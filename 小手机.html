@@ -222,14 +222,14 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v7 · 骰子/定位修复+购物';
+const APP_VER='v8 · 定位/代付/拉黑修复+日历';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
     vision:{base:'https://vg.v1api.cc/v1',key:'',model:''},
     hist:24, timeAware:true, replyDelay:2, sound:true, web:{enabled:false}
   },
-  me:{name:'忆北',wxid:'yibei_0414',avatar:'🐱',signature:'做一只无忧无虑的小猫～',persona:'我叫忆北，20岁女生，娃娃脸有点肉感，慢热腼腆熟了疯癫可爱，没安全感、占有欲强、嘴硬心软的小财迷。',balance:520.00,bills:[],momentCover:'',status:''},
+  me:{name:'忆北',wxid:'yibei_0414',avatar:'🐱',signature:'做一只无忧无虑的小猫～',persona:'我叫忆北，20岁女生，娃娃脸有点肉感，慢热腼腆熟了疯癫可爱，没安全感、占有欲强、嘴硬心软的小财迷。',balance:520.00,bills:[],momentCover:'',status:'',place:''},
   worldbook:[],
   contacts:[],
   messages:{},
@@ -238,6 +238,7 @@ function defState(){return{
   weather:null,
   spy:{},
   shop:{cart:[],results:[],q:''},
+  calendar:[],
   friendRequests:[],
   _proactiveDone:{},
   _proactiveCount:{}
@@ -310,6 +311,7 @@ function msgToText(m){
     case 'dice':return '[我掷了骰子，点数是'+m.value+']';
     case 'gift':return m.from==='ta'?'[你送了ta一个礼物：'+m.name+']':'[我送了你一个礼物：'+m.name+(m.shop?'（在'+m.shop+'买的）':'')+'，¥'+(+m.price).toFixed(2)+']';
     case 'paycard':return '[我在'+(m.shop||'商城')+'下单了「'+m.name+'」¥'+(+m.price).toFixed(2)+'，想让你帮我代付]';
+    case 'paid':return '[我帮你代付成功了：'+m.name+' ¥'+(+m.price).toFixed(2)+']';
     case 'sys':return null;
     default:return m.content||'';
   }
@@ -321,13 +323,15 @@ function worldHits(text){const out=[];text=text||'';
     if(keys.some(k=>text.includes(k)))out.push(w);});
   return out;}
 function getSpy(c){if(!c.spy)c.spy={granted:false,loc:false,time:'',times:2};return c.spy;}
+function curLoc(){return (S.me.place||'').trim()||(S.weather&&S.weather.place)||'';}
+function fmtDur(ms){const m=Math.round(ms/60000);if(m<60)return m+'分钟';const h=Math.round(m/60);if(h<24)return h+'小时';return Math.round(h/24)+'天';}
 function buildSystem(c){
   let s=c.persona||'';
   s+='\n\n# 你在和谁聊\n对方是「'+S.me.name+'」'+(c.remark?'（你给ta备注：'+c.remark+'）':'')+'。';
-  if(c.blocked)s+='\n\n# 重要\n'+S.me.name+'刚刚把你拉黑了，你能感觉到被冷落/拒绝。';
-  if(c._readdedAt&&Date.now()-c._readdedAt<3600000)s+='\n\n# 重要\n'+S.me.name+'之前把你拉黑了，刚刚才重新把你加回好友，你心里清楚这件事，可以有相应反应。';
+  if(c.blocked)s+='\n\n# 重要\n'+S.me.name+'把你拉黑了'+(c._blockedAt?'，已经'+fmtDur(Date.now()-c._blockedAt):'')+'，你能感觉到被冷落/拒绝。';
+  if(c._readdedAt&&Date.now()-c._readdedAt<3600000)s+='\n\n# 重要\n'+S.me.name+'之前把你拉黑了'+(c._blockDur?'（黑了'+c._blockDur+'）':'')+'，刚刚才重新把你加回好友，你心里清楚拉黑了多久这件事，别说错时长。';
   const _sp=getSpy(c);
-  if(_sp.loc){if(S.weather&&S.weather.place)s+='\n\n# 实时定位（ta已授权你随时查看）\n'+S.me.name+'此刻在：'+S.weather.place+'。';else s+='\n\n# 实时定位\nta授权了实时定位，但现在还没取到具体位置（可能没允许定位权限），别假装知道ta在哪，可以说定位还没刷出来、催ta开定位。';}
+  if(_sp.loc){const loc=curLoc();if(loc)s+='\n\n# 实时定位（ta已授权你随时查看）\n'+S.me.name+'此刻在：'+loc+'。你能精确看到，可以具体地提到这个地点。';else s+='\n\n# 实时定位\nta授权了实时定位，但现在还没取到具体位置（可能没允许定位权限），别假装知道ta在哪，可以说定位还没刷出来、催ta开定位。';}
   if(_sp.granted)s+='\n\n# 你能查看'+S.me.name+'的手机（ta已授权，下面是ta手机的真实情况，被问到"你看到我什么了"务必照这个答，绝不要编造）\n'+myActivity(c.id);
   if(S.me.persona)s+='\n对方的人设：'+S.me.persona;
   // 世界书
@@ -340,6 +344,8 @@ function buildSystem(c){
   const mo=S.moments.filter(p=>p.authorId==='me'||p.authorId===c.id).slice(0,6);
   if(mo.length)s+='\n\n# 最近的朋友圈（你知道这些动态）\n'+mo.map(p=>(p.authorId==='me'?S.me.name:'你')+'发了："'+p.text+'"').join('\n');
   if(S.settings.timeAware)s+='\n\n# 时间感知\n现在是 '+new Date().toLocaleString('zh-CN',{weekday:'long',hour:'2-digit',minute:'2-digit',month:'long',day:'numeric'})+'，请结合当前时间（早中晚、是否深夜）自然地回应。';
+  const _tod=todayStr(),_hol=holidayOf(_tod);if(_hol)s+='\n\n# 节日\n今天是'+_hol+'，可以应景祝福。';
+  const _ev=S.calendar.filter(e=>e.date>=_tod).slice(0,5);if(_ev.length)s+='\n\n# '+S.me.name+'的日程\n'+_ev.map(e=>e.date+' '+e.title+(e.type==='period'?'(姨妈期)':'')).join('；')+'。需要时可用一行 [日程|YYYY-MM-DD|事项] 帮ta记日程。';
   // 久未回复感知
   const lu=[...msgs(c.id)].reverse().find(m=>m.role==='user');
   if(lu){const gap=Date.now()-lu.time;if(gap>3600000)s+='\n\n# 注意\n'+S.me.name+'已经 '+Math.floor(gap/3600000)+' 小时没回你消息了，你可以表达在意/想念或追问。';}
@@ -349,7 +355,7 @@ function buildSystem(c){
   // 天气
   if(S.weather)s+='\n\n# '+S.me.name+'所在地天气\n'+S.weather.place+'，'+S.weather.desc+'，'+S.weather.temp+'°C'+(S.weather.rain?'（有雨）':'')+'。你知道这些，下雨时可在合适的时候自然提醒ta带伞，不用每条都提天气。';
   if(S.settings.web&&S.settings.web.enabled)s+='\n\n# 联网\n当需要查实时/最新信息（新闻、天气细节、价格、某事实）时，单独用一行 [联网|要搜索的关键词]，系统会联网查并把结果给你，你再据此回答。';
-  s+='\n\n# 微信聊天规则\n- 像真人发微信：一次可以连发好几条短消息，每条单独占一行（用换行分隔），不要写成一大段。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 你可以单独用一行 [心情|你此刻的内心想法] 表达内心戏（不会作为消息发出，只显示在顶部）。\n- 当'+S.me.name+'让你记住某件事、或聊到重要的事时，单独用一行 [记住|要长期记住的内容] 把它存进记忆。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta时，用一行 [来电|语音] 或 [来电|视频]，会触发来电。\n- 玩骰子/真心话大冒险时，用单独一行 [骰子|点数]（点数你自己定1到6），你说的话要和这个点数一致，再和对方比大小、出题或认罚。\n- 想送对方礼物时，用一行 [送礼|礼物名|价格] 给ta发一个礼物卡片。';
+  s+='\n\n# 微信聊天规则\n- 像真人发微信：一次可以连发好几条短消息，每条单独占一行（用换行分隔），不要写成一大段。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 你可以单独用一行 [心情|你此刻的内心想法] 表达内心戏（不会作为消息发出，只显示在顶部）。\n- 当'+S.me.name+'让你记住某件事、或聊到重要的事时，单独用一行 [记住|要长期记住的内容] 把它存进记忆。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta时，用一行 [来电|语音] 或 [来电|视频]，会触发来电。\n- 玩骰子/真心话大冒险时，用单独一行 [骰子|点数]（点数你自己定1到6），你说的话要和这个点数一致，再和对方比大小、出题或认罚。\n- 想送对方礼物时，用一行 [送礼|礼物名|价格] 给ta发一个礼物卡片。\n- 当ta发来"求代付"、而你愿意帮ta付时，用一行 [代付成功|金额|商品名] 生成代付成功卡片。';
   return s;
 }
 
@@ -372,6 +378,7 @@ function render(){
   else if(c.p==='contactInfo')html=renderContactInfo(c.id);
   else if(c.p==='spy')html=renderSpy(c.id);
   else if(c.p==='shop')html=renderShop();
+  else if(c.p==='calendar')html=renderCalendar();
   else if(c.p==='momentDetail')html='';
   app.innerHTML='<div class="page">'+html+'</div>';
   if(c.p==='chat'){afterChat(c.id);}
@@ -391,6 +398,7 @@ function renderHome(){
       <div class="app" onclick="openWeChat('moments')"><div class="ic" style="background:#ee5a6f;color:#fff">🌸</div><span>朋友圈</span></div>
       <div class="app" onclick="openSpy()"><div class="ic" style="background:#5b6b9c;color:#fff">🔍</div><span>查他手机</span></div>
       <div class="app" onclick="go('shop')"><div class="ic" style="background:#ff6b6b;color:#fff">🛒</div><span>购物</span></div>
+      <div class="app" onclick="go('calendar')"><div class="ic" style="background:#4ecdc4;color:#fff">📅</div><span>日历</span></div>
     </div>
     <div class="dock">
       <div class="app" onclick="openWeChat()"><div class="ic" style="background:#07c160;color:#fff">💬</div></div>
@@ -555,6 +563,40 @@ function payCartTo(id){payTo(id);S.shop.cart=[];save();}
 function receiveGift(mid){let found;for(const k in S.messages){const m=S.messages[k].find(x=>x.id===mid);if(m){found={m,k};break;}}
   if(!found||found.m.received)return;found.m.received=true;save();render();toast('🎁 收下了 '+found.m.name);}
 
+/* ---------- 日历 ---------- */
+const HOLIDAYS={'01-01':'元旦','02-14':'情人节','03-08':'女神节','05-01':'劳动节','05-20':'520','06-01':'儿童节','10-01':'国庆节','12-24':'平安夜','12-25':'圣诞节','12-31':'跨年'};
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function holidayOf(dateStr){const md=dateStr.slice(5);return HOLIDAYS[md]||'';}
+function renderCalendar(){const evs=[...S.calendar].sort((a,b)=>a.date<b.date?-1:1);const today=todayStr();
+  return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">📅 日历</span><span class="r" onclick="addCalEvent()">＋</span></div>
+    <div class="scroll" style="background:#000">
+      <div class="hint" style="padding:12px">今天 ${today} ${holidayOf(today)?'· '+holidayOf(today)+'🎉':''}。你和ta都能加日程；到日子ta会提醒你；节假日ta会发红包祝福。</div>
+      ${evs.length?evs.map(e=>{const c=getC(e.contactId);const past=e.date<today;return `<div class="section" style="margin:10px 12px"><div class="it"><div><div style="font-size:15px;color:${past?'#666':'#eee'}">${e.type==='period'?'🩸 ':'📌 '}${esc(e.title)}</div><div style="font-size:12px;color:#888;margin-top:3px">${e.date}${c?' · '+esc(c.remark||c.name)+'提醒':''}</div></div><span onclick="S.calendar=S.calendar.filter(x=>x.id!=='${e.id}');save();render()" style="color:#fa5151;cursor:pointer">✕</span></div></div>`;}).join(''):'<div class="empty">还没有日程，点右上角 ＋ 添加</div>'}
+      <div style="height:20px"></div></div>`;}
+function addCalEvent(){openModal(`<h3>添加日程</h3>
+  <div class="field"><label>日期</label><input id="ce_d" type="date" value="${todayStr()}"></div>
+  <div class="field"><label>事项</label><input id="ce_t" placeholder="去看医生 / 发工资…"></div>
+  <div class="field"><label>类型</label><select id="ce_type"><option value="event">普通日程</option><option value="period">姨妈期</option></select></div>
+  <div class="field"><label>谁提醒我</label><select id="ce_c"><option value="">不提醒</option>${S.contacts.filter(c=>!c.deleted).map(c=>`<option value="${c.id}">${esc(c.remark||c.name)}</option>`).join('')}</select></div>
+  <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="saveCalEvent()">保存</button></div>`);}
+function saveCalEvent(){const d=$('#ce_d').value,t=$('#ce_t').value.trim();if(!d||!t){toast('填日期和事项');return;}
+  S.calendar.push({id:uid(),date:d,title:t,type:$('#ce_type').value,contactId:$('#ce_c').value});save();closeModal();render();toast('已添加 📅');}
+function checkCalendar(){if(!S._calFired)S._calFired={};const F=S._calFired;const today=todayStr();const h=new Date().getHours();if(h<9)return;
+  const hol=holidayOf(today);
+  S.contacts.forEach(c=>{if(c.deleted||c.blocked)return;
+    if(hol&&F['hol_'+c.id]!==today){F['hol_'+c.id]=today;save();holidayGreet(c.id,hol);}
+  });
+  S.calendar.forEach(e=>{if(e.date===today&&e.contactId&&F[e.id]!==today){const c=getC(e.contactId);if(c&&!c.blocked){F[e.id]=today;save();remindEvent(e.contactId,e);}}});}
+setInterval(checkCalendar,60000);setTimeout(checkCalendar,4000);
+async function holidayGreet(id,hol){const c=getC(id);try{
+  const content=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：今天是'+hol+'，请你给'+S.me.name+'发一句节日祝福，并单独一行 [红包|金额|祝福语] 发个应景红包。]'}]);
+  splitBubbles(content).forEach(l=>{if(/^\[(联网|心情|记住|闹钟|来电)\|/.test(l))return;const mm=lineToMsg(l);mm.time=Date.now();msgs(id).push(mm);notifyIncoming(c,mm);});save();if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();
+}catch(e){}}
+async function remindEvent(id,e){const c=getC(id);try{
+  const content=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：今天是'+e.date+'，'+S.me.name+'的日程「'+e.title+'」'+(e.type==='period'?'（姨妈期，要多关心、提醒喝热水别吃凉的）':'')+'，请你提醒ta、关心一下。]'}]);
+  splitBubbles(content).forEach(l=>{if(/^\[(联网|心情|记住|闹钟|来电)\|/.test(l))return;const mm=lineToMsg(l);mm.time=Date.now();msgs(id).push(mm);notifyIncoming(c,mm);});save();if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();
+}catch(e2){}}
+
 /* ---------- 微信主界面 ---------- */
 function renderWeChat(){
   let body='';
@@ -584,7 +626,7 @@ function wxChats(){
       <div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div>${c.pinned?'<div style="font-size:10px;color:#ccc">置顶</div>':''}</div></div>`;}).join('')+'</div>';
 }
 function previewOf(m){if(m.role==='assistant')return splitBubbles(m.content)[0]||'[消息]';
-  return ({text:m.content,image:'[照片]',transfer:'[转账]',redpacket:'[红包]',location:'[位置]',file:'[文件]',spycard:'[查看权限]',dice:'[骰子]',gift:'[礼物]',paycard:'[求代付]',sys:m.content})[m.type]||'[消息]';}
+  return ({text:m.content,image:'[照片]',transfer:'[转账]',redpacket:'[红包]',location:'[位置]',file:'[文件]',spycard:'[查看权限]',dice:'[骰子]',gift:'[礼物]',paycard:'[求代付]',paid:'[已代付]',sys:m.content})[m.type]||'[消息]';}
 
 function wxContacts(){
   const fr=S.friendRequests.length?`<div class="list"><div class="row" onclick="openFriendRequests()"><div class="avatar sm" style="background:#fa9d3b">➕</div><div class="meta"><div class="n">新的朋友</div></div><span class="badge">${S.friendRequests.length}</span></div></div>`:'';
@@ -615,16 +657,17 @@ function editMe(){openModal(`<h3>我的资料</h3>
   <div class="field"><label>个性签名</label><input id="me_sig" value="${esc(S.me.signature)}"></div>
   <div class="field"><label>我的人设（所有角色都会知道）</label><textarea id="me_persona" rows="3">${esc(S.me.persona)}</textarea></div>
   <div class="field"><label>我的今日动态（手机读不到的事自己写，他查岗能看到）</label><input id="me_status" value="${esc(S.me.status||'')}" placeholder="刷抖音到两点 / 打了一小时游戏…"></div>
+  <div class="field"><label>我现在的位置（手填更具体，留空则用GPS）</label><input id="me_place" value="${esc(S.me.place||'')}" placeholder="在家 / 万达广场 / 公司…"></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="saveMe()">保存</button></div>`);}
 function upMe(){pickFile('image/*',async f=>{S.me.avatar=await compress(f,256,.8);editMe();});}
 function saveMe(){S.me.name=$('#me_name').value.trim()||'我';S.me.wxid=$('#me_wxid').value.trim();
-  S.me.avatar=$('#me_av').value.trim()||'🐱';S.me.signature=$('#me_sig').value.trim();S.me.persona=$('#me_persona').value.trim();S.me.status=$('#me_status').value.trim();
+  S.me.avatar=$('#me_av').value.trim()||'🐱';S.me.signature=$('#me_sig').value.trim();S.me.persona=$('#me_persona').value.trim();S.me.status=$('#me_status').value.trim();S.me.place=$('#me_place').value.trim();
   save();closeModal();render();}
 function myActivity(exceptId){let s='';
   // 跟别的角色聊天
   const others=S.contacts.filter(c=>!c.deleted&&c.id!==exceptId).map(c=>({c,lm:lastMsg(c.id)})).filter(x=>x.lm).sort((a,b)=>b.lm.time-a.lm.time).slice(0,2);
   if(others.length)s+='·她最近还在跟：'+others.map(o=>(o.c.remark||o.c.name)+'聊（"'+previewOf(o.lm).slice(0,16)+'"）').join('、')+'\n';
-  if(S.weather&&S.weather.place)s+='·她的位置：'+S.weather.place+'\n';
+  if(curLoc())s+='·她的位置：'+curLoc()+'\n';
   if(S.me.bills&&S.me.bills.length)s+='·她最近花钱：'+S.me.bills.slice(-3).map(b=>b.note+' '+(b.type==='in'?'+':'-')+b.amount).join('、')+'\n';
   const liked=S.moments.filter(p=>(p.likes||[]).includes(S.me.name)||(p.comments||[]).some(cm=>cm.name===S.me.name));
   if(liked.length)s+='·她在朋友圈互动：'+liked.slice(0,2).map(p=>{const cm=(p.comments||[]).find(x=>x.name===S.me.name);return (p.authorId==='me'?'自己':(getC(p.authorId)?.name||'某人'))+'的动态'+(cm?'评论了"'+cm.text+'"':'点了赞');}).join('、')+'\n';
@@ -697,7 +740,7 @@ function setChatBg(id){const c=getC(id);openModal(`<h3>聊天背景</h3><div cla
   <div class="btns"><button class="btn g" onclick="getC('${id}').chatBg='';save();closeModal();toast('已恢复默认')">恢复默认</button>
   <button class="btn p" onclick="pickFile('image/*',async f=>{getC('${id}').chatBg=await compress(f,800,.6);save();closeModal();toast('背景已设置')})">选图片</button></div>`);}
 function c_pin(id){const c=getC(id);c.pinned=!c.pinned;save();render();}
-function c_block(id){const c=getC(id);c.blocked=!c.blocked;save();render();
+function c_block(id){const c=getC(id);c.blocked=!c.blocked;if(c.blocked)c._blockedAt=Date.now();save();render();
   if(c.blocked){toast('已拉黑，过会儿看「通讯录」he会申请加你');setTimeout(()=>createFriendRequest(id),8000+Math.random()*9000);}}
 async function createFriendRequest(id){const c=getC(id);if(!c||!c.blocked)return;
   if(S.friendRequests.some(r=>r.contactId===id))return;
@@ -708,12 +751,25 @@ async function createFriendRequest(id){const c=getC(id);if(!c||!c.blocked)return
   toast('📇 通讯录有人申请加你');}
 function openFriendRequests(){if(!S.friendRequests.length){toast('暂无新申请');return;}
   openModal(`<h3>➕ 新的朋友</h3>${S.friendRequests.map(r=>{const c=getC(r.contactId);return `<div class="section"><div style="padding:12px 14px;display:flex;gap:10px;align-items:center">${av(c?c.avatar:'🙂','sm')}<div class="meta"><div class="n">${esc(c?c.name:'?')}</div><div class="s">${esc(r.msg)}</div></div></div><div style="display:flex;gap:8px;padding:0 14px 12px"><button class="btn p" style="flex:1" onclick="acceptFriend('${r.id}')">接受</button><button class="btn g" style="flex:1" onclick="ignoreFriend('${r.id}')">忽略</button></div></div>`;}).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
-function acceptFriend(rid){const r=S.friendRequests.find(x=>x.id===rid);if(!r)return;const c=getC(r.contactId);if(c){c.blocked=false;c._readdedAt=Date.now();msgs(c.id).push({role:'user',type:'sys',content:'你通过了'+c.name+'的好友申请，现在可以聊天了',time:Date.now(),id:uid()});}
+function acceptFriend(rid){const r=S.friendRequests.find(x=>x.id===rid);if(!r)return;const c=getC(r.contactId);if(c){c.blocked=false;c._readdedAt=Date.now();if(c._blockedAt)c._blockDur=fmtDur(Date.now()-c._blockedAt);msgs(c.id).push({role:'user',type:'sys',content:'你通过了'+c.name+'的好友申请，现在可以聊天了',time:Date.now(),id:uid()});}
   S.friendRequests=S.friendRequests.filter(x=>x.id!==rid);save();closeModal();render();toast('已加回好友');
   if(c)setTimeout(()=>aiReply(c.id),900);}
 function ignoreFriend(rid){S.friendRequests=S.friendRequests.filter(x=>x.id!==rid);save();(S.friendRequests.length?openFriendRequests():closeModal());render();}
 function c_delete(id){if(!confirm('删除这个角色和聊天记录？'))return;const c=getC(id);c.deleted=true;delete S.messages[id];save();stack.pop();render();}
-function clearHistory(id){if(!confirm('清空聊天记录？'))return;S.messages[id]=[];save();toast('已清空');}
+function clearHistory(id){openModal(`<h3>清除聊天记录</h3>
+  <button class="btn g" style="margin-bottom:8px" onclick="doClear('${id}','all')">🗑️ 清空全部</button>
+  <button class="btn g" style="margin-bottom:8px" onclick="doClear('${id}','3d')">清除最近 3 天</button>
+  <button class="btn g" style="margin-bottom:14px" onclick="doClear('${id}','7d')">清除最近 7 天</button>
+  <div class="hint">或按日期范围删除：</div>
+  <div class="two"><div class="field"><label>从</label><input id="cl_a" type="date"></div><div class="field"><label>到</label><input id="cl_b" type="date"></div></div>
+  <button class="btn d" onclick="doClear('${id}','range')">删除该范围</button>
+  <button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+function doClear(id,mode){const list=msgs(id);let keep;
+  if(mode==='all'){keep=[];}
+  else if(mode==='3d'||mode==='7d'){const cut=Date.now()-(mode==='3d'?3:7)*86400000;keep=list.filter(m=>m.time<cut);}
+  else{const a=$('#cl_a').value,b=$('#cl_b').value;if(!a||!b){toast('选好起止日期');return;}
+    const t0=new Date(a+'T00:00:00').getTime(),t1=new Date(b+'T23:59:59').getTime();keep=list.filter(m=>m.time<t0||m.time>t1);}
+  S.messages[id]=keep;save();closeModal();render();toast('已删除 '+(list.length-keep.length)+' 条');}
 function togProactive(id){const c=getC(id);c.proactive.enabled=!c.proactive.enabled;save();render();}
 function togSpy(id,k){const c=getC(id);const sp=getSpy(c);sp[k]=!sp[k];save();render();if(k==='loc'&&sp.loc)fetchWeather(true);}
 function saveSpy(id){const c=getC(id);const sp=getSpy(c);sp.time=$('#sp_t').value||'';sp.times=+$('#sp_n').value||2;save();toast('已保存');}
@@ -782,6 +838,7 @@ function buildPart(c,m,me){
   if(m.type==='dice')return `<div style="font-size:46px;line-height:1">${['','⚀','⚁','⚂','⚃','⚄','⚅'][m.value]||'🎲'}<span style="font-size:15px;color:#999;margin-left:6px">${m.value}点</span></div>`;
   if(m.type==='gift'){const h=(m.from==='ta'&&!m.received)?`onclick="event.stopPropagation();receiveGift('${m.id}')"`:'';return `<div class="card" ${h}><div class="cpay" style="background:${m.received?'#d9b48a':'#ee5a6f'}"><div class="big">🎁</div><div><div class="t1">${esc(m.name)}</div><div class="t2">${m.received?'已领取':(m.from==='ta'?'点击领取礼物':'¥'+(+m.price).toFixed(2))}</div></div></div><div class="cfoot">${m.shop?esc(m.shop)+' · ':''}礼物</div></div>`;}
   if(m.type==='paycard'){return `<div class="card"><div class="cpay" style="background:#f7a23b"><div class="big">💳</div><div><div class="t1">求代付 ¥${(+m.price).toFixed(2)}</div><div class="t2">${esc(m.name)}</div></div></div><div class="cfoot">${esc(m.shop||'商城')} · 好友代付</div></div>`;}
+  if(m.type==='paid'){return `<div class="card"><div class="cpay" style="background:#2bb36a"><div class="big">✅</div><div><div class="t1">已代付 ¥${(+m.price).toFixed(2)}</div><div class="t2">${esc(m.name)}</div></div></div><div class="cfoot">好友代付成功</div></div>`;}
   return `<div class="bubble">${esc(m.content)}</div>`;}
 function payCard(kind,m,me){const done=m.received;
   const cls='cpay '+(done?'done':kind);const ic=kind==='r'?'🧧':'💰';
@@ -845,6 +902,8 @@ function lineToMsg(line){
   if(dm)return {role:'assistant',type:'dice',value:dm[1]?+dm[1]:1+Math.floor(Math.random()*6),id:uid()};
   const gm=line.match(/^\[送礼\|([^|\]]*)\|?([^\]]*)\]$/);
   if(gm)return {role:'assistant',type:'gift',name:gm[1]||'礼物',price:+gm[2]||0,shop:'',from:'ta',received:false,id:uid()};
+  const pm=line.match(/^\[代付成功\|([^|\]]*)\|?([^\]]*)\]$/);
+  if(pm)return {role:'assistant',type:'paid',price:+pm[1]||0,name:pm[2]||'商品',id:uid()};
   const m=line.match(CARD_RE);if(!m)return {role:'assistant',type:'text',content:line};
   const f=m[2].split('|');
   if(m[1]==='转账')return {role:'assistant',type:'transfer',amount:+f[0]||0,note:f[1],received:false,id:uid()};
@@ -873,6 +932,7 @@ async function aiReply(id){const c=getC(id);if(c.blocked)return;
       let mm=line.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=mm[1];save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[记住\|([^\]]*)\]$/);if(mm){c.memory=c.memory||[];if(mm[1]&&!c.memory.includes(mm[1])){c.memory.push(mm[1]);save();toast('🧠 已记住：'+mm[1].slice(0,12));}continue;}
       mm=line.match(/^\[闹钟\|([0-9]{1,2}:[0-9]{2})\|?([^\]]*)\]$/);if(mm){addAlarm(c.id,mm[1],mm[2]||'起床');continue;}
+      mm=line.match(/^\[日程\|(\d{4}-\d{2}-\d{2})\|?([^\]]*)\]$/);if(mm){S.calendar.push({id:uid(),date:mm[1],title:mm[2]||'日程',type:'event',contactId:c.id});save();toast('📅 已加日程 '+mm[1]);continue;}
       mm=line.match(/^\[来电\|(语音|视频)\]$/);if(mm){const k=mm[1]==='视频'?'video':'voice';setTimeout(()=>incomingCall(c.id,k,'ta打来的'),600);continue;}
       await sleep(got?400+Math.random()*500:0);got=true;
       const msg=lineToMsg(line);msg.time=Date.now();msg.id=msg.id||uid();msgs(id).push(msg);save();
@@ -979,7 +1039,9 @@ const WCODE={0:'晴',1:'晴',2:'多云',3:'阴',45:'雾',48:'雾',51:'小雨',53
 function fetchWeather(manual){if(!navigator.geolocation){if(manual)toast('设备不支持定位');return;}
   navigator.geolocation.getCurrentPosition(async p=>{const la=p.coords.latitude,lo=p.coords.longitude;
     try{const w=await fetch('https://api.open-meteo.com/v1/forecast?latitude='+la+'&longitude='+lo+'&current=temperature_2m,weather_code,precipitation').then(r=>r.json());
-      let place='';try{const g=await fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?latitude='+la+'&longitude='+lo+'&localityLanguage=zh').then(r=>r.json());place=(g.city||g.locality||g.principalSubdivision||'');}catch(e){}
+      let place='';try{const g=await fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?latitude='+la+'&longitude='+lo+'&localityLanguage=zh').then(r=>r.json());
+        const parts=[g.principalSubdivision||g.city,g.locality,(g.localityInfo&&g.localityInfo.administrative&&g.localityInfo.administrative.slice(-1)[0]&&g.localityInfo.administrative.slice(-1)[0].name)];
+        place=parts.filter((x,i,a)=>x&&a.indexOf(x)===i).join('·');}catch(e){}
       const code=w.current.weather_code,desc=WCODE[code]||'未知';
       S.weather={place,temp:Math.round(w.current.temperature_2m),desc,rain:(w.current.precipitation>0||[51,53,55,61,63,65,80,81,82,95,96].indexOf(code)>=0),time:Date.now()};
       save();if(manual)toast('🌦️ '+place+' '+desc+' '+S.weather.temp+'°C');if(cur().p==='settings')render();
