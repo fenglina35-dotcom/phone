@@ -271,13 +271,13 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v18 · 语音音色+消息通知';
+const APP_VER='v20 · 总结视角+自动发布';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
     vision:{base:'https://vg.v1api.cc/v1',key:'',model:''},
     hist:24, timeAware:true, replyDelay:2, sound:true, web:{enabled:false}, summaryRounds:20, proactiveIdleMin:20,
-    voiceAuto:true, tts:{base:'',key:'',model:'',voice:''}
+    voiceAuto:true, tts:{base:'',key:'',model:'',voice:''}, stt:{base:'',key:'',model:''}
   },
   me:{name:'忆北',wxid:'yibei_0414',avatar:'🐱',signature:'做一只无忧无虑的小猫～',persona:'我叫忆北，20岁女生，娃娃脸有点肉感，慢热腼腆熟了疯癫可爱，没安全感、占有欲强、嘴硬心软的小财迷。',balance:520.00,bills:[],momentCover:'',status:'',place:'',battery:null,charging:false,onlineMode:'auto'},
   worldbook:[],
@@ -367,7 +367,7 @@ function msgToText(m){
     case 'payreject':return '[我拒绝了帮你代付：'+m.name+']';
     case 'food':return m.from==='ta'?'[你给ta点了外卖：'+m.name+']':'[我给你点了外卖：'+m.name+(m.shop?'（'+m.shop+'）':'')+'，¥'+(+m.price).toFixed(2)+']';
     case 'tweetcard':return '[我转发给你一条X推文——'+m.tname+'：「'+m.ttext+'」]';
-    case 'voice':return '[语音]'+(m.content||'');
+    case 'voice':return m.content?('[语音消息]'+m.content):'['+S.me.name+'发了条语音（暂时没识别出文字，你可以问ta说了啥）]';
     case 'chatlog':return '[我转发给你一份聊天记录《'+m.title+'》，内容：'+(m.lines||[]).map(l=>l.who+'说'+l.text).join('；').slice(0,200)+']';
     case 'tcollect':return '[你收下了我的转账 ¥'+(+m.amount).toFixed(2)+']';
     case 'treject':return '[你拒收了我的转账，钱退回了]';
@@ -396,14 +396,39 @@ async function speak(text,o){const t=stripSpoken(text);if(!t)return;const v=o?ge
   if(!('speechSynthesis'in window))return;
   try{const u=new SpeechSynthesisUtterance(t);if(v){u.rate=+v.rate||1;u.pitch=+v.pitch||1;if(v.voiceURI){const vs=_voices.find(x=>x.voiceURI===v.voiceURI);if(vs)u.voice=vs;}}speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}}
 function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m)return;
-  const o=m.role==='user'?S.me:getC(owner);speak(m.content,o);
-  const el=document.querySelector('[data-vid="'+mid+'"]');if(el){el.classList.add('playing');setTimeout(()=>el.classList.remove('playing'),Math.min(8000,(m.content||'').length*120));}}
+  const el=document.querySelector('[data-vid="'+mid+'"]');if(el){el.classList.add('playing');setTimeout(()=>el.classList.remove('playing'),Math.min(9000,(m.dur||3)*1000+800));}
+  if(m.audio){try{const au=new Audio(m.audio);au.play();return;}catch(e){}}
+  const o=m.role==='user'?S.me:getC(owner);speak(m.content,o);}
 /* ===== 顶部消息通知 ===== */
 let _bannerT;
 function showMsgBanner(c,msg){const b=$('#msgBanner');if(!b)return;
   b.innerHTML=`${av(c.avatar,'sm')}<div style="flex:1;min-width:0"><div class="bn">${esc(c.remark||c.name)}</div><div class="bm">${esc(previewOf(msg))}</div></div>`;
   b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';openChat(c.id);};
   clearTimeout(_bannerT);_bannerT=setTimeout(()=>{b.className='msgbanner';},4500);}
+/* ===== 真·录音 长按说话 ===== */
+let _rec=null;
+function makeSR(lang){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)return null;try{const r=new SR();r.lang=lang||'zh-CN';r.interimResults=true;r.continuous=true;return r;}catch(e){return null;}}
+async function startRec(cb){if(_rec)return;
+  try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    const mr=new MediaRecorder(stream);const chunks=[];mr.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+    const sr=makeSR();let srText='';if(sr){sr.onresult=ev=>{srText='';for(let i=0;i<ev.results.length;i++)srText+=ev.results[i][0].transcript;};try{sr.start();}catch(e){}}
+    _rec={mr,chunks,stream,sr,start:Date.now(),getText:()=>srText};mr.start();
+    toast('🎙️ 松开发送，上滑取消');if(cb)cb();
+  }catch(e){toast('用不了麦克风（需允许权限/用https打开）');}}
+function stopRec(cancel,cb){if(!_rec)return;const R=_rec;_rec=null;
+  if(R.sr){try{R.sr.stop();}catch(e){}}
+  R.mr.onstop=async()=>{R.stream.getTracks().forEach(t=>t.stop());
+    if(cancel){if(cb)cb(null);return;}
+    const dur=Math.max(1,Math.round((Date.now()-R.start)/1000));
+    const blob=new Blob(R.chunks,{type:R.mr.mimeType||'audio/webm'});
+    let content=(R.getText()||'').trim();
+    if(!content&&S.settings.stt&&S.settings.stt.base&&S.settings.stt.key){try{content=await sttTranscribe(blob);}catch(e){}}
+    const b64=await blobB64(blob);
+    if(cb)cb({audio:b64,content:content,dur});};
+  try{R.mr.stop();}catch(e){R.stream&&R.stream.getTracks().forEach(t=>t.stop());if(cb)cb(null);}}
+function blobB64(blob){return new Promise(res=>{const r=new FileReader();r.onload=()=>res(r.result);r.readAsDataURL(blob);});}
+async function sttTranscribe(blob){const a=S.settings.stt;const fd=new FormData();fd.append('file',blob,'a.webm');fd.append('model',a.model||'whisper-1');
+  const r=await fetch(a.base.replace(/\/+$/,'')+'/audio/transcriptions',{method:'POST',headers:{'Authorization':'Bearer '+a.key},body:fd});const j=await r.json();return (j.text||'').trim();}
 function fmtDur(ms){const m=Math.round(ms/60000);if(m<60)return m+'分钟';const h=Math.round(m/60);if(h<24)return h+'小时';return Math.round(h/24)+'天';}
 function buildSystem(c){
   let s=c.persona||'';
@@ -425,6 +450,8 @@ function buildSystem(c){
   // 朋友圈感知（自己发的 + 对方发的）
   const mo=S.moments.filter(p=>p.authorId==='me'||p.authorId===c.id).slice(0,6);
   if(mo.length)s+='\n\n# 最近的朋友圈（你知道这些动态）\n'+mo.map(p=>(p.authorId==='me'?S.me.name:'你')+'发了："'+p.text+'"').join('\n');
+  const myx=(S.x&&S.x.tweets||[]).filter(t=>t.who===c.id).slice(0,3);
+  if(myx.length)s+='\n\n# 你自己最近发的推特\n'+myx.map(t=>'"'+t.text+'"').join('\n');
   if(S.settings.timeAware)s+='\n\n# 时间感知\n现在是 '+new Date().toLocaleString('zh-CN',{weekday:'long',hour:'2-digit',minute:'2-digit',month:'long',day:'numeric'})+'，请结合当前时间（早中晚、是否深夜）自然地回应。';
   const _tod=todayStr(),_hol=holidayOf(_tod);if(_hol)s+='\n\n# 节日\n今天是'+_hol+'，可以应景祝福。';
   const _ev=S.calendar.filter(e=>e.date>=_tod).slice(0,5);if(_ev.length)s+='\n\n# '+S.me.name+'的日程\n'+_ev.map(e=>e.date+' '+e.title+(e.type==='period'?'(姨妈期)':'')).join('；')+'。需要时可用一行 [日程|YYYY-MM-DD|事项] 帮ta记日程。';
@@ -501,6 +528,19 @@ function renderHome(){
 }
 function openWeChat(tab){wxTab=tab||'chats';go('wechat');scanProactive();}
 function scanProactive(){S.contacts.forEach(c=>{if(!c.deleted&&c.proactive&&c.proactive.enabled)maybeProactive(c.id);});}
+function saveAuto(id){const c=getC(id);c.autoMoment=Math.max(0,+$('#ap_m').value||0);c.autoTweet=Math.max(0,+$('#ap_t').value||0);save();toast('已保存');}
+function scanAutoPost(){if(!S._autoPost)S._autoPost={};const today=new Date().toDateString();
+  S.contacts.forEach(c=>{if(c.deleted||c.blocked)return;const pc=S._autoPost[c.id]||{date:today,m:0,t:0,last:0};if(pc.date!==today){pc.date=today;pc.m=0;pc.t=0;}S._autoPost[c.id]=pc;
+    if(Date.now()-pc.last<2400000)return;
+    if((c.autoMoment||0)>pc.m&&Math.random()<0.5){pc.m++;pc.last=Date.now();save();doAutoMoment(c.id);return;}
+    if((c.autoTweet||0)>pc.t&&Math.random()<0.5){pc.t++;pc.last=Date.now();save();doAutoTweet(c.id);}
+  });}
+async function doAutoMoment(id){const c=getC(id);try{const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'现在你想发条朋友圈（结合此刻心情/日常/和'+S.me.name+'的关系都行），只输出动态内容本身，一两句，别带方括号。'}]);
+  S.moments.unshift({id:uid(),authorId:id,text:cleanReply(r).slice(0,120),images:[],time:Date.now(),likes:[],comments:[]});save();if(cur().p==='wechat'&&wxTab==='moments')render();toast('🌸 '+(c.remark||c.name)+'发了朋友圈');}catch(e){}}
+async function doAutoTweet(id){const c=getC(id);try{const _co=(typeof circleObj==='function')?circleObj(id):{};const note=_co.desc?'，贴合你的圈子定位「'+_co.desc+'」':'';
+  const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'现在你想发条推特'+note+'，一两句，只输出推文内容，别带方括号。'}]);
+  const nm=c.name;xUser(nm,{handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,cid:id});S.x.tweets.unshift({id:uid(),who:id,name:nm,handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,text:cleanReply(r),time:Date.now(),likes:[],lk:Math.floor(Math.random()*80),comments:[],rt:0});save();if(cur().p==='x')render();toast('𝕏 '+nm+'发了推');}catch(e){}}
+setInterval(scanAutoPost,240000);setTimeout(scanAutoPost,8000);
 
 /* ---------- 设置 ---------- */
 function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
@@ -524,6 +564,9 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_tbase" value="${esc((S.settings.tts||{}).base||'')}" placeholder="https://…/v1"></div>
       <div class="field" style="padding:0 14px"><label>API Key</label><input id="s_tkey" type="password" value="${esc((S.settings.tts||{}).key||'')}"></div>
       <div class="two" style="padding:0 14px 10px"><div class="field"><label>模型</label><input id="s_tmodel" value="${esc((S.settings.tts||{}).model||'')}" placeholder="tts-1"></div><div class="field"><label>默认音色</label><input id="s_tvoice" value="${esc((S.settings.tts||{}).voice||'')}" placeholder="alloy/克隆ID"></div></div>
+      <div style="padding:6px 14px;font-weight:600;color:#7bd38d;font-size:13px">🎧 语音转文字（让角色听懂你录的语音·可选）</div>
+      <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_sbase" value="${esc((S.settings.stt||{}).base||'')}" placeholder="https://…/v1（留空用手机识别）"></div>
+      <div class="two" style="padding:0 14px 10px"><div class="field"><label>API Key</label><input id="s_skey" type="password" value="${esc((S.settings.stt||{}).key||'')}"></div><div class="field"><label>模型</label><input id="s_smodel" value="${esc((S.settings.stt||{}).model||'')}" placeholder="whisper-1"></div></div>
     </div>
     <div class="section">
       <div class="it">带几条历史<input id="s_hist" type="number" value="${S.settings.hist}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
@@ -552,6 +595,7 @@ function saveSettings(){const g=id=>$('#'+id).value.trim();
   S.settings.chat={base:g('s_cbase')||'https://vg.v1api.cc/v1',key:g('s_ckey'),model:g('s_cmodel')||'gpt-4o-mini',temp:$('#s_ctemp').value||0.8,maxTokens:$('#s_cmax').value||900};
   S.settings.vision={base:g('s_vbase')||S.settings.chat.base,key:g('s_vkey')||S.settings.chat.key,model:g('s_vmodel')};
   S.settings.tts={base:g('s_tbase'),key:g('s_tkey'),model:g('s_tmodel'),voice:g('s_tvoice')};
+  S.settings.stt={base:g('s_sbase'),key:g('s_skey'),model:g('s_smodel')};
   S.settings.hist=$('#s_hist').value||24;S.settings.replyDelay=$('#s_delay').value||0;S.settings.summaryRounds=+$('#s_sum').value||0;S.settings.proactiveIdleMin=+$('#s_pidle').value||20;save();toast('已保存 ✅');}
 function reqNotify(){if(!('Notification'in window)){toast('这设备不支持通知');return;}Notification.requestPermission().then(p=>toast(p==='granted'?'已允许后台通知🔔':'未允许'));}
 async function testConn(){const o=$('#testOut');o.style.color='#999';o.textContent='测试中…';
@@ -1093,6 +1137,10 @@ function renderContactInfo(id){const c=getC(id);if(!c)return '';const sp=getSpy(
       <div class="it"><span>固定查看时间</span><span class="v"><input type="time" id="sp_t" value="${sp.time||''}" style="border:1px solid #38383a;border-radius:6px;padding:3px;background:#2c2c2e;color:#eee"> <button class="minibtn" onclick="saveSpy('${id}')">存</button></span></div>
       <div class="it"><span>每天查看次数</span><span class="v"><input type="number" id="sp_n" value="${sp.times||2}" style="width:42px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:3px;background:#2c2c2e;color:#eee"> <button class="minibtn" onclick="saveSpy('${id}')">存</button></span></div>
     </div>
+    <div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#ee5a6f">📣 自动发布（ta自己发）</div>
+      <div class="it"><span>每天主动发朋友圈</span><span class="v"><input type="number" id="ap_m" min="0" value="${c.autoMoment||0}" style="width:42px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:3px;background:#2c2c2e;color:#eee">条 <button class="minibtn" onclick="saveAuto('${id}')">存</button></span></div>
+      <div class="it"><span>每天主动发推特</span><span class="v"><input type="number" id="ap_t" min="0" value="${c.autoTweet||0}" style="width:42px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:3px;background:#2c2c2e;color:#eee">条 <button class="minibtn" onclick="saveAuto('${id}')">存</button></span></div>
+    </div>
     <div class="section" style="margin:12px">
       <div class="it" onclick="clearHistory('${id}')"><span>清空聊天记录</span><span class="v">›</span></div>
       <div class="it" onclick="c_block('${id}')"><span>${c.blocked?'解除拉黑':'加入黑名单'}</span><span class="v">›</span></div>
@@ -1188,8 +1236,8 @@ function renderChat(id){const c=getC(id);if(!c)return '';
     ${(_sel&&_sel.id===id)?`<div class="inputbar"><button class="btn g" style="flex:1" onclick="exitSelect()">取消</button><button class="btn p" style="flex:1" onclick="forwardSelected()">转发(<span id="fwdcnt">${_sel.ids.length}</span>)</button></div>`:`<div class="inputbar">
       <span class="plus" onclick="$('#panel').classList.toggle('show')">＋</span>
       <span class="plus" style="background:${_voiceMode?'linear-gradient(135deg,#9ec5fe,#b8a4e3)':'transparent'};box-shadow:none;color:${_voiceMode?'#fff':'#aaa'}" onclick="_voiceMode=!_voiceMode;render()">🎤</span>
-      <textarea id="cinput" rows="1" placeholder="${c.blocked?'已拉黑，发不出去':(_voiceMode?'输入要发的语音内容…':'发消息…')}" ${c.blocked?'disabled':''}></textarea>
-      <button class="send" onclick="sendText('${id}')">${_voiceMode?'发语音':'发送'}</button>
+      ${_voiceMode?`<button id="holdbtn" class="send" style="flex:1;background:#3a3a40;color:#eee;border-radius:8px" onpointerdown="recDown(event,'${id}')" onpointerup="recUp('${id}')" onpointercancel="recUp('${id}',1)" oncontextmenu="return false">按住 说话</button>`:`<textarea id="cinput" rows="1" placeholder="${c.blocked?'已拉黑，发不出去':'发消息…'}" ${c.blocked?'disabled':''}></textarea>
+      <button class="send" onclick="sendText('${id}')">发送</button>`}
     </div>`}`;}
 function bubbleRow(c,m){
   const me=m.role==='user';
@@ -1248,6 +1296,12 @@ function pushMsg(id,m){m.time=Date.now();if(m.role==='user'&&!m.id)m.id=uid();ms
   if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){const c=getC(id);cb.insertAdjacentHTML('beforeend',bubbleRow(c,m));cb.scrollTop=cb.scrollHeight;}}}
 
 let _voiceMode=false;
+function recDown(ev,id){if(ev&&ev.preventDefault)ev.preventDefault();const c=getC(id);if(c.blocked)return;
+  startRec(()=>{const b=$('#holdbtn');if(b){b.textContent='● 录音中… 松开发送';b.style.background='#c0392b';}});}
+function recUp(id,cancel){const b=$('#holdbtn');if(b){b.textContent='按住 说话';b.style.background='#3a3a40';}
+  if(!_rec)return;const tooShort=Date.now()-_rec.start<600;
+  stopRec(cancel||tooShort,m=>{if(!m)return;if(tooShort){toast('太短啦');return;}
+    pushMsg(id,{role:'user',type:'voice',audio:m.audio,content:m.content||'',dur:m.dur,id:uid()});scheduleReply(id);});}
 function sendText(id){const c=getC(id);if(c.blocked){toast('已拉黑，先解除吧');return;}
   const ta=$('#cinput');const t=ta.value.trim();if(!t)return;ta.value='';ta.style.height='auto';
   if(_voiceMode)pushMsg(id,{role:'user',type:'voice',content:t,id:uid()});
@@ -1347,7 +1401,7 @@ async function maybeSummarize(id){const c=getC(id);const rounds=+S.settings.summ
   const all=msgs(id);const keep=rounds*2;if(all.length<=keep+6)return;
   const done=c._sumCount||0;const upto=all.length-keep;if(upto-done<6)return;
   const chunk=all.slice(done,upto).map(msgToText).filter(Boolean).join('\n');if(!chunk)return;
-  try{const sum=await chatAPI([{role:'system',content:'用一两句话简洁概括这段聊天发生了什么（保留关键事/情绪/约定），别超过40字，直接给概括，不要前缀。'},{role:'user',content:chunk}],{max:120,temp:.3});
+  try{const sum=await chatAPI([{role:'system',content:'你是「'+c.name+'」，用第一人称、像写日记一样简短记下刚才你和「'+S.me.name+'」之间发生的事（比如"我和'+S.me.name+'…"，带点你的情绪），不超过40字，别用旁白第三人称，直接写，不要前缀。'},{role:'user',content:chunk}],{max:120,temp:.4});
     if(sum){c.summaries=c.summaries||[];c.summaries.push({time:new Date().toLocaleString('zh-CN',{year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}),text:cleanReply(sum).slice(0,60)});c._sumCount=upto;save();}
   }catch(e){}}
 let _replyTimers={};
@@ -1431,8 +1485,8 @@ function ringStart(){ringStop();if(!_audio)return;let on=false;
 function ringStop(){if(_ring){clearInterval(_ring);_ring=null;}if(navigator.vibrate)navigator.vibrate(0);}
 function blip(freq,dur){if(!_audio||!S.settings.sound)return;try{const o=_audio.createOscillator(),g=_audio.createGain();o.connect(g);g.connect(_audio.destination);o.frequency.value=freq;o.type='sine';g.gain.setValueAtTime(.2,_audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,_audio.currentTime+dur);o.start();o.stop(_audio.currentTime+dur);}catch(e){}}
 function incomingCall(id,kind){const c=getC(id);if(!c||c.blocked||_call)return;
-  _call={id,kind,state:'incoming'};initAudio();ringStart();renderCall();}
-function placeCall(id,kind){const c=getC(id);if(!c)return;initAudio();_call={id,kind,state:'outgoing'};renderCall();
+  _call={id,kind,state:'incoming',replyVoice:S.settings.voiceAuto!==false};initAudio();ringStart();renderCall();}
+function placeCall(id,kind){const c=getC(id);if(!c)return;initAudio();_call={id,kind,state:'outgoing',replyVoice:S.settings.voiceAuto!==false};renderCall();
   blip(600,.15);setTimeout(()=>{if(_call&&_call.state==='outgoing')answerCall(true);},1600);}
 function answerCall(autoByThem){if(!_call)return;ringStop();blip(880,.12);
   _call.state='active';_call.start=Date.now();
@@ -1454,16 +1508,21 @@ function renderCall(){const L=$('#callLayer');if(!_call){L.className='callscreen
   let btns='';
   if(_call.state==='incoming')btns=`<div class="cbtncol"><div class="cbtn red" onclick="declineCall()">📵</div>拒绝</div><div class="cbtncol"><div class="cbtn green" onclick="answerCall()">📞</div>接听</div>`;
   else if(_call.state==='outgoing')btns=`<div class="cbtncol"><div class="cbtn red" onclick="declineCall()">📵</div>取消</div>`;
-  else btns=`<div class="cbtncol"><div class="cbtn gray" onclick="document.getElementById('callInput').classList.toggle('show')">💬</div>说话</div><div class="cbtncol"><div class="cbtn red" onclick="hangupCall()">📵</div>挂断</div>`;
+  else btns=`<div class="cbtncol"><div class="cbtn gray" onclick="document.getElementById('callInput').classList.toggle('show')">⌨️</div>打字</div>
+    <div class="cbtncol"><div class="cbtn ${_call.replyVoice?'green':'gray'}" onclick="_call.replyVoice=!_call.replyVoice;renderCall()">${_call.replyVoice?'🔊':'💬'}</div>${_call.replyVoice?'对方语音':'对方文字'}</div>
+    <div class="cbtncol"><div class="cbtn red" onclick="hangupCall()">📵</div>挂断</div>`;
   L.innerHTML=`<div class="cav">${isImg(c.avatar)?`<img src="${c.avatar}">`:(c.avatar||'🙂')}</div>
     <div class="cname">${esc(c.remark||c.name)}</div><div class="cstat">${stat}</div>
     <div class="callsubs" id="callSubs"></div>
-    <div class="callinput" id="callInput"><input id="callMsg" placeholder="说点什么…" onkeydown="if(event.key==='Enter')callSend()"><button onclick="callSend()">说</button></div>
+    ${_call.state==='active'?`<div class="callinput show" id="callInput"><button class="send" style="border-radius:18px;background:#3a3a40" onpointerdown="recDownCall(event)" onpointerup="recUpCall()" onpointercancel="recUpCall(1)" oncontextmenu="return false">🎙按住</button><input id="callMsg" placeholder="打字说…" onkeydown="if(event.key==='Enter')callSend()"><button onclick="callSend()">发</button></div>`:''}
     <div class="callbtns">${btns}</div>`;
   renderCallSubs();}
+function recDownCall(ev){if(ev&&ev.preventDefault)ev.preventDefault();startRec(()=>{const b=document.querySelector('#callInput button');});}
+function recUpCall(cancel){if(!_call||!_rec)return;const tooShort=Date.now()-_rec.start<600;const id=_call.id;
+  stopRec(cancel||tooShort,m=>{if(!m||tooShort)return;msgs(id).push({role:'user',type:'voice',audio:m.audio,content:m.content||'',dur:m.dur,id:uid(),_call:true});save();renderCallSubs();callAI();});}
 function renderCallSubs(){const box=$('#callSubs');if(!box||!_call)return;
   const list=(msgs(_call.id)||[]).filter(m=>m._call).slice(-6);
-  box.innerHTML=list.map(m=>{const act=/^[（(]/.test(m.content);return `<div class="cb ${m.role==='user'?'me':''}" ${act?'style="font-style:italic;opacity:.75;background:transparent"':''}>${esc(m.content)}</div>`;}).join('');box.scrollTop=box.scrollHeight;}
+  box.innerHTML=list.map(m=>{if(m.type==='voice')return `<div class="cb ${m.role==='user'?'me':''}" onclick="playVoice('${m.id}')">🎙️ ${esc(m.content||'语音')} ${m.dur||''}″</div>`;const act=/^[（(]/.test(m.content);return `<div class="cb ${m.role==='user'?'me':''}" ${act?'style="font-style:italic;opacity:.75;background:transparent"':''}>${esc(m.content)}</div>`;}).join('');box.scrollTop=box.scrollHeight;}
 function callSend(){const inp=$('#callMsg');if(!inp)return;const t=inp.value.trim();if(!t||!_call)return;inp.value='';
   msgs(_call.id).push({role:'user',type:'text',content:t,time:Date.now(),id:uid(),_call:true});save();renderCallSubs();callAI();}
 async function callAI(sysNote){if(!_call)return;const c=getC(_call.id);const video=_call.kind==='video';
@@ -1475,7 +1534,7 @@ async function callAI(sysNote){if(!_call)return;const c=getC(_call.id);const vid
     await sleep((Number(S.settings.replyDelay)||0)*1000);if(!_call)return;
     const wantHang=/\[挂断\]/.test(content);let spoken='';
     splitBubbles(content).forEach(l=>{if(/^\[挂断\]$/.test(l))return;if(/^\[(转账|红包|位置|图片|文件|心情|记住|闹钟|来电|联网)\|/.test(l))return;msgs(c.id).push({role:'assistant',type:'text',content:l,time:Date.now(),id:uid(),_call:true});spoken+=' '+l;});
-    save();renderCallSubs();if(!c.muted){if(S.settings.voiceAuto)speak(spoken,c);else blip(700,.08);}
+    save();renderCallSubs();if(!c.muted){if(_call&&_call.replyVoice)speak(spoken,c);else blip(700,.08);}
     if(wantHang&&_call)setTimeout(()=>{if(_call&&_call.id===c.id)hangupCall(true);},1200);
   }catch(e){msgs(c.id).push({role:'assistant',type:'text',content:'(信号不好…)',time:Date.now(),id:uid(),_call:true});renderCallSubs();}}
 
