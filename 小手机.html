@@ -216,6 +216,16 @@ body{background:#000;padding:0;}
 .spybanner.show{display:block;}
 .spybanner b{font-weight:600;}
 .spydot{display:inline-block;margin-left:4px;}
+.msgbanner{position:absolute;top:8px;left:10px;right:10px;z-index:440;background:rgba(40,40,46,.97);border:1px solid #3a3a40;border-radius:14px;padding:10px 12px;display:none;align-items:center;gap:10px;box-shadow:0 6px 20px rgba(0,0,0,.5);cursor:pointer;}
+.msgbanner.show{display:flex;animation:slided .25s ease;}
+@keyframes slided{from{transform:translateY(-20px);opacity:0}to{transform:translateY(0);opacity:1}}
+.msgbanner .bn{font-size:14px;color:#fff;font-weight:600;}
+.msgbanner .bm{font-size:13px;color:#bbb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.voicebub{display:inline-flex;align-items:center;gap:8px;min-width:90px;cursor:pointer;}
+.voicebub .vwave{font-size:17px;}
+.vtext{font-size:13px;color:#999;margin-top:3px;line-height:1.4;}
+.voicebub.playing .vwave{animation:vw .6s infinite;}
+@keyframes vw{0%,100%{opacity:1}50%{opacity:.4}}
 /* ===== X ===== */
 .xnav{flex:0 0 46px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:#000;border-bottom:.5px solid #2f3336;}
 .xnav .t{font-size:18px;font-weight:700;color:#e7e9ea;}.xnav .l,.xnav .r{font-size:22px;color:#e7e9ea;cursor:pointer;}
@@ -249,6 +259,7 @@ body{background:#000;padding:0;}
 <div class="phone"><div class="screen">
   <div class="island"></div>
   <div id="app"></div>
+  <div class="msgbanner" id="msgBanner"></div>
   <div class="spybanner" id="spyBanner"></div>
   <div class="callscreen" id="callLayer"></div>
   <!-- 全局弹窗容器 -->
@@ -260,12 +271,13 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v17 · 通话/礼物/条数/勾选修';
+const APP_VER='v18 · 语音音色+消息通知';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
     vision:{base:'https://vg.v1api.cc/v1',key:'',model:''},
-    hist:24, timeAware:true, replyDelay:2, sound:true, web:{enabled:false}, summaryRounds:20, proactiveIdleMin:20
+    hist:24, timeAware:true, replyDelay:2, sound:true, web:{enabled:false}, summaryRounds:20, proactiveIdleMin:20,
+    voiceAuto:true, tts:{base:'',key:'',model:'',voice:''}
   },
   me:{name:'忆北',wxid:'yibei_0414',avatar:'🐱',signature:'做一只无忧无虑的小猫～',persona:'我叫忆北，20岁女生，娃娃脸有点肉感，慢热腼腆熟了疯癫可爱，没安全感、占有欲强、嘴硬心软的小财迷。',balance:520.00,bills:[],momentCover:'',status:'',place:'',battery:null,charging:false,onlineMode:'auto'},
   worldbook:[],
@@ -355,6 +367,7 @@ function msgToText(m){
     case 'payreject':return '[我拒绝了帮你代付：'+m.name+']';
     case 'food':return m.from==='ta'?'[你给ta点了外卖：'+m.name+']':'[我给你点了外卖：'+m.name+(m.shop?'（'+m.shop+'）':'')+'，¥'+(+m.price).toFixed(2)+']';
     case 'tweetcard':return '[我转发给你一条X推文——'+m.tname+'：「'+m.ttext+'」]';
+    case 'voice':return '[语音]'+(m.content||'');
     case 'chatlog':return '[我转发给你一份聊天记录《'+m.title+'》，内容：'+(m.lines||[]).map(l=>l.who+'说'+l.text).join('；').slice(0,200)+']';
     case 'tcollect':return '[你收下了我的转账 ¥'+(+m.amount).toFixed(2)+']';
     case 'treject':return '[你拒收了我的转账，钱退回了]';
@@ -371,6 +384,26 @@ function worldHits(text){const out=[];text=text||'';
 function getSpy(c){if(!c.spy)c.spy={granted:false,loc:false,time:'',times:2};return c.spy;}
 function curLoc(){return (S.me.place||'').trim()||(S.weather&&S.weather.place)||'';}
 function isOnline(){const m=S.me.onlineMode||'auto';if(m==='on')return true;if(m==='off')return false;return document.visibilityState==='visible';}
+/* ===== 语音 ===== */
+function getVoice(o){if(!o.voice)o.voice={engine:'system',voiceURI:'',rate:1,pitch:1,lang:'zh'};return o.voice;}
+function stripSpoken(t){return (t||'').replace(/[（(][^）)]*[）)]/g,'').replace(/\[[^\]]*\]/g,'').replace(/[*_~`#>]/g,'').trim();}
+let _voices=[];
+function loadVoices(){try{_voices=speechSynthesis.getVoices()||[];}catch(e){_voices=[];}}
+if('speechSynthesis'in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices;}
+async function speak(text,o){const t=stripSpoken(text);if(!t)return;const v=o?getVoice(o):null;
+  const tts=S.settings.tts;
+  if(v&&v.engine==='api'&&tts&&tts.base&&tts.key){try{const r=await fetch(tts.base.replace(/\/+$/,'')+'/audio/speech',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tts.key},body:JSON.stringify({model:tts.model||'tts-1',input:t,voice:v.ttsVoice||tts.voice||'alloy',speed:v.rate||1})});if(r.ok){const b=await r.blob();const au=new Audio(URL.createObjectURL(b));au.play();return;}}catch(e){}}
+  if(!('speechSynthesis'in window))return;
+  try{const u=new SpeechSynthesisUtterance(t);if(v){u.rate=+v.rate||1;u.pitch=+v.pitch||1;if(v.voiceURI){const vs=_voices.find(x=>x.voiceURI===v.voiceURI);if(vs)u.voice=vs;}}speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}}
+function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m)return;
+  const o=m.role==='user'?S.me:getC(owner);speak(m.content,o);
+  const el=document.querySelector('[data-vid="'+mid+'"]');if(el){el.classList.add('playing');setTimeout(()=>el.classList.remove('playing'),Math.min(8000,(m.content||'').length*120));}}
+/* ===== 顶部消息通知 ===== */
+let _bannerT;
+function showMsgBanner(c,msg){const b=$('#msgBanner');if(!b)return;
+  b.innerHTML=`${av(c.avatar,'sm')}<div style="flex:1;min-width:0"><div class="bn">${esc(c.remark||c.name)}</div><div class="bm">${esc(previewOf(msg))}</div></div>`;
+  b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';openChat(c.id);};
+  clearTimeout(_bannerT);_bannerT=setTimeout(()=>{b.className='msgbanner';},4500);}
 function fmtDur(ms){const m=Math.round(ms/60000);if(m<60)return m+'分钟';const h=Math.round(m/60);if(h<24)return h+'小时';return Math.round(h/24)+'天';}
 function buildSystem(c){
   let s=c.persona||'';
@@ -404,7 +437,7 @@ function buildSystem(c){
   // 天气
   if(S.weather)s+='\n\n# '+S.me.name+'所在地天气\n'+S.weather.place+'，'+S.weather.desc+'，'+S.weather.temp+'°C'+(S.weather.rain?'（有雨）':'')+'。你知道这些，下雨时可在合适的时候自然提醒ta带伞，不用每条都提天气。';
   if(S.settings.web&&S.settings.web.enabled)s+='\n\n# 联网\n当需要查实时/最新信息（新闻、天气细节、价格、某事实）时，单独用一行 [联网|要搜索的关键词]，系统会联网查并把结果给你，你再据此回答。';
-  s+='\n\n# 微信聊天规则\n- 像真人发微信：一次回复大约 '+(c.msgMin||1)+' 到 '+(c.msgMax||4)+' 条短消息，每条单独占一行（用换行分隔），不要写成一大段。具体几条你根据当下情境自己把握：随意时少发，认真/激动/吵架/撒娇时可以多发几条。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 你可以单独用一行 [心情|你此刻的内心想法] 表达内心戏（不会作为消息发出，只显示在顶部）。\n- 当'+S.me.name+'让你记住某件事、或聊到重要的事时，单独用一行 [记住|要长期记住的内容] 把它存进记忆。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta时，用一行 [来电|语音] 或 [来电|视频]，会触发来电。\n- 玩骰子/真心话大冒险时，用单独一行 [骰子|点数]（点数你自己定1到6），你说的话要和这个点数一致，再和对方比大小、出题或认罚。\n- 想送对方礼物时，用一行 [送礼|礼物名|价格] 给ta发一个礼物卡片。\n- 当ta发来"求代付"：愿意帮付用一行 [代付成功|金额|商品名]；不愿意用一行 [拒绝代付|金额|商品名]。\n- 想给ta点份外卖时，用一行 [点外卖|餐品名|价格]，ta会收到外卖卡片去签收。\n- 当'+S.me.name+'让你发一条朋友圈时，用一行 [发朋友圈|内容]；让你发推特时，用一行 [发推|内容]，会真的发出去。\n- 当'+S.me.name+'给你转账时：愿意收用一行 [收款]，不想收用一行 [拒收]（退回ta）。\n- 当'+S.me.name+'送你礼物时：愿意收用一行 [收礼]，不想收用一行 [拒礼]（退回ta）。';
+  s+='\n\n# 微信聊天规则\n- 像真人发微信：一次回复大约 '+(c.msgMin||1)+' 到 '+(c.msgMax||4)+' 条短消息，每条单独占一行（用换行分隔），不要写成一大段。具体几条你根据当下情境自己把握：随意时少发，认真/激动/吵架/撒娇时可以多发几条。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 你可以单独用一行 [心情|你此刻的内心想法] 表达内心戏（不会作为消息发出，只显示在顶部）。\n- 当'+S.me.name+'让你记住某件事、或聊到重要的事时，单独用一行 [记住|要长期记住的内容] 把它存进记忆。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta时，用一行 [来电|语音] 或 [来电|视频]，会触发来电。\n- 玩骰子/真心话大冒险时，用单独一行 [骰子|点数]（点数你自己定1到6），你说的话要和这个点数一致，再和对方比大小、出题或认罚。\n- 想送对方礼物时，用一行 [送礼|礼物名|价格] 给ta发一个礼物卡片。\n- 当ta发来"求代付"：愿意帮付用一行 [代付成功|金额|商品名]；不愿意用一行 [拒绝代付|金额|商品名]。\n- 想给ta点份外卖时，用一行 [点外卖|餐品名|价格]，ta会收到外卖卡片去签收。\n- 当'+S.me.name+'让你发一条朋友圈时，用一行 [发朋友圈|内容]；让你发推特时，用一行 [发推|内容]，会真的发出去。\n- 当'+S.me.name+'给你转账时：愿意收用一行 [收款]，不想收用一行 [拒收]（退回ta）。\n- 当'+S.me.name+'送你礼物时：愿意收用一行 [收礼]，不想收用一行 [拒礼]（退回ta）。\n- 想发语音消息时，用一行 [语音|要说的话]'+((c.voice&&c.voice.lang&&c.voice.lang!=='zh')?'。你的语音用'+c.voice.lang+'语，请输出 [语音|外语原文|中文翻译]':'')+'。日常和打电话时都能发语音。';
   return s;
 }
 
@@ -486,8 +519,15 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="field" style="padding:0 14px"><label>API Key</label><input id="s_vkey" type="password" value="${esc(v.key)}" placeholder="不填则用聊天的Key"></div>
       <div class="field" style="padding:0 14px 10px"><label>模型名（如 gpt-4o）</label><input id="s_vmodel" value="${esc(v.model)}" placeholder="留空=不识图"></div>
     </div>
+    <div class="section"><div style="padding:12px 14px;font-weight:600;color:#b8a4e3">🎙️ 语音API（可选·克隆/更真）</div>
+      <div class="hint" style="padding:0 14px">不填就用手机自带音色(免费)。填了的话，把某角色音色引擎切成「API」即可用。需 OpenAI 兼容 /audio/speech 接口。</div>
+      <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_tbase" value="${esc((S.settings.tts||{}).base||'')}" placeholder="https://…/v1"></div>
+      <div class="field" style="padding:0 14px"><label>API Key</label><input id="s_tkey" type="password" value="${esc((S.settings.tts||{}).key||'')}"></div>
+      <div class="two" style="padding:0 14px 10px"><div class="field"><label>模型</label><input id="s_tmodel" value="${esc((S.settings.tts||{}).model||'')}" placeholder="tts-1"></div><div class="field"><label>默认音色</label><input id="s_tvoice" value="${esc((S.settings.tts||{}).voice||'')}" placeholder="alloy/克隆ID"></div></div>
+    </div>
     <div class="section">
       <div class="it">带几条历史<input id="s_hist" type="number" value="${S.settings.hist}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
+      <div class="it">语音自动播放<span class="sw ${S.settings.voiceAuto?'on':''}" onclick="S.settings.voiceAuto=!S.settings.voiceAuto;save();render()"></span></div>
       <div class="it">延迟几秒回复<input id="s_delay" type="number" min="0" value="${S.settings.replyDelay}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it">超过几回合自动总结<input id="s_sum" type="number" min="0" value="${S.settings.summaryRounds||0}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it">主动消息间隔(分钟)<input id="s_pidle" type="number" min="1" value="${S.settings.proactiveIdleMin||20}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
@@ -511,6 +551,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
 function saveSettings(){const g=id=>$('#'+id).value.trim();
   S.settings.chat={base:g('s_cbase')||'https://vg.v1api.cc/v1',key:g('s_ckey'),model:g('s_cmodel')||'gpt-4o-mini',temp:$('#s_ctemp').value||0.8,maxTokens:$('#s_cmax').value||900};
   S.settings.vision={base:g('s_vbase')||S.settings.chat.base,key:g('s_vkey')||S.settings.chat.key,model:g('s_vmodel')};
+  S.settings.tts={base:g('s_tbase'),key:g('s_tkey'),model:g('s_tmodel'),voice:g('s_tvoice')};
   S.settings.hist=$('#s_hist').value||24;S.settings.replyDelay=$('#s_delay').value||0;S.settings.summaryRounds=+$('#s_sum').value||0;S.settings.proactiveIdleMin=+$('#s_pidle').value||20;save();toast('已保存 ✅');}
 function reqNotify(){if(!('Notification'in window)){toast('这设备不支持通知');return;}Notification.requestPermission().then(p=>toast(p==='granted'?'已允许后台通知🔔':'未允许'));}
 async function testConn(){const o=$('#testOut');o.style.color='#999';o.textContent='测试中…';
@@ -936,7 +977,7 @@ function wxChats(){
       <div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div>${c.pinned?'<div style="font-size:10px;color:#ccc">置顶</div>':''}</div></div>`;}).join('')+'</div>';
 }
 function previewOf(m){if(m.role==='assistant')return splitBubbles(m.content)[0]||'[消息]';
-  return ({text:m.content,image:'[照片]',transfer:'[转账]',redpacket:'[红包]',location:'[位置]',file:'[文件]',spycard:'[查看权限]',dice:'[骰子]',gift:'[礼物]',paycard:'[求代付]',paid:'[已代付]',tweetcard:'[X推文]',tcollect:'[已收款]',treject:'[已退还]',chatlog:'[聊天记录]',food:'[外卖]',payreject:'[拒绝代付]',sys:m.content})[m.type]||'[消息]';}
+  return ({text:m.content,image:'[照片]',transfer:'[转账]',redpacket:'[红包]',location:'[位置]',file:'[文件]',spycard:'[查看权限]',dice:'[骰子]',gift:'[礼物]',paycard:'[求代付]',paid:'[已代付]',tweetcard:'[X推文]',tcollect:'[已收款]',treject:'[已退还]',chatlog:'[聊天记录]',food:'[外卖]',payreject:'[拒绝代付]',voice:'[语音]',sys:m.content})[m.type]||'[消息]';}
 
 function wxContacts(){
   const fr=S.friendRequests.length?`<div class="list"><div class="row" onclick="openFriendRequests()"><div class="avatar sm" style="background:#fa9d3b">➕</div><div class="meta"><div class="n">新的朋友</div></div><span class="badge">${S.friendRequests.length}</span></div></div>`:'';
@@ -1033,6 +1074,7 @@ function renderContactInfo(id){const c=getC(id);if(!c)return '';const sp=getSpy(
       <div class="it" onclick="editMemory('${id}')"><span>🧠 记忆</span><span class="v">${(c.memory||[]).length}条 ›</span></div>
       <div class="it" onclick="editSummary('${id}')"><span>📝 对话总结</span><span class="v">${(c.summaries||[]).length}条 ›</span></div>
       <div class="it" onclick="editCircle('${id}')"><span>𝕏 圈子备注</span><span class="v">${(S.x&&S.x.circle&&S.x.circle[id])?'已设 ›':'未设 ›'}</span></div>
+      <div class="it" onclick="editVoice('${id}')"><span>🎙️ 语音音色</span><span class="v">${getVoice(c).voiceURI?'已设 ›':'默认 ›'}</span></div>
       <div class="it" onclick="setChatBg('${id}')"><span>聊天背景</span><span class="v">${c.chatBg?'已设置':'默认'}</span></div>
     </div>
     <div class="section" style="margin:12px">
@@ -1145,8 +1187,9 @@ function renderChat(id){const c=getC(id);if(!c)return '';
     </div>
     ${(_sel&&_sel.id===id)?`<div class="inputbar"><button class="btn g" style="flex:1" onclick="exitSelect()">取消</button><button class="btn p" style="flex:1" onclick="forwardSelected()">转发(<span id="fwdcnt">${_sel.ids.length}</span>)</button></div>`:`<div class="inputbar">
       <span class="plus" onclick="$('#panel').classList.toggle('show')">＋</span>
-      <textarea id="cinput" rows="1" placeholder="${c.blocked?'已拉黑，发不出去':'发消息…'}" ${c.blocked?'disabled':''}></textarea>
-      <button class="send" onclick="sendText('${id}')">发送</button>
+      <span class="plus" style="background:${_voiceMode?'linear-gradient(135deg,#9ec5fe,#b8a4e3)':'transparent'};box-shadow:none;color:${_voiceMode?'#fff':'#aaa'}" onclick="_voiceMode=!_voiceMode;render()">🎤</span>
+      <textarea id="cinput" rows="1" placeholder="${c.blocked?'已拉黑，发不出去':(_voiceMode?'输入要发的语音内容…':'发消息…')}" ${c.blocked?'disabled':''}></textarea>
+      <button class="send" onclick="sendText('${id}')">${_voiceMode?'发语音':'发送'}</button>
     </div>`}`;}
 function bubbleRow(c,m){
   const me=m.role==='user';
@@ -1178,6 +1221,8 @@ function buildPart(c,m,me){
   if(m.type==='chatlog'){const prev=(m.lines||[]).slice(0,3).map(l=>l.who+'：'+l.text).join('\n');return `<div class="card" style="width:240px;background:#2c2c2e" onclick="event.stopPropagation();openChatlog('${m.id}')"><div style="padding:11px"><div style="color:#9ec5fe;font-size:13px;font-weight:700;margin-bottom:5px">📑 ${esc(m.title)}</div><div style="color:#aaa;font-size:12px;white-space:pre-wrap;line-height:1.5">${esc(prev)}${(m.lines||[]).length>3?'\n…':''}</div></div><div class="cfoot" style="background:rgba(255,255,255,.06);color:#888">共${(m.lines||[]).length}条 · 点击查看</div></div>`;}
   if(m.type==='tcollect'){return `<div class="card"><div class="cpay done"><div class="big">💰</div><div><div class="t1">已收款</div><div class="t2">¥${(+m.amount).toFixed(2)} 对方已收下你的转账</div></div></div><div class="cfoot">微信转账</div></div>`;}
   if(m.type==='treject'){return `<div class="card"><div class="cpay" style="background:#8a8a8a"><div class="big">↩️</div><div><div class="t1">已退还</div><div class="t2">¥${(+m.amount).toFixed(2)} 对方拒收了转账</div></div></div><div class="cfoot">微信转账 · 已退回你钱包</div></div>`;}
+  if(m.type==='voice'){const dur=m.dur||Math.max(1,Math.round((m.content||'').length/3.5));
+    return `<div class="bubble"><div class="voicebub" data-vid="${m.id}" onclick="event.stopPropagation();playVoice('${m.id}')"><span class="vwave">🔊</span><span style="letter-spacing:2px">▪▪▪▪</span> ${dur}″</div><div class="vtext">${esc(m.content)}${m.trans?'<br><span style="color:#aa8">译：'+esc(m.trans)+'</span>':''}</div></div>`;}
   return `<div class="bubble">${esc(m.content)}</div>`;}
 function payCard(kind,m,me){const done=m.received;
   const cls='cpay '+(done?'done':kind);const ic=kind==='r'?'🧧':'💰';
@@ -1202,9 +1247,12 @@ function afterChat(id){const cb=$('#chatbg');if(cb)cb.scrollTop=cb.scrollHeight;
 function pushMsg(id,m){m.time=Date.now();if(m.role==='user'&&!m.id)m.id=uid();msgs(id).push(m);save();
   if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){const c=getC(id);cb.insertAdjacentHTML('beforeend',bubbleRow(c,m));cb.scrollTop=cb.scrollHeight;}}}
 
+let _voiceMode=false;
 function sendText(id){const c=getC(id);if(c.blocked){toast('已拉黑，先解除吧');return;}
   const ta=$('#cinput');const t=ta.value.trim();if(!t)return;ta.value='';ta.style.height='auto';
-  pushMsg(id,{role:'user',type:'text',content:t});scheduleReply(id);}
+  if(_voiceMode)pushMsg(id,{role:'user',type:'voice',content:t,id:uid()});
+  else pushMsg(id,{role:'user',type:'text',content:t});
+  scheduleReply(id);}
 
 /* 功能面板发送 */
 function cPhoto(id){$('#panel').classList.remove('show');pickFile('image/*',async f=>{const src=await compress(f,900,.7);
@@ -1278,6 +1326,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
       mm=line.match(/^\[发朋友圈\|([^\]]*)\]$/);if(mm){S.moments.unshift({id:uid(),authorId:c.id,text:mm[1],images:[],time:Date.now(),likes:[],comments:[]});save();toast('🌸 '+(c.remark||c.name)+'发了朋友圈');continue;}
       mm=line.match(/^\[发推\|([^\]]*)\]$/);if(mm){const nm=c.name;xUser(nm,{handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,cid:c.id});S.x.tweets.unshift({id:uid(),who:c.id,name:nm,handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,text:mm[1],time:Date.now(),likes:[],lk:Math.floor(Math.random()*60),comments:[],rt:0});save();toast('𝕏 '+nm+'发了推');continue;}
       mm=line.match(/^\[点外卖\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){const fc={role:'assistant',type:'food',name:mm[1]||'外卖',price:+mm[2]||0,shop:'',from:'ta',received:false,id:uid(),time:Date.now()};msgs(id).push(fc);notifyIncoming(c,fc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
+      mm=line.match(/^\[语音\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){const vm={role:'assistant',type:'voice',content:mm[1]||'',trans:mm[2]||'',time:Date.now(),id:uid()};msgs(id).push(vm);notifyIncoming(c,vm);save();if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');cb.insertAdjacentHTML('beforeend',bubbleRow(c,vm));cb.scrollTop=cb.scrollHeight;}continue;}
       mm=line.match(/^\[拒绝代付\|?([0-9.]*)\|?([^\]]*)\]$/);if(mm){const pc={role:'assistant',type:'payreject',price:+mm[1]||0,name:mm[2]||'',id:uid(),time:Date.now()};msgs(id).push(pc);notifyIncoming(c,pc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[收款\|?([0-9.]*)\]$/);if(mm){markTransfer(id,'collect');const mg={role:'assistant',type:'tcollect',amount:+mm[1]||lastTransferAmt(id),time:Date.now(),id:uid()};msgs(id).push(mg);notifyIncoming(c,mg);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[拒收\|?([0-9.]*)\]$/);if(mm){const amt=+mm[1]||lastTransferAmt(id);markTransfer(id,'reject');addBill('in',amt,(c.remark||c.name)+'退回的转账');const mg={role:'assistant',type:'treject',amount:amt,time:Date.now(),id:uid()};msgs(id).push(mg);notifyIncoming(c,mg);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
@@ -1309,7 +1358,13 @@ document.addEventListener('click',()=>{initAudio();const liveLoc=S.contacts.some
 function playDing(){if(!S.settings.sound||!_audio)return;try{const o=_audio.createOscillator(),g=_audio.createGain();o.connect(g);g.connect(_audio.destination);
   o.frequency.value=880;o.type='sine';g.gain.setValueAtTime(.001,_audio.currentTime);g.gain.exponentialRampToValueAtTime(.25,_audio.currentTime+.02);
   g.gain.exponentialRampToValueAtTime(.001,_audio.currentTime+.35);o.start();o.stop(_audio.currentTime+.36);}catch(e){}}
-function notifyIncoming(c,msg){if(c.muted)return;playDing();
+function notifyIncoming(c,msg){
+  // 语音消息自动播放
+  if(msg&&msg.type==='voice'&&S.settings.voiceAuto&&!c.muted)speak(msg.content,c);
+  if(c.muted)return;
+  const viewing=cur().p==='chat'&&cur().id===c.id;
+  if(!viewing&&!(_call&&_call.id===c.id))showMsgBanner(c,msg);
+  playDing();
   if(document.hidden&&'Notification'in window&&Notification.permission==='granted'){try{new Notification(c.remark||c.name,{body:previewOf(msg)});}catch(e){}}}
 /* 撤回 / 编辑消息 */
 function msgMenu(cid,mid){const list=msgs(cid);const m=list.find(x=>x.id===mid);if(!m)return;
@@ -1337,6 +1392,21 @@ function editMemory(id){const c=getC(id);c.memory=c.memory||[];
 function editMemItem(id,i){const c=getC(id);openModal(`<h3>编辑记忆</h3><div class="field"><textarea id="mi_t" rows="3">${esc(c.memory[i])}</textarea></div>
   <div class="btns"><button class="btn g" onclick="editMemory('${id}')">返回</button><button class="btn p" onclick="(function(){getC('${id}').memory[${i}]=$('#mi_t').value.trim();save();editMemory('${id}');})()">保存</button></div>`);}
 function circleObj(id){const v=(S.x.circle||{})[id];if(!v)return{name:'',desc:''};if(typeof v==='string')return{name:'',desc:v};return v;}
+function voiceOptions(sel){loadVoices();if(!_voices.length)return '<option value="">（系统语音加载中，重开一次设置）</option>';
+  return '<option value="">默认</option>'+_voices.map(v=>`<option value="${esc(v.voiceURI)}" ${sel===v.voiceURI?'selected':''}>${esc(v.name)} (${esc(v.lang)})</option>`).join('');}
+function editVoice(id){const c=getC(id);const v=getVoice(c);openModal(`<h3>🎙️ ${esc(c.remark||c.name)} 的音色</h3>
+  <div class="hint">用手机自带语音合成，每个角色可选不同音色；想用克隆/更高级，在 设置→语音API 里填接口并把引擎切成 API。</div>
+  <div class="field"><label>引擎</label><select id="v_eng"><option value="system" ${v.engine!=='api'?'selected':''}>系统音色(免费)</option><option value="api" ${v.engine==='api'?'selected':''}>语音API(可克隆)</option></select></div>
+  <div class="field"><label>系统音色</label><select id="v_uri">${voiceOptions(v.voiceURI)}</select></div>
+  <div class="field"><label>语速 ${(+v.rate||1).toFixed(1)}</label><input id="v_rate" type="range" min="0.5" max="1.8" step="0.1" value="${v.rate||1}" style="width:100%"></div>
+  <div class="field"><label>音调 ${(+v.pitch||1).toFixed(1)}</label><input id="v_pitch" type="range" min="0.5" max="1.6" step="0.1" value="${v.pitch||1}" style="width:100%"></div>
+  <div class="field"><label>语言（外语会带中文翻译）</label><select id="v_lang"><option value="zh" ${v.lang==='zh'?'selected':''}>中文</option><option value="英" ${v.lang==='英'?'selected':''}>英语</option><option value="日" ${v.lang==='日'?'selected':''}>日语</option><option value="韩" ${v.lang==='韩'?'selected':''}>韩语</option></select></div>
+  <div class="field"><label>API音色名(用API时填，如克隆ID/alloy)</label><input id="v_tv" value="${esc(v.ttsVoice||'')}" placeholder="不用API可留空"></div>
+  <div class="btns" style="margin-bottom:8px"><button class="btn g" onclick="previewVoice('${id}')">🔊 试听</button></div>
+  <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="saveVoice('${id}')">保存</button></div>`);}
+function readVoiceForm(){return {engine:$('#v_eng').value,voiceURI:$('#v_uri').value,rate:+$('#v_rate').value||1,pitch:+$('#v_pitch').value||1,lang:$('#v_lang').value,ttsVoice:$('#v_tv').value.trim()};}
+function previewVoice(id){const c=getC(id);const nv=readVoiceForm();c._voiceTmp=getVoice(c);c.voice=nv;speak('你好呀，我是'+(c.remark||c.name)+'，这是我的声音。',c);c.voice=c._voiceTmp;delete c._voiceTmp;}
+function saveVoice(id){const c=getC(id);c.voice=readVoiceForm();save();closeModal();render();toast('音色已保存');}
 function editCircle(id){S.x.circle=S.x.circle||{};const co=circleObj(id);openModal(`<h3>𝕏 圈子</h3><div class="hint">圈子名称=ta所在的圈子/标签；定位=ta发推的人设风格。</div>
   <div class="field"><label>圈子名称</label><input id="cir_n" value="${esc(co.name)}" placeholder="如：医学圈 / 摄影圈"></div>
   <div class="field"><label>圈子定位/风格</label><textarea id="cir_t" rows="3" placeholder="比如：高冷医学博主，偶尔发暗恋小作文">${esc(co.desc)}</textarea></div>
@@ -1403,9 +1473,9 @@ async function callAI(sysNote){if(!_call)return;const c=getC(_call.id);const vid
     const content=await chatAPI([{role:'system',content:sys},...hist]);
     if(!_call)return;
     await sleep((Number(S.settings.replyDelay)||0)*1000);if(!_call)return;
-    const wantHang=/\[挂断\]/.test(content);
-    splitBubbles(content).forEach(l=>{if(/^\[挂断\]$/.test(l))return;if(/^\[(转账|红包|位置|图片|文件|心情|记住|闹钟|来电|联网)\|/.test(l))return;msgs(c.id).push({role:'assistant',type:'text',content:l,time:Date.now(),id:uid(),_call:true});});
-    save();renderCallSubs();if(!c.muted)blip(700,.08);
+    const wantHang=/\[挂断\]/.test(content);let spoken='';
+    splitBubbles(content).forEach(l=>{if(/^\[挂断\]$/.test(l))return;if(/^\[(转账|红包|位置|图片|文件|心情|记住|闹钟|来电|联网)\|/.test(l))return;msgs(c.id).push({role:'assistant',type:'text',content:l,time:Date.now(),id:uid(),_call:true});spoken+=' '+l;});
+    save();renderCallSubs();if(!c.muted){if(S.settings.voiceAuto)speak(spoken,c);else blip(700,.08);}
     if(wantHang&&_call)setTimeout(()=>{if(_call&&_call.id===c.id)hangupCall(true);},1200);
   }catch(e){msgs(c.id).push({role:'assistant',type:'text',content:'(信号不好…)',time:Date.now(),id:uid(),_call:true});renderCallSubs();}}
 
