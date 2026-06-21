@@ -215,7 +215,7 @@ function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
     vision:{base:'https://vg.v1api.cc/v1',key:'',model:''},
-    hist:24, timeAware:true, replyDelay:2, sound:true
+    hist:24, timeAware:true, replyDelay:2, sound:true, web:{enabled:false}
   },
   me:{name:'忆北',wxid:'yibei_0414',avatar:'🐱',signature:'做一只无忧无虑的小猫～',persona:'我叫忆北，20岁女生，娃娃脸有点肉感，慢热腼腆熟了疯癫可爱，没安全感、占有欲强、嘴硬心软的小财迷。',balance:520.00,bills:[],momentCover:''},
   worldbook:[],
@@ -224,6 +224,7 @@ function defState(){return{
   moments:[],
   alarms:[],
   weather:null,
+  spy:{},
   _proactiveDone:{},
   _proactiveCount:{}
 };}
@@ -318,8 +319,12 @@ function buildSystem(c){
   // 久未回复感知
   const lu=[...msgs(c.id)].reverse().find(m=>m.role==='user');
   if(lu){const gap=Date.now()-lu.time;if(gap>3600000)s+='\n\n# 注意\n'+S.me.name+'已经 '+Math.floor(gap/3600000)+' 小时没回你消息了，你可以表达在意/想念或追问。';}
+  // 他自己的手机内容（保持一致，被问到能答上来）
+  const sp=S.spy[c.id];
+  if(sp)s+='\n\n# 你手机里现在的内容（这是你自己的，被问到要答得上、保持一致）\n位置：'+(sp.location||'')+'\n日记：'+(sp.diary||'')+(sp.browser?'\n浏览：'+sp.browser.join('；'):'')+(sp.wallet?'\n支出：'+sp.wallet.map(w=>w.item+w.amount).join('；'):'')+(sp.friends?'\n新好友：'+sp.friends.join('；'):'');
   // 天气
-  if(S.weather)s+='\n\n# '+S.me.name+'所在地天气\n'+S.weather.place+'，'+S.weather.desc+'，'+S.weather.temp+'°C'+(S.weather.rain?'，正在下雨/有雨，记得提醒ta带伞、别淋湿。':'。')+'你知道这些，可自然地关心ta。';
+  if(S.weather)s+='\n\n# '+S.me.name+'所在地天气\n'+S.weather.place+'，'+S.weather.desc+'，'+S.weather.temp+'°C'+(S.weather.rain?'（有雨）':'')+'。你知道这些，下雨时可在合适的时候自然提醒ta带伞，不用每条都提天气。';
+  if(S.settings.web&&S.settings.web.enabled)s+='\n\n# 联网\n当需要查实时/最新信息（新闻、天气细节、价格、某事实）时，单独用一行 [联网|要搜索的关键词]，系统会联网查并把结果给你，你再据此回答。';
   s+='\n\n# 微信聊天规则\n- 像真人发微信：一次可以连发好几条短消息，每条单独占一行（用换行分隔），不要写成一大段。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 你可以单独用一行 [心情|你此刻的内心想法] 表达内心戏（不会作为消息发出，只显示在顶部）。\n- 当'+S.me.name+'让你记住某件事、或聊到重要的事时，单独用一行 [记住|要长期记住的内容] 把它存进记忆。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta时，用一行 [来电|语音] 或 [来电|视频]，会触发来电。';
   return s;
 }
@@ -341,6 +346,7 @@ function render(){
   else if(c.p==='wechat')html=renderWeChat();
   else if(c.p==='chat')html=renderChat(c.id);
   else if(c.p==='contactInfo')html=renderContactInfo(c.id);
+  else if(c.p==='spy')html=renderSpy(c.id);
   else if(c.p==='momentDetail')html='';
   app.innerHTML='<div class="page">'+html+'</div>';
   if(c.p==='chat'){afterChat(c.id);}
@@ -358,6 +364,7 @@ function renderHome(){
       <div class="app" onclick="go('settings')"><div class="ic" style="background:#8e8e93;color:#fff">⚙️</div><span>设置</span></div>
       <div class="app" onclick="go('worldbook')"><div class="ic" style="background:#ff9f43;color:#fff">📖</div><span>世界书</span></div>
       <div class="app" onclick="openWeChat('moments')"><div class="ic" style="background:#ee5a6f;color:#fff">🌸</div><span>朋友圈</span></div>
+      <div class="app" onclick="openSpy()"><div class="ic" style="background:#5b6b9c;color:#fff">🔍</div><span>查他手机</span></div>
     </div>
     <div class="dock">
       <div class="app" onclick="openWeChat()"><div class="ic" style="background:#07c160;color:#fff">💬</div></div>
@@ -389,6 +396,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="it">带几条历史<input id="s_hist" type="number" value="${S.settings.hist}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it">延迟几秒回复<input id="s_delay" type="number" min="0" value="${S.settings.replyDelay}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it">时间感知<span class="sw ${S.settings.timeAware?'on':''}" onclick="S.settings.timeAware=!S.settings.timeAware;save();render()"></span></div>
+      <div class="it">联网搜索<span class="sw ${S.settings.web&&S.settings.web.enabled?'on':''}" onclick="S.settings.web={enabled:!(S.settings.web&&S.settings.web.enabled)};save();render()"></span></div>
       <div class="it">提示音<span class="sw ${S.settings.sound?'on':''}" onclick="S.settings.sound=!S.settings.sound;save();render()"></span></div>
       <div class="it">后台通知（点开授权）<span class="v" onclick="reqNotify()">允许 ›</span></div>
     </div>
@@ -440,6 +448,32 @@ function saveWorld(id,isNew){const w={id,name:$('#w_name').value.trim()||'未命
   if(isNew)S.worldbook.push(w);else{const i=S.worldbook.findIndex(x=>x.id===id);w.enabled=S.worldbook[i].enabled;S.worldbook[i]=w;}
   save();closeModal();render();}
 function delWorld(id){S.worldbook=S.worldbook.filter(x=>x.id!==id);save();closeModal();render();}
+
+/* ---------- 查他手机 ---------- */
+function openSpy(){const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){toast('先创建一个角色');return;}
+  if(cs.length===1){go('spy',{id:cs[0].id});return;}
+  openModal(`<h3>🔍 查谁的手机</h3>${cs.map(c=>`<div class="section"><div class="it" onclick="closeModal();go('spy',{id:'${c.id}'})">${esc(c.remark||c.name)}<span class="v">›</span></div></div>`).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+function renderSpy(id){const c=getC(id);if(!c)return '';const d=S.spy[id];
+  let body;
+  if(!d){body=`<div class="empty" style="padding:60px 20px">还没偷看过 ta 的手机～<br>点下面「🔄 刷新」生成一次（会根据你们的聊天来编）。</div>`;}
+  else{body=`
+    <div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#b9a6e0">📍 此刻在</div><div class="it"><span>${esc(d.location||'未知')}</span></div></div>
+    <div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#feca57">📔 日记 / 备忘</div><div style="padding:0 14px 12px;font-size:14px;color:#ddd;line-height:1.7;white-space:pre-wrap">${esc(d.diary||'（空）')}</div></div>
+    <div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#54a0ff">🌐 浏览记录</div>${(d.browser||[]).map(b=>`<div class="it"><span style="font-size:13px;color:#ccc">${esc(b)}</span></div>`).join('')||'<div class="it"><span class="v">无</span></div>'}</div>
+    <div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#2bb36a">💸 钱包支出</div>${(d.wallet||[]).map(w=>`<div class="bill"><div>${esc(w.item||'')}</div><div class="${(+w.amount)>=0?'pos':'neg'}">${(+w.amount)>=0?'+':''}${(+w.amount).toFixed(2)}</div></div>`).join('')||'<div class="it"><span class="v">无</span></div>'}</div>
+    <div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#07c160">💬 微信聊天</div>${(d.wechat||[]).map(w=>`<div class="it"><span style="font-size:13px"><b style="color:#9ec5fe">${esc(w.who||'某人')}：</b>${esc(w.text||'')}</span></div>`).join('')||'<div class="it"><span class="v">无</span></div>'}</div>
+    <div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#ee5a6f">➕ 新加好友</div>${(d.friends||[]).map(f=>`<div class="it"><span style="font-size:13px;color:#ccc">${esc(f)}</span></div>`).join('')||'<div class="it"><span class="v">无</span></div>'}</div>
+    <div style="text-align:center;color:#666;font-size:11px;padding:4px">更新于 ${hm(d.time)}</div>`;}
+  return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(c.remark||c.name)}的手机</span><span class="r" onclick="spyRefresh('${id}')">🔄</span></div>
+    <div class="scroll" style="background:#000">${body}<div style="padding:12px"><button class="btn p" onclick="spyRefresh('${id}')">🔄 刷新内容</button></div><div style="height:20px"></div></div>`;}
+function stripJSON(t){t=(t||'').trim();const m=t.match(/```(?:json)?\s*([\s\S]*?)```/);if(m)t=m[1];const a=t.indexOf('{'),b=t.lastIndexOf('}');if(a>=0&&b>a)t=t.slice(a,b+1);return t;}
+async function spyRefresh(id){const c=getC(id);toast('偷看中…');
+  try{const hist=msgs(id).slice(-16).map(m=>({role:m.role,content:msgToText(m)})).filter(x=>x.content!=null);
+    const prompt='你来扮演'+(c.remark||c.name)+'，根据你们最近的聊天和你的人设，生成此刻"你自己手机里"的私密内容（要符合人设、和聊天有呼应，可带点没告诉对方的小秘密或小心思）。只输出 JSON，不要解释：\n{"location":"你此刻在哪","diary":"今天的日记或备忘(2-4句)","browser":["浏览记录1","记录2","记录3"],"wallet":[{"item":"支出名目","amount":-数字}],"wechat":[{"who":"联系人","text":"和ta的一句聊天"}],"friends":["新加的好友及原因"]}';
+    const content=await chatAPI([{role:'system',content:buildSystem(c)},...hist,{role:'user',content:prompt}],{max:800});
+    const data=JSON.parse(stripJSON(content));data.time=Date.now();S.spy[id]=data;save();
+    if(cur().p==='spy')render();toast('刷新好了 👀');
+  }catch(e){toast('生成失败，再试一次或检查API');}}
 
 /* ---------- 微信主界面 ---------- */
 function renderWeChat(){
@@ -570,6 +604,22 @@ function clearHistory(id){if(!confirm('清空聊天记录？'))return;S.messages
 function togProactive(id){const c=getC(id);c.proactive.enabled=!c.proactive.enabled;save();render();}
 function savePa(id){const c=getC(id);c.proactive.start=+$('#pa_s').value||0;c.proactive.end=+$('#pa_e').value||23;c.proactive.times=+$('#pa_n').value||1;save();toast('已保存');}
 
+/* ---------- 多选转发 ---------- */
+let _sel=null;
+function enterSelect(id){_sel={id,ids:[]};const p=$('#panel');if(p)p.classList.remove('show');render();}
+function exitSelect(){_sel=null;render();}
+function toggleSel(mid){if(!_sel)return;const i=_sel.ids.indexOf(mid);if(i<0)_sel.ids.push(mid);else _sel.ids.splice(i,1);render();}
+function forwardSelected(){if(!_sel||!_sel.ids.length){toast('先选几条');return;}
+  const from=_sel.id;const targets=S.contacts.filter(c=>!c.deleted&&c.id!==from);
+  if(!targets.length){toast('没有别的角色可转发');return;}
+  openModal(`<h3>转发给</h3>${targets.map(c=>`<div class="section"><div class="it" onclick="doForward('${c.id}')">${esc(c.remark||c.name)}<span class="v">›</span></div></div>`).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+function doForward(toId){const from=_sel.id;const src=msgs(from);
+  const picked=src.filter(m=>_sel.ids.includes(m.id));
+  const dst=msgs(toId);
+  dst.push({role:'user',type:'sys',content:'—— 转发自'+(getC(from).remark||getC(from).name)+'的聊天 ——',time:Date.now(),id:uid()});
+  picked.forEach(m=>{const copy=Object.assign({},m);copy.id=uid();copy.time=Date.now();copy._fwd=true;dst.push(copy);});
+  save();_sel=null;closeModal();toast('已转发'+picked.length+'条');openChat(toId);}
+
 /* ---------- 聊天页 ---------- */
 function renderChat(id){const c=getC(id);if(!c)return '';
   const bg=c.chatBg?`background:url(${c.chatBg}) center/cover`:'';
@@ -578,7 +628,7 @@ function renderChat(id){const c=getC(id);if(!c)return '';
   let body='';
   list.forEach((m,i)=>{if(i===0||m.time-list[i-1].time>300000)body+=`<div class="tstamp"><span>${hm(m.time)}</span></div>`;body+=bubbleRow(c,m);});
   const mood=c.mood?`<div class="moodbar" onclick="showMood('${id}')">💭 ${esc(c.mood.slice(0,22))}${c.mood.length>22?'…':''}</div>`:'';
-  return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(c.remark||c.name)}${c.muted?' 🔕':''}</span><span class="r" style="display:flex;gap:14px;align-items:center"><span onclick="placeCall('${id}','voice')">📞</span><span onclick="placeCall('${id}','video')">📹</span><span onclick="go('contactInfo',{id:'${id}'})">⋯</span></span></div>
+  return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(c.remark||c.name)}${c.muted?' 🔕':''}</span><span class="r" onclick="go('contactInfo',{id:'${id}'})">⋯</span></div>
     ${mood}
     <div class="chatbg" id="chatbg" style="${bg}">${body}</div>
     <div class="panel" id="panel">
@@ -587,18 +637,24 @@ function renderChat(id){const c=getC(id);if(!c)return '';
       <div class="it" onclick="cRed('${id}')"><div class="b">🧧</div><span>红包</span></div>
       <div class="it" onclick="cLoc('${id}')"><div class="b">📍</div><span>位置</span></div>
       <div class="it" onclick="cDoc('${id}')"><div class="b">📎</div><span>文件</span></div>
+      <div class="it" onclick="placeCall('${id}','voice')"><div class="b">📞</div><span>语音通话</span></div>
+      <div class="it" onclick="placeCall('${id}','video')"><div class="b">📹</div><span>视频通话</span></div>
+      <div class="it" onclick="enterSelect('${id}')"><div class="b">↗️</div><span>多选转发</span></div>
     </div>
-    <div class="inputbar">
+    ${(_sel&&_sel.id===id)?`<div class="inputbar"><button class="btn g" style="flex:1" onclick="exitSelect()">取消</button><button class="btn p" style="flex:1" onclick="forwardSelected()">转发(${_sel.ids.length})</button></div>`:`<div class="inputbar">
       <span class="plus" onclick="$('#panel').classList.toggle('show')">＋</span>
       <textarea id="cinput" rows="1" placeholder="${c.blocked?'已拉黑，发不出去':'发消息…'}" ${c.blocked?'disabled':''}></textarea>
       <button class="send" onclick="sendText('${id}')">发送</button>
-    </div>`;}
+    </div>`}`;}
 function bubbleRow(c,m){
   const me=m.role==='user';
   if(m.type==='sys')return `<div class="tstamp"><span>${esc(m.content)}</span></div>`;
   if(!m.id)m.id=uid();
   let inner=buildPart(c,m,me);
-  return `<div class="msg ${me?'me':'them'}"><span onclick="msgMenu('${c.id}','${m.id}')">${av(me?S.me.avatar:c.avatar)}</span><div class="col" onclick="msgMenu('${c.id}','${m.id}')">${inner}</div></div>`;}
+  const selecting=_sel&&_sel.id===c.id;
+  const h=selecting?`onclick="toggleSel('${m.id}')"`:`onclick="msgMenu('${c.id}','${m.id}')"`;
+  const tick=selecting?`<span style="align-self:center;font-size:20px;color:${_sel.ids.includes(m.id)?'#07c160':'#555'}">${_sel.ids.includes(m.id)?'☑':'⚪'}</span>`:'';
+  return `<div class="msg ${me?'me':'them'}">${tick}<span ${h}>${av(me?S.me.avatar:c.avatar)}</span><div class="col" ${h}>${inner}</div></div>`;}
 function buildPart(c,m,me){
   if(m.type==='image')return `<div class="imgmsg" onclick="event.stopPropagation();viewImg('${m.src}')"><img src="${m.src}"></div>`;
   if(m.type==='transfer')return payCard('t',m,me);
@@ -674,11 +730,16 @@ async function aiReply(id){const c=getC(id);if(c.blocked)return;
     cb.scrollTop=cb.scrollHeight;typingEl=$('#typing');}
   try{
     const hist=msgs(id).slice(-(S.settings.hist||24)).map(m=>({role:m.role,content:msgToText(m)})).filter(x=>x.content!=null);
-    const content=await chatAPI([{role:'system',content:buildSystem(c)},...hist]);
+    let content=await chatAPI([{role:'system',content:buildSystem(c)},...hist]);
+    // 联网
+    const wq=content.match(/\[联网\|([^\]]*)\]/);
+    if(wq&&S.settings.web&&S.settings.web.enabled){const r=await webSearch(wq[1]);
+      content=await chatAPI([{role:'system',content:buildSystem(c)},...hist,{role:'system',content:'联网搜索"'+wq[1]+'"的结果：\n'+r+'\n请用中文据此自然回答，不要再输出[联网]标记。'}]);}
     if(typingEl)typingEl.remove();
     const lines=splitBubbles(content);let got=false;
     for(let i=0;i<lines.length;i++){
       const line=lines[i];
+      if(/^\[联网\|/.test(line))continue;
       let mm=line.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=mm[1];save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[记住\|([^\]]*)\]$/);if(mm){c.memory=c.memory||[];if(mm[1]&&!c.memory.includes(mm[1])){c.memory.push(mm[1]);save();toast('🧠 已记住：'+mm[1].slice(0,12));}continue;}
       mm=line.match(/^\[闹钟\|([0-9]{1,2}:[0-9]{2})\|?([^\]]*)\]$/);if(mm){addAlarm(c.id,mm[1],mm[2]||'起床');continue;}
@@ -696,7 +757,7 @@ let _replyTimers={};
 function scheduleReply(id){clearTimeout(_replyTimers[id]);_replyTimers[id]=setTimeout(()=>aiReply(id),(Number(S.settings.replyDelay)||0)*1000);}
 /* 提示音 + 通知 */
 let _audio;function initAudio(){if(!_audio){try{_audio=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}}
-document.addEventListener('click',()=>{initAudio();if(!S.weather||Date.now()-S.weather.time>3600000)fetchWeather();},{once:true});
+document.addEventListener('click',()=>{initAudio();if(!S.weather||Date.now()-S.weather.time>72000000)fetchWeather();},{once:true});
 function playDing(){if(!S.settings.sound||!_audio)return;try{const o=_audio.createOscillator(),g=_audio.createGain();o.connect(g);g.connect(_audio.destination);
   o.frequency.value=880;o.type='sine';g.gain.setValueAtTime(.001,_audio.currentTime);g.gain.exponentialRampToValueAtTime(.25,_audio.currentTime+.02);
   g.gain.exponentialRampToValueAtTime(.001,_audio.currentTime+.35);o.start();o.stop(_audio.currentTime+.36);}catch(e){}}
@@ -769,15 +830,17 @@ function renderCall(){const L=$('#callLayer');if(!_call){L.className='callscreen
   renderCallSubs();}
 function renderCallSubs(){const box=$('#callSubs');if(!box||!_call)return;
   const list=(msgs(_call.id)||[]).filter(m=>m._call).slice(-6);
-  box.innerHTML=list.map(m=>`<div class="cb ${m.role==='user'?'me':''}">${esc(m.content)}</div>`).join('');box.scrollTop=box.scrollHeight;}
+  box.innerHTML=list.map(m=>{const act=/^[（(]/.test(m.content);return `<div class="cb ${m.role==='user'?'me':''}" ${act?'style="font-style:italic;opacity:.75;background:transparent"':''}>${esc(m.content)}</div>`;}).join('');box.scrollTop=box.scrollHeight;}
 function callSend(){const inp=$('#callMsg');if(!inp)return;const t=inp.value.trim();if(!t||!_call)return;inp.value='';
   msgs(_call.id).push({role:'user',type:'text',content:t,time:Date.now(),id:uid(),_call:true});save();renderCallSubs();callAI();}
-async function callAI(sysNote){if(!_call)return;const c=getC(_call.id);
+async function callAI(sysNote){if(!_call)return;const c=getC(_call.id);const video=_call.kind==='video';
   try{const hist=msgs(c.id).slice(-(S.settings.hist||24)).map(m=>({role:m.role,content:msgToText(m)})).filter(x=>x.content!=null);
     if(sysNote)hist.push({role:'user',content:sysNote});
-    const sys=buildSystem(c)+'\n\n# 正在通话\n你们正在'+(_call.kind==='video'?'视频':'语音')+'通话，用口语短句像打电话一样，别用卡片。';
+    const sys=buildSystem(c)+'\n\n# 正在通话\n你们正在'+(video?'视频':'语音')+'通话，用口语短句像打电话一样，别用卡片。'+(video?'\n视频里你能看到ta、ta也能看到你，可以用（括号）描写你的动作神态，比如（凑近镜头笑）。':'');
     const content=await chatAPI([{role:'system',content:sys},...hist]);
-    splitBubbles(content).forEach(l=>{if(/^\[/.test(l))return;msgs(c.id).push({role:'assistant',type:'text',content:l,time:Date.now(),id:uid(),_call:true});});
+    if(!_call)return;
+    await sleep((Number(S.settings.replyDelay)||0)*1000);if(!_call)return;
+    splitBubbles(content).forEach(l=>{if(/^\[(转账|红包|位置|图片|文件|心情|记住|闹钟|来电|联网)\|/.test(l))return;msgs(c.id).push({role:'assistant',type:'text',content:l,time:Date.now(),id:uid(),_call:true});});
     save();renderCallSubs();if(!c.muted)blip(700,.08);
   }catch(e){msgs(c.id).push({role:'assistant',type:'text',content:'(信号不好…)',time:Date.now(),id:uid(),_call:true});renderCallSubs();}}
 
@@ -792,6 +855,10 @@ function fetchWeather(manual){if(!navigator.geolocation){if(manual)toast('设备
       save();if(manual)toast('🌦️ '+place+' '+desc+' '+S.weather.temp+'°C');if(cur().p==='settings')render();
     }catch(e){if(manual)toast('天气获取失败');}
   },()=>{if(manual)toast('定位被拒绝了');});}
+
+/* =================== 联网搜索 =================== */
+async function webSearch(q){try{const r=await fetch('https://s.jina.ai/'+encodeURIComponent(q),{headers:{'Accept':'text/plain','X-Respond-With':'no-content'}});
+  const t=await r.text();return t.slice(0,1500);}catch(e){return '（联网失败，请凭已有知识回答）';}}
 
 /* =================== 闹钟 =================== */
 function addAlarm(contactId,time,label){S.alarms.push({id:uid(),time,label:label||'起床',contactId,enabled:true});save();toast('⏰ 已定闹钟 '+time+' '+(label||''));}
