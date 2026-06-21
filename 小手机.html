@@ -260,7 +260,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v16 · 外卖+X增强+查岗去重';
+const APP_VER='v17 · 通话/礼物/条数/勾选修';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -404,7 +404,7 @@ function buildSystem(c){
   // 天气
   if(S.weather)s+='\n\n# '+S.me.name+'所在地天气\n'+S.weather.place+'，'+S.weather.desc+'，'+S.weather.temp+'°C'+(S.weather.rain?'（有雨）':'')+'。你知道这些，下雨时可在合适的时候自然提醒ta带伞，不用每条都提天气。';
   if(S.settings.web&&S.settings.web.enabled)s+='\n\n# 联网\n当需要查实时/最新信息（新闻、天气细节、价格、某事实）时，单独用一行 [联网|要搜索的关键词]，系统会联网查并把结果给你，你再据此回答。';
-  s+='\n\n# 微信聊天规则\n- 像真人发微信：一次可以连发好几条短消息，每条单独占一行（用换行分隔），不要写成一大段。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 你可以单独用一行 [心情|你此刻的内心想法] 表达内心戏（不会作为消息发出，只显示在顶部）。\n- 当'+S.me.name+'让你记住某件事、或聊到重要的事时，单独用一行 [记住|要长期记住的内容] 把它存进记忆。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta时，用一行 [来电|语音] 或 [来电|视频]，会触发来电。\n- 玩骰子/真心话大冒险时，用单独一行 [骰子|点数]（点数你自己定1到6），你说的话要和这个点数一致，再和对方比大小、出题或认罚。\n- 想送对方礼物时，用一行 [送礼|礼物名|价格] 给ta发一个礼物卡片。\n- 当ta发来"求代付"：愿意帮付用一行 [代付成功|金额|商品名]；不愿意用一行 [拒绝代付|金额|商品名]。\n- 想给ta点份外卖时，用一行 [点外卖|餐品名|价格]，ta会收到外卖卡片去签收。\n- 当'+S.me.name+'让你发一条朋友圈时，用一行 [发朋友圈|内容]；让你发推特时，用一行 [发推|内容]，会真的发出去。\n- 当'+S.me.name+'给你转账时，你可以选择收下或拒收：愿意收就用一行 [收款]，不想收/想逗ta就用一行 [拒收]（钱会退回ta）。';
+  s+='\n\n# 微信聊天规则\n- 像真人发微信：一次回复大约 '+(c.msgMin||1)+' 到 '+(c.msgMax||4)+' 条短消息，每条单独占一行（用换行分隔），不要写成一大段。具体几条你根据当下情境自己把握：随意时少发，认真/激动/吵架/撒娇时可以多发几条。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 你可以单独用一行 [心情|你此刻的内心想法] 表达内心戏（不会作为消息发出，只显示在顶部）。\n- 当'+S.me.name+'让你记住某件事、或聊到重要的事时，单独用一行 [记住|要长期记住的内容] 把它存进记忆。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta时，用一行 [来电|语音] 或 [来电|视频]，会触发来电。\n- 玩骰子/真心话大冒险时，用单独一行 [骰子|点数]（点数你自己定1到6），你说的话要和这个点数一致，再和对方比大小、出题或认罚。\n- 想送对方礼物时，用一行 [送礼|礼物名|价格] 给ta发一个礼物卡片。\n- 当ta发来"求代付"：愿意帮付用一行 [代付成功|金额|商品名]；不愿意用一行 [拒绝代付|金额|商品名]。\n- 想给ta点份外卖时，用一行 [点外卖|餐品名|价格]，ta会收到外卖卡片去签收。\n- 当'+S.me.name+'让你发一条朋友圈时，用一行 [发朋友圈|内容]；让你发推特时，用一行 [发推|内容]，会真的发出去。\n- 当'+S.me.name+'给你转账时：愿意收用一行 [收款]，不想收用一行 [拒收]（退回ta）。\n- 当'+S.me.name+'送你礼物时：愿意收用一行 [收礼]，不想收用一行 [拒礼]（退回ta）。';
   return s;
 }
 
@@ -614,8 +614,9 @@ function pickTarget(cb){const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length)
 function giftFlow(i){const p=S.shop.results[i];if(!p)return;window._gp=p;pickTarget(giftTo);}
 function giftTo(id){const p=window._gp;if(!p)return;if(+p.price>S.me.balance){toast('余额不够');return;}
   addBill('out',+p.price,'送'+(getC(id).remark||getC(id).name)+'：'+p.name);
-  pushMsg(id,{role:'user',type:'gift',name:p.name,price:+p.price,shop:p.shop||'',from:'me',received:true,id:uid()});
-  closeModal();toast('已送出 🎁');scheduleReply(id);}
+  pushMsg(id,{role:'user',type:'gift',name:p.name,price:+p.price,shop:p.shop||'',from:'me',received:false,id:uid()});
+  closeModal();toast('已送出，等对方收下 🎁');scheduleReply(id);}
+function lastGift(id){return [...msgs(id)].reverse().find(x=>x.role==='user'&&x.type==='gift'&&x.from==='me'&&!x.received&&!x.declined);}
 function payFlow(i){const p=S.shop.results[i];if(!p)return;window._pp=p;pickTarget(payTo);}
 function payTo(id){const p=window._pp;if(!p)return;
   pushMsg(id,{role:'user',type:'paycard',name:p.name,price:+p.price,shop:p.shop||'',id:uid()});
@@ -672,7 +673,8 @@ function foodReceive(mid){let found;for(const k in S.messages){const m=S.message
   if(!found||found.m.received)return;found.m.received=true;msgs(found.k).push({role:'user',type:'sys',content:'你签收了外卖：'+found.m.name,time:Date.now(),id:uid()});save();render();toast('🛵 已签收 '+found.m.name);
   const c=getC(found.k);if(c&&!c.blocked)setTimeout(()=>aiReply(found.k,'[系统：'+S.me.name+'签收了你点的外卖「'+found.m.name+'」，回应一下。]'),1500);}
 function foodReject(mid){let found;for(const k in S.messages){const m=S.messages[k].find(x=>x.id===mid);if(m){found={m,k};break;}}
-  if(!found||found.m.received||found.m.declined)return;found.m.declined=true;msgs(found.k).push({role:'user',type:'sys',content:'你拒收了外卖：'+found.m.name,time:Date.now(),id:uid()});save();render();toast('已拒收');}
+  if(!found||found.m.received||found.m.declined)return;found.m.declined=true;msgs(found.k).push({role:'user',type:'sys',content:'你拒收了外卖：'+found.m.name,time:Date.now(),id:uid()});save();render();toast('已拒收');
+  const c=getC(found.k);if(c&&!c.blocked)setTimeout(()=>aiReply(found.k,'[系统：'+S.me.name+'拒收了你点的外卖「'+found.m.name+'」，回应一下。]'),1500);}
 
 /* ---------- 日历 ---------- */
 const HOLIDAYS={'01-01':'元旦','02-14':'情人节','03-08':'女神节','05-01':'劳动节','05-20':'520','06-01':'儿童节','10-01':'国庆节','12-24':'平安夜','12-25':'圣诞节','12-31':'跨年'};
@@ -973,8 +975,8 @@ function saveMe(){S.me.name=$('#me_name').value.trim()||'我';S.me.wxid=$('#me_w
   S.me.avatar=$('#me_av').value.trim()||'🐱';S.me.signature=$('#me_sig').value.trim();S.me.persona=$('#me_persona').value.trim();S.me.status=$('#me_status').value.trim();S.me.place=$('#me_place').value.trim();
   save();closeModal();render();}
 function myActivity(exceptId,since){let s='';since=since||0;
-  const others=S.contacts.filter(c=>!c.deleted&&c.id!==exceptId).map(c=>({c,lm:lastMsg(c.id)})).filter(x=>x.lm&&x.lm.time>since).sort((a,b)=>b.lm.time-a.lm.time).slice(0,2);
-  if(others.length)s+='·她最近还在跟：'+others.map(o=>(o.c.remark||o.c.name)+' '+hm(o.lm.time)+'聊（"'+previewOf(o.lm).slice(0,16)+'"）').join('、')+'\n';
+  const others=S.contacts.filter(c=>!c.deleted&&c.id!==exceptId).map(c=>({c,um:[...msgs(c.id)].reverse().find(m=>m.role==='user'&&m.type!=='sys'),lm:lastMsg(c.id)})).filter(x=>x.um&&x.lm&&x.lm.time>since).sort((a,b)=>b.lm.time-a.lm.time).slice(0,2);
+  if(others.length)s+='·她最近还在跟：'+others.map(o=>(o.c.remark||o.c.name)+' '+hm(o.lm.time)+'聊，她说过"'+previewOf(o.um).slice(0,16)+'"').join('；')+'\n';
   if(curLoc())s+='·她的位置：'+curLoc()+'\n';
   const bills=(S.me.bills||[]).filter(b=>!since||!b.ts||b.ts>since).slice(-3);
   if(bills.length)s+='·她最近花钱：'+bills.map(b=>b.note+' '+(b.type==='in'?'+':'-')+b.amount).join('、')+'\n';
@@ -1008,6 +1010,7 @@ function editContact(id){const c=id?getC(id):{id:cid(),name:'',avatar:'',remark:
     <div class="field"><label>关系（如 恋人/朋友）</label><input id="c_rel" value="${esc(c.relation)}"></div>
     <div class="field"><label>签名</label><input id="c_sig" value="${esc(c.signature)}"></div>
     <div class="field"><label>人设 / 性格设定</label><textarea id="c_persona" rows="5">${esc(c.persona)}</textarea></div>
+    <div class="two"><div class="field"><label>每次回复最少几条</label><input id="c_mmin" type="number" min="1" value="${c.msgMin||1}"></div><div class="field"><label>最多几条</label><input id="c_mmax" type="number" min="1" value="${c.msgMax||4}"></div></div>
     <div class="field"><label>开场白</label><input id="c_greet" value="${esc(c.greeting)}"></div>
     <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="saveContact('${c.id}',${!!c._new})">保存</button></div>`);
   window._tmpAv=c.avatar;}
@@ -1015,6 +1018,7 @@ function upC(){pickFile('image/*',async f=>{const d=await compress(f,256,.8);$('
 function saveContact(id,isNew){const c=isNew?{id,pinned:false,blocked:false,proactive:{enabled:false,start:9,end:23,times:2},chatBg:''}:getC(id);
   c.name=$('#c_name').value.trim()||'新角色';c.avatar=$('#c_av').value.trim()||'🙂';c.relation=$('#c_rel').value.trim();
   c.signature=$('#c_sig').value.trim();c.persona=$('#c_persona').value.trim();c.greeting=$('#c_greet').value.trim();
+  c.msgMin=Math.max(1,+$('#c_mmin').value||1);c.msgMax=Math.max(c.msgMin,+$('#c_mmax').value||4);
   if(isNew){S.contacts.push(c);if(c.greeting)msgs(c.id).push({role:'assistant',type:'text',content:c.greeting,time:Date.now()});}
   save();closeModal();render();}
 
@@ -1101,7 +1105,9 @@ function savePa(id){const c=getC(id);c.proactive.start=$('#pa_s').value||'09:00'
 let _sel=null;
 function enterSelect(id){_sel={id,ids:[]};const p=$('#panel');if(p)p.classList.remove('show');render();}
 function exitSelect(){_sel=null;render();}
-function toggleSel(mid){if(!_sel)return;const i=_sel.ids.indexOf(mid);if(i<0)_sel.ids.push(mid);else _sel.ids.splice(i,1);render();}
+function toggleSel(mid){if(!_sel)return;const i=_sel.ids.indexOf(mid);const on=i<0;if(on)_sel.ids.push(mid);else _sel.ids.splice(i,1);
+  const tk=$('#tk_'+mid);if(tk){tk.textContent=on?'☑':'⚪';tk.style.color=on?'#07c160':'#555';}
+  const fc=$('#fwdcnt');if(fc)fc.textContent=_sel.ids.length;}
 function forwardSelected(){if(!_sel||!_sel.ids.length){toast('先选几条');return;}
   const from=_sel.id;const targets=S.contacts.filter(c=>!c.deleted&&c.id!==from);
   if(!targets.length){toast('没有别的角色可转发');return;}
@@ -1137,7 +1143,7 @@ function renderChat(id){const c=getC(id);if(!c)return '';
       <div class="it" onclick="cDice('${id}')"><div class="b">🎲</div><span>骰子</span></div>
       <div class="it" onclick="enterSelect('${id}')"><div class="b">↗️</div><span>多选转发</span></div>
     </div>
-    ${(_sel&&_sel.id===id)?`<div class="inputbar"><button class="btn g" style="flex:1" onclick="exitSelect()">取消</button><button class="btn p" style="flex:1" onclick="forwardSelected()">转发(${_sel.ids.length})</button></div>`:`<div class="inputbar">
+    ${(_sel&&_sel.id===id)?`<div class="inputbar"><button class="btn g" style="flex:1" onclick="exitSelect()">取消</button><button class="btn p" style="flex:1" onclick="forwardSelected()">转发(<span id="fwdcnt">${_sel.ids.length}</span>)</button></div>`:`<div class="inputbar">
       <span class="plus" onclick="$('#panel').classList.toggle('show')">＋</span>
       <textarea id="cinput" rows="1" placeholder="${c.blocked?'已拉黑，发不出去':'发消息…'}" ${c.blocked?'disabled':''}></textarea>
       <button class="send" onclick="sendText('${id}')">发送</button>
@@ -1149,7 +1155,7 @@ function bubbleRow(c,m){
   let inner=buildPart(c,m,me);
   const selecting=_sel&&_sel.id===c.id;
   const h=selecting?`onclick="toggleSel('${m.id}')"`:`onclick="msgMenu('${c.id}','${m.id}')"`;
-  const tick=selecting?`<span style="align-self:center;font-size:20px;color:${_sel.ids.includes(m.id)?'#07c160':'#555'}">${_sel.ids.includes(m.id)?'☑':'⚪'}</span>`:'';
+  const tick=selecting?`<span id="tk_${m.id}" style="align-self:center;font-size:20px;color:${_sel.ids.includes(m.id)?'#07c160':'#555'}">${_sel.ids.includes(m.id)?'☑':'⚪'}</span>`:'';
   const ts=m.time?`<div class="msgt">${hm(m.time)}</div>`:'';
   return `<div class="msg ${me?'me':'them'}">${tick}<span ${h}>${av(me?S.me.avatar:c.avatar)}</span><div class="col" ${h}>${inner}${ts}</div></div>`;}
 function buildPart(c,m,me){
@@ -1160,7 +1166,8 @@ function buildPart(c,m,me){
   if(m.type==='file')return `<div class="card cfile"><div class="ic">📄</div><div><div class="n">${esc(m.name)}</div><div class="s">${esc(m.size||'')}</div></div></div>`;
   if(m.type==='spycard')return `<div class="card"><div class="cpay" style="background:#5b6b9c"><div class="big">📱</div><div><div class="t1">小手机查看权限</div><div class="t2">已授权随时查看我的手机</div></div></div><div class="cfoot">权限卡片</div></div>`;
   if(m.type==='dice')return `<div style="font-size:46px;line-height:1">${['','⚀','⚁','⚂','⚃','⚄','⚅'][m.value]||'🎲'}<span style="font-size:15px;color:#999;margin-left:6px">${m.value}点</span></div>`;
-  if(m.type==='gift'){const pend=(m.from==='ta'&&!m.received&&!m.declined);const t2=m.declined?'已拒收':m.received?'已领取':(m.from==='ta'?'点击领取礼物':'¥'+(+m.price).toFixed(2));
+  if(m.type==='gift'){const pend=(m.from==='ta'&&!m.received&&!m.declined);
+    const t2=m.declined?(m.from==='ta'?'已拒收':'对方拒收·已退回'):m.received?(m.from==='ta'?'已领取':'对方已收下'):(m.from==='ta'?'点击领取礼物':'¥'+(+m.price).toFixed(2)+' · 待对方收下');
     return `<div class="card"><div class="cpay" style="background:${(m.received||m.declined)?'#d9b48a':'#ee5a6f'}"><div class="big">🎁</div><div><div class="t1">${esc(m.name)}</div><div class="t2">${t2}</div></div></div><div class="cfoot">${m.shop?esc(m.shop)+' · ':''}礼物</div></div>${pend?`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#ee5a6f;color:#fff" onclick="event.stopPropagation();receiveGift('${m.id}')">领取</button><button class="minibtn" onclick="event.stopPropagation();rejectGift('${m.id}')">拒收</button></div>`:''}`;}
   if(m.type==='food'){const pend=(m.from==='ta'&&!m.received&&!m.declined);const t2=m.declined?'已拒收':m.received?'已签收':(m.from==='ta'?'点击签收':'¥'+(+m.price).toFixed(2));
     return `<div class="card"><div class="cpay" style="background:${(m.received||m.declined)?'#d9b48a':'#ffb83b'}"><div class="big">🍔</div><div><div class="t1">${esc(m.name)}</div><div class="t2">${t2}</div></div></div><div class="cfoot">${m.shop?esc(m.shop)+' · ':''}外卖订单</div></div>${pend?`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#ffb83b;color:#fff" onclick="event.stopPropagation();foodReceive('${m.id}')">签收</button><button class="minibtn" onclick="event.stopPropagation();foodReject('${m.id}')">拒收</button></div>`:''}`;}
@@ -1274,6 +1281,8 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
       mm=line.match(/^\[拒绝代付\|?([0-9.]*)\|?([^\]]*)\]$/);if(mm){const pc={role:'assistant',type:'payreject',price:+mm[1]||0,name:mm[2]||'',id:uid(),time:Date.now()};msgs(id).push(pc);notifyIncoming(c,pc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[收款\|?([0-9.]*)\]$/);if(mm){markTransfer(id,'collect');const mg={role:'assistant',type:'tcollect',amount:+mm[1]||lastTransferAmt(id),time:Date.now(),id:uid()};msgs(id).push(mg);notifyIncoming(c,mg);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[拒收\|?([0-9.]*)\]$/);if(mm){const amt=+mm[1]||lastTransferAmt(id);markTransfer(id,'reject');addBill('in',amt,(c.remark||c.name)+'退回的转账');const mg={role:'assistant',type:'treject',amount:amt,time:Date.now(),id:uid()};msgs(id).push(mg);notifyIncoming(c,mg);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
+      mm=line.match(/^\[收礼\]$/);if(mm){const g=lastGift(id);if(g){g.received=true;const mg={role:'assistant',type:'sys',content:'对方收下了你的礼物：'+g.name,time:Date.now(),id:uid()};msgs(id).push(mg);}save();if(cur().p==='chat'&&cur().id===id)render();continue;}
+      mm=line.match(/^\[拒礼\]$/);if(mm){const g=lastGift(id);if(g){g.declined=true;addBill('in',+g.price,(c.remark||c.name)+'退回的礼物');const mg={role:'assistant',type:'sys',content:'对方拒收了礼物，'+(+g.price).toFixed(2)+'元已退回',time:Date.now(),id:uid()};msgs(id).push(mg);}save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[来电\|(语音|视频)\]$/);if(mm){const k=mm[1]==='视频'?'video':'voice';setTimeout(()=>incomingCall(c.id,k,'ta打来的'),600);continue;}
       await sleep(got?400+Math.random()*500:0);got=true;
       const msg=lineToMsg(line);msg.time=Date.now();msg.id=msg.id||uid();msgs(id).push(msg);save();
@@ -1361,13 +1370,11 @@ function answerCall(autoByThem){if(!_call)return;ringStop();blip(880,.12);
   callAI('[系统：'+(autoByThem?S.me.name+'接通了你打的':'你接通了')+(_call.kind==='video'?'视频':'语音')+'电话，自然开口，口语化短句。]');}
 function declineCall(){if(!_call)return;ringStop();blip(300,.3);const id=_call.id,wasIn=_call.state==='incoming';
   msgs(id).push({role:'user',type:'sys',content:wasIn?'你拒绝了通话':'通话已取消',time:Date.now(),id:uid()});save();
-  _call=null;renderCall();if(cur().p==='chat')render();
-  const c=getC(id);if(wasIn&&c&&!c.blocked)setTimeout(()=>aiReply(id,'[系统：你打电话给'+S.me.name+'，但ta拒接了。你不太高兴，主动发消息问ta为什么不接、在干嘛。]'),2500);}
-function hangupCall(){if(!_call)return;blip(300,.3);clearInterval(_callTimer);const id=_call.id;
+  _call=null;renderCall();if(cur().p==='chat')render();}
+function hangupCall(byAI){if(!_call)return;blip(300,.3);clearInterval(_callTimer);const id=_call.id;
   const dur=_call.start?Math.floor((Date.now()-_call.start)/1000):0;
-  msgs(id).push({role:'user',type:'sys',content:'通话时长 '+Math.floor(dur/60)+':'+(dur%60).toString().padStart(2,'0'),time:Date.now(),id:uid()});save();
-  _call=null;renderCall();if(cur().p==='chat')render();
-  const c=getC(id);if(c&&!c.blocked)setTimeout(()=>aiReply(id,'[系统：你们刚通话结束（'+S.me.name+'挂断的）。你意犹未尽或还有话想说，主动再给ta发条消息。]'),2500);}
+  msgs(id).push({role:'user',type:'sys',content:(byAI?'对方挂断 · ':'')+'通话时长 '+Math.floor(dur/60)+':'+(dur%60).toString().padStart(2,'0'),time:Date.now(),id:uid()});save();
+  _call=null;renderCall();if(cur().p==='chat')render();}
 function renderCallTime(){if(!_call||_call.state!=='active')return;const s=$('#callStat');if(s){const d=Math.floor((Date.now()-_call.start)/1000);s.textContent=Math.floor(d/60)+':'+(d%60).toString().padStart(2,'0');}}
 function renderCall(){const L=$('#callLayer');if(!_call){L.className='callscreen';L.innerHTML='';return;}
   const c=getC(_call.id);const video=_call.kind==='video';
@@ -1392,12 +1399,14 @@ function callSend(){const inp=$('#callMsg');if(!inp)return;const t=inp.value.tri
 async function callAI(sysNote){if(!_call)return;const c=getC(_call.id);const video=_call.kind==='video';
   try{const hist=msgs(c.id).slice(-(S.settings.hist||24)).map(m=>({role:m.role,content:msgToText(m)})).filter(x=>x.content!=null);
     if(sysNote)hist.push({role:'user',content:sysNote});
-    const sys=buildSystem(c)+'\n\n# 正在通话\n你们正在'+(video?'视频':'语音')+'通话，用口语短句像打电话一样，别用卡片。'+(video?'\n视频里你能看到ta、ta也能看到你，可以用（括号）描写你的动作神态，比如（凑近镜头笑）。':'');
+    const sys=buildSystem(c)+'\n\n# 正在通话\n你们正在'+(video?'视频':'语音')+'通话，用口语短句像打电话一样，别用卡片。'+(video?'\n视频里你能看到ta、ta也能看到你，可以用（括号）描写你的动作神态，比如（凑近镜头笑）。':'')+'\n如果你想结束通话（聊够了/有事/想逗ta/生气），就在最后单独一行输出 [挂断]，会由你主动挂断。';
     const content=await chatAPI([{role:'system',content:sys},...hist]);
     if(!_call)return;
     await sleep((Number(S.settings.replyDelay)||0)*1000);if(!_call)return;
-    splitBubbles(content).forEach(l=>{if(/^\[(转账|红包|位置|图片|文件|心情|记住|闹钟|来电|联网)\|/.test(l))return;msgs(c.id).push({role:'assistant',type:'text',content:l,time:Date.now(),id:uid(),_call:true});});
+    const wantHang=/\[挂断\]/.test(content);
+    splitBubbles(content).forEach(l=>{if(/^\[挂断\]$/.test(l))return;if(/^\[(转账|红包|位置|图片|文件|心情|记住|闹钟|来电|联网)\|/.test(l))return;msgs(c.id).push({role:'assistant',type:'text',content:l,time:Date.now(),id:uid(),_call:true});});
     save();renderCallSubs();if(!c.muted)blip(700,.08);
+    if(wantHang&&_call)setTimeout(()=>{if(_call&&_call.id===c.id)hangupCall(true);},1200);
   }catch(e){msgs(c.id).push({role:'assistant',type:'text',content:'(信号不好…)',time:Date.now(),id:uid(),_call:true});renderCallSubs();}}
 
 /* =================== 天气 =================== */
