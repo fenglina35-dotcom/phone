@@ -217,7 +217,7 @@ function defState(){return{
     vision:{base:'https://vg.v1api.cc/v1',key:'',model:''},
     hist:24, timeAware:true, replyDelay:2, sound:true, web:{enabled:false}
   },
-  me:{name:'忆北',wxid:'yibei_0414',avatar:'🐱',signature:'做一只无忧无虑的小猫～',persona:'我叫忆北，20岁女生，娃娃脸有点肉感，慢热腼腆熟了疯癫可爱，没安全感、占有欲强、嘴硬心软的小财迷。',balance:520.00,bills:[],momentCover:''},
+  me:{name:'忆北',wxid:'yibei_0414',avatar:'🐱',signature:'做一只无忧无虑的小猫～',persona:'我叫忆北，20岁女生，娃娃脸有点肉感，慢热腼腆熟了疯癫可爱，没安全感、占有欲强、嘴硬心软的小财迷。',balance:520.00,bills:[],momentCover:'',status:''},
   worldbook:[],
   contacts:[],
   messages:{},
@@ -225,6 +225,7 @@ function defState(){return{
   alarms:[],
   weather:null,
   spy:{},
+  friendRequests:[],
   _proactiveDone:{},
   _proactiveCount:{}
 };}
@@ -461,7 +462,7 @@ function renderSpy(id){const c=getC(id);if(!c)return '';const d=S.spy[id];
     <div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#feca57">📔 日记 / 备忘</div><div style="padding:0 14px 12px;font-size:14px;color:#ddd;line-height:1.7;white-space:pre-wrap">${esc(d.diary||'（空）')}</div></div>
     <div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#54a0ff">🌐 浏览记录</div>${(d.browser||[]).map(b=>`<div class="it"><span style="font-size:13px;color:#ccc">${esc(b)}</span></div>`).join('')||'<div class="it"><span class="v">无</span></div>'}</div>
     <div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#2bb36a">💸 钱包支出</div>${(d.wallet||[]).map(w=>`<div class="bill"><div>${esc(w.item||'')}</div><div class="${(+w.amount)>=0?'pos':'neg'}">${(+w.amount)>=0?'+':''}${(+w.amount).toFixed(2)}</div></div>`).join('')||'<div class="it"><span class="v">无</span></div>'}</div>
-    <div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#07c160">💬 微信聊天</div>${(d.wechat||[]).map(w=>`<div class="it"><span style="font-size:13px"><b style="color:#9ec5fe">${esc(w.who||'某人')}：</b>${esc(w.text||'')}</span></div>`).join('')||'<div class="it"><span class="v">无</span></div>'}</div>
+    <div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#07c160">💬 微信聊天</div>${(d.wechat||[]).map(w=>`<div style="padding:8px 14px;border-bottom:.5px solid #2a2a2c"><div style="font-size:13px;color:#9ec5fe;font-weight:600;margin-bottom:5px">${esc(w.who||'某人')}</div>${(w.lines||[]).map(l=>{const ta=/^(他|她|ta|我)[:：]/i.test(l);return `<div style="font-size:13px;color:${ta?'#9ee6a0':'#ccc'};padding:2px 0">${esc(l)}</div>`;}).join('')}</div>`).join('')||'<div class="it"><span class="v">无</span></div>'}</div>
     <div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#ee5a6f">➕ 新加好友</div>${(d.friends||[]).map(f=>`<div class="it"><span style="font-size:13px;color:#ccc">${esc(f)}</span></div>`).join('')||'<div class="it"><span class="v">无</span></div>'}</div>
     <div style="text-align:center;color:#666;font-size:11px;padding:4px">更新于 ${hm(d.time)}</div>`;}
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(c.remark||c.name)}的手机</span><span class="r" onclick="spyRefresh('${id}')">🔄</span></div>
@@ -469,7 +470,7 @@ function renderSpy(id){const c=getC(id);if(!c)return '';const d=S.spy[id];
 function stripJSON(t){t=(t||'').trim();const m=t.match(/```(?:json)?\s*([\s\S]*?)```/);if(m)t=m[1];const a=t.indexOf('{'),b=t.lastIndexOf('}');if(a>=0&&b>a)t=t.slice(a,b+1);return t;}
 async function spyRefresh(id){const c=getC(id);toast('偷看中…');
   try{const hist=msgs(id).slice(-16).map(m=>({role:m.role,content:msgToText(m)})).filter(x=>x.content!=null);
-    const prompt='你来扮演'+(c.remark||c.name)+'，根据你们最近的聊天和你的人设，生成此刻"你自己手机里"的私密内容（要符合人设、和聊天有呼应，可带点没告诉对方的小秘密或小心思）。只输出 JSON，不要解释：\n{"location":"你此刻在哪","diary":"今天的日记或备忘(2-4句)","browser":["浏览记录1","记录2","记录3"],"wallet":[{"item":"支出名目","amount":-数字}],"wechat":[{"who":"联系人","text":"和ta的一句聊天"}],"friends":["新加的好友及原因"]}';
+    const prompt='你来扮演'+(c.remark||c.name)+'，根据你们最近的聊天和你的人设，生成此刻"你自己手机里"的私密内容（要符合人设、和聊天有呼应，可带点没告诉对方的小秘密或小心思）。微信聊天要是和别人来回的对话。只输出 JSON，不要解释：\n{"location":"你此刻在哪","diary":"今天的日记或备忘(2-4句)","browser":["浏览记录1","记录2","记录3"],"wallet":[{"item":"支出名目","amount":-数字}],"wechat":[{"who":"某个联系人(如 同事老张/前任/妈妈)","lines":["他：说的话","对方：回的话","他：又说的话"]}],"friends":["新加的好友及原因"]}';
     const content=await chatAPI([{role:'system',content:buildSystem(c)},...hist,{role:'user',content:prompt}],{max:800});
     const data=JSON.parse(stripJSON(content));data.time=Date.now();S.spy[id]=data;save();
     if(cur().p==='spy')render();toast('刷新好了 👀');
@@ -506,9 +507,11 @@ function wxChats(){
 function previewOf(m){if(m.role==='assistant')return splitBubbles(m.content)[0]||'[消息]';
   return ({text:m.content,image:'[照片]',transfer:'[转账]',redpacket:'[红包]',location:'[位置]',file:'[文件]',sys:m.content})[m.type]||'[消息]';}
 
-function wxContacts(){if(!S.contacts.filter(c=>!c.deleted).length)return '<div class="empty">点右上角 ＋ 创建一个角色</div>';
-  return '<div class="list">'+S.contacts.filter(c=>!c.deleted).map(c=>`<div class="row" onclick="go('contactInfo',{id:'${c.id}'})">${av(c.avatar,'sm')}
-    <div class="meta"><div class="n">${esc(c.remark||c.name)}</div><div class="s">${esc(c.signature||c.relation||'')}</div></div></div>`).join('')+'</div>';
+function wxContacts(){
+  const fr=S.friendRequests.length?`<div class="list"><div class="row" onclick="openFriendRequests()"><div class="avatar sm" style="background:#fa9d3b">➕</div><div class="meta"><div class="n">新的朋友</div></div><span class="badge">${S.friendRequests.length}</span></div></div>`:'';
+  if(!S.contacts.filter(c=>!c.deleted).length)return fr+'<div class="empty">点右上角 ＋ 创建一个角色</div>';
+  return fr+'<div class="list">'+S.contacts.filter(c=>!c.deleted).map(c=>`<div class="row" onclick="go('contactInfo',{id:'${c.id}'})">${av(c.avatar,'sm')}
+    <div class="meta"><div class="n">${esc(c.remark||c.name)}${c.blocked?' <span class=tag>已拉黑</span>':''}</div><div class="s">${esc(c.signature||c.relation||'')}</div></div></div>`).join('')+'</div>';
 }
 
 function wxMe(){
@@ -532,11 +535,22 @@ function editMe(){openModal(`<h3>我的资料</h3>
   <div class="field"><label>微信号</label><input id="me_wxid" value="${esc(S.me.wxid)}"></div>
   <div class="field"><label>个性签名</label><input id="me_sig" value="${esc(S.me.signature)}"></div>
   <div class="field"><label>我的人设（所有角色都会知道）</label><textarea id="me_persona" rows="3">${esc(S.me.persona)}</textarea></div>
+  <div class="field"><label>我的今日动态（手机读不到的事自己写，他查岗能看到）</label><input id="me_status" value="${esc(S.me.status||'')}" placeholder="刷抖音到两点 / 打了一小时游戏…"></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="saveMe()">保存</button></div>`);}
 function upMe(){pickFile('image/*',async f=>{S.me.avatar=await compress(f,256,.8);editMe();});}
 function saveMe(){S.me.name=$('#me_name').value.trim()||'我';S.me.wxid=$('#me_wxid').value.trim();
-  S.me.avatar=$('#me_av').value.trim()||'🐱';S.me.signature=$('#me_sig').value.trim();S.me.persona=$('#me_persona').value.trim();
+  S.me.avatar=$('#me_av').value.trim()||'🐱';S.me.signature=$('#me_sig').value.trim();S.me.persona=$('#me_persona').value.trim();S.me.status=$('#me_status').value.trim();
   save();closeModal();render();}
+function myActivity(exceptId){let s='';
+  // 跟别的角色聊天
+  const others=S.contacts.filter(c=>!c.deleted&&c.id!==exceptId).map(c=>({c,lm:lastMsg(c.id)})).filter(x=>x.lm).sort((a,b)=>b.lm.time-a.lm.time).slice(0,2);
+  if(others.length)s+='·她最近还在跟：'+others.map(o=>(o.c.remark||o.c.name)+'聊（"'+previewOf(o.lm).slice(0,16)+'"）').join('、')+'\n';
+  if(S.weather)s+='·她的位置：'+S.weather.place+'\n';
+  if(S.me.bills&&S.me.bills.length)s+='·她最近花钱：'+S.me.bills.slice(-3).map(b=>b.note+' '+(b.type==='in'?'+':'-')+b.amount).join('、')+'\n';
+  const liked=S.moments.filter(p=>(p.likes||[]).includes(S.me.name)||(p.comments||[]).some(cm=>cm.name===S.me.name));
+  if(liked.length)s+='·她在朋友圈互动：'+liked.slice(0,2).map(p=>{const cm=(p.comments||[]).find(x=>x.name===S.me.name);return (p.authorId==='me'?'自己':(getC(p.authorId)?.name||'某人'))+'的动态'+(cm?'评论了"'+cm.text+'"':'点了赞');}).join('、')+'\n';
+  if(S.me.status)s+='·她自己写的动态："'+S.me.status+'"\n';
+  return s||'（手机上没什么新动静）';}
 function openWallet(){openModal(`<h3>💰 钱包</h3>
   <div class="wallet" style="margin:0 0 14px"><div class="lb">零钱余额</div><div class="ba">¥ ${(+S.me.balance).toFixed(2)}</div></div>
   <div class="field"><label>修改余额</label><div class="avline"><input id="bal" type="number" value="${(+S.me.balance).toFixed(2)}"><button class="minibtn" onclick="S.me.balance=+$('#bal').value||0;save();openWallet()">改</button></div></div>
@@ -583,6 +597,7 @@ function renderContactInfo(id){const c=getC(id);if(!c)return '';
       <div class="it"><span>置顶聊天</span><span class="sw ${c.pinned?'on':''}" onclick="c_pin('${id}')"></span></div>
       <div class="it"><span>消息免打扰</span><span class="sw ${c.muted?'on':''}" onclick="c_mute('${id}')"></span></div>
       <div class="it"><span>主动消息</span><span class="sw ${c.proactive.enabled?'on':''}" onclick="togProactive('${id}')"></span></div>
+      <div class="it"><span>允许ta查我手机（查岗）</span><span class="sw ${c.proactive.spy?'on':''}" onclick="togSpy('${id}')"></span></div>
       ${c.proactive.enabled?`<div class="it"><span>时段 / 每天上限</span><span class="v"><input type="number" id="pa_s" value="${c.proactive.start}" style="width:38px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:3px;background:#2c2c2e;color:#eee">-<input type="number" id="pa_e" value="${c.proactive.end}" style="width:38px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:3px;background:#2c2c2e;color:#eee">点 <input type="number" id="pa_n" value="${c.proactive.times||1}" style="width:34px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:3px;background:#2c2c2e;color:#eee">次 <button class="minibtn" onclick="savePa('${id}')">存</button></span></div>`:''}
     </div>
     <div class="section" style="margin:12px">
@@ -598,10 +613,24 @@ function setChatBg(id){const c=getC(id);openModal(`<h3>聊天背景</h3><div cla
   <div class="btns"><button class="btn g" onclick="getC('${id}').chatBg='';save();closeModal();toast('已恢复默认')">恢复默认</button>
   <button class="btn p" onclick="pickFile('image/*',async f=>{getC('${id}').chatBg=await compress(f,800,.6);save();closeModal();toast('背景已设置')})">选图片</button></div>`);}
 function c_pin(id){const c=getC(id);c.pinned=!c.pinned;save();render();}
-function c_block(id){const c=getC(id);c.blocked=!c.blocked;save();render();}
+function c_block(id){const c=getC(id);c.blocked=!c.blocked;save();render();
+  if(c.blocked)setTimeout(()=>createFriendRequest(id),20000+Math.random()*40000);}
+async function createFriendRequest(id){const c=getC(id);if(!c||!c.blocked)return;
+  if(S.friendRequests.some(r=>r.contactId===id))return;
+  let msg='是我，别拉黑我好不好…我们好好说。';
+  try{msg=(await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：'+S.me.name+'把你拉黑了，你不死心，重新申请加回好友。写一句简短的好友验证消息，别超过20字。]'}])).split('\n')[0].slice(0,30)||msg;}catch(e){}
+  S.friendRequests.push({id:uid(),contactId:id,msg,time:Date.now()});save();
+  if(!c.muted)playDing();if(cur().p==='wechat'&&wxTab==='contacts')render();
+  toast('📇 通讯录有人申请加你');}
+function openFriendRequests(){if(!S.friendRequests.length){toast('暂无新申请');return;}
+  openModal(`<h3>➕ 新的朋友</h3>${S.friendRequests.map(r=>{const c=getC(r.contactId);return `<div class="section"><div style="padding:12px 14px;display:flex;gap:10px;align-items:center">${av(c?c.avatar:'🙂','sm')}<div class="meta"><div class="n">${esc(c?c.name:'?')}</div><div class="s">${esc(r.msg)}</div></div></div><div style="display:flex;gap:8px;padding:0 14px 12px"><button class="btn p" style="flex:1" onclick="acceptFriend('${r.id}')">接受</button><button class="btn g" style="flex:1" onclick="ignoreFriend('${r.id}')">忽略</button></div></div>`;}).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
+function acceptFriend(rid){const r=S.friendRequests.find(x=>x.id===rid);if(!r)return;const c=getC(r.contactId);if(c){c.blocked=false;msgs(c.id).push({role:'user',type:'sys',content:'你通过了'+c.name+'的好友申请',time:Date.now(),id:uid()});}
+  S.friendRequests=S.friendRequests.filter(x=>x.id!==rid);save();closeModal();render();toast('已加回好友');}
+function ignoreFriend(rid){S.friendRequests=S.friendRequests.filter(x=>x.id!==rid);save();(S.friendRequests.length?openFriendRequests():closeModal());render();}
 function c_delete(id){if(!confirm('删除这个角色和聊天记录？'))return;const c=getC(id);c.deleted=true;delete S.messages[id];save();stack.pop();render();}
 function clearHistory(id){if(!confirm('清空聊天记录？'))return;S.messages[id]=[];save();toast('已清空');}
 function togProactive(id){const c=getC(id);c.proactive.enabled=!c.proactive.enabled;save();render();}
+function togSpy(id){const c=getC(id);c.proactive.spy=!c.proactive.spy;save();render();}
 function savePa(id){const c=getC(id);c.proactive.start=+$('#pa_s').value||0;c.proactive.end=+$('#pa_e').value||23;c.proactive.times=+$('#pa_n').value||1;save();toast('已保存');}
 
 /* ---------- 多选转发 ---------- */
@@ -881,8 +910,10 @@ async function maybeProactive(id){const c=getC(id);if(!c.proactive.enabled||c.bl
   if(!inWin)return;const lm=lastMsg(id);if(lm&&Date.now()-lm.time<2*3600000)return;
   const today=new Date().toDateString();const pc=S._proactiveCount[id]||{date:today,n:0};if(pc.date!==today){pc.date=today;pc.n=0;}
   if(pc.n>=(c.proactive.times||1))return;pc.n++;S._proactiveCount[id]=pc;save();
-  try{const content=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：现在是'+hm()+'，'+S.me.name+'有一会儿没理你了，请你主动发起一段微信消息，自然一点。]'}]);
-    splitBubbles(content).forEach(l=>{const mm=lineToMsg(l);mm.time=Date.now();msgs(id).push(mm);});save();
+  let note='[系统：现在是'+hm()+'，'+S.me.name+'有一会儿没理你了，请你主动发起一段微信消息，自然一点。]';
+  if(c.proactive.spy)note='[系统：'+S.me.name+'好久没理你，你忍不住偷看了ta的手机，看到这些：\n'+myActivity(id)+'\n请据此主动给ta发消息（可以吃醋、关心、调侃或质问，符合你人设），自然口语。]';
+  try{const content=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:note}]);
+    splitBubbles(content).forEach(l=>{if(/^\[(联网)\|/.test(l))return;const mm=lineToMsg(l);if(mm.type==='text'&&/^\[(心情|记住|闹钟|来电)\|/.test(mm.content))return;mm.time=Date.now();msgs(id).push(mm);notifyIncoming(c,mm);});save();
     if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();
   }catch(e){}}
 
