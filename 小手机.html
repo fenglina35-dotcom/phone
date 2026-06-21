@@ -222,6 +222,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
+const APP_VER='v6 · 骰子/查岗修复';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -305,6 +306,7 @@ function msgToText(m){
     case 'location':return '[我发了位置：'+(m.name||'')+' '+(m.address||'')+']';
     case 'file':return '[我发了文件：'+(m.name||'')+']';
     case 'spycard':return '[我把我的小手机查看权限发给你了，你现在可以随时查看我的手机：聊天对象、钱包、朋友圈互动、动态。]';
+    case 'dice':return '[我掷了骰子，点数是'+m.value+']';
     case 'sys':return null;
     default:return m.content||'';
   }
@@ -323,6 +325,7 @@ function buildSystem(c){
   if(c._readdedAt&&Date.now()-c._readdedAt<3600000)s+='\n\n# 重要\n'+S.me.name+'之前把你拉黑了，刚刚才重新把你加回好友，你心里清楚这件事，可以有相应反应。';
   const _sp=getSpy(c);
   if(_sp.loc&&S.weather)s+='\n\n# 实时定位（ta已授权你随时查看）\n'+S.me.name+'此刻在：'+S.weather.place+'。';
+  if(_sp.granted)s+='\n\n# 你能查看'+S.me.name+'的手机（ta已授权，下面是ta手机的真实情况，被问到"你看到我什么了"务必照这个答，绝不要编造）\n'+myActivity(c.id);
   if(S.me.persona)s+='\n对方的人设：'+S.me.persona;
   // 世界书
   const recent=msgs(c.id).slice(-8).map(msgToText).filter(Boolean).join('\n');
@@ -343,7 +346,7 @@ function buildSystem(c){
   // 天气
   if(S.weather)s+='\n\n# '+S.me.name+'所在地天气\n'+S.weather.place+'，'+S.weather.desc+'，'+S.weather.temp+'°C'+(S.weather.rain?'（有雨）':'')+'。你知道这些，下雨时可在合适的时候自然提醒ta带伞，不用每条都提天气。';
   if(S.settings.web&&S.settings.web.enabled)s+='\n\n# 联网\n当需要查实时/最新信息（新闻、天气细节、价格、某事实）时，单独用一行 [联网|要搜索的关键词]，系统会联网查并把结果给你，你再据此回答。';
-  s+='\n\n# 微信聊天规则\n- 像真人发微信：一次可以连发好几条短消息，每条单独占一行（用换行分隔），不要写成一大段。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 你可以单独用一行 [心情|你此刻的内心想法] 表达内心戏（不会作为消息发出，只显示在顶部）。\n- 当'+S.me.name+'让你记住某件事、或聊到重要的事时，单独用一行 [记住|要长期记住的内容] 把它存进记忆。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta时，用一行 [来电|语音] 或 [来电|视频]，会触发来电。';
+  s+='\n\n# 微信聊天规则\n- 像真人发微信：一次可以连发好几条短消息，每条单独占一行（用换行分隔），不要写成一大段。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 你可以单独用一行 [心情|你此刻的内心想法] 表达内心戏（不会作为消息发出，只显示在顶部）。\n- 当'+S.me.name+'让你记住某件事、或聊到重要的事时，单独用一行 [记住|要长期记住的内容] 把它存进记忆。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta时，用一行 [来电|语音] 或 [来电|视频]，会触发来电。\n- 玩骰子/真心话大冒险比大小时，用单独一行 [骰子] 掷骰子（系统会随机点数），再根据双方点数判胜负、出题或接受惩罚。';
   return s;
 }
 
@@ -426,6 +429,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
     <div id="testOut" style="font-size:12px;text-align:center;min-height:16px;margin-bottom:8px"></div>
     <button class="btn p" onclick="saveSettings()">保存设置</button>
     <div class="btns" style="margin-top:10px"><button class="btn g" onclick="exportData()">💾 导出备份</button><button class="btn g" onclick="importData()">📂 导入</button></div>
+    <div style="text-align:center;color:#666;font-size:12px;padding:14px">版本 ${APP_VER}</div>
     <div style="height:20px"></div>
   </div>`;
 }
@@ -482,16 +486,19 @@ function renderSpy(id){const c=getC(id);if(!c)return '';const d=S.spy[id];
     <div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#07c160">💬 微信聊天</div>${(d.wechat||[]).map(w=>`<div style="padding:8px 14px;border-bottom:.5px solid #2a2a2c"><div style="font-size:13px;color:#9ec5fe;font-weight:600;margin-bottom:5px">${esc(w.who||'某人')}</div>${(w.lines||[]).map(l=>{const ta=/^(他|她|ta|我)[:：]/i.test(l);return `<div style="font-size:13px;color:${ta?'#9ee6a0':'#ccc'};padding:2px 0">${esc(l)}</div>`;}).join('')}</div>`).join('')||'<div class="it"><span class="v">无</span></div>'}</div>
     <div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#ee5a6f">➕ 新加好友</div>${(d.friends||[]).map(f=>`<div class="it"><span style="font-size:13px;color:#ccc">${esc(f)}</span></div>`).join('')||'<div class="it"><span class="v">无</span></div>'}</div>
     <div style="text-align:center;color:#666;font-size:11px;padding:4px">更新于 ${hm(d.time)}</div>`;}
-  return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(c.remark||c.name)}的手机</span><span class="r" onclick="spyRefresh('${id}')">🔄</span></div>
-    <div class="scroll" style="background:#000">${body}<div style="padding:12px"><button class="btn p" onclick="spyRefresh('${id}')">🔄 刷新内容</button></div><div style="height:20px"></div></div>`;}
+  const btn=_spyBusy?`<button class="btn g" disabled>⏳ 刷新中…请稍候</button>`:`<button class="btn p" onclick="spyRefresh('${id}')">🔄 刷新内容</button>`;
+  const topbar=_spyBusy?`<div style="text-align:center;color:#b9a6e0;font-size:13px;padding:10px;background:#1c1c1e">⏳ 正在偷看 ta 的手机，请稍候…</div>`:'';
+  return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(c.remark||c.name)}的手机</span><span class="r" onclick="spyRefresh('${id}')">${_spyBusy?'⏳':'🔄'}</span></div>
+    ${topbar}<div class="scroll" style="background:#000">${body}<div style="padding:12px">${btn}</div><div style="height:20px"></div></div>`;}
 function stripJSON(t){t=(t||'').trim();const m=t.match(/```(?:json)?\s*([\s\S]*?)```/);if(m)t=m[1];const a=t.indexOf('{'),b=t.lastIndexOf('}');if(a>=0&&b>a)t=t.slice(a,b+1);return t;}
-async function spyRefresh(id){const c=getC(id);toast('偷看中…');
+let _spyBusy=false;
+async function spyRefresh(id){if(_spyBusy){toast('正在刷新，别急~');return;}const c=getC(id);_spyBusy=true;if(cur().p==='spy')render();
   try{const hist=msgs(id).slice(-16).map(m=>({role:m.role,content:msgToText(m)})).filter(x=>x.content!=null);
     const prompt='你来扮演'+(c.remark||c.name)+'，根据你们最近的聊天和你的人设，生成此刻"你自己手机里"的私密内容（要符合人设、和聊天有呼应，可带点没告诉对方的小秘密或小心思）。微信聊天要是和别人来回的对话。只输出 JSON，不要解释：\n{"location":"你此刻在哪","diary":"今天的日记或备忘(2-4句)","browser":["浏览记录1","记录2","记录3"],"wallet":[{"item":"支出名目","amount":-数字}],"wechat":[{"who":"某个联系人(如 同事老张/前任/妈妈)","lines":["他：说的话","对方：回的话","他：又说的话"]}],"friends":["新加的好友及原因"]}';
     const content=await chatAPI([{role:'system',content:buildSystem(c)},...hist,{role:'user',content:prompt}],{max:800});
-    const data=JSON.parse(stripJSON(content));data.time=Date.now();S.spy[id]=data;save();
+    const data=JSON.parse(stripJSON(content));data.time=Date.now();S.spy[id]=data;save();_spyBusy=false;
     if(cur().p==='spy')render();toast('刷新好了 👀');
-  }catch(e){toast('生成失败，再试一次或检查API');}}
+  }catch(e){_spyBusy=false;if(cur().p==='spy')render();toast('生成失败了，再点一次刷新试试');}}
 
 /* ---------- 微信主界面 ---------- */
 function renderWeChat(){
@@ -522,7 +529,7 @@ function wxChats(){
       <div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div>${c.pinned?'<div style="font-size:10px;color:#ccc">置顶</div>':''}</div></div>`;}).join('')+'</div>';
 }
 function previewOf(m){if(m.role==='assistant')return splitBubbles(m.content)[0]||'[消息]';
-  return ({text:m.content,image:'[照片]',transfer:'[转账]',redpacket:'[红包]',location:'[位置]',file:'[文件]',spycard:'[查看权限]',sys:m.content})[m.type]||'[消息]';}
+  return ({text:m.content,image:'[照片]',transfer:'[转账]',redpacket:'[红包]',location:'[位置]',file:'[文件]',spycard:'[查看权限]',dice:'[骰子]',sys:m.content})[m.type]||'[消息]';}
 
 function wxContacts(){
   const fr=S.friendRequests.length?`<div class="list"><div class="row" onclick="openFriendRequests()"><div class="avatar sm" style="background:#fa9d3b">➕</div><div class="meta"><div class="n">新的朋友</div></div><span class="badge">${S.friendRequests.length}</span></div></div>`:'';
@@ -636,7 +643,7 @@ function setChatBg(id){const c=getC(id);openModal(`<h3>聊天背景</h3><div cla
   <button class="btn p" onclick="pickFile('image/*',async f=>{getC('${id}').chatBg=await compress(f,800,.6);save();closeModal();toast('背景已设置')})">选图片</button></div>`);}
 function c_pin(id){const c=getC(id);c.pinned=!c.pinned;save();render();}
 function c_block(id){const c=getC(id);c.blocked=!c.blocked;save();render();
-  if(c.blocked)setTimeout(()=>createFriendRequest(id),20000+Math.random()*40000);}
+  if(c.blocked){toast('已拉黑，过会儿看「通讯录」he会申请加你');setTimeout(()=>createFriendRequest(id),8000+Math.random()*9000);}}
 async function createFriendRequest(id){const c=getC(id);if(!c||!c.blocked)return;
   if(S.friendRequests.some(r=>r.contactId===id))return;
   let msg='是我，别拉黑我好不好…我们好好说。';
@@ -693,6 +700,7 @@ function renderChat(id){const c=getC(id);if(!c)return '';
       <div class="it" onclick="placeCall('${id}','voice')"><div class="b">📞</div><span>语音通话</span></div>
       <div class="it" onclick="placeCall('${id}','video')"><div class="b">📹</div><span>视频通话</span></div>
       <div class="it" onclick="cSpyGrant('${id}')"><div class="b">📱</div><span>授权查手机</span></div>
+      <div class="it" onclick="cDice('${id}')"><div class="b">🎲</div><span>骰子</span></div>
       <div class="it" onclick="enterSelect('${id}')"><div class="b">↗️</div><span>多选转发</span></div>
     </div>
     ${(_sel&&_sel.id===id)?`<div class="inputbar"><button class="btn g" style="flex:1" onclick="exitSelect()">取消</button><button class="btn p" style="flex:1" onclick="forwardSelected()">转发(${_sel.ids.length})</button></div>`:`<div class="inputbar">
@@ -716,6 +724,7 @@ function buildPart(c,m,me){
   if(m.type==='location')return `<div class="card cloc"><div class="map">📍</div><div class="info"><div class="n">${esc(m.name)}</div><div class="a">${esc(m.address||'')}</div></div></div>`;
   if(m.type==='file')return `<div class="card cfile"><div class="ic">📄</div><div><div class="n">${esc(m.name)}</div><div class="s">${esc(m.size||'')}</div></div></div>`;
   if(m.type==='spycard')return `<div class="card"><div class="cpay" style="background:#5b6b9c"><div class="big">📱</div><div><div class="t1">小手机查看权限</div><div class="t2">已授权随时查看我的手机</div></div></div><div class="cfoot">权限卡片</div></div>`;
+  if(m.type==='dice')return `<div style="font-size:46px;line-height:1">${['','⚀','⚁','⚂','⚃','⚄','⚅'][m.value]||'🎲'}<span style="font-size:15px;color:#999;margin-left:6px">${m.value}点</span></div>`;
   return `<div class="bubble">${esc(m.content)}</div>`;}
 function payCard(kind,m,me){const done=m.received;
   const cls='cpay '+(done?'done':kind);const ic=kind==='r'?'🧧':'💰';
@@ -763,6 +772,7 @@ function doRed(id){const a=+$('#rd_a').value;if(!a){toast('填金额呀');return
   pushMsg(id,{role:'user',type:'redpacket',amount:a,note:$('#rd_n').value.trim(),received:false,id:uid()});scheduleReply(id);}
 function cSpyGrant(id){const c=getC(id);$('#panel').classList.remove('show');getSpy(c).granted=true;save();
   pushMsg(id,{role:'user',type:'spycard',id:uid()});toast('已授权 '+(c.remark||c.name)+' 查看你的手机');scheduleReply(id);}
+function cDice(id){$('#panel').classList.remove('show');pushMsg(id,{role:'user',type:'dice',value:1+Math.floor(Math.random()*6),id:uid()});scheduleReply(id);}
 function cLoc(id){$('#panel').classList.remove('show');openModal(`<h3>📍 位置</h3>
   <div class="field"><label>地点</label><input id="lc_n" placeholder="星巴克"></div>
   <div class="field"><label>地址</label><input id="lc_a" placeholder="苏州市…"></div>
@@ -773,7 +783,9 @@ function doLoc(id){const n=$('#lc_n').value.trim();if(!n){toast('填地点呀');
 /* 拆分多条气泡 */
 function splitBubbles(text){return (text||'').split('\n').map(s=>s.trim()).filter(Boolean);}
 const CARD_RE=/^\[(转账|红包|位置|图片|文件)\|([^\]]*)\]$/;
-function lineToMsg(line){const m=line.match(CARD_RE);if(!m)return {role:'assistant',type:'text',content:line};
+function lineToMsg(line){
+  if(/^\[骰子\]$/.test(line))return {role:'assistant',type:'dice',value:1+Math.floor(Math.random()*6),id:uid()};
+  const m=line.match(CARD_RE);if(!m)return {role:'assistant',type:'text',content:line};
   const f=m[2].split('|');
   if(m[1]==='转账')return {role:'assistant',type:'transfer',amount:+f[0]||0,note:f[1],received:false,id:uid()};
   if(m[1]==='红包')return {role:'assistant',type:'redpacket',amount:+f[0]||0,note:f[1],received:false,id:uid()};
