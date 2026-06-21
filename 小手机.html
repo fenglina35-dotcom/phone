@@ -204,6 +204,33 @@ body{background:#000;padding:0;}
 .spybanner.show{display:block;}
 .spybanner b{font-weight:600;}
 .spydot{display:inline-block;margin-left:4px;}
+/* ===== X ===== */
+.xnav{flex:0 0 46px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:#000;border-bottom:.5px solid #2f3336;}
+.xnav .t{font-size:18px;font-weight:700;color:#e7e9ea;}.xnav .l,.xnav .r{font-size:22px;color:#e7e9ea;cursor:pointer;}
+.xtabs{flex:0 0 46px;display:flex;background:#000;border-bottom:.5px solid #2f3336;}
+.xtabs .xt{flex:1;text-align:center;line-height:46px;font-size:14px;color:#71767b;cursor:pointer;position:relative;}
+.xtabs .xt.on{color:#e7e9ea;font-weight:700;}
+.xtabs .xt.on:after{content:"";position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:40px;height:3px;border-radius:2px;background:#1d9bf0;}
+.xscroll{flex:1;overflow-y:auto;background:#000;}
+.tweet{display:flex;gap:10px;padding:12px 14px;border-bottom:.5px solid #2f3336;cursor:pointer;}
+.tweet .body{flex:1;min-width:0;}
+.tweet .head{display:flex;align-items:center;gap:5px;font-size:14px;}
+.tweet .head .nm{color:#e7e9ea;font-weight:700;}
+.tweet .head .hd{color:#71767b;}
+.tweet .tx{color:#e7e9ea;font-size:15px;line-height:1.45;margin:3px 0 6px;white-space:pre-wrap;word-break:break-word;}
+.tweet .acts{display:flex;justify-content:space-between;max-width:240px;color:#71767b;font-size:13px;}
+.tweet .acts span{cursor:pointer;}
+.tweet .acts .liked{color:#f91880;}
+.xcomment{display:flex;gap:10px;padding:10px 14px;border-bottom:.5px solid #1a1a1a;}
+.xcomment .tx{color:#d7d9db;font-size:14px;}
+.xdmrow{display:flex;gap:11px;padding:12px 14px;border-bottom:.5px solid #2f3336;cursor:pointer;align-items:center;}
+.xfab{position:absolute;right:16px;bottom:70px;width:52px;height:52px;border-radius:50%;background:#1d9bf0;color:#fff;font-size:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:8;}
+.xprofh{height:100px;background:linear-gradient(120deg,#1d9bf0,#8ecdf7);}
+.xbtn{background:#1d9bf0;border:none;color:#fff;font-weight:700;border-radius:18px;padding:7px 16px;font-size:14px;cursor:pointer;}
+.xbtn.out{background:transparent;border:1px solid #536471;color:#e7e9ea;}
+.xmsg{display:flex;margin:8px 0;}.xmsg.me{justify-content:flex-end;}
+.xmsg .b{max-width:72%;padding:8px 12px;border-radius:18px;font-size:14px;background:#2f3336;color:#e7e9ea;}
+.xmsg.me .b{background:#1d9bf0;color:#fff;}
 </style>
 </head>
 <body>
@@ -222,7 +249,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v9 · 加好友反应+闹钟重复';
+const APP_VER='v10 · X(推特)上线';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -239,6 +266,7 @@ function defState(){return{
   spy:{},
   shop:{cart:[],results:[],q:''},
   calendar:[],
+  x:{profile:{handle:'@yibei_0414',bio:'做一只无忧无虑的小猫～',fans:328,following:12},tweets:[],dms:[],following:[],blocked:[],circle:{}},
   friendRequests:[],
   _proactiveDone:{},
   _proactiveCount:{}
@@ -380,9 +408,13 @@ function render(){
   else if(c.p==='spy')html=renderSpy(c.id);
   else if(c.p==='shop')html=renderShop();
   else if(c.p==='calendar')html=renderCalendar();
+  else if(c.p==='x')html=renderX();
+  else if(c.p==='xtweet')html=renderXTweet(c.id);
+  else if(c.p==='xdm')html=renderXDM(c.id);
   else if(c.p==='momentDetail')html='';
   app.innerHTML='<div class="page">'+html+'</div>';
   if(c.p==='chat'){afterChat(c.id);}
+  if(c.p==='xdm'){const b=$('#xdmbox');if(b)b.scrollTop=b.scrollHeight;}
   if(c.p==='wechat'&&wxTab==='moments'){}
 }
 
@@ -400,6 +432,7 @@ function renderHome(){
       <div class="app" onclick="openSpy()"><div class="ic" style="background:#5b6b9c;color:#fff">🔍</div><span>查他手机</span></div>
       <div class="app" onclick="go('shop')"><div class="ic" style="background:#ff6b6b;color:#fff">🛒</div><span>购物</span></div>
       <div class="app" onclick="go('calendar')"><div class="ic" style="background:#4ecdc4;color:#fff">📅</div><span>日历</span></div>
+      <div class="app" onclick="openX()"><div class="ic" style="background:#000;color:#fff;border:1px solid #333">𝕏</div><span>X</span></div>
     </div>
     <div class="dock">
       <div class="app" onclick="openWeChat()"><div class="ic" style="background:#07c160;color:#fff">💬</div></div>
@@ -599,6 +632,133 @@ async function remindEvent(id,e){const c=getC(id);try{
   splitBubbles(content).forEach(l=>{if(/^\[(联网|心情|记住|闹钟|来电)\|/.test(l))return;const mm=lineToMsg(l);mm.time=Date.now();msgs(id).push(mm);notifyIncoming(c,mm);});save();if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();
 }catch(e2){}}
 
+/* ====================== X (推特) ====================== */
+let xTab='feed';
+function openX(){xTab='feed';go('x');}
+function tw(id){return S.x.tweets.find(t=>t.id===id);}
+function xlog(s){S.x._mylog=S.x._mylog||[];S.x._mylog.push(s);if(S.x._mylog.length>12)S.x._mylog.shift();}
+function parseArr(r){let t=(r||'').trim();const fb=t.match(/```(?:json)?\s*([\s\S]*?)```/);if(fb)t=fb[1];const a=t.indexOf('['),b=t.lastIndexOf(']');if(a>=0&&b>a)t=t.slice(a,b+1);return JSON.parse(t);}
+function renderX(){let body;
+  if(xTab==='feed')body=xFeed();else if(xTab==='search')body=xSearch();else if(xTab==='dm')body=xDMList();else body=xProfile();
+  return `<div class="xnav"><span class="l" onclick="home()">‹</span><span class="t">𝕏</span><span class="r" onclick="xRefresh()">🔄</span></div>
+    <div class="xtabs">${xtb('feed','主页')}${xtb('search','搜索')}${xtb('dm','私信')}${xtb('me','我')}</div>
+    <div class="xscroll" id="xscroll">${body}</div>
+    ${xTab==='feed'?'<div class="xfab" onclick="xCompose()">＋</div>':''}`;}
+function xtb(k,t){return `<div class="xt ${xTab===k?'on':''}" onclick="xTab='${k}';render()">${t}</div>`;}
+function xFeed(){const ts=[...S.x.tweets].filter(t=>!S.x.blocked.includes(t.name)).sort((a,b)=>b.time-a.time);
+  if(!ts.length)return `<div class="empty" style="padding:46px 20px;line-height:2">还没有推文～<br>点右上 🔄 刷新网友动态，或 ＋ 发一条<br><br><button class="xbtn" onclick="genContactTweet()">让角色发一条推</button></div>`;
+  return ts.map(tweetCard).join('');}
+function tweetCard(t){const liked=(t.likes||[]).includes(S.me.name);
+  return `<div class="tweet" onclick="go('xtweet',{id:'${t.id}'})">${av(t.avatar,'sm')}
+    <div class="body"><div class="head"><span class="nm">${esc(t.name)}</span><span class="hd">${esc(t.handle||'')} · ${ago(t.time)}</span></div>
+    <div class="tx">${esc(t.text)}</div>
+    <div class="acts"><span onclick="event.stopPropagation();go('xtweet',{id:'${t.id}'})">💬 ${(t.comments||[]).length}</span>
+      <span onclick="event.stopPropagation();xRepost('${t.id}')">🔁 ${t.rt||0}</span>
+      <span class="${liked?'liked':''}" onclick="event.stopPropagation();xLike('${t.id}')">${liked?'❤️':'🤍'} ${(t.likes||[]).length}</span>
+      <span onclick="event.stopPropagation();xUserMenu('${t.id}')">⋯</span></div></div></div>`;}
+function xLike(id){const t=tw(id);if(!t)return;t.likes=t.likes||[];const i=t.likes.indexOf(S.me.name);if(i<0){t.likes.push(S.me.name);xlog('在X上点赞了'+t.name+'的推文「'+t.text.slice(0,14)+'」');}else t.likes.splice(i,1);save();render();}
+function xRepost(id){const t=tw(id);if(!t)return;t.rt=(t.rt||0)+1;save();render();toast('已转推');}
+function xUserMenu(id){const t=tw(id);if(!t)return;const f=S.x.following.includes(t.name),b=S.x.blocked.includes(t.name);
+  openModal(`<h3>${esc(t.name)} ${esc(t.handle||'')}</h3>
+    <button class="btn g" style="margin-bottom:8px" onclick="xFollow('${id}')">${f?'✓ 已关注（点击取消）':'+ 关注'}</button>
+    <button class="btn d" onclick="xBlock('${id}')">${b?'解除拉黑':'拉黑 '+esc(t.name)}</button>
+    <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
+function xFollow(id){const t=tw(id);const i=S.x.following.indexOf(t.name);if(i<0){S.x.following.push(t.name);S.x.profile.following++;}else{S.x.following.splice(i,1);S.x.profile.following=Math.max(0,S.x.profile.following-1);}save();closeModal();render();}
+function xBlock(id){const t=tw(id);const i=S.x.blocked.indexOf(t.name);if(i<0)S.x.blocked.push(t.name);else S.x.blocked.splice(i,1);save();closeModal();render();}
+function xCompose(){openModal(`<h3>发推</h3><div class="hint">可以 @某个角色名，ta会来互动</div><div class="field"><textarea id="xc_t" rows="4" placeholder="有什么新鲜事？"></textarea></div>
+  <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="doXPost()">发布</button></div>`);}
+function doXPost(){const t=$('#xc_t').value.trim();if(!t)return;const tweet={id:uid(),who:'me',name:S.me.name,handle:S.x.profile.handle,avatar:S.me.avatar,text:t,time:Date.now(),likes:[],comments:[],rt:0};
+  S.x.tweets.unshift(tweet);xlog('在X发推：「'+t.slice(0,20)+'」');save();closeModal();render();toast('已发布');reactToTweet(tweet);}
+async function reactToTweet(tweet){
+  // 网友评论
+  try{const r=await chatAPI([{role:'system',content:'你是X网友评论生成器。针对推文生成3条不同网友的简短评论。只输出JSON：[{"name":"网友名","emoji":"emoji","text":"评论"}]'},{role:'user',content:'推文："'+tweet.text+'"'}],{max:500});
+    parseArr(r).forEach(o=>{tweet.comments.push({name:o.name,avatar:o.emoji||'🌐',text:o.text});});save();if(cur().p==='x'||cur().p==='xtweet')render();}catch(e){}
+  // @到的角色 + 恋人互动
+  const ats=S.contacts.filter(c=>!c.deleted&&!c.blocked&&tweet.text.includes(c.name));
+  const pool=ats.length?ats:S.contacts.filter(c=>!c.deleted&&!c.blocked).slice(0,1);
+  for(const c of pool){try{const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:S.me.name+'在X(推特)发了条推："'+tweet.text+'"'+(tweet.text.includes(c.name)?'（还@了你）':'')+'。你刷到了，回一句评论（口语、符合人设，别带方括号）。'}]);
+    tweet.comments.push({name:c.remark||c.name,avatar:c.avatar,cid:c.id,text:cleanReply(r).slice(0,50)});save();if(cur().p==='x'||cur().p==='xtweet')render();}catch(e){}}}
+function genContactTweet(){const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){toast('先创建角色');return;}
+  if(cs.length===1)return doGenContactTweet(cs[0].id);
+  openModal(`<h3>谁来发推</h3>${cs.map(c=>`<div class="section"><div class="it" onclick="closeModal();doGenContactTweet('${c.id}')">${esc(c.remark||c.name)}<span class="v">›</span></div></div>`).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+async function doGenContactTweet(cid){const c=getC(cid);toast('生成中…');
+  try{const note=S.x.circle[cid]?'。你在X的圈子定位/备注是：'+S.x.circle[cid]+'，推文风格要贴合它':'';
+    const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'以你的身份发一条推特(X)'+note+'，一两句，符合你的性格，只输出推文内容，别带方括号。'}]);
+    S.x.tweets.unshift({id:uid(),who:cid,name:c.remark||c.name,handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,text:cleanReply(r),time:Date.now(),likes:[],comments:[],rt:Math.floor(Math.random()*50)});save();render();
+  }catch(e){toast('生成失败');}}
+async function xRefresh(){if(xTab==='dm')return genNetDM();if(xTab==='search'){const q=$('#xs_q')?$('#xs_q').value.trim():'';return q?xDoSearch(q):toast('先输入要搜的内容');}return genNetTweets('');}
+async function genNetTweets(topic){toast('刷新中…');
+  try{const r=await chatAPI([{role:'system',content:'你是X(推特)内容生成器。生成5条不同网友的推文'+(topic?'，围绕主题"'+topic+'"':'（日常/搞笑/情感/热点都行）')+'。只输出JSON：[{"name":"昵称","handle":"@英文id","text":"推文","emoji":"emoji头像"}]'}],{max:800});
+    const arr=parseArr(r);const made=[];arr.forEach(o=>{const t={id:uid(),who:'net',name:o.name,handle:o.handle||'@user',avatar:o.emoji||'🌐',text:o.text,time:Date.now()-Math.floor(Math.random()*5400000),likes:[],comments:[],rt:Math.floor(Math.random()*300)};S.x.tweets.unshift(t);made.push(t);});
+    save();if(topic)S.x._results=made;render();
+  }catch(e){toast('刷新失败，再试一次');}}
+function xSearch(){return `<div style="padding:10px 14px;background:#000;border-bottom:.5px solid #2f3336"><input id="xs_q" value="${esc(S.x._q||'')}" placeholder="搜索 X（生成相关推文）" style="width:100%;border:1px solid #2f3336;border-radius:18px;padding:8px 14px;background:#16181c;color:#e7e9ea;outline:none" onkeydown="if(event.key==='Enter')xDoSearch(this.value)"></div>${(S.x._results||[]).filter(t=>tw(t.id)).map(tweetCard).join('')||'<div class="empty" style="padding:40px">搜你想看的内容，生成相关推文～</div>'}`;}
+function xDoSearch(q){q=(q||'').trim();if(!q)return;S.x._q=q;xlog('在X搜索了「'+q+'」');genNetTweets(q);}
+/* 推文详情 */
+function renderXTweet(id){const t=tw(id);if(!t)return '';
+  return `<div class="xnav"><span class="l" onclick="back()">‹</span><span class="t">推文</span><span class="r" onclick="xRefreshComments('${id}')">🔄</span></div>
+    <div class="xscroll">
+      <div style="padding:14px;border-bottom:.5px solid #2f3336"><div style="display:flex;gap:10px;align-items:center">${av(t.avatar,'sm')}<div><div class="nm" style="color:#e7e9ea;font-weight:700">${esc(t.name)}</div><div class="hd" style="font-size:13px;color:#71767b">${esc(t.handle||'')}</div></div></div>
+        <div class="tx" style="color:#e7e9ea;font-size:18px;margin:10px 0;white-space:pre-wrap">${esc(t.text)}</div>
+        <div style="color:#71767b;font-size:13px">${new Date(t.time).toLocaleString('zh-CN')}</div>
+        <div class="acts" style="margin-top:8px;color:#71767b"><span>🔁 ${t.rt||0}</span><span class="${(t.likes||[]).includes(S.me.name)?'liked':''}" onclick="xLike('${id}')">❤️ ${(t.likes||[]).length}</span></div></div>
+      ${(t.comments||[]).map((cm,ci)=>`<div class="xcomment">${av(cm.avatar||'💬','sm')}<div style="flex:1"><div class="nm" style="font-size:13px;color:#e7e9ea;font-weight:700">${esc(cm.name)}</div><div class="tx">${esc(cm.text)}</div><div style="font-size:12px;color:#1d9bf0;margin-top:3px;cursor:pointer" onclick="xReplyComment('${id}',${ci})">回复</div></div></div>`).join('')||'<div class="empty" style="padding:24px">还没有评论，点🔄生成网友评论</div>'}
+      <div style="height:70px"></div></div>
+    <div class="inputbar"><textarea id="xc_in" rows="1" placeholder="发布你的回复…可@角色"></textarea><button class="send" onclick="xComment('${id}')">回复</button></div>`;}
+async function xRefreshComments(id){const t=tw(id);if(!t)return;toast('生成评论中…');
+  try{const r=await chatAPI([{role:'system',content:'你是X评论区生成器。针对推文生成4条不同网友评论。只输出JSON：[{"name":"网友名","emoji":"emoji","text":"评论"}]'},{role:'user',content:'推文："'+t.text+'"'}],{max:600});
+    parseArr(r).forEach(o=>t.comments.push({name:o.name,avatar:o.emoji||'🌐',text:o.text}));save();render();
+  }catch(e){toast('生成失败');}}
+function xComment(id){const t=tw(id);const inp=$('#xc_in');const v=inp?inp.value.trim():'';if(!v)return;
+  t.comments.push({name:S.me.name,avatar:S.me.avatar,text:v});xlog('在X评论了'+t.name+'的推文：「'+v.slice(0,16)+'」');save();render();
+  // @到的角色或推文作者(若为角色)来回复
+  const ats=S.contacts.filter(c=>!c.deleted&&!c.blocked&&v.includes(c.name));
+  const author=t.who&&t.who!=='me'&&t.who!=='net'?getC(t.who):null;
+  const targets=ats.length?ats:(author?[author]:[]);
+  targets.forEach(c=>xCommentReply(t,c,v));}
+async function xCommentReply(t,c,v){try{const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:S.me.name+'在X推文"'+t.text+'"下评论了你/或@了你："'+v+'"，回ta一句（口语，别带方括号）。'}]);
+  t.comments.push({name:c.remark||c.name,avatar:c.avatar,cid:c.id,text:cleanReply(r).slice(0,50)});save();if(cur().p==='xtweet')render();}catch(e){}}
+function xReplyComment(id,ci){const t=tw(id);const cm=t.comments[ci];openModal(`<h3>回复 ${esc(cm.name)}</h3><div class="field"><input id="xrc" placeholder="回复 ${esc(cm.name)}…"></div>
+  <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="doXReply('${id}',${ci})">回复</button></div>`);}
+function doXReply(id,ci){const v=$('#xrc').value.trim();if(!v)return;const t=tw(id);const cm=t.comments[ci];
+  t.comments.push({name:S.me.name,avatar:S.me.avatar,text:'回复 '+cm.name+'：'+v});save();closeModal();render();
+  if(cm.cid&&getC(cm.cid))xCommentReply(t,getC(cm.cid),v);}
+/* 私信 */
+function xDMList(){const ds=S.x.dms||[];
+  return `<div style="padding:8px 14px;text-align:right;background:#000;border-bottom:.5px solid #2f3336"><button class="xbtn out" onclick="genNetDM()">＋ 收一条网友私信</button></div>
+    ${ds.length?ds.map(d=>{const last=d.msgs[d.msgs.length-1];return `<div class="xdmrow" onclick="go('xdm',{id:'${d.id}'})">${av(d.avatar,'sm')}<div class="meta"><div class="n" style="color:#e7e9ea">${esc(d.name)}</div><div class="s">${last?esc((last.from==='me'?'我：':'')+last.text):''}</div></div></div>`;}).join(''):'<div class="empty" style="padding:40px">还没有私信，点上面生成一条网友私信，或在推文里和人互动</div>'}`;}
+async function genNetDM(){toast('生成中…');
+  try{const r=await chatAPI([{role:'system',content:'生成一个X网友给"'+S.me.name+'"发来的私信开场（暧昧/搭讪/聊天都行，一两句）。只输出JSON：{"name":"网友名","emoji":"emoji","text":"私信内容"}'}],{max:300});
+    let t=r.trim();const fb=t.match(/```(?:json)?\s*([\s\S]*?)```/);if(fb)t=fb[1];const a=t.indexOf('{'),b=t.lastIndexOf('}');if(a>=0)t=t.slice(a,b+1);const o=JSON.parse(t);
+    S.x.dms.unshift({id:uid(),name:o.name,avatar:o.emoji||'🌐',msgs:[{from:'them',text:o.text,time:Date.now()}]});save();render();
+  }catch(e){toast('生成失败');}}
+function renderXDM(id){const d=S.x.dms.find(x=>x.id===id);if(!d)return '';
+  return `<div class="xnav"><span class="l" onclick="back()">‹</span><span class="t">${esc(d.name)}</span><span class="r"></span></div>
+    <div class="xscroll" id="xdmbox" style="padding:10px 14px">${d.msgs.map(m=>`<div class="xmsg ${m.from==='me'?'me':''}"><div class="b">${esc(m.text)}</div></div>`).join('')}</div>
+    <div class="inputbar"><textarea id="xdm_in" rows="1" placeholder="发私信…"></textarea><button class="send" onclick="xSendDM('${id}')">发送</button></div>`;}
+function xSendDM(id){const d=S.x.dms.find(x=>x.id===id);const inp=$('#xdm_in');const v=inp?inp.value.trim():'';if(!v)return;
+  d.msgs.push({from:'me',text:v,time:Date.now()});xlog('在X私信回复了'+d.name+'：「'+v.slice(0,16)+'」');save();render();xDMReply(d);}
+async function xDMReply(d){try{const c=d.cid?getC(d.cid):null;const sys=c?buildSystem(c):'你是X网友「'+d.name+'」，和'+S.me.name+'私信聊天，口语、简短、有个性。';
+  const hist=d.msgs.slice(-10).map(m=>({role:m.from==='me'?'user':'assistant',content:m.text}));
+  const r=await chatAPI([{role:'system',content:sys},...hist],{max:200});
+  d.msgs.push({from:'them',text:cleanReply(r),time:Date.now()});save();if(cur().p==='xdm')render();}catch(e){}}
+/* 我的主页 */
+function xProfile(){const p=S.x.profile;
+  return `<div class="xprofh"></div>
+    <div style="padding:0 14px"><div style="margin-top:-30px;display:flex;justify-content:space-between;align-items:flex-end">${av(S.me.avatar,'lg')}<button class="xbtn out" onclick="editXProfile()">编辑资料</button></div>
+      <div style="font-size:19px;font-weight:700;color:#e7e9ea;margin-top:8px">${esc(S.me.name)}</div>
+      <div style="color:#71767b;font-size:14px">${esc(p.handle)}</div>
+      <div style="color:#e7e9ea;font-size:14px;margin:8px 0">${esc(p.bio||'')}</div>
+      <div style="color:#71767b;font-size:14px"><b style="color:#e7e9ea">${p.following}</b> 正在关注　<b style="color:#e7e9ea">${p.fans}</b> 关注者</div>
+    </div>
+    <div style="border-bottom:.5px solid #2f3336;margin:10px 0;color:#e7e9ea;padding:8px 14px;font-weight:700">我的推文</div>
+    ${[...S.x.tweets].filter(t=>t.who==='me').sort((a,b)=>b.time-a.time).map(tweetCard).join('')||'<div class="empty" style="padding:30px">还没发过推</div>'}`;}
+function editXProfile(){const p=S.x.profile;openModal(`<h3>编辑 X 资料</h3>
+  <div class="field"><label>用户名 handle</label><input id="xp_h" value="${esc(p.handle)}"></div>
+  <div class="field"><label>简介</label><input id="xp_b" value="${esc(p.bio||'')}"></div>
+  <div class="two"><div class="field"><label>粉丝数</label><input id="xp_f" type="number" value="${p.fans}"></div><div class="field"><label>关注数</label><input id="xp_g" type="number" value="${p.following}"></div></div>
+  <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){S.x.profile.handle=$('#xp_h').value.trim()||'@me';S.x.profile.bio=$('#xp_b').value.trim();S.x.profile.fans=+$('#xp_f').value||0;S.x.profile.following=+$('#xp_g').value||0;save();closeModal();render();})()">保存</button></div>`);}
+
 /* ---------- 微信主界面 ---------- */
 function renderWeChat(){
   let body='';
@@ -674,6 +834,7 @@ function myActivity(exceptId){let s='';
   const liked=S.moments.filter(p=>(p.likes||[]).includes(S.me.name)||(p.comments||[]).some(cm=>cm.name===S.me.name));
   if(liked.length)s+='·她在朋友圈互动：'+liked.slice(0,2).map(p=>{const cm=(p.comments||[]).find(x=>x.name===S.me.name);return (p.authorId==='me'?'自己':(getC(p.authorId)?.name||'某人'))+'的动态'+(cm?'评论了"'+cm.text+'"':'点了赞');}).join('、')+'\n';
   if(S.me.status)s+='·她自己写的动态："'+S.me.status+'"\n';
+  if(S.x&&S.x._mylog&&S.x._mylog.length)s+='·她在X(推特)的动态：'+S.x._mylog.slice(-4).join('；')+'\n';
   return s||'（手机上没什么新动静）';}
 function openWallet(){openModal(`<h3>💰 钱包</h3>
   <div class="wallet" style="margin:0 0 14px"><div class="lb">零钱余额</div><div class="ba">¥ ${(+S.me.balance).toFixed(2)}</div></div>
@@ -712,6 +873,7 @@ function renderContactInfo(id){const c=getC(id);if(!c)return '';const sp=getSpy(
       <div class="it" onclick="editContact('${id}')"><span>人设</span><span class="v">点击修改</span></div>
       <div class="it" onclick="editMemory('${id}')"><span>🧠 记忆</span><span class="v">${(c.memory||[]).length}条 ›</span></div>
       <div class="it" onclick="editSummary('${id}')"><span>📝 对话总结</span><span class="v">${c.summary?'已有 ›':'空 ›'}</span></div>
+      <div class="it" onclick="editCircle('${id}')"><span>𝕏 圈子备注</span><span class="v">${(S.x&&S.x.circle&&S.x.circle[id])?'已设 ›':'未设 ›'}</span></div>
       <div class="it" onclick="setChatBg('${id}')"><span>聊天背景</span><span class="v">${c.chatBg?'已设置':'默认'}</span></div>
     </div>
     <div class="section" style="margin:12px">
@@ -992,6 +1154,9 @@ function editMemory(id){const c=getC(id);c.memory=c.memory||[];
     <button class="btn g" style="margin-top:10px" onclick="closeModal()">关闭</button>`);}
 function editMemItem(id,i){const c=getC(id);openModal(`<h3>编辑记忆</h3><div class="field"><textarea id="mi_t" rows="3">${esc(c.memory[i])}</textarea></div>
   <div class="btns"><button class="btn g" onclick="editMemory('${id}')">返回</button><button class="btn p" onclick="(function(){getC('${id}').memory[${i}]=$('#mi_t').value.trim();save();editMemory('${id}');})()">保存</button></div>`);}
+function editCircle(id){S.x.circle=S.x.circle||{};openModal(`<h3>𝕏 圈子备注</h3><div class="hint">设定ta在X上的圈子/人设定位（如：游戏区up、毒舌影评人、深情诗人…）。ta发推会贴合这个备注。</div>
+  <div class="field"><textarea id="cir_t" rows="3" placeholder="比如：高冷医学博主，偶尔发暗恋小作文">${esc(S.x.circle[id]||'')}</textarea></div>
+  <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){S.x.circle['${id}']=$('#cir_t').value.trim();save();closeModal();render();toast('已保存');})()">保存</button></div>`);}
 function editSummary(id){const c=getC(id);openModal(`<h3>📝 对话总结</h3><div class="hint">超过设定回合后自动生成；你也可手动修改。这段会作为更早聊天的背景给ta。</div>
   <div class="field"><textarea id="sm_t" rows="6">${esc(c.summary||'')}</textarea></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){getC('${id}').summary=$('#sm_t').value.trim();save();closeModal();render();toast('已保存');})()">保存</button></div>`);}
