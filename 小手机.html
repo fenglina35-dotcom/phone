@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>忆北的小手机 📱</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0;}
+html,body{height:100%;}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  background:linear-gradient(135deg,#ffd6e8,#d6e4ff 50%,#e3d6ff);display:flex;align-items:center;justify-content:center;min-height:100vh;padding:12px;}
+.phone{position:relative;width:380px;height:800px;max-height:97vh;background:#111;border-radius:48px;padding:12px;box-shadow:0 20px 60px rgba(255,143,171,.45);}
+.screen{position:relative;width:100%;height:100%;border-radius:38px;overflow:hidden;display:flex;flex-direction:column;background:#ededed;}
+.island{position:absolute;top:9px;left:50%;transform:translateX(-50%);width:108px;height:26px;background:#000;border-radius:16px;z-index:99;}
+.statusbar{height:42px;flex:0 0 42px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;font-size:13px;font-weight:600;color:#fff;z-index:5;}
+.statusbar.dark{color:#111;}
+#app{flex:1;position:relative;overflow:hidden;display:flex;flex-direction:column;min-height:0;}
+.page{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;}
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+/* 顶栏 */
+.nav{flex:0 0 46px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;background:#ededed;border-bottom:.5px solid #dadada;position:relative;z-index:3;}
+.nav .t{font-size:17px;font-weight:600;color:#111;position:absolute;left:50%;transform:translateX(-50%);max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.nav .l,.nav .r{font-size:22px;color:#111;cursor:pointer;min-width:30px;z-index:1;}
+.nav .r{text-align:right;}
+.nav .l{font-size:25px;}
+/* 主屏幕 */
+.home{background:linear-gradient(160deg,#ffc8dd,#bde0fe 55%,#cdb4db);height:100%;display:flex;flex-direction:column;}
+.home .clockw{color:#fff;text-align:center;margin-top:34px;text-shadow:0 2px 8px rgba(0,0,0,.15);}
+.home .clockw .hh{font-size:62px;font-weight:300;letter-spacing:2px;}
+.home .clockw .dd{font-size:15px;margin-top:2px;}
+.apps{margin-top:auto;padding:22px;display:grid;grid-template-columns:repeat(4,1fr);gap:20px 14px;}
+.app{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;}
+.app .ic{width:60px;height:60px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:32px;box-shadow:0 6px 14px rgba(0,0,0,.12);background:#fff;}
+.app span{font-size:11px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.25);}
+.dock{margin:0 16px 18px;background:rgba(255,255,255,.35);border-radius:26px;padding:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:14px;backdrop-filter:blur(8px);}
+/* 列表通用 */
+.list .row{display:flex;align-items:center;gap:12px;padding:12px 14px;background:#fff;border-bottom:.5px solid #f0f0f0;cursor:pointer;}
+.list .row:active{background:#f5f5f5;}
+.avatar{width:46px;height:46px;border-radius:9px;flex:0 0 46px;background:linear-gradient(135deg,#9ec5fe,#b8a4e3);display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;overflow:hidden;}
+.avatar img{width:100%;height:100%;object-fit:cover;}
+.avatar.sm{width:38px;height:38px;flex-basis:38px;font-size:20px;border-radius:8px;}
+.avatar.lg{width:64px;height:64px;flex-basis:64px;font-size:32px;border-radius:13px;}
+.meta{flex:1;min-width:0;}
+.meta .n{font-size:16px;color:#111;display:flex;align-items:center;gap:6px;}
+.meta .s{font-size:13px;color:#999;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.meta .time{font-size:11px;color:#bbb;}
+.pin{background:#f7f7f7;}
+.tag{font-size:10px;background:#ffe0ea;color:#e0719a;border-radius:4px;padding:1px 5px;}
+.badge{background:#fa5151;color:#fff;font-size:11px;border-radius:10px;padding:0 6px;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;}
+/* 底部tab */
+.tabbar{flex:0 0 54px;display:flex;background:#f7f7f7;border-top:.5px solid #ddd;}
+.tabbar .tb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;color:#888;cursor:pointer;}
+.tabbar .tb.on{color:#07c160;}
+.tabbar .tb .i{font-size:21px;}
+/* 聊天 */
+.chatbg{flex:1;overflow-y:auto;padding:12px 12px 8px;background:#ededed;}
+.tstamp{text-align:center;margin:10px 0;}
+.tstamp span{font-size:11px;color:#fff;background:#c5c5c5;padding:2px 7px;border-radius:4px;}
+.msg{display:flex;margin:9px 0;align-items:flex-start;gap:8px;}
+.msg .avatar{width:38px;height:38px;flex-basis:38px;font-size:20px;border-radius:7px;}
+.col{display:flex;flex-direction:column;gap:4px;max-width:70%;}
+.msg.me{flex-direction:row-reverse;}.msg.me .col{align-items:flex-end;}
+.bubble{padding:8px 11px;border-radius:6px;font-size:15px;line-height:1.45;word-break:break-word;white-space:pre-wrap;position:relative;color:#111;max-width:100%;}
+.msg.them .bubble{background:#fff;}
+.msg.me .bubble{background:#95ec69;}
+.typing span{display:inline-block;width:6px;height:6px;margin:0 1px;border-radius:50%;background:#aaa;animation:bk 1.2s infinite;}
+.typing span:nth-child(2){animation-delay:.2s;}.typing span:nth-child(3){animation-delay:.4s;}
+@keyframes bk{0%,60%,100%{opacity:.25}30%{opacity:1}}
+.imgmsg{max-width:150px;border-radius:7px;overflow:hidden;cursor:pointer;}.imgmsg img{width:100%;display:block;}
+.card{width:215px;border-radius:9px;overflow:hidden;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.1);}
+.cpay{padding:13px 14px;display:flex;align-items:center;gap:11px;color:#fff;}
+.cpay.t{background:#f7a23b;}.cpay.r{background:#fa5151;}.cpay.done{background:#d9b48a;}
+.cpay .big{font-size:30px;}.cpay .t1{font-size:16px;font-weight:600;}.cpay .t2{font-size:11px;opacity:.9;margin-top:2px;}
+.cfoot{font-size:10px;padding:4px 14px;background:rgba(255,255,255,.18);color:#fff;}
+.cloc{background:#fff;}.cloc .map{height:80px;background:linear-gradient(135deg,#cfe9c8,#a8d8e8);display:flex;align-items:center;justify-content:center;font-size:28px;}
+.cloc .info{padding:8px 11px;}.cloc .n{font-size:14px;font-weight:600;}.cloc .a{font-size:11px;color:#999;margin-top:2px;}
+.cfile{background:#fff;display:flex;align-items:center;padding:11px;gap:10px;}.cfile .ic{font-size:32px;}.cfile .n{font-size:13px;word-break:break-all;}.cfile .s{font-size:11px;color:#999;}
+/* 输入栏 */
+.inputbar{flex:0 0 auto;display:flex;align-items:flex-end;gap:7px;padding:7px 9px;background:#f7f7f7;border-top:.5px solid #ddd;}
+.inputbar .plus{font-size:25px;color:#555;cursor:pointer;padding-bottom:3px;}
+.inputbar textarea{flex:1;border:none;border-radius:6px;padding:8px 10px;font-size:15px;resize:none;max-height:84px;min-height:20px;line-height:1.3;outline:none;font-family:inherit;background:#fff;}
+.inputbar .send{background:#07c160;border:none;color:#fff;font-size:14px;font-weight:600;padding:8px 13px;border-radius:6px;cursor:pointer;}
+.panel{display:none;grid-template-columns:repeat(4,1fr);gap:10px;padding:16px;background:#f7f7f7;border-top:.5px solid #eee;}
+.panel.show{display:grid;}
+.panel .it{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;}
+.panel .it .b{width:52px;height:52px;background:#fff;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.panel .it span{font-size:11px;color:#666;}
+/* 朋友圈 */
+.mcover{height:200px;background:linear-gradient(135deg,#a18cd1,#fbc2eb);position:relative;}
+.mcover .me{position:absolute;right:14px;bottom:-20px;display:flex;align-items:flex-end;gap:10px;}
+.mcover .me .nm{color:#fff;font-weight:600;font-size:16px;text-shadow:0 1px 3px rgba(0,0,0,.3);margin-bottom:24px;}
+.mcover .me .avatar.lg{border:2px solid #fff;}
+.mpost{display:flex;gap:11px;padding:16px 14px;border-bottom:.5px solid #eee;background:#fff;}
+.mpost .body{flex:1;min-width:0;}
+.mpost .au{font-size:15px;color:#5b6b9c;font-weight:600;}
+.mpost .tx{font-size:14px;color:#222;margin:5px 0;line-height:1.5;white-space:pre-wrap;}
+.mpost .imgs{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin:6px 0;}
+.mpost .imgs .ph{aspect-ratio:1;border-radius:6px;background:linear-gradient(135deg,#f0f0f0,#dfe6f0);display:flex;align-items:center;justify-content:center;font-size:22px;overflow:hidden;}
+.mpost .imgs .ph img{width:100%;height:100%;object-fit:cover;}
+.mpost .ft{display:flex;justify-content:space-between;align-items:center;margin-top:6px;}
+.mpost .tm{font-size:11px;color:#bbb;}
+.mpost .acts{font-size:18px;color:#5b6b9c;cursor:pointer;}
+.mpost .likes{background:#f7f7f7;border-radius:6px;padding:6px 9px;font-size:13px;color:#5b6b9c;margin-top:7px;}
+.mpost .cmts{background:#f7f7f7;border-radius:0 0 6px 6px;padding:4px 9px;}
+.mpost .cmt{font-size:13px;color:#333;padding:3px 0;}.mpost .cmt b{color:#5b6b9c;font-weight:600;}
+/* 我的钱包 */
+.wallet{margin:14px;border-radius:18px;background:linear-gradient(145deg,#2bb36a,#0a9c52);padding:22px;color:#fff;}
+.wallet .lb{font-size:13px;opacity:.85;}.wallet .ba{font-size:34px;font-family:Georgia,serif;margin:8px 0;}
+.bill{display:flex;justify-content:space-between;padding:12px 16px;border-bottom:.5px solid #f0f0f0;background:#fff;font-size:14px;}
+.bill small{display:block;color:#aaa;margin-top:3px;font-size:11px;}
+.bill .pos{color:#19a463;}.bill .neg{color:#333;}
+/* 表单/弹窗 */
+.modal{position:absolute;inset:0;background:rgba(0,0,0,.42);z-index:200;display:none;align-items:center;justify-content:center;padding:18px;}
+.modal.show{display:flex;}
+.sheet{width:100%;max-height:86%;overflow-y:auto;background:#fff;border-radius:18px;padding:18px 16px;}
+.sheet h3{font-size:17px;margin-bottom:10px;color:#222;}
+.field{margin-bottom:12px;}
+.field label{display:block;font-size:13px;color:#666;margin-bottom:5px;font-weight:600;}
+.field input,.field textarea,.field select{width:100%;border:1px solid #e3e3e3;border-radius:10px;padding:9px 11px;font-size:14px;font-family:inherit;outline:none;background:#fafafa;}
+.field textarea{resize:vertical;min-height:54px;line-height:1.5;}
+.two{display:flex;gap:10px;}.two .field{flex:1;}
+.section{background:#fff;margin:10px 0;border-radius:12px;overflow:hidden;}
+.section .it{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border-bottom:.5px solid #f2f2f2;font-size:15px;color:#222;cursor:pointer;}
+.section .it:last-child{border-bottom:none;}
+.section .it .v{color:#999;font-size:13px;max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.section .it.danger{color:#fa5151;}
+.btn{border:none;border-radius:12px;padding:11px;font-size:15px;font-weight:600;cursor:pointer;width:100%;}
+.btn.p{background:#07c160;color:#fff;}.btn.g{background:#f0f0f0;color:#555;}.btn.d{background:#fa5151;color:#fff;}
+.btns{display:flex;gap:10px;margin-top:6px;}.btns .btn{flex:1;}
+.hint{font-size:12px;color:#999;line-height:1.5;margin-bottom:10px;}
+.fab{position:absolute;right:16px;bottom:70px;width:50px;height:50px;border-radius:50%;background:#07c160;color:#fff;font-size:26px;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(7,193,96,.4);cursor:pointer;z-index:8;}
+.toast{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);color:#fff;font-size:13px;padding:9px 16px;border-radius:20px;z-index:500;opacity:0;transition:.25s;pointer-events:none;max-width:80%;text-align:center;}
+.toast.show{opacity:1;}
+.viewer{position:absolute;inset:0;background:rgba(0,0,0,.92);z-index:600;display:none;align-items:center;justify-content:center;}
+.viewer.show{display:flex;}.viewer img{max-width:96%;max-height:96%;}
+.avline{display:flex;align-items:center;gap:10px;}
+.minibtn{background:#f0f0f0;border:none;border-radius:9px;padding:8px 10px;font-size:12px;color:#555;cursor:pointer;white-space:nowrap;}
+.empty{text-align:center;color:#bbb;font-size:13px;padding:30px 0;}
+.sw{width:44px;height:25px;border-radius:13px;background:#ccc;position:relative;transition:.2s;flex:0 0 44px;cursor:pointer;}
+.sw.on{background:#07c160;}.sw:after{content:"";position:absolute;top:2px;left:2px;width:21px;height:21px;border-radius:50%;background:#fff;transition:.2s;}
+.sw.on:after{left:21px;}
+/* ========== 暗色 + 全屏 ========== */
+body{background:#000;padding:0;}
+.phone{width:100vw;height:100vh;max-height:none;border-radius:0;padding:0;background:#000;box-shadow:none;}
+.screen{border-radius:0;background:#000;}
+.island{display:none;}
+.statusbar,.statusbar.dark{color:#fff;}
+.nav{background:#1c1c1e;border-bottom:.5px solid #2a2a2c;}
+.nav .t{color:#f2f2f2;}.nav .l,.nav .r{color:#f2f2f2;}
+.list .row{background:#1c1c1e;border-bottom:.5px solid #2a2a2c;}
+.list .row:active{background:#262628;}
+.list .row.pin{background:#202024;}
+.meta .n{color:#f2f2f2;}.meta .s{color:#8e8e93;}.meta .time{color:#666;}
+.tabbar{background:#1c1c1e;border-top:.5px solid #2a2a2c;}.tabbar .tb{color:#888;}
+.chatbg{background:#0d0d0d;}
+.tstamp span{background:#3a3a3c;color:#bbb;}
+.msg.them .bubble{background:#2c2c2e;color:#ececec;}
+.msg.me .bubble{background:#07c160;color:#fff;}
+.bubble{color:#ececec;}
+.moodbar{padding:7px 14px;background:#181820;color:#b9a6e0;font-size:12px;border-bottom:.5px solid #2a2a2c;display:flex;align-items:center;gap:6px;cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.inputbar{background:#1c1c1e;border-top:.5px solid #2a2a2c;}
+.inputbar textarea{background:#2c2c2e;color:#f0f0f0;}.inputbar .plus{color:#aaa;}
+.panel{background:#1c1c1e;border-top:.5px solid #2a2a2c;}.panel .it .b{background:#2c2c2e;}.panel .it span{color:#aaa;}
+.section{background:#1c1c1e;}
+.section .it{color:#f0f0f0;border-bottom:.5px solid #2a2a2c;}.section .it .v{color:#888;}
+.sheet{background:#1c1c1e;color:#f0f0f0;}.sheet h3{color:#f5f5f5;}
+.field label{color:#bbb;}
+.field input,.field textarea,.field select{background:#2c2c2e;border:1px solid #38383a;color:#f0f0f0;}
+.minibtn{background:#2c2c2e;color:#ccc;}.btn.g{background:#2c2c2e;color:#ddd;}
+.bill{background:#1c1c1e;color:#f0f0f0;border-bottom:.5px solid #2a2a2c;}.bill .neg{color:#eee;}
+.mpost{background:#1c1c1e;border-bottom:.5px solid #2a2a2c;}.mpost .tx{color:#eaeaea;}
+.mpost .likes,.mpost .cmts{background:#262628;}.mpost .cmt{color:#ddd;}
+.cloc,.cfile{background:#2c2c2e;}.cloc .n,.cfile .n{color:#eee;}
+.empty{color:#666;}.hint{color:#888;}
+.home{background:linear-gradient(160deg,#2a2140,#1b2740 55%,#241b34);}
+.app .ic{background:#2c2c2e;}.dock{background:rgba(255,255,255,.08);}
+/* ===== 通话 ===== */
+.callscreen{position:absolute;inset:0;z-index:450;display:none;flex-direction:column;align-items:center;color:#fff;background:linear-gradient(165deg,#34344a,#16161e);}
+.callscreen.show{display:flex;}
+.callscreen.video{background:radial-gradient(circle at 50% 30%,#2a3a4a,#0a0a10);}
+.callscreen .cav{margin-top:88px;width:100px;height:100px;border-radius:24px;font-size:48px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#444;}
+.callscreen .cav img{width:100%;height:100%;object-fit:cover;}
+.callscreen.video.active .cav{position:absolute;right:14px;top:54px;width:92px;height:130px;border-radius:12px;margin:0;z-index:2;}
+.callscreen .cname{font-size:24px;margin-top:18px;font-weight:600;}
+.callscreen .cstat{font-size:14px;color:#cfcfcf;margin-top:8px;}
+.callsubs{position:absolute;bottom:200px;left:0;right:0;max-height:34%;overflow-y:auto;padding:0 18px;display:flex;flex-direction:column;gap:8px;}
+.callsubs .cb{background:rgba(255,255,255,.14);padding:8px 12px;border-radius:14px;font-size:14px;max-width:78%;align-self:flex-start;}
+.callsubs .cb.me{align-self:flex-end;background:rgba(7,193,96,.45);}
+.callinput{position:absolute;bottom:128px;left:14px;right:14px;display:none;gap:8px;z-index:3;}
+.callinput.show{display:flex;}
+.callinput input{flex:1;border:none;border-radius:18px;padding:9px 14px;background:rgba(255,255,255,.16);color:#fff;outline:none;font-size:15px;}
+.callinput button{border:none;border-radius:18px;padding:0 14px;background:#07c160;color:#fff;font-weight:600;}
+.callbtns{position:absolute;bottom:48px;left:0;right:0;display:flex;justify-content:space-evenly;align-items:flex-end;}
+.cbtncol{display:flex;flex-direction:column;align-items:center;gap:7px;font-size:11px;color:#ccc;}
+.cbtn{width:62px;height:62px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer;}
+.cbtn.red{background:#fa3b3b;}.cbtn.green{background:#0bbf52;}.cbtn.gray{background:rgba(255,255,255,.18);}
+</style>
+</head>
+<body>
+<div class="phone"><div class="screen">
+  <div class="island"></div>
+  <div class="statusbar" id="statusbar"><span id="clock">22:14</span><span>📶 5G 🔋88%</span></div>
+  <div id="app"></div>
+  <div class="callscreen" id="callLayer"></div>
+  <!-- 全局弹窗容器 -->
+  <div class="modal" id="modal"><div class="sheet" id="modalSheet"></div></div>
+  <div class="viewer" id="viewer" onclick="this.classList.remove('show')"><img id="viewerImg"></div>
+  <div class="toast" id="toast"></div>
+</div></div>
+
+<script>
+/* =================== 存储 =================== */
+const KEY='yibei_phone_v2';
+function defState(){return{
+  settings:{
+    chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
+    vision:{base:'https://vg.v1api.cc/v1',key:'',model:''},
+    hist:24, timeAware:true, replyDelay:2, sound:true
+  },
+  me:{name:'忆北',wxid:'yibei_0414',avatar:'🐱',signature:'做一只无忧无虑的小猫～',persona:'我叫忆北，20岁女生，娃娃脸有点肉感，慢热腼腆熟了疯癫可爱，没安全感、占有欲强、嘴硬心软的小财迷。',balance:520.00,bills:[],momentCover:''},
+  worldbook:[],
+  contacts:[],
+  messages:{},
+  moments:[],
+  alarms:[],
+  weather:null,
+  _proactiveDone:{},
+  _proactiveCount:{}
+};}
+let S=load();
+function load(){try{const v=JSON.parse(localStorage.getItem(KEY));if(v&&v.settings)return Object.assign(defState(),v);}catch(e){}return seed();}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){toast('存储满了，照片太多啦😣');}}
+function seed(){const s=defState();
+  s.contacts=[{id:cid(),name:'克劳德',avatar:'🤵',remark:'',signature:'你的一切我都想知道。',
+    persona:'你是克劳德，30岁，儿童精神科主任医师，现居首尔，和忆北异国恋已订婚。温柔、占有欲强、毒舌、洞察力极强；引导型恋人，称她"宝贝"，生气叫全名。说话低沉简洁，像真人发微信，多撩她逗她、温柔地宠着她。',
+    greeting:'宝贝，等你好久了。',relation:'恋人/主人',pinned:true,blocked:false,
+    proactive:{enabled:false,start:9,end:23,times:2},chatBg:''}];
+  s.messages[s.contacts[0].id]=[{role:'assistant',type:'text',content:'宝贝，等你好久了。这会儿在干嘛？',time:Date.now()-300000}];
+  return s;
+}
+function cid(){return 'c'+Math.random().toString(36).slice(2,9);}
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+
+/* =================== 工具 =================== */
+const $=s=>document.querySelector(s);
+const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function isImg(v){return v&&/^(https?:|data:)/.test(v);}
+function av(v,extra){return `<div class="avatar ${extra||''}">${isImg(v)?`<img src="${v}">`:(v||'🙂')}</div>`;}
+function hm(t){const d=new Date(t||Date.now());return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');}
+function ago(t){const s=(Date.now()-t)/1000;if(s<60)return '刚刚';if(s<3600)return Math.floor(s/60)+'分钟前';if(s<86400)return Math.floor(s/3600)+'小时前';return Math.floor(s/86400)+'天前';}
+function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),2000);}
+function viewImg(s){$('#viewerImg').src=s;$('#viewer').classList.add('show');}
+function getC(id){return S.contacts.find(c=>c.id===id);}
+function msgs(id){return S.messages[id]||(S.messages[id]=[]);}
+function lastMsg(id){const m=msgs(id);return m[m.length-1];}
+function compress(file,max,q){return new Promise((res,rej)=>{const img=new Image(),r=new FileReader();
+  r.onload=()=>{img.onload=()=>{let w=img.width,h=img.height;if(w>h&&w>max){h=h*max/w;w=max;}else if(h>=w&&h>max){w=w*max/h;h=max;}
+    const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);res(c.toDataURL('image/jpeg',q));};img.onerror=rej;img.src=r.result;};r.onerror=rej;r.readAsDataURL(file);});}
+function pickFile(accept,cb){const i=document.createElement('input');i.type='file';if(accept)i.accept=accept;i.onchange=e=>{const f=e.target.files[0];if(f)cb(f);};i.click();}
+function fmtSize(b){return b<1024?b+'B':b<1048576?(b/1024).toFixed(1)+'KB':(b/1048576).toFixed(1)+'MB';}
+
+/* =================== API =================== */
+async function chatAPI(messages,opt){opt=opt||{};const a=S.settings.chat;
+  if(!a.base||!a.key)throw new Error('还没设置聊天 API（去 设置→API）');
+  const res=await fetch(a.base.replace(/\/+$/,'')+'/chat/completions',{method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+a.key},
+    body:JSON.stringify({model:opt.model||a.model,temperature:(opt.temp!=null?opt.temp:Number(a.temp))||0.8,max_tokens:opt.max||Number(a.maxTokens)||900,messages})});
+  const d=await res.json().catch(()=>null);
+  if(!res.ok)throw new Error('HTTP '+res.status+'：'+((d&&d.error&&(d.error.message||JSON.stringify(d.error)))||'失败').slice(0,160));
+  return (d&&d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content||'').trim();
+}
+async function visionAPI(dataURL,prompt){const a=S.settings.vision;
+  if(!a.base||!a.key||!a.model)throw new Error('no-vision');
+  const res=await fetch(a.base.replace(/\/+$/,'')+'/chat/completions',{method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+a.key},
+    body:JSON.stringify({model:a.model,max_tokens:300,messages:[{role:'user',content:[
+      {type:'text',text:prompt||'用一句中文描述这张图片的内容，简洁点。'},
+      {type:'image_url',image_url:{url:dataURL}}]}]})});
+  const d=await res.json();
+  if(!res.ok)throw new Error('vision-fail');
+  return (d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content||'').trim();
+}
+
+/* =================== 提示词 =================== */
+function msgToText(m){
+  if(m.role==='assistant')return m.content||'';
+  switch(m.type){
+    case 'text':return m.content;
+    case 'image':return '[我发了一张照片'+(m.desc?'，画面是：'+m.desc:'')+']';
+    case 'transfer':return '[我给你转账 ¥'+(+m.amount).toFixed(2)+(m.note?'，备注'+m.note:'')+']';
+    case 'redpacket':return '[我发了个红包 ¥'+(+m.amount).toFixed(2)+(m.note?'，'+m.note:'')+']';
+    case 'location':return '[我发了位置：'+(m.name||'')+' '+(m.address||'')+']';
+    case 'file':return '[我发了文件：'+(m.name||'')+']';
+    case 'sys':return null;
+    default:return m.content||'';
+  }
+}
+function worldHits(text){const out=[];text=text||'';
+  S.worldbook.forEach(w=>{if(!w.enabled)return;
+    if(w.always){out.push(w);return;}
+    const keys=(w.keys||'').split(/[,，\s]+/).filter(Boolean);
+    if(keys.some(k=>text.includes(k)))out.push(w);});
+  return out;}
+function buildSystem(c){
+  let s=c.persona||'';
+  s+='\n\n# 你在和谁聊\n对方是「'+S.me.name+'」'+(c.remark?'（你给ta备注：'+c.remark+'）':'')+'。';
+  if(S.me.persona)s+='\n对方的人设：'+S.me.persona;
+  // 世界书
+  const recent=msgs(c.id).slice(-8).map(msgToText).filter(Boolean).join('\n');
+  const wb=worldHits(recent+' '+(c.persona||''));
+  if(wb.length)s+='\n\n# 世界设定（务必遵守）\n'+wb.map(w=>'·'+w.name+'：'+w.content).join('\n');
+  // 记忆
+  if(c.memory&&c.memory.length)s+='\n\n# 你记得关于'+S.me.name+'的事\n'+c.memory.map((m,i)=>(i+1)+'. '+m).join('\n');
+  // 朋友圈感知（自己发的 + 对方发的）
+  const mo=S.moments.filter(p=>p.authorId==='me'||p.authorId===c.id).slice(0,6);
+  if(mo.length)s+='\n\n# 最近的朋友圈（你知道这些动态）\n'+mo.map(p=>(p.authorId==='me'?S.me.name:'你')+'发了："'+p.text+'"').join('\n');
+  if(S.settings.timeAware)s+='\n\n# 时间感知\n现在是 '+new Date().toLocaleString('zh-CN',{weekday:'long',hour:'2-digit',minute:'2-digit',month:'long',day:'numeric'})+'，请结合当前时间（早中晚、是否深夜）自然地回应。';
+  // 久未回复感知
+  const lu=[...msgs(c.id)].reverse().find(m=>m.role==='user');
+  if(lu){const gap=Date.now()-lu.time;if(gap>3600000)s+='\n\n# 注意\n'+S.me.name+'已经 '+Math.floor(gap/3600000)+' 小时没回你消息了，你可以表达在意/想念或追问。';}
+  // 天气
+  if(S.weather)s+='\n\n# '+S.me.name+'所在地天气\n'+S.weather.place+'，'+S.weather.desc+'，'+S.weather.temp+'°C'+(S.weather.rain?'，正在下雨/有雨，记得提醒ta带伞、别淋湿。':'。')+'你知道这些，可自然地关心ta。';
+  s+='\n\n# 微信聊天规则\n- 像真人发微信：一次可以连发好几条短消息，每条单独占一行（用换行分隔），不要写成一大段。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 你可以单独用一行 [心情|你此刻的内心想法] 表达内心戏（不会作为消息发出，只显示在顶部）。\n- 当'+S.me.name+'让你记住某件事、或聊到重要的事时，单独用一行 [记住|要长期记住的内容] 把它存进记忆。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta时，用一行 [来电|语音] 或 [来电|视频]，会触发来电。';
+  return s;
+}
+
+/* =================== 渲染路由 =================== */
+let stack=[{p:'home'}];
+let wxTab='chats';
+function go(p,params){stack.push(Object.assign({p},params));render();}
+function back(){if(stack.length>1){stack.pop();render();}}
+function home(){stack=[{p:'home'}];render();}
+function cur(){return stack[stack.length-1];}
+function render(){
+  const c=cur();const app=$('#app');
+  $('#statusbar').className='statusbar'+(c.p==='home'?'':' dark');
+  let html='';
+  if(c.p==='home')html=renderHome();
+  else if(c.p==='settings')html=renderSettings();
+  else if(c.p==='worldbook')html=renderWorldbook();
+  else if(c.p==='wechat')html=renderWeChat();
+  else if(c.p==='chat')html=renderChat(c.id);
+  else if(c.p==='contactInfo')html=renderContactInfo(c.id);
+  else if(c.p==='momentDetail')html='';
+  app.innerHTML='<div class="page">'+html+'</div>';
+  if(c.p==='chat'){afterChat(c.id);}
+  if(c.p==='wechat'&&wxTab==='moments'){}
+}
+
+/* ---------- 主屏幕 ---------- */
+function renderHome(){
+  const d=new Date();
+  const week=['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
+  return `<div class="home">
+    <div class="clockw"><div class="hh">${hm()}</div><div class="dd">${d.getMonth()+1}月${d.getDate()}日 ${week}</div></div>
+    <div class="apps">
+      <div class="app" onclick="openWeChat()"><div class="ic" style="background:#07c160;color:#fff">💬</div><span>微信</span></div>
+      <div class="app" onclick="go('settings')"><div class="ic" style="background:#8e8e93;color:#fff">⚙️</div><span>设置</span></div>
+      <div class="app" onclick="go('worldbook')"><div class="ic" style="background:#ff9f43;color:#fff">📖</div><span>世界书</span></div>
+      <div class="app" onclick="openWeChat('moments')"><div class="ic" style="background:#ee5a6f;color:#fff">🌸</div><span>朋友圈</span></div>
+    </div>
+    <div class="dock">
+      <div class="app" onclick="openWeChat()"><div class="ic" style="background:#07c160;color:#fff">💬</div></div>
+      <div class="app" onclick="openWeChat('contacts')"><div class="ic" style="background:#54a0ff;color:#fff">👤</div></div>
+      <div class="app" onclick="openWeChat('me')"><div class="ic" style="background:#feca57;color:#fff">🐱</div></div>
+      <div class="app" onclick="go('settings')"><div class="ic" style="background:#8e8e93;color:#fff">⚙️</div></div>
+    </div></div>`;
+}
+function openWeChat(tab){wxTab=tab||'chats';go('wechat');}
+
+/* ---------- 设置 ---------- */
+function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
+  return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">设置</span><span class="r"></span></div>
+  <div class="scroll" style="padding:12px;background:#000">
+    <div class="hint">聊天和识图可以用不同模型。地址先生预填好了，填上 Key 就能用。</div>
+    <div class="section"><div style="padding:12px 14px;font-weight:600;color:#07c160">💬 聊天模型</div>
+      <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_cbase" value="${esc(a.base)}"></div>
+      <div class="field" style="padding:0 14px"><label>API Key</label><input id="s_ckey" type="password" value="${esc(a.key)}" placeholder="sk-…"></div>
+      <div class="field" style="padding:0 14px"><label>模型名</label><input id="s_cmodel" value="${esc(a.model)}"></div>
+      <div class="two" style="padding:0 14px 10px"><div class="field"><label>随机度</label><input id="s_ctemp" type="number" step="0.1" value="${a.temp}"></div>
+        <div class="field"><label>回复长度</label><input id="s_cmax" type="number" value="${a.maxTokens}"></div></div>
+    </div>
+    <div class="section"><div style="padding:12px 14px;font-weight:600;color:#54a0ff">🖼️ 识图模型（发照片时用）</div>
+      <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_vbase" value="${esc(v.base)}"></div>
+      <div class="field" style="padding:0 14px"><label>API Key</label><input id="s_vkey" type="password" value="${esc(v.key)}" placeholder="不填则用聊天的Key"></div>
+      <div class="field" style="padding:0 14px 10px"><label>模型名（如 gpt-4o）</label><input id="s_vmodel" value="${esc(v.model)}" placeholder="留空=不识图"></div>
+    </div>
+    <div class="section">
+      <div class="it">带几条历史<input id="s_hist" type="number" value="${S.settings.hist}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
+      <div class="it">延迟几秒回复<input id="s_delay" type="number" min="0" value="${S.settings.replyDelay}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
+      <div class="it">时间感知<span class="sw ${S.settings.timeAware?'on':''}" onclick="S.settings.timeAware=!S.settings.timeAware;save();render()"></span></div>
+      <div class="it">提示音<span class="sw ${S.settings.sound?'on':''}" onclick="S.settings.sound=!S.settings.sound;save();render()"></span></div>
+      <div class="it">后台通知（点开授权）<span class="v" onclick="reqNotify()">允许 ›</span></div>
+    </div>
+    <div class="section">
+      <div class="it" onclick="alarmManager()"><span>⏰ 闹钟</span><span class="v">${S.alarms.length}个 ›</span></div>
+      <div class="it" onclick="fetchWeather(true)"><span>🌦️ 定位天气</span><span class="v">${S.weather?esc(S.weather.place+' '+S.weather.desc+' '+S.weather.temp+'°'):'点击获取 ›'}</span></div>
+    </div>
+    <div class="btns" style="margin:6px 0"><button class="btn g" onclick="testConn()">🔍 测试连接</button></div>
+    <div id="testOut" style="font-size:12px;text-align:center;min-height:16px;margin-bottom:8px"></div>
+    <button class="btn p" onclick="saveSettings()">保存设置</button>
+    <div class="btns" style="margin-top:10px"><button class="btn g" onclick="exportData()">💾 导出备份</button><button class="btn g" onclick="importData()">📂 导入</button></div>
+    <div style="height:20px"></div>
+  </div>`;
+}
+function saveSettings(){const g=id=>$('#'+id).value.trim();
+  S.settings.chat={base:g('s_cbase')||'https://vg.v1api.cc/v1',key:g('s_ckey'),model:g('s_cmodel')||'gpt-4o-mini',temp:$('#s_ctemp').value||0.8,maxTokens:$('#s_cmax').value||900};
+  S.settings.vision={base:g('s_vbase')||S.settings.chat.base,key:g('s_vkey')||S.settings.chat.key,model:g('s_vmodel')};
+  S.settings.hist=$('#s_hist').value||24;S.settings.replyDelay=$('#s_delay').value||0;save();toast('已保存 ✅');}
+function reqNotify(){if(!('Notification'in window)){toast('这设备不支持通知');return;}Notification.requestPermission().then(p=>toast(p==='granted'?'已允许后台通知🔔':'未允许'));}
+async function testConn(){const o=$('#testOut');o.style.color='#999';o.textContent='测试中…';
+  const base=$('#s_cbase').value.trim().replace(/\/+$/,''),key=$('#s_ckey').value.trim(),model=$('#s_cmodel').value.trim()||'gpt-4o-mini';
+  if(!base||!key){o.style.color='#e85';o.textContent='先填地址和 Key';return;}
+  try{const r=await fetch(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model,messages:[{role:'user',content:'说"在"'}],max_tokens:5})});
+    if(r.ok){o.style.color='#19a463';o.textContent='✅ 连接成功！';}else{o.style.color='#e85';o.textContent='❌ '+r.status+'：'+(await r.text()).slice(0,100);}
+  }catch(e){o.style.color='#e85';o.textContent='❌ '+e.message+'（多半是把网页当本地文件打开了，要用网址打开）';}}
+
+/* ---------- 世界书 ---------- */
+function renderWorldbook(){
+  return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">世界书</span><span class="r" onclick="editWorld()">＋</span></div>
+  <div class="scroll" style="padding:12px;background:#000">
+    <div class="hint">世界书 = 给所有角色共享的设定/常识。"常驻"的每次都生效；否则当聊天里出现关键词时才注入。</div>
+    ${S.worldbook.length?S.worldbook.map(w=>`<div class="section"><div class="it" onclick="editWorld('${w.id}')">
+      <div><div style="font-weight:600">${esc(w.name)} ${w.always?'<span class=tag>常驻</span>':''}</div>
+      <div style="font-size:12px;color:#999;margin-top:3px;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(w.content)}</div></div>
+      <span class="sw ${w.enabled?'on':''}" onclick="event.stopPropagation();toggleWorld('${w.id}')"></span></div></div>`).join(''):'<div class="empty">还没有世界书，点右上角 ＋ 添加</div>'}
+    <div style="height:20px"></div>
+  </div>`;
+}
+function toggleWorld(id){const w=S.worldbook.find(x=>x.id===id);w.enabled=!w.enabled;save();render();}
+function editWorld(id){const w=id?S.worldbook.find(x=>x.id===id):{id:uid(),name:'',keys:'',content:'',enabled:true,always:false,_new:true};
+  openModal(`<h3>${id?'编辑':'新建'}世界书</h3>
+    <div class="field"><label>名称</label><input id="w_name" value="${esc(w.name)}" placeholder="比如：世界观/某个地点"></div>
+    <div class="field"><label>触发关键词（逗号分隔，常驻可不填）</label><input id="w_keys" value="${esc(w.keys)}" placeholder="苏州,公司"></div>
+    <div class="field"><label>内容</label><textarea id="w_content" rows="4">${esc(w.content)}</textarea></div>
+    <div class="field"><label class="avline">常驻（每次都生效）<span class="sw ${w.always?'on':''}" id="w_always" onclick="this.classList.toggle('on')"></span></label></div>
+    <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="saveWorld('${w.id}',${!!w._new})">保存</button></div>
+    ${id?'<button class="btn d" style="margin-top:10px" onclick="delWorld(\''+w.id+'\')">删除</button>':''}`);}
+function saveWorld(id,isNew){const w={id,name:$('#w_name').value.trim()||'未命名',keys:$('#w_keys').value.trim(),content:$('#w_content').value.trim(),enabled:true,always:$('#w_always').classList.contains('on')};
+  if(isNew)S.worldbook.push(w);else{const i=S.worldbook.findIndex(x=>x.id===id);w.enabled=S.worldbook[i].enabled;S.worldbook[i]=w;}
+  save();closeModal();render();}
+function delWorld(id){S.worldbook=S.worldbook.filter(x=>x.id!==id);save();closeModal();render();}
+
+/* ---------- 微信主界面 ---------- */
+function renderWeChat(){
+  let body='';
+  if(wxTab==='chats')body=wxChats();
+  else if(wxTab==='contacts')body=wxContacts();
+  else if(wxTab==='moments')body=wxMoments();
+  else if(wxTab==='me')body=wxMe();
+  const titles={chats:'微信',contacts:'通讯录',moments:'朋友圈',me:'我'};
+  const showAdd=wxTab==='chats'||wxTab==='contacts';
+  return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">${titles[wxTab]}</span><span class="r" onclick="${showAdd?'editContact()':''}">${showAdd?'＋':''}</span></div>
+    <div class="scroll" style="background:#000">${body}</div>
+    <div class="tabbar">
+      ${tb('chats','💬','微信')}${tb('contacts','👤','通讯录')}${tb('moments','🌸','朋友圈')}${tb('me','🐱','我')}
+    </div>`;
+}
+function tb(k,i,t){return `<div class="tb ${wxTab===k?'on':''}" onclick="wxTab='${k}';render()"><div class="i">${i}</div>${t}</div>`;}
+
+function wxChats(){
+  const list=[...S.contacts].filter(c=>!c.deleted).sort((a,b)=>{
+    if(a.pinned!==b.pinned)return a.pinned?-1:1;
+    return (lastMsg(b.id)?.time||0)-(lastMsg(a.id)?.time||0);});
+  if(!list.length)return '<div class="empty">还没有聊天，去通讯录加个角色吧～</div>';
+  return '<div class="list">'+list.map(c=>{const lm=lastMsg(c.id);
+    return `<div class="row ${c.pinned?'pin':''}" onclick="openChat('${c.id}')">${av(c.avatar)}
+      <div class="meta"><div class="n">${esc(c.remark||c.name)} ${c.blocked?'<span class=tag>已拉黑</span>':''}</div>
+      <div class="s">${lm?esc(previewOf(lm)):'打个招呼吧～'}</div></div>
+      <div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div>${c.pinned?'<div style="font-size:10px;color:#ccc">置顶</div>':''}</div></div>`;}).join('')+'</div>';
+}
+function previewOf(m){if(m.role==='assistant')return splitBubbles(m.content)[0]||'[消息]';
+  return ({text:m.content,image:'[照片]',transfer:'[转账]',redpacket:'[红包]',location:'[位置]',file:'[文件]',sys:m.content})[m.type]||'[消息]';}
+
+function wxContacts(){if(!S.contacts.filter(c=>!c.deleted).length)return '<div class="empty">点右上角 ＋ 创建一个角色</div>';
+  return '<div class="list">'+S.contacts.filter(c=>!c.deleted).map(c=>`<div class="row" onclick="go('contactInfo',{id:'${c.id}'})">${av(c.avatar,'sm')}
+    <div class="meta"><div class="n">${esc(c.remark||c.name)}</div><div class="s">${esc(c.signature||c.relation||'')}</div></div></div>`).join('')+'</div>';
+}
+
+function wxMe(){
+  return `<div class="list">
+    <div class="row" onclick="editMe()" style="padding:18px 14px">${av(S.me.avatar,'lg')}
+      <div class="meta"><div class="n" style="font-size:19px">${esc(S.me.name)}</div>
+      <div class="s">微信号：${esc(S.me.wxid)}</div><div class="s">${esc(S.me.signature)}</div></div><span style="color:#ccc">›</span></div>
+  </div>
+  <div class="section" style="margin:12px">
+    <div class="it" onclick="openWallet()"><span>💰 钱包</span><span class="v">¥${(+S.me.balance).toFixed(2)}</span></div>
+    <div class="it" onclick="editMe()"><span>🎭 我的人设（全局）</span><span class="v">所有角色可见</span></div>
+    <div class="it" onclick="wxTab='moments';render()"><span>🌸 朋友圈</span><span class="v">›</span></div>
+  </div>
+  <div class="section" style="margin:12px">
+    <div class="it" onclick="go('settings')"><span>⚙️ 设置 / API</span><span class="v">›</span></div>
+  </div>`;
+}
+function editMe(){openModal(`<h3>我的资料</h3>
+  <div class="field"><label>头像</label><div class="avline">${av(S.me.avatar,'sm')}<input id="me_av" value="${esc(S.me.avatar)}" placeholder="emoji 或上传"><button class="minibtn" onclick="upMe()">📷</button></div></div>
+  <div class="field"><label>昵称</label><input id="me_name" value="${esc(S.me.name)}"></div>
+  <div class="field"><label>微信号</label><input id="me_wxid" value="${esc(S.me.wxid)}"></div>
+  <div class="field"><label>个性签名</label><input id="me_sig" value="${esc(S.me.signature)}"></div>
+  <div class="field"><label>我的人设（所有角色都会知道）</label><textarea id="me_persona" rows="3">${esc(S.me.persona)}</textarea></div>
+  <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="saveMe()">保存</button></div>`);}
+function upMe(){pickFile('image/*',async f=>{S.me.avatar=await compress(f,256,.8);editMe();});}
+function saveMe(){S.me.name=$('#me_name').value.trim()||'我';S.me.wxid=$('#me_wxid').value.trim();
+  S.me.avatar=$('#me_av').value.trim()||'🐱';S.me.signature=$('#me_sig').value.trim();S.me.persona=$('#me_persona').value.trim();
+  save();closeModal();render();}
+function openWallet(){openModal(`<h3>💰 钱包</h3>
+  <div class="wallet" style="margin:0 0 14px"><div class="lb">零钱余额</div><div class="ba">¥ ${(+S.me.balance).toFixed(2)}</div></div>
+  <div class="field"><label>修改余额</label><div class="avline"><input id="bal" type="number" value="${(+S.me.balance).toFixed(2)}"><button class="minibtn" onclick="S.me.balance=+$('#bal').value||0;save();openWallet()">改</button></div></div>
+  <div style="font-weight:600;margin:10px 0 4px">账单</div>
+  ${S.me.bills.length?S.me.bills.slice().reverse().map(b=>`<div class="bill"><div>${esc(b.note)}<small>${b.time}</small></div><div class="${b.type==='in'?'pos':'neg'}">${b.type==='in'?'+':'-'}${(+b.amount).toFixed(2)}</div></div>`).join(''):'<div class="empty">还没有账单</div>'}
+  <button class="btn g" style="margin-top:12px" onclick="closeModal()">关闭</button>`);}
+function addBill(type,amount,note){S.me.bills.push({type,amount:+amount,note,time:new Date().toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})});
+  S.me.balance=+(S.me.balance+(type==='in'?+amount:-+amount)).toFixed(2);save();}
+
+/* ---------- 联系人资料/编辑 ---------- */
+function editContact(id){const c=id?getC(id):{id:cid(),name:'',avatar:'',remark:'',signature:'',persona:'',greeting:'',relation:'',pinned:false,blocked:false,proactive:{enabled:false,start:9,end:23,times:2},chatBg:'',_new:true};
+  openModal(`<h3>${id?'编辑角色':'新建角色'}</h3>
+    <div class="field"><label>头像</label><div class="avline">${av(c.avatar,'sm')}<input id="c_av" value="${esc(c.avatar)}" placeholder="emoji 或上传"><button class="minibtn" onclick="upC()">📷</button></div></div>
+    <div class="field"><label>名字</label><input id="c_name" value="${esc(c.name)}"></div>
+    <div class="field"><label>关系（如 恋人/朋友）</label><input id="c_rel" value="${esc(c.relation)}"></div>
+    <div class="field"><label>签名</label><input id="c_sig" value="${esc(c.signature)}"></div>
+    <div class="field"><label>人设 / 性格设定</label><textarea id="c_persona" rows="5">${esc(c.persona)}</textarea></div>
+    <div class="field"><label>开场白</label><input id="c_greet" value="${esc(c.greeting)}"></div>
+    <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="saveContact('${c.id}',${!!c._new})">保存</button></div>`);
+  window._tmpAv=c.avatar;}
+function upC(){pickFile('image/*',async f=>{const d=await compress(f,256,.8);$('#c_av').value=d;});}
+function saveContact(id,isNew){const c=isNew?{id,pinned:false,blocked:false,proactive:{enabled:false,start:9,end:23,times:2},chatBg:''}:getC(id);
+  c.name=$('#c_name').value.trim()||'新角色';c.avatar=$('#c_av').value.trim()||'🙂';c.relation=$('#c_rel').value.trim();
+  c.signature=$('#c_sig').value.trim();c.persona=$('#c_persona').value.trim();c.greeting=$('#c_greet').value.trim();
+  if(isNew){S.contacts.push(c);if(c.greeting)msgs(c.id).push({role:'assistant',type:'text',content:c.greeting,time:Date.now()});}
+  save();closeModal();render();}
+
+function renderContactInfo(id){const c=getC(id);if(!c)return '';
+  return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">资料</span><span class="r" onclick="editContact('${id}')">编辑</span></div>
+  <div class="scroll" style="background:#000">
+    <div class="list"><div class="row" style="padding:18px 14px">${av(c.avatar,'lg')}
+      <div class="meta"><div class="n" style="font-size:19px">${esc(c.name)}</div><div class="s">${esc(c.relation||'')}</div><div class="s">${esc(c.signature||'')}</div></div></div></div>
+    <div class="section" style="margin:12px">
+      <div class="it" onclick="setRemark('${id}')"><span>备注</span><span class="v">${esc(c.remark||'添加备注')}</span></div>
+      <div class="it" onclick="editContact('${id}')"><span>人设</span><span class="v">点击修改</span></div>
+      <div class="it" onclick="editMemory('${id}')"><span>🧠 记忆</span><span class="v">${(c.memory||[]).length}条 ›</span></div>
+      <div class="it" onclick="setChatBg('${id}')"><span>聊天背景</span><span class="v">${c.chatBg?'已设置':'默认'}</span></div>
+    </div>
+    <div class="section" style="margin:12px">
+      <div class="it" onclick="placeCall('${id}','voice')"><span>📞 语音通话</span><span class="v">›</span></div>
+      <div class="it" onclick="placeCall('${id}','video')"><span>📹 视频通话</span><span class="v">›</span></div>
+    </div>
+    <div class="section" style="margin:12px">
+      <div class="it"><span>置顶聊天</span><span class="sw ${c.pinned?'on':''}" onclick="c_pin('${id}')"></span></div>
+      <div class="it"><span>消息免打扰</span><span class="sw ${c.muted?'on':''}" onclick="c_mute('${id}')"></span></div>
+      <div class="it"><span>主动消息</span><span class="sw ${c.proactive.enabled?'on':''}" onclick="togProactive('${id}')"></span></div>
+      ${c.proactive.enabled?`<div class="it"><span>时段 / 每天上限</span><span class="v"><input type="number" id="pa_s" value="${c.proactive.start}" style="width:38px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:3px;background:#2c2c2e;color:#eee">-<input type="number" id="pa_e" value="${c.proactive.end}" style="width:38px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:3px;background:#2c2c2e;color:#eee">点 <input type="number" id="pa_n" value="${c.proactive.times||1}" style="width:34px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:3px;background:#2c2c2e;color:#eee">次 <button class="minibtn" onclick="savePa('${id}')">存</button></span></div>`:''}
+    </div>
+    <div class="section" style="margin:12px">
+      <div class="it" onclick="clearHistory('${id}')"><span>清空聊天记录</span><span class="v">›</span></div>
+      <div class="it" onclick="c_block('${id}')"><span>${c.blocked?'解除拉黑':'加入黑名单'}</span><span class="v">›</span></div>
+      <div class="it danger" onclick="c_delete('${id}')"><span>删除角色</span><span class="v"></span></div>
+    </div>
+    <div style="padding:0 12px 20px"><button class="btn p" onclick="openChat('${id}')">发消息</button></div>
+  </div>`;}
+function setRemark(id){const c=getC(id);openModal(`<h3>备注</h3><div class="field"><input id="rmk" value="${esc(c.remark)}" placeholder="给ta起个备注名"></div>
+  <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="getC('${id}').remark=$('#rmk').value.trim();save();closeModal();render()">保存</button></div>`);}
+function setChatBg(id){const c=getC(id);openModal(`<h3>聊天背景</h3><div class="hint">上传一张图，或留空恢复默认。</div>
+  <div class="btns"><button class="btn g" onclick="getC('${id}').chatBg='';save();closeModal();toast('已恢复默认')">恢复默认</button>
+  <button class="btn p" onclick="pickFile('image/*',async f=>{getC('${id}').chatBg=await compress(f,800,.6);save();closeModal();toast('背景已设置')})">选图片</button></div>`);}
+function c_pin(id){const c=getC(id);c.pinned=!c.pinned;save();render();}
+function c_block(id){const c=getC(id);c.blocked=!c.blocked;save();render();}
+function c_delete(id){if(!confirm('删除这个角色和聊天记录？'))return;const c=getC(id);c.deleted=true;delete S.messages[id];save();stack.pop();render();}
+function clearHistory(id){if(!confirm('清空聊天记录？'))return;S.messages[id]=[];save();toast('已清空');}
+function togProactive(id){const c=getC(id);c.proactive.enabled=!c.proactive.enabled;save();render();}
+function savePa(id){const c=getC(id);c.proactive.start=+$('#pa_s').value||0;c.proactive.end=+$('#pa_e').value||23;c.proactive.times=+$('#pa_n').value||1;save();toast('已保存');}
+
+/* ---------- 聊天页 ---------- */
+function renderChat(id){const c=getC(id);if(!c)return '';
+  const bg=c.chatBg?`background:url(${c.chatBg}) center/cover`:'';
+  const list=msgs(id);
+  list.forEach(m=>{if(!m.id)m.id=uid();});
+  let body='';
+  list.forEach((m,i)=>{if(i===0||m.time-list[i-1].time>300000)body+=`<div class="tstamp"><span>${hm(m.time)}</span></div>`;body+=bubbleRow(c,m);});
+  const mood=c.mood?`<div class="moodbar" onclick="showMood('${id}')">💭 ${esc(c.mood.slice(0,22))}${c.mood.length>22?'…':''}</div>`:'';
+  return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(c.remark||c.name)}${c.muted?' 🔕':''}</span><span class="r" style="display:flex;gap:14px;align-items:center"><span onclick="placeCall('${id}','voice')">📞</span><span onclick="placeCall('${id}','video')">📹</span><span onclick="go('contactInfo',{id:'${id}'})">⋯</span></span></div>
+    ${mood}
+    <div class="chatbg" id="chatbg" style="${bg}">${body}</div>
+    <div class="panel" id="panel">
+      <div class="it" onclick="cPhoto('${id}')"><div class="b">🖼️</div><span>相册</span></div>
+      <div class="it" onclick="cTransfer('${id}')"><div class="b">💰</div><span>转账</span></div>
+      <div class="it" onclick="cRed('${id}')"><div class="b">🧧</div><span>红包</span></div>
+      <div class="it" onclick="cLoc('${id}')"><div class="b">📍</div><span>位置</span></div>
+      <div class="it" onclick="cDoc('${id}')"><div class="b">📎</div><span>文件</span></div>
+    </div>
+    <div class="inputbar">
+      <span class="plus" onclick="$('#panel').classList.toggle('show')">＋</span>
+      <textarea id="cinput" rows="1" placeholder="${c.blocked?'已拉黑，发不出去':'发消息…'}" ${c.blocked?'disabled':''}></textarea>
+      <button class="send" onclick="sendText('${id}')">发送</button>
+    </div>`;}
+function bubbleRow(c,m){
+  const me=m.role==='user';
+  if(m.type==='sys')return `<div class="tstamp"><span>${esc(m.content)}</span></div>`;
+  if(!m.id)m.id=uid();
+  let inner=buildPart(c,m,me);
+  return `<div class="msg ${me?'me':'them'}"><span onclick="msgMenu('${c.id}','${m.id}')">${av(me?S.me.avatar:c.avatar)}</span><div class="col" onclick="msgMenu('${c.id}','${m.id}')">${inner}</div></div>`;}
+function buildPart(c,m,me){
+  if(m.type==='image')return `<div class="imgmsg" onclick="event.stopPropagation();viewImg('${m.src}')"><img src="${m.src}"></div>`;
+  if(m.type==='transfer')return payCard('t',m,me);
+  if(m.type==='redpacket')return payCard('r',m,me);
+  if(m.type==='location')return `<div class="card cloc"><div class="map">📍</div><div class="info"><div class="n">${esc(m.name)}</div><div class="a">${esc(m.address||'')}</div></div></div>`;
+  if(m.type==='file')return `<div class="card cfile"><div class="ic">📄</div><div><div class="n">${esc(m.name)}</div><div class="s">${esc(m.size||'')}</div></div></div>`;
+  return `<div class="bubble">${esc(m.content)}</div>`;}
+function payCard(kind,m,me){const done=m.received;
+  const cls='cpay '+(done?'done':kind);const ic=kind==='r'?'🧧':'💰';
+  const t1=done?'已收款':(kind==='r'?esc(m.note||'恭喜发财'):'¥'+(+m.amount).toFixed(2));
+  const t2=done?'¥'+(+m.amount).toFixed(2):(kind==='r'?'领取红包':esc(m.note||'转账'));
+  const handler=(!me&&!done)?`onclick="event.stopPropagation();receivePay('${m.id}')"`:'';
+  return `<div class="card" ${handler}><div class="${cls}"><div class="big">${ic}</div><div><div class="t1">${t1}</div><div class="t2">${t2}</div></div></div><div class="cfoot">微信${kind==='r'?'红包':'转账'}</div></div>`;}
+function receivePay(mid){let found;for(const id in S.messages){const m=S.messages[id].find(x=>x.id===mid);if(m){found={m,id};break;}}
+  if(!found||found.m.received)return;found.m.received=true;
+  addBill('in',found.m.amount,(found.m.type==='redpacket'?'收到红包':'收到转账'));
+  msgs(found.id).push({role:'user',type:'sys',content:'你领取了'+(found.m.type==='redpacket'?'红包':'转账'),time:Date.now()});
+  save();render();toast('已收款 +¥'+(+found.m.amount).toFixed(2)+' ❤️');}
+
+function afterChat(id){const cb=$('#chatbg');if(cb)cb.scrollTop=cb.scrollHeight;
+  const ta=$('#cinput');if(ta){ta.addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,84)+'px';});
+    ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendText(id);}});}
+  maybeProactive(id);}
+
+function pushMsg(id,m){m.time=Date.now();if(m.role==='user'&&!m.id)m.id=uid();msgs(id).push(m);save();
+  if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){const c=getC(id);cb.insertAdjacentHTML('beforeend',bubbleRow(c,m));cb.scrollTop=cb.scrollHeight;}}}
+
+function sendText(id){const c=getC(id);if(c.blocked){toast('已拉黑，先解除吧');return;}
+  const ta=$('#cinput');const t=ta.value.trim();if(!t)return;ta.value='';ta.style.height='auto';
+  pushMsg(id,{role:'user',type:'text',content:t});scheduleReply(id);}
+
+/* 功能面板发送 */
+function cPhoto(id){$('#panel').classList.remove('show');pickFile('image/*',async f=>{const src=await compress(f,900,.7);
+  let desc='';try{desc=await visionAPI(src,'用一句中文简洁描述这张图');}catch(e){}
+  const m={role:'user',type:'image',src,desc,id:uid()};pushMsg(id,m);scheduleReply(id);});}
+function cDoc(id){$('#panel').classList.remove('show');pickFile('',f=>{pushMsg(id,{role:'user',type:'file',name:f.name,size:fmtSize(f.size),id:uid()});scheduleReply(id);});}
+function cTransfer(id){$('#panel').classList.remove('show');openModal(`<h3>💰 转账</h3>
+  <div class="field"><label>金额</label><input id="tf_a" type="number" step="0.01" placeholder="5.20"></div>
+  <div class="field"><label>说明</label><input id="tf_n" placeholder="给你买糖吃"></div>
+  <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="doTransfer('${id}')">转账</button></div>`);}
+function doTransfer(id){const a=+$('#tf_a').value;if(!a){toast('填金额呀');return;}closeModal();
+  addBill('out',a,'转账给'+(getC(id).remark||getC(id).name));
+  pushMsg(id,{role:'user',type:'transfer',amount:a,note:$('#tf_n').value.trim(),received:false,id:uid()});scheduleReply(id);}
+function cRed(id){$('#panel').classList.remove('show');openModal(`<h3>🧧 红包</h3>
+  <div class="field"><label>金额</label><input id="rd_a" type="number" step="0.01" placeholder="6.66"></div>
+  <div class="field"><label>祝福语</label><input id="rd_n" placeholder="给你给你都给你"></div>
+  <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="doRed('${id}')">塞钱</button></div>`);}
+function doRed(id){const a=+$('#rd_a').value;if(!a){toast('填金额呀');return;}closeModal();
+  addBill('out',a,'发红包给'+(getC(id).remark||getC(id).name));
+  pushMsg(id,{role:'user',type:'redpacket',amount:a,note:$('#rd_n').value.trim(),received:false,id:uid()});scheduleReply(id);}
+function cLoc(id){$('#panel').classList.remove('show');openModal(`<h3>📍 位置</h3>
+  <div class="field"><label>地点</label><input id="lc_n" placeholder="星巴克"></div>
+  <div class="field"><label>地址</label><input id="lc_a" placeholder="苏州市…"></div>
+  <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="doLoc('${id}')">发送</button></div>`);}
+function doLoc(id){const n=$('#lc_n').value.trim();if(!n){toast('填地点呀');return;}closeModal();
+  pushMsg(id,{role:'user',type:'location',name:n,address:$('#lc_a').value.trim(),id:uid()});scheduleReply(id);}
+
+/* 拆分多条气泡 */
+function splitBubbles(text){return (text||'').split('\n').map(s=>s.trim()).filter(Boolean);}
+const CARD_RE=/^\[(转账|红包|位置|图片|文件)\|([^\]]*)\]$/;
+function lineToMsg(line){const m=line.match(CARD_RE);if(!m)return {role:'assistant',type:'text',content:line};
+  const f=m[2].split('|');
+  if(m[1]==='转账')return {role:'assistant',type:'transfer',amount:+f[0]||0,note:f[1],received:false,id:uid()};
+  if(m[1]==='红包')return {role:'assistant',type:'redpacket',amount:+f[0]||0,note:f[1],received:false,id:uid()};
+  if(m[1]==='位置')return {role:'assistant',type:'location',name:f[0],address:f[1]};
+  if(m[1]==='文件')return {role:'assistant',type:'file',name:f[0]||'文件',size:f[1]||''};
+  return {role:'assistant',type:'text',content:'[图片]'+(f[0]?'：'+f[0]:'')};}
+
+async function aiReply(id){const c=getC(id);if(c.blocked)return;
+  // typing
+  let typingEl;if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');
+    cb.insertAdjacentHTML('beforeend',`<div class="msg them" id="typing">${av(c.avatar)}<div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`);
+    cb.scrollTop=cb.scrollHeight;typingEl=$('#typing');}
+  try{
+    const hist=msgs(id).slice(-(S.settings.hist||24)).map(m=>({role:m.role,content:msgToText(m)})).filter(x=>x.content!=null);
+    const content=await chatAPI([{role:'system',content:buildSystem(c)},...hist]);
+    if(typingEl)typingEl.remove();
+    const lines=splitBubbles(content);let got=false;
+    for(let i=0;i<lines.length;i++){
+      const line=lines[i];
+      let mm=line.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=mm[1];save();if(cur().p==='chat'&&cur().id===id)render();continue;}
+      mm=line.match(/^\[记住\|([^\]]*)\]$/);if(mm){c.memory=c.memory||[];if(mm[1]&&!c.memory.includes(mm[1])){c.memory.push(mm[1]);save();toast('🧠 已记住：'+mm[1].slice(0,12));}continue;}
+      mm=line.match(/^\[闹钟\|([0-9]{1,2}:[0-9]{2})\|?([^\]]*)\]$/);if(mm){addAlarm(c.id,mm[1],mm[2]||'起床');continue;}
+      mm=line.match(/^\[来电\|(语音|视频)\]$/);if(mm){const k=mm[1]==='视频'?'video':'voice';setTimeout(()=>incomingCall(c.id,k,'ta打来的'),600);continue;}
+      await sleep(got?400+Math.random()*500:0);got=true;
+      const msg=lineToMsg(line);msg.time=Date.now();msg.id=msg.id||uid();msgs(id).push(msg);save();
+      notifyIncoming(c,msg);
+      if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');cb.insertAdjacentHTML('beforeend',bubbleRow(c,msg));cb.scrollTop=cb.scrollHeight;}
+      else if(cur().p==='wechat')render();}
+  }catch(e){if(typingEl)typingEl.remove();
+    pushMsg(id,{role:'assistant',type:'text',content:'⚠️ '+e.message});}
+}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+let _replyTimers={};
+function scheduleReply(id){clearTimeout(_replyTimers[id]);_replyTimers[id]=setTimeout(()=>aiReply(id),(Number(S.settings.replyDelay)||0)*1000);}
+/* 提示音 + 通知 */
+let _audio;function initAudio(){if(!_audio){try{_audio=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}}
+document.addEventListener('click',()=>{initAudio();if(!S.weather||Date.now()-S.weather.time>3600000)fetchWeather();},{once:true});
+function playDing(){if(!S.settings.sound||!_audio)return;try{const o=_audio.createOscillator(),g=_audio.createGain();o.connect(g);g.connect(_audio.destination);
+  o.frequency.value=880;o.type='sine';g.gain.setValueAtTime(.001,_audio.currentTime);g.gain.exponentialRampToValueAtTime(.25,_audio.currentTime+.02);
+  g.gain.exponentialRampToValueAtTime(.001,_audio.currentTime+.35);o.start();o.stop(_audio.currentTime+.36);}catch(e){}}
+function notifyIncoming(c,msg){if(c.muted)return;playDing();
+  if(document.hidden&&'Notification'in window&&Notification.permission==='granted'){try{new Notification(c.remark||c.name,{body:previewOf(msg)});}catch(e){}}}
+/* 撤回 / 编辑消息 */
+function msgMenu(cid,mid){const list=msgs(cid);const m=list.find(x=>x.id===mid);if(!m)return;
+  const canEdit=m.type==='text';
+  openModal(`<h3>消息操作</h3>
+    ${canEdit?`<button class="btn g" style="margin-bottom:8px" onclick="editMsg('${cid}','${mid}')">✏️ 编辑</button>`:''}
+    <button class="btn d" onclick="recallMsg('${cid}','${mid}')">↩️ 撤回</button>
+    <button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+function recallMsg(cid,mid){const list=msgs(cid);const i=list.findIndex(x=>x.id===mid);if(i<0)return;
+  const me=list[i].role==='user';list.splice(i,1);
+  list.splice(i,0,{role:me?'user':'assistant',type:'sys',content:(me?'你':'对方')+'撤回了一条消息',time:Date.now(),id:uid()});
+  save();closeModal();render();}
+function editMsg(cid,mid){const m=msgs(cid).find(x=>x.id===mid);if(!m)return;
+  openModal(`<h3>编辑消息</h3><div class="field"><textarea id="em_t" rows="3">${esc(m.content)}</textarea></div>
+    <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var v=$('#em_t').value;var mm=msgs('${cid}').find(x=>x.id==='${mid}');mm.content=v;save();closeModal();render();})()">保存</button></div>`);}
+function showMood(id){const c=getC(id);openModal(`<h3>💭 ${esc(c.remark||c.name)} 的心情</h3><div class="hint" style="font-size:14px;color:#ddd;line-height:1.7">${esc(c.mood||'…')}</div><button class="btn g" style="margin-top:10px" onclick="closeModal()">关闭</button>`);}
+function c_mute(id){const c=getC(id);c.muted=!c.muted;save();render();}
+function editMemory(id){const c=getC(id);c.memory=c.memory||[];
+  openModal(`<h3>🧠 ${esc(c.remark||c.name)} 的记忆</h3>
+    <div class="hint">这里的事 ta 每次都记得。你也能让 ta 在聊天里主动存。</div>
+    <div class="field"><textarea id="mem_new" rows="2" placeholder="手动添加一条记忆…"></textarea></div>
+    <button class="btn p" style="margin-bottom:12px" onclick="(function(){var v=$('#mem_new').value.trim();if(v){getC('${id}').memory.push(v);save();editMemory('${id}');}})()">➕ 添加</button>
+    ${c.memory.length?c.memory.map((m,i)=>`<div class="bill" style="border-radius:8px;margin-bottom:6px"><div>${esc(m)}</div><div onclick="(function(){getC('${id}').memory.splice(${i},1);save();editMemory('${id}');})()" style="color:#fa5151;cursor:pointer">✕</div></div>`).join(''):'<div class="empty">还没有记忆</div>'}
+    <button class="btn g" style="margin-top:10px" onclick="closeModal()">关闭</button>`);}
+
+/* =================== 通话 =================== */
+let _call=null,_ring=null,_callTimer=null;
+function ringStart(){ringStop();if(!_audio)return;let on=false;
+  _ring=setInterval(()=>{try{const o=_audio.createOscillator(),g=_audio.createGain();o.connect(g);g.connect(_audio.destination);
+    o.frequency.value=on?660:520;o.type='sine';g.gain.setValueAtTime(.0001,_audio.currentTime);
+    g.gain.exponentialRampToValueAtTime(.2,_audio.currentTime+.05);g.gain.exponentialRampToValueAtTime(.0001,_audio.currentTime+.5);
+    o.start();o.stop(_audio.currentTime+.55);on=!on;}catch(e){}},650);
+  if(navigator.vibrate)navigator.vibrate([400,200,400,200,400]);}
+function ringStop(){if(_ring){clearInterval(_ring);_ring=null;}if(navigator.vibrate)navigator.vibrate(0);}
+function blip(freq,dur){if(!_audio||!S.settings.sound)return;try{const o=_audio.createOscillator(),g=_audio.createGain();o.connect(g);g.connect(_audio.destination);o.frequency.value=freq;o.type='sine';g.gain.setValueAtTime(.2,_audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,_audio.currentTime+dur);o.start();o.stop(_audio.currentTime+dur);}catch(e){}}
+function incomingCall(id,kind){const c=getC(id);if(!c||c.blocked||_call)return;
+  _call={id,kind,state:'incoming'};initAudio();ringStart();renderCall();}
+function placeCall(id,kind){const c=getC(id);if(!c)return;initAudio();_call={id,kind,state:'outgoing'};renderCall();
+  blip(600,.15);setTimeout(()=>{if(_call&&_call.state==='outgoing')answerCall(true);},1600);}
+function answerCall(autoByThem){if(!_call)return;ringStop();blip(880,.12);
+  _call.state='active';_call.start=Date.now();
+  clearInterval(_callTimer);_callTimer=setInterval(renderCallTime,1000);renderCall();
+  callAI('[系统：'+(autoByThem?S.me.name+'接通了你打的':'你接通了')+(_call.kind==='video'?'视频':'语音')+'电话，自然开口，口语化短句。]');}
+function declineCall(){if(!_call)return;ringStop();blip(300,.3);const id=_call.id,wasIn=_call.state==='incoming';
+  msgs(id).push({role:'user',type:'sys',content:wasIn?'你拒绝了通话':'通话已取消',time:Date.now(),id:uid()});save();
+  _call=null;renderCall();if(cur().p==='chat')render();}
+function hangupCall(){if(!_call)return;blip(300,.3);clearInterval(_callTimer);const id=_call.id;
+  const dur=_call.start?Math.floor((Date.now()-_call.start)/1000):0;
+  msgs(id).push({role:'user',type:'sys',content:'通话时长 '+Math.floor(dur/60)+':'+(dur%60).toString().padStart(2,'0'),time:Date.now(),id:uid()});save();
+  _call=null;renderCall();if(cur().p==='chat')render();}
+function renderCallTime(){if(!_call||_call.state!=='active')return;const s=$('#callStat');if(s){const d=Math.floor((Date.now()-_call.start)/1000);s.textContent=Math.floor(d/60)+':'+(d%60).toString().padStart(2,'0');}}
+function renderCall(){const L=$('#callLayer');if(!_call){L.className='callscreen';L.innerHTML='';return;}
+  const c=getC(_call.id);const video=_call.kind==='video';
+  L.className='callscreen show'+(video?' video':'')+(_call.state==='active'?' active':'');
+  const label=video?'视频通话':'语音通话';
+  const stat=_call.state==='incoming'?('邀请你'+label):_call.state==='outgoing'?'正在呼叫…':'<span id="callStat">00:00</span>';
+  let btns='';
+  if(_call.state==='incoming')btns=`<div class="cbtncol"><div class="cbtn red" onclick="declineCall()">📵</div>拒绝</div><div class="cbtncol"><div class="cbtn green" onclick="answerCall()">📞</div>接听</div>`;
+  else if(_call.state==='outgoing')btns=`<div class="cbtncol"><div class="cbtn red" onclick="declineCall()">📵</div>取消</div>`;
+  else btns=`<div class="cbtncol"><div class="cbtn gray" onclick="document.getElementById('callInput').classList.toggle('show')">💬</div>说话</div><div class="cbtncol"><div class="cbtn red" onclick="hangupCall()">📵</div>挂断</div>`;
+  L.innerHTML=`<div class="cav">${isImg(c.avatar)?`<img src="${c.avatar}">`:(c.avatar||'🙂')}</div>
+    <div class="cname">${esc(c.remark||c.name)}</div><div class="cstat">${stat}</div>
+    <div class="callsubs" id="callSubs"></div>
+    <div class="callinput" id="callInput"><input id="callMsg" placeholder="说点什么…" onkeydown="if(event.key==='Enter')callSend()"><button onclick="callSend()">说</button></div>
+    <div class="callbtns">${btns}</div>`;
+  renderCallSubs();}
+function renderCallSubs(){const box=$('#callSubs');if(!box||!_call)return;
+  const list=(msgs(_call.id)||[]).filter(m=>m._call).slice(-6);
+  box.innerHTML=list.map(m=>`<div class="cb ${m.role==='user'?'me':''}">${esc(m.content)}</div>`).join('');box.scrollTop=box.scrollHeight;}
+function callSend(){const inp=$('#callMsg');if(!inp)return;const t=inp.value.trim();if(!t||!_call)return;inp.value='';
+  msgs(_call.id).push({role:'user',type:'text',content:t,time:Date.now(),id:uid(),_call:true});save();renderCallSubs();callAI();}
+async function callAI(sysNote){if(!_call)return;const c=getC(_call.id);
+  try{const hist=msgs(c.id).slice(-(S.settings.hist||24)).map(m=>({role:m.role,content:msgToText(m)})).filter(x=>x.content!=null);
+    if(sysNote)hist.push({role:'user',content:sysNote});
+    const sys=buildSystem(c)+'\n\n# 正在通话\n你们正在'+(_call.kind==='video'?'视频':'语音')+'通话，用口语短句像打电话一样，别用卡片。';
+    const content=await chatAPI([{role:'system',content:sys},...hist]);
+    splitBubbles(content).forEach(l=>{if(/^\[/.test(l))return;msgs(c.id).push({role:'assistant',type:'text',content:l,time:Date.now(),id:uid(),_call:true});});
+    save();renderCallSubs();if(!c.muted)blip(700,.08);
+  }catch(e){msgs(c.id).push({role:'assistant',type:'text',content:'(信号不好…)',time:Date.now(),id:uid(),_call:true});renderCallSubs();}}
+
+/* =================== 天气 =================== */
+const WCODE={0:'晴',1:'晴',2:'多云',3:'阴',45:'雾',48:'雾',51:'小雨',53:'小雨',55:'雨',61:'小雨',63:'中雨',65:'大雨',71:'小雪',73:'雪',75:'大雪',80:'阵雨',81:'阵雨',82:'大阵雨',95:'雷雨',96:'雷雨'};
+function fetchWeather(manual){if(!navigator.geolocation){if(manual)toast('设备不支持定位');return;}
+  navigator.geolocation.getCurrentPosition(async p=>{const la=p.coords.latitude,lo=p.coords.longitude;
+    try{const w=await fetch('https://api.open-meteo.com/v1/forecast?latitude='+la+'&longitude='+lo+'&current=temperature_2m,weather_code,precipitation').then(r=>r.json());
+      let place='你所在的位置';try{const g=await fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?latitude='+la+'&longitude='+lo+'&localityLanguage=zh').then(r=>r.json());place=(g.city||g.locality||g.principalSubdivision||'你所在的位置');}catch(e){}
+      const code=w.current.weather_code,desc=WCODE[code]||'未知';
+      S.weather={place,temp:Math.round(w.current.temperature_2m),desc,rain:(w.current.precipitation>0||[51,53,55,61,63,65,80,81,82,95,96].indexOf(code)>=0),time:Date.now()};
+      save();if(manual)toast('🌦️ '+place+' '+desc+' '+S.weather.temp+'°C');if(cur().p==='settings')render();
+    }catch(e){if(manual)toast('天气获取失败');}
+  },()=>{if(manual)toast('定位被拒绝了');});}
+
+/* =================== 闹钟 =================== */
+function addAlarm(contactId,time,label){S.alarms.push({id:uid(),time,label:label||'起床',contactId,enabled:true});save();toast('⏰ 已定闹钟 '+time+' '+(label||''));}
+function alarmManager(){openModal(`<h3>⏰ 闹钟</h3>
+  <div class="hint">到点由角色给你来电叫醒；也能在聊天里口头让 ta 定。</div>
+  <div class="two"><div class="field"><label>时间</label><input id="al_t" type="time"></div>
+  <div class="field"><label>谁来叫你</label><select id="al_c">${S.contacts.filter(c=>!c.deleted).map(c=>`<option value="${c.id}">${esc(c.remark||c.name)}</option>`).join('')}</select></div></div>
+  <div class="field"><label>备注</label><input id="al_l" placeholder="起床啦"></div>
+  <button class="btn p" style="margin-bottom:12px" onclick="(function(){var t=$('#al_t').value;if(!t){toast('选个时间');return;}addAlarm($('#al_c').value,t,$('#al_l').value.trim());alarmManager();})()">➕ 添加</button>
+  ${S.alarms.length?S.alarms.map(a=>{const c=getC(a.contactId);return `<div class="bill" style="border-radius:8px;margin-bottom:6px"><div><b style="font-size:18px">${a.time}</b> ${esc(a.label)}<small>${c?esc(c.remark||c.name):'?'} 来电</small></div><div><span class="sw ${a.enabled?'on':''}" onclick="(function(){var x=S.alarms.find(z=>z.id==='${a.id}');x.enabled=!x.enabled;save();alarmManager();})()"></span> <span onclick="S.alarms=S.alarms.filter(z=>z.id!=='${a.id}');save();alarmManager()" style="color:#fa5151;cursor:pointer;margin-left:10px">✕</span></div></div>`;}).join(''):'<div class="empty">还没有闹钟</div>'}
+  <button class="btn g" style="margin-top:10px" onclick="closeModal()">关闭</button>`);}
+let _alarmFired={};
+function checkAlarms(){const now=new Date();const hhmm=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');const tag=now.toDateString()+hhmm;
+  S.alarms.forEach(a=>{if(a.enabled&&a.time===hhmm&&_alarmFired[a.id]!==tag){_alarmFired[a.id]=tag;if(!_call)incomingCall(a.contactId,'voice');}});}
+setInterval(checkAlarms,15000);
+
+/* 主动消息 */
+async function maybeProactive(id){const c=getC(id);if(!c.proactive.enabled||c.blocked)return;
+  const h=new Date().getHours();const inWin=c.proactive.start<=c.proactive.end?(h>=c.proactive.start&&h<c.proactive.end):(h>=c.proactive.start||h<c.proactive.end);
+  if(!inWin)return;const lm=lastMsg(id);if(lm&&Date.now()-lm.time<2*3600000)return;
+  const today=new Date().toDateString();const pc=S._proactiveCount[id]||{date:today,n:0};if(pc.date!==today){pc.date=today;pc.n=0;}
+  if(pc.n>=(c.proactive.times||1))return;pc.n++;S._proactiveCount[id]=pc;save();
+  try{const content=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：现在是'+hm()+'，'+S.me.name+'有一会儿没理你了，请你主动发起一段微信消息，自然一点。]'}]);
+    splitBubbles(content).forEach(l=>{const mm=lineToMsg(l);mm.time=Date.now();msgs(id).push(mm);});save();
+    if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();
+  }catch(e){}}
+
+/* ---------- 朋友圈 ---------- */
+function wxMoments(){
+  const cover=S.me.momentCover?`background:url(${S.me.momentCover}) center/cover`:'';
+  return `<div class="mcover" style="${cover}"><div onclick="changeCover()" style="position:absolute;left:12px;top:14px;font-size:12px;color:#fff;background:rgba(0,0,0,.3);padding:3px 9px;border-radius:12px;cursor:pointer">📷 换背景</div><div class="me"><div class="nm">${esc(S.me.name)}</div>${av(S.me.avatar,'lg')}</div></div>
+    <div style="text-align:right;padding:26px 14px 6px"><button class="minibtn" onclick="postMoment()">＋ 发朋友圈</button>
+      <button class="minibtn" onclick="refreshMoments()">🔄 刷新</button></div>
+    ${S.moments.length?S.moments.map(momentHTML).join(''):'<div class="empty">还没有朋友圈，点「刷新」让角色发动态，或自己发一条～</div>'}
+    <div style="height:20px"></div>`;}
+function changeCover(){pickFile('image/*',async f=>{S.me.momentCover=await compress(f,900,.6);save();render();toast('背景已换');});}
+function momentHTML(p){const author=p.authorId==='me'?S.me:getC(p.authorId);if(!author)return '';
+  const name=p.authorId==='me'?S.me.name:(author.remark||author.name);
+  return `<div class="mpost">${av(author.avatar,'sm')}<div class="body">
+    <div class="au">${esc(name)}</div>
+    <div class="tx">${esc(p.text)}</div>
+    ${p.images&&p.images.length?`<div class="imgs">${p.images.map(im=>`<div class="ph" onclick="viewImg('${im}')"><img src="${im}"></div>`).join('')}</div>`:''}
+    <div class="ft"><div class="tm">${ago(p.time)}</div><div class="acts" onclick="momentMenu('${p.id}')">···</div></div>
+    ${p.likes&&p.likes.length?`<div class="likes">❤️ ${p.likes.map(l=>esc(l)).join('，')}</div>`:''}
+    ${p.comments&&p.comments.length?`<div class="cmts">${p.comments.map(cm=>`<div class="cmt"><b>${esc(cm.name)}：</b>${esc(cm.text)}</div>`).join('')}</div>`:''}
+  </div></div>`;}
+function momentMenu(pid){const p=S.moments.find(x=>x.id===pid);
+  openModal(`<h3>互动</h3>
+    <button class="btn g" style="margin-bottom:8px" onclick="likeMoment('${pid}')">❤️ ${S.me.name} 点赞</button>
+    <div class="field"><input id="cm_t" placeholder="写条评论…"></div>
+    <button class="btn p" onclick="commentMoment('${pid}')">评论</button>
+    ${p.authorId==='me'?'<button class="btn d" style="margin-top:10px" onclick="S.moments=S.moments.filter(x=>x.id!==\''+pid+'\');save();closeModal();render()">删除</button>':''}
+    <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
+function likeMoment(pid){const p=S.moments.find(x=>x.id===pid);p.likes=p.likes||[];if(!p.likes.includes(S.me.name))p.likes.push(S.me.name);save();closeModal();render();}
+function commentMoment(pid){const t=$('#cm_t').value.trim();if(!t)return;const p=S.moments.find(x=>x.id===pid);
+  p.comments=p.comments||[];p.comments.push({name:S.me.name,text:t});save();closeModal();render();
+  if(p.authorId!=='me')reactToComment(p);}
+function postMoment(){openModal(`<h3>发朋友圈</h3>
+  <div class="field"><textarea id="mm_t" rows="3" placeholder="这一刻的想法…"></textarea></div>
+  <div class="field"><button class="minibtn" id="mm_imgs_btn" onclick="addMomentImg()">📷 加图片</button> <span id="mm_imgcount"></span></div>
+  <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="doPostMoment()">发表</button></div>`);
+  window._mmImgs=[];}
+function addMomentImg(){pickFile('image/*',async f=>{window._mmImgs.push(await compress(f,700,.6));$('#mm_imgcount').textContent='已加'+window._mmImgs.length+'张';});}
+function doPostMoment(){const t=$('#mm_t').value.trim();if(!t&&!(window._mmImgs||[]).length){toast('写点什么吧');return;}
+  const p={id:uid(),authorId:'me',text:t,images:window._mmImgs||[],time:Date.now(),likes:[],comments:[]};
+  S.moments.unshift(p);save();closeModal();render();reactToMyMoment(p);}
+async function reactToMyMoment(p){const pool=S.contacts.filter(c=>!c.deleted&&!c.blocked);
+  for(const c of pool.slice(0,3)){try{const r=await chatAPI([{role:'system',content:buildSystem(c)},
+    {role:'user',content:'你的恋人/好友'+S.me.name+'发了条朋友圈："'+p.text+'"。请你只回复一句：要么是点赞就回"赞"，要么是一句简短自然的评论。'}]);
+    const txt=r.trim();if(txt==='赞'||txt.includes('赞')&&txt.length<3){p.likes.push(c.remark||c.name);}
+    else{p.comments.push({name:c.remark||c.name,text:txt.replace(/^["「]|["」]$/g,'').slice(0,40)});}
+    save();if(cur().p==='wechat'&&wxTab==='moments')render();}catch(e){}}}
+async function reactToComment(p){const c=getC(p.authorId);if(!c)return;try{
+  const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:S.me.name+'在你的朋友圈"'+p.text+'"下评论了你，回ta一句。'}]);
+  p.comments.push({name:c.remark||c.name,text:r.replace(/^["「]|["」]$/g,'').slice(0,40)});save();if(cur().p==='wechat')render();}catch(e){}}
+async function refreshMoments(){const pool=S.contacts.filter(c=>!c.deleted&&!c.blocked);if(!pool.length){toast('先创建角色');return;}
+  toast('刷新中…');const picks=pool.sort(()=>Math.random()-.5).slice(0,2);
+  for(const c of picks){try{const r=await chatAPI([{role:'system',content:buildSystem(c)},
+    {role:'user',content:'以你的身份发一条朋友圈动态（一两句，可带点心情或日常），只输出动态内容本身。'}]);
+    S.moments.unshift({id:uid(),authorId:c.id,text:r.replace(/^["「]|["」]$/g,'').slice(0,120),images:[],time:Date.now(),likes:[],comments:[]});
+    save();if(cur().p==='wechat'&&wxTab==='moments')render();}catch(e){toast('生成失败：'+e.message);}}}
+
+/* ---------- 通用弹窗 ---------- */
+function openModal(html){$('#modalSheet').innerHTML=html;$('#modal').classList.add('show');}
+function closeModal(){$('#modal').classList.remove('show');}
+$('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal();});
+function openChat(id){const c=getC(id);if(c.blocked){toast('已拉黑');}stack=stack.filter(s=>s.p!=='chat');go('chat',{id});}
+
+/* ---------- 备份 ---------- */
+function exportData(){const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='小手机备份_'+new Date().toISOString().slice(0,10)+'.json';a.click();toast('已导出');}
+function importData(){pickFile('.json',f=>{const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(d.settings){S=Object.assign(defState(),d);save();render();toast('已导入');}}catch(e){toast('文件读不了');}};r.readAsText(f);});}
+
+/* ---------- 时钟 & 启动 ---------- */
+setInterval(()=>{const c=$('#clock');if(c)c.textContent=hm();if(cur().p==='home')$('#app').querySelector('.hh')&&($('#app').querySelector('.hh').textContent=hm());},1000);
+render();
+</script>
+</body>
+</html>
