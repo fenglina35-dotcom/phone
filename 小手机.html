@@ -289,7 +289,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v24 · 群聊+情侣空间+纠错';
+const APP_VER='v25 · 群聊增强';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1039,7 +1039,7 @@ function renderWeChat(){
   else if(wxTab==='me')body=wxMe();
   const titles={chats:'微信',contacts:'通讯录',moments:'朋友圈',me:'我'};
   const showAdd=wxTab==='chats'||wxTab==='contacts';
-  return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">${titles[wxTab]}</span><span class="r" onclick="${showAdd?'editContact()':''}">${showAdd?'＋':''}</span></div>
+  return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">${titles[wxTab]}</span><span class="r" onclick="${wxTab==='chats'?'chatAddMenu()':wxTab==='contacts'?'editContact()':''}">${showAdd?'＋':''}</span></div>
     <div class="scroll" style="background:#000">${body}</div>
     <div class="tabbar">
       ${tb('chats','💬','微信')}${tb('contacts','👤','通讯录')}${tb('moments','🌸','朋友圈')}${tb('me','🐱','我')}
@@ -1052,9 +1052,9 @@ function wxChats(){
     if(a.pinned!==b.pinned)return a.pinned?-1:1;
     return (lastMsg(b.id)?.time||0)-(lastMsg(a.id)?.time||0);});
   const groups=(S.groups||[]);
-  let html='<div class="list"><div class="row" onclick="createGroup()"><div class="avatar" style="background:#54a0ff">👥</div><div class="meta"><div class="n">发起群聊</div></div></div>';
-  groups.forEach(g=>{const lm=g.msgs[g.msgs.length-1];html+=`<div class="row" onclick="go('group',{id:'${g.id}'})"><div class="avatar" style="background:#7c6cc0">👥</div><div class="meta"><div class="n">${esc(g.name)}(${g.members.length+1})</div><div class="s">${lm?esc(gpreview(lm)):'群聊已创建'}</div></div><div class="meta time">${lm?hm(lm.time):''}</div></div>`;});
-  if(!list.length&&!groups.length)return html+'</div><div class="empty">去通讯录加个角色，或发起群聊～</div>';
+  let html='<div class="list">';
+  groups.forEach(g=>{const lm=g.msgs[g.msgs.length-1];html+=`<div class="row" onclick="go('group',{id:'${g.id}'})">${g.avatar?av(g.avatar):'<div class="avatar" style="background:#7c6cc0">👥</div>'}<div class="meta"><div class="n">${esc(g.name)}(${g.members.length+1})</div><div class="s">${lm?esc(gpreview(lm)):'群聊已创建'}</div></div><div class="meta time">${lm?hm(lm.time):''}</div></div>`;});
+  if(!list.length&&!groups.length)return '<div class="empty">右上角 ＋ 新建角色或发起群聊～</div>';
   html+=list.map(c=>{const lm=lastMsg(c.id);
     return `<div class="row ${c.pinned?'pin':''}" onclick="openChat('${c.id}')">${av(c.avatar)}
       <div class="meta"><div class="n">${esc(c.remark||c.name)} ${c.blocked?'<span class=tag>已拉黑</span>':''}</div>
@@ -1065,6 +1065,10 @@ function wxChats(){
 function gpreview(m){const nm=m.senderId==='me'?S.me.name:(getC(m.senderId)?getC(m.senderId).name:'?');return nm+'：'+gmText(m);}
 function gmText(m){return m.type==='text'?m.content:'[消息]';}
 /* ===== 群聊 ===== */
+function chatAddMenu(){openModal(`<h3>＋</h3>
+  <button class="btn p" style="margin-bottom:8px" onclick="closeModal();editContact()">🧑 新建角色</button>
+  <button class="btn g" onclick="closeModal();createGroup()">👥 发起群聊</button>
+  <button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
 function createGroup(){const cs=S.contacts.filter(c=>!c.deleted);if(cs.length<1){toast('先创建角色');return;}
   window._gsel=[];openModal(`<h3>👥 发起群聊</h3><div class="hint">选要拉进群的角色（可多选）</div>
     <div id="gpick">${cs.map(c=>`<div class="section"><div class="it" onclick="gtoggle('${c.id}',this)">${esc(c.remark||c.name)}<span class="v" id="gp_${c.id}">＋</span></div></div>`).join('')}</div>
@@ -1084,30 +1088,44 @@ function renderGroup(id){const g=S.groups.find(x=>x.id===id);if(!g)return '';
       <button class="send" onclick="sendGroup('${id}')">发送</button></div>`;}
 function gbubble(g,m){const me=m.senderId==='me';if(m.type==='sys')return `<div class="tstamp"><span>${esc(m.content)}</span></div>`;
   const c=me?null:getC(m.senderId);const av0=me?av(S.me.avatar):av(c?c.avatar:'🙂');const nm=me?'':`<div style="font-size:11px;color:#888;margin-bottom:2px">${esc(c?c.name:'?')}</div>`;
-  return `<div class="msg ${me?'me':'them'}">${av0}<div class="col">${nm}<div class="bubble">${esc(m.content)}</div></div></div>`;}
+  return `<div class="msg ${me?'me':'them'}">${av0}<div class="col">${nm}<div class="bubble">${esc(m.content)}</div><div class="msgt">${hm(m.time)}</div></div></div>`;}
+function gNotify(g,c){if(cur().p==='group'&&cur().id===g.id)return;playDing();const b=$('#msgBanner');if(!b)return;const lm=g.msgs[g.msgs.length-1];
+  b.innerHTML=`${g.avatar?av(g.avatar,'sm'):'<div class="avatar sm" style="background:#7c6cc0">👥</div>'}<div style="flex:1;min-width:0"><div class="bn">${esc(g.name)}</div><div class="bm">${esc(c.name+'：'+(lm?gmText(lm):''))}</div></div>`;
+  b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';go('group',{id:g.id});};clearTimeout(_bannerT);_bannerT=setTimeout(()=>{b.className='msgbanner';},4500);}
 function sendGroup(id){const g=S.groups.find(x=>x.id===id);const ta=$('#ginput');const t=ta.value.trim();if(!t)return;ta.value='';ta.style.height='auto';
   g.msgs.push({senderId:'me',role:'user',type:'text',content:t,time:Date.now(),id:uid()});save();render();aiGroupReply(id,t);}
 function groupAt(id){const g=S.groups.find(x=>x.id===id);openModal(`<h3>@ 谁</h3>${g.members.map(cid=>{const c=getC(cid);return c?`<div class="section"><div class="it" onclick="closeModal();var ta=$('#ginput');ta.value+='@${esc(c.name)} ';ta.focus()">${esc(c.name)}</div></div>`:'';}).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function gContext(g,c){const others=g.members.filter(x=>x!==c.id).map(x=>getC(x)).filter(Boolean).map(x=>x.name);
-  let s='\n\n# 你在群聊「'+g.name+'」里\n群里有：'+S.me.name+'(你们共同的恋人/主人)、'+others.join('、')+'。这是多人群聊，你可以 @别人、和群友拌嘴或吃醋（尤其'+S.me.name+'对别人好时），回复要短、口语、符合你的人设和心情值。\n# 最近群聊记录\n'+g.msgs.slice(-14).map(m=>(m.senderId==='me'?S.me.name:(getC(m.senderId)?getC(m.senderId).name:'?'))+'：'+gmText(m)).join('\n');
+  let s='\n\n# 你在群聊「'+g.name+'」里\n群里有：'+S.me.name+'(你们共同的恋人/主人)、'+others.join('、')+'。这是多人群聊，你可以 @别人、和群友拌嘴或吃醋（尤其'+S.me.name+'对别人好时），回复 '+(g.msgMin||1)+'到'+(g.msgMax||2)+' 条短消息，口语、符合你的人设和心情值。';
+  if(g.relations)s+='\n# 群里的关系\n'+g.relations;
+  s+='\n# 最近群聊记录\n'+g.msgs.slice(-14).map(m=>(m.senderId==='me'?S.me.name:(getC(m.senderId)?getC(m.senderId).name:'?'))+'：'+gmText(m)).join('\n');
   return s;}
 async function aiGroupReply(id,fromText){const g=S.groups.find(x=>x.id===id);if(!g)return;
-  const members=g.members.map(x=>getC(x)).filter(c=>c&&!c.deleted&&!c.blocked);if(!members.length)return;
+  const allowed=(g.responders&&g.responders.length)?g.responders:g.members;
+  const members=allowed.map(x=>getC(x)).filter(c=>c&&!c.deleted&&!c.blocked);if(!members.length)return;
   let resp=members.filter(c=>fromText&&fromText.includes(c.name));
   if(!resp.length)resp=[...members].sort(()=>Math.random()-.5).slice(0,Math.min(members.length,1+Math.floor(Math.random()*2)));
   for(const c of resp){await sleep(500+Math.random()*600);
     try{const sys=buildSystem(c)+gContext(g,c);
-      const content=await chatAPI([{role:'system',content:sys},{role:'user',content:'[群里现在该你说话了，针对最新消息自然回一两句，可@人]'}]);
-      splitBubbles(content).forEach(l=>{l=normTag(l);if(LEAKRE.test(l))return;splitActions(l).forEach(p=>{g.msgs.push({senderId:c.id,role:'assistant',type:'text',content:p,time:Date.now(),id:uid()});});});
+      const content=await chatAPI([{role:'system',content:sys},{role:'user',content:'[群里现在该你说话了，针对最新消息自然回，可@人]'}]);
+      let any=false;splitBubbles(content).forEach(l=>{l=normTag(l);if(LEAKRE.test(l))return;splitActions(l).forEach(p=>{g.msgs.push({senderId:c.id,role:'assistant',type:'text',content:p,time:Date.now(),id:uid()});any=true;});});
+      if(any)gNotify(g,c);
       save();if(cur().p==='group'&&cur().id===id){const cb=$('#chatbg');if(cb){cb.innerHTML='';const gg=S.groups.find(x=>x.id===id);gg.msgs.forEach((m,i)=>{cb.insertAdjacentHTML('beforeend',gbubble(gg,m));});cb.scrollTop=cb.scrollHeight;}}
     }catch(e){}}}
-function groupInfo(id){const g=S.groups.find(x=>x.id===id);openModal(`<h3>👥 ${esc(g.name)}</h3>
-  <div class="hint">成员：${S.me.name}、${g.members.map(x=>getC(x)?esc(getC(x).name):'?').join('、')}</div>
+function groupInfo(id){const g=S.groups.find(x=>x.id===id);const resp=g.responders||g.members.slice();
+  openModal(`<h3>👥 群设置</h3>
+  <div class="field"><label>群头像</label><div class="avline">${g.avatar?av(g.avatar,'sm'):'<div class="avatar sm" style="background:#7c6cc0">👥</div>'}<button class="minibtn" onclick="gAvatar('${id}')">📷 从相册选</button></div></div>
   <div class="field"><label>群名称</label><input id="gn" value="${esc(g.name)}"></div>
-  <button class="btn p" style="margin-bottom:8px" onclick="g_addMember('${id}')">＋ 拉人进群</button>
-  <button class="btn g" style="margin-bottom:8px" onclick="g.name=$('#gn').value.trim()||g.name;S.groups.find(x=>x.id==='${id}').name=$('#gn').value.trim()||'群聊';save();closeModal();render()">保存群名</button>
+  <div class="field"><label>谁会回复（不选=全部都回）</label><div id="grsp">${g.members.map(cid=>{const c=getC(cid);return c?`<span class="minibtn" id="gr_${cid}" style="margin:2px;background:${resp.indexOf(cid)>=0?'#07c160':'#2c2c2e'};color:${resp.indexOf(cid)>=0?'#fff':'#ccc'}" onclick="gToggleResp('${id}','${cid}',this)">${esc(c.name)}</span>`:'';}).join('')}</div></div>
+  <div class="two"><div class="field"><label>每人回复最少</label><input id="g_min" type="number" min="1" value="${g.msgMin||1}"></div><div class="field"><label>最多</label><input id="g_max" type="number" min="1" value="${g.msgMax||2}"></div></div>
+  <div class="field"><label>关系链（他们之间、和你的关系）</label><textarea id="g_rel" rows="3" placeholder="例如：克劳德和沉野是死对头，都喜欢忆北；阿涉是忆北的青梅竹马。">${esc(g.relations||'')}</textarea></div>
+  <button class="btn p" style="margin-bottom:8px" onclick="saveGroup('${id}')">保存设置</button>
+  <button class="btn g" style="margin-bottom:8px" onclick="g_addMember('${id}')">＋ 拉人进群</button>
   <button class="btn d" onclick="if(confirm('解散群聊？')){S.groups=S.groups.filter(x=>x.id!=='${id}');save();closeModal();back()}">解散群聊</button>
   <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
+function gToggleResp(gid,cid,el){const g=S.groups.find(x=>x.id===gid);g.responders=g.responders||g.members.slice();const i=g.responders.indexOf(cid);if(i>=0)g.responders.splice(i,1);else g.responders.push(cid);const on=g.responders.indexOf(cid)>=0;el.style.background=on?'#07c160':'#2c2c2e';el.style.color=on?'#fff':'#ccc';}
+function gAvatar(id){pickFile('image/*',async f=>{const g=S.groups.find(x=>x.id===id);g.avatar=await compress(f,256,.8);save();groupInfo(id);});}
+function saveGroup(id){const g=S.groups.find(x=>x.id===id);g.name=$('#gn').value.trim()||g.name;g.msgMin=Math.max(1,+$('#g_min').value||1);g.msgMax=Math.max(g.msgMin,+$('#g_max').value||2);g.relations=$('#g_rel').value.trim();save();closeModal();render();toast('已保存');}
 function g_addMember(id){const g=S.groups.find(x=>x.id===id);const avail=S.contacts.filter(c=>!c.deleted&&g.members.indexOf(c.id)<0);if(!avail.length){toast('没有可拉的角色了');return;}
   openModal(`<h3>拉人进群</h3>${avail.map(c=>`<div class="section"><div class="it" onclick="S.groups.find(x=>x.id==='${id}').members.push('${c.id}');S.groups.find(x=>x.id==='${id}').msgs.push({senderId:'me',type:'sys',content:'${esc(c.name)} 加入了群聊',time:Date.now(),id:uid()});save();closeModal();render()">${esc(c.remark||c.name)}<span class="v">＋</span></div></div>`).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 /* ===== 情侣空间 ===== */
