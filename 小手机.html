@@ -289,7 +289,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v25 · 群聊增强';
+const APP_VER='v26 · 支持ElevenLabs克隆音';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -414,7 +414,9 @@ function loadVoices(){try{_voices=speechSynthesis.getVoices()||[];}catch(e){_voi
 if('speechSynthesis'in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices;}
 async function speak(text,o){const t=stripSpoken(text);if(!t)return;const v=o?getVoice(o):null;
   const tts=S.settings.tts;
-  if(v&&v.engine==='api'&&tts&&tts.base&&tts.key){try{const r=await fetch(tts.base.replace(/\/+$/,'')+'/audio/speech',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tts.key},body:JSON.stringify({model:tts.model||'tts-1',input:t,voice:v.ttsVoice||tts.voice||'alloy',speed:v.rate||1})});if(r.ok){const b=await r.blob();const au=new Audio(URL.createObjectURL(b));au.play();return;}}catch(e){}}
+  if(v&&v.engine==='api'&&tts&&tts.base&&tts.key){const vid=v.ttsVoice||tts.voice||'';
+    if(/elevenlabs/i.test(tts.base)){try{const r=await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+vid,{method:'POST',headers:{'xi-api-key':tts.key,'Content-Type':'application/json'},body:JSON.stringify({text:t,model_id:tts.model||'eleven_multilingual_v2'})});if(r.ok){const b=await r.blob();new Audio(URL.createObjectURL(b)).play();return;}else{toast('语音API错误 '+r.status);}}catch(e){toast('语音API连不上(可能跨域)');}return;}
+    try{const r=await fetch(tts.base.replace(/\/+$/,'')+'/audio/speech',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tts.key},body:JSON.stringify({model:tts.model||'tts-1',input:t,voice:vid||'alloy',speed:v.rate||1})});if(r.ok){const b=await r.blob();new Audio(URL.createObjectURL(b)).play();return;}}catch(e){}}
   if(!('speechSynthesis'in window))return;
   try{const u=new SpeechSynthesisUtterance(t);if(v){u.rate=+v.rate||1;u.pitch=+v.pitch||1;if(v.voiceURI){const vs=_voices.find(x=>x.voiceURI===v.voiceURI);if(vs)u.voice=vs;}}speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}}
 function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m)return;
@@ -593,7 +595,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="field" style="padding:0 14px 10px"><label>模型名（如 gpt-4o）</label><input id="s_vmodel" value="${esc(v.model)}" placeholder="留空=不识图"></div>
     </div>
     <div class="section"><div style="padding:12px 14px;font-weight:600;color:#b8a4e3">🎙️ 语音API（可选·克隆/更真）</div>
-      <div class="hint" style="padding:0 14px">不填就用手机自带音色(免费)。填了的话，把某角色音色引擎切成「API」即可用。需 OpenAI 兼容 /audio/speech 接口。</div>
+      <div class="hint" style="padding:0 14px">不填用手机自带音色(免费)。要用 ElevenLabs 克隆音：地址填 https://api.elevenlabs.io、Key填你的、模型填 eleven_multilingual_v2、默认音色填你的 voice id；再把角色「语音音色」引擎切成 API。也支持 OpenAI 兼容 /audio/speech。</div>
       <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_tbase" value="${esc((S.settings.tts||{}).base||'')}" placeholder="https://…/v1"></div>
       <div class="field" style="padding:0 14px"><label>API Key</label><input id="s_tkey" type="password" value="${esc((S.settings.tts||{}).key||'')}"></div>
       <div class="two" style="padding:0 14px 10px"><div class="field"><label>模型</label><input id="s_tmodel" value="${esc((S.settings.tts||{}).model||'')}" placeholder="tts-1"></div><div class="field"><label>默认音色</label><input id="s_tvoice" value="${esc((S.settings.tts||{}).voice||'')}" placeholder="alloy/克隆ID"></div></div>
