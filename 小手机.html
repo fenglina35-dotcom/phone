@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black" />
 <meta name="apple-mobile-web-app-title" content="小手机" />
+<link rel="apple-touch-icon" href="icon.png" />
 <title>忆北的小手机 📱</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0;}
@@ -295,7 +296,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v30 · 通话字幕式+独立+去心情值';
+const APP_VER='v31 · 字幕放慢+纯语音+图标';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1709,9 +1710,7 @@ function renderCall(){const L=$('#callLayer');if(!_call){L.className='callscreen
   let btns='';
   if(_call.state==='incoming')btns=`<div class="cbtncol"><div class="cbtn red" onclick="declineCall()">📵</div>拒绝</div><div class="cbtncol"><div class="cbtn green" onclick="answerCall()">📞</div>接听</div>`;
   else if(_call.state==='outgoing')btns=`<div class="cbtncol"><div class="cbtn red" onclick="declineCall()">📵</div>取消</div>`;
-  else btns=`<div class="cbtncol"><div class="cbtn gray" onclick="document.getElementById('callInput').classList.toggle('show')">⌨️</div>打字</div>
-    <div class="cbtncol"><div class="cbtn ${_call.replyVoice?'green':'gray'}" onclick="_call.replyVoice=!_call.replyVoice;renderCall()">${_call.replyVoice?'🔊':'💬'}</div>${_call.replyVoice?'对方语音':'对方文字'}</div>
-    <div class="cbtncol"><div class="cbtn red" onclick="hangupCall()">📵</div>挂断</div>`;
+  else{_call.replyVoice=true;btns=`<div class="cbtncol"><div class="cbtn red" onclick="hangupCall()">📵</div>挂断</div>`;}
   L.innerHTML=`<div class="cav">${isImg(c.avatar)?`<img src="${c.avatar}">`:(c.avatar||'🙂')}</div>
     <div class="cname">${esc(c.remark||c.name)}</div><div class="cstat">${stat}</div>
     <div class="callsub" id="callSub"></div>
@@ -1742,7 +1741,7 @@ async function callAI(sysNote){if(!_call)return;const c=getC(_call.id);const vid
     for(const p of pieces){if(!_call||_call.session!==sess)return;
       msgs(c.id).push({role:'assistant',type:'text',content:p,time:Date.now(),id:uid(),_call:true,_cs:sess});save();
       _call.sub={who:'them',text:p};updateCallSub();
-      if(_call.replyVoice&&!c.muted)await speakWait(p,c);else await sleep(Math.max(1200,p.length*130));}
+      if(_call.replyVoice&&!c.muted){await speakWait(p,c);await sleep(900);}else await sleep(Math.max(1800,p.length*180));}
     if(_call&&_call.session===sess){_call.sub=null;updateCallSub();}
     if(wantHang&&_call&&_call.session===sess)setTimeout(()=>{if(_call&&_call.id===c.id)hangupCall(true);},900);
   }catch(e){if(_call){_call.sub={who:'them',text:'(信号不好…)'};updateCallSub();}}}
