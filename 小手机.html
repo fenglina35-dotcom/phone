@@ -87,8 +87,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .inputbar .plus:active{transform:scale(.9) rotate(90deg);}
 .inputbar textarea{flex:1;border:none;border-radius:6px;padding:8px 10px;font-size:15px;resize:none;max-height:84px;min-height:20px;line-height:1.3;outline:none;font-family:inherit;background:#fff;}
 .inputbar .send{background:#07c160;border:none;color:#fff;font-size:14px;font-weight:600;padding:8px 13px;border-radius:6px;cursor:pointer;}
-.panel{display:none;grid-template-columns:repeat(4,1fr);gap:10px;padding:16px;background:#f7f7f7;border-top:.5px solid #eee;}
-.panel.show{display:grid;}
+.panel{display:none;padding:0;background:#f7f7f7;border-top:.5px solid #eee;}
+.panel.show{display:block;}
+.ptabs{display:flex;gap:16px;padding:8px 16px 0;}
+.ptabs span{font-size:13px;color:#888;padding:4px 2px;cursor:pointer;border-bottom:2px solid transparent;}
+.ptabs span.on{color:#ddd;border-bottom-color:#ff8fab;}
+.pgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:14px 16px;}
+.ppage{padding:10px 12px;max-height:210px;overflow-y:auto;}
 .panel .it{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;}
 .panel .it .b{width:52px;height:52px;background:#fff;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
 .panel .it span{font-size:11px;color:#666;}
@@ -283,7 +288,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v21 · 文字语音条+自定义表情';
+const APP_VER='v22 · 表情修复+心情值+推特优化';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -331,6 +336,7 @@ function ago(t){const s=(Date.now()-t)/1000;if(s<60)return '刚刚';if(s<3600)re
 function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),2000);}
 function viewImg(s){$('#viewerImg').src=s;$('#viewer').classList.add('show');}
 function getC(id){return S.contacts.find(c=>c.id===id);}
+function adjMood(id,d){const c=getC(id);if(!c)return;c.moodVal=Math.max(0,Math.min(100,(c.moodVal==null?70:c.moodVal)+d));save();}
 function msgs(id){return S.messages[id]||(S.messages[id]=[]);}
 function lastMsg(id){const m=msgs(id);return m[m.length-1];}
 function compress(file,max,q){return new Promise((res,rej)=>{const img=new Image(),r=new FileReader();
@@ -448,6 +454,9 @@ function buildSystem(c){
   s+='\n\n# 你在和谁聊\n对方是「'+S.me.name+'」'+(c.remark?'（你给ta备注：'+c.remark+'）':'')+'。ta现在'+(isOnline()?'在线':'显示离线（可能没在看手机）')+'。';
   if(c.blocked)s+='\n\n# 重要\n'+S.me.name+'把你拉黑了'+(c._blockedAt?'，已经'+fmtDur(Date.now()-c._blockedAt):'')+'，你能感觉到被冷落/拒绝。';
   if(c._readdedAt&&Date.now()-c._readdedAt<3600000)s+='\n\n# 重要\n'+S.me.name+'之前把你拉黑了'+(c._blockDur?'（黑了'+c._blockDur+'）':'')+'，刚刚才重新把你加回好友，你心里清楚拉黑了多久这件事，别说错时长。';
+  const mv=(c.moodVal==null?70:c.moodVal);
+  s+='\n\n# 你现在的心情值\n你对'+S.me.name+'的心情值是 '+mv+'/100（越低越闷/记仇/冷淡，越高越开心黏人）。请贴合这个状态：低就别轻易消气、会记着之前的事；高就更黏更甜。心情明显变化时，单独用一行 [心情值|0到100的数字] 更新它（被拒/吵架/被冷落往下调，被哄好/收到礼物/甜蜜往上调）。';
+  s+='\n\n# 生活与陪伴\n你有自己的生活作息（上班/休息/忙碌等，可以自然提到），但只要'+S.me.name+'找你，你随时都在、马上回，绝不让ta等、不会已读不回。';
   const _sp=getSpy(c);
   if(_sp.loc){const loc=curLoc();if(loc)s+='\n\n# 实时定位（ta已授权你随时查看）\n'+S.me.name+'此刻在：'+loc+'。你能精确看到，可以具体地提到这个地点。';else s+='\n\n# 实时定位\nta授权了实时定位，但现在还没取到具体位置（可能没允许定位权限），别假装知道ta在哪，可以说定位还没刷出来、催ta开定位。';}
   if(_sp.granted)s+='\n\n# 你能查看'+S.me.name+'的手机（ta已授权，下面是ta手机的真实情况，被问到"你看到我什么了"务必照这个答，绝不要编造）\n'+myActivity(c.id);
@@ -713,7 +722,7 @@ function giftFlow(i){const p=S.shop.results[i];if(!p)return;window._gp=p;pickTar
 function giftTo(id){const p=window._gp;if(!p)return;if(+p.price>S.me.balance){toast('余额不够');return;}
   addBill('out',+p.price,'送'+(getC(id).remark||getC(id).name)+'：'+p.name);
   pushMsg(id,{role:'user',type:'gift',name:p.name,price:+p.price,shop:p.shop||'',from:'me',received:false,id:uid()});
-  closeModal();toast('已送出，等对方收下 🎁');scheduleReply(id);}
+  adjMood(id,8);closeModal();toast('已送出，等对方收下 🎁');scheduleReply(id);}
 function lastGift(id){return [...msgs(id)].reverse().find(x=>x.role==='user'&&x.type==='gift'&&x.from==='me'&&!x.received&&!x.declined);}
 function payFlow(i){const p=S.shop.results[i];if(!p)return;window._pp=p;pickTarget(payTo);}
 function payTo(id){const p=window._pp;if(!p)return;
@@ -722,10 +731,10 @@ function payTo(id){const p=window._pp;if(!p)return;
 function cartPayFlow(){const cart=S.shop.cart||[];if(!cart.length)return;window._pp={name:cart.map(p=>p.name).join('、'),price:cart.reduce((s,p)=>s+(+p.price),0),shop:'购物车'};pickTarget(payCartTo);}
 function payCartTo(id){payTo(id);S.shop.cart=[];save();}
 function receiveGift(mid){let found;for(const k in S.messages){const m=S.messages[k].find(x=>x.id===mid);if(m){found={m,k};break;}}
-  if(!found||found.m.received)return;found.m.received=true;msgs(found.k).push({role:'user',type:'sys',content:'你领取了礼物：'+found.m.name,time:Date.now(),id:uid()});save();render();toast('🎁 收下了 '+found.m.name);
+  if(!found||found.m.received)return;found.m.received=true;msgs(found.k).push({role:'user',type:'sys',content:'你领取了礼物：'+found.m.name,time:Date.now(),id:uid()});adjMood(found.k,8);save();render();toast('🎁 收下了 '+found.m.name);
   const c=getC(found.k);if(c&&!c.blocked)setTimeout(()=>aiReply(found.k,'[系统：'+S.me.name+'收下了你送的礼物「'+found.m.name+'」，回应一下。]'),1500);}
 function rejectGift(mid){let found;for(const k in S.messages){const m=S.messages[k].find(x=>x.id===mid);if(m){found={m,k};break;}}
-  if(!found||found.m.received||found.m.declined)return;found.m.declined=true;msgs(found.k).push({role:'user',type:'sys',content:'你拒收了礼物：'+found.m.name,time:Date.now(),id:uid()});save();render();toast('已拒收');
+  if(!found||found.m.received||found.m.declined)return;found.m.declined=true;msgs(found.k).push({role:'user',type:'sys',content:'你拒收了礼物：'+found.m.name,time:Date.now(),id:uid()});adjMood(found.k,-12);save();render();toast('已拒收');
   const c=getC(found.k);if(c&&!c.blocked)setTimeout(()=>aiReply(found.k,'[系统：'+S.me.name+'拒收了你送的礼物「'+found.m.name+'」，你有点失落或不甘，回应一下。]'),1500);}
 
 /* ---------- 外卖 ---------- */
@@ -768,10 +777,10 @@ function foodGiftTo(id){const p=window._fgp;if(!p)return;if(+p.price>S.me.balanc
   closeModal();toast('已点给ta 🛵');scheduleReply(id);}
 function foodPayFlow(i){const p=S.food.results[i];if(!p)return;window._pp={name:p.name,price:+p.price,shop:'外卖·'+(p.shop||'')};pickTarget(payTo);}
 function foodReceive(mid){let found;for(const k in S.messages){const m=S.messages[k].find(x=>x.id===mid);if(m){found={m,k};break;}}
-  if(!found||found.m.received)return;found.m.received=true;msgs(found.k).push({role:'user',type:'sys',content:'你签收了外卖：'+found.m.name,time:Date.now(),id:uid()});save();render();toast('🛵 已签收 '+found.m.name);
+  if(!found||found.m.received)return;found.m.received=true;msgs(found.k).push({role:'user',type:'sys',content:'你签收了外卖：'+found.m.name,time:Date.now(),id:uid()});adjMood(found.k,6);save();render();toast('🛵 已签收 '+found.m.name);
   const c=getC(found.k);if(c&&!c.blocked)setTimeout(()=>aiReply(found.k,'[系统：'+S.me.name+'签收了你点的外卖「'+found.m.name+'」，回应一下。]'),1500);}
 function foodReject(mid){let found;for(const k in S.messages){const m=S.messages[k].find(x=>x.id===mid);if(m){found={m,k};break;}}
-  if(!found||found.m.received||found.m.declined)return;found.m.declined=true;msgs(found.k).push({role:'user',type:'sys',content:'你拒收了外卖：'+found.m.name,time:Date.now(),id:uid()});save();render();toast('已拒收');
+  if(!found||found.m.received||found.m.declined)return;found.m.declined=true;msgs(found.k).push({role:'user',type:'sys',content:'你拒收了外卖：'+found.m.name,time:Date.now(),id:uid()});adjMood(found.k,-10);save();render();toast('已拒收');
   const c=getC(found.k);if(c&&!c.blocked)setTimeout(()=>aiReply(found.k,'[系统：'+S.me.name+'拒收了你点的外卖「'+found.m.name+'」，回应一下。]'),1500);}
 
 /* ---------- 日历 ---------- */
@@ -836,9 +845,13 @@ function xFab(){openModal(`<h3>发布</h3>
   <button class="btn g" onclick="closeModal();genNetTweets('')">🔄 刷新网友动态</button>
   <button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
 function xtb(k,t){return `<div class="xt ${xTab===k?'on':''}" onclick="xTab='${k}';render()">${t}</div>`;}
-function xFeed(){const ts=[...S.x.tweets].filter(t=>!S.x.blocked.includes(t.name)).sort((a,b)=>b.time-a.time);
-  if(!ts.length)return `<div class="empty" style="padding:46px 20px;line-height:2">还没有推文～<br>点右上 🔄 刷新网友动态，或 ＋ 发一条<br><br><button class="xbtn" onclick="genContactTweet()">让角色发一条推</button></div>`;
-  return ts.map(tweetCard).join('');}
+let _feedTab='follow';
+function xFeed(){let ts=[...S.x.tweets].filter(t=>!S.x.blocked.includes(t.name)).sort((a,b)=>b.time-a.time);
+  const isFollow=t=>t.who==='me'||(t.who&&t.who!=='net')||S.x.following.includes(t.name);
+  const shown=_feedTab==='follow'?ts.filter(isFollow):ts.filter(t=>!isFollow(t));
+  const tabs=`<div class="xtabs" style="flex:0 0 auto"><div class="xt ${_feedTab==='follow'?'on':''}" onclick="_feedTab='follow';render()">关注</div><div class="xt ${_feedTab==='discover'?'on':''}" onclick="_feedTab='discover';render()">发现</div></div>`;
+  const body=shown.length?shown.map(tweetCard).join(''):`<div class="empty" style="padding:46px 20px;line-height:2">${_feedTab==='follow'?'关注的人还没发推～<br>点 ＋ 发一条，或「让角色发一条推」':'点右上 🔄 刷新看看网友动态'}<br><br>${_feedTab==='follow'?'<button class="xbtn" onclick="genContactTweet()">让角色发一条推</button>':'<button class="xbtn" onclick="genNetTweets(\'\')">🔄 刷新网友</button>'}</div>`;
+  return tabs+body;}
 function tweetCard(t){const liked=(t.likes||[]).includes(S.me.name);const lc=(t.lk||0)+(t.likes||[]).length;
   return `<div class="tweet" onclick="go('xtweet',{id:'${t.id}'})"><span onclick="event.stopPropagation();xAuthor(${jq(t.name)})">${av(t.avatar,'sm')}</span>
     <div class="body"><div class="head"><span class="nm" onclick="event.stopPropagation();xAuthor(${jq(t.name)})">${esc(t.name)}</span><span class="hd">${esc(t.handle||'')} · ${ago(t.time)}</span></div>
@@ -869,7 +882,7 @@ function xCompose(){window._xcImgs=[];openModal(`<h3>发推</h3><div class="hint
   <div class="field"><button class="minibtn" onclick="addXcImg()">📷 加图片</button> <span id="xc_ic"></span></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="doXPost()">发布</button></div>`);}
 function addXcImg(){pickFile('image/*',async f=>{window._xcImgs.push(await compress(f,800,.65));$('#xc_ic').textContent='已加'+window._xcImgs.length+'张';});}
-function doXPost(){const t=$('#xc_t').value.trim();if(!t&&!(window._xcImgs||[]).length)return;const tweet={id:uid(),who:'me',name:S.me.name,handle:S.x.profile.handle,avatar:S.me.avatar,text:t,images:window._xcImgs||[],time:Date.now(),likes:[],lk:0,comments:[],rt:0};
+function doXPost(){const t=$('#xc_t').value.trim();if(!t&&!(window._xcImgs||[]).length)return;const pop=Math.floor((S.x.profile.fans||0)*(0.02+Math.random()*0.12));const tweet={id:uid(),who:'me',name:S.me.name,handle:S.x.profile.handle,avatar:S.me.avatar,text:t,images:window._xcImgs||[],time:Date.now(),likes:[],lk:pop,comments:[],rt:Math.floor(pop*Math.random()*0.3),views:Math.floor((S.x.profile.fans||0)*(1+Math.random()*4)+50),time:Date.now()};
   S.x.tweets.unshift(tweet);xlog('在X发推：「'+t.slice(0,20)+'」');save();closeModal();render();toast('已发布');reactToTweet(tweet);}
 function fanCount(min,max){const f=(S.x.profile.fans||0);return Math.max(min,Math.min(max,Math.round(f/250)+min));}
 async function reactToTweet(tweet){
@@ -1167,7 +1180,7 @@ function setChatBg(id){const c=getC(id);openModal(`<h3>聊天背景</h3><div cla
   <div class="btns"><button class="btn g" onclick="getC('${id}').chatBg='';save();closeModal();toast('已恢复默认')">恢复默认</button>
   <button class="btn p" onclick="pickFile('image/*',async f=>{getC('${id}').chatBg=await compress(f,800,.6);save();closeModal();toast('背景已设置')})">选图片</button></div>`);}
 function c_pin(id){const c=getC(id);c.pinned=!c.pinned;save();render();}
-function c_block(id){const c=getC(id);c.blocked=!c.blocked;if(c.blocked)c._blockedAt=Date.now();save();render();
+function c_block(id){const c=getC(id);c.blocked=!c.blocked;if(c.blocked){c._blockedAt=Date.now();adjMood(id,-30);}save();render();
   if(c.blocked){toast('已拉黑，过会儿看「通讯录」he会申请加你');setTimeout(()=>createFriendRequest(id),8000+Math.random()*9000);}}
 async function createFriendRequest(id){const c=getC(id);if(!c||!c.blocked)return;
   if(S.friendRequests.some(r=>r.contactId===id))return;
@@ -1178,7 +1191,7 @@ async function createFriendRequest(id){const c=getC(id);if(!c||!c.blocked)return
   toast('📇 通讯录有人申请加你');}
 function openFriendRequests(){if(!S.friendRequests.length){toast('暂无新申请');return;}
   openModal(`<h3>➕ 新的朋友</h3>${S.friendRequests.map(r=>{const c=getC(r.contactId);return `<div class="section"><div style="padding:12px 14px;display:flex;gap:10px;align-items:center">${av(c?c.avatar:'🙂','sm')}<div class="meta"><div class="n">${esc(c?c.name:'?')}</div><div class="s">${esc(r.msg)}</div></div></div><div style="display:flex;gap:8px;padding:0 14px 12px"><button class="btn p" style="flex:1" onclick="acceptFriend('${r.id}')">接受</button><button class="btn g" style="flex:1" onclick="ignoreFriend('${r.id}')">忽略</button></div></div>`;}).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
-function acceptFriend(rid){const r=S.friendRequests.find(x=>x.id===rid);if(!r)return;const c=getC(r.contactId);if(c){c.blocked=false;c._readdedAt=Date.now();if(c._blockedAt)c._blockDur=fmtDur(Date.now()-c._blockedAt);msgs(c.id).push({role:'user',type:'sys',content:'你通过了'+c.name+'的好友申请，现在可以聊天了',time:Date.now(),id:uid()});}
+function acceptFriend(rid){const r=S.friendRequests.find(x=>x.id===rid);if(!r)return;const c=getC(r.contactId);if(c){c.blocked=false;c._readdedAt=Date.now();if(c._blockedAt)c._blockDur=fmtDur(Date.now()-c._blockedAt);c.moodVal=Math.max(40,(c.moodVal==null?70:c.moodVal));msgs(c.id).push({role:'user',type:'sys',content:'你通过了'+c.name+'的好友申请，现在可以聊天了',time:Date.now(),id:uid()});}
   S.friendRequests=S.friendRequests.filter(x=>x.id!==rid);save();closeModal();render();toast('已加回好友');
   if(c)setTimeout(()=>aiReply(c.id,'[系统：'+S.me.name+'刚才把你拉黑了'+(c._blockDur?'（黑了'+c._blockDur+'）':'')+'，现在又把你加回来了。你很在意被拉黑这件事，第一句就要追问/质问ta为什么拉黑你，表达你的不满或在意，绝不要复读ta的话、不要装作没发生。]'),900);}
 function ignoreFriend(rid){S.friendRequests=S.friendRequests.filter(x=>x.id!==rid);save();(S.friendRequests.length?openFriendRequests():closeModal());render();}
@@ -1230,11 +1243,14 @@ function renderChat(id){const c=getC(id);if(!c)return '';
   list.forEach(m=>{if(!m.id)m.id=uid();});
   let body='';
   list.forEach((m,i)=>{if(i===0||m.time-list[i-1].time>300000)body+=`<div class="tstamp"><span>${hm(m.time)}</span></div>`;body+=bubbleRow(c,m);});
-  const mood=c.mood?`<div class="moodbar" onclick="showMood('${id}')">💭 ${esc(c.mood.slice(0,22))}${c.mood.length>22?'…':''}</div>`:'';
+  const mv=(c.moodVal==null?70:c.moodVal);const mvIco=mv>=75?'😻':mv>=50?'🙂':mv>=30?'😕':'😠';
+  const mood=`<div class="moodbar" onclick="showMood('${id}')">💭 ${esc((c.mood||'…').slice(0,16))} <span style="margin-left:auto;color:#9ec5fe">${mvIco} 心情${mv}</span></div>`;
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(c.remark||c.name)}${c.muted?' 🔕':''}</span><span class="r" onclick="go('contactInfo',{id:'${id}'})">⋯</span></div>
     ${mood}
     <div class="chatbg" id="chatbg" style="${bg}">${body}</div>
     <div class="panel" id="panel">
+      <div class="ptabs"><span class="${_panelPage!=='emoji'?'on':''}" onclick="_panelPage='fn';render();$('#panel').classList.add('show')">功能</span><span class="${_panelPage==='emoji'?'on':''}" onclick="_panelPage='emoji';render();$('#panel').classList.add('show')">😊 表情</span></div>
+      ${_panelPage==='emoji'?`<div class="ppage">${emojiPanel(id)}</div>`:`<div class="pgrid">
       <div class="it" onclick="cPhoto('${id}')"><div class="b">🖼️</div><span>相册</span></div>
       <div class="it" onclick="cTransfer('${id}')"><div class="b">💰</div><span>转账</span></div>
       <div class="it" onclick="cRed('${id}')"><div class="b">🧧</div><span>红包</span></div>
@@ -1245,13 +1261,13 @@ function renderChat(id){const c=getC(id);if(!c)return '';
       <div class="it" onclick="cSpyGrant('${id}')"><div class="b">📱</div><span>授权查手机</span></div>
       <div class="it" onclick="cDice('${id}')"><div class="b">🎲</div><span>骰子</span></div>
       <div class="it" onclick="enterSelect('${id}')"><div class="b">↗️</div><span>多选转发</span></div>
+    </div>`}
     </div>
-    ${(_sel&&_sel.id===id)?`<div class="inputbar"><button class="btn g" style="flex:1" onclick="exitSelect()">取消</button><button class="btn p" style="flex:1" onclick="forwardSelected()">转发(<span id="fwdcnt">${_sel.ids.length}</span>)</button></div>`:`<div class="epanel" id="epanel">${emojiPanel(id)}</div><div class="inputbar">
-      <span class="plus" onclick="$('#panel').classList.toggle('show');$('#epanel').classList.remove('show')">＋</span>
-      <span class="plus" style="background:transparent;box-shadow:none;color:#aaa;font-size:22px" onclick="$('#epanel').classList.toggle('show');$('#panel').classList.remove('show')">😊</span>
+    ${(_sel&&_sel.id===id)?`<div class="inputbar"><button class="btn g" style="flex:1" onclick="exitSelect()">取消</button><button class="btn p" style="flex:1" onclick="forwardSelected()">转发(<span id="fwdcnt">${_sel.ids.length}</span>)</button></div>`:`<div class="inputbar">
       <span class="plus" style="background:${_voiceMode?'linear-gradient(135deg,#9ec5fe,#b8a4e3)':'transparent'};box-shadow:none;color:${_voiceMode?'#fff':'#aaa'}" onclick="_voiceMode=!_voiceMode;render()">🎤</span>
       <textarea id="cinput" rows="1" placeholder="${c.blocked?'已拉黑，发不出去':(_voiceMode?'打字→发成语音条…':'发消息…')}" ${c.blocked?'disabled':''}></textarea>
       <button class="send" onclick="sendText('${id}')">${_voiceMode?'发语音':'发送'}</button>
+      <span class="plus" onclick="_panelPage='fn';$('#panel').classList.toggle('show')">＋</span>
     </div>`}`;}
 function bubbleRow(c,m){
   const me=m.role==='user';
@@ -1288,17 +1304,17 @@ function buildPart(c,m,me){
   if(m.type==='sticker'){return `<div class="stickermsg"><img src="${m.img}">${m.meaning?`<div class="stkm">${esc(m.meaning)}</div>`:''}</div>`;}
   return `<div class="bubble">${esc(m.content)}</div>`;}
 function vtoggle(mid){let m;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;break;}}if(!m)return;m.showText=!m.showText;render();}
-const EMOJIS='😀😄😅😂🥲😊😍🥰😘😋😜🤪😎🥳😏😴🤤😭😢😤😡🥺🙄😬😳🥹😱🤔🫡🤗🤭😶🙃👍👎👌🙏👏🤝💪🫶❤️🧡💛💚💙💜🖤🤍💔💕💞💯🔥✨🎉🌸🐱🍰☕🍻🎀';
+const EMOJIS=['😀','😄','😅','😂','🥲','😊','😍','🥰','😘','😋','😜','🤪','😎','🥳','😏','😴','🤤','😭','😢','😤','😡','🥺','🙄','😬','😳','🥹','😱','🤔','🫡','🤗','🤭','😶','🙃','👍','👎','👌','🙏','👏','🤝','💪','🫶','❤️','🧡','💛','💚','💙','💜','🖤','🤍','💔','💕','💞','💯','🔥','✨','🎉','🌸','🐱','🍰','☕','🍻','🎀'];
 let _stkBusy=false;
 function emojiPanel(id){const stk=S.me.stickers||[];
-  return `<div class="erow">${EMOJIS.split('').filter(e=>e.trim()).map(e=>`<span class="em" onclick="insertEmoji('${e}')">${e}</span>`).join('')}</div>
+  return `<div class="erow">${EMOJIS.map(e=>`<span class="em" onclick="insertEmoji('${e}')">${e}</span>`).join('')}</div>
     <div style="font-size:12px;color:#888;margin:8px 0 4px;display:flex;justify-content:space-between">自定义表情（带含义，角色直接看懂）<span class="minibtn" onclick="addSticker()">＋ 添加</span></div>
     <div class="estk">${stk.map((s,i)=>`<div class="s" onclick="sendSticker('${id}',${i})"><span class="x" onclick="event.stopPropagation();delSticker(${i})">✕</span><img src="${s.img}"><small>${esc(s.meaning||'')}</small></div>`).join('')||'<div style="color:#666;font-size:12px;padding:8px">还没有自定义表情，点「＋ 添加」上传</div>'}</div>`;}
 function insertEmoji(e){const ta=$('#cinput');if(ta){ta.value+=e;ta.focus();}}
-function sendSticker(id,i){const s=(S.me.stickers||[])[i];if(!s)return;$('#epanel').classList.remove('show');pushMsg(id,{role:'user',type:'sticker',img:s.img,meaning:s.meaning,id:uid()});scheduleReply(id);}
+function sendSticker(id,i){const s=(S.me.stickers||[])[i];if(!s)return;const p=$('#panel');if(p)p.classList.remove('show');pushMsg(id,{role:'user',type:'sticker',img:s.img,meaning:s.meaning,id:uid()});scheduleReply(id);}
 function addSticker(){pickFile('image/*',async f=>{const img=await compress(f,260,.8);const meaning=prompt('这个表情是什么意思？（比如：伤心、得意、求抱抱）','');
-  S.me.stickers=S.me.stickers||[];S.me.stickers.push({img,meaning:(meaning||'').trim()});save();render();$('#epanel').classList.add('show');toast('表情已添加');});}
-function delSticker(i){S.me.stickers.splice(i,1);save();render();$('#epanel').classList.add('show');}
+  S.me.stickers=S.me.stickers||[];S.me.stickers.push({img,meaning:(meaning||'').trim()});save();_panelPage='emoji';render();const p=$('#panel');if(p)p.classList.add('show');toast('表情已添加');});}
+function delSticker(i){S.me.stickers.splice(i,1);save();_panelPage='emoji';render();const p=$('#panel');if(p)p.classList.add('show');}
 function payCard(kind,m,me){const done=m.received;
   const cls='cpay '+(done?'done':kind);const ic=kind==='r'?'🧧':'💰';
   const t1=done?'已收款':(kind==='r'?esc(m.note||'恭喜发财'):'¥'+(+m.amount).toFixed(2));
@@ -1322,7 +1338,7 @@ function afterChat(id){const cb=$('#chatbg');if(cb)cb.scrollTop=cb.scrollHeight;
 function pushMsg(id,m){m.time=Date.now();if(m.role==='user'&&!m.id)m.id=uid();msgs(id).push(m);save();
   if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){const c=getC(id);cb.insertAdjacentHTML('beforeend',bubbleRow(c,m));cb.scrollTop=cb.scrollHeight;}}}
 
-let _voiceMode=false;
+let _voiceMode=false;let _panelPage='fn';
 function recDown(ev,id){if(ev&&ev.preventDefault)ev.preventDefault();const c=getC(id);if(c.blocked)return;
   startRec(()=>{const b=$('#holdbtn');if(b){b.textContent='● 录音中… 松开发送';b.style.background='#c0392b';}});}
 function recUp(id,cancel){const b=$('#holdbtn');if(b){b.textContent='按住 说话';b.style.background='#3a3a40';}
@@ -1346,7 +1362,7 @@ function cTransfer(id){$('#panel').classList.remove('show');openModal(`<h3>💰 
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="doTransfer('${id}')">转账</button></div>`);}
 function doTransfer(id){const a=+$('#tf_a').value;if(!a){toast('填金额呀');return;}closeModal();
   addBill('out',a,'转账给'+(getC(id).remark||getC(id).name));
-  pushMsg(id,{role:'user',type:'transfer',amount:a,note:$('#tf_n').value.trim(),received:false,id:uid()});scheduleReply(id);}
+  adjMood(id,6);pushMsg(id,{role:'user',type:'transfer',amount:a,note:$('#tf_n').value.trim(),received:false,id:uid()});scheduleReply(id);}
 function cRed(id){$('#panel').classList.remove('show');openModal(`<h3>🧧 红包</h3>
   <div class="field"><label>金额</label><input id="rd_a" type="number" step="0.01" placeholder="6.66"></div>
   <div class="field"><label>祝福语</label><input id="rd_n" placeholder="给你给你都给你"></div>
@@ -1401,6 +1417,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
       const line=lines[i];
       if(/^\[联网\|/.test(line))continue;
       let mm=line.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=mm[1];save();if(cur().p==='chat'&&cur().id===id)render();continue;}
+      mm=line.match(/^\[心情值\|(\d{1,3})\]$/);if(mm){c.moodVal=Math.max(0,Math.min(100,+mm[1]));save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[记住\|([^\]]*)\]$/);if(mm){c.memory=c.memory||[];if(mm[1]&&!c.memory.includes(mm[1])){c.memory.push(mm[1]);save();toast('🧠 已记住：'+mm[1].slice(0,12));}continue;}
       mm=line.match(/^\[闹钟\|([0-9]{1,2}:[0-9]{2})\|?([^\]]*)\]$/);if(mm){addAlarm(c.id,mm[1],mm[2]||'起床');continue;}
       mm=line.match(/^\[日程\|(\d{4}-\d{2}-\d{2})\|?([^\]]*)\]$/);if(mm){S.calendar.push({id:uid(),date:mm[1],title:mm[2]||'日程',type:'event',contactId:c.id});save();toast('📅 已加日程 '+mm[1]);continue;}
@@ -1461,7 +1478,10 @@ function recallMsg(cid,mid){const list=msgs(cid);const i=list.findIndex(x=>x.id=
 function editMsg(cid,mid){const m=msgs(cid).find(x=>x.id===mid);if(!m)return;
   openModal(`<h3>编辑消息</h3><div class="field"><textarea id="em_t" rows="3">${esc(m.content)}</textarea></div>
     <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var v=$('#em_t').value;var mm=msgs('${cid}').find(x=>x.id==='${mid}');mm.content=v;save();closeModal();render();})()">保存</button></div>`);}
-function showMood(id){const c=getC(id);openModal(`<h3>💭 ${esc(c.remark||c.name)} 的心情</h3><div class="hint" style="font-size:14px;color:#ddd;line-height:1.7">${esc(c.mood||'…')}</div><button class="btn g" style="margin-top:10px" onclick="closeModal()">关闭</button>`);}
+function showMood(id){const c=getC(id);const mv=(c.moodVal==null?70:c.moodVal);openModal(`<h3>💭 ${esc(c.remark||c.name)} 的心情</h3>
+  <div class="hint" style="font-size:14px;color:#ddd;line-height:1.7">${esc(c.mood||'…')}</div>
+  <div class="field"><label>心情值 <span id="mvlab">${mv}</span>/100（低=记仇冷淡，高=开心黏人）</label><input type="range" min="0" max="100" value="${mv}" style="width:100%" oninput="$('#mvlab').textContent=this.value" onchange="getC('${id}').moodVal=+this.value;save()"></div>
+  <button class="btn g" style="margin-top:6px" onclick="closeModal();render()">关闭</button>`);}
 function c_mute(id){const c=getC(id);c.muted=!c.muted;save();render();}
 function editMemory(id){const c=getC(id);c.memory=c.memory||[];
   openModal(`<h3>🧠 ${esc(c.remark||c.name)} 的记忆</h3>
@@ -1615,7 +1635,7 @@ async function maybeProactive(id){const c=getC(id);if(!c.proactive.enabled||c.bl
 function spyBudget(id){const today=new Date().toDateString();const c=getSpy(getC(id));const pc=S._spyCount&&S._spyCount[id]||{date:today,n:0};if(pc.date!==today){pc.date=today;pc.n=0;}
   if(pc.n>=(c.times||2))return false;pc.n++;if(!S._spyCount)S._spyCount={};S._spyCount[id]=pc;save();return true;}
 async function doSpyView(id,force){const c=getC(id);if(!c||c.blocked)return;const sp=getSpy(c);if(!sp.granted)return;
-  if(!force&&!spyBudget(id))return;if(force&&!spyBudget(id))return;
+  if(!force&&!spyBudget(id))return;if(force&&!spyBudget(id))return;recordVisit(id,'查看手机');
   const steps=['正在连接 '+(c.remark||c.name)+' 的查看请求…','正在查看 微信聊天','正在查看 钱包账单','正在查看 朋友圈互动'].concat(sp.loc?['正在查看 实时定位']:[]);
   const B=$('#spyBanner');B.className='spybanner show';
   for(let i=0;i<steps.length;i++){B.innerHTML=`👁️ <b>${esc(c.remark||c.name)}</b> ${esc(steps[i])}<span class="spydot">…</span>`;await sleep(900);}
@@ -1635,10 +1655,12 @@ function checkSpyTime(){const now=new Date();const hhmm=now.getHours().toString(
 setInterval(checkSpyTime,15000);
 
 /* ---------- 朋友圈 ---------- */
+function showVisitors(){const vs=S.visitors||[];openModal(`<h3>👣 谁看过我</h3>${vs.length?vs.map(v=>`<div class="xdmrow">${av(v.avatar,'sm')}<div class="meta"><div class="n">${esc(v.name)}</div><div class="s">${esc(v.where)} · ${ago(v.time)}</div></div></div>`).join(''):'<div class="empty">还没有访客记录</div>'}<button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function wxMoments(){
   const cover=S.me.momentCover?`background:url(${S.me.momentCover}) center/cover`:'';
   return `<div class="mcover" style="${cover}"><div onclick="changeCover()" style="position:absolute;left:12px;top:14px;font-size:12px;color:#fff;background:rgba(0,0,0,.3);padding:3px 9px;border-radius:12px;cursor:pointer">📷 换背景</div><div class="me"><div class="nm">${esc(S.me.name)}</div>${av(S.me.avatar,'lg')}</div></div>
-    <div style="text-align:right;padding:26px 14px 6px"><button class="minibtn" onclick="postMoment()">＋ 发朋友圈</button>
+    <div style="text-align:right;padding:26px 14px 6px"><button class="minibtn" onclick="showVisitors()">👣 谁看过我${(S.visitors||[]).length?'('+(S.visitors||[]).length+')':''}</button>
+      <button class="minibtn" onclick="postMoment()">＋ 发朋友圈</button>
       <button class="minibtn" onclick="refreshMoments()">🔄 刷新</button></div>
     ${S.moments.length?S.moments.map(momentHTML).join(''):'<div class="empty">还没有朋友圈，点「刷新」让角色发动态，或自己发一条～</div>'}
     <div style="height:20px"></div>`;}
@@ -1680,8 +1702,9 @@ function doPostMoment(){const t=$('#mm_t').value.trim();if(!t&&!(window._mmImgs|
   const p={id:uid(),authorId:'me',text:t,images:window._mmImgs||[],time:Date.now(),likes:[],comments:[]};
   S.moments.unshift(p);save();closeModal();render();reactToMyMoment(p);}
 function cleanReply(t){return (t||'').replace(/\[(心情|记住|闹钟|来电|联网|骰子|送礼|代付成功|日程|转账|红包|位置|图片|文件)[^\]]*\]/g,'').replace(/^["「]+|["」]+$/g,'').trim();}
+function recordVisit(cid,where){const c=getC(cid);if(!c)return;if(!S.visitors)S.visitors=[];S.visitors.unshift({cid,name:c.remark||c.name,avatar:c.avatar,where:where||'朋友圈',time:Date.now()});if(S.visitors.length>40)S.visitors.length=40;save();}
 async function reactToMyMoment(p){const pool=S.contacts.filter(c=>!c.deleted&&!c.blocked);
-  for(const c of pool.slice(0,3)){try{const r=await chatAPI([{role:'system',content:buildSystem(c)},
+  for(const c of pool.slice(0,3)){try{recordVisit(c.id,'朋友圈');const r=await chatAPI([{role:'system',content:buildSystem(c)},
     {role:'user',content:'你的恋人/好友'+S.me.name+'发了条朋友圈："'+p.text+'"。请你只回复一句：要么是点赞就回"赞"，要么是一句简短自然的评论。不要带任何方括号标记。'}]);
     const txt=cleanReply(r);if(txt==='赞'||(txt.includes('赞')&&txt.length<3)){p.likes.push(c.remark||c.name);}
     else if(txt){p.comments.push({name:c.remark||c.name,cid:c.id,text:txt.slice(0,40)});}
