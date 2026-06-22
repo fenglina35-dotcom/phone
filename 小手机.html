@@ -289,7 +289,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v26 · 支持ElevenLabs克隆音';
+const APP_VER='v27 · 语音缓存可重播+通话外语';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -412,17 +412,25 @@ function stripSpoken(t){return (t||'').replace(/[（(][^）)]*[）)]/g,'').repla
 let _voices=[];
 function loadVoices(){try{_voices=speechSynthesis.getVoices()||[];}catch(e){_voices=[];}}
 if('speechSynthesis'in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices;}
-async function speak(text,o){const t=stripSpoken(text);if(!t)return;const v=o?getVoice(o):null;
-  const tts=S.settings.tts;
-  if(v&&v.engine==='api'&&tts&&tts.base&&tts.key){const vid=v.ttsVoice||tts.voice||'';
-    if(/elevenlabs/i.test(tts.base)){try{const r=await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+vid,{method:'POST',headers:{'xi-api-key':tts.key,'Content-Type':'application/json'},body:JSON.stringify({text:t,model_id:tts.model||'eleven_multilingual_v2'})});if(r.ok){const b=await r.blob();new Audio(URL.createObjectURL(b)).play();return;}else{toast('语音API错误 '+r.status);}}catch(e){toast('语音API连不上(可能跨域)');}return;}
-    try{const r=await fetch(tts.base.replace(/\/+$/,'')+'/audio/speech',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tts.key},body:JSON.stringify({model:tts.model||'tts-1',input:t,voice:vid||'alloy',speed:v.rate||1})});if(r.ok){const b=await r.blob();new Audio(URL.createObjectURL(b)).play();return;}}catch(e){}}
-  if(!('speechSynthesis'in window))return;
+let _curAudio=null;
+function playUrl(url){try{if(_curAudio){_curAudio.pause();}}catch(e){}_curAudio=new Audio(url);_curAudio.play().catch(()=>{});}
+async function ttsURL(text,o){const t=stripSpoken(text);if(!t)return null;const v=o?getVoice(o):null;const tts=S.settings.tts;
+  if(!(v&&v.engine==='api'&&tts&&tts.base&&tts.key))return null;const vid=v.ttsVoice||tts.voice||'';
+  try{let r;
+    if(/elevenlabs/i.test(tts.base))r=await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+vid,{method:'POST',headers:{'xi-api-key':tts.key,'Content-Type':'application/json'},body:JSON.stringify({text:t,model_id:tts.model||'eleven_multilingual_v2'})});
+    else r=await fetch(tts.base.replace(/\/+$/,'')+'/audio/speech',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tts.key},body:JSON.stringify({model:tts.model||'tts-1',input:t,voice:vid||'alloy',speed:v.rate||1})});
+    if(r.ok)return URL.createObjectURL(await r.blob());toast('语音API错误 '+r.status);
+  }catch(e){toast('语音生成失败');}return null;}
+async function speak(text,o){const v=o?getVoice(o):null;
+  if(v&&v.engine==='api'&&S.settings.tts&&S.settings.tts.key){const url=await ttsURL(text,o);if(url)playUrl(url);return;}
+  const t=stripSpoken(text);if(!t||!('speechSynthesis'in window))return;
   try{const u=new SpeechSynthesisUtterance(t);if(v){u.rate=+v.rate||1;u.pitch=+v.pitch||1;if(v.voiceURI){const vs=_voices.find(x=>x.voiceURI===v.voiceURI);if(vs)u.voice=vs;}}speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}}
+async function speakMsg(m,o){if(m.audio){playUrl(m.audio);return;}const v=o?getVoice(o):null;
+  if(v&&v.engine==='api'&&S.settings.tts&&S.settings.tts.key){if(m._url){playUrl(m._url);return;}const url=await ttsURL(m.content,o);if(url){m._url=url;playUrl(url);}return;}
+  speak(m.content,o);}
 function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m)return;
   const el=document.querySelector('[data-vid="'+mid+'"]');if(el){el.classList.add('playing');setTimeout(()=>el.classList.remove('playing'),Math.min(9000,(m.dur||3)*1000+800));}
-  if(m.audio){try{const au=new Audio(m.audio);au.play();return;}catch(e){}}
-  const o=m.role==='user'?S.me:getC(owner);speak(m.content,o);}
+  speakMsg(m,m.role==='user'?S.me:getC(owner));}
 /* ===== 顶部消息通知 ===== */
 let _bannerT;
 function showMsgBanner(c,msg){const b=$('#msgBanner');if(!b)return;
@@ -1580,7 +1588,7 @@ function playDing(){if(!S.settings.sound||!_audio)return;try{const o=_audio.crea
   g.gain.exponentialRampToValueAtTime(.001,_audio.currentTime+.35);o.start();o.stop(_audio.currentTime+.36);}catch(e){}}
 function notifyIncoming(c,msg){
   // 语音消息自动播放
-  if(msg&&msg.type==='voice'&&S.settings.voiceAuto&&!c.muted)speak(msg.content,c);
+  if(msg&&msg.type==='voice'&&S.settings.voiceAuto&&!c.muted)speakMsg(msg,c);
   if(c.muted)return;
   const viewing=cur().p==='chat'&&cur().id===c.id;
   if(!viewing&&!(_call&&_call.id===c.id))showMsgBanner(c,msg);
@@ -1699,7 +1707,8 @@ function callSend(){const inp=$('#callMsg');if(!inp)return;const t=inp.value.tri
 async function callAI(sysNote){if(!_call)return;const c=getC(_call.id);const video=_call.kind==='video';
   try{const hist=msgs(c.id).slice(-(S.settings.hist||24)).map(m=>({role:m.role,content:msgToText(m)})).filter(x=>x.content!=null);
     if(sysNote)hist.push({role:'user',content:sysNote});
-    const sys=buildSystem(c)+'\n\n# 正在通话\n你们正在'+(video?'视频':'语音')+'通话，用口语短句像打电话一样，别用卡片。'+(video?'\n视频里你能看到ta、ta也能看到你，可以用（括号）描写你的动作神态，比如（凑近镜头笑）。':'')+'\n如果你想结束通话（聊够了/有事/想逗ta/生气），就在最后单独一行输出 [挂断]，会由你主动挂断。';
+    const _lang=(getVoice(c).lang||'zh');const _langN=_lang==='zh'?'':({'英':'英','日':'日','韩':'韩'}[_lang]||_lang)+'语';
+    const sys=buildSystem(c)+'\n\n# 正在通话\n你们正在'+(video?'视频':'语音')+'通话，用口语短句像打电话一样，别用卡片。'+(_langN?'\n你用'+_langN+'说话，每句话后面用（）附上中文翻译当字幕。':'')+(video?'\n视频里你能看到ta、ta也能看到你，可以用（括号）描写你的动作神态，比如（凑近镜头笑）。':'')+'\n如果你想结束通话（聊够了/有事/想逗ta/生气），就在最后单独一行输出 [挂断]，会由你主动挂断。';
     const content=await chatAPI([{role:'system',content:sys},...hist]);
     if(!_call)return;
     await sleep((Number(S.settings.replyDelay)||0)*1000);if(!_call)return;
