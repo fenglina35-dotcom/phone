@@ -289,7 +289,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v23 · 通话/格式/退还修复';
+const APP_VER='v24 · 群聊+情侣空间+纠错';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -303,6 +303,8 @@ function defState(){return{
   messages:{},
   moments:[],
   alarms:[],
+  groups:[],
+  couple:null,
   weather:null,
   spy:{},
   shop:{cart:[],results:[],q:''},
@@ -475,6 +477,11 @@ function buildSystem(c){
   if(mo.length)s+='\n\n# 最近的朋友圈（你知道这些动态）\n'+mo.map(p=>(p.authorId==='me'?S.me.name:'你')+'发了："'+p.text+'"').join('\n');
   const myx=(S.x&&S.x.tweets||[]).filter(t=>t.who===c.id).slice(0,3);
   if(myx.length)s+='\n\n# 你自己最近发的推特\n'+myx.map(t=>'"'+t.text+'"').join('\n');
+  // 群聊记忆互通
+  const myg=(S.groups||[]).filter(g=>g.members.indexOf(c.id)>=0);
+  if(myg.length){const gl=myg.map(g=>{const last=g.msgs.slice(-6).map(m=>(m.senderId==='me'?S.me.name:(getC(m.senderId)?getC(m.senderId).name:'?'))+'：'+gmText(m)).join('；');return '群「'+g.name+'」最近：'+last;}).join('\n');s+='\n\n# 你也在这些群里（私下你也记得群里聊了啥）\n'+gl;}
+  // 情侣空间
+  if(S.couple&&S.couple.cid===c.id){const days=Math.max(0,Math.floor((Date.now()-new Date(S.couple.startDate).getTime())/86400000));s+='\n\n# 情侣空间\n你和'+S.me.name+'是正式情侣，已经在一起 '+days+' 天了。你们绑定了情侣空间，你很珍惜这段关系。';}
   if(S.settings.timeAware)s+='\n\n# 时间感知\n现在是 '+new Date().toLocaleString('zh-CN',{weekday:'long',hour:'2-digit',minute:'2-digit',month:'long',day:'numeric'})+'，请结合当前时间（早中晚、是否深夜）自然地回应。';
   const _tod=todayStr(),_hol=holidayOf(_tod);if(_hol)s+='\n\n# 节日\n今天是'+_hol+'，可以应景祝福。';
   const _ev=S.calendar.filter(e=>e.date>=_tod).slice(0,5);if(_ev.length)s+='\n\n# '+S.me.name+'的日程\n'+_ev.map(e=>e.date+' '+e.title+(e.type==='period'?'(姨妈期)':'')).join('；')+'。需要时可用一行 [日程|YYYY-MM-DD|事项] 帮ta记日程。';
@@ -507,6 +514,8 @@ function render(){
   else if(c.p==='worldbook')html=renderWorldbook();
   else if(c.p==='wechat')html=renderWeChat();
   else if(c.p==='chat')html=renderChat(c.id);
+  else if(c.p==='group')html=renderGroup(c.id);
+  else if(c.p==='couple')html=renderCouple();
   else if(c.p==='contactInfo')html=renderContactInfo(c.id);
   else if(c.p==='spy')html=renderSpy(c.id);
   else if(c.p==='shop')html=renderShop();
@@ -541,6 +550,7 @@ function renderHome(){
       <div class="app" onclick="go('calendar')"><div class="ic" style="background:#4ecdc4;color:#fff">📅</div><span>日历</span></div>
       <div class="app" onclick="openX()"><div class="ic" style="background:#000;color:#fff;border:1px solid #333">𝕏</div><span>X</span></div>
       <div class="app" onclick="go('food')"><div class="ic" style="background:#ffb83b;color:#fff">🍔</div><span>外卖</span></div>
+      <div class="app" onclick="openCouple()"><div class="ic" style="background:#ff8fab;color:#fff">💞</div><span>情侣空间</span></div>
     </div>
     <div class="dock">
       <div class="app" onclick="openWeChat()"><div class="ic" style="background:#07c160;color:#fff">💬</div></div>
@@ -807,7 +817,8 @@ function checkCalendar(){if(!S._calFired)S._calFired={};const F=S._calFired;cons
   S.contacts.forEach(c=>{if(c.deleted||c.blocked)return;
     if(hol&&F['hol_'+c.id]!==today){F['hol_'+c.id]=today;save();holidayGreet(c.id,hol);}
   });
-  S.calendar.forEach(e=>{if(e.date===today&&e.contactId&&F[e.id]!==today){const c=getC(e.contactId);if(c&&!c.blocked){F[e.id]=today;save();remindEvent(e.contactId,e);}}});}
+  S.calendar.forEach(e=>{if(e.date===today&&e.contactId&&F[e.id]!==today){const c=getC(e.contactId);if(c&&!c.blocked){F[e.id]=today;save();remindEvent(e.contactId,e);}}});
+  if(S.couple&&S.couple.cid){const c=getC(S.couple.cid);if(c&&!c.blocked){const md=today.slice(5);(S.couple.anniversaries||[]).forEach((a,i)=>{if(a.date.slice(5)===md&&F['anniv_'+i]!==today){F['anniv_'+i]=today;save();remindEvent(S.couple.cid,{date:today,title:'你们的纪念日「'+a.title+'」',type:'event'});}});}}}
 setInterval(checkCalendar,60000);setTimeout(checkCalendar,4000);
 async function holidayGreet(id,hol){const c=getC(id);try{
   const content=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：今天是'+hol+'，请你给'+S.me.name+'发一句节日祝福，并单独一行 [红包|金额|祝福语] 发个应景红包。]'}]);
@@ -1040,13 +1051,91 @@ function wxChats(){
   const list=[...S.contacts].filter(c=>!c.deleted).sort((a,b)=>{
     if(a.pinned!==b.pinned)return a.pinned?-1:1;
     return (lastMsg(b.id)?.time||0)-(lastMsg(a.id)?.time||0);});
-  if(!list.length)return '<div class="empty">还没有聊天，去通讯录加个角色吧～</div>';
-  return '<div class="list">'+list.map(c=>{const lm=lastMsg(c.id);
+  const groups=(S.groups||[]);
+  let html='<div class="list"><div class="row" onclick="createGroup()"><div class="avatar" style="background:#54a0ff">👥</div><div class="meta"><div class="n">发起群聊</div></div></div>';
+  groups.forEach(g=>{const lm=g.msgs[g.msgs.length-1];html+=`<div class="row" onclick="go('group',{id:'${g.id}'})"><div class="avatar" style="background:#7c6cc0">👥</div><div class="meta"><div class="n">${esc(g.name)}(${g.members.length+1})</div><div class="s">${lm?esc(gpreview(lm)):'群聊已创建'}</div></div><div class="meta time">${lm?hm(lm.time):''}</div></div>`;});
+  if(!list.length&&!groups.length)return html+'</div><div class="empty">去通讯录加个角色，或发起群聊～</div>';
+  html+=list.map(c=>{const lm=lastMsg(c.id);
     return `<div class="row ${c.pinned?'pin':''}" onclick="openChat('${c.id}')">${av(c.avatar)}
       <div class="meta"><div class="n">${esc(c.remark||c.name)} ${c.blocked?'<span class=tag>已拉黑</span>':''}</div>
       <div class="s">${lm?esc(previewOf(lm)):'打个招呼吧～'}</div></div>
-      <div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div>${c.pinned?'<div style="font-size:10px;color:#ccc">置顶</div>':''}</div></div>`;}).join('')+'</div>';
+      <div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div>${c.pinned?'<div style="font-size:10px;color:#ccc">置顶</div>':''}</div></div>`;}).join('');
+  return html+'</div>';
 }
+function gpreview(m){const nm=m.senderId==='me'?S.me.name:(getC(m.senderId)?getC(m.senderId).name:'?');return nm+'：'+gmText(m);}
+function gmText(m){return m.type==='text'?m.content:'[消息]';}
+/* ===== 群聊 ===== */
+function createGroup(){const cs=S.contacts.filter(c=>!c.deleted);if(cs.length<1){toast('先创建角色');return;}
+  window._gsel=[];openModal(`<h3>👥 发起群聊</h3><div class="hint">选要拉进群的角色（可多选）</div>
+    <div id="gpick">${cs.map(c=>`<div class="section"><div class="it" onclick="gtoggle('${c.id}',this)">${esc(c.remark||c.name)}<span class="v" id="gp_${c.id}">＋</span></div></div>`).join('')}</div>
+    <div class="field"><label>群名称</label><input id="g_name" placeholder="例如：我的后宫团"></div>
+    <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="doCreateGroup()">创建</button></div>`);}
+function gtoggle(id){const i=window._gsel.indexOf(id);if(i<0)window._gsel.push(id);else window._gsel.splice(i,1);const e=$('#gp_'+id);if(e)e.textContent=i<0?'✓':'＋';}
+function doCreateGroup(){if(!window._gsel||!window._gsel.length){toast('至少选一个角色');return;}
+  const nm=($('#g_name').value||'').trim()||(window._gsel.map(id=>getC(id).name).slice(0,3).join('、')+'的群');
+  const g={id:'g'+uid(),name:nm,members:window._gsel.slice(),msgs:[]};S.groups.unshift(g);save();closeModal();go('group',{id:g.id});}
+function renderGroup(id){const g=S.groups.find(x=>x.id===id);if(!g)return '';
+  g.msgs.forEach(m=>{if(!m.id)m.id=uid();});
+  let body='';g.msgs.forEach((m,i)=>{if(i===0||m.time-g.msgs[i-1].time>300000)body+=`<div class="tstamp"><span>${hm(m.time)}</span></div>`;body+=gbubble(g,m);});
+  return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(g.name)}(${g.members.length+1})</span><span class="r" onclick="groupInfo('${id}')">⋯</span></div>
+    <div class="chatbg" id="chatbg">${body}</div>
+    <div class="inputbar"><span class="plus" style="background:transparent;box-shadow:none;color:#aaa" onclick="groupAt('${id}')">@</span>
+      <textarea id="ginput" rows="1" placeholder="群里说点啥…"></textarea>
+      <button class="send" onclick="sendGroup('${id}')">发送</button></div>`;}
+function gbubble(g,m){const me=m.senderId==='me';if(m.type==='sys')return `<div class="tstamp"><span>${esc(m.content)}</span></div>`;
+  const c=me?null:getC(m.senderId);const av0=me?av(S.me.avatar):av(c?c.avatar:'🙂');const nm=me?'':`<div style="font-size:11px;color:#888;margin-bottom:2px">${esc(c?c.name:'?')}</div>`;
+  return `<div class="msg ${me?'me':'them'}">${av0}<div class="col">${nm}<div class="bubble">${esc(m.content)}</div></div></div>`;}
+function sendGroup(id){const g=S.groups.find(x=>x.id===id);const ta=$('#ginput');const t=ta.value.trim();if(!t)return;ta.value='';ta.style.height='auto';
+  g.msgs.push({senderId:'me',role:'user',type:'text',content:t,time:Date.now(),id:uid()});save();render();aiGroupReply(id,t);}
+function groupAt(id){const g=S.groups.find(x=>x.id===id);openModal(`<h3>@ 谁</h3>${g.members.map(cid=>{const c=getC(cid);return c?`<div class="section"><div class="it" onclick="closeModal();var ta=$('#ginput');ta.value+='@${esc(c.name)} ';ta.focus()">${esc(c.name)}</div></div>`:'';}).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
+function gContext(g,c){const others=g.members.filter(x=>x!==c.id).map(x=>getC(x)).filter(Boolean).map(x=>x.name);
+  let s='\n\n# 你在群聊「'+g.name+'」里\n群里有：'+S.me.name+'(你们共同的恋人/主人)、'+others.join('、')+'。这是多人群聊，你可以 @别人、和群友拌嘴或吃醋（尤其'+S.me.name+'对别人好时），回复要短、口语、符合你的人设和心情值。\n# 最近群聊记录\n'+g.msgs.slice(-14).map(m=>(m.senderId==='me'?S.me.name:(getC(m.senderId)?getC(m.senderId).name:'?'))+'：'+gmText(m)).join('\n');
+  return s;}
+async function aiGroupReply(id,fromText){const g=S.groups.find(x=>x.id===id);if(!g)return;
+  const members=g.members.map(x=>getC(x)).filter(c=>c&&!c.deleted&&!c.blocked);if(!members.length)return;
+  let resp=members.filter(c=>fromText&&fromText.includes(c.name));
+  if(!resp.length)resp=[...members].sort(()=>Math.random()-.5).slice(0,Math.min(members.length,1+Math.floor(Math.random()*2)));
+  for(const c of resp){await sleep(500+Math.random()*600);
+    try{const sys=buildSystem(c)+gContext(g,c);
+      const content=await chatAPI([{role:'system',content:sys},{role:'user',content:'[群里现在该你说话了，针对最新消息自然回一两句，可@人]'}]);
+      splitBubbles(content).forEach(l=>{l=normTag(l);if(LEAKRE.test(l))return;splitActions(l).forEach(p=>{g.msgs.push({senderId:c.id,role:'assistant',type:'text',content:p,time:Date.now(),id:uid()});});});
+      save();if(cur().p==='group'&&cur().id===id){const cb=$('#chatbg');if(cb){cb.innerHTML='';const gg=S.groups.find(x=>x.id===id);gg.msgs.forEach((m,i)=>{cb.insertAdjacentHTML('beforeend',gbubble(gg,m));});cb.scrollTop=cb.scrollHeight;}}
+    }catch(e){}}}
+function groupInfo(id){const g=S.groups.find(x=>x.id===id);openModal(`<h3>👥 ${esc(g.name)}</h3>
+  <div class="hint">成员：${S.me.name}、${g.members.map(x=>getC(x)?esc(getC(x).name):'?').join('、')}</div>
+  <div class="field"><label>群名称</label><input id="gn" value="${esc(g.name)}"></div>
+  <button class="btn p" style="margin-bottom:8px" onclick="g_addMember('${id}')">＋ 拉人进群</button>
+  <button class="btn g" style="margin-bottom:8px" onclick="g.name=$('#gn').value.trim()||g.name;S.groups.find(x=>x.id==='${id}').name=$('#gn').value.trim()||'群聊';save();closeModal();render()">保存群名</button>
+  <button class="btn d" onclick="if(confirm('解散群聊？')){S.groups=S.groups.filter(x=>x.id!=='${id}');save();closeModal();back()}">解散群聊</button>
+  <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
+function g_addMember(id){const g=S.groups.find(x=>x.id===id);const avail=S.contacts.filter(c=>!c.deleted&&g.members.indexOf(c.id)<0);if(!avail.length){toast('没有可拉的角色了');return;}
+  openModal(`<h3>拉人进群</h3>${avail.map(c=>`<div class="section"><div class="it" onclick="S.groups.find(x=>x.id==='${id}').members.push('${c.id}');S.groups.find(x=>x.id==='${id}').msgs.push({senderId:'me',type:'sys',content:'${esc(c.name)} 加入了群聊',time:Date.now(),id:uid()});save();closeModal();render()">${esc(c.remark||c.name)}<span class="v">＋</span></div></div>`).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
+/* ===== 情侣空间 ===== */
+function bindCouple(id){const c=getC(id);if(S.couple&&S.couple.cid&&S.couple.cid!==id){if(!confirm('已绑定其他角色，换成 '+(c.remark||c.name)+'？'))return;}
+  S.couple={cid:id,startDate:todayStr(),anniversaries:[]};save();render();toast('💞 已绑定情侣空间');}
+function openCouple(){go('couple');}
+function renderCouple(){const cp=S.couple;const c=cp&&getC(cp.cid);
+  if(!cp||!c)return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">💞 情侣空间</span><span class="r"></span></div>
+    <div class="scroll" style="background:#000"><div class="empty" style="padding:50px 24px;line-height:2">还没绑定～<br>去某个角色的「资料页」点 <b>💞 绑定情侣空间</b><br>（只能绑定一个）</div></div>`;
+  const days=Math.max(0,Math.floor((Date.now()-new Date(cp.startDate).getTime())/86400000));
+  return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">💞 情侣空间</span><span class="r" onclick="coupleSet()">⋯</span></div>
+    <div class="scroll" style="background:#000">
+      <div style="margin:14px;border-radius:18px;background:linear-gradient(145deg,#ff8fab,#b8a4e3);padding:22px;color:#fff;text-align:center">
+        <div style="display:flex;justify-content:center;gap:16px;align-items:center;margin-bottom:10px">${av(S.me.avatar,'lg')}<span style="font-size:24px">💞</span>${av(c.avatar,'lg')}</div>
+        <div style="font-size:15px">${esc(S.me.name)} &amp; ${esc(c.remark||c.name)}</div>
+        <div style="font-size:40px;font-weight:700;margin:6px 0">${days}<span style="font-size:16px;font-weight:400"> 天</span></div>
+        <div style="font-size:12px;opacity:.9">从 ${cp.startDate} 在一起</div>
+      </div>
+      <div class="section" style="margin:12px"><div class="it" onclick="coupleSet()"><span>📅 在一起的日子</span><span class="v">${cp.startDate} ›</span></div></div>
+      <div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#ff8fab;display:flex;justify-content:space-between">🎁 纪念日<span class="minibtn" onclick="addAnniv()">＋ 添加</span></div>
+        ${(cp.anniversaries||[]).length?cp.anniversaries.map((a,i)=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div><b>${a.date}</b> ${esc(a.title)}<small>${annivCount(a.date)}</small></div><span onclick="S.couple.anniversaries.splice(${i},1);save();render()" style="color:#fa5151;cursor:pointer">✕</span></div>`).join(''):'<div class="empty" style="padding:14px">还没有纪念日</div>'}</div>
+      <div style="padding:0 12px"><button class="btn d" onclick="if(confirm('解除情侣绑定？')){S.couple=null;save();render()}">💔 解除绑定</button></div>
+      <div style="height:20px"></div></div>`;}
+function annivCount(date){const d=new Date(date).getTime();const diff=Math.floor((d-Date.now())/86400000);if(diff>0)return '还有'+diff+'天';if(diff===0)return '就是今天！🎉';return Math.abs(diff)+'天前';}
+function coupleSet(){openModal(`<h3>在一起的日子</h3><div class="field"><label>恋爱开始日期</label><input id="cp_d" type="date" value="${S.couple.startDate}"></div>
+  <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="S.couple.startDate=$('#cp_d').value||S.couple.startDate;save();closeModal();render()">保存</button></div>`);}
+function addAnniv(){openModal(`<h3>添加纪念日</h3><div class="field"><label>日期</label><input id="an_d" type="date" value="${todayStr()}"></div><div class="field"><label>名称</label><input id="an_t" placeholder="第一次见面 / 订婚…"></div>
+  <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var d=$('#an_d').value,t=$('#an_t').value.trim();if(!d||!t){toast('填日期和名称');return;}S.couple.anniversaries=S.couple.anniversaries||[];S.couple.anniversaries.push({date:d,title:t});S.couple.anniversaries.sort((a,b)=>a.date<b.date?-1:1);save();closeModal();render();})()">保存</button></div>`);}
 function previewOf(m){if(m.role==='assistant')return splitBubbles(m.content)[0]||'[消息]';
   return ({text:m.content,image:'[照片]',transfer:'[转账]',redpacket:'[红包]',location:'[位置]',file:'[文件]',spycard:'[查看权限]',dice:'[骰子]',gift:'[礼物]',paycard:'[求代付]',paid:'[已代付]',tweetcard:'[X推文]',tcollect:'[已收款]',treject:'[已退还]',chatlog:'[聊天记录]',food:'[外卖]',payreject:'[拒绝代付]',voice:'[语音]',sticker:'[表情]',sys:m.content})[m.type]||'[消息]';}
 
@@ -1146,6 +1235,7 @@ function renderContactInfo(id){const c=getC(id);if(!c)return '';const sp=getSpy(
       <div class="it" onclick="editSummary('${id}')"><span>📝 对话总结</span><span class="v">${(c.summaries||[]).length}条 ›</span></div>
       <div class="it" onclick="editCircle('${id}')"><span>𝕏 圈子备注</span><span class="v">${(S.x&&S.x.circle&&S.x.circle[id])?'已设 ›':'未设 ›'}</span></div>
       <div class="it" onclick="editVoice('${id}')"><span>🎙️ 语音音色</span><span class="v">${getVoice(c).voiceURI?'已设 ›':'默认 ›'}</span></div>
+      <div class="it" onclick="bindCouple('${id}')"><span>💞 情侣空间</span><span class="v">${(S.couple&&S.couple.cid===id)?'已绑定 ✓':'绑定 ›'}</span></div>
       <div class="it" onclick="setChatBg('${id}')"><span>聊天背景</span><span class="v">${c.chatBg?'已设置':'默认'}</span></div>
     </div>
     <div class="section" style="margin:12px">
@@ -1384,7 +1474,11 @@ function doLoc(id){const n=$('#lc_n').value.trim();if(!n){toast('填地点呀');
 /* 拆分多条气泡 */
 function splitBubbles(text){return (text||'').split('\n').map(s=>s.trim()).filter(Boolean);}
 function splitActions(line){const out=[];const re=/[（(][^）)]*[）)]/g;let last=0,m;while((m=re.exec(line))){const before=line.slice(last,m.index).trim();if(before)out.push(before);out.push(m[0].trim());last=re.lastIndex;}const tail=line.slice(last).trim();if(tail)out.push(tail);return out.length?out:[line];}
-function normTag(line){return (line||'').replace(/[［｛]/g,'[').replace(/[］｝]/g,']').replace(/｜/g,'|').replace(/\[\s+/,'[').replace(/\s+\]/,']').trim();}
+const TAGWORDS='心情值|心情|记住|闹钟|日程|发朋友圈|发推|点外卖|语音|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断';
+function normTag(line){let t=(line||'').replace(/[［｛]/g,'[').replace(/[］｝]/g,']').replace(/｜/g,'|').replace(/\[\s+/,'[').replace(/\s+\]/,']').trim();
+  t=t.replace(new RegExp('^\\[\\s*('+TAGWORDS+')\\s*[|:：，,、\\s]+','i'),'[$1|');
+  return t;}
+const LEAKRE=new RegExp('^\\[('+TAGWORDS+')(\\||\\]|$)');
 const CARD_RE=/^\[(转账|红包|位置|图片|文件)\|([^\]]*)\]$/;
 function lineToMsg(line){
   const dm=line.match(/^\[骰子(?:\|([1-6]))?\]$/);
@@ -1435,6 +1529,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
       mm=line.match(/^\[拒礼\]$/);if(mm){const g=lastGift(id);if(g){g.declined=true;addBill('in',+g.price,(c.remark||c.name)+'退回的礼物');const mg={role:'assistant',type:'sys',content:'对方拒收了礼物，'+(+g.price).toFixed(2)+'元已退回',time:Date.now(),id:uid()};msgs(id).push(mg);}save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[来电\|(语音|视频)\]$/);if(mm){const k=mm[1]==='视频'?'video':'voice';setTimeout(()=>incomingCall(c.id,k,'ta打来的'),600);continue;}
       const base=lineToMsg(line);
+      if(base.type==='text'&&LEAKRE.test(line))continue;
       const parts=base.type==='text'?splitActions(base.content):[null];
       for(let pi=0;pi<parts.length;pi++){
         await sleep(got?400+Math.random()*500:0);got=true;
@@ -1554,7 +1649,7 @@ function hangupCall(byAI){if(!_call)return;blip(300,.3);clearInterval(_callTimer
   const dur=_call.start?Math.floor((Date.now()-_call.start)/1000):0;
   msgs(id).push({role:'user',type:'sys',content:(byAI?'对方挂断 · ':'')+'通话时长 '+Math.floor(dur/60)+':'+(dur%60).toString().padStart(2,'0'),time:Date.now(),id:uid()});save();
   _call=null;renderCall();if(cur().p==='chat')render();
-  const c=getC(id);if(!byAI&&c&&!c.blocked)setTimeout(()=>aiReply(id,'[系统：通话是'+S.me.name+'挂断的，你察觉到了，主动再发条消息（意犹未尽/在意/或问怎么突然挂了，符合你心情值和人设）。]'),2500);}
+  const c=getC(id);const durTxt=Math.floor(dur/60)+'分'+(dur%60)+'秒';if(!byAI&&c&&!c.blocked)setTimeout(()=>aiReply(id,'[系统：你们这通电话聊了'+durTxt+'，是'+S.me.name+'挂断的，你察觉到了，主动再发条消息（可以提这次通话多久/意犹未尽/问怎么突然挂了，符合你心情值和人设）。]'),2500);}
 function renderCallTime(){if(!_call||_call.state!=='active')return;const s=$('#callStat');if(s){const d=Math.floor((Date.now()-_call.start)/1000);s.textContent=Math.floor(d/60)+':'+(d%60).toString().padStart(2,'0');}}
 function renderCall(){const L=$('#callLayer');if(!_call){L.className='callscreen';L.innerHTML='';return;}
   const c=getC(_call.id);const video=_call.kind==='video';
