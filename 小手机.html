@@ -296,7 +296,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v31 · 字幕放慢+纯语音+图标';
+const APP_VER='v32 · 游戏大厅+总结视角+访客清空';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -577,6 +577,7 @@ function renderHome(){
       <div class="app" onclick="openX()"><div class="ic" style="background:#000;color:#fff;border:1px solid #333">𝕏</div><span>X</span></div>
       <div class="app" onclick="go('food')"><div class="ic" style="background:#ffb83b;color:#fff">🍔</div><span>外卖</span></div>
       <div class="app" onclick="openCouple()"><div class="ic" style="background:#ff8fab;color:#fff">💞</div><span>情侣空间</span></div>
+      <div class="app" onclick="openGames()"><div class="ic" style="background:#6c5ce7;color:#fff">🎮</div><span>游戏大厅</span></div>
     </div>
     <div class="dock">
       <div class="app" onclick="openWeChat()"><div class="ic" style="background:#07c160;color:#fff">💬</div></div>
@@ -1160,6 +1161,22 @@ function g_addMember(id){const g=S.groups.find(x=>x.id===id);const avail=S.conta
 function bindCouple(id){const c=getC(id);if(S.couple&&S.couple.cid&&S.couple.cid!==id){if(!confirm('已绑定其他角色，换成 '+(c.remark||c.name)+'？'))return;}
   S.couple={cid:id,startDate:todayStr(),anniversaries:[]};save();render();toast('💞 已绑定情侣空间');}
 function openCouple(){go('couple');}
+const GAMES=[
+  {k:'soup',e:'🐢',n:'海龟汤',kick:'我们来玩海龟汤吧！你出一个有反转的诡异谜题，先只描述表面情境；我用是非题来猜，你只回答"是/不是/无关"，我猜到了你再揭晓真相。出题吧～'},
+  {k:'tod',e:'🎲',n:'真心话大冒险',kick:'我们玩真心话大冒险，用骰子比大小（你掷骰子用一行 [骰子|点数]）。点数小的人选真心话或大冒险。你先掷～'},
+  {k:'idiom',e:'📝',n:'成语接龙',kick:'我们玩成语接龙，你先说一个成语，我用它的最后一个字接下一个，轮流来。你先开始！'},
+  {k:'guess',e:'🔢',n:'猜数字',kick:'我们玩猜数字：你心里想一个1到100的整数，我来猜，你每次只提示"大了/小了/猜对啦"。想好了就说"想好了"。'},
+  {k:'quiz',e:'💑',n:'默契考验',kick:'我们玩默契大考验：轮流出一道关于彼此的问题考对方，看谁更懂谁。你先出第一题～'},
+  {k:'drama',e:'🎭',n:'即兴小剧场',kick:'我们来即兴小剧场，你给我们设定一个情境/开场白，然后我们一起把剧情演下去。开场吧～'},
+  {k:'quick',e:'⚡',n:'快问快答',kick:'我们玩快问快答，你连续快速地问我问题、我来答，答完你也可以让我问你。开始！'}
+];
+function openGames(){openModal(`<h3>🎮 游戏大厅</h3><div class="hint">选个游戏，再选一个角色一起玩～ 玩的时候打字、发语音都行。</div>
+  ${GAMES.map(g=>`<div class="section"><div class="it" onclick="pickGameChar('${g.k}')">${g.e} ${g.n}<span class="v">›</span></div></div>`).join('')}
+  <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
+function pickGameChar(k){const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){toast('先创建一个角色');return;}
+  openModal(`<h3>和谁玩？</h3>${cs.map(c=>`<div class="section"><div class="it" onclick="startGame('${k}','${c.id}')">${esc(c.remark||c.name)}<span class="v">›</span></div></div>`).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+function startGame(k,cid){const g=GAMES.find(x=>x.k===k);if(!g)return;closeModal();openChat(cid);
+  pushMsg(cid,{role:'user',type:'text',content:'【'+g.n+'】'+g.kick,id:uid()});scheduleReply(cid);}
 function renderCouple(){const cp=S.couple;const c=cp&&getC(cp.cid);
   if(!cp||!c)return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">💞 情侣空间</span><span class="r"></span></div>
     <div class="scroll" style="background:#000"><div class="empty" style="padding:50px 24px;line-height:2">还没绑定～<br>去某个角色的「资料页」点 <b>💞 绑定情侣空间</b><br>（只能绑定一个）</div></div>`;
@@ -1598,7 +1615,7 @@ async function maybeSummarize(id){const c=getC(id);const rounds=+S.settings.summ
   const all=msgs(id);const keep=rounds*2;if(all.length<=keep+6)return;
   const done=c._sumCount||0;const upto=all.length-keep;if(upto-done<6)return;
   const chunk=all.slice(done,upto).map(msgToText).filter(Boolean).join('\n');if(!chunk)return;
-  try{const sum=await chatAPI([{role:'system',content:'你是「'+c.name+'」，用第一人称、像写日记一样简短记下刚才你和「'+S.me.name+'」之间发生的事（比如"我和'+S.me.name+'…"，带点你的情绪），不超过40字，别用旁白第三人称，直接写，不要前缀。'},{role:'user',content:chunk}],{max:120,temp:.4});
+  try{const sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」本人。用第一人称写一句日记，记下刚才发生的事：用"我"指你自己('+c.name+')，用"'+S.me.name+'"称呼对方。例如"今天'+S.me.name+'跟我撒娇，我心都化了"。30字内，必须是你('+c.name+')的口吻和视角，不是'+S.me.name+'的视角、不要旁白，直接写正文。'},{role:'user',content:chunk}],{max:120,temp:.4});
     if(sum){c.summaries=c.summaries||[];c.summaries.push({time:new Date().toLocaleString('zh-CN',{year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}),text:cleanReply(sum).slice(0,60)});c._sumCount=upto;save();}
   }catch(e){}}
 let _replyTimers={};
@@ -1817,7 +1834,7 @@ function checkSpyTime(){const now=new Date();const hhmm=now.getHours().toString(
 setInterval(checkSpyTime,15000);
 
 /* ---------- 朋友圈 ---------- */
-function showVisitors(){const vs=S.visitors||[];openModal(`<h3>👣 谁看过我</h3>${vs.length?vs.map(v=>`<div class="xdmrow">${av(v.avatar,'sm')}<div class="meta"><div class="n">${esc(v.name)}</div><div class="s">${esc(v.where)} · ${ago(v.time)}</div></div></div>`).join(''):'<div class="empty">还没有访客记录</div>'}<button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
+function showVisitors(){const vs=S.visitors||[];openModal(`<h3>👣 谁看过我</h3>${vs.length?vs.map(v=>`<div class="xdmrow">${av(v.avatar,'sm')}<div class="meta"><div class="n">${esc(v.name)}</div><div class="s">${esc(v.where)} · ${ago(v.time)}</div></div></div>`).join(''):'<div class="empty">还没有访客记录</div>'}${vs.length?'<button class="btn d" style="margin-top:8px" onclick="S.visitors=[];save();showVisitors()">🧹 一键清空</button>':''}<button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function wxMoments(){
   const cover=S.me.momentCover?`background:url(${S.me.momentCover}) center/cover`:'';
   return `<div class="mcover" style="${cover}"><div onclick="changeCover()" style="position:absolute;left:12px;top:14px;font-size:12px;color:#fff;background:rgba(0,0,0,.3);padding:3px 9px;border-radius:12px;cursor:pointer">📷 换背景</div><div class="me"><div class="nm">${esc(S.me.name)}</div>${av(S.me.avatar,'lg')}</div></div>
