@@ -296,7 +296,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v44 · 卧底省调用(角色单独)';
+const APP_VER='v45 · 卧底独立投票+选人进场';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1275,16 +1275,22 @@ function gsQuit(){if(_gs)clearInterval(_gs._tm);_gs=null;home();}
 /* ===== 谁是卧底 ===== */
 let _uc=null;
 const UC_BOTS=['小鹿','阿白','团子','西西','阿七','麦麦','楠楠','糖糖','可可','豆豆'];
-function ucConfig(cid){closeModal();
+function ucConfig(cid){closeModal();const cs=S.contacts.filter(c=>!c.deleted);
   openModal(`<h3>🕵️ 谁是卧底</h3>
-   <div class="hint">你和几名AI玩家一起玩。每人拿到一个词，卧底的词不一样。轮流描述、投票，把卧底揪出来！你不知道自己是不是卧底，靠描述来猜。</div>
-   <div class="field"><label>总玩家数（含你）</label><select id="uc_n"><option>4</option><option selected>5</option><option>6</option><option>7</option></select></div>
+   <div class="hint">勾选要拉进来一起玩的角色（可多选），人数不够用匿名AI玩家补。每人拿到一个词，卧底的词不一样。</div>
+   <div class="field"><label>拉谁进来玩（可多选）</label><div class="section">${cs.length?cs.map(c=>`<label class="avline" style="font-weight:400">${esc(c.remark||c.name)}<span class="sw ${c.id===cid?'on':''}" data-uc="${c.id}" onclick="this.classList.toggle('on')"></span></label>`).join(''):'<div style="font-size:12px;color:#999;padding:8px">还没有角色，会全用匿名AI玩家</div>'}</div></div>
+   <div class="field"><label>再加几个匿名AI玩家</label><select id="uc_bots"><option>0</option><option>1</option><option selected>2</option><option>3</option><option>4</option></select></div>
    <div class="field"><label>卧底人数</label><select id="uc_u"><option selected>1</option><option>2</option></select></div>
-   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="ucStart('${cid}')">开始</button></div>`);}
-async function ucStart(cid){closeModal();const N=+$('#uc_n').value||5;let U=+$('#uc_u').value||1;U=Math.min(U,Math.max(1,Math.floor((N-1)/2)));
-  const cs=S.contacts.filter(c=>!c.deleted);let pool=[];if(getC(cid))pool.push(getC(cid));cs.forEach(c=>{if(c.id!==cid)pool.push(c);});
-  const players=[{id:'me',name:S.me.name,isMe:true,avatar:S.me.avatar,alive:true,role:'civ',word:'',desc:'',_said:false,vote:null}];
-  let bi=0;for(let i=0;i<N-1;i++){const c=pool[i];players.push(c?{id:'p_'+c.id,name:c.remark||c.name,avatar:c.avatar,isMe:false,bot:false,alive:true,role:'civ',word:'',desc:'',_said:false,vote:null}:{id:'bot'+i,name:UC_BOTS[bi++%UC_BOTS.length],avatar:'🙂',isMe:false,bot:true,alive:true,role:'civ',word:'',desc:'',_said:false,vote:null});}
+   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="ucStart()">开始</button></div>`);}
+async function ucStart(){const sel=[...document.querySelectorAll('[data-uc].on')].map(e=>e.getAttribute('data-uc'));
+  const nbots=+($('#uc_bots')?$('#uc_bots').value:0)||0;let U=+($('#uc_u')?$('#uc_u').value:1)||1;
+  const chars=sel.map(id=>getC(id)).filter(Boolean);const total=1+chars.length+nbots;
+  if(total<4){toast('至少要4个玩家(含你)，多拉角色或加几个AI玩家');return;}
+  closeModal();U=Math.min(U,Math.max(1,Math.floor((total-1)/2)));
+  const players=[{id:'me',name:S.me.name,isMe:true,avatar:S.me.avatar,bot:false,alive:true,role:'civ',word:'',desc:'',_said:false,vote:null}];
+  chars.forEach(c=>players.push({id:'p_'+c.id,name:c.remark||c.name,avatar:c.avatar,isMe:false,bot:false,alive:true,role:'civ',word:'',desc:'',_said:false,vote:null}));
+  let bi=0;for(let i=0;i<nbots;i++)players.push({id:'bot'+i,name:UC_BOTS[bi++%UC_BOTS.length],avatar:'🙂',isMe:false,bot:true,alive:true,role:'civ',word:'',desc:'',_said:false,vote:null});
+  const N=players.length;
   const ridx=[...Array(N).keys()].sort(()=>Math.random()-.5).slice(0,U);ridx.forEach(i=>players[i].role='undercover');
   _uc={players,N,U,phase:'loading',round:1,turn:0,order:[],civWord:'',ucWord:'',busy:true,lastOut:null,win:null,_botDescDone:false};
   go('uc');render();
@@ -1327,13 +1333,13 @@ async function ucVotePhase(){if(!_uc)return;_uc.phase='vote';_uc.busy=true;_uc.p
   // 角色单独投（带各自人设）
   for(const p of alive){if(p.isMe||p.bot)continue;
     const others=alive.filter(x=>x.id!==p.id);const cc=getC(p.id.slice(2));const base=cc?buildSystem(cc)+'\n\n':'';
-    try{const r=await chatAPI([{role:'system',content:base+'你在玩"谁是卧底"，你的词是「'+p.word+'」。这是大家的描述：\n'+summary+'\n谁的描述和你的词最不一样、最可疑，谁就可能是卧底。从这些人里挑一个你要投的：'+others.map(x=>x.name).join('、')+'。只回答一个名字，不要解释。'},{role:'user',content:'你投谁？'}],{max:20,aux:true});
+    try{const r=await chatAPI([{role:'system',content:base+'你在玩"谁是卧底"。你自己的词是「'+p.word+'」。下面是每个人的描述：\n'+summary+'\n请你【独立】判断：谁的描述放到你的词「'+p.word+'」上最不贴切、最不像在说你这个词，谁就最可能是卧底——按你自己的想法投，别管别人怎么想。从这些人里投一个（不能投自己）：'+others.map(x=>x.name).join('、')+'。只回答一个名字，不要解释。'},{role:'user',content:'你投谁？'}],{max:20,aux:true});
       const nm=(r||'').trim();let t=others.find(x=>nm.includes(x.name));if(!t)t=others[Math.floor(Math.random()*others.length)];p.vote=t?t.id:null;}
     catch(e){p.vote=others.length?others[Math.floor(Math.random()*others.length)].id:null;}}
   // bot 批量投（一次调用）
   const bots=alive.filter(p=>p.bot);
   if(bots.length){
-    try{const r=await chatAPI([{role:'system',content:'你在主持"谁是卧底"投票。大家的描述：\n'+summary+'\n替下面每个电脑玩家各投一个最可疑(描述和ta自己词最不搭)的人，不能投自己。玩家及其词：\n'+bots.map(b=>b.name+'（词：'+b.word+'）').join('\n')+'\n可投的人：'+alive.map(x=>x.name).join('、')+'。严格每行一个，格式：玩家名:::要投的人名。只输出这些行。'},{role:'user',content:'给出投票'}],{max:200,aux:true});
+    try{const r=await chatAPI([{role:'system',content:'你在主持"谁是卧底"投票。大家的描述：\n'+summary+'\n下面每个电脑玩家有【自己的词】，请站在各自的角度【独立】判断：对该玩家来说，谁的描述跟「他自己的词」最不搭、最可疑，就投谁。每个人的词不同，所以他们的投票很可能【各不相同】，不要让他们全投同一个人（除非真的极其明显）。不能投自己。玩家及其词：\n'+bots.map(b=>b.name+'（词：'+b.word+'）').join('\n')+'\n可投的人：'+alive.map(x=>x.name).join('、')+'。严格每行一个，格式：玩家名:::要投的人名。只输出这些行。'},{role:'user',content:'给出各自的投票'}],{max:200,aux:true});
       const map={};(r||'').split('\n').forEach(line=>{const m=line.split(/:::|：：：/);if(m.length>=2)map[m[0].trim()]=m[1].trim();});
       bots.forEach(b=>{const others=alive.filter(x=>x.id!==b.id);const nm=map[b.name]||'';let t=others.find(x=>nm.includes(x.name));if(!t)t=others[Math.floor(Math.random()*others.length)];b.vote=t?t.id:null;});}
     catch(e){bots.forEach(b=>{const others=alive.filter(x=>x.id!==b.id);b.vote=others.length?others[Math.floor(Math.random()*others.length)].id:null;});}}
