@@ -296,7 +296,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v39 · 游戏修复(海龟汤/小黑屋/你说我猜)';
+const APP_VER='v40 · 游戏空间+信箱+X通知';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -319,8 +319,10 @@ function defState(){return{
   calendar:[],
   x:{profile:{handle:'@yibei_0414',bio:'做一只无忧无虑的小猫～',fans:328,following:12,cover:''},tweets:[],dms:[],following:[],blocked:[],circle:{},users:{}},
   friendRequests:[],
+  mail:[],
   _proactiveDone:{},
-  _proactiveCount:{}
+  _proactiveCount:{},
+  _mailCount:{}
 };}
 let S=load();
 function load(){try{const v=JSON.parse(localStorage.getItem(KEY));if(v&&v.settings)return Object.assign(defState(),v);}catch(e){}return seed();}
@@ -576,6 +578,8 @@ function render(){
   else if(c.p==='group')html=renderGroup(c.id);
   else if(c.p==='couple')html=renderCouple();
   else if(c.p==='wg')html=renderWG();
+  else if(c.p==='mail')html=renderMail();
+  else if(c.p==='gs')html=renderGS();
   else if(c.p==='contactInfo')html=renderContactInfo(c.id);
   else if(c.p==='spy')html=renderSpy(c.id);
   else if(c.p==='shop')html=renderShop();
@@ -612,6 +616,7 @@ function renderHome(){
       <div class="app" onclick="go('food')"><div class="ic" style="background:#ffb83b;color:#fff">🍔</div><span>外卖</span></div>
       <div class="app" onclick="openCouple()"><div class="ic" style="background:#ff8fab;color:#fff">💞</div><span>情侣空间</span></div>
       <div class="app" onclick="openGames()"><div class="ic" style="background:#6c5ce7;color:#fff">🎮</div><span>游戏大厅</span></div>
+      <div class="app" onclick="go('mail')"><div class="ic" style="background:#f4a93b;color:#fff;position:relative">📮${(S.mail||[]).some(m=>!m.read)?'<span style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:#fa5151;border:2px solid #000"></span>':''}</div><span>信箱</span></div>
     </div>
     <div class="dock">
       <div class="app" onclick="openWeChat()"><div class="ic" style="background:#07c160;color:#fff">💬</div></div>
@@ -633,7 +638,11 @@ async function doAutoMoment(id){const c=getC(id);try{const r=await chatAPI([{rol
   S.moments.unshift({id:uid(),authorId:id,text:cleanReply(r).slice(0,120),images:[],time:Date.now(),likes:[],comments:[]});save();if(cur().p==='wechat'&&wxTab==='moments')render();toast('🌸 '+(c.remark||c.name)+'发了朋友圈');}catch(e){}}
 async function doAutoTweet(id){const c=getC(id);try{const _co=(typeof circleObj==='function')?circleObj(id):{};const note=_co.desc?'，贴合你的圈子定位「'+_co.desc+'」':'';
   const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'现在你想发条推特'+note+'，一两句，只输出推文内容，别带方括号。'}]);
-  const nm=c.name;xUser(nm,{handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,cid:id});S.x.tweets.unshift({id:uid(),who:id,name:nm,handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,text:cleanReply(r),time:Date.now(),likes:[],lk:Math.floor(Math.random()*80),comments:[],rt:0});save();if(cur().p==='x')render();toast('𝕏 '+nm+'发了推');}catch(e){}}
+  const nm=c.name;xUser(nm,{handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,cid:id});const _tw=cleanReply(r);S.x.tweets.unshift({id:uid(),who:id,name:nm,handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,text:_tw,time:Date.now(),likes:[],lk:Math.floor(Math.random()*80),comments:[],rt:0});save();if(cur().p==='x')render();notifyX(c,_tw);}catch(e){}}
+function notifyX(c,text){if(c.muted)return;playDing();const b=$('#msgBanner');if(!b)return;
+  b.innerHTML=`<div style="width:34px;height:34px;border-radius:9px;background:#000;border:1px solid #333;color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px">𝕏</div><div style="flex:1;min-width:0"><div class="bn">${esc(c.remark||c.name)} 发了新动态</div><div class="bm">${esc(text)}</div></div>`;
+  b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';openX();};
+  clearTimeout(_bannerT);_bannerT=setTimeout(()=>{b.className='msgbanner';},4500);}
 setInterval(scanAutoPost,240000);setTimeout(scanAutoPost,8000);
 
 /* ---------- 设置 ---------- */
@@ -1210,7 +1219,7 @@ const GAMES=[
   {k:'drama',e:'🎭',n:'即兴小剧场',kick:'我们来即兴小剧场，你给我们设定一个情境/开场白，然后我们一起把剧情演下去。开场吧～'},
   {k:'quick',e:'⚡',n:'快问快答',kick:'我们玩快问快答，你连续快速地问我问题、我来答，答完你也可以让我问你。开始！'}
 ];
-function openGames(){openModal(`<h3>🎮 游戏大厅</h3><div class="hint">选个游戏，再选一个角色一起玩～ 打字、发语音都行。谁是卧底先生下批做。</div>
+function openGames(){openModal(`<h3>🎮 游戏大厅</h3><div class="hint">选个游戏，再选一个角色，会进到一个【单独的游戏空间】里玩～ 随时说"游戏结束"或点右上角「结束」就能退出，不会打扰微信聊天。</div>
   ${GAMES.map(g=>`<div class="section"><div class="it" onclick="pickGameChar('${g.k}')">${g.e} ${g.n}<span class="v">›</span></div></div>`).join('')}
   <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function pickGameChar(k){const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){toast('先创建一个角色');return;}
@@ -1218,22 +1227,98 @@ function pickGameChar(k){const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length
 function startGame(k,cid){const g=GAMES.find(x=>x.k===k);if(!g)return;closeModal();
   if(k==='soup')return soupCfg(cid);
   if(k==='escape')return escapeCfg(cid);
-  if(k==='wordguess')return startWG(cid);
-  openChat(cid);pushMsg(cid,{role:'user',type:'text',content:'【'+g.n+'】'+g.kick,id:uid()});scheduleReply(cid);}
+  if(k==='wordguess')return openGameSpace('wordguess',cid,'我们玩「你说我猜」：轮流出题——一个人描述一个词（不能说出这个词里的任何一个字），另一个人来猜，猜中或想换就继续，自由发挥别老用重复的词。你先出一个词、描述给我猜～','🤐 你说我猜');
+  openGameSpace(k,cid,g.kick,g.e+' '+g.n);}
+/* ===== 单独游戏空间 ===== */
+let _gs=null;
+function openGameSpace(kind,cid,intro,title){const c=getC(cid);if(!c)return;
+  if(_gs)clearInterval(_gs._tm);
+  _gs={cid,kind,title:title||'游戏',intro,msgs:[],t:30*60,busy:false,_tm:null};
+  go('gs');gsTimer();gsKick();}
+function gsSystem(){const c=getC(_gs.cid);
+  return buildSystem(c)+'\n\n# 现在你在和'+S.me.name+'玩游戏：'+_gs.title+'\n你们在一个【独立的小游戏空间】里玩，这不是日常微信聊天。\n- 用中文，轻松口语，沉浸在游戏里当好玩伴/主持人。\n- 游戏规则：'+_gs.intro+'\n- 别发[转账][红包][语音]这类卡片/标签，专心玩。\n- 当'+S.me.name+'说"游戏结束/不玩了/结束/退出"时，温柔地收个尾、道个别即可。';}
+function gsAbsorb(r){if(!_gs)return;splitBubbles(r).forEach(l=>{l=normTag(l);if(LEAKRE.test(l))return;l=l.replace(/\[[^\]]*\]/g,'').trim();if(l)splitActions(l).forEach(p=>{if(p.trim())_gs.msgs.push({who:'ta',text:p.trim()});});});}
+async function gsKick(){if(!_gs)return;_gs.busy=true;gsRender();
+  try{const r=await chatAPI([{role:'system',content:gsSystem()},{role:'user',content:'[游戏开始，请你作为主持人/玩伴先开场。]'}]);if(!_gs)return;gsAbsorb(r);}
+  catch(e){if(_gs)_gs.msgs.push({who:'ta',text:'（信号好像不太好…再戳我一下？）'});}
+  if(_gs)_gs.busy=false;gsRender();}
+async function gsSend(){if(!_gs||_gs.busy)return;const ta=$('#gs_in');if(!ta)return;const v=(ta.value||'').trim();if(!v)return;ta.value='';
+  _gs.msgs.push({who:'me',text:v});_gs.busy=true;gsRender();
+  try{const hist=_gs.msgs.slice(-30).map(m=>({role:m.who==='me'?'user':'assistant',content:m.text}));
+    const r=await chatAPI([{role:'system',content:gsSystem()},...hist]);if(!_gs)return;gsAbsorb(r);}
+  catch(e){if(_gs)_gs.msgs.push({who:'ta',text:'（…信号断了一下，再说一遍？）'});}
+  if(_gs)_gs.busy=false;gsRender();}
+function gsFmt(){const t=Math.max(0,_gs?_gs.t:0);return Math.floor(t/60)+':'+String(t%60).padStart(2,'0');}
+function gsTimer(){if(!_gs)return;clearInterval(_gs._tm);const tm=setInterval(()=>{if(!_gs||cur().p!=='gs'){clearInterval(tm);return;}_gs.t--;const e=document.getElementById('gstime');if(e)e.textContent=gsFmt();if(_gs.t<=0){clearInterval(tm);toast('⏰ 时间到啦～想继续玩也行，不玩就点结束');}},1000);_gs._tm=tm;}
+function gsRender(){if(cur().p==='gs'){render();const b=$('#gsbg');if(b)b.scrollTop=b.scrollHeight;}}
+function renderGS(){if(!_gs)return '';const c=getC(_gs.cid);
+  const body=_gs.msgs.map(m=>m.who==='me'
+    ?`<div class="msg me"><div class="col"><div class="bubble">${esc(m.text)}</div></div></div>`
+    :`<div class="msg them">${av(c?c.avatar:'🙂')}<div class="col"><div class="bubble">${esc(m.text)}</div></div></div>`).join('')
+    +(_gs.busy?`<div class="msg them">${av(c?c.avatar:'🙂')}<div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`:'');
+  return `<div class="nav"><span class="l" onclick="gsQuit()">‹ 退出</span><span class="t">${esc(_gs.title)} <span id="gstime" style="color:#fa5151;font-size:13px">${gsFmt()}</span></span><span class="r" onclick="gsQuit()" style="color:#fa5151">结束</span></div>
+    <div class="scroll" id="gsbg" style="background:#000">${body||'<div class="empty" style="padding:30px">开场中…</div>'}</div>
+    <div class="inputbar"><textarea id="gs_in" rows="1" placeholder='说点什么…（说"游戏结束"或点右上「结束」随时退出）' onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();gsSend();}"></textarea><button class="send" onclick="gsSend()">发</button></div>`;}
+function gsQuit(){if(_gs)clearInterval(_gs._tm);_gs=null;home();}
+/* ===== 信箱 ===== */
+function fmtDate(t){const d=new Date(t||Date.now());return (d.getMonth()+1)+'月'+d.getDate()+'日 '+hm(t);}
+function renderMail(){const list=S.mail||[];
+  return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">📮 信箱</span><span class="r" onclick="mailSettings()">⚙︎</span></div>
+   <div class="scroll" style="background:#000;padding:10px">
+   <div class="hint">他趁你不在时写给你的信💌 点右上⚙︎可以让角色每天主动写几封。</div>
+   ${list.length?list.map(L=>{const c=getC(L.cid);return `<div class="section"><div class="it" onclick="openLetter('${L.id}')" style="align-items:flex-start">
+     <div style="font-size:24px;margin-right:8px">${L.read?'📭':'💌'}</div>
+     <div style="flex:1;min-width:0"><div style="font-weight:600;${L.read?'color:#999':''}">${esc(L.subject)} ${L.read?'':'<span class="badge" style="display:inline-flex">新</span>'}</div>
+     <div style="font-size:12px;color:#888;margin-top:3px">${esc(c?(c.remark||c.name):'TA')} · ${fmtDate(L.time)}</div></div>
+     <span onclick="event.stopPropagation();delLetter('${L.id}')" style="color:#fa5151;cursor:pointer;padding:0 4px">✕</span></div></div>`;}).join(''):'<div class="empty" style="padding:50px;line-height:2">还没有信～<br>点右上角 ⚙︎ 给角色开启「每天写信」</div>'}
+   <div style="height:20px"></div></div>`;}
+function openLetter(lid){const L=(S.mail||[]).find(x=>x.id===lid);if(!L)return;L.read=true;save();const c=getC(L.cid);
+  openModal(`<div style="text-align:center"><div style="font-size:30px">💌</div><h3 style="margin:6px 0 2px">${esc(L.subject)}</h3>
+   <div style="font-size:12px;color:#888;margin-bottom:12px">${esc(c?(c.remark||c.name):'TA')} 写于 ${fmtDate(L.time)}</div></div>
+   <div style="background:#fffdf3;color:#3a3a3a;border-radius:14px;padding:18px;line-height:2;white-space:pre-wrap;font-size:15px;max-height:52vh;overflow:auto;box-shadow:inset 0 0 0 1px #f0e6c8">${esc(L.body)}</div>
+   <div class="btns" style="margin-top:14px"><button class="btn d" onclick="delLetter('${lid}')">删除</button><button class="btn p" onclick="closeModal();render()">收好💗</button></div>`);
+  if(cur().p==='mail')render();}
+function delLetter(lid){S.mail=(S.mail||[]).filter(x=>x.id!==lid);save();closeModal();render();}
+function mailSettings(){const cs=S.contacts.filter(c=>!c.deleted);
+  openModal(`<h3>📮 信箱设置</h3><div class="hint">让角色每天主动给你写几封信（趁你不在时写的心里话，会结合你们最近的聊天）。0=不写。他也会自己想写就写。</div>
+   <div class="section">${cs.length?cs.map(c=>`<div class="it"><span>${esc(c.remark||c.name)}</span><span class="v"><input type="number" min="0" max="5" value="${c.mailPerDay||0}" onchange="getC('${c.id}').mailPerDay=Math.max(0,Math.min(5,+this.value||0));save()" style="width:48px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:5px;background:#2c2c2e;color:#eee"> 封/天</span></div>`).join(''):'<div class="empty">先创建一个角色</div>'}</div>
+   <div class="btns"><button class="btn p" onclick="closeModal()">好啦</button></div>`);}
+function scanMail(){const today=new Date().toDateString();S._mailCount=S._mailCount||{};
+  S.contacts.forEach(c=>{if(c.deleted||c.blocked||!c.mailPerDay)return;
+    const pc=S._mailCount[c.id]||{date:today,n:0,last:0};if(pc.date!==today){pc.date=today;pc.n=0;}S._mailCount[c.id]=pc;
+    if(pc.n>=c.mailPerDay)return;
+    if(Date.now()-(pc.last||0)<3600000)return;
+    if(Math.random()<0.45)return;
+    pc.n++;pc.last=Date.now();save();genLetter(c.id);});}
+async function genLetter(id){const c=getC(id);if(!c)return;
+  const recent=msgs(id).slice(-20).map(msgToText).filter(Boolean).join('\n');
+  const sys=buildSystem(c)+'\n\n# 现在：给'+S.me.name+'写一封信\n趁'+S.me.name+'不在身边，你想给ta写一封信，说说心里话。这不是微信消息，是一封正式的、温柔真诚的信。请结合你们最近的聊天和你对ta的感情来写，有细节、有温度，像真实的手写信。\n只输出下面两行、用:::分隔，别的都别写：\n主题:::一句话的信件标题\n正文:::信的正文（120-280字，可用换行分段，结尾可署名）';
+  try{const r=await chatAPI([{role:'system',content:sys},{role:'user',content:'最近的聊天记录：\n'+(recent||'(还没怎么聊过)')+'\n\n请给我写一封信。'}],{max:700,temp:.85});
+    if(!r)return;let sub='给你的信',body=r.trim();
+    const ms=r.match(/主题[:：]{1,3}\s*([^\n]+)/);if(ms)sub=ms[1].trim();
+    const mb=r.split(/正文[:：]{1,3}/);if(mb[1])body=mb[1].trim();
+    body=body.replace(/^主题[:：]{1,3}[^\n]*\n+/,'').trim();
+    const letter={id:uid(),cid:id,subject:sub.slice(0,40),body,time:Date.now(),read:false};
+    S.mail.unshift(letter);if(S.mail.length>60)S.mail=S.mail.slice(0,60);save();notifyMail(c,letter);
+    if(cur().p==='mail'||cur().p==='home')render();
+  }catch(e){}}
+function notifyMail(c,letter){if(c.muted)return;playDing();const b=$('#msgBanner');if(!b)return;
+  b.innerHTML=`<div style="width:34px;height:34px;border-radius:9px;background:#f4a93b;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px">💌</div><div style="flex:1;min-width:0"><div class="bn">${esc(c.remark||c.name)} 给你写了封信</div><div class="bm">${esc(letter.subject)}</div></div>`;
+  b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';go('mail');};
+  clearTimeout(_bannerT);_bannerT=setTimeout(()=>{b.className='msgbanner';},5500);}
+setInterval(scanMail,300000);setTimeout(scanMail,15000);
 function soupCfg(cid){openModal(`<h3>🐢 海龟汤设置</h3>
   <div class="field"><label>类别</label><select id="sc_cat"><option>悬疑</option><option>恐怖</option><option>搞笑</option><option>温情</option><option>脑洞</option></select></div>
   <div class="field"><label>难度</label><select id="sc_dif"><option>简单</option><option selected>中等</option><option>烧脑</option></select></div>
   <div class="hint">玩的时候：说「公布答案」揭晓汤底，「换一题」换题，「结束」收工。</div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="soupStart('${cid}')">开始</button></div>`);}
-function soupStart(cid){const cat=$('#sc_cat').value,dif=$('#sc_dif').value;closeModal();openChat(cid);
-  const content='【海龟汤·'+cat+'·'+dif+'】我们玩海龟汤。请你出一个'+cat+'类、难度'+dif+'的谜题，先只描述表面情境（汤面），我用是非题来猜，你只回答「是 / 不是 / 无关」。我说「公布答案」你就揭晓汤底，「换一题」就换，「结束」就停。出题吧～';
-  pushMsg(cid,{role:'user',type:'text',content,id:uid()});scheduleReply(cid);}
+function soupStart(cid){const cat=$('#sc_cat').value,dif=$('#sc_dif').value;closeModal();
+  openGameSpace('soup',cid,'我们玩海龟汤：你出一个'+cat+'类、难度'+dif+'的谜题，先只描述表面情境（汤面），我用是非题来猜，你只回答「是 / 不是 / 无关」。我说「公布答案」你就揭晓汤底，「换一题」就换一道。先出题吧～','🐢 海龟汤·'+cat);}
 function escapeCfg(cid){openModal(`<h3>🚪 小黑屋</h3><div class="hint">你被困在上锁的小黑屋，达成你定的条件才能开门通关。规则你自己写～</div>
   <div class="field"><label>密室设定 / 开门规则</label><textarea id="esc_r" rows="4" placeholder="例如：屋里有一盏灯、一个保险箱、一张纸条。要找到密码打开保险箱拿到钥匙才能开门；密码藏在纸条的谜语里。"></textarea></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="escStart('${cid}')">进入小黑屋</button></div>`);}
-function escStart(cid){const r=$('#esc_r').value.trim()||'屋里有线索，需要解开谜题找到钥匙才能开门。';closeModal();openChat(cid);
-  const content='【小黑屋】你来当游戏主持人（GM）。设定：我被困在一间上锁的小黑屋，'+r+' 门一开就通关。请你描述场景、根据我每一步行动推进剧情，只有我真正达成开门条件时才宣布「🔓门开了，通关！」，否则不能放我出去。开始描述场景吧～';
-  pushMsg(cid,{role:'user',type:'text',content,id:uid()});scheduleReply(cid);}
+function escStart(cid){const r=$('#esc_r').value.trim()||'屋里有线索，需要解开谜题找到钥匙才能开门。';closeModal();
+  openGameSpace('escape',cid,'你来当游戏主持人（GM）：我被困在一间上锁的小黑屋，'+r+' 门一开就通关。你描述场景、根据我每一步行动推进剧情，只有我真正达成开门条件时才宣布「🔓门开了，通关！」，否则不能放我出去。先描述一下场景吧～','🚪 小黑屋');}
 /* ===== 你说我猜 ===== */
 let _wg=null;
 function startWG(cid){_wg={cid,round:1,score:{me:0,ta:0},phase:'idle',word:'',desc:'',guesses:[],t:0};go('wg');wgRound('ai');}
