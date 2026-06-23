@@ -296,7 +296,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v36 · 通话翻译不读+通话类型';
+const APP_VER='v37 · 通话只读外语+防中文跑偏';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -424,21 +424,19 @@ async function toggleSteps(){if(_stepOn){window.removeEventListener('devicemotio
 /* ===== 语音 ===== */
 function getVoice(o){if(!o.voice)o.voice={engine:'system',voiceURI:'',rate:1,pitch:1,lang:'zh'};return o.voice;}
 function stripSpoken(t){return (t||'').replace(/[（(【][^）)】]*[）)】]/g,'').replace(/\[[^\]]*\]/g,'').replace(/[*_~`#>]/g,'').trim();}
-// 通话朗读：外语角色只读外语原文（自动纠正"中文（外语）"被搞反的情况），中文角色去掉（）
+// 通话朗读：外语角色只读外语原文。英/韩用"剔除所有中文字符"的硬办法，
+// 不依赖模型有没有写对括号，所以中文翻译永远不会被读出来。
+const CJK_RE=/[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/g;
+const CN_PUNCT_RE=/[（）()「」『』【】《》〈〉、，。．！？；：…—～·“”‘’]/g;
+function hasForeign(text,lang){if(!lang||lang==='zh')return true;const re=lang==='韩'?/[가-힣]/:lang==='日'?/[぀-ヿ]/:/[A-Za-z]/;return re.test(text||'');}
 function pickSpoken(text,lang){
   let t=(text||'').replace(/【[^】]*】/g,'').replace(/\[[^\]]*\]/g,'').replace(/[*_~`#>]/g,'').trim();
   if(!lang||lang==='zh')return t.replace(/[（(][^）)]*[）)]/g,'').trim();
-  const re=lang==='韩'?/[가-힣]/g:lang==='日'?/[぀-ヿ]/g:/[A-Za-z]/g;
-  const m=t.match(/^([\s\S]*?)[（(]([^）)]*)[）)]([\s\S]*)$/);
-  let cand;
-  if(m){const outside=(m[1]+m[3]),inside=m[2];
-    const co=(outside.match(re)||[]).length,ci=(inside.match(re)||[]).length;
-    if(ci>co&&ci>0)cand=inside;                    // 被搞反了：外语其实在（）里
-    else cand=outside.replace(/[（(][^）)]*[）)]/g,'');// 外语在外、（中文翻译）丢掉
-  }else cand=t.replace(/[（(][^）)]*[）)]/g,'');
-  cand=cand.trim();
-  if(!(cand.match(re)||[]).length)return '';        // 纯中文翻译那句不读
-  return cand;}
+  if(lang==='日'){const s=t.replace(/[（(][^）)]*[）)]/g,'').trim();return /[぀-ヿ]/.test(s)?s:'';}
+  // 英 / 韩：把所有中文汉字和中文标点都抹掉，只留外语
+  let s=t.replace(CJK_RE,' ').replace(CN_PUNCT_RE,' ').replace(/\s+/g,' ').trim();
+  const ok=lang==='韩'?/[가-힣]/.test(s):/[A-Za-z]/.test(s);
+  return ok?s:'';}
 let _voices=[];
 function loadVoices(){try{_voices=speechSynthesis.getVoices()||[];}catch(e){_voices=[];}}
 if('speechSynthesis'in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices;}
@@ -1820,11 +1818,15 @@ async function callAI(sysNote){if(!_call)return;const c=getC(_call.id);const vid
     let cf='\n\n# 正在'+(video?'视频':'语音')+'通话（务必遵守格式）\n用口语短句，像打电话一样，别用卡片。每句单独一行。';
     if(video)cf+='\n- 这是视频，你的动作神态用【】单独成行写，比如【凑近镜头笑】。';
     else cf+='\n- 这是语音通话（看不到画面），绝对不要出现任何【】动作神态描写，一个【】都不许有，只能说话。';
-    if(_langN)cf+='\n- 你全程说'+_langN+'：先单独一行写'+_langN+'原文（这行会被读出来），紧接着【换一行】用（）单独写中文翻译（这行不会被读）。原文一行、（中文翻译）另起一行，别写在同一行，也别把顺序搞反。例如：\n'+(_lang==='韩'?'사랑해\n（我爱你）':_lang==='日'?'好きだよ\n（喜欢你）':'I miss you\n（我想你了）')+'\n- 哪怕是要挂断、道别、回应"挂了/别挂"这种话，也必须先写'+_langN+'原文那一行，绝不能整句只说中文。';
+    if(_langN)cf+='\n- ‼️最重要：你全程只能说'+_langN+'，从头到尾每一句都是'+_langN+'，绝对不准中途切回中文整句说话（这是会被读出来的那一行）。格式：先单独一行写'+_langN+'原文（会被读出来），紧接着【换一行】用（）单独写中文翻译（不会被读）。原文一行、（中文翻译）另起一行，别写在同一行，也别把顺序搞反。例如：\n'+(_lang==='韩'?'사랑해\n（我爱你）':_lang==='日'?'好きだよ\n（喜欢你）':'I miss you\n（我想你了）')+'\n- 哪怕是要挂断、道别、回应"挂了/别挂/我爱你"这种话，也必须先写'+_langN+'原文那一行，绝不能整句只说中文。';
     cf+='\n- 想结束通话就【单独占一行】只输出 [挂断]，不要把 [挂断] 和说的话写在同一行。';
     const sys=buildSystem(c)+cf;
-    const content=await chatAPI([{role:'system',content:sys},...hist]);
+    let content=await chatAPI([{role:'system',content:sys},...hist]);
     if(!_call||_call.session!==sess)return;
+    // 外语通话若整段没出现外语（模型说成了中文），自动纠正重来一次
+    if(_langN&&content&&!hasForeign(content,_lang)){
+      const fix=await chatAPI([{role:'system',content:sys},...hist,{role:'assistant',content:content},{role:'user',content:'[系统纠正：你刚才整句说成中文了。请用'+_langN+'重说一遍刚才的意思，每句先写'+_langN+'原文一行、再换行写（中文翻译），不要再用中文整句。]'}]);
+      if(_call&&_call.session===sess&&fix&&hasForeign(fix,_lang))content=fix;}
     const wantHang=/\[挂断\]/.test(content);const pieces=[];const _vlang=(getVoice(c).lang||'zh');
     splitBubbles(content).forEach(l=>{l=normTag(l);if(/^\[挂断\]$/.test(l))return;const mm=l.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=mm[1];return;}if(LEAKRE.test(l))return;
       if(video){splitActions(l).forEach(p=>pieces.push(p));}
