@@ -296,7 +296,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v45 · 卧底独立投票+选人进场';
+const APP_VER='v46 · 卧底词库分类+人机性格';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1275,28 +1275,43 @@ function gsQuit(){if(_gs)clearInterval(_gs._tm);_gs=null;home();}
 /* ===== 谁是卧底 ===== */
 let _uc=null;
 const UC_BOTS=['小鹿','阿白','团子','西西','阿七','麦麦','楠楠','糖糖','可可','豆豆'];
+const UC_TRAITS=['毒舌爱抬杠','话痨爱跑题','高冷惜字如金','逗比爱开玩笑','谨慎多疑','迷糊常跑偏','自信爱断言','阴阳怪气','软萌可爱','老练沉稳','急性子直球','喜欢卖关子绕弯子'];
+const UC_WORDS={
+ 美食:[['可乐','雪碧'],['汉堡','三明治'],['包子','饺子'],['蛋糕','面包'],['咖啡','奶茶'],['西瓜','哈密瓜'],['薯条','薯片'],['火锅','麻辣烫'],['牛奶','酸奶'],['草莓','车厘子'],['拉面','米线'],['月饼','蛋黄酥'],['冰淇淋','棒冰'],['橙子','橘子'],['饺子','馄饨'],['豆浆','米汤']],
+ 日常:[['牙刷','牙膏'],['毛巾','浴巾'],['雨伞','雨衣'],['钢笔','铅笔'],['沙发','床'],['空调','风扇'],['镜子','窗户'],['枕头','抱枕'],['钱包','卡包'],['口红','唇膏'],['耳机','音响'],['手表','手环'],['眼镜','墨镜'],['充电器','充电宝'],['闹钟','手表'],['拖鞋','凉鞋']],
+ 动物:[['老虎','豹子'],['青蛙','蟾蜍'],['乌龟','甲鱼'],['兔子','仓鼠'],['蝴蝶','飞蛾'],['鲸鱼','海豚'],['企鹅','鸭子'],['马','驴'],['蜜蜂','蚂蚁'],['鹦鹉','八哥'],['金鱼','锦鲤'],['狼','哈士奇'],['熊猫','浣熊'],['蜗牛','蜘蛛']],
+ 地点:[['学校','幼儿园'],['医院','药店'],['电影院','剧院'],['超市','便利店'],['游泳池','澡堂'],['机场','火车站'],['公园','植物园'],['图书馆','书店'],['酒吧','咖啡厅'],['健身房','操场'],['酒店','民宿'],['银行','邮局']],
+ 职业:[['医生','护士'],['老师','教授'],['警察','保安'],['演员','主播'],['歌手','rapper'],['作家','记者'],['厨师','服务员'],['司机','快递员'],['程序员','设计师'],['律师','法官'],['理发师','化妆师']],
+ 抽象:[['梦想','理想'],['爱情','友情'],['回忆','想象'],['谎言','秘密'],['时间','年龄'],['影子','倒影'],['运气','缘分'],['寂寞','孤独'],['后悔','遗憾'],['希望','期待'],['自由','放纵'],['温柔','善良'],['勇气','冲动']]
+};
 function ucConfig(cid){closeModal();const cs=S.contacts.filter(c=>!c.deleted);
   openModal(`<h3>🕵️ 谁是卧底</h3>
    <div class="hint">勾选要拉进来一起玩的角色（可多选），人数不够用匿名AI玩家补。每人拿到一个词，卧底的词不一样。</div>
    <div class="field"><label>拉谁进来玩（可多选）</label><div class="section">${cs.length?cs.map(c=>`<label class="avline" style="font-weight:400">${esc(c.remark||c.name)}<span class="sw ${c.id===cid?'on':''}" data-uc="${c.id}" onclick="this.classList.toggle('on')"></span></label>`).join(''):'<div style="font-size:12px;color:#999;padding:8px">还没有角色，会全用匿名AI玩家</div>'}</div></div>
    <div class="field"><label>再加几个匿名AI玩家</label><select id="uc_bots"><option>0</option><option>1</option><option selected>2</option><option>3</option><option>4</option></select></div>
+   <div class="field"><label>词库类别</label><select id="uc_cat"><option value="ai">🎲 AI随机出题（无限不重复）</option><option value="美食">🍔 美食</option><option value="日常">🧴 日常用品</option><option value="动物">🐾 动物</option><option value="地点">📍 地点</option><option value="职业">👮 人物职业</option><option value="抽象">💭 抽象脑洞</option></select></div>
    <div class="field"><label>卧底人数</label><select id="uc_u"><option selected>1</option><option>2</option></select></div>
    <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="ucStart()">开始</button></div>`);}
 async function ucStart(){const sel=[...document.querySelectorAll('[data-uc].on')].map(e=>e.getAttribute('data-uc'));
   const nbots=+($('#uc_bots')?$('#uc_bots').value:0)||0;let U=+($('#uc_u')?$('#uc_u').value:1)||1;
+  const cat=$('#uc_cat')?$('#uc_cat').value:'ai';
   const chars=sel.map(id=>getC(id)).filter(Boolean);const total=1+chars.length+nbots;
   if(total<4){toast('至少要4个玩家(含你)，多拉角色或加几个AI玩家');return;}
   closeModal();U=Math.min(U,Math.max(1,Math.floor((total-1)/2)));
+  const traits=[...UC_TRAITS].sort(()=>Math.random()-.5);
   const players=[{id:'me',name:S.me.name,isMe:true,avatar:S.me.avatar,bot:false,alive:true,role:'civ',word:'',desc:'',_said:false,vote:null}];
   chars.forEach(c=>players.push({id:'p_'+c.id,name:c.remark||c.name,avatar:c.avatar,isMe:false,bot:false,alive:true,role:'civ',word:'',desc:'',_said:false,vote:null}));
-  let bi=0;for(let i=0;i<nbots;i++)players.push({id:'bot'+i,name:UC_BOTS[bi++%UC_BOTS.length],avatar:'🙂',isMe:false,bot:true,alive:true,role:'civ',word:'',desc:'',_said:false,vote:null});
+  let bi=0;for(let i=0;i<nbots;i++)players.push({id:'bot'+i,name:UC_BOTS[bi++%UC_BOTS.length],avatar:'🙂',isMe:false,bot:true,trait:traits[i%traits.length],alive:true,role:'civ',word:'',desc:'',_said:false,vote:null});
   const N=players.length;
   const ridx=[...Array(N).keys()].sort(()=>Math.random()-.5).slice(0,U);ridx.forEach(i=>players[i].role='undercover');
   _uc={players,N,U,phase:'loading',round:1,turn:0,order:[],civWord:'',ucWord:'',busy:true,lastOut:null,win:null,_botDescDone:false};
   go('uc');render();
-  try{const r=await chatAPI([{role:'system',content:'给一对"谁是卧底"游戏用的词：两个相近但不同的具体名词，能描述也容易混淆。只输出一行，格式：平民词:::卧底词。例如 可乐:::雪碧 或 老虎:::豹子'},{role:'user',content:'出一对词'}],{max:40,aux:true});
+  let pair=null;
+  if(cat!=='ai'&&UC_WORDS[cat]){const list=UC_WORDS[cat];pair=list[Math.floor(Math.random()*list.length)];if(window._ucLast===pair.join()&&list.length>1){pair=list[(list.indexOf(pair)+1)%list.length];}window._ucLast=pair.join();if(Math.random()<.5)pair=[pair[1],pair[0]];}
+  if(pair){_uc.civWord=pair[0];_uc.ucWord=pair[1];}
+  else{try{const r=await chatAPI([{role:'system',content:'给一对"谁是卧底"游戏用的词：两个相近但不同的具体名词，能描述也容易混淆。只输出一行，格式：平民词:::卧底词。例如 可乐:::雪碧 或 老虎:::豹子'},{role:'user',content:'出一对词'}],{max:40,aux:true});
     const p=(r||'').split(/:::|：：：/).map(x=>x.trim()).filter(Boolean);_uc.civWord=p[0]||'苹果';_uc.ucWord=p[1]||'梨';}
-  catch(e){_uc.civWord='苹果';_uc.ucWord='梨';}
+  catch(e){_uc.civWord='苹果';_uc.ucWord='梨';}}
   if(!_uc)return;_uc.players.forEach(p=>p.word=p.role==='undercover'?_uc.ucWord:_uc.civWord);
   _uc.order=[...Array(N).keys()].sort(()=>Math.random()-.5);_uc.turn=0;_uc.phase='desc';_uc.busy=false;ucStep();}
 function ucAlive(){return _uc.players.filter(p=>p.alive);}
@@ -1314,8 +1329,8 @@ function ucStep(){if(!_uc)return;
 function ucFallbackDesc(){return ['不太好说…','你们先猜猜','跟楼上差不多','嗯…挺常见的','有点难形容'][Math.floor(Math.random()*5)];}
 async function ucBotDescs(bots){if(!_uc)return;
   const prev=ucAlive().filter(x=>x._said).map(x=>x.name+'：'+x.desc).join('\n')||'(还没人描述)';
-  const lines=bots.map(b=>b.name+'（词：'+b.word+'）').join('\n');
-  try{const r=await chatAPI([{role:'system',content:'你在主持"谁是卧底"，替下面几个电脑玩家各写一句对"自己词"的描述。规则：每句【不能出现该玩家自己的词或其中的字】，自然像真人；谁的词跟多数人明显不同(可能是卧底)就描述得更含糊别暴露。已有描述：\n'+prev+'\n这几个玩家和各自的词：\n'+lines+'\n严格每行一个、按这个顺序，格式：玩家名:::描述（8到22字）。只输出这些行，别的不要。'},{role:'user',content:'给出他们的描述'}],{max:400,aux:true});
+  const lines=bots.map(b=>b.name+'（词：'+b.word+'，性格：'+(b.trait||'普通')+'）').join('\n');
+  try{const r=await chatAPI([{role:'system',content:'你在主持"谁是卧底"，替下面几个电脑玩家各写一句对"自己词"的描述。规则：每句【不能出现该玩家自己的词或其中的字】，自然像真人；【每个人都要按自己的"性格"用不同的语气和风格说话，别写得千篇一律】；谁的词跟多数人明显不同(可能是卧底)就描述得更含糊别暴露。已有描述：\n'+prev+'\n这几个玩家、各自的词和性格：\n'+lines+'\n严格每行一个、按这个顺序，格式：玩家名:::描述（8到22字，体现各自性格）。只输出这些行，别的不要。'},{role:'user',content:'给出他们的描述'}],{max:400,aux:true});
     const map={};(r||'').split('\n').forEach(line=>{const m=line.split(/:::|：：：/);if(m.length>=2&&m[0].trim())map[m[0].trim()]=m[1].trim();});
     bots.forEach(b=>{b.desc=((map[b.name]||'').replace(/^["「『]+|["」』]+$/g,'').slice(0,40))||ucFallbackDesc();b._said=true;});}
   catch(e){bots.forEach(b=>{b.desc=ucFallbackDesc();b._said=true;});}
@@ -1339,7 +1354,7 @@ async function ucVotePhase(){if(!_uc)return;_uc.phase='vote';_uc.busy=true;_uc.p
   // bot 批量投（一次调用）
   const bots=alive.filter(p=>p.bot);
   if(bots.length){
-    try{const r=await chatAPI([{role:'system',content:'你在主持"谁是卧底"投票。大家的描述：\n'+summary+'\n下面每个电脑玩家有【自己的词】，请站在各自的角度【独立】判断：对该玩家来说，谁的描述跟「他自己的词」最不搭、最可疑，就投谁。每个人的词不同，所以他们的投票很可能【各不相同】，不要让他们全投同一个人（除非真的极其明显）。不能投自己。玩家及其词：\n'+bots.map(b=>b.name+'（词：'+b.word+'）').join('\n')+'\n可投的人：'+alive.map(x=>x.name).join('、')+'。严格每行一个，格式：玩家名:::要投的人名。只输出这些行。'},{role:'user',content:'给出各自的投票'}],{max:200,aux:true});
+    try{const r=await chatAPI([{role:'system',content:'你在主持"谁是卧底"投票。大家的描述：\n'+summary+'\n下面每个电脑玩家有【自己的词】和【性格】，请站在各自的角度【独立】判断：对该玩家来说，谁的描述跟「他自己的词」最不搭、最可疑，就投谁；多疑的更爱投人、迷糊的可能投错、阴阳怪气的可能乱投——按性格来。每个人的词不同，投票很可能【各不相同】，不要全投同一个人（除非极其明显）。不能投自己。玩家、词和性格：\n'+bots.map(b=>b.name+'（词：'+b.word+'，性格：'+(b.trait||'普通')+'）').join('\n')+'\n可投的人：'+alive.map(x=>x.name).join('、')+'。严格每行一个，格式：玩家名:::要投的人名。只输出这些行。'},{role:'user',content:'给出各自的投票'}],{max:200,aux:true});
       const map={};(r||'').split('\n').forEach(line=>{const m=line.split(/:::|：：：/);if(m.length>=2)map[m[0].trim()]=m[1].trim();});
       bots.forEach(b=>{const others=alive.filter(x=>x.id!==b.id);const nm=map[b.name]||'';let t=others.find(x=>nm.includes(x.name));if(!t)t=others[Math.floor(Math.random()*others.length)];b.vote=t?t.id:null;});}
     catch(e){bots.forEach(b=>{const others=alive.filter(x=>x.id!==b.id);b.vote=others.length?others[Math.floor(Math.random()*others.length)].id:null;});}}
