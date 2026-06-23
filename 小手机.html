@@ -296,7 +296,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v52 · 小号删除/备注/陌生人修复';
+const APP_VER='v53 · 通话记录可删改';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -632,6 +632,7 @@ function render(){
   else if(c.p==='mail')html=renderMail();
   else if(c.p==='gs')html=renderGS();
   else if(c.p==='uc')html=renderUC();
+  else if(c.p==='calllog')html=renderCallLog(c.id);
   else if(c.p==='contactInfo')html=renderContactInfo(c.id);
   else if(c.p==='spy')html=renderSpy(c.id);
   else if(c.p==='shop')html=renderShop();
@@ -1472,6 +1473,30 @@ function renderUC(){if(!_uc)return '';const me=_uc.players.find(p=>p.isMe);
       <div style="margin-top:6px">${panel}</div><div style="height:20px"></div></div>`;}
 function ucReplay(){const lead=_uc.players.find(p=>!p.isMe&&p.id.indexOf('p_')===0);const cid=lead?lead.id.slice(2):(S.contacts.filter(c=>!c.deleted)[0]||{}).id;_uc=null;if(cid)ucConfig(cid);else home();}
 function ucQuit(){_uc=null;home();}
+/* ===== 通话记录（可删改）===== */
+let _clTab='all';
+function renderCallLog(id){const c=getC(id);if(!c)return '';
+  let list=msgs(id).filter(m=>m._call);
+  if(_clTab==='voice')list=list.filter(m=>(m._ck||'voice')==='voice');
+  else if(_clTab==='video')list=list.filter(m=>m._ck==='video');
+  let html='',lastCs=null,idx=0;
+  list.forEach(m=>{
+    if(m._cs!==lastCs){lastCs=m._cs;idx++;const kind=m._ck==='video'?'📹 视频通话':'📞 语音通话';html+=`<div class="tstamp"><span>${kind}${m.time?' · '+fmtDate(m.time):' · 第'+idx+'通'}</span></div>`;}
+    const who=m.role==='user'?S.me.name:(c.remark||c.name);
+    const txt=m.type==='voice'?('🎙️ '+(m.content||'语音')):(m.content||'');
+    html+=`<div class="bill" style="border-radius:10px;margin:4px 10px;align-items:flex-start"><div style="flex:1;min-width:0"><div style="font-size:11px;color:#888">${esc(who)}</div><div style="color:#ddd;white-space:pre-wrap">${esc(txt)}</div></div><div style="white-space:nowrap;padding-left:8px"><span onclick="clEdit('${id}','${m.id}')" style="color:#54a0ff;cursor:pointer;margin-right:12px">✎</span><span onclick="clDel('${id}','${m.id}')" style="color:#fa5151;cursor:pointer">✕</span></div></div>`;
+  });
+  const tab=(k,l)=>`<span onclick="_clTab='${k}';render()" style="padding:4px 14px;border-radius:14px;cursor:pointer;${_clTab===k?'background:#07c160;color:#fff':'color:#999'}">${l}</span>`;
+  return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">📞 通话记录</span><span class="r" onclick="clClear('${id}')" style="color:#fa5151;font-size:13px">清空</span></div>
+   <div style="padding:8px;background:#1c1c1e;display:flex;gap:8px;justify-content:center;border-bottom:.5px solid #2a2a2c">${tab('all','全部')}${tab('voice','语音')}${tab('video','视频')}</div>
+   <div class="scroll" style="background:#000">
+   <div class="hint">通话/视频里说的内容都在这。聊久了如果AI把外语说成了中文，来这删掉或改对那几条就行，不用清空全部记忆。</div>
+   ${html||'<div class="empty" style="padding:40px">还没有通话记录</div>'}<div style="height:20px"></div></div>`;}
+function clEdit(id,mid){const m=msgs(id).find(x=>x.id===mid);if(!m)return;
+  openModal(`<h3>编辑这句</h3><div class="field"><textarea id="cl_t" rows="3">${esc(m.content||'')}</textarea></div>
+   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var mm=msgs('${id}').find(x=>x.id==='${mid}');if(mm)mm.content=$('#cl_t').value;save();closeModal();render();})()">保存</button></div>`);}
+function clDel(id,mid){const arr=msgs(id);const i=arr.findIndex(x=>x.id===mid);if(i<0)return;arr.splice(i,1);save();render();}
+function clClear(id){if(!confirm('清空和ta的全部通话记录？\n（只删通话/视频内容，不动文字聊天和记忆）'))return;S.messages[mkey(id)]=msgs(id).filter(m=>!m._call);save();render();toast('通话记录已清空');}
 /* ===== 信箱 ===== */
 function fmtDate(t){const d=new Date(t||Date.now());return (d.getMonth()+1)+'月'+d.getDate()+'日 '+hm(t);}
 function renderMail(){const list=S.mail||[];
@@ -1740,6 +1765,7 @@ function renderContactInfo(id){const c=getC(id);if(!c)return '';const sp=getSpy(
     <div class="section" style="margin:12px">
       <div class="it" onclick="placeCall('${id}','voice')"><span>📞 语音通话</span><span class="v">›</span></div>
       <div class="it" onclick="placeCall('${id}','video')"><span>📹 视频通话</span><span class="v">›</span></div>
+      <div class="it" onclick="go('calllog',{id:'${id}'})"><span>📞 通话记录（可删改）</span><span class="v">${msgs(id).filter(m=>m._call).length}条 ›</span></div>
     </div>
     <div class="section" style="margin:12px">
       <div class="it"><span>置顶聊天</span><span class="sw ${c.pinned?'on':''}" onclick="c_pin('${id}')"></span></div>
@@ -2261,14 +2287,14 @@ function updateCallSub(){const box=$('#callSub');if(!box)return;const s=_call&&_
   box.innerHTML=s?`<div class="csline ${s.who==='me'?'me':''}">${esc(s.text)}</div>`:'';}
 function recDownCall(ev){if(ev&&ev.preventDefault)ev.preventDefault();startRec(()=>{const b=document.querySelector('#callInput button');});}
 function recUpCall(cancel){if(!_call||!_rec)return;const tooShort=Date.now()-_rec.start<600;const id=_call.id;
-  stopRec(cancel||tooShort,m=>{if(!m||tooShort)return;msgs(id).push({role:'user',type:'voice',audio:m.audio,content:m.content||'',dur:m.dur,id:uid(),_call:true,_cs:_call&&_call.session});save();if(_call){_call.sub={who:'me',text:'🎙️ '+(m.content||'语音')};updateCallSub();}callAI();});}
+  stopRec(cancel||tooShort,m=>{if(!m||tooShort)return;msgs(id).push({role:'user',type:'voice',audio:m.audio,content:m.content||'',dur:m.dur,id:uid(),time:Date.now(),_call:true,_ck:(_call&&_call.kind)||'voice',_cs:_call&&_call.session});save();if(_call){_call.sub={who:'me',text:'🎙️ '+(m.content||'语音')};updateCallSub();}callAI();});}
 function playBufWait(buf){return new Promise(res=>{if(!_audio||!buf){res();return;}try{if(_audio.state==='suspended')_audio.resume();if(_curSrc){try{_curSrc.stop();}catch(e){}}const s=_audio.createBufferSource();s.buffer=buf;s.connect(_audio.destination);s.onended=()=>res();s.start();_curSrc=s;setTimeout(res,Math.min(20000,buf.duration*1000+800));}catch(e){res();}});}
 async function speakWait(text,c){const v=c?getVoice(c):null;const t=stripSpoken(text);
   if(!t)return new Promise(r=>setTimeout(r,1100));
   if(v&&v.engine==='api'&&S.settings.tts&&S.settings.tts.key){const ab=await ttsArr(text,c);const buf=await decodeBuf(ab);if(buf){await playBufWait(buf);return;}}
   return new Promise(res=>{try{const u=new SpeechSynthesisUtterance(t);if(v){u.rate=+v.rate||1;u.pitch=+v.pitch||1;if(v.voiceURI){const vs=_voices.find(x=>x.voiceURI===v.voiceURI);if(vs)u.voice=vs;}}u.onend=()=>res();u.onerror=()=>res();speechSynthesis.cancel();speechSynthesis.speak(u);setTimeout(res,Math.max(2500,t.length*200));}catch(e){res();}});}
 function callSend(){const inp=$('#callMsg');if(!inp)return;const t=inp.value.trim();if(!t||!_call)return;inp.value='';
-  msgs(_call.id).push({role:'user',type:'text',content:t,time:Date.now(),id:uid(),_call:true,_cs:_call.session});save();_call.sub={who:'me',text:t};updateCallSub();callAI();}
+  msgs(_call.id).push({role:'user',type:'text',content:t,time:Date.now(),id:uid(),_call:true,_ck:_call.kind,_cs:_call.session});save();_call.sub={who:'me',text:t};updateCallSub();callAI();}
 async function callAI(sysNote){if(!_call)return;const c=getC(_call.id);const video=_call.kind==='video';const sess=_call.session;
   try{const hist=msgs(c.id).slice(-(S.settings.hist||24)).map(m=>({role:m.role,content:msgToText(m)})).filter(x=>x.content!=null);
     if(sysNote)hist.push({role:'user',content:sysNote});
@@ -2290,7 +2316,7 @@ async function callAI(sysNote){if(!_call)return;const c=getC(_call.id);const vid
       if(video){splitActions(l).forEach(p=>pieces.push(p));}
       else{const cleaned=l.replace(/【[^】]*】/g,'').trim();if(cleaned)splitActions(cleaned).forEach(p=>pieces.push(p));}});
     for(const p of pieces){if(!_call||_call.session!==sess)return;
-      msgs(c.id).push({role:'assistant',type:'text',content:p,time:Date.now(),id:uid(),_call:true,_cs:sess});save();
+      msgs(c.id).push({role:'assistant',type:'text',content:p,time:Date.now(),id:uid(),_call:true,_ck:video?'video':'voice',_cs:sess});save();
       _call.sub={who:'them',text:p};updateCallSub();
       const spoken=pickSpoken(p,_vlang);
       if(_call.replyVoice&&!c.muted&&spoken){await speakWait(spoken,c);await sleep(900);}else await sleep(Math.max(1400,p.length*150));}
