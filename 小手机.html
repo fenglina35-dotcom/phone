@@ -296,7 +296,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v43 · 谁是卧底+游戏骰子';
+const APP_VER='v44 · 卧底省调用(角色单独)';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1284,9 +1284,9 @@ function ucConfig(cid){closeModal();
 async function ucStart(cid){closeModal();const N=+$('#uc_n').value||5;let U=+$('#uc_u').value||1;U=Math.min(U,Math.max(1,Math.floor((N-1)/2)));
   const cs=S.contacts.filter(c=>!c.deleted);let pool=[];if(getC(cid))pool.push(getC(cid));cs.forEach(c=>{if(c.id!==cid)pool.push(c);});
   const players=[{id:'me',name:S.me.name,isMe:true,avatar:S.me.avatar,alive:true,role:'civ',word:'',desc:'',_said:false,vote:null}];
-  let bi=0;for(let i=0;i<N-1;i++){const c=pool[i];players.push(c?{id:'p_'+c.id,name:c.remark||c.name,avatar:c.avatar,isMe:false,alive:true,role:'civ',word:'',desc:'',_said:false,vote:null}:{id:'bot'+i,name:UC_BOTS[bi++%UC_BOTS.length],avatar:'🙂',isMe:false,alive:true,role:'civ',word:'',desc:'',_said:false,vote:null});}
+  let bi=0;for(let i=0;i<N-1;i++){const c=pool[i];players.push(c?{id:'p_'+c.id,name:c.remark||c.name,avatar:c.avatar,isMe:false,bot:false,alive:true,role:'civ',word:'',desc:'',_said:false,vote:null}:{id:'bot'+i,name:UC_BOTS[bi++%UC_BOTS.length],avatar:'🙂',isMe:false,bot:true,alive:true,role:'civ',word:'',desc:'',_said:false,vote:null});}
   const ridx=[...Array(N).keys()].sort(()=>Math.random()-.5).slice(0,U);ridx.forEach(i=>players[i].role='undercover');
-  _uc={players,N,U,phase:'loading',round:1,turn:0,order:[],civWord:'',ucWord:'',busy:true,lastOut:null,win:null};
+  _uc={players,N,U,phase:'loading',round:1,turn:0,order:[],civWord:'',ucWord:'',busy:true,lastOut:null,win:null,_botDescDone:false};
   go('uc');render();
   try{const r=await chatAPI([{role:'system',content:'给一对"谁是卧底"游戏用的词：两个相近但不同的具体名词，能描述也容易混淆。只输出一行，格式：平民词:::卧底词。例如 可乐:::雪碧 或 老虎:::豹子'},{role:'user',content:'出一对词'}],{max:40,aux:true});
     const p=(r||'').split(/:::|：：：/).map(x=>x.trim()).filter(Boolean);_uc.civWord=p[0]||'苹果';_uc.ucWord=p[1]||'梨';}
@@ -1295,14 +1295,28 @@ async function ucStart(cid){closeModal();const N=+$('#uc_n').value||5;let U=+$('
   _uc.order=[...Array(N).keys()].sort(()=>Math.random()-.5);_uc.turn=0;_uc.phase='desc';_uc.busy=false;ucStep();}
 function ucAlive(){return _uc.players.filter(p=>p.alive);}
 function ucStep(){if(!_uc)return;
+  // 先把所有 bot 的描述一次性批量生成（省调用）；真正的角色单独调
+  const bots=_uc.players.filter(p=>p.alive&&p.bot&&!p._said);
+  if(bots.length&&!_uc._botDescDone){_uc._botDescDone=true;_uc.busy=true;render();ucBotDescs(bots);return;}
   while(_uc.turn<_uc.order.length){const p=_uc.players[_uc.order[_uc.turn]];
     if(p&&p.alive&&!p._said){
       if(p.isMe){_uc.phase='desc';render();return;}
+      if(p.bot){_uc.turn++;continue;}
       _uc.busy=true;render();ucAIDesc(p);return;}
     _uc.turn++;}
   ucVotePhase();}
+function ucFallbackDesc(){return ['不太好说…','你们先猜猜','跟楼上差不多','嗯…挺常见的','有点难形容'][Math.floor(Math.random()*5)];}
+async function ucBotDescs(bots){if(!_uc)return;
+  const prev=ucAlive().filter(x=>x._said).map(x=>x.name+'：'+x.desc).join('\n')||'(还没人描述)';
+  const lines=bots.map(b=>b.name+'（词：'+b.word+'）').join('\n');
+  try{const r=await chatAPI([{role:'system',content:'你在主持"谁是卧底"，替下面几个电脑玩家各写一句对"自己词"的描述。规则：每句【不能出现该玩家自己的词或其中的字】，自然像真人；谁的词跟多数人明显不同(可能是卧底)就描述得更含糊别暴露。已有描述：\n'+prev+'\n这几个玩家和各自的词：\n'+lines+'\n严格每行一个、按这个顺序，格式：玩家名:::描述（8到22字）。只输出这些行，别的不要。'},{role:'user',content:'给出他们的描述'}],{max:400,aux:true});
+    const map={};(r||'').split('\n').forEach(line=>{const m=line.split(/:::|：：：/);if(m.length>=2&&m[0].trim())map[m[0].trim()]=m[1].trim();});
+    bots.forEach(b=>{b.desc=((map[b.name]||'').replace(/^["「『]+|["」』]+$/g,'').slice(0,40))||ucFallbackDesc();b._said=true;});}
+  catch(e){bots.forEach(b=>{b.desc=ucFallbackDesc();b._said=true;});}
+  if(!_uc)return;_uc.busy=false;ucStep();}
 async function ucAIDesc(p){if(!_uc)return;const prev=ucAlive().filter(x=>x._said).map(x=>x.name+'：'+x.desc).join('\n')||'(你是第一个说的)';
-  try{const r=await chatAPI([{role:'system',content:'你在玩"谁是卧底"，你拿到的词是「'+p.word+'」。用一句话描述这个词，【绝不能说出这个词本身或它包含的字】，要自然、像真人。如果你发现自己的词好像和别人描述的对不上，你可能是少数派(卧底)，那就说得更模糊、更含糊地跟着大家，别暴露自己。本轮已有的描述：\n'+prev+'\n只输出你的一句话描述（8到22字，不要引号、不要带名字、不要解释）。'},{role:'user',content:'轮到你描述了'}],{max:60,aux:true});
+  const cc=getC(p.id.slice(2));const base=cc?buildSystem(cc)+'\n\n':'';
+  try{const r=await chatAPI([{role:'system',content:base+'你在玩"谁是卧底"，你拿到的词是「'+p.word+'」。用一句话描述这个词（可以带点你自己的说话风格），【绝不能说出这个词本身或它包含的字】，要自然、像真人。如果你发现自己的词好像和别人描述的对不上，你可能是少数派(卧底)，那就说得更模糊、更含糊地跟着大家，别暴露自己。本轮已有的描述：\n'+prev+'\n只输出你的一句话描述（8到22字，不要引号、不要带名字、不要解释）。'},{role:'user',content:'轮到你描述了'}],{max:60,aux:true});
     p.desc=(cleanReply(r)||'').replace(/^["「『]+|["」』]+$/g,'').replace(/\n/g,' ').slice(0,40)||'…(想不出词)';}
   catch(e){p.desc='…(没说话)';}
   p._said=true;_uc.turn++;_uc.busy=false;ucStep();}
@@ -1310,11 +1324,19 @@ function ucDesc(){if(!_uc)return;const ta=$('#uc_in');const v=(ta&&ta.value||'')
   const me=_uc.players.find(p=>p.isMe);me.desc=v.slice(0,40);me._said=true;_uc.turn++;ucStep();}
 async function ucVotePhase(){if(!_uc)return;_uc.phase='vote';_uc.busy=true;_uc.players.forEach(p=>p.vote=null);render();
   const alive=ucAlive();const summary=alive.map(p=>p.name+'：'+(p.desc||'(没说)')).join('\n');
-  for(const p of alive){if(p.isMe)continue;
-    const others=alive.filter(x=>x.id!==p.id);
-    try{const r=await chatAPI([{role:'system',content:'你在玩"谁是卧底"，你的词是「'+p.word+'」。这是大家的描述：\n'+summary+'\n谁的描述和你的词最不一样、最可疑，谁就可能是卧底。从这些人里挑一个你要投的：'+others.map(x=>x.name).join('、')+'。只回答一个名字，不要解释。'},{role:'user',content:'你投谁？'}],{max:20,aux:true});
+  // 角色单独投（带各自人设）
+  for(const p of alive){if(p.isMe||p.bot)continue;
+    const others=alive.filter(x=>x.id!==p.id);const cc=getC(p.id.slice(2));const base=cc?buildSystem(cc)+'\n\n':'';
+    try{const r=await chatAPI([{role:'system',content:base+'你在玩"谁是卧底"，你的词是「'+p.word+'」。这是大家的描述：\n'+summary+'\n谁的描述和你的词最不一样、最可疑，谁就可能是卧底。从这些人里挑一个你要投的：'+others.map(x=>x.name).join('、')+'。只回答一个名字，不要解释。'},{role:'user',content:'你投谁？'}],{max:20,aux:true});
       const nm=(r||'').trim();let t=others.find(x=>nm.includes(x.name));if(!t)t=others[Math.floor(Math.random()*others.length)];p.vote=t?t.id:null;}
     catch(e){p.vote=others.length?others[Math.floor(Math.random()*others.length)].id:null;}}
+  // bot 批量投（一次调用）
+  const bots=alive.filter(p=>p.bot);
+  if(bots.length){
+    try{const r=await chatAPI([{role:'system',content:'你在主持"谁是卧底"投票。大家的描述：\n'+summary+'\n替下面每个电脑玩家各投一个最可疑(描述和ta自己词最不搭)的人，不能投自己。玩家及其词：\n'+bots.map(b=>b.name+'（词：'+b.word+'）').join('\n')+'\n可投的人：'+alive.map(x=>x.name).join('、')+'。严格每行一个，格式：玩家名:::要投的人名。只输出这些行。'},{role:'user',content:'给出投票'}],{max:200,aux:true});
+      const map={};(r||'').split('\n').forEach(line=>{const m=line.split(/:::|：：：/);if(m.length>=2)map[m[0].trim()]=m[1].trim();});
+      bots.forEach(b=>{const others=alive.filter(x=>x.id!==b.id);const nm=map[b.name]||'';let t=others.find(x=>nm.includes(x.name));if(!t)t=others[Math.floor(Math.random()*others.length)];b.vote=t?t.id:null;});}
+    catch(e){bots.forEach(b=>{const others=alive.filter(x=>x.id!==b.id);b.vote=others.length?others[Math.floor(Math.random()*others.length)].id:null;});}}
   if(!_uc)return;_uc.busy=false;render();}
 function ucVote(id){if(!_uc||_uc.busy)return;const me=_uc.players.find(p=>p.isMe);if(!me.alive){ucTally();return;}me.vote=id;ucTally();}
 function ucTally(){if(!_uc)return;const alive=ucAlive();const tally={};
@@ -1335,7 +1357,7 @@ function ucTally(){if(!_uc)return;const alive=ucAlive();const tally={};
   render();}
 function ucNextRound(){if(!_uc)return;_uc.round++;_uc.players.forEach(p=>{p._said=false;p.desc='';p.vote=null;});
   _uc.order=_uc.players.map((p,i)=>i).filter(i=>_uc.players[i].alive).sort(()=>Math.random()-.5);
-  _uc.turn=0;_uc.phase='desc';_uc.lastOut=null;render();ucStep();}
+  _uc.turn=0;_uc.phase='desc';_uc.lastOut=null;_uc._botDescDone=false;render();ucStep();}
 function ucPill(p){const me=_uc.players.find(x=>x.isMe);const dead=!p.alive;
   return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;background:${dead?'#1a1a1c':'#202022'};opacity:${dead?'.55':'1'}">
     ${av(p.avatar,'sm')}<div style="flex:1;min-width:0"><div style="font-weight:600;${dead?'text-decoration:line-through':''}">${esc(p.name)}${p.isMe?'（你）':''} ${dead?'<span style="color:#fa5151">'+(p.role==='undercover'?'🕵️卧底':'🙂平民')+' 出局</span>':''}</div>
