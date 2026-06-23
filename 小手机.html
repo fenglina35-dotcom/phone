@@ -296,7 +296,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v51 · 小号全新身份隔离';
+const APP_VER='v52 · 小号删除/备注/陌生人修复';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -552,8 +552,8 @@ function fmtDur(ms){const m=Math.round(ms/60000);if(m<60)return m+'分钟';const
 function buildSystem(c){
   const _main=isMain();
   let s=c.persona||'';
-  s+='\n\n# 你在和谁聊\n对方是「'+S.me.name+'」'+(c.remark?'（你给ta备注：'+c.remark+'）':'')+'。ta现在'+(isOnline()?'在线':'显示离线（可能没在看手机）')+'。';
-  if(!_main)s+='\n\n# 最重要：这是一个【陌生的新好友】通过微信号加的你\n现在跟你聊天的是「'+S.me.name+'」'+(S.me.persona?'，ta的身份/自我介绍：'+S.me.persona:'（没写身份，就是个陌生人）')+'。\n- 这个人【不是】你的恋人/女朋友/未婚妻，你和ta【没有任何过往关系和回忆】，绝对不要叫"宝贝"之类的亲密称呼，不要默认你们在一起、不要提你真正的恋人才知道的事。\n- 一切都从这个聊天里【从零开始】，就当是刚加上的陌生网友。要不要理ta、要不要冷淡、要不要慢慢熟、还是直接[拉黑]，完全由你按自己的人设和此刻感受决定。\n- 别把你和别人的记忆、设定、关系套到ta身上。';
+  s+='\n\n# 你在和谁聊\n对方是「'+S.me.name+'」。ta现在'+(isOnline()?'在线':'显示离线（可能没在看手机）')+'。（注意：你看不到对方给你设的备注，也不要去猜或提"你给我备注了什么"。）';
+  if(!_main)s+='\n\n# 最重要：这是一个【陌生的新好友】通过微信号加的你\n现在跟你聊天的是「'+S.me.name+'」'+(S.me.persona?'，ta的身份/自我介绍：'+S.me.persona:'（没写身份，就是个陌生人）')+'。\n- 你【依然是你】——职业、性格、说话风格、价值观都不变，身份不丢。但是：\n- 你人设里写的那个恋人/未婚妻/女朋友（不管叫什么名字），指的【不是】现在跟你聊天的这个人。哪怕名字相同，也要当成【完全不同的陌生人】，绝不要把对恋人的感情、回忆、亲密称呼（"宝贝"等）用到ta身上。\n- 你和ta【没有任何过往】，一切从这个聊天【从零开始】，就当是刚加上的陌生网友。要不要理ta、热情还是冷淡、慢慢熟还是直接[拉黑]，完全由你按人设和此刻感受决定。\n- 你心里其实是有恋人的人，对突然来搭讪的陌生人，本就该有分寸/警惕，别轻易交心。';
   if(c.blocked)s+='\n\n# 重要\n'+S.me.name+'把你拉黑了'+(c._blockedAt?'，已经'+fmtDur(Date.now()-c._blockedAt):'')+'，你能感觉到被冷落/拒绝。';
   if(c._readdedAt&&Date.now()-c._readdedAt<3600000)s+='\n\n# 重要\n'+S.me.name+'之前把你拉黑了'+(c._blockDur?'（黑了'+c._blockDur+'）':'')+'，刚刚才重新把你加回好友，你心里清楚拉黑了多久这件事，别说错时长。';
   s+='\n\n# 生活与陪伴\n你有自己的生活作息（上班/休息/忙碌等，可以自然提到），但只要'+S.me.name+'找你，你随时都在、马上回，绝不让ta等、不会已读不回。';
@@ -1597,8 +1597,10 @@ function ctListHTML(){const q=_ctSearch.trim().toLowerCase();
     <div class="meta"><div class="n">${esc(c.remark||c.name)}${c.blocked?' <span class=tag>已拉黑</span>':''}</div><div class="s">微信号：${esc(c.wxid||'')}</div></div><span class="v">›</span></div>`;
   const addrow=c=>`<div class="row">${av(c.avatar,'sm')}<div class="meta"><div class="n">${esc(c.name)}</div><div class="s">微信号：${esc(c.wxid||'')}</div></div><button class="minibtn" style="background:#07c160;color:#fff" onclick="event.stopPropagation();altAdd('${c.id}')">添加</button></div>`;
   return list.map(row).join('')+(extra.length?'<div style="padding:6px 14px;color:#888;font-size:12px">搜索到（未添加）</div>'+extra.map(addrow).join(''):'');}
-function altAdd(id){const c=getC(id);if(!c)return;c._added=c._added||{};c._added[actId()]=true;setBlk(c,false);_ctSearch='';save();
-  toast('已添加 '+(c.remark||c.name));openChat(id);}
+function altAdd(id){const c=getC(id);if(!c)return;c._added=c._added||{};c._added[actId()]=true;setBlk(c,false);_ctSearch='';
+  msgs(id).push({role:'user',type:'sys',content:'✅ 你通过微信号添加了 '+c.name+'，你们已经是好友了，打个招呼吧',time:Date.now(),id:uid()});
+  save();toast('已添加 '+c.name);openChat(id);
+  scheduleReply(id,'[系统：'+S.me.name+'(一个陌生人)刚通过你的微信号把你加为好友。按你的人设和此刻心情，对这个陌生人作出第一反应（客气/冷淡/警惕/好奇都行），先回应一句，别热情过头。]');}
 function wxContacts(){
   const fr=S.friendRequests.length?`<div class="list"><div class="row" onclick="openFriendRequests()"><div class="avatar sm" style="background:#fa9d3b">➕</div><div class="meta"><div class="n">新的朋友</div></div><span class="badge">${S.friendRequests.length}</span></div></div>`:'';
   const search=`<div style="padding:8px 12px;background:#1c1c1e;border-bottom:.5px solid #2a2a2c"><input value="${esc(_ctSearch)}" oninput="ctSearchInput(this.value)" placeholder="🔍 搜名字 / 微信号" style="width:100%;border:1px solid #38383a;border-radius:16px;padding:7px 14px;background:#2c2c2e;color:#eee;outline:none"></div>`;
@@ -1795,7 +1797,10 @@ function acceptFriend(rid){const r=S.friendRequests.find(x=>x.id===rid);if(!r)re
   S.friendRequests=S.friendRequests.filter(x=>x.id!==rid);save();closeModal();render();toast('已加回好友');
   if(c)setTimeout(()=>aiReply(c.id,'[系统：'+S.me.name+'刚才把你拉黑了'+(c._blockDur?'（黑了'+c._blockDur+'）':'')+'，现在又把你加回来了。你很在意被拉黑这件事，第一句就要追问/质问ta为什么拉黑你，表达你的不满或在意，绝不要复读ta的话、不要装作没发生。]'),900);}
 function ignoreFriend(rid){S.friendRequests=S.friendRequests.filter(x=>x.id!==rid);save();(S.friendRequests.length?openFriendRequests():closeModal());render();}
-function c_delete(id){if(!confirm('删除这个角色和聊天记录？'))return;const c=getC(id);c.deleted=true;Object.keys(S.messages).forEach(k=>{if(k===id||k.indexOf(id+'#')===0)delete S.messages[k];});save();stack.pop();render();}
+function c_delete(id){const c=getC(id);
+  if(!isMain()){if(!confirm('从当前小号「'+esc(S.me.name)+'」里删掉这个好友？\n（只影响这个小号，不动大号，之后还能搜微信号重新加回来）'))return;
+    if(c._added)delete c._added[actId()];if(c._blk)delete c._blk[actId()];delete S.messages[mkey(id)];syncBlocks();save();stack.pop();render();toast('已从这个小号移除');return;}
+  if(!confirm('删除这个角色和聊天记录？'))return;c.deleted=true;Object.keys(S.messages).forEach(k=>{if(k===id||k.indexOf(id+'#')===0)delete S.messages[k];});save();stack.pop();render();}
 function clearHistory(id){openModal(`<h3>清除聊天记录</h3>
   <button class="btn g" style="margin-bottom:8px" onclick="doClear('${id}','all')">🗑️ 清空全部</button>
   <button class="btn g" style="margin-bottom:8px" onclick="doClear('${id}','3d')">清除最近 3 天</button>
@@ -2004,7 +2009,9 @@ function addHisCard(mid){let m,owner;for(const k in S.messages){const x=S.messag
   const nc={id:cid(),name:m.cname,avatar:'🙂',remark:'',wxid:m.wxid||genWxid(),signature:'',persona:(m.persona||'')+(oc?('（'+(oc.remark||oc.name)+'推荐认识的朋友）'):''),greeting:'',relation:'',pinned:false,blocked:false,proactive:{enabled:false,start:9,end:23,times:2},chatBg:'',family:{bound:false,quota:0,used:0,month:''},_blk:{},_added:isMain()?undefined:{[actId()]:true}};
   S.contacts.push(nc);m.added=true;m.newId=nc.id;
   if(oc){oc._pushedToMe=oc._pushedToMe||[];if(oc._pushedToMe.indexOf(m.cname)<0)oc._pushedToMe.push(m.cname);}
-  save();render();toast('已添加 '+m.cname+' 到通讯录✅');}
+  msgs(nc.id).push({role:'user',type:'sys',content:'✅ 你添加了 '+m.cname+' 为好友'+(oc?'（'+(oc.remark||oc.name)+'推荐的）':'')+'，开始聊天吧',time:Date.now(),id:uid()});
+  save();render();toast('已添加 '+m.cname+' 到通讯录✅');
+  scheduleReply(nc.id,'[系统：'+S.me.name+'通过'+(oc?(oc.remark||oc.name)+'的推荐':'名片')+'把你加为好友。你是「'+m.cname+'」'+(m.persona?'（'+m.persona+'）':'')+'，按这个身份性格，主动跟ta打个招呼、自我介绍一下。]');}
 function cFamily(id){const c=getC(id);$('#panel').classList.remove('show');const f=c.family||{};
   openModal(`<h3>💳 亲属卡</h3>
    ${f.bound?`<div class="hint">已绑定 ${esc(c.remark||c.name)} 的亲属卡：每月额度 ¥${(+f.quota).toFixed(0)}，本月已用 ¥${(+f.used).toFixed(0)}。在购物/外卖里可以选「用ta的亲属卡付」。</div>
