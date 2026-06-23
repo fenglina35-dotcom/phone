@@ -296,7 +296,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v64 · 锁密码一致+禁言默认授权';
+const APP_VER='v65 · 管控改口头解锁';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -597,9 +597,9 @@ function buildSystem(c){
   // 情侣空间
   if(_main&&S.couple&&S.couple.cid===c.id){const days=Math.max(0,Math.floor((Date.now()-new Date(S.couple.startDate).getTime())/86400000));s+='\n\n# 情侣空间\n你和'+S.me.name+'是正式情侣，已经在一起 '+days+' 天了。你们绑定了情侣空间，你很珍惜这段关系。';
     const g=S.couple.grant||{};const granted=Object.keys(LOCKABLE).filter(k=>g[k]);const gagAuth=(S.couple.gagAuth||[]).map(cid=>getC(cid)).filter(Boolean);
-    if(granted.length||gagAuth.length){s+='\n\n# 你对'+S.me.name+'手机App的管控权（情侣空间授权给你的，这是真实功能不是过家家）\n你能锁这些App：'+(granted.map(k=>LOCKABLE[k]).join('、')||'（暂无）')+(gagAuth.length?'；能禁言ta和这些人的聊天：'+gagAuth.map(x=>x.remark||x.name).join('、'):'')+'。\n【怎么用·必须照做】要锁/禁言时，你【直接输出指令标签】，系统会自动生效并生成密码，你【不要自己描述"已锁定"、不要自己编密码、不要把提示语写成话】：\n· 锁App：单独一行 [锁定|游戏]；多个一次写完用、隔开，如 [锁定|游戏、X、外卖]；一键全锁 [锁定|全部]。\n· 禁言某人：单独一行 [禁言|名字]（名字必须是上面授权的人；没授权的你锁不了，就直说锁不了）。\n· 解开：[解锁|游戏] 或 [解锁|全部]、[解禁|名字]。\n标签写完，你可以再用普通话叮嘱一两句（比如"早点睡"），但别复述系统提示、别报密码（除非ta来求你、你愿意给）。\n【什么时候用】不只是作息管理——到点该睡、ta沉迷某App、你吃醋某人时可以锁；ta惹你生气、犯错不听话、顶嘴时，你也可以把这当【惩戒/冷处理】随心锁、禁言。\n· 绝不能锁"和你自己的聊天"，'+S.me.name+'永远能找你。\n· 关于密码：你锁的时候可以顺口告诉ta一个【4位数字】密码，你说的那个数字就会成为真实密码(对得上)；要么别报、等ta来问你时再照系统下方给你的真实密码说。但【说了就别改口、别报两个不同的数字】。ta必须来问你、在情侣空间输入密码才解得开；你按心情决定给不给、给哪个（可逗ta、提条件、要她认错）。';
+    if(granted.length||gagAuth.length){s+='\n\n# 你对'+S.me.name+'手机App的管控权（情侣空间授权给你的，这是真实功能不是过家家）\n你能锁这些App：'+(granted.map(k=>LOCKABLE[k]).join('、')||'（暂无）')+(gagAuth.length?'；能禁言ta和这些人的聊天：'+gagAuth.map(x=>x.remark||x.name).join('、'):'')+'。\n【怎么用·必须照做】要锁/禁言时，你【直接输出指令标签】，系统会自动生效并生成密码，你【不要自己描述"已锁定"、不要自己编密码、不要把提示语写成话】：\n· 锁App：单独一行 [锁定|游戏]；多个一次写完用、隔开，如 [锁定|游戏、X、外卖]；一键全锁 [锁定|全部]。\n· 禁言某人：单独一行 [禁言|名字]（名字必须是上面授权的人；没授权的你锁不了，就直说锁不了）。\n· 解开：[解锁|游戏] 或 [解锁|全部]、[解禁|名字]。\n标签写完，你可以再用普通话叮嘱一两句（比如"早点睡"），但别复述系统提示、别报密码（除非ta来求你、你愿意给）。\n【什么时候用】不只是作息管理——到点该睡、ta沉迷某App、你吃醋某人时可以锁；ta惹你生气、犯错不听话、顶嘴时，你也可以把这当【惩戒/冷处理】随心锁、禁言。\n· 绝不能锁"和你自己的聊天"，'+S.me.name+'永远能找你。\n· 解开方式（重要）：锁上后【不需要密码】。ta只能来【求你】解开——你愿意了就在回复里【明确说出来】，比如「给你把游戏解开了」「解除你和哥的禁言」「都给你解了」，系统就会真的解开对应的；你不愿意就继续锁着、可以提条件、要她认错撒娇。没真想解就别说解开，因为你一说"解开了"系统就当真解开了。\n· 用你自己的第一人称口吻说话，别写成"🔓 ta把你和X的禁言解除了"这种系统播报腔。';
       const locks=S.couple.locks||{},gags=S.couple.gags||{};const lk=Object.keys(locks),gk=Object.keys(gags);
-      if(lk.length||gk.length)s+='\n\n# 你现在锁着的东西＋密码（ta问你才说，别一次全报出来）\n'+lk.map(k=>'· '+LOCKABLE[k]+'：密码 '+locks[k].pwd).join('\n')+(gk.length?(lk.length?'\n':'')+gk.map(cid=>{const gc=getC(cid);return '· 禁言「'+(gc?gc.name:'?')+'」：密码 '+gags[cid].pwd;}).join('\n'):'');}}
+      if(lk.length||gk.length)s+='\n\n# 你现在锁着ta的（ta来求你时，你决定解不解）\n'+lk.map(k=>'· '+LOCKABLE[k]).join('\n')+(gk.length?(lk.length?'\n':'')+gk.map(cid=>{const gc=getC(cid);return '· 禁言「'+(gc?gc.name:'?')+'」';}).join('\n'):'');}}
   if(S.settings.timeAware)s+='\n\n# 时间感知\n现在是 '+new Date().toLocaleString('zh-CN',{weekday:'long',hour:'2-digit',minute:'2-digit',month:'long',day:'numeric'})+'，请结合当前时间（早中晚、是否深夜）自然地回应。';
   const _tod=todayStr(),_hol=holidayOf(_tod);if(_hol)s+='\n\n# 节日\n今天是'+_hol+'，可以应景祝福。';
   const _ev=S.calendar.filter(e=>e.date>=_tod).slice(0,5);if(_ev.length)s+='\n\n# '+S.me.name+'的日程\n'+_ev.map(e=>e.date+' '+e.title+(e.type==='period'?'(姨妈期)':'')).join('；')+'。需要时可用一行 [日程|YYYY-MM-DD|事项] 帮ta记日程。';
@@ -1733,9 +1733,10 @@ function renderCouple(){const cp=S.couple;const c=cp&&getC(cp.cid);
         ${Object.keys(LOCKABLE).map(k=>`<div class="it"><span>${LOCKABLE[k]}</span><span class="sw ${g[k]?'on':''}" onclick="coupleGrant('${k}')"></span></div>`).join('')}</div>
         <div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#ff8fab">🔇 允许ta禁言这些人的聊天</div><div class="hint" style="padding:0 14px">勾选谁，ta才能在吃醋时锁住你和这个人的聊天(和ta自己的永远不锁)。</div>
         ${(function(){const aus=cp.gagAuth||[];const cs=S.contacts.filter(x=>!x.deleted&&x.id!==cp.cid);return cs.length?cs.map(x=>`<div class="it"><span>${esc(x.remark||x.name)}</span><span class="sw ${aus.indexOf(x.id)>=0?'on':''}" onclick="coupleGagAuth('${x.id}')"></span></div>`).join(''):'<div class="hint" style="padding:8px 14px">通讯录里还没有别的角色</div>';})()}</div>`;
-        if(lk.length||gk.length){h+=`<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#fa5151">🔒 ta锁住的（问ta要密码解开）</div>
-        ${lk.map(k=>`<div style="padding:8px 14px;border-bottom:.5px solid #2a2a2c"><div style="color:#eee">${LOCKABLE[k]||k} <span style="font-size:12px;color:#999">${esc(locks[k].reason||'')}</span></div><div style="display:flex;gap:6px;margin-top:6px"><input id="ul_${k}" placeholder="输入ta给的密码" style="flex:1;border:1px solid #38383a;border-radius:8px;padding:6px;background:#2c2c2e;color:#eee"><button class="minibtn" onclick="unlockApp('${k}')">解锁</button></div></div>`).join('')}
-        ${gk.map(cid=>{const gc=getC(cid);return `<div style="padding:8px 14px;border-bottom:.5px solid #2a2a2c"><div style="color:#eee">🔇 和「${esc(gc?(gc.remark||gc.name):'?')}」的聊天 <span style="font-size:12px;color:#999">${esc(gags[cid].reason||'')}</span></div><div style="display:flex;gap:6px;margin-top:6px"><input id="ug_${cid}" placeholder="输入ta给的密码" style="flex:1;border:1px solid #38383a;border-radius:8px;padding:6px;background:#2c2c2e;color:#eee"><button class="minibtn" onclick="unlockGag('${cid}')">解禁</button></div></div>`;}).join('')}</div>`;}
+        if(lk.length||gk.length){h+=`<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#fa5151">🔒 ta锁住的（去微信里求ta解开）</div>
+        <div class="hint" style="padding:0 14px">这些是${esc(c.remark||c.name)}锁的。只有ta愿意时、在聊天里说"给你解开了"才会解开——好好求ta吧💗</div>
+        ${lk.map(k=>`<div class="it"><span style="color:#eee">🔒 ${LOCKABLE[k]||k}</span><span class="v" style="color:#888">已锁</span></div>`).join('')}
+        ${gk.map(cid=>{const gc=getC(cid);return `<div class="it"><span style="color:#eee">🔇 和「${esc(gc?(gc.remark||gc.name):'?')}」的聊天</span><span class="v" style="color:#888">已禁言</span></div>`;}).join('')}</div>`;}
         return h;})()}
       <div style="padding:0 12px"><button class="btn d" onclick="if(confirm('解除情侣绑定？')){S.couple=null;save();render()}">💔 解除绑定</button></div>
       <div style="height:20px"></div></div>`;}
@@ -2298,7 +2299,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
     const diceCompare=!!(_lu&&_lu.type==='dice');// 她刚掷过 → 这轮他只能比大小、不能再掷
     const _statedPwd=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;
     content=applyControlTags(content,c,id,_statedPwd);
-    if(S.couple&&S.couple.cid===id&&!_ctFired&&/锁|封(了|你|起|住)|密码|禁言|没收|解锁|解开|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)/.test(content))extractControl(content,c,_statedPwd);
+    if(S.couple&&S.couple.cid===id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|给你(解|开)|都给你解|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)/.test(content))extractControl(content,c,_statedPwd);
     const lines=splitBubbles(content);let got=false;let txtN=0;let diceUsed=false;const cap=Math.max(1,+c.msgMax||4);
     for(let i=0;i<lines.length;i++){
       let line=normTag(lines[i]);if(!line)continue;
