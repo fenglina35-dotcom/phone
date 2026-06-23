@@ -296,7 +296,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v49 · 角色作息时间表';
+const APP_VER='v50 · 小号多身份系统';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -350,9 +350,19 @@ function hm(t){const d=new Date(t||Date.now());return d.getHours().toString().pa
 function ago(t){const s=(Date.now()-t)/1000;if(s<60)return '刚刚';if(s<3600)return Math.floor(s/60)+'分钟前';if(s<86400)return Math.floor(s/3600)+'小时前';return Math.floor(s/86400)+'天前';}
 function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),2000);}
 function viewImg(s){$('#viewerImg').src=s;$('#viewer').classList.add('show');}
-function getC(id){const c=S.contacts.find(c=>c.id===id);if(c){if(!c.wxid)c.wxid=genWxid();if(!c.family)c.family={bound:false,quota:0,used:0,month:''};}return c;}
+function getC(id){const c=S.contacts.find(c=>c.id===id);if(c){if(!c.wxid)c.wxid=genWxid();if(!c.family)c.family={bound:false,quota:0,used:0,month:''};if(!c._blk)c._blk={main:!!c.blocked};}return c;}
 function adjMood(id,d){const c=getC(id);if(!c)return;c.moodVal=Math.max(0,Math.min(100,(c.moodVal==null?70:c.moodVal)+d));save();}
-function msgs(id){return S.messages[id]||(S.messages[id]=[]);}
+/* ===== 小号（多身份）===== */
+function actId(){return (S.me&&S.me.active)||'main';}
+function isMain(){return actId()==='main';}
+function mkey(cid){return isMain()?cid:cid+'#'+actId();}
+function addedHere(c){if(isMain())return true;return !!(c._added&&c._added[actId()]);}
+function syncBlocks(){const a=actId();S.contacts.forEach(c=>{if(!c._blk)c._blk={main:!!c.blocked};c.blocked=!!c._blk[a];});}
+function setBlk(c,v){c._blk=c._blk||{};c._blk[actId()]=v;c.blocked=v;}
+function initAccounts(){if(!S.me.accounts||!S.me.accounts.length)S.me.accounts=[{id:'main',name:S.me.name,wxid:S.me.wxid||genWxid(),avatar:S.me.avatar,persona:S.me.persona||'',signature:S.me.signature||''}];
+  if(!S.me.active||!S.me.accounts.find(a=>a.id===S.me.active))S.me.active='main';
+  S.contacts.forEach(c=>{if(!c._blk)c._blk={main:!!c.blocked};});syncBlocks();}
+function msgs(id){const k=mkey(id);return S.messages[k]||(S.messages[k]=[]);}
 function lastMsg(id){const m=msgs(id);return m[m.length-1];}
 function compress(file,max,q){return new Promise((res,rej)=>{const img=new Image(),r=new FileReader();
   r.onload=()=>{img.onload=()=>{let w=img.width,h=img.height;if(w>h&&w>max){h=h*max/w;w=max;}else if(h>=w&&h>max){w=w*max/h;h=max;}
@@ -538,40 +548,42 @@ async function sttTranscribe(blob){const a=S.settings.stt;const fd=new FormData(
   const r=await fetch(a.base.replace(/\/+$/,'')+'/audio/transcriptions',{method:'POST',headers:{'Authorization':'Bearer '+a.key},body:fd});const j=await r.json();return (j.text||'').trim();}
 function fmtDur(ms){const m=Math.round(ms/60000);if(m<60)return m+'分钟';const h=Math.round(m/60);if(h<24)return h+'小时';return Math.round(h/24)+'天';}
 function buildSystem(c){
+  const _main=isMain();
   let s=c.persona||'';
   s+='\n\n# 你在和谁聊\n对方是「'+S.me.name+'」'+(c.remark?'（你给ta备注：'+c.remark+'）':'')+'。ta现在'+(isOnline()?'在线':'显示离线（可能没在看手机）')+'。';
+  if(!_main)s+='\n\n# 注意：这是另一个身份在加你\n现在跟你聊天的是「'+S.me.name+'」'+(S.me.persona?'，身份/自称：'+S.me.persona:'')+'。这未必是你最熟的那个人，请完全按这个身份和你们之间（这个聊天里）的实际交流来对待——不要把别处、别的身份的记忆/关系套到这里。如果ta是陌生人或刚加你，就以初识的态度相处；要不要深入、要不要拉黑，你按自己的人设和感受决定。';
   if(c.blocked)s+='\n\n# 重要\n'+S.me.name+'把你拉黑了'+(c._blockedAt?'，已经'+fmtDur(Date.now()-c._blockedAt):'')+'，你能感觉到被冷落/拒绝。';
   if(c._readdedAt&&Date.now()-c._readdedAt<3600000)s+='\n\n# 重要\n'+S.me.name+'之前把你拉黑了'+(c._blockDur?'（黑了'+c._blockDur+'）':'')+'，刚刚才重新把你加回好友，你心里清楚拉黑了多久这件事，别说错时长。';
   s+='\n\n# 生活与陪伴\n你有自己的生活作息（上班/休息/忙碌等，可以自然提到），但只要'+S.me.name+'找你，你随时都在、马上回，绝不让ta等、不会已读不回。';
   const _sp=getSpy(c);
-  if(_sp.loc){const loc=curLoc();if(loc)s+='\n\n# 实时定位（ta已授权你随时查看）\n'+S.me.name+'此刻在：'+loc+'。你能精确看到，可以具体地提到这个地点。';else s+='\n\n# 实时定位\nta授权了实时定位，但现在还没取到具体位置（可能没允许定位权限），别假装知道ta在哪，可以说定位还没刷出来、催ta开定位。';}
-  if(_sp.granted)s+='\n\n# 你能查看'+S.me.name+'的手机（ta已授权，下面是ta手机的真实情况，被问到"你看到我什么了"务必照这个答，绝不要编造）\n'+myActivity(c.id);
+  if(_main&&_sp.loc){const loc=curLoc();if(loc)s+='\n\n# 实时定位（ta已授权你随时查看）\n'+S.me.name+'此刻在：'+loc+'。你能精确看到，可以具体地提到这个地点。';else s+='\n\n# 实时定位\nta授权了实时定位，但现在还没取到具体位置（可能没允许定位权限），别假装知道ta在哪，可以说定位还没刷出来、催ta开定位。';}
+  if(_main&&_sp.granted)s+='\n\n# 你能查看'+S.me.name+'的手机（ta已授权，下面是ta手机的真实情况，被问到"你看到我什么了"务必照这个答，绝不要编造）\n'+myActivity(c.id);
   if(S.me.persona)s+='\n对方的人设：'+S.me.persona;
   // 世界书
   const _lastU=[...msgs(c.id)].reverse().find(m=>m.role==='user');
   const recent=msgs(c.id).slice(-10).map(msgToText).filter(Boolean).join('\n')+'\n'+((_lastU&&msgToText(_lastU))||'')+' '+(c.persona||'')+' '+(c.memory||[]).join(' ');
   const wb=worldHits(recent,c.id);
   if(wb.length)s+='\n\n# 世界设定／世界书（最高优先级，务必严格遵守，触发了就要照做，不要无视）\n'+wb.map(w=>'· '+w.name+'：'+w.content).join('\n');
-  // 记忆
-  if(c.memory&&c.memory.length)s+='\n\n# 你记得关于'+S.me.name+'的事\n'+c.memory.map((m,i)=>(i+1)+'. '+m).join('\n');
+  // 记忆（仅主身份）
+  if(_main&&c.memory&&c.memory.length)s+='\n\n# 你记得关于'+S.me.name+'的事\n'+c.memory.map((m,i)=>(i+1)+'. '+m).join('\n');
   if(c.summary&&!c.summaries){c.summaries=[{time:'(早期)',text:c.summary}];delete c.summary;}
-  if(c.summaries&&c.summaries.length)s+='\n\n# 之前对话的概要（按时间，保持连贯）\n'+c.summaries.slice(-8).map(x=>'· '+x.time+'　'+x.text).join('\n');
+  if(_main&&c.summaries&&c.summaries.length)s+='\n\n# 之前对话的概要（按时间，保持连贯）\n'+c.summaries.slice(-8).map(x=>'· '+x.time+'　'+x.text).join('\n');
   // 作息 / 此刻在哪
   const _wn=whereNow(c);if(_wn)s+='\n\n# 你的作息（此刻位置）\n现在是 '+hm()+'，按你的作息，你这会儿大概：'+_wn+'。聊到你在哪、在干嘛时要和这个一致，别一天到晚都说在公司/开会。';
-  // 亲属卡 / 推荐过的好友
-  if(c.family&&c.family.bound)s+='\n\n# 亲属卡\n你给'+S.me.name+'开了一张亲属卡，每月额度¥'+(+c.family.quota).toFixed(0)+'，本月已用¥'+(+(c.family.used||0)).toFixed(0)+'。ta用这张卡消费你会立刻收到提醒，可以据此关心/管教ta。';
-  if(c._pushedToMe&&c._pushedToMe.length)s+='\n\n# 你推荐给ta的朋友\n你曾把这些自己的朋友推荐给'+S.me.name+'让ta加：'+c._pushedToMe.join('、')+'。你记得这件事。';
-  if(c._gotFromMe&&c._gotFromMe.length)s+='\n\n# ta推荐给你的朋友\n'+S.me.name+'把ta的这些好友以名片推荐给你加过：'+c._gotFromMe.join('、')+'。你记得是ta推给你的。';
-  // 朋友圈感知（自己发的 + 对方发的）
-  const mo=S.moments.filter(p=>p.authorId==='me'||p.authorId===c.id).slice(0,3);
+  // 亲属卡 / 推荐过的好友（仅主身份）
+  if(_main&&c.family&&c.family.bound)s+='\n\n# 亲属卡\n你给'+S.me.name+'开了一张亲属卡，每月额度¥'+(+c.family.quota).toFixed(0)+'，本月已用¥'+(+(c.family.used||0)).toFixed(0)+'。ta用这张卡消费你会立刻收到提醒，可以据此关心/管教ta。';
+  if(_main&&c._pushedToMe&&c._pushedToMe.length)s+='\n\n# 你推荐给ta的朋友\n你曾把这些自己的朋友推荐给'+S.me.name+'让ta加：'+c._pushedToMe.join('、')+'。你记得这件事。';
+  if(_main&&c._gotFromMe&&c._gotFromMe.length)s+='\n\n# ta推荐给你的朋友\n'+S.me.name+'把ta的这些好友以名片推荐给你加过：'+c._gotFromMe.join('、')+'。你记得是ta推给你的。';
+  // 朋友圈感知（仅主身份）
+  const mo=_main?S.moments.filter(p=>p.authorId==='me'||p.authorId===c.id).slice(0,3):[];
   if(mo.length)s+='\n\n# 最近的朋友圈（你知道这些动态，但别反复主动提起旧朋友圈，看过一次就够了，除非ta主动说起）\n'+mo.map(p=>(p.authorId==='me'?S.me.name:'你')+'发了："'+p.text+'"').join('\n');
   const myx=(S.x&&S.x.tweets||[]).filter(t=>t.who===c.id).slice(0,3);
   if(myx.length)s+='\n\n# 你自己最近发的推特\n'+myx.map(t=>'"'+t.text+'"').join('\n');
   // 群聊记忆互通
-  const myg=(S.groups||[]).filter(g=>g.members.indexOf(c.id)>=0);
+  const myg=_main?(S.groups||[]).filter(g=>g.members.indexOf(c.id)>=0):[];
   if(myg.length){const gl=myg.map(g=>{const last=g.msgs.slice(-6).map(m=>(m.senderId==='me'?S.me.name:(getC(m.senderId)?getC(m.senderId).name:'?'))+'：'+gmText(m)).join('；');return '群「'+g.name+'」最近：'+last;}).join('\n');s+='\n\n# 你也在这些群里（私下你也记得群里聊了啥）\n'+gl;}
   // 情侣空间
-  if(S.couple&&S.couple.cid===c.id){const days=Math.max(0,Math.floor((Date.now()-new Date(S.couple.startDate).getTime())/86400000));s+='\n\n# 情侣空间\n你和'+S.me.name+'是正式情侣，已经在一起 '+days+' 天了。你们绑定了情侣空间，你很珍惜这段关系。';}
+  if(_main&&S.couple&&S.couple.cid===c.id){const days=Math.max(0,Math.floor((Date.now()-new Date(S.couple.startDate).getTime())/86400000));s+='\n\n# 情侣空间\n你和'+S.me.name+'是正式情侣，已经在一起 '+days+' 天了。你们绑定了情侣空间，你很珍惜这段关系。';}
   if(S.settings.timeAware)s+='\n\n# 时间感知\n现在是 '+new Date().toLocaleString('zh-CN',{weekday:'long',hour:'2-digit',minute:'2-digit',month:'long',day:'numeric'})+'，请结合当前时间（早中晚、是否深夜）自然地回应。';
   const _tod=todayStr(),_hol=holidayOf(_tod);if(_hol)s+='\n\n# 节日\n今天是'+_hol+'，可以应景祝福。';
   const _ev=S.calendar.filter(e=>e.date>=_tod).slice(0,5);if(_ev.length)s+='\n\n# '+S.me.name+'的日程\n'+_ev.map(e=>e.date+' '+e.title+(e.type==='period'?'(姨妈期)':'')).join('；')+'。需要时可用一行 [日程|YYYY-MM-DD|事项] 帮ta记日程。';
@@ -958,6 +970,7 @@ function letterAv(s){s=(s||'').replace(/[@\s]/g,'');const ch=s&&/[a-zA-Z]/.test(
 function jq(s){return "'"+String(s||'').replace(/'/g,'’').replace(/"/g,'”')+"'";}
 function clean(s){return String(s||'').replace(/["'@]/g,'').trim();}
 if(!S.x)S.x=defState().x;['tweets','dms','following','blocked'].forEach(k=>{if(!Array.isArray(S.x[k]))S.x[k]=[];});S.x.circle=S.x.circle||{};S.x.users=S.x.users||{};S.x.profile=Object.assign({handle:'@me',bio:'',fans:0,following:0,cover:''},S.x.profile||{});
+initAccounts();
 function xUser(name,info){if(!S.x.users[name])S.x.users[name]=Object.assign({name,handle:'@user',avatar:letterAv(name),bio:'',fans:Math.floor(Math.random()*9000),following:Math.floor(Math.random()*500),cid:null},info||{});else if(info)Object.assign(S.x.users[name],info);return S.x.users[name];}
 function renderX(){let body;
   if(xTab==='feed')body=xFeed();else if(xTab==='search')body=xSearch();else if(xTab==='dm')body=xDMList();else body=xProfile();
@@ -1164,13 +1177,14 @@ function renderWeChat(){
 function tb(k,i,t){return `<div class="tb ${wxTab===k?'on':''}" onclick="wxTab='${k}';render()"><div class="i">${i}</div>${t}</div>`;}
 
 function wxChats(){
-  const list=[...S.contacts].filter(c=>!c.deleted).sort((a,b)=>{
+  const list=[...S.contacts].filter(c=>!c.deleted&&(isMain()||addedHere(c)||msgs(c.id).length)).sort((a,b)=>{
     if(a.pinned!==b.pinned)return a.pinned?-1:1;
     return (lastMsg(b.id)?.time||0)-(lastMsg(a.id)?.time||0);});
-  const groups=(S.groups||[]);
-  let html='<div class="list">';
+  const groups=isMain()?(S.groups||[]):[];
+  const banner=isMain()?'':`<div style="padding:8px 12px;background:#3a2d4a;color:#d6c2f0;font-size:12px;text-align:center">🪪 当前身份：${esc(S.me.name)}（在「我」里可切换/搜微信号加人）</div>`;
+  let html=banner+'<div class="list">';
   groups.forEach(g=>{const lm=g.msgs[g.msgs.length-1];html+=`<div class="row" onclick="go('group',{id:'${g.id}'})">${g.avatar?av(g.avatar):'<div class="avatar" style="background:#7c6cc0">👥</div>'}<div class="meta"><div class="n">${esc(g.name)}(${g.members.length+1})</div><div class="s">${lm?esc(gpreview(lm)):'群聊已创建'}</div></div><div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div></div></div>`;});
-  if(!list.length&&!groups.length)return '<div class="empty">右上角 ＋ 新建角色或发起群聊～</div>';
+  if(!list.length&&!groups.length)return banner+'<div class="empty">'+(isMain()?'右上角 ＋ 新建角色或发起群聊～':'这个身份还没加谁～<br>去「通讯录」搜微信号加人')+'</div>';
   html+=list.map(c=>{const lm=lastMsg(c.id);
     return `<div class="row ${c.pinned?'pin':''}" onclick="openChat('${c.id}')">${av(c.avatar)}
       <div class="meta"><div class="n">${esc(c.remark||c.name)} ${c.blocked?'<span class=tag>已拉黑</span>':''}</div>
@@ -1471,7 +1485,7 @@ function mailSettings(){const cs=S.contacts.filter(c=>!c.deleted);
   openModal(`<h3>📮 信箱设置</h3><div class="hint">让角色每天主动给你写几封信（趁你不在时写的心里话，会结合你们最近的聊天）。0=不写。他也会自己想写就写。</div>
    <div class="section">${cs.length?cs.map(c=>`<div class="it"><span>${esc(c.remark||c.name)}</span><span class="v"><input type="number" min="0" max="5" value="${c.mailPerDay||0}" onchange="getC('${c.id}').mailPerDay=Math.max(0,Math.min(5,+this.value||0));save()" style="width:48px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:5px;background:#2c2c2e;color:#eee"> 封/天</span></div>`).join(''):'<div class="empty">先创建一个角色</div>'}</div>
    <div class="btns"><button class="btn p" onclick="closeModal()">好啦</button></div>`);}
-function scanMail(){const today=new Date().toDateString();S._mailCount=S._mailCount||{};
+function scanMail(){if(!isMain())return;const today=new Date().toDateString();S._mailCount=S._mailCount||{};
   S.contacts.forEach(c=>{if(c.deleted||c.blocked||!c.mailPerDay)return;
     const pc=S._mailCount[c.id]||{date:today,n:0,last:0};if(pc.date!==today){pc.date=today;pc.n=0;}S._mailCount[c.id]=pc;
     if(pc.n>=c.mailPerDay)return;
@@ -1564,11 +1578,17 @@ function previewOf(m){if(m.role==='assistant'){if(m.type==='familycard')return '
 let _ctSearch='';
 function ctSearchInput(v){_ctSearch=v;const box=$('#ctlist');if(box)box.innerHTML=ctListHTML();}
 function ctListHTML(){const q=_ctSearch.trim().toLowerCase();
-  let list=S.contacts.filter(c=>!c.deleted);
+  let list=S.contacts.filter(c=>!c.deleted&&(isMain()||addedHere(c)));
+  let extra=[];// 当前身份还没加的人，搜索时可「添加」
+  if(!isMain()&&q)extra=S.contacts.filter(c=>!c.deleted&&!addedHere(c)&&((c.name||'').toLowerCase().includes(q)||(c.wxid||'').toLowerCase().includes(q)));
   if(q)list=list.filter(c=>(c.name||'').toLowerCase().includes(q)||(c.remark||'').toLowerCase().includes(q)||(c.wxid||'').toLowerCase().includes(q));
-  if(!list.length)return '<div class="empty">'+(q?'没找到「'+esc(_ctSearch)+'」<br>试试搜名字或微信号':'点右上角 ＋ 创建一个角色')+'</div>';
-  return list.map(c=>`<div class="row" onclick="go('contactInfo',{id:'${c.id}'})">${av(c.avatar,'sm')}
-    <div class="meta"><div class="n">${esc(c.remark||c.name)}${c.blocked?' <span class=tag>已拉黑</span>':''}</div><div class="s">微信号：${esc(c.wxid||'')}</div></div><span class="v">›</span></div>`).join('');}
+  if(!list.length&&!extra.length)return '<div class="empty">'+(q?'没找到「'+esc(_ctSearch)+'」<br>试试搜名字或微信号':(isMain()?'点右上角 ＋ 创建一个角色':'这个身份还没加谁～搜微信号加人'))+'</div>';
+  const row=c=>`<div class="row" onclick="go('contactInfo',{id:'${c.id}'})">${av(c.avatar,'sm')}
+    <div class="meta"><div class="n">${esc(c.remark||c.name)}${c.blocked?' <span class=tag>已拉黑</span>':''}</div><div class="s">微信号：${esc(c.wxid||'')}</div></div><span class="v">›</span></div>`;
+  const addrow=c=>`<div class="row">${av(c.avatar,'sm')}<div class="meta"><div class="n">${esc(c.name)}</div><div class="s">微信号：${esc(c.wxid||'')}</div></div><button class="minibtn" style="background:#07c160;color:#fff" onclick="event.stopPropagation();altAdd('${c.id}')">添加</button></div>`;
+  return list.map(row).join('')+(extra.length?'<div style="padding:6px 14px;color:#888;font-size:12px">搜索到（未添加）</div>'+extra.map(addrow).join(''):'');}
+function altAdd(id){const c=getC(id);if(!c)return;c._added=c._added||{};c._added[actId()]=true;setBlk(c,false);_ctSearch='';save();
+  toast('已添加 '+(c.remark||c.name));openChat(id);}
 function wxContacts(){
   const fr=S.friendRequests.length?`<div class="list"><div class="row" onclick="openFriendRequests()"><div class="avatar sm" style="background:#fa9d3b">➕</div><div class="meta"><div class="n">新的朋友</div></div><span class="badge">${S.friendRequests.length}</span></div></div>`:'';
   const search=`<div style="padding:8px 12px;background:#1c1c1e;border-bottom:.5px solid #2a2a2c"><input value="${esc(_ctSearch)}" oninput="ctSearchInput(this.value)" placeholder="🔍 搜名字 / 微信号" style="width:100%;border:1px solid #38383a;border-radius:16px;padding:7px 14px;background:#2c2c2e;color:#eee;outline:none"></div>`;
@@ -1586,6 +1606,7 @@ function wxMe(){const on=isOnline();const md=S.me.onlineMode||'auto';
     <div class="it" onclick="openWallet()"><span>💰 钱包</span><span class="v">¥${(+S.me.balance).toFixed(2)}</span></div>
     <div class="it"><span>👟 微信步数 ${(S.me.steps||0)}</span><span class="v" onclick="toggleSteps()">${_stepOn?'计步中(点停)':'开启计步 ›'}</span></div>
     <div class="it" onclick="editMe()"><span>🎭 我的人设（全局）</span><span class="v">所有角色可见</span></div>
+    <div class="it" onclick="accountMgr()"><span>🪪 小号 / 切换身份</span><span class="v">${(S.me.accounts||[]).length>1?'当前：'+esc(S.me.name):'添加 ›'}</span></div>
     <div class="it" onclick="wxTab='moments';render()"><span>🌸 朋友圈</span><span class="v">›</span></div>
   </div>
   <div class="section" style="margin:12px">
@@ -1605,7 +1626,34 @@ function editMe(){openModal(`<h3>我的资料</h3>
 function upMe(){pickFile('image/*',async f=>{S.me.avatar=await compress(f,256,.8);editMe();});}
 function saveMe(){S.me.name=$('#me_name').value.trim()||'我';S.me.wxid=$('#me_wxid').value.trim();
   S.me.avatar=$('#me_av').value.trim()||'🐱';S.me.signature=$('#me_sig').value.trim();S.me.persona=$('#me_persona').value.trim();S.me.status=$('#me_status').value.trim();S.me.place=$('#me_place').value.trim();S.me.steps=+$('#me_steps').value||0;
-  save();closeModal();render();}
+  syncActiveAccount();save();closeModal();render();}
+function syncActiveAccount(){const a=(S.me.accounts||[]).find(x=>x.id===actId());if(a){a.name=S.me.name;a.wxid=S.me.wxid;a.avatar=S.me.avatar;a.persona=S.me.persona;a.signature=S.me.signature;}}
+function accountMgr(){const acts=S.me.accounts||[];
+  openModal(`<h3>🪪 我的小号</h3><div class="hint">切换不同身份和角色聊天。每个身份有<b>独立的聊天记录</b>；角色可能拉黑某个身份，你换个身份就能重新搜微信号加回。当前：<b>${esc(S.me.name)}</b></div>
+   ${acts.map(a=>`<div class="section"><div class="it">${av(a.avatar||'🐱','sm')}<div class="meta" style="flex:1" onclick="switchAccount('${a.id}')"><div class="n">${esc(a.name)} ${a.id===actId()?'<span class=tag>当前</span>':''}</div><div class="s">${esc(a.persona||'未设身份').slice(0,22)||'未设身份'}</div></div><span class="v" onclick="event.stopPropagation();editAccount('${a.id}')">编辑</span>${a.id!=='main'?`<span style="color:#fa5151;margin-left:10px;cursor:pointer" onclick="event.stopPropagation();delAccount('${a.id}')">✕</span>`:''}</div></div>`).join('')}
+   <button class="btn p" style="margin-top:8px" onclick="editAccount()">＋ 新建小号</button>
+   <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
+function switchAccount(aid){if(aid===actId()){closeModal();return;}syncActiveAccount();const t=(S.me.accounts||[]).find(a=>a.id===aid);if(!t)return;
+  S.me.active=aid;S.me.name=t.name;S.me.wxid=t.wxid;S.me.avatar=t.avatar;S.me.persona=t.persona||'';S.me.signature=t.signature||'';
+  syncBlocks();save();closeModal();wxTab='chats';render();toast('已切换到「'+t.name+'」');}
+function editAccount(aid){const a=aid?(S.me.accounts||[]).find(x=>x.id===aid):{id:'acc_'+Math.random().toString(36).slice(2,7),name:'',wxid:genWxid(),avatar:'🙂',persona:'',_new:true};if(!a)return;
+  openModal(`<h3>${aid&&!a._new?'编辑身份':'新建小号'}</h3>
+   <div class="field"><label>头像</label><div class="avline">${av(a.avatar,'sm')}<input id="ac_av" value="${esc(a.avatar)}"><button class="minibtn" onclick="pickFile('image/*',async f=>{$('#ac_av').value=await compress(f,256,.8)})">📷</button></div></div>
+   <div class="field"><label>昵称</label><input id="ac_name" value="${esc(a.name)}" placeholder="这个身份叫什么"></div>
+   <div class="field"><label>微信号</label><input id="ac_wxid" value="${esc(a.wxid)}"></div>
+   <div class="field"><label>身份设定（角色会知道你以这个身份跟ta聊）</label><textarea id="ac_per" rows="3" placeholder="比如：陌生网友 / 新同事 / 假装是别人 / 记者…">${esc(a.persona||'')}</textarea></div>
+   <div class="btns"><button class="btn g" onclick="accountMgr()">返回</button><button class="btn p" onclick="saveAccount('${a.id}',${!!a._new})">保存</button></div>`);}
+function saveAccount(id,isNew){const a=isNew?{id}:(S.me.accounts||[]).find(x=>x.id===id);if(!a)return;
+  a.name=$('#ac_name').value.trim()||'小号';a.wxid=$('#ac_wxid').value.trim()||genWxid();a.avatar=$('#ac_av').value.trim()||'🙂';a.persona=$('#ac_per').value.trim();
+  if(isNew)S.me.accounts.push(a);
+  if(a.id===actId()){S.me.name=a.name;S.me.wxid=a.wxid;S.me.avatar=a.avatar;S.me.persona=a.persona;}
+  save();accountMgr();}
+function delAccount(id){if(id==='main')return;if(!confirm('删除这个小号？它的聊天记录也会清掉'))return;
+  if(actId()===id)switchAccount('main');
+  S.me.accounts=(S.me.accounts||[]).filter(a=>a.id!==id);
+  Object.keys(S.messages).forEach(k=>{if(k.endsWith('#'+id))delete S.messages[k];});
+  S.contacts.forEach(c=>{if(c._blk)delete c._blk[id];if(c._added)delete c._added[id];});
+  save();accountMgr();}
 function myActivity(exceptId,since){let s='';since=since||0;
   const others=S.contacts.filter(c=>!c.deleted&&c.id!==exceptId).map(c=>({c,um:[...msgs(c.id)].reverse().find(m=>m.role==='user'&&m.type!=='sys'),lm:lastMsg(c.id)})).filter(x=>x.um&&x.lm&&x.lm.time>since).sort((a,b)=>b.lm.time-a.lm.time).slice(0,2);
   if(others.length)s+='·她最近还在跟：'+others.map(o=>(o.c.remark||o.c.name)+' '+hm(o.lm.time)+'聊，她说过"'+previewOf(o.um).slice(0,16)+'"').join('；')+'\n';
@@ -1718,7 +1766,7 @@ function setChatBg(id){const c=getC(id);openModal(`<h3>聊天背景</h3><div cla
   <div class="btns"><button class="btn g" onclick="getC('${id}').chatBg='';save();closeModal();toast('已恢复默认')">恢复默认</button>
   <button class="btn p" onclick="pickFile('image/*',async f=>{getC('${id}').chatBg=await compress(f,800,.6);save();closeModal();toast('背景已设置')})">选图片</button></div>`);}
 function c_pin(id){const c=getC(id);c.pinned=!c.pinned;save();render();}
-function c_block(id){const c=getC(id);c.blocked=!c.blocked;if(c.blocked){c._blockedAt=Date.now();adjMood(id,-30);}save();render();
+function c_block(id){const c=getC(id);setBlk(c,!c.blocked);if(c.blocked){c._blockedAt=Date.now();adjMood(id,-30);}save();render();
   if(c.blocked){toast('已拉黑，过会儿看「通讯录」he会申请加你');setTimeout(()=>createFriendRequest(id),8000+Math.random()*9000);}}
 async function createFriendRequest(id){const c=getC(id);if(!c||!c.blocked)return;
   if(S.friendRequests.some(r=>r.contactId===id))return;
@@ -1729,11 +1777,11 @@ async function createFriendRequest(id){const c=getC(id);if(!c||!c.blocked)return
   toast('📇 通讯录有人申请加你');}
 function openFriendRequests(){if(!S.friendRequests.length){toast('暂无新申请');return;}
   openModal(`<h3>➕ 新的朋友</h3>${S.friendRequests.map(r=>{const c=getC(r.contactId);return `<div class="section"><div style="padding:12px 14px;display:flex;gap:10px;align-items:center">${av(c?c.avatar:'🙂','sm')}<div class="meta"><div class="n">${esc(c?c.name:'?')}</div><div class="s">${esc(r.msg)}</div></div></div><div style="display:flex;gap:8px;padding:0 14px 12px"><button class="btn p" style="flex:1" onclick="acceptFriend('${r.id}')">接受</button><button class="btn g" style="flex:1" onclick="ignoreFriend('${r.id}')">忽略</button></div></div>`;}).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
-function acceptFriend(rid){const r=S.friendRequests.find(x=>x.id===rid);if(!r)return;const c=getC(r.contactId);if(c){c.blocked=false;c._readdedAt=Date.now();if(c._blockedAt)c._blockDur=fmtDur(Date.now()-c._blockedAt);c.moodVal=Math.max(40,(c.moodVal==null?70:c.moodVal));msgs(c.id).push({role:'user',type:'sys',content:'你通过了'+c.name+'的好友申请，现在可以聊天了',time:Date.now(),id:uid()});}
+function acceptFriend(rid){const r=S.friendRequests.find(x=>x.id===rid);if(!r)return;const c=getC(r.contactId);if(c){setBlk(c,false);c._readdedAt=Date.now();if(c._blockedAt)c._blockDur=fmtDur(Date.now()-c._blockedAt);c.moodVal=Math.max(40,(c.moodVal==null?70:c.moodVal));msgs(c.id).push({role:'user',type:'sys',content:'你通过了'+c.name+'的好友申请，现在可以聊天了',time:Date.now(),id:uid()});}
   S.friendRequests=S.friendRequests.filter(x=>x.id!==rid);save();closeModal();render();toast('已加回好友');
   if(c)setTimeout(()=>aiReply(c.id,'[系统：'+S.me.name+'刚才把你拉黑了'+(c._blockDur?'（黑了'+c._blockDur+'）':'')+'，现在又把你加回来了。你很在意被拉黑这件事，第一句就要追问/质问ta为什么拉黑你，表达你的不满或在意，绝不要复读ta的话、不要装作没发生。]'),900);}
 function ignoreFriend(rid){S.friendRequests=S.friendRequests.filter(x=>x.id!==rid);save();(S.friendRequests.length?openFriendRequests():closeModal());render();}
-function c_delete(id){if(!confirm('删除这个角色和聊天记录？'))return;const c=getC(id);c.deleted=true;delete S.messages[id];save();stack.pop();render();}
+function c_delete(id){if(!confirm('删除这个角色和聊天记录？'))return;const c=getC(id);c.deleted=true;Object.keys(S.messages).forEach(k=>{if(k===id||k.indexOf(id+'#')===0)delete S.messages[k];});save();stack.pop();render();}
 function clearHistory(id){openModal(`<h3>清除聊天记录</h3>
   <button class="btn g" style="margin-bottom:8px" onclick="doClear('${id}','all')">🗑️ 清空全部</button>
   <button class="btn g" style="margin-bottom:8px" onclick="doClear('${id}','3d')">清除最近 3 天</button>
@@ -1747,7 +1795,7 @@ function doClear(id,mode){const list=msgs(id);let keep;
   else if(mode==='3d'||mode==='7d'){const cut=Date.now()-(mode==='3d'?3:7)*86400000;keep=list.filter(m=>m.time<cut);}
   else{const a=$('#cl_a').value,b=$('#cl_b').value;if(!a||!b){toast('选好起止日期');return;}
     const t0=new Date(a+'T00:00:00').getTime(),t1=new Date(b+'T23:59:59').getTime();keep=list.filter(m=>m.time<t0||m.time>t1);}
-  S.messages[id]=keep;save();closeModal();render();toast('已删除 '+(list.length-keep.length)+' 条');}
+  S.messages[mkey(id)]=keep;save();closeModal();render();toast('已删除 '+(list.length-keep.length)+' 条');}
 function togProactive(id){const c=getC(id);c.proactive.enabled=!c.proactive.enabled;save();render();}
 function togSpy(id,k){const c=getC(id);const sp=getSpy(c);sp[k]=!sp[k];save();render();if(k==='loc'&&sp.loc)fetchWeather(true);}
 function saveSpy(id){const c=getC(id);const sp=getSpy(c);sp.time=$('#sp_t').value||'';sp.times=+$('#sp_n').value||2;save();toast('已保存');}
@@ -1759,7 +1807,7 @@ function savePa(id){const c=getC(id);c.proactive.start=$('#pa_s').value||'09:00'
 let _sel=null;
 function enterSelect(id){_sel={id,ids:[]};const p=$('#panel');if(p)p.classList.remove('show');render();}
 function exitSelect(){_sel=null;render();}
-function delSelected(id){if(!_sel||!_sel.ids.length){toast('先选几条');return;}if(!confirm('删除选中的 '+_sel.ids.length+' 条消息？'))return;S.messages[id]=msgs(id).filter(m=>_sel.ids.indexOf(m.id)<0);_sel=null;save();render();toast('已删除');}
+function delSelected(id){if(!_sel||!_sel.ids.length){toast('先选几条');return;}if(!confirm('删除选中的 '+_sel.ids.length+' 条消息？'))return;S.messages[mkey(id)]=msgs(id).filter(m=>_sel.ids.indexOf(m.id)<0);_sel=null;save();render();toast('已删除');}
 function toggleSel(mid){if(!_sel)return;const i=_sel.ids.indexOf(mid);const on=i<0;if(on)_sel.ids.push(mid);else _sel.ids.splice(i,1);
   const tk=$('#tk_'+mid);if(tk){tk.textContent=on?'☑':'⚪';tk.style.color=on?'#07c160':'#555';}
   const fc=$('#fwdcnt');if(fc)fc.textContent=_sel.ids.length;}
@@ -1938,8 +1986,8 @@ function sendNamecard(id,fid){const f=getC(fid);if(!f)return;closeModal();const 
   pushMsg(id,{role:'user',type:'namecard',dir:'mine',cname:f.remark||f.name,wxid:f.wxid,avatar:f.avatar,persona:(f.signature||f.relation||'我的好友'),refId:fid,id:uid()});
   toast('已把 '+(f.remark||f.name)+' 的名片推给ta');scheduleReply(id);}
 function addHisCard(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m||m.added)return;
-  const oc=getC(owner);
-  const nc={id:cid(),name:m.cname,avatar:'🙂',remark:'',wxid:m.wxid||genWxid(),signature:'',persona:(m.persona||'')+(oc?('（'+(oc.remark||oc.name)+'推荐认识的朋友）'):''),greeting:'',relation:'',pinned:false,blocked:false,proactive:{enabled:false,start:9,end:23,times:2},chatBg:'',family:{bound:false,quota:0,used:0,month:''}};
+  const oc=getC((owner||'').split('#')[0]);
+  const nc={id:cid(),name:m.cname,avatar:'🙂',remark:'',wxid:m.wxid||genWxid(),signature:'',persona:(m.persona||'')+(oc?('（'+(oc.remark||oc.name)+'推荐认识的朋友）'):''),greeting:'',relation:'',pinned:false,blocked:false,proactive:{enabled:false,start:9,end:23,times:2},chatBg:'',family:{bound:false,quota:0,used:0,month:''},_blk:{},_added:isMain()?undefined:{[actId()]:true}};
   S.contacts.push(nc);m.added=true;m.newId=nc.id;
   if(oc){oc._pushedToMe=oc._pushedToMe||[];if(oc._pushedToMe.indexOf(m.cname)<0)oc._pushedToMe.push(m.cname);}
   save();render();toast('已添加 '+m.cname+' 到通讯录✅');}
@@ -2043,7 +2091,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
       mm=line.match(/^\[亲属卡\|?([0-9]*)\]$/);if(mm){const q=+mm[1]||500;const fc={role:'assistant',type:'familycard',quota:q,bound:false,id:uid(),time:Date.now()};msgs(id).push(fc);notifyIncoming(c,fc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[推荐好友\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){const nc={role:'assistant',type:'namecard',dir:'his',cname:(mm[1]||'朋友').trim(),persona:(mm[2]||'').trim(),wxid:genWxid(),added:false,id:uid(),time:Date.now()};msgs(id).push(nc);c._pushedToMe=c._pushedToMe||[];c._pushedToMe.push(nc.cname);notifyIncoming(c,nc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[已加\|?([^\]]*)\]$/);if(mm){const nm=(mm[1]||'').trim();const card=[...msgs(id)].reverse().find(x=>x.role==='user'&&x.type==='namecard'&&x.dir==='mine'&&!x._accepted&&(!nm||x.cname===nm||nm.includes(x.cname)));if(card){card._accepted=true;save();if(cur().p==='chat'&&cur().id===id)render();}continue;}
-      mm=line.match(/^\[拉黑\]$/);if(mm){c.blocked=true;c._blockedBy='ta';const mg={role:'assistant',type:'sys',content:'你被'+(c.remark||c.name)+'拉黑了',time:Date.now(),id:uid()};msgs(id).push(mg);save();if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();continue;}
+      mm=line.match(/^\[拉黑\]$/);if(mm){setBlk(c,true);c._blockedBy='ta';const mg={role:'assistant',type:'sys',content:'你被'+(c.remark||c.name)+'拉黑了',time:Date.now(),id:uid()};msgs(id).push(mg);save();if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();continue;}
       const base=lineToMsg(line);
       if(base.type==='dice'){if(diceUsed||diceCompare)continue;diceUsed=true;}
       if(base.type==='text'&&LEAKRE.test(line))continue;
@@ -2259,12 +2307,12 @@ function alarmManager(){openModal(`<h3>⏰ 闹钟</h3>
   ${S.alarms.length?S.alarms.map(a=>{const c=getC(a.contactId);return `<div class="bill" style="border-radius:8px;margin-bottom:6px"><div><b style="font-size:18px">${a.time}</b> ${esc(a.label)} <span class="tag">${a.repeat==='daily'?'每天':'仅一次'}</span><small>${c?esc(c.remark||c.name):'?'} 来电</small></div><div><span class="sw ${a.enabled?'on':''}" onclick="(function(){var x=S.alarms.find(z=>z.id==='${a.id}');x.enabled=!x.enabled;save();alarmManager();})()"></span> <span onclick="S.alarms=S.alarms.filter(z=>z.id!=='${a.id}');save();alarmManager()" style="color:#fa5151;cursor:pointer;margin-left:10px">✕</span></div></div>`;}).join(''):'<div class="empty">还没有闹钟</div>'}
   <button class="btn g" style="margin-top:10px" onclick="closeModal()">关闭</button>`);}
 let _alarmFired={};
-function checkAlarms(){const now=new Date();const hhmm=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');const tag=now.toDateString()+hhmm;
+function checkAlarms(){if(!isMain())return;const now=new Date();const hhmm=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');const tag=now.toDateString()+hhmm;
   S.alarms.forEach(a=>{if(a.enabled&&a.time===hhmm&&_alarmFired[a.id]!==tag){_alarmFired[a.id]=tag;if(!_call)incomingCall(a.contactId,'voice');if(a.repeat!=='daily'){S.alarms=S.alarms.filter(z=>z.id!==a.id);save();}}});}
 setInterval(checkAlarms,15000);
 
 /* 主动消息 */
-async function maybeProactive(id){const c=getC(id);if(!c.proactive.enabled||c.blocked)return;
+async function maybeProactive(id){if(!isMain())return;const c=getC(id);if(!c.proactive.enabled||c.blocked)return;
   const now=new Date().getHours()*60+new Date().getMinutes();const s=toMin(c.proactive.start),e=toMin(c.proactive.end);const inWin=s<=e?(now>=s&&now<e):(now>=s||now<e);
   if(!inWin)return;const lm=lastMsg(id);if(lm&&Date.now()-lm.time<(Number(S.settings.proactiveIdleMin)||20)*60000)return;
   const today=new Date().toDateString();const pc=S._proactiveCount[id]||{date:today,n:0};if(pc.date!==today){pc.date=today;pc.n=0;}
@@ -2278,7 +2326,7 @@ async function maybeProactive(id){const c=getC(id);if(!c.proactive.enabled||c.bl
 /* ---------- 查岗（他看我的手机）---------- */
 function spyBudget(id){const today=new Date().toDateString();const c=getSpy(getC(id));const pc=S._spyCount&&S._spyCount[id]||{date:today,n:0};if(pc.date!==today){pc.date=today;pc.n=0;}
   if(pc.n>=(c.times||2))return false;pc.n++;if(!S._spyCount)S._spyCount={};S._spyCount[id]=pc;save();return true;}
-async function doSpyView(id,force){const c=getC(id);if(!c||c.blocked)return;const sp=getSpy(c);if(!sp.granted)return;
+async function doSpyView(id,force){if(!isMain())return;const c=getC(id);if(!c||c.blocked)return;const sp=getSpy(c);if(!sp.granted)return;
   if(!force&&!spyBudget(id))return;recordVisit(id,'查看手机');
   const steps=['正在连接 '+(c.remark||c.name)+' 的查看请求…','正在查看 微信聊天','正在查看 朋友圈','正在查看 钱包账单','正在查看 X浏览记录','正在查看 X私信'].concat(sp.loc?['正在查看 实时定位']:[]);
   const B=$('#spyBanner');B.className='spybanner show';
