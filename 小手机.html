@@ -296,7 +296,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v34 · 通话格式+一批修复';
+const APP_VER='v35 · 通话朗读+骰子修复';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -424,6 +424,18 @@ async function toggleSteps(){if(_stepOn){window.removeEventListener('devicemotio
 /* ===== 语音 ===== */
 function getVoice(o){if(!o.voice)o.voice={engine:'system',voiceURI:'',rate:1,pitch:1,lang:'zh'};return o.voice;}
 function stripSpoken(t){return (t||'').replace(/[（(【][^）)】]*[）)】]/g,'').replace(/\[[^\]]*\]/g,'').replace(/[*_~`#>]/g,'').trim();}
+// 通话朗读：外语角色只读外语原文（自动纠正"中文（外语）"被搞反的情况），中文角色去掉（）
+function pickSpoken(text,lang){
+  let t=(text||'').replace(/【[^】]*】/g,'').replace(/\[[^\]]*\]/g,'').replace(/[*_~`#>]/g,'').trim();
+  if(!lang||lang==='zh')return t.replace(/[（(][^）)]*[）)]/g,'').trim();
+  const re=lang==='韩'?/[가-힣]/g:lang==='日'?/[぀-ヿ]/g:/[A-Za-z]/g;
+  const m=t.match(/^([\s\S]*?)[（(]([^）)]*)[）)]([\s\S]*)$/);
+  if(m){const outside=(m[1]+m[3]),inside=m[2];
+    const co=(outside.match(re)||[]).length,ci=(inside.match(re)||[]).length;
+    if(ci>co&&ci>0)return inside.trim();          // 被搞反了：外语其实在（）里
+    const o=outside.replace(/[（(][^）)]*[）)]/g,'').trim();return o||inside.trim();
+  }
+  return t.replace(/[（(][^）)]*[）)]/g,'').trim();}
 let _voices=[];
 function loadVoices(){try{_voices=speechSynthesis.getVoices()||[];}catch(e){_voices=[];}}
 if('speechSynthesis'in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices;}
@@ -522,7 +534,7 @@ function buildSystem(c){
   // 天气
   if(S.weather)s+='\n\n# '+S.me.name+'所在地天气\n'+S.weather.place+'，'+S.weather.desc+'，'+S.weather.temp+'°C'+(S.weather.rain?'（有雨）':'')+'。你知道这些，下雨时可在合适的时候自然提醒ta带伞，不用每条都提天气。';
   if(S.settings.web&&S.settings.web.enabled)s+='\n\n# 联网\n当需要查实时/最新信息（新闻、天气细节、价格、某事实）时，单独用一行 [联网|要搜索的关键词]，系统会联网查并把结果给你，你再据此回答。';
-  s+='\n\n# 微信聊天规则\n- 现在是微信【文字聊天】，必须用中文，普通说话，不要用【】动作描写、不要外语原文+翻译那种通话格式（只有"语音消息"可以按语音规则来）。\n- 像真人发微信：一次回复大约 '+(c.msgMin||1)+' 到 '+(c.msgMax||4)+' 条短消息，每条单独占一行（用换行分隔），不要写成一大段。具体几条你根据当下情境自己把握：随意时少发，认真/激动/吵架/撒娇时可以多发几条。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 你可以单独用一行 [心情|你此刻的内心想法] 表达内心戏（不会作为消息发出，只显示在顶部）。\n- 当'+S.me.name+'让你记住某件事、或聊到重要的事时，单独用一行 [记住|要长期记住的内容] 把它存进记忆。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta、或ta说"想你了/想听你声音/打个电话/给我打电话"之类的话时，就主动用一行 [来电|语音]（或 [来电|视频]）真的打过去，别只用文字回"那我打给你"却不打。\n- 玩骰子/真心话大冒险时，用单独一行 [骰子|点数]（点数你自己定1到6），你说的话要和这个点数一致，再和对方比大小、出题或认罚。每一轮只掷一次——一条回复里最多出现一个 [骰子]，绝不要一次抛两次。\n- 想送对方礼物时，用一行 [送礼|礼物名|价格] 给ta发一个礼物卡片。\n- 当ta刚发来一张新的"求代付"卡片：愿意帮付用一行 [代付成功]；不愿意用一行 [拒绝代付]。每张求代付卡只处理一次，已经付过或拒过的那一单千万别再付一次，正常聊天就好。\n- 想给ta点份外卖时，用一行 [点外卖|餐品名|价格]，ta会收到外卖卡片去签收。\n- 当'+S.me.name+'让你发一条朋友圈时，用一行 [发朋友圈|内容]；让你发推特时，用一行 [发推|内容]，会真的发出去。\n- 当'+S.me.name+'给你转账时：愿意收用一行 [收款]，不想收用一行 [拒收]（退回ta）。\n- 当'+S.me.name+'送你礼物时：愿意收用一行 [收礼]，不想收用一行 [拒礼]（退回ta）。\n- 想发语音消息时，用一行 [语音|要说的话]'+((c.voice&&c.voice.lang&&c.voice.lang!=='zh')?'。你的语音用'+c.voice.lang+'语，请输出 [语音|外语原文|中文翻译]':'')+'。日常和打电话时都能发语音。';
+  s+='\n\n# 微信聊天规则\n- 现在是微信【文字聊天】，必须用中文，普通说话，不要用【】动作描写、不要外语原文+翻译那种通话格式（只有"语音消息"可以按语音规则来）。\n- 像真人发微信：一次回复大约 '+(c.msgMin||1)+' 到 '+(c.msgMax||4)+' 条短消息，每条单独占一行（用换行分隔），不要写成一大段。具体几条你根据当下情境自己把握：随意时少发，认真/激动/吵架/撒娇时可以多发几条。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 你可以单独用一行 [心情|你此刻的内心想法] 表达内心戏（不会作为消息发出，只显示在顶部）。\n- 当'+S.me.name+'让你记住某件事、或聊到重要的事时，单独用一行 [记住|要长期记住的内容] 把它存进记忆。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta、或ta说"想你了/想听你声音/打个电话/给我打电话"之类的话时，就主动用一行 [来电|语音]（或 [来电|视频]）真的打过去，别只用文字回"那我打给你"却不打。\n- 玩骰子/真心话大冒险时，用单独一行 [骰子|点数]（点数你自己定1到6），你说的话要和这个点数一致。规则：你先掷一次（一条回复里最多一个 [骰子]），然后【等ta掷】；ta掷完后，你这一轮就【只比大小、报结果、出题或认罚，绝对不要再掷第二次骰子】。一局两人各掷一次就够了。\n- 想送对方礼物时，用一行 [送礼|礼物名|价格] 给ta发一个礼物卡片。\n- 当ta刚发来一张新的"求代付"卡片：愿意帮付用一行 [代付成功]；不愿意用一行 [拒绝代付]。每张求代付卡只处理一次，已经付过或拒过的那一单千万别再付一次，正常聊天就好。\n- 想给ta点份外卖时，用一行 [点外卖|餐品名|价格]，ta会收到外卖卡片去签收。\n- 当'+S.me.name+'让你发一条朋友圈时，用一行 [发朋友圈|内容]；让你发推特时，用一行 [发推|内容]，会真的发出去。\n- 当'+S.me.name+'给你转账时：愿意收用一行 [收款]，不想收用一行 [拒收]（退回ta）。\n- 当'+S.me.name+'送你礼物时：愿意收用一行 [收礼]，不想收用一行 [拒礼]（退回ta）。\n- 想发语音消息时，用一行 [语音|要说的话]'+((c.voice&&c.voice.lang&&c.voice.lang!=='zh')?'。你的语音用'+c.voice.lang+'语，请输出 [语音|外语原文|中文翻译]':'')+'。日常和打电话时都能发语音。';
   return s;
 }
 
@@ -1625,6 +1637,8 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
     if(wq&&S.settings.web&&S.settings.web.enabled){const r=await webSearch(wq[1]);
       content=await chatAPI([{role:'system',content:buildSystem(c)},...hist,{role:'system',content:'联网搜索"'+wq[1]+'"的结果：\n'+r+'\n请用中文据此自然回答，不要再输出[联网]标记。'}]);}
     if(typingEl)typingEl.remove();
+    let _lu=null;{const _ms=msgs(id);for(let i=_ms.length-1;i>=0;i--){if(_ms[i].role==='user'){_lu=_ms[i];break;}}}
+    const diceCompare=!!(_lu&&_lu.type==='dice');// 她刚掷过 → 这轮他只能比大小、不能再掷
     const lines=splitBubbles(content);let got=false;let txtN=0;let diceUsed=false;const cap=Math.max(1,+c.msgMax||4);
     for(let i=0;i<lines.length;i++){
       let line=normTag(lines[i]);if(!line)continue;
@@ -1645,7 +1659,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
       mm=line.match(/^\[拒礼\]$/);if(mm){const g=lastGift(id);if(g){g.declined=true;addBill('in',+g.price,(c.remark||c.name)+'退回的礼物');const mg={role:'assistant',type:'sys',content:'对方拒收了礼物，'+(+g.price).toFixed(2)+'元已退回',time:Date.now(),id:uid()};msgs(id).push(mg);}save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[来电\|(语音|视频)\]$/);if(mm){const k=mm[1]==='视频'?'video':'voice';setTimeout(()=>incomingCall(c.id,k,'ta打来的'),600);continue;}
       const base=lineToMsg(line);
-      if(base.type==='dice'){if(diceUsed)continue;diceUsed=true;}
+      if(base.type==='dice'){if(diceUsed||diceCompare)continue;diceUsed=true;}
       if(base.type==='text'&&LEAKRE.test(line))continue;
       const parts=base.type==='text'?splitActions(base.content):[null];
       for(let pi=0;pi<parts.length;pi++){
@@ -1802,18 +1816,21 @@ async function callAI(sysNote){if(!_call)return;const c=getC(_call.id);const vid
     const _lang=(getVoice(c).lang||'zh');const _langN=_lang==='zh'?'':({'英':'英','日':'日','韩':'韩'}[_lang]||_lang)+'语';
     let cf='\n\n# 正在'+(video?'视频':'语音')+'通话（务必遵守格式）\n用口语短句，像打电话一样，别用卡片。每句单独一行。';
     if(video)cf+='\n- 这是视频，你的动作神态用【】单独成行写，比如【凑近镜头笑】。';
-    else cf+='\n- 这是语音通话（看不到画面），不要写任何【】动作描写，只说话。';
-    if(_langN)cf+='\n- 你说'+_langN+'：每句先写'+_langN+'原文（这句会被读出来），紧跟着用（）写中文翻译（不会被读）。千万别搞反——原文在前、（中文翻译）在后，否则会把中文读出来。例如：'+(_lang==='韩'?'사랑해（我爱你）':_lang==='日'?'好きだよ（喜欢你）':'I miss you（我想你了）');
-    cf+='\n- 想结束通话就单独一行输出 [挂断]。';
+    else cf+='\n- 这是语音通话（看不到画面），绝对不要出现任何【】动作神态描写，一个【】都不许有，只能说话。';
+    if(_langN)cf+='\n- 你全程说'+_langN+'：每一句都【先写'+_langN+'原文】（这句会被读出来），紧跟着用（）写中文翻译（不会被读）。原文在前、（中文翻译）在后，千万别搞反，否则会把中文读出来。例如：'+(_lang==='韩'?'사랑해（我爱你）':_lang==='日'?'好きだよ（喜欢你）':'I miss you（我想你了）')+'。\n- 哪怕是要挂断、道别、回应"挂了/别挂"这种话，也必须保持'+_langN+'原文在前、（中文翻译）在后，绝不能整句只说中文。';
+    cf+='\n- 想结束通话就【单独占一行】只输出 [挂断]，不要把 [挂断] 和说的话写在同一行。';
     const sys=buildSystem(c)+cf;
     const content=await chatAPI([{role:'system',content:sys},...hist]);
     if(!_call||_call.session!==sess)return;
-    const wantHang=/\[挂断\]/.test(content);const pieces=[];
-    splitBubbles(content).forEach(l=>{l=normTag(l);if(/^\[挂断\]$/.test(l))return;const mm=l.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=mm[1];return;}if(LEAKRE.test(l))return;splitActions(l).forEach(p=>pieces.push(p));});
+    const wantHang=/\[挂断\]/.test(content);const pieces=[];const _vlang=(getVoice(c).lang||'zh');
+    splitBubbles(content).forEach(l=>{l=normTag(l);if(/^\[挂断\]$/.test(l))return;const mm=l.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=mm[1];return;}if(LEAKRE.test(l))return;
+      if(video){splitActions(l).forEach(p=>pieces.push(p));}
+      else{const cleaned=l.replace(/【[^】]*】/g,'').trim();if(cleaned)pieces.push(cleaned);}});
     for(const p of pieces){if(!_call||_call.session!==sess)return;
       msgs(c.id).push({role:'assistant',type:'text',content:p,time:Date.now(),id:uid(),_call:true,_cs:sess});save();
       _call.sub={who:'them',text:p};updateCallSub();
-      if(_call.replyVoice&&!c.muted){await speakWait(p,c);await sleep(900);}else await sleep(Math.max(1800,p.length*180));}
+      const spoken=pickSpoken(p,_vlang);
+      if(_call.replyVoice&&!c.muted&&spoken){await speakWait(spoken,c);await sleep(900);}else await sleep(Math.max(1400,p.length*150));}
     if(_call&&_call.session===sess){_call.sub=null;updateCallSub();}
     if(wantHang&&_call&&_call.session===sess)setTimeout(()=>{if(_call&&_call.id===c.id)hangupCall(true);},900);
   }catch(e){if(_call){_call.sub={who:'them',text:'(信号不好…)'};updateCallSub();}}}
