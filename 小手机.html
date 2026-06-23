@@ -296,13 +296,13 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v56 · 线下约会(结束发关心)+24h清理';
+const APP_VER='v58 · 微信手动确认回复';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
     aux:{base:'',key:'',model:''},
     vision:{base:'https://vg.v1api.cc/v1',key:'',model:''},
-    hist:24, timeAware:true, replyDelay:2, sound:true, web:{enabled:false}, summaryRounds:20, proactiveIdleMin:20,
+    hist:24, timeAware:true, replyDelay:2, sound:true, web:{enabled:false}, summaryRounds:20, proactiveIdleMin:20, manualReply:true,
     voiceAuto:true, tts:{base:'',key:'',model:'',voice:''}, stt:{base:'',key:'',model:''}
   },
   me:{name:'忆北',wxid:'yibei_0414',avatar:'🐱',signature:'做一只无忧无虑的小猫～',persona:'我叫忆北，20岁女生，娃娃脸有点肉感，慢热腼腆熟了疯癫可爱，没安全感、占有欲强、嘴硬心软的小财迷。',balance:520.00,bills:[],momentCover:'',status:'',place:'',battery:null,charging:false,onlineMode:'auto',steps:0},
@@ -737,6 +737,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
     <div class="section">
       <div class="it">带几条历史<input id="s_hist" type="number" value="${S.settings.hist}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it">语音自动播放<span class="sw ${S.settings.voiceAuto?'on':''}" onclick="S.settings.voiceAuto=!S.settings.voiceAuto;save();render()"></span></div>
+      <div class="it"><span>发消息后手动点回复<br><small style="color:#888">开：发完点「让ta回复」他才回；他主动找你不受影响</small></span><span class="sw ${S.settings.manualReply?'on':''}" onclick="S.settings.manualReply=!S.settings.manualReply;save();render()"></span></div>
       <div class="it">延迟几秒回复<input id="s_delay" type="number" min="0" value="${S.settings.replyDelay}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it">超过几回合自动总结<input id="s_sum" type="number" min="0" value="${S.settings.summaryRounds||0}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it">主动消息间隔(分钟)<input id="s_pidle" type="number" min="1" value="${S.settings.proactiveIdleMin||20}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
@@ -1557,7 +1558,7 @@ function offlineSystem(c){let s=c.persona||'';
   if(c.memory&&c.memory.length)s+='\n\n# 你记得关于'+S.me.name+'的事\n'+c.memory.map((m,i)=>(i+1)+'. '+m).join('\n');
   const o=offData(c.id);
   if(o.memory&&o.memory.length)s+='\n\n# 你们以前线下见面的经历\n'+o.memory.join('\n');
-  s+='\n\n# 现在：和'+S.me.name+'线下真实约会（这不是微信聊天！）\n地点：'+(o.loc||'未定')+'，时间：'+(o.when||'现在')+'。\n- 沉浸式第一人称角色扮演，像写剧本/小说。\n- 你的【动作、神态、环境、心理】一律用【】括起来写成旁白；说出口的话就正常写。\n- 一次可以几段：旁白和对话穿插，生动真实，符合你的人设和你们的关系。\n- 这里是面对面，绝对不要用微信那套：不要发[转账][红包][语音][来电]这类标签卡片。';
+  s+='\n\n# 现在：和'+S.me.name+'线下真实约会（这不是微信聊天！）\n地点：'+(o.loc||'未定')+'，时间：'+(o.when||'现在')+'。\n- 沉浸式角色扮演，像写剧本/小说。\n- 你的【动作、神态、环境、心理】一律用【】括起来写成旁白，旁白用【第三人称】（用 他/她/两人 来描写，绝对不要用"我"）；你说出口的话就正常写出来（第一人称对话）。\n- 一次可以几段：旁白和对话穿插，生动真实，符合你的人设和你们的关系。\n- 这里是面对面，绝对不要用微信那套：不要发[转账][红包][语音][来电]这类标签卡片。';
   return s;}
 async function offAI(note){if(!_off)return;const c=getC(_off.id);const o=offData(_off.id);_off.busy=true;offRender();
   try{const hist=o.msgs.slice(-30).map(m=>({role:m.who==='me'?'user':'assistant',content:(m.who==='旁白'?'【'+m.text+'】':m.text)}));
@@ -1570,10 +1571,11 @@ async function offAI(note){if(!_off)return;const c=getC(_off.id);const o=offData
   }catch(e){o.msgs.push({id:uid(),who:'旁白',text:'（…信号般的停顿，再继续吧）'});}
   if(_off)_off.busy=false;offRender();}
 function offRender(){if(cur().p==='off'){render();const b=$('#offbg');if(b)b.scrollTop=b.scrollHeight;}}
-function offSend(){if(!_off||_off.busy)return;const ta=$('#off_in');if(!ta)return;const v=(ta.value||'').trim();if(!v)return;ta.value='';
-  offData(_off.id).msgs.push({id:uid(),who:'me',text:v});save();offAI();}
-function offNarrate(){if(!_off||_off.busy)return;const t=prompt('加一段旁白（你的动作/场景/剧情）：','');if(t==null)return;const v=t.trim();if(!v)return;
-  offData(_off.id).msgs.push({id:uid(),who:'旁白',text:v});save();offAI();}
+function offSay(){if(!_off||_off.busy)return;const ta=$('#off_in');if(!ta)return;const v=(ta.value||'').trim();if(!v)return;ta.value='';
+  offData(_off.id).msgs.push({id:uid(),who:'me',text:v});save();offRender();}
+function offNarrate(){if(!_off||_off.busy)return;const t=prompt('加一段旁白（第三人称，用 他/她/两人 描写动作/场景/剧情）：','');if(t==null)return;const v=t.trim();if(!v)return;
+  offData(_off.id).msgs.push({id:uid(),who:'旁白',text:v});save();offRender();}
+function offReply(){if(!_off||_off.busy)return;offAI();}
 function offMsgMenu(id,mid){const o=offData(id);const m=o.msgs.find(x=>x.id===mid);if(!m)return;
   openModal(`<h3>编辑 / 删除</h3><div class="field"><textarea id="off_e" rows="3">${esc(m.text)}</textarea></div>
    <div class="btns"><button class="btn d" onclick="(function(){var oo=offData('${id}');oo.msgs=oo.msgs.filter(x=>x.id!=='${mid}');save();closeModal();render();})()">删除</button><button class="btn p" onclick="(function(){var mm=offData('${id}').msgs.find(x=>x.id==='${mid}');if(mm)mm.text=$('#off_e').value;save();closeModal();render();})()">保存</button></div>
@@ -1600,14 +1602,15 @@ function offSetting(id){const o=offData(id);
 function offQuit(){_off=null;home();}
 function renderOff(id){const c=getC(id);if(!c)return '';const o=offData(id);
   const body=o.msgs.map(m=>{
-    if(m.who==='旁白')return `<div onclick="offMsgMenu('${id}','${m.id}')" style="text-align:center;color:#c9a0d8;font-style:italic;font-size:13px;padding:8px 24px;line-height:1.6">${esc(m.text)}</div>`;
+    if(m.who==='旁白')return `<div onclick="offMsgMenu('${id}','${m.id}')" style="text-align:center;color:#d8aee6;font-style:italic;font-size:15.5px;padding:11px 20px;line-height:1.75">${esc(m.text)}</div>`;
     if(m.who==='me')return `<div class="msg me" onclick="offMsgMenu('${id}','${m.id}')"><div class="col"><div class="bubble">${esc(m.text)}</div></div></div>`;
-    return `<div class="msg them" onclick="offMsgMenu('${id}','${m.id}')">${av(c.avatar)}<div class="col"><div class="bubble">${esc(m.text)}</div></div></div>`;}).join('')
-    +(_off&&_off.busy?`<div class="msg them">${av(c.avatar)}<div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`:'');
-  return `<div class="nav"><span class="l" onclick="offQuit()">‹ 退出</span><span class="t">🌹 线下约会</span><span class="r" onclick="offEnd('${id}')" style="color:#fa5151;font-size:13px">结束</span></div>
+    return `<div class="msg them" onclick="offMsgMenu('${id}','${m.id}')" style="padding-left:14px"><div class="col"><div class="bubble">${esc(m.text)}</div></div></div>`;}).join('')
+    +(_off&&_off.busy?`<div class="msg them" style="padding-left:14px"><div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`:'');
+  return `<div class="nav"><span class="l" onclick="offQuit()">‹ 退出</span><span class="t">🌹 和 ${esc(c.remark||c.name)} 约会</span><span class="r" onclick="offEnd('${id}')" style="color:#fa5151;font-size:13px">结束</span></div>
    <div style="padding:7px 12px;background:#2a1a22;color:#e8a0b8;font-size:12px;display:flex;justify-content:space-between;align-items:center"><span>📍 ${esc(o.loc||'未定')} · 🕐 ${esc(o.when||'现在')}</span><span><span onclick="offSetting('${id}')" style="cursor:pointer;margin-right:12px">⚙︎设定</span><span onclick="offMemory('${id}')" style="cursor:pointer">🌹记忆</span></span></div>
-   <div class="scroll" id="offbg" style="background:#140d11">${body||'<div class="empty" style="padding:30px">开始约会吧…</div>'}</div>
-   <div class="inputbar"><button class="send" style="background:#9a5;margin-right:6px" onclick="offNarrate()" title="加旁白">🎭</button><textarea id="off_in" rows="1" placeholder="说点什么…(🎭加旁白/动作，点右上「结束」收尾并存记忆)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();offSend();}"></textarea><button class="send" onclick="offSend()">发</button></div>`;}
+   <div class="scroll" id="offbg" style="background:#140d11">${body||'<div class="empty" style="padding:30px">开始约会吧…写完你的旁白和台词，再点「让TA回复」</div>'}</div>
+   <div style="padding:6px 10px 0"><button class="btn p" style="width:100%;background:#e84d6f" ${_off&&_off.busy?'disabled':''} onclick="offReply()">${_off&&_off.busy?'TA回复中…':'▶ 让TA回复'}</button></div>
+   <div class="inputbar"><button class="send" style="background:#9a5;margin-right:6px" onclick="offNarrate()" title="加旁白">🎭</button><textarea id="off_in" rows="1" placeholder="写你的台词…(🎭加旁白，写完点上面「让TA回复」)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();offSay();}"></textarea><button class="send" onclick="offSay()">记下</button></div>`;}
 /* ===== 信箱 ===== */
 function fmtDate(t){const d=new Date(t||Date.now());return (d.getMonth()+1)+'月'+d.getDate()+'日 '+hm(t);}
 function renderMail(){const list=S.mail||[];
@@ -2007,7 +2010,7 @@ function renderChat(id){const c=getC(id);if(!c)return '';
       <div class="it" onclick="enterSelect('${id}')"><div class="b">↗️</div><span>多选转发</span></div>
     </div>`}
     </div>
-    ${(_sel&&_sel.id===id)?`<div class="inputbar"><button class="btn g" style="flex:1" onclick="exitSelect()">取消</button><button class="btn d" style="flex:1" onclick="delSelected('${id}')">删除(<span id="fwdcnt">${_sel.ids.length}</span>)</button><button class="btn p" style="flex:1" onclick="forwardSelected()">转发</button></div>`:`<div class="inputbar">`+`
+    ${(_sel&&_sel.id===id)?`<div class="inputbar"><button class="btn g" style="flex:1" onclick="exitSelect()">取消</button><button class="btn d" style="flex:1" onclick="delSelected('${id}')">删除(<span id="fwdcnt">${_sel.ids.length}</span>)</button><button class="btn p" style="flex:1" onclick="forwardSelected()">转发</button></div>`:(S.settings.manualReply&&!c.blocked?`<div style="padding:6px 10px 0"><button class="btn p" style="width:100%" ${_replying===id?'disabled':''} onclick="manualReply('${id}')">${_replying===id?'回复中…':'▶ 让ta回复'}</button></div>`:'')+`<div class="inputbar">`+`
       <span class="plus" style="background:${_voiceMode?'linear-gradient(135deg,#9ec5fe,#b8a4e3)':'transparent'};box-shadow:none;color:${_voiceMode?'#fff':'#aaa'}" onclick="_voiceMode=!_voiceMode;render()">🎤</span>
       <textarea id="cinput" rows="1" placeholder="${c.blocked?'已拉黑，发不出去':(_voiceMode?'打字→发成语音条…':'发消息…')}" ${c.blocked?'disabled':''}></textarea>
       <button class="send" onclick="sendText('${id}')">${_voiceMode?'发语音':'发送'}</button>
@@ -2276,7 +2279,13 @@ async function maybeSummarize(id){const c=getC(id);const rounds=+S.settings.summ
     if(sum){c.summaries=c.summaries||[];c.summaries.push({time:new Date().toLocaleString('zh-CN',{year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}),text:cleanReply(sum).slice(0,60)});c._sumCount=upto;save();}
   }catch(e){}}
 let _replyTimers={};
-function scheduleReply(id,note){clearTimeout(_replyTimers[id]);_replyTimers[id]=setTimeout(()=>aiReply(id,note),(Number(S.settings.replyDelay)||0)*1000);}
+let _replying=null;
+function scheduleReply(id,note){
+  // 手动回复模式：回应"我发的消息"(无note)时不自动回，等我点「让ta回复」；主动找我的(带note/系统触发)照常自动
+  if(!note&&S.settings.manualReply){if(cur().p==='chat'&&cur().id===id)render();return;}
+  clearTimeout(_replyTimers[id]);_replyTimers[id]=setTimeout(()=>aiReply(id,note),(Number(S.settings.replyDelay)||0)*1000);}
+function manualReply(id){if(_replying)return;const c=getC(id);if(!c||c.blocked)return;_replying=id;if(cur().p==='chat'&&cur().id===id)render();
+  Promise.resolve(aiReply(id)).finally(()=>{_replying=null;if(cur().p==='chat'&&cur().id===id)render();});}
 /* 提示音 + 通知 */
 let _audio;function initAudio(){if(!_audio){try{_audio=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}}
 document.addEventListener('click',()=>{initAudio();const liveLoc=S.contacts.some(c=>!c.deleted&&getSpy(c).loc);if(!S.weather||Date.now()-S.weather.time>(liveLoc?600000:72000000))fetchWeather();},{once:true});
