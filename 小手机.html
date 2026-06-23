@@ -296,7 +296,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v42 · 次要功能全走辅助模型';
+const APP_VER='v43 · 谁是卧底+游戏骰子';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -582,6 +582,7 @@ function render(){
   else if(c.p==='wg')html=renderWG();
   else if(c.p==='mail')html=renderMail();
   else if(c.p==='gs')html=renderGS();
+  else if(c.p==='uc')html=renderUC();
   else if(c.p==='contactInfo')html=renderContactInfo(c.id);
   else if(c.p==='spy')html=renderSpy(c.id);
   else if(c.p==='shop')html=renderShop();
@@ -1221,9 +1222,8 @@ const GAMES=[
   {k:'soup',e:'🐢',n:'海龟汤'},
   {k:'escape',e:'🚪',n:'小黑屋(自定义密室)'},
   {k:'wordguess',e:'🤐',n:'你说我猜'},
-  {k:'tod',e:'🎲',n:'真心话大冒险',kick:'我们玩真心话大冒险，用骰子比大小（你掷骰子用一行 [骰子|点数]）。点数小的人选真心话或大冒险。你先掷～'},
-  {k:'idiom',e:'📝',n:'成语接龙',kick:'我们玩成语接龙，你先说一个成语，我用它的最后一个字接下一个，轮流来。你先开始！'},
-  {k:'guess',e:'🔢',n:'猜数字',kick:'我们玩猜数字：你心里想一个1到100的整数，我来猜，你每次只提示"大了/小了/猜对啦"。想好了就说"想好了"。'},
+  {k:'undercover',e:'🕵️',n:'谁是卧底'},
+  {k:'tod',e:'🎲',n:'真心话大冒险',kick:'我们玩真心话大冒险：用骰子比大小，ta会点下面的🎲掷骰子，你也掷一个（直接在话里说你掷出几点1-6），点数小的人要选「真心话」或「大冒险」并完成。先让ta掷，或你先掷都行～'},
   {k:'quiz',e:'💑',n:'默契考验',kick:'我们玩默契大考验：轮流出一道关于彼此的问题考对方，看谁更懂谁。你先出第一题～'},
   {k:'drama',e:'🎭',n:'即兴小剧场',kick:'我们来即兴小剧场，你给我们设定一个情境/开场白，然后我们一起把剧情演下去。开场吧～'},
   {k:'quick',e:'⚡',n:'快问快答',kick:'我们玩快问快答，你连续快速地问我问题、我来答，答完你也可以让我问你。开始！'}
@@ -1237,6 +1237,7 @@ function startGame(k,cid){const g=GAMES.find(x=>x.k===k);if(!g)return;closeModal
   if(k==='soup')return soupCfg(cid);
   if(k==='escape')return escapeCfg(cid);
   if(k==='wordguess')return openGameSpace('wordguess',cid,'我们玩「你说我猜」：轮流出题——一个人描述一个词（不能说出这个词里的任何一个字），另一个人来猜，猜中或想换就继续，自由发挥别老用重复的词。你先出一个词、描述给我猜～','🤐 你说我猜');
+  if(k==='undercover')return ucConfig(cid);
   openGameSpace(k,cid,g.kick,g.e+' '+g.n);}
 /* ===== 单独游戏空间 ===== */
 let _gs=null;
@@ -1251,12 +1252,14 @@ async function gsKick(){if(!_gs)return;_gs.busy=true;gsRender();
   try{const r=await chatAPI([{role:'system',content:gsSystem()},{role:'user',content:'[游戏开始，请你作为主持人/玩伴先开场。]'}],{aux:true});if(!_gs)return;gsAbsorb(r);}
   catch(e){if(_gs)_gs.msgs.push({who:'ta',text:'（信号好像不太好…再戳我一下？）'});}
   if(_gs)_gs.busy=false;gsRender();}
-async function gsSend(){if(!_gs||_gs.busy)return;const ta=$('#gs_in');if(!ta)return;const v=(ta.value||'').trim();if(!v)return;ta.value='';
-  _gs.msgs.push({who:'me',text:v});_gs.busy=true;gsRender();
+async function gsReply(){if(!_gs)return;_gs.busy=true;gsRender();
   try{const hist=_gs.msgs.slice(-30).map(m=>({role:m.who==='me'?'user':'assistant',content:m.text}));
     const r=await chatAPI([{role:'system',content:gsSystem()},...hist],{aux:true});if(!_gs)return;gsAbsorb(r);}
   catch(e){if(_gs)_gs.msgs.push({who:'ta',text:'（…信号断了一下，再说一遍？）'});}
   if(_gs)_gs.busy=false;gsRender();}
+function gsSend(){if(!_gs||_gs.busy)return;const ta=$('#gs_in');if(!ta)return;const v=(ta.value||'').trim();if(!v)return;ta.value='';
+  _gs.msgs.push({who:'me',text:v});gsReply();}
+function gsDice(){if(!_gs||_gs.busy)return;const v=1+Math.floor(Math.random()*6);_gs.msgs.push({who:'me',text:'🎲 我掷出了 '+v+' 点'});gsReply();}
 function gsFmt(){const t=Math.max(0,_gs?_gs.t:0);return Math.floor(t/60)+':'+String(t%60).padStart(2,'0');}
 function gsTimer(){if(!_gs)return;clearInterval(_gs._tm);const tm=setInterval(()=>{if(!_gs||cur().p!=='gs'){clearInterval(tm);return;}_gs.t--;const e=document.getElementById('gstime');if(e)e.textContent=gsFmt();if(_gs.t<=0){clearInterval(tm);toast('⏰ 时间到啦～想继续玩也行，不玩就点结束');}},1000);_gs._tm=tm;}
 function gsRender(){if(cur().p==='gs'){render();const b=$('#gsbg');if(b)b.scrollTop=b.scrollHeight;}}
@@ -1267,8 +1270,111 @@ function renderGS(){if(!_gs)return '';const c=getC(_gs.cid);
     +(_gs.busy?`<div class="msg them">${av(c?c.avatar:'🙂')}<div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`:'');
   return `<div class="nav"><span class="l" onclick="gsQuit()">‹ 退出</span><span class="t">${esc(_gs.title)} <span id="gstime" style="color:#fa5151;font-size:13px">${gsFmt()}</span></span><span class="r" onclick="gsQuit()" style="color:#fa5151">结束</span></div>
     <div class="scroll" id="gsbg" style="background:#000">${body||'<div class="empty" style="padding:30px">开场中…</div>'}</div>
-    <div class="inputbar"><textarea id="gs_in" rows="1" placeholder='说点什么…（说"游戏结束"或点右上「结束」随时退出）' onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();gsSend();}"></textarea><button class="send" onclick="gsSend()">发</button></div>`;}
+    <div class="inputbar"><button class="send" style="background:#3a3a3c;margin-right:6px" onclick="gsDice()" title="掷骰子">🎲</button><textarea id="gs_in" rows="1" placeholder='说点什么…（🎲掷骰子；说"游戏结束"或点右上「结束」随时退出）' onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();gsSend();}"></textarea><button class="send" onclick="gsSend()">发</button></div>`;}
 function gsQuit(){if(_gs)clearInterval(_gs._tm);_gs=null;home();}
+/* ===== 谁是卧底 ===== */
+let _uc=null;
+const UC_BOTS=['小鹿','阿白','团子','西西','阿七','麦麦','楠楠','糖糖','可可','豆豆'];
+function ucConfig(cid){closeModal();
+  openModal(`<h3>🕵️ 谁是卧底</h3>
+   <div class="hint">你和几名AI玩家一起玩。每人拿到一个词，卧底的词不一样。轮流描述、投票，把卧底揪出来！你不知道自己是不是卧底，靠描述来猜。</div>
+   <div class="field"><label>总玩家数（含你）</label><select id="uc_n"><option>4</option><option selected>5</option><option>6</option><option>7</option></select></div>
+   <div class="field"><label>卧底人数</label><select id="uc_u"><option selected>1</option><option>2</option></select></div>
+   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="ucStart('${cid}')">开始</button></div>`);}
+async function ucStart(cid){closeModal();const N=+$('#uc_n').value||5;let U=+$('#uc_u').value||1;U=Math.min(U,Math.max(1,Math.floor((N-1)/2)));
+  const cs=S.contacts.filter(c=>!c.deleted);let pool=[];if(getC(cid))pool.push(getC(cid));cs.forEach(c=>{if(c.id!==cid)pool.push(c);});
+  const players=[{id:'me',name:S.me.name,isMe:true,avatar:S.me.avatar,alive:true,role:'civ',word:'',desc:'',_said:false,vote:null}];
+  let bi=0;for(let i=0;i<N-1;i++){const c=pool[i];players.push(c?{id:'p_'+c.id,name:c.remark||c.name,avatar:c.avatar,isMe:false,alive:true,role:'civ',word:'',desc:'',_said:false,vote:null}:{id:'bot'+i,name:UC_BOTS[bi++%UC_BOTS.length],avatar:'🙂',isMe:false,alive:true,role:'civ',word:'',desc:'',_said:false,vote:null});}
+  const ridx=[...Array(N).keys()].sort(()=>Math.random()-.5).slice(0,U);ridx.forEach(i=>players[i].role='undercover');
+  _uc={players,N,U,phase:'loading',round:1,turn:0,order:[],civWord:'',ucWord:'',busy:true,lastOut:null,win:null};
+  go('uc');render();
+  try{const r=await chatAPI([{role:'system',content:'给一对"谁是卧底"游戏用的词：两个相近但不同的具体名词，能描述也容易混淆。只输出一行，格式：平民词:::卧底词。例如 可乐:::雪碧 或 老虎:::豹子'},{role:'user',content:'出一对词'}],{max:40,aux:true});
+    const p=(r||'').split(/:::|：：：/).map(x=>x.trim()).filter(Boolean);_uc.civWord=p[0]||'苹果';_uc.ucWord=p[1]||'梨';}
+  catch(e){_uc.civWord='苹果';_uc.ucWord='梨';}
+  if(!_uc)return;_uc.players.forEach(p=>p.word=p.role==='undercover'?_uc.ucWord:_uc.civWord);
+  _uc.order=[...Array(N).keys()].sort(()=>Math.random()-.5);_uc.turn=0;_uc.phase='desc';_uc.busy=false;ucStep();}
+function ucAlive(){return _uc.players.filter(p=>p.alive);}
+function ucStep(){if(!_uc)return;
+  while(_uc.turn<_uc.order.length){const p=_uc.players[_uc.order[_uc.turn]];
+    if(p&&p.alive&&!p._said){
+      if(p.isMe){_uc.phase='desc';render();return;}
+      _uc.busy=true;render();ucAIDesc(p);return;}
+    _uc.turn++;}
+  ucVotePhase();}
+async function ucAIDesc(p){if(!_uc)return;const prev=ucAlive().filter(x=>x._said).map(x=>x.name+'：'+x.desc).join('\n')||'(你是第一个说的)';
+  try{const r=await chatAPI([{role:'system',content:'你在玩"谁是卧底"，你拿到的词是「'+p.word+'」。用一句话描述这个词，【绝不能说出这个词本身或它包含的字】，要自然、像真人。如果你发现自己的词好像和别人描述的对不上，你可能是少数派(卧底)，那就说得更模糊、更含糊地跟着大家，别暴露自己。本轮已有的描述：\n'+prev+'\n只输出你的一句话描述（8到22字，不要引号、不要带名字、不要解释）。'},{role:'user',content:'轮到你描述了'}],{max:60,aux:true});
+    p.desc=(cleanReply(r)||'').replace(/^["「『]+|["」』]+$/g,'').replace(/\n/g,' ').slice(0,40)||'…(想不出词)';}
+  catch(e){p.desc='…(没说话)';}
+  p._said=true;_uc.turn++;_uc.busy=false;ucStep();}
+function ucDesc(){if(!_uc)return;const ta=$('#uc_in');const v=(ta&&ta.value||'').trim();if(!v){toast('描述一下你的词吧～');return;}
+  const me=_uc.players.find(p=>p.isMe);me.desc=v.slice(0,40);me._said=true;_uc.turn++;ucStep();}
+async function ucVotePhase(){if(!_uc)return;_uc.phase='vote';_uc.busy=true;_uc.players.forEach(p=>p.vote=null);render();
+  const alive=ucAlive();const summary=alive.map(p=>p.name+'：'+(p.desc||'(没说)')).join('\n');
+  for(const p of alive){if(p.isMe)continue;
+    const others=alive.filter(x=>x.id!==p.id);
+    try{const r=await chatAPI([{role:'system',content:'你在玩"谁是卧底"，你的词是「'+p.word+'」。这是大家的描述：\n'+summary+'\n谁的描述和你的词最不一样、最可疑，谁就可能是卧底。从这些人里挑一个你要投的：'+others.map(x=>x.name).join('、')+'。只回答一个名字，不要解释。'},{role:'user',content:'你投谁？'}],{max:20,aux:true});
+      const nm=(r||'').trim();let t=others.find(x=>nm.includes(x.name));if(!t)t=others[Math.floor(Math.random()*others.length)];p.vote=t?t.id:null;}
+    catch(e){p.vote=others.length?others[Math.floor(Math.random()*others.length)].id:null;}}
+  if(!_uc)return;_uc.busy=false;render();}
+function ucVote(id){if(!_uc||_uc.busy)return;const me=_uc.players.find(p=>p.isMe);if(!me.alive){ucTally();return;}me.vote=id;ucTally();}
+function ucTally(){if(!_uc)return;const alive=ucAlive();const tally={};
+  alive.forEach(p=>{if(p.vote){tally[p.vote]=(tally[p.vote]||0)+1;}});
+  let max=0,top=[];Object.keys(tally).forEach(id=>{if(tally[id]>max){max=tally[id];top=[id];}else if(tally[id]===max)top.push(id);});
+  let outId,tie=false;
+  if(!top.length)outId=alive[Math.floor(Math.random()*alive.length)].id;
+  else if(top.length>1){tie=true;outId=top[Math.floor(Math.random()*top.length)];}
+  else outId=top[0];
+  const out=_uc.players.find(p=>p.id===outId);out.alive=false;
+  const votes=alive.filter(p=>p.vote).map(p=>p.name+'→'+(_uc.players.find(x=>x.id===p.vote)||{}).name).join('，');
+  _uc.lastOut={name:out.name,role:out.role,tie,votes,wasMe:out.isMe};
+  const aliveU=_uc.players.filter(p=>p.alive&&p.role==='undercover').length;
+  const aliveC=_uc.players.filter(p=>p.alive&&p.role==='civ').length;
+  if(aliveU===0){_uc.phase='over';_uc.win='civ';}
+  else if(aliveU>=aliveC){_uc.phase='over';_uc.win='under';}
+  else _uc.phase='result';
+  render();}
+function ucNextRound(){if(!_uc)return;_uc.round++;_uc.players.forEach(p=>{p._said=false;p.desc='';p.vote=null;});
+  _uc.order=_uc.players.map((p,i)=>i).filter(i=>_uc.players[i].alive).sort(()=>Math.random()-.5);
+  _uc.turn=0;_uc.phase='desc';_uc.lastOut=null;render();ucStep();}
+function ucPill(p){const me=_uc.players.find(x=>x.isMe);const dead=!p.alive;
+  return `<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:10px;background:${dead?'#1a1a1c':'#202022'};opacity:${dead?'.55':'1'}">
+    ${av(p.avatar,'sm')}<div style="flex:1;min-width:0"><div style="font-weight:600;${dead?'text-decoration:line-through':''}">${esc(p.name)}${p.isMe?'（你）':''} ${dead?'<span style="color:#fa5151">'+(p.role==='undercover'?'🕵️卧底':'🙂平民')+' 出局</span>':''}</div>
+    ${p.desc?`<div style="font-size:13px;color:#bbb;margin-top:2px">「${esc(p.desc)}」</div>`:'<div style="font-size:12px;color:#666;margin-top:2px">…</div>'}</div></div>`;}
+function renderUC(){if(!_uc)return '';const me=_uc.players.find(p=>p.isMe);
+  let panel='';
+  if(_uc.phase==='loading')panel='<div class="empty" style="padding:30px">发牌中…🎴</div>';
+  else if(_uc.phase==='desc'){const cur_=_uc.players[_uc.order[_uc.turn]];
+    if(cur_&&cur_.isMe&&cur_.alive&&!cur_._said&&!_uc.busy)panel=`<div style="padding:10px"><div style="text-align:center;color:#ffd6e8;margin-bottom:8px">轮到你描述了（别说出你的词）</div><div class="inputbar" style="position:static"><textarea id="uc_in" rows="1" placeholder="用一句话描述你的词…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();ucDesc();}"></textarea><button class="send" onclick="ucDesc()">说</button></div></div>`;
+    else panel=`<div class="empty" style="padding:18px">${esc((cur_&&cur_.name)||'')} 描述中…💭</div>`;}
+  else if(_uc.phase==='vote'){
+    if(_uc.busy)panel='<div class="empty" style="padding:18px">大家投票中…🗳️</div>';
+    else if(me.alive)panel=`<div style="padding:10px"><div style="text-align:center;color:#ffd6e8;margin-bottom:8px">投票！你觉得谁是卧底？</div>${ucAlive().filter(p=>!p.isMe).map(p=>`<button class="btn g" style="margin-bottom:6px" onclick="ucVote('${p.id}')">投 ${esc(p.name)}</button>`).join('')}</div>`;
+    else panel=`<div style="padding:10px;text-align:center"><div style="color:#888;margin-bottom:8px">你已出局，旁观中👀</div><button class="btn p" onclick="ucVote('')">看投票结果</button></div>`;}
+  else if(_uc.phase==='result'){const o=_uc.lastOut;
+    panel=`<div style="padding:14px;text-align:center;line-height:1.9">
+      ${o.tie?'<div style="color:#f7a23b">出现平票，抽签决定～</div>':''}
+      <div style="font-size:16px">🗳️ <b>${esc(o.name)}</b> 被票出局</div>
+      <div style="font-size:20px;margin:6px 0">ta是 ${o.role==='undercover'?'🕵️ <b style="color:#fa5151">卧底</b>':'🙂 <b>平民</b>'}！</div>
+      <div style="font-size:12px;color:#777">${esc(o.votes||'')}</div>
+      <button class="btn p" style="margin-top:12px" onclick="ucNextRound()">下一轮 ›</button></div>`;}
+  else if(_uc.phase==='over'){const o=_uc.lastOut;const meUnder=me.role==='undercover';const win=_uc.win;
+    const iWon=(win==='under')===meUnder;
+    panel=`<div style="padding:16px;text-align:center;line-height:1.9">
+      ${o?`<div>🗳️ <b>${esc(o.name)}</b> 出局，ta是 ${o.role==='undercover'?'🕵️卧底':'🙂平民'}</div>`:''}
+      <div style="font-size:22px;margin:10px 0">${win==='under'?'🕵️ 卧底获胜！':'🎉 平民获胜！'}</div>
+      <div style="font-size:15px;color:${iWon?'#2bd66a':'#fa5151'}">你是 ${meUnder?'🕵️卧底':'🙂平民'}，${iWon?'你赢啦！🏆':'这局输了～'}</div>
+      <div style="font-size:13px;color:#888;margin-top:10px">平民词：${esc(_uc.civWord)} ｜ 卧底词：${esc(_uc.ucWord)}</div>
+      <div style="margin-top:8px;font-size:12px;color:#888">${_uc.players.map(p=>esc(p.name)+'('+(p.role==='undercover'?'卧底':'平民')+')').join('、')}</div>
+      <div style="display:flex;gap:10px;justify-content:center;margin-top:14px"><button class="btn p" style="max-width:120px" onclick="ucReplay()">再来一局</button><button class="btn g" style="max-width:120px" onclick="ucQuit()">退出</button></div></div>`;}
+  const wordBox=`<div style="margin:10px;padding:12px;border-radius:14px;background:linear-gradient(135deg,#6c5ce7,#a29bfe);color:#fff;text-align:center">
+    <div style="font-size:12px;opacity:.9">你拿到的词（别告诉别人！）</div><div style="font-size:26px;font-weight:800;margin-top:2px">${esc(me.word||'…')}</div>
+    <div style="font-size:11px;opacity:.85;margin-top:3px">第 ${_uc.round} 轮 · 你不知道自己是不是卧底，自己判断哦</div></div>`;
+  return `<div class="nav"><span class="l" onclick="ucQuit()">‹ 退出</span><span class="t">🕵️ 谁是卧底</span><span class="r" onclick="ucQuit()" style="color:#fa5151">结束</span></div>
+    <div class="scroll" style="background:#000">${wordBox}
+      <div style="display:flex;flex-direction:column;gap:6px;padding:0 10px">${_uc.players.map(ucPill).join('')}</div>
+      <div style="margin-top:6px">${panel}</div><div style="height:20px"></div></div>`;}
+function ucReplay(){const lead=_uc.players.find(p=>!p.isMe&&p.id.indexOf('p_')===0);const cid=lead?lead.id.slice(2):(S.contacts.filter(c=>!c.deleted)[0]||{}).id;_uc=null;if(cid)ucConfig(cid);else home();}
+function ucQuit(){_uc=null;home();}
 /* ===== 信箱 ===== */
 function fmtDate(t){const d=new Date(t||Date.now());return (d.getMonth()+1)+'月'+d.getDate()+'日 '+hm(t);}
 function renderMail(){const list=S.mail||[];
