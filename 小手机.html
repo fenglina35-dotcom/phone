@@ -296,7 +296,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v65 · 管控改口头解锁';
+const APP_VER='v66 · 拦截系统腔+自定义App图标';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -665,27 +665,35 @@ function renderHome(){
     <div class="clockw"><div class="hh">${hm()}</div><div class="dd">${d.getMonth()+1}月${d.getDate()}日 ${week}</div></div>
     <div class="hwidget"><div class="hg">${greet} 🐾</div>${S.weather&&S.weather.place?`<div class="hw">${S.weather.place} · ${esc(S.weather.desc)} ${S.weather.temp}°`+(S.weather.rain?' ☔记得带伞':'')+`</div>`:'<div class="hw" onclick="fetchWeather(true)">点这里获取天气 ›</div>'}</div>
     <div class="apps">
-      <div class="app" onclick="openWeChat()"><div class="ic" style="background:#07c160;color:#fff">💬</div><span>微信</span></div>
-      <div class="app" onclick="go('settings')"><div class="ic" style="background:#8e8e93;color:#fff">⚙️</div><span>设置</span></div>
-      <div class="app" onclick="go('worldbook')"><div class="ic" style="background:#ff9f43;color:#fff">📖</div><span>世界书</span></div>
-      <div class="app" onclick="openApp('moments')"><div class="ic" style="background:#ee5a6f;color:#fff">🌸</div><span>${appLk('moments')}朋友圈</span></div>
-      <div class="app" onclick="openApp('spy')"><div class="ic" style="background:#5b6b9c;color:#fff">🔍</div><span>${appLk('spy')}查他手机</span></div>
-      <div class="app" onclick="openApp('shop')"><div class="ic" style="background:#ff6b6b;color:#fff">🛒</div><span>${appLk('shop')}购物</span></div>
-      <div class="app" onclick="openApp('calendar')"><div class="ic" style="background:#4ecdc4;color:#fff">📅</div><span>${appLk('calendar')}日历</span></div>
-      <div class="app" onclick="openApp('x')"><div class="ic" style="background:#000;color:#fff;border:1px solid #333">𝕏</div><span>${appLk('x')}X</span></div>
-      <div class="app" onclick="openApp('food')"><div class="ic" style="background:#ffb83b;color:#fff">🍔</div><span>${appLk('food')}外卖</span></div>
-      <div class="app" onclick="openCouple()"><div class="ic" style="background:#ff8fab;color:#fff">💞</div><span>情侣空间</span></div>
-      <div class="app" onclick="openApp('games')"><div class="ic" style="background:#6c5ce7;color:#fff">🎮</div><span>${appLk('games')}游戏大厅</span></div>
-      <div class="app" onclick="openApp('mail')"><div class="ic" style="background:#f4a93b;color:#fff;position:relative">📮${(S.mail||[]).some(m=>!m.read)?'<span style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:#fa5151;border:2px solid #000"></span>':''}</div><span>${appLk('mail')}信箱</span></div>
-      <div class="app" onclick="openApp('offline')"><div class="ic" style="background:#e84d6f;color:#fff">🌹</div><span>${appLk('offline')}线下约会</span></div>
+      <div class="app" onclick="openWeChat()">${aIco('wechat','💬','#07c160')}<span>微信</span></div>
+      <div class="app" onclick="go('settings')">${aIco('settings','⚙️','#8e8e93')}<span>设置</span></div>
+      <div class="app" onclick="go('worldbook')">${aIco('worldbook','📖','#ff9f43')}<span>世界书</span></div>
+      <div class="app" onclick="openApp('moments')">${aIco('moments','🌸','#ee5a6f')}<span>${appLk('moments')}朋友圈</span></div>
+      <div class="app" onclick="openApp('spy')">${aIco('spy','🔍','#5b6b9c')}<span>${appLk('spy')}查他手机</span></div>
+      <div class="app" onclick="openApp('shop')">${aIco('shop','🛒','#ff6b6b')}<span>${appLk('shop')}购物</span></div>
+      <div class="app" onclick="openApp('calendar')">${aIco('calendar','📅','#4ecdc4')}<span>${appLk('calendar')}日历</span></div>
+      <div class="app" onclick="openApp('x')">${aIco('x','𝕏','#000;border:1px solid #333')}<span>${appLk('x')}X</span></div>
+      <div class="app" onclick="openApp('food')">${aIco('food','🍔','#ffb83b')}<span>${appLk('food')}外卖</span></div>
+      <div class="app" onclick="openCouple()">${aIco('couple','💞','#ff8fab')}<span>情侣空间</span></div>
+      <div class="app" onclick="openApp('games')">${aIco('games','🎮','#6c5ce7')}<span>${appLk('games')}游戏大厅</span></div>
+      <div class="app" onclick="openApp('mail')">${aIco('mail','📮','#f4a93b',(S.mail||[]).some(m=>!m.read)?'<span style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:#fa5151;border:2px solid #000"></span>':'')}<span>${appLk('mail')}信箱</span></div>
+      <div class="app" onclick="openApp('offline')">${aIco('offline','🌹','#e84d6f')}<span>${appLk('offline')}线下约会</span></div>
     </div>
     <div class="dock">
-      <div class="app" onclick="openWeChat()"><div class="ic" style="background:#07c160;color:#fff">💬</div></div>
-      <div class="app" onclick="openWeChat('contacts')"><div class="ic" style="background:#54a0ff;color:#fff">👤</div></div>
-      <div class="app" onclick="openWeChat('me')"><div class="ic" style="background:#feca57;color:#fff">🐱</div></div>
-      <div class="app" onclick="go('settings')"><div class="ic" style="background:#8e8e93;color:#fff">⚙️</div></div>
+      <div class="app" onclick="openWeChat()">${aIco('wechat','💬','#07c160')}</div>
+      <div class="app" onclick="openWeChat('contacts')">${aIco('contacts','👤','#54a0ff')}</div>
+      <div class="app" onclick="openWeChat('me')">${aIco('me','🐱','#feca57')}</div>
+      <div class="app" onclick="go('settings')">${aIco('settings','⚙️','#8e8e93')}</div>
     </div></div>`;
 }
+function aIco(key,emoji,bg,extra){const ic=S.me.appIcons&&S.me.appIcons[key];
+  return `<div class="ic" style="${ic?'background:#222;':'background:'+bg+';'}color:#fff;position:relative;overflow:hidden">${ic?`<img src="${ic}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">`:emoji}${extra||''}</div>`;}
+const HOMEAPPS=[['wechat','💬','微信'],['settings','⚙️','设置'],['worldbook','📖','世界书'],['moments','🌸','朋友圈'],['spy','🔍','查他手机'],['shop','🛒','购物'],['calendar','📅','日历'],['x','𝕏','X'],['food','🍔','外卖'],['couple','💞','情侣空间'],['games','🎮','游戏大厅'],['mail','📮','信箱'],['offline','🌹','线下约会'],['contacts','👤','通讯录'],['me','🐱','我']];
+function appIconEditor(){S.me.appIcons=S.me.appIcons||{};
+  openModal(`<h3>🎨 App 图标</h3><div class="hint">给主屏图标换成你喜欢的图片，留空恢复默认。</div>
+   ${HOMEAPPS.map(a=>`<div class="it"><span>${S.me.appIcons[a[0]]?'':a[1]} ${a[2]}</span><span class="v">${S.me.appIcons[a[0]]?`<img src="${S.me.appIcons[a[0]]}" style="width:26px;height:26px;border-radius:6px;object-fit:cover;vertical-align:middle">`:''}<button class="minibtn" style="margin-left:6px" onclick="setAppIcon('${a[0]}')">${S.me.appIcons[a[0]]?'换':'上传'}</button>${S.me.appIcons[a[0]]?`<button class="minibtn" style="margin-left:4px" onclick="delete S.me.appIcons['${a[0]}'];save();appIconEditor();render()">复位</button>`:''}</span></div>`).join('')}
+   <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
+function setAppIcon(key){pickFile('image/*',async f=>{S.me.appIcons=S.me.appIcons||{};S.me.appIcons[key]=await compress(f,200,.8);save();appIconEditor();render();toast('图标已换 🎨');});}
 const LOCKABLE={moments:'朋友圈',spy:'查他手机',shop:'购物',calendar:'日历',x:'X',food:'外卖',games:'游戏大厅',mail:'信箱',offline:'线下约会'};
 function appLocked(key){return !!(S.couple&&S.couple.locks&&S.couple.locks[key]);}
 function appLk(key){return appLocked(key)?'🔒':'';}
@@ -758,6 +766,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
     <div class="section">
       <div class="it" onclick="alarmManager()"><span>⏰ 闹钟</span><span class="v">${S.alarms.length}个 ›</span></div>
       <div class="it"><span>🖼️ 主屏壁纸</span><span class="v"><button class="minibtn" onclick="setHomeBg()">${S.me.homeBg?'换':'上传'}</button>${S.me.homeBg?'<button class="minibtn" style="margin-left:6px" onclick="S.me.homeBg=\'\';save();toast(\'已恢复默认\')">恢复默认</button>':''}</span></div>
+      <div class="it" onclick="appIconEditor()"><span>🎨 App 图标</span><span class="v">自定义 ›</span></div>
       <div class="it" onclick="fetchWeather(true)"><span>🌦️ 定位天气</span><span class="v">${S.weather?esc(S.weather.place+' '+S.weather.desc+' '+S.weather.temp+'°'):'点击获取 ›'}</span></div>
     </div>
     <div class="btns" style="margin:6px 0"><button class="btn g" onclick="testConn()">🔍 测试连接</button></div>
@@ -2304,6 +2313,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
     for(let i=0;i<lines.length;i++){
       let line=normTag(lines[i]);if(!line)continue;
       if(/^\[联网\|/.test(line))continue;
+      if(/^\s*[🔒🔓🔇🔊🔕]/.test(line)||/^\s*(?:ta|TA|他|她)(把你|锁了你|禁言了你|解除了你|解禁了你|解锁了你)/.test(line))continue;
       let mm=line.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=mm[1];save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[记住\|([^\]]*)\]$/);if(mm){c.memory=c.memory||[];if(mm[1]&&!c.memory.includes(mm[1])){c.memory.push(mm[1]);save();toast('🧠 已记住：'+mm[1].slice(0,12));}continue;}
       mm=line.match(/^\[闹钟\|([0-9]{1,2}:[0-9]{2})\|?([^\]]*)\]$/);if(mm){addAlarm(c.id,mm[1],mm[2]||'起床');continue;}
