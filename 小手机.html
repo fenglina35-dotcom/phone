@@ -296,7 +296,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v62 · 管控锁修复';
+const APP_VER='v63 · 管控锁真生效';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1022,6 +1022,7 @@ function clean(s){return String(s||'').replace(/["'@]/g,'').trim();}
 if(!S.x)S.x=defState().x;['tweets','dms','following','blocked'].forEach(k=>{if(!Array.isArray(S.x[k]))S.x[k]=[];});S.x.circle=S.x.circle||{};S.x.users=S.x.users||{};S.x.profile=Object.assign({handle:'@me',bio:'',fans:0,following:0,cover:''},S.x.profile||{});
 initAccounts();
 if(!S.offline)S.offline={};
+if(S.couple&&S.couple.grant===undefined){S.couple.grant={};Object.keys(LOCKABLE).forEach(k=>S.couple.grant[k]=true);save();}
 function cleanupOld(){const DAY=86400000,now=Date.now();let ch=false;
   if(S.moments){const n=S.moments.length;S.moments=S.moments.filter(p=>now-(p.time||0)<DAY);if(S.moments.length!==n)ch=true;}
   if(S.x&&S.x.tweets){const n=S.x.tweets.length;S.x.tweets=S.x.tweets.filter(t=>now-(t.time||0)<DAY);if(S.x.tweets.length!==n)ch=true;}
@@ -1319,7 +1320,7 @@ function g_addMember(id){const g=S.groups.find(x=>x.id===id);const avail=S.conta
   openModal(`<h3>拉人进群</h3>${avail.map(c=>`<div class="section"><div class="it" onclick="S.groups.find(x=>x.id==='${id}').members.push('${c.id}');S.groups.find(x=>x.id==='${id}').msgs.push({senderId:'me',type:'sys',content:'${esc(c.name)} 加入了群聊',time:Date.now(),id:uid()});save();closeModal();render()">${esc(c.remark||c.name)}<span class="v">＋</span></div></div>`).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 /* ===== 情侣空间 ===== */
 function bindCouple(id){const c=getC(id);if(S.couple&&S.couple.cid&&S.couple.cid!==id){if(!confirm('已绑定其他角色，换成 '+(c.remark||c.name)+'？'))return;}
-  S.couple={cid:id,startDate:todayStr(),anniversaries:[]};save();render();toast('💞 已绑定情侣空间');}
+  const gr={};Object.keys(LOCKABLE).forEach(k=>gr[k]=true);S.couple={cid:id,startDate:todayStr(),anniversaries:[],grant:gr,gagAuth:[],locks:{},gags:{}};save();render();toast('💞 已绑定情侣空间');}
 function openCouple(){go('couple');}
 function setHomeBg(){pickFile('image/*',async f=>{S.me.homeBg=await compress(f,1000,.7);save();render();toast('主屏壁纸已换 🖼️');});}
 const GAMES=[
@@ -2239,8 +2240,25 @@ function applyControlTags(content,c,id){
     else if(act==='解禁'){const nm=arg.split(/[、,，\|]/)[0].trim();const tgt=S.contacts.find(x=>!x.deleted&&(x.name===nm||x.remark===nm||(nm&&nm.includes(x.name))));if(tgt&&S.couple.gags)delete S.couple.gags[tgt.id];}
     return '';
   });
-  if(changed){save();if(cur().p==='wechat'||cur().p==='home')render();}
+  _ctFired=changed;if(changed){save();if(cur().p==='wechat'||cur().p==='home')render();}
   return out;}
+let _ctFired=false;
+const APP_NLWORDS={games:['游戏大厅','打游戏','游戏'],x:['推特','微博','X'],food:['外卖','点餐'],shop:['购物','淘宝','商城'],moments:['朋友圈','动态'],mail:['信箱','邮箱','邮件'],offline:['线下约会','线下','约会'],calendar:['日历','日程'],spy:['查他手机','查岗','查手机']};
+// 模型常常"只用嘴说锁了"而不发指令——这里直接解析ta的话，把锁/禁言真正落地，并用ta说出口的密码
+async function extractControl(reply,c){
+  if(!(S.couple&&S.couple.cid===c.id))return;
+  const gr=S.couple.grant||{};const apps=Object.keys(LOCKABLE).filter(k=>gr[k]);const gauth=(S.couple.gagAuth||[]).map(cid=>getC(cid)).filter(Boolean);
+  if(!apps.length&&!gauth.length)return;
+  const sys='你是指令解析器。判断"'+(c.remark||c.name)+'"说的这句话里，ta是否真的要【锁住/解锁某些App】或【禁言/解禁与某人的聊天】。\n可锁的App只有：'+apps.map(k=>LOCKABLE[k]).join('、')+'。\n可禁言的人只有：'+(gauth.map(x=>x.remark||x.name).join('、')||'无')+'。\n只输出JSON：{"lock":[App名],"unlock":[App名],"gag":[人名],"ungag":[人名],"pwd":"句中出现的4位数字密码或空字符串"}。要锁全部就把可锁的App都列进lock。ta只是随口说说没真要锁，就全给空数组。';
+  let d;try{const r=await chatAPI([{role:'system',content:sys},{role:'user',content:reply}],{max:140,aux:true});d=JSON.parse(stripJSON(r));}catch(e){return;}
+  if(!d)return;const pwd=(d.pwd&&/^\d{4}$/.test(String(d.pwd)))?String(d.pwd):null;
+  const toKey=n=>{n=(''+n).replace(/[「」『』\s]/g,'');return APPNAME2KEY[n]||Object.keys(APP_NLWORDS).find(k=>APP_NLWORDS[k].some(w=>n===w||n.indexOf(w)>=0));};
+  let changed=false;
+  (d.lock||[]).forEach(n=>{const k=toKey(n);if(k&&gr[k]&&!(S.couple.locks&&S.couple.locks[k])){S.couple.locks=S.couple.locks||{};S.couple.locks[k]={pwd:pwd||genPwd(),time:Date.now()};changed=true;}});
+  (d.unlock||[]).forEach(n=>{const k=toKey(n);if(k&&S.couple.locks&&S.couple.locks[k]){delete S.couple.locks[k];changed=true;}});
+  (d.gag||[]).forEach(n=>{n=(''+n).replace(/[「」\s]/g,'');const tgt=gauth.find(x=>x.name===n||x.remark===n||(n&&(n.indexOf(x.name)>=0||(x.remark&&n.indexOf(x.remark)>=0))));if(tgt&&!(S.couple.gags&&S.couple.gags[tgt.id])){S.couple.gags=S.couple.gags||{};S.couple.gags[tgt.id]={pwd:pwd||genPwd(),time:Date.now()};changed=true;}});
+  (d.ungag||[]).forEach(n=>{n=(''+n).replace(/[「」\s]/g,'');const tgt=S.contacts.find(x=>!x.deleted&&(x.name===n||x.remark===n||(n&&n.indexOf(x.name)>=0)));if(tgt&&S.couple.gags&&S.couple.gags[tgt.id]){delete S.couple.gags[tgt.id];changed=true;}});
+  if(changed){save();if(cur().p==='wechat'||cur().p==='home'||cur().p==='couple'||cur().p==='chat')render();}}
 function normTag(line){let t=(line||'').replace(/[［｛]/g,'[').replace(/[］｝]/g,']').replace(/｜/g,'|').replace(/\[\s+/,'[').replace(/\s+\]/,']').trim();
   t=t.replace(new RegExp('^\\[\\s*('+TAGWORDS+')\\s*[|:：，,、\\s]+','i'),'[$1|');
   return t;}
@@ -2278,6 +2296,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
     let _lu=null;{const _ms=msgs(id);for(let i=_ms.length-1;i>=0;i--){if(_ms[i].role==='user'){_lu=_ms[i];break;}}}
     const diceCompare=!!(_lu&&_lu.type==='dice');// 她刚掷过 → 这轮他只能比大小、不能再掷
     content=applyControlTags(content,c,id);
+    if(S.couple&&S.couple.cid===id&&!_ctFired&&/锁|封(了|你|起|住)|密码|禁言|没收|解锁|解开|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)/.test(content))extractControl(content,c);
     const lines=splitBubbles(content);let got=false;let txtN=0;let diceUsed=false;const cap=Math.max(1,+c.msgMax||4);
     for(let i=0;i<lines.length;i++){
       let line=normTag(lines[i]);if(!line)continue;
