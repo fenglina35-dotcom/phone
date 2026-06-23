@@ -296,7 +296,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v54 · 总结含通话+查手机升级';
+const APP_VER='v56 · 线下约会(结束发关心)+24h清理';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -570,6 +570,8 @@ function buildSystem(c){
   if(_main&&c.memory&&c.memory.length)s+='\n\n# 你记得关于'+S.me.name+'的事\n'+c.memory.map((m,i)=>(i+1)+'. '+m).join('\n');
   if(c.summary&&!c.summaries){c.summaries=[{time:'(早期)',text:c.summary}];delete c.summary;}
   if(_main&&c.summaries&&c.summaries.length)s+='\n\n# 之前对话的概要（按时间，保持连贯）\n'+c.summaries.slice(-8).map(x=>'· '+x.time+'　'+x.text).join('\n');
+  const _off=S.offline&&S.offline[c.id];
+  if(_main&&_off&&_off.memory&&_off.memory.length)s+='\n\n# 你和ta线下见过面（你们真的在现实里约会过，记得这些）\n'+_off.memory.join('\n')+'\n微信聊天里你可以自然提起这些线下的事，但要用【普通文字】说，别用旁白【】那种线下格式。';
   // 作息 / 此刻在哪
   const _wn=whereNow(c);if(_wn)s+='\n\n# 你的作息（此刻位置）\n现在是 '+hm()+'，按你的作息，你这会儿大概：'+_wn+'。聊到你在哪、在干嘛时要和这个一致，别一天到晚都说在公司/开会。';
   // 亲属卡 / 推荐过的好友（仅主身份）
@@ -633,6 +635,7 @@ function render(){
   else if(c.p==='gs')html=renderGS();
   else if(c.p==='uc')html=renderUC();
   else if(c.p==='calllog')html=renderCallLog(c.id);
+  else if(c.p==='off')html=renderOff(c.id);
   else if(c.p==='contactInfo')html=renderContactInfo(c.id);
   else if(c.p==='spy')html=renderSpy(c.id);
   else if(c.p==='shop')html=renderShop();
@@ -670,6 +673,7 @@ function renderHome(){
       <div class="app" onclick="openCouple()"><div class="ic" style="background:#ff8fab;color:#fff">💞</div><span>情侣空间</span></div>
       <div class="app" onclick="openGames()"><div class="ic" style="background:#6c5ce7;color:#fff">🎮</div><span>游戏大厅</span></div>
       <div class="app" onclick="go('mail')"><div class="ic" style="background:#f4a93b;color:#fff;position:relative">📮${(S.mail||[]).some(m=>!m.read)?'<span style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:#fa5151;border:2px solid #000"></span>':''}</div><span>信箱</span></div>
+      <div class="app" onclick="openOfflineMenu()"><div class="ic" style="background:#e84d6f;color:#fff">🌹</div><span>线下约会</span></div>
     </div>
     <div class="dock">
       <div class="app" onclick="openWeChat()"><div class="ic" style="background:#07c160;color:#fff">💬</div></div>
@@ -1006,6 +1010,15 @@ function jq(s){return "'"+String(s||'').replace(/'/g,'’').replace(/"/g,'”')+
 function clean(s){return String(s||'').replace(/["'@]/g,'').trim();}
 if(!S.x)S.x=defState().x;['tweets','dms','following','blocked'].forEach(k=>{if(!Array.isArray(S.x[k]))S.x[k]=[];});S.x.circle=S.x.circle||{};S.x.users=S.x.users||{};S.x.profile=Object.assign({handle:'@me',bio:'',fans:0,following:0,cover:''},S.x.profile||{});
 initAccounts();
+if(!S.offline)S.offline={};
+function cleanupOld(){const DAY=86400000,now=Date.now();let ch=false;
+  if(S.moments){const n=S.moments.length;S.moments=S.moments.filter(p=>now-(p.time||0)<DAY);if(S.moments.length!==n)ch=true;}
+  if(S.x&&S.x.tweets){const n=S.x.tweets.length;S.x.tweets=S.x.tweets.filter(t=>now-(t.time||0)<DAY);if(S.x.tweets.length!==n)ch=true;}
+  if(S.x&&S.x.dms){S.x.dms.forEach(d=>{d.msgs=(d.msgs||[]).filter(m=>!m.time||now-m.time<DAY);});const n=S.x.dms.length;S.x.dms=S.x.dms.filter(d=>(d.msgs||[]).length);if(S.x.dms.length!==n)ch=true;}
+  (S.me.accounts||[]).forEach(a=>{if(a.bills){const n=a.bills.length;a.bills=a.bills.filter(b=>!b.ts||now-b.ts<DAY);if(a.bills.length!==n)ch=true;}});
+  const act=(S.me.accounts||[]).find(a=>a.id===actId());if(act)S.me.bills=act.bills;
+  if(ch){save();const c=cur();if(c&&(c.p==='wechat'||c.p==='x'))render();}}
+setInterval(cleanupOld,600000);setTimeout(cleanupOld,5000);
 function xUser(name,info){if(!S.x.users[name])S.x.users[name]=Object.assign({name,handle:'@user',avatar:letterAv(name),bio:'',fans:Math.floor(Math.random()*9000),following:Math.floor(Math.random()*500),cid:null},info||{});else if(info)Object.assign(S.x.users[name],info);return S.x.users[name];}
 function renderX(){let body;
   if(xTab==='feed')body=xFeed();else if(xTab==='search')body=xSearch();else if(xTab==='dm')body=xDMList();else body=xProfile();
@@ -1521,6 +1534,80 @@ function clEdit(id,mid){const m=msgs(id).find(x=>x.id===mid);if(!m)return;
    <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var mm=msgs('${id}').find(x=>x.id==='${mid}');if(mm)mm.content=$('#cl_t').value;save();closeModal();render();})()">保存</button></div>`);}
 function clDel(id,mid){const arr=msgs(id);const i=arr.findIndex(x=>x.id===mid);if(i<0)return;arr.splice(i,1);save();render();}
 function clClear(id){if(!confirm('清空和ta的全部通话记录？\n（只删通话/视频内容，不动文字聊天和记忆）'))return;S.messages[mkey(id)]=msgs(id).filter(m=>!m._call);save();render();toast('通话记录已清空');}
+/* ===== 线下约会（独立空间，与微信隔离）===== */
+let _off=null;
+function offData(id){if(!S.offline[id])S.offline[id]={loc:'',when:'',msgs:[],memory:[],started:false};return S.offline[id];}
+function openOfflineMenu(){const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){toast('先创建一个角色');return;}
+  openModal(`<h3>🌹 线下约会</h3><div class="hint">和角色进入一个【独立的约会空间】，有旁白(动作/场景/剧情)+对话，和微信完全分开。约会结束会自动总结成记忆，微信里的ta也会知道你们线下见过面。</div>
+   ${cs.map(c=>{const o=S.offline[c.id];return `<div class="section"><div class="it" onclick="offlineEnter('${c.id}')">${av(c.avatar,'sm')}<div class="meta" style="flex:1"><div class="n">${esc(c.remark||c.name)}</div><div class="s">${o&&o.started?'约会中 · '+esc(o.loc||''):(o&&o.memory&&o.memory.length?'有'+o.memory.length+'条约会记忆':'未约过')}</div></div><span class="v">›</span></div></div>`;}).join('')}
+   <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
+function offlineEnter(cid){closeModal();const o=offData(cid);if(o.started){_off={id:cid,busy:false};go('off',{id:cid});return;}offlineInvite(cid);}
+function offlineInvite(cid){const c=getC(cid);
+  openModal(`<h3>🌹 约 ${esc(c.remark||c.name)} 见面</h3>
+   <div class="field"><label>约会地点</label><input id="of_loc" placeholder="比如：江边咖啡馆 / 你家 / 电影院"></div>
+   <div class="two"><div class="field"><label>日期</label><input id="of_date" type="date" value="${todayStr()}"></div><div class="field"><label>时间</label><input id="of_time" type="time" value="19:00"></div></div>
+   <div class="hint">发出邀请后，ta会(以ta的人设)回应是否赴约，然后你们就开始线下约会。</div>
+   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="offlineStart('${cid}')">发出邀请 💌</button></div>`);}
+function offlineStart(cid){const loc=$('#of_loc').value.trim()||'老地方';const date=$('#of_date').value||todayStr();const time=$('#of_time').value||'19:00';closeModal();
+  const o=offData(cid);o.loc=loc;o.when=date+' '+time;o.started=true;o.msgs=o.msgs||[];
+  o.msgs.push({id:uid(),who:'旁白',text:'💌 你向TA发出约会邀请：'+date+' '+time+'，在「'+loc+'」见面。'});
+  save();_off={id:cid,busy:false};go('off',{id:cid});
+  offAI('[系统：'+S.me.name+'邀请你 '+o.when+' 在「'+loc+'」线下见面。先以你的人设回应是否赴约(基本会答应)，然后用旁白【】描写你到场的场景/动作，开启这次约会。]');}
+function offlineSystem(c){let s=c.persona||'';
+  if(c.memory&&c.memory.length)s+='\n\n# 你记得关于'+S.me.name+'的事\n'+c.memory.map((m,i)=>(i+1)+'. '+m).join('\n');
+  const o=offData(c.id);
+  if(o.memory&&o.memory.length)s+='\n\n# 你们以前线下见面的经历\n'+o.memory.join('\n');
+  s+='\n\n# 现在：和'+S.me.name+'线下真实约会（这不是微信聊天！）\n地点：'+(o.loc||'未定')+'，时间：'+(o.when||'现在')+'。\n- 沉浸式第一人称角色扮演，像写剧本/小说。\n- 你的【动作、神态、环境、心理】一律用【】括起来写成旁白；说出口的话就正常写。\n- 一次可以几段：旁白和对话穿插，生动真实，符合你的人设和你们的关系。\n- 这里是面对面，绝对不要用微信那套：不要发[转账][红包][语音][来电]这类标签卡片。';
+  return s;}
+async function offAI(note){if(!_off)return;const c=getC(_off.id);const o=offData(_off.id);_off.busy=true;offRender();
+  try{const hist=o.msgs.slice(-30).map(m=>({role:m.who==='me'?'user':'assistant',content:(m.who==='旁白'?'【'+m.text+'】':m.text)}));
+    if(note)hist.push({role:'user',content:note});
+    const r=await chatAPI([{role:'system',content:offlineSystem(c)},...hist]);
+    if(!_off)return;
+    splitBubbles(r).forEach(l=>{l=normTag(l);if(LEAKRE.test(l))return;l=l.replace(/\[[^\]]*\]/g,'').trim();if(!l)return;
+      splitActions(l).forEach(p=>{p=(p||'').trim();if(!p)return;const nar=/^[（(【][\s\S]*[）)】]$/.test(p);o.msgs.push({id:uid(),who:nar?'旁白':'ta',text:nar?p.replace(/^[（(【]+|[）)】]+$/g,'').trim():p});});});
+    save();
+  }catch(e){o.msgs.push({id:uid(),who:'旁白',text:'（…信号般的停顿，再继续吧）'});}
+  if(_off)_off.busy=false;offRender();}
+function offRender(){if(cur().p==='off'){render();const b=$('#offbg');if(b)b.scrollTop=b.scrollHeight;}}
+function offSend(){if(!_off||_off.busy)return;const ta=$('#off_in');if(!ta)return;const v=(ta.value||'').trim();if(!v)return;ta.value='';
+  offData(_off.id).msgs.push({id:uid(),who:'me',text:v});save();offAI();}
+function offNarrate(){if(!_off||_off.busy)return;const t=prompt('加一段旁白（你的动作/场景/剧情）：','');if(t==null)return;const v=t.trim();if(!v)return;
+  offData(_off.id).msgs.push({id:uid(),who:'旁白',text:v});save();offAI();}
+function offMsgMenu(id,mid){const o=offData(id);const m=o.msgs.find(x=>x.id===mid);if(!m)return;
+  openModal(`<h3>编辑 / 删除</h3><div class="field"><textarea id="off_e" rows="3">${esc(m.text)}</textarea></div>
+   <div class="btns"><button class="btn d" onclick="(function(){var oo=offData('${id}');oo.msgs=oo.msgs.filter(x=>x.id!=='${mid}');save();closeModal();render();})()">删除</button><button class="btn p" onclick="(function(){var mm=offData('${id}').msgs.find(x=>x.id==='${mid}');if(mm)mm.text=$('#off_e').value;save();closeModal();render();})()">保存</button></div>
+   <button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+function offMemory(id){const o=offData(id);
+  openModal(`<h3>🌹 约会记忆</h3><div class="hint">这些是你们线下见面发生的事(结束约会会自动添加)，微信里的ta也会记得。可随时改/删。</div>
+   ${(o.memory||[]).map((m,i)=>`<div class="bill" style="border-radius:8px;margin-bottom:6px"><div style="flex:1">${esc(m)}</div><div style="white-space:nowrap"><span onclick="(function(){var t=prompt('改记忆',offData('${id}').memory[${i}]);if(t!=null){offData('${id}').memory[${i}]=t;save();offMemory('${id}');}})()" style="color:#54a0ff;cursor:pointer;margin-right:10px">✎</span><span onclick="offData('${id}').memory.splice(${i},1);save();offMemory('${id}')" style="color:#fa5151;cursor:pointer">✕</span></div></div>`).join('')||'<div class="empty">还没有约会记忆</div>'}
+   <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
+async function offEnd(id){const o=offData(id);if(!o.msgs||!o.msgs.length){offQuit();return;}
+  if(!confirm('结束这次约会？会自动把这次见面总结成一条记忆(微信里的ta也会知道)。'))return;
+  toast('正在回味这次约会…');const c=getC(id);
+  try{const text=o.msgs.map(m=>(m.who==='me'?S.me.name:m.who==='旁白'?'(旁白)':c.name)+'：'+m.text).join('\n');
+    const sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」。把你和'+S.me.name+'这次线下约会发生的事，用第一人称简短记成1到2句记忆(包含地点、做了什么、心情)，以后聊微信你能想起。直接写正文，50字内。'},{role:'user',content:text}],{max:160});
+    o.memory=o.memory||[];o.memory.push((o.when?o.when+' ':'')+(o.loc?'@'+o.loc+'：':'')+cleanReply(sum).slice(0,90));
+  }catch(e){o.memory=o.memory||[];o.memory.push((o.when||'')+(o.loc?' @'+o.loc:'')+' 见了一面');}
+  o.started=false;save();toast('约会记忆已保存💗');
+  if(c&&!c.blocked)scheduleReply(id,'[系统：你和'+S.me.name+'刚结束在「'+(o.loc||'外面')+'」的线下约会，要分开各自回家了。请你主动发微信关心ta（比如 路上注意安全、到家跟我说一声、今天很开心 之类，符合你的人设），用普通文字聊天，别用旁白【】那种格式。]');
+  offQuit();}
+function offSetting(id){const o=offData(id);
+  openModal(`<h3>约会设定</h3>
+   <div class="field"><label>约会地点</label><input id="os_loc" value="${esc(o.loc||'')}"></div>
+   <div class="field"><label>时间</label><input id="os_when" value="${esc(o.when||'')}"></div>
+   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var o=offData('${id}');o.loc=$('#os_loc').value.trim();o.when=$('#os_when').value.trim();save();closeModal();render();})()">保存</button></div>`);}
+function offQuit(){_off=null;home();}
+function renderOff(id){const c=getC(id);if(!c)return '';const o=offData(id);
+  const body=o.msgs.map(m=>{
+    if(m.who==='旁白')return `<div onclick="offMsgMenu('${id}','${m.id}')" style="text-align:center;color:#c9a0d8;font-style:italic;font-size:13px;padding:8px 24px;line-height:1.6">${esc(m.text)}</div>`;
+    if(m.who==='me')return `<div class="msg me" onclick="offMsgMenu('${id}','${m.id}')"><div class="col"><div class="bubble">${esc(m.text)}</div></div></div>`;
+    return `<div class="msg them" onclick="offMsgMenu('${id}','${m.id}')">${av(c.avatar)}<div class="col"><div class="bubble">${esc(m.text)}</div></div></div>`;}).join('')
+    +(_off&&_off.busy?`<div class="msg them">${av(c.avatar)}<div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`:'');
+  return `<div class="nav"><span class="l" onclick="offQuit()">‹ 退出</span><span class="t">🌹 线下约会</span><span class="r" onclick="offEnd('${id}')" style="color:#fa5151;font-size:13px">结束</span></div>
+   <div style="padding:7px 12px;background:#2a1a22;color:#e8a0b8;font-size:12px;display:flex;justify-content:space-between;align-items:center"><span>📍 ${esc(o.loc||'未定')} · 🕐 ${esc(o.when||'现在')}</span><span><span onclick="offSetting('${id}')" style="cursor:pointer;margin-right:12px">⚙︎设定</span><span onclick="offMemory('${id}')" style="cursor:pointer">🌹记忆</span></span></div>
+   <div class="scroll" id="offbg" style="background:#140d11">${body||'<div class="empty" style="padding:30px">开始约会吧…</div>'}</div>
+   <div class="inputbar"><button class="send" style="background:#9a5;margin-right:6px" onclick="offNarrate()" title="加旁白">🎭</button><textarea id="off_in" rows="1" placeholder="说点什么…(🎭加旁白/动作，点右上「结束」收尾并存记忆)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();offSend();}"></textarea><button class="send" onclick="offSend()">发</button></div>`;}
 /* ===== 信箱 ===== */
 function fmtDate(t){const d=new Date(t||Date.now());return (d.getMonth()+1)+'月'+d.getDate()+'日 '+hm(t);}
 function renderMail(){const list=S.mail||[];
