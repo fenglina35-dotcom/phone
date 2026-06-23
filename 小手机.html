@@ -296,7 +296,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v50 · 小号多身份系统';
+const APP_VER='v51 · 小号全新身份隔离';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -361,6 +361,8 @@ function syncBlocks(){const a=actId();S.contacts.forEach(c=>{if(!c._blk)c._blk={
 function setBlk(c,v){c._blk=c._blk||{};c._blk[actId()]=v;c.blocked=v;}
 function initAccounts(){if(!S.me.accounts||!S.me.accounts.length)S.me.accounts=[{id:'main',name:S.me.name,wxid:S.me.wxid||genWxid(),avatar:S.me.avatar,persona:S.me.persona||'',signature:S.me.signature||''}];
   if(!S.me.active||!S.me.accounts.find(a=>a.id===S.me.active))S.me.active='main';
+  S.me.accounts.forEach(a=>{if(a.balance==null)a.balance=(a.id==='main'?(+S.me.balance||0):188);if(!a.bills)a.bills=(a.id==='main'?(S.me.bills||[]):[]);});
+  const act=S.me.accounts.find(a=>a.id===S.me.active);if(act){S.me.balance=act.balance;S.me.bills=act.bills;}
   S.contacts.forEach(c=>{if(!c._blk)c._blk={main:!!c.blocked};});syncBlocks();}
 function msgs(id){const k=mkey(id);return S.messages[k]||(S.messages[k]=[]);}
 function lastMsg(id){const m=msgs(id);return m[m.length-1];}
@@ -551,7 +553,7 @@ function buildSystem(c){
   const _main=isMain();
   let s=c.persona||'';
   s+='\n\n# 你在和谁聊\n对方是「'+S.me.name+'」'+(c.remark?'（你给ta备注：'+c.remark+'）':'')+'。ta现在'+(isOnline()?'在线':'显示离线（可能没在看手机）')+'。';
-  if(!_main)s+='\n\n# 注意：这是另一个身份在加你\n现在跟你聊天的是「'+S.me.name+'」'+(S.me.persona?'，身份/自称：'+S.me.persona:'')+'。这未必是你最熟的那个人，请完全按这个身份和你们之间（这个聊天里）的实际交流来对待——不要把别处、别的身份的记忆/关系套到这里。如果ta是陌生人或刚加你，就以初识的态度相处；要不要深入、要不要拉黑，你按自己的人设和感受决定。';
+  if(!_main)s+='\n\n# 最重要：这是一个【陌生的新好友】通过微信号加的你\n现在跟你聊天的是「'+S.me.name+'」'+(S.me.persona?'，ta的身份/自我介绍：'+S.me.persona:'（没写身份，就是个陌生人）')+'。\n- 这个人【不是】你的恋人/女朋友/未婚妻，你和ta【没有任何过往关系和回忆】，绝对不要叫"宝贝"之类的亲密称呼，不要默认你们在一起、不要提你真正的恋人才知道的事。\n- 一切都从这个聊天里【从零开始】，就当是刚加上的陌生网友。要不要理ta、要不要冷淡、要不要慢慢熟、还是直接[拉黑]，完全由你按自己的人设和此刻感受决定。\n- 别把你和别人的记忆、设定、关系套到ta身上。';
   if(c.blocked)s+='\n\n# 重要\n'+S.me.name+'把你拉黑了'+(c._blockedAt?'，已经'+fmtDur(Date.now()-c._blockedAt):'')+'，你能感觉到被冷落/拒绝。';
   if(c._readdedAt&&Date.now()-c._readdedAt<3600000)s+='\n\n# 重要\n'+S.me.name+'之前把你拉黑了'+(c._blockDur?'（黑了'+c._blockDur+'）':'')+'，刚刚才重新把你加回好友，你心里清楚拉黑了多久这件事，别说错时长。';
   s+='\n\n# 生活与陪伴\n你有自己的生活作息（上班/休息/忙碌等，可以自然提到），但只要'+S.me.name+'找你，你随时都在、马上回，绝不让ta等、不会已读不回。';
@@ -574,6 +576,14 @@ function buildSystem(c){
   if(_main&&c.family&&c.family.bound)s+='\n\n# 亲属卡\n你给'+S.me.name+'开了一张亲属卡，每月额度¥'+(+c.family.quota).toFixed(0)+'，本月已用¥'+(+(c.family.used||0)).toFixed(0)+'。ta用这张卡消费你会立刻收到提醒，可以据此关心/管教ta。';
   if(_main&&c._pushedToMe&&c._pushedToMe.length)s+='\n\n# 你推荐给ta的朋友\n你曾把这些自己的朋友推荐给'+S.me.name+'让ta加：'+c._pushedToMe.join('、')+'。你记得这件事。';
   if(_main&&c._gotFromMe&&c._gotFromMe.length)s+='\n\n# ta推荐给你的朋友\n'+S.me.name+'把ta的这些好友以名片推荐给你加过：'+c._gotFromMe.join('、')+'。你记得是ta推给你的。';
+  // 跨身份：别的微信号加过你并聊过（主身份才知道，要报备给ta）
+  if(_main){const altLines=[];
+    Object.keys(S.messages).forEach(k=>{
+      const idx=k.indexOf('#');if(idx<=0||k.slice(0,idx)!==c.id)return;
+      const acc=(S.me.accounts||[]).find(a=>a.id===k.slice(idx+1));const arr=S.messages[k]||[];if(!acc||!arr.length)return;
+      const recent=arr.slice(-6).map(m=>(m.role==='user'?acc.name:'你')+'：'+((m.content||msgToText(m))||'').replace(/\n/g,' ').slice(0,40)).join('\n');
+      altLines.push('「'+acc.name+'」（微信号'+(acc.wxid||'')+'）加了你，你们聊了：\n'+recent);});
+    if(altLines.length)s+='\n\n# 最近有别人加你微信、和你聊过天（你心里清楚这事）\n'+altLines.join('\n\n')+'\n'+S.me.name+'是你的恋人。这些陌生人加你、跟你聊天，你应当【第一时间如实向'+S.me.name+'报备】（谁加了你、聊了什么、你的态度），坦坦荡荡别隐瞒，符合你的人设。';}
   // 朋友圈感知（仅主身份）
   const mo=_main?S.moments.filter(p=>p.authorId==='me'||p.authorId===c.id).slice(0,3):[];
   if(mo.length)s+='\n\n# 最近的朋友圈（你知道这些动态，但别反复主动提起旧朋友圈，看过一次就够了，除非ta主动说起）\n'+mo.map(p=>(p.authorId==='me'?S.me.name:'你')+'发了："'+p.text+'"').join('\n');
@@ -677,7 +687,7 @@ function scanAutoPost(){if(!S._autoPost)S._autoPost={};const today=new Date().to
     if((c.autoTweet||0)>pc.t&&Math.random()<0.5){pc.t++;pc.last=Date.now();save();doAutoTweet(c.id);}
   });}
 async function doAutoMoment(id){const c=getC(id);try{const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'现在你想发条朋友圈（结合此刻心情/日常/和'+S.me.name+'的关系都行），只输出动态内容本身，一两句，别带方括号。'}]);
-  S.moments.unshift({id:uid(),authorId:id,text:cleanReply(r).slice(0,120),images:[],time:Date.now(),likes:[],comments:[]});save();if(cur().p==='wechat'&&wxTab==='moments')render();toast('🌸 '+(c.remark||c.name)+'发了朋友圈');}catch(e){}}
+  S.moments.unshift({id:uid(),authorId:id,text:cleanReply(r).slice(0,120),images:[],time:Date.now(),likes:[],comments:[],acct:actId()});save();if(cur().p==='wechat'&&wxTab==='moments')render();toast('🌸 '+(c.remark||c.name)+'发了朋友圈');}catch(e){}}
 async function doAutoTweet(id){const c=getC(id);try{const _co=(typeof circleObj==='function')?circleObj(id):{};const note=_co.desc?'，贴合你的圈子定位「'+_co.desc+'」':'';
   const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'现在你想发条推特'+note+'，一两句，只输出推文内容，别带方括号。'}],{aux:true});
   const nm=c.name;xUser(nm,{handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,cid:id});const _tw=cleanReply(r);S.x.tweets.unshift({id:uid(),who:id,name:nm,handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,text:_tw,time:Date.now(),likes:[],lk:Math.floor(Math.random()*80),comments:[],rt:0});save();if(cur().p==='x')render();notifyX(c,_tw);}catch(e){}}
@@ -1627,7 +1637,7 @@ function upMe(){pickFile('image/*',async f=>{S.me.avatar=await compress(f,256,.8
 function saveMe(){S.me.name=$('#me_name').value.trim()||'我';S.me.wxid=$('#me_wxid').value.trim();
   S.me.avatar=$('#me_av').value.trim()||'🐱';S.me.signature=$('#me_sig').value.trim();S.me.persona=$('#me_persona').value.trim();S.me.status=$('#me_status').value.trim();S.me.place=$('#me_place').value.trim();S.me.steps=+$('#me_steps').value||0;
   syncActiveAccount();save();closeModal();render();}
-function syncActiveAccount(){const a=(S.me.accounts||[]).find(x=>x.id===actId());if(a){a.name=S.me.name;a.wxid=S.me.wxid;a.avatar=S.me.avatar;a.persona=S.me.persona;a.signature=S.me.signature;}}
+function syncActiveAccount(){const a=(S.me.accounts||[]).find(x=>x.id===actId());if(a){a.name=S.me.name;a.wxid=S.me.wxid;a.avatar=S.me.avatar;a.persona=S.me.persona;a.signature=S.me.signature;a.balance=S.me.balance;a.bills=S.me.bills;}}
 function accountMgr(){const acts=S.me.accounts||[];
   openModal(`<h3>🪪 我的小号</h3><div class="hint">切换不同身份和角色聊天。每个身份有<b>独立的聊天记录</b>；角色可能拉黑某个身份，你换个身份就能重新搜微信号加回。当前：<b>${esc(S.me.name)}</b></div>
    ${acts.map(a=>`<div class="section"><div class="it">${av(a.avatar||'🐱','sm')}<div class="meta" style="flex:1" onclick="switchAccount('${a.id}')"><div class="n">${esc(a.name)} ${a.id===actId()?'<span class=tag>当前</span>':''}</div><div class="s">${esc(a.persona||'未设身份').slice(0,22)||'未设身份'}</div></div><span class="v" onclick="event.stopPropagation();editAccount('${a.id}')">编辑</span>${a.id!=='main'?`<span style="color:#fa5151;margin-left:10px;cursor:pointer" onclick="event.stopPropagation();delAccount('${a.id}')">✕</span>`:''}</div></div>`).join('')}
@@ -1635,7 +1645,11 @@ function accountMgr(){const acts=S.me.accounts||[];
    <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function switchAccount(aid){if(aid===actId()){closeModal();return;}syncActiveAccount();const t=(S.me.accounts||[]).find(a=>a.id===aid);if(!t)return;
   S.me.active=aid;S.me.name=t.name;S.me.wxid=t.wxid;S.me.avatar=t.avatar;S.me.persona=t.persona||'';S.me.signature=t.signature||'';
-  syncBlocks();save();closeModal();wxTab='chats';render();toast('已切换到「'+t.name+'」');}
+  if(t.balance==null)t.balance=(aid==='main'?0:188);if(!t.bills)t.bills=[];S.me.balance=t.balance;S.me.bills=t.bills;
+  syncBlocks();save();closeModal();wxTab='chats';render();toast('已切换到「'+t.name+'」');
+  if(aid==='main')setTimeout(triggerAltReports,1500);}
+function lastAltMsgTime(cid){let t=0;Object.keys(S.messages).forEach(k=>{if(k.indexOf(cid+'#')===0){const arr=S.messages[k]||[];const lm=arr[arr.length-1];if(lm&&lm.time>t)t=lm.time;}});return t;}
+function triggerAltReports(){if(!isMain())return;for(const c of S.contacts){if(c.deleted||c.blocked)continue;const t=lastAltMsgTime(c.id);if(t&&t>(c._altReportAt||0)){c._altReportAt=Date.now();save();scheduleReply(c.id,'[系统：最近有别人(用别的微信号)加了你、还和你聊了天。'+S.me.name+'是你的恋人，你要主动、第一时间如实向ta报备这件事——谁加了你、大概聊了什么、你什么态度，坦诚点别瞒着。]');break;}}}
 function editAccount(aid){const a=aid?(S.me.accounts||[]).find(x=>x.id===aid):{id:'acc_'+Math.random().toString(36).slice(2,7),name:'',wxid:genWxid(),avatar:'🙂',persona:'',_new:true};if(!a)return;
   openModal(`<h3>${aid&&!a._new?'编辑身份':'新建小号'}</h3>
    <div class="field"><label>头像</label><div class="avline">${av(a.avatar,'sm')}<input id="ac_av" value="${esc(a.avatar)}"><button class="minibtn" onclick="pickFile('image/*',async f=>{$('#ac_av').value=await compress(f,256,.8)})">📷</button></div></div>
@@ -1643,7 +1657,7 @@ function editAccount(aid){const a=aid?(S.me.accounts||[]).find(x=>x.id===aid):{i
    <div class="field"><label>微信号</label><input id="ac_wxid" value="${esc(a.wxid)}"></div>
    <div class="field"><label>身份设定（角色会知道你以这个身份跟ta聊）</label><textarea id="ac_per" rows="3" placeholder="比如：陌生网友 / 新同事 / 假装是别人 / 记者…">${esc(a.persona||'')}</textarea></div>
    <div class="btns"><button class="btn g" onclick="accountMgr()">返回</button><button class="btn p" onclick="saveAccount('${a.id}',${!!a._new})">保存</button></div>`);}
-function saveAccount(id,isNew){const a=isNew?{id}:(S.me.accounts||[]).find(x=>x.id===id);if(!a)return;
+function saveAccount(id,isNew){const a=isNew?{id,balance:188,bills:[]}:(S.me.accounts||[]).find(x=>x.id===id);if(!a)return;
   a.name=$('#ac_name').value.trim()||'小号';a.wxid=$('#ac_wxid').value.trim()||genWxid();a.avatar=$('#ac_av').value.trim()||'🙂';a.persona=$('#ac_per').value.trim();
   if(isNew)S.me.accounts.push(a);
   if(a.id===actId()){S.me.name=a.name;S.me.wxid=a.wxid;S.me.avatar=a.avatar;S.me.persona=a.persona;}
@@ -1713,11 +1727,11 @@ function renderContactInfo(id){const c=getC(id);if(!c)return '';const sp=getSpy(
     <div class="section" style="margin:12px">
       <div class="it" onclick="setRemark('${id}')"><span>备注</span><span class="v">${esc(c.remark||'添加备注')}</span></div>
       <div class="it" onclick="editContact('${id}')"><span>人设</span><span class="v">点击修改</span></div>
-      <div class="it" onclick="editMemory('${id}')"><span>🧠 记忆</span><span class="v">${(c.memory||[]).length}条 ›</span></div>
+      ${isMain()?`<div class="it" onclick="editMemory('${id}')"><span>🧠 记忆</span><span class="v">${(c.memory||[]).length}条 ›</span></div>
       <div class="it" onclick="editSummary('${id}')"><span>📝 对话总结</span><span class="v">${(c.summaries||[]).length}条 ›</span></div>
-      <div class="it" onclick="editCircle('${id}')"><span>𝕏 圈子备注</span><span class="v">${(S.x&&S.x.circle&&S.x.circle[id])?'已设 ›':'未设 ›'}</span></div>
+      <div class="it" onclick="editCircle('${id}')"><span>𝕏 圈子备注</span><span class="v">${(S.x&&S.x.circle&&S.x.circle[id])?'已设 ›':'未设 ›'}</span></div>`:`<div class="it"><span style="color:#888">🪪 你正用小号「${esc(S.me.name)}」看ta（陌生人视角，看不到主号的记忆/关系）</span></div>`}
       <div class="it" onclick="editVoice('${id}')"><span>🎙️ 语音音色</span><span class="v">${getVoice(c).voiceURI?'已设 ›':'默认 ›'}</span></div>
-      <div class="it" onclick="bindCouple('${id}')"><span>💞 情侣空间</span><span class="v">${(S.couple&&S.couple.cid===id)?'已绑定 ✓':'绑定 ›'}</span></div>
+      ${isMain()?`<div class="it" onclick="bindCouple('${id}')"><span>💞 情侣空间</span><span class="v">${(S.couple&&S.couple.cid===id)?'已绑定 ✓':'绑定 ›'}</span></div>`:''}
       <div class="it" onclick="schedSet('${id}')"><span>🕐 作息时间表</span><span class="v">${(c.sched&&c.sched.on)?'已启用 ›':'未设 ›'}</span></div>
       <div class="it" onclick="setChatBg('${id}')"><span>聊天背景</span><span class="v">${c.chatBg?'已设置':'默认'}</span></div>
     </div>
@@ -2077,7 +2091,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
       mm=line.match(/^\[记住\|([^\]]*)\]$/);if(mm){c.memory=c.memory||[];if(mm[1]&&!c.memory.includes(mm[1])){c.memory.push(mm[1]);save();toast('🧠 已记住：'+mm[1].slice(0,12));}continue;}
       mm=line.match(/^\[闹钟\|([0-9]{1,2}:[0-9]{2})\|?([^\]]*)\]$/);if(mm){addAlarm(c.id,mm[1],mm[2]||'起床');continue;}
       mm=line.match(/^\[日程\|(\d{4}-\d{2}-\d{2})\|?([^\]]*)\]$/);if(mm){S.calendar.push({id:uid(),date:mm[1],title:mm[2]||'日程',type:'event',contactId:c.id});save();toast('📅 已加日程 '+mm[1]);continue;}
-      mm=line.match(/^\[发朋友圈\|([^\]]*)\]$/);if(mm){S.moments.unshift({id:uid(),authorId:c.id,text:mm[1],images:[],time:Date.now(),likes:[],comments:[]});save();toast('🌸 '+(c.remark||c.name)+'发了朋友圈');continue;}
+      mm=line.match(/^\[发朋友圈\|([^\]]*)\]$/);if(mm){S.moments.unshift({id:uid(),authorId:c.id,text:mm[1],images:[],time:Date.now(),likes:[],comments:[],acct:actId()});save();toast('🌸 '+(c.remark||c.name)+'发了朋友圈');continue;}
       mm=line.match(/^\[发推\|([^\]]*)\]$/);if(mm){const nm=c.name;xUser(nm,{handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,cid:c.id});S.x.tweets.unshift({id:uid(),who:c.id,name:nm,handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,text:mm[1],time:Date.now(),likes:[],lk:Math.floor(Math.random()*60),comments:[],rt:0});save();toast('𝕏 '+nm+'发了推');continue;}
       mm=line.match(/^\[点外卖\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){const fc={role:'assistant',type:'food',name:mm[1]||'外卖',price:+mm[2]||0,shop:'',from:'ta',received:false,id:uid(),time:Date.now()};msgs(id).push(fc);notifyIncoming(c,fc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[语音\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){const vm={role:'assistant',type:'voice',content:mm[1]||'',trans:mm[2]||'',time:Date.now(),id:uid()};msgs(id).push(vm);notifyIncoming(c,vm);save();if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');cb.insertAdjacentHTML('beforeend',bubbleRow(c,vm));cb.scrollTop=cb.scrollHeight;}continue;}
@@ -2355,7 +2369,7 @@ function wxMoments(){
     <div style="text-align:right;padding:26px 14px 6px"><button class="minibtn" onclick="showVisitors()">👣 谁看过我${(S.visitors||[]).length?'('+(S.visitors||[]).length+')':''}</button>
       <button class="minibtn" onclick="postMoment()">＋ 发朋友圈</button>
       <button class="minibtn" onclick="refreshMoments()">🔄 刷新</button></div>
-    ${S.moments.length?S.moments.map(momentHTML).join(''):'<div class="empty">还没有朋友圈，点「刷新」让角色发动态，或自己发一条～</div>'}
+    ${(function(){const ms=S.moments.filter(p=>(p.acct||'main')===actId());return ms.length?ms.map(momentHTML).join(''):'<div class="empty">'+(isMain()?'还没有朋友圈，点「刷新」让角色发动态，或自己发一条～':'这个身份的朋友圈还是空的～')+'</div>';})()}
     <div style="height:20px"></div>`;}
 function changeCover(){pickFile('image/*',async f=>{S.me.momentCover=await compress(f,900,.6);save();render();toast('背景已换');});}
 function momentHTML(p){const author=p.authorId==='me'?S.me:getC(p.authorId);if(!author)return '';
@@ -2392,7 +2406,7 @@ function postMoment(){openModal(`<h3>发朋友圈</h3>
   window._mmImgs=[];}
 function addMomentImg(){pickFile('image/*',async f=>{window._mmImgs.push(await compress(f,700,.6));$('#mm_imgcount').textContent='已加'+window._mmImgs.length+'张';});}
 function doPostMoment(){const t=$('#mm_t').value.trim();if(!t&&!(window._mmImgs||[]).length){toast('写点什么吧');return;}
-  const p={id:uid(),authorId:'me',text:t,images:window._mmImgs||[],time:Date.now(),likes:[],comments:[]};
+  const p={id:uid(),authorId:'me',text:t,images:window._mmImgs||[],time:Date.now(),likes:[],comments:[],acct:actId()};
   S.moments.unshift(p);save();closeModal();render();reactToMyMoment(p);}
 function cleanReply(t){return (t||'').replace(/\[(心情|记住|闹钟|来电|联网|骰子|送礼|代付成功|日程|转账|红包|位置|图片|文件)[^\]]*\]/g,'').replace(/^["「]+|["」]+$/g,'').trim();}
 function recordVisit(cid,where){const c=getC(cid);if(!c)return;if(!S.visitors)S.visitors=[];S.visitors.unshift({cid,name:c.remark||c.name,avatar:c.avatar,where:where||'朋友圈',time:Date.now()});if(S.visitors.length>40)S.visitors.length=40;save();}
@@ -2409,7 +2423,7 @@ async function refreshMoments(){const pool=S.contacts.filter(c=>!c.deleted&&!c.b
   toast('刷新中…');const picks=pool.sort(()=>Math.random()-.5).slice(0,2);
   for(const c of picks){try{const r=await chatAPI([{role:'system',content:buildSystem(c)},
     {role:'user',content:'以你的身份发一条朋友圈动态（一两句，可带点心情或日常），只输出动态内容本身，不要带方括号标记。'}]);
-    S.moments.unshift({id:uid(),authorId:c.id,text:cleanReply(r).slice(0,120),images:[],time:Date.now(),likes:[],comments:[]});
+    S.moments.unshift({id:uid(),authorId:c.id,text:cleanReply(r).slice(0,120),images:[],time:Date.now(),likes:[],comments:[],acct:actId()});
     save();if(cur().p==='wechat'&&wxTab==='moments')render();}catch(e){toast('生成失败：'+e.message);}}}
 
 /* ---------- 通用弹窗 ---------- */
