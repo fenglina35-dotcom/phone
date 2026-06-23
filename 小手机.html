@@ -296,7 +296,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v38 · 电话格式不串进文字聊天';
+const APP_VER='v39 · 游戏修复(海龟汤/小黑屋/你说我猜)';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1220,28 +1220,37 @@ function startGame(k,cid){const g=GAMES.find(x=>x.k===k);if(!g)return;closeModal
   if(k==='escape')return escapeCfg(cid);
   if(k==='wordguess')return startWG(cid);
   openChat(cid);pushMsg(cid,{role:'user',type:'text',content:'【'+g.n+'】'+g.kick,id:uid()});scheduleReply(cid);}
-function soupCfg(cid){window._sc={cat:'悬疑',dif:'中等'};openModal(`<h3>🐢 海龟汤设置</h3>
+function soupCfg(cid){openModal(`<h3>🐢 海龟汤设置</h3>
   <div class="field"><label>类别</label><select id="sc_cat"><option>悬疑</option><option>恐怖</option><option>搞笑</option><option>温情</option><option>脑洞</option></select></div>
   <div class="field"><label>难度</label><select id="sc_dif"><option>简单</option><option selected>中等</option><option>烧脑</option></select></div>
   <div class="hint">玩的时候：说「公布答案」揭晓汤底，「换一题」换题，「结束」收工。</div>
-  <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var cat=$('#sc_cat').value,dif=$('#sc_dif').value;closeModal();openChat('${cid}');pushMsg('${cid}',{role:'user',type:'text',content:'【海龟汤·'+cat+'·'+dif+'】我们玩海龟汤。请你出一个'+cat+'类、难度'+dif+'的谜题，先只描述表面情境(汤面)，我用是非题来猜，你只回答"是/不是/无关"。我说"公布答案"你就揭晓汤底，"换一题"就换，"结束"就停。出题吧～',id:uid()});scheduleReply('${cid}');})()">开始</button></div>`);}
+  <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="soupStart('${cid}')">开始</button></div>`);}
+function soupStart(cid){const cat=$('#sc_cat').value,dif=$('#sc_dif').value;closeModal();openChat(cid);
+  const content='【海龟汤·'+cat+'·'+dif+'】我们玩海龟汤。请你出一个'+cat+'类、难度'+dif+'的谜题，先只描述表面情境（汤面），我用是非题来猜，你只回答「是 / 不是 / 无关」。我说「公布答案」你就揭晓汤底，「换一题」就换，「结束」就停。出题吧～';
+  pushMsg(cid,{role:'user',type:'text',content,id:uid()});scheduleReply(cid);}
 function escapeCfg(cid){openModal(`<h3>🚪 小黑屋</h3><div class="hint">你被困在上锁的小黑屋，达成你定的条件才能开门通关。规则你自己写～</div>
   <div class="field"><label>密室设定 / 开门规则</label><textarea id="esc_r" rows="4" placeholder="例如：屋里有一盏灯、一个保险箱、一张纸条。要找到密码打开保险箱拿到钥匙才能开门；密码藏在纸条的谜语里。"></textarea></div>
-  <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var r=$('#esc_r').value.trim()||'屋里有线索，需要解开谜题找到钥匙才能开门。';closeModal();openChat('${cid}');pushMsg('${cid}',{role:'user',type:'text',content:'【小黑屋】你来当游戏主持人(GM)。设定：我被困在一间上锁的小黑屋，'+r+' 门一开就通关。请你描述场景、根据我每一步行动推进剧情，只有我真正达成开门条件时才宣布"🔓门开了，通关！"，否则不能放我出去。开始描述场景吧～',id:uid()});scheduleReply('${cid}');})()">进入小黑屋</button></div>`);}
+  <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="escStart('${cid}')">进入小黑屋</button></div>`);}
+function escStart(cid){const r=$('#esc_r').value.trim()||'屋里有线索，需要解开谜题找到钥匙才能开门。';closeModal();openChat(cid);
+  const content='【小黑屋】你来当游戏主持人（GM）。设定：我被困在一间上锁的小黑屋，'+r+' 门一开就通关。请你描述场景、根据我每一步行动推进剧情，只有我真正达成开门条件时才宣布「🔓门开了，通关！」，否则不能放我出去。开始描述场景吧～';
+  pushMsg(cid,{role:'user',type:'text',content,id:uid()});scheduleReply(cid);}
 /* ===== 你说我猜 ===== */
 let _wg=null;
 function startWG(cid){_wg={cid,round:1,score:{me:0,ta:0},phase:'idle',word:'',desc:'',guesses:[],t:0};go('wg');wgRound('ai');}
 async function wgRound(who){if(!_wg)return;const c=getC(_wg.cid);_wg.phase='loading';_wg.who=who;_wg.guesses=[];_wg.word='';_wg.desc='';wgRender();
   try{if(who==='ai'){const r=await chatAPI([{role:'system',content:'你在玩"你描述我猜词"。请你选一个常见、好描述的中文词语(2到4个字)，然后用一两句话描述它但绝对不能出现这个词或它包含的任何一个字。严格用格式：词语:::字数:::描述。只输出这一行。'},{role:'user',content:'出一个词来描述'}],{max:200});
     const p=(r||'').split(/:::|：：：/).map(x=>x.trim());_wg.word=p[0]||'苹果';_wg.len=_wg.word.length;_wg.desc=p[2]||p[1]||'一种东西';
-  }else{const r=await chatAPI([{role:'system',content:'给我一个适合"描述猜词"游戏的常见中文词语(2到4个字)，只输出这个词，别的不要。'}],{max:30});_wg.word=(r||'').replace(/[^一-龥A-Za-z]/g,'').slice(0,4)||'西瓜';_wg.len=_wg.word.length;}
+  }else{const r=await chatAPI([{role:'system',content:'给我一个适合"描述猜词"游戏的常见中文词语(2到4个字)，只输出这个词，别的不要。'},{role:'user',content:'出一个词'}],{max:30});_wg.word=(r||'').replace(/[^一-龥A-Za-z]/g,'').slice(0,4)||'西瓜';_wg.len=_wg.word.length;}
+  if(!_wg||cur().p!=='wg')return;
   _wg.phase=who==='ai'?'meGuess':'meDesc';wgStartTimer(40);wgRender();
-  }catch(e){toast('出题失败，再试一次');_wg.phase='idle';wgRender();}}
-function wgStartTimer(sec){clearInterval(_wg._tm);_wg.t=sec;_wg._tm=setInterval(()=>{if(!_wg){clearInterval(_wg&&_wg._tm);return;}_wg.t--;const e=document.getElementById('wgtime');if(e)e.textContent=_wg.t+'s';if(_wg.t<=0){clearInterval(_wg._tm);wgTimeout();}},1000);}
+  }catch(e){if(_wg)_wg.phase='error';wgRender();}}
+function wgRetry(){if(_wg)wgRound(_wg.who||'ai');}
+function wgStartTimer(sec){if(!_wg)return;clearInterval(_wg._tm);_wg.t=sec;const tm=setInterval(()=>{if(!_wg||cur().p!=='wg'){clearInterval(tm);return;}_wg.t--;const e=document.getElementById('wgtime');if(e)e.textContent=_wg.t+'s';if(_wg.t<=0){clearInterval(tm);wgTimeout();}},1000);_wg._tm=tm;}
 function wgTimeout(){if(!_wg)return;const c=getC(_wg.cid);if(_wg.who==='ai'){_wg.score.ta++;toast('⏰ 超时，没猜出来！答案：'+_wg.word);}else{_wg.score.me++;toast('⏰ 超时，ta没猜出来');}_wg.round++;wgRound(_wg.who==='ai'?'me':'ai');}
 function renderWG(){if(!_wg)return '';const c=getC(_wg.cid);
   let mid='';
   if(_wg.phase==='loading')mid='<div class="empty" style="padding:40px">出题中…</div>';
+  else if(_wg.phase==='error')mid=`<div class="empty" style="padding:36px;line-height:1.8">出题失败了😣<br>可能是网络或接口不稳<div style="display:flex;gap:10px;justify-content:center;margin-top:16px"><button class="btn p" style="max-width:120px" onclick="wgRetry()">重新出题</button><button class="btn g" style="max-width:120px" onclick="wgQuit()">退出</button></div></div>`;
   else if(_wg.phase==='meGuess')mid=`<div style="text-align:center;padding:14px"><div style="color:#888;font-size:13px">${esc(c?c.name:'ta')} 描述（${_wg.len}个字）</div><div style="font-size:17px;color:#eee;margin:10px 0;line-height:1.6">「${esc(_wg.desc)}」</div><div style="font-size:13px;color:#888">你来猜👇</div></div>${_wg.guesses.map(g=>`<div style="text-align:center;color:#aaa;font-size:14px">${esc(g)} ❌</div>`).join('')}`;
   else if(_wg.phase==='meDesc')mid=`<div style="text-align:center;padding:14px"><div style="color:#888;font-size:13px">轮到你描述这个词（${esc(c?c.name:'ta')}来猜）：</div><div style="font-size:24px;color:#ffd6e8;margin:10px 0;font-weight:700">${esc(_wg.word)}</div><div style="font-size:12px;color:#888">描述它，别说出这个字～</div></div>${_wg.guesses.map(g=>`<div style="text-align:center;color:#9ec5fe;font-size:14px">ta猜：${esc(g)} <span onclick="wgJudge(true)" style="color:#2bd66a;cursor:pointer">对✓</span> <span onclick="wgJudge(false)" style="color:#fa5151;cursor:pointer">错✗</span></div>`).join('')}`;
   return `<div class="nav"><span class="l" onclick="wgQuit()">‹</span><span class="t">🤐 你说我猜 <span id="wgtime" style="color:#fa5151">${_wg.t}s</span></span><span class="r">你${_wg.score.me}:${_wg.score.ta}ta</span></div>
@@ -1253,7 +1262,7 @@ function wgInput(){if(!_wg)return;const ta=$('#wg_in');const v=ta.value.trim();i
   else if(_wg.phase==='meDesc'){wgAIGuess(v);}}
 async function wgAIGuess(myDesc){if(!_wg)return;try{const r=await chatAPI([{role:'system',content:'我们在玩猜词，对方描述一个'+_wg.len+'个字的词，你来猜，只回答你猜的那一个词，别的不要。'},{role:'user',content:'描述：'+myDesc}],{max:30});const g=(r||'').replace(/[^一-龥A-Za-z]/g,'').slice(0,6);_wg.guesses.push(g);wgRender();}catch(e){}}
 function wgJudge(ok){if(!_wg)return;clearInterval(_wg._tm);if(ok){_wg.score.ta++;toast('ta猜对啦🎉');}else{toast('那继续描述呗～');wgStartTimer(_wg.t>0?_wg.t:30);return;}_wg.round++;wgRound('ai');}
-function wgQuit(){if(_wg){clearInterval(_wg._tm);}const cid=_wg&&_wg.cid;_wg=null;if(cid)openChat(cid);else home();}
+function wgQuit(){const cid=_wg&&_wg.cid;if(_wg){clearInterval(_wg._tm);}_wg=null;if(cid&&getC(cid))openChat(cid);else home();}
 function renderCouple(){const cp=S.couple;const c=cp&&getC(cp.cid);
   if(!cp||!c)return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">💞 情侣空间</span><span class="r"></span></div>
     <div class="scroll" style="background:#000"><div class="empty" style="padding:50px 24px;line-height:2">还没绑定～<br>去某个角色的「资料页」点 <b>💞 绑定情侣空间</b><br>（只能绑定一个）</div></div>`;
@@ -2000,7 +2009,7 @@ async function refreshMoments(){const pool=S.contacts.filter(c=>!c.deleted&&!c.b
 function openModal(html){$('#modalSheet').innerHTML=html;$('#modal').classList.add('show');}
 function closeModal(){$('#modal').classList.remove('show');}
 $('#modal').addEventListener('click',e=>{if(e.target.id==='modal')closeModal();});
-function openChat(id){const c=getC(id);if(c.blocked){toast('已拉黑');}stack=stack.filter(s=>s.p!=='chat');go('chat',{id});}
+function openChat(id){const c=getC(id);if(!c){home();return;}if(c.blocked){toast('已拉黑');}stack=stack.filter(s=>s.p!=='chat');go('chat',{id});}
 
 /* ---------- 备份 ---------- */
 function exportData(){const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
