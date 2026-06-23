@@ -296,7 +296,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v37 · 通话只读外语+防中文跑偏';
+const APP_VER='v38 · 电话格式不串进文字聊天';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -437,6 +437,24 @@ function pickSpoken(text,lang){
   let s=t.replace(CJK_RE,' ').replace(CN_PUNCT_RE,' ').replace(/\s+/g,' ').trim();
   const ok=lang==='韩'?/[가-힣]/.test(s):/[A-Za-z]/.test(s);
   return ok?s:'';}
+const CJK_TEST=new RegExp(CJK_RE.source);
+function hasCN(s){return CJK_TEST.test(s||'');}
+// 把通话里的一句转成"中文版"，喂给文字聊天的历史，免得他照抄电话里的外语格式
+function callToCN(text){let t=(text||'').replace(/【[^】]*】/g,'').replace(/\[[^\]]*\]/g,'').trim();
+  const m=t.match(/[（(]([^）)]*)[）)]/);if(m&&hasCN(m[1]))return m[1].trim();      // 取括号里的中文翻译
+  const cn=t.replace(/[A-Za-z가-힣぀-ヿ]/g,'').replace(/[（()）]/g,'').replace(/\s+/g,' ').trim();
+  return hasCN(cn)?cn:'';}                                                          // 纯外语那句就丢掉
+// 文字聊天里若冒出"外语（中文）"的电话格式，自动取中文显示（纯中文的不动）
+function deCallFmt(line){if(!/[A-Za-z가-힣぀-ヿ]/.test(line))return line;
+  const m=line.match(/[（(]([^）)]*)[）)]/);if(m&&hasCN(m[1]))return m[1].trim();return line;}
+// 通话里是否跑偏成中文（整句中文、又不是括号翻译）
+function callDrifted(content,lang){if(!lang||lang==='zh')return false;
+  return splitBubbles(content).some(l=>{l=(l||'').trim();if(!l)return false;
+    if(/^\[.*\]$/.test(l))return false;                       // 标签行
+    if(/^[（(][^）)]*[）)]$/.test(l))return false;             // 纯括号翻译
+    const noAct=l.replace(/【[^】]*】/g,'').replace(/[（(][^）)]*[）)]/g,'').trim();
+    if(!noAct)return false;
+    return hasCN(noAct)&&!hasForeign(noAct,lang);});}
 let _voices=[];
 function loadVoices(){try{_voices=speechSynthesis.getVoices()||[];}catch(e){_voices=[];}}
 if('speechSynthesis'in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices;}
@@ -535,7 +553,7 @@ function buildSystem(c){
   // 天气
   if(S.weather)s+='\n\n# '+S.me.name+'所在地天气\n'+S.weather.place+'，'+S.weather.desc+'，'+S.weather.temp+'°C'+(S.weather.rain?'（有雨）':'')+'。你知道这些，下雨时可在合适的时候自然提醒ta带伞，不用每条都提天气。';
   if(S.settings.web&&S.settings.web.enabled)s+='\n\n# 联网\n当需要查实时/最新信息（新闻、天气细节、价格、某事实）时，单独用一行 [联网|要搜索的关键词]，系统会联网查并把结果给你，你再据此回答。';
-  s+='\n\n# 微信聊天规则\n- 现在是微信【文字聊天】，必须用中文，普通说话，不要用【】动作描写、不要外语原文+翻译那种通话格式（只有"语音消息"可以按语音规则来）。\n- 像真人发微信：一次回复大约 '+(c.msgMin||1)+' 到 '+(c.msgMax||4)+' 条短消息，每条单独占一行（用换行分隔），不要写成一大段。具体几条你根据当下情境自己把握：随意时少发，认真/激动/吵架/撒娇时可以多发几条。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 你可以单独用一行 [心情|你此刻的内心想法] 表达内心戏（不会作为消息发出，只显示在顶部）。\n- 当'+S.me.name+'让你记住某件事、或聊到重要的事时，单独用一行 [记住|要长期记住的内容] 把它存进记忆。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta、或ta说"想你了/想听你声音/打个电话/给我打电话"之类的话时，就主动用一行 [来电|语音]（或 [来电|视频]）真的打过去，别只用文字回"那我打给你"却不打。\n- 玩骰子/真心话大冒险时，用单独一行 [骰子|点数]（点数你自己定1到6），你说的话要和这个点数一致。规则：你先掷一次（一条回复里最多一个 [骰子]），然后【等ta掷】；ta掷完后，你这一轮就【只比大小、报结果、出题或认罚，绝对不要再掷第二次骰子】。一局两人各掷一次就够了。\n- 想送对方礼物时，用一行 [送礼|礼物名|价格] 给ta发一个礼物卡片。\n- 当ta刚发来一张新的"求代付"卡片：愿意帮付用一行 [代付成功]；不愿意用一行 [拒绝代付]。每张求代付卡只处理一次，已经付过或拒过的那一单千万别再付一次，正常聊天就好。\n- 想给ta点份外卖时，用一行 [点外卖|餐品名|价格]，ta会收到外卖卡片去签收。\n- 当'+S.me.name+'让你发一条朋友圈时，用一行 [发朋友圈|内容]；让你发推特时，用一行 [发推|内容]，会真的发出去。\n- 当'+S.me.name+'给你转账时：愿意收用一行 [收款]，不想收用一行 [拒收]（退回ta）。\n- 当'+S.me.name+'送你礼物时：愿意收用一行 [收礼]，不想收用一行 [拒礼]（退回ta）。\n- 想发语音消息时，用一行 [语音|要说的话]'+((c.voice&&c.voice.lang&&c.voice.lang!=='zh')?'。你的语音用'+c.voice.lang+'语，请输出 [语音|外语原文|中文翻译]':'')+'。日常和打电话时都能发语音。';
+  s+='\n\n# 微信聊天规则\n- 现在是微信【文字聊天】，必须用中文，普通说话，不要用【】动作描写、不要外语原文+翻译那种通话格式（只有"语音消息"可以按语音规则来）。\n- 哪怕你刚和ta打完电话/视频（上面历史里可能有电话内容），现在回到文字聊天也必须用中文普通文字，绝对不要再写英文/韩文/日文，也不要带（中文翻译）这种括号格式——那是电话专用的，文字消息里出现就错了。\n- 像真人发微信：一次回复大约 '+(c.msgMin||1)+' 到 '+(c.msgMax||4)+' 条短消息，每条单独占一行（用换行分隔），不要写成一大段。具体几条你根据当下情境自己把握：随意时少发，认真/激动/吵架/撒娇时可以多发几条。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 你可以单独用一行 [心情|你此刻的内心想法] 表达内心戏（不会作为消息发出，只显示在顶部）。\n- 当'+S.me.name+'让你记住某件事、或聊到重要的事时，单独用一行 [记住|要长期记住的内容] 把它存进记忆。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta、或ta说"想你了/想听你声音/打个电话/给我打电话"之类的话时，就主动用一行 [来电|语音]（或 [来电|视频]）真的打过去，别只用文字回"那我打给你"却不打。\n- 玩骰子/真心话大冒险时，用单独一行 [骰子|点数]（点数你自己定1到6），你说的话要和这个点数一致。规则：你先掷一次（一条回复里最多一个 [骰子]），然后【等ta掷】；ta掷完后，你这一轮就【只比大小、报结果、出题或认罚，绝对不要再掷第二次骰子】。一局两人各掷一次就够了。\n- 想送对方礼物时，用一行 [送礼|礼物名|价格] 给ta发一个礼物卡片。\n- 当ta刚发来一张新的"求代付"卡片：愿意帮付用一行 [代付成功]；不愿意用一行 [拒绝代付]。每张求代付卡只处理一次，已经付过或拒过的那一单千万别再付一次，正常聊天就好。\n- 想给ta点份外卖时，用一行 [点外卖|餐品名|价格]，ta会收到外卖卡片去签收。\n- 当'+S.me.name+'让你发一条朋友圈时，用一行 [发朋友圈|内容]；让你发推特时，用一行 [发推|内容]，会真的发出去。\n- 当'+S.me.name+'给你转账时：愿意收用一行 [收款]，不想收用一行 [拒收]（退回ta）。\n- 当'+S.me.name+'送你礼物时：愿意收用一行 [收礼]，不想收用一行 [拒礼]（退回ta）。\n- 想发语音消息时，用一行 [语音|要说的话]'+((c.voice&&c.voice.lang&&c.voice.lang!=='zh')?'。你的语音用'+c.voice.lang+'语，请输出 [语音|外语原文|中文翻译]':'')+'。日常和打电话时都能发语音。';
   return s;
 }
 
@@ -1630,7 +1648,9 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
     cb.insertAdjacentHTML('beforeend',`<div class="msg them" id="typing">${av(c.avatar)}<div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`);
     cb.scrollTop=cb.scrollHeight;typingEl=$('#typing');}
   try{
-    const hist=msgs(id).slice(-(S.settings.hist||24)).map(m=>({role:m.role,content:msgToText(m)})).filter(x=>x.content!=null);
+    const hist=msgs(id).slice(-(S.settings.hist||24)).map(m=>{
+      if(m._call){const cn=callToCN(m.content!=null?m.content:msgToText(m));return cn?{role:m.role,content:cn}:null;}
+      return {role:m.role,content:msgToText(m)};}).filter(x=>x&&x.content!=null);
     if(note)hist.push({role:'user',content:note});
     let content=await chatAPI([{role:'system',content:buildSystem(c)},...hist]);
     // 联网
@@ -1662,6 +1682,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
       const base=lineToMsg(line);
       if(base.type==='dice'){if(diceUsed||diceCompare)continue;diceUsed=true;}
       if(base.type==='text'&&LEAKRE.test(line))continue;
+      if(base.type==='text')base.content=deCallFmt(base.content);
       const parts=base.type==='text'?splitActions(base.content):[null];
       for(let pi=0;pi<parts.length;pi++){
         if(base.type==='text'){if(txtN>=cap)break;txtN++;}
@@ -1823,10 +1844,10 @@ async function callAI(sysNote){if(!_call)return;const c=getC(_call.id);const vid
     const sys=buildSystem(c)+cf;
     let content=await chatAPI([{role:'system',content:sys},...hist]);
     if(!_call||_call.session!==sess)return;
-    // 外语通话若整段没出现外语（模型说成了中文），自动纠正重来一次
-    if(_langN&&content&&!hasForeign(content,_lang)){
-      const fix=await chatAPI([{role:'system',content:sys},...hist,{role:'assistant',content:content},{role:'user',content:'[系统纠正：你刚才整句说成中文了。请用'+_langN+'重说一遍刚才的意思，每句先写'+_langN+'原文一行、再换行写（中文翻译），不要再用中文整句。]'}]);
-      if(_call&&_call.session===sess&&fix&&hasForeign(fix,_lang))content=fix;}
+    // 外语通话里只要有"整句说成中文"的句子（哪怕只是其中几句跑偏），自动纠正重来一次
+    if(_langN&&content&&callDrifted(content,_lang)){
+      const fix=await chatAPI([{role:'system',content:sys},...hist,{role:'assistant',content:content},{role:'user',content:'[系统纠正：你刚才有句子直接说成了中文。请整段重说，每一句都先写'+_langN+'原文一行、再换行写（中文翻译），从头到尾不许出现整句中文。]'}]);
+      if(_call&&_call.session===sess&&fix&&!callDrifted(fix,_lang))content=fix;}
     const wantHang=/\[挂断\]/.test(content);const pieces=[];const _vlang=(getVoice(c).lang||'zh');
     splitBubbles(content).forEach(l=>{l=normTag(l);if(/^\[挂断\]$/.test(l))return;const mm=l.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=mm[1];return;}if(LEAKRE.test(l))return;
       if(video){splitActions(l).forEach(p=>pieces.push(p));}
