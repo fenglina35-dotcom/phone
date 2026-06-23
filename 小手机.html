@@ -296,7 +296,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v35 · 通话朗读+骰子修复';
+const APP_VER='v36 · 通话翻译不读+通话类型';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -430,12 +430,15 @@ function pickSpoken(text,lang){
   if(!lang||lang==='zh')return t.replace(/[（(][^）)]*[）)]/g,'').trim();
   const re=lang==='韩'?/[가-힣]/g:lang==='日'?/[぀-ヿ]/g:/[A-Za-z]/g;
   const m=t.match(/^([\s\S]*?)[（(]([^）)]*)[）)]([\s\S]*)$/);
+  let cand;
   if(m){const outside=(m[1]+m[3]),inside=m[2];
     const co=(outside.match(re)||[]).length,ci=(inside.match(re)||[]).length;
-    if(ci>co&&ci>0)return inside.trim();          // 被搞反了：外语其实在（）里
-    const o=outside.replace(/[（(][^）)]*[）)]/g,'').trim();return o||inside.trim();
-  }
-  return t.replace(/[（(][^）)]*[）)]/g,'').trim();}
+    if(ci>co&&ci>0)cand=inside;                    // 被搞反了：外语其实在（）里
+    else cand=outside.replace(/[（(][^）)]*[）)]/g,'');// 外语在外、（中文翻译）丢掉
+  }else cand=t.replace(/[（(][^）)]*[）)]/g,'');
+  cand=cand.trim();
+  if(!(cand.match(re)||[]).length)return '';        // 纯中文翻译那句不读
+  return cand;}
 let _voices=[];
 function loadVoices(){try{_voices=speechSynthesis.getVoices()||[];}catch(e){_voices=[];}}
 if('speechSynthesis'in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices;}
@@ -1773,15 +1776,15 @@ function answerCall(autoByThem){if(!_call)return;ringStop();blip(880,.12);
   _call.state='active';_call.start=Date.now();
   clearInterval(_callTimer);_callTimer=setInterval(renderCallTime,1000);renderCall();
   callAI('[系统：'+(autoByThem?S.me.name+'接通了你打的':'你接通了')+(_call.kind==='video'?'视频':'语音')+'电话，自然开口，口语化短句。]');}
-function declineCall(){if(!_call)return;ringStop();blip(300,.3);const id=_call.id,wasIn=_call.state==='incoming';
-  msgs(id).push({role:'user',type:'sys',content:wasIn?'你拒绝了通话':'通话已取消',time:Date.now(),id:uid()});save();
+function declineCall(){if(!_call)return;ringStop();blip(300,.3);const id=_call.id,wasIn=_call.state==='incoming';const kindTxt=_call.kind==='video'?'视频通话':'语音通话';
+  msgs(id).push({role:'user',type:'sys',content:wasIn?'你拒绝了'+kindTxt:kindTxt+'已取消',time:Date.now(),id:uid()});save();
   _call=null;renderCall();if(cur().p==='chat')render();
-  const c=getC(id);if(wasIn&&c&&!c.blocked)setTimeout(()=>aiReply(id,'[系统：你打电话给'+S.me.name+'，ta拒接了。你察觉到了，主动发消息问ta为什么不接、在干嘛（符合你心情值和人设）。]'),2500);}
-function hangupCall(byAI){if(!_call)return;blip(300,.3);clearInterval(_callTimer);const id=_call.id;
+  const c=getC(id);if(wasIn&&c&&!c.blocked)setTimeout(()=>aiReply(id,'[系统：你打'+kindTxt+'给'+S.me.name+'，ta拒接了。你察觉到了，主动发消息问ta为什么不接、在干嘛（符合你心情值和人设）。]'),2500);}
+function hangupCall(byAI){if(!_call)return;blip(300,.3);clearInterval(_callTimer);const id=_call.id;const kindTxt=_call.kind==='video'?'视频通话':'语音通话';
   const dur=_call.start?Math.floor((Date.now()-_call.start)/1000):0;
-  msgs(id).push({role:'user',type:'sys',content:(byAI?'对方挂断 · ':'')+'通话时长 '+Math.floor(dur/60)+':'+(dur%60).toString().padStart(2,'0'),time:Date.now(),id:uid()});save();
+  msgs(id).push({role:'user',type:'sys',content:(byAI?'对方挂断 · ':'')+kindTxt+'结束 · 时长 '+Math.floor(dur/60)+':'+(dur%60).toString().padStart(2,'0'),time:Date.now(),id:uid()});save();
   _call=null;renderCall();if(cur().p==='chat')render();
-  const c=getC(id);const durTxt=Math.floor(dur/60)+'分'+(dur%60)+'秒';if(!byAI&&c&&!c.blocked)setTimeout(()=>aiReply(id,'[系统：你们这通电话聊了'+durTxt+'，是'+S.me.name+'挂断的，你察觉到了，主动再发条消息（可以提这次通话多久/意犹未尽/问怎么突然挂了，符合你心情值和人设）。]'),2500);}
+  const c=getC(id);const durTxt=Math.floor(dur/60)+'分'+(dur%60)+'秒';if(!byAI&&c&&!c.blocked)setTimeout(()=>aiReply(id,'[系统：你们这通'+kindTxt+'聊了'+durTxt+'，是'+S.me.name+'挂断的，你察觉到了，主动再发条消息（可以提这次通话多久/意犹未尽/问怎么突然挂了，符合你心情值和人设）。]'),2500);}
 function renderCallTime(){if(!_call||_call.state!=='active')return;const s=$('#callStat');if(s){const d=Math.floor((Date.now()-_call.start)/1000);s.textContent=Math.floor(d/60)+':'+(d%60).toString().padStart(2,'0');}}
 function renderCall(){const L=$('#callLayer');if(!_call){L.className='callscreen';L.innerHTML='';return;}
   const c=getC(_call.id);const video=_call.kind==='video';
@@ -1817,7 +1820,7 @@ async function callAI(sysNote){if(!_call)return;const c=getC(_call.id);const vid
     let cf='\n\n# 正在'+(video?'视频':'语音')+'通话（务必遵守格式）\n用口语短句，像打电话一样，别用卡片。每句单独一行。';
     if(video)cf+='\n- 这是视频，你的动作神态用【】单独成行写，比如【凑近镜头笑】。';
     else cf+='\n- 这是语音通话（看不到画面），绝对不要出现任何【】动作神态描写，一个【】都不许有，只能说话。';
-    if(_langN)cf+='\n- 你全程说'+_langN+'：每一句都【先写'+_langN+'原文】（这句会被读出来），紧跟着用（）写中文翻译（不会被读）。原文在前、（中文翻译）在后，千万别搞反，否则会把中文读出来。例如：'+(_lang==='韩'?'사랑해（我爱你）':_lang==='日'?'好きだよ（喜欢你）':'I miss you（我想你了）')+'。\n- 哪怕是要挂断、道别、回应"挂了/别挂"这种话，也必须保持'+_langN+'原文在前、（中文翻译）在后，绝不能整句只说中文。';
+    if(_langN)cf+='\n- 你全程说'+_langN+'：先单独一行写'+_langN+'原文（这行会被读出来），紧接着【换一行】用（）单独写中文翻译（这行不会被读）。原文一行、（中文翻译）另起一行，别写在同一行，也别把顺序搞反。例如：\n'+(_lang==='韩'?'사랑해\n（我爱你）':_lang==='日'?'好きだよ\n（喜欢你）':'I miss you\n（我想你了）')+'\n- 哪怕是要挂断、道别、回应"挂了/别挂"这种话，也必须先写'+_langN+'原文那一行，绝不能整句只说中文。';
     cf+='\n- 想结束通话就【单独占一行】只输出 [挂断]，不要把 [挂断] 和说的话写在同一行。';
     const sys=buildSystem(c)+cf;
     const content=await chatAPI([{role:'system',content:sys},...hist]);
@@ -1825,7 +1828,7 @@ async function callAI(sysNote){if(!_call)return;const c=getC(_call.id);const vid
     const wantHang=/\[挂断\]/.test(content);const pieces=[];const _vlang=(getVoice(c).lang||'zh');
     splitBubbles(content).forEach(l=>{l=normTag(l);if(/^\[挂断\]$/.test(l))return;const mm=l.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=mm[1];return;}if(LEAKRE.test(l))return;
       if(video){splitActions(l).forEach(p=>pieces.push(p));}
-      else{const cleaned=l.replace(/【[^】]*】/g,'').trim();if(cleaned)pieces.push(cleaned);}});
+      else{const cleaned=l.replace(/【[^】]*】/g,'').trim();if(cleaned)splitActions(cleaned).forEach(p=>pieces.push(p));}});
     for(const p of pieces){if(!_call||_call.session!==sess)return;
       msgs(c.id).push({role:'assistant',type:'text',content:p,time:Date.now(),id:uid(),_call:true,_cs:sess});save();
       _call.sub={who:'them',text:p};updateCallSub();
