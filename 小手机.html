@@ -57,7 +57,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 /* 底部tab */
 .tabbar{flex:0 0 54px;display:flex;background:#f7f7f7;border-top:.5px solid #ddd;}
 .tabbar .tb{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;color:#888;cursor:pointer;}
-.tabbar .tb.on{color:#07c160;}
+.tabbar .tb.on{color:#ff6fa5;}
 .tabbar .tb .i{font-size:21px;}
 /* 聊天 */
 .chatbg{flex:1;overflow-y:auto;padding:12px 12px 8px;background:#ededed;}
@@ -87,7 +87,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .inputbar .plus{flex:0 0 auto;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;cursor:pointer;background:linear-gradient(135deg,#ffb6c9,#b8a4e3);box-shadow:0 2px 6px rgba(184,164,227,.5);transition:transform .15s;}
 .inputbar .plus:active{transform:scale(.9) rotate(90deg);}
 .inputbar textarea{flex:1;border:none;border-radius:6px;padding:8px 10px;font-size:15px;resize:none;max-height:84px;min-height:20px;line-height:1.3;outline:none;font-family:inherit;background:#fff;}
-.inputbar .send{background:#07c160;border:none;color:#fff;font-size:14px;font-weight:600;padding:8px 13px;border-radius:6px;cursor:pointer;}
+.inputbar .send{background:linear-gradient(135deg,#ffa0c8,#ff6fa5);border:none;color:#fff;font-size:14px;font-weight:600;padding:8px 13px;border-radius:6px;cursor:pointer;}
 .panel{display:none;padding:0;background:#f7f7f7;border-top:.5px solid #eee;}
 .panel.show{display:block;}
 .ptabs{display:flex;gap:16px;padding:8px 16px 0;}
@@ -138,10 +138,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .section .it .v{color:#999;font-size:13px;max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .section .it.danger{color:#fa5151;}
 .btn{border:none;border-radius:12px;padding:11px;font-size:15px;font-weight:600;cursor:pointer;width:100%;}
-.btn.p{background:#07c160;color:#fff;}.btn.g{background:#f0f0f0;color:#555;}.btn.d{background:#fa5151;color:#fff;}
+.btn.p{background:linear-gradient(135deg,#ffa0c8,#ff6fa5);color:#fff;}.btn.g{background:#f0f0f0;color:#555;}.btn.d{background:#fa5151;color:#fff;}
 .btns{display:flex;gap:10px;margin-top:6px;}.btns .btn{flex:1;}
 .hint{font-size:12px;color:#999;line-height:1.5;margin-bottom:10px;}
-.fab{position:absolute;right:16px;bottom:70px;width:50px;height:50px;border-radius:50%;background:#07c160;color:#fff;font-size:26px;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(7,193,96,.4);cursor:pointer;z-index:8;}
+.fab{position:absolute;right:16px;bottom:70px;width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#ffa0c8,#ff6fa5);color:#fff;font-size:26px;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(255,111,165,.45);cursor:pointer;z-index:8;}
 .toast{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);color:#fff;font-size:13px;padding:9px 16px;border-radius:20px;z-index:500;opacity:0;transition:.25s;pointer-events:none;max-width:80%;text-align:center;}
 .toast.show{opacity:1;}
 .viewer{position:absolute;inset:0;background:rgba(0,0,0,.92);z-index:600;display:none;align-items:center;justify-content:center;}
@@ -150,7 +150,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .minibtn{background:#f0f0f0;border:none;border-radius:9px;padding:8px 10px;font-size:12px;color:#555;cursor:pointer;white-space:nowrap;}
 .empty{text-align:center;color:#bbb;font-size:13px;padding:30px 0;}
 .sw{width:44px;height:25px;border-radius:13px;background:#ccc;position:relative;transition:.2s;flex:0 0 44px;cursor:pointer;}
-.sw.on{background:#07c160;}.sw:after{content:"";position:absolute;top:2px;left:2px;width:21px;height:21px;border-radius:50%;background:#fff;transition:.2s;}
+.sw.on{background:#ff6fa5;}.sw:after{content:"";position:absolute;top:2px;left:2px;width:21px;height:21px;border-radius:50%;background:#fff;transition:.2s;}
 .sw.on:after{left:21px;}
 /* ========== 暗色 + 全屏 ========== */
 body{background:#000;padding:0;}
@@ -217,7 +217,7 @@ body{background:#000;padding:0;}
 .callinput{position:absolute;bottom:150px;left:14px;right:14px;display:none;gap:8px;z-index:3;}
 .callinput.show{display:flex;}
 .callinput input{flex:1;border:none;border-radius:18px;padding:9px 14px;background:rgba(255,255,255,.16);color:#fff;outline:none;font-size:15px;}
-.callinput button{border:none;border-radius:18px;padding:0 14px;background:#07c160;color:#fff;font-weight:600;}
+.callinput button{border:none;border-radius:18px;padding:0 14px;background:linear-gradient(135deg,#ffa0c8,#ff6fa5);color:#fff;font-weight:600;}
 .callbtns{position:absolute;bottom:40px;left:0;right:0;display:flex;justify-content:space-evenly;align-items:flex-end;}
 .cbtncol{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:10px;color:#ccc;}
 .cbtn{width:62px;height:62px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer;}
@@ -296,7 +296,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v58 · 微信手动确认回复';
+const APP_VER='v60 · 主屏壁纸+情侣管控锁';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -595,7 +595,11 @@ function buildSystem(c){
   const myg=_main?(S.groups||[]).filter(g=>g.members.indexOf(c.id)>=0):[];
   if(myg.length){const gl=myg.map(g=>{const last=g.msgs.slice(-6).map(m=>(m.senderId==='me'?S.me.name:(getC(m.senderId)?getC(m.senderId).name:'?'))+'：'+gmText(m)).join('；');return '群「'+g.name+'」最近：'+last;}).join('\n');s+='\n\n# 你也在这些群里（私下你也记得群里聊了啥）\n'+gl;}
   // 情侣空间
-  if(_main&&S.couple&&S.couple.cid===c.id){const days=Math.max(0,Math.floor((Date.now()-new Date(S.couple.startDate).getTime())/86400000));s+='\n\n# 情侣空间\n你和'+S.me.name+'是正式情侣，已经在一起 '+days+' 天了。你们绑定了情侣空间，你很珍惜这段关系。';}
+  if(_main&&S.couple&&S.couple.cid===c.id){const days=Math.max(0,Math.floor((Date.now()-new Date(S.couple.startDate).getTime())/86400000));s+='\n\n# 情侣空间\n你和'+S.me.name+'是正式情侣，已经在一起 '+days+' 天了。你们绑定了情侣空间，你很珍惜这段关系。';
+    const g=S.couple.grant||{};const granted=Object.keys(LOCKABLE).filter(k=>g[k]);
+    if(granted.length||g.gag){s+='\n\n# 你对'+S.me.name+'手机的管控权（ta在情侣空间授权给你的）\n你被授权管：'+(granted.map(k=>LOCKABLE[k]).join('、')||'（暂无App）')+(g.gag?'；还能禁止ta和某人聊天':'')+'。\n- 在合适的时机（到深夜该睡了/ta沉迷某App/你吃醋某个人），你可以主动管控：锁App用单独一行 [锁定|App名|原因]（App名必须在授权范围内）；禁止ta和某人聊天用一行 [禁言|那个人的名字|原因]；想解开用 [解锁|App名] 或 [解禁|名字]。\n- 绝不能锁"和你自己的聊天"，'+S.me.name+'永远能找你。\n- 一旦锁上，系统会生成随机密码，只有你知道；'+S.me.name+'必须来问你密码、在情侣空间输入才能解开。ta问你时，你按心情决定给不给、给哪个（可以逗ta、提条件）。';
+      const locks=S.couple.locks||{},gags=S.couple.gags||{};const lk=Object.keys(locks),gk=Object.keys(gags);
+      if(lk.length||gk.length)s+='\n\n# 你现在锁着的东西＋密码（ta问你才说，别一次全报出来）\n'+lk.map(k=>'· '+LOCKABLE[k]+'：密码 '+locks[k].pwd).join('\n')+(gk.length?(lk.length?'\n':'')+gk.map(cid=>{const gc=getC(cid);return '· 禁言「'+(gc?gc.name:'?')+'」：密码 '+gags[cid].pwd;}).join('\n'):'');}}
   if(S.settings.timeAware)s+='\n\n# 时间感知\n现在是 '+new Date().toLocaleString('zh-CN',{weekday:'long',hour:'2-digit',minute:'2-digit',month:'long',day:'numeric'})+'，请结合当前时间（早中晚、是否深夜）自然地回应。';
   const _tod=todayStr(),_hol=holidayOf(_tod);if(_hol)s+='\n\n# 节日\n今天是'+_hol+'，可以应景祝福。';
   const _ev=S.calendar.filter(e=>e.date>=_tod).slice(0,5);if(_ev.length)s+='\n\n# '+S.me.name+'的日程\n'+_ev.map(e=>e.date+' '+e.title+(e.type==='period'?'(姨妈期)':'')).join('；')+'。需要时可用一行 [日程|YYYY-MM-DD|事项] 帮ta记日程。';
@@ -657,23 +661,23 @@ function renderHome(){
   const d=new Date();
   const week=['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
   const hr=d.getHours();const greet=hr<6?'夜深了，早点睡':hr<11?'早安呀小猫':hr<14?'中午好，吃饭了吗':hr<18?'下午好～':hr<23?'晚上好呀':'还不睡吗';
-  return `<div class="home">
+  return `<div class="home" style="${S.me.homeBg?'background:url('+S.me.homeBg+') center/cover;':''}">
     <div class="clockw"><div class="hh">${hm()}</div><div class="dd">${d.getMonth()+1}月${d.getDate()}日 ${week}</div></div>
     <div class="hwidget"><div class="hg">${greet} 🐾</div>${S.weather&&S.weather.place?`<div class="hw">${S.weather.place} · ${esc(S.weather.desc)} ${S.weather.temp}°`+(S.weather.rain?' ☔记得带伞':'')+`</div>`:'<div class="hw" onclick="fetchWeather(true)">点这里获取天气 ›</div>'}</div>
     <div class="apps">
       <div class="app" onclick="openWeChat()"><div class="ic" style="background:#07c160;color:#fff">💬</div><span>微信</span></div>
       <div class="app" onclick="go('settings')"><div class="ic" style="background:#8e8e93;color:#fff">⚙️</div><span>设置</span></div>
       <div class="app" onclick="go('worldbook')"><div class="ic" style="background:#ff9f43;color:#fff">📖</div><span>世界书</span></div>
-      <div class="app" onclick="openWeChat('moments')"><div class="ic" style="background:#ee5a6f;color:#fff">🌸</div><span>朋友圈</span></div>
-      <div class="app" onclick="openSpy()"><div class="ic" style="background:#5b6b9c;color:#fff">🔍</div><span>查他手机</span></div>
-      <div class="app" onclick="go('shop')"><div class="ic" style="background:#ff6b6b;color:#fff">🛒</div><span>购物</span></div>
-      <div class="app" onclick="go('calendar')"><div class="ic" style="background:#4ecdc4;color:#fff">📅</div><span>日历</span></div>
-      <div class="app" onclick="openX()"><div class="ic" style="background:#000;color:#fff;border:1px solid #333">𝕏</div><span>X</span></div>
-      <div class="app" onclick="go('food')"><div class="ic" style="background:#ffb83b;color:#fff">🍔</div><span>外卖</span></div>
+      <div class="app" onclick="openApp('moments')"><div class="ic" style="background:#ee5a6f;color:#fff">🌸</div><span>${appLk('moments')}朋友圈</span></div>
+      <div class="app" onclick="openApp('spy')"><div class="ic" style="background:#5b6b9c;color:#fff">🔍</div><span>${appLk('spy')}查他手机</span></div>
+      <div class="app" onclick="openApp('shop')"><div class="ic" style="background:#ff6b6b;color:#fff">🛒</div><span>${appLk('shop')}购物</span></div>
+      <div class="app" onclick="openApp('calendar')"><div class="ic" style="background:#4ecdc4;color:#fff">📅</div><span>${appLk('calendar')}日历</span></div>
+      <div class="app" onclick="openApp('x')"><div class="ic" style="background:#000;color:#fff;border:1px solid #333">𝕏</div><span>${appLk('x')}X</span></div>
+      <div class="app" onclick="openApp('food')"><div class="ic" style="background:#ffb83b;color:#fff">🍔</div><span>${appLk('food')}外卖</span></div>
       <div class="app" onclick="openCouple()"><div class="ic" style="background:#ff8fab;color:#fff">💞</div><span>情侣空间</span></div>
-      <div class="app" onclick="openGames()"><div class="ic" style="background:#6c5ce7;color:#fff">🎮</div><span>游戏大厅</span></div>
-      <div class="app" onclick="go('mail')"><div class="ic" style="background:#f4a93b;color:#fff;position:relative">📮${(S.mail||[]).some(m=>!m.read)?'<span style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:#fa5151;border:2px solid #000"></span>':''}</div><span>信箱</span></div>
-      <div class="app" onclick="openOfflineMenu()"><div class="ic" style="background:#e84d6f;color:#fff">🌹</div><span>线下约会</span></div>
+      <div class="app" onclick="openApp('games')"><div class="ic" style="background:#6c5ce7;color:#fff">🎮</div><span>${appLk('games')}游戏大厅</span></div>
+      <div class="app" onclick="openApp('mail')"><div class="ic" style="background:#f4a93b;color:#fff;position:relative">📮${(S.mail||[]).some(m=>!m.read)?'<span style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:#fa5151;border:2px solid #000"></span>':''}</div><span>${appLk('mail')}信箱</span></div>
+      <div class="app" onclick="openApp('offline')"><div class="ic" style="background:#e84d6f;color:#fff">🌹</div><span>${appLk('offline')}线下约会</span></div>
     </div>
     <div class="dock">
       <div class="app" onclick="openWeChat()"><div class="ic" style="background:#07c160;color:#fff">💬</div></div>
@@ -682,6 +686,11 @@ function renderHome(){
       <div class="app" onclick="go('settings')"><div class="ic" style="background:#8e8e93;color:#fff">⚙️</div></div>
     </div></div>`;
 }
+const LOCKABLE={moments:'朋友圈',spy:'查他手机',shop:'购物',calendar:'日历',x:'X',food:'外卖',games:'游戏大厅',mail:'信箱',offline:'线下约会'};
+function appLocked(key){return !!(S.couple&&S.couple.locks&&S.couple.locks[key]);}
+function appLk(key){return appLocked(key)?'🔒':'';}
+function openApp(key){if(appLocked(key)){toast('🔒「'+(LOCKABLE[key]||key)+'」被ta锁了，去情侣空间问他要密码解锁');go('couple');return;}
+  ({moments:()=>openWeChat('moments'),spy:openSpy,shop:()=>go('shop'),calendar:()=>go('calendar'),x:openX,food:()=>go('food'),games:openGames,mail:()=>go('mail'),offline:openOfflineMenu}[key]||(()=>{}))();}
 function openWeChat(tab){wxTab=tab||'chats';go('wechat');scanProactive();}
 function scanProactive(){S.contacts.forEach(c=>{if(!c.deleted&&c.proactive&&c.proactive.enabled)maybeProactive(c.id);});}
 function saveAuto(id){const c=getC(id);c.autoMoment=Math.max(0,+$('#ap_m').value||0);c.autoTweet=Math.max(0,+$('#ap_t').value||0);save();toast('已保存');}
@@ -748,6 +757,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
     </div>
     <div class="section">
       <div class="it" onclick="alarmManager()"><span>⏰ 闹钟</span><span class="v">${S.alarms.length}个 ›</span></div>
+      <div class="it"><span>🖼️ 主屏壁纸</span><span class="v"><button class="minibtn" onclick="setHomeBg()">${S.me.homeBg?'换':'上传'}</button>${S.me.homeBg?'<button class="minibtn" style="margin-left:6px" onclick="S.me.homeBg=\'\';save();toast(\'已恢复默认\')">恢复默认</button>':''}</span></div>
       <div class="it" onclick="fetchWeather(true)"><span>🌦️ 定位天气</span><span class="v">${S.weather?esc(S.weather.place+' '+S.weather.desc+' '+S.weather.temp+'°'):'点击获取 ›'}</span></div>
     </div>
     <div class="btns" style="margin:6px 0"><button class="btn g" onclick="testConn()">🔍 测试连接</button></div>
@@ -1311,6 +1321,7 @@ function g_addMember(id){const g=S.groups.find(x=>x.id===id);const avail=S.conta
 function bindCouple(id){const c=getC(id);if(S.couple&&S.couple.cid&&S.couple.cid!==id){if(!confirm('已绑定其他角色，换成 '+(c.remark||c.name)+'？'))return;}
   S.couple={cid:id,startDate:todayStr(),anniversaries:[]};save();render();toast('💞 已绑定情侣空间');}
 function openCouple(){go('couple');}
+function setHomeBg(){pickFile('image/*',async f=>{S.me.homeBg=await compress(f,1000,.7);save();render();toast('主屏壁纸已换 🖼️');});}
 const GAMES=[
   {k:'soup',e:'🐢',n:'海龟汤'},
   {k:'escape',e:'🚪',n:'小黑屋(自定义密室)'},
@@ -1714,8 +1725,25 @@ function renderCouple(){const cp=S.couple;const c=cp&&getC(cp.cid);
       <div class="section" style="margin:12px"><div class="it" onclick="coupleSet()"><span>📅 在一起的日子</span><span class="v">${cp.startDate} ›</span></div></div>
       <div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#ff8fab;display:flex;justify-content:space-between">🎁 纪念日<span class="minibtn" onclick="addAnniv()">＋ 添加</span></div>
         ${(cp.anniversaries||[]).length?cp.anniversaries.map((a,i)=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div><b>${a.date}</b> ${esc(a.title)}<small>${annivCount(a.date)}</small></div><span onclick="S.couple.anniversaries.splice(${i},1);save();render()" style="color:#fa5151;cursor:pointer">✕</span></div>`).join(''):'<div class="empty" style="padding:14px">还没有纪念日</div>'}</div>
+      ${(function(){const g=cp.grant||{},locks=cp.locks||{},gags=cp.gags||{};const lk=Object.keys(locks),gk=Object.keys(gags);
+        let h=`<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#ff8fab">📱 软件管控授权</div>
+        <div class="hint" style="padding:0 14px">勾选的App才授权给 ${esc(c.remark||c.name)} 管。ta会在合适的时机(比如该睡了)自己判断锁哪些；锁了得问ta要密码、在下面输入才能解开。取消授权ta会立刻知道。</div>
+        ${Object.keys(LOCKABLE).map(k=>`<div class="it"><span>${LOCKABLE[k]}</span><span class="sw ${g[k]?'on':''}" onclick="coupleGrant('${k}')"></span></div>`).join('')}
+        <div class="it"><span>允许ta禁言我和别人的聊天</span><span class="sw ${g.gag?'on':''}" onclick="coupleGrant('gag')"></span></div></div>`;
+        if(lk.length||gk.length){h+=`<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#fa5151">🔒 ta锁住的（问ta要密码解开）</div>
+        ${lk.map(k=>`<div style="padding:8px 14px;border-bottom:.5px solid #2a2a2c"><div style="color:#eee">${LOCKABLE[k]||k} <span style="font-size:12px;color:#999">${esc(locks[k].reason||'')}</span></div><div style="display:flex;gap:6px;margin-top:6px"><input id="ul_${k}" placeholder="输入ta给的密码" style="flex:1;border:1px solid #38383a;border-radius:8px;padding:6px;background:#2c2c2e;color:#eee"><button class="minibtn" onclick="unlockApp('${k}')">解锁</button></div></div>`).join('')}
+        ${gk.map(cid=>{const gc=getC(cid);return `<div style="padding:8px 14px;border-bottom:.5px solid #2a2a2c"><div style="color:#eee">🔇 和「${esc(gc?(gc.remark||gc.name):'?')}」的聊天 <span style="font-size:12px;color:#999">${esc(gags[cid].reason||'')}</span></div><div style="display:flex;gap:6px;margin-top:6px"><input id="ug_${cid}" placeholder="输入ta给的密码" style="flex:1;border:1px solid #38383a;border-radius:8px;padding:6px;background:#2c2c2e;color:#eee"><button class="minibtn" onclick="unlockGag('${cid}')">解禁</button></div></div>`;}).join('')}</div>`;}
+        return h;})()}
       <div style="padding:0 12px"><button class="btn d" onclick="if(confirm('解除情侣绑定？')){S.couple=null;save();render()}">💔 解除绑定</button></div>
       <div style="height:20px"></div></div>`;}
+function coupleGrant(k){if(!S.couple)return;S.couple.grant=S.couple.grant||{};const was=!!S.couple.grant[k];S.couple.grant[k]=!was;
+  if(was){if(k!=='gag'&&S.couple.locks)delete S.couple.locks[k];const cid=S.couple.cid;const c=cid&&getC(cid);
+    if(c&&!c.blocked)scheduleReply(cid,'[系统：'+S.me.name+'刚取消了对「'+(k==='gag'?'禁言聊天':LOCKABLE[k])+'」的管控授权。你立刻知道了，按你人设反应一下（吃醋/质问/耍赖/无奈答应都行）。]');}
+  save();render();}
+function unlockApp(k){const el=$('#ul_'+k);const v=(el?el.value:'').trim();const lk=S.couple&&S.couple.locks&&S.couple.locks[k];if(!lk)return;
+  if(v&&v===String(lk.pwd)){delete S.couple.locks[k];save();render();toast('已解锁「'+(LOCKABLE[k]||k)+'」✅');}else toast('密码不对，去问ta要正确的解锁密码😏');}
+function unlockGag(cid){const el=$('#ug_'+cid);const v=(el?el.value:'').trim();const g=S.couple&&S.couple.gags&&S.couple.gags[cid];if(!g)return;
+  if(v&&v===String(g.pwd)){delete S.couple.gags[cid];save();render();toast('已解禁，可以聊啦✅');}else toast('密码不对，问ta要正确的😏');}
 function annivCount(date){const d=new Date(date).getTime();const diff=Math.floor((d-Date.now())/86400000);if(diff>0)return '还有'+diff+'天';if(diff===0)return '就是今天！🎉';return Math.abs(diff)+'天前';}
 function coupleSet(){openModal(`<h3>在一起的日子</h3><div class="field"><label>恋爱开始日期</label><input id="cp_d" type="date" value="${S.couple.startDate}"></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="S.couple.startDate=$('#cp_d').value||S.couple.startDate;save();closeModal();render()">保存</button></div>`);}
@@ -2010,7 +2038,7 @@ function renderChat(id){const c=getC(id);if(!c)return '';
       <div class="it" onclick="enterSelect('${id}')"><div class="b">↗️</div><span>多选转发</span></div>
     </div>`}
     </div>
-    ${(_sel&&_sel.id===id)?`<div class="inputbar"><button class="btn g" style="flex:1" onclick="exitSelect()">取消</button><button class="btn d" style="flex:1" onclick="delSelected('${id}')">删除(<span id="fwdcnt">${_sel.ids.length}</span>)</button><button class="btn p" style="flex:1" onclick="forwardSelected()">转发</button></div>`:(S.settings.manualReply&&!c.blocked?`<div style="padding:6px 10px 0"><button class="btn p" style="width:100%" ${_replying===id?'disabled':''} onclick="manualReply('${id}')">${_replying===id?'回复中…':'▶ 让ta回复'}</button></div>`:'')+`<div class="inputbar">`+`
+    ${(_sel&&_sel.id===id)?`<div class="inputbar"><button class="btn g" style="flex:1" onclick="exitSelect()">取消</button><button class="btn d" style="flex:1" onclick="delSelected('${id}')">删除(<span id="fwdcnt">${_sel.ids.length}</span>)</button><button class="btn p" style="flex:1" onclick="forwardSelected()">转发</button></div>`:(S.couple&&S.couple.gags&&S.couple.gags[id])?`<div class="inputbar" style="justify-content:center;color:#fa9bb5;font-size:13px;padding:16px;text-align:center">🔇 ta把你们的聊天锁了，<span onclick="openCouple()" style="color:#ff6fa5;text-decoration:underline;cursor:pointer">去情侣空间输密码解禁</span></div>`:(S.settings.manualReply&&!c.blocked?`<div style="padding:6px 10px 0"><button class="btn p" style="width:100%" ${_replying===id?'disabled':''} onclick="manualReply('${id}')">${_replying===id?'回复中…':'▶ 让ta回复'}</button></div>`:'')+`<div class="inputbar">`+`
       <span class="plus" style="background:${_voiceMode?'linear-gradient(135deg,#9ec5fe,#b8a4e3)':'transparent'};box-shadow:none;color:${_voiceMode?'#fff':'#aaa'}" onclick="_voiceMode=!_voiceMode;render()">🎤</span>
       <textarea id="cinput" rows="1" placeholder="${c.blocked?'已拉黑，发不出去':(_voiceMode?'打字→发成语音条…':'发消息…')}" ${c.blocked?'disabled':''}></textarea>
       <button class="send" onclick="sendText('${id}')">${_voiceMode?'发语音':'发送'}</button>
@@ -2193,7 +2221,9 @@ function doLoc(id){const n=$('#lc_n').value.trim();if(!n){toast('填地点呀');
 /* 拆分多条气泡 */
 function splitBubbles(text){return (text||'').split('\n').map(s=>s.trim()).filter(Boolean);}
 function splitActions(line){const out=[];const re=/[（(【][^）)】]*[）)】]/g;let last=0,m;while((m=re.exec(line))){const before=line.slice(last,m.index).trim();if(before)out.push(before);out.push(m[0].trim());last=re.lastIndex;}const tail=line.slice(last).trim();if(tail)out.push(tail);return out.length?out:[line];}
-const TAGWORDS='心情值|心情|记住|闹钟|日程|发朋友圈|发推|点外卖|语音|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑';
+const TAGWORDS='心情值|心情|记住|闹钟|日程|发朋友圈|发推|点外卖|语音|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁';
+const APPNAME2KEY={'朋友圈':'moments','查他手机':'spy','查岗':'spy','购物':'shop','日历':'calendar','x':'x','X':'x','推特':'x','外卖':'food','游戏':'games','游戏大厅':'games','信箱':'mail','线下约会':'offline','线下':'offline'};
+function genPwd(){return String(1000+Math.floor(Math.random()*9000));}
 function normTag(line){let t=(line||'').replace(/[［｛]/g,'[').replace(/[］｝]/g,']').replace(/｜/g,'|').replace(/\[\s+/,'[').replace(/\s+\]/,']').trim();
   t=t.replace(new RegExp('^\\[\\s*('+TAGWORDS+')\\s*[|:：，,、\\s]+','i'),'[$1|');
   return t;}
@@ -2253,6 +2283,11 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
       mm=line.match(/^\[推荐好友\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){const nc={role:'assistant',type:'namecard',dir:'his',cname:(mm[1]||'朋友').trim(),persona:(mm[2]||'').trim(),wxid:genWxid(),added:false,id:uid(),time:Date.now()};msgs(id).push(nc);c._pushedToMe=c._pushedToMe||[];c._pushedToMe.push(nc.cname);notifyIncoming(c,nc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[已加\|?([^\]]*)\]$/);if(mm){const nm=(mm[1]||'').trim();const card=[...msgs(id)].reverse().find(x=>x.role==='user'&&x.type==='namecard'&&x.dir==='mine'&&!x._accepted&&(!nm||x.cname===nm||nm.includes(x.cname)));if(card){card._accepted=true;save();if(cur().p==='chat'&&cur().id===id)render();}continue;}
       mm=line.match(/^\[拉黑\]$/);if(mm){setBlk(c,true);c._blockedBy='ta';const mg={role:'assistant',type:'sys',content:'你被'+(c.remark||c.name)+'拉黑了',time:Date.now(),id:uid()};msgs(id).push(mg);save();if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();continue;}
+      const _isCp=S.couple&&S.couple.cid===c.id;const _gr=(S.couple&&S.couple.grant)||{};
+      mm=line.match(/^\[锁定\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){if(_isCp){const ak=APPNAME2KEY[(mm[1]||'').trim()];if(ak&&_gr[ak]){S.couple.locks=S.couple.locks||{};const pwd=genPwd();S.couple.locks[ak]={pwd,reason:(mm[2]||'').trim(),time:Date.now()};const mg={role:'assistant',type:'sys',content:'🔒 ta锁了你的「'+LOCKABLE[ak]+'」'+(mm[2]?'（'+mm[2].trim()+'）':'')+'，去情侣空间问ta要密码解锁',time:Date.now(),id:uid()};msgs(id).push(mg);notifyIncoming(c,mg);save();if(cur().p==='chat'&&cur().id===id)render();}}continue;}
+      mm=line.match(/^\[解锁\|([^\]]*)\]$/);if(mm){if(_isCp){const ak=APPNAME2KEY[(mm[1]||'').trim()];if(ak&&S.couple.locks&&S.couple.locks[ak]){delete S.couple.locks[ak];const mg={role:'assistant',type:'sys',content:'🔓 ta把你的「'+LOCKABLE[ak]+'」解锁了',time:Date.now(),id:uid()};msgs(id).push(mg);notifyIncoming(c,mg);save();if(cur().p==='chat'&&cur().id===id)render();}}continue;}
+      mm=line.match(/^\[禁言\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){if(_isCp&&_gr.gag){const nm=(mm[1]||'').trim();const tgt=S.contacts.find(x=>!x.deleted&&x.id!==c.id&&(x.name===nm||x.remark===nm||nm.includes(x.name)));if(tgt){S.couple.gags=S.couple.gags||{};const pwd=genPwd();S.couple.gags[tgt.id]={pwd,reason:(mm[2]||'').trim(),time:Date.now()};const mg={role:'assistant',type:'sys',content:'🔇 ta禁止了你和「'+(tgt.remark||tgt.name)+'」聊天'+(mm[2]?'（'+mm[2].trim()+'）':'')+'，去情侣空间问ta要密码解禁',time:Date.now(),id:uid()};msgs(id).push(mg);notifyIncoming(c,mg);save();if(cur().p==='chat'&&cur().id===id)render();}}continue;}
+      mm=line.match(/^\[解禁\|([^\]]*)\]$/);if(mm){if(_isCp){const nm=(mm[1]||'').trim();const tgt=S.contacts.find(x=>!x.deleted&&(x.name===nm||x.remark===nm||nm.includes(x.name)));if(tgt&&S.couple.gags&&S.couple.gags[tgt.id]){delete S.couple.gags[tgt.id];const mg={role:'assistant',type:'sys',content:'🔊 ta解禁了你和「'+(tgt.remark||tgt.name)+'」的聊天',time:Date.now(),id:uid()};msgs(id).push(mg);notifyIncoming(c,mg);save();if(cur().p==='chat'&&cur().id===id)render();}}continue;}
       const base=lineToMsg(line);
       if(base.type==='dice'){if(diceUsed||diceCompare)continue;diceUsed=true;}
       if(base.type==='text'&&LEAKRE.test(line))continue;
