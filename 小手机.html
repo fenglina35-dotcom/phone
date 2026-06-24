@@ -296,7 +296,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v84 · X关注列表+主页拉黑';
+const APP_VER='v86 · 查手机可重置存档';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -869,10 +869,11 @@ function renderSpy(id){const c=getC(id);if(!c)return '';const d=S.spy[id];
     ${sec('💬 微信聊天','#07c160',(d.wechat||[]).map(w=>`<div style="padding:8px 14px;border-bottom:.5px solid #2a2a2c"><div style="font-size:13px;color:#9ec5fe;font-weight:600;margin-bottom:5px">${esc(w.who||'某人')}</div>${(w.lines||[]).map(l=>{const ta=/^(他|她|ta|我)[:：]/i.test(l);return `<div style="font-size:13px;color:${ta?'#9ee6a0':'#ccc'};padding:2px 0">${esc(l)}</div>`;}).join('')}</div>`).join('')||'<div class="it"><span class="v">无</span></div>')}
     ${sec('➕ 新加好友','#ee5a6f',itlist(d.friends))}
     <div style="text-align:center;color:#666;font-size:11px;padding:4px">更新于 ${hm(d.time)}</div>`;}
-  const btn=_spyBusy?`<button class="btn g" disabled>⏳ 刷新中…请稍候</button>`:`<button class="btn p" onclick="spyRefresh('${id}')">🔄 刷新内容</button>`;
+  const btn=_spyBusy?`<button class="btn g" disabled>⏳ 刷新中…请稍候</button>`:`<button class="btn p" onclick="spyRefresh('${id}')">🔄 刷新内容</button>${d?`<button class="btn g" style="margin-top:8px" onclick="spyReset('${id}')">🗑 重置（清掉旧存档，重新生成全新内容）</button>`:''}`;
   const topbar=_spyBusy?`<div style="text-align:center;color:#b9a6e0;font-size:13px;padding:10px;background:#1c1c1e">⏳ 正在偷看 ta 的手机，请稍候…</div>`:'';
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(c.remark||c.name)}的手机</span><span class="r" onclick="spyRefresh('${id}')">${_spyBusy?'⏳':'🔄'}</span></div>
     ${topbar}<div class="scroll" style="background:#000">${body}<div style="padding:12px">${btn}</div><div style="height:20px"></div></div>`;}
+function spyReset(id){if(!confirm('重置他手机内容？\n会清掉这份查手机的旧存档，下次刷新重新生成全新的（不影响聊天/记忆）。'))return;delete S.spy[id];save();render();toast('已重置，点🔄重新生成');}
 function stripJSON(t){t=(t||'').trim();const m=t.match(/```(?:json)?\s*([\s\S]*?)```/);if(m)t=m[1];const a=t.indexOf('{'),b=t.lastIndexOf('}');if(a>=0&&b>a)t=t.slice(a,b+1);return t;}
 let _spyBusy=false;
 async function spyRefresh(id){if(_spyBusy){toast('正在刷新，别急~');return;}const c=getC(id);_spyBusy=true;if(cur().p==='spy')render();
@@ -891,7 +892,7 @@ async function spyRefresh(id){if(_spyBusy){toast('正在刷新，别急~');retur
       +'"wallet":[{"item":"支出名目","amount":-数字}],'
       +'"wechat":[{"who":"某个联系人(如 同事老张/前任/妈妈)","lines":["他：说的话","对方：回的话","他：又说的话"]}],'
       +'"friends":["新加的好友及原因"]}';
-    const content=await chatAPI([{role:'system',content:buildSystem(c)},...hist,{role:'user',content:prompt}],{max:1100,aux:true});
+    const content=await chatAPI([{role:'system',content:buildSystem(c)},...hist,{role:'user',content:prompt}],{max:1100});
     const data=JSON.parse(stripJSON(content));data.time=Date.now();S.spy[id]=data;save();_spyBusy=false;
     if(cur().p==='spy')render();toast('刷新好了 👀');
   }catch(e){_spyBusy=false;if(cur().p==='spy')render();toast('生成失败了，再点一次刷新试试');}}
