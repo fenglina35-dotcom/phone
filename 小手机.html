@@ -296,7 +296,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v72 · 通话挂断自动总结';
+const APP_VER='v74 · 浏览器(联网搜索)';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -410,6 +410,7 @@ function msgToText(m){
     case 'namecard':return '[我给你推荐了我的好友「'+m.cname+'」（微信号'+(m.wxid||'')+'）'+(m.persona?'，'+m.persona:'')+'，推荐你也加一下]';
     case 'familybuy':return '[我刚用你给的亲属卡买了「'+m.name+'」，花了¥'+(+m.price).toFixed(2)+'，本月这卡已用¥'+(+m.used).toFixed(2)+'/'+(+m.quota).toFixed(0)+']';
     case 'familyreq':return '[我向你申请绑定一张亲属卡，想用你的额度买点东西]';
+    case 'weblink':return '[我转发给你一条联网搜到的资料：'+m.title+'——'+((m.snippet||'').slice(0,120))+']';
     case 'text':return m.content;
     case 'image':return '[我发了一张照片'+(m.desc?'，画面是：'+m.desc:'')+']';
     case 'transfer':return '[我给你转账 ¥'+(+m.amount).toFixed(2)+(m.note?'，备注'+m.note:'')+']';
@@ -648,6 +649,7 @@ function render(){
   else if(c.p==='uc')html=renderUC();
   else if(c.p==='calllog')html=renderCallLog(c.id);
   else if(c.p==='off')html=renderOff(c.id);
+  else if(c.p==='browser')html=renderBrowser();
   else if(c.p==='contactInfo')html=renderContactInfo(c.id);
   else if(c.p==='spy')html=renderSpy(c.id);
   else if(c.p==='shop')html=renderShop();
@@ -676,6 +678,7 @@ function renderHome(){
       <div class="app" onclick="openWeChat()">${aIco('wechat','💬','#07c160')}<span>微信</span></div>
       <div class="app" onclick="go('settings')">${aIco('settings','⚙️','#8e8e93')}<span>设置</span></div>
       <div class="app" onclick="go('worldbook')">${aIco('worldbook','📖','#ff9f43')}<span>世界书</span></div>
+      <div class="app" onclick="openApp('browser')">${aIco('browser','🌐','#3a7bd5')}<span>${appLk('browser')}浏览器</span></div>
       <div class="app" onclick="openApp('moments')">${aIco('moments','🌸','#ee5a6f')}<span>${appLk('moments')}朋友圈</span></div>
       <div class="app" onclick="openApp('spy')">${aIco('spy','🔍','#5b6b9c')}<span>${appLk('spy')}查他手机</span></div>
       <div class="app" onclick="openApp('shop')">${aIco('shop','🛒','#ff6b6b')}<span>${appLk('shop')}购物</span></div>
@@ -696,17 +699,17 @@ function renderHome(){
 }
 function aIco(key,emoji,bg,extra){const ic=S.me.appIcons&&S.me.appIcons[key];
   return `<div class="ic" style="${ic?'background:#222;':'background:'+bg+';'}color:#fff;position:relative;overflow:hidden">${ic?`<img src="${ic}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">`:emoji}${extra||''}</div>`;}
-const HOMEAPPS=[['wechat','💬','微信'],['settings','⚙️','设置'],['worldbook','📖','世界书'],['moments','🌸','朋友圈'],['spy','🔍','查他手机'],['shop','🛒','购物'],['calendar','📅','日历'],['x','𝕏','X'],['food','🍔','外卖'],['couple','💞','情侣空间'],['games','🎮','游戏大厅'],['mail','📮','信箱'],['offline','🌹','线下约会'],['contacts','👤','通讯录'],['me','🐱','我']];
+const HOMEAPPS=[['wechat','💬','微信'],['settings','⚙️','设置'],['worldbook','📖','世界书'],['browser','🌐','浏览器'],['moments','🌸','朋友圈'],['spy','🔍','查他手机'],['shop','🛒','购物'],['calendar','📅','日历'],['x','𝕏','X'],['food','🍔','外卖'],['couple','💞','情侣空间'],['games','🎮','游戏大厅'],['mail','📮','信箱'],['offline','🌹','线下约会'],['contacts','👤','通讯录'],['me','🐱','我']];
 function appIconEditor(){S.me.appIcons=S.me.appIcons||{};
   openModal(`<h3>🎨 App 图标</h3><div class="hint">给主屏图标换成你喜欢的图片，留空恢复默认。</div>
    ${HOMEAPPS.map(a=>`<div class="it"><span>${S.me.appIcons[a[0]]?'':a[1]} ${a[2]}</span><span class="v">${S.me.appIcons[a[0]]?`<img src="${S.me.appIcons[a[0]]}" style="width:26px;height:26px;border-radius:6px;object-fit:cover;vertical-align:middle">`:''}<button class="minibtn" style="margin-left:6px" onclick="setAppIcon('${a[0]}')">${S.me.appIcons[a[0]]?'换':'上传'}</button>${S.me.appIcons[a[0]]?`<button class="minibtn" style="margin-left:4px" onclick="delete S.me.appIcons['${a[0]}'];save();appIconEditor();render()">复位</button>`:''}</span></div>`).join('')}
    <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function setAppIcon(key){pickFile('image/*',async f=>{S.me.appIcons=S.me.appIcons||{};S.me.appIcons[key]=await compress(f,200,.8);save();appIconEditor();render();toast('图标已换 🎨');});}
-const LOCKABLE={moments:'朋友圈',spy:'查他手机',shop:'购物',calendar:'日历',x:'X',food:'外卖',games:'游戏大厅',mail:'信箱',offline:'线下约会'};
+const LOCKABLE={browser:'浏览器',moments:'朋友圈',spy:'查他手机',shop:'购物',calendar:'日历',x:'X',food:'外卖',games:'游戏大厅',mail:'信箱',offline:'线下约会'};
 function appLocked(key){return !!(S.couple&&S.couple.locks&&S.couple.locks[key]);}
 function appLk(key){return appLocked(key)?'🔒':'';}
 function openApp(key){if(appLocked(key)){toast('🔒「'+(LOCKABLE[key]||key)+'」被ta锁了，去情侣空间问他要密码解锁');go('couple');return;}
-  ({moments:()=>openWeChat('moments'),spy:openSpy,shop:()=>go('shop'),calendar:()=>go('calendar'),x:openX,food:()=>go('food'),games:openGames,mail:()=>go('mail'),offline:openOfflineMenu}[key]||(()=>{}))();}
+  ({browser:()=>go('browser'),moments:()=>openWeChat('moments'),spy:openSpy,shop:()=>go('shop'),calendar:()=>go('calendar'),x:openX,food:()=>go('food'),games:openGames,mail:()=>go('mail'),offline:openOfflineMenu}[key]||(()=>{}))();}
 function openWeChat(tab){wxTab=tab||'chats';go('wechat');scanProactive();}
 function scanProactive(){S.contacts.forEach(c=>{if(!c.deleted&&c.proactive&&c.proactive.enabled)maybeProactive(c.id);});}
 function saveAuto(id){const c=getC(id);c.autoMoment=Math.max(0,+$('#ap_m').value||0);c.autoTweet=Math.max(0,+$('#ap_t').value||0);save();toast('已保存');}
@@ -1039,6 +1042,7 @@ function clean(s){return String(s||'').replace(/["'@]/g,'').trim();}
 if(!S.x)S.x=defState().x;['tweets','dms','following','blocked'].forEach(k=>{if(!Array.isArray(S.x[k]))S.x[k]=[];});S.x.circle=S.x.circle||{};S.x.users=S.x.users||{};S.x.profile=Object.assign({handle:'@me',bio:'',fans:0,following:0,cover:''},S.x.profile||{});
 initAccounts();
 if(!S.offline)S.offline={};
+if(!S.browser)S.browser={q:'',items:[],history:[]};
 if(S.couple&&S.couple.grant===undefined){S.couple.grant={};Object.keys(LOCKABLE).forEach(k=>S.couple.grant[k]=true);save();}
 if(S.couple&&S.couple.gagAuth===undefined){S.couple.gagAuth=S.contacts.filter(x=>!x.deleted&&x.id!==S.couple.cid).map(x=>x.id);save();}
 function cleanupOld(){const DAY=86400000,now=Date.now();let ch=false;
@@ -1772,7 +1776,7 @@ function coupleSet(){openModal(`<h3>在一起的日子</h3><div class="field"><l
 function addAnniv(){openModal(`<h3>添加纪念日</h3><div class="field"><label>日期</label><input id="an_d" type="date" value="${todayStr()}"></div><div class="field"><label>名称</label><input id="an_t" placeholder="第一次见面 / 订婚…"></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var d=$('#an_d').value,t=$('#an_t').value.trim();if(!d||!t){toast('填日期和名称');return;}S.couple.anniversaries=S.couple.anniversaries||[];S.couple.anniversaries.push({date:d,title:t});S.couple.anniversaries.sort((a,b)=>a.date<b.date?-1:1);save();closeModal();render();})()">保存</button></div>`);}
 function previewOf(m){if(m.role==='assistant'){if(m.type==='familycard')return '[亲属卡邀请]';if(m.type==='namecard')return '[推荐好友：'+(m.cname||'')+']';return splitBubbles(m.content)[0]||'[消息]';}
-  return ({text:m.content,image:'[照片]',transfer:'[转账]',redpacket:'[红包]',location:'[位置]',file:'[文件]',spycard:'[查看权限]',dice:'[骰子]',gift:'[礼物]',paycard:'[求代付]',paid:'[已代付]',tweetcard:'[X推文]',tcollect:'[已收款]',treject:'[已退还]',chatlog:'[聊天记录]',food:'[外卖]',payreject:'[拒绝代付]',voice:'[语音]',sticker:'[表情]',namecard:'[名片]',familybuy:'[亲属卡消费]',familyreq:'[亲属卡申请]',sys:m.content})[m.type]||'[消息]';}
+  return ({text:m.content,image:'[照片]',transfer:'[转账]',redpacket:'[红包]',location:'[位置]',file:'[文件]',spycard:'[查看权限]',dice:'[骰子]',gift:'[礼物]',paycard:'[求代付]',paid:'[已代付]',tweetcard:'[X推文]',tcollect:'[已收款]',treject:'[已退还]',chatlog:'[聊天记录]',food:'[外卖]',payreject:'[拒绝代付]',voice:'[语音]',sticker:'[表情]',namecard:'[名片]',familybuy:'[亲属卡消费]',familyreq:'[亲属卡申请]',weblink:'[网页]',sys:m.content})[m.type]||'[消息]';}
 
 let _ctSearch='';
 function ctSearchInput(v){_ctSearch=v;const box=$('#ctlist');if(box)box.innerHTML=ctListHTML();}
@@ -1872,6 +1876,7 @@ function myActivity(exceptId,since){let s='';since=since||0;
   if(myTw.length)s+='·她最近发的推文：'+myTw.map(t=>'「'+t.text.slice(0,24)+'」').join('、')+'\n';
   if(!since&&S.x&&S.x._mylog&&S.x._mylog.length)s+='·她在X的其它动态：'+S.x._mylog.slice(-5).join('；')+'\n';
   if(S.me.battery!=null)s+='·她手机电量：'+S.me.battery+'%'+(S.me.charging?'(充电中)':'')+'\n';
+  if(S.browser&&S.browser.history&&S.browser.history.length)s+='·她最近在浏览器搜了：'+S.browser.history.slice(0,4).map(h=>h.q).join('、')+'\n';
   return s||'（手机上没什么新动静）';}
 let _walSel=null;
 function openWallet(){S.me.bills.forEach(b=>{if(!b.id)b.id=uid();});const sel=_walSel;
@@ -2021,14 +2026,27 @@ function toggleSel(mid){if(!_sel)return;const i=_sel.ids.indexOf(mid);const on=i
   const tk=$('#tk_'+mid);if(tk){tk.textContent=on?'☑':'⚪';tk.style.color=on?'#07c160':'#555';}
   const fc=$('#fwdcnt');if(fc)fc.textContent=_sel.ids.length;}
 function forwardSelected(){if(!_sel||!_sel.ids.length){toast('先选几条');return;}
-  const from=_sel.id;const targets=S.contacts.filter(c=>!c.deleted&&c.id!==from);
-  if(!targets.length){toast('没有别的角色可转发');return;}
-  openModal(`<h3>转发给</h3>${targets.map(c=>`<div class="section"><div class="it" onclick="doForward('${c.id}')">${esc(c.remark||c.name)}<span class="v">›</span></div></div>`).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
-function doForward(toId){const from=_sel.id;const fromC=getC(from);const src=msgs(from);
+  const from=_sel.id;const accts=(S.me.accounts&&S.me.accounts.length)?S.me.accounts:[{id:'main',name:S.me.name}];
+  let html='<h3>转发聊天记录给</h3><div class="hint">可以转给当前身份的好友，也能转到某个小号身份下的角色（切到那个小号就能看到）。</div>';
+  accts.forEach(a=>{
+    const list=S.contacts.filter(c=>!c.deleted&&c.id!==from&&(a.id==='main'||(c._added&&c._added[a.id])||S.messages[c.id+'#'+a.id]));
+    html+=`<div style="font-weight:600;color:#ff8fab;padding:10px 4px 4px">📂 ${esc(a.name)}${a.id===actId()?'（当前）':a.id==='main'?'（大号）':'（小号）'}</div>`;
+    html+=list.length?list.map(c=>`<div class="section"><div class="it" onclick="doForward('${c.id}','${a.id}')">${av(c.avatar,'sm')}<div class="meta" style="flex:1"><div class="n">${esc(c.remark||c.name)}</div></div><span class="v">›</span></div></div>`).join(''):'<div class="hint" style="padding:2px 8px;color:#777">这个身份还没加好友</div>';
+  });
+  html+='<button class="btn g" style="margin-top:10px" onclick="closeModal()">取消</button>';
+  openModal(html);}
+function doForward(toId,acctId){const from=_sel.id;const fromC=getC(from);const src=msgs(from);
   const picked=src.filter(m=>_sel.ids.includes(m.id)&&m.type!=='sys');
   const lines=picked.map(m=>({who:m.role==='user'?S.me.name:(fromC.name),text:previewOf(m)}));
-  msgs(toId).push({role:'user',type:'chatlog',title:S.me.name+'和'+fromC.name+'的聊天记录',lines,time:Date.now(),id:uid()});
-  save();_sel=null;closeModal();toast('已转发聊天记录');scheduleReply(toId);openChat(toId);}
+  acctId=acctId||'main';const sameAcct=(acctId===actId());
+  const key=(acctId==='main')?toId:toId+'#'+acctId;
+  const card={role:'user',type:'chatlog',title:S.me.name+'和'+fromC.name+'的聊天记录',lines,time:Date.now(),id:uid()};
+  S.messages[key]=S.messages[key]||[];S.messages[key].push(card);
+  const tc=getC(toId);if(tc&&acctId!=='main'){tc._added=tc._added||{};tc._added[acctId]=true;}
+  save();_sel=null;closeModal();
+  if(sameAcct){toast('已转发聊天记录');scheduleReply(toId);openChat(toId);}
+  else{const an=(accts2(acctId)||{}).name||acctId;toast('已转发到「'+an+'」身份的 '+(tc?(tc.remark||tc.name):'')+'，切到那个身份就能给ta看～');}}
+function accts2(id){return (S.me.accounts||[]).find(a=>a.id===id);}
 function openChatlog(mid){let m;for(const k in S.messages){m=S.messages[k].find(x=>x.id===mid);if(m)break;}if(!m)return;
   openModal(`<h3>📑 ${esc(m.title)}</h3><div style="max-height:60vh;overflow-y:auto">${(m.lines||[]).map(l=>`<div style="padding:6px 2px;border-bottom:.5px solid #2a2a2c;font-size:14px"><b style="color:#9ec5fe">${esc(l.who)}：</b>${esc(l.text)}</div>`).join('')}</div><button class="btn g" style="margin-top:10px" onclick="closeModal()">关闭</button>`);}
 
@@ -2107,6 +2125,7 @@ function buildPart(c,m,me){
       <div style="padding:11px;display:flex;gap:10px;align-items:center">${av(his?'🙂':(m.avatar||'🙂'),'sm')}<div style="min-width:0;flex:1"><div style="font-weight:600;color:#eafff0">${esc(m.cname)}</div><div style="font-size:12px;color:#8fcaa6">微信号：${esc(m.wxid||'')}</div></div><div style="font-size:20px">👤</div></div>
       <div style="padding:7px 11px;background:rgba(255,255,255,.05);color:#9fd9b4;font-size:12px">${esc(m.persona||'')||'个人名片'}</div>
       ${his?(m.added?'<div style="padding:8px;text-align:center;color:#2bd66a;font-size:13px;font-weight:600">✅ 已添加到通讯录</div>':`<div style="padding:9px;text-align:center;background:#07c160;color:#fff;font-weight:600;cursor:pointer" onclick="event.stopPropagation();addHisCard('${m.id}')">＋ 添加到通讯录</div>`):(m._accepted?'<div style="padding:6px;text-align:center;color:#2bd66a;font-size:12px">✅ 对方已添加</div>':'<div style="padding:6px;text-align:center;color:#6fae86;font-size:11px">推荐给ta的名片 · 等ta添加</div>')}</div>`;}
+  if(m.type==='weblink'){return `<div class="card" style="width:240px;background:#13233a;border:1px solid #2a4a72" onclick="event.stopPropagation();viewWeblink('${m.id}')"><div style="padding:11px"><div style="color:#71767b;font-size:11px;margin-bottom:4px">🌐 网页/搜索结果</div><div style="color:#cfe3ff;font-size:13px;font-weight:700">${esc(m.title)}</div><div style="color:#9fb6d4;font-size:12px;margin-top:4px;line-height:1.5">${esc((m.snippet||'').slice(0,90))}${(m.snippet||'').length>90?'…':''}</div></div><div class="cfoot" style="background:rgba(255,255,255,.05);color:#7db3ff">点击查看全文</div></div>`;}
   if(m.type==='familyreq'){return `<div class="card"><div class="cpay" style="background:#e8527f"><div class="big">💳</div><div><div class="t1">亲属卡申请</div><div class="t2">想绑定你的亲属卡用额度</div></div></div><div class="cfoot">等ta同意并设额度</div></div>`;}
   return `<div class="bubble">${esc(m.content)}</div>`;}
 function vtoggle(mid){let m;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;break;}}if(!m)return;m.showText=!m.showText;render();}
@@ -2244,7 +2263,7 @@ function doLoc(id){const n=$('#lc_n').value.trim();if(!n){toast('填地点呀');
 function splitBubbles(text){return (text||'').split('\n').map(s=>s.trim()).filter(Boolean);}
 function splitActions(line){const out=[];const re=/[（(【][^）)】]*[）)】]/g;let last=0,m;while((m=re.exec(line))){const before=line.slice(last,m.index).trim();if(before)out.push(before);out.push(m[0].trim());last=re.lastIndex;}const tail=line.slice(last).trim();if(tail)out.push(tail);return out.length?out:[line];}
 const TAGWORDS='心情值|心情|记住|闹钟|日程|发朋友圈|发推|点外卖|语音|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁';
-const APPNAME2KEY={'朋友圈':'moments','动态':'moments','查他手机':'spy','查岗':'spy','查手机':'spy','购物':'shop','淘宝':'shop','商城':'shop','日历':'calendar','日程':'calendar','x':'x','X':'x','推特':'x','微博':'x','推':'x','外卖':'food','点餐':'food','游戏':'games','游戏大厅':'games','打游戏':'games','信箱':'mail','邮箱':'mail','邮件':'mail','线下约会':'offline','线下':'offline','约会':'offline'};
+const APPNAME2KEY={'浏览器':'browser','搜索':'browser','上网':'browser','百度':'browser','朋友圈':'moments','动态':'moments','查他手机':'spy','查岗':'spy','查手机':'spy','购物':'shop','淘宝':'shop','商城':'shop','日历':'calendar','日程':'calendar','x':'x','X':'x','推特':'x','微博':'x','推':'x','外卖':'food','点餐':'food','游戏':'games','游戏大厅':'games','打游戏':'games','信箱':'mail','邮箱':'mail','邮件':'mail','线下约会':'offline','线下':'offline','约会':'offline'};
 function genPwd(){return String(1000+Math.floor(Math.random()*9000));}
 function _appKeys(arg,pool,filt){if(/全部|所有|全锁|全/.test(arg))return pool.filter(filt);return arg.split(/[、,，\/\s]+/).map(x=>APPNAME2KEY[x.replace(/[「」『』"'《》]/g,'').trim()]).filter(k=>k&&filt(k));}
 // 角色嘴上说"拉黑了"却没真拉黑——这里读ta的话真正拉黑/加回
@@ -2276,7 +2295,7 @@ function applyControlTags(content,c,id,statedPwd){
   _ctFired=changed;if(changed){save();if(cur().p==='wechat'||cur().p==='home')render();}
   return out;}
 let _ctFired=false;
-const APP_NLWORDS={games:['游戏大厅','打游戏','游戏'],x:['推特','微博','X'],food:['外卖','点餐'],shop:['购物','淘宝','商城'],moments:['朋友圈','动态'],mail:['信箱','邮箱','邮件'],offline:['线下约会','线下','约会'],calendar:['日历','日程'],spy:['查他手机','查岗','查手机']};
+const APP_NLWORDS={browser:['浏览器','搜索','上网'],games:['游戏大厅','打游戏','游戏'],x:['推特','微博','X'],food:['外卖','点餐'],shop:['购物','淘宝','商城'],moments:['朋友圈','动态'],mail:['信箱','邮箱','邮件'],offline:['线下约会','线下','约会'],calendar:['日历','日程'],spy:['查他手机','查岗','查手机']};
 // 模型常常"只用嘴说锁了"而不发指令——这里直接解析ta的话，把锁/禁言真正落地，并用ta说出口的密码
 async function extractControl(reply,c,statedPwd){
   if(!(S.couple&&S.couple.cid===c.id))return;
@@ -2572,6 +2591,35 @@ function fetchWeather(manual){if(!navigator.geolocation){if(manual)toast('设备
 /* =================== 联网搜索 =================== */
 async function webSearch(q){try{const r=await fetch('https://s.jina.ai/'+encodeURIComponent(q),{headers:{'Accept':'text/plain','X-Respond-With':'no-content'}});
   const t=await r.text();return t.slice(0,1500);}catch(e){return '（联网失败，请凭已有知识回答）';}}
+/* =================== 浏览器 =================== */
+let _brBusy=false;
+function renderBrowser(){const b=S.browser||{};
+  return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">🌐 浏览器</span><span class="r" onclick="brHistory()">🕘</span></div>
+   <div style="padding:10px 12px;background:#1c1c1e;display:flex;gap:8px;border-bottom:.5px solid #2a2a2c">
+     <input id="br_q" value="${esc(b.q||'')}" placeholder="联网搜索…" style="flex:1;border:1px solid #38383a;border-radius:18px;padding:8px 14px;background:#2c2c2e;color:#eee;outline:none" onkeydown="if(event.key==='Enter')browserSearch()">
+     <button class="send" onclick="browserSearch()" ${_brBusy?'disabled':''}>${_brBusy?'…':'搜'}</button></div>
+   <div class="scroll" style="background:#000">
+   ${_brBusy?'<div class="empty">🔎 联网搜索中…</div>':((b.items&&b.items.length)?b.items.map((it,i)=>`<div class="section"><div style="padding:12px 14px" onclick="brView(${i})"><div style="color:#7db3ff;font-size:15px;font-weight:600">${esc(it.title)}</div><div style="color:#bbb;font-size:13px;margin-top:4px;line-height:1.6">${esc((it.snippet||'').slice(0,160))}${(it.snippet||'').length>160?'…':''}</div><div style="margin-top:8px;display:flex;gap:8px"><button class="minibtn" onclick="event.stopPropagation();brView(${i})">查看</button><button class="minibtn" onclick="event.stopPropagation();brFwd(${i})">转发给角色</button></div></div></div>`).join(''):'<div class="empty" style="padding:50px;line-height:1.8">搜点你想查的吧～<br>联网实时搜索，准确精准</div>')}
+   <div style="height:20px"></div></div>`;}
+async function browserSearch(qArg){if(_brBusy)return;const q=(qArg||($('#br_q')?$('#br_q').value:'')||'').trim();if(!q){toast('搜点啥呢');return;}
+  S.browser=S.browser||{};S.browser.q=q;S.browser.history=S.browser.history||[];S.browser.history.unshift({q,time:Date.now()});S.browser.history=S.browser.history.slice(0,40);
+  _brBusy=true;save();render();
+  try{const raw=await webSearch(q);
+    const r=await chatAPI([{role:'system',content:'你是浏览器搜索结果整理器。根据下面联网搜到的真实资料，整理成3到5条搜索结果，要准确、基于资料、不要编造。每行一条，严格格式：标题:::一两句话摘要。只输出这些行。'},{role:'user',content:'搜索词：'+q+'\n\n联网资料：\n'+(raw||'').slice(0,1500)}],{max:700,aux:true});
+    const items=looseLines(r).map(p=>({title:clean(p[0]),snippet:(p[1]||p[0]||'').trim()})).filter(x=>x.title);
+    S.browser.items=items.length?items:[{title:q,snippet:(raw||'没搜到相关内容').slice(0,300)}];
+  }catch(e){S.browser.items=[{title:q,snippet:'搜索失败了，检查下网络再试一次'}];}
+  _brBusy=false;save();render();}
+function brView(i){const it=(S.browser.items||[])[i];if(!it)return;
+  openModal(`<h3 style="color:#7db3ff">${esc(it.title)}</h3><div style="max-height:55vh;overflow:auto;color:#ddd;line-height:1.8;white-space:pre-wrap;font-size:14px">${esc(it.snippet)}</div><div class="btns" style="margin-top:12px"><button class="btn g" onclick="closeModal()">关闭</button><button class="btn p" onclick="closeModal();brFwd(${i})">转发给角色</button></div>`);}
+function brFwd(i){const it=(S.browser.items||[])[i];if(!it)return;const cs=S.contacts.filter(c=>!c.deleted&&(isMain()||addedHere(c)));if(!cs.length){toast('先加个角色');return;}
+  window._brF=it;openModal(`<h3>转发给</h3>${cs.map(c=>`<div class="section"><div class="it" onclick="doBrFwd('${c.id}')">${esc(c.remark||c.name)}<span class="v">›</span></div></div>`).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+function doBrFwd(cid){const it=window._brF;if(!it)return;pushMsg(cid,{role:'user',type:'weblink',title:it.title,snippet:it.snippet,q:(S.browser&&S.browser.q)||'',id:uid()});closeModal();toast('已转发给角色');scheduleReply(cid);}
+function brHistory(){const h=(S.browser&&S.browser.history)||[];
+  openModal(`<h3>🕘 搜索记录</h3>${h.length?h.map((x,i)=>`<div class="it"><span onclick="brRe(${i})" style="flex:1;color:#ccc;cursor:pointer">🔍 ${esc(x.q)}</span><small style="color:#777">${fmtDate(x.time)}</small></div>`).join(''):'<div class="empty">还没搜过</div>'}<div class="btns" style="margin-top:8px"><button class="btn d" onclick="S.browser.history=[];save();closeModal();toast('已清空记录')">清空记录</button><button class="btn g" onclick="closeModal()">关闭</button></div>`);}
+function brRe(i){const x=(S.browser&&S.browser.history||[])[i];if(!x)return;closeModal();browserSearch(x.q);}
+function viewWeblink(mid){let m;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;break;}}if(!m)return;
+  openModal(`<h3 style="color:#7db3ff">${esc(m.title)}</h3><div style="max-height:55vh;overflow:auto;color:#ddd;line-height:1.8;white-space:pre-wrap;font-size:14px">${esc(m.snippet||'')}</div><button class="btn g" style="margin-top:12px" onclick="closeModal()">关闭</button>`);}
 
 /* =================== 闹钟 =================== */
 function addAlarm(contactId,time,label,repeat){S.alarms.push({id:uid(),time,label:label||'起床',contactId,enabled:true,repeat:repeat||'once'});save();toast('⏰ 已定闹钟 '+time+' '+(label||''));}
