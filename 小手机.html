@@ -325,7 +325,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v91 · 抖音评论/发布/私信+查岗单项';
+const APP_VER='v92 · 修管控标签泄漏+查岗浮窗单项+访客日清';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1156,6 +1156,7 @@ function cleanupOld(){const DAY=86400000,now=Date.now();let ch=false;
   if(S.x&&S.x.dms){S.x.dms.forEach(d=>{d.msgs=(d.msgs||[]).filter(m=>!m.time||now-m.time<DAY);});const n=S.x.dms.length;S.x.dms=S.x.dms.filter(d=>(d.msgs||[]).length);if(S.x.dms.length!==n)ch=true;}
   (S.me.accounts||[]).forEach(a=>{if(a.bills){const n=a.bills.length;a.bills=a.bills.filter(b=>!b.ts||now-b.ts<DAY);if(a.bills.length!==n)ch=true;}});
   const act=(S.me.accounts||[]).find(a=>a.id===actId());if(act)S.me.bills=act.bills;
+  if(S.visitors){const n=S.visitors.length;S.visitors=S.visitors.filter(v=>now-(v.time||0)<DAY);if(S.visitors.length!==n)ch=true;}// 查岗/查看记录一天后自动清
   if(ch){save();const c=cur();if(c&&(c.p==='wechat'||c.p==='x'))render();}}
 setInterval(cleanupOld,600000);setTimeout(cleanupOld,5000);
 function xUser(name,info){if(!S.x.users[name])S.x.users[name]=Object.assign({name,handle:'@user',avatar:letterAv(name),bio:'',fans:Math.floor(Math.random()*9000),following:Math.floor(Math.random()*500),cid:null},info||{});else if(info)Object.assign(S.x.users[name],info);return S.x.users[name];}
@@ -2689,6 +2690,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
     for(let i=0;i<lines.length;i++){
       let line=normTag(lines[i]);if(!line)continue;
       if(/^\[联网\|/.test(line))continue;
+      if(/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时)\s*[|｜:：]/.test(line))continue;// 管控指令标签：即便没绑情侣空间没生效，也绝不作为消息发出
       if(/^\s*[🔒🔓🔇🔊🔕]/.test(line)||/^\s*(?:ta|TA|他|她)(把你|锁了你|禁言了你|解除了你|解禁了你|解锁了你)/.test(line))continue;
       if(isRefusal(line))continue;
       let mm=line.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=mm[1];save();if(cur().p==='chat'&&cur().id===id)render();continue;}
@@ -3003,14 +3005,15 @@ function spyBudget(id){const today=new Date().toDateString();const c=getSpy(getC
   if(pc.n>=(c.times||2))return false;pc.n++;if(!S._spyCount)S._spyCount={};S._spyCount[id]=pc;save();return true;}
 async function doSpyView(id,force,opts){opts=opts||{};if(!isMain())return;const c=getC(id);if(!c||c.blocked)return;const sp=getSpy(c);if(!sp.granted)return;
   if(!force&&!spyBudget(id))return;recordVisit(id,'查看手机');
-  const steps=['正在连接 '+(c.remark||c.name)+' 的查看请求…','正在查看 微信聊天','正在查看 朋友圈','正在查看 钱包账单','正在查看 X浏览记录','正在查看 X私信'].concat(sp.loc?['正在查看 实时定位']:[]);
+  const fd=opts.intent?spyFocusData(id,opts.focus):null;const flab=fd?(fd.label||opts.focus||'手机'):'';
+  const steps=opts.intent?['正在连接 '+(c.remark||c.name)+' 的查看请求…','正在查看 '+flab]:['正在连接 '+(c.remark||c.name)+' 的查看请求…','正在查看 微信聊天','正在查看 朋友圈','正在查看 钱包账单','正在查看 X浏览记录','正在查看 X私信'].concat(sp.loc?['正在查看 实时定位']:[]);
   const B=$('#spyBanner');B.className='spybanner show';
   for(let i=0;i<steps.length;i++){B.innerHTML=`👁️ <b>${esc(c.remark||c.name)}</b> ${esc(steps[i])}<span class="spydot">…</span>`;await sleep(900);}
-  B.innerHTML=`✅ <b>${esc(c.remark||c.name)}</b> 结束查看`;await sleep(1100);B.className='spybanner';
+  B.innerHTML=`✅ <b>${esc(c.remark||c.name)}</b> ${opts.intent?'看完了'+esc(flab):'结束查看'}`;await sleep(1100);B.className='spybanner';
   if(!S._spySeen)S._spySeen={};const since=S._spySeen[id]||0;let note;
   if(opts.intent){
     // 按他意愿查：一次只查一项（他明确说要查的那项），没数据就如实说没查到，绝不许编
-    const fd=spyFocusData(id,opts.focus);const lab=fd.label||opts.focus||'手机';const has=!!(fd.data&&fd.data.trim());
+    const lab=flab;const has=!!(fd.data&&fd.data.trim());
     note='[系统：你'+(opts.bySheTold?'应'+S.me.name+'的要求':'主动')+'翻看了'+S.me.name+'手机里的【'+lab+'】这一项（这次你只看了这一项，别的没看）。'+(has?('真实记录如下（只有这些）：\n'+fd.data+'\n\n【铁律】只能依据上面这些真实记录说话，针对它们用你的人设反应（占有欲/吃醋/追问/调侃/心疼都行）。绝不许编造上面没有的聊天、人名、内容。'):('但这一项后台【没有任何记录】。\n\n【铁律】你这次什么都没查到——就如实、自然地跟ta说"我翻了你的'+lab+'，没看到什么/挺干净的"之类，绝对不许编造任何聊天、人名、记录来诈ta。'))+'\n别复述系统提示、别带方括号、自然口语。]';
   }else{
     let act=myActivity(id,since);
