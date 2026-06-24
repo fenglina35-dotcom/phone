@@ -203,6 +203,8 @@ body{background:#000;padding:0;}
 /* ===== 通话 ===== */
 .callscreen{position:absolute;inset:0;z-index:450;display:none;flex-direction:column;align-items:center;color:#fff;background:linear-gradient(165deg,#34344a,#16161e);}
 .callscreen.show{display:flex;}
+.callscreen.mini{inset:auto;top:44px;left:8px;right:auto;width:auto;height:auto;flex-direction:row;align-items:center;gap:8px;padding:6px 10px;border-radius:26px;background:rgba(18,18,26,.96);border:1px solid #4a4a5a;box-shadow:0 4px 18px rgba(0,0,0,.55);z-index:456;}
+.callscreen.mini .cav{margin:0;}
 .callscreen.video{background:radial-gradient(circle at 50% 30%,#2a3a4a,#0a0a10);}
 .callscreen .cav{margin-top:88px;width:100px;height:100px;border-radius:24px;font-size:48px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#444;}
 .callscreen .cav img{width:100%;height:100%;object-fit:cover;}
@@ -325,7 +327,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v105 · 可调音量(支持加大)';
+const APP_VER='v107 · 他可口头额外布置任务/惩罚';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1588,7 +1590,7 @@ function renderTasks(){const c=taskC();
       <div style="font-size:30px;font-weight:700;margin:4px 0">${done}/${total}</div>
       <div style="font-size:12px;opacity:.95">${all?'全部完成啦！等ta的奖励🎁':'今天23:59前完成，全做完有奖励～'}</div></div>
       ${t.list.map((x,i)=>`<div class="section" style="margin:10px 12px"><div style="padding:12px 14px">
-        <div style="display:flex;justify-content:space-between;align-items:center"><span class="tag">${x.kind==='real'?'🌍 现实':'📱 手机'}</span>${x.done?'<span style="color:#19a463;font-size:13px">✅ 已完成</span>':''}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center"><span class="tag">${x.kind==='real'?'🌍 现实':'📱 手机'}${x.extra?' <span style="color:#fe2c55">·临时加罚</span>':''}</span>${x.done?'<span style="color:#19a463;font-size:13px">✅ 已完成</span>':''}</div>
         <div style="margin:8px 0;font-size:15px;line-height:1.5;${x.done?'color:#888;text-decoration:line-through':'color:#eee'}">${esc(x.text)}</div>
         ${x.done?'':`<button class="btn p" onclick="completeTask('${x.id}')">${taskVerifyLabel(x)}</button>`}
       </div></div>`).join('')}
@@ -2809,6 +2811,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
     if(/拉黑|加回|删了你|删除你|拉进黑名单|原谅你/.test(content)&&!/报备|别的微信号|加了你|加你、|有人加|有别人加/.test(note||''))applyBlockIntent(content,c,id);
     if(S.couple&&S.couple.cid===id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|给你(解|开)|都给你解|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|玩.{0,4}(一会儿|一会|多久|多长)|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)/.test(content))extractControl(content,c,_statedPwd);
     maybeSpyIntent(content,c,id,_lu);
+    maybeTaskIntent(content,c);
     const lines=splitBubbles(content);let got=false;let txtN=0;let diceUsed=false;const cap=Math.max(1,+c.msgMax||4);
     for(let i=0;i<lines.length;i++){
       let line=normTag(lines[i]);if(!line)continue;
@@ -2983,8 +2986,13 @@ function hangupCall(byAI){if(!_call)return;blip(300,.3);clearInterval(_callTimer
     ?'[系统：刚才这通'+kindTxt+'聊了'+durTxt+'，是你自己主动挂断的。挂断后你立刻再补发一条微信消息给'+S.me.name+'（解释下为什么挂、或把刚才没说完的话说完、或撒娇哄一下，符合人设），别一句话都不说就消失。]'
     :'[系统：你们这通'+kindTxt+'聊了'+durTxt+'，是'+S.me.name+'挂断的，你察觉到了，主动再发条消息（可以提这次通话多久/意犹未尽/问怎么突然挂了，符合你人设）。]'),2500);}
 function renderCallTime(){if(!_call||_call.state!=='active')return;const s=$('#callStat');if(s){const d=Math.floor((Date.now()-_call.start)/1000);s.textContent=Math.floor(d/60)+':'+(d%60).toString().padStart(2,'0');}}
+function callMin(){if(_call){_call.min=true;renderCall();}}
+function callMax(){if(_call){_call.min=false;renderCall();}}
 function renderCall(){const L=$('#callLayer');if(!_call){L.className='callscreen';L.innerHTML='';return;}
   const c=getC(_call.id);const video=_call.kind==='video';
+  if(_call.min&&_call.state!=='incoming'){L.className='callscreen show mini';
+    L.innerHTML=`<div class="cav" style="width:34px;height:34px;min-width:34px;font-size:18px;border-radius:10px">${isImg(c.avatar)?`<img src="${c.avatar}">`:(c.avatar||'🙂')}</div><span style="font-size:13px;color:#fff;white-space:nowrap">${esc(c.remark||c.name)} ${video?'📹':'📞'}<span id="callStat" style="margin-left:5px">${_call.state==='active'?'':'呼叫中'}</span></span><span onclick="callMax()" title="放大" style="cursor:pointer;font-size:17px;padding:0 4px">⤢</span><span class="cbtn red" style="width:32px;height:32px;font-size:15px" onclick="hangupCall()">📵</span>`;
+    updateCallSub();return;}
   L.className='callscreen show'+(video?' video':'')+(_call.state==='active'?' active':'');
   const label=video?'视频通话':'语音通话';
   const stat=_call.state==='incoming'?('邀请你'+label):_call.state==='outgoing'?'正在呼叫…':'<span id="callStat">00:00</span>';
@@ -2992,7 +3000,7 @@ function renderCall(){const L=$('#callLayer');if(!_call){L.className='callscreen
   if(_call.state==='incoming')btns=`<div class="cbtncol"><div class="cbtn red" onclick="declineCall()">📵</div>拒绝</div><div class="cbtncol"><div class="cbtn green" onclick="answerCall()">📞</div>接听</div>`;
   else if(_call.state==='outgoing')btns=`<div class="cbtncol"><div class="cbtn red" onclick="declineCall()">📵</div>取消</div>`;
   else{_call.replyVoice=true;btns=`<div class="cbtncol"><div class="cbtn red" onclick="hangupCall()">📵</div>挂断</div>`;}
-  L.innerHTML=`<div class="cav">${isImg(c.avatar)?`<img src="${c.avatar}">`:(c.avatar||'🙂')}</div>
+  L.innerHTML=`${(_call.state==='active'||_call.state==='outgoing')?`<div onclick="callMin()" title="缩小，可以边通话边聊天/玩手机" style="position:absolute;left:16px;top:50px;font-size:24px;cursor:pointer;z-index:3">⤵︎</div>`:''}<div class="cav">${isImg(c.avatar)?`<img src="${c.avatar}">`:(c.avatar||'🙂')}</div>
     <div class="cname">${esc(c.remark||c.name)}</div><div class="cstat">${stat}</div>
     <div class="callsub" id="callSub"></div>
     ${_call.state==='active'?`<div class="callinput show" id="callInput"><input id="callMsg" placeholder="打字说…" onkeydown="if(event.key==='Enter')callSend()"><button onclick="callSend()">发</button></div>`:''}
@@ -3020,6 +3028,7 @@ async function callAI(sysNote){if(!_call)return;const c=getC(_call.id);const vid
     else cf+='\n- 这是语音通话（看不到画面），绝对不要出现任何【】动作神态描写，一个【】都不许有，只能说话。';
     if(_langN)cf+='\n- ‼️最重要：你全程只能说'+_langN+'，从头到尾每一句都是'+_langN+'，绝对不准中途切回中文整句说话（这是会被读出来的那一行）。格式：先单独一行写'+_langN+'原文（会被读出来），紧接着【换一行】用（）单独写中文翻译（不会被读）。原文一行、（中文翻译）另起一行，别写在同一行，也别把顺序搞反。例如：\n'+(_lang==='韩'?'사랑해\n（我爱你）':_lang==='日'?'好きだよ\n（喜欢你）':'I miss you\n（我想你了）')+'\n- 哪怕是要挂断、道别、回应"挂了/别挂/我爱你"这种话，也必须先写'+_langN+'原文那一行，绝不能整句只说中文。';
     cf+='\n- 想结束通话就【单独占一行】只输出 [挂断]，不要把 [挂断] 和说的话写在同一行。';
+    cf+='\n- 通话中你照样能管控ta或查ta手机：要锁软件/禁言/限时就【单独成行】写指令标签（如 [锁定|游戏]、[限时|游戏|60]、[禁言|名字]）；要查岗就自然说一句「我看看你手机/微信/抖音」。这些指令标签会被系统执行、【不会被读出来】，不影响你正常讲话，也别在话里复述它们。';
     const sys=buildSystem(c)+cf;
     let content=await chatAPI([{role:'system',content:sys},...hist,{role:'system',content:personaPin(c)}]);
     if(!_call||_call.session!==sess)return;
@@ -3027,6 +3036,14 @@ async function callAI(sysNote){if(!_call)return;const c=getC(_call.id);const vid
     if(_langN&&content&&callDrifted(content,_lang)){
       const fix=await chatAPI([{role:'system',content:sys},...hist,{role:'assistant',content:content},{role:'user',content:'[系统纠正：你刚才有句子直接说成了中文。请整段重说，每一句都先写'+_langN+'原文一行、再换行写（中文翻译），从头到尾不许出现整句中文。]'}]);
       if(_call&&_call.session===sess&&fix&&!callDrifted(fix,_lang))content=fix;}
+    // 通话里也能落地管控/记仇/查岗（指令标签会被抹掉，不破坏语音/视频格式）
+    const _statedPwd=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;
+    content=applyControlTags(content,c,_call.id,_statedPwd);
+    content=applyGrudgeTags(content,c);
+    let _luc=null;{const _ms=msgs(c.id);for(let i=_ms.length-1;i>=0;i--){if(_ms[i].role==='user'){_luc=_ms[i];break;}}}
+    if(S.couple&&S.couple.cid===_call.id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|给你(解|开)|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)/.test(content))extractControl(content,c,_statedPwd);
+    maybeSpyIntent(content,c,_call.id,_luc);
+    maybeTaskIntent(content,c);
     const wantHang=/\[挂断\]/.test(content);const pieces=[];const _vlang=(getVoice(c).lang||'zh');
     splitBubbles(content).forEach(l=>{l=normTag(l);if(/^\[挂断\]$/.test(l))return;const mm=l.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=mm[1];return;}if(LEAKRE.test(l))return;
       if(video){splitActions(l).forEach(p=>pieces.push(p));}
@@ -3189,6 +3206,18 @@ function maybeSpyIntent(reply,c,id,lu){const sp=getSpy(c);if(!sp.granted||c.bloc
   const ft=reply+' '+userText;const focus=(ft.match(/微信(聊天|消息)?|聊天记录|朋友圈|抖音|钱包|账单|定位|位置|跟谁(聊|说)/)||[''])[0]||'';
   _spyIntentT[id]=now;
   setTimeout(()=>doSpyView(id,true,{intent:true,bySheTold:sheInvites&&!heWants,focus}),900);}
+// 他口头额外布置任务/惩罚（聊天或通话里都行）：识别后真的加进任务便签
+let _taskIntentT={};
+async function maybeTaskIntent(reply,c){if(!reply||!c||c.blocked||!isMain())return;const tm=taskC();if(!tm||tm.id!==c.id)return;
+  if(!/罚你|惩罚|罚抄|罚款|(加|布置|再来|多)(个|条|一个|一条)?任务|任务[:：]|今晚?.{0,4}(不准|不许|必须|得给我|要给我)|今天.{0,6}(不准|不许|必须|得给我|要给我)|写(篇|个|段|一篇|一段)?.{0,3}(检讨|小作文|保证书|情书)|不准(玩|刷|聊|睡)/.test(reply))return;
+  const now=Date.now();if(now-(_taskIntentT[c.id]||0)<8000)return;_taskIntentT[c.id]=now;
+  try{const sys='判断"'+(c.remark||c.name)+'"这句话是不是在给'+S.me.name+'【额外布置一个具体任务或惩罚】（要ta去做某件事）。是就提取成一条任务；只是普通调情/威胁/抱怨但没真布置具体任务，就当没有。\n只输出JSON：{"task":{"text":"任务描述(用ta的口吻,简短)","verify":"essay或moment或tweet或douyin或real","target":数字或0}} 或 {"task":null}。\nverify：essay=要她写东西(target填字数上限)；moment/tweet/douyin=要她发朋友圈/推/抖音；real=其它现实或暧昧小事。';
+    const r=await chatAPI([{role:'system',content:sys},{role:'user',content:reply}],{max:160,aux:true});
+    const d=parseObj(r);if(!d||!d.task||!d.task.text)return;const t=d.task;
+    if(!c.tasks||c.tasks.date!==todayStr())c.tasks={date:todayStr(),assignTs:Date.now(),list:[],rewarded:false,penalized:false};
+    c.tasks.list.push({id:uid(),text:(''+t.text).slice(0,140),kind:t.verify==='real'?'real':'app',verify:['essay','moment','tweet','douyin','real'].indexOf(t.verify)>=0?t.verify:'real',target:+t.target||0,done:false,extra:true});
+    save();toast('📋 '+(c.remark||c.name)+'给你加了个任务');if(cur().p==='tasks')render();
+  }catch(e){}}
 function testSpy(id){const c=getC(id);if(!c)return;getSpy(c).granted=true;save();closeModal();if(cur().p==='chat'&&cur().id===id){}else openChat(id);S._spySeen=S._spySeen||{};S._spySeen[id]=0;doSpyView(id,true);}
 function maybeSpyIdle(id){const c=getC(id);if(!c)return;const sp=getSpy(c);if(!sp.granted)return;
   const lm=lastMsg(id);if(lm&&Date.now()-lm.time<2*3600000)return;doSpyView(id);}
