@@ -325,7 +325,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v101 · 任务更Dom+线下模型切换/多选/修滚动+约会记忆可改';
+const APP_VER='v102 · 朋友圈可选仅谁可见';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -634,7 +634,7 @@ function buildSystem(c){
       altLines.push('「'+acc.name+'」（微信号'+(acc.wxid||'')+'）加了你，你们聊了：\n'+recent);});
     if(altLines.length)s+='\n\n# 有别人加过你微信、和你聊过（你心里都清楚这些）\n'+altLines.join('\n\n')+'\n这些你都记得，'+S.me.name+'（你恋人）问起时你要如实说清楚（谁加的、聊了啥、你的态度）。但【不要反复主动提这件事】——你已经报备过了，除非有新的人加你或有新消息，否则平时就正常聊天，别老把这事翻出来念叨。';}
   // 朋友圈感知（仅主身份）
-  const mo=_main?S.moments.filter(p=>p.authorId==='me'||p.authorId===c.id).slice(0,3):[];
+  const mo=_main?S.moments.filter(p=>(p.authorId==='me'||p.authorId===c.id)&&momentVisibleTo(p,c.id)).slice(0,3):[];
   if(mo.length)s+='\n\n# 最近的朋友圈（你知道这些动态，但别反复主动提起旧朋友圈，看过一次就够了，除非ta主动说起）\n'+mo.map(p=>(p.authorId==='me'?S.me.name:'你')+'发了："'+p.text+'"').join('\n');
   const myx=(S.x&&S.x.tweets||[]).filter(t=>t.who===c.id).slice(0,3);
   if(myx.length)s+='\n\n# 你自己最近发的推特\n'+myx.map(t=>'"'+t.text+'"').join('\n');
@@ -3203,6 +3203,7 @@ function momentHTML(p){const author=p.authorId==='me'?S.me:getC(p.authorId);if(!
     <div class="au">${esc(name)}</div>
     <div class="tx">${esc(p.text)}</div>
     ${p.images&&p.images.length?`<div class="imgs">${p.images.map(im=>`<div class="ph" onclick="viewImg('${im}')"><img src="${im}"></div>`).join('')}</div>`:''}
+    ${(p.authorId==='me'&&p.visible&&p.visible.length)?`<div style="font-size:11px;color:#888;margin-top:3px">🔒 仅 ${p.visible.map(id=>{const cc=getC(id);return cc?esc(cc.remark||cc.name):'?';}).join('、')} 可见</div>`:''}
     <div class="ft"><div class="tm">${ago(p.time)}</div><div class="acts" onclick="momentMenu('${p.id}')">···</div></div>
     ${p.likes&&p.likes.length?`<div class="likes">❤️ ${p.likes.map(l=>esc(l)).join('，')}</div>`:''}
     ${p.comments&&p.comments.length?`<div class="cmts">${p.comments.map((cm,ci)=>`<div class="cmt" onclick="replyComment('${p.id}',${ci})"><b>${esc(cm.name)}：</b>${esc(cm.text)}</div>`).join('')}</div>`:''}
@@ -3224,18 +3225,22 @@ function likeMoment(pid){const p=S.moments.find(x=>x.id===pid);p.likes=p.likes||
 function commentMoment(pid){const t=$('#cm_t').value.trim();if(!t)return;const p=S.moments.find(x=>x.id===pid);
   p.comments=p.comments||[];p.comments.push({name:S.me.name,text:t});save();closeModal();render();
   if(p.authorId!=='me')reactToComment(p);}
-function postMoment(){openModal(`<h3>发朋友圈</h3>
+function postMoment(){const cs=S.contacts.filter(c=>!c.deleted);openModal(`<h3>发朋友圈</h3>
   <div class="field"><textarea id="mm_t" rows="3" placeholder="这一刻的想法…"></textarea></div>
   <div class="field"><button class="minibtn" id="mm_imgs_btn" onclick="addMomentImg()">📷 加图片</button> <span id="mm_imgcount"></span></div>
+  <div class="field"><label>谁可以看（都不选=所有人可见；选了就只有选中的人能看到，不相关的人看不到）</label>
+    ${cs.length?cs.map(c=>`<label class="avline" style="font-weight:400">${esc(c.remark||c.name)}<span class="sw" data-mv="${c.id}" onclick="this.classList.toggle('on')"></span></label>`).join(''):'<div style="font-size:12px;color:#999">还没有角色</div>'}</div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="doPostMoment()">发表</button></div>`);
   window._mmImgs=[];}
 function addMomentImg(){pickFile('image/*',async f=>{window._mmImgs.push(await compress(f,700,.6));$('#mm_imgcount').textContent='已加'+window._mmImgs.length+'张';});}
 function doPostMoment(){const t=$('#mm_t').value.trim();if(!t&&!(window._mmImgs||[]).length){toast('写点什么吧');return;}
-  const p={id:uid(),authorId:'me',text:t,images:window._mmImgs||[],time:Date.now(),likes:[],comments:[],acct:actId()};
+  const visible=[...document.querySelectorAll('[data-mv].on')].map(e=>e.getAttribute('data-mv'));
+  const p={id:uid(),authorId:'me',text:t,images:window._mmImgs||[],time:Date.now(),likes:[],comments:[],acct:actId(),visible};
   S.moments.unshift(p);save();closeModal();render();reactToMyMoment(p);}
 function cleanReply(t){return (t||'').replace(/\[(心情|记住|闹钟|来电|联网|骰子|送礼|代付成功|日程|转账|红包|位置|图片|文件)[^\]]*\]/g,'').replace(/^["「]+|["」]+$/g,'').trim();}
 function recordVisit(cid,where){const c=getC(cid);if(!c)return;if(!S.visitors)S.visitors=[];S.visitors.unshift({cid,name:c.remark||c.name,avatar:c.avatar,where:where||'朋友圈',time:Date.now()});if(S.visitors.length>40)S.visitors.length=40;save();}
-async function reactToMyMoment(p){const pool=S.contacts.filter(c=>!c.deleted&&!c.blocked);
+function momentVisibleTo(p,cid){if(!p||p.authorId!=='me')return true;if(!p.visible||!p.visible.length)return true;return p.visible.indexOf(cid)>=0;}
+async function reactToMyMoment(p){const pool=S.contacts.filter(c=>!c.deleted&&!c.blocked&&momentVisibleTo(p,c.id));
   for(const c of pool.slice(0,3)){try{recordVisit(c.id,'朋友圈');const r=await chatAPI([{role:'system',content:buildSystem(c)},
     {role:'user',content:'你的恋人/好友'+S.me.name+'发了条朋友圈："'+p.text+'"。请你只回复一句：要么是点赞就回"赞"，要么是一句简短自然的评论。不要带任何方括号标记。'}]);
     const txt=cleanReply(r);if(txt==='赞'||(txt.includes('赞')&&txt.length<3)){p.likes.push(c.remark||c.name);}
