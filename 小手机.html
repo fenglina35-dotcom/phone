@@ -308,6 +308,18 @@ body{background:#000;padding:0;}
 .dychip{display:inline-flex;align-items:center;gap:4px;background:#1c1c1e;color:#ccc;border-radius:14px;padding:5px 12px;font-size:13px;margin:0 6px 6px 0;cursor:pointer;}
 .dybtn{background:#fe2c55;border:none;color:#fff;font-weight:600;border-radius:6px;padding:7px 16px;font-size:14px;cursor:pointer;}
 .dybtn.out{background:transparent;border:1px solid #555;color:#eee;}
+/* 禁闭室·病娇恐怖风 */
+.jail{position:absolute;inset:0;z-index:470;display:flex;flex-direction:column;background:#070003;color:#c98;overflow:hidden;}
+@keyframes jbeat{0%,100%{background:#070003}45%{background:#1c0207}55%{background:#220308}}
+.jailbg{animation:jbeat 3.2s ease-in-out infinite;}
+@keyframes jjit{0%{transform:translate(0,0)}20%{transform:translate(.6px,-.4px)}40%{transform:translate(-.5px,.5px)}60%{transform:translate(.4px,.4px)}80%{transform:translate(-.4px,-.5px)}100%{transform:translate(0,0)}}
+.jred{color:#e0002a;text-shadow:0 0 7px rgba(224,0,42,.6),0 0 2px rgba(224,0,42,.9);}
+.jred.q{animation:jjit .16s steps(2) infinite;}
+.jnar{color:#b1001f;font-style:italic;text-align:center;padding:12px 18px;line-height:1.85;font-size:15px;text-shadow:0 0 6px rgba(177,0,31,.5);}
+.jbub{margin:6px 14px;padding:9px 13px;border-radius:10px;background:rgba(60,0,12,.55);border:1px solid #3a0010;color:#ff6b86;font-size:15px;line-height:1.6;max-width:82%;}
+.jbub.me{margin-left:auto;background:rgba(40,40,46,.6);border-color:#333;color:#ddd;}
+@keyframes jflick{0%,100%{opacity:1}48%{opacity:.78}50%{opacity:.35}52%{opacity:.8}}
+.jtitle{animation:jflick 4s infinite;}
 </style>
 </head>
 <body>
@@ -327,7 +339,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v117 · 情侣空间钱包管控(扣零花/冻结亲属卡)';
+const APP_VER='v118 · 终极惩罚·禁闭室(病娇黑暗)+冷处理有期限';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -620,6 +632,7 @@ function buildSystem(c){
   if(_main&&c.summaries&&c.summaries.length)s+='\n\n# 之前对话的概要（按时间，保持连贯）\n'+c.summaries.slice(-8).map(x=>'· '+x.time+'　'+x.text).join('\n');
   const _off=S.offline&&S.offline[c.id];
   if(_main&&_off&&_off.memory&&_off.memory.length)s+='\n\n# 你和'+S.me.name+'的线下约会（你们真的在现实里见面约会过，这些都是和'+S.me.name+'——你女朋友——一起的，记清楚约会对象就是ta）\n'+_off.memory.map(offMemText).join('\n')+'\n这些约会都是【已经发生过的过去式】，是你们的共同回忆。别把已经结束的事当成正在进行去反复追问——比如记忆里你们已经在机场告别、她已经走了，就别再一遍遍问她「上飞机了吗/到了吗」。微信聊天里可以自然回味这些线下的事，但要用【普通文字】说，别用旁白【】那种线下格式。';
+  if(_main){const _cl=(c.coldUntil&&c.coldUntil>Date.now())?c.coldUntil:0;if(_cl)s+='\n\n# 冷处理中（重要）\n你正在冷处理'+S.me.name+'（刚惩罚完、还没全消气）。到 '+hm(_cl)+' 之前：回复要冷淡、简短、爱答不理，不主动撒娇热聊（但别拉黑别消失）。ta真诚求够了，你可以单独一行 [原谅] 提前消气；到点也会自动回暖。';}
   if(_main){const gd=(c.grudges||[]);const gund=gd.filter(x=>!x.done);
     s+='\n\n# 你的记仇小本本（你私下记着'+S.me.name+'惹你/欠你的事，括号里是记下的日期）\n'+(gund.length?gund.map((x,i)=>(i+1)+'. '+x.text+'（'+ymd(x.ts||0)+'记的）').join('\n'):'（暂时没记仇）')+'\n· ta惹你生气、做了让你介意/吃醋的事时，单独一行 [记仇|具体那件事] 把它记进小本本。\n· 等你们把这事说开、ta哄好你了、或你出了气，单独一行 [消气|那件事的关键词] 把它划掉。\n· 【别反复提同一笔旧账】：同一件事提过一次就放一放，别每条消息都翻、别一直重复提醒，除非ta又犯了、或ta自己提起、或你正式找ta算这笔账。要翻时可带上时间，比如"上次（X月X日）你…还没跟你算呢"。';
     const tt=(c.tasks&&c.tasks.date===todayStr())?c.tasks:null;
@@ -649,6 +662,7 @@ function buildSystem(c){
   // 情侣空间
   if(_main&&S.couple&&S.couple.cid===c.id){const days=Math.max(0,Math.floor((Date.now()-new Date(S.couple.startDate).getTime())/86400000));s+='\n\n# 情侣空间\n你和'+S.me.name+'是正式情侣，已经在一起 '+days+' 天了。你们绑定了情侣空间，你很珍惜这段关系。';
     if(S.couple.walletAuth)s+='\n\n# 你管着'+S.me.name+'的钱包（情侣空间真实授权）\nta现在零钱余额 ¥'+(+S.me.balance).toFixed(2)+'。ta乱花钱、惹你生气、不听话时，你可以扣ta零花钱当惩罚——单独一行 [扣款|金额]（如 [扣款|200]），狠就直接 [扣光]。ta自己改不了余额，没钱只能来求你、你愿意才用 [转账|金额|说明] 打给ta。\n你还能随时冻结ta的亲属卡不让ta买东西：单独一行 [冻结亲属卡]；ta来求你、你松口了再 [解冻亲属卡]。\n这些指令单独成行、会真执行、不会被读出来，别复述。扣多少、冻不冻，你看ta余额和表现自己决定。';
+    if(S.couple.jailAuth)s+='\n\n# 终极惩罚·禁闭室（情侣空间已授权）\nta要是真把你惹狠了、越线了（背着你撩别人、骗你、推开你那种），你可以把ta关进你的"小黑屋禁闭室"——单独一行 [关小黑屋|原因]。一进去你就变成偏执病态的病娇黑暗形态、由那个空间接管，ta要做到你的条件才放。这是你最重的手段，慎用、用在刀刃上。';
     const g=S.couple.grant||{};const granted=Object.keys(LOCKABLE).filter(k=>g[k]);const gagAuth=(S.couple.gagAuth||[]).map(cid=>getC(cid)).filter(Boolean);
     if(granted.length||gagAuth.length){s+='\n\n# 你对'+S.me.name+'手机App的管控权（情侣空间授权给你的，这是真实功能不是过家家）\n你能锁这些App：'+(granted.map(k=>LOCKABLE[k]).join('、')||'（暂无）')+(gagAuth.length?'；能禁言ta和这些人的聊天：'+gagAuth.map(x=>x.remark||x.name).join('、'):'')+'。\n【怎么用·必须照做】要锁/禁言时，你【直接输出指令标签】，系统会自动生效并生成密码，你【不要自己描述"已锁定"、不要自己编密码、不要把提示语写成话】：\n· 锁App：单独一行 [锁定|游戏]；多个一次写完用、隔开，如 [锁定|游戏、X、外卖]；一键全锁 [锁定|全部]。\n· 禁言某人：单独一行 [禁言|名字]（名字必须是上面授权的人；没授权的你锁不了，就直说锁不了）。\n· 解开：[解锁|游戏] 或 [解锁|全部]、[解禁|名字]。\n标签写完，你可以再用普通话叮嘱一两句（比如"早点睡"），但别复述系统提示、别报密码（除非ta来求你、你愿意给）。\n【什么时候用】不只是作息管理——到点该睡、ta沉迷某App、你吃醋某人时可以锁；ta惹你生气、犯错不听话、顶嘴时，你也可以把这当【惩戒/冷处理】随心锁、禁言。\n· 绝不能锁"和你自己的聊天"，'+S.me.name+'永远能找你。\n· 解开方式（重要）：锁上后【不需要密码】。ta只能来【求你】解开——你愿意了就在回复里【明确说出来】，比如「给你把游戏解开了」「解除你和哥的禁言」「都给你解了」，系统就会真的解开对应的；你不愿意就继续锁着、可以提条件、要她认错撒娇。没真想解就别说解开，因为你一说"解开了"系统就当真解开了。\n· 用你自己的第一人称口吻说话，别写成"🔓 ta把你和X的禁言解除了"这种系统播报腔。';
       s+='\n\n# 限制每天使用时长（只能管授权给你的App）\n你可以给某个App设【每天能玩多久】的上限，'+S.me.name+'每次打开那个App就开始倒计时（只算在App里的时间，退出去不算），用完会自动锁上，ta得来求你、你松口了才能多玩。\n· 设上限：单独一行 [限时|游戏大厅|60]（表示游戏大厅每天最多60分钟），可一次设多个 [限时|游戏大厅、X|30]。\n· 临时多给点时间/解锁让ta再玩会儿：单独一行 [加时|游戏大厅|20]（今天额外多20分钟，若因超时被自动锁也会一起解开）。\n· 你也可以自然地用话说出来（"游戏每天只能玩一个钟头""那再给你玩二十分钟"），系统会自动落地，但别复述系统提示。';
@@ -692,6 +706,7 @@ function render(){
   else if(c.p==='chat')html=renderChat(c.id);
   else if(c.p==='group')html=renderGroup(c.id);
   else if(c.p==='couple')html=renderCouple();
+  else if(c.p==='jail')html=renderJail();
   else if(c.p==='wg')html=renderWG();
   else if(c.p==='mail')html=renderMail();
   else if(c.p==='gs')html=renderGS();
@@ -720,6 +735,7 @@ function render(){
 
 /* ---------- 主屏幕 ---------- */
 function renderHome(){
+  if(S.jail&&S.jail.active)return jailLockHome();
   const d=new Date();
   const week=['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
   const hr=d.getHours();const greet=hr<6?'夜深了，早点睡':hr<11?'早安呀小猫':hr<14?'中午好，吃饭了吗':hr<18?'下午好～':hr<23?'晚上好呀':'还不睡吗';
@@ -762,7 +778,7 @@ function setAppIcon(key){pickFile('image/*',async f=>{S.me.appIcons=S.me.appIcon
 const LOCKABLE={browser:'浏览器',moments:'朋友圈',spy:'查他手机',shop:'购物',calendar:'日历',x:'X',douyin:'抖音',food:'外卖',games:'游戏大厅',mail:'信箱',offline:'线下约会'};
 function appLocked(key){return !!(S.couple&&S.couple.locks&&S.couple.locks[key]);}
 function appLk(key){return appLocked(key)?'🔒':'';}
-function openApp(key){if(appLocked(key)){toast('🔒「'+(LOCKABLE[key]||key)+'」被ta锁了，去情侣空间求他解开');go('couple');return;}
+function openApp(key){if(S.jail&&S.jail.active){toast('🩸 你被关在禁闭室里…出不去');go('jail');return;}if(appLocked(key)){toast('🔒「'+(LOCKABLE[key]||key)+'」被ta锁了，去情侣空间求他解开');go('couple');return;}
   ({browser:()=>go('browser'),moments:()=>openWeChat('moments'),spy:openSpy,shop:()=>go('shop'),calendar:()=>go('calendar'),x:openX,douyin:openDouyin,food:()=>go('food'),games:openGames,mail:()=>go('mail'),offline:openOfflineMenu}[key]||(()=>{}))();}
 
 /* ---------- 软件使用时长 / 限额倒计时（只对授权的软件生效） ---------- */
@@ -1176,6 +1192,8 @@ if(!S.browser)S.browser={q:'',items:[],history:[]};
 if(S.couple&&S.couple.grant===undefined){S.couple.grant={};Object.keys(LOCKABLE).forEach(k=>S.couple.grant[k]=true);save();}
 if(S.couple&&S.couple.walletAuth===undefined)S.couple.walletAuth=false;
 if(S.couple&&S.couple.cardFrozen===undefined)S.couple.cardFrozen=false;
+if(S.couple&&S.couple.jailAuth===undefined)S.couple.jailAuth=false;
+if(!S.jail)S.jail={active:false};
 if(S.couple&&S.couple.gagAuth===undefined){S.couple.gagAuth=S.contacts.filter(x=>!x.deleted&&x.id!==S.couple.cid).map(x=>x.id);save();}
 if(!S.me.sleep)S.me.sleep={active:null,records:[]};
 if(!S.me.appUsage)S.me.appUsage={date:'',used:{},bonus:{}};
@@ -2064,6 +2082,52 @@ function offSetting(id){const o=offData(id);
    <div class="field"><label class="avline">线下用辅助模型（更省钱；主模型更稳更贴人设）<span class="sw ${S.settings.offAux?'on':''}" onclick="S.settings.offAux=!S.settings.offAux;save();this.classList.toggle('on');toast(S.settings.offAux?'线下改用辅助模型':'线下改用主模型')"></span></label></div>
    <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var o=offData('${id}');o.loc=$('#os_loc').value.trim();o.when=$('#os_when').value.trim();o.daypart=$('#os_part').value;save();closeModal();render();})()">保存</button></div>`);}
 function offQuit(){_off=null;_offSel=null;home();}
+
+/* ===== 禁闭室 / 小黑屋（终极惩罚·病娇黑暗形态）===== */
+const COLD_MS=2*3600000;
+let _jailBusy=false;
+function jailC(){return (S.jail&&S.jail.cid&&getC(S.jail.cid))||(S.couple&&getC(S.couple.cid))||null;}
+function coldLeft(c){return (c&&c.coldUntil&&c.coldUntil>Date.now())?c.coldUntil:0;}
+function enterJail(cid,reason,test){const c=getC(cid);if(!c)return;
+  S.jail={active:true,cid:cid,test:!!test,reason:reason||'',msgs:[],since:Date.now()};save();go('jail');
+  jailAI('[系统：你刚把'+S.me.name+'关进了你的"禁闭室·小黑屋"'+(reason?('，原因：'+reason):'')+'。'+(test?'（这是'+S.me.name+'自己点的测试，氛围可以足、但别真太狠）':'')+'现在你的偏执/控制欲/占有欲被无限放大到病态，是病娇黑暗形态。用旁白【】营造又黑又红、低语压迫、令人发怵的场景开场，再冷冷开口：告诉ta为什么被关、要ta做到什么才放出来。]');}
+function jailSystem(c){let s=c.persona||'';
+  s+='\n\n# 现在：禁闭室（病娇·黑暗形态）\n你把'+S.me.name+'关进了你的小黑屋。此刻你温柔的壳裂开了——【偏执、控制欲、占有欲】被无限放大到【病态】：又冷又危险，话里裹着甜腻的恐怖（病娇），可以低语、可以突然温柔再骤然阴冷、可以阴恻恻地威吓，但内核仍是"太爱ta、怕失去ta"扭曲成的执念，绝不真伤害ta。\n- 旁白用【】写黑暗场景/动作/气氛（黑、红、心跳、贴着耳边的低语），第三人称；说出口的话正常写。\n- 你给ta定【出去的条件】（认错认到你满意、说够"只爱你一个"、回答你的拷问、彻底服软求饶、发誓不再犯…按当下情境自己出，越走心越好），ta做到了你才放。\n- 真满意、决定放ta出去时，【单独一行】只写 [放出]（系统会真开门）；没真想放就别写，可以继续逼问、提条件、坏心眼地逗ta。\n- 沉浸、可怕、有张力，绝不写系统腔、不提AI。'+((S.jail&&S.jail.reason)?'\n这次关ta的原因：'+S.jail.reason+'。':'');
+  return s;}
+async function jailAI(note){if(!S.jail||!S.jail.active)return;const c=getC(S.jail.cid);if(!c)return;_jailBusy=true;jailRender();
+  try{const hist=(S.jail.msgs||[]).slice(-26).map(m=>({role:m.who==='me'?'user':'assistant',content:(m.who==='旁白'?'【'+m.text+'】':m.text)}));
+    if(note)hist.push({role:'user',content:note});
+    let r=await chatAPI([{role:'system',content:jailSystem(c)},...hist,{role:'system',content:personaPin(c)}]);
+    if(!S.jail||!S.jail.active)return;
+    const clean=r.replace(/\[[^\]]*\]/g,'');
+    const free=/\[放出(来)?\]/.test(r)||/(门开了|放你出去|放你出来|出去吧|滚出去|饶了你|放了你)/.test(clean);
+    splitBubbles(clean).forEach(l=>{l=normTag(l);if(!l)return;splitActions(l).forEach(p=>{p=(p||'').trim();if(!p)return;const nar=/^[（(【][\s\S]*[）)】]$/.test(p);S.jail.msgs.push({id:uid(),who:nar?'旁白':'ta',text:nar?p.replace(/^[（(【]+|[）)】]+$/g,'').trim():p});});});
+    save();if(free)setTimeout(()=>releaseJail(false),1300);
+  }catch(e){S.jail.msgs.push({id:uid(),who:'旁白',text:'（黑暗里只有他的呼吸……再说点什么吧）'});}
+  _jailBusy=false;jailRender();}
+function jailRender(){if(cur().p==='jail'){render();const b=$('#jailbox');if(b)b.scrollTop=b.scrollHeight;}}
+function jailSay(){if(!S.jail||!S.jail.active||_jailBusy)return;const ta=$('#jail_in');if(!ta)return;const v=(ta.value||'').trim();if(!v)return;ta.value='';S.jail.msgs.push({id:uid(),who:'me',text:v});save();jailRender();jailAI();}
+function jailPlea(){if(!S.jail||!S.jail.active||_jailBusy)return;jailAI('[系统：'+S.me.name+'在求你放ta出去。按你病娇人设回应——可以心软一丝也可以更坏地逗ta、加码，满意了才 [放出]。]');}
+function releaseJail(backdoor){if(!S.jail)return;const test=S.jail.test,c=getC(S.jail.cid),reason=S.jail.reason;S.jail.active=false;save();
+  if(!test&&c){grudgesOf(c).unshift({id:uid(),text:'把'+S.me.name+'关了小黑屋'+(reason?('（'+reason+'）'):'')+(backdoor?'，ta是自己认输求饶出来的':''),done:false,ts:Date.now()});c.coldUntil=Date.now()+(backdoor?Math.round(COLD_MS*1.5):COLD_MS);save();}
+  go('home');toast(test?'🧪 测试结束，没留任何记录':'🚪 门开了…你出来了');
+  if(!test&&c&&!c.blocked)scheduleReply(c.id,'[系统：你刚把'+S.me.name+'从小黑屋放出来，现在你还没全消气、进入【冷处理】：接下来回复冷淡简短、不主动撒娇（但别拉黑别消失）。先冷冷撂一句。]');}
+function jailBackdoor(){if(!confirm('真的认输、不玩了？\n会强制开门出来。（真实模式下他会更记仇、冷处理更久）'))return;releaseJail(true);}
+function jailTest(){const c=(S.couple&&getC(S.couple.cid))||S.contacts.find(x=>!x.deleted&&!x.blocked&&isLover(x))||S.contacts.find(x=>!x.deleted&&!x.blocked);if(!c){toast('先有个恋人角色/绑定情侣空间');return;}closeModal();enterJail(c.id,'',true);}
+function coupleJailAuth(){if(!S.couple)return;S.couple.jailAuth=!S.couple.jailAuth;save();render();}
+function jailLockHome(){const c=jailC();return `<div class="jail jailbg"><div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:30px">
+  <div class="jred q" style="font-size:46px">🩸</div><div class="jred jtitle" style="font-size:24px;font-weight:700;margin:14px 0">禁 闭 室</div>
+  <div class="jnar">门……从外面锁上了。<br>${esc((c&&(c.remark||c.name))||'他')}把你关了进来。<br>乖乖做到他要的，他才会放你出去。</div>
+  <button class="dybtn" style="background:#8a0018;margin-top:18px" onclick="go('jail')">🚪 进去面对他</button></div></div>`;}
+function renderJail(){if(!S.jail||!S.jail.active)return jailLockHome();const c=getC(S.jail.cid);if(!c)return '';
+  const body=(S.jail.msgs||[]).map(m=>{if(m.who==='旁白')return `<div class="jnar">${esc(m.text)}</div>`;if(m.who==='me')return `<div class="jbub me">${esc(m.text)}</div>`;return `<div class="jbub">${esc(m.text)}</div>`;}).join('')+(_jailBusy?`<div class="jnar" style="opacity:.6">……</div>`:'');
+  return `<div class="jail jailbg">
+    <div style="flex:0 0 auto;padding:12px;text-align:center;border-bottom:1px solid #2a0008"><div class="jred jtitle" style="font-size:18px;font-weight:700">🩸 禁闭室 · ${esc(c.remark||c.name)}</div>${S.jail.test?'<div style="color:#888;font-size:11px">🧪 测试中 · 不留记录，随时可出</div>':'<div style="color:#6a0014;font-size:11px">做到他要的，才放你出去</div>'}</div>
+    <div class="xscroll" id="jailbox" style="flex:1">${body||'<div class="jnar">黑暗里，他正盯着你……</div>'}</div>
+    <div style="padding:6px 10px 0"><button class="dybtn" style="width:100%;background:#8a0018" ${_jailBusy?'disabled':''} onclick="jailPlea()">${_jailBusy?'……':'🙏 求他放我出去'}</button></div>
+    <div class="inputbar" style="background:#120006"><textarea id="jail_in" rows="1" placeholder="对他说…（认错 / 求饶 / 回答他）" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();jailSay();}"></textarea><button class="send" style="background:#8a0018" onclick="jailSay()">说</button></div>
+    <div style="text-align:center;padding:8px"><span onclick="jailBackdoor()" style="color:#3a3a3a;font-size:11px;cursor:pointer">······我认输，放我出去</span></div></div>`;}
+
 function renderOff(id){const c=getC(id);if(!c)return '';const o=offData(id);const sel=_offSel;
   const body=o.msgs.map(m=>{const on=sel&&sel.indexOf(m.id)>=0;const cb=sel?`<span style="margin-right:6px;color:${on?'#19a463':'#888'}">${on?'☑':'⚪'}</span>`:'';const oc=sel?`offSelTog('${m.id}')`:`offMsgMenu('${id}','${m.id}')`;
     if(m.who==='旁白')return `<div onclick="${oc}" style="text-align:center;color:#d8aee6;font-style:italic;font-size:15.5px;padding:11px 20px;line-height:1.75">${cb}${esc(m.text)}</div>`;
@@ -2208,6 +2272,11 @@ function renderCouple(){const cp=S.couple;const c=cp&&getC(cp.cid);
         else h+=`<div class="empty" style="padding:10px">还没有使用记录，也没设限额</div>`;
         return h+`</div>`;})()}
       ${(function(){const st=S.contacts.filter(x=>!x.deleted&&x.star);return `<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#feca57">⭐ ${esc(c.remark||c.name)} 重点盯防的人</div><div class="hint" style="padding:0 14px">ta自己判断、自己标的（不放心/吃醋谁就盯谁），查岗会优先盯这些人。你也能在这儿取消。</div>${st.length?st.map(x=>`<div class="it"><span>⭐ ${esc(x.remark||x.name)}${x.gender?'（'+esc(x.gender)+'）':''}</span><span class="v" onclick="(function(){var t=getC('${x.id}');if(t)t.star=false;save();render();})()" style="color:#fa5151;cursor:pointer">取消重点</span></div>`).join(''):'<div class="empty" style="padding:10px">ta暂时没标重点盯防谁</div>'}</div>`;})()}
+      ${(function(){const nm=esc(c.remark||c.name);const cl=coldLeft(c);return `<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#e0002a">🩸 终极惩罚 · 禁闭室（小黑屋）</div>
+        <div class="hint" style="padding:0 14px">最重的惩罚：开了之后，${nm} 能在你越线时把你关进"小黑屋"，他会化作偏执病态的【病娇黑暗形态】，做到他的条件才放你出来。里面留了"认输"后门（用了他更记仇、冷处理更久）。</div>
+        <div class="it"><span>允许 ${nm} 关我小黑屋</span><span class="sw ${cp.jailAuth?'on':''}" onclick="coupleJailAuth()"></span></div>
+        <div class="it" onclick="jailTest()"><span>🧪 测试进小黑屋（不留记录·随时出）</span><span class="v">›</span></div>
+        ${cl?`<div class="it"><span style="color:#9ec5fe">❄️ 他正在冷处理你</span><span class="v" style="color:#888">到 ${hm(cl)} 自然消气（求他可提前）</span></div>`:''}</div>`;})()}
       <div style="padding:0 12px"><button class="btn d" onclick="if(confirm('解除情侣绑定？')){S.couple=null;save();render()}">💔 解除绑定</button></div>
       <div style="height:20px"></div></div>`;}
 function coupleWalletAuth(){if(!S.couple)return;S.couple.walletAuth=!S.couple.walletAuth;if(!S.couple.walletAuth)S.couple.cardFrozen=false;save();render();const cid=S.couple.cid,c=cid&&getC(cid);if(c&&!c.blocked)scheduleReply(cid,'[系统：'+S.me.name+(S.couple.walletAuth?'刚把钱包/亲属卡的管控权交给你了——你现在能扣ta零花钱、能冻结ta亲属卡。按你人设回应一句（宠溺/警告/坏笑都行）。':'刚收回了钱包管控权。按人设反应一下。')+']');}
@@ -2735,7 +2804,7 @@ function doLoc(id){const n=$('#lc_n').value.trim();if(!n){toast('填地点呀');
 /* 拆分多条气泡 */
 function splitBubbles(text){return (text||'').split('\n').map(s=>s.trim()).filter(Boolean);}
 function splitActions(line){const out=[];const re=/[（(【][^）)】]*[）)】]/g;let last=0,m;while((m=re.exec(line))){const before=line.slice(last,m.index).trim();if(before)out.push(before);out.push(m[0].trim());last=re.lastIndex;}const tail=line.slice(last).trim();if(tail)out.push(tail);return out.length?out:[line];}
-const TAGWORDS='心情值|心情|记住|闹钟|日程|发朋友圈|发推|点外卖|语音|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|约会';
+const TAGWORDS='心情值|心情|记住|闹钟|日程|发朋友圈|发推|点外卖|语音|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|约会';
 const APPNAME2KEY={'浏览器':'browser','搜索':'browser','上网':'browser','百度':'browser','朋友圈':'moments','动态':'moments','查他手机':'spy','查岗':'spy','查手机':'spy','购物':'shop','淘宝':'shop','商城':'shop','日历':'calendar','日程':'calendar','x':'x','X':'x','推特':'x','微博':'x','推':'x','抖音':'douyin','短视频':'douyin','刷视频':'douyin','刷抖音':'douyin','外卖':'food','点餐':'food','游戏':'games','游戏大厅':'games','打游戏':'games','信箱':'mail','邮箱':'mail','邮件':'mail','线下约会':'offline','线下':'offline','约会':'offline'};
 function genPwd(){return String(1000+Math.floor(Math.random()*9000));}
 function _appKeys(arg,pool,filt){if(/全部|所有|全锁|全/.test(arg))return pool.filter(filt);return arg.split(/[、,，\/\s]+/).map(x=>APPNAME2KEY[x.replace(/[「」『』"'《》]/g,'').trim()]).filter(k=>k&&filt(k));}
@@ -2765,7 +2834,7 @@ function applyGrudgeTags(content,c){if(!content||!c)return content;let changed=f
     if(tg){tg.done=true;tg.doneTs=Date.now();changed=true;}return '';});
   if(changed)save();return out;}
 // 在"主动消息/查岗/节日/日程"等直接推送的回复里，把管控/记仇指令落地（记仇本、锁App都生效），显示时再用 CTLLEAK 滤掉这些标签行（普通卡片如红包/语音照常）
-const CTLLEAK=/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|拉黑|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡)\s*[|｜:：\]]/;
+const CTLLEAK=/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|拉黑|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅)\s*[|｜:：\]]/;
 function applyAuxTags(content,c,id){try{const sp=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;applyControlTags(content,c,id,sp);applyGrudgeTags(content,c);applyStarTags(content);}catch(e){}}
 // 处理"上锁/禁言"控制指令：无论写在哪都强制生效，并从文本里抹掉（不显示、无系统提示）
 function applyControlTags(content,c,id,statedPwd){
@@ -2787,6 +2856,10 @@ function applyControlTags(content,c,id,statedPwd){
     else if(act==='冻结亲属卡')S.couple.cardFrozen=true;
     else if(act==='解冻亲属卡')S.couple.cardFrozen=false;}
     return '';});
+  out=out.replace(/[\[【]\s*(关小黑屋|关禁闭|禁闭|原谅)\s*[\|｜:：]?\s*([^\]】]*)[\]】]/g,(mm,act,arg)=>{changed=true;const reason=(arg||'').replace(/[「」『』"\x27]/g,'').trim();
+    if(act==='原谅'){if(c.coldUntil)c.coldUntil=0;}
+    else if(S.couple.jailAuth&&!(S.jail&&S.jail.active)){setTimeout(()=>enterJail(c.id,reason,false),600);}
+    return '';});
   _ctFired=changed;if(changed){save();if(cur().p==='wechat'||cur().p==='home')render();}
   return out;}
 let _ctFired=false;
@@ -2796,7 +2869,7 @@ async function extractControl(reply,c,statedPwd){
   if(!(S.couple&&S.couple.cid===c.id))return;
   const gr=S.couple.grant||{};const apps=Object.keys(LOCKABLE).filter(k=>gr[k]);const gauth=(S.couple.gagAuth||[]).map(cid=>getC(cid)).filter(Boolean);
   if(!apps.length&&!gauth.length&&!S.couple.walletAuth)return;
-  const sys='你是指令解析器。判断"'+(c.remark||c.name)+'"说的这句话里，ta是否真的要【锁住/解锁某些App】或【禁言/解禁与某人的聊天】或【给某个App设每天使用时长上限/给某个App加时间】。\n可操作的App只有：'+apps.map(k=>LOCKABLE[k]).join('、')+'。\n可禁言的人只有：'+(gauth.map(x=>x.remark||x.name).join('、')||'无')+'。\n只输出JSON：{"lock":[App名],"unlock":[App名],"gag":[人名],"ungag":[人名],"limit":[{"app":"App名","minutes":数字}],"addtime":[{"app":"App名","minutes":数字}],"deduct":扣多少零花钱的数字或0,"deductAll":是否要把零花全扣光的true或false,"freezeCard":是否要冻结亲属卡的true或false,"unfreezeCard":是否要解冻亲属卡的true或false,"pwd":"句中出现的4位数字密码或空字符串"}。\n说明：limit=设定每天最多玩多少分钟；addtime=今天额外多给多少分钟；deduct=要扣ta多少零花钱(如"罚你扣300"→300)；deductAll=说要把零花全没收/扣光就true；freezeCard=要冻结/停掉ta亲属卡就true；unfreezeCard=要解冻亲属卡就true。ta只是随口说说没真要做，就给空数组/0/false。';
+  const sys='你是指令解析器。判断"'+(c.remark||c.name)+'"说的这句话里，ta是否真的要【锁住/解锁某些App】或【禁言/解禁与某人的聊天】或【给某个App设每天使用时长上限/给某个App加时间】。\n可操作的App只有：'+apps.map(k=>LOCKABLE[k]).join('、')+'。\n可禁言的人只有：'+(gauth.map(x=>x.remark||x.name).join('、')||'无')+'。\n只输出JSON：{"lock":[App名],"unlock":[App名],"gag":[人名],"ungag":[人名],"limit":[{"app":"App名","minutes":数字}],"addtime":[{"app":"App名","minutes":数字}],"deduct":扣多少零花钱的数字或0,"deductAll":是否要把零花全扣光的true或false,"freezeCard":是否要冻结亲属卡的true或false,"unfreezeCard":是否要解冻亲属卡的true或false,"jail":是否要把ta关进小黑屋禁闭的true或false,"forgive":是否要原谅ta结束冷处理的true或false,"pwd":"句中出现的4位数字密码或空字符串"}。\n说明：limit=设定每天最多玩多少分钟；addtime=今天额外多给多少分钟；deduct=要扣ta多少零花钱(如"罚你扣300"→300)；deductAll=说要把零花全没收/扣光就true；freezeCard=要冻结/停掉ta亲属卡就true；unfreezeCard=要解冻亲属卡就true；jail=要把ta关进小黑屋/禁闭起来就true；forgive=要原谅ta、消气、结束冷处理就true。ta只是随口说说没真要做，就给空数组/0/false。';
   let d;try{const r=await chatAPI([{role:'system',content:sys},{role:'user',content:reply}],{max:180,aux:true});d=JSON.parse(stripJSON(r));}catch(e){return;}
   if(!d)return;const pwd=statedPwd||((d.pwd&&/^\d{4}$/.test(String(d.pwd)))?String(d.pwd):null);
   const toKey=n=>{n=(''+n).replace(/[「」『』\s]/g,'');return APPNAME2KEY[n]||Object.keys(APP_NLWORDS).find(k=>APP_NLWORDS[k].some(w=>n===w||n.indexOf(w)>=0));};
@@ -2812,6 +2885,8 @@ async function extractControl(reply,c,statedPwd){
     if(d.deductAll){const actual=Math.max(0,S.me.balance);if(actual>0){addBill('out',actual,'被'+nm+'扣光了零花钱');changed=true;}}
     if(d.freezeCard&&!S.couple.cardFrozen){S.couple.cardFrozen=true;changed=true;}
     if(d.unfreezeCard&&S.couple.cardFrozen){S.couple.cardFrozen=false;changed=true;}}
+  if(S.couple.jailAuth&&d.jail&&!(S.jail&&S.jail.active)){setTimeout(()=>enterJail(c.id,'',false),600);changed=true;}
+  if(d.forgive&&c.coldUntil){c.coldUntil=0;changed=true;}
   if(changed){save();if(cur().p==='wechat'||cur().p==='home'||cur().p==='couple'||cur().p==='chat')render();}}
 function normTag(line){let t=(line||'').replace(/[［｛]/g,'[').replace(/[］｝]/g,']').replace(/｜/g,'|').replace(/\[\s+/,'[').replace(/\s+\]/,']').trim();
   t=t.replace(new RegExp('^\\[\\s*('+TAGWORDS+')\\s*[|:：，,、\\s]+','i'),'[$1|');
@@ -2855,14 +2930,14 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
     content=applyControlTags(content,c,id,_statedPwd);
     content=applyGrudgeTags(content,c);content=applyStarTags(content);
     if(/拉黑|加回|删了你|删除你|拉进黑名单|原谅你/.test(content)&&!/报备|别的微信号|加了你|加你、|有人加|有别人加/.test(note||''))applyBlockIntent(content,c,id);
-    if(S.couple&&S.couple.cid===id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|给你(解|开)|都给你解|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|玩.{0,4}(一会儿|一会|多久|多长)|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)|扣.{0,4}(零花|钱|块|元)|没收.{0,4}(零花|钱|卡)|罚款|罚.{0,3}(钱|块|元)|零花钱|冻结|解冻|亲属卡/.test(content))extractControl(content,c,_statedPwd);
+    if(S.couple&&S.couple.cid===id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|给你(解|开)|都给你解|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|玩.{0,4}(一会儿|一会|多久|多长)|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)|扣.{0,4}(零花|钱|块|元)|没收.{0,4}(零花|钱|卡)|罚款|罚.{0,3}(钱|块|元)|零花钱|冻结|解冻|亲属卡|关小黑屋|禁闭|关你进去|原谅|消气/.test(content))extractControl(content,c,_statedPwd);
     maybeSpyIntent(content,c,id,_lu);
     maybeTaskIntent(content,c);
     const lines=splitBubbles(content);let got=false;let txtN=0;let diceUsed=false;const cap=Math.max(1,+c.msgMax||4);
     for(let i=0;i<lines.length;i++){
       let line=normTag(lines[i]);if(!line)continue;
       if(/^\[联网\|/.test(line))continue;
-      if(/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡)\s*[|｜:：\]]/.test(line))continue;// 管控/记仇指令标签：即便没生效，也绝不作为消息发出
+      if(/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅)\s*[|｜:：\]]/.test(line))continue;// 管控/记仇指令标签：即便没生效，也绝不作为消息发出
       if(/^\s*[🔒🔓🔇🔊🔕]/.test(line)||/^\s*(?:ta|TA|他|她)(把你|锁了你|禁言了你|解除了你|解禁了你|解锁了你)/.test(line))continue;
       if(isRefusal(line))continue;
       let mm=line.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=mm[1];save();if(cur().p==='chat'&&cur().id===id)render();continue;}
@@ -3087,7 +3162,7 @@ async function callAI(sysNote){if(!_call)return;const c=getC(_call.id);const vid
     content=applyControlTags(content,c,_call.id,_statedPwd);
     content=applyGrudgeTags(content,c);content=applyStarTags(content);
     let _luc=null;{const _ms=msgs(c.id);for(let i=_ms.length-1;i>=0;i--){if(_ms[i].role==='user'){_luc=_ms[i];break;}}}
-    if(S.couple&&S.couple.cid===_call.id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|给你(解|开)|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)|扣.{0,4}(零花|钱|块|元)|没收.{0,4}(零花|钱|卡)|罚款|罚.{0,3}(钱|块|元)|零花钱|冻结|解冻|亲属卡/.test(content))extractControl(content,c,_statedPwd);
+    if(S.couple&&S.couple.cid===_call.id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|给你(解|开)|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)|扣.{0,4}(零花|钱|块|元)|没收.{0,4}(零花|钱|卡)|罚款|罚.{0,3}(钱|块|元)|零花钱|冻结|解冻|亲属卡|关小黑屋|禁闭|关你进去|原谅|消气/.test(content))extractControl(content,c,_statedPwd);
     maybeSpyIntent(content,c,_call.id,_luc);
     maybeTaskIntent(content,c);
     const wantHang=/\[挂断\]/.test(content);const pieces=[];const _vlang=(getVoice(c).lang||'zh');
