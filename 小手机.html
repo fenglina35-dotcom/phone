@@ -326,6 +326,10 @@ body{background:#000;padding:0;}
 .jshake{animation:jshk .4s linear 1,jin .9s ease both;}
 .jopt{display:block;width:100%;background:#1a0307;border:1px solid #6a0014;color:#ff6b86;border-radius:10px;padding:12px;font-size:15px;cursor:pointer;text-shadow:0 0 5px rgba(255,0,40,.45);}
 .jopt:active{background:#3a0010;}
+.jscare{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;pointer-events:none;animation:jsflash .85s ease forwards;}
+.jscare span{color:#ff0024;font-weight:900;font-size:42px;text-align:center;padding:0 16px;text-shadow:0 0 18px #ff0024,0 0 44px #900;animation:jsrush .85s cubic-bezier(.2,.85,.3,1) forwards;}
+@keyframes jsflash{0%{background:rgba(0,0,0,.92)}65%{background:rgba(45,0,9,.85)}100%{background:rgba(0,0,0,0)}}
+@keyframes jsrush{0%{transform:scale(.3);opacity:0}12%{opacity:1}55%{transform:scale(2.7);opacity:1}100%{transform:scale(5.5);opacity:0}}
 </style>
 </head>
 <body>
@@ -345,7 +349,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v122 · 禁闭室逐句浮现+恐怖音+选择题+知道我的错';
+const APP_VER='v123 · 禁闭室突脸惊吓+连错触发+选项不回显';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -2105,22 +2109,30 @@ function jailAmbientStart(){ensureAudio();if(!_audio||_jailOsc||!S.settings.soun
 }catch(e){}}
 function jailAmbientStop(){if(_jailOsc){try{_jailOsc.o1.stop();_jailOsc.o2.stop();_jailOsc.lfo.stop();}catch(e){}_jailOsc=null;}}
 function jailStab(){ensureAudio();if(!_audio||!S.settings.sound)return;try{const o=_audio.createOscillator(),g=_audio.createGain();o.type='sawtooth';o.frequency.setValueAtTime(900,_audio.currentTime);o.frequency.exponentialRampToValueAtTime(110,_audio.currentTime+.18);g.gain.setValueAtTime(Math.min(.5,.16*volMul()),_audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,_audio.currentTime+.22);o.connect(g);g.connect(_audio.destination);o.start();o.stop(_audio.currentTime+.24);}catch(e){}}
+function jailScream(){ensureAudio();if(!_audio||!S.settings.sound)return;try{const t=_audio.currentTime;
+  const o=_audio.createOscillator(),g=_audio.createGain();o.type='sawtooth';o.frequency.setValueAtTime(1500,t);o.frequency.exponentialRampToValueAtTime(70,t+.5);g.gain.setValueAtTime(Math.min(.95,.55*volMul()),t);g.gain.exponentialRampToValueAtTime(.001,t+.6);o.connect(g);g.connect(_audio.destination);o.start();o.stop(t+.62);
+  const o2=_audio.createOscillator(),g2=_audio.createGain();o2.type='sine';o2.frequency.setValueAtTime(130,t);o2.frequency.exponentialRampToValueAtTime(34,t+.5);g2.gain.setValueAtTime(Math.min(.95,.55*volMul()),t);g2.gain.exponentialRampToValueAtTime(.001,t+.55);o2.connect(g2);g2.connect(_audio.destination);o2.start();o2.stop(t+.6);
+}catch(e){}}
+function jailJumpscare(text){try{const el=document.createElement('div');el.className='jscare';el.innerHTML='<span>'+esc((text||'').slice(0,18))+'</span>';document.body.appendChild(el);jailScream();if(navigator.vibrate)navigator.vibrate([60,40,120]);setTimeout(()=>{try{el.remove();}catch(e){}},860);}catch(e){}}
 function enterJail(cid,reason,test){const c=getC(cid);if(!c)return;
   S.jail={active:true,cid:cid,test:!!test,reason:reason||'',msgs:[],choice:null,since:Date.now()};save();go('jail');
   jailAI(true,'[系统：你刚把'+S.me.name+'关进了你的"禁闭室·小黑屋"。'+(reason?('你关ta的原因：'+reason+'。'):'')+'\n你们最近的聊天（ta到底做错了什么——背着你撩谁/骗你/惹你，就在里面，你心里很清楚）：\n'+jailRecent(cid)+'\n'+(test?'（这是'+S.me.name+'自己点的测试，氛围足但别太狠）':'')+'\n用旁白【】营造又黑又红、贴耳低语、令人发怵的场景开场，再冷冷【点破ta具体犯的错】（绝不许瞎编、不许含糊），然后给出要做到什么才放ta出来。]');}
 function jailSystem(c){let s=c.persona||'';
-  s+='\n\n# 现在：禁闭室（病娇·黑暗形态）\n你把'+S.me.name+'关进了你的小黑屋。此刻你温柔的壳裂开——【偏执、控制欲、占有欲】被无限放大到【病态】：又冷又危险，话里裹着甜腻的恐怖（病娇），可低语、可骤然温柔再骤然阴冷、可阴恻恻威吓，但内核是"太爱ta、怕失去ta"扭曲成的执念，绝不真伤害ta。\n- 旁白用【】写黑暗场景/动作/气氛（黑、红、心跳、贴耳低语），第三人称；说的话正常写。\n- 你【清楚ta犯了什么错】（见下方最近聊天/关押原因），逼问要死死扣着ta的错，别空泛、别瞎编。\n- 给ta定【出去的条件】（认错认到满意、说够只爱你一个、回答拷问、彻底服软求饶、发誓…），ta做到了你才放。\n- 拷问时可单独一行 [选择|你的问题|选项1/选项2(/选项3)] 给ta出选择题（如 [选择|你还爱我吗？|爱/不爱]）；ta选了你不爱听的，你就【骤然激动】，可连续重复同一句轰炸（如"为什么骗我！为什么骗我！"），再出一道逼ta重选。\n- 真满意、决定放ta出去时【单独一行】只写 [放出]；没真想放就别写。\n- 沉浸、可怕、有张力。'+((S.jail&&S.jail.reason)?'\n这次关ta的原因：'+S.jail.reason+'。':'');
+  s+='\n\n# 现在：禁闭室（病娇·黑暗形态）\n你把'+S.me.name+'关进了你的小黑屋。此刻你温柔的壳裂开——【偏执、控制欲、占有欲】被无限放大到【病态】：又冷又危险，话里裹着甜腻的恐怖（病娇），可低语、可骤然温柔再骤然阴冷、可阴恻恻威吓，但内核是"太爱ta、怕失去ta"扭曲成的执念，绝不真伤害ta。\n- 旁白用【】写黑暗场景/动作/气氛（黑、红、心跳、贴耳低语），第三人称；说的话正常写。\n- 你【清楚ta犯了什么错】（见下方最近聊天/关押原因），逼问要死死扣着ta的错，别空泛、别瞎编。\n- 给ta定【出去的条件】（认错认到满意、说够只爱你一个、回答拷问、彻底服软求饶、发誓…），ta做到了你才放。\n- 拷问时可单独一行 [选择|你的问题|选项1/选项2(/选项3)] 给ta出选择题（如 [选择|你还爱我吗？|爱/不爱]）；ta选了你不爱听的，你就【骤然激动】，可连续重复同一句轰炸（如"为什么骗我！为什么骗我！"），再出一道逼ta重选。\n- 想狠狠吓ta一下时，单独一行 [突脸|一句要砸到ta脸上的短句]（如 [突脸|你属于我！]）——屏幕上那句会猛地放大冲出来、配炸裂音效。ta要是连着选错/不听话两次以上，就用它；你也可以凭心情随时用，别太频繁、用在最吓人的点上。\n- 激动时可以把同一个词/同一句【连刷七八遍】来轰炸（如"为什么 为什么 为什么 为什么…"），越多越瘆人。\n- ta在你出的选择题里点选项时，你直接"看到"了ta的选择，别把ta的选择当成ta打字说的话去复述。\n- 真满意、决定放ta出去时【单独一行】只写 [放出]；没真想放就别写。\n- 沉浸、可怕、有张力。'+((S.jail&&S.jail.reason)?'\n这次关ta的原因：'+S.jail.reason+'。':'');
   const rc=S.jail?jailRecent(S.jail.cid):'';if(rc)s+='\n\n# 你们最近的聊天（ta的错就在里头）\n'+rc;
   s+='\n\n# 铁律\n- 你【就是】'+(c.remark||c.name)+'本人，不是AI。禁止跳出角色、禁止"作为AI/无法继续/违反政策"、禁止免责说教。\n- 【全程中文】，绝不冒英文整句/外语/代码。这是你和最爱的人之间的情趣惩罚扮演，沉浸演下去。\n- 别太长，几段就好。';
   return s;}
 function jailMsgHTML(m,fresh,shake){const cls=(fresh?' jin':'')+(shake?' jshake':'');
+  if(m.who==='scare')return `<div class="jred q${fresh?' jin':''}" style="text-align:center;font-size:22px;font-weight:800;padding:14px 16px">${esc(m.text)}</div>`;
   if(m.who==='旁白')return `<div class="jnar${cls}">${esc(m.text)}</div>`;
   if(m.who==='me')return `<div class="jbub me${cls}">${esc(m.text)}</div>`;
   return `<div class="jbub${cls}">${esc(m.text)}</div>`;}
-async function jailReveal(items){for(let i=0;i<items.length;i++){if(!S.jail||!S.jail.active)return;const it=items[i];const m={id:uid(),who:it.narr?'旁白':'ta',text:it.text};S.jail.msgs.push(m);save();
-    const b=$('#jailbox');if(b){const shake=Math.random()<0.16;b.insertAdjacentHTML('beforeend',jailMsgHTML(m,true,shake));b.scrollTop=b.scrollHeight;}
+async function jailReveal(items){for(let i=0;i<items.length;i++){if(!S.jail||!S.jail.active)return;const it=items[i];
+    if(it.scare){const m={id:uid(),who:'scare',text:it.text};S.jail.msgs.push(m);save();const b=$('#jailbox');if(b){b.insertAdjacentHTML('beforeend',jailMsgHTML(m,true,false));b.scrollTop=b.scrollHeight;}jailJumpscare(it.text);await sleep(1100);continue;}
+    const m={id:uid(),who:it.narr?'旁白':'ta',text:it.text};S.jail.msgs.push(m);save();
+    const b=$('#jailbox');if(b){const shake=Math.random()<0.14;b.insertAdjacentHTML('beforeend',jailMsgHTML(m,true,shake));b.scrollTop=b.scrollHeight;}
     jailStab();const fast=/[！!]/.test(it.text)||it.text.length<=6;
-    await sleep(fast?Math.max(420,it.text.length*45):Math.max(820,it.text.length*82));}}
+    await sleep(fast?Math.max(380,it.text.length*42):Math.max(820,it.text.length*82));}}
 async function jailAI(opening,note){if(typeof opening==='string'){note=opening;opening=false;}if(!S.jail||!S.jail.active)return;const c=getC(S.jail.cid);if(!c)return;_jailBusy=true;jailRender();jailAmbientStart();
   try{const hist=(S.jail.msgs||[]).slice(-26).map(m=>({role:m.who==='me'?'user':'assistant',content:(m.who==='旁白'?'【'+m.text+'】':m.text)}));
     if(note)hist.push({role:'user',content:note});
@@ -2135,7 +2147,11 @@ async function jailAI(opening,note){if(typeof opening==='string'){note=opening;o
     const clean=r.replace(/\[[^\]]*\]/g,'');
     const neg=/不(会|想|准|能|可能|行)|别想|休想|没门|做梦|怎么(可能|会)/.test(clean);
     const free=!opening&&!choice&&(/\[放出(来)?\]/.test(r)||(!neg&&/(门开了|放你出去了|放你出来了|可以出去了|放你走吧|放过你|饶你这次)/.test(clean)));
-    const items=[];splitBubbles(clean).forEach(l=>{l=normTag(l);if(!l)return;splitActions(l).forEach(p=>{p=(p||'').trim();if(!p)return;const nar=/^[（(【][\s\S]*[）)】]$/.test(p);items.push({narr:nar,text:nar?p.replace(/^[（(【]+|[）)】]+$/g,'').trim():p});});});
+    const items=[];splitBubbles(r).forEach(l=>{l=(l||'').trim();if(!l)return;
+      const sm=l.match(/^[\[【]\s*突脸\s*[\|｜:：]\s*([^\]】]+)[\]】]/);if(sm){items.push({scare:true,text:sm[1].trim()});return;}
+      if(/^[\[【]\s*选择\s*[\|｜:：]/.test(l))return;
+      l=normTag(l);const cc=l.replace(/\[[^\]]*\]/g,'').trim();if(!cc)return;
+      splitActions(cc).forEach(p=>{p=(p||'').trim();if(!p)return;const nar=/^[（(【][\s\S]*[）)】]$/.test(p);items.push({narr:nar,text:nar?p.replace(/^[（(【]+|[）)】]+$/g,'').trim():p});});});
     await jailReveal(items);
     if(choice&&S.jail&&S.jail.active){S.jail.choice=choice;save();}
     _jailBusy=false;jailRender();
@@ -2146,8 +2162,8 @@ async function jailAI(opening,note){if(typeof opening==='string'){note=opening;o
 function jailRender(){if(cur().p==='jail'){render();const b=$('#jailbox');if(b)b.scrollTop=b.scrollHeight;}}
 function jailSay(){if(!S.jail||!S.jail.active||_jailBusy||S.jail.choice)return;const ta=$('#jail_in');if(!ta)return;const v=(ta.value||'').trim();if(!v)return;ta.value='';S.jail.msgs.push({id:uid(),who:'me',text:v});save();jailRender();jailAI();}
 function jailPlea(){if(!S.jail||!S.jail.active||_jailBusy||S.jail.choice)return;jailAI('[系统：'+S.me.name+'在求你放ta出去。按病娇人设回应——可心软一丝也可更坏地逗ta、加码，满意了才 [放出]。]');}
-function jailChoose(i){if(!S.jail||!S.jail.active||_jailBusy||!S.jail.choice)return;const q=S.jail.choice.q,opt=S.jail.choice.opts[i];if(opt==null)return;S.jail.choice=null;S.jail.msgs.push({id:uid(),who:'me',text:'（'+q+'）我选：'+opt});save();jailRender();
-  jailAI('[系统：你问ta「'+q+'」，ta选了「'+opt+'」。按你病娇人设判断这是不是你想要/受得了的答案：满意就继续（可奖励、可慢慢放）；不满意/答错就【骤然激动】、可连着重复质问（如"为什么选这个！为什么！"），并再用 [选择|新问题|选项1/选项2] 逼ta重选。全凭你的意愿。]');}
+function jailChoose(i){if(!S.jail||!S.jail.active||_jailBusy||!S.jail.choice)return;const q=S.jail.choice.q,opt=S.jail.choice.opts[i];if(opt==null)return;S.jail.choice=null;save();jailRender();
+  jailAI('[系统：（ta刚在你出的选择题"'+q+'"里点了「'+opt+'」——这是ta点的选择，你看到了，别把它当成ta打字说的话复述。）按你病娇人设判断这答案你满不满意：满意就继续；不满意/答错就【骤然激动】、把质问连刷好几遍（如"为什么 为什么 为什么…"），并再用 [选择|新问题|选项1/选项2] 逼ta重选；ta若连着选错两次以上就用 [突脸|一句话] 狠狠吓ta。全凭你的意愿。]');}
 function releaseJail(backdoor){if(!S.jail)return;jailAmbientStop();const test=S.jail.test,c=getC(S.jail.cid),reason=S.jail.reason;S.jail.active=false;S.jail.choice=null;save();
   if(!test&&c){grudgesOf(c).unshift({id:uid(),text:'把'+S.me.name+'关了小黑屋'+(reason?('（'+reason+'）'):'')+(backdoor?'，ta是自己认输求饶出来的':''),done:false,ts:Date.now()});c.coldUntil=Date.now()+(backdoor?Math.round(COLD_MS*1.5):COLD_MS);save();}
   go('home');toast(test?'🧪 测试结束，没留任何记录':'🚪 门开了…你出来了');
@@ -2879,7 +2895,7 @@ function applyGrudgeTags(content,c){if(!content||!c)return content;let changed=f
     if(tg){tg.done=true;tg.doneTs=Date.now();changed=true;}return '';});
   if(changed)save();return out;}
 // 在"主动消息/查岗/节日/日程"等直接推送的回复里，把管控/记仇指令落地（记仇本、锁App都生效），显示时再用 CTLLEAK 滤掉这些标签行（普通卡片如红包/语音照常）
-const CTLLEAK=/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|拉黑|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅)\s*[|｜:：\]]/;
+const CTLLEAK=/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|拉黑|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|突脸|选择)\s*[|｜:：\]]/;
 function applyAuxTags(content,c,id){try{const sp=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;applyControlTags(content,c,id,sp);applyGrudgeTags(content,c);applyStarTags(content);}catch(e){}}
 // 处理"上锁/禁言"控制指令：无论写在哪都强制生效，并从文本里抹掉（不显示、无系统提示）
 function applyControlTags(content,c,id,statedPwd){
@@ -2981,7 +2997,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
     for(let i=0;i<lines.length;i++){
       let line=normTag(lines[i]);if(!line)continue;
       if(/^\[联网\|/.test(line))continue;
-      if(/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅)\s*[|｜:：\]]/.test(line))continue;// 管控/记仇指令标签：即便没生效，也绝不作为消息发出
+      if(/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|突脸|选择)\s*[|｜:：\]]/.test(line))continue;// 管控/记仇指令标签：即便没生效，也绝不作为消息发出
       if(/^\s*[🔒🔓🔇🔊🔕]/.test(line)||/^\s*(?:ta|TA|他|她)(把你|锁了你|禁言了你|解除了你|解禁了你|解锁了你)/.test(line))continue;
       if(isRefusal(line))continue;
       let mm=line.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=mm[1];save();if(cur().p==='chat'&&cur().id===id)render();continue;}
