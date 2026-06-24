@@ -339,7 +339,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v119 · 修禁闭室开场被秒放出';
+const APP_VER='v120 · 关小黑屋只认明确指令,聊到不误关';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -2870,7 +2870,7 @@ async function extractControl(reply,c,statedPwd){
   if(!(S.couple&&S.couple.cid===c.id))return;
   const gr=S.couple.grant||{};const apps=Object.keys(LOCKABLE).filter(k=>gr[k]);const gauth=(S.couple.gagAuth||[]).map(cid=>getC(cid)).filter(Boolean);
   if(!apps.length&&!gauth.length&&!S.couple.walletAuth)return;
-  const sys='你是指令解析器。判断"'+(c.remark||c.name)+'"说的这句话里，ta是否真的要【锁住/解锁某些App】或【禁言/解禁与某人的聊天】或【给某个App设每天使用时长上限/给某个App加时间】。\n可操作的App只有：'+apps.map(k=>LOCKABLE[k]).join('、')+'。\n可禁言的人只有：'+(gauth.map(x=>x.remark||x.name).join('、')||'无')+'。\n只输出JSON：{"lock":[App名],"unlock":[App名],"gag":[人名],"ungag":[人名],"limit":[{"app":"App名","minutes":数字}],"addtime":[{"app":"App名","minutes":数字}],"deduct":扣多少零花钱的数字或0,"deductAll":是否要把零花全扣光的true或false,"freezeCard":是否要冻结亲属卡的true或false,"unfreezeCard":是否要解冻亲属卡的true或false,"jail":是否要把ta关进小黑屋禁闭的true或false,"forgive":是否要原谅ta结束冷处理的true或false,"pwd":"句中出现的4位数字密码或空字符串"}。\n说明：limit=设定每天最多玩多少分钟；addtime=今天额外多给多少分钟；deduct=要扣ta多少零花钱(如"罚你扣300"→300)；deductAll=说要把零花全没收/扣光就true；freezeCard=要冻结/停掉ta亲属卡就true；unfreezeCard=要解冻亲属卡就true；jail=要把ta关进小黑屋/禁闭起来就true；forgive=要原谅ta、消气、结束冷处理就true。ta只是随口说说没真要做，就给空数组/0/false。';
+  const sys='你是指令解析器。判断"'+(c.remark||c.name)+'"说的这句话里，ta是否真的要【锁住/解锁某些App】或【禁言/解禁与某人的聊天】或【给某个App设每天使用时长上限/给某个App加时间】。\n可操作的App只有：'+apps.map(k=>LOCKABLE[k]).join('、')+'。\n可禁言的人只有：'+(gauth.map(x=>x.remark||x.name).join('、')||'无')+'。\n只输出JSON：{"lock":[App名],"unlock":[App名],"gag":[人名],"ungag":[人名],"limit":[{"app":"App名","minutes":数字}],"addtime":[{"app":"App名","minutes":数字}],"deduct":扣多少零花钱的数字或0,"deductAll":是否要把零花全扣光的true或false,"freezeCard":是否要冻结亲属卡的true或false,"unfreezeCard":是否要解冻亲属卡的true或false,"forgive":是否要原谅ta结束冷处理的true或false,"pwd":"句中出现的4位数字密码或空字符串"}。\n说明：limit=设定每天最多玩多少分钟；addtime=今天额外多给多少分钟；deduct=要扣ta多少零花钱(如"罚你扣300"→300)；deductAll=说要把零花全没收/扣光就true；freezeCard=要冻结/停掉ta亲属卡就true；unfreezeCard=要解冻亲属卡就true；forgive=要原谅ta、消气、结束冷处理就true。ta只是随口说说没真要做，就给空数组/0/false。';
   let d;try{const r=await chatAPI([{role:'system',content:sys},{role:'user',content:reply}],{max:180,aux:true});d=JSON.parse(stripJSON(r));}catch(e){return;}
   if(!d)return;const pwd=statedPwd||((d.pwd&&/^\d{4}$/.test(String(d.pwd)))?String(d.pwd):null);
   const toKey=n=>{n=(''+n).replace(/[「」『』\s]/g,'');return APPNAME2KEY[n]||Object.keys(APP_NLWORDS).find(k=>APP_NLWORDS[k].some(w=>n===w||n.indexOf(w)>=0));};
@@ -2886,7 +2886,6 @@ async function extractControl(reply,c,statedPwd){
     if(d.deductAll){const actual=Math.max(0,S.me.balance);if(actual>0){addBill('out',actual,'被'+nm+'扣光了零花钱');changed=true;}}
     if(d.freezeCard&&!S.couple.cardFrozen){S.couple.cardFrozen=true;changed=true;}
     if(d.unfreezeCard&&S.couple.cardFrozen){S.couple.cardFrozen=false;changed=true;}}
-  if(S.couple.jailAuth&&d.jail&&!(S.jail&&S.jail.active)){setTimeout(()=>enterJail(c.id,'',false),600);changed=true;}
   if(d.forgive&&c.coldUntil){c.coldUntil=0;changed=true;}
   if(changed){save();if(cur().p==='wechat'||cur().p==='home'||cur().p==='couple'||cur().p==='chat')render();}}
 function normTag(line){let t=(line||'').replace(/[［｛]/g,'[').replace(/[］｝]/g,']').replace(/｜/g,'|').replace(/\[\s+/,'[').replace(/\s+\]/,']').trim();
@@ -2931,7 +2930,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
     content=applyControlTags(content,c,id,_statedPwd);
     content=applyGrudgeTags(content,c);content=applyStarTags(content);
     if(/拉黑|加回|删了你|删除你|拉进黑名单|原谅你/.test(content)&&!/报备|别的微信号|加了你|加你、|有人加|有别人加/.test(note||''))applyBlockIntent(content,c,id);
-    if(S.couple&&S.couple.cid===id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|给你(解|开)|都给你解|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|玩.{0,4}(一会儿|一会|多久|多长)|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)|扣.{0,4}(零花|钱|块|元)|没收.{0,4}(零花|钱|卡)|罚款|罚.{0,3}(钱|块|元)|零花钱|冻结|解冻|亲属卡|关小黑屋|禁闭|关你进去|原谅|消气/.test(content))extractControl(content,c,_statedPwd);
+    if(S.couple&&S.couple.cid===id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|给你(解|开)|都给你解|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|玩.{0,4}(一会儿|一会|多久|多长)|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)|扣.{0,4}(零花|钱|块|元)|没收.{0,4}(零花|钱|卡)|罚款|罚.{0,3}(钱|块|元)|零花钱|冻结|解冻|亲属卡|原谅|消气/.test(content))extractControl(content,c,_statedPwd);
     maybeSpyIntent(content,c,id,_lu);
     maybeTaskIntent(content,c);
     const lines=splitBubbles(content);let got=false;let txtN=0;let diceUsed=false;const cap=Math.max(1,+c.msgMax||4);
@@ -3163,7 +3162,7 @@ async function callAI(sysNote){if(!_call)return;const c=getC(_call.id);const vid
     content=applyControlTags(content,c,_call.id,_statedPwd);
     content=applyGrudgeTags(content,c);content=applyStarTags(content);
     let _luc=null;{const _ms=msgs(c.id);for(let i=_ms.length-1;i>=0;i--){if(_ms[i].role==='user'){_luc=_ms[i];break;}}}
-    if(S.couple&&S.couple.cid===_call.id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|给你(解|开)|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)|扣.{0,4}(零花|钱|块|元)|没收.{0,4}(零花|钱|卡)|罚款|罚.{0,3}(钱|块|元)|零花钱|冻结|解冻|亲属卡|关小黑屋|禁闭|关你进去|原谅|消气/.test(content))extractControl(content,c,_statedPwd);
+    if(S.couple&&S.couple.cid===_call.id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|给你(解|开)|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)|扣.{0,4}(零花|钱|块|元)|没收.{0,4}(零花|钱|卡)|罚款|罚.{0,3}(钱|块|元)|零花钱|冻结|解冻|亲属卡|原谅|消气/.test(content))extractControl(content,c,_statedPwd);
     maybeSpyIntent(content,c,_call.id,_luc);
     maybeTaskIntent(content,c);
     const wantHang=/\[挂断\]/.test(content);const pieces=[];const _vlang=(getVoice(c).lang||'zh');
