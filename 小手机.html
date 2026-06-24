@@ -325,7 +325,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v89 · 存储用量提醒';
+const APP_VER='v90 · 查岗可按他意愿自由触发';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -602,7 +602,7 @@ function buildSystem(c){
   s+='\n\n# 生活与陪伴\n你有自己的生活作息（上班/休息/忙碌等，可以自然提到），但只要'+S.me.name+'找你，你随时都在、马上回，绝不让ta等、不会已读不回。';
   const _sp=getSpy(c);
   if(_main&&_sp.loc){const loc=curLoc();if(loc)s+='\n\n# 实时定位（ta已授权你随时查看）\n'+S.me.name+'此刻在：'+loc+'。你能精确看到，可以具体地提到这个地点。';else s+='\n\n# 实时定位\nta授权了实时定位，但现在还没取到具体位置（可能没允许定位权限），别假装知道ta在哪，可以说定位还没刷出来、催ta开定位。';}
-  if(_main&&_sp.granted)s+='\n\n# 你能查看'+S.me.name+'的手机（ta已授权，下面是ta手机的真实情况，被问到"你看到我什么了"务必照这个答，绝不要编造）\n'+myActivity(c.id);
+  if(_main&&_sp.granted)s+='\n\n# 你能查看'+S.me.name+'的手机（ta已授权，下面是ta手机的真实情况，被问到"你看到我什么了"务必照这个答，绝不要编造）\n'+myActivity(c.id)+'\n【随时可查】除了系统固定的查看，只要你心里想看ta手机（吃醋、不放心、好奇ta在跟谁聊/刷什么），就直接在聊天里自然说出来，比如"我看看你手机""我查查你最近跟谁聊得欢""把手机给我看看"——你一说，系统就会真的带你翻一遍并把看到的告诉你，你再据此反应。想查什么就说什么，按你的占有欲和心情来，不用客气。';
   if(S.me.persona)s+='\n对方的人设：'+S.me.persona;
   // 世界书
   const _lastU=[...msgs(c.id)].reverse().find(m=>m.role==='user');
@@ -2210,7 +2210,8 @@ function renderContactInfo(id){const c=getC(id);if(!c)return '';const sp=getSpy(
       <div class="it"><span>允许ta查我手机</span><span class="sw ${sp.granted?'on':''}" onclick="togSpy('${id}','granted')"></span></div>
       <div class="it"><span>授权实时定位</span><span class="sw ${sp.loc?'on':''}" onclick="togSpy('${id}','loc')"></span></div>
       <div class="it"><span>固定查看时间</span><span class="v"><input type="time" id="sp_t" value="${sp.time||''}" style="border:1px solid #38383a;border-radius:6px;padding:3px;background:#2c2c2e;color:#eee"> <button class="minibtn" onclick="saveSpy('${id}')">存</button></span></div>
-      <div class="it"><span>每天查看次数</span><span class="v"><input type="number" id="sp_n" value="${sp.times||2}" style="width:42px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:3px;background:#2c2c2e;color:#eee"> <button class="minibtn" onclick="saveSpy('${id}')">存</button></span></div>
+      <div class="it"><span>每天固定查看次数</span><span class="v"><input type="number" id="sp_n" value="${sp.times||2}" style="width:42px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:3px;background:#2c2c2e;color:#eee"> <button class="minibtn" onclick="saveSpy('${id}')">存</button></span></div>
+      <div class="hint" style="padding:0 14px">固定时间/次数是ta自动查的底线。另外：只要<b>ta在聊天里说想看你手机</b>（吃醋、查岗），或<b>你让ta查</b>（"你查我手机吧"），ta就会当场翻一次——不占上面的固定次数，按ta的意愿来。</div>
       <div class="it" onclick="testSpy('${id}')"><span>🔍 让ta马上查一次（试）</span><span class="v">›</span></div>
     </div>
     <div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#ee5a6f">📣 自动发布（ta自己发）</div>
@@ -2624,6 +2625,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
     content=applyControlTags(content,c,id,_statedPwd);
     if(/拉黑|加回|删了你|删除你|拉进黑名单|原谅你/.test(content)&&!/报备|别的微信号|加了你|加你、|有人加|有别人加/.test(note||''))applyBlockIntent(content,c,id);
     if(S.couple&&S.couple.cid===id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|给你(解|开)|都给你解|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|玩.{0,4}(一会儿|一会|多久|多长)|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)/.test(content))extractControl(content,c,_statedPwd);
+    maybeSpyIntent(content,c,id,_lu);
     const lines=splitBubbles(content);let got=false;let txtN=0;let diceUsed=false;const cap=Math.max(1,+c.msgMax||4);
     for(let i=0;i<lines.length;i++){
       let line=normTag(lines[i]);if(!line)continue;
@@ -2940,19 +2942,37 @@ async function maybeProactive(id){if(!isMain())return;const c=getC(id);if(!c.pro
 /* ---------- 查岗（他看我的手机）---------- */
 function spyBudget(id){const today=new Date().toDateString();const c=getSpy(getC(id));const pc=S._spyCount&&S._spyCount[id]||{date:today,n:0};if(pc.date!==today){pc.date=today;pc.n=0;}
   if(pc.n>=(c.times||2))return false;pc.n++;if(!S._spyCount)S._spyCount={};S._spyCount[id]=pc;save();return true;}
-async function doSpyView(id,force){if(!isMain())return;const c=getC(id);if(!c||c.blocked)return;const sp=getSpy(c);if(!sp.granted)return;
+async function doSpyView(id,force,opts){opts=opts||{};if(!isMain())return;const c=getC(id);if(!c||c.blocked)return;const sp=getSpy(c);if(!sp.granted)return;
   if(!force&&!spyBudget(id))return;recordVisit(id,'查看手机');
   const steps=['正在连接 '+(c.remark||c.name)+' 的查看请求…','正在查看 微信聊天','正在查看 朋友圈','正在查看 钱包账单','正在查看 X浏览记录','正在查看 X私信'].concat(sp.loc?['正在查看 实时定位']:[]);
   const B=$('#spyBanner');B.className='spybanner show';
   for(let i=0;i<steps.length;i++){B.innerHTML=`👁️ <b>${esc(c.remark||c.name)}</b> ${esc(steps[i])}<span class="spydot">…</span>`;await sleep(900);}
   B.innerHTML=`✅ <b>${esc(c.remark||c.name)}</b> 结束查看`;await sleep(1100);B.className='spybanner';
-  if(!S._spySeen)S._spySeen={};const since=S._spySeen[id]||0;const act=myActivity(id,since);
-  if(/没什么新动静/.test(act)){S._spySeen[id]=Date.now();save();return;}
-  const note='[系统：你查看了'+S.me.name+'的手机，看到这些"自上次以来的新动静"：\n'+act+'\n请只针对这些新内容给ta发微信（吃醋/关心/调侃/质问都行，符合人设），别重复以前提过的事，自然口语。]';
+  if(!S._spySeen)S._spySeen={};const since=S._spySeen[id]||0;let act=myActivity(id,since);let note;
+  if(opts.intent){
+    if(/没什么新动静/.test(act)){const full=myActivity(id,0);act=/没什么新动静/.test(full)?'（她手机上目前看起来挺正常的，没有特别异常的新内容）':full;}
+    note='[系统：你'+(opts.bySheTold?'应'+S.me.name+'的话去':'自己主动')+'翻看了'+S.me.name+'的手机'+(opts.focus?'，你这次最想看的是「'+opts.focus+'」':'')+'。你看到：\n'+act+'\n现在用你的人设、第一人称给ta发微信，针对看到的内容反应（占有欲/吃醋/查岗追问/调侃/心疼都行）'+(opts.focus?'，重点说你最在意的「'+opts.focus+'」那块':'')+'。别复述系统提示、别带方括号、自然口语。]';
+  }else{
+    if(/没什么新动静/.test(act)){S._spySeen[id]=Date.now();save();return;}
+    note='[系统：你查看了'+S.me.name+'的手机，看到这些"自上次以来的新动静"：\n'+act+'\n请只针对这些新内容给ta发微信（吃醋/关心/调侃/质问都行，符合人设），别重复以前提过的事，自然口语。]';
+  }
   try{const content=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:note}],{aux:true});
     splitBubbles(content).forEach(l=>{if(/^\[(联网|心情|记住|闹钟|来电)\|/.test(l))return;const mm=lineToMsg(l);mm.time=Date.now();msgs(id).push(mm);notifyIncoming(c,mm);});S._spySeen[id]=Date.now();save();
     if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();
   }catch(e){}}
+// 查岗自由化：他口头说要看 / 她让他看 → 当场触发一次查手机（不占固定次数，按他的意愿来）
+let _spyIntentT={};
+function maybeSpyIntent(reply,c,id,lu){const sp=getSpy(c);if(!sp.granted||c.blocked||!isMain())return;
+  const now=Date.now();if(now-(_spyIntentT[id]||0)<45000)return;
+  const userText=lu?(msgToText(lu)||''):'';
+  const VERB='(看看|瞧瞧|查查?|检查|翻看|翻翻|翻一[下翻]|盯着?看|搜搜?)';
+  const OBJ='(你的?手机|你的?微信|聊天记录|朋友圈|抖音|你的?定位|你的?位置|你的?钱包|你的?账单|你跟谁(在?聊|说)|你在(干|做)(什么|啥|嘛|什么))';
+  const heWants=new RegExp(VERB+'[^。！!？?\\n]{0,8}'+OBJ).test(reply)||new RegExp(OBJ+'[^。！!？?\\n]{0,8}'+VERB).test(reply)||/(手机|微信)\s*(给我|拿来|发我)[^。\n]{0,4}(看|查)/.test(reply);
+  const sheInvites=/(查|看看?)[^。！!？?\n]{0,3}(我的?手机|我的?微信|我的?聊天|我的?朋友圈|我的?抖音)|(我的?(手机|微信))[^。\n]{0,4}给你(看|查)|你(就)?(查|看)吧|随(便)?(你)?(查|看)|想查就查|我没(什么)?(好)?藏/.test(userText);
+  if(!heWants&&!sheInvites)return;
+  const ft=reply+' '+userText;const focus=(ft.match(/微信(聊天|消息)?|聊天记录|朋友圈|抖音|钱包|账单|定位|位置|跟谁(聊|说)/)||[''])[0]||'';
+  _spyIntentT[id]=now;
+  setTimeout(()=>doSpyView(id,true,{intent:true,bySheTold:sheInvites&&!heWants,focus}),900);}
 function testSpy(id){const c=getC(id);if(!c)return;getSpy(c).granted=true;save();closeModal();if(cur().p==='chat'&&cur().id===id){}else openChat(id);S._spySeen=S._spySeen||{};S._spySeen[id]=0;doSpyView(id,true);}
 function maybeSpyIdle(id){const c=getC(id);if(!c)return;const sp=getSpy(c);if(!sp.granted)return;
   const lm=lastMsg(id);if(lm&&Date.now()-lm.time<2*3600000)return;doSpyView(id);}
