@@ -296,11 +296,12 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v77 · 强制来电+通话记录分类清空';
+const APP_VER='v79 · 联网可选jina或模型';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
     aux:{base:'',key:'',model:''},
+    search:{mode:'jina',base:'https://s.jina.ai',key:'',model:''},
     vision:{base:'https://vg.v1api.cc/v1',key:'',model:''},
     hist:24, timeAware:true, replyDelay:2, sound:true, web:{enabled:false}, summaryRounds:20, proactiveIdleMin:20, manualReply:true,
     voiceAuto:true, tts:{base:'',key:'',model:'',voice:''}, stt:{base:'',key:'',model:''}
@@ -748,6 +749,14 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="two" style="padding:0 14px 10px"><div class="field"><label>接口地址(可选)</label><input id="s_xbase" value="${esc((S.settings.aux||{}).base||'')}" placeholder="留空=同聊天"></div>
         <div class="field"><label>API Key(可选)</label><input id="s_xkey" type="password" value="${esc((S.settings.aux||{}).key||'')}" placeholder="留空=同聊天"></div></div>
     </div>
+    <div class="section"><div style="padding:12px 14px;font-weight:600;color:#3a7bd5">🌐 联网搜索（浏览器/[联网]用）</div>
+      <div class="it"><span>联网方式</span><span class="v">${[["jina","jina搜索"],["model","用模型"]].map(m=>`<span onclick="S.settings.search=Object.assign({base:\'https://s.jina.ai\',key:\'\',model:\'\'},S.settings.search,{mode:\'${m[0]}\'});save();render()" style="cursor:pointer;padding:3px 9px;border-radius:8px;${((S.settings.search||{}).mode||'jina')===m[0]?'background:#3a7bd5;color:#fff':'color:#888'}">${m[1]}</span>`).join('')}</span></div>
+      ${((S.settings.search||{}).mode||'jina')==='model'?`<div class="hint" style="padding:0 14px">用你的兼容API搜索。<b>普通模型不能真联网</b>(只会凭记忆答)；要真联网请填<b>带联网能力的模型</b>(如 -online / sonar / gpt-4o-search-preview)。地址/Key留空=用上面的聊天模型。</div>
+      <div class="field" style="padding:0 14px"><label>联网模型名</label><input id="s_semodel" value="${esc((S.settings.search||{}).model||'')}" placeholder="留空=用聊天模型(可能不实时)"></div>
+      <div class="two" style="padding:0 14px 10px"><div class="field"><label>地址(可选)</label><input id="s_sebase" value="${esc((S.settings.search||{}).base||'')}" placeholder="留空=同聊天"></div><div class="field"><label>Key(可选)</label><input id="s_sekey" type="password" value="${esc((S.settings.search||{}).key||'')}" placeholder="留空=同聊天"></div></div>`:`<div class="hint" style="padding:0 14px">用 jina 真实搜索：去 jina.ai 免费拿 key 填下面。</div>
+      <div class="field" style="padding:0 14px"><label>jina接口地址</label><input id="s_sebase" value="${esc((S.settings.search||{}).base||'https://s.jina.ai')}" placeholder="https://s.jina.ai"></div>
+      <div class="field" style="padding:0 14px 10px"><label>API Key</label><input id="s_sekey" type="password" value="${esc((S.settings.search||{}).key||'')}" placeholder="jina_xxx"></div>`}
+    </div>
     <div class="section"><div style="padding:12px 14px;font-weight:600;color:#54a0ff">🖼️ 识图模型（发照片时用）</div>
       <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_vbase" value="${esc(v.base)}"></div>
       <div class="field" style="padding:0 14px"><label>API Key</label><input id="s_vkey" type="password" value="${esc(v.key)}" placeholder="不填则用聊天的Key"></div>
@@ -791,6 +800,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
 function saveSettings(){const g=id=>$('#'+id).value.trim();
   S.settings.chat={base:g('s_cbase')||'https://vg.v1api.cc/v1',key:g('s_ckey'),model:g('s_cmodel')||'gpt-4o-mini',temp:$('#s_ctemp').value||0.8,maxTokens:$('#s_cmax').value||900};
   S.settings.aux={base:g('s_xbase'),key:g('s_xkey'),model:g('s_xmodel')};
+  S.settings.search={mode:(S.settings.search&&S.settings.search.mode)||'jina',base:($('#s_sebase')?$('#s_sebase').value.trim():''),key:($('#s_sekey')?$('#s_sekey').value.trim():''),model:($('#s_semodel')?$('#s_semodel').value.trim():((S.settings.search||{}).model||''))};
   S.settings.vision={base:g('s_vbase')||S.settings.chat.base,key:g('s_vkey')||S.settings.chat.key,model:g('s_vmodel')};
   S.settings.tts={base:g('s_tbase'),key:g('s_tkey'),model:g('s_tmodel'),voice:g('s_tvoice')};
   S.settings.stt={base:g('s_sbase'),key:g('s_skey'),model:g('s_smodel')};
@@ -2596,8 +2606,16 @@ function fetchWeather(manual){if(!navigator.geolocation){if(manual)toast('设备
   },()=>{if(manual)toast('定位被拒绝了');});}
 
 /* =================== 联网搜索 =================== */
-async function webSearch(q){try{const r=await fetch('https://s.jina.ai/'+encodeURIComponent(q),{headers:{'Accept':'text/plain','X-Respond-With':'no-content'}});
-  const t=await r.text();return t.slice(0,1500);}catch(e){return '（联网失败，请凭已有知识回答）';}}
+async function webSearch(q){const ws=S.settings.search||{};
+  if(ws.mode==='model'){const a=S.settings.chat;const base=(ws.base||a.base||'').replace(/\/+$/,'');const key=ws.key||a.key;const model=ws.model||a.model;
+    try{const r=await fetch(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model,max_tokens:700,messages:[{role:'system',content:'你是联网搜索助手。请就用户的问题给出尽量最新、真实的信息；如果你具备联网/检索能力就联网查证。'},{role:'user',content:'联网搜索并简要回答：'+q}]})});
+      const d=await r.json().catch(()=>null);if(!r.ok)return '（搜索失败 '+r.status+'：检查设置里的联网模型）';
+      return ((d&&d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content)||'').slice(0,1800)||'（没搜到内容）';}catch(e){return '（搜索失败，检查联网模型设置）';}}
+  const base=(ws.base||'https://s.jina.ai').replace(/\/+$/,'');
+  try{const h={'Accept':'text/plain','X-Respond-With':'no-content'};if(ws.key)h['Authorization']='Bearer '+ws.key;
+    const r=await fetch(base+'/'+encodeURIComponent(q),{headers:h});const t=await r.text();
+    if(!r.ok)return '（联网失败 '+r.status+'：可能要去"设置→联网搜索"填上 jina 密钥，或改用「用模型」）';
+    return (t||'').slice(0,1800);}catch(e){return '（联网失败，检查网络，或在"设置→联网搜索"换方式）';}}
 /* =================== 浏览器 =================== */
 let _brBusy=false;
 function renderBrowser(){const b=S.browser||{};
