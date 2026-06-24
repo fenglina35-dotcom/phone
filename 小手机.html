@@ -296,7 +296,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v66 · 拦截系统腔+自定义App图标';
+const APP_VER='v67 · 修上传照片+X搜索原创推文';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -367,9 +367,13 @@ function initAccounts(){if(!S.me.accounts||!S.me.accounts.length)S.me.accounts=[
 function msgs(id){const k=mkey(id);return S.messages[k]||(S.messages[k]=[]);}
 function lastMsg(id){const m=msgs(id);return m[m.length-1];}
 function compress(file,max,q){return new Promise((res,rej)=>{const img=new Image(),r=new FileReader();
-  r.onload=()=>{img.onload=()=>{let w=img.width,h=img.height;if(w>h&&w>max){h=h*max/w;w=max;}else if(h>=w&&h>max){w=w*max/h;h=max;}
-    const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);res(c.toDataURL('image/jpeg',q));};img.onerror=rej;img.src=r.result;};r.onerror=rej;r.readAsDataURL(file);});}
-function pickFile(accept,cb){const i=document.createElement('input');i.type='file';if(accept)i.accept=accept;i.onchange=e=>{const f=e.target.files[0];if(f)cb(f);};i.click();}
+  r.onload=()=>{const raw=r.result;img.onload=()=>{try{let w=img.width,h=img.height;if(w>h&&w>max){h=h*max/w;w=max;}else if(h>=w&&h>max){w=w*max/h;h=max;}
+    const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);const out=c.toDataURL('image/jpeg',q);res(out&&out.length>30?out:raw);}catch(e){res(raw);}};img.onerror=()=>res(raw);img.src=raw;};r.onerror=rej;r.readAsDataURL(file);});}
+function pickFile(accept,cb){try{if(window._pfEl){window._pfEl.remove();}}catch(_){}
+  const i=document.createElement('input');i.type='file';if(accept)i.accept=accept;
+  i.style.cssText='position:fixed;left:-9999px;top:0;opacity:0;width:1px;height:1px';
+  i.onchange=e=>{const f=e.target.files&&e.target.files[0];if(f)cb(f);setTimeout(()=>{try{i.remove();}catch(_){}},500);};
+  document.body.appendChild(i);window._pfEl=i;i.click();}
 function fmtSize(b){return b<1024?b+'B':b<1048576?(b/1024).toFixed(1)+'KB':(b/1048576).toFixed(1)+'MB';}
 
 /* =================== API =================== */
@@ -1116,7 +1120,7 @@ async function doGenContactTweet(cid){const c=getC(cid);toast('生成中…');
   }catch(e){toast('生成失败');}}
 async function xRefresh(){if(xTab==='dm')return genNetDM();if(xTab==='search')return toast('在搜索框里点搜索按钮');return genNetTweets('');}
 async function genNetTweets(topic){toast('刷新中…');
-  try{const r=await chatAPI([{role:'system',content:'你是X(推特)内容生成器，每行一条，严格用格式：昵称:::@英文id:::推文内容。不要序号、不要别的话。'},{role:'user',content:'生成5条不同网友的推文'+(topic?'，围绕主题"'+topic+'"':'（日常/搞笑/情感/热点都行）')+'。'}],{max:800,aux:true});
+  try{const r=await chatAPI([{role:'system',content:'你是X(推特)内容生成器，每行一条，严格用格式：昵称:::@英文id:::推文内容。不要序号、不要别的话。'},{role:'user',content:'生成5条不同网友的【原创推文】'+(topic?'，都围绕主题"'+topic+'"（是各自独立发的帖子，不是评论、不是回复别人、不要以@或"回复"开头）':'（日常/搞笑/情感/热点都行）')+'。'}],{max:800,aux:true});
     const rows=looseLines(r);if(!rows.length)throw new Error('empty');const made=[];rows.forEach(p=>{const nm=clean(p[0]);if(!nm)return;xUser(nm,{handle:p[1]});const t={id:uid(),who:'net',name:nm,handle:p[1]||'@user',avatar:letterAv(p[1]||nm),text:p[2]||p[1]||'',time:Date.now()-Math.floor(Math.random()*5400000),likes:[],lk:Math.floor(Math.random()*2000),comments:[],rt:Math.floor(Math.random()*400)};S.x.tweets.unshift(t);made.push(t);});
     save();if(topic)S.x._results=made.map(t=>t.id);render();
   }catch(e){toast('刷新失败，再点一次');}}
