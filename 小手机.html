@@ -325,7 +325,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v94 · 记仇小本本+线下时段+通话时间感知';
+const APP_VER='v96 · 查他手机显示和我的线下约会';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -614,9 +614,11 @@ function buildSystem(c){
   if(c.summary&&!c.summaries){c.summaries=[{time:'(早期)',text:c.summary}];delete c.summary;}
   if(_main&&c.summaries&&c.summaries.length)s+='\n\n# 之前对话的概要（按时间，保持连贯）\n'+c.summaries.slice(-8).map(x=>'· '+x.time+'　'+x.text).join('\n');
   const _off=S.offline&&S.offline[c.id];
-  if(_main&&_off&&_off.memory&&_off.memory.length)s+='\n\n# 你和ta线下见过面（你们真的在现实里约会过，记得这些）\n'+_off.memory.join('\n')+'\n微信聊天里你可以自然提起这些线下的事，但要用【普通文字】说，别用旁白【】那种线下格式。';
+  if(_main&&_off&&_off.memory&&_off.memory.length)s+='\n\n# 你和'+S.me.name+'的线下约会（你们真的在现实里见面约会过，这些都是和'+S.me.name+'——你女朋友——一起的，记清楚约会对象就是ta）\n'+_off.memory.join('\n')+'\n微信聊天里你可以自然提起这些和ta线下的事，但要用【普通文字】说，别用旁白【】那种线下格式。';
   if(_main){const gd=(c.grudges||[]);const gund=gd.filter(x=>!x.done);
-    s+='\n\n# 你的记仇小本本（你私下记着'+S.me.name+'惹你/欠你的事，找机会跟ta算账、翻旧账）\n'+(gund.length?gund.map((x,i)=>(i+1)+'. '+x.text).join('\n'):'（暂时没记仇）')+'\n· ta惹你生气、做了让你介意/吃醋的事时，单独一行 [记仇|具体那件事] 把它记进小本本。\n· 等你们把这事说开、ta哄好你了、或你出了气，单独一行 [消气|那件事的关键词] 把它划掉。\n· 平时可以适时翻旧账："上次你…这账还没跟你算呢"，符合你占有欲强、嘴硬的人设。';}
+    s+='\n\n# 你的记仇小本本（你私下记着'+S.me.name+'惹你/欠你的事，找机会跟ta算账、翻旧账）\n'+(gund.length?gund.map((x,i)=>(i+1)+'. '+x.text).join('\n'):'（暂时没记仇）')+'\n· ta惹你生气、做了让你介意/吃醋的事时，单独一行 [记仇|具体那件事] 把它记进小本本。\n· 等你们把这事说开、ta哄好你了、或你出了气，单独一行 [消气|那件事的关键词] 把它划掉。\n· 平时可以适时翻旧账："上次你…这账还没跟你算呢"，符合你占有欲强、嘴硬的人设。';
+    const tt=(c.tasks&&c.tasks.date===todayStr())?c.tasks:null;
+    if(tt){const dn=tt.list.filter(x=>x.done).length;s+='\n\n# 今天你给'+S.me.name+'布置的任务（在ta手机「任务便签」里，你看得到完成情况，可督促/验收/奖惩）\n'+tt.list.map((x,i)=>(i+1)+'. '+x.text+' —— '+(x.done?'✅已完成':'⬜没完成')).join('\n')+'\n已完成 '+dn+'/'+tt.list.length+'。全部完成你要奖励ta（送礼物）；没完成的你会记仇、线下罚ta。可以自然地催ta、验收、点评。';}}
   // 作息 / 此刻在哪
   const _wn=whereNow(c);if(_wn)s+='\n\n# 你的作息（此刻位置）\n现在是 '+hm()+'，按你的作息，你这会儿大概：'+_wn+'。聊到你在哪、在干嘛时要和这个一致，别一天到晚都说在公司/开会。';
   // 亲属卡 / 推荐过的好友（仅主身份）
@@ -701,6 +703,7 @@ function render(){
   else if(c.p==='xdm')html=renderXDM(c.id);
   else if(c.p==='xuser')html=renderXUser(c.name);
   else if(c.p==='dy')html=renderDouyin();
+  else if(c.p==='tasks')html=renderTasks();
   else if(c.p==='dydm')html=renderDyDM(c.id);
   else if(c.p==='momentDetail')html='';
   app.innerHTML='<div class="page">'+html+'</div>';
@@ -730,6 +733,7 @@ function renderHome(){
       <div class="app" onclick="openApp('douyin')">${aIco('douyin','🎵','#000;border:1px solid #333')}<span>${appLk('douyin')}抖音</span></div>
       <div class="app" onclick="openApp('food')">${aIco('food','🍔','#ffb83b')}<span>${appLk('food')}外卖</span></div>
       <div class="app" onclick="openCouple()">${aIco('couple','💞','#ff8fab')}<span>情侣空间</span></div>
+      <div class="app" onclick="go('tasks')">${aIco('tasks','📋','#f59e0b')}<span>任务便签</span></div>
       <div class="app" onclick="openApp('games')">${aIco('games','🎮','#6c5ce7')}<span>${appLk('games')}游戏大厅</span></div>
       <div class="app" onclick="openApp('mail')">${aIco('mail','📮','#f4a93b',(S.mail||[]).some(m=>!m.read)?'<span style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:#fa5151;border:2px solid #000"></span>':'')}<span>${appLk('mail')}信箱</span></div>
       <div class="app" onclick="openApp('offline')">${aIco('offline','🌹','#e84d6f')}<span>${appLk('offline')}线下约会</span></div>
@@ -743,7 +747,7 @@ function renderHome(){
 }
 function aIco(key,emoji,bg,extra){const ic=S.me.appIcons&&S.me.appIcons[key];
   return `<div class="ic" style="${ic?'background:#222;':'background:'+bg+';'}color:#fff;position:relative;overflow:hidden">${ic?`<img src="${ic}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">`:emoji}${extra||''}</div>`;}
-const HOMEAPPS=[['wechat','💬','微信'],['settings','⚙️','设置'],['worldbook','📖','世界书'],['browser','🌐','浏览器'],['moments','🌸','朋友圈'],['spy','🔍','查他手机'],['shop','🛒','购物'],['calendar','📅','日历'],['x','𝕏','X'],['food','🍔','外卖'],['couple','💞','情侣空间'],['games','🎮','游戏大厅'],['mail','📮','信箱'],['offline','🌹','线下约会'],['contacts','👤','通讯录'],['me','🐱','我']];
+const HOMEAPPS=[['wechat','💬','微信'],['settings','⚙️','设置'],['worldbook','📖','世界书'],['browser','🌐','浏览器'],['moments','🌸','朋友圈'],['spy','🔍','查他手机'],['shop','🛒','购物'],['calendar','📅','日历'],['x','𝕏','X'],['food','🍔','外卖'],['couple','💞','情侣空间'],['tasks','📋','任务便签'],['games','🎮','游戏大厅'],['mail','📮','信箱'],['offline','🌹','线下约会'],['contacts','👤','通讯录'],['me','🐱','我']];
 function appIconEditor(){S.me.appIcons=S.me.appIcons||{};
   openModal(`<h3>🎨 App 图标</h3><div class="hint">给主屏图标换成你喜欢的图片，留空恢复默认。</div>
    ${HOMEAPPS.map(a=>`<div class="it"><span>${S.me.appIcons[a[0]]?'':a[1]} ${a[2]}</span><span class="v">${S.me.appIcons[a[0]]?`<img src="${S.me.appIcons[a[0]]}" style="width:26px;height:26px;border-radius:6px;object-fit:cover;vertical-align:middle">`:''}<button class="minibtn" style="margin-left:6px" onclick="setAppIcon('${a[0]}')">${S.me.appIcons[a[0]]?'换':'上传'}</button>${S.me.appIcons[a[0]]?`<button class="minibtn" style="margin-left:4px" onclick="delete S.me.appIcons['${a[0]}'];save();appIconEditor();render()">复位</button>`:''}</span></div>`).join('')}
@@ -950,7 +954,7 @@ function renderSpy(id){const c=getC(id);if(!c)return '';const d=S.spy[id];
     <div style="text-align:center;color:#666;font-size:11px;padding:4px">更新于 ${hm(d.time)}</div>`;}
   const btn=_spyBusy?`<button class="btn g" disabled>⏳ 刷新中…请稍候</button>`:`<button class="btn p" onclick="spyRefresh('${id}')">🔄 刷新内容</button>${d?`<button class="btn g" style="margin-top:8px" onclick="spyReset('${id}')">🗑 重置（清掉旧存档，重新生成全新内容）</button>`:''}`;
   const topbar=_spyBusy?`<div style="text-align:center;color:#b9a6e0;font-size:13px;padding:10px;background:#1c1c1e">⏳ 正在偷看 ta 的手机，请稍候…</div>`:'';
-  body=(spyGrudgeSec(id)||'')+(spyUsageSec(id)||'')+(spyDouyinSec(id)||'')+body;
+  body=(spyOfflineSec(id)||'')+(spyGrudgeSec(id)||'')+(spyUsageSec(id)||'')+(spyDouyinSec(id)||'')+body;
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(c.remark||c.name)}的手机</span><span class="r" onclick="spyRefresh('${id}')">${_spyBusy?'⏳':'🔄'}</span></div>
     ${topbar}<div class="scroll" style="background:#000">${body}<div style="padding:12px">${btn}</div><div style="height:20px"></div></div>`;}
 // 他的记仇小本本（在他手机里；他自己会划掉，你也能手动加/删）
@@ -960,6 +964,12 @@ function spyGrudgeSec(id){const c=getC(id);if(!c)return '';const g=grudgesOf(c);
 function spyAddGrudge(id){const c=getC(id);if(!c)return;const t=prompt('帮ta在小本本上记一笔（ta惦记的事）：','');if(t==null)return;const v=t.trim();if(!v)return;grudgesOf(c).unshift({id:uid(),text:v,done:false,ts:Date.now()});save();render();}
 function spyToggleGrudge(id,i){const c=getC(id);const g=c&&c.grudges;if(!g||!g[i])return;g[i].done=!g[i].done;g[i].doneTs=g[i].done?Date.now():0;save();render();}
 function spyDelGrudge(id,i){const c=getC(id);const g=c&&c.grudges;if(!g||!g[i])return;g.splice(i,1);save();render();}
+// 他手机里：和忆北的线下约会记录（让他清楚约会对象是忆北）
+function spyOfflineSec(id){const o=S.offline&&S.offline[id];const mem=(o&&o.memory)||[];const ongoing=o&&o.started;if(!mem.length&&!ongoing)return '';
+  let rows='';
+  if(ongoing)rows+=`<div class="it"><span style="font-size:13px;color:#ff8fab">💗 此刻正在和「${esc(S.me.name)}」约会中 · 📍${esc(o.loc||'')}${o.daypart?' · '+esc(o.daypart):''}</span></div>`;
+  rows+=mem.slice(-8).reverse().map(m=>`<div class="it"><span style="font-size:13px;color:#ccc">🌹 ${esc(m)}</span></div>`).join('');
+  return `<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#ff8fab">🌹 和「${esc(S.me.name)}」的线下约会（共${mem.length}次）</div>${rows||'<div class="it"><span class="v">无</span></div>'}</div>`;}
 // 查手机：忆北在抖音点赞过的视频（取消点赞就没记录了）
 function spyDouyinSec(id){const liked=(S.dy&&S.dy.liked)||[];if(!liked.length)return '';
   const rows=liked.slice(0,12).map(v=>`<div class="it"><span style="font-size:13px;color:#ccc">${v.emoji||'🎬'} @${esc(v.author||'')}：${esc((v.desc||'').slice(0,30))}</span></div>`).join('');
@@ -1543,6 +1553,75 @@ function editDyProfile(){const p=S.dy.profile;openModal(`<h3>编辑抖音资料<
   <div class="field"><label>昵称</label><input id="dyp_n" value="${esc(p.nick||S.me.name)}"></div>
   <div class="field"><label>简介</label><input id="dyp_b" value="${esc(p.bio||'')}"></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){S.dy.profile.nick=$('#dyp_n').value.trim();S.dy.profile.bio=$('#dyp_b').value.trim();save();closeModal();render();})()">保存</button></div>`);}
+
+/* ---------- 任务便签（他给我布置每日任务）---------- */
+let _taskBusy=false;
+function taskC(){return (S.couple&&getC(S.couple.cid))||S.contacts.find(x=>!x.deleted&&!x.blocked&&isLover(x))||S.contacts.find(x=>!x.deleted&&!x.blocked)||null;}
+function tasksToday(c){const t=c&&c.tasks;return (t&&t.date===todayStr())?t:null;}
+function taskVerifyLabel(x){return {steps:'🏃 我走够了',essay:'✍️ 写好交给ta',moment:'✅ 我发朋友圈了',tweet:'✅ 我发推了',douyin:'✅ 我发抖音了',real:'✅ 完成了'}[x.verify]||'✅ 完成';}
+function postedSince(kind,since){since=since||0;
+  if(kind==='moment')return S.moments.some(p=>p.authorId==='me'&&(p.time||0)>since);
+  if(kind==='tweet')return (S.x&&S.x.tweets||[]).some(t=>t.who==='me'&&(t.time||0)>since);
+  if(kind==='douyin')return (S.dy&&S.dy.mine||[]).some(v=>(v.ts||0)>since);
+  return false;}
+function renderTasks(){const c=taskC();
+  if(!c)return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">📋 任务便签</span><span class="r"></span></div><div class="scroll" style="background:#000"><div class="empty" style="padding:50px 24px;line-height:2">还没有恋人角色～<br>先创建一个角色（最好在情侣空间绑定），ta就能给你布置任务啦</div></div>`;
+  checkTaskPenalty(c);const t=tasksToday(c);const n=c.taskN||3;
+  let body;
+  if(!t){body=`<div style="margin:14px;padding:20px;border-radius:16px;background:linear-gradient(145deg,#f59e0b,#b45309);color:#fff;text-align:center">
+      <div style="font-size:15px">${esc(c.remark||c.name)} 还没布置今天的任务</div>
+      <div style="font-size:12px;opacity:.9;margin:6px 0 14px">完成全部有奖励🎁，没完成会被记仇、线下受罚哦</div>
+      <button class="btn" style="background:#fff;color:#b45309;font-weight:700" ${_taskBusy?'disabled':''} onclick="genTasks()">${_taskBusy?'ta在安排…':'📋 让ta布置今天的任务'}</button></div>
+    <div class="section" style="margin:12px"><div class="it"><span>每天任务条数</span><span class="v"><input id="tk_n" type="number" min="1" max="8" value="${n}" style="width:46px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:4px;background:#2c2c2e;color:#eee"> <button class="minibtn" onclick="(function(){var v=Math.max(1,Math.min(8,+$('#tk_n').value||3));taskC().taskN=v;save();toast('每天'+v+'条');})()">存</button></span></div></div>`;}
+  else{const done=t.list.filter(x=>x.done).length,total=t.list.length,all=total&&done===total;
+    body=`<div style="margin:14px;padding:16px;border-radius:16px;background:linear-gradient(145deg,${all?'#19a463,#0c6b3f':'#f59e0b,#b45309'});color:#fff;text-align:center">
+      <div style="font-size:14px">今天的任务 · ${esc(c.remark||c.name)} 布置</div>
+      <div style="font-size:30px;font-weight:700;margin:4px 0">${done}/${total}</div>
+      <div style="font-size:12px;opacity:.95">${all?'全部完成啦！等ta的奖励🎁':'加油完成，全做完有奖励～'}</div></div>
+      ${t.list.map((x,i)=>`<div class="section" style="margin:10px 12px"><div style="padding:12px 14px">
+        <div style="display:flex;justify-content:space-between;align-items:center"><span class="tag">${x.kind==='real'?'🌍 现实':'📱 手机'}</span>${x.done?'<span style="color:#19a463;font-size:13px">✅ 已完成</span>':''}</div>
+        <div style="margin:8px 0;font-size:15px;line-height:1.5;${x.done?'color:#888;text-decoration:line-through':'color:#eee'}">${esc(x.text)}</div>
+        ${x.verify==='steps'&&!x.done?`<div style="font-size:12px;color:#f59e0b;margin-bottom:6px">目标 ${x.target} 步 · 当前 ${S.me.steps||0} 步</div>`:''}
+        ${x.done?'':`<button class="btn p" onclick="completeTask('${x.id}')">${taskVerifyLabel(x)}</button>`}
+      </div></div>`).join('')}
+      <div class="hint" style="padding:6px 16px">手机任务会真的验证（作文要交给ta看、发布类要真发了、步数要够），别糊弄~ 现实任务靠你自觉，骗ta的话线下要罚的😏</div>`;}
+  return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">📋 任务便签</span><span class="r"></span></div>
+    <div class="scroll" style="background:#000">${body}<div style="height:20px"></div></div>`;}
+async function genTasks(){const c=taskC();if(!c){toast('先创建恋人角色');return;}if(tasksToday(c)){toast('今天的任务ta已经布置过啦');return;}if(_taskBusy)return;
+  checkTaskPenalty(c);_taskBusy=true;render();toast('ta在琢磨今天怎么安排你…');
+  const n=c.taskN||3;
+  try{const allowed='steps（走路，target填目标步数如6000）、essay（写小作文/检讨/彩虹屁/保证书，target填字数上限如100）、moment（发一条朋友圈）、tweet（发一条推特X）、douyin（发一条抖音）、real（现实生活的事：多喝水/早睡/健身/拍自拍等，没法验证靠她自觉）';
+    const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：现在你来给'+S.me.name+'布置今天的 '+n+' 条小任务。你是ta的恋人/掌控者，完全按你的人设、此刻心情、ta最近的表现（乖不乖、有没有惹你）来布置——可以是惩罚、撒娇式命令、也可以是关心ta健康作息。要好玩、有你的风格、有点掌控欲。\n大部分任务要是【在手机上就能完成的】(essay/moment/tweet/douyin)，可以有一两条现实任务(real/steps)。每条必须从这些可验证类型里选一个：'+allowed+'。\n只输出JSON数组、不要任何解释：[{"text":"任务描述(用你的第一人称口吻，像在命令/惩罚/宠ta)","kind":"app或real","verify":"类型代码","target":数字(没有填0)}]'}],{max:700});
+    const arr=parseArr(r);if(!Array.isArray(arr)||!arr.length)throw 0;
+    const list=arr.slice(0,n).map(o=>({id:uid(),text:(o.text||'').toString().slice(0,140),kind:o.kind==='real'?'real':'app',verify:['steps','essay','moment','tweet','douyin','real'].indexOf(o.verify)>=0?o.verify:'real',target:+o.target||0,done:false}));
+    c.tasks={date:todayStr(),assignTs:Date.now(),list,rewarded:false,penalized:false};save();_taskBusy=false;render();toast('任务来咯📋');
+    if(!c.blocked)scheduleReply(c.id,'[系统：你刚在'+S.me.name+'手机的任务便签里给ta布置了今天的任务，跟ta说一声、催ta好好完成、说说不完成的后果，一两句，符合你人设。别逐条复述任务。]');
+  }catch(e){_taskBusy=false;render();toast('没布置成功，再点一次');}}
+function completeTask(id){const c=taskC();const t=tasksToday(c);if(!t)return;const x=t.list.find(z=>z.id===id);if(!x||x.done)return;
+  if(x.verify==='essay'){openEssay(id);return;}
+  if(x.verify==='steps'){const cur=S.me.steps||0;if(cur<(x.target||0)){toast('还差 '+((x.target||0)-cur)+' 步呢，再去走走~（当前'+cur+'步）');return;}}
+  if(x.verify==='moment'&&!postedSince('moment',t.assignTs)){toast('布置任务后还没发朋友圈哦，发一条再来点完成');return;}
+  if(x.verify==='tweet'&&!postedSince('tweet',t.assignTs)){toast('布置任务后还没发推哦，发一条再来');return;}
+  if(x.verify==='douyin'&&!postedSince('douyin',t.assignTs)){toast('布置任务后还没发抖音哦，去发一条');return;}
+  if(x.verify==='real'&&!confirm('确定真的完成了这条现实任务吗？\n骗ta的话…线下见面要受罚的哦😏')){return;}
+  finishTask(c,x);}
+function finishTask(c,x,proof){x.done=true;x.doneTs=Date.now();save();render();toast('完成啦 ✅');
+  if(!c.blocked)scheduleReply(c.id,'[系统：'+S.me.name+'完成了你今天布置的任务「'+x.text+'」'+(proof?'，ta把内容发到你们聊天里了，先看一眼':'')+'。简短回应一句（夸ta/调侃/继续端着都行，符合你人设）。]');
+  checkAllDone(c);}
+function checkAllDone(c){const t=tasksToday(c);if(!t||t.rewarded)return;if(t.list.length&&t.list.every(x=>x.done)){t.rewarded=true;save();
+    if(!c.blocked)scheduleReply(c.id,'[系统：'+S.me.name+'把你今天布置的 '+t.list.length+' 条任务【全部完成】了！按说好的要奖励ta——用单独一行 [送礼|礼物名|价格] 送ta一个礼物，并夸夸ta、表示满意。]');}}
+function openEssay(id){const c=taskC();const t=tasksToday(c);const x=t&&t.list.find(z=>z.id===id);if(!x)return;const max=x.target||100;
+  openModal(`<h3>✍️ 交作业</h3><div class="hint">${esc(x.text)}<br>（${max}字以内，至少10字，认真写，ta会看的~）</div>
+    <div class="field"><textarea id="essay_t" rows="5" placeholder="在这里写…" oninput="var e=$('#essay_c');if(e)e.textContent=this.value.trim().length+'/'+${max}"></textarea><div id="essay_c" style="text-align:right;font-size:12px;color:#999">0/${max}</div></div>
+    <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="submitEssay('${id}',${max})">交给ta</button></div>`);}
+function submitEssay(id,max){const ta=$('#essay_t');const v=(ta?ta.value:'').trim();if(v.length<10){toast('至少写10个字啦，别糊弄~');return;}if(v.length>max){toast('超字数了，'+max+'字以内');return;}
+  const c=taskC();const t=tasksToday(c);const x=t&&t.list.find(z=>z.id===id);if(!x)return;
+  pushMsg(c.id,{role:'user',type:'text',content:'【作业·'+x.text+'】\n'+v,id:uid()});closeModal();finishTask(c,x,v);}
+function checkTaskPenalty(c){const t=c&&c.tasks;if(!t||t.date===todayStr()||t.penalized)return;
+  const undone=t.list.filter(x=>!x.done);t.penalized=true;
+  if(undone.length){grudgesOf(c).unshift({id:uid(),text:t.date+' 没完成我布置的任务（差'+undone.length+'条：'+undone.map(x=>x.text).join('、').slice(0,36)+'）',done:false,ts:Date.now()});
+    if(!c.blocked)scheduleReply(c.id,'[系统：'+t.date+'你给'+S.me.name+'布置的任务，ta有 '+undone.length+' 条没完成。你不太高兴，已经记到你的小本本上了，冷淡地说一句、并威胁线下见面要罚ta（怎么罚你自己定，符合人设），一两句。]');}
+  save();}
 
 /* ---------- 微信主界面 ---------- */
 function renderWeChat(){
@@ -3016,6 +3095,8 @@ function checkStepReport(){if(!isMain())return;const now=new Date();if(now.getHo
   if(!c||c.blocked)return;S.me._stepRptDate=today;save();
   scheduleReply(c.id,'[系统：现在23点，你看到'+S.me.name+'今天的微信步数是 '+(S.me.steps||0)+' 步。就这一次、主动关心一句（步数少就催ta多动动别老躺着，多了就夸ta/心疼ta累，符合你人设）。今天别再提步数了。]');}
 setInterval(checkStepReport,60000);setTimeout(checkStepReport,8000);
+function checkTasksDaily(){if(!isMain())return;const c=taskC();if(c)checkTaskPenalty(c);}
+setTimeout(checkTasksDaily,9000);setInterval(checkTasksDaily,300000);
 
 /* 主动消息 */
 async function maybeProactive(id){if(!isMain())return;const c=getC(id);if(!c.proactive.enabled||c.blocked)return;
