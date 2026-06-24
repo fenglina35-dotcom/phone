@@ -280,6 +280,32 @@ body{background:#000;padding:0;}
 .xmsg .b{max-width:100%;padding:8px 12px;border-radius:18px;font-size:14px;background:#2f3336;color:#e7e9ea;word-break:break-word;}
 .xmt{font-size:10px;color:#71767b;margin-top:2px;}
 .xmsg.me .b{background:#1d9bf0;color:#fff;}
+/* 抖音 */
+.dynav{flex:0 0 46px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:#000;color:#fff;}
+.dyfeed{flex:1;overflow-y:auto;scroll-snap-type:y mandatory;background:#000;}
+.dyvideo{position:relative;height:100%;width:100%;scroll-snap-align:start;display:flex;align-items:flex-end;overflow:hidden;}
+.dybg{position:absolute;inset:0;background-size:300% 300%;animation:dyflow 9s ease infinite;}
+@keyframes dyflow{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.dyemoji{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:78px;animation:dyfloat 4.5s ease-in-out infinite;filter:drop-shadow(0 4px 14px rgba(0,0,0,.5));}
+@keyframes dyfloat{0%{transform:translateY(-10px) scale(1)}50%{transform:translateY(10px) scale(1.08)}100%{transform:translateY(-10px) scale(1)}}
+.dyplay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:60px;color:rgba(255,255,255,.85);pointer-events:none;opacity:0;transition:.25s;}
+.dyvideo.paused .dyplay{opacity:1;}
+.dyvideo.paused .dybg{animation-play-state:paused;}.dyvideo.paused .dyemoji{animation-play-state:paused;}
+.dymeta{position:relative;z-index:3;padding:14px 70px 22px 14px;color:#fff;width:100%;background:linear-gradient(to top,rgba(0,0,0,.62),transparent);}
+.dyrail{position:absolute;right:8px;bottom:24px;z-index:4;display:flex;flex-direction:column;gap:16px;align-items:center;color:#fff;}
+.dyrail .ra{display:flex;flex-direction:column;align-items:center;font-size:12px;cursor:pointer;gap:2px;}
+.dyrail .ra .ic{font-size:28px;line-height:1;}
+.dydisc{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#333,#000);display:flex;align-items:center;justify-content:center;font-size:20px;animation:dyspin 4s linear infinite;border:3px solid #555;}
+@keyframes dyspin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.dynarr{position:absolute;left:0;right:0;bottom:0;z-index:6;background:rgba(0,0,0,.9);color:#eee;padding:16px 16px 22px;border-radius:16px 16px 0 0;font-size:14px;line-height:1.7;max-height:60%;overflow-y:auto;}
+.dytopt{position:absolute;top:8px;left:0;right:0;z-index:5;display:flex;justify-content:center;gap:22px;color:#fff;}
+.dytopt span{font-size:16px;opacity:.6;cursor:pointer;padding:4px;}.dytopt span.on{opacity:1;font-weight:700;border-bottom:2px solid #fe2c55;}
+.dytab{flex:0 0 50px;display:flex;background:#000;border-top:.5px solid #222;}
+.dytab .t{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#888;font-size:11px;gap:2px;cursor:pointer;}
+.dytab .t.on{color:#fff;}.dytab .t .i{font-size:18px;}
+.dychip{display:inline-flex;align-items:center;gap:4px;background:#1c1c1e;color:#ccc;border-radius:14px;padding:5px 12px;font-size:13px;margin:0 6px 6px 0;cursor:pointer;}
+.dybtn{background:#fe2c55;border:none;color:#fff;font-weight:600;border-radius:6px;padding:7px 16px;font-size:14px;cursor:pointer;}
+.dybtn.out{background:transparent;border:1px solid #555;color:#eee;}
 </style>
 </head>
 <body>
@@ -299,7 +325,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v87 · 睡眠计时+软件每日限时';
+const APP_VER='v88 · 新增抖音';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -430,6 +456,7 @@ function msgToText(m){
     case 'payreject':return '[我拒绝了帮你代付：'+m.name+']';
     case 'food':return m.from==='ta'?'[你给ta点了外卖：'+m.name+']':'[我给你点了外卖：'+m.name+(m.shop?'（'+m.shop+'）':'')+'，¥'+(+m.price).toFixed(2)+']';
     case 'tweetcard':return '[我转发给你一条X推文——'+m.tname+'：「'+m.ttext+'」]';
+    case 'dycard':return '[我转发给你一条抖音视频——@'+m.author+'：「'+m.desc+'」'+(m.narration?'，视频内容：'+m.narration:'')+']';
     case 'voice':return m.content?('[语音消息]'+m.content):'['+S.me.name+'发了条语音]';
     case 'sticker':return '[表情'+(m.meaning?'：'+m.meaning:'')+']';
     case 'chatlog':return '[我转发给你一份聊天记录《'+m.title+'》，内容：'+(m.lines||[]).map(l=>l.who+'说'+l.text).join('；').slice(0,200)+']';
@@ -671,6 +698,8 @@ function render(){
   else if(c.p==='xtweet')html=renderXTweet(c.id);
   else if(c.p==='xdm')html=renderXDM(c.id);
   else if(c.p==='xuser')html=renderXUser(c.name);
+  else if(c.p==='dy')html=renderDouyin();
+  else if(c.p==='dydm')html=renderDyDM(c.id);
   else if(c.p==='momentDetail')html='';
   app.innerHTML='<div class="page">'+html+'</div>';
   if(c.p==='chat'){afterChat(c.id);}
@@ -696,6 +725,7 @@ function renderHome(){
       <div class="app" onclick="openApp('shop')">${aIco('shop','🛒','#ff6b6b')}<span>${appLk('shop')}购物</span></div>
       <div class="app" onclick="openApp('calendar')">${aIco('calendar','📅','#4ecdc4')}<span>${appLk('calendar')}日历</span></div>
       <div class="app" onclick="openApp('x')">${aIco('x','𝕏','#000;border:1px solid #333')}<span>${appLk('x')}X</span></div>
+      <div class="app" onclick="openApp('douyin')">${aIco('douyin','🎵','#000;border:1px solid #333')}<span>${appLk('douyin')}抖音</span></div>
       <div class="app" onclick="openApp('food')">${aIco('food','🍔','#ffb83b')}<span>${appLk('food')}外卖</span></div>
       <div class="app" onclick="openCouple()">${aIco('couple','💞','#ff8fab')}<span>情侣空间</span></div>
       <div class="app" onclick="openApp('games')">${aIco('games','🎮','#6c5ce7')}<span>${appLk('games')}游戏大厅</span></div>
@@ -717,16 +747,16 @@ function appIconEditor(){S.me.appIcons=S.me.appIcons||{};
    ${HOMEAPPS.map(a=>`<div class="it"><span>${S.me.appIcons[a[0]]?'':a[1]} ${a[2]}</span><span class="v">${S.me.appIcons[a[0]]?`<img src="${S.me.appIcons[a[0]]}" style="width:26px;height:26px;border-radius:6px;object-fit:cover;vertical-align:middle">`:''}<button class="minibtn" style="margin-left:6px" onclick="setAppIcon('${a[0]}')">${S.me.appIcons[a[0]]?'换':'上传'}</button>${S.me.appIcons[a[0]]?`<button class="minibtn" style="margin-left:4px" onclick="delete S.me.appIcons['${a[0]}'];save();appIconEditor();render()">复位</button>`:''}</span></div>`).join('')}
    <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function setAppIcon(key){pickFile('image/*',async f=>{S.me.appIcons=S.me.appIcons||{};S.me.appIcons[key]=await compress(f,200,.8);save();appIconEditor();render();toast('图标已换 🎨');});}
-const LOCKABLE={browser:'浏览器',moments:'朋友圈',spy:'查他手机',shop:'购物',calendar:'日历',x:'X',food:'外卖',games:'游戏大厅',mail:'信箱',offline:'线下约会'};
+const LOCKABLE={browser:'浏览器',moments:'朋友圈',spy:'查他手机',shop:'购物',calendar:'日历',x:'X',douyin:'抖音',food:'外卖',games:'游戏大厅',mail:'信箱',offline:'线下约会'};
 function appLocked(key){return !!(S.couple&&S.couple.locks&&S.couple.locks[key]);}
 function appLk(key){return appLocked(key)?'🔒':'';}
 function openApp(key){if(appLocked(key)){toast('🔒「'+(LOCKABLE[key]||key)+'」被ta锁了，去情侣空间求他解开');go('couple');return;}
-  ({browser:()=>go('browser'),moments:()=>openWeChat('moments'),spy:openSpy,shop:()=>go('shop'),calendar:()=>go('calendar'),x:openX,food:()=>go('food'),games:openGames,mail:()=>go('mail'),offline:openOfflineMenu}[key]||(()=>{}))();}
+  ({browser:()=>go('browser'),moments:()=>openWeChat('moments'),spy:openSpy,shop:()=>go('shop'),calendar:()=>go('calendar'),x:openX,douyin:openDouyin,food:()=>go('food'),games:openGames,mail:()=>go('mail'),offline:openOfflineMenu}[key]||(()=>{}))();}
 
 /* ---------- 软件使用时长 / 限额倒计时（只对授权的软件生效） ---------- */
 // 把当前所在页面映射到 LOCKABLE 的 appKey；不在任何受控软件里返回 null
 function curAppKey(){const p=cur().p;
-  const map={browser:'browser',spy:'spy',shop:'shop',calendar:'calendar',food:'food',mail:'mail',gs:'games',uc:'games',off:'offline',x:'x',xtweet:'x',xdm:'x',xuser:'x'};
+  const map={browser:'browser',spy:'spy',shop:'shop',calendar:'calendar',food:'food',mail:'mail',gs:'games',uc:'games',off:'offline',x:'x',xtweet:'x',xdm:'x',xuser:'x',dy:'douyin',dydm:'douyin'};
   if(map[p])return map[p];
   if(p==='wechat'&&wxTab==='moments')return 'moments';
   return null;}
@@ -917,9 +947,13 @@ function renderSpy(id){const c=getC(id);if(!c)return '';const d=S.spy[id];
     <div style="text-align:center;color:#666;font-size:11px;padding:4px">更新于 ${hm(d.time)}</div>`;}
   const btn=_spyBusy?`<button class="btn g" disabled>⏳ 刷新中…请稍候</button>`:`<button class="btn p" onclick="spyRefresh('${id}')">🔄 刷新内容</button>${d?`<button class="btn g" style="margin-top:8px" onclick="spyReset('${id}')">🗑 重置（清掉旧存档，重新生成全新内容）</button>`:''}`;
   const topbar=_spyBusy?`<div style="text-align:center;color:#b9a6e0;font-size:13px;padding:10px;background:#1c1c1e">⏳ 正在偷看 ta 的手机，请稍候…</div>`:'';
-  body=(spyUsageSec(id)||'')+body;
+  body=(spyUsageSec(id)||'')+(spyDouyinSec(id)||'')+body;
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(c.remark||c.name)}的手机</span><span class="r" onclick="spyRefresh('${id}')">${_spyBusy?'⏳':'🔄'}</span></div>
     ${topbar}<div class="scroll" style="background:#000">${body}<div style="padding:12px">${btn}</div><div style="height:20px"></div></div>`;}
+// 查手机：忆北在抖音点赞过的视频（取消点赞就没记录了）
+function spyDouyinSec(id){const liked=(S.dy&&S.dy.liked)||[];if(!liked.length)return '';
+  const rows=liked.slice(0,12).map(v=>`<div class="it"><span style="font-size:13px;color:#ccc">${v.emoji||'🎬'} @${esc(v.author||'')}：${esc((v.desc||'').slice(0,30))}</span></div>`).join('');
+  return `<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#fe2c55">🎵 ta在抖音点赞的视频（共${liked.length}条）</div>${rows}</div>`;}
 function spyReset(id){if(!confirm('重置他手机内容？\n会清掉这份查手机的旧存档，下次刷新重新生成全新的（不影响聊天/记忆）。'))return;delete S.spy[id];save();render();toast('已重置，点🔄重新生成');}
 // 情侣空间监控到的「忆北今日各App使用时长」——查手机里也能看到（只显示授权的软件）
 function spyUsageSec(id){if(!(S.couple&&S.couple.cid===id))return '';const g=S.couple.grant||{},tl=S.couple.timeLimit||{};
@@ -1112,6 +1146,9 @@ if(S.couple&&S.couple.gagAuth===undefined){S.couple.gagAuth=S.contacts.filter(x=
 if(!S.me.sleep)S.me.sleep={active:null,records:[]};
 if(!S.me.appUsage)S.me.appUsage={date:'',used:{},bonus:{}};
 if(S.couple&&!S.couple.timeLimit)S.couple.timeLimit={};
+if(S.couple&&S.couple.grant&&S.couple.grant.douyin===undefined)S.couple.grant.douyin=true;
+if(!S.dy)S.dy={profile:{nick:'',avatar:null,bio:'记录美好生活✨'},feed:[],liked:[],following:[],dms:[],history:[],users:{}};
+['feed','liked','following','dms','history'].forEach(k=>{if(!Array.isArray(S.dy[k]))S.dy[k]=[];});S.dy.users=S.dy.users||{};S.dy.profile=Object.assign({nick:'',avatar:null,bio:'记录美好生活✨'},S.dy.profile||{});
 function cleanupOld(){const DAY=86400000,now=Date.now();let ch=false;
   if(S.moments){const n=S.moments.length;S.moments=S.moments.filter(p=>now-(p.time||0)<DAY);if(S.moments.length!==n)ch=true;}
   if(S.x&&S.x.tweets){const n=S.x.tweets.length;S.x.tweets=S.x.tweets.filter(t=>now-(t.time||0)<DAY);if(S.x.tweets.length!==n)ch=true;}
@@ -1312,6 +1349,130 @@ function editXProfile(){const p=S.x.profile;openModal(`<h3>编辑 X 资料</h3>
   <div class="two"><div class="field"><label>粉丝数</label><input id="xp_f" type="number" value="${p.fans}"></div><div class="field"><label>关注数</label><input id="xp_g" type="number" value="${p.following}"></div></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){S.x.profile.handle=$('#xp_h').value.trim()||'@me';S.x.profile.bio=$('#xp_b').value.trim();S.x.profile.fans=+$('#xp_f').value||0;S.x.profile.following=+$('#xp_g').value||0;save();closeModal();render();})()">保存</button></div>`);}
 function changeXCover(){pickFile('image/*',async f=>{S.x.profile.cover=await compress(f,900,.6);save();render();toast('背景已换');});}
+
+/* ---------- 抖音 ---------- */
+const DY_GRADS=['linear-gradient(135deg,#fe2c55,#7c1f3a)','linear-gradient(135deg,#25f4ee,#0b6b67)','linear-gradient(135deg,#845ef7,#2b1a5e)','linear-gradient(135deg,#ff922b,#7a3d05)','linear-gradient(135deg,#20c997,#0a4d3a)','linear-gradient(135deg,#f06595,#5e1a3a)','linear-gradient(135deg,#4dabf7,#103a5e)','linear-gradient(135deg,#ffd43b,#7a6308)'];
+let dyTab='feed';let _dyMode='rec';let _dyNarr={};let _dyPaused={};
+function dyNick(){return S.dy.profile.nick||S.me.name;}
+function dyAvatar(){return S.dy.profile.avatar||S.me.avatar;}
+function openDouyin(){dyTab='feed';go('dy');if(!S.dy.feed.length)dyGenFeed('',true);}
+function dyVid(id){return S.dy.feed.find(v=>v.id===id)||S.dy.liked.find(v=>v.id===id);}
+function renderDouyin(){let body;
+  if(dyTab==='feed')body=dyFeedView();else if(dyTab==='search')body=dySearchView();else if(dyTab==='dm')body=dyDMList();else body=dyProfile();
+  const nav=dyTab==='feed'?'':`<div class="dynav"><span class="l" onclick="home()" style="cursor:pointer">‹</span><span style="font-weight:700">${dyTab==='search'?'搜索':dyTab==='dm'?'消息':'我'}</span><span class="r" style="width:14px"></span></div>`;
+  return `${nav}<div style="flex:1;overflow:hidden;display:flex;flex-direction:column">${body}</div>
+    <div class="dytab">${dytb('feed','🏠','首页')}${dytb('search','🔍','搜索')}${dytb('dm','✉️','消息')}${dytb('me','🙂','我')}</div>`;}
+function dytb(k,i,t){return `<div class="t ${dyTab===k?'on':''}" onclick="dyTab='${k}';render()"><div class="i">${i}</div>${t}</div>`;}
+function dyFeedView(){const list=_dyMode==='follow'?S.dy.feed.filter(v=>v.cid&&S.dy.following.includes(v.cid)):S.dy.feed;
+  const top=`<div style="position:absolute;top:8px;left:10px;z-index:7;color:#fff;font-size:22px;cursor:pointer;text-shadow:0 1px 4px rgba(0,0,0,.6)" onclick="home()">‹</div><div class="dytopt"><span class="${_dyMode==='follow'?'on':''}" onclick="_dyMode='follow';render()">关注</span><span class="${_dyMode==='rec'?'on':''}" onclick="_dyMode='rec';render()">推荐</span></div>`;
+  if(!list.length){return `<div style="position:relative;flex:1;background:#000;color:#888;display:flex;align-items:center;justify-content:center;text-align:center;line-height:2;padding:20px">${top}${_dyMode==='follow'?'关注的人还没发视频～<br>去「我的关注」添加角色的抖音<br><br><button class="dybtn out" onclick="dyFollowList()">我的关注</button>':'还没有视频<br><button class="dybtn" onclick="dyGenFeed(\'\',true)">🔄 刷新推荐</button>'}</div>`;}
+  const more=_dyMode==='rec'?`<div class="dyvideo" style="background:#000;color:#888;align-items:center;justify-content:center"><div style="text-align:center"><button class="dybtn" onclick="dyGenFeed('',false)">🔄 刷新更多</button></div></div>`:'';
+  return `<div class="dyfeed" id="dyfeed">${top}${list.map(dyVideoCard).join('')}${more}</div>`;}
+function dyVideoCard(v,i){const liked=!!v.liked;const lc=(v.lk||0)+(liked?1:0);const grad=v.grad||DY_GRADS[i%DY_GRADS.length];const paused=_dyPaused[v.id];
+  const fol=v.cid&&S.dy.following.includes(v.cid);
+  return `<div class="dyvideo${paused?' paused':''}">
+    <div class="dybg" style="background-image:${grad}"></div>
+    <div class="dyemoji">${v.emoji||'🎬'}</div>
+    <div class="dyplay">▶︎</div>
+    <div onclick="dyTapVideo('${v.id}')" style="position:absolute;inset:0;z-index:2"></div>
+    <div class="dyrail">
+      <div class="ra" onclick="dyVideoAuthor('${v.id}')" style="margin-bottom:4px"><div style="position:relative">${av(v.avatar||'🎵','sm')}${v.cid&&!fol?'<span style="position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);width:18px;height:18px;border-radius:50%;background:#fe2c55;color:#fff;font-size:13px;line-height:18px;text-align:center">+</span>':''}</div></div>
+      <div class="ra" onclick="dyLike('${v.id}')"><span class="ic">${liked?'❤️':'🤍'}</span>${lc}</div>
+      <div class="ra" onclick="dyTapVideo('${v.id}')"><span class="ic">📖</span>简介</div>
+      <div class="ra" onclick="dyFwd('${v.id}')"><span class="ic">↗️</span>转发</div>
+      <div class="ra" style="margin-top:2px"><div class="dydisc">🎵</div></div>
+    </div>
+    <div class="dymeta">
+      <div style="font-weight:700;font-size:16px;margin-bottom:5px">@${esc(v.author||'用户')}${v.cid?'<span style="font-size:11px;background:#fe2c55;border-radius:4px;padding:1px 5px;margin-left:6px">角色</span>':''}</div>
+      <div style="font-size:14px;line-height:1.5">${esc(v.desc||'')}</div>
+      <div style="font-size:12px;color:#ddd;margin-top:6px">🎵 ${esc(v.music||'原创音乐')}</div>
+    </div>
+    <div class="dynarr" id="narr_${v.id}" onclick="dyTapVideo('${v.id}')" style="display:${_dyNarr[v.id]?'block':'none'}"><div style="font-weight:700;color:#fe2c55;margin-bottom:6px">📖 视频内容 · 旁白</div>${esc(v.narration||v.desc||'（这条还没有旁白描写）')}<div style="text-align:center;color:#777;margin-top:10px;font-size:12px">点这里收起</div></div></div>`;}
+// 不整页重渲染，避免竖向 feed 滚动位置被重置
+function dyTapVideo(id){const el=document.getElementById('narr_'+id);if(!el)return;const show=el.style.display==='none';el.style.display=show?'block':'none';_dyNarr[id]=show;}
+function dyKeepScroll(fn){const f=$('#dyfeed');const st=f?f.scrollTop:0;fn();render();const g=$('#dyfeed');if(g)g.scrollTop=st;}
+function dyVideoAuthor(id){const v=dyVid(id);if(!v)return;if(!v.cid)return toast('这是网友视频');
+  if(!S.dy.following.includes(v.cid)){S.dy.following.push(v.cid);save();toast('已关注 @'+v.author);dyKeepScroll(()=>{});}}
+function dyLike(id){const v=dyVid(id);if(!v)return;v.liked=!v.liked;
+  if(v.liked){if(!S.dy.liked.find(x=>x.id===v.id))S.dy.liked.unshift(Object.assign({},v));}
+  else S.dy.liked=S.dy.liked.filter(x=>x.id!==v.id);
+  // 同步 feed / liked 里同一条的状态
+  const fv=S.dy.feed.find(x=>x.id===id);if(fv)fv.liked=v.liked;
+  const lv=S.dy.liked.find(x=>x.id===id);if(lv)lv.liked=v.liked;
+  if(cur().p==='dy'&&dyTab==='feed')dyKeepScroll(save);else{save();render();}}
+async function dyGenFeed(topic,replace){const c=(S.couple&&getC(S.couple.cid))||null;toast('加载视频中…');
+  try{const r=await chatAPI([{role:'system',content:'你是抖音短视频内容生成器。生成5条不同的短视频信息，类型要杂（搞笑/萌宠/美食/风景/舞蹈/剧情/知识/情感都行）。只输出JSON数组，不要解释：[{"author":"博主昵称","handle":"@英文id","desc":"视频文案/标题(一句，可带#话题)","narration":"旁白：详细描写这条视频里到底是什么画面、发生了什么(2-4句，像在跟人讲这视频拍了啥)","music":"背景音乐名","emoji":"一个最能代表画面的emoji"}]'},{role:'user',content:topic?('围绕「'+topic+'」生成相关的短视频。'):'生成一批热门推荐短视频。'}],{max:1100,aux:true});
+    const arr=parseArr(r);if(!Array.isArray(arr)||!arr.length)throw new Error('empty');
+    const vids=arr.map((o,i)=>({id:uid(),author:clean(o.author)||'用户'+(10+Math.floor(Math.random()*89)),handle:o.handle||'@user',avatar:'🎵',cid:null,desc:o.desc||'',narration:o.narration||'',music:o.music||'原创音乐',emoji:(o.emoji||'🎬').slice(0,2),grad:DY_GRADS[Math.floor(Math.random()*DY_GRADS.length)],lk:Math.floor(Math.random()*90000),ts:Date.now()}));
+    if(replace)S.dy.feed=vids;else S.dy.feed=S.dy.feed.concat(vids);
+    if(S.dy.feed.length>40)S.dy.feed=S.dy.feed.slice(-40);
+    save();if(cur().p==='dy')render();const f=$('#dyfeed');if(replace&&f)f.scrollTop=0;
+  }catch(e){toast('加载失败，再点一次');}}
+function dySearchView(){const h=S.dy.history||[];
+  return `<div style="padding:12px 14px;background:#000"><div style="display:flex;gap:8px"><input id="dy_q" placeholder="搜你想看的视频…" style="flex:1;border:none;border-radius:18px;padding:9px 14px;background:#1c1c1e;color:#eee;outline:none" onkeydown="if(event.key==='Enter')dyDoSearch($('#dy_q').value)"><button class="dybtn" onclick="dyDoSearch($('#dy_q').value)">搜索</button></div></div>
+    <div style="flex:1;overflow-y:auto;background:#000;padding:14px">
+      ${h.length?`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="color:#888;font-size:13px">搜索记录</span><span onclick="dyClearHistory()" style="color:#fe2c55;font-size:13px;cursor:pointer">🗑 清空</span></div>
+      <div>${h.map((q,i)=>`<span class="dychip"><span onclick="dyDoSearch(${jq(q)})">${esc(q)}</span><span onclick="dyDelHistory(${i})" style="color:#666;margin-left:2px">✕</span></span>`).join('')}</div>`:'<div class="empty" style="padding:30px;color:#888">搜你想看的，比如「猫咪」「美食教程」「治愈风景」</div>'}
+    </div>`;}
+function dyDoSearch(q){q=(q||'').trim();if(!q)return;S.dy.history=S.dy.history||[];S.dy.history=S.dy.history.filter(x=>x!==q);S.dy.history.unshift(q);if(S.dy.history.length>20)S.dy.history=S.dy.history.slice(0,20);save();dyTab='feed';_dyMode='rec';dyGenFeed(q,true);}
+function dyClearHistory(){if(!confirm('清空全部搜索记录？'))return;S.dy.history=[];save();render();toast('已清空搜索记录');}
+function dyDelHistory(i){S.dy.history.splice(i,1);save();render();}
+function dyFwd(id){const v=dyVid(id);if(!v)return;const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){toast('先创建角色');return;}
+  window._fwDy=v;if(cs.length===1)return doDyFwd(cs[0].id);
+  openModal(`<h3>把视频转发给</h3>${cs.map(c=>`<div class="section"><div class="it" onclick="doDyFwd('${c.id}')">${esc(c.remark||c.name)}<span class="v">›</span></div></div>`).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+function doDyFwd(cid){const v=window._fwDy;if(!v)return;pushMsg(cid,{role:'user',type:'dycard',author:v.author,desc:v.desc,narration:v.narration,emoji:v.emoji,id:uid()});closeModal();toast('已转发到微信');scheduleReply(cid);}
+/* 关注 */
+function dyFollowList(){const fl=S.dy.following.map(getC).filter(Boolean);
+  openModal(`<h3>我的关注（${fl.length}）</h3><div style="max-height:60vh;overflow:auto">
+    ${fl.length?fl.map(c=>`<div class="section"><div class="it">${av(c.avatar,'sm')}<div class="meta" style="flex:1"><div class="n">${esc(c.remark||c.name)}</div><div class="s">${esc(c.signature||'')}</div></div><button class="minibtn" onclick="dyGenContactVideo('${c.id}')">看TA视频</button> <button class="minibtn" onclick="dyUnfollow('${c.id}')">取关</button></div></div>`).join(''):'<div class="empty">还没关注谁</div>'}
+  </div><button class="btn p" style="margin-top:8px" onclick="closeModal();dyAddFollow()">＋ 添加角色的抖音</button><button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
+function dyAddFollow(){const cs=S.contacts.filter(c=>!c.deleted&&!S.dy.following.includes(c.id));
+  openModal(`<h3>添加角色抖音</h3>${cs.length?cs.map(c=>`<div class="section"><div class="it" onclick="dyDoFollow('${c.id}')">${esc(c.remark||c.name)}<span class="v">＋ 关注</span></div></div>`).join(''):'<div class="empty">没有可添加的角色了</div>'}<button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+function dyDoFollow(cid){if(!S.dy.following.includes(cid))S.dy.following.push(cid);save();closeModal();toast('已关注，去刷TA的视频吧');dyGenContactVideo(cid);}
+function dyUnfollow(cid){S.dy.following=S.dy.following.filter(x=>x!==cid);save();closeModal();render();}
+async function dyGenContactVideo(cid){const c=getC(cid);if(!c)return;if(!S.dy.following.includes(cid))S.dy.following.push(cid);closeModal();toast('生成中…');
+  try{const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'你在抖音发了一条短视频。只输出JSON：{"desc":"视频文案(一句，可带#话题)","narration":"旁白：这条视频里你拍了什么画面、在做什么(2-4句)","music":"配乐名","emoji":"代表画面的emoji"}'}],{max:400,aux:true});
+    const o=parseObj(r);S.dy.feed.unshift({id:uid(),author:c.remark||c.name,handle:'@'+(c.name||'').replace(/\s/g,''),avatar:c.avatar,cid:cid,desc:o.desc||'',narration:o.narration||'',music:o.music||'原创音乐',emoji:(o.emoji||'🎬').slice(0,2),grad:DY_GRADS[Math.floor(Math.random()*DY_GRADS.length)],lk:Math.floor(Math.random()*5000),ts:Date.now()});
+    save();dyTab='feed';_dyMode='follow';if(cur().p==='dy')render();else go('dy');const f=$('#dyfeed');if(f)f.scrollTop=0;
+  }catch(e){toast('生成失败');}}
+/* 私信 */
+function dyDMList(){const ds=S.dy.dms||[];
+  return `<div style="padding:10px 14px;text-align:right;background:#000;border-bottom:.5px solid #222"><button class="dybtn out" onclick="dyDMPick()">＋ 私信角色</button></div>
+    <div style="flex:1;overflow-y:auto;background:#000">${ds.length?ds.map(d=>{const last=d.msgs[d.msgs.length-1];return `<div class="xdmrow"><span onclick="go('dydm',{id:'${d.id}'})">${av(d.avatar,'sm')}</span><div class="meta" onclick="go('dydm',{id:'${d.id}'})"><div class="n" style="color:#eee">${esc(d.name)}</div><div class="s">${last?esc((last.from==='me'?'我：':'')+last.text):''}</div></div><span onclick="S.dy.dms=S.dy.dms.filter(z=>z.id!=='${d.id}');save();render()" style="color:#fa5151;cursor:pointer;padding:0 6px">✕</span></div>`;}).join(''):'<div class="empty" style="padding:40px">还没有私信，点上面「私信角色」开始聊</div>'}</div>`;}
+function dyDMPick(){const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){toast('先创建角色');return;}
+  openModal(`<h3>私信谁</h3>${cs.map(c=>`<div class="section"><div class="it" onclick="openDyDM('${c.id}')">${esc(c.remark||c.name)}<span class="v">›</span></div></div>`).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+function openDyDM(cid){const c=getC(cid);if(!c)return;let d=S.dy.dms.find(x=>x.cid===cid);if(!d){d={id:uid(),cid,name:c.remark||c.name,avatar:c.avatar,msgs:[]};S.dy.dms.unshift(d);save();}closeModal();go('dydm',{id:d.id});}
+function renderDyDM(id){const d=S.dy.dms.find(x=>x.id===id);if(!d)return '';
+  return `<div class="dynav"><span class="l" onclick="back()" style="cursor:pointer">‹</span><span style="font-weight:700">${esc(d.name)}</span><span class="r" style="width:14px"></span></div>
+    <div class="xscroll" id="dydmbox" style="padding:10px 14px;background:#111">${d.msgs.map(m=>`<div class="xmsg ${m.from==='me'?'me':''}"><div class="xmwrap"><div class="b">${esc(m.text)}</div><div class="xmt">${m.time?hm(m.time):''}</div></div></div>`).join('')||'<div class="empty" style="padding:30px">抖音私信，发条消息打个招呼吧</div>'}</div>
+    <div class="inputbar"><textarea id="dydm_in" rows="1" placeholder="发私信…"></textarea><button class="send" onclick="dySendDM('${id}')">发送</button></div>`;}
+function dySendDM(id){const d=S.dy.dms.find(x=>x.id===id);const inp=$('#dydm_in');const v=inp?inp.value.trim():'';if(!v)return;
+  d.msgs.push({from:'me',text:v,time:Date.now()});save();render();const b=$('#dydmbox');if(b)b.scrollTop=b.scrollHeight;dyDMReply(d);}
+async function dyDMReply(d){try{const c=d.cid?getC(d.cid):null;if(!c)return;
+  const hist=d.msgs.slice(-10).map(m=>({role:m.from==='me'?'user':'assistant',content:m.text}));
+  const r=await chatAPI([{role:'system',content:buildSystem(c)+'\n\n# 场景\n现在是在【抖音私信】里和'+S.me.name+'聊天，口语、简短自然，别带方括号动作。'},...hist],{max:220,aux:true});
+  d.msgs.push({from:'them',text:cleanReply(r),time:Date.now()});save();if(cur().p==='dydm')render();const b=$('#dydmbox');if(b)b.scrollTop=b.scrollHeight;}catch(e){}}
+/* 我的主页 */
+function dyProfile(){const liked=S.dy.liked||[];
+  return `<div style="flex:1;overflow-y:auto;background:#000;color:#eee">
+    <div style="text-align:center;padding:20px 14px">
+      <div onclick="changeDyAvatar()" style="cursor:pointer;display:inline-block">${av(dyAvatar(),'lg')}</div>
+      <div style="font-size:19px;font-weight:700;margin-top:8px">${esc(dyNick())}</div>
+      <div style="color:#888;font-size:13px;margin-top:4px">${esc(S.dy.profile.bio||'')}</div>
+      <div style="margin-top:10px;display:flex;justify-content:center;gap:8px"><button class="dybtn out" onclick="editDyProfile()">编辑资料</button><button class="dybtn out" onclick="dyFollowList()">我的关注 ${S.dy.following.length}</button></div>
+    </div>
+    <div style="border-top:.5px solid #222;padding:12px 14px;font-weight:700">❤️ 我的喜欢（${liked.length}）</div>
+    ${liked.length?`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:0 2px">${liked.map(v=>`<div onclick="dyOpenLiked('${v.id}')" style="position:relative;aspect-ratio:3/4;background:${v.grad||DY_GRADS[0]};border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:34px;cursor:pointer"><span>${v.emoji||'🎬'}</span><span style="position:absolute;left:4px;bottom:3px;font-size:10px;color:#fff">❤️${(v.lk||0)+1}</span></div>`).join('')}</div>`:'<div class="empty" style="padding:30px;color:#888">还没点赞过视频～点赞的会出现在这里</div>'}
+    <div style="height:16px"></div>`;}
+function dyOpenLiked(id){const v=S.dy.liked.find(x=>x.id===id);if(!v)return;
+  openModal(`<h3>${esc(v.emoji||'🎬')} @${esc(v.author)}</h3><div style="font-size:14px;line-height:1.6;color:#333">${esc(v.desc||'')}</div>
+    <div style="background:#f4f4f6;border-radius:10px;padding:10px;margin-top:10px;font-size:13px;line-height:1.7;color:#555"><b>📖 旁白：</b>${esc(v.narration||'（无）')}</div>
+    <div class="btns" style="margin-top:12px"><button class="btn d" onclick="dyLike('${id}');closeModal()">取消点赞</button><button class="btn g" onclick="closeModal()">关闭</button></div>`);}
+function changeDyAvatar(){pickFile('image/*',async f=>{S.dy.profile.avatar=await compress(f,300,.8);save();render();toast('头像已换 🎨');});}
+function editDyProfile(){const p=S.dy.profile;openModal(`<h3>编辑抖音资料</h3>
+  <div class="field"><label>昵称</label><input id="dyp_n" value="${esc(p.nick||S.me.name)}"></div>
+  <div class="field"><label>简介</label><input id="dyp_b" value="${esc(p.bio||'')}"></div>
+  <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){S.dy.profile.nick=$('#dyp_n').value.trim();S.dy.profile.bio=$('#dyp_b').value.trim();save();closeModal();render();})()">保存</button></div>`);}
 
 /* ---------- 微信主界面 ---------- */
 function renderWeChat(){
@@ -1873,7 +2034,7 @@ function coupleSet(){openModal(`<h3>在一起的日子</h3><div class="field"><l
 function addAnniv(){openModal(`<h3>添加纪念日</h3><div class="field"><label>日期</label><input id="an_d" type="date" value="${todayStr()}"></div><div class="field"><label>名称</label><input id="an_t" placeholder="第一次见面 / 订婚…"></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var d=$('#an_d').value,t=$('#an_t').value.trim();if(!d||!t){toast('填日期和名称');return;}S.couple.anniversaries=S.couple.anniversaries||[];S.couple.anniversaries.push({date:d,title:t});S.couple.anniversaries.sort((a,b)=>a.date<b.date?-1:1);save();closeModal();render();})()">保存</button></div>`);}
 function previewOf(m){if(m.role==='assistant'){if(m.type==='familycard')return '[亲属卡邀请]';if(m.type==='namecard')return '[推荐好友：'+(m.cname||'')+']';if(m.type==='dateinvite')return '[约会邀请]';return splitBubbles(m.content)[0]||'[消息]';}
-  return ({text:m.content,image:'[照片]',transfer:'[转账]',redpacket:'[红包]',location:'[位置]',file:'[文件]',spycard:'[查看权限]',dice:'[骰子]',gift:'[礼物]',paycard:'[求代付]',paid:'[已代付]',tweetcard:'[X推文]',tcollect:'[已收款]',treject:'[已退还]',chatlog:'[聊天记录]',food:'[外卖]',payreject:'[拒绝代付]',voice:'[语音]',sticker:'[表情]',namecard:'[名片]',familybuy:'[亲属卡消费]',familyreq:'[亲属卡申请]',weblink:'[网页]',dateinvite:'[约会邀请]',sys:m.content})[m.type]||'[消息]';}
+  return ({text:m.content,image:'[照片]',transfer:'[转账]',redpacket:'[红包]',location:'[位置]',file:'[文件]',spycard:'[查看权限]',dice:'[骰子]',gift:'[礼物]',paycard:'[求代付]',paid:'[已代付]',tweetcard:'[X推文]',dycard:'[抖音视频]',tcollect:'[已收款]',treject:'[已退还]',chatlog:'[聊天记录]',food:'[外卖]',payreject:'[拒绝代付]',voice:'[语音]',sticker:'[表情]',namecard:'[名片]',familybuy:'[亲属卡消费]',familyreq:'[亲属卡申请]',weblink:'[网页]',dateinvite:'[约会邀请]',sys:m.content})[m.type]||'[消息]';}
 
 let _ctSearch='';
 function ctSearchInput(v){_ctSearch=v;const box=$('#ctlist');if(box)box.innerHTML=ctListHTML();}
@@ -2214,6 +2375,7 @@ function buildPart(c,m,me){
   if(m.type==='paycard'){return `<div class="card"><div class="cpay" style="background:#f7a23b"><div class="big">💳</div><div><div class="t1">求代付 ¥${(+m.price).toFixed(2)}</div><div class="t2">${esc(m.name)}</div></div></div><div class="cfoot">${esc(m.shop||'商城')} · 好友代付</div></div>`;}
   if(m.type==='paid'){return `<div class="card"><div class="cpay" style="background:#2bb36a"><div class="big">✅</div><div><div class="t1">已代付 ¥${(+m.price).toFixed(2)}</div><div class="t2">${esc(m.name)}</div></div></div><div class="cfoot">好友代付成功</div></div>`;}
   if(m.type==='tweetcard'){return `<div class="card" style="width:240px;background:#16181c;border:1px solid #2f3336"><div style="padding:11px"><div style="color:#71767b;font-size:11px;margin-bottom:4px">𝕏 来自X的推文</div><div style="color:#e7e9ea;font-size:13px;font-weight:700">${esc(m.tname)} <span style="color:#71767b;font-weight:400">${esc(m.thandle||'')}</span></div><div style="color:#d7d9db;font-size:13px;margin-top:4px">${esc(m.ttext)}</div></div></div>`;}
+  if(m.type==='dycard'){return `<div class="card" style="width:230px;background:#16181c;border:1px solid #333;overflow:hidden"><div style="height:120px;background:${DY_GRADS[0]};display:flex;align-items:center;justify-content:center;font-size:48px;position:relative">${esc(m.emoji||'🎬')}<span style="position:absolute;left:8px;top:6px;color:#fff;font-size:11px;font-weight:700">🎵 抖音</span><span style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:34px;color:rgba(255,255,255,.7)">▶︎</span></div><div style="padding:9px 11px"><div style="color:#fff;font-size:13px;font-weight:700">@${esc(m.author||'用户')}</div><div style="color:#ccc;font-size:12px;margin-top:3px">${esc(m.desc||'')}</div></div></div>`;}
   if(m.type==='chatlog'){const prev=(m.lines||[]).slice(0,3).map(l=>l.who+'：'+l.text).join('\n');return `<div class="card" style="width:240px;background:#2c2c2e" onclick="event.stopPropagation();openChatlog('${m.id}')"><div style="padding:11px"><div style="color:#9ec5fe;font-size:13px;font-weight:700;margin-bottom:5px">📑 ${esc(m.title)}</div><div style="color:#aaa;font-size:12px;white-space:pre-wrap;line-height:1.5">${esc(prev)}${(m.lines||[]).length>3?'\n…':''}</div></div><div class="cfoot" style="background:rgba(255,255,255,.06);color:#888">共${(m.lines||[]).length}条 · 点击查看</div></div>`;}
   if(m.type==='tcollect'){return `<div class="card"><div class="cpay done"><div class="big">💰</div><div><div class="t1">已收款</div><div class="t2">¥${(+m.amount).toFixed(2)} 对方已收下你的转账</div></div></div><div class="cfoot">微信转账</div></div>`;}
   if(m.type==='treject'){return `<div class="card"><div class="cpay" style="background:#8a8a8a"><div class="big">↩️</div><div><div class="t1">已退还</div><div class="t2">¥${(+m.amount).toFixed(2)} 对方拒收了转账</div></div></div><div class="cfoot">微信转账 · 已退回你钱包</div></div>`;}
@@ -2367,7 +2529,7 @@ function doLoc(id){const n=$('#lc_n').value.trim();if(!n){toast('填地点呀');
 function splitBubbles(text){return (text||'').split('\n').map(s=>s.trim()).filter(Boolean);}
 function splitActions(line){const out=[];const re=/[（(【][^）)】]*[）)】]/g;let last=0,m;while((m=re.exec(line))){const before=line.slice(last,m.index).trim();if(before)out.push(before);out.push(m[0].trim());last=re.lastIndex;}const tail=line.slice(last).trim();if(tail)out.push(tail);return out.length?out:[line];}
 const TAGWORDS='心情值|心情|记住|闹钟|日程|发朋友圈|发推|点外卖|语音|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|限时|加时|约会';
-const APPNAME2KEY={'浏览器':'browser','搜索':'browser','上网':'browser','百度':'browser','朋友圈':'moments','动态':'moments','查他手机':'spy','查岗':'spy','查手机':'spy','购物':'shop','淘宝':'shop','商城':'shop','日历':'calendar','日程':'calendar','x':'x','X':'x','推特':'x','微博':'x','推':'x','外卖':'food','点餐':'food','游戏':'games','游戏大厅':'games','打游戏':'games','信箱':'mail','邮箱':'mail','邮件':'mail','线下约会':'offline','线下':'offline','约会':'offline'};
+const APPNAME2KEY={'浏览器':'browser','搜索':'browser','上网':'browser','百度':'browser','朋友圈':'moments','动态':'moments','查他手机':'spy','查岗':'spy','查手机':'spy','购物':'shop','淘宝':'shop','商城':'shop','日历':'calendar','日程':'calendar','x':'x','X':'x','推特':'x','微博':'x','推':'x','抖音':'douyin','短视频':'douyin','刷视频':'douyin','刷抖音':'douyin','外卖':'food','点餐':'food','游戏':'games','游戏大厅':'games','打游戏':'games','信箱':'mail','邮箱':'mail','邮件':'mail','线下约会':'offline','线下':'offline','约会':'offline'};
 function genPwd(){return String(1000+Math.floor(Math.random()*9000));}
 function _appKeys(arg,pool,filt){if(/全部|所有|全锁|全/.test(arg))return pool.filter(filt);return arg.split(/[、,，\/\s]+/).map(x=>APPNAME2KEY[x.replace(/[「」『』"'《》]/g,'').trim()]).filter(k=>k&&filt(k));}
 // 角色嘴上说"拉黑了"却没真拉黑——这里读ta的话真正拉黑/加回
@@ -2401,7 +2563,7 @@ function applyControlTags(content,c,id,statedPwd){
   _ctFired=changed;if(changed){save();if(cur().p==='wechat'||cur().p==='home')render();}
   return out;}
 let _ctFired=false;
-const APP_NLWORDS={browser:['浏览器','搜索','上网'],games:['游戏大厅','打游戏','游戏'],x:['推特','微博','X'],food:['外卖','点餐'],shop:['购物','淘宝','商城'],moments:['朋友圈','动态'],mail:['信箱','邮箱','邮件'],offline:['线下约会','线下','约会'],calendar:['日历','日程'],spy:['查他手机','查岗','查手机']};
+const APP_NLWORDS={browser:['浏览器','搜索','上网'],games:['游戏大厅','打游戏','游戏'],x:['推特','微博','X'],douyin:['抖音','短视频','刷视频'],food:['外卖','点餐'],shop:['购物','淘宝','商城'],moments:['朋友圈','动态'],mail:['信箱','邮箱','邮件'],offline:['线下约会','线下','约会'],calendar:['日历','日程'],spy:['查他手机','查岗','查手机']};
 // 模型常常"只用嘴说锁了"而不发指令——这里直接解析ta的话，把锁/禁言真正落地，并用ta说出口的密码
 async function extractControl(reply,c,statedPwd){
   if(!(S.couple&&S.couple.cid===c.id))return;
