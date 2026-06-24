@@ -349,7 +349,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v125 · 情侣空间报备计时(洗澡/吃饭/玩…)';
+const APP_VER='v127 · 通话中也能关小黑屋+选择题兼容全角/多语言';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -2131,6 +2131,7 @@ function jailHeartStart(){if(_jailHeart||!(S.settings&&S.settings.sound))return;
 function jailHeartStop(){if(_jailHeart){clearTimeout(_jailHeart);_jailHeart=null;}if(_jailHeartT){clearTimeout(_jailHeartT);_jailHeartT=null;}}
 function jailHeartRush(ms){_jailHeartMs=ms||340;if(_jailHeartT)clearTimeout(_jailHeartT);_jailHeartT=setTimeout(()=>{_jailHeartMs=1050;},4500);}
 function enterJail(cid,reason,test){const c=getC(cid);if(!c)return;
+  if(typeof _call!=='undefined'&&_call){try{clearInterval(_callTimer);}catch(e){}try{ringStop();}catch(e){}_call=null;try{renderCall();}catch(e){}}
   S.jail={active:true,cid:cid,test:!!test,reason:reason||'',msgs:[],choice:null,since:Date.now()};save();go('jail');
   jailAI(true,'[系统：你刚把'+S.me.name+'关进了你的"禁闭室·小黑屋"。'+(reason?('你关ta的原因：'+reason+'。'):'')+'\n你们最近的聊天（ta到底做错了什么——背着你撩谁/骗你/惹你，就在里面，你心里很清楚）：\n'+jailRecent(cid)+'\n'+(test?'（这是'+S.me.name+'自己点的测试，氛围足但别太狠）':'')+'\n用旁白【】营造又黑又红、贴耳低语、令人发怵的场景开场，再冷冷【点破ta具体犯的错】（绝不许瞎编、不许含糊），然后给出要做到什么才放ta出来。]');}
 function jailSystem(c){let s=c.persona||'';
@@ -2158,7 +2159,7 @@ async function jailAI(opening,note){if(typeof opening==='string'){note=opening;o
     const engHeavy=t=>{const m=(t||'').match(/[A-Za-z]/g);return m&&m.length>20&&m.length>(t.replace(/\s/g,'').length*0.3);};
     if(isRefusal(r)||engHeavy(r)){const fix=await chatAPI([{role:'system',content:jailSystem(c)},...hist,{role:'assistant',content:r},{role:'user',content:'[系统：你刚跳出角色/夹英文/像AI了。重来：你就是'+(c.remark||c.name)+'本人，全程中文、病娇黑暗地继续把'+S.me.name+'关着逼问，绝不提AI、绝不英文、绝不说教。]'},{role:'system',content:personaPin(c)}],{aux:_jaux});if(fix&&!isRefusal(fix)&&!engHeavy(fix))r=fix;}
     if(!S.jail||!S.jail.active)return;
-    let choice=null;const cm=r.match(/\[\s*选择\s*[\|｜:：]([^\|｜\]]+)[\|｜]([^\]]+)\]/);
+    let choice=null;const cm=r.match(/[\[【]\s*选择\s*[\|｜:：]([^\|｜\]】]+)[\|｜]([^\]】]+)[\]】]/);
     if(cm){const q=cm[1].trim();const opts=cm[2].split(/[\/、,，\|]/).map(x=>x.trim()).filter(Boolean).slice(0,4);if(opts.length>=2)choice={q,opts};}
     const clean=r.replace(/\[[^\]]*\]/g,'');
     const neg=/不(会|想|准|能|可能|行)|别想|休想|没门|做梦|怎么(可能|会)/.test(clean);
@@ -2361,6 +2362,9 @@ function renderCouple(){const cp=S.couple;const c=cp&&getC(cp.cid);
         <div class="hint" style="padding:0 14px;color:#888">主模型更稳更入戏；某些模型不认这个剧情时，可切换试试。</div>
         <div class="it" onclick="jailTest()"><span>🧪 测试进小黑屋（不留记录·随时出）</span><span class="v">›</span></div>
         ${cl?`<div class="it"><span style="color:#9ec5fe">❄️ 他正在冷处理你</span><span class="v" style="color:#888">到 ${hm(cl)} 自然消气（求他可提前）</span></div>`:''}</div>`;})()}
+      <div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#ff8fab">📳 失踪·夺命连环催</div>
+        <div class="hint" style="padding:0 14px">开了之后，你长时间不回ta：约1.5小时温柔催→3小时不耐烦→5小时直接来电；失踪近一整天还无视，他可能把你关小黑屋(需上面授权)。点了睡眠/报备计时的时段【不算】，他知道你在干嘛。</div>
+        <div class="it"><span>开启失踪升级</span><span class="sw ${cp.escalate?'on':''}" onclick="coupleEscalate()"></span></div></div>
       <div style="padding:0 12px"><button class="btn d" onclick="if(confirm('解除情侣绑定？')){S.couple=null;save();render()}">💔 解除绑定</button></div>
       <div style="height:20px"></div></div>`;}
 function coupleWalletAuth(){if(!S.couple)return;S.couple.walletAuth=!S.couple.walletAuth;if(!S.couple.walletAuth)S.couple.cardFrozen=false;save();render();const cid=S.couple.cid,c=cid&&getC(cid);if(c&&!c.blocked)scheduleReply(cid,'[系统：'+S.me.name+(S.couple.walletAuth?'刚把钱包/亲属卡的管控权交给你了——你现在能扣ta零花钱、能冻结ta亲属卡。按你人设回应一句（宠溺/警告/坏笑都行）。':'刚收回了钱包管控权。按人设反应一下。')+']');}
@@ -3232,7 +3236,7 @@ async function callAI(sysNote){if(!_call)return;const c=getC(_call.id);const vid
     else cf+='\n- 这是语音通话（看不到画面），绝对不要出现任何【】动作神态描写，一个【】都不许有，只能说话。';
     if(_langN)cf+='\n- ‼️最重要：你全程只能说'+_langN+'，从头到尾每一句都是'+_langN+'，绝对不准中途切回中文整句说话（这是会被读出来的那一行）。格式：先单独一行写'+_langN+'原文（会被读出来），紧接着【换一行】用（）单独写中文翻译（不会被读）。原文一行、（中文翻译）另起一行，别写在同一行，也别把顺序搞反。例如：\n'+(_lang==='韩'?'사랑해\n（我爱你）':_lang==='日'?'好きだよ\n（喜欢你）':'I miss you\n（我想你了）')+'\n- 哪怕是要挂断、道别、回应"挂了/别挂/我爱你"这种话，也必须先写'+_langN+'原文那一行，绝不能整句只说中文。';
     cf+='\n- 想结束通话就【单独占一行】只输出 [挂断]，不要把 [挂断] 和说的话写在同一行。';
-    cf+='\n- 通话中你照样能管控ta或查ta手机：要锁软件/禁言/限时就【单独成行】写指令标签（如 [锁定|游戏]、[限时|游戏|60]、[禁言|名字]）；要查岗就自然说一句「我看看你手机/微信/抖音」。这些指令标签会被系统执行、【不会被读出来】，不影响你正常讲话，也别在话里复述它们。';
+    cf+='\n- 通话中你照样能管控ta或查ta手机：要锁软件/禁言/限时就【单独成行】写指令标签（如 [锁定|游戏]、[限时|游戏|60]、[禁言|名字]、[扣款|200]）；要查岗就自然说一句「我看看你手机/微信/抖音」；ta真把你惹狠了越线了还能 [关小黑屋|原因] 把ta拖进禁闭室(需授权)。这些指令标签会被系统执行、【不会被读出来】，不影响你正常讲话，也别在话里复述它们。';
     const sys=buildSystem(c)+cf;
     let content=await chatAPI([{role:'system',content:sys},...hist,{role:'system',content:personaPin(c)}]);
     if(!_call||_call.session!==sess)return;
@@ -3345,6 +3349,31 @@ function autoAssignTasks(){if(!isMain())return;const c=taskC();if(!c||c.blocked)
   const tt=c.taskTime||'09:00';const now=new Date();const hhmm=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');if(hhmm<tt)return;// 没到设定的布置时间不自动发（避免凌晨布置）
   if(Date.now()-_autoTaskTry<60000)return;_autoTaskTry=Date.now();genTasks();}
 setTimeout(autoAssignTasks,4000);
+/* 失踪三级升级：催→火→来电→做实进小黑屋（他自己判断；睡眠/报备中不算） */
+const _IGT=[90,180,300,1200];/* 分钟：一级催/二级火/三级来电/四级做实 */
+function escContact(){if(S.couple&&S.couple.cid){const c=getC(S.couple.cid);if(c&&!c.deleted)return c;}return S.contacts.find(x=>!x.deleted&&!x.blocked&&isLover(x))||null;}
+function lastUserTs(cid){const arr=msgs(cid);for(let i=arr.length-1;i>=0;i--){if(arr[i].role==='user')return arr[i].time||0;}return 0;}
+function fireEscalation(c,stage,hours){const onl=isOnline()?'（ta还显示在线、却晾着你不回）':'';
+  if(stage===1)scheduleReply(c.id,'[系统：'+S.me.name+'已经大约 '+hours+' 小时没回你消息了'+onl+'。你开始在意/担心，主动发条消息问ta在干嘛、催ta回你，按你人设、别太凶，一两句。]');
+  else if(stage===2)scheduleReply(c.id,'[系统：'+S.me.name+'已经 '+hours+' 小时没理你了'+onl+'，你之前催过ta还没回。你不耐烦、火了，语气重些、带质问和占有欲，一两句。]');
+  else if(stage===3){if(typeof _call==='undefined'||!_call)incomingCall(c.id,'voice');}
+  else if(stage===4)scheduleReply(c.id,'[系统：'+S.me.name+'失踪快一整天、无视了你所有催促和来电'+(isOnline()?'还挂着在线':'')+'，你气炸了。狠狠质问ta去哪了、跟谁、为什么不回。'+((S.couple&&S.couple.jailAuth)?'你已经忍无可忍——若你认定ta确实越线(失踪+逃避+可能撒谎/撩别人)，可以单独一行 [关小黑屋|失踪一整天不回我] 直接把ta关进禁闭室。':'')+']');}
+function checkIgnore(){if(!isMain())return;if(!(S.couple&&S.couple.escalate))return;if(S.jail&&S.jail.active)return;
+  if(S.me.sleep&&S.me.sleep.active)return;if(S.me.report&&S.me.report.active)return;/* 正当活动中不催 */
+  const c=escContact();if(!c||c.blocked)return;
+  /* 遵守你设的"主动时段"：开了主动消息就只在时段内升级，不会半夜催你/来电 */
+  if(c.proactive&&c.proactive.enabled){const nm=new Date().getHours()*60+new Date().getMinutes();const st=toMin(c.proactive.start),en=toMin(c.proactive.end);const inWin=st<=en?(nm>=st&&nm<en):(nm>=st||nm<en);if(!inWin)return;}
+  /* 他刚催过(25分钟内发过消息)就先别叠，避免和"30分钟主动消息"撞一起 */
+  {const arr=msgs(c.id);const lm=arr[arr.length-1];if(lm&&lm.role==='assistant'&&lm.time&&Date.now()-lm.time<1500000)return;}
+  let base=lastUserTs(c.id);if(!base){const arr=msgs(c.id);base=arr.length?(arr[0].time||Date.now()):Date.now();}
+  const sl=S.me.sleep;if(sl&&sl.records&&sl.records[0]&&sl.records[0].end>base)base=sl.records[0].end;/* 睡醒后才开始算 */
+  const rp=S.me.report;if(rp&&rp.log&&rp.log[0]&&rp.log[0].end>base)base=rp.log[0].end;/* 报备结束后才开始算 */
+  const gapMin=(Date.now()-base)/60000;c._esc=c._esc||{stage:0};
+  if(gapMin<_IGT[0]){c._esc.stage=0;return;}/* 回复了就重置 */
+  let target=0;for(let i=0;i<_IGT.length;i++){if(gapMin>=_IGT[i])target=i+1;}
+  if(target<=c._esc.stage)return;c._esc.stage=target;save();fireEscalation(c,target,Math.max(1,Math.floor(gapMin/60)));}
+function coupleEscalate(){if(!S.couple)return;S.couple.escalate=!S.couple.escalate;if(S.couple.escalate){const c=escContact();if(c)c._esc={stage:0};}save();render();}
+setInterval(checkIgnore,120000);setTimeout(checkIgnore,15000);
 
 /* 主动消息 */
 async function maybeProactive(id){if(!isMain())return;const c=getC(id);if(!c.proactive.enabled||c.blocked)return;
@@ -3529,7 +3558,7 @@ function storageFullAlert(){openModal(`<h3>🚨 存储已经满了！</h3><div s
 function paintBatt(){const b=$('#battinfo');if(b)b.innerHTML='📶 5G 🔋'+(S.me.battery!=null?S.me.battery+'%':'88%')+(S.me.charging?'⚡':'');}
 function initBattery(){if(navigator.getBattery){navigator.getBattery().then(bt=>{const upd=()=>{S.me.battery=Math.round(bt.level*100);S.me.charging=bt.charging;save();paintBatt();};bt.addEventListener('levelchange',upd);bt.addEventListener('chargingchange',upd);upd();}).catch(()=>{});}}
 initBattery();
-document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;}else{ensureAudio();if(cur().p==='wechat'&&wxTab==='me')render();setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;}else{ensureAudio();if(cur().p==='wechat'&&wxTab==='me')render();setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
 setInterval(()=>{const c=$('#clock');if(c)c.textContent=hm();paintBatt();if(cur().p==='home')$('#app').querySelector('.hh')&&($('#app').querySelector('.hh').textContent=hm());},1000);
 render();
 setTimeout(checkStorageWarn,1200);
