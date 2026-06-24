@@ -327,7 +327,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v115 · 通话查岗看几轮聊天+他自己标重点';
+const APP_VER='v116 · 通话记录恢复单条删除';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1952,7 +1952,7 @@ function renderCallLog(id){const c=getC(id);if(!c)return '';
     const kind=g.ck==='video'?'📹 视频通话':'📞 语音通话';
     const dateStr=first.time?fmtDate(first.time):'';const st=first.time?hm(first.time):'';const et=last.time?hm(last.time):'';
     const inner=g.msgs.map(m=>{const who=m.role==='user'?S.me.name:(c.remark||c.name);const txt=m.type==='voice'?('🎙️ '+(m.content||'语音')):(m.content||'');
-      return `<div style="padding:6px 0;border-top:.5px solid #242428"><div style="font-size:11px;color:#888;display:flex;justify-content:space-between"><span>${esc(who)}</span><span onclick="clEdit('${id}','${m.id}')" style="color:#54a0ff;cursor:pointer">✎改</span></div><div style="color:#ddd;white-space:pre-wrap;font-size:14px;margin-top:2px">${esc(txt)}</div></div>`;}).join('');
+      return `<div style="padding:6px 0;border-top:.5px solid #242428"><div style="font-size:11px;color:#888;display:flex;justify-content:space-between"><span>${esc(who)}</span><span><span onclick="clEdit('${id}','${m.id}')" style="color:#54a0ff;cursor:pointer">✎改</span><span onclick="clDel('${id}','${m.id}')" style="color:#fa5151;cursor:pointer;margin-left:14px">✕删</span></span></div><div style="color:#ddd;white-space:pre-wrap;font-size:14px;margin-top:2px">${esc(txt)}</div></div>`;}).join('');
     return `<div style="margin:10px;border:1px solid #2a2a2c;border-radius:14px;overflow:hidden;background:#141416">
       <div style="background:#1e1e22;padding:9px 12px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div style="min-width:0"><div style="font-size:13px;color:#9ec5fe;font-weight:600">${kind} · 第${gi+1}通</div><div style="font-size:11px;color:#888;margin-top:2px">${dateStr}　🟢开始 ${st} — 🔴结束 ${et}</div></div><span onclick="clDelSession('${id}','${g.cs}')" style="color:#fa5151;font-size:12px;cursor:pointer;white-space:nowrap">🗑 删这通</span></div>
       <div style="padding:2px 12px 10px">${inner}</div></div>`;}).join('');
