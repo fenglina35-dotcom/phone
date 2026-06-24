@@ -296,7 +296,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v70 · 拉黑不误判报备';
+const APP_VER='v71 · 计步持续+每天23点报';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -458,10 +458,14 @@ function isOnline(){const m=S.me.onlineMode||'auto';if(m==='on')return true;if(m
 let _stepOn=false,_stepLast=0,_stepPrev=0,_stepHandler=null;
 function stepMotion(e){const a=e.accelerationIncludingGravity||e.acceleration;if(!a)return;const mag=Math.sqrt((a.x||0)**2+(a.y||0)**2+(a.z||0)**2);const now=Date.now();
   if(mag-_stepPrev>2.2&&now-_stepLast>320){S.me.steps=(S.me.steps||0)+1;_stepLast=now;if(cur().p==='wechat'&&wxTab==='me'){const e2=document.querySelector('.it span');}}_stepPrev=mag;if(now-_stepLast>4000)save();}
-async function toggleSteps(){if(_stepOn){window.removeEventListener('devicemotion',_stepHandler);_stepOn=false;save();render();toast('已停止计步');return;}
+async function toggleSteps(){if(_stepOn){window.removeEventListener('devicemotion',_stepHandler);_stepOn=false;S.me.stepOn=false;save();render();toast('已停止计步');return;}
   try{if(typeof DeviceMotionEvent!=='undefined'&&DeviceMotionEvent.requestPermission){const p=await DeviceMotionEvent.requestPermission();if(p!=='granted'){toast('没给运动权限');return;}}
-    _stepHandler=stepMotion;window.addEventListener('devicemotion',_stepHandler);_stepOn=true;render();toast('开始计步，走起来试试👟');
+    _stepHandler=stepMotion;window.addEventListener('devicemotion',_stepHandler);_stepOn=true;S.me.stepOn=true;save();render();toast('开始计步，会一直记着，走起来试试👟');
   }catch(e){toast('这设备不支持计步，可在资料里手填步数');}}
+async function resumeSteps(){if(_stepOn||!S.me.stepOn)return;
+  try{if(typeof DeviceMotionEvent!=='undefined'&&DeviceMotionEvent.requestPermission){const p=await DeviceMotionEvent.requestPermission();if(p!=='granted')return;}
+    _stepHandler=stepMotion;window.addEventListener('devicemotion',_stepHandler);_stepOn=true;if(cur().p==='wechat'&&wxTab==='me')render();}catch(e){}}
+document.addEventListener('click',()=>{if(S.me.stepOn&&!_stepOn)resumeSteps();},{once:true});
 /* ===== 语音 ===== */
 function getVoice(o){if(!o.voice)o.voice={engine:'system',voiceURI:'',rate:1,pitch:1,lang:'zh'};return o.voice;}
 function stripSpoken(t){return (t||'').replace(/[（(【][^）)】]*[）)】]/g,'').replace(/\[[^\]]*\]/g,'').replace(/[*_~`#>]/g,'').trim();}
@@ -1868,7 +1872,6 @@ function myActivity(exceptId,since){let s='';since=since||0;
   if(myTw.length)s+='·她最近发的推文：'+myTw.map(t=>'「'+t.text.slice(0,24)+'」').join('、')+'\n';
   if(!since&&S.x&&S.x._mylog&&S.x._mylog.length)s+='·她在X的其它动态：'+S.x._mylog.slice(-5).join('；')+'\n';
   if(S.me.battery!=null)s+='·她手机电量：'+S.me.battery+'%'+(S.me.charging?'(充电中)':'')+'\n';
-  if(S.me.steps)s+='·她今天微信步数：'+S.me.steps+'步\n';
   return s||'（手机上没什么新动静）';}
 let _walSel=null;
 function openWallet(){S.me.bills.forEach(b=>{if(!b.id)b.id=uid();});const sel=_walSel;
@@ -2577,6 +2580,11 @@ let _alarmFired={};
 function checkAlarms(){if(!isMain())return;const now=new Date();const hhmm=now.getHours().toString().padStart(2,'0')+':'+now.getMinutes().toString().padStart(2,'0');const tag=now.toDateString()+hhmm;
   S.alarms.forEach(a=>{if(a.enabled&&a.time===hhmm&&_alarmFired[a.id]!==tag){_alarmFired[a.id]=tag;if(!_call)incomingCall(a.contactId,'voice');if(a.repeat!=='daily'){S.alarms=S.alarms.filter(z=>z.id!==a.id);save();}}});}
 setInterval(checkAlarms,15000);
+function checkStepReport(){if(!isMain())return;const now=new Date();if(now.getHours()!==23)return;const today=now.toDateString();if(S.me._stepRptDate===today)return;
+  const c=(S.couple&&getC(S.couple.cid))||S.contacts.find(x=>!x.deleted&&!x.blocked&&isLover(x))||S.contacts.find(x=>!x.deleted&&!x.blocked&&getSpy(x).granted);
+  if(!c||c.blocked)return;S.me._stepRptDate=today;save();
+  scheduleReply(c.id,'[系统：现在23点，你看到'+S.me.name+'今天的微信步数是 '+(S.me.steps||0)+' 步。就这一次、主动关心一句（步数少就催ta多动动别老躺着，多了就夸ta/心疼ta累，符合你人设）。今天别再提步数了。]');}
+setInterval(checkStepReport,60000);setTimeout(checkStepReport,8000);
 
 /* 主动消息 */
 async function maybeProactive(id){if(!isMain())return;const c=getC(id);if(!c.proactive.enabled||c.blocked)return;
