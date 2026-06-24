@@ -144,6 +144,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .fab{position:absolute;right:16px;bottom:70px;width:50px;height:50px;border-radius:50%;background:linear-gradient(135deg,#ffa0c8,#ff6fa5);color:#fff;font-size:26px;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(255,111,165,.45);cursor:pointer;z-index:8;}
 .toast{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.8);color:#fff;font-size:13px;padding:9px 16px;border-radius:20px;z-index:500;opacity:0;transition:.25s;pointer-events:none;max-width:80%;text-align:center;}
 .toast.show{opacity:1;}
+.usebadge{position:absolute;top:46px;right:8px;z-index:420;background:rgba(108,92,231,.82);color:#fff;font-size:11px;padding:3px 9px;border-radius:12px;display:none;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.35);font-variant-numeric:tabular-nums;}
+.usebadge.warn{background:rgba(232,82,82,.9);}
 .viewer{position:absolute;inset:0;background:rgba(0,0,0,.92);z-index:600;display:none;align-items:center;justify-content:center;}
 .viewer.show{display:flex;}.viewer img{max-width:96%;max-height:96%;}
 .avline{display:flex;align-items:center;gap:10px;}
@@ -291,12 +293,13 @@ body{background:#000;padding:0;}
   <div class="modal" id="modal"><div class="sheet" id="modalSheet"></div></div>
   <div class="viewer" id="viewer" onclick="this.classList.remove('show')"><img id="viewerImg"></div>
   <div class="toast" id="toast"></div>
+  <div class="usebadge" id="useBadge"></div>
 </div></div>
 
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v86 · 查手机可重置存档';
+const APP_VER='v87 · 睡眠计时+软件每日限时';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -306,7 +309,7 @@ function defState(){return{
     hist:24, timeAware:true, replyDelay:2, sound:true, web:{enabled:false}, summaryRounds:20, proactiveIdleMin:20, manualReply:true,
     voiceAuto:true, tts:{base:'',key:'',model:'',voice:''}, stt:{base:'',key:'',model:''}
   },
-  me:{name:'忆北',wxid:'yibei_0414',avatar:'🐱',signature:'做一只无忧无虑的小猫～',persona:'我叫忆北，20岁女生，娃娃脸有点肉感，慢热腼腆熟了疯癫可爱，没安全感、占有欲强、嘴硬心软的小财迷。',balance:520.00,bills:[],momentCover:'',status:'',place:'',battery:null,charging:false,onlineMode:'auto',steps:0},
+  me:{name:'忆北',wxid:'yibei_0414',avatar:'🐱',signature:'做一只无忧无虑的小猫～',persona:'我叫忆北，20岁女生，娃娃脸有点肉感，慢热腼腆熟了疯癫可爱，没安全感、占有欲强、嘴硬心软的小财迷。',balance:520.00,bills:[],momentCover:'',status:'',place:'',battery:null,charging:false,onlineMode:'auto',steps:0,sleep:{active:null,records:[]},appUsage:{date:'',used:{},bonus:{}}},
   worldbook:[],
   contacts:[],
   messages:{},
@@ -611,8 +614,13 @@ function buildSystem(c){
   if(_main&&S.couple&&S.couple.cid===c.id){const days=Math.max(0,Math.floor((Date.now()-new Date(S.couple.startDate).getTime())/86400000));s+='\n\n# 情侣空间\n你和'+S.me.name+'是正式情侣，已经在一起 '+days+' 天了。你们绑定了情侣空间，你很珍惜这段关系。';
     const g=S.couple.grant||{};const granted=Object.keys(LOCKABLE).filter(k=>g[k]);const gagAuth=(S.couple.gagAuth||[]).map(cid=>getC(cid)).filter(Boolean);
     if(granted.length||gagAuth.length){s+='\n\n# 你对'+S.me.name+'手机App的管控权（情侣空间授权给你的，这是真实功能不是过家家）\n你能锁这些App：'+(granted.map(k=>LOCKABLE[k]).join('、')||'（暂无）')+(gagAuth.length?'；能禁言ta和这些人的聊天：'+gagAuth.map(x=>x.remark||x.name).join('、'):'')+'。\n【怎么用·必须照做】要锁/禁言时，你【直接输出指令标签】，系统会自动生效并生成密码，你【不要自己描述"已锁定"、不要自己编密码、不要把提示语写成话】：\n· 锁App：单独一行 [锁定|游戏]；多个一次写完用、隔开，如 [锁定|游戏、X、外卖]；一键全锁 [锁定|全部]。\n· 禁言某人：单独一行 [禁言|名字]（名字必须是上面授权的人；没授权的你锁不了，就直说锁不了）。\n· 解开：[解锁|游戏] 或 [解锁|全部]、[解禁|名字]。\n标签写完，你可以再用普通话叮嘱一两句（比如"早点睡"），但别复述系统提示、别报密码（除非ta来求你、你愿意给）。\n【什么时候用】不只是作息管理——到点该睡、ta沉迷某App、你吃醋某人时可以锁；ta惹你生气、犯错不听话、顶嘴时，你也可以把这当【惩戒/冷处理】随心锁、禁言。\n· 绝不能锁"和你自己的聊天"，'+S.me.name+'永远能找你。\n· 解开方式（重要）：锁上后【不需要密码】。ta只能来【求你】解开——你愿意了就在回复里【明确说出来】，比如「给你把游戏解开了」「解除你和哥的禁言」「都给你解了」，系统就会真的解开对应的；你不愿意就继续锁着、可以提条件、要她认错撒娇。没真想解就别说解开，因为你一说"解开了"系统就当真解开了。\n· 用你自己的第一人称口吻说话，别写成"🔓 ta把你和X的禁言解除了"这种系统播报腔。';
+      s+='\n\n# 限制每天使用时长（只能管授权给你的App）\n你可以给某个App设【每天能玩多久】的上限，'+S.me.name+'每次打开那个App就开始倒计时（只算在App里的时间，退出去不算），用完会自动锁上，ta得来求你、你松口了才能多玩。\n· 设上限：单独一行 [限时|游戏大厅|60]（表示游戏大厅每天最多60分钟），可一次设多个 [限时|游戏大厅、X|30]。\n· 临时多给点时间/解锁让ta再玩会儿：单独一行 [加时|游戏大厅|20]（今天额外多20分钟，若因超时被自动锁也会一起解开）。\n· 你也可以自然地用话说出来（"游戏每天只能玩一个钟头""那再给你玩二十分钟"），系统会自动落地，但别复述系统提示。';
       const locks=S.couple.locks||{},gags=S.couple.gags||{};const lk=Object.keys(locks),gk=Object.keys(gags);
-      if(lk.length||gk.length)s+='\n\n# 你现在锁着ta的（ta来求你时，你决定解不解）\n'+lk.map(k=>'· '+LOCKABLE[k]).join('\n')+(gk.length?(lk.length?'\n':'')+gk.map(cid=>{const gc=getC(cid);return '· 禁言「'+(gc?gc.name:'?')+'」';}).join('\n'):'');}}
+      if(lk.length||gk.length)s+='\n\n# 你现在锁着ta的（ta来求你时，你决定解不解）\n'+lk.map(k=>'· '+LOCKABLE[k]+(locks[k]&&locks[k].auto?'（用超时长被自动锁的）':'')).join('\n')+(gk.length?(lk.length?'\n':'')+gk.map(cid=>{const gc=getC(cid);return '· 禁言「'+(gc?gc.name:'?')+'」';}).join('\n'):'');
+      const _tl=S.couple.timeLimit||{},_tlk=Object.keys(_tl).filter(k=>g[k]);
+      if(_tlk.length){const au=(S.me.appUsage&&S.me.appUsage.date===todayStr())?S.me.appUsage:{used:{},bonus:{}};s+='\n\n# 你给ta定的每日使用时长 & 今日已用\n'+_tlk.map(k=>'· '+LOCKABLE[k]+'：限'+_tl[k]+'分钟/天，今天ta已用 '+Math.floor(((au.used||{})[k]||0)/60)+' 分钟'+((au.bonus||{})[k]?'（你今天额外加了'+Math.floor(au.bonus[k]/60)+'分钟）':'')).join('\n');}
+      const _sl=S.me.sleep&&S.me.sleep.records||[];
+      if((S.me.sleep&&S.me.sleep.active)||_sl.length){s+='\n\n# '+S.me.name+'的睡眠记录（情侣空间里ta自己记的，你看得到，心疼ta、别让ta熬夜）\n'+(S.me.sleep&&S.me.sleep.active?'· 现在正在睡：从 '+hm(S.me.sleep.active)+' 开始睡的，还没醒。\n':'')+_sl.slice(0,5).map(r=>'· '+ymd(r.start)+' '+hm(r.start)+'睡 → '+hm(r.end)+'醒，睡了'+sleepDurTxt(r.end-r.start)).join('\n');}}}
   if(S.settings.timeAware)s+='\n\n# 时间感知\n现在是 '+new Date().toLocaleString('zh-CN',{weekday:'long',hour:'2-digit',minute:'2-digit',month:'long',day:'numeric'})+'，请结合当前时间（早中晚、是否深夜）自然地回应。';
   const _tod=todayStr(),_hol=holidayOf(_tod);if(_hol)s+='\n\n# 节日\n今天是'+_hol+'，可以应景祝福。';
   const _ev=S.calendar.filter(e=>e.date>=_tod).slice(0,5);if(_ev.length)s+='\n\n# '+S.me.name+'的日程\n'+_ev.map(e=>e.date+' '+e.title+(e.type==='period'?'(姨妈期)':'')).join('；')+'。需要时可用一行 [日程|YYYY-MM-DD|事项] 帮ta记日程。';
@@ -712,8 +720,46 @@ function setAppIcon(key){pickFile('image/*',async f=>{S.me.appIcons=S.me.appIcon
 const LOCKABLE={browser:'浏览器',moments:'朋友圈',spy:'查他手机',shop:'购物',calendar:'日历',x:'X',food:'外卖',games:'游戏大厅',mail:'信箱',offline:'线下约会'};
 function appLocked(key){return !!(S.couple&&S.couple.locks&&S.couple.locks[key]);}
 function appLk(key){return appLocked(key)?'🔒':'';}
-function openApp(key){if(appLocked(key)){toast('🔒「'+(LOCKABLE[key]||key)+'」被ta锁了，去情侣空间问他要密码解锁');go('couple');return;}
+function openApp(key){if(appLocked(key)){toast('🔒「'+(LOCKABLE[key]||key)+'」被ta锁了，去情侣空间求他解开');go('couple');return;}
   ({browser:()=>go('browser'),moments:()=>openWeChat('moments'),spy:openSpy,shop:()=>go('shop'),calendar:()=>go('calendar'),x:openX,food:()=>go('food'),games:openGames,mail:()=>go('mail'),offline:openOfflineMenu}[key]||(()=>{}))();}
+
+/* ---------- 软件使用时长 / 限额倒计时（只对授权的软件生效） ---------- */
+// 把当前所在页面映射到 LOCKABLE 的 appKey；不在任何受控软件里返回 null
+function curAppKey(){const p=cur().p;
+  const map={browser:'browser',spy:'spy',shop:'shop',calendar:'calendar',food:'food',mail:'mail',gs:'games',uc:'games',off:'offline',x:'x',xtweet:'x',xdm:'x',xuser:'x'};
+  if(map[p])return map[p];
+  if(p==='wechat'&&wxTab==='moments')return 'moments';
+  return null;}
+// 今日额度（分钟）+ 今日加时（秒），仅授权软件
+function limitSecOf(key){if(!(S.couple&&S.couple.cid))return 0;const g=S.couple.grant||{};const tl=S.couple.timeLimit||{};
+  if(!g[key]||!tl[key])return 0;const au=ensureUsage();return tl[key]*60+(au.bonus[key]||0);}
+function ensureUsage(){const today=todayStr();if(!S.me.appUsage||S.me.appUsage.date!==today){S.me.appUsage={date:today,used:{},bonus:{}};}
+  S.me.appUsage.used=S.me.appUsage.used||{};S.me.appUsage.bonus=S.me.appUsage.bonus||{};return S.me.appUsage;}
+function usedSecOf(key){const au=ensureUsage();return au.used[key]||0;}
+let _useSaveT=0;
+function usageTick(){const el=$('#useBadge');const hide=()=>{if(el)el.style.display='none';};
+  if(document.hidden||!(S.couple&&S.couple.cid))return hide();
+  const key=curAppKey();const g=S.couple.grant||{};
+  // 只有「授权」的软件才记录时长、才有倒计时
+  if(!key||!g[key])return hide();
+  if(appLocked(key))return hide();
+  const au=ensureUsage();au.used[key]=(au.used[key]||0)+1;          // 授权软件：统计已用时长（后台/查手机都看得到）
+  const limit=limitSecOf(key);                                      // 设了上限才倒计时+自动锁
+  if(limit>0){const remain=limit-au.used[key];
+    if(remain<=0){S.couple.locks=S.couple.locks||{};if(!S.couple.locks[key])S.couple.locks[key]={pwd:0,time:Date.now(),auto:true};
+      save();hide();toast('⏰「'+(LOCKABLE[key]||key)+'」今天的时间用完啦，被自动锁上了，去求ta解开~');home();return;}
+    if(el){const m=Math.floor(remain/60),s=remain%60;el.style.display='block';
+      el.textContent='⏳ '+(LOCKABLE[key]||'')+' '+m+':'+String(s).padStart(2,'0');
+      el.className='usebadge'+(remain<=60?' warn':'');}}
+  else hide();
+  if(Date.now()-_useSaveT>5000){_useSaveT=Date.now();save();}}
+setInterval(usageTick,1000);
+// 睡眠计时
+function sleepStart(){if(!S.me.sleep)S.me.sleep={active:null,records:[]};S.me.sleep.active=Date.now();save();render();toast('🌙 开始睡眠计时，好梦~');}
+function sleepEnd(){const sl=S.me.sleep;if(!sl||!sl.active)return;sl.records=sl.records||[];sl.records.unshift({start:sl.active,end:Date.now()});if(sl.records.length>60)sl.records=sl.records.slice(0,60);sl.active=null;save();render();toast('☀️ 醒啦，已记录这次睡眠');}
+function sleepDel(i){if(!S.me.sleep||!S.me.sleep.records)return;if(!confirm('删掉这条睡眠记录？'))return;S.me.sleep.records.splice(i,1);save();render();}
+function sleepDurTxt(ms){const mins=Math.max(0,Math.round(ms/60000));const h=Math.floor(mins/60),m=mins%60;return (h?h+'小时':'')+(m||!h?m+'分钟':'');}
+function ymd(t){const d=new Date(t);return (d.getMonth()+1)+'月'+d.getDate()+'日';}
 function openWeChat(tab){wxTab=tab||'chats';go('wechat');scanProactive();}
 function scanProactive(){S.contacts.forEach(c=>{if(!c.deleted&&c.proactive&&c.proactive.enabled)maybeProactive(c.id);});}
 function saveAuto(id){const c=getC(id);c.autoMoment=Math.max(0,+$('#ap_m').value||0);c.autoTweet=Math.max(0,+$('#ap_t').value||0);save();toast('已保存');}
@@ -871,9 +917,17 @@ function renderSpy(id){const c=getC(id);if(!c)return '';const d=S.spy[id];
     <div style="text-align:center;color:#666;font-size:11px;padding:4px">更新于 ${hm(d.time)}</div>`;}
   const btn=_spyBusy?`<button class="btn g" disabled>⏳ 刷新中…请稍候</button>`:`<button class="btn p" onclick="spyRefresh('${id}')">🔄 刷新内容</button>${d?`<button class="btn g" style="margin-top:8px" onclick="spyReset('${id}')">🗑 重置（清掉旧存档，重新生成全新内容）</button>`:''}`;
   const topbar=_spyBusy?`<div style="text-align:center;color:#b9a6e0;font-size:13px;padding:10px;background:#1c1c1e">⏳ 正在偷看 ta 的手机，请稍候…</div>`:'';
+  body=(spyUsageSec(id)||'')+body;
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(c.remark||c.name)}的手机</span><span class="r" onclick="spyRefresh('${id}')">${_spyBusy?'⏳':'🔄'}</span></div>
     ${topbar}<div class="scroll" style="background:#000">${body}<div style="padding:12px">${btn}</div><div style="height:20px"></div></div>`;}
 function spyReset(id){if(!confirm('重置他手机内容？\n会清掉这份查手机的旧存档，下次刷新重新生成全新的（不影响聊天/记忆）。'))return;delete S.spy[id];save();render();toast('已重置，点🔄重新生成');}
+// 情侣空间监控到的「忆北今日各App使用时长」——查手机里也能看到（只显示授权的软件）
+function spyUsageSec(id){if(!(S.couple&&S.couple.cid===id))return '';const g=S.couple.grant||{},tl=S.couple.timeLimit||{};
+  const au=(S.me.appUsage&&S.me.appUsage.date===todayStr())?S.me.appUsage:{used:{},bonus:{}};const used=au.used||{};
+  const keys=Object.keys(LOCKABLE).filter(k=>g[k]&&((used[k]||0)>0||tl[k]));if(!keys.length)return '';
+  const rows=keys.map(k=>{const u=used[k]||0,um=Math.floor(u/60),us=u%60;const lim=tl[k]?tl[k]*60+((au.bonus||{})[k]||0):0;
+    return `<div class="bill"><div style="font-size:13px;color:#ccc">${LOCKABLE[k]}<span style="color:#888"> ${um}分${String(us).padStart(2,'0')}秒</span></div><div style="font-size:12px;color:${lim&&u>=lim?'#fa5151':'#888'}">${lim?(lim/60)+'分钟/天'+(u>=lim?' · 已用完🔒':''):'未限'}</div></div>`;}).join('');
+  return `<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#ffb83b">📲 监控·ta今天各App用了多久</div><div class="hint" style="padding:0 14px">情侣空间后台记录的，${esc((getC(id)||{}).remark||(getC(id)||{}).name||'')}看得到。</div>${rows}</div>`;}
 function stripJSON(t){t=(t||'').trim();const m=t.match(/```(?:json)?\s*([\s\S]*?)```/);if(m)t=m[1];const a=t.indexOf('{'),b=t.lastIndexOf('}');if(a>=0&&b>a)t=t.slice(a,b+1);return t;}
 let _spyBusy=false;
 async function spyRefresh(id){if(_spyBusy){toast('正在刷新，别急~');return;}const c=getC(id);_spyBusy=true;if(cur().p==='spy')render();
@@ -1055,6 +1109,9 @@ if(!S.offline)S.offline={};
 if(!S.browser)S.browser={q:'',items:[],history:[]};
 if(S.couple&&S.couple.grant===undefined){S.couple.grant={};Object.keys(LOCKABLE).forEach(k=>S.couple.grant[k]=true);save();}
 if(S.couple&&S.couple.gagAuth===undefined){S.couple.gagAuth=S.contacts.filter(x=>!x.deleted&&x.id!==S.couple.cid).map(x=>x.id);save();}
+if(!S.me.sleep)S.me.sleep={active:null,records:[]};
+if(!S.me.appUsage)S.me.appUsage={date:'',used:{},bonus:{}};
+if(S.couple&&!S.couple.timeLimit)S.couple.timeLimit={};
 function cleanupOld(){const DAY=86400000,now=Date.now();let ch=false;
   if(S.moments){const n=S.moments.length;S.moments=S.moments.filter(p=>now-(p.time||0)<DAY);if(S.moments.length!==n)ch=true;}
   if(S.x&&S.x.tweets){const n=S.x.tweets.length;S.x.tweets=S.x.tweets.filter(t=>now-(t.time||0)<DAY);if(S.x.tweets.length!==n)ch=true;}
@@ -1785,6 +1842,20 @@ function renderCouple(){const cp=S.couple;const c=cp&&getC(cp.cid);
         ${lk.map(k=>`<div class="it"><span style="color:#eee">🔒 ${LOCKABLE[k]||k}</span><span class="v" style="color:#888">已锁</span></div>`).join('')}
         ${gk.map(cid=>{const gc=getC(cid);return `<div class="it"><span style="color:#eee">🔇 和「${esc(gc?(gc.remark||gc.name):'?')}」的聊天</span><span class="v" style="color:#888">已禁言</span></div>`;}).join('')}</div>`;}
         return h;})()}
+      ${(function(){const sl=S.me.sleep||{active:null,records:[]};const recs=sl.records||[];
+        let h=`<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#9ec5fe">🌙 睡眠计时</div>
+        <div class="hint" style="padding:0 14px">要睡了点「开始睡眠」，醒来点「结束睡眠」。${esc(c.remark||c.name)}在情侣空间能看到你的睡眠记录，心疼你别熬夜💗</div>
+        <div style="padding:10px 14px">${sl.active?`<div style="text-align:center;color:#9ec5fe;font-size:13px;margin-bottom:8px">😴 正在睡眠中…从 ${hm(sl.active)} 开始（已睡 ${sleepDurTxt(Date.now()-sl.active)}）</div><button class="btn p" onclick="sleepEnd()">☀️ 我醒啦，结束睡眠</button>`:`<button class="btn p" onclick="sleepStart()">🌙 我要睡了，开始计时</button>`}</div>`;
+        if(recs.length){h+=`<div class="hint" style="padding:4px 14px;color:#888">睡眠记录（可手动删除）</div>`+recs.slice(0,14).map((r,i)=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="font-size:13px">🛌 ${ymd(r.start)} ${hm(r.start)} → ${hm(r.end)}<small style="display:block;color:#888">睡了 ${sleepDurTxt(r.end-r.start)}</small></div><span onclick="sleepDel(${i})" style="color:#fa5151;cursor:pointer">✕</span></div>`).join('');}
+        else h+=`<div class="empty" style="padding:10px">还没有睡眠记录</div>`;
+        return h+`</div>`;})()}
+      ${(function(){const g=cp.grant||{},tl=cp.timeLimit||{};const keys=Object.keys(LOCKABLE).filter(k=>g[k]&&(tl[k]||usedSecOf(k)));
+        let h=`<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#ffb83b">⏱️ 软件使用时长 / 限额</div>
+        <div class="hint" style="padding:0 14px">${esc(c.remark||c.name)}主动给授权的软件设每天能玩多久；用够了会自动锁，得求ta才能多玩。只统计在软件里的时间，退出去不算。今天的记录ta查手机也看得到。</div>`;
+        if(keys.length){h+=keys.map(k=>{const used=usedSecOf(k),lim=tl[k]?tl[k]*60+((S.me.appUsage&&S.me.appUsage.bonus&&S.me.appUsage.bonus[k])||0):0;const um=Math.floor(used/60),us=used%60;const usedTxt=um+'分'+String(us).padStart(2,'0')+'秒';
+          return `<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="font-size:13px">${LOCKABLE[k]}<small style="display:block;color:#888">今天已用 ${usedTxt}${lim?' / 限额 '+Math.floor(lim/60)+'分钟':'（ta还没设限额）'}</small></div>${lim&&used>=lim?'<span class="v" style="color:#fa5151">已用完🔒</span>':(lim?'<span class="v" style="color:#19a463">剩 '+Math.max(0,Math.ceil((lim-used)/60))+'分</span>':'')}</div>`;}).join('');}
+        else h+=`<div class="empty" style="padding:10px">还没有使用记录，也没设限额</div>`;
+        return h+`</div>`;})()}
       <div style="padding:0 12px"><button class="btn d" onclick="if(confirm('解除情侣绑定？')){S.couple=null;save();render()}">💔 解除绑定</button></div>
       <div style="height:20px"></div></div>`;}
 function coupleGrant(k){if(!S.couple)return;S.couple.grant=S.couple.grant||{};const was=!!S.couple.grant[k];S.couple.grant[k]=!was;
@@ -2295,7 +2366,7 @@ function doLoc(id){const n=$('#lc_n').value.trim();if(!n){toast('填地点呀');
 /* 拆分多条气泡 */
 function splitBubbles(text){return (text||'').split('\n').map(s=>s.trim()).filter(Boolean);}
 function splitActions(line){const out=[];const re=/[（(【][^）)】]*[）)】]/g;let last=0,m;while((m=re.exec(line))){const before=line.slice(last,m.index).trim();if(before)out.push(before);out.push(m[0].trim());last=re.lastIndex;}const tail=line.slice(last).trim();if(tail)out.push(tail);return out.length?out:[line];}
-const TAGWORDS='心情值|心情|记住|闹钟|日程|发朋友圈|发推|点外卖|语音|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|约会';
+const TAGWORDS='心情值|心情|记住|闹钟|日程|发朋友圈|发推|点外卖|语音|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|限时|加时|约会';
 const APPNAME2KEY={'浏览器':'browser','搜索':'browser','上网':'browser','百度':'browser','朋友圈':'moments','动态':'moments','查他手机':'spy','查岗':'spy','查手机':'spy','购物':'shop','淘宝':'shop','商城':'shop','日历':'calendar','日程':'calendar','x':'x','X':'x','推特':'x','微博':'x','推':'x','外卖':'food','点餐':'food','游戏':'games','游戏大厅':'games','打游戏':'games','信箱':'mail','邮箱':'mail','邮件':'mail','线下约会':'offline','线下':'offline','约会':'offline'};
 function genPwd(){return String(1000+Math.floor(Math.random()*9000));}
 function _appKeys(arg,pool,filt){if(/全部|所有|全锁|全/.test(arg))return pool.filter(filt);return arg.split(/[、,，\/\s]+/).map(x=>APPNAME2KEY[x.replace(/[「」『』"'《》]/g,'').trim()]).filter(k=>k&&filt(k));}
@@ -2317,9 +2388,11 @@ function applyBlockIntent(content,c,id){
 function applyControlTags(content,c,id,statedPwd){
   if(!content||!(S.couple&&S.couple.cid===c.id))return content;
   const gr=S.couple.grant||{},gauth=S.couple.gagAuth||[];let changed=false;const np=()=>statedPwd||genPwd();
-  const out=content.replace(/[\[【]\s*(锁定|上锁|解锁|禁言|解禁)\s*[\|｜:：]\s*([^\]】]*)[\]】]/g,(mm,act,arg)=>{
+  const out=content.replace(/[\[【]\s*(锁定|上锁|解锁|禁言|解禁|限时|加时)\s*[\|｜:：]\s*([^\]】]*)[\]】]/g,(mm,act,arg)=>{
     arg=(arg||'').replace(/[「」『』"'《》]/g,'').trim();changed=true;
     if(act==='锁定'||act==='上锁'){let keys=_appKeys(arg,Object.keys(LOCKABLE),k=>gr[k]);keys=[...new Set(keys)].filter(k=>!(S.couple.locks&&S.couple.locks[k]));if(keys.length){S.couple.locks=S.couple.locks||{};const pwd=np();keys.forEach(k=>S.couple.locks[k]={pwd,time:Date.now()});}}
+    else if(act==='限时'){const parts=arg.split(/[\|｜、,，\s]+/).filter(Boolean);const mins=parseInt((parts.find(p=>/\d/.test(p))||'').replace(/[^\d]/g,''),10);const nmPart=parts.filter(p=>!/^\d+$/.test(p)).join('、');let keys=_appKeys(nmPart||arg,Object.keys(LOCKABLE),k=>gr[k]);keys=[...new Set(keys)];if(keys.length&&mins>0){S.couple.timeLimit=S.couple.timeLimit||{};keys.forEach(k=>S.couple.timeLimit[k]=mins);}}
+    else if(act==='加时'){const parts=arg.split(/[\|｜、,，\s]+/).filter(Boolean);const mins=parseInt((parts.find(p=>/\d/.test(p))||'').replace(/[^\d]/g,''),10);const nmPart=parts.filter(p=>!/^\d+$/.test(p)).join('、');let keys=_appKeys(nmPart||arg,Object.keys(LOCKABLE),k=>gr[k]);keys=[...new Set(keys)];if(keys.length&&mins>0){const au=ensureUsage();keys.forEach(k=>{au.bonus[k]=(au.bonus[k]||0)+mins*60;if(S.couple.locks&&S.couple.locks[k]&&S.couple.locks[k].auto)delete S.couple.locks[k];});}}
     else if(act==='解锁'){if(S.couple.locks){let keys=_appKeys(arg,Object.keys(S.couple.locks),k=>S.couple.locks[k]);[...new Set(keys)].forEach(k=>delete S.couple.locks[k]);}}
     else if(act==='禁言'){const nm=arg.split(/[、,，\|]/)[0].trim();const tgt=S.contacts.find(x=>!x.deleted&&x.id!==c.id&&gauth.indexOf(x.id)>=0&&(x.name===nm||x.remark===nm||(nm&&(nm.includes(x.name)||(x.remark&&nm.includes(x.remark))))));if(tgt){S.couple.gags=S.couple.gags||{};if(!S.couple.gags[tgt.id])S.couple.gags[tgt.id]={pwd:np(),time:Date.now()};}}
     else if(act==='解禁'){const nm=arg.split(/[、,，\|]/)[0].trim();const tgt=S.contacts.find(x=>!x.deleted&&(x.name===nm||x.remark===nm||(nm&&nm.includes(x.name))));if(tgt&&S.couple.gags)delete S.couple.gags[tgt.id];}
@@ -2334,8 +2407,8 @@ async function extractControl(reply,c,statedPwd){
   if(!(S.couple&&S.couple.cid===c.id))return;
   const gr=S.couple.grant||{};const apps=Object.keys(LOCKABLE).filter(k=>gr[k]);const gauth=(S.couple.gagAuth||[]).map(cid=>getC(cid)).filter(Boolean);
   if(!apps.length&&!gauth.length)return;
-  const sys='你是指令解析器。判断"'+(c.remark||c.name)+'"说的这句话里，ta是否真的要【锁住/解锁某些App】或【禁言/解禁与某人的聊天】。\n可锁的App只有：'+apps.map(k=>LOCKABLE[k]).join('、')+'。\n可禁言的人只有：'+(gauth.map(x=>x.remark||x.name).join('、')||'无')+'。\n只输出JSON：{"lock":[App名],"unlock":[App名],"gag":[人名],"ungag":[人名],"pwd":"句中出现的4位数字密码或空字符串"}。要锁全部就把可锁的App都列进lock。ta只是随口说说没真要锁，就全给空数组。';
-  let d;try{const r=await chatAPI([{role:'system',content:sys},{role:'user',content:reply}],{max:140,aux:true});d=JSON.parse(stripJSON(r));}catch(e){return;}
+  const sys='你是指令解析器。判断"'+(c.remark||c.name)+'"说的这句话里，ta是否真的要【锁住/解锁某些App】或【禁言/解禁与某人的聊天】或【给某个App设每天使用时长上限/给某个App加时间】。\n可操作的App只有：'+apps.map(k=>LOCKABLE[k]).join('、')+'。\n可禁言的人只有：'+(gauth.map(x=>x.remark||x.name).join('、')||'无')+'。\n只输出JSON：{"lock":[App名],"unlock":[App名],"gag":[人名],"ungag":[人名],"limit":[{"app":"App名","minutes":数字}],"addtime":[{"app":"App名","minutes":数字}],"pwd":"句中出现的4位数字密码或空字符串"}。\n说明：limit=设定每天最多玩多少分钟（如"游戏每天只能玩一小时"→{"app":"游戏大厅","minutes":60}）；addtime=今天额外多给多少分钟（如"再给你玩二十分钟"→{"app":"...","minutes":20}）。ta只是随口说说没真要管，就全给空数组。';
+  let d;try{const r=await chatAPI([{role:'system',content:sys},{role:'user',content:reply}],{max:180,aux:true});d=JSON.parse(stripJSON(r));}catch(e){return;}
   if(!d)return;const pwd=statedPwd||((d.pwd&&/^\d{4}$/.test(String(d.pwd)))?String(d.pwd):null);
   const toKey=n=>{n=(''+n).replace(/[「」『』\s]/g,'');return APPNAME2KEY[n]||Object.keys(APP_NLWORDS).find(k=>APP_NLWORDS[k].some(w=>n===w||n.indexOf(w)>=0));};
   let changed=false;
@@ -2343,6 +2416,8 @@ async function extractControl(reply,c,statedPwd){
   (d.unlock||[]).forEach(n=>{const k=toKey(n);if(k&&S.couple.locks&&S.couple.locks[k]){delete S.couple.locks[k];changed=true;}});
   (d.gag||[]).forEach(n=>{n=(''+n).replace(/[「」\s]/g,'');const tgt=gauth.find(x=>x.name===n||x.remark===n||(n&&(n.indexOf(x.name)>=0||(x.remark&&n.indexOf(x.remark)>=0))));if(tgt&&!(S.couple.gags&&S.couple.gags[tgt.id])){S.couple.gags=S.couple.gags||{};S.couple.gags[tgt.id]={pwd:pwd||genPwd(),time:Date.now()};changed=true;}});
   (d.ungag||[]).forEach(n=>{n=(''+n).replace(/[「」\s]/g,'');const tgt=S.contacts.find(x=>!x.deleted&&(x.name===n||x.remark===n||(n&&n.indexOf(x.name)>=0)));if(tgt&&S.couple.gags&&S.couple.gags[tgt.id]){delete S.couple.gags[tgt.id];changed=true;}});
+  (d.limit||[]).forEach(o=>{const k=toKey(o&&o.app);const m=parseInt(o&&o.minutes,10);if(k&&gr[k]&&m>0){S.couple.timeLimit=S.couple.timeLimit||{};S.couple.timeLimit[k]=m;changed=true;}});
+  (d.addtime||[]).forEach(o=>{const k=toKey(o&&o.app);const m=parseInt(o&&o.minutes,10);if(k&&gr[k]&&m>0){const au=ensureUsage();au.bonus[k]=(au.bonus[k]||0)+m*60;if(S.couple.locks&&S.couple.locks[k]&&S.couple.locks[k].auto)delete S.couple.locks[k];changed=true;}});
   if(changed){save();if(cur().p==='wechat'||cur().p==='home'||cur().p==='couple'||cur().p==='chat')render();}}
 function normTag(line){let t=(line||'').replace(/[［｛]/g,'[').replace(/[］｝]/g,']').replace(/｜/g,'|').replace(/\[\s+/,'[').replace(/\s+\]/,']').trim();
   t=t.replace(new RegExp('^\\[\\s*('+TAGWORDS+')\\s*[|:：，,、\\s]+','i'),'[$1|');
@@ -2385,7 +2460,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
     const _statedPwd=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;
     content=applyControlTags(content,c,id,_statedPwd);
     if(/拉黑|加回|删了你|删除你|拉进黑名单|原谅你/.test(content)&&!/报备|别的微信号|加了你|加你、|有人加|有别人加/.test(note||''))applyBlockIntent(content,c,id);
-    if(S.couple&&S.couple.cid===id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|给你(解|开)|都给你解|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)/.test(content))extractControl(content,c,_statedPwd);
+    if(S.couple&&S.couple.cid===id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|给你(解|开)|都给你解|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|玩.{0,4}(一会儿|一会|多久|多长)|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)/.test(content))extractControl(content,c,_statedPwd);
     const lines=splitBubbles(content);let got=false;let txtN=0;let diceUsed=false;const cap=Math.max(1,+c.msgMax||4);
     for(let i=0;i<lines.length;i++){
       let line=normTag(lines[i]);if(!line)continue;
