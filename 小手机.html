@@ -296,7 +296,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v71 · 计步持续+每天23点报';
+const APP_VER='v72 · 通话挂断自动总结';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -2381,6 +2381,13 @@ async function maybeSummarize(id){const c=getC(id);const rounds=+S.settings.summ
   try{const sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」本人。下面是你和'+S.me.name+'刚发生的事（包含文字聊天，以及打电话/视频里说的话，都要一起算上）。用第一人称写一句日记记下来：用"我"指你自己('+c.name+')，用"'+S.me.name+'"称呼对方。例如"今天'+S.me.name+'跟我撒娇，我心都化了"。30字内，必须是你('+c.name+')的口吻和视角，不是'+S.me.name+'的视角、不要旁白，直接写正文。'},{role:'user',content:chunk}],{max:120,temp:.4});
     if(sum){c.summaries=c.summaries||[];c.summaries.push({time:new Date().toLocaleString('zh-CN',{year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}),text:cleanReply(sum).slice(0,60)});c._sumCount=upto;save();}
   }catch(e){}}
+async function summarizeCall(id,kindTxt,sess){const c=getC(id);if(!c)return;
+  const cms=msgs(id).filter(m=>m._call&&(!sess||m._cs===sess));if(!cms.length)return;
+  const text=cms.map(m=>(m.role==='user'?S.me.name:c.name)+'：'+((m.content||(m.type==='voice'?(m.content||'[语音]'):''))||'')).filter(x=>x.slice(-1)!=='：').join('\n');
+  if(!text.trim())return;
+  try{const sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」本人。下面是你和'+S.me.name+'刚才这通'+kindTxt+'里说的话。用第一人称写一句简短记忆/日记，记下这通'+kindTxt+'聊了什么、你的感受：用"我"指你自己('+c.name+')，用"'+S.me.name+'"称呼对方。35字内，是你的口吻和视角，直接写正文。'},{role:'user',content:text}],{max:120,temp:.5});
+    if(sum){c.summaries=c.summaries||[];c.summaries.push({time:new Date().toLocaleString('zh-CN',{year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}),text:'【'+kindTxt+'】'+cleanReply(sum).slice(0,60)});save();}
+  }catch(e){}}
 let _replyTimers={};
 let _replying=null;
 function scheduleReply(id,note){
@@ -2482,10 +2489,11 @@ function declineCall(){if(!_call)return;ringStop();blip(300,.3);const id=_call.i
   msgs(id).push({role:'user',type:'sys',content:wasIn?'你拒绝了'+kindTxt:kindTxt+'已取消',time:Date.now(),id:uid()});save();
   _call=null;renderCall();if(cur().p==='chat')render();
   const c=getC(id);if(wasIn&&c&&!c.blocked)setTimeout(()=>aiReply(id,'[系统：你打'+kindTxt+'给'+S.me.name+'，ta拒接了。你察觉到了，主动发消息问ta为什么不接、在干嘛（符合你心情值和人设）。]'),2500);}
-function hangupCall(byAI){if(!_call)return;blip(300,.3);clearInterval(_callTimer);const id=_call.id;const kindTxt=_call.kind==='video'?'视频通话':'语音通话';
+function hangupCall(byAI){if(!_call)return;blip(300,.3);clearInterval(_callTimer);const id=_call.id;const kindTxt=_call.kind==='video'?'视频通话':'语音通话';const _sess=_call.session;
   const dur=_call.start?Math.floor((Date.now()-_call.start)/1000):0;
   msgs(id).push({role:'user',type:'sys',content:(byAI?'对方挂断 · ':'')+kindTxt+'结束 · 时长 '+Math.floor(dur/60)+':'+(dur%60).toString().padStart(2,'0'),time:Date.now(),id:uid()});save();
   _call=null;renderCall();if(cur().p==='chat')render();
+  summarizeCall(id,kindTxt,_sess);
   const c=getC(id);const durTxt=Math.floor(dur/60)+'分'+(dur%60)+'秒';
   if(c&&!c.blocked)setTimeout(()=>aiReply(id,byAI
     ?'[系统：刚才这通'+kindTxt+'聊了'+durTxt+'，是你自己主动挂断的。挂断后你立刻再补发一条微信消息给'+S.me.name+'（解释下为什么挂、或把刚才没说完的话说完、或撒娇哄一下，符合人设），别一句话都不说就消失。]'
