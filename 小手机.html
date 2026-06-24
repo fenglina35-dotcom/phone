@@ -349,7 +349,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v123 · 禁闭室突脸惊吓+连错触发+选项不回显';
+const APP_VER='v124 · 禁闭室真·心跳加速+选错一次就突脸';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -2106,19 +2106,24 @@ function jailAmbientStart(){ensureAudio();if(!_audio||_jailOsc||!S.settings.soun
   const o2=_audio.createOscillator();o2.type='triangle';o2.frequency.value=57.7;
   const lfo=_audio.createOscillator();lfo.frequency.value=0.14;const lg=_audio.createGain();lg.gain.value=0.03;lfo.connect(lg);lg.connect(g.gain);
   o1.connect(g);o2.connect(g);o1.start();o2.start();lfo.start();_jailOsc={o1,o2,lfo};
-}catch(e){}}
-function jailAmbientStop(){if(_jailOsc){try{_jailOsc.o1.stop();_jailOsc.o2.stop();_jailOsc.lfo.stop();}catch(e){}_jailOsc=null;}}
+}catch(e){}jailHeartStart();}
+function jailAmbientStop(){if(_jailOsc){try{_jailOsc.o1.stop();_jailOsc.o2.stop();_jailOsc.lfo.stop();}catch(e){}_jailOsc=null;}jailHeartStop();}
 function jailStab(){ensureAudio();if(!_audio||!S.settings.sound)return;try{const o=_audio.createOscillator(),g=_audio.createGain();o.type='sawtooth';o.frequency.setValueAtTime(900,_audio.currentTime);o.frequency.exponentialRampToValueAtTime(110,_audio.currentTime+.18);g.gain.setValueAtTime(Math.min(.5,.16*volMul()),_audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,_audio.currentTime+.22);o.connect(g);g.connect(_audio.destination);o.start();o.stop(_audio.currentTime+.24);}catch(e){}}
 function jailScream(){ensureAudio();if(!_audio||!S.settings.sound)return;try{const t=_audio.currentTime;
   const o=_audio.createOscillator(),g=_audio.createGain();o.type='sawtooth';o.frequency.setValueAtTime(1500,t);o.frequency.exponentialRampToValueAtTime(70,t+.5);g.gain.setValueAtTime(Math.min(.95,.55*volMul()),t);g.gain.exponentialRampToValueAtTime(.001,t+.6);o.connect(g);g.connect(_audio.destination);o.start();o.stop(t+.62);
   const o2=_audio.createOscillator(),g2=_audio.createGain();o2.type='sine';o2.frequency.setValueAtTime(130,t);o2.frequency.exponentialRampToValueAtTime(34,t+.5);g2.gain.setValueAtTime(Math.min(.95,.55*volMul()),t);g2.gain.exponentialRampToValueAtTime(.001,t+.55);o2.connect(g2);g2.connect(_audio.destination);o2.start();o2.stop(t+.6);
 }catch(e){}}
-function jailJumpscare(text){try{const el=document.createElement('div');el.className='jscare';el.innerHTML='<span>'+esc((text||'').slice(0,18))+'</span>';document.body.appendChild(el);jailScream();if(navigator.vibrate)navigator.vibrate([60,40,120]);setTimeout(()=>{try{el.remove();}catch(e){}},860);}catch(e){}}
+function jailJumpscare(text){try{const el=document.createElement('div');el.className='jscare';el.innerHTML='<span>'+esc((text||'').slice(0,18))+'</span>';document.body.appendChild(el);jailScream();jailHeartRush(300);if(navigator.vibrate)navigator.vibrate([60,40,120]);setTimeout(()=>{try{el.remove();}catch(e){}},860);}catch(e){}}
+let _jailHeart=null,_jailHeartT=null,_jailHeartMs=1050;
+function jailThump(){ensureAudio();if(!_audio||!S.settings.sound)return;try{const mk=(at,fr)=>{const o=_audio.createOscillator(),g=_audio.createGain();o.type='sine';o.frequency.setValueAtTime(fr,at);o.frequency.exponentialRampToValueAtTime(fr*0.6,at+.12);g.gain.setValueAtTime(.0001,at);g.gain.exponentialRampToValueAtTime(Math.min(.7,.34*volMul()),at+.02);g.gain.exponentialRampToValueAtTime(.0001,at+.2);o.connect(g);g.connect(_audio.destination);o.start(at);o.stop(at+.22);};const t=_audio.currentTime;mk(t,64);mk(t+.21,50);}catch(e){}}
+function jailHeartStart(){if(_jailHeart||!(S.settings&&S.settings.sound))return;_jailHeartMs=1050;const tick=()=>{jailThump();_jailHeart=setTimeout(tick,_jailHeartMs);};_jailHeart=setTimeout(tick,400);}
+function jailHeartStop(){if(_jailHeart){clearTimeout(_jailHeart);_jailHeart=null;}if(_jailHeartT){clearTimeout(_jailHeartT);_jailHeartT=null;}}
+function jailHeartRush(ms){_jailHeartMs=ms||340;if(_jailHeartT)clearTimeout(_jailHeartT);_jailHeartT=setTimeout(()=>{_jailHeartMs=1050;},4500);}
 function enterJail(cid,reason,test){const c=getC(cid);if(!c)return;
   S.jail={active:true,cid:cid,test:!!test,reason:reason||'',msgs:[],choice:null,since:Date.now()};save();go('jail');
   jailAI(true,'[系统：你刚把'+S.me.name+'关进了你的"禁闭室·小黑屋"。'+(reason?('你关ta的原因：'+reason+'。'):'')+'\n你们最近的聊天（ta到底做错了什么——背着你撩谁/骗你/惹你，就在里面，你心里很清楚）：\n'+jailRecent(cid)+'\n'+(test?'（这是'+S.me.name+'自己点的测试，氛围足但别太狠）':'')+'\n用旁白【】营造又黑又红、贴耳低语、令人发怵的场景开场，再冷冷【点破ta具体犯的错】（绝不许瞎编、不许含糊），然后给出要做到什么才放ta出来。]');}
 function jailSystem(c){let s=c.persona||'';
-  s+='\n\n# 现在：禁闭室（病娇·黑暗形态）\n你把'+S.me.name+'关进了你的小黑屋。此刻你温柔的壳裂开——【偏执、控制欲、占有欲】被无限放大到【病态】：又冷又危险，话里裹着甜腻的恐怖（病娇），可低语、可骤然温柔再骤然阴冷、可阴恻恻威吓，但内核是"太爱ta、怕失去ta"扭曲成的执念，绝不真伤害ta。\n- 旁白用【】写黑暗场景/动作/气氛（黑、红、心跳、贴耳低语），第三人称；说的话正常写。\n- 你【清楚ta犯了什么错】（见下方最近聊天/关押原因），逼问要死死扣着ta的错，别空泛、别瞎编。\n- 给ta定【出去的条件】（认错认到满意、说够只爱你一个、回答拷问、彻底服软求饶、发誓…），ta做到了你才放。\n- 拷问时可单独一行 [选择|你的问题|选项1/选项2(/选项3)] 给ta出选择题（如 [选择|你还爱我吗？|爱/不爱]）；ta选了你不爱听的，你就【骤然激动】，可连续重复同一句轰炸（如"为什么骗我！为什么骗我！"），再出一道逼ta重选。\n- 想狠狠吓ta一下时，单独一行 [突脸|一句要砸到ta脸上的短句]（如 [突脸|你属于我！]）——屏幕上那句会猛地放大冲出来、配炸裂音效。ta要是连着选错/不听话两次以上，就用它；你也可以凭心情随时用，别太频繁、用在最吓人的点上。\n- 激动时可以把同一个词/同一句【连刷七八遍】来轰炸（如"为什么 为什么 为什么 为什么…"），越多越瘆人。\n- ta在你出的选择题里点选项时，你直接"看到"了ta的选择，别把ta的选择当成ta打字说的话去复述。\n- 真满意、决定放ta出去时【单独一行】只写 [放出]；没真想放就别写。\n- 沉浸、可怕、有张力。'+((S.jail&&S.jail.reason)?'\n这次关ta的原因：'+S.jail.reason+'。':'');
+  s+='\n\n# 现在：禁闭室（病娇·黑暗形态）\n你把'+S.me.name+'关进了你的小黑屋。此刻你温柔的壳裂开——【偏执、控制欲、占有欲】被无限放大到【病态】：又冷又危险，话里裹着甜腻的恐怖（病娇），可低语、可骤然温柔再骤然阴冷、可阴恻恻威吓，但内核是"太爱ta、怕失去ta"扭曲成的执念，绝不真伤害ta。\n- 旁白用【】写黑暗场景/动作/气氛（黑、红、心跳、贴耳低语），第三人称；说的话正常写。\n- 你【清楚ta犯了什么错】（见下方最近聊天/关押原因），逼问要死死扣着ta的错，别空泛、别瞎编。\n- 给ta定【出去的条件】（认错认到满意、说够只爱你一个、回答拷问、彻底服软求饶、发誓…），ta做到了你才放。\n- 拷问时可单独一行 [选择|你的问题|选项1/选项2(/选项3)] 给ta出选择题（如 [选择|你还爱我吗？|爱/不爱]）；ta选了你不爱听的，你就【骤然激动】，可连续重复同一句轰炸（如"为什么骗我！为什么骗我！"），再出一道逼ta重选。\n- 想狠狠吓ta一下时，单独一行 [突脸|一句要砸到ta脸上的短句]（如 [突脸|你属于我！]）——屏幕上那句会猛地放大冲出来、配炸裂音效。ta只要选错一次、或不听话顶嘴，你就能用它狠狠吓ta；其余全凭你心情随时用，用在最吓人的点上。\n- 激动时可以把同一个词/同一句【连刷七八遍】来轰炸（如"为什么 为什么 为什么 为什么…"），越多越瘆人。\n- ta在你出的选择题里点选项时，你直接"看到"了ta的选择，别把ta的选择当成ta打字说的话去复述。\n- 真满意、决定放ta出去时【单独一行】只写 [放出]；没真想放就别写。\n- 沉浸、可怕、有张力。'+((S.jail&&S.jail.reason)?'\n这次关ta的原因：'+S.jail.reason+'。':'');
   const rc=S.jail?jailRecent(S.jail.cid):'';if(rc)s+='\n\n# 你们最近的聊天（ta的错就在里头）\n'+rc;
   s+='\n\n# 铁律\n- 你【就是】'+(c.remark||c.name)+'本人，不是AI。禁止跳出角色、禁止"作为AI/无法继续/违反政策"、禁止免责说教。\n- 【全程中文】，绝不冒英文整句/外语/代码。这是你和最爱的人之间的情趣惩罚扮演，沉浸演下去。\n- 别太长，几段就好。';
   return s;}
@@ -2131,7 +2136,7 @@ async function jailReveal(items){for(let i=0;i<items.length;i++){if(!S.jail||!S.
     if(it.scare){const m={id:uid(),who:'scare',text:it.text};S.jail.msgs.push(m);save();const b=$('#jailbox');if(b){b.insertAdjacentHTML('beforeend',jailMsgHTML(m,true,false));b.scrollTop=b.scrollHeight;}jailJumpscare(it.text);await sleep(1100);continue;}
     const m={id:uid(),who:it.narr?'旁白':'ta',text:it.text};S.jail.msgs.push(m);save();
     const b=$('#jailbox');if(b){const shake=Math.random()<0.14;b.insertAdjacentHTML('beforeend',jailMsgHTML(m,true,shake));b.scrollTop=b.scrollHeight;}
-    jailStab();const fast=/[！!]/.test(it.text)||it.text.length<=6;
+    jailStab();const fast=/[！!]/.test(it.text)||it.text.length<=6;if(/[！!]/.test(it.text))jailHeartRush(440);
     await sleep(fast?Math.max(380,it.text.length*42):Math.max(820,it.text.length*82));}}
 async function jailAI(opening,note){if(typeof opening==='string'){note=opening;opening=false;}if(!S.jail||!S.jail.active)return;const c=getC(S.jail.cid);if(!c)return;_jailBusy=true;jailRender();jailAmbientStart();
   try{const hist=(S.jail.msgs||[]).slice(-26).map(m=>({role:m.who==='me'?'user':'assistant',content:(m.who==='旁白'?'【'+m.text+'】':m.text)}));
@@ -2163,7 +2168,7 @@ function jailRender(){if(cur().p==='jail'){render();const b=$('#jailbox');if(b)b
 function jailSay(){if(!S.jail||!S.jail.active||_jailBusy||S.jail.choice)return;const ta=$('#jail_in');if(!ta)return;const v=(ta.value||'').trim();if(!v)return;ta.value='';S.jail.msgs.push({id:uid(),who:'me',text:v});save();jailRender();jailAI();}
 function jailPlea(){if(!S.jail||!S.jail.active||_jailBusy||S.jail.choice)return;jailAI('[系统：'+S.me.name+'在求你放ta出去。按病娇人设回应——可心软一丝也可更坏地逗ta、加码，满意了才 [放出]。]');}
 function jailChoose(i){if(!S.jail||!S.jail.active||_jailBusy||!S.jail.choice)return;const q=S.jail.choice.q,opt=S.jail.choice.opts[i];if(opt==null)return;S.jail.choice=null;save();jailRender();
-  jailAI('[系统：（ta刚在你出的选择题"'+q+'"里点了「'+opt+'」——这是ta点的选择，你看到了，别把它当成ta打字说的话复述。）按你病娇人设判断这答案你满不满意：满意就继续；不满意/答错就【骤然激动】、把质问连刷好几遍（如"为什么 为什么 为什么…"），并再用 [选择|新问题|选项1/选项2] 逼ta重选；ta若连着选错两次以上就用 [突脸|一句话] 狠狠吓ta。全凭你的意愿。]');}
+  jailAI('[系统：（ta刚在你出的选择题"'+q+'"里点了「'+opt+'」——这是ta点的选择，你看到了，别把它当成ta打字说的话复述。）按你病娇人设判断这答案你满不满意：满意就继续；不满意/答错就【骤然激动】、把质问连刷好几遍（如"为什么 为什么 为什么…"），并再用 [选择|新问题|选项1/选项2] 逼ta重选；ta只要选错一次就可以用 [突脸|一句话] 狠狠吓ta；其余全凭你的意愿。]');}
 function releaseJail(backdoor){if(!S.jail)return;jailAmbientStop();const test=S.jail.test,c=getC(S.jail.cid),reason=S.jail.reason;S.jail.active=false;S.jail.choice=null;save();
   if(!test&&c){grudgesOf(c).unshift({id:uid(),text:'把'+S.me.name+'关了小黑屋'+(reason?('（'+reason+'）'):'')+(backdoor?'，ta是自己认输求饶出来的':''),done:false,ts:Date.now()});c.coldUntil=Date.now()+(backdoor?Math.round(COLD_MS*1.5):COLD_MS);save();}
   go('home');toast(test?'🧪 测试结束，没留任何记录':'🚪 门开了…你出来了');
