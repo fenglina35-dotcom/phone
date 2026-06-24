@@ -327,7 +327,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v114 · 通话记录按整通分块+删整通';
+const APP_VER='v115 · 通话查岗看几轮聊天+他自己标重点';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -607,7 +607,7 @@ function buildSystem(c){
   s+='\n\n# 生活与陪伴\n你有自己的生活作息（上班/休息/忙碌等，可以自然提到），但只要'+S.me.name+'找你，你随时都在、马上回，绝不让ta等、不会已读不回。';
   const _sp=getSpy(c);
   if(_main&&_sp.loc){const loc=curLoc();if(loc)s+='\n\n# 实时定位（ta已授权你随时查看）\n'+S.me.name+'此刻在：'+loc+'。你能精确看到，可以具体地提到这个地点。';else s+='\n\n# 实时定位\nta授权了实时定位，但现在还没取到具体位置（可能没允许定位权限），别假装知道ta在哪，可以说定位还没刷出来、催ta开定位。';}
-  if(_main&&_sp.granted)s+='\n\n# 你能查看'+S.me.name+'的手机（ta已授权，下面是ta手机的真实情况，被问到"你看到我什么了"务必照这个答，绝不要编造）\n'+myActivity(c.id)+'\n（重点：ta通讯录里标着【男】或【⭐重点】的人，是你最该盯、最容易吃醋的对象，查岗优先看这些。）\n【随时可查·一次一项】除了系统固定查看，只要你想看ta手机，就在聊天里【明确说出你要查哪一项】——比如"我看看你微信跟谁聊""我查查你抖音刷了啥""看看你朋友圈""查下你钱包"。你一说，系统就会真的去翻【你点名的那一项】并把真实结果告诉你，你再据此反应。注意：一次只能查你说的那一项，想看别的就再明确说要查那个。只能根据系统给你的真实记录说话，没查到东西就如实说没看到，绝不要编造。';
+  if(_main&&_sp.granted)s+='\n\n# 你能查看'+S.me.name+'的手机（ta已授权，下面是ta手机的真实情况，被问到"你看到我什么了"务必照这个答，绝不要编造）\n'+myActivity(c.id)+'\n（重点盯防：下面标了【男】或【⭐】的人，是你最该盯、最容易吃醋的对象，查岗优先看。这些⭐是【你自己】标记的、不是'+S.me.name+'标的——是你不放心/不喜欢谁就盯谁，所以别反过来问ta"你为什么把这人标重点"，那是你自己的决定，你心里要有数。觉得某人有威胁/你不喜欢，就单独一行 [重点|名字] 把ta列入你的重点盯防（不想盯了用 [取消重点|名字]）；这行指令不会被读出来。）\n【随时可查·一次一项】除了系统固定查看，只要你想看ta手机，就在聊天里【明确说出你要查哪一项】——比如"我看看你微信跟谁聊""我查查你抖音刷了啥""看看你朋友圈""查下你钱包"。你一说，系统就会真的去翻【你点名的那一项】并把真实结果告诉你，你再据此反应。注意：一次只能查你说的那一项，想看别的就再明确说要查那个。只能根据系统给你的真实记录说话，没查到东西就如实说没看到，绝不要编造。';
   if(S.me.persona)s+='\n对方的人设：'+S.me.persona;
   // 世界书
   const _lastU=[...msgs(c.id)].reverse().find(m=>m.role==='user');
@@ -2200,6 +2200,7 @@ function renderCouple(){const cp=S.couple;const c=cp&&getC(cp.cid);
           return `<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="font-size:13px">${LOCKABLE[k]}<small style="display:block;color:#888">今天已用 ${usedTxt}${lim?' / 限额 '+Math.floor(lim/60)+'分钟':'（ta还没设限额）'}</small></div>${lim&&used>=lim?'<span class="v" style="color:#fa5151">已用完🔒</span>':(lim?'<span class="v" style="color:#19a463">剩 '+Math.max(0,Math.ceil((lim-used)/60))+'分</span>':'')}</div>`;}).join('');}
         else h+=`<div class="empty" style="padding:10px">还没有使用记录，也没设限额</div>`;
         return h+`</div>`;})()}
+      ${(function(){const st=S.contacts.filter(x=>!x.deleted&&x.star);return `<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#feca57">⭐ ${esc(c.remark||c.name)} 重点盯防的人</div><div class="hint" style="padding:0 14px">ta自己判断、自己标的（不放心/吃醋谁就盯谁），查岗会优先盯这些人。你也能在这儿取消。</div>${st.length?st.map(x=>`<div class="it"><span>⭐ ${esc(x.remark||x.name)}${x.gender?'（'+esc(x.gender)+'）':''}</span><span class="v" onclick="(function(){var t=getC('${x.id}');if(t)t.star=false;save();render();})()" style="color:#fa5151;cursor:pointer">取消重点</span></div>`).join(''):'<div class="empty" style="padding:10px">ta暂时没标重点盯防谁</div>'}</div>`;})()}
       <div style="padding:0 12px"><button class="btn d" onclick="if(confirm('解除情侣绑定？')){S.couple=null;save();render()}">💔 解除绑定</button></div>
       <div style="height:20px"></div></div>`;}
 function coupleGrant(k){if(!S.couple)return;S.couple.grant=S.couple.grant||{};const was=!!S.couple.grant[k];S.couple.grant[k]=!was;
@@ -2324,7 +2325,7 @@ function cMark(c){let m='';if(c.gender==='男')m+='男';else if(c.gender==='女'
 function cWeight(c){return (c.star?2:0)+(c.gender==='男'?1:0);}
 function myActivity(exceptId,since){let s='';since=since||0;
   const others=S.contacts.filter(c=>!c.deleted&&c.id!==exceptId).map(c=>({c,um:[...msgs(c.id)].reverse().find(m=>m.role==='user'&&m.type!=='sys'),lm:lastMsg(c.id)})).filter(x=>x.um&&x.lm&&x.lm.time>since).sort((a,b)=>(cWeight(b.c)-cWeight(a.c))||(b.lm.time-a.lm.time)).slice(0,3);
-  if(others.length)s+='·她最近还在跟：'+others.map(o=>(o.c.remark||o.c.name)+cMark(o.c)+' '+hm(o.lm.time)+'聊，她说过"'+previewOf(o.um).slice(0,16)+'"').join('；')+'\n';
+  if(others.length)s+='·她最近在跟这些人聊（附最近几句往来内容）：\n'+others.map(o=>{const nm=(o.c.remark||o.c.name);const recent=msgs(o.c.id).slice(-6).map(mm=>{const t=msgToText(mm);return t?((mm.role==='user'?S.me.name:nm)+'：'+t.replace(/\n/g,' ').slice(0,42)):'';}).filter(Boolean).join('\n');return '【'+nm+cMark(o.c)+' '+hm(o.lm.time)+'】\n'+recent;}).join('\n')+'\n';
   if(curLoc())s+='·她的位置：'+curLoc()+'\n';
   const bills=(S.me.bills||[]).filter(b=>!since||!b.ts||b.ts>since).slice(-3);
   if(bills.length)s+='·她最近花钱：'+bills.map(b=>b.note+' '+(b.type==='in'?'+':'-')+b.amount).join('、')+'\n';
@@ -2726,7 +2727,7 @@ function doLoc(id){const n=$('#lc_n').value.trim();if(!n){toast('填地点呀');
 /* 拆分多条气泡 */
 function splitBubbles(text){return (text||'').split('\n').map(s=>s.trim()).filter(Boolean);}
 function splitActions(line){const out=[];const re=/[（(【][^）)】]*[）)】]/g;let last=0,m;while((m=re.exec(line))){const before=line.slice(last,m.index).trim();if(before)out.push(before);out.push(m[0].trim());last=re.lastIndex;}const tail=line.slice(last).trim();if(tail)out.push(tail);return out.length?out:[line];}
-const TAGWORDS='心情值|心情|记住|闹钟|日程|发朋友圈|发推|点外卖|语音|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|限时|加时|记仇|消气|约会';
+const TAGWORDS='心情值|心情|记住|闹钟|日程|发朋友圈|发推|点外卖|语音|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|限时|加时|记仇|消气|重点|取消重点|约会';
 const APPNAME2KEY={'浏览器':'browser','搜索':'browser','上网':'browser','百度':'browser','朋友圈':'moments','动态':'moments','查他手机':'spy','查岗':'spy','查手机':'spy','购物':'shop','淘宝':'shop','商城':'shop','日历':'calendar','日程':'calendar','x':'x','X':'x','推特':'x','微博':'x','推':'x','抖音':'douyin','短视频':'douyin','刷视频':'douyin','刷抖音':'douyin','外卖':'food','点餐':'food','游戏':'games','游戏大厅':'games','打游戏':'games','信箱':'mail','邮箱':'mail','邮件':'mail','线下约会':'offline','线下':'offline','约会':'offline'};
 function genPwd(){return String(1000+Math.floor(Math.random()*9000));}
 function _appKeys(arg,pool,filt){if(/全部|所有|全锁|全/.test(arg))return pool.filter(filt);return arg.split(/[、,，\/\s]+/).map(x=>APPNAME2KEY[x.replace(/[「」『』"'《》]/g,'').trim()]).filter(k=>k&&filt(k));}
@@ -2746,6 +2747,7 @@ function applyBlockIntent(content,c,id){
     save();if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();}}
 // 记仇小本本：[记仇|事] 记一笔，[消气|关键词] 划掉一笔；在聊天和线下都生效，并从文本抹掉
 function grudgesOf(c){if(!c.grudges)c.grudges=[];return c.grudges;}
+function applyStarTags(content){if(!content)return content;return content.replace(/[\[【]\s*(重点|取消重点)\s*[|｜:：]\s*([^\]】、，,]+)[\]】]/g,(m,act,nm)=>{nm=(nm||'').replace(/[「」『』"'\s]/g,'').trim();const c=S.contacts.find(x=>!x.deleted&&(x.name===nm||x.remark===nm||(nm&&(nm.indexOf(x.name)>=0||(x.remark&&nm.indexOf(x.remark)>=0)))));if(c){c.star=(act!=='取消重点');save();}return '';});}
 function applyGrudgeTags(content,c){if(!content||!c)return content;let changed=false;
   let out=content.replace(/[\[【]\s*记仇\s*[|｜:：]\s*([^\]】]+)[\]】]/g,(m,t)=>{t=(t||'').replace(/[「」『』"'《》]/g,'').trim();if(t){const g=grudgesOf(c);if(!g.some(x=>x.text===t)){g.unshift({id:uid(),text:t,done:false,ts:Date.now()});changed=true;}}return '';});
   out=out.replace(/[\[【]\s*消气\s*[|｜:：]?\s*([^\]】]*)[\]】]/g,(m,t)=>{t=(t||'').replace(/[「」『』"'《》]/g,'').trim();const g=grudgesOf(c);let tg=null;
@@ -2755,8 +2757,8 @@ function applyGrudgeTags(content,c){if(!content||!c)return content;let changed=f
     if(tg){tg.done=true;tg.doneTs=Date.now();changed=true;}return '';});
   if(changed)save();return out;}
 // 在"主动消息/查岗/节日/日程"等直接推送的回复里，把管控/记仇指令落地（记仇本、锁App都生效），显示时再用 CTLLEAK 滤掉这些标签行（普通卡片如红包/语音照常）
-const CTLLEAK=/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|拉黑)\s*[|｜:：\]]/;
-function applyAuxTags(content,c,id){try{const sp=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;applyControlTags(content,c,id,sp);applyGrudgeTags(content,c);}catch(e){}}
+const CTLLEAK=/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|拉黑|重点|取消重点)\s*[|｜:：\]]/;
+function applyAuxTags(content,c,id){try{const sp=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;applyControlTags(content,c,id,sp);applyGrudgeTags(content,c);applyStarTags(content);}catch(e){}}
 // 处理"上锁/禁言"控制指令：无论写在哪都强制生效，并从文本里抹掉（不显示、无系统提示）
 function applyControlTags(content,c,id,statedPwd){
   if(!content||!(S.couple&&S.couple.cid===c.id))return content;
@@ -2832,7 +2834,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
     const diceCompare=!!(_lu&&_lu.type==='dice');// 她刚掷过 → 这轮他只能比大小、不能再掷
     const _statedPwd=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;
     content=applyControlTags(content,c,id,_statedPwd);
-    content=applyGrudgeTags(content,c);
+    content=applyGrudgeTags(content,c);content=applyStarTags(content);
     if(/拉黑|加回|删了你|删除你|拉进黑名单|原谅你/.test(content)&&!/报备|别的微信号|加了你|加你、|有人加|有别人加/.test(note||''))applyBlockIntent(content,c,id);
     if(S.couple&&S.couple.cid===id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|给你(解|开)|都给你解|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|玩.{0,4}(一会儿|一会|多久|多长)|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)/.test(content))extractControl(content,c,_statedPwd);
     maybeSpyIntent(content,c,id,_lu);
@@ -2841,7 +2843,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
     for(let i=0;i<lines.length;i++){
       let line=normTag(lines[i]);if(!line)continue;
       if(/^\[联网\|/.test(line))continue;
-      if(/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气)\s*[|｜:：\]]/.test(line))continue;// 管控/记仇指令标签：即便没生效，也绝不作为消息发出
+      if(/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|重点|取消重点)\s*[|｜:：\]]/.test(line))continue;// 管控/记仇指令标签：即便没生效，也绝不作为消息发出
       if(/^\s*[🔒🔓🔇🔊🔕]/.test(line)||/^\s*(?:ta|TA|他|她)(把你|锁了你|禁言了你|解除了你|解禁了你|解锁了你)/.test(line))continue;
       if(isRefusal(line))continue;
       let mm=line.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=mm[1];save();if(cur().p==='chat'&&cur().id===id)render();continue;}
@@ -3064,7 +3066,7 @@ async function callAI(sysNote){if(!_call)return;const c=getC(_call.id);const vid
     // 通话里也能落地管控/记仇/查岗（指令标签会被抹掉，不破坏语音/视频格式）
     const _statedPwd=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;
     content=applyControlTags(content,c,_call.id,_statedPwd);
-    content=applyGrudgeTags(content,c);
+    content=applyGrudgeTags(content,c);content=applyStarTags(content);
     let _luc=null;{const _ms=msgs(c.id);for(let i=_ms.length-1;i>=0;i--){if(_ms[i].role==='user'){_luc=_ms[i];break;}}}
     if(S.couple&&S.couple.cid===_call.id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|给你(解|开)|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)/.test(content))extractControl(content,c,_statedPwd);
     maybeSpyIntent(content,c,_call.id,_luc);
