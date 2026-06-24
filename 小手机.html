@@ -325,7 +325,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v103 · 修提示音/铃声被语音输入打断';
+const APP_VER='v104 · 约会记忆做成日期卡片+不再重复追问';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -614,7 +614,7 @@ function buildSystem(c){
   if(c.summary&&!c.summaries){c.summaries=[{time:'(早期)',text:c.summary}];delete c.summary;}
   if(_main&&c.summaries&&c.summaries.length)s+='\n\n# 之前对话的概要（按时间，保持连贯）\n'+c.summaries.slice(-8).map(x=>'· '+x.time+'　'+x.text).join('\n');
   const _off=S.offline&&S.offline[c.id];
-  if(_main&&_off&&_off.memory&&_off.memory.length)s+='\n\n# 你和'+S.me.name+'的线下约会（你们真的在现实里见面约会过，这些都是和'+S.me.name+'——你女朋友——一起的，记清楚约会对象就是ta）\n'+_off.memory.join('\n')+'\n微信聊天里你可以自然提起这些和ta线下的事，但要用【普通文字】说，别用旁白【】那种线下格式。';
+  if(_main&&_off&&_off.memory&&_off.memory.length)s+='\n\n# 你和'+S.me.name+'的线下约会（你们真的在现实里见面约会过，这些都是和'+S.me.name+'——你女朋友——一起的，记清楚约会对象就是ta）\n'+_off.memory.map(offMemText).join('\n')+'\n这些约会都是【已经发生过的过去式】，是你们的共同回忆。别把已经结束的事当成正在进行去反复追问——比如记忆里你们已经在机场告别、她已经走了，就别再一遍遍问她「上飞机了吗/到了吗」。微信聊天里可以自然回味这些线下的事，但要用【普通文字】说，别用旁白【】那种线下格式。';
   if(_main){const gd=(c.grudges||[]);const gund=gd.filter(x=>!x.done);
     s+='\n\n# 你的记仇小本本（你私下记着'+S.me.name+'惹你/欠你的事，找机会跟ta算账、翻旧账）\n'+(gund.length?gund.map((x,i)=>(i+1)+'. '+x.text).join('\n'):'（暂时没记仇）')+'\n· ta惹你生气、做了让你介意/吃醋的事时，单独一行 [记仇|具体那件事] 把它记进小本本。\n· 等你们把这事说开、ta哄好你了、或你出了气，单独一行 [消气|那件事的关键词] 把它划掉。\n· 平时可以适时翻旧账："上次你…这账还没跟你算呢"，符合你占有欲强、嘴硬的人设。';
     const tt=(c.tasks&&c.tasks.date===todayStr())?c.tasks:null;
@@ -965,12 +965,15 @@ function spyAddGrudge(id){const c=getC(id);if(!c)return;const t=prompt('帮ta在
 function spyToggleGrudge(id,i){const c=getC(id);const g=c&&c.grudges;if(!g||!g[i])return;g[i].done=!g[i].done;g[i].doneTs=g[i].done?Date.now():0;save();render();}
 function spyDelGrudge(id,i){const c=getC(id);const g=c&&c.grudges;if(!g||!g[i])return;g.splice(i,1);save();render();}
 // 他手机里：和忆北的线下约会记录（让他清楚约会对象是忆北）
+function offMemText(m){return (typeof m==='string')?m:((m.label?m.label+' ':'')+(m.loc?'@'+m.loc+'：':'')+(m.text||''));}
+function offMemLabel(o){const w=o.when||'';let d='';const md=w.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);if(md)d=(+md[2])+'月'+(+md[3])+'日';else if(w)d=w;else d=ymd(Date.now());const tm=w.match(/(\d{1,2}:\d{2})/);return d+(o.daypart?' '+o.daypart:(tm?' '+tm[1]:''));}
 function spyOfflineSec(id){const o=S.offline&&S.offline[id];const mem=(o&&o.memory)||[];const ongoing=o&&o.started;if(!mem.length&&!ongoing)return '';
   let rows='';
   if(ongoing)rows+=`<div class="it"><span style="font-size:13px;color:#ff8fab">💗 此刻正在和「${esc(S.me.name)}」约会中 · 📍${esc(o.loc||'')}${o.daypart?' · '+esc(o.daypart):''}</span></div>`;
-  rows+=mem.map((m,i)=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="flex:1;font-size:13px;color:#ccc">🌹 ${esc(m)}</div><div style="white-space:nowrap"><span onclick="spyEditOffMem('${id}',${i})" style="color:#54a0ff;cursor:pointer;margin-right:10px">✎</span><span onclick="spyDelOffMem('${id}',${i})" style="color:#fa5151;cursor:pointer">✕</span></div></div>`).join('');
+  rows+=mem.map((m,i)=>{const obj=(typeof m==='object'&&m);const hdr=obj?('📅 '+esc(m.label||ymd(m.ts||0))+(m.loc?' · @'+esc(m.loc):'')):'';const txt=obj?esc(m.text||''):esc(m);
+    return `<div style="margin:0 10px 8px;background:#241a20;border:1px solid #3a2a30;border-radius:12px;padding:10px 12px"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px"><div style="flex:1;min-width:0">${hdr?`<div style="color:#ff8fab;font-weight:600;font-size:13px;margin-bottom:4px">${hdr}</div>`:''}<div style="font-size:13px;color:#ddd;line-height:1.6">🌹 ${txt}</div></div><div style="white-space:nowrap"><span onclick="spyEditOffMem('${id}',${i})" style="color:#54a0ff;cursor:pointer;margin-right:8px">✎</span><span onclick="spyDelOffMem('${id}',${i})" style="color:#fa5151;cursor:pointer">✕</span></div></div></div>`;}).join('');
   return `<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#ff8fab">🌹 和「${esc(S.me.name)}」的线下约会（共${mem.length}次，可改/删）</div>${rows||'<div class="it"><span class="v">无</span></div>'}</div>`;}
-function spyEditOffMem(id,i){const o=S.offline&&S.offline[id];if(!o||!o.memory)return;const t=prompt('修改这条约会记忆：',o.memory[i]);if(t==null)return;o.memory[i]=t.trim();save();render();}
+function spyEditOffMem(id,i){const o=S.offline&&S.offline[id];if(!o||!o.memory)return;const m=o.memory[i];const cur=(typeof m==='object')?(m.text||''):m;const t=prompt('修改这条约会记忆：',cur);if(t==null)return;if(typeof m==='object')m.text=t.trim();else o.memory[i]=t.trim();save();render();}
 function spyDelOffMem(id,i){const o=S.offline&&S.offline[id];if(!o||!o.memory)return;if(!confirm('删除这条约会记忆？'))return;o.memory.splice(i,1);save();render();}
 // 查手机：忆北在抖音点赞过的视频（取消点赞就没记录了）
 function spyDouyinSec(id){const liked=(S.dy&&S.dy.liked)||[];if(!liked.length)return '';
@@ -1989,7 +1992,7 @@ function offlineSystem(c){let s=c.persona||'';
   if(c.memory&&c.memory.length)s+='\n\n# 你记得关于'+S.me.name+'的事\n'+c.memory.map((m,i)=>(i+1)+'. '+m).join('\n');
   if(c.summaries&&c.summaries.length)s+='\n\n# 你和ta微信聊天的概要（线下你也记得这些）\n'+c.summaries.slice(-6).map(x=>'· '+x.time+' '+x.text).join('\n');
   const o=offData(c.id);
-  if(o.memory&&o.memory.length)s+='\n\n# 你们以前线下见面的经历\n'+o.memory.join('\n');
+  if(o.memory&&o.memory.length)s+='\n\n# 你们以前线下见面的经历\n'+o.memory.map(offMemText).join('\n');
   const gund=(c.grudges||[]).filter(x=>!x.done);
   s+='\n\n# 你的记仇小本本（'+S.me.name+'惹你/欠你的事，当面正好找ta算账）\n'+(gund.length?gund.map((x,i)=>(i+1)+'. '+x.text).join('\n'):'（暂时没记仇）')+'\n约会里ta再惹你，用一行 [记仇|具体那件事] 记下；当面把账算清/哄好了就 [消气|关键词] 划掉。';
   s+='\n\n# 现在：和'+S.me.name+'线下真实约会（这不是微信聊天！）\n地点：'+(o.loc||'未定')+'，时间：'+(o.when||'现在')+(o.daypart?'（现在是'+o.daypart+'）':'')+'。\n- 你清楚现在大概是'+(o.daypart||'这个时段')+'，言行、环境、光线都要符合这个时段（比如深夜就安静暧昧、中午就明亮热闹），别搞错时间。\n- 沉浸式角色扮演，像写剧本/小说。\n- 你的【动作、神态、环境、心理】一律用【】括起来写成旁白，旁白用【第三人称】（用 他/她/两人 来描写，绝对不要用"我"）；你说出口的话就正常写出来（第一人称对话）。\n- 一次可以几段：旁白和对话穿插，生动真实，符合你的人设和你们的关系。\n- 这里是面对面，绝对不要用微信那套：不要发[转账][红包][语音][来电]这类标签卡片。';
@@ -2024,17 +2027,17 @@ function offMsgMenu(id,mid){const o=offData(id);const m=o.msgs.find(x=>x.id===mi
    <button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
 function offMemory(id){const o=offData(id);
   openModal(`<h3>🌹 约会记忆</h3><div class="hint">这些是你们线下见面发生的事(结束约会会自动添加)，微信里的ta也会记得。可随时改/删。</div>
-   ${(o.memory||[]).map((m,i)=>`<div class="bill" style="border-radius:8px;margin-bottom:6px"><div style="flex:1">${esc(m)}</div><div style="white-space:nowrap"><span onclick="(function(){var t=prompt('改记忆',offData('${id}').memory[${i}]);if(t!=null){offData('${id}').memory[${i}]=t;save();offMemory('${id}');}})()" style="color:#54a0ff;cursor:pointer;margin-right:10px">✎</span><span onclick="offData('${id}').memory.splice(${i},1);save();offMemory('${id}')" style="color:#fa5151;cursor:pointer">✕</span></div></div>`).join('')||'<div class="empty">还没有约会记忆</div>'}
+   ${(o.memory||[]).map((m,i)=>{const obj=(typeof m==='object'&&m);const hdr=obj?('📅 '+esc(m.label||ymd(m.ts||0))+(m.loc?' · @'+esc(m.loc):'')):'';const txt=obj?esc(m.text||''):esc(m);return `<div style="background:#fff5f8;border:1px solid #ffd6e6;border-radius:10px;padding:9px 11px;margin-bottom:6px"><div style="display:flex;justify-content:space-between;gap:6px"><div style="flex:1">${hdr?`<div style="color:#e8527f;font-weight:600;font-size:12px;margin-bottom:3px">${hdr}</div>`:''}<div style="font-size:13px;color:#444;line-height:1.5">${txt}</div></div><div style="white-space:nowrap"><span onclick="spyEditOffMem('${id}',${i})" style="color:#54a0ff;cursor:pointer;margin-right:10px">✎</span><span onclick="(function(){offData('${id}').memory.splice(${i},1);save();offMemory('${id}');})()" style="color:#fa5151;cursor:pointer">✕</span></div></div></div>`;}).join('')||'<div class="empty">还没有约会记忆</div>'}
    <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 async function offEnd(id){const o=offData(id);if(!o.msgs||!o.msgs.length){offQuit();return;}
   if(!confirm('结束这次约会？会自动把这次见面总结成一条记忆(微信里的ta也会知道)。'))return;
   toast('正在回味这次约会…');const c=getC(id);
   try{const text=o.msgs.map(m=>(m.who==='me'?S.me.name:m.who==='旁白'?'(旁白)':c.name)+'：'+m.text).join('\n');
     const sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」。把你和'+S.me.name+'这次线下约会发生的事，用第一人称简短记成1到2句记忆(包含地点、做了什么、心情)，以后聊微信你能想起。直接写正文，50字内。'},{role:'user',content:text}],{max:160});
-    o.memory=o.memory||[];o.memory.push((o.when?o.when+' ':'')+(o.loc?'@'+o.loc+'：':'')+cleanReply(sum).slice(0,90));
-  }catch(e){o.memory=o.memory||[];o.memory.push((o.when||'')+(o.loc?' @'+o.loc:'')+' 见了一面');}
+    o.memory=o.memory||[];o.memory.push({ts:Date.now(),label:offMemLabel(o),loc:o.loc||'',text:cleanReply(sum).slice(0,120)});
+  }catch(e){o.memory=o.memory||[];o.memory.push({ts:Date.now(),label:offMemLabel(o),loc:o.loc||'',text:'见了一面'});}
   o.started=false;save();toast('约会记忆已保存💗');
-  if(c&&!c.blocked)scheduleReply(id,'[系统：你和'+S.me.name+'刚结束在「'+(o.loc||'外面')+'」的线下约会，要分开各自回家了。请你主动发微信关心ta（比如 路上注意安全、到家跟我说一声、今天很开心 之类，符合你的人设），用普通文字聊天，别用旁白【】那种格式。]');
+  if(c&&!c.blocked)scheduleReply(id,'[系统：你和'+S.me.name+'刚结束在「'+(o.loc||'外面')+'」的这次线下见面，要分开了。请你结合刚才见面的真实情形，主动发微信自然地道别/关心一句（路上小心、今天很开心、想你之类，符合你人设和当时情境；如果刚才是在机场送别就别说「到家说一声」那种）。用普通文字聊天，别用旁白【】格式。]');
   offQuit();}
 function offSetting(id){const o=offData(id);
   openModal(`<h3>约会设定</h3>
