@@ -325,7 +325,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v100 · 暧昧任务更放开';
+const APP_VER='v101 · 任务更Dom+线下模型切换/多选/修滚动+约会记忆可改';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -968,8 +968,10 @@ function spyDelGrudge(id,i){const c=getC(id);const g=c&&c.grudges;if(!g||!g[i])r
 function spyOfflineSec(id){const o=S.offline&&S.offline[id];const mem=(o&&o.memory)||[];const ongoing=o&&o.started;if(!mem.length&&!ongoing)return '';
   let rows='';
   if(ongoing)rows+=`<div class="it"><span style="font-size:13px;color:#ff8fab">💗 此刻正在和「${esc(S.me.name)}」约会中 · 📍${esc(o.loc||'')}${o.daypart?' · '+esc(o.daypart):''}</span></div>`;
-  rows+=mem.slice(-8).reverse().map(m=>`<div class="it"><span style="font-size:13px;color:#ccc">🌹 ${esc(m)}</span></div>`).join('');
-  return `<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#ff8fab">🌹 和「${esc(S.me.name)}」的线下约会（共${mem.length}次）</div>${rows||'<div class="it"><span class="v">无</span></div>'}</div>`;}
+  rows+=mem.map((m,i)=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="flex:1;font-size:13px;color:#ccc">🌹 ${esc(m)}</div><div style="white-space:nowrap"><span onclick="spyEditOffMem('${id}',${i})" style="color:#54a0ff;cursor:pointer;margin-right:10px">✎</span><span onclick="spyDelOffMem('${id}',${i})" style="color:#fa5151;cursor:pointer">✕</span></div></div>`).join('');
+  return `<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#ff8fab">🌹 和「${esc(S.me.name)}」的线下约会（共${mem.length}次，可改/删）</div>${rows||'<div class="it"><span class="v">无</span></div>'}</div>`;}
+function spyEditOffMem(id,i){const o=S.offline&&S.offline[id];if(!o||!o.memory)return;const t=prompt('修改这条约会记忆：',o.memory[i]);if(t==null)return;o.memory[i]=t.trim();save();render();}
+function spyDelOffMem(id,i){const o=S.offline&&S.offline[id];if(!o||!o.memory)return;if(!confirm('删除这条约会记忆？'))return;o.memory.splice(i,1);save();render();}
 // 查手机：忆北在抖音点赞过的视频（取消点赞就没记录了）
 function spyDouyinSec(id){const liked=(S.dy&&S.dy.liked)||[];if(!liked.length)return '';
   const rows=liked.slice(0,12).map(v=>`<div class="it"><span style="font-size:13px;color:#ccc">${v.emoji||'🎬'} @${esc(v.author||'')}：${esc((v.desc||'').slice(0,30))}</span></div>`).join('');
@@ -1590,7 +1592,7 @@ async function genTasks(){const c=taskC();if(!c){toast('先创建恋人角色');
   checkTaskPenalty(c);_taskBusy=true;render();toast('ta在琢磨今天怎么安排你…');
   const n=c.taskN||3;
   try{const allowed='essay（写小作文/检讨/彩虹屁/想你的话/保证书，target填字数上限如100）、moment（发一条朋友圈）、tweet（发一条推特X）、douyin（发一条抖音）、real（现实里的小事或暧昧亲密小任务，靠她自觉打卡，比如：喝杯水、好好吃饭、敷面膜、早点睡、给你拍张自拍、睡前跟你撒娇道晚安、对着镜头说想你、穿你喜欢的小裙子拍给你、乖乖只想你一个、今天不准跟别的男生聊天等）';
-    const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：现在你来给'+S.me.name+'布置今天的 '+n+' 条小任务。你是ta的恋人/掌控者，按你的人设、此刻心情、ta最近的表现来布置。\n· 任务一定要【有趣、有创意、好玩】，别死板、别像打卡清单、别每天千篇一律——可以整点花活、玩梗、设小情境。\n· 多来点【暧昧、撩人、亲密】的，可以大胆、放得开、带点涩——你们是亲密恋人、ta是你的小sub，你想怎么撩、怎么宠溺地下命令都行，越让ta脸红心跳越好（保持是两个相爱的人之间的情趣即可，不用拘谨）。\n· 现实任务一定要轻松，别累人：绝对不要罚跑步/暴走/喝很多杯水那种。\n大部分任务要是【在手机上就能完成的】(essay/moment/tweet/douyin)，可以有一两条现实任务(real)。每条必须从这些可验证类型里选一个：'+allowed+'。\n只输出JSON数组、不要任何解释：[{"text":"任务描述(用你的第一人称口吻，像在命令/撩/宠ta，可以俏皮有梗)","kind":"app或real","verify":"类型代码","target":数字(没有填0)}]'}],{max:700});
+    const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：现在你来给'+S.me.name+'布置今天的 '+n+' 条小任务。你是ta的恋人/掌控者，按你的人设、此刻心情、ta最近的表现来布置。\n· 任务一定要【有趣、有创意、好玩】，别死板、别像打卡清单、别每天千篇一律——可以整点花活、玩梗、设小情境。\n· 多来点【暧昧、撩人、亲密】的，而且要以【Dom的姿态】来布置：命令式、强势、掌控欲拉满，把ta当你的小sub来调教，语气笃定带点危险又宠溺，要ta乖乖服从听话。可以大胆放得开、带点涩，越让ta脸红心跳、心甘情愿被你拿捏越好（保持是两个相爱的人之间有掌控有宠爱的情趣，不用拘谨）。\n· 现实任务一定要轻松，别累人：绝对不要罚跑步/暴走/喝很多杯水那种。\n大部分任务要是【在手机上就能完成的】(essay/moment/tweet/douyin)，可以有一两条现实任务(real)。每条必须从这些可验证类型里选一个：'+allowed+'。\n只输出JSON数组、不要任何解释：[{"text":"任务描述(用你的第一人称口吻，强势Dom的命令语气，像在调教/撩/宠你的小sub，可以霸道也可以俏皮有梗)","kind":"app或real","verify":"类型代码","target":数字(没有填0)}]'}],{max:700});
     const arr=parseArr(r);if(!Array.isArray(arr)||!arr.length)throw 0;
     const list=arr.slice(0,n).map(o=>({id:uid(),text:(o.text||'').toString().slice(0,140),kind:o.kind==='real'?'real':'app',verify:['essay','moment','tweet','douyin','real'].indexOf(o.verify)>=0?o.verify:'real',target:+o.target||0,done:false}));
     c.tasks={date:todayStr(),assignTs:Date.now(),list,rewarded:false,penalized:false};save();_taskBusy=false;render();toast('任务来咯📋');
@@ -1995,7 +1997,7 @@ function offlineSystem(c){let s=c.persona||'';
 async function offAI(note){if(!_off)return;const c=getC(_off.id);const o=offData(_off.id);_off.busy=true;offRender();
   try{const hist=o.msgs.slice(-30).map(m=>({role:m.who==='me'?'user':'assistant',content:(m.who==='旁白'?'【'+m.text+'】':m.text)}));
     if(note)hist.push({role:'user',content:note});
-    let r=await chatAPI([{role:'system',content:offlineSystem(c)},...hist,{role:'system',content:personaPin(c)}]);
+    let r=await chatAPI([{role:'system',content:offlineSystem(c)},...hist,{role:'system',content:personaPin(c)}],{aux:!!(S.settings&&S.settings.offAux)});
     if(!_off)return;
     r=applyGrudgeTags(r,c);
     splitBubbles(r).forEach(l=>{l=normTag(l);if(LEAKRE.test(l))return;l=l.replace(/\[[^\]]*\]/g,'').trim();if(!l)return;
@@ -2009,9 +2011,16 @@ function offSay(){if(!_off||_off.busy)return;const ta=$('#off_in');if(!ta)return
 function offNarrate(){if(!_off||_off.busy)return;const t=prompt('加一段旁白（第三人称，用 他/她/两人 描写动作/场景/剧情）：','');if(t==null)return;const v=t.trim();if(!v)return;
   offData(_off.id).msgs.push({id:uid(),who:'旁白',text:v});save();offRender();}
 function offReply(){if(!_off||_off.busy)return;offAI();}
+let _offSel=null;
+function offReKeep(){const b=$('#offbg');const st=b?b.scrollTop:null;render();const g=$('#offbg');if(g&&st!=null)g.scrollTop=st;}
+function offEditMsg(id,mid){const t=$('#off_e');const v=t?t.value:'';const mm=offData(id).msgs.find(x=>x.id===mid);if(mm)mm.text=v;save();closeModal();offReKeep();}
+function offDelMsg(id,mid){offData(id).msgs=offData(id).msgs.filter(x=>x.id!==mid);save();closeModal();offReKeep();}
+function offSelToggle(){_offSel=_offSel?null:[];offReKeep();}
+function offSelTog(mid){if(!_offSel)return;const i=_offSel.indexOf(mid);if(i<0)_offSel.push(mid);else _offSel.splice(i,1);offReKeep();}
+function offDelSel(id){if(!_offSel||!_offSel.length){toast('先选几条');return;}if(!confirm('删除选中的 '+_offSel.length+' 条？'))return;const ids=_offSel.slice();offData(id).msgs=offData(id).msgs.filter(x=>ids.indexOf(x.id)<0);_offSel=null;save();offReKeep();toast('已删除');}
 function offMsgMenu(id,mid){const o=offData(id);const m=o.msgs.find(x=>x.id===mid);if(!m)return;
   openModal(`<h3>编辑 / 删除</h3><div class="field"><textarea id="off_e" rows="3">${esc(m.text)}</textarea></div>
-   <div class="btns"><button class="btn d" onclick="(function(){var oo=offData('${id}');oo.msgs=oo.msgs.filter(x=>x.id!=='${mid}');save();closeModal();render();})()">删除</button><button class="btn p" onclick="(function(){var mm=offData('${id}').msgs.find(x=>x.id==='${mid}');if(mm)mm.text=$('#off_e').value;save();closeModal();render();})()">保存</button></div>
+   <div class="btns"><button class="btn d" onclick="offDelMsg('${id}','${mid}')">删除</button><button class="btn p" onclick="offEditMsg('${id}','${mid}')">保存</button></div>
    <button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
 function offMemory(id){const o=offData(id);
   openModal(`<h3>🌹 约会记忆</h3><div class="hint">这些是你们线下见面发生的事(结束约会会自动添加)，微信里的ta也会记得。可随时改/删。</div>
@@ -2032,19 +2041,20 @@ function offSetting(id){const o=offData(id);
    <div class="field"><label>约会地点</label><input id="os_loc" value="${esc(o.loc||'')}"></div>
    <div class="field"><label>时间</label><input id="os_when" value="${esc(o.when||'')}"></div>
    <div class="field"><label>时段（ta会按这个时段表现）</label><select id="os_part" style="width:100%;border:1px solid #38383a;border-radius:8px;padding:8px;background:#2c2c2e;color:#eee">${DAYPARTS.map(d=>`<option ${d===(o.daypart||'晚上')?'selected':''}>${d}</option>`).join('')}</select></div>
+   <div class="field"><label class="avline">线下用辅助模型（更省钱；主模型更稳更贴人设）<span class="sw ${S.settings.offAux?'on':''}" onclick="S.settings.offAux=!S.settings.offAux;save();this.classList.toggle('on');toast(S.settings.offAux?'线下改用辅助模型':'线下改用主模型')"></span></label></div>
    <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var o=offData('${id}');o.loc=$('#os_loc').value.trim();o.when=$('#os_when').value.trim();o.daypart=$('#os_part').value;save();closeModal();render();})()">保存</button></div>`);}
-function offQuit(){_off=null;home();}
-function renderOff(id){const c=getC(id);if(!c)return '';const o=offData(id);
-  const body=o.msgs.map(m=>{
-    if(m.who==='旁白')return `<div onclick="offMsgMenu('${id}','${m.id}')" style="text-align:center;color:#d8aee6;font-style:italic;font-size:15.5px;padding:11px 20px;line-height:1.75">${esc(m.text)}</div>`;
-    if(m.who==='me')return `<div class="msg me" onclick="offMsgMenu('${id}','${m.id}')"><div class="col"><div class="bubble">${esc(m.text)}</div></div></div>`;
-    return `<div class="msg them" onclick="offMsgMenu('${id}','${m.id}')" style="padding-left:14px"><div class="col"><div class="bubble">${esc(m.text)}</div></div></div>`;}).join('')
+function offQuit(){_off=null;_offSel=null;home();}
+function renderOff(id){const c=getC(id);if(!c)return '';const o=offData(id);const sel=_offSel;
+  const body=o.msgs.map(m=>{const on=sel&&sel.indexOf(m.id)>=0;const cb=sel?`<span style="margin-right:6px;color:${on?'#19a463':'#888'}">${on?'☑':'⚪'}</span>`:'';const oc=sel?`offSelTog('${m.id}')`:`offMsgMenu('${id}','${m.id}')`;
+    if(m.who==='旁白')return `<div onclick="${oc}" style="text-align:center;color:#d8aee6;font-style:italic;font-size:15.5px;padding:11px 20px;line-height:1.75">${cb}${esc(m.text)}</div>`;
+    if(m.who==='me')return `<div class="msg me" onclick="${oc}"><div class="col"><div class="bubble">${cb}${esc(m.text)}</div></div></div>`;
+    return `<div class="msg them" onclick="${oc}" style="padding-left:14px"><div class="col"><div class="bubble">${cb}${esc(m.text)}</div></div></div>`;}).join('')
     +(_off&&_off.busy?`<div class="msg them" style="padding-left:14px"><div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`:'');
   return `<div class="nav"><span class="l" onclick="offQuit()">‹ 退出</span><span class="t">🌹 和 ${esc(c.remark||c.name)} 约会</span><span class="r" onclick="offEnd('${id}')" style="color:#fa5151;font-size:13px">结束</span></div>
-   <div style="padding:7px 12px;background:#2a1a22;color:#e8a0b8;font-size:12px;display:flex;justify-content:space-between;align-items:center"><span>📍 ${esc(o.loc||'未定')} · 🕐 ${esc(o.daypart||o.when||'现在')}</span><span><span onclick="offSetting('${id}')" style="cursor:pointer;margin-right:12px">⚙︎设定</span><span onclick="offMemory('${id}')" style="cursor:pointer">🌹记忆</span></span></div>
+   <div style="padding:7px 12px;background:#2a1a22;color:#e8a0b8;font-size:12px;display:flex;justify-content:space-between;align-items:center"><span>📍 ${esc(o.loc||'未定')} · 🕐 ${esc(o.daypart||o.when||'现在')}</span><span><span onclick="offSelToggle()" style="cursor:pointer;margin-right:12px">${sel?'✕取消':'☑多选'}</span><span onclick="offSetting('${id}')" style="cursor:pointer;margin-right:12px">⚙︎设定</span><span onclick="offMemory('${id}')" style="cursor:pointer">🌹记忆</span></span></div>
    <div class="scroll" id="offbg" style="background:#140d11">${body||'<div class="empty" style="padding:30px">开始约会吧…写完你的旁白和台词，再点「让TA回复」</div>'}</div>
-   <div style="padding:6px 10px 0"><button class="btn p" style="width:100%;background:#e84d6f" ${_off&&_off.busy?'disabled':''} onclick="offReply()">${_off&&_off.busy?'TA回复中…':'▶ 让TA回复'}</button></div>
-   <div class="inputbar"><button class="send" style="background:#9a5;margin-right:6px" onclick="offNarrate()" title="加旁白">🎭</button><textarea id="off_in" rows="1" placeholder="写你的台词…(🎭加旁白，写完点上面「让TA回复」)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();offSay();}"></textarea><button class="send" onclick="offSay()">记下</button></div>`;}
+   ${sel?`<div class="inputbar" style="justify-content:space-between"><button class="btn g" style="flex:1" onclick="offSelToggle()">取消</button><button class="btn d" style="flex:1;margin-left:8px" onclick="offDelSel('${id}')">删除选中(${sel.length})</button></div>`:`<div style="padding:6px 10px 0"><button class="btn p" style="width:100%;background:#e84d6f" ${_off&&_off.busy?'disabled':''} onclick="offReply()">${_off&&_off.busy?'TA回复中…':'▶ 让TA回复'}</button></div>
+   <div class="inputbar"><button class="send" style="background:#9a5;margin-right:6px" onclick="offNarrate()" title="加旁白">🎭</button><textarea id="off_in" rows="1" placeholder="写你的台词…(🎭加旁白，写完点上面「让TA回复」)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();offSay();}"></textarea><button class="send" onclick="offSay()">记下</button></div>`}`;}
 /* ===== 信箱 ===== */
 function fmtDate(t){const d=new Date(t||Date.now());return (d.getMonth()+1)+'月'+d.getDate()+'日 '+hm(t);}
 function renderMail(){const list=S.mail||[];
