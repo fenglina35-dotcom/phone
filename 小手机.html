@@ -296,7 +296,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v83 · 全量自检+小修';
+const APP_VER='v84 · X关注列表+主页拉黑';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1104,6 +1104,10 @@ function xUserMenu(id){const t=tw(id);if(!t)return;const f=S.x.following.include
 function xFollow(id){const t=tw(id);xFollowName(t.name);}
 function xFollowName(name){const i=S.x.following.indexOf(name);if(i<0){S.x.following.push(name);S.x.profile.following++;xUser(name,{follower:true});}else{S.x.following.splice(i,1);S.x.profile.following=Math.max(0,S.x.profile.following-1);}save();closeModal();render();}
 function xBlock(id){const t=tw(id);const i=S.x.blocked.indexOf(t.name);if(i<0)S.x.blocked.push(t.name);else S.x.blocked.splice(i,1);save();closeModal();render();}
+function xBlockName(name){const i=S.x.blocked.indexOf(name);if(i<0){S.x.blocked.push(name);const fi=S.x.following.indexOf(name);if(fi>=0){S.x.following.splice(fi,1);S.x.profile.following=Math.max(0,S.x.profile.following-1);}toast('已拉黑 '+name);}else{S.x.blocked.splice(i,1);toast('已解除拉黑');}save();render();}
+function xUnfollow(name){const i=S.x.following.indexOf(name);if(i>=0){S.x.following.splice(i,1);S.x.profile.following=Math.max(0,S.x.profile.following-1);save();xFollowingList();}}
+function xFollowingList(){const list=S.x.following.slice();
+  openModal(`<h3>正在关注（${list.length}）</h3><div style="max-height:60vh;overflow:auto">${list.length?list.map(n=>{const u=xUser(n);return `<div class="section"><div class="it">${av(u.avatar,'sm')}<div class="meta" style="flex:1" onclick="closeModal();go('xuser',{name:${jq(n)}})"><div class="n">${esc(n)}</div><div class="s">${esc(u.handle||u.bio||'')}</div></div><button class="minibtn" onclick="xUnfollow(${jq(n)})">取关</button></div></div>`;}).join(''):'<div class="empty">还没关注谁～去刷推/搜博主关注</div>'}</div><button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function fwdTweet(id){const t=tw(id);const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){toast('先创建角色');return;}
   window._fwT=t;if(cs.length===1)return doFwdTweet(cs[0].id);
   openModal(`<h3>转发到微信</h3>${cs.map(c=>`<div class="section"><div class="it" onclick="doFwdTweet('${c.id}')">${esc(c.remark||c.name)}<span class="v">›</span></div></div>`).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
@@ -1165,9 +1169,10 @@ function renderXUser(name){const u=xUser(name);const f=S.x.following.includes(na
         <div style="color:#71767b;font-size:14px">${esc(u.handle||'')}</div>
         <div style="color:#e7e9ea;font-size:14px;margin:8px 0">${esc(u.bio||'')}</div>
         <div style="color:#71767b;font-size:14px"><b style="color:#e7e9ea">${u.following||0}</b> 关注　<b style="color:#e7e9ea">${u.fans||0}</b> 粉丝</div>
-        <div style="display:flex;gap:8px;margin:12px 0"><button class="xbtn ${f?'out':''}" onclick="xFollowName(${jq(name)})">${f?'已关注':'+ 关注'}</button>
+        <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap"><button class="xbtn ${f?'out':''}" onclick="xFollowName(${jq(name)})">${f?'已关注':'+ 关注'}</button>
           <button class="xbtn out" onclick="openDMWith(${jq(name)})">私信</button>
-          <button class="xbtn out" onclick="editUserProfile(${jq(name)})">改资料</button></div></div>
+          <button class="xbtn out" onclick="editUserProfile(${jq(name)})">改资料</button>
+          <button class="xbtn out" style="${S.x.blocked.includes(name)?'color:#1d9bf0':'color:#f4212e'}" onclick="xBlockName(${jq(name)})">${S.x.blocked.includes(name)?'解除拉黑':'拉黑'}</button></div></div>
       <div style="border-bottom:.5px solid #2f3336;color:#e7e9ea;padding:8px 14px;font-weight:700">推文</div>
       ${ts.length?ts.map(tweetCard).join(''):'<div class="empty" style="padding:30px">还没有推文，点🔄生成一条ta的动态</div>'}</div>`;}
 async function genUserTweet(name){const u=xUser(name);toast('生成中…');
@@ -1239,7 +1244,7 @@ function xProfile(){const p=S.x.profile;
       <div style="font-size:19px;font-weight:700;color:#e7e9ea;margin-top:8px">${esc(S.me.name)}</div>
       <div style="color:#71767b;font-size:14px">${esc(p.handle)}</div>
       <div style="color:#e7e9ea;font-size:14px;margin:8px 0">${esc(p.bio||'')}</div>
-      <div style="color:#71767b;font-size:14px"><b style="color:#e7e9ea">${p.following}</b> 正在关注　<b style="color:#e7e9ea">${p.fans}</b> 关注者</div>
+      <div style="color:#71767b;font-size:14px"><span onclick="xFollowingList()" style="cursor:pointer"><b style="color:#e7e9ea">${p.following}</b> <span style="text-decoration:underline">正在关注 ›</span></span>　<b style="color:#e7e9ea">${p.fans}</b> 关注者</div>
     </div>
     <div style="border-bottom:.5px solid #2f3336;margin:10px 0;color:#e7e9ea;padding:8px 14px;font-weight:700">我的推文</div>
     ${[...S.x.tweets].filter(t=>t.who==='me').sort((a,b)=>b.time-a.time).map(tweetCard).join('')||'<div class="empty" style="padding:30px">还没发过推</div>'}`;}
