@@ -325,7 +325,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v92 · 修管控标签泄漏+查岗浮窗单项+访客日清';
+const APP_VER='v93 · 我发的抖音可转发给角色';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -456,7 +456,7 @@ function msgToText(m){
     case 'payreject':return '[我拒绝了帮你代付：'+m.name+']';
     case 'food':return m.from==='ta'?'[你给ta点了外卖：'+m.name+']':'[我给你点了外卖：'+m.name+(m.shop?'（'+m.shop+'）':'')+'，¥'+(+m.price).toFixed(2)+']';
     case 'tweetcard':return '[我转发给你一条X推文——'+m.tname+'：「'+m.ttext+'」]';
-    case 'dycard':return '[我转发给你一条抖音视频——@'+m.author+'：「'+m.desc+'」'+(m.narration?'，视频内容：'+m.narration:'')+']';
+    case 'dycard':return m.mine?('[我把我自己发的抖音视频分享给你——「'+m.desc+'」'+(m.narration?'，视频内容：'+m.narration:'')+']'):('[我转发给你一条抖音视频——@'+m.author+'：「'+m.desc+'」'+(m.narration?'，视频内容：'+m.narration:'')+']');
     case 'voice':return m.content?('[语音消息]'+m.content):'['+S.me.name+'发了条语音]';
     case 'sticker':return '[表情'+(m.meaning?'：'+m.meaning:'')+']';
     case 'chatlog':return '[我转发给你一份聊天记录《'+m.title+'》，内容：'+(m.lines||[]).map(l=>l.who+'说'+l.text).join('；').slice(0,200)+']';
@@ -1432,7 +1432,7 @@ function dyDelHistory(i){S.dy.history.splice(i,1);save();render();}
 function dyFwd(id){const v=dyVid(id);if(!v)return;const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){toast('先创建角色');return;}
   window._fwDy=v;if(cs.length===1)return doDyFwd(cs[0].id);
   openModal(`<h3>把视频转发给</h3>${cs.map(c=>`<div class="section"><div class="it" onclick="doDyFwd('${c.id}')">${esc(c.remark||c.name)}<span class="v">›</span></div></div>`).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
-function doDyFwd(cid){const v=window._fwDy;if(!v)return;pushMsg(cid,{role:'user',type:'dycard',author:v.author,desc:v.desc,narration:v.narration,emoji:v.emoji,id:uid()});closeModal();toast('已转发到微信');scheduleReply(cid);}
+function doDyFwd(cid){const v=window._fwDy;if(!v)return;pushMsg(cid,{role:'user',type:'dycard',author:v.cid==='me'?dyNick():v.author,desc:v.desc,narration:v.narration,emoji:v.emoji,mine:v.cid==='me',id:uid()});closeModal();toast('已转发到微信');scheduleReply(cid);}
 /* 发抖音 */
 function dyCompose(){openModal(`<h3>发抖音</h3>
   <div class="field"><label>文案 / 标题</label><input id="dyc_desc" placeholder="记录此刻…可带 #话题"></div>
@@ -1528,7 +1528,7 @@ function dyProfile(){const liked=S.dy.liked||[];const mine=S.dy.mine||[];
 function dyOpenLiked(id){const v=dyVid(id);if(!v)return;const isMineVid=v.cid==='me';
   openModal(`<h3>${esc(v.emoji||'🎬')} @${esc(isMineVid?dyNick():v.author)}</h3><div style="font-size:14px;line-height:1.6;color:#333">${esc(v.desc||'')}</div>
     <div style="background:#f4f4f6;border-radius:10px;padding:10px;margin-top:10px;font-size:13px;line-height:1.7;color:#555"><b>📖 旁白：</b>${esc(v.narration||'（无）')}</div>
-    <div class="btns" style="margin-top:12px"><button class="dybtn out" onclick="closeModal();dyComments('${id}')">💬 评论 ${(v.comments||[]).length}</button>${isMineVid?`<button class="btn d" onclick="dyDelVideo('${id}')">🗑 删除</button>`:`<button class="btn d" onclick="dyLike('${id}');closeModal()">取消点赞</button>`}<button class="btn g" onclick="closeModal()">关闭</button></div>`);}
+    <div class="btns" style="margin-top:12px;flex-wrap:wrap"><button class="dybtn out" onclick="closeModal();dyComments('${id}')">💬 评论 ${(v.comments||[]).length}</button><button class="dybtn out" onclick="closeModal();dyFwd('${id}')">↗️ 转发给角色</button>${isMineVid?`<button class="btn d" onclick="dyDelVideo('${id}')">🗑 删除</button>`:`<button class="btn d" onclick="dyLike('${id}');closeModal()">取消点赞</button>`}<button class="btn g" onclick="closeModal()">关闭</button></div>`);}
 function changeDyAvatar(){pickFile('image/*',async f=>{S.dy.profile.avatar=await compress(f,300,.8);save();render();toast('头像已换 🎨');});}
 function editDyProfile(){const p=S.dy.profile;openModal(`<h3>编辑抖音资料</h3>
   <div class="field"><label>昵称</label><input id="dyp_n" value="${esc(p.nick||S.me.name)}"></div>
