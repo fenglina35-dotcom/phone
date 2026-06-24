@@ -349,7 +349,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v124 · 禁闭室真·心跳加速+选错一次就突脸';
+const APP_VER='v125 · 情侣空间报备计时(洗澡/吃饭/玩…)';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -642,6 +642,8 @@ function buildSystem(c){
   if(_main&&c.summaries&&c.summaries.length)s+='\n\n# 之前对话的概要（按时间，保持连贯）\n'+c.summaries.slice(-8).map(x=>'· '+x.time+'　'+x.text).join('\n');
   const _off=S.offline&&S.offline[c.id];
   if(_main&&_off&&_off.memory&&_off.memory.length)s+='\n\n# 你和'+S.me.name+'的线下约会（你们真的在现实里见面约会过，这些都是和'+S.me.name+'——你女朋友——一起的，记清楚约会对象就是ta）\n'+_off.memory.map(offMemText).join('\n')+'\n这些约会都是【已经发生过的过去式】，是你们的共同回忆。别把已经结束的事当成正在进行去反复追问——比如记忆里你们已经在机场告别、她已经走了，就别再一遍遍问她「上飞机了吗/到了吗」。微信聊天里可以自然回味这些线下的事，但要用【普通文字】说，别用旁白【】那种线下格式。';
+  if(_main){const rp=S.me.report;if(rp&&rp.active)s+='\n\n# '+S.me.name+'此刻的报备（ta主动告诉你ta在干嘛）\nta现在正在「'+rp.active.type+'」，从 '+hm(rp.active.start)+' 开始，已经 '+sleepDurTxt(Date.now()-rp.active.start)+'了。你清楚ta在干嘛、别瞎担心瞎吃醋；但若时长明显离谱（洗澡/吃饭却好几个钟头），你可以起疑、追问。';
+    if(rp&&(rp.log||[]).length){const rl=rp.log.slice(0,4);s+='\n\n# '+S.me.name+'最近的报备\n'+rl.map(r=>r.type+' '+hm(r.start)+'→'+hm(r.end)+'（'+sleepDurTxt(r.end-r.start)+'）').join('；');}}
   if(_main){const _cl=(c.coldUntil&&c.coldUntil>Date.now())?c.coldUntil:0;if(_cl)s+='\n\n# 冷处理中（重要）\n你正在冷处理'+S.me.name+'（刚惩罚完、还没全消气）。到 '+hm(_cl)+' 之前：回复要冷淡、简短、爱答不理，不主动撒娇热聊（但别拉黑别消失）。ta真诚求够了，你可以单独一行 [原谅] 提前消气；到点也会自动回暖。';}
   if(_main){const gd=(c.grudges||[]);const gund=gd.filter(x=>!x.done);
     s+='\n\n# 你的记仇小本本（你私下记着'+S.me.name+'惹你/欠你的事，括号里是记下的日期）\n'+(gund.length?gund.map((x,i)=>(i+1)+'. '+x.text+'（'+ymd(x.ts||0)+'记的）').join('\n'):'（暂时没记仇）')+'\n· ta惹你生气、做了让你介意/吃醋的事时，单独一行 [记仇|具体那件事] 把它记进小本本。\n· 等你们把这事说开、ta哄好你了、或你出了气，单独一行 [消气|那件事的关键词] 把它划掉。\n· 【别反复提同一笔旧账】：同一件事提过一次就放一放，别每条消息都翻、别一直重复提醒，除非ta又犯了、或ta自己提起、或你正式找ta算这笔账。要翻时可带上时间，比如"上次（X月X日）你…还没跟你算呢"。';
@@ -824,6 +826,14 @@ function usageTick(){const el=$('#useBadge');const hide=()=>{if(el)el.style.disp
 setInterval(usageTick,1000);
 // 睡眠计时
 function sleepStart(){if(!S.me.sleep)S.me.sleep={active:null,records:[]};S.me.sleep.active=Date.now();save();render();toast('🌙 开始睡眠计时，好梦~');}
+function reportNotify(note){if(!(S.couple&&S.couple.cid))return;const c=getC(S.couple.cid);if(c&&!c.blocked)scheduleReply(c.id,note);}
+function reportStart(type){type=(''+(type||'')).trim().slice(0,16);if(!type)return;if(!S.me.report)S.me.report={active:null,log:[]};if(S.me.report.active)reportEnd(true);
+  S.me.report.active={type,start:Date.now()};save();render();toast('📍 已报备：'+type);
+  reportNotify('[系统：'+S.me.name+'刚报备说ta去「'+type+'」了（开始计时）。按你人设回应一句（叮嘱/吃醋/宠/催ta快回来都行，简短点）。]');}
+function reportCustom(){const t=prompt('报备你要去干嘛：','');if(t==null)return;reportStart(t);}
+function reportEnd(silent){const rp=S.me.report;if(!rp||!rp.active)return;const a=rp.active,end=Date.now();rp.log=rp.log||[];rp.log.unshift({type:a.type,start:a.start,end});if(rp.log.length>40)rp.log=rp.log.slice(0,40);rp.active=null;save();if(!silent)render();
+  if(!silent)reportNotify('[系统：'+S.me.name+'报备结束了——ta「'+a.type+'」一共用了 '+sleepDurTxt(end-a.start)+'（'+hm(a.start)+'→'+hm(end)+'）。这个时长合不合理你自己判断（正常吃饭/洗澡不会太久），回应一句。]');}
+function reportDel(i){if(!S.me.report||!S.me.report.log)return;S.me.report.log.splice(i,1);save();render();}
 function sleepEnd(){const sl=S.me.sleep;if(!sl||!sl.active)return;sl.records=sl.records||[];sl.records.unshift({start:sl.active,end:Date.now()});if(sl.records.length>60)sl.records=sl.records.slice(0,60);sl.active=null;save();render();toast('☀️ 醒啦，已记录这次睡眠');}
 function sleepDel(i){if(!S.me.sleep||!S.me.sleep.records)return;if(!confirm('删掉这条睡眠记录？'))return;S.me.sleep.records.splice(i,1);save();render();}
 function sleepDurTxt(ms){const mins=Math.max(0,Math.round(ms/60000));const h=Math.floor(mins/60),m=mins%60;return (h?h+'小时':'')+(m||!h?m+'分钟':'');}
@@ -1206,6 +1216,7 @@ if(S.couple&&S.couple.jailAuth===undefined)S.couple.jailAuth=false;
 if(!S.jail)S.jail={active:false};
 if(S.couple&&S.couple.gagAuth===undefined){S.couple.gagAuth=S.contacts.filter(x=>!x.deleted&&x.id!==S.couple.cid).map(x=>x.id);save();}
 if(!S.me.sleep)S.me.sleep={active:null,records:[]};
+if(!S.me.report)S.me.report={active:null,log:[]};
 if(!S.me.appUsage)S.me.appUsage={date:'',used:{},bonus:{}};
 if(S.couple&&!S.couple.timeLimit)S.couple.timeLimit={};
 if(S.couple&&S.couple.grant&&S.couple.grant.douyin===undefined)S.couple.grant.douyin=true;
@@ -2327,6 +2338,13 @@ function renderCouple(){const cp=S.couple;const c=cp&&getC(cp.cid);
         <div style="padding:10px 14px">${sl.active?`<div style="text-align:center;color:#9ec5fe;font-size:13px;margin-bottom:8px">😴 正在睡眠中…从 ${hm(sl.active)} 开始（已睡 ${sleepDurTxt(Date.now()-sl.active)}）</div><button class="btn p" onclick="sleepEnd()">☀️ 我醒啦，结束睡眠</button>`:`<button class="btn p" onclick="sleepStart()">🌙 我要睡了，开始计时</button>`}</div>`;
         if(recs.length){h+=`<div class="hint" style="padding:4px 14px;color:#888">睡眠记录（可手动删除）</div>`+recs.slice(0,14).map((r,i)=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="font-size:13px">🛌 ${ymd(r.start)} ${hm(r.start)} → ${hm(r.end)}<small style="display:block;color:#888">睡了 ${sleepDurTxt(r.end-r.start)}</small></div><span onclick="sleepDel(${i})" style="color:#fa5151;cursor:pointer">✕</span></div>`).join('');}
         else h+=`<div class="empty" style="padding:10px">还没有睡眠记录</div>`;
+        return h+`</div>`;})()}
+      ${(function(){const rp=S.me.report||{active:null,log:[]};const log=rp.log||[];const presets=['洗澡','吃饭','玩游戏','看剧','健身','出门'];
+        let h=`<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#ffb83b">📍 报备 · 我去干嘛了</div>
+        <div class="hint" style="padding:0 14px">出门做点啥就点一下开始、回来点结束。${esc(c.remark||c.name)}第一时间知道你去哪了、用了多久，就不会瞎担心/瞎吃醋啦💗</div>`;
+        if(rp.active){h+=`<div style="padding:10px 14px"><div style="text-align:center;color:#ffb83b;font-size:14px;margin-bottom:8px">⏱️ 正在「${esc(rp.active.type)}」…从 ${hm(rp.active.start)} 开始（已 ${sleepDurTxt(Date.now()-rp.active.start)}）</div><button class="btn p" onclick="reportEnd()">✅ 结束 / 我回来了</button></div>`;}
+        else{h+=`<div style="padding:8px 14px;display:flex;flex-wrap:wrap;gap:8px">${presets.map(p=>`<button class="minibtn" onclick="reportStart('${p}')">${p}</button>`).join('')}<button class="minibtn" style="background:#7c5cff;color:#fff" onclick="reportCustom()">＋ 其他…</button></div>`;}
+        if(log.length){h+=`<div class="hint" style="padding:4px 14px;color:#888">报备记录（可删）</div>`+log.slice(0,12).map((r,i)=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="font-size:13px">📍 ${ymd(r.start)} ${hm(r.start)}→${hm(r.end)} ${esc(r.type)}<small style="display:block;color:#888">用了 ${sleepDurTxt(r.end-r.start)}</small></div><span onclick="reportDel(${i})" style="color:#fa5151;cursor:pointer">✕</span></div>`).join('');}
         return h+`</div>`;})()}
       ${(function(){const g=cp.grant||{},tl=cp.timeLimit||{};const keys=Object.keys(LOCKABLE).filter(k=>g[k]&&(tl[k]||usedSecOf(k)));
         let h=`<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#ffb83b">⏱️ 软件使用时长 / 限额</div>
