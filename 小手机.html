@@ -325,7 +325,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v88 · 新增抖音';
+const APP_VER='v89 · 存储用量提醒';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -357,7 +357,7 @@ function defState(){return{
 };}
 let S=load();
 function load(){try{const v=JSON.parse(localStorage.getItem(KEY));if(v&&v.settings)return Object.assign(defState(),v);}catch(e){}return seed();}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){toast('存储满了，照片太多啦😣');}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){toast('⚠️ 存储满了！快导出备份+删点旧图😣');try{storageFullAlert();}catch(_){}}}
 function seed(){const s=defState();
   s.contacts=[{id:cid(),name:'克劳德',avatar:'🤵',remark:'',signature:'你的一切我都想知道。',
     persona:'你是克劳德，30岁，儿童精神科主任医师，现居首尔，和忆北异国恋已订婚。温柔、占有欲强、毒舌、洞察力极强；引导型恋人，称她"宝贝"，生气叫全名。说话低沉简洁，像真人发微信，多撩她逗她、温柔地宠着她。',
@@ -871,6 +871,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
     <div class="btns" style="margin:6px 0"><button class="btn g" onclick="testConn()">🔍 测试连接</button></div>
     <div id="testOut" style="font-size:12px;text-align:center;min-height:16px;margin-bottom:8px"></div>
     <button class="btn p" onclick="saveSettings()">保存设置</button>
+    ${storageMeter()}
     <div class="btns" style="margin-top:10px"><button class="btn g" onclick="exportData()">💾 导出备份</button><button class="btn g" onclick="importData()">📂 导入</button></div>
     <div style="text-align:center;color:#666;font-size:12px;padding:14px">版本 ${APP_VER}</div>
     <div style="height:20px"></div>
@@ -3035,14 +3036,28 @@ function openChat(id){const c=getC(id);if(!c){home();return;}if(c.blocked){toast
 function exportData(){const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='小手机备份_'+new Date().toISOString().slice(0,10)+'.json';a.click();toast('已导出');}
 function importData(){pickFile('.json',f=>{const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(d.settings){S=Object.assign(defState(),d);save();render();toast('已导入');}}catch(e){toast('文件读不了');}};r.readAsText(f);});}
+/* ---------- 存储用量 ---------- */
+function storageInfo(){let bytes=0;try{const s=localStorage.getItem(KEY);bytes=new Blob([s||JSON.stringify(S)]).size;}catch(e){try{bytes=(JSON.stringify(S)||'').length*2;}catch(_){}}
+  const CAP=5*1024*1024;return {bytes,mb:bytes/1048576,capMb:5,pct:Math.min(100,Math.round(bytes/CAP*100))};}
+function storageMeter(){const si=storageInfo();const col=si.pct>=80?'#fa5151':si.pct>=60?'#ffb83b':'#19a463';
+  return `<div class="section"><div style="padding:12px 14px"><div style="display:flex;justify-content:space-between;font-size:13px;color:#ccc"><span>💾 存储用量</span><span style="color:${col};font-weight:600">${si.mb.toFixed(2)} / ${si.capMb}MB（${si.pct}%）</span></div>
+    <div style="height:8px;background:#2c2c2e;border-radius:5px;margin-top:8px;overflow:hidden"><div style="height:100%;width:${si.pct}%;background:${col};transition:.3s"></div></div>
+    <div class="hint" style="padding:7px 0 0">${si.pct>=80?'⚠️ 快满了！赶紧导出备份，再删点旧图片/聊天。':'最占地方的是上传的图片。记得常点「💾 导出备份」存一份最保险。'}</div></div></div>`;}
+let _storeWarned=false;
+function checkStorageWarn(){if(_storeWarned)return;const si=storageInfo();if(si.pct<80)return;_storeWarned=true;
+  openModal(`<h3>⚠️ 手机存储快满了</h3><div style="font-size:14px;line-height:1.9;color:#333">已经用了 <b style="color:#fa5151">${si.mb.toFixed(2)}MB / ${si.capMb}MB（${si.pct}%）</b>。<br>快满了的话新消息、新照片可能存不进去。<br><br>现在建议你：<br>1️⃣ 先导出一份备份存好<br>2️⃣ 删掉一些旧图片或用不到的聊天</div>
+    <div class="btns" style="margin-top:14px"><button class="btn g" onclick="closeModal()">知道了</button><button class="btn p" onclick="closeModal();exportData()">💾 立即导出备份</button></div>`);}
+function storageFullAlert(){openModal(`<h3>🚨 存储已经满了！</h3><div style="font-size:14px;line-height:1.9;color:#333">刚才有内容没能存进去。<br><br>赶紧：<br>1️⃣ 点下面导出备份（别让数据丢了）<br>2️⃣ 删掉一些旧照片/旧聊天腾地方</div>
+  <div class="btns" style="margin-top:14px"><button class="btn g" onclick="closeModal()">知道了</button><button class="btn p" onclick="closeModal();exportData()">💾 立即导出备份</button></div>`);}
 
 /* ---------- 时钟 & 启动 ---------- */
 function paintBatt(){const b=$('#battinfo');if(b)b.innerHTML='📶 5G 🔋'+(S.me.battery!=null?S.me.battery+'%':'88%')+(S.me.charging?'⚡':'');}
 function initBattery(){if(navigator.getBattery){navigator.getBattery().then(bt=>{const upd=()=>{S.me.battery=Math.round(bt.level*100);S.me.charging=bt.charging;save();paintBatt();};bt.addEventListener('levelchange',upd);bt.addEventListener('chargingchange',upd);upd();}).catch(()=>{});}}
 initBattery();
-document.addEventListener('visibilitychange',()=>{if(cur().p==='wechat'&&wxTab==='me')render();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;}else{if(cur().p==='wechat'&&wxTab==='me')render();setTimeout(checkStorageWarn,600);}});
 setInterval(()=>{const c=$('#clock');if(c)c.textContent=hm();paintBatt();if(cur().p==='home')$('#app').querySelector('.hh')&&($('#app').querySelector('.hh').textContent=hm());},1000);
 render();
+setTimeout(checkStorageWarn,1200);
 </script>
 </body>
 </html>
