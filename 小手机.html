@@ -325,7 +325,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v104 · 约会记忆做成日期卡片+不再重复追问';
+const APP_VER='v105 · 可调音量(支持加大)';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -537,8 +537,11 @@ let _voices=[];
 function loadVoices(){try{_voices=speechSynthesis.getVoices()||[];}catch(e){_voices=[];}}
 if('speechSynthesis'in window){loadVoices();speechSynthesis.onvoiceschanged=loadVoices;}
 let _curAudio=null,_curSrc=null;
-function playUrl(url){try{if(_curAudio){_curAudio.pause();}}catch(e){}_curAudio=new Audio(url);_curAudio.play().catch(()=>{});}
-function playBuf(buf){ensureAudio();if(!_audio||!buf)return;try{if(_audio.state==='suspended'||_audio.state==='interrupted')_audio.resume();if(_curSrc){try{_curSrc.stop();}catch(e){}}const s=_audio.createBufferSource();s.buffer=buf;s.connect(_audio.destination);s.start();_curSrc=s;}catch(e){}}
+function volMul(){const v=(S.settings&&S.settings.volume!=null)?S.settings.volume:1;return Math.max(0,Math.min(3,v));}
+function playUrl(url){try{if(_curAudio){_curAudio.pause();}}catch(e){}_curAudio=new Audio(url);const vol=volMul();
+  try{ensureAudio();if(_audio&&vol>1){const src=_audio.createMediaElementSource(_curAudio);const g=_audio.createGain();g.gain.value=vol;src.connect(g);g.connect(_audio.destination);}else{_curAudio.volume=Math.max(0,Math.min(1,vol));}}catch(e){try{_curAudio.volume=Math.max(0,Math.min(1,vol));}catch(_){}}
+  _curAudio.play().catch(()=>{});}
+function playBuf(buf){ensureAudio();if(!_audio||!buf)return;try{if(_audio.state==='suspended'||_audio.state==='interrupted')_audio.resume();if(_curSrc){try{_curSrc.stop();}catch(e){}}const s=_audio.createBufferSource();s.buffer=buf;const g=_audio.createGain();g.gain.value=volMul();s.connect(g);g.connect(_audio.destination);s.start();_curSrc=s;}catch(e){}}
 async function ttsArr(text,o){const t=stripSpoken(text);if(!t)return null;const v=o?getVoice(o):null;const tts=S.settings.tts;
   if(!(v&&v.engine==='api'&&tts&&tts.base&&tts.key))return null;const vid=v.ttsVoice||tts.voice||'';
   try{let r;
@@ -866,6 +869,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="it">时间感知<span class="sw ${S.settings.timeAware?'on':''}" onclick="S.settings.timeAware=!S.settings.timeAware;save();render()"></span></div>
       <div class="it">联网搜索<span class="sw ${S.settings.web&&S.settings.web.enabled?'on':''}" onclick="S.settings.web={enabled:!(S.settings.web&&S.settings.web.enabled)};save();render()"></span></div>
       <div class="it">提示音<span class="sw ${S.settings.sound?'on':''}" onclick="S.settings.sound=!S.settings.sound;save();render()"></span></div>
+      <div class="it" style="flex-wrap:wrap"><span>🔊 音量 <b style="color:#07c160">${Math.round(((S.settings.volume!=null?S.settings.volume:1))*100)}%</b><small style="color:#999;display:block">后台听歌听不清ta讲话，可调到100%以上加大</small></span><input type="range" min="0" max="300" step="10" value="${Math.round(((S.settings.volume!=null?S.settings.volume:1))*100)}" style="width:100%;margin-top:6px" oninput="S.settings.volume=(+this.value)/100;save();this.previousElementSibling.querySelector('b').textContent=this.value+'%'" onchange="playDing()"></div>
       <div class="it">后台通知（点开授权）<span class="v" onclick="reqNotify()">允许 ›</span></div>
     </div>
     <div class="section">
@@ -2880,7 +2884,7 @@ function initAudio(){ensureAudio();}
 ['touchend','pointerdown','click'].forEach(ev=>document.addEventListener(ev,ensureAudio,{passive:true}));
 document.addEventListener('click',()=>{initAudio();const liveLoc=S.contacts.some(c=>!c.deleted&&getSpy(c).loc);if(!S.weather||Date.now()-S.weather.time>(liveLoc?600000:72000000))fetchWeather();},{once:true});
 function playDing(){if(!S.settings.sound)return;ensureAudio();if(!_audio)return;try{const o=_audio.createOscillator(),g=_audio.createGain();o.connect(g);g.connect(_audio.destination);
-  o.frequency.value=880;o.type='sine';g.gain.setValueAtTime(.001,_audio.currentTime);g.gain.exponentialRampToValueAtTime(.25,_audio.currentTime+.02);
+  o.frequency.value=880;o.type='sine';g.gain.setValueAtTime(.001,_audio.currentTime);g.gain.exponentialRampToValueAtTime(Math.min(1,.25*volMul()),_audio.currentTime+.02);
   g.gain.exponentialRampToValueAtTime(.001,_audio.currentTime+.35);o.start();o.stop(_audio.currentTime+.36);}catch(e){}}
 function notifyIncoming(c,msg){
   // 语音消息自动播放
@@ -2952,11 +2956,11 @@ let _call=null,_ring=null,_callTimer=null;
 function ringStart(){ringStop();ensureAudio();if(!_audio)return;let on=false;
   _ring=setInterval(()=>{try{const o=_audio.createOscillator(),g=_audio.createGain();o.connect(g);g.connect(_audio.destination);
     o.frequency.value=on?660:520;o.type='sine';g.gain.setValueAtTime(.0001,_audio.currentTime);
-    g.gain.exponentialRampToValueAtTime(.2,_audio.currentTime+.05);g.gain.exponentialRampToValueAtTime(.0001,_audio.currentTime+.5);
+    g.gain.exponentialRampToValueAtTime(Math.min(1,.2*volMul()),_audio.currentTime+.05);g.gain.exponentialRampToValueAtTime(.0001,_audio.currentTime+.5);
     o.start();o.stop(_audio.currentTime+.55);on=!on;}catch(e){}},650);
   if(navigator.vibrate)navigator.vibrate([400,200,400,200,400]);}
 function ringStop(){if(_ring){clearInterval(_ring);_ring=null;}if(navigator.vibrate)navigator.vibrate(0);}
-function blip(freq,dur){if(!S.settings.sound)return;ensureAudio();if(!_audio)return;try{const o=_audio.createOscillator(),g=_audio.createGain();o.connect(g);g.connect(_audio.destination);o.frequency.value=freq;o.type='sine';g.gain.setValueAtTime(.2,_audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,_audio.currentTime+dur);o.start();o.stop(_audio.currentTime+dur);}catch(e){}}
+function blip(freq,dur){if(!S.settings.sound)return;ensureAudio();if(!_audio)return;try{const o=_audio.createOscillator(),g=_audio.createGain();o.connect(g);g.connect(_audio.destination);o.frequency.value=freq;o.type='sine';g.gain.setValueAtTime(Math.min(1,.2*volMul()),_audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,_audio.currentTime+dur);o.start();o.stop(_audio.currentTime+dur);}catch(e){}}
 function incomingCall(id,kind){const c=getC(id);if(!c||c.blocked||_call)return;
   _call={id,kind,state:'incoming',replyVoice:S.settings.voiceAuto!==false,session:uid(),sub:null};initAudio();ringStart();renderCall();}
 function placeCall(id,kind){const c=getC(id);if(!c)return;initAudio();_call={id,kind,state:'outgoing',replyVoice:S.settings.voiceAuto!==false,session:uid(),sub:null};renderCall();
@@ -2999,7 +3003,7 @@ function updateCallSub(){const box=$('#callSub');if(!box)return;const s=_call&&_
 function recDownCall(ev){if(ev&&ev.preventDefault)ev.preventDefault();startRec(()=>{const b=document.querySelector('#callInput button');});}
 function recUpCall(cancel){if(!_call||!_rec)return;const tooShort=Date.now()-_rec.start<600;const id=_call.id;
   stopRec(cancel||tooShort,m=>{if(!m||tooShort)return;msgs(id).push({role:'user',type:'voice',audio:m.audio,content:m.content||'',dur:m.dur,id:uid(),time:Date.now(),_call:true,_ck:(_call&&_call.kind)||'voice',_cs:_call&&_call.session});save();if(_call){_call.sub={who:'me',text:'🎙️ '+(m.content||'语音')};updateCallSub();}callAI();});}
-function playBufWait(buf){ensureAudio();return new Promise(res=>{if(!_audio||!buf){res();return;}try{if(_audio.state==='suspended'||_audio.state==='interrupted')_audio.resume();if(_curSrc){try{_curSrc.stop();}catch(e){}}const s=_audio.createBufferSource();s.buffer=buf;s.connect(_audio.destination);s.onended=()=>res();s.start();_curSrc=s;setTimeout(res,Math.min(20000,buf.duration*1000+800));}catch(e){res();}});}
+function playBufWait(buf){ensureAudio();return new Promise(res=>{if(!_audio||!buf){res();return;}try{if(_audio.state==='suspended'||_audio.state==='interrupted')_audio.resume();if(_curSrc){try{_curSrc.stop();}catch(e){}}const s=_audio.createBufferSource();s.buffer=buf;const g=_audio.createGain();g.gain.value=volMul();s.connect(g);g.connect(_audio.destination);s.onended=()=>res();s.start();_curSrc=s;setTimeout(res,Math.min(20000,buf.duration*1000+800));}catch(e){res();}});}
 async function speakWait(text,c){const v=c?getVoice(c):null;const t=stripSpoken(text);
   if(!t)return new Promise(r=>setTimeout(r,1100));
   if(v&&v.engine==='api'&&S.settings.tts&&S.settings.tts.key){const ab=await ttsArr(text,c);const buf=await decodeBuf(ab);if(buf){await playBufWait(buf);return;}}
