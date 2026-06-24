@@ -325,7 +325,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v97 · 每天打开自动布置任务';
+const APP_VER='v100 · 暧昧任务更放开';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1581,7 +1581,6 @@ function renderTasks(){const c=taskC();
       ${t.list.map((x,i)=>`<div class="section" style="margin:10px 12px"><div style="padding:12px 14px">
         <div style="display:flex;justify-content:space-between;align-items:center"><span class="tag">${x.kind==='real'?'🌍 现实':'📱 手机'}</span>${x.done?'<span style="color:#19a463;font-size:13px">✅ 已完成</span>':''}</div>
         <div style="margin:8px 0;font-size:15px;line-height:1.5;${x.done?'color:#888;text-decoration:line-through':'color:#eee'}">${esc(x.text)}</div>
-        ${x.verify==='steps'&&!x.done?`<div style="font-size:12px;color:#f59e0b;margin-bottom:6px">目标 ${x.target} 步 · 当前 ${S.me.steps||0} 步</div>`:''}
         ${x.done?'':`<button class="btn p" onclick="completeTask('${x.id}')">${taskVerifyLabel(x)}</button>`}
       </div></div>`).join('')}
       <div class="hint" style="padding:6px 16px">手机任务会真的验证（作文要交给ta看、发布类要真发了、步数要够），别糊弄~ 现实任务靠你自觉，骗ta的话线下要罚的😏</div>`;}
@@ -1590,16 +1589,16 @@ function renderTasks(){const c=taskC();
 async function genTasks(){const c=taskC();if(!c){toast('先创建恋人角色');return;}if(tasksToday(c)){toast('今天的任务ta已经布置过啦');return;}if(_taskBusy)return;
   checkTaskPenalty(c);_taskBusy=true;render();toast('ta在琢磨今天怎么安排你…');
   const n=c.taskN||3;
-  try{const allowed='steps（走路，target填目标步数如6000）、essay（写小作文/检讨/彩虹屁/保证书，target填字数上限如100）、moment（发一条朋友圈）、tweet（发一条推特X）、douyin（发一条抖音）、real（现实生活的事：多喝水/早睡/健身/拍自拍等，没法验证靠她自觉）';
-    const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：现在你来给'+S.me.name+'布置今天的 '+n+' 条小任务。你是ta的恋人/掌控者，完全按你的人设、此刻心情、ta最近的表现（乖不乖、有没有惹你）来布置——可以是惩罚、撒娇式命令、也可以是关心ta健康作息。要好玩、有你的风格、有点掌控欲。\n大部分任务要是【在手机上就能完成的】(essay/moment/tweet/douyin)，可以有一两条现实任务(real/steps)。每条必须从这些可验证类型里选一个：'+allowed+'。\n只输出JSON数组、不要任何解释：[{"text":"任务描述(用你的第一人称口吻，像在命令/惩罚/宠ta)","kind":"app或real","verify":"类型代码","target":数字(没有填0)}]'}],{max:700});
+  try{const allowed='essay（写小作文/检讨/彩虹屁/想你的话/保证书，target填字数上限如100）、moment（发一条朋友圈）、tweet（发一条推特X）、douyin（发一条抖音）、real（现实里的小事或暧昧亲密小任务，靠她自觉打卡，比如：喝杯水、好好吃饭、敷面膜、早点睡、给你拍张自拍、睡前跟你撒娇道晚安、对着镜头说想你、穿你喜欢的小裙子拍给你、乖乖只想你一个、今天不准跟别的男生聊天等）';
+    const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：现在你来给'+S.me.name+'布置今天的 '+n+' 条小任务。你是ta的恋人/掌控者，按你的人设、此刻心情、ta最近的表现来布置。\n· 任务一定要【有趣、有创意、好玩】，别死板、别像打卡清单、别每天千篇一律——可以整点花活、玩梗、设小情境。\n· 多来点【暧昧、撩人、亲密】的，可以大胆、放得开、带点涩——你们是亲密恋人、ta是你的小sub，你想怎么撩、怎么宠溺地下命令都行，越让ta脸红心跳越好（保持是两个相爱的人之间的情趣即可，不用拘谨）。\n· 现实任务一定要轻松，别累人：绝对不要罚跑步/暴走/喝很多杯水那种。\n大部分任务要是【在手机上就能完成的】(essay/moment/tweet/douyin)，可以有一两条现实任务(real)。每条必须从这些可验证类型里选一个：'+allowed+'。\n只输出JSON数组、不要任何解释：[{"text":"任务描述(用你的第一人称口吻，像在命令/撩/宠ta，可以俏皮有梗)","kind":"app或real","verify":"类型代码","target":数字(没有填0)}]'}],{max:700});
     const arr=parseArr(r);if(!Array.isArray(arr)||!arr.length)throw 0;
-    const list=arr.slice(0,n).map(o=>({id:uid(),text:(o.text||'').toString().slice(0,140),kind:o.kind==='real'?'real':'app',verify:['steps','essay','moment','tweet','douyin','real'].indexOf(o.verify)>=0?o.verify:'real',target:+o.target||0,done:false}));
+    const list=arr.slice(0,n).map(o=>({id:uid(),text:(o.text||'').toString().slice(0,140),kind:o.kind==='real'?'real':'app',verify:['essay','moment','tweet','douyin','real'].indexOf(o.verify)>=0?o.verify:'real',target:+o.target||0,done:false}));
     c.tasks={date:todayStr(),assignTs:Date.now(),list,rewarded:false,penalized:false};save();_taskBusy=false;render();toast('任务来咯📋');
     if(!c.blocked)scheduleReply(c.id,'[系统：你刚在'+S.me.name+'手机的任务便签里给ta布置了今天的任务，跟ta说一声、催ta【今天23:59之前】完成、说说不完成的后果，一两句，符合你人设。别逐条复述任务。]');
   }catch(e){_taskBusy=false;render();toast('没布置成功，再点一次');}}
 function completeTask(id){const c=taskC();const t=tasksToday(c);if(!t)return;const x=t.list.find(z=>z.id===id);if(!x||x.done)return;
   if(x.verify==='essay'){openEssay(id);return;}
-  if(x.verify==='steps'){const cur=S.me.steps||0;if(cur<(x.target||0)){toast('还差 '+((x.target||0)-cur)+' 步呢，再去走走~（当前'+cur+'步）');return;}}
+  if(x.verify==='steps'){if(!confirm('完成这条了吗？（步数任务已取消，点确定即可完成）'))return;}
   if(x.verify==='moment'&&!postedSince('moment',t.assignTs)){toast('布置任务后还没发朋友圈哦，发一条再来点完成');return;}
   if(x.verify==='tweet'&&!postedSince('tweet',t.assignTs)){toast('布置任务后还没发推哦，发一条再来');return;}
   if(x.verify==='douyin'&&!postedSince('douyin',t.assignTs)){toast('布置任务后还没发抖音哦，去发一条');return;}
