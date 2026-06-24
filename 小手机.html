@@ -296,7 +296,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v82 · 通话总结更全+对方约会+删一天前通话';
+const APP_VER='v83 · 全量自检+小修';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1795,7 +1795,7 @@ function coupleSet(){openModal(`<h3>在一起的日子</h3><div class="field"><l
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="S.couple.startDate=$('#cp_d').value||S.couple.startDate;save();closeModal();render()">保存</button></div>`);}
 function addAnniv(){openModal(`<h3>添加纪念日</h3><div class="field"><label>日期</label><input id="an_d" type="date" value="${todayStr()}"></div><div class="field"><label>名称</label><input id="an_t" placeholder="第一次见面 / 订婚…"></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var d=$('#an_d').value,t=$('#an_t').value.trim();if(!d||!t){toast('填日期和名称');return;}S.couple.anniversaries=S.couple.anniversaries||[];S.couple.anniversaries.push({date:d,title:t});S.couple.anniversaries.sort((a,b)=>a.date<b.date?-1:1);save();closeModal();render();})()">保存</button></div>`);}
-function previewOf(m){if(m.role==='assistant'){if(m.type==='familycard')return '[亲属卡邀请]';if(m.type==='namecard')return '[推荐好友：'+(m.cname||'')+']';return splitBubbles(m.content)[0]||'[消息]';}
+function previewOf(m){if(m.role==='assistant'){if(m.type==='familycard')return '[亲属卡邀请]';if(m.type==='namecard')return '[推荐好友：'+(m.cname||'')+']';if(m.type==='dateinvite')return '[约会邀请]';return splitBubbles(m.content)[0]||'[消息]';}
   return ({text:m.content,image:'[照片]',transfer:'[转账]',redpacket:'[红包]',location:'[位置]',file:'[文件]',spycard:'[查看权限]',dice:'[骰子]',gift:'[礼物]',paycard:'[求代付]',paid:'[已代付]',tweetcard:'[X推文]',tcollect:'[已收款]',treject:'[已退还]',chatlog:'[聊天记录]',food:'[外卖]',payreject:'[拒绝代付]',voice:'[语音]',sticker:'[表情]',namecard:'[名片]',familybuy:'[亲属卡消费]',familyreq:'[亲属卡申请]',weblink:'[网页]',dateinvite:'[约会邀请]',sys:m.content})[m.type]||'[消息]';}
 
 let _ctSearch='';
