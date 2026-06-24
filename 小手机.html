@@ -325,7 +325,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v93 · 我发的抖音可转发给角色';
+const APP_VER='v94 · 记仇小本本+线下时段+通话时间感知';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -615,6 +615,8 @@ function buildSystem(c){
   if(_main&&c.summaries&&c.summaries.length)s+='\n\n# 之前对话的概要（按时间，保持连贯）\n'+c.summaries.slice(-8).map(x=>'· '+x.time+'　'+x.text).join('\n');
   const _off=S.offline&&S.offline[c.id];
   if(_main&&_off&&_off.memory&&_off.memory.length)s+='\n\n# 你和ta线下见过面（你们真的在现实里约会过，记得这些）\n'+_off.memory.join('\n')+'\n微信聊天里你可以自然提起这些线下的事，但要用【普通文字】说，别用旁白【】那种线下格式。';
+  if(_main){const gd=(c.grudges||[]);const gund=gd.filter(x=>!x.done);
+    s+='\n\n# 你的记仇小本本（你私下记着'+S.me.name+'惹你/欠你的事，找机会跟ta算账、翻旧账）\n'+(gund.length?gund.map((x,i)=>(i+1)+'. '+x.text).join('\n'):'（暂时没记仇）')+'\n· ta惹你生气、做了让你介意/吃醋的事时，单独一行 [记仇|具体那件事] 把它记进小本本。\n· 等你们把这事说开、ta哄好你了、或你出了气，单独一行 [消气|那件事的关键词] 把它划掉。\n· 平时可以适时翻旧账："上次你…这账还没跟你算呢"，符合你占有欲强、嘴硬的人设。';}
   // 作息 / 此刻在哪
   const _wn=whereNow(c);if(_wn)s+='\n\n# 你的作息（此刻位置）\n现在是 '+hm()+'，按你的作息，你这会儿大概：'+_wn+'。聊到你在哪、在干嘛时要和这个一致，别一天到晚都说在公司/开会。';
   // 亲属卡 / 推荐过的好友（仅主身份）
@@ -948,9 +950,16 @@ function renderSpy(id){const c=getC(id);if(!c)return '';const d=S.spy[id];
     <div style="text-align:center;color:#666;font-size:11px;padding:4px">更新于 ${hm(d.time)}</div>`;}
   const btn=_spyBusy?`<button class="btn g" disabled>⏳ 刷新中…请稍候</button>`:`<button class="btn p" onclick="spyRefresh('${id}')">🔄 刷新内容</button>${d?`<button class="btn g" style="margin-top:8px" onclick="spyReset('${id}')">🗑 重置（清掉旧存档，重新生成全新内容）</button>`:''}`;
   const topbar=_spyBusy?`<div style="text-align:center;color:#b9a6e0;font-size:13px;padding:10px;background:#1c1c1e">⏳ 正在偷看 ta 的手机，请稍候…</div>`:'';
-  body=(spyUsageSec(id)||'')+(spyDouyinSec(id)||'')+body;
+  body=(spyGrudgeSec(id)||'')+(spyUsageSec(id)||'')+(spyDouyinSec(id)||'')+body;
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(c.remark||c.name)}的手机</span><span class="r" onclick="spyRefresh('${id}')">${_spyBusy?'⏳':'🔄'}</span></div>
     ${topbar}<div class="scroll" style="background:#000">${body}<div style="padding:12px">${btn}</div><div style="height:20px"></div></div>`;}
+// 他的记仇小本本（在他手机里；他自己会划掉，你也能手动加/删）
+function spyGrudgeSec(id){const c=getC(id);if(!c)return '';const g=grudgesOf(c);const undone=g.filter(x=>!x.done).length;
+  const rows=g.length?g.map((x,i)=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="flex:1;font-size:13px;${x.done?'text-decoration:line-through;color:#888':'color:#eee'}">${x.done?'✅ ':'📌 '}${esc(x.text)}<small style="display:block;color:#777">${x.done?'已算账/消气了':'记着呢，还没算账'}</small></div><div style="white-space:nowrap"><span onclick="spyToggleGrudge('${id}',${i})" style="color:#54a0ff;cursor:pointer;margin-right:10px" title="划掉/恢复">${x.done?'↺':'✓'}</span><span onclick="spyDelGrudge('${id}',${i})" style="color:#fa5151;cursor:pointer">✕</span></div></div>`).join(''):'<div class="empty" style="padding:10px">小本本还是空的，ta暂时没记仇～</div>';
+  return `<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#fa5151;display:flex;justify-content:space-between">📓 ta的记仇小本本${undone?'（'+undone+'笔没算账）':'（都消气啦）'}<span class="minibtn" onclick="spyAddGrudge('${id}')">＋ 记一笔</span></div>${rows}</div>`;}
+function spyAddGrudge(id){const c=getC(id);if(!c)return;const t=prompt('帮ta在小本本上记一笔（ta惦记的事）：','');if(t==null)return;const v=t.trim();if(!v)return;grudgesOf(c).unshift({id:uid(),text:v,done:false,ts:Date.now()});save();render();}
+function spyToggleGrudge(id,i){const c=getC(id);const g=c&&c.grudges;if(!g||!g[i])return;g[i].done=!g[i].done;g[i].doneTs=g[i].done?Date.now():0;save();render();}
+function spyDelGrudge(id,i){const c=getC(id);const g=c&&c.grudges;if(!g||!g[i])return;g.splice(i,1);save();render();}
 // 查手机：忆北在抖音点赞过的视频（取消点赞就没记录了）
 function spyDouyinSec(id){const liked=(S.dy&&S.dy.liked)||[];if(!liked.length)return '';
   const rows=liked.slice(0,12).map(v=>`<div class="it"><span style="font-size:13px;color:#ccc">${v.emoji||'🎬'} @${esc(v.author||'')}：${esc((v.desc||'').slice(0,30))}</span></div>`).join('');
@@ -1871,7 +1880,9 @@ function clClearOld(id){const sc=_clTab==='voice'?'语音':_clTab==='video'?'视
   save();render();toast(n?'已删掉'+n+'条一天前的记录':'没有一天前的记录');}
 /* ===== 线下约会（独立空间，与微信隔离）===== */
 let _off=null;
-function offData(id){if(!S.offline[id])S.offline[id]={loc:'',when:'',msgs:[],memory:[],started:false};return S.offline[id];}
+function offData(id){if(!S.offline[id])S.offline[id]={loc:'',when:'',msgs:[],memory:[],started:false,daypart:''};return S.offline[id];}
+const DAYPARTS=['白天','中午','下午','傍晚','晚上','深夜'];
+function dayPartNow(){const h=new Date().getHours();return h<5?'深夜':h<9?'清晨':h<11?'上午':h<13?'中午':h<17?'下午':h<19?'傍晚':h<23?'晚上':'深夜';}
 function acceptDate(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m||m.accepted||m.declined)return;
   m.accepted=true;const cid=(owner||'').split('#')[0];const o=offData(cid);o.loc=m.loc||o.loc||'老地方';o.when=m.when||o.when||'现在';o.started=true;o.msgs=o.msgs||[];
   o.msgs.push({id:uid(),who:'旁白',text:'你答应了TA的约会邀请：'+o.when+' 在「'+o.loc+'」见面。'});save();_off={id:cid,busy:false};go('off',{id:cid});
@@ -1886,24 +1897,29 @@ function offlineInvite(cid){const c=getC(cid);
   openModal(`<h3>🌹 约 ${esc(c.remark||c.name)} 见面</h3>
    <div class="field"><label>约会地点</label><input id="of_loc" placeholder="比如：江边咖啡馆 / 你家 / 电影院"></div>
    <div class="two"><div class="field"><label>日期</label><input id="of_date" type="date" value="${todayStr()}"></div><div class="field"><label>时间</label><input id="of_time" type="time" value="19:00"></div></div>
+   <div class="field"><label>时段（让ta知道现在是什么时候）</label><select id="of_part" style="width:100%;border:1px solid #38383a;border-radius:8px;padding:8px;background:#2c2c2e;color:#eee">${DAYPARTS.map(d=>`<option ${d==='晚上'?'selected':''}>${d}</option>`).join('')}</select></div>
    <div class="hint">发出邀请后，ta会(以ta的人设)回应是否赴约，然后你们就开始线下约会。</div>
    <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="offlineStart('${cid}')">发出邀请 💌</button></div>`);}
-function offlineStart(cid){const loc=$('#of_loc').value.trim()||'老地方';const date=$('#of_date').value||todayStr();const time=$('#of_time').value||'19:00';closeModal();
-  const o=offData(cid);o.loc=loc;o.when=date+' '+time;o.started=true;o.msgs=o.msgs||[];
+function offlineStart(cid){const loc=$('#of_loc').value.trim()||'老地方';const date=$('#of_date').value||todayStr();const time=$('#of_time').value||'19:00';const part=($('#of_part')&&$('#of_part').value)||'晚上';closeModal();
+  const o=offData(cid);o.loc=loc;o.when=date+' '+time;o.daypart=part;o.started=true;o.msgs=o.msgs||[];
   o.msgs.push({id:uid(),who:'旁白',text:'💌 你向TA发出约会邀请：'+date+' '+time+'，在「'+loc+'」见面。'});
   save();_off={id:cid,busy:false};go('off',{id:cid});
   offAI('[系统：'+S.me.name+'邀请你 '+o.when+' 在「'+loc+'」线下见面。先以你的人设回应是否赴约(基本会答应)，然后用旁白【】描写你到场的场景/动作，开启这次约会。]');}
 function offlineSystem(c){let s=c.persona||'';
   if(c.memory&&c.memory.length)s+='\n\n# 你记得关于'+S.me.name+'的事\n'+c.memory.map((m,i)=>(i+1)+'. '+m).join('\n');
+  if(c.summaries&&c.summaries.length)s+='\n\n# 你和ta微信聊天的概要（线下你也记得这些）\n'+c.summaries.slice(-6).map(x=>'· '+x.time+' '+x.text).join('\n');
   const o=offData(c.id);
   if(o.memory&&o.memory.length)s+='\n\n# 你们以前线下见面的经历\n'+o.memory.join('\n');
-  s+='\n\n# 现在：和'+S.me.name+'线下真实约会（这不是微信聊天！）\n地点：'+(o.loc||'未定')+'，时间：'+(o.when||'现在')+'。\n- 沉浸式角色扮演，像写剧本/小说。\n- 你的【动作、神态、环境、心理】一律用【】括起来写成旁白，旁白用【第三人称】（用 他/她/两人 来描写，绝对不要用"我"）；你说出口的话就正常写出来（第一人称对话）。\n- 一次可以几段：旁白和对话穿插，生动真实，符合你的人设和你们的关系。\n- 这里是面对面，绝对不要用微信那套：不要发[转账][红包][语音][来电]这类标签卡片。';
+  const gund=(c.grudges||[]).filter(x=>!x.done);
+  s+='\n\n# 你的记仇小本本（'+S.me.name+'惹你/欠你的事，当面正好找ta算账）\n'+(gund.length?gund.map((x,i)=>(i+1)+'. '+x.text).join('\n'):'（暂时没记仇）')+'\n约会里ta再惹你，用一行 [记仇|具体那件事] 记下；当面把账算清/哄好了就 [消气|关键词] 划掉。';
+  s+='\n\n# 现在：和'+S.me.name+'线下真实约会（这不是微信聊天！）\n地点：'+(o.loc||'未定')+'，时间：'+(o.when||'现在')+(o.daypart?'（现在是'+o.daypart+'）':'')+'。\n- 你清楚现在大概是'+(o.daypart||'这个时段')+'，言行、环境、光线都要符合这个时段（比如深夜就安静暧昧、中午就明亮热闹），别搞错时间。\n- 沉浸式角色扮演，像写剧本/小说。\n- 你的【动作、神态、环境、心理】一律用【】括起来写成旁白，旁白用【第三人称】（用 他/她/两人 来描写，绝对不要用"我"）；你说出口的话就正常写出来（第一人称对话）。\n- 一次可以几段：旁白和对话穿插，生动真实，符合你的人设和你们的关系。\n- 这里是面对面，绝对不要用微信那套：不要发[转账][红包][语音][来电]这类标签卡片。';
   return s;}
 async function offAI(note){if(!_off)return;const c=getC(_off.id);const o=offData(_off.id);_off.busy=true;offRender();
   try{const hist=o.msgs.slice(-30).map(m=>({role:m.who==='me'?'user':'assistant',content:(m.who==='旁白'?'【'+m.text+'】':m.text)}));
     if(note)hist.push({role:'user',content:note});
-    const r=await chatAPI([{role:'system',content:offlineSystem(c)},...hist,{role:'system',content:personaPin(c)}]);
+    let r=await chatAPI([{role:'system',content:offlineSystem(c)},...hist,{role:'system',content:personaPin(c)}]);
     if(!_off)return;
+    r=applyGrudgeTags(r,c);
     splitBubbles(r).forEach(l=>{l=normTag(l);if(LEAKRE.test(l))return;l=l.replace(/\[[^\]]*\]/g,'').trim();if(!l)return;
       splitActions(l).forEach(p=>{p=(p||'').trim();if(!p)return;const nar=/^[（(【][\s\S]*[）)】]$/.test(p);o.msgs.push({id:uid(),who:nar?'旁白':'ta',text:nar?p.replace(/^[（(【]+|[）)】]+$/g,'').trim():p});});});
     save();
@@ -1937,7 +1953,8 @@ function offSetting(id){const o=offData(id);
   openModal(`<h3>约会设定</h3>
    <div class="field"><label>约会地点</label><input id="os_loc" value="${esc(o.loc||'')}"></div>
    <div class="field"><label>时间</label><input id="os_when" value="${esc(o.when||'')}"></div>
-   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var o=offData('${id}');o.loc=$('#os_loc').value.trim();o.when=$('#os_when').value.trim();save();closeModal();render();})()">保存</button></div>`);}
+   <div class="field"><label>时段（ta会按这个时段表现）</label><select id="os_part" style="width:100%;border:1px solid #38383a;border-radius:8px;padding:8px;background:#2c2c2e;color:#eee">${DAYPARTS.map(d=>`<option ${d===(o.daypart||'晚上')?'selected':''}>${d}</option>`).join('')}</select></div>
+   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var o=offData('${id}');o.loc=$('#os_loc').value.trim();o.when=$('#os_when').value.trim();o.daypart=$('#os_part').value;save();closeModal();render();})()">保存</button></div>`);}
 function offQuit(){_off=null;home();}
 function renderOff(id){const c=getC(id);if(!c)return '';const o=offData(id);
   const body=o.msgs.map(m=>{
@@ -1946,7 +1963,7 @@ function renderOff(id){const c=getC(id);if(!c)return '';const o=offData(id);
     return `<div class="msg them" onclick="offMsgMenu('${id}','${m.id}')" style="padding-left:14px"><div class="col"><div class="bubble">${esc(m.text)}</div></div></div>`;}).join('')
     +(_off&&_off.busy?`<div class="msg them" style="padding-left:14px"><div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`:'');
   return `<div class="nav"><span class="l" onclick="offQuit()">‹ 退出</span><span class="t">🌹 和 ${esc(c.remark||c.name)} 约会</span><span class="r" onclick="offEnd('${id}')" style="color:#fa5151;font-size:13px">结束</span></div>
-   <div style="padding:7px 12px;background:#2a1a22;color:#e8a0b8;font-size:12px;display:flex;justify-content:space-between;align-items:center"><span>📍 ${esc(o.loc||'未定')} · 🕐 ${esc(o.when||'现在')}</span><span><span onclick="offSetting('${id}')" style="cursor:pointer;margin-right:12px">⚙︎设定</span><span onclick="offMemory('${id}')" style="cursor:pointer">🌹记忆</span></span></div>
+   <div style="padding:7px 12px;background:#2a1a22;color:#e8a0b8;font-size:12px;display:flex;justify-content:space-between;align-items:center"><span>📍 ${esc(o.loc||'未定')} · 🕐 ${esc(o.daypart||o.when||'现在')}</span><span><span onclick="offSetting('${id}')" style="cursor:pointer;margin-right:12px">⚙︎设定</span><span onclick="offMemory('${id}')" style="cursor:pointer">🌹记忆</span></span></div>
    <div class="scroll" id="offbg" style="background:#140d11">${body||'<div class="empty" style="padding:30px">开始约会吧…写完你的旁白和台词，再点「让TA回复」</div>'}</div>
    <div style="padding:6px 10px 0"><button class="btn p" style="width:100%;background:#e84d6f" ${_off&&_off.busy?'disabled':''} onclick="offReply()">${_off&&_off.busy?'TA回复中…':'▶ 让TA回复'}</button></div>
    <div class="inputbar"><button class="send" style="background:#9a5;margin-right:6px" onclick="offNarrate()" title="加旁白">🎭</button><textarea id="off_in" rows="1" placeholder="写你的台词…(🎭加旁白，写完点上面「让TA回复」)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();offSay();}"></textarea><button class="send" onclick="offSay()">记下</button></div>`;}
@@ -2590,7 +2607,7 @@ function doLoc(id){const n=$('#lc_n').value.trim();if(!n){toast('填地点呀');
 /* 拆分多条气泡 */
 function splitBubbles(text){return (text||'').split('\n').map(s=>s.trim()).filter(Boolean);}
 function splitActions(line){const out=[];const re=/[（(【][^）)】]*[）)】]/g;let last=0,m;while((m=re.exec(line))){const before=line.slice(last,m.index).trim();if(before)out.push(before);out.push(m[0].trim());last=re.lastIndex;}const tail=line.slice(last).trim();if(tail)out.push(tail);return out.length?out:[line];}
-const TAGWORDS='心情值|心情|记住|闹钟|日程|发朋友圈|发推|点外卖|语音|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|限时|加时|约会';
+const TAGWORDS='心情值|心情|记住|闹钟|日程|发朋友圈|发推|点外卖|语音|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|限时|加时|记仇|消气|约会';
 const APPNAME2KEY={'浏览器':'browser','搜索':'browser','上网':'browser','百度':'browser','朋友圈':'moments','动态':'moments','查他手机':'spy','查岗':'spy','查手机':'spy','购物':'shop','淘宝':'shop','商城':'shop','日历':'calendar','日程':'calendar','x':'x','X':'x','推特':'x','微博':'x','推':'x','抖音':'douyin','短视频':'douyin','刷视频':'douyin','刷抖音':'douyin','外卖':'food','点餐':'food','游戏':'games','游戏大厅':'games','打游戏':'games','信箱':'mail','邮箱':'mail','邮件':'mail','线下约会':'offline','线下':'offline','约会':'offline'};
 function genPwd(){return String(1000+Math.floor(Math.random()*9000));}
 function _appKeys(arg,pool,filt){if(/全部|所有|全锁|全/.test(arg))return pool.filter(filt);return arg.split(/[、,，\/\s]+/).map(x=>APPNAME2KEY[x.replace(/[「」『』"'《》]/g,'').trim()]).filter(k=>k&&filt(k));}
@@ -2608,6 +2625,16 @@ function applyBlockIntent(content,c,id){
     setBlk(c,false);c._readdedAt=Date.now();
     const mg={role:'assistant',type:'sys',content:(c.remark||c.name)+'把你加回来了',time:Date.now(),id:uid()};msgs(id).push(mg);
     save();if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();}}
+// 记仇小本本：[记仇|事] 记一笔，[消气|关键词] 划掉一笔；在聊天和线下都生效，并从文本抹掉
+function grudgesOf(c){if(!c.grudges)c.grudges=[];return c.grudges;}
+function applyGrudgeTags(content,c){if(!content||!c)return content;let changed=false;
+  let out=content.replace(/[\[【]\s*记仇\s*[|｜:：]\s*([^\]】]+)[\]】]/g,(m,t)=>{t=(t||'').replace(/[「」『』"'《》]/g,'').trim();if(t){const g=grudgesOf(c);if(!g.some(x=>x.text===t)){g.unshift({id:uid(),text:t,done:false,ts:Date.now()});changed=true;}}return '';});
+  out=out.replace(/[\[【]\s*消气\s*[|｜:：]?\s*([^\]】]*)[\]】]/g,(m,t)=>{t=(t||'').replace(/[「」『』"'《》]/g,'').trim();const g=grudgesOf(c);let tg=null;
+    if(t){tg=g.find(x=>!x.done&&(x.text.indexOf(t)>=0||t.indexOf(x.text)>=0));
+      if(!tg){const ks=t.replace(/[的了又还跟和与你我ta]/g,'').split('').filter(Boolean);if(ks.length>=2)tg=g.find(x=>!x.done&&ks.filter(ch=>x.text.indexOf(ch)>=0).length>=Math.ceil(ks.length*0.6));}}// 关键词模糊匹配；匹配不上就不乱划
+    else tg=g.find(x=>!x.done);// 不带关键词的[消气]=划掉最近一笔
+    if(tg){tg.done=true;tg.doneTs=Date.now();changed=true;}return '';});
+  if(changed)save();return out;}
 // 处理"上锁/禁言"控制指令：无论写在哪都强制生效，并从文本里抹掉（不显示、无系统提示）
 function applyControlTags(content,c,id,statedPwd){
   if(!content||!(S.couple&&S.couple.cid===c.id))return content;
@@ -2683,6 +2710,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
     const diceCompare=!!(_lu&&_lu.type==='dice');// 她刚掷过 → 这轮他只能比大小、不能再掷
     const _statedPwd=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;
     content=applyControlTags(content,c,id,_statedPwd);
+    content=applyGrudgeTags(content,c);
     if(/拉黑|加回|删了你|删除你|拉进黑名单|原谅你/.test(content)&&!/报备|别的微信号|加了你|加你、|有人加|有别人加/.test(note||''))applyBlockIntent(content,c,id);
     if(S.couple&&S.couple.cid===id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|给你(解|开)|都给你解|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|玩.{0,4}(一会儿|一会|多久|多长)|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)/.test(content))extractControl(content,c,_statedPwd);
     maybeSpyIntent(content,c,id,_lu);
@@ -2690,7 +2718,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
     for(let i=0;i<lines.length;i++){
       let line=normTag(lines[i]);if(!line)continue;
       if(/^\[联网\|/.test(line))continue;
-      if(/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时)\s*[|｜:：]/.test(line))continue;// 管控指令标签：即便没绑情侣空间没生效，也绝不作为消息发出
+      if(/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气)\s*[|｜:：\]]/.test(line))continue;// 管控/记仇指令标签：即便没生效，也绝不作为消息发出
       if(/^\s*[🔒🔓🔇🔊🔕]/.test(line)||/^\s*(?:ta|TA|他|她)(把你|锁了你|禁言了你|解除了你|解禁了你|解锁了你)/.test(line))continue;
       if(isRefusal(line))continue;
       let mm=line.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=mm[1];save();if(cur().p==='chat'&&cur().id===id)render();continue;}
@@ -2888,6 +2916,7 @@ async function callAI(sysNote){if(!_call)return;const c=getC(_call.id);const vid
     if(sysNote)hist.push({role:'user',content:sysNote});
     const _lang=(getVoice(c).lang||'zh');const _langN=_lang==='zh'?'':({'英':'英','日':'日','韩':'韩'}[_lang]||_lang)+'语';
     let cf='\n\n# 正在'+(video?'视频':'语音')+'通话（务必遵守格式）\n用口语短句，像打电话一样，别用卡片。每句单独一行。';
+    cf+='\n- ⏰ 现在是 '+hm()+'（'+dayPartNow()+'），你心里很清楚此刻几点、是'+dayPartNow()+'，【不用'+S.me.name+'问你也知道】，言行要贴合这个时间：深夜就压低声音、带点困意或心疼ta还没睡；清晨就刚睡醒的慵懒；饭点会问ta吃没吃。别表现得不知道现在几点。';
     if(video)cf+='\n- 这是视频，你的动作神态用【】单独成行写，比如【凑近镜头笑】。';
     else cf+='\n- 这是语音通话（看不到画面），绝对不要出现任何【】动作神态描写，一个【】都不许有，只能说话。';
     if(_langN)cf+='\n- ‼️最重要：你全程只能说'+_langN+'，从头到尾每一句都是'+_langN+'，绝对不准中途切回中文整句说话（这是会被读出来的那一行）。格式：先单独一行写'+_langN+'原文（会被读出来），紧接着【换一行】用（）单独写中文翻译（不会被读）。原文一行、（中文翻译）另起一行，别写在同一行，也别把顺序搞反。例如：\n'+(_lang==='韩'?'사랑해\n（我爱你）':_lang==='日'?'好きだよ\n（喜欢你）':'I miss you\n（我想你了）')+'\n- 哪怕是要挂断、道别、回应"挂了/别挂/我爱你"这种话，也必须先写'+_langN+'原文那一行，绝不能整句只说中文。';
