@@ -327,7 +327,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v111 · 性别/⭐重点关注+通讯录搜索生成角色';
+const APP_VER='v114 · 通话记录按整通分块+删整通';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1945,24 +1945,30 @@ function renderCallLog(id){const c=getC(id);if(!c)return '';
   let list=msgs(id).filter(m=>m._call);
   if(_clTab==='voice')list=list.filter(m=>(m._ck||'voice')==='voice');
   else if(_clTab==='video')list=list.filter(m=>m._ck==='video');
-  let html='',lastCs=null,idx=0;
-  list.forEach(m=>{
-    if(m._cs!==lastCs){lastCs=m._cs;idx++;const kind=m._ck==='video'?'📹 视频通话':'📞 语音通话';html+=`<div class="tstamp"><span>${kind}${m.time?' · '+fmtDate(m.time):' · 第'+idx+'通'}</span></div>`;}
-    const who=m.role==='user'?S.me.name:(c.remark||c.name);
-    const txt=m.type==='voice'?('🎙️ '+(m.content||'语音')):(m.content||'');
-    html+=`<div class="bill" style="border-radius:10px;margin:4px 10px;align-items:flex-start"><div style="flex:1;min-width:0"><div style="font-size:11px;color:#888">${esc(who)}</div><div style="color:#ddd;white-space:pre-wrap">${esc(txt)}</div></div><div style="white-space:nowrap;padding-left:8px"><span onclick="clEdit('${id}','${m.id}')" style="color:#54a0ff;cursor:pointer;margin-right:12px">✎</span><span onclick="clDel('${id}','${m.id}')" style="color:#fa5151;cursor:pointer">✕</span></div></div>`;
-  });
+  // 按"每通通话"(session)分组
+  const groups=[],map={};
+  list.forEach(m=>{const k=m._cs||('_'+(m.time||0));if(!map[k]){map[k]={cs:m._cs||'',ck:m._ck,msgs:[]};groups.push(map[k]);}map[k].msgs.push(m);});
+  const html=groups.map((g,gi)=>{const first=g.msgs[0],last=g.msgs[g.msgs.length-1];
+    const kind=g.ck==='video'?'📹 视频通话':'📞 语音通话';
+    const dateStr=first.time?fmtDate(first.time):'';const st=first.time?hm(first.time):'';const et=last.time?hm(last.time):'';
+    const inner=g.msgs.map(m=>{const who=m.role==='user'?S.me.name:(c.remark||c.name);const txt=m.type==='voice'?('🎙️ '+(m.content||'语音')):(m.content||'');
+      return `<div style="padding:6px 0;border-top:.5px solid #242428"><div style="font-size:11px;color:#888;display:flex;justify-content:space-between"><span>${esc(who)}</span><span onclick="clEdit('${id}','${m.id}')" style="color:#54a0ff;cursor:pointer">✎改</span></div><div style="color:#ddd;white-space:pre-wrap;font-size:14px;margin-top:2px">${esc(txt)}</div></div>`;}).join('');
+    return `<div style="margin:10px;border:1px solid #2a2a2c;border-radius:14px;overflow:hidden;background:#141416">
+      <div style="background:#1e1e22;padding:9px 12px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px"><div style="min-width:0"><div style="font-size:13px;color:#9ec5fe;font-weight:600">${kind} · 第${gi+1}通</div><div style="font-size:11px;color:#888;margin-top:2px">${dateStr}　🟢开始 ${st} — 🔴结束 ${et}</div></div><span onclick="clDelSession('${id}','${g.cs}')" style="color:#fa5151;font-size:12px;cursor:pointer;white-space:nowrap">🗑 删这通</span></div>
+      <div style="padding:2px 12px 10px">${inner}</div></div>`;}).join('');
   const tab=(k,l)=>`<span onclick="_clTab='${k}';render()" style="padding:4px 14px;border-radius:14px;cursor:pointer;${_clTab===k?'background:#07c160;color:#fff':'color:#999'}">${l}</span>`;
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">📞 通话记录</span><span class="r" onclick="clClear('${id}')" style="color:#fa5151;font-size:13px">清空</span></div>
    <div style="padding:8px;background:#1c1c1e;display:flex;gap:8px;justify-content:center;border-bottom:.5px solid #2a2a2c">${tab('all','全部')}${tab('voice','语音')}${tab('video','视频')}</div>
    <div style="padding:6px 10px;text-align:right;background:#111"><button class="minibtn" onclick="clClearOld('${id}')">🗑 删掉一天前的${_clTab==='voice'?'语音':_clTab==='video'?'视频':''}</button></div>
-   <div class="scroll" style="background:#000">
-   <div class="hint">通话/视频里说的内容都在这。聊久了如果AI把外语说成了中文，来这删掉或改对那几条就行，不用清空全部记忆。</div>
+   <div class="scroll" id="cllog" style="background:#000">
+   <div class="hint">每通电话单独一框，标了开始/结束时间。整通不想要就点框右上「🗑删这通」；某句说错了点「✎改」。</div>
    ${html||'<div class="empty" style="padding:40px">还没有通话记录</div>'}<div style="height:20px"></div></div>`;}
 function clEdit(id,mid){const m=msgs(id).find(x=>x.id===mid);if(!m)return;
   openModal(`<h3>编辑这句</h3><div class="field"><textarea id="cl_t" rows="3">${esc(m.content||'')}</textarea></div>
-   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var mm=msgs('${id}').find(x=>x.id==='${mid}');if(mm)mm.content=$('#cl_t').value;save();closeModal();render();})()">保存</button></div>`);}
-function clDel(id,mid){const arr=msgs(id);const i=arr.findIndex(x=>x.id===mid);if(i<0)return;arr.splice(i,1);save();render();}
+   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var mm=msgs('${id}').find(x=>x.id==='${mid}');if(mm)mm.content=$('#cl_t').value;save();closeModal();clKeep(()=>{});})()">保存</button></div>`);}
+function clKeep(fn){const e=$('#cllog');const st=e?e.scrollTop:0;fn();render();const g=$('#cllog');if(g)g.scrollTop=st;}
+function clDel(id,mid){const arr=msgs(id);const i=arr.findIndex(x=>x.id===mid);if(i<0)return;clKeep(()=>{arr.splice(i,1);save();});}
+function clDelSession(id,cs){if(!confirm('删除这一整通通话记录？'))return;clKeep(()=>{S.messages[mkey(id)]=msgs(id).filter(m=>!(m._call&&(m._cs||'')===cs));save();});toast('已删这通');}
 function clClear(id){const sc=_clTab==='voice'?'语音':_clTab==='video'?'视频':'全部';if(!confirm('清空和ta的'+sc+'通话记录？\n（只删这一类的通话内容，不动文字聊天和记忆）'))return;
   S.messages[mkey(id)]=msgs(id).filter(m=>{if(!m._call)return true;if(_clTab==='all')return false;const k=m._ck==='video'?'video':'voice';return k!==_clTab;});save();render();toast(sc+'通话记录已清空');}
 function clClearOld(id){const sc=_clTab==='voice'?'语音':_clTab==='video'?'视频':'';const cut=Date.now()-86400000;
@@ -3187,11 +3193,11 @@ async function doSpyView(id,force,opts){opts=opts||{};if(!isMain())return;const 
   if(opts.intent){
     // 按他意愿查：一次只查一项（他明确说要查的那项），没数据就如实说没查到，绝不许编
     const lab=flab;const has=!!(fd.data&&fd.data.trim());
-    note='[系统：你'+(opts.bySheTold?'应'+S.me.name+'的要求':'主动')+'翻看了'+S.me.name+'手机里的【'+lab+'】这一项（这次你只看了这一项，别的没看）。'+(has?('真实记录如下（只有这些）：\n'+fd.data+'\n\n【铁律】只能依据上面这些真实记录说话，针对它们用你的人设反应（占有欲/吃醋/追问/调侃/心疼都行）。绝不许编造上面没有的聊天、人名、内容。'):('但这一项后台【没有任何记录】。\n\n【铁律】你这次什么都没查到——就如实、自然地跟ta说"我翻了你的'+lab+'，没看到什么/挺干净的"之类，绝对不许编造任何聊天、人名、记录来诈ta。'))+'\n别复述系统提示、别带方括号、自然口语。]';
+    note='[系统：你'+(opts.bySheTold?'应'+S.me.name+'的要求':'主动')+'翻看了'+S.me.name+'手机里的【'+lab+'】这一项（这次你只看了这一项，别的没看）。'+(has?('真实记录如下（只有这些）：\n'+fd.data+'\n\n【铁律】只能依据上面这些真实记录说话，针对它们用你的人设反应（占有欲/吃醋/追问/调侃/心疼都行）。绝不许编造上面没有的聊天、人名、内容。'):('但这一项后台【没有任何记录】。\n\n【铁律】你这次什么都没查到——就如实、自然地跟ta说"我翻了你的'+lab+'，没看到什么/挺干净的"之类，绝对不许编造任何聊天、人名、记录来诈ta。'))+'\n【说话要求】简短、直接、戳重点：一两句话点破/质问你最在意的那条，别啰嗦长篇大论、别逐条念。别复述系统提示、别带方括号、自然口语。]';
   }else{
     let act=myActivity(id,since);
     if(/没什么新动静/.test(act)){S._spySeen[id]=Date.now();save();return;}
-    note='[系统：你查看了'+S.me.name+'的手机，看到这些"自上次以来的新动静"：\n'+act+'\n请只针对这些新内容给ta发微信（吃醋/关心/调侃/质问都行，符合人设），别重复以前提过的事，自然口语。\n【铁律】只能依据上面真实内容，不许编造没有的记录。]';
+    note='[系统：你查看了'+S.me.name+'的手机，看到这些"自上次以来的新动静"：\n'+act+'\n请只针对这些新内容给ta发微信（吃醋/关心/调侃/质问都行，符合人设），别重复以前提过的事。\n【说话要求】简短直接、戳重点，一两句就够，别啰嗦一大堆。自然口语。\n【铁律】只能依据上面真实内容，不许编造没有的记录。]';
   }
   try{const content=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:note}],{aux:true});
     applyAuxTags(content,c,id);splitBubbles(content).forEach(l=>{if(/^\[(联网|心情|记住|闹钟|来电)\|/.test(l)||CTLLEAK.test((l||'').trim()))return;const mm=lineToMsg(l);mm.time=Date.now();msgs(id).push(mm);notifyIncoming(c,mm);});if(!opts.intent)S._spySeen[id]=Date.now();save();
@@ -3210,7 +3216,7 @@ function spyFocusData(id,focus){const f=focus||'';
   if(/(X|x|推特|微博)/.test(f)){const tw=(S.x&&S.x.tweets||[]).filter(t=>t.who==='me').slice(0,4);return {label:'X动态',data:tw.map(t=>'「'+t.text.slice(0,24)+'」').join('、')};}
   if(/浏览|百度|网页/.test(f)){const h=(S.browser&&S.browser.history||[]).slice(0,5).map(x=>x.q);return {label:'浏览器搜索',data:h.join('、')};}
   if(/微信|聊天|跟谁|消息|谁聊|谁说|联系人/.test(f)){const others=S.contacts.filter(c=>!c.deleted&&c.id!==id).map(c=>({c,um:[...msgs(c.id)].reverse().find(m=>m.role==='user'&&m.type!=='sys'),lm:lastMsg(c.id)})).filter(x=>x.um&&x.lm).sort((a,b)=>(cWeight(b.c)-cWeight(a.c))||(b.lm.time-a.lm.time)).slice(0,4);
-    return {label:'微信聊天',data:others.map(o=>(o.c.remark||o.c.name)+cMark(o.c)+' '+hm(o.lm.time)+'："'+previewOf(o.um).slice(0,16)+'"').join('；')};}
+    return {label:'微信聊天',data:others.map(o=>{const nm=(o.c.remark||o.c.name);const recent=msgs(o.c.id).slice(-8).map(m=>{const t=msgToText(m);return t?((m.role==='user'?S.me.name:nm)+'：'+t.replace(/\n/g,' ').slice(0,50)):'';}).filter(Boolean).join('\n');return '【她和 '+nm+cMark(o.c)+' 的聊天（'+hm(o.lm.time)+'）完整内容】\n'+recent;}).join('\n\n')};}
   // 没指明具体看啥 → 只瞄一眼大概（位置+状态）
   return {label:'',data:[curLoc()?'她此刻在'+curLoc():'',S.me.status?'她写的状态："'+S.me.status+'"':''].filter(Boolean).join('；')};}
 // 查岗自由化：他口头说要看 / 她让他看 → 当场触发一次查手机（不占固定次数，按他的意愿来）
