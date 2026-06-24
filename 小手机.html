@@ -325,7 +325,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v96 · 查他手机显示和我的线下约会';
+const APP_VER='v97 · 每天打开自动布置任务';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1570,14 +1570,14 @@ function renderTasks(){const c=taskC();
   let body;
   if(!t){body=`<div style="margin:14px;padding:20px;border-radius:16px;background:linear-gradient(145deg,#f59e0b,#b45309);color:#fff;text-align:center">
       <div style="font-size:15px">${esc(c.remark||c.name)} 还没布置今天的任务</div>
-      <div style="font-size:12px;opacity:.9;margin:6px 0 14px">完成全部有奖励🎁，没完成会被记仇、线下受罚哦</div>
+      <div style="font-size:12px;opacity:.9;margin:6px 0 14px">每天打开自动收到 · 当天23:59前完成<br>全部完成有奖励🎁，没完成会被记仇、线下受罚哦</div>
       <button class="btn" style="background:#fff;color:#b45309;font-weight:700" ${_taskBusy?'disabled':''} onclick="genTasks()">${_taskBusy?'ta在安排…':'📋 让ta布置今天的任务'}</button></div>
     <div class="section" style="margin:12px"><div class="it"><span>每天任务条数</span><span class="v"><input id="tk_n" type="number" min="1" max="8" value="${n}" style="width:46px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:4px;background:#2c2c2e;color:#eee"> <button class="minibtn" onclick="(function(){var v=Math.max(1,Math.min(8,+$('#tk_n').value||3));taskC().taskN=v;save();toast('每天'+v+'条');})()">存</button></span></div></div>`;}
   else{const done=t.list.filter(x=>x.done).length,total=t.list.length,all=total&&done===total;
     body=`<div style="margin:14px;padding:16px;border-radius:16px;background:linear-gradient(145deg,${all?'#19a463,#0c6b3f':'#f59e0b,#b45309'});color:#fff;text-align:center">
       <div style="font-size:14px">今天的任务 · ${esc(c.remark||c.name)} 布置</div>
       <div style="font-size:30px;font-weight:700;margin:4px 0">${done}/${total}</div>
-      <div style="font-size:12px;opacity:.95">${all?'全部完成啦！等ta的奖励🎁':'加油完成，全做完有奖励～'}</div></div>
+      <div style="font-size:12px;opacity:.95">${all?'全部完成啦！等ta的奖励🎁':'今天23:59前完成，全做完有奖励～'}</div></div>
       ${t.list.map((x,i)=>`<div class="section" style="margin:10px 12px"><div style="padding:12px 14px">
         <div style="display:flex;justify-content:space-between;align-items:center"><span class="tag">${x.kind==='real'?'🌍 现实':'📱 手机'}</span>${x.done?'<span style="color:#19a463;font-size:13px">✅ 已完成</span>':''}</div>
         <div style="margin:8px 0;font-size:15px;line-height:1.5;${x.done?'color:#888;text-decoration:line-through':'color:#eee'}">${esc(x.text)}</div>
@@ -1595,7 +1595,7 @@ async function genTasks(){const c=taskC();if(!c){toast('先创建恋人角色');
     const arr=parseArr(r);if(!Array.isArray(arr)||!arr.length)throw 0;
     const list=arr.slice(0,n).map(o=>({id:uid(),text:(o.text||'').toString().slice(0,140),kind:o.kind==='real'?'real':'app',verify:['steps','essay','moment','tweet','douyin','real'].indexOf(o.verify)>=0?o.verify:'real',target:+o.target||0,done:false}));
     c.tasks={date:todayStr(),assignTs:Date.now(),list,rewarded:false,penalized:false};save();_taskBusy=false;render();toast('任务来咯📋');
-    if(!c.blocked)scheduleReply(c.id,'[系统：你刚在'+S.me.name+'手机的任务便签里给ta布置了今天的任务，跟ta说一声、催ta好好完成、说说不完成的后果，一两句，符合你人设。别逐条复述任务。]');
+    if(!c.blocked)scheduleReply(c.id,'[系统：你刚在'+S.me.name+'手机的任务便签里给ta布置了今天的任务，跟ta说一声、催ta【今天23:59之前】完成、说说不完成的后果，一两句，符合你人设。别逐条复述任务。]');
   }catch(e){_taskBusy=false;render();toast('没布置成功，再点一次');}}
 function completeTask(id){const c=taskC();const t=tasksToday(c);if(!t)return;const x=t.list.find(z=>z.id===id);if(!x||x.done)return;
   if(x.verify==='essay'){openEssay(id);return;}
@@ -3097,6 +3097,12 @@ function checkStepReport(){if(!isMain())return;const now=new Date();if(now.getHo
 setInterval(checkStepReport,60000);setTimeout(checkStepReport,8000);
 function checkTasksDaily(){if(!isMain())return;const c=taskC();if(c)checkTaskPenalty(c);}
 setTimeout(checkTasksDaily,9000);setInterval(checkTasksDaily,300000);
+// 每天打开小手机就自动收到当天任务（当天只生成一次；当天23:59前完成，否则次日记仇）
+let _autoTaskTry=0;
+function autoAssignTasks(){if(!isMain())return;const c=taskC();if(!c||c.blocked)return;checkTaskPenalty(c);
+  if(tasksToday(c)||_taskBusy)return;const a=S.settings&&S.settings.chat;if(!a||!a.key)return;// 没配模型就不自动生成
+  if(Date.now()-_autoTaskTry<60000)return;_autoTaskTry=Date.now();genTasks();}
+setTimeout(autoAssignTasks,4000);
 
 /* 主动消息 */
 async function maybeProactive(id){if(!isMain())return;const c=getC(id);if(!c.proactive.enabled||c.blocked)return;
@@ -3264,7 +3270,7 @@ function storageFullAlert(){openModal(`<h3>🚨 存储已经满了！</h3><div s
 function paintBatt(){const b=$('#battinfo');if(b)b.innerHTML='📶 5G 🔋'+(S.me.battery!=null?S.me.battery+'%':'88%')+(S.me.charging?'⚡':'');}
 function initBattery(){if(navigator.getBattery){navigator.getBattery().then(bt=>{const upd=()=>{S.me.battery=Math.round(bt.level*100);S.me.charging=bt.charging;save();paintBatt();};bt.addEventListener('levelchange',upd);bt.addEventListener('chargingchange',upd);upd();}).catch(()=>{});}}
 initBattery();
-document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;}else{if(cur().p==='wechat'&&wxTab==='me')render();setTimeout(checkStorageWarn,600);}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;}else{if(cur().p==='wechat'&&wxTab==='me')render();setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);}});
 setInterval(()=>{const c=$('#clock');if(c)c.textContent=hm();paintBatt();if(cur().p==='home')$('#app').querySelector('.hh')&&($('#app').querySelector('.hh').textContent=hm());},1000);
 render();
 setTimeout(checkStorageWarn,1200);
