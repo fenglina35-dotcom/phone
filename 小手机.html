@@ -296,7 +296,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v74 · 浏览器(联网搜索)';
+const APP_VER='v75 · 报备只一次';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -594,7 +594,7 @@ function buildSystem(c){
       const acc=(S.me.accounts||[]).find(a=>a.id===k.slice(idx+1));const arr=S.messages[k]||[];if(!acc||!arr.length)return;
       const recent=arr.slice(-6).map(m=>(m.role==='user'?acc.name:'你')+'：'+((m.content||msgToText(m))||'').replace(/\n/g,' ').slice(0,40)).join('\n');
       altLines.push('「'+acc.name+'」（微信号'+(acc.wxid||'')+'）加了你，你们聊了：\n'+recent);});
-    if(altLines.length)s+='\n\n# 最近有别人加你微信、和你聊过天（你心里清楚这事）\n'+altLines.join('\n\n')+'\n'+S.me.name+'是你的恋人。这些陌生人加你、跟你聊天，你应当【第一时间如实向'+S.me.name+'报备】（谁加了你、聊了什么、你的态度），坦坦荡荡别隐瞒，符合你的人设。';}
+    if(altLines.length)s+='\n\n# 有别人加过你微信、和你聊过（你心里都清楚这些）\n'+altLines.join('\n\n')+'\n这些你都记得，'+S.me.name+'（你恋人）问起时你要如实说清楚（谁加的、聊了啥、你的态度）。但【不要反复主动提这件事】——你已经报备过了，除非有新的人加你或有新消息，否则平时就正常聊天，别老把这事翻出来念叨。';}
   // 朋友圈感知（仅主身份）
   const mo=_main?S.moments.filter(p=>p.authorId==='me'||p.authorId===c.id).slice(0,3):[];
   if(mo.length)s+='\n\n# 最近的朋友圈（你知道这些动态，但别反复主动提起旧朋友圈，看过一次就够了，除非ta主动说起）\n'+mo.map(p=>(p.authorId==='me'?S.me.name:'你')+'发了："'+p.text+'"').join('\n');
