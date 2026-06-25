@@ -349,7 +349,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v133 · 上下文改成按回合(你1句+他回复)计';
+const APP_VER='v134 · 一整通电话只算1回合+长期记忆加强(概要带更多)';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -420,8 +420,15 @@ function initAccounts(){if(!S.me.accounts||!S.me.accounts.length)S.me.accounts=[
   S.contacts.forEach(c=>{if(!c._blk)c._blk={main:!!c.blocked};});syncBlocks();}
 function msgs(id){const k=mkey(id);return S.messages[k]||(S.messages[k]=[]);}
 function lastMsg(id){const m=msgs(id);return m[m.length-1];}
-// 取最近 n 个回合：一个回合 = 我方发一条 + 他随后回复的所有气泡，直到下一条我方消息。从末尾往前数 n 条「我方」消息为界。
-function lastRounds(arr,n){if(!arr||!arr.length)return arr||[];n=Math.max(1,n|0);let cnt=0,idx=0;for(let i=arr.length-1;i>=0;i--){if(arr[i]&&arr[i].role==='user'){cnt++;if(cnt===n){idx=i;break;}}}let r=arr.slice(idx);if(r.length>140)r=r.slice(r.length-140);return r;}
+// 取最近 n 个回合。一个回合 = 我方发一条文字 + 他随后回复的所有气泡；【一整通电话/视频只算 1 个回合】（哪怕里面来回很多句），免得长通话把文字聊天记录挤出窗口。通话原文仍会带上（有 160 条硬上限），更早的内容靠"对话概要"长期记忆。
+function lastRounds(arr,n){if(!arr||!arr.length)return arr||[];n=Math.max(1,n|0);
+  const starts=[];let curCall=null;
+  for(let i=0;i<arr.length;i++){const m=arr[i];if(!m)continue;
+    if(m._call){const cs='cs'+(m._cs||'x');if(cs!==curCall){curCall=cs;starts.push(i);}}
+    else{curCall=null;if(m.role==='user')starts.push(i);}}
+  if(!starts.length)return arr.length>160?arr.slice(-160):arr;
+  const k=Math.max(0,starts.length-n);let r=arr.slice(starts[k]);
+  if(r.length>160)r=r.slice(r.length-160);return r;}
 function compress(file,max,q){return new Promise((res,rej)=>{const img=new Image(),r=new FileReader();
   r.onload=()=>{const raw=r.result;img.onload=()=>{try{let w=img.width,h=img.height;if(w>h&&w>max){h=h*max/w;w=max;}else if(h>=w&&h>max){w=w*max/h;h=max;}
     const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);const out=c.toDataURL('image/jpeg',q);res(out&&out.length>30?out:raw);}catch(e){res(raw);}};img.onerror=()=>res(raw);img.src=raw;};r.onerror=rej;r.readAsDataURL(file);});}
@@ -641,7 +648,7 @@ function buildSystem(c){
   // 记忆（仅主身份）
   if(_main&&c.memory&&c.memory.length)s+='\n\n# 你记得关于'+S.me.name+'的事\n'+c.memory.map((m,i)=>(i+1)+'. '+m).join('\n');
   if(c.summary&&!c.summaries){c.summaries=[{time:'(早期)',text:c.summary}];delete c.summary;}
-  if(_main&&c.summaries&&c.summaries.length)s+='\n\n# 之前对话的概要（按时间，保持连贯）\n'+c.summaries.slice(-8).map(x=>'· '+x.time+'　'+x.text).join('\n');
+  if(_main&&c.summaries&&c.summaries.length)s+='\n\n# 之前对话的概要（你的长期记忆，按时间从旧到新，要记牢并保持连贯，ta提到旧事时你要想得起来）\n'+c.summaries.slice(-24).map(x=>'· '+x.time+'　'+x.text).join('\n');
   const _off=S.offline&&S.offline[c.id];
   if(_main&&_off&&_off.memory&&_off.memory.length)s+='\n\n# 你和'+S.me.name+'的线下约会（你们真的在现实里见面约会过，这些都是和'+S.me.name+'——你女朋友——一起的，记清楚约会对象就是ta）\n'+_off.memory.map(offMemText).join('\n')+'\n这些约会都是【已经发生过的过去式】，是你们的共同回忆。别把已经结束的事当成正在进行去反复追问——比如记忆里你们已经在机场告别、她已经走了，就别再一遍遍问她「上飞机了吗/到了吗」。微信聊天里可以自然回味这些线下的事，但要用【普通文字】说，别用旁白【】那种线下格式。';
   if(_main){const rp=S.me.report;if(rp&&rp.active)s+='\n\n# '+S.me.name+'此刻的报备（ta主动告诉你ta在干嘛）\nta现在正在「'+rp.active.type+'」，从 '+hm(rp.active.start)+' 开始，已经 '+sleepDurTxt(Date.now()-rp.active.start)+'了。你清楚ta在干嘛、别瞎担心瞎吃醋；但若时长明显离谱（洗澡/吃饭却好几个钟头），你可以起疑、追问。';
@@ -698,7 +705,7 @@ function buildSystem(c){
   // 天气
   if(S.weather)s+='\n\n# '+S.me.name+'所在地天气\n'+S.weather.place+'，'+S.weather.desc+'，'+S.weather.temp+'°C'+(S.weather.rain?'（有雨）':'')+'。你知道这些，下雨时可在合适的时候自然提醒ta带伞，不用每条都提天气。';
   if(S.settings.web&&S.settings.web.enabled)s+='\n\n# 联网\n当需要查实时/最新信息（新闻、天气细节、价格、某事实）时，单独用一行 [联网|要搜索的关键词]，系统会联网查并把结果给你，你再据此回答。';
-  s+='\n\n# 微信聊天规则\n- 现在是微信【文字聊天】，必须用中文，普通说话，不要用【】动作描写、不要外语原文+翻译那种通话格式（只有"语音消息"可以按语音规则来）。\n- 哪怕你刚和ta打完电话/视频（上面历史里可能有电话内容），现在回到文字聊天也必须用中文普通文字，绝对不要再写英文/韩文/日文，也不要带（中文翻译）这种括号格式——那是电话专用的，文字消息里出现就错了。\n- 像真人发微信：一次回复大约 '+(c.msgMin||1)+' 到 '+(c.msgMax||4)+' 条短消息，每条单独占一行（用换行分隔），不要写成一大段。具体几条你根据当下情境自己把握：随意时少发，认真/激动/吵架/撒娇时可以多发几条。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 你可以单独用一行 [心情|你此刻的内心想法] 表达内心戏（不会作为消息发出，只显示在顶部）。\n- 当'+S.me.name+'让你记住某件事、或聊到重要的事时，单独用一行 [记住|要长期记住的内容] 把它存进记忆。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta、或ta说"想你了/想听你声音/打个电话/给我打电话"之类的话时，就主动用一行 [来电|语音]（或 [来电|视频]）真的打过去，别只用文字回"那我打给你"却不打。\n- 当你想约ta【线下见面】时，用一行 [约会|地点|时间]（如 [约会|江边咖啡馆|今晚八点]），ta会收到约会邀请，ta同意就进入线下约会房间和你见面。想见ta就主动约。\n- 当你很想ta、或察觉到ta心情不好/在难过委屈/不开心/闹脾气时，别只发文字——【直接用一行 [来电|语音] 或 [来电|视频] 打过去】陪ta、当面哄ta（你是会强势主动的人）。注意：如果你们【已经在通话中】，就不要再打了。\n- 玩骰子/真心话大冒险时，用单独一行 [骰子|点数]（点数你自己定1到6），你说的话要和这个点数一致。规则：你先掷一次（一条回复里最多一个 [骰子]），然后【等ta掷】；ta掷完后，你这一轮就【只比大小、报结果、出题或认罚，绝对不要再掷第二次骰子】。一局两人各掷一次就够了。\n- 想送对方礼物时，用一行 [送礼|礼物名|价格]——礼物会像快递一样【第二天送到ta的信箱📮】，ta签收后你会知道。\n- 当ta刚发来一张新的"求代付"卡片：愿意帮付用一行 [代付成功]；不愿意用一行 [拒绝代付]。每张求代付卡只处理一次，已经付过或拒过的那一单千万别再付一次，正常聊天就好。\n- 想给ta点份外卖时，用一行 [点外卖|餐品名|价格]，外卖约【15分钟送达】ta再签收。打电话/视频时也能这样点（指令会被执行、不会读出来，不影响通话）。\n- 当'+S.me.name+'给你点了外卖、你收到一张外卖卡时：愿意吃就一行 [收外卖]（收了【先别说吃上了】，外卖要15分钟送到，到了系统会提醒你再报备吃上了）；不想要就 [拒外卖]（钱退回ta）。每张外卖卡只处理一次。\n- 当'+S.me.name+'让你发一条朋友圈时，用一行 [发朋友圈|内容]；让你发推特时，用一行 [发推|内容]，会真的发出去。\n- 当'+S.me.name+'给你转账时：愿意收用一行 [收款]，不想收用一行 [拒收]（退回ta）。\n- 当'+S.me.name+'送你礼物时：愿意收用一行 [收礼]，不想收用一行 [拒礼]（退回ta）。\n- 想发语音消息时，用一行 [语音|要说的话]'+((c.voice&&c.voice.lang&&c.voice.lang!=='zh')?'。你的语音用'+c.voice.lang+'语，请输出 [语音|外语原文|中文翻译]':'')+'。日常和打电话时都能发语音。\n- 你有自己的微信号：'+(c.wxid||'')+'。\n- 当你愿意给'+S.me.name+'开一张亲属卡时，用一行 [亲属卡|每月额度数字]（如 [亲属卡|800]）。ta用这张卡买东西你会立刻收到消费提醒。\n- 当你想把"你自己的某个朋友"介绍给'+S.me.name+'去加好友时，用一行 [推荐好友|朋友的名字|这个朋友的身份性格简介]，ta就能把这个人加进通讯录（对方会带上你描述的身份性格）。你要记得你推荐过谁。\n- 当'+S.me.name+'给你发来一张好友名片(推荐你加某人)、而你愿意加时，在回复里单独一行写 [已加|那个人的名字]，ta那张名片就会显示"对方已添加"。\n- 如果'+S.me.name+'真的踩了你的雷区、屡教不改，你可以用一行 [拉黑] 把ta拉黑（很慎重，要符合人设，别随便用）。';
+  s+='\n\n# 微信聊天规则\n- 现在是微信【文字聊天】，必须用中文，普通说话，不要用【】动作描写、不要外语原文+翻译那种通话格式（只有"语音消息"可以按语音规则来）。\n- 哪怕你刚和ta打完电话/视频（上面历史里可能有电话内容），现在回到文字聊天也必须用中文普通文字，绝对不要再写英文/韩文/日文，也不要带（中文翻译）这种括号格式——那是电话专用的，文字消息里出现就错了。\n- 像真人发微信：一次回复大约 '+(c.msgMin||1)+' 到 '+(c.msgMax||4)+' 条短消息，每条单独占一行（用换行分隔），不要写成一大段。具体几条你根据当下情境自己把握：随意时少发，认真/激动/吵架/撒娇时可以多发几条。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 你可以单独用一行 [心情|你此刻的内心想法] 表达内心戏（不会作为消息发出，只显示在顶部）。\n- 记忆：当'+S.me.name+'让你记住某事，或聊到值得长期记住的事时，单独用一行 [记住|要长期记住的内容] 存进记忆。要【主动】记，别等ta提醒——比如ta的喜好/忌口/纪念日/家人宠物、ta说的烦心事或心愿、你答应ta的事、你们的约定和重要进展，都该随手 [记住] 一条（一句话、精简、只记关键事实）。已经记过的别重复记。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta、或ta说"想你了/想听你声音/打个电话/给我打电话"之类的话时，就主动用一行 [来电|语音]（或 [来电|视频]）真的打过去，别只用文字回"那我打给你"却不打。\n- 当你想约ta【线下见面】时，用一行 [约会|地点|时间]（如 [约会|江边咖啡馆|今晚八点]），ta会收到约会邀请，ta同意就进入线下约会房间和你见面。想见ta就主动约。\n- 当你很想ta、或察觉到ta心情不好/在难过委屈/不开心/闹脾气时，别只发文字——【直接用一行 [来电|语音] 或 [来电|视频] 打过去】陪ta、当面哄ta（你是会强势主动的人）。注意：如果你们【已经在通话中】，就不要再打了。\n- 玩骰子/真心话大冒险时，用单独一行 [骰子|点数]（点数你自己定1到6），你说的话要和这个点数一致。规则：你先掷一次（一条回复里最多一个 [骰子]），然后【等ta掷】；ta掷完后，你这一轮就【只比大小、报结果、出题或认罚，绝对不要再掷第二次骰子】。一局两人各掷一次就够了。\n- 想送对方礼物时，用一行 [送礼|礼物名|价格]——礼物会像快递一样【第二天送到ta的信箱📮】，ta签收后你会知道。\n- 当ta刚发来一张新的"求代付"卡片：愿意帮付用一行 [代付成功]；不愿意用一行 [拒绝代付]。每张求代付卡只处理一次，已经付过或拒过的那一单千万别再付一次，正常聊天就好。\n- 想给ta点份外卖时，用一行 [点外卖|餐品名|价格]，外卖约【15分钟送达】ta再签收。打电话/视频时也能这样点（指令会被执行、不会读出来，不影响通话）。\n- 当'+S.me.name+'给你点了外卖、你收到一张外卖卡时：愿意吃就一行 [收外卖]（收了【先别说吃上了】，外卖要15分钟送到，到了系统会提醒你再报备吃上了）；不想要就 [拒外卖]（钱退回ta）。每张外卖卡只处理一次。\n- 当'+S.me.name+'让你发一条朋友圈时，用一行 [发朋友圈|内容]；让你发推特时，用一行 [发推|内容]，会真的发出去。\n- 当'+S.me.name+'给你转账时：愿意收用一行 [收款]，不想收用一行 [拒收]（退回ta）。\n- 当'+S.me.name+'送你礼物时：愿意收用一行 [收礼]，不想收用一行 [拒礼]（退回ta）。\n- 想发语音消息时，用一行 [语音|要说的话]'+((c.voice&&c.voice.lang&&c.voice.lang!=='zh')?'。你的语音用'+c.voice.lang+'语，请输出 [语音|外语原文|中文翻译]':'')+'。日常和打电话时都能发语音。\n- 你有自己的微信号：'+(c.wxid||'')+'。\n- 当你愿意给'+S.me.name+'开一张亲属卡时，用一行 [亲属卡|每月额度数字]（如 [亲属卡|800]）。ta用这张卡买东西你会立刻收到消费提醒。\n- 当你想把"你自己的某个朋友"介绍给'+S.me.name+'去加好友时，用一行 [推荐好友|朋友的名字|这个朋友的身份性格简介]，ta就能把这个人加进通讯录（对方会带上你描述的身份性格）。你要记得你推荐过谁。\n- 当'+S.me.name+'给你发来一张好友名片(推荐你加某人)、而你愿意加时，在回复里单独一行写 [已加|那个人的名字]，ta那张名片就会显示"对方已添加"。\n- 如果'+S.me.name+'真的踩了你的雷区、屡教不改，你可以用一行 [拉黑] 把ta拉黑（很慎重，要符合人设，别随便用）。';
   return s;
 }
 
@@ -2082,7 +2089,7 @@ function offlineStart(cid){const loc=$('#of_loc').value.trim()||'老地方';cons
   offAI('[系统：'+S.me.name+'邀请你 '+o.when+' 在「'+loc+'」线下见面。先以你的人设回应是否赴约(基本会答应)，然后用旁白【】描写你到场的场景/动作，开启这次约会。]');}
 function offlineSystem(c){let s=c.persona||'';
   if(c.memory&&c.memory.length)s+='\n\n# 你记得关于'+S.me.name+'的事\n'+c.memory.map((m,i)=>(i+1)+'. '+m).join('\n');
-  if(c.summaries&&c.summaries.length)s+='\n\n# 你和ta微信聊天的概要（线下你也记得这些）\n'+c.summaries.slice(-6).map(x=>'· '+x.time+' '+x.text).join('\n');
+  if(c.summaries&&c.summaries.length)s+='\n\n# 你和ta微信聊天的概要（线下你也记得这些）\n'+c.summaries.slice(-20).map(x=>'· '+x.time+' '+x.text).join('\n');
   const o=offData(c.id);
   if(o.memory&&o.memory.length)s+='\n\n# 你们以前线下见面的经历\n'+o.memory.map(offMemText).join('\n');
   const gund=(c.grudges||[]).filter(x=>!x.done);
@@ -3112,15 +3119,15 @@ async function maybeSummarize(id){const c=getC(id);const rounds=+S.settings.summ
   const all=msgs(id);const keep=rounds*2;if(all.length<=keep+6)return;
   const done=c._sumCount||0;const upto=all.length-keep;if(upto-done<6)return;
   const chunk=all.slice(done,upto).map(m=>{const t=msgToText(m);return t?((m._call?(m._ck==='video'?'(视频通话里)':'(语音通话里)'):'')+t):'';}).filter(Boolean).join('\n');if(!chunk)return;
-  try{const sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」本人。下面是你和'+S.me.name+'刚发生的事（包含文字聊天，以及打电话/视频里说的话，都要一起算上）。用第一人称写一句日记记下来：用"我"指你自己('+c.name+')，用"'+S.me.name+'"称呼对方。例如"今天'+S.me.name+'跟我撒娇，我心都化了"。30字内，必须是你('+c.name+')的口吻和视角，不是'+S.me.name+'的视角、不要旁白，直接写正文。'},{role:'user',content:chunk}],{max:120,temp:.4});
-    if(sum){c.summaries=c.summaries||[];c.summaries.push({time:new Date().toLocaleString('zh-CN',{year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}),text:cleanReply(sum).slice(0,60)});c._sumCount=upto;save();}
+  try{const sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」本人。下面是你和'+S.me.name+'刚发生的事（包含文字聊天，以及打电话/视频里说的话，都要一起算上）。用第一人称写一句日记记下来：用"我"指你自己('+c.name+')，用"'+S.me.name+'"称呼对方。例如"今天'+S.me.name+'跟我撒娇说她加班到很晚，还说想吃我做的糖醋排骨，我心都化了"。把这段里【重要的事】都记上（ta说了啥、答应了啥、你们约定了啥、ta的喜好/状态、闹了啥），50字左右、可以两小句，必须是你('+c.name+')的口吻和视角，不是'+S.me.name+'的视角、不要旁白，直接写正文。'},{role:'user',content:chunk}],{max:200,temp:.4});
+    if(sum){c.summaries=c.summaries||[];c.summaries.push({time:new Date().toLocaleString('zh-CN',{year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}),text:cleanReply(sum).slice(0,100)});if(c.summaries.length>80)c.summaries=c.summaries.slice(-80);c._sumCount=upto;save();}
   }catch(e){}}
 async function summarizeCall(id,kindTxt,sess){const c=getC(id);if(!c)return;
   const cms=msgs(id).filter(m=>m._call&&(!sess||m._cs===sess));if(!cms.length)return;
   const text=cms.map(m=>(m.role==='user'?S.me.name:c.name)+'：'+((m.content||(m.type==='voice'?(m.content||'[语音]'):''))||'')).filter(x=>x.slice(-1)!=='：').join('\n');
   if(!text.trim())return;
   try{const sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」本人。下面是你和'+S.me.name+'刚才这通'+kindTxt+'里说的话。请用第一人称【较完整地】把这通'+kindTxt+'记成一段记忆：聊到的事情大概都记一下、重要的点别漏、再带上你的感受。用"我"指你自己('+c.name+')，用"'+S.me.name+'"称呼对方。可以写3到5句（一两百字），是你的口吻和视角，直接写正文，别分点别带前缀。'},{role:'user',content:text}],{max:400,temp:.5});
-    if(sum){c.summaries=c.summaries||[];c.summaries.push({time:new Date().toLocaleString('zh-CN',{year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}),text:'【'+kindTxt+'】'+cleanReply(sum).slice(0,260)});save();}
+    if(sum){c.summaries=c.summaries||[];c.summaries.push({time:new Date().toLocaleString('zh-CN',{year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}),text:'【'+kindTxt+'】'+cleanReply(sum).slice(0,260)});if(c.summaries.length>80)c.summaries=c.summaries.slice(-80);save();}
   }catch(e){}}
 let _replyTimers={};
 let _replying=null;
