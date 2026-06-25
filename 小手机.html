@@ -352,7 +352,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v149 · 查手机精修:暗色主屏/真微信(我置顶)/钱包余额/日期日记/今日日程/通讯录/监控可删·刷新不清旧+密码抖动';
+const APP_VER='v150 · 群聊大改:引用回复(可引用任何人)/互相搭话不死板/+号发红包转账/可清空';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1955,15 +1955,30 @@ function renderGroup(id){const g=S.groups.find(x=>x.id===id);if(!g)return '';
   let body='';g.msgs.forEach((m,i)=>{if(i===0||m.time-g.msgs[i-1].time>300000)body+=`<div class="tstamp"><span>${hm(m.time)}</span></div>`;body+=gbubble(g,m);});
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(g.name)}(${g.members.length+1})</span><span class="r" onclick="groupInfo('${id}')">⋯</span></div>
     <div class="chatbg" id="chatbg">${body}</div>
-    <div class="inputbar"><span class="plus" style="background:transparent;box-shadow:none;color:#aaa" onclick="groupAt('${id}')">@</span>
+    <div class="inputbar"><span class="plus" style="background:transparent;box-shadow:none;color:#aaa" onclick="groupPlus('${id}')">＋</span>
       <textarea id="ginput" rows="1" placeholder="群里说点啥…"></textarea>
       <button class="send" onclick="sendGroup('${id}')">发送</button></div>`;}
+function groupPlus(id){openModal(`<h3>＋ 群里发</h3>
+  <button class="btn p" style="margin-bottom:8px" onclick="groupSendCard('${id}','redpacket')">🧧 发群红包</button>
+  <button class="btn p" style="margin-bottom:8px;background:#36b06a" onclick="groupSendCard('${id}','transfer')">💸 群里转账</button>
+  <button class="btn g" style="margin-bottom:8px" onclick="closeModal();var ta=$('#ginput');ta&&ta.focus();groupAt('${id}')">@ 提到谁</button>
+  <button class="btn g" onclick="closeModal()">取消</button>`);}
+function groupSendCard(id,type){const g=S.groups.find(x=>x.id===id);if(!g){closeModal();return;}
+  const v=prompt(type==='redpacket'?'发个群红包，金额：':'转账金额：',type==='redpacket'?'5.20':'13.14');if(v==null){closeModal();return;}
+  const amt=Math.max(0,+v||0);if(!amt){toast('金额填错了');return;}
+  if(amt>S.me.balance){toast('余额不够哦💸');return;}
+  const note=(prompt('附言（可空）：',type==='redpacket'?'恭喜发财，大吉大利':'给你～')||'').trim();
+  addBill('out',amt,'群里'+(type==='redpacket'?'发红包':'转账'));
+  g.msgs.push({senderId:'me',role:'user',type,amount:amt,note,time:Date.now(),id:uid(),received:false});save();closeModal();render();
+  toast((type==='redpacket'?'🧧 红包':'💸 转账')+'已发出 ¥'+amt.toFixed(2));aiGroupReply(id,'');}
+function clearGroupMsgs(id){const g=S.groups.find(x=>x.id===id);if(!g)return;if(!confirm('清空这个群的全部聊天记录？'))return;g.msgs=[];save();closeModal();render();toast('已清空群聊');}
 function gbubble(g,m){const me=m.senderId==='me';if(m.type==='sys')return `<div class="tstamp"><span>${esc(m.content)}</span></div>`;
   const c=me?null:getC(m.senderId);const av0=me?av(S.me.avatar):av(c?c.avatar:'🙂');const nm=me?'':`<div style="font-size:11px;color:#888;margin-bottom:2px">${esc(c?c.name:'?')}</div>`;
+  const q=m.q?`<div style="background:rgba(120,120,130,.2);border-left:2px solid #999;border-radius:5px;padding:3px 8px;margin-bottom:3px;font-size:11px;color:#999;max-width:210px;${me?'margin-left:auto':''}">${esc(m.q.who)}：${esc((m.q.text||'').slice(0,30))}</div>`:'';
   let inner;
   if(m.type==='transfer'||m.type==='redpacket'){const rp=m.type==='redpacket';const got=m.received;
-    inner=`<div class="card" style="cursor:pointer" onclick="gGrab('${g.id}','${m.id}')"><div class="cpay" style="background:${rp?(got?'#caa15a':'#f0a73b'):(got?'#7fae8f':'#36b06a')}"><div class="big">${rp?'🧧':'💸'}</div><div><div class="t1">¥${(+m.amount).toFixed(2)}</div><div class="t2">${esc(m.note||(rp?'恭喜发财':'给你转账'))}</div></div></div><div class="cfoot">${got?'已领取':(rp?'点击领取红包':'点击收款')}</div></div>`;
-  }else inner=`<div class="bubble">${esc(m.content)}</div>`;
+    inner=`<div class="card"${me?'':` style="cursor:pointer" onclick="gGrab('${g.id}','${m.id}')"`}><div class="cpay" style="background:${rp?(got?'#caa15a':'#f0a73b'):(got?'#7fae8f':'#36b06a')}"><div class="big">${rp?'🧧':'💸'}</div><div><div class="t1">¥${(+m.amount).toFixed(2)}</div><div class="t2">${esc(m.note||(rp?'恭喜发财':'给你转账'))}</div></div></div><div class="cfoot">${me?'已发出':(got?'已领取':(rp?'点击领取红包':'点击收款'))}</div></div>`;
+  }else inner=`${q}<div class="bubble">${esc(m.content)}</div>`;
   return `<div class="msg ${me?'me':'them'}">${av0}<div class="col">${nm}${inner}<div class="msgt">${hm(m.time)}</div></div></div>`;}
 function gGrab(gid,mid){const g=S.groups.find(x=>x.id===gid);if(!g)return;const m=g.msgs.find(x=>x.id===mid);if(!m||m.received||(m.type!=='transfer'&&m.type!=='redpacket'))return;
   m.received=true;const nm=getC(m.senderId)?getC(m.senderId).name:'群友';addBill('in',+m.amount||0,nm+(m.type==='redpacket'?'的群红包':'的群转账'));save();render();toast('已领取 ¥'+(+m.amount).toFixed(2)+' 💰');}
@@ -1973,18 +1988,26 @@ function gNotify(g,c){if(cur().p==='group'&&cur().id===g.id)return;playDing();co
 function sendGroup(id){const g=S.groups.find(x=>x.id===id);const ta=$('#ginput');const t=ta.value.trim();if(!t)return;ta.value='';ta.style.height='auto';
   g.msgs.push({senderId:'me',role:'user',type:'text',content:t,time:Date.now(),id:uid()});save();render();aiGroupReply(id,t);}
 function groupAt(id){const g=S.groups.find(x=>x.id===id);openModal(`<h3>@ 谁</h3>${g.members.map(cid=>{const c=getC(cid);return c?`<div class="section"><div class="it" onclick="closeModal();var ta=$('#ginput');ta.value+='@${esc(c.name)} ';ta.focus()">${esc(c.name)}</div></div>`:'';}).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
-function gContext(g,c){const others=g.members.filter(x=>x!==c.id).map(x=>getC(x)).filter(Boolean).map(x=>x.name);
-  let s='\n\n# 你在群聊「'+g.name+'」里\n群里有：'+S.me.name+'(你们共同的恋人/主人)、'+others.join('、')+'。这是多人群聊，你可以 @别人、和群友拌嘴或吃醋（尤其'+S.me.name+'对别人好时）。\n- 像发微信一样【一条一条地说】，每条短消息单独占一行（换行分隔），别堆成一大段；这次大约回 '+(g.msgMin||1)+'到'+(g.msgMax||2)+' 条，口语、符合你的人设和心情值。\n- 你也能在群里【发红包或转账】讨好'+S.me.name+'、或跟群友争宠斗富：单独一行 [红包|金额|祝福语] 或 [转账|金额|说明]（'+S.me.name+'点一下就能领走）。想对ta好、过节、或争风吃醋时用，金额自己定、别滥发。';
+function gName(m){return m.senderId==='me'?S.me.name:(getC(m.senderId)?(getC(m.senderId).name):'?');}
+function gContext(g,c,recent){const others=g.members.filter(x=>x!==c.id).map(x=>getC(x)).filter(Boolean).map(x=>x.name);
+  recent=recent||g.msgs.slice(-14);
+  let s='\n\n# 你在群聊「'+g.name+'」里\n群里有：'+S.me.name+'(你们共同的恋人/主人)、'+others.join('、')+'。这是真实的多人群聊。\n'
+   +'- 你能看到上面【所有人】说的话，包括其他群友彼此之间的对话。要像真群聊那样：可以接群友的话、附和、拌嘴、调侃、起哄、吃醋——【不要每个人都只对着'+S.me.name+'说话】，不要和别人说一样的话、不要复读别人。\n'
+   +'- 【绝对不要用 @某人】这种格式。想专门回应某一条消息，就在你那句话【前面单独占一行】写 [引用|序号]（序号见下面群记录），引用'+S.me.name+'的或别的群友的都行；不是每句都要引用，一次最多引用一两条。\n'
+   +'- 像真人发微信，这次只回【1 到 2 条】短消息，每条单独占一行；可以只回一条，话不投机也可以就接一句，别凑数、别每个人都发一样多。\n'
+   +'- 想发红包/转账（讨好'+S.me.name+'或跟群友斗富）就单独一行 [红包|金额|祝福语] 或 [转账|金额|说明]，金额自己定、别滥发。\n'
+   +'- 口语、自然、有情绪，符合你的人设和心情值。';
   if(g.relations)s+='\n# 群里的关系\n'+g.relations;
-  s+='\n# 最近群聊记录\n'+g.msgs.slice(-14).map(m=>(m.senderId==='me'?S.me.name:(getC(m.senderId)?getC(m.senderId).name:'?'))+'：'+gmText(m)).join('\n');
+  s+='\n# 最近群聊记录（带序号，引用时用这个号）\n'+(recent.length?recent.map((m,i)=>'['+(i+1)+'] '+gName(m)+'：'+gmText(m)).join('\n'):'（还没人说话）');
   return s;}
 // 把群回复解析成「一条条」的消息项（文字气泡 + 红包/转账卡片），文字条数封顶
-function gParseReply(content,cap){const out=[];let txt=0;
+function gParseReply(content,cap,recent){const out=[];let txt=0;let pq=null;
   splitBubbles(content).forEach(l=>{l=normTag(l);if(!l)return;
+    let qm=l.match(/^\[\s*引用\s*[|｜:：]?\s*(\d{1,2})\s*\]$/);if(qm){const rm=recent&&recent[+qm[1]-1];if(rm)pq={who:gName(rm),text:(gmText(rm)||'').slice(0,30)};return;}
     let m=l.match(/^\[\s*转账\s*\|\s*([0-9.]+)\s*\|?\s*([^\]]*)\]$/);if(m){out.push({type:'transfer',amount:+m[1]||0,note:(m[2]||'').trim(),received:false});return;}
     m=l.match(/^\[\s*红包\s*\|\s*([0-9.]+)\s*\|?\s*([^\]]*)\]$/);if(m){out.push({type:'redpacket',amount:+m[1]||0,note:(m[2]||'').trim(),received:false});return;}
     if(LEAKRE.test(l))return;// 别把别的指令标签当消息发出来
-    splitActions(l).forEach(p=>{if(txt>=cap)return;p=(p||'').trim();if(p)out.push({type:'text',content:p});txt++;});
+    splitActions(l).forEach(p=>{if(txt>=cap)return;p=(p||'').replace(/^(@[^\s@]+\s*)+/,'').trim();if(!p||/^@\S+$/.test(p))return;/* 丢掉纯@xxx气泡 */const it={type:'text',content:p};if(pq){it.q=pq;pq=null;}out.push(it);txt++;});
   });
   return out;}
 async function aiGroupReply(id,fromText){const g=S.groups.find(x=>x.id===id);if(!g)return;
@@ -1994,12 +2017,13 @@ async function aiGroupReply(id,fromText){const g=S.groups.find(x=>x.id===id);if(
   const atd=members.filter(c=>fromText&&fromText.includes(c.name));
   const rest=members.filter(c=>atd.indexOf(c)<0).sort(()=>Math.random()-.5);
   const resp=[...atd,...rest];
-  const cap=Math.max(1,+g.msgMax||2);
-  for(const c of resp){await sleep(450+Math.random()*650);
-    try{const sys=buildSystem(c)+gContext(g,c);
-      const content=await chatAPI([{role:'system',content:sys},{role:'user',content:'[群里现在该你说话了，针对最新消息自然回，可@人。像发微信一样一条一条地发，别一次堆一大段]'}]);
-      let items=gParseReply(content,cap);
-      if(!items.length)items=[{type:'text',content:'…'}];
+  const cap=Math.max(1,+g.msgMax||2);const lo=Math.max(1,+g.msgMin||1);
+  for(const c of resp){await sleep(500+Math.random()*750);
+    try{const recent=g.msgs.slice(-14);const sys=buildSystem(c)+gContext(g,c,recent);
+      const pcap=Math.max(1,Math.min(cap,lo+Math.floor(Math.random()*(cap-lo+1))));// 每人这轮回几条随机，更自然
+      const content=await chatAPI([{role:'system',content:sys},{role:'user',content:'[轮到你在群里说话了。看看上面大家（包括其他群友互相）说了啥，自然接话——回'+S.me.name+'、或接群友的话拌嘴起哄都行。要专门回应某条就用 [引用|序号]，别@人、别跟别人说一样的话。只回 1 到 2 条短消息。]'}],{max:380});
+      let items=gParseReply(content,pcap,recent);
+      if(!items.length)continue;// 没内容就这轮不吭声，更像真人
       let first=true;
       for(const it of items){
         if(!first)await sleep(420+Math.random()*560);first=false;
@@ -2017,6 +2041,7 @@ function groupInfo(id){const g=S.groups.find(x=>x.id===id);const resp=g.responde
   <div class="field"><label>关系链（他们之间、和你的关系）</label><textarea id="g_rel" rows="3" placeholder="例如：克劳德和沉野是死对头，都喜欢忆北；阿涉是忆北的青梅竹马。">${esc(g.relations||'')}</textarea></div>
   <button class="btn p" style="margin-bottom:8px" onclick="saveGroup('${id}')">保存设置</button>
   <button class="btn g" style="margin-bottom:8px" onclick="g_addMember('${id}')">＋ 拉人进群</button>
+  <button class="btn g" style="margin-bottom:8px" onclick="clearGroupMsgs('${id}')">🧹 清空群聊记录</button>
   <button class="btn d" onclick="if(confirm('解散群聊？')){S.groups=S.groups.filter(x=>x.id!=='${id}');save();closeModal();back()}">解散群聊</button>
   <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function gToggleResp(gid,cid,el){const g=S.groups.find(x=>x.id===gid);g.responders=g.responders||g.members.slice();const i=g.responders.indexOf(cid);if(i>=0)g.responders.splice(i,1);else g.responders.push(cid);const on=g.responders.indexOf(cid)>=0;el.style.background=on?'#07c160':'#2c2c2e';el.style.color=on?'#fff':'#ccc';}
