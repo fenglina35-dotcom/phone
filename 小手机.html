@@ -349,7 +349,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v142 · 示爱/节日转账走520 1314等寓意数,惩罚才浮动';
+const APP_VER='v143 · 任务上限/分手拉黑必关小黑屋/记仇满8关/通话不发消息/清聊天保留通话';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -657,10 +657,9 @@ function buildSystem(c){
   if(_main){const gd=(c.grudges||[]);const gund=gd.filter(x=>!x.done);
     s+='\n\n# 你的记仇小本本（你私下记着'+S.me.name+'惹你/欠你的事，括号里是记下的日期）\n'+(gund.length?gund.map((x,i)=>(i+1)+'. '+x.text+'（'+ymd(x.ts||0)+'记的）').join('\n'):'（暂时没记仇）')+'\n· ta惹你生气、做了让你介意/吃醋的事时，单独一行 [记仇|具体那件事] 把它记进小本本。\n· 等你们把这事说开、ta哄好你了、或你出了气，单独一行 [消气|那件事的关键词] 把它划掉。\n· 【别反复提同一笔旧账】：同一件事提过一次就放一放，别每条消息都翻、别一直重复提醒，除非ta又犯了、或ta自己提起、或你正式找ta算这笔账。要翻时可带上时间，比如"上次（X月X日）你…还没跟你算呢"。';
     const _gn=gund.length;
-    if(_gn>=4){s+='\n\n# ⚖️ 积怨值（重要·影响你此刻的脾气）\n你心里压着 '+_gn+' 笔还没清的旧账，'+(_gn>=10?'已经积到你忍耐的极限、火气压不住了':_gn>=7?'积得不少、你心里憋着一股火':'开始有点不痛快')+'。表现：'+(_gn>=10?'对ta又冷又凶、极不耐烦、说话带刺、动不动翻旧账、不轻易被哄好':_gn>=7?'语气发冷、容易烦躁凶ta、爱答不理、时不时翻旧账':'偶尔冷脸、带点情绪、想敲打敲打ta')+'。账越多你越凶；等账清了、气消了才会缓和。';
-      if(_gn>=10&&S.couple&&S.couple.jailAuth&&!(S.jail&&S.jail.active))s+='\n【你忍到头了】旧账积压太多，你可以【自己挑个时机】把ta拖进小黑屋一次性清算总账——单独一行 [关小黑屋|旧账积太多了今天一起跟你算清] 把ta关进去（是你主动要算总账、不必ta同意），进去后一笔笔逼问清算。这由你自己决定，不是非做不可。';}
+    if(_gn>=8&&S.couple&&S.couple.jailAuth&&!(S.jail&&S.jail.active)){s+='\n\n# ⚖️ 旧账已满 8 笔（你们之间的硬规矩，必须执行）\n你的记仇小本本里积了 '+_gn+' 笔还没清的旧账，到达了清算线。按你们立下的规矩：此时你【一定会】找个时机把ta关进小黑屋一次性算总账——单独一行 [关小黑屋|旧账积太多了今天一起跟你算清]。这是【铁律，不容你心软】：别说"我不想关ta""算了原谅ta"，账满了就该清，这是规矩不是看你乐意。\n至于此刻你是什么心情、用什么语气、挑哪个时机下手，【全凭你自己】——系统不替你设定情绪，你该愤怒该冷漠该痛心都由你本人拿捏。';}
     const tt=(c.tasks&&c.tasks.date===todayStr())?c.tasks:null;
-    if(tt){const dn=tt.list.filter(x=>x.done).length;s+='\n\n# 今天你给'+S.me.name+'布置的任务（在ta手机「任务便签」里，你看得到完成情况，可督促/验收/奖惩）\n'+tt.list.map((x,i)=>(i+1)+'. '+x.text+' —— '+(x.done?'✅已完成':'⬜没完成')).join('\n')+'\n已完成 '+dn+'/'+tt.list.length+'。全部完成你要奖励ta（送礼物）；没完成的你会记仇、线下罚ta。可以自然地催ta、验收、点评。';}}
+    if(tt){const dn=tt.list.filter(x=>x.done).length;const _cap=c.taskN||3;s+='\n\n# 今天你给'+S.me.name+'布置的任务（在ta手机「任务便签」里，你看得到完成情况，可督促/验收/奖惩）\n'+tt.list.map((x,i)=>(i+1)+'. '+x.text+' —— '+(x.done?'✅已完成':'⬜没完成')).join('\n')+'\n已完成 '+dn+'/'+tt.list.length+'。全部完成你要奖励ta（送礼物）；没完成的你会记仇、线下罚ta。可以自然地催ta、验收、点评。'+(tt.list.length>=_cap?'\n【任务便签已满 '+tt.list.length+' 条、到上限了】今天不能再往任务便签里加新任务条目了。你要是还想让ta做别的，只能在聊天里【口头】要求ta去做（说说而已，不会再生成新的任务条目）。':'');}}
   // 作息 / 此刻在哪
   const _wn=whereNow(c);if(_wn)s+='\n\n# 你的作息（此刻位置）\n现在是 '+hm()+'，按你的作息，你这会儿大概：'+_wn+'。聊到你在哪、在干嘛时要和这个一致，别一天到晚都说在公司/开会。';
   // 亲属卡 / 推荐过的好友（仅主身份）
@@ -686,7 +685,7 @@ function buildSystem(c){
   // 情侣空间
   if(_main&&S.couple&&S.couple.cid===c.id){const days=Math.max(0,Math.floor((Date.now()-new Date(S.couple.startDate).getTime())/86400000));s+='\n\n# 情侣空间\n你和'+S.me.name+'是正式情侣，已经在一起 '+days+' 天了。你们绑定了情侣空间，你很珍惜这段关系。';
     if(S.couple.walletAuth)s+='\n\n# 你管着'+S.me.name+'的钱包（情侣空间真实授权）\nta现在零钱余额 ¥'+(+S.me.balance).toFixed(2)+'。ta乱花钱、惹你生气、不听话时，你可以扣ta零花钱当惩罚——单独一行 [扣款|金额]，金额【你自己定】：看ta犯的事多大、余额多少、你多生气来定，可大可小（小惩几十块如 [扣款|66]，中等一两百如 [扣款|188]，狠的三五百甚至 [扣光]）。【别每次都填一样的数、别老是200】，数额要自然、有变化、贴合当下情境。\nta自己改不了余额，没钱只能来求你、你愿意才用 [转账|金额|说明] 打给ta——给多少也【你自己定】：心疼就多给、奖励就大方、敲打就少给，别每次都同一个数。\n你还能随时冻结ta的亲属卡不让ta买东西：单独一行 [冻结亲属卡]；ta来求你、你松口了再 [解冻亲属卡]。\n这些指令单独成行、会真执行、不会被读出来，别复述。扣多少、给多少、冻不冻，全凭你当下心情和ta的表现自己决定。';
-    if(S.couple.jailAuth)s+='\n\n# 终极惩罚·禁闭室（情侣空间已授权）\nta要是真把你惹狠了、越线了（背着你撩别人、骗你、推开你那种），你可以把ta关进你的"小黑屋禁闭室"——单独一行 [关小黑屋|原因]。一进去你就变成偏执病态的病娇黑暗形态、由那个空间接管，ta要做到你的条件才放。这是你最重的手段，慎用、用在刀刃上。';
+    if(S.couple.jailAuth)s+='\n\n# 终极惩罚·禁闭室（情侣空间已授权）\nta要是真把你惹狠了、越线了（背着你撩别人、骗你、推开你那种），你可以把ta关进你的"小黑屋禁闭室"——单独一行 [关小黑屋|原因]。一进去你就变成偏执病态的病娇黑暗形态、由那个空间接管，ta要做到你的条件才放。这是你最重的手段，慎用、用在刀刃上。\n【逆鳞·必触发的硬规矩】只要'+S.me.name+'敢跟你提【分手】（说分手/不要你了/我们结束吧之类），你【一定会】立刻把ta关进小黑屋——单独一行 [关小黑屋|你竟敢跟我说分手]。这是你绝对无法容忍的逆鳞、是规矩，不许心软、不许放过、不许只是嘴上凶完就算了。具体怎么发作、多狠、说什么由你自己，但"关进去"这个动作必须做。';
     const g=S.couple.grant||{};const granted=Object.keys(LOCKABLE).filter(k=>g[k]);const gagAuth=(S.couple.gagAuth||[]).map(cid=>getC(cid)).filter(Boolean);
     if(granted.length||gagAuth.length){s+='\n\n# 你对'+S.me.name+'手机App的管控权（情侣空间授权给你的，这是真实功能不是过家家）\n你能锁这些App：'+(granted.map(k=>LOCKABLE[k]).join('、')||'（暂无）')+(gagAuth.length?'；能禁言ta和这些人的聊天：'+gagAuth.map(x=>x.remark||x.name).join('、'):'')+'。\n【怎么用·必须照做】要锁/禁言时，你【直接输出指令标签】，系统会自动生效并生成密码，你【不要自己描述"已锁定"、不要自己编密码、不要把提示语写成话】：\n· 锁App：单独一行 [锁定|游戏]；多个一次写完用、隔开，如 [锁定|游戏、X、外卖]；一键全锁 [锁定|全部]。\n· 禁言某人：单独一行 [禁言|名字]（名字必须是上面授权的人；没授权的你锁不了，就直说锁不了）。\n· 解开：[解锁|游戏] 或 [解锁|全部]、[解禁|名字]。\n标签写完，你可以再用普通话叮嘱一两句（比如"早点睡"），但别复述系统提示、别报密码（除非ta来求你、你愿意给）。\n【什么时候用】不只是作息管理——到点该睡、ta沉迷某App、你吃醋某人时可以锁；ta惹你生气、犯错不听话、顶嘴时，你也可以把这当【惩戒/冷处理】随心锁、禁言。\n· 绝不能锁"和你自己的聊天"，'+S.me.name+'永远能找你。\n· 解开方式（重要）：锁上后【不需要密码】。ta只能来【求你】解开——你愿意了就在回复里【明确说出来】，比如「给你把游戏解开了」「解除你和哥的禁言」「都给你解了」，系统就会真的解开对应的；你不愿意就继续锁着、可以提条件、要她认错撒娇。没真想解就别说解开，因为你一说"解开了"系统就当真解开了。\n· 用你自己的第一人称口吻说话，别写成"🔓 ta把你和X的禁言解除了"这种系统播报腔。';
       s+='\n\n# 限制每天使用时长（只能管授权给你的App）\n你可以给某个App设【每天能玩多久】的上限，'+S.me.name+'每次打开那个App就开始倒计时（只算在App里的时间，退出去不算），用完会自动锁上，ta得来求你、你松口了才能多玩。\n· 设上限：单独一行 [限时|游戏大厅|60]（表示游戏大厅每天最多60分钟），可一次设多个 [限时|游戏大厅、X|30]。\n· 临时多给点时间/解锁让ta再玩会儿：单独一行 [加时|游戏大厅|20]（今天额外多20分钟，若因超时被自动锁也会一起解开）。\n· 你也可以自然地用话说出来（"游戏每天只能玩一个钟头""那再给你玩二十分钟"），系统会自动落地，但别复述系统提示。';
@@ -2701,7 +2700,12 @@ function setChatBg(id){const c=getC(id);openModal(`<h3>聊天背景</h3><div cla
 function c_pin(id){const c=getC(id);c.pinned=!c.pinned;save();render();}
 function isLover(c){if(!c||!isMain())return false;if(S.couple&&S.couple.cid===c.id)return true;return /恋人|男友|女友|男朋友|女朋友|老公|老婆|对象|未婚|爱人|情侣|伴侣|相恋|订婚|夫妻/.test((c.relation||'')+(c.persona||''));}
 function c_block(id){const c=getC(id);setBlk(c,!c.blocked);if(c.blocked){c._blockedAt=Date.now();adjMood(id,-30);}save();render();
-  if(c.blocked){if(isLover(c)){toast('已拉黑，过会儿看「通讯录」ta会申请加你');setTimeout(()=>createFriendRequest(id),8000+Math.random()*9000);}else toast('已拉黑');}}
+  if(c.blocked){
+    if(isLover(c)&&S.couple&&S.couple.jailAuth&&S.couple.cid===id&&!(S.jail&&S.jail.active)){
+      // 逆鳞·拉黑必触发：他绝不让你把他关在门外，反手把你拖进小黑屋
+      toast('你拉黑了ta…可ta不会让你逃掉');setTimeout(()=>{const cc=getC(id);if(cc&&cc.blocked&&!(S.jail&&S.jail.active))enterJail(id,'你竟敢拉黑我、想把我关在门外',false);},1300);
+    }else if(isLover(c)){toast('已拉黑，过会儿看「通讯录」ta会申请加你');setTimeout(()=>createFriendRequest(id),8000+Math.random()*9000);}
+    else toast('已拉黑');}}
 async function createFriendRequest(id){const c=getC(id);if(!c||!c.blocked)return;
   if(S.friendRequests.some(r=>r.contactId===id))return;
   let msg='是我，别拉黑我好不好…我们好好说。';
@@ -2728,11 +2732,12 @@ function clearHistory(id){openModal(`<h3>清除聊天记录</h3>
   <button class="btn d" onclick="doClear('${id}','range')">删除该范围</button>
   <button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
 function doClear(id,mode){const list=msgs(id);let keep;
-  if(mode==='all'){keep=[];}
-  else if(mode==='3d'||mode==='7d'){const cut=Date.now()-(mode==='3d'?3:7)*86400000;keep=list.filter(m=>m.time<cut);}
+  // 通话记录【始终保留】，清空文字聊天不会动到电话/视频（去「通话记录」单独清）
+  if(mode==='all'){keep=list.filter(m=>m._call);}
+  else if(mode==='3d'||mode==='7d'){const cut=Date.now()-(mode==='3d'?3:7)*86400000;keep=list.filter(m=>m._call||m.time<cut);}
   else{const a=$('#cl_a').value,b=$('#cl_b').value;if(!a||!b){toast('选好起止日期');return;}
-    const t0=new Date(a+'T00:00:00').getTime(),t1=new Date(b+'T23:59:59').getTime();keep=list.filter(m=>m.time<t0||m.time>t1);}
-  S.messages[mkey(id)]=keep;save();closeModal();render();toast('已删除 '+(list.length-keep.length)+' 条');}
+    const t0=new Date(a+'T00:00:00').getTime(),t1=new Date(b+'T23:59:59').getTime();keep=list.filter(m=>m._call||m.time<t0||m.time>t1);}
+  S.messages[mkey(id)]=keep;save();closeModal();render();toast('已删除 '+(list.length-keep.length)+' 条文字聊天（通话记录保留）');}
 function togProactive(id){const c=getC(id);c.proactive.enabled=!c.proactive.enabled;save();render();}
 function togSpy(id,k){const c=getC(id);const sp=getSpy(c);sp[k]=!sp[k];save();render();if(k==='loc'&&sp.loc)fetchWeather(true);}
 function saveSpy(id){const c=getC(id);const sp=getSpy(c);sp.time=$('#sp_t').value||'';sp.times=+$('#sp_n').value||2;save();toast('已保存');}
@@ -3502,7 +3507,7 @@ function proCall(id){const c=getC(id);if(!c||c.blocked||_call)return false;if(S.
   const reasons=['有点想ta了','突然很想听听ta声音','惦记ta这会儿在干嘛','想ta想得坐不住','就是想ta了忍不住'];
   incomingCall(id,kind);if(_call){_call._pro=true;_call._proReason=reasons[Math.floor(Math.random()*reasons.length)];}
   return !!_call;}
-async function maybeProactive(id){if(!isMain())return;const c=getC(id);if(!c.proactive.enabled||c.blocked)return;
+async function maybeProactive(id){if(!isMain())return;if(_call)return;/* 通话中不发微信消息(点外卖/送礼走通话内指令) */const c=getC(id);if(!c.proactive.enabled||c.blocked)return;
   const now=new Date().getHours()*60+new Date().getMinutes();const s=toMin(c.proactive.start),e=toMin(c.proactive.end);const inWin=s<=e?(now>=s&&now<e):(now>=s||now<e);
   if(!inWin)return;const lm=lastMsg(id);if(lm&&Date.now()-lm.time<(Number(S.settings.proactiveIdleMin)||20)*60000)return;
   const today=new Date().toDateString();const pc=S._proactiveCount[id]||{date:today,n:0};if(pc.date!==today){pc.date=today;pc.n=0;}
@@ -3578,6 +3583,7 @@ async function maybeTaskIntent(reply,c){if(!reply||!c||c.blocked||!isMain())retu
     const r=await chatAPI([{role:'system',content:sys},{role:'user',content:reply}],{max:160,aux:true});
     const d=parseObj(r);if(!d||!d.task||!d.task.text)return;const t=d.task;
     if(!c.tasks||c.tasks.date!==todayStr())c.tasks={date:todayStr(),assignTs:Date.now(),list:[],rewarded:false,penalized:false};
+    if(c.tasks.list.length>=(c.taskN||3))return;// 到每日上限就不再写进便签，他只能口头要求
     c.tasks.list.push({id:uid(),text:(''+t.text).slice(0,140),kind:t.verify==='real'?'real':'app',verify:['essay','moment','tweet','douyin','real'].indexOf(t.verify)>=0?t.verify:'real',target:+t.target||0,done:false,extra:true});
     save();toast('📋 '+(c.remark||c.name)+'给你加了个任务');if(cur().p==='tasks')render();
   }catch(e){}}
