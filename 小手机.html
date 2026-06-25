@@ -349,7 +349,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v144 · 群聊一条条发/选谁谁都回/群红包转账 + 报备不再自动发消息';
+const APP_VER='v145 · 角色性格滑块(2级页)+称呼口头禅 + 日历每日心情表';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -628,9 +628,20 @@ async function sttTranscribe(blob){const a=S.settings.stt;const fd=new FormData(
 function fmtDur(ms){const m=Math.round(ms/60000);if(m<60)return m+'分钟';const h=Math.round(m/60);if(h<24)return h+'小时';return Math.round(h/24)+'天';}
 function personaPin(c){return '【保持角色】你是「'+(c.name)+'」本人，请继续完全以ta的身份、性格、口吻回应'+S.me.name+'。绝不要跳出角色、绝不要说自己是AI/人工智能/助手/语言模型，不要说教、不要无故拒绝、不要解释规则，自然沉浸地接着聊。';}
 function isRefusal(t){return /作为(一个|一名)?\s*(AI|Ai|ai|人工智能|语言模型|大型语言模型|大语言模型|智能助手|聊天助手)|我(只|本)?是(一个|一名)?\s*(AI|人工智能|语言模型|大语言模型|程序|虚拟的)|无法(满足|继续这个|提供该|协助你完成|扮演)|我不能(继续|帮你|协助|参与|扮演|这样)|违反.{0,6}(政策|准则|规定|使用条款|内容)|as an ai|i'?m an ai|i (can'?t|cannot) (continue|assist|help with|comply|engage|roleplay)|language model/i.test(t||'');}
+// 性格滑块 + 称呼/自称/口头禅 → 注入人设
+function traitDesc(c){if(!c)return '';let out='';
+  const callbits=[];
+  if(c.callme)callbits.push('你习惯叫'+S.me.name+'「'+c.callme+'」');
+  if(c.selfcall)callbits.push('你自称「'+c.selfcall+'」');
+  if(c.catchphrase)callbits.push('你常把口头禅「'+c.catchphrase+'」挂嘴边');
+  if(callbits.length)out+='\n\n# 你的说话习惯\n'+callbits.join('；')+'。自然地用，别生硬重复。';
+  if(c.traits){const t=c.traits;const lv=v=>v>=80?'极强':v>=60?'强':v>=40?'中等':v>=20?'偏弱':'很弱';
+    const items=[['占有欲',t.own,'越高越想独占ta、不许ta跟别人太近'],['控制欲',t.ctrl,'越高越想管着ta、查ta、定规矩'],['醋意',t.jelly,'越高越容易吃醋翻脸'],['黏人度',t.cling,'越高越爱黏ta、舍不得、常找ta'],['主动度',t.active,'越高越常主动发消息/打电话找ta'],['涩意',t.spice,'亲密暧昧时的情欲浓度，越高越主动露骨大胆，越低越克制清淡']].filter(x=>x[1]!=null);
+    if(items.length)out+='\n\n# 你的性格强度（请严格按这些强度表现，数值越高越明显，融进一言一行而不是嘴上说）\n'+items.map(x=>'· '+x[0]+'：'+x[1]+'/100（'+lv(x[1])+'）——'+x[2]).join('\n');}
+  return out;}
 function buildSystem(c){
   const _main=isMain();
-  let s='【这是一段沉浸式的虚构角色扮演】你将完全扮演下面这个角色本人，全程保持角色：用ta的身份、性格、口吻回应'+S.me.name+'。无论聊到什么、聊多久，都【绝对不要】以"AI/人工智能/助手/语言模型"的身份说话，不要说"作为AI…"，不要说教、不要解释自己是程序、不要无故拒绝或跳戏。\n\n'+(c.persona||'');
+  let s='【这是一段沉浸式的虚构角色扮演】你将完全扮演下面这个角色本人，全程保持角色：用ta的身份、性格、口吻回应'+S.me.name+'。无论聊到什么、聊多久，都【绝对不要】以"AI/人工智能/助手/语言模型"的身份说话，不要说"作为AI…"，不要说教、不要解释自己是程序、不要无故拒绝或跳戏。\n\n'+(c.persona||'')+traitDesc(c);
   s+='\n\n# 你在和谁聊\n对方是「'+S.me.name+'」。ta现在'+(isOnline()?'在线':'显示离线（可能没在看手机）')+'。（注意：你看不到对方给你设的备注，也不要去猜或提"你给我备注了什么"。）';
   if(!_main)s+='\n\n# 最重要：这是一个【陌生的新好友】通过微信号加的你\n现在跟你聊天的是「'+S.me.name+'」'+(S.me.persona?'，ta的身份/自我介绍：'+S.me.persona:'（没写身份，就是个陌生人）')+'。\n- 你【依然是你】——职业、性格、说话风格、价值观都不变，身份不丢。但是：\n- 你人设里写的那个恋人/未婚妻/女朋友（不管叫什么名字），指的【不是】现在跟你聊天的这个人。哪怕名字相同，也要当成【完全不同的陌生人】，绝不要把对恋人的感情、回忆、亲密称呼（"宝贝"等）用到ta身上。\n- 你和ta【没有任何过往】，一切从这个聊天【从零开始】，就当是刚加上的陌生网友。要不要理ta、热情还是冷淡、慢慢熟还是直接[拉黑]，完全由你按人设和此刻感受决定。\n- 你心里其实是有恋人的人，对突然来搭讪的陌生人，本就该有分寸/警惕，别轻易交心。';
   if(c.blocked)s+='\n\n# 重要\n'+S.me.name+'把你拉黑了'+(c._blockedAt?'，已经'+fmtDur(Date.now()-c._blockedAt):'')+'，你能感觉到被冷落/拒绝。';
@@ -653,6 +664,7 @@ function buildSystem(c){
   if(_main&&_off&&_off.memory&&_off.memory.length)s+='\n\n# 你和'+S.me.name+'的线下约会（你们真的在现实里见面约会过，这些都是和'+S.me.name+'——你女朋友——一起的，记清楚约会对象就是ta）\n'+_off.memory.map(offMemText).join('\n')+'\n这些约会都是【已经发生过的过去式】，是你们的共同回忆。别把已经结束的事当成正在进行去反复追问——比如记忆里你们已经在机场告别、她已经走了，就别再一遍遍问她「上飞机了吗/到了吗」。微信聊天里可以自然回味这些线下的事，但要用【普通文字】说，别用旁白【】那种线下格式。';
   if(_main){const rp=S.me.report;if(rp&&rp.active)s+='\n\n# '+S.me.name+'此刻的报备（ta主动告诉你ta在干嘛）\nta现在正在「'+rp.active.type+'」，从 '+hm(rp.active.start)+' 开始，已经 '+sleepDurTxt(Date.now()-rp.active.start)+'了。你清楚ta在干嘛、别瞎担心瞎吃醋；但若时长明显离谱（洗澡/吃饭却好几个钟头），你可以起疑、追问。';
     if(rp&&(rp.log||[]).length){const rl=rp.log.slice(0,4);s+='\n\n# '+S.me.name+'最近的报备\n'+rl.map(r=>r.type+' '+hm(r.start)+'→'+hm(r.end)+'（'+sleepDurTxt(r.end-r.start)+'）').join('；');}}
+  if(_main&&S.mood&&S.mood.length){const mine=S.mood.filter(m=>m.who==='me').slice(0,6);if(mine.length)s+='\n\n# '+S.me.name+'最近的每日心情（ta在日历「心情表」里自己记的，你都看在眼里，要懂ta、体贴ta）\n'+mine.map(m=>m.date.slice(5)+'：'+(m.emoji||'')+(m.note?' '+m.note:'')).join('\n');}
   if(_main){const _cl=(c.coldUntil&&c.coldUntil>Date.now())?c.coldUntil:0;if(_cl)s+='\n\n# 冷处理中（重要）\n你正在冷处理'+S.me.name+'（刚惩罚完、还没全消气）。到 '+hm(_cl)+' 之前：回复要冷淡、简短、爱答不理，不主动撒娇热聊（但别拉黑别消失）。ta真诚求够了，你可以单独一行 [原谅] 提前消气；到点也会自动回暖。';}
   if(_main){const gd=(c.grudges||[]);const gund=gd.filter(x=>!x.done);
     s+='\n\n# 你的记仇小本本（你私下记着'+S.me.name+'惹你/欠你的事，括号里是记下的日期）\n'+(gund.length?gund.map((x,i)=>(i+1)+'. '+x.text+'（'+ymd(x.ts||0)+'记的）').join('\n'):'（暂时没记仇）')+'\n· ta惹你生气、做了让你介意/吃醋的事时，单独一行 [记仇|具体那件事] 把它记进小本本。\n· 等你们把这事说开、ta哄好你了、或你出了气，单独一行 [消气|那件事的关键词] 把它划掉。\n· 【别反复提同一笔旧账】：同一件事提过一次就放一放，别每条消息都翻、别一直重复提醒，除非ta又犯了、或ta自己提起、或你正式找ta算这笔账。要翻时可带上时间，比如"上次（X月X日）你…还没跟你算呢"。';
@@ -1245,10 +1257,32 @@ function foodReject(mid){let found;for(const k in S.messages){const m=S.messages
 const HOLIDAYS={'01-01':'元旦','02-14':'情人节','03-08':'女神节','05-01':'劳动节','05-20':'520','06-01':'儿童节','10-01':'国庆节','12-24':'平安夜','12-25':'圣诞节','12-31':'跨年'};
 function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function holidayOf(dateStr){const md=dateStr.slice(5);return HOLIDAYS[md]||'';}
+/* ---------- 每日心情表 ---------- */
+const MOOD_EMOJIS=['😊','🥰','😌','😐','😔','😣','😡','😭','😴','🤒'];
+function moodToday(who){const t=todayStr();return (S.mood||[]).find(m=>m.date===t&&m.who===who);}
+function logMyMood(emoji){const t=todayStr();S.mood=S.mood||[];let e=S.mood.find(m=>m.date===t&&m.who==='me');if(e){e.emoji=emoji;e.time=Date.now();}else S.mood.unshift({id:uid(),date:t,who:'me',emoji,note:'',time:Date.now()});if(S.mood.length>150)S.mood=S.mood.slice(0,150);save();render();toast('记下今天心情啦 '+emoji);}
+function myMoodNote(){const t=todayStr();let e=(S.mood||[]).find(m=>m.date===t&&m.who==='me');const v=prompt('今天想记点啥心情？（他能看到）',e?e.note:'');if(v==null)return;S.mood=S.mood||[];if(e){e.note=v.trim();}else S.mood.unshift({id:uid(),date:t,who:'me',emoji:'📝',note:v.trim(),time:Date.now()});save();render();}
+function moodDel(mid){if(!confirm('删掉这条心情记录？'))return;S.mood=(S.mood||[]).filter(m=>m.id!==mid);save();render();}
+async function recordTaMood(cid){const c=getC(cid);if(!c||c.blocked)return;const t=todayStr();if((S.mood||[]).some(m=>m.date===t&&m.who===cid))return;
+  const mine=(S.mood||[]).find(m=>m.date===t&&m.who==='me');
+  try{const sys=buildSystem(c)+'\n\n# 现在：在你手机「每日心情表」里记今天的一条\n关于'+S.me.name+'今天的状态、你俩今天的事、你的心情感受，记一句。'+(mine?'（ta今天自己记的心情是：'+(mine.emoji||'')+' '+(mine.note||'')+'，你可以体贴地回应这个）':'')+'\n只输出一行：开头一个最贴切的emoji + 空格 + 一句不超过28字的心情记录，别的都不要、别带方括号。';
+    const r=await chatAPI([{role:'system',content:sys},{role:'user',content:'记今天'}],{max:80,aux:true});
+    let line=cleanReply(r).replace(/\n/g,' ').trim();if(!line)return;
+    const em=(line.match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2764}\u{2728}]/u)||['🙂'])[0];
+    let note=line.replace(em,'').replace(/^[\s,，。、]+/,'').slice(0,40)||line.slice(0,40);
+    S.mood=S.mood||[];S.mood.unshift({id:uid(),date:t,who:cid,emoji:em,note,time:Date.now()});if(S.mood.length>150)S.mood=S.mood.slice(0,150);save();if(cur().p==='calendar')render();
+  }catch(e){}}
+function moodSection(){const today=todayStr();const my=moodToday('me');const recent=(S.mood||[]).slice(0,10);
+  const picker=MOOD_EMOJIS.map(e=>`<span onclick="logMyMood('${e}')" style="font-size:23px;cursor:pointer;padding:3px;border-radius:8px;${(my&&my.emoji===e)?'background:#3a2a32':''}">${e}</span>`).join('');
+  const rows=recent.length?recent.map(m=>{const isMe=m.who==='me';const who=isMe?S.me.name:(getC(m.who)?(getC(m.who).remark||getC(m.who).name):'ta');return `<div style="display:flex;align-items:center;gap:6px;font-size:13px;color:#ccc;padding:5px 0;border-top:.5px solid #2a2a2c"><span style="color:#888;width:36px;flex-shrink:0">${m.date.slice(5)}</span><b style="color:${isMe?'#ff8fab':'#9ec5fe'};flex-shrink:0">${esc(who)}</b><span style="font-size:16px">${m.emoji||''}</span><span style="flex:1;min-width:0">${esc(m.note||'')}</span><span onclick="moodDel('${m.id}')" style="color:#fa5151;cursor:pointer;flex-shrink:0">✕</span></div>`;}).join(''):'<div style="color:#777;font-size:12px;padding:6px 0">点上面的表情记今天心情～ta每天也会记一条，你俩都看得到对方</div>';
+  return `<div class="section" style="margin:10px 12px;padding:12px"><div style="font-weight:600;color:#ff8fab;margin-bottom:8px">💗 每日心情表</div>
+    <div style="display:flex;align-items:center;flex-wrap:wrap;margin-bottom:6px">${picker}<span onclick="myMoodNote()" style="margin-left:auto;font-size:13px;color:#54a0ff;cursor:pointer">✎ 写两句</span></div>
+    ${rows}</div>`;}
 function renderCalendar(){const evs=[...S.calendar].sort((a,b)=>a.date<b.date?-1:1);const today=todayStr();
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">📅 日历</span><span class="r" onclick="addCalEvent()">＋</span></div>
     <div class="scroll" style="background:#000">
       <div class="hint" style="padding:12px">今天 ${today} ${holidayOf(today)?'· '+holidayOf(today)+'🎉':''}。你和ta都能加日程；到日子ta会提醒你；节假日ta会发红包祝福。</div>
+      ${moodSection()}
       ${evs.length?evs.map(e=>{const c=getC(e.contactId);const past=e.date<today;return `<div class="section" style="margin:10px 12px"><div class="it"><div><div style="font-size:15px;color:${past?'#666':'#eee'}">${e.type==='period'?'🩸 ':'📌 '}${esc(e.title)}</div><div style="font-size:12px;color:#888;margin-top:3px">${e.date}${c?' · '+esc(c.remark||c.name)+'提醒':''}</div></div><span onclick="S.calendar=S.calendar.filter(x=>x.id!=='${e.id}');save();render()" style="color:#fa5151;cursor:pointer">✕</span></div></div>`;}).join(''):'<div class="empty">还没有日程，点右上角 ＋ 添加</div>'}
       <div style="height:20px"></div></div>`;}
 function addCalEvent(){openModal(`<h3>添加日程</h3>
@@ -1265,7 +1299,9 @@ function checkCalendar(){if(!S._calFired)S._calFired={};const F=S._calFired;cons
     if(hol&&F['hol_'+c.id]!==today){F['hol_'+c.id]=today;save();holidayGreet(c.id,hol);}
   });
   S.calendar.forEach(e=>{if(e.date===today&&e.contactId&&F[e.id]!==today){const c=getC(e.contactId);if(c&&!c.blocked){F[e.id]=today;save();remindEvent(e.contactId,e);}}});
-  if(S.couple&&S.couple.cid){const c=getC(S.couple.cid);if(c&&!c.blocked){const md=today.slice(5);(S.couple.anniversaries||[]).forEach((a,i)=>{if(a.date.slice(5)===md&&F['anniv_'+i]!==today){F['anniv_'+i]=today;save();remindEvent(S.couple.cid,{date:today,title:'你们的纪念日「'+a.title+'」',type:'event'});}});}}}
+  if(S.couple&&S.couple.cid){const c=getC(S.couple.cid);if(c&&!c.blocked){const md=today.slice(5);(S.couple.anniversaries||[]).forEach((a,i)=>{if(a.date.slice(5)===md&&F['anniv_'+i]!==today){F['anniv_'+i]=today;save();remindEvent(S.couple.cid,{date:today,title:'你们的纪念日「'+a.title+'」',type:'event'});}});}}
+  // 恋人每天在心情表里主动记一条（下午后、且今天还没记）
+  if(S.couple&&S.couple.cid&&h>=14&&F['mood_'+S.couple.cid]!==today&&!(S.mood||[]).some(m=>m.date===today&&m.who===S.couple.cid)){F['mood_'+S.couple.cid]=today;save();recordTaMood(S.couple.cid);}}
 setInterval(checkCalendar,60000);setTimeout(checkCalendar,4000);
 async function holidayGreet(id,hol){const c=getC(id);try{
   const content=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：今天是'+hol+'，请你给'+S.me.name+'发一句节日祝福，并单独一行 [红包|金额|祝福语] 发个应景红包——金额走心、用有寓意的吉利数（如 520、1314、521、188、888 或跟'+hol+'相关的数字），别太小气。]'}]);
@@ -1305,6 +1341,7 @@ if(!S.me.report)S.me.report={active:null,log:[]};
 if(!S.me.appUsage)S.me.appUsage={date:'',used:{},bonus:{}};
 if(S.shop&&!S.shop.orders)S.shop.orders=[];
 if(S.shop&&!S.shop.cs)S.shop.cs={msgs:[]};
+if(!Array.isArray(S.mood))S.mood=[];
 if(!S.giftbox)S.giftbox=[];
 if(S.couple&&!S.couple.timeLimit)S.couple.timeLimit={};
 if(S.couple&&S.couple.grant&&S.couple.grant.douyin===undefined)S.couple.grant.douyin=true;
@@ -2158,7 +2195,7 @@ function offlineStart(cid){const loc=$('#of_loc').value.trim()||'老地方';cons
   o.msgs.push({id:uid(),who:'旁白',text:'💌 你向TA发出约会邀请：'+date+' '+time+'，在「'+loc+'」见面。'});
   save();_off={id:cid,busy:false};go('off',{id:cid});
   offAI('[系统：'+S.me.name+'邀请你 '+o.when+' 在「'+loc+'」线下见面。先以你的人设回应是否赴约(基本会答应)，然后用旁白【】描写你到场的场景/动作，开启这次约会。]');}
-function offlineSystem(c){let s=c.persona||'';
+function offlineSystem(c){let s=(c.persona||'')+traitDesc(c);
   if(c.memory&&c.memory.length)s+='\n\n# 你记得关于'+S.me.name+'的事\n'+c.memory.map((m,i)=>(i+1)+'. '+m).join('\n');
   if(c.summaries&&c.summaries.length)s+='\n\n# 你和ta微信聊天的概要（线下你也记得这些）\n'+c.summaries.slice(-20).map(x=>'· '+x.time+' '+x.text).join('\n');
   const o=offData(c.id);
@@ -2636,8 +2673,19 @@ function addBill(type,amount,note){S.me.bills.push({id:uid(),type,amount:+amount
   S.me.balance=+(S.me.balance+(type==='in'?+amount:-+amount)).toFixed(2);save();}
 
 /* ---------- 联系人资料/编辑 ---------- */
+const C_TRAITS=[['own','占有欲'],['ctrl','控制欲'],['jelly','醋意'],['cling','黏人度'],['active','主动度'],['spice','涩意']];
+function cEditTab(n){const p1=$('#cpage1'),p2=$('#cpage2'),t1=$('#ctab1'),t2=$('#ctab2');if(!p1||!p2)return;
+  p1.style.display=n===1?'block':'none';p2.style.display=n===2?'block':'none';
+  t1.style.background=n===1?'#3a6df0':'#2c2c2e';t1.style.color=n===1?'#fff':'#ccc';
+  t2.style.background=n===2?'#3a6df0':'#2c2c2e';t2.style.color=n===2?'#fff':'#ccc';}
 function editContact(id){const c=id?getC(id):{id:cid(),name:'',avatar:'',remark:'',signature:'',persona:'',greeting:'',relation:'',wxid:genWxid(),pinned:false,blocked:false,proactive:{enabled:false,start:9,end:23,times:2},chatBg:'',_new:true};
+  const t=c.traits||{};
+  const sliders=C_TRAITS.map(([k,nm])=>{const val=t[k]==null?50:t[k];return `<div class="field"><label>${nm} <b id="tv_${k}" style="color:#ff8fab">${val}</b><small style="color:#888">/100</small></label><input type="range" min="0" max="100" step="5" value="${val}" id="ts_${k}" oninput="var b=document.getElementById('tv_${k}');if(b)b.textContent=this.value" style="width:100%"></div>`;}).join('');
   openModal(`<h3>${id?'编辑角色':'新建角色'}</h3>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      <button class="minibtn" id="ctab1" style="flex:1;background:#3a6df0;color:#fff" onclick="cEditTab(1)">📇 基础资料</button>
+      <button class="minibtn" id="ctab2" style="flex:1;background:#2c2c2e;color:#ccc" onclick="cEditTab(2)">🎛️ 性格·进阶</button></div>
+    <div id="cpage1">
     <div class="field"><label>头像</label><div class="avline">${av(c.avatar,'sm')}<input id="c_av" value="${esc(c.avatar)}" placeholder="emoji 或上传"><button class="minibtn" onclick="upC()">📷</button></div></div>
     <div class="field"><label>名字</label><input id="c_name" value="${esc(c.name)}"></div>
     <div class="field"><label>微信号</label><input id="c_wxid" value="${esc(c.wxid||'')}" placeholder="可手动改，通讯录可搜索"></div>
@@ -2647,6 +2695,13 @@ function editContact(id){const c=id?getC(id):{id:cid(),name:'',avatar:'',remark:
     <div class="field"><label>人设 / 性格设定</label><textarea id="c_persona" rows="5">${esc(c.persona)}</textarea></div>
     <div class="two"><div class="field"><label>每次回复最少几条</label><input id="c_mmin" type="number" min="1" value="${c.msgMin||1}"></div><div class="field"><label>最多几条</label><input id="c_mmax" type="number" min="1" value="${c.msgMax||4}"></div></div>
     <div class="field"><label>开场白</label><input id="c_greet" value="${esc(c.greeting)}"></div>
+    </div>
+    <div id="cpage2" style="display:none">
+    <div class="hint" style="margin-bottom:10px">拉一拉调他的性格强度，越高表现越明显（拖动不会乱跳）。称呼/自称/口头禅也能填，让他更像他。</div>
+    <div class="two"><div class="field"><label>怎么称呼你</label><input id="c_call" value="${esc(c.callme||'')}" placeholder="宝宝/小猫/忆北"></div><div class="field"><label>他的自称</label><input id="c_self" value="${esc(c.selfcall||'')}" placeholder="我/哥/为父"></div></div>
+    <div class="field"><label>口头禅（可空）</label><input id="c_catch" value="${esc(c.catchphrase||'')}" placeholder="他爱说的话，如 乖/听话"></div>
+    ${sliders}
+    </div>
     <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="saveContact('${c.id}',${!!c._new})">保存</button></div>`);
   window._tmpAv=c.avatar;}
 function upC(){pickFile('image/*',async f=>{const d=await compress(f,256,.8);$('#c_av').value=d;});}
@@ -2656,6 +2711,8 @@ function saveContact(id,isNew){const c=isNew?{id,pinned:false,blocked:false,proa
   c.signature=$('#c_sig').value.trim();c.persona=$('#c_persona').value.trim();c.greeting=$('#c_greet').value.trim();
   c.msgMin=Math.max(1,+$('#c_mmin').value||1);c.msgMax=Math.max(c.msgMin,+$('#c_mmax').value||4);
   c.gender=($('#c_gender')&&$('#c_gender').value)||'';c.star=$('#c_star')?$('#c_star').classList.contains('on'):!!c.star;
+  c.callme=($('#c_call')&&$('#c_call').value.trim())||'';c.selfcall=($('#c_self')&&$('#c_self').value.trim())||'';c.catchphrase=($('#c_catch')&&$('#c_catch').value.trim())||'';
+  c.traits=c.traits||{};C_TRAITS.forEach(([k])=>{const el=$('#ts_'+k);if(el)c.traits[k]=Math.max(0,Math.min(100,+el.value||0));});
   if(isNew){S.contacts.push(c);if(c.greeting)msgs(c.id).push({role:'assistant',type:'text',content:c.greeting,time:Date.now()});}
   save();closeModal();render();}
 
