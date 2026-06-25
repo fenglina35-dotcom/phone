@@ -349,7 +349,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v131 · 修复扣零花钱后重新登录余额恢复的bug';
+const APP_VER='v132 · 记仇本本去重(相似旧账不再重复记)';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -2945,9 +2945,12 @@ function applyBlockIntent(content,c,id){
     save();if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();}}
 // 记仇小本本：[记仇|事] 记一笔，[消气|关键词] 划掉一笔；在聊天和线下都生效，并从文本抹掉
 function grudgesOf(c){if(!c.grudges)c.grudges=[];return c.grudges;}
+// 记仇去重：和「还没消气」的旧账高度相似就不再重复记（精确/包含/字重叠≥75%）；已消气的旧账若又犯可重新记
+function _gnorm(s){return (''+s).replace(/[\s，。、！？!?,.~…「」『』’‘“”《》()（）:：;；·\-—]/g,'').toLowerCase();}
+function grudgeDup(g,t){const a=_gnorm(t);if(!a)return false;return (g||[]).some(x=>{if(x.done)return false;const b=_gnorm(x.text);if(!b)return false;if(a===b)return true;if(a.length>=4&&b.length>=4&&(a.indexOf(b)>=0||b.indexOf(a)>=0))return true;const sa=new Set(a.split('')),sb=new Set(b.split(''));let inter=0;sa.forEach(ch=>{if(sb.has(ch))inter++;});const mn=Math.min(sa.size,sb.size);return mn>=4&&inter/mn>=0.75;});}
 function applyStarTags(content){if(!content)return content;return content.replace(/[\[【]\s*(重点|取消重点)\s*[|｜:：]\s*([^\]】、，,]+)[\]】]/g,(m,act,nm)=>{nm=(nm||'').replace(/[「」『』"'\s]/g,'').trim();const c=S.contacts.find(x=>!x.deleted&&(x.name===nm||x.remark===nm||(nm&&(nm.indexOf(x.name)>=0||(x.remark&&nm.indexOf(x.remark)>=0)))));if(c){c.star=(act!=='取消重点');save();}return '';});}
 function applyGrudgeTags(content,c){if(!content||!c)return content;let changed=false;
-  let out=content.replace(/[\[【]\s*记仇\s*[|｜:：]\s*([^\]】]+)[\]】]/g,(m,t)=>{t=(t||'').replace(/[「」『』"'《》]/g,'').trim();if(t){const g=grudgesOf(c);if(!g.some(x=>x.text===t)){g.unshift({id:uid(),text:t,done:false,ts:Date.now()});changed=true;}}return '';});
+  let out=content.replace(/[\[【]\s*记仇\s*[|｜:：]\s*([^\]】]+)[\]】]/g,(m,t)=>{t=(t||'').replace(/[「」『』"'《》]/g,'').trim();if(t){const g=grudgesOf(c);if(!grudgeDup(g,t)){g.unshift({id:uid(),text:t,done:false,ts:Date.now()});changed=true;}}return '';});
   out=out.replace(/[\[【]\s*消气\s*[|｜:：]?\s*([^\]】]*)[\]】]/g,(m,t)=>{t=(t||'').replace(/[「」『』"'《》]/g,'').trim();const g=grudgesOf(c);let tg=null;
     if(t){tg=g.find(x=>!x.done&&(x.text.indexOf(t)>=0||t.indexOf(x.text)>=0));
       if(!tg){const ks=t.replace(/[的了又还跟和与你我ta]/g,'').split('').filter(Boolean);if(ks.length>=2)tg=g.find(x=>!x.done&&ks.filter(ch=>x.text.indexOf(ch)>=0).length>=Math.ceil(ks.length*0.6));}}// 关键词模糊匹配；匹配不上就不乱划
