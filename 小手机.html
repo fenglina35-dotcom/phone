@@ -349,7 +349,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v145 · 角色性格滑块(2级页)+称呼口头禅 + 日历每日心情表';
+const APP_VER='v146 · 情侣空间/设置分两页整理(切页不跳回)';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -884,9 +884,18 @@ function notifyX(c,text){if(c.muted)return;playDing();const b=$('#msgBanner');if
 setInterval(scanAutoPost,240000);setTimeout(scanAutoPost,8000);
 
 /* ---------- 设置 ---------- */
+let _setTab=1;
+function setTab(n){_setTab=n;const p1=$('#setpage1'),p2=$('#setpage2'),t1=$('#settab1'),t2=$('#settab2');if(!p1||!p2)return;
+  p1.style.display=n===2?'none':'block';p2.style.display=n===2?'block':'none';
+  if(t1){t1.style.background=n===2?'#2c2c2e':'#07c160';t1.style.color=n===2?'#ccc':'#fff';}
+  if(t2){t2.style.background=n===2?'#07c160':'#2c2c2e';t2.style.color=n===2?'#fff':'#ccc';}}
 function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">设置</span><span class="r"></span></div>
   <div class="scroll" style="padding:12px;background:#000">
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button class="minibtn" id="settab1" style="flex:1;${_setTab===2?'background:#2c2c2e;color:#ccc':'background:#07c160;color:#fff'}" onclick="setTab(1)">🔌 接口·模型</button>
+      <button class="minibtn" id="settab2" style="flex:1;${_setTab===2?'background:#07c160;color:#fff':'background:#2c2c2e;color:#ccc'}" onclick="setTab(2)">⚙️ 偏好·工具</button></div>
+    <div id="setpage1" style="display:${_setTab===2?'none':'block'}">
     <div class="hint">聊天和识图可以用不同模型。地址先生预填好了，填上 Key 就能用。</div>
     <div class="section"><div style="padding:12px 14px;font-weight:600;color:#07c160">💬 聊天模型</div>
       <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_cbase" value="${esc(a.base)}"></div>
@@ -923,6 +932,8 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_sbase" value="${esc((S.settings.stt||{}).base||'')}" placeholder="https://…/v1（留空用手机识别）"></div>
       <div class="two" style="padding:0 14px 10px"><div class="field"><label>API Key</label><input id="s_skey" type="password" value="${esc((S.settings.stt||{}).key||'')}"></div><div class="field"><label>模型</label><input id="s_smodel" value="${esc((S.settings.stt||{}).model||'')}" placeholder="whisper-1"></div></div>
     </div>
+    </div>
+    <div id="setpage2" style="display:${_setTab===2?'block':'none'}">
     <div class="section">
       <div class="it"><span>带几个回合<br><small style="color:#888">你1句+他的回复=1回合，记得越多越久但越慢</small></span><input id="s_hist" type="number" min="2" max="40" value="${S.settings.hist}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it">语音自动播放<span class="sw ${S.settings.voiceAuto?'on':''}" onclick="S.settings.voiceAuto=!S.settings.voiceAuto;save();render()"></span></div>
@@ -942,6 +953,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="it"><span>🖼️ 主屏壁纸</span><span class="v"><button class="minibtn" onclick="setHomeBg()">${S.me.homeBg?'换':'上传'}</button>${S.me.homeBg?'<button class="minibtn" style="margin-left:6px" onclick="S.me.homeBg=\'\';save();toast(\'已恢复默认\')">恢复默认</button>':''}</span></div>
       <div class="it" onclick="appIconEditor()"><span>🎨 App 图标</span><span class="v">自定义 ›</span></div>
       <div class="it" onclick="fetchWeather(true)"><span>🌦️ 定位天气</span><span class="v">${S.weather?esc(S.weather.place+' '+S.weather.desc+' '+S.weather.temp+'°'):'点击获取 ›'}</span></div>
+    </div>
     </div>
     <div class="btns" style="margin:6px 0"><button class="btn g" onclick="testConn()">🔍 测试连接</button></div>
     <div id="testOut" style="font-size:12px;text-align:center;min-height:16px;margin-bottom:8px"></div>
@@ -2458,6 +2470,11 @@ function wgInput(){if(!_wg)return;const ta=$('#wg_in');const v=ta.value.trim();i
 async function wgAIGuess(myDesc){if(!_wg)return;try{const r=await chatAPI([{role:'system',content:'我们在玩猜词，对方描述一个'+_wg.len+'个字的词，你来猜，只回答你猜的那一个词，别的不要。'},{role:'user',content:'描述：'+myDesc}],{max:30});const g=(r||'').replace(/[^一-龥A-Za-z]/g,'').slice(0,6);_wg.guesses.push(g);wgRender();}catch(e){}}
 function wgJudge(ok){if(!_wg)return;clearInterval(_wg._tm);if(ok){_wg.score.ta++;toast('ta猜对啦🎉');}else{toast('那继续描述呗～');wgStartTimer(_wg.t>0?_wg.t:30);return;}_wg.round++;wgRound('ai');}
 function wgQuit(){const cid=_wg&&_wg.cid;if(_wg){clearInterval(_wg._tm);}_wg=null;if(cid&&getC(cid))openChat(cid);else home();}
+let _couTab=1;
+function couTab(n){_couTab=n;const p1=$('#coupage1'),p2=$('#coupage2'),t1=$('#coutab1'),t2=$('#coutab2');if(!p1||!p2)return;
+  p1.style.display=n===2?'none':'block';p2.style.display=n===2?'block':'none';
+  if(t1){t1.style.background=n===2?'#2c2c2e':'#ff6fa5';t1.style.color=n===2?'#ccc':'#fff';}
+  if(t2){t2.style.background=n===2?'#ff6fa5':'#2c2c2e';t2.style.color=n===2?'#fff':'#ccc';}}
 function renderCouple(){const cp=S.couple;const c=cp&&getC(cp.cid);
   if(!cp||!c)return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">💞 情侣空间</span><span class="r"></span></div>
     <div class="scroll" style="background:#000"><div class="empty" style="padding:50px 24px;line-height:2">还没绑定～<br>去某个角色的「资料页」点 <b>💞 绑定情侣空间</b><br>（只能绑定一个）</div></div>`;
@@ -2470,9 +2487,29 @@ function renderCouple(){const cp=S.couple;const c=cp&&getC(cp.cid);
         <div style="font-size:40px;font-weight:700;margin:6px 0">${days}<span style="font-size:16px;font-weight:400"> 天</span></div>
         <div style="font-size:12px;opacity:.9">从 ${cp.startDate} 在一起</div>
       </div>
+      <div style="display:flex;gap:8px;margin:0 12px 6px">
+        <button class="minibtn" id="coutab1" style="flex:1;${_couTab===2?'background:#2c2c2e;color:#ccc':'background:#ff6fa5;color:#fff'}" onclick="couTab(1)">💞 甜蜜日常</button>
+        <button class="minibtn" id="coutab2" style="flex:1;${_couTab===2?'background:#ff6fa5;color:#fff':'background:#2c2c2e;color:#ccc'}" onclick="couTab(2)">🔐 管控授权</button></div>
+      <div id="coupage1" style="display:${_couTab===2?'none':'block'}">
       <div class="section" style="margin:12px"><div class="it" onclick="coupleSet()"><span>📅 在一起的日子</span><span class="v">${cp.startDate} ›</span></div></div>
       <div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#ff8fab;display:flex;justify-content:space-between">🎁 纪念日<span class="minibtn" onclick="addAnniv()">＋ 添加</span></div>
         ${(cp.anniversaries||[]).length?cp.anniversaries.map((a,i)=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div><b>${a.date}</b> ${esc(a.title)}<small>${annivCount(a.date)}</small></div><span onclick="S.couple.anniversaries.splice(${i},1);save();render()" style="color:#fa5151;cursor:pointer">✕</span></div>`).join(''):'<div class="empty" style="padding:14px">还没有纪念日</div>'}</div>
+      ${(function(){const sl=S.me.sleep||{active:null,records:[]};const recs=sl.records||[];
+        let h=`<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#9ec5fe">🌙 睡眠计时</div>
+        <div class="hint" style="padding:0 14px">要睡了点「开始睡眠」，醒来点「结束睡眠」。${esc(c.remark||c.name)}在情侣空间能看到你的睡眠记录，心疼你别熬夜💗</div>
+        <div style="padding:10px 14px">${sl.active?`<div style="text-align:center;color:#9ec5fe;font-size:13px;margin-bottom:8px">😴 正在睡眠中…从 ${hm(sl.active)} 开始（已睡 ${sleepDurTxt(Date.now()-sl.active)}）</div><button class="btn p" onclick="sleepEnd()">☀️ 我醒啦，结束睡眠</button>`:`<button class="btn p" onclick="sleepStart()">🌙 我要睡了，开始计时</button>`}</div>`;
+        if(recs.length){h+=`<div class="hint" style="padding:4px 14px;color:#888">睡眠记录（可手动删除）</div>`+recs.slice(0,14).map((r,i)=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="font-size:13px">🛌 ${ymd(r.start)} ${hm(r.start)} → ${hm(r.end)}<small style="display:block;color:#888">睡了 ${sleepDurTxt(r.end-r.start)}</small></div><span onclick="sleepDel(${i})" style="color:#fa5151;cursor:pointer">✕</span></div>`).join('');}
+        else h+=`<div class="empty" style="padding:10px">还没有睡眠记录</div>`;
+        return h+`</div>`;})()}
+      ${(function(){const rp=S.me.report||{active:null,log:[]};const log=rp.log||[];const presets=['洗澡','吃饭','玩游戏','看剧','健身','出门'];
+        let h=`<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#ffb83b">📍 报备 · 我去干嘛了</div>
+        <div class="hint" style="padding:0 14px">出门做点啥就点一下开始、回来点结束。${esc(c.remark||c.name)}第一时间知道你去哪了、用了多久，就不会瞎担心/瞎吃醋啦💗</div>`;
+        if(rp.active){h+=`<div style="padding:10px 14px"><div style="text-align:center;color:#ffb83b;font-size:14px;margin-bottom:8px">⏱️ 正在「${esc(rp.active.type)}」…从 ${hm(rp.active.start)} 开始（已 ${sleepDurTxt(Date.now()-rp.active.start)}）</div><button class="btn p" onclick="reportEnd()">✅ 结束 / 我回来了</button></div>`;}
+        else{h+=`<div style="padding:8px 14px;display:flex;flex-wrap:wrap;gap:8px">${presets.map(p=>`<button class="minibtn" onclick="reportStart('${p}')">${p}</button>`).join('')}<button class="minibtn" style="background:#7c5cff;color:#fff" onclick="reportCustom()">＋ 其他…</button></div>`;}
+        if(log.length){h+=`<div class="hint" style="padding:4px 14px;color:#888">报备记录（可删）</div>`+log.slice(0,12).map((r,i)=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="font-size:13px">📍 ${ymd(r.start)} ${hm(r.start)}→${hm(r.end)} ${esc(r.type)}<small style="display:block;color:#888">用了 ${sleepDurTxt(r.end-r.start)}</small></div><span onclick="reportDel(${i})" style="color:#fa5151;cursor:pointer">✕</span></div>`).join('');}
+        return h+`</div>`;})()}
+      </div>
+      <div id="coupage2" style="display:${_couTab===2?'block':'none'}">
       ${(function(){const g=cp.grant||{},locks=cp.locks||{},gags=cp.gags||{};const lk=Object.keys(locks),gk=Object.keys(gags);
         let h=`<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#ff8fab">📱 软件管控授权</div>
         <div class="hint" style="padding:0 14px">勾选的App才授权给 ${esc(c.remark||c.name)} 管。ta会在合适的时机(比如该睡了)自己判断锁哪些；锁了得问ta要密码、在下面输入才能解开。取消授权ta会立刻知道。</div>
@@ -2488,20 +2525,6 @@ function renderCouple(){const cp=S.couple;const c=cp&&getC(cp.cid);
         <div class="hint" style="padding:0 14px">开了之后，${nm} 能扣你零花钱、能冻结你的亲属卡当惩罚；你就改不了自己的余额了（防作弊），没钱得求ta给。</div>
         <div class="it"><span>把钱包/亲属卡交给ta管</span><span class="sw ${cp.walletAuth?'on':''}" onclick="coupleWalletAuth()"></span></div>
         ${cp.walletAuth?`<div class="it"><span style="color:#888">当前零钱</span><span class="v">¥${(+S.me.balance).toFixed(2)}（ta可扣）</span></div>${cp.cardFrozen?`<div class="it"><span style="color:#fa5151">💳 亲属卡已被ta冻结</span><span class="v" style="color:#888">求ta解冻</span></div>`:''}`:''}</div>`;})()}
-      ${(function(){const sl=S.me.sleep||{active:null,records:[]};const recs=sl.records||[];
-        let h=`<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#9ec5fe">🌙 睡眠计时</div>
-        <div class="hint" style="padding:0 14px">要睡了点「开始睡眠」，醒来点「结束睡眠」。${esc(c.remark||c.name)}在情侣空间能看到你的睡眠记录，心疼你别熬夜💗</div>
-        <div style="padding:10px 14px">${sl.active?`<div style="text-align:center;color:#9ec5fe;font-size:13px;margin-bottom:8px">😴 正在睡眠中…从 ${hm(sl.active)} 开始（已睡 ${sleepDurTxt(Date.now()-sl.active)}）</div><button class="btn p" onclick="sleepEnd()">☀️ 我醒啦，结束睡眠</button>`:`<button class="btn p" onclick="sleepStart()">🌙 我要睡了，开始计时</button>`}</div>`;
-        if(recs.length){h+=`<div class="hint" style="padding:4px 14px;color:#888">睡眠记录（可手动删除）</div>`+recs.slice(0,14).map((r,i)=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="font-size:13px">🛌 ${ymd(r.start)} ${hm(r.start)} → ${hm(r.end)}<small style="display:block;color:#888">睡了 ${sleepDurTxt(r.end-r.start)}</small></div><span onclick="sleepDel(${i})" style="color:#fa5151;cursor:pointer">✕</span></div>`).join('');}
-        else h+=`<div class="empty" style="padding:10px">还没有睡眠记录</div>`;
-        return h+`</div>`;})()}
-      ${(function(){const rp=S.me.report||{active:null,log:[]};const log=rp.log||[];const presets=['洗澡','吃饭','玩游戏','看剧','健身','出门'];
-        let h=`<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#ffb83b">📍 报备 · 我去干嘛了</div>
-        <div class="hint" style="padding:0 14px">出门做点啥就点一下开始、回来点结束。${esc(c.remark||c.name)}第一时间知道你去哪了、用了多久，就不会瞎担心/瞎吃醋啦💗</div>`;
-        if(rp.active){h+=`<div style="padding:10px 14px"><div style="text-align:center;color:#ffb83b;font-size:14px;margin-bottom:8px">⏱️ 正在「${esc(rp.active.type)}」…从 ${hm(rp.active.start)} 开始（已 ${sleepDurTxt(Date.now()-rp.active.start)}）</div><button class="btn p" onclick="reportEnd()">✅ 结束 / 我回来了</button></div>`;}
-        else{h+=`<div style="padding:8px 14px;display:flex;flex-wrap:wrap;gap:8px">${presets.map(p=>`<button class="minibtn" onclick="reportStart('${p}')">${p}</button>`).join('')}<button class="minibtn" style="background:#7c5cff;color:#fff" onclick="reportCustom()">＋ 其他…</button></div>`;}
-        if(log.length){h+=`<div class="hint" style="padding:4px 14px;color:#888">报备记录（可删）</div>`+log.slice(0,12).map((r,i)=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="font-size:13px">📍 ${ymd(r.start)} ${hm(r.start)}→${hm(r.end)} ${esc(r.type)}<small style="display:block;color:#888">用了 ${sleepDurTxt(r.end-r.start)}</small></div><span onclick="reportDel(${i})" style="color:#fa5151;cursor:pointer">✕</span></div>`).join('');}
-        return h+`</div>`;})()}
       ${(function(){const g=cp.grant||{},tl=cp.timeLimit||{};const keys=Object.keys(LOCKABLE).filter(k=>g[k]&&(tl[k]||usedSecOf(k)));
         let h=`<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#ffb83b">⏱️ 软件使用时长 / 限额</div>
         <div class="hint" style="padding:0 14px">${esc(c.remark||c.name)}主动给授权的软件设每天能玩多久；用够了会自动锁，得求ta才能多玩。只统计在软件里的时间，退出去不算。今天的记录ta查手机也看得到。</div>`;
@@ -2521,6 +2544,7 @@ function renderCouple(){const cp=S.couple;const c=cp&&getC(cp.cid);
         <div class="hint" style="padding:0 14px">开了之后，你长时间不回ta：约1.5小时温柔催→3小时不耐烦→5小时直接来电；失踪近一整天还无视，他可能把你关小黑屋(需上面授权)。点了睡眠/报备计时的时段【不算】，他知道你在干嘛。</div>
         <div class="it"><span>开启失踪升级</span><span class="sw ${cp.escalate?'on':''}" onclick="coupleEscalate()"></span></div></div>
       <div style="padding:0 12px"><button class="btn d" onclick="if(confirm('解除情侣绑定？')){S.couple=null;save();render()}">💔 解除绑定</button></div>
+      </div>
       <div style="height:20px"></div></div>`;}
 function coupleWalletAuth(){if(!S.couple)return;S.couple.walletAuth=!S.couple.walletAuth;if(!S.couple.walletAuth)S.couple.cardFrozen=false;save();render();const cid=S.couple.cid,c=cid&&getC(cid);if(c&&!c.blocked)scheduleReply(cid,'[系统：'+S.me.name+(S.couple.walletAuth?'刚把钱包/亲属卡的管控权交给你了——你现在能扣ta零花钱、能冻结ta亲属卡。按你人设回应一句（宠溺/警告/坏笑都行）。':'刚收回了钱包管控权。按人设反应一下。')+']');}
 function coupleGrant(k){if(!S.couple)return;S.couple.grant=S.couple.grant||{};const was=!!S.couple.grant[k];S.couple.grant[k]=!was;
