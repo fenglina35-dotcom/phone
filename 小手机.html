@@ -36,6 +36,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .home .clockw .hh{font-size:62px;font-weight:300;letter-spacing:2px;}
 .home .clockw .dd{font-size:15px;margin-top:2px;}
 .apps{margin-top:auto;padding:22px;display:grid;grid-template-columns:repeat(4,1fr);gap:20px 14px;}
+.appswipe{margin-top:auto;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.appswipe::-webkit-scrollbar{display:none}
+.apppage{flex:0 0 100%;display:grid;grid-template-columns:repeat(4,1fr);gap:20px 14px;padding:22px;scroll-snap-align:start;align-content:start;box-sizing:border-box}
+.pgdots{display:flex;justify-content:center;gap:8px;padding:2px 0 6px}
+.pgdot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.4)}
+.pgdot.on{background:#fff}
 .app{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;}
 .app .ic{width:60px;height:60px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:32px;box-shadow:0 6px 14px rgba(0,0,0,.12);background:#fff;}
 .app span{font-size:11px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.25);}
@@ -490,6 +496,7 @@ function msgToText(m){
     case 'paycard':return '[我在'+(m.shop||'商城')+'下单了「'+m.name+'」¥'+(+m.price).toFixed(2)+'，想让你帮我代付]';
     case 'paid':return '[我帮你代付成功了：'+m.name+' ¥'+(+m.price).toFixed(2)+']';
     case 'payreject':return '[我拒绝了帮你代付：'+m.name+']';
+    case 'musicinvite':return '['+S.me.name+'邀请你一起听歌：'+m.title+(m.artist?'（'+m.artist+'）':'')+'，你们正一起听]';
     case 'food':return m.from==='ta'?'[你给ta点了外卖：'+m.name+']':'['+S.me.name+'给你点了外卖：'+m.name+(m.shop?'（'+m.shop+'）':'')+'，¥'+(+m.price).toFixed(2)+(m.declined?'（你拒收了）':m.delivered?'（已送到、你吃上了）':m.received?'（你收下了，配送中）':'（等你 [收外卖] 或 [拒外卖]）')+']';
     case 'tweetcard':return '[我转发给你一条X推文——'+m.tname+'：「'+m.ttext+'」]';
     case 'dycard':return m.mine?('[我把我自己发的抖音视频分享给你——「'+m.desc+'」'+(m.narration?'，视频内容：'+m.narration:'')+']'):('[我转发给你一条抖音视频——@'+m.author+'：「'+m.desc+'」'+(m.narration?'，视频内容：'+m.narration:'')+']');
@@ -740,6 +747,7 @@ function render(){
   const _sb=$('#statusbar');if(_sb)_sb.className='statusbar'+(c.p==='home'?'':' dark');
   let html='';
   if(c.p==='home')html=renderHome();
+  else if(c.p==='music')html=renderMusic();
   else if(c.p==='settings')html=renderSettings();
   else if(c.p==='worldbook')html=renderWorldbook();
   else if(c.p==='wechat')html=renderWeChat();
@@ -776,6 +784,86 @@ function render(){
 }
 
 /* ---------- 主屏幕 ---------- */
+/* ---------- 🎵 一起听音乐 ---------- */
+let _ma=null,_mCur=null,_mPlaying=false,_mUrl=null;
+function musicInit(){if(!S.music)S.music={songs:[],session:null,loop:false};S.music.songs=S.music.songs||[];}
+function mIDB(){return new Promise((res,rej)=>{const r=indexedDB.open('yibeiMusic',1);r.onupgradeneeded=e=>{try{e.target.result.createObjectStore('audio');}catch(_){}};r.onsuccess=e=>res(e.target.result);r.onerror=()=>rej();});}
+function mPut(k,b){return mIDB().then(db=>new Promise((res,rej)=>{const tx=db.transaction('audio','readwrite');tx.objectStore('audio').put(b,k);tx.oncomplete=()=>res();tx.onerror=()=>rej();}));}
+function mGet(k){return mIDB().then(db=>new Promise((res)=>{const tx=db.transaction('audio','readonly');const q=tx.objectStore('audio').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>res(null);}));}
+function mDelIDB(k){return mIDB().then(db=>new Promise((res)=>{const tx=db.transaction('audio','readwrite');tx.objectStore('audio').delete(k);tx.oncomplete=()=>res();tx.onerror=()=>res();})).catch(()=>{});}
+function openMusic(){musicInit();go('music');}
+function musicAdd(){musicInit();window._muBlob=null;openModal(`<h3>🎵 添加歌曲</h3>
+  <div class="field"><label>歌名</label><input id="mu_t" placeholder="歌名"></div>
+  <div class="field"><label>歌手（选填）</label><input id="mu_a" placeholder="歌手"></div>
+  <div class="field"><label>歌词（选填，带 [00:12.00] 时间轴会跟着高亮滚动）</label><textarea id="mu_l" rows="4" placeholder="把歌词粘进来…"></textarea></div>
+  <div class="field"><label>音乐来源（二选一）</label>
+    <div style="display:flex;gap:8px;margin-top:6px;align-items:center"><button class="minibtn" onclick="mPickFile()">📁 上传本地文件</button><span id="mu_file" style="font-size:12px;color:#888"></span></div>
+    <input id="mu_url" placeholder="或粘贴在线直链（.mp3 / .m4a）" style="margin-top:8px;width:100%;border:1px solid #38383a;border-radius:8px;padding:8px;background:#2c2c2e;color:#eee"></div>
+  <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="musicAddSave()">添加</button></div>`);}
+function mPickFile(){pickFile('audio/*',f=>{window._muBlob=f;const e=$('#mu_file');if(e)e.textContent='已选：'+((f.name||'音频')+'').slice(0,22);const tt=$('#mu_t');if(tt&&!tt.value)tt.value=(f.name||'').replace(/\.[^.]+$/,'');});}
+async function musicAddSave(){musicInit();const t=($('#mu_t').value||'').trim()||'未命名';const a=($('#mu_a').value||'').trim();const l=($('#mu_l').value||'').trim();const url=($('#mu_url').value||'').trim();
+  const id='m'+uid();let src=null;
+  if(window._muBlob){try{await mPut(id,window._muBlob);src={t:'idb'};}catch(e){toast('存储失败，文件可能太大');return;}}
+  else if(url){src={t:'url',url};}
+  else{toast('上传个文件、或贴个链接');return;}
+  S.music.songs.unshift({id,title:t,artist:a,lyrics:l,src});window._muBlob=null;save();closeModal();render();toast('已添加 🎵');}
+function musicDel(id){if(!confirm('删除这首歌？'))return;S.music.songs=S.music.songs.filter(s=>s.id!==id);mDelIDB(id);if(_mCur===id){try{_ma&&_ma.pause();}catch(e){}_mCur=null;_mPlaying=false;}save();render();}
+async function musicPlay(id){musicInit();const s=S.music.songs.find(x=>x.id===id);if(!s)return;
+  if(!_ma){_ma=new Audio();_ma.ontimeupdate=mTick;_ma.onended=mEnded;_ma.onplay=()=>{_mPlaying=true;mBtns();};_ma.onpause=()=>{_mPlaying=false;mBtns();};}
+  _mCur=id;let url;
+  if(s.src&&s.src.t==='url')url=s.src.url;
+  else{const b=await mGet(id);if(!b){toast('音频文件丢了，删掉重新加一下');return;}if(_mUrl){try{URL.revokeObjectURL(_mUrl);}catch(e){}}url=URL.createObjectURL(b);_mUrl=url;}
+  _ma.src=url;_ma.loop=!!S.music.loop;try{await _ma.play();}catch(e){toast('点一下▶播放');}
+  render();}
+function musicToggle(){if(!_ma||!_mCur){const s=S.music&&S.music.songs[0];if(s)musicPlay(s.id);return;}if(_ma.paused)_ma.play().catch(()=>{});else _ma.pause();}
+function musicNext(){const songs=S.music.songs;if(!songs.length)return;let i=songs.findIndex(s=>s.id===_mCur);i=(i+1)%songs.length;musicPlay(songs[i].id);}
+function musicLoop(){musicInit();S.music.loop=!S.music.loop;if(_ma)_ma.loop=!!S.music.loop;save();render();}
+function mEnded(){if(S.music&&S.music.loop){if(_ma){_ma.currentTime=0;_ma.play().catch(()=>{});}}else musicNext();}
+function mFmt(s){s=Math.floor(s||0);if(!isFinite(s))s=0;return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
+function mBtns(){const b=$('#m_play');if(b)b.textContent=_mPlaying?'⏸':'▶';}
+function mTick(){if(!_ma)return;const pb=$('#m_prog');if(pb)pb.style.width=(_ma.duration?(_ma.currentTime/_ma.duration*100):0)+'%';const tt=$('#m_time');if(tt)tt.textContent=mFmt(_ma.currentTime)+' / '+mFmt(_ma.duration||0);mLyricTick();}
+function musicSeek(ev){if(!_ma||!_ma.duration)return;const r=ev.currentTarget.getBoundingClientRect();const p=Math.min(1,Math.max(0,(ev.clientX-r.left)/r.width));_ma.currentTime=p*_ma.duration;}
+function parseLyrics(l){if(!l)return[];const out=[];const re=/\[(\d{1,2}):(\d{2})(?:[.:](\d{1,2}))?\]/g;
+  l.split('\n').forEach(ln=>{let m;const times=[];re.lastIndex=0;while((m=re.exec(ln))){times.push(+m[1]*60+(+m[2])+(m[3]?+('0.'+m[3]):0));}const txt=ln.replace(/\[[^\]]*\]/g,'').trim();if(times.length)times.forEach(t=>out.push({t,txt}));else if(txt)out.push({t:null,txt});});
+  if(out.some(x=>x.t!=null))out.sort((a,b)=>((a.t==null?-1:a.t)-(b.t==null?-1:b.t)));return out;}
+function mLyricTick(){const box=document.getElementById('m_lyrics');if(!box||!_ma||!_mCur)return;const s=S.music.songs.find(x=>x.id===_mCur);if(!s)return;const lines=parseLyrics(s.lyrics);if(!lines.length||!lines.some(x=>x.t!=null))return;
+  let idx=-1;for(let i=0;i<lines.length;i++){if(lines[i].t!=null&&lines[i].t<=_ma.currentTime)idx=i;}
+  const els=box.querySelectorAll('.mlrc');els.forEach((el,i)=>{el.style.color=i===idx?'#fff':'#777';el.style.fontWeight=i===idx?'700':'400';});if(idx>=0&&els[idx])els[idx].scrollIntoView({block:'center',behavior:'smooth'});}
+function renderMusic(){musicInit();const songs=S.music.songs;const cur=songs.find(s=>s.id===_mCur);const sess=S.music.session;const sc=sess&&getC(sess.cid);
+  const list=songs.length?songs.map(s=>`<div class="it" style="${s.id===_mCur?'background:#2a2438':''}"><span style="flex:1;cursor:pointer;color:#eee" onclick="musicPlay('${s.id}')">${s.id===_mCur&&_mPlaying?'🎶':'🎵'} ${esc(s.title)}${s.artist?' <small style="color:#888">- '+esc(s.artist)+'</small>':''}</span><span onclick="musicDel('${s.id}')" style="color:#fa5151;cursor:pointer;padding:0 4px">✕</span></div>`).join(''):'<div class="empty" style="padding:24px;color:#888">还没有歌～点右上角 ＋ 添加（上传文件或贴链接）</div>';
+  let player='';
+  if(cur){const lyr=parseLyrics(cur.lyrics);
+    const cover=sc?`<div style="display:flex;align-items:center;justify-content:center;gap:14px">${av(S.me.avatar,'lg')}<span style="font-size:22px">🎧</span>${av(sc.avatar,'lg')}</div><div style="text-align:center;color:#9ec5fe;font-size:12px;margin-top:8px">和 ${esc(sc.remark||sc.name)} 一起听 · 已连接 ✅</div>`:`<div style="text-align:center;font-size:56px">💿</div>`;
+    player=`<div style="margin:14px;padding:16px;border-radius:18px;background:linear-gradient(160deg,#2a2440,#181423)">
+      ${cover}
+      <div style="text-align:center;margin-top:10px;color:#fff;font-size:17px;font-weight:600">${esc(cur.title)}</div>
+      <div style="text-align:center;color:#999;font-size:12px;min-height:16px">${esc(cur.artist||'')}</div>
+      <div id="m_lyrics" style="height:118px;overflow:auto;margin:12px 0;text-align:center;font-size:14px;line-height:2.1;color:#777">${lyr.length?lyr.map(x=>`<div class="mlrc">${esc(x.txt)||'&nbsp;'}</div>`).join(''):'<div style="color:#666;padding-top:40px">（这首没有歌词）</div>'}</div>
+      <div onclick="musicSeek(event)" style="height:5px;background:#3a3550;border-radius:3px;cursor:pointer;margin:6px 2px"><div id="m_prog" style="height:100%;width:0;background:#ff8fab;border-radius:3px"></div></div>
+      <div id="m_time" style="text-align:center;color:#888;font-size:11px">0:00 / 0:00</div>
+      <div style="display:flex;justify-content:center;align-items:center;gap:30px;margin-top:12px">
+        <span onclick="musicLoop()" style="cursor:pointer;font-size:20px;color:${S.music.loop?'#ff8fab':'#888'}" title="单曲循环">🔂</span>
+        <span id="m_play" onclick="musicToggle()" style="cursor:pointer;font-size:36px;color:#fff">${_mPlaying?'⏸':'▶'}</span>
+        <span onclick="musicNext()" style="cursor:pointer;font-size:24px;color:#ccc" title="下一首">⏭</span>
+      </div>
+      <div style="text-align:center;margin-top:14px">${sess?`<button class="minibtn" onclick="musicEndSession()">结束一起听</button>`:`<button class="minibtn" style="background:#ff6fa5;color:#fff" onclick="musicInvite()">👫 邀请谁一起听</button>`}</div>
+    </div>`;
+    if(sess&&sc){const ms=msgs(sess.cid).filter(m=>!m._call&&(m.type==='text'||m.type==='voice')).slice(-6);
+      const chat=ms.map(m=>{const mine=m.role==='user';const t=msgToText(m);return t?`<div style="display:flex;margin:4px 0;${mine?'justify-content:flex-end':''}"><div style="max-width:76%;padding:6px 10px;border-radius:11px;font-size:13px;background:${mine?'#3a6df0':'#262628'};color:#fff">${esc(t)}</div></div>`:'';}).join('');
+      player+=`<div style="margin:0 14px 8px"><div style="color:#888;font-size:12px;margin-bottom:4px">💬 一边听一边聊</div>${chat||'<div style="color:#666;font-size:12px">说句话开始聊吧～</div>'}<div class="inputbar" style="position:static;padding:8px 0 0"><textarea id="m_chat" rows="1" placeholder="说点啥…"></textarea><button class="send" onclick="musicChatSend()">发</button></div></div>`;}
+  }
+  return `<div class="nav" style="background:#15121c"><span class="l" onclick="back()" style="color:#ccc">‹</span><span class="t" style="color:#eee">🎵 音乐 · 一起听</span><span class="r" onclick="musicAdd()" style="color:#ccc">＋</span></div>
+    <div class="scroll" style="background:#15121c">${player}<div class="section" style="margin:12px"><div style="padding:9px 14px;color:#aaa;font-weight:600">🎶 歌曲列表（${songs.length}）</div>${list}</div><div style="height:20px"></div></div>`;}
+function musicInvite(){if(!_mCur){toast('先点一首歌');return;}pickTarget(musicInviteTo);}
+function musicInviteTo(cid){musicInit();const c=getC(cid);const s=S.music.songs.find(x=>x.id===_mCur);if(!c||!s)return;
+  S.music.session={cid,songId:_mCur};
+  msgs(cid).push({role:'user',type:'musicinvite',title:s.title,artist:s.artist||'',time:Date.now(),id:uid()});
+  save();render();toast('已邀请 '+(c.remark||c.name)+' 一起听🎧');
+  if(!c.blocked)scheduleReply(cid,'[系统：'+S.me.name+'邀请你一起听歌「'+s.title+'」'+(s.artist?'（'+s.artist+'）':'')+'，你接受了，你俩连上一起听。跟着这首歌的氛围或歌名，跟ta聊两句、点评下这歌、或说点应景的情话，温柔自然。]');}
+function joinMusicSession(cid,title){musicInit();const s=S.music.songs.find(x=>x.title===title)||S.music.songs[0];if(!s){openMusic();return;}S.music.session={cid,songId:s.id};save();musicPlay(s.id);go('music');}
+function musicEndSession(){S.music.session=null;save();render();}
+function musicChatSend(){const sess=S.music.session;if(!sess)return;const inp=$('#m_chat');const t=inp?inp.value.trim():'';if(!t)return;inp.value='';
+  msgs(sess.cid).push({role:'user',type:'text',content:t,time:Date.now(),id:uid()});save();render();scheduleReply(sess.cid);}
 function renderHome(){
   if(S.jail&&S.jail.active)return jailLockHome();
   const d=new Date();
@@ -784,7 +872,8 @@ function renderHome(){
   return `<div class="home" style="${S.me.homeBg?'background:url('+S.me.homeBg+') center/cover;':''}">
     <div class="clockw"><div class="hh">${hm()}</div><div class="dd">${d.getMonth()+1}月${d.getDate()}日 ${week}</div></div>
     <div class="hwidget"><div class="hg">${greet} 🐾</div>${S.weather&&S.weather.place?`<div class="hw">${S.weather.place} · ${esc(S.weather.desc)} ${S.weather.temp}°`+(S.weather.rain?' ☔记得带伞':'')+`</div>`:'<div class="hw" onclick="fetchWeather(true)">点这里获取天气 ›</div>'}</div>
-    <div class="apps">
+    <div class="appswipe" id="appswipe" onscroll="homePgScroll(this)">
+     <div class="apppage">
       <div class="app" onclick="openWeChat()">${aIco('wechat','💬','#07c160')}<span>微信</span></div>
       <div class="app" onclick="go('settings')">${aIco('settings','⚙️','#8e8e93')}<span>设置</span></div>
       <div class="app" onclick="go('worldbook')">${aIco('worldbook','📖','#ff9f43')}<span>世界书</span></div>
@@ -801,7 +890,12 @@ function renderHome(){
       <div class="app" onclick="openApp('games')">${aIco('games','🎮','#6c5ce7')}<span>${appLk('games')}游戏大厅</span></div>
       <div class="app" onclick="openApp('mail')">${aIco('mail','📮','#f4a93b',(S.mail||[]).some(m=>!m.read)?'<span style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:#fa5151;border:2px solid #000"></span>':'')}<span>${appLk('mail')}信箱</span></div>
       <div class="app" onclick="openApp('offline')">${aIco('offline','🌹','#e84d6f')}<span>${appLk('offline')}线下约会</span></div>
+     </div>
+     <div class="apppage">
+      <div class="app" onclick="openMusic()">${aIco('music','🎵','linear-gradient(135deg,#ff8fab,#b8a4e3)')}<span>音乐</span></div>
+     </div>
     </div>
+    <div class="pgdots"><span class="pgdot on" id="pgdot0"></span><span class="pgdot" id="pgdot1"></span></div>
     <div class="dock">
       <div class="app" onclick="openWeChat()">${aIco('wechat','💬','#07c160')}</div>
       <div class="app" onclick="openWeChat('contacts')">${aIco('contacts','👤','#54a0ff')}</div>
@@ -809,6 +903,7 @@ function renderHome(){
       <div class="app" onclick="go('settings')">${aIco('settings','⚙️','#8e8e93')}</div>
     </div></div>`;
 }
+function homePgScroll(el){const w=el.clientWidth||1;const p=Math.round((el.scrollLeft||0)/w);const d0=$('#pgdot0'),d1=$('#pgdot1');if(d0)d0.className='pgdot'+(p===0?' on':'');if(d1)d1.className='pgdot'+(p===1?' on':'');}
 function aIco(key,emoji,bg,extra){const ic=S.me.appIcons&&S.me.appIcons[key];
   return `<div class="ic" style="${ic?'background:#222;':'background:'+bg+';'}color:#fff;position:relative;overflow:hidden">${ic?`<img src="${ic}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">`:emoji}${extra||''}</div>`;}
 const HOMEAPPS=[['wechat','💬','微信'],['settings','⚙️','设置'],['worldbook','📖','世界书'],['browser','🌐','浏览器'],['moments','🌸','朋友圈'],['spy','🔍','查他手机'],['shop','🛒','购物'],['calendar','📅','日历'],['x','𝕏','X'],['food','🍔','外卖'],['couple','💞','情侣空间'],['tasks','📋','任务便签'],['games','🎮','游戏大厅'],['mail','📮','信箱'],['offline','🌹','线下约会'],['contacts','👤','通讯录'],['me','🐱','我']];
@@ -2756,7 +2851,7 @@ function coupleSet(){openModal(`<h3>在一起的日子</h3><div class="field"><l
 function addAnniv(){openModal(`<h3>添加纪念日</h3><div class="field"><label>日期</label><input id="an_d" type="date" value="${todayStr()}"></div><div class="field"><label>名称</label><input id="an_t" placeholder="第一次见面 / 订婚…"></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var d=$('#an_d').value,t=$('#an_t').value.trim();if(!d||!t){toast('填日期和名称');return;}S.couple.anniversaries=S.couple.anniversaries||[];S.couple.anniversaries.push({date:d,title:t});S.couple.anniversaries.sort((a,b)=>a.date<b.date?-1:1);save();closeModal();render();})()">保存</button></div>`);}
 function previewOf(m){if(m.role==='assistant'){if(m.type==='familycard')return '[亲属卡邀请]';if(m.type==='namecard')return '[推荐好友：'+(m.cname||'')+']';if(m.type==='dateinvite')return '[约会邀请]';return splitBubbles(m.content)[0]||'[消息]';}
-  return ({text:m.content,image:'[照片]',transfer:'[转账]',redpacket:'[红包]',location:'[位置]',file:'[文件]',spycard:'[查看权限]',dice:'[骰子]',gift:'[礼物]',paycard:'[求代付]',paid:'[已代付]',tweetcard:'[X推文]',dycard:'[抖音视频]',tcollect:'[已收款]',treject:'[已退还]',chatlog:'[聊天记录]',food:'[外卖]',payreject:'[拒绝代付]',voice:'[语音]',sticker:'[表情]',namecard:'[名片]',familybuy:'[亲属卡消费]',familyreq:'[亲属卡申请]',weblink:'[网页]',dateinvite:'[约会邀请]',sys:m.content})[m.type]||'[消息]';}
+  return ({text:m.content,image:'[照片]',transfer:'[转账]',redpacket:'[红包]',location:'[位置]',file:'[文件]',spycard:'[查看权限]',dice:'[骰子]',gift:'[礼物]',paycard:'[求代付]',paid:'[已代付]',tweetcard:'[X推文]',dycard:'[抖音视频]',tcollect:'[已收款]',treject:'[已退还]',chatlog:'[聊天记录]',food:'[外卖]',payreject:'[拒绝代付]',voice:'[语音]',sticker:'[表情]',namecard:'[名片]',familybuy:'[亲属卡消费]',familyreq:'[亲属卡申请]',weblink:'[网页]',dateinvite:'[约会邀请]',musicinvite:'[🎧 一起听歌]',sys:m.content})[m.type]||'[消息]';}
 
 let _ctSearch='';
 function ctSearchInput(v){_ctSearch=v;const box=$('#ctlist');if(box)box.innerHTML=ctListHTML();}
@@ -3122,6 +3217,7 @@ function bubbleRow(c,m){
   const ts=m.time?`<div class="msgt">${hm(m.time)}</div>`:'';
   return `<div class="msg ${me?'me':'them'}">${tick}<span ${h}>${av(me?S.me.avatar:c.avatar)}</span><div class="col" ${h}>${inner}${ts}</div></div>`;}
 function buildPart(c,m,me){
+  if(m.type==='musicinvite')return `<div class="card" style="cursor:pointer" onclick="event.stopPropagation();joinMusicSession('${c.id}','${(m.title||'').replace(/'/g,'')}')"><div class="cpay" style="background:linear-gradient(135deg,#ff8fab,#b8a4e3)"><div class="big">🎧</div><div><div class="t1">一起听歌</div><div class="t2">${esc(m.title||'')}${m.artist?' · '+esc(m.artist):''}</div></div></div><div class="cfoot">🎵 点击进入一起听</div></div>`;
   if(m.type==='image')return `<div class="imgmsg" onclick="event.stopPropagation();viewImg('${m.src}')"><img src="${m.src}"></div>`;
   if(m.type==='transfer')return payCard('t',m,me);
   if(m.type==='redpacket')return payCard('r',m,me);
