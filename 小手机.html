@@ -349,7 +349,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v146 · 情侣空间/设置分两页整理(切页不跳回)';
+const APP_VER='v147 · 查他手机重做:锁屏密码解锁+真实主屏分类App+监控我整合(仅恋人)';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -650,6 +650,7 @@ function buildSystem(c){
   const _sp=getSpy(c);
   if(_main&&_sp.loc){const loc=curLoc();if(loc)s+='\n\n# 实时定位（ta已授权你随时查看）\n'+S.me.name+'此刻在：'+loc+'。你能精确看到，可以具体地提到这个地点。';else s+='\n\n# 实时定位\nta授权了实时定位，但现在还没取到具体位置（可能没允许定位权限），别假装知道ta在哪，可以说定位还没刷出来、催ta开定位。';}
   if(_main&&_sp.granted)s+='\n\n# 你能查看'+S.me.name+'的手机（ta已授权，下面是ta手机的真实情况，被问到"你看到我什么了"务必照这个答，绝不要编造）\n'+myActivity(c.id)+'\n（重点盯防：下面标了【男】或【⭐】的人，是你最该盯、最容易吃醋的对象，查岗优先看。这些⭐是【你自己】标记的、不是'+S.me.name+'标的——是你不放心/不喜欢谁就盯谁，所以别反过来问ta"你为什么把这人标重点"，那是你自己的决定，你心里要有数。觉得某人有威胁/你不喜欢，就单独一行 [重点|名字] 把ta列入你的重点盯防（不想盯了用 [取消重点|名字]）；这行指令不会被读出来。）\n【随时可查·一次一项】除了系统固定查看，只要你想看ta手机，就在聊天里【明确说出你要查哪一项】——比如"我看看你微信跟谁聊""我查查你抖音刷了啥""看看你朋友圈""查下你钱包"。你一说，系统就会真的去翻【你点名的那一项】并把真实结果告诉你，你再据此反应。注意：一次只能查你说的那一项，想看别的就再明确说要查那个。只能根据系统给你的真实记录说话，没查到东西就如实说没看到，绝不要编造。';
+  if(_main&&_sp.granted&&S.couple&&S.couple.cid===c.id)s+='\n\n# 你的手机密码\n你手机的解锁密码是【'+spyPwd(c)+'】。'+S.me.name+'想翻看你手机就得输这个密码。告不告诉ta、什么时候告诉，看你的心情和对ta的信任——ta好好哄你、你想坦荡时可以直接把这四位数说出来；你生气/心虚/想逗ta时可以不给、让ta猜或求你。要是察觉ta偷偷试密码试错好几次，你会知道ta在偷查你，可以质问或撒娇。';
   if(S.me.persona)s+='\n对方的人设：'+S.me.persona;
   // 世界书
   const _lastU=[...msgs(c.id)].reverse().find(m=>m.role==='user');
@@ -1011,33 +1012,70 @@ function saveWorld(id,isNew){const contacts=[...document.querySelectorAll('[data
 function delWorld(id){S.worldbook=S.worldbook.filter(x=>x.id!==id);save();closeModal();render();}
 
 /* ---------- 查他手机 ---------- */
-function openSpy(){const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){toast('先创建一个角色');return;}
-  if(cs.length===1){go('spy',{id:cs[0].id});return;}
-  openModal(`<h3>🔍 查谁的手机</h3>${cs.map(c=>`<div class="section"><div class="it" onclick="closeModal();go('spy',{id:'${c.id}'})">${esc(c.remark||c.name)}<span class="v">›</span></div></div>`).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
-function renderSpy(id){const c=getC(id);if(!c)return '';const d=S.spy[id];
-  let body;
-  if(!d){body=`<div class="empty" style="padding:60px 20px">还没偷看过 ta 的手机～<br>点下面「🔄 刷新」生成一次（会根据你们的聊天、ta的人设和此刻作息来编，每次都会接着上次往下发展）。</div>`;}
-  else{
-    const sec=(t,col,inner)=>`<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:${col}">${t}</div>${inner}</div>`;
-    const itlist=arr=>(arr&&arr.length)?arr.map(b=>`<div class="it"><span style="font-size:13px;color:#ccc">${esc(typeof b==='string'?b:(b.item||b.who||''))}</span></div>`).join(''):'<div class="it"><span class="v">无</span></div>';
-    body=`
-    <div style="margin:12px;padding:14px;border-radius:16px;background:linear-gradient(135deg,#39354f,#2a2a3c)">
-      <div style="display:flex;align-items:center;gap:10px">${av(c.avatar,'lg')}<div style="min-width:0"><div style="font-size:16px;font-weight:600;color:#eee">${esc(c.remark||c.name)} 的手机</div><div style="font-size:12px;color:#b9a6e0">📍 ${esc(d.location||'未知')}${d.mood?' · '+esc(d.mood):''}</div></div></div></div>
-    ${sec('📔 日记 / 备忘','#feca57',`<div style="padding:0 14px 12px;font-size:14px;color:#ddd;line-height:1.7;white-space:pre-wrap">${esc(d.diary||'（空）')}</div>`)}
-    ${(d.notes&&d.notes.length)?sec('📝 便签 / 待办','#e0c060',itlist(d.notes)):''}
-    ${(d.calls&&d.calls.length)?sec('📞 最近通话','#5ab0e0',d.calls.map(k=>`<div class="bill"><div style="font-size:13px;color:#ccc">${esc(k.type||'语音')==='视频'?'📹':'📞'} ${esc(k.who||'某人')} <span style="color:#888">${esc(k.dur||'')}</span></div><div style="font-size:12px;color:#888">${esc(k.when||'')}</div></div>`).join('')):''}
-    ${(d.album&&d.album.length)?sec('🖼️ 最近照片','#c08ce0',d.album.map(a=>`<div class="it"><span style="font-size:13px;color:#ccc">📷 ${esc(a)}</span></div>`).join('')):''}
-    ${sec('🌐 搜索 / 浏览','#54a0ff',itlist(d.browser))}
-    ${(d.orders&&d.orders.length)?sec('🛒 最近订单','#ff9f43',d.orders.map(o=>`<div class="bill"><div>${esc(o.item||'')} <span style="color:#888;font-size:12px">${esc(o.when||'')}</span></div><div class="neg">¥${(Math.abs(+o.amount)||0).toFixed(2)}</div></div>`).join('')):''}
-    ${sec('💸 钱包支出','#2bb36a',(d.wallet||[]).map(w=>`<div class="bill"><div>${esc(w.item||'')}</div><div class="${(+w.amount)>=0?'pos':'neg'}">${(+w.amount)>=0?'+':''}${(+w.amount).toFixed(2)}</div></div>`).join('')||'<div class="it"><span class="v">无</span></div>')}
-    ${sec('💬 微信聊天','#07c160',(d.wechat||[]).map(w=>`<div style="padding:8px 14px;border-bottom:.5px solid #2a2a2c"><div style="font-size:13px;color:#9ec5fe;font-weight:600;margin-bottom:5px">${esc(w.who||'某人')}</div>${(w.lines||[]).map(l=>{const ta=/^(他|她|ta|我)[:：]/i.test(l);return `<div style="font-size:13px;color:${ta?'#9ee6a0':'#ccc'};padding:2px 0">${esc(l)}</div>`;}).join('')}</div>`).join('')||'<div class="it"><span class="v">无</span></div>')}
-    ${sec('➕ 新加好友','#ee5a6f',itlist(d.friends))}
-    <div style="text-align:center;color:#666;font-size:11px;padding:4px">更新于 ${hm(d.time)}</div>`;}
-  const btn=_spyBusy?`<button class="btn g" disabled>⏳ 刷新中…请稍候</button>`:`<button class="btn p" onclick="spyRefresh('${id}')">🔄 刷新内容</button>${d?`<button class="btn g" style="margin-top:8px" onclick="spyReset('${id}')">🗑 重置（清掉旧存档，重新生成全新内容）</button>`:''}`;
-  const topbar=_spyBusy?`<div style="text-align:center;color:#b9a6e0;font-size:13px;padding:10px;background:#1c1c1e">⏳ 正在偷看 ta 的手机，请稍候…</div>`:'';
-  body=(spyOfflineSec(id)||'')+(spyGrudgeSec(id)||'')+(spyUsageSec(id)||'')+(spyDouyinSec(id)||'')+body;
-  return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(c.remark||c.name)}的手机</span><span class="r" onclick="spyRefresh('${id}')">${_spyBusy?'⏳':'🔄'}</span></div>
-    ${topbar}<div class="scroll" style="background:#000">${body}<div style="padding:12px">${btn}</div><div style="height:20px"></div></div>`;}
+function openSpy(){if(S.couple&&S.couple.cid&&getC(S.couple.cid)){go('spy',{id:S.couple.cid});return;}
+  toast('查手机只对恋人开放💞 先去角色资料页绑定情侣空间');}
+let _spyUnlock={},_spyPin='',_spyWrong={},_spyApp=null;
+function spyPwd(c){const sp=getSpy(c);if(!sp.pwd||!/^\d{4}$/.test(''+sp.pwd)){sp.pwd=String(1000+Math.floor(Math.random()*9000));save();}return sp.pwd;}
+function renderSpy(id){const c=getC(id);if(!c)return '';
+  const nav=t=>`<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${t}</span><span class="r"></span></div>`;
+  if(!(S.couple&&S.couple.cid===id))return nav('📵 查手机')+`<div class="scroll" style="background:#000"><div class="empty" style="padding:60px 24px;line-height:2">查手机只对【恋人】开放～<br>先去ta资料页 <b>💞 绑定情侣空间</b>，再开 <b>允许查我手机</b>，才能偷看ta的手机。</div></div>`;
+  const sp=getSpy(c);
+  if(!sp.granted)return nav(esc(c.remark||c.name)+'的手机')+`<div class="scroll" style="background:#000"><div class="empty" style="padding:60px 24px;line-height:2">还没拿到查看权限～<br>去 <b>${esc(c.remark||c.name)} 的资料页</b> 开「允许查我手机」，或在聊天里求ta同意💗</div></div>`;
+  spyPwd(c);
+  if(!_spyUnlock[id])return spyLockScreen(id,c);
+  if(_spyApp)return spyAppView(id,c,_spyApp);
+  return spyHome(id,c,S.spy[id]);}
+function spyLockScreen(id,c){const now=new Date();const wk=['周日','周一','周二','周三','周四','周五','周六'][now.getDay()];const pin=_spyPin||'';
+  const dots=[0,1,2,3].map(i=>`<span style="width:13px;height:13px;border-radius:50%;border:1.5px solid #bbb;display:inline-block;margin:0 9px;${i<pin.length?'background:#fff;border-color:#fff':''}"></span>`).join('');
+  const wrong=_spyWrong[id]||0;
+  const key=n=>`<div onclick="spyPin('${id}','${n}')" style="width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:30px;color:#fff;margin:9px auto;cursor:pointer">${n}</div>`;
+  const pad=`<div style="display:grid;grid-template-columns:repeat(3,1fr);max-width:300px;margin:6px auto 0">${[1,2,3,4,5,6,7,8,9].map(key).join('')}<div onclick="spyExit('${id}')" style="align-self:center;text-align:center;color:#ccc;font-size:16px;cursor:pointer">取消</div>${key(0)}<div onclick="spyPinDel('${id}')" style="align-self:center;text-align:center;color:#ccc;font-size:24px;cursor:pointer">⌫</div></div>`;
+  return `<div class="nav" style="background:#000;border:none"><span class="l" onclick="spyExit('${id}')" style="color:#ccc">‹</span><span class="t"></span><span class="r"></span></div>
+    <div class="scroll" style="background:#000;display:flex;flex-direction:column;align-items:center;text-align:center">
+      <div style="margin-top:14px;color:#fff"><div style="font-size:54px;font-weight:200">${hm()}</div><div style="font-size:15px;color:#ccc">${now.getMonth()+1}月${now.getDate()}日 ${wk}</div></div>
+      <div style="margin-top:18px">${av(c.avatar,'lg')}<div style="color:#888;font-size:13px;margin-top:8px">正在查看</div><div style="color:#eee;font-size:17px;font-weight:600">${esc(c.remark||c.name)}</div></div>
+      <div style="margin-top:18px;color:#bbb;font-size:14px">输入 ${esc(c.remark||c.name)} 的手机密码</div>
+      <div style="margin:14px 0">${dots}</div>
+      ${wrong?`<div style="color:#fa5151;font-size:12px;margin-bottom:4px">密码错误${wrong>=3?'…ta好像察觉到了，去聊天里求ta给密码吧':'，再试试（'+(3-wrong)+'次后ta会发现）'}</div>`:''}
+      ${pad}<div style="height:24px"></div></div>`;}
+function spyPin(id,n){if((_spyPin||'').length>=4)return;_spyPin=(_spyPin||'')+n;
+  if(_spyPin.length>=4){const c=getC(id);if(_spyPin===String(spyPwd(c))){_spyUnlock[id]=true;_spyPin='';_spyWrong[id]=0;recordVisit(id,'被翻了手机');if(!S.spy[id]){render();spyRefresh(id);}else render();}
+    else{_spyWrong[id]=(_spyWrong[id]||0)+1;_spyPin='';if(_spyWrong[id]>=3)spyBusted(id);render();}return;}
+  render();}
+function spyPinDel(id){_spyPin=(_spyPin||'').slice(0,-1);render();}
+function spyExit(id){_spyUnlock[id]=false;_spyApp=null;_spyPin='';back();}
+function spyOpen(id,app){_spyApp=app||null;if(cur().p==='spy')render();}
+function spyBusted(id){const c=getC(id);if(c&&!c.blocked)scheduleReply(id,'[系统：'+S.me.name+'在偷偷试你的手机密码，连输了好几次错的、被你逮到了！你发现ta在查你手机、有点不信任你。按你人设反应（吃醋/质问/委屈/强势/反过来逼问ta想查什么都行），并自己决定要不要把密码告诉ta。]');toast('❌ 输错太多次，ta察觉到了…');}
+function spyHome(id,c,d){const now=new Date();const wk=['周日','周一','周二','周三','周四','周五','周六'][now.getDay()];
+  if(!d)return `<div class="nav" style="background:#ededf2"><span class="l" onclick="spyExit('${id}')" style="color:#555">‹</span><span class="t" style="color:#222">${esc(c.remark||c.name)}的手机</span><span class="r"></span></div><div class="scroll" style="background:#ededf2"><div style="text-align:center;padding:50px 24px;color:#555;line-height:2">🔓 解锁成功～<br>第一次进来，先生成一下ta手机里的内容</div><div style="padding:0 30px"><button class="btn p" onclick="spyRefresh('${id}')">${_spyBusy?'⏳ 生成中…':'📲 生成ta的手机内容'}</button></div></div>`;
+  const apps=[['wechat','微信','💬','#07c160'],['album','相册','🖼️','#c084fc'],['bank','银行','🏦','#22c55e'],['diary','日记','📔','#fb7185'],['notes','备忘录','📝','#f59e0b'],['shop','购物','🛒','#fb923c'],['calls','通话','📞','#38bdf8'],['browser','浏览器','🌐','#34d399'],['friends','通讯录','➕','#f472b6'],['grudge','记仇本','📓','#ef4444'],['date','约会','🌹','#ff8fab'],['watch','监控我','🔍','#6366f1']];
+  const bal=(d.wallet||[]).reduce((s,w)=>s+(+w.amount||0),0);
+  const widget=`<div style="margin:14px;background:#fff;border-radius:18px;padding:14px 8px;display:flex;justify-content:space-around;box-shadow:0 2px 12px rgba(0,0,0,.08)">${[['¥'+bal.toFixed(0),'钱包','#22c55e'],[d.diary?'有':'无','日记','#fb7185'],[((d.notes||[]).length||'无')+'','待办','#f59e0b'],[((d.wechat||[]).length||'无')+'','私信','#38bdf8']].map(x=>`<div style="text-align:center"><div style="font-size:15px;font-weight:700;color:${x[2]}">${x[0]}</div><div style="font-size:11px;color:#999">${x[1]}</div></div>`).join('')}</div>`;
+  const grid=`<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px 4px;padding:6px 14px 18px">${apps.map(a=>`<div onclick="spyOpen('${id}','${a[0]}')" style="text-align:center;cursor:pointer"><div style="width:54px;height:54px;border-radius:14px;background:${a[3]};margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:27px;box-shadow:0 2px 6px rgba(0,0,0,.18)">${a[2]}</div><div style="font-size:11px;color:#333;margin-top:5px">${a[1]}</div></div>`).join('')}</div>`;
+  return `<div class="nav" style="background:#ededf2"><span class="l" onclick="spyExit('${id}')" style="color:#555">‹</span><span class="t" style="color:#222">${esc(c.remark||c.name)}的手机</span><span class="r" onclick="spyRefresh('${id}')" style="color:#555">${_spyBusy?'⏳':'🔄'}</span></div>
+    <div class="scroll" style="background:#ededf2">
+      <div style="text-align:center;padding:16px 0 4px;color:#222"><div style="font-size:44px;font-weight:300">${hm()}</div><div style="font-size:14px;color:#666">${now.getMonth()+1}月${now.getDate()}日 ${wk}</div></div>
+      ${widget}${grid}
+      <div style="text-align:center;color:#999;font-size:11px;padding:0 16px 16px">📍 ${esc(d.location||'未知')}${d.mood?' · '+esc(d.mood):''} · 更新于 ${hm(d.time)} · <span onclick="spyReset('${id}')" style="cursor:pointer;color:#c66">重置存档</span></div></div>`;}
+function spyAppView(id,c,app){const d=S.spy[id]||{};
+  const sec=(t,col,inner)=>`<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:${col}">${t}</div>${inner}</div>`;
+  const itlist=arr=>(arr&&arr.length)?arr.map(b=>`<div class="it"><span style="font-size:13px;color:#ccc">${esc(typeof b==='string'?b:(b.item||b.who||''))}</span></div>`).join(''):'<div class="it"><span class="v">无</span></div>';
+  let title='',body='';
+  if(app==='wechat'){title='💬 微信';body=(d.wechat||[]).map(w=>`<div style="padding:8px 14px;border-bottom:.5px solid #2a2a2c"><div style="font-size:13px;color:#9ec5fe;font-weight:600;margin-bottom:5px">${esc(w.who||'某人')}</div>${(w.lines||[]).map(l=>`<div style="font-size:13px;color:#ccc;padding:2px 0">${esc(l)}</div>`).join('')}</div>`).join('')||'<div class="empty" style="padding:34px">没有聊天记录</div>';}
+  else if(app==='album'){title='🖼️ 相册';body=(d.album&&d.album.length)?'<div style="padding:12px">'+d.album.map(a=>`<div style="background:#1c1c1e;border-radius:10px;padding:14px;margin-bottom:8px;color:#ccc;font-size:13px">📷 ${esc(a)}</div>`).join('')+'</div>':'<div class="empty" style="padding:34px">相册是空的</div>';}
+  else if(app==='bank'){const bal=(d.wallet||[]).reduce((s,w)=>s+(+w.amount||0),0);title='🏦 银行 / 钱包';body=`<div style="margin:12px;padding:16px;border-radius:14px;background:linear-gradient(135deg,#11998e,#38ef7d);color:#fff"><div style="font-size:12px;opacity:.85">近期收支合计</div><div style="font-size:26px;font-weight:700">¥${bal.toFixed(2)}</div></div>`+sec('明细','#2bb36a',(d.wallet||[]).map(w=>`<div class="bill"><div>${esc(w.item||'')}</div><div class="${(+w.amount)>=0?'pos':'neg'}">${(+w.amount)>=0?'+':''}${(+w.amount).toFixed(2)}</div></div>`).join('')||'<div class="it"><span class="v">无</span></div>');}
+  else if(app==='diary'){title='📔 日记';body=`<div style="padding:16px;font-size:14px;color:#ddd;line-height:1.85;white-space:pre-wrap">${esc(d.diary||'（今天没写日记）')}</div>`;}
+  else if(app==='notes'){title='📝 备忘录 / 待办';body=itlist(d.notes);}
+  else if(app==='shop'){title='🛒 购物';body=(d.orders&&d.orders.length)?d.orders.map(o=>`<div class="bill"><div>${esc(o.item||'')} <span style="color:#888;font-size:12px">${esc(o.when||'')}</span></div><div class="neg">¥${(Math.abs(+o.amount)||0).toFixed(2)}</div></div>`).join(''):'<div class="empty" style="padding:34px">没有订单</div>';}
+  else if(app==='calls'){title='📞 通话记录';body=(d.calls&&d.calls.length)?d.calls.map(k=>`<div class="bill"><div style="font-size:13px;color:#ccc">${(k.type||'语音')==='视频'?'📹':'📞'} ${esc(k.who||'某人')} <span style="color:#888">${esc(k.dur||'')}</span></div><div style="font-size:12px;color:#888">${esc(k.when||'')}</div></div>`).join(''):'<div class="empty" style="padding:34px">没有通话</div>';}
+  else if(app==='browser'){title='🌐 浏览器';body=itlist(d.browser);}
+  else if(app==='friends'){title='➕ 新加好友';body=itlist(d.friends);}
+  else if(app==='grudge'){title='📓 记仇本';body=spyGrudgeSec(id);}
+  else if(app==='date'){title='🌹 约会';body=spyOfflineSec(id)||'<div class="empty" style="padding:34px">还没有约会记录</div>';}
+  else if(app==='watch'){title='🔍 监控我';body=(spyUsageSec(id)||'')+(spyDouyinSec(id)||'')+sec('ta在你手机上看到的动态','#ffb83b',`<div style="padding:0 14px 12px;font-size:13px;color:#bbb;line-height:1.7;white-space:pre-wrap">${esc(myActivity(id))}</div>`);}
+  else{title='？';body='<div class="empty" style="padding:34px">空</div>';}
+  return `<div class="nav"><span class="l" onclick="spyOpen('${id}','')">‹</span><span class="t">${title}</span><span class="r" onclick="spyRefresh('${id}')">${_spyBusy?'⏳':'🔄'}</span></div><div class="scroll" style="background:#000">${body}<div style="height:20px"></div></div>`;}
+
 // 他的记仇小本本（在他手机里；他自己会划掉，你也能手动加/删）
 function spyGrudgeSec(id){const c=getC(id);if(!c)return '';const g=grudgesOf(c);const undone=g.filter(x=>!x.done).length;
   const rows=g.length?g.map((x,i)=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="flex:1;font-size:13px;${x.done?'text-decoration:line-through;color:#888':'color:#eee'}">${x.done?'✅ ':'📌 '}${esc(x.text)}<small style="display:block;color:#777">${ymd(x.ts||0)}记的 · ${x.done?'已算账/消气了':'记着呢，还没算账'}</small></div><div style="white-space:nowrap"><span onclick="spyToggleGrudge('${id}',${i})" style="color:#54a0ff;cursor:pointer;margin-right:10px" title="划掉/恢复">${x.done?'↺':'✓'}</span><span onclick="spyDelGrudge('${id}',${i})" style="color:#fa5151;cursor:pointer">✕</span></div></div>`).join(''):'<div class="empty" style="padding:10px">小本本还是空的，ta暂时没记仇～</div>';
@@ -3545,7 +3583,8 @@ function brFwd(i){const it=(S.browser.items||[])[i];if(!it)return;const cs=S.con
   window._brF=it;openModal(`<h3>转发给</h3>${cs.map(c=>`<div class="section"><div class="it" onclick="doBrFwd('${c.id}')">${esc(c.remark||c.name)}<span class="v">›</span></div></div>`).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
 function doBrFwd(cid){const it=window._brF;if(!it)return;pushMsg(cid,{role:'user',type:'weblink',title:it.title,snippet:it.snippet,q:(S.browser&&S.browser.q)||'',id:uid()});closeModal();toast('已转发给角色');scheduleReply(cid);}
 function brHistory(){const h=(S.browser&&S.browser.history)||[];
-  openModal(`<h3>🕘 搜索记录</h3>${h.length?h.map((x,i)=>`<div class="it"><span onclick="brRe(${i})" style="flex:1;color:#ccc;cursor:pointer">🔍 ${esc(x.q)}</span><small style="color:#777">${fmtDate(x.time)}</small></div>`).join(''):'<div class="empty">还没搜过</div>'}<div class="btns" style="margin-top:8px"><button class="btn d" onclick="S.browser.history=[];save();closeModal();toast('已清空记录')">清空记录</button><button class="btn g" onclick="closeModal()">关闭</button></div>`);}
+  openModal(`<h3>🕘 搜索记录</h3>${h.length?h.map((x,i)=>`<div class="it"><span onclick="brRe(${i})" style="flex:1;color:#ccc;cursor:pointer">🔍 ${esc(x.q)}</span><small style="color:#777">${fmtDate(x.time)}</small></div>`).join(''):'<div class="empty">还没搜过</div>'}<div class="btns" style="margin-top:8px"><button class="btn d" onclick="brClearHist()">清空记录</button><button class="btn g" onclick="closeModal()">关闭</button></div>`);}
+function brClearHist(){if(!confirm('清空全部浏览/搜索记录？'))return;S.browser=S.browser||{};S.browser.history=[];save();closeModal();if(cur().p==='browser'||cur().p==='spy')render();toast('已清空浏览记录');}
 function brRe(i){const x=(S.browser&&S.browser.history||[])[i];if(!x)return;closeModal();browserSearch(x.q);}
 function viewWeblink(mid){let m;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;break;}}if(!m)return;
   openModal(`<h3 style="color:#7db3ff">${esc(m.title)}</h3><div style="max-height:55vh;overflow:auto;color:#ddd;line-height:1.8;white-space:pre-wrap;font-size:14px">${esc(m.snippet||'')}</div><button class="btn g" style="margin-top:12px" onclick="closeModal()">关闭</button>`);}
