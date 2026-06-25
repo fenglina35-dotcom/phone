@@ -349,7 +349,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v143 · 任务上限/分手拉黑必关小黑屋/记仇满8关/通话不发消息/清聊天保留通话';
+const APP_VER='v144 · 群聊一条条发/选谁谁都回/群红包转账 + 报备不再自动发消息';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -841,11 +841,11 @@ setInterval(usageTick,1000);
 function sleepStart(){if(!S.me.sleep)S.me.sleep={active:null,records:[]};S.me.sleep.active=Date.now();save();render();toast('🌙 开始睡眠计时，好梦~');}
 function reportNotify(note){if(!(S.couple&&S.couple.cid))return;const c=getC(S.couple.cid);if(c&&!c.blocked)scheduleReply(c.id,note);}
 function reportStart(type){type=(''+(type||'')).trim().slice(0,16);if(!type)return;if(!S.me.report)S.me.report={active:null,log:[]};if(S.me.report.active)reportEnd(true);
-  S.me.report.active={type,start:Date.now()};save();render();toast('📍 已报备：'+type);
-  reportNotify('[系统：'+S.me.name+'刚报备说ta去「'+type+'」了（开始计时）。按你人设回应一句（叮嘱/吃醋/宠/催ta快回来都行，简短点）。]');}
+  S.me.report.active={type,start:Date.now()};save();render();toast('📍 已报备：'+type);}
+  // 报备只默默计时、不主动给角色发消息；他查岗/聊天时会从上下文知道你在干嘛（更真实）
 function reportCustom(){const t=prompt('报备你要去干嘛：','');if(t==null)return;reportStart(t);}
-function reportEnd(silent){const rp=S.me.report;if(!rp||!rp.active)return;const a=rp.active,end=Date.now();rp.log=rp.log||[];rp.log.unshift({type:a.type,start:a.start,end});if(rp.log.length>40)rp.log=rp.log.slice(0,40);rp.active=null;save();if(!silent)render();
-  if(!silent)reportNotify('[系统：'+S.me.name+'报备结束了——ta「'+a.type+'」一共用了 '+sleepDurTxt(end-a.start)+'（'+hm(a.start)+'→'+hm(end)+'）。这个时长合不合理你自己判断（正常吃饭/洗澡不会太久），回应一句。]');}
+function reportEnd(silent){const rp=S.me.report;if(!rp||!rp.active)return;const a=rp.active,end=Date.now();rp.log=rp.log||[];rp.log.unshift({type:a.type,start:a.start,end});if(rp.log.length>40)rp.log=rp.log.slice(0,40);rp.active=null;save();if(!silent)render();}
+  // 报备结束也不主动发消息，只记进报备记录；他查的时候自己看时长合不合理
 function reportDel(i){if(!S.me.report||!S.me.report.log)return;S.me.report.log.splice(i,1);save();render();}
 function sleepEnd(){const sl=S.me.sleep;if(!sl||!sl.active)return;sl.records=sl.records||[];sl.records.unshift({start:sl.active,end:Date.now()});if(sl.records.length>60)sl.records=sl.records.slice(0,60);sl.active=null;save();render();toast('☀️ 醒啦，已记录这次睡眠');}
 function sleepDel(i){if(!S.me.sleep||!S.me.sleep.records)return;if(!confirm('删掉这条睡眠记录？'))return;S.me.sleep.records.splice(i,1);save();render();}
@@ -1801,7 +1801,7 @@ function wxChats(){
   return html+'</div>';
 }
 function gpreview(m){const nm=m.senderId==='me'?S.me.name:(getC(m.senderId)?getC(m.senderId).name:'?');return nm+'：'+gmText(m);}
-function gmText(m){return m.type==='text'?m.content:'[消息]';}
+function gmText(m){return m.type==='text'?m.content:m.type==='transfer'?'[转账]':m.type==='redpacket'?'[红包]':'[消息]';}
 /* ===== 群聊 ===== */
 function chatAddMenu(){openModal(`<h3>＋</h3>
   <button class="btn p" style="margin-bottom:8px" onclick="closeModal();editContact()">🧑 新建角色</button>
@@ -1826,7 +1826,13 @@ function renderGroup(id){const g=S.groups.find(x=>x.id===id);if(!g)return '';
       <button class="send" onclick="sendGroup('${id}')">发送</button></div>`;}
 function gbubble(g,m){const me=m.senderId==='me';if(m.type==='sys')return `<div class="tstamp"><span>${esc(m.content)}</span></div>`;
   const c=me?null:getC(m.senderId);const av0=me?av(S.me.avatar):av(c?c.avatar:'🙂');const nm=me?'':`<div style="font-size:11px;color:#888;margin-bottom:2px">${esc(c?c.name:'?')}</div>`;
-  return `<div class="msg ${me?'me':'them'}">${av0}<div class="col">${nm}<div class="bubble">${esc(m.content)}</div><div class="msgt">${hm(m.time)}</div></div></div>`;}
+  let inner;
+  if(m.type==='transfer'||m.type==='redpacket'){const rp=m.type==='redpacket';const got=m.received;
+    inner=`<div class="card" style="cursor:pointer" onclick="gGrab('${g.id}','${m.id}')"><div class="cpay" style="background:${rp?(got?'#caa15a':'#f0a73b'):(got?'#7fae8f':'#36b06a')}"><div class="big">${rp?'🧧':'💸'}</div><div><div class="t1">¥${(+m.amount).toFixed(2)}</div><div class="t2">${esc(m.note||(rp?'恭喜发财':'给你转账'))}</div></div></div><div class="cfoot">${got?'已领取':(rp?'点击领取红包':'点击收款')}</div></div>`;
+  }else inner=`<div class="bubble">${esc(m.content)}</div>`;
+  return `<div class="msg ${me?'me':'them'}">${av0}<div class="col">${nm}${inner}<div class="msgt">${hm(m.time)}</div></div></div>`;}
+function gGrab(gid,mid){const g=S.groups.find(x=>x.id===gid);if(!g)return;const m=g.msgs.find(x=>x.id===mid);if(!m||m.received||(m.type!=='transfer'&&m.type!=='redpacket'))return;
+  m.received=true;const nm=getC(m.senderId)?getC(m.senderId).name:'群友';addBill('in',+m.amount||0,nm+(m.type==='redpacket'?'的群红包':'的群转账'));save();render();toast('已领取 ¥'+(+m.amount).toFixed(2)+' 💰');}
 function gNotify(g,c){if(cur().p==='group'&&cur().id===g.id)return;playDing();const b=$('#msgBanner');if(!b)return;const lm=g.msgs[g.msgs.length-1];
   b.innerHTML=`${g.avatar?av(g.avatar,'sm'):'<div class="avatar sm" style="background:#7c6cc0">👥</div>'}<div style="flex:1;min-width:0"><div class="bn">${esc(g.name)}</div><div class="bm">${esc(c.name+'：'+(lm?gmText(lm):''))}</div></div>`;
   b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';go('group',{id:g.id});};clearTimeout(_bannerT);_bannerT=setTimeout(()=>{b.className='msgbanner';},4500);}
@@ -1834,21 +1840,39 @@ function sendGroup(id){const g=S.groups.find(x=>x.id===id);const ta=$('#ginput')
   g.msgs.push({senderId:'me',role:'user',type:'text',content:t,time:Date.now(),id:uid()});save();render();aiGroupReply(id,t);}
 function groupAt(id){const g=S.groups.find(x=>x.id===id);openModal(`<h3>@ 谁</h3>${g.members.map(cid=>{const c=getC(cid);return c?`<div class="section"><div class="it" onclick="closeModal();var ta=$('#ginput');ta.value+='@${esc(c.name)} ';ta.focus()">${esc(c.name)}</div></div>`:'';}).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function gContext(g,c){const others=g.members.filter(x=>x!==c.id).map(x=>getC(x)).filter(Boolean).map(x=>x.name);
-  let s='\n\n# 你在群聊「'+g.name+'」里\n群里有：'+S.me.name+'(你们共同的恋人/主人)、'+others.join('、')+'。这是多人群聊，你可以 @别人、和群友拌嘴或吃醋（尤其'+S.me.name+'对别人好时），回复 '+(g.msgMin||1)+'到'+(g.msgMax||2)+' 条短消息，口语、符合你的人设和心情值。';
+  let s='\n\n# 你在群聊「'+g.name+'」里\n群里有：'+S.me.name+'(你们共同的恋人/主人)、'+others.join('、')+'。这是多人群聊，你可以 @别人、和群友拌嘴或吃醋（尤其'+S.me.name+'对别人好时）。\n- 像发微信一样【一条一条地说】，每条短消息单独占一行（换行分隔），别堆成一大段；这次大约回 '+(g.msgMin||1)+'到'+(g.msgMax||2)+' 条，口语、符合你的人设和心情值。\n- 你也能在群里【发红包或转账】讨好'+S.me.name+'、或跟群友争宠斗富：单独一行 [红包|金额|祝福语] 或 [转账|金额|说明]（'+S.me.name+'点一下就能领走）。想对ta好、过节、或争风吃醋时用，金额自己定、别滥发。';
   if(g.relations)s+='\n# 群里的关系\n'+g.relations;
   s+='\n# 最近群聊记录\n'+g.msgs.slice(-14).map(m=>(m.senderId==='me'?S.me.name:(getC(m.senderId)?getC(m.senderId).name:'?'))+'：'+gmText(m)).join('\n');
   return s;}
+// 把群回复解析成「一条条」的消息项（文字气泡 + 红包/转账卡片），文字条数封顶
+function gParseReply(content,cap){const out=[];let txt=0;
+  splitBubbles(content).forEach(l=>{l=normTag(l);if(!l)return;
+    let m=l.match(/^\[\s*转账\s*\|\s*([0-9.]+)\s*\|?\s*([^\]]*)\]$/);if(m){out.push({type:'transfer',amount:+m[1]||0,note:(m[2]||'').trim(),received:false});return;}
+    m=l.match(/^\[\s*红包\s*\|\s*([0-9.]+)\s*\|?\s*([^\]]*)\]$/);if(m){out.push({type:'redpacket',amount:+m[1]||0,note:(m[2]||'').trim(),received:false});return;}
+    if(LEAKRE.test(l))return;// 别把别的指令标签当消息发出来
+    splitActions(l).forEach(p=>{if(txt>=cap)return;p=(p||'').trim();if(p)out.push({type:'text',content:p});txt++;});
+  });
+  return out;}
 async function aiGroupReply(id,fromText){const g=S.groups.find(x=>x.id===id);if(!g)return;
   const allowed=(g.responders&&g.responders.length)?g.responders:g.members;
   const members=allowed.map(x=>getC(x)).filter(c=>c&&!c.deleted&&!c.blocked);if(!members.length)return;
-  let resp=members.filter(c=>fromText&&fromText.includes(c.name));
-  if(!resp.length)resp=[...members].sort(()=>Math.random()-.5).slice(0,Math.min(members.length,1+Math.floor(Math.random()*2)));
-  for(const c of resp){await sleep(500+Math.random()*600);
+  // 被@到的先回；选中的(没选=全部)每个人都至少回一条，其余顺序打乱
+  const atd=members.filter(c=>fromText&&fromText.includes(c.name));
+  const rest=members.filter(c=>atd.indexOf(c)<0).sort(()=>Math.random()-.5);
+  const resp=[...atd,...rest];
+  const cap=Math.max(1,+g.msgMax||2);
+  for(const c of resp){await sleep(450+Math.random()*650);
     try{const sys=buildSystem(c)+gContext(g,c);
-      const content=await chatAPI([{role:'system',content:sys},{role:'user',content:'[群里现在该你说话了，针对最新消息自然回，可@人]'}]);
-      let any=false;splitBubbles(content).forEach(l=>{l=normTag(l);if(LEAKRE.test(l))return;splitActions(l).forEach(p=>{g.msgs.push({senderId:c.id,role:'assistant',type:'text',content:p,time:Date.now(),id:uid()});any=true;});});
-      if(any)gNotify(g,c);
-      save();if(cur().p==='group'&&cur().id===id){const cb=$('#chatbg');if(cb){cb.innerHTML='';const gg=S.groups.find(x=>x.id===id);gg.msgs.forEach((m,i)=>{cb.insertAdjacentHTML('beforeend',gbubble(gg,m));});cb.scrollTop=cb.scrollHeight;}}
+      const content=await chatAPI([{role:'system',content:sys},{role:'user',content:'[群里现在该你说话了，针对最新消息自然回，可@人。像发微信一样一条一条地发，别一次堆一大段]'}]);
+      let items=gParseReply(content,cap);
+      if(!items.length)items=[{type:'text',content:'…'}];
+      let first=true;
+      for(const it of items){
+        if(!first)await sleep(420+Math.random()*560);first=false;
+        it.senderId=c.id;it.role='assistant';it.time=Date.now();it.id=uid();g.msgs.push(it);save();
+        if(cur().p==='group'&&cur().id===id){const cb=$('#chatbg');if(cb){cb.insertAdjacentHTML('beforeend',gbubble(g,it));cb.scrollTop=cb.scrollHeight;}}
+      }
+      gNotify(g,c);
     }catch(e){}}}
 function groupInfo(id){const g=S.groups.find(x=>x.id===id);const resp=g.responders||g.members.slice();
   openModal(`<h3>👥 群设置</h3>
