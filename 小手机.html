@@ -349,14 +349,14 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v132 · 记仇本本去重(相似旧账不再重复记)';
+const APP_VER='v133 · 上下文改成按回合(你1句+他回复)计';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
     aux:{base:'',key:'',model:''},
     search:{mode:'jina',base:'https://s.jina.ai',key:'',model:''},
     vision:{base:'https://vg.v1api.cc/v1',key:'',model:''},
-    hist:24, timeAware:true, replyDelay:2, sound:true, web:{enabled:false}, summaryRounds:20, proactiveIdleMin:20, manualReply:true,
+    hist:12, histUnit:'rounds', timeAware:true, replyDelay:2, sound:true, web:{enabled:false}, summaryRounds:16, proactiveIdleMin:20, manualReply:true,
     voiceAuto:true, tts:{base:'',key:'',model:'',voice:''}, stt:{base:'',key:'',model:''}
   },
   me:{name:'忆北',wxid:'yibei_0414',avatar:'🐱',signature:'做一只无忧无虑的小猫～',persona:'我叫忆北，20岁女生，娃娃脸有点肉感，慢热腼腆熟了疯癫可爱，没安全感、占有欲强、嘴硬心软的小财迷。',balance:520.00,bills:[],momentCover:'',status:'',place:'',battery:null,charging:false,onlineMode:'auto',steps:0,sleep:{active:null,records:[]},appUsage:{date:'',used:{},bonus:{}}},
@@ -420,6 +420,8 @@ function initAccounts(){if(!S.me.accounts||!S.me.accounts.length)S.me.accounts=[
   S.contacts.forEach(c=>{if(!c._blk)c._blk={main:!!c.blocked};});syncBlocks();}
 function msgs(id){const k=mkey(id);return S.messages[k]||(S.messages[k]=[]);}
 function lastMsg(id){const m=msgs(id);return m[m.length-1];}
+// 取最近 n 个回合：一个回合 = 我方发一条 + 他随后回复的所有气泡，直到下一条我方消息。从末尾往前数 n 条「我方」消息为界。
+function lastRounds(arr,n){if(!arr||!arr.length)return arr||[];n=Math.max(1,n|0);let cnt=0,idx=0;for(let i=arr.length-1;i>=0;i--){if(arr[i]&&arr[i].role==='user'){cnt++;if(cnt===n){idx=i;break;}}}let r=arr.slice(idx);if(r.length>140)r=r.slice(r.length-140);return r;}
 function compress(file,max,q){return new Promise((res,rej)=>{const img=new Image(),r=new FileReader();
   r.onload=()=>{const raw=r.result;img.onload=()=>{try{let w=img.width,h=img.height;if(w>h&&w>max){h=h*max/w;w=max;}else if(h>=w&&h>max){w=w*max/h;h=max;}
     const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);const out=c.toDataURL('image/jpeg',q);res(out&&out.length>30?out:raw);}catch(e){res(raw);}};img.onerror=()=>res(raw);img.src=raw;};r.onerror=rej;r.readAsDataURL(file);});}
@@ -899,7 +901,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="two" style="padding:0 14px 10px"><div class="field"><label>API Key</label><input id="s_skey" type="password" value="${esc((S.settings.stt||{}).key||'')}"></div><div class="field"><label>模型</label><input id="s_smodel" value="${esc((S.settings.stt||{}).model||'')}" placeholder="whisper-1"></div></div>
     </div>
     <div class="section">
-      <div class="it">带几条历史<input id="s_hist" type="number" value="${S.settings.hist}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
+      <div class="it"><span>带几个回合<br><small style="color:#888">你1句+他的回复=1回合，记得越多越久但越慢</small></span><input id="s_hist" type="number" min="2" max="40" value="${S.settings.hist}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it">语音自动播放<span class="sw ${S.settings.voiceAuto?'on':''}" onclick="S.settings.voiceAuto=!S.settings.voiceAuto;save();render()"></span></div>
       <div class="it"><span>发消息后手动点回复<br><small style="color:#888">开：发完点「让ta回复」他才回；他主动找你不受影响</small></span><span class="sw ${S.settings.manualReply?'on':''}" onclick="S.settings.manualReply=!S.settings.manualReply;save();render()"></span></div>
       <div class="it">延迟几秒回复<input id="s_delay" type="number" min="0" value="${S.settings.replyDelay}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
@@ -933,7 +935,7 @@ function saveSettings(){const g=id=>$('#'+id).value.trim();
   S.settings.vision={base:g('s_vbase')||S.settings.chat.base,key:g('s_vkey')||S.settings.chat.key,model:g('s_vmodel')};
   S.settings.tts={base:g('s_tbase'),key:g('s_tkey'),model:g('s_tmodel'),voice:g('s_tvoice')};
   S.settings.stt={base:g('s_sbase'),key:g('s_skey'),model:g('s_smodel')};
-  S.settings.hist=$('#s_hist').value||24;S.settings.replyDelay=$('#s_delay').value||0;S.settings.summaryRounds=+$('#s_sum').value||0;S.settings.proactiveIdleMin=+$('#s_pidle').value||20;save();toast('已保存 ✅');}
+  S.settings.hist=Math.max(2,Math.min(40,+$('#s_hist').value||12));S.settings.histUnit='rounds';S.settings.replyDelay=$('#s_delay').value||0;S.settings.summaryRounds=+$('#s_sum').value||0;S.settings.proactiveIdleMin=+$('#s_pidle').value||20;save();toast('已保存 ✅');}
 function reqNotify(){if(!('Notification'in window)){toast('这设备不支持通知');return;}Notification.requestPermission().then(p=>toast(p==='granted'?'已允许后台通知🔔':'未允许'));}
 async function testConn(){const o=$('#testOut');o.style.color='#999';o.textContent='测试中…';
   const base=$('#s_cbase').value.trim().replace(/\/+$/,''),key=$('#s_ckey').value.trim(),model=$('#s_cmodel').value.trim()||'gpt-4o-mini';
@@ -1254,6 +1256,8 @@ if(S.couple&&!S.couple.timeLimit)S.couple.timeLimit={};
 if(S.couple&&S.couple.grant&&S.couple.grant.douyin===undefined)S.couple.grant.douyin=true;
 if(!S.dy)S.dy={profile:{nick:'',avatar:null,bio:'记录美好生活✨'},feed:[],liked:[],following:[],dms:[],history:[],mine:[],users:{}};
 ['feed','liked','following','dms','history','mine'].forEach(k=>{if(!Array.isArray(S.dy[k]))S.dy[k]=[];});S.dy.users=S.dy.users||{};S.dy.profile=Object.assign({nick:'',avatar:null,bio:'记录美好生活✨'},S.dy.profile||{});
+// 上下文从「条」改为「回合」：老数据把条数÷2换算成回合，只迁移一次
+if(S.settings){if(S.settings.histUnit!=='rounds'){S.settings.hist=Math.max(4,Math.min(24,Math.round((+S.settings.hist||24)/2)));S.settings.histUnit='rounds';}if(!(+S.settings.hist))S.settings.hist=12;}
 function cleanupOld(){const DAY=86400000,now=Date.now();let ch=false;
   if(S.moments){const n=S.moments.length;S.moments=S.moments.filter(p=>now-(p.time||0)<DAY);if(S.moments.length!==n)ch=true;}
   if(S.x&&S.x.tweets){const n=S.x.tweets.length;S.x.tweets=S.x.tweets.filter(t=>now-(t.time||0)<DAY);if(S.x.tweets.length!==n)ch=true;}
@@ -3035,7 +3039,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
     cb.insertAdjacentHTML('beforeend',`<div class="msg them" id="typing">${av(c.avatar)}<div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`);
     cb.scrollTop=cb.scrollHeight;typingEl=$('#typing');}
   try{
-    const hist=msgs(id).slice(-(S.settings.hist||24)).map(m=>{
+    const hist=lastRounds(msgs(id),S.settings.hist||12).map(m=>{
       if(m._call){const cn=callToCN(m.content!=null?m.content:msgToText(m));return cn?{role:m.role,content:cn}:null;}
       return {role:m.role,content:msgToText(m)};}).filter(x=>x&&x.content!=null);
     if(note)hist.push({role:'user',content:note});
@@ -3266,7 +3270,7 @@ async function speakWait(text,c){const v=c?getVoice(c):null;const t=stripSpoken(
 function callSend(){const inp=$('#callMsg');if(!inp)return;const t=inp.value.trim();if(!t||!_call)return;inp.value='';
   msgs(_call.id).push({role:'user',type:'text',content:t,time:Date.now(),id:uid(),_call:true,_ck:_call.kind,_cs:_call.session});save();_call.sub={who:'me',text:t};updateCallSub();callAI();}
 async function callAI(sysNote){if(!_call)return;const c=getC(_call.id);const video=_call.kind==='video';const sess=_call.session;
-  try{const hist=msgs(c.id).slice(-(S.settings.hist||24)).map(m=>({role:m.role,content:msgToText(m)})).filter(x=>x.content!=null);
+  try{const hist=lastRounds(msgs(c.id),S.settings.hist||12).map(m=>({role:m.role,content:msgToText(m)})).filter(x=>x.content!=null);
     if(sysNote)hist.push({role:'user',content:sysNote});
     const _lang=(getVoice(c).lang||'zh');const _langN=_lang==='zh'?'':({'英':'英','日':'日','韩':'韩'}[_lang]||_lang)+'语';
     let cf='\n\n# 正在'+(video?'视频':'语音')+'通话（务必遵守格式）\n用口语短句，像打电话一样，别用卡片。每句单独一行。';
