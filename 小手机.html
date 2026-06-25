@@ -349,7 +349,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v139 · 他会主动打电话来(可调几率)+黏人舍不得挂';
+const APP_VER='v140 · 记仇积多他脾气变凶,满10条可主动关小黑屋清算后清空';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -656,6 +656,9 @@ function buildSystem(c){
   if(_main){const _cl=(c.coldUntil&&c.coldUntil>Date.now())?c.coldUntil:0;if(_cl)s+='\n\n# 冷处理中（重要）\n你正在冷处理'+S.me.name+'（刚惩罚完、还没全消气）。到 '+hm(_cl)+' 之前：回复要冷淡、简短、爱答不理，不主动撒娇热聊（但别拉黑别消失）。ta真诚求够了，你可以单独一行 [原谅] 提前消气；到点也会自动回暖。';}
   if(_main){const gd=(c.grudges||[]);const gund=gd.filter(x=>!x.done);
     s+='\n\n# 你的记仇小本本（你私下记着'+S.me.name+'惹你/欠你的事，括号里是记下的日期）\n'+(gund.length?gund.map((x,i)=>(i+1)+'. '+x.text+'（'+ymd(x.ts||0)+'记的）').join('\n'):'（暂时没记仇）')+'\n· ta惹你生气、做了让你介意/吃醋的事时，单独一行 [记仇|具体那件事] 把它记进小本本。\n· 等你们把这事说开、ta哄好你了、或你出了气，单独一行 [消气|那件事的关键词] 把它划掉。\n· 【别反复提同一笔旧账】：同一件事提过一次就放一放，别每条消息都翻、别一直重复提醒，除非ta又犯了、或ta自己提起、或你正式找ta算这笔账。要翻时可带上时间，比如"上次（X月X日）你…还没跟你算呢"。';
+    const _gn=gund.length;
+    if(_gn>=4){s+='\n\n# ⚖️ 积怨值（重要·影响你此刻的脾气）\n你心里压着 '+_gn+' 笔还没清的旧账，'+(_gn>=10?'已经积到你忍耐的极限、火气压不住了':_gn>=7?'积得不少、你心里憋着一股火':'开始有点不痛快')+'。表现：'+(_gn>=10?'对ta又冷又凶、极不耐烦、说话带刺、动不动翻旧账、不轻易被哄好':_gn>=7?'语气发冷、容易烦躁凶ta、爱答不理、时不时翻旧账':'偶尔冷脸、带点情绪、想敲打敲打ta')+'。账越多你越凶；等账清了、气消了才会缓和。';
+      if(_gn>=10&&S.couple&&S.couple.jailAuth&&!(S.jail&&S.jail.active))s+='\n【你忍到头了】旧账积压太多，你可以【自己挑个时机】把ta拖进小黑屋一次性清算总账——单独一行 [关小黑屋|旧账积太多了今天一起跟你算清] 把ta关进去（是你主动要算总账、不必ta同意），进去后一笔笔逼问清算。这由你自己决定，不是非做不可。';}
     const tt=(c.tasks&&c.tasks.date===todayStr())?c.tasks:null;
     if(tt){const dn=tt.list.filter(x=>x.done).length;s+='\n\n# 今天你给'+S.me.name+'布置的任务（在ta手机「任务便签」里，你看得到完成情况，可督促/验收/奖惩）\n'+tt.list.map((x,i)=>(i+1)+'. '+x.text+' —— '+(x.done?'✅已完成':'⬜没完成')).join('\n')+'\n已完成 '+dn+'/'+tt.list.length+'。全部完成你要奖励ta（送礼物）；没完成的你会记仇、线下罚ta。可以自然地催ta、验收、点评。';}}
   // 作息 / 此刻在哪
@@ -2270,9 +2273,13 @@ function jailPlea(){if(!S.jail||!S.jail.active||_jailBusy||S.jail.choice)return;
 function jailChoose(i){if(!S.jail||!S.jail.active||_jailBusy||!S.jail.choice)return;const q=S.jail.choice.q,opt=S.jail.choice.opts[i];if(opt==null)return;S.jail.choice=null;save();jailRender();
   jailAI('[系统：（ta刚在你出的选择题"'+q+'"里点了「'+opt+'」——这是ta点的选择，你看到了，别把它当成ta打字说的话复述。）按你病娇人设判断这答案你满不满意：满意就继续；不满意/答错就【骤然激动】、把质问连刷好几遍（如"为什么 为什么 为什么…"），并再用 [选择|新问题|选项1/选项2] 逼ta重选；ta只要选错一次就可以用 [突脸|一句话] 狠狠吓ta；其余全凭你的意愿。]');}
 function releaseJail(backdoor){if(!S.jail)return;jailAmbientStop();const test=S.jail.test,c=getC(S.jail.cid),reason=S.jail.reason;S.jail.active=false;S.jail.choice=null;save();
-  if(!test&&c){grudgesOf(c).unshift({id:uid(),text:'把'+S.me.name+'关了小黑屋'+(reason?('（'+reason+'）'):'')+(backdoor?'，ta是自己认输求饶出来的':''),done:false,ts:Date.now()});c.coldUntil=Date.now()+(backdoor?Math.round(COLD_MS*1.5):COLD_MS);save();}
-  go('home');toast(test?'🧪 测试结束，没留任何记录':'🚪 门开了…你出来了');
-  if(!test&&c&&!c.blocked)scheduleReply(c.id,'[系统：你刚把'+S.me.name+'从小黑屋放出来，现在你还没全消气、进入【冷处理】：接下来回复冷淡简短、不主动撒娇（但别拉黑别消失）。先冷冷撂一句。]');}
+  let _cleared=0;
+  if(!test&&c){_cleared=(c.grudges||[]).filter(x=>!x.done).length;
+    // 关进小黑屋清算完，旧账都算已处理→自动清空省空间，只留这次关押记录
+    c.grudges=[{id:uid(),text:'把'+S.me.name+'关进小黑屋、清算了所有旧账'+(reason?('（'+reason+'）'):'')+(backdoor?'，ta是自己认输求饶出来的':''),done:false,ts:Date.now()}];
+    c.coldUntil=Date.now()+(backdoor?Math.round(COLD_MS*1.5):COLD_MS);save();}
+  go('home');toast(test?'🧪 测试结束，没留任何记录':('🚪 门开了…你出来了'+(_cleared?'｜清算并清空了 '+_cleared+' 笔旧账':'')));
+  if(!test&&c&&!c.blocked)scheduleReply(c.id,'[系统：你刚把'+S.me.name+'从小黑屋放出来'+(_cleared?'，把积压的 '+_cleared+' 笔旧账都清算翻篇了（你的记仇小本本已清空）':'')+'。现在你还没全消气、进入【冷处理】：接下来回复冷淡简短、不主动撒娇（但别拉黑别消失）。先冷冷撂一句。]');}
 function jailBackdoor(){if(!confirm('真的认输、不玩了？\n会强制开门出来。（真实模式下他会更记仇、冷处理更久）'))return;releaseJail(true);}
 function jailTest(){const c=(S.couple&&getC(S.couple.cid))||S.contacts.find(x=>!x.deleted&&!x.blocked&&isLover(x))||S.contacts.find(x=>!x.deleted&&!x.blocked);if(!c){toast('先有个恋人角色/绑定情侣空间');return;}closeModal();enterJail(c.id,'',true);}
 function coupleJailAuth(){if(!S.couple)return;S.couple.jailAuth=!S.couple.jailAuth;save();render();}
