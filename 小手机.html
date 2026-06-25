@@ -809,6 +809,12 @@ async function musicAddSave(){musicInit();const t=($('#mu_t').value||'').trim()|
   else{toast('上传个文件、或贴个链接');return;}
   S.music.songs.unshift({id,title:t,artist:a,lyrics:l,src});window._muBlob=null;save();closeModal();render();toast('已添加 🎵');}
 function musicDel(id){if(!confirm('删除这首歌？'))return;S.music.songs=S.music.songs.filter(s=>s.id!==id);mDelIDB(id);if(_mCur===id){try{_ma&&_ma.pause();}catch(e){}_mCur=null;_mPlaying=false;}save();render();}
+function musicEdit(id){musicInit();const s=S.music.songs.find(x=>x.id===id);if(!s)return;openModal(`<h3>✎ 改歌名 / 歌词</h3>
+  <div class="field"><label>歌名</label><input id="me_t" value="${esc(s.title||'')}"></div>
+  <div class="field"><label>歌手</label><input id="me_a" value="${esc(s.artist||'')}"></div>
+  <div class="field"><label>歌词（粘进来；带 [00:12.00] 时间轴会跟着高亮滚动，没有时间轴就普通显示）</label><textarea id="me_l" rows="6" placeholder="把歌词粘进来…">${esc(s.lyrics||'')}</textarea></div>
+  <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="musicEditSave('${id}')">保存</button></div>`);}
+function musicEditSave(id){const s=S.music.songs.find(x=>x.id===id);if(!s)return;s.title=($('#me_t').value||'').trim()||s.title;s.artist=($('#me_a').value||'').trim();s.lyrics=($('#me_l').value||'').trim();save();closeModal();render();toast('已保存 ✏️');}
 async function musicPlay(id){musicInit();const s=S.music.songs.find(x=>x.id===id);if(!s)return;
   if(!_ma){_ma=new Audio();_ma.ontimeupdate=mTick;_ma.onended=mEnded;_ma.onplay=()=>{_mPlaying=true;mBtns();};_ma.onpause=()=>{_mPlaying=false;mBtns();};}
   _mCur=id;let url;
@@ -831,7 +837,7 @@ function mLyricTick(){const box=document.getElementById('m_lyrics');if(!box||!_m
   let idx=-1;for(let i=0;i<lines.length;i++){if(lines[i].t!=null&&lines[i].t<=_ma.currentTime)idx=i;}
   const els=box.querySelectorAll('.mlrc');els.forEach((el,i)=>{el.style.color=i===idx?'#fff':'#777';el.style.fontWeight=i===idx?'700':'400';});if(idx>=0&&els[idx])els[idx].scrollIntoView({block:'center',behavior:'smooth'});}
 function renderMusic(){musicInit();const songs=S.music.songs;const cur=songs.find(s=>s.id===_mCur);const sess=S.music.session;const sc=sess&&getC(sess.cid);
-  const list=songs.length?songs.map(s=>`<div class="it" style="${s.id===_mCur?'background:#2a2438':''}"><span style="flex:1;cursor:pointer;color:#eee" onclick="musicPlay('${s.id}')">${s.id===_mCur&&_mPlaying?'🎶':'🎵'} ${esc(s.title)}${s.artist?' <small style="color:#888">- '+esc(s.artist)+'</small>':''}</span><span onclick="musicDel('${s.id}')" style="color:#fa5151;cursor:pointer;padding:0 4px">✕</span></div>`).join(''):'<div class="empty" style="padding:24px;color:#888">还没有歌～点右上角 ＋ 添加（上传文件或贴链接）</div>';
+  const list=songs.length?songs.map(s=>`<div class="it" style="${s.id===_mCur?'background:#2a2438':''}"><span style="flex:1;cursor:pointer;color:#eee" onclick="musicPlay('${s.id}')">${s.id===_mCur&&_mPlaying?'🎶':'🎵'} ${esc(s.title)}${s.artist?' <small style="color:#888">- '+esc(s.artist)+'</small>':''}</span><span onclick="musicEdit('${s.id}')" style="color:#54a0ff;cursor:pointer;padding:0 6px" title="改歌名/歌词">✎</span><span onclick="musicDel('${s.id}')" style="color:#fa5151;cursor:pointer;padding:0 4px">✕</span></div>`).join(''):'<div class="empty" style="padding:24px;color:#888">还没有歌～点右上角 ＋ 添加（上传文件或贴链接）</div>';
   let player='';
   if(cur){const lyr=parseLyrics(cur.lyrics);
     const cover=sc?`<div style="display:flex;align-items:center;justify-content:center;gap:14px">${av(S.me.avatar,'lg')}<span style="font-size:22px">🎧</span>${av(sc.avatar,'lg')}</div><div style="text-align:center;color:#9ec5fe;font-size:12px;margin-top:8px">和 ${esc(sc.remark||sc.name)} 一起听 · 已连接 ✅</div>`:`<div style="text-align:center;font-size:56px">💿</div>`;
