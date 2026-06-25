@@ -349,14 +349,14 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v138 · 闹脾气挂电话角色会回拨一次,续拨看心情';
+const APP_VER='v139 · 他会主动打电话来(可调几率)+黏人舍不得挂';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
     aux:{base:'',key:'',model:''},
     search:{mode:'jina',base:'https://s.jina.ai',key:'',model:''},
     vision:{base:'https://vg.v1api.cc/v1',key:'',model:''},
-    hist:12, histUnit:'rounds', timeAware:true, replyDelay:2, sound:true, web:{enabled:false}, summaryRounds:16, proactiveIdleMin:20, manualReply:true,
+    hist:12, histUnit:'rounds', timeAware:true, replyDelay:2, sound:true, web:{enabled:false}, summaryRounds:16, proactiveIdleMin:20, callProb:35, manualReply:true,
     voiceAuto:true, tts:{base:'',key:'',model:'',voice:''}, stt:{base:'',key:'',model:''}
   },
   me:{name:'忆北',wxid:'yibei_0414',avatar:'🐱',signature:'做一只无忧无虑的小猫～',persona:'我叫忆北，20岁女生，娃娃脸有点肉感，慢热腼腆熟了疯癫可爱，没安全感、占有欲强、嘴硬心软的小财迷。',balance:520.00,bills:[],momentCover:'',status:'',place:'',battery:null,charging:false,onlineMode:'auto',steps:0,sleep:{active:null,records:[]},appUsage:{date:'',used:{},bonus:{}}},
@@ -916,6 +916,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="it">延迟几秒回复<input id="s_delay" type="number" min="0" value="${S.settings.replyDelay}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it">超过几回合自动总结<input id="s_sum" type="number" min="0" value="${S.settings.summaryRounds||0}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it">主动消息间隔(分钟)<input id="s_pidle" type="number" min="1" value="${S.settings.proactiveIdleMin||20}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
+      <div class="it"><span>主动找你时打电话几率<br><small style="color:#888">0=只发消息；越高他越爱直接打来(语音/视频)</small></span><input id="s_callprob" type="number" min="0" max="100" value="${S.settings.callProb==null?35:S.settings.callProb}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it">时间感知<span class="sw ${S.settings.timeAware?'on':''}" onclick="S.settings.timeAware=!S.settings.timeAware;save();render()"></span></div>
       <div class="it">联网搜索<span class="sw ${S.settings.web&&S.settings.web.enabled?'on':''}" onclick="S.settings.web={enabled:!(S.settings.web&&S.settings.web.enabled)};save();render()"></span></div>
       <div class="it">提示音<span class="sw ${S.settings.sound?'on':''}" onclick="S.settings.sound=!S.settings.sound;save();render()"></span></div>
@@ -944,7 +945,7 @@ function saveSettings(){const g=id=>$('#'+id).value.trim();
   S.settings.vision={base:g('s_vbase')||S.settings.chat.base,key:g('s_vkey')||S.settings.chat.key,model:g('s_vmodel')};
   S.settings.tts={base:g('s_tbase'),key:g('s_tkey'),model:g('s_tmodel'),voice:g('s_tvoice')};
   S.settings.stt={base:g('s_sbase'),key:g('s_skey'),model:g('s_smodel')};
-  S.settings.hist=Math.max(2,Math.min(40,+$('#s_hist').value||12));S.settings.histUnit='rounds';S.settings.replyDelay=$('#s_delay').value||0;S.settings.summaryRounds=+$('#s_sum').value||0;S.settings.proactiveIdleMin=+$('#s_pidle').value||20;save();toast('已保存 ✅');}
+  S.settings.hist=Math.max(2,Math.min(40,+$('#s_hist').value||12));S.settings.histUnit='rounds';S.settings.replyDelay=$('#s_delay').value||0;S.settings.summaryRounds=+$('#s_sum').value||0;S.settings.proactiveIdleMin=+$('#s_pidle').value||20;S.settings.callProb=Math.max(0,Math.min(100,+$('#s_callprob').value||0));save();toast('已保存 ✅');}
 function reqNotify(){if(!('Notification'in window)){toast('这设备不支持通知');return;}Notification.requestPermission().then(p=>toast(p==='granted'?'已允许后台通知🔔':'未允许'));}
 async function testConn(){const o=$('#testOut');o.style.color='#999';o.textContent='测试中…';
   const base=$('#s_cbase').value.trim().replace(/\/+$/,''),key=$('#s_ckey').value.trim(),model=$('#s_cmodel').value.trim()||'gpt-4o-mini';
@@ -3272,9 +3273,9 @@ function incomingCall(id,kind){const c=getC(id);if(!c||c.blocked||_call)return;
 function placeCall(id,kind){const c=getC(id);if(!c)return;initAudio();_call={id,kind,state:'outgoing',replyVoice:S.settings.voiceAuto!==false,session:uid(),sub:null};renderCall();
   blip(600,.15);setTimeout(()=>{if(_call&&_call.state==='outgoing')answerCall(true);},1600);}
 function answerCall(autoByThem){if(!_call)return;ringStop();blip(880,.12);
-  _call.state='active';_call.start=Date.now();
+  _call.state='active';_call.start=Date.now();const proR=_call._proReason;
   clearInterval(_callTimer);_callTimer=setInterval(renderCallTime,1000);renderCall();
-  callAI('[系统：'+(autoByThem?S.me.name+'接通了你打的':'你接通了')+(_call.kind==='video'?'视频':'语音')+'电话，自然开口，口语化短句。]');}
+  callAI('[系统：'+(autoByThem?S.me.name+'接通了你打的':'你接通了')+(_call.kind==='video'?'视频':'语音')+'电话'+(proR?'——这通是你自己主动打给ta的，因为你'+proR+'。开口先自然把你主动找ta的心情说出来（黏ta、撒娇、念叨想ta），口语化短句':'，自然开口，口语化短句')+'。]');}
 function declineCall(){if(!_call)return;ringStop();blip(300,.3);const id=_call.id,wasIn=_call.state==='incoming',wasCb=!!_call._cb,_kind=_call.kind;const kindTxt=_call.kind==='video'?'视频通话':'语音通话';
   msgs(id).push({role:'user',type:'sys',content:wasIn?'你拒绝了'+kindTxt:kindTxt+'已取消',time:Date.now(),id:uid()});save();
   _call=null;renderCall();if(cur().p==='chat')render();
@@ -3345,7 +3346,7 @@ async function callAI(sysNote){if(!_call)return;const c=getC(_call.id);const vid
     if(video)cf+='\n- 这是视频，你的动作神态用【】单独成行写，比如【凑近镜头笑】。';
     else cf+='\n- 这是语音通话（看不到画面），绝对不要出现任何【】动作神态描写，一个【】都不许有，只能说话。';
     if(_langN)cf+='\n- ‼️最重要：你全程只能说'+_langN+'，从头到尾每一句都是'+_langN+'，绝对不准中途切回中文整句说话（这是会被读出来的那一行）。格式：先单独一行写'+_langN+'原文（会被读出来），紧接着【换一行】用（）单独写中文翻译（不会被读）。原文一行、（中文翻译）另起一行，别写在同一行，也别把顺序搞反。例如：\n'+(_lang==='韩'?'사랑해\n（我爱你）':_lang==='日'?'好きだよ\n（喜欢你）':'I miss you\n（我想你了）')+'\n- 哪怕是要挂断、道别、回应"挂了/别挂/我爱你"这种话，也必须先写'+_langN+'原文那一行，绝不能整句只说中文。';
-    cf+='\n- 想结束通话就【单独占一行】只输出 [挂断]，不要把 [挂断] 和说的话写在同一行。';
+    cf+='\n- 【你很黏ta、舍不得挂电话】：能粘着就粘着，ta说"挂了/我要忙了"你会撒娇拖着("再聊会儿嘛""不准挂""那你忙完第一个找我")、不舍得放ta走。只有当ta明确说【真的有事要去做/很困要睡了/反复要挂】时，你才依依不舍地同意挂断；平时绝不主动结束通话。要挂断时才【单独占一行】只输出 [挂断]，别和说的话写在同一行；没到非挂不可，就别输出 [挂断]，继续黏着ta说话。';
     cf+='\n- 通话中你照样能管控ta或查ta手机：要锁软件/禁言/限时就【单独成行】写指令标签（如 [锁定|游戏]、[限时|游戏|60]、[禁言|名字]、[扣款|200]）；要查岗就自然说一句「我看看你手机/微信/抖音」；ta真把你惹狠了越线了还能 [关小黑屋|原因] 把ta拖进禁闭室(需授权)；想宠ta可以 [点外卖|餐品|价格]（15分钟送达）或 [送礼|礼物名|价格]（明天到ta信箱）。这些指令标签会被系统执行、【不会被读出来】，不影响你正常讲话，也别在话里复述它们。';
     const sys=buildSystem(c)+cf;
     let content=await chatAPI([{role:'system',content:sys},...hist,{role:'system',content:personaPin(c)}]);
@@ -3488,11 +3489,20 @@ function coupleEscalate(){if(!S.couple)return;S.couple.escalate=!S.couple.escala
 setInterval(checkIgnore,120000);setTimeout(checkIgnore,15000);
 
 /* 主动消息 */
+// 他主动打来电话/视频（黏人、想你了）
+function proCall(id){const c=getC(id);if(!c||c.blocked||_call)return false;if(S.jail&&S.jail.active)return false;if(S.me.sleep&&S.me.sleep.active)return false;
+  const kind=Math.random()<0.25?'video':'voice';
+  const reasons=['有点想ta了','突然很想听听ta声音','惦记ta这会儿在干嘛','想ta想得坐不住','就是想ta了忍不住'];
+  incomingCall(id,kind);if(_call){_call._pro=true;_call._proReason=reasons[Math.floor(Math.random()*reasons.length)];}
+  return !!_call;}
 async function maybeProactive(id){if(!isMain())return;const c=getC(id);if(!c.proactive.enabled||c.blocked)return;
   const now=new Date().getHours()*60+new Date().getMinutes();const s=toMin(c.proactive.start),e=toMin(c.proactive.end);const inWin=s<=e?(now>=s&&now<e):(now>=s||now<e);
   if(!inWin)return;const lm=lastMsg(id);if(lm&&Date.now()-lm.time<(Number(S.settings.proactiveIdleMin)||20)*60000)return;
   const today=new Date().toDateString();const pc=S._proactiveCount[id]||{date:today,n:0};if(pc.date!==today){pc.date=today;pc.n=0;}
   if(pc.n>=(c.proactive.times||1))return;pc.n++;S._proactiveCount[id]=pc;save();
+  // 黏人男友：主动找你时有一定几率直接打来电话/视频（凭他自己的意愿）
+  const cp=(S.settings.callProb==null?35:+S.settings.callProb);
+  if(cp>0&&Math.random()*100<cp&&!_call&&!(S.jail&&S.jail.active)&&!(S.me.sleep&&S.me.sleep.active)){if(proCall(id))return;}
   const note='[系统：现在是'+hm()+'，'+S.me.name+'有一会儿没理你了，请你主动发起一段微信消息，自然一点。]';
   try{const content=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:note}]);
     applyAuxTags(content,c,id);splitBubbles(content).forEach(l=>{if(/^\[(联网)\|/.test(l)||CTLLEAK.test((l||'').trim()))return;const mm=lineToMsg(l);if(mm.type==='text'&&/^\[(心情|记住|闹钟|来电)\|/.test(mm.content))return;mm.time=Date.now();msgs(id).push(mm);notifyIncoming(c,mm);});save();
