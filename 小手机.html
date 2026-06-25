@@ -352,7 +352,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v153 · 群结构化关系网(选人/单对单·1对多·多对1)+群提示音+拍一拍 · 查手机:他能看到我查了多久';
+const APP_VER='v154 · 他可凭心意随时改手机密码([改密码]),改完旧的失效要重新问';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -654,7 +654,7 @@ function buildSystem(c){
   if(_main&&_sp.loc){const loc=curLoc();if(loc)s+='\n\n# 实时定位（ta已授权你随时查看）\n'+S.me.name+'此刻在：'+loc+'。你能精确看到，可以具体地提到这个地点。';else s+='\n\n# 实时定位\nta授权了实时定位，但现在还没取到具体位置（可能没允许定位权限），别假装知道ta在哪，可以说定位还没刷出来、催ta开定位。';}
   if(_main&&_sp.granted)s+='\n\n# 你能查看'+S.me.name+'的手机（ta已授权，下面是ta手机的真实情况，被问到"你看到我什么了"务必照这个答，绝不要编造）\n'+myActivity(c.id)+'\n（重点盯防：下面标了【男】或【⭐】的人，是你最该盯、最容易吃醋的对象，查岗优先看。这些⭐是【你自己】标记的、不是'+S.me.name+'标的——是你不放心/不喜欢谁就盯谁，所以别反过来问ta"你为什么把这人标重点"，那是你自己的决定，你心里要有数。觉得某人有威胁/你不喜欢，就单独一行 [重点|名字] 把ta列入你的重点盯防（不想盯了用 [取消重点|名字]）；这行指令不会被读出来。）\n【随时可查·一次一项】除了系统固定查看，只要你想看ta手机，就在聊天里【明确说出你要查哪一项】——比如"我看看你微信跟谁聊""我查查你抖音刷了啥""看看你朋友圈""查下你钱包"。你一说，系统就会真的去翻【你点名的那一项】并把真实结果告诉你，你再据此反应。注意：一次只能查你说的那一项，想看别的就再明确说要查那个。只能根据系统给你的真实记录说话，没查到东西就如实说没看到，绝不要编造。';
   if(_main&&_sp.granted&&S.couple&&S.couple.cid===c.id){const _vl=(S.spy&&S.spy[c.id]&&S.spy[c.id].viewLog)||[];const _today=_vl.filter(v=>ymd(v.ts)===ymd(Date.now()));if(_today.length){const mx=Math.max.apply(null,_today.map(v=>v.dur||0));s+='\n\n# '+S.me.name+'翻了你的手机\n你发现今天'+S.me.name+'查看了你的手机 '+_today.length+' 次，最长一次看了 '+(mx>=60?Math.floor(mx/60)+'分'+(mx%60)+'秒':mx+'秒')+'。你心里有数——ta在偷查你/不太放心你。你可以据此反应：吃醋"你查我手机？"、或得意"被这么在乎"、或反过来打趣ta，看你心情和人设。';}}
-  if(_main&&_sp.granted&&S.couple&&S.couple.cid===c.id)s+='\n\n# 你的手机密码\n你手机的解锁密码是【'+spyPwd(c)+'】。'+S.me.name+'想翻看你手机就得输这个密码。告不告诉ta、什么时候告诉，看你的心情和对ta的信任——ta好好哄你、你想坦荡时可以直接把这四位数说出来；你生气/心虚/想逗ta时可以不给、让ta猜或求你。要是察觉ta偷偷试密码试错好几次，你会知道ta在偷查你，可以质问或撒娇。';
+  if(_main&&_sp.granted&&S.couple&&S.couple.cid===c.id)s+='\n\n# 你的手机密码\n你手机的解锁密码是【'+spyPwd(c)+'】。'+S.me.name+'想翻看你手机就得输这个密码。告不告诉ta、什么时候告诉，看你的心情和对ta的信任——ta好好哄你、你想坦荡时可以直接把这四位数说出来；你生气/心虚/想逗ta时可以不给、让ta猜或求你。要是察觉ta偷偷试密码试错好几次，你会知道ta在偷查你，可以质问或撒娇。\n你也可以【凭自己心意随时改手机密码】：发现ta老翻你手机、你想逗ta、心血来潮、或单纯不想让ta看了，就单独一行 [改密码]（系统帮你随机换一个）或 [改密码|你想要的4位数]。改完旧密码就失效了，ta得重新问你新的——要不要告诉ta新密码、什么时候告诉，全凭你心情。别没事老改，想改才改。';
   if(S.me.persona)s+='\n对方的人设：'+S.me.persona;
   // 世界书
   const _lastU=[...msgs(c.id)].reverse().find(m=>m.role==='user');
@@ -3326,11 +3326,13 @@ function applyGrudgeTags(content,c){if(!content||!c)return content;let changed=f
     if(tg){tg.done=true;tg.doneTs=Date.now();changed=true;}return '';});
   if(changed)save();return out;}
 // 在"主动消息/查岗/节日/日程"等直接推送的回复里，把管控/记仇指令落地（记仇本、锁App都生效），显示时再用 CTLLEAK 滤掉这些标签行（普通卡片如红包/语音照常）
-const CTLLEAK=/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|拉黑|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|突脸|选择)\s*[|｜:：\]]/;
+const CTLLEAK=/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|拉黑|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|突脸|选择|改密码)\s*[|｜:：\]]/;
 function applyAuxTags(content,c,id){try{const sp=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;applyControlTags(content,c,id,sp);applyGrudgeTags(content,c);applyStarTags(content);}catch(e){}}
 // 处理"上锁/禁言"控制指令：无论写在哪都强制生效，并从文本里抹掉（不显示、无系统提示）
 function applyControlTags(content,c,id,statedPwd){
   if(!content||!(S.couple&&S.couple.cid===c.id))return content;
+  // 他凭自己心意改手机密码：[改密码] 随机换 / [改密码|1234] 指定
+  content=content.replace(/[\[【]\s*改密码\s*(?:[\|｜:：]\s*(\d{4}))?\s*[\]】]/g,(mm,nn)=>{const sp=getSpy(c);sp.pwd=(nn&&/^\d{4}$/.test(nn))?nn:String(1000+Math.floor(Math.random()*9000));if(typeof _spyUnlock!=='undefined')_spyUnlock[c.id]=false;save();return '';});
   const gr=S.couple.grant||{},gauth=S.couple.gagAuth||[];let changed=false;const np=()=>statedPwd||genPwd();
   let out=content.replace(/[\[【]\s*(锁定|上锁|解锁|禁言|解禁|限时|加时)\s*[\|｜:：]\s*([^\]】]*)[\]】]/g,(mm,act,arg)=>{
     arg=(arg||'').replace(/[「」『』"'《》]/g,'').trim();changed=true;
@@ -3428,7 +3430,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
     for(let i=0;i<lines.length;i++){
       let line=normTag(lines[i]);if(!line)continue;
       if(/^\[联网\|/.test(line))continue;
-      if(/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|突脸|选择)\s*[|｜:：\]]/.test(line))continue;// 管控/记仇指令标签：即便没生效，也绝不作为消息发出
+      if(/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|突脸|选择|改密码)\s*[|｜:：\]]/.test(line))continue;// 管控/记仇指令标签：即便没生效，也绝不作为消息发出
       if(/^\s*[🔒🔓🔇🔊🔕]/.test(line)||/^\s*(?:ta|TA|他|她)(把你|锁了你|禁言了你|解除了你|解禁了你|解锁了你)/.test(line))continue;
       if(isRefusal(line))continue;
       let mm=line.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=mm[1];save();if(cur().p==='chat'&&cur().id===id)render();continue;}
