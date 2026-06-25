@@ -1324,13 +1324,13 @@ function openCart(){const cart=S.shop.cart||[];const total=cart.reduce((s,p)=>s+
   openModal(`<h3>🛍️ 购物车</h3>${cart.length?cart.map((p,i)=>`<div class="bill"><div>${p.emoji||'🛍️'} ${esc(p.name)}<small>${esc(p.shop||'')}</small></div><div>¥${(+p.price).toFixed(2)} <span onclick="S.shop.cart.splice(${i},1);save();openCart()" style="color:#fa5151;cursor:pointer;margin-left:6px">✕</span></div></div>`).join('')+`<div style="text-align:right;padding:10px 4px;font-size:16px;color:#ff6b6b">合计 ¥${total.toFixed(2)}</div><div class="btns"><button class="btn p" onclick="doBuy(S.shop.cart.slice(),'self')">自己买单</button><button class="btn g" onclick="closeModal();cartPayFlow()">让TA代付</button></div>${familyContacts().length?`<button class="btn g" style="margin-top:8px;background:#e8527f;color:#fff" onclick="closeModal();familyPayFlow(S.shop.cart.slice())">用亲属卡付</button>`:''}`:'<div class="empty">购物车空空的</div>'}<button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function doBuy(items,who){if(!items.length)return;const total=items.reduce((s,p)=>s+(+p.price),0);
   if(who==='self'){if(total>S.me.balance){toast('余额不够啦（去钱包改余额）');return;}
-    S.shop.orders=S.shop.orders||[];
-    items.forEach(p=>{addBill('out',+p.price,'在'+(p.shop||'商城')+'买了'+p.name);S.shop.orders.unshift({id:uid(),name:p.name,price:+p.price,shop:p.shop||'商城',emoji:p.emoji||'🛍️',buyTs:Date.now(),arriveTs:Date.now()+86400000,refunded:false});});
-    if(S.shop.orders.length>40)S.shop.orders=S.shop.orders.slice(0,40);
-    S.shop.cart=S.shop.cart.filter(c=>!items.includes(c));save();closeModal();render();toast('下单成功 ¥'+total.toFixed(2)+'，预计明天送达 📦');}}
+    items.forEach(p=>{addBill('out',+p.price,'在'+(p.shop||'商城')+'买了'+p.name);parcelDeliver(null,p.name,+p.price,'self',{emoji:p.emoji||'🛒',shop:p.shop||'商城'});});
+    S.shop.cart=S.shop.cart.filter(c=>!items.includes(c));save();closeModal();render();toast('下单成功 ¥'+total.toFixed(2)+'，已发货，预计明天到信箱 📦');}}
+function orderEta(ts){const ms=ts-Date.now();if(ms<=0)return '即将到达';const h=Math.floor(ms/3600000);const m=Math.floor((ms%3600000)/60000);return h>0?('还有约 '+h+' 小时'+(m?m+'分':'')+' 到货'):('还有约 '+Math.max(1,m)+' 分钟到货');}
 function openOrders(){const os=S.shop.orders||[];const refN=os.filter(o=>o.refunded).length;
-  openModal(`<h3>📦 我的订单</h3><div style="max-height:60vh;overflow:auto">${os.length?os.map(o=>{const arrived=Date.now()>=o.arriveTs;const st=o.refunded?'<span style="color:#888">已退款</span>':(arrived?'<span style="color:#19a463">✅ 已签收</span>':'<span style="color:#ffb83b">🚚 运送中 · 预计 '+fmtDate(o.arriveTs)+' 送达</span>');
-    return `<div class="bill" style="${o.refunded?'opacity:.55':''}"><div style="flex:1">${o.emoji||'🛍️'} ${esc(o.name)}<small style="display:block;color:#888">¥${(+o.price).toFixed(2)} · ${st}</small></div><div style="white-space:nowrap"><button class="minibtn" onclick="csConsultOrder('${o.id}')">咨询客服</button>${o.refunded?'<span style="color:#888;font-size:12px;margin-left:6px">已退</span>':` <button class="minibtn" style="color:#fa5151" onclick="refundOrder('${o.id}')">退款</button>`}</div></div>`;}).join(''):'<div class="empty">还没有订单～买点东西吧</div>'}</div>
+  openModal(`<h3>📦 我的订单</h3><div style="max-height:60vh;overflow:auto">${os.length?os.map(o=>{const arrived=Date.now()>=o.arriveTs;const tag=o.parcel?(o.kind==='pay'?'代付':o.kind==='self'?'自购':'礼物'):'';const refundable=(!o.parcel||o.kind==='self')&&!o.refunded;
+    const st=o.refunded?'<span style="color:#888">已退款</span>':(arrived?(o.parcel?'<span style="color:#19a463">📮 已到信箱 · 去签收</span>':'<span style="color:#19a463">✅ 已签收</span>'):'<span style="color:#ffb83b">🚚 已发货 · 运输中 · '+orderEta(o.arriveTs)+'</span>');
+    return `<div class="bill" style="${o.refunded?'opacity:.55':''}"><div style="flex:1">${o.emoji||'🛍️'} ${esc(o.name)}${tag?'<span style="color:#ff8fab;font-size:11px;margin-left:4px">'+tag+'</span>':''}<small style="display:block;color:#888">¥${(+o.price).toFixed(2)} · ${st}</small></div><div style="white-space:nowrap"><button class="minibtn" onclick="csConsultOrder('${o.id}')">咨询客服</button>${o.parcel&&arrived?' <button class="minibtn" style="background:#ff6fa5;color:#fff" onclick="closeModal();go(\'mail\')">去信箱签收</button>':''}${refundable?` <button class="minibtn" style="color:#fa5151" onclick="refundOrder('${o.id}')">退款</button>`:(o.refunded?'<span style="color:#888;font-size:12px;margin-left:6px">已退</span>':'')}</div></div>`;}).join(''):'<div class="empty">还没有订单～买点东西吧</div>'}</div>
   <button class="btn p" style="margin-top:8px;background:#ff6b6b" onclick="closeModal();go('shopcs')">💬 联系商城客服</button>
   ${refN?`<button class="btn g" style="margin-top:8px" onclick="clearRefundedOrders()">🧹 清除已退款订单（${refN}）</button>`:''}
   <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
@@ -1444,18 +1444,25 @@ function checkFoodDelivery(){if(!isMain())return;const now=Date.now();let ch=fal
     });}
   if(ch){save();const cu=cur();if(cu&&(cu.p==='chat'||cu.p==='wechat'))render();}}
 setInterval(checkFoodDelivery,60000);setTimeout(checkFoodDelivery,7000);
+// 统一"包裹配送"：进商城订单显示已发货 + 第二天到信箱签收（礼物 和 代付的商品都走这条）
+function parcelDeliver(cid,name,price,kind,opts){opts=opts||{};name=(''+(name||'商品')).slice(0,30);price=+price||0;kind=kind||'gift';const pid=uid();const arrive=Date.now()+86400000;
+  S.giftbox=S.giftbox||[];S.giftbox.push({id:pid,cid:cid||null,name,price,kind,buyTs:Date.now(),arriveTs:arrive,delivered:false});
+  S.shop.orders=S.shop.orders||[];S.shop.orders.unshift({id:pid,name,price,shop:opts.shop||(kind==='pay'?'代付':kind==='self'?'自购':'礼物'),emoji:opts.emoji||(kind==='pay'?'🛍️':kind==='self'?'🛒':'🎁'),buyTs:Date.now(),arriveTs:arrive,refunded:false,parcel:true,kind});
+  if(S.shop.orders.length>40)S.shop.orders=S.shop.orders.slice(0,40);}
 function giftSend(cid,name,price){if(!cid)return;const c=getC(cid);name=(''+(name||'礼物')).slice(0,30);price=+price||0;
-  S.giftbox=S.giftbox||[];S.giftbox.push({id:uid(),cid,name,price,buyTs:Date.now(),arriveTs:Date.now()+86400000,delivered:false});
+  parcelDeliver(cid,name,price,'gift');
   if(c)msgs(cid).push({role:'assistant',type:'gift',name,price,from:'ta',shipping:true,id:uid(),time:Date.now()});
   save();const cu=cur();if(cu&&((cu.p==='chat'&&cu.id===cid)||cu.p==='wechat'))render();}
 function checkGiftDelivery(){if(!isMain())return;const now=Date.now();let ch=false;const gb=S.giftbox||[];
-  gb.forEach(g=>{if(!g.delivered&&now>=g.arriveTs){g.delivered=true;ch=true;const c=getC(g.cid);
-    S.mail=S.mail||[];S.mail.unshift({id:uid(),cid:g.cid,type:'gift',giftName:g.name,giftPrice:g.price,subject:'🎁 礼物到了：'+g.name,body:'快递到了～'+(c?(c.remark||c.name):'ta')+'给你寄的「'+g.name+'」到了，签收一下吧💗',signed:false,read:false,time:Date.now()});if(S.mail.length>60)S.mail=S.mail.slice(0,60);
-    if(c)notifyMail(c,{subject:'🎁 礼物到了：'+g.name});}});
+  gb.forEach(g=>{if(!g.delivered&&now>=g.arriveTs){g.delivered=true;ch=true;const c=getC(g.cid);const k=g.kind||'gift';const who=c?(c.remark||c.name):'ta';
+    const subj=k==='self'?('📦 你买的「'+g.name+'」到了'):k==='pay'?('📦 代付的「'+g.name+'」到了'):('🎁 礼物到了：'+g.name);
+    const bd=k==='self'?('你买的「'+g.name+'」到货了，签收一下吧📦'):k==='pay'?('你让 '+who+' 帮你付的「'+g.name+'」到货了，签收一下吧📦'):('快递到了～'+who+'给你寄的「'+g.name+'」到了，签收一下吧💗');
+    S.mail=S.mail||[];S.mail.unshift({id:uid(),cid:g.cid,type:'gift',kind:k,giftName:g.name,giftPrice:g.price,subject:subj,body:bd,signed:false,read:false,time:Date.now()});if(S.mail.length>60)S.mail=S.mail.slice(0,60);
+    if(c)notifyMail(c,{subject:subj});else playDing();}});
   S.giftbox=gb.filter(g=>!g.delivered||now-g.arriveTs<6048e5);
   if(ch){save();const cu=cur();if(cu&&cu.p==='mail')render();}}
 setInterval(checkGiftDelivery,60000);setTimeout(checkGiftDelivery,8000);
-function signGift(lid){const L=(S.mail||[]).find(x=>x.id===lid);if(!L||L.signed)return;L.signed=true;L.read=true;save();closeModal&&closeModal();render();toast('🎁 签收了 '+L.giftName);const c=getC(L.cid);if(c&&!c.blocked)scheduleReply(L.cid,'[系统：'+S.me.name+'在信箱签收了你寄的礼物「'+L.giftName+'」，ta很开心。你跟ta确认收到、自然地宠ta/道一句，一两句。]');}
+function signGift(lid){const L=(S.mail||[]).find(x=>x.id===lid);if(!L||L.signed)return;L.signed=true;L.read=true;save();closeModal&&closeModal();render();toast('📦 签收了 '+L.giftName);const c=getC(L.cid);if(c&&!c.blocked)scheduleReply(L.cid,L.kind==='pay'?('[系统：'+S.me.name+'在信箱签收了你帮ta付钱买的「'+L.giftName+'」。你确认ta收到了、自然地宠ta或打趣一句，一两句。]'):('[系统：'+S.me.name+'在信箱签收了你寄的礼物「'+L.giftName+'」，ta很开心。你跟ta确认收到、自然地宠ta/道一句，一两句。]'));}
 function foodPayFlow(i){const p=S.food.results[i];if(!p)return;window._pp={name:p.name,price:+p.price,shop:'外卖·'+(p.shop||'')};pickTarget(payTo);}
 function foodReceive(mid){let found;for(const k in S.messages){const m=S.messages[k].find(x=>x.id===mid);if(m){found={m,k};break;}}
   if(!found||found.m.received)return;found.m.received=true;msgs(found.k).push({role:'user',type:'sys',content:'你签收了外卖：'+found.m.name,time:Date.now(),id:uid()});adjMood(found.k,6);save();render();toast('🛵 已签收 '+found.m.name);
@@ -3538,7 +3545,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
       mm=line.match(/^\[点外卖\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){const fc={role:'assistant',type:'food',name:mm[1]||'外卖',price:+mm[2]||0,shop:'',from:'ta',received:false,declined:false,deliverAt:Date.now()+900000,arrived:false,id:uid(),time:Date.now()};msgs(id).push(fc);notifyIncoming(c,fc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[送礼\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){giftSend(id,(mm[1]||'礼物').trim(),+mm[2]||0);continue;}
       mm=line.match(/^\[语音\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){const vm={role:'assistant',type:'voice',content:mm[1]||'',trans:mm[2]||'',time:Date.now(),id:uid()};msgs(id).push(vm);notifyIncoming(c,vm);save();if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');cb.insertAdjacentHTML('beforeend',bubbleRow(c,vm));cb.scrollTop=cb.scrollHeight;}continue;}
-      mm=line.match(/^\[代付成功\|?([0-9.]*)\|?([^\]]*)\]$/);if(mm){const pend=markPay(id,'pay');if(!pend)continue;const pc={role:'assistant',type:'paid',price:pend.price||+mm[1]||0,name:pend.name||mm[2]||'商品',id:uid(),time:Date.now()};msgs(id).push(pc);notifyIncoming(c,pc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
+      mm=line.match(/^\[代付成功\|?([0-9.]*)\|?([^\]]*)\]$/);if(mm){const pend=markPay(id,'pay');if(!pend)continue;const pnm=pend.name||mm[2]||'商品';const ppr=pend.price||+mm[1]||0;const pc={role:'assistant',type:'paid',price:ppr,name:pnm,id:uid(),time:Date.now()};msgs(id).push(pc);notifyIncoming(c,pc);parcelDeliver(id,pnm,ppr,'pay');save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[拒绝代付\|?([0-9.]*)\|?([^\]]*)\]$/);if(mm){const pend=markPay(id,'reject');if(!pend)continue;const pc={role:'assistant',type:'payreject',price:pend.price||+mm[1]||0,name:pend.name||mm[2]||'',id:uid(),time:Date.now()};msgs(id).push(pc);notifyIncoming(c,pc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       if(/^\[\s*收外卖\s*\]$/.test(line)){const pf=markFood(id,'accept');if(pf){msgs(id).push({role:'user',type:'sys',content:'🛵 '+(c.remark||c.name)+'收下了外卖「'+pf.name+'」，配送中（约15分钟送达）',time:Date.now(),id:uid()});adjMood(id,5);save();if(cur().p==='chat'&&cur().id===id)render();}continue;}
       if(/^\[\s*拒外卖\s*\]$/.test(line)){const pf=markFood(id,'reject');if(pf){addBill('in',+pf.price||0,'外卖退款：'+pf.name);msgs(id).push({role:'user',type:'sys',content:'❌ '+(c.remark||c.name)+'拒收了外卖「'+pf.name+'」，¥'+(+pf.price).toFixed(2)+' 已原路退回钱包',time:Date.now(),id:uid()});adjMood(id,-6);save();if(cur().p==='chat'&&cur().id===id)render();}continue;}
