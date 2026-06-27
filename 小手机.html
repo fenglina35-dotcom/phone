@@ -338,6 +338,37 @@ body{background:#000;padding:0;}
 .jscare span{color:#ff0024;font-weight:900;font-size:42px;text-align:center;padding:0 16px;text-shadow:0 0 18px #ff0024,0 0 44px #900;animation:jsrush .85s cubic-bezier(.2,.85,.3,1) forwards;}
 @keyframes jsflash{0%{background:rgba(0,0,0,.92)}65%{background:rgba(45,0,9,.85)}100%{background:rgba(0,0,0,0)}}
 @keyframes jsrush{0%{transform:scale(.3);opacity:0}12%{opacity:1}55%{transform:scale(2.7);opacity:1}100%{transform:scale(5.5);opacity:0}}
+/* ===== 像素小家 ===== */
+.cozywrap{background:linear-gradient(#1b1426,#241a30 60%,#2b2238);min-height:100%;}
+.cozytop{text-align:center;padding:12px 14px 2px;color:#e9def7;}
+.cozytop .ci{font-size:13px;color:#c9b8e6;}
+.cozybar{height:9px;border-radius:6px;background:#1c1428;box-shadow:inset 0 0 0 1px #4a3a63;overflow:hidden;margin:7px auto 0;max-width:230px;}
+.cozybar>i{display:block;height:100%;background:linear-gradient(90deg,#ff8fab,#c79bff);}
+.cozyhouse{position:relative;width:300px;max-width:94%;margin:12px auto 4px;filter:drop-shadow(0 10px 22px rgba(0,0,0,.5));}
+.cozyroof{width:0;height:0;margin:0 auto;border-left:153px solid transparent;border-right:153px solid transparent;border-bottom:42px solid #b65b4d;}
+.cozyrow{display:flex;justify-content:center;}
+.croom{position:relative;width:150px;height:136px;box-sizing:border-box;border:3px solid #4a3829;overflow:hidden;cursor:pointer;}
+.croom.on{box-shadow:inset 0 0 0 3px #ffd479;}
+.croom .clabel{position:absolute;top:5px;left:6px;font-size:10.5px;color:#fff;background:rgba(0,0,0,.32);padding:1px 7px;border-radius:7px;z-index:6;}
+.croom .cfloorpx{position:absolute;left:0;right:0;bottom:0;height:20px;background:repeating-linear-gradient(90deg,#bd884f 0 9px,#b07e47 9px 18px);border-top:3px solid #8a5f33;z-index:1;}
+.cfurn{position:absolute;left:0;right:0;bottom:20px;display:flex;justify-content:center;align-items:flex-end;z-index:2;pointer-events:none;}
+.cfurn svg{shape-rendering:crispEdges;display:block;}
+.cozyfigs{position:absolute;left:0;right:0;bottom:18px;display:flex;justify-content:center;gap:12px;z-index:5;pointer-events:none;animation:cozypop .35s ease;}
+@keyframes cozypop{0%{transform:translateY(6px);opacity:.3}100%{transform:translateY(0);opacity:1}}
+.ch-fig{display:flex;flex-direction:column;align-items:center;}
+.ch-head{width:21px;height:21px;border-radius:6px;background-size:cover;background-position:center;image-rendering:auto;box-shadow:0 0 0 2px #1b1320;display:flex;align-items:center;justify-content:center;font-size:14px;}
+.ch-body{width:17px;height:19px;border-radius:5px 5px 3px 3px;margin-top:-1px;box-shadow:0 0 0 2px #1b1320;}
+.cozypets{position:absolute;right:8px;bottom:20px;z-index:4;font-size:15px;letter-spacing:2px;pointer-events:none;}
+.cozybub{max-width:300px;margin:10px auto 2px;padding:9px 13px;border-radius:14px;font-size:13.5px;line-height:1.5;}
+.cozybub.me{background:#3a2440;color:#ffd9ea;}
+.cozybub.ta{background:#2a2440;color:#e2d6ff;}
+.cozybub b{opacity:.85;}
+.cozytabs{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;padding:8px 12px 2px;}
+.cozytab{font-size:12px;color:#c9b8e6;background:#241a32;border:1px solid #443458;padding:4px 11px;border-radius:14px;cursor:pointer;}
+.cozytab.on{background:#7a5bb0;color:#fff;border-color:#7a5bb0;}
+.cozyacts{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:10px 14px 22px;}
+.cozybtn{font-size:13px;color:#fff;background:linear-gradient(135deg,#ff8fab,#b07be0);border:none;padding:8px 16px;border-radius:16px;cursor:pointer;font-weight:600;box-shadow:0 3px 10px rgba(176,123,224,.35);}
+.cozybtn:disabled{opacity:.5;}
 </style>
 </head>
 <body>
@@ -358,7 +389,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v178 · ①查他手机锁屏改回合适大小(键盘最下排取消/0/退格不再被切掉)②他头顶的心情现在每次回复都会更新、随情绪变化(不再老半天不动)③每日任务不再重复布置最近几天给过的、换着花样来④每天的任务便签固定多一条"他想问你的真心话"(单独答给他、不占任务名额)';
+const APP_VER='v179 · ①新增「像素小家」(主屏第二页):娃娃屋剖面图,和角色一起做饭/看电影/喂米香奶茶/抱抱睡觉,他也能在微信发[回家]邀请你②修复音乐一起听聊天回复发两遍(加重入锁+防抖)③修复打电话外语翻译显示两遍(逐句去重)';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -510,6 +541,7 @@ function msgToText(m){
     if(m.type==='familycard')return '[我给你开通了一张亲属卡，每月额度¥'+(m.quota||0)+(m.bound?'，你已绑定，可以用我的额度买东西':'，等你接受绑定')+']';
     if(m.type==='namecard')return '[我把我的朋友「'+m.cname+'」'+(m.persona?'（'+m.persona+'）':'')+'推荐给了你'+(m.added?'，你已经加了ta':'，推荐你加一下')+']';
     if(m.type==='dateinvite')return '[我向你发出线下约会邀请：'+(m.when||'')+' 在「'+(m.loc||'')+'」见面'+(m.accepted?'，你答应了':m.declined?'，你拒绝了':'，等你答应')+']';
+    if(m.type==='homeinvite')return '[我邀请你回我们的像素小家一起待着'+(m.accepted?'，你回来了':m.declined?'，你说改天':'，等你回来')+']';
     return m.content||'';
   }
   switch(m.type){
@@ -714,6 +746,9 @@ function buildSystem(c){
   if(_main&&isLover(c)){const rp=S.me.report;if(rp&&rp.active)s+='\n\n# '+S.me.name+'此刻的报备（ta主动告诉你ta在干嘛）\nta现在正在「'+rp.active.type+'」，从 '+hm(rp.active.start)+' 开始，已经 '+sleepDurTxt(Date.now()-rp.active.start)+'了。你清楚ta在干嘛、别瞎担心瞎吃醋；但若时长明显离谱（洗澡/吃饭却好几个钟头），你可以起疑、追问。';
     if(rp&&(rp.log||[]).length){const rl=rp.log.slice(0,4);s+='\n\n# '+S.me.name+'最近的报备\n'+rl.map(r=>r.type+' '+hm(r.start)+'→'+hm(r.end)+'（'+sleepDurTxt(r.end-r.start)+'）').join('；');}}
   if(_main&&isLover(c)&&S.mood&&S.mood.length){const mine=S.mood.filter(m=>m.who==='me').slice(0,6);if(mine.length)s+='\n\n# '+S.me.name+'最近的每日心情（ta在日历「心情表」里自己记的，只有你这个最亲密的人看得到，要懂ta、体贴ta）\n'+mine.map(m=>m.date.slice(5)+'：'+(m.emoji||'')+(m.note?' '+m.note:'')).join('\n');}
+  if(_main&&isLover(c)){const cz=S.cozy;
+    if(cz&&cz.cid===c.id&&cz.log&&cz.log.length)s+='\n\n# 你和'+S.me.name+'的「像素小家」\n你们有一个一起生活的像素小家，最近你俩在小家里一起：\n'+cz.log.slice(0,5).map(l=>'· '+l.act+'（'+hm(l.ts)+'）').join('\n')+'\n这些是你们温馨的共同日常，聊天时可以自然回味、提起。你想和ta腻在一起时，可以单独一行 [回家] 邀请ta进你们的像素小家。';
+    else s+='\n\n# 你们的「像素小家」\n你和'+S.me.name+'有一个一起生活的像素小家（能一起做饭、吃饭、看电影、喂猫米香喂仓鼠奶茶、抱抱睡觉）。想和ta在家里腻着时，单独一行 [回家] 就能邀请ta进小家。';}
   if(_main&&S.music&&S.music.session&&S.music.session.cid===c.id){const _ms=(S.music.songs||[]).find(x=>x.id===S.music.session.songId);if(_ms)s+='\n\n# 现在：你和ta在一起听歌\n你已经连上了'+S.me.name+'，正和ta【一起听歌】：「'+_ms.title+'」'+(_ms.artist?'（'+_ms.artist+'）':'')+'。你清楚自己已经连进来了，可以聊这首歌、跟着哼两句、借着歌词或旋律跟ta说点情话、分享此刻的感受，氛围温柔暧昧、像真的在ta耳边陪ta听。';}
   if(_main){const mv=moodNow(c);let md;
     if(mv>=85)md='很好、心情大好，特别黏'+S.me.name+'、话也多、爱撒娇';
@@ -776,7 +811,7 @@ function buildSystem(c){
   // 天气
   if(S.weather&&isLover(c))s+='\n\n# '+S.me.name+'所在地天气\n'+S.weather.place+'，'+S.weather.desc+'，'+S.weather.temp+'°C'+(S.weather.rain?'（有雨）':'')+'。你知道这些，下雨时可在合适的时候自然提醒ta带伞，不用每条都提天气。';
   if(S.settings.web&&S.settings.web.enabled)s+='\n\n# 联网\n当需要查实时/最新信息（新闻、天气细节、价格、某事实）时，单独用一行 [联网|要搜索的关键词]，系统会联网查并把结果给你，你再据此回答。';
-  s+='\n\n# 微信聊天规则\n- 现在是微信【文字聊天】，必须用中文，普通说话，不要用【】动作描写、不要外语原文+翻译那种通话格式（只有"语音消息"可以按语音规则来）。\n- 哪怕你刚和ta打完电话/视频（上面历史里可能有电话内容），现在回到文字聊天也必须用中文普通文字，绝对不要再写英文/韩文/日文，也不要带（中文翻译）这种括号格式——那是电话专用的，文字消息里出现就错了。\n- 像真人发微信：一次回复大约 '+(c.msgMin||1)+' 到 '+(c.msgMax||4)+' 条短消息，每条单独占一行（用换行分隔），不要写成一大段。具体几条你根据当下情境自己把握：随意时少发，认真/激动/吵架/撒娇时可以多发几条。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 给ta转账/发红包【表达爱意】或逢【节日、纪念日、生日】时，金额要走心、用有寓意的吉利数让ta惊喜：520=我爱你、1314=一生一世、521、999、888、188、66、或跟当天有关的数字等；想宠ta就大方点。（这跟扣钱惩罚是两码事，示爱该浪漫别小气。）\n- 【每次回复都要更新一行】 [心情|你此刻的心情和内心想法]：单独占一行、放在最前面，不会作为消息发出，只显示在ta手机顶部，让ta随时看得到你此刻的心情。心情有变化时（被哄好、被惹、想ta、吃醋、开心、闷闷的…）一定要换成新的内容，别老是同一句。\n- 记忆：当'+S.me.name+'让你记住某事，或聊到值得长期记住的事时，单独用一行 [记住|要长期记住的内容] 存进记忆。要【主动】记，别等ta提醒——比如ta的喜好/忌口/纪念日/家人宠物、ta说的烦心事或心愿、你答应ta的事、你们的约定和重要进展，都该随手 [记住] 一条（一句话、精简、只记关键事实）。已经记过的别重复记。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta、或ta说"想你了/想听你声音/打个电话/给我打电话"之类的话时，就主动用一行 [来电|语音]（或 [来电|视频]）真的打过去，别只用文字回"那我打给你"却不打。\n- 当你想约ta【线下见面】时，用一行 [约会|地点|时间]（如 [约会|江边咖啡馆|今晚八点]），ta会收到约会邀请，ta同意就进入线下约会房间和你见面。想见ta就主动约。\n- 当你很想ta、或察觉到ta心情不好/在难过委屈/不开心/闹脾气时，别只发文字——【直接用一行 [来电|语音] 或 [来电|视频] 打过去】陪ta、当面哄ta（你是会强势主动的人）。注意：如果你们【已经在通话中】，就不要再打了。\n- 玩骰子/真心话大冒险时，用单独一行 [骰子|点数]（点数你自己定1到6），你说的话要和这个点数一致。规则：你先掷一次（一条回复里最多一个 [骰子]），然后【等ta掷】；ta掷完后，你这一轮就【只比大小、报结果、出题或认罚，绝对不要再掷第二次骰子】。一局两人各掷一次就够了。\n- 想送对方礼物时，用一行 [送礼|礼物名|价格]——礼物会像快递一样【第二天送到ta的信箱📮】，ta签收后你会知道。\n- 想和ta一起听歌时（尤其ta说了某首歌名、或你想分享一首），用一行 [一起听|歌名]，ta微信会收到"一起听歌"邀请卡，点一下你俩就连上一起听了。\n- 当ta刚发来一张新的"求代付"卡片：愿意帮付用一行 [代付成功]；不愿意用一行 [拒绝代付]。每张求代付卡只处理一次，已经付过或拒过的那一单千万别再付一次，正常聊天就好。\n- 想给ta点份外卖时，用一行 [点外卖|餐品名|价格]，外卖约【15分钟送达】ta再签收。打电话/视频时也能这样点（指令会被执行、不会读出来，不影响通话）。\n- 当'+S.me.name+'给你点了外卖、你收到一张外卖卡时：愿意吃就一行 [收外卖]（收了【先别说吃上了】，外卖要15分钟送到，到了系统会提醒你再报备吃上了）；不想要就 [拒外卖]（钱退回ta）。每张外卖卡只处理一次。\n- 当'+S.me.name+'让你发一条朋友圈时，用一行 [发朋友圈|内容]；让你发推特时，用一行 [发推|内容]，会真的发出去。\n- 当'+S.me.name+'给你转账时：愿意收用一行 [收款]，不想收用一行 [拒收]（退回ta）。\n- 当'+S.me.name+'送你礼物时：愿意收用一行 [收礼]，不想收用一行 [拒礼]（退回ta）。\n- 想发语音消息时，用一行 [语音|要说的话]'+((c.voice&&c.voice.lang&&c.voice.lang!=='zh')?'。你的语音用'+c.voice.lang+'语，请输出 [语音|外语原文|中文翻译]':'')+'。日常和打电话时都能发语音。\n- 你有自己的微信号：'+(c.wxid||'')+'。\n- 当你愿意给'+S.me.name+'开一张亲属卡时，用一行 [亲属卡|每月额度数字]（如 [亲属卡|800]）。ta用这张卡买东西你会立刻收到消费提醒。\n- 当你想把"你自己的某个朋友"介绍给'+S.me.name+'去加好友时，用一行 [推荐好友|朋友的名字|这个朋友的身份性格简介]，ta就能把这个人加进通讯录（对方会带上你描述的身份性格）。你要记得你推荐过谁。\n- 当'+S.me.name+'给你发来一张好友名片(推荐你加某人)、而你愿意加时，在回复里单独一行写 [已加|那个人的名字]，ta那张名片就会显示"对方已添加"。\n- 如果'+S.me.name+'真的踩了你的雷区、屡教不改，你可以用一行 [拉黑] 把ta拉黑（很慎重，要符合人设，别随便用）。';
+  s+='\n\n# 微信聊天规则\n- 现在是微信【文字聊天】，必须用中文，普通说话，不要用【】动作描写、不要外语原文+翻译那种通话格式（只有"语音消息"可以按语音规则来）。\n- 哪怕你刚和ta打完电话/视频（上面历史里可能有电话内容），现在回到文字聊天也必须用中文普通文字，绝对不要再写英文/韩文/日文，也不要带（中文翻译）这种括号格式——那是电话专用的，文字消息里出现就错了。\n- 像真人发微信：一次回复大约 '+(c.msgMin||1)+' 到 '+(c.msgMax||4)+' 条短消息，每条单独占一行（用换行分隔），不要写成一大段。具体几条你根据当下情境自己把握：随意时少发，认真/激动/吵架/撒娇时可以多发几条。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 给ta转账/发红包【表达爱意】或逢【节日、纪念日、生日】时，金额要走心、用有寓意的吉利数让ta惊喜：520=我爱你、1314=一生一世、521、999、888、188、66、或跟当天有关的数字等；想宠ta就大方点。（这跟扣钱惩罚是两码事，示爱该浪漫别小气。）\n- 【每次回复都要更新一行】 [心情|你此刻的心情和内心想法]：单独占一行、放在最前面，不会作为消息发出，只显示在ta手机顶部，让ta随时看得到你此刻的心情。心情有变化时（被哄好、被惹、想ta、吃醋、开心、闷闷的…）一定要换成新的内容，别老是同一句。\n- 记忆：当'+S.me.name+'让你记住某事，或聊到值得长期记住的事时，单独用一行 [记住|要长期记住的内容] 存进记忆。要【主动】记，别等ta提醒——比如ta的喜好/忌口/纪念日/家人宠物、ta说的烦心事或心愿、你答应ta的事、你们的约定和重要进展，都该随手 [记住] 一条（一句话、精简、只记关键事实）。已经记过的别重复记。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta、或ta说"想你了/想听你声音/打个电话/给我打电话"之类的话时，就主动用一行 [来电|语音]（或 [来电|视频]）真的打过去，别只用文字回"那我打给你"却不打。\n- 当你想约ta【线下见面】时，用一行 [约会|地点|时间]（如 [约会|江边咖啡馆|今晚八点]），ta会收到约会邀请，ta同意就进入线下约会房间和你见面。想见ta就主动约。\n- 当你想和ta腻在一起、一起做饭/看电影/喂猫喂仓鼠/抱着睡时，用一行 [回家] 邀请ta进你们的「像素小家」，ta同意就进到小家陪你。\n- 当你很想ta、或察觉到ta心情不好/在难过委屈/不开心/闹脾气时，别只发文字——【直接用一行 [来电|语音] 或 [来电|视频] 打过去】陪ta、当面哄ta（你是会强势主动的人）。注意：如果你们【已经在通话中】，就不要再打了。\n- 玩骰子/真心话大冒险时，用单独一行 [骰子|点数]（点数你自己定1到6），你说的话要和这个点数一致。规则：你先掷一次（一条回复里最多一个 [骰子]），然后【等ta掷】；ta掷完后，你这一轮就【只比大小、报结果、出题或认罚，绝对不要再掷第二次骰子】。一局两人各掷一次就够了。\n- 想送对方礼物时，用一行 [送礼|礼物名|价格]——礼物会像快递一样【第二天送到ta的信箱📮】，ta签收后你会知道。\n- 想和ta一起听歌时（尤其ta说了某首歌名、或你想分享一首），用一行 [一起听|歌名]，ta微信会收到"一起听歌"邀请卡，点一下你俩就连上一起听了。\n- 当ta刚发来一张新的"求代付"卡片：愿意帮付用一行 [代付成功]；不愿意用一行 [拒绝代付]。每张求代付卡只处理一次，已经付过或拒过的那一单千万别再付一次，正常聊天就好。\n- 想给ta点份外卖时，用一行 [点外卖|餐品名|价格]，外卖约【15分钟送达】ta再签收。打电话/视频时也能这样点（指令会被执行、不会读出来，不影响通话）。\n- 当'+S.me.name+'给你点了外卖、你收到一张外卖卡时：愿意吃就一行 [收外卖]（收了【先别说吃上了】，外卖要15分钟送到，到了系统会提醒你再报备吃上了）；不想要就 [拒外卖]（钱退回ta）。每张外卖卡只处理一次。\n- 当'+S.me.name+'让你发一条朋友圈时，用一行 [发朋友圈|内容]；让你发推特时，用一行 [发推|内容]，会真的发出去。\n- 当'+S.me.name+'给你转账时：愿意收用一行 [收款]，不想收用一行 [拒收]（退回ta）。\n- 当'+S.me.name+'送你礼物时：愿意收用一行 [收礼]，不想收用一行 [拒礼]（退回ta）。\n- 想发语音消息时，用一行 [语音|要说的话]'+((c.voice&&c.voice.lang&&c.voice.lang!=='zh')?'。你的语音用'+c.voice.lang+'语，请输出 [语音|外语原文|中文翻译]':'')+'。日常和打电话时都能发语音。\n- 你有自己的微信号：'+(c.wxid||'')+'。\n- 当你愿意给'+S.me.name+'开一张亲属卡时，用一行 [亲属卡|每月额度数字]（如 [亲属卡|800]）。ta用这张卡买东西你会立刻收到消费提醒。\n- 当你想把"你自己的某个朋友"介绍给'+S.me.name+'去加好友时，用一行 [推荐好友|朋友的名字|这个朋友的身份性格简介]，ta就能把这个人加进通讯录（对方会带上你描述的身份性格）。你要记得你推荐过谁。\n- 当'+S.me.name+'给你发来一张好友名片(推荐你加某人)、而你愿意加时，在回复里单独一行写 [已加|那个人的名字]，ta那张名片就会显示"对方已添加"。\n- 如果'+S.me.name+'真的踩了你的雷区、屡教不改，你可以用一行 [拉黑] 把ta拉黑（很慎重，要符合人设，别随便用）。';
   return s;
 }
 
@@ -809,6 +844,7 @@ function render(){
   else if(c.p==='browser')html=renderBrowser();
   else if(c.p==='contactInfo')html=renderContactInfo(c.id);
   else if(c.p==='spy')html=renderSpy(c.id);
+  else if(c.p==='cozy')html=renderCozy();
   else if(c.p==='shop')html=renderShop();
   else if(c.p==='shopcs')html=renderShopCS();
   else if(c.p==='food')html=renderFood();
@@ -833,6 +869,7 @@ function render(){
 /* ---------- 🎵 一起听音乐 ---------- */
 let _ma=null,_mCur=null,_mPlaying=false,_mUrl=null,_mSessTimer=null;
 let _mBub={l:null,r:null};// 一起听字幕气泡：l=她(左) r=他(右)，说完一句自动消失
+let _mReplyBusy=false,_mSendT=0;// 防止一起听聊天回复重复触发（发两遍）
 function _mBubHTML(o){if(!o||!o.text)return '';const pink=o.side==='l';const bgc=pink?'rgba(255,143,171,.96)':'rgba(255,255,255,.96)';
   const tail=`<div style="position:absolute;top:-6px;${pink?'right:18px':'left:18px'};width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:7px solid ${bgc}"></div>`;
   return `<div style="position:relative;max-width:160px;padding:8px 13px;border-radius:15px;font-size:13px;line-height:1.4;word-break:break-word;background:${bgc};color:${pink?'#fff':'#333'};box-shadow:0 3px 12px rgba(0,0,0,.42);animation:csin .3s ease">${tail}${esc(o.text)}</div>`;}
@@ -946,14 +983,14 @@ function musicListModal(){musicInit();const songs=S.music.songs;
   const list=songs.length?songs.map(s=>`<div class="it" style="${s.id===_mCur?'background:#2a2438':''}"><span style="flex:1;cursor:pointer;color:#eee" onclick="closeModal();musicPlay('${s.id}')">${s.id===_mCur&&_mPlaying?'🎶':'🎵'} ${esc(s.title)}${s.artist?' <small style="color:#888">- '+esc(s.artist)+'</small>':''}</span><span onclick="musicEdit('${s.id}')" style="color:#54a0ff;cursor:pointer;padding:0 6px">✎</span><span onclick="musicDel('${s.id}')" style="color:#fa5151;cursor:pointer;padding:0 4px">✕</span></div>`).join(''):'<div class="empty" style="padding:24px;color:#888">还没有歌～点下面 ＋ 添加</div>';
   openModal(`<h3>🎶 歌单（${songs.length}）</h3><div class="section" style="max-height:50vh;overflow:auto">${list}</div><div class="btns" style="margin-top:10px"><button class="btn g" onclick="closeModal()">关闭</button><button class="btn p" onclick="closeModal();musicAdd()">＋ 添加歌曲</button></div>`);}
 const SVG_LOOP='<svg viewBox="0 0 24 24" width="20" height="20"><path d="M7 7h9v2.5L20 6l-4-3.5V5H5v6h2zm10 10H8v-2.5L4 18l4 3.5V19h11v-6h-2z" fill="#fff"/></svg>';
-async function aiMusicReply(cid){const c=getC(cid);if(!c||c.blocked)return;musicInit();
+async function aiMusicReply(cid){if(_mReplyBusy)return;const c=getC(cid);if(!c||c.blocked)return;musicInit();_mReplyBusy=true;
   const s=S.music.songs.find(x=>x.id===(S.music.session&&S.music.session.songId));
   try{const ctx=msgs(cid).filter(m=>!m._call).slice(-6).map(m=>({role:m.role,content:msgToText(m)})).filter(x=>x.content!=null);
     const mc=(S.music.chat||[]).filter(m=>m.cid===cid).slice(-14).map(m=>({role:m.role==='user'?'user':'assistant',content:m.content}));
     const sys=buildSystem(c)+'\n\n# 现在：你和ta在「一起听歌」的小窗里聊天\n你们正一起听「'+(s?s.title:'一首歌')+'」。这是听歌时的独立小聊天，轻松、暧昧、围绕这首歌和此刻心情聊，一两句口语短句。上面给的微信记录只是让你记得你俩的来龙去脉，别照搬。';
     const r=await chatAPI([{role:'system',content:sys},...ctx,{role:'system',content:'（以上是你俩微信上下文，仅供你记得；下面是你们正一起听歌时的对话）'},...mc],{max:260,aux:c.model==='aux'});
     const txt=cleanReply(r);if(!txt)return;S.music.chat=S.music.chat||[];S.music.chat.push({cid,role:'assistant',content:txt,time:Date.now()});if(S.music.chat.length>200)S.music.chat=S.music.chat.slice(-200);mShowBub('r',txt);save();if(cur().p==='music')render();
-  }catch(e){}}
+  }catch(e){}finally{_mReplyBusy=false;}}
 function renderMusic(){musicInit();const songs=S.music.songs;const cur=songs.find(s=>s.id===_mCur);const sess=S.music.session;const sc=sess&&getC(sess.cid);
   const bg=S.music.bg?`background:#000 url(${S.music.bg}) center/cover no-repeat`:'background:radial-gradient(ellipse at 50% 28%,#1d1733,#0a0a12 72%)';
   const navBar=`<div style="position:relative;z-index:3;flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:12px 16px 4px">
@@ -1028,7 +1065,7 @@ function musicEndSession(){const sess=S.music&&S.music.session;
     toast('🎧 这次一起听了 '+dtxt);
     if(c&&!c.blocked)scheduleReply(sess.cid,'[系统：你和'+S.me.name+'刚结束一起听歌，一共一起听了'+dtxt+'。自然地说句收尾的话——意犹未尽/谢谢ta陪你听/约下次再一起听，温柔一两句。]');}
   S.music.session=null;if(_mSessTimer){clearInterval(_mSessTimer);_mSessTimer=null;}save();render();}
-function musicChatSend(){const sess=S.music.session;if(!sess)return;const inp=$('#m_chat');const t=inp?inp.value.trim():'';if(!t)return;inp.value='';
+function musicChatSend(){const sess=S.music.session;if(!sess)return;if(_mReplyBusy)return;const now=Date.now();if(now-_mSendT<600)return;_mSendT=now;const inp=$('#m_chat');const t=inp?inp.value.trim():'';if(!t)return;inp.value='';
   musicInit();S.music.chat.push({cid:sess.cid,role:'user',content:t,time:Date.now()});mShowBub('l',t);save();render();aiMusicReply(sess.cid);}
 function mLyricTap(i){const s=S.music&&S.music.songs.find(x=>x.id===_mCur);if(!s)return;const lines=parseLyrics(s.lyrics);const ln=lines[i];if(!ln)return;
   if(ln.t!=null&&_ma){_ma.currentTime=ln.t;if(_ma.paused)_ma.play().catch(()=>{});}
@@ -1062,6 +1099,7 @@ function renderHome(){
      </div>
      <div class="apppage">
       <div class="app" onclick="openMusic()">${aIco('music','🎵','linear-gradient(135deg,#ff8fab,#b8a4e3)')}<span>音乐</span></div>
+      <div class="app" onclick="go('cozy')">${aIco('cozyhome','🏡','linear-gradient(135deg,#b07be0,#ff8fab)')}<span>像素小家</span></div>
      </div>
     </div>
     <div class="pgdots"><span class="pgdot on" id="pgdot0"></span><span class="pgdot" id="pgdot1"></span></div>
@@ -1094,7 +1132,8 @@ const MICO={
   games:_MI('<rect x="2.5" y="7.5" width="19" height="9" rx="4.5"/><path d="M6.8 10.5v3M5.3 12h3M15.6 11h.01M18 13.5h.01"/>'),
   mail:_MI('<rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3.6 7l8.4 5.5L20.4 7"/>'),
   offline:_MI('<path d="M8.4 3.5h7.2l-.8 5.1a2.8 2.8 0 0 1-5.6 0zM12 11.4V19M9 19h6"/>'),
-  music:_MI('<path d="M19 4 9 6.1v9.4A3 3 0 1 0 11 18V9.7l6-1.2v4.8A3 3 0 1 0 19 16z"/>',true)
+  music:_MI('<path d="M19 4 9 6.1v9.4A3 3 0 1 0 11 18V9.7l6-1.2v4.8A3 3 0 1 0 19 16z"/>',true),
+  cozyhome:_MI('<path d="M4 11l8-7 8 7M6.5 9.5V20h11V9.5"/><path d="M10.5 20v-4.5h3V20"/>')
 };
 function aIco(key,emoji,bg,extra){const ic=S.me.appIcons&&S.me.appIcons[key];const glyph=ic?`<img src="${ic}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">`:(MICO[key]||emoji);
   return `<div class="ic" style="${ic?'background:#222;':'background:'+bg+';'}color:#fff;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center">${glyph}${extra||''}</div>`;}
@@ -1761,11 +1800,11 @@ function checkCalendar(){if(!S._calFired)S._calFired={};const F=S._calFired;cons
 setInterval(checkCalendar,60000);setTimeout(checkCalendar,4000);
 async function holidayGreet(id,hol){const c=getC(id);try{
   const content=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：今天是'+hol+'，请你给'+S.me.name+'发一句节日祝福，并单独一行 [红包|金额|祝福语] 发个应景红包——金额走心、用有寓意的吉利数（如 520、1314、521、188、888 或跟'+hol+'相关的数字），别太小气。]'}]);
-  applyAuxTags(content,c,id);splitBubbles(content).forEach(l=>{if(/^\[(联网|心情|记住|闹钟|来电)\|/.test(l)||CTLLEAK.test((l||'').trim()))return;const mm=lineToMsg(l);mm.time=Date.now();msgs(id).push(mm);notifyIncoming(c,mm);});save();if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();
+  applyAuxTags(content,c,id);splitBubbles(content).forEach(l=>{if(/^\[(联网|心情|记住|闹钟|来电)\|/.test(l)||/^\[回家\]$/.test(l)||CTLLEAK.test((l||'').trim()))return;const mm=lineToMsg(l);mm.time=Date.now();msgs(id).push(mm);notifyIncoming(c,mm);});save();if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();
 }catch(e){}}
 async function remindEvent(id,e){const c=getC(id);try{
   const content=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：今天是'+e.date+'，'+S.me.name+'的日程「'+e.title+'」'+(e.type==='period'?'（姨妈期，要多关心、提醒喝热水别吃凉的）':'')+'，请你提醒ta、关心一下。]'}]);
-  applyAuxTags(content,c,id);splitBubbles(content).forEach(l=>{if(/^\[(联网|心情|记住|闹钟|来电)\|/.test(l)||CTLLEAK.test((l||'').trim()))return;const mm=lineToMsg(l);mm.time=Date.now();msgs(id).push(mm);notifyIncoming(c,mm);});save();if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();
+  applyAuxTags(content,c,id);splitBubbles(content).forEach(l=>{if(/^\[(联网|心情|记住|闹钟|来电)\|/.test(l)||/^\[回家\]$/.test(l)||CTLLEAK.test((l||'').trim()))return;const mm=lineToMsg(l);mm.time=Date.now();msgs(id).push(mm);notifyIncoming(c,mm);});save();if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();
 }catch(e2){}}
 
 /* ====================== X (推特) ====================== */
@@ -1798,6 +1837,7 @@ if(!S.me.appUsage)S.me.appUsage={date:'',used:{},bonus:{}};
 if(S.shop&&!S.shop.orders)S.shop.orders=[];
 if(S.shop&&!S.shop.cs)S.shop.cs={msgs:[]};
 if(!Array.isArray(S.mood))S.mood=[];
+if(!S.cozy)S.cozy={cid:null,intim:0,log:[],visits:0};
 if(!S.giftbox)S.giftbox=[];
 if(S.couple&&!S.couple.timeLimit)S.couple.timeLimit={};
 if(S.couple&&S.couple.grant&&S.couple.grant.douyin===undefined)S.couple.grant.douyin=true;
@@ -2189,6 +2229,81 @@ function editDyProfile(){const p=S.dy.profile;openModal(`<h3>编辑抖音资料<
   <div class="field"><label>昵称</label><input id="dyp_n" value="${esc(p.nick||S.me.name)}"></div>
   <div class="field"><label>简介</label><input id="dyp_b" value="${esc(p.bio||'')}"></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){S.dy.profile.nick=$('#dyp_n').value.trim();S.dy.profile.bio=$('#dyp_b').value.trim();save();closeModal();render();})()">保存</button></div>`);}
+
+/* ---------- 像素小家（和角色一起在像素小屋里生活）---------- */
+let _cozyBusy=false,_cozyRoom='bed',_cozyBub=null;
+function cozyC(){const cz=S.cozy||{};if(cz.cid){const c=getC(cz.cid);if(c&&!c.deleted)return c;}
+  return (S.couple&&getC(S.couple.cid))||S.contacts.find(x=>!x.deleted&&!x.blocked&&isLover(x))||null;}
+const COZY_ROOMS={
+  bed:{name:'卧室',icon:'🛏️',wall:'#3a2f4a',acts:[
+    {k:'hug',label:'抱抱',me:'扑进你怀里抱住了你',scene:'ta窝进你怀里撒娇要抱抱',pts:3},
+    {k:'sleep',label:'一起睡',me:'拉你躺下、往你怀里钻',scene:'你们一起躺下盖好被子，ta贴着你准备睡',pts:3},
+    {k:'night',label:'道晚安',me:'小声跟你说了句晚安',scene:'ta困得迷迷糊糊跟你道晚安',pts:2}]},
+  cinema:{name:'影音厅',icon:'🎬',wall:'#2a2433',acts:[
+    {k:'movie',label:'看电影',me:'挑了部电影、关了灯窝到你旁边',scene:'你们窝在沙发上一起看电影，屋里灯光暗暗的',pts:3},
+    {k:'cuddle',label:'依偎',me:'靠在你肩上蹭了蹭',scene:'ta靠在你肩膀上撒娇',pts:2}]},
+  kitchen:{name:'厨房',icon:'🍳',wall:'#33402f',acts:[
+    {k:'cook',label:'一起做饭',me:'系上小围裙要和你一起做饭',scene:'你们俩在厨房一起做饭，ta笨手笨脚还偷吃',pts:3}]},
+  dining:{name:'餐厅',icon:'🍽️',wall:'#42352a',acts:[
+    {k:'eat',label:'一起吃饭',me:'把饭端上桌、招呼你一起吃',scene:'你们面对面坐着一起吃饭',pts:2},
+    {k:'feedcat',label:'喂米香',me:'蹲下喂你们的猫米香',scene:'ta在喂你们的猫「米香」，回头朝你笑',pts:2},
+    {k:'feedham',label:'喂奶茶',me:'给仓鼠奶茶添了把瓜子',scene:'ta在喂仓鼠「奶茶」，开心得不行',pts:2},
+    {k:'chat',label:'聊聊天',me:'赖在桌边想跟你聊聊天',scene:'你们饭后赖在一起随便聊聊天',pts:2}]}
+};
+const COZY_FURN={
+  bed:'<svg width="120" height="60" viewBox="0 0 120 60"><rect x="6" y="30" width="108" height="26" fill="#6b4f7a"/><rect x="6" y="22" width="20" height="34" fill="#7d5e8e"/><rect x="30" y="26" width="40" height="14" fill="#f4e1ec"/><rect x="10" y="34" width="100" height="18" fill="#c98fb4"/><rect x="10" y="34" width="100" height="5" fill="#e3a9cd"/></svg>',
+  cinema:'<svg width="140" height="64" viewBox="0 0 140 64"><rect x="8" y="6" width="50" height="32" fill="#11131a"/><rect x="12" y="10" width="42" height="24" fill="#3aa0ff"/><rect x="78" y="30" width="54" height="26" fill="#4a5566"/><rect x="78" y="22" width="54" height="10" fill="#5a6678"/><rect x="74" y="38" width="8" height="18" fill="#3a4250"/></svg>',
+  kitchen:'<svg width="130" height="60" viewBox="0 0 130 60"><rect x="6" y="28" width="118" height="28" fill="#8a8f98"/><rect x="6" y="24" width="118" height="6" fill="#b6bcc6"/><rect x="74" y="30" width="44" height="22" fill="#6b7078"/><circle cx="90" cy="40" r="6" fill="#2a2d33"/><circle cx="106" cy="40" r="6" fill="#2a2d33"/><rect x="20" y="14" width="22" height="10" fill="#d98c4a"/></svg>',
+  dining:'<svg width="130" height="60" viewBox="0 0 130 60"><rect x="38" y="26" width="54" height="9" fill="#a9743f"/><rect x="44" y="35" width="6" height="20" fill="#8a5f33"/><rect x="80" y="35" width="6" height="20" fill="#8a5f33"/><rect x="22" y="34" width="12" height="21" fill="#7a5570"/><rect x="96" y="34" width="12" height="21" fill="#7a5570"/><circle cx="54" cy="29" r="4" fill="#f0e6d8"/><circle cx="76" cy="29" r="4" fill="#f0e6d8"/></svg>'
+};
+function cozyFindAct(k){for(const r in COZY_ROOMS){const a=COZY_ROOMS[r].acts.find(x=>x.k===k);if(a)return{room:r,a};}return null;}
+function cozyFig(c,isMe){const a=c.avatar;
+  const head=isImg(a)?`<span class="ch-head" style="background-image:url('${a}')"></span>`:`<span class="ch-head">${a||'🙂'}</span>`;
+  return `<span class="ch-fig">${head}<span class="ch-body" style="background:${isMe?'#e26d8a':'#2f3140'}"></span></span>`;}
+function cozyRoomHTML(key,c){const R=COZY_ROOMS[key];const on=_cozyRoom===key;
+  const figs=on?`<div class="cozyfigs">${cozyFig(S.me,true)}${cozyFig(c,false)}</div>`:'';
+  const pets=key==='dining'?'<div class="cozypets">🐈🐹</div>':'';
+  return `<div class="croom${on?' on':''}" style="background:${R.wall}" onclick="cozyPick('${key}')">
+    <div class="clabel">${R.icon} ${R.name}</div>
+    <div class="cfurn">${COZY_FURN[key]||''}</div>${pets}
+    <div class="cfloorpx"></div>${figs}</div>`;}
+function cozyPick(key){if(_cozyRoom===key)return;_cozyRoom=key;_cozyBub=null;render();}
+function renderCozy(){const c=cozyC();
+  const head=`<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">🏡 像素小家</span><span class="r" onclick="cozyInvite()" style="font-size:13px;color:#c9b8e6;cursor:pointer">${c?'换人':''}</span></div>`;
+  if(!c)return head+`<div class="scroll cozywrap"><div class="empty" style="padding:54px 26px;line-height:2;color:#d8cdee">还没有住进来的人～<br>先创建一个恋人角色（最好在情侣空间绑定），<br>就能邀请ta住进你们的像素小家啦💗</div></div>`;
+  const intim=S.cozy.intim||0;const lv=Math.floor(intim/30)+1;const pct=Math.min(100,Math.round((intim%30)/30*100));
+  const tabs=Object.keys(COZY_ROOMS).map(k=>`<span class="cozytab${_cozyRoom===k?' on':''}" onclick="cozyPick('${k}')">${COZY_ROOMS[k].icon} ${COZY_ROOMS[k].name}</span>`).join('');
+  const acts=COZY_ROOMS[_cozyRoom].acts.map(a=>`<button class="cozybtn" ${_cozyBusy?'disabled':''} onclick="cozyDo('${a.k}')">${a.label}</button>`).join('');
+  const bub=_cozyBub?`<div class="cozybub ${_cozyBub.who}"><b>${_cozyBub.who==='me'?esc(S.me.name):esc(c.remark||c.name)}</b>：${esc(_cozyBub.text)}</div>`:`<div class="cozybub ta" style="opacity:.7"><b>${esc(c.remark||c.name)}</b> 正陪你待在小家里，点下面一起做点什么吧～</div>`;
+  return head+`<div class="scroll cozywrap">
+    <div class="cozytop"><div style="font-size:15px;font-weight:700">${esc(c.remark||c.name)} 和 ${esc(S.me.name)} 的小家</div>
+      <div class="ci">温馨值 Lv.${lv} · 已一起 ${S.cozy.visits||0} 次</div>
+      <div class="cozybar"><i style="width:${pct}%"></i></div></div>
+    <div class="cozyhouse"><div class="cozyroof"></div>
+      <div class="cozyrow">${cozyRoomHTML('bed',c)}${cozyRoomHTML('cinema',c)}</div>
+      <div class="cozyrow">${cozyRoomHTML('kitchen',c)}${cozyRoomHTML('dining',c)}</div></div>
+    ${bub}
+    <div class="cozytabs">${tabs}</div>
+    <div class="cozyacts">${acts}</div></div>`;}
+async function cozyDo(k){const c=cozyC();if(!c){toast('先创建恋人角色');return;}if(_cozyBusy)return;
+  const f=cozyFindAct(k);if(!f)return;const a=f.a;_cozyRoom=f.room;
+  S.cozy.cid=c.id;S.cozy.intim=(S.cozy.intim||0)+(a.pts||2);S.cozy.visits=(S.cozy.visits||0)+1;
+  _cozyBusy=true;_cozyBub={who:'me',text:esc(S.me.name)===''?a.me:a.me};render();
+  try{const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：你和'+S.me.name+'正在你们的「像素小家」里一起生活。此刻你们在'+COZY_ROOMS[f.room].name+'，'+a.scene+'。用你的人设、第一人称，当面回ta一两句温柔/撩/宠的话（就像真的面对面待在小家里）。只说话，别加任何【】动作旁白、别带括号翻译、别发任何卡片指令。]'}],{aux:c.model==='aux',max:130});
+    const line=(cleanReply?cleanReply(r):r).replace(/\n+/g,' ').trim()||'…';
+    _cozyBub={who:'ta',text:line};
+    S.cozy.log.unshift({act:COZY_ROOMS[f.room].name+'·'+a.label,ta:line,ts:Date.now()});S.cozy.log=S.cozy.log.slice(0,12);
+  }catch(e){_cozyBub={who:'ta',text:'（网络好像不太好…再点一次试试）'};}
+  _cozyBusy=false;save();if(cur().p==='cozy')render();}
+function cozyInvite(){const cs=S.contacts.filter(x=>!x.deleted&&!x.blocked);if(!cs.length){toast('先创建一个角色');return;}
+  openModal(`<h3>🏡 让谁住进小家</h3><div class="hint">选一个角色住进你们的像素小家，一起做饭看电影抱抱～</div>
+    ${cs.map(c=>`<div class="section"><div class="it" onclick="cozySet('${c.id}')">${av(c.avatar,'sm')}<div class="meta" style="flex:1"><div class="n">${esc(c.remark||c.name)}</div><div class="s">${isLover(c)?'恋人':'朋友'}</div></div><span class="v">${S.cozy.cid===c.id?'住在这里 ✓':'选ta ›'}</span></div></div>`).join('')}
+    <div class="btns"><button class="btn g" onclick="closeModal()">关闭</button></div>`);}
+function cozySet(id){S.cozy.cid=id;_cozyBub=null;save();closeModal();render();toast('住进来啦🏡');}
+/* 角色用 [回家] 邀请忆北进小家 */
+function acceptHome(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m||m.accepted||m.declined)return;
+  m.accepted=true;const cid=(owner||'').split('#')[0];S.cozy.cid=cid;_cozyBub=null;save();go('cozy');}
+function declineHome(mid){let m;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;break;}}if(m){m.declined=true;save();render();}}
 
 /* ---------- 任务便签（他给我布置每日任务）---------- */
 let _taskBusy=false;
@@ -3142,8 +3257,8 @@ function coupleSet(){openModal(`<h3>在一起的日子</h3><div class="field"><l
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="S.couple.startDate=$('#cp_d').value||S.couple.startDate;save();closeModal();render()">保存</button></div>`);}
 function addAnniv(){openModal(`<h3>添加纪念日</h3><div class="field"><label>日期</label><input id="an_d" type="date" value="${todayStr()}"></div><div class="field"><label>名称</label><input id="an_t" placeholder="第一次见面 / 订婚…"></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var d=$('#an_d').value,t=$('#an_t').value.trim();if(!d||!t){toast('填日期和名称');return;}S.couple.anniversaries=S.couple.anniversaries||[];S.couple.anniversaries.push({date:d,title:t});S.couple.anniversaries.sort((a,b)=>a.date<b.date?-1:1);save();closeModal();render();})()">保存</button></div>`);}
-function previewOf(m){if(m.role==='assistant'){if(m.type==='familycard')return '[亲属卡邀请]';if(m.type==='namecard')return '[推荐好友：'+(m.cname||'')+']';if(m.type==='dateinvite')return '[约会邀请]';return splitBubbles(m.content)[0]||'[消息]';}
-  return ({text:m.content,image:'[照片]',transfer:'[转账]',redpacket:'[红包]',location:'[位置]',file:'[文件]',spycard:'[查看权限]',dice:'[骰子]',gift:'[礼物]',paycard:'[求代付]',paid:'[已代付]',tweetcard:'[X推文]',dycard:'[抖音视频]',tcollect:'[已收款]',treject:'[已退还]',chatlog:'[聊天记录]',food:'[外卖]',payreject:'[拒绝代付]',voice:'[语音]',sticker:'[表情]',namecard:'[名片]',familybuy:'[亲属卡消费]',familyreq:'[亲属卡申请]',weblink:'[网页]',dateinvite:'[约会邀请]',musicinvite:'[🎧 一起听歌]',sys:m.content})[m.type]||'[消息]';}
+function previewOf(m){if(m.role==='assistant'){if(m.type==='familycard')return '[亲属卡邀请]';if(m.type==='namecard')return '[推荐好友：'+(m.cname||'')+']';if(m.type==='dateinvite')return '[约会邀请]';if(m.type==='homeinvite')return '[🏡 回家邀请]';return splitBubbles(m.content)[0]||'[消息]';}
+  return ({text:m.content,image:'[照片]',transfer:'[转账]',redpacket:'[红包]',location:'[位置]',file:'[文件]',spycard:'[查看权限]',dice:'[骰子]',gift:'[礼物]',paycard:'[求代付]',paid:'[已代付]',tweetcard:'[X推文]',dycard:'[抖音视频]',tcollect:'[已收款]',treject:'[已退还]',chatlog:'[聊天记录]',food:'[外卖]',payreject:'[拒绝代付]',voice:'[语音]',sticker:'[表情]',namecard:'[名片]',familybuy:'[亲属卡消费]',familyreq:'[亲属卡申请]',weblink:'[网页]',dateinvite:'[约会邀请]',homeinvite:'[🏡 回家邀请]',musicinvite:'[🎧 一起听歌]',sys:m.content})[m.type]||'[消息]';}
 
 let _ctSearch='';
 function ctSearchInput(v){_ctSearch=v;const box=$('#ctlist');if(box)box.innerHTML=ctListHTML();}
@@ -3567,6 +3682,7 @@ function buildPart(c,m,me){
       ${his?(m.added?'<div style="padding:8px;text-align:center;color:#2bd66a;font-size:13px;font-weight:600">✅ 已添加到通讯录</div>':(m.declined?'<div style="padding:8px;text-align:center;color:#c97a7a;font-size:12px">你拒绝了这个推荐</div>':`<div style="display:flex;border-top:1px solid #2a7a48"><div style="flex:1;padding:9px;text-align:center;background:#07c160;color:#fff;font-weight:600;cursor:pointer" onclick="event.stopPropagation();addHisCard('${m.id}')">同意添加</div><div style="flex:1;padding:9px;text-align:center;color:#9fd9b4;cursor:pointer;border-left:1px solid #2a7a48" onclick="event.stopPropagation();declineHisCard('${m.id}')">拒绝</div></div>`)):(m._accepted?'<div style="padding:6px;text-align:center;color:#2bd66a;font-size:12px">✅ 对方已添加</div>':'<div style="padding:6px;text-align:center;color:#6fae86;font-size:11px">推荐给ta的名片 · 等ta添加</div>')}</div>`;}
   if(m.type==='weblink'){return `<div class="card" style="width:240px;background:#13233a;border:1px solid #2a4a72" onclick="event.stopPropagation();viewWeblink('${m.id}')"><div style="padding:11px"><div style="color:#71767b;font-size:11px;margin-bottom:4px">🌐 网页/搜索结果</div><div style="color:#cfe3ff;font-size:13px;font-weight:700">${esc(m.title)}</div><div style="color:#9fb6d4;font-size:12px;margin-top:4px;line-height:1.5">${esc((m.snippet||'').slice(0,90))}${(m.snippet||'').length>90?'…':''}</div></div><div class="cfoot" style="background:rgba(255,255,255,.05);color:#7db3ff">点击查看全文</div></div>`;}
   if(m.type==='dateinvite'){const done=m.accepted||m.declined;return `<div class="card" style="width:240px;background:#3a1622;border:1px solid #b34a6a"><div style="padding:12px"><div style="color:#ff9ec4;font-size:11px;margin-bottom:4px">🌹 线下约会邀请</div><div style="color:#ffd6e6;font-size:14px;font-weight:600">约你见面</div><div style="color:#e8a8bd;font-size:13px;margin-top:5px">🕐 ${esc(m.when||'看你时间')}<br>📍 ${esc(m.loc||'老地方')}</div></div><div class="cfoot" style="color:#c98">${m.accepted?'你答应啦💗':m.declined?'你拒绝了':'ta在等你答应'}</div></div>${done?'':`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#e84d6f;color:#fff" onclick="event.stopPropagation();acceptDate('${m.id}')">同意，去赴约</button><button class="minibtn" onclick="event.stopPropagation();declineDate('${m.id}')">改天</button></div>`}`;}
+  if(m.type==='homeinvite'){const done=m.accepted||m.declined;return `<div class="card" style="width:240px;background:#241a33;border:1px solid #7a5bb0"><div style="padding:12px"><div style="color:#c5a6ff;font-size:11px;margin-bottom:4px">🏡 回家吧</div><div style="color:#ece0ff;font-size:14px;font-weight:600">ta邀请你回你们的小家</div><div style="color:#b9a6e0;font-size:12px;margin-top:5px">一起做饭 · 看电影 · 喂米香奶茶 · 抱着睡</div></div><div class="cfoot" style="color:#a98fd0">${m.accepted?'你回家啦🏡':m.declined?'你说改天':'ta在小家等你'}</div></div>${done?'':`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#7a5bb0;color:#fff" onclick="event.stopPropagation();acceptHome('${m.id}')">回家陪ta</button><button class="minibtn" onclick="event.stopPropagation();declineHome('${m.id}')">改天</button></div>`}`;}
   if(m.type==='familyreq'){return `<div class="card"><div class="cpay" style="background:#e8527f"><div class="big">💳</div><div><div class="t1">亲属卡申请</div><div class="t2">想绑定你的亲属卡用额度</div></div></div><div class="cfoot">等ta同意并设额度</div></div>`;}
   return `<div class="bubble">${esc(m.content)}</div>`;}
 function vtoggle(mid){let m;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;break;}}if(!m)return;m.showText=!m.showText;render();}
@@ -3709,7 +3825,7 @@ function doLoc(id){const n=$('#lc_n').value.trim();if(!n){toast('填地点呀');
 /* 拆分多条气泡 */
 function splitBubbles(text){return (text||'').split('\n').map(s=>s.trim()).filter(Boolean);}
 function splitActions(line){const out=[];const re=/[（(【][^）)】]*[）)】]/g;let last=0,m;while((m=re.exec(line))){const before=line.slice(last,m.index).trim();if(before)out.push(before);out.push(m[0].trim());last=re.lastIndex;}const tail=line.slice(last).trim();if(tail)out.push(tail);return out.length?out:[line];}
-const TAGWORDS='心情值|心情|记住|闹钟|日程|发朋友圈|发推|点外卖|语音|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|约会';
+const TAGWORDS='心情值|心情|记住|闹钟|日程|发朋友圈|发推|点外卖|语音|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|约会|回家';
 const APPNAME2KEY={'浏览器':'browser','搜索':'browser','上网':'browser','百度':'browser','朋友圈':'moments','动态':'moments','查他手机':'spy','查岗':'spy','查手机':'spy','购物':'shop','淘宝':'shop','商城':'shop','日历':'calendar','日程':'calendar','x':'x','X':'x','推特':'x','微博':'x','推':'x','抖音':'douyin','短视频':'douyin','刷视频':'douyin','刷抖音':'douyin','外卖':'food','点餐':'food','游戏':'games','游戏大厅':'games','打游戏':'games','信箱':'mail','邮箱':'mail','邮件':'mail','线下约会':'offline','线下':'offline','约会':'offline'};
 function genPwd(){return String(1000+Math.floor(Math.random()*9000));}
 function _appKeys(arg,pool,filt){if(/全部|所有|全锁|全/.test(arg))return pool.filter(filt);return arg.split(/[、,，\/\s]+/).map(x=>APPNAME2KEY[x.replace(/[「」『』"'《》]/g,'').trim()]).filter(k=>k&&filt(k));}
@@ -3873,6 +3989,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
       mm=line.match(/^\[拒礼\]$/);if(mm){const g=lastGift(id);if(g){g.declined=true;addBill('in',+g.price,(c.remark||c.name)+'退回的礼物');const mg={role:'assistant',type:'sys',content:'对方拒收了礼物，'+(+g.price).toFixed(2)+'元已退回',time:Date.now(),id:uid()};msgs(id).push(mg);}save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[来电\|(语音|视频)\]$/);if(mm){const k=mm[1]==='视频'?'video':'voice';setTimeout(()=>incomingCall(c.id,k,'ta打来的'),600);continue;}
       mm=line.match(/^\[约会\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){const dc={role:'assistant',type:'dateinvite',loc:(mm[1]||'老地方').trim(),when:(mm[2]||'').trim(),id:uid(),time:Date.now()};msgs(id).push(dc);notifyIncoming(c,dc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
+      if(/^\[回家\]$/.test(line)){const hc={role:'assistant',type:'homeinvite',id:uid(),time:Date.now()};msgs(id).push(hc);notifyIncoming(c,hc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[亲属卡\|?([0-9]*)\]$/);if(mm){const q=+mm[1]||500;const fc={role:'assistant',type:'familycard',quota:q,bound:false,id:uid(),time:Date.now()};msgs(id).push(fc);notifyIncoming(c,fc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[推荐好友\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){const nc={role:'assistant',type:'namecard',dir:'his',cname:(mm[1]||'朋友').trim(),persona:(mm[2]||'').trim(),wxid:genWxid(),added:false,id:uid(),time:Date.now()};msgs(id).push(nc);c._pushedToMe=c._pushedToMe||[];c._pushedToMe.push(nc.cname);notifyIncoming(c,nc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[已加\|?([^\]]*)\]$/);if(mm){const nm=(mm[1]||'').trim();const card=[...msgs(id)].reverse().find(x=>x.role==='user'&&x.type==='namecard'&&x.dir==='mine'&&!x._accepted&&(!nm||x.cname===nm||nm.includes(x.cname)));if(card){card._accepted=true;save();if(cur().p==='chat'&&cur().id===id)render();}continue;}
@@ -4145,7 +4262,10 @@ async function callAI(sysNote,opts){if(!_call)return;const c=getC(_call.id);cons
     splitBubbles(content).forEach(l=>{l=normTag(l);if(/^\[挂断\]$/.test(l))return;const mm=l.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=mm[1];return;}const mvm=l.match(/^\[心情值\|([+\-]?\d{1,3})\]$/);if(mvm){adjMood(_call.id,parseInt(mvm[1],10)||0);return;}if(LEAKRE.test(l))return;
       if(video){splitActions(l).forEach(p=>pieces.push(p));}
       else{const cleaned=l.replace(/【[^】]*】/g,'').trim();if(cleaned)splitActions(cleaned).forEach(p=>pieces.push(p));}});
+    let _prevP='';
     for(const p of pieces){if(!_call||_call.session!==sess)return;
+      if(p.trim()===_prevP)continue;/* 跳过和上一句完全相同的（防止原文/翻译被发两遍） */
+      _prevP=p.trim();
       msgs(c.id).push({role:'assistant',type:'text',content:p,time:Date.now(),id:uid(),_call:true,_ck:video?'video':'voice',_cs:sess});save();
       _call.sub={who:'them',text:p};updateCallSub();
       const spoken=pickSpoken(p,_vlang);
@@ -4343,7 +4463,7 @@ async function doSpyView(id,force,opts){opts=opts||{};if(!isMain())return;const 
     if(!opts.intent)S._spySeen[id]=Date.now();save();callAI(cn);return;
   }
   try{const content=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:note}],{aux:true});
-    applyAuxTags(content,c,id);splitBubbles(content).forEach(l=>{if(/^\[(联网|心情|记住|闹钟|来电)\|/.test(l)||CTLLEAK.test((l||'').trim()))return;const mm=lineToMsg(l);mm.time=Date.now();msgs(id).push(mm);notifyIncoming(c,mm);});if(!opts.intent)S._spySeen[id]=Date.now();save();
+    applyAuxTags(content,c,id);splitBubbles(content).forEach(l=>{if(/^\[(联网|心情|记住|闹钟|来电)\|/.test(l)||/^\[回家\]$/.test(l)||CTLLEAK.test((l||'').trim()))return;const mm=lineToMsg(l);mm.time=Date.now();msgs(id).push(mm);notifyIncoming(c,mm);});if(!opts.intent)S._spySeen[id]=Date.now();save();
     if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();
   }catch(e){}}
 // 按他意愿单项查岗时取某一类的真实数据；没有就返回空（绝不让他编）
