@@ -358,7 +358,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v170 · 一起听精修:头像女左男右/聊天改成头像下方字幕气泡(一句一句弹出说完自动消失,带尖角指向头像)/中间连接键改粉色/转盘下方加回歌词(字幕式当前句高亮可点亮)';
+const APP_VER='v171 · 歌词打轴工具:粘纯歌词后放着歌一句句点「标记这一句」自动生成[mm:ss.xx]时间轴(无需手敲),可退一句/退3秒/随时保存;没时间轴仍按进度匀速滚';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -825,8 +825,33 @@ function musicEdit(id){musicInit();const s=S.music.songs.find(x=>x.id===id);if(!
   <div class="field"><label>歌名</label><input id="me_t" value="${esc(s.title||'')}"></div>
   <div class="field"><label>歌手</label><input id="me_a" value="${esc(s.artist||'')}"></div>
   <div class="field"><label>歌词（粘进来；带 [00:12.00] 时间轴会跟着高亮滚动，没有时间轴就普通显示）</label><textarea id="me_l" rows="6" placeholder="把歌词粘进来…">${esc(s.lyrics||'')}</textarea></div>
+  <div class="hint">没有时间轴也能用（跟着进度匀速滚）。想精确卡每句？粘好纯歌词后点下面「打轴」，放着歌一句句点就行。</div>
+  <button class="btn g" style="margin-bottom:8px" onclick="musicEditSave('${id}',true);musicSync('${id}')">🎯 打轴（跟着歌点·自动生成时间轴）</button>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="musicEditSave('${id}')">保存</button></div>`);}
-function musicEditSave(id){const s=S.music.songs.find(x=>x.id===id);if(!s)return;s.title=($('#me_t').value||'').trim()||s.title;s.artist=($('#me_a').value||'').trim();s.lyrics=($('#me_l').value||'').trim();save();closeModal();render();toast('已保存 ✏️');}
+function musicEditSave(id,silent){const s=S.music.songs.find(x=>x.id===id);if(!s)return;s.title=($('#me_t').value||'').trim()||s.title;s.artist=($('#me_a').value||'').trim();s.lyrics=($('#me_l').value||'').trim();save();if(!silent){closeModal();render();toast('已保存 ✏️');}}
+/* ===== 歌词打轴：放着歌，一句句点，自动生成 [mm:ss.xx] 时间轴 ===== */
+let _sync=null;
+function fmtLrc(sec){sec=Math.max(0,sec||0);const m=Math.floor(sec/60),s=Math.floor(sec%60),cs=Math.floor((sec*100)%100);return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+'.'+String(cs).padStart(2,'0');}
+function musicSync(id){musicInit();const s=S.music.songs.find(x=>x.id===id);if(!s){toast('没这首歌');return;}
+  const raw=(s.lyrics||'').split('\n').map(l=>l.replace(/\[[^\]]*\]/g,'').trim()).filter(Boolean);
+  if(!raw.length){toast('先把纯歌词(一行一句)粘进去再打轴');return;}
+  if(_mCur!==id)musicPlay(id);
+  _sync={id,lines:raw,idx:0,stamps:[]};syncRender();}
+function syncRender(){if(!_sync)return;const cur=_ma?_ma.currentTime:0;const done=_sync.idx>=_sync.lines.length;
+  const lines=_sync.lines.map((t,i)=>{const st=_sync.stamps[i]!=null;const isCur=i===_sync.idx;return `<div style="padding:3px 0;font-size:14px;line-height:1.5;color:${isCur?'#ff6fa5':(st?'#7a7a82':'#cfcfd6')};font-weight:${isCur?'700':'400'}">${st?'<span style="color:#2bd66a">['+fmtLrc(_sync.stamps[i])+']</span> ':''}${esc(t)}</div>`;}).join('');
+  openModal(`<h3>🎯 打轴 · 跟着歌点</h3>
+    <div class="hint">放着歌，到【高亮那句】该唱时点「⏱ 标记这一句」，就把当前时间打上去并跳到下一句。点早了用「↩ 退一句」。点完或随时「保存」。</div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <button class="minibtn" onclick="musicToggle();setTimeout(syncRender,60)">${_mPlaying?'⏸ 暂停':'▶ 播放'}</button>
+      <button class="minibtn" onclick="if(_ma){_ma.currentTime=Math.max(0,_ma.currentTime-3);}setTimeout(syncRender,60)">⏪ 退3秒</button>
+      <span style="color:#9a9aa2;font-size:12px;margin-left:auto">当前 ${fmtLrc(cur)} · ${_sync.idx}/${_sync.lines.length}</span>
+    </div>
+    <div style="max-height:36vh;overflow:auto;background:#141416;border-radius:10px;padding:8px 10px;margin-bottom:10px">${lines}${done?'<div style="color:#2bd66a;text-align:center;padding:8px">✅ 全部打完了，点「保存时间轴」</div>':''}</div>
+    <div class="btns"><button class="btn g" onclick="syncBack()">↩ 退一句</button>${done?'':`<button class="btn p" onclick="syncMark()">⏱ 标记这一句</button>`}</div>
+    <div class="btns" style="margin-top:8px"><button class="btn g" onclick="_sync=null;closeModal()">取消</button><button class="btn p" onclick="syncSave()">保存时间轴</button></div>`);}
+function syncMark(){if(!_sync||!_ma)return;_sync.stamps[_sync.idx]=_ma.currentTime;_sync.idx=Math.min(_sync.lines.length,_sync.idx+1);syncRender();}
+function syncBack(){if(!_sync)return;if(_sync.idx>0){_sync.idx--;_sync.stamps[_sync.idx]=null;}syncRender();}
+function syncSave(){if(!_sync)return;const s=S.music.songs.find(x=>x.id===_sync.id);if(s){s.lyrics=_sync.lines.map((t,i)=>(_sync.stamps[i]!=null?'['+fmtLrc(_sync.stamps[i])+']':'')+t).join('\n');save();}_sync=null;closeModal();render();toast('时间轴已保存🎯');}
 async function musicPlay(id){musicInit();const s=S.music.songs.find(x=>x.id===id);if(!s)return;
   if(!_ma){_ma=new Audio();_ma.ontimeupdate=mTick;_ma.onended=mEnded;_ma.onplay=()=>{_mPlaying=true;mBtns();};_ma.onpause=()=>{_mPlaying=false;mBtns();};}
   _mCur=id;let url;
