@@ -358,7 +358,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v169 · 桌面美化(全部emoji换成简约线条图标,更高级)/设置去掉App图标(省空间)/查岗补全:抖音私信加时间+只报新增(双重保险防重复旧事)+新增X私信与线下约会记录,扫描逐项过';
+const APP_VER='v170 · 一起听精修:头像女左男右/聊天改成头像下方字幕气泡(一句一句弹出说完自动消失,带尖角指向头像)/中间连接键改粉色/转盘下方加回歌词(字幕式当前句高亮可点亮)';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -788,6 +788,12 @@ function render(){
 /* ---------- 主屏幕 ---------- */
 /* ---------- 🎵 一起听音乐 ---------- */
 let _ma=null,_mCur=null,_mPlaying=false,_mUrl=null,_mSessTimer=null;
+let _mBub={l:null,r:null};// 一起听字幕气泡：l=她(左) r=他(右)，说完一句自动消失
+function _mBubHTML(o){if(!o||!o.text)return '';const pink=o.side==='l';const bgc=pink?'rgba(255,143,171,.96)':'rgba(255,255,255,.96)';
+  const tail=`<div style="position:absolute;top:-6px;${pink?'right:18px':'left:18px'};width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:7px solid ${bgc}"></div>`;
+  return `<div style="position:relative;max-width:160px;padding:8px 13px;border-radius:15px;font-size:13px;line-height:1.4;word-break:break-word;background:${bgc};color:${pink?'#fff':'#333'};box-shadow:0 3px 12px rgba(0,0,0,.42);animation:csin .3s ease">${tail}${esc(o.text)}</div>`;}
+function mShowBub(side,text){if(!text)return;if(_mBub[side]&&_mBub[side]._t)clearTimeout(_mBub[side]._t);
+  _mBub[side]={side,text:(''+text).slice(0,60),_t:setTimeout(()=>{_mBub[side]=null;if(cur().p==='music')render();},6000)};}
 function mSessTick(){const el=document.getElementById('m_sesstime');const sess=S.music&&S.music.session;
   if(!sess||!sess.startTs){if(_mSessTimer){clearInterval(_mSessTimer);_mSessTimer=null;}if(el)el.textContent=fmtListen((S.music&&S.music.totalSec)||0);return;}
   const live=((S.music&&S.music.totalSec)||0)+Math.floor((Date.now()-sess.startTs)/1000);
@@ -842,7 +848,7 @@ function parseLyrics(l){if(!l)return[];const out=[];const re=/\[(\d{1,2}):(\d{2}
 function mLyricTick(){const box=document.getElementById('m_lyrics');if(!box||!_ma||!_mCur)return;const s=S.music.songs.find(x=>x.id===_mCur);if(!s)return;const lines=parseLyrics(s.lyrics);if(!lines.length)return;
   if(lines.some(x=>x.t!=null)){// 带时间轴：高亮当前句并居中
     let idx=-1;for(let i=0;i<lines.length;i++){if(lines[i].t!=null&&lines[i].t<=_ma.currentTime)idx=i;}
-    const els=box.querySelectorAll('.mlrc');els.forEach((el,i)=>{el.style.color=i===idx?'#d6477e':'#b8849e';el.style.fontWeight=i===idx?'700':'400';el.style.transform=i===idx?'scale(1.08)':'scale(1)';});
+    const els=box.querySelectorAll('.mlrc');els.forEach((el,i)=>{el.style.color=i===idx?'#ffd6e8':'#7d7d88';el.style.fontWeight=i===idx?'700':'400';el.style.transform=i===idx?'scale(1.08)':'scale(1)';});
     if(idx>=0&&els[idx])box.scrollTop=Math.max(0,els[idx].offsetTop-box.clientHeight/2+els[idx].clientHeight/2);}
   else if(_ma.duration){// 纯文本歌词：跟着进度匀速滚动
     const max=box.scrollHeight-box.clientHeight;if(max>0)box.scrollTop=(_ma.currentTime/_ma.duration)*max;}}
@@ -877,7 +883,7 @@ async function aiMusicReply(cid){const c=getC(cid);if(!c||c.blocked)return;music
     const mc=(S.music.chat||[]).filter(m=>m.cid===cid).slice(-14).map(m=>({role:m.role==='user'?'user':'assistant',content:m.content}));
     const sys=buildSystem(c)+'\n\n# 现在：你和ta在「一起听歌」的小窗里聊天\n你们正一起听「'+(s?s.title:'一首歌')+'」。这是听歌时的独立小聊天，轻松、暧昧、围绕这首歌和此刻心情聊，一两句口语短句。上面给的微信记录只是让你记得你俩的来龙去脉，别照搬。';
     const r=await chatAPI([{role:'system',content:sys},...ctx,{role:'system',content:'（以上是你俩微信上下文，仅供你记得；下面是你们正一起听歌时的对话）'},...mc],{max:260});
-    const txt=cleanReply(r);if(!txt)return;S.music.chat=S.music.chat||[];S.music.chat.push({cid,role:'assistant',content:txt,time:Date.now()});if(S.music.chat.length>200)S.music.chat=S.music.chat.slice(-200);save();if(cur().p==='music')render();
+    const txt=cleanReply(r);if(!txt)return;S.music.chat=S.music.chat||[];S.music.chat.push({cid,role:'assistant',content:txt,time:Date.now()});if(S.music.chat.length>200)S.music.chat=S.music.chat.slice(-200);mShowBub('r',txt);save();if(cur().p==='music')render();
   }catch(e){}}
 function renderMusic(){musicInit();const songs=S.music.songs;const cur=songs.find(s=>s.id===_mCur);const sess=S.music.session;const sc=sess&&getC(sess.cid);
   const bg=S.music.bg?`background:#000 url(${S.music.bg}) center/cover no-repeat`:'background:radial-gradient(ellipse at 50% 28%,#1d1733,#0a0a12 72%)';
@@ -900,18 +906,16 @@ function renderMusic(){musicInit();const songs=S.music.songs;const cur=songs.fin
         <path d="M182 86 q9 7 5 16" fill="none" stroke="rgba(235,235,240,.6)" stroke-width="2.3"/>
       </svg>
       <div style="position:absolute;left:50%;top:12px;transform:translateX(-50%);display:flex;align-items:center">
-        <div style="position:relative;z-index:1">${taBlock}</div>
-        <div style="position:relative;z-index:2;margin-left:-12px">${_mAvHTML(meAv,'me',66)}</div></div>
-      <div onclick="${sess?'musicEndSession()':'musicInvite()'}" title="一起听" style="position:absolute;left:50%;bottom:2px;transform:translateX(-50%);width:24px;height:24px;border-radius:50%;background:#ff5b4a;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;box-shadow:0 2px 7px rgba(0,0,0,.5);cursor:pointer;z-index:4">⏻</div>
+        <div style="position:relative;z-index:1">${_mAvHTML(meAv,'me',66)}</div>
+        <div style="position:relative;z-index:2;margin-left:-12px">${taBlock}</div></div>
+      <div onclick="${sess?'musicEndSession()':'musicInvite()'}" title="一起听" style="position:absolute;left:50%;bottom:2px;transform:translateX(-50%);width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#ff9ec4,#ff6fa5);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;box-shadow:0 2px 7px rgba(0,0,0,.45);cursor:pointer;z-index:4">⏻</div>
+    </div>
+    <div style="display:flex;justify-content:center;gap:14px;align-items:flex-start;min-height:38px;margin-top:8px;padding:0 12px">
+      <div style="flex:1;display:flex;justify-content:flex-end">${_mBubHTML(_mBub.l,'l')}</div>
+      <div style="flex:1;display:flex;justify-content:flex-start">${_mBubHTML(_mBub.r,'r')}</div>
     </div>
     <div onclick="editMusicDistance()" style="text-align:center;color:#d2d2da;font-size:13px;margin-top:4px;cursor:pointer">相距 ${S.music.distance} 公里，一起听了 <span id="m_sesstime">${fmtListen(((S.music.totalSec)||0)+(sess&&sess.startTs?Math.floor((Date.now()-sess.startTs)/1000):0))}</span></div>`;
-  // 头像旁弹出的聊天气泡（左=他，右=你）
-  let chatZone='';
-  if(sess&&sc){const mc=(S.music.chat||[]).filter(m=>m.cid===sess.cid).slice(-4);
-    chatZone=mc.map(m=>{const mine=m.role==='user';const avs=mine?meAv:taAv;
-      const avHTML=isImg(avs)?`<img src="${avs}" style="width:26px;height:26px;border-radius:50%;object-fit:cover;flex:0 0 26px">`:`<div style="width:26px;height:26px;border-radius:50%;flex:0 0 26px;display:flex;align-items:center;justify-content:center;font-size:14px;background:linear-gradient(135deg,#9ec5fe,#b8a4e3)">${avs||'🙂'}</div>`;
-      const bub=`<div style="max-width:62%;padding:7px 11px;border-radius:14px;font-size:13px;line-height:1.4;word-break:break-word;background:${mine?'rgba(255,143,171,.92)':'rgba(255,255,255,.92)'};color:${mine?'#fff':'#333'};box-shadow:0 2px 8px rgba(0,0,0,.35)">${esc(m.content)}</div>`;
-      return `<div style="display:flex;align-items:flex-end;gap:7px;margin:5px 0;animation:csin .32s ease;${mine?'justify-content:flex-end':'justify-content:flex-start'}">${mine?bub+avHTML:avHTML+bub}</div>`;}).join('');}
+  const lyr=parseLyrics(cur.lyrics);
   // 大转盘（封面在中间·扩大）
   const cover=cur.cover;
   const disk=`<div style="position:relative;width:248px;height:248px">
@@ -924,8 +928,8 @@ function renderMusic(){musicInit();const songs=S.music.songs;const cur=songs.fin
     ${S.music.bg?'<div style="position:absolute;inset:0;background:rgba(0,0,0,.4);pointer-events:none"></div>':''}
     ${navBar}
     <div style="position:relative;z-index:3;flex:0 0 auto">${avatars}</div>
-    <div style="position:relative;z-index:3;flex:0 0 auto;display:flex;flex-direction:column;justify-content:flex-end;min-height:60px;max-height:118px;overflow:hidden;padding:2px 16px">${chatZone}</div>
     <div style="position:relative;z-index:3;flex:1;display:flex;align-items:center;justify-content:center;min-height:0">${disk}</div>
+    <div id="m_lyrics" style="position:relative;z-index:3;flex:0 0 auto;height:60px;overflow:hidden;text-align:center;padding:2px 20px;-webkit-mask-image:linear-gradient(transparent,#000 28%,#000 72%,transparent);mask-image:linear-gradient(transparent,#000 28%,#000 72%,transparent)">${lyr.length?lyr.map((x,i)=>`<div class="mlrc" onclick="mLyricTap(${i})" style="font-size:13px;line-height:2.05;color:#7d7d88;transition:color .3s,transform .3s;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(x.txt)||'&nbsp;'}</div>`).join(''):'<div style="color:#777;font-size:12px;line-height:60px">这首歌还没歌词，点歌单里的 ✎ 加进来</div>'}</div>
     <div style="position:relative;z-index:3;flex:0 0 auto;padding:2px 20px 12px">
       <div onclick="musicSeek(event)" style="height:4px;background:rgba(255,255,255,.18);border-radius:3px;cursor:pointer;margin:6px 0 4px"><div id="m_prog" style="height:100%;width:0;background:linear-gradient(90deg,#ff8fab,#c08ce0);border-radius:3px"></div></div>
       <div id="m_time" style="text-align:center;color:#b9b9c2;font-size:11px">0:00 / 0:00</div>
@@ -956,10 +960,10 @@ function musicEndSession(){const sess=S.music&&S.music.session;
     if(c&&!c.blocked)scheduleReply(sess.cid,'[系统：你和'+S.me.name+'刚结束一起听歌，一共一起听了'+dtxt+'。自然地说句收尾的话——意犹未尽/谢谢ta陪你听/约下次再一起听，温柔一两句。]');}
   S.music.session=null;if(_mSessTimer){clearInterval(_mSessTimer);_mSessTimer=null;}save();render();}
 function musicChatSend(){const sess=S.music.session;if(!sess)return;const inp=$('#m_chat');const t=inp?inp.value.trim():'';if(!t)return;inp.value='';
-  musicInit();S.music.chat.push({cid:sess.cid,role:'user',content:t,time:Date.now()});save();render();aiMusicReply(sess.cid);}
+  musicInit();S.music.chat.push({cid:sess.cid,role:'user',content:t,time:Date.now()});mShowBub('l',t);save();render();aiMusicReply(sess.cid);}
 function mLyricTap(i){const s=S.music&&S.music.songs.find(x=>x.id===_mCur);if(!s)return;const lines=parseLyrics(s.lyrics);const ln=lines[i];if(!ln)return;
   if(ln.t!=null&&_ma){_ma.currentTime=ln.t;if(_ma.paused)_ma.play().catch(()=>{});}
-  const box=document.getElementById('m_lyrics');if(box){box.querySelectorAll('.mlrc').forEach((el,k)=>{el.style.color=k===i?'#d6477e':'#b8849e';el.style.fontWeight=k===i?'700':'400';el.style.transform=k===i?'scale(1.1)':'scale(1)';});}}
+  const box=document.getElementById('m_lyrics');if(box){box.querySelectorAll('.mlrc').forEach((el,k)=>{el.style.color=k===i?'#ffd6e8':'#7d7d88';el.style.fontWeight=k===i?'700':'400';el.style.transform=k===i?'scale(1.1)':'scale(1)';});}}
 function renderHome(){
   if(S.jail&&S.jail.active)return jailLockHome();
   const d=new Date();
