@@ -389,7 +389,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v179 · ①新增「像素小家」(主屏第二页):娃娃屋剖面图,和角色一起做饭/看电影/喂米香奶茶/抱抱睡觉,他也能在微信发[回家]邀请你②修复音乐一起听聊天回复发两遍(加重入锁+防抖)③修复打电话外语翻译显示两遍(逐句去重)';
+const APP_VER='v180 · ①对话总结加重要度(他自己打1-5星,5星最珍贵):满了优先清掉低星最老的、5星永久保留;可自设上限/开关/手动清理,珍贵回忆永远在场②音乐一起听其实有上下文记忆,新增「清空一起听聊天」按钮可单独清';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -740,7 +740,7 @@ function buildSystem(c){
   // 记忆（仅主身份）
   if(_main&&c.memory&&c.memory.length)s+='\n\n# 你记得关于'+S.me.name+'的事\n'+c.memory.map((m,i)=>(i+1)+'. '+m).join('\n');
   if(c.summary&&!c.summaries){c.summaries=[{time:'(早期)',text:c.summary}];delete c.summary;}
-  if(_main&&c.summaries&&c.summaries.length)s+='\n\n# 之前对话的概要（你的长期记忆，按时间从旧到新，要记牢并保持连贯，ta提到旧事时你要想得起来）\n'+c.summaries.slice(-24).map(x=>'· '+x.time+'　'+x.text).join('\n');
+  if(_main&&c.summaries&&c.summaries.length)s+='\n\n# 之前对话的概要（你的长期记忆，按时间从旧到新，要记牢并保持连贯，ta提到旧事时你要想得起来；标★的是你格外珍视的回忆）\n'+topSummaries(c.summaries,24).map(x=>'· '+x.time+'　'+((x.imp||3)>=5?'★ ':'')+x.text).join('\n');
   const _off=S.offline&&S.offline[c.id];
   if(_main&&_off&&_off.memory&&_off.memory.length)s+='\n\n# 你和'+S.me.name+'的线下约会（你们真的在现实里见面约会过，这些都是和'+S.me.name+'——你女朋友——一起的，记清楚约会对象就是ta）\n'+_off.memory.map(offMemText).join('\n')+'\n这些约会都是【已经发生过的过去式】，是你们的共同回忆。别把已经结束的事当成正在进行去反复追问——比如记忆里你们已经在机场告别、她已经走了，就别再一遍遍问她「上飞机了吗/到了吗」。微信聊天里可以自然回味这些线下的事，但要用【普通文字】说，别用旁白【】那种线下格式。';
   if(_main&&isLover(c)){const rp=S.me.report;if(rp&&rp.active)s+='\n\n# '+S.me.name+'此刻的报备（ta主动告诉你ta在干嘛）\nta现在正在「'+rp.active.type+'」，从 '+hm(rp.active.start)+' 开始，已经 '+sleepDurTxt(Date.now()-rp.active.start)+'了。你清楚ta在干嘛、别瞎担心瞎吃醋；但若时长明显离谱（洗澡/吃饭却好几个钟头），你可以起疑、追问。';
@@ -977,8 +977,13 @@ function musicMenu(){musicInit();openModal(`<h3>🎵 一起听</h3>
   <button class="btn g" style="margin-bottom:8px" onclick="setMusicBg()">🖼️ 换背景图</button>
   ${S.music.bg?`<button class="btn g" style="margin-bottom:8px" onclick="S.music.bg='';save();closeModal();render();toast('已恢复默认背景')">↩️ 恢复默认背景</button>`:''}
   ${S.music.session?`<button class="btn d" style="margin-bottom:8px" onclick="closeModal();musicEndSession()">结束一起听</button>`:`<button class="btn p" style="margin-bottom:8px" onclick="closeModal();musicInvite()">👫 邀请一起听</button>`}
-  <div class="hint" style="margin-top:4px">小提示：点唱片中间换封面、点头像换头像、点「相距…」那行改距离。</div>
+  <button class="btn g" style="margin-bottom:8px" onclick="musicClearChat()">🧹 清空一起听聊天记录（${(S.music.chat||[]).length}条）</button>
+  <div class="hint" style="margin-top:4px">小提示：点唱片中间换封面、点头像换头像、点「相距…」那行改距离。一起听聊天他记得最近的对话，想让他忘掉就点上面清空。</div>
   <button class="btn g" style="margin-top:6px" onclick="closeModal()">关闭</button>`);}
+function musicClearChat(){musicInit();const sess=S.music.session;const n=(S.music.chat||[]).length;if(!n){toast('还没有一起听聊天记录');return;}
+  if(!confirm('清空一起听的聊天记录？\n（'+(sess?'只清你和当前一起听对象的':'清全部一起听聊天')+'，不影响微信聊天和记忆）'))return;
+  if(sess)S.music.chat=(S.music.chat||[]).filter(m=>m.cid!==sess.cid);else S.music.chat=[];
+  _mBub={l:null,r:null};save();closeModal();render();toast('已清空一起听聊天');}
 function musicListModal(){musicInit();const songs=S.music.songs;
   const list=songs.length?songs.map(s=>`<div class="it" style="${s.id===_mCur?'background:#2a2438':''}"><span style="flex:1;cursor:pointer;color:#eee" onclick="closeModal();musicPlay('${s.id}')">${s.id===_mCur&&_mPlaying?'🎶':'🎵'} ${esc(s.title)}${s.artist?' <small style="color:#888">- '+esc(s.artist)+'</small>':''}</span><span onclick="musicEdit('${s.id}')" style="color:#54a0ff;cursor:pointer;padding:0 6px">✎</span><span onclick="musicDel('${s.id}')" style="color:#fa5151;cursor:pointer;padding:0 4px">✕</span></div>`).join(''):'<div class="empty" style="padding:24px;color:#888">还没有歌～点下面 ＋ 添加</div>';
   openModal(`<h3>🎶 歌单（${songs.length}）</h3><div class="section" style="max-height:50vh;overflow:auto">${list}</div><div class="btns" style="margin-top:10px"><button class="btn g" onclick="closeModal()">关闭</button><button class="btn p" onclick="closeModal();musicAdd()">＋ 添加歌曲</button></div>`);}
@@ -3041,7 +3046,7 @@ function releaseJail(backdoor){if(!S.jail)return;jailAmbientStop();const test=S.
 async function summarizeJail(c,reason,backdoor,jmsgs){if(!c)return;
   const stamp=new Date().toLocaleString('zh-CN',{year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
   c.summaries=c.summaries||[];
-  const push=t=>{c.summaries.push({time:stamp,text:'【小黑屋】'+(t||'').slice(0,300)});if(c.summaries.length>80)c.summaries=c.summaries.slice(-80);save();};
+  const push=t=>{addSummary(c,(t||'').slice(0,300),4,'【小黑屋】');};
   const fallback='我把'+S.me.name+'关进了禁闭室小黑屋惩罚ta'+(reason?('，因为'+reason):'')+'，'+(backdoor?'ta认输求饶后我才放ta出来':'我逼问审够、ta认错服软了才放ta出来')+'，积压的旧账也都清算翻篇了。';
   const text=(jmsgs||[]).map(m=>{const who=(m.who==='me')?S.me.name:(m.who==='旁白'?'（场景）':(c.name||'我'));return who+'：'+(m.text||'');}).filter(x=>x.slice(-1)!=='：'&&x.indexOf('（场景）：')!==0).join('\n');
   if(!text.trim()){push(fallback);return;}
@@ -4012,19 +4017,28 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
   maybeSummarize(id);
 }
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+// ===== 记忆总结·重要度(1-5) + 自动清理 =====
+const IMP_INSTR='\n最后，请在【最前面单独一行】用「重要度：N」给这段记忆打个分：N是1到5的整数——1=普通日常闲聊、2=有点小事、3=一般值得记、4=重要、5=刻骨铭心的大事(比如表白/订婚/纪念日/ta哭了/重大承诺/大吵又和好)。第一行只写「重要度：N」，第二行起再写日记正文。';
+function rateAndText(raw){let imp=3,text=(raw||'').trim();const m=text.match(/^\s*重要度\s*[:：]?\s*([1-5])[^\n]*\n?/);if(m){imp=+m[1];text=text.slice(m[0].length).trim();}return {imp:imp,text:text};}
+function sumStamp(){return new Date().toLocaleString('zh-CN',{year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});}
+function pruneSummaries(c){if(S.settings.memAutoClean===false)return;const cap=(+S.settings.memCap)||100;let arr=c.summaries||[];
+  while(arr.length>cap){let cand=-1,candImp=99;for(let i=0;i<arr.length;i++){const im=arr[i].imp||3;if(im>=5)continue;if(im<candImp){candImp=im;cand=i;}}if(cand<0)break;/* 剩下全是5星就不再删 */arr.splice(cand,1);}}
+function addSummary(c,text,imp,prefix){if(!text)return;c.summaries=c.summaries||[];c.summaries.push({time:sumStamp(),text:(prefix||'')+text,imp:Math.max(1,Math.min(5,imp||3))});pruneSummaries(c);save();}
+// 给系统提示挑总结：所有4-5星的(珍贵回忆永远在场) + 最近n条
+function topSummaries(arr,n){arr=arr||[];if(arr.length<=n)return arr;const recent=arr.slice(-n);const older=arr.slice(0,arr.length-n).filter(x=>(x.imp||3)>=4);return older.concat(recent);}
 async function maybeSummarize(id){const c=getC(id);const rounds=+S.settings.summaryRounds||0;if(!rounds)return;
   const all=msgs(id);const keep=rounds*2;if(all.length<=keep+6)return;
   const done=c._sumCount||0;const upto=all.length-keep;if(upto-done<6)return;
   const chunk=all.slice(done,upto).map(m=>{const t=msgToText(m);return t?((m._call?(m._ck==='video'?'(视频通话里)':'(语音通话里)'):'')+t):'';}).filter(Boolean).join('\n');if(!chunk)return;
-  try{const sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」本人。下面是你和'+S.me.name+'刚发生的事（包含文字聊天，以及打电话/视频里说的话，都要一起算上）。用第一人称写一句日记记下来：用"我"指你自己('+c.name+')，用"'+S.me.name+'"称呼对方。例如"今天'+S.me.name+'跟我撒娇说她加班到很晚，还说想吃我做的糖醋排骨，我心都化了"。把这段里【重要的事】都记上（ta说了啥、答应了啥、你们约定了啥、ta的喜好/状态、闹了啥），50字左右、可以两小句，必须是你('+c.name+')的口吻和视角，不是'+S.me.name+'的视角、不要旁白，直接写正文。'},{role:'user',content:chunk}],{max:200,temp:.4});
-    if(sum){c.summaries=c.summaries||[];c.summaries.push({time:new Date().toLocaleString('zh-CN',{year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}),text:cleanReply(sum).slice(0,100)});if(c.summaries.length>80)c.summaries=c.summaries.slice(-80);c._sumCount=upto;save();}
+  try{const sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」本人。下面是你和'+S.me.name+'刚发生的事（包含文字聊天，以及打电话/视频里说的话，都要一起算上）。用第一人称写一句日记记下来：用"我"指你自己('+c.name+')，用"'+S.me.name+'"称呼对方。例如"今天'+S.me.name+'跟我撒娇说她加班到很晚，还说想吃我做的糖醋排骨，我心都化了"。把这段里【重要的事】都记上（ta说了啥、答应了啥、你们约定了啥、ta的喜好/状态、闹了啥），50字左右、可以两小句，必须是你('+c.name+')的口吻和视角，不是'+S.me.name+'的视角、不要旁白，直接写正文。'+IMP_INSTR},{role:'user',content:chunk}],{max:220,temp:.4});
+    if(sum){const rt=rateAndText(cleanReply(sum));if(rt.text){addSummary(c,rt.text.slice(0,100),rt.imp);c._sumCount=upto;save();}}
   }catch(e){}}
 async function summarizeCall(id,kindTxt,sess){const c=getC(id);if(!c)return;
   const cms=msgs(id).filter(m=>m._call&&(!sess||m._cs===sess));if(!cms.length)return;
   const text=cms.map(m=>(m.role==='user'?S.me.name:c.name)+'：'+((m.content||(m.type==='voice'?(m.content||'[语音]'):''))||'')).filter(x=>x.slice(-1)!=='：').join('\n');
   if(!text.trim())return;
-  try{const sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」本人。下面是你和'+S.me.name+'刚才这通'+kindTxt+'里说的话。请用第一人称【较完整地】把这通'+kindTxt+'记成一段记忆：聊到的事情大概都记一下、重要的点别漏、再带上你的感受。用"我"指你自己('+c.name+')，用"'+S.me.name+'"称呼对方。可以写3到5句（一两百字），是你的口吻和视角，直接写正文，别分点别带前缀。'},{role:'user',content:text}],{max:400,temp:.5});
-    if(sum){c.summaries=c.summaries||[];c.summaries.push({time:new Date().toLocaleString('zh-CN',{year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}),text:'【'+kindTxt+'】'+cleanReply(sum).slice(0,260)});if(c.summaries.length>80)c.summaries=c.summaries.slice(-80);save();}
+  try{const sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」本人。下面是你和'+S.me.name+'刚才这通'+kindTxt+'里说的话。请用第一人称【较完整地】把这通'+kindTxt+'记成一段记忆：聊到的事情大概都记一下、重要的点别漏、再带上你的感受。用"我"指你自己('+c.name+')，用"'+S.me.name+'"称呼对方。可以写3到5句（一两百字），是你的口吻和视角，直接写正文，别分点别带前缀。'+IMP_INSTR},{role:'user',content:text}],{max:420,temp:.5});
+    if(sum){const rt=rateAndText(cleanReply(sum));if(rt.text)addSummary(c,rt.text.slice(0,260),rt.imp,'【'+kindTxt+'】');}
   }catch(e){}}
 let _replyTimers={};
 let _replying=null;
@@ -4103,11 +4117,16 @@ function editCircle(id){S.x.circle=S.x.circle||{};const co=circleObj(id);openMod
   <div class="field"><label>圈子定位/风格</label><textarea id="cir_t" rows="3" placeholder="比如：高冷医学博主，偶尔发暗恋小作文">${esc(co.desc)}</textarea></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){S.x.circle['${id}']={name:$('#cir_n').value.trim(),desc:$('#cir_t').value.trim()};save();closeModal();render();toast('已保存');})()">保存</button></div>`);}
 function editSummary(id){const c=getC(id);c.summaries=c.summaries||(c.summary?[{time:'(早期)',text:c.summary}]:[]);delete c.summary;
-  openModal(`<h3>📝 对话总结</h3><div class="hint">每段聊天会自动概括成一条（带时间），简洁。点条目可改/删。</div>
+  const cap=(+S.settings.memCap)||100;const autoOn=S.settings.memAutoClean!==false;const stars=n=>{n=n||3;return '★'.repeat(n)+'☆'.repeat(5-n);};
+  openModal(`<h3>📝 对话总结（长期记忆）</h3><div class="hint">每段聊天会自动概括成一条，ta会按重要度打 1-5 星（★越多越珍贵）。满了之后会优先清掉低星、最老的，<b>5星永远保留</b>。点★可改星级。</div>
+  <div class="section" style="margin:0 0 10px"><div class="it"><span>自动清理</span><span class="v"><label style="cursor:pointer"><input type="checkbox" ${autoOn?'checked':''} onclick="S.settings.memAutoClean=this.checked;save();editSummary('${id}')"> 开</label></span></div>
+    <div class="it"><span>记忆上限（条）</span><span class="v"><input id="mcap" type="number" min="20" max="1000" value="${cap}" style="width:60px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:4px;background:#2c2c2e;color:#eee"> <button class="minibtn" onclick="(function(){var v=Math.max(20,Math.min(1000,+$('#mcap').value||100));S.settings.memCap=v;save();var cc=getC('${id}');pruneSummaries(cc);save();editSummary('${id}');})()">存</button></span></div>
+    <div class="it"><span>当前 ${c.summaries.length} 条</span><span class="v"><button class="minibtn" onclick="(function(){var cc=getC('${id}');pruneSummaries(cc);save();editSummary('${id}');toast('已清理低星记忆');})()">🧹 立即清理低星</button></span></div></div>
   <div class="field"><textarea id="sm_new" rows="2" placeholder="手动加一条概要…"></textarea></div>
-  <button class="btn p" style="margin-bottom:12px" onclick="(function(){var v=$('#sm_new').value.trim();if(v){getC('${id}').summaries.push({time:new Date().toLocaleString('zh-CN',{year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}),text:v});save();editSummary('${id}');}})()">➕ 添加</button>
-  ${c.summaries.length?c.summaries.slice().reverse().map((x,ri)=>{const i=c.summaries.length-1-ri;return `<div class="bill" style="border-radius:8px;margin-bottom:6px"><div style="flex:1"><small style="color:#888">${esc(x.time)}</small><div>${esc(x.text)}</div></div><div style="white-space:nowrap"><span onclick="editSumItem('${id}',${i})" style="color:#54a0ff;cursor:pointer;margin-right:10px">✎</span><span onclick="getC('${id}').summaries.splice(${i},1);save();editSummary('${id}')" style="color:#fa5151;cursor:pointer">✕</span></div></div>`;}).join(''):'<div class="empty">还没有总结</div>'}
+  <button class="btn p" style="margin-bottom:12px" onclick="(function(){var v=$('#sm_new').value.trim();if(v){getC('${id}').summaries.push({time:new Date().toLocaleString('zh-CN',{year:'2-digit',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}),text:v,imp:3});save();editSummary('${id}');}})()">➕ 添加</button>
+  ${c.summaries.length?c.summaries.slice().reverse().map((x,ri)=>{const i=c.summaries.length-1-ri;return `<div class="bill" style="border-radius:8px;margin-bottom:6px"><div style="flex:1"><small style="color:#888">${esc(x.time)}　<span onclick="sumSetImp('${id}',${i})" style="color:#f5b301;cursor:pointer" title="点击改重要度">${stars(x.imp)}</span></small><div>${esc(x.text)}</div></div><div style="white-space:nowrap"><span onclick="editSumItem('${id}',${i})" style="color:#54a0ff;cursor:pointer;margin-right:10px">✎</span><span onclick="getC('${id}').summaries.splice(${i},1);save();editSummary('${id}')" style="color:#fa5151;cursor:pointer">✕</span></div></div>`;}).join(''):'<div class="empty">还没有总结</div>'}
   <button class="btn g" style="margin-top:10px" onclick="closeModal()">关闭</button>`);}
+function sumSetImp(id,i){const c=getC(id);const x=c.summaries&&c.summaries[i];if(!x)return;const v=prompt('这条记忆的重要度（1-5，5最珍贵·永久保留）：',x.imp||3);if(v==null)return;const n=Math.max(1,Math.min(5,parseInt(v,10)||3));x.imp=n;save();editSummary(id);}
 function editSumItem(id,i){const c=getC(id);openModal(`<h3>编辑这条概要</h3><div class="field"><small style="color:#888">${esc(c.summaries[i].time)}</small><textarea id="si_t" rows="3">${esc(c.summaries[i].text)}</textarea></div>
   <div class="btns"><button class="btn g" onclick="editSummary('${id}')">返回</button><button class="btn p" onclick="(function(){getC('${id}').summaries[${i}].text=$('#si_t').value.trim();save();editSummary('${id}');})()">保存</button></div>`);}
 
