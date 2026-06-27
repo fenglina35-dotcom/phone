@@ -358,7 +358,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v168 · 一起听全屏沉浸式大改:可换背景图/每首歌封面在大转盘中央可上传/两个圆头像可单独设置贴一起+耳机线/头像下显示相距公里(默1400)与累计一起听时长/聊天从头像旁弹出左右气泡/可退出可聊天';
+const APP_VER='v169 · 桌面美化(全部emoji换成简约线条图标,更高级)/设置去掉App图标(省空间)/查岗补全:抖音私信加时间+只报新增(双重保险防重复旧事)+新增X私信与线下约会记录,扫描逐项过';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1000,8 +1000,31 @@ function renderHome(){
     </div></div>`;
 }
 function homePgScroll(el){const w=el.clientWidth||1;const p=Math.round((el.scrollLeft||0)/w);const d0=$('#pgdot0'),d1=$('#pgdot1');if(d0)d0.className='pgdot'+(p===0?' on':'');if(d1)d1.className='pgdot'+(p===1?' on':'');}
-function aIco(key,emoji,bg,extra){const ic=S.me.appIcons&&S.me.appIcons[key];
-  return `<div class="ic" style="${ic?'background:#222;':'background:'+bg+';'}color:#fff;position:relative;overflow:hidden">${ic?`<img src="${ic}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">`:emoji}${extra||''}</div>`;}
+// 简约线条图标库（白色，替代 emoji，更高级）
+const _MI=(p,f)=>'<svg viewBox="0 0 24 24" width="26" height="26" fill="'+(f?'#fff':'none')+'" stroke="'+(f?'none':'#fff')+'" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>';
+const MICO={
+  wechat:_MI('<path d="M21 11.4a8.3 8.3 0 0 1-12 7.4L4 20.5l1.4-4A8.3 8.3 0 1 1 21 11.4z"/><path d="M8.6 11.3h.01M12 11.3h.01M15.4 11.3h.01"/>'),
+  contacts:_MI('<circle cx="12" cy="8" r="4"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>'),
+  me:_MI('<path d="M5.5 4 7 8.3M18.5 4 17 8.3"/><path d="M5.5 9.5C5.5 14 8.2 17.5 12 17.5s6.5-3.5 6.5-8"/><path d="M9.6 12h.01M14.4 12h.01M10.8 14.4c.7.5 1.7.5 2.4 0"/>'),
+  settings:_MI('<circle cx="12" cy="12" r="3.2"/><path d="M12 2.6v3M12 18.4v3M21.4 12h-3M5.6 12h-3M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1M18.4 18.4l-2.1-2.1M7.7 7.7 5.6 5.6"/>'),
+  worldbook:_MI('<path d="M6.5 3.5H18a1 1 0 0 1 1 1V19.5a1 1 0 0 1-1 1H6.5A1.5 1.5 0 0 1 5 19V5A1.5 1.5 0 0 1 6.5 3.5z"/><path d="M9 3.5V20.5"/>'),
+  browser:_MI('<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.6 2.6 15 0 18M12 3c-2.6 2.6-2.6 15 0 18"/>'),
+  moments:_MI('<rect x="3" y="7" width="18" height="13" rx="2.6"/><circle cx="12" cy="13.5" r="3.3"/><path d="M8.3 7l1.4-2.4h4.6L15.7 7"/>'),
+  spy:_MI('<circle cx="11" cy="11" r="6.5"/><path d="M20.5 20.5 16 16"/>'),
+  shop:_MI('<path d="M6.2 8h11.6l-.9 11.1a1 1 0 0 1-1 .9H8.1a1 1 0 0 1-1-.9z"/><path d="M9 8V6.6a3 3 0 0 1 6 0V8"/>'),
+  calendar:_MI('<rect x="3.5" y="5" width="17" height="15.5" rx="2.2"/><path d="M3.5 9.5h17M8.5 3v4M15.5 3v4"/>'),
+  x:_MI('<path d="M17.3 3h2.9l-6.4 7.3L21.5 21h-5.7l-4.4-5.8L6.2 21H3.3l6.9-7.8L2.8 3h5.8l4 5.3zM16.2 19.3h1.6L8 4.6H6.3z"/>',true),
+  douyin:_MI('<path d="M14 3h2.4a4.6 4.6 0 0 0 3.6 3.6V9a6.9 6.9 0 0 1-3.6-1v6.4A5.1 5.1 0 1 1 11 9.4v2.7a2.4 2.4 0 1 0 1.7 2.3z"/>',true),
+  food:_MI('<path d="M5 3v6a2 2 0 0 0 4 0V3M7 9v12M17 3c-1.4 0-2.3 2-2.3 4.5S15.6 12 17 12s2.3-1 2.3-4.5S18.4 3 17 3zM17 12v9"/>'),
+  couple:_MI('<path d="M12 20.5S3.5 15 3.5 8.9A4.4 4.4 0 0 1 12 7a4.4 4.4 0 0 1 8.5 1.9C20.5 15 12 20.5 12 20.5z"/>',true),
+  tasks:_MI('<rect x="5" y="4.5" width="14" height="16" rx="2"/><path d="M9 4.5V3.2h6v1.3M8.8 12.4l2 2 4-4"/>'),
+  games:_MI('<rect x="2.5" y="7.5" width="19" height="9" rx="4.5"/><path d="M6.8 10.5v3M5.3 12h3M15.6 11h.01M18 13.5h.01"/>'),
+  mail:_MI('<rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3.6 7l8.4 5.5L20.4 7"/>'),
+  offline:_MI('<path d="M8.4 3.5h7.2l-.8 5.1a2.8 2.8 0 0 1-5.6 0zM12 11.4V19M9 19h6"/>'),
+  music:_MI('<path d="M19 4 9 6.1v9.4A3 3 0 1 0 11 18V9.7l6-1.2v4.8A3 3 0 1 0 19 16z"/>',true)
+};
+function aIco(key,emoji,bg,extra){const ic=S.me.appIcons&&S.me.appIcons[key];const glyph=ic?`<img src="${ic}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">`:(MICO[key]||emoji);
+  return `<div class="ic" style="${ic?'background:#222;':'background:'+bg+';'}color:#fff;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center">${glyph}${extra||''}</div>`;}
 const HOMEAPPS=[['wechat','💬','微信'],['settings','⚙️','设置'],['worldbook','📖','世界书'],['browser','🌐','浏览器'],['moments','🌸','朋友圈'],['spy','🔍','查他手机'],['shop','🛒','购物'],['calendar','📅','日历'],['x','𝕏','X'],['food','🍔','外卖'],['couple','💞','情侣空间'],['tasks','📋','任务便签'],['games','🎮','游戏大厅'],['mail','📮','信箱'],['offline','🌹','线下约会'],['contacts','👤','通讯录'],['me','🐱','我']];
 function appIconEditor(){S.me.appIcons=S.me.appIcons||{};
   openModal(`<h3>🎨 App 图标</h3><div class="hint">给主屏图标换成你喜欢的图片，留空恢复默认。</div>
@@ -1148,7 +1171,6 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
     <div class="section">
       <div class="it" onclick="alarmManager()"><span>⏰ 闹钟</span><span class="v">${S.alarms.length}个 ›</span></div>
       <div class="it"><span>🖼️ 主屏壁纸</span><span class="v"><button class="minibtn" onclick="setHomeBg()">${S.me.homeBg?'换':'上传'}</button>${S.me.homeBg?'<button class="minibtn" style="margin-left:6px" onclick="S.me.homeBg=\'\';save();toast(\'已恢复默认\')">恢复默认</button>':''}</span></div>
-      <div class="it" onclick="appIconEditor()"><span>🎨 App 图标</span><span class="v">自定义 ›</span></div>
       <div class="it" onclick="fetchWeather(true)"><span>🌦️ 定位天气</span><span class="v">${S.weather?esc(S.weather.place+' '+S.weather.desc+' '+S.weather.temp+'°'):'点击获取 ›'}</span></div>
     </div>
     </div>
@@ -3109,9 +3131,16 @@ function myActivity(exceptId,since){let s='';since=since||0;
   // 抖音（搜索/点赞/私信）—— 这些没有逐条时间戳，全量查时一起看
   const dh=(S.dy&&S.dy.history||[]).slice(0,6);if(dh.length)s+='·她抖音搜过：'+dh.join('、')+'\n';
   const dl=(S.dy&&S.dy.liked||[]).slice(0,6);if(dl.length)s+='·她抖音点赞：'+dl.map(v=>'@'+(v.author||'')+(v.desc?'「'+(''+v.desc).slice(0,16)+'」':'')).join('；')+'\n';
-  const dd=(S.dy&&S.dy.dms||[]).filter(d=>(d.msgs||[]).length);if(dd.length)s+='·她抖音私信：'+dd.slice(0,5).map(d=>d.name+'('+d.msgs.slice(-2).map(m=>(m.from==='me'?S.me.name:d.name)+'"'+(''+(m.text||'')).slice(0,24)+'"').join(' / ')+')').join('；')+'\n';
+  // 抖音/X 私信：带时间，只报"自上次查看以来有新消息"的会话（双重保险防重复提旧事）
+  const _dmLine=(arr,label)=>{const list=(arr||[]).filter(d=>(d.msgs||[]).some(m=>(m.time||0)>since));if(!list.length)return '';
+    return '·'+label+(since?'（只列自上次后有新消息的）':'')+'：'+list.slice(0,5).map(d=>{const nw=d.msgs.filter(m=>(m.time||0)>since);const show=(nw.length?nw:d.msgs).slice(-2);const lt=show[show.length-1];const tt=(lt&&lt.time)?hm(lt.time)+' ':'';return tt+d.name+'('+show.map(m=>(m.from==='me'?S.me.name:d.name)+'"'+(''+(m.text||'')).slice(0,24)+'"').join(' / ')+')';}).join('；')+'\n';};
+  s+=_dmLine(S.dy&&S.dy.dms,'她抖音私信');
+  s+=_dmLine(S.x&&S.x.dms,'她X私信');
   // 购物订单
   const ords=(S.shop&&S.shop.orders||[]).filter(o=>!o.refunded).slice(0,5);if(ords.length)s+='·她最近网购下单：'+ords.map(o=>o.item).join('、')+'\n';
+  // 线下约会记录（什么时候·和谁·在哪约会）
+  const _dates=[];Object.keys(S.offline||{}).forEach(cid=>{const o=S.offline[cid];const cc=getC(cid);if(!cc||cc.deleted||!o)return;if(!((o.memory&&o.memory.length)||(o.msgs&&o.msgs.length)||o.started))return;const last=(o.memory&&o.memory.length)?offMemText(o.memory[o.memory.length-1]).slice(0,30):'';_dates.push((o.when||offMemLabel(o))+' 和'+(cc.remark||cc.name)+(o.loc?'在'+o.loc:'')+'约会'+(last?'，'+last:''));});
+  if(_dates.length)s+='·她的线下约会记录：'+_dates.slice(0,3).join('；')+'\n';
   return s||'（手机上没什么新动静）';}
 let _walSel=null;
 function openWallet(){S.me.bills.forEach(b=>{if(!b.id)b.id=uid();});const sel=_walSel;
@@ -4112,7 +4141,7 @@ async function doSpyView(id,force,opts){opts=opts||{};if(!isMain())return;const 
   if(_call&&!(_call.id===id&&_call.state==='active'))return;/* 有通话在进行（响铃/拨号/或在和别人通话）就别冒出查岗微信消息；只有"正和ta本人通话中"才继续（下面会把反应导进电话里）*/
   if(!force&&!spyBudget(id))return;recordVisit(id,'查看手机');
   const fd=opts.intent?spyFocusData(id,opts.focus):null;const flab=fd?(fd.label||opts.focus||'手机'):'';
-  const steps=opts.intent?['正在连接 '+(c.remark||c.name)+' 的查看请求…','正在查看 '+flab]:['正在连接 '+(c.remark||c.name)+' 的查看请求…','正在查看 微信聊天','正在查看 朋友圈','正在查看 抖音(搜索/点赞/私信)','正在查看 钱包账单','正在查看 购物订单','正在查看 浏览器记录','正在查看 X动态'].concat(sp.loc?['正在查看 实时定位']:[]).concat(['查看完成']);
+  const steps=opts.intent?['正在连接 '+(c.remark||c.name)+' 的查看请求…','正在查看 '+flab]:['正在连接 '+(c.remark||c.name)+' 的查看请求…','正在查看 微信聊天','正在查看 朋友圈','正在查看 抖音(搜索/点赞/私信)','正在查看 X动态','正在查看 X私信','正在查看 钱包账单','正在查看 购物订单','正在查看 浏览器记录','正在查看 线下约会记录'].concat(sp.loc?['正在查看 实时定位']:[]).concat(['查看完成']);
   const B=$('#spyBanner');B.className='spybanner show';
   for(let i=0;i<steps.length;i++){B.innerHTML=`👁️ <b>${esc(c.remark||c.name)}</b> ${esc(steps[i])}<span class="spydot">…</span>`;await sleep(900);}
   B.innerHTML=`✅ <b>${esc(c.remark||c.name)}</b> ${opts.intent?'看完了'+esc(flab):'结束查看'}`;await sleep(1100);B.className='spybanner';
