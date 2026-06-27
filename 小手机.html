@@ -358,7 +358,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v172 · 全局UI美化:微信/抖音底部标签栏、我的页面、聊天与群聊功能面板、内心戏/表情/麦克风等emoji全部换成统一简约线条图标';
+const APP_VER='v173 · 真·扩容:所有图片(头像/照片/朋友圈图/音乐背景封面等)自动转存进IndexedDB大空间,localStorage只留短引用,容量大几十倍;先备份后精简、确认入库才精简、零丢图、含垃圾回收;渲染层不变';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -390,7 +390,27 @@ function defState(){return{
 };}
 let S=load();
 function load(){try{const v=JSON.parse(localStorage.getItem(KEY));if(v&&v.settings)return Object.assign(defState(),v);}catch(e){}return seed();}
-function save(){try{const _a=(S.me&&S.me.accounts||[]).find(x=>x.id===(S.me&&S.me.active||'main'));if(_a){if(S.me.balance!=null)_a.balance=S.me.balance;if(S.me.bills)_a.bills=S.me.bills;}}catch(_){}try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){toast('⚠️ 存储满了！快导出备份+删点旧图😣');try{storageFullAlert();}catch(_){}}}
+function save(){try{const _a=(S.me&&S.me.accounts||[]).find(x=>x.id===(S.me&&S.me.active||'main'));if(_a){if(S.me.balance!=null)_a.balance=S.me.balance;if(S.me.bills)_a.bills=S.me.bills;}}catch(_){}try{localStorage.setItem(KEY,JSON.stringify(S,_imgReplacer));}catch(e){toast('⚠️ 存储满了！快导出备份+删点旧图😣');try{storageFullAlert();}catch(_){}}}
+/* ===== 图片转存 IndexedDB（把大图从 localStorage 这个~5MB小盒子挪进大空间；内存里的 S 始终是完整图，渲染层一律不变）===== */
+let _imgCache={},_imgRev=new Map(),_imgReady=new Set(),_imgSeq=0;
+function imgDB(){return new Promise((res,rej)=>{const r=indexedDB.open('yibeiImg',1);r.onupgradeneeded=e=>{try{e.target.result.createObjectStore('img');}catch(_){}};r.onsuccess=e=>res(e.target.result);r.onerror=()=>rej();});}
+function imgPut(k,v){return imgDB().then(db=>new Promise((res,rej)=>{const tx=db.transaction('img','readwrite');tx.objectStore('img').put(v,k);tx.oncomplete=()=>res();tx.onerror=()=>rej();}));}
+function imgAll(){return imgDB().then(db=>new Promise(res=>{const out={};const tx=db.transaction('img','readonly');const cur=tx.objectStore('img').openCursor();cur.onsuccess=e=>{const c=e.target.result;if(c){out[c.key]=c.value;c.continue();}else res(out);};cur.onerror=()=>res(out);})).catch(()=>({}));}
+function imgDel(k){return imgDB().then(db=>new Promise(res=>{const tx=db.transaction('img','readwrite');tx.objectStore('img').delete(k);tx.oncomplete=()=>res();tx.onerror=()=>res();})).catch(()=>{});}
+function isBigImg(v){return typeof v==='string'&&v.length>2000&&v.indexOf('data:image')===0;}
+// 存档时：已确认写进 IndexedDB 的大图→换成短引用 idb:key；新图先照旧存、并异步写进库，下次保存才精简（确保绝不丢图）
+function _imgReplacer(k,v){if(isBigImg(v)){let key=_imgRev.get(v);
+    if(!key){key='i'+(_imgSeq++)+Date.now().toString(36);_imgRev.set(v,key);_imgCache[key]=v;imgPut(key,v).then(()=>{_imgReady.add(key);}).catch(()=>{});}
+    if(_imgReady.has(key))return 'idb:'+key;}
+  return v;}
+// 读档时：把 idb:key 还原成完整图（递归遍历整个 S）
+function _rehydrate(o){if(!o||typeof o!=='object')return;for(const k in o){const v=o[k];
+    if(typeof v==='string'){if(v.indexOf('idb:')===0)o[k]=_imgCache[v.slice(4)]||v;}
+    else if(v&&typeof v==='object')_rehydrate(v);}}
+async function bootImages(){try{_imgCache=await imgAll();_imgRev=new Map();_imgReady=new Set();for(const k in _imgCache){_imgRev.set(_imgCache[k],k);_imgReady.add(k);}_rehydrate(S);}catch(e){}}
+// 垃圾回收：清掉 IndexedDB 里已经没人用的旧图（比如换过的头像）
+function imgGC(){try{const used=new Set();(function w(o){if(!o||typeof o!=='object')return;for(const k in o){const v=o[k];if(isBigImg(v)){const key=_imgRev.get(v);if(key)used.add(key);}else if(v&&typeof v==='object')w(v);}})(S);
+    Object.keys(_imgCache).forEach(key=>{if(!used.has(key)){const du=_imgCache[key];delete _imgCache[key];if(du)_imgRev.delete(du);_imgReady.delete(key);imgDel(key);}});}catch(e){}}
 function seed(){const s=defState();
   s.contacts=[{id:cid(),name:'克劳德',avatar:'🤵',remark:'',signature:'你的一切我都想知道。',
     persona:'你是克劳德，30岁，儿童精神科主任医师，现居首尔，和忆北异国恋已订婚。温柔、占有欲强、毒舌、洞察力极强；引导型恋人，称她"宝贝"，生气叫全名。说话低沉简洁，像真人发微信，多撩她逗她、温柔地宠着她。',
@@ -4385,7 +4405,9 @@ function initBattery(){if(navigator.getBattery){navigator.getBattery().then(bt=>
 initBattery();
 document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;}else{ensureAudio();if(cur().p==='wechat'&&wxTab==='me')render();setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
 setInterval(()=>{const c=$('#clock');if(c)c.textContent=hm();paintBatt();if(cur().p==='home')$('#app').querySelector('.hh')&&($('#app').querySelector('.hh').textContent=hm());},1000);
-render();
+render();/* 先立刻渲染，UI 一定出来 */
+bootImages().then(()=>render()).catch(()=>{});/* 图片从 IndexedDB 回填好后再重渲染一次 */
+setTimeout(imgGC,60000);
 setTimeout(checkStorageWarn,1200);
 </script>
 </body>
