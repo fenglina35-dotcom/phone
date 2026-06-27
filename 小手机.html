@@ -358,7 +358,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v171 · 歌词打轴工具:粘纯歌词后放着歌一句句点「标记这一句」自动生成[mm:ss.xx]时间轴(无需手敲),可退一句/退3秒/随时保存;没时间轴仍按进度匀速滚';
+const APP_VER='v172 · 全局UI美化:微信/抖音底部标签栏、我的页面、聊天与群聊功能面板、内心戏/表情/麦克风等emoji全部换成统一简约线条图标';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1054,6 +1054,37 @@ const MICO={
 };
 function aIco(key,emoji,bg,extra){const ic=S.me.appIcons&&S.me.appIcons[key];const glyph=ic?`<img src="${ic}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">`:(MICO[key]||emoji);
   return `<div class="ic" style="${ic?'background:#222;':'background:'+bg+';'}color:#fff;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center">${glyph}${extra||''}</div>`;}
+// 通用线条图标（UI 里替代 emoji，可指定颜色/大小，默认跟随文字色）
+const ICONS={
+  chat:'<path d="M21 11.4a8.3 8.3 0 0 1-12 7.4L4 20.5l1.4-4A8.3 8.3 0 1 1 21 11.4z"/><path d="M8.6 11.3h.01M12 11.3h.01M15.4 11.3h.01"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>',
+  cat:'<path d="M5.5 4 7 8.3M18.5 4 17 8.3"/><path d="M5.5 9.5C5.5 14 8 17.5 12 17.5s6.5-3.5 6.5-8"/><path d="M9.6 12h.01M14.4 12h.01M10.8 14.4c.7.5 1.7.5 2.4 0"/>',
+  gear:'<circle cx="12" cy="12" r="3.2"/><path d="M12 2.6v3M12 18.4v3M21.4 12h-3M5.6 12h-3M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1M18.4 18.4l-2.1-2.1M7.7 7.7 5.6 5.6"/>',
+  camera:'<rect x="3" y="7" width="18" height="13" rx="2.6"/><circle cx="12" cy="13.5" r="3.3"/><path d="M8.3 7l1.4-2.4h4.6L15.7 7"/>',
+  wallet:'<path d="M3 7.5A1.5 1.5 0 0 1 4.5 6H18a1 1 0 0 1 1 1v1.2"/><rect x="3" y="8" width="18" height="10.5" rx="2"/><path d="M15.5 12.5h3.5v3h-3.5a1.5 1.5 0 0 1 0-3z"/>',
+  steps:'<path d="M3 13h3.5l2-7 3.5 13 2.2-6H21"/>',
+  mask:'<path d="M4 5.5h16v5a8 8 0 0 1-16 0z"/><path d="M8.5 10h.01M15.5 10h.01M9 13.5c1.6 1.5 4.4 1.5 6 0"/>',
+  idcard:'<rect x="3" y="5.5" width="18" height="13" rx="2.2"/><circle cx="8.5" cy="10.8" r="2.1"/><path d="M13 9.5h5M13 12.5h4M5.6 15.4c.5-1.3 1.6-1.9 2.9-1.9s2.4.6 2.9 1.9"/>',
+  image:'<rect x="3" y="4.5" width="18" height="15" rx="2.3"/><circle cx="8.5" cy="9.5" r="1.7"/><path d="M4 17l5-4 4 3 3-2.4 4 3.4"/>',
+  money:'<circle cx="12" cy="12" r="8.3"/><path d="M9 9l3 3 3-3M12 12v4.2M9.6 13.4h4.8M9.6 15.4h4.8"/>',
+  redpacket:'<rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="M5 8.6c3.2 2.1 10.8 2.1 14 0"/><circle cx="12" cy="10.4" r="1.5"/>',
+  location:'<path d="M12 21s7-6 7-11a7 7 0 1 0-14 0c0 5 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/>',
+  file:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>',
+  phone:'<path d="M6.5 4h3l1.5 4-2 1.5a11 11 0 0 0 5 5l1.5-2 4 1.5v3a2 2 0 0 1-2.1 2A16 16 0 0 1 4.5 6.1 2 2 0 0 1 6.5 4z"/>',
+  video:'<rect x="3" y="6.5" width="12.5" height="11" rx="2.2"/><path d="M15.5 10.2l5.5-3v9.6l-5.5-3z"/>',
+  spyphone:'<rect x="6" y="3" width="12" height="18" rx="2.5"/><circle cx="11.5" cy="11" r="2.4"/><path d="M13.4 12.9 15.6 15"/>',
+  card:'<rect x="3" y="6" width="18" height="12" rx="2.2"/><path d="M3 10h18M6.5 14.5h4"/>',
+  dice:'<rect x="4" y="4" width="16" height="16" rx="3.2"/><path d="M8.5 8.5h.01M15.5 8.5h.01M12 12h.01M8.5 15.5h.01M15.5 15.5h.01"/>',
+  forward:'<path d="M13 5l7 7-7 7v-4.2C7 14.6 4 16.6 3.2 20 3.6 12.5 7.2 9.2 13 9.2z"/>',
+  smile:'<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M8.6 14.4c1.5 1.7 5.3 1.7 6.8 0"/>',
+  mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.6 11a6.4 6.4 0 0 0 12.8 0M12 17.4V21M8.6 21h6.8"/>',
+  thought:'<path d="M5.5 10a5 5 0 0 1 9-3 4 4 0 0 1 4.5 4 3.4 3.4 0 0 1-3.4 3.4H8.4A3.4 3.4 0 0 1 5.5 10z"/><path d="M5 16.5h.01M7.5 19.5h.01"/>',
+  home:'<path d="M4 11l8-7 8 7M6.5 9.5V20h11V9.5"/>',
+  search:'<circle cx="11" cy="11" r="6.5"/><path d="M20.5 20.5 16 16"/>',
+  envelope:'<rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3.6 7l8.4 5.5L20.4 7"/>'
+};
+function svgIc(name,size,color,sw){const p=ICONS[name];if(!p)return '';size=size||22;
+  return '<svg viewBox="0 0 24 24" width="'+size+'" height="'+size+'" fill="none" stroke="'+(color||'currentColor')+'" stroke-width="'+(sw||1.9)+'" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle">'+p+'</svg>';}
 const HOMEAPPS=[['wechat','💬','微信'],['settings','⚙️','设置'],['worldbook','📖','世界书'],['browser','🌐','浏览器'],['moments','🌸','朋友圈'],['spy','🔍','查他手机'],['shop','🛒','购物'],['calendar','📅','日历'],['x','𝕏','X'],['food','🍔','外卖'],['couple','💞','情侣空间'],['tasks','📋','任务便签'],['games','🎮','游戏大厅'],['mail','📮','信箱'],['offline','🌹','线下约会'],['contacts','👤','通讯录'],['me','🐱','我']];
 function appIconEditor(){S.me.appIcons=S.me.appIcons||{};
   openModal(`<h3>🎨 App 图标</h3><div class="hint">给主屏图标换成你喜欢的图片，留空恢复默认。</div>
@@ -1929,7 +1960,7 @@ function renderDouyin(){let body;
   if(dyTab==='feed')body=dyFeedView();else if(dyTab==='search')body=dySearchView();else if(dyTab==='dm')body=dyDMList();else body=dyProfile();
   const nav=dyTab==='feed'?'':`<div class="dynav"><span class="l" onclick="home()" style="cursor:pointer">‹</span><span style="font-weight:700">${dyTab==='search'?'搜索':dyTab==='dm'?'消息':'我'}</span><span class="r" style="width:14px"></span></div>`;
   return `${nav}<div style="flex:1;overflow:hidden;display:flex;flex-direction:column;position:relative">${body}${dyTab==='feed'?'<div class="xfab" style="bottom:60px;background:#fe2c55" onclick="dyCompose()">＋</div>':''}</div>
-    <div class="dytab">${dytb('feed','🏠','首页')}${dytb('search','🔍','搜索')}${dytb('dm','✉️','消息')}${dytb('me','🙂','我')}</div>`;}
+    <div class="dytab">${dytb('feed',svgIc('home',22),'首页')}${dytb('search',svgIc('search',22),'搜索')}${dytb('dm',svgIc('envelope',22),'消息')}${dytb('me',svgIc('user',22),'我')}</div>`;}
 function dytb(k,i,t){return `<div class="t ${dyTab===k?'on':''}" onclick="dyTab='${k}';render()"><div class="i">${i}</div>${t}</div>`;}
 function dyFeedView(){const list=_dyMode==='follow'?S.dy.feed.filter(v=>v.cid&&v.cid!=='me'&&S.dy.following.includes(v.cid)):S.dy.feed;
   const top=`<div style="position:absolute;top:8px;left:10px;z-index:7;color:#fff;font-size:22px;cursor:pointer;text-shadow:0 1px 4px rgba(0,0,0,.6)" onclick="home()">‹</div><div class="dytopt"><span class="${_dyMode==='follow'?'on':''}" onclick="_dyMode='follow';render()">关注</span><span class="${_dyMode==='rec'?'on':''}" onclick="_dyMode='rec';render()">推荐</span></div>`;
@@ -2196,7 +2227,7 @@ function renderWeChat(){
   return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">${titles[wxTab]}</span><span class="r" onclick="${wxTab==='chats'?'chatAddMenu()':wxTab==='contacts'?'editContact()':''}">${showAdd?'＋':''}</span></div>
     <div class="scroll" style="background:#000">${body}</div>
     <div class="tabbar">
-      ${tb('chats','💬','微信')}${tb('contacts','👤','通讯录')}${tb('moments','🌸','朋友圈')}${tb('me','🐱','我')}
+      ${tb('chats',svgIc('chat',23),'微信')}${tb('contacts',svgIc('user',23),'通讯录')}${tb('moments',svgIc('camera',23),'朋友圈')}${tb('me',svgIc('cat',23),'我')}
     </div>`;
 }
 function tb(k,i,t){return `<div class="tb ${wxTab===k?'on':''}" onclick="wxTab='${k}';render()"><div class="i">${i}</div>${t}</div>`;}
@@ -2238,10 +2269,10 @@ function renderGroup(id){const g=S.groups.find(x=>x.id===id);if(!g)return '';
   let body='';g.msgs.forEach((m,i)=>{if(i===0||m.time-g.msgs[i-1].time>300000)body+=`<div class="tstamp"><span>${hm(m.time)}</span></div>`;body+=gbubble(g,m);});
   const sel=_gmsel&&_gmsel.id===id;
   const panel=`<div class="panel" id="gpanel"><div class="pgrid">
-      <div class="it" onclick="document.getElementById('gpanel').classList.remove('show');groupSendCard('${id}','redpacket')"><div class="b">🧧</div><span>红包</span></div>
-      <div class="it" onclick="document.getElementById('gpanel').classList.remove('show');groupSendCard('${id}','transfer')"><div class="b">💰</div><span>转账</span></div>
-      <div class="it" onclick="document.getElementById('gpanel').classList.remove('show');groupAt('${id}')"><div class="b">@</div><span>提到谁</span></div>
-      <div class="it" onclick="enterGSelect('${id}')"><div class="b">↗️</div><span>多选转发</span></div>
+      <div class="it" onclick="document.getElementById('gpanel').classList.remove('show');groupSendCard('${id}','redpacket')"><div class="b">${svgIc('redpacket',26,'#e6e6ee')}</div><span>红包</span></div>
+      <div class="it" onclick="document.getElementById('gpanel').classList.remove('show');groupSendCard('${id}','transfer')"><div class="b">${svgIc('money',26,'#e6e6ee')}</div><span>转账</span></div>
+      <div class="it" onclick="document.getElementById('gpanel').classList.remove('show');groupAt('${id}')"><div class="b" style="font-size:24px;color:#e6e6ee">@</div><span>提到谁</span></div>
+      <div class="it" onclick="enterGSelect('${id}')"><div class="b">${svgIc('forward',26,'#e6e6ee')}</div><span>多选转发</span></div>
     </div></div>`;
   const inbar=sel
     ?`<div class="inputbar"><button class="btn g" style="flex:1" onclick="exitGSelect()">取消</button><button class="btn d" style="flex:1" onclick="gDelSelected('${id}')">删除(<span id="gfwdcnt">${_gmsel.ids.length}</span>)</button><button class="btn p" style="flex:1" onclick="gForwardSelected('${id}')">转发</button></div>`
@@ -3080,14 +3111,14 @@ function wxMe(){const on=isOnline();const md=S.me.onlineMode||'auto';
   </div>
   <div class="section" style="margin:12px">
     <div class="it"><span>在线状态</span><span class="v">${['auto','on','off'].map(m=>`<span onclick="S.me.onlineMode='${m}';save();render()" style="cursor:pointer;padding:3px 8px;border-radius:8px;${md===m?'background:#07c160;color:#fff':'color:#888'}">${m==='auto'?'自动':m==='on'?'在线':'离线'}</span>`).join('')}</span></div>
-    <div class="it" onclick="openWallet()"><span>💰 钱包</span><span class="v">¥${(+S.me.balance).toFixed(2)}</span></div>
-    <div class="it"><span>👟 微信步数 ${(S.me.steps||0)}</span><span class="v" onclick="toggleSteps()">${_stepOn?'计步中(点停)':'开启计步 ›'}</span></div>
-    <div class="it" onclick="editMe()"><span>🎭 我的人设（全局）</span><span class="v">所有角色可见</span></div>
-    <div class="it" onclick="accountMgr()"><span>🪪 小号 / 切换身份</span><span class="v">${(S.me.accounts||[]).length>1?'当前：'+esc(S.me.name):'添加 ›'}</span></div>
-    <div class="it" onclick="wxTab='moments';render()"><span>🌸 朋友圈</span><span class="v">›</span></div>
+    <div class="it" onclick="openWallet()"><span style="display:inline-flex;align-items:center;gap:8px">${svgIc('wallet',18,'#c3c6d2')}钱包</span><span class="v">¥${(+S.me.balance).toFixed(2)}</span></div>
+    <div class="it"><span style="display:inline-flex;align-items:center;gap:8px">${svgIc('steps',18,'#c3c6d2')}微信步数 ${(S.me.steps||0)}</span><span class="v" onclick="toggleSteps()">${_stepOn?'计步中(点停)':'开启计步 ›'}</span></div>
+    <div class="it" onclick="editMe()"><span style="display:inline-flex;align-items:center;gap:8px">${svgIc('mask',18,'#c3c6d2')}我的人设（全局）</span><span class="v">所有角色可见</span></div>
+    <div class="it" onclick="accountMgr()"><span style="display:inline-flex;align-items:center;gap:8px">${svgIc('idcard',18,'#c3c6d2')}小号 / 切换身份</span><span class="v">${(S.me.accounts||[]).length>1?'当前：'+esc(S.me.name):'添加 ›'}</span></div>
+    <div class="it" onclick="wxTab='moments';render()"><span style="display:inline-flex;align-items:center;gap:8px">${svgIc('camera',18,'#c3c6d2')}朋友圈</span><span class="v">›</span></div>
   </div>
   <div class="section" style="margin:12px">
-    <div class="it" onclick="go('settings')"><span>⚙️ 设置 / API</span><span class="v">›</span></div>
+    <div class="it" onclick="go('settings')"><span style="display:inline-flex;align-items:center;gap:8px">${svgIc('gear',18,'#c3c6d2')}设置 / API</span><span class="v">›</span></div>
   </div>`;
 }
 function editMe(){openModal(`<h3>我的资料</h3>
@@ -3376,29 +3407,29 @@ function renderChat(id){const c=getC(id);if(!c)return '';
   list.forEach(m=>{if(!m.id)m.id=uid();});
   let body='';
   list.forEach((m,i)=>{if(i===0||m.time-list[i-1].time>300000)body+=`<div class="tstamp"><span>${hm(m.time)}</span></div>`;body+=bubbleRow(c,m);});
-  const mood=c.mood?`<div class="moodbar" onclick="showMood('${id}')">💭 ${esc(c.mood.slice(0,24))}${c.mood.length>24?'…':''}</div>`:'';
+  const mood=c.mood?`<div class="moodbar" onclick="showMood('${id}')" style="display:flex;align-items:center;gap:6px">${svgIc('thought',15,'#b9a6e0')}<span style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${esc(c.mood.slice(0,24))}${c.mood.length>24?'…':''}</span></div>`:'';
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(c.remark||c.name)}${c.muted?' 🔕':''}</span><span class="r" onclick="go('contactInfo',{id:'${id}'})">⋯</span></div>
     ${mood}
     <div class="chatbg" id="chatbg" style="${bg}">${body}</div>
     <div class="panel" id="panel">
-      <div class="ptabs"><span class="${_panelPage!=='emoji'?'on':''}" onclick="_panelPage='fn';render();$('#panel').classList.add('show')">功能</span><span class="${_panelPage==='emoji'?'on':''}" onclick="_panelPage='emoji';render();$('#panel').classList.add('show')">😊 表情</span></div>
+      <div class="ptabs"><span class="${_panelPage!=='emoji'?'on':''}" onclick="_panelPage='fn';render();$('#panel').classList.add('show')">功能</span><span class="${_panelPage==='emoji'?'on':''}" onclick="_panelPage='emoji';render();$('#panel').classList.add('show')"><span style="display:inline-flex;align-items:center;gap:5px">${svgIc('smile',16)}表情</span></span></div>
       ${_panelPage==='emoji'?`<div class="ppage">${emojiPanel(id)}</div>`:`<div class="pgrid">
-      <div class="it" onclick="cPhoto('${id}')"><div class="b">🖼️</div><span>相册</span></div>
-      <div class="it" onclick="cTransfer('${id}')"><div class="b">💰</div><span>转账</span></div>
-      <div class="it" onclick="cRed('${id}')"><div class="b">🧧</div><span>红包</span></div>
-      <div class="it" onclick="cLoc('${id}')"><div class="b">📍</div><span>位置</span></div>
-      <div class="it" onclick="cDoc('${id}')"><div class="b">📎</div><span>文件</span></div>
-      <div class="it" onclick="placeCall('${id}','voice')"><div class="b">📞</div><span>语音通话</span></div>
-      <div class="it" onclick="placeCall('${id}','video')"><div class="b">📹</div><span>视频通话</span></div>
-      <div class="it" onclick="cSpyGrant('${id}')"><div class="b">📱</div><span>授权查手机</span></div>
-      <div class="it" onclick="cNamecard('${id}')"><div class="b">👤</div><span>名片</span></div>
-      <div class="it" onclick="cFamily('${id}')"><div class="b">💳</div><span>亲属卡</span></div>
-      <div class="it" onclick="cDice('${id}')"><div class="b">🎲</div><span>骰子</span></div>
-      <div class="it" onclick="enterSelect('${id}')"><div class="b">↗️</div><span>多选转发</span></div>
+      <div class="it" onclick="cPhoto('${id}')"><div class="b">${svgIc('image',26,'#e6e6ee')}</div><span>相册</span></div>
+      <div class="it" onclick="cTransfer('${id}')"><div class="b">${svgIc('money',26,'#e6e6ee')}</div><span>转账</span></div>
+      <div class="it" onclick="cRed('${id}')"><div class="b">${svgIc('redpacket',26,'#e6e6ee')}</div><span>红包</span></div>
+      <div class="it" onclick="cLoc('${id}')"><div class="b">${svgIc('location',26,'#e6e6ee')}</div><span>位置</span></div>
+      <div class="it" onclick="cDoc('${id}')"><div class="b">${svgIc('file',26,'#e6e6ee')}</div><span>文件</span></div>
+      <div class="it" onclick="placeCall('${id}','voice')"><div class="b">${svgIc('phone',26,'#e6e6ee')}</div><span>语音通话</span></div>
+      <div class="it" onclick="placeCall('${id}','video')"><div class="b">${svgIc('video',26,'#e6e6ee')}</div><span>视频通话</span></div>
+      <div class="it" onclick="cSpyGrant('${id}')"><div class="b">${svgIc('spyphone',26,'#e6e6ee')}</div><span>授权查手机</span></div>
+      <div class="it" onclick="cNamecard('${id}')"><div class="b">${svgIc('idcard',26,'#e6e6ee')}</div><span>名片</span></div>
+      <div class="it" onclick="cFamily('${id}')"><div class="b">${svgIc('card',26,'#e6e6ee')}</div><span>亲属卡</span></div>
+      <div class="it" onclick="cDice('${id}')"><div class="b">${svgIc('dice',26,'#e6e6ee')}</div><span>骰子</span></div>
+      <div class="it" onclick="enterSelect('${id}')"><div class="b">${svgIc('forward',26,'#e6e6ee')}</div><span>多选转发</span></div>
     </div>`}
     </div>
     ${(_sel&&_sel.id===id)?`<div class="inputbar"><button class="btn g" style="flex:1" onclick="exitSelect()">取消</button><button class="btn d" style="flex:1" onclick="delSelected('${id}')">删除(<span id="fwdcnt">${_sel.ids.length}</span>)</button><button class="btn p" style="flex:1" onclick="forwardSelected()">转发</button></div>`:(S.couple&&S.couple.gags&&S.couple.gags[id])?`<div class="inputbar" style="justify-content:center;color:#fa9bb5;font-size:13px;padding:16px;text-align:center">🔇 ta把你们的聊天锁了，<span onclick="openCouple()" style="color:#ff6fa5;text-decoration:underline;cursor:pointer">去情侣空间输密码解禁</span></div>`:(S.settings.manualReply&&!c.blocked?`<div style="padding:6px 10px 0"><button class="btn p" style="width:100%" ${_replying===id?'disabled':''} onclick="manualReply('${id}')">${_replying===id?'回复中…':'▶ 让ta回复'}</button></div>`:'')+`<div class="inputbar">`+`
-      <span class="plus" style="background:${_voiceMode?'linear-gradient(135deg,#9ec5fe,#b8a4e3)':'transparent'};box-shadow:none;color:${_voiceMode?'#fff':'#aaa'}" onclick="_voiceMode=!_voiceMode;render()">🎤</span>
+      <span class="plus" style="background:${_voiceMode?'linear-gradient(135deg,#9ec5fe,#b8a4e3)':'transparent'};box-shadow:none;color:${_voiceMode?'#fff':'#aaa'}" onclick="_voiceMode=!_voiceMode;render()">${svgIc('mic',19,_voiceMode?'#fff':'#aaa')}</span>
       <textarea id="cinput" rows="1" placeholder="${c.blocked?'已拉黑，发不出去':(_voiceMode?'打字→发成语音条…':'发消息…')}" ${c.blocked?'disabled':''}></textarea>
       <button class="send" onclick="sendText('${id}')">${_voiceMode?'发语音':'发送'}</button>
       <span class="plus" onclick="_panelPage='fn';$('#panel').classList.toggle('show')">＋</span>
