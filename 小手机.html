@@ -358,7 +358,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v167 · 他查你手机更全(补抖音搜索/点赞/私信+购物订单,扫描图标逐项过+查看完成)/扣钱金额去掉固定示例改成完全按他意愿且看你余额浮动';
+const APP_VER='v168 · 一起听全屏沉浸式大改:可换背景图/每首歌封面在大转盘中央可上传/两个圆头像可单独设置贴一起+耳机线/头像下显示相距公里(默1400)与累计一起听时长/聊天从头像旁弹出左右气泡/可退出可聊天';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -788,8 +788,11 @@ function render(){
 /* ---------- 主屏幕 ---------- */
 /* ---------- 🎵 一起听音乐 ---------- */
 let _ma=null,_mCur=null,_mPlaying=false,_mUrl=null,_mSessTimer=null;
-function mSessTick(){const el=document.getElementById('m_sesstime');const sess=S.music&&S.music.session;if(!el||!sess||!sess.startTs){if(_mSessTimer){clearInterval(_mSessTimer);_mSessTimer=null;}return;}el.textContent=mFmt((Date.now()-sess.startTs)/1000);}
-function musicInit(){if(!S.music)S.music={songs:[],session:null,loop:false,chat:[]};S.music.songs=S.music.songs||[];S.music.chat=S.music.chat||[];}
+function mSessTick(){const el=document.getElementById('m_sesstime');const sess=S.music&&S.music.session;
+  if(!sess||!sess.startTs){if(_mSessTimer){clearInterval(_mSessTimer);_mSessTimer=null;}if(el)el.textContent=fmtListen((S.music&&S.music.totalSec)||0);return;}
+  const live=((S.music&&S.music.totalSec)||0)+Math.floor((Date.now()-sess.startTs)/1000);
+  if(el)el.textContent=fmtListen(live);}
+function musicInit(){if(!S.music)S.music={songs:[],session:null,loop:false,chat:[]};S.music.songs=S.music.songs||[];S.music.chat=S.music.chat||[];if(S.music.totalSec==null)S.music.totalSec=0;if(S.music.distance==null)S.music.distance=1400;}
 function mIDB(){return new Promise((res,rej)=>{const r=indexedDB.open('yibeiMusic',1);r.onupgradeneeded=e=>{try{e.target.result.createObjectStore('audio');}catch(_){}};r.onsuccess=e=>res(e.target.result);r.onerror=()=>rej();});}
 function mPut(k,b){return mIDB().then(db=>new Promise((res,rej)=>{const tx=db.transaction('audio','readwrite');tx.objectStore('audio').put(b,k);tx.oncomplete=()=>res();tx.onerror=()=>rej();}));}
 function mGet(k){return mIDB().then(db=>new Promise((res)=>{const tx=db.transaction('audio','readonly');const q=tx.objectStore('audio').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>res(null);}));}
@@ -846,6 +849,27 @@ function mLyricTick(){const box=document.getElementById('m_lyrics');if(!box||!_m
 const SVG_PLAY='<svg viewBox="0 0 24 24" width="26" height="26"><path d="M8 5v14l11-7z" fill="#fff"/></svg>';
 const SVG_PAUSE='<svg viewBox="0 0 24 24" width="24" height="24"><rect x="6" y="4" width="4" height="16" rx="1.5" fill="#fff"/><rect x="14" y="4" width="4" height="16" rx="1.5" fill="#fff"/></svg>';
 const SVG_NEXT='<svg viewBox="0 0 24 24" width="22" height="22"><path d="M5 5l10 7-10 7zM16 5h3v14h-3z" fill="#fff"/></svg>';
+const SVG_PREV='<svg viewBox="0 0 24 24" width="22" height="22"><path d="M19 5L9 12l10 7zM5 5h3v14H5z" fill="#fff"/></svg>';
+const SVG_LIST='<svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 6h11v2H4zM4 11h11v2H4zM4 16h7v2H4zM17 9l5 3-5 3z" fill="#fff"/></svg>';
+function fmtListen(sec){sec=Math.max(0,Math.floor(sec||0));const h=Math.floor(sec/3600),m=Math.floor((sec%3600)/60),s=sec%60;if(h>0)return h+'小时'+m+'分钟';if(m>0)return m+'分钟'+s+'秒';return s+'秒';}
+function musicPrev(){const songs=S.music.songs;if(!songs.length)return;let i=songs.findIndex(s=>s.id===_mCur);i=(i-1+songs.length)%songs.length;musicPlay(songs[i].id);}
+function _mAvHTML(src,which,size){const inner=isImg(src)?`<img src="${src}" style="width:100%;height:100%;object-fit:cover">`:`<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:${Math.round(size*0.5)}px;background:linear-gradient(135deg,#9ec5fe,#b8a4e3)">${src||'🙂'}</div>`;
+  return `<div onclick="setMusicAvatar('${which}')" style="width:${size}px;height:${size}px;border-radius:50%;overflow:hidden;border:2px solid rgba(255,255,255,.9);box-shadow:0 3px 10px rgba(0,0,0,.55);cursor:pointer">${inner}</div>`;}
+function setMusicAvatar(which){pickFile('image/*',async f=>{const img=await compress(f,300,.8);musicInit();if(which==='me')S.music.meAvatar=img;else S.music.taAvatar=img;save();render();toast('头像换好了');});}
+function setMusicCover(){musicInit();const s=S.music.songs.find(x=>x.id===_mCur);if(!s){toast('先放一首歌');return;}pickFile('image/*',async f=>{s.cover=await compress(f,520,.72);save();render();toast('封面换好了🎵');});}
+function setMusicBg(){pickFile('image/*',async f=>{musicInit();S.music.bg=await compress(f,1000,.7);save();closeModal();render();toast('背景换好了🖼️');});}
+function editMusicDistance(){musicInit();const v=prompt('相距多少公里？',(S.music.distance==null?1400:S.music.distance));if(v==null)return;const n=parseFloat(v);if(isNaN(n)){toast('填个数字哦');return;}S.music.distance=n;save();render();toast('已更新');}
+function musicMenu(){musicInit();openModal(`<h3>🎵 一起听</h3>
+  <button class="btn g" style="margin-bottom:8px" onclick="closeModal();musicAdd()">＋ 添加歌曲</button>
+  <button class="btn g" style="margin-bottom:8px" onclick="closeModal();musicListModal()">🎶 歌单（${(S.music.songs||[]).length}）</button>
+  <button class="btn g" style="margin-bottom:8px" onclick="setMusicBg()">🖼️ 换背景图</button>
+  ${S.music.bg?`<button class="btn g" style="margin-bottom:8px" onclick="S.music.bg='';save();closeModal();render();toast('已恢复默认背景')">↩️ 恢复默认背景</button>`:''}
+  ${S.music.session?`<button class="btn d" style="margin-bottom:8px" onclick="closeModal();musicEndSession()">结束一起听</button>`:`<button class="btn p" style="margin-bottom:8px" onclick="closeModal();musicInvite()">👫 邀请一起听</button>`}
+  <div class="hint" style="margin-top:4px">小提示：点唱片中间换封面、点头像换头像、点「相距…」那行改距离。</div>
+  <button class="btn g" style="margin-top:6px" onclick="closeModal()">关闭</button>`);}
+function musicListModal(){musicInit();const songs=S.music.songs;
+  const list=songs.length?songs.map(s=>`<div class="it" style="${s.id===_mCur?'background:#2a2438':''}"><span style="flex:1;cursor:pointer;color:#eee" onclick="closeModal();musicPlay('${s.id}')">${s.id===_mCur&&_mPlaying?'🎶':'🎵'} ${esc(s.title)}${s.artist?' <small style="color:#888">- '+esc(s.artist)+'</small>':''}</span><span onclick="musicEdit('${s.id}')" style="color:#54a0ff;cursor:pointer;padding:0 6px">✎</span><span onclick="musicDel('${s.id}')" style="color:#fa5151;cursor:pointer;padding:0 4px">✕</span></div>`).join(''):'<div class="empty" style="padding:24px;color:#888">还没有歌～点下面 ＋ 添加</div>';
+  openModal(`<h3>🎶 歌单（${songs.length}）</h3><div class="section" style="max-height:50vh;overflow:auto">${list}</div><div class="btns" style="margin-top:10px"><button class="btn g" onclick="closeModal()">关闭</button><button class="btn p" onclick="closeModal();musicAdd()">＋ 添加歌曲</button></div>`);}
 const SVG_LOOP='<svg viewBox="0 0 24 24" width="20" height="20"><path d="M7 7h9v2.5L20 6l-4-3.5V5H5v6h2zm10 10H8v-2.5L4 18l4 3.5V19h11v-6h-2z" fill="#fff"/></svg>';
 async function aiMusicReply(cid){const c=getC(cid);if(!c||c.blocked)return;musicInit();
   const s=S.music.songs.find(x=>x.id===(S.music.session&&S.music.session.songId));
@@ -856,32 +880,64 @@ async function aiMusicReply(cid){const c=getC(cid);if(!c||c.blocked)return;music
     const txt=cleanReply(r);if(!txt)return;S.music.chat=S.music.chat||[];S.music.chat.push({cid,role:'assistant',content:txt,time:Date.now()});if(S.music.chat.length>200)S.music.chat=S.music.chat.slice(-200);save();if(cur().p==='music')render();
   }catch(e){}}
 function renderMusic(){musicInit();const songs=S.music.songs;const cur=songs.find(s=>s.id===_mCur);const sess=S.music.session;const sc=sess&&getC(sess.cid);
-  const list=songs.length?songs.map(s=>`<div class="it" style="${s.id===_mCur?'background:#2a2438':''}"><span style="flex:1;cursor:pointer;color:#eee" onclick="musicPlay('${s.id}')">${s.id===_mCur&&_mPlaying?'🎶':'🎵'} ${esc(s.title)}${s.artist?' <small style="color:#888">- '+esc(s.artist)+'</small>':''}</span><span onclick="musicEdit('${s.id}')" style="color:#54a0ff;cursor:pointer;padding:0 6px" title="改歌名/歌词">✎</span><span onclick="musicDel('${s.id}')" style="color:#fa5151;cursor:pointer;padding:0 4px">✕</span></div>`).join(''):'<div class="empty" style="padding:24px;color:#888">还没有歌～点右上角 ＋ 添加（上传文件或贴链接）</div>';
-  let player='';
-  if(cur){const lyr=parseLyrics(cur.lyrics);
-    const disk=`<div style="position:relative;width:188px;height:188px;margin:6px auto 2px"><div id="m_disk" style="position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,#2a2a2a 0,#0c0c0c 29%,#1d1d1d 30%,#0c0c0c 32%,#1d1d1d 33%,#0c0c0c 35%,#1d1d1d 36%,#0c0c0c 38%,#1d1d1d 39%,#0a0a0a 72%);box-shadow:0 12px 30px rgba(180,90,130,.35),inset 0 0 24px rgba(0,0,0,.85);animation:dyspin 9s linear infinite;animation-play-state:${_mPlaying?'running':'paused'}"><div style="position:absolute;inset:58px;border-radius:50%;background:linear-gradient(135deg,#ff9ec5,#c9a3e8);box-shadow:inset 0 0 10px rgba(255,255,255,.4)"></div><div style="position:absolute;left:50%;top:50%;width:7px;height:7px;border-radius:50%;background:#fff;transform:translate(-50%,-50%);z-index:2"></div></div><div style="position:absolute;top:-2px;right:18px;width:14px;height:14px;border-radius:50%;background:#e3a9c4;z-index:4"></div><div id="m_arm" style="position:absolute;top:4px;right:24px;width:5px;height:92px;background:linear-gradient(#f3c3d8,#d98fb4);border-radius:3px;transform-origin:top center;transform:rotate(${_mPlaying?'26deg':'6deg'});transition:transform .6s;z-index:3"></div></div>`;
-    const conn=sc?`<div style="margin-top:10px;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap">${av(S.me.avatar,'sm')}<span style="font-size:16px">🎧</span>${av(sc.avatar,'sm')}<span style="display:inline-flex;align-items:center;gap:5px;background:rgba(255,143,171,.18);border:1px solid rgba(255,143,171,.55);color:#d6477e;font-size:12px;padding:3px 11px;border-radius:14px">和 ${esc(sc.remark||sc.name)} 一起听 · ⏱ <span id="m_sesstime">${mFmt((Date.now()-(sess.startTs||Date.now()))/1000)}</span></span></div>`:'';
-    const rbtn=on=>`width:46px;height:46px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:${on?'linear-gradient(135deg,#ff8fab,#d9a3e8)':'linear-gradient(135deg,#ffc4d8,#e6cdf0)'};box-shadow:0 3px 10px rgba(214,71,126,.3);cursor:pointer`;
-    player=`<div style="margin:14px;padding:18px 16px;border-radius:22px;background:linear-gradient(165deg,#ffd9e8,#ffe6ef)">
-      ${disk}${conn}
-      <div style="text-align:center;margin-top:12px;color:#7a4258;font-size:18px;font-weight:700">${esc(cur.title)}</div>
-      <div style="text-align:center;color:#b07a92;font-size:12px;min-height:16px">${esc(cur.artist||'')}</div>
-      <div id="m_lyrics" style="height:120px;overflow:auto;-webkit-overflow-scrolling:touch;margin:12px 4px;padding:6px 8px;text-align:center;font-size:14px;line-height:2.2;color:#b8849e;background:rgba(255,255,255,.45);border-radius:12px">${lyr.length?lyr.map((x,i)=>`<div class="mlrc" onclick="mLyricTap(${i})" style="cursor:pointer;transition:color .3s,transform .3s">${esc(x.txt)||'&nbsp;'}</div>`).join(''):'<div style="color:#c79ab0;padding-top:40px">（这首没歌词，点列表里的 ✎ 粘进来）</div>'}</div>
-      <div onclick="musicSeek(event)" style="height:5px;background:rgba(214,71,126,.2);border-radius:3px;cursor:pointer;margin:6px 2px"><div id="m_prog" style="height:100%;width:0;background:linear-gradient(90deg,#ff6fa5,#c08ce0);border-radius:3px"></div></div>
-      <div id="m_time" style="text-align:center;color:#b07a92;font-size:11px">0:00 / 0:00</div>
-      <div style="display:flex;justify-content:center;align-items:center;gap:26px;margin-top:16px">
-        <span onclick="musicLoop()" style="${rbtn(S.music.loop)}" title="单曲循环">${SVG_LOOP}</span>
-        <span id="m_play" onclick="musicToggle()" style="width:62px;height:62px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#ff8fab,#c08ce0);box-shadow:0 6px 18px rgba(214,71,126,.45);cursor:pointer">${_mPlaying?SVG_PAUSE:SVG_PLAY}</span>
-        <span onclick="musicNext()" style="${rbtn(false)}" title="下一首">${SVG_NEXT}</span>
+  const bg=S.music.bg?`background:#000 url(${S.music.bg}) center/cover no-repeat`:'background:radial-gradient(ellipse at 50% 28%,#1d1733,#0a0a12 72%)';
+  const navBar=`<div style="position:relative;z-index:3;flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:12px 16px 4px">
+      <span onclick="back()" style="font-size:26px;line-height:1;cursor:pointer;color:#eee">⌄</span>
+      <div style="flex:1;min-width:0;text-align:center;padding:0 8px"><div style="font-size:16px;font-weight:600;color:#f2f2f2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(cur?cur.title:'一起听')}</div><div style="font-size:12px;color:#b8b8c0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(cur?(cur.artist||''):'')}</div></div>
+      <span onclick="musicMenu()" style="font-size:22px;line-height:1;cursor:pointer;color:#eee">⋯</span></div>`;
+  if(!cur){
+    return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;color:#eee;${bg}">${navBar}
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;z-index:3">
+        <div style="font-size:54px;opacity:.8">🎧</div><div style="color:#cfcfd6">还没在放歌～去歌单选一首吧</div>
+        <button class="btn p" style="width:auto;padding:10px 22px" onclick="musicListModal()">🎶 打开歌单</button></div></div>`;}
+  // 头像（圆形·贴一起·耳机线）
+  const meAv=S.music.meAvatar||S.me.avatar;const taAv=S.music.taAvatar||(sc&&sc.avatar)||'🙂';
+  const taBlock=sess?_mAvHTML(taAv,'ta',66):`<div onclick="musicInvite()" style="width:66px;height:66px;border-radius:50%;border:2px dashed rgba(255,255,255,.55);display:flex;align-items:center;justify-content:center;font-size:11px;color:#cfcfd6;cursor:pointer;text-align:center;line-height:1.25">+ 邀请<br>一起听</div>`;
+  const avatars=`<div style="position:relative;width:230px;height:98px;margin:2px auto 0">
+      <svg width="230" height="98" viewBox="0 0 230 98" style="position:absolute;left:0;top:0;pointer-events:none">
+        <path d="M48 86 C 26 2, 204 2, 182 86" fill="none" stroke="rgba(235,235,240,.6)" stroke-width="2.3"/>
+        <path d="M48 86 q-9 7 -5 16" fill="none" stroke="rgba(235,235,240,.6)" stroke-width="2.3"/>
+        <path d="M182 86 q9 7 5 16" fill="none" stroke="rgba(235,235,240,.6)" stroke-width="2.3"/>
+      </svg>
+      <div style="position:absolute;left:50%;top:12px;transform:translateX(-50%);display:flex;align-items:center">
+        <div style="position:relative;z-index:1">${taBlock}</div>
+        <div style="position:relative;z-index:2;margin-left:-12px">${_mAvHTML(meAv,'me',66)}</div></div>
+      <div onclick="${sess?'musicEndSession()':'musicInvite()'}" title="一起听" style="position:absolute;left:50%;bottom:2px;transform:translateX(-50%);width:24px;height:24px;border-radius:50%;background:#ff5b4a;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;box-shadow:0 2px 7px rgba(0,0,0,.5);cursor:pointer;z-index:4">⏻</div>
+    </div>
+    <div onclick="editMusicDistance()" style="text-align:center;color:#d2d2da;font-size:13px;margin-top:4px;cursor:pointer">相距 ${S.music.distance} 公里，一起听了 <span id="m_sesstime">${fmtListen(((S.music.totalSec)||0)+(sess&&sess.startTs?Math.floor((Date.now()-sess.startTs)/1000):0))}</span></div>`;
+  // 头像旁弹出的聊天气泡（左=他，右=你）
+  let chatZone='';
+  if(sess&&sc){const mc=(S.music.chat||[]).filter(m=>m.cid===sess.cid).slice(-4);
+    chatZone=mc.map(m=>{const mine=m.role==='user';const avs=mine?meAv:taAv;
+      const avHTML=isImg(avs)?`<img src="${avs}" style="width:26px;height:26px;border-radius:50%;object-fit:cover;flex:0 0 26px">`:`<div style="width:26px;height:26px;border-radius:50%;flex:0 0 26px;display:flex;align-items:center;justify-content:center;font-size:14px;background:linear-gradient(135deg,#9ec5fe,#b8a4e3)">${avs||'🙂'}</div>`;
+      const bub=`<div style="max-width:62%;padding:7px 11px;border-radius:14px;font-size:13px;line-height:1.4;word-break:break-word;background:${mine?'rgba(255,143,171,.92)':'rgba(255,255,255,.92)'};color:${mine?'#fff':'#333'};box-shadow:0 2px 8px rgba(0,0,0,.35)">${esc(m.content)}</div>`;
+      return `<div style="display:flex;align-items:flex-end;gap:7px;margin:5px 0;animation:csin .32s ease;${mine?'justify-content:flex-end':'justify-content:flex-start'}">${mine?bub+avHTML:avHTML+bub}</div>`;}).join('');}
+  // 大转盘（封面在中间·扩大）
+  const cover=cur.cover;
+  const disk=`<div style="position:relative;width:248px;height:248px">
+      <div id="m_disk" style="position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle,#262626 0,#0b0b0b 27%,#1c1c1c 28%,#0b0b0b 30%,#1c1c1c 31%,#0b0b0b 33%,#090909 70%);box-shadow:0 16px 44px rgba(0,0,0,.6),inset 0 0 34px rgba(0,0,0,.92);animation:dyspin 14s linear infinite;animation-play-state:${_mPlaying?'running':'paused'}">
+        <div onclick="setMusicCover()" style="position:absolute;inset:34px;border-radius:50%;overflow:hidden;cursor:pointer;${cover?`background:url(${cover}) center/cover`:'background:linear-gradient(135deg,#33415e,#1f2a40)'};box-shadow:inset 0 0 14px rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center">${cover?'':'<span style="color:rgba(255,255,255,.65);font-size:13px;text-align:center;line-height:1.5">点这里<br>上传封面</span>'}</div>
+        <div style="position:absolute;left:50%;top:50%;width:10px;height:10px;border-radius:50%;background:#fff;transform:translate(-50%,-50%);z-index:2;box-shadow:0 0 0 3px rgba(0,0,0,.45)"></div>
+      </div></div>`;
+  const rbtn='width:44px;height:44px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;opacity:.92';
+  return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;color:#eee;${bg}">
+    ${S.music.bg?'<div style="position:absolute;inset:0;background:rgba(0,0,0,.4);pointer-events:none"></div>':''}
+    ${navBar}
+    <div style="position:relative;z-index:3;flex:0 0 auto">${avatars}</div>
+    <div style="position:relative;z-index:3;flex:0 0 auto;display:flex;flex-direction:column;justify-content:flex-end;min-height:60px;max-height:118px;overflow:hidden;padding:2px 16px">${chatZone}</div>
+    <div style="position:relative;z-index:3;flex:1;display:flex;align-items:center;justify-content:center;min-height:0">${disk}</div>
+    <div style="position:relative;z-index:3;flex:0 0 auto;padding:2px 20px 12px">
+      <div onclick="musicSeek(event)" style="height:4px;background:rgba(255,255,255,.18);border-radius:3px;cursor:pointer;margin:6px 0 4px"><div id="m_prog" style="height:100%;width:0;background:linear-gradient(90deg,#ff8fab,#c08ce0);border-radius:3px"></div></div>
+      <div id="m_time" style="text-align:center;color:#b9b9c2;font-size:11px">0:00 / 0:00</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin:12px 4px 6px">
+        <span onclick="musicLoop()" style="${rbtn};${S.music.loop?'background:rgba(255,143,171,.35)':''}" title="单曲循环">${SVG_LOOP}</span>
+        <span onclick="musicPrev()" style="${rbtn}">${SVG_PREV}</span>
+        <span id="m_play" onclick="musicToggle()" style="width:60px;height:60px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#ff8fab,#c08ce0);box-shadow:0 6px 18px rgba(0,0,0,.5);cursor:pointer">${_mPlaying?SVG_PAUSE:SVG_PLAY}</span>
+        <span onclick="musicNext()" style="${rbtn}">${SVG_NEXT}</span>
+        <span onclick="musicListModal()" style="${rbtn}">${SVG_LIST}</span>
       </div>
-      <div style="text-align:center;margin-top:16px">${sess?`<button class="minibtn" style="background:#fff;color:#d6477e" onclick="musicEndSession()">结束一起听</button>`:`<button class="minibtn" style="background:#ff6fa5;color:#fff" onclick="musicInvite()">👫 邀请谁一起听</button>`}</div>
-    </div>`;
-    if(sess&&sc){const mc=(S.music.chat||[]).filter(m=>m.cid===sess.cid).slice(-8);
-      const chat=mc.map(m=>{const mine=m.role==='user';return `<div style="display:flex;margin:4px 0;${mine?'justify-content:flex-end':''}"><div style="max-width:76%;padding:7px 11px;border-radius:13px;font-size:13px;background:${mine?'linear-gradient(135deg,#ff8fab,#d9a3e8)':'#fff'};color:${mine?'#fff':'#6a4555'};box-shadow:0 1px 4px rgba(214,71,126,.15)">${esc(m.content)}</div></div>`;}).join('');
-      player+=`<div style="margin:0 14px 10px;padding:12px;border-radius:16px;background:linear-gradient(165deg,#ffe6ef,#fff0f5)"><div style="color:#d6477e;font-size:12px;margin-bottom:6px;font-weight:600">💬 一起听 · 边听边聊（独立小窗，他也记得你俩的事）</div>${chat||'<div style="color:#c79ab0;font-size:12px">说句话开始聊吧～</div>'}<div class="inputbar" style="position:static;padding:8px 0 0;background:transparent"><textarea id="m_chat" rows="1" placeholder="说点啥…" style="background:#fff;color:#6a4555"></textarea><button class="send" onclick="musicChatSend()">发</button></div></div>`;}
-  }
-  return `<div class="nav" style="background:#ffd9e8;border-bottom:.5px solid #ffc4d8"><span class="l" onclick="back()" style="color:#d6477e">‹</span><span class="t" style="color:#7a4258">🎵 音乐 · 一起听</span><span class="r" onclick="musicAdd()" style="color:#d6477e">＋</span></div>
-    <div class="scroll" style="background:#fdeaf1">${player}<div class="section" style="margin:12px"><div style="padding:9px 14px;color:#aaa;font-weight:600">🎶 歌曲列表（${songs.length}）</div>${list}</div><div style="height:20px"></div></div>`;}
+      <div class="inputbar" style="position:static;background:rgba(255,255,255,.1);border:none;border-radius:22px;padding:5px 6px 5px 14px;margin-top:2px"><textarea id="m_chat" rows="1" placeholder="${sess?'对ta说点什么…':'先邀请谁一起听 →'}" style="background:transparent;color:#eee" ${sess?'':'disabled'}></textarea><button class="send" onclick="musicChatSend()" style="border-radius:18px;${sess?'':'opacity:.5'}">发</button></div>
+    </div></div>`;}
 function musicInvite(){if(!_mCur){toast('先点一首歌');return;}pickTarget(musicInviteTo);}
 function musicInviteTo(cid){musicInit();const c=getC(cid);const s=S.music.songs.find(x=>x.id===_mCur);if(!c||!s)return;
   S.music.session={cid,songId:_mCur,startTs:Date.now()};
@@ -893,6 +949,7 @@ function joinMusicSession(cid,title){musicInit();let s=S.music.songs.find(x=>x.t
   S.music.session={cid,songId:s?s.id:null,startTs:Date.now()};save();go('music');
   if(s)musicPlay(s.id);else toast('你还没这首歌「'+(title||'')+'」，点右上＋加进来就能一起听🎵');}
 function musicEndSession(){const sess=S.music&&S.music.session;
+  if(sess&&sess.startTs)S.music.totalSec=((S.music.totalSec)||0)+Math.floor((Date.now()-sess.startTs)/1000);// 累计进总时长
   if(sess&&sess.cid&&sess.startTs){const dur=Math.round((Date.now()-sess.startTs)/1000);const c=getC(sess.cid);const dtxt=dur>=60?Math.floor(dur/60)+'分'+(dur%60)+'秒':dur+'秒';
     if(c)msgs(sess.cid).push({role:'user',type:'sys',content:'🎧 一起听结束 · 你们一起听了 '+dtxt,time:Date.now(),id:uid()});
     toast('🎧 这次一起听了 '+dtxt);
