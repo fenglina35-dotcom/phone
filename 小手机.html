@@ -423,7 +423,7 @@ const KEY='yibei_phone_v2';
 const SHARE_GATE=true, SHARE_PW='12150414';
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ if(localStorage.getItem('yibei_unlocked')==='1')return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v208 · 分享版加访问口令门:新设备打开要输口令才能进,输对一次就永久记住这台设备;你自己/老用户(本机已有存档)不会被拦;换口令只改代码里 SHARE_PW 重新部署、已进来的人不受影响——配合"给新人开门后立刻换口令"就能防外传';
+const APP_VER='v209 · 通话挂断/接听/视频换成线条图标,缩小后的通话小窗可以拖动;修好浏览器"清空了东西还在"(现在搜索框/结果/历史一起清);又清一批emoji:设置页(音量/闹钟/壁纸/天气/存储)、查他手机被查记录、任务徽章和标签、线下约会玫瑰(换成爱心)、角色资料整页、X刷新图标做得更像真的';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1243,9 +1243,16 @@ const ICONS={
   flask:'<path d="M9.5 3v6L5 18a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 18l-4.5-9V3M8 3h8M8 13h8"/>',
   dots:'<circle cx="6" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="18" cy="12" r="1.4"/>',
   snow:'<path d="M12 2.5v19M3.8 7l16.4 10M20.2 7 3.8 17M12 6l-3 2M12 6l3 2M12 18l-3-2M12 18l3-2M5.5 9.5l.4 3.5M18.5 9.5l-.4 3.5"/>',
-  refresh:'<path d="M20 6.5A8.5 8.5 0 1 0 21 13"/><path d="M20.5 3v4h-4"/>',
+  refresh:'<path d="M20.5 4v5h-5"/><path d="M3.5 12a8.5 8.5 0 0 1 14.3-6.2L20.5 9"/><path d="M3.5 20v-5h5"/><path d="M20.5 12A8.5 8.5 0 0 1 6.2 18.2L3.5 15"/>',
   trash:'<path d="M4 7h16M9.5 7V5.2a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1V7M6.5 7l.9 12.2a1.5 1.5 0 0 0 1.5 1.3h6.2a1.5 1.5 0 0 0 1.5-1.3L18.5 7M10 11v6M14 11v6"/>',
-  clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>'
+  clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+  hangup:'<path d="M5.4 13.7 3.8 12a1.6 1.6 0 0 1 0-2.5c4.8-3.7 11.6-3.7 16.4 0a1.6 1.6 0 0 1 0 2.5l-1.6 1.7a1.5 1.5 0 0 1-2 .2l-1.7-1.3a1.3 1.3 0 0 1-.5-1.3l.3-1.4a10.5 10.5 0 0 0-6 0l.3 1.4a1.3 1.3 0 0 1-.5 1.3l-1.7 1.3a1.5 1.5 0 0 1-2-.2z"/>',
+  phonecall:'<path d="M6.5 4h3l1.5 4-2 1.5a11 11 0 0 0 5 5l1.5-2 4 1.5v3a2 2 0 0 1-2.1 2A16 16 0 0 1 4.5 6.1 2 2 0 0 1 6.5 4z"/>',
+  volume:'<path d="M4 9.5h3.5L12 5.5v13L7.5 14.5H4z"/><path d="M15.5 9.2a4 4 0 0 1 0 5.6M18 6.8a7.5 7.5 0 0 1 0 10.4"/>',
+  weather:'<circle cx="8.5" cy="8" r="3"/><path d="M8.5 1.8v1.6M8.5 12.6v1.6M2 8h1.6M13.4 8H15M4 3.5l1.1 1.1M11.9 3.5l-1.1 1.1"/><path d="M7.5 19a3.7 3.7 0 0 1 .6-7.4A5 5 0 0 1 18 13a3.3 3.3 0 0 1-.5 6z"/>',
+  disk:'<path d="M5 4h10.5L19 7.5V19a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M8 4v4.5h6.5V4M8.5 20v-5.5h7V20"/>',
+  check:'<path d="M4.5 12.5l4.5 4.5 10.5-11"/>',
+  expand:'<path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"/>'
 };
 function svgIc(name,size,color,sw){const p=ICONS[name];if(!p)return '';size=size||22;
   return '<svg viewBox="0 0 24 24" width="'+size+'" height="'+size+'" fill="none" stroke="'+(color||'currentColor')+'" stroke-width="'+(sw||1.9)+'" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle">'+p+'</svg>';}
@@ -1389,13 +1396,13 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="it">时间感知<span class="sw ${S.settings.timeAware?'on':''}" onclick="S.settings.timeAware=!S.settings.timeAware;save();render()"></span></div>
       <div class="it">联网搜索<span class="sw ${S.settings.web&&S.settings.web.enabled?'on':''}" onclick="S.settings.web={enabled:!(S.settings.web&&S.settings.web.enabled)};save();render()"></span></div>
       <div class="it">提示音<span class="sw ${S.settings.sound?'on':''}" onclick="S.settings.sound=!S.settings.sound;save();render()"></span></div>
-      <div class="it" style="flex-wrap:wrap"><span>🔊 音量 <b style="color:#07c160">${Math.round(((S.settings.volume!=null?S.settings.volume:1))*100)}%</b><small style="color:#999;display:block">后台听歌听不清ta讲话，可调到100%以上加大</small></span><input type="range" min="0" max="300" step="10" value="${Math.round(((S.settings.volume!=null?S.settings.volume:1))*100)}" style="width:100%;margin-top:6px" oninput="S.settings.volume=(+this.value)/100;save();this.previousElementSibling.querySelector('b').textContent=this.value+'%'" onchange="playDing()"></div>
+      <div class="it" style="flex-wrap:wrap"><span>${svgIc('volume',15,'#bbb')} 音量 <b style="color:#07c160">${Math.round(((S.settings.volume!=null?S.settings.volume:1))*100)}%</b><small style="color:#999;display:block">后台听歌听不清ta讲话，可调到100%以上加大</small></span><input type="range" min="0" max="300" step="10" value="${Math.round(((S.settings.volume!=null?S.settings.volume:1))*100)}" style="width:100%;margin-top:6px" oninput="S.settings.volume=(+this.value)/100;save();this.previousElementSibling.querySelector('b').textContent=this.value+'%'" onchange="playDing()"></div>
       <div class="it">后台通知（点开授权）<span class="v" onclick="reqNotify()">允许 ›</span></div>
     </div>
     <div class="section">
-      <div class="it" onclick="alarmManager()"><span>⏰ 闹钟</span><span class="v">${S.alarms.length}个 ›</span></div>
-      <div class="it"><span>🖼️ 主屏壁纸</span><span class="v"><button class="minibtn" onclick="setHomeBg()">${S.me.homeBg?'换':'上传'}</button>${S.me.homeBg?'<button class="minibtn" style="margin-left:6px" onclick="S.me.homeBg=\'\';save();toast(\'已恢复默认\')">恢复默认</button>':''}</span></div>
-      <div class="it" onclick="fetchWeather(true)"><span>🌦️ 定位天气</span><span class="v">${S.weather?esc(S.weather.place+' '+S.weather.desc+' '+S.weather.temp+'°'):'点击获取 ›'}</span></div>
+      <div class="it" onclick="alarmManager()"><span>${svgIc('clock',15,'#bbb')} 闹钟</span><span class="v">${S.alarms.length}个 ›</span></div>
+      <div class="it"><span>${svgIc('image',15,'#bbb')} 主屏壁纸</span><span class="v"><button class="minibtn" onclick="setHomeBg()">${S.me.homeBg?'换':'上传'}</button>${S.me.homeBg?'<button class="minibtn" style="margin-left:6px" onclick="S.me.homeBg=\'\';save();toast(\'已恢复默认\')">恢复默认</button>':''}</span></div>
+      <div class="it" onclick="fetchWeather(true)"><span>${svgIc('weather',15,'#bbb')} 定位天气</span><span class="v">${S.weather?esc(S.weather.place+' '+S.weather.desc+' '+S.weather.temp+'°'):'点击获取 ›'}</span></div>
     </div>
     </div>
     <div class="btns" style="margin:6px 0"><button class="btn g" onclick="testConn()">测试连接</button></div>
@@ -1558,10 +1565,10 @@ function spyAppView(id,c,app){const d=S.spy[id]||{};
   else if(app==='contacts'){title='👤 通讯录';const cts=(d.contacts&&d.contacts.length)?d.contacts:[];
     body='<div style="padding:8px 0">'+(cts.length?cts.map(p=>`<div class="it"><div style="flex:1"><span style="font-size:14px;color:#eee">${esc(p.name||'')}</span>${p.note?'<small style="color:#888"> · '+esc(p.note)+'</small>':''}</div><span style="font-size:12px;color:#888">${esc(p.added||'')}</span></div>`).join(''):'<div class="empty" style="padding:34px">通讯录空空的，点🔄刷新生成</div>')+'</div>';}
   else if(app==='grudge'){title='📓 记仇本';body=spyGrudgeSec(id);}
-  else if(app==='date'){title='🌹 约会';body=spyOfflineSec(id)||'<div class="empty" style="padding:34px">还没有约会记录</div>';}
+  else if(app==='date'){title='约会';body=spyOfflineSec(id)||'<div class="empty" style="padding:34px">还没有约会记录</div>';}
   else if(app==='watch'){title='🔍 监控我';const wl=(d.watched&&d.watched.length)?d.watched:[];
     const wrows=wl.length?wl.map((w,i)=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="flex:1;font-size:13px;color:#ddd">👁️ ${esc(typeof w==='string'?w:(w.text||''))}</div><span onclick="spyWatchDel('${id}',${i})" style="color:#fa5151;cursor:pointer">✕</span></div>`).join(''):'<div class="empty" style="padding:14px">还没抓到你的动态，点下面🔄刷新一下</div>';
-    const vl=(d.viewLog||[]);const vrows=vl.length?vl.slice(0,12).map(v=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="flex:1;font-size:13px;color:#ddd">🕵️ ${esc(S.me.name)} 翻看了你的手机 <b style="color:#ffb83b">${v.dur>=60?Math.floor(v.dur/60)+'分'+(v.dur%60)+'秒':v.dur+'秒'}</b></div><span style="font-size:11px;color:#888">${ymd(v.ts)} ${hm(v.ts)}</span></div>`).join(''):'<div class="empty" style="padding:14px">还没有被查记录</div>';
+    const vl=(d.viewLog||[]);const vrows=vl.length?vl.slice(0,12).map(v=>`<div class="bill" style="border-radius:8px;margin:0 10px 6px"><div style="flex:1;font-size:13px;color:#ddd">${esc(S.me.name)} 翻看了你的手机 <b style="color:#ffb83b">${v.dur>=60?Math.floor(v.dur/60)+'分'+(v.dur%60)+'秒':v.dur+'秒'}</b></div><span style="font-size:11px;color:#888">${ymd(v.ts)} ${hm(v.ts)}</span></div>`).join(''):'<div class="empty" style="padding:14px">还没有被查记录</div>';
     const viewSec=`<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#fa5151">被查记录（${esc(S.me.name)}翻你手机的时长，ta也瞒不过你）</div>${vrows}</div>`;
     body=viewSec+`<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#ffb83b;display:flex;justify-content:space-between">ta在你手机上看到的动态<span class="minibtn" onclick="spyWatchRefresh('${id}')">刷新</span></div><div class="hint" style="padding:0 14px">旧的、看过的你可以单独删掉。</div>${wrows}</div>`+(spyUsageSec(id)||'')+(spyDouyinSec(id)||'');}
   else{title='？';body='<div class="empty" style="padding:34px">空</div>';}
@@ -1584,7 +1591,7 @@ function spyOfflineSec(id){const o=S.offline&&S.offline[id];const mem=(o&&o.memo
   let rows='';
   if(ongoing)rows+=`<div class="it"><span style="font-size:13px;color:#ff8fab">💗 此刻正在和「${esc(S.me.name)}」约会中 · 📍${esc(o.loc||'')}${o.daypart?' · '+esc(o.daypart):''}</span></div>`;
   rows+=mem.map((m,i)=>{const obj=(typeof m==='object'&&m);const hdr=obj?('📅 '+esc(m.label||ymd(m.ts||0))+(m.loc?' · @'+esc(m.loc):'')):'';const txt=obj?esc(m.text||''):esc(m);
-    return `<div style="margin:0 10px 8px;background:#241a20;border:1px solid #3a2a30;border-radius:12px;padding:10px 12px"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px"><div style="flex:1;min-width:0">${hdr?`<div style="color:#ff8fab;font-weight:600;font-size:13px;margin-bottom:4px">${hdr}</div>`:''}<div style="font-size:13px;color:#ddd;line-height:1.6">🌹 ${txt}</div></div><div style="white-space:nowrap"><span onclick="spyEditOffMem('${id}',${i})" style="color:#54a0ff;cursor:pointer;margin-right:8px">✎</span><span onclick="spyDelOffMem('${id}',${i})" style="color:#fa5151;cursor:pointer">✕</span></div></div></div>`;}).join('');
+    return `<div style="margin:0 10px 8px;background:#241a20;border:1px solid #3a2a30;border-radius:12px;padding:10px 12px"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px"><div style="flex:1;min-width:0">${hdr?`<div style="color:#ff8fab;font-weight:600;font-size:13px;margin-bottom:4px">${hdr}</div>`:''}<div style="font-size:13px;color:#ddd;line-height:1.6">${svgIc('heart',13,'#ff8fab')} ${txt}</div></div><div style="white-space:nowrap"><span onclick="spyEditOffMem('${id}',${i})" style="color:#54a0ff;cursor:pointer;margin-right:8px">✎</span><span onclick="spyDelOffMem('${id}',${i})" style="color:#fa5151;cursor:pointer">✕</span></div></div></div>`;}).join('');
   return `<div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#ff8fab">和「${esc(S.me.name)}」的线下约会（共${mem.length}次，可改/删）</div>${rows||'<div class="it"><span class="v">无</span></div>'}</div>`;}
 function spyEditOffMem(id,i){const o=S.offline&&S.offline[id];if(!o||!o.memory)return;const m=o.memory[i];const cur=(typeof m==='object')?(m.text||''):m;const t=prompt('修改这条约会记忆：',cur);if(t==null)return;if(typeof m==='object')m.text=t.trim();else o.memory[i]=t.trim();save();render();}
 async function spyDelOffMem(id,i){const o=S.offline&&S.offline[id];if(!o||!o.memory)return;if(!await uiConfirm('删除这条约会记忆？'))return;o.memory.splice(i,1);save();render();}
@@ -2405,7 +2412,7 @@ function taskDup(list,text){const nt=_taskNorm(text);if(!nt)return true;const se
     const setX=new Set(nx);let inter=0;setT.forEach(ch=>{if(setX.has(ch))inter++;});
     const shorter=Math.min(setT.size,setX.size);
     return shorter>=3&&inter/shorter>=0.8;/* 短任务的字几乎都在另一条里→重复 */});}
-function taskVerifyLabel(x){return {steps:'🏃 我走够了',essay:'✍️ 写好交给ta',moment:'✅ 我发朋友圈了',tweet:'✅ 我发推了',douyin:'✅ 我发抖音了',real:'✅ 完成了',truth:'💌 老实回答ta'}[x.verify]||'✅ 完成';}
+function taskVerifyLabel(x){return {steps:'我走够了',essay:'写好交给ta',moment:'我发朋友圈了',tweet:'我发推了',douyin:'我发抖音了',real:'完成了',truth:'老实回答ta'}[x.verify]||'完成';}
 function postedSince(kind,since){since=since||0;
   if(kind==='moment')return S.moments.some(p=>p.authorId==='me'&&(p.time||0)>since);
   if(kind==='tweet')return (S.x&&S.x.tweets||[]).some(t=>t.who==='me'&&(t.time||0)>since);
@@ -2428,11 +2435,11 @@ function renderTasks(){const c=taskC();
       <div style="font-size:30px;font-weight:700;margin:4px 0">${done}/${total}</div>
       <div style="font-size:12px;opacity:.95">${all?'全部完成啦！等ta的奖励🎁':'今天23:59前完成，全做完有奖励～'}</div></div>
       ${t.list.map((x,i)=>`<div class="section" style="margin:10px 12px"><div style="padding:12px 14px">
-        <div style="display:flex;justify-content:space-between;align-items:center"><span class="tag">${x.truth?'💌 真心话':(x.kind==='real'?'🌍 现实':'📱 手机')}${x.extra?' <span style="color:#fe2c55">·临时加罚</span>':''}</span>${x.done?'<span style="color:#19a463;font-size:13px">✅ 已完成</span>':''}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center"><span class="tag">${x.truth?'真心话':(x.kind==='real'?'现实':'手机')}${x.extra?' <span style="color:#fe2c55">·临时加罚</span>':''}</span>${x.done?'<span style="color:#19a463;font-size:13px">已完成</span>':''}</div>
         <div style="margin:8px 0;font-size:15px;line-height:1.5;${x.done?'color:#888;text-decoration:line-through':'color:#eee'}">${esc(x.text)}</div>
         ${x.done?'':`<button class="btn p" onclick="completeTask('${x.id}')">${taskVerifyLabel(x)}</button>`}
       </div></div>`).join('')}
-      <div class="hint" style="padding:6px 16px">手机任务会真的验证（作文要交给ta看、发布类要真发了、步数要够），别糊弄~ 现实任务靠你自觉，骗ta的话线下要罚的😏</div>`;}
+      <div class="hint" style="padding:6px 16px">手机任务会真的验证（作文要交给ta看、发布类要真发了、步数要够），别糊弄~ 现实任务靠你自觉，骗ta的话线下要罚的</div>`;}
   return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">任务便签</span><span class="r"></span></div>
     <div class="scroll" style="background:#000">${body}<div style="height:20px"></div></div>`;}
 async function genTasks(){const c=taskC();if(!c){toast('先创建恋人角色');return;}if(tasksToday(c)){toast('今天的任务ta已经布置过啦');return;}if(_taskBusy)return;
@@ -2461,7 +2468,7 @@ async function completeTask(id){const c=taskC();const t=tasksToday(c);if(!t)retu
   if(x.verify==='moment'&&!postedSince('moment',t.assignTs)){toast('布置任务后还没发朋友圈哦，发一条再来点完成');return;}
   if(x.verify==='tweet'&&!postedSince('tweet',t.assignTs)){toast('布置任务后还没发推哦，发一条再来');return;}
   if(x.verify==='douyin'&&!postedSince('douyin',t.assignTs)){toast('布置任务后还没发抖音哦，去发一条');return;}
-  if(x.verify==='real'&&!await uiConfirm('确定真的完成了这条现实任务吗？\n骗ta的话…线下见面要受罚的哦😏')){return;}
+  if(x.verify==='real'&&!await uiConfirm('确定真的完成了这条现实任务吗？\n骗ta的话…线下见面要受罚的哦')){return;}
   finishTask(c,x);}
 function finishTask(c,x,proof){x.done=true;x.doneTs=Date.now();save();render();toast('完成啦 ✅');
   if(!c.blocked)scheduleReply(c.id,'[系统：'+S.me.name+'完成了你今天布置的任务「'+x.text+'」'+(proof?'，ta把内容发到你们聊天里了，先看一眼':'')+'。简短回应一句（夸ta/调侃/继续端着都行，符合你人设）。]');
@@ -3222,7 +3229,7 @@ function renderOff(id){const c=getC(id);if(!c)return '';const o=offData(id);cons
     return `<div class="msg them" onclick="${oc}" style="padding-left:14px"><div class="col"><div class="bubble">${cb}${esc(m.text)}</div></div></div>`;}).join('')
     +(_off&&_off.busy?`<div class="msg them" style="padding-left:14px"><div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`:'');
   return `<div class="nav"><span class="l" onclick="offQuit()">‹ 退出</span><span class="t">和 ${esc(c.remark||c.name)} 约会</span><span class="r" onclick="offEnd('${id}')" style="color:#fa5151;font-size:13px">结束</span></div>
-   <div style="padding:7px 12px;background:#2a1a22;color:#e8a0b8;font-size:12px;display:flex;justify-content:space-between;align-items:center"><span>📍 ${esc(o.loc||'未定')} · 🕐 ${esc(o.daypart||o.when||'现在')}</span><span><span onclick="offSelToggle()" style="cursor:pointer;margin-right:12px">${sel?'✕取消':'☑多选'}</span><span onclick="offSetting('${id}')" style="cursor:pointer;margin-right:12px">⚙︎设定</span><span onclick="offMemory('${id}')" style="cursor:pointer">🌹记忆</span></span></div>
+   <div style="padding:7px 12px;background:#2a1a22;color:#e8a0b8;font-size:12px;display:flex;justify-content:space-between;align-items:center"><span>📍 ${esc(o.loc||'未定')} · 🕐 ${esc(o.daypart||o.when||'现在')}</span><span><span onclick="offSelToggle()" style="cursor:pointer;margin-right:12px">${sel?'✕取消':'☑多选'}</span><span onclick="offSetting('${id}')" style="cursor:pointer;margin-right:12px">⚙︎设定</span><span onclick="offMemory('${id}')" style="cursor:pointer">记忆</span></span></div>
    <div class="scroll" id="offbg" style="background:#140d11">${body||'<div class="empty" style="padding:30px">开始约会吧…写完你的旁白和台词，再点「让TA回复」</div>'}</div>
    ${sel?`<div class="inputbar" style="justify-content:space-between"><button class="btn g" style="flex:1" onclick="offSelToggle()">取消</button><button class="btn d" style="flex:1;margin-left:8px" onclick="offDelSel('${id}')">删除选中(${sel.length})</button></div>`:`<div style="padding:6px 10px 0"><button class="btn p" style="width:100%;background:#e84d6f" ${_off&&_off.busy?'disabled':''} onclick="offReply()">${_off&&_off.busy?'TA回复中…':'▶ 让TA回复'}</button></div>
    <div class="inputbar"><button class="send" style="background:#9a5;margin-right:6px" onclick="offNarrate()" title="加旁白"></button><textarea id="off_in" rows="1" placeholder="写你的台词…(🎭加旁白，写完点上面「让TA回复」)" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();offSay();}"></textarea><button class="send" onclick="offSay()">记下</button></div>`}`;}
@@ -3808,19 +3815,19 @@ function renderContactInfo(id){const c=getC(id);if(!c)return '';const sp=getSpy(
       <div class="it" onclick="setRemark('${id}')"><span>备注</span><span class="v">${esc(c.remark||'添加备注')}</span></div>
       <div class="it" onclick="editContact('${id}')"><span>人设</span><span class="v">点击修改</span></div>
       ${isMain()?`<div class="it" onclick="cToggleModel('${id}')"><span>聊天模型</span><span class="v">${c.model==='aux'?'副模型 ›':'主模型 ›'}</span></div>
-      <div class="it" onclick="editMemory('${id}')"><span>🧠 记忆</span><span class="v">${(c.memory||[]).length}条 ›</span></div>
-      <div class="it" onclick="editSummary('${id}')"><span>📝 对话总结</span><span class="v">${(c.summaries||[]).length}条 ›</span></div>
-      <div class="it" onclick="editCircle('${id}')"><span>𝕏 圈子备注</span><span class="v">${(S.x&&S.x.circle&&S.x.circle[id])?'已设 ›':'未设 ›'}</span></div>`:`<div class="it"><span style="color:#888">🪪 你正用小号「${esc(S.me.name)}」看ta（陌生人视角，看不到主号的记忆/关系）</span></div>`}
-      <div class="it" onclick="editVoice('${id}')"><span>🎙️ 语音音色</span><span class="v">${getVoice(c).voiceURI?'已设 ›':'默认 ›'}</span></div>
-      ${isMain()?`<div class="it" onclick="bindCouple('${id}')"><span>💞 情侣空间</span><span class="v">${(S.couple&&S.couple.cid===id)?'已绑定 ✓':'绑定 ›'}</span></div>`:''}
-      <div class="it" onclick="schedSet('${id}')"><span>🕐 作息时间表</span><span class="v">${(c.sched&&c.sched.on)?'已启用 ›':'未设 ›'}</span></div>
+      <div class="it" onclick="editMemory('${id}')"><span>记忆</span><span class="v">${(c.memory||[]).length}条 ›</span></div>
+      <div class="it" onclick="editSummary('${id}')"><span>对话总结</span><span class="v">${(c.summaries||[]).length}条 ›</span></div>
+      <div class="it" onclick="editCircle('${id}')"><span>𝕏 圈子备注</span><span class="v">${(S.x&&S.x.circle&&S.x.circle[id])?'已设 ›':'未设 ›'}</span></div>`:`<div class="it"><span style="color:#888">你正用小号「${esc(S.me.name)}」看ta（陌生人视角，看不到主号的记忆/关系）</span></div>`}
+      <div class="it" onclick="editVoice('${id}')"><span>语音音色</span><span class="v">${getVoice(c).voiceURI?'已设 ›':'默认 ›'}</span></div>
+      ${isMain()?`<div class="it" onclick="bindCouple('${id}')"><span>情侣空间</span><span class="v">${(S.couple&&S.couple.cid===id)?'已绑定 ✓':'绑定 ›'}</span></div>`:''}
+      <div class="it" onclick="schedSet('${id}')"><span>作息时间表</span><span class="v">${(c.sched&&c.sched.on)?'已启用 ›':'未设 ›'}</span></div>
       <div class="it" onclick="setChatBg('${id}')"><span>聊天背景</span><span class="v">${c.chatBg?'已设置':'默认'}</span></div>
     </div>
     <div class="section" style="margin:12px">
-      <div class="it" onclick="placeCall('${id}','voice')"><span>📞 语音通话</span><span class="v">›</span></div>
-      <div class="it" onclick="placeCall('${id}','video')"><span>📹 视频通话</span><span class="v">›</span></div>
-      <div class="it" onclick="go('calllog',{id:'${id}'})"><span>📞 通话记录（可删改）</span><span class="v">${msgs(id).filter(m=>m._call).length}条 ›</span></div>
-      ${isMain()?`<div class="it" onclick="alterPick('${id}')"><span>🎭 以ta的身份去找别人聊</span><span class="v" style="color:#b07be0">沙盒·实验 ›</span></div>`:''}
+      <div class="it" onclick="placeCall('${id}','voice')"><span>语音通话</span><span class="v">›</span></div>
+      <div class="it" onclick="placeCall('${id}','video')"><span>视频通话</span><span class="v">›</span></div>
+      <div class="it" onclick="go('calllog',{id:'${id}'})"><span>通话记录（可删改）</span><span class="v">${msgs(id).filter(m=>m._call).length}条 ›</span></div>
+      ${isMain()?`<div class="it" onclick="alterPick('${id}')"><span>以ta的身份去找别人聊</span><span class="v" style="color:#b07be0">沙盒·实验 ›</span></div>`:''}
     </div>
     <div class="section" style="margin:12px">
       <div class="it"><span>置顶聊天</span><span class="sw ${c.pinned?'on':''}" onclick="c_pin('${id}')"></span></div>
@@ -3834,7 +3841,7 @@ function renderContactInfo(id){const c=getC(id);if(!c)return '';const sp=getSpy(
       <div class="it"><span>固定查看时间</span><span class="v"><input type="time" id="sp_t" value="${sp.time||''}" style="border:1px solid #38383a;border-radius:6px;padding:3px;background:#2c2c2e;color:#eee"> <button class="minibtn" onclick="saveSpy('${id}')">存</button></span></div>
       <div class="it"><span>每天固定查看次数</span><span class="v"><input type="number" id="sp_n" value="${sp.times||2}" style="width:42px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:3px;background:#2c2c2e;color:#eee"> <button class="minibtn" onclick="saveSpy('${id}')">存</button></span></div>
       <div class="hint" style="padding:0 14px">固定时间/次数是ta自动查的底线。另外：只要<b>ta在聊天里说想看你手机</b>（吃醋、查岗），或<b>你让ta查</b>（"你查我手机吧"），ta就会当场翻一次——不占上面的固定次数，按ta的意愿来。</div>
-      <div class="it" onclick="testSpy('${id}')"><span>🔍 让ta马上查一次（试）</span><span class="v">›</span></div>
+      <div class="it" onclick="testSpy('${id}')"><span>让ta马上查一次（试）</span><span class="v">›</span></div>
     </div>
     <div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#ee5a6f">自动发布（ta自己发）</div>
       <div class="it"><span>每天主动发朋友圈</span><span class="v"><input type="number" id="ap_m" min="0" value="${c.autoMoment||0}" style="width:42px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:3px;background:#2c2c2e;color:#eee">条 <button class="minibtn" onclick="saveAuto('${id}')">存</button></span></div>
@@ -3842,7 +3849,7 @@ function renderContactInfo(id){const c=getC(id);if(!c)return '';const sp=getSpy(
     </div>
     <div class="section" style="margin:12px">
       <div class="it" onclick="clearHistory('${id}')"><span>清空聊天记录</span><span class="v">›</span></div>
-      ${isMain()?`<div class="it danger" onclick="wipeContact('${id}')"><span>🧹 彻底清空全部记忆</span><span class="v" style="color:#fa5151">聊天+记忆+总结+记仇+约会…</span></div>`:''}
+      ${isMain()?`<div class="it danger" onclick="wipeContact('${id}')"><span>彻底清空全部记忆</span><span class="v" style="color:#fa5151">聊天+记忆+总结+记仇+约会…</span></div>`:''}
       <div class="it" onclick="c_block('${id}')"><span>${c.blocked?'解除拉黑':'加入黑名单'}</span><span class="v">›</span></div>
       <div class="it danger" onclick="c_delete('${id}')"><span>删除角色</span><span class="v"></span></div>
     </div>
@@ -3858,7 +3865,7 @@ async function wipeContact(id){const c=getC(id);if(!c||!isMain())return;
   if(S.offline&&S.offline[id])delete S.offline[id];// 线下约会
   if(S.music&&S.music.chat)S.music.chat=S.music.chat.filter(m=>m.cid!==id);// 一起听聊天
   if(S.spy&&S.spy[id]){const sp=S.spy[id];S.spy[id]={granted:sp.granted,loc:sp.loc,time:sp.time,times:sp.times,pwd:sp.pwd};}// 清ta手机内容/查看记录，保留授权开关
-  save();render();toast('已彻底清空和「'+(c.remark||c.name)+'」的全部记忆 🧹');}
+  save();render();toast('已彻底清空和「'+(c.remark||c.name)+'」的全部记忆');}
 function setRemark(id){const c=getC(id);openModal(`<h3>备注</h3><div class="field"><input id="rmk" value="${esc(c.remark)}" placeholder="给ta起个备注名"></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="getC('${id}').remark=$('#rmk').value.trim();save();closeModal();render()">保存</button></div>`);}
 function schedSet(id){const c=getC(id);const sc=c.sched||{on:false,work:'',home:'家',amS:'08:00',amE:'12:00',pmS:'14:00',pmE:'18:00'};
@@ -4038,7 +4045,7 @@ function buildPart(c,m,me){
       <div style="padding:7px 11px;background:rgba(255,255,255,.05);color:#9fd9b4;font-size:12px">${esc(m.persona||'')||'个人名片'}</div>
       ${his?(m.added?'<div style="padding:8px;text-align:center;color:#2bd66a;font-size:13px;font-weight:600">已添加到通讯录</div>':(m.declined?'<div style="padding:8px;text-align:center;color:#c97a7a;font-size:12px">你拒绝了这个推荐</div>':`<div style="display:flex;border-top:1px solid #2a7a48"><div style="flex:1;padding:9px;text-align:center;background:#07c160;color:#fff;font-weight:600;cursor:pointer" onclick="event.stopPropagation();addHisCard('${m.id}')">同意添加</div><div style="flex:1;padding:9px;text-align:center;color:#9fd9b4;cursor:pointer;border-left:1px solid #2a7a48" onclick="event.stopPropagation();declineHisCard('${m.id}')">拒绝</div></div>`)):(m._accepted?'<div style="padding:6px;text-align:center;color:#2bd66a;font-size:12px">✅ 对方已添加</div>':'<div style="padding:6px;text-align:center;color:#6fae86;font-size:11px">推荐给ta的名片 · 等ta添加</div>')}</div>`;}
   if(m.type==='weblink'){return `<div class="card" style="width:240px;background:#13233a;border:1px solid #2a4a72" onclick="event.stopPropagation();viewWeblink('${m.id}')"><div style="padding:11px"><div style="color:#71767b;font-size:11px;margin-bottom:4px">🌐 网页/搜索结果</div><div style="color:#cfe3ff;font-size:13px;font-weight:700">${esc(m.title)}</div><div style="color:#9fb6d4;font-size:12px;margin-top:4px;line-height:1.5">${esc((m.snippet||'').slice(0,90))}${(m.snippet||'').length>90?'…':''}</div></div><div class="cfoot" style="background:rgba(255,255,255,.05);color:#7db3ff">点击查看全文</div></div>`;}
-  if(m.type==='dateinvite'){const done=m.accepted||m.declined;return `<div class="card" style="width:240px;background:#3a1622;border:1px solid #b34a6a"><div style="padding:12px"><div style="color:#ff9ec4;font-size:11px;margin-bottom:4px">🌹 线下约会邀请</div><div style="color:#ffd6e6;font-size:14px;font-weight:600">约你见面</div><div style="color:#e8a8bd;font-size:13px;margin-top:5px">🕐 ${esc(m.when||'看你时间')}<br>📍 ${esc(m.loc||'老地方')}</div></div><div class="cfoot" style="color:#c98">${m.accepted?'你答应啦💗':m.declined?'你拒绝了':'ta在等你答应'}</div></div>${done?'':`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#e84d6f;color:#fff" onclick="event.stopPropagation();acceptDate('${m.id}')">同意，去赴约</button><button class="minibtn" onclick="event.stopPropagation();declineDate('${m.id}')">改天</button></div>`}`;}
+  if(m.type==='dateinvite'){const done=m.accepted||m.declined;return `<div class="card" style="width:240px;background:#3a1622;border:1px solid #b34a6a"><div style="padding:12px"><div style="color:#ff9ec4;font-size:11px;margin-bottom:4px">${svgIc('heart',12,'#ff9ec4')} 线下约会邀请</div><div style="color:#ffd6e6;font-size:14px;font-weight:600">约你见面</div><div style="color:#e8a8bd;font-size:13px;margin-top:5px">🕐 ${esc(m.when||'看你时间')}<br>📍 ${esc(m.loc||'老地方')}</div></div><div class="cfoot" style="color:#c98">${m.accepted?'你答应啦💗':m.declined?'你拒绝了':'ta在等你答应'}</div></div>${done?'':`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#e84d6f;color:#fff" onclick="event.stopPropagation();acceptDate('${m.id}')">同意，去赴约</button><button class="minibtn" onclick="event.stopPropagation();declineDate('${m.id}')">改天</button></div>`}`;}
   if(m.type==='homeinvite'){const done=m.accepted||m.declined;return `<div class="card" style="width:240px;background:#241a33;border:1px solid #7a5bb0"><div style="padding:12px"><div style="color:#c5a6ff;font-size:11px;margin-bottom:4px">🏡 回家吧</div><div style="color:#ece0ff;font-size:14px;font-weight:600">ta邀请你回你们的小家</div><div style="color:#b9a6e0;font-size:12px;margin-top:5px">一起做饭 · 看电影 · 喂米香奶茶 · 抱着睡</div></div><div class="cfoot" style="color:#a98fd0">${m.accepted?'你回家啦🏡':m.declined?'你说改天':'ta在小家等你'}</div></div>${done?'':`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#7a5bb0;color:#fff" onclick="event.stopPropagation();acceptHome('${m.id}')">回家陪ta</button><button class="minibtn" onclick="event.stopPropagation();declineHome('${m.id}')">改天</button></div>`}`;}
   if(m.type==='outpass'){const st=m.status;return `<div class="card" style="width:240px;background:#23303a;border:1px solid #3a6b8a"><div style="padding:12px"><div style="color:#9ec5fe;font-size:11px;margin-bottom:4px">📍 出门报备申请</div><div style="color:#dbeafe;font-size:14px;font-weight:600">去：${esc(m.where||'')}</div>${m.who?`<div style="color:#a9c7e8;font-size:12px;margin-top:3px">同行：${esc(m.who)}</div>`:''}${m.dur?`<div style="color:#a9c7e8;font-size:12px">时长：${esc(m.dur)}</div>`:''}</div><div class="cfoot" style="color:${st==='approved'?'#19a463':st==='rejected'?'#fa5151':'#c9a86b'}">${st==='approved'?'✅ ta批准了'+(m.reason?'：'+esc(m.reason):''):st==='rejected'?'🚫 ta驳回了'+(m.reason?'：'+esc(m.reason):''):'⏳ 等ta批准'}</div></div>`;}
   if(m.type==='familyreq'){return `<div class="card"><div class="cpay" style="background:#e8527f"><div class="big">💳</div><div><div class="t1">亲属卡申请</div><div class="t2">想绑定你的亲属卡用额度</div></div></div><div class="cfoot">等ta同意并设额度</div></div>`;}
@@ -4557,7 +4564,7 @@ function incomingCall(id,kind){const c=getC(id);if(!c||c.blocked||_call)return;
   _call={id,kind,state:'incoming',opened:false,replyVoice:S.settings.voiceAuto!==false,session:uid(),sub:null};initAudio();ringStart();showCallBanner(c);
   clearTimeout(_callMissT);_callMissT=setTimeout(()=>callMissed(id),15000);}// 来电只先弹横幅；15秒没接=未接
 function showCallBanner(c){const b=$('#callBanner');if(!b||!_call)return;const label=_call.kind==='video'?'视频':'语音';
-  b.innerHTML=`<div onclick="openIncoming()" style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;cursor:pointer">${av(c.avatar,'sm')}<div style="flex:1;min-width:0"><div class="bn">${esc(c.remark||c.name)}</div><div class="bm">📞 邀请你${label}通话…</div></div></div><span class="cbtn red" style="width:30px;height:30px;font-size:14px;margin-left:4px" onclick="event.stopPropagation();declineCall()">📵</span><span class="cbtn green" style="width:30px;height:30px;font-size:14px" onclick="event.stopPropagation();answerCall()">📞</span>`;
+  b.innerHTML=`<div onclick="openIncoming()" style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;cursor:pointer">${av(c.avatar,'sm')}<div style="flex:1;min-width:0"><div class="bn">${esc(c.remark||c.name)}</div><div class="bm" style="display:flex;align-items:center;gap:5px">${svgIc(label==='视频'?'video':'phonecall',13,'#9a9')}邀请你${label}通话…</div></div></div><span class="cbtn red" style="width:30px;height:30px;margin-left:4px" onclick="event.stopPropagation();declineCall()">${svgIc('hangup',15,'#fff')}</span><span class="cbtn green" style="width:30px;height:30px" onclick="event.stopPropagation();answerCall()">${svgIc('phonecall',15,'#fff')}</span>`;
   b.className='msgbanner show';}
 function hideCallBanner(){const b=$('#callBanner');if(b)b.className='msgbanner';}
 function openIncoming(){if(!_call)return;_call.opened=true;hideCallBanner();renderCall();}
@@ -4628,19 +4635,33 @@ function callOnUserSay(t){if(!_call)return false;_call.lastUserTs=Date.now();_ca
   return false;}
 function callMin(){if(_call){_call.min=true;renderCall();}}
 function callMax(){if(_call){_call.min=false;renderCall();}}
-function renderCall(){const L=$('#callLayer');if(!_call){L.className='callscreen';L.innerHTML='';return;}
-  if(_call.state==='incoming'&&!_call.opened){L.className='callscreen';L.innerHTML='';return;}// 来电时先只显示横幅，点开才进整屏
+function makeMiniDraggable(){const L=$('#callLayer');if(!L||!L.classList.contains('mini'))return;
+  if(_call&&_call._mpos){L.style.left=_call._mpos.x+'px';L.style.top=_call._mpos.y+'px';L.style.right='auto';L.style.bottom='auto';}
+  if(L._dragBound)return;L._dragBound=true;
+  let sx,sy,ox,oy,drag=false,moved=false;
+  L.addEventListener('pointerdown',e=>{if(!L.classList.contains('mini'))return;if(e.target.closest('.cbtn'))return;
+    const r=L.getBoundingClientRect();ox=r.left;oy=r.top;sx=e.clientX;sy=e.clientY;drag=true;moved=false;});
+  L.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-sx,dy=e.clientY-sy;
+    if(!moved){if(Math.abs(dx)+Math.abs(dy)<4)return;moved=true;L.style.right='auto';L.style.bottom='auto';try{L.setPointerCapture(e.pointerId);}catch(_){}}
+    const w=L.offsetWidth,h=L.offsetHeight;let nx=Math.max(4,Math.min(window.innerWidth-w-4,ox+dx)),ny=Math.max(4,Math.min(window.innerHeight-h-4,oy+dy));
+    L.style.left=nx+'px';L.style.top=ny+'px';});
+  const up=e=>{if(!drag)return;drag=false;try{L.releasePointerCapture(e.pointerId);}catch(_){}if(moved&&_call)_call._mpos={x:parseFloat(L.style.left)||0,y:parseFloat(L.style.top)||0};};
+  L.addEventListener('pointerup',up);L.addEventListener('pointercancel',up);}
+function renderCall(){const L=$('#callLayer');const _clrPos=()=>{L.style.left=L.style.top=L.style.right=L.style.bottom='';};
+  if(!_call){L.className='callscreen';L.innerHTML='';_clrPos();return;}
+  if(_call.state==='incoming'&&!_call.opened){L.className='callscreen';L.innerHTML='';_clrPos();return;}// 来电时先只显示横幅，点开才进整屏
   const c=getC(_call.id);const video=_call.kind==='video';
   if(_call.min&&_call.state!=='incoming'){L.className='callscreen show mini';
-    L.innerHTML=`<div class="cav" style="width:34px;height:34px;min-width:34px;font-size:18px;border-radius:10px">${isImg(c.avatar)?`<img src="${c.avatar}">`:(c.avatar||'🙂')}</div><span style="font-size:13px;color:#fff;white-space:nowrap">${esc(c.remark||c.name)} ${video?'📹':'📞'}<span id="callStat" style="margin-left:5px">${_call.state==='active'?'':'呼叫中'}</span></span><span onclick="callMax()" title="放大" style="cursor:pointer;font-size:17px;padding:0 4px">⤢</span><span class="cbtn red" style="width:32px;height:32px;font-size:15px" onclick="hangupCall()">📵</span>`;
+    L.innerHTML=`<div class="cav cdrag" style="width:34px;height:34px;min-width:34px;font-size:18px;border-radius:10px">${isImg(c.avatar)?`<img src="${c.avatar}">`:(c.avatar||'🙂')}</div><span style="font-size:13px;color:#fff;white-space:nowrap;display:flex;align-items:center;gap:4px">${esc(c.remark||c.name)} ${video?svgIc('video',15,'#cfcfe0'):svgIc('phonecall',14,'#cfcfe0')}<span id="callStat" style="margin-left:3px">${_call.state==='active'?'':'呼叫中'}</span></span><span onclick="callMax()" title="放大" style="cursor:pointer;padding:0 4px;display:flex">${svgIc('expand',16,'#fff')}</span><span class="cbtn red" style="width:32px;height:32px" onclick="hangupCall()">${svgIc('hangup',17,'#fff')}</span>`;
+    setTimeout(makeMiniDraggable,0);
     updateCallSub();return;}
-  L.className='callscreen show'+(video?' video':'')+(_call.state==='active'?' active':'');
+  _clrPos();L.className='callscreen show'+(video?' video':'')+(_call.state==='active'?' active':'');
   const label=video?'视频通话':'语音通话';
   const stat=_call.state==='incoming'?('邀请你'+label):_call.state==='outgoing'?'正在呼叫…':'<span id="callStat">00:00</span>';
   let btns='';
-  if(_call.state==='incoming')btns=`<div class="cbtncol"><div class="cbtn red" onclick="declineCall()">📵</div>拒绝</div><div class="cbtncol"><div class="cbtn green" onclick="answerCall()">📞</div>接听</div>`;
-  else if(_call.state==='outgoing')btns=`<div class="cbtncol"><div class="cbtn red" onclick="declineCall()">📵</div>取消</div>`;
-  else{_call.replyVoice=true;btns=`<div class="cbtncol"><div class="cbtn red" onclick="hangupCall()">📵</div>挂断</div>`;}
+  if(_call.state==='incoming')btns=`<div class="cbtncol"><div class="cbtn red" onclick="declineCall()">${svgIc('hangup',26,'#fff')}</div>拒绝</div><div class="cbtncol"><div class="cbtn green" onclick="answerCall()">${svgIc('phonecall',25,'#fff')}</div>接听</div>`;
+  else if(_call.state==='outgoing')btns=`<div class="cbtncol"><div class="cbtn red" onclick="declineCall()">${svgIc('hangup',26,'#fff')}</div>取消</div>`;
+  else{_call.replyVoice=true;btns=`<div class="cbtncol"><div class="cbtn red" onclick="hangupCall()">${svgIc('hangup',24,'#fff')}</div>挂断</div>`;}
   L.innerHTML=`${(_call.state==='active'||_call.state==='outgoing')?`<div onclick="callMin()" title="缩小，可以边通话边聊天/玩手机" style="position:absolute;left:16px;top:50px;font-size:24px;cursor:pointer;z-index:3">⤵︎</div>`:''}<div class="cav">${isImg(c.avatar)?`<img src="${c.avatar}">`:(c.avatar||'🙂')}</div>
     <div class="cname">${esc(c.remark||c.name)}</div><div class="cstat">${stat}</div>
     <div class="callsub" id="callSub"></div>
@@ -4768,8 +4789,8 @@ function brFwd(i){const it=(S.browser.items||[])[i];if(!it)return;const cs=S.con
   window._brF=it;openModal(`<h3>转发给</h3>${cs.map(c=>`<div class="section"><div class="it" onclick="doBrFwd('${c.id}')">${esc(c.remark||c.name)}<span class="v">›</span></div></div>`).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
 function doBrFwd(cid){const it=window._brF;if(!it)return;pushMsg(cid,{role:'user',type:'weblink',title:it.title,snippet:it.snippet,q:(S.browser&&S.browser.q)||'',id:uid()});closeModal();toast('已转发给角色');scheduleReply(cid);}
 function brHistory(){const h=(S.browser&&S.browser.history)||[];
-  openModal(`<h3>搜索记录</h3>${h.length?h.map((x,i)=>`<div class="it"><span onclick="brRe(${i})" style="flex:1;color:#ccc;cursor:pointer">🔍 ${esc(x.q)}</span><small style="color:#777">${fmtDate(x.time)}</small></div>`).join(''):'<div class="empty">还没搜过</div>'}<div class="btns" style="margin-top:8px"><button class="btn d" onclick="brClearHist()">清空记录</button><button class="btn g" onclick="closeModal()">关闭</button></div>`);}
-async function brClearHist(){if(!await uiConfirm('清空全部浏览/搜索记录？'))return;S.browser=S.browser||{};S.browser.history=[];save();closeModal();if(cur().p==='browser'||cur().p==='spy')render();toast('已清空浏览记录');}
+  openModal(`<h3>搜索记录</h3>${h.length?h.map((x,i)=>`<div class="it"><span onclick="brRe(${i})" style="flex:1;color:#ccc;cursor:pointer;display:flex;align-items:center;gap:8px">${svgIc('search',15,'#888')}${esc(x.q)}</span><small style="color:#777">${fmtDate(x.time)}</small></div>`).join(''):'<div class="empty">还没搜过</div>'}<div class="btns" style="margin-top:8px"><button class="btn d" onclick="brClearHist()">清空记录</button><button class="btn g" onclick="closeModal()">关闭</button></div>`);}
+async function brClearHist(){if(!await uiConfirm('清空全部浏览/搜索记录？\n（搜索框、搜索结果、历史记录都会清掉）'))return;S.browser={q:'',items:[],history:[]};save();closeModal();if(cur().p==='browser'||cur().p==='spy')render();toast('已清空');}
 function brRe(i){const x=(S.browser&&S.browser.history||[])[i];if(!x)return;closeModal();browserSearch(x.q);}
 function viewWeblink(mid){let m;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;break;}}if(!m)return;
   openModal(`<h3 style="color:#7db3ff">${esc(m.title)}</h3><div style="max-height:55vh;overflow:auto;color:#ddd;line-height:1.8;white-space:pre-wrap;font-size:14px">${esc(m.snippet||'')}</div><button class="btn g" style="margin-top:12px" onclick="closeModal()">关闭</button>`);}
@@ -5064,9 +5085,9 @@ function importData(){pickFile('.json',f=>{const r=new FileReader();r.onload=()=
 function storageInfo(){let bytes=0;try{const s=localStorage.getItem(KEY);bytes=new Blob([s||JSON.stringify(S)]).size;}catch(e){try{bytes=(JSON.stringify(S)||'').length*2;}catch(_){}}
   const CAP=5*1024*1024;return {bytes,mb:bytes/1048576,capMb:5,pct:Math.min(100,Math.round(bytes/CAP*100))};}
 function storageMeter(){const si=storageInfo();const col=si.pct>=80?'#fa5151':si.pct>=60?'#ffb83b':'#19a463';
-  return `<div class="section"><div style="padding:12px 14px"><div style="display:flex;justify-content:space-between;font-size:13px;color:#ccc"><span>💾 存储用量</span><span style="color:${col};font-weight:600">${si.mb.toFixed(2)} / ${si.capMb}MB（${si.pct}%）</span></div>
+  return `<div class="section"><div style="padding:12px 14px"><div style="display:flex;justify-content:space-between;font-size:13px;color:#ccc"><span>${svgIc('disk',14,'#bbb')} 存储用量</span><span style="color:${col};font-weight:600">${si.mb.toFixed(2)} / ${si.capMb}MB（${si.pct}%）</span></div>
     <div style="height:8px;background:#2c2c2e;border-radius:5px;margin-top:8px;overflow:hidden"><div style="height:100%;width:${si.pct}%;background:${col};transition:.3s"></div></div>
-    <div class="hint" style="padding:7px 0 0">${si.pct>=80?'⚠️ 快满了！赶紧导出备份，再删点旧图片/聊天。':'最占地方的是上传的图片。记得常点「💾 导出备份」存一份最保险。'}</div></div></div>`;}
+    <div class="hint" style="padding:7px 0 0">${si.pct>=80?'快满了！赶紧导出备份，再删点旧图片/聊天。':'最占地方的是上传的图片。记得常点「导出备份」存一份最保险。'}</div></div></div>`;}
 let _storeWarned=false;
 function checkStorageWarn(){if(_storeWarned)return;const si=storageInfo();if(si.pct<80)return;_storeWarned=true;
   openModal(`<h3>手机存储快满了</h3><div style="font-size:14px;line-height:1.9;color:#333">已经用了 <b style="color:#fa5151">${si.mb.toFixed(2)}MB / ${si.capMb}MB（${si.pct}%）</b>。<br>快满了的话新消息、新照片可能存不进去。<br><br>现在建议你：<br>1️⃣ 先导出一份备份存好<br>2️⃣ 删掉一些旧图片或用不到的聊天</div>
