@@ -389,7 +389,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v184 · 新增三个掌控特权:①挂项圈(他给你挂归属印记、你摘不掉、显示在微信「我」页)②出门报备审批(你发出门申请→他批准/驳回)③替你发朋友圈(他以你名义发宣示主权);并修复:通话/视频中他不能登录微信,必须先挂断';
+const APP_VER='v185 · 修复:删掉某个联系人后,他对ta的"禁言/锁聊天"会一起被清掉,不再卡在情侣空间「ta锁住的」里解不开(启动+打开情侣空间都会自动清僵尸锁)。之前的三个掌控特权:挂项圈/出门报备审批/替你发朋友圈';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1850,6 +1850,7 @@ if(S.shop&&!S.shop.cs)S.shop.cs={msgs:[]};
 if(!Array.isArray(S.mood))S.mood=[];
 if(!S.cozy)S.cozy={cid:null,intim:0,log:[],visits:0};
 if(S.wxLogin&&Date.now()>=S.wxLogin.until)S.wxLogin=null;// 启动时清掉过期的微信登录态，避免卡住
+if(S.couple&&S.couple.gags){Object.keys(S.couple.gags).forEach(cid=>{const _gc=S.contacts.find(x=>x.id===cid);if(!_gc||_gc.deleted)delete S.couple.gags[cid];});}// 启动时清掉已删联系人的僵尸禁言
 if(!S.giftbox)S.giftbox=[];
 if(S.couple&&!S.couple.timeLimit)S.couple.timeLimit={};
 if(S.couple&&S.couple.grant&&S.couple.grant.douyin===undefined)S.couple.grant.douyin=true;
@@ -3196,7 +3197,7 @@ function couTab(n){_couTab=n;const p1=$('#coupage1'),p2=$('#coupage2'),t1=$('#co
   p1.style.display=n===2?'none':'block';p2.style.display=n===2?'block':'none';
   if(t1){t1.style.background=n===2?'#2c2c2e':'#ff6fa5';t1.style.color=n===2?'#ccc':'#fff';}
   if(t2){t2.style.background=n===2?'#ff6fa5':'#2c2c2e';t2.style.color=n===2?'#fff':'#ccc';}}
-function renderCouple(){const cp=S.couple;const c=cp&&getC(cp.cid);
+function renderCouple(){cleanStaleGags();const cp=S.couple;const c=cp&&getC(cp.cid);
   if(!cp||!c)return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">💞 情侣空间</span><span class="r"></span></div>
     <div class="scroll" style="background:#000"><div class="empty" style="padding:50px 24px;line-height:2">还没绑定～<br>去某个角色的「资料页」点 <b>💞 绑定情侣空间</b><br>（只能绑定一个）</div></div>`;
   const days=Math.max(0,Math.floor((Date.now()-new Date(cp.startDate).getTime())/86400000));
@@ -3578,7 +3579,10 @@ function ignoreFriend(rid){S.friendRequests=S.friendRequests.filter(x=>x.id!==ri
 function c_delete(id){const c=getC(id);
   if(!isMain()){if(!confirm('从当前小号「'+esc(S.me.name)+'」里删掉这个好友？\n（只影响这个小号，不动大号，之后还能搜微信号重新加回来）'))return;
     if(c._added)delete c._added[actId()];if(c._blk)delete c._blk[actId()];delete S.messages[mkey(id)];syncBlocks();save();stack.pop();render();toast('已从这个小号移除');return;}
-  if(!confirm('删除这个角色和聊天记录？'))return;c.deleted=true;Object.keys(S.messages).forEach(k=>{if(k===id||k.indexOf(id+'#')===0)delete S.messages[k];});save();stack.pop();render();}
+  if(!confirm('删除这个角色和聊天记录？'))return;c.deleted=true;Object.keys(S.messages).forEach(k=>{if(k===id||k.indexOf(id+'#')===0)delete S.messages[k];});
+  if(S.couple){if(S.couple.gags)delete S.couple.gags[id];if(S.couple.gagAuth)S.couple.gagAuth=S.couple.gagAuth.filter(x=>x!==id);}// 删人时连带清掉对ta的禁言/授权,避免僵尸锁
+  save();stack.pop();render();}
+function cleanStaleGags(){if(!S.couple||!S.couple.gags)return false;let ch=false;Object.keys(S.couple.gags).forEach(cid=>{const c=getC(cid);if(!c||c.deleted){delete S.couple.gags[cid];ch=true;}});if(ch)save();return ch;}
 function clearHistory(id){openModal(`<h3>清除聊天记录</h3>
   <button class="btn g" style="margin-bottom:8px" onclick="doClear('${id}','all')">🗑️ 清空全部</button>
   <button class="btn g" style="margin-bottom:8px" onclick="doClear('${id}','3d')">清除最近 3 天</button>
