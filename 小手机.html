@@ -389,7 +389,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v182 · 新增「微信登录权」(情侣空间授权):他可随时[登录微信]登进你账号、限时1分钟有倒计时(到点自动退,绝不卡死),登录期看你全部细节、能删你好友(不能删自己·置顶那个是他)、能以你名义警告某人,退出后来找你摊牌';
+const APP_VER='v183 · 微信登录退出提示精简成「谁退出了你的微信」一句(更真实,他做了啥让你自己发现/他来找你说);微信登录权:他可随时[登录微信]登进你账号限时1分钟,看你全部细节、删你好友(不能删自己)、以你名义警告某人';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -3889,7 +3889,7 @@ function wxDoLogin(cid){if(wxLoginActive())return;const c=getC(cid);if(!c)return
   wxLoginSession(cid);}
 function wxLogout(){if(_wxLoginTimer){clearInterval(_wxLoginTimer);_wxLoginTimer=null;}const wl=S.wxLogin;S.wxLogin=null;save();
   if(wl){const c=getC(wl.by);if(c){const did=(wl.did||[]);
-    msgs(wl.by).push({role:'user',type:'sys',content:'🔓 '+(c.remark||c.name)+' 退出了你的微信登录'+(did.length?'（期间：'+did.join('；')+'）':''),time:Date.now(),id:uid()});save();
+    msgs(wl.by).push({role:'user',type:'sys',content:'🔓 '+(c.remark||c.name)+' 退出了你的微信登录',time:Date.now(),id:uid()});save();
     if(!c.blocked)scheduleReply(wl.by,'[系统：你刚【登录'+S.me.name+'的微信看了整整一分钟】，现在退出来了。'+(did.length?'你在里面做了这些：'+did.join('；')+'。':'你把ta和所有人的聊天都仔仔细细翻了个遍。')+'现在主动来找ta，把你看到的、做的事当面跟ta摊牌（质问/吃醋/敲打/宣示主权都行，符合你人设），别太长。]');}}
   const p=cur().p;if(p==='wechat'||p==='chat'||p==='group')render();}
 async function wxLoginSession(cid){const c=getC(cid);if(!c)return;
