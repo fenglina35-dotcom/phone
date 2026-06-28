@@ -428,7 +428,7 @@ const KEY='yibei_phone_v2';
 const SHARE_GATE=true, SHARE_PW='8980';
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ if(localStorage.getItem('yibei_unlocked')==='1')return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v218 · 更换访问口令(旧口令作废,已进来的人和本机存档不受影响)';
+const APP_VER='v219 · 修好声音要退后台才恢复:之前触屏只唤醒了音效引擎、没把被系统打断暂停的音乐接着放;现在一碰屏幕就同时唤醒音效+继续放本该在放的音乐,不用再退后台';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -921,7 +921,7 @@ function render(){
 
 /* ---------- 主屏幕 ---------- */
 /* ---------- 🎵 一起听音乐 ---------- */
-let _ma=null,_mCur=null,_mPlaying=false,_mUrl=null,_mSessTimer=null;
+let _ma=null,_mCur=null,_mPlaying=false,_mUrl=null,_mSessTimer=null,_mWantPlay=false;
 let _mBub={l:null,r:null};// 一起听字幕气泡：l=她(左) r=他(右)，说完一句自动消失
 let _mReplyBusy=false,_mSendT=0;// 防止一起听聊天回复重复触发（发两遍）
 function _mBubHTML(o){if(!o||!o.text)return '';const pink=o.side==='l';const bgc=pink?'rgba(255,143,171,.96)':'rgba(255,255,255,.96)';
@@ -987,14 +987,14 @@ function syncRender(){if(!_sync)return;const cur=_ma?_ma.currentTime:0;const don
 function syncMark(){if(!_sync||!_ma)return;_sync.stamps[_sync.idx]=_ma.currentTime;_sync.idx=Math.min(_sync.lines.length,_sync.idx+1);syncRender();}
 function syncBack(){if(!_sync)return;if(_sync.idx>0){_sync.idx--;_sync.stamps[_sync.idx]=null;}syncRender();}
 function syncSave(){if(!_sync)return;const s=S.music.songs.find(x=>x.id===_sync.id);if(s){s.lyrics=_sync.lines.map((t,i)=>(_sync.stamps[i]!=null?'['+fmtLrc(_sync.stamps[i])+']':'')+t).join('\n');save();}_sync=null;closeModal();render();toast('时间轴已保存🎯');}
-async function musicPlay(id){musicInit();const s=S.music.songs.find(x=>x.id===id);if(!s)return;
+async function musicPlay(id){musicInit();const s=S.music.songs.find(x=>x.id===id);if(!s)return;_mWantPlay=true;
   if(!_ma){_ma=new Audio();_ma.ontimeupdate=mTick;_ma.onended=mEnded;_ma.onplay=()=>{_mPlaying=true;mBtns();};_ma.onpause=()=>{_mPlaying=false;mBtns();};}
   _mCur=id;let url;
   if(s.src&&s.src.t==='url')url=s.src.url;
   else{const b=await mGet(id);if(!b){toast('音频文件丢了，删掉重新加一下');return;}if(_mUrl){try{URL.revokeObjectURL(_mUrl);}catch(e){}}url=URL.createObjectURL(b);_mUrl=url;}
   _ma.src=url;_ma.loop=!!S.music.loop;try{await _ma.play();}catch(e){toast('点一下▶播放');}
   render();}
-function musicToggle(){if(!_ma||!_mCur){const s=S.music&&S.music.songs[0];if(s)musicPlay(s.id);return;}if(_ma.paused)_ma.play().catch(()=>{});else _ma.pause();}
+function musicToggle(){if(!_ma||!_mCur){const s=S.music&&S.music.songs[0];if(s)musicPlay(s.id);return;}if(_ma.paused){_mWantPlay=true;_ma.play().catch(()=>{});}else{_mWantPlay=false;_ma.pause();}}
 function musicNext(){const songs=S.music.songs;if(!songs.length)return;let i=songs.findIndex(s=>s.id===_mCur);i=(i+1)%songs.length;musicPlay(songs[i].id);}
 function musicLoop(){musicInit();S.music.loop=!S.music.loop;if(_ma)_ma.loop=!!S.music.loop;save();render();}
 function mEnded(){if(S.music&&S.music.loop){if(_ma){_ma.currentTime=0;_ma.play().catch(()=>{});}}else musicNext();}
@@ -4479,8 +4479,10 @@ function manualReply(id){if(_replying)return;const c=getC(id);if(!c||c.blocked)r
 let _audio;
 function ensureAudio(){try{if(!_audio||_audio.state==='closed')_audio=new (window.AudioContext||window.webkitAudioContext)();if(_audio&&(_audio.state==='suspended'||_audio.state==='interrupted'))_audio.resume().catch(()=>{});}catch(e){}return _audio;}
 function initAudio(){ensureAudio();}
-// iOS：用了系统键盘的语音转文字/被其它声音打断后，AudioContext 会被挂起，提示音/铃声就没了。这里在每次点击/触摸/切回页面时把它唤醒，免得要退出重开。
-['touchend','pointerdown','click'].forEach(ev=>document.addEventListener(ev,ensureAudio,{passive:true}));
+// iOS：用了系统键盘的语音转文字/被其它声音打断后，AudioContext 会被挂起、在放的音乐(_ma)也会被暂停，提示音/铃声/音乐就没了。
+// 这里在每次点击/触摸/切回页面时既唤醒 AudioContext，又把"本该在放的音乐"接着放，免得要退出后台才恢复。
+function audioKick(){ensureAudio();try{if(_ma&&_mWantPlay&&_ma.paused&&(!_ma.duration||_ma.currentTime<_ma.duration-0.3))_ma.play().catch(()=>{});}catch(e){}}
+['touchend','pointerdown','click'].forEach(ev=>document.addEventListener(ev,audioKick,{passive:true}));
 document.addEventListener('click',()=>{initAudio();const liveLoc=S.contacts.some(c=>!c.deleted&&getSpy(c).loc);if(!S.weather||Date.now()-S.weather.time>(liveLoc?600000:72000000))fetchWeather();},{once:true});
 function playDing(){if(!S.settings.sound)return;ensureAudio();if(!_audio)return;try{const o=_audio.createOscillator(),g=_audio.createGain();o.connect(g);g.connect(_audio.destination);
   o.frequency.value=880;o.type='sine';g.gain.setValueAtTime(.001,_audio.currentTime);g.gain.exponentialRampToValueAtTime(Math.min(1,.25*volMul()),_audio.currentTime+.02);
@@ -5113,7 +5115,7 @@ function storageFullAlert(){openModal(`<h3>存储已经满了！</h3><div style=
 function paintBatt(){const b=$('#battinfo');if(b)b.innerHTML='📶 5G 🔋'+(S.me.battery!=null?S.me.battery+'%':'88%')+(S.me.charging?'⚡':'');}
 function initBattery(){if(navigator.getBattery){navigator.getBattery().then(bt=>{const upd=()=>{S.me.battery=Math.round(bt.level*100);S.me.charging=bt.charging;save();paintBatt();};bt.addEventListener('levelchange',upd);bt.addEventListener('chargingchange',upd);upd();}).catch(()=>{});}}
 initBattery();
-document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;}else{ensureAudio();if(cur().p==='wechat'&&wxTab==='me')render();setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){_storeWarned=false;}else{audioKick();if(cur().p==='wechat'&&wxTab==='me')render();setTimeout(checkStorageWarn,600);setTimeout(autoAssignTasks,800);setTimeout(checkIgnore,1800);}});
 setInterval(()=>{const c=$('#clock');if(c)c.textContent=hm();paintBatt();if(cur().p==='home')$('#app').querySelector('.hh')&&($('#app').querySelector('.hh').textContent=hm());},1000);
 render();/* 先立刻渲染，UI 一定出来 */
 bootImages().then(()=>render()).catch(()=>{});/* 图片从 IndexedDB 回填好后再重渲染一次 */
