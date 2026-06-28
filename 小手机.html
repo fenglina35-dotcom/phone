@@ -226,7 +226,8 @@ body{background:#000;padding:0;}
 /* ===== 通话 ===== */
 .callscreen{position:absolute;inset:0;z-index:450;display:none;flex-direction:column;align-items:center;color:#fff;background:linear-gradient(165deg,#34344a,#16161e);}
 .callscreen.show{display:flex;}
-.callscreen.mini{inset:auto;top:44px;left:8px;right:auto;width:auto;height:auto;flex-direction:row;align-items:center;gap:8px;padding:6px 10px;border-radius:26px;background:rgba(18,18,26,.96);border:1px solid #4a4a5a;box-shadow:0 4px 18px rgba(0,0,0,.55);z-index:456;}
+.callscreen.mini{inset:auto;top:44px;left:8px;right:auto;width:auto;height:auto;flex-direction:row;align-items:center;gap:8px;padding:6px 10px;border-radius:26px;background:rgba(18,18,26,.96);border:1px solid #4a4a5a;box-shadow:0 4px 18px rgba(0,0,0,.55);z-index:456;touch-action:none;user-select:none;-webkit-user-select:none;transition:none;will-change:left,top;}
+.callscreen.mini.dragging{cursor:grabbing;}
 .callscreen.mini .cav{margin:0;}
 .callscreen.video{background:radial-gradient(circle at 50% 30%,#2a3a4a,#0a0a10);}
 .callscreen .cav{margin-top:88px;width:100px;height:100px;border-radius:24px;font-size:48px;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#444;}
@@ -423,7 +424,7 @@ const KEY='yibei_phone_v2';
 const SHARE_GATE=true, SHARE_PW='12150414';
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ if(localStorage.getItem('yibei_unlocked')==='1')return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v210 · 通话里口头也能定闹钟[闹钟]、记东西[记住]、记日程[日程]了;修好通话时外卖重复点(同一通电话两分钟内同样的不重复下单);音乐打轴更好找:歌单每首歌后面直接加了「打轴」按钮,点了放着歌一句句点就生成滚动时间轴';
+const APP_VER='v211 · 修好缩小通话小窗拖动卡顿:加 touch-action:none 不让浏览器把拖动当成滚动抢走、按下立刻捕获指针、用 requestAnimationFrame 跟手刷新,现在拖动丝滑了;放大/挂断按钮照常能点';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -4639,21 +4640,25 @@ function callMax(){if(_call){_call.min=false;renderCall();}}
 function makeMiniDraggable(){const L=$('#callLayer');if(!L||!L.classList.contains('mini'))return;
   if(_call&&_call._mpos){L.style.left=_call._mpos.x+'px';L.style.top=_call._mpos.y+'px';L.style.right='auto';L.style.bottom='auto';}
   if(L._dragBound)return;L._dragBound=true;
-  let sx,sy,ox,oy,drag=false,moved=false;
-  L.addEventListener('pointerdown',e=>{if(!L.classList.contains('mini'))return;if(e.target.closest('.cbtn'))return;
-    const r=L.getBoundingClientRect();ox=r.left;oy=r.top;sx=e.clientX;sy=e.clientY;drag=true;moved=false;});
-  L.addEventListener('pointermove',e=>{if(!drag)return;const dx=e.clientX-sx,dy=e.clientY-sy;
-    if(!moved){if(Math.abs(dx)+Math.abs(dy)<4)return;moved=true;L.style.right='auto';L.style.bottom='auto';try{L.setPointerCapture(e.pointerId);}catch(_){}}
-    const w=L.offsetWidth,h=L.offsetHeight;let nx=Math.max(4,Math.min(window.innerWidth-w-4,ox+dx)),ny=Math.max(4,Math.min(window.innerHeight-h-4,oy+dy));
-    L.style.left=nx+'px';L.style.top=ny+'px';});
-  const up=e=>{if(!drag)return;drag=false;try{L.releasePointerCapture(e.pointerId);}catch(_){}if(moved&&_call)_call._mpos={x:parseFloat(L.style.left)||0,y:parseFloat(L.style.top)||0};};
+  let sx,sy,ox,oy,drag=false,moved=false,nx=0,ny=0,raf=0;
+  const paint=()=>{raf=0;L.style.left=nx+'px';L.style.top=ny+'px';};
+  L.addEventListener('pointerdown',e=>{if(!L.classList.contains('mini'))return;if(e.target.closest('.cbtn,.cmax'))return;
+    const r=L.getBoundingClientRect();ox=r.left;oy=r.top;sx=e.clientX;sy=e.clientY;nx=ox;ny=oy;drag=true;moved=false;
+    L.style.right='auto';L.style.bottom='auto';L.style.left=ox+'px';L.style.top=oy+'px';
+    try{L.setPointerCapture(e.pointerId);}catch(_){}},{passive:false});
+  L.addEventListener('pointermove',e=>{if(!drag)return;e.preventDefault();const dx=e.clientX-sx,dy=e.clientY-sy;
+    if(!moved){if(Math.abs(dx)+Math.abs(dy)<3)return;moved=true;L.classList.add('dragging');}
+    const w=L.offsetWidth,h=L.offsetHeight;
+    nx=Math.max(4,Math.min(window.innerWidth-w-4,ox+dx));ny=Math.max(4,Math.min(window.innerHeight-h-4,oy+dy));
+    if(!raf)raf=requestAnimationFrame(paint);},{passive:false});
+  const up=e=>{if(!drag)return;drag=false;L.classList.remove('dragging');if(raf){cancelAnimationFrame(raf);raf=0;paint();}try{L.releasePointerCapture(e.pointerId);}catch(_){}if(moved&&_call)_call._mpos={x:nx,y:ny};};
   L.addEventListener('pointerup',up);L.addEventListener('pointercancel',up);}
 function renderCall(){const L=$('#callLayer');const _clrPos=()=>{L.style.left=L.style.top=L.style.right=L.style.bottom='';};
   if(!_call){L.className='callscreen';L.innerHTML='';_clrPos();return;}
   if(_call.state==='incoming'&&!_call.opened){L.className='callscreen';L.innerHTML='';_clrPos();return;}// 来电时先只显示横幅，点开才进整屏
   const c=getC(_call.id);const video=_call.kind==='video';
   if(_call.min&&_call.state!=='incoming'){L.className='callscreen show mini';
-    L.innerHTML=`<div class="cav cdrag" style="width:34px;height:34px;min-width:34px;font-size:18px;border-radius:10px">${isImg(c.avatar)?`<img src="${c.avatar}">`:(c.avatar||'🙂')}</div><span style="font-size:13px;color:#fff;white-space:nowrap;display:flex;align-items:center;gap:4px">${esc(c.remark||c.name)} ${video?svgIc('video',15,'#cfcfe0'):svgIc('phonecall',14,'#cfcfe0')}<span id="callStat" style="margin-left:3px">${_call.state==='active'?'':'呼叫中'}</span></span><span onclick="callMax()" title="放大" style="cursor:pointer;padding:0 4px;display:flex">${svgIc('expand',16,'#fff')}</span><span class="cbtn red" style="width:32px;height:32px" onclick="hangupCall()">${svgIc('hangup',17,'#fff')}</span>`;
+    L.innerHTML=`<div class="cav cdrag" style="width:34px;height:34px;min-width:34px;font-size:18px;border-radius:10px">${isImg(c.avatar)?`<img src="${c.avatar}">`:(c.avatar||'🙂')}</div><span style="font-size:13px;color:#fff;white-space:nowrap;display:flex;align-items:center;gap:4px">${esc(c.remark||c.name)} ${video?svgIc('video',15,'#cfcfe0'):svgIc('phonecall',14,'#cfcfe0')}<span id="callStat" style="margin-left:3px">${_call.state==='active'?'':'呼叫中'}</span></span><span class="cmax" onclick="callMax()" title="放大" style="cursor:pointer;padding:0 4px;display:flex">${svgIc('expand',16,'#fff')}</span><span class="cbtn red" style="width:32px;height:32px" onclick="hangupCall()">${svgIc('hangup',17,'#fff')}</span>`;
     setTimeout(makeMiniDraggable,0);
     updateCallSub();return;}
   _clrPos();L.className='callscreen show'+(video?' video':'')+(_call.state==='active'?' active':'');
