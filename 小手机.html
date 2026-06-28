@@ -197,6 +197,14 @@ body{background:#000;padding:0;}
 .cfmbtns{display:flex;gap:10px;}
 .cfmb{flex:1;border:none;border-radius:11px;padding:11px 0;font-size:15px;cursor:pointer;}
 .cfmb.g{background:#3a3a3e;color:#ddd;}.cfmb.p{background:#07c160;color:#fff;}.cfmb.d{background:#fa5151;color:#fff;}
+.gate{position:fixed;inset:0;z-index:100000;background:linear-gradient(180deg,#181019 0%,#0c0a0e 55%,#000 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 36px;text-align:center;}
+.gate .glogo{width:64px;height:64px;border-radius:20px;background:linear-gradient(135deg,#e8b878,#e89db5);display:flex;align-items:center;justify-content:center;margin-bottom:18px;box-shadow:0 10px 28px rgba(120,60,90,.4);}
+.gate h2{color:#f3e6ee;font-size:19px;font-weight:700;letter-spacing:1px;margin-bottom:6px;}
+.gate p{color:#9a8ea0;font-size:13px;line-height:1.7;margin-bottom:22px;}
+.gate input{width:100%;max-width:260px;background:#211c26;border:1px solid #3a3340;border-radius:13px;padding:13px 16px;color:#f0f0f0;font-size:16px;text-align:center;letter-spacing:3px;outline:none;}
+.gate input:focus{border-color:#e89db5;}
+.gate button{width:100%;max-width:260px;margin-top:14px;border:none;border-radius:13px;padding:13px 0;font-size:16px;color:#fff;background:linear-gradient(135deg,#e89db5,#c77fae);cursor:pointer;}
+.gate .gerr{color:#ff6b81;font-size:13px;height:18px;margin-top:12px;}
 .field label{color:#bbb;}
 .field input,.field textarea,.field select{background:#2c2c2e;border:1px solid #38383a;color:#f0f0f0;}
 .minibtn{background:#2c2c2e;color:#ccc;}.btn.g{background:#2c2c2e;color:#ddd;}
@@ -411,7 +419,11 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v207 · 全局去emoji第一大轮:所有导航标题、弹窗标题、按钮、分区标题、提示气泡、刷新/购物车/订单/历史等导航小按钮全部清掉emoji或换成统一线条图标;表情包/角色头像/骰子/打分星星等保留;深处少量装饰性emoji后续继续清';
+/* 分享版访问口令：换口令时只改 SHARE_PW 这一串、重新部署即可。已解锁过的设备不受影响。 */
+const SHARE_GATE=true, SHARE_PW='12150414';
+let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
+function gateOK(){ if(!SHARE_GATE)return true; try{ if(localStorage.getItem('yibei_unlocked')==='1')return true; }catch(e){return true;} return _bootHadSave; }
+const APP_VER='v208 · 分享版加访问口令门:新设备打开要输口令才能进,输对一次就永久记住这台设备;你自己/老用户(本机已有存档)不会被拦;换口令只改代码里 SHARE_PW 重新部署、已进来的人不受影响——配合"给新人开门后立刻换口令"就能防外传';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -2542,10 +2554,18 @@ function showManual(){openModal(`<h3>小手机 · 使用说明书</h3>
     <b>小提示</b>：换设备或清缓存数据会没，记得偶尔在「我」里<b>导出备份</b>存好。玩得开心。
   </div>
   <div class="btns" style="margin-top:14px"><button class="btn p" onclick="closeModal()">开始玩吧</button></div>`);}
-function maybeFirstRun(){try{if(localStorage.getItem('yibei_manual_seen'))return;
+function maybeFirstRun(){try{if(!gateOK())return;if(localStorage.getItem('yibei_manual_seen'))return;
     const noContacts=!(S.contacts||[]).filter(c=>!c.deleted).length;
     const noKey=!(S.settings&&S.settings.chat&&S.settings.chat.key);
     if(noContacts&&noKey){localStorage.setItem('yibei_manual_seen','1');showManual();}}catch(e){}}
+function showGate(){if(gateOK())return;let el=document.getElementById('gate');
+  if(!el){el=document.createElement('div');el.id='gate';el.className='gate';document.body.appendChild(el);}
+  el.innerHTML='<div class="glogo">'+svgIc('lock',30,'#fff')+'</div><h2>小手机</h2><p>请输入访问口令开始<br>（找邀请你的人要）</p><input id="gateInp" inputmode="text" placeholder="访问口令" autocomplete="off"><button id="gateBtn">进入</button><div class="gerr" id="gateErr"></div>';
+  const inp=document.getElementById('gateInp'),err=document.getElementById('gateErr');
+  const tryIn=()=>{if((inp.value||'').trim()===SHARE_PW){try{localStorage.setItem('yibei_unlocked','1');}catch(e){}el.remove();render();setTimeout(maybeFirstRun,400);}else{err.textContent='口令不对，再试试';inp.value='';inp.focus();}};
+  document.getElementById('gateBtn').onclick=tryIn;
+  inp.onkeydown=e=>{if(e.key==='Enter')tryIn();};
+  setTimeout(()=>inp.focus(),100);}
 function chatAddMenu(){openModal(`<h3>＋</h3>
   <button class="btn p" style="margin-bottom:8px" onclick="closeModal();editContact()">新建角色</button>
   <button class="btn g" onclick="closeModal();createGroup()">发起群聊</button>
@@ -5064,6 +5084,7 @@ render();/* 先立刻渲染，UI 一定出来 */
 bootImages().then(()=>render()).catch(()=>{});/* 图片从 IndexedDB 回填好后再重渲染一次 */
 setTimeout(imgGC,60000);
 setTimeout(checkStorageWarn,1200);
+showGate();
 setTimeout(maybeFirstRun,600);
 </script>
 </body>
