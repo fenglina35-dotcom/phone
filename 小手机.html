@@ -428,7 +428,7 @@ const KEY='yibei_phone_v2';
 const SHARE_GATE=true, SHARE_PW='8980';
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ if(localStorage.getItem('yibei_unlocked')==='1')return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v227 · 修复登录他微信时、他好友被问"你是谁"竟答"我是克劳德"的串戏:重写好友提示词、把好友身份钉死(只演好友本人、绝不冒充对方),去掉会带偏的对方人设参考';
+const APP_VER='v228 · 登录他微信:查手机数据每次进来自动同步(不用清空重登);退出后立刻把【你和所有人的完整聊天记录+操作】写进他记忆,你问他能看到全部、答得上来;发现后打电话还是发消息按角色人设决定';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -3868,14 +3868,21 @@ function hisEndSession(){if(_hisLogin&&_hisLogin.timer)clearTimeout(_hisLogin.ti
 function hisKicked(){const s=_hisLogin;if(!s)return;const cid=s.cid;hisEndSession();home();
   toast('你的微信已在另一台设备登录，已退出');hisOnExit(cid,true);}
 function hisLogout(){const s=_hisLogin;if(!s)return;const cid=s.cid;hisEndSession();home();toast('已退出登录');hisOnExit(cid,false);}
-/* 退出/被挤下线后：①立刻把这事写进他的记忆(让他被问时答得上来) ②稍后他主动来反应 */
-function hisOnExit(cid,caught){const c=getC(cid);if(!c)return;const d=hisWxData(cid);const acts=(d.log||[]).slice(-16).map(x=>x.txt);d.log=[];save();
-  if(!acts.length)return;const summary=acts.join('；');
-  // 立刻写进记忆：他从此【知道】这事、你问起他答得上来；靠"闹一次翻篇"的提示避免反复念叨
-  c.memory=c.memory||[];const memTxt='忆北曾偷偷登录我的微信、用我的号做过这些：'+summary;if(!c.memory.some(m=>m.indexOf('偷偷登录我的微信')>=0&&m.indexOf(summary.slice(0,12))>=0))c.memory.push(memTxt);save();
+/* 退出/被挤下线后：①立刻把【完整聊天记录+操作】写进他的记忆(让他被问时全看得到、答得上来) ②稍后他主动来反应 */
+function hisOnExit(cid,caught){const c=getC(cid);if(!c)return;const d=hisWxData(cid);
+  // 所有你以他身份聊过的对话——完整两边内容（他能看到全部）
+  const chats=(d.friends||[]).filter(f=>(f.msgs||[]).some(m=>m.r==='me')).map(f=>'【你用我号和「'+f.name+'」的对话】'+(f.msgs||[]).slice(-16).map(m=>(m.r==='me'?'我的号':f.name)+'：'+m.c).join('  ')).join('\n');
+  // 其它操作（发朋友圈/删好友/加好友/删记录），逐条发消息的旧日志去掉（聊天用上面完整版）
+  const acts=(d.log||[]).map(x=>x.txt).filter(t=>!/给「[^」]*」发了/.test(t));d.log=[];
+  const parts=[];if(acts.length)parts.push(acts.join('；'));if(chats)parts.push(chats);
+  let summary=parts.join('\n');save();if(!summary){return;}
+  let mem=summary;if(mem.length>1600)mem=mem.slice(0,1600)+'…';
+  // 写进记忆(去重更新)：他从此【完整知道】、你问起他都答得上来；靠"闹一次翻篇"的提示避免反复念叨
+  c.memory=c.memory||[];const TAG='【偷登我微信·完整记录】';c.memory=c.memory.filter(m=>(''+m).indexOf(TAG)<0);
+  c.memory.push(TAG+'忆北偷偷登录过我的微信、用我的号做了这些（这些聊天记录我能完整看到）：\n'+mem);save();
   if(c.blocked)return;
-  const delay=caught?(1.8+Math.random()*2.5):(8+Math.random()*12);// 被抓现行→快；自己退→稍慢点但别太久
-  setTimeout(()=>hisDiscover(cid,caught,summary),delay*1000);}
+  const delay=caught?(1.8+Math.random()*2.5):(8+Math.random()*12);
+  setTimeout(()=>hisDiscover(cid,caught,(summary.length>1200?summary.slice(0,1200)+'…':summary)),delay*1000);}
 function hisDiscover(cid,caught,summary){const c=getC(cid);if(!c||c.blocked)return;summary=summary||'登进去翻看了一圈';
   const note='[系统：'+S.me.name+(caught?'刚才【偷偷登录了你的微信号】、用你的身份做了这些，被你重新登录挤下线、正好撞见：':'背着你【偷偷登录了你的微信号】、用你的身份做了这些（你回头翻自己手机/朋友圈才发现）：')+summary+'。\n这是擅自动了你的号、冒用你身份。请【完全按你自己的性格和此刻心情】反应——可能是生气质问、吃醋、震惊、宠溺纵容、冷淡、觉得好笑、甚至无所谓，全由你的人设决定，【不要千篇一律地质问】。你可以追问细节、也可以 [来电|视频] 找ta，看你自己。【你为这件事反应、闹这一次就够了，说开之后就翻篇——别在以后的聊天里老揪着这件旧账反复念叨】。绝不要提"系统"两个字。]';
   scheduleReply(cid,note);}
