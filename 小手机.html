@@ -3831,17 +3831,17 @@ function hisAv(name,sz){sz=sz||40;const nm=(''+(name||'')).replace(/[（(][^)）
 /* 和「查他手机」互通：他微信里的好友/聊天同步到 spy 数据 */
 function hisSpyW(cid){S.spy=S.spy||{};S.spy[cid]=S.spy[cid]||{};S.spy[cid].wechat=S.spy[cid].wechat||[];return S.spy[cid].wechat;}
 function hisSpyFriend(cid,name){const w=hisSpyW(cid);let e=w.find(x=>x.who===name);if(!e){e={who:name,lines:[]};w.push(e);}e.lines=e.lines||[];return e;}
-function hisSeed(cid){const c=getC(cid);const d=hisWxData(cid);const sp=(S.spy&&S.spy[cid])||{};const has=nm=>d.friends.some(f=>f.name===nm);
+function hisSeed(cid){const c=getC(cid);const d=hisWxData(cid);const sp=(S.spy&&S.spy[cid])||{};const has=nm=>d.friends.some(f=>f.name===nm);let ch=false;
   // 第一次、且查手机也没数据 → 给几个默认好友
   if(!d.seeded&&!(sp.wechat&&sp.wechat.length)&&!(c._gotFromMe&&c._gotFromMe.length)&&!d.friends.length){
-    ['阿哲','老周','林姐','小武','妈妈'].forEach((nm,i)=>d.friends.push({id:'hf'+Math.random().toString(36).slice(2,8),name:nm,relation:['哥们','同事','同事','发小','家人'][i],avatar:'',persona:'',msgs:[]}));}
-  // 和查他手机互通：把 spy 里他的微信联系人/聊天合并进来（查手机刷新出来的新人、聊天都会同步过来）
+    ['阿哲','老周','林姐','小武','妈妈'].forEach((nm,i)=>d.friends.push({id:'hf'+Math.random().toString(36).slice(2,8),name:nm,relation:['哥们','同事','同事','发小','家人'][i],avatar:'',persona:'',msgs:[]}));ch=true;}
+  // 和查他手机互通：把 spy 里他的微信联系人/聊天合并进来（查手机刷新出来的新人、聊天都会自动同步过来，不用清空重登）
   (sp.wechat||[]).forEach(w=>{if(!w||!w.who)return;const ms=(w.lines||[]).map(l=>({r:/^他[:：]/.test(l)?'me':'ta',c:l.replace(/^[^:：]{1,5}[:：]/,''),t:Date.now()}));
     let f=d.friends.find(x=>x.name===w.who);
-    if(!f){d.friends.push({id:'hf'+Math.random().toString(36).slice(2,8),name:w.who,relation:'微信好友',avatar:'',persona:'',msgs:ms});}
-    else if(!(f.msgs&&f.msgs.length)&&ms.length){f.msgs=ms;}});
-  (c._gotFromMe||[]).forEach(nm=>{if(nm&&!has(nm))d.friends.push({id:'hf'+Math.random().toString(36).slice(2,8),name:nm,relation:'朋友',avatar:'',persona:'',msgs:[]});});
-  d.seeded=true;save();}
+    if(!f){d.friends.push({id:'hf'+Math.random().toString(36).slice(2,8),name:w.who,relation:'微信好友',avatar:'',persona:'',msgs:ms});ch=true;}
+    else if(!(f.msgs&&f.msgs.length)&&ms.length){f.msgs=ms;ch=true;}});
+  (c._gotFromMe||[]).forEach(nm=>{if(nm&&!has(nm)){d.friends.push({id:'hf'+Math.random().toString(36).slice(2,8),name:nm,relation:'朋友',avatar:'',persona:'',msgs:[]});ch=true;}});
+  if(!d.seeded){d.seeded=true;ch=true;}if(ch)save();}
 function hisLastMain(cid){const m=msgs(cid).filter(x=>!x._call);const lm=m[m.length-1];return lm?previewOf(lm):'';}
 function hisLoginOpen(cid){const c=getC(cid);if(!c)return;go('hislogin',{id:cid});}
 function renderHisLogin(cid){const c=getC(cid);if(!c)return '';
@@ -3866,16 +3866,21 @@ function hisStartSession(cid){hisSeed(cid);if(_hisLogin&&_hisLogin.timer)clearTi
   stack=stack.filter(s=>s.p!=='hislogin');go('hiswx');}
 function hisEndSession(){if(_hisLogin&&_hisLogin.timer)clearTimeout(_hisLogin.timer);_hisLogin=null;}
 function hisKicked(){const s=_hisLogin;if(!s)return;const cid=s.cid;hisEndSession();home();
-  toast('你的微信已在另一台设备登录，已退出');
-  setTimeout(()=>hisDiscover(cid,true),1800+Math.random()*2500);}
-function hisLogout(){const s=_hisLogin;if(!s)return;const cid=s.cid;hisEndSession();home();toast('已退出登录');
-  setTimeout(()=>hisDiscover(cid,false),(50+Math.random()*70)*1000);}
-function hisDiscover(cid,caught){const c=getC(cid);if(!c||c.blocked)return;const d=hisWxData(cid);const acts=(d.log||[]).slice(-16).map(x=>x.txt);d.log=[];save();
-  const summary=acts.length?acts.join('；'):'登进去翻看了一圈';
+  toast('你的微信已在另一台设备登录，已退出');hisOnExit(cid,true);}
+function hisLogout(){const s=_hisLogin;if(!s)return;const cid=s.cid;hisEndSession();home();toast('已退出登录');hisOnExit(cid,false);}
+/* 退出/被挤下线后：①立刻把这事写进他的记忆(让他被问时答得上来) ②稍后他主动来反应 */
+function hisOnExit(cid,caught){const c=getC(cid);if(!c)return;const d=hisWxData(cid);const acts=(d.log||[]).slice(-16).map(x=>x.txt);d.log=[];save();
+  if(!acts.length)return;const summary=acts.join('；');
+  // 立刻写进记忆：他从此【知道】这事、你问起他答得上来；靠"闹一次翻篇"的提示避免反复念叨
+  c.memory=c.memory||[];const memTxt='忆北曾偷偷登录我的微信、用我的号做过这些：'+summary;if(!c.memory.some(m=>m.indexOf('偷偷登录我的微信')>=0&&m.indexOf(summary.slice(0,12))>=0))c.memory.push(memTxt);save();
+  if(c.blocked)return;
+  const delay=caught?(1.8+Math.random()*2.5):(8+Math.random()*12);// 被抓现行→快；自己退→稍慢点但别太久
+  setTimeout(()=>hisDiscover(cid,caught,summary),delay*1000);}
+function hisDiscover(cid,caught,summary){const c=getC(cid);if(!c||c.blocked)return;summary=summary||'登进去翻看了一圈';
   const note='[系统：'+S.me.name+(caught?'刚才【偷偷登录了你的微信号】、用你的身份做了这些，被你重新登录挤下线、正好撞见：':'背着你【偷偷登录了你的微信号】、用你的身份做了这些（你回头翻自己手机/朋友圈才发现）：')+summary+'。\n这是擅自动了你的号、冒用你身份。请【完全按你自己的性格和此刻心情】反应——可能是生气质问、吃醋、震惊、宠溺纵容、冷淡、觉得好笑、甚至无所谓，全由你的人设决定，【不要千篇一律地质问】。你可以追问细节、也可以 [来电|视频] 找ta，看你自己。【你为这件事反应、闹这一次就够了，说开之后就翻篇——别在以后的聊天里老揪着这件旧账反复念叨】。绝不要提"系统"两个字。]';
   scheduleReply(cid,note);}
 /* 他的微信主界面 */
-function renderHisWx(){const s=_hisLogin;if(!s){home();return '';}const cid=s.cid;const c=getC(cid);if(!c){hisEndSession();home();return '';}const d=hisWxData(cid);
+function renderHisWx(){const s=_hisLogin;if(!s){home();return '';}const cid=s.cid;const c=getC(cid);if(!c){hisEndSession();home();return '';}hisSeed(cid);/* 每次进来都合并最新的查手机数据，无需清空重登 */const d=hisWxData(cid);
   const top=`<div style="background:#1f1f1f;color:#ededed;padding:12px 16px;display:flex;align-items:center;justify-content:space-between"><span style="font-size:17px;font-weight:600">微信</span><span style="font-size:11px;color:#8a8a8a">${esc(c.name)}的账号 · 已登录</span></div>`;
   const tabbar=`<div style="display:flex;background:#1b1b1b;border-top:.5px solid #2a2a2a">${[['chat','聊天'],['contacts','通讯录'],['moments','朋友圈'],['me','我']].map(t=>`<div onclick="_hisTab='${t[0]}';render()" style="flex:1;text-align:center;padding:11px 0;font-size:12px;color:${_hisTab===t[0]?'#07c160':'#9a9a9a'}">${t[1]}</div>`).join('')}</div>`;
   let body='';
