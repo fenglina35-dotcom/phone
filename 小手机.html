@@ -425,10 +425,10 @@ const KEY='yibei_phone_v2';
    true 改成 false 就是【完全关掉口令门】(谁打开都不用输)。
    已经进来过的人不受影响；你自己本机有存档也不会被拦。
    ====================================================================== */
-const SHARE_GATE=true, SHARE_PW='6223';
+const SHARE_GATE=true, SHARE_PW='8980';
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ if(localStorage.getItem('yibei_unlocked')==='1')return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v217 · 更换访问口令(旧口令作废,已进来的人和本机存档不受影响)';
+const APP_VER='v218 · 更换访问口令(旧口令作废,已进来的人和本机存档不受影响)';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
