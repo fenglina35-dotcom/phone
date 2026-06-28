@@ -423,7 +423,7 @@ const KEY='yibei_phone_v2';
 const SHARE_GATE=true, SHARE_PW='12150414';
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ if(localStorage.getItem('yibei_unlocked')==='1')return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v209 · 通话挂断/接听/视频换成线条图标,缩小后的通话小窗可以拖动;修好浏览器"清空了东西还在"(现在搜索框/结果/历史一起清);又清一批emoji:设置页(音量/闹钟/壁纸/天气/存储)、查他手机被查记录、任务徽章和标签、线下约会玫瑰(换成爱心)、角色资料整页、X刷新图标做得更像真的';
+const APP_VER='v210 · 通话里口头也能定闹钟[闹钟]、记东西[记住]、记日程[日程]了;修好通话时外卖重复点(同一通电话两分钟内同样的不重复下单);音乐打轴更好找:歌单每首歌后面直接加了「打轴」按钮,点了放着歌一句句点就生成滚动时间轴';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1034,7 +1034,7 @@ async function musicClearChat(){musicInit();const sess=S.music.session;const n=(
   if(sess)S.music.chat=(S.music.chat||[]).filter(m=>m.cid!==sess.cid);else S.music.chat=[];
   _mBub={l:null,r:null};save();closeModal();render();toast('已清空一起听聊天');}
 function musicListModal(){musicInit();const songs=S.music.songs;
-  const list=songs.length?songs.map(s=>`<div class="it" style="${s.id===_mCur?'background:#2a2438':''}"><span style="flex:1;cursor:pointer;color:#eee" onclick="closeModal();musicPlay('${s.id}')">${s.id===_mCur&&_mPlaying?'🎶':'🎵'} ${esc(s.title)}${s.artist?' <small style="color:#888">- '+esc(s.artist)+'</small>':''}</span><span onclick="musicEdit('${s.id}')" style="color:#54a0ff;cursor:pointer;padding:0 6px">✎</span><span onclick="musicDel('${s.id}')" style="color:#fa5151;cursor:pointer;padding:0 4px">✕</span></div>`).join(''):'<div class="empty" style="padding:24px;color:#888">还没有歌～点下面 ＋ 添加</div>';
+  const list=songs.length?songs.map(s=>`<div class="it" style="${s.id===_mCur?'background:#2a2438':''}"><span style="flex:1;cursor:pointer;color:#eee;display:flex;align-items:center;gap:7px" onclick="closeModal();musicPlay('${s.id}')">${svgIc('note',15,s.id===_mCur&&_mPlaying?'#2bd66a':'#9a9aa2')}${esc(s.title)}${s.artist?' <small style="color:#888">- '+esc(s.artist)+'</small>':''}</span><span onclick="musicSync('${s.id}')" style="color:#2bd66a;cursor:pointer;padding:0 7px;font-size:12.5px">打轴</span><span onclick="musicEdit('${s.id}')" style="color:#54a0ff;cursor:pointer;padding:0 6px">✎</span><span onclick="musicDel('${s.id}')" style="color:#fa5151;cursor:pointer;padding:0 4px">✕</span></div>`).join(''):'<div class="empty" style="padding:24px;color:#888">还没有歌～点下面 ＋ 添加</div>';
   openModal(`<h3>歌单（${songs.length}）</h3><div class="section" style="max-height:50vh;overflow:auto">${list}</div><div class="btns" style="margin-top:10px"><button class="btn g" onclick="closeModal()">关闭</button><button class="btn p" onclick="closeModal();musicAdd()">＋ 添加歌曲</button></div>`);}
 const SVG_LOOP='<svg viewBox="0 0 24 24" width="20" height="20"><path d="M7 7h9v2.5L20 6l-4-3.5V5H5v6h2zm10 10H8v-2.5L4 18l4 3.5V19h11v-6h-2z" fill="#fff"/></svg>';
 async function aiMusicReply(cid){if(_mReplyBusy)return;const c=getC(cid);if(!c||c.blocked)return;musicInit();_mReplyBusy=true;
@@ -1252,7 +1252,8 @@ const ICONS={
   weather:'<circle cx="8.5" cy="8" r="3"/><path d="M8.5 1.8v1.6M8.5 12.6v1.6M2 8h1.6M13.4 8H15M4 3.5l1.1 1.1M11.9 3.5l-1.1 1.1"/><path d="M7.5 19a3.7 3.7 0 0 1 .6-7.4A5 5 0 0 1 18 13a3.3 3.3 0 0 1-.5 6z"/>',
   disk:'<path d="M5 4h10.5L19 7.5V19a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M8 4v4.5h6.5V4M8.5 20v-5.5h7V20"/>',
   check:'<path d="M4.5 12.5l4.5 4.5 10.5-11"/>',
-  expand:'<path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"/>'
+  expand:'<path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"/>',
+  note:'<path d="M9 18V6l10-2v11"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="15" r="2.5"/>'
 };
 function svgIc(name,size,color,sw){const p=ICONS[name];if(!p)return '';size=size||22;
   return '<svg viewBox="0 0 24 24" width="'+size+'" height="'+size+'" fill="none" stroke="'+(color||'currentColor')+'" stroke-width="'+(sw||1.9)+'" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle">'+p+'</svg>';}
@@ -4691,7 +4692,7 @@ async function callAI(sysNote,opts){if(!_call)return;const c=getC(_call.id);cons
     else cf+='\n- 这是语音通话（看不到画面），绝对不要出现任何【】动作神态描写，一个【】都不许有，只能说话。';
     if(_langN)cf+='\n- ‼️最重要：你全程只能说'+_langN+'，从头到尾每一句都是'+_langN+'，绝对不准中途切回中文整句说话（这是会被读出来的那一行）。格式：先单独一行写'+_langN+'原文（会被读出来），紧接着【换一行】用（）单独写中文翻译（不会被读）。原文一行、（中文翻译）另起一行，别写在同一行，也别把顺序搞反。\n‼️【每说一句外语，就【紧接着】在下一行写它自己的中文翻译，再说下一句；绝对不要把好几句原文堆在一起、最后才统一翻译】。一句原文配一句翻译，严格交替。【每句的中文翻译只写一遍，绝不要用不同括号（）或()把同一句翻译重复写两次】。例如：\n'+(_lang==='韩'?'사랑해\n（我爱你）\n보고 싶어\n（我想你了）':_lang==='日'?'好きだよ\n（喜欢你）\n会いたい\n（我想你了）':'I miss you\n（我想你了）\nCome here\n（过来）')+'\n- 哪怕是要挂断、道别、回应"挂了/别挂/我爱你"这种话，也必须先写'+_langN+'原文那一行，绝不能整句只说中文。'+(S.me.callName?'\n- ‼️叫到'+S.me.name+'名字时：'+_langN+'原文那一行【照常用「'+S.me.name+'」】（原文就该是地道外语）；但【中文翻译那一行】里要把名字写成中文「'+S.me.callName+'」，别在翻译里还写「'+S.me.name+'」。例：I miss you, '+S.me.name+'\n（我想你了，'+S.me.callName+'）':'');
     cf+='\n- 【你很黏ta、舍不得挂电话】：能粘着就粘着，ta说"挂了/我要忙了"你会撒娇拖着("再聊会儿嘛""不准挂""那你忙完第一个找我")、不舍得放ta走。只有当ta明确说【真的有事要去做/很困要睡了/反复要挂】时，你才依依不舍地同意挂断；平时绝不主动结束通话。要挂断时才【单独占一行】只输出 [挂断]，别和说的话写在同一行；没到非挂不可，就别输出 [挂断]，继续黏着ta说话。';
-    cf+='\n- 通话中你照样能管控ta或查ta手机：要锁软件/禁言/限时就【单独成行】写指令标签（如 [锁定|游戏]、[限时|游戏|60]、[禁言|名字]、[扣款|金额完全你自己定·看ta余额·零散随意别用固定数]）；要查岗就自然说一句「我看看你手机/微信/抖音」；ta真把你惹狠了越线了还能 [关小黑屋|原因] 把ta拖进禁闭室(需授权)；想宠ta可以 [点外卖|餐品|价格]（15分钟送达）或 [送礼|礼物名|价格]（明天到ta信箱）。\n- 通话里ta让你【发朋友圈/发推/转账】时你也能照做：[发朋友圈|内容]、[发推|内容]、[转账|金额|说明]（想发红包用 [红包|金额|祝福语]）——会真的发出去/打过去。\n这些指令标签会被系统执行、【不会被读出来】，不影响你正常讲话，也别在话里复述它们。';
+    cf+='\n- 通话中你照样能管控ta或查ta手机：要锁软件/禁言/限时就【单独成行】写指令标签（如 [锁定|游戏]、[限时|游戏|60]、[禁言|名字]、[扣款|金额完全你自己定·看ta余额·零散随意别用固定数]）；要查岗就自然说一句「我看看你手机/微信/抖音」；ta真把你惹狠了越线了还能 [关小黑屋|原因] 把ta拖进禁闭室(需授权)；想宠ta可以 [点外卖|餐品|价格]（15分钟送达）或 [送礼|礼物名|价格]（明天到ta信箱）。\n- 通话里ta让你【发朋友圈/发推/转账】时你也能照做：[发朋友圈|内容]、[发推|内容]、[转账|金额|说明]（想发红包用 [红包|金额|祝福语]）——会真的发出去/打过去。\n- 通话里ta让你【记住某事 / 定闹钟 / 记到日历】时也能照做：[记住|内容]、[闹钟|HH:MM|事由]、[日程|YYYY-MM-DD|事由]（单独成行、会真的记下来/设好，不会被读出来、别复述）。\n这些指令标签会被系统执行、【不会被读出来】，不影响你正常讲话，也别在话里复述它们。';
     const sys=buildSystem(c)+cf;
     const _md=Object.assign({aux:c.model==='aux'},opts||{});// 这个角色用主/副模型
     let content=await chatAPI([{role:'system',content:sys},...hist,{role:'system',content:personaPin(c)}],_md);
@@ -4706,7 +4707,11 @@ async function callAI(sysNote,opts){if(!_call)return;const c=getC(_call.id);cons
     const _statedPwd=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;
     content=applyControlTags(content,c,_call.id,_statedPwd);
     content=applyGrudgeTags(content,c);content=applyStarTags(content);
-    content=content.replace(/[\[【]\s*点外卖\s*[\|｜:：]([^\|｜\]】]*)[\|｜]?([^\]】]*)[\]】]/g,(mm,nm,pr)=>{const fc={role:'assistant',type:'food',name:(nm||'外卖').trim(),price:+pr||0,shop:'',from:'ta',received:false,declined:false,deliverAt:Date.now()+900000,arrived:false,id:uid(),time:Date.now()};msgs(_call.id).push(fc);notifyIncoming(c,fc);save();return '';});
+    content=content.replace(/[\[【]\s*点外卖\s*[\|｜:：]([^\|｜\]】]*)[\|｜]?([^\]】]*)[\]】]/g,(mm,nm,pr)=>{nm=(nm||'外卖').trim();const now=Date.now();if(msgs(_call.id).some(x=>x.type==='food'&&x.from==='ta'&&x.name===nm&&now-(x.time||0)<120000))return '';/* 同一通电话两分钟内同样外卖别重复点 */const fc={role:'assistant',type:'food',name:nm,price:+pr||0,shop:'',from:'ta',received:false,declined:false,deliverAt:now+900000,arrived:false,id:uid(),time:now};msgs(_call.id).push(fc);notifyIncoming(c,fc);save();return '';});
+    // 通话里口头让ta定闹钟 / 记东西 / 记日程，也能真的落地
+    content=content.replace(/[\[【]\s*记住\s*[\|｜:：]([^\]】]+)[\]】]/g,(mm,tx)=>{tx=(tx||'').trim();c.memory=c.memory||[];if(tx&&!c.memory.includes(tx)){c.memory.push(tx);save();toast('已记住：'+tx.slice(0,12));}return '';});
+    content=content.replace(/[\[【]\s*闹钟\s*[\|｜:：]([0-9]{1,2}:[0-9]{2})\s*[\|｜:：]?([^\]】]*)[\]】]/g,(mm,t,lb)=>{addAlarm(c.id,t,(lb||'起床').trim());return '';});
+    content=content.replace(/[\[【]\s*日程\s*[\|｜:：](\d{4}-\d{2}-\d{2})\s*[\|｜:：]?([^\]】]*)[\]】]/g,(mm,d,tt)=>{S.calendar.push({id:uid(),date:d,title:(tt||'日程').trim(),type:'event',contactId:c.id});save();toast('已加日程 '+d);return '';});
     content=content.replace(/[\[【]\s*送礼\s*[\|｜:：]([^\|｜\]】]*)[\|｜]?([^\]】]*)[\]】]/g,(mm,nm,pr)=>{giftSend(_call.id,(nm||'礼物').trim(),+pr||0);return '';});
     // 通话里也能：发朋友圈 / 发推 / 转账（执行后不读出来）
     content=content.replace(/[\[【]\s*发朋友圈\s*[\|｜:：]([^\]】]+)[\]】]/g,(mm,tx)=>{S.moments.unshift({id:uid(),authorId:c.id,text:(tx||'').trim(),images:[],time:Date.now(),likes:[],comments:[],acct:actId()});save();if(cur().p==='wechat'&&wxTab==='moments')render();return '';});
