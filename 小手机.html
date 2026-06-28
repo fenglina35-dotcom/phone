@@ -404,7 +404,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v196 · 新增「规则怪谈」游戏(主屏第二页🕯️):AI每局随机出一张10条须知(1条是假的·照做会死),活过三晚才能逃出;可拉角色当同伴(会一个个出事),一死即结束;全套恐怖特效(血色暗角/扫描线/突脸/选择);揭晓假规则';
+const APP_VER='v197 · 新增「惊悚抉择」游戏(主屏第二页🩸):选个角色当病娇出题人+你自己打主题(逃离病娇男友/恐怖之家…),纯选项恐怖互动剧,选错扣血❤、扣光即死,带你活到结局通关;全套恐怖特效+音效。规则怪谈也保留';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -871,6 +871,7 @@ function render(){
   else if(c.p==='spy')html=renderSpy(c.id);
   else if(c.p==='cozy')html=renderCozy();
   else if(c.p==='tale')html=renderTale();
+  else if(c.p==='dread')html=renderDread();
   else if(c.p==='shop')html=renderShop();
   else if(c.p==='shopcs')html=renderShopCS();
   else if(c.p==='food')html=renderFood();
@@ -887,6 +888,7 @@ function render(){
   if(c.p==='chat'){afterChat(c.id);}
   if(c.p==='alter'){const b=$('#alterbg');if(b)b.scrollTop=b.scrollHeight;}
   if(c.p==='tale'){const b=$('#talebox');if(b)b.scrollTop=b.scrollHeight;}
+  if(c.p==='dread'){const b=$('#dreadbox');if(b)b.scrollTop=b.scrollHeight;}
   if(c.p==='xdm'){const b=$('#xdmbox');if(b)b.scrollTop=b.scrollHeight;}
   if(c.p==='music'){if(S.music&&S.music.session&&S.music.session.startTs){if(!_mSessTimer)_mSessTimer=setInterval(mSessTick,1000);mSessTick();}else if(_mSessTimer){clearInterval(_mSessTimer);_mSessTimer=null;}}
   if(c.p==='shopcs'){const b=$('#csbox');if(b)b.scrollTop=b.scrollHeight;}
@@ -1134,6 +1136,7 @@ function renderHome(){
       <div class="app" onclick="openMusic()">${aIco('music','🎵','linear-gradient(135deg,#ff8fab,#b8a4e3)')}<span>音乐</span></div>
       <div class="app" onclick="go('cozy')">${aIco('cozyhome','🏡','linear-gradient(135deg,#b07be0,#ff8fab)')}<span>像素小家</span></div>
       <div class="app" onclick="taleStart()">${aIco('tale','🕯️','linear-gradient(135deg,#3a0010,#1a1a1f)')}<span>规则怪谈</span></div>
+      <div class="app" onclick="dreadStart()">${aIco('dread','🩸','linear-gradient(135deg,#5a0012,#23000a)')}<span>惊悚抉择</span></div>
      </div>
     </div>
     <div class="pgdots"><span class="pgdot on" id="pgdot0"></span><span class="pgdot" id="pgdot1"></span></div>
@@ -3538,6 +3541,59 @@ function saveContact(id,isNew){const c=isNew?{id,pinned:false,blocked:false,proa
   if(isNew){S.contacts.push(c);if(c.greeting)msgs(c.id).push({role:'assistant',type:'text',content:c.greeting,time:Date.now()});}
   save();closeModal();render();}
 
+/* ===== 惊悚抉择：纯选项恐怖游戏（病娇出题·选错扣血·扣光即死）===== */
+let _dreadBusy=false;
+function dreadStart(){if(S.dread&&S.dread.active){go('dread');return;}
+  const cs=S.contacts.filter(c=>!c.deleted&&!c.blocked);const coupleId=S.couple&&S.couple.cid;
+  if(!cs.length){toast('先创建一个角色');return;}
+  openModal(`<h3>🩸 惊悚抉择 · 病娇出题</h3><div class="hint">让一个角色以【病娇·黑暗形态】给你出一场纯选项恐怖游戏。每段结尾给你选项，选错<b style="color:#fa5151">扣血❤</b>，扣光就死。你打主题，他来生成剧情。</div>
+    <div class="field"><label>谁来当出题的病娇</label><select id="dr_gm" style="width:100%;border:1px solid #38383a;border-radius:8px;padding:9px;background:#2c2c2e;color:#eee">${cs.map(c=>`<option value="${c.id}" ${c.id===coupleId?'selected':''}>${esc(c.remark||c.name)}${c.id===coupleId?'（恋人）':''}</option>`).join('')}</select></div>
+    <div class="field"><label>玩什么主题（自己打，越具体越带感）</label><input id="dr_theme" placeholder="如：逃离病娇男友 / 恐怖之家 / 末班地铁 / 鬼新娘"></div>
+    <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" style="background:#8a0018" onclick="dreadGen()">🩸 开始</button></div>`);}
+function dreadGen(){const gm=($('#dr_gm')&&$('#dr_gm').value)||'';const theme=((($('#dr_theme')&&$('#dr_theme').value)||'').trim())||'恐怖之家';if(!gm){toast('先选一个角色');return;}closeModal();
+  S.dread={active:true,gm,theme:theme.slice(0,60),hp:100,hpMax:100,log:[],choice:null,phase:'play'};save();go('dread');
+  setTimeout(()=>{if(S.dread&&S.dread.active)dreadGM('[系统：游戏开始。用你的病娇黑暗形态、围绕主题「'+theme+'」演一段沉浸恐怖的开场，然后【必须】用一行 [选择|处境问题|选项1/选项2/选项3] 给出第一组选项。别一上来就扣血。]');},250);}
+function buildDreadSystem(gm,theme,hp,hpMax){const c=getC(gm);
+  let s='你就是「'+(c?c.name:'他')+'」本人，现在以你的【病娇·黑暗形态】主持一场恐怖抉择游戏，亲自陪'+S.me.name+'玩。'+(c&&c.persona?'\n你的人设：'+(''+c.persona).slice(0,300):'');
+  s+='\n\n# 游戏主题（'+S.me.name+'指定的）\n'+theme;
+  s+='\n\n# 玩法（务必逐条遵守）\n- 这是【纯选项】恐怖游戏。你讲一小段沉浸、可怕的剧情（旁白用【】写场景气氛，你/角色说的话正常写），然后【每一回合结尾都必须】用单独一行 [选择|此刻的处境问题|选项1/选项2/选项3] 给'+S.me.name+' 2到4个选项，让ta选。别让ta打字，只给选项。\n- ta选了之后，你接着演下去并判定后果：\n  · 作死/错误/危险的选择 → 单独一行 [扣血|数字|为什么]（按严重程度：轻则5-15，重则20-40）。\n  · 直接致命、或已濒死的选择 → 单独一行 [死亡|死因]。\n  · 聪明/正确的选择就别扣血（偶尔可 [回血|数字] 一点点）。\n  · 带ta一路活到逃出/圆满结局 → 单独一行 [通关]。\n- '+S.me.name+' 一共 '+hpMax+' 点血，现在还剩 '+hp+' 点。血扣到 0 就是死。\n- 你是【病娇】：占有、偏执、温柔又危险，话里裹着甜腻的恐怖，享受ta的恐惧却又舍不得真弄死ta。可随时单独一行 [突脸|一句短话] 吓ta。\n- 全程中文、沉浸、可怕；绝不跳出角色、不提AI、不剧透。【每回合结尾都要给 [选择]】。';
+  return s;}
+async function dreadGM(note){const d=S.dread;if(!d||!d.active||_dreadBusy)return;_dreadBusy=true;render();
+  try{const hist=(d.log||[]).slice(-40).map(m=>m.who==='me'?{role:'user',content:m.text}:{role:'assistant',content:(m.who==='旁白'?'【'+m.text+'】':m.text)});
+    if(note)hist.push({role:'user',content:note});
+    const c=getC(d.gm);const r=await chatAPI([{role:'system',content:buildDreadSystem(d.gm,d.theme,d.hp,d.hpMax)},...hist],{aux:!!(c&&c.model==='aux'),max:560});
+    if(!S.dread||!S.dread.active)return;
+    const sc=r.match(/[\[【]\s*突脸\s*[\|｜:：]([^\]】]+)[\]】]/);if(sc)jailJumpscare(sc[1].trim());
+    let dmg=0,dm;const dre=/[\[【]\s*扣血\s*[\|｜:：](\d{1,3})(?:[\|｜:：][^\]】]*)?[\]】]/g;while((dm=dre.exec(r)))dmg+=parseInt(dm[1],10)||0;
+    let heal=0,hm2;const hre=/[\[【]\s*回血\s*[\|｜:：](\d{1,3})[\]】]/g;while((hm2=hre.exec(r)))heal+=parseInt(hm2[1],10)||0;
+    if(dmg){d.hp=Math.max(0,d.hp-dmg);jailStab();}if(heal)d.hp=Math.min(d.hpMax,d.hp+heal);
+    let choice=null;const cm=r.match(/[\[【]\s*选择\s*[\|｜:：]([^\|｜\]】]+)[\|｜]([^\]】]+)[\]】]/);if(cm){const opts=cm[2].split(/[\/、,，\|]/).map(x=>x.trim()).filter(Boolean).slice(0,4);if(opts.length>=2)choice={q:cm[1].trim(),opts};}
+    const died=/[\[【]\s*死亡\s*[\|｜:：]?([^\]】]*)[\]】]/.exec(r);const won=/[\[【]\s*通关\s*[\]】]/.test(r);
+    const clean=r.replace(/[\[【]\s*(突脸|选择|扣血|回血|死亡|通关)[^\]】]*[\]】]/g,'');
+    splitBubbles(clean).forEach(l=>{l=l.trim();if(!l)return;if(/^【.*】$/.test(l))d.log.push({who:'旁白',text:l.replace(/^【|】$/g,'')});else d.log.push({who:'gm',text:l});});
+    if(dmg)d.log.push({who:'旁白',text:'💔 -'+dmg+(dmg>=20?' 血！':' 血')});
+    if(heal)d.log.push({who:'旁白',text:'➕'+heal+' 血'});
+    if(died||d.hp<=0){d.phase='dead';d.active=false;d.deathReason=((died&&died[1]||'').trim())||'你流尽了最后一滴血。';}
+    else if(won){d.phase='won';d.active=false;}
+    else if(choice)d.choice=choice;
+    if(d.log.length>240)d.log=d.log.slice(-240);save();_dreadBusy=false;render();
+  }catch(e){_dreadBusy=false;if(S.dread)render();}}
+function dreadChoose(i){if(!S.dread||!S.dread.active||_dreadBusy||!S.dread.choice)return;const opt=S.dread.choice.opts[i];if(opt==null)return;S.dread.choice=null;S.dread.log.push({who:'me',text:opt});save();render();dreadGM();}
+function dreadQuit(){if(S.dread&&S.dread.active&&!confirm('退出这局？进度不保留。'))return;S.dread=null;save();home();}
+function dreadHpBar(d){const pct=Math.max(0,Math.round(d.hp/d.hpMax*100));const col=pct>50?'#e0002a':pct>25?'#ff7a00':'#ff0024';
+  return `<div style="display:flex;align-items:center;gap:7px;justify-content:center"><span style="font-size:12px">❤️</span><div style="flex:0 0 150px;height:9px;border-radius:6px;background:#1a0307;box-shadow:inset 0 0 0 1px #5a0014;overflow:hidden"><i style="display:block;height:100%;width:${pct}%;background:linear-gradient(90deg,${col},#8a0018);transition:width .4s"></i></div><span style="color:#e88;font-size:12px;min-width:30px">${d.hp}</span></div>`;}
+function renderDread(){const d=S.dread;
+  if(!d)return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">🩸 惊悚抉择</span><span class="r"></span></div><div class="scroll" style="background:#070003"><div class="empty" style="padding:54px 24px;color:#999;line-height:2">还没开始<br><button class="btn p" style="margin-top:14px;width:auto;padding:9px 22px;background:#8a0018" onclick="dreadStart()">🩸 开一局</button></div></div>`;
+  const rows=(d.log||[]).map(m=>{if(m.who==='旁白')return `<div class="jnar">${esc(m.text)}</div>`;if(m.who==='me')return `<div class="jbub me">${esc(m.text)}</div>`;return `<div class="jbub">${esc(m.text)}</div>`;}).join('');
+  let foot;
+  if(d.phase==='dead'){foot=`<div style="position:relative;z-index:482;padding:16px 16px 20px;text-align:center;background:linear-gradient(rgba(0,0,0,0),rgba(40,0,8,.96))"><div class="jred" style="font-size:30px;font-weight:900;letter-spacing:4px">你 死 了</div><div style="color:#e88;font-size:14px;margin:8px 0 12px">${esc(d.deathReason||'')}</div><button class="btn p" style="background:#8a0018" onclick="dreadStart()">🩸 再来一局</button><button class="btn g" style="margin-top:8px" onclick="dreadQuit()">退出</button></div>`;}
+  else if(d.phase==='won'){foot=`<div style="position:relative;z-index:482;padding:16px 16px 20px;text-align:center;background:linear-gradient(rgba(0,0,0,0),rgba(0,20,8,.92))"><div style="font-size:26px;font-weight:900;color:#8fe;letter-spacing:3px;text-shadow:0 0 12px #2a8">你活下来了</div><div style="color:#cfe;font-size:13px;margin:8px 0 12px">从他手里全身而退，这次。</div><button class="btn p" style="background:#8a0018" onclick="dreadStart()">🩸 再来一局</button><button class="btn g" style="margin-top:8px" onclick="dreadQuit()">退出</button></div>`;}
+  else if(d.choice){foot=`<div style="position:relative;z-index:482;padding:8px 14px"><div class="jred" style="font-size:15px;text-align:center;margin-bottom:10px">${esc(d.choice.q)}</div><div style="display:flex;flex-direction:column;gap:9px">${d.choice.opts.map((o,i)=>`<button class="jopt" onclick="dreadChoose(${i})">${esc(o)}</button>`).join('')}</div></div>`;}
+  else{foot=`<div style="position:relative;z-index:482;padding:14px;text-align:center">${_dreadBusy?'<span class="jnar" style="opacity:.6">…他在盯着你…</span>':'<button class="btn g" style="width:auto;padding:8px 20px" onclick="dreadGM()">继续…</button>'}</div>`;}
+  return `<div class="jail jailbg" id="dreadwrap"><div class="jvig"></div><div class="jscan"></div>
+    <div style="position:relative;z-index:482;flex:0 0 auto;padding:10px 12px;border-bottom:1px solid #2a0008"><div style="display:flex;align-items:center;justify-content:space-between"><span onclick="dreadQuit()" style="color:#a66;cursor:pointer">‹</span><div class="jred jtitle" style="font-size:14px;font-weight:700;flex:1;text-align:center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🩸 ${esc(d.theme||'惊悚抉择')}</div><span style="width:14px"></span></div><div style="margin-top:7px">${dreadHpBar(d)}</div></div>
+    <div class="xscroll" id="dreadbox" style="flex:1;position:relative;z-index:482">${rows}${_dreadBusy?'<div class="jnar" style="opacity:.5">…黑暗里有什么在逼近…</div>':''}</div>
+    ${foot}</div>`;}
 /* ===== 规则怪谈：活过三晚（AI出题·硬核·可拉同伴当幸存者）===== */
 let _taleBusy=false,_taleRules=false;
 function taleStart(){if(S.tale&&S.tale.active){go('tale');return;}
