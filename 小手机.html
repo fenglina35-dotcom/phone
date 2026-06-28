@@ -428,7 +428,7 @@ const KEY='yibei_phone_v2';
 const SHARE_GATE=true, SHARE_PW='8980';
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ if(localStorage.getItem('yibei_unlocked')==='1')return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v225 · 登录他的微信:发现后让他闹一次就翻篇、别老揪着这事反复念叨;他资料页新增「清空ta微信数据(重新测试)」一键重置(好友/聊天/替发的朋友圈/操作记录全清,不影响你和他的正常聊天)';
+const APP_VER='v226 · 重要修复:资料页点「情侣空间·已绑定」会重新绑定、把在一起天数/纪念日/授权全冲掉的bug——现在已绑定就只进入、绝不重置;之前被冲掉的请重新设一下日期和授权(以后不会再被冲)';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -2766,7 +2766,9 @@ function saveGroup(id){const g=S.groups.find(x=>x.id===id);g.name=$('#gn').value
 function g_addMember(id){const g=S.groups.find(x=>x.id===id);const avail=S.contacts.filter(c=>!c.deleted&&g.members.indexOf(c.id)<0);if(!avail.length){toast('没有可拉的角色了');return;}
   openModal(`<h3>拉人进群</h3>${avail.map(c=>`<div class="section"><div class="it" onclick="S.groups.find(x=>x.id==='${id}').members.push('${c.id}');S.groups.find(x=>x.id==='${id}').msgs.push({senderId:'me',type:'sys',content:'${esc(c.name)} 加入了群聊',time:Date.now(),id:uid()});save();closeModal();render()">${esc(c.remark||c.name)}<span class="v">＋</span></div></div>`).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 /* ===== 情侣空间 ===== */
-async function bindCouple(id){const c=getC(id);if(S.couple&&S.couple.cid&&S.couple.cid!==id){if(!await uiConfirm('已绑定其他角色，换成 '+(c.remark||c.name)+'？'))return;}
+async function bindCouple(id){const c=getC(id);
+  if(S.couple&&S.couple.cid===id){go('couple');return;}/* 已经绑定的就是这个角色 → 直接进情侣空间，绝不重置天数/纪念日/授权 */
+  if(S.couple&&S.couple.cid&&S.couple.cid!==id){if(!await uiConfirm('已绑定其他角色，换成 '+(c.remark||c.name)+'？这会重置在一起的天数和授权哦。'))return;}
   const gr={};Object.keys(LOCKABLE).forEach(k=>gr[k]=true);const ga=S.contacts.filter(x=>!x.deleted&&x.id!==id).map(x=>x.id);S.couple={cid:id,startDate:todayStr(),anniversaries:[],grant:gr,gagAuth:ga,locks:{},gags:{}};save();render();toast('已绑定情侣空间');}
 function openCouple(){go('couple');}
 function setHomeBg(){pickFile('image/*',async f=>{S.me.homeBg=await compress(f,1000,.7);save();render();toast('主屏壁纸已换 🖼️');});}
