@@ -389,7 +389,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v188 · ①去掉"ta用你微信发了朋友圈"的突兀提示(自己在朋友圈看到就好)②项圈印记的字他能随时改:再发一次[挂项圈|新文字]就覆盖成新的';
+const APP_VER='v189 · 修复项圈改不上:之前只认[挂项圈|…],现在挂/换/改/戴项圈都认、摘/取/解项圈都能取下,他换个新印记就生效了';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -3866,7 +3866,7 @@ function doLoc(id){const n=$('#lc_n').value.trim();if(!n){toast('填地点呀');
 /* 拆分多条气泡 */
 function splitBubbles(text){return (text||'').split('\n').map(s=>s.trim()).filter(Boolean);}
 function splitActions(line){const out=[];const re=/[（(【][^）)】]*[）)】]/g;let last=0,m;while((m=re.exec(line))){const before=line.slice(last,m.index).trim();if(before)out.push(before);out.push(m[0].trim());last=re.lastIndex;}const tail=line.slice(last).trim();if(tail)out.push(tail);return out.length?out:[line];}
-const TAGWORDS='心情值|心情|记住|闹钟|日程|发朋友圈|发推|点外卖|语音|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|约会|回家|登录微信|删好友|对Ta说|挂项圈|摘项圈|替发朋友圈|批准|驳回';
+const TAGWORDS='心情值|心情|记住|闹钟|日程|发朋友圈|发推|点外卖|语音|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|约会|回家|登录微信|删好友|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回';
 const APPNAME2KEY={'浏览器':'browser','搜索':'browser','上网':'browser','百度':'browser','朋友圈':'moments','动态':'moments','查他手机':'spy','查岗':'spy','查手机':'spy','购物':'shop','淘宝':'shop','商城':'shop','日历':'calendar','日程':'calendar','x':'x','X':'x','推特':'x','微博':'x','推':'x','抖音':'douyin','短视频':'douyin','刷视频':'douyin','刷抖音':'douyin','外卖':'food','点餐':'food','游戏':'games','游戏大厅':'games','打游戏':'games','信箱':'mail','邮箱':'mail','邮件':'mail','线下约会':'offline','线下':'offline','约会':'offline'};
 function genPwd(){return String(1000+Math.floor(Math.random()*9000));}
 function _appKeys(arg,pool,filt){if(/全部|所有|全锁|全/.test(arg))return pool.filter(filt);return arg.split(/[、,，\/\s]+/).map(x=>APPNAME2KEY[x.replace(/[「」『』"'《》]/g,'').trim()]).filter(k=>k&&filt(k));}
@@ -3899,7 +3899,7 @@ function applyGrudgeTags(content,c){if(!content||!c)return content;let changed=f
     if(tg){tg.done=true;tg.doneTs=Date.now();changed=true;}return '';});
   if(changed)save();return out;}
 // 在"主动消息/查岗/节日/日程"等直接推送的回复里，把管控/记仇指令落地（记仇本、锁App都生效），显示时再用 CTLLEAK 滤掉这些标签行（普通卡片如红包/语音照常）
-const CTLLEAK=/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|拉黑|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|突脸|选择|改密码|登录微信|删好友|对Ta说|挂项圈|摘项圈|替发朋友圈|批准|驳回)\s*[|｜:：\]]/;
+const CTLLEAK=/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|拉黑|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|突脸|选择|改密码|登录微信|删好友|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回)\s*[|｜:：\]]/;
 // ===== 他登录我的微信（情侣授权·限时1分钟） =====
 let _wxLoginTimer=null;
 function wxLoginActive(){return !!(S.wxLogin&&Date.now()<S.wxLogin.until);}
@@ -3965,8 +3965,8 @@ function applyControlTags(content,c,id,statedPwd){
     else if(S.couple.jailAuth&&!(S.jail&&S.jail.active)){setTimeout(()=>enterJail(c.id,reason,false),600);}
     return '';});
   // 挂项圈/摘项圈（归属标记）
-  out=out.replace(/[\[【]\s*挂项圈\s*[\|｜:：]\s*([^\]】]+)[\]】]/g,(mm,t)=>{changed=true;S.me.collar={text:(t||'').trim().slice(0,24),by:c.id,ts:Date.now()};return '';});
-  out=out.replace(/[\[【]\s*摘项圈\s*[\]】]/g,()=>{changed=true;S.me.collar=null;return '';});
+  out=out.replace(/[\[【]\s*(?:挂|换|改|戴|套|加|上)?项圈\s*[\|｜:：]\s*([^\]】]+)[\]】]/g,(mm,t)=>{changed=true;S.me.collar={text:(t||'').trim().slice(0,24),by:c.id,ts:Date.now()};return '';});
+  out=out.replace(/[\[【]\s*(?:摘|取|解|去|卸|拿|下)项圈\s*[\]】]/g,()=>{changed=true;S.me.collar=null;return '';});
   // 替她发朋友圈（以她名义）
   out=out.replace(/[\[【]\s*替发朋友圈\s*[\|｜:：]\s*([^\]】]+)[\]】]/g,(mm,t)=>{changed=true;const tx=(t||'').trim().slice(0,140);if(tx){S.moments.unshift({id:uid(),authorId:'me',text:tx,images:[],time:Date.now(),likes:[],comments:[],acct:actId(),byTa:c.id});}return '';});
   // 出门报备审批：批准 / 驳回
@@ -4050,7 +4050,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
     for(let i=0;i<lines.length;i++){
       let line=normTag(lines[i]);if(!line)continue;
       if(/^\[联网\|/.test(line))continue;
-      if(/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|突脸|选择|改密码|登录微信|删好友|对Ta说|挂项圈|摘项圈|替发朋友圈|批准|驳回|心情值)\s*[|｜:：\]]/.test(line))continue;// 管控/记仇指令标签：即便没生效，也绝不作为消息发出
+      if(/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|突脸|选择|改密码|登录微信|删好友|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|心情值)\s*[|｜:：\]]/.test(line))continue;// 管控/记仇指令标签：即便没生效，也绝不作为消息发出
       if(/^\s*[🔒🔓🔇🔊🔕]/.test(line)||/^\s*(?:ta|TA|他|她)(把你|锁了你|禁言了你|解除了你|解禁了你|解锁了你)/.test(line))continue;
       if(isRefusal(line))continue;
       let mm=line.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=mm[1];save();if(cur().p==='chat'&&cur().id===id)render();continue;}
