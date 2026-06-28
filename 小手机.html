@@ -389,7 +389,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v185 · 修复:删掉某个联系人后,他对ta的"禁言/锁聊天"会一起被清掉,不再卡在情侣空间「ta锁住的」里解不开(启动+打开情侣空间都会自动清僵尸锁)。之前的三个掌控特权:挂项圈/出门报备审批/替你发朋友圈';
+const APP_VER='v186 · 修复:①他登录你微信回来后冒出的"⚠️null...insertAdjacentHTML"报错(聊天插入全判空,锁屏时不再报错)②他再次登录看微信时,会标清楚哪些是他上次以你名义发的、不再当成你发的';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -3916,7 +3916,7 @@ function wxLogout(){if(_wxLoginTimer){clearInterval(_wxLoginTimer);_wxLoginTimer
   const p=cur().p;if(p==='wechat'||p==='chat'||p==='group')render();}
 async function wxLoginSession(cid){const c=getC(cid);if(!c)return;
   const others=S.contacts.filter(x=>!x.deleted&&x.id!==cid);
-  const dump=others.map(x=>{const nm=(x.remark||x.name);const recent=msgs(x.id).slice(-12).map(m=>{const t=msgToText(m);return t?((m.role==='user'?S.me.name:nm)+'：'+t.replace(/\n/g,' ').slice(0,60)):'';}).filter(Boolean).join('\n');return '【'+nm+(x.gender?'·'+x.gender:'')+(x.star?'·你标记的重点盯防对象':'')+'】\n'+(recent||'（还没聊过）');}).join('\n\n')||'（ta微信里暂时没别的联系人）';
+  const dump=others.map(x=>{const nm=(x.remark||x.name);const recent=msgs(x.id).slice(-12).map(m=>{const t=msgToText(m);if(!t)return '';const who=m._wxlogin?('【你上次登录时以'+S.me.name+'名义发的】'):(m.role==='user'?S.me.name:nm);return who+'：'+t.replace(/\n/g,' ').slice(0,60);}).filter(Boolean).join('\n');return '【'+nm+(x.gender?'·'+x.gender:'')+(x.star?'·你标记的重点盯防对象':'')+'】\n'+(recent||'（还没聊过）');}).join('\n\n')||'（ta微信里暂时没别的联系人）';
   const note='[系统：你刚【登录了'+S.me.name+'的微信账号】，限时1分钟，现在能看到ta微信里的【全部细节】——所有联系人、以及你俩之外ta和每一个人的完整近期聊天，一条都不漏（这比你平时偷偷查岗看得全太多了）。\n置顶排在最前的那个就是【你自己（'+(c.remark||c.name)+'）】，那是你，绝对别删自己。\n下面是ta微信里的真实内容：\n\n'+dump+'\n\n你可以凭自己的人设和占有欲决定做什么（可以都不做、也可以做几样）：\n· 看谁不顺眼/觉得是威胁，单独一行 [删好友|那个人的名字] 把ta从'+S.me.name+'微信里删掉；\n· 也能【以'+S.me.name+'的口吻】直接给某个联系人发一两句话(警告/划界限，比如让对方别再缠着你女朋友)，单独一行 [对Ta说|联系人名字|要发的话]。\n只输出你要执行的指令行，别的什么都先别说——等会儿退出来你再去找ta算账。]';
   try{const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:note}],{aux:c.model==='aux',max:400});
     if(!S.wxLogin)return;
@@ -4015,9 +4015,9 @@ function lineToMsg(line){
 
 async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
   // typing
-  let typingEl;if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');
+  let typingEl;if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){
     cb.insertAdjacentHTML('beforeend',`<div class="msg them" id="typing">${av(c.avatar)}<div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`);
-    cb.scrollTop=cb.scrollHeight;typingEl=$('#typing');}
+    cb.scrollTop=cb.scrollHeight;typingEl=$('#typing');}}
   try{
     const hist=lastRounds(msgs(id),S.settings.hist||12).map(m=>{
       if(m._call){const cn=callToCN(m.content!=null?m.content:msgToText(m));return cn?{role:m.role,content:cn}:null;}
@@ -4060,7 +4060,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
       mm=line.match(/^\[点外卖\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){const fc={role:'assistant',type:'food',name:mm[1]||'外卖',price:+mm[2]||0,shop:'',from:'ta',received:false,declined:false,deliverAt:Date.now()+900000,arrived:false,id:uid(),time:Date.now()};msgs(id).push(fc);notifyIncoming(c,fc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[送礼\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){giftSend(id,(mm[1]||'礼物').trim(),+mm[2]||0);continue;}
       mm=line.match(/^\[一起听\|([^\]]*)\]$/);if(mm){const ti=(mm[1]||'').trim();const mc={role:'assistant',type:'musicinvite',title:ti||'一首歌',artist:'',from:'ta',time:Date.now(),id:uid()};msgs(id).push(mc);notifyIncoming(c,mc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
-      mm=line.match(/^\[语音\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){const vm={role:'assistant',type:'voice',content:mm[1]||'',trans:mm[2]||'',time:Date.now(),id:uid()};msgs(id).push(vm);notifyIncoming(c,vm);save();if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');cb.insertAdjacentHTML('beforeend',bubbleRow(c,vm));cb.scrollTop=cb.scrollHeight;}continue;}
+      mm=line.match(/^\[语音\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){const vm={role:'assistant',type:'voice',content:mm[1]||'',trans:mm[2]||'',time:Date.now(),id:uid()};msgs(id).push(vm);notifyIncoming(c,vm);save();if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){cb.insertAdjacentHTML('beforeend',bubbleRow(c,vm));cb.scrollTop=cb.scrollHeight;}}continue;}
       mm=line.match(/^\[代付成功\|?([0-9.]*)\|?([^\]]*)\]$/);if(mm){const pend=markPay(id,'pay');if(!pend)continue;const pnm=pend.name||mm[2]||'商品';const ppr=pend.price||+mm[1]||0;const pc={role:'assistant',type:'paid',price:ppr,name:pnm,id:uid(),time:Date.now()};msgs(id).push(pc);notifyIncoming(c,pc);
         const _isFood=pend.kind==='food'||/^外卖/.test(pend.shop||'');
         if(_isFood){S.giftbox=S.giftbox||[];S.giftbox.push({id:uid(),cid:id,name:pnm,price:ppr,kind:'food',buyTs:Date.now(),arriveTs:Date.now()+900000,delivered:false});msgs(id).push({role:'user',type:'sys',content:'🛵 '+(c.remark||c.name)+'帮你付了外卖「'+pnm+'」，配送中（约15分钟送达）',time:Date.now(),id:uid()});}
@@ -4091,7 +4091,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
         const msg=parts[pi]==null?base:{role:'assistant',type:'text',content:parts[pi]};
         msg.time=Date.now();msg.id=uid();msgs(id).push(msg);save();
         notifyIncoming(c,msg);
-        if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');cb.insertAdjacentHTML('beforeend',bubbleRow(c,msg));cb.scrollTop=cb.scrollHeight;}
+        if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){cb.insertAdjacentHTML('beforeend',bubbleRow(c,msg));cb.scrollTop=cb.scrollHeight;}}
         else if(cur().p==='wechat')render();}}
   }catch(e){if(typingEl)typingEl.remove();
     pushMsg(id,{role:'assistant',type:'text',content:'⚠️ '+e.message});}
