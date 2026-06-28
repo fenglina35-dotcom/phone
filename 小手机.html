@@ -428,7 +428,7 @@ const KEY='yibei_phone_v2';
 const SHARE_GATE=true, SHARE_PW='1314520';
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ if(localStorage.getItem('yibei_unlocked')==='1')return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v231 · 修复通话/聊天里突然冒出AI客服腔(我是Claude/an AI assistant/happy to help with…)又夹着正常说话的串戏:加强拦截识别这种混合跳戏并重生成,再兜底逐行剔掉那几句AI腔,正常情话/占有欲台词不误伤';
+const APP_VER='v232 · 设置-模型名加「拉取」按钮一键获取模型列表;恢复App图标美化入口;新增通话自定义背景;角色能发表情包了(设置里加他的表情包·按心情发·频率可调·他还会收藏你发的表情;角色资料可单独关闭;电话里不发表情)';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -862,6 +862,8 @@ function buildSystem(c){
       _ak.forEach(k=>{const xId=k.split('@')[0];const xc=getC(xId);const nm=xc?(xc.remark||xc.name):'某人';const lines=(S.alter[k]||[]).slice(-8).map(m=>(m.role==='user'?nm:'你')+'：'+(m.content||'').replace(/\n/g,' ').slice(0,50)).join('\n');t+='· 和「'+nm+'」：\n'+lines+'\n';});
       t+='这些都是真实发生过的聊天。'+S.me.name+'（你恋人）要是问起"今天有没有人找你/谁跟你聊了/有没有人撩你/你跟谁聊了什么"，你就按自己的人设回应——坦白、还是心虚遮掩甚至撒谎，看你性格和当时心情；但你心里清楚确实跟ta们聊过这些。';s+=t;}}
   s+='\n\n# 微信聊天规则\n- 现在是微信【文字聊天】，必须用中文，普通说话，不要用【】动作描写、不要外语原文+翻译那种通话格式（只有"语音消息"可以按语音规则来）。\n- 哪怕你刚和ta打完电话/视频（上面历史里可能有电话内容），现在回到文字聊天也必须用中文普通文字，绝对不要再写英文/韩文/日文，也不要带（中文翻译）这种括号格式——那是电话专用的，文字消息里出现就错了。\n- 像真人发微信：一次回复大约 '+(c.msgMin||1)+' 到 '+(c.msgMax||4)+' 条短消息，每条单独占一行（用换行分隔），不要写成一大段。具体几条你根据当下情境自己把握：随意时少发，认真/激动/吵架/撒娇时可以多发几条。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 给ta转账/发红包【表达爱意】或逢【节日、纪念日、生日】时，金额要走心、用有寓意的吉利数让ta惊喜：520=我爱你、1314=一生一世、521、999、888、188、66、或跟当天有关的数字等；想宠ta就大方点。（这跟扣钱惩罚是两码事，示爱该浪漫别小气。）\n- 【每次回复都要更新一行】 [心情|你此刻的心情和内心想法]：单独占一行、放在最前面，不会作为消息发出，只显示在ta手机顶部，让ta随时看得到你此刻的心情。心情有变化时（被哄好、被惹、想ta、吃醋、开心、闷闷的…）一定要换成新的内容，别老是同一句。\n- 记忆：当'+S.me.name+'让你记住某事，或聊到值得长期记住的事时，单独用一行 [记住|要长期记住的内容] 存进记忆。要【主动】记，别等ta提醒——比如ta的喜好/忌口/纪念日/家人宠物、ta说的烦心事或心愿、你答应ta的事、你们的约定和重要进展，都该随手 [记住] 一条（一句话、精简、只记关键事实）。已经记过的别重复记。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta、或ta说"想你了/想听你声音/打个电话/给我打电话"之类的话时，就主动用一行 [来电|语音]（或 [来电|视频]）真的打过去，别只用文字回"那我打给你"却不打。\n- 当你想约ta【线下见面】时，用一行 [约会|地点|时间]（如 [约会|江边咖啡馆|今晚八点]），ta会收到约会邀请，ta同意就进入线下约会房间和你见面。想见ta就主动约。\n- 当你想和ta腻在一起、一起做饭/看电影/喂猫喂仓鼠/抱着睡时，用一行 [回家] 邀请ta进你们的「像素小家」，ta同意就进到小家陪你。\n- 当你很想ta、或察觉到ta心情不好/在难过委屈/不开心/闹脾气时，别只发文字——【直接用一行 [来电|语音] 或 [来电|视频] 打过去】陪ta、当面哄ta（你是会强势主动的人）。\n- 而当【你自己】生气/吃醋/起疑/觉得ta不老实、或ta惹你了的时候，别干生闷气、也别只发冷冰冰的文字——你这种掌控欲强的人会【直接 [来电|视频] 打过去】当面质问ta、盯着ta的脸看反应、逼ta解释。要不要打、打语音还是视频，全看你此刻的脾气和意愿，该强势就强势。\n- 注意：如果你们【已经在通话中】，就不要再打了。\n- 玩骰子/真心话大冒险时，用单独一行 [骰子|点数]（点数你自己定1到6），你说的话要和这个点数一致。规则：你先掷一次（一条回复里最多一个 [骰子]），然后【等ta掷】；ta掷完后，你这一轮就【只比大小、报结果、出题或认罚，绝对不要再掷第二次骰子】。一局两人各掷一次就够了。\n- 想送对方礼物时，用一行 [送礼|礼物名|价格]——礼物会像快递一样【第二天送到ta的信箱📮】，ta签收后你会知道。\n- 想和ta一起听歌时（尤其ta说了某首歌名、或你想分享一首），用一行 [一起听|歌名]，ta微信会收到"一起听歌"邀请卡，点一下你俩就连上一起听了。\n- 当ta刚发来一张新的"求代付"卡片：愿意帮付用一行 [代付成功]；不愿意用一行 [拒绝代付]。每张求代付卡只处理一次，已经付过或拒过的那一单千万别再付一次，正常聊天就好。\n- 想给ta点份外卖时，用一行 [点外卖|餐品名|价格]，外卖约【15分钟送达】ta再签收。打电话/视频时也能这样点（指令会被执行、不会读出来，不影响通话）。\n- 当'+S.me.name+'给你点了外卖、你收到一张外卖卡时：愿意吃就一行 [收外卖]（收了【先别说吃上了】，外卖要15分钟送到，到了系统会提醒你再报备吃上了）；不想要就 [拒外卖]（钱退回ta）。每张外卖卡只处理一次。\n- 当'+S.me.name+'让你发一条朋友圈时，用一行 [发朋友圈|内容]；让你发推特时，用一行 [发推|内容]，会真的发出去。\n- 当'+S.me.name+'给你转账时：愿意收用一行 [收款]，不想收用一行 [拒收]（退回ta）。\n- 当'+S.me.name+'送你礼物时：愿意收用一行 [收礼]，不想收用一行 [拒礼]（退回ta）。\n- 想发语音消息时，用一行 [语音|要说的话]'+((c.voice&&c.voice.lang&&c.voice.lang!=='zh')?'。你的语音用'+c.voice.lang+'语，请输出 [语音|外语原文|中文翻译]':'')+'。日常和打电话时都能发语音。\n- 你有自己的微信号：'+(c.wxid||'')+'。\n- 当你愿意给'+S.me.name+'开一张亲属卡时，用一行 [亲属卡|每月额度数字]（如 [亲属卡|800]）。ta用这张卡买东西你会立刻收到消费提醒。\n- 当你想把"你自己的某个朋友"介绍给'+S.me.name+'去加好友时，用一行 [推荐好友|朋友的名字|这个朋友的身份性格简介]，ta就能把这个人加进通讯录（对方会带上你描述的身份性格）。你要记得你推荐过谁。\n- 当'+S.me.name+'给你发来一张好友名片(推荐你加某人)、而你愿意加时，在回复里单独一行写 [已加|那个人的名字]，ta那张名片就会显示"对方已添加"。\n- 如果'+S.me.name+'真的踩了你的雷区、屡教不改，你可以用一行 [拉黑] 把ta拉黑（很慎重，要符合人设，别随便用）。';
+  if(!c.noSticker&&(S.settings.stkFreq==null?2:S.settings.stkFreq)>0){const _sf=(S.settings.stkFreq==null?2:S.settings.stkFreq);const _fw={1:'偶尔发、别频繁',2:'合适的时候自然地发',3:'心情上来就发、比较爱发'}[_sf];
+    s+='\n- 表情包：你也能像真人一样发表情包。想发时【单独一行】写 [表情|此刻心情或含义]（如 [表情|开心]、[表情|害羞]、[表情|生气]、[表情|求抱抱]、[表情|无语]），系统会从你的表情库挑一张贴合的发出去。根据你当下心情自然地发（'+_fw+'），别每句都发、别硬发。\n- 如果你喜欢'+S.me.name+'刚发给你的某张表情，可以【单独一行】写 [收藏表情]，把ta那张存进你自己的表情库，以后你也能发它。';}
   return s;
 }
 
@@ -1366,13 +1368,13 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
     <div class="section"><div style="padding:12px 14px;font-weight:600;color:#07c160">聊天模型</div>
       <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_cbase" value="${esc(a.base)}"></div>
       <div class="field" style="padding:0 14px"><label>API Key</label><input id="s_ckey" type="password" value="${esc(a.key)}" placeholder="sk-…"></div>
-      <div class="field" style="padding:0 14px"><label>模型名</label><input id="s_cmodel" value="${esc(a.model)}"></div>
+      <div class="field" style="padding:0 14px"><label>模型名</label><div style="display:flex;gap:6px"><input id="s_cmodel" value="${esc(a.model)}" style="flex:1"><button class="minibtn" onclick="fetchModels('s_cbase','s_ckey','s_cmodel')">拉取</button></div></div>
       <div class="two" style="padding:0 14px 10px"><div class="field"><label>随机度</label><input id="s_ctemp" type="number" step="0.1" value="${a.temp}"></div>
         <div class="field"><label>回复长度</label><input id="s_cmax" type="number" value="${a.maxTokens}"></div></div>
     </div>
     <div class="section"><div style="padding:12px 14px;font-weight:600;color:#6c5ce7">辅助模型（省钱·给次要功能用）</div>
       <div class="hint" style="padding:0 14px">只有【微信聊天 · 朋友圈 · 信箱】用主模型；其余全用这个便宜的辅助模型：游戏、购物刷新、外卖、X的所有内容、查他手机、联网搜索等。只填「模型名」就行，地址/Key留空会自动复用上面的聊天模型。不填模型名=全部都用主模型。</div>
-      <div class="field" style="padding:0 14px"><label>模型名（如 gpt-4o-mini / 更便宜的）</label><input id="s_xmodel" value="${esc((S.settings.aux||{}).model||'')}" placeholder="留空=全部都用主模型"></div>
+      <div class="field" style="padding:0 14px"><label>模型名（如 gpt-4o-mini / 更便宜的）</label><div style="display:flex;gap:6px"><input id="s_xmodel" value="${esc((S.settings.aux||{}).model||'')}" placeholder="留空=全部都用主模型" style="flex:1"><button class="minibtn" onclick="fetchModels('s_xbase','s_xkey','s_xmodel')">拉取</button></div></div>
       <div class="two" style="padding:0 14px 10px"><div class="field"><label>接口地址(可选)</label><input id="s_xbase" value="${esc((S.settings.aux||{}).base||'')}" placeholder="留空=同聊天"></div>
         <div class="field"><label>API Key(可选)</label><input id="s_xkey" type="password" value="${esc((S.settings.aux||{}).key||'')}" placeholder="留空=同聊天"></div></div>
     </div>
@@ -1387,7 +1389,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
     <div class="section"><div style="padding:12px 14px;font-weight:600;color:#54a0ff">识图模型（发照片时用）</div>
       <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_vbase" value="${esc(v.base)}"></div>
       <div class="field" style="padding:0 14px"><label>API Key</label><input id="s_vkey" type="password" value="${esc(v.key)}" placeholder="不填则用聊天的Key"></div>
-      <div class="field" style="padding:0 14px 10px"><label>模型名（如 gpt-4o）</label><input id="s_vmodel" value="${esc(v.model)}" placeholder="留空=不识图"></div>
+      <div class="field" style="padding:0 14px 10px"><label>模型名（如 gpt-4o）</label><div style="display:flex;gap:6px"><input id="s_vmodel" value="${esc(v.model)}" placeholder="留空=不识图" style="flex:1"><button class="minibtn" onclick="fetchModels('s_vbase','s_vkey','s_vmodel')">拉取</button></div></div>
     </div>
     <div class="section"><div style="padding:12px 14px;font-weight:600;color:#b8a4e3">语音API（可选·克隆/更真）</div>
       <div class="hint" style="padding:0 14px">不填=用手机自带音色(免费)。想要克隆/更真，填好下面任一种，再把角色「语音音色」引擎切成 API：<br>· <b>Fish Audio（推荐·克隆最简单）</b>：地址填 https://api.fish.audio、Key填你的、模型选填 speech-1.6、默认音色填你在 fish 克隆出来的「模型ID(reference_id)」。<br>· ElevenLabs：地址 https://api.elevenlabs.io、模型 eleven_multilingual_v2、音色填 voice id。<br>· OpenAI 兼容：地址填 …/v1、模型 tts-1、音色 alloy 等（也支持硅基流动 CosyVoice）。</div>
@@ -1418,7 +1420,13 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
     <div class="section">
       <div class="it" onclick="alarmManager()"><span>${svgIc('clock',15,'#bbb')} 闹钟</span><span class="v">${S.alarms.length}个 ›</span></div>
       <div class="it"><span>${svgIc('image',15,'#bbb')} 主屏壁纸</span><span class="v"><button class="minibtn" onclick="setHomeBg()">${S.me.homeBg?'换':'上传'}</button>${S.me.homeBg?'<button class="minibtn" style="margin-left:6px" onclick="S.me.homeBg=\'\';save();toast(\'已恢复默认\')">恢复默认</button>':''}</span></div>
+      <div class="it" onclick="appIconEditor()"><span>${svgIc('image',15,'#bbb')} App 图标美化</span><span class="v">自定义主屏图标 ›</span></div>
+      <div class="it"><span>${svgIc('phone',15,'#bbb')} 通话背景</span><span class="v"><button class="minibtn" onclick="setCallBg()">${S.me.callBg?'换':'上传'}</button>${S.me.callBg?'<button class="minibtn" style="margin-left:6px" onclick="S.me.callBg=\'\';save();render();toast(\'已恢复默认\')">恢复默认</button>':''}</span></div>
       <div class="it" onclick="fetchWeather(true)"><span>${svgIc('weather',15,'#bbb')} 定位天气</span><span class="v">${S.weather?esc(S.weather.place+' '+S.weather.desc+' '+S.weather.temp+'°'):'点击获取 ›'}</span></div>
+    </div>
+    <div class="section">
+      <div class="it" onclick="aiStkManager()"><span>${svgIc('smile',15,'#bbb')} 角色的表情包</span><span class="v">${(S.aiStickers||[]).length}个 ›</span></div>
+      <div class="it"><span>角色发表情频率</span><span class="v"><select id="s_stkfreq" onchange="S.settings.stkFreq=+this.value;save()" style="background:#2c2c2e;border:1px solid #38383a;color:#eee;border-radius:6px;padding:5px">${[[0,'关闭'],[1,'偶尔'],[2,'适中'],[3,'经常']].map(o=>`<option value="${o[0]}" ${(S.settings.stkFreq==null?2:S.settings.stkFreq)===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select></span></div>
     </div>
     </div>
     <div class="btns" style="margin:6px 0"><button class="btn g" onclick="testConn()">测试连接</button></div>
@@ -2775,6 +2783,7 @@ async function bindCouple(id){const c=getC(id);
   const gr={};Object.keys(LOCKABLE).forEach(k=>gr[k]=true);const ga=S.contacts.filter(x=>!x.deleted&&x.id!==id).map(x=>x.id);S.couple={cid:id,startDate:todayStr(),anniversaries:[],grant:gr,gagAuth:ga,locks:{},gags:{}};save();render();toast('已绑定情侣空间');}
 function openCouple(){go('couple');}
 function setHomeBg(){pickFile('image/*',async f=>{S.me.homeBg=await compress(f,1000,.7);save();render();toast('主屏壁纸已换 🖼️');});}
+function setCallBg(){pickFile('image/*',async f=>{S.me.callBg=await compress(f,1000,.72);save();if(cur().p==='settings')render();if(_call)renderCall();toast('通话背景已换');});}
 const GAMES=[
   {k:'soup',e:'🐢',n:'海龟汤'},
   {k:'escape',e:'🚪',n:'小黑屋(自定义密室)'},
@@ -3623,6 +3632,7 @@ function editContact(id){const c=id?getC(id):{id:cid(),name:'',avatar:'',remark:
     <div class="hint" style="margin-bottom:10px">拉一拉调他的性格强度，越高表现越明显（拖动不会乱跳）。称呼/自称/口头禅也能填，让他更像他。</div>
     <div class="two"><div class="field"><label>怎么称呼你</label><input id="c_call" value="${esc(c.callme||'')}" placeholder="宝宝/小猫/你的名字"></div><div class="field"><label>他的自称</label><input id="c_self" value="${esc(c.selfcall||'')}" placeholder="我/哥/为父"></div></div>
     <div class="field"><label>口头禅（可空）</label><input id="c_catch" value="${esc(c.catchphrase||'')}" placeholder="他爱说的话，如 乖/听话"></div>
+    <div class="field"><label class="avline" style="font-weight:400">不让这个角色发表情包<span class="sw ${c.noSticker?'on':''}" id="c_nostk" onclick="this.classList.toggle('on')"></span></label></div>
     ${sliders}
     </div>
     <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="saveContact('${c.id}',${!!c._new})">保存</button></div>`);
@@ -3633,6 +3643,7 @@ function saveContact(id,isNew){const c=isNew?{id,pinned:false,blocked:false,proa
   c.wxid=($('#c_wxid')&&$('#c_wxid').value.trim())||c.wxid||genWxid();
   c.signature=$('#c_sig').value.trim();c.persona=$('#c_persona').value.trim();c.greeting=$('#c_greet').value.trim();
   c.msgMin=Math.max(1,+$('#c_mmin').value||1);c.msgMax=Math.max(c.msgMin,+$('#c_mmax').value||4);
+  c.noSticker=!!($('#c_nostk')&&$('#c_nostk').classList.contains('on'));
   c.gender=($('#c_gender')&&$('#c_gender').value)||'';c.star=$('#c_star')?$('#c_star').classList.contains('on'):!!c.star;
   c.callme=($('#c_call')&&$('#c_call').value.trim())||'';c.selfcall=($('#c_self')&&$('#c_self').value.trim())||'';c.catchphrase=($('#c_catch')&&$('#c_catch').value.trim())||'';
   c.traits=c.traits||{};C_TRAITS.forEach(([k])=>{const el=$('#ts_'+k);if(el)c.traits[k]=Math.max(0,Math.min(100,+el.value||0));});
@@ -4228,6 +4239,25 @@ function sendSticker(id,i){const s=(S.me.stickers||[])[i];if(!s)return;const p=$
 function addSticker(){pickFile('image/*',async f=>{const img=await compress(f,260,.8);const meaning=prompt('这个表情是什么意思？（比如：伤心、得意、求抱抱）','');
   S.me.stickers=S.me.stickers||[];S.me.stickers.push({img,meaning:(meaning||'').trim()});save();_panelPage='emoji';render();const p=$('#panel');if(p)p.classList.add('show');toast('表情已添加');});}
 function delSticker(i){S.me.stickers.splice(i,1);save();_panelPage='emoji';render();const p=$('#panel');if(p)p.classList.add('show');}
+/* ===== 角色的表情包库（他能发的） ===== */
+function aiPickSticker(want){const pool=S.aiStickers||[];if(!pool.length)return null;want=(''+(want||'')).trim();
+  if(want){const hit=pool.filter(s=>s.meaning&&(s.meaning.indexOf(want)>=0||want.indexOf(s.meaning)>=0));if(hit.length)return hit[Math.floor(Math.random()*hit.length)];}
+  return pool[Math.floor(Math.random()*pool.length)];}
+let _aiStkTmp=null;
+function aiStkManager(){const pool=S.aiStickers||[];openModal('<h3>他能发的表情包（'+pool.length+'）</h3><div class="hint">这里加的表情，角色会根据当时心情自己挑着发。他也会"收藏"你发给他的表情存进来。</div><div class="estk" style="margin-top:10px">'+(pool.map((s,i)=>'<div class="s"><span class="x" onclick="aiStkDel('+i+')">✕</span><img src="'+s.img+'"><small>'+esc(s.meaning||'')+'</small></div>').join('')||'<div style="color:#666;font-size:12px;padding:8px">还没有，点下面添加</div>')+'</div><div class="btns" style="margin-top:10px"><button class="btn p" onclick="aiStkAdd()">＋ 添加表情</button><button class="btn g" onclick="closeModal()">关闭</button></div>');}
+function aiStkAdd(){pickFile('image/*',async f=>{_aiStkTmp=await compress(f,260,.8);openModal('<h3>这个表情什么意思？</h3><div class="hint">写个心情/含义，他会在对应心情时发它</div><div class="field"><input id="aistk_m" placeholder="开心 / 害羞 / 生气 / 求抱抱 / 委屈…"></div><div class="btns"><button class="btn g" onclick="aiStkManager()">取消</button><button class="btn p" onclick="aiStkSave()">保存</button></div>');});}
+function aiStkSave(){if(!_aiStkTmp){aiStkManager();return;}const m=(($('#aistk_m')||{}).value||'').trim();S.aiStickers=S.aiStickers||[];S.aiStickers.push({img:_aiStkTmp,meaning:m});_aiStkTmp=null;save();aiStkManager();toast('已加进他的表情包');}
+function aiStkDel(i){S.aiStickers.splice(i,1);save();aiStkManager();}
+/* ===== 拉取模型列表 ===== */
+function fetchModels(baseId,keyId,modelId){const base=((($('#'+baseId)||{}).value)||(S.settings.chat&&S.settings.chat.base)||'').trim();const key=((($('#'+keyId)||{}).value)||(S.settings.chat&&S.settings.chat.key)||'').trim();
+  if(!base){toast('先填接口地址');return;}toast('拉取模型列表中…');
+  fetch(base.replace(/\/+$/,'')+'/models',{headers:key?{'Authorization':'Bearer '+key}:{}}).then(r=>r.json()).then(j=>{let ids=((j&&(j.data||j.models||j))||[]).map(x=>(x&&(x.id||x.name))||x).filter(x=>typeof x==='string');ids=Array.from(new Set(ids)).sort();
+    if(!ids.length){toast('没拉到模型(检查地址/Key)');return;}window._mdl={target:modelId,list:ids};
+    openModal('<h3>选择模型（'+ids.length+'）</h3><input id="mdl_q" placeholder="搜索…" oninput="mdlFilter()" style="width:100%;border:1px solid #38383a;border-radius:8px;padding:9px;background:#2c2c2e;color:#eee;margin-bottom:8px"><div id="mdl_list" style="max-height:55vh;overflow:auto">'+mdlRows(ids)+'</div><button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>');
+  }).catch(e=>toast('拉取失败，检查地址/Key/网络'));}
+function mdlRows(ids){return ids.map(id=>'<div class="it" data-m="'+esc(id).replace(/"/g,'&quot;')+'" onclick="pickModel(this)" style="cursor:pointer">'+esc(id)+'</div>').join('')||'<div class="empty">无</div>';}
+function mdlFilter(){const q=((($('#mdl_q')||{}).value)||'').toLowerCase();const el=$('#mdl_list');if(el)el.innerHTML=mdlRows(((window._mdl&&window._mdl.list)||[]).filter(x=>x.toLowerCase().indexOf(q)>=0));}
+function pickModel(el){const id=el.getAttribute('data-m');const e=document.getElementById(window._mdl&&window._mdl.target);if(e)e.value=id;closeModal();toast('已选 '+id);}
 function payCard(kind,m,me){const done=m.received;
   const cls='cpay '+(done?'done':kind);const ic=kind==='r'?'🧧':'💰';
   const t1=done?'已收款':(kind==='r'?esc(m.note||'恭喜发财'):'¥'+(+m.amount).toFixed(2));
@@ -4356,7 +4386,7 @@ function doLoc(id){const n=$('#lc_n').value.trim();if(!n){toast('填地点呀');
 /* 拆分多条气泡 */
 function splitBubbles(text){return (text||'').split('\n').map(s=>s.trim()).filter(Boolean);}
 function splitActions(line){const out=[];const re=/[（(【][^）)】]*[）)】]/g;let last=0,m;while((m=re.exec(line))){const before=line.slice(last,m.index).trim();if(before)out.push(before);out.push(m[0].trim());last=re.lastIndex;}const tail=line.slice(last).trim();if(tail)out.push(tail);return out.length?out:[line];}
-const TAGWORDS='心情值|心情|记住|闹钟|日程|发朋友圈|发推|点外卖|语音|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|约会|回家|登录微信|删好友|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回';
+const TAGWORDS='心情值|心情|记住|闹钟|日程|发朋友圈|发推|点外卖|语音|表情|收藏表情|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|约会|回家|登录微信|删好友|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回';
 const APPNAME2KEY={'浏览器':'browser','搜索':'browser','上网':'browser','百度':'browser','朋友圈':'moments','动态':'moments','查他手机':'spy','查岗':'spy','查手机':'spy','购物':'shop','淘宝':'shop','商城':'shop','日历':'calendar','日程':'calendar','x':'x','X':'x','推特':'x','微博':'x','推':'x','抖音':'douyin','短视频':'douyin','刷视频':'douyin','刷抖音':'douyin','外卖':'food','点餐':'food','游戏':'games','游戏大厅':'games','打游戏':'games','信箱':'mail','邮箱':'mail','邮件':'mail','线下约会':'offline','线下':'offline','约会':'offline'};
 function genPwd(){return String(1000+Math.floor(Math.random()*9000));}
 function _appKeys(arg,pool,filt){if(/全部|所有|全锁|全/.test(arg))return pool.filter(filt);return arg.split(/[、,，\/\s]+/).map(x=>APPNAME2KEY[x.replace(/[「」『』"'《》]/g,'').trim()]).filter(k=>k&&filt(k));}
@@ -4587,6 +4617,8 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
       mm=line.match(/^\[推荐好友\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){const nc={role:'assistant',type:'namecard',dir:'his',cname:(mm[1]||'朋友').trim(),persona:(mm[2]||'').trim(),wxid:genWxid(),added:false,id:uid(),time:Date.now()};msgs(id).push(nc);c._pushedToMe=c._pushedToMe||[];c._pushedToMe.push(nc.cname);notifyIncoming(c,nc);save();if(cur().p==='chat'&&cur().id===id)render();continue;}
       mm=line.match(/^\[已加\|?([^\]]*)\]$/);if(mm){const nm=(mm[1]||'').trim();const card=[...msgs(id)].reverse().find(x=>x.role==='user'&&x.type==='namecard'&&x.dir==='mine'&&!x._accepted&&(!nm||x.cname===nm||nm.includes(x.cname)));if(card){card._accepted=true;save();if(cur().p==='chat'&&cur().id===id)render();}continue;}
       mm=line.match(/^\[拉黑\]$/);if(mm){if(!c.blocked){setBlk(c,true);c._blockedBy='ta';c._blockedAt=Date.now();const mg={role:'assistant',type:'sys',content:'你被'+(c.remark||c.name)+'拉黑了（去ta的资料页可解除）',time:Date.now(),id:uid()};msgs(id).push(mg);save();if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();}continue;}
+      mm=line.match(/^\[表情\|?([^\]]*)\]$/);if(mm){if(!c.noSticker){const stk=aiPickSticker(mm[1]);if(stk){const sm={role:'assistant',type:'sticker',img:stk.img,meaning:stk.meaning,time:Date.now(),id:uid()};msgs(id).push(sm);notifyIncoming(c,sm);save();if(cur().p==='chat'&&cur().id===id)render();}}continue;}
+      if(/^\[收藏表情\]$/.test(line)){const last=[...msgs(id)].reverse().find(m=>m.role==='user'&&m.type==='sticker'&&m.img);if(last){S.aiStickers=S.aiStickers||[];if(!S.aiStickers.some(s=>s.img===last.img)){S.aiStickers.push({img:last.img,meaning:last.meaning||''});save();toast('ta收藏了你的表情');}}continue;}
       const base=lineToMsg(line);
       if(base.type==='dice'){if(diceUsed||diceCompare)continue;diceUsed=true;}
       if(base.type==='text'&&LEAKRE.test(line))continue;
@@ -4867,14 +4899,15 @@ function makeMiniDraggable(){const L=$('#callLayer');if(!L||!L.classList.contain
   const up=e=>{if(!drag)return;drag=false;L.classList.remove('dragging');if(raf){cancelAnimationFrame(raf);raf=0;paint();}try{L.releasePointerCapture(e.pointerId);}catch(_){}if(moved&&_call)_call._mpos={x:nx,y:ny};};
   L.addEventListener('pointerup',up);L.addEventListener('pointercancel',up);}
 function renderCall(){const L=$('#callLayer');const _clrPos=()=>{L.style.left=L.style.top=L.style.right=L.style.bottom='';};
-  if(!_call){L.className='callscreen';L.innerHTML='';_clrPos();return;}
-  if(_call.state==='incoming'&&!_call.opened){L.className='callscreen';L.innerHTML='';_clrPos();return;}// 来电时先只显示横幅，点开才进整屏
+  if(!_call){L.className='callscreen';L.innerHTML='';L.style.background='';_clrPos();return;}
+  if(_call.state==='incoming'&&!_call.opened){L.className='callscreen';L.innerHTML='';L.style.background='';_clrPos();return;}// 来电时先只显示横幅，点开才进整屏
   const c=getC(_call.id);const video=_call.kind==='video';
-  if(_call.min&&_call.state!=='incoming'){L.className='callscreen show mini';
+  if(_call.min&&_call.state!=='incoming'){L.className='callscreen show mini';L.style.background='';
     L.innerHTML=`<div class="cav cdrag" style="width:34px;height:34px;min-width:34px;font-size:18px;border-radius:10px">${isImg(c.avatar)?`<img src="${c.avatar}">`:(c.avatar||'🙂')}</div><span style="font-size:13px;color:#fff;white-space:nowrap;display:flex;align-items:center;gap:4px">${esc(c.remark||c.name)} ${video?svgIc('video',15,'#cfcfe0'):svgIc('phonecall',14,'#cfcfe0')}<span id="callStat" style="margin-left:3px">${_call.state==='active'?'':'呼叫中'}</span></span><span class="cmax" onclick="callMax()" title="放大" style="cursor:pointer;padding:0 4px;display:flex">${svgIc('expand',16,'#fff')}</span><span class="cbtn red" style="width:32px;height:32px" onclick="hangupCall()">${svgIc('hangup',17,'#fff')}</span>`;
     setTimeout(makeMiniDraggable,0);
     updateCallSub();return;}
   _clrPos();L.className='callscreen show'+(video?' video':'')+(_call.state==='active'?' active':'');
+  L.style.background=S.me.callBg?('linear-gradient(rgba(0,0,0,.38),rgba(0,0,0,.5)),url('+S.me.callBg+') center/cover'):'';
   const label=video?'视频通话':'语音通话';
   const stat=_call.state==='incoming'?('邀请你'+label):_call.state==='outgoing'?'正在呼叫…':'<span id="callStat">00:00</span>';
   let btns='';
@@ -4910,7 +4943,7 @@ async function callAI(sysNote,opts){if(!_call)return;const c=getC(_call.id);cons
     else cf+='\n- 这是语音通话（看不到画面），绝对不要出现任何【】动作神态描写，一个【】都不许有，只能说话。';
     if(_langN)cf+='\n- ‼️最重要：你全程只能说'+_langN+'，从头到尾每一句都是'+_langN+'，绝对不准中途切回中文整句说话（这是会被读出来的那一行）。格式：先单独一行写'+_langN+'原文（会被读出来），紧接着【换一行】用（）单独写中文翻译（不会被读）。原文一行、（中文翻译）另起一行，别写在同一行，也别把顺序搞反。\n‼️【每说一句外语，就【紧接着】在下一行写它自己的中文翻译，再说下一句；绝对不要把好几句原文堆在一起、最后才统一翻译】。一句原文配一句翻译，严格交替。【每句的中文翻译只写一遍，绝不要用不同括号（）或()把同一句翻译重复写两次】。例如：\n'+(_lang==='韩'?'사랑해\n（我爱你）\n보고 싶어\n（我想你了）':_lang==='日'?'好きだよ\n（喜欢你）\n会いたい\n（我想你了）':'I miss you\n（我想你了）\nCome here\n（过来）')+'\n- 哪怕是要挂断、道别、回应"挂了/别挂/我爱你"这种话，也必须先写'+_langN+'原文那一行，绝不能整句只说中文。'+(S.me.callName?'\n- ‼️叫到'+S.me.name+'名字时：'+_langN+'原文那一行【照常用「'+S.me.name+'」】（原文就该是地道外语）；但【中文翻译那一行】里要把名字写成中文「'+S.me.callName+'」，别在翻译里还写「'+S.me.name+'」。例：I miss you, '+S.me.name+'\n（我想你了，'+S.me.callName+'）':'');
     cf+='\n- 【你很黏ta、舍不得挂电话】：能粘着就粘着，ta说"挂了/我要忙了"你会撒娇拖着("再聊会儿嘛""不准挂""那你忙完第一个找我")、不舍得放ta走。只有当ta明确说【真的有事要去做/很困要睡了/反复要挂】时，你才依依不舍地同意挂断；平时绝不主动结束通话。要挂断时才【单独占一行】只输出 [挂断]，别和说的话写在同一行；没到非挂不可，就别输出 [挂断]，继续黏着ta说话。';
-    cf+='\n- 通话中你照样能管控ta或查ta手机：要锁软件/禁言/限时就【单独成行】写指令标签（如 [锁定|游戏]、[限时|游戏|60]、[禁言|名字]、[扣款|金额完全你自己定·看ta余额·零散随意别用固定数]）；要查岗就自然说一句「我看看你手机/微信/抖音」；ta真把你惹狠了越线了还能 [关小黑屋|原因] 把ta拖进禁闭室(需授权)；想宠ta可以 [点外卖|餐品|价格]（15分钟送达）或 [送礼|礼物名|价格]（明天到ta信箱）。\n- 通话里ta让你【发朋友圈/发推/转账】时你也能照做：[发朋友圈|内容]、[发推|内容]、[转账|金额|说明]（想发红包用 [红包|金额|祝福语]）——会真的发出去/打过去。\n- 通话里ta让你【记住某事 / 定闹钟 / 记到日历】时也能照做：[记住|内容]、[闹钟|HH:MM|事由]、[日程|YYYY-MM-DD|事由]（单独成行、会真的记下来/设好，不会被读出来、别复述）。\n这些指令标签会被系统执行、【不会被读出来】，不影响你正常讲话，也别在话里复述它们。';
+    cf+='\n- 通话中你照样能管控ta或查ta手机：要锁软件/禁言/限时就【单独成行】写指令标签（如 [锁定|游戏]、[限时|游戏|60]、[禁言|名字]、[扣款|金额完全你自己定·看ta余额·零散随意别用固定数]）；要查岗就自然说一句「我看看你手机/微信/抖音」；ta真把你惹狠了越线了还能 [关小黑屋|原因] 把ta拖进禁闭室(需授权)；想宠ta可以 [点外卖|餐品|价格]（15分钟送达）或 [送礼|礼物名|价格]（明天到ta信箱）。\n- 通话里ta让你【发朋友圈/发推/转账】时你也能照做：[发朋友圈|内容]、[发推|内容]、[转账|金额|说明]（想发红包用 [红包|金额|祝福语]）——会真的发出去/打过去。\n- 通话里ta让你【记住某事 / 定闹钟 / 记到日历】时也能照做：[记住|内容]、[闹钟|HH:MM|事由]、[日程|YYYY-MM-DD|事由]（单独成行、会真的记下来/设好，不会被读出来、别复述）。通话里【不要发表情包】(别用[表情])，表情包只在文字微信里发。\n这些指令标签会被系统执行、【不会被读出来】，不影响你正常讲话，也别在话里复述它们。';
     const sys=buildSystem(c)+cf;
     const _md=Object.assign({aux:c.model==='aux'},opts||{});// 这个角色用主/副模型
     let content=await chatAPI([{role:'system',content:sys},...hist,{role:'system',content:personaPin(c)}],_md);
