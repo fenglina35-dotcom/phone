@@ -428,7 +428,7 @@ const KEY='yibei_phone_v2';
 const SHARE_GATE=true, SHARE_PW='5211314';
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ if(localStorage.getItem('yibei_unlocked')==='1')return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v228 · 登录他微信:查手机数据每次进来自动同步(不用清空重登);退出后立刻把【你和所有人的完整聊天记录+操作】写进他记忆,你问他能看到全部、答得上来;发现后打电话还是发消息按角色人设决定';
+const APP_VER='v229 · 通话新增「免提模式」:点麦克风按钮,对着屏幕直接说话→自动识别→他用语音回你→接着听你下一句,全程解放双手(打字键盘照常保留);他说话时自动停听避免回声。安卓Chrome最稳,iOS可能识别不稳';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -4742,7 +4742,26 @@ function editSumItem(id,i){const c=getC(id);openModal(`<h3>编辑这条概要</h
 
 /* =================== 通话 =================== */
 let _call=null,_ring=null,_callTimer=null,_callSilTimer=null,_callMissT=null;
-function endCallTimers(){try{clearInterval(_callTimer);}catch(e){}try{clearInterval(_callSilTimer);}catch(e){}try{clearTimeout(_callMissT);}catch(e){}}
+/* ===== 免提模式：对着屏幕说话→自动识别→他语音回你→接着听，全程不用动手 ===== */
+let _callHF=false,_callSR=null,_callHFBusy=false;
+function callHFToggle(){if(!_call)return;if(_callHF){callHFStop();toast('已关闭免提');}else{callHFStart();}render();}
+function callHFStart(){const sr=makeSR('zh-CN');if(!sr){toast('这台设备/浏览器不支持语音识别，先用打字或按住说话吧（安卓Chrome支持最好）');_callHF=false;return;}
+  _callHF=true;_callSR=sr;
+  sr.onresult=ev=>{if(_callHFBusy||!_callHF)return;let fin='';for(let i=ev.resultIndex;i<ev.results.length;i++){if(ev.results[i].isFinal)fin+=ev.results[i][0].transcript;}
+    const t=(fin||'').trim();if(t){if(_call){_call.sub={who:'me',text:t};updateCallSub();}hfHeard(t);}
+    else{const it=(ev.results[ev.results.length-1][0].transcript||'').trim();if(it&&_call){_call.sub={who:'me',text:it};updateCallSub();}}};
+  sr.onerror=e=>{if(_callHF&&!_callHFBusy&&(e.error==='no-speech'||e.error==='aborted'||e.error==='network'))setTimeout(hfRestart,400);};
+  sr.onend=()=>{if(_callHF&&!_callHFBusy)setTimeout(hfRestart,300);};
+  try{sr.start();}catch(e){}}
+function hfRestart(){if(!_callHF||_callHFBusy||!_call)return;try{_callSR&&_callSR.start();}catch(e){}}
+function callHFStop(){_callHF=false;try{if(_callSR){_callSR.onend=null;_callSR.onresult=null;_callSR.onerror=null;_callSR.stop();}}catch(e){}_callSR=null;}
+async function hfHeard(t){if(_callHFBusy||!_call)return;_callHFBusy=true;
+  try{_callSR&&_callSR.stop();}catch(e){}/* 他说话时先停止聆听，避免听到他的声音 */
+  const id=_call.id;msgs(id).push({role:'user',type:'text',content:t,time:Date.now(),id:uid(),_call:true,_ck:_call.kind,_cs:_call.session});save();
+  _call.sub={who:'me',text:t};updateCallSub();
+  try{if(!callOnUserSay(t))await callAI();}catch(e){}
+  _callHFBusy=false;if(_callHF&&_call)setTimeout(hfRestart,250);/* 他说完，接着听你下一句 */}
+function endCallTimers(){try{clearInterval(_callTimer);}catch(e){}try{clearInterval(_callSilTimer);}catch(e){}try{clearTimeout(_callMissT);}catch(e){}callHFStop();}
 function ringStart(){ringStop();ensureAudio();if(!_audio)return;let on=false;
   _ring=setInterval(()=>{try{const o=_audio.createOscillator(),g=_audio.createGain();o.connect(g);g.connect(_audio.destination);
     o.frequency.value=on?660:520;o.type='sine';g.gain.setValueAtTime(.0001,_audio.currentTime);
@@ -4860,7 +4879,7 @@ function renderCall(){const L=$('#callLayer');const _clrPos=()=>{L.style.left=L.
   L.innerHTML=`${(_call.state==='active'||_call.state==='outgoing')?`<div onclick="callMin()" title="缩小，可以边通话边聊天/玩手机" style="position:absolute;left:16px;top:50px;font-size:24px;cursor:pointer;z-index:3">⤵︎</div>`:''}<div class="cav">${isImg(c.avatar)?`<img src="${c.avatar}">`:(c.avatar||'🙂')}</div>
     <div class="cname">${esc(c.remark||c.name)}</div><div class="cstat">${stat}</div>
     <div class="callsub" id="callSub"></div>
-    ${_call.state==='active'?`<div class="callinput show" id="callInput"><input id="callMsg" placeholder="打字说…" onkeydown="if(event.key==='Enter')callSend()"><button onclick="callSend()">发</button></div>`:''}
+    ${_call.state==='active'?`<div class="callinput show" id="callInput"><button onclick="callHFToggle()" title="免提·对着屏幕说" style="background:${_callHF?'linear-gradient(135deg,#9ec5fe,#b8a4e3)':'#3a3a40'};border:none;border-radius:50%;width:40px;height:40px;min-width:40px;display:flex;align-items:center;justify-content:center;cursor:pointer">${svgIc('mic',18,'#fff')}</button><input id="callMsg" placeholder="${_callHF?'免提中·直接对我说…':'打字说…'}" onkeydown="if(event.key==='Enter')callSend()"><button onclick="callSend()">发</button></div>${_callHF?`<div style="text-align:center;color:#9ec5fe;font-size:12px;margin-top:4px">🎙️ 免提聆听中·直接说话就行（再点麦克风关闭）</div>`:''}`:''}
     <div class="callbtns">${btns}</div>`;
   updateCallSub();}
 function updateCallSub(){const box=$('#callSub');if(!box)return;const s=_call&&_call.sub;
