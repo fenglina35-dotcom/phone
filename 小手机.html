@@ -428,7 +428,7 @@ const KEY='yibei_phone_v2';
 const SHARE_GATE=true, SHARE_PW='8980';
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ if(localStorage.getItem('yibei_unlocked')==='1')return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v220 · 语音API新增 Fish Audio 支持(克隆最简单):设置-语音API地址填 api.fish.audio、Key、模型选填 speech-1.6、音色填 fish 克隆出的模型ID,角色语音音色切成API即可;同时仍支持 ElevenLabs 和 OpenAI兼容(硅基流动CosyVoice)';
+const APP_VER='v221 · 语音音色里加了「克隆声音(国内·硅基流动)」按钮:填好硅基流动接口后,在角色-语音音色里传一段人声+打上这段话说的内容,App内一键克隆、自动设成该角色音色,不用梯子不用敲代码';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -4535,12 +4535,36 @@ function editVoice(id){const c=getC(id);const v=getVoice(c);openModal(`<h3>${esc
   <div class="field"><label>音调 ${(+v.pitch||1).toFixed(1)}</label><input id="v_pitch" type="range" min="0.5" max="1.6" step="0.1" value="${v.pitch||1}" style="width:100%"></div>
   <div class="field"><label>语言（外语会带中文翻译）</label><select id="v_lang"><option value="zh" ${v.lang==='zh'?'selected':''}>中文</option><option value="英" ${v.lang==='英'?'selected':''}>英语</option><option value="日" ${v.lang==='日'?'selected':''}>日语</option><option value="韩" ${v.lang==='韩'?'selected':''}>韩语</option></select></div>
   <div class="field"><label>API音色名(用API时填，如克隆ID/alloy)</label><input id="v_tv" value="${esc(v.ttsVoice||'')}" placeholder="不用API可留空"></div>
-  <div class="btns" style="margin-bottom:8px"><button class="btn g" onclick="previewVoice('${id}')">试听</button></div>
+  <div class="btns" style="margin-bottom:8px"><button class="btn g" onclick="previewVoice('${id}')">试听</button><button class="btn g" onclick="cloneVoiceModal('${id}')">克隆声音(国内·硅基流动)</button></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="saveVoice('${id}')">保存</button></div>`);}
 function readVoiceForm(){return {engine:$('#v_eng').value,voiceURI:$('#v_uri').value,rate:+$('#v_rate').value||1,pitch:+$('#v_pitch').value||1,lang:$('#v_lang').value,ttsVoice:$('#v_tv').value.trim()};}
 function previewVoice(id){const c=getC(id);const nv=readVoiceForm();const samp={zh:'你好呀，我是'+(c.remark||c.name)+'，这是我的声音。','英':'Hi, this is my voice. Nice to talk with you.','日':'こんにちは、これが私の声です。よろしくね。','韩':'안녕하세요, 제 목소리예요. 잘 부탁해요.'}[nv.lang||'zh'];
   const tmp=c.voice;c.voice=nv;speak(samp,c);c.voice=tmp;}
 function saveVoice(id){const c=getC(id);c.voice=readVoiceForm();save();closeModal();render();toast('音色已保存');}
+/* 在 App 内直接克隆声音（硅基流动 CosyVoice，国内不用梯子） */
+function cloneVoiceModal(id){const tts=S.settings.tts||{};
+  if(!/siliconflow/i.test(tts.base||'')||!tts.key){
+    openModal(`<h3>先填硅基流动接口</h3><div style="font-size:14px;line-height:1.9;color:#e6e6e6">克隆前先去 <b>设置 → 语音API</b> 填好这三样（一次就行）：<br><br>接口地址：<b>https://api.siliconflow.cn/v1</b><br>API Key：硅基流动控制台里新建的那串<br>模型：<b>FunAudioLLM/CosyVoice2-0.5B</b><br><br>填好保存，再回这里点「克隆声音」。</div>
+    <div class="btns" style="margin-top:12px"><button class="btn g" onclick="editVoice('${id}')">返回</button><button class="btn p" onclick="closeModal();_setTab=1;go('settings')">去填接口</button></div>`);return;}
+  openModal(`<h3>克隆声音 · 硅基流动</h3>
+   <div style="font-size:13px;line-height:1.85;color:#cfcfcf">①传一段想克隆的人声（10~30 秒、清晰、没背景音/音乐最好）<br>②把这段录音"说了哪些字"一字不差打在下面（CosyVoice 靠这个学声音）<br>生成后会自动设成<b>这个角色</b>的音色。</div>
+   <div class="field" style="margin-top:10px"><label>声音文件（mp3 / wav / m4a）</label><input id="cl_f" type="file" accept="audio/*"></div>
+   <div class="field"><label>这段录音说的内容（必填，要和音频一致）</label><textarea id="cl_t" rows="3" placeholder="例：你好呀，今天天气真不错，很高兴见到你。"></textarea></div>
+   <div class="btns"><button class="btn g" onclick="editVoice('${id}')">返回</button><button class="btn p" id="cl_go" onclick="doCloneVoice('${id}')">开始克隆</button></div>`);}
+async function doCloneVoice(id){const c=getC(id);if(!c)return;const tts=S.settings.tts||{};
+  const f=(($('#cl_f')||{}).files||[])[0];const txt=(($('#cl_t')||{}).value||'').trim();
+  if(!f){toast('先选一段声音文件');return;}if(!txt){toast('把录音说的内容填上');return;}
+  const btn=$('#cl_go');if(btn){btn.disabled=true;btn.textContent='克隆中…';}
+  try{const dataURL=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f);});
+    const model=(/cosyvoice|fish/i.test(tts.model||'')?tts.model:'FunAudioLLM/CosyVoice2-0.5B');
+    const body={model,customName:'yb'+Math.random().toString(36).slice(2,9),text:txt,audio:dataURL};
+    const r=await fetch('https://api.siliconflow.cn/v1/uploads/audio/voice',{method:'POST',headers:{'Authorization':'Bearer '+tts.key,'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const j=await r.json().catch(()=>null);
+    if(!r.ok||!j||!j.uri){toast('克隆失败 '+r.status+' '+((j&&(j.message||j.error||j.detail))||'')); if(btn){btn.disabled=false;btn.textContent='开始克隆';}return;}
+    S.settings.tts.model=model;
+    c.voice=c.voice||getVoice(c);c.voice.engine='api';c.voice.ttsVoice=j.uri;save();
+    closeModal();toast('克隆成功！已设为该角色音色，去试听吧');setTimeout(()=>editVoice(id),250);
+  }catch(e){toast('克隆出错，检查网络/接口地址');if(btn){btn.disabled=false;btn.textContent='开始克隆';}}}
 function editCircle(id){S.x.circle=S.x.circle||{};const co=circleObj(id);openModal(`<h3>𝕏 圈子</h3><div class="hint">圈子名称=ta所在的圈子/标签；定位=ta发推的人设风格。</div>
   <div class="field"><label>圈子名称</label><input id="cir_n" value="${esc(co.name)}" placeholder="如：医学圈 / 摄影圈"></div>
   <div class="field"><label>圈子定位/风格</label><textarea id="cir_t" rows="3" placeholder="比如：高冷医学博主，偶尔发暗恋小作文">${esc(co.desc)}</textarea></div>
