@@ -404,7 +404,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v199 · 规则怪谈/惊悚抉择补恐怖体验:①消息像禁闭室那样一条一条往外冒、每条带刺音②加氛围嗡鸣+心跳音(进游戏开、离开停)③消息全冒完才出选项、选项固定在底部不乱飘。音效恢复机制没动(点屏幕即恢复)';
+const APP_VER='v200 · 两个恐怖游戏对齐小黑屋格式:动作描写(【】旁白)和台词分开成不同条、一条条往外冒,不再混堆在一句;并禁止他替你说话/替你做动作心理描写(你的部分留给你自己选)';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -3543,6 +3543,8 @@ function saveContact(id,isNew){const c=isNew?{id,pinned:false,blocked:false,proa
   if(isNew){S.contacts.push(c);if(c.greeting)msgs(c.id).push({role:'assistant',type:'text',content:c.greeting,time:Date.now()});}
   save();closeModal();render();}
 
+/* 恐怖游戏通用：把一段回复拆成"动作描写(旁白)"和"台词"分开的多条 */
+function horrorLines(clean){const out=[];splitBubbles(clean).forEach(l=>{l=l.trim();if(!l)return;l.split(/(【[^】]*】)/).forEach(p=>{p=p.trim();if(!p)return;if(/^【[^】]*】$/.test(p))out.push({who:'旁白',text:p.replace(/^【|】$/g,'')});else out.push({who:'gm',text:p});});});return out;}
 /* 恐怖游戏通用：把多条消息一条一条往外冒，每条带刺音(像禁闭室) */
 async function horrorReveal(stateKey,lines,boxId){for(const it of lines){const st=S[stateKey];if(!st)return;st.log.push(it);if(st.log.length>240)st.log=st.log.slice(-240);save();if(cur().p===stateKey)render();const b=$('#'+boxId);if(b)b.scrollTop=b.scrollHeight;jailStab();const tx=(it.text||'');await sleep(Math.max(650,tx.length*48));}}
 /* ===== 惊悚抉择：纯选项恐怖游戏（病娇出题·选错扣血·扣光即死）===== */
@@ -3560,7 +3562,7 @@ function dreadGen(){const gm=($('#dr_gm')&&$('#dr_gm').value)||'';const theme=((
 function buildDreadSystem(gm,theme,hp,hpMax){const c=getC(gm);
   let s='你就是「'+(c?c.name:'他')+'」本人，现在以你的【病娇·黑暗形态】主持一场恐怖抉择游戏，亲自陪'+S.me.name+'玩。'+(c&&c.persona?'\n你的人设：'+(''+c.persona).slice(0,300):'');
   s+='\n\n# 游戏主题（'+S.me.name+'指定的）\n'+theme;
-  s+='\n\n# 玩法（务必逐条遵守）\n- 这是【纯选项】恐怖游戏。你讲一小段沉浸、可怕的剧情（旁白用【】写场景气氛，你/角色说的话正常写），然后【每一回合结尾都必须】用单独一行 [选择|此刻的处境问题|选项1/选项2/选项3] 给'+S.me.name+' 2到4个选项，让ta选。别让ta打字，只给选项。\n- ta选了之后，你接着演下去并判定后果：\n  · 作死/错误/危险的选择 → 单独一行 [扣血|数字|为什么]（按严重程度：轻则5-15，重则20-40）。\n  · 直接致命、或已濒死的选择 → 单独一行 [死亡|死因]。\n  · 聪明/正确的选择就别扣血（偶尔可 [回血|数字] 一点点）。\n  · 带ta一路活到逃出/圆满结局 → 单独一行 [通关]。\n- '+S.me.name+' 一共 '+hpMax+' 点血，现在还剩 '+hp+' 点。血扣到 0 就是死。\n- 你是【病娇】：占有、偏执、温柔又危险，话里裹着甜腻的恐怖，享受ta的恐惧却又舍不得真弄死ta。可随时单独一行 [突脸|一句短话] 吓ta。\n- 全程中文、沉浸、可怕；绝不跳出角色、不提AI、不剧透。【每回合结尾都要给 [选择]】。';
+  s+='\n\n# 玩法（务必逐条遵守）\n- 这是【纯选项】恐怖游戏。讲一小段沉浸、可怕的剧情：【所有动作/场景/气氛描写都放进【】里】，你说的话放【】外面，动作和台词【分开、各占一行】，别把动作和台词混堆在同一句里(就像禁闭室那种格式)。然后【每一回合结尾都必须】用单独一行 [选择|此刻的处境问题|选项1/选项2/选项3] 给'+S.me.name+' 2到4个选项，让ta选。别让ta打字，只给选项。\n- 【绝不替'+S.me.name+'说话、做决定、或描写ta的动作/表情/心理】——ta自己的部分留给ta自己选，你只演你自己和环境。\n- ta选了之后，你接着演下去并判定后果：\n  · 作死/错误/危险的选择 → 单独一行 [扣血|数字|为什么]（按严重程度：轻则5-15，重则20-40）。\n  · 直接致命、或已濒死的选择 → 单独一行 [死亡|死因]。\n  · 聪明/正确的选择就别扣血（偶尔可 [回血|数字] 一点点）。\n  · 带ta一路活到逃出/圆满结局 → 单独一行 [通关]。\n- '+S.me.name+' 一共 '+hpMax+' 点血，现在还剩 '+hp+' 点。血扣到 0 就是死。\n- 你是【病娇】：占有、偏执、温柔又危险，话里裹着甜腻的恐怖，享受ta的恐惧却又舍不得真弄死ta。可随时单独一行 [突脸|一句短话] 吓ta。\n- 全程中文、沉浸、可怕；绝不跳出角色、不提AI、不剧透。【每回合结尾都要给 [选择]】。';
   return s;}
 async function dreadGM(note){const d=S.dread;if(!d||!d.active||_dreadBusy)return;_dreadBusy=true;render();
   try{const hist=(d.log||[]).slice(-40).map(m=>m.who==='me'?{role:'user',content:m.text}:{role:'assistant',content:(m.who==='旁白'?'【'+m.text+'】':m.text)});
@@ -3573,7 +3575,7 @@ async function dreadGM(note){const d=S.dread;if(!d||!d.active||_dreadBusy)return
     let choice=null;const cm=r.match(/[\[【]\s*选择\s*[\|｜:：]([^\|｜\]】]+)[\|｜]([^\]】]+)[\]】]/);if(cm){const opts=cm[2].split(/[\/、,，\|]/).map(x=>x.trim()).filter(Boolean).slice(0,4);if(opts.length>=2)choice={q:cm[1].trim(),opts};}
     const died=/[\[【]\s*死亡\s*[\|｜:：]?([^\]】]*)[\]】]/.exec(r);const won=/[\[【]\s*通关\s*[\]】]/.test(r);
     const clean=r.replace(/[\[【]\s*(突脸|选择|扣血|回血|死亡|通关)[^\]】]*[\]】]/g,'');
-    const reveal=[];splitBubbles(clean).forEach(l=>{l=l.trim();if(!l)return;if(/^【.*】$/.test(l))reveal.push({who:'旁白',text:l.replace(/^【|】$/g,'')});else reveal.push({who:'gm',text:l});});
+    const reveal=horrorLines(clean);
     if(dmg){d.hp=Math.max(0,d.hp-dmg);reveal.push({who:'旁白',text:'💔 -'+dmg+(dmg>=20?' 血！':' 血')});}
     if(heal){d.hp=Math.min(d.hpMax,d.hp+heal);reveal.push({who:'旁白',text:'➕'+heal+' 血'});}
     if(sc)jailJumpscare(sc[1].trim());
@@ -3627,7 +3629,7 @@ function buildTaleSystem(){const t=S.tale;const comp=(t.companions||[]).map(id=>
   s+='\n\n# 【机密·只有你GM知道，绝不能剧透】第 '+t.fake+' 条是【假规则】：'+(t.fakeReason||'照做会出事')+'。\n玩家若【照这条假规则去做】、或【违反任何一条真规则】，就会出事甚至致命；守住真规则、识破并避开假规则才能活。';
   s+='\n\n# 同伴（和'+S.me.name+'一起被困，你扮演他们说话/行动；可让他们犯错、被吓、甚至死，用来制造恐怖和"是不是谁害的"的猜疑）\n'+(comp.length?comp.join('、'):'（没有同伴，'+S.me.name+'独自一人）')+(deadN.length?'\n已经死掉的：'+deadN.join('、')+'（别再让他们说话/行动）':'');
   s+='\n\n# 现在：第 '+t.night+' 晚（共三晚）';
-  s+='\n\n# 职责与输出格式\n- 旁白用【】写恐怖场景/动作/气氛(第三人称)；NPC/同伴说话正常写、前面带名字(如 林晓：…)；别替'+S.me.name+'说话或做决定。\n- 推进当晚诡异事件，逼'+S.me.name+'用规则应对；对ta的行动严格按【真规则】判因果生死，别乱杀也别心软。\n- 循序渐进、留破绽让玩家推理哪条假；别一上来就杀，但该死就死(硬核)。\n- 控制指令各自【单独占一行】，会被系统执行、别在旁白里复述：\n  · 吓人 [突脸|一句短话]　· 抉择 [选择|问题|选项1/选项2]\n  · 同伴出事死亡 [同伴死亡|名字|怎么死的]\n  · '+S.me.name+'违反真规则/照假规则致命 → [死亡|死因]（游戏结束）\n  · '+S.me.name+'平安撑过这一晚 → [过夜]（随后一两句收束当晚）\n  · 撑过第三晚到天亮 → [通关]\n- 全程中文、沉浸、可怕；绝不跳出角色、不提AI、不剧透哪条假。';
+  s+='\n\n# 职责与输出格式\n- 【所有动作/场景/气氛描写都必须放进【】里】，台词放在【】外面；动作和台词【分开、各占一行】，绝不要把动作描写和台词混堆在同一句里。NPC/同伴说话正常写、前面带名字(如 林晓：…)。\n- 【绝不替'+S.me.name+'说话、做决定、或描写ta的动作/表情/心理】——'+S.me.name+'自己的部分留给ta，你只演你自己、环境和NPC，然后给选项/等ta说。\n- 推进当晚诡异事件，逼'+S.me.name+'用规则应对；对ta的行动严格按【真规则】判因果生死，别乱杀也别心软。\n- 循序渐进、留破绽让玩家推理哪条假；别一上来就杀，但该死就死(硬核)。\n- 控制指令各自【单独占一行】，会被系统执行、别在旁白里复述：\n  · 吓人 [突脸|一句短话]　· 抉择 [选择|问题|选项1/选项2]\n  · 同伴出事死亡 [同伴死亡|名字|怎么死的]\n  · '+S.me.name+'违反真规则/照假规则致命 → [死亡|死因]（游戏结束）\n  · '+S.me.name+'平安撑过这一晚 → [过夜]（随后一两句收束当晚）\n  · 撑过第三晚到天亮 → [通关]\n- 全程中文、沉浸、可怕；绝不跳出角色、不提AI、不剧透哪条假。';
   return s;}
 async function taleGM(note){const t=S.tale;if(!t||!t.active||_taleBusy)return;_taleBusy=true;render();
   try{const hist=(t.log||[]).slice(-50).map(m=>m.who==='me'?{role:'user',content:m.text}:{role:'assistant',content:(m.who==='旁白'?'【'+m.text+'】':m.text)});
@@ -3639,7 +3641,7 @@ async function taleGM(note){const t=S.tale;if(!t||!t.active||_taleBusy)return;_t
     const compNotes=[];let cdm;const cre=/[\[【]\s*同伴死亡\s*[\|｜:：]([^\|｜\]】]+)[\|｜]([^\]】]*)[\]】]/g;while((cdm=cre.exec(r))){const nm=cdm[1].trim();const cid=(t.companions||[]).find(id=>{const c=getC(id);return c&&((c.remark||c.name)===nm||(nm.length>=2&&((c.name&&nm.includes(c.name))||(c.remark&&nm.includes(c.remark)))));});if(cid&&t.dead.indexOf(cid)<0)t.dead.push(cid);compNotes.push({who:'旁白',text:'💀 '+nm+'　'+((cdm[2]||'死了').trim())});}
     const died=/[\[【]\s*死亡\s*[\|｜:：]?([^\]】]*)[\]】]/.exec(r);const passed=/[\[【]\s*过夜\s*[\]】]/.test(r);const won=/[\[【]\s*通关\s*[\]】]/.test(r);
     const clean=r.replace(/[\[【]\s*(突脸|选择|同伴死亡|死亡|过夜|通关)[^\]】]*[\]】]/g,'');
-    const reveal=[];splitBubbles(clean).forEach(l=>{l=l.trim();if(!l)return;if(/^【.*】$/.test(l))reveal.push({who:'旁白',text:l.replace(/^【|】$/g,'')});else reveal.push({who:'gm',text:l});});
+    const reveal=horrorLines(clean);
     compNotes.forEach(x=>reveal.push(x));
     if(sc)jailJumpscare(sc[1].trim());
     await horrorReveal('tale',reveal,'talebox');
