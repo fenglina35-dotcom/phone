@@ -428,7 +428,7 @@ const KEY='yibei_phone_v2';
 const SHARE_GATE=true, SHARE_PW='8980';
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ if(localStorage.getItem('yibei_unlocked')==='1')return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v221 · 语音音色里加了「克隆声音(国内·硅基流动)」按钮:填好硅基流动接口后,在角色-语音音色里传一段人声+打上这段话说的内容,App内一键克隆、自动设成该角色音色,不用梯子不用敲代码';
+const APP_VER='v222 · 修好一起听聊天他回复时闪屏/像发两条:原来每次发/回都整页重渲染导致闪烁,现在只就地更新那个气泡、不再整页刷;他的回复也合并成一行短句';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -930,7 +930,9 @@ function _mBubHTML(o){if(!o||!o.text)return '';const pink=o.side==='l';const bgc
   const tail=`<div style="position:absolute;top:-6px;${pink?'right:18px':'left:18px'};width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-bottom:7px solid ${bgc}"></div>`;
   return `<div style="position:relative;max-width:160px;padding:8px 13px;border-radius:15px;font-size:13px;line-height:1.4;word-break:break-word;background:${bgc};color:${pink?'#fff':'#333'};box-shadow:0 3px 12px rgba(0,0,0,.42);animation:csin .3s ease">${tail}${esc(o.text)}</div>`;}
 function mShowBub(side,text){if(!text)return;if(_mBub[side]&&_mBub[side]._t)clearTimeout(_mBub[side]._t);
-  _mBub[side]={side,text:(''+text).slice(0,60),_t:setTimeout(()=>{_mBub[side]=null;if(cur().p==='music')render();},6000)};}
+  _mBub[side]={side,text:(''+text).slice(0,60),_t:setTimeout(()=>{_mBub[side]=null;const e=document.getElementById('m_bub_'+side);if(e)e.innerHTML='';},6000)};
+  // 直接更新这一个气泡的 DOM，不整页重渲染（避免闪屏/看着像发两条）
+  const e=document.getElementById('m_bub_'+side);if(e)e.innerHTML=_mBubHTML(_mBub[side]);}
 function mSessTick(){const el=document.getElementById('m_sesstime');const sess=S.music&&S.music.session;
   if(!sess||!sess.startTs){if(_mSessTimer){clearInterval(_mSessTimer);_mSessTimer=null;}if(el)el.textContent=fmtListen((S.music&&S.music.totalSec)||0);return;}
   const live=((S.music&&S.music.totalSec)||0)+Math.floor((Date.now()-sess.startTs)/1000);
@@ -1050,7 +1052,7 @@ async function aiMusicReply(cid){if(_mReplyBusy)return;const c=getC(cid);if(!c||
     const mc=(S.music.chat||[]).filter(m=>m.cid===cid).slice(-14).map(m=>({role:m.role==='user'?'user':'assistant',content:m.content}));
     const sys=buildSystem(c)+'\n\n# 现在：你和ta在「一起听歌」的小窗里聊天\n你们正一起听「'+(s?s.title:'一首歌')+'」。这是听歌时的独立小聊天，轻松、暧昧、围绕这首歌和此刻心情聊，一两句口语短句。上面给的微信记录只是让你记得你俩的来龙去脉，别照搬。';
     const r=await chatAPI([{role:'system',content:sys},...ctx,{role:'system',content:'（以上是你俩微信上下文，仅供你记得；下面是你们正一起听歌时的对话）'},...mc],{max:260,aux:c.model==='aux'});
-    const txt=cleanReply(r);if(!txt)return;S.music.chat=S.music.chat||[];S.music.chat.push({cid,role:'assistant',content:txt,time:Date.now()});if(S.music.chat.length>200)S.music.chat=S.music.chat.slice(-200);mShowBub('r',txt);save();if(cur().p==='music')render();
+    let txt=cleanReply(r).replace(/\s*\n+\s*/g,' ').trim();if(!txt)return;S.music.chat=S.music.chat||[];S.music.chat.push({cid,role:'assistant',content:txt,time:Date.now()});if(S.music.chat.length>200)S.music.chat=S.music.chat.slice(-200);mShowBub('r',txt);save();
   }catch(e){}finally{_mReplyBusy=false;}}
 function renderMusic(){musicInit();const songs=S.music.songs;const cur=songs.find(s=>s.id===_mCur);const sess=S.music.session;const sc=sess&&getC(sess.cid);
   const bg=S.music.bg?`background:#000 url(${S.music.bg}) center/cover no-repeat`:'background:radial-gradient(ellipse at 50% 28%,#1d1733,#0a0a12 72%)';
@@ -1078,8 +1080,8 @@ function renderMusic(){musicInit();const songs=S.music.songs;const cur=songs.fin
       <div onclick="${sess?'musicEndSession()':'musicInvite()'}" title="一起听" style="position:absolute;left:50%;bottom:2px;transform:translateX(-50%);width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,#ff9ec4,#ff6fa5);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;box-shadow:0 2px 7px rgba(0,0,0,.45);cursor:pointer;z-index:4">⏻</div>
     </div>
     <div style="display:flex;justify-content:center;gap:14px;align-items:flex-start;min-height:38px;margin-top:8px;padding:0 12px">
-      <div style="flex:1;display:flex;justify-content:flex-end">${_mBubHTML(_mBub.l,'l')}</div>
-      <div style="flex:1;display:flex;justify-content:flex-start">${_mBubHTML(_mBub.r,'r')}</div>
+      <div id="m_bub_l" style="flex:1;display:flex;justify-content:flex-end">${_mBubHTML(_mBub.l,'l')}</div>
+      <div id="m_bub_r" style="flex:1;display:flex;justify-content:flex-start">${_mBubHTML(_mBub.r,'r')}</div>
     </div>
     <div onclick="editMusicDistance()" style="text-align:center;color:#d2d2da;font-size:13px;margin-top:4px;cursor:pointer">相距 ${S.music.distance} 公里，一起听了 <span id="m_sesstime">${fmtListen(((S.music.totalSec)||0)+(sess&&sess.startTs?Math.floor((Date.now()-sess.startTs)/1000):0))}</span></div>`;
   const lyr=parseLyrics(cur.lyrics);
@@ -1127,7 +1129,7 @@ function musicEndSession(){const sess=S.music&&S.music.session;
     if(c&&!c.blocked)scheduleReply(sess.cid,'[系统：你和'+S.me.name+'刚结束一起听歌，一共一起听了'+dtxt+'。自然地说句收尾的话——意犹未尽/谢谢ta陪你听/约下次再一起听，温柔一两句。]');}
   S.music.session=null;if(_mSessTimer){clearInterval(_mSessTimer);_mSessTimer=null;}save();render();}
 function musicChatSend(){const sess=S.music.session;if(!sess)return;if(_mReplyBusy)return;const now=Date.now();if(now-_mSendT<600)return;_mSendT=now;const inp=$('#m_chat');const t=inp?inp.value.trim():'';if(!t)return;inp.value='';
-  musicInit();S.music.chat.push({cid:sess.cid,role:'user',content:t,time:Date.now()});mShowBub('l',t);save();render();aiMusicReply(sess.cid);}
+  musicInit();S.music.chat.push({cid:sess.cid,role:'user',content:t,time:Date.now()});mShowBub('l',t);save();aiMusicReply(sess.cid);}
 function mLyricTap(i){const s=S.music&&S.music.songs.find(x=>x.id===_mCur);if(!s)return;const lines=parseLyrics(s.lyrics);const ln=lines[i];if(!ln)return;
   if(ln.t!=null&&_ma){_ma.currentTime=ln.t;if(_ma.paused)_ma.play().catch(()=>{});}
   const box=document.getElementById('m_lyrics');if(box){box.querySelectorAll('.mlrc').forEach((el,k)=>{el.style.color=k===i?'#ffd6e8':'#7d7d88';el.style.fontWeight=k===i?'700':'400';el.style.transform=k===i?'scale(1.1)':'scale(1)';});}}
