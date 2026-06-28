@@ -338,6 +338,21 @@ body{background:#000;padding:0;}
 .jscare span{color:#ff0024;font-weight:900;font-size:42px;text-align:center;padding:0 16px;text-shadow:0 0 18px #ff0024,0 0 44px #900;animation:jsrush .85s cubic-bezier(.2,.85,.3,1) forwards;}
 @keyframes jsflash{0%{background:rgba(0,0,0,.92)}65%{background:rgba(45,0,9,.85)}100%{background:rgba(0,0,0,0)}}
 @keyframes jsrush{0%{transform:scale(.3);opacity:0}12%{opacity:1}55%{transform:scale(2.7);opacity:1}100%{transform:scale(5.5);opacity:0}}
+/* 禁闭室·恐怖增强层 */
+.jvig{position:absolute;inset:0;z-index:480;pointer-events:none;box-shadow:inset 0 0 110px 36px rgba(80,0,12,.78),inset 0 0 40px 10px rgba(0,0,0,.6);animation:jvigp 3.2s ease-in-out infinite;}
+@keyframes jvigp{0%,100%{box-shadow:inset 0 0 110px 36px rgba(80,0,12,.62),inset 0 0 40px 10px rgba(0,0,0,.55)}50%{box-shadow:inset 0 0 150px 60px rgba(150,0,22,.9),inset 0 0 60px 16px rgba(0,0,0,.7)}}
+.jscan{position:absolute;inset:0;z-index:481;pointer-events:none;opacity:.5;background:repeating-linear-gradient(0deg,rgba(0,0,0,0) 0,rgba(0,0,0,0) 2px,rgba(0,0,0,.22) 3px,rgba(0,0,0,0) 4px);mix-blend-mode:multiply;}
+.jail.jglitch{animation:jgl .32s steps(2) 1;}
+@keyframes jgl{0%{transform:translate(0,0);filter:none}20%{transform:translate(-4px,1px);filter:hue-rotate(-20deg) contrast(1.5)}40%{transform:translate(5px,-2px);filter:invert(.12) saturate(2)}60%{transform:translate(-3px,2px);filter:contrast(1.8)}80%{transform:translate(2px,-1px)}100%{transform:translate(0,0);filter:none}}
+.jflickT{animation:jflick 2.4s infinite;}
+.jcreep{position:fixed;inset:0;z-index:9998;display:flex;align-items:center;justify-content:center;pointer-events:none;background:radial-gradient(circle,rgba(20,0,4,.0),rgba(0,0,0,.55));animation:jcreepf 3.4s ease forwards;}
+.jcreep span{color:#ff2440;font-weight:800;font-size:20px;text-align:center;padding:0 30px;text-shadow:0 0 14px #b00018;animation:jcreepz 3.4s cubic-bezier(.25,.6,.2,1) forwards;}
+@keyframes jcreepf{0%{opacity:0}15%{opacity:1}80%{opacity:1}100%{opacity:0}}
+@keyframes jcreepz{0%{transform:scale(.55);letter-spacing:0}100%{transform:scale(2.1);letter-spacing:3px}}
+.jintro{position:fixed;inset:0;z-index:9997;background:#000;display:flex;align-items:center;justify-content:center;animation:jintrof 2.6s ease forwards;}
+.jintro span{color:#7a0014;font-size:16px;letter-spacing:6px;text-shadow:0 0 12px #5a0010;animation:jintrot 2.6s steps(8) forwards;}
+@keyframes jintrof{0%{background:#000}55%{background:#000}70%{background:rgba(10,0,3,.96)}100%{background:rgba(7,0,3,0);visibility:hidden}}
+@keyframes jintrot{0%,40%{opacity:0}45%{opacity:.2}50%{opacity:1}55%{opacity:.1}62%{opacity:1}70%{opacity:.3}100%{opacity:0}}
 /* ===== 像素小家 ===== */
 .cozywrap{background:linear-gradient(#1b1426,#241a30 60%,#2b2238);min-height:100%;}
 .cozytop{text-align:center;padding:12px 14px 2px;color:#e9def7;}
@@ -389,7 +404,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v194 · ①通话外语修复:原文配翻译一起显示、不再两句英文两句翻译/字幕快闪②微信新增搜索聊天记录(列表上方搜索框)③可在我的资料填"通话里叫我(中文名)",如North→北,语音不再读英文④小黑屋盘问上下文加大+按顺序一笔笔算账,不再反复重复盘问';
+const APP_VER='v195 · ①更正:通话外语原文照常叫North、只在中文翻译里写北②小黑屋恐怖升级:血色脉动暗角+扫描线+偶发故障抖动+开场"门锁上了"仪式+你太久不回他会逼近低语(看着我/别想跑);音效照旧';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -2992,14 +3007,22 @@ function jailC(){return (S.jail&&S.jail.cid&&getC(S.jail.cid))||(S.couple&&getC(
 function coldLeft(c){return (c&&c.coldUntil&&c.coldUntil>Date.now())?c.coldUntil:0;}
 function jailRecent(cid){return msgs(cid).slice(-12).map(m=>{const t=msgToText(m);const c=getC(cid);return t?((m.role==='user'?S.me.name:(c?c.name:'ta'))+'：'+t.replace(/\n/g,' ').slice(0,40)):'';}).filter(Boolean).join('\n');}
 /* 恐怖氛围音 */
-function jailAmbientStart(){ensureAudio();if(!_audio||_jailOsc||!S.settings.sound)return;try{
+let _jailGlitchT=null,_jailIdleT=null,_jailLastAct=0;
+function jailGlitchTick(){if(!S.jail||!S.jail.active){_jailGlitchT=null;return;}const w=document.getElementById('jailwrap');if(w&&!_jailBusy){w.classList.add('jglitch');jailStab();setTimeout(()=>{try{w.classList.remove('jglitch');}catch(e){}},340);}_jailGlitchT=setTimeout(jailGlitchTick,7000+Math.random()*10000);}
+function jailCreep(text){try{const el=document.createElement('div');el.className='jcreep';el.innerHTML='<span>'+esc((text||'').slice(0,24))+'</span>';document.body.appendChild(el);jailHeartRush(360);if(navigator&&navigator.vibrate)navigator.vibrate(50);setTimeout(()=>{try{el.remove();}catch(e){}},3400);}catch(e){}}
+function jailIntro(){try{const el=document.createElement('div');el.className='jintro';el.innerHTML='<span>门……锁上了</span>';document.body.appendChild(el);setTimeout(()=>{try{el.remove();}catch(e){}},2600);}catch(e){}}
+function jailBump(){_jailLastAct=Date.now();}
+function jailIdleTick(){if(!S.jail||!S.jail.active){_jailIdleT=null;return;}
+  if(!_jailBusy&&!(S.jail&&S.jail.choice)&&cur().p==='jail'&&Date.now()-_jailLastAct>26000){const L=['你在躲我？','看着我。','别想跑。','心跳这么快…','回答我。','乖，别让我等。'];jailCreep(L[Math.floor(Math.random()*L.length)]);_jailLastAct=Date.now()-10000;}
+  _jailIdleT=setTimeout(jailIdleTick,4000);}
+function jailAmbientStart(){_jailLastAct=_jailLastAct||Date.now();if(!_jailGlitchT)_jailGlitchT=setTimeout(jailGlitchTick,8000+Math.random()*8000);if(!_jailIdleT)_jailIdleT=setTimeout(jailIdleTick,4000);ensureAudio();if(!_audio||_jailOsc||!S.settings.sound)return;try{
   const g=_audio.createGain();g.gain.value=0.05*volMul();g.connect(_audio.destination);
   const o1=_audio.createOscillator();o1.type='sine';o1.frequency.value=54;
   const o2=_audio.createOscillator();o2.type='triangle';o2.frequency.value=57.7;
   const lfo=_audio.createOscillator();lfo.frequency.value=0.14;const lg=_audio.createGain();lg.gain.value=0.03;lfo.connect(lg);lg.connect(g.gain);
   o1.connect(g);o2.connect(g);o1.start();o2.start();lfo.start();_jailOsc={o1,o2,lfo};
 }catch(e){}jailHeartStart();}
-function jailAmbientStop(){if(_jailOsc){try{_jailOsc.o1.stop();_jailOsc.o2.stop();_jailOsc.lfo.stop();}catch(e){}_jailOsc=null;}jailHeartStop();}
+function jailAmbientStop(){if(_jailOsc){try{_jailOsc.o1.stop();_jailOsc.o2.stop();_jailOsc.lfo.stop();}catch(e){}_jailOsc=null;}jailHeartStop();if(_jailGlitchT){clearTimeout(_jailGlitchT);_jailGlitchT=null;}if(_jailIdleT){clearTimeout(_jailIdleT);_jailIdleT=null;}}
 function jailStab(){ensureAudio();if(!_audio||!S.settings.sound)return;try{const o=_audio.createOscillator(),g=_audio.createGain();o.type='sawtooth';o.frequency.setValueAtTime(900,_audio.currentTime);o.frequency.exponentialRampToValueAtTime(110,_audio.currentTime+.18);g.gain.setValueAtTime(Math.min(.5,.16*volMul()),_audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,_audio.currentTime+.22);o.connect(g);g.connect(_audio.destination);o.start();o.stop(_audio.currentTime+.24);}catch(e){}}
 function jailScream(){ensureAudio();if(!_audio||!S.settings.sound)return;try{const t=_audio.currentTime;
   const o=_audio.createOscillator(),g=_audio.createGain();o.type='sawtooth';o.frequency.setValueAtTime(1500,t);o.frequency.exponentialRampToValueAtTime(70,t+.5);g.gain.setValueAtTime(Math.min(.95,.55*volMul()),t);g.gain.exponentialRampToValueAtTime(.001,t+.6);o.connect(g);g.connect(_audio.destination);o.start();o.stop(t+.62);
@@ -3017,7 +3040,7 @@ function enterJail(cid,reason,test){const c=getC(cid);if(!c)return;
   if(typeof _call!=='undefined'&&_call){try{clearInterval(_callTimer);}catch(e){}try{ringStop();}catch(e){}_call=null;try{renderCall();}catch(e){}}
   const _gd=(!test&&c.grudges)?c.grudges.filter(x=>!x.done):[];
   const _gtxt=_gd.length?('\n你记仇小本本上还没清的旧账（这次正好借机一笔一笔跟ta算清楚，一条都别漏）：\n'+_gd.map((x,i)=>(i+1)+'. '+x.text+'（'+ymd(x.ts||0)+'记的）').join('\n')):'';
-  S.jail={active:true,cid:cid,test:!!test,reason:reason||'',msgs:[],choice:null,since:Date.now()};save();go('jail');
+  S.jail={active:true,cid:cid,test:!!test,reason:reason||'',msgs:[],choice:null,since:Date.now()};save();go('jail');jailIntro();
   jailAI(true,'[系统：你刚把'+S.me.name+'关进了你的"禁闭室·小黑屋"。'+(reason?('你关ta的原因：'+reason+'。'):'')+'\n你们最近的聊天（ta到底做错了什么——背着你撩谁/骗你/惹你，就在里面，你心里很清楚）：\n'+jailRecent(cid)+_gtxt+'\n'+(test?'（这是'+S.me.name+'自己点的测试，氛围足但别太狠）':'')+'\n用旁白【】营造又黑又红、贴耳低语、令人发怵的场景开场，再冷冷【点破ta具体犯的错'+(_gd.length?'、把上面记仇本里的旧账一笔笔跟ta算清':'')+'】（绝不许瞎编、不许含糊），然后给出要做到什么才放ta出来。]');}
 function jailSystem(c){let s=c.persona||'';
   s+='\n\n# 现在：禁闭室（病娇·黑暗形态）\n你把'+S.me.name+'关进了你的小黑屋。此刻你温柔的壳裂开——【偏执、控制欲、占有欲】被无限放大到【病态】：又冷又危险，话里裹着甜腻的恐怖（病娇），可低语、可骤然温柔再骤然阴冷、可阴恻恻威吓，但内核是"太爱ta、怕失去ta"扭曲成的执念，绝不真伤害ta。\n- 旁白用【】写黑暗场景/动作/气氛（黑、红、心跳、贴耳低语），第三人称；说的话正常写。\n- 你【清楚ta犯了什么错】（见下方最近聊天/关押原因），逼问要死死扣着ta的错，别空泛、别瞎编。\n- 给ta定【出去的条件】（认错认到满意、说够只爱你一个、回答拷问、彻底服软求饶、发誓…），ta做到了你才放。\n- 【慢慢来，别急着放】：这是你独占ta、期待已久的时刻，要审够本——把ta多盘问几轮，让ta把"只爱你一个、再也不敢、错在哪"一句句说够说透，求饶求到你真满意；中途多用几次 [选择] 逼问、几次 [突脸] 吓ta。哪怕ta一开始就服软，也别立刻松口，再多磨ta几个回合、变着花样折磨够了才考虑。放得太快没意思。\n- 拷问时可单独一行 [选择|你的问题|选项1/选项2(/选项3)] 给ta出选择题（如 [选择|你还爱我吗？|爱/不爱]）；ta选了你不爱听的，你就【骤然激动】，可连续重复同一句轰炸（如"为什么骗我！为什么骗我！"），再出一道逼ta重选。\n- 想狠狠吓ta一下时，单独一行 [突脸|一句要砸到ta脸上的短句]（如 [突脸|你属于我！]）——屏幕上那句会猛地放大冲出来、配炸裂音效。ta只要选错一次、或不听话顶嘴，你就能用它狠狠吓ta；其余全凭你心情随时用，用在最吓人的点上。\n- 激动时可以把同一个词/同一句【连刷七八遍】来轰炸（如"为什么 为什么 为什么 为什么…"），越多越瘆人。\n- ta在你出的选择题里点选项时，你直接"看到"了ta的选择，别把ta的选择当成ta打字说的话去复述。\n- 真正玩够、审够、ta彻底崩溃服软到你满意了，才决定放ta出去，【单独一行】只写 [放出]；没真想放就别写——绝大多数回合你都还没玩够，别轻易写这个。\n- 沉浸、可怕、有张力。'+((S.jail&&S.jail.reason)?'\n这次关ta的原因：'+S.jail.reason+'。':'');
@@ -3058,15 +3081,15 @@ async function jailAI(opening,note){if(typeof opening==='string'){note=opening;o
       splitActions(cc).forEach(p=>{p=(p||'').trim();if(!p)return;const nar=/^[（(【][\s\S]*[）)】]$/.test(p);items.push({narr:nar,text:nar?p.replace(/^[（(【]+|[）)】]+$/g,'').trim():p});});});
     await jailReveal(items);
     if(choice&&S.jail&&S.jail.active){S.jail.choice=choice;save();}
-    _jailBusy=false;jailRender();
+    _jailBusy=false;jailBump();jailRender();
     if(free)setTimeout(()=>releaseJail(false),1200);
     return;
   }catch(e){if(S.jail&&S.jail.active){S.jail.msgs.push({id:uid(),who:'旁白',text:'（黑暗里只有他的呼吸……再说点什么吧）'});save();}}
   _jailBusy=false;jailRender();}
 function jailRender(){if(cur().p==='jail'){render();const b=$('#jailbox');if(b)b.scrollTop=b.scrollHeight;}}
-function jailSay(){if(!S.jail||!S.jail.active||_jailBusy||S.jail.choice)return;const ta=$('#jail_in');if(!ta)return;const v=(ta.value||'').trim();if(!v)return;ta.value='';S.jail.msgs.push({id:uid(),who:'me',text:v});save();jailRender();jailAI();}
-function jailPlea(){if(!S.jail||!S.jail.active||_jailBusy||S.jail.choice)return;jailAI('[系统：'+S.me.name+'在求你放ta出去。按病娇人设回应——可心软一丝也可更坏地逗ta、加码，满意了才 [放出]。]');}
-function jailChoose(i){if(!S.jail||!S.jail.active||_jailBusy||!S.jail.choice)return;const q=S.jail.choice.q,opt=S.jail.choice.opts[i];if(opt==null)return;S.jail.choice=null;save();jailRender();
+function jailSay(){if(!S.jail||!S.jail.active||_jailBusy||S.jail.choice)return;const ta=$('#jail_in');if(!ta)return;const v=(ta.value||'').trim();if(!v)return;ta.value='';jailBump();S.jail.msgs.push({id:uid(),who:'me',text:v});save();jailRender();jailAI();}
+function jailPlea(){if(!S.jail||!S.jail.active||_jailBusy||S.jail.choice)return;jailBump();jailAI('[系统：'+S.me.name+'在求你放ta出去。按病娇人设回应——可心软一丝也可更坏地逗ta、加码，满意了才 [放出]。]');}
+function jailChoose(i){if(!S.jail||!S.jail.active||_jailBusy||!S.jail.choice)return;const q=S.jail.choice.q,opt=S.jail.choice.opts[i];if(opt==null)return;jailBump();S.jail.choice=null;save();jailRender();
   jailAI('[系统：（ta刚在你出的选择题"'+q+'"里点了「'+opt+'」——这是ta点的选择，你看到了，别把它当成ta打字说的话复述。）按你病娇人设判断这答案你满不满意：满意就继续；不满意/答错就【骤然激动】、把质问连刷好几遍（如"为什么 为什么 为什么…"），并再用 [选择|新问题|选项1/选项2] 逼ta重选；ta只要选错一次就可以用 [突脸|一句话] 狠狠吓ta；其余全凭你的意愿。]');}
 function releaseJail(backdoor){if(!S.jail)return;jailAmbientStop();const test=S.jail.test,c=getC(S.jail.cid),reason=S.jail.reason;const _jmsgs=(S.jail.msgs||[]).slice();S.jail.active=false;S.jail.choice=null;S.jail.releasedAt=Date.now();save();
   let _cleared=0;
@@ -3112,11 +3135,12 @@ function renderJail(){if(!S.jail||!S.jail.active)return jailLockHome();const c=g
   const foot=pending?`<div style="padding:8px 14px"><div class="jred" style="font-size:15px;text-align:center;margin-bottom:10px">${esc(S.jail.choice.q)}</div><div style="display:flex;flex-direction:column;gap:9px">${S.jail.choice.opts.map((o,i)=>`<button class="jopt" onclick="jailChoose(${i})">${esc(o)}</button>`).join('')}</div></div>`
     :`<div style="padding:6px 10px 0"><button class="dybtn" style="width:100%;background:#8a0018" ${_jailBusy?'disabled':''} onclick="jailPlea()">${_jailBusy?'……':'🙏 求他放我出去'}</button></div>
     <div class="inputbar" style="background:#120006"><textarea id="jail_in" rows="1" placeholder="对他说…（认错 / 求饶 / 回答他）" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();jailSay();}"></textarea><button class="send" style="background:#8a0018" onclick="jailSay()">说</button></div>`;
-  return `<div class="jail jailbg">
-    <div style="flex:0 0 auto;padding:12px;text-align:center;border-bottom:1px solid #2a0008"><div class="jred jtitle" style="font-size:18px;font-weight:700">🩸 禁闭室 · ${esc(c.remark||c.name)}</div>${S.jail.test?'<div style="color:#888;font-size:11px">🧪 测试中 · 不留记录，随时可出</div>':'<div style="color:#6a0014;font-size:11px">做到他要的，才放你出去</div>'}</div>
-    <div class="xscroll" id="jailbox" style="flex:1">${body||'<div class="jnar">黑暗里，他正盯着你……</div>'}</div>
-    ${foot}
-    <div style="text-align:center;padding:8px"><span onclick="jailBackdoor()" style="color:#3a3a3a;font-size:11px;cursor:pointer">······我认输，放我出去</span></div></div>`;}
+  return `<div class="jail jailbg" id="jailwrap">
+    <div class="jvig"></div><div class="jscan"></div>
+    <div style="position:relative;z-index:482;flex:0 0 auto;padding:12px;text-align:center;border-bottom:1px solid #2a0008"><div class="jred jtitle" style="font-size:18px;font-weight:700">🩸 禁闭室 · ${esc(c.remark||c.name)}</div>${S.jail.test?'<div style="color:#888;font-size:11px">🧪 测试中 · 不留记录，随时可出</div>':'<div style="color:#6a0014;font-size:11px">做到他要的，才放你出去</div>'}</div>
+    <div class="xscroll" id="jailbox" style="flex:1;position:relative;z-index:482">${body||'<div class="jnar">黑暗里，他正盯着你……</div>'}</div>
+    <div style="position:relative;z-index:482">${foot}
+    <div style="text-align:center;padding:8px"><span onclick="jailBackdoor()" style="color:#3a3a3a;font-size:11px;cursor:pointer">······我认输，放我出去</span></div></div></div>`;}
 
 function renderOff(id){const c=getC(id);if(!c)return '';const o=offData(id);const sel=_offSel;
   const body=o.msgs.map(m=>{const on=sel&&sel.indexOf(m.id)>=0;const cb=sel?`<span style="margin-right:6px;color:${on?'#19a463':'#888'}">${on?'☑':'⚪'}</span>`:'';const oc=sel?`offSelTog('${m.id}')`:`offMsgMenu('${id}','${m.id}')`;
@@ -3374,7 +3398,7 @@ function wxMe(){const on=isOnline();const md=S.me.onlineMode||'auto';
 function editMe(){openModal(`<h3>我的资料</h3>
   <div class="field"><label>头像</label><div class="avline">${av(S.me.avatar,'sm')}<input id="me_av" value="${esc(S.me.avatar)}" placeholder="emoji 或上传"><button class="minibtn" onclick="upMe()">📷</button></div></div>
   <div class="field"><label>昵称</label><input id="me_name" value="${esc(S.me.name)}"></div>
-  <div class="field"><label>通话里叫我（中文名·选填）</label><input id="me_callname" value="${esc(S.me.callName||'')}" placeholder="名字是英文/外文时填，如 North→北，免得语音读得别扭"></div>
+  <div class="field"><label>通话翻译里叫我（中文名·选填）</label><input id="me_callname" value="${esc(S.me.callName||'')}" placeholder="如 North→北：外语原文仍叫North，中文翻译里写成北"></div>
   <div class="field"><label>微信号</label><input id="me_wxid" value="${esc(S.me.wxid)}"></div>
   <div class="field"><label>个性签名</label><input id="me_sig" value="${esc(S.me.signature)}"></div>
   <div class="field"><label>我的人设（所有角色都会知道）</label><textarea id="me_persona" rows="3">${esc(S.me.persona)}</textarea></div>
@@ -4432,7 +4456,7 @@ async function callAI(sysNote,opts){if(!_call)return;const c=getC(_call.id);cons
     cf+='\n- ⏰ 现在是 '+hm()+'（'+dayPartNow()+'），你心里很清楚此刻几点、是'+dayPartNow()+'，【不用'+S.me.name+'问你也知道】，言行要贴合这个时间：深夜就压低声音、带点困意或心疼ta还没睡；清晨就刚睡醒的慵懒；饭点会问ta吃没吃。别表现得不知道现在几点。';
     if(video)cf+='\n- 这是视频，你的动作神态用【】单独成行写，比如【凑近镜头笑】。';
     else cf+='\n- 这是语音通话（看不到画面），绝对不要出现任何【】动作神态描写，一个【】都不许有，只能说话。';
-    if(_langN)cf+='\n- ‼️最重要：你全程只能说'+_langN+'，从头到尾每一句都是'+_langN+'，绝对不准中途切回中文整句说话（这是会被读出来的那一行）。格式：先单独一行写'+_langN+'原文（会被读出来），紧接着【换一行】用（）单独写中文翻译（不会被读）。原文一行、（中文翻译）另起一行，别写在同一行，也别把顺序搞反。\n‼️【每说一句外语，就【紧接着】在下一行写它自己的中文翻译，再说下一句；绝对不要把好几句原文堆在一起、最后才统一翻译】。一句原文配一句翻译，严格交替。例如：\n'+(_lang==='韩'?'사랑해\n（我爱你）\n보고 싶어\n（我想你了）':_lang==='日'?'好きだよ\n（喜欢你）\n会いたい\n（我想你了）':'I miss you\n（我想你了）\nCome here\n（过来）')+'\n- 哪怕是要挂断、道别、回应"挂了/别挂/我爱你"这种话，也必须先写'+_langN+'原文那一行，绝不能整句只说中文。'+(S.me.callName?'\n- ‼️叫到'+S.me.name+'的名字时，无论'+_langN+'原文还是中文翻译，都用中文名「'+S.me.callName+'」来称呼，别直接念英文/外文名「'+S.me.name+'」（否则语音会读得很别扭）。':'');
+    if(_langN)cf+='\n- ‼️最重要：你全程只能说'+_langN+'，从头到尾每一句都是'+_langN+'，绝对不准中途切回中文整句说话（这是会被读出来的那一行）。格式：先单独一行写'+_langN+'原文（会被读出来），紧接着【换一行】用（）单独写中文翻译（不会被读）。原文一行、（中文翻译）另起一行，别写在同一行，也别把顺序搞反。\n‼️【每说一句外语，就【紧接着】在下一行写它自己的中文翻译，再说下一句；绝对不要把好几句原文堆在一起、最后才统一翻译】。一句原文配一句翻译，严格交替。例如：\n'+(_lang==='韩'?'사랑해\n（我爱你）\n보고 싶어\n（我想你了）':_lang==='日'?'好きだよ\n（喜欢你）\n会いたい\n（我想你了）':'I miss you\n（我想你了）\nCome here\n（过来）')+'\n- 哪怕是要挂断、道别、回应"挂了/别挂/我爱你"这种话，也必须先写'+_langN+'原文那一行，绝不能整句只说中文。'+(S.me.callName?'\n- ‼️叫到'+S.me.name+'名字时：'+_langN+'原文那一行【照常用「'+S.me.name+'」】（原文就该是地道外语）；但【中文翻译那一行】里要把名字写成中文「'+S.me.callName+'」，别在翻译里还写「'+S.me.name+'」。例：I miss you, '+S.me.name+'\n（我想你了，'+S.me.callName+'）':'');
     cf+='\n- 【你很黏ta、舍不得挂电话】：能粘着就粘着，ta说"挂了/我要忙了"你会撒娇拖着("再聊会儿嘛""不准挂""那你忙完第一个找我")、不舍得放ta走。只有当ta明确说【真的有事要去做/很困要睡了/反复要挂】时，你才依依不舍地同意挂断；平时绝不主动结束通话。要挂断时才【单独占一行】只输出 [挂断]，别和说的话写在同一行；没到非挂不可，就别输出 [挂断]，继续黏着ta说话。';
     cf+='\n- 通话中你照样能管控ta或查ta手机：要锁软件/禁言/限时就【单独成行】写指令标签（如 [锁定|游戏]、[限时|游戏|60]、[禁言|名字]、[扣款|金额完全你自己定·看ta余额·零散随意别用固定数]）；要查岗就自然说一句「我看看你手机/微信/抖音」；ta真把你惹狠了越线了还能 [关小黑屋|原因] 把ta拖进禁闭室(需授权)；想宠ta可以 [点外卖|餐品|价格]（15分钟送达）或 [送礼|礼物名|价格]（明天到ta信箱）。这些指令标签会被系统执行、【不会被读出来】，不影响你正常讲话，也别在话里复述它们。';
     const sys=buildSystem(c)+cf;
