@@ -404,7 +404,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v198 · 修复通话翻译重复(同一句翻译被半角()和全角（）写两遍):现在同句只认第一条翻译、多余的丢掉,通话格式更稳';
+const APP_VER='v199 · 规则怪谈/惊悚抉择补恐怖体验:①消息像禁闭室那样一条一条往外冒、每条带刺音②加氛围嗡鸣+心跳音(进游戏开、离开停)③消息全冒完才出选项、选项固定在底部不乱飘。音效恢复机制没动(点屏幕即恢复)';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -889,6 +889,8 @@ function render(){
   if(c.p==='alter'){const b=$('#alterbg');if(b)b.scrollTop=b.scrollHeight;}
   if(c.p==='tale'){const b=$('#talebox');if(b)b.scrollTop=b.scrollHeight;}
   if(c.p==='dread'){const b=$('#dreadbox');if(b)b.scrollTop=b.scrollHeight;}
+  if((c.p==='tale'&&S.tale&&S.tale.active)||(c.p==='dread'&&S.dread&&S.dread.active)){setTimeout(jailAmbientStart,40);}
+  else if(c.p!=='jail'){jailAmbientStop();}
   if(c.p==='xdm'){const b=$('#xdmbox');if(b)b.scrollTop=b.scrollHeight;}
   if(c.p==='music'){if(S.music&&S.music.session&&S.music.session.startTs){if(!_mSessTimer)_mSessTimer=setInterval(mSessTick,1000);mSessTick();}else if(_mSessTimer){clearInterval(_mSessTimer);_mSessTimer=null;}}
   if(c.p==='shopcs'){const b=$('#csbox');if(b)b.scrollTop=b.scrollHeight;}
@@ -3541,6 +3543,8 @@ function saveContact(id,isNew){const c=isNew?{id,pinned:false,blocked:false,proa
   if(isNew){S.contacts.push(c);if(c.greeting)msgs(c.id).push({role:'assistant',type:'text',content:c.greeting,time:Date.now()});}
   save();closeModal();render();}
 
+/* 恐怖游戏通用：把多条消息一条一条往外冒，每条带刺音(像禁闭室) */
+async function horrorReveal(stateKey,lines,boxId){for(const it of lines){const st=S[stateKey];if(!st)return;st.log.push(it);if(st.log.length>240)st.log=st.log.slice(-240);save();if(cur().p===stateKey)render();const b=$('#'+boxId);if(b)b.scrollTop=b.scrollHeight;jailStab();const tx=(it.text||'');await sleep(Math.max(650,tx.length*48));}}
 /* ===== 惊悚抉择：纯选项恐怖游戏（病娇出题·选错扣血·扣光即死）===== */
 let _dreadBusy=false;
 function dreadStart(){if(S.dread&&S.dread.active){go('dread');return;}
@@ -3562,17 +3566,19 @@ async function dreadGM(note){const d=S.dread;if(!d||!d.active||_dreadBusy)return
   try{const hist=(d.log||[]).slice(-40).map(m=>m.who==='me'?{role:'user',content:m.text}:{role:'assistant',content:(m.who==='旁白'?'【'+m.text+'】':m.text)});
     if(note)hist.push({role:'user',content:note});
     const c=getC(d.gm);const r=await chatAPI([{role:'system',content:buildDreadSystem(d.gm,d.theme,d.hp,d.hpMax)},...hist],{aux:!!(c&&c.model==='aux'),max:560});
-    if(!S.dread||!S.dread.active)return;
-    const sc=r.match(/[\[【]\s*突脸\s*[\|｜:：]([^\]】]+)[\]】]/);if(sc)jailJumpscare(sc[1].trim());
+    if(!S.dread||!S.dread.active){_dreadBusy=false;return;}
+    const sc=r.match(/[\[【]\s*突脸\s*[\|｜:：]([^\]】]+)[\]】]/);
     let dmg=0,dm;const dre=/[\[【]\s*扣血\s*[\|｜:：](\d{1,3})(?:[\|｜:：][^\]】]*)?[\]】]/g;while((dm=dre.exec(r)))dmg+=parseInt(dm[1],10)||0;
     let heal=0,hm2;const hre=/[\[【]\s*回血\s*[\|｜:：](\d{1,3})[\]】]/g;while((hm2=hre.exec(r)))heal+=parseInt(hm2[1],10)||0;
-    if(dmg){d.hp=Math.max(0,d.hp-dmg);jailStab();}if(heal)d.hp=Math.min(d.hpMax,d.hp+heal);
     let choice=null;const cm=r.match(/[\[【]\s*选择\s*[\|｜:：]([^\|｜\]】]+)[\|｜]([^\]】]+)[\]】]/);if(cm){const opts=cm[2].split(/[\/、,，\|]/).map(x=>x.trim()).filter(Boolean).slice(0,4);if(opts.length>=2)choice={q:cm[1].trim(),opts};}
     const died=/[\[【]\s*死亡\s*[\|｜:：]?([^\]】]*)[\]】]/.exec(r);const won=/[\[【]\s*通关\s*[\]】]/.test(r);
     const clean=r.replace(/[\[【]\s*(突脸|选择|扣血|回血|死亡|通关)[^\]】]*[\]】]/g,'');
-    splitBubbles(clean).forEach(l=>{l=l.trim();if(!l)return;if(/^【.*】$/.test(l))d.log.push({who:'旁白',text:l.replace(/^【|】$/g,'')});else d.log.push({who:'gm',text:l});});
-    if(dmg)d.log.push({who:'旁白',text:'💔 -'+dmg+(dmg>=20?' 血！':' 血')});
-    if(heal)d.log.push({who:'旁白',text:'➕'+heal+' 血'});
+    const reveal=[];splitBubbles(clean).forEach(l=>{l=l.trim();if(!l)return;if(/^【.*】$/.test(l))reveal.push({who:'旁白',text:l.replace(/^【|】$/g,'')});else reveal.push({who:'gm',text:l});});
+    if(dmg){d.hp=Math.max(0,d.hp-dmg);reveal.push({who:'旁白',text:'💔 -'+dmg+(dmg>=20?' 血！':' 血')});}
+    if(heal){d.hp=Math.min(d.hpMax,d.hp+heal);reveal.push({who:'旁白',text:'➕'+heal+' 血'});}
+    if(sc)jailJumpscare(sc[1].trim());
+    await horrorReveal('dread',reveal,'dreadbox');
+    if(!S.dread)return;
     if(died||d.hp<=0){d.phase='dead';d.active=false;d.deathReason=((died&&died[1]||'').trim())||'你流尽了最后一滴血。';}
     else if(won){d.phase='won';d.active=false;}
     else if(choice)d.choice=choice;
@@ -3627,17 +3633,21 @@ async function taleGM(note){const t=S.tale;if(!t||!t.active||_taleBusy)return;_t
   try{const hist=(t.log||[]).slice(-50).map(m=>m.who==='me'?{role:'user',content:m.text}:{role:'assistant',content:(m.who==='旁白'?'【'+m.text+'】':m.text)});
     if(note)hist.push({role:'user',content:note});
     const r=await chatAPI([{role:'system',content:buildTaleSystem()},...hist],{max:600});
-    if(!S.tale||!S.tale.active)return;
-    const sc=r.match(/[\[【]\s*突脸\s*[\|｜:：]([^\]】]+)[\]】]/);if(sc)jailJumpscare(sc[1].trim());
+    if(!S.tale||!S.tale.active){_taleBusy=false;return;}
+    const sc=r.match(/[\[【]\s*突脸\s*[\|｜:：]([^\]】]+)[\]】]/);
     let choice=null;const cm=r.match(/[\[【]\s*选择\s*[\|｜:：]([^\|｜\]】]+)[\|｜]([^\]】]+)[\]】]/);if(cm){const opts=cm[2].split(/[\/、,，\|]/).map(x=>x.trim()).filter(Boolean).slice(0,4);if(opts.length>=2)choice={q:cm[1].trim(),opts};}
-    let cdm;const cre=/[\[【]\s*同伴死亡\s*[\|｜:：]([^\|｜\]】]+)[\|｜]([^\]】]*)[\]】]/g;while((cdm=cre.exec(r))){const nm=cdm[1].trim();const cid=(t.companions||[]).find(id=>{const c=getC(id);return c&&((c.remark||c.name)===nm||(nm.length>=2&&((c.name&&nm.includes(c.name))||(c.remark&&nm.includes(c.remark)))));});if(cid&&t.dead.indexOf(cid)<0)t.dead.push(cid);t.log.push({who:'旁白',text:'💀 '+nm+'　'+((cdm[2]||'死了').trim())});}
+    const compNotes=[];let cdm;const cre=/[\[【]\s*同伴死亡\s*[\|｜:：]([^\|｜\]】]+)[\|｜]([^\]】]*)[\]】]/g;while((cdm=cre.exec(r))){const nm=cdm[1].trim();const cid=(t.companions||[]).find(id=>{const c=getC(id);return c&&((c.remark||c.name)===nm||(nm.length>=2&&((c.name&&nm.includes(c.name))||(c.remark&&nm.includes(c.remark)))));});if(cid&&t.dead.indexOf(cid)<0)t.dead.push(cid);compNotes.push({who:'旁白',text:'💀 '+nm+'　'+((cdm[2]||'死了').trim())});}
     const died=/[\[【]\s*死亡\s*[\|｜:：]?([^\]】]*)[\]】]/.exec(r);const passed=/[\[【]\s*过夜\s*[\]】]/.test(r);const won=/[\[【]\s*通关\s*[\]】]/.test(r);
     const clean=r.replace(/[\[【]\s*(突脸|选择|同伴死亡|死亡|过夜|通关)[^\]】]*[\]】]/g,'');
-    splitBubbles(clean).forEach(l=>{l=l.trim();if(!l)return;if(/^【.*】$/.test(l))t.log.push({who:'旁白',text:l.replace(/^【|】$/g,'')});else t.log.push({who:'gm',text:l});});
-    if(choice)t.choice=choice;
+    const reveal=[];splitBubbles(clean).forEach(l=>{l=l.trim();if(!l)return;if(/^【.*】$/.test(l))reveal.push({who:'旁白',text:l.replace(/^【|】$/g,'')});else reveal.push({who:'gm',text:l});});
+    compNotes.forEach(x=>reveal.push(x));
+    if(sc)jailJumpscare(sc[1].trim());
+    await horrorReveal('tale',reveal,'talebox');
+    if(!S.tale)return;
     if(died){t.phase='dead';t.active=false;t.deathReason=((died[1]||'').trim())||'你没能活过这一晚。';}
     else if(won){t.phase='won';t.active=false;}
     else if(passed){if(t.night>=3){t.phase='won';t.active=false;}else{t.night++;t.log.push({who:'旁白',text:'—— 你撑过去了，天蒙蒙亮。第 '+t.night+' 晚，正在逼近 ——'});}}
+    else if(choice)t.choice=choice;
     if(t.log.length>240)t.log=t.log.slice(-240);save();_taleBusy=false;render();
     if(passed&&S.tale&&S.tale.active)setTimeout(()=>{if(S.tale&&S.tale.active)taleGM('[系统：第'+t.night+'晚开始了，紧接着推进这一晚新的诡异事件。]');},1500);
   }catch(e){_taleBusy=false;if(S.tale)render();}}
