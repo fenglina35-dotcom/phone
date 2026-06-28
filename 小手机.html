@@ -428,7 +428,7 @@ const KEY='yibei_phone_v2';
 const SHARE_GATE=true, SHARE_PW='8980';
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ if(localStorage.getItem('yibei_unlocked')==='1')return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v219 · 修好声音要退后台才恢复:之前触屏只唤醒了音效引擎、没把被系统打断暂停的音乐接着放;现在一碰屏幕就同时唤醒音效+继续放本该在放的音乐,不用再退后台';
+const APP_VER='v220 · 语音API新增 Fish Audio 支持(克隆最简单):设置-语音API地址填 api.fish.audio、Key、模型选填 speech-1.6、音色填 fish 克隆出的模型ID,角色语音音色切成API即可;同时仍支持 ElevenLabs 和 OpenAI兼容(硅基流动CosyVoice)';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -691,7 +691,9 @@ function playBuf(buf){ensureAudio();if(!_audio||!buf)return;try{if(_audio.state=
 async function ttsArr(text,o){const t=stripSpoken(text);if(!t)return null;const v=o?getVoice(o):null;const tts=S.settings.tts;
   if(!(v&&v.engine==='api'&&tts&&tts.base&&tts.key))return null;const vid=v.ttsVoice||tts.voice||'';
   try{let r;
-    if(/elevenlabs/i.test(tts.base))r=await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+vid,{method:'POST',headers:{'xi-api-key':tts.key,'Content-Type':'application/json'},body:JSON.stringify({text:t,model_id:tts.model||'eleven_multilingual_v2'})});
+    if(/fish\.?audio/i.test(tts.base)){const hd={'Authorization':'Bearer '+tts.key,'Content-Type':'application/json'};if(tts.model)hd['model']=tts.model;/* speech-1.6 / s1 等主干模型，选填 */
+      r=await fetch('https://api.fish.audio/v1/tts',{method:'POST',headers:hd,body:JSON.stringify({text:t,reference_id:vid||undefined,format:'mp3',normalize:true})});}
+    else if(/elevenlabs/i.test(tts.base))r=await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+vid,{method:'POST',headers:{'xi-api-key':tts.key,'Content-Type':'application/json'},body:JSON.stringify({text:t,model_id:tts.model||'eleven_multilingual_v2'})});
     else r=await fetch(tts.base.replace(/\/+$/,'')+'/audio/speech',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tts.key},body:JSON.stringify({model:tts.model||'tts-1',input:t,voice:vid||'alloy'})});
     if(r.ok)return await r.arrayBuffer();toast('语音API错误 '+r.status);
   }catch(e){toast('语音生成失败');}return null;}
@@ -1380,10 +1382,10 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="field" style="padding:0 14px 10px"><label>模型名（如 gpt-4o）</label><input id="s_vmodel" value="${esc(v.model)}" placeholder="留空=不识图"></div>
     </div>
     <div class="section"><div style="padding:12px 14px;font-weight:600;color:#b8a4e3">语音API（可选·克隆/更真）</div>
-      <div class="hint" style="padding:0 14px">不填用手机自带音色(免费)。要用 ElevenLabs 克隆音：地址填 https://api.elevenlabs.io、Key填你的、模型填 eleven_multilingual_v2、默认音色填你的 voice id；再把角色「语音音色」引擎切成 API。也支持 OpenAI 兼容 /audio/speech。</div>
-      <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_tbase" value="${esc((S.settings.tts||{}).base||'')}" placeholder="https://…/v1"></div>
+      <div class="hint" style="padding:0 14px">不填=用手机自带音色(免费)。想要克隆/更真，填好下面任一种，再把角色「语音音色」引擎切成 API：<br>· <b>Fish Audio（推荐·克隆最简单）</b>：地址填 https://api.fish.audio、Key填你的、模型选填 speech-1.6、默认音色填你在 fish 克隆出来的「模型ID(reference_id)」。<br>· ElevenLabs：地址 https://api.elevenlabs.io、模型 eleven_multilingual_v2、音色填 voice id。<br>· OpenAI 兼容：地址填 …/v1、模型 tts-1、音色 alloy 等（也支持硅基流动 CosyVoice）。</div>
+      <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_tbase" value="${esc((S.settings.tts||{}).base||'')}" placeholder="https://api.fish.audio 或 …/v1"></div>
       <div class="field" style="padding:0 14px"><label>API Key</label><input id="s_tkey" type="password" value="${esc((S.settings.tts||{}).key||'')}"></div>
-      <div class="two" style="padding:0 14px 10px"><div class="field"><label>模型</label><input id="s_tmodel" value="${esc((S.settings.tts||{}).model||'')}" placeholder="tts-1"></div><div class="field"><label>默认音色</label><input id="s_tvoice" value="${esc((S.settings.tts||{}).voice||'')}" placeholder="alloy/克隆ID"></div></div>
+      <div class="two" style="padding:0 14px 10px"><div class="field"><label>模型</label><input id="s_tmodel" value="${esc((S.settings.tts||{}).model||'')}" placeholder="speech-1.6 / tts-1"></div><div class="field"><label>默认音色</label><input id="s_tvoice" value="${esc((S.settings.tts||{}).voice||'')}" placeholder="克隆模型ID / alloy"></div></div>
       <div style="padding:6px 14px;font-weight:600;color:#7bd38d;font-size:13px">语音转文字（让角色听懂你录的语音·可选）</div>
       <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_sbase" value="${esc((S.settings.stt||{}).base||'')}" placeholder="https://…/v1（留空用手机识别）"></div>
       <div class="two" style="padding:0 14px 10px"><div class="field"><label>API Key</label><input id="s_skey" type="password" value="${esc((S.settings.stt||{}).key||'')}"></div><div class="field"><label>模型</label><input id="s_smodel" value="${esc((S.settings.stt||{}).model||'')}" placeholder="whisper-1"></div></div>
