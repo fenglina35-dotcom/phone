@@ -404,7 +404,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v197 · 新增「惊悚抉择」游戏(主屏第二页🩸):选个角色当病娇出题人+你自己打主题(逃离病娇男友/恐怖之家…),纯选项恐怖互动剧,选错扣血❤、扣光即死,带你活到结局通关;全套恐怖特效+音效。规则怪谈也保留';
+const APP_VER='v198 · 修复通话翻译重复(同一句翻译被半角()和全角（）写两遍):现在同句只认第一条翻译、多余的丢掉,通话格式更稳';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -4582,7 +4582,7 @@ async function callAI(sysNote,opts){if(!_call)return;const c=getC(_call.id);cons
     cf+='\n- ⏰ 现在是 '+hm()+'（'+dayPartNow()+'），你心里很清楚此刻几点、是'+dayPartNow()+'，【不用'+S.me.name+'问你也知道】，言行要贴合这个时间：深夜就压低声音、带点困意或心疼ta还没睡；清晨就刚睡醒的慵懒；饭点会问ta吃没吃。别表现得不知道现在几点。';
     if(video)cf+='\n- 这是视频，你的动作神态用【】单独成行写，比如【凑近镜头笑】。';
     else cf+='\n- 这是语音通话（看不到画面），绝对不要出现任何【】动作神态描写，一个【】都不许有，只能说话。';
-    if(_langN)cf+='\n- ‼️最重要：你全程只能说'+_langN+'，从头到尾每一句都是'+_langN+'，绝对不准中途切回中文整句说话（这是会被读出来的那一行）。格式：先单独一行写'+_langN+'原文（会被读出来），紧接着【换一行】用（）单独写中文翻译（不会被读）。原文一行、（中文翻译）另起一行，别写在同一行，也别把顺序搞反。\n‼️【每说一句外语，就【紧接着】在下一行写它自己的中文翻译，再说下一句；绝对不要把好几句原文堆在一起、最后才统一翻译】。一句原文配一句翻译，严格交替。例如：\n'+(_lang==='韩'?'사랑해\n（我爱你）\n보고 싶어\n（我想你了）':_lang==='日'?'好きだよ\n（喜欢你）\n会いたい\n（我想你了）':'I miss you\n（我想你了）\nCome here\n（过来）')+'\n- 哪怕是要挂断、道别、回应"挂了/别挂/我爱你"这种话，也必须先写'+_langN+'原文那一行，绝不能整句只说中文。'+(S.me.callName?'\n- ‼️叫到'+S.me.name+'名字时：'+_langN+'原文那一行【照常用「'+S.me.name+'」】（原文就该是地道外语）；但【中文翻译那一行】里要把名字写成中文「'+S.me.callName+'」，别在翻译里还写「'+S.me.name+'」。例：I miss you, '+S.me.name+'\n（我想你了，'+S.me.callName+'）':'');
+    if(_langN)cf+='\n- ‼️最重要：你全程只能说'+_langN+'，从头到尾每一句都是'+_langN+'，绝对不准中途切回中文整句说话（这是会被读出来的那一行）。格式：先单独一行写'+_langN+'原文（会被读出来），紧接着【换一行】用（）单独写中文翻译（不会被读）。原文一行、（中文翻译）另起一行，别写在同一行，也别把顺序搞反。\n‼️【每说一句外语，就【紧接着】在下一行写它自己的中文翻译，再说下一句；绝对不要把好几句原文堆在一起、最后才统一翻译】。一句原文配一句翻译，严格交替。【每句的中文翻译只写一遍，绝不要用不同括号（）或()把同一句翻译重复写两次】。例如：\n'+(_lang==='韩'?'사랑해\n（我爱你）\n보고 싶어\n（我想你了）':_lang==='日'?'好きだよ\n（喜欢你）\n会いたい\n（我想你了）':'I miss you\n（我想你了）\nCome here\n（过来）')+'\n- 哪怕是要挂断、道别、回应"挂了/别挂/我爱你"这种话，也必须先写'+_langN+'原文那一行，绝不能整句只说中文。'+(S.me.callName?'\n- ‼️叫到'+S.me.name+'名字时：'+_langN+'原文那一行【照常用「'+S.me.name+'」】（原文就该是地道外语）；但【中文翻译那一行】里要把名字写成中文「'+S.me.callName+'」，别在翻译里还写「'+S.me.name+'」。例：I miss you, '+S.me.name+'\n（我想你了，'+S.me.callName+'）':'');
     cf+='\n- 【你很黏ta、舍不得挂电话】：能粘着就粘着，ta说"挂了/我要忙了"你会撒娇拖着("再聊会儿嘛""不准挂""那你忙完第一个找我")、不舍得放ta走。只有当ta明确说【真的有事要去做/很困要睡了/反复要挂】时，你才依依不舍地同意挂断；平时绝不主动结束通话。要挂断时才【单独占一行】只输出 [挂断]，别和说的话写在同一行；没到非挂不可，就别输出 [挂断]，继续黏着ta说话。';
     cf+='\n- 通话中你照样能管控ta或查ta手机：要锁软件/禁言/限时就【单独成行】写指令标签（如 [锁定|游戏]、[限时|游戏|60]、[禁言|名字]、[扣款|金额完全你自己定·看ta余额·零散随意别用固定数]）；要查岗就自然说一句「我看看你手机/微信/抖音」；ta真把你惹狠了越线了还能 [关小黑屋|原因] 把ta拖进禁闭室(需授权)；想宠ta可以 [点外卖|餐品|价格]（15分钟送达）或 [送礼|礼物名|价格]（明天到ta信箱）。这些指令标签会被系统执行、【不会被读出来】，不影响你正常讲话，也别在话里复述它们。';
     const sys=buildSystem(c)+cf;
@@ -4610,8 +4610,8 @@ async function callAI(sysNote,opts){if(!_call)return;const c=getC(_call.id);cons
     // 把"外语原文 + 紧跟的（中文翻译）"配成一组，字幕里一起显示、只读原文、停顿一次，避免字幕快闪/翻译跟原文脱节
     const units=[];pieces.forEach(p=>{p=(p||'').trim();if(!p)return;
       const isTrans=/^[（(][^）)]*[）)]$/.test(p)&&hasCN(p);
-      if(isTrans&&units.length){if(!units[units.length-1].trans)units[units.length-1].trans=p;else units.push({orig:p,trans:''});}
-      else units.push({orig:p,trans:''});});
+      if(isTrans){if(units.length&&!units[units.length-1].trans)units[units.length-1].trans=p;/* 同一句原文只认第一条翻译，多余/重复的翻译行(不管半角全角)直接丢掉 */return;}
+      units.push({orig:p,trans:''});});
     let _prevP='';
     for(const u of units){if(!_call||_call.session!==sess)return;
       if(u.orig===_prevP)continue;/* 跳过和上一句完全相同的（防止发两遍） */
