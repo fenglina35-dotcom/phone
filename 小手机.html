@@ -389,7 +389,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v192 · 马甲聊天改成真实联动:你扮演别的角色撩他后,他真的记得跟谁聊了什么——你以忆北身份问他他会知道(坦白或心虚看他),查他手机也能看到这些真实聊天。用实时读取,随时点「清空」他就忘了(可逆、不会真错乱)';
+const APP_VER='v193 · 马甲聊天升级:①修复每次回复跳到顶部(现在停在最新)②回复不再死板的两条、1~3条更像真人③可多选删除消息(右上「选择」)④对方被撩烦了能[拉黑]你⑤上下文跟随主聊天的条数设置(默认约24条)';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -868,6 +868,7 @@ function render(){
   else if(c.p==='momentDetail')html='';
   app.innerHTML='<div class="page">'+html+'</div>';
   if(c.p==='chat'){afterChat(c.id);}
+  if(c.p==='alter'){const b=$('#alterbg');if(b)b.scrollTop=b.scrollHeight;}
   if(c.p==='xdm'){const b=$('#xdmbox');if(b)b.scrollTop=b.scrollHeight;}
   if(c.p==='music'){if(S.music&&S.music.session&&S.music.session.startTs){if(!_mSessTimer)_mSessTimer=setInterval(mSessTick,1000);mSessTick();}else if(_mSessTimer){clearInterval(_mSessTimer);_mSessTimer=null;}}
   if(c.p==='shopcs'){const b=$('#csbox');if(b)b.scrollTop=b.scrollHeight;}
@@ -1859,6 +1860,7 @@ if(S.shop&&!S.shop.cs)S.shop.cs={msgs:[]};
 if(!Array.isArray(S.mood))S.mood=[];
 if(!S.cozy)S.cozy={cid:null,intim:0,log:[],visits:0};
 if(!S.alter)S.alter={};// 马甲聊天沙盒(以某角色身份找另一角色聊),与真实聊天/记忆完全隔离
+if(!S.alterMeta)S.alterMeta={};// 马甲聊天的拉黑等状态
 if(S.wxLogin&&Date.now()>=S.wxLogin.until)S.wxLogin=null;// 启动时清掉过期的微信登录态，避免卡住
 if(S.couple&&S.couple.gags){Object.keys(S.couple.gags).forEach(cid=>{const _gc=S.contacts.find(x=>x.id===cid);if(!_gc||_gc.deleted)delete S.couple.gags[cid];});}// 启动时清掉已删联系人的僵尸禁言
 if(!S.giftbox)S.giftbox=[];
@@ -3496,8 +3498,9 @@ function saveContact(id,isNew){const c=isNew?{id,pinned:false,blocked:false,proa
   save();closeModal();render();}
 
 /* ===== 马甲聊天：以某角色身份去找另一角色聊（沙盒·与真实聊天/记忆完全隔离）===== */
-let _alterBusy=false;
+let _alterBusy=false,_alterSel=null;
 function alterKey(x,y){return x+'@'+y;}
+function alterBlocked(key){return !!(S.alterMeta&&S.alterMeta[key]&&S.alterMeta[key].blocked);}
 function alterPick(xId){const x=getC(xId);if(!x){toast('角色不在了');return;}
   const cs=S.contacts.filter(c=>!c.deleted&&c.id!==xId);if(!cs.length){toast('通讯录里还没有别的角色可聊');return;}
   const coupleId=S.couple&&S.couple.cid;
@@ -3509,31 +3512,43 @@ function buildAlterSystem(y,x){const xn=(x.remark||x.name);
   if(y.signature)s+='\n你的个性签名："'+y.signature+'"';
   if(y.relation)s+='\n你的身份/关系背景：'+y.relation;
   if(isLover(y)||(S.couple&&S.couple.cid===y.id))s+='\n\n# 你的感情状态\n你有一个深爱着的恋人'+S.me.name+'，你对ta很专一、很在乎。';
-  s+='\n\n# 现在：微信文字聊天\n正在微信上跟你聊天的人是「'+xn+'」'+(x.relation?'（'+x.relation+'）':'')+(x.persona?'。关于ta：'+(''+x.persona).slice(0,180):'')+'。\n你按自己真实的人设、性格和说话风格来回应ta——热情、冷淡、警惕、调侃还是不耐烦，全看你自己和ta说的话，自然真实。像真人发微信：用中文、口语、一次一两条短消息，每条单独一行，别长篇大论、别写旁白和括号动作。\n【规矩】① 只跟「'+xn+'」聊这一摊，别把ta错当成别人、别扯进无关的人。② 你可以表明态度（比如你有对象、不想被撩），但【绝不要透露'+S.me.name+'的任何私密信息或你俩的私事细节】。③ 别提"系统/AI/设定/项圈/查岗/任务"这些词。';
+  s+='\n\n# 现在：微信文字聊天\n正在微信上跟你聊天的人是「'+xn+'」'+(x.relation?'（'+x.relation+'）':'')+(x.persona?'。关于ta：'+(''+x.persona).slice(0,180):'')+'。\n你按自己真实的人设、性格和说话风格来回应ta——热情、冷淡、警惕、调侃还是不耐烦，全看你自己和ta说的话，自然真实。\n像真人发微信：用中文、口语，一次发【1到3条】短消息（随意时一条就够、认真或激动时多发两句），别每次都正好两条，别长篇大论，别写旁白和括号动作。\n【规矩】① 只跟「'+xn+'」聊这一摊，别把ta错当成别人、别扯进无关的人。② 你可以表明态度（比如你有对象、不想被撩），但【绝不要透露'+S.me.name+'的任何私密信息或你俩的私事细节】。③ 别提"系统/AI/设定/项圈/查岗/任务"这些词。④ 如果「'+xn+'」太过分、越界、死缠烂打让你很反感，你可以【单独一行】写 [拉黑] 把ta拉黑（很慎重、符合你人设才用，可在拉黑前撂下一句话）。';
   return s;}
 function renderAlter(xId,yId){const x=getC(xId),y=getC(yId);
   if(!x||!y)return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">马甲聊天</span><span class="r"></span></div><div class="scroll"><div class="empty" style="padding:50px">角色不在了</div></div>`;
-  const key=alterKey(xId,yId);const list=S.alter[key]||[];
-  const rows=list.map(m=>{
-    if(m.role==='assistant')return `<div style="display:flex;gap:8px;margin:10px 12px;align-items:flex-end">${av(y.avatar,'sm')}<div style="max-width:72%;background:#26262a;color:#eee;border-radius:4px 14px 14px 14px;padding:8px 12px;font-size:15px;line-height:1.45;white-space:pre-wrap">${esc(m.content)}</div></div>`;
-    return `<div style="display:flex;gap:8px;margin:10px 12px;align-items:flex-end;flex-direction:row-reverse">${av(x.avatar,'sm')}<div style="max-width:72%;background:linear-gradient(135deg,#ff8fab,#ff6fa5);color:#fff;border-radius:14px 4px 14px 14px;padding:8px 12px;font-size:15px;line-height:1.45;white-space:pre-wrap">${esc(m.content)}</div></div>`;
+  const key=alterKey(xId,yId);const list=S.alter[key]||[];const sel=(_alterSel&&_alterSel.key===key)?_alterSel:null;const blk=alterBlocked(key);
+  const rows=list.map(m=>{const isMe=m.role==='user';const seld=sel&&sel.ids.indexOf(m.id)>=0;
+    const bub=isMe?`<div style="max-width:68%;background:linear-gradient(135deg,#ff8fab,#ff6fa5);color:#fff;border-radius:14px 4px 14px 14px;padding:8px 12px;font-size:15px;line-height:1.45;white-space:pre-wrap">${esc(m.content)}</div>`:`<div style="max-width:68%;background:#26262a;color:#eee;border-radius:4px 14px 14px 14px;padding:8px 12px;font-size:15px;line-height:1.45;white-space:pre-wrap">${esc(m.content)}</div>`;
+    const mark=sel?`<span style="align-self:center;width:18px;height:18px;border-radius:50%;border:1.5px solid ${seld?'#ff6fa5':'#666'};background:${seld?'#ff6fa5':'transparent'};color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${seld?'✓':''}</span>`:'';
+    return `<div style="display:flex;gap:8px;margin:10px 12px;align-items:flex-end;${isMe?'flex-direction:row-reverse;':''}${sel?'cursor:pointer;':''}${seld?'background:rgba(255,143,171,.16);border-radius:12px;padding:3px 2px;':''}"${sel?` onclick="alterToggleSel('${m.id}')"`:''}>${av(isMe?x.avatar:y.avatar,'sm')}${bub}${mark}</div>`;
   }).join('')||`<div class="empty" style="padding:34px 24px;color:#888;line-height:1.8">你正扮演「${esc(x.remark||x.name)}」<br>发条消息去撩撩「${esc(y.remark||y.name)}」吧～<br><span style="font-size:11px">（沙盒·不影响真实剧情和记忆）</span></div>`;
-  return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t" style="font-size:15px">🎭 ${esc(x.remark||x.name)} → ${esc(y.remark||y.name)}</span><span class="r" onclick="alterClear('${xId}','${yId}')" style="color:#fa5151;font-size:13px">清空</span></div>
+  const navR=sel?`<span onclick="alterSelCancel()" style="color:#ccc">取消</span>`:`<span onclick="alterSelStart('${xId}','${yId}')" style="color:#9ec5fe;margin-right:14px">选择</span><span onclick="alterClear('${xId}','${yId}')" style="color:#fa5151">清空</span>`;
+  const bar=sel?`<div class="inputbar" style="gap:8px"><button class="btn g" style="flex:1" onclick="alterSelCancel()">取消</button><button class="btn d" style="flex:1" onclick="alterDelSel()">删除(${sel.ids.length})</button></div>`
+    :blk?`<div class="inputbar" style="justify-content:center;color:#888;font-size:13px;padding:16px;text-align:center">对方已把你拉黑，发不出去了<br><span style="font-size:11px">点右上「清空」可以重来</span></div>`
+    :`<div class="inputbar"><textarea id="alter_in" rows="1" placeholder="以 ${esc(x.remark||x.name)} 的身份说…"></textarea><button class="send" onclick="alterSend('${xId}','${yId}')">发送</button></div>`;
+  return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t" style="font-size:15px">🎭 ${esc(x.remark||x.name)} → ${esc(y.remark||y.name)}</span><span class="r" style="font-size:13px">${navR}</span></div>
     <div style="padding:7px 12px;background:#2a2438;color:#c5a6ff;font-size:11.5px;text-align:center;line-height:1.5">你正以「${esc(x.remark||x.name)}」的身份和「${esc(y.remark||y.name)}」聊天<br>沙盒实验 · 不影响真实剧情和记忆</div>
-    <div class="chatbg" id="alterbg" style="background:#0d0d0d">${rows}${_alterBusy?'<div style="color:#888;font-size:12px;text-align:center;padding:8px">对方正在输入…</div>':''}</div>
-    <div class="inputbar"><textarea id="alter_in" rows="1" placeholder="以 ${esc(x.remark||x.name)} 的身份说…"></textarea><button class="send" onclick="alterSend('${xId}','${yId}')">发送</button></div>`;}
-function alterSend(xId,yId){if(_alterBusy)return;const inp=$('#alter_in');const t=inp?inp.value.trim():'';if(!t)return;inp.value='';
-  const key=alterKey(xId,yId);S.alter[key]=S.alter[key]||[];S.alter[key].push({role:'user',type:'text',content:t.slice(0,500),time:Date.now(),id:uid()});if(S.alter[key].length>300)S.alter[key]=S.alter[key].slice(-300);save();render();alterReply(xId,yId);}
+    <div class="chatbg" id="alterbg" style="background:#0d0d0d">${rows}${_alterBusy?'<div style="color:#888;font-size:12px;text-align:center;padding:8px">对方正在输入…</div>':''}${blk?`<div style="text-align:center;color:#fa7a8f;font-size:12px;padding:12px">⛔ 「${esc(y.remark||y.name)}」把你拉黑了</div>`:''}</div>
+    ${bar}`;}
+function alterSend(xId,yId){if(_alterBusy)return;const key=alterKey(xId,yId);if(alterBlocked(key)){toast('对方已把你拉黑了');return;}const inp=$('#alter_in');const t=inp?inp.value.trim():'';if(!t)return;inp.value='';
+  S.alter[key]=S.alter[key]||[];S.alter[key].push({role:'user',type:'text',content:t.slice(0,500),time:Date.now(),id:uid()});if(S.alter[key].length>400)S.alter[key]=S.alter[key].slice(-400);save();render();alterReply(xId,yId);}
 async function alterReply(xId,yId){if(_alterBusy)return;const x=getC(xId),y=getC(yId);if(!x||!y)return;_alterBusy=true;if(cur().p==='alter')render();
   const key=alterKey(xId,yId);
-  try{const conv=(S.alter[key]||[]).slice(-16).map(m=>({role:m.role,content:m.content}));
-    const r=await chatAPI([{role:'system',content:buildAlterSystem(y,x)},...conv],{aux:y.model==='aux',max:300});
+  try{const conv=(S.alter[key]||[]).slice(-((S.settings.hist||12)*2)).map(m=>({role:m.role,content:m.content}));
+    const r=await chatAPI([{role:'system',content:buildAlterSystem(y,x)},...conv],{aux:y.model==='aux',max:320});
+    const wantBlock=/[\[【]\s*拉黑\s*[\]】]/.test(r);
     let lines=splitBubbles(cleanReply(r)).filter(l=>l&&!CTLLEAK.test(l)&&!/^[\[【]/.test(l));
-    if(!lines.length)lines=['…'];
-    S.alter[key]=S.alter[key]||[];lines.forEach(l=>S.alter[key].push({role:'assistant',type:'text',content:l.slice(0,400),time:Date.now(),id:uid()}));if(S.alter[key].length>300)S.alter[key]=S.alter[key].slice(-300);save();
+    if(!lines.length&&!wantBlock)lines=['…'];
+    S.alter[key]=S.alter[key]||[];lines.forEach(l=>S.alter[key].push({role:'assistant',type:'text',content:l.slice(0,400),time:Date.now(),id:uid()}));if(S.alter[key].length>400)S.alter[key]=S.alter[key].slice(-400);
+    if(wantBlock){S.alterMeta=S.alterMeta||{};S.alterMeta[key]={blocked:true,ts:Date.now()};}
+    save();
   }catch(e){S.alter[key]=S.alter[key]||[];S.alter[key].push({role:'assistant',type:'text',content:'（网络好像不太好…再发一句试试）',time:Date.now(),id:uid()});}
   _alterBusy=false;if(cur().p==='alter')render();}
-function alterClear(xId,yId){const key=alterKey(xId,yId);if(!(S.alter[key]&&S.alter[key].length)){toast('还没有聊天记录');return;}if(!confirm('清空这段马甲聊天？'))return;delete S.alter[key];save();render();toast('已清空');}
+function alterSelStart(xId,yId){_alterSel={key:alterKey(xId,yId),ids:[]};render();}
+function alterSelCancel(){_alterSel=null;render();}
+function alterToggleSel(id){if(!_alterSel)return;const i=_alterSel.ids.indexOf(id);if(i>=0)_alterSel.ids.splice(i,1);else _alterSel.ids.push(id);render();}
+function alterDelSel(){if(!_alterSel)return;const key=_alterSel.key,ids=_alterSel.ids;if(!ids.length){toast('先选要删的消息');return;}S.alter[key]=(S.alter[key]||[]).filter(m=>ids.indexOf(m.id)<0);if(!(S.alter[key]||[]).length)delete S.alter[key];save();_alterSel=null;render();toast('已删除');}
+function alterClear(xId,yId){const key=alterKey(xId,yId);if(!(S.alter[key]&&S.alter[key].length)&&!alterBlocked(key)){toast('还没有聊天记录');return;}if(!confirm('清空这段马甲聊天？（对方会彻底忘记，拉黑也解除）'))return;delete S.alter[key];if(S.alterMeta)delete S.alterMeta[key];_alterSel=null;save();render();toast('已清空');}
 function renderContactInfo(id){const c=getC(id);if(!c)return '';const sp=getSpy(c);
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">资料</span><span class="r" onclick="editContact('${id}')">编辑</span></div>
   <div class="scroll" style="background:#000">
@@ -3635,6 +3650,7 @@ function c_delete(id){const c=getC(id);
   if(!confirm('删除这个角色和聊天记录？'))return;c.deleted=true;Object.keys(S.messages).forEach(k=>{if(k===id||k.indexOf(id+'#')===0)delete S.messages[k];});
   if(S.couple){if(S.couple.gags)delete S.couple.gags[id];if(S.couple.gagAuth)S.couple.gagAuth=S.couple.gagAuth.filter(x=>x!==id);}// 删人时连带清掉对ta的禁言/授权,避免僵尸锁
   if(S.alter)Object.keys(S.alter).forEach(k=>{if(k.split('@').indexOf(id)>=0)delete S.alter[k];});// 清掉涉及ta的马甲聊天
+  if(S.alterMeta)Object.keys(S.alterMeta).forEach(k=>{if(k.split('@').indexOf(id)>=0)delete S.alterMeta[k];});
   save();stack.pop();render();}
 function cleanStaleGags(){if(!S.couple||!S.couple.gags)return false;let ch=false;Object.keys(S.couple.gags).forEach(cid=>{const c=getC(cid);if(!c||c.deleted){delete S.couple.gags[cid];ch=true;}});if(ch)save();return ch;}
 function clearHistory(id){openModal(`<h3>清除聊天记录</h3>
