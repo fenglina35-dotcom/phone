@@ -428,7 +428,7 @@ const KEY='yibei_phone_v2';
 const SHARE_GATE=true, SHARE_PW='8980';
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ if(localStorage.getItem('yibei_unlocked')==='1')return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v226 · 重要修复:资料页点「情侣空间·已绑定」会重新绑定、把在一起天数/纪念日/授权全冲掉的bug——现在已绑定就只进入、绝不重置;之前被冲掉的请重新设一下日期和授权(以后不会再被冲)';
+const APP_VER='v227 · 修复登录他微信时、他好友被问"你是谁"竟答"我是克劳德"的串戏:重写好友提示词、把好友身份钉死(只演好友本人、绝不冒充对方),去掉会带偏的对方人设参考';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -3909,7 +3909,10 @@ function hisChatSend(cid,fid){const inp=$('#his_in');const t=inp?inp.value.trim(
 let _hisReplyBusy=false;
 async function aiHisFriendReply(cid,fid){if(_hisReplyBusy)return;_hisReplyBusy=true;const c=getC(cid);const d=hisWxData(cid);const f=(d.friends||[]).find(x=>x.id===fid);if(!c||!f){_hisReplyBusy=false;return;}
   try{const hist=(f.msgs||[]).slice(-12).map(m=>({role:m.r==='me'?'user':'assistant',content:m.c}));
-    const sys='你在扮演「'+f.name+'」，是「'+c.name+'」的'+(f.relation||'微信好友')+'。'+(f.persona?'你的人设：'+f.persona+'。':'')+'现在「'+c.name+'」在微信上跟你聊天（其实是别人登录了他的号在冒充他，但你并不知道，你以为就是他本人）。按你和他的关系自然、口语、简短地回复（1~2句），像真人发微信。'+(c.persona?'（参考：'+c.name+'平时是这样的人——'+(c.persona||'').slice(0,80)+'）':'');
+    const sys='【你的身份】你是「'+f.name+'」，是「'+c.name+'」的'+(f.relation||'微信好友')+'。'+(f.persona?'你（'+f.name+'）的性格：'+f.persona+'。':'')+
+      '\n现在「'+c.name+'」在微信上找你聊天（其实是别人登录了'+c.name+'的号在冒充他，但你并不知道、你以为就是'+c.name+'本人）。对方（'+c.name+'）说的话是发给你的，你要【回应】他、而不是模仿他。'+
+      '\n【铁律·身份不许串】你【从头到尾只是「'+f.name+'」本人】，第一人称"我"指的就是「'+f.name+'」。无论对方说什么、哪怕问"你是谁"，你都只能以「'+f.name+'」的身份回答（比如"我是你妹妹呀""我是老张啊"）。【绝对不许把自己说成「'+c.name+'」、不许冒充'+c.name+'、不许替'+c.name+'说话】。'+
+      '\n按你和「'+c.name+'」的关系，自然、口语、简短地回（1~2句），像真人发微信。';
     const r=await chatAPI([{role:'system',content:sys},...hist],{max:200,aux:true});
     const txt=cleanReply(r).replace(/\s*\n+\s*/g,' ').trim();if(!txt)return;
     f.msgs.push({r:'ta',c:txt,t:Date.now()});hisSpyFriend(cid,f.name).lines.push(f.name+'：'+txt);/* 同步进查他手机 */
