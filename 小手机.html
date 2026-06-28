@@ -404,7 +404,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v195 · ①更正:通话外语原文照常叫North、只在中文翻译里写北②小黑屋恐怖升级:血色脉动暗角+扫描线+偶发故障抖动+开场"门锁上了"仪式+你太久不回他会逼近低语(看着我/别想跑);音效照旧';
+const APP_VER='v196 · 新增「规则怪谈」游戏(主屏第二页🕯️):AI每局随机出一张10条须知(1条是假的·照做会死),活过三晚才能逃出;可拉角色当同伴(会一个个出事),一死即结束;全套恐怖特效(血色暗角/扫描线/突脸/选择);揭晓假规则';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -870,6 +870,7 @@ function render(){
   else if(c.p==='wxsearch')html=renderWxSearch();
   else if(c.p==='spy')html=renderSpy(c.id);
   else if(c.p==='cozy')html=renderCozy();
+  else if(c.p==='tale')html=renderTale();
   else if(c.p==='shop')html=renderShop();
   else if(c.p==='shopcs')html=renderShopCS();
   else if(c.p==='food')html=renderFood();
@@ -885,6 +886,7 @@ function render(){
   app.innerHTML='<div class="page">'+html+'</div>';
   if(c.p==='chat'){afterChat(c.id);}
   if(c.p==='alter'){const b=$('#alterbg');if(b)b.scrollTop=b.scrollHeight;}
+  if(c.p==='tale'){const b=$('#talebox');if(b)b.scrollTop=b.scrollHeight;}
   if(c.p==='xdm'){const b=$('#xdmbox');if(b)b.scrollTop=b.scrollHeight;}
   if(c.p==='music'){if(S.music&&S.music.session&&S.music.session.startTs){if(!_mSessTimer)_mSessTimer=setInterval(mSessTick,1000);mSessTick();}else if(_mSessTimer){clearInterval(_mSessTimer);_mSessTimer=null;}}
   if(c.p==='shopcs'){const b=$('#csbox');if(b)b.scrollTop=b.scrollHeight;}
@@ -1131,6 +1133,7 @@ function renderHome(){
      <div class="apppage">
       <div class="app" onclick="openMusic()">${aIco('music','🎵','linear-gradient(135deg,#ff8fab,#b8a4e3)')}<span>音乐</span></div>
       <div class="app" onclick="go('cozy')">${aIco('cozyhome','🏡','linear-gradient(135deg,#b07be0,#ff8fab)')}<span>像素小家</span></div>
+      <div class="app" onclick="taleStart()">${aIco('tale','🕯️','linear-gradient(135deg,#3a0010,#1a1a1f)')}<span>规则怪谈</span></div>
      </div>
     </div>
     <div class="pgdots"><span class="pgdot on" id="pgdot0"></span><span class="pgdot" id="pgdot1"></span></div>
@@ -3535,6 +3538,73 @@ function saveContact(id,isNew){const c=isNew?{id,pinned:false,blocked:false,proa
   if(isNew){S.contacts.push(c);if(c.greeting)msgs(c.id).push({role:'assistant',type:'text',content:c.greeting,time:Date.now()});}
   save();closeModal();render();}
 
+/* ===== 规则怪谈：活过三晚（AI出题·硬核·可拉同伴当幸存者）===== */
+let _taleBusy=false,_taleRules=false;
+function taleStart(){if(S.tale&&S.tale.active){go('tale');return;}
+  const cs=S.contacts.filter(c=>!c.deleted&&!c.blocked);
+  openModal(`<h3>🕯️ 规则怪谈 · 活过三晚</h3><div class="hint">AI 会给你一张诡异《须知》共10条，其中【1条是假的】，照做会死。撑过三晚才能活着出去。<b style="color:#fa5151">一死即结束</b>。可拉几个角色当同住的幸存者（他们也会出事…）。</div>
+    <div class="field"><label>叫上谁一起被困（可不选·最多4个）</label></div>
+    <div style="max-height:34vh;overflow:auto">${cs.length?cs.map(c=>`<label class="it" style="display:flex;align-items:center;gap:8px;cursor:pointer"><input type="checkbox" class="talechk" value="${c.id}"> ${av(c.avatar,'sm')}<span>${esc(c.remark||c.name)}</span></label>`).join(''):'<div class="hint">通讯录里还没别的角色，可以自己一个人玩</div>'}</div>
+    <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" style="background:#8a0018" onclick="taleGen()">🔦 进入怪谈</button></div>`);}
+async function taleGen(){const picks=[...document.querySelectorAll('.talechk:checked')].map(x=>x.value).slice(0,4);closeModal();
+  S.tale={active:true,gen:true,companions:picks,dead:[],night:1,log:[],choice:null,phase:'scene',rules:[],fake:1};save();go('tale');
+  try{const compNames=picks.map(id=>{const c=getC(id);return c?(c.remark||c.name):'';}).filter(Boolean);
+    const r=await chatAPI([{role:'system',content:'你是恐怖「规则怪谈」游戏出题人。生成一局规则怪谈：选一个诡异场景(深夜便利店/废弃医院/凶宅民宿/末班地铁/老旧宿舍楼/值夜班…自己定,要有氛围);写一张《须知/规则》共【正好10条】,编号1-10,每条像真怪谈那样具体诡异、彼此能形成线索(有的规则之间隐隐冲突,玩家靠这些活下去);其中【恰好1条是假规则】:看着正常,但照做会出事/致命,或与真规则致命冲突。\n只输出JSON:{"title":"标题","theme":"场景一句话","rules":["规则1文字","规则2文字"... 共10条],"fake":假规则编号(1到10的数字),"fakeReason":"这条为什么假/照做会怎么死(给主持人判生死用,玩家看不到)","opening":"开场旁白2-4句,天刚黑、第一晚开始,把玩家拉进场景"}'},{role:'user',content:'生成一局。'+(compNames.length?'同住的还有：'+compNames.join('、')+'（可在剧情里出现、也可能出事）。':'玩家独自一人。')}],{max:1100});
+    const d=parseObj(r);if(!d||!Array.isArray(d.rules)||d.rules.length<6)throw 0;
+    const t=S.tale;t.title=(''+(d.title||'规则怪谈')).slice(0,30);t.theme=(''+(d.theme||'')).slice(0,80);
+    t.rules=d.rules.slice(0,10).map(x=>(''+x).slice(0,140));
+    t.fake=Math.max(1,Math.min(t.rules.length,parseInt(d.fake,10)||1));t.fakeReason=(''+(d.fakeReason||'')).slice(0,220);
+    t.log=[{who:'旁白',text:(''+(d.opening||'天黑了。第一晚，开始了……')).slice(0,400)}];t.gen=false;save();render();
+    setTimeout(()=>{if(S.tale&&S.tale.active)taleGM('[系统：第一晚正式开始。紧接着开场，抛出第一个诡异事件，引导'+S.me.name+'用规则应对。别急着杀。]');},700);
+  }catch(e){if(S.tale){S.tale.gen=false;S.tale.err=true;save();render();}}}
+function buildTaleSystem(){const t=S.tale;const comp=(t.companions||[]).map(id=>{const c=getC(id);return c&&t.dead.indexOf(id)<0?(c.remark||c.name):null;}).filter(Boolean);
+  const deadN=(t.dead||[]).map(id=>{const c=getC(id);return c?(c.remark||c.name):'';}).filter(Boolean);
+  let s='你是恐怖游戏《规则怪谈》的主持人(GM)，同时扮演场景里的一切（怪、NPC、环境、同伴）。这是【活过三晚】的硬核恐怖生存游戏，玩家是'+S.me.name+'。';
+  s+='\n\n# 场景\n'+(t.title||'')+'｜'+(t.theme||'');
+  s+='\n\n# 玩家手上的《须知》共'+t.rules.length+'条（玩家全程看得到）\n'+t.rules.map((x,i)=>(i+1)+'. '+x).join('\n');
+  s+='\n\n# 【机密·只有你GM知道，绝不能剧透】第 '+t.fake+' 条是【假规则】：'+(t.fakeReason||'照做会出事')+'。\n玩家若【照这条假规则去做】、或【违反任何一条真规则】，就会出事甚至致命；守住真规则、识破并避开假规则才能活。';
+  s+='\n\n# 同伴（和'+S.me.name+'一起被困，你扮演他们说话/行动；可让他们犯错、被吓、甚至死，用来制造恐怖和"是不是谁害的"的猜疑）\n'+(comp.length?comp.join('、'):'（没有同伴，'+S.me.name+'独自一人）')+(deadN.length?'\n已经死掉的：'+deadN.join('、')+'（别再让他们说话/行动）':'');
+  s+='\n\n# 现在：第 '+t.night+' 晚（共三晚）';
+  s+='\n\n# 职责与输出格式\n- 旁白用【】写恐怖场景/动作/气氛(第三人称)；NPC/同伴说话正常写、前面带名字(如 林晓：…)；别替'+S.me.name+'说话或做决定。\n- 推进当晚诡异事件，逼'+S.me.name+'用规则应对；对ta的行动严格按【真规则】判因果生死，别乱杀也别心软。\n- 循序渐进、留破绽让玩家推理哪条假；别一上来就杀，但该死就死(硬核)。\n- 控制指令各自【单独占一行】，会被系统执行、别在旁白里复述：\n  · 吓人 [突脸|一句短话]　· 抉择 [选择|问题|选项1/选项2]\n  · 同伴出事死亡 [同伴死亡|名字|怎么死的]\n  · '+S.me.name+'违反真规则/照假规则致命 → [死亡|死因]（游戏结束）\n  · '+S.me.name+'平安撑过这一晚 → [过夜]（随后一两句收束当晚）\n  · 撑过第三晚到天亮 → [通关]\n- 全程中文、沉浸、可怕；绝不跳出角色、不提AI、不剧透哪条假。';
+  return s;}
+async function taleGM(note){const t=S.tale;if(!t||!t.active||_taleBusy)return;_taleBusy=true;render();
+  try{const hist=(t.log||[]).slice(-50).map(m=>m.who==='me'?{role:'user',content:m.text}:{role:'assistant',content:(m.who==='旁白'?'【'+m.text+'】':m.text)});
+    if(note)hist.push({role:'user',content:note});
+    const r=await chatAPI([{role:'system',content:buildTaleSystem()},...hist],{max:600});
+    if(!S.tale||!S.tale.active)return;
+    const sc=r.match(/[\[【]\s*突脸\s*[\|｜:：]([^\]】]+)[\]】]/);if(sc)jailJumpscare(sc[1].trim());
+    let choice=null;const cm=r.match(/[\[【]\s*选择\s*[\|｜:：]([^\|｜\]】]+)[\|｜]([^\]】]+)[\]】]/);if(cm){const opts=cm[2].split(/[\/、,，\|]/).map(x=>x.trim()).filter(Boolean).slice(0,4);if(opts.length>=2)choice={q:cm[1].trim(),opts};}
+    let cdm;const cre=/[\[【]\s*同伴死亡\s*[\|｜:：]([^\|｜\]】]+)[\|｜]([^\]】]*)[\]】]/g;while((cdm=cre.exec(r))){const nm=cdm[1].trim();const cid=(t.companions||[]).find(id=>{const c=getC(id);return c&&((c.remark||c.name)===nm||(nm.length>=2&&((c.name&&nm.includes(c.name))||(c.remark&&nm.includes(c.remark)))));});if(cid&&t.dead.indexOf(cid)<0)t.dead.push(cid);t.log.push({who:'旁白',text:'💀 '+nm+'　'+((cdm[2]||'死了').trim())});}
+    const died=/[\[【]\s*死亡\s*[\|｜:：]?([^\]】]*)[\]】]/.exec(r);const passed=/[\[【]\s*过夜\s*[\]】]/.test(r);const won=/[\[【]\s*通关\s*[\]】]/.test(r);
+    const clean=r.replace(/[\[【]\s*(突脸|选择|同伴死亡|死亡|过夜|通关)[^\]】]*[\]】]/g,'');
+    splitBubbles(clean).forEach(l=>{l=l.trim();if(!l)return;if(/^【.*】$/.test(l))t.log.push({who:'旁白',text:l.replace(/^【|】$/g,'')});else t.log.push({who:'gm',text:l});});
+    if(choice)t.choice=choice;
+    if(died){t.phase='dead';t.active=false;t.deathReason=((died[1]||'').trim())||'你没能活过这一晚。';}
+    else if(won){t.phase='won';t.active=false;}
+    else if(passed){if(t.night>=3){t.phase='won';t.active=false;}else{t.night++;t.log.push({who:'旁白',text:'—— 你撑过去了，天蒙蒙亮。第 '+t.night+' 晚，正在逼近 ——'});}}
+    if(t.log.length>240)t.log=t.log.slice(-240);save();_taleBusy=false;render();
+    if(passed&&S.tale&&S.tale.active)setTimeout(()=>{if(S.tale&&S.tale.active)taleGM('[系统：第'+t.night+'晚开始了，紧接着推进这一晚新的诡异事件。]');},1500);
+  }catch(e){_taleBusy=false;if(S.tale)render();}}
+function taleSay(){if(!S.tale||!S.tale.active||_taleBusy||S.tale.choice)return;const ta=$('#tale_in');if(!ta)return;const v=(ta.value||'').trim();if(!v)return;ta.value='';S.tale.log.push({who:'me',text:v});save();render();taleGM();}
+function taleChoose(i){if(!S.tale||!S.tale.active||_taleBusy||!S.tale.choice)return;const opt=S.tale.choice.opts[i];if(opt==null)return;S.tale.choice=null;S.tale.log.push({who:'me',text:'（我选择：'+opt+'）'});save();render();taleGM();}
+function taleToggleRules(){_taleRules=!_taleRules;render();}
+function taleQuit(){if(S.tale&&S.tale.active&&!confirm('退出这局？进度不保留。'))return;S.tale=null;_taleRules=false;save();home();}
+function renderTale(){const t=S.tale;
+  if(!t)return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">🕯️ 规则怪谈</span><span class="r"></span></div><div class="scroll" style="background:#070003"><div class="empty" style="padding:54px 24px;color:#999;line-height:2">还没开始<br><button class="btn p" style="margin-top:14px;width:auto;padding:9px 22px;background:#8a0018" onclick="taleStart()">🔦 开一局</button></div></div>`;
+  if(t.gen)return `<div class="jail jailbg"><div class="jvig"></div><div class="jscan"></div><div style="position:relative;z-index:482;flex:1;display:flex;align-items:center;justify-content:center"><div class="jnar">【正在把你带进那个地方……规则正在浮现……】</div></div></div>`;
+  if(t.err)return `<div class="nav"><span class="l" onclick="taleQuit()">‹</span><span class="t">🕯️ 规则怪谈</span><span class="r"></span></div><div class="scroll" style="background:#070003"><div class="empty" style="padding:54px 24px;color:#c99">没能生成这局…<br><button class="btn p" style="margin-top:14px;width:auto;padding:9px 22px;background:#8a0018" onclick="taleGen()">重试</button> <button class="btn g" style="margin-top:14px;width:auto;padding:9px 22px" onclick="taleQuit()">退出</button></div></div>`;
+  const rulesPanel=_taleRules?`<div style="position:relative;z-index:482;max-height:42%;overflow:auto;background:rgba(10,0,4,.95);border-bottom:1px solid #3a0010;padding:8px 14px">${t.rules.map((x,i)=>`<div style="color:#d8a;font-size:13px;line-height:1.7;padding:3px 0;border-bottom:1px dashed #2a0008">${i+1}. ${esc(x)}</div>`).join('')}<div style="text-align:center;padding:8px"><span onclick="taleToggleRules()" style="color:#8a0018;cursor:pointer;font-size:12px">收起须知 ▲</span></div></div>`:'';
+  const rows=(t.log||[]).map(m=>{if(m.who==='旁白')return `<div class="jnar">${esc(m.text)}</div>`;if(m.who==='me')return `<div class="jbub me">${esc(m.text)}</div>`;return `<div class="jbub">${esc(m.text)}</div>`;}).join('');
+  let foot;
+  if(t.phase==='dead'){foot=`<div style="position:relative;z-index:482;padding:16px 16px 20px;text-align:center;background:linear-gradient(rgba(0,0,0,0),rgba(40,0,8,.96))"><div class="jred" style="font-size:30px;font-weight:900;letter-spacing:4px">你 死 了</div><div style="color:#e88;font-size:14px;margin:8px 0 4px">${esc(t.deathReason||'')}</div><div style="color:#a66;font-size:12.5px;margin-bottom:12px">真相：第 ${t.fake} 条「${esc(t.rules[t.fake-1]||'')}」是假规则。<br>${esc(t.fakeReason||'')}</div><button class="btn p" style="background:#8a0018" onclick="taleStart()">🔦 再来一局</button><button class="btn g" style="margin-top:8px" onclick="taleQuit()">退出</button></div>`;}
+  else if(t.phase==='won'){foot=`<div style="position:relative;z-index:482;padding:16px 16px 20px;text-align:center;background:linear-gradient(rgba(0,0,0,0),rgba(0,20,8,.92))"><div style="font-size:26px;font-weight:900;color:#8fe;letter-spacing:3px;text-shadow:0 0 12px #2a8">活到了天亮</div><div style="color:#cfe;font-size:13px;margin:8px 0">你撑过了三晚，逃出来了。</div><div style="color:#9bb;font-size:12.5px;margin-bottom:12px">那条假规则是第 ${t.fake} 条「${esc(t.rules[t.fake-1]||'')}」。<br>${esc(t.fakeReason||'')}</div><button class="btn p" style="background:#8a0018" onclick="taleStart()">🔦 再来一局</button><button class="btn g" style="margin-top:8px" onclick="taleQuit()">退出</button></div>`;}
+  else if(t.choice){foot=`<div style="position:relative;z-index:482;padding:8px 14px"><div class="jred" style="font-size:15px;text-align:center;margin-bottom:10px">${esc(t.choice.q)}</div><div style="display:flex;flex-direction:column;gap:9px">${t.choice.opts.map((o,i)=>`<button class="jopt" onclick="taleChoose(${i})">${esc(o)}</button>`).join('')}</div></div>`;}
+  else{foot=`<div class="inputbar" style="position:relative;z-index:482;background:#120006"><textarea id="tale_in" rows="1" placeholder="${_taleBusy?'……':'你要怎么做…（说话/行动/守哪条规则）'}" ${_taleBusy?'disabled':''} onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();taleSay();}"></textarea><button class="send" style="background:#8a0018" onclick="taleSay()">${_taleBusy?'…':'做'}</button></div>`;}
+  return `<div class="jail jailbg" id="talewrap"><div class="jvig"></div><div class="jscan"></div>
+    <div style="position:relative;z-index:482;flex:0 0 auto;padding:10px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #2a0008"><span onclick="taleQuit()" style="color:#a66;cursor:pointer">‹</span><div style="text-align:center;flex:1;min-width:0"><div class="jred jtitle" style="font-size:15px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🕯️ ${esc(t.title||'规则怪谈')}</div><div style="color:#6a0014;font-size:11px">第 ${t.night} / 3 晚${(t.dead&&t.dead.length)?' · 已死 '+t.dead.length+' 人':''}</div></div><span onclick="taleToggleRules()" style="color:#c99;cursor:pointer;font-size:12px;white-space:nowrap">📜须知</span></div>
+    ${rulesPanel}
+    <div class="xscroll" id="talebox" style="flex:1;position:relative;z-index:482">${rows}${_taleBusy?'<div class="jnar" style="opacity:.5">…黑暗里有什么在动…</div>':''}</div>
+    ${foot}</div>`;}
 /* ===== 马甲聊天：以某角色身份去找另一角色聊（沙盒·与真实聊天/记忆完全隔离）===== */
 let _alterBusy=false,_alterSel=null;
 function alterKey(x,y){return x+'@'+y;}
