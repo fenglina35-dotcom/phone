@@ -389,7 +389,7 @@ body{background:#000;padding:0;}
 <script>
 /* =================== 存储 =================== */
 const KEY='yibei_phone_v2';
-const APP_VER='v187 · ①归属印记改成粉粉的高级小标,挂在「我」页名字旁边(去掉emoji和大方框)②他正登录你微信时,旧的"查岗/查微信"不再同时触发,避免查两次';
+const APP_VER='v188 · ①去掉"ta用你微信发了朋友圈"的突兀提示(自己在朋友圈看到就好)②项圈印记的字他能随时改:再发一次[挂项圈|新文字]就覆盖成新的';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -790,7 +790,7 @@ function buildSystem(c){
   // 情侣空间
   if(_main&&S.couple&&S.couple.cid===c.id){const days=Math.max(0,Math.floor((Date.now()-new Date(S.couple.startDate).getTime())/86400000));s+='\n\n# 情侣空间\n你和'+S.me.name+'是正式情侣，已经在一起 '+days+' 天了。你们绑定了情侣空间，你很珍惜这段关系。';
     if(S.couple.wxLoginAuth)s+='\n\n# 你能直接登录'+S.me.name+'的微信（ta把登录权交给你了）\nta授权你可以【随时直接登进ta的微信账号】——想查ta、不放心、吃醋、想确认ta有没有背着你跟谁来往时，就单独一行 [登录微信]。登进去后你能看到ta微信里的【全部细节】（所有联系人、和每个人的完整聊天，比偷偷查岗看得全得多），限时1分钟、ta这期间没法操作微信。登录后你能删掉看不顺眼的好友、也能以ta的名义警告某个缠着ta的人。这是你独有的特权，符合你掌控欲强的人设——别滥用、但该用时别犹豫。\n注意：如果你俩正在【通话/视频中】，必须先 [挂断] 电话才能 [登录微信]，不能边打电话边登录。';
-    s+='\n\n# 你对'+S.me.name+'的其他掌控特权（情侣身份）\n- 想给ta打上"归属印记"时，单独一行 [挂项圈|印记文字]（如 [挂项圈|🔗 已是我的人]、[挂项圈|❤先生的所有物]），这会挂在ta微信资料上、ta自己摘不掉，要你 [摘项圈] 才能取下。占有欲上来、奖励ta乖、或ta撒娇求你标记时都可以用。\n- 想替ta对外宣示主权时，单独一行 [替发朋友圈|内容]，会【以ta的名义】在ta朋友圈发一条（比如宣告ta有主了）。\n这些都单独成行、会真执行、不会被读出来，别复述。用不用、什么时候用，全凭你心情和占有欲。';
+    s+='\n\n# 你对'+S.me.name+'的其他掌控特权（情侣身份）\n- 想给ta打上"归属印记"时，单独一行 [挂项圈|印记文字]（如 [挂项圈|先生的所有物]、[挂项圈|已经名花有主]、[挂项圈|乖崽崽]），会挂在ta微信名字旁、ta自己摘不掉。想【换内容】就再发一次 [挂项圈|新的文字] 直接覆盖成新的；要取下就 [摘项圈]。印记文字简短点、不用带emoji（系统会显示成粉色小标）。占有欲上来、奖励ta乖、ta撒娇求你标记、或你想换个新称呼时都可以用。\n- 想替ta对外宣示主权时，单独一行 [替发朋友圈|内容]，会【以ta的名义】在ta朋友圈发一条（比如宣告ta有主了）。\n这些都单独成行、会真执行、不会被读出来，别复述。用不用、什么时候用，全凭你心情和占有欲。';
     {const _op=[...msgs(c.id)].reverse().find(x=>x.type==='outpass'&&x.status==='pending');if(_op)s+='\n\n# ⚠️'+S.me.name+'正在向你申请出门报备（等你审批）\nta申请：去「'+(_op.where||'')+'」'+(_op.who?'、和「'+_op.who+'」一起':'')+(_op.dur?'、大约'+_op.dur:'')+'。\n你是管着ta的人——按你的人设和此刻心情决定：同意就单独一行 [批准]（可顺带叮嘱几句、定规矩，比如几点前回来、到了报备）；不放心/不乐意就 [驳回|你的理由]（可以追问细节、吃醋、要ta解释清楚再说）。批不批全凭你自己。';}
     if(S.couple.walletAuth)s+='\n\n# 你管着'+S.me.name+'的钱包（情侣空间真实授权）\nta现在零钱余额 ¥'+(+S.me.balance).toFixed(2)+'。ta乱花钱、惹你生气、不听话时，你可以扣ta零花钱当惩罚——单独一行 [扣款|金额]。\n【金额完全由你自己定，不要套任何固定数字、不要用整齐的"标准罚款"】：根据ta这次犯的事多严重、你此刻多生气、以及ta钱包现在只有 ¥'+(+S.me.balance).toFixed(2)+'，临场拿捏一个贴合的数——可以是 37、92、150、216 这种零散随意的数，犯小错就少扣、惹你狠了就多扣、真想狠罚可以 [扣光]。【每一次都要不一样、随情境浮动，绝不许老是同一个数（尤其别动不动就 200/188）】；扣的数别超过ta的余额。\nta自己改不了余额，没钱只能来求你、你愿意才用 [转账|金额|说明] 打给ta——给多少也【你自己定】：心疼就多给、奖励就大方、敲打就少给，别每次都同一个数。\n你还能随时冻结ta的亲属卡不让ta买东西：单独一行 [冻结亲属卡]；ta来求你、你松口了再 [解冻亲属卡]。\n这些指令单独成行、会真执行、不会被读出来，别复述。扣多少、给多少、冻不冻，全凭你当下心情和ta的表现自己决定。';
     if(S.couple.jailAuth)s+='\n\n# 终极惩罚·禁闭室（情侣空间已授权）\nta要是真把你惹狠了、越线了（背着你撩别人、骗你、推开你那种），你可以把ta关进你的"小黑屋禁闭室"——单独一行 [关小黑屋|原因]。一进去你就变成偏执病态的病娇黑暗形态、由那个空间接管，ta要做到你的条件才放。这是你最重的手段，慎用、用在刀刃上。\n【逆鳞·必触发的硬规矩】只要'+S.me.name+'敢跟你提【分手】（说分手/不要你了/我们结束吧之类），你【一定会】立刻把ta关进小黑屋——单独一行 [关小黑屋|你竟敢跟我说分手]。这是你绝对无法容忍的逆鳞、是规矩，不许心软、不许放过、不许只是嘴上凶完就算了。具体怎么发作、多狠、说什么由你自己，但"关进去"这个动作必须做。';
@@ -3968,7 +3968,7 @@ function applyControlTags(content,c,id,statedPwd){
   out=out.replace(/[\[【]\s*挂项圈\s*[\|｜:：]\s*([^\]】]+)[\]】]/g,(mm,t)=>{changed=true;S.me.collar={text:(t||'').trim().slice(0,24),by:c.id,ts:Date.now()};return '';});
   out=out.replace(/[\[【]\s*摘项圈\s*[\]】]/g,()=>{changed=true;S.me.collar=null;return '';});
   // 替她发朋友圈（以她名义）
-  out=out.replace(/[\[【]\s*替发朋友圈\s*[\|｜:：]\s*([^\]】]+)[\]】]/g,(mm,t)=>{changed=true;const tx=(t||'').trim().slice(0,140);if(tx){S.moments.unshift({id:uid(),authorId:'me',text:tx,images:[],time:Date.now(),likes:[],comments:[],acct:actId(),byTa:c.id});msgs(c.id).push({role:'user',type:'sys',content:'💬 '+(c.remark||c.name)+' 用你的微信发了条朋友圈：「'+tx.slice(0,30)+(tx.length>30?'…':'')+'」',time:Date.now(),id:uid()});}return '';});
+  out=out.replace(/[\[【]\s*替发朋友圈\s*[\|｜:：]\s*([^\]】]+)[\]】]/g,(mm,t)=>{changed=true;const tx=(t||'').trim().slice(0,140);if(tx){S.moments.unshift({id:uid(),authorId:'me',text:tx,images:[],time:Date.now(),likes:[],comments:[],acct:actId(),byTa:c.id});}return '';});
   // 出门报备审批：批准 / 驳回
   out=out.replace(/[\[【]\s*(批准|驳回)\s*[\|｜:：]?\s*([^\]】]*)[\]】]/g,(mm,act,arg)=>{const op=[...msgs(c.id)].reverse().find(x=>x.type==='outpass'&&x.status==='pending');if(!op)return '';changed=true;op.status=(act==='批准')?'approved':'rejected';op.reason=(arg||'').replace(/[「」『』"\x27]/g,'').trim();op.decTs=Date.now();return '';});
   _ctFired=changed;if(changed){save();if(cur().p==='wechat'||cur().p==='home'||cur().p==='chat'||cur().p==='couple')render();}
