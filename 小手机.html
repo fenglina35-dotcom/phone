@@ -428,7 +428,7 @@ const KEY='yibei_phone_v2';
 const SHARE_GATE=true, SHARE_PW='8980';
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ if(localStorage.getItem('yibei_unlocked')==='1')return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v222 · 修好一起听聊天他回复时闪屏/像发两条:原来每次发/回都整页重渲染导致闪烁,现在只就地更新那个气泡、不再整页刷;他的回复也合并成一行短句';
+const APP_VER='v223 · 新功能「登录他的微信」:他资料页→登录ta的微信(账号=他微信号+密码=他锁屏密码),登进去是第二个微信,能替他发朋友圈/和他好友聊天/删聊天记录/删好友/加好友,每步都记进操作记录;登录2~5分钟会被他察觉挤下线、或在他微信「我」里退出登录,之后他会拿你做的事来质问你;查手机里的删好友改到此处(更合理);全独立模块不碰旧数据';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -890,6 +890,9 @@ function render(){
   else if(c.p==='off')html=renderOff(c.id);
   else if(c.p==='browser')html=renderBrowser();
   else if(c.p==='contactInfo')html=renderContactInfo(c.id);
+  else if(c.p==='hislogin')html=renderHisLogin(c.id);
+  else if(c.p==='hiswx')html=renderHisWx();
+  else if(c.p==='hischat')html=renderHisChat(c.id,c.fid);
   else if(c.p==='alter')html=renderAlter(c.x,c.y);
   else if(c.p==='wxsearch')html=renderWxSearch();
   else if(c.p==='spy')html=renderSpy(c.id);
@@ -1559,7 +1562,7 @@ function spyAppView(id,c,app){const d=S.spy[id]||{};
     const body=(w.lines||[]).map(l=>{const mine=/^(他|我)[:：]/.test(l);return bub(mine,l.replace(/^[^:：]{1,4}[:：]/,''));}).join('');
     return wxchat(esc(w.who||'某人'),body);}
   if(app==='wechat'){const items=spyWxList(id,c,d);
-    const rows=items.map(it=>`<div style="display:flex;align-items:center;gap:11px;padding:11px 14px;background:${it.pin?'#161616':'#0e0e0e'};border-bottom:.5px solid #222">${`<div onclick="spyOpen('${id}','${it.k}')" style="display:flex;align-items:center;gap:11px;flex:1;min-width:0;cursor:pointer">${av(it.avatar,'sm')}<div style="flex:1;min-width:0"><div style="font-size:15px;color:#eee;font-weight:500">${esc(it.name)}${it.pin?' <span style="font-size:10px;color:#fff;background:#fa9d3b;border-radius:4px;padding:0 4px;vertical-align:middle">置顶</span>':''}</div><div style="font-size:12px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc((it.prev||'').slice(0,26))}</div></div></div>`}${it.del?`<span onclick="spyWxDel('${id}','${it.k}')" style="color:#fa5151;cursor:pointer;padding:0 6px;font-size:13px">删除</span>`:''}</div>`).join('');
+    const rows=items.map(it=>`<div style="display:flex;align-items:center;gap:11px;padding:11px 14px;background:${it.pin?'#161616':'#0e0e0e'};border-bottom:.5px solid #222">${`<div onclick="spyOpen('${id}','${it.k}')" style="display:flex;align-items:center;gap:11px;flex:1;min-width:0;cursor:pointer">${av(it.avatar,'sm')}<div style="flex:1;min-width:0"><div style="font-size:15px;color:#eee;font-weight:500">${esc(it.name)}${it.pin?' <span style="font-size:10px;color:#fff;background:#fa9d3b;border-radius:4px;padding:0 4px;vertical-align:middle">置顶</span>':''}</div><div style="font-size:12px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc((it.prev||'').slice(0,26))}</div></div></div>`}</div>`).join('');
     return `<div class="nav" style="background:#161616"><span class="l" onclick="spyOpen('${id}','')" style="color:#ccc">‹</span><span class="t" style="color:#eee">微信</span><span class="r"></span></div><div class="scroll" style="background:#0e0e0e">${rows}<div style="height:20px"></div></div>`;}
 
   let title='',body='';
@@ -3816,6 +3819,95 @@ function alterSelCancel(){_alterSel=null;render();}
 function alterToggleSel(id){if(!_alterSel)return;const i=_alterSel.ids.indexOf(id);if(i>=0)_alterSel.ids.splice(i,1);else _alterSel.ids.push(id);render();}
 function alterDelSel(){if(!_alterSel)return;const key=_alterSel.key,ids=_alterSel.ids;if(!ids.length){toast('先选要删的消息');return;}S.alter[key]=(S.alter[key]||[]).filter(m=>ids.indexOf(m.id)<0);if(!(S.alter[key]||[]).length)delete S.alter[key];save();_alterSel=null;render();toast('已删除');}
 async function alterClear(xId,yId){const key=alterKey(xId,yId);if(!(S.alter[key]&&S.alter[key].length)&&!alterBlocked(key)){toast('还没有聊天记录');return;}if(!await uiConfirm('清空这段马甲聊天？（对方会彻底忘记，拉黑也解除）'))return;delete S.alter[key];if(S.alterMeta)delete S.alterMeta[key];_alterSel=null;save();render();toast('已清空');}
+/* ================= 登录他的微信（第二个微信·独立模块，不碰旧数据） ================= */
+let _hisLogin=null;/* {cid, until, timer} 登录中 */
+let _hisTab='chat';
+function hisWxData(cid){S.hisWx=S.hisWx||{};if(!S.hisWx[cid])S.hisWx[cid]={seeded:false,friends:[],moments:[],log:[]};return S.hisWx[cid];}
+function hisLog(cid,txt){const d=hisWxData(cid);d.log=d.log||[];d.log.push({t:Date.now(),txt});if(d.log.length>40)d.log=d.log.slice(-40);save();}
+function hisSeed(cid){const c=getC(cid);const d=hisWxData(cid);if(d.seeded)return;const sp=(S.spy&&S.spy[cid])||{};const names=[];
+  (sp.wechat||[]).forEach(w=>{if(w&&w.who)names.push({name:w.who,relation:'微信好友',last:(w.lines&&w.lines[w.lines.length-1]||'').replace(/^[^:：]{1,4}[:：]/,'')});});
+  (c._gotFromMe||[]).forEach(nm=>{if(nm&&!names.find(x=>x.name===nm))names.push({name:nm,relation:'朋友',last:''});});
+  if(!names.length){['阿哲','老周','林姐','小武','妈妈'].forEach((nm,i)=>names.push({name:nm,relation:['哥们','同事','同事','发小','家人'][i],last:''}));}
+  d.friends=names.map(n=>({id:'hf'+Math.random().toString(36).slice(2,8),name:n.name,relation:n.relation,avatar:'🙂',persona:'',msgs:n.last?[{r:'ta',c:n.last,t:Date.now()-3600000}]:[]}));
+  d.seeded=true;save();}
+function hisLoginOpen(cid){const c=getC(cid);if(!c)return;go('hislogin',{id:cid});}
+function renderHisLogin(cid){const c=getC(cid);if(!c)return '';
+  return `<div style="position:absolute;inset:0;background:#1a1a1a;color:#ededed;display:flex;flex-direction:column;padding:0 26px">
+    <div style="padding:18px 0 0"><span onclick="back()" style="font-size:26px;color:#ededed;cursor:pointer">✕</span><span style="float:right;color:#9a9a9a;font-size:14px;padding-top:6px">找回密码　更多</span></div>
+    <div style="font-size:24px;font-weight:600;text-align:center;margin:48px 0 40px">微信号 / QQ号 / 邮箱登录</div>
+    <div style="border-bottom:1px solid #333;display:flex;align-items:center;padding:14px 0"><span style="width:64px;color:#ededed;font-size:16px">账号</span><input id="hl_acct" placeholder="微信号 / QQ号 / 邮箱" autocomplete="off" style="flex:1;background:transparent;border:none;outline:none;color:#fff;font-size:16px"></div>
+    <div style="border-bottom:1px solid #333;display:flex;align-items:center;padding:14px 0"><span style="width:64px;color:#ededed;font-size:16px">密码</span><input id="hl_pw" type="password" placeholder="请填写密码" autocomplete="off" style="flex:1;background:transparent;border:none;outline:none;color:#fff;font-size:16px"></div>
+    <div style="color:#7a7a7a;font-size:13px;margin-top:14px">上述微信号 / QQ号 / 邮箱仅用于登录验证</div>
+    <div style="color:#6a93c8;font-size:15px;margin-top:14px">用手机号登录</div>
+    <div style="flex:1"></div>
+    <div style="display:flex;align-items:center;gap:8px;color:#bdbdbd;font-size:14px;justify-content:center;margin-bottom:18px"><span style="width:18px;height:18px;border-radius:50%;border:1.5px solid #777;display:inline-block"></span>登录后同步最近的聊天记录</div>
+    <button onclick="hisDoLogin('${cid}')" style="background:#07c160;color:#fff;border:none;border-radius:8px;padding:14px;font-size:17px;margin-bottom:30px;cursor:pointer">同意并登录</button>
+  </div>`;}
+function hisDoLogin(cid){const c=getC(cid);if(!c)return;const a=($('#hl_acct')||{}).value||'',p=($('#hl_pw')||{}).value||'';
+  if(a.trim()!==(c.wxid||'')){toast('账号或密码错误');return;}
+  if(p.trim()!==String(spyPwd(c))){toast('账号或密码错误');return;}
+  hisStartSession(cid);}
+function hisStartSession(cid){hisSeed(cid);if(_hisLogin&&_hisLogin.timer)clearTimeout(_hisLogin.timer);
+  const dur=(120+Math.floor(Math.random()*180))*1000;/* 2~5分钟内随机被发现 */
+  _hisLogin={cid,until:Date.now()+dur,timer:setTimeout(hisKicked,dur)};_hisTab='chat';
+  stack=stack.filter(s=>s.p!=='hislogin');go('hiswx');}
+function hisEndSession(){if(_hisLogin&&_hisLogin.timer)clearTimeout(_hisLogin.timer);_hisLogin=null;}
+function hisKicked(){const s=_hisLogin;if(!s)return;const cid=s.cid;hisEndSession();home();
+  toast('你的微信已在另一台设备登录，已退出');
+  setTimeout(()=>hisDiscover(cid,true),1800+Math.random()*2500);}
+function hisLogout(){const s=_hisLogin;if(!s)return;const cid=s.cid;hisEndSession();home();toast('已退出登录');
+  setTimeout(()=>hisDiscover(cid,false),(50+Math.random()*70)*1000);}
+function hisDiscover(cid,caught){const c=getC(cid);if(!c||c.blocked)return;const d=hisWxData(cid);const acts=(d.log||[]).slice(-8).map(x=>x.txt);d.log=[];save();
+  const summary=acts.length?acts.join('；'):'登进去翻看了一圈';
+  const note='[系统：'+S.me.name+(caught?'刚才【偷偷登录了你的微信号】、用你的身份做了这些，被你重新登录挤下线、当场撞见：':'背着你【偷偷登录了你的微信号】，用你的身份做了这些（你回头看自己手机/朋友圈才发现）：')+summary+'。这是擅自动你的号、冒用你身份！你又惊又气、也有点吃醋慌乱，立刻去质问ta：为什么登我微信、到底跟谁聊了什么、删了加了谁、那条朋友圈是不是你发的。按你人设强烈反应（可以直接 [来电|视频] 打过去逼问）。绝不要提"系统"两个字。]';
+  scheduleReply(cid,note);}
+/* 他的微信主界面 */
+function renderHisWx(){const s=_hisLogin;if(!s){home();return '';}const cid=s.cid;const c=getC(cid);if(!c){hisEndSession();home();return '';}const d=hisWxData(cid);
+  const top=`<div style="background:#1f1f1f;color:#ededed;padding:12px 16px;display:flex;align-items:center;justify-content:space-between"><span style="font-size:17px;font-weight:600">微信</span><span style="font-size:11px;color:#8a8a8a">${esc(c.name)}的账号 · 已登录</span></div>`;
+  const tabbar=`<div style="display:flex;background:#1b1b1b;border-top:.5px solid #2a2a2a">${[['chat','聊天'],['contacts','通讯录'],['moments','朋友圈'],['me','我']].map(t=>`<div onclick="_hisTab='${t[0]}';render()" style="flex:1;text-align:center;padding:11px 0;font-size:12px;color:${_hisTab===t[0]?'#07c160':'#9a9a9a'}">${t[1]}</div>`).join('')}</div>`;
+  let body='';
+  if(_hisTab==='chat'){body=(d.friends.length?d.friends.map(f=>`<div onclick="go('hischat',{id:'${cid}',fid:'${f.id}'})" style="display:flex;align-items:center;gap:11px;padding:12px 14px;border-bottom:.5px solid #222;cursor:pointer">${av(f.avatar,'sm')}<div style="flex:1;min-width:0"><div style="color:#ededed;font-size:15px">${esc(f.name)}</div><div style="color:#888;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc((f.msgs.length?f.msgs[f.msgs.length-1].c:'')||'')}</div></div></div>`).join(''):'<div class="empty" style="padding:50px;color:#888">他还没有联系人，去通讯录加</div>');}
+  else if(_hisTab==='contacts'){body=`<div onclick="hisAddFriend('${cid}')" style="padding:13px 14px;border-bottom:.5px solid #222;color:#07c160;cursor:pointer">＋ 添加好友</div>`+(d.friends.map(f=>`<div style="display:flex;align-items:center;gap:11px;padding:12px 14px;border-bottom:.5px solid #222"><div onclick="go('hischat',{id:'${cid}',fid:'${f.id}'})" style="display:flex;align-items:center;gap:11px;flex:1;cursor:pointer">${av(f.avatar,'sm')}<div><div style="color:#ededed;font-size:15px">${esc(f.name)}</div><div style="color:#888;font-size:11px">${esc(f.relation||'')}</div></div></div><span onclick="hisDelFriend('${cid}','${f.id}')" style="color:#fa5151;font-size:13px;cursor:pointer;padding:0 6px">删除</span></div>`).join(''));}
+  else if(_hisTab==='moments'){body=`<div onclick="hisPostMoment('${cid}')" style="padding:13px 14px;border-bottom:.5px solid #222;color:#07c160;cursor:pointer">＋ 发一条朋友圈（以他的名义）</div>`+((d.moments||[]).length?d.moments.map(m=>`<div style="padding:13px 14px;border-bottom:.5px solid #222"><div style="color:#ededed;font-size:14px;line-height:1.5">${esc(m.text)}</div><div style="color:#777;font-size:11px;margin-top:5px">${ago(m.t)}</div></div>`).join(''):'<div class="empty" style="padding:50px;color:#888">他还没发过朋友圈</div>');}
+  else{body=`<div style="padding:22px 16px;display:flex;align-items:center;gap:14px;border-bottom:.5px solid #222">${av(c.avatar,'lg')}<div><div style="color:#ededed;font-size:19px">${esc(c.name)}</div><div style="color:#888;font-size:13px;margin-top:4px">微信号：${esc(c.wxid||'')}</div></div></div>
+    <div class="hint" style="padding:14px;color:#888;line-height:1.7">你正登录着他的微信。退出后会切回你自己的账号——但你做过的事(发的朋友圈/聊的天/删加的好友)都还在，他迟早会发现。</div>
+    <div style="padding:0 14px"><button onclick="hisLogout()" style="width:100%;background:#2a2a2a;color:#fa5151;border:none;border-radius:8px;padding:14px;font-size:16px;cursor:pointer">退出登录</button></div>`;}
+  return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;background:#111">${top}<div class="scroll" style="flex:1;background:#111">${body}</div>${tabbar}</div>`;}
+function renderHisChat(cid,fid){const s=_hisLogin;if(!s){home();return '';}const c=getC(cid);const d=hisWxData(cid);const f=(d.friends||[]).find(x=>x.id===fid);if(!f){_hisTab='chat';go('hiswx');return '';}
+  const bub=(mine,txt)=>`<div style="display:flex;margin:7px 12px;${mine?'justify-content:flex-end':''}"><div style="max-width:72%;padding:9px 12px;border-radius:13px;font-size:14px;line-height:1.45;background:${mine?'#1f8f4d':'#262628'};color:#fff">${esc(txt)}</div></div>`;
+  const body=(f.msgs||[]).map(m=>bub(m.r==='me',m.c)).join('')||'<div class="empty" style="padding:40px;color:#888">还没有聊天记录</div>';
+  return `<div style="position:absolute;inset:0;display:flex;flex-direction:column;background:#0e0e0e">
+   <div class="nav" style="background:#1b1b1b"><span class="l" onclick="_hisTab='chat';go('hiswx')" style="color:#ededed">‹</span><span class="t" style="color:#ededed">${esc(f.name)}</span><span class="r" onclick="hisClearChat('${cid}','${fid}')" style="color:#fa5151;font-size:13px">清空</span></div>
+   <div class="scroll" id="hischatlog" style="flex:1;background:#0e0e0e">${body}<div style="height:12px"></div></div>
+   <div class="inputbar"><textarea id="his_in" rows="1" placeholder="以${esc(c.name)}的身份发…" style="background:#2c2c2e;color:#f0f0f0"></textarea><button class="send" onclick="hisChatSend('${cid}','${fid}')">发送</button></div>
+  </div>`;}
+function hisChatSend(cid,fid){const inp=$('#his_in');const t=inp?inp.value.trim():'';if(!t)return;inp.value='';const d=hisWxData(cid);const f=(d.friends||[]).find(x=>x.id===fid);if(!f)return;
+  f.msgs.push({r:'me',c:t,t:Date.now()});hisLog(cid,'用他的号给「'+f.name+'」发了消息：'+t.slice(0,18));save();render();const lg=$('#hischatlog');if(lg)lg.scrollTop=lg.scrollHeight;aiHisFriendReply(cid,fid);}
+let _hisReplyBusy=false;
+async function aiHisFriendReply(cid,fid){if(_hisReplyBusy)return;_hisReplyBusy=true;const c=getC(cid);const d=hisWxData(cid);const f=(d.friends||[]).find(x=>x.id===fid);if(!c||!f){_hisReplyBusy=false;return;}
+  try{const hist=(f.msgs||[]).slice(-12).map(m=>({role:m.r==='me'?'user':'assistant',content:m.c}));
+    const sys='你在扮演「'+f.name+'」，是「'+c.name+'」的'+(f.relation||'微信好友')+'。'+(f.persona?'你的人设：'+f.persona+'。':'')+'现在「'+c.name+'」在微信上跟你聊天（其实是别人登录了他的号在冒充他，但你并不知道，你以为就是他本人）。按你和他的关系自然、口语、简短地回复（1~2句），像真人发微信。'+(c.persona?'（参考：'+c.name+'平时是这样的人——'+(c.persona||'').slice(0,80)+'）':'');
+    const r=await chatAPI([{role:'system',content:sys},...hist],{max:200,aux:true});
+    const txt=cleanReply(r).replace(/\s*\n+\s*/g,' ').trim();if(!txt)return;
+    if(!(_hisLogin&&_hisLogin.cid===cid)){/* 已退出，仍把回复存下 */}
+    f.msgs.push({r:'ta',c:txt,t:Date.now()});save();if(cur().p==='hischat'&&cur().fid===fid){render();const lg=$('#hischatlog');if(lg)lg.scrollTop=lg.scrollHeight;}
+  }catch(e){}finally{_hisReplyBusy=false;}}
+function hisAddFriend(cid){openModal(`<h3>添加好友（加进他的微信）</h3>
+  <div class="field"><label>名字</label><input id="haf_n" placeholder="对方名字"></div>
+  <div class="field"><label>关系（选填）</label><input id="haf_r" placeholder="同事 / 朋友 / …"></div>
+  <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="hisDoAddFriend('${cid}')">添加</button></div>`);}
+function hisDoAddFriend(cid){const n=($('#haf_n')||{}).value.trim();if(!n){toast('填个名字');return;}const r=($('#haf_r')||{}).value.trim();const d=hisWxData(cid);
+  d.friends.push({id:'hf'+Math.random().toString(36).slice(2,8),name:n,relation:r||'微信好友',avatar:'🙂',persona:'',msgs:[]});hisLog(cid,'用他的号加了好友「'+n+'」');closeModal();render();toast('已添加');}
+async function hisDelFriend(cid,fid){const d=hisWxData(cid);const f=(d.friends||[]).find(x=>x.id===fid);if(!f)return;if(!await uiConfirm('把好友「'+f.name+'」从他微信里删掉？'))return;
+  d.friends=d.friends.filter(x=>x.id!==fid);hisLog(cid,'用他的号删了好友「'+f.name+'」');save();render();toast('已删除好友');}
+async function hisClearChat(cid,fid){const d=hisWxData(cid);const f=(d.friends||[]).find(x=>x.id===fid);if(!f)return;if(!(f.msgs||[]).length){toast('没有聊天记录');return;}if(!await uiConfirm('清空和「'+f.name+'」的聊天记录？'))return;
+  f.msgs=[];hisLog(cid,'删了他和「'+f.name+'」的聊天记录');save();render();toast('已清空');}
+function hisPostMoment(cid){openModal(`<h3>发朋友圈（以他的名义）</h3>
+  <div class="field"><textarea id="hpm_t" rows="3" placeholder="替他发点什么…"></textarea></div>
+  <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="hisDoPostMoment('${cid}')">发布</button></div>`);}
+function hisDoPostMoment(cid){const t=($('#hpm_t')||{}).value.trim();if(!t){toast('写点内容');return;}const d=hisWxData(cid);
+  d.moments.unshift({id:uid(),text:t,t:Date.now()});hisLog(cid,'以他的名义发了条朋友圈：'+t.slice(0,18));closeModal();render();toast('已发布到他的朋友圈');}
+setInterval(()=>{if(_hisLogin&&Date.now()>=_hisLogin.until)hisKicked();},3000);
 function renderContactInfo(id){const c=getC(id);if(!c)return '';const sp=getSpy(c);
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">资料</span><span class="r" onclick="editContact('${id}')">编辑</span></div>
   <div class="scroll" style="background:#000">
@@ -3832,6 +3924,8 @@ function renderContactInfo(id){const c=getC(id);if(!c)return '';const sp=getSpy(
       ${isMain()?`<div class="it" onclick="bindCouple('${id}')"><span>情侣空间</span><span class="v">${(S.couple&&S.couple.cid===id)?'已绑定 ✓':'绑定 ›'}</span></div>`:''}
       <div class="it" onclick="schedSet('${id}')"><span>作息时间表</span><span class="v">${(c.sched&&c.sched.on)?'已启用 ›':'未设 ›'}</span></div>
       <div class="it" onclick="setChatBg('${id}')"><span>聊天背景</span><span class="v">${c.chatBg?'已设置':'默认'}</span></div>
+      ${isMain()?`<div class="it"><span>ta的微信号</span><span class="v">${esc(c.wxid||'')}</span></div>
+      <div class="it" onclick="hisLoginOpen('${id}')"><span style="color:#c5a6ff">登录ta的微信</span><span class="v">用ta微信号+锁屏密码 ›</span></div>`:''}
     </div>
     <div class="section" style="margin:12px">
       <div class="it" onclick="placeCall('${id}','voice')"><span>语音通话</span><span class="v">›</span></div>
