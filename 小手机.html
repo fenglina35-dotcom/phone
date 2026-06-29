@@ -546,7 +546,7 @@ const SHARE_GATE=true, SHARE_PW='52113148890';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v247 · 主屏App加到第三页(可拖App过去,翻页/点点支持3页);微信主题黑/白两按钮切换(设置里),白色=经典微信浅色(列表/聊天/气泡/输入栏整套变白),只影响微信页面';
+const APP_VER='v248 · 微信白色主题补漏:通讯录顶部搜索框/AI生成区不再是黑块,跟着主题变白;主屏App第三页;微信黑白切换';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -3790,7 +3790,8 @@ function altAdd(id){const c=getC(id);if(!c)return;c._added=c._added||{};c._added
   scheduleReply(id,'[系统：'+S.me.name+'(一个陌生人)刚通过你的微信号把你加为好友。按你的人设和此刻心情，对这个陌生人作出第一反应（客气/冷淡/警惕/好奇都行），先回应一句，别热情过头。]');}
 function wxContacts(){
   const fr=S.friendRequests.length?`<div class="list"><div class="row" onclick="openFriendRequests()"><div class="avatar sm" style="background:#fa9d3b">➕</div><div class="meta"><div class="n">新的朋友</div></div><span class="badge">${S.friendRequests.length}</span></div></div>`:'';
-  const search=`<div style="padding:8px 12px;background:#1c1c1e;border-bottom:.5px solid #2a2a2c"><input value="${esc(_ctSearch)}" oninput="ctSearchInput(this.value)" placeholder="🔍 搜名字 / 微信号" style="width:100%;border:1px solid #38383a;border-radius:16px;padding:7px 14px;background:#2c2c2e;color:#eee;outline:none"><button class="minibtn" style="width:100%;margin-top:8px;padding:8px;background:#7c5cff;color:#fff" onclick="genCharPrompt()">想要的角色搜不到？描述一下，AI 帮你生成</button></div>`;
+  const wl=S.me.wxTheme==='white';
+  const search=`<div style="padding:8px 12px;background:${wl?'#ededed':'#1c1c1e'};border-bottom:.5px solid ${wl?'#dcdcdc':'#2a2a2c'}"><input value="${esc(_ctSearch)}" oninput="ctSearchInput(this.value)" placeholder="🔍 搜名字 / 微信号" style="width:100%;border:1px solid ${wl?'#e2e2e2':'#38383a'};border-radius:16px;padding:7px 14px;background:${wl?'#fff':'#2c2c2e'};color:${wl?'#111':'#eee'};outline:none"><button class="minibtn" style="width:100%;margin-top:8px;padding:8px;background:#7c5cff;color:#fff" onclick="genCharPrompt()">想要的角色搜不到？描述一下，AI 帮你生成</button></div>`;
   return search+fr+'<div class="list" id="ctlist">'+ctListHTML()+'</div>';
 }
 function genCharPrompt(){openModal(`<h3>生成角色</h3><div class="hint">描述你想要的角色，越具体越好（名字、性别、身份、性格、和你的关系都能写）。</div>
