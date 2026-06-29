@@ -102,7 +102,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .ptabs span{font-size:13px;color:#888;padding:4px 2px;cursor:pointer;border-bottom:2px solid transparent;}
 .ptabs span.on{color:#ddd;border-bottom-color:#ff8fab;}
 .pgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:14px 16px;}
-.ppage{padding:10px 12px;max-height:210px;overflow-y:auto;}
+.ppage{padding:10px 12px;max-height:46vh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
 .panel .it{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;}
 .panel .it .b{width:52px;height:52px;background:#fff;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 1px 3px rgba(0,0,0,.06);}
 .panel .it span{font-size:11px;color:#666;}
@@ -428,7 +428,7 @@ const KEY='yibei_phone_v2';
 const SHARE_GATE=true, SHARE_PW='123098';
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ if(localStorage.getItem('yibei_unlocked')==='1')return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v232 · 设置-模型名加「拉取」按钮一键获取模型列表;恢复App图标美化入口;新增通话自定义背景;角色能发表情包了(设置里加他的表情包·按心情发·频率可调·他还会收藏你发的表情;角色资料可单独关闭;电话里不发表情)';
+const APP_VER='v233 · 表情面板自定义表情往下翻更舒服:滚动区域从210px加高到46vh,表情+自定义表情同一页往下滑就到,不用单独分页';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
