@@ -546,7 +546,7 @@ const SHARE_GATE=true, SHARE_PW='mixang';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v249 · 设置里给联网/识图/语音各加独立测试按钮(测试联网/测试识图/测试语音),不再只能测聊天模型;语音测试成功会响一声';
+const APP_VER='v250 · 主模型/副模型各自独立测试按钮(测试主模型/测试副模型,就在各自那栏下面);联网/识图/语音也都有测试;副模型留空地址Key会自动用主模型测';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1680,12 +1680,14 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="field" style="padding:0 14px"><label>模型名</label><div style="display:flex;gap:6px"><input id="s_cmodel" value="${esc(a.model)}" style="flex:1"><button class="minibtn" onclick="fetchModels('s_cbase','s_ckey','s_cmodel')">拉取</button></div></div>
       <div class="two" style="padding:0 14px 10px"><div class="field"><label>随机度</label><input id="s_ctemp" type="number" step="0.1" value="${a.temp}"></div>
         <div class="field"><label>回复长度</label><input id="s_cmax" type="number" value="${a.maxTokens}"></div></div>
+      <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="testMain()">测试主模型</button></div><div id="testC" style="font-size:12px;text-align:center;min-height:14px;padding-bottom:8px"></div>
     </div>
     <div class="section"><div style="padding:12px 14px;font-weight:600;color:#6c5ce7">辅助模型（省钱·给次要功能用）</div>
       <div class="hint" style="padding:0 14px">只有【微信聊天 · 朋友圈 · 信箱】用主模型；其余全用这个便宜的辅助模型：游戏、购物刷新、外卖、X的所有内容、查他手机、联网搜索等。只填「模型名」就行，地址/Key留空会自动复用上面的聊天模型。不填模型名=全部都用主模型。</div>
       <div class="field" style="padding:0 14px"><label>模型名（如 gpt-4o-mini / 更便宜的）</label><div style="display:flex;gap:6px"><input id="s_xmodel" value="${esc((S.settings.aux||{}).model||'')}" placeholder="留空=全部都用主模型" style="flex:1"><button class="minibtn" onclick="fetchModels('s_xbase','s_xkey','s_xmodel')">拉取</button></div></div>
       <div class="two" style="padding:0 14px 10px"><div class="field"><label>接口地址(可选)</label><input id="s_xbase" value="${esc((S.settings.aux||{}).base||'')}" placeholder="留空=同聊天"></div>
         <div class="field"><label>API Key(可选)</label><input id="s_xkey" type="password" value="${esc((S.settings.aux||{}).key||'')}" placeholder="留空=同聊天"></div></div>
+      <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="testAux()">测试副模型</button></div><div id="testX" style="font-size:12px;text-align:center;min-height:14px;padding-bottom:8px"></div>
     </div>
     <div class="section"><div style="padding:12px 14px;font-weight:600;color:#3a7bd5">联网搜索（浏览器/[联网]用）</div>
       <div class="it"><span>联网方式</span><span class="v">${[["jina","jina搜索"],["model","用模型"]].map(m=>`<span onclick="S.settings.search=Object.assign({base:\'https://s.jina.ai\',key:\'\',model:\'\'},S.settings.search,{mode:\'${m[0]}\'});save();render()" style="cursor:pointer;padding:3px 9px;border-radius:8px;${((S.settings.search||{}).mode||'jina')===m[0]?'background:#3a7bd5;color:#fff':'color:#888'}">${m[1]}</span>`).join('')}</span></div>
@@ -1745,8 +1747,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="it"><span>角色发表情频率</span><span class="v"><select id="s_stkfreq" onchange="S.settings.stkFreq=+this.value;save()" style="background:#2c2c2e;border:1px solid #38383a;color:#eee;border-radius:6px;padding:5px">${[[0,'关闭'],[1,'偶尔'],[2,'适中'],[3,'经常']].map(o=>`<option value="${o[0]}" ${(S.settings.stkFreq==null?2:S.settings.stkFreq)===o[0]?'selected':''}>${o[1]}</option>`).join('')}</select></span></div>
     </div>
     </div>
-    <div class="btns" style="margin:6px 0"><button class="btn g" onclick="testConn()">测试连接</button></div>
-    <div id="testOut" style="font-size:12px;text-align:center;min-height:16px;margin-bottom:8px"></div>
+    <div id="testOut" style="display:none"></div>
     <button class="btn p" onclick="saveSettings()">保存设置</button>
     ${storageMeter()}
     <div class="btns" style="margin-top:10px"><button class="btn g" onclick="exportData()">导出备份</button><button class="btn g" onclick="importData()">导入</button></div>
@@ -1769,6 +1770,17 @@ async function testConn(){const o=$('#testOut');o.style.color='#999';o.textConte
   try{const r=await fetch(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model,messages:[{role:'user',content:'说"在"'}],max_tokens:5})});
     if(r.ok){o.style.color='#19a463';o.textContent='✅ 连接成功！';}else{o.style.color='#e85';o.textContent='❌ '+r.status+'：'+(await r.text()).slice(0,100);}
   }catch(e){o.style.color='#e85';o.textContent='❌ '+e.message+'（多半是把网页当本地文件打开了，要用网址打开）';}}
+async function testModel(bId,kId,mId,outId,defM){const o=$('#'+outId);if(!o)return;o.style.color='#999';o.textContent='测试中…';
+  const base=($('#'+bId).value.trim()||'').replace(/\/+$/,'');const key=$('#'+kId).value.trim();const model=$('#'+mId).value.trim()||defM;
+  const fb=($('#s_cbase').value.trim()||'').replace(/\/+$/,''),fk=$('#s_ckey').value.trim();
+  const ub=base||fb,uk=key||fk;
+  if(!ub||!uk){o.style.color='#e85';o.textContent='先填地址和Key';return;}
+  if(!model){o.style.color='#e85';o.textContent='先填模型名';return;}
+  try{const r=await fetch(ub+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+uk},body:JSON.stringify({model,max_tokens:5,messages:[{role:'user',content:'说"在"'}]})});
+    if(r.ok)o.style.color='#19a463',o.textContent='✅ 连接成功！';else{o.style.color='#e85';o.textContent='❌ '+r.status+'：'+(await r.text()).slice(0,90);}
+  }catch(e){o.style.color='#e85';o.textContent='❌ '+e.message+'（可能是把网页当本地文件打开了）';}}
+function testMain(){testModel('s_cbase','s_ckey','s_cmodel','testC','gpt-4o-mini');}
+function testAux(){testModel('s_xbase','s_xkey','s_xmodel','testX','');}
 async function testSE(){const o=$('#testSE');if(!o)return;o.style.color='#999';o.textContent='测试中…';
   const mode=(S.settings.search||{}).mode||'jina';const seb=$('#s_sebase'),sek=$('#s_sekey'),sem=$('#s_semodel');
   try{
