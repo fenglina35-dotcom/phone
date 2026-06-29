@@ -546,7 +546,7 @@ const SHARE_GATE=true, SHARE_PW='786953';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v255 · 修通话里反复点外卖:去重从"同名"放宽到"20分钟内点过就不再点"(换菜名也拦),提示模型一通电话最多点一次;聊天也加同样防重复';
+const APP_VER='v256 · 修他不记得自己点了什么外卖(会乱说):以前他发的外卖/转账/红包/礼物/语音卡在历史里是空白,现在都补上文字描述,他能记得自己做过啥、问他点了什么会答对';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -697,6 +697,14 @@ function msgToText(m){
     if(m.type==='namecard')return '[我把我的朋友「'+m.cname+'」'+(m.persona?'（'+m.persona+'）':'')+'推荐给了你'+(m.added?'，你已经加了ta':'，推荐你加一下')+']';
     if(m.type==='dateinvite')return '[我向你发出线下约会邀请：'+(m.when||'')+' 在「'+(m.loc||'')+'」见面'+(m.accepted?'，你答应了':m.declined?'，你拒绝了':'，等你答应')+']';
     if(m.type==='homeinvite')return '[我邀请你回我们的像素小家一起待着'+(m.accepted?'，你回来了':m.declined?'，你说改天':'，等你回来')+']';
+    if(m.type==='food')return '[我给你点了外卖「'+(m.name||'')+'」'+(m.declined?'（你拒收了）':m.delivered?'（已送到、你吃上了）':m.received?'（你收下了，配送中）':'（点好了，约15分钟送到）')+'，别再重复点了]';
+    if(m.type==='transfer')return '[我给你转了 ¥'+(+m.amount||0).toFixed(2)+(m.note?'，备注「'+m.note+'」':'')+']';
+    if(m.type==='redpacket')return '[我给你发了个红包 ¥'+(+m.amount||0).toFixed(2)+(m.note?'，「'+m.note+'」':'')+']';
+    if(m.type==='gift')return '[我送了你礼物「'+(m.name||'')+'」]';
+    if(m.type==='location')return '[我给你发了个位置：'+(m.name||'')+']';
+    if(m.type==='file')return '[我给你发了文件：'+(m.name||'')+']';
+    if(m.type==='sticker')return '[我发了个表情'+(m.meaning?'：'+m.meaning:'')+']';
+    if(m.type==='voice')return m.content?('[我发语音说：'+m.content+']'):'[我发了条语音]';
     return m.content||'';
   }
   switch(m.type){
