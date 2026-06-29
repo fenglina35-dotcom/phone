@@ -551,7 +551,7 @@ const SHARE_GATE=true, SHARE_PW='786953';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v259 · 定位失败(如安卓百度浏览器屏蔽定位)可手动输城市查天气;顶栏按钮点击区放大到44px、层级提高,改善安卓某些浏览器要滑到顶才点得到的问题';
+const APP_VER='v260 · 聊天语音改成点一下才播(不再自动播);修iOS触屏后没声音:音频上下文被打断时重建+点击手势里同步解锁(静音buffer),不用退出页面再进;通话自动出声开关保留';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1737,7 +1737,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
     <div id="setpage2" style="display:${_setTab===2?'block':'none'}">
     <div class="section">
       <div class="it"><span>带几个回合<br><small style="color:#888">你1句+他的回复=1回合，记得越多越久但越慢</small></span><input id="s_hist" type="number" min="2" max="40" value="${S.settings.hist}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
-      <div class="it">语音自动播放<span class="sw ${S.settings.voiceAuto?'on':''}" onclick="S.settings.voiceAuto=!S.settings.voiceAuto;save();render()"></span></div>
+      <div class="it"><span>通话自动出声<br><small style="color:#888">通话时ta的话自动念出来；聊天里的语音条改成点一下才播</small></span><span class="sw ${S.settings.voiceAuto?'on':''}" onclick="S.settings.voiceAuto=!S.settings.voiceAuto;save();render()"></span></div>
       <div class="it"><span>发消息后手动点回复<br><small style="color:#888">开：发完点「让ta回复」他才回；他主动找你不受影响</small></span><span class="sw ${S.settings.manualReply?'on':''}" onclick="S.settings.manualReply=!S.settings.manualReply;save();render()"></span></div>
       <div class="it">延迟几秒回复<input id="s_delay" type="number" min="0" value="${S.settings.replyDelay}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it">超过几回合自动总结<input id="s_sum" type="number" min="0" value="${S.settings.summaryRounds||0}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
@@ -4622,7 +4622,8 @@ function buildPart(c,m,me){
   if(m.type==='familyreq'){return `<div class="card"><div class="cpay" style="background:#e8527f"><div class="big">💳</div><div><div class="t1">亲属卡申请</div><div class="t2">想绑定你的亲属卡用额度</div></div></div><div class="cfoot">等ta同意并设额度</div></div>`;}
   return `<div class="bubble">${esc(m.content)}</div>`;}
 function vtoggle(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m)return;
-  initAudio();speakMsg(m,m.role==='user'?S.me:getC(owner));   // 点一下就播放，可重复点重复听
+  audioUnlock();   // 在点击手势里同步解锁音频(iOS必须如此),否则等TTS网络回来再唤醒就来不及、没声音
+  speakMsg(m,m.role==='user'?S.me:getC(owner));   // 点一下就播放，可重复点重复听
   const el=document.querySelector('[data-vid="'+mid+'"]');
   if(el){el.classList.add('playing');setTimeout(()=>{const e2=document.querySelector('[data-vid="'+mid+'"]');if(e2)e2.classList.remove('playing');},Math.min(9000,(m.dur||3)*1000+600));
     if(!m.showText){m.showText=true;save();const wrap=el.parentNode;if(wrap&&!wrap.querySelector('.vtext'))wrap.insertAdjacentHTML('beforeend','<div class="vtext">'+esc(m.content||'')+(m.trans?'<br><span style="color:#aa8">译：'+esc(m.trans)+'</span>':'')+'</div>');}}}
@@ -5073,19 +5074,24 @@ function manualReply(id){if(_replying)return;const c=getC(id);if(!c||c.blocked)r
   Promise.resolve(aiReply(id,_note)).finally(()=>{_replying=null;if(cur().p==='chat'&&cur().id===id)render();});}
 /* 提示音 + 通知 */
 let _audio;
-function ensureAudio(){try{if(!_audio||_audio.state==='closed')_audio=new (window.AudioContext||window.webkitAudioContext)();if(_audio&&(_audio.state==='suspended'||_audio.state==='interrupted'))_audio.resume().catch(()=>{});}catch(e){}return _audio;}
+function ensureAudio(){try{
+  if(_audio&&_audio.state==='interrupted'){try{_audio.close();}catch(e){}_audio=null;}/* iOS 被打断后 resume 常常无效，直接重建 */
+  if(!_audio||_audio.state==='closed')_audio=new (window.AudioContext||window.webkitAudioContext)();
+  if(_audio&&_audio.state!=='running')_audio.resume().catch(()=>{});
+}catch(e){}return _audio;}
 function initAudio(){ensureAudio();}
+// iOS 解锁：必须在用户手势里同步 resume + 播一个静音 buffer，否则之后再放声音会没声
+function audioUnlock(){try{ensureAudio();if(_audio&&_audio.state!=='running'){const bf=_audio.createBuffer(1,1,22050);const s=_audio.createBufferSource();s.buffer=bf;s.connect(_audio.destination);s.start(0);}}catch(e){}}
 // iOS：用了系统键盘的语音转文字/被其它声音打断后，AudioContext 会被挂起、在放的音乐(_ma)也会被暂停，提示音/铃声/音乐就没了。
 // 这里在每次点击/触摸/切回页面时既唤醒 AudioContext，又把"本该在放的音乐"接着放，免得要退出后台才恢复。
-function audioKick(){ensureAudio();try{if(_ma&&_mWantPlay&&_ma.paused&&(!_ma.duration||_ma.currentTime<_ma.duration-0.3))_ma.play().catch(()=>{});}catch(e){}}
+function audioKick(){audioUnlock();try{if(_ma&&_mWantPlay&&_ma.paused&&(!_ma.duration||_ma.currentTime<_ma.duration-0.3))_ma.play().catch(()=>{});}catch(e){}}
 ['touchend','pointerdown','click'].forEach(ev=>document.addEventListener(ev,audioKick,{passive:true}));
 document.addEventListener('click',()=>{initAudio();const liveLoc=S.contacts.some(c=>!c.deleted&&getSpy(c).loc);if(!S.weather||Date.now()-S.weather.time>(liveLoc?600000:72000000))fetchWeather();},{once:true});
 function playDing(){if(!S.settings.sound)return;ensureAudio();if(!_audio)return;try{const o=_audio.createOscillator(),g=_audio.createGain();o.connect(g);g.connect(_audio.destination);
   o.frequency.value=880;o.type='sine';g.gain.setValueAtTime(.001,_audio.currentTime);g.gain.exponentialRampToValueAtTime(Math.min(1,.25*volMul()),_audio.currentTime+.02);
   g.gain.exponentialRampToValueAtTime(.001,_audio.currentTime+.35);o.start();o.stop(_audio.currentTime+.36);}catch(e){}}
 function notifyIncoming(c,msg){
-  // 语音消息自动播放
-  if(msg&&msg.type==='voice'&&S.settings.voiceAuto&&!c.muted)speakMsg(msg,c);
+  // 语音消息：不再自动播放，改成点一下语音条才播（点开能重复听）
   if(c.muted)return;
   const viewing=cur().p==='chat'&&cur().id===c.id;
   if(!viewing&&!_call)showMsgBanner(c,msg);
