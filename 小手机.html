@@ -551,7 +551,7 @@ const SHARE_GATE=true, SHARE_PW='6565788';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v266 · 查ta手机里新增「设置」App:可悄悄改ta的手机密码(同时也是登ta微信的密码),改完1-2分钟内ta会发现但不知道新密码,按人设质问/吃醋';
+const APP_VER='v267 · 游戏大厅改成邀请制:选游戏+角色先发邀请卡片,ta在微信同意后才能点「进入游戏」一起玩;ta会记得跟你一起玩过哪些游戏';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -735,6 +735,7 @@ function msgToText(m){
     case 'paid':return '[我帮你代付成功了：'+m.name+' ¥'+(+m.price).toFixed(2)+']';
     case 'payreject':return '[我拒绝了帮你代付：'+m.name+']';
     case 'musicinvite':return '['+S.me.name+'邀请你一起听歌：'+m.title+(m.artist?'（'+m.artist+'）':'')+'，你们正一起听]';
+    case 'gameinvite':return '[我给你发了游戏邀请，想一起玩「'+(m.gname||'游戏')+'」'+(m.status==='accepted'?'，你答应了、可以一起玩了':m.status==='declined'?'，你拒绝了':'，等你[同意游戏]或[拒绝游戏]')+']';
     case 'outpass':return '[我向你申请出门报备：去「'+(m.where||'')+'」'+(m.who?'、和「'+m.who+'」一起':'')+(m.dur?'、大约'+m.dur:'')+(m.status==='approved'?'，你批准了'+(m.reason?'（'+m.reason+'）':''):m.status==='rejected'?'，你驳回了'+(m.reason?'（'+m.reason+'）':''):'，等你批准')+']';
     case 'food':return m.from==='ta'?'[你给ta点了外卖：'+m.name+']':'['+S.me.name+'给你点了外卖：'+m.name+(m.shop?'（'+m.shop+'）':'')+'，¥'+(+m.price).toFixed(2)+(m.declined?'（你拒收了）':m.delivered?'（已送到、你吃上了）':m.received?'（你收下了，配送中）':'（等你 [收外卖] 或 [拒外卖]）')+']';
     case 'tweetcard':return '[我转发给你一条X推文——'+m.tname+'：「'+m.ttext+'」]';
@@ -925,6 +926,7 @@ function buildSystem(c){
   if(wb.length)s+='\n\n# 世界设定／世界书（最高优先级，务必严格遵守，触发了就要照做，不要无视）\n'+wb.map(w=>'· '+w.name+'：'+w.content).join('\n');
   // 记忆（仅主身份）
   if(_main&&c.memory&&c.memory.length)s+='\n\n# 你记得关于'+S.me.name+'的事\n'+c.memory.map((m,i)=>(i+1)+'. '+m).join('\n');
+  if(_main&&c.gamesPlayed&&c.gamesPlayed.length)s+='\n\n# 你和'+S.me.name+'一起玩过的游戏\n你记得跟ta在游戏大厅一起玩过：'+c.gamesPlayed.join('、')+'。被提起时要想得起来、能自然回味这些一起玩过的事，别说没玩过（具体每局怎么玩的不重要，记得玩过就行）。';
   if(c.summary&&!c.summaries){c.summaries=[{time:'(早期)',text:c.summary}];delete c.summary;}
   if(_main&&c.summaries&&c.summaries.length)s+='\n\n# 之前对话的概要（你的长期记忆，按时间从旧到新，要记牢并保持连贯，ta提到旧事时你要想得起来；标★的是你格外珍视的回忆）\n'+topSummaries(c.summaries,24).map(x=>'· '+x.time+'　'+((x.imp||3)>=5?'★ ':'')+x.text).join('\n');
   const _off=S.offline&&S.offline[c.id];
@@ -3206,11 +3208,22 @@ const GAMES=[
   {k:'drama',e:'🎭',n:'即兴小剧场',kick:'我们来即兴小剧场，你给我们设定一个情境/开场白，然后我们一起把剧情演下去。开场吧～'},
   {k:'quick',e:'⚡',n:'快问快答',kick:'我们玩快问快答，你连续快速地问我问题、我来答，答完你也可以让我问你。开始！'}
 ];
-function openGames(){openModal(`<h3>游戏大厅</h3><div class="hint">选个游戏，再选一个角色，会进到一个【单独的游戏空间】里玩～ 随时说"游戏结束"或点右上角「结束」就能退出，不会打扰微信聊天。</div>
+function openGames(){openModal(`<h3>游戏大厅</h3><div class="hint">选个游戏，再选个角色发出【邀请卡片】，等ta在微信里同意后，点卡片上的「进入游戏」就能一起玩～ 随时说"游戏结束"或点右上角「结束」就能退出。</div>
   ${GAMES.map(g=>`<div class="section"><div class="it" onclick="pickGameChar('${g.k}')">${g.e} ${g.n}<span class="v">›</span></div></div>`).join('')}
   <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function pickGameChar(k){const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){toast('先创建一个角色');return;}
-  openModal(`<h3>和谁玩？</h3>${cs.map(c=>`<div class="section"><div class="it" onclick="startGame('${k}','${c.id}')">${esc(c.remark||c.name)}<span class="v">›</span></div></div>`).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+  openModal(`<h3>邀请谁一起玩？</h3><div class="hint">会给ta发一张【游戏邀请卡片】，ta同意之后，你才能和ta进游戏空间一起玩～</div>${cs.map(c=>`<div class="section"><div class="it" onclick="sendGameInvite('${k}','${c.id}')">${esc(c.remark||c.name)}<span class="v">›</span></div></div>`).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+function sendGameInvite(k,cid){const g=GAMES.find(x=>x.k===k);const c=getC(cid);if(!g||!c)return;closeModal();
+  if(c.blocked){toast('ta把你拉黑了，没法邀请');return;}
+  const mc={role:'user',type:'gameinvite',game:k,gname:g.n,ge:g.e,status:'pending',id:uid(),time:Date.now()};
+  msgs(cid).push(mc);save();openChat(cid);
+  const note='[系统：'+S.me.name+'给你发来一张【游戏邀请卡片】，想拉你一起玩「'+g.e+' '+g.n+'」。请你按当下心情和人设决定：愿意陪ta玩，就【单独一行】输出 [同意游戏] 再说一句答应的话；这会儿不想玩/在忙，就【单独一行】输出 [拒绝游戏] 并温柔说明。注意：只有你[同意游戏]，ta才能进去和你一起玩；这两个标记不会被读出来。]';
+  scheduleReply(cid,note);}
+function gameInviteDecide(id,ok){const c=getC(id);if(!c)return;const inv=[...msgs(id)].reverse().find(x=>x.type==='gameinvite'&&x.status==='pending');if(!inv)return;
+  inv.status=ok?'accepted':'declined';
+  if(ok){c.gamesPlayed=c.gamesPlayed||[];if(inv.gname&&c.gamesPlayed.indexOf(inv.gname)<0){c.gamesPlayed.push(inv.gname);if(c.gamesPlayed.length>30)c.gamesPlayed.shift();}}
+  save();if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();}
+function enterGameNow(cid,k){const inv=[...msgs(cid)].reverse().find(x=>x.type==='gameinvite'&&x.game===k);if(inv&&inv.status!=='accepted'){toast('要等ta同意了才能进去玩哦');return;}startGame(k,cid);}
 function startGame(k,cid){const g=GAMES.find(x=>x.k===k);if(!g)return;closeModal();
   if(k==='soup')return soupCfg(cid);
   if(k==='escape')return escapeCfg(cid);
@@ -3867,7 +3880,7 @@ function coupleSet(){openModal(`<h3>在一起的日子</h3><div class="field"><l
 function addAnniv(){openModal(`<h3>添加纪念日</h3><div class="field"><label>日期</label><input id="an_d" type="date" value="${todayStr()}"></div><div class="field"><label>名称</label><input id="an_t" placeholder="第一次见面 / 订婚…"></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var d=$('#an_d').value,t=$('#an_t').value.trim();if(!d||!t){toast('填日期和名称');return;}S.couple.anniversaries=S.couple.anniversaries||[];S.couple.anniversaries.push({date:d,title:t});S.couple.anniversaries.sort((a,b)=>a.date<b.date?-1:1);save();closeModal();render();})()">保存</button></div>`);}
 function previewOf(m){if(m.role==='assistant'){if(m.type==='familycard')return '[亲属卡邀请]';if(m.type==='namecard')return '[推荐好友：'+(m.cname||'')+']';if(m.type==='dateinvite')return '[约会邀请]';if(m.type==='homeinvite')return '[🏡 回家邀请]';return splitBubbles(m.content)[0]||'[消息]';}
-  return ({text:m.content,image:'[照片]',transfer:'[转账]',redpacket:'[红包]',location:'[位置]',file:'[文件]',spycard:'[查看权限]',dice:'[骰子]',gift:'[礼物]',paycard:'[求代付]',paid:'[已代付]',tweetcard:'[X推文]',dycard:'[抖音视频]',tcollect:'[已收款]',treject:'[已退还]',chatlog:'[聊天记录]',food:'[外卖]',payreject:'[拒绝代付]',voice:'[语音]',sticker:'[表情]',namecard:'[名片]',familybuy:'[亲属卡消费]',familyreq:'[亲属卡申请]',weblink:'[网页]',dateinvite:'[约会邀请]',homeinvite:'[🏡 回家邀请]',outpass:'[📍 出门申请]',musicinvite:'[🎧 一起听歌]',sys:m.content})[m.type]||'[消息]';}
+  return ({text:m.content,image:'[照片]',transfer:'[转账]',redpacket:'[红包]',location:'[位置]',file:'[文件]',spycard:'[查看权限]',dice:'[骰子]',gift:'[礼物]',paycard:'[求代付]',paid:'[已代付]',tweetcard:'[X推文]',dycard:'[抖音视频]',tcollect:'[已收款]',treject:'[已退还]',chatlog:'[聊天记录]',food:'[外卖]',payreject:'[拒绝代付]',voice:'[语音]',sticker:'[表情]',namecard:'[名片]',familybuy:'[亲属卡消费]',familyreq:'[亲属卡申请]',weblink:'[网页]',dateinvite:'[约会邀请]',homeinvite:'[🏡 回家邀请]',outpass:'[📍 出门申请]',musicinvite:'[🎧 一起听歌]',gameinvite:'[🎮 游戏邀请]',sys:m.content})[m.type]||'[消息]';}
 
 let _ctSearch='';
 function ctSearchInput(v){_ctSearch=v;const box=$('#ctlist');if(box)box.innerHTML=ctListHTML();}
@@ -4649,6 +4662,8 @@ function buildPart(c,m,me){
   if(m.type==='homeinvite'){const done=m.accepted||m.declined;return `<div class="card" style="width:240px;background:#241a33;border:1px solid #7a5bb0"><div style="padding:12px"><div style="color:#c5a6ff;font-size:11px;margin-bottom:4px">🏡 回家吧</div><div style="color:#ece0ff;font-size:14px;font-weight:600">ta邀请你回你们的小家</div><div style="color:#b9a6e0;font-size:12px;margin-top:5px">一起做饭 · 看电影 · 喂米香奶茶 · 抱着睡</div></div><div class="cfoot" style="color:#a98fd0">${m.accepted?'你回家啦🏡':m.declined?'你说改天':'ta在小家等你'}</div></div>${done?'':`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#7a5bb0;color:#fff" onclick="event.stopPropagation();acceptHome('${m.id}')">回家陪ta</button><button class="minibtn" onclick="event.stopPropagation();declineHome('${m.id}')">改天</button></div>`}`;}
   if(m.type==='outpass'){const st=m.status;return `<div class="card" style="width:240px;background:#23303a;border:1px solid #3a6b8a"><div style="padding:12px"><div style="color:#9ec5fe;font-size:11px;margin-bottom:4px">📍 出门报备申请</div><div style="color:#dbeafe;font-size:14px;font-weight:600">去：${esc(m.where||'')}</div>${m.who?`<div style="color:#a9c7e8;font-size:12px;margin-top:3px">同行：${esc(m.who)}</div>`:''}${m.dur?`<div style="color:#a9c7e8;font-size:12px">时长：${esc(m.dur)}</div>`:''}</div><div class="cfoot" style="color:${st==='approved'?'#19a463':st==='rejected'?'#fa5151':'#c9a86b'}">${st==='approved'?'✅ ta批准了'+(m.reason?'：'+esc(m.reason):''):st==='rejected'?'🚫 ta驳回了'+(m.reason?'：'+esc(m.reason):''):'⏳ 等ta批准'}</div></div>`;}
   if(m.type==='familyreq'){return `<div class="card"><div class="cpay" style="background:#e8527f"><div class="big">💳</div><div><div class="t1">亲属卡申请</div><div class="t2">想绑定你的亲属卡用额度</div></div></div><div class="cfoot">等ta同意并设额度</div></div>`;}
+  if(m.type==='gameinvite'){const st=m.status;const playing=st==='accepted';
+    return `<div class="card" style="width:240px;background:#1d2342;border:1px solid #4a5bb0"><div style="padding:12px"><div style="color:#9db4ff;font-size:11px;margin-bottom:4px">🎮 游戏邀请</div><div style="color:#e3e9ff;font-size:14px;font-weight:600">${esc(m.ge||'')} ${esc(m.gname||'一起玩')}</div><div style="color:#aab6e8;font-size:12px;margin-top:5px">想拉你进游戏空间一起玩～</div></div><div class="cfoot" style="color:#8fa0d8">${st==='accepted'?'ta答应啦🎮':st==='declined'?'ta这会儿不想玩':'等ta同意…'}</div></div>${playing?`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#5b6bd6;color:#fff" onclick="event.stopPropagation();enterGameNow('${c.id}','${m.game}')">▶ 进入游戏</button></div>`:''}`;}
   return `<div class="bubble">${esc(m.content)}</div>`;}
 function vtoggle(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m)return;
   audioUnlock();   // 在点击手势里同步解锁音频(iOS必须如此),否则等TTS网络回来再唤醒就来不及、没声音
@@ -4816,7 +4831,7 @@ function doLoc(id){const n=$('#lc_n').value.trim();if(!n){toast('填地点呀');
 /* 拆分多条气泡 */
 function splitBubbles(text){return (text||'').split('\n').map(s=>s.trim()).filter(Boolean);}
 function splitActions(line){const out=[];const re=/[（(【][^）)】]*[）)】]/g;let last=0,m;while((m=re.exec(line))){const before=line.slice(last,m.index).trim();if(before)out.push(before);out.push(m[0].trim());last=re.lastIndex;}const tail=line.slice(last).trim();if(tail)out.push(tail);return out.length?out:[line];}
-const TAGWORDS='心情值|心情|记住|闹钟|日程|发朋友圈|发推|点外卖|语音|表情|收藏表情|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|约会|回家|登录微信|删好友|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回';
+const TAGWORDS='心情值|心情|记住|闹钟|日程|发朋友圈|发推|点外卖|语音|表情|收藏表情|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|约会|回家|登录微信|删好友|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|同意游戏|拒绝游戏';
 const APPNAME2KEY={'浏览器':'browser','搜索':'browser','上网':'browser','百度':'browser','朋友圈':'moments','动态':'moments','查他手机':'spy','查岗':'spy','查手机':'spy','购物':'shop','淘宝':'shop','商城':'shop','日历':'calendar','日程':'calendar','x':'x','X':'x','推特':'x','微博':'x','推':'x','抖音':'douyin','短视频':'douyin','刷视频':'douyin','刷抖音':'douyin','外卖':'food','点餐':'food','游戏':'games','游戏大厅':'games','打游戏':'games','信箱':'mail','邮箱':'mail','邮件':'mail','线下约会':'offline','线下':'offline','约会':'offline'};
 function genPwd(){return String(1000+Math.floor(Math.random()*9000));}
 function _appKeys(arg,pool,filt){if(/全部|所有|全锁|全/.test(arg))return pool.filter(filt);return arg.split(/[、,，\/\s]+/).map(x=>APPNAME2KEY[x.replace(/[「」『』"'《》]/g,'').trim()]).filter(k=>k&&filt(k));}
@@ -5010,11 +5025,13 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
     maybeTaskIntent(content,c);maybeCollarIntent(content,c);
     // [来电|语音/视频] 容错：哪怕模型把它写在句子中间(不是单独一行)，也照样触发来电、并从文字里抹掉，别漏成文字
     content=content.replace(/[\[【]\s*来电\s*[\|｜]\s*(语音|视频)\s*[\]】]/g,(m,k)=>{setTimeout(()=>incomingCall(c.id,k==='视频'?'video':'voice','ta打来的'),600);return '';});
+    // [同意游戏]/[拒绝游戏]：哪怕写在句中也照样落地，并从文字里抹掉
+    content=content.replace(/[\[【]\s*(同意游戏|拒绝游戏)\s*[\]】]/g,(m,act)=>{gameInviteDecide(id,act==='同意游戏');return '';});
     const lines=splitBubbles(content);let got=false;let txtN=0;let diceUsed=false;const cap=Math.max(1,+c.msgMax||4);
     for(let i=0;i<lines.length;i++){
       let line=normTag(lines[i]);if(!line)continue;
       if(/^\[联网\|/.test(line))continue;
-      if(/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|突脸|选择|改密码|登录微信|删好友|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|心情值)\s*[|｜:：\]]/.test(line))continue;// 管控/记仇指令标签：即便没生效，也绝不作为消息发出
+      if(/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|突脸|选择|改密码|登录微信|删好友|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|心情值|同意游戏|拒绝游戏)\s*[|｜:：\]]/.test(line))continue;// 管控/记仇指令标签：即便没生效，也绝不作为消息发出
       if(/^\s*[🔒🔓🔇🔊🔕]/.test(line)||/^\s*(?:ta|TA|他|她)(把你|锁了你|禁言了你|解除了你|解禁了你|解锁了你)/.test(line))continue;
       if(isRefusal(line))continue;
       let mm=line.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=mm[1];save();if(cur().p==='chat'&&cur().id===id)render();continue;}
