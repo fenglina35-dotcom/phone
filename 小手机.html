@@ -551,7 +551,7 @@ const SHARE_GATE=true, SHARE_PW='Beiye5911';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v269 · 去emoji换成线条图标:默认头像(全局)、消息菜单、查他手机标题/提示、X点赞转发评论都换成好看的线条;你自己选的emoji头像/图片头像保留';
+const APP_VER='v270 · 新增聊天引用功能(长按句子引用·他也会挑你最在意的那句回·只聊天不通话·设置里可开关);X推文详情页+抖音的点赞评论转发emoji也换成线条';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -727,7 +727,7 @@ function msgToText(m){
     case 'familybuy':return '[我刚用你给的亲属卡买了「'+m.name+'」，花了¥'+(+m.price).toFixed(2)+'，本月这卡已用¥'+(+m.used).toFixed(2)+'/'+(+m.quota).toFixed(0)+']';
     case 'familyreq':return '[我向你申请绑定一张亲属卡，想用你的额度买点东西]';
     case 'weblink':return '[我转发给你一条联网搜到的资料：'+m.title+'——'+((m.snippet||'').slice(0,120))+']';
-    case 'text':return m.content;
+    case 'text':return (m.quote&&m.quote.who==='ta'&&m.quote.text)?('（我引用了你刚说的那句「'+m.quote.text+'」，专门就这一句，我说：）'+m.content):m.content;
     case 'image':return '[我发了一张照片'+(m.desc?'，画面是：'+m.desc:'')+']';
     case 'transfer':return '[我给你转账 ¥'+(+m.amount).toFixed(2)+(m.note?'，备注'+m.note:'')+']';
     case 'redpacket':return '[我发了个红包 ¥'+(+m.amount).toFixed(2)+(m.note?'，'+m.note:'')+']';
@@ -745,7 +745,7 @@ function msgToText(m){
     case 'food':return m.from==='ta'?'[你给ta点了外卖：'+m.name+']':'['+S.me.name+'给你点了外卖：'+m.name+(m.shop?'（'+m.shop+'）':'')+'，¥'+(+m.price).toFixed(2)+(m.declined?'（你拒收了）':m.delivered?'（已送到、你吃上了）':m.received?'（你收下了，配送中）':'（等你 [收外卖] 或 [拒外卖]）')+']';
     case 'tweetcard':return '[我转发给你一条X推文——'+m.tname+'：「'+m.ttext+'」]';
     case 'dycard':return m.mine?('[我把我自己发的抖音视频分享给你——「'+m.desc+'」'+(m.narration?'，视频内容：'+m.narration:'')+']'):('[我转发给你一条抖音视频——@'+m.author+'：「'+m.desc+'」'+(m.narration?'，视频内容：'+m.narration:'')+']');
-    case 'voice':return m.content?('[语音消息]'+m.content):'['+S.me.name+'发了条语音]';
+    case 'voice':{const vq=(m.quote&&m.quote.who==='ta'&&m.quote.text)?'（我引用了你刚说的那句「'+m.quote.text+'」，就这一句）':'';return m.content?('[语音消息]'+vq+m.content):'['+S.me.name+'发了条语音]';}
     case 'sticker':return '[表情'+(m.meaning?'：'+m.meaning:'')+']';
     case 'chatlog':return '[我转发给你一份聊天记录《'+m.title+'》，内容：'+(m.lines||[]).map(l=>l.who+'说'+l.text).join('；').slice(0,200)+']';
     case 'tcollect':return '[你收下了我的转账 ¥'+(+m.amount).toFixed(2)+']';
@@ -932,6 +932,7 @@ function buildSystem(c){
   // 记忆（仅主身份）
   if(_main&&c.memory&&c.memory.length)s+='\n\n# 你记得关于'+S.me.name+'的事\n'+c.memory.map((m,i)=>(i+1)+'. '+m).join('\n');
   if(_main&&c.gamesPlayed&&c.gamesPlayed.length)s+='\n\n# 你和'+S.me.name+'一起玩过的游戏\n你记得跟ta在游戏大厅一起玩过：'+c.gamesPlayed.join('、')+'。被提起时要想得起来、能自然回味这些一起玩过的事，别说没玩过（具体每局怎么玩的不重要，记得玩过就行）。';
+  if(S.settings.quoteOn!==false)s+='\n\n# 引用回复（仅微信文字聊天）\n· '+S.me.name+'可能引用你之前的某句话来专门问你——你会在ta消息里看到"（我引用了你刚说的那句「…」…）"，这时【只针对被引用的那一句】回答，别答成别的。\n· 你回复时也可以引用ta的话：当'+S.me.name+'【一口气发了两条及以上、意思不同】的消息、你想特别回应你最在意的那一条时，在那条回复的【前面单独一行】写 [引用|ta那句的原话]，紧接着写你的回应。规矩：①只发了一条、或两条意思差不多/能一起回的，就【不要】引用，正常回；②一次最多引用一句，别滥用；③只在文字聊天用，【打电话时绝不要】用[引用]。';
   if(c.summary&&!c.summaries){c.summaries=[{time:'(早期)',text:c.summary}];delete c.summary;}
   if(_main&&c.summaries&&c.summaries.length)s+='\n\n# 之前对话的概要（你的长期记忆，按时间从旧到新，要记牢并保持连贯，ta提到旧事时你要想得起来；标★的是你格外珍视的回忆）\n'+topSummaries(c.summaries,24).map(x=>'· '+x.time+'　'+((x.imp||3)>=5?'★ ':'')+x.text).join('\n');
   const _off=S.offline&&S.offline[c.id];
@@ -1747,6 +1748,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="it"><span>带几个回合<br><small style="color:#888">你1句+他的回复=1回合，记得越多越久但越慢</small></span><input id="s_hist" type="number" min="2" max="40" value="${S.settings.hist}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it"><span>通话自动出声<br><small style="color:#888">通话时ta的话自动念出来；聊天里的语音条改成点一下才播</small></span><span class="sw ${S.settings.voiceAuto?'on':''}" onclick="S.settings.voiceAuto=!S.settings.voiceAuto;save();render()"></span></div>
       <div class="it"><span>发消息后手动点回复<br><small style="color:#888">开：发完点「让ta回复」他才回；他主动找你不受影响</small></span><span class="sw ${S.settings.manualReply?'on':''}" onclick="S.settings.manualReply=!S.settings.manualReply;save();render()"></span></div>
+      <div class="it"><span>聊天引用功能<br><small style="color:#888">开：长按一句话可以引用它来问；他也会挑你最在意的那句回你（只聊天，电话不引用）</small></span><span class="sw ${S.settings.quoteOn!==false?'on':''}" onclick="S.settings.quoteOn=(S.settings.quoteOn===false);save();render()"></span></div>
       <div class="it">延迟几秒回复<input id="s_delay" type="number" min="0" value="${S.settings.replyDelay}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it">超过几回合自动总结<input id="s_sum" type="number" min="0" value="${S.settings.summaryRounds||0}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it">主动消息间隔(分钟)<input id="s_pidle" type="number" min="1" value="${S.settings.proactiveIdleMin||20}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
@@ -2516,8 +2518,8 @@ function renderXTweet(id){const t=tw(id);if(!t)return '';
         <div class="tx" style="color:#e7e9ea;font-size:18px;margin:10px 0;white-space:pre-wrap">${esc(t.text)}</div>
         ${t.images&&t.images.length?`<div style="display:grid;grid-template-columns:repeat(${Math.min(t.images.length,2)},1fr);gap:4px;margin:6px 0">${t.images.map(im=>`<img src="${im}" style="width:100%;border-radius:10px" onclick="viewImg('${im}')">`).join('')}</div>`:''}
         <div style="color:#71767b;font-size:13px">${new Date(t.time).toLocaleString('zh-CN')}</div>
-        <div class="acts" style="margin-top:8px;color:#71767b"><span>🔁 ${t.rt||0}</span><span class="${(t.likes||[]).includes(S.me.name)?'liked':''}" onclick="xLike('${id}')">❤️ ${(t.lk||0)+(t.likes||[]).length}</span></div></div>
-      ${(t.comments||[]).map((cm,ci)=>`<div class="xcomment">${av(cm.avatar||'💬','sm')}<div style="flex:1"><div class="nm" style="font-size:13px;color:#e7e9ea;font-weight:700">${esc(cm.name)} ${cm.authorLiked?'<span style="color:#f91880;font-weight:400">· ❤️作者赞过</span>':''}</div><div class="tx">${esc(cm.text)}</div><div style="font-size:12px;margin-top:3px"><span style="color:#1d9bf0;cursor:pointer" onclick="xReplyComment('${id}',${ci})">回复</span> <span style="color:#71767b;cursor:pointer;margin-left:10px" onclick="xAuthorLike('${id}',${ci})">${cm.authorLiked?'取消赞':'作者赞'}</span></div></div></div>`).join('')||'<div class="empty" style="padding:24px">还没有评论，点🔄生成网友评论</div>'}
+        <div class="acts" style="margin-top:8px;color:#71767b"><span>${svgIc('refresh',14,'currentColor')} ${t.rt||0}</span><span class="${(t.likes||[]).includes(S.me.name)?'liked':''}" onclick="xLike('${id}')">${svgIc('heart',14,(t.likes||[]).includes(S.me.name)?'#f4245e':'currentColor')} ${(t.lk||0)+(t.likes||[]).length}</span></div></div>
+      ${(t.comments||[]).map((cm,ci)=>`<div class="xcomment">${av(cm.avatar||'','sm')}<div style="flex:1"><div class="nm" style="font-size:13px;color:#e7e9ea;font-weight:700">${esc(cm.name)} ${cm.authorLiked?'<span style="color:#f91880;font-weight:400">· 作者赞过</span>':''}</div><div class="tx">${esc(cm.text)}</div><div style="font-size:12px;margin-top:3px"><span style="color:#1d9bf0;cursor:pointer" onclick="xReplyComment('${id}',${ci})">回复</span> <span style="color:#71767b;cursor:pointer;margin-left:10px" onclick="xAuthorLike('${id}',${ci})">${cm.authorLiked?'取消赞':'作者赞'}</span></div></div></div>`).join('')||'<div class="empty" style="padding:24px">还没有评论，点右上角刷新生成网友评论</div>'}
       <div style="height:70px"></div></div>
     <div class="inputbar"><textarea id="xc_in" rows="1" placeholder="发布你的回复…可@角色"></textarea><button class="send" onclick="xComment('${id}')">回复</button></div>`;}
 function xAuthorLike(id,ci){const t=tw(id);t.comments[ci].authorLiked=!t.comments[ci].authorLiked;save();render();}
@@ -2606,10 +2608,10 @@ function dyVideoCard(v,i){const liked=!!v.liked;const lc=(v.lk||0)+(liked?1:0);c
     <div onclick="dyTapVideo('${v.id}')" style="position:absolute;inset:0;z-index:2"></div>
     <div class="dyrail">
       <div class="ra" onclick="dyVideoAuthor('${v.id}')" style="margin-bottom:4px"><div style="position:relative">${av(v.avatar||'🎵','sm')}${isChar&&!fol?'<span style="position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);width:18px;height:18px;border-radius:50%;background:#fe2c55;color:#fff;font-size:13px;line-height:18px;text-align:center">+</span>':''}</div></div>
-      <div class="ra" onclick="dyLike('${v.id}')"><span class="ic">${liked?'❤️':'🤍'}</span>${lc}</div>
-      <div class="ra" onclick="dyComments('${v.id}')"><span class="ic">💬</span>${(v.comments||[]).length}</div>
-      <div class="ra" onclick="dyTapVideo('${v.id}')"><span class="ic">📖</span>简介</div>
-      <div class="ra" onclick="dyFwd('${v.id}')"><span class="ic">↗️</span>转发</div>
+      <div class="ra" onclick="dyLike('${v.id}')"><span class="ic">${svgIc('heart',26,liked?'#fe2c55':'#fff')}</span>${lc}</div>
+      <div class="ra" onclick="dyComments('${v.id}')"><span class="ic">${svgIc('chat',26,'#fff')}</span>${(v.comments||[]).length}</div>
+      <div class="ra" onclick="dyTapVideo('${v.id}')"><span class="ic">${svgIc('book',26,'#fff')}</span>简介</div>
+      <div class="ra" onclick="dyFwd('${v.id}')"><span class="ic">${svgIc('forward',26,'#fff')}</span>转发</div>
       <div class="ra" style="margin-top:2px"><div class="dydisc">🎵</div></div>
     </div>
     <div class="dymeta">
@@ -2750,7 +2752,7 @@ function dyProfile(){const liked=S.dy.liked||[];const mine=S.dy.mine||[];
     </div>
     <div style="border-top:.5px solid #222;padding:12px 14px;font-weight:700">🎬 我的作品（${mine.length}）</div>
     ${mine.length?grid(mine):'<div class="empty" style="padding:24px;color:#888">还没发过视频～点上面「＋ 发抖音」</div>'}
-    <div style="border-top:.5px solid #222;padding:12px 14px;font-weight:700;margin-top:6px">❤️ 我的喜欢（${liked.length}）</div>
+    <div style="border-top:.5px solid #222;padding:12px 14px;font-weight:700;margin-top:6px;display:flex;align-items:center;gap:6px">${svgIc('heart',15,'#f4245e')} 我的喜欢（${liked.length}）</div>
     ${liked.length?grid(liked):'<div class="empty" style="padding:24px;color:#888">还没点赞过视频～点赞的会出现在这里</div>'}
     <div style="height:16px"></div>`;}
 function dyOpenLiked(id){const v=dyVid(id);if(!v)return;const isMineVid=v.cid==='me';
@@ -4593,6 +4595,7 @@ function renderChat(id){const c=getC(id);if(!c)return '';
   let body='';
   list.forEach((m,i)=>{if(i===0||m.time-list[i-1].time>300000)body+=`<div class="tstamp"><span>${hm(m.time)}</span></div>`;body+=bubbleRow(c,m);});
   const mood=c.mood?`<div class="moodbar" onclick="showMood('${id}')" style="display:flex;align-items:center;gap:6px">${svgIc('thought',15,'#b9a6e0')}<span style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${esc(c.mood.slice(0,24))}${c.mood.length>24?'…':''}</span></div>`:'';
+  const qbar=(S.settings.quoteOn!==false&&_quoting&&_quoting.id===id)?`<div style="display:flex;align-items:center;gap:8px;padding:7px 14px;background:rgba(120,130,170,.12);border-left:3px solid #8a93c8;margin:0 8px;border-radius:8px;font-size:12px;color:#aab"><span style="flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">引用${_quoting.who==='me'?'你自己':'ta'}：${esc((_quoting.text||'').slice(0,30))}${(_quoting.text||'').length>30?'…':''}</span><span onclick="quoteClear()" style="cursor:pointer;color:#889;font-size:15px;padding:0 4px">✕</span></div>`:'';
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(c.remark||c.name)}${c.muted?' 🔕':''}</span><span class="r" onclick="go('contactInfo',{id:'${id}'})">⋯</span></div>
     ${mood}
     <div class="chatbg" id="chatbg" style="${bg}">${body}</div>
@@ -4613,7 +4616,7 @@ function renderChat(id){const c=getC(id);if(!c)return '';
       <div class="it" onclick="enterSelect('${id}')"><div class="b">${svgIc('forward',26,'#e6e6ee')}</div><span>多选转发</span></div>
     </div>`}
     </div>
-    ${(_sel&&_sel.id===id)?`<div class="inputbar"><button class="btn g" style="flex:1" onclick="exitSelect()">取消</button><button class="btn d" style="flex:1" onclick="delSelected('${id}')">删除(<span id="fwdcnt">${_sel.ids.length}</span>)</button><button class="btn p" style="flex:1" onclick="forwardSelected()">转发</button></div>`:(S.couple&&S.couple.gags&&S.couple.gags[id])?`<div class="inputbar" style="justify-content:center;color:#fa9bb5;font-size:13px;padding:16px;text-align:center">🔇 ta把你们的聊天锁了，<span onclick="openCouple()" style="color:#ff6fa5;text-decoration:underline;cursor:pointer">去情侣空间输密码解禁</span></div>`:(S.settings.manualReply&&!c.blocked?`<div style="padding:6px 10px 0"><button class="btn p" style="width:100%" ${_replying===id?'disabled':''} onclick="manualReply('${id}')">${_replying===id?'回复中…':'▶ 让ta回复'}</button></div>`:'')+`<div class="inputbar">`+`
+    ${(_sel&&_sel.id===id)?`<div class="inputbar"><button class="btn g" style="flex:1" onclick="exitSelect()">取消</button><button class="btn d" style="flex:1" onclick="delSelected('${id}')">删除(<span id="fwdcnt">${_sel.ids.length}</span>)</button><button class="btn p" style="flex:1" onclick="forwardSelected()">转发</button></div>`:(S.couple&&S.couple.gags&&S.couple.gags[id])?`<div class="inputbar" style="justify-content:center;color:#fa9bb5;font-size:13px;padding:16px;text-align:center">🔇 ta把你们的聊天锁了，<span onclick="openCouple()" style="color:#ff6fa5;text-decoration:underline;cursor:pointer">去情侣空间输密码解禁</span></div>`:(S.settings.manualReply&&!c.blocked?`<div style="padding:6px 10px 0"><button class="btn p" style="width:100%" ${_replying===id?'disabled':''} onclick="manualReply('${id}')">${_replying===id?'回复中…':'▶ 让ta回复'}</button></div>`:'')+qbar+`<div class="inputbar">`+`
       <span class="plus" style="background:${_voiceMode?'linear-gradient(135deg,#9ec5fe,#b8a4e3)':'transparent'};box-shadow:none;color:${_voiceMode?'#fff':'#aaa'}" onclick="_voiceMode=!_voiceMode;render()">${svgIc('mic',19,_voiceMode?'#fff':'#aaa')}</span>
       <textarea id="cinput" rows="1" placeholder="${c.blocked?'已拉黑，发不出去':(_voiceMode?'打字→发成语音条…':'发消息…')}" ${c.blocked?'disabled':''}></textarea>
       <button class="send" onclick="sendText('${id}')">${_voiceMode?'发语音':'发送'}</button>
@@ -4628,7 +4631,9 @@ function bubbleRow(c,m){
   const h=selecting?`onclick="toggleSel('${m.id}')"`:`onclick="msgMenu('${c.id}','${m.id}')"`;
   const tick=selecting?`<span id="tk_${m.id}" style="align-self:center;font-size:20px;color:${_sel.ids.includes(m.id)?'#07c160':'#555'}">${_sel.ids.includes(m.id)?'☑':'⚪'}</span>`:'';
   const ts=m.time?`<div class="msgt">${hm(m.time)}</div>`:'';
-  return `<div class="msg ${me?'me':'them'}">${tick}<span ${h}>${av(me?S.me.avatar:c.avatar)}</span><div class="col" ${h}>${inner}${ts}</div></div>`;}
+  const quotable=(S.settings.quoteOn!==false)&&!selecting&&(m.type==='text'||m.type==='voice');
+  const lp=quotable?` onmousedown="qPressStart('${c.id}','${m.id}')" onmouseup="qPressEnd()" onmouseleave="qPressEnd()" ontouchstart="qPressStart('${c.id}','${m.id}')" ontouchend="qPressEnd()" ontouchmove="qPressEnd()"`:'';
+  return `<div class="msg ${me?'me':'them'}">${tick}<span ${h}>${av(me?S.me.avatar:c.avatar)}</span><div class="col" ${h}${lp}>${inner}${ts}</div></div>`;}
 function buildPart(c,m,me){
   if(m.type==='musicinvite')return `<div class="card" style="cursor:pointer" onclick="event.stopPropagation();joinMusicSession('${c.id}','${(m.title||'').replace(/'/g,'')}')"><div class="cpay" style="background:linear-gradient(135deg,#ff8fab,#b8a4e3)"><div class="big">🎧</div><div><div class="t1">一起听歌</div><div class="t2">${esc(m.title||'')}${m.artist?' · '+esc(m.artist):''}</div></div></div><div class="cfoot">🎵 点击进入一起听</div></div>`;
   if(m.type==='image')return `<div class="imgmsg" onclick="event.stopPropagation();viewImg('${m.src}')"><img src="${m.src}"></div>`;
@@ -4653,7 +4658,7 @@ function buildPart(c,m,me){
   if(m.type==='tcollect'){return `<div class="card"><div class="cpay done"><div class="big">💰</div><div><div class="t1">已收款</div><div class="t2">¥${(+m.amount).toFixed(2)} 对方已收下你的转账</div></div></div><div class="cfoot">微信转账</div></div>`;}
   if(m.type==='treject'){return `<div class="card"><div class="cpay" style="background:#8a8a8a"><div class="big">↩️</div><div><div class="t1">已退还</div><div class="t2">¥${(+m.amount).toFixed(2)} 对方拒收了转账</div></div></div><div class="cfoot">微信转账 · 已退回你钱包</div></div>`;}
   if(m.type==='voice'){const dur=m.dur||Math.max(1,Math.round((m.content||'').length/3));const wide=Math.min(60+dur*8,200);
-    return `<div class="bubble voiceb" style="min-width:${wide}px" data-vid="${m.id}" onclick="event.stopPropagation();vtoggle('${m.id}')"><span class="vwave">‹))</span> ${dur}″</div>${m.showText?`<div class="vtext">${esc(m.content)}${m.trans?'<br><span style="color:#aa8">译：'+esc(m.trans)+'</span>':''}</div>`:''}`;}
+    return quoteBar(m)+`<div class="bubble voiceb" style="min-width:${wide}px" data-vid="${m.id}" onclick="event.stopPropagation();vtoggle('${m.id}')"><span class="vwave">‹))</span> ${dur}″</div>${m.showText?`<div class="vtext">${esc(m.content)}${m.trans?'<br><span style="color:#aa8">译：'+esc(m.trans)+'</span>':''}</div>`:''}`;}
   if(m.type==='sticker'){return `<div class="stickermsg"><img src="${m.img}">${m.meaning?`<div class="stkm">${esc(m.meaning)}</div>`:''}</div>`;}
   if(m.type==='familycard'){const bnd=m.bound;
     return `<div class="card"><div class="cpay" style="background:#e8527f"><div class="big">💳</div><div><div class="t1">亲属卡 · 每月¥${(+m.quota).toFixed(0)}</div><div class="t2">${bnd?'已绑定，用ta的额度消费':(m.declined?'你拒绝了':'邀请你绑定亲属卡')}</div></div></div><div class="cfoot">亲属卡邀请</div></div>${(!bnd&&!m.declined)?`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#e8527f;color:#fff" onclick="event.stopPropagation();acceptFamily('${m.id}')">接受</button><button class="minibtn" onclick="event.stopPropagation();declineFamily('${m.id}')">拒绝</button></div>`:''}`;}
@@ -4670,7 +4675,7 @@ function buildPart(c,m,me){
   if(m.type==='familyreq'){return `<div class="card"><div class="cpay" style="background:#e8527f"><div class="big">💳</div><div><div class="t1">亲属卡申请</div><div class="t2">想绑定你的亲属卡用额度</div></div></div><div class="cfoot">等ta同意并设额度</div></div>`;}
   if(m.type==='gameinvite'){const st=m.status;const playing=st==='accepted';
     return `<div class="card" style="width:240px;background:#1d2342;border:1px solid #4a5bb0"><div style="padding:12px"><div style="color:#9db4ff;font-size:11px;margin-bottom:4px">🎮 游戏邀请</div><div style="color:#e3e9ff;font-size:14px;font-weight:600">${esc(m.ge||'')} ${esc(m.gname||'一起玩')}</div><div style="color:#aab6e8;font-size:12px;margin-top:5px">想拉你进游戏空间一起玩～</div></div><div class="cfoot" style="color:#8fa0d8">${st==='accepted'?'ta答应啦🎮':st==='declined'?'ta这会儿不想玩':'等ta同意…'}</div></div>${playing?`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#5b6bd6;color:#fff" onclick="event.stopPropagation();enterGameNow('${c.id}','${m.game}')">▶ 进入游戏</button></div>`:''}`;}
-  return `<div class="bubble">${esc(m.content)}</div>`;}
+  return quoteBar(m)+`<div class="bubble">${esc(m.content)}</div>`;}
 function vtoggle(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m)return;
   audioUnlock();   // 在点击手势里同步解锁音频(iOS必须如此),否则等TTS网络回来再唤醒就来不及、没声音
   speakMsg(m,m.role==='user'?S.me:getC(owner));   // 点一下就播放，可重复点重复听
@@ -4741,10 +4746,24 @@ function recUp(id,cancel){const b=$('#holdbtn');if(b){b.textContent='按住 说�
 function sendText(id){if(wxLoginActive()){toast('微信被ta登录中，你暂时不能操作');return;}const c=getC(id);if(c.blocked){toast('已拉黑，先解除吧');return;}
   if(c._cbTries)c._cbTries=0;// 她主动发消息=重新搭理ta，回拨追逐结束、计数清零
   const ta=$('#cinput');const t=ta.value.trim();if(!t)return;ta.value='';ta.style.height='auto';
-  if(_voiceMode)pushMsg(id,{role:'user',type:'voice',content:t,dur:Math.max(1,Math.round(t.length/3)),id:uid()});
-  else pushMsg(id,{role:'user',type:'text',content:t});
+  const q=(S.settings.quoteOn!==false&&_quoting&&_quoting.id===id)?{text:_quoting.text,who:_quoting.who}:null;_quoting=null;
+  if(_voiceMode)pushMsg(id,{role:'user',type:'voice',content:t,dur:Math.max(1,Math.round(t.length/3)),id:uid(),quote:q});
+  else pushMsg(id,{role:'user',type:'text',content:t,quote:q});
   maybeFollowup(id,t);// 检测ta提到的将来要做的事，之后主动来关心
   scheduleReply(id);}
+/* ===== 聊天引用 ===== */
+let _quoting=null,_lpT=null,_lpFired=false;
+function quoteTextOf(m){return (m&&(m.type==='text'||m.type==='voice'))?(m.content||'').trim():'';}
+function quoteSet(cid,mid){if(S.settings.quoteOn===false)return;const m=msgs(cid).find(x=>x.id===mid);const txt=quoteTextOf(m);if(!txt){toast('这条没法引用');return;}_quoting={id:cid,text:txt,who:m.role==='user'?'me':'ta'};if(typeof closeModal==='function')closeModal();if(cur().p==='chat'&&cur().id===cid)render();}
+function quoteClear(){_quoting=null;if(cur().p==='chat')render();}
+function _matchMyLine(id,frag){if(!frag)return frag;const f=_gnorm(frag);if(!f)return frag;const ms=msgs(id).filter(m=>m.role==='user'&&(m.type==='text'||m.type==='voice')&&m.content).slice(-12);
+  let best=null,bestScore=0;
+  ms.forEach(m=>{const b=_gnorm(m.content);if(!b)return;let sc;if(b===f)sc=100;else if(b.indexOf(f)>=0||f.indexOf(b)>=0)sc=80;else{const sa=new Set(f.split('')),sb=new Set(b.split(''));let inter=0;sa.forEach(ch=>{if(sb.has(ch))inter++;});const mn=Math.min(sa.size,sb.size)||1;sc=inter/mn*60;}if(sc>bestScore){bestScore=sc;best=m.content;}});
+  return (best&&bestScore>=30)?best.trim():frag;}
+function qPressStart(cid,mid){if(S.settings.quoteOn===false)return;_lpFired=false;clearTimeout(_lpT);_lpT=setTimeout(()=>{_lpFired=true;quoteSet(cid,mid);},480);}
+function qPressEnd(){clearTimeout(_lpT);}
+function quoteBar(m){if(!m||!m.quote||!m.quote.text)return '';const who=m.quote.who==='me'?(S.me.name+'：'):'';const t=(m.quote.text||'').slice(0,46);
+  return `<div style="font-size:11.5px;opacity:.5;border-left:2px solid currentColor;padding:1px 0 1px 7px;margin-bottom:3px;line-height:1.35;max-width:210px;white-space:normal;word-break:break-word">${esc(who+t)}${(m.quote.text||'').length>46?'…':''}</div>`;}
 
 /* 功能面板发送 */
 function readAsDataURL(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f);});}
@@ -4837,7 +4856,7 @@ function doLoc(id){const n=$('#lc_n').value.trim();if(!n){toast('填地点呀');
 /* 拆分多条气泡 */
 function splitBubbles(text){return (text||'').split('\n').map(s=>s.trim()).filter(Boolean);}
 function splitActions(line){const out=[];const re=/[（(【][^）)】]*[）)】]/g;let last=0,m;while((m=re.exec(line))){const before=line.slice(last,m.index).trim();if(before)out.push(before);out.push(m[0].trim());last=re.lastIndex;}const tail=line.slice(last).trim();if(tail)out.push(tail);return out.length?out:[line];}
-const TAGWORDS='心情值|心情|记住|闹钟|日程|发朋友圈|发推|点外卖|语音|表情|收藏表情|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|约会|回家|登录微信|删好友|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|同意游戏|拒绝游戏';
+const TAGWORDS='心情值|心情|记住|闹钟|日程|发朋友圈|发推|点外卖|语音|表情|收藏表情|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|约会|回家|登录微信|删好友|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|同意游戏|拒绝游戏|引用';
 const APPNAME2KEY={'浏览器':'browser','搜索':'browser','上网':'browser','百度':'browser','朋友圈':'moments','动态':'moments','查他手机':'spy','查岗':'spy','查手机':'spy','购物':'shop','淘宝':'shop','商城':'shop','日历':'calendar','日程':'calendar','x':'x','X':'x','推特':'x','微博':'x','推':'x','抖音':'douyin','短视频':'douyin','刷视频':'douyin','刷抖音':'douyin','外卖':'food','点餐':'food','游戏':'games','游戏大厅':'games','打游戏':'games','信箱':'mail','邮箱':'mail','邮件':'mail','线下约会':'offline','线下':'offline','约会':'offline'};
 function genPwd(){return String(1000+Math.floor(Math.random()*9000));}
 function _appKeys(arg,pool,filt){if(/全部|所有|全锁|全/.test(arg))return pool.filter(filt);return arg.split(/[、,，\/\s]+/).map(x=>APPNAME2KEY[x.replace(/[「」『』"'《》]/g,'').trim()]).filter(k=>k&&filt(k));}
@@ -5049,7 +5068,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
     content=content.replace(/[\[【]\s*来电\s*[\|｜]\s*(语音|视频)\s*[\]】]/g,(m,k)=>{setTimeout(()=>incomingCall(c.id,k==='视频'?'video':'voice','ta打来的'),600);return '';});
     // [同意游戏]/[拒绝游戏]：哪怕写在句中也照样落地，并从文字里抹掉
     content=content.replace(/[\[【]\s*(同意游戏|拒绝游戏)\s*[\]】]/g,(m,act)=>{gameInviteDecide(id,act==='同意游戏');return '';});
-    const lines=splitBubbles(content);let got=false;let txtN=0;let diceUsed=false;const cap=Math.max(1,+c.msgMax||4);
+    const lines=splitBubbles(content);let got=false;let txtN=0;let diceUsed=false;let pendQuote=null;const cap=Math.max(1,+c.msgMax||4);
     for(let i=0;i<lines.length;i++){
       let line=normTag(lines[i]);if(!line)continue;
       if(/^\[联网\|/.test(line))continue;
@@ -5088,6 +5107,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
       mm=line.match(/^\[拉黑\]$/);if(mm){if(!c.blocked){setBlk(c,true);c._blockedBy='ta';c._blockedAt=Date.now();const mg={role:'assistant',type:'sys',content:'你被'+(c.remark||c.name)+'拉黑了（去ta的资料页可解除）',time:Date.now(),id:uid()};msgs(id).push(mg);save();if(cur().p==='chat'&&cur().id===id)render();else if(cur().p==='wechat')render();}continue;}
       mm=line.match(/^\[表情\|?([^\]]*)\]$/);if(mm){if(!c.noSticker){const stk=aiPickSticker(mm[1]);if(stk){const sm={role:'assistant',type:'sticker',img:stk.img,meaning:stk.meaning,time:Date.now(),id:uid()};msgs(id).push(sm);notifyIncoming(c,sm);save();if(cur().p==='chat'&&cur().id===id)render();}}continue;}
       if(/^\[收藏表情\]$/.test(line)){const last=[...msgs(id)].reverse().find(m=>m.role==='user'&&m.type==='sticker'&&m.img);if(last){S.aiStickers=S.aiStickers||[];if(!S.aiStickers.some(s=>s.img===last.img)){S.aiStickers.push({img:last.img,meaning:last.meaning||''});save();toast('ta收藏了你的表情');}}continue;}
+      mm=line.match(/^\[引用\|(.+)\]$/);if(mm){if(S.settings.quoteOn!==false)pendQuote=_matchMyLine(id,(mm[1]||'').trim());continue;}
       const base=lineToMsg(line);
       if((base.type==='transfer'||base.type==='redpacket')&&msgs(id).some(x=>x.role==='assistant'&&x.type===base.type&&Math.abs((+x.amount||0)-(+base.amount||0))<0.01&&Date.now()-(x.time||0)<180000))continue;/* 3分钟内同额转账/红包不重复 */
       if(base.type==='dice'){if(diceUsed||diceCompare)continue;diceUsed=true;}
@@ -5098,6 +5118,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
         if(base.type==='text'){if(txtN>=cap)break;txtN++;}
         await sleep(got?400+Math.random()*500:0);got=true;
         const msg=parts[pi]==null?base:{role:'assistant',type:'text',content:parts[pi]};
+        if(pendQuote&&(msg.type==='text'||msg.type==='voice')){msg.quote={who:'me',text:pendQuote};pendQuote=null;}
         msg.time=Date.now();msg.id=uid();msgs(id).push(msg);save();
         notifyIncoming(c,msg);
         if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){cb.insertAdjacentHTML('beforeend',bubbleRow(c,msg));cb.scrollTop=cb.scrollHeight;}}
@@ -5166,12 +5187,15 @@ function notifyIncoming(c,msg){
   playDing();
   if(document.hidden&&'Notification'in window&&Notification.permission==='granted'){try{new Notification(c.remark||c.name,{body:previewOf(msg)});}catch(e){}}}
 /* 撤回 / 编辑消息 */
-function msgMenu(cid,mid){const list=msgs(cid);const m=list.find(x=>x.id===mid);if(!m)return;
+function msgMenu(cid,mid){if(_lpFired){_lpFired=false;return;}/* 刚长按过=去引用了，别再弹菜单 */
+  const list=msgs(cid);const m=list.find(x=>x.id===mid);if(!m)return;
   const canEdit=m.type==='text';
+  const canQuote=(S.settings.quoteOn!==false)&&(m.type==='text'||m.type==='voice');
   // 重新生成：他发的(文字/语音/视频都行、不是系统提示)、且这条后面你没再说话(是最新那轮)才行
   let canRegen=(m.role==='assistant'&&m.type!=='sys'&&!m._call);
   if(canRegen){const i=list.findIndex(x=>x.id===mid);for(let j=i+1;j<list.length;j++){if(list[j].role==='user'&&list[j].type!=='sys'){canRegen=false;break;}}}
   openModal(`<h3>消息操作</h3>
+    ${canQuote?`<button class="btn g" style="margin-bottom:8px" onclick="quoteSet('${cid}','${mid}')">引用这句</button>`:''}
     ${canEdit?`<button class="btn g" style="margin-bottom:8px" onclick="editMsg('${cid}','${mid}')">编辑</button>`:''}
     ${canRegen?`<button class="btn p" style="margin-bottom:8px" onclick="regenMsg('${cid}','${mid}')">${svgIc('refresh',15,'#fff')} 重新生成</button>`:''}
     <button class="btn d" onclick="recallMsg('${cid}','${mid}')">撤回</button>
