@@ -494,6 +494,10 @@ body{background:#000;padding:0;}
 .cozyroof{width:0;height:0;margin:0 auto;border-left:153px solid transparent;border-right:153px solid transparent;border-bottom:42px solid #b65b4d;}
 .cozyrow{display:flex;justify-content:center;}
 .croom{position:relative;width:150px;height:136px;box-sizing:border-box;border:3px solid #4a3829;overflow:hidden;cursor:pointer;}
+.aiload{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:99998;background:rgba(20,20,24,.92);color:#fff;padding:15px 22px;border-radius:14px;display:none;align-items:center;gap:11px;font-size:14px;box-shadow:0 12px 34px rgba(0,0,0,.55);}
+.aiload.show{display:flex;}
+.aiload .spin{width:18px;height:18px;border:2.5px solid rgba(255,255,255,.28);border-top-color:#ff8fab;border-radius:50%;animation:aispin .8s linear infinite;flex:none;}
+@keyframes aispin{to{transform:rotate(360deg)}}
 .croom.on{box-shadow:inset 0 0 0 3px #ffd479;}
 .croom .clabel{position:absolute;top:5px;left:6px;font-size:10.5px;color:#fff;background:rgba(0,0,0,.32);padding:1px 7px;border-radius:7px;z-index:6;}
 .croom .cfloorpx{position:absolute;left:0;right:0;bottom:0;height:20px;background:repeating-linear-gradient(90deg,#bd884f 0 9px,#b07e47 9px 18px);border-top:3px solid #8a5f33;z-index:1;}
@@ -529,6 +533,7 @@ body{background:#000;padding:0;}
   <div class="modal" id="modal"><div class="sheet" id="modalSheet"></div></div>
   <div class="viewer" id="viewer" onclick="this.classList.remove('show')"><img id="viewerImg"></div>
   <div class="toast" id="toast"></div>
+  <div class="aiload" id="aiload"><span class="spin"></span><span id="ailoadtxt">正在刷新…</span></div>
   <div class="usebadge" id="useBadge"></div>
 </div></div>
 
@@ -546,7 +551,7 @@ const SHARE_GATE=true, SHARE_PW='786953';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v257 · 送礼/转账/红包也加防重复(3分钟内同样的不再发,挂电话后也不会再重复一次);配合v256历史可见,他记得自己送过/转过、不会重复也不会乱说';
+const APP_VER='v258 · 所有AI生成(X推文/博主/评论/私信、抖音视频/评论/私信、查手机、购物/外卖搜索、任务)统一加"正在刷新中"持续提示+失败自动重试3次,解决要刷好几遍/以为没反应/直接失败';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -627,6 +632,11 @@ function av(v,extra){return `<div class="avatar ${extra||''}">${isImg(v)?`<img s
 function hm(t){const d=new Date(t||Date.now());return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');}
 function ago(t){const s=(Date.now()-t)/1000;if(s<60)return '刚刚';if(s<3600)return Math.floor(s/60)+'分钟前';if(s<86400)return Math.floor(s/3600)+'小时前';return Math.floor(s/86400)+'天前';}
 function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),2000);}
+let _aiLoadN=0;
+function aiLoad(msg){_aiLoadN++;const el=$('#aiload');if(el){const t=$('#ailoadtxt');if(t)t.textContent=msg||'正在刷新…';el.classList.add('show');}}
+function aiDone(){_aiLoadN=Math.max(0,_aiLoadN-1);if(_aiLoadN<=0){_aiLoadN=0;const el=$('#aiload');if(el)el.classList.remove('show');}}
+// 生成内容带自动重试：parseFn 解析失败/空就重试，最多 tries 次，全失败返回 null
+async function aiGen(messages,opt,parseFn,tries){tries=tries||3;for(let i=0;i<tries;i++){try{const r=await chatAPI(messages,opt);const out=parseFn(r);if(out!=null&&(out.length===undefined||out.length>0))return out;}catch(e){}}return null;}
 function viewImg(s){$('#viewerImg').src=s;$('#viewer').classList.add('show');}
 function getC(id){const c=S.contacts.find(c=>c.id===id);if(c){if(!c.wxid)c.wxid=genWxid();if(!c.family)c.family={bound:false,quota:0,used:0,month:''};if(!c._blk)c._blk={main:!!c.blocked};}return c;}
 // 心情值会随时间慢慢回归平常(70)：每小时回4点。moodNow 取当前实际心情
@@ -2020,8 +2030,8 @@ async function spyRefresh(id){if(_spyBusy){toast('正在刷新，别急~');retur
       +'"groups":[{"name":"你在的一个微信群名(如 家族群/兄弟局/公司部门群)","lines":["某成员：说的话","另一成员：回的话","他：你说的话"]}],'
       +'"contacts":[{"name":"通讯录里的人","note":"关系如 同事/家人","added":"如 3天前/上周/很久了"}],'
       +'"friends":["新加的好友及原因"]}';
-    const content=await chatAPI([{role:'system',content:buildSystem(c)},...hist,{role:'user',content:prompt}],{max:1200});
-    const ng=JSON.parse(stripJSON(content));
+    let ng=null;for(let _i=0;_i<3&&!ng;_i++){try{const content=await chatAPI([{role:'system',content:buildSystem(c)},...hist,{role:'user',content:prompt}],{max:1200});ng=JSON.parse(stripJSON(content));}catch(_e){ng=null;}}
+    if(!ng){_spyBusy=false;if(cur().p==='spy')render();toast('生成失败了，再点一次刷新试试');return;}
     // 合并：刷新【不清掉】已有的——余额/通讯录/日记历史/今日日程/他看到的我的动态都保留
     const data=Object.assign({},prev||{},ng);data.time=Date.now();
     data.balance=(ng.balance!=null)?+ng.balance:((prev&&prev.balance!=null)?prev.balance:(2000+Math.floor(Math.random()*9000)));
@@ -2067,9 +2077,10 @@ function shopCard(p,i){return `<div class="mpost" style="align-items:center">
       </div></div></div>`;}
 async function shopSearch(){if(_shopBusy)return;const q=($('#shop_q')?$('#shop_q').value:'').trim();if(!q){toast('搜点啥呢');return;}
   S.shop.q=q;_shopBusy=true;render();
-  try{const content=await chatAPI([{role:'system',content:'你是购物App的搜索引擎。根据关键词生成6件相关商品，价格合理（人民币）。只输出JSON数组，不要解释：[{"name":"商品名","price":数字,"shop":"店铺名","desc":"一句卖点","emoji":"一个相关emoji"}]'},{role:'user',content:'搜索：'+q}],{max:700,aux:true});
-    let t=content.trim();const fb=t.match(/```(?:json)?\s*([\s\S]*?)```/);if(fb)t=fb[1];const ai=t.indexOf('['),bi=t.lastIndexOf(']');if(ai>=0&&bi>ai)t=t.slice(ai,bi+1);
-    S.shop.results=JSON.parse(t);_shopBusy=false;render();
+  try{const arr=await aiGen([{role:'system',content:'你是购物App的搜索引擎。根据关键词生成6件相关商品，价格合理（人民币）。只输出JSON数组，不要解释：[{"name":"商品名","price":数字,"shop":"店铺名","desc":"一句卖点","emoji":"一个相关emoji"}]'},{role:'user',content:'搜索：'+q}],{max:700,aux:true},parseArr);
+    _shopBusy=false;
+    if(!arr||!arr.length){render();toast('搜索失败了，再试一次');return;}
+    S.shop.results=arr;render();
   }catch(e){_shopBusy=false;render();toast('搜索失败，再试一次');}}
 function addCart(i){const p=S.shop.results[i];if(!p)return;S.shop.cart.push(p);save();render();toast('已加入购物车 🛒');}
 function buyNow(i){const p=S.shop.results[i];if(!p)return;doBuy([p],'self');}
@@ -2172,9 +2183,10 @@ function foodCard(p,i){return `<div class="mpost" style="align-items:center">
       </div></div></div>`;}
 async function foodSearch(){if(_foodBusy)return;const q=($('#food_q')?$('#food_q').value:'').trim();if(!q){toast('搜点啥呢');return;}
   S.food.q=q;_foodBusy=true;render();
-  try{const r=await chatAPI([{role:'system',content:'你是外卖App搜索引擎，每行一个，严格用格式：餐品名:::价格数字:::店铺名:::一句描述:::一个相关emoji。生成6个相关餐品，价格合理。不要别的话。'},{role:'user',content:'搜索：'+q}],{max:700,aux:true});
-    const arr=looseLines(r).map(p=>({name:p[0],price:+(p[1]||'').replace(/[^0-9.]/g,'')||(10+Math.floor(Math.random()*40)),shop:p[2]||'好吃外卖',desc:p[3]||'',emoji:(p[4]||'🍱').slice(0,2)}));
-    S.food.results=arr;_foodBusy=false;render();
+  try{const rows=await aiGen([{role:'system',content:'你是外卖App搜索引擎，每行一个，严格用格式：餐品名:::价格数字:::店铺名:::一句描述:::一个相关emoji。生成6个相关餐品，价格合理。不要别的话。'},{role:'user',content:'搜索：'+q}],{max:700,aux:true},looseLines);
+    _foodBusy=false;
+    if(!rows){render();toast('搜索失败了，再试一次');return;}
+    S.food.results=rows.map(p=>({name:p[0],price:+(p[1]||'').replace(/[^0-9.]/g,'')||(10+Math.floor(Math.random()*40)),shop:p[2]||'好吃外卖',desc:p[3]||'',emoji:(p[4]||'🍱').slice(0,2)}));render();
   }catch(e){_foodBusy=false;render();toast('搜索失败，再试一次');}}
 function foodCart(i){const p=S.food.results[i];if(!p)return;S.food.cart.push(p);save();render();toast('已加入 🛍️');}
 function foodBuy(i){const p=S.food.results[i];if(!p)return;foodDoBuy([p]);}
@@ -2410,18 +2422,20 @@ async function reactToTweet(tweet){
 function genContactTweet(){const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){toast('先创建角色');return;}
   if(cs.length===1)return doGenContactTweet(cs[0].id);
   openModal(`<h3>谁来发推</h3>${cs.map(c=>`<div class="section"><div class="it" onclick="closeModal();doGenContactTweet('${c.id}')">${esc(c.remark||c.name)}<span class="v">›</span></div></div>`).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
-async function doGenContactTweet(cid){const c=getC(cid);toast('生成中…');
+async function doGenContactTweet(cid){const c=getC(cid);aiLoad('正在生成…');
   try{const _co=circleObj(cid);const note=_co.desc?'。你在X的圈子'+(_co.name?'「'+_co.name+'」':'')+'定位是：'+_co.desc+'，推文风格要贴合它':'';
-    const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'以你的身份发一条推特(X)'+note+'，一两句，符合你的性格，只输出推文内容，别带方括号。'}],{aux:true});
+    const txt=await aiGen([{role:'system',content:buildSystem(c)},{role:'user',content:'以你的身份发一条推特(X)'+note+'，一两句，符合你的性格，只输出推文内容，别带方括号。'}],{aux:true},r=>{const t=cleanReply(r);return t&&t.trim()?t:null;});
+    if(!txt){toast('生成失败了，再点一次');return;}
     const nm=c.name;xUser(nm,{handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,cid:cid,bio:c.signature||''});
-    S.x.tweets.unshift({id:uid(),who:cid,name:nm,handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,text:cleanReply(r),time:Date.now(),likes:[],lk:Math.floor(Math.random()*80),comments:[],rt:Math.floor(Math.random()*40)});save();render();
-  }catch(e){toast('生成失败');}}
+    S.x.tweets.unshift({id:uid(),who:cid,name:nm,handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,text:txt,time:Date.now(),likes:[],lk:Math.floor(Math.random()*80),comments:[],rt:Math.floor(Math.random()*40)});save();render();
+  }finally{aiDone();}}
 async function xRefresh(){if(xTab==='dm')return genNetDM();if(xTab==='search')return toast('在搜索框里点搜索按钮');return genNetTweets('');}
-async function genNetTweets(topic){toast('刷新中…');
-  try{const r=await chatAPI([{role:'system',content:'你是X(推特)内容生成器，每行一条，严格用格式：昵称:::@英文id:::推文内容。不要序号、不要别的话。'},{role:'user',content:'生成5条不同网友的【原创推文】'+(topic?'，都围绕主题"'+topic+'"（是各自独立发的帖子，不是评论、不是回复别人、不要以@或"回复"开头）':'（日常/搞笑/情感/热点都行）')+'。'}],{max:800,aux:true});
-    const rows=looseLines(r);if(!rows.length)throw new Error('empty');const made=[];rows.forEach(p=>{const nm=clean(p[0]);if(!nm)return;xUser(nm,{handle:p[1]});const t={id:uid(),who:'net',name:nm,handle:p[1]||'@user',avatar:letterAv(p[1]||nm),text:p[2]||p[1]||'',time:Date.now()-Math.floor(Math.random()*5400000),likes:[],lk:Math.floor(Math.random()*2000),comments:[],rt:Math.floor(Math.random()*400)};S.x.tweets.unshift(t);made.push(t);});
+async function genNetTweets(topic){aiLoad('正在刷新…');
+  try{const rows=await aiGen([{role:'system',content:'你是X(推特)内容生成器，每行一条，严格用格式：昵称:::@英文id:::推文内容。不要序号、不要别的话。'},{role:'user',content:'生成5条不同网友的【原创推文】'+(topic?'，都围绕主题"'+topic+'"（是各自独立发的帖子，不是评论、不是回复别人、不要以@或"回复"开头）':'（日常/搞笑/情感/热点都行）')+'。'}],{max:800,aux:true},looseLines);
+    if(!rows){toast('刷新失败了，再点一次刷新');return;}
+    const made=[];rows.forEach(p=>{const nm=clean(p[0]);if(!nm)return;xUser(nm,{handle:p[1]});const t={id:uid(),who:'net',name:nm,handle:p[1]||'@user',avatar:letterAv(p[1]||nm),text:p[2]||p[1]||'',time:Date.now()-Math.floor(Math.random()*5400000),likes:[],lk:Math.floor(Math.random()*2000),comments:[],rt:Math.floor(Math.random()*400)};S.x.tweets.unshift(t);made.push(t);});
     save();if(topic)S.x._results=made.map(t=>t.id);render();
-  }catch(e){toast('刷新失败，再点一次');}}
+  }finally{aiDone();}}
 let _xsMode='content';
 function xSearch(){const list=(S.x._results||[]).map(id=>tw(id)).filter(Boolean);const bl=S.x._bloggers||[];
   return `<div style="padding:10px 14px;background:#000;border-bottom:.5px solid #2f3336">
@@ -2431,10 +2445,11 @@ function xSearch(){const list=(S.x._results||[]).map(id=>tw(id)).filter(Boolean)
 function xDoSearch(q){q=(q||'').trim();if(!q)return;S.x._q=q;xlog('在X搜索了「'+q+'」');if(_xsMode==='blogger')genBloggers(q);else genNetTweets(q);}
 function clearSearch(){const ids=S.x._results||[];S.x.tweets=S.x.tweets.filter(t=>ids.indexOf(t.id)<0);S.x._results=[];S.x._bloggers=[];S.x._q='';save();render();toast('已清空搜索');}
 async function clearDiscover(){if(!await uiConfirm('清空发现里的网友推文？'))return;S.x.tweets=S.x.tweets.filter(t=>t.who!=='net');save();render();toast('已清空');}
-async function genBloggers(q){toast('搜索博主中…');
-  try{const r=await chatAPI([{role:'system',content:'你是X博主搜索。根据关键词给出5个相关博主。每行一个，严格用格式：博主名:::@英文id:::一句简介。不要别的话。'},{role:'user',content:'搜索博主：'+q}],{max:600,aux:true});
-    S.x._bloggers=looseLines(r).map(p=>{const nm=clean(p[0]);if(!nm)return null;xUser(nm,{handle:p[1],bio:p[2]||'',fans:Math.floor(Math.random()*99999)});return nm;}).filter(Boolean);save();render();
-  }catch(e){toast('搜索失败，再试一次');}}
+async function genBloggers(q){aiLoad('正在搜索…');
+  try{const rows=await aiGen([{role:'system',content:'你是X博主搜索。根据关键词给出5个相关博主。每行一个，严格用格式：博主名:::@英文id:::一句简介。不要别的话。'},{role:'user',content:'搜索博主：'+q}],{max:600,aux:true},looseLines);
+    if(!rows){toast('搜索失败了，再试一次');return;}
+    S.x._bloggers=rows.map(p=>{const nm=clean(p[0]);if(!nm)return null;xUser(nm,{handle:p[1],bio:p[2]||'',fans:Math.floor(Math.random()*99999)});return nm;}).filter(Boolean);save();render();
+  }finally{aiDone();}}
 function userRow(name){const u=S.x.users[name];if(!u)return '';const f=S.x.following.includes(name);
   return `<div class="xdmrow"><span onclick="go('xuser',{name:${jq(name)}})">${av(u.avatar,'sm')}</span><div class="meta" onclick="go('xuser',{name:${jq(name)}})"><div class="n" style="color:#e7e9ea">${esc(name)}</div><div class="s">${esc(u.bio||u.handle||'')}</div></div><button class="xbtn ${f?'out':''}" style="font-size:12px;padding:5px 12px" onclick="xFollowName(${jq(name)})">${f?'已关注':'关注'}</button></div>`;}
 /* 用户主页 */
@@ -2452,11 +2467,12 @@ function renderXUser(name){const u=xUser(name);const f=S.x.following.includes(na
           <button class="xbtn out" style="${S.x.blocked.includes(name)?'color:#1d9bf0':'color:#f4212e'}" onclick="xBlockName(${jq(name)})">${S.x.blocked.includes(name)?'解除拉黑':'拉黑'}</button></div></div>
       <div style="border-bottom:.5px solid #2f3336;color:#e7e9ea;padding:8px 14px;font-weight:700">推文</div>
       ${ts.length?ts.map(tweetCard).join(''):'<div class="empty" style="padding:30px">还没有推文，点🔄生成一条ta的动态</div>'}</div>`;}
-async function genUserTweet(name){const u=xUser(name);toast('生成中…');
-  try{let r;if(u.cid&&getC(u.cid)){r=await chatAPI([{role:'system',content:buildSystem(getC(u.cid))},{role:'user',content:'以你的身份发一条推特，一两句，别带方括号。'}],{aux:true});}
-    else{r=await chatAPI([{role:'system',content:'你是X博主「'+name+'」'+(u.bio?'（'+u.bio+'）':'')+'，发一条符合你人设的推文，一两句。只输出推文内容。'}],{max:200,aux:true});}
-    S.x.tweets.unshift({id:uid(),who:u.cid||'net',name:name,handle:u.handle||'@user',avatar:u.avatar,text:cleanReply(r),time:Date.now(),likes:[],lk:Math.floor(Math.random()*500),comments:[],rt:Math.floor(Math.random()*100)});save();render();
-  }catch(e){toast('生成失败');}}
+async function genUserTweet(name){const u=xUser(name);aiLoad('正在生成…');
+  try{const isC=u.cid&&getC(u.cid);const _msgs=isC?[{role:'system',content:buildSystem(getC(u.cid))},{role:'user',content:'以你的身份发一条推特，一两句，别带方括号。'}]:[{role:'system',content:'你是X博主「'+name+'」'+(u.bio?'（'+u.bio+'）':'')+'，发一条符合你人设的推文，一两句。只输出推文内容。'}];
+    const txt=await aiGen(_msgs,isC?{aux:true}:{max:200,aux:true},r=>{const t=cleanReply(r);return t&&t.trim()?t:null;});
+    if(!txt){toast('生成失败了，再点一次');return;}
+    S.x.tweets.unshift({id:uid(),who:u.cid||'net',name:name,handle:u.handle||'@user',avatar:u.avatar,text:txt,time:Date.now(),likes:[],lk:Math.floor(Math.random()*500),comments:[],rt:Math.floor(Math.random()*100)});save();render();
+  }finally{aiDone();}}
 function editUserProfile(name){const u=xUser(name);openModal(`<h3>编辑 ${esc(name)} 的资料</h3>
   <div class="field"><label>handle</label><input id="up_h" value="${esc(u.handle||'')}"></div>
   <div class="field"><label>简介</label><input id="up_b" value="${esc(u.bio||'')}"></div>
@@ -2477,11 +2493,12 @@ function renderXTweet(id){const t=tw(id);if(!t)return '';
       <div style="height:70px"></div></div>
     <div class="inputbar"><textarea id="xc_in" rows="1" placeholder="发布你的回复…可@角色"></textarea><button class="send" onclick="xComment('${id}')">回复</button></div>`;}
 function xAuthorLike(id,ci){const t=tw(id);t.comments[ci].authorLiked=!t.comments[ci].authorLiked;save();render();}
-async function xRefreshComments(id){const t=tw(id);if(!t)return;toast('生成评论中…');const n=fanCount(4,9);
+async function xRefreshComments(id){const t=tw(id);if(!t)return;aiLoad('正在生成评论…');const n=fanCount(4,9);
   const existing=(t.comments||[]).slice(-6).map(c=>c.name+'说"'+c.text+'"').join('；');
-  try{const r=await chatAPI([{role:'system',content:'你是X评论区生成器。针对"'+t.name+'"的这条推，生成'+n+'条不同网友评论（吃瓜、共鸣、抬杠黑子都可；让其中1-2条@楼上某位接话，形成楼层互动）。'+(existing?'已有评论：'+existing+'，新评论可以接着这些聊。':'')+'每行一条，严格用格式：昵称:::@英文id:::评论内容。不要别的话。'},{role:'user',content:'推文："'+t.text+'"'}],{max:900,aux:true});
-    looseLines(r).forEach(p=>{const nm=clean(p[0]);if(!nm)return;t.comments.push({name:nm,avatar:letterAv(p[1]||nm),text:p[2]||p[1]||''});xUser(nm,{handle:p[1]});});save();render();
-  }catch(e){toast('生成失败，再试一次');}}
+  try{const rows=await aiGen([{role:'system',content:'你是X评论区生成器。针对"'+t.name+'"的这条推，生成'+n+'条不同网友评论（吃瓜、共鸣、抬杠黑子都可；让其中1-2条@楼上某位接话，形成楼层互动）。'+(existing?'已有评论：'+existing+'，新评论可以接着这些聊。':'')+'每行一条，严格用格式：昵称:::@英文id:::评论内容。不要别的话。'},{role:'user',content:'推文："'+t.text+'"'}],{max:900,aux:true},looseLines);
+    if(!rows){toast('生成失败了，再试一次');return;}
+    rows.forEach(p=>{const nm=clean(p[0]);if(!nm)return;t.comments.push({name:nm,avatar:letterAv(p[1]||nm),text:p[2]||p[1]||''});xUser(nm,{handle:p[1]});});save();render();
+  }finally{aiDone();}}
 function xComment(id){const t=tw(id);const inp=$('#xc_in');const v=inp?inp.value.trim():'';if(!v)return;
   t.comments.push({name:S.me.name,avatar:S.me.avatar,text:v});xlog('在X评论了'+t.name+'的推文：「'+v.slice(0,16)+'」');save();render();
   // @到的角色或推文作者(若为角色)来回复
@@ -2500,10 +2517,11 @@ function doXReply(id,ci){const v=$('#xrc').value.trim();if(!v)return;const t=tw(
 function xDMList(){const ds=S.x.dms||[];
   return `<div style="padding:8px 14px;text-align:right;background:#000;border-bottom:.5px solid #2f3336"><span style="float:left;color:#71767b;font-size:12px;line-height:30px">粉丝${S.x.profile.fans}·私信随粉丝量</span><button class="xbtn out" onclick="genNetDM()">＋ 刷新私信</button></div>
     ${ds.length?ds.map(d=>{const last=d.msgs[d.msgs.length-1];return `<div class="xdmrow"><span onclick="go('xdm',{id:'${d.id}'})">${av(d.avatar,'sm')}</span><div class="meta" onclick="go('xdm',{id:'${d.id}'})"><div class="n" style="color:#e7e9ea">${esc(d.name)}</div><div class="s">${last?esc((last.from==='me'?'我：':'')+last.text):''}</div></div><span onclick="S.x.dms=S.x.dms.filter(z=>z.id!=='${d.id}');save();render()" style="color:#fa5151;cursor:pointer;padding:0 6px">✕</span></div>`;}).join(''):'<div class="empty" style="padding:40px">还没有私信，点上面生成一条网友私信，或在推文里和人互动</div>'}`;}
-async function genNetDM(){toast('生成中…');const recent=S.x.tweets.filter(t=>t.who==='me').slice(0,2).map(t=>t.text).join('；');const n=fanCount(1,4);
-  try{const r=await chatAPI([{role:'system',content:'你生成X网友私信。每行一条，严格用格式：网友名:::@英文id:::私信内容。不要别的话。'},{role:'user',content:'生成'+n+'个不同网友给"'+S.me.name+'"发来的私信开场。类型要杂（暧昧搭讪/真诚粉丝/抬杠黑子/合作邀约/普通网友），但别太多太杂。'+(recent?'结合ta最近发的推："'+recent+'"。':'')}],{max:500,aux:true});
-    const rows=looseLines(r);if(!rows.length)throw new Error('empty');rows.forEach(p=>{const nm=clean(p[0]);if(!nm)return;xUser(nm,{handle:p[1]});S.x.dms.unshift({id:uid(),name:nm,avatar:letterAv(p[1]||nm),msgs:[{from:'them',text:p[2]||p[1]||'在吗',time:Date.now()}]});});save();render();
-  }catch(e){toast('生成失败，再试一次');}}
+async function genNetDM(){aiLoad('正在刷新私信…');const recent=S.x.tweets.filter(t=>t.who==='me').slice(0,2).map(t=>t.text).join('；');const n=fanCount(1,4);
+  try{const rows=await aiGen([{role:'system',content:'你生成X网友私信。每行一条，严格用格式：网友名:::@英文id:::私信内容。不要别的话。'},{role:'user',content:'生成'+n+'个不同网友给"'+S.me.name+'"发来的私信开场。类型要杂（暧昧搭讪/真诚粉丝/抬杠黑子/合作邀约/普通网友），但别太多太杂。'+(recent?'结合ta最近发的推："'+recent+'"。':'')}],{max:500,aux:true},looseLines);
+    if(!rows){toast('生成失败了，再试一次');return;}
+    rows.forEach(p=>{const nm=clean(p[0]);if(!nm)return;xUser(nm,{handle:p[1]});S.x.dms.unshift({id:uid(),name:nm,avatar:letterAv(p[1]||nm),msgs:[{from:'them',text:p[2]||p[1]||'在吗',time:Date.now()}]});});save();render();
+  }finally{aiDone();}}
 function renderXDM(id){const d=S.x.dms.find(x=>x.id===id);if(!d)return '';
   return `<div class="xnav"><span class="l" onclick="back()">‹</span><span class="t">${esc(d.name)}</span><span class="r"></span></div>
     <div class="xscroll" id="xdmbox" style="padding:10px 14px">${d.msgs.map(m=>`<div class="xmsg ${m.from==='me'?'me':''}"><div class="xmwrap"><div class="b">${esc(m.text)}</div><div class="xmt">${m.time?hm(m.time):''}</div></div></div>`).join('')}</div>
@@ -2592,14 +2610,14 @@ function dyLike(id){const v=dyVid(id);if(!v)return;v.liked=!v.liked;
   const fv=S.dy.feed.find(x=>x.id===id);if(fv)fv.liked=v.liked;
   const lv=S.dy.liked.find(x=>x.id===id);if(lv)lv.liked=v.liked;
   if(cur().p==='dy'&&dyTab==='feed')dyKeepScroll(save);else{save();render();}}
-async function dyGenFeed(topic,replace){toast('加载视频中…');
-  try{const r=await chatAPI([{role:'system',content:'你是抖音短视频内容生成器。生成5条不同的短视频信息，类型要杂（搞笑/萌宠/美食/风景/舞蹈/剧情/知识/情感都行）。只输出JSON数组，不要解释：[{"author":"博主昵称","handle":"@英文id","desc":"视频文案/标题(一句，可带#话题)","narration":"旁白：详细描写这条视频里到底是什么画面、发生了什么(2-4句，像在跟人讲这视频拍了啥)","music":"背景音乐名","emoji":"一个最能代表画面的emoji"}]'},{role:'user',content:topic?('围绕「'+topic+'」生成相关的短视频。'):'生成一批热门推荐短视频。'}],{max:1100,aux:true});
-    const arr=parseArr(r);if(!Array.isArray(arr)||!arr.length)throw new Error('empty');
+async function dyGenFeed(topic,replace){aiLoad('正在加载视频…');
+  try{const arr=await aiGen([{role:'system',content:'你是抖音短视频内容生成器。生成5条不同的短视频信息，类型要杂（搞笑/萌宠/美食/风景/舞蹈/剧情/知识/情感都行）。只输出JSON数组，不要解释：[{"author":"博主昵称","handle":"@英文id","desc":"视频文案/标题(一句，可带#话题)","narration":"旁白：详细描写这条视频里到底是什么画面、发生了什么(2-4句，像在跟人讲这视频拍了啥)","music":"背景音乐名","emoji":"一个最能代表画面的emoji"}]'},{role:'user',content:topic?('围绕「'+topic+'」生成相关的短视频。'):'生成一批热门推荐短视频。'}],{max:1100,aux:true},parseArr);
+    if(!arr||!Array.isArray(arr)||!arr.length){toast('加载失败了，再点一次');return;}
     const vids=arr.map((o,i)=>({id:uid(),author:clean(o.author)||'用户'+(10+Math.floor(Math.random()*89)),handle:o.handle||'@user',avatar:'🎵',cid:null,desc:o.desc||'',narration:o.narration||'',music:o.music||'原创音乐',emoji:(o.emoji||'🎬').slice(0,2),grad:DY_GRADS[Math.floor(Math.random()*DY_GRADS.length)],lk:Math.floor(Math.random()*90000),comments:[],ts:Date.now()}));
     if(replace)S.dy.feed=vids;else S.dy.feed=S.dy.feed.concat(vids);
     if(S.dy.feed.length>40)S.dy.feed=S.dy.feed.slice(-40);
     save();if(cur().p==='dy')render();const f=$('#dyfeed');if(replace&&f)f.scrollTop=0;
-  }catch(e){toast('加载失败，再点一次');}}
+  }finally{aiDone();}}
 function dySearchView(){const h=S.dy.history||[];
   return `<div style="padding:12px 14px;background:#000"><div style="display:flex;gap:8px"><input id="dy_q" placeholder="搜你想看的视频…" style="flex:1;border:none;border-radius:18px;padding:9px 14px;background:#1c1c1e;color:#eee;outline:none" onkeydown="if(event.key==='Enter')dyDoSearch($('#dy_q').value)"><button class="dybtn" onclick="dyDoSearch($('#dy_q').value)">搜索</button></div></div>
     <div style="flex:1;overflow-y:auto;background:#000;padding:14px">
@@ -2639,7 +2657,7 @@ function dyPostComment(id){const v=dyVid(id);if(!v)return;const inp=$('#dycm_in'
   dyComments(id);}
 async function dyCharReplyComment(v,c,t){try{const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:S.me.name+'在抖音视频"'+(v.desc||'')+'"下评论/@了你："'+t+'"，回ta一句（口语，别带方括号）。'}],{max:120,aux:true});
   v.comments.push({name:c.remark||c.name,avatar:c.avatar,cid:c.id,text:cleanReply(r).slice(0,50)});save();if(dyModalOpen())dyComments(v.id);}catch(e){}}
-function dyGenComments(id){const v=dyVid(id);if(!v)return;toast('生成评论中…');dyGenCommentsCore(v,{net:6,chars:2,mine:v.cid==='me'}).then(()=>{if(dyModalOpen())dyComments(id);});}
+function dyGenComments(id){const v=dyVid(id);if(!v)return;aiLoad('正在生成评论…');dyGenCommentsCore(v,{net:6,chars:2,mine:v.cid==='me'}).then(()=>{if(dyModalOpen())dyComments(id);}).finally(aiDone);}
 async function dyGenCommentsCore(v,opts){opts=opts||{};v.comments=v.comments||[];
   try{const r=await chatAPI([{role:'system',content:'你是抖音评论区生成器。针对一条短视频生成'+(opts.net||5)+'条不同网友的简短评论（搞笑/共鸣/夸赞/玩梗/抬杠都行，符合抖音风格，'+(opts.mine?'这是个漂亮女生发的，可以有夸她好看、搭讪的':'')+'）。每行一条，格式：昵称:::评论内容。不要别的话。'},{role:'user',content:'视频文案："'+(v.desc||'')+'"，画面："'+(v.narration||'')+'"'}],{max:700,aux:true});
     (r||'').split('\n').map(l=>l.trim()).filter(Boolean).forEach(l=>{const p=l.replace(/^[\d.、\-\s]+/,'').split(/:::|：：：|\|\||：|:/);const nm=clean(p[0]);if(!nm||/^http/.test(nm))return;const tx=(p.slice(1).join('：')||p[0]||'').trim();if(tx)v.comments.push({name:nm,avatar:letterAv(nm),text:tx.slice(0,60)});});save();if(dyModalOpen())dyComments(v.id);
@@ -2658,11 +2676,12 @@ function dyAddFollow(){const cs=S.contacts.filter(c=>!c.deleted&&!S.dy.following
   openModal(`<h3>添加角色抖音</h3>${cs.length?cs.map(c=>`<div class="section"><div class="it" onclick="dyDoFollow('${c.id}')">${esc(c.remark||c.name)}<span class="v">＋ 关注</span></div></div>`).join(''):'<div class="empty">没有可添加的角色了</div>'}<button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
 function dyDoFollow(cid){if(!S.dy.following.includes(cid))S.dy.following.push(cid);save();closeModal();toast('已关注，去刷TA的视频吧');dyGenContactVideo(cid);}
 function dyUnfollow(cid){S.dy.following=S.dy.following.filter(x=>x!==cid);save();closeModal();render();}
-async function dyGenContactVideo(cid){const c=getC(cid);if(!c)return;if(!S.dy.following.includes(cid))S.dy.following.push(cid);closeModal();toast('生成中…');
-  try{const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'你在抖音发了一条短视频。只输出JSON：{"desc":"视频文案(一句，可带#话题)","narration":"旁白：这条视频里你拍了什么画面、在做什么(2-4句)","music":"配乐名","emoji":"代表画面的emoji"}'}],{max:400,aux:true});
-    const o=parseObj(r);S.dy.feed.unshift({id:uid(),author:c.remark||c.name,handle:'@'+(c.name||'').replace(/\s/g,''),avatar:c.avatar,cid:cid,desc:o.desc||'',narration:o.narration||'',music:o.music||'原创音乐',emoji:(o.emoji||'🎬').slice(0,2),grad:DY_GRADS[Math.floor(Math.random()*DY_GRADS.length)],lk:Math.floor(Math.random()*5000),comments:[],ts:Date.now()});
+async function dyGenContactVideo(cid){const c=getC(cid);if(!c)return;if(!S.dy.following.includes(cid))S.dy.following.push(cid);closeModal();aiLoad('正在生成…');
+  try{const o=await aiGen([{role:'system',content:buildSystem(c)},{role:'user',content:'你在抖音发了一条短视频。只输出JSON：{"desc":"视频文案(一句，可带#话题)","narration":"旁白：这条视频里你拍了什么画面、在做什么(2-4句)","music":"配乐名","emoji":"代表画面的emoji"}'}],{max:400,aux:true},parseObj);
+    if(!o||!o.desc){toast('生成失败了，再点一次');return;}
+    S.dy.feed.unshift({id:uid(),author:c.remark||c.name,handle:'@'+(c.name||'').replace(/\s/g,''),avatar:c.avatar,cid:cid,desc:o.desc||'',narration:o.narration||'',music:o.music||'原创音乐',emoji:(o.emoji||'🎬').slice(0,2),grad:DY_GRADS[Math.floor(Math.random()*DY_GRADS.length)],lk:Math.floor(Math.random()*5000),comments:[],ts:Date.now()});
     save();dyTab='feed';_dyMode='follow';if(cur().p==='dy')render();else go('dy');const f=$('#dyfeed');if(f)f.scrollTop=0;
-  }catch(e){toast('生成失败');}}
+  }finally{aiDone();}}
 /* 私信 */
 function dyDMList(){const ds=S.dy.dms||[];
   return `<div style="padding:10px 14px;display:flex;gap:8px;justify-content:flex-end;background:#000;border-bottom:.5px solid #222"><button class="dybtn out" onclick="dyGenDMs()">刷新私信</button><button class="dybtn out" onclick="dyDMPick()">＋ 私信角色</button></div>
@@ -2671,11 +2690,12 @@ function dyDMPick(){const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){toa
   openModal(`<h3>私信谁</h3>${cs.map(c=>`<div class="section"><div class="it" onclick="openDyDM('${c.id}')">${esc(c.remark||c.name)}<span class="v">›</span></div></div>`).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
 function openDyDM(cid){const c=getC(cid);if(!c)return;closeModal();openDyDMName(c.remark||c.name,cid,c.avatar);}
 function openDyDMName(name,cid,avatar){let d=cid?S.dy.dms.find(x=>x.cid===cid):S.dy.dms.find(x=>!x.cid&&x.name===name);if(!d){d={id:uid(),cid:cid||null,name,avatar:avatar||'🎵',msgs:[]};S.dy.dms.unshift(d);save();}go('dydm',{id:d.id});}
-async function dyGenDMs(){toast('刷新私信中…');const recent=(S.dy.mine||[]).slice(0,3).map(v=>v.desc).filter(Boolean).join('；')||(S.dy.history||[]).slice(0,3).join('、');
-  try{const r=await chatAPI([{role:'system',content:'你生成抖音陌生网友私信。生成3条不同网友（看了'+S.me.name+'视频来的）发来的私信开场，要暧昧、会撩、夸她好看、想加微信想约她那种（目的是让她男朋友看到会吃醋），但别露骨下流。每行一条，格式：网友名:::私信内容。不要别的话。'},{role:'user',content:(recent?'她最近发的/搜的："'+recent+'"，可以结合。':'')+'生成撩人的私信开场。'}],{max:500,aux:true});
-    let n=0;(r||'').split('\n').map(l=>l.trim()).filter(Boolean).forEach(l=>{const p=l.replace(/^[\d.、\-\s]+/,'').split(/:::|：：：|\|\||：|:/);const nm=clean(p[0]);if(!nm||/^http/.test(nm))return;const tx=(p.slice(1).join('：')||'在吗美女').trim();S.dy.dms.unshift({id:uid(),cid:null,name:nm,avatar:letterAv(nm),msgs:[{from:'them',text:tx.slice(0,80),time:Date.now()}]});n++;});
-    save();render();toast(n?'有'+n+'条新私信👀':'暂时没有新私信');
-  }catch(e){toast('刷新失败，再试一次');}}
+async function dyGenDMs(){aiLoad('正在刷新私信…');const recent=(S.dy.mine||[]).slice(0,3).map(v=>v.desc).filter(Boolean).join('；')||(S.dy.history||[]).slice(0,3).join('、');
+  try{const rows=await aiGen([{role:'system',content:'你生成抖音陌生网友私信。生成3条不同网友（看了'+S.me.name+'视频来的）发来的私信开场，要暧昧、会撩、夸她好看、想加微信想约她那种（目的是让她男朋友看到会吃醋），但别露骨下流。每行一条，格式：网友名:::私信内容。不要别的话。'},{role:'user',content:(recent?'她最近发的/搜的："'+recent+'"，可以结合。':'')+'生成撩人的私信开场。'}],{max:500,aux:true},(r)=>{const out=(r||'').split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const p=l.replace(/^[\d.、\-\s]+/,'').split(/:::|：：：|\|\||：|:/);const nm=clean(p[0]);if(!nm||/^http/.test(nm))return null;return {name:nm,text:(p.slice(1).join('：')||'在吗美女').trim().slice(0,80)};}).filter(Boolean);return out.length?out:null;});
+    if(!rows){toast('刷新失败了，再试一次');return;}
+    rows.forEach(x=>S.dy.dms.unshift({id:uid(),cid:null,name:x.name,avatar:letterAv(x.name),msgs:[{from:'them',text:x.text,time:Date.now()}]}));
+    save();render();toast('有'+rows.length+'条新私信👀');
+  }finally{aiDone();}}
 function renderDyDM(id){const d=S.dy.dms.find(x=>x.id===id);if(!d)return '';
   return `<div class="dynav"><span class="l" onclick="back()" style="cursor:pointer">‹</span><span style="font-weight:700">${esc(d.name)}</span><span class="r" onclick="dyClearDM('${id}')" style="cursor:pointer;color:#fa9bb5;font-size:13px">清空</span></div>
     <div class="xscroll" id="dydmbox" style="padding:10px 14px;background:#111">${d.msgs.map((m,mi)=>`<div class="xmsg ${m.from==='me'?'me':''}"><div class="xmwrap"><div class="b" onclick="dyDelDMMsg('${id}',${mi})" title="点删除这条">${esc(m.text)}</div><div class="xmt">${m.time?hm(m.time):''}</div></div></div>`).join('')||'<div class="empty" style="padding:30px">抖音私信，发条消息打个招呼吧</div>'}</div>
@@ -2842,8 +2862,8 @@ async function genTasks(){const c=taskC();if(!c){toast('先创建恋人角色');
   const hist=(c.taskHist||[]).map(s=>({text:s}));// 最近几天布置过的任务，用来防止重复
   const avoidTxt=hist.length?'\n· 【最近这些任务你已经布置过了，今天务必换着花样来，别再重复、也别换汤不换药地重复同类】：'+hist.map(h=>h.text).join('；'):'';
   try{const allowed='essay（写小作文/检讨/彩虹屁/想你的话/保证书，target填字数上限如100）、moment（发一条朋友圈）、tweet（发一条推特X）、douyin（发一条抖音）、real（现实里的小事或暧昧亲密小任务，靠她自觉打卡，比如：喝杯水、好好吃饭、敷面膜、早点睡、给你拍张自拍、睡前跟你撒娇道晚安、对着镜头说想你、穿你喜欢的小裙子拍给你、乖乖只想你一个、今天不准跟别的男生聊天等）';
-    const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：现在你来给'+S.me.name+'布置今天的 '+n+' 条小任务。你是ta的恋人/掌控者，按你的人设、此刻心情、ta最近的表现来布置。\n· 任务一定要【有趣、有创意、好玩】，别死板、别像打卡清单、别每天千篇一律——可以整点花活、玩梗、设小情境。'+avoidTxt+'\n· 多来点【暧昧、撩人、亲密】的，而且要以【Dom的姿态】来布置：命令式、强势、掌控欲拉满，把ta当你的小sub来调教，语气笃定带点危险又宠溺，要ta乖乖服从听话。可以大胆放得开、带点涩，越让ta脸红心跳、心甘情愿被你拿捏越好（保持是两个相爱的人之间有掌控有宠爱的情趣，不用拘谨）。\n· 现实任务一定要轻松，别累人：绝对不要罚跑步/暴走/喝很多杯水那种。\n大部分任务要是【在手机上就能完成的】(essay/moment/tweet/douyin)，可以有一两条现实任务(real)。每条必须从这些可验证类型里选一个：'+allowed+'。\n· 【另外务必额外再加一条 verify 为 truth 的任务】：内容是你【今天最想问'+S.me.name+'的一个"真心话"问题】（一句问句就好，可以暧昧、可以走心、可以是你好奇/在意/吃醋想确认的事），target填0、kind填real。这条不算在上面那'+n+'条里。\n只输出JSON数组、不要任何解释：[{"text":"任务描述(用你的第一人称口吻，强势Dom的命令语气，像在调教/撩/宠你的小sub，可以霸道也可以俏皮有梗)","kind":"app或real","verify":"类型代码","target":数字(没有填0)}]'}],{max:760});
-    const arr=parseArr(r);if(!Array.isArray(arr)||!arr.length)throw 0;
+    const arr=await aiGen([{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：现在你来给'+S.me.name+'布置今天的 '+n+' 条小任务。你是ta的恋人/掌控者，按你的人设、此刻心情、ta最近的表现来布置。\n· 任务一定要【有趣、有创意、好玩】，别死板、别像打卡清单、别每天千篇一律——可以整点花活、玩梗、设小情境。'+avoidTxt+'\n· 多来点【暧昧、撩人、亲密】的，而且要以【Dom的姿态】来布置：命令式、强势、掌控欲拉满，把ta当你的小sub来调教，语气笃定带点危险又宠溺，要ta乖乖服从听话。可以大胆放得开、带点涩，越让ta脸红心跳、心甘情愿被你拿捏越好（保持是两个相爱的人之间有掌控有宠爱的情趣，不用拘谨）。\n· 现实任务一定要轻松，别累人：绝对不要罚跑步/暴走/喝很多杯水那种。\n大部分任务要是【在手机上就能完成的】(essay/moment/tweet/douyin)，可以有一两条现实任务(real)。每条必须从这些可验证类型里选一个：'+allowed+'。\n· 【另外务必额外再加一条 verify 为 truth 的任务】：内容是你【今天最想问'+S.me.name+'的一个"真心话"问题】（一句问句就好，可以暧昧、可以走心、可以是你好奇/在意/吃醋想确认的事），target填0、kind填real。这条不算在上面那'+n+'条里。\n只输出JSON数组、不要任何解释：[{"text":"任务描述(用你的第一人称口吻，强势Dom的命令语气，像在调教/撩/宠你的小sub，可以霸道也可以俏皮有梗)","kind":"app或real","verify":"类型代码","target":数字(没有填0)}]'}],{max:760},parseArr);
+    if(!arr||!Array.isArray(arr)||!arr.length)throw 0;
     let truthQ='';
     const list=[];for(const o of arr){const text=(o.text||'').toString().slice(0,140);if(!text)continue;
       if(o.verify==='truth'){if(!truthQ)truthQ=text;continue;}/* 真心话单独处理，不占名额 */
