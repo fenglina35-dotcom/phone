@@ -235,7 +235,7 @@ body{background:#000;padding:0;}
 .hwid .wbig{font-size:23px;font-weight:700;line-height:1;}
 .hwid .wbig small{font-size:12px;font-weight:500;opacity:.8;margin-left:3px;}
 @keyframes wspin{to{transform:rotate(360deg)}}
-.wdisc{transform-origin:center;animation:wspin 5s linear infinite;}
+.wdisc{transform-origin:center;transform-box:fill-box;animation:wspin 3.2s linear infinite;}
 /* 宽组件：横跨两列 */
 .wwide{grid-column:1 / -1;flex-direction:row;align-items:center;justify-content:flex-start;min-height:auto;}
 .hnote{grid-column:1 / -1;position:relative;display:block;padding:13px 15px;border-radius:16px;box-shadow:0 8px 22px rgba(0,0,0,.18);cursor:pointer;min-height:48px;box-sizing:border-box;}
@@ -491,7 +491,7 @@ const SHARE_GATE=true, SHARE_PW='52113148890';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v241 · 组件固定第一页不分页;去掉重复的大时钟和问候卡,时钟卡(时间天气+自定义图)直接放最顶;精简组件(去掉在一起天数/纪念日/ta此刻/便签);听歌小唱片转起来';
+const APP_VER='v242 · 修好唱片转动(原来是同心圆转了看不出,加了偏心点+刻度线+transform-box:fill-box,现在肉眼可见在转);组件固定第一页,时钟卡置顶';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1327,7 +1327,7 @@ function wAnniv(){if(!(S.couple&&S.couple.cid))return '';const col=wcol();
 function wTanow(){if(!(S.couple&&S.couple.cid))return '';const c=getC(S.couple.cid);if(!c)return '';const col=wcol();
   const wn=whereNow(c);if(!wn)return '';return _wCard(svgIc('location',22,col),esc(c.remark||c.name)+' 此刻','<div class="wm">'+esc(wn)+'</div>','openCouple()');}
 function wDisc(){const col=wcol();const s=_mCur&&S.music&&S.music.songs?S.music.songs.find(x=>x.id===_mCur):null;
-  const disc='<svg class="'+(s?'wdisc':'')+'" style="animation-play-state:'+(_mPlaying?'running':(s?'running':'paused'))+'" viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="'+col+'" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="9.2"/><circle cx="12" cy="12" r="6" opacity=".4"/><circle cx="12" cy="12" r="3.4" opacity=".25"/><circle cx="12" cy="12" r="1.6" fill="'+col+'"/></svg>';
+  const disc='<svg class="'+(s?'wdisc':'')+'" viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="'+col+'" stroke-width="1.5" stroke-linecap="round"><circle cx="12" cy="12" r="9.2"/><circle cx="12" cy="12" r="3.4" opacity=".3"/><circle cx="12" cy="12" r="1.5" fill="'+col+'" stroke="none"/><circle cx="12" cy="5.4" r="1.15" fill="'+col+'" stroke="none"/><path d="M12 8.6V12" opacity=".5"/></svg>';
   const top=_mPlaying?'正在听':'音乐';
   const main=s?'<div class="wm">'+esc(s.title)+(s.artist?' · '+esc(s.artist):'')+'</div>':'<div class="wm" style="opacity:.7">还没在听 · 去挑一首</div>';
   return `<div class="hwid" style="color:${col}" onclick="openMusic()"><div class="wic">${disc}</div><div class="wbd"><div class="wt">${top}</div>${main}</div></div>`;}
