@@ -236,6 +236,25 @@ body{background:#000;padding:0;}
 .hwid .wbig small{font-size:12px;font-weight:500;opacity:.8;margin-left:3px;}
 @keyframes wspin{to{transform:rotate(360deg)}}
 .wdisc{transform-origin:center;transform-box:fill-box;animation:wspin 3.2s linear infinite;}
+/* 桌面小猫 */
+.wpet{align-items:center;justify-content:center;text-align:center;gap:3px;}
+.wpet .petbox{position:relative;width:100%;display:flex;align-items:center;justify-content:center;min-height:60px;}
+.petcat{display:block;overflow:visible;}
+.petday{animation:pbob 2.6s ease-in-out infinite;transform-origin:center bottom;}
+.petsleep{animation:pbreath 3.4s ease-in-out infinite;transform-origin:center bottom;}
+.petcat .ptail{transform-box:fill-box;transform-origin:bottom left;animation:ptwag 1.3s ease-in-out infinite;}
+.petcat .peyes{transform-box:fill-box;transform-origin:center;animation:pblink 4.5s infinite;}
+.petpet{animation:ppjump .5s ease !important;}
+.pzzz{position:absolute;top:0;right:15%;font-weight:700;opacity:.7;animation:pzfloat 2.8s ease-in-out infinite;}
+.pzzz small{font-size:.7em;}
+.pheart{position:absolute;bottom:42%;pointer-events:none;animation:phf 1.05s ease-out forwards;}
+@keyframes ptwag{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(13deg)}}
+@keyframes pbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+@keyframes pblink{0%,90%,100%{transform:scaleY(1)}94%{transform:scaleY(.15)}}
+@keyframes pbreath{0%,100%{transform:scale(1)}50%{transform:scale(1.055)}}
+@keyframes pzfloat{0%{opacity:0;transform:translateY(7px)}35%{opacity:.85}100%{opacity:0;transform:translateY(-13px)}}
+@keyframes ppjump{0%,100%{transform:translateY(0)}35%{transform:translateY(-7px)}65%{transform:translateY(0)}}
+@keyframes phf{0%{opacity:0;transform:translateY(0) scale(.5)}25%{opacity:1}100%{opacity:0;transform:translateY(-36px) scale(1.05)}}
 /* 宽组件：横跨两列 */
 .wwide{grid-column:1 / -1;flex-direction:row;align-items:center;justify-content:flex-start;min-height:auto;}
 .hnote{grid-column:1 / -1;position:relative;display:block;padding:13px 15px;border-radius:16px;box-shadow:0 8px 22px rgba(0,0,0,.18);cursor:pointer;min-height:48px;box-sizing:border-box;}
@@ -502,7 +521,7 @@ const SHARE_GATE=true, SHARE_PW='52113148890';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v244 · 主屏主题新增"白色"(暗黑/淡粉/白色三选一,设置-主屏主题里切);白色主题:浅色背景+白图标+深灰字,情侣空间横幅也跟着变白;日历心情表线条小脸+粉卡';
+const APP_VER='v245 · 新增桌面小猫组件:会动的简约电子猫,白天坐着精神(尾巴摇/眨眼/微晃),晚上21点-7点趴着睡(呼吸起伏+Zzz),点一下摸摸头(蹦一下+冒爱心+喵);在主屏组件里可开关排序';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1307,7 +1326,7 @@ function initAppDrag(){if(window._aDragInit)return;window._aDragInit=1;
 initAppDrag();
 // ===== 主屏小组件 =====
 function widInit(){const m=S.me;
-  if(!Array.isArray(m.widgets))m.widgets=['clock','couple2','mood','disc'];
+  if(!Array.isArray(m.widgets))m.widgets=['clock','couple2','mood','disc','pet'];
   if(!m.note||typeof m.note!=='object')m.note={text:'',paper:'#fff7d6',ink:'#5b4a2f'};
   if(!m.mood||typeof m.mood!=='object')m.mood={k:'',date:''};
   if(!m.wColor)m.wColor='#ffffff';
@@ -1317,10 +1336,12 @@ function widInit(){const m=S.me;
   if(Array.isArray(m.widgetPages)){const a=Array.isArray(m.widgetPages[0])?m.widgetPages[0]:[],b=Array.isArray(m.widgetPages[1])?m.widgetPages[1]:[];m.widgets=a.concat(b.filter(k=>a.indexOf(k)<0));delete m.widgetPages;}
   const valid=k=>WIDS.some(w=>w[0]===k);const seen={};
   m.widgets=(m.widgets||[]).filter(k=>valid(k)&&!seen[k]&&(seen[k]=1));
+  // v245：桌面小猫补进来一次
+  if(!m._wmigPet){if(m.widgets.indexOf('pet')<0)m.widgets.push('pet');m._wmigPet=1;}
   // 时钟卡固定在最顶（代替原来的大时钟+问候）
   if(m.widgets.indexOf('clock')<0)m.widgets.unshift('clock');else if(m.widgets[0]!=='clock'){m.widgets=['clock'].concat(m.widgets.filter(k=>k!=='clock'));}}
 function wToday(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
-const WIDS=[['clock','时钟·天气·小图','时间天气，右边可放一张自己上传的小图'],['couple2','双头像·天数','两个圆头像+在一起天数（绑定情侣空间后自动算）'],['mood','今日心情','点一下记录今天的心情'],['disc','正在听','会转的小唱片，显示在听的歌']];
+const WIDS=[['clock','时钟·天气·小图','时间天气，右边可放一张自己上传的小图'],['couple2','双头像·天数','两个圆头像+在一起天数（绑定情侣空间后自动算）'],['mood','今日心情','点一下记录今天的心情'],['disc','正在听','会转的小唱片，显示在听的歌'],['pet','桌面小猫','会动的电子小猫·白天精神晚上睡·点一下摸摸头']];
 const MOODS={happy:['开心','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M8.6 14.4c1.5 1.7 5.3 1.7 6.8 0"/>'],love:['想ta','<path d="M12 20s-7-4.3-9.2-8.3A4.8 4.8 0 0 1 12 6a4.8 4.8 0 0 1 9.2 5.7C19 15.7 12 20 12 20z"/>'],calm:['平静','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M9 14.6h6"/>'],tired:['累了','<circle cx="12" cy="12" r="8.4"/><path d="M8 9.6c.8.6 2 .6 2.8 0M13.2 9.6c.8.6 2 .6 2.8 0M9 15c1.5-1.2 4.5-1.2 6 0"/>'],sad:['难过','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M8.6 15.4c1.5-1.7 5.3-1.7 6.8 0"/>'],angry:['气鼓鼓','<circle cx="12" cy="12" r="8.4"/><path d="M7.6 9.4l2.4 1M16.4 9.4l-2.4 1M8.6 15.4c1.5-1.2 5.3-1.2 6.8 0"/>'],
   neutral:['平淡','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M8.8 14.7h6.4"/>'],
   distress:['烦躁','<circle cx="12" cy="12" r="8.4"/><path d="M8 9.2l2.4 1.3M16 9.2l-2.4 1.3M9.2 15.4c.9-1.4 4.7-1.4 5.6 0"/>'],
@@ -1378,7 +1399,33 @@ function wClock(){const col=wcol();const d=new Date();const week=['周日','周�
   const pic=S.me.wPic?'<img src="'+S.me.wPic+'">':svgIc('image',26,col);
   return `<div class="hwid wclk wwide" style="color:${col}"><div class="clkL" onclick="openApp('calendar')"><div class="clkT">${hm()}</div><div class="clkD">${d.getMonth()+1}月${d.getDate()}日 ${week}</div>${wx?'<div class="clkW">'+wx+'</div>':'<div class="clkW" onclick="event.stopPropagation();fetchWeather(true)" style="cursor:pointer">点这获取天气 ›</div>'}</div><div class="clkP" onclick="wPicUpload()">${pic}</div></div>`;}
 function wPicUpload(){pickFile('image/*',async f=>{S.me.wPic=await compress(f,500,.75);save();render();toast('小图已换 🖼️');});}
-const WIDR={couple2:wCouple2,clock:wClock,days:wDays,anniv:wAnniv,tanow:wTanow,note:wNote,mood:wMood,disc:wDisc};
+const WIDR={couple2:wCouple2,clock:wClock,days:wDays,anniv:wAnniv,tanow:wTanow,note:wNote,mood:wMood,disc:wDisc,pet:wPet};
+function petCatDay(col){return `<svg class="petcat petday" viewBox="0 0 76 64" width="76" height="62" fill="none" stroke="${col}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+  <path class="ptail" d="M56 52 q15 1 9 -17"/>
+  <path d="M22 54 q-6 -23 16 -23 q22 0 16 23 z" fill="${col}" fill-opacity=".08"/>
+  <path d="M27 22 l-4 -12 l11 6"/><path d="M49 22 l4 -12 l-11 6"/>
+  <circle cx="38" cy="28" r="14" fill="${col}" fill-opacity=".07"/>
+  <g class="peyes"><circle cx="32" cy="28" r="2.1" fill="${col}" stroke="none"/><circle cx="44" cy="28" r="2.1" fill="${col}" stroke="none"/></g>
+  <path d="M36 33 q2 2 4 0"/>
+  <path d="M21 27 l8 1M21 31 l8 -1M55 27 l-8 1M55 31 l-8 -1"/></svg>`;}
+function petCatNight(col){return `<svg class="petcat petsleep" viewBox="0 0 80 58" width="80" height="58" fill="none" stroke="${col}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M16 48 q0 -24 28 -24 q26 0 26 24 z" fill="${col}" fill-opacity=".08"/>
+  <path d="M22 30 l-3 -9 l9 4"/><path d="M33 26 l1 -9 l7 6"/>
+  <circle cx="28" cy="36" r="12" fill="${col}" fill-opacity=".06"/>
+  <path d="M22 36 q3 3 7 0"/>
+  <path d="M14 38 l7 0M14 41 l7 -1.5"/>
+  <path class="ptail" d="M68 48 q11 -1 5 -13"/></svg>`;}
+function wPet(){const col=wcol();const hr=new Date().getHours();const night=(hr>=21||hr<7);
+  const cat=night?petCatNight(col):petCatDay(col);
+  const zzz=night?`<span class="pzzz" style="color:${col}">z<small>z</small></span>`:'';
+  const sub=night?'呼呼…睡着了':'精神满满～';
+  return `<div class="hwid wpet" style="color:${col}" onclick="petTap(this)"><div class="petbox">${cat}${zzz}</div><div class="wbd" style="text-align:center"><div class="wt">桌面小猫</div><div class="wm" style="font-size:13px">${sub}</div></div></div>`;}
+function petTap(el){const box=el.querySelector('.petbox');const c=el.querySelector('.petcat');
+  if(c){c.classList.remove('petpet');void c.offsetWidth;c.classList.add('petpet');setTimeout(()=>{try{c.classList.remove('petpet');}catch(_){}},520);}
+  if(box){for(let i=0;i<3;i++){const h=document.createElement('span');h.className='pheart';h.style.left=(28+i*20)+'%';h.style.animationDelay=(i*0.12)+'s';h.innerHTML='<svg viewBox="0 0 24 24" width="13" height="13" fill="#ff8fab" stroke="none"><path d="M12 20s-7-4.3-9.2-8.3A4.8 4.8 0 0 1 12 6a4.8 4.8 0 0 1 9.2 5.7C19 15.7 12 20 12 20z"/></svg>';box.appendChild(h);setTimeout(()=>{try{h.remove();}catch(_){}}, 1100);}}
+  S.me.petPats=(S.me.petPats||0)+1;save();
+  const night=(()=>{const hr=new Date().getHours();return hr>=21||hr<7;})();
+  toast(night?'喵…（迷糊地蹭了蹭你）':'喵～ 蹭蹭你的手');}
 function homeWidgets(){widInit();
   const html=S.me.widgets.map(k=>WIDR[k]?WIDR[k]():'').filter(Boolean).join('');
   return html?'<div class="hwwrap">'+html+'</div>':'';}
