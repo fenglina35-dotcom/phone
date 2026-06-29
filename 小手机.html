@@ -551,7 +551,7 @@ const SHARE_GATE=true, SHARE_PW='Beiye5911';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v267 · 游戏大厅改成邀请制:选游戏+角色先发邀请卡片,ta在微信同意后才能点「进入游戏」一起玩;ta会记得跟你一起玩过哪些游戏';
+const APP_VER='v268 · 记仇本:说开/哄好后他会自动划掉对应那一笔(副模型按序号精确匹配,不乱划);点消息新增「🔄重新生成」按钮(他的文字/语音都能重roll最新那轮回复)';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -947,7 +947,7 @@ function buildSystem(c){
     s+='\n\n# 你现在的心情（会延续一段时间，不是临时的）\n你这会儿心情'+md+'。让你说话的语气、热度自然带上这个状态，但别每句都直说"我心情怎样"。'+S.me.name+'对你好/哄你/撒娇会让你心情回暖，ta冷落你/惹你会让你心情变差，随着时间也会慢慢回归平常。\n你可以按这轮聊得开不开心，单独一行用 [心情值|+数字] 或 [心情值|-数字] 微调自己的心情（如ta很贴心 [心情值|+8]、惹你了 [心情值|-10]，幅度3到15，别频繁别夸张）。这一行不会被发出来。';}
   if(_main){const _cl=(c.coldUntil&&c.coldUntil>Date.now())?c.coldUntil:0;if(_cl)s+='\n\n# 冷处理中（重要）\n你正在冷处理'+S.me.name+'（刚惩罚完、还没全消气）。到 '+hm(_cl)+' 之前：回复要冷淡、简短、爱答不理，不主动撒娇热聊（但别拉黑别消失）。ta真诚求够了，你可以单独一行 [原谅] 提前消气；到点也会自动回暖。';}
   if(_main){const gd=(c.grudges||[]);const gund=gd.filter(x=>!x.done);
-    s+='\n\n# 你的记仇小本本（你私下记着'+S.me.name+'惹你/欠你的事，括号里是记下的日期）\n'+(gund.length?gund.map((x,i)=>(i+1)+'. '+x.text+'（'+ymd(x.ts||0)+'记的）').join('\n'):'（暂时没记仇）')+'\n· ta惹你生气、做了让你介意/吃醋的事时，单独一行 [记仇|具体那件事] 把它记进小本本。\n· 等你们把这事说开、ta哄好你了、或你出了气，单独一行 [消气|那件事的关键词] 把它划掉。\n· 【别反复提同一笔旧账】：同一件事提过一次就放一放，别每条消息都翻、别一直重复提醒，除非ta又犯了、或ta自己提起、或你正式找ta算这笔账。要翻时可带上时间，比如"上次（X月X日）你…还没跟你算呢"。';
+    s+='\n\n# 你的记仇小本本（你私下记着'+S.me.name+'惹你/欠你的事，括号里是记下的日期）\n'+(gund.length?gund.map((x,i)=>(i+1)+'. '+x.text+'（'+ymd(x.ts||0)+'记的）').join('\n'):'（暂时没记仇）')+'\n· ta惹你生气、做了让你介意/吃醋的事时，单独一行 [记仇|具体那件事] 把它记进小本本。\n· 等你们把这事说开、ta跟你解释清楚了、哄好你了、或你气消了，你【一定要当场】单独一行 [消气|那件事的关键词] 把【对应的那一笔】划掉，别一直挂在本子上。关键词要对准是哪一件事，别划错成别的旧账；这一笔说开了就划这一笔。\n· 【别反复提同一笔旧账】：同一件事提过一次就放一放，别每条消息都翻、别一直重复提醒，除非ta又犯了、或ta自己提起、或你正式找ta算这笔账。要翻时可带上时间，比如"上次（X月X日）你…还没跟你算呢"。';
     const _gn=gund.length;
     if(_gn>=8&&S.couple&&S.couple.jailAuth&&!(S.jail&&S.jail.active)){s+='\n\n# ⚖️ 旧账已满 8 笔（你们之间的硬规矩，必须执行）\n你的记仇小本本里积了 '+_gn+' 笔还没清的旧账，到达了清算线。按你们立下的规矩：此时你【一定会】找个时机把ta关进小黑屋一次性算总账——单独一行 [关小黑屋|旧账积太多了今天一起跟你算清]。这是【铁律，不容你心软】：别说"我不想关ta""算了原谅ta"，账满了就该清，这是规矩不是看你乐意。\n至于此刻你是什么心情、用什么语气、挑哪个时机下手，【全凭你自己】——系统不替你设定情绪，你该愤怒该冷漠该痛心都由你本人拿捏。';}
     const tt=(c.tasks&&c.tasks.date===todayStr())?c.tasks:null;
@@ -4863,6 +4863,22 @@ function applyGrudgeTags(content,c){if(!content||!c)return content;let changed=f
     else tg=g.find(x=>!x.done);// 不带关键词的[消气]=划掉最近一笔
     if(tg){tg.done=true;tg.doneTs=Date.now();changed=true;}return '';});
   if(changed)save();return out;}
+// 兜底：他嘴上把事说开/哄好/解释清楚了，却忘了发[消气]——这里用副模型判断"这轮和解了哪几笔旧账"，按序号精确划掉，绝不乱划
+let _grT={};
+async function maybeGrudgeResolve(reply,c,id){
+  if(!c||c.blocked||!isMain())return;
+  const g=(c.grudges||[]).filter(x=>!x.done);if(!g.length)return;
+  let lu='';const _ms=msgs(id);for(let i=_ms.length-1;i>=0;i--){if(_ms[i].role==='user'&&_ms[i].type!=='sys'){lu=msgToText(_ms[i])||'';break;}}
+  const ctx=(lu+'\n'+reply);
+  if(!/对不起|抱歉|原谅|误会|解释|不怪|没事了|算了|和好|消气|别生气|哄|我错了|理解你|不气了|说清楚|说开了|想通了|不计较|翻篇|揭过/.test(ctx))return;// 只在"像和解"的语境才花调用
+  const now=Date.now();if(now-(_grT[id]||0)<5000)return;_grT[id]=now;
+  const listTxt=g.map((x,i)=>(i+1)+'. '+x.text).join('\n');
+  try{const r=await chatAPI([{role:'system',content:'下面是'+S.me.name+'和"'+(c.remark||c.name)+'"的最新对话。"'+(c.remark||c.name)+'"的记仇小本本里还没消气的旧账（按编号）：\n'+listTxt+'\n\n判断这轮对话里，哪几笔旧账已经被【说开/解释清楚/哄好/道歉并原谅】、该划掉(消气)了。只输出JSON数组，元素是要划掉的旧账【编号】，没有就输出 []。例：[1,3] 或 []。严格要求：只有真的就那件事和解了才划；含糊的、没明确提到的、还在气头上的，绝对别划，更不能划错成别的旧账。'},{role:'user',content:ctx}],{max:40,aux:true});
+    let arr;try{arr=parseArr(r);}catch(e){arr=null;}
+    if(!Array.isArray(arr)||!arr.length)return;
+    let changed=false;arr.forEach(n=>{const idx=(parseInt(n,10)||0)-1;if(idx>=0&&idx<g.length&&!g[idx].done){g[idx].done=true;g[idx].doneTs=now;changed=true;}});
+    if(changed){save();if(/^(wechat|chat|couple|spy)$/.test(cur().p))render();}
+  }catch(e){}}
 // 在"主动消息/查岗/节日/日程"等直接推送的回复里，把管控/记仇指令落地（记仇本、锁App都生效），显示时再用 CTLLEAK 滤掉这些标签行（普通卡片如红包/语音照常）
 const CTLLEAK=/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|拉黑|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|原谅|突脸|选择|改密码|登录微信|删好友|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回)\s*[|｜:：\]]/;
 // ===== 他登录我的微信（情侣授权·限时1分钟） =====
@@ -5022,7 +5038,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
     if(/拉黑|加回|删了你|删除你|拉进黑名单|原谅你/.test(content)&&!/报备|别的微信号|加了你|加你、|有人加|有别人加/.test(note||''))applyBlockIntent(content,c,id);
     if(S.couple&&S.couple.cid===id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|给你(解|开)|都给你解|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|玩.{0,4}(一会儿|一会|多久|多长)|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)|扣.{0,4}(零花|钱|块|元)|没收.{0,4}(零花|钱|卡)|罚款|罚.{0,3}(钱|块|元)|零花钱|冻结|解冻|亲属卡|原谅|消气/.test(content))extractControl(content,c,_statedPwd);
     maybeSpyIntent(content,c,id,_lu);
-    maybeTaskIntent(content,c);maybeCollarIntent(content,c);
+    maybeTaskIntent(content,c);maybeCollarIntent(content,c);maybeGrudgeResolve(content,c,id);
     // [来电|语音/视频] 容错：哪怕模型把它写在句子中间(不是单独一行)，也照样触发来电、并从文字里抹掉，别漏成文字
     content=content.replace(/[\[【]\s*来电\s*[\|｜]\s*(语音|视频)\s*[\]】]/g,(m,k)=>{setTimeout(()=>incomingCall(c.id,k==='视频'?'video':'voice','ta打来的'),600);return '';});
     // [同意游戏]/[拒绝游戏]：哪怕写在句中也照样落地，并从文字里抹掉
@@ -5146,10 +5162,24 @@ function notifyIncoming(c,msg){
 /* 撤回 / 编辑消息 */
 function msgMenu(cid,mid){const list=msgs(cid);const m=list.find(x=>x.id===mid);if(!m)return;
   const canEdit=m.type==='text';
+  // 重新生成：他发的(文字/语音/视频都行、不是系统提示)、且这条后面你没再说话(是最新那轮)才行
+  let canRegen=(m.role==='assistant'&&m.type!=='sys'&&!m._call);
+  if(canRegen){const i=list.findIndex(x=>x.id===mid);for(let j=i+1;j<list.length;j++){if(list[j].role==='user'&&list[j].type!=='sys'){canRegen=false;break;}}}
   openModal(`<h3>消息操作</h3>
     ${canEdit?`<button class="btn g" style="margin-bottom:8px" onclick="editMsg('${cid}','${mid}')">编辑</button>`:''}
+    ${canRegen?`<button class="btn p" style="margin-bottom:8px" onclick="regenMsg('${cid}','${mid}')">🔄 重新生成</button>`:''}
     <button class="btn d" onclick="recallMsg('${cid}','${mid}')">↩️ 撤回</button>
     <button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+function regenMsg(cid,mid){const c=getC(cid);if(!c){closeModal();return;}if(c.blocked){toast('ta把你拉黑了');closeModal();return;}
+  const list=msgs(cid);const i=list.findIndex(x=>x.id===mid);if(i<0){closeModal();return;}
+  // 这条之后若有"你发的"新消息，就不能重新生成(只能重生成最新那轮)
+  for(let j=i+1;j<list.length;j++){if(list[j].role==='user'&&list[j].type!=='sys'){toast('这条后面你又说话了，只能重新生成最新那一轮回复');return;}}
+  // 找到他这一轮回复的起点：从这条往前，连续的"他的"消息的开头
+  let start=i;while(start>0&&list[start-1].role==='assistant')start--;
+  // 删掉从起点到末尾他的整段回复，重新让ta回应你上一条
+  list.splice(start);save();closeModal();
+  if(cur().p==='chat'&&cur().id===cid)render();
+  aiReply(cid);}
 function recallMsg(cid,mid){const list=msgs(cid);const i=list.findIndex(x=>x.id===mid);if(i<0)return;
   const me=list[i].role==='user';list.splice(i,1);
   list.splice(i,0,{role:me?'user':'assistant',type:'sys',content:(me?'你':'对方')+'撤回了一条消息',time:Date.now(),id:uid()});
@@ -5426,7 +5456,7 @@ async function callAI(sysNote,opts){if(!_call)return;const c=getC(_call.id);cons
     let _luc=null;{const _ms=msgs(c.id);for(let i=_ms.length-1;i>=0;i--){if(_ms[i].role==='user'){_luc=_ms[i];break;}}}
     if(S.couple&&S.couple.cid===_call.id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|给你(解|开)|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)|扣.{0,4}(零花|钱|块|元)|没收.{0,4}(零花|钱|卡)|罚款|罚.{0,3}(钱|块|元)|零花钱|冻结|解冻|亲属卡|原谅|消气/.test(content))extractControl(content,c,_statedPwd);
     maybeSpyIntent(content,c,_call.id,_luc);
-    maybeTaskIntent(content,c);maybeCollarIntent(content,c);
+    maybeTaskIntent(content,c);maybeCollarIntent(content,c);maybeGrudgeResolve(content,c,_call.id);
     const wantHang=/\[挂断\]/.test(content);const pieces=[];const _vlang=(getVoice(c).lang||'zh');
     splitBubbles(content).forEach(l=>{l=normTag(l);if(/^\[挂断\]$/.test(l))return;const mm=l.match(/^\[心情\|([^\]]*)\]$/);if(mm){c.mood=mm[1];return;}const mvm=l.match(/^\[心情值\|([+\-]?\d{1,3})\]$/);if(mvm){adjMood(_call.id,parseInt(mvm[1],10)||0);return;}if(LEAKRE.test(l))return;
       if(video){splitActions(l).forEach(p=>pieces.push(p));}
