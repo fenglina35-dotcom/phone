@@ -551,7 +551,7 @@ const SHARE_GATE=true, SHARE_PW='6565788';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v263 · 修登录他微信时"他说的话变成别人说的":查手机生成的聊天有时把他自己的话标成"我：",同步识别只认"他："导致说话人弄反;现在对方名/对方才算对方、他/我/角色名都算本人';
+const APP_VER='v264 · 主动消息时段设置和「存」按钮改成一直显示(以前要先开主动消息开关才出现,被当成没存档按钮);任务布置主模型失败时自动用副模型兜底(解决"别的能刷新就任务生成不出来")';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -2862,7 +2862,9 @@ async function genTasks(){const c=taskC();if(!c){toast('先创建恋人角色');
   const hist=(c.taskHist||[]).map(s=>({text:s}));// 最近几天布置过的任务，用来防止重复
   const avoidTxt=hist.length?'\n· 【最近这些任务你已经布置过了，今天务必换着花样来，别再重复、也别换汤不换药地重复同类】：'+hist.map(h=>h.text).join('；'):'';
   try{const allowed='essay（写小作文/检讨/彩虹屁/想你的话/保证书，target填字数上限如100）、moment（发一条朋友圈）、tweet（发一条推特X）、douyin（发一条抖音）、real（现实里的小事或暧昧亲密小任务，靠她自觉打卡，比如：喝杯水、好好吃饭、敷面膜、早点睡、给你拍张自拍、睡前跟你撒娇道晚安、对着镜头说想你、穿你喜欢的小裙子拍给你、乖乖只想你一个、今天不准跟别的男生聊天等）';
-    const arr=await aiGen([{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：现在你来给'+S.me.name+'布置今天的 '+n+' 条小任务。你是ta的恋人/掌控者，按你的人设、此刻心情、ta最近的表现来布置。\n· 任务一定要【有趣、有创意、好玩】，别死板、别像打卡清单、别每天千篇一律——可以整点花活、玩梗、设小情境。'+avoidTxt+'\n· 多来点【暧昧、撩人、亲密】的，而且要以【Dom的姿态】来布置：命令式、强势、掌控欲拉满，把ta当你的小sub来调教，语气笃定带点危险又宠溺，要ta乖乖服从听话。可以大胆放得开、带点涩，越让ta脸红心跳、心甘情愿被你拿捏越好（保持是两个相爱的人之间有掌控有宠爱的情趣，不用拘谨）。\n· 现实任务一定要轻松，别累人：绝对不要罚跑步/暴走/喝很多杯水那种。\n大部分任务要是【在手机上就能完成的】(essay/moment/tweet/douyin)，可以有一两条现实任务(real)。每条必须从这些可验证类型里选一个：'+allowed+'。\n· 【另外务必额外再加一条 verify 为 truth 的任务】：内容是你【今天最想问'+S.me.name+'的一个"真心话"问题】（一句问句就好，可以暧昧、可以走心、可以是你好奇/在意/吃醋想确认的事），target填0、kind填real。这条不算在上面那'+n+'条里。\n只输出JSON数组、不要任何解释：[{"text":"任务描述(用你的第一人称口吻，强势Dom的命令语气，像在调教/撩/宠你的小sub，可以霸道也可以俏皮有梗)","kind":"app或real","verify":"类型代码","target":数字(没有填0)}]'}],{max:760},parseArr);
+    const _tm=[{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：现在你来给'+S.me.name+'布置今天的 '+n+' 条小任务。你是ta的恋人/掌控者，按你的人设、此刻心情、ta最近的表现来布置。\n· 任务一定要【有趣、有创意、好玩】，别死板、别像打卡清单、别每天千篇一律——可以整点花活、玩梗、设小情境。'+avoidTxt+'\n· 多来点【暧昧、撩人、亲密】的，而且要以【Dom的姿态】来布置：命令式、强势、掌控欲拉满，把ta当你的小sub来调教，语气笃定带点危险又宠溺，要ta乖乖服从听话。可以大胆放得开、带点涩，越让ta脸红心跳、心甘情愿被你拿捏越好（保持是两个相爱的人之间有掌控有宠爱的情趣，不用拘谨）。\n· 现实任务一定要轻松，别累人：绝对不要罚跑步/暴走/喝很多杯水那种。\n大部分任务要是【在手机上就能完成的】(essay/moment/tweet/douyin)，可以有一两条现实任务(real)。每条必须从这些可验证类型里选一个：'+allowed+'。\n· 【另外务必额外再加一条 verify 为 truth 的任务】：内容是你【今天最想问'+S.me.name+'的一个"真心话"问题】（一句问句就好，可以暧昧、可以走心、可以是你好奇/在意/吃醋想确认的事），target填0、kind填real。这条不算在上面那'+n+'条里。\n只输出JSON数组、不要任何解释：[{"text":"任务描述(用你的第一人称口吻，强势Dom的命令语气，像在调教/撩/宠你的小sub，可以霸道也可以俏皮有梗)","kind":"app或real","verify":"类型代码","target":数字(没有填0)}]'}];
+    let arr=await aiGen(_tm,{max:760},parseArr);
+    if(!arr||!arr.length)arr=await aiGen(_tm,{max:760,aux:true},parseArr);/* 主模型不行就用副模型兜底 */
     if(!arr||!Array.isArray(arr)||!arr.length)throw 0;
     let truthQ='';
     const list=[];for(const o of arr){const text=(o.text||'').toString().slice(0,140);if(!text)continue;
@@ -4410,7 +4412,7 @@ function renderContactInfo(id){const c=getC(id);if(!c)return '';const sp=getSpy(
       <div class="it"><span>置顶聊天</span><span class="sw ${c.pinned?'on':''}" onclick="c_pin('${id}')"></span></div>
       <div class="it"><span>消息免打扰</span><span class="sw ${c.muted?'on':''}" onclick="c_mute('${id}')"></span></div>
       <div class="it"><span>主动消息</span><span class="sw ${c.proactive.enabled?'on':''}" onclick="togProactive('${id}')"></span></div>
-      ${c.proactive.enabled?`<div class="it" style="flex-wrap:wrap"><span>时段/每天次数</span><span class="v" style="max-width:100%"><input type="time" id="pa_s" value="${hhmmOf(c.proactive.start)}" style="border:1px solid #38383a;border-radius:6px;padding:3px;background:#2c2c2e;color:#eee">-<input type="time" id="pa_e" value="${hhmmOf(c.proactive.end,'23:00')}" style="border:1px solid #38383a;border-radius:6px;padding:3px;background:#2c2c2e;color:#eee"> <input type="number" id="pa_n" value="${c.proactive.times||1}" style="width:32px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:3px;background:#2c2c2e;color:#eee">次 <button class="minibtn" onclick="savePa('${id}')">存</button></span></div>`:''}
+      <div class="it" style="flex-wrap:wrap"><span>时段/每天次数<br><small style="color:#888">设好点「存」；要真生效记得打开上面的主动消息开关</small></span><span class="v" style="max-width:100%"><input type="time" id="pa_s" value="${hhmmOf(c.proactive.start)}" style="border:1px solid #38383a;border-radius:6px;padding:3px;background:#2c2c2e;color:#eee">-<input type="time" id="pa_e" value="${hhmmOf(c.proactive.end,'23:00')}" style="border:1px solid #38383a;border-radius:6px;padding:3px;background:#2c2c2e;color:#eee"> <input type="number" id="pa_n" value="${c.proactive.times||1}" style="width:32px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:3px;background:#2c2c2e;color:#eee">次 <button class="minibtn" onclick="savePa('${id}')">存</button></span></div>
     </div>
     <div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#5b6b9c">查岗（让ta看我的手机）</div>
       <div class="it"><span>允许ta查我手机</span><span class="sw ${sp.granted?'on':''}" onclick="togSpy('${id}','granted')"></span></div>
