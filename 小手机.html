@@ -551,7 +551,7 @@ const SHARE_GATE=true, SHARE_PW='Beiye5911';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v271 · 修通话bug:边打电话边查手机会两轮消息叠一起说得飞快→改成串行(说完一句再接下一轮);他通话中想登你微信,说完话会自动挂断、紧接着直接登进去';
+const APP_VER='v272 · 语音失败自动重试:偶发401/429/网络抖动(尤其ElevenLabs免费版)会让头一两条没声,现在悄悄退避重试最多3次,真的都失败才弹一次提示';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -830,22 +830,27 @@ function playUrl(url){try{if(_curAudio){_curAudio.pause();}}catch(e){}_curAudio=
   try{ensureAudio();if(_audio&&vol>1){const src=_audio.createMediaElementSource(_curAudio);const g=_audio.createGain();g.gain.value=vol;src.connect(g);g.connect(_audio.destination);}else{_curAudio.volume=Math.max(0,Math.min(1,vol));}}catch(e){try{_curAudio.volume=Math.max(0,Math.min(1,vol));}catch(_){}}
   _curAudio.play().catch(()=>{});}
 async function playBuf(buf){ensureAudio();if(!_audio||!buf)return;try{if(_audio.state!=='running'){try{await _audio.resume();}catch(e){}}if(_curSrc){try{_curSrc.stop();}catch(e){}}const s=_audio.createBufferSource();s.buffer=buf;const g=_audio.createGain();g.gain.value=volMul();s.connect(g);g.connect(_audio.destination);s.start();_curSrc=s;}catch(e){}}
+async function _ttsOnce(t,vid,tts){let r;
+  if(/fish\.?audio/i.test(tts.base)){const hd={'Authorization':'Bearer '+tts.key,'Content-Type':'application/json'};if(tts.model)hd['model']=tts.model;/* speech-1.6 / s1 等主干模型，选填 */
+    r=await fetch('https://api.fish.audio/v1/tts',{method:'POST',headers:hd,body:JSON.stringify({text:t,reference_id:vid||undefined,format:'mp3',normalize:true})});}
+  else if(/elevenlabs/i.test(tts.base))r=await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+vid,{method:'POST',headers:{'xi-api-key':tts.key,'Content-Type':'application/json'},body:JSON.stringify({text:t,model_id:tts.model||'eleven_multilingual_v2'})});
+  else if(/minimax/i.test(tts.base)){const gid=(tts.group||'').trim();
+    const url=tts.base.replace(/\/+$/,'')+'/v1/t2a_v2'+(gid?('?GroupId='+encodeURIComponent(gid)):'');
+    r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tts.key},body:JSON.stringify({model:tts.model||'speech-02-turbo',text:t,stream:false,language_boost:'auto',voice_setting:{voice_id:vid||'male-qn-qingse',speed:1,vol:1,pitch:0},audio_setting:{sample_rate:32000,bitrate:128000,format:'mp3',channel:1}})});
+    if(r.ok){const j=await r.json();const hex=j&&j.data&&j.data.audio;
+      if(hex){const bytes=new Uint8Array(hex.length/2);for(let i=0;i<bytes.length;i++)bytes[i]=parseInt(hex.substr(i*2,2),16);return {buf:bytes.buffer};}
+      return {err:(j&&j.base_resp&&j.base_resp.status_msg)||'无音频'};}
+    return {err:r.status};}
+  else r=await fetch(tts.base.replace(/\/+$/,'')+'/audio/speech',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tts.key},body:JSON.stringify({model:tts.model||'tts-1',input:t,voice:vid||'alloy'})});
+  if(r.ok)return {buf:await r.arrayBuffer()};
+  return {err:r.status};}
+// 语音自动重试：偶发的 401/429/网络抖动(尤其 ElevenLabs 免费版)会让头一两条没声，这里悄悄退避重试，最多3次都失败才弹提示
 async function ttsArr(text,o){const t=stripSpoken(text);if(!t)return null;const v=o?getVoice(o):null;const tts=S.settings.tts;
   if(!(v&&v.engine==='api'&&tts&&tts.base&&tts.key))return null;const vid=v.ttsVoice||tts.voice||'';
-  try{let r;
-    if(/fish\.?audio/i.test(tts.base)){const hd={'Authorization':'Bearer '+tts.key,'Content-Type':'application/json'};if(tts.model)hd['model']=tts.model;/* speech-1.6 / s1 等主干模型，选填 */
-      r=await fetch('https://api.fish.audio/v1/tts',{method:'POST',headers:hd,body:JSON.stringify({text:t,reference_id:vid||undefined,format:'mp3',normalize:true})});}
-    else if(/elevenlabs/i.test(tts.base))r=await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+vid,{method:'POST',headers:{'xi-api-key':tts.key,'Content-Type':'application/json'},body:JSON.stringify({text:t,model_id:tts.model||'eleven_multilingual_v2'})});
-    else if(/minimax/i.test(tts.base)){const gid=(tts.group||'').trim();
-      const url=tts.base.replace(/\/+$/,'')+'/v1/t2a_v2'+(gid?('?GroupId='+encodeURIComponent(gid)):'');
-      r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tts.key},body:JSON.stringify({model:tts.model||'speech-02-turbo',text:t,stream:false,language_boost:'auto',voice_setting:{voice_id:vid||'male-qn-qingse',speed:1,vol:1,pitch:0},audio_setting:{sample_rate:32000,bitrate:128000,format:'mp3',channel:1}})});
-      if(r.ok){const j=await r.json();const hex=j&&j.data&&j.data.audio;
-        if(hex){const bytes=new Uint8Array(hex.length/2);for(let i=0;i<bytes.length;i++)bytes[i]=parseInt(hex.substr(i*2,2),16);return bytes.buffer;}
-        toast('语音API错误 '+((j&&j.base_resp&&j.base_resp.status_msg)||'无音频'));return null;}
-      toast('语音API错误 '+r.status);return null;}
-    else r=await fetch(tts.base.replace(/\/+$/,'')+'/audio/speech',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tts.key},body:JSON.stringify({model:tts.model||'tts-1',input:t,voice:vid||'alloy'})});
-    if(r.ok)return await r.arrayBuffer();toast('语音API错误 '+r.status);
-  }catch(e){toast('语音生成失败');}return null;}
+  let lastErr='';
+  for(let i=0;i<3;i++){if(i>0)await new Promise(r=>setTimeout(r,i*600));/* 退避：0 → 0.6s → 1.2s */
+    try{const res=await _ttsOnce(t,vid,tts);if(res&&res.buf)return res.buf;lastErr=(res&&res.err)||'无音频';}catch(e){lastErr='网络';}}
+  toast('语音API错误 '+lastErr+'（已自动重试）');return null;}
 async function decodeBuf(ab){if(!_audio||!ab)return null;try{initAudio();return await _audio.decodeAudioData(ab.slice(0));}catch(e){return null;}}
 async function speak(text,o){const v=o?getVoice(o):null;
   if(v&&v.engine==='api'&&S.settings.tts&&S.settings.tts.key){initAudio();const ab=await ttsArr(text,o);const buf=await decodeBuf(ab);if(buf){playBuf(buf);return;}}
