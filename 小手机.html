@@ -546,7 +546,7 @@ const SHARE_GATE=true, SHARE_PW='786953';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v253 · 角色发语音频率可设(关闭/偶尔/经常/总是);修语音第一次没声音:播放前等音频上下文唤醒,点语音条即可播放且能重复听(以前点只显示文字不出声)';
+const APP_VER='v254 · 去掉通话里"免提聆听中·直接说话就行"那条提示文字(免提麦克风按钮还在,功能不变)';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -5288,7 +5288,7 @@ function renderCall(){const L=$('#callLayer');const _clrPos=()=>{L.style.left=L.
   L.innerHTML=`${(_call.state==='active'||_call.state==='outgoing')?`<div onclick="callMin()" title="缩小，可以边通话边聊天/玩手机" style="position:absolute;left:16px;top:50px;font-size:24px;cursor:pointer;z-index:3">⤵︎</div>`:''}<div class="cav">${isImg(c.avatar)?`<img src="${c.avatar}">`:(c.avatar||'🙂')}</div>
     <div class="cname">${esc(c.remark||c.name)}</div><div class="cstat">${stat}</div>
     <div class="callsub" id="callSub"></div>
-    ${_call.state==='active'?`<div class="callinput show" id="callInput"><button onclick="callHFToggle()" title="免提·对着屏幕说" style="background:${_callHF?'linear-gradient(135deg,#9ec5fe,#b8a4e3)':'#3a3a40'};border:none;border-radius:50%;width:40px;height:40px;min-width:40px;display:flex;align-items:center;justify-content:center;cursor:pointer">${svgIc('mic',18,'#fff')}</button><input id="callMsg" placeholder="${_callHF?'免提中·直接对我说…':'打字说…'}" onkeydown="if(event.key==='Enter')callSend()"><button onclick="callSend()">发</button></div>${_callHF?`<div style="text-align:center;color:#9ec5fe;font-size:12px;margin-top:4px">🎙️ 免提聆听中·直接说话就行（再点麦克风关闭）</div>`:''}`:''}
+    ${_call.state==='active'?`<div class="callinput show" id="callInput"><button onclick="callHFToggle()" title="免提·对着屏幕说" style="background:${_callHF?'linear-gradient(135deg,#9ec5fe,#b8a4e3)':'#3a3a40'};border:none;border-radius:50%;width:40px;height:40px;min-width:40px;display:flex;align-items:center;justify-content:center;cursor:pointer">${svgIc('mic',18,'#fff')}</button><input id="callMsg" placeholder="${_callHF?'免提中·直接对我说…':'打字说…'}" onkeydown="if(event.key==='Enter')callSend()"><button onclick="callSend()">发</button></div>`:''}
     <div class="callbtns">${btns}</div>`;
   updateCallSub();}
 function updateCallSub(){const box=$('#callSub');if(!box)return;const s=_call&&_call.sub;
