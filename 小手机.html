@@ -551,7 +551,7 @@ const SHARE_GATE=true, SHARE_PW='786953';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v260 · 聊天语音改成点一下才播(不再自动播);修iOS触屏后没声音:音频上下文被打断时重建+点击手势里同步解锁(静音buffer),不用退出页面再进;通话自动出声开关保留';
+const APP_VER='v261 · 通话也修了iOS没声音:接听/拨打/打开来电时同步解锁音频(静音buffer),通话播放经ensureAudio被打断会自动重建,不用退出再进;通话语音照常自动出声';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -5221,13 +5221,13 @@ function showCallBanner(c){const b=$('#callBanner');if(!b||!_call)return;const l
   b.innerHTML=`<div onclick="openIncoming()" style="display:flex;align-items:center;gap:8px;flex:1;min-width:0;cursor:pointer">${av(c.avatar,'sm')}<div style="flex:1;min-width:0"><div class="bn">${esc(c.remark||c.name)}</div><div class="bm" style="display:flex;align-items:center;gap:5px">${svgIc(label==='视频'?'video':'phonecall',13,'#9a9')}邀请你${label}通话…</div></div></div><span class="cbtn red" style="width:30px;height:30px;margin-left:4px" onclick="event.stopPropagation();declineCall()">${svgIc('hangup',15,'#fff')}</span><span class="cbtn green" style="width:30px;height:30px" onclick="event.stopPropagation();answerCall()">${svgIc('phonecall',15,'#fff')}</span>`;
   b.className='msgbanner show';}
 function hideCallBanner(){const b=$('#callBanner');if(b)b.className='msgbanner';}
-function openIncoming(){if(!_call)return;_call.opened=true;hideCallBanner();renderCall();}
+function openIncoming(){if(!_call)return;audioUnlock();_call.opened=true;hideCallBanner();renderCall();}
 function callMissed(id){if(!_call||_call.id!==id||_call.state!=='incoming')return;ringStop();endCallTimers();hideCallBanner();const kindTxt=_call.kind==='video'?'视频通话':'语音通话';_call=null;renderCall();
   msgs(id).push({role:'user',type:'sys',content:'未接来电 · '+kindTxt,time:Date.now(),id:uid()});save();if(cur().p==='chat'&&cur().id===id)render();
   const c=getC(id);if(c&&!c.blocked)setTimeout(()=>aiReply(id,'[系统：你打'+kindTxt+'给'+S.me.name+'，响了好一会儿ta都没接（未接来电）。你有点担心又有点不爽，主动发条消息问ta去哪了/在干嘛/怎么不接电话（符合你心情值和人设，别凶过头）。]'),1500);}
-function placeCall(id,kind){const c=getC(id);if(!c)return;initAudio();_call={id,kind,state:'outgoing',replyVoice:S.settings.voiceAuto!==false,session:uid(),sub:null};renderCall();
+function placeCall(id,kind){const c=getC(id);if(!c)return;audioUnlock();_call={id,kind,state:'outgoing',replyVoice:S.settings.voiceAuto!==false,session:uid(),sub:null};renderCall();
   blip(600,.15);setTimeout(()=>{if(_call&&_call.state==='outgoing')answerCall(true);},1600);}
-function answerCall(autoByThem){if(!_call)return;ringStop();clearTimeout(_callMissT);hideCallBanner();blip(880,.12);
+function answerCall(autoByThem){if(!_call)return;audioUnlock();ringStop();clearTimeout(_callMissT);hideCallBanner();blip(880,.12);
   _call.state='active';_call.opened=true;_call.start=Date.now();_call.lastUserTs=Date.now();_call.silentStage=0;const proR=_call._proReason;
   clearInterval(_callTimer);_callTimer=setInterval(renderCallTime,1000);clearInterval(_callSilTimer);_callSilTimer=setInterval(checkCallSilence,15000);renderCall();
   callAI('[系统：'+(autoByThem?S.me.name+'接通了你打的':'你接通了')+(_call.kind==='video'?'视频':'语音')+'电话'+(proR?'——这通是你自己主动打给ta的，因为你'+proR+'。开口先自然把你主动找ta的心情说出来（黏ta、撒娇、念叨想ta），口语化短句':'，自然开口，口语化短句')+'。]');}
