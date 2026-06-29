@@ -44,6 +44,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .pgdot.on{background:#fff}
 .app{display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;}
 .app .ic{width:60px;height:60px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:32px;box-shadow:0 6px 14px rgba(0,0,0,.12);background:#fff;}
+.appswipe.aedit .app{animation:ajig .34s ease-in-out infinite;}
+.appswipe.aedit .app:hover{animation:none;}
+@keyframes ajig{0%,100%{transform:rotate(-1.6deg)}50%{transform:rotate(1.6deg)}}
+.appghost .ic{box-shadow:0 12px 24px rgba(0,0,0,.32);}
+.appswipe.aedit{touch-action:none;}
 .app span{font-size:11px;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.25);}
 .dock{margin:0 16px 18px;background:rgba(255,255,255,.35);border-radius:26px;padding:12px;display:grid;grid-template-columns:repeat(4,1fr);gap:14px;backdrop-filter:blur(8px);}
 /* 列表通用 */
@@ -486,7 +491,7 @@ const SHARE_GATE=true, SHARE_PW='52113148890';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v238 · 主屏组件改成方块网格(方块+长条混排,像iOS);双头像可单独换不影响微信头像;淡粉卡片做实换壁纸字不糊;规则怪谈/惊悚抉择换线条图标;邮箱红点改粉色';
+const APP_VER='v239 · App图标可长按拖拽换位/拖到第二页(轻点照常打开,按住约0.4秒拿起,拖到屏幕边缘自动翻页),布局自动保存;App改为数据驱动,功能不变';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1215,32 +1220,7 @@ function renderHome(){
     <div class="clockw"><div class="hh">${hm()}</div><div class="dd">${d.getMonth()+1}月${d.getDate()}日 ${week}</div></div>
     <div class="hwidget"><div class="hg">${greet}</div>${S.weather&&S.weather.place?`<div class="hw">${S.weather.place} · ${esc(S.weather.desc)} ${S.weather.temp}°`+(S.weather.rain?' · 记得带伞':'')+`</div>`:'<div class="hw" onclick="fetchWeather(true)">点这里获取天气 ›</div>'}</div>
     ${homeWidgets()}
-    <div class="appswipe" id="appswipe" onscroll="homePgScroll(this)">
-     <div class="apppage">
-      <div class="app" onclick="openWeChat()">${aIco('wechat','💬','#07c160')}<span>微信</span></div>
-      <div class="app" onclick="go('settings')">${aIco('settings','⚙️','#8e8e93')}<span>设置</span></div>
-      <div class="app" onclick="go('worldbook')">${aIco('worldbook','📖','#ff9f43')}<span>世界书</span></div>
-      <div class="app" onclick="openApp('browser')">${aIco('browser','🌐','#3a7bd5')}<span>${appLk('browser')}浏览器</span></div>
-      <div class="app" onclick="openApp('moments')">${aIco('moments','🌸','#ee5a6f')}<span>${appLk('moments')}朋友圈</span></div>
-      <div class="app" onclick="openApp('spy')">${aIco('spy','🔍','#5b6b9c')}<span>${appLk('spy')}查他手机</span></div>
-      <div class="app" onclick="openApp('shop')">${aIco('shop','🛒','#ff6b6b')}<span>${appLk('shop')}购物</span></div>
-      <div class="app" onclick="openApp('calendar')">${aIco('calendar','📅','#4ecdc4')}<span>${appLk('calendar')}日历</span></div>
-      <div class="app" onclick="openApp('x')">${aIco('x','𝕏','#000;border:1px solid #333')}<span>${appLk('x')}X</span></div>
-      <div class="app" onclick="openApp('douyin')">${aIco('douyin','🎵','#000;border:1px solid #333')}<span>${appLk('douyin')}抖音</span></div>
-      <div class="app" onclick="openApp('food')">${aIco('food','🍔','#ffb83b')}<span>${appLk('food')}外卖</span></div>
-      <div class="app" onclick="openCouple()">${aIco('couple','💞','#ff8fab')}<span>情侣空间</span></div>
-      <div class="app" onclick="go('tasks')">${aIco('tasks','📋','#f59e0b')}<span>任务便签</span></div>
-      <div class="app" onclick="openApp('games')">${aIco('games','🎮','#6c5ce7')}<span>${appLk('games')}游戏大厅</span></div>
-      <div class="app" onclick="openApp('mail')">${aIco('mail','📮','#f4a93b',(S.mail||[]).some(m=>!m.read)?'<span style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:#ff7eb3;border:2px solid #fff"></span>':'')}<span>${appLk('mail')}信箱</span></div>
-      <div class="app" onclick="openApp('offline')">${aIco('offline','🌹','#e84d6f')}<span>${appLk('offline')}线下约会</span></div>
-     </div>
-     <div class="apppage">
-      <div class="app" onclick="openMusic()">${aIco('music','🎵','linear-gradient(135deg,#ff8fab,#b8a4e3)')}<span>音乐</span></div>
-      <div class="app" onclick="go('cozy')">${aIco('cozyhome','🏡','linear-gradient(135deg,#b07be0,#ff8fab)')}<span>像素小家</span></div>
-      <div class="app" onclick="taleStart()">${aIco('tale','🕯️','linear-gradient(135deg,#3a0010,#1a1a1f)')}<span>规则怪谈</span></div>
-      <div class="app" onclick="dreadStart()">${aIco('dread','🩸','linear-gradient(135deg,#5a0012,#23000a)')}<span>惊悚抉择</span></div>
-     </div>
-    </div>
+    <div class="appswipe" id="appswipe" onscroll="homePgScroll(this)">${homeAppsHtml()}</div>
     <div class="pgdots"><span class="pgdot on" id="pgdot0"></span><span class="pgdot" id="pgdot1"></span></div>
     <div class="dock">
       <div class="app" onclick="openWeChat()">${aIco('wechat','💬','#07c160')}</div>
@@ -1250,6 +1230,72 @@ function renderHome(){
     </div></div>`;
 }
 function homePgScroll(el){const w=el.clientWidth||1;const p=Math.round((el.scrollLeft||0)/w);const d0=$('#pgdot0'),d1=$('#pgdot1');if(d0)d0.className='pgdot'+(p===0?' on':'');if(d1)d1.className='pgdot'+(p===1?' on':'');}
+// ===== 主屏 App（数据驱动 + 长按拖拽换位/换页）=====
+const APPDEFS={
+  wechat:{e:'💬',c:'#07c160',t:'微信'},settings:{e:'⚙️',c:'#8e8e93',t:'设置'},worldbook:{e:'📖',c:'#ff9f43',t:'世界书'},
+  browser:{e:'🌐',c:'#3a7bd5',t:'浏览器',lk:1},moments:{e:'🌸',c:'#ee5a6f',t:'朋友圈',lk:1},spy:{e:'🔍',c:'#5b6b9c',t:'查他手机',lk:1},
+  shop:{e:'🛒',c:'#ff6b6b',t:'购物',lk:1},calendar:{e:'📅',c:'#4ecdc4',t:'日历',lk:1},x:{e:'𝕏',c:'#000;border:1px solid #333',t:'X',lk:1},
+  douyin:{e:'🎵',c:'#000;border:1px solid #333',t:'抖音',lk:1},food:{e:'🍔',c:'#ffb83b',t:'外卖',lk:1},couple:{e:'💞',c:'#ff8fab',t:'情侣空间'},
+  tasks:{e:'📋',c:'#f59e0b',t:'任务便签'},games:{e:'🎮',c:'#6c5ce7',t:'游戏大厅',lk:1},mail:{e:'📮',c:'#f4a93b',t:'信箱',lk:1,badge:1},
+  offline:{e:'🌹',c:'#e84d6f',t:'线下约会',lk:1},music:{e:'🎵',c:'linear-gradient(135deg,#ff8fab,#b8a4e3)',t:'音乐'},
+  cozy:{e:'🏡',c:'linear-gradient(135deg,#b07be0,#ff8fab)',t:'像素小家',icon:'cozyhome'},
+  tale:{e:'🕯️',c:'linear-gradient(135deg,#3a0010,#1a1a1f)',t:'规则怪谈'},dread:{e:'🩸',c:'linear-gradient(135deg,#5a0012,#23000a)',t:'惊悚抉择'}};
+const APPRUN={wechat:()=>openWeChat(),settings:()=>go('settings'),worldbook:()=>go('worldbook'),browser:()=>openApp('browser'),moments:()=>openApp('moments'),spy:()=>openApp('spy'),shop:()=>openApp('shop'),calendar:()=>openApp('calendar'),x:()=>openApp('x'),douyin:()=>openApp('douyin'),food:()=>openApp('food'),couple:()=>openCouple(),tasks:()=>go('tasks'),games:()=>openApp('games'),mail:()=>openApp('mail'),offline:()=>openApp('offline'),music:()=>openMusic(),cozy:()=>go('cozy'),tale:()=>taleStart(),dread:()=>dreadStart()};
+const APP_DEFLAYOUT=[['wechat','settings','worldbook','browser','moments','spy','shop','calendar','x','douyin','food','couple','tasks','games','mail','offline'],['music','cozy','tale','dread']];
+function appLayoutInit(){let L=S.me.appLayout;
+  if(!Array.isArray(L)||L.length<2||!Array.isArray(L[0])||!Array.isArray(L[1]))L=[APP_DEFLAYOUT[0].slice(),APP_DEFLAYOUT[1].slice()];
+  L=[L[0]||[],L[1]||[]];const seen={};const clean=p=>p.filter(k=>APPDEFS[k]&&!seen[k]&&(seen[k]=1));
+  L[0]=clean(L[0]);L[1]=clean(L[1]);
+  Object.keys(APPDEFS).forEach(k=>{if(!seen[k]){L[0].push(k);seen[k]=1;}});
+  S.me.appLayout=L;}
+function appCell(k){const a=APPDEFS[k];if(!a)return '';
+  const badge=(k==='mail'&&(S.mail||[]).some(m=>!m.read))?'<span style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:#ff7eb3;border:2px solid #fff"></span>':'';
+  const lk=a.lk?appLk(k):'';
+  return '<div class="app" data-k="'+k+'" onpointerdown="appDown(event,\''+k+'\')">'+aIco(a.icon||k,a.e,a.c,badge)+'<span>'+lk+a.t+'</span></div>';}
+function homeAppsHtml(){appLayoutInit();return S.me.appLayout.map((pg,pi)=>'<div class="apppage" data-pg="'+pi+'">'+pg.map(appCell).join('')+'</div>').join('');}
+let _aPend=null,_aDrag=null,_aTimer=null,_aFlip=null,_aFlipDir=0;
+function appDown(e,k){if(e.pointerType==='mouse'&&e.button!==0)return;
+  _aPend={k,x:e.clientX,y:e.clientY,t:Date.now()};clearTimeout(_aTimer);
+  _aTimer=setTimeout(()=>{if(_aPend&&!_aDrag)appBeginDrag();},380);}
+function appBeginDrag(){const p=_aPend;if(!p)return;const sw=$('#appswipe');if(!sw)return;
+  const cell=sw.querySelector('.app[data-k="'+p.k+'"]');if(!cell)return;
+  const r=cell.getBoundingClientRect();const g=cell.cloneNode(true);g.className='app appghost';
+  g.style.cssText='position:fixed;left:'+r.left+'px;top:'+r.top+'px;width:'+r.width+'px;margin:0;z-index:9999;pointer-events:none;opacity:.94;transform:scale(1.14);';
+  document.body.appendChild(g);
+  _aDrag={k:p.k,ghost:g,offx:p.x-r.left,offy:p.y-r.top};
+  cell.style.opacity='.25';sw.classList.add('aedit');
+  if(navigator.vibrate)try{navigator.vibrate(15);}catch(_){}
+  appGhostMove(p.x,p.y);}
+function appGhostMove(x,y){if(!_aDrag)return;const g=_aDrag.ghost;g.style.left=(x-_aDrag.offx)+'px';g.style.top=(y-_aDrag.offy)+'px';
+  const sw=$('#appswipe');if(!sw)return;const r=sw.getBoundingClientRect();
+  let dir=0;if(x>r.right-40)dir=1;else if(x<r.left+40)dir=-1;
+  if(dir!==_aFlipDir){_aFlipDir=dir;clearTimeout(_aFlip);if(dir)_aFlip=setTimeout(()=>appFlip(dir),430);}}
+function appFlip(dir){const sw=$('#appswipe');if(!sw||!_aDrag)return;const w=sw.clientWidth;let pg=Math.max(0,Math.min(1,Math.round(sw.scrollLeft/w)+dir));
+  sw.scrollLeft=pg*w;homePgScroll(sw);
+  _aFlip=setTimeout(()=>{if(_aDrag&&_aFlipDir===dir)appFlip(dir);},700);}
+function appMove(e){if(_aDrag){e.preventDefault();appGhostMove(e.clientX,e.clientY);return;}
+  if(_aPend){if(Math.abs(e.clientX-_aPend.x)>12||Math.abs(e.clientY-_aPend.y)>12){clearTimeout(_aTimer);_aPend=null;}}}
+function appUp(e){clearTimeout(_aTimer);clearTimeout(_aFlip);_aFlipDir=0;
+  if(_aDrag){appDrop(e.clientX,e.clientY);return;}
+  if(_aPend){const dx=Math.abs(e.clientX-_aPend.x),dy=Math.abs(e.clientY-_aPend.y),dt=Date.now()-_aPend.t,k=_aPend.k;_aPend=null;
+    if(dx<12&&dy<12&&dt<380){const f=APPRUN[k];if(f)f();}}}
+function appDrop(x,y){const d=_aDrag;_aDrag=null;const sw=$('#appswipe');const k=d.k;
+  if(d.ghost)d.ghost.style.display='none';
+  const tgt=document.elementFromPoint(x,y);
+  if(d.ghost)d.ghost.remove();
+  const tcell=tgt&&tgt.closest?tgt.closest('.app'):null;
+  const tpageEl=tgt&&tgt.closest?tgt.closest('.apppage'):null;
+  let tpg=tpageEl?(+tpageEl.dataset.pg||0):(sw?Math.max(0,Math.min(1,Math.round(sw.scrollLeft/sw.clientWidth))):0);
+  const L=S.me.appLayout;[0,1].forEach(i=>{const j=L[i].indexOf(k);if(j>=0)L[i].splice(j,1);});
+  let idx=L[tpg].length;
+  if(tcell&&tcell.dataset.k&&tcell.dataset.k!==k){const ti=L[tpg].indexOf(tcell.dataset.k);if(ti>=0)idx=ti;}
+  L[tpg].splice(idx,0,k);
+  if(sw){sw.classList.remove('aedit');}
+  save();render();}
+function initAppDrag(){if(window._aDragInit)return;window._aDragInit=1;
+  document.addEventListener('pointermove',appMove,{passive:false});
+  document.addEventListener('pointerup',appUp);document.addEventListener('pointercancel',appUp);}
+initAppDrag();
 // ===== 主屏小组件 =====
 function widInit(){const m=S.me;
   if(!Array.isArray(m.widgets))m.widgets=['couple2','clock','note','mood','disc'];
