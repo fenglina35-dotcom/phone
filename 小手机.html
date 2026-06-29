@@ -267,6 +267,17 @@ body{background:#000;padding:0;}
 .home.tpink .hwidget .hw{color:#b87993;}
 .home.tpink .hwid{background:rgba(255,248,251,.82)!important;border-color:rgba(255,255,255,.65)!important;backdrop-filter:none!important;}
 .home.tpink .hwid .wic{background:rgba(255,182,201,.5)!important;}
+/* ===== 白色主题 ===== */
+.home.twhite{background:linear-gradient(165deg,#ffffff,#f3f3f6 55%,#eaeaee);}
+.home.twhite:before,.home.twhite:after{display:none;}
+.home.twhite .app .ic{background:#ffffff!important;box-shadow:0 6px 15px rgba(150,150,160,.22)!important;}
+.home.twhite .app .ic svg{stroke:#7e8493;}
+.home.twhite .app span{color:#6a6f7d;text-shadow:none;}
+.home.twhite .dock{background:rgba(255,255,255,.72)!important;}
+.home.twhite .pgdot{background:rgba(120,125,140,.3);}
+.home.twhite .pgdot.on{background:#9aa0b0;}
+.home.twhite .hwid{background:rgba(255,255,255,.92)!important;border-color:rgba(0,0,0,.05)!important;backdrop-filter:none!important;box-shadow:0 6px 16px rgba(150,150,160,.16);}
+.home.twhite .hwid .wic{background:rgba(120,128,150,.12)!important;}
 /* 双头像情侣组件 */
 .wcp2{gap:10px;}
 .wcp2 .av2{display:flex;}
@@ -491,7 +502,7 @@ const SHARE_GATE=true, SHARE_PW='52113148890';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v243 · 日历每日心情表改用线条小脸(不再用emoji),做成粉色小卡片;补全10种心情线条(开心/想ta/平静/平淡/难过/烦躁/生气/大哭/累了/生病);兼容旧emoji记录';
+const APP_VER='v244 · 主屏主题新增"白色"(暗黑/淡粉/白色三选一,设置-主屏主题里切);白色主题:浅色背景+白图标+深灰字,情侣空间横幅也跟着变白;日历心情表线条小脸+粉卡';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1216,7 +1227,7 @@ function renderHome(){
   const d=new Date();
   const week=['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
   const hr=d.getHours();const greet=hr<6?'夜深了，早点睡':hr<11?'早安呀小猫':hr<14?'中午好，吃饭了吗':hr<18?'下午好～':hr<23?'晚上好呀':'还不睡吗';
-  return `<div class="home${S.me.theme==='pink'?' tpink':''}" style="${S.me.homeBg?'background:url('+S.me.homeBg+') center/cover;':''}">
+  return `<div class="home${S.me.theme==='pink'?' tpink':S.me.theme==='white'?' twhite':''}" style="${S.me.homeBg?'background:url('+S.me.homeBg+') center/cover;':''}">
     ${homeWidgets()}
     <div class="appswipe" id="appswipe" onscroll="homePgScroll(this)">${homeAppsHtml()}</div>
     <div class="pgdots"><span class="pgdot on" id="pgdot0"></span><span class="pgdot" id="pgdot1"></span></div>
@@ -1321,7 +1332,7 @@ function moodIc(k,size,color){const m=MOODS[k];if(!m)return '';return '<svg view
 function moodKeyOf(v){if(!v)return '';if(MOODS[v])return v;if(EMOJI2MOOD[v])return EMOJI2MOOD[v];return 'calm';}
 function moodGlyph(v,size,color){const k=moodKeyOf(v);return k?moodIc(k,size,color):'';}
 function moodLabel(v){const k=moodKeyOf(v);return k&&MOODS[k]?MOODS[k][0]:'';}
-function wcol(){return (S.me.theme==='pink'&&(!S.me.wColor||S.me.wColor==='#ffffff'))?'#b85c81':(S.me.wColor||'#fff');}
+function wcol(){const t=S.me.theme,def=(!S.me.wColor||S.me.wColor==='#ffffff');if(def&&t==='pink')return '#b85c81';if(def&&t==='white')return '#555a66';return S.me.wColor||'#fff';}
 function _wCard(ic,top,main,onclick){const col=wcol();return `<div class="hwid" style="color:${col}" onclick="${onclick}"><div class="wic">${ic}</div><div class="wbd"><div class="wt">${top}</div>${main}</div></div>`;}
 function wDays(){if(!(S.couple&&S.couple.cid&&S.couple.startDate))return '';const c=getC(S.couple.cid);if(!c)return '';const col=wcol();
   const days=Math.max(0,Math.floor((Date.now()-new Date(S.couple.startDate).getTime())/86400000))+1;
@@ -1646,7 +1657,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="it"><span>${svgIc('image',15,'#bbb')} 主屏壁纸</span><span class="v"><button class="minibtn" onclick="setHomeBg()">${S.me.homeBg?'换':'上传'}</button>${S.me.homeBg?'<button class="minibtn" style="margin-left:6px" onclick="S.me.homeBg=\'\';save();toast(\'已恢复默认\')">恢复默认</button>':''}</span></div>
       <div class="it" onclick="appIconEditor()"><span>${svgIc('image',15,'#bbb')} App 图标美化</span><span class="v">自定义主屏图标 ›</span></div>
       <div class="it" onclick="widgetManager()"><span>${svgIc('star',15,'#bbb')} 主屏组件</span><span class="v">${(()=>{widInit();return S.me.widgets.length;})()}个 · 排序/开关 ›</span></div>
-      <div class="it"><span>${svgIc('heart',15,'#bbb')} 主屏主题</span><span class="v"><button class="minibtn" style="${S.me.theme!=='pink'?'background:#ff8fab;color:#fff':''}" onclick="S.me.theme='';save();render()">暗黑</button><button class="minibtn" style="margin-left:6px;${S.me.theme==='pink'?'background:#ff8fab;color:#fff':''}" onclick="S.me.theme='pink';save();render();toast('换成淡粉色啦 🌸')">淡粉</button></span></div>
+      <div class="it"><span>${svgIc('heart',15,'#bbb')} 主屏主题</span><span class="v"><button class="minibtn" style="${(!S.me.theme)?'background:#ff8fab;color:#fff':''}" onclick="S.me.theme='';save();render()">暗黑</button><button class="minibtn" style="margin-left:6px;${S.me.theme==='pink'?'background:#ff8fab;color:#fff':''}" onclick="S.me.theme='pink';save();render();toast('换成淡粉色啦 🌸')">淡粉</button><button class="minibtn" style="margin-left:6px;${S.me.theme==='white'?'background:#ff8fab;color:#fff':''}" onclick="S.me.theme='white';save();render();toast('换成白色啦 🤍')">白色</button></span></div>
       <div class="it"><span>${svgIc('phone',15,'#bbb')} 通话背景</span><span class="v"><button class="minibtn" onclick="setCallBg()">${S.me.callBg?'换':'上传'}</button>${S.me.callBg?'<button class="minibtn" style="margin-left:6px" onclick="S.me.callBg=\'\';save();render();toast(\'已恢复默认\')">恢复默认</button>':''}</span></div>
       <div class="it" onclick="fetchWeather(true)"><span>${svgIc('weather',15,'#bbb')} 定位天气</span><span class="v">${S.weather?esc(S.weather.place+' '+S.weather.desc+' '+S.weather.temp+'°'):'点击获取 ›'}</span></div>
     </div>
@@ -3587,16 +3598,16 @@ function renderCouple(){cleanStaleGags();const cp=S.couple;const c=cp&&getC(cp.c
     <div class="scroll" style="${BG}"><div class="empty" style="padding:60px 30px;line-height:2.1">${svgIc('heart',46,'#e89db5')}<div style="margin-top:14px">还没绑定～<br>去某个角色的「资料页」点 <b style="color:#e89db5">绑定情侣空间</b><br>（只能绑定一个）</div></div></div>`;
   const days=Math.max(0,Math.floor((Date.now()-new Date(cp.startDate).getTime())/86400000));
   const ROSE='#e89db5',GOLD='#e8b878',BLUE='#9ec5fe',AMBER='#ffc078',RED='#ff6b81',PUR='#c5a6ff';
-  const PINKTH=S.me.theme==='pink';
-  const BANBG=PINKTH?'linear-gradient(135deg,#ffc6da 0%,#ffd9e6 55%,#ffe7f0 100%)':'linear-gradient(135deg,#5b2f44 0%,#3c2b53 55%,#243049 100%)';
-  const BANTX=PINKTH?'#9c4f73':'#f3e6ee',BANBIG=PINKTH?'#b8316e':'#fff',BANSUB=PINKTH?'#bd7c9c':'#e9d9c4';
+  const PINKTH=S.me.theme==='pink',WHITETH=S.me.theme==='white',LIGHTTH=PINKTH||WHITETH;
+  const BANBG=PINKTH?'linear-gradient(135deg,#ffc6da 0%,#ffd9e6 55%,#ffe7f0 100%)':WHITETH?'linear-gradient(135deg,#fbfbfd 0%,#f0f0f4 60%,#eaeaef 100%)':'linear-gradient(135deg,#5b2f44 0%,#3c2b53 55%,#243049 100%)';
+  const BANTX=PINKTH?'#9c4f73':WHITETH?'#5a606e':'#f3e6ee',BANBIG=PINKTH?'#b8316e':WHITETH?'#4a4f5c':'#fff',BANSUB=PINKTH?'#bd7c9c':WHITETH?'#8a909c':'#e9d9c4';
   const HD=(ic,t,col,right)=>`<div style="padding:13px 15px;display:flex;align-items:center;gap:9px;font-weight:600;color:${col};font-size:14px;letter-spacing:.3px;border-bottom:1px solid rgba(255,255,255,.05)">${svgIc(ic,17,col)}<span style="flex:1">${t}</span>${right||''}</div>`;
   const SEC='class="section" style="margin:12px;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.06);background:#17151b"';
   const frame=a=>`<span style="display:inline-block;border-radius:18px;padding:2.5px;background:linear-gradient(135deg,${GOLD},${ROSE})">${av(a,'lg')}</span>`;
   return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">情侣空间</span><span class="r" onclick="coupleSet()">${svgIc('dots',20,'#bbb')}</span></div>
     <div class="scroll" style="${BG}">
-      <div style="margin:14px;border-radius:22px;padding:24px 20px 20px;text-align:center;position:relative;overflow:hidden;background:${BANBG};box-shadow:0 16px 38px rgba(${PINKTH?'232,150,181,.4':'70,30,55,.45'}),inset 0 1px 0 rgba(255,255,255,.12);border:1px solid rgba(255,255,255,${PINKTH?'.5':'.1'})">
-        <div style="position:absolute;inset:0;background:radial-gradient(120% 80% at 50% -12%,rgba(${PINKTH?'255,255,255,.4':'232,176,120,.25'}),transparent 60%);pointer-events:none"></div>
+      <div style="margin:14px;border-radius:22px;padding:24px 20px 20px;text-align:center;position:relative;overflow:hidden;background:${BANBG};box-shadow:0 16px 38px rgba(${PINKTH?'232,150,181,.4':WHITETH?'150,150,160,.25':'70,30,55,.45'}),inset 0 1px 0 rgba(255,255,255,.12);border:1px solid rgba(${WHITETH?'0,0,0,.05':'255,255,255,'+(PINKTH?'.5':'.1')})">
+        <div style="position:absolute;inset:0;background:radial-gradient(120% 80% at 50% -12%,rgba(${LIGHTTH?'255,255,255,.4':'232,176,120,.25'}),transparent 60%);pointer-events:none"></div>
         <div style="display:flex;justify-content:center;gap:16px;align-items:center;margin-bottom:14px;position:relative">${frame(S.me.avatar)}<span style="filter:drop-shadow(0 2px 6px rgba(0,0,0,.3))">${svgIc('heart',26,PINKTH?'#ff7eb3':'#ffc1d4')}</span>${frame(c.avatar)}</div>
         <div style="font-size:14.5px;letter-spacing:.5px;color:${BANTX};position:relative">${esc(S.me.name)} &amp; ${esc(c.remark||c.name)}</div>
         <div style="font-size:46px;font-weight:800;margin:4px 0 2px;color:${BANBIG};letter-spacing:1px;position:relative;text-shadow:0 2px 12px rgba(${PINKTH?'232,150,181,.35':'0,0,0,.3'})">${days}<span style="font-size:15px;font-weight:400;opacity:.85"> 天</span></div>
