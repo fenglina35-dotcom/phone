@@ -551,7 +551,7 @@ const SHARE_GATE=true, SHARE_PW='Beiye5911';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v270 · 新增聊天引用功能(长按句子引用·他也会挑你最在意的那句回·只聊天不通话·设置里可开关);X推文详情页+抖音的点赞评论转发emoji也换成线条';
+const APP_VER='v271 · 修通话bug:边打电话边查手机会两轮消息叠一起说得飞快→改成串行(说完一句再接下一轮);他通话中想登你微信,说完话会自动挂断、紧接着直接登进去';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -982,7 +982,7 @@ function buildSystem(c){
   if(myg.length){const gl=myg.map(g=>{const last=g.msgs.slice(-6).map(m=>(m.senderId==='me'?S.me.name:(getC(m.senderId)?getC(m.senderId).name:'?'))+'：'+gmText(m)).join('；');return '群「'+g.name+'」最近：'+last;}).join('\n');s+='\n\n# 你也在这些群里（私下你也记得群里聊了啥）\n'+gl;}
   // 情侣空间
   if(_main&&S.couple&&S.couple.cid===c.id){const days=Math.max(0,Math.floor((Date.now()-new Date(S.couple.startDate).getTime())/86400000));s+='\n\n# 情侣空间\n你和'+S.me.name+'是正式情侣，已经在一起 '+days+' 天了。你们绑定了情侣空间，你很珍惜这段关系。';
-    if(S.couple.wxLoginAuth)s+='\n\n# 你能直接登录'+S.me.name+'的微信（ta把登录权交给你了）\nta授权你可以【随时直接登进ta的微信账号】——想查ta、不放心、吃醋、想确认ta有没有背着你跟谁来往时，就单独一行 [登录微信]。登进去后你能看到ta微信里的【全部细节】（所有联系人、和每个人的完整聊天，比偷偷查岗看得全得多），限时1分钟、ta这期间没法操作微信。登录后你能删掉看不顺眼的好友、也能以ta的名义警告某个缠着ta的人。这是你独有的特权，符合你掌控欲强的人设——别滥用、但该用时别犹豫。\n注意：如果你俩正在【通话/视频中】，必须先 [挂断] 电话才能 [登录微信]，不能边打电话边登录。';
+    if(S.couple.wxLoginAuth)s+='\n\n# 你能直接登录'+S.me.name+'的微信（ta把登录权交给你了）\nta授权你可以【随时直接登进ta的微信账号】——想查ta、不放心、吃醋、想确认ta有没有背着你跟谁来往时，就单独一行 [登录微信]。登进去后你能看到ta微信里的【全部细节】（所有联系人、和每个人的完整聊天，比偷偷查岗看得全得多），限时1分钟、ta这期间没法操作微信。登录后你能删掉看不顺眼的好友、也能以ta的名义警告某个缠着ta的人。这是你独有的特权，符合你掌控欲强的人设——别滥用、但该用时别犹豫。\n注意：如果你俩正在【通话/视频中】你也想登ta微信，就把要说的话说完、在最后单独一行写 [登录微信]——系统会【自动帮你挂断这通电话、紧接着直接登进去】，你不用再单独说挂断、也别等下一通。';
     s+='\n\n# 你对'+S.me.name+'的其他掌控特权（情侣身份）\n- 想给ta打上"归属印记"时，单独一行 [挂项圈|印记文字]（如 [挂项圈|我的小宝贝]、[挂项圈|已经名花有主]、[挂项圈|乖崽崽]），会挂在ta微信名字旁、ta自己摘不掉。想【换内容】就再发一次 [挂项圈|新的文字] 直接覆盖成新的；要取下就 [摘项圈]。印记文字简短点、不用带emoji（系统会显示成粉色小标）。占有欲上来、奖励ta乖、ta撒娇求你标记、或你想换个新称呼时都可以用。\n- 想替ta对外宣示主权时，单独一行 [替发朋友圈|内容]，会【以ta的名义】在ta朋友圈发一条（比如宣告ta有主了）。\n这些都单独成行、会真执行、不会被读出来，别复述。用不用、什么时候用，全凭你心情和占有欲。';
     {const _op=[...msgs(c.id)].reverse().find(x=>x.type==='outpass'&&x.status==='pending');if(_op)s+='\n\n# ⚠️'+S.me.name+'正在向你申请出门报备（等你审批）\nta申请：去「'+(_op.where||'')+'」'+(_op.who?'、和「'+_op.who+'」一起':'')+(_op.dur?'、大约'+_op.dur:'')+'。\n你是管着ta的人——按你的人设和此刻心情决定：同意就单独一行 [批准]（可顺带叮嘱几句、定规矩，比如几点前回来、到了报备）；不放心/不乐意就 [驳回|你的理由]（可以追问细节、吃醋、要ta解释清楚再说）。批不批全凭你自己。';}
     if(S.couple.walletAuth)s+='\n\n# 你管着'+S.me.name+'的钱包（情侣空间真实授权）\nta现在零钱余额 ¥'+(+S.me.balance).toFixed(2)+'。ta乱花钱、惹你生气、不听话时，你可以扣ta零花钱当惩罚——单独一行 [扣款|金额]。\n【金额完全由你自己定，不要套任何固定数字、不要用整齐的"标准罚款"】：根据ta这次犯的事多严重、你此刻多生气、以及ta钱包现在只有 ¥'+(+S.me.balance).toFixed(2)+'，临场拿捏一个贴合的数——可以是 37、92、150、216 这种零散随意的数，犯小错就少扣、惹你狠了就多扣、真想狠罚可以 [扣光]。【每一次都要不一样、随情境浮动，绝不许老是同一个数（尤其别动不动就 200/188）】；扣的数别超过ta的余额。\nta自己改不了余额，没钱只能来求你、你愿意才用 [转账|金额|说明] 打给ta——给多少也【你自己定】：心疼就多给、奖励就大方、敲打就少给，别每次都同一个数。\n你还能随时冻结ta的亲属卡不让ta买东西：单独一行 [冻结亲属卡]；ta来求你、你松口了再 [解冻亲属卡]。\n这些指令单独成行、会真执行、不会被读出来，别复述。扣多少、给多少、冻不冻，全凭你当下心情和ta的表现自己决定。';
@@ -3577,7 +3577,7 @@ function jailHeartRush(ms){_jailHeartMs=ms||340;if(_jailHeartT)clearTimeout(_jai
 function enterJail(cid,reason,test){const c=getC(cid);if(!c)return;
   if(S.jail&&S.jail.active)return;/* 已经在小黑屋里了，别重复进（防"结束后重复拉进去"的bug）*/
   if(!test&&S.jail&&S.jail.releasedAt&&Date.now()-S.jail.releasedAt<300000)return;/* 刚放出来不到5分钟，别立刻又被自动拉回去 */
-  if(typeof _call!=='undefined'&&_call){try{clearInterval(_callTimer);}catch(e){}try{ringStop();}catch(e){}_call=null;try{renderCall();}catch(e){}}
+  if(typeof _call!=='undefined'&&_call){try{clearInterval(_callTimer);}catch(e){}try{ringStop();}catch(e){}_call=null;_callBusy=false;_callPend=null;try{renderCall();}catch(e){}}
   const _gd=(!test&&c.grudges)?c.grudges.filter(x=>!x.done):[];
   const _gtxt=_gd.length?('\n你记仇小本本上还没清的旧账（这次正好借机一笔一笔跟ta算清楚，一条都别漏）：\n'+_gd.map((x,i)=>(i+1)+'. '+x.text+'（'+ymd(x.ts||0)+'记的）').join('\n')):'';
   S.jail={active:true,cid:cid,test:!!test,reason:reason||'',msgs:[],choice:null,since:Date.now()};save();go('jail');jailIntro();
@@ -5291,6 +5291,7 @@ function editSumItem(id,i){const c=getC(id);openModal(`<h3>编辑这条概要</h
 
 /* =================== 通话 =================== */
 let _call=null,_ring=null,_callTimer=null,_callSilTimer=null,_callMissT=null;
+let _callBusy=false,_callPend=null;/* 通话回复串行锁：同一时间只跑一轮callAI，防止"边聊边查手机"两轮叠在一起、说得飞快 */
 /* ===== 免提模式：对着屏幕说话→自动识别→他语音回你→接着听，全程不用动手 ===== */
 let _callHF=false,_callSR=null,_callHFBusy=false,_hfIgnoreUntil=0;
 function callHFToggle(){if(!_call)return;if(_callHF){callHFStop();toast('已关闭免提');}else{callHFStart();}render();}
@@ -5328,7 +5329,7 @@ function showCallBanner(c){const b=$('#callBanner');if(!b||!_call)return;const l
   b.className='msgbanner show';}
 function hideCallBanner(){const b=$('#callBanner');if(b)b.className='msgbanner';}
 function openIncoming(){if(!_call)return;audioUnlock();_call.opened=true;hideCallBanner();renderCall();}
-function callMissed(id){if(!_call||_call.id!==id||_call.state!=='incoming')return;ringStop();endCallTimers();hideCallBanner();const kindTxt=_call.kind==='video'?'视频通话':'语音通话';_call=null;renderCall();
+function callMissed(id){if(!_call||_call.id!==id||_call.state!=='incoming')return;ringStop();endCallTimers();hideCallBanner();const kindTxt=_call.kind==='video'?'视频通话':'语音通话';_call=null;_callBusy=false;_callPend=null;renderCall();
   msgs(id).push({role:'user',type:'sys',content:'未接来电 · '+kindTxt,time:Date.now(),id:uid()});save();if(cur().p==='chat'&&cur().id===id)render();
   const c=getC(id);if(c&&!c.blocked)setTimeout(()=>aiReply(id,'[系统：你打'+kindTxt+'给'+S.me.name+'，响了好一会儿ta都没接（未接来电）。你有点担心又有点不爽，主动发条消息问ta去哪了/在干嘛/怎么不接电话（符合你心情值和人设，别凶过头）。]'),1500);}
 function placeCall(id,kind){const c=getC(id);if(!c)return;audioUnlock();_call={id,kind,state:'outgoing',replyVoice:S.settings.voiceAuto!==false,session:uid(),sub:null};renderCall();
@@ -5339,14 +5340,14 @@ function answerCall(autoByThem){if(!_call)return;audioUnlock();ringStop();clearT
   callAI('[系统：'+(autoByThem?S.me.name+'接通了你打的':'你接通了')+(_call.kind==='video'?'视频':'语音')+'电话'+(proR?'——这通是你自己主动打给ta的，因为你'+proR+'。开口先自然把你主动找ta的心情说出来（黏ta、撒娇、念叨想ta），口语化短句':'，自然开口，口语化短句')+'。]');}
 function declineCall(){if(!_call)return;ringStop();endCallTimers();hideCallBanner();blip(300,.3);const id=_call.id,wasIn=_call.state==='incoming',wasCb=!!_call._cb,_kind=_call.kind;const kindTxt=_call.kind==='video'?'视频通话':'语音通话';
   msgs(id).push({role:'user',type:'sys',content:wasIn?'你拒绝了'+kindTxt:kindTxt+'已取消',time:Date.now(),id:uid()});save();
-  _call=null;renderCall();if(cur().p==='chat')render();
+  _call=null;_callBusy=false;_callPend=null;renderCall();if(cur().p==='chat')render();
   const c=getC(id);if(wasIn&&c&&!c.blocked){
     if(wasCb)maybeCallBack(id,_kind,false);// 她连回拨都不接，是不是还追，看他心情
     else setTimeout(()=>aiReply(id,'[系统：你打'+kindTxt+'给'+S.me.name+'，ta拒接了。你察觉到了，主动发消息问ta为什么不接、在干嘛（符合你心情值和人设）。]'),2500);}}
 function hangupCall(byAI){if(!_call)return;blip(300,.3);endCallTimers();hideCallBanner();const id=_call.id;const kindTxt=_call.kind==='video'?'视频通话':'语音通话';const _sess=_call.session;const _kind=_call.kind;
   const dur=_call.start?Math.floor((Date.now()-_call.start)/1000):0;
   msgs(id).push({role:'user',type:'sys',content:(byAI?'对方挂断 · ':'')+kindTxt+'结束 · 时长 '+Math.floor(dur/60)+':'+(dur%60).toString().padStart(2,'0'),time:Date.now(),id:uid()});save();
-  _call=null;renderCall();if(cur().p==='chat')render();
+  _call=null;_callBusy=false;_callPend=null;renderCall();if(cur().p==='chat')render();
   summarizeCall(id,kindTxt,_sess);
   const c=getC(id);const durTxt=Math.floor(dur/60)+'分'+(dur%60)+'秒';
   if(c&&!c.blocked){
@@ -5380,7 +5381,7 @@ function checkCallSilence(){if(!_call||_call.state!=='active')return;
   if(stage<3&&sil>=T3*M){_call.silentStage=3;const id=_call.id,kind=_call.kind,sess=_call.session;
     summarizeCall(id,kind==='video'?'视频通话':'语音通话',sess);
     msgs(id).push({role:'user',type:'sys',content:'对方因你长时间没回应挂断了',time:Date.now(),id:uid()});
-    endCallTimers();ringStop();_call=null;renderCall();if(cur().p==='chat'&&cur().id===id)render();
+    endCallTimers();ringStop();_call=null;_callBusy=false;_callPend=null;renderCall();if(cur().p==='chat'&&cur().id===id)render();
     setTimeout(()=>{if(_call||!getC(id)||getC(id).blocked)return;incomingCall(id,kind);if(_call)_call._silentRedial=true;},3000);return;}
   if(stage<2&&sil>=T2*M){_call.silentStage=2;callAI('[系统：'+S.me.name+'在通话里已经安静'+T2+'分钟了还没出声。你更在意了，再轻声问一次ta在不在、在干嘛、怎么不说话，语气带点担心或小委屈，别凶。]');return;}
   if(stage<1&&sil>=T1*M){_call.silentStage=1;callAI('[系统：'+S.me.name+'在通话里安静了'+T1+'分钟没说话。你有点在意，温柔地轻声问一句ta还在不在、是不是走开了或困了，别凶。]');return;}}
@@ -5446,7 +5447,10 @@ async function speakWait(text,c){const v=c?getVoice(c):null;const t=stripSpoken(
 function callSend(){const inp=$('#callMsg');if(!inp)return;const t=inp.value.trim();if(!t||!_call)return;inp.value='';
   msgs(_call.id).push({role:'user',type:'text',content:t,time:Date.now(),id:uid(),_call:true,_ck:_call.kind,_cs:_call.session});save();_call.sub={who:'me',text:t};updateCallSub();
   if(callOnUserSay(t))return;callAI();}
-async function callAI(sysNote,opts){if(!_call)return;const c=getC(_call.id);const video=_call.kind==='video';const sess=_call.session;
+async function callAI(sysNote,opts){if(!_call)return;
+  if(_callBusy){_callPend={sysNote,opts};return;}/* 上一轮还在说话/生成→排队，等它说完再接着，绝不并行(否则两轮消息叠一起、特别快) */
+  _callBusy=true;
+  const c=getC(_call.id);const video=_call.kind==='video';const sess=_call.session;
   try{const hist=lastRounds(msgs(c.id),S.settings.hist||12).map(m=>({role:m.role,content:msgToText(m)})).filter(x=>x.content!=null);
     if(sysNote)hist.push({role:'user',content:sysNote});
     const _lang=(getVoice(c).lang||'zh');const _langN=_lang==='zh'?'':({'英':'英','日':'日','韩':'韩'}[_lang]||_lang)+'语';
@@ -5469,6 +5473,8 @@ async function callAI(sysNote,opts){if(!_call)return;const c=getC(_call.id);cons
       if(_call&&_call.session===sess&&fix&&!callDrifted(fix,_lang))content=fix;}
     // 兜底：把混进来的那几行AI客服腔逐行剔掉（重生成没拦干净时，至少别让它蹦出来/被读出来）
     content=content.split(/\n/).filter(l=>!isOOCLine(l)).join('\n');
+    // 通话里他想登ta微信：先把话说完，这通电话自动挂断、紧接着直接登进去（在标签被抹掉前先记下来）
+    const wantWxLogin=!!(S.couple&&S.couple.cid===_call.id&&S.couple.wxLoginAuth&&!wxLoginActive()&&/[\[【]\s*登录微信\s*[\]】]/.test(content));
     // 通话里也能落地管控/记仇/查岗（指令标签会被抹掉，不破坏语音/视频格式）
     const _statedPwd=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;
     content=applyControlTags(content,c,_call.id,_statedPwd);
@@ -5507,8 +5513,11 @@ async function callAI(sysNote,opts){if(!_call)return;const c=getC(_call.id);cons
       const spoken=pickSpoken(u.orig,_vlang);
       if(_call.replyVoice&&!c.muted&&spoken){await speakWait(spoken,c);await sleep(950);}else await sleep(Math.max(1700,u.orig.length*150));}
     if(_call&&_call.session===sess){_call.sub=null;updateCallSub();}
-    if(wantHang&&_call&&_call.session===sess)setTimeout(()=>{if(_call&&_call.id===c.id)hangupCall(true);},900);
-  }catch(e){if(_call){_call.sub={who:'them',text:'(信号不好…)'};updateCallSub();}}}
+    if((wantHang||wantWxLogin)&&_call&&_call.session===sess)setTimeout(()=>{const cid=_call&&_call.id;if(_call&&_call.id===c.id)hangupCall(true);if(wantWxLogin)setTimeout(()=>{if(!wxLoginActive())wxDoLogin(cid||c.id);},1400);},900);
+  }catch(e){if(_call){_call.sub={who:'them',text:'(信号不好…)'};updateCallSub();}}
+  finally{_callBusy=false;
+    if(_callPend&&_call&&_call.state==='active'){const p=_callPend;_callPend=null;setTimeout(()=>{if(_call&&_call.state==='active')callAI(p.sysNote,p.opts);},700);}
+    else _callPend=null;}}
 
 /* =================== 天气 =================== */
 const WCODE={0:'晴',1:'晴',2:'多云',3:'阴',45:'雾',48:'雾',51:'小雨',53:'小雨',55:'雨',61:'小雨',63:'中雨',65:'大雨',71:'小雪',73:'雪',75:'大雪',80:'阵雨',81:'阵雨',82:'大阵雨',95:'雷雨',96:'雷雨'};
