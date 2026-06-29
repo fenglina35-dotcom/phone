@@ -221,18 +221,20 @@ body{background:#000;padding:0;}
 .hwidget .hg{color:#fff;font-size:16px;font-weight:600;}
 .hwidget .hw{color:rgba(255,255,255,.8);font-size:13px;margin-top:4px;}
 /* 主屏小组件 */
-.hwwrap{position:relative;z-index:1;margin:12px 18px 0;max-height:36vh;overflow-y:auto;scrollbar-width:none;}
+.hwwrap{position:relative;z-index:1;display:grid;grid-template-columns:1fr 1fr;grid-auto-flow:row dense;gap:10px;margin:10px 18px 0;max-height:44vh;overflow-y:auto;scrollbar-width:none;}
 .hwwrap::-webkit-scrollbar{display:none;}
-.hwid{position:relative;display:flex;align-items:center;gap:12px;margin:9px 4px 0;padding:12px 14px;background:rgba(255,255,255,.13);backdrop-filter:blur(10px);border-radius:18px;border:1px solid rgba(255,255,255,.14);cursor:pointer;}
-.hwid .wic{flex:none;width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.16);}
-.hwid .wbd{flex:1;min-width:0;}
+.hwid{position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:8px;min-height:104px;padding:13px;background:rgba(255,255,255,.13);backdrop-filter:blur(10px);border-radius:18px;border:1px solid rgba(255,255,255,.14);cursor:pointer;box-sizing:border-box;}
+.hwid .wic{flex:none;width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.16);}
+.hwid .wbd{flex:none;width:100%;min-width:0;}
 .hwid .wt{font-size:11.5px;opacity:.72;letter-spacing:.3px;}
-.hwid .wm{font-size:17px;font-weight:600;margin-top:2px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;}
-.hwid .wbig{font-size:25px;font-weight:700;line-height:1;}
-.hwid .wbig small{font-size:13px;font-weight:500;opacity:.8;margin-left:3px;}
+.hwid .wm{font-size:15px;font-weight:600;margin-top:2px;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.hwid .wbig{font-size:23px;font-weight:700;line-height:1;}
+.hwid .wbig small{font-size:12px;font-weight:500;opacity:.8;margin-left:3px;}
 @keyframes wspin{to{transform:rotate(360deg)}}
 .wdisc{transform-origin:center;animation:wspin 9s linear infinite;}
-.hnote{position:relative;display:block;margin:9px 4px 0;padding:13px 15px;border-radius:16px 16px 16px 4px;box-shadow:0 8px 22px rgba(0,0,0,.18);cursor:pointer;min-height:48px;}
+/* 宽组件：横跨两列 */
+.wwide{grid-column:1 / -1;flex-direction:row;align-items:center;justify-content:flex-start;min-height:auto;}
+.hnote{grid-column:1 / -1;position:relative;display:block;padding:13px 15px;border-radius:16px;box-shadow:0 8px 22px rgba(0,0,0,.18);cursor:pointer;min-height:48px;box-sizing:border-box;}
 .hnote .nt{font-size:11px;opacity:.55;margin-bottom:3px;display:flex;align-items:center;gap:5px;}
 .hnote .nx{font-size:15px;line-height:1.45;white-space:pre-wrap;word-break:break-word;}
 /* 组件管理·拖动排序 */
@@ -248,33 +250,33 @@ body{background:#000;padding:0;}
 /* ===== 淡粉色主题 ===== */
 .home.tpink{background:linear-gradient(165deg,#ffe5ef,#ffd3e1 50%,#f9cfe0);}
 .home.tpink:before,.home.tpink:after{display:none;}
-.home.tpink .clockw{color:#fff;text-shadow:0 2px 12px rgba(214,120,150,.45);}
-.home.tpink .app .ic{background:rgba(255,255,255,.5)!important;box-shadow:0 7px 16px rgba(232,150,181,.28)!important;}
+.home.tpink .clockw{color:#fff;text-shadow:0 1px 4px rgba(180,90,120,.4);}
+.home.tpink .app .ic{background:#f7d3e1!important;box-shadow:0 7px 16px rgba(232,150,181,.3)!important;}
 .home.tpink .app .ic svg{stroke:#e87fa6;}
 .home.tpink .app span{color:#a25e78;text-shadow:0 1px 2px rgba(255,255,255,.55);}
-.home.tpink .dock{background:rgba(255,255,255,.42)!important;}
+.home.tpink .dock{background:rgba(255,219,232,.6)!important;}
 .home.tpink .pgdot{background:rgba(162,94,120,.3);}
 .home.tpink .pgdot.on{background:#e87fa6;}
-.home.tpink .hwidget{background:rgba(255,255,255,.42);border-color:rgba(255,255,255,.55);}
+.home.tpink .hwidget{background:rgba(255,248,251,.72);border-color:rgba(255,255,255,.6);}
 .home.tpink .hwidget .hg{color:#a25e78;}
 .home.tpink .hwidget .hw{color:#b87993;}
-.home.tpink .hwid{background:rgba(255,255,255,.45);border-color:rgba(255,255,255,.55);}
-.home.tpink .hwid .wic{background:rgba(255,182,201,.45);}
+.home.tpink .hwid{background:rgba(255,248,251,.82)!important;border-color:rgba(255,255,255,.65)!important;backdrop-filter:none!important;}
+.home.tpink .hwid .wic{background:rgba(255,182,201,.5)!important;}
 /* 双头像情侣组件 */
-.wcp2{display:flex;flex-direction:column;align-items:center;gap:9px;padding:15px 14px;}
-.wcp2 .av2{display:flex;gap:-8px;}
-.wcp2 .av2 .cir{width:56px;height:56px;border-radius:50%;border:3px solid rgba(255,255,255,.85);background:rgba(255,182,201,.4);overflow:hidden;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.15);}
+.wcp2{gap:10px;}
+.wcp2 .av2{display:flex;}
+.wcp2 .av2 .cir{width:52px;height:52px;border-radius:50%;border:3px solid rgba(255,255,255,.85);background:rgba(255,182,201,.4);overflow:hidden;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,.15);}
 .wcp2 .av2 .cir:last-child{margin-left:-14px;}
 .wcp2 .av2 .cir img{width:100%;height:100%;object-fit:cover;}
-.wcp2 .d2{font-size:22px;font-weight:700;letter-spacing:1px;}
-.wcp2 .d2 small{font-size:13px;font-weight:500;opacity:.8;margin-left:3px;}
+.wcp2 .d2{font-size:20px;font-weight:700;letter-spacing:1px;}
+.wcp2 .d2 small{font-size:12px;font-weight:500;opacity:.8;margin-left:3px;}
 /* 时钟天气图片卡 */
 .wclk{display:flex;align-items:center;gap:14px;padding:14px 16px;}
 .wclk .clkL{flex:1;min-width:0;}
-.wclk .clkT{font-size:34px;font-weight:300;letter-spacing:1px;line-height:1;}
+.wclk .clkT{font-size:30px;font-weight:300;letter-spacing:1px;line-height:1;}
 .wclk .clkD{font-size:13px;opacity:.85;margin-top:5px;}
 .wclk .clkW{font-size:12.5px;opacity:.8;margin-top:3px;}
-.wclk .clkP{flex:none;width:78px;height:78px;border-radius:15px;overflow:hidden;background:rgba(255,182,201,.3);display:flex;align-items:center;justify-content:center;}
+.wclk .clkP{flex:none;width:66px;height:66px;border-radius:14px;overflow:hidden;background:rgba(255,182,201,.3);display:flex;align-items:center;justify-content:center;}
 .wclk .clkP img{width:100%;height:100%;object-fit:cover;}
 /* ===== 通话 ===== */
 .callscreen{position:absolute;inset:0;z-index:450;display:none;flex-direction:column;align-items:center;color:#fff;background:linear-gradient(165deg,#34344a,#16161e);}
@@ -484,7 +486,7 @@ const SHARE_GATE=true, SHARE_PW='52113148890';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v237 · 淡粉色主题(设置-主屏主题切换):所有App图标/底色/dock变粉;新增双头像+在一起天数组件、时钟天气卡(右侧可上传自己的小图);背景仍可自己上传壁纸';
+const APP_VER='v238 · 主屏组件改成方块网格(方块+长条混排,像iOS);双头像可单独换不影响微信头像;淡粉卡片做实换壁纸字不糊;规则怪谈/惊悚抉择换线条图标;邮箱红点改粉色';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1229,7 +1231,7 @@ function renderHome(){
       <div class="app" onclick="openCouple()">${aIco('couple','💞','#ff8fab')}<span>情侣空间</span></div>
       <div class="app" onclick="go('tasks')">${aIco('tasks','📋','#f59e0b')}<span>任务便签</span></div>
       <div class="app" onclick="openApp('games')">${aIco('games','🎮','#6c5ce7')}<span>${appLk('games')}游戏大厅</span></div>
-      <div class="app" onclick="openApp('mail')">${aIco('mail','📮','#f4a93b',(S.mail||[]).some(m=>!m.read)?'<span style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:#fa5151;border:2px solid #000"></span>':'')}<span>${appLk('mail')}信箱</span></div>
+      <div class="app" onclick="openApp('mail')">${aIco('mail','📮','#f4a93b',(S.mail||[]).some(m=>!m.read)?'<span style="position:absolute;top:-5px;right:-5px;width:14px;height:14px;border-radius:50%;background:#ff7eb3;border:2px solid #fff"></span>':'')}<span>${appLk('mail')}信箱</span></div>
       <div class="app" onclick="openApp('offline')">${aIco('offline','🌹','#e84d6f')}<span>${appLk('offline')}线下约会</span></div>
      </div>
      <div class="apppage">
@@ -1260,39 +1262,51 @@ function wToday(){const d=new Date();return d.getFullYear()+'-'+String(d.getMont
 const WIDS=[['couple2','双头像·天数','两个圆头像+在一起天数（绑定情侣空间后自动算）'],['clock','时钟·天气·小图','时间天气，右边可放一张自己上传的小图'],['days','在一起天数','和ta在一起多少天了（绑定情侣空间后自动算）'],['anniv','纪念日倒数','距离下一个纪念日还有几天'],['tanow','ta此刻','按ta的作息，此刻大概在干嘛'],['note','可爱便签','自己写句文案/碎碎念，贴在主屏'],['mood','今日心情','点一下记录今天的心情'],['disc','正在听','会转的小唱片，显示在听的歌']];
 const MOODS={happy:['开心','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M8.6 14.4c1.5 1.7 5.3 1.7 6.8 0"/>'],love:['想ta','<path d="M12 20s-7-4.3-9.2-8.3A4.8 4.8 0 0 1 12 6a4.8 4.8 0 0 1 9.2 5.7C19 15.7 12 20 12 20z"/>'],calm:['平静','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M9 14.6h6"/>'],tired:['累了','<circle cx="12" cy="12" r="8.4"/><path d="M8 9.6c.8.6 2 .6 2.8 0M13.2 9.6c.8.6 2 .6 2.8 0M9 15c1.5-1.2 4.5-1.2 6 0"/>'],sad:['难过','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M8.6 15.4c1.5-1.7 5.3-1.7 6.8 0"/>'],angry:['气鼓鼓','<circle cx="12" cy="12" r="8.4"/><path d="M7.6 9.4l2.4 1M16.4 9.4l-2.4 1M8.6 15.4c1.5-1.2 5.3-1.2 6.8 0"/>']};
 function moodIc(k,size,color){const m=MOODS[k];if(!m)return '';return '<svg viewBox="0 0 24 24" width="'+(size||22)+'" height="'+(size||22)+'" fill="none" stroke="'+(color||'currentColor')+'" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle">'+m[1]+'</svg>';}
-function _wCard(ic,top,main,onclick){const col=S.me.wColor||'#fff';return `<div class="hwid" style="color:${col}" onclick="${onclick}"><div class="wic">${ic}</div><div class="wbd"><div class="wt">${top}</div>${main}</div></div>`;}
-function wDays(){if(!(S.couple&&S.couple.cid&&S.couple.startDate))return '';const c=getC(S.couple.cid);if(!c)return '';const col=S.me.wColor||'#fff';
+function wcol(){return (S.me.theme==='pink'&&(!S.me.wColor||S.me.wColor==='#ffffff'))?'#b85c81':(S.me.wColor||'#fff');}
+function _wCard(ic,top,main,onclick){const col=wcol();return `<div class="hwid" style="color:${col}" onclick="${onclick}"><div class="wic">${ic}</div><div class="wbd"><div class="wt">${top}</div>${main}</div></div>`;}
+function wDays(){if(!(S.couple&&S.couple.cid&&S.couple.startDate))return '';const c=getC(S.couple.cid);if(!c)return '';const col=wcol();
   const days=Math.max(0,Math.floor((Date.now()-new Date(S.couple.startDate).getTime())/86400000))+1;
   return _wCard(svgIc('heart',23,col),'和 '+esc(c.remark||c.name)+' 在一起','<div class="wbig">第 '+days+' <small>天</small></div>','openCouple()');}
-function wAnniv(){if(!(S.couple&&S.couple.cid))return '';const col=S.me.wColor||'#fff';
+function wAnniv(){if(!(S.couple&&S.couple.cid))return '';const col=wcol();
   const list=(S.couple.anniversaries||[]).filter(a=>a&&a.date);if(!list.length)return '';
   const now=new Date();now.setHours(0,0,0,0);let best=null;
   list.forEach(a=>{const md=a.date.slice(5).split('-');const mo=+md[0],da=+md[1];if(!mo||!da)return;
     for(let yr=0;yr<2;yr++){const d=new Date(now.getFullYear()+yr,mo-1,da);if(d>=now){const diff=Math.round((d-now)/86400000);if(!best||diff<best.diff)best={diff,title:a.title||'纪念日'};break;}}});
   if(!best)return '';const main=best.diff===0?'<div class="wbig">就是今天</div>':'<div class="wbig">'+best.diff+' <small>天后</small></div>';
   return _wCard(svgIc('calendar',22,col),'距 '+esc(best.title),main,'openCouple()');}
-function wTanow(){if(!(S.couple&&S.couple.cid))return '';const c=getC(S.couple.cid);if(!c)return '';const col=S.me.wColor||'#fff';
+function wTanow(){if(!(S.couple&&S.couple.cid))return '';const c=getC(S.couple.cid);if(!c)return '';const col=wcol();
   const wn=whereNow(c);if(!wn)return '';return _wCard(svgIc('location',22,col),esc(c.remark||c.name)+' 此刻','<div class="wm">'+esc(wn)+'</div>','openCouple()');}
-function wDisc(){const col=S.me.wColor||'#fff';const s=_mCur&&S.music&&S.music.songs?S.music.songs.find(x=>x.id===_mCur):null;
+function wDisc(){const col=wcol();const s=_mCur&&S.music&&S.music.songs?S.music.songs.find(x=>x.id===_mCur):null;
   const disc='<svg class="'+(_mPlaying?'wdisc':'')+'" viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="'+col+'" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.4" opacity=".45"/><circle cx="12" cy="12" r="2"/></svg>';
   const top=_mPlaying?'正在听':'音乐';
   const main=s?'<div class="wm">'+esc(s.title)+(s.artist?' · '+esc(s.artist):'')+'</div>':'<div class="wm" style="opacity:.7">还没在听 · 去挑一首</div>';
   return `<div class="hwid" style="color:${col}" onclick="openMusic()"><div class="wic">${disc}</div><div class="wbd"><div class="wt">${top}</div>${main}</div></div>`;}
-function wMood(){const col=S.me.wColor||'#fff';const md=S.me.mood;const has=md.k&&md.date===wToday();
+function wMood(){const col=wcol();const md=S.me.mood;const has=md.k&&md.date===wToday();
   const ic=has?moodIc(md.k,27,col):svgIc('smile',26,col);
   const main=has?'<div class="wm">'+(MOODS[md.k]?MOODS[md.k][0]:'')+'</div>':'<div class="wm" style="opacity:.7">点一下记录今天</div>';
   return `<div class="hwid" style="color:${col}" onclick="wMoodPick()"><div class="wic">${ic}</div><div class="wbd"><div class="wt">今日心情</div>${main}</div></div>`;}
 function wNote(){const n=S.me.note;const paper=n.paper||'#fff7d6',ink=n.ink||'#5b4a2f';
   const txt=n.text&&n.text.trim()?esc(n.text):'<span style="opacity:.5">点这里写点什么…</span>';
   return `<div class="hnote" style="background:${paper};color:${ink}" onclick="wNoteEdit()"><div class="nt">${svgIc('notebook',13,ink)} 便签</div><div class="nx">${txt}</div></div>`;}
-function wCouple2(){if(!(S.couple&&S.couple.cid&&S.couple.startDate))return '';const c=getC(S.couple.cid);if(!c)return '';const col=S.me.wColor||'#fff';
+function wCouple2(){if(!(S.couple&&S.couple.cid&&S.couple.startDate))return '';const c=getC(S.couple.cid);if(!c)return '';const col=wcol();
   const days=Math.max(0,Math.floor((Date.now()-new Date(S.couple.startDate).getTime())/86400000))+1;
-  const cir=(src)=>'<div class="cir">'+(src?'<img src="'+src+'">':svgIc('user',26,col))+'</div>';
-  return `<div class="hwid wcp2" style="color:${col}" onclick="openCouple()"><div class="av2">${cir(S.me.avatar)}${cir(c.avatar)}</div><div class="d2">${days} <small>天</small></div></div>`;}
-function wClock(){const col=S.me.wColor||'#fff';const d=new Date();const week=['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
+  const me=S.me.homeAvMe||S.me.avatar,ta=S.me.homeAvTa||c.avatar;
+  const cir=(src)=>'<div class="cir">'+(src?'<img src="'+src+'">':svgIc('user',20,col))+'</div>';
+  return `<div class="hwid wcp2" style="color:${col}" onclick="cp2Edit()"><div class="av2">${cir(me)}${cir(ta)}</div><div class="d2">${days} <small>天</small></div></div>`;}
+function cp2Edit(){const col='#ff8fab';const me=S.me.homeAvMe||S.me.avatar,c=S.couple&&S.couple.cid?getC(S.couple.cid):null,ta=S.me.homeAvTa||(c&&c.avatar);
+  const pv=(src,who)=>`<div onclick="cp2Pic('${who}')" style="width:62px;height:62px;border-radius:50%;border:2.5px solid #ff8fab;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#3a2a3a;cursor:pointer;margin:0 auto">${src?`<img src="${src}" style="width:100%;height:100%;object-fit:cover">`:svgIc('user',26,'#ff8fab')}</div>`;
+  openModal(`<h3>主屏头像</h3><div class="hint">只改主屏这个小组件的头像，不会动到微信头像。</div>
+   <div style="display:flex;gap:24px;justify-content:center;margin:16px 0 6px">
+     <div style="text-align:center">${pv(me,'me')}<div style="color:#ccc;font-size:13px;margin-top:7px">我</div><button class="minibtn" style="margin-top:5px" onclick="cp2Reset('me')">用微信头像</button></div>
+     <div style="text-align:center">${pv(ta,'ta')}<div style="color:#ccc;font-size:13px;margin-top:7px">${esc((c&&(c.remark||c.name))||'ta')}</div><button class="minibtn" style="margin-top:5px" onclick="cp2Reset('ta')">用微信头像</button></div>
+   </div>
+   <div class="btns" style="margin-top:14px"><button class="btn g" onclick="closeModal();openCouple()">进入情侣空间</button><button class="btn p" onclick="closeModal()">完成</button></div>`);}
+function cp2Pic(who){pickFile('image/*',async f=>{const d=await compress(f,300,.82);if(who==='me')S.me.homeAvMe=d;else S.me.homeAvTa=d;save();render();cp2Edit();toast('主屏头像已换 🌸');});}
+function cp2Reset(who){if(who==='me')S.me.homeAvMe='';else S.me.homeAvTa='';save();render();cp2Edit();}
+function wClock(){const col=wcol();const d=new Date();const week=['周日','周一','周二','周三','周四','周五','周六'][d.getDay()];
   const wx=S.weather&&S.weather.place?esc(S.weather.place)+' '+esc(S.weather.desc)+' '+S.weather.temp+'°':'';
   const pic=S.me.wPic?'<img src="'+S.me.wPic+'">':svgIc('image',26,col);
-  return `<div class="hwid wclk" style="color:${col}"><div class="clkL" onclick="openApp('calendar')"><div class="clkT">${hm()}</div><div class="clkD">${d.getMonth()+1}月${d.getDate()}日 ${week}</div>${wx?'<div class="clkW">'+wx+'</div>':'<div class="clkW" onclick="event.stopPropagation();fetchWeather(true)" style="cursor:pointer">点这获取天气 ›</div>'}</div><div class="clkP" onclick="wPicUpload()">${pic}</div></div>`;}
+  return `<div class="hwid wclk wwide" style="color:${col}"><div class="clkL" onclick="openApp('calendar')"><div class="clkT">${hm()}</div><div class="clkD">${d.getMonth()+1}月${d.getDate()}日 ${week}</div>${wx?'<div class="clkW">'+wx+'</div>':'<div class="clkW" onclick="event.stopPropagation();fetchWeather(true)" style="cursor:pointer">点这获取天气 ›</div>'}</div><div class="clkP" onclick="wPicUpload()">${pic}</div></div>`;}
 function wPicUpload(){pickFile('image/*',async f=>{S.me.wPic=await compress(f,500,.75);save();render();toast('小图已换 🖼️');});}
 function homeWidgets(){widInit();const R={couple2:wCouple2,clock:wClock,days:wDays,anniv:wAnniv,tanow:wTanow,note:wNote,mood:wMood,disc:wDisc};
   const html=S.me.widgets.map(k=>R[k]?R[k]():'').filter(Boolean).join('');
@@ -1352,7 +1366,9 @@ const MICO={
   mail:_MI('<rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M3.6 7l8.4 5.5L20.4 7"/>'),
   offline:_MI('<path d="M8.4 3.5h7.2l-.8 5.1a2.8 2.8 0 0 1-5.6 0zM12 11.4V19M9 19h6"/>'),
   music:_MI('<path d="M19 4 9 6.1v9.4A3 3 0 1 0 11 18V9.7l6-1.2v4.8A3 3 0 1 0 19 16z"/>',true),
-  cozyhome:_MI('<path d="M4 11l8-7 8 7M6.5 9.5V20h11V9.5"/><path d="M10.5 20v-4.5h3V20"/>')
+  cozyhome:_MI('<path d="M4 11l8-7 8 7M6.5 9.5V20h11V9.5"/><path d="M10.5 20v-4.5h3V20"/>'),
+  tale:_MI('<rect x="8.5" y="9" width="7" height="11" rx="1"/><path d="M12 9V6.4"/><path d="M12 2.4c1.5 1.3 2.2 2.5 2.2 3.6a2.2 2.2 0 0 1-4.4 0c0-1.1.7-2.3 2.2-3.6z"/><path d="M6.8 20.2h10.4"/>'),
+  dread:_MI('<path d="M12 3.2c3.2 4.2 6 7.2 6 10.6a6 6 0 0 1-12 0c0-3.4 2.8-6.4 6-10.6z"/>')
 };
 function aIco(key,emoji,bg,extra){const ic=S.me.appIcons&&S.me.appIcons[key];const glyph=ic?`<img src="${ic}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">`:(MICO[key]||emoji);
   return `<div class="ic" style="${ic?'background:#222;':'background:'+bg+';'}color:#fff;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center">${glyph}${extra||''}</div>`;}
