@@ -491,7 +491,7 @@ const SHARE_GATE=true, SHARE_PW='52113148890';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v242 · 修好唱片转动(原来是同心圆转了看不出,加了偏心点+刻度线+transform-box:fill-box,现在肉眼可见在转);组件固定第一页,时钟卡置顶';
+const APP_VER='v243 · 日历每日心情表改用线条小脸(不再用emoji),做成粉色小卡片;补全10种心情线条(开心/想ta/平静/平淡/难过/烦躁/生气/大哭/累了/生病);兼容旧emoji记录';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -858,7 +858,7 @@ function buildSystem(c){
   if(_main&&_off&&_off.memory&&_off.memory.length)s+='\n\n# 你和'+S.me.name+'的线下约会（你们真的在现实里见面约会过，这些都是和'+S.me.name+'——你女朋友——一起的，记清楚约会对象就是ta）\n'+_off.memory.map(offMemText).join('\n')+'\n这些约会都是【已经发生过的过去式】，是你们的共同回忆。别把已经结束的事当成正在进行去反复追问——比如记忆里你们已经在机场告别、她已经走了，就别再一遍遍问她「上飞机了吗/到了吗」。微信聊天里可以自然回味这些线下的事，但要用【普通文字】说，别用旁白【】那种线下格式。';
   if(_main&&isLover(c)){const rp=S.me.report;if(rp&&rp.active)s+='\n\n# '+S.me.name+'此刻的报备（ta主动告诉你ta在干嘛）\nta现在正在「'+rp.active.type+'」，从 '+hm(rp.active.start)+' 开始，已经 '+sleepDurTxt(Date.now()-rp.active.start)+'了。你清楚ta在干嘛、别瞎担心瞎吃醋；但若时长明显离谱（洗澡/吃饭却好几个钟头），你可以起疑、追问。';
     if(rp&&(rp.log||[]).length){const rl=rp.log.slice(0,4);s+='\n\n# '+S.me.name+'最近的报备\n'+rl.map(r=>r.type+' '+hm(r.start)+'→'+hm(r.end)+'（'+sleepDurTxt(r.end-r.start)+'）').join('；');}}
-  if(_main&&isLover(c)&&S.mood&&S.mood.length){const mine=S.mood.filter(m=>m.who==='me').slice(0,6);if(mine.length)s+='\n\n# '+S.me.name+'最近的每日心情（ta在日历「心情表」里自己记的，只有你这个最亲密的人看得到，要懂ta、体贴ta）\n'+mine.map(m=>m.date.slice(5)+'：'+(m.emoji||'')+(m.note?' '+m.note:'')).join('\n');}
+  if(_main&&isLover(c)&&S.mood&&S.mood.length){const mine=S.mood.filter(m=>m.who==='me').slice(0,6);if(mine.length)s+='\n\n# '+S.me.name+'最近的每日心情（ta在日历「心情表」里自己记的，只有你这个最亲密的人看得到，要懂ta、体贴ta）\n'+mine.map(m=>m.date.slice(5)+'：'+(moodLabel(m.emoji)||'')+(m.note?' '+m.note:'')).join('\n');}
   if(_main&&isLover(c)){const cz=S.cozy;
     if(cz&&cz.cid===c.id&&cz.log&&cz.log.length)s+='\n\n# 你和'+S.me.name+'的「像素小家」\n你们有一个一起生活的像素小家，最近你俩在小家里一起：\n'+cz.log.slice(0,5).map(l=>'· '+l.act+'（'+hm(l.ts)+'）').join('\n')+'\n这些是你们温馨的共同日常，聊天时可以自然回味、提起。你想和ta腻在一起时，可以单独一行 [回家] 邀请ta进你们的像素小家。';
     else s+='\n\n# 你们的「像素小家」\n你和'+S.me.name+'有一个一起生活的像素小家（能一起做饭、吃饭、看电影、喂猫米香喂仓鼠奶茶、抱抱睡觉）。想和ta在家里腻着时，单独一行 [回家] 就能邀请ta进小家。';}
@@ -1310,8 +1310,17 @@ function widInit(){const m=S.me;
   if(m.widgets.indexOf('clock')<0)m.widgets.unshift('clock');else if(m.widgets[0]!=='clock'){m.widgets=['clock'].concat(m.widgets.filter(k=>k!=='clock'));}}
 function wToday(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 const WIDS=[['clock','时钟·天气·小图','时间天气，右边可放一张自己上传的小图'],['couple2','双头像·天数','两个圆头像+在一起天数（绑定情侣空间后自动算）'],['mood','今日心情','点一下记录今天的心情'],['disc','正在听','会转的小唱片，显示在听的歌']];
-const MOODS={happy:['开心','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M8.6 14.4c1.5 1.7 5.3 1.7 6.8 0"/>'],love:['想ta','<path d="M12 20s-7-4.3-9.2-8.3A4.8 4.8 0 0 1 12 6a4.8 4.8 0 0 1 9.2 5.7C19 15.7 12 20 12 20z"/>'],calm:['平静','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M9 14.6h6"/>'],tired:['累了','<circle cx="12" cy="12" r="8.4"/><path d="M8 9.6c.8.6 2 .6 2.8 0M13.2 9.6c.8.6 2 .6 2.8 0M9 15c1.5-1.2 4.5-1.2 6 0"/>'],sad:['难过','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M8.6 15.4c1.5-1.7 5.3-1.7 6.8 0"/>'],angry:['气鼓鼓','<circle cx="12" cy="12" r="8.4"/><path d="M7.6 9.4l2.4 1M16.4 9.4l-2.4 1M8.6 15.4c1.5-1.2 5.3-1.2 6.8 0"/>']};
+const MOODS={happy:['开心','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M8.6 14.4c1.5 1.7 5.3 1.7 6.8 0"/>'],love:['想ta','<path d="M12 20s-7-4.3-9.2-8.3A4.8 4.8 0 0 1 12 6a4.8 4.8 0 0 1 9.2 5.7C19 15.7 12 20 12 20z"/>'],calm:['平静','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M9 14.6h6"/>'],tired:['累了','<circle cx="12" cy="12" r="8.4"/><path d="M8 9.6c.8.6 2 .6 2.8 0M13.2 9.6c.8.6 2 .6 2.8 0M9 15c1.5-1.2 4.5-1.2 6 0"/>'],sad:['难过','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M8.6 15.4c1.5-1.7 5.3-1.7 6.8 0"/>'],angry:['气鼓鼓','<circle cx="12" cy="12" r="8.4"/><path d="M7.6 9.4l2.4 1M16.4 9.4l-2.4 1M8.6 15.4c1.5-1.2 5.3-1.2 6.8 0"/>'],
+  neutral:['平淡','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M8.8 14.7h6.4"/>'],
+  distress:['烦躁','<circle cx="12" cy="12" r="8.4"/><path d="M8 9.2l2.4 1.3M16 9.2l-2.4 1.3M9.2 15.4c.9-1.4 4.7-1.4 5.6 0"/>'],
+  cry:['大哭','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01"/><path d="M8.7 15.6c1.4-1.6 5.2-1.6 6.6 0"/><path d="M9 12.4v2.3M15 12.4v2.3"/>'],
+  sick:['生病','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M9 15h6"/><path d="M6.4 16l5 1.3"/>']};
+const MOODK=['happy','love','calm','neutral','sad','distress','angry','cry','tired','sick'];
+const EMOJI2MOOD={'😊':'happy','🙂':'happy','😄':'happy','🥰':'love','❤':'love','😍':'love','😌':'calm','😐':'neutral','😑':'neutral','😔':'sad','😢':'sad','😞':'sad','😣':'distress','😖':'distress','😩':'distress','😤':'distress','😡':'angry','😠':'angry','😭':'cry','😴':'tired','😪':'tired','🤒':'sick','🤧':'sick','😷':'sick'};
 function moodIc(k,size,color){const m=MOODS[k];if(!m)return '';return '<svg viewBox="0 0 24 24" width="'+(size||22)+'" height="'+(size||22)+'" fill="none" stroke="'+(color||'currentColor')+'" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle">'+m[1]+'</svg>';}
+function moodKeyOf(v){if(!v)return '';if(MOODS[v])return v;if(EMOJI2MOOD[v])return EMOJI2MOOD[v];return 'calm';}
+function moodGlyph(v,size,color){const k=moodKeyOf(v);return k?moodIc(k,size,color):'';}
+function moodLabel(v){const k=moodKeyOf(v);return k&&MOODS[k]?MOODS[k][0]:'';}
 function wcol(){return (S.me.theme==='pink'&&(!S.me.wColor||S.me.wColor==='#ffffff'))?'#b85c81':(S.me.wColor||'#fff');}
 function _wCard(ic,top,main,onclick){const col=wcol();return `<div class="hwid" style="color:${col}" onclick="${onclick}"><div class="wic">${ic}</div><div class="wbd"><div class="wt">${top}</div>${main}</div></div>`;}
 function wDays(){if(!(S.couple&&S.couple.cid&&S.couple.startDate))return '';const c=getC(S.couple.cid);if(!c)return '';const col=wcol();
@@ -2083,23 +2092,25 @@ function holidayOf(dateStr){const md=dateStr.slice(5);return HOLIDAYS[md]||'';}
 /* ---------- 每日心情表 ---------- */
 const MOOD_EMOJIS=['😊','🥰','😌','😐','😔','😣','😡','😭','😴','🤒'];
 function moodToday(who){const t=todayStr();return (S.mood||[]).find(m=>m.date===t&&m.who===who);}
-function logMyMood(emoji){const t=todayStr();S.mood=S.mood||[];let e=S.mood.find(m=>m.date===t&&m.who==='me');if(e){e.emoji=emoji;e.time=Date.now();}else S.mood.unshift({id:uid(),date:t,who:'me',emoji,note:'',time:Date.now()});if(S.mood.length>150)S.mood=S.mood.slice(0,150);save();render();toast('记下今天心情啦 '+emoji);}
-function myMoodNote(){const t=todayStr();let e=(S.mood||[]).find(m=>m.date===t&&m.who==='me');const v=prompt('今天想记点啥心情？（他能看到）',e?e.note:'');if(v==null)return;S.mood=S.mood||[];if(e){e.note=v.trim();}else S.mood.unshift({id:uid(),date:t,who:'me',emoji:'📝',note:v.trim(),time:Date.now()});save();render();}
+function logMyMood(emoji){const t=todayStr();S.mood=S.mood||[];let e=S.mood.find(m=>m.date===t&&m.who==='me');if(e){e.emoji=emoji;e.time=Date.now();}else S.mood.unshift({id:uid(),date:t,who:'me',emoji,note:'',time:Date.now()});if(S.mood.length>150)S.mood=S.mood.slice(0,150);save();render();toast('记下今天心情啦 · '+moodLabel(emoji));}
+function myMoodNote(){const t=todayStr();let e=(S.mood||[]).find(m=>m.date===t&&m.who==='me');const v=prompt('今天想记点啥心情？（他能看到）',e?e.note:'');if(v==null)return;S.mood=S.mood||[];if(e){e.note=v.trim();}else S.mood.unshift({id:uid(),date:t,who:'me',emoji:'',note:v.trim(),time:Date.now()});save();render();}
 async function moodDel(mid){if(!await uiConfirm('删掉这条心情记录？'))return;S.mood=(S.mood||[]).filter(m=>m.id!==mid);save();render();}
 async function recordTaMood(cid){const c=getC(cid);if(!c||c.blocked)return;const t=todayStr();if((S.mood||[]).some(m=>m.date===t&&m.who===cid))return;
   const mine=(S.mood||[]).find(m=>m.date===t&&m.who==='me');
-  try{const sys=buildSystem(c)+'\n\n# 现在：在你手机「每日心情表」里记今天的一条\n关于'+S.me.name+'今天的状态、你俩今天的事、你的心情感受，记一句。'+(mine?'（ta今天自己记的心情是：'+(mine.emoji||'')+' '+(mine.note||'')+'，你可以体贴地回应这个）':'')+'\n只输出一行：开头一个最贴切的emoji + 空格 + 一句不超过28字的心情记录，别的都不要、别带方括号。';
+  try{const moodList=MOODK.map(k=>k+'='+MOODS[k][0]).join('、');
+    const sys=buildSystem(c)+'\n\n# 现在：在你手机「每日心情表」里记今天的一条\n关于'+S.me.name+'今天的状态、你俩今天的事、你的心情感受，记一句。'+(mine?'（ta今天自己记的心情是：'+moodLabel(mine.emoji)+' '+(mine.note||'')+'，你可以体贴地回应这个）':'')+'\n从这些心情里挑一个最贴切的（只用英文key）：'+moodList+'\n只输出一行，格式：心情key|一句不超过28字的心情记录。例如：love|今天她对我笑了，心都化了。别的都不要、别带方括号。';
     const r=await chatAPI([{role:'system',content:sys},{role:'user',content:'记今天'}],{max:80,aux:true});
     let line=cleanReply(r).replace(/\n/g,' ').trim();if(!line)return;
-    const em=(line.match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2764}\u{2728}]/u)||['🙂'])[0];
-    let note=line.replace(em,'').replace(/^[\s,，。、]+/,'').slice(0,40)||line.slice(0,40);
-    S.mood=S.mood||[];S.mood.unshift({id:uid(),date:t,who:cid,emoji:em,note,time:Date.now()});if(S.mood.length>150)S.mood=S.mood.slice(0,150);save();if(cur().p==='calendar')render();
+    let mk='calm',note=line;const mm=line.match(/^\s*([a-z]+)\s*[|｜:：]\s*(.+)$/i);
+    if(mm&&MOODS[mm[1].toLowerCase()]){mk=mm[1].toLowerCase();note=mm[2];}else{const em=(line.match(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2764}\u{2728}]/u)||[])[0];if(em){mk=moodKeyOf(em);note=line.replace(em,'');}}
+    note=note.replace(/^[\s,，。、|｜:：]+/,'').slice(0,40)||line.slice(0,40);
+    S.mood=S.mood||[];S.mood.unshift({id:uid(),date:t,who:cid,emoji:mk,note,time:Date.now()});if(S.mood.length>150)S.mood=S.mood.slice(0,150);save();if(cur().p==='calendar')render();
   }catch(e){}}
-function moodSection(){const today=todayStr();const my=moodToday('me');const recent=(S.mood||[]).slice(0,10);
-  const picker=MOOD_EMOJIS.map(e=>`<span onclick="logMyMood('${e}')" style="font-size:23px;cursor:pointer;padding:3px;border-radius:8px;${(my&&my.emoji===e)?'background:#3a2a32':''}">${e}</span>`).join('');
-  const rows=recent.length?recent.map(m=>{const isMe=m.who==='me';const who=isMe?S.me.name:(getC(m.who)?(getC(m.who).remark||getC(m.who).name):'ta');return `<div style="display:flex;align-items:center;gap:6px;font-size:13px;color:#ccc;padding:5px 0;border-top:.5px solid #2a2a2c"><span style="color:#888;width:36px;flex-shrink:0">${m.date.slice(5)}</span><b style="color:${isMe?'#ff8fab':'#9ec5fe'};flex-shrink:0">${esc(who)}</b><span style="font-size:16px">${m.emoji||''}</span><span style="flex:1;min-width:0">${esc(m.note||'')}</span><span onclick="moodDel('${m.id}')" style="color:#fa5151;cursor:pointer;flex-shrink:0">✕</span></div>`;}).join(''):'<div style="color:#777;font-size:12px;padding:6px 0">点上面的表情记今天心情～ta每天也会记一条，你俩都看得到对方</div>';
-  return `<div class="section" style="margin:10px 12px;padding:12px"><div style="font-weight:600;color:#ff8fab;margin-bottom:8px">每日心情表</div>
-    <div style="display:flex;align-items:center;flex-wrap:wrap;margin-bottom:6px">${picker}<span onclick="myMoodNote()" style="margin-left:auto;font-size:13px;color:#54a0ff;cursor:pointer">✎ 写两句</span></div>
+function moodSection(){const my=moodToday('me');const recent=(S.mood||[]).slice(0,10);const sel=my?moodKeyOf(my.emoji):'';
+  const picker=MOODK.map(k=>`<span onclick="logMyMood('${k}')" title="${MOODS[k][0]}" style="cursor:pointer;padding:5px;border-radius:11px;display:inline-flex;${sel===k?'background:rgba(255,126,179,.3)':''}">${moodIc(k,24,'#c25a86')}</span>`).join('');
+  const rows=recent.length?recent.map(m=>{const isMe=m.who==='me';const who=isMe?S.me.name:(getC(m.who)?(getC(m.who).remark||getC(m.who).name):'ta');return `<div style="display:flex;align-items:center;gap:7px;font-size:13px;color:#8a5670;padding:6px 0;border-top:.5px solid rgba(184,92,129,.18)"><span style="color:#c08aa0;width:36px;flex-shrink:0">${m.date.slice(5)}</span><b style="color:${isMe?'#d6568f':'#6f97c9'};flex-shrink:0">${esc(who)}</b><span style="flex-shrink:0;display:inline-flex">${moodGlyph(m.emoji,18,isMe?'#d6568f':'#6f97c9')}</span><span style="flex:1;min-width:0">${esc(m.note||'')}</span><span onclick="moodDel('${m.id}')" style="color:#e08aa0;cursor:pointer;flex-shrink:0">✕</span></div>`;}).join(''):'<div style="color:#b07a90;font-size:12px;padding:6px 0">点上面的小脸记今天心情～ta每天也会记一条，你俩都看得到对方</div>';
+  return `<div style="margin:10px 12px;padding:13px 14px;border-radius:16px;background:linear-gradient(135deg,#ffe3ee,#ffd6e6 70%,#ffe0ef);box-shadow:0 6px 18px rgba(232,150,181,.22)"><div style="font-weight:700;color:#c2407a;margin-bottom:8px">每日心情表</div>
+    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:2px;margin-bottom:4px">${picker}<span onclick="myMoodNote()" style="margin-left:auto;font-size:13px;color:#c2407a;font-weight:600;cursor:pointer">写两句</span></div>
     ${rows}</div>`;}
 function renderCalendar(){const evs=[...S.calendar].sort((a,b)=>a.date<b.date?-1:1);const today=todayStr();
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">日历</span><span class="r" onclick="addCalEvent()">＋</span></div>
