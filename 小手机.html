@@ -551,7 +551,7 @@ const SHARE_GATE=true, SHARE_PW='6565788';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v262 · 线下约会没角色时改成清晰弹窗提示(以前只闪个小toast像打不开):提示去微信新建角色;线下功能本身正常,需先有角色才能约';
+const APP_VER='v263 · 修登录他微信时"他说的话变成别人说的":查手机生成的聊天有时把他自己的话标成"我：",同步识别只认"他："导致说话人弄反;现在对方名/对方才算对方、他/我/角色名都算本人';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -2026,7 +2026,7 @@ async function spyRefresh(id){if(_spyBusy){toast('正在刷新，别急~');retur
       +'"browser":["最近搜索或浏览的1","2","3"],'
       +'"orders":[{"item":"网购/外卖买了啥","amount":数字,"when":"今天/昨天"}],'
       +'"wallet":[{"item":"支出/收入名目","amount":正数或负数}],'
-      +'"wechat":[{"who":"别人(如 同事老张/前任/妈妈，别写'+S.me.name+')","lines":["他：说的话","对方：回的话"]}],'
+      +'"wechat":[{"who":"别人(如 同事老张/前任/妈妈，别写'+S.me.name+')","lines":["他：你自己说的话(一律用「他：」开头)","对方：那个人回的话(一律用「对方：」开头)"]}]（lines里你自己说的必须用"他："开头、对方的用"对方："开头，别用"我："也别写名字）,'
       +'"groups":[{"name":"你在的一个微信群名(如 家族群/兄弟局/公司部门群)","lines":["某成员：说的话","另一成员：回的话","他：你说的话"]}],'
       +'"contacts":[{"name":"通讯录里的人","note":"关系如 同事/家人","added":"如 3天前/上周/很久了"}],'
       +'"friends":["新加的好友及原因"]}';
@@ -4244,7 +4244,13 @@ function hisSeed(cid){const c=getC(cid);const d=hisWxData(cid);const sp=(S.spy&&
   if(!d.seeded&&!(sp.wechat&&sp.wechat.length)&&!(c._gotFromMe&&c._gotFromMe.length)&&!d.friends.length){
     ['阿哲','老周','林姐','小武','妈妈'].forEach((nm,i)=>d.friends.push({id:'hf'+Math.random().toString(36).slice(2,8),name:nm,relation:['哥们','同事','同事','发小','家人'][i],avatar:'',persona:'',msgs:[]}));ch=true;}
   // 和查他手机互通：把 spy 里他的微信联系人/聊天合并进来（查手机刷新出来的新人、聊天都会自动同步过来，不用清空重登）
-  (sp.wechat||[]).forEach(w=>{if(!w||!w.who)return;const ms=(w.lines||[]).map(l=>({r:/^他[:：]/.test(l)?'me':'ta',c:l.replace(/^[^:：]{1,5}[:：]/,''),t:Date.now()}));
+  (sp.wechat||[]).forEach(w=>{if(!w||!w.who)return;const fname=(''+w.who).trim();
+    const ms=(w.lines||[]).map(l=>{const s=''+l;const mm=s.match(/^([^:：]{1,10})[:：]/);const sp2=mm?mm[1].trim():'';const txt=s.replace(/^[^:：]{1,10}[:：]/,'');
+      let r;
+      if(sp2==='他'||sp2==='我'||sp2==='自己'||sp2===c.name||(c.remark&&sp2===c.remark))r='me';/* 角色本人 */
+      else if(sp2===fname||/对方|对面/.test(sp2)||sp2==='对')r='ta';/* 对方 */
+      else r=mm?'ta':'me';/* 有名字但认不出当对方，没标签的当他本人 */
+      return {r,c:txt,t:Date.now()};});
     let f=d.friends.find(x=>x.name===w.who);
     if(!f){d.friends.push({id:'hf'+Math.random().toString(36).slice(2,8),name:w.who,relation:'微信好友',avatar:'',persona:'',msgs:ms});ch=true;}
     else if(!(f.msgs&&f.msgs.length)&&ms.length){f.msgs=ms;ch=true;}});
