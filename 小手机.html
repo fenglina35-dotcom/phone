@@ -551,7 +551,7 @@ const SHARE_GATE=true, SHARE_PW='6565788';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v261 · 通话也修了iOS没声音:接听/拨打/打开来电时同步解锁音频(静音buffer),通话播放经ensureAudio被打断会自动重建,不用退出再进;通话语音照常自动出声';
+const APP_VER='v262 · 线下约会没角色时改成清晰弹窗提示(以前只闪个小toast像打不开):提示去微信新建角色;线下功能本身正常,需先有角色才能约';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -3420,7 +3420,7 @@ function acceptDate(mid){let m,owner;for(const k in S.messages){const x=S.messag
   o.msgs.push({id:uid(),who:'旁白',text:'你答应了TA的约会邀请：'+o.when+' 在「'+o.loc+'」见面。'});save();_off={id:cid,busy:false};go('off',{id:cid});
   offAI('[系统：'+S.me.name+'答应了你的约会邀请，'+o.when+'在「'+o.loc+'」见面。是你主动约的ta，你先到了——用旁白【】描写你到场的场景/动作开场，主动热情点。]');}
 function declineDate(mid){let m;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;break;}}if(m){m.declined=true;save();render();}}
-function openOfflineMenu(){const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){toast('先创建一个角色');return;}
+function openOfflineMenu(){const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){openModal(`<h3>线下约会</h3><div class="hint" style="line-height:1.8">线下约会要先有一个角色才能约见面～<br><br>请先去 <b>微信 → 右上角 ＋ → 新建角色</b> 创建一个，再回来点线下约会就能用了。</div><button class="btn p" style="margin-top:8px" onclick="closeModal();openWeChat()">去新建角色</button><button class="btn g" style="margin-top:8px" onclick="closeModal()">知道了</button>`);return;}
   openModal(`<h3>线下约会</h3><div class="hint">和角色进入一个【独立的约会空间】，有旁白(动作/场景/剧情)+对话，和微信完全分开。约会结束会自动总结成记忆，微信里的ta也会知道你们线下见过面。</div>
    ${cs.map(c=>{const o=S.offline[c.id];return `<div class="section"><div class="it" onclick="offlineEnter('${c.id}')">${av(c.avatar,'sm')}<div class="meta" style="flex:1"><div class="n">${esc(c.remark||c.name)}</div><div class="s">${o&&o.started?'约会中 · '+esc(o.loc||''):(o&&o.memory&&o.memory.length?'有'+o.memory.length+'条约会记忆':'未约过')}</div></div><span class="v">›</span></div></div>`;}).join('')}
    <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
