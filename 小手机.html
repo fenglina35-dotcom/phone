@@ -236,9 +236,11 @@ body{background:#000;padding:0;}
 .hwid .wbig small{font-size:12px;font-weight:500;opacity:.8;margin-left:3px;}
 @keyframes wspin{to{transform:rotate(360deg)}}
 .wdisc{transform-origin:center;transform-box:fill-box;animation:wspin 3.2s linear infinite;}
-/* 桌面小猫 */
-.wpet{align-items:center;justify-content:center;text-align:center;gap:3px;}
-.wpet .petbox{position:relative;width:100%;display:flex;align-items:center;justify-content:center;min-height:60px;}
+/* 桌面小猫（无卡片背景，单独一只浮在桌面） */
+.home .hwid.wpet,.home.tpink .hwid.wpet,.home.twhite .hwid.wpet{background:transparent!important;border:none!important;box-shadow:none!important;backdrop-filter:none!important;}
+.wpet{align-items:center;justify-content:center;text-align:center;gap:3px;padding:4px;}
+.wpet .petbox{position:relative;width:100%;display:flex;align-items:center;justify-content:center;min-height:84px;}
+.wpet .petcat{width:88px;height:auto;}
 .petcat{display:block;overflow:visible;}
 .petday{animation:pbob 2.6s ease-in-out infinite;transform-origin:center bottom;}
 .petsleep{animation:pbreath 3.4s ease-in-out infinite;transform-origin:center bottom;}
@@ -521,7 +523,7 @@ const SHARE_GATE=true, SHARE_PW='52113148890';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v245 · 新增桌面小猫组件:会动的简约电子猫,白天坐着精神(尾巴摇/眨眼/微晃),晚上21点-7点趴着睡(呼吸起伏+Zzz),点一下摸摸头(蹦一下+冒爱心+喵);在主屏组件里可开关排序';
+const APP_VER='v246 · 桌面小猫去掉白色卡片框,单独一只浮在桌面(猫也放大了);白天精神晚上睡,点一下摸摸头';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1419,7 +1421,7 @@ function wPet(){const col=wcol();const hr=new Date().getHours();const night=(hr>
   const cat=night?petCatNight(col):petCatDay(col);
   const zzz=night?`<span class="pzzz" style="color:${col}">z<small>z</small></span>`:'';
   const sub=night?'呼呼…睡着了':'精神满满～';
-  return `<div class="hwid wpet" style="color:${col}" onclick="petTap(this)"><div class="petbox">${cat}${zzz}</div><div class="wbd" style="text-align:center"><div class="wt">桌面小猫</div><div class="wm" style="font-size:13px">${sub}</div></div></div>`;}
+  return `<div class="hwid wpet" style="color:${col}" onclick="petTap(this)"><div class="petbox">${cat}${zzz}</div></div>`;}
 function petTap(el){const box=el.querySelector('.petbox');const c=el.querySelector('.petcat');
   if(c){c.classList.remove('petpet');void c.offsetWidth;c.classList.add('petpet');setTimeout(()=>{try{c.classList.remove('petpet');}catch(_){}},520);}
   if(box){for(let i=0;i<3;i++){const h=document.createElement('span');h.className='pheart';h.style.left=(28+i*20)+'%';h.style.animationDelay=(i*0.12)+'s';h.innerHTML='<svg viewBox="0 0 24 24" width="13" height="13" fill="#ff8fab" stroke="none"><path d="M12 20s-7-4.3-9.2-8.3A4.8 4.8 0 0 1 12 6a4.8 4.8 0 0 1 9.2 5.7C19 15.7 12 20 12 20z"/></svg>';box.appendChild(h);setTimeout(()=>{try{h.remove();}catch(_){}}, 1100);}}
