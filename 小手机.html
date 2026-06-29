@@ -226,8 +226,10 @@ body{background:#000;padding:0;}
 .hwidget .hg{color:#fff;font-size:16px;font-weight:600;}
 .hwidget .hw{color:rgba(255,255,255,.8);font-size:13px;margin-top:4px;}
 /* 主屏小组件 */
-.hwwrap{position:relative;z-index:1;display:grid;grid-template-columns:1fr 1fr;grid-auto-flow:row dense;gap:10px;margin:10px 18px 0;max-height:44vh;overflow-y:auto;scrollbar-width:none;}
-.hwwrap::-webkit-scrollbar{display:none;}
+.wswipe{position:relative;z-index:1;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin:10px 0 0;}
+.wswipe::-webkit-scrollbar{display:none;}
+.wpage{flex:0 0 100%;box-sizing:border-box;padding:0 18px;scroll-snap-align:start;display:grid;grid-template-columns:1fr 1fr;grid-auto-flow:row dense;gap:10px;align-content:start;}
+.wdots{display:flex;justify-content:center;gap:7px;margin:8px 0 0;position:relative;z-index:1;}
 .hwid{position:relative;display:flex;flex-direction:column;align-items:flex-start;justify-content:space-between;gap:8px;min-height:104px;padding:13px;background:rgba(255,255,255,.13);backdrop-filter:blur(10px);border-radius:18px;border:1px solid rgba(255,255,255,.14);cursor:pointer;box-sizing:border-box;}
 .hwid .wic{flex:none;width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.16);}
 .hwid .wbd{flex:none;width:100%;min-width:0;}
@@ -246,6 +248,7 @@ body{background:#000;padding:0;}
 .wlist{margin:4px 0;}
 .wrow{display:flex;align-items:center;gap:11px;padding:12px;margin:8px 0;background:#2c2c2e;border:1px solid #38383a;border-radius:13px;}
 .wrow.wdrag{opacity:.45;border-style:dashed;}
+.wrow.wsep{background:rgba(232,157,181,.12);border-style:dashed;border-color:#e89db5;}
 .wrow .whandle{flex:none;color:#888;cursor:grab;touch-action:none;padding:2px 4px;}
 .wrow .wnm{flex:1;}
 .wrow .wnm small{display:block;color:#888;font-size:11.5px;margin-top:2px;}
@@ -491,7 +494,7 @@ const SHARE_GATE=true, SHARE_PW='52113148890';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v239 · App图标可长按拖拽换位/拖到第二页(轻点照常打开,按住约0.4秒拿起,拖到屏幕边缘自动翻页),布局自动保存;App改为数据驱动,功能不变';
+const APP_VER='v240 · 主屏组件分两页(不再上下滑,多了翻到第二页,下面App不被挤);组件管理拖到"第二页"分隔线下即移到第二页;情侣空间横幅淡粉主题变粉;X/抖音去掉黑边框';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1234,8 +1237,8 @@ function homePgScroll(el){const w=el.clientWidth||1;const p=Math.round((el.scrol
 const APPDEFS={
   wechat:{e:'💬',c:'#07c160',t:'微信'},settings:{e:'⚙️',c:'#8e8e93',t:'设置'},worldbook:{e:'📖',c:'#ff9f43',t:'世界书'},
   browser:{e:'🌐',c:'#3a7bd5',t:'浏览器',lk:1},moments:{e:'🌸',c:'#ee5a6f',t:'朋友圈',lk:1},spy:{e:'🔍',c:'#5b6b9c',t:'查他手机',lk:1},
-  shop:{e:'🛒',c:'#ff6b6b',t:'购物',lk:1},calendar:{e:'📅',c:'#4ecdc4',t:'日历',lk:1},x:{e:'𝕏',c:'#000;border:1px solid #333',t:'X',lk:1},
-  douyin:{e:'🎵',c:'#000;border:1px solid #333',t:'抖音',lk:1},food:{e:'🍔',c:'#ffb83b',t:'外卖',lk:1},couple:{e:'💞',c:'#ff8fab',t:'情侣空间'},
+  shop:{e:'🛒',c:'#ff6b6b',t:'购物',lk:1},calendar:{e:'📅',c:'#4ecdc4',t:'日历',lk:1},x:{e:'𝕏',c:'#1a1a1f',t:'X',lk:1},
+  douyin:{e:'🎵',c:'#1a1a1f',t:'抖音',lk:1},food:{e:'🍔',c:'#ffb83b',t:'外卖',lk:1},couple:{e:'💞',c:'#ff8fab',t:'情侣空间'},
   tasks:{e:'📋',c:'#f59e0b',t:'任务便签'},games:{e:'🎮',c:'#6c5ce7',t:'游戏大厅',lk:1},mail:{e:'📮',c:'#f4a93b',t:'信箱',lk:1,badge:1},
   offline:{e:'🌹',c:'#e84d6f',t:'线下约会',lk:1},music:{e:'🎵',c:'linear-gradient(135deg,#ff8fab,#b8a4e3)',t:'音乐'},
   cozy:{e:'🏡',c:'linear-gradient(135deg,#b07be0,#ff8fab)',t:'像素小家',icon:'cozyhome'},
@@ -1303,7 +1306,13 @@ function widInit(){const m=S.me;
   if(!m.mood||typeof m.mood!=='object')m.mood={k:'',date:''};
   if(!m.wColor)m.wColor='#ffffff';
   // v237 迁移：把双头像、时钟卡补进来一次（不打乱已有顺序）
-  if(!m._wmig237){if(m.widgets.indexOf('couple2')<0)m.widgets.unshift('couple2');if(m.widgets.indexOf('clock')<0)m.widgets.splice(Math.min(1,m.widgets.length),0,'clock');m._wmig237=1;}}
+  if(!m._wmig237){if(m.widgets.indexOf('couple2')<0)m.widgets.unshift('couple2');if(m.widgets.indexOf('clock')<0)m.widgets.splice(Math.min(1,m.widgets.length),0,'clock');m._wmig237=1;}
+  // v240：组件分两页（不再上下滑，多了翻到第二页）
+  const valid=k=>WIDS.some(w=>w[0]===k);
+  if(!Array.isArray(m.widgetPages)){const base=(m.widgets||[]).filter(valid);m.widgetPages=[base.slice(0,2),base.slice(2)];}
+  let P=[Array.isArray(m.widgetPages[0])?m.widgetPages[0]:[],Array.isArray(m.widgetPages[1])?m.widgetPages[1]:[]];
+  const seen={};const clean=a=>a.filter(k=>valid(k)&&!seen[k]&&(seen[k]=1));
+  P[0]=clean(P[0]);P[1]=clean(P[1]);m.widgetPages=P;m.widgets=P[0].concat(P[1]);}
 function wToday(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 const WIDS=[['couple2','双头像·天数','两个圆头像+在一起天数（绑定情侣空间后自动算）'],['clock','时钟·天气·小图','时间天气，右边可放一张自己上传的小图'],['days','在一起天数','和ta在一起多少天了（绑定情侣空间后自动算）'],['anniv','纪念日倒数','距离下一个纪念日还有几天'],['tanow','ta此刻','按ta的作息，此刻大概在干嘛'],['note','可爱便签','自己写句文案/碎碎念，贴在主屏'],['mood','今日心情','点一下记录今天的心情'],['disc','正在听','会转的小唱片，显示在听的歌']];
 const MOODS={happy:['开心','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M8.6 14.4c1.5 1.7 5.3 1.7 6.8 0"/>'],love:['想ta','<path d="M12 20s-7-4.3-9.2-8.3A4.8 4.8 0 0 1 12 6a4.8 4.8 0 0 1 9.2 5.7C19 15.7 12 20 12 20z"/>'],calm:['平静','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M9 14.6h6"/>'],tired:['累了','<circle cx="12" cy="12" r="8.4"/><path d="M8 9.6c.8.6 2 .6 2.8 0M13.2 9.6c.8.6 2 .6 2.8 0M9 15c1.5-1.2 4.5-1.2 6 0"/>'],sad:['难过','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M8.6 15.4c1.5-1.7 5.3-1.7 6.8 0"/>'],angry:['气鼓鼓','<circle cx="12" cy="12" r="8.4"/><path d="M7.6 9.4l2.4 1M16.4 9.4l-2.4 1M8.6 15.4c1.5-1.2 5.3-1.2 6.8 0"/>']};
@@ -1354,9 +1363,16 @@ function wClock(){const col=wcol();const d=new Date();const week=['周日','周�
   const pic=S.me.wPic?'<img src="'+S.me.wPic+'">':svgIc('image',26,col);
   return `<div class="hwid wclk wwide" style="color:${col}"><div class="clkL" onclick="openApp('calendar')"><div class="clkT">${hm()}</div><div class="clkD">${d.getMonth()+1}月${d.getDate()}日 ${week}</div>${wx?'<div class="clkW">'+wx+'</div>':'<div class="clkW" onclick="event.stopPropagation();fetchWeather(true)" style="cursor:pointer">点这获取天气 ›</div>'}</div><div class="clkP" onclick="wPicUpload()">${pic}</div></div>`;}
 function wPicUpload(){pickFile('image/*',async f=>{S.me.wPic=await compress(f,500,.75);save();render();toast('小图已换 🖼️');});}
-function homeWidgets(){widInit();const R={couple2:wCouple2,clock:wClock,days:wDays,anniv:wAnniv,tanow:wTanow,note:wNote,mood:wMood,disc:wDisc};
-  const html=S.me.widgets.map(k=>R[k]?R[k]():'').filter(Boolean).join('');
-  return html?'<div class="hwwrap">'+html+'</div>':'';}
+const WIDR={couple2:wCouple2,clock:wClock,days:wDays,anniv:wAnniv,tanow:wTanow,note:wNote,mood:wMood,disc:wDisc};
+function homeWidgets(){widInit();
+  const pg=keys=>keys.map(k=>WIDR[k]?WIDR[k]():'').filter(Boolean).join('');
+  const P=S.me.widgetPages;const h1=pg(P[0]),h2=pg(P[1]);
+  if(!h1&&!h2)return '';
+  const pages=[h1];if(h2)pages.push(h2);
+  const sw='<div class="wswipe" id="wswipe" onscroll="wPgScroll(this)">'+pages.map(h=>'<div class="wpage">'+h+'</div>').join('')+'</div>';
+  const dots=pages.length>1?'<div class="wdots">'+pages.map((_,i)=>'<span class="pgdot'+(i===0?' on':'')+'" id="wpgdot'+i+'"></span>').join('')+'</div>':'';
+  return sw+dots;}
+function wPgScroll(el){const w=el.clientWidth||1;const p=Math.round((el.scrollLeft||0)/w);for(let i=0;i<3;i++){const d=document.getElementById('wpgdot'+i);if(d)d.className='pgdot'+(i===p?' on':'');}}
 function wNoteEdit(){widInit();const n=S.me.note;const papers=['#fff7d6','#ffd9e0','#d6f0ff','#e2ffd9','#efe2ff','#ffffff'];window._wnPaper=null;
   openModal(`<h3>可爱便签</h3>
     <textarea id="wn_t" rows="4" style="width:100%;box-sizing:border-box;background:#2c2c2e;border:1px solid #38383a;border-radius:10px;color:#eee;padding:10px;font-size:15px" placeholder="写点什么…文案、碎碎念、想说的话">${esc(n.text||'')}</textarea>
@@ -1371,16 +1387,22 @@ function wMoodPick(){widInit();openModal(`<h3>今天心情如何</h3><div style=
 function wMoodSet(k){widInit();S.me.mood={k,date:wToday()};save();closeModal();render();toast('记下啦');}
 // 组件管理（开关 + 拖动排序）
 function widgetManager(){widInit();const meta={};WIDS.forEach(w=>meta[w[0]]=w);
-  const en=S.me.widgets.filter(k=>meta[k]);const off=WIDS.map(w=>w[0]).filter(k=>!S.me.widgets.includes(k));
-  openModal(`<h3>主屏组件</h3><div class="hint">拖左边手柄排序，点开关增减。文字颜色可在下面改。</div>
-   <div style="color:#aaa;font-size:13px;margin:12px 0 2px">已显示（拖动排序）</div>
+  const P=S.me.widgetPages;const en1=P[0].filter(k=>meta[k]),en2=P[1].filter(k=>meta[k]);
+  const off=WIDS.map(w=>w[0]).filter(k=>!S.me.widgets.includes(k));
+  openModal(`<h3>主屏组件</h3><div class="hint">拖左边手柄排序；把组件拖到「第二页」分隔线下面，就到第二页了（主屏左右滑切换两页）。点开关增减。</div>
    <div class="wlist" id="wlist" onpointermove="wDragMove(event)" onpointerup="wDragEnd()" onpointercancel="wDragEnd()">
-   ${en.length?en.map(k=>wManRow(k,meta[k],true)).join(''):'<div style="color:#777;padding:8px">都关掉了</div>'}</div>
+   ${en1.map(k=>wManRow(k,meta[k],true)).join('')}
+   ${wSepRow()}
+   ${en2.map(k=>wManRow(k,meta[k],true)).join('')}</div>
    ${off.length?`<div style="color:#aaa;font-size:13px;margin:14px 0 2px">已关闭（点开启）</div>${off.map(k=>wManRow(k,meta[k],false)).join('')}`:''}
    <div style="display:flex;align-items:center;gap:10px;margin:18px 0 4px"><span style="color:#aaa;font-size:13px">组件文字颜色</span><input type="color" id="wcolor" value="${S.me.wColor||'#ffffff'}" onchange="S.me.wColor=this.value;save();render()" style="width:46px;height:32px;background:none;border:none"><button class="minibtn" onclick="S.me.wColor='#ffffff';save();render();widgetManager()">恢复白</button></div>
    <div class="btns" style="margin-top:10px"><button class="btn p" onclick="closeModal()">完成</button></div>`);}
+function wSepRow(){return `<div class="wrow wsep" data-k="__sep__"><span class="whandle" onpointerdown="wDragDown(event,'__sep__')">${svgIc('dots',20,'#e89db5')}</span><div class="wnm" style="color:#e89db5;font-weight:600">▽ 第二页（下面的拖到这条线以下）</div></div>`;}
 function wManRow(k,w,on){return `<div class="wrow" data-k="${k}">${on?`<span class="whandle" onpointerdown="wDragDown(event,'${k}')">${svgIc('dots',20,'#888')}</span>`:'<span style="width:26px;flex:none"></span>'}<div class="wnm">${w[1]}<small>${w[2]}</small></div><span class="sw ${on?'on':''}" onclick="wToggle('${k}')"></span></div>`;}
-function wToggle(k){widInit();const i=S.me.widgets.indexOf(k);if(i>=0)S.me.widgets.splice(i,1);else S.me.widgets.push(k);save();render();widgetManager();}
+function wToggle(k){widInit();const P=S.me.widgetPages;let found=false;
+  for(const pg of P){const i=pg.indexOf(k);if(i>=0){pg.splice(i,1);found=true;break;}}
+  if(!found)P[0].push(k);
+  S.me.widgets=P[0].concat(P[1]);save();render();widgetManager();}
 let _wdg=null;
 function wDragDown(e,k){const row=e.target.closest('.wrow');if(!row)return;_wdg={k,row};row.classList.add('wdrag');try{row.setPointerCapture(e.pointerId);}catch(_){}e.preventDefault();}
 function wDragMove(e){if(!_wdg)return;e.preventDefault();const list=document.getElementById('wlist');if(!list)return;
@@ -1388,7 +1410,10 @@ function wDragMove(e){if(!_wdg)return;e.preventDefault();const list=document.get
   for(const r of rows){if(r===_wdg.row)continue;const b=r.getBoundingClientRect();if(y<b.top+b.height/2){after=r;break;}}
   if(after){if(after!==_wdg.row.nextSibling)list.insertBefore(_wdg.row,after);}else if(_wdg.row!==list.lastElementChild)list.appendChild(_wdg.row);}
 function wDragEnd(){if(!_wdg)return;_wdg.row.classList.remove('wdrag');const list=document.getElementById('wlist');
-  if(list){const order=[...list.querySelectorAll('.wrow')].map(r=>r.dataset.k);if(order.length){const off=S.me.widgets.filter(k=>order.indexOf(k)<0);S.me.widgets=order.concat(off.filter(k=>order.indexOf(k)<0));save();render();}}
+  if(list){const order=[...list.querySelectorAll('.wrow')].map(r=>r.dataset.k);
+    const real=k=>k&&k!=='__sep__'&&WIDS.some(w=>w[0]===k);const si=order.indexOf('__sep__');
+    let p1,p2;if(si<0){p1=order.filter(real);p2=[];}else{p1=order.slice(0,si).filter(real);p2=order.slice(si+1).filter(real);}
+    S.me.widgetPages=[p1,p2];S.me.widgets=p1.concat(p2);save();render();}
   _wdg=null;}
 // 简约线条图标库（白色，替代 emoji，更高级）
 const _MI=(p,f)=>'<svg viewBox="0 0 24 24" width="26" height="26" fill="'+(f?'#fff':'none')+'" stroke="'+(f?'none':'#fff')+'" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>';
@@ -3570,17 +3595,20 @@ function renderCouple(){cleanStaleGags();const cp=S.couple;const c=cp&&getC(cp.c
     <div class="scroll" style="${BG}"><div class="empty" style="padding:60px 30px;line-height:2.1">${svgIc('heart',46,'#e89db5')}<div style="margin-top:14px">还没绑定～<br>去某个角色的「资料页」点 <b style="color:#e89db5">绑定情侣空间</b><br>（只能绑定一个）</div></div></div>`;
   const days=Math.max(0,Math.floor((Date.now()-new Date(cp.startDate).getTime())/86400000));
   const ROSE='#e89db5',GOLD='#e8b878',BLUE='#9ec5fe',AMBER='#ffc078',RED='#ff6b81',PUR='#c5a6ff';
+  const PINKTH=S.me.theme==='pink';
+  const BANBG=PINKTH?'linear-gradient(135deg,#ffc6da 0%,#ffd9e6 55%,#ffe7f0 100%)':'linear-gradient(135deg,#5b2f44 0%,#3c2b53 55%,#243049 100%)';
+  const BANTX=PINKTH?'#9c4f73':'#f3e6ee',BANBIG=PINKTH?'#b8316e':'#fff',BANSUB=PINKTH?'#bd7c9c':'#e9d9c4';
   const HD=(ic,t,col,right)=>`<div style="padding:13px 15px;display:flex;align-items:center;gap:9px;font-weight:600;color:${col};font-size:14px;letter-spacing:.3px;border-bottom:1px solid rgba(255,255,255,.05)">${svgIc(ic,17,col)}<span style="flex:1">${t}</span>${right||''}</div>`;
   const SEC='class="section" style="margin:12px;border-radius:16px;overflow:hidden;border:1px solid rgba(255,255,255,.06);background:#17151b"';
   const frame=a=>`<span style="display:inline-block;border-radius:18px;padding:2.5px;background:linear-gradient(135deg,${GOLD},${ROSE})">${av(a,'lg')}</span>`;
   return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">情侣空间</span><span class="r" onclick="coupleSet()">${svgIc('dots',20,'#bbb')}</span></div>
     <div class="scroll" style="${BG}">
-      <div style="margin:14px;border-radius:22px;padding:24px 20px 20px;text-align:center;position:relative;overflow:hidden;background:linear-gradient(135deg,#5b2f44 0%,#3c2b53 55%,#243049 100%);box-shadow:0 16px 38px rgba(70,30,55,.45),inset 0 1px 0 rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.1)">
-        <div style="position:absolute;inset:0;background:radial-gradient(120% 80% at 50% -12%,rgba(232,176,120,.25),transparent 60%);pointer-events:none"></div>
-        <div style="display:flex;justify-content:center;gap:16px;align-items:center;margin-bottom:14px;position:relative">${frame(S.me.avatar)}<span style="filter:drop-shadow(0 2px 6px rgba(0,0,0,.3))">${svgIc('heart',26,'#ffc1d4')}</span>${frame(c.avatar)}</div>
-        <div style="font-size:14.5px;letter-spacing:.5px;color:#f3e6ee;position:relative">${esc(S.me.name)} &amp; ${esc(c.remark||c.name)}</div>
-        <div style="font-size:46px;font-weight:800;margin:4px 0 2px;color:#fff;letter-spacing:1px;position:relative;text-shadow:0 2px 12px rgba(0,0,0,.3)">${days}<span style="font-size:15px;font-weight:400;opacity:.85"> 天</span></div>
-        <div style="font-size:11.5px;color:#e9d9c4;opacity:.85;letter-spacing:1.5px;position:relative">相伴自 ${cp.startDate}</div>
+      <div style="margin:14px;border-radius:22px;padding:24px 20px 20px;text-align:center;position:relative;overflow:hidden;background:${BANBG};box-shadow:0 16px 38px rgba(${PINKTH?'232,150,181,.4':'70,30,55,.45'}),inset 0 1px 0 rgba(255,255,255,.12);border:1px solid rgba(255,255,255,${PINKTH?'.5':'.1'})">
+        <div style="position:absolute;inset:0;background:radial-gradient(120% 80% at 50% -12%,rgba(${PINKTH?'255,255,255,.4':'232,176,120,.25'}),transparent 60%);pointer-events:none"></div>
+        <div style="display:flex;justify-content:center;gap:16px;align-items:center;margin-bottom:14px;position:relative">${frame(S.me.avatar)}<span style="filter:drop-shadow(0 2px 6px rgba(0,0,0,.3))">${svgIc('heart',26,PINKTH?'#ff7eb3':'#ffc1d4')}</span>${frame(c.avatar)}</div>
+        <div style="font-size:14.5px;letter-spacing:.5px;color:${BANTX};position:relative">${esc(S.me.name)} &amp; ${esc(c.remark||c.name)}</div>
+        <div style="font-size:46px;font-weight:800;margin:4px 0 2px;color:${BANBIG};letter-spacing:1px;position:relative;text-shadow:0 2px 12px rgba(${PINKTH?'232,150,181,.35':'0,0,0,.3'})">${days}<span style="font-size:15px;font-weight:400;opacity:.85"> 天</span></div>
+        <div style="font-size:11.5px;color:${BANSUB};opacity:.9;letter-spacing:1.5px;position:relative">相伴自 ${cp.startDate}</div>
       </div>
       <div style="display:flex;gap:8px;margin:0 12px 6px">
         <button class="minibtn" id="coutab1" style="flex:1;display:flex;align-items:center;justify-content:center;gap:5px;${_couTab===2?'background:#2a2730;color:#bbb':'background:linear-gradient(135deg,#e89db5,#c77fae);color:#fff'}" onclick="couTab(1)">${svgIc('heart',14,_couTab===2?'#bbb':'#fff')}甜蜜日常</button>
