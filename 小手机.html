@@ -551,7 +551,7 @@ const SHARE_GATE=true, SHARE_PW='6565788';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v265 · 主动消息时段存不了的真因:type=time选择器在某些安卓浏览器取不到值,改成整点数字框(0-23点)兼容所有浏览器,存完会回显确认;时段+存按钮常显';
+const APP_VER='v266 · 查ta手机里新增「设置」App:可悄悄改ta的手机密码(同时也是登ta微信的密码),改完1-2分钟内ta会发现但不知道新密码,按人设质问/吃醋';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1903,8 +1903,8 @@ function spyPinDel(id){if(_spyLockUntil[id]&&Date.now()<_spyLockUntil[id])return
 function spyExit(id){spyLogView(id);_spyUnlock[id]=false;_spyApp=null;_spyPin='';_spyShake=false;back();}
 function spyOpen(id,app){_spyApp=app||null;if(cur().p==='spy')render();}
 function spyBusted(id){const c=getC(id);if(c&&!c.blocked)scheduleReply(id,'[系统：'+S.me.name+'在偷偷试你的手机密码，连输了好几次错的、被你逮到了！你发现ta在查你手机、有点不信任你。按你人设反应（吃醋/质问/委屈/强势/反过来逼问ta想查什么都行），并自己决定要不要把密码告诉ta。]');toast('输错太多次，ta察觉到了…');}
-const SPY_APPS=[['wechat','微信','💬','#07c160'],['album','相册','🖼️','#c084fc'],['bank','银行','🏦','#22c55e'],['diary','日记','📔','#fb7185'],['todo','今日日程','📋','#f59e0b'],['shop','购物','🛒','#fb923c'],['calls','通话','📞','#38bdf8'],['browser','浏览器','🌐','#34d399'],['contacts','通讯录','👤','#f472b6'],['grudge','记仇本','📓','#ef4444'],['date','约会','🌹','#ff8fab'],['watch','监控我','🔍','#6366f1']];
-const SPYICON={wechat:'chat',album:'image',bank:'bank',diary:'book',todo:'calendar',shop:'bag',calls:'phone',browser:'globe',contacts:'user',grudge:'notebook',date:'glass',watch:'search'};
+const SPY_APPS=[['wechat','微信','💬','#07c160'],['album','相册','🖼️','#c084fc'],['bank','银行','🏦','#22c55e'],['diary','日记','📔','#fb7185'],['todo','今日日程','📋','#f59e0b'],['shop','购物','🛒','#fb923c'],['calls','通话','📞','#38bdf8'],['browser','浏览器','🌐','#34d399'],['contacts','通讯录','👤','#f472b6'],['grudge','记仇本','📓','#ef4444'],['date','约会','🌹','#ff8fab'],['watch','监控我','🔍','#6366f1'],['settings','设置','⚙️','#8e8e93']];
+const SPYICON={wechat:'chat',album:'image',bank:'bank',diary:'book',todo:'calendar',shop:'bag',calls:'phone',browser:'globe',contacts:'user',grudge:'notebook',date:'glass',watch:'search',settings:'gear'};
 function spyHome(id,c,d){const now=new Date();const wk=['周日','周一','周二','周三','周四','周五','周六'][now.getDay()];
   if(!d)return `<div class="nav" style="background:#000"><span class="l" onclick="spyExit('${id}')" style="color:#ccc">‹</span><span class="t" style="color:#eee">${esc(c.remark||c.name)}的手机</span><span class="r"></span></div><div class="scroll" style="background:#000"><div style="text-align:center;padding:50px 24px;color:#aaa;line-height:2">🔓 解锁成功～<br>第一次进来，点下面生成一下ta手机里的内容</div><div style="padding:0 30px"><button class="btn p" onclick="spyRefresh('${id}')">${_spyBusy?'⏳ 生成中…':'📲 生成ta的手机内容'}</button></div></div>`;
   const bal=(d.balance!=null)?+d.balance:(d.wallet||[]).reduce((s,w)=>s+(+w.amount||0),0);
@@ -1952,6 +1952,20 @@ function spyAppView(id,c,app){const d=S.spy[id]||{};
   if(app==='wechat'){const items=spyWxList(id,c,d);
     const rows=items.map(it=>`<div style="display:flex;align-items:center;gap:11px;padding:11px 14px;background:${it.pin?'#161616':'#0e0e0e'};border-bottom:.5px solid #222">${`<div onclick="spyOpen('${id}','${it.k}')" style="display:flex;align-items:center;gap:11px;flex:1;min-width:0;cursor:pointer">${av(it.avatar,'sm')}<div style="flex:1;min-width:0"><div style="font-size:15px;color:#eee;font-weight:500">${esc(it.name)}${it.pin?' <span style="font-size:10px;color:#fff;background:#fa9d3b;border-radius:4px;padding:0 4px;vertical-align:middle">置顶</span>':''}</div><div style="font-size:12px;color:#888;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc((it.prev||'').slice(0,26))}</div></div></div>`}</div>`).join('');
     return `<div class="nav" style="background:#161616"><span class="l" onclick="spyOpen('${id}','')" style="color:#ccc">‹</span><span class="t" style="color:#eee">微信</span><span class="r"></span></div><div class="scroll" style="background:#0e0e0e">${rows}<div style="height:20px"></div></div>`;}
+  if(app==='settings'){const pw=spyPwd(c);
+    return `<div class="nav" style="background:#161616"><span class="l" onclick="spyOpen('${id}','')" style="color:#ccc">‹</span><span class="t" style="color:#eee">设置</span><span class="r"></span></div>
+      <div class="scroll" style="background:#000">
+        <div style="margin:14px;padding:16px;background:#16161a;border-radius:14px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">${svgIc('lock',20,'#8e8e93')}<span style="font-size:15px;color:#eee;font-weight:600">手机密码 / 微信登录密码</span></div>
+          <div style="font-size:12px;color:#888;line-height:1.7;margin:6px 0 14px">改了之后，解锁ta手机、登录ta微信都用新密码。<br><span style="color:#fa9d3b">悄悄改掉，ta过一会儿会发现哦～</span></div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="spynewpw" type="tel" inputmode="numeric" maxlength="4" placeholder="新4位数字密码" value="" style="flex:1;background:#0e0e0e;border:1px solid #333;color:#fff;border-radius:10px;padding:11px 13px;font-size:16px;letter-spacing:3px">
+            <button class="btn p" style="width:auto;padding:11px 18px;margin:0;white-space:nowrap" onclick="spyChangePwd('${id}')">改密码</button>
+          </div>
+          <div style="font-size:11px;color:#666;margin-top:10px">当前密码：<span style="color:#aaa;letter-spacing:2px">${esc(''+pw)}</span></div>
+        </div>
+        <div style="text-align:center;color:#666;font-size:11px;padding:0 16px 16px">改完密码，下次进ta手机/登ta微信都要输新密码。</div>
+      </div>`;}
 
   let title='',body='';
   if(app==='album'){title='🖼️ 相册';body=(d.album&&d.album.length)?'<div style="padding:12px">'+d.album.map(a=>`<div style="background:#1c1c1e;border-radius:10px;padding:14px;margin-bottom:8px;color:#ccc;font-size:13px">📷 ${esc(a)}</div>`).join('')+'</div>':'<div class="empty" style="padding:34px">相册是空的</div>';}
@@ -1977,6 +1991,12 @@ function spyAppView(id,c,app){const d=S.spy[id]||{};
 function spyTodoToggle(id,i){const d=S.spy[id];if(!d||!d.todo||!d.todo.items||!d.todo.items[i])return;d.todo.items[i].done=!d.todo.items[i].done;save();render();}
 function spyWatchDel(id,i){const d=S.spy[id];if(!d||!d.watched)return;d.watched.splice(i,1);save();render();}
 function spyWatchRefresh(id){const d=S.spy[id];if(!d)return;const act=myActivity(id);const lines=(act||'').split('\n').map(x=>x.replace(/^[·\-•\s]+/,'').trim()).filter(x=>x&&x.length>1&&!/^#/.test(x));d.watched=lines.slice(0,20);save();render();toast('已刷新ta看到的动态👁️');}
+function spyChangePwd(id){const c=getC(id);if(!c)return;const el=document.getElementById('spynewpw');const v=(el?el.value:'').trim();
+  if(!/^\d{4}$/.test(v)){toast('请输入4位数字密码');return;}
+  const sp=getSpy(c);const old=spyPwd(c);
+  if(v===String(old)){toast('和原来的密码一样哦');return;}
+  sp.pwd=v;save();render();toast('密码已改成 '+v+' 🔒');
+  if(c&&!c.blocked)setTimeout(()=>{const cc=getC(id);if(cc&&!cc.blocked)scheduleReply(id,'[系统：你刚发现自己手机的解锁密码被'+S.me.name+'偷偷改掉了！原来的密码进不去了，你并不知道改成了什么。你意识到ta动了你手机、还改了你的密码，心里很复杂。按你人设反应（吃醋/委屈/质问/强势/反过来逼问ta为什么改、是不是不信任你、想查什么），自己决定要不要逼ta把新密码说出来。]');},(60+Math.floor(Math.random()*60))*1000);}
 
 // 他的记仇小本本（在他手机里；他自己会划掉，你也能手动加/删）
 function spyGrudgeSec(id){const c=getC(id);if(!c)return '';const g=grudgesOf(c);const undone=g.filter(x=>!x.done).length;
