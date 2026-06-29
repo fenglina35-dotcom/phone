@@ -220,6 +220,28 @@ body{background:#000;padding:0;}
 .hwidget{position:relative;z-index:1;margin:18px 22px 0;background:rgba(255,255,255,.12);backdrop-filter:blur(10px);border-radius:18px;padding:14px 16px;border:1px solid rgba(255,255,255,.12);}
 .hwidget .hg{color:#fff;font-size:16px;font-weight:600;}
 .hwidget .hw{color:rgba(255,255,255,.8);font-size:13px;margin-top:4px;}
+/* 主屏小组件 */
+.hwwrap{position:relative;z-index:1;margin:12px 18px 0;max-height:36vh;overflow-y:auto;scrollbar-width:none;}
+.hwwrap::-webkit-scrollbar{display:none;}
+.hwid{position:relative;display:flex;align-items:center;gap:12px;margin:9px 4px 0;padding:12px 14px;background:rgba(255,255,255,.13);backdrop-filter:blur(10px);border-radius:18px;border:1px solid rgba(255,255,255,.14);cursor:pointer;}
+.hwid .wic{flex:none;width:40px;height:40px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.16);}
+.hwid .wbd{flex:1;min-width:0;}
+.hwid .wt{font-size:11.5px;opacity:.72;letter-spacing:.3px;}
+.hwid .wm{font-size:17px;font-weight:600;margin-top:2px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;}
+.hwid .wbig{font-size:25px;font-weight:700;line-height:1;}
+.hwid .wbig small{font-size:13px;font-weight:500;opacity:.8;margin-left:3px;}
+@keyframes wspin{to{transform:rotate(360deg)}}
+.wdisc{transform-origin:center;animation:wspin 9s linear infinite;}
+.hnote{position:relative;display:block;margin:9px 4px 0;padding:13px 15px;border-radius:16px 16px 16px 4px;box-shadow:0 8px 22px rgba(0,0,0,.18);cursor:pointer;min-height:48px;}
+.hnote .nt{font-size:11px;opacity:.55;margin-bottom:3px;display:flex;align-items:center;gap:5px;}
+.hnote .nx{font-size:15px;line-height:1.45;white-space:pre-wrap;word-break:break-word;}
+/* 组件管理·拖动排序 */
+.wlist{margin:4px 0;}
+.wrow{display:flex;align-items:center;gap:11px;padding:12px;margin:8px 0;background:#2c2c2e;border:1px solid #38383a;border-radius:13px;}
+.wrow.wdrag{opacity:.45;border-style:dashed;}
+.wrow .whandle{flex:none;color:#888;cursor:grab;touch-action:none;padding:2px 4px;}
+.wrow .wnm{flex:1;}
+.wrow .wnm small{display:block;color:#888;font-size:11.5px;margin-top:2px;}
 .app .ic{background:rgba(255,255,255,.12);box-shadow:0 6px 16px rgba(0,0,0,.25);position:relative;z-index:1;}
 .apps,.dock{position:relative;z-index:1;}
 .dock{background:rgba(255,255,255,.12);backdrop-filter:blur(10px);}
@@ -431,7 +453,7 @@ const SHARE_GATE=true, SHARE_PW='52113148890';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v235 · 新增"一键踢人"清场能力:SHARE_EPOCH代数号,想清场时加1就让所有老设备重新输新口令(她自己有存档永不被踢);兼容现有已解锁用户,平时不影响任何人';
+const APP_VER='v236 · 主屏可爱小组件:在一起天数/纪念日倒数/ta此刻/可爱便签(可改纸色字色)/今日心情/会转的唱片;设置-主屏组件里可拖动排序+开关+改文字颜色;全用线条图标无emoji';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1158,7 +1180,8 @@ function renderHome(){
   const hr=d.getHours();const greet=hr<6?'夜深了，早点睡':hr<11?'早安呀小猫':hr<14?'中午好，吃饭了吗':hr<18?'下午好～':hr<23?'晚上好呀':'还不睡吗';
   return `<div class="home" style="${S.me.homeBg?'background:url('+S.me.homeBg+') center/cover;':''}">
     <div class="clockw"><div class="hh">${hm()}</div><div class="dd">${d.getMonth()+1}月${d.getDate()}日 ${week}</div></div>
-    <div class="hwidget"><div class="hg">${greet} 🐾</div>${S.weather&&S.weather.place?`<div class="hw">${S.weather.place} · ${esc(S.weather.desc)} ${S.weather.temp}°`+(S.weather.rain?' ☔记得带伞':'')+`</div>`:'<div class="hw" onclick="fetchWeather(true)">点这里获取天气 ›</div>'}</div>
+    <div class="hwidget"><div class="hg">${greet}</div>${S.weather&&S.weather.place?`<div class="hw">${S.weather.place} · ${esc(S.weather.desc)} ${S.weather.temp}°`+(S.weather.rain?' · 记得带伞':'')+`</div>`:'<div class="hw" onclick="fetchWeather(true)">点这里获取天气 ›</div>'}</div>
+    ${homeWidgets()}
     <div class="appswipe" id="appswipe" onscroll="homePgScroll(this)">
      <div class="apppage">
       <div class="app" onclick="openWeChat()">${aIco('wechat','💬','#07c160')}<span>微信</span></div>
@@ -1194,6 +1217,77 @@ function renderHome(){
     </div></div>`;
 }
 function homePgScroll(el){const w=el.clientWidth||1;const p=Math.round((el.scrollLeft||0)/w);const d0=$('#pgdot0'),d1=$('#pgdot1');if(d0)d0.className='pgdot'+(p===0?' on':'');if(d1)d1.className='pgdot'+(p===1?' on':'');}
+// ===== 主屏小组件 =====
+function widInit(){const m=S.me;
+  if(!Array.isArray(m.widgets))m.widgets=['days','anniv','tanow','note','mood','disc'];
+  if(!m.note||typeof m.note!=='object')m.note={text:'',paper:'#fff7d6',ink:'#5b4a2f'};
+  if(!m.mood||typeof m.mood!=='object')m.mood={k:'',date:''};
+  if(!m.wColor)m.wColor='#ffffff';}
+function wToday(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+const WIDS=[['days','在一起天数','和ta在一起多少天了（绑定情侣空间后自动算）'],['anniv','纪念日倒数','距离下一个纪念日还有几天'],['tanow','ta此刻','按ta的作息，此刻大概在干嘛'],['note','可爱便签','自己写句文案/碎碎念，贴在主屏'],['mood','今日心情','点一下记录今天的心情'],['disc','正在听','会转的小唱片，显示在听的歌']];
+const MOODS={happy:['开心','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M8.6 14.4c1.5 1.7 5.3 1.7 6.8 0"/>'],love:['想ta','<path d="M12 20s-7-4.3-9.2-8.3A4.8 4.8 0 0 1 12 6a4.8 4.8 0 0 1 9.2 5.7C19 15.7 12 20 12 20z"/>'],calm:['平静','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M9 14.6h6"/>'],tired:['累了','<circle cx="12" cy="12" r="8.4"/><path d="M8 9.6c.8.6 2 .6 2.8 0M13.2 9.6c.8.6 2 .6 2.8 0M9 15c1.5-1.2 4.5-1.2 6 0"/>'],sad:['难过','<circle cx="12" cy="12" r="8.4"/><path d="M8.6 10h.01M15.4 10h.01M8.6 15.4c1.5-1.7 5.3-1.7 6.8 0"/>'],angry:['气鼓鼓','<circle cx="12" cy="12" r="8.4"/><path d="M7.6 9.4l2.4 1M16.4 9.4l-2.4 1M8.6 15.4c1.5-1.2 5.3-1.2 6.8 0"/>']};
+function moodIc(k,size,color){const m=MOODS[k];if(!m)return '';return '<svg viewBox="0 0 24 24" width="'+(size||22)+'" height="'+(size||22)+'" fill="none" stroke="'+(color||'currentColor')+'" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle">'+m[1]+'</svg>';}
+function _wCard(ic,top,main,onclick){const col=S.me.wColor||'#fff';return `<div class="hwid" style="color:${col}" onclick="${onclick}"><div class="wic">${ic}</div><div class="wbd"><div class="wt">${top}</div>${main}</div></div>`;}
+function wDays(){if(!(S.couple&&S.couple.cid&&S.couple.startDate))return '';const c=getC(S.couple.cid);if(!c)return '';const col=S.me.wColor||'#fff';
+  const days=Math.max(0,Math.floor((Date.now()-new Date(S.couple.startDate).getTime())/86400000))+1;
+  return _wCard(svgIc('heart',23,col),'和 '+esc(c.remark||c.name)+' 在一起','<div class="wbig">第 '+days+' <small>天</small></div>','openCouple()');}
+function wAnniv(){if(!(S.couple&&S.couple.cid))return '';const col=S.me.wColor||'#fff';
+  const list=(S.couple.anniversaries||[]).filter(a=>a&&a.date);if(!list.length)return '';
+  const now=new Date();now.setHours(0,0,0,0);let best=null;
+  list.forEach(a=>{const md=a.date.slice(5).split('-');const mo=+md[0],da=+md[1];if(!mo||!da)return;
+    for(let yr=0;yr<2;yr++){const d=new Date(now.getFullYear()+yr,mo-1,da);if(d>=now){const diff=Math.round((d-now)/86400000);if(!best||diff<best.diff)best={diff,title:a.title||'纪念日'};break;}}});
+  if(!best)return '';const main=best.diff===0?'<div class="wbig">就是今天</div>':'<div class="wbig">'+best.diff+' <small>天后</small></div>';
+  return _wCard(svgIc('calendar',22,col),'距 '+esc(best.title),main,'openCouple()');}
+function wTanow(){if(!(S.couple&&S.couple.cid))return '';const c=getC(S.couple.cid);if(!c)return '';const col=S.me.wColor||'#fff';
+  const wn=whereNow(c);if(!wn)return '';return _wCard(svgIc('location',22,col),esc(c.remark||c.name)+' 此刻','<div class="wm">'+esc(wn)+'</div>','openCouple()');}
+function wDisc(){const col=S.me.wColor||'#fff';const s=_mCur&&S.music&&S.music.songs?S.music.songs.find(x=>x.id===_mCur):null;
+  const disc='<svg class="'+(_mPlaying?'wdisc':'')+'" viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="'+col+'" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5.4" opacity=".45"/><circle cx="12" cy="12" r="2"/></svg>';
+  const top=_mPlaying?'正在听':'音乐';
+  const main=s?'<div class="wm">'+esc(s.title)+(s.artist?' · '+esc(s.artist):'')+'</div>':'<div class="wm" style="opacity:.7">还没在听 · 去挑一首</div>';
+  return `<div class="hwid" style="color:${col}" onclick="openMusic()"><div class="wic">${disc}</div><div class="wbd"><div class="wt">${top}</div>${main}</div></div>`;}
+function wMood(){const col=S.me.wColor||'#fff';const md=S.me.mood;const has=md.k&&md.date===wToday();
+  const ic=has?moodIc(md.k,27,col):svgIc('smile',26,col);
+  const main=has?'<div class="wm">'+(MOODS[md.k]?MOODS[md.k][0]:'')+'</div>':'<div class="wm" style="opacity:.7">点一下记录今天</div>';
+  return `<div class="hwid" style="color:${col}" onclick="wMoodPick()"><div class="wic">${ic}</div><div class="wbd"><div class="wt">今日心情</div>${main}</div></div>`;}
+function wNote(){const n=S.me.note;const paper=n.paper||'#fff7d6',ink=n.ink||'#5b4a2f';
+  const txt=n.text&&n.text.trim()?esc(n.text):'<span style="opacity:.5">点这里写点什么…</span>';
+  return `<div class="hnote" style="background:${paper};color:${ink}" onclick="wNoteEdit()"><div class="nt">${svgIc('notebook',13,ink)} 便签</div><div class="nx">${txt}</div></div>`;}
+function homeWidgets(){widInit();const R={days:wDays,anniv:wAnniv,tanow:wTanow,note:wNote,mood:wMood,disc:wDisc};
+  const html=S.me.widgets.map(k=>R[k]?R[k]():'').filter(Boolean).join('');
+  return html?'<div class="hwwrap">'+html+'</div>':'';}
+function wNoteEdit(){widInit();const n=S.me.note;const papers=['#fff7d6','#ffd9e0','#d6f0ff','#e2ffd9','#efe2ff','#ffffff'];window._wnPaper=null;
+  openModal(`<h3>可爱便签</h3>
+    <textarea id="wn_t" rows="4" style="width:100%;box-sizing:border-box;background:#2c2c2e;border:1px solid #38383a;border-radius:10px;color:#eee;padding:10px;font-size:15px" placeholder="写点什么…文案、碎碎念、想说的话">${esc(n.text||'')}</textarea>
+    <div style="margin:11px 0 6px;color:#aaa;font-size:13px">便签纸颜色</div>
+    <div id="wn_papers" style="display:flex;gap:10px;flex-wrap:wrap">${papers.map(p=>`<span onclick="wnPaper('${p}')" data-p="${p}" style="width:30px;height:30px;border-radius:8px;background:${p};border:2px solid ${n.paper===p?'#ff8fab':'rgba(255,255,255,.15)'};cursor:pointer"></span>`).join('')}</div>
+    <div style="margin:12px 0 6px;color:#aaa;font-size:13px">字体颜色</div>
+    <input type="color" id="wn_ink" value="${n.ink||'#5b4a2f'}" style="width:46px;height:34px;background:none;border:none">
+    <div class="btns" style="margin-top:14px"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="wNoteSave()">保存</button></div>`);}
+function wnPaper(p){window._wnPaper=p;document.querySelectorAll('#wn_papers span').forEach(s=>s.style.border='2px solid '+(s.dataset.p===p?'#ff8fab':'rgba(255,255,255,.15)'));}
+function wNoteSave(){widInit();S.me.note.text=$('#wn_t').value;if(window._wnPaper)S.me.note.paper=window._wnPaper;S.me.note.ink=$('#wn_ink').value;window._wnPaper=null;save();closeModal();render();toast('便签已贴上');}
+function wMoodPick(){widInit();openModal(`<h3>今天心情如何</h3><div style="display:flex;flex-wrap:wrap;gap:14px;justify-content:center;padding:12px 0 6px">${Object.keys(MOODS).map(k=>`<div onclick="wMoodSet('${k}')" style="display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;width:62px">${moodIc(k,34,'#ffb3c8')}<small style="color:#bbb">${MOODS[k][0]}</small></div>`).join('')}</div>${S.me.mood&&S.me.mood.k&&S.me.mood.date===wToday()?'<div class="btns" style="margin-top:8px"><button class="btn g" onclick="S.me.mood={k:\'\',date:\'\'};save();closeModal();render()">清除今天</button></div>':''}`);}
+function wMoodSet(k){widInit();S.me.mood={k,date:wToday()};save();closeModal();render();toast('记下啦');}
+// 组件管理（开关 + 拖动排序）
+function widgetManager(){widInit();const meta={};WIDS.forEach(w=>meta[w[0]]=w);
+  const en=S.me.widgets.filter(k=>meta[k]);const off=WIDS.map(w=>w[0]).filter(k=>!S.me.widgets.includes(k));
+  openModal(`<h3>主屏组件</h3><div class="hint">拖左边手柄排序，点开关增减。文字颜色可在下面改。</div>
+   <div style="color:#aaa;font-size:13px;margin:12px 0 2px">已显示（拖动排序）</div>
+   <div class="wlist" id="wlist" onpointermove="wDragMove(event)" onpointerup="wDragEnd()" onpointercancel="wDragEnd()">
+   ${en.length?en.map(k=>wManRow(k,meta[k],true)).join(''):'<div style="color:#777;padding:8px">都关掉了</div>'}</div>
+   ${off.length?`<div style="color:#aaa;font-size:13px;margin:14px 0 2px">已关闭（点开启）</div>${off.map(k=>wManRow(k,meta[k],false)).join('')}`:''}
+   <div style="display:flex;align-items:center;gap:10px;margin:18px 0 4px"><span style="color:#aaa;font-size:13px">组件文字颜色</span><input type="color" id="wcolor" value="${S.me.wColor||'#ffffff'}" onchange="S.me.wColor=this.value;save();render()" style="width:46px;height:32px;background:none;border:none"><button class="minibtn" onclick="S.me.wColor='#ffffff';save();render();widgetManager()">恢复白</button></div>
+   <div class="btns" style="margin-top:10px"><button class="btn p" onclick="closeModal()">完成</button></div>`);}
+function wManRow(k,w,on){return `<div class="wrow" data-k="${k}">${on?`<span class="whandle" onpointerdown="wDragDown(event,'${k}')">${svgIc('dots',20,'#888')}</span>`:'<span style="width:26px;flex:none"></span>'}<div class="wnm">${w[1]}<small>${w[2]}</small></div><span class="sw ${on?'on':''}" onclick="wToggle('${k}')"></span></div>`;}
+function wToggle(k){widInit();const i=S.me.widgets.indexOf(k);if(i>=0)S.me.widgets.splice(i,1);else S.me.widgets.push(k);save();render();widgetManager();}
+let _wdg=null;
+function wDragDown(e,k){const row=e.target.closest('.wrow');if(!row)return;_wdg={k,row};row.classList.add('wdrag');try{row.setPointerCapture(e.pointerId);}catch(_){}e.preventDefault();}
+function wDragMove(e){if(!_wdg)return;e.preventDefault();const list=document.getElementById('wlist');if(!list)return;
+  const rows=[...list.querySelectorAll('.wrow')];const y=e.clientY;let after=null;
+  for(const r of rows){if(r===_wdg.row)continue;const b=r.getBoundingClientRect();if(y<b.top+b.height/2){after=r;break;}}
+  if(after){if(after!==_wdg.row.nextSibling)list.insertBefore(_wdg.row,after);}else if(_wdg.row!==list.lastElementChild)list.appendChild(_wdg.row);}
+function wDragEnd(){if(!_wdg)return;_wdg.row.classList.remove('wdrag');const list=document.getElementById('wlist');
+  if(list){const order=[...list.querySelectorAll('.wrow')].map(r=>r.dataset.k);if(order.length){const off=S.me.widgets.filter(k=>order.indexOf(k)<0);S.me.widgets=order.concat(off.filter(k=>order.indexOf(k)<0));save();render();}}
+  _wdg=null;}
 // 简约线条图标库（白色，替代 emoji，更高级）
 const _MI=(p,f)=>'<svg viewBox="0 0 24 24" width="26" height="26" fill="'+(f?'#fff':'none')+'" stroke="'+(f?'none':'#fff')+'" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>';
 const MICO={
@@ -1432,6 +1526,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="it" onclick="alarmManager()"><span>${svgIc('clock',15,'#bbb')} 闹钟</span><span class="v">${S.alarms.length}个 ›</span></div>
       <div class="it"><span>${svgIc('image',15,'#bbb')} 主屏壁纸</span><span class="v"><button class="minibtn" onclick="setHomeBg()">${S.me.homeBg?'换':'上传'}</button>${S.me.homeBg?'<button class="minibtn" style="margin-left:6px" onclick="S.me.homeBg=\'\';save();toast(\'已恢复默认\')">恢复默认</button>':''}</span></div>
       <div class="it" onclick="appIconEditor()"><span>${svgIc('image',15,'#bbb')} App 图标美化</span><span class="v">自定义主屏图标 ›</span></div>
+      <div class="it" onclick="widgetManager()"><span>${svgIc('star',15,'#bbb')} 主屏组件</span><span class="v">${(()=>{widInit();return S.me.widgets.length;})()}个 · 排序/开关 ›</span></div>
       <div class="it"><span>${svgIc('phone',15,'#bbb')} 通话背景</span><span class="v"><button class="minibtn" onclick="setCallBg()">${S.me.callBg?'换':'上传'}</button>${S.me.callBg?'<button class="minibtn" style="margin-left:6px" onclick="S.me.callBg=\'\';save();render();toast(\'已恢复默认\')">恢复默认</button>':''}</span></div>
       <div class="it" onclick="fetchWeather(true)"><span>${svgIc('weather',15,'#bbb')} 定位天气</span><span class="v">${S.weather?esc(S.weather.place+' '+S.weather.desc+' '+S.weather.temp+'°'):'点击获取 ›'}</span></div>
     </div>
