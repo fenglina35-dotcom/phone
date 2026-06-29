@@ -551,7 +551,7 @@ const SHARE_GATE=true, SHARE_PW='Beiye5911';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v272c · 语音报错显示具体原因(401后面带 detected_unusual_activity/invalid api key/quota 等),方便排查到底是key失效还是账号被标记';
+const APP_VER='v273 · 修语音设置「测试语音」只能响一次的bug:点击手势里先同步解锁音频(iOS),第二次起也能正常出声';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1838,7 +1838,8 @@ async function testVision(){const o=$('#testV');if(!o)return;o.style.color='#999
   try{const r=await fetchT(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model,max_tokens:10,messages:[{role:'user',content:[{type:'text',text:'这是什么颜色?'},{type:'image_url',image_url:{url:img}}]}]})});
     if(r.ok)o.style.color='#19a463',o.textContent='✅ 识图模型可用';else{o.style.color='#e85';o.textContent='❌ '+r.status+'：'+(await r.text()).slice(0,80);}
   }catch(e){o.style.color='#e85';o.textContent=e.name==='AbortError'?'❌ 超时：这个模型多半不支持识图，或网络慢（换成 gpt-4o / 支持视觉的模型）':'❌ '+e.message;}}
-async function testTTS(){const o=$('#testT');if(!o)return;o.style.color='#999';o.textContent='测试中…（成功会响一声）';
+async function testTTS(){audioUnlock();/* 在点击手势里同步解锁音频(iOS必须如此),否则第二次测试时上下文已挂起、网络回来再播就没声 */
+  const o=$('#testT');if(!o)return;o.style.color='#999';o.textContent='测试中…（成功会响一声）';
   const base=$('#s_tbase').value.trim().replace(/\/+$/,'');const key=$('#s_tkey').value.trim();const model=$('#s_tmodel').value.trim();const voice=$('#s_tvoice').value.trim();const group=($('#s_tgroup')?$('#s_tgroup').value.trim():'');
   if(!base||!key){o.style.color='#e85';o.textContent='先填语音地址和Key';return;}
   const saved=S.settings.tts;S.settings.tts={base,key,model,voice,group};
