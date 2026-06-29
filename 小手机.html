@@ -546,7 +546,7 @@ const SHARE_GATE=true, SHARE_PW='mixang';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v250 · 主模型/副模型各自独立测试按钮(测试主模型/测试副模型,就在各自那栏下面);联网/识图/语音也都有测试;副模型留空地址Key会自动用主模型测';
+const APP_VER='v251 · 修复识图等测试一直转圈:所有测试加25秒超时,卡住会报"超时"而不是一直"测试中"(识图超时会提示模型可能不支持看图,换gpt-4o等视觉模型)';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1770,15 +1770,16 @@ async function testConn(){const o=$('#testOut');o.style.color='#999';o.textConte
   try{const r=await fetch(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model,messages:[{role:'user',content:'说"在"'}],max_tokens:5})});
     if(r.ok){o.style.color='#19a463';o.textContent='✅ 连接成功！';}else{o.style.color='#e85';o.textContent='❌ '+r.status+'：'+(await r.text()).slice(0,100);}
   }catch(e){o.style.color='#e85';o.textContent='❌ '+e.message+'（多半是把网页当本地文件打开了，要用网址打开）';}}
+function fetchT(url,opt,ms){const ac=new AbortController();const t=setTimeout(()=>ac.abort(),ms||25000);return fetch(url,Object.assign({},opt||{},{signal:ac.signal})).finally(()=>clearTimeout(t));}
 async function testModel(bId,kId,mId,outId,defM){const o=$('#'+outId);if(!o)return;o.style.color='#999';o.textContent='测试中…';
   const base=($('#'+bId).value.trim()||'').replace(/\/+$/,'');const key=$('#'+kId).value.trim();const model=$('#'+mId).value.trim()||defM;
   const fb=($('#s_cbase').value.trim()||'').replace(/\/+$/,''),fk=$('#s_ckey').value.trim();
   const ub=base||fb,uk=key||fk;
   if(!ub||!uk){o.style.color='#e85';o.textContent='先填地址和Key';return;}
   if(!model){o.style.color='#e85';o.textContent='先填模型名';return;}
-  try{const r=await fetch(ub+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+uk},body:JSON.stringify({model,max_tokens:5,messages:[{role:'user',content:'说"在"'}]})});
+  try{const r=await fetchT(ub+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+uk},body:JSON.stringify({model,max_tokens:5,messages:[{role:'user',content:'说"在"'}]})});
     if(r.ok)o.style.color='#19a463',o.textContent='✅ 连接成功！';else{o.style.color='#e85';o.textContent='❌ '+r.status+'：'+(await r.text()).slice(0,90);}
-  }catch(e){o.style.color='#e85';o.textContent='❌ '+e.message+'（可能是把网页当本地文件打开了）';}}
+  }catch(e){o.style.color='#e85';o.textContent=e.name==='AbortError'?'❌ 超时（25秒没响应，检查地址/模型名）':'❌ '+e.message+'（可能是把网页当本地文件打开了）';}}
 function testMain(){testModel('s_cbase','s_ckey','s_cmodel','testC','gpt-4o-mini');}
 function testAux(){testModel('s_xbase','s_xkey','s_xmodel','testX','');}
 async function testSE(){const o=$('#testSE');if(!o)return;o.style.color='#999';o.textContent='测试中…';
@@ -1786,26 +1787,27 @@ async function testSE(){const o=$('#testSE');if(!o)return;o.style.color='#999';o
   try{
     if(mode==='model'){const a=S.settings.chat;const base=(((seb&&seb.value.trim())||a.base||'')).replace(/\/+$/,'');const key=(sek&&sek.value.trim())||a.key;const model=(sem&&sem.value.trim())||a.model;
       if(!base||!key){o.style.color='#e85';o.textContent='先填地址和Key';return;}
-      const r=await fetch(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model,max_tokens:10,messages:[{role:'user',content:'回个"在"'}]})});
+      const r=await fetchT(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model,max_tokens:10,messages:[{role:'user',content:'回个"在"'}]})});
       if(r.ok)o.style.color='#19a463',o.textContent='✅ 联网模型可用';else{o.style.color='#e85';o.textContent='❌ '+r.status+'：'+(await r.text()).slice(0,80);}
     }else{const base=(((seb&&seb.value.trim())||'https://s.jina.ai')).replace(/\/+$/,'');const key=(sek&&sek.value.trim());const h={'Accept':'text/plain','X-Respond-With':'no-content'};if(key)h['Authorization']='Bearer '+key;
-      const r=await fetch(base+'/'+encodeURIComponent('OpenAI'),{headers:h});
+      const r=await fetchT(base+'/'+encodeURIComponent('OpenAI'),{headers:h});
       if(r.ok)o.style.color='#19a463',o.textContent='✅ jina 联网成功';else{o.style.color='#e85';o.textContent='❌ '+r.status+'：检查 jina 密钥或改用「用模型」';}}
-  }catch(e){o.style.color='#e85';o.textContent='❌ '+e.message;}}
+  }catch(e){o.style.color='#e85';o.textContent=e.name==='AbortError'?'❌ 超时（25秒没响应）':'❌ '+e.message;}}
 async function testVision(){const o=$('#testV');if(!o)return;o.style.color='#999';o.textContent='测试中…';
   const base=($('#s_vbase').value.trim()||'').replace(/\/+$/,'');const key=$('#s_vkey').value.trim()||$('#s_ckey').value.trim();const model=$('#s_vmodel').value.trim();
   if(!base||!key){o.style.color='#e85';o.textContent='先填识图地址和Key';return;}
   if(!model){o.style.color='#e85';o.textContent='先填识图模型名';return;}
   const img='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
-  try{const r=await fetch(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model,max_tokens:10,messages:[{role:'user',content:[{type:'text',text:'这是什么颜色?'},{type:'image_url',image_url:{url:img}}]}]})});
+  try{const r=await fetchT(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model,max_tokens:10,messages:[{role:'user',content:[{type:'text',text:'这是什么颜色?'},{type:'image_url',image_url:{url:img}}]}]})});
     if(r.ok)o.style.color='#19a463',o.textContent='✅ 识图模型可用';else{o.style.color='#e85';o.textContent='❌ '+r.status+'：'+(await r.text()).slice(0,80);}
-  }catch(e){o.style.color='#e85';o.textContent='❌ '+e.message;}}
+  }catch(e){o.style.color='#e85';o.textContent=e.name==='AbortError'?'❌ 超时：这个模型多半不支持识图，或网络慢（换成 gpt-4o / 支持视觉的模型）':'❌ '+e.message;}}
 async function testTTS(){const o=$('#testT');if(!o)return;o.style.color='#999';o.textContent='测试中…（成功会响一声）';
   const base=$('#s_tbase').value.trim().replace(/\/+$/,'');const key=$('#s_tkey').value.trim();const model=$('#s_tmodel').value.trim();const voice=$('#s_tvoice').value.trim();const group=($('#s_tgroup')?$('#s_tgroup').value.trim():'');
   if(!base||!key){o.style.color='#e85';o.textContent='先填语音地址和Key';return;}
   const saved=S.settings.tts;S.settings.tts={base,key,model,voice,group};
-  try{initAudio();const ab=await ttsArr('喵～ 测试成功啦',{voice:{engine:'api',ttsVoice:voice}});
-    if(ab){const buf=await decodeBuf(ab);if(buf){playBuf(buf);o.style.color='#19a463';o.textContent='✅ 语音生成成功（已播放）';}else{o.style.color='#19a463';o.textContent='✅ 接口通了（拿到语音数据）';}}
+  try{initAudio();const ab=await Promise.race([ttsArr('喵～ 测试成功啦',{voice:{engine:'api',ttsVoice:voice}}),new Promise(res=>setTimeout(()=>res('__T_O__'),25000))]);
+    if(ab==='__T_O__'){o.style.color='#e85';o.textContent='❌ 超时（25秒没响应，检查地址/Key/音色）';}
+    else if(ab){const buf=await decodeBuf(ab);if(buf){playBuf(buf);o.style.color='#19a463';o.textContent='✅ 语音生成成功（已播放）';}else{o.style.color='#19a463';o.textContent='✅ 接口通了（拿到语音数据）';}}
     else{o.style.color='#e85';o.textContent='❌ 没拿到语音，检查地址/Key/音色（海螺还要GroupId）';}
   }catch(e){o.style.color='#e85';o.textContent='❌ '+e.message;}
   S.settings.tts=saved;}
