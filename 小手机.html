@@ -546,7 +546,7 @@ const SHARE_GATE=true, SHARE_PW='786953';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v256 · 修他不记得自己点了什么外卖(会乱说):以前他发的外卖/转账/红包/礼物/语音卡在历史里是空白,现在都补上文字描述,他能记得自己做过啥、问他点了什么会答对';
+const APP_VER='v257 · 送礼/转账/红包也加防重复(3分钟内同样的不再发,挂电话后也不会再重复一次);配合v256历史可见,他记得自己送过/转过、不会重复也不会乱说';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -2204,6 +2204,7 @@ function parcelDeliver(cid,name,price,kind,opts){opts=opts||{};name=(''+(name||'
   S.shop.orders=S.shop.orders||[];S.shop.orders.unshift({id:pid,name,price,shop:opts.shop||(kind==='pay'?'代付':kind==='self'?'自购':'礼物'),emoji:opts.emoji||(kind==='pay'?'🛍️':kind==='self'?'🛒':'🎁'),buyTs:Date.now(),arriveTs:arrive,refunded:false,parcel:true,kind});
   if(S.shop.orders.length>40)S.shop.orders=S.shop.orders.slice(0,40);}
 function giftSend(cid,name,price){if(!cid)return;const c=getC(cid);name=(''+(name||'礼物')).slice(0,30);price=+price||0;
+  if(msgs(cid).some(x=>x.role==='assistant'&&x.type==='gift'&&x.name===name&&Date.now()-(x.time||0)<180000))return;/* 3分钟内同样礼物不重复送(防挂电话后再送一次) */
   parcelDeliver(cid,name,price,'gift');
   if(c)msgs(cid).push({role:'assistant',type:'gift',name,price,from:'ta',shipping:true,id:uid(),time:Date.now()});
   save();const cu=cur();if(cu&&((cu.p==='chat'&&cu.id===cid)||cu.p==='wechat'))render();}
@@ -4999,6 +5000,7 @@ async function aiReply(id,note){const c=getC(id);if(c.blocked)return;
       mm=line.match(/^\[表情\|?([^\]]*)\]$/);if(mm){if(!c.noSticker){const stk=aiPickSticker(mm[1]);if(stk){const sm={role:'assistant',type:'sticker',img:stk.img,meaning:stk.meaning,time:Date.now(),id:uid()};msgs(id).push(sm);notifyIncoming(c,sm);save();if(cur().p==='chat'&&cur().id===id)render();}}continue;}
       if(/^\[收藏表情\]$/.test(line)){const last=[...msgs(id)].reverse().find(m=>m.role==='user'&&m.type==='sticker'&&m.img);if(last){S.aiStickers=S.aiStickers||[];if(!S.aiStickers.some(s=>s.img===last.img)){S.aiStickers.push({img:last.img,meaning:last.meaning||''});save();toast('ta收藏了你的表情');}}continue;}
       const base=lineToMsg(line);
+      if((base.type==='transfer'||base.type==='redpacket')&&msgs(id).some(x=>x.role==='assistant'&&x.type===base.type&&Math.abs((+x.amount||0)-(+base.amount||0))<0.01&&Date.now()-(x.time||0)<180000))continue;/* 3分钟内同额转账/红包不重复 */
       if(base.type==='dice'){if(diceUsed||diceCompare)continue;diceUsed=true;}
       if(base.type==='text'&&LEAKRE.test(line))continue;
       if(base.type==='text')base.content=deCallFmt(base.content);
@@ -5348,7 +5350,7 @@ async function callAI(sysNote,opts){if(!_call)return;const c=getC(_call.id);cons
     // 通话里也能：发朋友圈 / 发推 / 转账（执行后不读出来）
     content=content.replace(/[\[【]\s*发朋友圈\s*[\|｜:：]([^\]】]+)[\]】]/g,(mm,tx)=>{S.moments.unshift({id:uid(),authorId:c.id,text:(tx||'').trim(),images:[],time:Date.now(),likes:[],comments:[],acct:actId()});save();if(cur().p==='wechat'&&wxTab==='moments')render();return '';});
     content=content.replace(/[\[【]\s*发推\s*[\|｜:：]([^\]】]+)[\]】]/g,(mm,tx)=>{const nm=c.name;xUser(nm,{handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,cid:c.id});S.x.tweets.unshift({id:uid(),who:c.id,name:nm,handle:'@'+c.name.replace(/\s/g,''),avatar:c.avatar,text:(tx||'').trim(),time:Date.now(),likes:[],lk:Math.floor(Math.random()*60),comments:[],rt:0});save();return '';});
-    content=content.replace(/[\[【]\s*(转账|红包)\s*[\|｜:：]([0-9.]+)\s*[\|｜:：]?([^\]】]*)[\]】]/g,(mm,kind,amt,note)=>{const tc={role:'assistant',type:(kind==='红包'?'redpacket':'transfer'),amount:+amt||0,note:(note||'').trim(),received:false,id:uid(),time:Date.now()};msgs(_call.id).push(tc);notifyIncoming(c,tc);save();return '';});
+    content=content.replace(/[\[【]\s*(转账|红包)\s*[\|｜:：]([0-9.]+)\s*[\|｜:：]?([^\]】]*)[\]】]/g,(mm,kind,amt,note)=>{const ty=(kind==='红包'?'redpacket':'transfer'),av=+amt||0;if(msgs(_call.id).some(x=>x.role==='assistant'&&x.type===ty&&Math.abs((+x.amount||0)-av)<0.01&&Date.now()-(x.time||0)<180000))return '';/* 3分钟内同额转账/红包不重复 */const tc={role:'assistant',type:ty,amount:av,note:(note||'').trim(),received:false,id:uid(),time:Date.now()};msgs(_call.id).push(tc);notifyIncoming(c,tc);save();return '';});
     let _luc=null;{const _ms=msgs(c.id);for(let i=_ms.length-1;i>=0;i--){if(_ms[i].role==='user'){_luc=_ms[i];break;}}}
     if(S.couple&&S.couple.cid===_call.id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|给你(解|开)|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)|扣.{0,4}(零花|钱|块|元)|没收.{0,4}(零花|钱|卡)|罚款|罚.{0,3}(钱|块|元)|零花钱|冻结|解冻|亲属卡|原谅|消气/.test(content))extractControl(content,c,_statedPwd);
     maybeSpyIntent(content,c,_call.id,_luc);
