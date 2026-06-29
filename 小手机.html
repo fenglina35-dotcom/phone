@@ -195,6 +195,29 @@ body{background:#000;padding:0;}
 .section{background:#1c1c1e;}
 .section .it{color:#f0f0f0;border-bottom:.5px solid #2a2a2c;}.section .it .v{color:#888;}
 .sheet{background:#1c1c1e;color:#f0f0f0;}.sheet h3{color:#f5f5f5;}
+/* ===== 微信·白色主题（只作用于微信页面） ===== */
+.wxlight{background:#ededed;}
+.wxlight .nav{background:#f7f7f7;border-bottom:.5px solid #dcdcdc;}
+.wxlight .nav .t,.wxlight .nav .l,.wxlight .nav .r{color:#111;}
+.wxlight .list .row{background:#fff;border-bottom:.5px solid #ececec;}
+.wxlight .list .row:active{background:#f0f0f0;}
+.wxlight .list .row.pin{background:#f6f6f6;}
+.wxlight .meta .n{color:#111;}.wxlight .meta .s{color:#999;}.wxlight .meta .time{color:#bbb;}
+.wxlight .tabbar{background:#f7f7f7;border-top:.5px solid #dcdcdc;}.wxlight .tabbar .tb{color:#999;}.wxlight .tabbar .tb.on{color:#07c160;}
+.wxlight .chatbg{background:#ededed;}
+.wxlight .tstamp span{background:#d6d6d6;color:#777;}
+.wxlight .msg.them .bubble{background:#fff;color:#111;}
+.wxlight .msg.me .bubble{background:#95ec69;color:#0b3b18;}
+.wxlight .bubble{color:#111;}
+.wxlight .msgt{color:#aaa;}
+.wxlight .moodbar{background:#fff;color:#c2407a;border-bottom:.5px solid #ececec;}
+.wxlight .inputbar{background:#f7f7f7;border-top:.5px solid #dcdcdc;}
+.wxlight .inputbar textarea{background:#fff;color:#111;}
+.wxlight .panel{background:#f7f7f7;border-top:.5px solid #dcdcdc;}
+.wxlight .panel .it span{color:#666;}
+.wxlight .panel .it .b{background:linear-gradient(145deg,#ffffff,#eee);box-shadow:0 4px 10px rgba(0,0,0,.08);border:1px solid rgba(0,0,0,.05);}
+.wxlight .section{background:#fff;}
+.wxlight .section .it{color:#111;border-bottom:.5px solid #ececec;}.wxlight .section .it .v{color:#999;}
 .cfm{position:fixed;inset:0;z-index:9999;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);backdrop-filter:blur(2px);}
 .cfm.show{display:flex;}
 .cfmbox{width:78%;max-width:300px;background:#232327;border-radius:16px;padding:22px 18px 14px;box-shadow:0 18px 50px rgba(0,0,0,.5);text-align:center;}
@@ -523,7 +546,7 @@ const SHARE_GATE=true, SHARE_PW='52113148890';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v246 · 桌面小猫去掉白色卡片框,单独一只浮在桌面(猫也放大了);白天精神晚上睡,点一下摸摸头';
+const APP_VER='v247 · 主屏App加到第三页(可拖App过去,翻页/点点支持3页);微信主题黑/白两按钮切换(设置里),白色=经典微信浅色(列表/聊天/气泡/输入栏整套变白),只影响微信页面';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1018,7 +1041,8 @@ function render(){
   else if(c.p==='tasks')html=renderTasks();
   else if(c.p==='dydm')html=renderDyDM(c.id);
   else if(c.p==='momentDetail')html='';
-  app.innerHTML='<div class="page">'+html+'</div>';
+  const _wxL=(S.me.wxTheme==='white'&&(c.p==='wechat'||c.p==='chat'))?' wxlight':'';
+  app.innerHTML='<div class="page'+_wxL+'">'+html+'</div>';
   if(c.p==='chat'){afterChat(c.id);}
   if(c.p==='alter'){const b=$('#alterbg');if(b)b.scrollTop=b.scrollHeight;}
   if(c.p==='tale'){const b=$('#talebox');if(b)b.scrollTop=b.scrollHeight;}
@@ -1251,7 +1275,7 @@ function renderHome(){
   return `<div class="home${S.me.theme==='pink'?' tpink':S.me.theme==='white'?' twhite':''}" style="${S.me.homeBg?'background:url('+S.me.homeBg+') center/cover;':''}">
     ${homeWidgets()}
     <div class="appswipe" id="appswipe" onscroll="homePgScroll(this)">${homeAppsHtml()}</div>
-    <div class="pgdots"><span class="pgdot on" id="pgdot0"></span><span class="pgdot" id="pgdot1"></span></div>
+    <div class="pgdots">${(S.me.appLayout||APP_DEFLAYOUT).map((_,i)=>'<span class="pgdot'+(i===0?' on':'')+'" id="pgdot'+i+'"></span>').join('')}</div>
     <div class="dock">
       <div class="app" onclick="openWeChat()">${aIco('wechat','💬','#07c160')}</div>
       <div class="app" onclick="openWeChat('contacts')">${aIco('contacts','👤','#54a0ff')}</div>
@@ -1259,7 +1283,7 @@ function renderHome(){
       <div class="app" onclick="go('settings')">${aIco('settings','⚙️','#8e8e93')}</div>
     </div></div>`;
 }
-function homePgScroll(el){const w=el.clientWidth||1;const p=Math.round((el.scrollLeft||0)/w);const d0=$('#pgdot0'),d1=$('#pgdot1');if(d0)d0.className='pgdot'+(p===0?' on':'');if(d1)d1.className='pgdot'+(p===1?' on':'');}
+function homePgScroll(el){const w=el.clientWidth||1;const p=Math.round((el.scrollLeft||0)/w);for(let i=0;i<APP_PAGES;i++){const d=document.getElementById('pgdot'+i);if(d)d.className='pgdot'+(i===p?' on':'');}}
 // ===== 主屏 App（数据驱动 + 长按拖拽换位/换页）=====
 const APPDEFS={
   wechat:{e:'💬',c:'#07c160',t:'微信'},settings:{e:'⚙️',c:'#8e8e93',t:'设置'},worldbook:{e:'📖',c:'#ff9f43',t:'世界书'},
@@ -1271,11 +1295,13 @@ const APPDEFS={
   cozy:{e:'🏡',c:'linear-gradient(135deg,#b07be0,#ff8fab)',t:'像素小家',icon:'cozyhome'},
   tale:{e:'🕯️',c:'linear-gradient(135deg,#3a0010,#1a1a1f)',t:'规则怪谈'},dread:{e:'🩸',c:'linear-gradient(135deg,#5a0012,#23000a)',t:'惊悚抉择'}};
 const APPRUN={wechat:()=>openWeChat(),settings:()=>go('settings'),worldbook:()=>go('worldbook'),browser:()=>openApp('browser'),moments:()=>openApp('moments'),spy:()=>openApp('spy'),shop:()=>openApp('shop'),calendar:()=>openApp('calendar'),x:()=>openApp('x'),douyin:()=>openApp('douyin'),food:()=>openApp('food'),couple:()=>openCouple(),tasks:()=>go('tasks'),games:()=>openApp('games'),mail:()=>openApp('mail'),offline:()=>openApp('offline'),music:()=>openMusic(),cozy:()=>go('cozy'),tale:()=>taleStart(),dread:()=>dreadStart()};
-const APP_DEFLAYOUT=[['wechat','settings','worldbook','browser','moments','spy','shop','calendar','x','douyin','food','couple','tasks','games','mail','offline'],['music','cozy','tale','dread']];
+const APP_PAGES=3;
+const APP_DEFLAYOUT=[['wechat','settings','worldbook','browser','moments','spy','shop','calendar','x','douyin','food','couple','tasks','games','mail','offline'],['music','cozy','tale','dread'],[]];
 function appLayoutInit(){let L=S.me.appLayout;
-  if(!Array.isArray(L)||L.length<2||!Array.isArray(L[0])||!Array.isArray(L[1]))L=[APP_DEFLAYOUT[0].slice(),APP_DEFLAYOUT[1].slice()];
-  L=[L[0]||[],L[1]||[]];const seen={};const clean=p=>p.filter(k=>APPDEFS[k]&&!seen[k]&&(seen[k]=1));
-  L[0]=clean(L[0]);L[1]=clean(L[1]);
+  if(!Array.isArray(L)||!Array.isArray(L[0]))L=APP_DEFLAYOUT.map(p=>p.slice());
+  L=L.map(p=>Array.isArray(p)?p:[]);while(L.length<APP_PAGES)L.push([]);L=L.slice(0,APP_PAGES);
+  const seen={};const clean=p=>p.filter(k=>APPDEFS[k]&&!seen[k]&&(seen[k]=1));
+  L=L.map(clean);
   Object.keys(APPDEFS).forEach(k=>{if(!seen[k]){L[0].push(k);seen[k]=1;}});
   S.me.appLayout=L;}
 function appCell(k){const a=APPDEFS[k];if(!a)return '';
@@ -1300,7 +1326,7 @@ function appGhostMove(x,y){if(!_aDrag)return;const g=_aDrag.ghost;g.style.left=(
   const sw=$('#appswipe');if(!sw)return;const r=sw.getBoundingClientRect();
   let dir=0;if(x>r.right-40)dir=1;else if(x<r.left+40)dir=-1;
   if(dir!==_aFlipDir){_aFlipDir=dir;clearTimeout(_aFlip);if(dir)_aFlip=setTimeout(()=>appFlip(dir),430);}}
-function appFlip(dir){const sw=$('#appswipe');if(!sw||!_aDrag)return;const w=sw.clientWidth;let pg=Math.max(0,Math.min(1,Math.round(sw.scrollLeft/w)+dir));
+function appFlip(dir){const sw=$('#appswipe');if(!sw||!_aDrag)return;const w=sw.clientWidth;let pg=Math.max(0,Math.min(APP_PAGES-1,Math.round(sw.scrollLeft/w)+dir));
   sw.scrollLeft=pg*w;homePgScroll(sw);
   _aFlip=setTimeout(()=>{if(_aDrag&&_aFlipDir===dir)appFlip(dir);},700);}
 function appMove(e){if(_aDrag){e.preventDefault();appGhostMove(e.clientX,e.clientY);return;}
@@ -1315,9 +1341,9 @@ function appDrop(x,y){const d=_aDrag;_aDrag=null;const sw=$('#appswipe');const k
   if(d.ghost)d.ghost.remove();
   const tcell=tgt&&tgt.closest?tgt.closest('.app'):null;
   const tpageEl=tgt&&tgt.closest?tgt.closest('.apppage'):null;
-  let tpg=tpageEl?(+tpageEl.dataset.pg||0):(sw?Math.max(0,Math.min(1,Math.round(sw.scrollLeft/sw.clientWidth))):0);
-  const L=S.me.appLayout;[0,1].forEach(i=>{const j=L[i].indexOf(k);if(j>=0)L[i].splice(j,1);});
-  let idx=L[tpg].length;
+  let tpg=tpageEl?(+tpageEl.dataset.pg||0):(sw?Math.max(0,Math.min(APP_PAGES-1,Math.round(sw.scrollLeft/sw.clientWidth))):0);
+  const L=S.me.appLayout;L.forEach(pg=>{const j=pg.indexOf(k);if(j>=0)pg.splice(j,1);});
+  if(!L[tpg])tpg=0;let idx=L[tpg].length;
   if(tcell&&tcell.dataset.k&&tcell.dataset.k!==k){const ti=L[tpg].indexOf(tcell.dataset.k);if(ti>=0)idx=ti;}
   L[tpg].splice(idx,0,k);
   if(sw){sw.classList.remove('aedit');}
@@ -1707,6 +1733,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="it" onclick="appIconEditor()"><span>${svgIc('image',15,'#bbb')} App 图标美化</span><span class="v">自定义主屏图标 ›</span></div>
       <div class="it" onclick="widgetManager()"><span>${svgIc('star',15,'#bbb')} 主屏组件</span><span class="v">${(()=>{widInit();return S.me.widgets.length;})()}个 · 排序/开关 ›</span></div>
       <div class="it"><span>${svgIc('heart',15,'#bbb')} 主屏主题</span><span class="v"><button class="minibtn" style="${(!S.me.theme)?'background:#ff8fab;color:#fff':''}" onclick="S.me.theme='';save();render()">暗黑</button><button class="minibtn" style="margin-left:6px;${S.me.theme==='pink'?'background:#ff8fab;color:#fff':''}" onclick="S.me.theme='pink';save();render();toast('换成淡粉色啦 🌸')">淡粉</button><button class="minibtn" style="margin-left:6px;${S.me.theme==='white'?'background:#ff8fab;color:#fff':''}" onclick="S.me.theme='white';save();render();toast('换成白色啦 🤍')">白色</button></span></div>
+      <div class="it"><span>${svgIc('chat',15,'#bbb')} 微信主题</span><span class="v"><button class="minibtn" style="${S.me.wxTheme!=='white'?'background:#ff8fab;color:#fff':''}" onclick="S.me.wxTheme='';save();render();toast('微信换成黑色')">黑色</button><button class="minibtn" style="margin-left:6px;${S.me.wxTheme==='white'?'background:#ff8fab;color:#fff':''}" onclick="S.me.wxTheme='white';save();render();toast('微信换成白色 🤍')">白色</button></span></div>
       <div class="it"><span>${svgIc('phone',15,'#bbb')} 通话背景</span><span class="v"><button class="minibtn" onclick="setCallBg()">${S.me.callBg?'换':'上传'}</button>${S.me.callBg?'<button class="minibtn" style="margin-left:6px" onclick="S.me.callBg=\'\';save();render();toast(\'已恢复默认\')">恢复默认</button>':''}</span></div>
       <div class="it" onclick="fetchWeather(true)"><span>${svgIc('weather',15,'#bbb')} 定位天气</span><span class="v">${S.weather?esc(S.weather.place+' '+S.weather.desc+' '+S.weather.temp+'°'):'点击获取 ›'}</span></div>
     </div>
@@ -2818,7 +2845,7 @@ function renderWeChat(){
   const titles={chats:'微信',contacts:'通讯录',moments:'朋友圈',me:'我'};
   const showAdd=wxTab==='chats'||wxTab==='contacts';
   return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">${titles[wxTab]}</span><span class="r" onclick="${wxTab==='chats'?'chatAddMenu()':wxTab==='contacts'?'editContact()':''}">${showAdd?'＋':''}</span></div>
-    <div class="scroll" style="background:#000">${body}</div>
+    <div class="scroll" style="background:${S.me.wxTheme==='white'?'#ededed':'#000'}">${body}</div>
     <div class="tabbar">
       ${tb('chats',svgIc('chat',23),'微信')}${tb('contacts',svgIc('user',23),'通讯录')}${tb('moments',svgIc('camera',23),'朋友圈')}${tb('me',svgIc('cat',23),'我')}
     </div>`;
@@ -2842,7 +2869,7 @@ function wxChats(){
     return (lastMsg(b.id)?.time||0)-(lastMsg(a.id)?.time||0);});
   const groups=isMain()?(S.groups||[]):[];
   const banner=isMain()?'':`<div style="padding:8px 12px;background:#3a2d4a;color:#d6c2f0;font-size:12px;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px">${svgIc('idcard',14,'#d6c2f0')}当前身份：${esc(S.me.name)}（在「我」里可切换/搜微信号加人）</div>`;
-  const searchbar=`<div onclick="openWxSearch()" style="margin:8px 12px;padding:8px 12px;background:#1c1c1e;border-radius:9px;color:#888;font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer">${svgIc('search',15,'#888')} 搜索聊天记录</div>`;
+  const searchbar=`<div onclick="openWxSearch()" style="margin:8px 12px;padding:8px 12px;background:${S.me.wxTheme==='white'?'#fff':'#1c1c1e'};border-radius:9px;color:#999;font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer">${svgIc('search',15,'#999')} 搜索聊天记录</div>`;
   let html=banner+searchbar+'<div class="list">';
   groups.forEach(g=>{const lm=g.msgs[g.msgs.length-1];html+=`<div class="row" onclick="go('group',{id:'${g.id}'})">${g.avatar?av(g.avatar):'<div class="avatar" style="background:#7c6cc0">👥</div>'}<div class="meta"><div class="n">${esc(g.name)}(${g.members.length+1})</div><div class="s">${lm?esc(gpreview(lm)):'群聊已创建'}</div></div><div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div></div></div>`;});
   if(!list.length&&!groups.length)return banner+'<div class="empty">'+(isMain()?'欢迎来到小手机～<br>右上角 ＋ 新建你的第一个角色就能开聊<br><br><button class="btn p" style="max-width:220px;margin:14px auto 0" onclick="showManual()">使用说明书</button>':'这个身份还没加谁～<br>去「通讯录」搜微信号加人')+'</div>';
