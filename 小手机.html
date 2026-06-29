@@ -546,7 +546,7 @@ const SHARE_GATE=true, SHARE_PW='mixang';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v248 · 微信白色主题补漏:通讯录顶部搜索框/AI生成区不再是黑块,跟着主题变白;主屏App第三页;微信黑白切换';
+const APP_VER='v249 · 设置里给联网/识图/语音各加独立测试按钮(测试联网/测试识图/测试语音),不再只能测聊天模型;语音测试成功会响一声';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1694,11 +1694,13 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="two" style="padding:0 14px 10px"><div class="field"><label>地址(可选)</label><input id="s_sebase" value="${esc((S.settings.search||{}).base||'')}" placeholder="留空=同聊天"></div><div class="field"><label>Key(可选)</label><input id="s_sekey" type="password" value="${esc((S.settings.search||{}).key||'')}" placeholder="留空=同聊天"></div></div>`:`<div class="hint" style="padding:0 14px">用 jina 真实搜索：去 jina.ai 免费拿 key 填下面。</div>
       <div class="field" style="padding:0 14px"><label>jina接口地址</label><input id="s_sebase" value="${esc((S.settings.search||{}).base||'https://s.jina.ai')}" placeholder="https://s.jina.ai"></div>
       <div class="field" style="padding:0 14px 10px"><label>API Key</label><input id="s_sekey" type="password" value="${esc((S.settings.search||{}).key||'')}" placeholder="jina_xxx"></div>`}
+      <div class="btns" style="padding:4px 14px 6px"><button class="btn g" onclick="testSE()">测试联网</button></div><div id="testSE" style="font-size:12px;text-align:center;min-height:14px;padding-bottom:8px"></div>
     </div>
     <div class="section"><div style="padding:12px 14px;font-weight:600;color:#54a0ff">识图模型（发照片时用）</div>
       <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_vbase" value="${esc(v.base)}"></div>
       <div class="field" style="padding:0 14px"><label>API Key</label><input id="s_vkey" type="password" value="${esc(v.key)}" placeholder="不填则用聊天的Key"></div>
       <div class="field" style="padding:0 14px 10px"><label>模型名（如 gpt-4o）</label><div style="display:flex;gap:6px"><input id="s_vmodel" value="${esc(v.model)}" placeholder="留空=不识图" style="flex:1"><button class="minibtn" onclick="fetchModels('s_vbase','s_vkey','s_vmodel')">拉取</button></div></div>
+      <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="testVision()">测试识图</button></div><div id="testV" style="font-size:12px;text-align:center;min-height:14px;padding-bottom:8px"></div>
     </div>
     <div class="section"><div style="padding:12px 14px;font-weight:600;color:#b8a4e3">语音API（可选·克隆/更真）</div>
       <div class="hint" style="padding:0 14px">不填=用手机自带音色(免费)。想要克隆/更真，填好下面任一种，再把角色「语音音色」引擎切成 API：<br>· <b>Fish Audio（推荐·克隆最简单）</b>：地址填 https://api.fish.audio、Key填你的、模型选填 speech-1.6、默认音色填你在 fish 克隆出来的「模型ID(reference_id)」。<br>· <b>MiniMax 海螺（国内·克隆很真）</b>：地址填 https://api.minimaxi.com（海外用 https://api.minimax.io）、Key填你的、模型 speech-02-turbo、音色填 voice_id（系统音色如 male-qn-qingse，或你克隆出来的ID）、<b>下面 GroupId 必填</b>。<br>· ElevenLabs：地址 https://api.elevenlabs.io、模型 eleven_multilingual_v2、音色填 voice id。<br>· OpenAI 兼容：地址填 …/v1、模型 tts-1、音色 alloy 等（也支持硅基流动 CosyVoice）。</div>
@@ -1706,6 +1708,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="field" style="padding:0 14px"><label>API Key</label><input id="s_tkey" type="password" value="${esc((S.settings.tts||{}).key||'')}"></div>
       <div class="two" style="padding:0 14px 10px"><div class="field"><label>模型</label><input id="s_tmodel" value="${esc((S.settings.tts||{}).model||'')}" placeholder="speech-1.6 / speech-02-turbo / tts-1"></div><div class="field"><label>默认音色</label><input id="s_tvoice" value="${esc((S.settings.tts||{}).voice||'')}" placeholder="克隆模型ID / male-qn-qingse / alloy"></div></div>
       <div class="field" style="padding:0 14px 10px"><label>GroupId（仅 MiniMax 海螺需要）</label><input id="s_tgroup" value="${esc((S.settings.tts||{}).group||'')}" placeholder="MiniMax 控制台里的 GroupID，其它接口留空"></div>
+      <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="testTTS()">测试语音（会响一声）</button></div><div id="testT" style="font-size:12px;text-align:center;min-height:14px;padding-bottom:6px"></div>
       <div style="padding:6px 14px;font-weight:600;color:#7bd38d;font-size:13px">语音转文字（让角色听懂你录的语音·可选）</div>
       <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_sbase" value="${esc((S.settings.stt||{}).base||'')}" placeholder="https://…/v1（留空用手机识别）"></div>
       <div class="two" style="padding:0 14px 10px"><div class="field"><label>API Key</label><input id="s_skey" type="password" value="${esc((S.settings.stt||{}).key||'')}"></div><div class="field"><label>模型</label><input id="s_smodel" value="${esc((S.settings.stt||{}).model||'')}" placeholder="whisper-1"></div></div>
@@ -1766,6 +1769,34 @@ async function testConn(){const o=$('#testOut');o.style.color='#999';o.textConte
   try{const r=await fetch(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model,messages:[{role:'user',content:'说"在"'}],max_tokens:5})});
     if(r.ok){o.style.color='#19a463';o.textContent='✅ 连接成功！';}else{o.style.color='#e85';o.textContent='❌ '+r.status+'：'+(await r.text()).slice(0,100);}
   }catch(e){o.style.color='#e85';o.textContent='❌ '+e.message+'（多半是把网页当本地文件打开了，要用网址打开）';}}
+async function testSE(){const o=$('#testSE');if(!o)return;o.style.color='#999';o.textContent='测试中…';
+  const mode=(S.settings.search||{}).mode||'jina';const seb=$('#s_sebase'),sek=$('#s_sekey'),sem=$('#s_semodel');
+  try{
+    if(mode==='model'){const a=S.settings.chat;const base=(((seb&&seb.value.trim())||a.base||'')).replace(/\/+$/,'');const key=(sek&&sek.value.trim())||a.key;const model=(sem&&sem.value.trim())||a.model;
+      if(!base||!key){o.style.color='#e85';o.textContent='先填地址和Key';return;}
+      const r=await fetch(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model,max_tokens:10,messages:[{role:'user',content:'回个"在"'}]})});
+      if(r.ok)o.style.color='#19a463',o.textContent='✅ 联网模型可用';else{o.style.color='#e85';o.textContent='❌ '+r.status+'：'+(await r.text()).slice(0,80);}
+    }else{const base=(((seb&&seb.value.trim())||'https://s.jina.ai')).replace(/\/+$/,'');const key=(sek&&sek.value.trim());const h={'Accept':'text/plain','X-Respond-With':'no-content'};if(key)h['Authorization']='Bearer '+key;
+      const r=await fetch(base+'/'+encodeURIComponent('OpenAI'),{headers:h});
+      if(r.ok)o.style.color='#19a463',o.textContent='✅ jina 联网成功';else{o.style.color='#e85';o.textContent='❌ '+r.status+'：检查 jina 密钥或改用「用模型」';}}
+  }catch(e){o.style.color='#e85';o.textContent='❌ '+e.message;}}
+async function testVision(){const o=$('#testV');if(!o)return;o.style.color='#999';o.textContent='测试中…';
+  const base=($('#s_vbase').value.trim()||'').replace(/\/+$/,'');const key=$('#s_vkey').value.trim()||$('#s_ckey').value.trim();const model=$('#s_vmodel').value.trim();
+  if(!base||!key){o.style.color='#e85';o.textContent='先填识图地址和Key';return;}
+  if(!model){o.style.color='#e85';o.textContent='先填识图模型名';return;}
+  const img='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  try{const r=await fetch(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model,max_tokens:10,messages:[{role:'user',content:[{type:'text',text:'这是什么颜色?'},{type:'image_url',image_url:{url:img}}]}]})});
+    if(r.ok)o.style.color='#19a463',o.textContent='✅ 识图模型可用';else{o.style.color='#e85';o.textContent='❌ '+r.status+'：'+(await r.text()).slice(0,80);}
+  }catch(e){o.style.color='#e85';o.textContent='❌ '+e.message;}}
+async function testTTS(){const o=$('#testT');if(!o)return;o.style.color='#999';o.textContent='测试中…（成功会响一声）';
+  const base=$('#s_tbase').value.trim().replace(/\/+$/,'');const key=$('#s_tkey').value.trim();const model=$('#s_tmodel').value.trim();const voice=$('#s_tvoice').value.trim();const group=($('#s_tgroup')?$('#s_tgroup').value.trim():'');
+  if(!base||!key){o.style.color='#e85';o.textContent='先填语音地址和Key';return;}
+  const saved=S.settings.tts;S.settings.tts={base,key,model,voice,group};
+  try{initAudio();const ab=await ttsArr('喵～ 测试成功啦',{voice:{engine:'api',ttsVoice:voice}});
+    if(ab){const buf=await decodeBuf(ab);if(buf){playBuf(buf);o.style.color='#19a463';o.textContent='✅ 语音生成成功（已播放）';}else{o.style.color='#19a463';o.textContent='✅ 接口通了（拿到语音数据）';}}
+    else{o.style.color='#e85';o.textContent='❌ 没拿到语音，检查地址/Key/音色（海螺还要GroupId）';}
+  }catch(e){o.style.color='#e85';o.textContent='❌ '+e.message;}
+  S.settings.tts=saved;}
 
 /* ---------- 世界书 ---------- */
 function renderWorldbook(){
