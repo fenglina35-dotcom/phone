@@ -25,10 +25,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .page{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;}
 .scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
 /* 顶栏 */
-.nav{flex:0 0 46px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;background:#ededed;border-bottom:.5px solid #dadada;position:relative;z-index:3;}
+.nav{flex:0 0 46px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;background:#ededed;border-bottom:.5px solid #dadada;position:relative;z-index:20;}
 .nav .t{font-size:17px;font-weight:600;color:#111;position:absolute;left:50%;transform:translateX(-50%);max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.nav .l,.nav .r{font-size:22px;color:#111;cursor:pointer;min-width:30px;z-index:1;}
-.nav .r{text-align:right;}
+.nav .l,.nav .r{font-size:22px;color:#111;cursor:pointer;min-width:44px;min-height:44px;display:flex;align-items:center;position:relative;z-index:5;}
+.nav .r{justify-content:flex-end;}
 .nav .l{font-size:25px;}
 /* 主屏幕 */
 .home{background:linear-gradient(160deg,#ffc8dd,#bde0fe 55%,#cdb4db);height:100%;display:flex;flex-direction:column;}
@@ -551,7 +551,7 @@ const SHARE_GATE=true, SHARE_PW='786953';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v258 · 所有AI生成(X推文/博主/评论/私信、抖音视频/评论/私信、查手机、购物/外卖搜索、任务)统一加"正在刷新中"持续提示+失败自动重试3次,解决要刷好几遍/以为没反应/直接失败';
+const APP_VER='v259 · 定位失败(如安卓百度浏览器屏蔽定位)可手动输城市查天气;顶栏按钮点击区放大到44px、层级提高,改善安卓某些浏览器要滑到顶才点得到的问题';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -5400,17 +5400,24 @@ async function callAI(sysNote,opts){if(!_call)return;const c=getC(_call.id);cons
 
 /* =================== 天气 =================== */
 const WCODE={0:'晴',1:'晴',2:'多云',3:'阴',45:'雾',48:'雾',51:'小雨',53:'小雨',55:'雨',61:'小雨',63:'中雨',65:'大雨',71:'小雪',73:'雪',75:'大雪',80:'阵雨',81:'阵雨',82:'大阵雨',95:'雷雨',96:'雷雨'};
-function fetchWeather(manual){if(!navigator.geolocation){if(manual)toast('设备不支持定位');return;}
-  navigator.geolocation.getCurrentPosition(async p=>{const la=p.coords.latitude,lo=p.coords.longitude;
-    try{const w=await fetch('https://api.open-meteo.com/v1/forecast?latitude='+la+'&longitude='+lo+'&current=temperature_2m,weather_code,precipitation').then(r=>r.json());
-      let place='';try{const g=await fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?latitude='+la+'&longitude='+lo+'&localityLanguage=zh').then(r=>r.json());
-        const parts=[g.principalSubdivision||g.city,g.locality,(g.localityInfo&&g.localityInfo.administrative&&g.localityInfo.administrative.slice(-1)[0]&&g.localityInfo.administrative.slice(-1)[0].name)];
-        place=parts.filter((x,i,a)=>x&&a.indexOf(x)===i).join('·');}catch(e){}
-      const code=w.current.weather_code,desc=WCODE[code]||'未知';
-      S.weather={place,temp:Math.round(w.current.temperature_2m),desc,rain:(w.current.precipitation>0||[51,53,55,61,63,65,80,81,82,95,96].indexOf(code)>=0),time:Date.now()};
-      save();if(manual)toast(''+place+' '+desc+' '+S.weather.temp+'°C');if(cur().p==='settings')render();
-    }catch(e){if(manual)toast('天气获取失败');}
-  },()=>{if(manual)toast('定位被拒绝了');});}
+async function _weatherCoords(la,lo,placeName,manual){
+  try{const w=await fetch('https://api.open-meteo.com/v1/forecast?latitude='+la+'&longitude='+lo+'&current=temperature_2m,weather_code,precipitation').then(r=>r.json());
+    let place=placeName||'';
+    if(!place){try{const g=await fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?latitude='+la+'&longitude='+lo+'&localityLanguage=zh').then(r=>r.json());
+      const parts=[g.principalSubdivision||g.city,g.locality,(g.localityInfo&&g.localityInfo.administrative&&g.localityInfo.administrative.slice(-1)[0]&&g.localityInfo.administrative.slice(-1)[0].name)];
+      place=parts.filter((x,i,a)=>x&&a.indexOf(x)===i).join('·');}catch(e){}}
+    const code=w.current.weather_code,desc=WCODE[code]||'未知';
+    S.weather={place,temp:Math.round(w.current.temperature_2m),desc,rain:(w.current.precipitation>0||[51,53,55,61,63,65,80,81,82,95,96].indexOf(code)>=0),time:Date.now()};
+    save();if(manual)toast(''+place+' '+desc+' '+S.weather.temp+'°C');if(cur().p==='settings'||cur().p==='home')render();return true;
+  }catch(e){if(manual)toast('天气获取失败');return false;}}
+async function weatherByCity(){const q=prompt('定位用不了？直接输你的城市（如 苏州、北京、Shanghai）：',(S.weather&&S.weather.place)||'');if(q==null)return;const city=q.trim();if(!city)return;toast('查询中…');
+  try{const g=await fetch('https://geocoding-api.open-meteo.com/v1/search?name='+encodeURIComponent(city)+'&count=1&language=zh&format=json').then(r=>r.json());
+    if(!g||!g.results||!g.results.length){toast('没找到这个城市，换个写法再试');return;}
+    const r0=g.results[0];const nm=[r0.admin1,r0.name].filter((x,i,a)=>x&&a.indexOf(x)===i).join('·')||city;
+    await _weatherCoords(r0.latitude,r0.longitude,nm,true);
+  }catch(e){toast('查询失败，检查网络');}}
+function fetchWeather(manual){if(!navigator.geolocation){if(manual)weatherByCity();return;}
+  navigator.geolocation.getCurrentPosition(p=>{_weatherCoords(p.coords.latitude,p.coords.longitude,'',manual);},()=>{if(manual)weatherByCity();},{timeout:8000,maximumAge:600000});}
 
 /* =================== 联网搜索 =================== */
 async function webSearch(q){const ws=S.settings.search||{};
