@@ -551,7 +551,7 @@ const SHARE_GATE=true, SHARE_PW='6565788';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v264 · 主动消息时段设置和「存」按钮改成一直显示(以前要先开主动消息开关才出现,被当成没存档按钮);任务布置主模型失败时自动用副模型兜底(解决"别的能刷新就任务生成不出来")';
+const APP_VER='v265 · 主动消息时段存不了的真因:type=time选择器在某些安卓浏览器取不到值,改成整点数字框(0-23点)兼容所有浏览器,存完会回显确认;时段+存按钮常显';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -4412,7 +4412,7 @@ function renderContactInfo(id){const c=getC(id);if(!c)return '';const sp=getSpy(
       <div class="it"><span>置顶聊天</span><span class="sw ${c.pinned?'on':''}" onclick="c_pin('${id}')"></span></div>
       <div class="it"><span>消息免打扰</span><span class="sw ${c.muted?'on':''}" onclick="c_mute('${id}')"></span></div>
       <div class="it"><span>主动消息</span><span class="sw ${c.proactive.enabled?'on':''}" onclick="togProactive('${id}')"></span></div>
-      <div class="it" style="flex-wrap:wrap"><span>时段/每天次数<br><small style="color:#888">设好点「存」；要真生效记得打开上面的主动消息开关</small></span><span class="v" style="max-width:100%"><input type="time" id="pa_s" value="${hhmmOf(c.proactive.start)}" style="border:1px solid #38383a;border-radius:6px;padding:3px;background:#2c2c2e;color:#eee">-<input type="time" id="pa_e" value="${hhmmOf(c.proactive.end,'23:00')}" style="border:1px solid #38383a;border-radius:6px;padding:3px;background:#2c2c2e;color:#eee"> <input type="number" id="pa_n" value="${c.proactive.times||1}" style="width:32px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:3px;background:#2c2c2e;color:#eee">次 <button class="minibtn" onclick="savePa('${id}')">存</button></span></div>
+      <div class="it" style="flex-wrap:wrap"><span>时段/每天次数<br><small style="color:#888">设好点「存」；要真生效记得打开上面的主动消息开关</small></span><span class="v" style="max-width:100%"><input type="number" min="0" max="23" id="pa_s" value="${hourOf(c.proactive.start,9)}" style="width:42px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:4px;background:#2c2c2e;color:#eee">点-<input type="number" min="0" max="23" id="pa_e" value="${hourOf(c.proactive.end,23)}" style="width:42px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:4px;background:#2c2c2e;color:#eee">点 <input type="number" id="pa_n" value="${c.proactive.times||1}" style="width:38px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:4px;background:#2c2c2e;color:#eee">次 <button class="minibtn" onclick="savePa('${id}')">存</button></span></div>
     </div>
     <div class="section" style="margin:12px"><div style="padding:10px 14px;font-weight:600;color:#5b6b9c">查岗（让ta看我的手机）</div>
       <div class="it"><span>允许ta查我手机</span><span class="sw ${sp.granted?'on':''}" onclick="togSpy('${id}','granted')"></span></div>
@@ -4508,8 +4508,9 @@ function togProactive(id){const c=getC(id);c.proactive.enabled=!c.proactive.enab
 function togSpy(id,k){const c=getC(id);const sp=getSpy(c);sp[k]=!sp[k];save();render();if(k==='loc'&&sp.loc)fetchWeather(true);}
 function saveSpy(id){const c=getC(id);const sp=getSpy(c);sp.time=$('#sp_t').value||'';sp.times=+$('#sp_n').value||2;save();toast('已保存');}
 function hhmmOf(v,def){if(typeof v==='number')return String(v).padStart(2,'0')+':00';if(typeof v==='string'&&/^\d{1,2}:\d{2}/.test(v))return v;return def||'09:00';}
+function hourOf(v,def){if(typeof v==='number')return v;if(typeof v==='string'&&v.includes(':'))return parseInt(v.split(':')[0],10)||0;return def;}
 function toMin(v){if(typeof v==='number')return v*60;if(typeof v==='string'&&v.includes(':')){const[a,b]=v.split(':');return (+a)*60+(+b);}return 0;}
-function savePa(id){const c=getC(id);c.proactive.start=$('#pa_s').value||'09:00';c.proactive.end=$('#pa_e').value||'23:00';c.proactive.times=+$('#pa_n').value||1;save();toast('已保存');}
+function savePa(id){const c=getC(id);let s=parseInt(($('#pa_s')||{}).value,10),e=parseInt(($('#pa_e')||{}).value,10);if(isNaN(s))s=9;if(isNaN(e))e=23;c.proactive.start=Math.max(0,Math.min(23,s));c.proactive.end=Math.max(0,Math.min(23,e));c.proactive.times=+($('#pa_n')||{}).value||1;save();render();toast('已保存 ✓ '+c.proactive.start+'点-'+c.proactive.end+'点');}
 
 /* ---------- 多选转发 ---------- */
 let _sel=null,_gmsel=null,_gfwd=null;
