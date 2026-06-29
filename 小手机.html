@@ -546,7 +546,7 @@ const SHARE_GATE=true, SHARE_PW='mixang';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v251 · 修复识图等测试一直转圈:所有测试加25秒超时,卡住会报"超时"而不是一直"测试中"(识图超时会提示模型可能不支持看图,换gpt-4o等视觉模型)';
+const APP_VER='v252 · 发照片识图更稳:识图加30秒超时(不再卡死拖住回复)+失败自动重试一次,还看不到会提示再发一次;解释"有时看不到"=识图那次失败/照片滑出记忆范围';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -680,11 +680,11 @@ async function chatAPI(messages,opt){opt=opt||{};let a=S.settings.chat;
 }
 async function visionAPI(dataURL,prompt){const a=S.settings.vision;
   if(!a.base||!a.key||!a.model)throw new Error('no-vision');
-  const res=await fetch(a.base.replace(/\/+$/,'')+'/chat/completions',{method:'POST',
+  const res=await fetchT(a.base.replace(/\/+$/,'')+'/chat/completions',{method:'POST',
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+a.key},
     body:JSON.stringify({model:a.model,max_tokens:300,messages:[{role:'user',content:[
       {type:'text',text:prompt||'用一句中文描述这张图片的内容，简洁点。'},
-      {type:'image_url',image_url:{url:dataURL}}]}]})});
+      {type:'image_url',image_url:{url:dataURL}}]}]})},30000);
   const d=await res.json();
   if(!res.ok)throw new Error('vision-fail');
   return (d.choices&&d.choices[0]&&d.choices[0].message&&d.choices[0].message.content||'').trim();
@@ -4667,7 +4667,9 @@ function cPhoto(id){$('#panel').classList.remove('show');pickFile('image/*',asyn
   let src;try{src=await compress(f,900,.7);}catch(e){src=null;}
   if(!src){try{src=await readAsDataURL(f);}catch(e){toast('图片读取失败，再试一次');return;}}
   const m={role:'user',type:'image',src,desc:'',id:uid()};pushMsg(id,m);
-  try{m.desc=await visionAPI(src,'用一句中文简洁描述这张图');save();}catch(e){}
+  let okv=false;
+  for(let tryi=0;tryi<2&&!okv;tryi++){try{const d=await visionAPI(src,'用一句中文简洁描述这张图');if(d){m.desc=d;okv=true;save();}}catch(e){if(e&&e.message==='no-vision')break;}}
+  if(!okv&&S.settings.vision&&S.settings.vision.model)toast('这张图没识别成功，他可能看不清，再发一次试试');
   scheduleReply(id);});}
 function cDoc(id){$('#panel').classList.remove('show');pickFile('',f=>{pushMsg(id,{role:'user',type:'file',name:f.name,size:fmtSize(f.size),id:uid()});scheduleReply(id);});}
 function cTransfer(id){$('#panel').classList.remove('show');openModal(`<h3>转账</h3>
