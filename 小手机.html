@@ -551,7 +551,7 @@ const SHARE_GATE=true, SHARE_PW='Beiye5911';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v273 · 修语音设置「测试语音」只能响一次的bug:点击手势里先同步解锁音频(iOS),第二次起也能正常出声';
+const APP_VER='v274 · 语音设置精简:只留海螺+ElevenLabs说明,删掉GroupId框(新版Key用不上);加海螺常用音色一键填入+「拉取音色」按钮(自动列出系统音色和你的克隆)';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1739,12 +1739,14 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="testVision()">测试识图</button></div><div id="testV" style="font-size:12px;text-align:center;min-height:14px;padding-bottom:8px"></div>
     </div>
     <div class="section"><div style="padding:12px 14px;font-weight:600;color:#b8a4e3">语音API（可选·克隆/更真）</div>
-      <div class="hint" style="padding:0 14px">不填=用手机自带音色(免费)。想要克隆/更真，填好下面任一种，再把角色「语音音色」引擎切成 API：<br>· <b>Fish Audio（推荐·克隆最简单）</b>：地址填 https://api.fish.audio、Key填你的、模型选填 speech-1.6、默认音色填你在 fish 克隆出来的「模型ID(reference_id)」。<br>· <b>MiniMax 海螺（国内·克隆很真）</b>：地址填 https://api.minimaxi.com（海外用 https://api.minimax.io）、Key填你的、模型 speech-02-turbo、音色填 voice_id（系统音色如 male-qn-qingse，或你克隆出来的ID）、<b>下面 GroupId 必填</b>。<br>· ElevenLabs：地址 https://api.elevenlabs.io、模型 eleven_multilingual_v2、音色填 voice id。<b style="color:#7bd38d">想省额度</b>就把模型改成 <b>eleven_turbo_v2_5</b> 或 <b>eleven_flash_v2_5</b>，credits 便宜约一半、日常听几乎没差，能多撑一倍。<br>· OpenAI 兼容：地址填 …/v1、模型 tts-1、音色 alloy 等（也支持硅基流动 CosyVoice）。</div>
-      <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_tbase" value="${esc((S.settings.tts||{}).base||'')}" placeholder="https://api.fish.audio / minimaxi.com / …/v1"></div>
+      <div class="hint" style="padding:0 14px">不填=用手机自带音色(免费)。想要克隆/更真，按下面任一种填好，再把角色「语音音色」引擎切成 API：<br>· <b>MiniMax 海螺（推荐·国内·便宜·克隆很真）</b>：地址填 https://api.minimaxi.com、Key填你的、模型 speech-02-turbo、音色填 voice_id（系统音色见下面，或你克隆出来的ID）。<br>· <b>ElevenLabs</b>：地址 https://api.elevenlabs.io、模型 eleven_multilingual_v2、音色填 voice id。<b style="color:#7bd38d">想省额度</b>就把模型改成 <b>eleven_turbo_v2_5</b> 或 <b>eleven_flash_v2_5</b>（便宜约一半、日常听几乎没差）。</div>
+      <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_tbase" value="${esc((S.settings.tts||{}).base||'')}" placeholder="https://api.minimaxi.com 或 api.elevenlabs.io"></div>
       <div class="field" style="padding:0 14px"><label>API Key</label><input id="s_tkey" type="password" value="${esc((S.settings.tts||{}).key||'')}"></div>
-      <div class="two" style="padding:0 14px 2px"><div class="field"><label>模型</label><input id="s_tmodel" value="${esc((S.settings.tts||{}).model||'')}" placeholder="turbo/flash更省 / speech-02-turbo / tts-1"></div><div class="field"><label>默认音色</label><input id="s_tvoice" value="${esc((S.settings.tts||{}).voice||'')}" placeholder="克隆模型ID / male-qn-qingse / alloy"></div></div>
-      <div class="hint" style="padding:0 14px 10px;color:#8a9">ElevenLabs 省额度：模型填 <b style="color:#7bd38d">eleven_turbo_v2_5</b> 或 <b style="color:#7bd38d">eleven_flash_v2_5</b>（比 multilingual_v2 便宜约一半，日常听差不多）。</div>
-      <div class="field" style="padding:0 14px 10px"><label>GroupId（仅 MiniMax 海螺需要）</label><input id="s_tgroup" value="${esc((S.settings.tts||{}).group||'')}" placeholder="MiniMax 控制台里的 GroupID，其它接口留空"></div>
+      <div class="two" style="padding:0 14px 2px"><div class="field"><label>模型</label><input id="s_tmodel" value="${esc((S.settings.tts||{}).model||'')}" placeholder="speech-02-turbo / eleven_flash_v2_5"></div><div class="field"><label>默认音色</label><input id="s_tvoice" value="${esc((S.settings.tts||{}).voice||'')}" placeholder="male-qn-qingse / voice id / 克隆ID"></div></div>
+      <div class="hint" style="padding:0 14px 6px;color:#8a9">ElevenLabs 省额度：模型填 <b style="color:#7bd38d">eleven_turbo_v2_5</b> 或 <b style="color:#7bd38d">eleven_flash_v2_5</b>（比 multilingual_v2 便宜约一半，日常听差不多）。</div>
+      <div style="padding:0 14px 4px;font-size:12px;color:#9aa">海螺常用音色（点一下填入"默认音色"）：</div>
+      <div style="padding:0 14px 8px">${[['male-qn-qingse','青涩青年'],['male-qn-jingying','精英青年'],['male-qn-badao','霸道青年'],['presenter_male','男主持'],['audiobook_male_1','有声书男'],['female-shaonv','少女'],['female-yujie','御姐'],['presenter_female','女主持']].map(v=>`<span onclick="pickVoice('${v[0]}')" style="display:inline-block;margin:0 5px 5px 0;padding:4px 10px;background:#2c2c2e;border-radius:13px;font-size:12px;color:#cdd;cursor:pointer">${v[1]}</span>`).join('')}</div>
+      <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="pullVoices()">拉取我的全部音色（含克隆·海螺）</button></div>
       <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="testTTS()">测试语音（会响一声）</button></div><div id="testT" style="font-size:12px;text-align:center;min-height:14px;padding-bottom:6px"></div>
       <div style="padding:6px 14px;font-weight:600;color:#7bd38d;font-size:13px">语音转文字（让角色听懂你录的语音·可选）</div>
       <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_sbase" value="${esc((S.settings.stt||{}).base||'')}" placeholder="https://…/v1（留空用手机识别）"></div>
@@ -1849,6 +1851,25 @@ async function testTTS(){audioUnlock();/* 在点击手势里同步解锁音频(i
     else{o.style.color='#e85';o.textContent='❌ 没拿到语音，检查地址/Key/音色（海螺还要GroupId）';}
   }catch(e){o.style.color='#e85';o.textContent='❌ '+e.message;}
   S.settings.tts=saved;}
+// 拉取海螺账号下的可用音色（系统音色 + 你克隆的），点一下填入「默认音色」
+let _voiceList=[],_voiceQ='';
+async function pullVoices(){const base=($('#s_tbase')?$('#s_tbase').value.trim().replace(/\/+$/,''):'');const key=($('#s_tkey')?$('#s_tkey').value.trim():'');
+  if(!/minimax/i.test(base)){toast('这个只支持海螺(MiniMax)，地址要填 api.minimaxi.com');return;}
+  if(!key){toast('先填上面的 API Key');return;}
+  toast('正在拉取音色…');
+  try{const r=await fetch(base+'/v1/get_voice',{method:'POST',headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify({voice_type:'all'})});
+    const d=await r.json();if(!d||(d.base_resp&&d.base_resp.status_code!==0)){toast('拉取失败：'+((d&&d.base_resp&&d.base_resp.status_msg)||r.status));return;}
+    const clones=(d.voice_cloning||[]).map(v=>({id:v.voice_id,name:v.voice_name||'我的克隆',clone:true}));
+    const sys=(d.system_voice||[]).map(v=>({id:v.voice_id,name:v.voice_name||v.voice_id}));
+    _voiceList=clones.concat(sys);_voiceQ='';showVoicePicker();
+  }catch(e){toast('拉取失败，检查地址/Key/网络');}}
+function showVoicePicker(){const q=(_voiceQ||'').toLowerCase();
+  const list=_voiceList.filter(v=>!q||(''+v.id).toLowerCase().indexOf(q)>=0||(''+v.name).toLowerCase().indexOf(q)>=0);
+  openModal(`<h3>选个音色（共${_voiceList.length}个）</h3>
+    <div class="field"><input id="vp_q" placeholder="搜名字或ID…" value="${esc(_voiceQ)}" oninput="_voiceQ=this.value;showVoicePicker();setTimeout(()=>{var e=document.getElementById('vp_q');if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length);}},0)"></div>
+    <div style="max-height:50vh;overflow:auto">${list.slice(0,150).map(v=>`<div class="it" onclick="pickVoice('${esc(v.id)}')" style="cursor:pointer"><span>${v.clone?'<b style="color:#ffb83b">我的克隆 · </b>':''}${esc(v.name)}<br><small style="color:#888">${esc(v.id)}</small></span><span class="v">选</span></div>`).join('')||'<div class="empty" style="padding:20px">没有匹配的</div>'}${list.length>150?'<div class="hint" style="padding:8px">只显示前150个，用搜索找更快</div>':''}</div>
+    <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
+function pickVoice(id){const el=$('#s_tvoice');if(el)el.value=id;if(typeof closeModal==='function')closeModal();toast('已选音色：'+id);}
 
 /* ---------- 世界书 ---------- */
 function renderWorldbook(){
