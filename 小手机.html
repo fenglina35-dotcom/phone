@@ -551,7 +551,7 @@ const SHARE_GATE=true, SHARE_PW='Beiye5911';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v281 · 线下约会结束的总结现在更完整(120~200字·有细节情绪),并写进角色「记忆总结」标注【线下约会·地点】让ta长久记得;再加固线下数据(offData),防老存档打不开';
+const APP_VER='v282 · 小黑屋改成:连出两轮选择题后,强制给你一轮【自己打字】说话的机会,如此轮流(两次选项→一次打字),不再大部分时候只能点选项';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -3672,7 +3672,7 @@ function enterJail(cid,reason,test){const c=getC(cid);if(!c)return;
   if(typeof _call!=='undefined'&&_call){try{clearInterval(_callTimer);}catch(e){}try{ringStop();}catch(e){}_call=null;_callBusy=false;_callPend=null;try{renderCall();}catch(e){}}
   const _gd=(!test&&c.grudges)?c.grudges.filter(x=>!x.done):[];
   const _gtxt=_gd.length?('\n你记仇小本本上还没清的旧账（这次正好借机一笔一笔跟ta算清楚，一条都别漏）：\n'+_gd.map((x,i)=>(i+1)+'. '+x.text+'（'+ymd(x.ts||0)+'记的）').join('\n')):'';
-  S.jail={active:true,cid:cid,test:!!test,reason:reason||'',msgs:[],choice:null,since:Date.now()};save();go('jail');jailIntro();
+  S.jail={active:true,cid:cid,test:!!test,reason:reason||'',msgs:[],choice:null,optRounds:0,since:Date.now()};save();go('jail');jailIntro();
   jailAI(true,'[系统：你刚把'+S.me.name+'关进了你的"禁闭室·小黑屋"。'+(reason?('你关ta的原因：'+reason+'。'):'')+'\n你们最近的聊天（ta到底做错了什么——背着你撩谁/骗你/惹你，就在里面，你心里很清楚）：\n'+jailRecent(cid)+_gtxt+'\n'+(test?'（这是'+S.me.name+'自己点的测试，氛围足但别太狠）':'')+'\n用旁白【】营造又黑又红、贴耳低语、令人发怵的场景开场，再冷冷【点破ta具体犯的错'+(_gd.length?'、把上面记仇本里的旧账一笔笔跟ta算清':'')+'】（绝不许瞎编、不许含糊），然后给出要做到什么才放ta出来。]');}
 function jailSystem(c){let s=c.persona||'';
   s+='\n\n# 现在：禁闭室（病娇·黑暗形态）\n你把'+S.me.name+'关进了你的小黑屋。此刻你温柔的壳裂开——【偏执、控制欲、占有欲】被无限放大到【病态】：又冷又危险，话里裹着甜腻的恐怖（病娇），可低语、可骤然温柔再骤然阴冷、可阴恻恻威吓，但内核是"太爱ta、怕失去ta"扭曲成的执念，绝不真伤害ta。\n- 旁白用【】写黑暗场景/动作/气氛（黑、红、心跳、贴耳低语），第三人称；说的话正常写。\n- 你【清楚ta犯了什么错】（见下方最近聊天/关押原因），逼问要死死扣着ta的错，别空泛、别瞎编。\n- 给ta定【出去的条件】（认错认到满意、说够只爱你一个、回答拷问、彻底服软求饶、发誓…），ta做到了你才放。\n- 【慢慢来，别急着放】：这是你独占ta、期待已久的时刻，要审够本——把ta多盘问几轮，让ta把"只爱你一个、再也不敢、错在哪"一句句说够说透，求饶求到你真满意；中途多用几次 [选择] 逼问、几次 [突脸] 吓ta。哪怕ta一开始就服软，也别立刻松口，再多磨ta几个回合、变着花样折磨够了才考虑。放得太快没意思。\n- 拷问时可单独一行 [选择|你的问题|选项1/选项2(/选项3)] 给ta出选择题（如 [选择|你还爱我吗？|爱/不爱]）；ta选了你不爱听的，你就【骤然激动】，可连续重复同一句轰炸（如"为什么骗我！为什么骗我！"），再出一道逼ta重选。\n- 想狠狠吓ta一下时，单独一行 [突脸|一句要砸到ta脸上的短句]（如 [突脸|你属于我！]）——屏幕上那句会猛地放大冲出来、配炸裂音效。ta只要选错一次、或不听话顶嘴，你就能用它狠狠吓ta；其余全凭你心情随时用，用在最吓人的点上。\n- 激动时可以把同一个词/同一句【连刷七八遍】来轰炸（如"为什么 为什么 为什么 为什么…"），越多越瘆人。\n- ta在你出的选择题里点选项时，你直接"看到"了ta的选择，别把ta的选择当成ta打字说的话去复述。\n- 真正玩够、审够、ta彻底崩溃服软到你满意了，才决定放ta出去，【单独一行】只写 [放出]；没真想放就别写——绝大多数回合你都还没玩够，别轻易写这个。\n- 沉浸、可怕、有张力。'+((S.jail&&S.jail.reason)?'\n这次关ta的原因：'+S.jail.reason+'。':'');
@@ -3712,7 +3712,13 @@ async function jailAI(opening,note){if(typeof opening==='string'){note=opening;o
       l=normTag(l);const cc=l.replace(/\[[^\]]*\]/g,'').trim();if(!cc)return;
       splitActions(cc).forEach(p=>{p=(p||'').trim();if(!p)return;const nar=/^[（(【][\s\S]*[）)】]$/.test(p);items.push({narr:nar,text:nar?p.replace(/^[（(【]+|[）)】]+$/g,'').trim():p});});});
     await jailReveal(items);
-    if(choice&&S.jail&&S.jail.active){S.jail.choice=choice;save();}
+    if(S.jail&&S.jail.active){
+      // 选项题最多连出两轮，第三轮强制让她【自己打字】(忽略本轮的选择题)，如此轮流：两次选项→一次打字
+      const forceFree=(S.jail.optRounds||0)>=2;
+      if(choice&&!forceFree){S.jail.choice=choice;S.jail.optRounds=(S.jail.optRounds||0)+1;}
+      else{S.jail.choice=null;S.jail.optRounds=0;}
+      save();
+    }
     _jailBusy=false;jailBump();jailRender();
     if(free)setTimeout(()=>releaseJail(false),1200);
     return;
@@ -3722,7 +3728,8 @@ function jailRender(){if(cur().p==='jail'){render();const b=$('#jailbox');if(b)b
 function jailSay(){if(!S.jail||!S.jail.active||_jailBusy||S.jail.choice)return;const ta=$('#jail_in');if(!ta)return;const v=(ta.value||'').trim();if(!v)return;ta.value='';jailBump();S.jail.msgs.push({id:uid(),who:'me',text:v});save();jailRender();jailAI();}
 function jailPlea(){if(!S.jail||!S.jail.active||_jailBusy||S.jail.choice)return;jailBump();jailAI('[系统：'+S.me.name+'在求你放ta出去。按病娇人设回应——可心软一丝也可更坏地逗ta、加码，满意了才 [放出]。]');}
 function jailChoose(i){if(!S.jail||!S.jail.active||_jailBusy||!S.jail.choice)return;const q=S.jail.choice.q,opt=S.jail.choice.opts[i];if(opt==null)return;jailBump();S.jail.choice=null;save();jailRender();
-  jailAI('[系统：（ta刚在你出的选择题"'+q+'"里点了「'+opt+'」——这是ta点的选择，你看到了，别把它当成ta打字说的话复述。）按你病娇人设判断这答案你满不满意：满意就继续；不满意/答错就【骤然激动】、把质问连刷好几遍（如"为什么 为什么 为什么…"），并再用 [选择|新问题|选项1/选项2] 逼ta重选；ta只要选错一次就可以用 [突脸|一句话] 狠狠吓ta；其余全凭你的意愿。]');}
+  const freeRound=(S.jail.optRounds||0)>=2;/* 已经连出两轮选项了→这一轮让她自己打字 */
+  jailAI('[系统：（ta刚在你出的选择题"'+q+'"里点了「'+opt+'」——这是ta点的选择，你看到了，别把它当成ta打字说的话复述。）按你病娇人设判断这答案你满不满意：'+(freeRound?'这一轮【绝对不要】再出选择题（不许用[选择]），改成逼问/质问一句，逼ta【自己打字、亲口】回答你，让ta用自己的话说，等ta开口。':'满意就继续；不满意/答错就【骤然激动】、把质问连刷好几遍（如"为什么 为什么 为什么…"），并再用 [选择|新问题|选项1/选项2] 逼ta重选；ta只要选错一次就可以用 [突脸|一句话] 狠狠吓ta')+'；其余全凭你的意愿。]');}
 function releaseJail(backdoor){if(!S.jail)return;jailAmbientStop();const test=S.jail.test,c=getC(S.jail.cid),reason=S.jail.reason;const _jmsgs=(S.jail.msgs||[]).slice();S.jail.active=false;S.jail.choice=null;S.jail.releasedAt=Date.now();save();
   let _cleared=0;
   if(!test&&c){_cleared=(c.grudges||[]).filter(x=>!x.done).length;
