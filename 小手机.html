@@ -551,7 +551,7 @@ const SHARE_GATE=true, SHARE_PW='Beiye5911';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v276 · 修语音条重复播放不了:改用HTML5音频(blob)播放并缓存,iOS打断重建上下文后也能反复重听,且重听不再重新生成(省额度)';
+const APP_VER='v277 · 把GroupId框加回来(选填):有些网友的Key报「token not match group」是因为需要填团队ID,新版sk-api留空即可,老版/多组的填上就好';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1745,6 +1745,7 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_tbase" value="${esc((S.settings.tts||{}).base||'')}" placeholder="https://api.minimaxi.com 或 api.elevenlabs.io"></div>
       <div class="field" style="padding:0 14px"><label>API Key</label><input id="s_tkey" type="password" value="${esc((S.settings.tts||{}).key||'')}"></div>
       <div class="two" style="padding:0 14px 2px"><div class="field"><label>模型</label><input id="s_tmodel" value="${esc((S.settings.tts||{}).model||'')}" placeholder="speech-02-turbo / eleven_flash_v2_5"></div><div class="field"><label>默认音色</label><input id="s_tvoice" value="${esc((S.settings.tts||{}).voice||'')}" placeholder="male-qn-qingse / voice id / 克隆ID"></div></div>
+      <div class="field" style="padding:2px 14px 2px"><label>GroupId（海螺·选填）</label><input id="s_tgroup" value="${esc((S.settings.tts||{}).group||'')}" placeholder="新版sk-api留空即可；若报「token not match group」就把团队ID填这里"></div>
       <div style="padding:2px 14px 4px;font-size:12px;color:#9aa">常用模型（点一下填入）：</div>
       <div style="padding:0 14px 8px">${[['speech-02-turbo','海螺·省钱'],['speech-02-hd','海螺·更好听'],['eleven_flash_v2_5','11·省额度'],['eleven_multilingual_v2','11·原版']].map(m=>`<span onclick="pickTtsModel('${m[0]}')" style="display:inline-block;margin:0 5px 5px 0;padding:4px 10px;background:#2c2c2e;border-radius:13px;font-size:12px;color:#cdd;cursor:pointer">${m[1]}</span>`).join('')}</div>
       <div style="padding:0 14px 4px;font-size:12px;color:#9aa">海螺常用音色（点一下填入"默认音色"）：</div>
