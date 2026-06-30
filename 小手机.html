@@ -551,7 +551,7 @@ const SHARE_GATE=true, SHARE_PW='Beiye5911';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v275 · 语音设置加常用模型一键切换:海螺turbo(省钱)/hd(更好听)、ElevenLabs flash/原版,点一下填入模型框';
+const APP_VER='v276 · 修语音条重复播放不了:改用HTML5音频(blob)播放并缓存,iOS打断重建上下文后也能反复重听,且重听不再重新生成(省额度)';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -858,10 +858,12 @@ async function speak(text,o){const v=o?getVoice(o):null;
   if(v&&v.engine==='api'&&S.settings.tts&&S.settings.tts.key){initAudio();const ab=await ttsArr(text,o);const buf=await decodeBuf(ab);if(buf){playBuf(buf);return;}}
   const t=stripSpoken(text);if(!t||!('speechSynthesis'in window))return;
   try{const u=new SpeechSynthesisUtterance(t);if(v){u.rate=+v.rate||1;u.pitch=+v.pitch||1;if(v.voiceURI){const vs=_voices.find(x=>x.voiceURI===v.voiceURI);if(vs)u.voice=vs;}}speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}}
-async function speakMsg(m,o){initAudio();const v=o?getVoice(o):null;
-  if(m._abuf){playBuf(m._abuf);return;}
-  if(m.audio){try{const ab=await(await fetch(m.audio)).arrayBuffer();const buf=await decodeBuf(ab);if(buf){m._abuf=buf;playBuf(buf);return;}}catch(e){}playUrl(m.audio);return;}
-  if(v&&v.engine==='api'&&S.settings.tts&&S.settings.tts.key){const ab=await ttsArr(m.content,o);const buf=await decodeBuf(ab);if(buf){m._abuf=buf;playBuf(buf);return;}}
+async function speakMsg(m,o){const v=o?getVoice(o):null;
+  // 用 HTML5 <audio>(blob URL) 播放，反复点都能重放——不像 Web Audio 那样：上下文被 iOS 打断重建后，旧的解码缓冲就放不出声了
+  if(m._aurl){playUrl(m._aurl);return;}
+  if(m.audio){playUrl(m.audio);return;}
+  if(v&&v.engine==='api'&&S.settings.tts&&S.settings.tts.key){const ab=await ttsArr(m.content,o);
+    if(ab){try{m._aurl=URL.createObjectURL(new Blob([ab],{type:'audio/mpeg'}));playUrl(m._aurl);return;}catch(e){const buf=await decodeBuf(ab);if(buf){playBuf(buf);return;}}}}
   speak(m.content,o);}
 function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m)return;
   const el=document.querySelector('[data-vid="'+mid+'"]');if(el){el.classList.add('playing');setTimeout(()=>el.classList.remove('playing'),Math.min(9000,(m.dur||3)*1000+800));}
