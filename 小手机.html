@@ -551,7 +551,7 @@ const SHARE_GATE=true, SHARE_PW='Beiye5911';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v280 · 登他微信:可用手机号登录/微信号登录切换,必须勾选"同步聊天记录"才能登;查他手机设置里可给角色设手机号(他自己知道);找回密码=输手机号→发验证码到他手机→你去微信问他要(给不给看他人设)→输对直接登进去';
+const APP_VER='v281 · 线下约会结束的总结现在更完整(120~200字·有细节情绪),并写进角色「记忆总结」标注【线下约会·地点】让ta长久记得;再加固线下数据(offData),防老存档打不开';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -3543,7 +3543,7 @@ async function clClearOld(id){const sc=_clTab==='voice'?'语音':_clTab==='video
   save();render();toast(n?'已删掉'+n+'条一天前的记录':'没有一天前的记录');}
 /* ===== 线下约会（独立空间，与微信隔离）===== */
 let _off=null;
-function offData(id){if(!S.offline[id])S.offline[id]={loc:'',when:'',msgs:[],memory:[],started:false,daypart:''};return S.offline[id];}
+function offData(id){S.offline=S.offline||{};if(!S.offline[id])S.offline[id]={loc:'',when:'',msgs:[],memory:[],started:false,daypart:''};return S.offline[id];}
 const DAYPARTS=['白天','中午','下午','傍晚','晚上','深夜'];
 function dayPartNow(){const h=new Date().getHours();return h<5?'深夜':h<9?'清晨':h<11?'上午':h<13?'中午':h<17?'下午':h<19?'傍晚':h<23?'晚上':'深夜';}
 function acceptDate(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m||m.accepted||m.declined)return;
@@ -3613,9 +3613,13 @@ async function offEnd(id){const o=offData(id);if(!o.msgs||!o.msgs.length){offQui
   if(!await uiConfirm('结束这次约会？会自动把这次见面总结成一条记忆(微信里的ta也会知道)。'))return;
   toast('正在回味这次约会…');const c=getC(id);
   try{const text=o.msgs.map(m=>(m.who==='me'?S.me.name:m.who==='旁白'?'(旁白)':c.name)+'：'+m.text).join('\n');
-    const sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」。把你和'+S.me.name+'这次线下约会发生的事，用第一人称简短记成1到2句记忆(包含地点、做了什么、心情)，以后聊微信你能想起。直接写正文，50字内。'},{role:'user',content:text}],{max:160});
-    o.memory=o.memory||[];o.memory.push({ts:Date.now(),label:offMemLabel(o),loc:o.loc||'',text:cleanReply(sum).slice(0,120)});
-  }catch(e){o.memory=o.memory||[];o.memory.push({ts:Date.now(),label:offMemLabel(o),loc:o.loc||'',text:'见了一面'});}
+    const sum=await chatAPI([{role:'system',content:'你就是「'+c.name+'」。把你和'+S.me.name+'这次线下约会【完整地】记成一段第一人称记忆：写清楚在哪、什么时段、你们一起做了什么、聊了哪些重要的话、有什么亲密或难忘的瞬间、你当时的心情感受。要具体、有细节、有情绪，像写一小段日记，120~200字，以后聊微信你能清楚回忆起这次见面。直接写正文，别写"记忆："这种前缀。'},{role:'user',content:text}],{max:600});
+    const clean=cleanReply(sum).slice(0,400)||'见了一面';
+    o.memory=o.memory||[];o.memory.push({ts:Date.now(),label:offMemLabel(o),loc:o.loc||'',text:clean});
+    // 同时写进长期「记忆总结」，标注是线下约会，让ta长久记得
+    c.summaries=c.summaries||[];c.summaries.push({time:sumStamp()+' · 线下约会',text:'【线下约会·'+(o.loc||'外面')+'】'+clean,imp:4});
+    try{pruneSummaries(c);}catch(_){}
+  }catch(e){o.memory=o.memory||[];o.memory.push({ts:Date.now(),label:offMemLabel(o),loc:o.loc||'',text:'见了一面'});c.summaries=c.summaries||[];c.summaries.push({time:sumStamp()+' · 线下约会',text:'【线下约会·'+(o.loc||'外面')+'】我们见了一面。',imp:3});}
   o.started=false;save();toast('约会记忆已保存💗');
   if(c&&!c.blocked)scheduleReply(id,'[系统：你和'+S.me.name+'刚结束在「'+(o.loc||'外面')+'」的这次线下见面，要分开了。请你结合刚才见面的真实情形，主动发微信自然地道别/关心一句（路上小心、今天很开心、想你之类，符合你人设和当时情境；如果刚才是在机场送别就别说「到家说一声」那种）。用普通文字聊天，别用旁白【】格式。]');
   offQuit();}
