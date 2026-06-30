@@ -551,7 +551,7 @@ const SHARE_GATE=true, SHARE_PW='Claudeopus4.6';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v283 · 强化贴人设:性格进阶(黏人/主动等)低分=真的不那样、高分=真的那样,加铁律绝不串人设;打电话几率按黏人度/主动度调整(黏人主动的更爱打、高冷独立的很少打);主动消息也按人设来不再硬装黏人';
+const APP_VER='v284 · 修查他手机老刷新失败:JSON解析改成更宽容(容忍尾逗号/前后多余文字),重试加到4次带退避,buildSystem加保护;大幅减少"生成失败"';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -2156,7 +2156,10 @@ async function spyRefresh(id){if(_spyBusy){toast('正在刷新，别急~');retur
       +'"groups":[{"name":"你在的一个微信群名(如 家族群/兄弟局/公司部门群)","lines":["某成员：说的话","另一成员：回的话","他：你说的话"]}],'
       +'"contacts":[{"name":"通讯录里的人","note":"关系如 同事/家人","added":"如 3天前/上周/很久了"}],'
       +'"friends":["新加的好友及原因"]}';
-    let ng=null;for(let _i=0;_i<3&&!ng;_i++){try{const content=await chatAPI([{role:'system',content:buildSystem(c)},...hist,{role:'user',content:prompt}],{max:1200});ng=JSON.parse(stripJSON(content));}catch(_e){ng=null;}}
+    let ng=null,_sys='';try{_sys=buildSystem(c);}catch(_be){_sys=(c.persona||'')+'（你是'+(c.remark||c.name)+'）';}
+    for(let _i=0;_i<4&&!ng;_i++){if(_i>0)await new Promise(r=>setTimeout(r,_i*500));
+      try{const content=await chatAPI([{role:'system',content:_sys},...hist,{role:'user',content:prompt}],{max:1200});
+        try{ng=parseObj(content);}catch(_p){try{ng=JSON.parse(stripJSON(content));}catch(_p2){ng=null;}}}catch(_e){ng=null;}}
     if(!ng){_spyBusy=false;if(cur().p==='spy')render();toast('生成失败了，再点一次刷新试试');return;}
     // 合并：刷新【不清掉】已有的——余额/通讯录/日记历史/今日日程/他看到的我的动态都保留
     const data=Object.assign({},prev||{},ng);data.time=Date.now();
