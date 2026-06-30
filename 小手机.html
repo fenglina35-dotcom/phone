@@ -551,7 +551,7 @@ const SHARE_GATE=true, SHARE_PW='Beiye5911';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v277 · 把GroupId框加回来(选填):有些网友的Key报「token not match group」是因为需要填团队ID,新版sk-api留空即可,老版/多组的填上就好';
+const APP_VER='v278 · 修线下约会打不开(老存档缺offline字段崩溃);设置里新增「桌面应用布局」点按钮排页/调顺序(免拖拽);强化角色时间感知(每次明确告知现在几点/上午下午);设置加「一键清空所有数据」(只留人设头像和API设置)';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -571,6 +571,7 @@ function defState(){return{
   couple:null,
   weather:null,
   spy:{},
+  offline:{},
   shop:{cart:[],results:[],q:'',orders:[],cs:{msgs:[]}},
   food:{cart:[],results:[],q:''},
   calendar:[],
@@ -922,6 +923,7 @@ function traitDesc(c){if(!c)return '';let out='';
 function buildSystem(c){
   const _main=isMain();
   let s='【这是一段沉浸式的虚构角色扮演】你将完全扮演下面这个角色本人，全程保持角色：用ta的身份、性格、口吻回应'+S.me.name+'。无论聊到什么、聊多久，都【绝对不要】以"AI/人工智能/助手/语言模型"的身份说话，不要说"作为AI…"，不要说教、不要解释自己是程序、不要无故拒绝或跳戏。\n\n'+(c.persona||'')+traitDesc(c);
+  s+='\n\n# 现在的时间（最重要·务必以此为准，绝不要搞错早上还是下午）\n现在是 '+ymd(Date.now())+' '+['周日','周一','周二','周三','周四','周五','周六'][new Date().getDay()]+' '+hm()+'，属于【'+dayPartNow()+'】。\n凡是涉及时间的话（打招呼、问"在干嘛"、说几点了、该吃饭/睡觉没、白天黑夜）都【必须】符合现在是「'+dayPartNow()+'」——别把下午当早上、别半夜说早安、别白天说晚安。如果'+S.me.name+'说的时间和这个对不上，以这个真实时间为准。';
   s+='\n\n# 你在和谁聊\n对方是「'+S.me.name+'」。ta现在'+(isOnline()?'在线':'显示离线（可能没在看手机）')+'。（注意：你看不到对方给你设的备注，也不要去猜或提"你给我备注了什么"。）';
   if(!_main)s+='\n\n# 最重要：这是一个【陌生的新好友】通过微信号加的你\n现在跟你聊天的是「'+S.me.name+'」'+(S.me.persona?'，ta的身份/自我介绍：'+S.me.persona:'（没写身份，就是个陌生人）')+'。\n- 你【依然是你】——职业、性格、说话风格、价值观都不变，身份不丢。但是：\n- 你人设里写的那个恋人/未婚妻/女朋友（不管叫什么名字），指的【不是】现在跟你聊天的这个人。哪怕名字相同，也要当成【完全不同的陌生人】，绝不要把对恋人的感情、回忆、亲密称呼（"宝贝"等）用到ta身上。\n- 你和ta【没有任何过往】，一切从这个聊天【从零开始】，就当是刚加上的陌生网友。要不要理ta、热情还是冷淡、慢慢熟还是直接[拉黑]，完全由你按人设和此刻感受决定。\n- 你心里其实是有恋人的人，对突然来搭讪的陌生人，本就该有分寸/警惕，别轻易交心。';
   if(c.blocked)s+='\n\n# 重要\n'+S.me.name+'把你拉黑了'+(c._blockedAt?'，已经'+fmtDur(Date.now()-c._blockedAt):'')+'，你能感觉到被冷落/拒绝。';
@@ -1387,6 +1389,20 @@ function initAppDrag(){if(window._aDragInit)return;window._aDragInit=1;
   document.addEventListener('pointermove',appMove,{passive:false});
   document.addEventListener('pointerup',appUp);document.addEventListener('pointercancel',appUp);}
 initAppDrag();
+// 用点按方式整理桌面（不用长按拖拽，苹果安卓都稳）：每个应用选放第几页 + 上下调顺序
+function appLayoutEditor(){appLayoutInit();const L=S.me.appLayout;
+  openModal('<h3>桌面应用布局</h3><div class="hint">点按钮把应用放到第几页、调上下顺序，不用拖拽。改完点完成。</div>'
+   +L.map((pg,pi)=>'<div class="section" style="margin-bottom:10px"><div style="padding:8px 12px;font-weight:600;color:#b8a4e3">第 '+(pi+1)+' 页（'+pg.length+'个）</div>'
+     +(pg.length?pg.map((k,j)=>{const a=APPDEFS[k]||{};
+        const up=j>0?'onclick="appMoveOrder(\''+k+'\',-1)" style="cursor:pointer;padding:5px 10px;color:#9ec5fe;font-size:17px"':'style="padding:5px 10px;color:#555;font-size:17px"';
+        const dn=j<pg.length-1?'onclick="appMoveOrder(\''+k+'\',1)" style="cursor:pointer;padding:5px 10px;color:#9ec5fe;font-size:17px"':'style="padding:5px 10px;color:#555;font-size:17px"';
+        let pages='';for(let tp=0;tp<APP_PAGES;tp++){if(tp!==pi)pages+='<span onclick="appMovePage(\''+k+'\','+tp+')" style="cursor:pointer;padding:3px 8px;margin-left:4px;background:#2c2c2e;border-radius:10px;font-size:12px;color:#cdd">第'+(tp+1)+'页</span>';}
+        return '<div class="it" style="align-items:center"><span style="flex:1;font-size:14px">'+esc(a.t||k)+'</span><span style="white-space:nowrap;display:flex;align-items:center"><span '+up+'>↑</span><span '+dn+'>↓</span>'+pages+'</span></div>';
+       }).join(''):'<div class="empty" style="padding:12px">这页是空的</div>')
+     +'</div>').join('')
+   +'<button class="btn p" style="margin-top:6px" onclick="closeModal();render()">完成</button>');}
+function appMoveOrder(k,dir){const L=S.me.appLayout;for(const pg of L){const j=pg.indexOf(k);if(j>=0){const nj=j+dir;if(nj<0||nj>=pg.length)return;pg.splice(j,1);pg.splice(nj,0,k);save();appLayoutEditor();return;}}}
+function appMovePage(k,tp){const L=S.me.appLayout;L.forEach(pg=>{const i=pg.indexOf(k);if(i>=0)pg.splice(i,1);});if(!L[tp])tp=0;L[tp].push(k);save();appLayoutEditor();}
 // ===== 主屏小组件 =====
 function widInit(){const m=S.me;
   if(!Array.isArray(m.widgets))m.widgets=['clock','couple2','mood','disc','pet'];
@@ -1793,7 +1809,10 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
     <div id="testOut" style="display:none"></div>
     <button class="btn p" onclick="saveSettings()">保存设置</button>
     ${storageMeter()}
+    <div class="btns" style="margin-top:10px"><button class="btn g" onclick="appLayoutEditor()">桌面应用布局（排到第几页·调顺序）</button></div>
     <div class="btns" style="margin-top:10px"><button class="btn g" onclick="exportData()">导出备份</button><button class="btn g" onclick="importData()">导入</button></div>
+    <div class="btns" style="margin-top:18px"><button class="btn d" onclick="clearAllData()">一键清空所有数据</button></div>
+    <div class="hint" style="text-align:center;padding:2px 14px">只清聊天/记忆/朋友圈/动态/钱包/约会等全部痕迹；<b>保留</b>你和角色的人设·头像、API设置、主屏布局。清空后无法恢复，建议先导出备份。</div>
     <div style="text-align:center;color:#666;font-size:12px;padding:14px">版本 ${APP_VER}</div>
     <div style="height:20px"></div>
   </div>`;
@@ -1806,6 +1825,25 @@ function saveSettings(){const g=id=>$('#'+id).value.trim();
   S.settings.tts={base:g('s_tbase'),key:g('s_tkey'),model:g('s_tmodel'),voice:g('s_tvoice'),group:($('#s_tgroup')?$('#s_tgroup').value.trim():((S.settings.tts||{}).group||''))};
   S.settings.stt={base:g('s_sbase'),key:g('s_skey'),model:g('s_smodel')};
   S.settings.hist=Math.max(2,Math.min(40,+$('#s_hist').value||12));S.settings.histUnit='rounds';S.settings.replyDelay=$('#s_delay').value||0;S.settings.summaryRounds=+$('#s_sum').value||0;S.settings.proactiveIdleMin=+$('#s_pidle').value||20;S.settings.callProb=Math.max(0,Math.min(100,+$('#s_callprob').value||0));S.settings.callSilentMin=Math.max(0,Math.min(60,parseInt($('#s_callsilent').value,10)||0));save();toast('已保存 ✅');}
+// 一键清空所有数据：清掉全部聊天/活动痕迹，但保留 你和角色的人设·头像、API设置、主屏布局
+async function clearAllData(){
+  if(!await uiConfirm('确定清空所有数据吗？\n\n会清掉：所有聊天、记忆、朋友圈、X/抖音、查手机、线下约会、钱包账单、日历、任务、心情、信箱等全部记录。\n会保留：你和角色的人设·头像、API设置、主屏布局。\n\n清空后无法恢复！建议先「导出备份」。'))return;
+  if(!await uiConfirm('最后确认：真的现在清空吗？\n点确定立刻开始，不可撤销。'))return;
+  const old=S,fresh=defState();
+  fresh.settings=old.settings;// 保留 API 设置
+  const m=old.me||{};
+  ['name','wxid','avatar','signature','persona'].forEach(k=>{if(m[k]!=null)fresh.me[k]=m[k];});// 我的人设·头像
+  ['widgets','theme','appLayout','appIcons','momentCover'].forEach(k=>{if(m[k]!=null)fresh.me[k]=m[k];});// 主屏布局/外观
+  const KEEP=['id','name','avatar','relation','wxid','signature','persona','greeting','msgMin','msgMax','noSticker','gender','callme','selfcall','catchphrase','traits','voice','model','taskN','pinned','proactive','chatBg'];
+  fresh.contacts=(old.contacts||[]).filter(c=>c&&!c.deleted).map(c=>{const n={};KEEP.forEach(k=>{if(c[k]!=null)n[k]=c[k];});if(!n.proactive)n.proactive={enabled:false,start:9,end:23,times:2};return n;});
+  fresh.worldbook=old.worldbook||[];// 保留世界书（你写的设定，不是聊天痕迹）
+  S=fresh;
+  try{imgDel('__messages');}catch(_){}
+  save();try{imgGC();}catch(_){}
+  try{closeModal();}catch(_){}
+  try{home();}catch(_){render();}
+  toast('已清空，只留下了人设和头像～');
+}
 function reqNotify(){if(!('Notification'in window)){toast('这设备不支持通知');return;}Notification.requestPermission().then(p=>toast(p==='granted'?'已允许后台通知🔔':'未允许'));}
 async function testConn(){const o=$('#testOut');o.style.color='#999';o.textContent='测试中…';
   const base=$('#s_cbase').value.trim().replace(/\/+$/,''),key=$('#s_ckey').value.trim(),model=$('#s_cmodel').value.trim()||'gpt-4o-mini';
@@ -3498,7 +3536,7 @@ function acceptDate(mid){let m,owner;for(const k in S.messages){const x=S.messag
   o.msgs.push({id:uid(),who:'旁白',text:'你答应了TA的约会邀请：'+o.when+' 在「'+o.loc+'」见面。'});save();_off={id:cid,busy:false};go('off',{id:cid});
   offAI('[系统：'+S.me.name+'答应了你的约会邀请，'+o.when+'在「'+o.loc+'」见面。是你主动约的ta，你先到了——用旁白【】描写你到场的场景/动作开场，主动热情点。]');}
 function declineDate(mid){let m;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;break;}}if(m){m.declined=true;save();render();}}
-function openOfflineMenu(){const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){openModal(`<h3>线下约会</h3><div class="hint" style="line-height:1.8">线下约会要先有一个角色才能约见面～<br><br>请先去 <b>微信 → 右上角 ＋ → 新建角色</b> 创建一个，再回来点线下约会就能用了。</div><button class="btn p" style="margin-top:8px" onclick="closeModal();openWeChat()">去新建角色</button><button class="btn g" style="margin-top:8px" onclick="closeModal()">知道了</button>`);return;}
+function openOfflineMenu(){S.offline=S.offline||{};const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){openModal(`<h3>线下约会</h3><div class="hint" style="line-height:1.8">线下约会要先有一个角色才能约见面～<br><br>请先去 <b>微信 → 右上角 ＋ → 新建角色</b> 创建一个，再回来点线下约会就能用了。</div><button class="btn p" style="margin-top:8px" onclick="closeModal();openWeChat()">去新建角色</button><button class="btn g" style="margin-top:8px" onclick="closeModal()">知道了</button>`);return;}
   openModal(`<h3>线下约会</h3><div class="hint">和角色进入一个【独立的约会空间】，有旁白(动作/场景/剧情)+对话，和微信完全分开。约会结束会自动总结成记忆，微信里的ta也会知道你们线下见过面。</div>
    ${cs.map(c=>{const o=S.offline[c.id];return `<div class="section"><div class="it" onclick="offlineEnter('${c.id}')">${av(c.avatar,'sm')}<div class="meta" style="flex:1"><div class="n">${esc(c.remark||c.name)}</div><div class="s">${o&&o.started?'约会中 · '+esc(o.loc||''):(o&&o.memory&&o.memory.length?'有'+o.memory.length+'条约会记忆':'未约过')}</div></div><span class="v">›</span></div></div>`;}).join('')}
    <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
