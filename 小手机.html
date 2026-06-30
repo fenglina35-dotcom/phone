@@ -551,7 +551,7 @@ const SHARE_GATE=true, SHARE_PW='Beiye5911';
 const SHARE_EPOCH=1;
 let _bootHadSave=false; try{_bootHadSave=!!localStorage.getItem(KEY);}catch(e){_bootHadSave=true;}
 function gateOK(){ if(!SHARE_GATE)return true; try{ const u=localStorage.getItem('yibei_unlocked'); if(u===String(SHARE_EPOCH)||(SHARE_EPOCH===1&&u==='1'))return true; }catch(e){return true;} return _bootHadSave; }
-const APP_VER='v274 · 语音设置精简:只留海螺+ElevenLabs说明,删掉GroupId框(新版Key用不上);加海螺常用音色一键填入+「拉取音色」按钮(自动列出系统音色和你的克隆)';
+const APP_VER='v275 · 语音设置加常用模型一键切换:海螺turbo(省钱)/hd(更好听)、ElevenLabs flash/原版,点一下填入模型框';
 function defState(){return{
   settings:{
     chat:{base:'https://vg.v1api.cc/v1',key:'',model:'gpt-4o-mini',temp:0.8,maxTokens:900},
@@ -1743,7 +1743,8 @@ function renderSettings(){const a=S.settings.chat,v=S.settings.vision;
       <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_tbase" value="${esc((S.settings.tts||{}).base||'')}" placeholder="https://api.minimaxi.com 或 api.elevenlabs.io"></div>
       <div class="field" style="padding:0 14px"><label>API Key</label><input id="s_tkey" type="password" value="${esc((S.settings.tts||{}).key||'')}"></div>
       <div class="two" style="padding:0 14px 2px"><div class="field"><label>模型</label><input id="s_tmodel" value="${esc((S.settings.tts||{}).model||'')}" placeholder="speech-02-turbo / eleven_flash_v2_5"></div><div class="field"><label>默认音色</label><input id="s_tvoice" value="${esc((S.settings.tts||{}).voice||'')}" placeholder="male-qn-qingse / voice id / 克隆ID"></div></div>
-      <div class="hint" style="padding:0 14px 6px;color:#8a9">ElevenLabs 省额度：模型填 <b style="color:#7bd38d">eleven_turbo_v2_5</b> 或 <b style="color:#7bd38d">eleven_flash_v2_5</b>（比 multilingual_v2 便宜约一半，日常听差不多）。</div>
+      <div style="padding:2px 14px 4px;font-size:12px;color:#9aa">常用模型（点一下填入）：</div>
+      <div style="padding:0 14px 8px">${[['speech-02-turbo','海螺·省钱'],['speech-02-hd','海螺·更好听'],['eleven_flash_v2_5','11·省额度'],['eleven_multilingual_v2','11·原版']].map(m=>`<span onclick="pickTtsModel('${m[0]}')" style="display:inline-block;margin:0 5px 5px 0;padding:4px 10px;background:#2c2c2e;border-radius:13px;font-size:12px;color:#cdd;cursor:pointer">${m[1]}</span>`).join('')}</div>
       <div style="padding:0 14px 4px;font-size:12px;color:#9aa">海螺常用音色（点一下填入"默认音色"）：</div>
       <div style="padding:0 14px 8px">${[['male-qn-qingse','青涩青年'],['male-qn-jingying','精英青年'],['male-qn-badao','霸道青年'],['presenter_male','男主持'],['audiobook_male_1','有声书男'],['female-shaonv','少女'],['female-yujie','御姐'],['presenter_female','女主持']].map(v=>`<span onclick="pickVoice('${v[0]}')" style="display:inline-block;margin:0 5px 5px 0;padding:4px 10px;background:#2c2c2e;border-radius:13px;font-size:12px;color:#cdd;cursor:pointer">${v[1]}</span>`).join('')}</div>
       <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="pullVoices()">拉取我的全部音色（含克隆·海螺）</button></div>
@@ -1870,6 +1871,7 @@ function showVoicePicker(){const q=(_voiceQ||'').toLowerCase();
     <div style="max-height:50vh;overflow:auto">${list.slice(0,150).map(v=>`<div class="it" onclick="pickVoice('${esc(v.id)}')" style="cursor:pointer"><span>${v.clone?'<b style="color:#ffb83b">我的克隆 · </b>':''}${esc(v.name)}<br><small style="color:#888">${esc(v.id)}</small></span><span class="v">选</span></div>`).join('')||'<div class="empty" style="padding:20px">没有匹配的</div>'}${list.length>150?'<div class="hint" style="padding:8px">只显示前150个，用搜索找更快</div>':''}</div>
     <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function pickVoice(id){const el=$('#s_tvoice');if(el)el.value=id;if(typeof closeModal==='function')closeModal();toast('已选音色：'+id);}
+function pickTtsModel(m){const el=$('#s_tmodel');if(el)el.value=m;toast('已选模型：'+m);}
 
 /* ---------- 世界书 ---------- */
 function renderWorldbook(){
