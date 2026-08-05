@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>电子宠物 · 本地预览</title>
+  <link rel="stylesheet" href="pet-game.css?v=812">
+  <style>
+    *{box-sizing:border-box}html,body{height:100%;margin:0;background:#1d1b1d;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif}.preview-shell{position:relative;width:min(100vw,414px);height:min(100vh,896px);margin:auto;overflow:hidden;background:#0d0d10;box-shadow:0 0 0 1px #333,0 24px 80px #000}.preview-app{position:absolute;inset:0;overflow:hidden}.preview-hub{position:absolute;inset:0;display:flex;flex-direction:column;background:#0c0d10;color:#f4f1ed}.preview-hub nav{height:58px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid #26272b}.preview-hub nav b{font-size:14px}.preview-hub nav small{display:block;margin-top:2px;color:#71737b;font-size:7px;letter-spacing:.18em}.preview-hub nav button{border:0;background:transparent;color:#aaa;font-size:10px}.preview-hub main{flex:1;overflow:auto;padding:15px}.preview-hero{padding:23px;border:1px solid #302c32;border-radius:25px;background:linear-gradient(145deg,#2b242b,#17181d);box-shadow:0 18px 40px #0005}.preview-hero small{color:#b49ca9;font-size:8px;letter-spacing:.18em}.preview-hero h1{margin:9px 0 7px;font-size:25px}.preview-hero p{margin:0;color:#89858d;font-size:10px;line-height:1.6}.preview-title{display:flex;justify-content:space-between;margin:22px 3px 10px}.preview-title b{font-size:13px}.preview-title span{color:#6f7077;font-size:9px}.preview-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.preview-card{min-height:140px;padding:14px;border:1px solid #3b3036;border-radius:21px;background:linear-gradient(150deg,#30222a,#17181c 76%);color:#eee;text-align:left}.preview-card svg{width:42px;height:42px;fill:none;stroke:#e5afc2;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}.preview-card b,.preview-card small{display:block}.preview-card b{margin-top:21px;font-size:15px}.preview-card small{margin-top:5px;color:#887f85;font-size:8px}.preview-placeholder{min-height:140px;padding:14px;border:1px solid #28292e;border-radius:21px;background:#15161a;color:#777;text-align:left}.preview-placeholder i{display:block;font-size:28px;font-style:normal}.preview-placeholder b,.preview-placeholder small{display:block}.preview-placeholder b{margin-top:22px;color:#aaa}.preview-placeholder small{margin-top:5px;font-size:8px}.modal{position:absolute;inset:0;z-index:100;display:none;align-items:flex-end;background:#0007}.modal.show{display:flex}.sheet{width:100%;max-height:88%;overflow:auto;padding:20px 16px calc(18px + env(safe-area-inset-bottom));border-radius:25px 25px 0 0;background:#f8f1eb;color:#54433f;box-shadow:0 -18px 45px #0004}.sheet h3{margin:0 0 8px}.hint{margin-bottom:10px;color:#907e78;font-size:10px;line-height:1.55}.section{margin-top:7px;border:1px solid #e5d8d2;border-radius:13px;overflow:hidden;background:#fffaf7}.it{min-height:45px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;font-size:11px}.it .v{color:#b26a83}.field{margin:10px 0}.btns{display:grid;grid-template-columns:1fr 1fr;gap:8px}.btn{height:42px;border:0;border-radius:13px}.btn.p{background:#cf738f;color:#fff}.btn.g{background:#e8ddd7;color:#796761}.btn.d{background:#b95d63;color:#fff}.toast{position:absolute;left:50%;bottom:28px;z-index:200;max-width:80%;padding:9px 13px;border-radius:99px;background:#2d292cdd;color:#fff;font-size:10px;opacity:0;transform:translate(-50%,10px);transition:.2s;pointer-events:none}.toast.show{opacity:1;transform:translate(-50%,0)}
+    @media(max-width:500px){.preview-shell{width:100vw;height:100vh;box-shadow:none}}
+  </style>
+</head>
+<body>
+  <div class="preview-shell">
+    <div class="preview-app" id="app"></div>
+    <div class="modal" id="modal" onclick="if(event.target===this)closeModal()"><div class="sheet" id="modalSheet"></div></div>
+    <div class="toast" id="toast"></div>
+  </div>
+  <script>
+    const $=s=>document.querySelector(s);const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+    let stack=[{p:'gameshub'}];const cur=()=>stack[stack.length-1];
+    let S={me:{name:'我'},contacts:[{id:'role-1',name:'沈砚',remark:'沈砚'},{id:'role-2',name:'林夏',remark:'林夏'}]};try{const old=localStorage.getItem('north-pet-preview');if(old)S.me.ePet=JSON.parse(old);}catch(_){}
+    function save(){try{localStorage.setItem('north-pet-preview',JSON.stringify(S.me.ePet||null));}catch(_){}}
+    function getC(id){return S.contacts.find(c=>c.id===id)||null}function go(p){stack.push({p});render()}function openGames(){closeModal();stack=[{p:'gameshub'}];render()}function home(){openGames()}
+    function openModal(html){$('#modalSheet').innerHTML=html;$('#modal').classList.add('show')}function closeModal(){$('#modal').classList.remove('show')}
+    let toastTimer=0;function toast(text){const t=$('#toast');t.textContent=text;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),1800)}
+    function resetPetPreview(){localStorage.removeItem('north-pet-preview');delete S.me.ePet;render();toast('预览数据已重置')}
+    function previewHub(){return `<div class="preview-hub"><nav><span><b>游戏大厅</b><small>GAME STUDIO</small></span><button onclick="resetPetPreview()">重置宠物预览</button></nav><main><section class="preview-hero"><small>PLAY TOGETHER</small><h1>选一场游戏</h1><p>电子宠物是独立长期养成游戏，可以单独照顾，也可以邀请角色成为共同照顾人。</p></section><div class="preview-title"><b>全部游戏</b><span>电子宠物可直接进入</span></div><div class="preview-grid"><button class="preview-card" onclick="openPetGame()"><svg viewBox="0 0 24 24"><path d="M8 8 6 4 4 8v6c0 4 3 7 8 7s8-3 8-7V8l-2-4-2 4M8 8q4-2 8 0"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M10 17q2 2 4 0"/></svg><b>电子宠物</b><small>领养 · 换装 · 共同照顾</small></button><div class="preview-placeholder"><i>✎</i><b>你画我猜</b><small>原有游戏入口示意</small></div></div></main></div>`}
+    function render(){const a=$('#app');a.innerHTML=cur().p==='pet'?renderPetGame():previewHub();setTimeout(()=>{if(cur().p==='pet')petAfterRender()},0)}
+  </script>
+  <script src="pet-game.js?v=812"></script>
+  <script>render()</script>
+</body>
+</html>

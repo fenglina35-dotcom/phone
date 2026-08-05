@@ -1,5 +1,5 @@
-const BUILD='811';
-const SHELL_CACHE='north-shell-v811';
+const BUILD='812';
+const SHELL_CACHE='north-shell-v812';
 const CORE_FILES=[
   {url:'./小手机.html?v='+BUILD,kind:'html'},
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
@@ -9,10 +9,13 @@ const CORE_FILES=[
 const OPTIONAL_FILES=[
   './icon.png',
   './assets/incoming-soft-ring-v1.wav',
+  './assets/pet-room-v1.webp',
   './pay-assets/alipay-receive.jpg',
   './pay-assets/wechat-receive.jpg',
   './pay-assets/wechat-contact.jpg',
   './commerce-ui.js?v='+BUILD,
+  './pet-game.js?v=812',
+  './pet-game.css?v=812',
   './vendor/mp4box.all.mjs?v='+BUILD,
   './vendor/rolldown-runtime-w6R9maHv.mjs',
   './vendor/styp-9TIZZDLN.mjs',
@@ -144,7 +147,7 @@ self.addEventListener('fetch',event=>{
     })());
     return;
   }
-  if(/\/commerce-ui\.js$/.test(url.pathname)||/\/icon\.png$/.test(url.pathname)||/\/pay-assets\//.test(url.pathname)||/\/vendor\//.test(url.pathname)){
+  if(/\/commerce-ui\.js$/.test(url.pathname)||/\/pet-game\.js$/.test(url.pathname)||/\/pet-game\.css$/.test(url.pathname)||/\/assets\/pet-room-v1\.webp$/.test(url.pathname)||/\/icon\.png$/.test(url.pathname)||/\/pay-assets\//.test(url.pathname)||/\/vendor\//.test(url.pathname)){
     event.respondWith((async()=>{
       const cache=await caches.open(SHELL_CACHE);
       const cached=await cache.match(request,{ignoreSearch:true});

@@ -10,11 +10,11 @@ assert.match(source, /# 当前联系人的独立身份（最高优先级）/);
 assert.match(source, /严禁猜测、暗示或声称ta是任何其他联系人换号、切换身份、同一个人/);
 assert.doesNotMatch(source, /# 当前聊天身份（小号与大号严格分开）/);
 assert.doesNotMatch(source, /现在跟你聊天的是小号身份/);
-assert.match(source, /if\(_main\)\{const av=affNow\(c\)/);
-assert.match(source, /if\(_main&&!opt\.selectiveMemory\)\{const _pd=powerDynamicPrompt/);
+assert.match(source, /if\(_main\)\{if\(!_natural\)\{const av=affNow\(c\)/);
+assert.match(source, /if\(_main&&!_natural&&!opt\.selectiveMemory\)\{const _pd=powerDynamicPrompt/);
 assert.doesNotMatch(source, /# 有别人加过你微信、和你聊过/);
 assert.doesNotMatch(source, /if\(aid==='main'\)setTimeout\(triggerAltReports/);
-assert.match(source, /# 姓名边界（重要）[\s\S]*?忆北的小手机[\s\S]*?应用\/设备名称/);
+assert.match(source, /# 姓名与称呼边界（重要）[\s\S]*?忆北的小手机[\s\S]*?应用\/设备名称/);
 
 assert.match(source, /function accountDeleteTap\(ev,id\)/);
 assert.match(source, /aria-label="删除小号"/);
