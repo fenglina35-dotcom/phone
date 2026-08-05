@@ -24,8 +24,10 @@ vm.runInContext([
   functionSource('wechatNaturalOn'),
   functionSource('wechatNaturalModuleNeeded'),
   functionSource('wechatNaturalCallEventNote'),
+  functionSource('wechatNaturalAutonomyNoteActive'),
   functionSource('wechatNaturalCallEventActive'),
   functionSource('wechatNaturalSilentDecision'),
+  functionSource('wechatNaturalInitiativePlan'),
   functionSource('wechatNaturalSlimSystem'),
   ';globalThis.need=wechatNaturalModuleNeeded;globalThis.note=wechatNaturalCallEventNote;globalThis.silent=wechatNaturalSilentDecision;globalThis.slim=wechatNaturalSlimSystem;',
 ].join('\n'),context);
@@ -49,6 +51,11 @@ assert.match(context.note(),/自主决定下一步/);
 assert.match(context.note(),/\[保持安静\]/);
 assert.equal(context.silent('[心情|有点闷]\n[保持安静]',context.note()),true);
 
+const initiativePlan=vm.runInContext('wechatNaturalInitiativePlan()',context);
+assert.equal(initiativePlan.kind,'autonomy');
+assert.match(initiativePlan.note,/主动联系自主决策/);
+assert.match(initiativePlan.note,/\[保持安静\]/);
+
 assert.match(source,/_hlPlan=humanLikeOn\(\)&&!_naturalOn\?/,'behavior planner must not decide natural-mode replies');
 assert.match(source,/_relIntent=_naturalOn\?null:relationshipIntent/,'numeric relationship policy must be absent in natural mode');
 assert.match(source,/if\(!_naturalOn\)maybeAffectionShift/,'affection must not auto-shift in natural mode');
@@ -61,7 +68,21 @@ assert.match(source,/if\(_main&&!_natural&&!opt\.selectiveMemory\)/,'power and b
 assert.match(source,/if\(!_natural\)\{const _ap=currentActivityPrompt/,'system-selected activities must stay out of natural mode');
 assert.match(source,/# 日常自主性/,'natural mode should explicitly leave daily state to the role');
 assert.match(source,/role:_naturalOn&&m\.type==='sys'\?'system':m\.role/,'system events must not masquerade as user speech');
-assert.match(source,/role:_callAutonomy\?'system':'user'/,'autonomous call triggers must be system facts');
+assert.match(source,/role:_naturalOn\?'system':'user'/,'all natural-mode event notes must be system facts, never fake user speech');
+assert.match(source,/\(_natural\?traitSpeechDesc\(c\):traitDesc\(c\)\)/,'numeric personality sliders must stay out of natural mode');
+assert.match(source,/function adjMood\(id,d\)\{if\(wechatNaturalOn\(\)\)return;/,'mood value changes must be inert in natural mode');
+assert.match(source,/function checkIgnore\(\)\{if\(wechatNaturalOn\(\)\|\|/,'legacy no-reply escalation must be disabled in natural mode');
+assert.match(source,/function checkFollowups\(\)\{if\(wechatNaturalOn\(\)\|\|/,'scheduled follow-up prompts must not force a natural-mode message');
+assert.match(source,/async function recordTaMood\(cid\)\{if\(wechatNaturalOn\(\)\)return false;/,'the system must not invent a daily mood for the role in natural mode');
+assert.match(source,/if\(!wechatNaturalOn\(\)&&hol&&F\['hol_'\+c\.id\]/,'holiday greetings and red packets must not be forced in natural mode');
+assert.match(source,/if\(!wechatNaturalOn\(\)&&S\.couple&&S\.couple\.cid&&h>=14/,'the daily mood scheduler must be disabled in natural mode');
+assert.match(source,/微信自然模式：不把久未打开解释为冷落/,'phone-idle events must not force a natural-mode reply');
+assert.match(source,/if\(!wechatNaturalOn\(\)\)cf\+='\\n- 【你很黏ta、舍不得挂电话】/,'the fixed clingy call policy must be stable-mode only');
+assert.match(source,/if\(!wechatNaturalOn\(\)\)maybeAffectionShift\(_call\.id/,'calls must not shift affection in natural mode');
+assert.match(source,/content=_naturalOn\?content\.replace\([^\n]+\):applyGrudgeTags\(content,c\)/,'natural-mode WeChat replies must not write to the grudge ledger');
+assert.match(source,/if\(!_naturalOn\)maybeGrudgeResolve\(content,c,id\)/,'natural-mode WeChat replies must not auto-resolve grudges');
+assert.match(source,/if\(!wechatNaturalOn\(\)\)maybeGrudgeResolve\(content,c,_call\.id\)/,'natural-mode calls must not auto-resolve grudges');
+assert.match(source,/if\(c&&!wechatNaturalOn\(\)\)\{const mood=honestMoodText/,'inline call mood tags must not write visible mood in natural mode');
 assert.match(source,/wechatCallEventReplyNote\(/,'call lifecycle must route through the autonomous test-mode note');
 assert.match(source,/content=applyControlTags\(content,c,id,_statedPwd\)/,'lock/control execution must remain connected');
 assert.match(source,/extractControl\(content,c,_statedPwd\)/,'natural-language lock execution must remain connected');

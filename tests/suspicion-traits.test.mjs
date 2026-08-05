@@ -150,7 +150,7 @@ assert.match(functionSource('suspicionCheckDaily'),/lastSilenceMessageId/);
 assert.match(functionSource('suspicionTick'),/这是同一件事最后一次跟进/);
 assert.match(functionSource('suspicionRequestMessage'),/suspicionEventOpen\(st\.pendingHangup\)/);
 assert.match(functionSource('maybeFollowup'),/suspicionPromiseCoversText/);
-assert.match(source,/if\(got\)suspicionOnAssistantReply\(c\)/);
+assert.match(source,/if\(got&&!_naturalOn\)suspicionOnAssistantReply\(c\)/);
 
 const detailContext=vm.createContext({Date,Math,extremeLoveOn:()=>false});
 for(const name of ['traitValue','suspicionNumber','suspicionPromiseDue','suspicionClaimFacts','suspicionDirectContradiction','suspicionSilenceDelay'])vm.runInContext(functionSource(name),detailContext);

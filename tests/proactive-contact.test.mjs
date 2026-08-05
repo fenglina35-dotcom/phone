@@ -34,7 +34,9 @@ assert.doesNotMatch(maybeSource, /a\.key===['"]sleep['"]/, 'an inferred sleep ac
 assert.match(maybeSource, /extremeLoveOn\(c\)/, 'extreme-love escalation may suppress ordinary initiative only while the mode is active');
 assert.match(maybeSource, /lm&&lm\.role===['"]user['"]/,'an unanswered user message must outrank proactive contact');
 assert.match(maybeSource, /initiativeQueueNote\(c,plan,plan\.note\)/,'queued initiative must carry a freshness baseline');
-assert.match(maybeSource, /callEligible=plan\.kind!==['"]photo['"]&&plan\.kind!==['"]location['"]&&plan\.kind!==['"]checkin['"]&&plan\.kind!==['"]conflict['"]/);
+assert.match(maybeSource, /callEligible=!natural&&plan\.kind!==['"]photo['"]&&plan\.kind!==['"]location['"]&&plan\.kind!==['"]checkin['"]&&plan\.kind!==['"]conflict['"]/, 'legacy random calls must not override natural-mode autonomy');
+assert.match(maybeSource, /plan=natural\?wechatNaturalInitiativePlan/, 'natural mode must let the role choose the proactive action');
+assert.match(maybeSource, /a=natural\?null:currentRoleActivity/, 'natural mode must not receive a system-invented current activity');
 assert.match(source, /setInterval\(checkInitiative,15000\)/);
 assert.match(source, /visibilitychange['"],initiativeWakeCheck/);
 assert.match(source, /pageshow['"],initiativeWakeCheck/);
@@ -203,6 +205,7 @@ function schedulerContext({planKind = 'share', callProb = 0, queue = true, deliv
     initiativeDelayMs: () => 60000,
     lastMsg: () => ({role: lastRole, time: now - 120000}),
     lastUserTs: () => 0,
+    wechatNaturalOn: () => false,
     extremeLoveOn: () => false,
     currentRoleActivity: () => ({key: activityKey, label: activityKey === 'sleep' ? '在睡觉或休息' : '正在忙工作', busy: 4, until: now + 21600000}),
     initiativePlan: () => ({kind: planKind, memory: null, note: '[系统：主动联系]'}),
