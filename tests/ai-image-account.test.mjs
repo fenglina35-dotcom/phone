@@ -8,12 +8,29 @@ const account=fs.readFileSync(path.join(root,'ai-account.js'),'utf8');
 const backend=fs.readFileSync(path.join(root,'supabase/functions/phone-ai/index.ts'),'utf8');
 const setup=fs.readFileSync(path.join(root,'AI_BACKEND_SETUP.md'),'utf8');
 
-assert.match(app,/function aiImageRelayOn\(\)\{return !!\(aiImageInit\(\)\.enabled&&aiCoreUrl\(\)\);\}/);
-assert.match(app,/if\(aiImageRelayOn\(\)\)\{const d=await aiRelay\('image'/);
-assert.match(app,/function imageGenerationAvailable\(\)/);
-assert.doesNotMatch(app,/if\(aiCoreOn\(\)\)\{const d=await aiRelay\('image'/);
+// AI账户不再提供任何内置图片入口、套餐、测试按钮或说明。
+assert.doesNotMatch(account,/启用图片生成|图片中转站|图片生成套餐|生成一张图片|购买与生图扣费说明/);
+assert.doesNotMatch(account,/AI_PURCHASE_NOTICE|aiImageReady|aiImageRouteCount|aiImagePackageCards|aiToggleImageApi|aiOpenImageGenerator|aiGenerateAccountImage/);
+
+// 付款截图仍是充值流程的一部分，不能随内置生图功能一起删除。
+assert.match(account,/accept="image\/\*,\.jpg,\.jpeg,\.png,\.webp,\.heic,\.heif"/);
+assert.match(account,/function aiClaimCanvasData\(source,width,height\)/);
+assert.match(account,/typeof createImageBitmap==='function'/);
+assert.match(account,/当前浏览器不能读取 HEIC\/HEIF/);
+assert.match(account,/点数不足提醒/);
+assert.match(account,/function aiCheckLowBalance\(balance\)/);
+assert.match(account,/语音或影院字幕服务中断/);
+
+// 前端不再读取旧的内置图片开关，也不会向 phone-ai 发送 image 请求。
+assert.doesNotMatch(app,/function aiImageInit|function aiImageRelayOn|aiRelay\('image'/);
+assert.match(app,/function imageGenerationAvailable\(\)\{const ch=S\.settings\.chat\|\|\{\};return !!\(\(S\.settings\.imgBase\|\|ch\.base\)&&\(S\.settings\.imgKey\|\|ch\.key\)\);\}/);
+assert.match(app,/async function genImage\(prompt\)[\s\S]*imageGenerateExternal\(base,key,model,prompt,'1024x1536'\)/);
+assert.match(app,/function dgImageConfigured\(\)[\s\S]*S\.settings\.imgBase\|\|ch\.base/);
+assert.doesNotMatch(app,/内置图片怎么用|AI账户里开启中转站图片|两个开关都开启/);
+assert.match(app,/让角色发真照片[\s\S]*使用下方外置图片接口生成，由对应平台计费/);
+
+// 外置图片能力继续保留，避免破坏用户自己配置的角色真图和绘画功能。
 assert.match(app,/function imageGenerateExternal\(base,key,model,prompt,size,quality\)/);
-assert.match(app,/q=quality==='low'\?'low':quality==='high'\?'high':'medium'/,'callers keep medium quality unless they explicitly request a faster or higher tier');
 assert.match(app,/const urls=\/\\\/v1\$\/i\.test\(b\)\?\[b\+path\]:\[b\+'\/v1'\+path,b\+path\]/);
 assert.match(app,/接口返回网页HTML，不是API JSON/);
 assert.match(app,/function imageCollectValues\(v,out\)/);
@@ -22,86 +39,18 @@ assert.match(app,/response_format:geminiImage\?'b64_json':'url'/);
 assert.match(app,/function imageSizeRatio\(size\)/);
 assert.match(app,/aspect_ratio:imageSizeRatio\(target\)/);
 assert.match(app,/必须保持画布尺寸.*不要改成方图/);
-assert.match(app,/if\(!res\|\|!res\.ok&&imageShouldRetryChat\(res\.status,err\)\)/);
 assert.match(app,/gemini-3\.1-flash-image-preview/);
 assert.match(app,/gemini-3-pro-image-preview/);
 
-assert.match(account,/启用图片生成/);
-assert.match(account,/图片中转站/);
-assert.match(account,/图片生成套餐/);
-assert.match(account,/生成一张图片/);
-assert.match(account,/function aiGenerateAccountImage\(\)/);
-assert.match(account,/function aiImageReady\(\)/);
-assert.match(account,/图片中转站尚未配置/);
-assert.match(account,/图片双路线已启用/);
-assert.match(account,/成功只扣一次，两条都失败才退点/);
-assert.match(account,/图片生成每张固定扣6点/);
-assert.match(account,/function aiShowPurchaseNotice\(\)/);
-assert.match(account,/成功只扣一次6点/);
-assert.match(account,/两条路线都失败则6点全额退回/);
-assert.match(account,/更换浏览器或手机前请先备份并确认用户ID/);
-assert.match(account,/accept="image\/\*,\.jpg,\.jpeg,\.png,\.webp,\.heic,\.heif"/);
-assert.match(account,/function aiClaimCanvasData\(source,width,height\)/);
-assert.match(account,/typeof createImageBitmap==='function'/);
-assert.match(account,/当前浏览器不能读取 HEIC\/HEIF/);
-
-assert.match(backend,/image: 6/);
-assert.match(backend,/Deno\.env\.get\("IMAGE_MODEL"\) \|\| "gpt-image-2"/);
-assert.match(backend,/function configuredImageRoutes\(\)/);
-assert.match(backend,/IMAGE_ROUTE_2_BASE_URL/);
-assert.match(backend,/IMAGE_ROUTE_2_API_KEY/);
-assert.match(backend,/IMAGE_ROUTE_2_MODEL/);
-assert.match(backend,/openai\("\/images\/generations"/);
-assert.match(backend,/\[base \+ "\/v1" \+ path, base \+ path\]/);
-assert.match(backend,/failure\.stopAlternateUrl = !\[404, 405, 501\]\.includes\(r\.status\)/);
-assert.match(backend,/\(e as any\)\?\.stopAlternateUrl/);
-assert.match(backend,/function relayImageResult\(data: any\)/);
-assert.match(backend,/function guardedChatImagePrompt\(prompt: unknown, size: string, rolePhoto = false\)/);
-assert.match(backend,/function shouldRetryImagePlain\(reason: string\)/);
-assert.match(backend,/function shouldRetrySameImageRoute\(reason: string\)/);
-assert.match(backend,/function shouldTryNextImageRoute\(reason: string\)/);
-assert.match(backend,/inlineData\?\.data/);
-assert.match(backend,/fileData\?\.fileUri/);
-assert.match(backend,/bareBase64\.length > 10000/);
-assert.match(backend,/b64_json: bareBase64/);
-assert.match(backend,/provider: "configured-relay"/);
-assert.match(backend,/quality: "medium"/);
-assert.match(backend,/function imageAspectRatio\(size: string\)/);
-assert.match(backend,/const gptImage = \/\^gpt-image\(\?:-\|\$\)\/i\.test\(model\)/);
-assert.match(backend,/response_format: geminiImage \? "b64_json" : "url"/);
-assert.match(backend,/aspect_ratio: imageAspectRatio\(size\)/);
-assert.match(backend,/content: guardedChatImagePrompt\(rawPrompt, size, rolePhoto\)/);
-assert.match(backend,/name: "route-1",[\s\S]*base: base2,[\s\S]*timeoutMs: 150000/);
-assert.match(backend,/\.\.\.original,[\s\S]*name: "route-2",[\s\S]*timeoutMs: 90000/);
-assert.match(backend,/const chatTimeout = route\.timeoutMs \|\| 90000/);
-assert.match(backend,/if \(i < routes\.length - 1 && !shouldTryNextImageRoute\(errText\(lastError\)\)\) break/);
-assert.match(backend,/upstream = await openai\("\/chat\/completions", chatBody, chatTimeout, route\)/);
-assert.match(backend,/richBody, 120000, route\)/);
-assert.match(backend,/\}, 120000, route\)/);
-const imageRouteStart=backend.indexOf('async function generateImageThroughRoute');
-const imageRouteEnd=backend.indexOf('function hexToBase64',imageRouteStart);
-const imageRoute=backend.slice(imageRouteStart,imageRouteEnd);
-assert.ok(imageRoute.indexOf('openai("/images/generations"')<imageRoute.indexOf('openai("/chat/completions"'),'structured image endpoint must be tried before chat fallback');
-assert.match(imageRoute,/relayImageResult\(upstream\)[\s\S]*catch \(firstError\)[\s\S]*endpoint = "chat-completions"/);
-assert.match(backend,/function recoverStalePendingCharges\(/);
+// 后台先返回 410，再进入任何计费分支；图片能力和部署参数均已移除。
+assert.match(backend,/if \(action === "image"\) return json\(\{ ok: false, error: "image-feature-retired" \}, 410\);/);
+assert.doesNotMatch(backend,/charge\(userId, clientSecret, "image"\)/);
+assert.doesNotMatch(backend,/image:\s*6|image_routes|configuredImageRoutes|generateImageThroughRoute|IMAGE_MODEL|IMAGE_ROUTE_2/);
+assert.doesNotMatch(backend,/openai\("\/images\/generations"/);
+assert.match(backend,/function recoverStalePendingCharges\(/,'old pending image charges still need safe automatic refunds');
 assert.match(backend,/stale-pending-auto-refund/);
-assert.match(backend,/await recoverStalePendingCharges\(userId, clientSecret\)/);
-assert.match(backend,/image_routes: configuredImageRoutes\(\)\.filter/);
-assert.match(backend,/await refund\(userId, clientSecret, "image", c\.cost, c\.ledgerId, reason\)/);
-assert.match(backend,/refunded: c\.cost/);
-assert.match(backend,/billed: false/);
-assert.doesNotMatch(backend,/OPENAI_IMAGE_API_KEY/);
-assert.doesNotMatch(backend,/https:\/\/api\.openai\.com\/v1\/images\/generations/);
 
+assert.doesNotMatch(setup,/IMAGE_MODEL|IMAGE_ROUTE_2|生成图片：|图片备用路线|图片生成复用/);
 assert.match(setup,/OPENAI_API_KEY=你的聊天\/识图中转站 key/);
-assert.match(setup,/IMAGE_MODEL=gpt-image-2/);
-assert.match(setup,/IMAGE_ROUTE_2_BASE_URL=备用中转站地址/);
-assert.match(setup,/任一路线成功就只结算一次，全部尝试都失败才全额退点/);
-assert.match(setup,/不需要额外配置官方 OpenAI Key/);
 
-assert.match(account,/点数不足提醒/);
-assert.match(account,/function aiCheckLowBalance\(balance\)/);
-assert.match(account,/lowBalanceThreshold/);
-assert.match(account,/AI点数快用完了/);
-
-console.log('AI image account tests passed');
+console.log('AI built-in image removal tests passed');

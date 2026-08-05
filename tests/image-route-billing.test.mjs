@@ -2,29 +2,18 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 
 const backend = fs.readFileSync(new URL("../supabase/functions/phone-ai/index.ts", import.meta.url), "utf8");
-const start = backend.indexOf('if (action === "image")');
-const end = backend.indexOf('if (action === "tts")', start);
-assert.ok(start >= 0 && end > start, "image action block missing");
-const image = backend.slice(start, end);
+const retired = 'if (action === "image") return json({ ok: false, error: "image-feature-retired" }, 410);';
 
-assert.equal((image.match(/await charge\(userId, clientSecret, "image"\)/g) || []).length, 1, "one request must reserve points once");
-assert.match(image, /for \(let i = 0; i < routes\.length; i\+\+\)/);
-assert.match(image, /const maxAttempts = route\.name === "route-1" \? 2 : 1/);
-assert.match(image, /shouldRetrySameImageRoute\(routeReason\)/);
-assert.match(image, /shouldTryNextImageRoute\(errText\(lastError\)\)/);
-assert.match(image, /result = await generateImageThroughRoute\(route/);
-assert.match(image, /if \(!result\) throw lastError/);
-assert.equal((image.match(/await finishCharge\(c\.ledgerId, true/g) || []).length, 1, "success must settle once");
-assert.equal((image.match(/await refund\(userId, clientSecret, "image", c\.cost/g) || []).length, 1, "all-route failure must refund once");
-assert.doesNotMatch(image.slice(image.indexOf("for (let i = 0"), image.indexOf("if (!result)")), /\bcharge\(/, "route switch must not charge again");
-assert.match(image, /fallback: usedRoute === "route-2"/);
-assert.match(image, /routeFailures\.push\(\{ route: route\.name, attempt, reason: routeReason \}/);
-assert.match(image, /route_failures: routeFailures/);
-assert.match(image, /charged: c\.cost/);
-assert.match(image, /charged: 0/);
-assert.match(image, /refunded: c\.cost/);
+assert.match(backend, /if \(action === "image"\) return json\(\{ ok: false, error: "image-feature-retired" \}, 410\);/);
+assert.ok(backend.indexOf(retired) < backend.indexOf('if (action === "account")'), "retired image requests must stop before account and billing work");
+assert.doesNotMatch(backend, /await charge\(userId, clientSecret, "image"\)/, "retired image requests must never reserve points");
+assert.doesNotMatch(backend, /await finishCharge\([^\n]+image|await refund\(userId, clientSecret, "image"/);
+assert.doesNotMatch(backend, /configuredImageRoutes|generateImageThroughRoute|IMAGE_ROUTE_2|IMAGE_MODEL/);
+assert.doesNotMatch(backend, /image_routes|image:\s*6/);
 
-assert.match(backend, /bareBase64\.length > 10000/);
-assert.match(backend, /return \{ data: \[\{ b64_json: bareBase64 \}\] \}/);
+// Existing pending image ledger rows can still be refunded after the feature is retired.
+assert.match(backend, /function recoverStalePendingCharges\(/);
+assert.match(backend, /\.eq\("feature", "image"\)/);
+assert.match(backend, /stale-pending-auto-refund/);
 
-console.log("image route billing tests passed");
+console.log("retired image route billing tests passed");

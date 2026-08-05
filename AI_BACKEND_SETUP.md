@@ -31,21 +31,10 @@ OPENAI_API_KEY=你的聊天/识图中转站 key
 OPENAI_BASE_URL=https://vg.v1api.cc/v1
 CHAT_MODEL=gemini-2.5-pro
 VISION_MODEL=gemini-2.5-pro
-IMAGE_MODEL=gpt-image-2
 ADMIN_ACCESS_TOKEN=主管理员独立强口令
 ```
 
 注意：Supabase 不允许自定义 Secret 以 `SUPABASE_` 开头，所以这里用的是 `PHONE_SUPABASE_URL` 和 `PHONE_SERVICE_ROLE_KEY`。
-
-图片生成复用已经部署的 `OPENAI_BASE_URL` 和 `OPENAI_API_KEY`，通过中转站的 `/v1/images/generations` 请求 `IMAGE_MODEL`。不需要额外配置官方 OpenAI Key。
-
-图片备用路线（可选，建议配置）：
-
-```text
-IMAGE_ROUTE_2_BASE_URL=备用中转站地址
-IMAGE_ROUTE_2_API_KEY=备用中转站密钥
-IMAGE_ROUTE_2_MODEL=gpt-image-2
-```
 
 如果要让其他管理员只管理用户授权、不能查看付款核对，再配置：
 
@@ -62,8 +51,6 @@ supabase/migrations/202607240001_license_admin_pagination.sql
 ```
 
 这个迁移会增加列表索引、管理员分页搜索函数和操作人字段。管理后台每次只读取 50 条，搜索、可进入/已移出筛选和总人数统计都在云端完成；“移出去”仍然只是停用，记录不会从搜索结果中删除。之后的移出和放回操作还会显示最近是哪位管理员、在什么时间执行的。
-
-配置备用站后，它会作为新的主路线；原图片站改为副路线。新主路线若返回空图片会在同一笔请求内自动补试一次，再失败才尝试原路线。一次生成只预扣一次点数：任一路线成功就只结算一次，全部尝试都失败才全额退点，不会因为重试或切换路线重复扣点。
 
 ## 4. 海螺语音 Secrets
 
@@ -85,7 +72,6 @@ TTS_CNY_PER_CHAR=0.0002
 ```text
 文字聊天：10 点 / 次
 识图：25 点 / 次
-生成图片：20 点 / 张
 语音生成：每 50 字 1 点，向上取整（1～50 字 1 点，最多 300 字 / 6 点）
 总结：2 点 / 次
 ```

@@ -40,7 +40,7 @@ assert.equal(context.rolePhotoSceneOnlyRequest('拍一张窗外的晚霞给我')
 assert.equal(context.rolePhotoSceneOnlyRequest('拍你站在夜景前的背影'), false);
 assert.equal(context.rolePhotoSceneOnlyRequest('自拍一张你和夜景'), false);
 
-assert.match(app, /aiRelay\('image',\{prompt:rawPrompt,size:'1024x1536',source:'role_photo'\}\)/);
+assert.doesNotMatch(app, /aiRelay\('image'/);
 assert.match(app, /function roleVisualIdentity\(c\)/);
 assert.match(app, /Same exact character identity and biological sex, no gender swap, no random stock selfie/);
 assert.match(app, /function rolePhotoSceneLogic\(c,rawScene\)/);
@@ -59,19 +59,8 @@ assert.match(app, /手机完全挡住整张脸/);
 assert.match(app, /【最终检查】画面中零张脸、零个可见五官/);
 assert.match(app, /遮脸硬规则，优先级最高/);
 assert.match(app, /function retryGeneratedImage\(cid,mid\)/);
-assert.match(app, /上游限流或没有成功出图，点数已退回/);
+assert.match(app, /外置图片平台限流或没有成功出图，请稍后重试/);
 assert.match(app, /点这里重试/);
 
-assert.match(backend, /const ROLE_PHOTO_NO_FACE_GUARD = `ABSOLUTE ROLE-PHOTO COMPOSITION LOCK:/);
-assert.match(backend, /const rolePhoto = String\(body\.source \|\| ""\) === "role_photo"/);
-assert.match(backend, /generateImageThroughRoute\(route, body\.prompt, size, rolePhoto\)/);
-assert.match(backend, /guardedImagePrompt\(rawPrompt, rolePhoto\)/);
-assert.match(backend, /guardedChatImagePrompt\(rawPrompt, size, rolePhoto\)/);
-assert.match(backend, /This lock overrides every other prompt sentence/);
-assert.match(backend, /keep the head and hair silhouette/i);
-assert.match(backend, /phone fully covers the whole face/i);
-assert.match(backend, /Do not substitute a random stock selfie person/i);
-assert.match(backend, /background, lighting, and location must follow the time and scene logic/i);
-assert.match(backend, /same current character with the exact gender and identity/i);
-assert.doesNotMatch(backend, /same young male character/i);
-assert.doesNotMatch(backend, /If a person is requested, avoid a clear front-facing face by using a natural side/);
+assert.match(backend, /image-feature-retired/);
+assert.doesNotMatch(backend, /ROLE_PHOTO_NO_FACE_GUARD|generateImageThroughRoute|guardedImagePrompt/);

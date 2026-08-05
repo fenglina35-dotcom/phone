@@ -86,8 +86,8 @@ promptContext.msgs=()=>[
 assert.equal(promptContext.rolePhotoContextRequest({id:'c1'}),'拍一下窗外夜景');
 
 assert.match(app,/先结合最近几句对话提取主体、颜色、款式和构图/);
-assert.match(backend,/Preserve the user's requested colors, style, and framing/);
-assert.match(backend,/Required canvas: \$\{size\}, \$\{ratio\}/);
-assert.match(app,/size:'1024x1536',source:'role_photo'/);
+assert.match(app,/imageGenerateExternal\(base,key,model,prompt,'1024x1536'\)/);
+assert.match(backend,/image-feature-retired/);
+assert.doesNotMatch(backend,/guardedChatImagePrompt|generateImageThroughRoute/);
 
 console.log('role photo wearable tests passed');

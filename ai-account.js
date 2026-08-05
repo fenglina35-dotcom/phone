@@ -1,5 +1,5 @@
 /* ---------- AI账户 / 内置AI ---------- */
-let _aiAcct=null,_aiAcctBusy=false,_aiAutoTried=false,_aiAcctFetchedAt=0,_aiVoiceList=[],_aiVoiceQ='',_aiVoiceTestBusy=false,_aiVoiceTestStatus='',_aiAsrTestBusy=false,_aiAsrTestStatus='',_aiPayBusy=false,_aiClaimFile=null,_aiClaimBusy=false,_aiImageBusy=false,_aiImageStatus='',_aiImageResult='',_aiLowBalanceTimer=0,_aiAccountPollTimer=0,_aiArrivalTimer=0;
+let _aiAcct=null,_aiAcctBusy=false,_aiAutoTried=false,_aiAcctFetchedAt=0,_aiVoiceList=[],_aiVoiceQ='',_aiVoiceTestBusy=false,_aiVoiceTestStatus='',_aiAsrTestBusy=false,_aiAsrTestStatus='',_aiPayBusy=false,_aiClaimFile=null,_aiClaimBusy=false,_aiLowBalanceTimer=0,_aiAccountPollTimer=0,_aiArrivalTimer=0;
 const AI_VOICE_PRESETS=[
   {id:'qingshouyin20260726',name:'青受音',clone:true,preset:true},
   {id:'xiayizhou20260725',name:'夏以昼',clone:true,preset:true},
@@ -19,7 +19,6 @@ const AI_PAYMENT_CHANNELS=[
   {id:'wechat',name:'微信支付',qr:'./pay-assets/wechat-receive.jpg',url:''}
 ];
 const AI_CLONE_CONTACT_QR='./pay-assets/wechat-contact.jpg';
-const AI_PURCHASE_NOTICE='图片生成每张固定扣6点，按当前套餐折算约0.19～0.24元/张。系统优先使用路线一，生成失败会自动重试并尝试路线二；无论切换或重试多少次，成功只扣一次6点，两条路线都失败则6点全额退回，不会因为切换路线重复扣点。点数属于通用点数，也可以用于文字、语音等功能，请按需购买、少量多次。AI账户与当前浏览器中的用户ID绑定，更换浏览器或手机前请先备份并确认用户ID，否则可能读取不到原账户点数。';
 function aiPageScroll(){const sc=typeof $==='function'?$('.scroll'):null;return sc?sc.scrollTop:0;}
 function aiBalanceCacheKey(){return'yibei_ai_balance_'+aiUserId();}
 function aiCachedBalance(){try{const raw=localStorage.getItem(aiBalanceCacheKey());if(raw==null||raw==='')return null;const n=Number(raw);return Number.isFinite(n)&&n>=0?n:null;}catch(_){return null;}}
@@ -29,7 +28,6 @@ function aiRenderStable(){const top=aiPageScroll(),page=typeof $==='function'?$(
 function aiHiddenPurchases(){const ac=aiCoreInit();if(!Array.isArray(ac.hiddenPurchases))ac.hiddenPurchases=[];return ac.hiddenPurchases;}
 function aiVisiblePurchases(){const hidden=new Set(aiHiddenPurchases().map(String));return (_aiAcct&&Array.isArray(_aiAcct.purchases)?_aiAcct.purchases:[]).filter(x=>!hidden.has(String(x&&x.id||'')));}
 function aiHidePurchase(id){if(!id)return;const arr=aiHiddenPurchases(),sid=String(id);if(!arr.map(String).includes(sid))arr.unshift(sid);aiCoreInit().hiddenPurchases=arr.slice(0,80);save();aiRenderStable();toast('订单已从本机列表移除');}
-function aiShowPurchaseNotice(){openModal(`<h3>购买说明</h3><div style="border:1px solid rgba(255,91,111,.5);background:#271419;color:#ff9aa8;border-radius:10px;padding:12px 13px;font-size:13px;line-height:1.8;white-space:pre-wrap">${esc(AI_PURCHASE_NOTICE)}</div><button class="btn g" style="margin-top:10px" onclick="closeModal()">关闭</button>`);}
 function aiMergeVoicePresets(list){const out=Array.isArray(list)?list.slice():[],seen=new Set(out.map(v=>String(v&&v.id||'')));AI_VOICE_PRESETS.forEach(v=>{if(!seen.has(v.id))out.unshift(v);});return out;}
 function aiPrivateVoices(){return _aiAcct&&Array.isArray(_aiAcct.private_voices)?_aiAcct.private_voices.filter(v=>v&&v.voice_id):[];}
 function aiVoiceLabel(id){id=String(id||'');if(!id)return'系统默认';const own=aiPrivateVoices().find(v=>String(v.voice_id)===id);if(own)return own.display_name||'我的专属音色';const preset=AI_VOICE_PRESETS.find(v=>v.id===id);return preset?preset.name:'已设置音色';}
@@ -42,7 +40,7 @@ function aiCoreInit(){S.settings.aiCore=S.settings.aiCore||{enabled:false,url:GA
 function aiLowBalanceCfg(){const ac=aiCoreInit();if(typeof ac.lowBalanceAlertOn!=='boolean')ac.lowBalanceAlertOn=true;let n=Number(ac.lowBalanceThreshold);if(!Number.isFinite(n))n=20;ac.lowBalanceThreshold=Math.max(1,Math.min(99999,Math.round(n)));return ac;}
 function aiToggleLowBalance(){const ac=aiLowBalanceCfg();ac.lowBalanceAlertOn=!ac.lowBalanceAlertOn;ac.lowBalanceAlerted=false;save();aiRenderStable();toast(ac.lowBalanceAlertOn?'点数提醒已开启':'点数提醒已关闭');}
 function aiSetLowBalance(v){const ac=aiLowBalanceCfg(),n=Math.max(1,Math.min(99999,Math.round(Number(v)||20)));ac.lowBalanceThreshold=n;ac.lowBalanceAlerted=false;save();aiRenderStable();const balance=_aiAcct&&_aiAcct.account&&Number(_aiAcct.account.points);if(Number.isFinite(balance))aiCheckLowBalance(balance);toast('低于 '+n+' 点时提醒');}
-function aiShowLowBalance(balance,tries){const modal=typeof $==='function'&&$('#modal');if(modal&&modal.classList.contains('show')&&tries<4){_aiLowBalanceTimer=setTimeout(()=>aiShowLowBalance(balance,tries+1),1200);return;}if(modal&&modal.classList.contains('show')){toast('AI点数快用完了，当前剩余 '+balance+' 点');return;}openModal(`<h3>AI点数快用完了</h3><div class="hint">当前剩余 <b style="color:#ffb7d2">${balance}</b> 点。可以先查看最近流水，按需少量充值，避免语音或图片生成中断。</div><button class="btn p" style="margin-top:12px" onclick="closeModal();go('aiaccount')">查看AI账户</button><button class="btn g" style="margin-top:8px" onclick="closeModal()">稍后再说</button>`);}
+function aiShowLowBalance(balance,tries){const modal=typeof $==='function'&&$('#modal');if(modal&&modal.classList.contains('show')&&tries<4){_aiLowBalanceTimer=setTimeout(()=>aiShowLowBalance(balance,tries+1),1200);return;}if(modal&&modal.classList.contains('show')){toast('AI点数快用完了，当前剩余 '+balance+' 点');return;}openModal(`<h3>AI点数快用完了</h3><div class="hint">当前剩余 <b style="color:#ffb7d2">${balance}</b> 点。可以先查看最近流水，按需少量充值，避免语音或影院字幕服务中断。</div><button class="btn p" style="margin-top:12px" onclick="closeModal();go('aiaccount')">查看AI账户</button><button class="btn g" style="margin-top:8px" onclick="closeModal()">稍后再说</button>`);}
 function aiCheckLowBalance(balance){const ac=aiLowBalanceCfg(),n=Number(balance),limit=ac.lowBalanceThreshold;if(!Number.isFinite(n)||!ac.lowBalanceAlertOn)return;if(n>=limit){if(ac.lowBalanceAlerted){ac.lowBalanceAlerted=false;save();}return;}if(ac.lowBalanceAlerted)return;ac.lowBalanceAlerted=true;save();clearTimeout(_aiLowBalanceTimer);_aiLowBalanceTimer=setTimeout(()=>aiShowLowBalance(n,0),350);}
 function aiPaidNoticeKey(){return'yibei_ai_paid_notified_'+aiUserId();}
 function aiPaidNotifiedIds(){try{const a=JSON.parse(localStorage.getItem(aiPaidNoticeKey())||'[]');return Array.isArray(a)?a.map(String):[];}catch(_){return[];}}
@@ -56,8 +54,6 @@ function aiVoiceRelayOn(){return !!((S.settings.tts||{}).relay&&aiCoreUrl());}
 function aiAsrRelayOn(){return typeof sttRelayOn==='function'?sttRelayOn():!!((S.settings.stt||{}).relay&&aiCoreUrl());}
 function aiAsrReady(){return !_aiAcct||!_aiAcct.capabilities?null:_aiAcct.capabilities.asr!==false;}
 function aiAsrRouteCount(){const n=Number(_aiAcct&&_aiAcct.capabilities&&_aiAcct.capabilities.asr_routes);return Number.isFinite(n)&&n>0?Math.round(n):1;}
-function aiImageReady(){return !_aiAcct||!_aiAcct.capabilities?null:_aiAcct.capabilities.image!==false;}
-function aiImageRouteCount(){const n=Number(_aiAcct&&_aiAcct.capabilities&&_aiAcct.capabilities.image_routes);return Number.isFinite(n)&&n>0?Math.round(n):1;}
 function aiExternalTts(){const t=(typeof ttsCfg==='function'?ttsCfg():(S.settings.tts||{}));return t&&t.base&&t.key?t:null;}
 function aiPrice(k){const p=(_aiAcct&&_aiAcct.pricing)||{chat:10,vision:25,image:6,tts:1,tts_chars_per_point:50,tts_max_chars:300,asr:1,asr_seconds_per_point:15,summary:2};return p[k]||0;}
 function aiTtsCharsPerPoint(){const n=Number(aiPrice('tts_chars_per_point'));return Number.isFinite(n)&&n>0?Math.round(n):50;}
@@ -78,12 +74,6 @@ function aiRechargeCards(){return aiRechargePlans().filter(p=>p.kind!=='service'
     <span style="font-size:14px;color:#e1e2e6">¥${Number(p.amount_cny||0).toFixed(1)}</span>
     <small style="display:block;color:#747985;margin-top:5px">约 ${aiTtsEstimatedCount(p.points,100)} 条100字普通语音</small>
     <small style="display:block;color:#747985;margin-top:2px">每50字1点，向上取整</small>
-  </button>`).join('');}
-function aiImagePackageCards(){return aiRechargePlans().filter(p=>p.kind!=='service').map((p,i)=>`<button onclick="aiOpenRecharge('${esc(p.id)}')" style="min-width:0;text-align:left;border:1px solid ${i===1?'rgba(126,184,255,.68)':'rgba(255,255,255,.1)'};background:${i===1?'#1d2632':'#1c1d22'};color:#f5f5f7;border-radius:8px;padding:13px 12px;cursor:pointer">
-    <span style="display:block;font-size:12px;color:${i===1?'#9dc7ff':'#9297a1'}">${esc(p.tag||p.name||'图片套餐')}</span>
-    <b style="display:block;font-size:23px;margin:5px 0 2px;letter-spacing:0">${Math.floor(Number(p.points||0)/Math.max(1,aiPrice('image')))}<small style="font-size:12px;font-weight:500;color:#a8adb6;margin-left:3px">张</small></b>
-    <span style="font-size:14px;color:#e1e2e6">¥${Number(p.amount_cny||0).toFixed(1)}</span>
-    <small style="display:block;color:#747985;margin-top:5px">${Number(p.points||0).toLocaleString()} 点通用点数</small>
   </button>`).join('');}
 function aiServiceCards(){return aiRechargePlans().filter(p=>p.kind==='service').map(p=>`<button onclick="aiOpenRecharge('${esc(p.id)}')" style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;border:1px solid rgba(255,255,255,.12);background:#1c1d22;color:#f5f5f7;border-radius:8px;padding:14px;cursor:pointer">
     <span><b style="display:block;font-size:16px">${esc(p.name)}</b><small style="display:block;color:#ff9aa8;margin-top:5px;font-weight:700">必须先添加办理微信，才能办理</small><small style="display:block;color:#8f949d;margin-top:3px">一次克隆、试听并接入小手机</small></span>
@@ -113,7 +103,6 @@ function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.
       <button class="minibtn" onclick="aiAccountRefresh()">刷新到账</button>
     </div>
     <div style="margin:0 0 10px;padding:10px 12px;border:1px solid rgba(255,91,111,.5);background:#271419;color:#ff9aa8;border-radius:8px;font-size:12px;font-weight:700;line-height:1.65">付款并上传凭证后请等待核对。页面会每15秒自动查询；也可以点“刷新到账”。到账后会响起专属提示音，并弹出绿色到账提醒。</div>
-    <button onclick="aiShowPurchaseNotice()" style="width:100%;margin:0 0 10px;padding:11px 12px;border:1px solid rgba(255,91,111,.36);background:#23151a;color:#ff8fa0;border-radius:8px;font-size:13px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px"><span style="display:flex;align-items:center;gap:8px">${typeof svgIc==='function'?svgIc('book',18,'#ff8fa0',1.6):''}购买与生图扣费说明</span><b style="font-size:16px">›</b></button>
     <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px">${aiRechargeCards()}</div>
     <div style="padding:5px 2px 9px"><b style="font-size:17px">音色服务</b><small style="display:block;color:#ff9aa8;margin-top:3px;font-weight:700">克隆音色必须先添加办理微信，未添加无法办理</small><small style="display:block;color:#777;margin-top:3px">请确认拥有声音授权，再提交干净音频</small></div>
     <div style="margin-bottom:12px">${aiServiceCards()}</div>
@@ -132,14 +121,6 @@ function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.
       <div class="btns" style="padding:0 14px 10px"><button class="btn p" ${_aiAsrTestBusy?'disabled':''} onclick="aiTestAsr()">${_aiAsrTestBusy?'测试中…':'影院字幕接口测试（5秒）'}</button></div>
       ${_aiAsrTestStatus?`<div class="hint" style="padding:0 14px 12px;color:${_aiAsrTestBusy?'#9dc7ff':(/^✅/.test(_aiAsrTestStatus)?'#71e69f':'#ff9aa8')}">${esc(_aiAsrTestStatus)}</div>`:''}
     </div>
-    <div class="section">
-      <div class="it"><span>启用图片生成<br><small style="color:${aiImageReady()===false?'#e6a0a8':'#888'}">${aiImageReady()===false?'图片中转站尚未配置，暂时不能开启。':(aiImageRouteCount()>1?'图片双路线已启用：路线一失败自动切路线二；成功只扣一次，两条都失败才退点。':'使用已部署的 gpt-image-2 中转站，每张 '+aiPrice('image')+' 点；生成失败自动退点。')}</small></span><span class="sw ${aiImageRelayOn()?'on':''}" onclick="aiToggleImageApi()"></span></div>
-      <div class="btns" style="padding:0 14px 12px"><button class="btn p" ${_aiImageBusy?'disabled':''} onclick="aiOpenImageGenerator()">${_aiImageBusy?'生成中…':'生成一张图片'}</button></div>
-      ${_aiImageStatus?`<div class="hint" style="padding:0 14px 10px;color:${_aiImageBusy?'#9dc7ff':'#9aa0aa'}">${esc(_aiImageStatus)}</div>`:''}
-      ${_aiImageResult?`<div style="padding:0 14px 14px"><img src="${esc(_aiImageResult)}" alt="生成的图片" onclick="viewImg(this.src)" style="display:block;width:100%;max-height:46vh;object-fit:contain;background:#111;border:1px solid rgba(255,255,255,.1);border-radius:8px"></div>`:''}
-    </div>
-    <div style="padding:5px 2px 9px"><b style="font-size:17px">图片生成套餐</b><small style="display:block;color:#777;margin-top:3px">套餐购买的是通用点数，按每张 ${aiPrice('image')} 点估算；文字、语音也可以使用同一余额。</small></div>
-    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:12px">${aiImagePackageCards()}</div>
     <div class="section">
       <div style="padding:12px 14px;font-weight:600;color:#a5b4fc">语音音色</div>
       <div class="hint" style="padding:0 14px 8px">系统免费音色和尚未绑定的克隆音色，所有账户都可以拉取使用；已经绑定的克隆音色只对绑定账户显示。</div>
@@ -160,7 +141,6 @@ function aiOpenRecharge(planId){const p=aiPlanById(planId);if(!p)return;
   openModal(`<h3>${esc(p.name||'充值点数')}</h3>
     <div style="text-align:center;padding:6px 0 14px"><b style="font-size:30px">${p.kind==='service'?'1 个音色':Number(p.points||0).toLocaleString()+'点'}</b><div style="color:#999;margin-top:4px">应付 ¥${Number(p.amount_cny||0).toFixed(1)}</div></div>
     ${p.kind==='service'?`<div style="border:1px solid rgba(255,91,111,.65);background:#2a151b;color:#ff9aa8;border-radius:8px;padding:10px 12px;font-size:14px;line-height:1.7;font-weight:700">重要：必须先添加办理微信，才能办理音色克隆。<br><span style="font-weight:400">付款后请回到“充值与服务订单”，重新打开这笔订单，微信二维码会自动弹出。</span></div>`:`<div class="hint">选择付款方式后会创建专属订单，并尝试打开对应收款页。付款金额必须与套餐一致。</div>`}
-    ${p.kind==='service'?'':`<button onclick="aiShowPurchaseNotice()" style="width:100%;margin-top:10px;padding:10px 11px;border:1px solid rgba(255,91,111,.36);background:#23151a;color:#ff8fa0;border-radius:8px;font-size:13px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between"><span>购买与生图扣费说明</span><b>›</b></button>`}
     <div class="btns" style="margin-top:12px">
       <button class="btn" style="background:#1677ff;color:#fff" ${_aiPayBusy?'disabled':''} onclick="aiCreatePurchase('${esc(p.id)}','alipay')">支付宝</button>
       <button class="btn" style="background:#07c160;color:#fff" ${_aiPayBusy?'disabled':''} onclick="aiCreatePurchase('${esc(p.id)}','wechat')">微信支付</button>
@@ -181,7 +161,6 @@ function aiShowPayment(purchase,plan,note,channel){if(!purchase||!plan||!channel
       订单号：<b>${esc(oid.slice(0,8).toUpperCase())}</b><br>付款备注：<b>${esc(note||'')}</b><br>
       <small style="color:${plan.kind==='service'?'#ff9aa8':'#888'}">${plan.kind==='service'?'付款并上传截图后，请关闭这里，再从“充值与服务订单”重新打开本订单；届时会自动显示办理微信二维码。必须添加微信后才能办理。':'付款后上传付款截图，等待管理员核对真实账单。'}</small>
     </div>
-    ${plan.kind==='service'?'':`<button onclick="aiShowPurchaseNotice()" style="width:100%;margin:0 0 12px;padding:10px 11px;border:1px solid rgba(255,91,111,.36);background:#23151a;color:#ff8fa0;border-radius:8px;font-size:13px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between"><span>购买与生图扣费说明</span><b>›</b></button>`}
     <div class="btns"><button class="btn g" onclick="aiCopyPayment('${esc(note||oid)}')">复制备注</button><button class="btn p" onclick="aiLaunchPayment('${esc(channel.id)}')">打开${esc(channel.name)}</button></div>
     <button class="btn g" style="margin-top:10px" onclick="aiOpenPurchaseClaim('${esc(oid)}')">上传付款截图，提交核对</button>`);}
 
@@ -243,20 +222,6 @@ async function aiTestAsr(){
   if(!started)aiAsrTestFinish('❌ 麦克风没有启动，请检查浏览器录音权限');
 }
 function aiSetVoiceLanguage(lang){S.settings.tts=S.settings.tts||{};S.settings.tts.relayLang=['zh','粤','英','日','韩'].includes(lang)?lang:'';save();aiRenderStable();toast(lang?'内置语音已设为'+({zh:'中文','粤':'粤语','英':'英语','日':'日语','韩':'韩语'}[lang]||lang):'内置语音暂时沿用角色语言');}
-function aiToggleImageApi(){if(aiImageReady()===false){toast('图片中转站尚未配置，暂时不能开启');return;}const cfg=aiImageInit();cfg.enabled=!aiImageRelayOn();save();aiRenderStable();toast(cfg.enabled?'图片生成已开启':'图片生成已关闭');}
-function aiImageFailText(e){const full=String((e&&e.message)||e||'').replace(/^内置AI失败：/,'');const raw=full.slice(0,180);if(/429|No images were successfully|relay-image-empty|no image/i.test(full))return '中转站上游这次没有成功出图或正在限流排队；后台花费为0时不会扣真实费用，本次AI点数已退回。稍后再试，或把描述写短一点。';if(/504|upstream-timeout|timeout|timed out|aborted/i.test(full))return '上游生成超过接口等待时间，可能已经产生真实费用；为避免重复扣费，系统不会自动再次生图。本次AI点数会自动退回，建议更换更快的图片线路。';if(/fetch|network|load failed|cors/i.test(full))return '网络等待太久断开；如果后台显示429/花费0，说明是中转站上游没有成功出图，不是密钥或付款问题。';if(/401|403|unauthori|forbidden|invalid.*key|no access/i.test(full))return '中转站密钥或权限异常，本次点数已退回。';if(/404|model.*not.*found|not found/i.test(full))return '接口地址或图片模型不匹配，本次点数已退回。';return raw||'图片生成失败，本次点数已退回。';}
-function aiOpenImageGenerator(){if(aiImageReady()===false){toast('图片中转站尚未配置');return;}if(!aiImageRelayOn()){toast('请先打开「启用图片生成」');return;}if(_aiImageBusy){toast('上一张图片还在生成中');return;}
-  openModal(`<h3>图片生成</h3>
-    <div class="hint" style="margin-bottom:10px">gpt-image-2 中转站 · 每张 ${aiPrice('image')} 点。生成失败自动退点。</div>
-    <label class="field" style="display:block"><span>想生成什么</span><textarea id="ai_image_prompt" maxlength="1000" rows="5" placeholder="例如：夜晚窗边的一杯热可可，真实手机随手拍，暖色灯光"></textarea></label>
-    <label class="field" style="display:block"><span>图片比例</span><select id="ai_image_size"><option value="1024x1024">方形</option><option value="1024x1536">竖图</option><option value="1536x1024">横图</option></select></label>
-    <button class="btn p" style="margin-top:10px" onclick="aiGenerateAccountImage()">生成图片 · ${aiPrice('image')}点</button>
-    <button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
-async function aiGenerateAccountImage(){if(_aiImageBusy)return;if(!aiImageRelayOn()){toast('图片生成没有开启');return;}const prompt=(document.getElementById('ai_image_prompt')&&document.getElementById('ai_image_prompt').value||'').trim(),size=(document.getElementById('ai_image_size')&&document.getElementById('ai_image_size').value)||'1024x1024';if(!prompt){toast('先写图片内容');return;}
-  _aiImageBusy=true;_aiImageStatus='正在调用图片中转站，请稍等…';_aiImageResult='';closeModal();if(cur().p==='aiaccount')aiRenderStable();
-  try{const d=await aiRelay('image',{prompt,size}),it=d&&d.data&&d.data.data&&d.data.data[0],raw=it&&(it.url||(it.b64_json?('data:image/jpeg;base64,'+it.b64_json):''));if(!raw)throw new Error('图片中转站没有返回图片');_aiImageResult=typeof stableImageSrc==='function'?await stableImageSrc(raw):raw;_aiImageStatus='图片生成成功'+(d.image_route==='route-2'?'（路线一失败，已自动使用路线二）':'')+'，已扣除 '+Number(d.charged||aiPrice('image'))+' 点';toast('图片生成成功');}
-  catch(e){const refunded=e&&e.data&&Number(e.data.refunded||0),msg=aiImageFailText(e);_aiImageStatus='生成失败'+(refunded?'，已退回 '+refunded+' 点':'')+'：'+msg;toast(refunded?'生成失败，点数已退回':'图片生成失败');}
-  finally{_aiImageBusy=false;setTimeout(()=>aiAccountRefresh(true,true),500);if(cur().p==='aiaccount')aiRenderStable();}}
 function aiCopyId(){try{navigator.clipboard&&navigator.clipboard.writeText(aiUserId());}catch(_){}toast('已复制用户ID');}
 
 async function aiPullVoices(){toast('正在拉取可用音色…');

@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='809';</script>
+<script>window.__NORTH_SHELL_BUILD__='811';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-809';
+  var key='north-sw-reloaded-811';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=809';
+  var url='sw.js?v=811';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -1019,9 +1019,9 @@ body{min-height:0}
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=809" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=809" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=809" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="ai-account.js?v=809"></script>
+<script src="license-gate.js?v=811" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=811" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=811" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="ai-account.js?v=811"></script>
 </body>
 </html>

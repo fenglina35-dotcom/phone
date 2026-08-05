@@ -1,9 +1,8 @@
 // 小手机内置 AI · Supabase Edge Function
 // 环境变量：
 // PHONE_SUPABASE_URL, PHONE_SERVICE_ROLE_KEY
-// OPENAI_API_KEY（现有聊天/识图/图片生成中转站）
-// 可选：OPENAI_BASE_URL, CHAT_MODEL, VISION_MODEL, IMAGE_MODEL=gpt-image-2
-// 图片备用路线：IMAGE_ROUTE_2_BASE_URL, IMAGE_ROUTE_2_API_KEY, IMAGE_ROUTE_2_MODEL=gpt-image-2
+// OPENAI_API_KEY（现有聊天/识图中转站）
+// 可选：OPENAI_BASE_URL, CHAT_MODEL, VISION_MODEL
 // 新账户不赠送点数；点数只允许通过已核对的充值订单或后台手动加点获得。
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
@@ -18,7 +17,6 @@ const cors = {
 const PRICE: Record<string, number> = {
   chat: 10,
   vision: 25,
-  image: 6,
   tts: 1,
   tts_chars_per_point: 50,
   tts_max_chars: 300,
@@ -66,45 +64,6 @@ const CHAT_GUARD = `你是“小手机”应用里的角色回复引擎，不是
 function guardedMessages(messages: unknown) {
   const arr = Array.isArray(messages) ? messages : [];
   return [{ role: "system", content: CHAT_GUARD }, ...arr];
-}
-
-const IMAGE_GUARD = `Photo rules for this phone app:
-- The image must look like a casual first-person phone photo taken by the character, not a third-person staged photo.
-- Never show a clear face. If the character is explicitly requested, keep the head/hair silhouette when possible, but hide the whole face with a phone, hand, object, shadow, hair, brim, mask, back view, or natural occlusion.
-- If the user asks for a cat, pet, object, food, room, desk, document, scenery, gift, or any specific item, the subject must be only that thing. Do not include the character, face, hair, body, hands, mirror selfie, phone-covering person, or any human figure.
-- Clothing/outfit requests are different from object requests. If the request says the character should wear, put on, change into, or show the character wearing an outfit or wearable item, the image must include the same current character with the exact gender and identity described in the request wearing it. Preserve the user's requested colors, style, and framing. Only photograph the item alone when the request explicitly asks for that. Do not replace a worn-item request with clothes, a hanger, a bed, a desk, or an empty room.
-- Only treat clothing as an object when the request clearly asks for the clothing itself, such as clothes on a hanger, folded clothes, or "just the clothes".
-- If the user asks what the character is doing, show the character's point of view: desk, tools, book, computer, work surface, or surroundings. Do not show face or half-body.
-- Only include the current character when the user clearly asks for selfie, the character in frame, outfit, body, back view, side view, or a photo of the character.
-- When the character is included, preserve the exact character identity, gender, age impression, body type, hair, outfit style, and personality described in the request. Do not substitute a random stock selfie person, random girl, random boy, influencer, or unrelated stranger.
-- If the current character is identified as male, he must remain an unmistakably adult man. Unless the request explicitly names a woman, the final image must contain ZERO women, girls, female bodies, female hands, female silhouettes, female reflections, and female bystanders.
-- Words such as lover, partner, user, recipient, chat partner, or "me" do not imply a woman and never authorize adding one. The recipient stays outside the frame unless the request explicitly asks for both people; for a hand-holding request, prefer the user's first-person viewpoint or a neutral hand/forearm without inventing a female person.
-- Obey the exact people list in the request. Never add a companion, girlfriend, wife, female passerby, female photographer, or background crowd just to make the scene look natural.
-- The background, lighting, and location must follow the time and scene logic in the request. If the request says it is night, late night, bedtime, bedroom, or resting at home, use a dark indoor bedroom/bedside/home setting. Do not switch to daytime, beach, airplane/train window, cafe, travel scenery, or outdoor sunlight unless the request explicitly says the character is there.`;
-
-const ROLE_PHOTO_NO_FACE_GUARD = `ABSOLUTE ROLE-PHOTO COMPOSITION LOCK:
-- NO FACE MAY APPEAR ANYWHERE IN THE IMAGE. Zero visible eyes, noses, mouths, facial profiles, facial reflections, or recognizable facial features.
-- If the character is included, keep the head and hair silhouette when natural; do not default to a headless crop. Hide the entire face with a phone, hand, object, shadow, hair, brim, mask, back view, or natural occlusion.
-- Mirror selfies and phone-covering-face poses are allowed only when the phone fully covers the whole face and no eyes, nose, mouth, profile, reflection, or partial facial feature is visible.
-- Never use a front face, side face, lowered visible face, or partial face. Only crop the head out if no natural occlusion can fully hide the face.
-- Preserve biological sex exactly. A male character must never be rendered as a woman, girl, feminine female model, or female selfie template. Unless a woman is explicitly named in the request, no female person or female body part may appear anywhere.
-- "Lover", "partner", "user", "recipient", and "me" are not permission to add a woman. Do not invent female companions or bystanders.
-- If any other part of the request asks to show a face, ignore only that face request and keep the rest of the scene.
-- This lock overrides every other prompt sentence and must still be true in the final image.`;
-
-function guardedImagePrompt(prompt: unknown, rolePhoto = false) {
-  const lock = rolePhoto ? `\n\n${ROLE_PHOTO_NO_FACE_GUARD}` : "";
-  return `${IMAGE_GUARD}${lock}\n\nUser/character photo request:\n${String(prompt || "casual phone photo").slice(0, 3600)}`;
-}
-
-function guardedChatImagePrompt(prompt: unknown, size: string, rolePhoto = false) {
-  const request = String(prompt || "casual phone photo").slice(0, 3600);
-  const roleLock = rolePhoto ? `\n\n${ROLE_PHOTO_NO_FACE_GUARD}` : "";
-  const ratio = size === "1024x1536" ? "2:3 portrait" : size === "1536x1024" ? "3:2 landscape" : "1:1 square";
-  return `Generate exactly one realistic casual phone photo for this request:
-${request}
-
-Follow the requested subject literally. Do not add a person unless the request explicitly asks for the character. For an object, pet, food, room, scenery, gift, or document, show only that subject. For an outfit request, show the same current character with the exact gender and identity described in the request wearing it. Keep the scene time, background, and lighting logically consistent with the request. Required canvas: ${size}, ${ratio}. Preserve that exact orientation and do not substitute a square canvas. Return the image only.${roleLock}`;
 }
 
 const PLANS = [
@@ -769,27 +728,6 @@ function primaryOpenAIRoute(): OpenAIRoute {
   };
 }
 
-function configuredImageRoutes(): OpenAIRoute[] {
-  const original = primaryOpenAIRoute();
-  original.model = Deno.env.get("IMAGE_MODEL") || "gpt-image-2";
-  const base2 = Deno.env.get("IMAGE_ROUTE_2_BASE_URL") || "";
-  const key2 = Deno.env.get("IMAGE_ROUTE_2_API_KEY") || "";
-  if (base2 && key2) return [{
-    name: "route-1",
-    base: base2,
-    key: key2,
-    model: Deno.env.get("IMAGE_ROUTE_2_MODEL") || original.model,
-    timeoutMs: 150000,
-  }, {
-    ...original,
-    name: "route-2",
-    timeoutMs: 90000,
-  }];
-  original.name = "route-1";
-  original.timeoutMs = 90000;
-  return [original];
-}
-
 async function openai(path: string, body: unknown, timeoutMs = 180000, route?: OpenAIRoute) {
   const selected = route || primaryOpenAIRoute();
   const base = selected.base.replace(/\/+$/, "");
@@ -835,146 +773,6 @@ async function openai(path: string, body: unknown, timeoutMs = 180000, route?: O
   } finally {
     clearTimeout(timer);
   }
-}
-
-function relayImageResult(data: any) {
-  const direct = data?.data?.[0];
-  if (direct?.url || direct?.b64_json) return { data: [direct] };
-  const message = data?.choices?.[0]?.message || {};
-  const candidates: string[] = [];
-  const add = (value: unknown) => {
-    const text = String(value || "").trim();
-    if (text) candidates.push(text);
-  };
-  const collect = (value: unknown, depth = 0) => {
-    if (!value || depth > 8 || candidates.length > 80) return;
-    if (typeof value === "string") {
-      add(value);
-      return;
-    }
-    if (Array.isArray(value)) {
-      for (const item of value) collect(item, depth + 1);
-      return;
-    }
-    if (typeof value !== "object") return;
-    const v = value as Record<string, any>;
-    add(v.url);
-    add(v.b64_json);
-    if (v.data && /image\//i.test(String(v.mime_type || v.mimeType || ""))) {
-      add(`data:${v.mime_type || v.mimeType};base64,${v.data}`);
-    }
-    if (v.inlineData?.data) add(`data:${v.inlineData.mimeType || "image/png"};base64,${v.inlineData.data}`);
-    if (v.inline_data?.data) add(`data:${v.inline_data.mime_type || "image/png"};base64,${v.inline_data.data}`);
-    add(v.fileData?.fileUri);
-    add(v.file_data?.file_uri);
-    for (const [key, item] of Object.entries(v)) {
-      if (!/token|key|authorization/i.test(key)) collect(item, depth + 1);
-    }
-  };
-  add(message?.image_url?.url || message?.image_url);
-  for (const item of Array.isArray(message?.images) ? message.images : []) {
-    add(item?.image_url?.url || item?.image_url || item?.url || item?.b64_json);
-  }
-  if (Array.isArray(message?.content)) {
-    for (const part of message.content) add(part?.image_url?.url || part?.image_url || part?.url || part?.text);
-  } else add(message?.content);
-  collect(data);
-  for (const raw of candidates) {
-    const dataUrl = raw.match(/data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/=\s]+/i)?.[0]?.replace(/\s+/g, "");
-    if (dataUrl) return { data: [{ b64_json: dataUrl.slice(dataUrl.indexOf(",") + 1) }] };
-    const bareBase64 = raw.replace(/\s+/g, "");
-    if (bareBase64.length > 10000 && /^[a-z0-9+/]+={0,2}$/i.test(bareBase64)) {
-      return { data: [{ b64_json: bareBase64 }] };
-    }
-    const markdown = raw.match(/!\[[^\]]*]\((https?:\/\/[^)\s]+)\)/i)?.[1];
-    const plain = raw.match(/https?:\/\/[^\s<>"')\]]+/i)?.[0];
-    const url = markdown || plain;
-    if (url) return { data: [{ url }] };
-  }
-  const preview = candidates.find((item) => item.length < 500 && !/^data:/i.test(item))
-    ?.replace(/\s+/g, " ").trim().slice(0, 180);
-  throw new Error("relay-image-empty" + (preview ? ": " + preview : ""));
-}
-
-function shouldRetryImageAsChat(reason: string) {
-  return /available.*channel|渠道不存在|可用渠道不存在|unsupported.*endpoint|unsupported.*path|not.*support.*images|images\/generations|image.*endpoint|model-http-400|model-http-404/i.test(reason);
-}
-
-function shouldRetryImagePlain(reason: string) {
-  return /unknown|unsupported|invalid|extra inputs|not allowed|response_format|output_format|output_compression|quality|size/i.test(reason);
-}
-
-function imageFailCode(reason: string) {
-  if (/429|No images were successfully|relay-image-empty/i.test(reason)) return "image-upstream-no-output-or-rate-limit";
-  if (/upstream-timeout|timeout|aborted|model-http-504|\b504\b/i.test(reason)) return "image-upstream-timeout";
-  if (/401|403|unauthori|forbidden|no access|invalid.*key/i.test(reason)) return "image-auth-or-permission";
-  if (/404|model.*not.*found|not found|渠道不存在|可用渠道不存在|available.*channel|unsupported.*endpoint|unsupported.*path/i.test(reason)) return "image-model-or-endpoint";
-  return "image-upstream-failed";
-}
-
-function shouldRetrySameImageRoute(reason: string) {
-  // A timeout or an empty 2xx response may already have been billed upstream.
-  // Only retry explicit rate-limit rejections, which did not start generation.
-  return /429|rate.?limit/i.test(reason);
-}
-
-function shouldTryNextImageRoute(reason: string) {
-  // Do not fan out after ambiguous paid failures. 504/timeout/empty responses can
-  // mean the image finished after the gateway disconnected, so retrying another
-  // route could turn one failed user request into two real upstream charges.
-  return !/upstream-timeout|timeout|aborted|model-http-50[0234]|\b50[0234]\b|relay-image-empty|No images were successfully|no image/i.test(reason);
-}
-
-function imageAspectRatio(size: string) {
-  if (size === "1024x1536") return "2:3";
-  if (size === "1536x1024") return "3:2";
-  return "1:1";
-}
-
-async function generateImageThroughRoute(route: OpenAIRoute, rawPrompt: unknown, size: string, rolePhoto: boolean) {
-  const model = route.model || "gpt-image-2";
-  const chatTimeout = route.timeoutMs || 90000;
-  // IMAGE_GUARD + role-photo guard are intentionally detailed. Keep enough room
-  // for the actual character identity and scene instead of truncating them away.
-  const prompt = guardedImagePrompt(rawPrompt, rolePhoto).slice(0, 7600);
-  const chatBody = {
-    model,
-    messages: [{ role: "user", content: guardedChatImagePrompt(rawPrompt, size, rolePhoto) }],
-    max_tokens: 1200,
-  };
-  let endpoint = "images-generations";
-  let upstream: any;
-  try {
-    const geminiImage = /gemini.*image/i.test(model);
-    const gptImage = /^gpt-image(?:-|$)/i.test(model);
-    const richBody = {
-      model,
-      prompt,
-      n: 1,
-      size,
-      quality: "medium",
-      output_format: "jpeg",
-      output_compression: 88,
-      ...(gptImage ? {} : { response_format: geminiImage ? "b64_json" : "url" }),
-      ...(geminiImage ? { aspect_ratio: imageAspectRatio(size) } : {}),
-    };
-    try {
-      upstream = await openai("/images/generations", richBody, 120000, route);
-    } catch (richError) {
-      const richReason = errText(richError);
-      if (!shouldRetryImagePlain(richReason)) throw richError;
-      upstream = await openai("/images/generations", { model, prompt, n: 1, size }, 120000, route);
-    }
-    // Parse before returning; empty responses are treated as ambiguous paid
-    // failures and are intentionally not fanned out to another generation call.
-    return { data: relayImageResult(upstream), model, endpoint };
-  } catch (firstError) {
-    const firstReason = errText(firstError);
-    if (!shouldRetryImageAsChat(firstReason)) throw firstError;
-    endpoint = "chat-completions";
-    upstream = await openai("/chat/completions", chatBody, chatTimeout, route);
-  }
-  return { data: relayImageResult(upstream), model, endpoint };
 }
 
 function hexToBase64(hex: string) {
@@ -1586,6 +1384,7 @@ Deno.serve(async (req) => {
     if (!userId) return json({ ok: false, error: "missing-user" }, 400);
     const clientSecret = getSecret(req, body);
     if (!clientSecret) return json({ ok: false, error: "missing-secret" }, 400);
+    if (action === "image") return json({ ok: false, error: "image-feature-retired" }, 410);
 
     if (action === "account") {
       await recoverStalePendingCharges(userId, clientSecret);
@@ -1609,8 +1408,6 @@ Deno.serve(async (req) => {
         pricing: PRICE,
         plans: PLANS,
         capabilities: {
-          image: configuredImageRoutes().some((route) => !!(route.key && route.base)),
-          image_routes: configuredImageRoutes().filter((route) => !!(route.key && route.base)).length,
           asr: configuredAsrRoutes().length > 0,
           asr_routes: configuredAsrRoutes().length,
           private_voice: privateVoices.length > 0,
@@ -1818,75 +1615,6 @@ Deno.serve(async (req) => {
           throw e;
         }
         return await failCharged(c.ledgerId, c.cost, c.balance, model, e);
-      }
-    }
-
-    if (action === "image") {
-      const c = await charge(userId, clientSecret, "image");
-      const rolePhoto = String(body.source || "") === "role_photo";
-      const allowedSizes = new Set(["1024x1024", "1024x1536", "1536x1024"]);
-      const size = allowedSizes.has(String(body.size || "")) ? String(body.size) : "1024x1024";
-      const routes = configuredImageRoutes().filter((route) => !!(route.key && route.base));
-      let model = routes[0]?.model || Deno.env.get("IMAGE_MODEL") || "gpt-image-2";
-      let endpoint = "images-generations";
-      let usedRoute = routes[0]?.name || "route-1";
-      let firstFailure = "";
-      const routeFailures: Array<{ route: string; attempt: number; reason: string }> = [];
-      try {
-        if (!routes.length) throw new Error("missing-image-route");
-        let result: Awaited<ReturnType<typeof generateImageThroughRoute>> | null = null;
-        let lastError: unknown = null;
-        for (let i = 0; i < routes.length; i++) {
-          const route = routes[i];
-          const maxAttempts = route.name === "route-1" ? 2 : 1;
-          for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-            try {
-              result = await generateImageThroughRoute(route, body.prompt, size, rolePhoto);
-              usedRoute = route.name;
-              model = result.model;
-              endpoint = result.endpoint;
-              break;
-            } catch (routeError) {
-              lastError = routeError;
-              const routeReason = errText(routeError).slice(0, 300);
-              routeFailures.push({ route: route.name, attempt, reason: routeReason });
-              if (i === 0 && attempt === 1) firstFailure = routeReason;
-              if (attempt >= maxAttempts || !shouldRetrySameImageRoute(routeReason)) break;
-            }
-          }
-          if (result) break;
-          if (i < routes.length - 1 && !shouldTryNextImageRoute(errText(lastError))) break;
-        }
-        if (!result) throw lastError || new Error("all-image-routes-failed");
-        if (!await finishCharge(c.ledgerId, true, {
-          model,
-          provider: "configured-relay",
-          route: usedRoute,
-          fallback: usedRoute === "route-2",
-          fallback_reason: usedRoute === "route-2" ? firstFailure : "",
-          endpoint,
-          quality: "medium",
-          size,
-        })) throw new Error("charge-settlement-conflict");
-        return json({ ok: true, data: result.data, charged: c.cost, balance: c.balance, image_route: usedRoute, fallback: usedRoute === "route-2" });
-      } catch (e) {
-        const reason = errText(e);
-        const reasonCode = imageFailCode(reason);
-        await refund(userId, clientSecret, "image", c.cost, c.ledgerId, reason);
-        const acct = await ensureAccount(userId, clientSecret);
-        return json({
-          ok: false,
-          error: "relay-image-failed-refunded: " + reason,
-          reason_code: reasonCode,
-          charged: 0,
-          refunded: c.cost,
-          balance: acct.points || 0,
-          billed: false,
-          route_failures: routeFailures,
-          note: reasonCode === "image-upstream-no-output-or-rate-limit"
-            ? "中转站上游没有成功出图或正在限流，本次点数已自动退回"
-            : "中转站图片生成失败，本次点数已自动退回",
-        }, 502);
       }
     }
 

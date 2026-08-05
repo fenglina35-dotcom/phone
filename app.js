@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='809'){
+if(window.__NORTH_SHELL_BUILD__!=='811'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v809 · 电量与健康摘要';
+const APP_VER='v811 · 内置图片功能下线';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -367,7 +367,7 @@ function defState(){return{
     vision:{base:'',key:'',model:''},
     aiCore:{enabled:false,url:GATE_URL+'/functions/v1/phone-ai'},
     hist:12, histUnit:'rounds', timeAware:true, replyDelay:2, sound:true, showMoodTag:true, web:{enabled:false}, summaryRounds:16, summaryModel:'main', offSummaryModel:'main', offlineWechatLive:true, proactiveIdleMin:20, callProb:35, callSilentMin:3, callPace:1, manualReply:true, humanLike:true, wechatNatural:false, initiative:true, currentActivity:true, personaGuard:true,
-    voiceAuto:true, voiceProgressive:false, tts:{base:'',key:'',model:'',voice:''}, stt:{base:'',key:'',model:'',relay:false}, aiImage:{enabled:false}, imgGen:false, imgModel:'gpt-image-2', imgBase:'', imgKey:''
+voiceAuto:true, voiceProgressive:false, tts:{base:'',key:'',model:'',voice:''}, stt:{base:'',key:'',model:'',relay:false}, imgGen:false, imgModel:'gpt-image-2', imgBase:'', imgKey:''
   },
   me:{name:'我',wxid:'wx_'+Math.random().toString(36).slice(2,9),avatar:'🐱',signature:'这个人很懒，什么都没写～',persona:'',city:'',age:18,adultConsent:true,balance:520.00,bills:[],momentCover:'',lockBg:'',locked:true,lockNotes:[],status:'',place:'',battery:null,charging:false,onlineMode:'auto',steps:0,stepDate:stepDayKey(),sleep:{active:null,records:[]},appUsage:{date:'',used:{},bonus:{}}},
   worldbook:[],
@@ -828,9 +828,7 @@ function fmtSize(b){return b<1024?b+'B':b<1048576?(b/1024).toFixed(1)+'KB':(b/10
 
 /* =================== API =================== */
 function apiErrorCN(status,raw){status=+status||0;const src=String(raw||'').replace(/\s+/g,' ').trim();let tip='接口返回异常，请检查地址、密钥和模型名';
-  if(/relay-image-failed-refunded|model-http-429|status_code[=:]\s*429|No images were successfully|relay-image-empty/i.test(src))tip='图片中转站上游这次没有成功出图或正在限流排队，本次点数已退回；后台花费为0说明没有扣到真实费用。稍后再试，或把描述写短一点。';
-  else if(/relay-image.*upstream-timeout|upstream-timeout/i.test(src))tip='图片中转站上游生成超时，本次点数会自动退回；这通常不是密钥错误，是上游排队太久。';
-  else if(status===400)tip='请求格式或模型名不兼容；先确认模型名完全正确，再换兼容接口测试';
+  if(status===400)tip='请求格式或模型名不兼容；先确认模型名完全正确，再换兼容接口测试';
   else if(status===401)tip='API Key 无效、过期或没有正确填写；重新复制密钥，注意不要带空格';
   else if(status===402)tip='账户余额或点数不足，需要充值后再试';
   else if(status===403)tip='密钥没有这个模型的权限，或平台限制了地区/IP；去平台控制台检查权限';
@@ -845,14 +843,12 @@ function apiErrorCN(status,raw){status=+status||0;const src=String(raw||'').repl
   else if(status===503)tip='服务暂时拥堵或维护中；稍后重试';
   else if(status===504)tip='上游响应超时；稍后重试或换速度更快的模型';
   else if(!status&&/abort|timeout|超时/i.test(src))tip='请求超时；检查网络、接口地址，或换响应更快的模型';
-  else if(!status&&/fetch|network|load failed|cors/i.test(src))tip='网络连接失败或接口等待太久断开；如果刚才是生成图片，多半是中转站上游排队/限流，不是付款或密钥错误。';
+  else if(!status&&/fetch|network|load failed|cors/i.test(src))tip='网络连接失败或接口等待太久断开；请检查网络、接口地址和平台线路状态。';
   const cn=/[\u4e00-\u9fa5]/.test(src)?src.slice(0,90):'';return(status?'HTTP '+status+'：':'')+tip+(cn&&cn.indexOf(tip)<0?'（'+cn+'）':'');}
 function apiCaughtCN(e){const s=String((e&&e.message)||e||'');const m=s.match(/HTTP\s*(\d{3})/i);return apiErrorCN(m?+m[1]:0,s);}
 function aiCoreOn(){return false;}
 function aiCoreUrl(){return (((S.settings&&S.settings.aiCore&&S.settings.aiCore.url)||'').trim()).replace(/\/+$/,'');}
-function aiImageInit(){S.settings=S.settings||{};S.settings.aiImage=S.settings.aiImage||{enabled:false};return S.settings.aiImage;}
-function aiImageRelayOn(){return !!(aiImageInit().enabled&&aiCoreUrl());}
-function imageGenerationAvailable(){const ch=S.settings.chat||{};return aiImageRelayOn()||!!((S.settings.imgBase||ch.base)&&(S.settings.imgKey||ch.key));}
+function imageGenerationAvailable(){const ch=S.settings.chat||{};return !!((S.settings.imgBase||ch.base)&&(S.settings.imgKey||ch.key));}
 function ttsCfg(){S.settings=S.settings||{};S.settings.tts=S.settings.tts||{};return S.settings.tts;}
 function ttsProviderKind(t){t=t||{};const p=String(t.provider||'').trim().toLowerCase(),base=String(t.base||'').toLowerCase();if(['minimax','mossland','fish','elevenlabs','hume','openai'].includes(p))return p;if(/api\.mosi\.cn|mossland/.test(base))return 'mossland';if(/fish\.?audio/.test(base))return 'fish';if(/elevenlabs/.test(base))return 'elevenlabs';if(/hume\.ai/.test(base))return 'hume';if(/minimax/.test(base))return 'minimax';return 'openai';}
 function ttsExternalOn(t){return !!(t&&t.base&&t.key);}
@@ -870,7 +866,7 @@ function aiUserSecret(){let s='';try{s=localStorage.getItem('yibei_ai_secret')||
 async function aiRelay(action,payload){const url=aiCoreUrl();if(!url)throw new Error('还没配置内置AI后台');
   await licenseSyncAiIdentity();
   const uid=aiUserId(),sec=aiUserSecret();
-  let r;try{r=await fetchT(url,{method:'POST',headers:{'Content-Type':'application/json','apikey':GATE_KEY,'Authorization':'Bearer '+GATE_KEY,'x-phone-user':uid,'x-phone-secret':sec},body:JSON.stringify(Object.assign({action,user_id:uid,client_secret:sec},payload||{}))},action==='image'?360000:190000);}catch(e){throw new Error(apiCaughtCN(e));}
+let r;try{r=await fetchT(url,{method:'POST',headers:{'Content-Type':'application/json','apikey':GATE_KEY,'Authorization':'Bearer '+GATE_KEY,'x-phone-user':uid,'x-phone-secret':sec},body:JSON.stringify(Object.assign({action,user_id:uid,client_secret:sec},payload||{}))},190000);}catch(e){throw new Error(apiCaughtCN(e));}
   const d=await r.json().catch(()=>null);if(!r.ok||!d||d.ok===false){if(d&&typeof aiAccountApplyResult==='function')aiAccountApplyResult(d,action);const msg=(d&&d.error)||('HTTP '+r.status);const e=new Error(r.status===402||/no-balance/i.test(msg)?'AI点数不足，请去「AI账户」充值或让管理员加点':'内置AI失败：'+String(msg).slice(0,140));e.status=r.status;e.data=d||null;e.ledger_id=d&&(d.ledger_id||d.ledgerId||d.request_id);e.charged=d&&d.charged;e.billed=d&&d.billed;throw e;}
   if(typeof aiAccountApplyResult==='function')aiAccountApplyResult(d,action);
   return d;}
@@ -996,7 +992,6 @@ async function imageGenerateExternal(base,key,model,prompt,size,quality){const p
 }
 function rolePhotoPromptLocked(prompt){const hard='ABSOLUTE COMPOSITION AND GENDER RULE: no face or recognizable facial features may appear. Keep the head and hair silhouette when natural, but hide the whole face with a phone fully covering the face, hand, object, shadow, hair, brim, mask, back view, or natural occlusion. Mirror selfies are allowed only when the phone fully covers the whole face. Do not default to a headless crop; crop the head out only if no natural occlusion can fully hide the face. Never use a random stock selfie person; preserve the exact character identity, biological sex, time, lighting, and location described in the prompt. If the current character is described as male, he must remain an unmistakably adult man and the image must contain zero women, girls, female bodies, female hands, female silhouettes, female reflections, or female bystanders unless the request explicitly names a woman. Words such as lover, partner, user, recipient, or me never authorize adding a woman. For scenery, night view, street view, sky, weather, object, food, pet, room, or desk requests, show only the requested subject with ZERO PEOPLE and NO CHARACTER IN FRAME unless the request explicitly asks for a selfie or the character.';return hard+'\n\n'+String(prompt||'').slice(0,1800);}
 async function genImage(prompt){const rawPrompt=String(prompt||'');
-  if(aiImageRelayOn()){const d=await aiRelay('image',{prompt:rawPrompt,size:'1024x1536',source:'role_photo'});const it=d.data&&d.data.data&&d.data.data[0];const url=it&&(it.url||(it.b64_json?('data:image/jpeg;base64,'+it.b64_json):''));if(!url)throw new Error('图片中转站没有返回图片');return url;}
   prompt=rolePhotoPromptLocked(rawPrompt);
   const ch=S.settings.chat||{};
   const base=((S.settings.imgBase||ch.base)||'').replace(/\/+$/,'');
@@ -1016,7 +1011,7 @@ async function fillGenImage(msg,prompt){
   catch(e){msg.pending=false;msg.src='';msg.failed=true;msg.errText=(e&&e.message||'生图失败');}
   save();if(cur().p==='chat'||cur().p==='wechat')setTimeout(render,40);
 }
-function generatedImageFailureLabel(err){const s=String(err||'');if(/429|No images were successfully|relay-image-empty|relay-image-failed-refunded|no image/i.test(s))return'上游限流或没有成功出图，点数已退回';if(/504|timeout|timed out|aborted|超时/i.test(s))return'上游生成超过等待时间，点数会退回；为避免重复费用未自动重试';if(/401|403|unauthori|forbidden|invalid.*key|no access/i.test(s))return'图片线路权限异常，点数已退回';if(/404|model.*not.*found|not found/i.test(s))return'图片模型或线路不匹配，点数已退回';if(/fetch|network|load failed|cors/i.test(s))return'网络中断或等待过久';return'生成失败'+(s?('：'+s.replace(/^内置AI失败：/,'').slice(0,70)):'');}
+function generatedImageFailureLabel(err){const s=String(err||'');if(/429|No images were successfully|relay-image-empty|no image/i.test(s))return'外置图片平台限流或没有成功出图，请稍后重试';if(/504|timeout|timed out|aborted|超时/i.test(s))return'外置图片平台生成超时，请先核对平台记录再重试';if(/401|403|unauthori|forbidden|invalid.*key|no access/i.test(s))return'外置图片接口密钥或权限异常';if(/404|model.*not.*found|not found/i.test(s))return'外置图片模型或接口地址不匹配';if(/fetch|network|load failed|cors/i.test(s))return'网络中断或等待过久';return'生成失败'+(s?('：'+s.replace(/^内置AI失败：/,'').slice(0,70)):'');}
 function retryGeneratedImage(cid,mid){const c=getC(cid),m=msgs(cid).find(x=>x&&x.id===mid);if(!c||!m||m.type!=='image'||m.pending||!m.genPrompt)return;m.failed=false;m.errText='';m.pending=true;save();render();setTimeout(()=>fillGenImage(m,m.genPrompt),60);}
 
 /* =================== 提示词 =================== */
@@ -1376,7 +1371,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=809';
+  const url='sw.js?v=811';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -3219,7 +3214,7 @@ function renderSettings(){const routes=chatRoutesInit(),routeActive=S.settings.c
     </div>
     <div class="section" id="set_image">
       <div style="padding:11px 14px 2px;font-weight:600;color:#e58fb0;font-size:13px">${svgIc('image',15,'#e58fb0')} AI 真图（角色发真实照片）</div>
-      <div class="it"><span>让角色发真照片<br><small style="color:#888">开：他发照片时生成图片；AI账户里开启中转站图片时每张6点，外置接口则按对应平台计费。关：只显示 [图片] 文字占位</small></span><span class="sw ${S.settings.imgGen?'on':''}" onclick="S.settings.imgGen=!S.settings.imgGen;save();render()"></span></div>
+      <div class="it"><span>让角色发真照片<br><small style="color:#888">开：他发照片时使用下方外置图片接口生成，由对应平台计费。关：只显示 [图片] 文字占位</small></span><span class="sw ${S.settings.imgGen?'on':''}" onclick="S.settings.imgGen=!S.settings.imgGen;save();render()"></span></div>
       <div class="field" style="padding:0 14px"><label>接口地址（留空=用上面聊天模型的）</label><input id="s_ibase" value="${esc(S.settings.imgBase||'')}" placeholder="${esc((S.settings.chat&&S.settings.chat.base)||'https://vg.v1api.cc/v1')}"></div>
       <div class="field" style="padding:0 14px"><label>API Key（留空=用聊天模型的）</label><input id="s_ikey" type="password" value="${esc(S.settings.imgKey||'')}" placeholder="留空则用聊天的Key"></div>
       <div class="field" style="padding:0 14px 4px"><label>绘图模型名（默认推荐 gpt-image-2：更像日常照片）</label><div style="display:flex;gap:6px"><input id="s_imgmodel" value="${esc(S.settings.imgModel||'gpt-image-2')}" placeholder="gpt-image-2" style="flex:1"><button class="minibtn" onclick="fetchModels('s_ibase','s_ikey','s_imgmodel')">拉取</button></div></div>
@@ -4790,7 +4785,7 @@ function gmText(m){return m.type==='text'?m.content:m.type==='transfer'?'[转账
 /* ===== 群聊 ===== */
 function showManual(section){openModal(`<h3>North · 使用说明与常见问题</h3>
   <div id="manual_scroll" style="font-size:13.5px;line-height:1.85;color:#e6e6e6;max-height:65vh;overflow:auto;text-align:left;padding-right:3px">
-    <div style="padding:2px 0 14px;color:#b8bdc8">第一次使用先看“快速开始”和“聊天模型”；使用点数、内置语音或图片时，请重点看“AI账户”。</div>
+    <div style="padding:2px 0 14px;color:#b8bdc8">第一次使用先看“快速开始”和“聊天模型”；使用点数或内置语音时，请重点看“AI账户”。</div>
 
     <div style="padding:13px 0;border-top:1px solid rgba(255,255,255,.12)">
       <b style="font-size:15px;color:#ffd0df">一、快速开始</b><br>
@@ -4814,7 +4809,7 @@ function showManual(section){openModal(`<h3>North · 使用说明与常见问题
     <div id="manual_ai" style="padding:13px 0;border-top:1px solid rgba(255,143,171,.5)">
       <b style="font-size:16px;color:#ffabc8">三、AI账户使用方法（重点）</b><br>
       <b>1. AI账户是什么</b><br>
-      AI账户不需要另外注册密码。第一次打开时，小手机会自动生成一个<b>本机用户ID</b>并连接账户。新账户不赠送点数，充值经核对到账后，点数可用于当前已开放的内置语音、图片等功能；实际扣点以AI账户页面价格和“最近流水”为准。<br>
+      AI账户不需要另外注册密码。第一次打开时，小手机会自动生成一个<b>本机用户ID</b>并连接账户。新账户不赠送点数，充值经核对到账后，点数可用于当前已开放的内置语音、影院字幕识别等功能；实际扣点以AI账户页面价格和“最近流水”为准。<br>
       <b>AI账户不是聊天模型接口。</b>当前内置AI主聊天通道固定关闭，角色日常聊天仍需在“设置 → 聊天模型”填写可用的外置接口。<br><br>
 
       <b>2. 用户ID和点数</b><br>
@@ -4836,14 +4831,7 @@ function showManual(section){openModal(`<h3>North · 使用说明与常见问题
       ④ 没声音时检查媒体音量、静音模式和浏览器音频权限，并主动点一次测试按钮解锁播放；生成中不要连续点击。<br>
       ⑤ 测试成功但角色不发语音时，检查设置里的“角色发语音频率”。<br><br>
 
-      <b>5. 内置图片怎么用</b><br>
-      ① 在AI账户打开<b>启用图片生成</b>，先点“生成一张图片”做独立测试，每张扣点以按钮显示为准。<br>
-      ② 想让角色在聊天中真的发照片，还要进入<b>设置 → AI真图</b>，打开“让角色发真照片”。两个开关都开启后，角色发图片指令时才会生成真图。<br>
-      ③ AI账户图片开启时优先走内置中转；关闭后，才使用“设置 → AI真图”中填写的外置图片地址、Key 和模型。外置图片由对应平台计费，不扣AI账户点数。<br>
-      ④ 外置接口先点“测试出图”。系统优先尝试 <b>/images/generations</b>，必要时再走兼容路径；平台列出模型不代表一定开放生图接口。<br>
-      ⑤ 生图通常比聊天慢，生成中不要反复点击。若最终失败，页面会显示原因；符合退款条件时点数自动退回，可在“最近流水”核对。后台显示上游消费成功但前端没拿到图片时，也以流水扣点和退款结果为准。<br><br>
-
-      <b>6. 流水与余额排查</b><br>
+      <b>5. 流水与余额排查</b><br>
       · 点数不足提醒可以自定义阈值；余额低于阈值时会弹窗。<br>
       · “最近流水”会显示功能、成功/失败、是否计费及余额变化。<br>
       · 页面一直显示“--”或刷新失败：先检查网络并重开AI账户；仍失败时记录用户ID和报错，千万不要先清除网站数据。<br>
@@ -5386,13 +5374,13 @@ function dgFallbackPlan(word){const k='#29282b',r='#c85f66',y='#d9b94f',g='#709a
   return o.filter(x=>x.points&&x.points.length>1).map(s=>Object.assign({},s,{points:s.points.map(p=>[p[0],p[1]*1.45+45])}));}
 function dgNormalizePlan(raw,word){const arr=Array.isArray(raw&&raw.strokes)?raw.strokes:[],out=[];arr.slice(0,120).forEach(s=>{if(!s||!Array.isArray(s.points))return;const pts=s.points.slice(0,180).map(p=>Array.isArray(p)?[Math.max(8,Math.min(992,+p[0]||0)),Math.max(8,Math.min(1192,+p[1]||0))]:null).filter(Boolean);if(pts.length<2)return;const color=dgPaletteColor(s.color),part=String(s.part||'').slice(0,30),broad=/头发|发片|发色|衣服填色|大面积|铺色|涂色/.test(part);out.push({part,color,width:Math.max(7,Math.min(broad?32:20,+s.width||13)),points:pts});});return out.length>=8?dgHumanizePlan(out):[];}
 function dgReferencePlan(word){const w=String(word||'').replace(/[\s，。！？!?,.、]/g,'');if(/^(?:一只)?(?:可爱的?)?(?:小狗|狗狗|狗|小犬)$/.test(w))return dgHumanizePlan(dgFallbackPlan('小狗'));return [];}
-function dgImageConfigured(){if(_dg&&_dg.artStyle==='line')return false;const ch=S.settings.chat||{};return aiImageRelayOn()||!!(((S.settings.imgBase||ch.base)||'').trim()&&((S.settings.imgKey||ch.key)||'').trim());}
+function dgImageConfigured(){if(_dg&&_dg.artStyle==='line')return false;const ch=S.settings.chat||{};return !!(((S.settings.imgBase||ch.base)||'').trim()&&((S.settings.imgKey||ch.key)||'').trim());}
 function dgTopicKey(v){return String(v||'').toLowerCase().replace(/[\s，。！？!?,.、的只一幅个]/g,'').slice(0,40);}
 function dgTopicRepeated(v,used){const key=dgTopicKey(v);if(!key)return true;return (used||[]).some(old=>{const prev=dgTopicKey(old);return prev===key||prev.length>1&&key.length>1&&(prev.includes(key)||key.includes(prev));});}
 function dgUsedTopics(c){const x=dgState(),all=[...(x.recentTopics||[]),...((c&&c.drawGuessMemory)||[]).map(m=>m&&m.answer),...(x.gallery||[]).map(a=>a&&a.answer)].map(v=>String(v||'').trim()).filter(Boolean),seen=new Set(),out=[];for(let i=all.length-1;i>=0;i--){const k=dgTopicKey(all[i]);if(k&&!seen.has(k)){seen.add(k);out.push(all[i]);}if(out.length>=40)break;}return out.reverse();}
 function dgRememberTopic(v){v=String(v||'').trim().slice(0,60);if(!v)return;const x=dgState(),key=dgTopicKey(v);x.recentTopics=(x.recentTopics||[]).filter(t=>dgTopicKey(t)!==key);x.recentTopics.push(v);if(x.recentTopics.length>60)x.recentTopics=x.recentTopics.slice(-60);save();}
 function dgRevealPlan(){const out=[];for(let y=120,row=0;y<=1120;y+=76,row++){const pts=[];for(let x=105;x<=895;x+=55){const step=x/55,curve=Math.sin((step+row)*.73)*14+Math.sin(step*.31+row*1.17)*7,slope=(x-500)*(row%2?.032:-.028);pts.push([x,y+curve+slope]);}if(row%2)pts.reverse();out.push({reveal:true,color:'#ffffff',brushColor:DG_COLORS[Math.floor(row/2)%DG_COLORS.length],width:90+(row%3)*7,points:pts});}return out;}
-async function dgGenerateArt(answer,instruction){const subject=String(answer||instruction||'可爱的日常物品').trim().slice(0,120),cat=/猫|cat/i.test(subject),dog=/狗|犬|dog|puppy/i.test(subject),species=cat?' For a cat: unmistakable domestic cat proportions, a broad round head, two small soft triangular cat ears, almond eyes, tiny nose, whiskers, a compact connected torso, four short rounded paws and one curved cat tail. Never give it rabbit ears, a human-shaped body, dangling stick limbs, or huge circular cartoon eyes.':dog?' For a dog: unmistakable friendly puppy proportions, floppy curved ears, canine muzzle and nose, compact connected torso, four short paws, collar and curved tail.':'',prompt='Create one highly recognizable cute illustration of exactly this subject: '+subject+'. Match a casual human colored-pencil doodle made by a skilled person: medium-thick strokes like a real colored pencil or soft marker, not heavy black tubing; subtle hand wobble and pressure variation; softly rounded organic curves; charming asymmetry without malformed anatomy. The result must look naturally hand-drawn but immediately resemble the real subject, not a symbol assembled from circles and sticks. Use warm cream paper, dark charcoal-brown outlines and cheerful muted colors. Keep the silhouette species-correct, compact and connected. Respect real occlusion: torso begins below the head and neck, body outlines never cross the mouth, muzzle, eyes or face, and rear parts stay behind front parts.'+species+' The centered subject fills about 72 percent of the canvas. No words, letters, labels, border, frame, watermark, photorealism, or unrelated characters. Portrait 2:3 illustration.';let url='';if(aiImageRelayOn()){const d=await aiRelay('image',{prompt,size:'1024x1536',quality:'low',source:'draw_guess'}),it=d.data&&d.data.data&&d.data.data[0];url=it&&(it.url||(it.b64_json?('data:image/jpeg;base64,'+it.b64_json):''));if(!url)throw new Error('图片中转站没有返回画作');}else{const ch=S.settings.chat||{},base=((S.settings.imgBase||ch.base)||'').replace(/\/+$/,''),key=(S.settings.imgKey||ch.key)||'',model=S.settings.imgModel||'gpt-image-2';if(!base||!key)throw new Error('还没配置生图线路');url=(await imageGenerateExternal(base,key,model,prompt,'1024x1536','low')).url;}return stableImageSrc(url);}
+async function dgGenerateArt(answer,instruction){const subject=String(answer||instruction||'可爱的日常物品').trim().slice(0,120),cat=/猫|cat/i.test(subject),dog=/狗|犬|dog|puppy/i.test(subject),species=cat?' For a cat: unmistakable domestic cat proportions, a broad round head, two small soft triangular cat ears, almond eyes, tiny nose, whiskers, a compact connected torso, four short rounded paws and one curved cat tail. Never give it rabbit ears, a human-shaped body, dangling stick limbs, or huge circular cartoon eyes.':dog?' For a dog: unmistakable friendly puppy proportions, floppy curved ears, canine muzzle and nose, compact connected torso, four short paws, collar and curved tail.':'',prompt='Create one highly recognizable cute illustration of exactly this subject: '+subject+'. Match a casual human colored-pencil doodle made by a skilled person: medium-thick strokes like a real colored pencil or soft marker, not heavy black tubing; subtle hand wobble and pressure variation; softly rounded organic curves; charming asymmetry without malformed anatomy. The result must look naturally hand-drawn but immediately resemble the real subject, not a symbol assembled from circles and sticks. Use warm cream paper, dark charcoal-brown outlines and cheerful muted colors. Keep the silhouette species-correct, compact and connected. Respect real occlusion: torso begins below the head and neck, body outlines never cross the mouth, muzzle, eyes or face, and rear parts stay behind front parts.'+species+' The centered subject fills about 72 percent of the canvas. No words, letters, labels, border, frame, watermark, photorealism, or unrelated characters. Portrait 2:3 illustration.',ch=S.settings.chat||{},base=((S.settings.imgBase||ch.base)||'').replace(/\/+$/,''),key=(S.settings.imgKey||ch.key)||'',model=S.settings.imgModel||'gpt-image-2';if(!base||!key)throw new Error('还没配置生图线路');return stableImageSrc((await imageGenerateExternal(base,key,model,prompt,'1024x1536','low')).url);}
 function dgCleanSpeech(v){return String(v||'').replace(/[\[\]【】]/g,'').replace(/^(?:角色|TA|我)\s*[：:]\s*/,'').trim().slice(0,80);}
 function dgChineseSpeech(v){const t=dgCleanSpeech(v);if(!/[A-Za-z]/.test(t))return t;const s=t.replace(/[A-Za-z][A-Za-z0-9'’_-]*(?:\s+[A-Za-z][A-Za-z0-9'’_-]*)*/g,'').replace(/\s+([，。！？、；：,.!?])/g,'$1').replace(/([\u3400-\u9fff])\s+([\u3400-\u9fff])/g,'$1$2').replace(/^[\s,.;:!?，。！？、；：—-]+|[\s,.;:!?，。！？、；：—-]+$/g,'').replace(/\s{2,}/g,' ').trim();return /[\u3400-\u9fff]/.test(s)?s.slice(0,80):'';}
 async function dgEnsureChineseSpeech(c,g,v,scene){let t=dgCleanSpeech(v);if(!/[A-Za-z]/.test(t))return t;if(!t)return'';try{const task='\n画室气泡只能使用自然的简体中文，任何英文字母、英文单词或英文句子都禁止出现。请保持原意和人设，把待修正台词改写为一句纯中文。只输出JSON：{"say":"纯中文台词"}。';const raw=await chatAPI(dgRoleChatMessages(c,g,task,'场景：'+(scene||'画画互动')+'\n待修正台词：'+t),{aux:true,max:160,temp:.45});let obj={};try{obj=parseObj(raw);}catch(_){}const fixed=dgChineseSpeech(obj.say||raw);if(fixed)return fixed;}catch(_){}return dgChineseSpeech(t);}

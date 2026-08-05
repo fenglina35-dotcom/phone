@@ -277,8 +277,7 @@ test('configured role drawing uses one generated image and reveals it without vi
   assert.match(generate,/await dgGenerateArt\(g\.answer,g\.instruction\)/);
   assert.match(generate,/g\.plan=dgRevealPlan\(\)/);
   assert.doesNotMatch(generate,/g\.mode==='role'.*visionAPI/);
-  assert.match(art,/source:'draw_guess'/);
-  assert.match(art,/quality:'low'/,'the drawing room asks the image provider for its faster generation tier');
+  assert.doesNotMatch(art,/aiRelay\('image'|source:'draw_guess'/,'retired built-in image routing is never called');
   assert.match(art,/imageGenerateExternal\([^)]*'1024x1536','low'/,'direct image providers use the same fast tier');
   assert.match(art,/imageGenerateExternal/);
   assert.match(art,/Never give it rabbit ears/);

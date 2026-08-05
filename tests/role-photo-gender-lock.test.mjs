@@ -59,11 +59,7 @@ assert.match(app, /只有用户亲口提出的要求可以授权女性入镜/);
 assert.match(app, /imageGenerateExternal\(base,key,model,prompt,size,quality\)\{const p=\(prompt\|\|'一张生活照'\)\.slice\(0,3200\)/);
 assert.match(app, /const rawPrompt=String\(prompt\|\|''\)/);
 
-assert.match(backend, /final image must contain ZERO women, girls, female bodies, female hands/i);
-assert.match(backend, /Words such as lover, partner, user, recipient, chat partner, or "me" do not imply a woman/i);
-assert.match(backend, /Obey the exact people list in the request/i);
-assert.match(backend, /A male character must never be rendered as a woman/i);
-assert.match(backend, /guardedImagePrompt\(rawPrompt, rolePhoto\)\.slice\(0, 7600\)/);
-assert.doesNotMatch(backend, /guardedImagePrompt\(rawPrompt, rolePhoto\)\.slice\(0, 4200\)/);
+assert.match(backend, /image-feature-retired/);
+assert.doesNotMatch(backend, /guardedImagePrompt|generateImageThroughRoute|charge\(userId, clientSecret, "image"\)/);
 
 console.log("role photo gender lock tests passed");
