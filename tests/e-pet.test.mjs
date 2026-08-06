@@ -158,12 +158,12 @@ test('wardrobe, visual growth, plumpness and diary controls remain discoverable'
 });
 
 test('preview and app load the complete visual module',()=>{
-  assert.match(html,/pet-game\.css\?v=823/);
-  assert.match(html,/pet-game\.js\?v=823/);
+  assert.match(html,/pet-game\.css\?v=824/);
+  assert.match(html,/pet-game\.js\?v=824/);
   assert.match(preview,/north-pet-preview/);
   assert.match(preview,/onclick="openPetGame\(\)"/);
   assert.match(css,/assets\/pet-room-v1\.webp/);
   assert.match(css,/\.pet-painter/);
-  assert.match(sw,/pet-game\.js\?v=823/);
+  assert.match(sw,/pet-game\.js\?v=824/);
   assert.match(sw,/pet-room-v1\.webp/);
 });

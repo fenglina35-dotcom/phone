@@ -1,5 +1,5 @@
 ﻿
-if(window.__NORTH_SHELL_BUILD__!=='823'){
+if(window.__NORTH_SHELL_BUILD__!=='824'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -354,7 +354,7 @@ function gateOK(){if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v823 · 微信账号记忆完全隔离';
+const APP_VER='v824 · 三款非音乐型来电短铃';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1371,7 +1371,7 @@ function playVoice(mid){let m,owner;for(const k in S.messages){const x=S.message
 let _bannerT;
 let _swReady=null;
 function registerSW(){if(_swReady)return _swReady;if(!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=823';
+  const url='sw.js?v=824';
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{navigator.serviceWorker.addEventListener('message',e=>appRouteFromNotify(e.data||{}));reg.update().catch(()=>{});return reg;}).catch(()=>null);
   return _swReady;}
 function appRouteFromNotify(d){if(!d||d.type!=='open')return;
@@ -10042,9 +10042,9 @@ async function hfHeard(t){if(_callHFBusy||!_call)return;_callHFBusy=true;/* 他�
   _callHFBusy=false;if(_callHF&&_call){try{if(_callSR)_callSR.start();}catch(e){}}/* 万一识别被系统结束了,悄悄接上 */}
 function endCallTimers(){try{clearInterval(_callTimer);}catch(e){}try{clearInterval(_callSilTimer);}catch(e){}try{clearTimeout(_callMissT);}catch(e){}stopCallMediaAudio('call-ended');callHFStop();}
 const INCOMING_RING_CHOICES=[
-  {key:'soft',label:'柔和轻响',tip:'清亮舒缓',url:'assets/incoming-soft-ring-v1.wav'},
-  {key:'morning',label:'晨光风铃',tip:'轻快温柔',url:'assets/incoming-morning-chime-v1.wav'},
-  {key:'night',label:'暖夜和弦',tip:'安静温暖',url:'assets/incoming-warm-night-v1.wav'}
+  {key:'soft',label:'叮咚轻铃',tip:'柔和的一高一低双响',url:'assets/incoming-soft-ring-v1.wav'},
+  {key:'morning',label:'清脆双响',tip:'短促明亮的两声轻响',url:'assets/incoming-morning-chime-v1.wav'},
+  {key:'night',label:'木质叮咚',tip:'偏低沉的温和双响',url:'assets/incoming-warm-night-v1.wav'}
 ];
 function incomingRingChoices(){return INCOMING_RING_CHOICES.slice();}
 function incomingRingKey(key){key=key==null?(S.settings&&S.settings.incomingRing):key;return INCOMING_RING_CHOICES.some(x=>x.key===key)?key:'soft';}
