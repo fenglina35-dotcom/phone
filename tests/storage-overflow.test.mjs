@@ -42,7 +42,7 @@ test('large core state migrates to IndexedDB before localStorage reaches its bro
   assert.match(app, /backup=await imgGet\(RECOVERY_IDB_KEY\)/);
   assert.match(app, /recoveryStateMeaningful\(stats\)/);
   assert.match(app, /S=mergeStateData\(restored\)/);
-  assert.match(functionSource('bootImages'), /^async function bootImages\(\)\{await bootOverflowCore\(\);try\{/);
+  assert.match(functionSource('bootImages'), /^async function bootImages\(\)\{await bootOverflowCore\(\);if\(privateNativeAppOn\(\)&&!_recoverySnapshotAt\)_recoverySnapshotAt=Date\.now\(\);try\{/);
   assert.match(app, /if\(_coreBootRef&&!_appBootFinished\)return true/);
 });
 
@@ -74,7 +74,8 @@ test('storage meter distinguishes the compact core index from browser-wide capac
 test('private app always moves core state to native storage and reports real device capacity', () => {
   assert.match(app, /nativeCore=privateNativeCoreStorageKey\(CORE_IDB_KEY\)/);
   assert.match(app, /overflow=nativeCore\|\|_coreOverflowMode\|\|bytes>CORE_INLINE_LIMIT/);
-  assert.match(app, /if\(privateNativeCoreStorageKey\(CORE_IDB_KEY\)&&!_coreOverflowMode\)save\(0\)/);
+  assert.doesNotMatch(app, /if\(privateNativeCoreStorageKey\(CORE_IDB_KEY\)&&!_coreOverflowMode\)save\(0\)/);
+  assert.match(app, /nativeCore=privateNativeCoreStorageKey\(CORE_IDB_KEY\)/);
   assert.match(app, /SmallPhoneNative\.request\('storage\.status'\)/);
   assert.match(app, /nativeTotal=.*native\.totalBytes/);
   assert.match(app, /手机当前可安全使用约/);

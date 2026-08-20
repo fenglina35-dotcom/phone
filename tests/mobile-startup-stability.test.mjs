@@ -26,14 +26,16 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('startup only hydrates images referenced by the restored state', () => {
+test('startup hydrates only the image set appropriate to web or the private app', () => {
   assert.match(app, /function imageRefKeys\(root\)/);
   assert.match(app, /function imgMany\(keys\)/);
   assert.match(app, /function imgManyChunk\(keys\)/);
   assert.match(functionSource('imgMany'), /i\+=48/);
   assert.match(functionSource('imgMany'), /j\+=12/);
   const boot = functionSource('bootImages');
-  assert.match(boot, /_imgCache=await imgMany\(imageRefKeys\(S\)\)/);
+  assert.match(boot, /keys=lazy\?privateBootImageKeys\(\):imageRefKeys\(S\)/);
+  assert.match(boot, /_imgCache=await imgMany\(keys\)/);
+  assert.match(boot, /if\(!lazy\)_rehydrate\(S\)/);
   assert.doesNotMatch(boot, /await imgAll\(\)/);
 });
 

@@ -1,6 +1,6 @@
-const BUILD='1008';
-const HOTFIX='v1008-shared-album-moments-stability-1';
-const SHELL_CACHE='north-shell-v1008';
+const BUILD='1009';
+const HOTFIX='v1009-native-render-thermal-repair-1';
+const SHELL_CACHE='north-shell-v1009';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];

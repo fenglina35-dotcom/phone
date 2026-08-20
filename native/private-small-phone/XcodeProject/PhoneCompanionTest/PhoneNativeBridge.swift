@@ -21,6 +21,10 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     }
     var openDeviceManagement: (() -> Void)?
     private let nativeSpeech = NativeSpeechRecognitionController()
+    private let storageQueue = DispatchQueue(
+        label: "com.smallphone.private-storage",
+        qos: .utility
+    )
     private var pendingSpeechEvents: [[String: Any]] = []
     private var visionBackgroundTasks: [String: UIBackgroundTaskIdentifier] = [:]
 
@@ -569,81 +573,148 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             return
         }
 
-        do {
-            switch action {
-            case "storage.get":
-                guard let stored = nativeStorageDataWithRecovery(at: url) else {
-                    reply(
-                        requestID: requestID,
-                        result: ["found": false]
-                    )
-                    return
-                }
-                let value = try JSONSerialization.jsonObject(with: stored.data)
-                reply(
-                    requestID: requestID,
-                    result: [
+        let legacyValue = arguments["value"] as? [String: Any]
+        let putVersion = (arguments["ver"] as? NSNumber)?.intValue
+            ?? (legacyValue?["ver"] as? NSNumber)?.intValue
+            ?? 1
+        let putSavedAt = (arguments["savedAt"] as? NSNumber)?.doubleValue
+            ?? (legacyValue?["savedAt"] as? NSNumber)?.doubleValue
+            ?? 0
+        let putStateJSON = (arguments["stateJSON"] as? String)
+            ?? (legacyValue?["json"] as? String)
+        let putStats = (arguments["stats"] as? [String: Any])
+            ?? (legacyValue?["stats"] as? [String: Any])
+
+        storageQueue.async { [weak self] in
+            guard let self else { return }
+            do {
+                switch action {
+                case "storage.get":
+                    guard let stored = self.nativeStorageDataWithRecovery(
+                        at: url
+                    ), let record = self.nativeStorageRecord(
+                        from: stored.data
+                    ), let stateJSON = record["json"] as? String else {
+                        self.replyStorage(
+                            requestID: requestID,
+                            result: ["found": false]
+                        )
+                        return
+                    }
+                    var result: [String: Any] = [
                         "found": true,
-                        "value": value,
+                        "ver": (record["ver"] as? NSNumber)?.intValue ?? 1,
+                        "savedAt": self.nativeStorageSavedAt(in: record),
+                        "stateJSON": stateJSON,
                         "recovered": stored.recovered
                     ]
-                )
-            case "storage.put":
-                guard let value = arguments["value"],
-                      JSONSerialization.isValidJSONObject(value) else {
-                    reply(requestID: requestID, error: "invalid_storage_value")
-                    return
-                }
-                let data = try JSONSerialization.data(withJSONObject: value)
-                guard nativeStorageRecord(from: data) != nil else {
-                    reply(requestID: requestID, error: "invalid_storage_record")
-                    return
-                }
-                let incomingSavedAt = nativeStorageSavedAt(in: value)
-                if let currentData = try? Data(contentsOf: url),
-                   let current = nativeStorageRecord(from: currentData),
-                   incomingSavedAt > 0,
-                   nativeStorageSavedAt(in: current) > incomingSavedAt {
-                    reply(
+                    if let stats = record["stats"],
+                       JSONSerialization.isValidJSONObject(stats) {
+                        result["stats"] = stats
+                    }
+                    self.replyStorage(requestID: requestID, result: result)
+                case "storage.put":
+                    guard putVersion >= 1,
+                          putSavedAt > 0,
+                          let stateJSON = putStateJSON,
+                          !stateJSON.isEmpty else {
+                        self.replyStorage(
+                            requestID: requestID,
+                            error: "invalid_storage_value"
+                        )
+                        return
+                    }
+                    var record: [String: Any] = [
+                        "ver": putVersion,
+                        "savedAt": putSavedAt,
+                        "json": stateJSON
+                    ]
+                    if let stats = putStats,
+                       JSONSerialization.isValidJSONObject(stats) {
+                        record["stats"] = stats
+                    }
+                    let data = try JSONSerialization.data(withJSONObject: record)
+                    guard self.nativeStorageRecord(from: data) != nil else {
+                        self.replyStorage(
+                            requestID: requestID,
+                            error: "invalid_storage_record"
+                        )
+                        return
+                    }
+                    let currentData = try? Data(contentsOf: url)
+                    if let currentData,
+                       let current = self.nativeStorageRecord(from: currentData),
+                       self.nativeStorageSavedAt(in: current) > putSavedAt {
+                        self.replyStorage(
+                            requestID: requestID,
+                            result: [
+                                "saved": true,
+                                "skippedOlderWrite": true,
+                                "bytes": currentData.count
+                            ]
+                        )
+                        return
+                    }
+                    if let currentData,
+                       self.nativeStorageRecord(from: currentData) != nil {
+                        let backupURL = self.nativeStorageBackupURL(for: url)
+                        try currentData.write(to: backupURL, options: .atomic)
+                        try self.applyNativeStorageProtection(to: backupURL)
+                    }
+                    try data.write(to: url, options: .atomic)
+                    try self.applyNativeStorageProtection(to: url)
+                    self.replyStorage(
                         requestID: requestID,
-                        result: [
-                            "saved": true,
-                            "skippedOlderWrite": true,
-                            "bytes": currentData.count
-                        ]
+                        result: ["saved": true, "bytes": data.count]
                     )
-                    return
+                case "storage.delete":
+                    if FileManager.default.fileExists(atPath: url.path) {
+                        try FileManager.default.removeItem(at: url)
+                    }
+                    let backupURL = self.nativeStorageBackupURL(for: url)
+                    if FileManager.default.fileExists(atPath: backupURL.path) {
+                        try FileManager.default.removeItem(at: backupURL)
+                    }
+                    self.replyStorage(
+                        requestID: requestID,
+                        result: ["deleted": true]
+                    )
+                default:
+                    self.replyStorage(
+                        requestID: requestID,
+                        error: "unsupported_storage_action"
+                    )
                 }
-                if let currentData = try? Data(contentsOf: url),
-                   nativeStorageRecord(from: currentData) != nil {
-                    try currentData.write(
-                        to: nativeStorageBackupURL(for: url),
-                        options: .atomic
-                    )
-                    try applyNativeStorageProtection(
-                        to: nativeStorageBackupURL(for: url)
-                    )
-                }
-                try data.write(to: url, options: .atomic)
-                try applyNativeStorageProtection(to: url)
-                reply(
+            } catch {
+                self.replyStorage(
                     requestID: requestID,
-                    result: ["saved": true, "bytes": data.count]
+                    error: "native_storage_failed"
                 )
-            case "storage.delete":
-                if FileManager.default.fileExists(atPath: url.path) {
-                    try FileManager.default.removeItem(at: url)
-                }
-                let backupURL = nativeStorageBackupURL(for: url)
-                if FileManager.default.fileExists(atPath: backupURL.path) {
-                    try FileManager.default.removeItem(at: backupURL)
-                }
-                reply(requestID: requestID, result: ["deleted": true])
-            default:
-                reply(requestID: requestID, error: "unsupported_storage_action")
             }
-        } catch {
-            reply(requestID: requestID, error: "native_storage_failed")
+        }
+    }
+
+    nonisolated private func replyStorage(
+        requestID: String,
+        result: [String: Any]? = nil,
+        error: String? = nil
+    ) {
+        var payload: [String: Any] = ["requestId": requestID]
+        if let result {
+            payload["result"] = result
+        }
+        if let error {
+            payload["error"] = error
+        }
+        guard JSONSerialization.isValidJSONObject(payload),
+              let data = try? JSONSerialization.data(withJSONObject: payload),
+              let json = String(data: data, encoding: .utf8) else {
+            return
+        }
+        Task { @MainActor [weak self] in
+            self?.webView?.evaluateJavaScript(
+                "window.__smallPhoneNativeReply && window.__smallPhoneNativeReply(\(json));"
+            )
         }
     }
 
@@ -689,7 +760,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         )
     }
 
-    private func nativeStorageDataWithRecovery(
+    nonisolated private func nativeStorageDataWithRecovery(
         at url: URL
     ) -> (data: Data, recovered: Bool)? {
         if let data = try? Data(contentsOf: url),
@@ -706,7 +777,9 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         return (backup, true)
     }
 
-    private func nativeStorageRecord(from data: Data) -> [String: Any]? {
+    nonisolated private func nativeStorageRecord(
+        from data: Data
+    ) -> [String: Any]? {
         guard let object = try? JSONSerialization.jsonObject(with: data),
               let record = object as? [String: Any],
               let version = record["ver"] as? NSNumber,
@@ -722,24 +795,24 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         return record
     }
 
-    private func nativeStorageSavedAt(in value: Any) -> Double {
+    nonisolated private func nativeStorageSavedAt(in value: Any) -> Double {
         guard let record = value as? [String: Any] else { return 0 }
         return (record["savedAt"] as? NSNumber)?.doubleValue ?? 0
     }
 
-    private func nativeStorageFileBytes(at url: URL) -> Int64 {
+    nonisolated private func nativeStorageFileBytes(at url: URL) -> Int64 {
         guard let attributes = try? FileManager.default.attributesOfItem(
             atPath: url.path
         ) else { return 0 }
         return (attributes[.size] as? NSNumber)?.int64Value ?? 0
     }
 
-    private func nativeStorageBackupURL(for url: URL) -> URL {
+    nonisolated private func nativeStorageBackupURL(for url: URL) -> URL {
         url.deletingPathExtension()
             .appendingPathExtension("backup.json")
     }
 
-    private func applyNativeStorageProtection(to url: URL) throws {
+    nonisolated private func applyNativeStorageProtection(to url: URL) throws {
         try FileManager.default.setAttributes(
             [
                 .protectionKey:
@@ -749,7 +822,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         )
     }
 
-    private func nativeStorageDirectory() -> URL? {
+    nonisolated private func nativeStorageDirectory() -> URL? {
         guard let support = FileManager.default.urls(
             for: .applicationSupportDirectory,
             in: .userDomainMask
@@ -771,7 +844,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         }
     }
 
-    private func nativeStorageURL(for key: String) -> URL? {
+    nonisolated private func nativeStorageURL(for key: String) -> URL? {
         let allowed = CharacterSet.alphanumerics.union(
             CharacterSet(charactersIn: "._-")
         )
