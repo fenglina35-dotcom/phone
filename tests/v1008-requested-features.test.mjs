@@ -70,9 +70,12 @@ test('role model and role-WeChat login entries are moved to the requested pages'
 });
 
 test('phone life notes can switch between automatic and manual-only recording without deleting history',()=>{
+  const page=functionSource('spyLifeNoteSec');
   assert.match(functionSource('lifeNoteOnUserMsg'),/!lifeNotesAutoOn\(\)/);
-  assert.match(functionSource('spyLifeNoteSec'),/角色自动记录/);
-  assert.match(functionSource('spyLifeNoteSec'),/lifeNoteTags\(n\)\.map/);
+  assert.match(page,/角色自动记录/);
+  assert.match(page,/lifeNoteTags\(n\)\.map/);
+  assert.match(page,/class="sw \$\{lifeNotesAutoOn\(\)\?'on':''\}"/);
+  assert.doesNotMatch(page,/\$\{sw\(/,'life-note page must not call an undefined switch renderer');
   assert.match(functionSource('lifeNoteTags'),/typeof raw==='string'/);
   assert.match(functionSource('lifeNotesAutoToggle'),/现有内容保留/);
   assert.doesNotMatch(functionSource('lifeNotesAutoToggle'),/splice|length=0|lifeNotes\(\)\.length/);

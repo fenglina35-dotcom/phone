@@ -54,7 +54,7 @@ assert.match(liveSandbox.prompt, /约会间隙拿出手机/);
 assert.match(liveSandbox.prompt, /手动分段总结/);
 assert.match(liveSandbox.prompt, /地点：江边/);
 
-assert.match(source, /v1015 · 远控真实字幕与伴生事件回执修复/);
+assert.match(source, /v1016 · 远控字幕解析与共同生活续接修复/);
 assert.match(source, /function timeAwarenessPrompt\(who,kind\)/);
 assert.match(source, /23:20\u523023:49[\s\S]*\u7edd\u5bf9\u4e0d\u8981\u8bf4\u5341\u4e8c\u70b9\u4e86/);
 assert.match(source, /timeAwarenessPrompt\(S\.me\.name,'wechat'\)/);
@@ -240,7 +240,7 @@ assert.match(repeatSandbox.staleInput, /\u4e00\u7b14\u52fe\u9500/);
 assert.ok(Array.from(repeatSandbox.staleReply).some((x) => x.includes("\u7b54\u9519\u4e86\u8f6e\u6b21")));
 assert.ok(Array.from(repeatSandbox.continueOldReply).some((x) => x.includes("\u7b54\u9519\u4e86\u8f6e\u6b21")));
 assert.match(source, /# \u672c\u573a\u8fde\u7eed\u6027\u4e0e\u9632\u590d\u8bfb\uff08\u53ea\u7ea6\u675f\u7ebf\u4e0b\u7ea6\u4f1a\uff09/);
-assert.match(source, /turn=offlineCurrentTurnPrompt\(o,note\)/);
+assert.match(source, /turn=life\?cohabCurrentTurnPrompt\(c,o,note\):offlineCurrentTurnPrompt\(o,note\)/);
 assert.match(source, /hist=offlineHistoryMessages\(o,offlineContextLimit\(\),\{deferCurrent:true\}\)/);
 assert.match(source, /req=offlineRequestMessages\(sys,hist,pin,turn\)/);
 assert.match(source, /function offOldUserPhraseReplay\(text,o,currentInput\)/);
@@ -657,6 +657,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=1015/);
+assert.match(html, /app\.js\?v=1016/);
 
 console.log("offline date tests passed");

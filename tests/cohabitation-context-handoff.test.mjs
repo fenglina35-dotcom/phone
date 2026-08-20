@@ -51,6 +51,28 @@ test('recent co-living context crosses into WeChat only as hidden background',()
   assert.deepEqual(d.msgs.map(x=>x.text),['start','他把钥匙放在桌上。','我先去洗手。']);
 });
 
+test('returning to common life continues newer online plot exactly once',()=>{
+  let online=[
+    {time:200,source:'微信',speaker:'user',who:'我',text:'那我在线上等你解释。'},
+    {time:250,source:'微信',speaker:'assistant',who:'先生',text:'回去以后我当面说。'}
+  ];
+  let scene=[
+    {time:100,source:'线下现场',speaker:'assistant',who:'先生',text:'旧现场回应。',current:false},
+    {time:150,source:'线下现场',speaker:'user',who:'我',text:'离开前悬着的旧输入。',current:true},
+    {time:300,source:'线下现场',speaker:'user',who:'我',text:'现在你说吧。',current:true}
+  ];
+  const sandbox={S:{me:{name:'我'}},String,Math,offlineWechatLiveOn:()=>true,cohabContextLimit:()=>20,offlineOnlineTimelineRows:()=>online,offlineSceneTimelineRows:()=>scene,offlineCurrentTurnPrompt:()=> '旧共同生活续演'};
+  vm.runInNewContext(`${functionSource('cohabOnlineReturnState')}\n${functionSource('cohabCurrentTurnPrompt')}\nglobalThis.run=cohabCurrentTurnPrompt;globalThis.state=cohabOnlineReturnState;`,sandbox);
+  const prompt=sandbox.run({name:'先生'},{},'');
+  assert.match(prompt,/从线上聊天返回共同生活/);
+  assert.match(prompt,/回去以后我当面说/);
+  assert.match(prompt,/现在你说吧/);
+  assert.doesNotMatch(prompt,/离开前悬着的旧输入/);
+  scene=scene.concat({time:350,source:'线下现场',speaker:'assistant',who:'先生',text:'已经接住线上剧情。',current:false});
+  assert.equal(sandbox.state({name:'先生'},{}),null,'a delivered face-to-face reply consumes the online handoff');
+  assert.equal(sandbox.run({name:'先生'},{}),'旧共同生活续演');
+});
+
 test('an online arrival queues and writes one real face-to-face handoff without copying the WeChat line',async()=>{
   const d={phase:'away',msgs:[],pendingArrival:null},root={enabled:true,paused:false,cid:'c1'},scheduled=[];
   const sandbox={

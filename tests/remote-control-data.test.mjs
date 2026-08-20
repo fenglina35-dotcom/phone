@@ -91,6 +91,18 @@ test('remote subtitles are role-generated and quiet on list pages',()=>{
   assert.doesNotMatch(app,/function remoteControlSayFallback/);
 });
 
+test('remote role subtitles survive a natural-text model response without fake fallback text',()=>{
+  const source=app.match(/function remoteControlRoleResponse\(raw\)\{[^\n]+\}/)?.[0]||'';
+  assert.ok(source,'remote role response parser must exist');
+  const parseObj=raw=>JSON.parse(raw);
+  const remoteControlRoleTextLines=raw=>String(raw||'').split('\n').map(x=>x.trim()).filter(Boolean).slice(0,2);
+  const roleVisibleEnvelopeText=raw=>String(raw||'').trim();
+  const parse=Function('parseObj','remoteControlRoleTextLines','roleVisibleEnvelopeText',`${source};return remoteControlRoleResponse;`)(parseObj,remoteControlRoleTextLines,roleVisibleEnvelopeText);
+  assert.deepEqual(parse('这条聊天为什么没告诉我？').lines,['这条聊天为什么没告诉我？']);
+  assert.deepEqual(parse('{"lines":["这是谁？"],"delete":false,"messageIndex":-1}').lines,['这是谁？']);
+  assert.equal(parse('{"line":"你最好解释清楚。","delete":false}').lines[0],'你最好解释清楚。');
+});
+
 test('remote control never revisits the same view page in one session',()=>{
   assert.match(app,/visitedPages:\[\]/);
   assert.match(app,/function remoteControlVisitKey\(a\)/);
