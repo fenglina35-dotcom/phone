@@ -17,6 +17,8 @@ const resetMemoryMigration = readFileSync(join(root, 'supabase', 'migrations', '
 const receiptMigration = readFileSync(join(root, 'supabase', 'migrations', '202608200002_phone_role_push_receipt_reconciliation.sql'), 'utf8');
 const edge = readFileSync(join(root, 'supabase', 'functions', 'phone-role-push', 'index.ts'), 'utf8');
 const notificationService = readFileSync(join(root, 'native', 'private-small-phone', 'XcodeProject', 'RoleNotificationService', 'NotificationService.swift'), 'utf8');
+const localPhoneWebView = readFileSync(join(root, 'native', 'private-small-phone', 'XcodeProject', 'PhoneCompanionTest', 'LocalPhoneWebView.swift'), 'utf8');
+const companionApp = readFileSync(join(root, 'native', 'private-small-phone', 'XcodeProject', 'PhoneCompanionTest', 'PhoneCompanionTestApp.swift'), 'utf8');
 
 function functionSource(name) {
   const start = app.indexOf(`function ${name}(`);
@@ -279,6 +281,8 @@ test('returned role messages are deduplicated and appended to the matching chat'
   assert.match(pull, /roleServerPushCallKind\(rawBody\)/);
   assert.match(pull, /incomingCall\(c\.id,callKind,\{serverPush:true\}\)/);
   assert.match(app, /window\.__smallPhoneOpenRolePush=async payload/);
+  assert.match(app, /window\.__smallPhoneSyncRolePush=async\(\)=>/);
+  assert.match(app, /setTimeout\(\(\)=>roleServerPushPull\(true\),6500\)/);
   assert.match(pull, /msg\._serverProactive=true/);
   assert.match(pull, /phone_role_push_ack/);
   assert.match(pull, /await persistWechatMessagesNow\(\)/);
@@ -296,6 +300,18 @@ test('returned role messages are deduplicated and appended to the matching chat'
   );
   assert.match(app, /setInterval\(\(\)=>roleServerPushPull\(false\),60000\)/);
   assert.match(app, /visibilitychange[\s\S]{0,1600}roleServerPushPull\(true\)/);
+});
+
+test('native foreground and delivered role notifications wake the web inbox without requiring a tap', () => {
+  assert.match(companionApp, /applicationDidBecomeActive[\s\S]{0,180}requestRolePushSync\(\)/);
+  assert.match(companionApp, /didReceiveRemoteNotification[\s\S]{0,520}userInfo\["rolePush"\][\s\S]{0,100}requestRolePushSync\(\)/);
+  assert.match(companionApp, /willPresent notification[\s\S]{0,260}userInfo\["rolePush"\][\s\S]{0,100}requestRolePushSync\(\)/);
+  assert.match(companionApp, /smallPhone\.pendingRolePushSync\.v1/);
+  assert.match(companionApp, /SmallPhoneRolePushSyncRequested/);
+  assert.match(localPhoneWebView, /name: Notification\.Name\("SmallPhoneRolePushSyncRequested"\)/);
+  assert.match(localPhoneWebView, /syncPendingRolePushIfReady\(\)/);
+  assert.match(localPhoneWebView, /window\.__smallPhoneSyncRolePush && window\.__smallPhoneSyncRolePush\(\)/);
+  assert.match(localPhoneWebView, /didFinish navigation[\s\S]{0,360}syncPendingRolePushIfReady\(\)/);
 });
 
 test('recently consumed real pushes can be reconciled without resurrecting deleted messages', () => {

@@ -11,6 +11,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
         private var showingLoadFailure = false
         private var didLoadPhone = false
         private var openingRolePush = false
+        private var syncingRolePush = false
 
         override init() {
             super.init()
@@ -24,6 +25,12 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 self,
                 selector: #selector(rolePushTapped),
                 name: Notification.Name("SmallPhoneRolePushTapped"),
+                object: nil
+            )
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(rolePushSyncRequested),
+                name: Notification.Name("SmallPhoneRolePushSyncRequested"),
                 object: nil
             )
         }
@@ -42,6 +49,29 @@ struct LocalPhoneWebView: UIViewRepresentable {
 
         @objc private func rolePushTapped() {
             openPendingRolePushIfReady()
+        }
+
+        @objc private func rolePushSyncRequested() {
+            syncPendingRolePushIfReady()
+        }
+
+        private func syncPendingRolePushIfReady() {
+            guard didLoadPhone,
+                  !syncingRolePush,
+                  UserDefaults.standard.bool(
+                    forKey: "smallPhone.pendingRolePushSync.v1"
+                  ),
+                  let webView = bridge.webView else { return }
+            syncingRolePush = true
+            let script = "window.__smallPhoneSyncRolePush && window.__smallPhoneSyncRolePush();"
+            webView.evaluateJavaScript(script) { [weak self] _, error in
+                self?.syncingRolePush = false
+                if error == nil {
+                    UserDefaults.standard.removeObject(
+                        forKey: "smallPhone.pendingRolePushSync.v1"
+                    )
+                }
+            }
         }
 
         private func openPendingRolePushIfReady() {
@@ -85,6 +115,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 updateSafeArea(in: webView)
                 bridge.announceReady()
                 openPendingRolePushIfReady()
+                syncPendingRolePushIfReady()
             }
         }
 
@@ -299,7 +330,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.137 (137)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.138 (138)';
       const root = document.documentElement;
       root.classList.add('north-native-app');
       root.style.setProperty('--north-native-safe-top', 'env(safe-area-inset-top, 0px)');

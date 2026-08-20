@@ -225,6 +225,7 @@ final class CompanionPushAppDelegate: NSObject,
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
+        requestRolePushSync()
         Task { @MainActor in
             ScreenShareCoordinator.shared.setHostForeground(true)
             await clearAppBadge()
@@ -283,6 +284,19 @@ final class CompanionPushAppDelegate: NSObject,
         }
     }
 
+    private func requestRolePushSync() {
+        DispatchQueue.main.async {
+            UserDefaults.standard.set(
+                true,
+                forKey: "smallPhone.pendingRolePushSync.v1"
+            )
+            NotificationCenter.default.post(
+                name: Notification.Name("SmallPhoneRolePushSyncRequested"),
+                object: nil
+            )
+        }
+    }
+
     func application(
         _ application: UIApplication,
         didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
@@ -307,6 +321,9 @@ final class CompanionPushAppDelegate: NSObject,
         fetchCompletionHandler completionHandler:
             @escaping (UIBackgroundFetchResult) -> Void
     ) {
+        if userInfo["rolePush"] != nil {
+            requestRolePushSync()
+        }
         Task { @MainActor in
             CompanionPushCoordinator.shared.receiveBackgroundWake(
                 completion: completionHandler
@@ -319,6 +336,9 @@ final class CompanionPushAppDelegate: NSObject,
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
         await clearAppBadge()
+        if notification.request.content.userInfo["rolePush"] != nil {
+            requestRolePushSync()
+        }
         return [.banner, .list, .sound]
     }
 

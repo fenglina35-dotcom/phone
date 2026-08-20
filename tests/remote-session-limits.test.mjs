@@ -19,7 +19,8 @@ test('v727 remote control does not include later page dwell wrappers',()=>{
 test('remote flow keeps bounded model calls and adds autonomous page selection',()=>{
   assert.doesNotMatch(app,/function remoteControlTimed\(task,ms,fallback\)/);
   assert.match(app,/function remoteControlModelCall\(messages,opt,timeoutMs\)/);
-  assert.match(app,/remote-control-model-timeout/);
+  assert.match(app,/callOpt=Object\.assign\(\{\},opt\|\|\{\},\{timeout:ms\}\)/);
+  assert.doesNotMatch(app,/remote-control-model-timeout/);
   assert.match(app,/await remoteControlAutonomousPlan\(c,required\)/);
   assert.match(app,/const reaction=await remoteControlRoleReaction\(c,a,r\)/);
   assert.match(app,/await remoteControlDecisionPlan\(c,ctl\.actions\)/);

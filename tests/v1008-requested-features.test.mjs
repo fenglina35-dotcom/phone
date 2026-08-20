@@ -79,6 +79,10 @@ test('phone life notes can switch between automatic and manual-only recording wi
   assert.match(functionSource('lifeNoteTags'),/typeof raw==='string'/);
   assert.match(functionSource('lifeNotesAutoToggle'),/现有内容保留/);
   assert.doesNotMatch(functionSource('lifeNotesAutoToggle'),/splice|length=0|lifeNotes\(\)\.length/);
+  const render=Function('lifeNotes','lifeNotesAutoOn','esc','aboutMeNoteText','fmtDT','lifeNoteTags','lifeTagName','S',`${page};return spyLifeNoteSec;`)(
+    ()=>[],()=>true,x=>String(x),x=>String(x),()=>'',()=>[],x=>x,{me:{name:'North'}}
+  );
+  assert.match(render('role-1'),/role="switch" aria-checked="true"/);
 });
 
 test('the private-App spy lock screen restores stored role avatars instead of printing idb references',()=>{

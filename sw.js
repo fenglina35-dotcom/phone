@@ -1,6 +1,6 @@
-const BUILD='1016';
-const HOTFIX='v1016-remote-caption-cohab-handoff-1';
-const SHELL_CACHE='north-shell-v1016';
+const BUILD='1017';
+const HOTFIX='v1017-notebook-inbox-bubble-repair-1';
+const SHELL_CACHE='north-shell-v1017';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
