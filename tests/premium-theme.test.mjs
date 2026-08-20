@@ -87,8 +87,9 @@ test('Moments content is formally integrated without replacing its data or actio
   assert.match(html,/\.wx-premium\.wx-moments>\.scroll\{padding:0;[^}]*scroll-padding-top:0/);
   assert.match(html,/\.wx-premium\.wx-moments>\.scroll>\.mcover\{[^}]*border-radius:0;[^}]*box-shadow:none/);
   assert.match(html,/\.wx-premium\.wx-moments>\.scroll>\.mpost\{margin:0;[^}]*border-bottom:\.5px solid[^}]*border-radius:0;[^}]*box-shadow:none/);
-  assert.match(html,/\.wx-premium\.wx-moments:not\(\.wxlight\),\.wx-premium\.wx-moments:not\(\.wxlight\)>\.nav,[^}]*background:#282429!important/);
-  assert.match(html,/\.wx-premium\.wx-moments>\.scroll>\.mpost\{[^}]*background:#282429/);
+  assert.match(html,/\.wx-premium\.wx-moments:not\(\.wxlight\),\.wx-premium\.wx-moments:not\(\.wxlight\)>\.nav,[^}]*background:#111!important/);
+  assert.match(html,/\.wx-premium\.wx-moments>\.scroll>\.mpost\{[^}]*background:#111/);
+  assert.match(html,/\.wx-role-moments\{[^}]*background:#111/);
   assert.match(html,/\.wx-premium\.wx-moments\.wxlight>\.scroll>\.mpost\{[^}]*background:rgba\(255,255,255,\.78\)/);
   assert.match(app,/S\.moments\.filter\(p=>\(p\.acct\|\|'main'\)===actId\(\)\)/);
   assert.match(app,/class="tm">\$\{fmtDT\(p\.time\)\}/);

@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='1013';</script>
+<script>window.__NORTH_SHELL_BUILD__='1014';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-1013';
+  var key='north-sw-reloaded-1014';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=1013&r=v1013-internal-voice-companion-stability-1';
+  var url='sw.js?v=1014&r=v1014-companion-unlock-remote-natural-caption-1';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -405,14 +405,14 @@ body{background:#000;padding:0;}
 .mpost{background:#1c1c1e;border-bottom:.5px solid #2a2a2c;}.mpost .tx{color:#eaeaea;}
 .mpost .likes,.mpost .cmts{background:#262628;}.mpost .cmt{color:#ddd;}
 /* 朋友圈正式接入新版框架：只调整容器和卡片层次，原有文字、线条、图片、互动及删除逻辑不变 */
-.wx-premium.wx-moments:not(.wxlight),.wx-premium.wx-moments:not(.wxlight)>.nav,.wx-premium.wx-moments:not(.wxlight)>.scroll,.wx-premium.wx-moments:not(.wxlight)>.tabbar{background:#282429!important;}
+.wx-premium.wx-moments:not(.wxlight),.wx-premium.wx-moments:not(.wxlight)>.nav,.wx-premium.wx-moments:not(.wxlight)>.scroll,.wx-premium.wx-moments:not(.wxlight)>.tabbar{background:#111!important;}
 .wx-premium.wx-moments>.scroll{padding:0;box-sizing:border-box;scroll-padding-top:0;}
 .wx-premium.wx-moments>.scroll>.mcover{height:190px;margin:0 0 42px;border:0;border-radius:0;overflow:visible;background:linear-gradient(145deg,#393239,#211e24);box-shadow:none;}
 .wx-premium.wx-moments>.scroll>.mcover .coverfull,.wx-premium.wx-moments>.scroll>.mcover:after{border-radius:0;}
 .wx-premium.wx-moments>.scroll>.mcover .me{right:14px;bottom:-30px;align-items:center;}
 .wx-premium.wx-moments>.scroll>.mcover .me .nm{margin:0 2px 0 0;color:#f7f2f5;text-shadow:0 2px 8px rgba(0,0,0,.7);}
 .wx-premium.wx-moments>.scroll>.mcover .me .avatar.lg{box-shadow:0 8px 20px rgba(0,0,0,.28);}
-.wx-premium.wx-moments>.scroll>.mpost{margin:0;padding:14px 12px;border:0;border-bottom:.5px solid rgba(255,255,255,.09);border-radius:0;background:#282429;box-shadow:none;}
+.wx-premium.wx-moments>.scroll>.mpost{margin:0;padding:14px 12px;border:0;border-bottom:.5px solid rgba(255,255,255,.09);border-radius:0;background:#111;box-shadow:none;}
 .wx-premium.wx-moments>.scroll>.mpost .likes,.wx-premium.wx-moments>.scroll>.mpost .cmts{background:rgba(255,255,255,.055);}
 .wx-premium.wx-moments>.scroll>.mpost .likes{border-radius:8px 8px 5px 5px;}
 .wx-premium.wx-moments>.scroll>.mpost .cmts{border-radius:5px 5px 8px 8px;}
@@ -787,7 +787,6 @@ body{background:#000;padding:0;}
 .remote-caption-wrap{position:absolute;z-index:20;left:14px;right:14px;bottom:max(20px,env(safe-area-inset-bottom));pointer-events:none;}
 .remote-caption{min-height:42px;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-end;gap:7px;}
 .remote-caption-bubble{max-width:90%;align-self:flex-start;padding:11px 14px;border:1px solid rgba(255,255,255,.16);border-radius:15px;background:rgba(13,10,13,.94);color:#fff;font-size:14px;line-height:1.62;box-shadow:0 9px 26px rgba(0,0,0,.46);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);position:relative;animation:remoteCaptionUp .38s cubic-bezier(.2,.72,.25,1);}
-.remote-caption-bubble:nth-last-child(2){opacity:.7;transform:scale(.97);transform-origin:left bottom}.remote-caption-bubble:nth-last-child(3){opacity:.42;transform:scale(.94);transform-origin:left bottom}
 .remote-exit-notice{position:absolute;left:50%;top:72px;z-index:545;display:none;align-items:center;gap:8px;transform:translateX(-50%);max-width:86%;padding:9px 13px;border:1px solid rgba(255,255,255,.12);border-radius:999px;background:rgba(16,16,20,.92);color:#e8e8ee;font-size:12px;letter-spacing:.2px;box-shadow:0 10px 26px rgba(0,0,0,.35);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);}
 .remote-exit-notice.show{display:flex;animation:remoteExitIn .28s ease-out;}
 .remote-exit-dot{width:7px;height:7px;border-radius:50%;background:#8f929b;box-shadow:0 0 8px rgba(180,184,196,.45);}
@@ -1341,8 +1340,8 @@ html.north-apple-remote-safe .music-chat-dock{margin-bottom:4px;scroll-margin-bo
 .wxlight .wx-real-profile,.wxlight .wx-subpage,.wxlight .wx-role-moments,.wxlight .wx-real-scroll,.wxlight .wx-info-scroll,.wxlight .wx-role-detail{background:#f7f7f7;color:#111}.wxlight .wx-real-nav{background:#f7f7f7;border-bottom-color:#ddd}.wxlight .wx-real-nav button,.wxlight .wx-real-nav span{color:#111}.wxlight .wx-profile-hero{background:#f7f7f7;color:#111}.wxlight .wx-profile-block,.wxlight .wx-profile-row,.wxlight .wx-profile-actions,.wxlight .wx-info-group,.wxlight .wx-chat-members{background:#fff;border-color:#e5e5e5}.wxlight .wx-chat-details-scroll{background:#f7f7f7}.wxlight .wx-chat-members button{color:#555}.wxlight .wx-chat-members button.add i{border-color:#aaa;color:#888}.wxlight .wx-profile-actions button{border-color:#e5e5e5}.wxlight .wx-info-group button{color:#111;border-color:#e8e8e8}.wxlight .wx-role-feed,.wxlight .wx-role-moment-card{background:#f7f7f7;color:#111}.wxlight .wx-role-moment-card .moment-main{border-color:#ddd}.wxlight .wx-role-moment-card .copy small,.wxlight .wx-role-moment-card>time{color:#151515}.wxlight .wx-role-detail-text{color:#111}.wxlight .wx-role-detail-actions,.wxlight .wx-role-detail-actions button+button{border-color:#ddd}.wxlight .wx-role-detail-social{background:#ebebee;color:#222}.wxlight .wx-role-detail-compose{border-color:#ddd;background:rgba(247,247,247,.97)}.wxlight .wx-role-detail-compose input{background:#e8e8eb;color:#111}.wxlight .wx-role-cover .avatar.lg{border-color:#f7f7f7}.wxlight .wx-feature-category{border-color:#ddd;background:#fff;color:#111;box-shadow:0 8px 22px rgba(0,0,0,.05)}.wxlight .wx-feature-category small{color:#74747a}.wxlight .wx-feature-tabs button{border-color:#d5d5da;background:#fff;color:#777}.wxlight .wx-feature-tabs button.on{border-color:#6c7faf;background:#edf1fb;color:#45577f}
 @media(max-width:390px){.wx-profile-hero{padding-left:17px;padding-right:17px}.wx-profile-thumbs i{width:50px;height:50px}.wx-role-cover{height:315px;flex-basis:315px}.wx-info-group button{padding-left:17px;padding-right:17px}.wx-info-group button>em{max-width:58%}}
 </style>
-<link rel="stylesheet" href="glass-theme.css?v=1013&r=internal-voice-companion-stability-1">
-<link rel="stylesheet" href="pet-game.css?v=1013">
+<link rel="stylesheet" href="glass-theme.css?v=1014&r=companion-unlock-remote-natural-caption-1">
+<link rel="stylesheet" href="pet-game.css?v=1014">
 <link rel="stylesheet" href="wedding-game.css?v=wedding-dual-17">
 </head>
 <body>
@@ -1365,7 +1364,7 @@ html.north-apple-remote-safe .music-chat-dock{margin-bottom:4px;scroll-margin-bo
     </div>
     <span class="remote-pointer" id="remotePointer" aria-hidden="true"></span>
     <div class="remote-caption-wrap">
-      <div class="remote-caption" id="remoteCaption">正在建立连接…</div>
+      <div class="remote-caption" id="remoteCaption"></div>
     </div>
   </div>
   <!-- 全局弹窗容器 -->
@@ -1393,13 +1392,13 @@ html.north-apple-remote-safe .music-chat-dock{margin-bottom:4px;scroll-margin-bo
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail('启动超过 12 秒，可能是网络或缓存异常');},12000);
 })();
 </script>
-<script src="license-gate.js?v=1013" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=1013" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=1013" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="pet-game.js?v=1013" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
-<script src="gift-effects.js?v=1013" onerror="console.warn('礼物粒子特效载入失败')"></script>
-<script src="thought-card-effects.js?v=1013" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
-<script src="ai-account.js?v=1013"></script>
+<script src="license-gate.js?v=1014" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=1014" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=1014" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="pet-game.js?v=1014" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
+<script src="gift-effects.js?v=1014" onerror="console.warn('礼物粒子特效载入失败')"></script>
+<script src="thought-card-effects.js?v=1014" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
+<script src="ai-account.js?v=1014"></script>
 <script src="wedding-game.js?v=wedding-dual-17" onerror="console.warn('现代婚礼预览载入失败')"></script>
 </body>
 </html>

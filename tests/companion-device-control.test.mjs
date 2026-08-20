@@ -128,7 +128,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v1013 · 内置语音隔离、伴生关怀与远控稳定修复'/);
+  assert.match(app, /const APP_VER='v1014 · 伴生解锁闭环与远控自然字幕修复'/);
 });
 
 test('manual sync reads locally in the bundled app and keeps cloud fallback', () => {
@@ -729,6 +729,37 @@ test('an indirect unlock inherits one recent app but refuses an ambiguous group'
   context.rows.unshift({ role: 'assistant', content: 'ChatGPT和DeepSeek都关着。' });
   context.rows.splice(1);
   assert.equal(context.resolve(state, { id: 'role' }, '给你解一个', '先放你用。').resolved, false);
+});
+
+test('a definite single-app natural unlock is recovered before the auxiliary model parser', () => {
+  const context = vm.createContext({});
+  vm.runInContext(`
+    const sent=[];
+    const state={linked:true,roleAccess:true,permissions:{appControl:true},apps:[{id:'ios.douyin',name:'抖音'}]};
+    function companionState(){return state;}
+    function companionReady(){return true;}
+    function companionResolveRoleActionTarget(){return {text:'抖音',scope:'external',resolved:true};}
+    function companionRoleScopeForText(){return 'external';}
+    function companionDispatchRoleByText(action,target){sent.push({action,target});return true;}
+    ${functionSource('companionMentionedExternalTargets')}
+    ${functionSource('companionNaturalTargetedUnlockTarget')}
+    ${functionSource('companionRecoverNaturalTargetedUnlock')}
+    this.recover=companionRecoverNaturalTargetedUnlock;
+    this.sent=sent;
+  `, context);
+  assert.equal(context.recover('行，抖音给你解开了。', { name: '角色' }), true);
+  assert.deepEqual(Array.from(context.sent, x => `${x.action}:${x.target}`), ['unlock:抖音']);
+  assert.equal(context.recover('抖音解锁失败了。', { name: '角色' }), false);
+  assert.equal(context.recover('等你写完作业再把抖音解开。', { name: '角色' }), false);
+  assert.equal(context.recover('要我把抖音解开吗？', { name: '角色' }), false);
+  assert.equal(context.sent.length, 1);
+  const recover = functionSource('companionRecoverNaturalTargetedUnlock');
+  const extract = functionSource('extractControl');
+  assert.match(recover, /companionNaturalTargetedUnlockTarget/);
+  assert.match(recover, /companionDispatchRoleByText\('unlock'/);
+  assert.match(extract, /companionRecoverNaturalTargetedUnlock\(reply,c\)/);
+  assert.match(functionSource('companionNaturalTargetedUnlockTarget'), /给你开了/);
+  assert.match(functionSource('companionNaturalTargetedUnlockTarget'), /失败/);
 });
 
 test('queued companion commands request APNs wake without treating push as the receipt', () => {

@@ -8,6 +8,7 @@ import { dirname, join } from 'node:path';
 const here = dirname(fileURLToPath(import.meta.url));
 const root = dirname(here);
 const app = readFileSync(join(root, 'app.js'), 'utf8');
+const phoneRolePush = readFileSync(join(root, 'supabase', 'functions', 'phone-role-push', 'index.ts'), 'utf8');
 
 function functionSource(name) {
   const start = app.indexOf(`function ${name}(`);
@@ -196,6 +197,14 @@ test('snapshots cannot manufacture manual unlock authority and explicit events s
   assert.match(app, /now-\(\+x\.ts\|\|0\)<24\*3600000/);
   assert.match(functionSource('companionAutomationMaybeSend'), /if\(!manual&&/);
   assert.match(app, /event\.delivered=true/);
+});
+
+test('a private-app manual unlock is handed to the server instead of being stranded locally', () => {
+  assert.match(functionSource('roleServerAutomationConfig'), /automationEvents/);
+  assert.match(functionSource('companionSendCommand'), /roleServerPushSync\(c,true\)/);
+  assert.match(functionSource('companionSendCommand'), /roleBackgroundDispatchNow\(false\)/);
+  assert.match(phoneRolePush, /configUnlockEvents/);
+  assert.match(phoneRolePush, /snapshotUnlockEvents/);
 });
 
 test('companion automation reuses the existing initiative queue and its wake checks', () => {

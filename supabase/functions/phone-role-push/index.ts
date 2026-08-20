@@ -870,6 +870,21 @@ function snapshotAmbientFacts(profile: Record<string, unknown>, snapshot: Record
 
 function automationCandidate(profile: Record<string, unknown>, snapshot: Record<string, unknown>) {
   const config = (profile.automation_config && typeof profile.automation_config === "object" ? profile.automation_config : {}) as Record<string, unknown>;
+  const configUnlockEvents = Array.isArray(config.automationEvents)
+    ? config.automationEvents as Array<Record<string, unknown>> : [];
+  const snapshotUnlockEvents = Array.isArray(snapshot.automationEvents)
+    ? snapshot.automationEvents as Array<Record<string, unknown>> : [];
+  if (configUnlockEvents.length) {
+    const events = new Map<string, Record<string, unknown>>();
+    for (const row of [...snapshotUnlockEvents, ...configUnlockEvents]) {
+      const id = String(row?.id || "").trim();
+      const at = snapshotTime(row?.ts);
+      if (!id || row?.kind !== "manualUnlock" || row?.explicit !== true ||
+          !at || Date.now() - at < 0 || Date.now() - at >= 24 * 3600_000) continue;
+      events.set(id, row);
+    }
+    snapshot = { ...snapshot, automationEvents: [...events.values()] };
+  }
   if (profileTemporarilySuspended(profile)) return null;
   const state = (profile.automation_state && typeof profile.automation_state === "object" ? profile.automation_state : {}) as Record<string, unknown>;
   const localRuns = (config.localRuns && typeof config.localRuns === "object" ? config.localRuns : {}) as Record<string, unknown>;
@@ -915,7 +930,13 @@ function automationCandidate(profile: Record<string, unknown>, snapshot: Record<
   }
   const lastUser = snapshotTime(profile.last_user_at);
   const snapAt = snapshotLatestTime(snapshot);
-  if (snapAt && Date.now() - snapAt > 36 * 3600_000) return null;
+  const hasRecentManualUnlock = (Array.isArray(snapshot.automationEvents) ? snapshot.automationEvents : [])
+    .some((row) => row && typeof row === "object" &&
+      (row as Record<string, unknown>).kind === "manualUnlock" &&
+      (row as Record<string, unknown>).explicit === true &&
+      Date.now() - snapshotTime((row as Record<string, unknown>).ts) >= 0 &&
+      Date.now() - snapshotTime((row as Record<string, unknown>).ts) < 24 * 3600_000);
+  if (snapAt && Date.now() - snapAt > 36 * 3600_000 && !hasRecentManualUnlock) return null;
   const health = (snapshot.health && typeof snapshot.health === "object" ? snapshot.health : {}) as Record<string, unknown>;
   const telemetry = (snapshot.deviceTelemetry && typeof snapshot.deviceTelemetry === "object" ? snapshot.deviceTelemetry : {}) as Record<string, unknown>;
   const screen = (snapshot.screenTime && typeof snapshot.screenTime === "object" ? snapshot.screenTime : {}) as Record<string, unknown>;

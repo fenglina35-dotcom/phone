@@ -74,8 +74,15 @@ test('remote subtitles are role-generated and quiet on list pages',()=>{
   assert.match(app,/await remoteControlShowRoleLines\(await remoteControlRoleLines\(c,a,r\)\)/);
   assert.match(app,/function remoteControlStageCaption\(a,r\)/);
   assert.match(app,/remoteControlScene\(r,remoteControlStageCaption\(a,r\)/);
-  assert.match(app,/cap\.appendChild\(b\);while\(cap\.children\.length>3\)/);
-  assert.doesNotMatch(app,/const cap=\$\('#remoteCaption'\);if\(cap\)replaceChildrenCompat\(cap\)/);
+  assert.match(app,/function remoteControlCaption\(say\)[\s\S]*?replaceChildrenCompat\(cap,b\)/);
+  assert.match(app,/function remoteControlClearCaption\(\)[\s\S]*?replaceChildrenCompat\(cap\)/);
+  assert.doesNotMatch(app,/cap\.appendChild\(b\);while\(cap\.children\.length>3\)/);
+  assert.match(app,/你不是操作解说员/);
+  assert.match(app,/禁止说“?我先看看/);
+  assert.match(app,/function remoteControlOperationalNarration\(text\)/);
+  assert.match(app,/!remoteControlOperationalNarration\(x\)/);
+  assert.doesNotMatch(app,/remoteControlCaption\('我先在桌面上找一下/);
+  assert.doesNotMatch(app,/remoteControlCaption\('找到了，我现在打开/);
   assert.doesNotMatch(app,/remoteControlTimed/);
   assert.doesNotMatch(app,/function remoteControlSayFallback/);
 });

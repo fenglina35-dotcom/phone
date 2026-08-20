@@ -55,25 +55,49 @@ test('live overlay blocks the phone while preserving an emergency stop', () => {
   assert.match(html, /id="remoteControlLayer"/);
   assert.match(html, /id="remoteRoleName"/);
   assert.match(html, /id="remoteCaption"/);
+  assert.match(html, /<div class="remote-caption" id="remoteCaption"><\/div>/);
+  assert.doesNotMatch(html, /id="remoteCaption">正在建立连接/);
   assert.match(html, /onclick="remoteControlStopByUser\(\)"/);
   assert.match(html, /\.remote-control-layer\{position:absolute;inset:0;z-index:550/);
   assert.match(html, /\.remote-live-dot\{[^}]*background:#ff2942/);
 });
 
-test('every action has readable non-blocking subtitles and persistent memory', () => {
+test('only one natural role subtitle is visible and navigation stays in the top progress label', () => {
   const remote = app.match(/let _remoteCtl[\s\S]*?(?=\/\/ ===== 他登录我的微信)/)?.[0] || '';
   assert.match(app, /function remoteControlCaptionMs\(t\)\{return Math\.max\(1800,Math\.min\(4200/);
   assert.doesNotMatch(remote, /SpeechSynthesisUtterance|speechSynthesis|remoteControlSpeak/);
   assert.match(app, /function remoteControlCaption\(say\)/);
-  assert.match(app, /cap\.appendChild\(b\)/);
-  assert.match(app, /while\(cap\.children\.length>3\)cap\.removeChild\(cap\.firstElementChild\)/);
+  assert.match(app, /replaceChildrenCompat\(cap,b\)/);
+  assert.doesNotMatch(remote, /cap\.appendChild\(b\);while\(cap\.children\.length>3\)/);
   assert.match(app, /function remoteControlStageCaption\(a,r\)/);
+  assert.match(app, /function remoteControlClearCaption\(\)/);
+  assert.match(app, /await sleep\(remoteControlCaptionMs\(line\)\);remoteControlClearCaption\(\)/);
+  assert.doesNotMatch(remote, /remoteControlCaption\('我先在桌面上找一下/);
+  assert.doesNotMatch(remote, /remoteControlCaption\('找到了，我现在打开/);
+  assert.equal((remote.match(/remoteControlCaption\(/g)||[]).length,2,'only the caption function and role-line renderer may write the bottom bubble');
+  assert.doesNotMatch(html, /remote-caption-bubble:nth-last-child/);
+  const scene = app.match(/function remoteControlScene\(r,status,i,total,a\)[\s\S]*?(?=\nasync function remoteControlFocusViewedTarget)/)?.[0] || '';
+  assert.match(scene, /app\.textContent=step\+\(status\|\|name\)\+' · LIVE'/);
+  assert.doesNotMatch(scene, /remoteControlCaption\(/);
   assert.match(html, /\.remote-caption-bubble/);
   assert.match(html, /\.remote-caption-wrap\{[^}]*bottom:max\(20px,env\(safe-area-inset-bottom\)\)/);
   assert.match(html, /@keyframes remoteCaptionUp/);
   assert.match(app, /remoteControlRemember\(c,\{ts:Date\.now\(\),startedAt/);
   assert.match(app, /function remoteControlHistoryPrompt\(c\)/);
   assert.match(app, /'remoteControlHistory'/);
+});
+
+test('remote caption replacement and clearing work at runtime', () => {
+  const replace = app.match(/function replaceChildrenCompat\(el,node\)\{[^\n]+\}/)?.[0] || '';
+  const caption = app.match(/function remoteControlCaption\(say\)\{[^\n]+\}/)?.[0] || '';
+  const clear = app.match(/function remoteControlClearCaption\(\)\{[^\n]+\}/)?.[0] || '';
+  assert.ok(replace && caption && clear);
+  const cap = {children: [], replaceChildren(...nodes){this.children=nodes;}};
+  const document = {createElement(){return {className:'',textContent:''};}};
+  const run = Function('$','document','cap',`${replace};${caption};${clear};remoteControlCaption('第一句');remoteControlCaption('第二句');const after=cap.children.map(x=>x.textContent);remoteControlClearCaption();return {after,count:cap.children.length};`);
+  const result = run(sel=>sel==='#remoteCaption'?cap:null,document,cap);
+  assert.deepEqual(result.after,['第二句']);
+  assert.equal(result.count,0);
 });
 
 test('role opens the real small-phone pages and searches the current desktop layout', () => {

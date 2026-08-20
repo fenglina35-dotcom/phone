@@ -12,22 +12,22 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v1013 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1013 · 内置语音隔离、伴生关怀与远控稳定修复'/);
-  assert.match(app,/const url='sw\.js\?v=1013&r=v1013-internal-voice-companion-stability-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1013'/);
-  assert.match(html,/app\.js\?v=1013/);
-  assert.match(sw,/const BUILD='1013'/);
-  assert.match(sw,/north-shell-v1013/);
-  assert.match(index,/小手机\.html\?v=1013/);
-  assert.match(repair,/小手机\.html\?v=1013/);
+test('v1014 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v1014 · 伴生解锁闭环与远控自然字幕修复'/);
+  assert.match(app,/const url='sw\.js\?v=1014&r=v1014-companion-unlock-remote-natural-caption-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1014'/);
+  assert.match(html,/app\.js\?v=1014/);
+  assert.match(sw,/const BUILD='1014'/);
+  assert.match(sw,/north-shell-v1014/);
+  assert.match(index,/小手机\.html\?v=1014/);
+  assert.match(repair,/小手机\.html\?v=1014/);
 });
 
-test('the private iOS package embeds web v1013 and keeps 1.0.134 delivery',()=>{
-  assert.match(privateBundle,/<string>1013<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.134;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 134;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.134 \(134\)'/);
+test('the private iOS package embeds web v1014 and keeps 1.0.135 delivery',()=>{
+  assert.match(privateBundle,/<string>1014<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.135;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 135;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.135 \(135\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 
