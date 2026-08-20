@@ -1,5 +1,5 @@
-const ORDER_API_URL = 'https://lkhlyfpssmrjkkzhuzag.supabase.co/functions/v1/phone-ai';
-const ORDER_PUBLIC_KEY = 'sb_publishable_uKytf2Tc_FmLv15SkkJyCQ_VU8IRSt2';
+const ORDER_API_URL = 'https://lovbzibismsjqvjujilz.supabase.co/functions/v1/phone-ai';
+const ORDER_PUBLIC_KEY = 'sb_publishable_HxLFoFQXKcG2wVhVRYM1fQ_MQCkbYop';
 const LICENSE_API_URL = 'https://lovbzibismsjqvjujilz.supabase.co/functions/v1/phone-license';
 const LICENSE_PUBLIC_KEY = 'sb_publishable_HxLFoFQXKcG2wVhVRYM1fQ_MQCkbYop';
 const TOKEN_KEY = 'north_admin_access';

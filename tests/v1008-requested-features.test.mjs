@@ -46,9 +46,9 @@ test('phone life notes can switch between automatic and manual-only recording wi
 });
 
 test('background tests yield to real chat and terminate inside the claim lease',()=>{
-  assert.match(edge,/decisionDeadline = Date\.now\(\) \+ 45_000/);
+  assert.match(edge,/decisionDeadline = Date\.now\(\) \+ 58_000/);
   assert.match(edge,/AbortController/);
-  assert.match(edge,/task\.kind === "one_minute_test"[\s\S]*?\? 2/);
+  assert.match(edge,/task\.kind === "one_minute_test" \|\| task\.kind === "app_watch_test"[\s\S]*?\? 1/);
   assert.match(migration,/kind in \('app_followup', 'one_minute_test', 'app_watch_test'\)/);
   assert.match(functionSource('pushMsg'),/roleBackgroundCancel\(id,\['one_minute_test','app_watch_test'\]\)/);
 });

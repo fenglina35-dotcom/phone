@@ -39,17 +39,26 @@ test('chat media settings expose an explicit real background message test', () =
 
 test('background generation uses the role current model and reports the real task and APNs result', () => {
   assert.match(app, /function roleServerModelRoute\(c\)/);
-  assert.match(app, /modelRoute:c&&c\.proactive&&c\.proactive\.serverPush\?roleServerModelRoute\(c\):null/);
+  assert.match(app, /function roleServerModelRoutes\(c\)/);
+  assert.match(app, /modelRoute:routes\[0\]\|\|null,modelRoutes:routes/);
   assert.match(app, /关闭后清除模型线路/);
   assert.match(app, /if\(!roleServerModelRoute\(c\)\)missing\.push/);
-  assert.match(edge, /name: "profile-current"/);
-  assert.match(edge, /automation\.modelRoute/);
-  assert.ok(edge.indexOf('name: "profile-current"') < edge.indexOf('Deno.env.get("OPENAI_API_KEY")'));
+  assert.match(edge, /index === 0 \? "profile-current" : "profile-secondary"/);
+  assert.match(edge, /automation\.modelRoutes/);
+  assert.match(edge, /name: index === 0 \? "profile-current" : "profile-secondary"/);
+  assert.ok(edge.indexOf('index === 0 ? "profile-current" : "profile-secondary"') < edge.indexOf('Deno.env.get("OPENAI_API_KEY")'));
   assert.match(app, /action:'task_status'/);
   assert.match(edge, /input\?\.action === "task_status"/);
   assert.match(edge, /providerReason:/);
   assert.match(edge, /pushStatus:/);
   assert.match(app, /APNs 已被 Apple 接受/);
+});
+
+test('an explicit background test tries each synchronized external route once and then releases the queue', () => {
+  assert.match(edge, /automation\.modelRoutes\.slice\(0, 2\)/);
+  assert.match(edge, /Math\.min\(27_000, remaining\)/);
+  assert.match(edge, /task\.kind === "one_minute_test" \|\| task\.kind === "app_watch_test"[\s\S]{0,80}\? 1/);
+  assert.doesNotMatch(edge, /task\.kind === "one_minute_test" \|\| task\.kind === "app_watch_test" \|\| task\.kind === "reply_handoff"[\s\S]{0,80}\? 2/);
 });
 
 test('app awareness is gated, limited, mutually exclusive and cooled down', () => {

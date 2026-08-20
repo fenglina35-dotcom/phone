@@ -319,21 +319,25 @@ async function roleMessage(
      Without a hard deadline a slow OpenAI-compatible endpoint can leave the
      task claimed until cron reclaims it, repeatedly occupying the same model
      route that the foreground WeChat reply uses. */
-  const decisionDeadline = Date.now() + 45_000;
+  const decisionDeadline = Date.now() + 58_000;
   const providers: Array<{ name: string; key: string; base: string; model: string }> = [];
   const providerFailures: string[] = [];
   const automation = (profile.automation_config && typeof profile.automation_config === "object"
     ? profile.automation_config : {}) as Record<string, unknown>;
-  const syncedRoute = (automation.modelRoute && typeof automation.modelRoute === "object"
-    ? automation.modelRoute : {}) as Record<string, unknown>;
-  const syncedBase = profileModelBase(syncedRoute.base);
-  const syncedKey = String(syncedRoute.key || "").trim().slice(0, 2000);
-  const syncedModel = String(syncedRoute.model || "").trim().slice(0, 200);
-  if (syncedBase && syncedKey && syncedModel) providers.push({
-    name: "profile-current",
-    key: syncedKey,
-    base: syncedBase,
-    model: syncedModel,
+  const syncedRoutes = Array.isArray(automation.modelRoutes)
+    ? automation.modelRoutes.slice(0, 2)
+    : [automation.modelRoute];
+  syncedRoutes.forEach((value, index) => {
+    const route = (value && typeof value === "object" ? value : {}) as Record<string, unknown>;
+    const base = profileModelBase(route.base);
+    const key = String(route.key || "").trim().slice(0, 2000);
+    const model = String(route.model || "").trim().slice(0, 200);
+    if (base && key && model && !providers.some((row) => row.base === base && row.key === key && row.model === model)) providers.push({
+      name: index === 0 ? "profile-current" : "profile-secondary",
+      key,
+      base,
+      model,
+    });
   });
   const key = Deno.env.get("OPENAI_API_KEY") || "";
   if (key) providers.push({
@@ -416,7 +420,7 @@ async function roleMessage(
           return { kind: "unavailable", body: "", reason: providerFailures.join(",") };
         }
         const controller = new AbortController();
-        const requestTimer = setTimeout(() => controller.abort(), Math.min(18_000, remaining));
+        const requestTimer = setTimeout(() => controller.abort(), Math.min(27_000, remaining));
         try {
           const response = await fetch(`${provider.base}/chat/completions`, {
             method: "POST",
@@ -1189,8 +1193,9 @@ Deno.serve(async (request) => {
       /* Explicit tests and reply handoffs must yield quickly to real chat.
          A transient 503 is useful diagnostic evidence, not permission to keep
          six concurrent generations alive for more than ten minutes. */
-      const maxAttempts = task.kind === "one_minute_test" || task.kind === "app_watch_test" || task.kind === "reply_handoff"
-        ? 2
+      const maxAttempts = task.kind === "one_minute_test" || task.kind === "app_watch_test"
+        ? 1
+        : task.kind === "reply_handoff" ? 2
         : task.kind === "device_handoff" || task.kind === "app_followup" ? 3 : 5;
       const shouldRetry = (decision.kind === "unavailable" || decision.kind === "message" && !backgroundDelivered) && Number(task.attempts || 0) < maxAttempts;
       const taskUpdate = shouldRetry

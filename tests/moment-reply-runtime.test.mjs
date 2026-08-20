@@ -27,7 +27,7 @@ function functionSource(name) {
 }
 
 function runtime(result, options = {}) {
-  const role = { id: 'role-1', name: '先生', remark: '先生' };
+  const role = { id: 'role-1', name: '先生', remark: '先生', model: 'aux' };
   const target = { id: 'comment-1', cid: 'me', name: 'North', text: '你真的会回我吗？', time: 1 };
   const post = { id: 'moment-1', authorId: 'role-1', text: '今天有点想你。', comments: [target] };
   let requests = 0, saves = 0, cancellations = 0;
@@ -75,6 +75,8 @@ test('a real Moment model result is appended to the exact comment thread once', 
   assert.equal(run.stats().cancellations, 1);
   assert.deepEqual(JSON.parse(JSON.stringify(run.context.lastCanceledKinds)), ['one_minute_test', 'app_watch_test']);
   assert.equal(run.context.lastOptions.timeout, 70000);
+  assert.equal(run.context.lastOptions.aux, true, 'Moments must use the same role-selected model route as ordinary WeChat');
+  assert.equal(run.context.lastOptions.complete, true);
   assert.equal(run.post.comments.length, 2);
   assert.deepEqual(JSON.parse(JSON.stringify(run.post.comments[1])), {
     id: 'reply-1', name: '先生', cid: 'role-1', text: '当然会，刚才就在等你来问。',

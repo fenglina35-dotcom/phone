@@ -64,10 +64,11 @@ test('Moment comment repair keeps the July 30 contextual reply behavior without 
   assert.match(reply, /最近的微信私聊上下文/);
   assert.match(reply, /朋友圈下面的评论（按先后顺序）/);
   assert.match(reply, /刚刚在评论区对你说/);
-  assert.match(reply, /selectRelevantMemory\(c,query,4\)/);
+  assert.match(reply, /selectRelevantMemory\(c,query,3\)/);
   assert.match(reply, /selectiveMemory:true/);
   assert.match(reply, /roleBackgroundCancel\(c\.id,\['one_minute_test','app_watch_test'\]\)/);
-  assert.match(reply, /chatAPI\(request,\{timeout:70000\}\)/);
+  assert.match(reply, /modelOptions=\{aux:c\.model==='aux',complete:true,timeout:70000\}/);
+  assert.match(reply, /chatAPI\(request,modelOptions\)/);
   assert.match(reply, /\+e\.status===503/);
   assert.doesNotMatch(reply, /看到了|我看到了|收到|知道了|好的|让我想想/);
   assert.equal((reply.match(/await chatAPI\(/g) || []).length, 1, 'July 30 behavior is restored to one direct real reply request');
@@ -135,7 +136,7 @@ test('an explicit request to post the previous announcement photo cannot silentl
   assert.match(post, /roleMomentReferencedChatImage\(c,opt\)/);
   assert.match(post, /roleMomentGenerateRequestedImage\(c,tx,opt\)\.then/);
   assert.ok(post.indexOf('roleMomentGenerateRequestedImage') < post.indexOf('publishRoleMoment(c,tx,Object.assign'), 'publication must wait for the real image attempt');
-  assert.match(functionSource(app, 'consumeMomentCommands'), /postRoleMoment\(c,body,opt\)/);
+  assert.match(app, /function consumeMomentCommands\(content,c,opt\)[\s\S]*?postRoleMoment\(c,body,opt\)[\s\S]*?return stripPostedMomentEcho\(out,posted\);\s*\}/);
   assert.match(app, /consumeMomentCommands\(content,c,\{toast:true,userText:_userText\}\)/);
 });
 

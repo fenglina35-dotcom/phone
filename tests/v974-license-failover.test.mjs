@@ -66,10 +66,11 @@ test('an unavailable primary plus an unsynchronized standby stays an outage', as
   assert.equal(gate.session(), null);
 });
 
-test('only the license route receives the standby project', () => {
+test('license and AI points use the authorization project without moving companion data', () => {
   assert.match(app, /const LICENSE_FAILOVER_URL='https:\/\/lovbzibismsjqvjujilz\.supabase\.co'/);
   assert.match(app, /endpoints:\[\s*\{id:'primary',baseUrl:GATE_URL,apiKey:GATE_KEY\},\s*\{id:'license-failover',baseUrl:LICENSE_FAILOVER_URL,apiKey:LICENSE_FAILOVER_KEY\}/);
-  assert.match(app, /aiCore:\{enabled:false,url:GATE_URL\+'\/functions\/v1\/phone-ai'/);
+  assert.match(app, /const AI_BACKEND_URL=LICENSE_FAILOVER_URL\+'\/functions\/v1\/phone-ai'/);
+  assert.match(app, /aiCore:\{enabled:false,url:AI_BACKEND_URL/);
   assert.match(bridge, /"lovbzibismsjqvjujilz\.supabase\.co"/);
   assert.match(bridge, /privateAccountBaseURL\s*=\s*"https:\/\/qvuahlqimcfgeoetosnl\.supabase\.co"/);
 });

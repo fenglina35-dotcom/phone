@@ -30,7 +30,7 @@ function aiPrivateVoiceRows(){const current=String((S.settings.tts||{}).voice||'
 function aiUsePrivateVoice(id){const voice=aiPrivateVoices().find(v=>String(v.voice_id)===String(id));if(!voice){toast('这个专属音色不属于当前AI账户，请刷新后重试');return;}S.settings.tts=S.settings.tts||{};S.settings.tts.voice=voice.voice_id;save();toast('已使用专属音色：'+(voice.display_name||'我的音色'));aiRenderStable();}
 
 function openAIAccount(){go('aiaccount');}
-function aiCoreInit(){S.settings.aiCore=S.settings.aiCore||{enabled:false,url:GATE_URL+'/functions/v1/phone-ai'};S.settings.aiCore.enabled=false;if(!S.settings.aiCore.url)S.settings.aiCore.url=GATE_URL+'/functions/v1/phone-ai';return S.settings.aiCore;}
+function aiCoreInit(){const current=S.settings.aiCore||(S.settings.aiCore={enabled:false,url:AI_BACKEND_URL}),legacy=GATE_URL+'/functions/v1/phone-ai';current.enabled=false;if(!current.url||current.url===legacy)current.url=AI_BACKEND_URL;return current;}
 function aiLowBalanceCfg(){const ac=aiCoreInit();if(typeof ac.lowBalanceAlertOn!=='boolean')ac.lowBalanceAlertOn=true;let n=Number(ac.lowBalanceThreshold);if(!Number.isFinite(n))n=20;ac.lowBalanceThreshold=Math.max(1,Math.min(99999,Math.round(n)));return ac;}
 function aiToggleLowBalance(){const ac=aiLowBalanceCfg();ac.lowBalanceAlertOn=!ac.lowBalanceAlertOn;ac.lowBalanceAlerted=false;save();aiRenderStable();toast(ac.lowBalanceAlertOn?'点数提醒已开启':'点数提醒已关闭');}
 function aiSetLowBalance(v){const ac=aiLowBalanceCfg(),n=Math.max(1,Math.min(99999,Math.round(Number(v)||20)));ac.lowBalanceThreshold=n;ac.lowBalanceAlerted=false;save();aiRenderStable();const balance=_aiAcct&&_aiAcct.account&&Number(_aiAcct.account.points);if(Number.isFinite(balance))aiCheckLowBalance(balance);toast('低于 '+n+' 点时提醒');}
