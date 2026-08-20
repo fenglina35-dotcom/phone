@@ -191,6 +191,19 @@ function roleTextRepeated(current: string, previous: string) {
   return a.length >= 2 && prior[a.length] / a.length >= roleRepeatThreshold(a.length);
 }
 
+function roleNormalizeGeneratedText(value: string, roleName = "") {
+  const escapedName = String(roleName || "").trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return String(value || "").split(/\r?\n/).map((raw) => {
+    let line = String(raw || "").trim();
+    /* The recent-context transcript contains date, time and speaker labels.
+       Some OpenAI-compatible models copied that wrapper into the answer,
+       which also prevented a following [图片|...] tag from being parsed. */
+    line = line.replace(/^\[?(?:\d{4}年\d{1,2}月\d{1,2}日|\d{4}[\/-]\d{1,2}[\/-]\d{1,2})[ T\s]+\d{1,2}:\d{2}(?::\d{2})?\]?\s*[^：:\n]{1,48}[：:]\s*/, "");
+    if (escapedName) line = line.replace(new RegExp(`^${escapedName}[：:]\\s*`), "");
+    return line;
+  }).filter(Boolean).join("\n").trim();
+}
+
 function roleMessageParts(value: string, maxParts = 4) {
   const limit = Math.max(1, Math.min(10, Number(maxParts) || 4));
   const out: string[] = [];
@@ -382,7 +395,7 @@ async function roleMessage(
   const promptText = prompt.filter(Boolean).join("\n");
   const baseMessages = [
     { role: "system", content: turnBoundary.pending ? "最近真实聊天仍停在一条尚未完成正常回复的用户消息。本次是正式随机主动联系，必须只输出 [保持安静]，不能抢答、补答或另开话题。" : "这是与上一轮分开的独立主动联系事件。最近真实聊天只用于理解已经发生的事实、关系、情绪和用户明确交代的去向，不是等待你继续作答的当前回合。可以自然关心交代过的事情后来怎么样，或开启符合本人生活的新话题，但禁止再次回答用户最后一句，禁止复述或改写角色已经给过的回答。" },
-    { role: "system", content: `这是恋人或亲密关系里的私人微信聊天，要像真实恋人的日常聊天，不是文案创作，也不是系统命令。必须按以下优先顺序理解：1.角色基础人设、身份与说话习惯；2.世界书中的真实设定和明确规则；3.当前真实事件、长期记忆、对话总结和最近真实聊天；4.角色本人自主判断与自然表达；5.可用功能及权限边界。功能只告诉你能做什么，不替你决定情绪或行动。\n先完整阅读同步内容，再以角色本人身份决定此刻是否真的想联系用户、带着什么情绪、想说什么或想做什么。只有本轮随机等待的30至60分钟安静期已经结束、当前没有正在聊天生成、通话或线下互动时，这次任务才会出现；不要把它描述成刚刚还在对话。若用户很久没出现且没有交代去向，可以按角色性格自然担心、询问、想念或焦虑；若用户已经说过去做什么，就承接那条真实交代，正常想念、报备或分享自己的日常。不要把这些选项当固定流程，也不要每次都问同一句。\n你不是只能发文字，也不要总等用户先要求。符合本人性格、关系、记忆、当前事实和权限时，可以主动打电话 [来电|语音] / [来电|视频]、送礼 [送礼|礼物名|价格|附言]、邀请一起听 [一起听|歌名]、邀请看当前可用作品 [放映邀请|作品名]、邀请见面 [约会|地点|时间]、邀请玩 [你画我猜] 或 [角色扮演|主题]。也可以发普通文字、[图片|具体画面描述] 或 [位置|地点|地址]。这些都是可用能力，不是本轮任务；是否使用、使用哪一种、何时使用全由角色本人决定。除电话必须单独发送外，其他动作可以配一两句自然的话；每轮最多一个主要功能动作，所有消息和动作都计入 ${messageMin} 到 ${messageMax} 条范围。\n只允许根据上下文陈述用户做过、发过、穿过、去过或身体发生过的事。没有明确依据时，绝不能声称翻过用户自拍、看见用户衣着、知道用户位置、动作、身体、睡眠或心率；可以改成询问，但不能把猜测写成事实。角色可以分享符合本人设定的普通日常，但不能捏造涉及用户的共同事件。不得复述近期已经发过的话或只换几个字重复原意。口语要自然、有生活感，不像诗、小说、广告或AI范文，不要悬空比喻，不要每次直呼用户全名；严禁使用破折号或横杠字符（—、——、–、―、--），不提AI、系统、定时、通知或后台。如果本人此刻不想联系，只输出 [保持安静]。` },
+    { role: "system", content: `这是恋人或亲密关系里的私人微信聊天，要像真实恋人的日常聊天，不是文案创作，也不是系统命令。必须按以下优先顺序理解：1.角色基础人设、身份与说话习惯；2.世界书中的真实设定和明确规则；3.当前真实事件、长期记忆、对话总结和最近真实聊天；4.角色本人自主判断与自然表达；5.可用功能及权限边界。功能只告诉你能做什么，不替你决定情绪或行动。\n先完整阅读同步内容，再以角色本人身份决定此刻是否真的想联系用户、带着什么情绪、想说什么或想做什么。只有本轮随机等待的30至60分钟安静期已经结束、当前没有正在聊天生成、通话或线下互动时，这次任务才会出现；不要把它描述成刚刚还在对话。若用户很久没出现且没有交代去向，可以按角色性格自然担心、询问、想念或焦虑；若用户已经说过去做什么，就承接那条真实交代，正常想念、报备或分享自己的日常。不要把这些选项当固定流程，也不要每次都问同一句。\n你不是只能发文字，也不要总等用户先要求。符合本人性格、关系、记忆、当前事实和权限时，可以主动打电话 [来电|语音] / [来电|视频]、送礼 [送礼|礼物名|价格|附言]、邀请一起听 [一起听|歌名]、邀请看当前可用作品 [放映邀请|作品名]、邀请见面 [约会|地点|时间]、邀请玩 [你画我猜] 或 [角色扮演|主题]。也可以发普通文字、[图片|具体画面描述] 或 [位置|地点|地址]。这些都是可用能力，不是本轮任务；是否使用、使用哪一种、何时使用全由角色本人决定。除电话必须单独发送外，其他动作可以配一两句自然的话；每轮最多一个主要功能动作，所有消息和动作都计入 ${messageMin} 到 ${messageMax} 条范围。\n只输出角色此刻真正要发送的消息正文，每条单独一行；绝对不要抄写聊天记录中的日期、时间、角色名、用户称呼或“某某：”说话人前缀。图片必须把 [图片|具体画面描述] 完整单独放在一行。\n只允许根据上下文陈述用户做过、发过、穿过、去过或身体发生过的事。没有明确依据时，绝不能声称翻过用户自拍、看见用户衣着、知道用户位置、动作、身体、睡眠或心率；可以改成询问，但不能把猜测写成事实。角色可以分享符合本人设定的普通日常，但不能捏造涉及用户的共同事件。不得复述近期已经发过的话或只换几个字重复原意。口语要自然、有生活感，不像诗、小说、广告或AI范文，不要悬空比喻，不要每次直呼用户全名；严禁使用破折号或横杠字符（—、——、–、―、--），不提AI、系统、定时、通知或后台。如果本人此刻不想联系，只输出 [保持安静]。` },
     { role: "user", content: promptText },
   ];
   if (eventInstruction) baseMessages[0].content = eventInstruction;
@@ -442,7 +455,8 @@ async function roleMessage(
             ];
             continue;
           }
-          const body = roleMessageParts(text.slice(0, 1200), messageMax).join("\n").trim();
+          const normalizedText = roleNormalizeGeneratedText(text.slice(0, 1200), String(profile.role_name || "角色"));
+          const body = roleMessageParts(normalizedText, messageMax).join("\n").trim();
           const bodyKey = roleTextKey(body);
           const repeated = !!bodyKey && repeatCandidates.some((old) => roleMessageRepeated(body, old));
           const ungrounded = roleUserFactUnsupported(body, `${recentContext}\n${memoryContext}`);
@@ -977,7 +991,11 @@ async function persistAndPush(
   if (error) throw error;
   let row = outbox;
   if (!row?.id) row = (await client.from("phone_role_push_outbox").select("id,push_status,avatar_token").eq("dedupe_key", dedupe).maybeSingle()).data;
-  if (!row?.id || row.push_status === "sent") return false;
+  if (!row?.id) return false;
+  /* A retry can observe the same dedupe row after APNs already accepted it.
+     That is successful idempotent delivery, not a reason to retry generation
+     and leave the background task spinning in pending/claimed state. */
+  if (row.push_status === "sent") return true;
   const link = (await client.from("phone_companion_links").select("apns_device_token,apns_environment").eq("target", profile.target).maybeSingle()).data;
   const push = await sendAPNs(String(link?.apns_device_token || ""), String(link?.apns_environment || "sandbox"), String(profile.role_id || ""), String(profile.role_name || "Role"), body, String(row.id), avatarURL(url, String(row.id), String(row.avatar_token || "")));
   await client.from("phone_role_push_outbox").update({

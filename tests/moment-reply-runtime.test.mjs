@@ -26,7 +26,7 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-function runtime(result) {
+function runtime(result, options = {}) {
   const role = { id: 'role-1', name: '先生', remark: '先生' };
   const target = { id: 'comment-1', cid: 'me', name: 'North', text: '你真的会回我吗？', time: 1 };
   const post = { id: 'moment-1', authorId: 'role-1', text: '今天有点想你。', comments: [target] };
@@ -47,7 +47,7 @@ function runtime(result) {
     buildSystem: () => 'system',
     wechatNaturalOn: () => true,
     memoryRetrievalPrompt: () => '\nselected-memory',
-    roleBackgroundCancel: async (_id, kinds) => { cancellations += 1; context.lastCanceledKinds = kinds; return true; },
+    roleBackgroundCancel: async (_id, kinds) => { cancellations += 1; context.lastCanceledKinds = kinds; if (options.cancelNeverFinishes) return new Promise(() => {}); return true; },
     roleServerPushTouchActivity: () => true,
     setTimeout,
     chatAPI: async (messages, options) => { requests += 1; context.lastRequest = messages; context.lastOptions = options; if (result instanceof Error) throw result; return result; },
@@ -107,4 +107,14 @@ test('a failed Moment model call records failure and never fabricates a role com
   assert.equal(run.post.comments.length, 1);
   assert.equal(run.target._roleReplyStatus, 'failed');
   assert.match(run.target._roleReplyError, /upstream timeout/);
+});
+
+test('private App Moment reply does not wait for the independent-cloud cancel RPC', async () => {
+  const run = runtime('我当然会回你。', { cancelNeverFinishes: true });
+  await Promise.race([
+    run.context.reactToComment(run.post, run.role.id, run.target),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Moment reply waited for cloud cancellation')), 100)),
+  ]);
+  assert.equal(run.stats().requests, 1);
+  assert.equal(run.post.comments.at(-1).text, '我当然会回你。');
 });

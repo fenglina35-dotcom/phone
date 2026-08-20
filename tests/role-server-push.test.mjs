@@ -102,7 +102,8 @@ test('edge dispatcher writes the message first and then attempts APNs', () => {
   assert.match(edge, /!activityQuietForThirtyMinutes\(latestProfile\)/);
   assert.match(edge, /Date\.parse\(String\(latestProfile\.next_due_at/);
   assert.match(edge, /roleUserFactUnsupported\(body/);
-  assert.match(edge, /roleMessageParts\(text\.slice\(0, 1200\), messageMax\)/);
+  assert.match(edge, /roleNormalizeGeneratedText\(text\.slice\(0, 1200\)/);
+  assert.match(edge, /roleMessageParts\(normalizedText, messageMax\)/);
   assert.match(edge, /roleNotificationPreview\(part\)/);
 });
 
@@ -312,6 +313,19 @@ test('recently consumed real pushes can be reconciled without resurrecting delet
   receipts.forget(['push-1']);
   assert.equal(receipts.has('push-1'), false);
   assert.doesNotMatch(functionSource('deleteRoleMsg'), /_rolePushReceipts|roleServerPushReceiptForget/);
+  const pull = functionSource('roleServerPushPull');
+  assert.match(pull, /if\(roleServerPushReceiptHas\(row\.id\)\)\{queueAck\(row,false\);continue;\}/);
+  assert.doesNotMatch(pull, /roleServerPushReceiptHas\(row\.id\)&&!alreadyVisible\).*roleServerPushReceiptForget/);
+});
+
+test('old transcript wrappers are removed before text and image messages are parsed', () => {
+  const normalizeSource = functionSource('roleServerPushNormalizeBody');
+  const normalize = Function(`${normalizeSource}; return roleServerPushNormalizeBody;`)();
+  assert.equal(
+    normalize({ name: '先生^^' }, '2026年8月20日 15:27 先生^^：[图片|医院办公桌旁的一杯黑咖啡]'),
+    '[图片|医院办公桌旁的一杯黑咖啡]',
+  );
+  assert.equal(normalize({ name: '先生^^' }, '先生^^：到了。'), '到了。');
 });
 
 test('server push respects the configured 1-10 message range', () => {
