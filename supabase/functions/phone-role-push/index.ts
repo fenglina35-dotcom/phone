@@ -302,6 +302,11 @@ async function roleMessage(
   eventContext = "",
   allowSilent = true,
 ) {
+  /* A background handoff must always finish inside the two-minute claim lease.
+     Without a hard deadline a slow OpenAI-compatible endpoint can leave the
+     task claimed until cron reclaims it, repeatedly occupying the same model
+     route that the foreground WeChat reply uses. */
+  const decisionDeadline = Date.now() + 45_000;
   const providers: Array<{ name: string; key: string; base: string; model: string }> = [];
   const providerFailures: string[] = [];
   const automation = (profile.automation_config && typeof profile.automation_config === "object"
@@ -392,10 +397,18 @@ async function roleMessage(
     for (const provider of providers) {
       let attemptMessages = baseMessages;
       for (let attempt = 0; attempt < 2; attempt += 1) {
+        const remaining = decisionDeadline - Date.now();
+        if (remaining <= 1_000) {
+          providerFailures.push("decision:timeout");
+          return { kind: "unavailable", body: "", reason: providerFailures.join(",") };
+        }
+        const controller = new AbortController();
+        const requestTimer = setTimeout(() => controller.abort(), Math.min(18_000, remaining));
         try {
           const response = await fetch(`${provider.base}/chat/completions`, {
             method: "POST",
             headers: { Authorization: `Bearer ${provider.key}`, "Content-Type": "application/json" },
+            signal: controller.signal,
             body: JSON.stringify({
               model: provider.model,
               temperature: 0.95,
@@ -448,8 +461,10 @@ async function roleMessage(
           ];
         } catch (error) {
           console.warn("role-message-provider-error", provider.name, String(error?.message || error).slice(0, 160));
-          providerFailures.push(`${provider.name}:network-error`);
+          providerFailures.push(`${provider.name}:${controller.signal.aborted ? "timeout" : "network-error"}`);
           break;
+        } finally {
+          clearTimeout(requestTimer);
         }
       }
     }
@@ -1153,7 +1168,13 @@ Deno.serve(async (request) => {
           baseline_user_at: profile.last_user_at, due_at: new Date(Date.now() + 5 * 60_000).toISOString(),
         });
       }
-      const shouldRetry = (decision.kind === "unavailable" || decision.kind === "message" && !backgroundDelivered) && Number(task.attempts || 0) < 5;
+      /* Explicit tests and reply handoffs must yield quickly to real chat.
+         A transient 503 is useful diagnostic evidence, not permission to keep
+         six concurrent generations alive for more than ten minutes. */
+      const maxAttempts = task.kind === "one_minute_test" || task.kind === "app_watch_test" || task.kind === "reply_handoff"
+        ? 2
+        : task.kind === "device_handoff" || task.kind === "app_followup" ? 3 : 5;
+      const shouldRetry = (decision.kind === "unavailable" || decision.kind === "message" && !backgroundDelivered) && Number(task.attempts || 0) < maxAttempts;
       const taskUpdate = shouldRetry
         ? { status: "pending", due_at: new Date(Date.now() + 60_000).toISOString(), claimed_until: null, payload: { ...payload, delivery } }
         : decision.kind === "unavailable" || decision.kind === "message" && !backgroundDelivered

@@ -30,7 +30,7 @@ function runtime(result) {
   const role = { id: 'role-1', name: '先生', remark: '先生' };
   const target = { id: 'comment-1', cid: 'me', name: 'North', text: '你真的会回我吗？', time: 1 };
   const post = { id: 'moment-1', authorId: 'role-1', text: '今天有点想你。', comments: [target] };
-  let requests = 0, saves = 0;
+  let requests = 0, saves = 0, cancellations = 0;
   const context = vm.createContext({
     Set, Date, String, Object, Array, Promise,
     S: { me: { name: 'North' }, moments: [post] },
@@ -47,7 +47,10 @@ function runtime(result) {
     buildSystem: () => 'system',
     wechatNaturalOn: () => true,
     memoryRetrievalPrompt: () => '\nselected-memory',
-    chatAPI: async messages => { requests += 1; context.lastRequest = messages; if (result instanceof Error) throw result; return result; },
+    roleBackgroundCancel: async (_id, kinds) => { cancellations += 1; context.lastCanceledKinds = kinds; return true; },
+    roleServerPushTouchActivity: () => true,
+    setTimeout,
+    chatAPI: async (messages, options) => { requests += 1; context.lastRequest = messages; context.lastOptions = options; if (result instanceof Error) throw result; return result; },
     cleanReply: text => String(text || '').trim(),
     roleVisibleEnvelopeText: text => String(text || ''),
     setNaturalInnerThought: (contact, value) => { contact.innerThought = String(value || '').trim(); return true; },
@@ -62,13 +65,16 @@ function runtime(result) {
   vm.runInContext(functionSource('stripHiddenThoughtTags'), context);
   vm.runInContext(functionSource('momentReplySpecific'), context);
   vm.runInContext(functionSource('reactToComment'), context);
-  return { context, post, target, role, stats: () => ({ requests, saves }) };
+  return { context, post, target, role, stats: () => ({ requests, saves, cancellations }) };
 }
 
 test('a real Moment model result is appended to the exact comment thread once', async () => {
   const run = runtime('当然会，刚才就在等你来问。');
   await run.context.reactToComment(run.post, run.role.id, run.target);
   assert.equal(run.stats().requests, 1);
+  assert.equal(run.stats().cancellations, 1);
+  assert.deepEqual(JSON.parse(JSON.stringify(run.context.lastCanceledKinds)), ['one_minute_test', 'app_watch_test']);
+  assert.equal(run.context.lastOptions.timeout, 70000);
   assert.equal(run.post.comments.length, 2);
   assert.deepEqual(JSON.parse(JSON.stringify(run.post.comments[1])), {
     id: 'reply-1', name: '先生', cid: 'role-1', text: '当然会，刚才就在等你来问。',

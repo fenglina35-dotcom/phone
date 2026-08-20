@@ -45,7 +45,9 @@ test('role replies to moment comments use the exact thread and recent WeChat con
   assert.match(block,/buildSystem\(c,\{natural:wechatNaturalOn\(\),query,selectiveMemory:true,memoryItems:memory\.items\}\)/);
   assert.match(block,/memoryRetrievalPrompt\(c,memory\)/);
   assert.match(block,/targetComment/);
-  assert.doesNotMatch(block,/timeout:/);
+  assert.match(block,/roleBackgroundCancel\(c\.id,\['one_minute_test','app_watch_test'\]\)/);
+  assert.match(block,/chatAPI\(request,\{timeout:70000\}\)/);
+  assert.match(block,/\+e\.status===503/);
   assert.equal((block.match(/await chatAPI\(/g)||[]).length,1,'Moment comments must use the July 30 single real model request');
   assert.match(block,/momentReplySpecific/);
   assert.doesNotMatch(source,/function momentReplySpecific\(txt\)[^\n]*看到了\|我看到了\|收到/);

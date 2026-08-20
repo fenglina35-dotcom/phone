@@ -6,11 +6,11 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-assert.match(source,/APP_VER='v1007 · 后台收件、朋友圈上下文与内心格式修复'/);
-assert.match(html,/__NORTH_SHELL_BUILD__='1007'/);
-assert.match(sw,/BUILD='1007'/);
-assert.equal((project.match(/CURRENT_PROJECT_VERSION = 128;/g)||[]).length,12);
-assert.equal((project.match(/MARKETING_VERSION = 1\.0\.128;/g)||[]).length,12);
+assert.match(source,/APP_VER='v1008 · 共同相册、朋友圈回复与私人App稳定性修复'/);
+assert.match(html,/__NORTH_SHELL_BUILD__='1008'/);
+assert.match(sw,/BUILD='1008'/);
+assert.equal((project.match(/CURRENT_PROJECT_VERSION = 129;/g)||[]).length,12);
+assert.equal((project.match(/MARKETING_VERSION = 1\.0\.129;/g)||[]).length,12);
 
 assert.match(source,/const WECHAT_UNIFIED_SYSTEM=true/);
 assert.match(source,/function wechatNaturalOn\(\)\{return WECHAT_UNIFIED_SYSTEM;\}/);

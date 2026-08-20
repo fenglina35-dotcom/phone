@@ -33,4 +33,19 @@ test('idle clock work skips hidden pages and never rebuilds an unchanged lock-sc
   assert.match(app,/function northUiClockTick\(\)\{if\(typeof document!==['"]undefined['"]&&document\.hidden\)return/);
   assert.match(app,/function renderLockClock\(force\)[\s\S]*?_lockClockPaintKey===key[\s\S]*?return/);
   assert.match(app,/if\(b\.textContent!==value\)b\.textContent=value/);
+  assert.match(app,/setInterval\(northUiClockTick,10000\)/);
+});
+
+test('large private saves and cloud backups are not repeated while the user is interacting',()=>{
+  assert.match(app,/_useSaveT>60000/);
+  assert.match(app,/PRIVATE_PHONE_AUTO_BACKUP_DELAY=30\*60\*1000/);
+  assert.match(app,/Date\.now\(\)-_privatePhoneLastInteractionAt<90000/);
+  assert.match(app,/function privatePhoneCloudWake\(\)[\s\S]*?privatePhoneCloudSchedule\(PRIVATE_PHONE_AUTO_BACKUP_DELAY\)/);
+  assert.doesNotMatch(app,/privatePhoneCloudAutoBackup\(\),6000/);
+});
+
+test('resume listeners collapse duplicate forced native and inbox pulls',()=>{
+  assert.match(app,/function companionPollMinDelay\(\)[\s\S]*?:60000/);
+  assert.match(app,/companionPollSnapshot\(force\)[\s\S]*?minDelay=force\?5000:companionPollMinDelay\(\)/);
+  assert.match(app,/roleServerPushPull\(force\)[\s\S]*?minDelay=force\?5000:45000/);
 });

@@ -66,7 +66,10 @@ test('Moment comment repair keeps the July 30 contextual reply behavior without 
   assert.match(reply, /刚刚在评论区对你说/);
   assert.match(reply, /selectRelevantMemory\(c,query,4\)/);
   assert.match(reply, /selectiveMemory:true/);
-  assert.doesNotMatch(reply, /timeout:/);
+  assert.match(reply, /roleBackgroundCancel\(c\.id,\['one_minute_test','app_watch_test'\]\)/);
+  assert.match(reply, /chatAPI\(request,\{timeout:70000\}\)/);
+  assert.match(reply, /\+e\.status===503/);
+  assert.doesNotMatch(reply, /看到了|我看到了|收到|知道了|好的|让我想想/);
   assert.equal((reply.match(/await chatAPI\(/g) || []).length, 1, 'July 30 behavior is restored to one direct real reply request');
   assert.match(reply, /_roleReplyStatus='failed'/);
   assert.match(reply, /if\(!txt\).*return;/s);

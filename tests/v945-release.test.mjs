@@ -12,22 +12,22 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v1007 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1007 · 后台收件、朋友圈上下文与内心格式修复'/);
-  assert.match(app,/const url='sw\.js\?v=1007&r=v1007-background-inbox-moments-inner-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1007'/);
-  assert.match(html,/app\.js\?v=1007/);
-  assert.match(sw,/const BUILD='1007'/);
-  assert.match(sw,/north-shell-v1007/);
-  assert.match(index,/小手机\.html\?v=1007/);
-  assert.match(repair,/小手机\.html\?v=1007/);
+test('v1008 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v1008 · 共同相册、朋友圈回复与私人App稳定性修复'/);
+  assert.match(app,/const url='sw\.js\?v=1008&r=v1008-shared-album-moments-stability-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1008'/);
+  assert.match(html,/app\.js\?v=1008/);
+  assert.match(sw,/const BUILD='1008'/);
+  assert.match(sw,/north-shell-v1008/);
+  assert.match(index,/小手机\.html\?v=1008/);
+  assert.match(repair,/小手机\.html\?v=1008/);
 });
 
-test('the private iOS package embeds web v1007 and keeps 1.0.128 delivery',()=>{
-  assert.match(privateBundle,/<string>1007<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.128;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 128;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.128 \(128\)'/);
+test('the private iOS package embeds web v1008 and keeps 1.0.129 delivery',()=>{
+  assert.match(privateBundle,/<string>1008<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.129;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 129;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.129 \(129\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 
