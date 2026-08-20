@@ -180,6 +180,39 @@ test('emotion care always requests a fresh heart-rate read and never treats it a
   assert.match(app, /每次重新读取；只作关心线索/);
 });
 
+test('a charging confirmation checks the fresh real battery state before the role replies', () => {
+  const messages = [
+    { role: 'assistant', type: 'text', content: '电量这么低，先去充电。充上了告诉我。', time: 1000, id: 'a-charge' },
+    { role: 'user', type: 'text', content: '充了，正在充电', time: 2000, id: 'u-charge' },
+  ];
+  const context = vm.createContext({
+    msgs: () => messages,
+    msgToText: (m) => m.content || '',
+    Date,
+  });
+  vm.runInContext(functionSource('companionChargingConfirmationSignal'), context);
+  context.c = { id: 'role' };
+  context.lu = messages[1];
+  vm.runInContext('this.positive=companionChargingConfirmationSignal(c,lu)', context);
+  assert.equal(context.positive.answer, '充了，正在充电');
+
+  messages[1].content = '还没充，等一下';
+  vm.runInContext('this.negative=companionChargingConfirmationSignal(c,lu)', context);
+  assert.equal(context.negative, null);
+
+  messages[0].content = '我今天看到一个充电器';
+  messages[1].content = '我充了';
+  vm.runInContext('this.incidental=companionChargingConfirmationSignal(c,lu)', context);
+  assert.equal(context.incidental, null);
+
+  const schedule = functionSource('companionChargingConfirmationSchedule');
+  assert.match(schedule, /queueNativeInspection\(c\.id,lu,'iPhone电量'/);
+  assert.match(schedule, /immediate:true,forceResult:true,suppressInitial:true/);
+  assert.match(schedule, /显示充电中或已充满才可以确认/);
+  assert.match(schedule, /不能拿旧快照冒充本次结果/);
+  assert.match(functionSource('aiReply'), /companionChargingConfirmationSchedule\(c,_lu\)/);
+});
+
 test('absence battery check is rate limited and cannot invent a shutdown', () => {
   assert.match(app, /now-last>=6\*3600000&&count<2/);
   assert.match(app, /只有电量为0且状态明确时才能怀疑关机/);

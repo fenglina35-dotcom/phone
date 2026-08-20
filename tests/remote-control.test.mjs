@@ -64,7 +64,7 @@ test('live overlay blocks the phone while preserving an emergency stop', () => {
 
 test('only one natural role subtitle is visible and navigation stays in the top progress label', () => {
   const remote = app.match(/let _remoteCtl[\s\S]*?(?=\/\/ ===== 他登录我的微信)/)?.[0] || '';
-  assert.match(app, /function remoteControlCaptionMs\(t\)\{return Math\.max\(1800,Math\.min\(4200/);
+  assert.match(app, /function remoteControlCaptionMs\(t\)\{return Math\.max\(3800,Math\.min\(8000/);
   assert.doesNotMatch(remote, /SpeechSynthesisUtterance|speechSynthesis|remoteControlSpeak/);
   assert.match(app, /function remoteControlCaption\(say\)/);
   assert.match(app, /replaceChildrenCompat\(cap,b\)/);

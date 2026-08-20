@@ -211,6 +211,9 @@ test('temporary offline or face-to-face states suspend without disabling backgro
   assert.match(edge, /profileTemporarilySuspended\(latestProfile\)/);
   assert.match(edge, /next_due_at: new Date\(Date\.now\(\) \+ 10 \* 60_000\)/);
   assert.match(edge, /!profile\.enabled \|\| profileTemporarilySuspended\(profile\)/);
+  assert.match(edgeFunctionSource('automationCandidate'), /pendingManualUnlock/);
+  assert.match(edgeFunctionSource('automationCandidate'), /profileTemporarilySuspended\(profile\) && !pendingManualUnlock/);
+  assert.match(edge, /!candidate && profileTemporarilySuspended\(profile\)/);
 });
 
 test('unified private app registers itself and exposes end-to-end push diagnostics', () => {

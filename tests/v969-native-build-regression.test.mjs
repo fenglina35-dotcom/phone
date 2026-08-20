@@ -12,14 +12,14 @@ const pip = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/Cal
 const reportApp = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/PhoneCompanionReport.swift');
 const reportScene = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/TotalActivityReport.swift');
 
-test('v1014 web and private iOS 1.0.135 keep explicit build identities', () => {
-  assert.match(app, /APP_VER='v1014 · 伴生解锁闭环与远控自然字幕修复'/);
-  assert.match(app, /sw\.js\?v=1014&r=v1014-companion-unlock-remote-natural-caption-1/);
-  assert.match(shell, /north-shell-v1014/);
-  assert.match(bundleInfo, /<string>1014<\/string>/);
-  assert.match(localWebView, /1\.0\.135 \(135\)/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 135;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.135;/g) || []).length, 12);
+test('v1015 web and private iOS 1.0.136 keep explicit build identities', () => {
+  assert.match(app, /APP_VER='v1015 · 远控真实字幕与伴生事件回执修复'/);
+  assert.match(app, /sw\.js\?v=1015&r=v1015-remote-caption-manual-unlock-1/);
+  assert.match(shell, /north-shell-v1015/);
+  assert.match(bundleInfo, /<string>1015<\/string>/);
+  assert.match(localWebView, /1\.0\.136 \(136\)/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 136;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.136;/g) || []).length, 12);
 });
 
 test('native shared-media gain uses only public AVFoundation types', () => {

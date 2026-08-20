@@ -885,10 +885,25 @@ function automationCandidate(profile: Record<string, unknown>, snapshot: Record<
     }
     snapshot = { ...snapshot, automationEvents: [...events.values()] };
   }
-  if (profileTemporarilySuspended(profile)) return null;
   const state = (profile.automation_state && typeof profile.automation_state === "object" ? profile.automation_state : {}) as Record<string, unknown>;
   const localRuns = (config.localRuns && typeof config.localRuns === "object" ? config.localRuns : {}) as Record<string, unknown>;
   const flags = (config.flags && typeof config.flags === "object" ? config.flags : {}) as Record<string, unknown>;
+  const runs = state.runs && typeof state.runs === "object" ? state.runs as Record<string, unknown> : {};
+  const pendingManualUnlock = [...(Array.isArray(snapshot.automationEvents) ? snapshot.automationEvents : [])]
+    .reverse()
+    .find((row) => {
+      if (!row || typeof row !== "object") return false;
+      const event = row as Record<string, unknown>;
+      const id = String(event.id || "").trim(), at = snapshotTime(event.ts);
+      return event.kind === "manualUnlock" && event.explicit === true && !!id && !!at &&
+        Date.now() - at >= 0 && Date.now() - at < 24 * 3600_000 &&
+        !runs[`manualUnlock:${id}`] && String(localRuns.manualUnlock || "") !== id;
+    });
+  // Ordinary proactive chat must respect a live-call/date suspension. A real,
+  // explicit owner unlock is an already completed device event, not a random
+  // proactive message, so it must still be consumed once instead of becoming
+  // a permanently ignored "立即告诉角色" record.
+  if (profileTemporarilySuspended(profile) && !pendingManualUnlock) return null;
   const windows = (config.windows && typeof config.windows === "object" ? config.windows : {}) as Record<string, unknown>;
   const clock = localClock(String(config.timezone || profile.timezone || "Asia/Shanghai"));
   const minute = clock.hour * 60 + clock.minute;
@@ -969,7 +984,6 @@ function automationCandidate(profile: Record<string, unknown>, snapshot: Record<
       const event = [...events].reverse().find((row) => row.kind === "manualUnlock" && row.explicit === true);
       key = `manualUnlock:${String(event?.id || event?.ts || clock.day)}`;
     }
-    const runs = state.runs && typeof state.runs === "object" ? state.runs as Record<string, unknown> : {};
     if (runs[key]) continue;
     if (kind === "morningSleep" && String(localRuns.morningSleep || "") === clock.day) continue;
     if (kind === "eveningScreen" && String(localRuns.eveningScreen || "") === clock.day) continue;
@@ -1248,10 +1262,6 @@ Deno.serve(async (request) => {
     for (const profile of Array.isArray(automationRows) ? automationRows : []) {
       const autoState = profile.automation_state && typeof profile.automation_state === "object" ? profile.automation_state as Record<string, unknown> : {};
       const automationConfig = profile.automation_config && typeof profile.automation_config === "object" ? profile.automation_config as Record<string, unknown> : {};
-      if (profileTemporarilySuspended(profile)) {
-        await client.from("phone_role_push_profiles").update({ claimed_until: null }).eq("target", profile.target).eq("role_id", profile.role_id);
-        continue;
-      }
       // 角色本人真实的上下班作息不依赖伴生设备读数，必须先判断；否则每次十五分钟设备刷新
       // 都会把到点通知推迟到下一轮 cron，甚至在尚未接管设备时永远无法触发。
       let candidate = automationCandidate(profile, {});
@@ -1262,6 +1272,10 @@ Deno.serve(async (request) => {
         const currentLink = (await client.from("phone_companion_links").select("snapshot")
           .eq("target", profile.target).maybeSingle()).data;
         candidate = automationCandidate(profile, (currentLink?.snapshot || {}) as Record<string, unknown>);
+      }
+      if (!candidate && profileTemporarilySuspended(profile)) {
+        await client.from("phone_role_push_profiles").update({ claimed_until: null }).eq("target", profile.target).eq("role_id", profile.role_id);
+        continue;
       }
       if (!candidate) {
         // Profile sync can legitimately replace automation_state while the

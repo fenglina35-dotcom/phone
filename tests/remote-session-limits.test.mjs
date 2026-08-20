@@ -37,7 +37,7 @@ test('remote-control model waits are bounded and visible list decisions keep pro
   assert.match(remote,/本次远程操控的原始目标，执行中不得忘记/);
   assert.match(remote,/msgs\(c&&c\.id\)\|\|\[\]\)\.slice\(-8\)/);
   const reaction=remote.match(/async function remoteControlRoleReaction\(c,a,r\)[\s\S]*?(?=\nasync function remoteControlRoleLines)/)?.[0]||'';
-  assert.match(reaction,/remoteControlModelCall\([\s\S]*?,9000\)/,'role reactions keep the July 23 quality window while remaining bounded');
+  assert.match(reaction,/remoteControlModelCall\([\s\S]*?,30000\)/,'role reactions allow the configured model enough time while remaining bounded');
 });
 
 test('remote control contains no friend-request rejection route',()=>{

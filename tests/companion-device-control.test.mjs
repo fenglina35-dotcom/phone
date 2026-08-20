@@ -128,7 +128,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v1014 · 伴生解锁闭环与远控自然字幕修复'/);
+  assert.match(app, /const APP_VER='v1015 · 远控真实字幕与伴生事件回执修复'/);
 });
 
 test('manual sync reads locally in the bundled app and keeps cloud fallback', () => {
@@ -172,6 +172,15 @@ test('native companion controls serialize and retry only transient failures', as
   assert.equal(context.calls(), 2);
   await assert.rejects(() => context.run({ action: 'lock', fail: 'auth' }));
   assert.equal(context.calls(), 3, 'non-transient authorization errors must not retry');
+});
+
+test('native Screen Time authorization is rechecked once and reports the exact state', () => {
+  const sync = readFileSync(join(root, 'native', 'private-small-phone', 'XcodeProject', 'PhoneCompanionTest', 'CompanionSyncView.swift'), 'utf8');
+  assert.match(sync, /guard await screenTimeControlAuthorizationSettled\(\) else/);
+  assert.match(sync, /Task\.sleep\(nanoseconds: 450_000_000\)/);
+  assert.match(sync, /屏幕使用时间尚未完成授权/);
+  assert.match(sync, /屏幕使用时间授权被系统拒绝或撤销/);
+  assert.doesNotMatch(sync, /屏幕使用时间授权已失效，请在伴生 App 重新授权后再(?:锁定|解锁)/);
 });
 
 test('local control receipt does not wait for unrelated wellness refresh', () => {

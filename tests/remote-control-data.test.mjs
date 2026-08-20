@@ -78,6 +78,10 @@ test('remote subtitles are role-generated and quiet on list pages',()=>{
   assert.match(app,/function remoteControlClearCaption\(\)[\s\S]*?replaceChildrenCompat\(cap\)/);
   assert.doesNotMatch(app,/cap\.appendChild\(b\);while\(cap\.children\.length>3\)/);
   assert.match(app,/你不是操作解说员/);
+  assert.match(app,/roleSpokenCount:0/);
+  assert.match(app,/本轮你还没有说过话，而当前详情已经有具体真实内容/);
+  assert.match(app,/角色正在理解当前内容/);
+  assert.match(app,/function remoteControlCaptionMs\(t\)\{return Math\.max\(3800,Math\.min\(8000/);
   assert.match(app,/禁止说“?我先看看/);
   assert.match(app,/function remoteControlOperationalNarration\(text\)/);
   assert.match(app,/!remoteControlOperationalNarration\(x\)/);

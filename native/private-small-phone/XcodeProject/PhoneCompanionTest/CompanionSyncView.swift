@@ -1871,9 +1871,9 @@ final class CompanionSyncService: ObservableObject {
 
         switch command.action {
         case "lock":
-            guard screenTimeControlIsAuthorized() else {
+            guard await screenTimeControlAuthorizationSettled() else {
                 throw CompanionSyncError.message(
-                    "屏幕使用时间授权已失效，请在伴生 App 重新授权后再锁定"
+                    screenTimeControlAuthorizationFailure(action: "锁定")
                 )
             }
             rememberShieldActor(command.actor)
@@ -1906,9 +1906,9 @@ final class CompanionSyncService: ObservableObject {
             return "屏蔽配置已写入；最终是否生效请以打开目标 App 时的系统屏蔽页为准"
 
         case "unlock":
-            guard screenTimeControlIsAuthorized() else {
+            guard await screenTimeControlAuthorizationSettled() else {
                 throw CompanionSyncError.message(
-                    "屏幕使用时间授权已失效，请在伴生 App 重新授权后再解锁"
+                    screenTimeControlAuthorizationFailure(action: "解锁")
                 )
             }
             let previousManualTokens =
@@ -2001,6 +2001,44 @@ final class CompanionSyncService: ObservableObject {
             }
         }
         return AuthorizationCenter.shared.authorizationStatus == .approved
+    }
+
+    private func screenTimeControlAuthorizationSettled() async -> Bool {
+        if screenTimeControlIsAuthorized() { return true }
+        // Family Controls can briefly keep the previous enum immediately after
+        // the user finishes the system authorization sheet. Re-read once before
+        // recording a real command failure; never auto-present permission UI in
+        // a background command and never treat this delay as success.
+        try? await Task.sleep(nanoseconds: 450_000_000)
+        return screenTimeControlIsAuthorized()
+    }
+
+    private func screenTimeControlAuthorizationFailure(
+        action: String
+    ) -> String {
+        let status = AuthorizationCenter.shared.authorizationStatus
+        if #available(iOS 26.0, *) {
+            switch status {
+            case .notDetermined:
+                return "屏幕使用时间尚未完成授权，请打开伴生 App 授权后再\(action)"
+            case .denied:
+                return "屏幕使用时间授权被系统拒绝或撤销，请在伴生 App 重新授权后再\(action)"
+            case .approved, .approvedWithDataAccess:
+                return "屏幕使用时间授权状态刚发生变化，请稍后再\(action)"
+            @unknown default:
+                return "无法确认屏幕使用时间授权，请打开伴生 App 核对后再\(action)"
+            }
+        }
+        switch status {
+        case .notDetermined:
+            return "屏幕使用时间尚未完成授权，请打开伴生 App 授权后再\(action)"
+        case .denied:
+            return "屏幕使用时间授权被系统拒绝或撤销，请在伴生 App 重新授权后再\(action)"
+        case .approved:
+            return "屏幕使用时间授权状态刚发生变化，请稍后再\(action)"
+        default:
+            return "无法确认屏幕使用时间授权，请打开伴生 App 核对后再\(action)"
+        }
     }
 
     private func nextSnapshotSequence() -> Int64 {
