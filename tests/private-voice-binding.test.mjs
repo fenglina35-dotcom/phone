@@ -46,7 +46,8 @@ assert.match(backend, /const available = await minimaxVoices\(\)/);
 assert.match(backend, /async function minimaxVoices\(force = false\)/);
 assert.match(backend, /await minimaxVoices\(true\)/);
 assert.match(app, /function ttsRelayVoiceIds\(tts\)/);
-assert.match(app, /const selected=String\(tts&&tts\.voice\|\|''\)\.trim\(\);return\[selected\|\|DEFAULT_TTS_VOICE\]/);
+assert.match(app, /tts\.relayVoice/);
+assert.match(app, /typeof aiInternalVoiceId==='function'\?aiInternalVoiceId\(\):tts\.voice/);
 assert.match(app, /const ids=ttsRelayVoiceIds\(tts\)/);
 assert.doesNotMatch(app, /ttsRelayVoiceIds\(v&&v\.ttsVoice,tts\)/);
 assert.match(app, /仅关闭内置语音、使用外置接口时生效/);
@@ -61,6 +62,8 @@ assert.match(account, /未绑定克隆/);
 assert.match(account, /新的音色克隆申请入口已经关闭/);
 assert.match(account, /已经绑定的克隆音色只对绑定账户显示/);
 assert.match(account, /function aiUsePrivateVoice/);
+assert.match(account, /S\.settings\.tts\.relayVoice=voice\.voice_id/);
+assert.doesNotMatch(account, /function aiUsePrivateVoice\(id\)[^\n]*S\.settings\.tts\.voice=voice\.voice_id/);
 assert.match(admin, /绑定客户专属音色/);
 assert.match(admin, /admin_assign_private_voice/);
 

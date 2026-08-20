@@ -25,9 +25,10 @@ function aiVoiceListCacheKey(){return'yibei_ai_voice_list_v1_'+aiUserId();}
 function aiCachedVoiceList(){try{const d=JSON.parse(localStorage.getItem(aiVoiceListCacheKey())||'null'),rows=Array.isArray(d)?d:Array.isArray(d&&d.rows)?d.rows:[];return rows.filter(v=>v&&v.id).slice(0,240);}catch(_){return[];}}
 function aiRememberVoiceList(rows){const safe=(Array.isArray(rows)?rows:[]).filter(v=>v&&v.id).slice(0,240).map(v=>({id:String(v.id),name:String(v.name||v.id).slice(0,100),clone:!!v.clone,private:!!v.private,unbound:!!v.unbound,preset:!!v.preset}));try{localStorage.setItem(aiVoiceListCacheKey(),JSON.stringify({savedAt:Date.now(),rows:safe}));}catch(_){}return safe;}
 function aiVoiceLabel(id){id=String(id||'');if(!id)return'系统默认';const own=aiPrivateVoices().find(v=>String(v.voice_id)===id);if(own)return own.display_name||'我的专属音色';const preset=AI_VOICE_PRESETS.find(v=>v.id===id);return preset?preset.name:'已设置音色';}
+function aiInternalVoiceId(){const t=S.settings.tts||(S.settings.tts={});if(Object.prototype.hasOwnProperty.call(t,'relayVoice'))return String(t.relayVoice||'').trim();const legacy=String(t.voice||'').trim(),known=AI_VOICE_PRESETS.some(v=>v.id===legacy)||aiPrivateVoices().some(v=>String(v.voice_id)===legacy)||aiCachedVoiceList().some(v=>String(v.id)===legacy);return legacy&&known?legacy:'';}
 function aiRelayVoiceAudio(d){const rows=[d&&d.data,d&&d.data&&d.data.data,d&&d.data&&d.data.raw&&d.data.raw.data,d];for(const row of rows){if(!row)continue;const audio=row.audio||row.audio_file||row.audio_url;if(audio)return audio;}return'';}
-function aiPrivateVoiceRows(){const current=String((S.settings.tts||{}).voice||''),voices=aiPrivateVoices();return voices.length?voices.map(v=>`<div class="it"><span><b style="color:#ffb7d2">${esc(v.display_name||'我的专属音色')}</b><small>仅当前AI账户可用 · 云端已绑定</small></span><span class="v"><button class="minibtn" ${current===String(v.voice_id)?'disabled':''} onclick="aiUsePrivateVoice('${esc(v.voice_id)}')">${current===String(v.voice_id)?'使用中':'使用'}</button></span></div>`).join(''):'<div class="hint" style="padding:0 14px 10px">当前账户没有已绑定的专属音色。新的音色克隆申请入口已经关闭。</div>';}
-function aiUsePrivateVoice(id){const voice=aiPrivateVoices().find(v=>String(v.voice_id)===String(id));if(!voice){toast('这个专属音色不属于当前AI账户，请刷新后重试');return;}S.settings.tts=S.settings.tts||{};S.settings.tts.voice=voice.voice_id;save();toast('已使用专属音色：'+(voice.display_name||'我的音色'));aiRenderStable();}
+function aiPrivateVoiceRows(){const current=aiInternalVoiceId(),voices=aiPrivateVoices();return voices.length?voices.map(v=>`<div class="it"><span><b style="color:#ffb7d2">${esc(v.display_name||'我的专属音色')}</b><small>仅当前AI账户可用 · 云端已绑定</small></span><span class="v"><button class="minibtn" ${current===String(v.voice_id)?'disabled':''} onclick="aiUsePrivateVoice('${esc(v.voice_id)}')">${current===String(v.voice_id)?'使用中':'使用'}</button></span></div>`).join(''):'<div class="hint" style="padding:0 14px 10px">当前账户没有已绑定的专属音色。新的音色克隆申请入口已经关闭。</div>';}
+function aiUsePrivateVoice(id){const voice=aiPrivateVoices().find(v=>String(v.voice_id)===String(id));if(!voice){toast('这个专属音色不属于当前AI账户，请刷新后重试');return;}S.settings.tts=S.settings.tts||{};S.settings.tts.relayVoice=voice.voice_id;save();toast('已使用内置专属音色：'+(voice.display_name||'我的音色'));aiRenderStable();}
 
 function openAIAccount(){go('aiaccount');}
 function aiCoreInit(){const current=S.settings.aiCore||(S.settings.aiCore={enabled:false,url:AI_BACKEND_URL}),legacy=GATE_URL+'/functions/v1/phone-ai';current.enabled=false;if(!current.url||current.url===legacy)current.url=AI_BACKEND_URL;return current;}
@@ -62,7 +63,7 @@ function aiPurchaseRows(){const rows=aiVisiblePurchases().slice(0,20);
 function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.tts=S.settings.tts||{};S.settings.stt=S.settings.stt||{};const tts=S.settings.tts;setTimeout(()=>{if(cur().p!=='aiaccount')return;if(typeof maybePhoneNotice==='function')maybePhoneNotice();if(!_aiAcctBusy&&(!_aiAcct||Date.now()-Number(_aiAcctFetchedAt||0)>5000))aiAccountRefresh(true,true);aiScheduleAccountPoll();},80);
   const knownBalance=aiVisibleBalance(),bal=knownBalance==null?'读取中…':knownBalance;
   const low=aiLowBalanceCfg();
-  const voice=aiVoiceLabel(tts.voice);
+  const voice=aiVoiceLabel(aiInternalVoiceId());
   const relayLang=tts.relayLang||'';
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">AI账户</span><span class="r" style="display:flex;justify-content:flex-end;gap:10px;font-size:12px"><b onclick="showPhoneNotice(false)" style="font-weight:500;color:#aaa;cursor:pointer">使用须知</b><b onclick="aiAccountRefresh()" style="font-weight:500;cursor:pointer">刷新</b></span></div>
   <div class="scroll" style="background:#0f1117;color:#e8eaf0;padding:12px">
@@ -95,11 +96,11 @@ function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.
     </div>
     <div class="section">
       <div style="padding:12px 14px;font-weight:600;color:#a5b4fc">语音音色</div>
-      <div class="hint" style="padding:0 14px 8px">系统免费音色和尚未绑定的克隆音色，所有账户都可以拉取使用；已经绑定的克隆音色只对绑定账户显示。</div>
+      <div class="hint" style="padding:0 14px 8px">这里只管理和测试内置语音。系统免费音色和尚未绑定的克隆音色，所有账户都可以拉取使用；已经绑定的克隆音色只对绑定账户显示。外置语音的地址、Key、模型和音色不会在这里被改动。</div>
       <div class="it"><span>可用公共音色<br><small style="color:#888">包含系统音色与未绑定克隆</small></span><span class="v"><button class="minibtn" onclick="aiPullVoices()">拉取音色</button></span></div>
       ${aiPrivateVoiceRows()}
-      <div class="it"><span>当前使用<small>${esc(voice)}</small></span><span class="v">自动校验权限</span></div>
-      <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="aiClearVoice()">清空音色</button><button class="btn p" ${_aiVoiceTestBusy?'disabled':''} onclick="aiTestVoice()">${_aiVoiceTestBusy?'生成中…':'测试语音'}</button></div>
+      <div class="it"><span>当前内置音色<small>${esc(voice)}</small></span><span class="v">${aiVoiceRelayOn()?'角色正在使用内置':'角色当前仍使用外置'}</span></div>
+      <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="aiClearVoice()">清空内置音色</button><button class="btn p" ${_aiVoiceTestBusy?'disabled':''} onclick="aiTestVoice()">${_aiVoiceTestBusy?'生成中…':'测试内置语音'}</button></div>
       ${_aiVoiceTestBusy||_aiVoiceTestStatus?`<div class="hint" style="padding:0 14px 10px;color:${_aiVoiceTestBusy?'#ffb7d2':'#9aa0aa'}">${_aiVoiceTestBusy?'<span class="spin" style="display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.25);border-top-color:#ff8fab;border-radius:50%;animation:aispin .8s linear infinite;vertical-align:-2px;margin-right:6px"></span>':''}${esc(_aiVoiceTestStatus||'语音生成中，请稍等，不要重复点击')}</div>`:''}
     </div>
     <div class="section">
@@ -110,7 +111,7 @@ function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.
   </div>`;}
 
 function aiToggleCore(){const ac=aiCoreInit();ac.enabled=false;save();aiRenderStable();toast('内置 AI 主通道已固定关闭');}
-function aiToggleVoiceApi(){S.settings.tts=S.settings.tts||{};S.settings.tts.relay=!aiVoiceRelayOn();if(S.settings.tts.relay)S.settings.tts.enabled=true;save();aiRenderStable();toast(S.settings.tts.relay?'内置语音已开启':'内置语音已关闭');}
+function aiToggleVoiceApi(){S.settings.tts=S.settings.tts||{};const t=S.settings.tts;t.relay=!aiVoiceRelayOn();if(t.relay){t.enabled=true;if(!String(t.relayVoice||'').trim())t.relayVoice=aiInternalVoiceId()||AI_DEFAULT_TTS_VOICE;}save();aiRenderStable();toast(t.relay?'内置语音已开启；外置配置仍完整保留':'内置语音已关闭；角色继续使用原外置语音');}
 function aiToggleAsrApi(){if(aiAsrReady()===false){toast('影院字幕识别后台还没有配置好，暂时不能开启');return;}S.settings.stt=S.settings.stt||{};S.settings.stt.relay=!aiAsrRelayOn();save();aiRenderStable();toast(S.settings.stt.relay?'影院字幕识别已开启':'影院字幕识别已关闭，将使用外置配置');}
 function aiAsrTestFinish(status){_aiAsrTestBusy=false;_aiAsrTestStatus=status;aiRenderStable();setTimeout(()=>aiAccountRefresh(true,true),500);}
 function aiAsrTestError(error){const raw=String(error||'').replace(/^内置AI失败：/,'').replace(/^asr-failed-refunded:\s*/,'');if(/unsupported-format-webm|format.*webm/i.test(raw))return '❌ 手机录音格式不兼容；请刷新到最新版后重试。本次点数已退回。';if(/empty/i.test(raw))return '❌ 接口没有听清文字，请靠近话筒清楚说一句再试。本次点数已退回。';if(/401|403|unauthor|forbidden|invalid.*key/i.test(raw))return '❌ 后台密钥或语音识别权限不正确，本次点数已退回。';if(/timeout|timed out|aborted/i.test(raw))return '❌ 识别接口超时，本次点数已退回，请稍后重试。';if(/network|fetch|load failed/i.test(raw))return '❌ 网络连接失败，录音没有识别成功。';return '❌ '+(raw||'语音识别失败；失败不会扣点').slice(0,220);}
@@ -145,40 +146,33 @@ async function aiPullVoices(){toast('正在拉取可用音色…');
     if(!_aiVoiceList.length){toast('暂时没有可用音色，请稍后重试');return;}
     aiShowVoicePicker();
   }catch(e){const cached=aiCachedVoiceList();if(cached.length){_aiVoiceList=cached;_aiVoiceQ='';toast('云端暂时不可用，显示上次成功读取的音色');aiShowVoicePicker();return;}toast('拉取失败：'+String((e&&e.message)||e).replace(/^内置AI失败：/,''));}}
-function aiShowVoicePicker(){const q=(_aiVoiceQ||'').toLowerCase(),curVoice=((S.settings.tts||{}).voice)||'';
+function aiShowVoicePicker(){const q=(_aiVoiceQ||'').toLowerCase(),curVoice=aiInternalVoiceId();
   const list=_aiVoiceList.filter(v=>!q||String(v.id||'').toLowerCase().includes(q)||String(v.name||'').toLowerCase().includes(q));
   openModal(`<h3>选择默认语音</h3>
     <div class="hint">当前默认：${esc(curVoice||'未选择')}</div>
     <div class="field"><input id="ai_vq" placeholder="搜名字或ID" value="${esc(_aiVoiceQ)}" oninput="_aiVoiceQ=this.value;aiShowVoicePicker();setTimeout(()=>{var e=document.getElementById('ai_vq');if(e){e.focus();e.setSelectionRange(e.value.length,e.value.length);}},0)"></div>
     <div style="max-height:52vh;overflow:auto">${list.slice(0,160).map(v=>`<div class="it" onclick="aiPickVoice('${esc(v.id)}')" style="cursor:pointer"><span>${v.private?'<b style="color:#ffb7d2">专属 · </b>':v.unbound?'<b style="color:#ffb83b">未绑定克隆 · </b>':'<b style="color:#71e69f">免费 · </b>'}${esc(v.name||v.id)}<small>${esc(v.id)}</small></span><span class="v">${v.id===curVoice?'已选':'选'}</span></div>`).join('')||'<div class="empty" style="padding:18px">没有匹配的音色</div>'}${list.length>160?'<div class="hint" style="padding:8px">只显示前160个，用搜索更快</div>':''}</div>
     <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
-function aiPickVoice(id){S.settings.tts=S.settings.tts||{};S.settings.tts.voice=id;save();closeModal();toast('已设为默认音色');if(cur().p==='aiaccount')render();}
-function aiClearVoice(){S.settings.tts=S.settings.tts||{};S.settings.tts.voice='';save();toast('已清空默认音色');render();}
-function aiVoiceTestText(){const lang=aiVoiceRelayOn()?((S.settings.tts||{}).relayLang||'zh'):'zh';return {zh:'我在测试这条语音的花销和声音效果。','粤':'我而家試緊呢把聲嘅效果同埋收費。','英':'Hi, I am testing the cost and sound of this voice.','日':'こんにちは、この音声の費用と聞こえ方をテストしています。','韩':'안녕하세요, 이 음성의 비용과 소리를 테스트하고 있어요.','法':'Bonjour, je teste le coût et le rendu de cette voix.','德':'Hallo, ich teste die Kosten und den Klang dieser Stimme.','俄':'Привет, я проверяю стоимость и звучание этого голоса.'}[lang]||'我在测试这条语音的花销和声音效果。';}
+function aiPickVoice(id){S.settings.tts=S.settings.tts||{};S.settings.tts.relayVoice=id;save();closeModal();toast('已设为内置默认音色；外置音色没有改变');if(cur().p==='aiaccount')render();}
+function aiClearVoice(){S.settings.tts=S.settings.tts||{};S.settings.tts.relayVoice='';save();toast('已清空内置音色；外置音色没有改变');render();}
+function aiVoiceTestText(){const lang=((S.settings.tts||{}).relayLang||'zh');return {zh:'我在测试这条语音的花销和声音效果。','粤':'我而家試緊呢把聲嘅效果同埋收費。','英':'Hi, I am testing the cost and sound of this voice.','日':'こんにちは、この音声の費用と聞こえ方をテストしています。','韩':'안녕하세요, 이 음성의 비용과 소리를 테스트하고 있어요.','法':'Bonjour, je teste le coût et le rendu de cette voix.','德':'Hallo, ich teste die Kosten und den Klang dieser Stimme.','俄':'Привет, я проверяю стоимость и звучание этого голоса.'}[lang]||'我在测试这条语音的花销和声音效果。';}
 async function aiTestVoice(){const text=aiVoiceTestText();
   if(_aiVoiceTestBusy){toast('语音还在生成中，请稍等');return;}
-  if(!aiVoiceEnabled()){toast('先打开语音API');return;}
-  _aiVoiceTestBusy=true;_aiVoiceTestStatus='语音生成中，请稍等，不要重复点击';if(cur().p==='aiaccount')aiRenderStable();
+  _aiVoiceTestBusy=true;_aiVoiceTestStatus='正在单独测试内置语音；不会改动外置配置';if(cur().p==='aiaccount')aiRenderStable();
   try{initAudio();
-    if(!aiVoiceRelayOn()&&typeof ttsArr==='function'){
-      const ab=await Promise.race([ttsArr(text,{voice:{engine:'api',ttsVoice:((S.settings.tts||{}).voice)||''}}),new Promise(res=>setTimeout(()=>res('__T_O__'),25000))]);
-      if(ab==='__T_O__'){_aiVoiceTestStatus='语音测试超时，未完成生成';toast('语音测试超时');return;}
-      if(!ab){_aiVoiceTestStatus='没有拿到语音，请检查音色或接口';toast('没有拿到语音');return;}
-      const buf=await decodeBuf(ab);if(buf){playBuf(buf);_aiVoiceTestStatus='外置语音测试成功';toast('外置语音测试成功');}else{_aiVoiceTestStatus='拿到语音数据，但播放失败';toast('拿到语音数据，但播放失败');}return;
-    }
-    const d=await Promise.race([aiRelay('tts',{text,voice_id:((S.settings.tts||{}).voice)||AI_DEFAULT_TTS_VOICE,model:'speech-02-turbo',language_boost:typeof ttsLanguageBoost==='function'?ttsLanguageBoost(null):'auto'}),new Promise(res=>setTimeout(()=>res('__T_O__'),25000))]);
+    const d=await Promise.race([aiRelay('tts',{text,voice_id:aiInternalVoiceId()||AI_DEFAULT_TTS_VOICE,model:'speech-02-turbo',language_boost:typeof ttsLanguageBoost==='function'?ttsLanguageBoost(null):'auto'}),new Promise(res=>setTimeout(()=>res('__T_O__'),25000))]);
     if(d==='__T_O__'){_aiVoiceTestStatus='语音测试超时，未完成生成';toast('语音测试超时');return;}
     const ledger=d&&(d.ledger_id||d.ledgerId||d.request_id),audio=aiRelayVoiceAudio(d);if(!audio){if(typeof ttsRefundLedger==='function')await ttsRefundLedger(ledger,'tts-test-no-audio');_aiVoiceTestStatus='音色绑定仍在，但后台没有返回音频，已退回本次AI点数';toast('后台没有返回音频，绑定没有丢失');setTimeout(()=>aiAccountRefresh(true,true),600);return;}
     let raw;try{raw=typeof audioDataToBuf==='function'?await audioDataToBuf(audio):await fetch(audio).then(x=>{if(!x.ok)throw new Error('HTTP '+x.status);return x.arrayBuffer();});if(!raw)throw new Error('empty-audio');}catch(_){if(typeof ttsRefundLedger==='function')await ttsRefundLedger(ledger,'tts-test-fetch-failed');_aiVoiceTestStatus='语音文件读取失败，已退回本次AI点数；音色绑定没有丢失';toast('语音读取失败，已退回本次AI点数');setTimeout(()=>aiAccountRefresh(true,true),800);return;}
     const ab=typeof ttsLedgerSet==='function'?ttsLedgerSet(raw,ledger):raw;const buf=await decodeBuf(ab);
-    if(buf){playBuf(buf);_aiVoiceTestStatus='语音测试成功';toast('语音测试成功');setTimeout(()=>aiAccountRefresh(true,true),800);}
+    if(buf){playBuf(buf);_aiVoiceTestStatus='内置语音测试成功'+(aiVoiceRelayOn()?'':'；当前开关关闭，角色仍使用外置语音');toast('内置语音测试成功');setTimeout(()=>aiAccountRefresh(true,true),800);}
     else{if(typeof ttsRefundAudio==='function')await ttsRefundAudio(ab,'tts-test-decode-failed');_aiVoiceTestStatus='拿到语音数据，但播放失败，已退回本次AI点数';toast('播放失败，已退回本次AI点数');setTimeout(()=>aiAccountRefresh(true,true),800);}
   }catch(e){let refunded=false;if(typeof ttsRefundError==='function')refunded=await ttsRefundError(e,'tts-test-client-error');_aiVoiceTestStatus='语音测试失败：'+String((e&&e.message)||e).replace(/^内置AI失败：/,'')+(refunded?'，已退回本次AI点数':'');toast(_aiVoiceTestStatus);setTimeout(()=>aiAccountRefresh(true,true),800);}
   finally{_aiVoiceTestBusy=false;if(cur().p==='aiaccount')aiRenderStable();}}
 
 function aiAccountApplyResult(d,action){if(!d)return;if(!_aiAcct)_aiAcct={account:{user_id:aiUserId()},pricing:null,plans:null,ledger:[]};
   if(action==='account')_aiAcctFetchedAt=Date.now();
-  if(d.pricing)_aiAcct.pricing=d.pricing;if(d.plans)_aiAcct.plans=d.plans;if(d.capabilities)_aiAcct.capabilities=d.capabilities;if(d.ledger)_aiAcct.ledger=d.ledger;if(d.purchases)_aiAcct.purchases=d.purchases;if(Array.isArray(d.private_voices)){_aiAcct.private_voices=aiRememberPrivateVoices(d.private_voices);const first=d.private_voices.find(v=>v&&v.voice_id),core=aiCoreInit();if(first&&!(S.settings.tts||{}).voice&&core.privateVoiceAutoSet!==first.voice_id){S.settings.tts=S.settings.tts||{};S.settings.tts.voice=first.voice_id;core.privateVoiceAutoSet=first.voice_id;save();}}if(d.account){_aiAcct.account=d.account;if(d.account.points!=null)aiRememberBalance(d.account.points);}
+  if(d.pricing)_aiAcct.pricing=d.pricing;if(d.plans)_aiAcct.plans=d.plans;if(d.capabilities)_aiAcct.capabilities=d.capabilities;if(d.ledger)_aiAcct.ledger=d.ledger;if(d.purchases)_aiAcct.purchases=d.purchases;if(Array.isArray(d.private_voices)){_aiAcct.private_voices=aiRememberPrivateVoices(d.private_voices);const first=d.private_voices.find(v=>v&&v.voice_id),core=aiCoreInit();if(first&&!aiInternalVoiceId()&&core.privateVoiceAutoSet!==first.voice_id){S.settings.tts=S.settings.tts||{};S.settings.tts.relayVoice=first.voice_id;core.privateVoiceAutoSet=first.voice_id;save();}}if(d.account){_aiAcct.account=d.account;if(d.account.points!=null)aiRememberBalance(d.account.points);}
   if(d.balance!=null){_aiAcct.account=_aiAcct.account||{user_id:aiUserId()};_aiAcct.account.points=d.balance;aiRememberBalance(d.balance);}
   if(d.charged){const feature=action||'chat';_aiAcct.ledger=_aiAcct.ledger||[];_aiAcct.ledger.unshift({kind:'charge',feature,points:-d.charged,balance_after:d.balance,status:d.ok===false?'failed':'done',billed:!!d.billed,note:d.note||d.error||'',created_at:new Date().toISOString()});_aiAcct.ledger=_aiAcct.ledger.slice(0,80);}
   if(_aiAcct.account&&_aiAcct.account.points!=null)aiCheckLowBalance(Number(_aiAcct.account.points));if(d.purchases)aiDetectPointsArrival(d);

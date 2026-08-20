@@ -1,6 +1,6 @@
-const BUILD='1012';
-const HOTFIX='v1012-voice-moments-album-companion-stability-1';
-const SHELL_CACHE='north-shell-v1012';
+const BUILD='1013';
+const HOTFIX='v1013-internal-voice-companion-stability-1';
+const SHELL_CACHE='north-shell-v1013';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];

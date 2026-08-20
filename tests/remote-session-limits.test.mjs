@@ -16,10 +16,11 @@ test('v727 remote control does not include later page dwell wrappers',()=>{
   assert.match(app,/async function remoteControlOpenApp\(a,c\)\{const ctl=_remoteCtl/);
 });
 
-test('v727 uses its original direct role planning flow',()=>{
+test('remote flow keeps bounded model calls and adds autonomous page selection',()=>{
   assert.doesNotMatch(app,/function remoteControlTimed\(task,ms,fallback\)/);
   assert.match(app,/function remoteControlModelCall\(messages,opt,timeoutMs\)/);
   assert.match(app,/remote-control-model-timeout/);
+  assert.match(app,/await remoteControlAutonomousPlan\(c,required\)/);
   assert.match(app,/const reaction=await remoteControlRoleReaction\(c,a,r\)/);
   assert.match(app,/await remoteControlDecisionPlan\(c,ctl\.actions\)/);
   assert.match(app,/await remoteControlShowRoleLines\(await remoteControlRoleLines\(c,a,r\)\)/);

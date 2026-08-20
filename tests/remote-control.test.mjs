@@ -65,7 +65,9 @@ test('every action has readable non-blocking subtitles and persistent memory', (
   assert.match(app, /function remoteControlCaptionMs\(t\)\{return Math\.max\(1800,Math\.min\(4200/);
   assert.doesNotMatch(remote, /SpeechSynthesisUtterance|speechSynthesis|remoteControlSpeak/);
   assert.match(app, /function remoteControlCaption\(say\)/);
-  assert.match(app, /replaceChildrenCompat\(cap,b\)/);
+  assert.match(app, /cap\.appendChild\(b\)/);
+  assert.match(app, /while\(cap\.children\.length>3\)cap\.removeChild\(cap\.firstElementChild\)/);
+  assert.match(app, /function remoteControlStageCaption\(a,r\)/);
   assert.match(html, /\.remote-caption-bubble/);
   assert.match(html, /\.remote-caption-wrap\{[^}]*bottom:max\(20px,env\(safe-area-inset-bottom\)\)/);
   assert.match(html, /@keyframes remoteCaptionUp/);

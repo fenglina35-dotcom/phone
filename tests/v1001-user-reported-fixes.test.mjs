@@ -47,6 +47,9 @@ test('daily checks use the phone timezone and proactive heart-rate care first re
   const localCare = functionSource(app, 'companionEmotionCareSchedule');
   assert.match(localCare, /queueNativeInspection\(c\.id,lastUser,'iPhone心率'/);
   assert.match(localCare, /onComplete/);
+  assert.doesNotMatch(localCare, /companionAutomationFresh\(health\.ts/);
+  assert.match(functionSource(app, 'companionHeartCareSignal'), /我没骗你/);
+  assert.ok(edge.indexOf('candidate = automationCandidate(profile, (currentLink?.snapshot || {})') < edge.indexOf('const recentRefresh = await latestAutomationRefreshCommand'), 'fresh facts and explicit unlock events must be consumed before requesting another refresh');
 });
 
 test('absence checks must visibly contact the user and manual unlock uploads immediately', () => {
@@ -155,7 +158,7 @@ test('remote control visibly enters each exact target instead of tapping one unc
   assert.match(focus, /a\.app==='douyin'&&a\.targetType==='dyVideo'/);
   assert.match(focus, /scrollIntoView/);
   const run = functionSource(app, 'remoteControlRun');
-  assert.match(run, /remoteControlScene\(r,'',i,required\.length,a\);await remoteControlFocusViewedTarget\(a\)/);
+  assert.match(run, /remoteControlScene\(r,remoteControlStageCaption\(a,r\),i,required\.length,a\);await remoteControlFocusViewedTarget\(a\)/);
 });
 
 test('completed Screen Time reading closes its banner and never auto-replays a failed model request', () => {

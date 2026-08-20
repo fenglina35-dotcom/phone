@@ -926,7 +926,7 @@ function automationCandidate(profile: Record<string, unknown>, snapshot: Record<
   const checks: Array<[string, boolean]> = [
     ["manualUnlock", flags.manualUnlockAlert === true],
     ["criticalBattery", flags.criticalBattery === true],
-    ["emotionCare", flags.emotionCare === true && Date.now() - lastUser <= 30 * 60_000 && /难过|伤心|委屈|想哭|哭了|崩溃|心慌|害怕|焦虑|不舒服|喘不过气|胸闷|心跳|心率/.test(String((config.lastUser as Record<string, unknown> | undefined)?.text || ""))],
+    ["emotionCare", flags.emotionCare === true && Date.now() - lastUser <= 30 * 60_000 && /难过|伤心|委屈|想哭|哭了|崩溃|心慌|害怕|焦虑|不舒服|喘不过气|胸闷|心跳|心率|我没骗你|我没有骗你|我没撒谎|我说的是真的|你不信我|真没骗|没有瞒你/.test(String((config.lastUser as Record<string, unknown> | undefined)?.text || ""))],
     ["morningSleep", flags.morningSleep === true && inside(parse(windows.sleepStart, 420), parse(windows.sleepEnd, 720))],
     ["eveningScreen", flags.eveningScreen === true && inside(parse(windows.usageStart, 1290), parse(windows.usageEnd, 1439))],
     ["absenceBattery", flags.absenceBattery === true && Date.now() - lastUser >= 3 * 3600_000],
@@ -1235,6 +1235,14 @@ Deno.serve(async (request) => {
       // 都会把到点通知推迟到下一轮 cron，甚至在尚未接管设备时永远无法触发。
       let candidate = automationCandidate(profile, {});
       if (!candidate) {
+        // 手动解锁事件和已经新鲜的电量、位置、健康快照不需要先再排一条
+        // 全设备刷新。先消费服务器已经收到的真实快照，避免“立即告知”被
+        // 固定十五分钟刷新节流推迟，也避免新鲜数据白白多等一轮 cron。
+        const currentLink = (await client.from("phone_companion_links").select("snapshot")
+          .eq("target", profile.target).maybeSingle()).data;
+        candidate = automationCandidate(profile, (currentLink?.snapshot || {}) as Record<string, unknown>);
+      }
+      if (!candidate) {
         // Profile sync can legitimately replace automation_state while the
         // iPhone is processing a command.  The command table is the durable
         // source of truth for refresh throttling, otherwise cron can enqueue a
@@ -1256,8 +1264,6 @@ Deno.serve(async (request) => {
           }).eq("target", profile.target).eq("role_id", profile.role_id);
           continue;
         }
-        const link = (await client.from("phone_companion_links").select("snapshot").eq("target", profile.target).maybeSingle()).data;
-        candidate = automationCandidate(profile, (link?.snapshot || {}) as Record<string, unknown>);
       }
       if (!candidate) {
         await client.from("phone_role_push_profiles").update({ claimed_until: null }).eq("target", profile.target).eq("role_id", profile.role_id);
@@ -1270,7 +1276,7 @@ Deno.serve(async (request) => {
         eveningScreen: "你按每日必查规则看到了今日总时长和所有已授权App记录。按人设自然反应，数字原样使用，不把各App相加成新的总时长。",
         absenceBattery: "用户至少3小时没有回复后，你因为担心而查看了已授权的电量和最近位置。这些只是真实事实；查完必须马上采取一种对方可见的行动：发1到2句消息，或发起来电。禁止保持安静，也不要把最近位置说成持续跟踪。",
         criticalBattery: "你发现已授权iPhone电量为5%或更低。按人设立即提醒充电，不提系统通知或持续监控。",
-        emotionCare: "用户刚才表达难过，你只把最新心率作为关心线索，不得据此证明撒谎、哭泣、疾病或作医疗诊断。",
+        emotionCare: "用户刚才表达难过或当前对话正在谈是否相信对方。你只把最新心率作为关心线索，不得据此证明撒谎、哭泣、疾病或作医疗诊断。",
         manualUnlock: "你收到了用户亲自成功解锁App的真实记录。按人设立即自然反应，不得凭空认定欺骗、背叛或做坏事。",
       };
       const decision = await roleMessage(profile, [], instructions[candidate.kind] || "", candidate.facts);

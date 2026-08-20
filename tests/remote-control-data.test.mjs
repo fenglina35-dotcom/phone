@@ -27,11 +27,17 @@ test('remote viewing opens real apps and stores only viewed facts',()=>{
   assert.match(app,/targetType==='dySearchHistory'[\s\S]*?dyTab='search'/);
 });
 
-test('broad inspection visits every available app while an explicit goal stays focused',()=>{
+test('remote inspection is role-selected, focused by context, and compact across feeds',()=>{
   assert.match(app,/function remoteControlRequiredPlan\(c\)/);
-  assert.match(app,/let required=remoteControlRequiredPlan\(c\);required=remoteControlDedupPlan\(await remoteControlOrderPlan\(c,required\)\)/);
+  assert.match(app,/let required=remoteControlRequiredPlan\(c\);required=remoteControlDedupPlan\(await remoteControlAutonomousPlan\(c,required\)\)/);
+  assert.match(app,/async function remoteControlAutonomousPlan\(c,candidates\)/);
+  assert.match(app,/不要机械全选，不要为了展示功能而乱看/);
+  assert.match(app,/通常选择3到8项/);
   assert.match(app,/direct&&\!remoteControlContextWantsBroad\(direct\)/);
   assert.match(app,/remoteControlContextCandidates\(c,direct\)/);
+  assert.match(app,/function remoteControlCompactViewPlan\(list\)/);
+  assert.match(app,/targetName:'朋友圈动态',targetType:'momentList'/);
+  assert.match(app,/targetName:'微博 \/ X动态',targetType:'xFeed'/);
   assert.match(app,/async function remoteControlOrderPlan\(c,required\)/);
   assert.match(app,/下面列出的软件都必须查看/);
   assert.match(app,/只决定软件顺序，不能漏掉、增加或重复任何app/);
@@ -66,8 +72,19 @@ test('remote subtitles are role-generated and quiet on list pages',()=>{
   assert.match(app,/max:520,complete:true,temp:\.82,aux:false/);
   assert.match(app,/const reaction=await remoteControlRoleReaction\(c,a,r\)/);
   assert.match(app,/await remoteControlShowRoleLines\(await remoteControlRoleLines\(c,a,r\)\)/);
+  assert.match(app,/function remoteControlStageCaption\(a,r\)/);
+  assert.match(app,/remoteControlScene\(r,remoteControlStageCaption\(a,r\)/);
+  assert.match(app,/cap\.appendChild\(b\);while\(cap\.children\.length>3\)/);
+  assert.doesNotMatch(app,/const cap=\$\('#remoteCaption'\);if\(cap\)replaceChildrenCompat\(cap\)/);
   assert.doesNotMatch(app,/remoteControlTimed/);
   assert.doesNotMatch(app,/function remoteControlSayFallback/);
+});
+
+test('remote control never revisits the same view page in one session',()=>{
+  assert.match(app,/visitedPages:\[\]/);
+  assert.match(app,/function remoteControlVisitKey\(a\)/);
+  assert.match(app,/function remoteControlMarkVisited\(ctl,a\)/);
+  assert.match(app,/if\(!remoteControlMarkVisited\(ctl,a\)\)continue/);
 });
 
 test('the role can independently act only on allowlisted visible data',()=>{

@@ -156,7 +156,7 @@ test('good morning triggers the daily sleep check immediately with authorized li
   assert.match(context.pick.note, /本次必查不包含心率、电量或位置/);
 });
 
-test('emotion care never treats heart rate as proof of lying or crying', () => {
+test('emotion care always requests a fresh heart-rate read and never treats it as proof', () => {
   const now = new Date(2026, 7, 6, 18, 0, 0).getTime();
   const context = candidateContext([{ role: 'user', type: 'text', content: '我有点难过，想哭', time: now - 25 * 60000, id: 'sad-1' }]);
   const st = baseState(now);
@@ -167,7 +167,16 @@ test('emotion care never treats heart rate as proof of lying or crying', () => {
   assert.match(context.pick.note, /心率不能证明ta撒谎、哭泣/);
   assert.match(app, /心率升高或降低不能证明撒谎、哭泣、背叛或任何具体情绪/);
   assert.match(functionSource('sendText'), /companionEmotionCareSchedule\(c,t\)/);
-  assert.match(functionSource('companionEmotionCareSchedule'), /直接接住ta这条消息/);
+  const care = functionSource('companionEmotionCareSchedule');
+  const signal = functionSource('companionHeartCareSignal');
+  assert.match(care, /queueNativeInspection\(c\.id,lastUser,'iPhone心率'/);
+  assert.doesNotMatch(care, /companionAutomationFresh\(health\.ts/);
+  assert.match(care, /绝不能证明ta撒谎、哭泣/);
+  assert.match(signal, /我没骗你/);
+  assert.match(signal, /你上一轮已经明确怀疑ta可能在欺骗或隐瞒/);
+  assert.match(signal, /别\|不要\|不许\|不用/);
+  assert.match(app, /难过或怀疑时尝试查看心率/);
+  assert.match(app, /每次重新读取；只作关心线索/);
 });
 
 test('absence battery check is rate limited and cannot invent a shutdown', () => {
