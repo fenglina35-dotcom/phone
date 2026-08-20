@@ -31,7 +31,7 @@ test('private app loads bundled phone resources instead of a remote shell', () =
   assert.match(webView, /webView\.window\?\.safeAreaInsets/);
   assert.match(webView, /north-native-app/);
   assert.match(webView, /root\.classList\.add\('north-native-app'\)/);
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.132 \(132\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.133 \(133\)'/);
   assert.match(webView, /SmallPhoneRolePushTapped/);
   assert.match(webView, /window\.__smallPhoneOpenRolePush/);
   assert.doesNotMatch(webView, /https?:\/\//);
@@ -126,8 +126,8 @@ test('real Mac project keeps all Screen Time targets and becomes 小手机', () 
   }
   assert.match(project, /INFOPLIST_KEY_CFBundleDisplayName = "小手机";/);
   assert.match(project, /PRODUCT_BUNDLE_IDENTIFIER = com\.qianyi\.PhoneCompanionTest;/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 132;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.132;/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 133;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.133;/);
 
   const scheme = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/xcshareddata/xcschemes/PhoneCompanionTest.xcscheme'

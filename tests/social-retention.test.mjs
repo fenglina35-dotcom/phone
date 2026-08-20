@@ -22,8 +22,9 @@ test('social posts remain retained and keep their explicit delete controls',()=>
 
 test('moment likes and comments are inline, reversible, and preserve the current scroll position',()=>{
   assert.match(source,/function momentRenderKeepScroll\(/);
-  assert.match(source,/const restore=\(\)=>\{const after=momentScrollElement\(\);if\(after\)after\.scrollTop=top/);
-  assert.match(source,/requestAnimationFrame\(\(\)=>\{restore\(\);requestAnimationFrame\(restore\);\}\)/);
+  assert.match(source,/function momentSocialRefresh\(pid\)/);
+  assert.match(source,/if\(pid&&momentSocialRefresh\(pid\)\)return/);
+  assert.match(source,/data-moment-social=/);
   assert.match(source,/function toggleMomentLike\(pid\)/);
   assert.match(source,/splice\(i,1\)/);
   assert.match(source,/push\(S\.me\.name\)/);

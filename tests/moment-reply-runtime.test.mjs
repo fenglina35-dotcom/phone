@@ -30,7 +30,7 @@ function runtime(result, options = {}) {
   const role = { id: 'role-1', name: '先生', remark: '先生', model: 'aux' };
   const target = { id: 'comment-1', cid: 'me', name: 'North', text: '你真的会回我吗？', time: 1 };
   const post = { id: 'moment-1', authorId: 'role-1', text: '今天有点想你。', comments: [target] };
-  let requests = 0, saves = 0, cancellations = 0;
+  let requests = 0, saves = 0, cancellations = 0, renders = [];
   const context = vm.createContext({
     Set, Date, String, Object, Array, Promise,
     S: { me: { name: 'North' }, moments: [post] },
@@ -57,7 +57,7 @@ function runtime(result, options = {}) {
     honestMoodText: (_contact, value) => value,
     moodInnerMonologue: (_contact, value) => value,
     save: () => { saves += 1; },
-    momentRenderKeepScroll: () => {},
+    momentRenderKeepScroll: pid => { renders.push(pid); },
     uid: () => 'reply-1',
     cur: () => ({ p: 'roleMomentDetail' }),
     wxTab: 'moments',
@@ -65,7 +65,7 @@ function runtime(result, options = {}) {
   vm.runInContext(functionSource('stripHiddenThoughtTags'), context);
   vm.runInContext(functionSource('momentReplySpecific'), context);
   vm.runInContext(functionSource('reactToComment'), context);
-  return { context, post, target, role, stats: () => ({ requests, saves, cancellations }) };
+  return { context, post, target, role, stats: () => ({ requests, saves, cancellations, renders }) };
 }
 
 test('a real Moment model result is appended to the exact comment thread once', async () => {
@@ -90,6 +90,7 @@ test('a real Moment model result is appended to the exact comment thread once', 
   assert.match(run.context.lastRequest[0].content, /当前回复场景（最高优先级）/);
   assert.match(run.context.lastRequest[0].content, /微信朋友圈评论区回复，不是在微信私聊窗口/);
   assert.match(run.context.lastRequest[0].content, /必须第一行严格写 \[内心\|简短真实想法\]/);
+  assert.deepEqual(run.stats().renders, ['moment-1'], 'a successful reply updates only its Moment social slot once');
 });
 
 test('malformed or same-line inner thoughts stay hidden in Moments and ordinary WeChat', () => {
@@ -109,6 +110,7 @@ test('a failed Moment model call records failure and never fabricates a role com
   assert.equal(run.post.comments.length, 1);
   assert.equal(run.target._roleReplyStatus, 'failed');
   assert.match(run.target._roleReplyError, /upstream timeout/);
+  assert.deepEqual(run.stats().renders, ['moment-1'], 'a failed reply updates only its own retry state once');
 });
 
 test('private App Moment reply does not wait for the independent-cloud cancel RPC', async () => {

@@ -902,22 +902,17 @@ final class CompanionSyncService: ObservableObject {
         if wantsUsage {
             await refreshDataAccessState()
         }
+        let locationDeadline: Date?
         if wantsLocation {
             locationManager.resumeTrackingIfAuthorized()
             locationManager.refreshCurrentLocation()
-            // A first Core Location fix commonly arrives after the old fixed
-            // 1.2-second delay (especially immediately after authorization).
-            // Wait for a usable, recent reading instead of declaring failure
-            // while the native location request is still in flight.
-            let deadline = Date().addingTimeInterval(8)
-            while Date() < deadline {
-                if let location = locationManager.currentLocation,
-                   location.horizontalAccuracy >= 0,
-                   abs(location.timestamp.timeIntervalSinceNow) <= 120 {
-                    break
-                }
-                try? await Task.sleep(nanoseconds: 250_000_000)
-            }
+            // Core Location may need longer than eight seconds for the first
+            // foreground fix even though the same request succeeds shortly
+            // afterwards in the background. Start it now, then let usage and
+            // health reads run concurrently before waiting out the remainder.
+            locationDeadline = Date().addingTimeInterval(18)
+        } else {
+            locationDeadline = nil
         }
         if wantsHealth, !wellnessService.healthSyncEnabled {
             // An explicit owner request for all/health data must cross the
@@ -961,7 +956,18 @@ final class CompanionSyncService: ObservableObject {
             }
         }
 
-        if wantsLocation {
+        if let deadline = locationDeadline {
+            while Date() < deadline {
+                if let location = locationManager.currentLocation,
+                   location.horizontalAccuracy >= 0,
+                   abs(location.timestamp.timeIntervalSinceNow) <= 120 {
+                    break
+                }
+                if locationManager.lastError != nil {
+                    break
+                }
+                try? await Task.sleep(nanoseconds: 250_000_000)
+            }
             let location = locationManager.currentLocation
             let usable = location.map {
                 $0.horizontalAccuracy >= 0
@@ -969,7 +975,7 @@ final class CompanionSyncService: ObservableObject {
             } ?? false
             if !usable {
                 readErrors["location"] = locationManager.lastError
-                    ?? "本次在 8 秒内没有取得可用定位"
+                    ?? "本次在 18 秒内没有取得可用定位"
             }
         }
         if wantsHealth {
@@ -1077,8 +1083,8 @@ final class CompanionSyncService: ObservableObject {
         )
         if action == "location" {
             try? await Task.sleep(nanoseconds: 1_200_000_000)
+            await wellnessService.refresh()
         }
-        await wellnessService.refresh()
         var snapshot = await makeSnapshot(
             locationManager: locationManager,
             report: latestDirectUsageSnapshot,

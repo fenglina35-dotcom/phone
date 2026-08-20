@@ -10,8 +10,10 @@ const root = dirname(here);
 const app = readFileSync(join(root, 'app.js'), 'utf8');
 const phone = readFileSync(join(root, '小手机.html'), 'utf8');
 function functionSource(name) {
-  const start = app.indexOf(`function ${name}(`);
-  assert.notEqual(start, -1, `missing ${name}`);
+  const functionStart = app.indexOf(`function ${name}(`);
+  assert.notEqual(functionStart, -1, `missing ${name}`);
+  const start = app.slice(Math.max(0, functionStart - 6), functionStart) === 'async '
+    ? functionStart - 6 : functionStart;
   let depth = 0;
   let opened = false;
   for (let i = start; i < app.length; i += 1) {
@@ -126,7 +128,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v1011 · 模型线路、朋友圈与后台消息修复'/);
+  assert.match(app, /const APP_VER='v1012 · 语音、朋友圈、相册与伴生稳定修复'/);
 });
 
 test('manual sync reads locally in the bundled app and keeps cloud fallback', () => {
@@ -144,12 +146,42 @@ test('manual sync reads locally in the bundled app and keeps cloud fallback', ()
 test('bundled private app reads and executes through the native device bridge', () => {
   const nativeRead = functionSource('companionNativeSnapshot');
   const send = functionSource('companionSendCommand');
+  const nativeRun = functionSource('companionNativeCommandRun');
   assert.match(nativeRead, /device\.snapshot/);
-  assert.match(send, /device\.command/);
-  assert.match(send, /stage!==\x27executed\x27/);
+  assert.match(nativeRun, /device\.command/);
+  assert.match(nativeRun, /stage!==\x27executed\x27/);
+  assert.match(send, /_companionNativeCommandLane/);
   assert.match(send, /transport=\x27local-native\x27/);
   assert.match(functionSource('companionRolePullLatest'), /companionRolePullNativeSnapshot/);
   assert.match(functionSource('companionRolePullLatest'), /companionRoleSnapshotFresh/);
+});
+
+test('native companion controls serialize and retry only transient failures', async () => {
+  const context = vm.createContext({ setTimeout, clearTimeout });
+  vm.runInContext(`
+    let calls=0;
+    const window={SmallPhoneNative:{request:async(_action,command)=>{calls++;if(command.fail==='auth')throw new Error('屏幕使用时间授权已失效');if(calls===1)throw new Error('本地屏蔽配置写入失败，未发送成功回执');return {ok:true,stage:'executed'};}}};
+    const sleep=()=>Promise.resolve();
+    ${functionSource('companionNativeCommandRetryable')}
+    ${functionSource('companionNativeCommandRun')}
+    this.run=companionNativeCommandRun;
+    this.calls=()=>calls;
+  `, context);
+  const receipt = await context.run({ action: 'lock' });
+  assert.equal(receipt.retries, 1);
+  assert.equal(context.calls(), 2);
+  await assert.rejects(() => context.run({ action: 'lock', fail: 'auth' }));
+  assert.equal(context.calls(), 3, 'non-transient authorization errors must not retry');
+});
+
+test('local control receipt does not wait for unrelated wellness refresh', () => {
+  const sync = readFileSync(join(root, 'native', 'private-small-phone', 'XcodeProject', 'PhoneCompanionTest', 'CompanionSyncView.swift'), 'utf8');
+  const start = sync.indexOf('func performLocalCommand(');
+  const end = sync.indexOf('private func updateDataAccessMode', start);
+  const block = sync.slice(start, end);
+  assert.match(block, /if action == "location"[\s\S]*await wellnessService\.refresh\(\)/);
+  assert.doesNotMatch(block, /}\s*await wellnessService\.refresh\(\)\s*var snapshot/);
+  assert.match(block, /"stage": "executed"/);
 });
 
 test('one-click role read names every real field and each actual app', () => {
@@ -721,7 +753,7 @@ test('role external lock uses the stable id without requiring an internal grant'
     function companionReady(st){return !!st.linked;}
     function companionApplyAction(){return {ok:true};}
     function companionLog(st,action,detail,status,actor){const row={action,detail,status,actor};st.commands.push(row);return row;}
-    function companionSendCommand(st,action,app,opt){sent.push({action,id:app.id,scope:opt.scope});}
+    function companionSendCommand(st,action,app,opt){sent.push({action,id:app.id,scope:opt.scope,by:opt.by});}
     ${functionSource('companionDispatchRoleExternal')}
     this.run=companionDispatchRoleExternal;
     this.sent=sent;
@@ -729,7 +761,7 @@ test('role external lock uses the stable id without requiring an internal grant'
   `, context);
   const result = context.run('lock', { id: 'ios.stable.douyin', name: '抖音' }, { actor: '角色' });
   assert.equal(result.ok, true);
-  assert.deepEqual(Array.from(context.sent, x => `${x.action}:${x.id}:${x.scope}`), ['lock:ios.stable.douyin:external']);
+  assert.deepEqual(Array.from(context.sent, x => `${x.action}:${x.id}:${x.scope}:${x.by}`), ['lock:ios.stable.douyin:external:role']);
   context.state.permissions.appControl = false;
   assert.equal(context.run('unlock', { id: 'ios.stable.douyin', name: '抖音' }, {}).ok, false);
   assert.equal(context.sent.length, 1);

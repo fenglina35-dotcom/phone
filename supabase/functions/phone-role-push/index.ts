@@ -731,7 +731,23 @@ function snapshotLatestTime(snapshot: Record<string, unknown>) {
   );
 }
 
-function snapshotAutomationFacts(snapshot: Record<string, unknown>, kind: string) {
+function snapshotLocationPlace(config: Record<string, unknown>, location: Record<string, unknown>) {
+  const fallback = String(location.place || location.address || "无可用新鲜位置").trim().slice(0, 120);
+  const rawHome = config.homeLocation;
+  if (!rawHome || typeof rawHome !== "object") return fallback;
+  const home = rawHome as Record<string, unknown>;
+  const lat = Number(location.lat), lng = Number(location.lng), homeLat = Number(home.lat), homeLng = Number(home.lng);
+  if (![lat, lng, homeLat, homeLng].every(Number.isFinite)) return fallback;
+  const rad = Math.PI / 180, lat1 = homeLat * rad, lat2 = lat * rad;
+  const dLat = (lat - homeLat) * rad, dLng = (lng - homeLng) * rad;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  const distance = 6371000 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(Math.max(0, 1 - h)));
+  const radius = Math.max(100, Math.min(1000, Number(home.radius) || 250));
+  const accuracy = Math.max(0, Math.min(2000, Number(location.accuracy) || 0));
+  return distance - accuracy <= radius ? "家" : fallback;
+}
+
+function snapshotAutomationFacts(snapshot: Record<string, unknown>, kind: string, config: Record<string, unknown>) {
   const health = (snapshot.health && typeof snapshot.health === "object" ? snapshot.health : {}) as Record<string, unknown>;
   const telemetry = (snapshot.deviceTelemetry && typeof snapshot.deviceTelemetry === "object" ? snapshot.deviceTelemetry : {}) as Record<string, unknown>;
   const battery = snapshot.battery && typeof snapshot.battery === "object"
@@ -758,7 +774,7 @@ function snapshotAutomationFacts(snapshot: Record<string, unknown>, kind: string
   if (kind === "absenceBattery" || kind === "criticalBattery") {
     if (!Number.isFinite(Number(battery.level))) return "";
     const level = Number(battery.level) <= 1 ? Math.round(Number(battery.level) * 100) : Math.round(Number(battery.level));
-    return `iPhone电量${level}%，充电状态${String(battery.state || "未知")}，更新${String(battery.generatedAt || battery.ts || "")}；最近授权位置${String(location.place || "无可用新鲜位置")}，位置时间${String(location.ts || "")}`;
+    return `iPhone电量${level}%，充电状态${String(battery.state || "未知")}，更新${String(battery.generatedAt || battery.ts || "")}；最近授权位置${snapshotLocationPlace(config, location)}，位置时间${String(location.ts || "")}`;
   }
   if (kind === "emotionCare") {
     if (!(Number(health.heartRateBpm) > 0)) return "";
@@ -847,7 +863,7 @@ function snapshotAmbientFacts(profile: Record<string, unknown>, snapshot: Record
   const recent = String(profile.recent_context || "").split(/\r?\n/).slice(-4).join("\n");
   if (permissions.location === true && /出门|到了|到家|在路上|回家|上班|下班|通勤/.test(recent) &&
       fresh(location.ts || location.generatedAt, 30 * 60_000) && String(location.place || "").trim()) {
-    facts.push(`最近位置${String(location.place).trim().slice(0, 120)}`);
+    facts.push(`最近位置${snapshotLocationPlace(config, location)}`);
   }
   return facts.slice(0, 3).join("；");
 }
@@ -924,7 +940,7 @@ function automationCandidate(profile: Record<string, unknown>, snapshot: Record<
     if (kind === "emotionCare" && !freshWithin(health.generatedAt, 20 * 60_000)) continue;
     if (kind === "morningSleep" && !freshWithin(health.generatedAt, 20 * 60_000)) continue;
     if (kind === "eveningScreen" && (!freshWithin(screen.generatedAt, 20 * 60_000) || screen.reportFresh !== true)) continue;
-    const facts = snapshotAutomationFacts(snapshot, kind);
+    const facts = snapshotAutomationFacts(snapshot, kind, config);
     if (!facts) continue;
     let key = `${kind}:${clock.day}`;
     if (kind === "manualUnlock") {

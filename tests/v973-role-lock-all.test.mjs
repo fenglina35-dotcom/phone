@@ -127,7 +127,8 @@ test('all-app companion commands dispatch every selected real iPhone app and eve
     { action: 'unlock', id: 'wechat', scope: 'internal' },
   ]);
   assert.match(functionSource('companionDispatchRoleExternal'), /companionSendCommand\(st,action,app/);
-  assert.match(functionSource('companionSendCommand'), /SmallPhoneNative\.request\('device\.command',command\)/);
+  assert.match(functionSource('companionSendCommand'), /companionNativeCommandRun\(command\)/);
+  assert.match(functionSource('companionNativeCommandRun'), /SmallPhoneNative\.request\('device\.command',command\)/);
 });
 
 test('an incorrect internal-only model tag cannot downgrade a spoken all-lock or all-unlock', () => {
