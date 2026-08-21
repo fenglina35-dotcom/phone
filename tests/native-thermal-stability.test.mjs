@@ -13,6 +13,14 @@ const bridge=fs.readFileSync(path.join(root,'native/private-small-phone/XcodePro
 const privateRoot=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/SmallPhonePrivateRootView.swift'),'utf8');
 const screenShare=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/ScreenShareCoordinator.swift'),'utf8');
 const appDelegate=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneCompanionTestApp.swift'),'utf8');
+const location=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/LocationManager.swift'),'utf8');
+
+function swiftFunction(source,name,nextName){
+  const start=source.indexOf(`func ${name}(`);
+  assert.notEqual(start,-1,`${name} is present`);
+  const end=nextName?source.indexOf(`func ${nextName}(`,start+1):-1;
+  return source.slice(start,end>=0?end:source.length);
+}
 
 test('private WKWebView does not create a backdrop compositor layer for every card and bubble',()=>{
   assert.match(css,/north-native-app\.north-glass-ui \.phone \*[\s\S]*?backdrop-filter:none!important/);
@@ -200,4 +208,26 @@ test('foreground snapshot synchronization is serialized and cooled down',()=>{
   assert.match(appDelegate,/func applicationDidBecomeActive[\s\S]{0,300}?synchronizeForegroundIfNeeded\(\)/);
   assert.match(appDelegate,/@MainActor\s+private func synchronizeForegroundIfNeeded\(\) async/);
   assert.match(appDelegate,/defer \{ foregroundSyncInFlight = false \}/);
+});
+
+test('location reads cannot leave best-accuracy GPS running after one role check',()=>{
+  const startTracking=swiftFunction(location,'startTracking','refreshCurrentLocation');
+  const refresh=swiftFunction(location,'refreshCurrentLocation','stopTracking');
+  const addPoint=location.slice(
+    location.indexOf('private func addFootprintPoint('),
+    location.indexOf('private func resolvePlaceName(')
+  );
+
+  assert.match(location,/pausesLocationUpdatesAutomatically = true/);
+  assert.match(startTracking,/manager\.stopUpdatingLocation\(\)/);
+  assert.match(startTracking,/startMonitoringSignificantLocationChanges\(\)/);
+  assert.match(startTracking,/requestOneShotLocation\(\)/);
+  assert.doesNotMatch(startTracking,/startUpdatingLocation\(\)/);
+  assert.match(refresh,/manager\.stopUpdatingLocation\(\)/);
+  assert.match(refresh,/requestOneShotLocation\(\)/);
+  assert.doesNotMatch(refresh,/startUpdatingLocation\(\)/);
+  assert.match(location,/private func requestOneShotLocation\(\)[\s\S]*?guard !oneShotLocationPending else \{ return \}[\s\S]*?manager\.requestLocation\(\)/);
+  assert.doesNotMatch(addPoint,/loadTodayPoints\(\)/);
+  assert.match(location,/guard todayPoints\[index\]\.placeName != placeName else \{ return \}/);
+  assert.match(location,/if compacted != savedPoints \{\s*saveTodayPoints\(\)\s*\}/);
 });

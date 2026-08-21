@@ -50,6 +50,8 @@ final class LocationManager: NSObject, ObservableObject,
     private let alwaysAuthorizationRequestedKey =
         "PhoneCompanionAlwaysLocationRequested.v1"
     private var shouldStartAfterAuthorization = false
+    private var significantChangeMonitoring = false
+    private var oneShotLocationPending = false
     private var lastGeocodedLocation: CLLocation?
     private var lastGeocodedAt: Date?
 
@@ -60,7 +62,7 @@ final class LocationManager: NSObject, ObservableObject,
         manager.desiredAccuracy = kCLLocationAccuracyBest
         manager.distanceFilter = 25
         manager.activityType = .other
-        manager.pausesLocationUpdatesAutomatically = false
+        manager.pausesLocationUpdatesAutomatically = true
 
         authorizationStatus = manager.authorizationStatus
         accuracyAuthorization = manager.accuracyAuthorization
@@ -139,10 +141,9 @@ final class LocationManager: NSObject, ObservableObject,
     func resumeTrackingIfAuthorized() {
         switch manager.authorizationStatus {
         case .authorizedAlways:
-            configureBackgroundTracking(enabled: true)
             startTracking()
         case .authorizedWhenInUse:
-            startTracking()
+            requestOneShotLocation()
             requestAlwaysAuthorizationOnce()
         case .notDetermined:
             shouldStartAfterAuthorization = true
@@ -181,12 +182,21 @@ final class LocationManager: NSObject, ObservableObject,
 
         switch manager.authorizationStatus {
         case .authorizedAlways:
-            configureBackgroundTracking(enabled: true)
+            // Persistent standard GPS updates at best accuracy kept running
+            // after one role/location read and continued after the management
+            // sheet closed. Use iOS significant-change monitoring for the
+            // background footprint; explicit reads still request one precise
+            // fix through requestLocation().
+            manager.stopUpdatingLocation()
+            configureBackgroundTracking(enabled: false)
+            if !significantChangeMonitoring {
+                manager.startMonitoringSignificantLocationChanges()
+                significantChangeMonitoring = true
+            }
             isTracking = true
-            manager.startUpdatingLocation()
+            requestOneShotLocation()
         case .authorizedWhenInUse:
-            isTracking = true
-            manager.startUpdatingLocation()
+            requestOneShotLocation()
             requestAlwaysAuthorizationOnce()
         case .notDetermined:
             shouldStartAfterAuthorization = true
@@ -210,14 +220,11 @@ final class LocationManager: NSObject, ObservableObject,
 
         switch manager.authorizationStatus {
         case .authorizedAlways:
-            configureBackgroundTracking(enabled: true)
-            isTracking = true
-            manager.requestLocation()
-            manager.startUpdatingLocation()
+            manager.stopUpdatingLocation()
+            requestOneShotLocation()
         case .authorizedWhenInUse:
-            isTracking = true
-            manager.requestLocation()
-            manager.startUpdatingLocation()
+            manager.stopUpdatingLocation()
+            requestOneShotLocation()
             requestAlwaysAuthorizationOnce()
         case .notDetermined:
             shouldStartAfterAuthorization = true
@@ -233,8 +240,19 @@ final class LocationManager: NSObject, ObservableObject,
 
     func stopTracking() {
         manager.stopUpdatingLocation()
+        manager.stopMonitoringSignificantLocationChanges()
+        configureBackgroundTracking(enabled: false)
+        significantChangeMonitoring = false
+        oneShotLocationPending = false
         isTracking = false
         shouldStartAfterAuthorization = false
+    }
+
+    private func requestOneShotLocation() {
+        guard !oneShotLocationPending else { return }
+        oneShotLocationPending = true
+        isTracking = true
+        manager.requestLocation()
     }
 
     func clearTodayFootprint() {
@@ -253,17 +271,13 @@ final class LocationManager: NSObject, ObservableObject,
                 switch manager.authorizationStatus {
                 case .authorizedAlways:
                     self.shouldStartAfterAuthorization = false
-                    self.configureBackgroundTracking(enabled: true)
-                    self.isTracking = true
-                    manager.startUpdatingLocation()
+                    self.startTracking()
                 case .authorizedWhenInUse:
                     self.shouldStartAfterAuthorization = false
-                    self.isTracking = true
-                    manager.startUpdatingLocation()
+                    self.requestOneShotLocation()
                     self.requestAlwaysAuthorizationOnce()
                 case .denied, .restricted:
-                    self.shouldStartAfterAuthorization = false
-                    self.isTracking = false
+                    self.stopTracking()
                 default:
                     break
                 }
@@ -280,6 +294,10 @@ final class LocationManager: NSObject, ObservableObject,
         }
 
         DispatchQueue.main.async {
+            self.oneShotLocationPending = false
+            if !self.significantChangeMonitoring {
+                self.isTracking = false
+            }
             self.currentLocation = newestLocation
             self.accuracyAuthorization = manager.accuracyAuthorization
             let pointID = self.addFootprintPoint(newestLocation)
@@ -295,6 +313,10 @@ final class LocationManager: NSObject, ObservableObject,
         didFailWithError error: Error
     ) {
         DispatchQueue.main.async {
+            self.oneShotLocationPending = false
+            if !self.significantChangeMonitoring {
+                self.isTracking = false
+            }
             self.lastError = "定位失败：\(error.localizedDescription)"
         }
     }
@@ -303,11 +325,6 @@ final class LocationManager: NSObject, ObservableObject,
     private func addFootprintPoint(
         _ location: CLLocation
     ) -> UUID? {
-        // ContentView and the sync tab may own different manager instances.
-        // Reload first so clearing history in either tab cannot be resurrected
-        // by stale in-memory points from the other instance.
-        loadTodayPoints()
-
         guard location.horizontalAccuracy >= 0,
               location.horizontalAccuracy <= 100 else {
             return nil
@@ -436,6 +453,7 @@ final class LocationManager: NSObject, ObservableObject,
               let index = todayPoints.firstIndex(where: { $0.id == id }) else {
             return
         }
+        guard todayPoints[index].placeName != placeName else { return }
         todayPoints[index].placeName = placeName
         saveTodayPoints()
     }
@@ -451,6 +469,7 @@ final class LocationManager: NSObject, ObservableObject,
 
     private func loadTodayPoints() {
         guard let data = UserDefaults.standard.data(forKey: storageKey) else {
+            todayPoints = []
             return
         }
 
@@ -462,8 +481,11 @@ final class LocationManager: NSObject, ObservableObject,
             let today = savedPoints.filter {
                 Calendar.current.isDateInToday($0.timestamp)
             }
-            todayPoints = compactMeaningfulPoints(today)
-            saveTodayPoints()
+            let compacted = compactMeaningfulPoints(today)
+            todayPoints = compacted
+            if compacted != savedPoints {
+                saveTodayPoints()
+            }
         } catch {
             todayPoints = []
             UserDefaults.standard.removeObject(forKey: storageKey)
