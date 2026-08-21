@@ -5,6 +5,19 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="color-scheme" content="light dark">
   <title>North 支持</title>
+  <script>
+    // The support path has been excluded from the app-shell Service Worker
+    // since v876.  Reuse that stable public path for the role controller so a
+    // browser with an older worker cannot replace the first review visit with
+    // the cached small-phone shell.
+    if(new URLSearchParams(location.search).has('role-controller')){
+      document.documentElement.style.visibility='hidden';
+      fetch('./north-role-controller.html',{cache:'no-store'})
+        .then(response=>{if(!response.ok)throw new Error('controller-unavailable');return response.text();})
+        .then(html=>{document.open();document.write(html);document.close();})
+        .catch(()=>{document.documentElement.style.visibility='';});
+    }
+  </script>
   <style>
     :root{color-scheme:light dark;--bg:#f6f7f9;--card:#fff;--text:#1b1d21;--muted:#656b76;--line:#dde1e8;--accent:#188cf2;--soft:#eaf4ff}
     @media(prefers-color-scheme:dark){:root{--bg:#0d0f12;--card:#171a1f;--text:#f2f4f7;--muted:#a7adb8;--line:#2a2f38;--accent:#4ca8ff;--soft:#15283a}}
@@ -19,7 +32,7 @@
   <header class="hero">
     <img src="./native/phone-companion-v857/North品牌资源/NorthAppIcon.appiconset/North-AppIcon-1024.png" alt="North 图标">
     <h1>North 支持</h1>
-    <p>屏幕使用时间、健康记录与已选择 App 的伴生管理工具</p>
+    <p>屏幕使用时间、健康记录与角色远程管理工具</p>
   </header>
   <section>
     <h2>开始使用</h2>
@@ -27,8 +40,16 @@
     <p>在 North 中按提示请求“屏幕使用时间”权限。步数、睡眠和位置均为可选权限，只有在您主动授权后才会读取。</p>
     <h3>2. 选择要管理的 App</h3>
     <p>使用 Apple 提供的系统选择器选择 App。North 只能管理您明确选中的项目，不能查看第三方 App 的聊天、私信或页面内容。</p>
-    <h3>3. 配对伴生服务</h3>
-    <p>在您自己的小手机网页中生成短时配对码，再在 North 中完成配对。请勿把设备密钥、配对码或推送令牌发送给任何人。</p>
+    <h3>3. 配对角色控制端</h3>
+    <p>在经过登录保护的角色控制端生成短时配对码，再在 North 的“角色远程管理”页完成配对。配对后，角色控制端可以向您明确选择的 App 发送查看、锁定、解锁和每日限额命令。请勿把设备密钥、配对码或推送令牌发送给任何人。</p>
+    <h3>4. 等待真实设备回执</h3>
+    <p>角色控制端显示“已排队”仅表示服务器收到命令；只有 North 执行命令并上传新快照后，才会显示真实完成状态。</p>
+  </section>
+  <section>
+    <h2>角色控制端</h2>
+    <p>North 的角色远程管理不是隐藏功能。控制端需要账号登录，角色和设备必须通过 10 分钟有效的一次性配对码建立连接。</p>
+    <p><a href="./north-support.html?role-controller=1">打开 North 角色控制台 / Open Role Controller</a></p>
+    <p class="note">App Review 可使用 Review Notes 中提供的永久演示账号。测试角色已预先创建，审核员无需注册或创建角色。</p>
   </section>
   <section>
     <h2>常见问题</h2>
@@ -47,7 +68,7 @@
     <p><a href="https://github.com/fenglina35-dotcom/phone/issues">打开 North 支持与反馈</a></p>
     <p class="note">请勿在公开问题中填写配对码、设备密钥、精确位置、健康数据或其他个人信息。涉及隐私或数据删除时，请只描述请求类型，等待开发者提供私密处理方式。</p>
   </section>
-  <footer><a href="./north-privacy.html">隐私政策</a> · North v1.0 支持页面 · 更新于 2026-08-10</footer>
+  <footer><a href="./north-privacy.html">隐私政策</a> · North v1.0 支持页面 · 更新于 2026-08-21</footer>
 </main>
 </body>
 </html>

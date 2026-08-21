@@ -1,0 +1,1002 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		E73280B13022994F006DC874 /* PhoneCompanionReport.appex in Embed ExtensionKit Extensions */ = {isa = PBXBuildFile; fileRef = E73280A53022994F006DC874 /* PhoneCompanionReport.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		E73280C03022B538006DC874 /* DeviceActivity.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E73280BF3022B538006DC874 /* DeviceActivity.framework */; };
+		E73280C83022B538006DC874 /* PhoneCompanionMonitor.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E73280BD3022B538006DC874 /* PhoneCompanionMonitor.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		E73280D630239BEE006DC874 /* ManagedSettings.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E73280D530239BEE006DC874 /* ManagedSettings.framework */; };
+		E73280D830239BEE006DC874 /* ManagedSettingsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E73280D730239BEE006DC874 /* ManagedSettingsUI.framework */; };
+		E73280E030239BEF006DC874 /* PhoneCompanionShield.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E73280D430239BEE006DC874 /* PhoneCompanionShield.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		E73280F43024F9F5006DC874 /* RoleNotificationService.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E73280ED3024F9F5006DC874 /* RoleNotificationService.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		E73280AF3022994F006DC874 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E74615BC3022636200B3739D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E73280A43022994F006DC874;
+			remoteInfo = PhoneCompanionReport;
+		};
+		E73280C63022B538006DC874 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E74615BC3022636200B3739D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E73280BC3022B538006DC874;
+			remoteInfo = PhoneCompanionMonitor;
+		};
+		E73280DE30239BEF006DC874 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E74615BC3022636200B3739D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E73280D330239BEE006DC874;
+			remoteInfo = PhoneCompanionShield;
+		};
+		E73280F23024F9F5006DC874 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E74615BC3022636200B3739D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E73280EC3024F9F5006DC874;
+			remoteInfo = RoleNotificationService;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		E73280B23022994F006DC874 /* Embed ExtensionKit Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(EXTENSIONS_FOLDER_PATH)";
+			dstSubfolderSpec = 16;
+			files = (
+				E73280B13022994F006DC874 /* PhoneCompanionReport.appex in Embed ExtensionKit Extensions */,
+			);
+			name = "Embed ExtensionKit Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E73280CD3022B538006DC874 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				E73280C83022B538006DC874 /* PhoneCompanionMonitor.appex in Embed Foundation Extensions */,
+				E73280F43024F9F5006DC874 /* RoleNotificationService.appex in Embed Foundation Extensions */,
+				E73280E030239BEF006DC874 /* PhoneCompanionShield.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		E73280A53022994F006DC874 /* PhoneCompanionReport.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = PhoneCompanionReport.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		E73280BD3022B538006DC874 /* PhoneCompanionMonitor.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PhoneCompanionMonitor.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		E73280BF3022B538006DC874 /* DeviceActivity.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceActivity.framework; path = System/Library/Frameworks/DeviceActivity.framework; sourceTree = SDKROOT; };
+		E73280D430239BEE006DC874 /* PhoneCompanionShield.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = PhoneCompanionShield.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		E73280D530239BEE006DC874 /* ManagedSettings.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettings.framework; path = System/Library/Frameworks/ManagedSettings.framework; sourceTree = SDKROOT; };
+		E73280D730239BEE006DC874 /* ManagedSettingsUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ManagedSettingsUI.framework; path = System/Library/Frameworks/ManagedSettingsUI.framework; sourceTree = SDKROOT; };
+		E73280ED3024F9F5006DC874 /* RoleNotificationService.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = RoleNotificationService.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		E74615C43022636300B3739D /* PhoneCompanionTest.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PhoneCompanionTest.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		E73280B53022994F006DC874 /* Exceptions for "PhoneCompanionReport" folder in "PhoneCompanionReport" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = E73280A43022994F006DC874 /* PhoneCompanionReport */;
+		};
+		E73280C93022B538006DC874 /* Exceptions for "PhoneCompanionMonitor" folder in "PhoneCompanionMonitor" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = E73280BC3022B538006DC874 /* PhoneCompanionMonitor */;
+		};
+		E73280E130239BEF006DC874 /* Exceptions for "PhoneCompanionShield" folder in "PhoneCompanionShield" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = E73280D330239BEE006DC874 /* PhoneCompanionShield */;
+		};
+		E73280E8302498F2006DC874 /* Exceptions for "PhoneCompanionTest" folder in "PhoneCompanionTest" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = E74615C33022636200B3739D /* PhoneCompanionTest */;
+		};
+		E73280F83024F9F5006DC874 /* Exceptions for "RoleNotificationService" folder in "RoleNotificationService" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = E73280EC3024F9F5006DC874 /* RoleNotificationService */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		E73280A63022994F006DC874 /* PhoneCompanionReport */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				E73280B53022994F006DC874 /* Exceptions for "PhoneCompanionReport" folder in "PhoneCompanionReport" target */,
+			);
+			path = PhoneCompanionReport;
+			sourceTree = "<group>";
+		};
+		E73280C13022B538006DC874 /* PhoneCompanionMonitor */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				E73280C93022B538006DC874 /* Exceptions for "PhoneCompanionMonitor" folder in "PhoneCompanionMonitor" target */,
+			);
+			path = PhoneCompanionMonitor;
+			sourceTree = "<group>";
+		};
+		E73280D930239BEF006DC874 /* PhoneCompanionShield */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				E73280E130239BEF006DC874 /* Exceptions for "PhoneCompanionShield" folder in "PhoneCompanionShield" target */,
+			);
+			path = PhoneCompanionShield;
+			sourceTree = "<group>";
+		};
+		E73280EE3024F9F5006DC874 /* RoleNotificationService */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				E73280F83024F9F5006DC874 /* Exceptions for "RoleNotificationService" folder in "RoleNotificationService" target */,
+			);
+			path = RoleNotificationService;
+			sourceTree = "<group>";
+		};
+		E74615C63022636300B3739D /* PhoneCompanionTest */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				E73280E8302498F2006DC874 /* Exceptions for "PhoneCompanionTest" folder in "PhoneCompanionTest" target */,
+			);
+			path = PhoneCompanionTest;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		E73280A23022994F006DC874 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E73280BA3022B538006DC874 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E73280C03022B538006DC874 /* DeviceActivity.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E73280D130239BEE006DC874 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E73280D630239BEE006DC874 /* ManagedSettings.framework in Frameworks */,
+				E73280D830239BEE006DC874 /* ManagedSettingsUI.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E73280EA3024F9F5006DC874 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E74615C13022636200B3739D /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		E73280BE3022B538006DC874 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				E73280BF3022B538006DC874 /* DeviceActivity.framework */,
+				E73280D530239BEE006DC874 /* ManagedSettings.framework */,
+				E73280D730239BEE006DC874 /* ManagedSettingsUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		E74615BB3022636200B3739D = {
+			isa = PBXGroup;
+			children = (
+				E74615C63022636300B3739D /* PhoneCompanionTest */,
+				E73280A63022994F006DC874 /* PhoneCompanionReport */,
+				E73280C13022B538006DC874 /* PhoneCompanionMonitor */,
+				E73280D930239BEF006DC874 /* PhoneCompanionShield */,
+				E73280EE3024F9F5006DC874 /* RoleNotificationService */,
+				E73280BE3022B538006DC874 /* Frameworks */,
+				E74615C53022636300B3739D /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		E74615C53022636300B3739D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				E74615C43022636300B3739D /* PhoneCompanionTest.app */,
+				E73280A53022994F006DC874 /* PhoneCompanionReport.appex */,
+				E73280BD3022B538006DC874 /* PhoneCompanionMonitor.appex */,
+				E73280D430239BEE006DC874 /* PhoneCompanionShield.appex */,
+				E73280ED3024F9F5006DC874 /* RoleNotificationService.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		E73280A43022994F006DC874 /* PhoneCompanionReport */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E73280B63022994F006DC874 /* Build configuration list for PBXNativeTarget "PhoneCompanionReport" */;
+			buildPhases = (
+				E73280A13022994F006DC874 /* Sources */,
+				E73280A23022994F006DC874 /* Frameworks */,
+				E73280A33022994F006DC874 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				E73280A63022994F006DC874 /* PhoneCompanionReport */,
+			);
+			name = PhoneCompanionReport;
+			packageProductDependencies = (
+			);
+			productName = PhoneCompanionReport;
+			productReference = E73280A53022994F006DC874 /* PhoneCompanionReport.appex */;
+			productType = "com.apple.product-type.extensionkit-extension";
+		};
+		E73280BC3022B538006DC874 /* PhoneCompanionMonitor */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E73280CA3022B538006DC874 /* Build configuration list for PBXNativeTarget "PhoneCompanionMonitor" */;
+			buildPhases = (
+				E73280B93022B538006DC874 /* Sources */,
+				E73280BA3022B538006DC874 /* Frameworks */,
+				E73280BB3022B538006DC874 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				E73280C13022B538006DC874 /* PhoneCompanionMonitor */,
+			);
+			name = PhoneCompanionMonitor;
+			packageProductDependencies = (
+			);
+			productName = PhoneCompanionMonitor;
+			productReference = E73280BD3022B538006DC874 /* PhoneCompanionMonitor.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		E73280D330239BEE006DC874 /* PhoneCompanionShield */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E73280E230239BEF006DC874 /* Build configuration list for PBXNativeTarget "PhoneCompanionShield" */;
+			buildPhases = (
+				E73280D030239BEE006DC874 /* Sources */,
+				E73280D130239BEE006DC874 /* Frameworks */,
+				E73280D230239BEE006DC874 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				E73280D930239BEF006DC874 /* PhoneCompanionShield */,
+			);
+			name = PhoneCompanionShield;
+			packageProductDependencies = (
+			);
+			productName = PhoneCompanionShield;
+			productReference = E73280D430239BEE006DC874 /* PhoneCompanionShield.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		E73280EC3024F9F5006DC874 /* RoleNotificationService */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E73280F53024F9F5006DC874 /* Build configuration list for PBXNativeTarget "RoleNotificationService" */;
+			buildPhases = (
+				E73280E93024F9F5006DC874 /* Sources */,
+				E73280EA3024F9F5006DC874 /* Frameworks */,
+				E73280EB3024F9F5006DC874 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				E73280EE3024F9F5006DC874 /* RoleNotificationService */,
+			);
+			name = RoleNotificationService;
+			packageProductDependencies = (
+			);
+			productName = RoleNotificationService;
+			productReference = E73280ED3024F9F5006DC874 /* RoleNotificationService.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		E74615C33022636200B3739D /* PhoneCompanionTest */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E74615CF3022636400B3739D /* Build configuration list for PBXNativeTarget "PhoneCompanionTest" */;
+			buildPhases = (
+				E74615C03022636200B3739D /* Sources */,
+				E74615C13022636200B3739D /* Frameworks */,
+				E74615C23022636200B3739D /* Resources */,
+				E73280B23022994F006DC874 /* Embed ExtensionKit Extensions */,
+				E73280CD3022B538006DC874 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				E73280B03022994F006DC874 /* PBXTargetDependency */,
+				E73280C73022B538006DC874 /* PBXTargetDependency */,
+				E73280DF30239BEF006DC874 /* PBXTargetDependency */,
+				E73280F33024F9F5006DC874 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				E74615C63022636300B3739D /* PhoneCompanionTest */,
+			);
+			name = PhoneCompanionTest;
+			packageProductDependencies = (
+			);
+			productName = PhoneCompanionTest;
+			productReference = E74615C43022636300B3739D /* PhoneCompanionTest.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		E74615BC3022636200B3739D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2660;
+				LastUpgradeCheck = 2660;
+				TargetAttributes = {
+					E73280A43022994F006DC874 = {
+						CreatedOnToolsVersion = 26.6;
+					};
+					E73280BC3022B538006DC874 = {
+						CreatedOnToolsVersion = 26.6;
+					};
+					E73280D330239BEE006DC874 = {
+						CreatedOnToolsVersion = 26.6;
+					};
+					E73280EC3024F9F5006DC874 = {
+						CreatedOnToolsVersion = 26.6;
+					};
+					E74615C33022636200B3739D = {
+						CreatedOnToolsVersion = 26.6;
+					};
+				};
+			};
+			buildConfigurationList = E74615BF3022636200B3739D /* Build configuration list for PBXProject "PhoneCompanionTest" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = E74615BB3022636200B3739D;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = E74615C53022636300B3739D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				E74615C33022636200B3739D /* PhoneCompanionTest */,
+				E73280A43022994F006DC874 /* PhoneCompanionReport */,
+				E73280BC3022B538006DC874 /* PhoneCompanionMonitor */,
+				E73280D330239BEE006DC874 /* PhoneCompanionShield */,
+				E73280EC3024F9F5006DC874 /* RoleNotificationService */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		E73280A33022994F006DC874 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E73280BB3022B538006DC874 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E73280D230239BEE006DC874 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E73280EB3024F9F5006DC874 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E74615C23022636200B3739D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		E73280A13022994F006DC874 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E73280B93022B538006DC874 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E73280D030239BEE006DC874 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E73280E93024F9F5006DC874 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E74615C03022636200B3739D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		E73280B03022994F006DC874 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E73280A43022994F006DC874 /* PhoneCompanionReport */;
+			targetProxy = E73280AF3022994F006DC874 /* PBXContainerItemProxy */;
+		};
+		E73280C73022B538006DC874 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E73280BC3022B538006DC874 /* PhoneCompanionMonitor */;
+			targetProxy = E73280C63022B538006DC874 /* PBXContainerItemProxy */;
+		};
+		E73280DF30239BEF006DC874 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E73280D330239BEE006DC874 /* PhoneCompanionShield */;
+			targetProxy = E73280DE30239BEF006DC874 /* PBXContainerItemProxy */;
+		};
+		E73280F33024F9F5006DC874 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E73280EC3024F9F5006DC874 /* RoleNotificationService */;
+			targetProxy = E73280F23024F9F5006DC874 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		E73280B33022994F006DC874 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = PhoneCompanionReport/PhoneCompanionReport.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 5;
+				DEVELOPMENT_TEAM = 32H9FL4NK7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PhoneCompanionReport/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PhoneCompanionReport;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.PhoneCompanionReport;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		E73280B43022994F006DC874 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = PhoneCompanionReport/PhoneCompanionReportRelease.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 5;
+				DEVELOPMENT_TEAM = 32H9FL4NK7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PhoneCompanionReport/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PhoneCompanionReport;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.PhoneCompanionReport;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		E73280CB3022B538006DC874 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = PhoneCompanionMonitor/PhoneCompanionMonitor.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 5;
+				DEVELOPMENT_TEAM = 32H9FL4NK7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PhoneCompanionMonitor/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PhoneCompanionMonitor;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.PhoneCompanionMonitor;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		E73280CC3022B538006DC874 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = PhoneCompanionMonitor/PhoneCompanionMonitor.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 5;
+				DEVELOPMENT_TEAM = 32H9FL4NK7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PhoneCompanionMonitor/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PhoneCompanionMonitor;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.PhoneCompanionMonitor;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		E73280E330239BEF006DC874 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = PhoneCompanionShield/PhoneCompanionShield.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 5;
+				DEVELOPMENT_TEAM = 32H9FL4NK7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PhoneCompanionShield/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PhoneCompanionShield;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.PhoneCompanionShield;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		E73280E430239BEF006DC874 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = PhoneCompanionShield/PhoneCompanionShield.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 5;
+				DEVELOPMENT_TEAM = 32H9FL4NK7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PhoneCompanionShield/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = PhoneCompanionShield;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.PhoneCompanionShield;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		E73280F63024F9F5006DC874 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 5;
+				DEVELOPMENT_TEAM = 32H9FL4NK7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = RoleNotificationService/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = RoleNotificationService;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.RoleNotificationService;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		E73280F73024F9F5006DC874 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 5;
+				DEVELOPMENT_TEAM = 32H9FL4NK7;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = RoleNotificationService/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = RoleNotificationService;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest.RoleNotificationService;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		E74615CD3022636400B3739D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		E74615CE3022636400B3739D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.5;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		E74615D03022636400B3739D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = PhoneCompanionTest/PhoneCompanionTest.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 5;
+				DEVELOPMENT_TEAM = 32H9FL4NK7;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PhoneCompanionTest/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = North;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "用于在您授权后读取步数和睡眠时间，并同步到您主动配对的私人伴侣服务供您查看。";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "North 不会写入或修改健康数据，仅在您授权后读取步数和睡眠时间。";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "用于在您使用 North 时获取当前位置、显示位置状态，并同步到您主动配对的私人伴侣服务。";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "用于在您授权后于后台更新设备位置，并同步到您主动配对的私人伴侣服务供您查看位置记录。";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		E74615D13022636400B3739D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = PhoneCompanionTest/PhoneCompanionTest.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 5;
+				DEVELOPMENT_TEAM = 32H9FL4NK7;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = PhoneCompanionTest/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = North;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "用于在您授权后读取步数和睡眠时间，并同步到您主动配对的私人伴侣服务供您查看。";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "North 不会写入或修改健康数据，仅在您授权后读取步数和睡眠时间。";
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "用于在您使用 North 时获取当前位置、显示位置状态，并同步到您主动配对的私人伴侣服务。";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "用于在您授权后于后台更新设备位置，并同步到您主动配对的私人伴侣服务供您查看位置记录。";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.qianyi.PhoneCompanionTest;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		E73280B63022994F006DC874 /* Build configuration list for PBXNativeTarget "PhoneCompanionReport" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E73280B33022994F006DC874 /* Debug */,
+				E73280B43022994F006DC874 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E73280CA3022B538006DC874 /* Build configuration list for PBXNativeTarget "PhoneCompanionMonitor" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E73280CB3022B538006DC874 /* Debug */,
+				E73280CC3022B538006DC874 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E73280E230239BEF006DC874 /* Build configuration list for PBXNativeTarget "PhoneCompanionShield" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E73280E330239BEF006DC874 /* Debug */,
+				E73280E430239BEF006DC874 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E73280F53024F9F5006DC874 /* Build configuration list for PBXNativeTarget "RoleNotificationService" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E73280F63024F9F5006DC874 /* Debug */,
+				E73280F73024F9F5006DC874 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E74615BF3022636200B3739D /* Build configuration list for PBXProject "PhoneCompanionTest" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E74615CD3022636400B3739D /* Debug */,
+				E74615CE3022636400B3739D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E74615CF3022636400B3739D /* Build configuration list for PBXNativeTarget "PhoneCompanionTest" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E74615D03022636400B3739D /* Debug */,
+				E74615D13022636400B3739D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = E74615BC3022636200B3739D /* Project object */;
+}

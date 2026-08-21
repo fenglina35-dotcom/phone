@@ -134,9 +134,10 @@ self.addEventListener('fetch',event=>{
     return;
   }
 
-  // App Store support/privacy URLs are ordinary public documents. They must
+  // App Store support/privacy and the signed-in role controller are ordinary
+  // public documents. They must
   // never be replaced by the cached small-phone application shell.
-  if(request.mode==='navigate'&&/\/north-(?:support|privacy)\.html$/.test(url.pathname))return;
+  if(request.mode==='navigate'&&/\/north-(?:support|privacy|role-controller)\.html$/.test(url.pathname))return;
 
   // Local visual previews must always load the exact requested document.
   // Otherwise an old cached app shell can replace the preview with the gate.

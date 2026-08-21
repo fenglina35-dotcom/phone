@@ -1,0 +1,7 @@
+.DS_Store
+**/.DS_Store
+xcuserdata/
+**/xcuserdata/
+DerivedData/
+*.xcuserstate
+North_Public_AppReview_*.zip

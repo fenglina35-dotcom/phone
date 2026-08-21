@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="robots" content="noindex,nofollow">
+  <title>North 角色控制台 · Role Controller</title>
+  <style>
+    :root{color-scheme:light dark;--bg:#f3f5f8;--card:#fff;--text:#17191d;--muted:#66707d;--line:#dfe4ea;--blue:#1479e8;--soft:#eaf3ff;--good:#14804a;--warn:#9a6400;--bad:#c13636;--shadow:0 18px 54px #17253b18}
+    @media(prefers-color-scheme:dark){:root{--bg:#0c0e12;--card:#161a20;--text:#f3f5f8;--muted:#a3abb6;--line:#2b313a;--blue:#58aaff;--soft:#14283d;--good:#53c98d;--warn:#e5b951;--bad:#ff7a7a;--shadow:0 18px 54px #0008}}
+    *{box-sizing:border-box}body{margin:0;background:linear-gradient(145deg,var(--bg),color-mix(in srgb,var(--bg),var(--blue) 5%));color:var(--text);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;min-height:100vh}
+    main{width:min(860px,calc(100% - 28px));margin:0 auto;padding:40px 0 72px}.hero{text-align:center;padding:10px 0 26px}.hero h1{margin:0 0 5px;font-size:30px}.hero p{margin:0;color:var(--muted)}.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px;margin:16px 0;box-shadow:var(--shadow)}h2{font-size:20px;margin:0 0 12px}h3{font-size:16px;margin:18px 0 8px}.sub{color:var(--muted);font-size:14px}.note{padding:13px 15px;background:var(--soft);border-radius:13px;color:var(--muted);margin:12px 0}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}@media(max-width:620px){.grid{grid-template-columns:1fr}.card{padding:19px}}
+    label{display:block;font-size:13px;color:var(--muted);margin:10px 0 5px}input,select{width:100%;min-height:46px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--text);padding:10px 12px;font:inherit}button,.button{border:0;border-radius:12px;min-height:44px;padding:10px 15px;background:var(--blue);color:#fff;font:600 15px/1.2 inherit;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:7px}button.secondary{background:var(--soft);color:var(--blue);border:1px solid color-mix(in srgb,var(--blue),transparent 70%)}button.danger{background:#c13d43}button:disabled{opacity:.45;cursor:not-allowed}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}.actions button{flex:1 1 140px}.pair{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}.value{min-height:48px;padding:11px 13px;border:1px dashed var(--line);border-radius:12px;background:var(--bg);word-break:break-all;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.code{font-size:26px;letter-spacing:5px;font-weight:700}.status{min-height:26px;margin-top:10px;color:var(--muted)}.status.good{color:var(--good)}.status.warn{color:var(--warn)}.status.bad{color:var(--bad)}.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}@media(max-width:620px){.facts{grid-template-columns:1fr}}.fact{padding:12px;border:1px solid var(--line);border-radius:13px}.fact small{display:block;color:var(--muted)}.history{list-style:none;padding:0;margin:10px 0 0}.history li{padding:11px 0;border-top:1px solid var(--line)}.history li:first-child{border-top:0}.pill{display:inline-block;border-radius:999px;padding:2px 9px;background:var(--soft);color:var(--blue);font-size:12px;margin-left:6px}footer{text-align:center;color:var(--muted);font-size:13px;padding-top:18px}footer a{color:var(--blue)}[hidden]{display:none!important}
+  </style>
+</head>
+<body>
+<main>
+  <header class="hero">
+    <h1>North 角色控制台</h1>
+    <p>Role Controller · 公开 North 的配对与远程管理入口</p>
+  </header>
+
+  <section class="card" id="login-card">
+    <h2>登录测试角色 / Sign in</h2>
+    <p class="sub">审核账号由开发者预先创建。无需注册，也无需创建角色。</p>
+    <div class="grid">
+      <div><label for="email">账号 / Email</label><input id="email" type="email" autocomplete="username" autocapitalize="none"></div>
+      <div><label for="password">密码 / Password</label><input id="password" type="password" autocomplete="current-password"></div>
+    </div>
+    <div class="actions"><button id="login-button" type="button">登录 / Sign in</button></div>
+    <div class="status" id="login-status" aria-live="polite"></div>
+    <p class="note">密码只用于本次登录，不写入页面、不保存在浏览器本地存储。App Review credentials are provided only in Review Notes.</p>
+  </section>
+
+  <div id="controller" hidden>
+    <section class="card">
+      <h2>已预配置测试角色 / Preconfigured role</h2>
+      <div class="facts">
+        <div class="fact"><small>角色 / Role</small><strong id="role-name">—</strong></div>
+        <div class="fact"><small>设备 / Device</small><strong id="device-status">未配对</strong></div>
+        <div class="fact"><small>最近同步 / Last sync</small><strong id="last-sync">—</strong></div>
+      </div>
+      <div class="actions"><button class="secondary" id="refresh-button" type="button">刷新状态 / Refresh</button><button class="secondary" id="logout-button" type="button">退出 / Sign out</button></div>
+    </section>
+
+    <section class="card">
+      <h2>1. 生成短时配对码 / Generate pairing code</h2>
+      <p class="sub">点击后生成新的 8 位一次性配对码，有效期 10 分钟。旧审核设备不会获得永久访问。</p>
+      <div class="actions"><button id="pair-button" type="button">生成新配对码 / New code</button></div>
+      <div id="pair-panel" hidden>
+        <label>角色控制端 ID / Controller ID</label>
+        <div class="pair"><div class="value" id="pair-target">—</div><button class="secondary" data-copy="pair-target" type="button">复制</button></div>
+        <label>8 位配对码 / 8-digit code</label>
+        <div class="pair"><div class="value code" id="pair-code">—</div><button class="secondary" data-copy="pair-code" type="button">复制</button></div>
+        <p class="status warn" id="pair-expiry"></p>
+      </div>
+      <p class="note">在 iPhone 打开 North →“角色远程管理”，填入上面两项并连接。随后保持 North 打开，完成系统授权、选择至少一个测试 App，并点一次“立即上传真实数据”。</p>
+      <div class="status" id="pair-status" aria-live="polite"></div>
+    </section>
+
+    <section class="card">
+      <h2>2. 测试角色远程命令 / Test role commands</h2>
+      <p class="sub">命令只针对审核设备在 Apple 系统选择器中明确选择的 App。服务器排队不等于成功；状态必须等 North 的设备回执。</p>
+      <label for="app-select">目标 App / Selected app</label>
+      <select id="app-select"><option value="">等待 North 上传已选 App…</option></select>
+      <label for="limit-minutes">每日限额（分钟）/ Daily limit</label>
+      <input id="limit-minutes" type="number" min="1" max="1440" value="15" inputmode="numeric">
+      <div class="actions">
+        <button class="secondary" id="view-button" type="button">请求刷新 / Refresh data</button>
+        <button id="lock-button" type="button">锁定 / Lock</button>
+        <button class="secondary" id="unlock-button" type="button">解锁 / Unlock</button>
+        <button id="limit-button" type="button">设置限额 / Set limit</button>
+      </div>
+      <div class="status" id="command-status" aria-live="polite"></div>
+      <h3>最近命令 / Recent commands</h3>
+      <ul class="history" id="command-history"><li class="sub">暂无命令</li></ul>
+    </section>
+  </div>
+
+  <footer><a href="./north-support.html">North 支持</a> · <a href="./north-privacy.html">隐私政策</a></footer>
+</main>
+<script src="./north-role-controller.js" defer></script>
+</body>
+</html>
