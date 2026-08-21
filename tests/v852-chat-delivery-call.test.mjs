@@ -8,7 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const source = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
 
 assert.match(source, /function phoneFriendPollDelay\(\)[\s\S]*?return 2500/, 'open friend chats must use the fast foreground polling window');
-assert.match(source, /setInterval\(\(\)=>phoneFriendMaybeSync\(false\),2500\)/, 'friend sync scheduler must be able to reach the fast polling window');
+assert.match(source, /setInterval\(\(\)=>\{if\(_appBootFinished\)phoneFriendMaybeSync\(false\);\},2500\)/, 'friend sync scheduler must reach the fast polling window only after startup restoration finishes');
 assert.match(source, /_pfRenderQueued=true/, 'messages received while typing must request a later safe repaint');
 
 const callStart = source.indexOf('let _callHF=false');

@@ -298,7 +298,7 @@ test('returned role messages are deduplicated and appended to the matching chat'
     pull.indexOf('await saveNowAsync()') < pull.indexOf("phone_role_push_ack"),
     'chat rows and the durable receipt must both be saved before the server ack'
   );
-  assert.match(app, /setInterval\(\(\)=>roleServerPushPull\(false\),60000\)/);
+  assert.match(app, /setInterval\(\(\)=>\{if\(_appBootFinished\)roleServerPushPull\(false\);\},60000\)/);
   assert.match(app, /function privateResumeSyncSoon\(\)[\s\S]{0,360}roleServerPushPull\(true\)/);
   assert.match(app, /visibilitychange[\s\S]{0,1600}privateResumeSyncSoon\(\)/);
 });

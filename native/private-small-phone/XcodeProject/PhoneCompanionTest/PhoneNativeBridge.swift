@@ -699,6 +699,59 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         result: [String: Any]? = nil,
         error: String? = nil
     ) {
+        // A restored core can be many megabytes. Embedding that string in an
+        // evaluateJavaScript source makes WebKit parse and compile the entire
+        // escaped state as code on its main thread. Pass the large value as a
+        // WebKit argument instead; the function body stays tiny and constant.
+        if let result,
+           let stateJSON = result["stateJSON"] as? String {
+            let version = (result["ver"] as? NSNumber)?.intValue ?? 1
+            let savedAt = (result["savedAt"] as? NSNumber)?.doubleValue ?? 0
+            let recovered = (result["recovered"] as? Bool) ?? false
+            let statsJSON: String
+            if let stats = result["stats"],
+               JSONSerialization.isValidJSONObject(stats),
+               let data = try? JSONSerialization.data(withJSONObject: stats) {
+                statsJSON = String(data: data, encoding: .utf8) ?? ""
+            } else {
+                statsJSON = ""
+            }
+            Task { @MainActor [weak self] in
+                guard let webView = self?.webView else { return }
+                webView.callAsyncJavaScript(
+                    """
+                    const restored = {
+                      found: true,
+                      ver: Number(version) || 1,
+                      savedAt: Number(savedAt) || 0,
+                      stateJSON: String(stateJSON || ''),
+                      recovered: Boolean(recovered)
+                    };
+                    if (statsJSON) {
+                      try { restored.stats = JSON.parse(statsJSON); } catch (_) {}
+                    }
+                    if (window.__smallPhoneNativeReply) {
+                      window.__smallPhoneNativeReply({
+                        requestId: String(requestID),
+                        result: restored
+                      });
+                    }
+                    """,
+                    arguments: [
+                        "requestID": requestID,
+                        "version": version,
+                        "savedAt": savedAt,
+                        "stateJSON": stateJSON,
+                        "recovered": recovered,
+                        "statsJSON": statsJSON
+                    ],
+                    in: nil,
+                    in: .page,
+                    completionHandler: { _ in }
+                )
+            }
+            return
+        }
         var payload: [String: Any] = ["requestId": requestID]
         if let result {
             payload["result"] = result

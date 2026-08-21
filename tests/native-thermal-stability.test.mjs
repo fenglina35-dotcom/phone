@@ -73,12 +73,21 @@ test('inactive native helpers do not keep waking the main thread',()=>{
   assert.match(app,/setInterval\(blockedPhoneSweepVisible,5000\)/);
 });
 
-test('private core storage sends one JSON string and performs disk work away from MainActor',()=>{
+test('private core storage stays off MainActor and never compiles a restored core as JavaScript source',()=>{
   assert.match(app,/const args=\{key:k,ver:[\s\S]*?stateJSON:String\(v\.json\|\|''\)\}[\s\S]*?request\('storage\.put',args\)/);
   assert.doesNotMatch(app,/request\('storage\.put',\{key:k,value:v\}\)/);
   assert.match(bridge,/private let storageQueue = DispatchQueue\([\s\S]*?qos: \.utility/);
   assert.match(bridge,/storageQueue\.async \{ \[weak self\] in/);
-  assert.match(bridge,/nonisolated private func replyStorage[\s\S]*?JSONSerialization\.data\(withJSONObject: payload\)[\s\S]*?Task \{ @MainActor/);
+  assert.match(bridge,/nonisolated private func replyStorage[\s\S]*?let stateJSON = result\["stateJSON"\] as\? String/);
+  assert.match(bridge,/callAsyncJavaScript\([\s\S]*?arguments: \[[\s\S]*?"stateJSON": stateJSON[\s\S]*?in: \.page/);
+  assert.doesNotMatch(bridge,/__smallPhoneNativeReply\(\\\(json\)\)[\s\S]{0,120}?stateJSON/);
+});
+
+test('native background and inbox work waits for the restored core to finish booting',()=>{
+  assert.match(app,/requestPersistentStorage\(\);privateResumeSyncSoon\(\)/);
+  assert.match(app,/setInterval\(\(\)=>\{if\(_appBootFinished\)companionPollSnapshot\(false\);\},8000\)/);
+  assert.match(app,/setInterval\(\(\)=>\{if\(_appBootFinished\)roleServerPushPull\(false\);\},60000\)/);
+  assert.match(app,/setInterval\(\(\)=>\{if\(_appBootFinished\)phoneFriendMaybeSync\(false\);\},2500\)/);
 });
 
 test('private boot keeps historical image references lazy without allowing image garbage collection',()=>{

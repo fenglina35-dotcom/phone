@@ -128,7 +128,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v1020 · 本地图片注入与点击性能修复'/);
+  assert.match(app, /const APP_VER='v1021 · 原生存档启动桥与发热修复'/);
 });
 
 test('manual sync reads locally in the bundled app and keeps cloud fallback', () => {
@@ -781,7 +781,7 @@ test('queued companion commands request APNs wake without treating push as the r
   assert.doesNotMatch(functionSource('companionNotifyNative'), /status\s*=\s*['"]completed/);
   assert.match(functionSource('companionPollMinDelay'), /4000/);
   assert.match(functionSource('companionAudit'), /后台唤醒未确认/);
-  assert.match(app, /setInterval\(\(\)=>companionPollSnapshot\(false\),8000\)/);
+  assert.match(app, /setInterval\(\(\)=>\{if\(_appBootFinished\)companionPollSnapshot\(false\);\},8000\)/);
 });
 
 test('role external lock uses the stable id without requiring an internal grant', () => {
