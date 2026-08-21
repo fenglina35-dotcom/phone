@@ -43,11 +43,12 @@ test('Douyin profile uses a real profile grid and vector heart icons', () => {
   assert.match(html, /\.dy-profile-card\{/);
 });
 
-test('new presentation layer loads after app.js and is available offline', () => {
-  assert.match(html, /<script src="app\.js\?v=(\d+)"[^>]*><\/script>\s*<script src="commerce-ui\.js\?v=\1"/);
+test('delivery and presentation layers load after app.js and are available offline', () => {
+  assert.match(html, /<script src="app\.js\?v=(\d+)"[^>]*><\/script>\s*<script src="delivery\.js\?v=\1"[^>]*><\/script>\s*<script src="commerce-ui\.js\?v=\1"/);
   assert.match(html, /\.shop-card\{/);
   assert.match(html, /\.mt-card\{/);
   assert.match(html, /\.dy-scene\{/);
   assert.match(sw, /commerce-ui\.js\?v='\+BUILD/);
+  assert.match(sw, /delivery\.js\?v='\+BUILD/);
   assert.match(sw, /\/commerce-ui\\\.js\$/);
 });

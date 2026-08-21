@@ -6,6 +6,7 @@
     "app.js",
     "ai-account.js",
     "license-gate.js",
+    "delivery.js",
     "commerce-ui.js",
     "pet-game.js",
     "pet-game.css",

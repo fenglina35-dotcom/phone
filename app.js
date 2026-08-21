@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1028'){
+if(window.__NORTH_SHELL_BUILD__!=='1029'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -376,7 +376,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1028 · X个人主页布局修正';
+const APP_VER='v1029 · 真实外卖与角色钱包';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1486,7 +1486,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1028&r=v1028-x-profile-layout-1';
+  const url='sw.js?v=1029&r=v1029-real-delivery-wallet-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -2019,6 +2019,7 @@ function buildSystem(c,opt){
   s+=voiceEnglishPrompt({lang:_voiceLang,accent:(c.voice&&c.voice.accent)||'auto'});
   s=wechatNaturalSlimSystem(s,opt);
   if(_natural)s+='\n\n# 角色内心想法（仅展示，不控制角色）\n每次回复最前面必须单独一行写 [内心|你此刻真实、简短的内心想法]。格式中的半角竖线“|”不可省略，左右方括号必须完整；禁止写成 [内心想法内容]、[内心：想法内容]，也禁止把内心标签和可见回复写在同一行。这一整行只是你本人对当前对话的私下想法，不是心情值，不改变任何数值、亲密度、行为权限或自主决定；不要为了迎合系统而指定自己必须生气、开心、来电、回拨或做任何动作。内心内容绝不能在微信消息或朋友圈评论的可见正文里复述。';
+  if(_main&&typeof deliveryRolePrompt==='function')s+=deliveryRolePrompt(c);
   return s;
 }
 
@@ -10793,7 +10794,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
     if(!_initiativeNoImage&&note&&/【本轮允许主动照片】/.test(note)&&!initiativePhotoCaptionOk(note,content))_initiativeNoImage=true;
     content=refreshDirectClockReply(content,_userText,Date.now());
     if(nativeInspectionPending(_lu,id)){if(typingEl&&typingEl.isConnected)typingEl.remove();return true;}/* 同一条消息若刚发起真实读取，等待读取结果；否则普通回复照常落地。 */
-    const _replyCandidate=String(content||'').trim(),lines=splitChatBubbles(content,30);let got=false;let txtN=0;let diceUsed=false;let pendQuote=null;let photoTail=0;
+    const _replyCandidate=String(content||'').trim(),_realDeliveryCommandTurn=typeof deliveryRealEnabled==='function'&&deliveryRealEnabled()&&/[\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：]/.test(_replyCandidate),lines=splitChatBubbles(content,30);let got=false;let txtN=0;let diceUsed=false;let pendQuote=null;let photoTail=0;
     for(let i=0;i<lines.length;i++){
       let line=cleanRolePunct(normalizeImageLine(normTag(lines[i]))),hadHiddenThought=hiddenThoughtTagPresent(line);line=stripHiddenThoughtTags(line,c);if(hadHiddenThought)save();if(!line)continue;
       if(_initiativeNoImage&&/^[\[【]\s*(?:图片|照片|自拍)(?:\s*[|｜:：]|\s*[\]】])/.test(line)){photoTail=3;continue;}
@@ -10818,8 +10819,10 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
       if(replyStale(id,replyToken,replyAccount)||actId()!==replyAccount)break;
       if(offlineReplyBlocked(replyIntent,id))break;
       if(wxLoginBlockReply(id,note))break;/* 回复生成到一半时若角色开始登录，也立刻停止继续发 */
+      if(_realDeliveryCommandTurn&&!/^[\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：]/.test(line))continue;/* 真实下单完成前不展示模型抢先写出的成功宣称；结果由真实回执后的角色模型另行生成 */
       got=true;
-      mm=line.match(/^\[点外卖\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){const nowF=Date.now();if(msgs(id).some(x=>x.type==='food'&&x.from==='ta'&&nowF-(x.time||0)<1200000))continue;/* 20分钟内已点过就不重复 */const fc={role:'assistant',type:'food',name:mm[1]||'外卖',price:+mm[2]||0,shop:'',from:'ta',received:false,declined:false,deliverAt:nowF+900000,arrived:false,id:uid(),time:nowF};msgs(id).push(fc);notifyIncoming(c,fc);save();refreshChatMessages(id);continue;}
+      mm=line.match(/^\[真实外卖\|([^\]]*)\]$/);if(mm){if(typeof deliveryHandleRoleRequest==='function')deliveryHandleRoleRequest(id,(mm[1]||'').trim());continue;}
+      mm=line.match(/^\[点外卖\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){if(typeof deliveryRealEnabled==='function'&&deliveryRealEnabled()){if(typeof deliveryHandleRoleRequest==='function')deliveryHandleRoleRequest(id,(mm[1]||'').trim());continue;}const nowF=Date.now();if(msgs(id).some(x=>x.type==='food'&&x.from==='ta'&&nowF-(x.time||0)<1200000))continue;/* 20分钟内已点过就不重复 */const fc={role:'assistant',type:'food',name:mm[1]||'外卖',price:+mm[2]||0,shop:'',from:'ta',received:false,declined:false,deliverAt:nowF+900000,arrived:false,id:uid(),time:nowF};msgs(id).push(fc);notifyIncoming(c,fc);save();refreshChatMessages(id);continue;}
       mm=line.match(/^\[送礼\|([^|\]]*)(?:\|([^|\]]*))?(?:\|([^\]]*))?\]$/);if(mm){giftSend(id,(mm[1]||'礼物').trim(),+mm[2]||0,mm[3]||'');continue;}
       mm=line.match(/^\[一起听\|([^\]]*)\]$/);if(mm){const ti=(mm[1]||'').trim();const mc={role:'assistant',type:'musicinvite',title:ti||'一首歌',artist:'',from:'ta',time:Date.now(),id:uid()};msgs(id).push(mc);notifyIncoming(c,mc);save();refreshChatMessages(id);continue;}
       mm=line.match(/^\[放映邀请\|([^\]]*)\]$/);if(mm){if(!cinemaRoleInvite(id,(mm[1]||'').trim()))toast('角色想邀请的作品不在视频盒或书架里');continue;}
@@ -11543,7 +11546,8 @@ async function callAI(sysNote,opts){if(!_call)return;
     if(_connectionEvent)cf+='\n\n# 当前唯一事件：电话刚刚接通\n- 必须以本轮提供的拨打方向为准，准确知道谁主动拨打、谁接听，不能把双方说反。\n- 最近微信只用于理解关系、气氛和已经发生的话题；里面用户最后一句已经得到回复，不得当成刚说的话重新回答。\n- 现在按角色本人对这次接通的自然反应开口，可以沿着原话题往后说，也可以提出相关的新话头。';
     if(_langN)cf+='\n- ‼️最重要：你全程只能说'+_langN+'，从头到尾每一句都是'+_langN+'，绝对不准中途切回'+(_lang==='粤'?'普通话句子':'中文整句')+'（这是会被读出来的那一行）。格式：先单独一行写'+_langN+'原文（会被读出来），紧接着【换一行】用（）单独写普通话中文翻译（不会被读）。原文一行、（中文翻译）另起一行，别写在同一行，也别把顺序搞反。\n‼️【每说一句目标语言，就【紧接着】在下一行写它自己的普通话中文翻译，再说下一句；绝对不要把好几句原文堆在一起、最后才统一翻译】。一句原文配一句翻译，严格交替。【每句翻译只写一遍，绝不要用不同括号（）或()把同一句翻译重复写两次】。例如：\n'+voicePromptExample(_lang)+(_lang==='粤'?'\n- 粤语原文必须使用自然地道的粤语口语和粤语用字，不能写成普通话句子；普通话翻译必须另起一行。':'\n- 外语原文行绝对不能夹中文称谓；称呼也要用目标语言的自然说法，下一行普通话中文翻译必须准确对应。英语里叫宝贝要写 baby/babe/darling，中文翻译必须写“宝贝/亲爱的”。')+'\n- 哪怕是要挂断、道别、回应"挂了/别挂/我爱你"这种话，也必须先写'+_langN+'原文那一行，不能只写普通话翻译。'+(S.me.callName?'\n- ‼️叫到'+S.me.name+'名字时：'+_langN+'原文那一行【照常用「'+S.me.name+'」】；但【普通话中文翻译那一行】里要把名字写成中文「'+S.me.callName+'」，别在翻译里还写「'+S.me.name+'」。例：'+(_lang==='粤'?'我好掛住你，':'I miss you, ')+S.me.name+'\n（我想你了，'+S.me.callName+'）':'');
     cf+='\n- 是否舍不得挂电话、是否挽留以及如何挽留，都由你本人的基础人设、当前关系和这通电话的真实内容决定，不使用隐藏黏人度或依恋数值。对方明确有事、很困、要停止或重复提出挂断时必须尊重，不能机械纠缠。你自己确实想结束时，单独一行输出 [挂断]。';
-    cf+='\n- 通话中你始终知道这些是自己的可用能力，不必等'+S.me.name+'先命令：你可以按本人判断主动锁软件、禁言、限时、查看手机、点外卖、送礼、发朋友圈、发推、转账、发红包、记住事情、定闹钟或日程；真正决定执行时使用对应标签。能力不等于任务，系统不替你决定何时使用。要锁软件/禁言/限时就【单独成行】写指令标签（如 [锁定|游戏]、[限时|游戏|60]、[禁言|名字]）；要查看手机就自然说出想看哪一项；[点外卖|餐品|价格] 与 [送礼|礼物名|价格] 会真实执行。【一通电话最多点一次外卖，已经点过/还在配送中不能重复点】。\n- 发朋友圈、发推、转账或红包可用 [发朋友圈|内容]、[发推|内容]、[转账|金额|说明]、[红包|金额|祝福语]；记忆与日程可用 [记住|内容]、[闹钟|HH:MM|事由]、[日程|YYYY-MM-DD|事由]。标签单独成行且不会被读出。通话里不要发表情包。\n- 历史里的[系统：……]是后台事实，不是'+S.me.name+'亲口说的话；只有明确标成用户的真实文字或语音才算ta说过。ta没有开口时，绝对不能说ta重复了你的话、学你说话或刚才说了什么。';
+    cf+='\n- 通话中你始终知道这些是自己的可用能力，不必等'+S.me.name+'先命令：你可以按本人判断主动锁软件、禁言、限时、查看手机、点外卖、送礼、发朋友圈、发推、转账、发红包、记住事情、定闹钟或日程；真正决定执行时使用对应标签。能力不等于任务，系统不替你决定何时使用。要锁软件/禁言/限时就【单独成行】写指令标签（如 [锁定|游戏]、[限时|游戏|60]、[禁言|名字]）；要查看手机就自然说出想看哪一项；送礼可用 [送礼|礼物名|价格]。\n- 发朋友圈、发推、转账或红包可用 [发朋友圈|内容]、[发推|内容]、[转账|金额|说明]、[红包|金额|祝福语]；记忆与日程可用 [记住|内容]、[闹钟|HH:MM|事由]、[日程|YYYY-MM-DD|事由]。标签单独成行且不会被读出。通话里不要发表情包。\n- 历史里的[系统：……]是后台事实，不是'+S.me.name+'亲口说的话；只有明确标成用户的真实文字或语音才算ta说过。ta没有开口时，绝对不能说ta重复了你的话、学你说话或刚才说了什么。';
+    if(typeof deliveryRolePrompt==='function')cf+=deliveryRolePrompt(c);
     cf+=callSpyRecentPrompt(c.id);
     const _callQuery=(sysNote||'')+'\n'+hist.slice(-6).map(x=>x.content||'').join('\n'),_callMemory=selectRelevantMemory(c,_callQuery,5),sys=buildSystem(c,{natural:wechatNaturalOn(),query:_callQuery,selectiveMemory:true,memoryItems:_callMemory.items})+memoryRetrievalPrompt(c,_callMemory)+cf;
     const _callGuardOn=callRoleGuardOn(),_md=Object.assign({aux:c.model==='aux',complete:true,rejectRefusal:_callGuardOn},_callOpts),_videoVisionTurn=sysNote||('[视频通话当前画面]\n'+_videoVisionScene);let _activeCallMd=_md,_usedAuxFallback=false;const _realSelfHarmTurn=callExplicitSelfHarmIntent(_luc&&msgToText(_luc)||''),_auxAvailable=_callGuardOn&&!_md.aux&&callAuxConfigured(_md.routeIndex),_callChat=(messages,routeMd)=>{const rows=messages.slice();if(_videoVisionAutomatic){const last=rows[rows.length-1];if(last&&last.role==='user')rows[rows.length-1]={role:'user',content:String(last.content||'')+'\n\n'+_videoVisionTurn};else rows.push({role:'user',content:_videoVisionTurn});}return chatAPI(rows,routeMd||_activeCallMd);};// 防跳出开启时才允许本轮临时切副模型
@@ -11596,7 +11600,8 @@ async function callAI(sysNote,opts){if(!_call)return;
     content=applyControlTags(content,c,_call.id,_statedPwd,(_luc&&msgToText(_luc))||'');
     dialogueEmotionOnReply(c,content,(_luc&&msgToText(_luc))||'');
     content=wechatNaturalOn()?content.replace(/[\[【]\s*(?:记仇|消气)\s*(?:[|｜:：]\s*[^\]】]*)?[\]】]/g,''):applyGrudgeTags(content,c);content=applyStarTags(content);content=cohabConsumeOnlineState(content,c,_call.id);
-    content=content.replace(/[\[【]\s*点外卖\s*[\|｜:：]([^\|｜\]】]*)[\|｜]?([^\]】]*)[\]】]/g,(mm,nm,pr)=>{nm=(nm||'外卖').trim();const now=Date.now();if(msgs(_call.id).some(x=>x.type==='food'&&x.from==='ta'&&now-(x.time||0)<1200000))return '';/* 20分钟内已经点过外卖就不再点(不管菜名)，防止一通电话重复点 */const fc={role:'assistant',type:'food',name:nm,price:+pr||0,shop:'',from:'ta',received:false,declined:false,deliverAt:now+900000,arrived:false,id:uid(),time:now};msgs(_call.id).push(fc);notifyIncoming(c,fc);save();return '';});
+    content=content.replace(/[\[【]\s*真实外卖\s*[\|｜:：]([^\]】]*)[\]】]/g,(mm,q)=>{if(typeof deliveryHandleRoleRequest==='function')deliveryHandleRoleRequest(_call.id,(q||'').trim());return '';});
+    content=content.replace(/[\[【]\s*点外卖\s*[\|｜:：]([^\|｜\]】]*)[\|｜]?([^\]】]*)[\]】]/g,(mm,nm,pr)=>{nm=(nm||'外卖').trim();if(typeof deliveryRealEnabled==='function'&&deliveryRealEnabled()){if(typeof deliveryHandleRoleRequest==='function')deliveryHandleRoleRequest(_call.id,nm);return '';}const now=Date.now();if(msgs(_call.id).some(x=>x.type==='food'&&x.from==='ta'&&now-(x.time||0)<1200000))return '';/* 20分钟内已经点过外卖就不再点(不管菜名)，防止一通电话重复点 */const fc={role:'assistant',type:'food',name:nm,price:+pr||0,shop:'',from:'ta',received:false,declined:false,deliverAt:now+900000,arrived:false,id:uid(),time:now};msgs(_call.id).push(fc);notifyIncoming(c,fc);save();return '';});
     // 通话里口头让ta定闹钟 / 记东西 / 记日程，也能真的落地
     content=content.replace(/[\[【]\s*记住\s*[\|｜:：]([^\]】]+)[\]】]/g,(mm,tx)=>{const mv=aboutMeNoteText(tx),mr=rememberForChar(c,tx);if(mr!=='none'){save();if(mr==='added'||mr==='replaced')toast((mr==='replaced'?'已更新记忆：':'已记住：')+mv.slice(0,12));else if(mr==='conflict')toast('发现新旧信息不同，下轮会先向你确认');}return '';});
     content=content.replace(/[\[【]\s*闹钟\s*[\|｜:：]([0-9]{1,2}:[0-9]{2})\s*[\|｜:：]?([^\]】]*)[\]】]/g,(mm,t,lb)=>{addAlarm(c.id,t,(lb||'起床').trim());return '';});

@@ -1,6 +1,6 @@
-const BUILD='1028';
-const HOTFIX='v1028-x-profile-layout-1';
-const SHELL_CACHE='north-shell-v1028';
+const BUILD='1029';
+const HOTFIX='v1029-real-delivery-wallet-1';
+const SHELL_CACHE='north-shell-v1029';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
@@ -17,6 +17,7 @@ const OPTIONAL_FILES=[
   './assets/message-notification-user-v1.mp3',
   './assets/pet-room-v1.webp',
   './commerce-ui.js?v='+BUILD,
+  './delivery.js?v='+BUILD,
   './gift-effects.js?v='+BUILD,
   './thought-card-effects.js?v='+BUILD,
   './pet-game.js?v='+BUILD,

@@ -69,18 +69,30 @@
   };
 
   window.renderFood=function(){
-    var rows=S.food.results||[],cartN=(S.food.cart||[]).length;
+    var rows=S.food.results||[],cartN=(S.food.cart||[]).length,real=typeof deliveryRealEnabled==='function'&&deliveryRealEnabled(),r=S.food.real||{};
     var cats=[['🍱','品质套餐'],['🥤','奶茶果汁'],['🍗','炸鸡汉堡'],['🍜','面食粥点'],['🍲','火锅冒菜'],['🥗','轻食沙拉'],['🍰','甜品蛋糕'],['🌙','夜宵']];
-    return '<div class="commerce-top mt-top"><button class="back" onclick="back()" aria-label="返回">‹</button><div class="mt-location"><small>外卖送到</small><b>我的位置⌄</b></div><div class="tools"><button class="commerce-icon" onclick="openFoodOrders()">订单</button><button class="commerce-icon" onclick="openFoodCart()">'+svgIc('bag',22,'#222')+(cartN?'<i class="badge">'+cartN+'</i>':'')+'</button></div></div>'+
-      '<div class="scroll mt-scroll"><section class="mt-hero"><div class="mt-hello"><b>美团外卖</b> 美好生活小帮手</div><div class="mt-search"><span>'+svgIc('search',17,'#555')+'</span><input id="food_q" value="'+esc(S.food.q||'')+'" placeholder="搜美食、饮品或店铺" onkeydown="if(event.key===\'Enter\')foodSearch()"><button onclick="foodSearch()" '+(_foodBusy?'disabled':'')+'>'+(_foodBusy?'寻找中':'搜索')+'</button></div></section>'+
+    return '<div class="commerce-top mt-top"><button class="back" onclick="back()" aria-label="返回">‹</button><div class="mt-location"><small>外卖送到</small><b>'+esc(real?(r.addressLabel||'平台默认地址'):'我的位置⌄')+'</b></div><div class="tools"><button class="commerce-icon" onclick="openFoodOrders()">订单</button><button class="commerce-icon" onclick="openFoodCart()">'+svgIc('bag',22,'#222')+(cartN?'<i class="badge">'+cartN+'</i>':'')+'</button></div></div>'+
+      '<div class="scroll mt-scroll">'+(typeof deliveryModeSwitchHtml==='function'?deliveryModeSwitchHtml():'')+'<section class="mt-hero"><div class="mt-hello"><b>'+(real?'真实外卖':'美团外卖')+'</b> '+(real?'淘宝闪购优先 · 美团外卖其次':'美好生活小帮手')+'</div><div class="mt-search"><span>'+svgIc('search',17,'#555')+'</span><input id="food_q" value="'+esc(S.food.q||'')+'" placeholder="'+(real?'搜索真实店铺、品牌或餐品':'搜美食、饮品或店铺')+'" onkeydown="if(event.key===\'Enter\')foodSearch()"><button onclick="foodSearch()" '+(_foodBusy?'disabled':'')+'>'+(_foodBusy?'寻找中':'搜索')+'</button></div></section>'+
       '<div class="mt-cats">'+cats.map(function(c){return '<button class="mt-cat" onclick="foodQuick(\''+c[1]+'\')"><b>'+c[0]+'</b>'+c[1]+'</button>';}).join('')+'</div>'+
-      '<div class="mt-promise"><span><b>准</b> 超时赔付</span><span><b>快</b> 30分钟达</span><span><b>省</b> 天天神券</span></div>'+
-      '<div class="section-head"><strong>'+(_foodBusy?'正在搜索附近美食':rows.length?'附近推荐':'今天想吃什么')+'</strong><small>'+(_foodBusy?'骑手和商家都在准备':rows.length?'综合排序 · 配送优先':'选个分类看看')+'</small><button class="more" onclick="openFoodOrders()">全部订单 ›</button></div>'+
-      '<div class="mt-list">'+(_foodBusy?'<div class="commerce-empty"><span class="big">🛵</span>正在寻找附近好店…</div>':rows.length?rows.map(window.foodCard).join(''):'<div class="commerce-empty"><span class="big">🍜</span>搜一搜附近的好吃的<br><small>奶茶、炸鸡、火锅都可以</small></div>')+'</div></div>';
+      (real?'<div class="mt-real-trust"><span>真实商家</span><span>真实价格</span><span>真实状态</span></div>':'<div class="mt-promise"><span><b>准</b> 超时赔付</span><span><b>快</b> 30分钟达</span><span><b>省</b> 天天神券</span></div>')+
+      '<div class="section-head"><strong>'+(_foodBusy?(real?'正在连接真实平台':'正在搜索附近美食'):rows.length?(real?'真实搜索结果':'附近推荐'):'今天想吃什么')+'</strong><small>'+(_foodBusy?(real?'不会生成虚拟候选':'骑手和商家都在准备'):rows.length?(real?'仅展示平台实际返回':'综合排序 · 配送优先'):'选个分类看看')+'</small><button class="more" onclick="openFoodOrders()">全部订单 ›</button></div>'+
+      '<div class="mt-list">'+(_foodBusy?'<div class="commerce-empty"><span class="big">🛵</span>'+(real?'正在读取淘宝闪购与美团外卖…':'正在寻找附近好店…')+'</div>':rows.length?rows.map(window.foodCard).join(''):'<div class="commerce-empty"><span class="big">🍜</span>'+(real?'搜索后才会显示真实平台结果<br><small>未连接或失败时不会用虚拟商家代替</small>':'搜一搜附近的好吃的<br><small>奶茶、炸鸡、火锅都可以</small>')+'</div>')+'</div></div>';
   };
 
   window.foodCard=function(p,i){
     p=p||{};
+    var real=typeof deliveryRealEnabled==='function'&&deliveryRealEnabled();
+    if(real){
+      var facts=[];
+      if(p.rating!=null)facts.push('<span class="star">★ '+Number(p.rating).toFixed(1)+'</span>');
+      if(p.reviewCount!=null)facts.push(Number(p.reviewCount)+'条评价');
+      if(p.monthlySales!=null)facts.push('月售'+Number(p.monthlySales));
+      var delivery=[];if(p.etaMinutes!=null)delivery.push(Number(p.etaMinutes)+'分钟');if(p.distanceKm!=null)delivery.push(Number(p.distanceKm).toFixed(1)+'km');
+      var media=p.imageUrl?'<img src="'+esc(p.imageUrl)+'" alt="" loading="lazy">':esc(p.emoji||'🍱');
+      return '<article class="mt-card real"><div class="mt-logo">'+media+'</div><div class="mt-body"><div class="mt-provider">'+(typeof deliveryProviderText==='function'?deliveryProviderText(p.provider):esc(p.provider||'真实平台'))+'</div><div class="mt-shopname">'+esc(p.merchant||p.shop||'真实商家')+'</div>'+
+        (facts.length||delivery.length?'<div class="mt-rating">'+facts.join(' · ')+(delivery.length?'<span class="mt-delivery">'+delivery.join(' · ')+'</span>':'')+'</div>':'')+'<div class="mt-dish">'+esc(p.name||'商品')+(p.description?' · '+esc(p.description):'')+'</div>'+(p.couponLabel?'<span class="mt-discount">'+esc(p.couponLabel)+'</span>':'')+
+        '<div class="mt-bottom"><span class="mt-price"><small>¥</small>'+money(p.total)+'</span><div class="mt-actions"><button onclick="deliveryRealFoodCart('+i+')">加购</button><button class="order" onclick="foodBuy('+i+')">创建订单</button></div></div><div class="mt-real-foot">商品 ¥'+money(p.price)+' · 配送 ¥'+money(p.deliveryFee)+' · 以创建订单回执为准</div></div></article>';
+    }
     var n=seedOf((p.shop||'')+(p.name||'')+i),rating=(4.5+(n%5)/10).toFixed(1),mins=22+n%19,km=(.6+(n%28)/10).toFixed(1),sales=300+n%1800;
     var backgrounds=['linear-gradient(145deg,#fff1bd,#ffd861)','linear-gradient(145deg,#ffe2d0,#ffc4a0)','linear-gradient(145deg,#e4f7d6,#bfeaa8)'];
     return '<article class="mt-card"><div class="mt-logo" style="background:'+backgrounds[n%backgrounds.length]+'">'+(p.emoji||'🍱')+'</div><div class="mt-body"><div class="mt-shopname">'+esc(p.shop||'附近好店')+'</div>'+
