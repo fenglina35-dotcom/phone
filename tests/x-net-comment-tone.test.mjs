@@ -15,6 +15,10 @@ function featureBlock(source) {
   return source.slice(start, end);
 }
 
+function normalizedLines(source) {
+  return source.replace(/\r\n/g, '\n');
+}
+
 for (const source of [app, bundledApp]) {
   test('X profile exposes friendly, hostile, and mixed comment settings', () => {
     assert.match(source, /netCommentTone:'mixed'/);
@@ -43,7 +47,7 @@ for (const source of [app, bundledApp]) {
 }
 
 test('web and private app use the same X comment-tone implementation', () => {
-  assert.equal(featureBlock(bundledApp), featureBlock(app));
+  assert.equal(normalizedLines(featureBlock(bundledApp)), normalizedLines(featureBlock(app)));
 });
 
 test('X profile cover is taller in web and private shells', () => {
