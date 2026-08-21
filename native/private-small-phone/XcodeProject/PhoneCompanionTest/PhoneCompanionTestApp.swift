@@ -180,6 +180,8 @@ final class CompanionPushAppDelegate: NSObject,
 
     private var urgentBatteryObserver: NSObjectProtocol?
     private var urgentBatterySyncTask: Task<Void, Never>?
+    private var foregroundSyncInFlight = false
+    private var lastForegroundSyncAt = Date.distantPast
 
     func application(
         _ application: UIApplication,
@@ -201,6 +203,7 @@ final class CompanionPushAppDelegate: NSObject,
             // upload listener is ready, including when the management sheet
             // has never been opened.
             _ = CompanionWellnessService.shared
+            ScreenShareCoordinator.shared.clearOrphanedBroadcastState()
             ScreenShareCoordinator.shared.setHostForeground(true)
             await clearAppBadge()
             CompanionPushCoordinator.shared.setBackgroundWakeHandler {
@@ -226,11 +229,24 @@ final class CompanionPushAppDelegate: NSObject,
 
     func applicationDidBecomeActive(_ application: UIApplication) {
         requestRolePushSync()
-        Task { @MainActor in
-            ScreenShareCoordinator.shared.setHostForeground(true)
-            await clearAppBadge()
-            await synchronizeCurrentSnapshotIfPaired()
+        Task { @MainActor [weak self] in
+            await self?.synchronizeForegroundIfNeeded()
         }
+    }
+
+    @MainActor
+    private func synchronizeForegroundIfNeeded() async {
+        ScreenShareCoordinator.shared.clearOrphanedBroadcastState()
+        ScreenShareCoordinator.shared.setHostForeground(true)
+        guard !foregroundSyncInFlight,
+              Date().timeIntervalSince(lastForegroundSyncAt) >= 30 else {
+            return
+        }
+        foregroundSyncInFlight = true
+        lastForegroundSyncAt = Date()
+        defer { foregroundSyncInFlight = false }
+        await clearAppBadge()
+        await synchronizeCurrentSnapshotIfPaired()
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {

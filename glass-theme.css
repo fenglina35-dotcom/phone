@@ -333,6 +333,24 @@ html.north-native-app.north-glass-ui .phone *::after{backdrop-filter:none!import
 html.north-ios-webkit.north-glass-ui .phone *,
 html.north-ios-webkit.north-glass-ui .phone *::before,
 html.north-ios-webkit.north-glass-ui .phone *::after{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+/* The private App detects real event-loop stalls instead of permanently
+   degrading the design. During a hot/blocked window only decorative infinite
+   motion and the two largest filtered backdrops are paused; message progress,
+   call state and other functional feedback remain visible. */
+html:is(.north-native-performance-guard,.north-native-startup-quiet) .home .wdisc,
+html:is(.north-native-performance-guard,.north-native-startup-quiet) .home .petday,
+html:is(.north-native-performance-guard,.north-native-startup-quiet) .home .petsleep,
+html:is(.north-native-performance-guard,.north-native-startup-quiet) .home .petcat .ptail,
+html:is(.north-native-performance-guard,.north-native-startup-quiet) .home .petcat .peyes,
+html:is(.north-native-performance-guard,.north-native-startup-quiet) .home .pzzz,
+html:is(.north-native-performance-guard,.north-native-startup-quiet) .dybg,
+html:is(.north-native-performance-guard,.north-native-startup-quiet) .dy-orbit,
+html:is(.north-native-performance-guard,.north-native-startup-quiet) .dyemoji,
+html:is(.north-native-performance-guard,.north-native-startup-quiet) .dydisc,
+html:is(.north-native-performance-guard,.north-native-startup-quiet) .locpulse,
+html:is(.north-native-performance-guard,.north-native-startup-quiet) .lmmarker span{animation-play-state:paused!important}
+html.north-native-performance-guard .music-ambient,
+html.north-native-performance-guard .dybg{filter:none!important}
 html.north-native-app.north-glass-ui.north-pack-pink .glass-second-portrait,
 html.north-native-app.north-glass-ui.north-pack-pink .glass-second-photos,
 html.north-native-app.north-glass-ui .home.tpink .glass-second-portrait,

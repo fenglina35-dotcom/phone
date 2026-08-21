@@ -7,10 +7,10 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const pip=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/CallPictureInPictureController.swift',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-test('v1018 web source keeps private 1.0.139 compatibility',()=>{
-  assert.match(app,/APP_VER='v1018 · 私人 App 点击响应与发热修复'/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 139;/);
-  assert.match(project,/MARKETING_VERSION = 1\.0\.139;/);
+test('v1019 web source keeps private 1.0.140 compatibility',()=>{
+  assert.match(app,/APP_VER='v1019 · 偶发卡顿与发热状态修复'/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 140;/);
+  assert.match(project,/MARKETING_VERSION = 1\.0\.140;/);
 });
 
 test('public music search needs no user login and reuses together-listen songs',()=>{

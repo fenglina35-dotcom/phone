@@ -12,22 +12,22 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v1018 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1018 · 私人 App 点击响应与发热修复'/);
-  assert.match(app,/const url='sw\.js\?v=1018&r=v1018-native-interaction-thermal-repair-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1018'/);
-  assert.match(html,/app\.js\?v=1018/);
-  assert.match(sw,/const BUILD='1018'/);
-  assert.match(sw,/north-shell-v1018/);
-  assert.match(index,/小手机\.html\?v=1018/);
-  assert.match(repair,/小手机\.html\?v=1018/);
+test('v1019 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v1019 · 偶发卡顿与发热状态修复'/);
+  assert.match(app,/const url='sw\.js\?v=1019&r=v1019-intermittent-thermal-state-repair-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1019'/);
+  assert.match(html,/app\.js\?v=1019/);
+  assert.match(sw,/const BUILD='1019'/);
+  assert.match(sw,/north-shell-v1019/);
+  assert.match(index,/小手机\.html\?v=1019/);
+  assert.match(repair,/小手机\.html\?v=1019/);
 });
 
-test('the private iOS package embeds web v1018 and keeps 1.0.139 delivery',()=>{
-  assert.match(privateBundle,/<string>1018<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.139;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 139;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.139 \(139\)'/);
+test('the private iOS package embeds web v1019 and keeps 1.0.140 delivery',()=>{
+  assert.match(privateBundle,/<string>1019<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.140;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 140;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.140 \(140\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

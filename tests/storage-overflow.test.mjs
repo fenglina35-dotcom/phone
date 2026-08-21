@@ -141,6 +141,7 @@ test('real save flow keeps only the newest queued large snapshot and restores it
     let S={settings:{},me:{accounts:[]},marker:'first',payload:'x'.repeat(3.6*1024*1024)};
     function defState(){return {settings:{},me:{accounts:[]}}}
     function _imgReplacer(key,value){return value}
+    function northNativeTimedJSON(value,replacer){return JSON.stringify(value,replacer)}
     function privateNativeCoreStorageKey(){return false}
     function isQuotaError(){return false}
     function mergeStateData(data){return Object.assign(defState(),data||{})}

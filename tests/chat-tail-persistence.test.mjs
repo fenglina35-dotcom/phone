@@ -57,6 +57,9 @@ test('each completed role turn is journaled and durably flushed before reply com
   assert.ok(durable.indexOf('persistWechatMessagesNow()')>=0);
   assert.ok(durable.indexOf('persistWechatMessagesNow()')<durable.indexOf('roleBackgroundCancel'));
   assert.match(functionSource('bootImages'),/wechatTailJournalMerge\(\)/);
-  assert.match(source,/pagehide'[\s\S]{0,500}saveNow\(\);persistWechatMessagesNow\(\)\.catch/);
-  assert.match(source,/visibilitychange'[\s\S]{0,900}saveNow\(\);persistWechatMessagesNow\(\)\.catch/);
+  assert.match(source,/function persistPendingStateOnHide\(\)[\s\S]{0,500}return saveNow\(\)/);
+  assert.match(source,/pagehide'[\s\S]{0,500}persistPendingStateOnHide\(\)/);
+  assert.doesNotMatch(source,/pagehide'[\s\S]{0,500}saveNow\(\);persistWechatMessagesNow\(\)\.catch/);
+  assert.match(source,/visibilitychange'[\s\S]{0,900}persistPendingStateOnHide\(\)/);
+  assert.doesNotMatch(source,/visibilitychange'[\s\S]{0,900}saveNow\(\);persistWechatMessagesNow\(\)\.catch/);
 });

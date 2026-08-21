@@ -11,6 +11,7 @@ const sync=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProje
 const bridge=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),'utf8');
 const privateRoot=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/SmallPhonePrivateRootView.swift'),'utf8');
 const screenShare=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/ScreenShareCoordinator.swift'),'utf8');
+const appDelegate=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneCompanionTestApp.swift'),'utf8');
 
 test('private WKWebView does not create a backdrop compositor layer for every card and bubble',()=>{
   assert.match(css,/north-native-app\.north-glass-ui \.phone \*[\s\S]*?backdrop-filter:none!important/);
@@ -93,4 +94,37 @@ test('startup avoids immediate whole-state cloud and recovery work',()=>{
   assert.match(app,/function queueRecoverySnapshot\(json,savedAt\)\{savedAt=[\s\S]*?_recoverySnapshotAt[\s\S]*?return _recoverySnapshotWrite;let data;try\{data=JSON\.parse\(json\)/);
   assert.doesNotMatch(app,/privateNativeCoreStorageKey\(CORE_IDB_KEY\)&&!_coreOverflowMode\)save\(0\)/);
   assert.match(app,/if\(!privateNativeAppOn\(\)\)setTimeout\(\(\)=>\{try\{const savedAt=Date\.now\(\),json=JSON\.stringify/);
+});
+
+test('background transitions perform one core save instead of two full state traversals',()=>{
+  assert.match(app,/function persistPendingStateOnHide\(\)\{if\(!_savePending\)return false;[\s\S]*?return saveNow\(\);\}/);
+  assert.match(app,/pagehide'[\s\S]{0,500}?persistPendingStateOnHide\(\)/);
+  assert.match(app,/beforeunload'[\s\S]{0,350}?persistPendingStateOnHide\(\)/);
+  assert.match(app,/visibilitychange'[\s\S]{0,800}?persistPendingStateOnHide\(\)/);
+  assert.doesNotMatch(app,/pagehide'[\s\S]{0,500}?saveNow\(\);persistWechatMessagesNow\(\)/);
+});
+
+test('native performance protection is adaptive and preserves the normal visual path',()=>{
+  assert.match(app,/function northNativeTimedJSON\(value,replacer,kind\)/);
+  assert.match(app,/function northNativePerformanceWatchStart\(\)/);
+  assert.match(app,/north-native-startup-quiet/);
+  assert.match(app,/north-native-performance-guard/);
+  assert.match(css,/north-native-performance-guard,.north-native-startup-quiet/);
+  assert.match(css,/animation-play-state:paused!important/);
+});
+
+test('orphaned ReplayKit state cannot leave the host on the hot polling path',()=>{
+  assert.match(screenShare,/func clearOrphanedBroadcastState/);
+  assert.match(screenShare,/now - newest > 15/);
+  assert.match(screenShare,/set\(false, forKey: "screenShare\.active\.v1"\)/);
+  assert.match(screenShare,/func status\(\)[\s\S]{0,120}?clearOrphanedBroadcastState\(\)/);
+  assert.match(screenShare,/private func poll\(force: Bool = false\)[\s\S]{0,120}?clearOrphanedBroadcastState\(\)/);
+});
+
+test('foreground snapshot synchronization is serialized and cooled down',()=>{
+  assert.match(appDelegate,/private var foregroundSyncInFlight = false/);
+  assert.match(appDelegate,/Date\(\)\.timeIntervalSince\(lastForegroundSyncAt\) >= 30/);
+  assert.match(appDelegate,/func applicationDidBecomeActive[\s\S]{0,300}?synchronizeForegroundIfNeeded\(\)/);
+  assert.match(appDelegate,/@MainActor\s+private func synchronizeForegroundIfNeeded\(\) async/);
+  assert.match(appDelegate,/defer \{ foregroundSyncInFlight = false \}/);
 });

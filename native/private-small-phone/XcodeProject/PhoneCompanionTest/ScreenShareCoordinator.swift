@@ -16,6 +16,30 @@ final class ScreenShareCoordinator {
     private var lastRealtimeNotifyAt: TimeInterval = 0
     private var picker: RPSystemBroadcastPickerView?
 
+    /// ReplayKit does not guarantee `broadcastFinished` when iOS terminates the
+    /// extension. In that case the App Group flag can remain true forever and
+    /// the host App keeps taking the active 0.5-second polling path on every
+    /// later launch. A real broadcast writes a frame about every 0.65 seconds,
+    /// so an old flag with no recent frame is an orphan, not a live share.
+    @discardableResult
+    func clearOrphanedBroadcastState(now: TimeInterval = Date().timeIntervalSince1970) -> Bool {
+        let defaults = UserDefaults(suiteName: Self.appGroup)
+        guard defaults?.bool(forKey: "screenShare.active.v1") == true else {
+            return false
+        }
+        let frameAt = (defaults?.double(forKey: "screenShare.frameAt.v1") ?? 0) / 1000
+        let startedAt = (defaults?.double(forKey: "screenShare.startedAt.v1") ?? 0) / 1000
+        let newest = max(frameAt, startedAt)
+        guard newest <= 0 || now - newest > 15 else { return false }
+        defaults?.set(false, forKey: "screenShare.active.v1")
+        defaults?.set(false, forKey: "screenShare.backgroundFrameReady.v1")
+        defaults?.set(now * 1000, forKey: "screenShare.endedAt.v1")
+        defaults?.synchronize()
+        lastActive = false
+        lastRealtimeNotifyAt = 0
+        return true
+    }
+
     func setHostForeground(_ foreground: Bool) {
         let defaults = UserDefaults(suiteName: Self.appGroup)
         defaults?.set(foreground, forKey: "screenShare.hostForeground.v1")
@@ -59,6 +83,7 @@ final class ScreenShareCoordinator {
     }
 
     func status() -> [String: Any] {
+        clearOrphanedBroadcastState()
         let defaults = UserDefaults(suiteName: Self.appGroup)
         return [
             "active": defaults?.bool(forKey: "screenShare.active.v1") ?? false,
@@ -186,6 +211,7 @@ final class ScreenShareCoordinator {
     }
 
     private func poll(force: Bool = false) {
+        clearOrphanedBroadcastState()
         let defaults = UserDefaults(suiteName: Self.appGroup)
         let active = defaults?.bool(forKey: "screenShare.active.v1") ?? false
         let sequence = defaults?.integer(forKey: "screenShare.sequence.v1") ?? 0
