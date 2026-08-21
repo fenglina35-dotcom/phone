@@ -6,6 +6,7 @@ const DELIVERY_ACTIONS = new Set([
   "capabilities",
   "confirm_address",
   "search",
+  "offer_options",
   "create_order",
   "pay_order",
   "order_status",
@@ -198,7 +199,7 @@ async function upstream(action: string, payload: JsonObject, context: JsonObject
       "x-phone-delivery-contract": "1",
     },
     body,
-    signal: AbortSignal.timeout(action === "search" ? 90000 : 35000),
+    signal: AbortSignal.timeout(action === "search" ? 50000 : 35000),
   });
   const raw = await response.text();
   let decoded: JsonObject = {};
@@ -257,6 +258,7 @@ function offerResult(value: unknown) {
     addressFingerprint: text(row.addressFingerprint, 180),
     rawVersion: text(row.rawVersion, 80),
     optionGroups: optionGroups(row.optionGroups || row.options),
+    optionsLoaded: row.optionsLoaded === true,
   };
 }
 
@@ -313,6 +315,13 @@ async function handleClientAction(
     const source = Array.isArray(data.offers) ? data.offers : [];
     const offers = source.slice(0, 30).map(offerResult);
     return reply(request, { ok: true, data: { offers, addressLabel: text(data.addressLabel, 80) } });
+  }
+  if (action === "offer_options") {
+    const offerId = text(payload.offerId, 160);
+    const quoteId = text(payload.quoteId, 160);
+    if (!offerId || !quoteId) return reply(request, { ok: false, error: "真实规格请求缺少报价标识" }, 400);
+    const data = await upstream(action, { offerId, quoteId }, context);
+    return reply(request, { ok: true, data: { offerId, quoteId, optionGroups: optionGroups(data.optionGroups), optionsLoaded: true } });
   }
   if (action === "create_order") {
     const clientRequestId = text(payload.clientRequestId, 160);

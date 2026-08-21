@@ -7,13 +7,17 @@ const adapter=fs.readFileSync(new URL('../services/phone-delivery-browser/src/ad
 const browser=fs.readFileSync(new URL('../services/phone-delivery-browser/src/taobao-flash-browser.mjs',import.meta.url),'utf8');
 
 assert.match(client,/selectedOptions:selected/,'the selected real platform options must be sent when creating an order');
-assert.match(client,/每个 required 组都必须选择/,'the role must choose every required option from platform data');
-assert.match(client,/必须优先严格满足用户明确说出的品牌、饮品、杯型、糖度、温度、口味和加料/,'explicit user drink and flavor requirements must outrank role preferences');
-assert.match(client,/当前没有真实角色钱包，也不会显示无效的自动付款开关/,'manual-only connectors must not present a fake usable wallet or auto-pay toggle');
-assert.match(client,/平台确认页已优惠/,'the client must report only checkout-confirmed discount facts');
+assert.match(client,/每个 required 组必须选择/,'the role must choose every required option from platform data');
+assert.match(client,/用户本次明确说出的杯型、糖度、冰度、口味和小料都是硬条件/,'explicit user drink and flavor requirements must outrank role preferences');
+assert.doesNotMatch(client,/deliverySetAutoPay|deliveryOpenWallet|deliveryTopUp|deliverySaveWallet/,'manual-only delivery must not expose fake wallet or auto-pay controls');
+assert.match(client,/平台结算页已自动优惠/,'the client must report only checkout-confirmed discount facts');
+assert.match(client,/offer_options/,'the client must fetch options only after selecting a fast candidate');
+assert.match(client,/候选没有完全对应项时必须返回 matched:false/,'explicit brands and products must never be silently substituted');
+assert.match(client,/真实选项缺少任意一项时必须返回 matched:false/,'explicit drink options must never be silently substituted');
 assert.match(client,/safePayQr/,'payment QR data must pass a strict client-side allowlist');
-assert.match(client,/官方待付款订单/,'the virtual phone must expose the official pending-payment checkout');
+assert.match(client,/支付宝待付款订单/,'the virtual phone must expose the official pending-payment checkout');
 assert.match(edge,/optionGroups: optionGroups/,'the edge connector must preserve sanitized platform option groups');
+assert.match(edge,/"offer_options"/,'the edge connector must expose the second-stage option request');
 assert.match(edge,/payQrDataURL/,'the edge connector must validate payment QR data');
 assert.match(adapter,/automaticPayments: false/,'browser automation must never advertise automatic payment');
 assert.match(adapter,/QRCode\.toDataURL/,'the official cashier URL must be convertible to a scannable QR');

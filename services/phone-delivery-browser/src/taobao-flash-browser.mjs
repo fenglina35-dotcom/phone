@@ -109,32 +109,30 @@ export class TaobaoFlashBrowser {
   }
 
   async search(query, limit = 12) {
-    const page = await this.goto(`https://h5.ele.me/search/?keyword=${encodeURIComponent(query)}`, 4800);
+    const page = await this.goto(`https://h5.ele.me/search/?keyword=${encodeURIComponent(query)}`, 2500);
     await this.requireLogin(page); await this.riskCheck(page);
-    for (let attempt = 0; attempt < 24; attempt += 1) {
-      const ready = await page.locator('body').innerText().then(text => /左滑进店|加载更多数据/.test(text)).catch(() => false);
-      if (ready) break;
-      await page.waitForTimeout(750);
+    let shops = [];
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      shops = await this.extractShops(page);
+      if (shops.length) break;
+      await page.waitForTimeout(500);
     }
     this.searchUrl = page.url();
-    this.shops = await this.extractShops(page);
+    this.shops = shops;
     if (!this.shops.length) throw new Error('淘宝闪购没有解析到可配送商家，请确认地址或在浏览器窗口处理验证');
     const offers = [];
-    for (let shopIndex = 0; shopIndex < Math.min(this.shops.length, 4) && offers.length < limit; shopIndex += 1) {
+    const maxShops = Math.min(this.shops.length, 2, Math.max(1, limit));
+    for (let shopIndex = 0; shopIndex < maxShops && offers.length < limit; shopIndex += 1) {
       const shop = this.shops[shopIndex];
       const shopPage = await this.enterShop(shopIndex);
-      const items = await this.extractMenu(shopPage, Math.max(2, Math.ceil(limit / Math.min(4, this.shops.length))));
+      const items = await this.extractMenu(shopPage, Math.max(1, Math.ceil(limit / maxShops)), query);
       for (const item of items) {
-        const optionGroups = await this.inspectOptions(shopPage, item.buttonIndex, item).catch(error => {
-          if (process.env.PHONE_DELIVERY_DIAGNOSTIC_PATH) console.error('[phone-delivery-browser] option inspection failed:', clean(error?.message || error, 240));
-          return [];
-        });
         const deliveryFee = shop.freeDeliveryThreshold > 0 && item.price >= shop.freeDeliveryThreshold ? 0 : shop.deliveryFee;
         offers.push({
           merchantId: shop.storeId || String(shopIndex), merchant: shop.name, name: item.name,
           description: item.description, price: item.price, deliveryFee,
           total: item.price + deliveryFee, rating: shop.rating, monthlySales: shop.monthlySales,
-          etaMinutes: shop.etaMinutes, couponLabel: shop.couponLabel, optionGroups,
+          etaMinutes: shop.etaMinutes, couponLabel: shop.couponLabel, optionGroups: [], optionsLoaded: false,
           browserRef: { shopIndex, itemName: item.name, buttonIndex: item.buttonIndex, detailUrl: item.detailUrl || '', shopUrl: shop.anchorUrl || '' },
         });
         if (offers.length >= limit) break;
@@ -201,9 +199,9 @@ export class TaobaoFlashBrowser {
     shop.directUrl = direct.toString();
     const storeId = parsed.searchParams.get('store_id') || parsed.searchParams.get('shopId') || '';
     shop.storeId = storeId;
-    await page.waitForTimeout(700);
+    await page.waitForTimeout(500);
     await this.dismissPromoOverlays(page);
-    await this.purchaseControls(page).first().waitFor({ state: 'visible', timeout: 12000 }).catch(() => {});
+    await this.waitForPurchaseControls(page, 8000);
     const shopBody = clean(await page.locator('body').innerText().catch(() => ''), 1800);
     const merchantMatch = shopBody.match(/环境\s+(.{2,50}?)\s+评分\s*([0-5](?:\.\d)?)/) || shopBody.match(/商家\s+(.{2,50}?)\s+(?:刚刚搜过|买过|热销|点餐)/);
     if (merchantMatch?.[1]) shop.name = clean(merchantMatch[1], 50);
@@ -231,11 +229,11 @@ export class TaobaoFlashBrowser {
     await page.waitForTimeout(350);
   }
 
-  async extractMenu(page, limit) {
+  async extractMenu(page, limit, query = '') {
     const controls = this.purchaseControls(page);
-    await controls.first().waitFor({ state: 'visible', timeout: 12000 }).catch(() => {});
+    await this.waitForPurchaseControls(page, 8000);
     const items = [];
-    for (let buttonIndex = 0; buttonIndex < await controls.count() && items.length < limit; buttonIndex += 1) {
+    for (let buttonIndex = 0; buttonIndex < Math.min(await controls.count(), 80); buttonIndex += 1) {
       const control = controls.nth(buttonIndex);
       const card = await control.evaluate(button => {
         const box = button.getBoundingClientRect();
@@ -259,11 +257,33 @@ export class TaobaoFlashBrowser {
       const name = clean(card.nameText.split(/月售|近期\d+人|[¥￥]/)[0], 60).replace(/^(热销|大家喜欢吃，才叫真好吃)\s*/, '').replace(/\s+\d+次$/, '');
       if (name && price > 0) items.push({ buttonIndex, name, price, description: clean(text, 240) });
     }
-    return items.filter((item, index) => items.findIndex(other => other.name === item.name) === index);
+    const unique = items.filter((item, index) => items.findIndex(other => other.name === item.name) === index);
+    const normalizedQuery = clean(query, 120).toLowerCase().replace(/\s+/g, '');
+    const pairs = new Set();
+    for (let index = 0; index + 1 < normalizedQuery.length; index += 1) pairs.add(normalizedQuery.slice(index, index + 2));
+    const score = item => {
+      const haystack = clean(`${item.name} ${item.description}`, 400).toLowerCase().replace(/\s+/g, '');
+      const name = clean(item.name, 100).toLowerCase().replace(/\s+/g, '');
+      let value = normalizedQuery.includes(name) || name.includes(normalizedQuery) ? 100 : 0;
+      for (const pair of pairs) if (haystack.includes(pair)) value += 1;
+      return value;
+    };
+    return unique.map((item, index) => ({ item, index, score: score(item) }))
+      .sort((left, right) => right.score - left.score || left.index - right.index)
+      .slice(0, limit).map(row => row.item);
   }
 
   purchaseControls(page) {
     return page.locator('[aria-label*="加购"], [aria-label*="选规格"], [aria-label*="选套餐"]').or(page.getByText(/^(选规格|选套餐|加购)$/));
+  }
+
+  async waitForPurchaseControls(page, timeout = 8000) {
+    const deadline = Date.now() + timeout;
+    while (Date.now() < deadline) {
+      if (await this.renderedLocator(this.purchaseControls(page))) return true;
+      await page.waitForTimeout(300);
+    }
+    return false;
   }
 
   async visibleDialog(page) {
@@ -291,10 +311,19 @@ export class TaobaoFlashBrowser {
   }
 
   async inspectOptions(page, buttonIndex, itemRef = null) {
-    const buttons = this.purchaseControls(page);
-    const button = buttons.nth(buttonIndex);
+    return this.inspectOptionsControl(page, this.purchaseControls(page).nth(buttonIndex), itemRef);
+  }
+
+  async inspectOptionsFor(ref) {
+    const page = ref.shopUrl ? await this.goto(ref.shopUrl, 900) : await this.enterShop(ref.shopIndex, { preferSaved: true });
+    await this.waitForPurchaseControls(page, 8000);
+    const button = await this.productControl(page, ref.itemName);
+    if (!button) throw new Error('没有在真实商家中定位到同一件商品，请重新搜索');
+    return this.inspectOptionsControl(page, button, ref);
+  }
+
+  async inspectOptionsControl(page, button, itemRef = null) {
     const originUrl = page.url();
-    const before = clean(await page.locator('[aria-label*="购物车总计金额"]').first().getAttribute('aria-label').catch(() => ''));
     await this.tapControl(page, button); await page.waitForTimeout(700);
     const enteredDetail = /pages\/ele-product-detail/i.test(page.url());
     if (enteredDetail) {
@@ -342,10 +371,17 @@ export class TaobaoFlashBrowser {
       const singleChoiceAddOn = /任选\s*1\s*种/.test(group.name) || group.choices.some(label => /任选\s*1\s*种/.test(label));
       const choices = group.choices.filter(label => !/^(猜你喜欢|温馨小贴士|数量|\d+|[（(]任选\s*\d+\s*种[）)])$/.test(label));
       if (/温度|冰度/.test(group.name)) {
-        const addOnStart = choices.findIndex((label, index) => index > 0 && !/冰|常温|温|热|冷/.test(label));
-        if (addOnStart > 0) {
-          normalizedGroups.push({ name: group.name, choices: choices.slice(0, addOnStart), multiple: false });
-          normalizedGroups.push({ name: '加料', choices: choices.slice(addOnStart), multiple: !singleChoiceAddOn });
+        const extraStart = choices.findIndex((label, index) => index > 0 && !/冰|常温|温|热|冷/.test(label));
+        if (extraStart > 0) {
+          normalizedGroups.push({ name: group.name, choices: choices.slice(0, extraStart), multiple: false });
+          let tail = choices.slice(extraStart).filter(label => !/^(甜度|糖度)(?:[【（(].*)?$/.test(label));
+          const toppingStart = tail.findIndex((label, index) => index > 0 && /小料|珍珠|椰果|啵啵|波波|麻薯|布丁|仙草|奶盖|芋圆|红豆|西米|爆珠/.test(label));
+          if (tail.some(label => /糖|甜/.test(label))) {
+            const sugar = toppingStart > 0 ? tail.slice(0, toppingStart) : tail;
+            const toppings = toppingStart > 0 ? tail.slice(toppingStart) : [];
+            if (sugar.length) normalizedGroups.push({ name: '糖度', choices: sugar, multiple: false });
+            if (toppings.length) normalizedGroups.push({ name: '加料', choices: toppings, multiple: !singleChoiceAddOn });
+          } else if (tail.length) normalizedGroups.push({ name: '加料', choices: tail, multiple: !singleChoiceAddOn });
           continue;
         }
       }
@@ -472,7 +508,26 @@ export class TaobaoFlashBrowser {
     return marked ? page.locator('[data-phone-delivery-title="1"]').first() : null;
   }
 
-  async createOrder({ ref, selectedOptions, quantity }) {
+  async productQuantityPlus(page, itemName, fallbackY = null) {
+    const pluses = page.locator('[aria-label*="增加"], [aria-label*="添加"], [aria-label*="加购"]');
+    const title = await this.productTitle(page, itemName);
+    const titleBox = title ? await title.boundingBox().catch(() => null) : null;
+    const targetY = titleBox ? titleBox.y + titleBox.height / 2 : fallbackY;
+    return targetY == null ? this.visibleLocator(pluses) : this.nearestControlAtY(pluses, targetY);
+  }
+
+  async cleanupFailureSuffix(itemName) {
+    try {
+      const result = await this.cleanupCartItem(itemName);
+      return result.cartAmount === 0
+        ? '本次加购已撤回'
+        : '淘宝闪购购物车仍有商品，请先在官方页面核对后再试';
+    } catch {
+      return '无法确认本次加购是否已撤回，请先在淘宝闪购购物车核对';
+    }
+  }
+
+  async createOrder({ ref, selectedOptions, optionGroups = [], quantity }) {
     let page; let targetControlY = null;
     if (ref.detailUrl) {
       page = await this.goto(ref.detailUrl, 1800);
@@ -480,8 +535,8 @@ export class TaobaoFlashBrowser {
       if (!body.includes(ref.itemName)) throw new Error('真实商品详情已失效，请重新搜索');
     } else {
       page = ref.shopUrl ? await this.goto(ref.shopUrl, 900) : await this.enterShop(ref.shopIndex, { preferSaved: true });
-      await this.purchaseControls(page).first().waitFor({ state: 'visible', timeout: 12000 }).catch(() => {});
-      const existingCartLabel = clean(await page.locator('[aria-label*="购物车总计金额"]').first().getAttribute('aria-label').catch(() => ''));
+      await this.waitForPurchaseControls(page, 8000);
+      const existingCartLabel = clean(await page.locator('[aria-label*="购物车总计金额"]').first().getAttribute('aria-label', { timeout: 1500 }).catch(() => ''));
       const existingCheckout = await this.visibleLocator(page.getByText('去结算', { exact: false }), true);
       if (number(existingCartLabel) > 0 || existingCheckout) throw new Error('淘宝闪购当前门店购物车已有商品，为避免混单请先在官方页面处理购物车');
       let add = null;
@@ -530,30 +585,52 @@ export class TaobaoFlashBrowser {
     }
     const dialog = await this.optionPanel(page);
     const selectedLabels = [];
-    if (dialog) {
-      const inspected = await this.dialogGroups(dialog);
-      for (const ids of Object.values(selectedOptions || {})) {
+    const applySelectedOptions = async (panel, collectLabels = false) => {
+      for (const [groupId, ids] of Object.entries(selectedOptions || {})) {
+        const group = optionGroups.find(item => String(item.id) === String(groupId));
+        if (!group) throw new Error('真实规格映射已经失效，请重新搜索');
         for (const id of (Array.isArray(ids) ? ids : [ids])) {
-          const match = String(id).match(/^g(\d+)c(\d+)$/); if (!match) continue;
-          const group = inspected[Number(match[1])];
-          const label = group?.choices?.[Number(match[2])];
-          if (label) {
-            await dialog.getByText(label, { exact: true }).first().click();
-            selectedLabels.push(`${group.name}：${label}`);
-          }
+          const choice = (group.choices || []).find(item => String(item.id) === String(id));
+          if (!choice) throw new Error(`${group.name}的真实选项已经失效，请重新搜索`);
+          const target = await this.visibleLocator(panel.getByText(choice.label, { exact: true }), true);
+          if (!target) throw new Error(`平台规格“${choice.label}”当前不可选择，请重新搜索`);
+          await this.activateControl(page, target);
+          if (collectLabels) selectedLabels.push(`${group.name}：${choice.label}`);
         }
       }
-      const confirm = await this.visibleLocator(dialog.getByText(/加入购物车|确定|选好了/), true);
+      const confirm = await this.visibleLocator(panel.getByText(/加入购物车|确定|选好了/), true);
       if (!confirm) throw new Error('未找到规格确认按钮，请在浏览器窗口处理');
       await this.tapControl(page, confirm); await page.waitForTimeout(900);
+    };
+    if (dialog) {
+      await applySelectedOptions(dialog, true);
     }
     for (let i = 1; i < quantity; i += 1) {
-      const pluses = page.locator('[aria-label*="增加"], [aria-label*="添加"], [aria-label*="加购"]');
-      const plus = targetControlY == null ? await this.visibleLocator(pluses) : await this.nearestControlAtY(pluses, targetControlY);
-      if (plus) { await plus.evaluate(node => node.click()).catch(() => this.activateControl(page, plus)); await page.waitForTimeout(350); }
+      const plus = await this.productQuantityPlus(page, ref.itemName, targetControlY);
+      if (!plus) {
+        // Products that use a specification dialog often keep the “choose
+        // options” button after being added instead of rendering a quantity +.
+        // Re-open the same product and apply the exact same choices again.
+        const addAgain = await this.productControl(page, ref.itemName);
+        if (addAgain) {
+          await this.activateControl(page, addAgain); await page.waitForTimeout(700);
+          const repeatDialog = await this.optionPanel(page);
+          if (repeatDialog) {
+            await applySelectedOptions(repeatDialog, false);
+            continue;
+          }
+        }
+        const suffix = await this.cleanupFailureSuffix(ref.itemName);
+        throw new Error(`平台没有找到第${i + 1}份同规格商品的增加入口，${suffix}`);
+      }
+      await plus.evaluate(node => node.click()).catch(() => this.activateControl(page, plus));
+      await page.waitForTimeout(350);
     }
     const checkout = await this.visibleLocator(page.getByText('去结算', { exact: false }), true);
-    if (!checkout) throw new Error('未达到起送金额或无法结算，请重新选择商品');
+    if (!checkout) {
+      const suffix = await this.cleanupFailureSuffix(ref.itemName);
+      throw new Error(`未达到起送金额或无法结算，${suffix}，请重新选择商品或数量`);
+    }
     const checkoutUrl = page.url();
     await checkout.evaluate(node => {
       let target = node;
@@ -568,12 +645,18 @@ export class TaobaoFlashBrowser {
     if (page.url() === checkoutUrl) {
       await this.activateControl(page, checkout); await page.waitForTimeout(1800);
     }
-    if (!/checkout|confirm|buy/i.test(page.url())) throw new Error('淘宝闪购没有进入订单确认页，请重新搜索后再试');
+    if (!/checkout|confirm|buy/i.test(page.url())) {
+      const suffix = await this.cleanupFailureSuffix(ref.itemName);
+      throw new Error(`淘宝闪购没有进入订单确认页，${suffix}，请重新搜索后再试`);
+    }
     await page.waitForTimeout(1800); await this.riskCheck(page);
     const body = clean(await page.locator('body').innerText(), 6000);
     const amounts = checkoutAmounts(body);
     const total = amounts.total;
-    if (!total) throw new Error('没有从淘宝闪购确认页读到有效金额');
+    if (!total) {
+      const suffix = await this.cleanupFailureSuffix(ref.itemName);
+      throw new Error(`没有从淘宝闪购确认页读到有效金额，${suffix}`);
+    }
     return { total, discount: amounts.discount, items: [{ name: ref.itemName, quantity, price: total, options: selectedLabels.join('、') }], browserOrderRef: { stage: 'confirm', url: page.url() }, risk: [] };
   }
 
@@ -592,10 +675,20 @@ export class TaobaoFlashBrowser {
   async submitOrder(browserOrderRef) {
     const page = await this.ensure();
     if (!/buy|order|confirm/i.test(page.url()) && browserOrderRef?.url) await this.goto(browserOrderRef.url, 1800);
-    const button = await this.visibleLocator(page.getByText(/提交订单|提交并支付|去支付|立即支付/, { exact: false }), true);
-    if (!button) throw new Error('未找到淘宝闪购提交订单按钮，请在浏览器窗口核对');
     const beforePages = new Set(this.context.pages());
-    await this.tapControl(page, button);
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const button = await this.visibleLocator(page.getByText(/提交订单|提交并支付|去支付|立即支付/, { exact: false }), true);
+      if (!button) throw new Error('未找到淘宝闪购提交订单按钮，请在浏览器窗口核对');
+      await this.tapControl(page, button); await page.waitForTimeout(700);
+      const promptBody = clean(await page.locator('body').innerText().catch(() => ''), 7000);
+      if (/选择餐具份数/.test(promptBody)) {
+        const noUtensils = await this.visibleLocator(page.getByText('无需餐具', { exact: true }), true);
+        if (!noUtensils) throw new Error('淘宝闪购要求选择餐具，但没有提供“无需餐具”选项');
+        await this.tapControl(page, noUtensils); await page.waitForTimeout(600);
+        continue;
+      }
+      break;
+    }
     for (let i = 0; i < 25; i += 1) {
       await page.waitForTimeout(500);
       const candidate = this.context.pages().find(item => !beforePages.has(item)) || this.context.pages().at(-1) || page;
@@ -606,6 +699,7 @@ export class TaobaoFlashBrowser {
     }
     const body = clean(await page.locator('body').innerText().catch(() => ''), 3000);
     if (/支付成功|付款成功/.test(body)) return { status: 'paid', payUrl: '', browserOrderRef: { stage: 'paid', url: page.url() } };
+    if (/确认订单/.test(body) && /立即支付|提交订单/.test(body)) throw new Error('淘宝闪购仍停留在订单确认页，没有完成真实订单提交');
     return { status: 'pending_payment', payUrl: '', browserOrderRef: { stage: 'cashier', url: page.url() } };
   }
 
@@ -698,32 +792,58 @@ export class TaobaoFlashBrowser {
     });
   }
 
-  async diagnosticCleanupItem(itemName) {
+  async diagnosticCart(path) {
+    const page = await this.ensure();
+    const cartTrigger = await this.renderedLocator(page.locator('[aria-label*="购物车总计金额"]'));
+    if (cartTrigger) await this.activateControl(page, cartTrigger);
+    else await page.touchscreen.tap(42, 866);
+    await page.waitForTimeout(700);
+    await page.screenshot({ path, fullPage: false });
+    const body = clean(await page.locator('body').innerText().catch(() => ''), 3200)
+      .replace(/1\d{10}/g, '***').replace(/\d{4,}/g, '***');
+    const aria = await page.locator('[aria-label]').evaluateAll(nodes => nodes.map(node => {
+      const box = node.getBoundingClientRect();
+      return { aria: node.getAttribute('aria-label') || '', text: (node.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 80), x: Math.round(box.x), y: Math.round(box.y), w: Math.round(box.width), h: Math.round(box.height) };
+    }).filter(item => item.w > 0 && item.h > 0).slice(-80)).catch(() => []);
+    return { url: page.url(), body, aria, path };
+  }
+
+  async cleanupCartItem(itemName) {
     if (!itemName) throw new Error('缺少要清理的测试商品名');
     let page = await this.ensure();
     if (/checkout|confirm|buy/i.test(page.url())) {
       await page.goBack({ waitUntil: 'domcontentloaded' }).catch(() => {});
       await page.waitForTimeout(1200);
     }
-    const cartTrigger = await this.renderedLocator(page.locator('[aria-label*="购物车总计金额"]'));
-    if (cartTrigger) await this.activateControl(page, cartTrigger);
-    else await page.touchscreen.tap(42, 884);
-    await page.waitForTimeout(600);
+    const decrementControls = page.locator('[aria-label*="减少"], [aria-label*="减购"]');
+    let openedMinus = await this.visibleLocator(decrementControls, true);
+    if (!openedMinus) {
+      const cartTrigger = await this.renderedLocator(page.locator('[aria-label*="购物车总计金额"]'));
+      if (cartTrigger) await this.activateControl(page, cartTrigger);
+      else await page.touchscreen.tap(42, 866);
+      await page.waitForTimeout(600);
+      openedMinus = await this.visibleLocator(decrementControls, true);
+    }
     let removed = 0;
     for (let attempt = 0; attempt < 12; attempt += 1) {
-      const title = await this.visibleLocator(page.getByText(itemName, { exact: true }), true);
-      if (!title) break;
-      const box = await title.boundingBox().catch(() => null);
-      if (!box) break;
-      const minus = await this.nearestControlAtY(page.locator('[aria-label*="减少"], [aria-label*="减购"]'), box.y + box.height / 2);
-      if (!minus) {
-        if (removed > 0) break;
-        throw new Error('没有找到测试商品对应的减少按钮');
-      }
+      // The shop page also contains a “bought before” history card with the same
+      // product title.  Only decrement controls rendered by the opened cart are
+      // safe to use here; the adapter already refuses to mix with a pre-existing
+      // cart before adding the test item.
+      const minus = await this.visibleLocator(decrementControls, true);
+      if (!minus) break;
       await minus.evaluate(node => node.click()).catch(() => this.activateControl(page, minus));
       removed += 1; await page.waitForTimeout(350);
     }
-    const cartLabel = clean(await page.locator('[aria-label*="购物车总计金额"]').first().getAttribute('aria-label').catch(() => ''));
-    return { removed, cartAmount: number(cartLabel) };
+    const cartLabels = page.locator('[aria-label*="购物车总计金额"]');
+    const cartLabel = clean(await cartLabels.first().getAttribute('aria-label', { timeout: 1500 }).catch(() => ''));
+    const remainingMinus = await this.visibleLocator(decrementControls, true);
+    const cartAmount = cartLabel ? number(cartLabel) : (removed > 0 && !remainingMinus ? 0 : null);
+    if (cartAmount !== 0 && !remainingMinus) throw new Error('没有找到购物车商品对应的减少按钮');
+    return { removed, cartAmount };
+  }
+
+  async diagnosticCleanupItem(itemName) {
+    return this.cleanupCartItem(itemName);
   }
 }

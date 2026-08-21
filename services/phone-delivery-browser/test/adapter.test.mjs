@@ -8,7 +8,8 @@ class FakeBrowser {
   constructor() { this.submits = 0; this.statusValue = 'pending_payment'; }
   async status() { return { loggedIn: true, addressLabel: '家' }; }
   async currentAddress() { return { label: '家', fingerprintSource: 'secret-full-address' }; }
-  async search() { return [{ merchantId: 'kfc-1', merchant: '肯德基', name: '原味鸡套餐', price: 39, deliveryFee: 3, total: 42, browserRef: { item: 1 }, optionGroups: [{ id: 'drink', name: '饮料', required: true, multiple: false, choices: [{ id: 'cola', label: '可乐', available: true }, { id: 'coffee', label: '咖啡', available: true }] }] }]; }
+  async search() { return [{ merchantId: 'kfc-1', merchant: '肯德基', name: '原味鸡套餐', price: 39, deliveryFee: 3, total: 42, browserRef: { item: 1 }, optionGroups: [], optionsLoaded: false }]; }
+  async inspectOptionsFor() { return [{ id: 'drink', name: '饮料', required: true, multiple: false, choices: [{ id: 'cola', label: '可乐', available: true }, { id: 'coffee', label: '咖啡', available: true }] }]; }
   async createOrder({ selectedOptions }) { return { total: 42, items: [{ name: '原味鸡套餐', quantity: 1, price: 42, options: selectedOptions.drink }], browserOrderRef: { id: 1 } }; }
   async submitOrder() { this.submits += 1; return { status: 'pending_payment', payUrl: 'https://cashier.example.test/pay?id=1', browserOrderRef: { id: 1 } }; }
   async orderStatus() { return { status: this.statusValue }; }
@@ -41,7 +42,10 @@ test('adapter exposes manual payment and preserves real options', async () => {
   assert.equal(capabilities.automaticPayments, false);
   assert.deepEqual(capabilities.payments, ['alipay']);
   const search = await adapter.handle('search', { query: 'KFC' }, context);
-  assert.equal(search.offers[0].optionGroups[0].choices[1].label, '咖啡');
+  assert.equal(search.offers[0].optionsLoaded, false);
+  assert.deepEqual(search.offers[0].optionGroups, []);
+  const options = await adapter.handle('offer_options', { offerId: search.offers[0].offerId, quoteId: search.offers[0].quoteId }, context);
+  assert.equal(options.optionGroups[0].choices[1].label, '咖啡');
   await assert.rejects(adapter.handle('create_order', { offerId: search.offers[0].offerId, quoteId: search.offers[0].quoteId, clientRequestId: 'a' }, context), /请选择饮料/);
   const created = await adapter.handle('create_order', { offerId: search.offers[0].offerId, quoteId: search.offers[0].quoteId, selectedOptions: { drink: 'coffee' }, clientRequestId: 'a' }, context);
   const automatic = await adapter.handle('pay_order', { orderId: created.orderId, automatic: true }, context);

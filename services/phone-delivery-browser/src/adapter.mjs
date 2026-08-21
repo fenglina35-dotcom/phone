@@ -23,10 +23,12 @@ export class DeliveryAdapter {
     if (action === 'diagnostic_reenter' && process.env.PHONE_DELIVERY_DIAGNOSTIC_PATH) return this.browser.diagnosticReenter();
     if (action === 'diagnostic_first_options' && process.env.PHONE_DELIVERY_DIAGNOSTIC_PATH) return this.browser.diagnosticFirstOptions(`${process.env.PHONE_DELIVERY_DIAGNOSTIC_PATH}.first-options.png`);
     if (action === 'diagnostic_control_map' && process.env.PHONE_DELIVERY_DIAGNOSTIC_PATH) return this.browser.diagnosticControlMap();
+    if (action === 'diagnostic_cart' && process.env.PHONE_DELIVERY_DIAGNOSTIC_PATH) return this.browser.diagnosticCart(`${process.env.PHONE_DELIVERY_DIAGNOSTIC_PATH}.cart.png`);
     if (action === 'diagnostic_cleanup_item' && process.env.PHONE_DELIVERY_DIAGNOSTIC_PATH) return this.browser.diagnosticCleanupItem(clean(payload.itemName, 140));
     if (action === 'capabilities') return this.capabilities();
     if (action === 'confirm_address') return this.confirmAddress(payload);
     if (action === 'search') return this.search(payload, context);
+    if (action === 'offer_options') return this.offerOptions(payload, context);
     if (action === 'create_order') return this.createOrder(payload, context);
     if (action === 'pay_order') return this.payOrder(payload, context);
     if (action === 'order_status') return this.orderStatus(payload, context);
@@ -76,6 +78,7 @@ export class DeliveryAdapter {
         etaMinutes: Number.isFinite(Number(item.etaMinutes)) ? Number(item.etaMinutes) : null,
         couponLabel: clean(item.couponLabel, 100), imageUrl: clean(item.imageUrl, 800),
         optionGroups: Array.isArray(item.optionGroups) ? item.optionGroups : [],
+        optionsLoaded: item.optionsLoaded === true,
         addressLabel: clean(address.label, 80), addressFingerprint, quoteExpiresAt: Date.now() + 8 * 60_000,
         rawVersion: clean(item.rawVersion || 'taobao-flash-browser-v1', 80),
       };
@@ -83,6 +86,17 @@ export class DeliveryAdapter {
       return offer;
     });
     return { offers, addressLabel: clean(address.label, 80) };
+  }
+
+  async offerOptions(payload, context) {
+    const key = `${context.target || ''}:${clean(payload.offerId, 160)}`;
+    const quote = this.quotes.get(key);
+    if (!quote || quote.quoteId !== clean(payload.quoteId, 160) || quote.expiresAt < Date.now()) throw new Error('真实报价已过期，请重新搜索');
+    if (!quote.optionsLoaded) {
+      quote.optionGroups = await this.browser.inspectOptionsFor(quote.browserRef);
+      quote.optionsLoaded = true;
+    }
+    return { offerId: quote.offerId, quoteId: quote.quoteId, optionGroups: quote.optionGroups, optionsLoaded: true };
   }
 
   async createOrder(payload, context) {
@@ -99,10 +113,14 @@ export class DeliveryAdapter {
     const key = `${context.target || ''}:${clean(payload.offerId, 160)}`;
     const quote = this.quotes.get(key);
     if (!quote || quote.quoteId !== clean(payload.quoteId, 160) || quote.expiresAt < Date.now()) throw new Error('真实报价已过期，请重新搜索');
+    if (!quote.optionsLoaded) {
+      quote.optionGroups = await this.browser.inspectOptionsFor(quote.browserRef);
+      quote.optionsLoaded = true;
+    }
     const selectedOptions = payload.selectedOptions && typeof payload.selectedOptions === 'object' ? payload.selectedOptions : {};
     this.validateOptions(quote.optionGroups, selectedOptions);
     const quantity = Math.max(1, Math.min(20, Number(payload.quantity) || 1));
-    const draft = await this.browser.createOrder({ ref: quote.browserRef, selectedOptions, quantity });
+    const draft = await this.browser.createOrder({ ref: quote.browserRef, selectedOptions, optionGroups: quote.optionGroups, quantity });
     const total = money(draft.total);
     if (!total) throw new Error('平台没有返回有效订单金额');
     if (this.maxOrderAmount > 0 && total > this.maxOrderAmount) throw new Error(`订单金额 ¥${total.toFixed(2)} 超过服务端上限`);
