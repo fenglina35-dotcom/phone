@@ -9,8 +9,8 @@ const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProjec
 assert.match(source,/APP_VER='v1033 · 微信通讯录与角色管理升级'/);
 assert.match(html,/__NORTH_SHELL_BUILD__='1033'/);
 assert.match(sw,/BUILD='1033'/);
-assert.equal((project.match(/CURRENT_PROJECT_VERSION = 153;/g)||[]).length,12);
-assert.equal((project.match(/MARKETING_VERSION = 1\.0\.153;/g)||[]).length,12);
+assert.equal((project.match(/CURRENT_PROJECT_VERSION = 154;/g)||[]).length,12);
+assert.equal((project.match(/MARKETING_VERSION = 1\.0\.154;/g)||[]).length,12);
 
 assert.match(source,/const WECHAT_UNIFIED_SYSTEM=true/);
 assert.match(source,/function wechatNaturalOn\(\)\{return WECHAT_UNIFIED_SYSTEM;\}/);
