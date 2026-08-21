@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1036'){
+if(window.__NORTH_SHELL_BUILD__!=='1037'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -376,7 +376,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1036 · 真实奶茶与微信发现页合并版';
+const APP_VER='v1037 · 微信真实外卖订单卡片';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1123,6 +1123,7 @@ function msgToText(m){
     if(m.type==='dateinvite')return '[我向你发出线下约会邀请：'+(m.when||'')+' 在「'+(m.loc||'')+'」见面'+(m.accepted?'，你答应了':m.declined?'，你拒绝了':'，等你答应')+']';
     if(m.type==='roleplayinvite')return '[我邀请你去角色扮演软件里玩「'+(m.title||'本次剧情')+'」'+(m.meRole?'，你这局扮演'+m.meRole:'')+(m.hisRole?'，我扮演'+m.hisRole:'')+(m.active?'（已经开局）':'')+']';
     if(m.type==='gameinvite')return '[我邀请你一起玩「'+(m.gname||'游戏')+'」'+(m.status==='accepted'?'，你已经接受了':m.status==='declined'?'，你拒绝了':'，正在等你选择')+']';
+    if(m.type==='deliveryorder'){const o=m.order||{},items=(o.items||[]).map(x=>x.name+(x.options?'（'+x.options+'）':'')).join('、');return '[我已经创建真实外卖订单并发来订单卡片：'+(o.merchant||'外卖商家')+'，'+(items||'外卖商品')+'，¥'+(+o.total||0).toFixed(2)+'，当前'+(typeof deliveryStatusText==='function'?deliveryStatusText(o.status):o.status||'待处理')+']';}
     if(m.type==='food')return '[我给你点了外卖「'+(m.name||'')+'」'+(m.declined?'（你拒收了）':m.delivered?'（已送到、你吃上了）':m.received?'（你收下了，配送中）':'（点好了，约15分钟送到）')+'，别再重复点了]';
     if(m.type==='transfer')return '[我给你转了 ¥'+(+m.amount||0).toFixed(2)+(m.note?'，备注「'+m.note+'」':'')+']';
     if(m.type==='redpacket')return '[我给你发了个红包 ¥'+(+m.amount||0).toFixed(2)+(m.note?'，「'+m.note+'」':'')+']';
@@ -1491,7 +1492,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1036&r=v1036-milktea-wechat-discover-1';
+  const url='sw.js?v=1037&r=v1037-wechat-real-delivery-card-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -9675,6 +9676,7 @@ function buildPart(c,m,me){
     const status=m.shipping?'已寄出 · 明日送达信箱':m.declined?(m.from==='ta'?'已拒收':'对方拒收 · 已退回'):m.received?(m.from==='ta'?'已领取':'对方已收下'):(m.from==='ta'?'等待领取':'待对方收下'),price=(+m.price||0)>0?'¥'+(+m.price).toFixed(2):'专属赠礼';
     if(effect){const color=m.giftRecipe&&m.giftRecipe.boxColor||giftBoxColor(m.id);return `<div class="giftcard giftcard-effect giftcard-simple" role="button" tabindex="0" aria-label="打开${esc(m.name)}礼物特效" onclick="event.stopPropagation();giftMessageOpen('${m.id}',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();giftMessageOpen('${m.id}',this)}">${giftBoxCardArt(color)}<div class="gift-simple-copy"><strong>${esc(m.name)}</strong><small>${giftBoxEnglish(effect)}</small></div></div>`;}
     return `<div class="giftcard"><div class="giftmain"><div class="giftline">${svgIc('gift',30,'#d7d7dc',1.35)}</div><div class="giftcopy"><div class="gifteyebrow">PRIVATE GIFT</div><div class="giftname">${esc(m.name)}</div><div class="giftmeta">${price}　·　${status}</div></div></div><div class="giftfoot"><span>${m.shop?esc(m.shop):'私人赠礼'}</span><span>GIFT DELIVERY</span></div></div>${pend?`<div style="display:flex;gap:7px;margin-top:6px"><button class="minibtn" style="background:#e7e7ea;color:#1c1c1f;border:0" onclick="event.stopPropagation();receiveGift('${m.id}')">领取</button><button class="minibtn" style="background:#25262a;color:#aaa;border:1px solid #3b3c41" onclick="event.stopPropagation();rejectGift('${m.id}')">拒收</button></div>`:''}`;}
+  if(m.type==='deliveryorder'&&typeof deliveryRealChatCardHTML==='function')return deliveryRealChatCardHTML(c,m,me);
   if(m.type==='food'){const pend=(m.from==='ta'&&!m.received&&!m.declined&&(m.arrived||!m.deliverAt));const delivering=(m.from==='me'&&m.received&&m.deliverAt&&!m.delivered)||(m.from==='ta'&&m.deliverAt&&!m.arrived&&!m.received&&!m.declined);
     const t2=m.declined?'已拒收·已退款':delivering?'配送中…约15分钟':m.received?(m.from==='me'?'已送达·ta吃上了':'已签收'):(m.from==='ta'?'已送达·点击签收':'¥'+(+m.price).toFixed(2)+'·等ta收');
     return `<div class="card"><div class="cpay" style="background:${(m.received||m.declined)?'#d9b48a':'#ffb83b'}"><div class="big">${svgIc('food',30,'#fff')}</div><div><div class="t1">${esc(m.name)}</div><div class="t2">${t2}</div></div></div><div class="cfoot">${m.shop?esc(m.shop)+' · ':''}外卖订单</div></div>${pend?`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#ffb83b;color:#fff" onclick="event.stopPropagation();foodReceive('${m.id}')">签收</button><button class="minibtn" onclick="event.stopPropagation();foodReject('${m.id}')">拒收</button></div>`:''}`;}
