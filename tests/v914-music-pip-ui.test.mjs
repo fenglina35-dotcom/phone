@@ -7,8 +7,8 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const pip=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/CallPictureInPictureController.swift',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-test('v1032 web source keeps private 1.0.153 compatibility',()=>{
-  assert.match(app,/APP_VER='v1032 · 微信聊天视觉升级'/);
+test('v1033 web source keeps private 1.0.153 compatibility',()=>{
+  assert.match(app,/APP_VER='v1033 · 微信通讯录与角色管理升级'/);
   assert.match(project,/CURRENT_PROJECT_VERSION = 153;/);
   assert.match(project,/MARKETING_VERSION = 1\.0\.153;/);
 });
