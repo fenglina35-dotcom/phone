@@ -12,22 +12,22 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v1031 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1031 · 微信首页视觉升级'/);
-  assert.match(app,/const url='sw\.js\?v=1031&r=v1031-wechat-home-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1031'/);
-  assert.match(html,/app\.js\?v=1031/);
-  assert.match(sw,/const BUILD='1031'/);
-  assert.match(sw,/north-shell-v1031/);
-  assert.match(index,/小手机\.html\?v=1031/);
-  assert.match(repair,/小手机\.html\?v=1031/);
+test('v1032 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v1032 · 微信聊天视觉升级'/);
+  assert.match(app,/const url='sw\.js\?v=1032&r=v1032-wechat-chat-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1032'/);
+  assert.match(html,/app\.js\?v=1032/);
+  assert.match(sw,/const BUILD='1032'/);
+  assert.match(sw,/north-shell-v1032/);
+  assert.match(index,/小手机\.html\?v=1032/);
+  assert.match(repair,/小手机\.html\?v=1032/);
 });
 
-test('the private iOS package embeds web v1031 and keeps 1.0.152 delivery',()=>{
-  assert.match(privateBundle,/<string>1031<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.152;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 152;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.152 \(152\)'/);
+test('the private iOS package embeds web v1032 and keeps 1.0.153 delivery',()=>{
+  assert.match(privateBundle,/<string>1032<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.153;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 153;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.153 \(153\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 
