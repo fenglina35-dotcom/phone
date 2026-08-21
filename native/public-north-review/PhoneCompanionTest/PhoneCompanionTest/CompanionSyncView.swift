@@ -1479,7 +1479,9 @@ final class CompanionSyncService: ObservableObject {
                 max(1, command.minutes ?? 1)
             )
             var settings = loadLimitSettings()
-            settings.removeAll { $0.token == token }
+            settings.removeAll {
+                stableExternalID(for: $0.token) == externalID
+            }
             settings.append(
                 SavedDailyLimitMirror(
                     token: token,
@@ -1488,8 +1490,22 @@ final class CompanionSyncService: ObservableObject {
                 )
             )
             saveLimitSettings(settings)
-            try rebuildDailyLimitMonitoring(settings)
-            return "真实 App 每日限额已改为 \(minutes) 分钟"
+            let persistedSettings = loadLimitSettings()
+            guard let persisted = persistedSettings.first(where: {
+                stableExternalID(for: $0.token) == externalID
+            }),
+            persisted.minutes == minutes,
+            persisted.isEnabled else {
+                throw CompanionSyncError.message(
+                    "本机未能保存新的每日限额"
+                )
+            }
+            try rebuildDailyLimitMonitoring(persistedSettings)
+            NotificationCenter.default.post(
+                name: .companionDailyLimitSettingsDidChange,
+                object: nil
+            )
+            return "真实 App 每日限额已改为 \(minutes) 分钟并由本机存储读回确认"
 
         default:
             throw CompanionSyncError.message("不支持的角色指令")
@@ -1645,6 +1661,14 @@ final class CompanionSyncService: ObservableObject {
     private func token(
         forExternalID externalID: String
     ) -> ApplicationToken? {
+        let selectedToken = loadSelection().applicationTokens.first {
+            stableExternalID(for: $0) == externalID
+        }
+        if let selectedToken {
+            rememberToken(selectedToken, forExternalID: externalID)
+            return selectedToken
+        }
+
         if let data = tokenRegistry()[externalID],
            let token = try? JSONDecoder().decode(
                ApplicationToken.self,
@@ -1652,14 +1676,7 @@ final class CompanionSyncService: ObservableObject {
            ) {
             return token
         }
-
-        let token = loadSelection().applicationTokens.first {
-            stableExternalID(for: $0) == externalID
-        }
-        if let token {
-            rememberToken(token, forExternalID: externalID)
-        }
-        return token
+        return nil
     }
 
     private func tokenRegistry() -> [String: Data] {

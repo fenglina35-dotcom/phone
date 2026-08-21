@@ -14,6 +14,12 @@ extension ManagedSettingsStore.Name {
     static let dailyLimit = Self("dailyLimit")
 }
 
+extension Notification.Name {
+    static let companionDailyLimitSettingsDidChange = Notification.Name(
+        "companion.daily-limit-settings-did-change"
+    )
+}
+
 private struct SavedDailyLimit: Codable {
     let token: ApplicationToken
     let minutes: Int
@@ -206,12 +212,21 @@ struct ContentView: View {
             saveSelection()
         }
         .task {
+            reloadDailyLimitSettingsFromSharedDefaults()
             refreshAuthorizationStatus()
             _ = sanitizeSelectionToIndividualApps()
             applyManualLocks()
         }
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for: .companionDailyLimitSettingsDidChange
+            )
+        ) { _ in
+            reloadDailyLimitSettingsFromSharedDefaults()
+        }
         .onChange(of: scenePhase) {
             if scenePhase == .active {
+                reloadDailyLimitSettingsFromSharedDefaults()
                 refreshAuthorizationStatus()
             }
         }
@@ -644,6 +659,35 @@ struct ContentView: View {
         if let data = try? JSONEncoder().encode(settings) {
             sharedDefaults?.set(data, forKey: dailyLimitsKey)
         }
+    }
+
+    private func reloadDailyLimitSettingsFromSharedDefaults() {
+        guard let data = sharedDefaults?.data(
+            forKey: dailyLimitsKey
+        ),
+        let settings = try? JSONDecoder().decode(
+            [SavedDailyLimit].self,
+            from: data
+        ) else {
+            dailyLimitMinutes = [:]
+            enabledDailyLimitTokens = []
+            return
+        }
+
+        let selectedTokens = selection.applicationTokens
+        var loadedMinutes: [ApplicationToken: Int] = [:]
+        var loadedEnabledTokens: Set<ApplicationToken> = []
+
+        for setting in settings
+            where selectedTokens.contains(setting.token) {
+            loadedMinutes[setting.token] = setting.minutes
+            if setting.isEnabled {
+                loadedEnabledTokens.insert(setting.token)
+            }
+        }
+
+        dailyLimitMinutes = loadedMinutes
+        enabledDailyLimitTokens = loadedEnabledTokens
     }
 
     private func reconcileSavedDataWithSelection() {

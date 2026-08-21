@@ -281,6 +281,6 @@ test('association metadata is durably saved and bundled code stays synchronized'
   assert.match(bind, /st\.bindings=oldBindings;app\.name=oldName/);
   assert.ok(bind.indexOf('await saveNowAsync()') < bind.indexOf("companionDispatchBound('limit'"));
   for (const name of ['companionBindingBackupKey', 'companionBindingBackupRows', 'companionBindingBackupWrite', 'companionBindingBackupRestore', 'companionAppByRef', 'companionRememberBindingTarget', 'companionRepairBindings', 'companionBindExternal', 'companionRenameExternal', 'companionOwnerAction']) {
-    assert.equal(functionSource(name, bundled), functionSource(name), `${name} must match the private bundle`);
+    assert.equal(normalized(functionSource(name, bundled)), normalized(functionSource(name)), `${name} must match the private bundle`);
   }
 });

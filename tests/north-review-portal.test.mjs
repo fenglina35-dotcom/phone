@@ -6,6 +6,7 @@ const html=readFileSync(new URL('../north-role-controller.html',import.meta.url)
 const js=readFileSync(new URL('../north-role-controller.js',import.meta.url),'utf8');
 const migration=readFileSync(new URL('../supabase/migrations/202608210001_north_review_portal.sql',import.meta.url),'utf8');
 const swift=readFileSync(new URL('../native/public-north-review/PhoneCompanionTest/PhoneCompanionTest/CompanionSyncView.swift',import.meta.url),'utf8');
+const contentView=readFileSync(new URL('../native/public-north-review/PhoneCompanionTest/PhoneCompanionTest/ContentView.swift',import.meta.url),'utf8');
 const project=readFileSync(new URL('../native/public-north-review/PhoneCompanionTest/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 const notes=readFileSync(new URL('../docs/north-app-review-notes-template.md',import.meta.url),'utf8');
 
@@ -55,4 +56,14 @@ test('review notes give complete access and exact three-step test flow',()=>{
   assert.match(notes,/1\. Open the Role Controller/);
   assert.match(notes,/2\. On the review iPhone/);
   assert.match(notes,/3\. Keep North open/);
+});
+
+test('remote daily limits replace the selected app state and refresh local management',()=>{
+  assert.match(swift,/stableExternalID\(for: \$0\.token\) == externalID/);
+  assert.match(swift,/persisted\.minutes == minutes/);
+  assert.match(swift,/companionDailyLimitSettingsDidChange/);
+  assert.match(swift,/本机存储读回确认/);
+  assert.match(contentView,/reloadDailyLimitSettingsFromSharedDefaults\(\)/);
+  assert.match(contentView,/NotificationCenter\.default\.publisher/);
+  assert.match(contentView,/for: \.companionDailyLimitSettingsDidChange/);
 });

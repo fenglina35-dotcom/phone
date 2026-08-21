@@ -50,7 +50,7 @@ test('the in-app transfer form validates and submits its amount and note', () =>
 });
 
 test('transfer functions stay synchronized in the private app bundle', () => {
-  const normalized = (value) => value.replace(/\n/g, '\n');
+  const normalized = (value) => value.replace(/\r\n/g, '\n');
   for (const name of ['spyWxTransferOpen', 'spyWxTransferSubmit', 'spyWxTransferDo']) {
     assert.equal(normalized(functionSource(name, bundled)), normalized(functionSource(name)));
   }

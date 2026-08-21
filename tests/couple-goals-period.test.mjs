@@ -92,6 +92,6 @@ test('goal and period implementation stays synchronized in the private app bundl
     'consumeCoupleGoalTags', 'coupleGoalOnUserMsg', 'coupleGoalReminder',
     'periodForecastReminder', 'checkCalendar',
   ];
-  const normalized = (value) => value.replace(/\n/g, '\n');
+  const normalized = (value) => value.replace(/\r\n/g, '\n');
   for (const name of names) assert.equal(normalized(functionSource(name, bundled)), normalized(functionSource(name)));
 });

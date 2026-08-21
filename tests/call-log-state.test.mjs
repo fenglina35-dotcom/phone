@@ -46,6 +46,6 @@ test('call log mutations restore the old viewport after layout settles', () => {
 
 test('private bundle receives the same call log state fix', () => {
   for (const name of ['renderScrollTarget', 'renderCallLog', 'clToggle', 'clKeep']) {
-    assert.equal(functionSource(name, bundled).replace(/\n/g, '\n'), functionSource(name).replace(/\n/g, '\n'), `${name} must match the private bundle`);
+    assert.equal(functionSource(name, bundled).replace(/\r\n/g, '\n'), functionSource(name).replace(/\r\n/g, '\n'), `${name} must match the private bundle`);
   }
 });
