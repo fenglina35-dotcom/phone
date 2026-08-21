@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1026'){
+if(window.__NORTH_SHELL_BUILD__!=='1027'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -376,7 +376,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1026 · 手机验证重复绑定修复';
+const APP_VER='v1027 · X网友评论风格';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -408,7 +408,7 @@ hist:12, histUnit:'rounds', timeAware:true, timeZone:'', replyDelay:2, sound:tru
   shop:{cart:[],results:[],q:'',orders:[],cs:{msgs:[]},co:{on:false,cid:null,pace:'slow',feed:[],hisPending:[],myPending:[],lastActTs:0}},
   food:{cart:[],results:[],q:''},
   calendar:[],
-  x:{profile:{handle:'@yibei_0414',bio:'做一只无忧无虑的小猫～',fans:328,following:12,cover:''},tweets:[],dms:[],following:[],blocked:[],circle:{},users:{}},
+  x:{profile:{handle:'@yibei_0414',bio:'做一只无忧无虑的小猫～',fans:328,following:12,cover:'',netCommentTone:'mixed'},tweets:[],dms:[],following:[],blocked:[],circle:{},users:{}},
   friendRequests:[],
   friendDiscovery:{enabled:false,freq:180,max:2,today:'',n:0,nextAt:0},
   mail:[],
@@ -1486,7 +1486,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1026&r=v1026-passkey-rebind-repair-1';
+  const url='sw.js?v=1027&r=v1027-x-net-comment-tone-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -4673,7 +4673,7 @@ function looseLines(r){const rows=parseLines(r);if(rows.length)return rows;
 function letterAv(s){s=(s||'').replace(/[@\s]/g,'');const ch=s&&/[a-zA-Z]/.test(s[0])?s[0].toUpperCase():(s[0]||'U');return ch;}
 function jq(s){return "'"+String(s||'').replace(/'/g,'’').replace(/"/g,'”')+"'";}
 function clean(s){return String(s||'').replace(/["'@]/g,'').trim();}
-if(!S.x)S.x=defState().x;['tweets','dms','following','blocked'].forEach(k=>{if(!Array.isArray(S.x[k]))S.x[k]=[];});S.x.circle=S.x.circle||{};S.x.users=S.x.users||{};S.x.profile=Object.assign({handle:'@me',bio:'',fans:0,following:0,cover:''},S.x.profile||{});
+if(!S.x)S.x=defState().x;['tweets','dms','following','blocked'].forEach(k=>{if(!Array.isArray(S.x[k]))S.x[k]=[];});S.x.circle=S.x.circle||{};S.x.users=S.x.users||{};S.x.profile=Object.assign({handle:'@me',bio:'',fans:0,following:0,cover:'',netCommentTone:'mixed'},S.x.profile||{});
 initAccounts();
 if(!S.offline)S.offline={};
 if(!S.roleplay)S.roleplay={};
@@ -4770,13 +4770,21 @@ function addXcImg(){pickFile('image/*',async f=>{window._xcImgs.push(await compr
 function doXPost(){const t=$('#xc_t').value.trim();if(!t&&!(window._xcImgs||[]).length)return;const pop=Math.floor((S.x.profile.fans||0)*(0.02+Math.random()*0.12));const tweet={id:uid(),who:'me',name:S.me.name,handle:S.x.profile.handle,avatar:S.me.avatar,text:t,images:window._xcImgs||[],time:Date.now(),likes:[],lk:pop,comments:[],rt:Math.floor(pop*Math.random()*0.3),views:Math.floor((S.x.profile.fans||0)*(1+Math.random()*4)+50),time:Date.now()};
   S.x.tweets.unshift(tweet);xlog('在X发推：「'+t.slice(0,20)+'」');save();closeModal();render();toast('已发布');reactToTweet(tweet);}
 function fanCount(min,max){const f=(S.x.profile.fans||0);return Math.max(min,Math.min(max,Math.round(f/250)+min));}
+function xNetCommentTone(){const v=S.x&&S.x.profile&&S.x.profile.netCommentTone;return ['friendly','hostile','mixed'].includes(v)?v:'mixed';}
+function xNetCommentToneGuide(tweet){
+  if(!tweet||tweet.who!=='me')return '评论整体自然多样，可以吃瓜、调侃、共鸣，也可以有少量抬杠或黑子。';
+  const tone=xNetCommentTone();
+  if(tone==='friendly')return '这些网友评论必须整体友善：可以真诚夸赞、共鸣、支持、关心或善意玩笑；不要抬杠、阴阳怪气、辱骂或恶意攻击。';
+  if(tone==='hostile')return '这些网友评论整体恶劣：以挑刺、质疑、抬杠、阴阳怪气或刻薄吐槽为主，可以像真实黑粉，但禁止威胁、仇恨歧视、人肉隐私、暴力和违法内容。';
+  return '这些网友评论必须大约一半友善、一半恶劣：友善评论可夸赞、共鸣或支持；恶劣评论可挑刺、抬杠、阴阳怪气或刻薄吐槽，但禁止威胁、仇恨歧视、人肉隐私、暴力和违法内容。';
+}
 async function reactToTweet(tweet){
   const n=fanCount(3,9);
   const authorCid=(tweet.who&&tweet.who!=='me'&&tweet.who!=='net')?tweet.who:null;
   const rolePool=tweet.who==='me'?S.contacts.filter(c=>!c.deleted&&!c.blocked).slice(0,1):[];
   for(const c of rolePool){try{const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'"'+tweet.name+'"在X发了条推："'+tweet.text+'"。你是最先刷到的人，以你自己的身份和视角第一个评论一句（口语、像真人留言；别带方括号）。'}],{aux:true});
     tweet.comments.push({name:c.name,avatar:c.avatar,cid:c.id,text:cleanReply(r).slice(0,50)});save();if(cur().p==='x'||cur().p==='xtweet')render();}catch(e){}}
-  try{const r=await chatAPI([{role:'system',content:'你是X网友评论生成器。针对"'+tweet.name+'"发的推，生成'+n+'条不同网友的简短评论（吃瓜、调侃、共鸣、抬杠黑子都行；其中1-2条可以@楼上某个网友名跟着接话，形成楼层互动）。每行一条，严格用格式：昵称:::@英文id:::评论内容。不要别的话。'},{role:'user',content:'推文："'+tweet.text+'"'}],{max:900,aux:true});
+  try{const r=await chatAPI([{role:'system',content:'你是X网友评论生成器。针对"'+tweet.name+'"发的推，生成'+n+'条不同网友的简短评论。'+xNetCommentToneGuide(tweet)+'其中1-2条可以@楼上某个网友名跟着接话，形成楼层互动。每行一条，严格用格式：昵称:::@英文id:::评论内容。不要别的话。'},{role:'user',content:'推文："'+tweet.text+'"'}],{max:900,aux:true});
     looseLines(r).forEach(p=>{const nm=clean(p[0]);if(!nm)return;tweet.comments.push({name:nm,avatar:letterAv(p[1]||nm),text:p[2]||p[1]||''});xUser(nm,{handle:p[1]});});save();if(cur().p==='x'||cur().p==='xtweet')render();}catch(e){}
   // 发帖影响粉丝
   if(tweet.who==='me'){const d=Math.floor(Math.random()*40)-8;S.x.profile.fans=Math.max(0,(S.x.profile.fans||0)+d);save();if(d>0)toast('涨粉 +'+d);else if(d<0)toast('掉粉 '+d);}
@@ -4854,7 +4862,7 @@ function renderXTweet(id){const t=tw(id);if(!t)return '';
 function xAuthorLike(id,ci){const t=tw(id);t.comments[ci].authorLiked=!t.comments[ci].authorLiked;save();render();}
 async function xRefreshComments(id){const t=tw(id);if(!t)return;aiLoad('正在生成评论…');const n=fanCount(4,9);
   const existing=(t.comments||[]).slice(-6).map(c=>c.name+'说"'+c.text+'"').join('；');
-  try{const rows=await aiGen([{role:'system',content:'你是X评论区生成器。针对"'+t.name+'"的这条推，生成'+n+'条不同网友评论（吃瓜、共鸣、抬杠黑子都可；让其中1-2条@楼上某位接话，形成楼层互动）。'+(existing?'已有评论：'+existing+'，新评论可以接着这些聊。':'')+'每行一条，严格用格式：昵称:::@英文id:::评论内容。不要别的话。'},{role:'user',content:'推文："'+t.text+'"'}],{max:900,aux:true},looseLines);
+  try{const rows=await aiGen([{role:'system',content:'你是X评论区生成器。针对"'+t.name+'"的这条推，生成'+n+'条不同网友评论。'+xNetCommentToneGuide(t)+'让其中1-2条@楼上某位接话，形成楼层互动。'+(existing?'已有评论：'+existing+'，新评论可以接着这些聊，但新评论仍必须遵守本次评论风格。':'')+'每行一条，严格用格式：昵称:::@英文id:::评论内容。不要别的话。'},{role:'user',content:'推文："'+t.text+'"'}],{max:900,aux:true},looseLines);
     if(!rows){toast('生成失败了，再试一次');return;}
     rows.forEach(p=>{const nm=clean(p[0]);if(!nm)return;t.comments.push({name:nm,avatar:letterAv(p[1]||nm),text:p[2]||p[1]||''});xUser(nm,{handle:p[1]});});save();render();
   }finally{aiDone();}}
@@ -4893,13 +4901,19 @@ async function xDMReply(d){try{const c=d.cid?getC(d.cid):null;const sys=c?buildS
   const r=await chatAPI([{role:'system',content:sys},...hist],{max:200,aux:true});
   d.msgs.push({from:'them',text:cleanReply(r),time:Date.now()});save();if(cur().p==='xdm')render();}catch(e){}}
 /* 我的主页 */
-function xProfile(){const p=S.x.profile;
+function setXNetCommentTone(tone){if(!['friendly','hostile','mixed'].includes(tone))return;S.x.profile.netCommentTone=tone;save();render();toast('网友评论风格已设置为'+({friendly:'友善',hostile:'恶劣',mixed:'一半一半'}[tone]));}
+function xProfile(){const p=S.x.profile,tone=xNetCommentTone();
   return `<div class="xprofh" style="${p.cover?'background:url('+p.cover+') center/cover':''}" onclick="changeXCover()"></div>
     <div style="padding:0 14px"><div style="margin-top:-30px;display:flex;justify-content:space-between;align-items:flex-end">${av(S.me.avatar,'lg')}<button class="xbtn out" onclick="editXProfile()">编辑资料</button></div>
       <div style="font-size:19px;font-weight:700;color:#e7e9ea;margin-top:8px">${esc(S.me.name)}</div>
       <div style="color:#71767b;font-size:14px">${esc(p.handle)}</div>
       <div style="color:#e7e9ea;font-size:14px;margin:8px 0">${esc(p.bio||'')}</div>
       <div style="color:#71767b;font-size:14px"><span onclick="xFollowingList()" style="cursor:pointer"><b style="color:#e7e9ea">${p.following}</b> <span style="text-decoration:underline">正在关注 ›</span></span>　<b style="color:#e7e9ea">${p.fans}</b> 关注者</div>
+      <div style="margin:14px 0 4px;padding:12px;border:1px solid #2f3336;border-radius:14px;background:#16181c">
+        <div style="color:#e7e9ea;font-size:15px;font-weight:700">网友评论风格</div>
+        <div style="color:#71767b;font-size:12px;line-height:1.5;margin:3px 0 10px">控制网友在我的推文下生成的评论；角色本人的评论不受影响。</div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap"><button class="xbtn ${tone==='friendly'?'':'out'}" style="font-size:12px;padding:6px 12px" onclick="setXNetCommentTone('friendly')">友善</button><button class="xbtn ${tone==='hostile'?'':'out'}" style="font-size:12px;padding:6px 12px" onclick="setXNetCommentTone('hostile')">恶劣</button><button class="xbtn ${tone==='mixed'?'':'out'}" style="font-size:12px;padding:6px 12px" onclick="setXNetCommentTone('mixed')">一半一半</button></div>
+      </div>
     </div>
     <div style="border-bottom:.5px solid #2f3336;margin:10px 0;color:#e7e9ea;padding:8px 14px;font-weight:700">我的推文</div>
     ${[...S.x.tweets].filter(t=>t.who==='me').sort((a,b)=>b.time-a.time).map(tweetCard).join('')||'<div class="empty" style="padding:30px">还没发过推</div>'}`;}
