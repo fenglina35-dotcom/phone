@@ -5,7 +5,7 @@ const app = fs.readFileSync(new URL("../app.js", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../小手机.html", import.meta.url), "utf8");
 const sw = fs.readFileSync(new URL("../sw.js", import.meta.url), "utf8");
 
-assert.match(app, /APP_VER='v1035 · 真实奶茶偏好与快速点单'/);
+assert.match(app, /APP_VER='v1036 · 真实奶茶与微信发现页合并版'/);
 assert.match(app, /function northUpdateAvailable\(build\)/);
 assert.match(app, /发现新版本 v\$\{esc\(build\)\}/);
 assert.match(app, /不需要退出或划掉小手机/);
@@ -14,7 +14,7 @@ assert.match(app, /setInterval\(\(\)=>reg\.update\(\)\.catch\(\(\)=>\{\}\),15\*6
 assert.match(app, /postMessage\(\{type:'north-version-query'\}\)/);
 assert.match(sw, /client\.postMessage\(\{type:'north-update-ready',build:BUILD\}\)/);
 assert.match(sw, /event\.data\.type!==['"]north-version-query['"]/);
-assert.match(html, /window\.__NORTH_SHELL_BUILD__='1035'/);
-assert.match(html, /sw\.js\?v=1035&r=v1035-real-milktea-ordering-1/);
+assert.match(html, /window\.__NORTH_SHELL_BUILD__='1036'/);
+assert.match(html, /sw\.js\?v=1036&r=v1036-milktea-wechat-discover-1/);
 
 console.log("update prompt tests passed");
