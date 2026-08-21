@@ -24,6 +24,10 @@ function functionSource(name, source = app) {
   throw new Error(`${name} is not closed`);
 }
 
+function normalized(value) {
+  return value.replace(/\r\n/g, '\n');
+}
+
 test('ordinary online chat keeps the real iPhone control protocol and exact all-app action', () => {
   const context = vm.createContext({});
   vm.runInContext(`
@@ -194,7 +198,6 @@ test('a negative mention of all never upgrades a partial target to all external 
 
 test('control extraction uses deterministic all-app recovery first and retries parser failures once', () => {
   const extract = functionSource('extractControl');
-  const normalized = value => value.replace(/\r\n/g, '\n');
   assert.ok(extract.indexOf('companionRecoverNaturalAllControl(reply,c)') < extract.indexOf('chatAPI('));
   assert.match(extract, /attempt<2/);
   assert.match(extract, /aux:attempt===0/);

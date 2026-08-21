@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 function loadPemBytes(path) {
-  const source = fs.readFileSync(new URL(path, import.meta.url), 'utf8');
+  const source = fs.readFileSync(new URL(path, import.meta.url), 'utf8').replace(/\r\n/g, '\n');
   const start = source.indexOf('function pemBytes(');
   const end = source.indexOf('\n}\n', start) + 3;
   const fn = source.slice(start, end).replace('pem: string', 'pem');
