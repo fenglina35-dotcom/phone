@@ -249,9 +249,11 @@ begin
 end;
 $$;
 
-revoke all on function public.phone_companion_review_session() from public;
-revoke all on function public.phone_companion_review_begin_pairing() from public;
-revoke all on function public.phone_companion_review_enqueue_command(text, text, integer) from public;
+-- Hosted Supabase projects may explicitly grant EXECUTE to `anon` through
+-- default privileges. Revoking only from PUBLIC is therefore insufficient.
+revoke all on function public.phone_companion_review_session() from public, anon;
+revoke all on function public.phone_companion_review_begin_pairing() from public, anon;
+revoke all on function public.phone_companion_review_enqueue_command(text, text, integer) from public, anon;
 
 grant execute on function public.phone_companion_review_session() to authenticated;
 grant execute on function public.phone_companion_review_begin_pairing() to authenticated;

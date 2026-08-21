@@ -71,3 +71,48 @@ append_section(
 )
 
 print("Updated four maintenance DOCX files for public North review")
+
+
+append_section(
+    "AI开发项目_项目说明文档.docx",
+    "2026-08-21｜公开 North 审核云端已部署",
+    [
+        "公开 North 审核控制端已部署到旧业务项目 lkhlyfpssmrjkkzhuzag。选择依据不是项目名称，而是线上结构核验：该项目仍具备 phone_companion_links、phone_companion_commands、绑定与短时配对 RPC，且当前公开 North 构建和角色控制台均连接此项目；邀请码项目 lovbzibismsjqvjujilz 不具备伴生表和 RPC，未被混用；私人伴生云 qvuahlqimcfgeoetosnl 未被修改。",
+        "迁移 202608210001_north_review_portal.sql 已执行并登记到远端 migration history。远端核验发现 hosted Supabase 默认权限曾显式给 anon 角色新函数 EXECUTE，单独从 PUBLIC revoke 不足；迁移已修正为同时从 PUBLIC 与 anon 撤销三个审核 RPC 的执行权。复验结果为 anon 三项全部 false、authenticated 三项全部 true，审核映射表 RLS 已开启。",
+        "永久审核 Auth 用户、North Review Role 和随机 yb_ 测试目标已经建立。审核密码只保存在 Windows 凭据管理器 North App Review:lkhlyfpssmrjkkzhuzag，不写入 Git、网页、SQL、维护文档或聊天交接。账号登录及 phone_companion_review_session 已在线验证成功；当前 linked=false 是尚未与候选 iPhone 构建配对的正确状态。",
+        "GitHub Pages 的支持页兼容入口、直接控制台、控制台脚本和隐私页均在线返回 HTTP 200。仍未完成：Mac 五 Target 编译签名、干净 iPhone 授权与选 App、生成十分钟配对码、刷新／锁定／解锁／15 分钟限额设备回执、完整录屏和 App Store Connect Review Notes／重新提交。",
+    ],
+)
+
+append_section(
+    "AI开发项目_Bug记录模板.docx",
+    "2026-08-21｜公开 North 审核 RPC 默认匿名执行权限",
+    [
+        "现象：202608210001 迁移首次部署后，审核表、三个 RPC 与 RLS 均存在，但远端 has_function_privilege 核验显示 anon 和 authenticated 都能执行三个 security definer 审核函数。",
+        "根因：该 hosted Supabase 项目的函数默认权限显式包含 anon=X。原迁移只执行 REVOKE ... FROM PUBLIC；撤销 PUBLIC 不会自动移除已经直接授予 anon 的权限，因此仅凭源码中的 PUBLIC revoke 不能证明匿名访问已关闭。",
+        "修复：三个函数统一改为 REVOKE ALL ... FROM PUBLIC, anon，再只向 authenticated 授予 EXECUTE；重新执行同一幂等迁移。专项测试增加对三条显式 anon revoke 的断言。",
+        "线上验证：review_accounts 表存在且 RLS=true；三个 RPC 均存在；anon_session、anon_pairing、anon_command 全部 false；authenticated 对应三项全部 true。账号密码登录与绑定到 auth.uid() 的 review_session 返回 200。",
+    ],
+)
+
+append_section(
+    "AI开发项目_Bug修改规范.docx",
+    "Supabase Security Definer RPC 权限验收规范（2026-08-21）",
+    [
+        "新建 security definer RPC 时不得假设 REVOKE FROM PUBLIC 等价于禁止 anon。Hosted 项目可能通过 default privileges 直接给 anon EXECUTE；迁移应显式 REVOKE ALL ON FUNCTION ... FROM PUBLIC, anon，再向所需角色精确 GRANT。",
+        "部署完成必须在真实远端使用 has_function_privilege 分别核对 anon 与 authenticated，而不能只看 SQL 文本、RLS 状态或函数是否存在。审核账号绑定类 RPC 的合格条件是 anon=false、authenticated=true，并且所有数据选择继续以 auth.uid() 约束。",
+    ],
+)
+
+append_section(
+    "AI开发项目_新聊天启动说明.docx",
+    "新聊天接手状态｜公开 North 审核云端完成（2026-08-21）",
+    [
+        "202608210001_north_review_portal.sql 已部署并登记到 lkhlyfpssmrjkkzhuzag；不要再部署到邀请码项目 lovbzibismsjqvjujilz，也不要把公开审核数据迁入私人伴生云 qvuahlqimcfgeoetosnl。旧 North 的配对表和 RPC 已在线核验可用。",
+        "远端曾发现 Supabase 默认权限直接给 anon EXECUTE，现已修正为三个审核 RPC 明确撤销 PUBLIC 与 anon，只允许 authenticated。线上 has_function_privilege 复验全部符合预期。",
+        "永久审核 Auth 用户、预建 North Review Role 和随机目标已创建，密码只在 Windows 凭据管理器 North App Review:lkhlyfpssmrjkkzhuzag 中。不要把邮箱或密码提交到 Git；仅在最终 App Store Connect Review Notes 中填写。",
+        "下一步必须在 Mac 编译构建 5，并用干净 iPhone 完成授权、选 App、配对、真实数据上传、刷新、锁定、解锁和 15 分钟限额回执。当前云端 session 显示 linked=false，只有真机配对完成后才能变为 true。",
+    ],
+)
+
+print("Updated four maintenance DOCX files for public North cloud deployment")

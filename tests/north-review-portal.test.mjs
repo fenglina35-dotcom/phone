@@ -22,6 +22,9 @@ test('review portal requires a login and contains no embedded reviewer credentia
 test('review RPCs are auth-bound and never expose location, health, or long-lived secrets',()=>{
   assert.match(migration,/auth\.uid\(\)/);
   assert.match(migration,/grant execute on function public\.phone_companion_review_session\(\) to authenticated/i);
+  assert.match(migration,/revoke all on function public\.phone_companion_review_session\(\) from public, anon/i);
+  assert.match(migration,/revoke all on function public\.phone_companion_review_begin_pairing\(\) from public, anon/i);
+  assert.match(migration,/revoke all on function public\.phone_companion_review_enqueue_command\(text, text, integer\) from public, anon/i);
   assert.match(migration,/grant execute on function public\.phone_companion_review_begin_pairing\(\) to authenticated/i);
   assert.match(migration,/grant execute on function public\.phone_companion_review_enqueue_command\(text, text, integer\) to authenticated/i);
   assert.match(migration,/interval '10 minutes'/i);
