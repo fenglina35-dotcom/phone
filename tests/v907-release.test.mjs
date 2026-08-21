@@ -12,9 +12,9 @@ const migration = read('supabase/migrations/202608130001_background_app_watch_te
 const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const nativeWeb = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v1029 web source keeps private 1.0.150 compatibility', () => {
-  assert.match(app, /APP_VER='v1029 · 真实外卖与角色钱包'/);
-  assert.match(html, /app\.js\?v=1029/);
+test('v1031 web source keeps private 1.0.150 compatibility', () => {
+  assert.match(app, /APP_VER='v1031 · 微信首页视觉升级'/);
+  assert.match(html, /app\.js\?v=1031/);
   assert.match(project, /CURRENT_PROJECT_VERSION = 150;/);
   assert.match(project, /MARKETING_VERSION = 1\.0\.150;/);
   assert.match(nativeWeb, /1\.0\.150 \(150\)/);

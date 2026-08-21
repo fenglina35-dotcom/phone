@@ -12,19 +12,19 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v1029 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1029 · 真实外卖与角色钱包'/);
-  assert.match(app,/const url='sw\.js\?v=1029&r=v1029-wechat-home-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1029'/);
-  assert.match(html,/app\.js\?v=1029/);
-  assert.match(sw,/const BUILD='1029'/);
-  assert.match(sw,/north-shell-v1029/);
-  assert.match(index,/小手机\.html\?v=1029/);
-  assert.match(repair,/小手机\.html\?v=1029/);
+test('v1031 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v1031 · 微信首页视觉升级'/);
+  assert.match(app,/const url='sw\.js\?v=1031&r=v1031-wechat-home-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1031'/);
+  assert.match(html,/app\.js\?v=1031/);
+  assert.match(sw,/const BUILD='1031'/);
+  assert.match(sw,/north-shell-v1031/);
+  assert.match(index,/小手机\.html\?v=1031/);
+  assert.match(repair,/小手机\.html\?v=1031/);
 });
 
-test('the private iOS package embeds web v1029 and keeps 1.0.150 delivery',()=>{
-  assert.match(privateBundle,/<string>1029<\/string>/);
+test('the private iOS package embeds web v1031 and keeps 1.0.150 delivery',()=>{
+  assert.match(privateBundle,/<string>1031<\/string>/);
   assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.150;/g)||[]).length,12);
   assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 150;/g)||[]).length,12);
   assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.150 \(150\)'/);
