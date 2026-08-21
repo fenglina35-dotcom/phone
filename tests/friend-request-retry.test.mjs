@@ -53,6 +53,7 @@ const sweepSandbox = {
   createFriendRequest(id) {
     sweepCreateCalls.push(id);
   },
+  wxNearbySweep() {},
 };
 vm.runInNewContext(
   source.slice(helperStart, helperEnd) +

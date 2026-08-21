@@ -47,5 +47,5 @@ test('the same send button stores narration or normal dialogue according to the 
   assert.match(send,/!manualReplySceneOn\('offline'\)\)offAI\(\)/);
   assert.match(functionSource('offRender'),/offNarrationDecorate/);
   assert.match(html,/\.offinput \.off-narrate\.on/);
-  assert.match(html,/\.offinput\.narration-mode textarea/);
+  assert.match(html,/\.offinput\.narration-mode #off_in/);
 });

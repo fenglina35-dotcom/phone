@@ -1,6 +1,6 @@
-const BUILD='1034';
-const HOTFIX='v1034-wechat-contacts-fixed-1';
-const SHELL_CACHE='north-shell-v1034';
+const BUILD='1035';
+const HOTFIX='v1035-wechat-discover-1';
+const SHELL_CACHE='north-shell-v1035';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];

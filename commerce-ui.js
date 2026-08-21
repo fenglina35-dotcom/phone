@@ -150,6 +150,6 @@
   };
   var dyFeedViewWithHomeButton=window.dyFeedView;
   window.dyFeedView=function(){
-    return dyFeedViewWithHomeButton.apply(this,arguments).replace('<div class="dy-topbar">','<div class="dy-topbar"><button class="dy-home-back" onclick="home()" aria-label="返回主屏幕"><svg viewBox="0 0 24 24" width="22" height="22"><path d="m15 5-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>');
+    return dyFeedViewWithHomeButton.apply(this,arguments).replace('<div class="dy-topbar">','<div class="dy-topbar"><button class="dy-home-back" onclick="dyBack()" aria-label="返回上一页"><svg viewBox="0 0 24 24" width="22" height="22"><path d="m15 5-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>');
   };
 })();
