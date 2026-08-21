@@ -324,6 +324,12 @@
       credential = await navigator.credentials.create({ publicKey: creationOptions(start.options) });
     } catch (error) {
       if (error && (error.name === 'NotAllowedError' || error.name === 'AbortError')) throw new Error('已取消手机绑定');
+      if (error && error.name === 'InvalidStateError') {
+        writeJSON(META_KEY, Object.assign({}, meta(), { passkeyCount: Math.max(1, Number(meta().passkeyCount) || 0), checkedAt: Date.now() }));
+        return { ok: true, alreadyBound: true, passkeyCount: Math.max(1, Number(meta().passkeyCount) || 0) };
+      }
+      if (error && error.name === 'SecurityError') throw new Error('当前打开地址与手机验证绑定域名不一致，请从原来的官方网址进入后重试');
+      if (error && error.name === 'NotSupportedError') throw new Error(isPrivateApp() ? '当前 App 暂不支持系统手机验证，请更新安装包后重试' : '当前浏览器不支持系统手机验证，请使用 Safari 或 Chrome');
       throw new Error(isPrivateApp() ? '系统手机验证失败，请稍后重试' : '系统手机验证失败，请换Safari或Chrome重试');
     }
     if (!credential) throw new Error('系统没有返回手机验证结果');

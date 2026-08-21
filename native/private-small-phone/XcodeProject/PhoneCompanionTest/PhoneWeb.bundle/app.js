@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1025'){
+if(window.__NORTH_SHELL_BUILD__!=='1026'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -376,7 +376,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1025 · 计步传感器保存风暴修复';
+const APP_VER='v1026 · 手机验证重复绑定修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1486,7 +1486,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1025&r=v1025-motion-sensor-save-storm-repair-1';
+  const url='sw.js?v=1026&r=v1026-passkey-rebind-repair-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -5486,7 +5486,7 @@ async function licenseCheckSession(){const now=Date.now();if(_licenseCheckBusy||
   catch(e){if(e&&e.server&&e.permanent===true){_licenseCheckFailures=0;_licenseCheckNextAt=0;NorthLicense.clearSession();try{localStorage.removeItem('yibei_unlocked');}catch(_){}showGate();toast(e.code==='license-admin-blocked'?'该授权已被管理员移出':(appleHomeCompatNative()?'这个 App 授权已退出，请重新恢复':'这个浏览器授权已退出，请重新恢复'));}else if(e&&e.server||e&&e.network){_licenseCheckFailures=Math.min(8,_licenseCheckFailures+1);_licenseCheckNextAt=Date.now()+Math.min(30*60000,60000*Math.pow(2,_licenseCheckFailures-1));}}
   finally{_licenseCheckBusy=false;}}
 async function licenseBindCurrent(){if(!window.NorthLicense){toast('授权组件没有加载，请刷新页面');return;}try{
-  toast('正在准备手机授权…');if(!NorthLicense.isManaged()||!NorthLicense.session())await NorthLicense.legacyActivate();licenseMarkUnlocked();await licenseSyncAiIdentity(true);await NorthLicense.bindPasskey();toast(appleHomeCompatNative()?'绑定成功，以后重装或换设备可直接恢复':'绑定成功，以后换浏览器或添加到主屏幕可直接恢复');if(cur().p==='settings')render();
+  toast('正在准备手机授权…');if(!NorthLicense.isManaged()||!NorthLicense.session())await NorthLicense.legacyActivate();licenseMarkUnlocked();await licenseSyncAiIdentity(true);const bound=await NorthLicense.bindPasskey();toast(bound&&bound.alreadyBound?'手机验证已经绑定，无需重复绑定':(appleHomeCompatNative()?'绑定成功，以后重装或换设备可直接恢复':'绑定成功，以后换浏览器或添加到主屏幕可直接恢复'));if(cur().p==='settings')render();
 }catch(e){toast((e&&e.message)||'绑定失败');if(cur().p==='settings')render();}}
 async function licenseSyncAiIdentity(force){if(!window.NorthLicense||!NorthLicense.isManaged()||!NorthLicense.session())return null;const s=NorthLicense.session(),markKey='north_license_ai_sync_v2',expected=(s.sessionId||s.licenseId)+'|'+aiCoreUrl();let oldMark='';try{oldMark=localStorage.getItem(markKey)||'';}catch(_){}if(!force&&oldMark===expected)return null;
   const result=await NorthLicense.syncAIIdentity(aiUserId(),aiUserSecret());if(!result||!result.userId||!result.clientSecret)throw new Error('AI账户同步失败');try{localStorage.setItem('yibei_ai_uid',result.userId);localStorage.setItem('yibei_ai_secret',result.clientSecret);localStorage.setItem(markKey,expected);}catch(_){}if(typeof _aiAcct!=='undefined')_aiAcct=null;if(typeof _aiAutoTried!=='undefined')_aiAutoTried=false;return result;}
@@ -5500,9 +5500,9 @@ async function licenseRefreshStatus(){if(_licenseStatusRefreshBusy||!window.Nort
 async function licenseDevicesModal(){openModal('<h3>已授权浏览器</h3><div class="hint">正在读取…</div>');try{const r=await NorthLicense.listSessions(),count=r.sessions.length;licenseUpdateCount(count);openModal('<h3>已授权浏览器 '+count+'/3</h3><div class="hint">第4个浏览器恢复时会自动退出最早的一个。移除只会退出该入口，不会删除聊天和设置。</div><div class="section">'+r.sessions.map(s=>'<div class="it"><span>'+esc(s.label)+(s.current?' <small style="color:#07c160">当前</small>':'')+'<br><small style="color:#777">最近使用：'+esc(licenseTimeText(s.last_seen_at))+'</small></span><button class="minibtn" onclick="licenseRevokeDevice(\''+s.id+'\','+!!s.current+')">移除</button></div>').join('')+'</div><button class="btn g" onclick="closeModal()">关闭</button>');}catch(e){toast((e&&e.message)||'读取失败');closeModal();}}
 async function licenseRevokeDevice(id,current){if(!await uiConfirm(current?'退出当前浏览器授权？不会删除任何数据。':'移除这个浏览器授权？'))return;try{await NorthLicense.revokeSession(id);if(current){try{localStorage.removeItem('yibei_unlocked');}catch(_){}closeModal();showGate();}else{toast('已移除');licenseDevicesModal();}}catch(e){toast((e&&e.message)||'移除失败');}}
 function licenseStatusSection(){if(!window.NorthLicense)return '';const managed=NorthLicense.isManaged()&&!!NorthLicense.session(),m=NorthLicense.meta(),count=Math.max(0,+m.sessionCount||0),passkeys=Math.max(0,+m.passkeyCount||0);
-  if(appleHomeCompatNative())return '<div class="section" id="set_license"><div style="padding:12px 14px 5px;font-weight:600;color:#f0c78e">私人 App 授权</div><div class="hint" style="padding:0 14px 9px">'+(managed?(passkeys?'已绑定系统扫脸/指纹；重装 App 或更换设备后可以恢复。':'当前 App 已授权；请绑定扫脸或指纹，以便重装或更换设备后恢复。'):'当前 App 尚未绑定手机验证；邀请码成功后仍永久失效。')+'<br><b>授权恢复只允许本人进行人脸或指纹验证。</b></div><div class="btns" style="padding:0 14px 10px"><button class="btn p" onclick="licenseBindCurrent()">'+(passkeys?'重新绑定手机验证':'绑定扫脸 / 指纹恢复')+'</button></div></div>';
+  if(appleHomeCompatNative())return '<div class="section" id="set_license"><div style="padding:12px 14px 5px;font-weight:600;color:#f0c78e">私人 App 授权</div><div class="hint" style="padding:0 14px 9px">'+(managed?(passkeys?'已绑定系统扫脸/指纹；重装 App 或更换设备后可以恢复。':'当前 App 已授权；请绑定扫脸或指纹，以便重装或更换设备后恢复。'):'当前 App 尚未绑定手机验证；邀请码成功后仍永久失效。')+'<br><b>授权恢复只允许本人进行人脸或指纹验证。</b></div><div class="btns" style="padding:0 14px 10px"><button class="btn p" onclick="licenseBindCurrent()">'+(passkeys?'检查 / 补绑手机验证':'绑定扫脸 / 指纹恢复')+'</button></div></div>';
   if(managed)setTimeout(licenseRefreshStatus,0);
-  return '<div class="section" id="set_license"><div style="padding:12px 14px 5px;font-weight:600;color:#f0c78e">手机授权</div><div class="hint" style="padding:0 14px 9px">'+(managed?(passkeys?'已绑定系统扫脸/指纹。换浏览器或添加到主屏幕后，点“恢复授权”即可。':'当前浏览器已授权；请立即绑定扫脸或指纹，设备恢复不接受任何迁移码或恢复码。'):'当前还是旧版浏览器授权。绑定后，邀请码仍永久失效，之后只能用扫脸或指纹恢复。')+'<br><b>设备恢复和浏览器合并只允许本人进行人脸或指纹验证。</b></div><div class="btns" style="padding:0 14px 8px"><button class="btn p" onclick="licenseBindCurrent()">'+(passkeys?'重新绑定手机验证':'绑定扫脸 / 指纹恢复')+'</button></div>'+(managed?'<div class="btns" style="padding:0 14px 8px"><button class="btn g" id="license_devices_btn" onclick="licenseDevicesModal()">已授权浏览器 '+count+'/3</button></div><div class="btns" style="padding:0 14px 10px"><button class="btn g" onclick="licenseRelinkModal()">Safari / Edge 授权合并</button></div>':'')+'</div>';}
+  return '<div class="section" id="set_license"><div style="padding:12px 14px 5px;font-weight:600;color:#f0c78e">手机授权</div><div class="hint" style="padding:0 14px 9px">'+(managed?(passkeys?'已绑定系统扫脸/指纹。换浏览器或添加到主屏幕后，点“恢复授权”即可。':'当前浏览器已授权；请立即绑定扫脸或指纹，设备恢复不接受任何迁移码或恢复码。'):'当前还是旧版浏览器授权。绑定后，邀请码仍永久失效，之后只能用扫脸或指纹恢复。')+'<br><b>设备恢复和浏览器合并只允许本人进行人脸或指纹验证。</b></div><div class="btns" style="padding:0 14px 8px"><button class="btn p" onclick="licenseBindCurrent()">'+(passkeys?'检查 / 补绑手机验证':'绑定扫脸 / 指纹恢复')+'</button></div>'+(managed?'<div class="btns" style="padding:0 14px 8px"><button class="btn g" id="license_devices_btn" onclick="licenseDevicesModal()">已授权浏览器 '+count+'/3</button></div><div class="btns" style="padding:0 14px 10px"><button class="btn g" onclick="licenseRelinkModal()">Safari / Edge 授权合并</button></div>':'')+'</div>';}
 function chatAddMenu(){openModal(`<h3>＋</h3>
   <button class="btn p" style="margin-bottom:8px" onclick="closeModal();editContact()">新建角色</button>
   <button class="btn g" onclick="closeModal();createGroup()">发起群聊</button>

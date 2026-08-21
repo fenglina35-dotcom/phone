@@ -130,6 +130,17 @@ const registerVerify = seen.find((item) => item.action === 'register_verify');
 assert.equal(registerVerify.credential.response.transports[0], 'internal');
 assert.equal(registerVerify.credential.response.publicKeyAlgorithm, -7);
 
+const createCredential = context.navigator.credentials.create;
+context.navigator.credentials.create = async () => { throw { name: 'InvalidStateError' }; };
+const verifyCountBefore = seen.filter((item) => item.action === 'register_verify').length;
+const alreadyBound = await license.bindPasskey();
+assert.equal(alreadyBound.alreadyBound, true);
+assert.equal(license.meta().passkeyCount, 1);
+assert.equal(seen.filter((item) => item.action === 'register_verify').length, verifyCountBefore);
+context.navigator.credentials.create = async () => { throw { name: 'SecurityError' }; };
+await assert.rejects(() => license.bindPasskey(), /当前打开地址与手机验证绑定域名不一致/);
+context.navigator.credentials.create = createCredential;
+
 await license.relinkPasskey();
 assert.equal(license.session().token, 'token-2');
 assert.equal(seen.some((item) => item.action === 'session_revoke' && item.targetSessionId === 'session-1'), true);
