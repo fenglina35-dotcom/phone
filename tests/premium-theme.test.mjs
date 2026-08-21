@@ -69,7 +69,7 @@ test('Android touch devices keep glass styling without fragile large backdrop la
 });
 
 test('WeChat uses a full-bleed frame while original chat internals stay intact',()=>{
-  assert.match(app,/const _wxP=c\.p==='wechat'\?' wx-premium':''/);
+  assert.match(app,/const _wxP=c\.p==='wechat'\?' wx-premium':c\.p==='chat'\?' wx-chat-premium':''/);
   assert.match(app,/const _wxSection=c\.p==='wechat'\?' wx-'\+String\(wxTab\|\|'chats'\):''/);
   assert.match(html,/\.wx-premium>\.nav\{/);
   assert.match(html,/\.wx-premium>\.tabbar\{/);
@@ -84,7 +84,7 @@ test('WeChat uses a full-bleed frame while original chat internals stay intact',
   assert.doesNotMatch(app,/wxEarIcon|wx-title-ear/);
   assert.match(app,/class="wx-desktop-login"[^\n]*Windows 微信已登录/);
   assert.match(app,/privateNativeStatusBarThemeName\(\)[\s\S]*S\.me\.wxTheme==='white'\?'white':'black'/);
-  assert.match(glass,/\.wx-premium>\.wx-main-nav\{[^}]*flex:0 0 58px[^}]*backdrop-filter:blur\(36px\) saturate\(170%\)[^}]*position:relative[^}]*z-index:6/);
+  assert.match(glass,/\.wx-premium>\.wx-main-nav\{[^}]*flex:0 0 58px[^}]*backdrop-filter:blur\(42px\) saturate\(155%\)[^}]*position:relative[^}]*z-index:6/);
   assert.match(glass,/\.wx-premium>\.wx-main-scroll\{[^}]*margin-top:-58px[^}]*padding-top:58px/);
   assert.match(glass,/\.wx-chats \.wx-chat-list \.row\.pin\{background:#202023!important\}/);
   assert.match(glass,/\.wx-chats\.wxlight \.wx-chat-list \.row\.pin\{background:#f4f4f6!important\}/);
@@ -108,7 +108,7 @@ test('Moments content is formally integrated without replacing its data or actio
 
 test('WeChat keeps the formal dynamic, microphone and reference-style bottom tabs',()=>{
   assert.match(app,/thought:'<path d="M5\.5 10a5 5 0 0 1 9-3 4 4 0 0 1 4\.5 4 3\.4 3\.4 0 0 1-3\.4 3\.4H8\.4A3\.4 3\.4 0 0 1 5\.5 10z"\/><path d="M5 16\.5h\.01M7\.5 19\.5h\.01"\/>',/);
-  assert.match(app,/const mood=.*svgIc\('thought',15,'#9a9b9f'\)/);
+  assert.match(app,/const mood=.*svgIc\('thought',15,'currentColor'\)/);
   assert.match(app,/mic:'<rect x="9" y="3" width="6" height="11" rx="3"\/><path d="M5\.6 11a6\.4 6\.4 0 0 0 12\.8 0M12 17\.4V21M8\.6 21h6\.8"\/>',/);
   assert.match(app,/tb\('chats',wxTabIcon\('chats'\),'微信'\)/);
   assert.match(app,/tb\('contacts',wxTabIcon\('contacts'\),'通讯录'\)/);

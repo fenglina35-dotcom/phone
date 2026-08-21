@@ -79,7 +79,12 @@ assert.match(afterChat, /addEventListener\('input'[\s\S]*chatComposerReflow\(thi
 assert.match(reflow, /style\.overflowY=full>max\?'auto':'hidden'/,'a one-line caret must remain clipped to the textarea instead of leaking below it');
 assert.doesNotMatch(reflow, /setSelectionRange|getBoundingClientRect|visualViewport/,'textarea resizing must not force WebKit to repaint the caret from stale keyboard geometry');
 assert.doesNotMatch(source, /function chatComposerViewportBind|_northChatCaretBound/,'keyboard viewport movement must remain owned by iOS and WKWebView');
-assert.match(source,/class="inputbar chat-inputbar"/,'the normal WeChat composer has a shared web/native layout hook');
+assert.match(source,/class="inputbar chat-inputbar\$\{_voiceMode/,'the normal WeChat composer has a shared web/native layout hook');
+const panelOpen = functionSource('chatPanelOpen');
+const panelToggle = functionSource('chatPanelToggle');
+assert.doesNotMatch(panelOpen, /render\(\)/, 'opening the emoji or function panel must not repaint the page');
+assert.doesNotMatch(panelToggle, /render\(\)/, 'closing or switching the panel must not repaint the page');
+assert.match(source, /chatComposerStateSync\(ta\)/, 'composer send state must update in place');
 assert.match(html,/\.chat-inputbar\{position:static;top:auto;gap:2px;padding:7px 2px 13px;\}/,'the composer moves up through reserved layout space and cannot cover the manual-reply row');
 assert.match(html,/\.chat-inputbar \.plus\{width:30px;\}/,'only the chat side controls use a narrower footprint');
 assert.match(html,/\.chat-inputbar \.send\{padding-left:10px;padding-right:10px;\}/,'the send button remains in place while yielding visible width to the textarea');

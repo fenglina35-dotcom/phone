@@ -48,6 +48,8 @@ test('chat composer stays above the sticker panel and iOS does not zoom a 15px t
   assert.match(html, /#panel\{order:2;flex:0 0 auto;\}/);
   assert.match(app, /function chatPanelKeyboardDismiss\(\)/);
   assert.match(app, /function chatPanelOpen\(page\)/);
-  assert.match(app, /function chatPanelToggle\(\)/);
-  assert.match(app, /onclick="chatPanelToggle\(\)"/);
+  assert.match(app, /function chatPanelToggle\(page\)/);
+  assert.match(app, /onclick="chatPanelToggle\('emoji'\)"/);
+  assert.match(app, /onclick="chatPanelToggle\('fn'\)"/);
+  assert.doesNotMatch(app.match(/function chatPanelOpen\(page\)[\s\S]*?function chatPanelToggle/)?.[0] ?? '', /render\(\)/);
 });

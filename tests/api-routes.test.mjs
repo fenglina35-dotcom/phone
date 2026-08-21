@@ -26,8 +26,8 @@ function functionSource(name) {
 
 assert.match(source, /const CHAT_ROUTE_NAMES=\['路线一','路线二','路线三','路线四'\]/);
 assert.match(source, /data-chat-route="\$\{i\}"/);
-assert.match(source, /onclick="chatRouteQuickOpen\(\)"/);
-assert.match(source, /svgIc\('route',26,'#e6e6ee'\)/);
+assert.match(source, /chatFunctionItem\('API路线','route','chatRouteQuickOpen\(\)'\)/);
+assert.match(source, /function chatRouteQuickOpen\(\)/);
 assert.match(source, /每条路线同时保存主聊天的地址、Key、模型、随机度、回复长度，以及辅助模型的地址、Key、模型/);
 assert.equal((source.match(/onclick="chatRouteSaveCurrent\(\)"/g) || []).length, 2, "both model headers need a nearby save button");
 assert.match(source, /routes\[routeActive\]=chatRouteCopy\(Object\.assign\(\{\},S\.settings\.chat,\{aux:S\.settings\.aux\}\)\)/);
