@@ -1,6 +1,6 @@
-const BUILD='1027';
-const HOTFIX='v1027-x-net-comment-tone-2';
-const SHELL_CACHE='north-shell-v1027';
+const BUILD='1028';
+const HOTFIX='v1028-x-profile-layout-1';
+const SHELL_CACHE='north-shell-v1028';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];

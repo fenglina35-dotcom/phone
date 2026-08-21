@@ -7,7 +7,7 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const wedding=fs.readFileSync(new URL('../wedding-game.js',import.meta.url),'utf8');
 const bridge=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift',import.meta.url),'utf8');
 
-test('v1027 removes synchronous camera JPEG work and preserves the camera audio session',()=>{
+test('v1028 removes synchronous camera JPEG work and preserves the camera audio session',()=>{
   assert.match(app,/async function callVideoElementFrame/);
   assert.match(app,/canvas\.toBlob\(/);
   assert.match(app,/privateNativeAppOn\(\)\?480:640/);
@@ -18,11 +18,11 @@ test('v1027 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1027 · X网友评论风格'/);
+  assert.match(app,/APP_VER='v1028 · X个人主页布局修正'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1027/);
-  assert.match(html,/sw\.js\?v=1027&r=v1027-x-net-comment-tone-2/);
+  assert.match(html,/north-sw-reloaded-1028/);
+  assert.match(html,/sw\.js\?v=1028&r=v1028-x-profile-layout-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{
