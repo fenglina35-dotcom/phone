@@ -48,7 +48,7 @@ assert.match(mount,/#talewrap/);
 assert.match(mount,/\.offstage/);
 assert.match(source,/const _isWxPage=_wxGlassPages\.includes\(c\.p\);/);
 assert.match(source,/const _wxG='';/);
-assert.match(source,/const _wxP=c\.p==='wechat'\?' wx-premium':'';\s*const _wxSection=c\.p==='wechat'\?' wx-'\+String\(wxTab\|\|'chats'\):'';\s*app\.innerHTML='<div class="page'\+_glass\+_wxG\+_setG\+_wxL\+_wxP\+_wxSection\+'">'\+html\+'<\/div>';\s*chatRouteMount\(c\);/);
+assert.match(source,/const _wxP=c\.p==='wechat'\?' wx-premium':'';\s*const _wxSection=c\.p==='wechat'\?' wx-'\+String\(wxTab\|\|'chats'\):'';\s*app\.innerHTML='<div class="page'\+_glass\+_wxG\+_setG\+_wxL\+_wxP\+_wxSection\+'">'\+html\+'<\/div>';[\s\S]{0,420}?chatRouteMount\(c\);/);
 
 const calls=[];
 const context=vm.createContext({

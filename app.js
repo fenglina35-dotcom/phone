@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1019'){
+if(window.__NORTH_SHELL_BUILD__!=='1020'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -376,7 +376,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1019 · 偶发卡顿与发热状态修复';
+const APP_VER='v1020 · 本地图片注入与点击性能修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1483,7 +1483,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1019&r=v1019-intermittent-thermal-state-repair-1';
+  const url='sw.js?v=1020&r=v1020-stored-image-render-repair-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -2124,6 +2124,10 @@ function render(){
   const _wxP=c.p==='wechat'?' wx-premium':'';
   const _wxSection=c.p==='wechat'?' wx-'+String(wxTab||'chats'):'';
   app.innerHTML='<div class="page'+_glass+_wxG+_setG+_wxL+_wxP+_wxSection+'">'+html+'</div>';
+  /* Private App pages keep stored images as short idb: references. Restore
+     already-cached sources in the same paint so a busy event loop cannot leave
+     the freshly rebuilt page black until a later timer gets CPU time. */
+  if(privateNativeAppOn())hydrateStoredImageNodes();
   chatRouteMount(c);
   if(c.p==='drawguess'){const usage=$('#useBadge');if(usage)usage.style.display='none';}
   renderLockScreen();renderLockPull();
@@ -12320,9 +12324,12 @@ function paintBatt(){const b=$('#battinfo');if(!b)return;const value='📶 5G �
 function initBattery(){if(navigator.getBattery){navigator.getBattery().then(bt=>{const upd=()=>{S.me.battery=Math.round(bt.level*100);S.me.charging=bt.charging;save();paintBatt();};bt.addEventListener('levelchange',upd);bt.addEventListener('chargingchange',upd);upd();}).catch(()=>{});}}
 function hydrateStoredImageNodes(){document.querySelectorAll('[data-idb-avatar]').forEach(el=>{const key=el.getAttribute('data-idb-avatar'),src=_imgCache[key];if(src){el.removeAttribute('data-idb-avatar');el.innerHTML='<img src="'+src+'">';}});document.querySelectorAll('img[src^="idb:"]').forEach(el=>{const src=_imgCache[(el.getAttribute('src')||'').slice(4)];if(src)el.src=src;});document.querySelectorAll('[style*="idb:"]').forEach(el=>{const raw=el.getAttribute('style')||'',next=raw.replace(/idb:([A-Za-z0-9._-]+)/g,(all,key)=>_imgCache[key]||all);if(next!==raw)el.setAttribute('style',next);});}
 function visibleStoredImageKeys(){const keys=new Set();document.querySelectorAll('[data-idb-avatar]').forEach(el=>keys.add(el.getAttribute('data-idb-avatar')||''));document.querySelectorAll('img[src^="idb:"]').forEach(el=>keys.add((el.getAttribute('src')||'').slice(4)));document.querySelectorAll('[style*="idb:"]').forEach(el=>{const raw=el.getAttribute('style')||'';let m;const re=/idb:([A-Za-z0-9._-]+)/g;while((m=re.exec(raw)))keys.add(m[1]);});return [...keys].filter(Boolean);}
-let _visibleImageHydrateTimer=0,_visibleImageHydrateBusy=false;
-async function hydrateVisibleStoredImages(){if(_visibleImageHydrateBusy)return;const missing=visibleStoredImageKeys().filter(k=>!_imgCache[k]);if(!missing.length){hydrateStoredImageNodes();return;}_visibleImageHydrateBusy=true;try{const found=await imgMany(missing);for(const k in found){_imgCache[k]=found[k];_imgRev.set(found[k],k);_imgReady.add(k);}hydrateStoredImageNodes();}finally{_visibleImageHydrateBusy=false;}}
-function scheduleVisibleStoredImages(){if(!privateNativeAppOn())return;clearTimeout(_visibleImageHydrateTimer);requestAnimationFrame(()=>{_visibleImageHydrateTimer=setTimeout(()=>hydrateVisibleStoredImages().catch(()=>{}),0);});}
+let _visibleImageHydrateTimer=0,_visibleImageHydrateIdle=0,_visibleImageHydrateBusy=false,_visibleImageHydrateAgain=false;
+const _visibleImageMisses=new Map();
+function visibleImageRetryState(key){const row=_visibleImageMisses.get(key);return row&&typeof row==='object'?row:{count:0,retryAt:0};}
+function visibleImageRetryDelay(count){return Math.min(120000,Math.max(4000,4000*Math.pow(3,Math.max(0,(+count||1)-1))));}
+async function hydrateVisibleStoredImages(force){if(_visibleImageHydrateBusy){_visibleImageHydrateAgain=true;return false;}const now=Date.now(),keys=visibleStoredImageKeys(),eligible=keys.filter(k=>!_imgCache[k]&&(force||visibleImageRetryState(k).retryAt<=now)),missing=eligible.slice(0,12);if(!missing.length){hydrateStoredImageNodes();return false;}if(eligible.length>missing.length)_visibleImageHydrateAgain=true;_visibleImageHydrateBusy=true;try{const found=await imgMany(missing);for(const k of missing){if(found[k]!=null){_imgCache[k]=found[k];_imgRev.set(found[k],k);_imgReady.add(k);_visibleImageMisses.delete(k);}else{const prev=visibleImageRetryState(k),count=Math.min(8,(+prev.count||0)+1);_visibleImageMisses.set(k,{count,retryAt:Date.now()+visibleImageRetryDelay(count)});}}hydrateStoredImageNodes();return Object.keys(found).length>0;}finally{_visibleImageHydrateBusy=false;if(_visibleImageHydrateAgain){_visibleImageHydrateAgain=false;scheduleVisibleStoredImages(false);}}}
+function scheduleVisibleStoredImages(force){if(!privateNativeAppOn())return;hydrateStoredImageNodes();if(_visibleImageHydrateBusy){_visibleImageHydrateAgain=true;return;}if(_visibleImageHydrateTimer||_visibleImageHydrateIdle)return;const run=()=>{_visibleImageHydrateTimer=0;_visibleImageHydrateIdle=0;hydrateVisibleStoredImages(!!force).catch(()=>{});};if(!force&&typeof requestIdleCallback==='function')_visibleImageHydrateIdle=requestIdleCallback(run,{timeout:1200});else _visibleImageHydrateTimer=setTimeout(run,force?0:120);}
 function refreshHydratedUI(){hydrateStoredImageNodes();const a=document.activeElement,editing=a&&(/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)||a.isContentEditable);if(privateNativeAppOn())scheduleVisibleStoredImages();else if(!editing)render();if(_call&&_call.state==='incoming'&&!_call.opened){const c=getC(_call.id);if(c)showCallBanner(c);}}
 let _androidResumeRepairAt=0;
 function androidResumeRepair(force){if(!_appBootFinished)return;const host=document.getElementById('app');if(!force&&host&&host.firstElementChild){window.__northBootReady=true;return;}const now=Date.now();if(now-_androidResumeRepairAt<800)return;_androidResumeRepairAt=now;try{render();window.__northBootReady=true;}catch(e){window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'恢复页面失败');}}
