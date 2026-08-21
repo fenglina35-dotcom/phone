@@ -9499,7 +9499,8 @@ const CHAT_RENDER_LIMIT=180;
 let _chatRenderExtra={};
 function showOlderChat(id){_chatRenderExtra[id]=(_chatRenderExtra[id]||0)+CHAT_RENDER_LIMIT;render();}
 function cohabWechatNavBadge(c){const d=cohabWechatState(c);return d?`<button class="cohab-wx-state phase-${d.phase}" onclick="event.stopPropagation();cohabEnter('${c.id}')" aria-label="共同生活当前状态：${esc(cohabStatusLabel(d))}"><i></i>${esc(cohabStatusLabel(d))}</button>`:'';}
-function chatVoiceButtonIcon(){return `<svg class="chat-voice-svg" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="13.4"></circle><path d="M16.1 22.2c1.8-1.6 1.8-4.5 0-6.1M20 24.9c3.3-3 3.3-8.7 0-11.7M23.9 27.3c4.9-4.4 4.9-10.9 0-15.3"></path></svg>`;}
+function chatVoiceButtonIcon(){return `<svg class="chat-voice-svg" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="12.9"></circle><path class="chat-voice-seed" d="M7.5 14l3.4-3v6z"></path><path d="M11.8 11.1c2 1.5 2 4.3 0 5.8M14.7 9.2c3.5 2.6 3.5 7 0 9.6M17.4 7.3c5 3.8 5 9.6 0 13.4"></path></svg>`;}
+function chatEmojiButtonIcon(){return `<svg class="chat-emoji-svg" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="12.9"></circle><circle class="chat-emoji-eye" cx="10.2" cy="11.5" r="1.25"></circle><circle class="chat-emoji-eye" cx="17.8" cy="11.5" r="1.25"></circle><path class="chat-emoji-mouth" d="M9.2 16.5h9.6c0 3.8-1.9 5.8-4.8 5.8s-4.8-2-4.8-5.8z"></path></svg>`;}
 function chatFunctionItem(label,icon,action){return `<button type="button" class="it" onclick="${action}"><span class="b">${svgIc(icon,25,'currentColor')}</span><span>${label}</span></button>`;}
 function chatFunctionPanel(id){const first=[
   chatFunctionItem('相册','image',`cPhoto('${id}')`),chatFunctionItem('语音通话','phone',`placeCall('${id}','voice')`),chatFunctionItem('视频通话','video',`placeCall('${id}','video')`),chatFunctionItem('位置','location',`cLoc('${id}')`),
@@ -9527,8 +9528,8 @@ function renderChat(id){const c=getC(id);if(!c)return '';
     ${(_sel&&_sel.id===id)?`<div class="inputbar"><button class="btn g" style="flex:1" onclick="exitSelect()">取消</button><button class="btn d" style="flex:1" onclick="delSelected('${id}')">删除(<span id="fwdcnt">${_sel.ids.length}</span>)</button><button class="btn p" style="flex:1" onclick="forwardSelected()">转发</button></div>`:(S.couple&&S.couple.gags&&S.couple.gags[id])?`<div class="inputbar" style="justify-content:center;color:#fa9bb5;font-size:13px;padding:16px;text-align:center">🔇 ta把你们的聊天锁了，<span onclick="openCouple()" style="color:#ff6fa5;text-decoration:underline;cursor:pointer">去情侣空间输密码解禁</span></div>`:(manualReplySceneOn('wechat')&&!c.blocked?`<div class="manual-reply-row"><button class="manual-reply-chip" ${(replyGenState||visionBusy)?'disabled':''} onclick="manualReply('${id}')">${visionBusy?'正在识图…':replyGenState==='active'?'回复中…':replyGenState==='queued'?'排队中…':'▶ 让ta回'}</button></div>`:'')+qbar+`<div class="inputbar chat-inputbar${_voiceMode?' voice-on':''}">`+`
       <button type="button" class="chat-composer-icon chat-voice-toggle" aria-label="切换语音输入" onclick="chatVoiceToggle()">${chatVoiceButtonIcon()}</button>
       <textarea id="cinput" rows="1" placeholder="${c.blocked?'已拉黑，发不出去':(_voiceMode?'输入文字，发送为语音条…':'发消息…')}" ${c.blocked?'disabled':''}></textarea>
-      <button type="button" class="chat-composer-icon chat-emoji-toggle" aria-label="打开表情" onclick="chatPanelToggle('emoji')">${svgIc('smile',28,'currentColor',1.25)}</button>
-      <button type="button" class="chat-composer-icon chat-function-toggle" aria-label="打开更多功能" onclick="chatPanelToggle('fn')"><span aria-hidden="true">＋</span></button>
+      <button type="button" class="chat-composer-icon chat-emoji-toggle" aria-label="打开表情" onclick="chatPanelToggle('emoji')">${chatEmojiButtonIcon()}</button>
+      <button type="button" class="chat-composer-icon chat-function-toggle" aria-label="打开更多功能" onclick="chatPanelToggle('fn')"><span aria-hidden="true"></span></button>
       <button type="button" class="send chat-send" onclick="sendText('${id}')">${_voiceMode?'发语音':'发送'}</button>
     </div>`}`;}
 function bubbleRow(c,m){
