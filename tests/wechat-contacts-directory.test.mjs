@@ -47,8 +47,11 @@ assert.match(app,/else if\(c\.p==='wxlabels'\)html=renderWxLabels\(\)/);
 assert.match(app,/else if\(c\.p==='wxgroupcreate'\)html=renderWxGroupCreate\(\)/);
 assert.match(app,/else if\(c\.p==='contactEdit'\)html=renderContactEditor\(c\.id,c\.isNew\)/);
 assert.match(functionSource('editContactAutonomy'),/go\('contactEdit'/);
+assert.match(functionSource('ctListHTML'),/pfAvatarOnlineHTML\(x\.f,'sm'\)[\s\S]*wx-contact-name/);
 
 assert.match(glass,/\.wx-contact-sticky-search\{[^}]*position:sticky/);
+assert.match(glass,/\.wx-contact-letter>h4\{[^}]*position:sticky;top:48px/);
+assert.match(glass,/\.wx-contact-person>\.pfavwrap\{[^}]*flex:0 0 40px/);
 assert.match(glass,/\.wx-directory-head\{[^}]*backdrop-filter:blur/);
 assert.match(glass,/\.wx-chat-premium>\.manual-reply-row,[^{]+\{[^}]*background:transparent!important/);
 assert.match(glass,/\.wx-chat-premium>\.chat-glass-mood\{[^}]*width:max-content/);

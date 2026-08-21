@@ -8208,7 +8208,7 @@ function ctSearchInput(v){_ctSearch=v;const box=$('#ctlist');if(box)box.innerHTM
 function ctListHTML(){const q=_ctSearch.trim().toLowerCase(),roles=wxRoleContacts().filter(c=>!q||[c.name,c.remark,c.wxid].some(v=>String(v||'').toLowerCase().includes(q))).map(c=>({kind:'role',id:c.id,name:c.remark||c.name,c}));let people=roles;
   if(isMain()){const p=phoneFriendState(),real=(p.friends||[]).filter(f=>{const n=pfFriendDisplayName(f),id=String(f.phone_id||f.id||'');return !q||(n+' '+id).toLowerCase().includes(q);}).map(f=>({kind:'phone',id:String(f.phone_id||f.id||'').toUpperCase(),name:pfFriendDisplayName(f),f}));people=people.concat(real);}
   if(!people.length)return `<div class="wx-contact-empty">${q?'没找到「'+esc(_ctSearch)+'」':'通讯录里还没有联系人'}</div>`;
-  const row=x=>x.kind==='role'?`<button class="wx-contact-person" onclick="go('contactInfo',{id:'${x.id}'})">${av(x.c.avatar,'sm')}<span>${esc(x.name)}</span>${x.c.blocked?'<em>已拉黑</em>':''}</button>`:`<button class="wx-contact-person" onclick="openPhoneFriendChat('${x.id}')">${pfAvatarOnlineHTML(x.f,'sm')}<span>${esc(x.name)}<small>小手机好友</small></span></button>`;
+  const row=x=>x.kind==='role'?`<button class="wx-contact-person" onclick="go('contactInfo',{id:'${x.id}'})">${av(x.c.avatar,'sm')}<span class="wx-contact-name">${esc(x.name)}</span>${x.c.blocked?'<em>已拉黑</em>':''}</button>`:`<button class="wx-contact-person" onclick="openPhoneFriendChat('${x.id}')">${pfAvatarOnlineHTML(x.f,'sm')}<span class="wx-contact-name">${esc(x.name)}<small>小手机好友</small></span></button>`;
   return wxDirectorySections(people,row);}
 function altAdd(id){const c=getC(id);if(!c)return;c._added=c._added||{};c._added[actId()]=true;setBlk(c,false);friendMetaClear(c);_ctSearch='';
   msgs(id).push({role:'user',type:'sys',content:'✅ 你通过微信号添加了 '+c.name+'，你们已经是好友了，打个招呼吧',time:Date.now(),id:uid()});
@@ -8230,7 +8230,7 @@ function wxContacts(){
 }
 function wxDirectoryNav(title,right){return `<div class="nav wx-directory-nav"><button type="button" class="l" onclick="back()">‹</button><span class="t">${esc(title)}</span>${right||'<span class="r"></span>'}</div>`;}
 function wxDirectorySearch(id,value,handler,placeholder){return `<div class="wx-directory-search"><label>${svgIc('search',18,'currentColor')}<input id="${id}" value="${esc(value||'')}" oninput="${handler}(this.value)" placeholder="${esc(placeholder||'搜索')}"></label></div>`;}
-function wxOnlyChatRow(c){return `<button class="wx-contact-person" onclick="go('contactInfo',{id:'${c.id}'})">${av(c.avatar,'sm')}<span>${esc(c.remark||c.name)}</span></button>`;}
+function wxOnlyChatRow(c){return `<button class="wx-contact-person" onclick="go('contactInfo',{id:'${c.id}'})">${av(c.avatar,'sm')}<span class="wx-contact-name">${esc(c.remark||c.name)}</span></button>`;}
 let _wxOnlyQuery='';
 function wxOnlyChatSearch(v){_wxOnlyQuery=v;const box=$('#wx-only-list');if(box)box.innerHTML=wxOnlyChatListHTML();}
 function wxOnlyChatListHTML(){const q=_wxOnlyQuery.trim().toLowerCase(),ids=new Set(wxOnlyChatIds()),rows=wxRoleContacts().filter(c=>ids.has(c.id)&&(!q||[c.name,c.remark,c.wxid].some(v=>String(v||'').toLowerCase().includes(q))));return rows.length?wxDirectorySections(rows.map(c=>Object.assign({},c,{name:c.remark||c.name})),wxOnlyChatRow):`<div class="wx-contact-empty">${q?'没有符合条件的联系人':'还没有仅聊天的朋友'}</div>`;}
