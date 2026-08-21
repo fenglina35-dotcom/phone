@@ -22,7 +22,7 @@ test('durable reply is saved before its server handoff is canceled',()=>{
 });
 
 test('explicit tests and handoffs survive transient profile state',()=>{
-  assert.match(edge,/const explicitHandoff = \["reply_handoff", "device_handoff", "one_minute_test", "app_watch_test"\]/);
+  assert.match(edge,/const explicitHandoff = \["reply_handoff", "device_handoff", "one_minute_test", "app_watch_test", "delivery_status"\]/);
   assert.match(edge,/!explicitHandoff && \(!profile\.enabled \|\| profileTemporarilySuspended\(profile\)\)/);
   assert.match(migration,/and kind = v_kind and status in \('pending','claimed'\)/);
   assert.doesNotMatch(migration,/kind in \('reply_handoff','device_handoff'\)/);

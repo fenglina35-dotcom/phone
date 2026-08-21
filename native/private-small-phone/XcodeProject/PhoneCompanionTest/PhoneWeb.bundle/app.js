@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1029'){
+if(window.__NORTH_SHELL_BUILD__!=='1030'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -376,7 +376,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1029 · 真实外卖与角色钱包';
+const APP_VER='v1030 · 真实外卖支付回执闭环';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -677,10 +677,15 @@ function av(v,extra){const cls='avatar '+(extra||'');
   if(!v||v==='🙂'||v==='😊'||v==='👤')return `<div class="${cls}">${_avIc('user')}</div>`;
   if(v==='👥')return `<div class="${cls}">${_avIc('users')}</div>`;
   return `<div class="${cls}">${v}</div>`;}
-function deviceTimeZone(){try{return Intl.DateTimeFormat().resolvedOptions().timeZone||'Asia/Shanghai';}catch(_){return'Asia/Shanghai';}}
-function timeZoneValid(zone){try{if(!zone)return false;new Intl.DateTimeFormat('en-US',{timeZone:zone}).format(0);return true;}catch(_){return false;}}
+const ROLE_TIME_ZONE_CACHE_MS=5*60*1000;
+let _deviceTimeZoneCache={value:'',at:0};
+const _timeZoneValidCache=new Map(),_roleTimeFormatterCache=new Map();
+function deviceTimeZone(force){const now=Date.now();if(!force&&_deviceTimeZoneCache.value&&now-_deviceTimeZoneCache.at<ROLE_TIME_ZONE_CACHE_MS)return _deviceTimeZoneCache.value;let value='Asia/Shanghai';try{value=Intl.DateTimeFormat().resolvedOptions().timeZone||value;}catch(_){} _deviceTimeZoneCache={value,at:now};_timeZoneValidCache.set(value,true);return value;}
+function timeZoneValid(zone){zone=String(zone||'').trim();if(!zone)return false;if(_timeZoneValidCache.has(zone))return _timeZoneValidCache.get(zone);let valid=false;try{new Intl.DateTimeFormat('en-US',{timeZone:zone}).format(0);valid=true;}catch(_){} _timeZoneValidCache.set(zone,valid);return valid;}
 function roleTimeZone(){const zone=String(S&&S.settings&&S.settings.timeZone||'').trim();return timeZoneValid(zone)?zone:deviceTimeZone();}
-function roleTimeParts(t,zone){const when=+t||Date.now(),tz=timeZoneValid(zone)?zone:roleTimeZone(),parts={};try{new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(new Date(when)).forEach(x=>{if(x.type!=='literal')parts[x.type]=x.value;});}catch(_){const d=new Date(when);parts.year=d.getFullYear();parts.month=d.getMonth()+1;parts.day=d.getDate();parts.hour=d.getHours();parts.minute=d.getMinutes();parts.second=d.getSeconds();}const y=+parts.year,m=+parts.month,d=+parts.day,h=(+parts.hour||0)%24,minute=+parts.minute||0,second=+parts.second||0;return{year:y,month:m,day:d,hour:h,minute,second,weekday:new Date(Date.UTC(y,m-1,d)).getUTCDay(),zone:tz};}
+function roleTimeFormatter(zone){let formatter=_roleTimeFormatterCache.get(zone);if(formatter)return formatter;formatter=new Intl.DateTimeFormat('en-CA',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'});_roleTimeFormatterCache.set(zone,formatter);return formatter;}
+function localRoleTimeParts(when,zone){const d=new Date(when);return{year:d.getFullYear(),month:d.getMonth()+1,day:d.getDate(),hour:d.getHours(),minute:d.getMinutes(),second:d.getSeconds(),weekday:d.getDay(),zone:zone||deviceTimeZone()};}
+function roleTimeParts(t,zone){const when=+t||Date.now(),requested=String(zone||'').trim(),configured=String(S&&S.settings&&S.settings.timeZone||'').trim();let tz='';if(requested&&timeZoneValid(requested))tz=requested;else if(!requested&&configured&&timeZoneValid(configured))tz=configured;const localZone=deviceTimeZone();if(!tz||tz===localZone)return localRoleTimeParts(when,localZone);const parts={};try{roleTimeFormatter(tz).formatToParts(new Date(when)).forEach(x=>{if(x.type!=='literal')parts[x.type]=x.value;});const y=+parts.year,m=+parts.month,d=+parts.day,h=(+parts.hour||0)%24,minute=+parts.minute||0,second=+parts.second||0;return{year:y,month:m,day:d,hour:h,minute,second,weekday:new Date(Date.UTC(y,m-1,d)).getUTCDay(),zone:tz};}catch(_){return localRoleTimeParts(when,localZone);}}
 function roleClockDate(t){const p=roleTimeParts(t||Date.now());return new Date(p.year,p.month-1,p.day,p.hour,p.minute,p.second,0);}
 function timeZoneOffsetText(zone,t){const when=Math.floor((+t||Date.now())/1000)*1000,p=roleTimeParts(when,zone),utc=Date.UTC(p.year,p.month-1,p.day,p.hour,p.minute,p.second),mins=Math.round((utc-when)/60000),sign=mins>=0?'+':'-',abs=Math.abs(mins);return'UTC'+sign+String(Math.floor(abs/60)).padStart(2,'0')+':'+String(abs%60).padStart(2,'0');}
 function timeZoneName(zone){const names={'Asia/Shanghai':'北京时间','Asia/Tokyo':'日本时间','Asia/Seoul':'韩国时间','Asia/Singapore':'新加坡时间','Asia/Bangkok':'泰国时间','Asia/Dubai':'阿联酋时间','Asia/Kolkata':'印度时间','Europe/London':'英国时间','Europe/Paris':'法国时间','Europe/Berlin':'德国时间','Europe/Moscow':'俄罗斯时间','America/New_York':'美国纽约时间','America/Chicago':'美国芝加哥时间','America/Denver':'美国丹佛时间','America/Los_Angeles':'美国洛杉矶时间','America/Toronto':'加拿大多伦多时间','America/Vancouver':'加拿大温哥华时间','America/Sao_Paulo':'巴西圣保罗时间','Australia/Sydney':'澳大利亚悉尼时间','Pacific/Auckland':'新西兰奥克兰时间'};return names[zone]||String(zone||'').replace(/_/g,' ').replace(/\//g,' / ');}
@@ -1486,7 +1491,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1029&r=v1029-real-delivery-wallet-1';
+  const url='sw.js?v=1030&r=v1030-delivery-settlement-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -2866,7 +2871,7 @@ function appleHomeCompatEnvironment(){return appleHomeCompatBrowserEnvironment()
 function applyAppleHomeCompat(){const root=typeof document==='undefined'?null:document.documentElement;if(root&&root.classList){root.classList.remove('north-ios-home-safe');root.classList.remove('north-apple-remote-safe');}return false;}
 function glassThemeOn(){return !!(S&&S.me&&S.me.uiMaterial==='glass');}
 let _nativeStatusBarTheme='';
-function privateNativeStatusBarThemeName(){const on=glassThemeOn(),pack=appIconPack();return on&&['black','gray','pink','blue'].includes(pack)?pack:(S&&S.me&&S.me.theme==='white'?'white':S&&S.me&&S.me.theme==='pink'?'pink':'black');}
+function privateNativeStatusBarThemeName(){const page=typeof cur==='function'?cur():null,isWechat=page&&['wechat','chat','chatDetails','contactInfo','friendInfo','contactSettings','roleMoments','roleMomentDetail','roleFeatures','newfriends','wxsearch','pffriends','pfchat','pfgroup','group'].includes(page.p);if(isWechat)return S&&S.me&&S.me.wxTheme==='white'?'white':'black';const on=glassThemeOn(),pack=appIconPack();return on&&['black','gray','pink','blue'].includes(pack)?pack:(S&&S.me&&S.me.theme==='white'?'white':S&&S.me&&S.me.theme==='pink'?'pink':'black');}
 function webStatusBarThemeSync(theme){const colors={black:'#000000',pink:'#ffeaf3',blue:'#eaf4ff',gray:'#e6e8ec',white:'#ffffff'},color=colors[theme]||colors.black,root=typeof document==='undefined'?null:document.documentElement;if(root&&root.classList){['black','pink','blue','gray','white'].forEach(k=>root.classList.toggle('north-shell-'+k,k===theme));root.style.setProperty('--north-shell-status-color',color);}if(typeof document!=='undefined'){let meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.remove();meta=document.createElement('meta');meta.name='theme-color';meta.content=color;document.head.appendChild(meta);const apple=document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');if(apple)apple.setAttribute('content','default');}return color;}
 function privateNativeStatusBarThemeSync(force){const theme=privateNativeStatusBarThemeName();webStatusBarThemeSync(theme);if(!privateNativeAppOn()){_nativeStatusBarTheme='';return theme;}if(!force&&theme===_nativeStatusBarTheme)return theme;_nativeStatusBarTheme=theme;window.SmallPhoneNative.request('appearance.statusBar',{theme}).catch(()=>{_nativeStatusBarTheme='';});return theme;}
 function applyGlassTheme(){const root=typeof document==='undefined'?null:document.documentElement,on=glassThemeOn(),pack=appIconPack();if(root&&root.classList){root.classList.toggle('north-glass-ui',on);['black','gray','pink','blue'].forEach(k=>root.classList.toggle('north-pack-'+k,on&&pack===k));}privateNativeStatusBarThemeSync(false);return on;}
@@ -5237,15 +5242,25 @@ function renderWeChat(){
   else if(wxTab==='contacts')body=wxContacts();
   else if(wxTab==='moments')body=wxMoments();
   else if(wxTab==='me')body=wxMe();
-  const titles={chats:'微信',contacts:'好友',moments:'朋友圈',me:'我'};
+  const titles={chats:'微信',contacts:'通讯录',moments:'发现',me:'我'};
   const showAdd=wxTab==='chats'||wxTab==='contacts'||wxTab==='moments';
-  return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">${titles[wxTab]}</span><span class="r" onclick="${wxTab==='chats'?'chatAddMenu()':wxTab==='contacts'?'editContact()':wxTab==='moments'?'momentTools()':''}">${showAdd?'＋':''}</span></div>
-    <div class="scroll" style="background:${S.me.wxTheme==='white'?'#ededed':'#000'}">${body}</div>
-    <div class="tabbar">
-      ${tb('chats',svgIc('chat',23),'微信')}${tb('contacts',svgIc('user',23),'好友')}${tb('moments',svgIc('camera',23),'朋友圈')}${tb('me',svgIc('smile',23),'我')}
+  const previewStatus=NORTH_PREVIEW?`<div class="wx-preview-status"><span><b>${hm()}</b>${wxPawIcon()}</span><span class="wx-preview-radio"><i></i><i></i><i></i><i></i>${wxWifiIcon()}<em>17</em></span></div>`:'';
+  return `${previewStatus}<div class="nav wx-main-nav"><button class="l wx-main-exit" type="button" onclick="home()" aria-label="返回主屏"></button><span class="t wx-main-title"><b>${titles[wxTab]}</b></span><button class="r wx-main-add" type="button" onclick="${wxTab==='chats'?'chatAddMenu()':wxTab==='contacts'?'editContact()':wxTab==='moments'?'momentTools()':''}" aria-label="${showAdd?'添加':'更多'}">${showAdd?wxPlusIcon():''}</button></div>
+    <div class="scroll wx-main-scroll">${body}</div>
+    <div class="tabbar wx-main-tabbar">
+      ${tb('chats',wxTabIcon('chats'),'微信')}${tb('contacts',wxTabIcon('contacts'),'通讯录')}${tb('moments',wxTabIcon('moments'),'发现')}${tb('me',wxTabIcon('me'),'我')}
     </div>`;
 }
-function tb(k,i,t){return `<div class="tb ${wxTab===k?'on':''}" onclick="wxTab='${k}';render()"><div class="i">${i}</div>${t}</div>`;}
+function wxPlusIcon(){return `<svg viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="14.5"/><path d="M17 9v16M9 17h16"/></svg>`;}
+function wxPawIcon(){return `<svg class="wx-paw" viewBox="0 0 26 24" aria-hidden="true"><ellipse cx="13" cy="16" rx="6.5" ry="5.7"/><ellipse cx="5" cy="10" rx="3" ry="4"/><ellipse cx="10" cy="5.5" rx="2.8" ry="4"/><ellipse cx="16.2" cy="5.3" rx="2.8" ry="4"/><ellipse cx="21.4" cy="10.2" rx="3" ry="4"/></svg>`;}
+function wxWifiIcon(){return `<svg class="wx-wifi" viewBox="0 0 26 20" aria-hidden="true"><path d="M2 6.8C8.6.8 17.4.8 24 6.8M6 11.2c4.1-3.5 9.9-3.5 14 0M10.2 15.2c1.7-1.4 3.9-1.4 5.6 0"/><circle cx="13" cy="18" r="1.2"/></svg>`;}
+function wxMonitorIcon(){return `<svg viewBox="0 0 28 24" aria-hidden="true"><rect x="3" y="3" width="22" height="15" rx="1.5"/><path d="M10 22h8M14 18v4"/></svg>`;}
+function wxTabIcon(k){const icons={
+  chats:`<path class="wx-tab-outline" d="M16 4.9C8.6 4.9 3.1 9 3.1 14.4c0 3.1 1.7 5.9 4.7 7.7l-1.4 5.2 5.3-3c1.4.4 2.8.6 4.3.6 7.4 0 12.9-4.2 12.9-10.5S23.4 4.9 16 4.9Z"/><path class="wx-tab-solid" d="M16 3.9C8 3.9 2 8.4 2 14.4c0 3.4 1.8 6.4 5 8.4l-1.6 6 6.2-3.5c1.4.4 2.9.6 4.4.6 8 0 14-4.6 14-11.5S24 3.9 16 3.9Z"/>`,
+  contacts:`<path class="wx-tab-outline" d="M14.5 4.3c3.3 0 5.3 2.6 5.3 6.1 0 4-2.2 7-5.3 7s-5.3-3-5.3-7c0-3.5 2-6.1 5.3-6.1ZM4.4 28c.9-5.3 4.4-8.2 10.1-8.2s9.2 2.9 10.1 8.2H4.4Zm20.5-14.6h5.6m-5.6 4.3h5.6m-5.6 4.3h5.6"/><path class="wx-tab-solid" d="M14.5 3.2c3.8 0 6.1 2.9 6.1 6.9 0 4.4-2.5 7.6-6.1 7.6s-6.1-3.2-6.1-7.6c0-4 2.3-6.9 6.1-6.9ZM2.9 29c.8-6 5-9.4 11.6-9.4S25.3 23 26.1 29H2.9Zm23-16.9h5.7v2.8h-5.7v-2.8Zm0 5h5.7v2.8h-5.7v-2.8Zm0 5h5.7v2.8h-5.7v-2.8Z"/>`,
+  moments:`<circle class="wx-tab-outline" cx="16" cy="16" r="12.5"/><path class="wx-tab-outline" d="m10.6 21.2 3-7.7 7.8-3-3 7.8-7.8 2.9Z"/><circle class="wx-tab-solid" cx="16" cy="16" r="14"/><path class="wx-tab-solid-cut" d="m10.2 21.8 3.3-8.3 8.3-3.3-3.3 8.3-8.3 3.3Z"/>`,
+  me:`<path class="wx-tab-outline" d="M16 4.4c3.2 0 5.1 2.6 5.1 6.1 0 3.9-2 6.8-5.1 6.8s-5.1-2.9-5.1-6.8c0-3.5 1.9-6.1 5.1-6.1ZM5.2 28.1c.9-5.5 4.7-8.6 10.8-8.6s9.9 3.1 10.8 8.6H5.2Z"/><path class="wx-tab-solid" d="M16 3.4c3.8 0 6.1 3 6.1 7 0 4.5-2.4 7.7-6.1 7.7s-6.1-3.2-6.1-7.7c0-4 2.3-7 6.1-7ZM3.7 29.3c.9-6.3 5.3-9.9 12.3-9.9s11.4 3.6 12.3 9.9H3.7Z"/>`};return `<svg class="wx-tab-icon wx-tab-${k}" viewBox="0 0 32 32" aria-hidden="true">${icons[k]}</svg>`;}
+function tb(k,i,t){return `<button type="button" class="tb ${wxTab===k?'on':''}" onclick="wxTab='${k}';render()" aria-label="${t}"><div class="i">${i}</div><span>${t}</span></button>`;}
 function openWxSearch(){go('wxsearch');setTimeout(()=>{const i=$('#wxs_in');if(i)i.focus();},80);}
 function openChatSearch(id){go('wxsearch',{id});setTimeout(()=>{const i=$('#wxs_in');if(i)i.focus();},80);}
 function renderWxSearch(id){const c=id&&getC(id),scope=c?'你和'+(c.remark||c.name)+'的聊天记录':'你和所有角色的聊天记录';
@@ -5313,18 +5328,19 @@ function wxChats(){
   const list=[...S.contacts].filter(c=>!c.deleted&&(isMain()||addedHere(c)||msgs(c.id).length));
   const groups=isMain()?(S.groups||[]):[];
   const banner=isMain()?'':`<div style="padding:8px 12px;background:#3a2d4a;color:#d6c2f0;font-size:12px;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px">${svgIc('idcard',14,'#d6c2f0')}当前身份：${esc(S.me.name)}（在「我」里可切换/搜微信号加人）</div>`;
-  const searchbar=`<div onclick="openWxSearch()" style="margin:8px 12px;padding:8px 12px;background:${S.me.wxTheme==='white'?'#fff':'#1c1c1e'};border-radius:9px;color:#999;font-size:13px;display:flex;align-items:center;gap:6px;cursor:pointer">${svgIc('search',15,'#999')} 搜索聊天记录</div>`;
-  const roleRow=c=>{const lm=lastMsg(c.id);return `<div class="row ${c.pinned?'pin':''}" onclick="openChat('${c.id}')">${av(c.avatar)}
+  const searchbar=`<button class="wx-chat-search" type="button" onclick="openWxSearch()">${svgIc('search',20,'currentColor')}<span>搜索</span></button>`;
+  const desktop=`<div class="wx-desktop-login" role="status"><span>${wxMonitorIcon()}</span><b>Windows 微信已登录</b></div>`;
+  const roleRow=c=>{const lm=lastMsg(c.id);return `<div class="row wx-chat-row ${c.pinned?'pin':''}" onclick="openChat('${c.id}')">${av(c.avatar)}
       <div class="meta"><div class="n">${esc(c.remark||c.name)} ${c.blocked?'<span class=tag>已拉黑</span>':''}</div>
       <div class="s">${lm?esc(previewOf(lm)):'打个招呼吧～'}</div></div>
       <div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div>${c.pinned?'<div style="font-size:10px;color:#ccc">置顶</div>':''}</div></div>`;};
   const entries=[],add=(time,pinned,html)=>entries.push({time:+time||0,pinned:!!pinned,html,order:entries.length});
   list.forEach(c=>{const lm=lastMsg(c.id);add(lm&&lm.time,c.pinned,roleRow(c));});
-  groups.forEach(g=>{const lm=g.msgs[g.msgs.length-1];add(lm&&lm.time,g.pinned,`<div class="row ${g.pinned?'pin':''}" onclick="go('group',{id:'${g.id}'})">${g.avatar?av(g.avatar):'<div class="avatar" style="background:#7c6cc0">👥</div>'}<div class="meta"><div class="n">${esc(g.name)}(${g.members.length+1})</div><div class="s">${lm?esc(gpreview(lm,g)):'群聊已创建'}</div></div><div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div>${g.pinned?'<div style="font-size:10px;color:#ccc">置顶</div>':''}</div></div>`);});
+  groups.forEach(g=>{const lm=g.msgs[g.msgs.length-1];add(lm&&lm.time,g.pinned,`<div class="row wx-chat-row ${g.pinned?'pin':''}" onclick="go('group',{id:'${g.id}'})">${g.avatar?av(g.avatar):'<div class="avatar" style="background:#7c6cc0">👥</div>'}<div class="meta"><div class="n">${esc(g.name)}(${g.members.length+1})</div><div class="s">${lm?esc(gpreview(lm,g)):'群聊已创建'}</div></div><div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div>${g.pinned?'<div style="font-size:10px;color:#ccc">置顶</div>':''}</div></div>`);});
   if(isMain()){const p=phoneFriendState();(p.groups||[]).forEach(g=>{const gid=g.group_id||g.id,arr=pfMsgList(p.groupMessages,gid),lm=arr[arr.length-1],unread=arr.filter(m=>m.from!==p.id&&m.time>(p.groupRead[gid]||0)).length;add(lm&&lm.time,g.pinned,`<div class="row ${g.pinned?'pin':''}" onclick="openPhoneFriendGroup('${gid}')"><div class="avatar" style="background:linear-gradient(135deg,#ff8fab,#ffc2d8)">${svgIc('users',24,'#fff')}</div><div class="meta"><div class="n">${esc(pfGroupDisplayName(g))}</div><div class="s">${lm?esc(lm.recalled?'[已撤回一条消息]':((pfNameById(lm.from)||'成员')+'：'+pfMsgPreview(lm))):'群聊已创建'}</div></div><div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div>${pfUnreadDot(unread)}${g.pinned?'<div style="font-size:10px;color:#ccc">置顶</div>':''}</div></div>`);});(p.friends||[]).forEach(f=>{const id=(''+(f.phone_id||f.id)).toUpperCase(),arr=pfVisibleMsgList(p.messages,id),lm=arr[arr.length-1],unread=arr.filter(m=>m.from===id&&m.time>(p.friendRead[id]||0)).length;add(lm&&lm.time,f.pinned,`<div class="row ${f.pinned?'pin':''}" onclick="openPhoneFriendChat('${id}')">${pfAvatarOnlineHTML(f)}<div class="meta"><div class="n">${esc(pfFriendDisplayName(f))}</div><div class="s">${lm?esc(lm.recalled?'[已撤回一条消息]':((lm.from===p.id?'我：':'')+pfMsgPreview(lm))):'已经是好友，打个招呼吧'}</div></div><div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div>${pfUnreadDot(unread)}${f.pinned?'<div style="font-size:10px;color:#ccc">置顶</div>':''}</div></div>`);});}
-  if(!entries.length)return banner+'<div class="empty">'+(isMain()?'欢迎来到 North～<br>右上角 ＋ 新建你的第一个角色就能开聊<br><br><button class="btn p" style="max-width:220px;margin:14px auto 0" onclick="showManual()">使用说明书</button>':'这个身份还没加谁～<br>去「好友」搜微信号加人')+'</div>';
+  if(!entries.length)return banner+searchbar+desktop+'<div class="empty">'+(isMain()?'欢迎来到 North～<br>右上角 ＋ 新建你的第一个角色就能开聊<br><br><button class="btn p" style="max-width:220px;margin:14px auto 0" onclick="showManual()">使用说明书</button>':'这个身份还没加谁～<br>去「通讯录」搜微信号加人')+'</div>';
   entries.sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)||b.time-a.time||a.order-b.order);
-  return banner+searchbar+'<div class="list">'+entries.map(x=>x.html).join('')+'</div>';
+  return banner+searchbar+desktop+'<div class="list wx-chat-list">'+entries.map(x=>x.html).join('')+'</div>';
 }
 function gpreview(m,g){const nm=gnm(g,m.senderId);return nm+'：'+gmText(m);}
 function gmText(m){return m.type==='text'?m.content:m.type==='transfer'?'[转账]':m.type==='redpacket'?'[红包]':'[消息]';}

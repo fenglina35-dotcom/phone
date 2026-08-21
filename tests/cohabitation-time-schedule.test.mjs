@@ -19,6 +19,12 @@ function functionSource(name){
   throw new Error(`unterminated ${name}`);
 }
 
+function roleTimeSources(){return[
+  'const ROLE_TIME_ZONE_CACHE_MS=5*60*1000;let _deviceTimeZoneCache={value:"",at:0};const _timeZoneValidCache=new Map(),_roleTimeFormatterCache=new Map();',
+  functionSource('deviceTimeZone'),functionSource('timeZoneValid'),functionSource('roleTimeZone'),
+  functionSource('roleTimeFormatter'),functionSource('localRoleTimeParts'),functionSource('roleTimeParts'),
+];}
+
 test('the shared role schedule distinguishes weekdays from weekends',()=>{
   const sandbox={Date,Math,String};
   vm.runInNewContext([
@@ -71,7 +77,7 @@ test('time awareness pins today, yesterday and tomorrow to the real calendar',()
   class FakeDate extends Date{constructor(...args){super(...(args.length?args:[fixed]));}static now(){return fixed;}}
   const sandbox={Date:FakeDate,String,S:{settings:{timeAware:true}}};
   vm.runInNewContext([
-    functionSource('deviceTimeZone'),functionSource('timeZoneValid'),functionSource('roleTimeZone'),functionSource('roleTimeParts'),functionSource('roleClockDate'),
+    ...roleTimeSources(),functionSource('roleClockDate'),
     functionSource('timeZoneOffsetText'),functionSource('timeZoneName'),
     functionSource('hm'),functionSource('weekdayCN'),functionSource('ymdFull'),
     functionSource('dayPartNow'),functionSource('timeAwarenessPrompt'),
@@ -89,7 +95,7 @@ test('the selected role timezone changes its clock, calendar and daypart',()=>{
   class FakeDate extends Date{constructor(...args){super(...(args.length?args:[fixed]));}static now(){return fixed;}}
   const sandbox={Date:FakeDate,String,S:{settings:{timeAware:true,timeZone:'Asia/Shanghai'}}};
   vm.runInNewContext([
-    functionSource('deviceTimeZone'),functionSource('timeZoneValid'),functionSource('roleTimeZone'),functionSource('roleTimeParts'),functionSource('roleClockDate'),
+    ...roleTimeSources(),functionSource('roleClockDate'),
     functionSource('timeZoneOffsetText'),functionSource('timeZoneName'),functionSource('hm'),functionSource('weekdayCN'),functionSource('ymdFull'),
     functionSource('dayPartNow'),functionSource('timeAwarenessPrompt'),
     'globalThis.clock=hm;globalThis.prompt=timeAwarenessPrompt;'

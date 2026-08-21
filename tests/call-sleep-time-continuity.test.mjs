@@ -18,12 +18,18 @@ function functionSource(name){
   throw new Error(`unterminated ${name}`);
 }
 
+function roleTimeSources(){return[
+  'const ROLE_TIME_ZONE_CACHE_MS=5*60*1000;let _deviceTimeZoneCache={value:"",at:0};const _timeZoneValidCache=new Map(),_roleTimeFormatterCache=new Map();',
+  functionSource('deviceTimeZone'),functionSource('timeZoneValid'),functionSource('roleTimeZone'),
+  functionSource('roleTimeFormatter'),functionSource('localRoleTimeParts'),functionSource('roleTimeParts'),
+];}
+
 test('a direct current-time answer is corrected at delivery time',()=>{
   const fixed=new Date(2026,7,19,20,24,0).getTime();
   class FakeDate extends Date{constructor(...args){super(...(args.length?args:[fixed]));}static now(){return fixed;}}
   const sandbox={Date:FakeDate,Math,String,S:{settings:{timeAware:true}}};
   vm.runInNewContext([
-    functionSource('deviceTimeZone'),functionSource('timeZoneValid'),functionSource('roleTimeZone'),functionSource('roleTimeParts'),
+    ...roleTimeSources(),
     functionSource('clockCNNumber'),functionSource('currentClockSpoken'),
     functionSource('directClockQuestion'),functionSource('refreshDirectClockReply'),
     'globalThis.refresh=refreshDirectClockReply;'
@@ -38,7 +44,7 @@ test('waking in an overnight call closes lull and records the actual interval',(
   const sandbox={Date:FakeDate,Math,String,S:{settings:{timeAware:true},me:{name:'用户',sleep:{active:null,records:[]}},contacts:[]},callPersist:()=>{},roleServerPushSyncSoon:()=>{}};
   vm.runInNewContext([
     'let _call={lull:true,sleepStartedAt:'+start+',lastSleep:null};',
-    functionSource('deviceTimeZone'),functionSource('timeZoneValid'),functionSource('roleTimeZone'),functionSource('roleTimeParts'),
+    ...roleTimeSources(),
     functionSource('callWakeIntent'),functionSource('sleepRecordAdd'),
     functionSource('dayStartMs'),functionSource('dayGap'),functionSource('callCompleteWake'),
     'globalThis.complete=callCompleteWake;globalThis.state=()=>_call;'

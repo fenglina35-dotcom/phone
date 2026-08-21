@@ -1,0 +1,20 @@
+services:
+  phone-delivery-browser:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PHONE_DELIVERY_BROWSER_HOST: 0.0.0.0
+      PHONE_DELIVERY_BROWSER_PORT: 8787
+      PHONE_DELIVERY_PROFILE: /data/profile
+      PHONE_DELIVERY_HEADLESS: "false"
+      DISPLAY: :99
+    ports:
+      - "127.0.0.1:8787:8787"
+      - "127.0.0.1:6080:6080"
+    volumes:
+      - phone_delivery_profile:/data/profile
+    shm_size: 1gb
+
+volumes:
+  phone_delivery_profile:

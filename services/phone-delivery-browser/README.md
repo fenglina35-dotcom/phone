@@ -1,0 +1,52 @@
+# 小手机淘宝闪购浏览器服务
+
+这是 `phone-delivery` Edge Function 的私有上游。它使用持久化 Chromium 操作用户本人已登录的淘宝闪购／饿了么 H5，不需要商户营业执照。
+
+页面校准思路参考了 MIT 许可的 [`ganyu123456/mcp-taobao-server`](https://github.com/ganyu123456/mcp-taobao-server)，归属说明见 `THIRD_PARTY_NOTICES.md`。
+
+## 能力边界
+
+- 搜索真实可配送商家和商品，读取平台页面返回的价格、配送费、评价及优惠信息。
+- 读取规格组并让小手机里的角色从真实选项中选择杯型、温度、糖度、口味和加料。
+- 创建确认页订单并校验服务端金额上限。
+- 经用户本人确认后提交真实订单，停在支付宝官方收银台，返回支付链接和本地生成的二维码。
+- 保守轮询订单页面；只有页面明确出现相应状态时才推进，不编造骑手、时间或送达状态。
+- `automaticPayments` 固定为 `false`。服务不会输入支付密码、不会绕过验证码，也不会替用户自动扣款。
+
+淘宝闪购 H5 改版、登录过期或触发滑块时会停止并要求人工处理。浏览器 profile 含登录 cookie，必须只放在受控主机上；noVNC 和服务端口默认仅绑定本机回环地址。
+
+## 本地开发
+
+```bash
+cp .env.example .env
+npm install
+npx playwright install chromium
+npm test
+npm start
+```
+
+首次启动会打开有头浏览器。用本人手机号、短信验证码和滑块登录淘宝闪购，并在平台中保存默认地址。服务本身不保存手机号、验证码或支付密码。
+
+如果主机已经安装 Chrome 或 Edge，可在 `.env` 设置 `PHONE_DELIVERY_CHROME_PATH`，无需另外下载 Playwright Chromium。
+
+## Docker 常驻运行
+
+```bash
+cp .env.example .env
+docker compose up -d --build
+```
+
+通过 SSH 隧道访问 noVNC，避免把 6080 暴露到公网：
+
+```bash
+ssh -L 6080:127.0.0.1:6080 user@your-server
+```
+
+浏览器打开 `http://127.0.0.1:6080/vnc.html` 完成人工登录和必要的风控处理。对外只应通过带 HTTPS 的反向代理暴露 `POST /delivery`；反代不得记录请求体、支付链接或 cookie。
+
+Supabase `phone-delivery` 需要设置：
+
+- `PHONE_DELIVERY_UPSTREAM_URL=https://你的私有域名/delivery`
+- `PHONE_DELIVERY_UPSTREAM_SECRET`：与本服务 `.env` 完全相同的随机密钥
+
+上游请求使用时间戳加 HMAC-SHA256 签名，超过五分钟或正文被修改都会拒绝。

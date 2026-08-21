@@ -1118,7 +1118,7 @@ Deno.serve(async (request) => {
       const profile = (await client.from("phone_role_push_profiles").select("*").eq("target", task.target).eq("role_id", task.role_id).maybeSingle()).data;
       const baseline = snapshotTime(task.baseline_user_at);
       const latestUser = snapshotTime(profile?.last_user_at);
-      const explicitHandoff = ["reply_handoff", "device_handoff", "one_minute_test", "app_watch_test"].includes(String(task.kind || ""));
+      const explicitHandoff = ["reply_handoff", "device_handoff", "one_minute_test", "app_watch_test", "delivery_status"].includes(String(task.kind || ""));
       /* 这些任务由用户操作直接创建，不能因页面退后台后 profile.enabled 的瞬时变化被取消。
          正式主动消息仍保持原来的 enabled 与新消息基线限制。 */
       if (!profile || (!explicitHandoff && (!profile.enabled || profileTemporarilySuspended(profile))) || (!explicitHandoff && baseline && latestUser > baseline + 1000)) {
@@ -1197,6 +1197,9 @@ Deno.serve(async (request) => {
           ? "这是查看软件后没有得到用户回复的最后一步。你本轮已经决定暂时锁定事件中的App；正文必须明确自然地告诉用户你锁定了它，不要再询问第二次。"
           : "这是查看软件后没有得到用户回复的最后一步。你本轮已经决定不锁定，只再发一次自然询问并结束；正文不得声称锁定。";
         context = `软件：${String(payload.appName || "已授权App")}\n软件稳定ID：${String(payload.appId || "")}\n${context}`;
+      } else if (task.kind === "delivery_status") {
+        instruction = "这是一笔由你创建的真实外卖订单刚收到的平台状态回执。只依据payload里的真实字段，按你自己的完整人设、关系和说话习惯决定怎样提醒用户；不得照抄模板，不得编造优惠、骑手位置、到达时间或其他未提供事实。订单进入已付款、配送中、已送达、已退款或失败等重要状态时应明确提醒。";
+        context = String(payload.facts || context || "真实外卖订单状态已更新");
       }
       const recentRows = (await client.from("phone_role_push_outbox").select("body").eq("target", task.target).eq("role_id", task.role_id).order("created_at", { ascending: false }).limit(6)).data || [];
       const decision = await roleMessage(
