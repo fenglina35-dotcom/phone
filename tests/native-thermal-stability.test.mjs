@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
@@ -31,6 +32,60 @@ test('the lightweight native status poll does not repeatedly refresh Screen Time
   assert.match(sync,/if wantsHealth \{\s*wellnessReadCompleted = await refreshWellnessWithTimeout/);
   assert.match(sync,/else \{\s*wellnessReadCompleted = true\s*\}/);
   assert.match(app,/companionNativeSnapshot\(\s*'\u72b6态'/);
+});
+
+test('unchanged companion timestamps do not rewrite the whole private core',()=>{
+  assert.match(app,/function companionSnapshotPersistSignature\(st\)/);
+  assert.match(app,/const st=companionState\(\),before=companionSnapshotPersistSignature\(st\)/);
+  assert.match(app,/const after=companionSnapshotPersistSignature\(st\);if\(before!==after\)\{save\(\)/);
+  assert.doesNotMatch(app,/JSON\.stringify\(\[st\.linked,st\.deviceId,st\.lastSync/);
+  assert.match(app,/battery=st\.battery\?\{level:st\.battery\.level,state:st\.battery\.state,lowPower:/);
+  assert.match(app,/automationEvents/);
+});
+
+test('companion persistence signature ignores refresh-only clocks but preserves real changes',()=>{
+  const source=app.match(/function companionSnapshotPersistSignature\(st\)\{[^\r\n]+\}/)?.[0];
+  assert.ok(source,'companionSnapshotPersistSignature source is present');
+  const signature=vm.runInNewContext(`(${source})`);
+  const base={
+    linked:true,
+    deviceId:'device-1',
+    deviceName:'iPhone',
+    screenTimeAvailable:true,
+    screenTimeMode:'per_app',
+    screenTimeSec:120,
+    apps:[{id:'app-1',name:'App',usedSec:120,locked:false}],
+    location:{lat:31.2,lng:121.4,accuracy:8,place:'家',ts:100},
+    footprints:[{lat:31.2,lng:121.4,accuracy:8,place:'家',ts:100}],
+    battery:{level:0.72,state:'充电中',lowPower:false,ts:100},
+    health:{ts:100,steps:1234,heartRateBpm:72,heartRateAt:90},
+    automationEvents:[],
+    commands:[],
+    readErrors:{}
+  };
+  const refreshed=structuredClone(base);
+  refreshed.lastSync=999;
+  refreshed.battery.ts=999;
+  refreshed.health.ts=999;
+  assert.equal(signature(base),signature(refreshed));
+
+  const batteryChanged=structuredClone(refreshed);
+  batteryChanged.battery.level=0.71;
+  assert.notEqual(signature(base),signature(batteryChanged));
+  const lockChanged=structuredClone(refreshed);
+  lockChanged.apps[0].locked=true;
+  assert.notEqual(signature(base),signature(lockChanged));
+  const unlockEvent=structuredClone(refreshed);
+  unlockEvent.automationEvents.push({id:'event-1',kind:'manualUnlock',externalAppId:'app-1',ts:888,explicit:true,delivered:false});
+  assert.notEqual(signature(base),signature(unlockEvent));
+});
+
+test('native status snapshots batch stable app-token persistence and cache unchanged footprints',()=>{
+  assert.match(sync,/let selectedApps: \[\(token: ApplicationToken, externalID: String\)\]/);
+  assert.match(sync,/rememberTokens\(selectedApps\)/);
+  assert.match(sync,/private func rememberTokens\([\s\S]*?guard changed else \{ return \}[\s\S]*?UserDefaults\.standard\.set\(registry/);
+  assert.match(sync,/guard registry\[externalID\] != data else \{ return \}/);
+  assert.match(sync,/if data == cachedFootprintData \{\s*return cachedTodayPoints\s*\}/);
 });
 
 test('idle clock work skips hidden pages and never rebuilds an unchanged lock-screen SVG mask',()=>{

@@ -530,6 +530,8 @@ final class CompanionSyncService: ObservableObject {
     private let appAliasesKey = "companion.sync.app-aliases.v1"
     private let tokenRegistryKey = "companion.sync.token-registry.v1"
     private let footprintStorageKey = "PhoneCompanionTodayFootprint"
+    private var cachedFootprintData: Data?
+    private var cachedTodayPoints: [FootprintPoint] = []
     private let shieldActorKey = "companion.shield.actor.v1"
     private let snapshotSequenceKey = "companion.snapshot.sequence.v1"
     private let manualUnlockEventsKey =
@@ -1500,12 +1502,16 @@ final class CompanionSyncService: ObservableObject {
             }
         )
 
-        var allExternalIDSet = Set<String>()
-        for token in selection.applicationTokens {
-            if let externalID = stableExternalID(for: token) {
-                allExternalIDSet.insert(externalID)
+        let selectedApps: [(token: ApplicationToken, externalID: String)] =
+            selection.applicationTokens.compactMap { token in
+                guard let externalID = stableExternalID(for: token) else {
+                    return nil
+                }
+                return (token, externalID)
             }
-        }
+        rememberTokens(selectedApps)
+
+        var allExternalIDSet = Set(selectedApps.map { $0.externalID })
         if let reportApps = report?.apps {
             for usage in reportApps {
                 allExternalIDSet.insert(usage.externalAppID)
@@ -1526,13 +1532,9 @@ final class CompanionSyncService: ObservableObject {
         var appRows: [[String: Any]] = []
         var includedIDs: Set<String> = []
 
-        for token in selection.applicationTokens {
-            guard let externalID = stableExternalID(for: token) else {
-                continue
-            }
-
-            rememberToken(token, forExternalID: externalID)
-
+        for selected in selectedApps {
+            let token = selected.token
+            let externalID = selected.externalID
             let setting = limitByToken[token]
             appRows.append([
                 "id": externalID,
@@ -1717,17 +1719,26 @@ final class CompanionSyncService: ObservableObject {
     private func loadFreshTodayPoints() -> [FootprintPoint] {
         guard let data = UserDefaults.standard.data(
             forKey: footprintStorageKey
-        ),
-        let points = try? JSONDecoder().decode(
+        ) else {
+            cachedFootprintData = nil
+            cachedTodayPoints = []
+            return []
+        }
+        if data == cachedFootprintData {
+            return cachedTodayPoints
+        }
+        guard let points = try? JSONDecoder().decode(
             [FootprintPoint].self,
             from: data
         ) else {
             return []
         }
-
-        return points.filter {
+        let today = points.filter {
             Calendar.current.isDateInToday($0.timestamp)
         }
+        cachedFootprintData = data
+        cachedTodayPoints = today
+        return today
     }
 
     private func processPendingCommandsSerialized(
@@ -2369,7 +2380,26 @@ final class CompanionSyncService: ObservableObject {
             return
         }
         var registry = tokenRegistry()
+        guard registry[externalID] != data else { return }
         registry[externalID] = data
+        UserDefaults.standard.set(registry, forKey: tokenRegistryKey)
+    }
+
+    private func rememberTokens(
+        _ entries: [(token: ApplicationToken, externalID: String)]
+    ) {
+        guard !entries.isEmpty else { return }
+        var registry = tokenRegistry()
+        var changed = false
+        for entry in entries {
+            guard let data = try? JSONEncoder().encode(entry.token),
+                  registry[entry.externalID] != data else {
+                continue
+            }
+            registry[entry.externalID] = data
+            changed = true
+        }
+        guard changed else { return }
         UserDefaults.standard.set(registry, forKey: tokenRegistryKey)
     }
 
