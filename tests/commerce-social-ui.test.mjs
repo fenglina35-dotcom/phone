@@ -31,7 +31,7 @@ test('Douyin redesign keeps feed actions and exposes a center publish control', 
   for (const handler of ['dyLike(', 'dyComments(', 'dyTapVideo(', 'dyFwd(', 'dyCompose()']) {
     assert.ok(ui.includes(handler), `missing Douyin handler: ${handler}`);
   }
-  assert.match(ui, /class="dy-home-back" onclick="home\(\)" aria-label="返回主屏幕"/);
+  assert.match(ui, /class="dy-home-back" onclick="dyBack\(\)" aria-label="返回上一页"/);
   assert.match(html, /\.dy-home-back\{/);
 });
 
