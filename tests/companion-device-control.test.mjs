@@ -128,7 +128,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v1017 · 小事簿后台入聊与气泡配色修复'/);
+  assert.match(app, /const APP_VER='v1018 · 私人 App 点击响应与发热修复'/);
 });
 
 test('manual sync reads locally in the bundled app and keeps cloud fallback', () => {
@@ -688,8 +688,9 @@ test('snapshot conflict copy reports a configuration mismatch without claiming e
 });
 
 test('the companion page refreshes immediately after returning to the foreground', () => {
-  assert.match(app, /visibilitychange[\s\S]{0,900}companionPollSnapshot\(true\)/);
-  assert.match(app, /pageshow[\s\S]{0,700}companionPollSnapshot\(true\)/);
+  assert.match(app, /function privateResumeSyncSoon\(\)[\s\S]{0,320}companionPollSnapshot\(true\)/);
+  assert.match(app, /visibilitychange[\s\S]{0,1200}privateResumeSyncSoon\(\)/);
+  assert.match(app, /pageshow[\s\S]{0,700}privateResumeSyncSoon\(\)/);
   assert.match(functionSource('companionPollSnapshot'), /document\.hidden/);
 });
 

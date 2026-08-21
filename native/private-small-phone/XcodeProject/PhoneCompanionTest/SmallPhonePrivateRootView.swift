@@ -37,6 +37,8 @@ private enum SmallPhoneStatusBarTheme: String {
 struct SmallPhonePrivateRootView: View {
     @State private var showsDeviceManagement = false
     @State private var reportFilterEnd = Date()
+    @State private var reportMounted = false
+    @State private var reportRequestGeneration = 0
     @State private var statusBarTheme = SmallPhoneStatusBarTheme.black
 
     private let reportContext =
@@ -64,13 +66,16 @@ struct SmallPhonePrivateRootView: View {
             statusBarTheme.color
                 .ignoresSafeArea(.container, edges: .top)
 
-            // Keep the privacy-preserving report extension mounted so an
-            // explicit role read can request a fresh tokenized snapshot even
-            // while the all-in-one web surface is the visible page.
-            DeviceActivityReport(reportContext, filter: todayFilter)
-                .frame(width: 2, height: 2)
-                .opacity(0.01)
-                .allowsHitTesting(false)
+            // DeviceActivityReport launches a separate report extension. It
+            // only needs to exist while a real Screen Time read is pending;
+            // leaving it mounted underneath WKWebView all day wastes CPU/GPU
+            // and can starve taps on long-running private-App sessions.
+            if reportMounted {
+                DeviceActivityReport(reportContext, filter: todayFilter)
+                    .frame(width: 2, height: 2)
+                    .opacity(0.01)
+                    .allowsHitTesting(false)
+            }
 
             LocalPhoneWebView {
                 showsDeviceManagement = true
@@ -90,6 +95,14 @@ struct SmallPhonePrivateRootView: View {
             )
         ) { _ in
             reportFilterEnd = Date()
+            reportMounted = true
+            reportRequestGeneration += 1
+            let generation = reportRequestGeneration
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 12_000_000_000)
+                guard generation == reportRequestGeneration else { return }
+                reportMounted = false
+            }
         }
         .onReceive(
             NotificationCenter.default.publisher(

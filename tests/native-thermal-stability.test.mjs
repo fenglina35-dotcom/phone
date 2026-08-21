@@ -9,6 +9,8 @@ const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
 const css=fs.readFileSync(path.join(root,'glass-theme.css'),'utf8');
 const sync=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/CompanionSyncView.swift'),'utf8');
 const bridge=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),'utf8');
+const privateRoot=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/SmallPhonePrivateRootView.swift'),'utf8');
+const screenShare=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/ScreenShareCoordinator.swift'),'utf8');
 
 test('private WKWebView does not create a backdrop compositor layer for every card and bubble',()=>{
   assert.match(css,/north-native-app\.north-glass-ui \.phone \*[\s\S]*?backdrop-filter:none!important/);
@@ -49,6 +51,25 @@ test('resume listeners collapse duplicate forced native and inbox pulls',()=>{
   assert.match(app,/function companionPollMinDelay\(\)[\s\S]*?:60000/);
   assert.match(app,/companionPollSnapshot\(force\)[\s\S]*?minDelay=force\?5000:companionPollMinDelay\(\)/);
   assert.match(app,/roleServerPushPull\(force\)[\s\S]*?minDelay=force\?5000:45000/);
+  assert.match(app,/function privateResumeSyncSoon\(\)[\s\S]*?companionPollSnapshot\(true\);roleServerPushPull\(true\)/);
+  assert.doesNotMatch(app,/setTimeout\(\(\)=>companionPollSnapshot\(true\),960\)/);
+});
+
+test('private saves avoid repeated full chat serialization on the tap path',()=>{
+  assert.match(app,/function messageArchiveStamp\(store\)/);
+  assert.match(app,/_heavyReady\.has\('messages'\)&&_heavyStamp\.messages===stamp/);
+  assert.match(app,/requestIdleCallback\(\(\)=>\{_saveIdleHandle=0;if\(_savePending\)saveNow\(\)/);
+  assert.match(app,/native&&requested>0\?Math\.max\(700,requested\):requested/);
+});
+
+test('inactive native helpers do not keep waking the main thread',()=>{
+  assert.match(screenShare,/schedulePoll\(after: 4\)/);
+  assert.match(screenShare,/schedulePoll\(after: 0\.5\)/);
+  assert.doesNotMatch(screenShare,/withTimeInterval: 0\.5, repeats: true/);
+  assert.match(privateRoot,/if reportMounted \{\s*DeviceActivityReport/);
+  assert.match(privateRoot,/reportMounted = false/);
+  assert.match(app,/setInterval\(friendRequestSweep,5000\)/);
+  assert.match(app,/setInterval\(blockedPhoneSweepVisible,5000\)/);
 });
 
 test('private core storage sends one JSON string and performs disk work away from MainActor',()=>{

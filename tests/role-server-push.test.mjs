@@ -299,7 +299,8 @@ test('returned role messages are deduplicated and appended to the matching chat'
     'chat rows and the durable receipt must both be saved before the server ack'
   );
   assert.match(app, /setInterval\(\(\)=>roleServerPushPull\(false\),60000\)/);
-  assert.match(app, /visibilitychange[\s\S]{0,1600}roleServerPushPull\(true\)/);
+  assert.match(app, /function privateResumeSyncSoon\(\)[\s\S]{0,360}roleServerPushPull\(true\)/);
+  assert.match(app, /visibilitychange[\s\S]{0,1600}privateResumeSyncSoon\(\)/);
 });
 
 test('native foreground and delivered role notifications wake the web inbox without requiring a tap', () => {

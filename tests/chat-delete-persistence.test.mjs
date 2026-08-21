@@ -26,18 +26,38 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
+test("chat archive stamp is bounded to conversation edges and tracks real list changes", () => {
+  const context = vm.createContext({});
+  vm.runInContext(`${functionSource("messageArchiveStamp")};globalThis.stamp=messageArchiveStamp;`, context);
+  const store = { role: [
+    { id: "first", time: 1, role: "user", content: "hello" },
+    { id: "middle", time: 2, role: "assistant", content: "kept" },
+    { id: "last", time: 3, role: "user", content: "world" },
+  ] };
+  const first = context.stamp(store);
+  store.role.push({ id: "new", time: 4, role: "assistant", content: "reply" });
+  const appended = context.stamp(store);
+  assert.notEqual(appended, first);
+  store.role.at(-1).read = true;
+  assert.notEqual(context.stamp(store), appended);
+  store.role.splice(1, 1);
+  assert.notEqual(context.stamp(store), appended);
+  assert.doesNotMatch(functionSource("messageArchiveStamp"), /for\(const m of rows\)/);
+});
+
 test("multi-select deletion flushes the updated large chat archive before success", async () => {
   const writes = [], events = [];
   const context = vm.createContext({
     S: { messages: { role: [{ id: "kept", content: "x".repeat(22000) }] } },
     _heavy: {},
+    _heavyStamp: {},
     _heavyReady: new Set(),
     _messageArchiveWrite: Promise.resolve(),
     imgPut: async (key, value) => { writes.push({ key, value }); events.push("archive"); },
     imgDel: async key => { events.push(`delete:${key}`); },
     saveNowAsync: async () => { events.push("core"); return true; },
   });
-  for (const name of ["writeMessageArchive", "deleteMessageArchive", "persistWechatMessagesNow"])
+  for (const name of ["messageArchiveStamp", "writeMessageArchive", "deleteMessageArchive", "persistWechatMessagesNow"])
     vm.runInContext(`${functionSource(name)};globalThis.${name}=${name};`, context);
   assert.equal(await context.persistWechatMessagesNow(), true);
   assert.deepEqual(events, ["archive", "core"]);
@@ -52,13 +72,14 @@ test("a small post-delete chat state removes the stale large archive first", asy
   const context = vm.createContext({
     S: { messages: { role: [{ id: "kept", content: "short" }] } },
     _heavy: { messages: "old" },
+    _heavyStamp: { messages: "old" },
     _heavyReady: new Set(["messages"]),
     _messageArchiveWrite: Promise.resolve(),
     imgPut: async () => {},
     imgDel: async key => { events.push(`delete:${key}`); },
     saveNowAsync: async () => { events.push("core"); return true; },
   });
-  for (const name of ["writeMessageArchive", "deleteMessageArchive", "persistWechatMessagesNow"])
+  for (const name of ["messageArchiveStamp", "writeMessageArchive", "deleteMessageArchive", "persistWechatMessagesNow"])
     vm.runInContext(`${functionSource(name)};globalThis.${name}=${name};`, context);
   await context.persistWechatMessagesNow();
   assert.deepEqual(events, ["delete:__messages", "core"]);

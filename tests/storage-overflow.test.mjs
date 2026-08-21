@@ -137,7 +137,7 @@ test('real save flow keeps only the newest queued large snapshot and restores it
     const KEY='north-test',CORE_IDB_KEY='__core_state',CORE_INLINE_LIMIT=3.5*1024*1024;
     let _coreBootRef=null,_coreOverflowMode=false,_coreMirrorWrite=Promise.resolve(true),
       _coreQueuedSave=null,_coreLogicalBytes=0,_coreSavePending=false,_coreFailureAt=0,
-      _appBootFinished=true,_saveTimer=null,_savePending=false,_saveLast=0,_saveOkLast=0;
+      _appBootFinished=true,_saveTimer=null,_saveIdleHandle=0,_savePending=false,_saveLast=0,_saveOkLast=0;
     let S={settings:{},me:{accounts:[]},marker:'first',payload:'x'.repeat(3.6*1024*1024)};
     function defState(){return {settings:{},me:{accounts:[]}}}
     function _imgReplacer(key,value){return value}
@@ -148,7 +148,7 @@ test('real save flow keeps only the newest queued large snapshot and restores it
     function recoveryStateMeaningful(stats){return !!stats.contacts}
     function normalizeLoadedState(){}
   `, context);
-  for (const name of ['storedTextBytes', 'coreBootShell', 'writeCoreBootShell', 'queueCoreMirror', 'saveNow', 'bootOverflowCore']) {
+  for (const name of ['storedTextBytes', 'coreBootShell', 'writeCoreBootShell', 'queueCoreMirror', 'cancelScheduledSave', 'saveNow', 'bootOverflowCore']) {
     vm.runInContext(functionSource(name), context);
   }
 

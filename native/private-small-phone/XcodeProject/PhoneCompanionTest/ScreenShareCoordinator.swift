@@ -45,12 +45,17 @@ final class ScreenShareCoordinator {
             timer = nil
             return
         }
-        if timer == nil {
-            timer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
-                Task { @MainActor in self?.poll() }
-            }
-        }
         poll(force: true)
+    }
+
+    private func schedulePoll(after delay: TimeInterval) {
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(
+            withTimeInterval: max(0.5, delay),
+            repeats: false
+        ) { [weak self] _ in
+            Task { @MainActor in self?.poll() }
+        }
     }
 
     func status() -> [String: Any] {
@@ -184,7 +189,11 @@ final class ScreenShareCoordinator {
         let defaults = UserDefaults(suiteName: Self.appGroup)
         let active = defaults?.bool(forKey: "screenShare.active.v1") ?? false
         let sequence = defaults?.integer(forKey: "screenShare.sequence.v1") ?? 0
-        guard let webView else { return }
+        guard let webView else {
+            timer?.invalidate()
+            timer = nil
+            return
+        }
         if force || active != lastActive {
             lastActive = active
             let activeLiteral = active ? "true" : "false"
@@ -194,6 +203,10 @@ final class ScreenShareCoordinator {
         if !active {
             lastFrameSequence = sequence
             lastRealtimeNotifyAt = 0
+            // Screen sharing is normally off. A permanent 0.5-second
+            // MainActor timer kept waking WKWebView even on the home screen;
+            // use a low-frequency probe until ReplayKit actually becomes active.
+            schedulePoll(after: 4)
             return
         }
         let now = Date().timeIntervalSince1970
@@ -206,5 +219,6 @@ final class ScreenShareCoordinator {
                 completionHandler: nil
             )
         }
+        schedulePoll(after: 0.5)
     }
 }

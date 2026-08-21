@@ -7,10 +7,10 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const pip=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/CallPictureInPictureController.swift',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-test('v1017 web source keeps private 1.0.138 compatibility',()=>{
-  assert.match(app,/APP_VER='v1017 · 小事簿后台入聊与气泡配色修复'/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 138;/);
-  assert.match(project,/MARKETING_VERSION = 1\.0\.138;/);
+test('v1018 web source keeps private 1.0.139 compatibility',()=>{
+  assert.match(app,/APP_VER='v1018 · 私人 App 点击响应与发热修复'/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 139;/);
+  assert.match(project,/MARKETING_VERSION = 1\.0\.139;/);
 });
 
 test('public music search needs no user login and reuses together-listen songs',()=>{
