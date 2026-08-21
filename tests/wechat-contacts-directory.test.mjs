@@ -48,9 +48,13 @@ assert.match(app,/else if\(c\.p==='wxgroupcreate'\)html=renderWxGroupCreate\(\)/
 assert.match(app,/else if\(c\.p==='contactEdit'\)html=renderContactEditor\(c\.id,c\.isNew\)/);
 assert.match(functionSource('editContactAutonomy'),/go\('contactEdit'/);
 assert.match(functionSource('ctListHTML'),/pfAvatarOnlineHTML\(x\.f,'sm'\)[\s\S]*wx-contact-name/);
+assert.doesNotMatch(contacts,/wx-contact-sticky-search|wxAlphabetRail/);
+assert.match(functionSource('renderWeChat'),/wxTab==='contacts'\?wxContactSearchHTML\(\):''[\s\S]*wx-main-scroll[\s\S]*wxTab==='contacts'\?wxAlphabetRail\(\):''/);
 
-assert.match(glass,/\.wx-contact-sticky-search\{[^}]*position:sticky/);
-assert.match(glass,/\.wx-contact-letter>h4\{[^}]*position:sticky;top:48px/);
+assert.match(glass,/\.wx-contacts>\.wx-contact-sticky-search\{[^}]*position:relative/);
+assert.match(glass,/\.wx-contacts>\.wx-alpha-rail\{[^}]*position:absolute;[^}]*top:106px;bottom:76px/);
+assert.match(glass,/\.wx-contacts>\.wx-contact-sticky-search input\{[^}]*text-align:center/);
+assert.match(glass,/\.wx-contact-letter>h4\{[^}]*position:sticky;top:0/);
 assert.match(glass,/\.wx-contact-person>\.pfavwrap\{[^}]*flex:0 0 40px/);
 assert.match(glass,/\.wx-directory-head\{[^}]*backdrop-filter:blur/);
 assert.match(glass,/\.wx-chat-premium>\.manual-reply-row,[^{]+\{[^}]*background:transparent!important/);

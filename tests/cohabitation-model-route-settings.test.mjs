@@ -55,7 +55,8 @@ test('common-life model and api route choices resolve independently',()=>{
 test('common-life settings visibly separate models from api routes',()=>{
   const sandbox={
     S:{settings:{}},Math,String,Number,CHAT_ROUTE_NAMES:['路线一','路线二','路线三','路线四'],
-    getC:()=>({sched:{on:false}}),roleScheduleBrief:()=>'未启用',esc:x=>String(x??'')
+    getC:()=>({sched:{on:false}}),roleScheduleBrief:()=>'未启用',esc:x=>String(x??''),
+    cohabTogetherScene:()=>true,_offSel:null,manualReplySceneOn:()=>false,_off:null
   };
   vm.runInNewContext([
     functionSource('cohabSettings'),functionSource('cohabModelLabel'),functionSource('cohabApiRouteLabel'),

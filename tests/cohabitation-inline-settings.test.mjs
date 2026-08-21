@@ -52,6 +52,9 @@ test('all common-life controls are inline above the chat and save without a page
   assert.match(panel,/cohabSummarizeNow/);
   assert.match(panel,/cohabMemoryOpen/);
   assert.match(panel,/共同生活设置/);
+  assert.match(panel,/cohab-debug-actions/);
+  assert.match(panel,/cohab-debug-reply/);
+  assert.match(panel,/onclick="offReply\(\)"/);
   assert.match(panel,/最近上下文/);
   assert.match(panel,/自动总结/);
   assert.match(panel,/旧总结引用/);
@@ -63,6 +66,8 @@ test('all common-life controls are inline above the chat and save without a page
   assert.match(setter,/save\(\)/);
   assert.doesNotMatch(setter,/render\(/,'changing a select must not replace the current chat composer');
   assert.match(html,/\.cohab-settings-grid\{display:grid/);
+  assert.match(html,/\.cohab-debug-reply\{[^}]*background:#1b1813/,'manual reply must be opaque inside expanded debug settings');
+  assert.doesNotMatch(render,/\$\{replyTop\}/,'common-life top bar must not contain the manual reply chip');
 });
 
 test('context, reply route and summary route feed the real common-life model chain',()=>{
