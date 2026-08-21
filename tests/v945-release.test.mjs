@@ -23,11 +23,11 @@ test('v1031 web files use one cache-busting build number',()=>{
   assert.match(repair,/小手机\.html\?v=1031/);
 });
 
-test('the private iOS package embeds web v1031 and keeps 1.0.150 delivery',()=>{
+test('the private iOS package embeds web v1031 and keeps 1.0.152 delivery',()=>{
   assert.match(privateBundle,/<string>1031<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.150;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 150;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.150 \(150\)'/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.152;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 152;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.152 \(152\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 
