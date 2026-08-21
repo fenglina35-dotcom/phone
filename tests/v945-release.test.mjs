@@ -14,7 +14,7 @@ const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTes
 
 test('v1029 web files use one cache-busting build number',()=>{
   assert.match(app,/APP_VER='v1029 · 真实外卖与角色钱包'/);
-  assert.match(app,/const url='sw\.js\?v=1029&r=v1029-real-delivery-wallet-1'/);
+  assert.match(app,/const url='sw\.js\?v=1029&r=v1029-wechat-home-1'/);
   assert.match(html,/__NORTH_SHELL_BUILD__='1029'/);
   assert.match(html,/app\.js\?v=1029/);
   assert.match(sw,/const BUILD='1029'/);

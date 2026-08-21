@@ -14,7 +14,7 @@ const reportScene = read('native/private-small-phone/XcodeProject/PhoneCompanion
 
 test('v1029 web and private iOS 1.0.150 keep explicit build identities', () => {
   assert.match(app, /APP_VER='v1029 · 真实外卖与角色钱包'/);
-  assert.match(app, /sw\.js\?v=1029&r=v1029-real-delivery-wallet-1/);
+  assert.match(app, /sw\.js\?v=1029&r=v1029-wechat-home-1/);
   assert.match(shell, /north-shell-v1029/);
   assert.match(bundleInfo, /<string>1029<\/string>/);
   assert.match(localWebView, /1\.0\.150 \(150\)/);
