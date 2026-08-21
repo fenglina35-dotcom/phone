@@ -25,6 +25,15 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         label: "com.smallphone.private-storage",
         qos: .utility
     )
+    private struct NativeStorageReadSession {
+        let data: Data
+        let expiresAt: TimeInterval
+    }
+    // Access is serialized exclusively by storageQueue. Keeping this outside
+    // MainActor prevents a multi-megabyte restored core from bouncing through
+    // the UI actor between bounded bridge chunks.
+    nonisolated(unsafe) private var storageReadSessions:
+        [String: NativeStorageReadSession] = [:]
     private var pendingSpeechEvents: [[String: Any]] = []
     private var visionBackgroundTasks: [String: UIBackgroundTaskIdentifier] = [:]
 
@@ -253,7 +262,8 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             }
         case "storage.status":
             performStorageStatus(requestID: requestID)
-        case "storage.get", "storage.put", "storage.delete":
+        case "storage.get", "storage.get.chunk", "storage.get.release",
+             "storage.put", "storage.delete":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             performStorageAction(
                 requestID: requestID,
@@ -584,10 +594,16 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             ?? (legacyValue?["json"] as? String)
         let putStats = (arguments["stats"] as? [String: Any])
             ?? (legacyValue?["stats"] as? [String: Any])
+        let transferToken = arguments["transferToken"] as? String ?? ""
+        let chunkOffset = (arguments["offset"] as? NSNumber)?.intValue ?? 0
 
         storageQueue.async { [weak self] in
             guard let self else { return }
             do {
+                let now = Date().timeIntervalSince1970
+                self.storageReadSessions = self.storageReadSessions.filter {
+                    $0.value.expiresAt > now
+                }
                 switch action {
                 case "storage.get":
                     guard let stored = self.nativeStorageDataWithRecovery(
@@ -601,18 +617,76 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                         )
                         return
                     }
+                    let stateData = Data(stateJSON.utf8)
                     var result: [String: Any] = [
                         "found": true,
                         "ver": (record["ver"] as? NSNumber)?.intValue ?? 1,
                         "savedAt": self.nativeStorageSavedAt(in: record),
-                        "stateJSON": stateJSON,
                         "recovered": stored.recovered
                     ]
                     if let stats = record["stats"],
                        JSONSerialization.isValidJSONObject(stats) {
                         result["stats"] = stats
                     }
+                    if stateData.count > 131_072 {
+                        let token = UUID().uuidString
+                        self.storageReadSessions[token] =
+                            NativeStorageReadSession(
+                                data: stateData,
+                                expiresAt: now + 90
+                            )
+                        result["chunked"] = true
+                        result["transferToken"] = token
+                        result["totalBytes"] = stateData.count
+                        result["chunkBytes"] = 196_608
+                    } else {
+                        result["stateJSON"] = stateJSON
+                    }
                     self.replyStorage(requestID: requestID, result: result)
+                case "storage.get.chunk":
+                    guard !transferToken.isEmpty,
+                          let session = self.storageReadSessions[transferToken],
+                          chunkOffset >= 0,
+                          chunkOffset < session.data.count else {
+                        self.replyStorage(
+                            requestID: requestID,
+                            error: "invalid_storage_transfer"
+                        )
+                        return
+                    }
+                    let end = min(session.data.count, chunkOffset + 196_608)
+                    let chunk = session.data.subdata(in: chunkOffset..<end)
+                    let done = end >= session.data.count
+                    if done {
+                        self.storageReadSessions.removeValue(
+                            forKey: transferToken
+                        )
+                    } else {
+                        self.storageReadSessions[transferToken] =
+                            NativeStorageReadSession(
+                                data: session.data,
+                                expiresAt: now + 90
+                            )
+                    }
+                    self.replyStorage(
+                        requestID: requestID,
+                        result: [
+                            "chunkBase64": chunk.base64EncodedString(),
+                            "nextOffset": end,
+                            "totalBytes": session.data.count,
+                            "done": done
+                        ]
+                    )
+                case "storage.get.release":
+                    if !transferToken.isEmpty {
+                        self.storageReadSessions.removeValue(
+                            forKey: transferToken
+                        )
+                    }
+                    self.replyStorage(
+                        requestID: requestID,
+                        result: ["released": true]
+                    )
                 case "storage.put":
                     guard putVersion >= 1,
                           putSavedAt > 0,
@@ -699,6 +773,43 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         result: [String: Any]? = nil,
         error: String? = nil
     ) {
+        // Chunk replies remain bounded even when the stored core is huge. Use
+        // WebKit arguments so each chunk is data, never JavaScript source.
+        if let result,
+           let chunkBase64 = result["chunkBase64"] as? String {
+            let nextOffset = (result["nextOffset"] as? NSNumber)?.intValue ?? 0
+            let totalBytes = (result["totalBytes"] as? NSNumber)?.intValue ?? 0
+            let done = (result["done"] as? Bool) ?? false
+            Task { @MainActor [weak self] in
+                guard let webView = self?.webView else { return }
+                webView.callAsyncJavaScript(
+                    """
+                    if (window.__smallPhoneNativeReply) {
+                      window.__smallPhoneNativeReply({
+                        requestId: String(requestID),
+                        result: {
+                          chunkBase64: String(chunkBase64 || ''),
+                          nextOffset: Number(nextOffset) || 0,
+                          totalBytes: Number(totalBytes) || 0,
+                          done: Boolean(done)
+                        }
+                      });
+                    }
+                    """,
+                    arguments: [
+                        "requestID": requestID,
+                        "chunkBase64": chunkBase64,
+                        "nextOffset": nextOffset,
+                        "totalBytes": totalBytes,
+                        "done": done
+                    ],
+                    in: nil,
+                    in: .page,
+                    completionHandler: { _ in }
+                )
+            }
+            return
+        }
         // A restored core can be many megabytes. Embedding that string in an
         // evaluateJavaScript source makes WebKit parse and compile the entire
         // escaped state as code on its main thread. Pass the large value as a

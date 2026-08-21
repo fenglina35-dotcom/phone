@@ -73,12 +73,16 @@ test('inactive native helpers do not keep waking the main thread',()=>{
   assert.match(app,/setInterval\(blockedPhoneSweepVisible,5000\)/);
 });
 
-test('private core storage stays off MainActor and never compiles a restored core as JavaScript source',()=>{
+test('private core storage stays off MainActor and restores large state through bounded chunks',()=>{
   assert.match(app,/const args=\{key:k,ver:[\s\S]*?stateJSON:String\(v\.json\|\|''\)\}[\s\S]*?request\('storage\.put',args\)/);
   assert.doesNotMatch(app,/request\('storage\.put',\{key:k,value:v\}\)/);
   assert.match(bridge,/private let storageQueue = DispatchQueue\([\s\S]*?qos: \.utility/);
   assert.match(bridge,/storageQueue\.async \{ \[weak self\] in/);
+  assert.match(bridge,/stateData\.count > 131_072[\s\S]*?"chunked"\] = true[\s\S]*?"chunkBytes"\] = 196_608/);
+  assert.match(bridge,/case "storage\.get\.chunk"[\s\S]*?chunkOffset \+ 196_608[\s\S]*?chunk\.base64EncodedString\(\)/);
+  assert.match(app,/async function privateNativeCoreGet\(k\)[\s\S]*?new TextDecoder\('utf-8'\)[\s\S]*?request\('storage\.get\.chunk',[\s\S]*?parts\.join\(''\)/);
   assert.match(bridge,/nonisolated private func replyStorage[\s\S]*?let stateJSON = result\["stateJSON"\] as\? String/);
+  assert.match(bridge,/let chunkBase64 = result\["chunkBase64"\] as\? String[\s\S]*?"chunkBase64": chunkBase64[\s\S]*?in: \.page/);
   assert.match(bridge,/callAsyncJavaScript\([\s\S]*?arguments: \[[\s\S]*?"stateJSON": stateJSON[\s\S]*?in: \.page/);
   assert.doesNotMatch(bridge,/__smallPhoneNativeReply\(\\\(json\)\)[\s\S]{0,120}?stateJSON/);
 });

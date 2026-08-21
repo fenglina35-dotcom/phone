@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1021'){
+if(window.__NORTH_SHELL_BUILD__!=='1022'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -376,7 +376,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1021 · 原生存档启动桥与发热修复';
+const APP_VER='v1022 · 原生大存档分块恢复与卡顿修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -461,7 +461,7 @@ const IMG_DB_VERSION=2;
 function imgDB(){return new Promise((res,rej)=>{let settled=false;const r=indexedDB.open('yibeiImg',IMG_DB_VERSION),fail=()=>{if(settled)return;settled=true;rej(r.error||new Error('IndexedDB unavailable'));};r.onupgradeneeded=e=>{const db=e.target.result;if(!db.objectStoreNames.contains('img'))db.createObjectStore('img');};r.onsuccess=e=>{if(settled){try{e.target.result.close();}catch(_){}return;}settled=true;const db=e.target.result;db.onversionchange=()=>{try{db.close();}catch(_){}};res(db);};r.onerror=fail;r.onblocked=fail;});}
 function privateNativeCoreStorageKey(k){return (k===CORE_IDB_KEY||k===RECOVERY_IDB_KEY||k===RECOVERY_HISTORY_IDB_KEY)&&typeof window!=='undefined'&&window.__SMALL_PHONE_PRIVATE__===true&&window.SmallPhoneNative&&typeof window.SmallPhoneNative.request==='function';}
 function privateNativeCorePut(k,v){v=v&&typeof v==='object'?v:{};const args={key:k,ver:+v.ver||1,savedAt:+v.savedAt||Date.now(),stateJSON:String(v.json||'')};if(v.stats&&typeof v.stats==='object')args.stats=v.stats;return window.SmallPhoneNative.request('storage.put',args).then(r=>{if(!r||r.saved!==true)throw new Error('Native storage write failed');});}
-function privateNativeCoreGet(k){return window.SmallPhoneNative.request('storage.get',{key:k}).then(r=>{if(!r||!r.found)return null;if(typeof r.stateJSON==='string'){const v={ver:+r.ver||1,savedAt:+r.savedAt||0,json:r.stateJSON};if(r.stats&&typeof r.stats==='object')v.stats=r.stats;return v;}return r.value||null;});}
+async function privateNativeCoreGet(k){const r=await window.SmallPhoneNative.request('storage.get',{key:k});if(!r||!r.found)return null;let stateJSON=typeof r.stateJSON==='string'?r.stateJSON:'';if(r.chunked===true){const token=String(r.transferToken||''),total=Math.max(0,+r.totalBytes||0),decoder=new TextDecoder('utf-8'),parts=[];let offset=0,turns=0;try{if(!token||!total)throw new Error('Native storage transfer metadata missing');while(offset<total&&turns++<4096){const row=await window.SmallPhoneNative.request('storage.get.chunk',{key:k,transferToken:token,offset}),b64=String(row&&row.chunkBase64||''),next=+((row&&row.nextOffset)||0);if(!b64||next<=offset||next>total)throw new Error('Native storage chunk invalid');const raw=atob(b64),bytes=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)bytes[i]=raw.charCodeAt(i);parts.push(decoder.decode(bytes,{stream:row.done!==true}));offset=next;if(row.done===true)break;}if(offset!==total)throw new Error('Native storage transfer incomplete');stateJSON=parts.join('');}catch(e){window.SmallPhoneNative.request('storage.get.release',{key:k,transferToken:token}).catch(()=>{});throw e;}}if(stateJSON){const v={ver:+r.ver||1,savedAt:+r.savedAt||0,json:stateJSON};if(r.stats&&typeof r.stats==='object')v.stats=r.stats;return v;}return r.value||null;}
 function privateNativeCoreDelete(k){return window.SmallPhoneNative.request('storage.delete',{key:k}).then(()=>{});}
 function imgPutIDB(k,v){return imgDB().then(db=>new Promise((res,rej)=>{let tx;try{tx=db.transaction('img','readwrite');tx.objectStore('img').put(v,k);}catch(e){try{db.close();}catch(_){}rej(e);return;}const done=(ok,e)=>{try{db.close();}catch(_){}ok?res():rej((e&&e.target&&e.target.error)||tx.error||new Error('IndexedDB write failed'));};tx.oncomplete=()=>done(true);tx.onerror=e=>done(false,e);tx.onabort=e=>done(false,e);}));}
 async function imgPutIDBWithRetry(k,v){let last;for(let attempt=0;attempt<3;attempt++){try{await imgPutIDB(k,v);return;}catch(e){last=e;if(attempt<2)await new Promise(resolve=>setTimeout(resolve,180*(attempt+1)));}}throw last||new Error('IndexedDB write failed after retry');}
@@ -1483,7 +1483,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1021&r=v1021-native-core-boot-bridge-repair-1';
+  const url='sw.js?v=1022&r=v1022-chunked-native-core-restore-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
