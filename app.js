@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1024'){
+if(window.__NORTH_SHELL_BUILD__!=='1025'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -376,7 +376,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1024 · 低功耗定位生命周期与发热修复';
+const APP_VER='v1025 · 计步传感器保存风暴修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1238,19 +1238,22 @@ document.addEventListener('visibilitychange',()=>syncPresence());
 window.addEventListener('pageshow',()=>syncPresence());
 window.addEventListener('pagehide',()=>presenceSet(false));
 setTimeout(()=>syncPresence(),1000);
-let _stepOn=false,_stepLast=0,_stepPrev=0,_stepHandler=null;
+let _stepOn=false,_stepLast=0,_stepPrev=0,_stepHandler=null,_stepSaveTimer=0,_stepDirty=false,_stepDayCheckAt=0;
 function stepDayKey(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function ensureDailySteps(){S.me=S.me||{};const today=stepDayKey();if(!S.me.stepDate){S.me.stepDate=today;return false;}if(S.me.stepDate!==today){S.me.stepDate=today;S.me.steps=0;S.me._stepRptDate='';save(900);return true;}return false;}
+function flushStepSave(){if(_stepSaveTimer){clearTimeout(_stepSaveTimer);_stepSaveTimer=0;}if(!_stepDirty)return false;_stepDirty=false;save(0);return true;}
+function queueStepSave(){_stepDirty=true;if(!_stepSaveTimer)_stepSaveTimer=setTimeout(flushStepSave,5000);}
 function stepMotion(e){const a=e.accelerationIncludingGravity||e.acceleration;if(!a)return;const mag=Math.sqrt((a.x||0)**2+(a.y||0)**2+(a.z||0)**2);const now=Date.now();
-  ensureDailySteps();if(mag-_stepPrev>2.2&&now-_stepLast>320){S.me.steps=(S.me.steps||0)+1;S.me.stepDate=stepDayKey();_stepLast=now;if(cur().p==='wechat'&&wxTab==='me'){const e2=document.querySelector('.it span');}}_stepPrev=mag;if(now-_stepLast>4000)save();}
-async function toggleSteps(){if(_stepOn){window.removeEventListener('devicemotion',_stepHandler);_stepOn=false;S.me.stepOn=false;save();render();toast('已停止计步');return;}
+  if(!_stepDayCheckAt||now-_stepDayCheckAt>=60000){_stepDayCheckAt=now;ensureDailySteps();}const stepped=mag-_stepPrev>2.2&&now-_stepLast>320;if(stepped){S.me.steps=(S.me.steps||0)+1;S.me.stepDate=stepDayKey();_stepLast=now;queueStepSave();if(cur().p==='wechat'&&wxTab==='me'){const e2=document.querySelector('.it span');}}_stepPrev=mag;}
+async function toggleSteps(){if(_stepOn){window.removeEventListener('devicemotion',_stepHandler);_stepOn=false;S.me.stepOn=false;if(!flushStepSave())save();render();toast('已停止计步');return;}
   try{if(typeof DeviceMotionEvent!=='undefined'&&DeviceMotionEvent.requestPermission){const p=await DeviceMotionEvent.requestPermission();if(p!=='granted'){S.me.stepPermissionGranted=false;toast('没给运动权限');return;}S.me.stepPermissionGranted=true;}
-    ensureDailySteps();_stepHandler=stepMotion;window.addEventListener('devicemotion',_stepHandler);_stepOn=true;S.me.stepOn=true;save();render();toast('开始计步，步数每天0点自动刷新');
+    ensureDailySteps();_stepDayCheckAt=Date.now();_stepHandler=stepMotion;window.addEventListener('devicemotion',_stepHandler);_stepOn=true;S.me.stepOn=true;save();render();toast('开始计步，步数每天0点自动刷新');
   }catch(e){toast('这设备不支持计步，可在资料里手填步数');}}
 async function resumeSteps(){if(_stepOn||!S.me.stepOn)return;
   try{if(typeof DeviceMotionEvent!=='undefined'&&DeviceMotionEvent.requestPermission&&S.me.stepPermissionGranted!==true)return;
-    ensureDailySteps();_stepHandler=stepMotion;window.addEventListener('devicemotion',_stepHandler);_stepOn=true;if(cur().p==='wechat'&&wxTab==='me')render();}catch(e){}}
+    ensureDailySteps();_stepDayCheckAt=Date.now();_stepHandler=stepMotion;window.addEventListener('devicemotion',_stepHandler);_stepOn=true;if(cur().p==='wechat'&&wxTab==='me')render();}catch(e){}}
 document.addEventListener('click',()=>{if(S.me.stepOn&&!_stepOn)resumeSteps();},{once:true});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)flushStepSave();});
 /* ===== 语音 ===== */
 function getVoice(o){if(!o.voice)o.voice={engine:'system',voiceURI:'',rate:1,pitch:1,pause:.6,lang:'zh',accent:'auto'};if(!o.voice.accent)o.voice.accent='auto';if(o.voice.pause==null)o.voice.pause=.6;return o.voice;}
 function voiceRate(o){const v=o&&o.voice?o.voice:o||{};return Math.max(.5,Math.min(1.8,+v.rate||1));}
@@ -1483,7 +1486,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1024&r=v1024-low-power-location-lifecycle-1';
+  const url='sw.js?v=1025&r=v1025-motion-sensor-save-storm-repair-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}

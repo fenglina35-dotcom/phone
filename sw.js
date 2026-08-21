@@ -1,6 +1,6 @@
-const BUILD='1024';
-const HOTFIX='v1024-low-power-location-lifecycle-1';
-const SHELL_CACHE='north-shell-v1024';
+const BUILD='1025';
+const HOTFIX='v1025-motion-sensor-save-storm-repair-1';
+const SHELL_CACHE='north-shell-v1025';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];

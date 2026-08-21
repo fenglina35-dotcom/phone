@@ -111,6 +111,21 @@ test('large private saves and cloud backups are not repeated while the user is i
   assert.doesNotMatch(app,/privatePhoneCloudAutoBackup\(\),6000/);
 });
 
+test('motion step tracking never saves at the sensor callback rate',()=>{
+  const start=app.indexOf('function stepMotion(');
+  const end=app.indexOf('async function toggleSteps(',start);
+  assert.notEqual(start,-1,'stepMotion is present');
+  assert.notEqual(end,-1,'toggleSteps follows stepMotion');
+  const motion=app.slice(start,end);
+  assert.match(app,/function queueStepSave\(\)\{_stepDirty=true;if\(!_stepSaveTimer\)_stepSaveTimer=setTimeout\(flushStepSave,5000\);\}/);
+  assert.match(motion,/const stepped=/);
+  assert.match(motion,/if\(stepped\)[\s\S]*?queueStepSave\(\)/);
+  assert.match(motion,/now-_stepDayCheckAt>=60000/);
+  assert.doesNotMatch(motion,/save\s*\(/);
+  assert.doesNotMatch(app,/if\(now-_stepLast>4000\)save\(\)/);
+  assert.match(app,/visibilitychange'\s*,\(\)=>\{if\(document\.hidden\)flushStepSave\(\);\}/);
+});
+
 test('resume listeners collapse duplicate forced native and inbox pulls',()=>{
   assert.match(app,/function companionPollMinDelay\(\)[\s\S]*?:60000/);
   assert.match(app,/companionPollSnapshot\(force\)[\s\S]*?minDelay=force\?5000:companionPollMinDelay\(\)/);
