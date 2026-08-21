@@ -1486,7 +1486,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1027&r=v1027-x-net-comment-tone-1';
+  const url='sw.js?v=1027&r=v1027-x-net-comment-tone-2';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -4901,27 +4901,22 @@ async function xDMReply(d){try{const c=d.cid?getC(d.cid):null;const sys=c?buildS
   const r=await chatAPI([{role:'system',content:sys},...hist],{max:200,aux:true});
   d.msgs.push({from:'them',text:cleanReply(r),time:Date.now()});save();if(cur().p==='xdm')render();}catch(e){}}
 /* 我的主页 */
-function setXNetCommentTone(tone){if(!['friendly','hostile','mixed'].includes(tone))return;S.x.profile.netCommentTone=tone;save();render();toast('网友评论风格已设置为'+({friendly:'友善',hostile:'恶劣',mixed:'一半一半'}[tone]));}
-function xProfile(){const p=S.x.profile,tone=xNetCommentTone();
+function xProfile(){const p=S.x.profile;
   return `<div class="xprofh" style="${p.cover?'background:url('+p.cover+') center/cover':''}" onclick="changeXCover()"></div>
     <div style="padding:0 14px"><div style="margin-top:-30px;display:flex;justify-content:space-between;align-items:flex-end">${av(S.me.avatar,'lg')}<button class="xbtn out" onclick="editXProfile()">编辑资料</button></div>
       <div style="font-size:19px;font-weight:700;color:#e7e9ea;margin-top:8px">${esc(S.me.name)}</div>
       <div style="color:#71767b;font-size:14px">${esc(p.handle)}</div>
       <div style="color:#e7e9ea;font-size:14px;margin:8px 0">${esc(p.bio||'')}</div>
       <div style="color:#71767b;font-size:14px"><span onclick="xFollowingList()" style="cursor:pointer"><b style="color:#e7e9ea">${p.following}</b> <span style="text-decoration:underline">正在关注 ›</span></span>　<b style="color:#e7e9ea">${p.fans}</b> 关注者</div>
-      <div style="margin:14px 0 4px;padding:12px;border:1px solid #2f3336;border-radius:14px;background:#16181c">
-        <div style="color:#e7e9ea;font-size:15px;font-weight:700">网友评论风格</div>
-        <div style="color:#71767b;font-size:12px;line-height:1.5;margin:3px 0 10px">控制网友在我的推文下生成的评论；角色本人的评论不受影响。</div>
-        <div style="display:flex;gap:7px;flex-wrap:wrap"><button class="xbtn ${tone==='friendly'?'':'out'}" style="font-size:12px;padding:6px 12px" onclick="setXNetCommentTone('friendly')">友善</button><button class="xbtn ${tone==='hostile'?'':'out'}" style="font-size:12px;padding:6px 12px" onclick="setXNetCommentTone('hostile')">恶劣</button><button class="xbtn ${tone==='mixed'?'':'out'}" style="font-size:12px;padding:6px 12px" onclick="setXNetCommentTone('mixed')">一半一半</button></div>
-      </div>
     </div>
     <div style="border-bottom:.5px solid #2f3336;margin:10px 0;color:#e7e9ea;padding:8px 14px;font-weight:700">我的推文</div>
     ${[...S.x.tweets].filter(t=>t.who==='me').sort((a,b)=>b.time-a.time).map(tweetCard).join('')||'<div class="empty" style="padding:30px">还没发过推</div>'}`;}
-function editXProfile(){const p=S.x.profile;openModal(`<h3>编辑 X 资料</h3>
+function editXProfile(){const p=S.x.profile,tone=xNetCommentTone();openModal(`<h3>编辑 X 资料</h3>
   <div class="field"><label>用户名 handle</label><input id="xp_h" value="${esc(p.handle)}"></div>
   <div class="field"><label>简介</label><input id="xp_b" value="${esc(p.bio||'')}"></div>
   <div class="two"><div class="field"><label>粉丝数</label><input id="xp_f" type="number" value="${p.fans}"></div><div class="field"><label>关注数</label><input id="xp_g" type="number" value="${p.following}"></div></div>
-  <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){S.x.profile.handle=$('#xp_h').value.trim()||'@me';S.x.profile.bio=$('#xp_b').value.trim();S.x.profile.fans=+$('#xp_f').value||0;S.x.profile.following=+$('#xp_g').value||0;save();closeModal();render();})()">保存</button></div>`);}
+  <div class="field"><label>网友评论风格</label><select id="xp_t"><option value="friendly" ${tone==='friendly'?'selected':''}>友善</option><option value="hostile" ${tone==='hostile'?'selected':''}>恶劣</option><option value="mixed" ${tone==='mixed'?'selected':''}>一半一半</option></select><div class="hint">控制网友在我的推文下生成的评论；角色本人的评论不受影响。</div></div>
+  <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var tone=$('#xp_t').value;S.x.profile.handle=$('#xp_h').value.trim()||'@me';S.x.profile.bio=$('#xp_b').value.trim();S.x.profile.fans=+$('#xp_f').value||0;S.x.profile.following=+$('#xp_g').value||0;S.x.profile.netCommentTone=['friendly','hostile','mixed'].includes(tone)?tone:'mixed';save();closeModal();render();})()">保存</button></div>`);}
 function changeXCover(){pickFile('image/*',async f=>{S.x.profile.cover=await compressBackground(f);save();render();toast('背景已换');});}
 
 /* ---------- 抖音 ---------- */

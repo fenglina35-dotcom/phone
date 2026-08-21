@@ -15,6 +15,6 @@ assert.match(app, /postMessage\(\{type:'north-version-query'\}\)/);
 assert.match(sw, /client\.postMessage\(\{type:'north-update-ready',build:BUILD\}\)/);
 assert.match(sw, /event\.data\.type!==['"]north-version-query['"]/);
 assert.match(html, /window\.__NORTH_SHELL_BUILD__='1027'/);
-assert.match(html, /sw\.js\?v=1027&r=v1027-x-net-comment-tone-1/);
+assert.match(html, /sw\.js\?v=1027&r=v1027-x-net-comment-tone-2/);
 
 console.log("update prompt tests passed");

@@ -1,5 +1,5 @@
 const BUILD='1027';
-const HOTFIX='v1027-x-net-comment-tone-1';
+const HOTFIX='v1027-x-net-comment-tone-2';
 const SHELL_CACHE='north-shell-v1027';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];

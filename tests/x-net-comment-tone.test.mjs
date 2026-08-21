@@ -4,6 +4,8 @@ import fs from 'node:fs';
 
 const app = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const bundledApp = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js', import.meta.url), 'utf8');
+const html = fs.readFileSync(new URL('../小手机.html', import.meta.url), 'utf8');
+const bundledHtml = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html', import.meta.url), 'utf8');
 
 function featureBlock(source) {
   const start = source.indexOf('function xNetCommentTone()');
@@ -16,11 +18,14 @@ function featureBlock(source) {
 for (const source of [app, bundledApp]) {
   test('X profile exposes friendly, hostile, and mixed comment settings', () => {
     assert.match(source, /netCommentTone:'mixed'/);
-    assert.match(source, /function setXNetCommentTone\(tone\)/);
-    assert.match(source, /网友评论风格/);
-    assert.match(source, /setXNetCommentTone\('friendly'\)[^\n]+>友善</);
-    assert.match(source, /setXNetCommentTone\('hostile'\)[^\n]+>恶劣</);
-    assert.match(source, /setXNetCommentTone\('mixed'\)[^\n]+>一半一半</);
+    const profile = source.slice(source.indexOf('function xProfile()'), source.indexOf('function editXProfile()'));
+    const editor = source.slice(source.indexOf('function editXProfile()'), source.indexOf('function changeXCover()'));
+    assert.doesNotMatch(profile, /网友评论风格/);
+    assert.match(editor, /网友评论风格/);
+    assert.match(editor, /option value="friendly"[^\n]+>友善</);
+    assert.match(editor, /option value="hostile"[^\n]+>恶劣</);
+    assert.match(editor, /option value="mixed"[^\n]+>一半一半</);
+    assert.match(editor, /S\.x\.profile\.netCommentTone=\['friendly','hostile','mixed'\]\.includes\(tone\)\?tone:'mixed'/);
   });
 
   test('only comments on my own tweets use the chosen tone', () => {
@@ -39,4 +44,11 @@ for (const source of [app, bundledApp]) {
 
 test('web and private app use the same X comment-tone implementation', () => {
   assert.equal(featureBlock(bundledApp), featureBlock(app));
+});
+
+test('X profile cover is taller in web and private shells', () => {
+  for (const source of [html, bundledHtml]) {
+    assert.match(source, /\.xprofh\{height:160px;/);
+    assert.doesNotMatch(source, /\.xprofh\{height:100px;/);
+  }
 });

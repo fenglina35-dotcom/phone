@@ -33,7 +33,7 @@
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=1027&r=v1027-x-net-comment-tone-1';
+  var url='sw.js?v=1027&r=v1027-x-net-comment-tone-2';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -907,7 +907,7 @@ body{background:#000;padding:0;}
 .xcomment .tx{color:#d7d9db;font-size:14px;}
 .xdmrow{display:flex;gap:11px;padding:12px 14px;border-bottom:.5px solid #2f3336;cursor:pointer;align-items:center;}
 .xfab{position:absolute;right:16px;bottom:70px;width:52px;height:52px;border-radius:50%;background:#1d9bf0;color:#fff;font-size:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:8;}
-.xprofh{height:100px;background:linear-gradient(120deg,#1d9bf0,#8ecdf7);}
+.xprofh{height:160px;background:linear-gradient(120deg,#1d9bf0,#8ecdf7);}
 .xbtn{background:#1d9bf0;border:none;color:#fff;font-weight:700;border-radius:18px;padding:7px 16px;font-size:14px;cursor:pointer;}
 .xbtn.out{background:transparent;border:1px solid #536471;color:#e7e9ea;}
 .xmsg{display:flex;margin:8px 0;}.xmsg.me{justify-content:flex-end;}
