@@ -129,7 +129,7 @@ test('full-screen particle animation is mobile-bounded and cleans itself up',()=
 });
 
 test('the app, offline cache and gate-free preview all load the effect',()=>{
-  assert.match(html,/gift-effects\.js\?v=1033/);
+  assert.match(html,/gift-effects\.js\?v=1034/);
   assert.match(sw,/gift-effects\.js\?v='\+BUILD/);
   assert.match(sw,/gift-effects\|thought-card-effects/,'optional gift and thought-card scripts must be served from the offline cache');
   assert.match(html,/\.giftcard-simple\{[^}]*width:210px/,'the gift card must retain its layout even before the effect script executes');

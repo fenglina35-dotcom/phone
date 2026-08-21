@@ -454,11 +454,9 @@ html.north-android.north-glass-ui .settings-glass .minibtn{backdrop-filter:none!
 
 /* 通讯录搜索和右侧索引固定在滚动层外；分组字母在搜索栏下方吸顶。 */
 .wx-contacts>.wx-contact-sticky-search{position:relative;top:auto;z-index:7;flex:0 0 48px;height:48px;box-sizing:border-box}
-.wx-contacts>.wx-contact-sticky-search label{position:relative}
-.wx-contacts>.wx-contact-sticky-search svg{position:absolute;left:calc(50% - 39px)}
-.wx-contacts>.wx-contact-sticky-search input{width:100%;flex:1;text-align:center}
-.wx-contacts>.wx-contact-sticky-search label:focus-within svg{left:12px}
-.wx-contacts>.wx-contact-sticky-search label:focus-within input{text-align:left;padding-left:27px!important}
+.wx-contacts>.wx-contact-sticky-search input{width:2em;flex:0 0 2em;text-align:left}
+.wx-contacts>.wx-contact-sticky-search label:focus-within{justify-content:flex-start}
+.wx-contacts>.wx-contact-sticky-search label:focus-within input{width:auto;flex:1;text-align:left}
 .wx-contacts>.wx-alpha-rail{position:absolute;right:1px;top:106px;bottom:76px;z-index:8}
 html.north-real-preview .wx-contacts>.wx-alpha-rail{top:150px}
 @media(max-height:720px){.wx-contacts>.wx-alpha-rail{top:100px;bottom:66px}html.north-real-preview .wx-contacts>.wx-alpha-rail{top:144px}}

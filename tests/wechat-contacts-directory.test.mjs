@@ -53,7 +53,8 @@ assert.match(functionSource('renderWeChat'),/wxTab==='contacts'\?wxContactSearch
 
 assert.match(glass,/\.wx-contacts>\.wx-contact-sticky-search\{[^}]*position:relative/);
 assert.match(glass,/\.wx-contacts>\.wx-alpha-rail\{[^}]*position:absolute;[^}]*top:106px;bottom:76px/);
-assert.match(glass,/\.wx-contacts>\.wx-contact-sticky-search input\{[^}]*text-align:center/);
+assert.match(glass,/\.wx-contacts>\.wx-contact-sticky-search input\{[^}]*width:2em;flex:0 0 2em;text-align:left/);
+assert.match(glass,/\.wx-contacts>\.wx-contact-sticky-search label:focus-within input\{[^}]*flex:1/);
 assert.match(glass,/\.wx-contact-letter>h4\{[^}]*position:sticky;top:0/);
 assert.match(glass,/\.wx-contact-person>\.pfavwrap\{[^}]*flex:0 0 40px/);
 assert.match(glass,/\.wx-directory-head\{[^}]*backdrop-filter:blur/);
