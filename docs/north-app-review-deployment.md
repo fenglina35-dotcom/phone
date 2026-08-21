@@ -4,7 +4,7 @@
 
 ## 一、部署审核控制台
 
-1. 将 `supabase/migrations/202608210001_north_review_portal.sql` 执行到公开 North 1.0 构建实际连接的 Supabase 项目。
+1. 将 `supabase/migrations/202608210001_north_review_portal.sql` 和 `supabase/migrations/202608210002_north_controller_self_service.sql` 依次执行到公开 North 1.0 构建实际连接的 Supabase 项目。
 2. 发布 `north-role-controller.html`、`north-role-controller.js`、更新后的支持页、隐私页与 Service Worker。
 3. 用已注册过旧 Service Worker 的浏览器打开以下三个地址，确认没有跳到小手机主页：
 
@@ -65,10 +65,17 @@ $$;
 2. 在另一浏览器登录角色控制台，生成配对码；回到 North →“角色远程管理”填入控制端 ID 与配对码，连接后点一次“立即上传真实数据”。
 3. 保持 North 打开，在控制台依次测试刷新、锁定、解锁和 15 分钟每日限额；每一项都必须看到设备回执和新快照，不能只看“已排队”。
 
+## 四、普通用户与角色管理员验收
+
+1. 在未登录的干净浏览器打开角色控制台，填写角色名称并创建控制端；立即导出恢复文件。
+2. 使用新生成的控制端 ID 和 8 位短时配对码连接 North，上传一次真实数据，再验证刷新、锁定、解锁和每日限额均收到设备回执。
+3. 在另一浏览器导入恢复文件，确认能继续管理同一控制端。删除控制端时，确认服务器连接和命令记录同时删除。完成验收后重新用永久审核账号配对审核测试角色，保证 Review Notes 流程仍可直接使用。
+
 ## 安全检查
 
 - 仓库中不得出现审核邮箱、审核密码、owner secret、device secret、service-role key 或固定配对码。
 - 控制台只返回屏幕使用时间和所选 App 控制状态，不向审核网页返回位置或健康快照。
 - 审核 RPC 只授权给 `authenticated`，且只能访问与当前 `auth.uid()` 绑定的预配置目标。
+- 普通控制端使用浏览器生成的随机目标与 32 字节密钥；后端只保存密钥哈希，恢复文件由用户自行保管，删除操作必须验证同一密钥。
 - 不添加审核设备识别、隐藏手势、地区开关、TestFlight 判断或仅审核时出现的功能。
 - 公开 North 与私人“小手机”不能同时控制同一台本人设备。

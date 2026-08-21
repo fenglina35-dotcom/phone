@@ -111,7 +111,7 @@ struct CompanionSyncView: View {
                     }
 
                     Text(
-                        "App Review：请使用 Review Notes 中提供的永久演示账号。测试角色已预先创建；审核员无需注册或创建角色，只需登录并生成新的 8 位配对码。"
+                        "首次使用：在角色控制台填写角色名称，并为当前浏览器创建独立控制端，即可生成新的 8 位配对码。请妥善保存控制端恢复文件。"
                     )
                     .font(.caption)
                     .foregroundStyle(.secondary)

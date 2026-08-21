@@ -8,6 +8,8 @@ North has two visible tabs: **Local Management** and **Role Remote Management**.
 
 The Role Remote Management feature lets a user-authorized role controller send refresh, lock, unlock, and daily-limit commands for apps that the user explicitly selected through Apple's FamilyActivityPicker. A server-queued command is not shown as completed until North executes it and uploads a device receipt.
 
+Ordinary users can open the same public Role Controller page, create an independent controller in their own browser without registration, export its recovery file, and pair it with North using a 10-minute one-time code. The separate demo login below is provided only so App Review does not need to create or preserve a controller during testing.
+
 Permanent demo access:
 
 - Role Controller: https://fenglina35-dotcom.github.io/phone/north-support.html?role-controller=1
@@ -17,7 +19,7 @@ Permanent demo access:
 
 Review steps:
 
-1. Open the Role Controller, sign in with the credentials above, and select **Generate new pairing code**. The page displays a controller ID and an 8-digit code. The login is permanent; each pairing code intentionally expires after 10 minutes for security.
+1. Open the Role Controller, choose **Review sign in**, sign in with the credentials above, and select **Generate new pairing code**. The page displays a controller ID and an 8-digit code. The login is permanent; each pairing code intentionally expires after 10 minutes for security.
 2. On the review iPhone, open North → **Local Management**, authorize Screen Time, and select at least one test app. Then open **Role Remote Management**, enter the controller ID and pairing code, connect, and tap **Upload real data now** once.
 3. Keep North open during the first review test. In the Role Controller, select the uploaded app and test **Refresh data**, **Lock**, **Unlock**, and **Set 15-minute daily limit**. The recent-command list changes from pending to the device-reported final status.
 
