@@ -23,6 +23,13 @@ assert.match(delivery,/必须先按你自己的语气自然问清楚并等待回
 assert.match(delivery,/这就已经是完整答案：不要再追问品牌、商品、口味、糖度、温度或规格/,'an autonomous order grant must not trigger another clarification loop');
 assert.match(delivery,/function roleRequestIntent/,'the browser request must retain actual user messages separately from role search text');
 assert.match(delivery,/autonomous:intent\.autonomous/,'the attempt must remember whether the user delegated the choice');
+assert.match(delivery,/后台保存的长期偏好就是默认选择/,'saved delivery preferences must fill unspecified real options');
+assert.match(delivery,/真正想选热饮、但该商品只有冰饮或冷饮时，必须返回 matched:false/,'an unavailable hot option must pause instead of silently choosing a cold drink');
+assert.match(delivery,/function requestRoleClarification/,'uncertain real options must pause for a user clarification');
+assert.match(delivery,/如果你想选热饮而当前商品没有热饮，只需自然问是否换一种/,'the role must naturally ask before switching away from an unavailable hot drink');
+assert.match(delivery,/真实外卖等待规格确认/,'the next user answer must resume the paused option flow');
+assert.match(delivery,/\[真实外卖\|换品:/,'a newly named product must abandon the old candidate and run one fresh search');
+assert.match(delivery,/详细原因已保留在外卖设置/,'long technical diagnostics must stay out of the chat overlay');
 assert.match(delivery,/始终保留自己的判断和意愿/,'the role may accept or refuse the delivery request according to its persona');
 assert.match(delivery,/必须先发一句符合你本人语气的简短可见消息/,'the role must acknowledge before starting automation');
 assert.match(delivery,/function rolePreludeAllowed/,'only a safe pre-order acknowledgement may be shown beside a command');
@@ -30,6 +37,7 @@ assert.match(app,/_realDeliveryCommandSeen=false/,'the parser must track the com
 assert.match(app,/_realDeliveryPreludeShown=false/,'automation must require a visible acknowledgement first');
 assert.match(app,/if\(!_realDeliveryPreludeShown\)\{got=false;continue;\}/,'a bare order tag must never start the browser silently');
 assert.match(app,/deliveryRolePreludeAllowed\(line\)/,'the parser must retain the safe pre-order acknowledgement');
-assert.match(browser,/这个真实套餐要求选择\$\{count\}份\$\{label\}/,'multi-item bundles must stop safely instead of hanging at an option panel');
+assert.match(browser,/function normalizeOptionPanelGroups/,'platform hint rows must be removed before a bundle is offered to the role');
+assert.match(browser,/selectionCount > 1/,'multi-item bundles must retain their exact selection count');
 
 console.log('real delivery role handoff tests passed');

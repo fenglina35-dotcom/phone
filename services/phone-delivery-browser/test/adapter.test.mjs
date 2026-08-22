@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { DeliveryAdapter } from '../src/adapter.mjs';
 import { sign, verifySignedRequest } from '../src/security.mjs';
-import { brandMatches, checkoutAmounts, knownRouteKey, preferredBrand, productMatchesSavedItem, publicAddressLabel, requestedItemName, riskChallengeKind, shopClosedReason, TaobaoFlashBrowser } from '../src/taobao-flash-browser.mjs';
+import { brandMatches, checkoutAmounts, knownRouteKey, normalizeOptionPanelGroups, preferredBrand, productMatchesSavedItem, publicAddressLabel, requestedItemName, riskChallengeKind, shopClosedReason, TaobaoFlashBrowser } from '../src/taobao-flash-browser.mjs';
 
 class FakeBrowser {
   constructor() { this.submits = 0; this.statusCalls = 0; this.statusValue = 'pending_payment'; }
@@ -35,6 +35,23 @@ test('public address labels never expose the full platform address row', () => {
 test('checkout total does not mistake the discount for the payable amount', () => {
   const amounts = checkoutAmounts('配送费 惊喜减3元 ¥5.6 ¥2.6 合计 已优惠 ¥3 ¥26.6 购红包 本单立减5元 合计¥26.6 已优惠 ¥3 立即支付');
   assert.deepEqual(amounts, { total: 26.6, discount: 3 });
+});
+
+test('bundle option parser removes platform hints and preserves the required item count', () => {
+  const groups = normalizeOptionPanelGroups([{ name: '饮料', choices: ['已选：', '价格计算中', '请选择2份', '选规格', '茉莉奶绿（大杯）', '黑糖珍珠奶茶Pro（大杯）'] }]);
+  assert.deepEqual(groups, [{
+    name: '饮料（请选择2份）',
+    choices: ['茉莉奶绿（大杯）', '黑糖珍珠奶茶Pro（大杯）'],
+    multiple: true,
+    selectionCount: 2,
+  }]);
+});
+
+test('adapter requires the exact number of selections for a real bundle', () => {
+  const adapter = new DeliveryAdapter({ browser: new FakeBrowser(), secret: '12345678901234567890123456789012' });
+  const groups = [{ id: 'g0', name: '饮料（请选择2份）', required: true, multiple: true, choices: [{ id: 'a', available: true }, { id: 'b', available: true }] }];
+  assert.throws(() => adapter.validateOptions(groups, { g0: ['a'] }), /准确选择2份/);
+  assert.doesNotThrow(() => adapter.validateOptions(groups, { g0: ['a', 'b'] }));
 });
 
 test('headful browser is brought to the foreground while headless mode stays silent', async () => {

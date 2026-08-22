@@ -8,6 +8,34 @@ const number = value => Number(String(value ?? '').match(/[\d.]+/)?.[0] || 0);
 const groupHeading = /^(规格|套餐|杯型|份量|容量|温度|冰度|糖度|甜度|口味|辣度|(?:推荐)?(?:加料|小料|配料).{0,40}|酱料|做法|主食\d*|小食\d*|甜品(?:\/小食)?|小食\/甜品|饮料|赠送|全鸡|配餐|蘸酱)(?:\s*[（(]?(?:请选|请选择|任选)\s*\d+\s*份[）)]?)?$/;
 const shopUrl = url => /newretail\/p\/ushop|pages\/ele-takeout-index/i.test(String(url || ''));
 
+const optionPanelNoise = /^(?:已选\s*[:：]?|价格计算中|选规格|选套餐|请选择|请选|确定|取消|加入购物车|数量|猜你喜欢|温馨小贴士)$/;
+
+export function normalizeOptionPanelGroups(value = []) {
+  const groups = [];
+  for (const raw of Array.isArray(value) ? value : []) {
+    const originalName = clean(raw?.name, 80);
+    if (!originalName) continue;
+    const rawChoices = (Array.isArray(raw?.choices) ? raw.choices : []).map(label => clean(label, 80)).filter(Boolean);
+    const hint = [originalName, ...rawChoices].map(label => label.match(/(?:请选|请选择|任选)\s*(\d+)\s*份/)).find(Boolean);
+    const selectionCount = Math.max(1, Math.min(20, Number(hint?.[1]) || 1));
+    const choices = [...new Set(rawChoices.filter(label => {
+      if (optionPanelNoise.test(label)) return false;
+      if (/^(?:请选|请选择|任选)\s*\d+\s*份$/.test(label)) return false;
+      if (/^(?:已选\s*[:：]?.*|价格(?:计算中|待计算)|共\s*\d+\s*件)$/.test(label)) return false;
+      return !/^[+×xX]$/.test(label);
+    }))];
+    if (!choices.length) continue;
+    const baseName = clean(originalName.replace(/[（(]?(?:请选|请选择|任选)\s*\d+\s*份[）)]?/g, ''), 60) || '规格';
+    groups.push({
+      name: selectionCount > 1 ? `${baseName}（请选择${selectionCount}份）` : baseName,
+      choices,
+      multiple: raw?.multiple === true || selectionCount > 1,
+      selectionCount,
+    });
+  }
+  return groups;
+}
+
 export function riskChallengeKind(value) {
   const body = clean(value, 12_000);
   if (/请选择符合描述的所有图片|没有新图片可以点后.*提交|请选择所有.*图片/i.test(body)) return '图片验证';
@@ -830,18 +858,9 @@ export class TaobaoFlashBrowser {
       return result;
     }, groupHeading.source);
     await this.closeOptionPanel(page);
-    const multiBundle = groups.find(group => {
-      const match = String(group.name || '').match(/(?:请选|请选择|任选)\s*(\d+)\s*份/);
-      return match && Number(match[1]) > 1;
-    });
     if (enteredDetail) { await page.goto(originUrl, { waitUntil: 'domcontentloaded' }).catch(() => {}); await page.waitForTimeout(700); }
-    if (multiBundle) {
-      const count = Number(String(multiBundle.name).match(/(?:请选|请选择|任选)\s*(\d+)\s*份/)?.[1] || 2);
-      const label = clean(String(multiBundle.name).replace(/[（(]?(?:请选|请选择|任选)\s*\d+\s*份[）)]?/g, ''), 40) || '商品';
-      throw new Error(`这个真实套餐要求选择${count}份${label}，暂不能安全代选组合；请先告诉我具体想要哪${count}份，或换成单杯商品`);
-    }
     const normalizedGroups = [];
-    for (const group of groups) {
+    for (const group of normalizeOptionPanelGroups(groups)) {
       const singleChoiceAddOn = /任选\s*1\s*种/.test(group.name) || group.choices.some(label => /任选\s*1\s*种/.test(label));
       const choices = group.choices.filter(label => !/^(猜你喜欢|温馨小贴士|数量|\d+|[（(]任选\s*\d+\s*种[）)])$/.test(label));
       if (/温度|冰度/.test(group.name)) {
@@ -859,7 +878,7 @@ export class TaobaoFlashBrowser {
           continue;
         }
       }
-      normalizedGroups.push({ name: group.name, choices, multiple: /加料|小料|配料/.test(group.name) && !singleChoiceAddOn });
+      normalizedGroups.push({ name: group.name, choices, multiple: group.multiple || /加料|小料|配料/.test(group.name) && !singleChoiceAddOn });
     }
     return normalizedGroups.map((group, groupIndex) => {
       return {

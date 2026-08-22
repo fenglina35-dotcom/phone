@@ -198,6 +198,8 @@ export class DeliveryAdapter {
       const ids = (group.multiple ? (Array.isArray(raw) ? raw : [raw]) : [Array.isArray(raw) ? raw[0] : raw]).filter(Boolean).map(String);
       const allowed = new Set((group.choices || []).filter(choice => choice.available !== false).map(choice => String(choice.id)));
       if (group.required !== false && !ids.length) throw new Error(`请选择${group.name}`);
+      const selectionCount = Number(String(group.name || '').match(/(?:请选|请选择|任选)\s*(\d+)\s*份/)?.[1] || 0);
+      if (selectionCount > 1 && ids.length !== selectionCount) throw new Error(`${group.name}需要准确选择${selectionCount}份`);
       if (ids.some(id => !allowed.has(id))) throw new Error(`${group.name}包含平台不存在的选项`);
     }
   }
