@@ -1,8 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { DeliveryAdapter } from '../src/adapter.mjs';
 import { sign, verifySignedRequest } from '../src/security.mjs';
-import { brandMatches, checkoutAmounts, preferredBrand, publicAddressLabel, riskChallengeKind, TaobaoFlashBrowser } from '../src/taobao-flash-browser.mjs';
+import { brandMatches, checkoutAmounts, knownRouteKey, preferredBrand, publicAddressLabel, riskChallengeKind, TaobaoFlashBrowser } from '../src/taobao-flash-browser.mjs';
 
 class FakeBrowser {
   constructor() { this.submits = 0; this.statusCalls = 0; this.statusValue = 'pending_payment'; }
@@ -49,6 +52,102 @@ test('known drink brands are recognized without widening to another merchant', (
   assert.equal(preferredBrand('随便来杯咖啡'), '');
   assert.equal(brandMatches('luckin', '瑞幸咖啡（人民广场店）'), true);
   assert.equal(brandMatches('luckin', '某某奶茶店'), false);
+});
+
+test('known product routes ignore the requested sugar and ice modifiers', () => {
+  assert.equal(
+    knownRouteKey('瑞幸咖啡 生椰拿铁 少糖 少冰'),
+    knownRouteKey('瑞幸咖啡 生椰拿铁 无糖 去冰'),
+  );
+  assert.notEqual(knownRouteKey('瑞幸咖啡 生椰拿铁'), knownRouteKey('瑞幸咖啡 橙C美式'));
+});
+
+test('a successful real product route survives a service restart', async () => {
+  const profile = await fs.mkdtemp(path.join(os.tmpdir(), 'phone-delivery-known-route-'));
+  try {
+    const first = new TaobaoFlashBrowser({ profile });
+    await first.rememberKnownRoute({
+      query: '瑞幸咖啡 生椰拿铁 少糖', merchant: '瑞幸咖啡（测试店）', merchantId: 'luckin-1',
+      itemName: '生椰拿铁', shopUrl: 'https://h5.ele.me/newretail/p/ushop/?store_id=luckin-1',
+    });
+    await first.rememberKnownRoute({
+      query: '瑞幸咖啡 橙C美式', merchant: '瑞幸咖啡（测试店）', merchantId: 'luckin-1',
+      itemName: '橙C美式', shopUrl: 'https://h5.ele.me/newretail/p/ushop/?store_id=luckin-1',
+    });
+    const restarted = new TaobaoFlashBrowser({ profile });
+    const saved = await restarted.knownRoute('瑞幸咖啡 生椰拿铁 无糖');
+    assert.equal(saved.itemName, '生椰拿铁');
+    assert.equal(saved.merchantId, 'luckin-1');
+    const natural = await restarted.knownRoute('想喝生椰拿铁少冰');
+    assert.equal(natural.itemName, '生椰拿铁');
+    await restarted.forgetKnownRoute(natural.routeKey);
+    assert.equal(await restarted.knownRoute('想喝生椰拿铁少冰'), null);
+    assert.equal((await restarted.knownRoute('瑞幸咖啡 橙C美式')).itemName, '橙C美式');
+  } finally {
+    await fs.rm(profile, { recursive: true, force: true });
+  }
+});
+
+test('a remembered route skips global search but still reads the current menu price', async () => {
+  const browser = new TaobaoFlashBrowser();
+  browser.knownRoute = async () => ({
+    merchant: '瑞幸咖啡（测试店）', merchantId: 'luckin-1', itemName: '生椰拿铁',
+    shopUrl: 'https://h5.ele.me/newretail/p/ushop/?store_id=luckin-1', savedAt: Date.now(),
+  });
+  browser.enterShop = async () => ({ url: () => 'https://h5.ele.me/newretail/p/ushop/?store_id=luckin-1' });
+  browser.requireLogin = async () => {};
+  browser.riskCheck = async () => 0;
+  browser.extractMenu = async () => [{ name: '生椰拿铁', description: '当次页面数据', price: 18.5, buttonIndex: 3 }];
+  browser.goto = async () => { throw new Error('不应进入全平台搜索'); };
+  const offers = await browser.search('瑞幸咖啡 生椰拿铁 少糖', 4);
+  assert.equal(offers.length, 1);
+  assert.equal(offers[0].price, 18.5);
+  assert.equal(offers[0].description, '当次页面数据');
+});
+
+test('a forced challenge on the remembered route stops instead of starting another search', async () => {
+  const browser = new TaobaoFlashBrowser();
+  browser.knownRoute = async () => ({
+    merchant: '瑞幸咖啡（测试店）', merchantId: 'luckin-1', itemName: '生椰拿铁',
+    shopUrl: 'https://h5.ele.me/newretail/p/ushop/?store_id=luckin-1', savedAt: Date.now(),
+  });
+  browser.enterShop = async () => ({ url: () => 'https://h5.ele.me/newretail/p/ushop/?store_id=luckin-1' });
+  browser.requireLogin = async () => {};
+  browser.riskCheck = async () => { throw new Error('淘宝闪购触发图片验证，请本人完成'); };
+  let globalSearches = 0;
+  browser.goto = async () => { globalSearches += 1; };
+  await assert.rejects(browser.search('瑞幸咖啡 生椰拿铁', 4), /图片验证/);
+  assert.equal(globalSearches, 0);
+});
+
+test('a transient direct-route failure does not discard the route or start global search', async () => {
+  const browser = new TaobaoFlashBrowser();
+  browser.knownRoute = async () => ({
+    merchant: '瑞幸咖啡（测试店）', merchantId: 'luckin-1', itemName: '生椰拿铁',
+    shopUrl: 'https://h5.ele.me/newretail/p/ushop/?store_id=luckin-1', savedAt: Date.now(),
+  });
+  browser.enterShop = async () => { throw new Error('网络连接暂时中断'); };
+  let globalSearches = 0; let forgotten = 0;
+  browser.goto = async () => { globalSearches += 1; };
+  browser.forgetKnownRoute = async () => { forgotten += 1; };
+  await assert.rejects(browser.search('瑞幸咖啡 生椰拿铁', 4), /网络连接暂时中断/);
+  assert.equal(globalSearches, 0);
+  assert.equal(forgotten, 0);
+});
+
+test('expired product routes are not reused', async () => {
+  const profile = await fs.mkdtemp(path.join(os.tmpdir(), 'phone-delivery-expired-route-'));
+  try {
+    await fs.writeFile(path.join(profile, 'known-product-routes.json'), JSON.stringify({
+      [knownRouteKey('瑞幸咖啡 生椰拿铁')]: {
+        query: '瑞幸咖啡 生椰拿铁', merchant: '瑞幸咖啡', merchantId: 'luckin-1', itemName: '生椰拿铁',
+        shopUrl: 'https://h5.ele.me/newretail/p/ushop/?store_id=luckin-1', savedAt: Date.now() - 31 * 24 * 60 * 60_000,
+      },
+    }), 'utf8');
+    assert.equal(await new TaobaoFlashBrowser({ profile }).knownRoute('瑞幸咖啡 生椰拿铁'), null);
+  } finally {
+    await fs.rm(profile, { recursive: true, force: true });
+  }
 });
 
 test('image captcha is recognized and a manually completed challenge resumes in place', async () => {

@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import path from 'node:path';
 
 const MSITE = 'https://h5.ele.me/';
 const ADDRESS_URL = 'https://h5.ele.me/minisite/pages-poi/address/index';
@@ -30,6 +31,12 @@ export function brandMatches(brand, value) {
   if (brand === 'chagee') return /霸王茶姬|chagee/i.test(name);
   if (brand === 'nayuki') return /奈雪/i.test(name);
   return false;
+}
+
+export function knownRouteKey(value) {
+  return clean(value, 160).toLowerCase()
+    .replace(/(?:无糖|零糖|少糖|微糖|半糖|全糖|正常糖|不另外加糖|少冰|少少冰|去冰|正常冰|多冰|热饮|冷饮|常温|大杯|中杯|小杯)/g, '')
+    .replace(/[^\p{L}\p{N}]+/gu, '');
 }
 
 export function publicAddressLabel(raw) {
@@ -74,6 +81,9 @@ export class TaobaoFlashBrowser {
     this.searchUrl = '';
     this.shops = [];
     this.addressCache = null;
+    this.knownRoutes = null;
+    this.knownRoutesWrite = Promise.resolve();
+    this.knownRoutesPath = path.join(path.resolve(this.profile), 'known-product-routes.json');
   }
 
   async start() {
@@ -170,6 +180,65 @@ export class TaobaoFlashBrowser {
     })();
     try { return await this.prewarmPromise; } finally { this.prewarmPromise = null; }
   }
+
+  async loadKnownRoutes() {
+    if (this.knownRoutes) return this.knownRoutes;
+    let saved = {};
+    try { saved = JSON.parse(await fs.readFile(this.knownRoutesPath, 'utf8')); } catch {}
+    const now = Date.now();
+    this.knownRoutes = Object.fromEntries(Object.entries(saved && typeof saved === 'object' ? saved : {}).filter(([, entry]) =>
+      entry && typeof entry === 'object' && shopUrl(entry.shopUrl) && clean(entry.itemName, 140) && now - Number(entry.savedAt || 0) < 30 * 24 * 60 * 60_000
+    ));
+    return this.knownRoutes;
+  }
+
+  async writeKnownRoutes() {
+    const target = this.knownRoutesPath;
+    this.knownRoutesWrite = this.knownRoutesWrite.catch(() => {}).then(async () => {
+      const snapshot = JSON.stringify(await this.loadKnownRoutes(), null, 2);
+      await fs.mkdir(path.dirname(target), { recursive: true });
+      await fs.writeFile(target, snapshot, 'utf8');
+    });
+    return this.knownRoutesWrite;
+  }
+
+  async knownRoute(query) {
+    const key = knownRouteKey(query);
+    if (!key) return null;
+    const routes = await this.loadKnownRoutes();
+    if (routes[key]) return { ...routes[key], routeKey: key };
+    const brand = preferredBrand(query);
+    const found = Object.entries(routes)
+      .filter(([, entry]) => !brand || brandMatches(brand, `${entry.merchant} ${entry.query}`))
+      .filter(([, entry]) => {
+        const itemKey = knownRouteKey(entry.itemName);
+        return itemKey && (key.includes(itemKey) || itemKey.includes(key));
+      })
+      .sort(([, left], [, right]) => Number(right.savedAt || 0) - Number(left.savedAt || 0))[0];
+    return found ? { ...found[1], routeKey: found[0] } : null;
+  }
+
+  async forgetKnownRoute(query) {
+    const key = knownRouteKey(query);
+    const routes = await this.loadKnownRoutes();
+    if (!key || !routes[key]) return;
+    delete routes[key];
+    await this.writeKnownRoutes();
+  }
+
+  async rememberKnownRoute(ref) {
+    const key = knownRouteKey(ref?.query);
+    if (!key || !shopUrl(ref?.shopUrl) || !clean(ref?.itemName, 140)) return;
+    const routes = await this.loadKnownRoutes();
+    for (const [routeKey, entry] of Object.entries(routes)) {
+      if (routeKey !== key && knownRouteKey(entry.itemName) === knownRouteKey(ref.itemName) && clean(entry.shopUrl, 1000) === clean(ref.shopUrl, 1000)) delete routes[routeKey];
+    }
+    routes[key] = {
+      query: clean(ref.query, 160), merchant: clean(ref.merchant, 100), merchantId: clean(ref.merchantId, 120),
+      itemName: clean(ref.itemName, 140), shopUrl: clean(ref.shopUrl, 1000), savedAt: Date.now(),
+    };
+    await this.writeKnownRoutes();
+  }
   needsLogin(page) { return /\/login|login\.ele\.me|passport/i.test(page.url()); }
   async requireLogin(page) { if (this.needsLogin(page)) throw new Error('淘宝闪购登录已失效，请在浏览器窗口用手机号、短信验证码和滑块重新登录'); }
   async riskText(page) {
@@ -253,6 +322,38 @@ export class TaobaoFlashBrowser {
       humanWaitMs += await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
       assertWithinSearchTime();
     };
+    const remembered = await this.knownRoute(query);
+    if (remembered) {
+      const shop = {
+        index: 0, name: remembered.merchant || '已记住的商家', storeId: remembered.merchantId || '',
+        anchorUrl: remembered.shopUrl, directUrl: remembered.shopUrl, deliveryFee: 0, freeDeliveryThreshold: 0,
+        etaMinutes: 0, rating: 0, monthlySales: 0, couponLabel: '',
+      };
+      this.searchUrl = '';
+      this.shops = [shop];
+      try {
+        const page = await this.enterShop(0, { preferSaved: true });
+        await this.requireLogin(page); await waitForHumanVerification(page);
+        const items = await this.extractMenu(page, Math.max(12, limit), query);
+        const target = knownRouteKey(remembered.itemName);
+        const item = items.find(row => knownRouteKey(row.name) === target) || items.find(row => knownRouteKey(row.name).includes(target) || target.includes(knownRouteKey(row.name)));
+        if (item) {
+          const deliveryFee = shop.freeDeliveryThreshold > 0 && item.price >= shop.freeDeliveryThreshold ? 0 : shop.deliveryFee;
+          return [{
+            merchantId: shop.storeId || 'saved-shop', merchant: shop.name, name: item.name,
+            description: item.description, price: item.price, deliveryFee, total: item.price + deliveryFee,
+            rating: shop.rating, monthlySales: shop.monthlySales, etaMinutes: shop.etaMinutes, couponLabel: shop.couponLabel,
+            optionGroups: [], optionsLoaded: false,
+            browserRef: { shopIndex: 0, itemName: item.name, buttonIndex: item.buttonIndex, detailUrl: '', shopUrl: shop.anchorUrl || shop.directUrl, query, merchant: shop.name, merchantId: shop.storeId || '' },
+          }];
+        }
+        await this.forgetKnownRoute(remembered.routeKey || query);
+      } catch (error) {
+        const message = String(error?.message || error);
+        if (!/真实商家已失效|未能进入淘宝闪购商家|没有在真实商家中定位到同一件商品/.test(message)) throw error;
+        await this.forgetKnownRoute(remembered.routeKey || query).catch(() => {});
+      }
+    }
     const page = await this.goto(`https://h5.ele.me/search/?keyword=${encodeURIComponent(query)}`, 2500);
     await this.requireLogin(page); await waitForHumanVerification(page);
     let shops = [];
@@ -286,7 +387,7 @@ export class TaobaoFlashBrowser {
           description: item.description, price: item.price, deliveryFee,
           total: item.price + deliveryFee, rating: shop.rating, monthlySales: shop.monthlySales,
           etaMinutes: shop.etaMinutes, couponLabel: shop.couponLabel, optionGroups: [], optionsLoaded: false,
-          browserRef: { shopIndex, itemName: item.name, buttonIndex: item.buttonIndex, detailUrl: item.detailUrl || '', shopUrl: shop.anchorUrl || '' },
+          browserRef: { shopIndex, itemName: item.name, buttonIndex: item.buttonIndex, detailUrl: item.detailUrl || '', shopUrl: shop.anchorUrl || '', query, merchant: shop.name, merchantId: shop.storeId || '' },
         });
         if (offers.length >= limit) break;
       }
@@ -472,7 +573,9 @@ export class TaobaoFlashBrowser {
     await this.waitForPurchaseControls(page, 8000);
     const button = await this.productControl(page, ref.itemName);
     if (!button) throw new Error('没有在真实商家中定位到同一件商品，请重新搜索');
-    return this.inspectOptionsControl(page, button, ref);
+    const groups = await this.inspectOptionsControl(page, button, ref);
+    await this.rememberKnownRoute(ref).catch(() => {});
+    return groups;
   }
 
   async inspectOptionsControl(page, button, itemRef = null) {

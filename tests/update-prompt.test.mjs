@@ -5,7 +5,7 @@ const app = fs.readFileSync(new URL("../app.js", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../小手机.html", import.meta.url), "utf8");
 const sw = fs.readFileSync(new URL("../sw.js", import.meta.url), "utf8");
 
-assert.match(app, /APP_VER='v1042 · 跨场景记忆与外卖验证续跑修复版'/);
+assert.match(app, /APP_VER='v1043 · 微信小号搜索与外卖低验证直达修复版'/);
 assert.match(app, /function northUpdateAvailable\(build\)/);
 assert.match(app, /发现新版本 v\$\{esc\(build\)\}/);
 assert.match(app, /不需要退出或划掉小手机/);
@@ -14,7 +14,7 @@ assert.match(app, /setInterval\(\(\)=>reg\.update\(\)\.catch\(\(\)=>\{\}\),15\*6
 assert.match(app, /postMessage\(\{type:'north-version-query'\}\)/);
 assert.match(sw, /client\.postMessage\(\{type:'north-update-ready',build:BUILD\}\)/);
 assert.match(sw, /event\.data\.type!==['"]north-version-query['"]/);
-assert.match(html, /window\.__NORTH_SHELL_BUILD__='1042'/);
-assert.match(html, /sw\.js\?v=1042&r=v1042-memory-delivery-captcha-1/);
+assert.match(html, /window\.__NORTH_SHELL_BUILD__='1043'/);
+assert.match(html, /sw\.js\?v=1043&r=v1043-wechat-delivery-route-1/);
 
 console.log("update prompt tests passed");
