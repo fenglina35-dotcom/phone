@@ -676,7 +676,8 @@ function _avIc(n){const p=ICONS[n]||ICONS.user;return '<svg viewBox="0 0 24 24" 
 function av(v,extra){const cls='avatar '+(extra||'');
   if(isImg(v))return `<div class="${cls}"><img src="${v}"></div>`;
   if(isStoredImgRef(v)){const key=v.slice(4),src=_imgCache[key];return src?`<div class="${cls}"><img src="${src}"></div>`:`<div class="${cls}" data-idb-avatar="${esc(key)}">${_avIc('user')}</div>`;}
-  if(!v||v==='🙂'||v==='😊'||v==='👤')return `<div class="${cls}">${_avIc('user')}</div>`;
+  if(v==='👤')return `<div class="${cls} wx-stranger-avatar">${_avIc('user')}</div>`;
+  if(!v||v==='🙂'||v==='😊')return `<div class="${cls}">${_avIc('user')}</div>`;
   if(v==='👥')return `<div class="${cls}">${_avIc('users')}</div>`;
   return `<div class="${cls}">${v}</div>`;}
 const ROLE_TIME_ZONE_CACHE_MS=5*60*1000;
@@ -2037,8 +2038,8 @@ let wxTab='chats';
 let _wxQuickOpen=false;
 let _scrollBottomOnce={};
 function go(p,params){stack.push(Object.assign({p},params));render();}
-function back(){if(stack.length>1){stack.pop();render();}}
-function home(){stack=[{p:'home'}];render();}
+function back(){const leaving=cur();if(leaving&&leaving.p==='wxscan'&&window.wxScanStop)window.wxScanStop();if(stack.length>1){stack.pop();render();}}
+function home(){if(window.wxScanStop)window.wxScanStop();window._wxReturnToDiscover=false;stack=[{p:'home'}];render();}
 function cur(){return stack[stack.length-1];}
 function renderPageKey(c){if(!c)return'';if(c.p==='chat')return'chat:'+c.id;if(c.p==='pfchat')return'pfchat:'+c.id;if(c.p==='pfgroup')return'pfgroup:'+c.gid;if(c.p==='group')return'group:'+c.id;if(c.p==='mgroom')return'mgroom:'+c.id;if(c.p==='hischat')return'hischat:'+c.id+':'+c.fid;if(c.p==='dydm')return'dydm:'+c.id;return c.p;}
 function renderScrollTarget(c){if(!c)return null;if(c.p==='hischat'&&c.fid==='__me')return{id:'hisselflog',stick:true};const map={settings:['settingsscroll',0],couple:['couplescroll',0],wxmoment:['wxMomentScroll',0],wxnearby:['wxNearbyScroll',0],chat:['chatbg',1],pfchat:['pfchatbg',1],pfgroup:['pfgroupbg',1],group:['chatbg',1],mgroom:['mgrbg',1],alter:['alterbg',1],tale:['talebox',1],dread:['dreadbox',1],xdm:['xdmbox',1],dydm:['dydmbox',1],shopcs:['csbox',1],off:['offbg',1],rp:['rpbg',1],jail:['jailbox',1],gs:['gsbg',1],hischat:['hischatlog',1],phonesms:['smsbody',1],calllog:['cllog',0]};const x=map[c.p];return x?{id:x[0],stick:!!x[1]}:null;}
@@ -2075,6 +2076,21 @@ function render(){
   else if(c.p==='wxmoment')html=renderWxMomentFeed();
   else if(c.p==='wxlive')html=renderWxLive();
   else if(c.p==='wxnearby')html=renderWxNearby();
+  else if(c.p==='wxprofile')html=renderWxProfile();
+  else if(c.p==='wxqr')html=renderWxQr();
+  else if(c.p==='wxscan')html=renderWxScan();
+  else if(c.p==='wxservices')html=renderWxServices();
+  else if(c.p==='wxwallet')html=renderWxWallet();
+  else if(c.p==='wxchange')html=renderWxChange();
+  else if(c.p==='wxbank')html=renderWxBank();
+  else if(c.p==='wxfamily')html=renderWxFamily();
+  else if(c.p==='wxbills')html=renderWxBills();
+  else if(c.p==='wxsupport')html=renderWxSupport();
+  else if(c.p==='wxfavorites')html=renderWxFavorites();
+  else if(c.p==='wxalbum')html=renderWxAlbum();
+  else if(c.p==='wxemoji')html=renderWxEmoji();
+  else if(c.p==='wxsettings')html=renderWxSettings();
+  else if(c.p==='wxaccounts')html=renderWxAccounts();
   else if(c.p==='newfriends')html=renderNewFriends();
   else if(c.p==='wxonlychat')html=renderWxOnlyChat();
   else if(c.p==='wxgroups')html=renderWxGroups();
@@ -2136,23 +2152,26 @@ function render(){
   else if(c.p==='tasks')html=renderTasks();
   else if(c.p==='dydm')html=renderDyDM(c.id);
   else if(c.p==='momentDetail')html='';
-  const _wxGlassPages=['wechat','wxmoment','wxlive','wxnearby','chat','chatDetails','contactInfo','friendInfo','contactSettings','roleMoments','roleMomentDetail','roleFeatures','newfriends','wxonlychat','wxgroups','wxlabels','wxgroupcreate','contactEdit','wxsearch','pffriends','pfchat','pfgroup','group'];
+  const _wxGlassPages=['wechat','wxmoment','wxlive','wxnearby','wxprofile','wxqr','wxscan','wxservices','wxwallet','wxchange','wxbank','wxfamily','wxbills','wxsupport','wxfavorites','wxalbum','wxemoji','wxsettings','wxaccounts','chat','chatDetails','contactInfo','friendInfo','contactSettings','roleMoments','roleMomentDetail','roleFeatures','newfriends','wxonlychat','wxgroups','wxlabels','wxgroupcreate','contactEdit','wxsearch','pffriends','pfchat','pfgroup','group'];
   const _isWxPage=_wxGlassPages.includes(c.p);
   const _glass=glassThemeOn()&&!_isWxPage?' glass-app':'';
   const _wxG='';
   const _setG=glassThemeOn()&&c.p==='settings'?' settings-glass':'';
   const _wxLightBase=['wechat','chat','chatDetails','contactInfo','friendInfo','contactSettings','roleMoments','roleMomentDetail','roleFeatures'].includes(c.p);
-  const _wxLightDirectory=['wxmoment','wxlive','wxnearby','newfriends','wxonlychat','wxgroups','wxlabels','wxgroupcreate','contactEdit'].includes(c.p);
+  const _wxLightDirectory=['wxmoment','wxlive','wxnearby','wxprofile','wxqr','wxscan','wxservices','wxwallet','wxchange','wxbank','wxfamily','wxbills','wxsupport','wxfavorites','wxalbum','wxemoji','wxsettings','wxaccounts','newfriends','wxonlychat','wxgroups','wxlabels','wxgroupcreate','contactEdit','pfchat','pfgroup','group'].includes(c.p);
   const _wxL=(S.me.wxTheme==='white'&&(_wxLightBase||_wxLightDirectory))?' wxlight':'';
-  const _wxP=c.p==='wechat'?' wx-premium':c.p==='chat'?' wx-chat-premium':'';
+  const _wxStandalonePremium=['wxprofile','wxqr','wxscan','wxservices','wxwallet','wxchange','wxbank','wxfamily','wxbills','wxsupport','wxfavorites','wxalbum','wxemoji','wxsettings','wxaccounts'].includes(c.p);
+  const _wxP=(c.p==='wechat'||_wxStandalonePremium)?' wx-premium':['chat','pfchat','pfgroup','group'].includes(c.p)?' wx-chat-premium':'';
   const _wxSection=c.p==='wechat'?' wx-'+String(wxTab==='moments'?'discover':(wxTab||'chats')):'';
-  app.innerHTML='<div class="page'+_glass+_wxG+_setG+_wxL+_wxP+_wxSection+'">'+html+'</div>';
+  const _wxFont=S.me&&S.me.wxFeatures&&S.me.wxFeatures.fontScale!=='normal'?' wx-font-'+S.me.wxFeatures.fontScale:'';
+  app.innerHTML='<div class="page'+_glass+_wxG+_setG+_wxL+_wxP+_wxSection+_wxFont+'">'+html+'</div>';
+  if(c.p==='music'){const b=app.querySelector('.music-app-head>button:first-child');if(b)b.onclick=back;}
+  if(c.p==='browser'){const b=app.querySelector('.br-nav .l');if(b)b.onclick=back;}
   /* Private App pages keep stored images as short idb: references. Restore
      already-cached sources in the same paint so a busy event loop cannot leave
      the freshly rebuilt page black until a later timer gets CPU time. */
   if(privateNativeAppOn())hydrateStoredImageNodes();
   chatRouteMount(c);
-  if(c.p==='off')offInputMount();
   if(['wxmoment','wxlive','wxnearby','newfriends','wxonlychat','wxgroups','wxlabels','wxgroupcreate','contactEdit'].includes(c.p)&&app.firstElementChild)app.firstElementChild.classList.add('wx-directory-page');
   if(c.p==='drawguess'){const usage=$('#useBadge');if(usage)usage.style.display='none';}
   renderLockScreen();renderLockPull();
@@ -3700,8 +3719,7 @@ function renderSettings(){const nativeBuild=privateNativeAppOn()?String(window._
       ${MANUAL_REPLY_SCENE_OPTIONS.map(x=>`<div class="it"><span>${x.label}<br><small style="color:#888">${x.tip}</small></span><span class="sw ${manualReplySceneOn(x.key)?'on':''}" onclick="manualReplySceneToggle('${x.key}')"></span></div>`).join('')}
       <div class="it"><span>角色自主主动联系<br><small style="color:#888">系统只提供联系时机；角色自己决定是否打电话、送礼、邀请听歌、看电影、约会、玩游戏或发普通消息</small></span><span class="sw ${S.settings.initiative!==false?'on':''}" onclick="S.settings.initiative=(S.settings.initiative===false);save();render()"></span></div>
       <div class="it"><span>角色差异化防护<br><small style="color:#888">让不同角色选择不同回应方式，并拦截跨角色重复的安慰、甜宠和固定开头</small></span><span class="sw ${S.settings.personaGuard!==false?'on':''}" onclick="S.settings.personaGuard=(S.settings.personaGuard===false);save();render()"></span></div>
-      <div class="it"><span>聊天引用功能<br><small style="color:#888">开：长按一句话可以引用它来问；他也会挑你最在意的那句回你（只聊天，电话不引用）</small></span><span class="sw ${S.settings.quoteOn!==false?'on':''}" onclick="S.settings.quoteOn=(S.settings.quoteOn===false);save();render()"></span></div>
-      <div class="it"><span>聊天顶部内心想法<br><small style="color:#888">关闭后只隐藏角色自己写下的内心想法，不控制情绪、关系、权限或任何选择</small></span><span class="sw ${S.settings.showMoodTag!==false?'on':''}" onclick="S.settings.showMoodTag=(S.settings.showMoodTag===false);save();render()"></span></div>
+      <div class="it" onclick="go('wxsettings')"><span>微信专属设置<br><small style="color:#888">聊天引用、心情气泡、微信主题、字体和全局气泡已集中到微信“我 → 设置”</small></span><span class="v">›</span></div>
       <div class="it"><span>查他手机·刷新用副模型<br><small style="color:#888">开：用便宜的副模型生成ta手机内容（省钱）；关：用主模型（更稳更贴人设）。哪个刷得出、刷得好就用哪个</small></span><span class="sw ${S.settings.spyAux?'on':''}" onclick="S.settings.spyAux=!S.settings.spyAux;save();render()"></span></div>
       <div class="it">延迟几秒回复<input id="s_delay" type="number" min="0" value="${S.settings.replyDelay}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
       <div class="it">超过几回合自动总结<input id="s_sum" type="number" min="0" value="${S.settings.summaryRounds||0}" style="width:70px;text-align:right;border:1px solid #38383a;border-radius:8px;padding:5px;background:#2c2c2e;color:#eee"></div>
@@ -5276,8 +5294,8 @@ function renderWeChat(){
 }
 function wxPlusIcon(){return `<svg viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="17" r="14.5"/><line x1="17" y1="9.5" x2="17" y2="24.5"/><line x1="9.5" y1="17" x2="24.5" y2="17"/></svg>`;}
 function wxContactAddIcon(){return `<svg class="wx-contact-add-icon" viewBox="0 0 34 34" aria-hidden="true"><circle cx="13" cy="10.2" r="4.7"/><path d="M4.7 27c.6-6.3 3.4-9.5 8.3-9.5s7.7 3.2 8.3 9.5"/><path d="M25.5 11.5v9M21 16h9"/></svg>`;}
-function wxQuickMenuIcon(kind){return kind==='group'?`<svg viewBox="0 0 36 36" aria-hidden="true"><path d="M18 5C10 5 4 10 4 16.3c0 3.7 2.1 6.9 5.5 9l-1.2 5 5.1-2.8c1.5.4 3 .6 4.6.6 8 0 14-5 14-11.8S26 5 18 5Z"/></svg>`:`<svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="13" cy="10.5" r="5"/><path d="M3.5 29c.8-7.2 4.1-10.8 9.5-10.8s8.7 3.6 9.5 10.8H3.5Z"/><path d="M28 16.5v11M22.5 22h11" fill="none"/></svg>`;}
-function wxQuickMenuHTML(){return `<div class="wx-quick-shade" onclick="_wxQuickOpen=false;render()"></div><div class="wx-quick-menu" role="menu"><button type="button" onclick="_wxQuickOpen=false;createGroup()">${wxQuickMenuIcon('group')}<span>发起群聊</span></button><button type="button" onclick="_wxQuickOpen=false;editContact()">${wxQuickMenuIcon('friend')}<span>添加朋友</span></button></div>`;}
+function wxQuickMenuIcon(kind){if(kind==='scan')return `<svg viewBox="0 0 36 36" aria-hidden="true"><path d="M5 14V6h8M23 6h8v8M31 22v8h-8M13 30H5v-8M9 18h18" fill="none"/></svg>`;return kind==='group'?`<svg viewBox="0 0 36 36" aria-hidden="true"><path d="M18 5C10 5 4 10 4 16.3c0 3.7 2.1 6.9 5.5 9l-1.2 5 5.1-2.8c1.5.4 3 .6 4.6.6 8 0 14-5 14-11.8S26 5 18 5Z"/></svg>`:`<svg viewBox="0 0 36 36" aria-hidden="true"><circle cx="13" cy="10.5" r="5"/><path d="M3.5 29c.8-7.2 4.1-10.8 9.5-10.8s8.7 3.6 9.5 10.8H3.5Z"/><path d="M28 16.5v11M22.5 22h11" fill="none"/></svg>`;}
+function wxQuickMenuHTML(){return `<div class="wx-quick-shade" onclick="_wxQuickOpen=false;render()"></div><div class="wx-quick-menu" role="menu"><button type="button" onclick="_wxQuickOpen=false;createGroup()">${wxQuickMenuIcon('group')}<span>发起群聊</span></button><button type="button" onclick="_wxQuickOpen=false;editContact()">${wxQuickMenuIcon('friend')}<span>添加朋友</span></button><button type="button" onclick="_wxQuickOpen=false;go('wxscan')">${wxQuickMenuIcon('scan')}<span>扫一扫</span></button></div>`;}
 function toggleWxQuickMenu(){_wxQuickOpen=!_wxQuickOpen;render();}
 function wxContactAddMenu(){openModal(`<h3>添加联系人</h3><button class="btn p" onclick="closeModal();editContact()">添加角色</button><button class="btn g" style="margin-top:8px" onclick="closeModal();openPhoneFriends()">添加小手机好友</button><button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
 function wxPawIcon(){return `<svg class="wx-paw" viewBox="0 0 26 24" aria-hidden="true"><ellipse cx="13" cy="16" rx="6.5" ry="5.7"/><ellipse cx="5" cy="10" rx="3" ry="4"/><ellipse cx="10" cy="5.5" rx="2.8" ry="4"/><ellipse cx="16.2" cy="5.3" rx="2.8" ry="4"/><ellipse cx="21.4" cy="10.2" rx="3" ry="4"/></svg>`;}
@@ -5307,20 +5325,30 @@ function wxDiscover(){return `<div class="wx-discover-list">
   <section>${wxDiscoverRow('nearby','附近的人',"wxDiscoverOpen('nearby')",'', '发现匿名新朋友')}</section>
   <section>${wxDiscoverRow('games','游戏',"wxDiscoverOpen('games')",'games')}</section>
   </div>`;}
-function wxDiscoverOpen(kind){if(kind==='nearby'){go('wxnearby');return;}if(kind==='channels'){if(appLocked('douyin'))return;_dyFromWx=true;if(dyInit())save(0);dyTab='feed';go('dy',{from:'wechat'});if(!S.dy.feed.length)dyGenFeed('',true);return;}const map={moments:'moments',music:'music',cinema:'cinema',browser:'browser',games:'games'};if(map[kind])openApp(map[kind]);}
+function wxDiscoverOpen(kind){if(kind==='nearby'){go('wxnearby');return;}if(kind==='channels'){if(appLocked('douyin'))return;_dyFromWx=true;if(dyInit())save(0);dyTab='feed';go('dy',{from:'wechat'});if(!S.dy.feed.length)dyGenFeed('',true);return;}const map={moments:'moments',music:'music',cinema:'cinema',browser:'browser',games:'games'};if(map[kind]){window._wxReturnToDiscover=true;openApp(map[kind]);}}
 function renderWxLive(){return `<div class="wx-directory-head">${wxDirectoryNav('直播')}</div><div class="scroll wx-directory-scroll wx-live-coming"><div class="wx-live-orbit"><i>${wxDiscoverIcon('live')}</i></div><b>直播功能开发中</b><p>入口已经保留，后续会在这里接入真实直播内容。</p><button type="button" onclick="back()">返回发现</button></div>`;}
 function renderWxMomentFeed(){return `<div class="wx-directory-head">${wxDirectoryNav('朋友圈',`<button type="button" class="r wx-dir-plus" onclick="momentTools()">＋</button>`)}</div><div class="scroll wx-directory-scroll wx-moment-feed" id="wxMomentScroll">${wxMoments()}</div>`;}
 
 let _wxNearbyBusy=false;
-const WX_NEARBY_FALLBACK=['雾岛来信','晚风未眠','十七码头','雨停之后','匿名旅人','旧唱片','凌晨两点','半糖气泡','海盐日落','北岸微光','纸飞机','沿途看海'];
-function wxNearbyState(){if(!S.wxNearby||typeof S.wxNearby!=='object')S.wxNearby={people:[],requests:[]};const d=S.wxNearby;d.people=Array.isArray(d.people)?d.people.filter(Boolean):[];d.requests=Array.isArray(d.requests)?d.requests.filter(Boolean):[];return d;}
-function wxNearbyFallbackPeople(){const salt=Math.floor(Date.now()/60000),lines=['刚搬来这附近，偶尔想找人聊聊天。','路过同一座城市，也许能认识一下。','喜欢音乐、散步和不赶时间的晚上。','不公开照片，熟悉以后再慢慢认识。','只是来看看附近有没有聊得来的人。','安静慢热，但会认真回复每一条消息。'];return WX_NEARBY_FALLBACK.map((name,i)=>({id:'near_'+salt+'_'+i,nickname:name,signature:lines[(i+salt)%lines.length],distance:(120+(i*173+salt)%4800)+'m',gender:i%3===0?'女':i%3===1?'男':'保密',persona:'你是微信附近的人里出现的匿名用户「'+name+'」。你注重边界、慢热但真实，不编造共同经历；成为好友后从普通陌生人开始自然认识。',greeting:'你好，刚刚在附近的人看到你，想认识一下。'}));}
+const WX_NEARBY_FALLBACK=['雾岛来信','晚风未眠','十七码头','雨停之后','匿名旅人','旧唱片','凌晨两点','半糖气泡','海盐日落','北岸微光','纸飞机','沿途看海','只问不答','复制广告','边界试探','话痨路人'];
+function wxNearbyState(){if(!S.wxNearby||typeof S.wxNearby!=='object')S.wxNearby={people:[],requests:[]};const d=S.wxNearby;d.people=Array.isArray(d.people)?d.people.filter(Boolean):[];d.requests=Array.isArray(d.requests)?d.requests.filter(Boolean):[];d.refreshSeq=Math.max(0,Number(d.refreshSeq)||0);return d;}
+function wxNearbyFallbackPeople(seed){const seq=Math.max(0,Number(seed)||0),salt=Math.floor(Date.now()/60000)+seq*7,types=[
+  ['友善健谈','刚搬来这附近，想找人聊聊吃喝和日常。','热情但尊重边界，会主动找话题，也会认真听对方说话。','你好，刚刚看到你在附近，方便认识一下吗？'],
+  ['安静慢热','不公开照片，熟悉以后再慢慢认识。','慢热谨慎，不轻易交心，熟悉后回复认真。','你好，我不太会开场，先打个招呼。'],
+  ['直接爽快','不喜欢猜来猜去，有话就直说。','说话直接、节奏快，有好感会表达，不合适也会明确说。','嗨，看你顺眼，想聊两句。'],
+  ['古怪跳脱','脑回路有点怪，但没有恶意。','思维跳跃、冷幽默、偶尔答非所问，但不编造共同经历。','你相信附近的人会随机遇到有趣的人吗？'],
+  ['功利社交','只聊资源和机会，没兴趣就很冷淡。','功利、现实，会先打听职业和资源；发现没有利用价值会敷衍。','你做什么工作的？也许能互相帮忙。'],
+  ['广告推销','加好友只是为了推销课程和产品。','把聊天当获客渠道，会反复推销并回避私人话题；被明确拒绝后应停止。','附近新店体验券要不要了解一下？'],
+  ['越界搭讪','很会搭讪，也经常试探别人底线。','轻浮、自来熟、容易说冒犯话；可以表现为令人厌烦的骚扰者，但不得威胁、仇恨或违法。被拉黑后不能绕过系统继续联系。','美女/帅哥，一个人在附近吗？'],
+  ['纯骚扰','没有认真认识的打算，只想连续发无聊消息找存在感。','烦人、重复、缺乏边界，会连续搭讪和催回复；不得威胁人身安全、泄露隐私或使用仇恨内容。','在吗？怎么不回？认识一下呗。']
+],start=Math.abs(salt)%types.length;return Array.from({length:12},(_,i)=>{const name=WX_NEARBY_FALLBACK[(i+salt)%WX_NEARBY_FALLBACK.length],t=types[(start+i)%types.length];return{id:'near_'+salt+'_'+seq+'_'+i,nickname:name,signature:t[1],distance:(120+(i*173+salt+seq*43)%4800)+'m',gender:(i+seq)%3===0?'女':(i+seq)%3===1?'男':'保密',persona:'你是微信附近的人里出现的匿名用户「'+name+'」，类型是「'+t[0]+'」。'+t[2]+'你和对方此前没有共同经历，关系必须从陌生人开始。',greeting:t[3]};});}
+function wxNearbyFingerprint(rows){return (rows||[]).map(x=>[x&&x.nickname,x&&x.gender,x&&x.distance,x&&x.signature].join('|')).join('||');}
 function wxNearbyNormalize(x,i){x=x&&typeof x==='object'?x:{};const base=WX_NEARBY_FALLBACK[i%WX_NEARBY_FALLBACK.length];return{id:'near_'+uid(),nickname:String(x.nickname||base).trim().slice(0,16)||base,signature:String(x.signature||'想认识一个聊得来的人。').trim().slice(0,54),distance:String(x.distance||((i+1)*260+'m')).trim().slice(0,12),gender:['男','女','保密'].includes(x.gender)?x.gender:'保密',persona:String(x.persona||'你是一个通过微信附近的人认识的普通匿名网友，慢热、真实、尊重边界。').trim().slice(0,500),greeting:String(x.greeting||'你好，刚刚在附近的人看到你，想认识一下。').trim().slice(0,80)};}
 function wxNearbyAvatar(){return `<span class="wx-nearby-avatar"><svg viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="15" r="8"/><path d="M8 39c1-10 6-14 14-14s13 4 14 14"/></svg></span>`;}
 function wxNearbyRequest(personId){return wxNearbyState().requests.slice().reverse().find(x=>x&&x.personId===personId)||null;}
 function wxNearbyCard(p){const req=wxNearbyRequest(p.id),pending=req&&req.status==='pending',accepted=req&&req.status==='accepted',click=accepted&&req.contactId?`wxNearbyOpen('${req.id}')`:`wxNearbyAdd('${p.id}')`;return `<article class="wx-nearby-card${pending?' pending':accepted?' accepted':''}">${wxNearbyAvatar()}<div class="wx-nearby-copy"><b>${esc(p.nickname)}</b><span>${esc(p.gender)} · ${esc(p.distance)}</span><p>${esc(p.signature)}</p></div><button type="button" ${pending?'disabled':''} onclick="${click}">${pending?'等待通过':accepted?'发消息':'添加'}</button></article>`;}
-function renderWxNearby(){wxNearbySweep(true);const d=wxNearbyState();if(!d.people.length){d.people=wxNearbyFallbackPeople();save(500);}return `<div class="wx-directory-head">${wxDirectoryNav('附近的人',`<button type="button" class="r wx-dir-text" onclick="wxNearbyRefresh()" ${_wxNearbyBusy?'disabled':''}>${_wxNearbyBusy?'刷新中':'刷新'}</button>`)}</div><div class="scroll wx-directory-scroll wx-nearby-page" id="wxNearbyScroll"><div class="wx-nearby-hero"><i>${wxDiscoverIcon('nearby')}</i><span><b>附近的新朋友</b><small>匿名资料 · 添加后约 10 秒自动通过</small></span></div><div class="wx-nearby-list">${d.people.map(wxNearbyCard).join('')}</div><p class="wx-nearby-foot">不会展示真实照片和精确位置。成为好友后会出现在微信通讯录中。</p></div>`;}
-async function wxNearbyRefresh(){if(_wxNearbyBusy)return;_wxNearbyBusy=true;render();let people=[];try{const arr=await aiGen([{role:'system',content:'你是微信“附近的人”匿名资料生成器。生成12个彼此不同、像真实普通网友的匿名资料，不给真实姓名、电话、住址、公司或精确位置，不要明星和现有角色。只输出JSON数组：[{"nickname":"匿名昵称","gender":"男/女/保密","distance":"120m到5km","signature":"一句自然个签","persona":"成为好友后的性格、兴趣和说话方式，尊重边界且不编共同经历","greeting":"通过好友后第一句自然招呼"}]'},{role:'user',content:'换一批附近的匿名用户，性格和兴趣要有明显区别。'}],{max:1800,aux:true},parseArr);people=(arr||[]).slice(0,12).map(wxNearbyNormalize);}catch(_){}if(people.length<8)people=wxNearbyFallbackPeople();const d=wxNearbyState();d.people=people;_wxNearbyBusy=false;save();if(cur().p==='wxnearby')render();toast('已换一批附近的人');}
+function renderWxNearby(){wxNearbySweep(true);const d=wxNearbyState();if(!d.people.length){d.people=wxNearbyFallbackPeople(d.refreshSeq);save(500);}return `<div class="wx-directory-head">${wxDirectoryNav('附近的人',`<button type="button" class="r wx-dir-text" onclick="wxNearbyRefresh()" ${_wxNearbyBusy?'disabled':''}>${_wxNearbyBusy?'刷新中':'刷新'}</button>`)}</div><div class="scroll wx-directory-scroll wx-nearby-page" id="wxNearbyScroll"><div class="wx-nearby-hero"><i>${wxDiscoverIcon('nearby')}</i><span><b>附近的新朋友</b><small>匿名资料 · 添加后约 10 秒自动通过</small></span></div><div class="wx-nearby-list">${d.people.map(wxNearbyCard).join('')}</div><p class="wx-nearby-foot">不会展示真实照片和精确位置。成为好友后会出现在微信通讯录中。</p></div>`;}
+async function wxNearbyRefresh(){if(_wxNearbyBusy)return;const d=wxNearbyState(),before=wxNearbyFingerprint(d.people),seq=++d.refreshSeq;_wxNearbyBusy=true;render();let people=[];try{const arr=await aiGen([{role:'system',content:'你是微信“附近的人”匿名资料生成器。生成12个彼此不同、像真实普通网友的匿名资料：必须混合友善、慢热、直率、古怪、功利、推销、边界感差和纯骚扰等类型，不能全部温柔友好。骚扰型可以烦人、重复搭讪、催回复或试探边界，但不得出现人身威胁、仇恨、违法、精确定位或隐私泄露。不给真实姓名、电话、住址、公司，不要明星和现有角色。只输出JSON数组：[{"nickname":"匿名昵称","gender":"男/女/保密","distance":"120m到5km","signature":"一句自然个签","persona":"成为好友后会持续保持的性格、动机、说话方式和边界表现，不编共同经历","greeting":"通过好友后的第一句"}]'},{role:'user',content:'换一批附近的匿名用户。好坏混合、来意混合、性格明显不同，避免模板化。刷新批次：'+seq}],{max:2200,aux:true},parseArr);people=(arr||[]).slice(0,12).map(wxNearbyNormalize);}catch(_){}if(people.length<8||wxNearbyFingerprint(people)===before)people=wxNearbyFallbackPeople(seq);d.people=people;_wxNearbyBusy=false;save();if(cur().p==='wxnearby')render();toast('已换一批不同性格的附近的人');}
 function wxNearbyAdd(id){const d=wxNearbyState(),p=d.people.find(x=>x.id===id);if(!p||wxNearbyRequest(id))return;const req={id:'wnr_'+uid(),personId:id,person:Object.assign({},p),status:'pending',time:Date.now(),acceptAt:Date.now()+10000,contactId:''};d.requests.push(req);save();render();toast('好友申请已发送，等待对方通过');setTimeout(()=>wxNearbySweep(false),10050);}
 function wxNearbyContact(req){if(req.contactId){const old=getC(req.contactId);if(old)return old;}const old=(S.contacts||[]).find(c=>c&&c.friendOrigin&&c.friendOrigin.nearbyRequestId===req.id);if(old)return old;const p=req.person||{},now=Date.now(),c={id:cid(),name:String(p.nickname||'附近的人').slice(0,20),avatar:'👤',remark:'',wxid:genWxid(),signature:String(p.signature||'').slice(0,60),persona:String(p.persona||'你是通过微信附近的人认识的普通网友，真实、慢热、尊重边界。').slice(0,800),greeting:String(p.greeting||'你好，刚刚通过了你的好友申请。').slice(0,80),relation:'附近认识的朋友',gender:['男','女'].includes(p.gender)?p.gender:'',star:false,pinned:false,blocked:false,proactive:{enabled:false,start:9,end:23,times:2},chatBg:'',createdAt:now,deleted:false,_friendPending:false,_friendAcceptedAt:now};c.friendOrigin={kind:'nearby',source:'附近的人',intent:'从陌生人开始认识',requestMsg:'我想添加你为朋友',acceptedAt:now,everAdded:true,nearbyRequestId:req.id};S.contacts.push(c);msgs(c.id).push({role:'user',type:'sys',content:'对方通过了你从「附近的人」发出的好友申请',time:now,id:uid()});return c;}
 function wxNearbySweep(silent){const d=wxNearbyState(),now=Date.now(),due=d.requests.filter(x=>x&&x.status==='pending'&&(+x.acceptAt||0)<=now);if(!due.length)return false;const accepted=[];due.forEach(req=>{const c=wxNearbyContact(req);req.status='accepted';req.acceptedAt=now;req.contactId=c.id;accepted.push(c);});save();if(!silent&&cur().p==='wxnearby')render();if(!silent){if(S.settings.sound)playDing();toast(accepted.length>1?accepted.length+' 位附近好友已通过申请':(accepted[0].remark||accepted[0].name)+' 已通过好友申请');}accepted.forEach(c=>setTimeout(()=>scheduleReply(c.id,'[系统：你刚刚通过了'+S.me.name+'从微信“附近的人”发来的好友申请。你们此前没有共同经历，从普通陌生人开始；按你的人设发一条自然、克制、能继续认识的第一句微信，不要说系统或AI，不要动作描写。]'),650));return true;}
@@ -5340,7 +5368,7 @@ function wxSearchRun(q){const box=$('#wxs_res');if(!box)return;q=(q||'').trim().
   box.innerHTML=pf+(hits.length?('<div style="padding:8px 14px 2px;color:#888;font-size:12px">找到 '+hits.length+' 条</div>'+hits.slice(0,80).map(h=>`<div class="row" onclick="openChat('${h.c.id}')">${av(h.c.avatar)}<div class="meta"><div class="n">${esc(h.c.remark||h.c.name)}<span style="color:#666;font-weight:400;font-size:11px;float:right">${h.m.time?hm(h.m.time):''}</span></div><div class="s">${h.m.role==='user'?'<span style="color:#888">我：</span>':''}${wxHi(h.t,q)}</div></div></div>`).join('')):('<div class="empty" style="padding:34px 24px;color:#888">没找到包含「'+esc(q)+'」的聊天</div>'));}
 
 function renderPhoneFriends(){const p=phoneFriendState();phoneFriendMaybeSync(false);const incoming=pfReqs('incoming'),outgoing=pfReqs('outgoing'),search=p.search||{};
-  const found=(search.items||[]).map(x=>{const id=(''+(x.phone_id||x.id||'')).toUpperCase();const already=id===p.id||phoneFriendById(id);return `<div class="row">${av(x.avatar||'🙂','sm')}<div class="meta"><div class="n">${esc(x.display_name||'小手机用户')}</div><div class="s">小手机ID：${esc(id)}</div></div>${already?'<span class="pfsoft">已是好友</span>':`<button class="minibtn" style="background:#07c160;color:#fff" onclick="phoneFriendRequest('${id}')">添加</button>`}</div>`;}).join('');
+  const found=(search.items||[]).map(x=>{const id=(''+(x.phone_id||x.id||'')).toUpperCase();const already=id===p.id||phoneFriendById(id);return `<div class="row">${already?av(x.avatar||'🙂','sm'):wxNearbyAvatar()}<div class="meta"><div class="n">${esc(x.display_name||'小手机用户')}</div><div class="s">小手机ID：${esc(id)}</div></div>${already?'<span class="pfsoft">已是好友</span>':`<button class="minibtn" style="background:#07c160;color:#fff" onclick="phoneFriendRequest('${id}')">添加</button>`}</div>`;}).join('');
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">小手机好友</span><span class="r" onclick="phoneFriendSync(false,true)">${svgIc('refresh',20,'#ccc')}</span></div>
   <div class="scroll" style="background:${S.me.wxTheme==='white'?'#ededed':'#000'}">
     <div class="section" style="margin:12px">
@@ -5354,7 +5382,7 @@ function renderPhoneFriends(){const p=phoneFriendState();phoneFriendMaybeSync(fa
       <div style="display:flex;gap:8px;padding:6px 14px 12px"><input id="pf_search" value="${esc(search.q||'')}" placeholder="输入对方小手机ID，如 SPXXXXXX" style="flex:1;border:1px solid #38383a;border-radius:9px;padding:9px;background:#2c2c2e;color:#eee;text-transform:uppercase">${(search.q||(search.items&&search.items.length))?'<button class="minibtn" onclick="phoneFriendSearchClear()">清空</button>':''}<button class="send" onclick="phoneFriendSearch()">搜索</button></div>
       ${search.busy?'<div class="empty" style="padding:14px;color:#888">搜索中…</div>':search.err?`<div class="hint" style="color:#e8a85b">${esc(search.err)}</div>`:(found||((search.q||'')?'<div class="empty" style="padding:14px;color:#888">没搜到这个ID</div>':''))}
     </div>
-    ${incoming.length?`<div class="section" style="margin:12px"><div style="padding:12px 14px 4px;color:#ffb6d0;font-weight:700">新的申请</div>${incoming.map(r=>{const busy=!!_pfRespondBusy[r.id]||!!r._responding;return `<div class="it">${av(r.from_avatar||'🙂','sm')}<span style="flex:1">${esc(r.from_name||r.from_id)}</span><button class="minibtn" style="background:#07c160;color:#fff" onclick="phoneFriendRespond('${r.id}',true)" ${busy?'disabled':''}>${busy?'处理中…':'通过'}</button><button class="minibtn" onclick="phoneFriendRespond('${r.id}',false)" ${busy?'disabled':''}>忽略</button></div>`;}).join('')}</div>`:''}
+    ${incoming.length?`<div class="section" style="margin:12px"><div style="padding:12px 14px 4px;color:#ffb6d0;font-weight:700">新的申请</div>${incoming.map(r=>{const busy=!!_pfRespondBusy[r.id]||!!r._responding;return `<div class="it">${wxNearbyAvatar()}<span style="flex:1">${esc(r.from_name||r.from_id)}</span><button class="minibtn" style="background:#07c160;color:#fff" onclick="phoneFriendRespond('${r.id}',true)" ${busy?'disabled':''}>${busy?'处理中…':'通过'}</button><button class="minibtn" onclick="phoneFriendRespond('${r.id}',false)" ${busy?'disabled':''}>忽略</button></div>`;}).join('')}</div>`:''}
     ${outgoing.length?`<div class="section" style="margin:12px"><div style="padding:12px 14px 4px;color:#aaa;font-weight:700">已发送申请</div>${outgoing.map(r=>`<div class="it"><span>${esc(r.to_name||r.to_id)}</span><span class="v">等待通过</span></div>`).join('')}</div>`:''}
     <div class="section" style="margin:12px">
       <div class="it" onclick="phoneFriendCreateGroupModal()"><span style="display:inline-flex;align-items:center;gap:8px">${svgIc('users',18,'#c3c6d2')}新建小手机群</span><span class="v">›</span></div>
@@ -6665,9 +6693,6 @@ async function offAI(note){if(!_off)return;const c=getC(_off.id);const o=offScen
   }catch(e){toast('线下回复失败：'+offlineReplyFailureReason(e)+'。原对话没有被改动',6500);}if(_off)_off.busy=false;offRender();}
 function offNarrationMode(){return !!(_off&&_off.narrateMode);}
 function offNarrationDecorate(){if(typeof document==='undefined')return;const btn=$('.off-narrate'),ta=$('#off_in'),on=offNarrationMode();if(btn){btn.classList.toggle('on',on);btn.setAttribute('aria-pressed',String(on));btn.title=on?'旁白输入已开启，再点恢复普通对话':'切换为旁白输入';}if(ta){ta.placeholder=on?'输入第三人称动作 / 场景旁白…':(_off&&_off.mode==='cohab'?'当面对TA说…':'当面对他说…');const bar=ta.closest&&ta.closest('.offinput');if(bar)bar.classList.toggle('narration-mode',on);}}
-function offInputStabilize(ta,placeEnd){if(!ta)return;const wasActive=document.activeElement===ta;if(!wasActive)try{ta.focus({preventScroll:true});}catch(_){ta.focus();}ta.scrollTop=0;if(placeEnd&&!wasActive&&typeof ta.setSelectionRange==='function')try{const end=ta.value.length;ta.setSelectionRange(end,end);}catch(_){}requestAnimationFrame(()=>{if(document.activeElement===ta)ta.scrollTop=0;});}
-function offInputPointerDown(e){const ta=e&&e.currentTarget;if(!ta)return;offInputStabilize(ta,false);}
-function offInputMount(){let ta=$('#off_in');if(!ta)return;if(ta.tagName==='TEXTAREA'){const input=document.createElement('input');input.id=ta.id;input.type='text';input.inputMode='text';input.autocomplete='off';input.placeholder=ta.placeholder;input.value=ta.value;input.setAttribute('aria-label',ta.placeholder||'输入消息');input.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();offSay();}});ta.replaceWith(input);ta=input;}if(ta.dataset.offInputMounted==='1')return;ta.dataset.offInputMounted='1';ta.addEventListener('pointerdown',offInputPointerDown,{passive:true});ta.addEventListener('touchend',()=>offInputStabilize(ta,false),{passive:true});ta.addEventListener('click',()=>offInputStabilize(ta,false));ta.addEventListener('focus',()=>{ta.scrollTop=0;});}
 function offRender(){if(cur().p==='off'){render();setTimeout(offNarrationDecorate,0);}}
 function offSay(){if(!_off||_off.busy)return;const o=offSceneData(_off.id),c=getC(_off.id);if(_off.mode==='cohab'&&!cohabTogetherScene(o)){toast((c.remark||c.name)+'现在'+cohabPhaseLabel(o.phase)+'，去微信联系TA吧');return;}const ta=$('#off_in');if(!ta)return;const v=(ta.value||'').trim();if(!v)return;ta.value='';
   const item=offNarrationMode()?{id:uid(),who:'旁白',source:'me',text:v,time:Date.now()}:{id:uid(),who:'me',text:v,time:Date.now()};if(_off.mode==='cohab')cohabPushMessage(o,item);else o.msgs.push(item);save();offRender();if(!manualReplySceneOn('offline'))offAI();}
@@ -7037,7 +7062,7 @@ function renderTravel(){const t=tvInit();
   const nav=tabs.map(x=>`<div onclick="_tvTab='${x[0]}';render()" style="flex:1;text-align:center;padding:12px 0;font-size:14px;letter-spacing:1px;color:${_tvTab===x[0]?'#e9edf5':'#6b7488'};border-bottom:2px solid ${_tvTab===x[0]?'#c9a86a':'transparent'}">${x[1]}${x[0]==='trips'&&up?'<span style="margin-left:5px;width:6px;height:6px;border-radius:50%;background:#c9a86a;display:inline-block;vertical-align:middle"></span>':''}</div>`).join('');
   let body=_tvTab==='search'?tvSearchView():_tvTab==='trips'?tvTripsView():_tvTab==='passport'?tvPassportView():tvMemoryView();
   return `<div class="travel-app" style="position:absolute;inset:0;display:flex;flex-direction:column;background:${TV_BG}">
-    <div class="travel-head" style="flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:14px 16px 8px"><span onclick="home()" style="font-size:24px;color:#8a94a8;cursor:pointer">‹</span><span style="font-size:17px;letter-spacing:5px;color:#e9edf5;font-weight:600">云程</span><span style="width:20px"></span></div>
+    <div class="travel-head" style="flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;padding:14px 16px 8px"><span onclick="back()" style="font-size:24px;color:#8a94a8;cursor:pointer">‹</span><span style="font-size:17px;letter-spacing:5px;color:#e9edf5;font-weight:600">云程</span><span style="width:20px"></span></div>
     <div class="travel-tabs" style="flex:0 0 auto;display:flex;border-bottom:.5px solid rgba(255,255,255,.07)">${nav}</div>
     <div class="xscroll travel-scroll" style="flex:1;overflow-y:auto">${body}</div></div>`;}
 function tvSearchView(){const t=S.travel.search;const c=t.cid?getC(t.cid):null;
@@ -9277,7 +9302,7 @@ const BUBBLE_PRESETS={
   night:{meBg:'linear-gradient(135deg,#45484f,#26282d)',meText:'#f0f0f2',themBg:'linear-gradient(135deg,#292b30,#17181b)',themText:'#d7d8dc',meShape:'soft',themShape:'soft',meIcon:'moon',themIcon:'star',meIconColor:'#c6cad8',themIconColor:'#9ea5b8',glow:false}
 };
 const BUBBLE_ICONS={none:'无',heart:'爱心',star:'星芒',bow:'蝴蝶结',flower:'花瓣',moon:'月光'};
-function bubbleCfg(c){return c&&c.bubbleStyle||null;}
+function bubbleCfg(c){return c&&c.bubbleStyle||(S.me&&S.me.wxFeatures&&S.me.wxFeatures.globalBubble)||null;}
 function bubbleSafeColor(v,fb){v=(''+(v||'')).trim();return /^#[0-9a-f]{6}$/i.test(v)||/^linear-gradient\([#0-9a-z(),.%\s-]+\)$/i.test(v)?v:fb;}
 function bubbleIconColor(v,fb){v=(''+(v||'')).trim();return /^#[0-9a-f]{6}$/i.test(v)?v:fb;}
 function bubbleIconSVG(kind,color,cls){if(!kind||kind==='none')return '';color=bubbleIconColor(color,'#e777a5');let p='';
@@ -9405,7 +9430,7 @@ function friendReqText(raw,fb){let lines=splitBubbles(cleanReply(raw)).map(x=>cl
 function openFriendRequests(){go('newfriends');}
 function friendRequestTime(r){return +(r.decidedAt||r.visibleAt||r.time)||Date.now();}
 function friendRequestStatus(r){return r.status==='accepted'?'已同意':r.status==='rejected'?'已拒绝':'等待处理';}
-function friendRequestCard(r){const c=getC(r.contactId);if(!c)return'';const pending=r.status==='pending',status=friendRequestStatus(r),click=pending?`onclick="editContact('${c.id}')"`:(!c.deleted?`onclick="openChat('${c.id}')"`:'');return `<article class="nf-card ${r.status}" ${click}><div class="nf-avatar">${av(c.avatar||'🙂','sm')}</div><div class="nf-copy"><div class="nf-line"><b>${esc(c.remark||c.name)}</b><time>${esc(factStamp(friendRequestTime(r)))}</time></div><div class="nf-source"><span>${esc(r.source||'好友申请')}</span>${r.kind==='readd'?'<em>再次申请</em>':r.kind==='surprise'?'<em>今日邂逅</em>':'<em>新角色</em>'}</div><p>${esc(friendReqText(r.msg,'想认识你，可以通过一下吗？'))}</p>${r.intent?`<small>来意 · ${esc(r.intent)}</small>`:''}</div><div class="nf-action">${pending?`<button class="accept" onclick="event.stopPropagation();acceptFriend('${r.id}')">同意</button><button class="reject" onclick="event.stopPropagation();ignoreFriend('${r.id}')">拒绝</button>`:`<span class="${r.status}">${status}</span>`}</div></article>`;}
+function friendRequestCard(r){const c=getC(r.contactId);if(!c)return'';const pending=r.status==='pending',status=friendRequestStatus(r),click=pending?`onclick="editContact('${c.id}')"`:(!c.deleted?`onclick="openChat('${c.id}')"`:'');return `<article class="nf-card ${r.status}" ${click}><div class="nf-avatar">${pending?wxNearbyAvatar():av(c.avatar||'🙂','sm')}</div><div class="nf-copy"><div class="nf-line"><b>${esc(c.remark||c.name)}</b><time>${esc(factStamp(friendRequestTime(r)))}</time></div><div class="nf-source"><span>${esc(r.source||'好友申请')}</span>${r.kind==='readd'?'<em>再次申请</em>':r.kind==='surprise'?'<em>今日邂逅</em>':'<em>新角色</em>'}</div><p>${esc(friendReqText(r.msg,'想认识你，可以通过一下吗？'))}</p>${r.intent?`<small>来意 · ${esc(r.intent)}</small>`:''}</div><div class="nf-action">${pending?`<button class="accept" onclick="event.stopPropagation();acceptFriend('${r.id}')">同意</button><button class="reject" onclick="event.stopPropagation();ignoreFriend('${r.id}')">拒绝</button>`:`<span class="${r.status}">${status}</span>`}</div></article>`;}
 let _nfSearch='';
 function nfSearchInput(v){_nfSearch=v;const box=$('#nf-results');if(box)box.innerHTML=nfResultsHTML();}
 function nfResultsHTML(){friendRequestsInit();const q=_nfSearch.trim().toLowerCase(),all=S.friendRequests.filter(r=>friendRequestVisible(r)).sort((a,b)=>friendRequestTime(b)-friendRequestTime(a)),list=all.filter(r=>{const c=getC(r.contactId);return !q||[c&&c.name,c&&c.remark,c&&c.wxid,r.msg,r.source].some(v=>String(v||'').toLowerCase().includes(q));}),cut=Date.now()-3*86400000,recent=list.filter(r=>friendRequestTime(r)>=cut),older=list.filter(r=>friendRequestTime(r)<cut),section=(title,arr)=>arr.length?`<section class="nf-group"><h4>${title}<span>${arr.length}</span></h4>${arr.map(friendRequestCard).join('')}</section>`:'';return section('近三天',recent)+section('三天前',older)+(!list.length?`<div class="nf-empty"><i>＋</i><b>${q?'没有找到相关申请':'暂时没有新的申请'}</b><span>${q?'换个名字或微信号试试':'创建角色后，约 10 秒会在这里收到申请'}</span></div>`:'');}
@@ -9641,8 +9666,7 @@ function renderChat(id){const c=getC(id);if(!c)return '';
   const qbar=(S.settings.quoteOn!==false&&_quoting&&_quoting.id===id)?`<div style="display:flex;align-items:center;gap:8px;padding:7px 14px;background:rgba(120,130,170,.12);border-left:3px solid #8a93c8;margin:0 8px;border-radius:8px;font-size:12px;color:#aab"><span style="flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">引用${_quoting.who==='me'?'你自己':'ta'}：${esc((_quoting.text||'').slice(0,30))}${(_quoting.text||'').length>30?'…':''}</span><span onclick="quoteClear()" style="cursor:pointer;color:#889;font-size:15px;padding:0 4px">✕</span></div>`:'';
   const cohabBadge=cohabWechatNavBadge(c);
   return `<div class="nav chat-glass-nav ${cohabBadge?'cohab-wx-nav':''}"><span class="l" onclick="back()">‹</span><span class="t ${cohabBadge?'cohab-wx-title':''}"><b>${esc(c.remark||c.name)}${c.muted?' 🔕':''}</b>${cohabBadge}</span><span class="r" onclick="go('contactInfo',{id:'${id}'})">⋯</span></div>
-    ${mood}
-    <div class="chatbg" id="chatbg" style="${bg}">${body}</div>
+    <div class="chatbg" id="chatbg" style="${bg}">${mood}${body}</div>
     <div class="panel chat-tools-panel" id="panel" data-page="${_panelPage}">
       <div class="chat-panel-pane chat-function-pane ${_panelPage==='emoji'?'':'on'}">${chatFunctionPanel(id)}</div>
       <div class="chat-panel-pane chat-emoji-pane ${_panelPage==='emoji'?'on':''}"><div class="ppage">${emojiPanel(id)}</div></div>
@@ -9664,8 +9688,8 @@ function bubbleRow(c,m){
   const h=selecting?`onclick="toggleSel('${m.id}')"`:`onclick="msgMenu('${c.id}','${m.id}')"`,avatarTap=selecting?h:(me?h:`onclick="event.stopPropagation();go('chatDetails',{id:'${c.id}'})"`);
   const tick=selecting?`<span id="tk_${m.id}" style="align-self:center;font-size:20px;color:${_sel.ids.includes(m.id)?'#07c160':'#555'}">${_sel.ids.includes(m.id)?'☑':'⚪'}</span>`:'';
   const ts=m.time?`<div class="msgt">${hm(m.time)}</div>`:'';
-  const quotable=(S.settings.quoteOn!==false)&&!selecting&&(m.type==='text'||m.type==='voice');
-  const lp=quotable?` onmousedown="qPressStart('${c.id}','${m.id}')" onmouseup="qPressEnd()" onmouseleave="qPressEnd()" ontouchstart="qPressStart('${c.id}','${m.id}')" ontouchend="qPressEnd()" ontouchmove="qPressEnd()"`:'';
+  const longPressable=!selecting&&(m.type==='text'||m.type==='voice'||m.type==='image');
+  const lp=longPressable?` onmousedown="qPressStart('${c.id}','${m.id}')" onmouseup="qPressEnd()" onmouseleave="qPressEnd()" ontouchstart="qPressStart('${c.id}','${m.id}')" ontouchend="qPressEnd()" ontouchmove="qPressEnd()"`:'';
   return `<div class="msg ${me?'me':'them'}${msgEnterClass(m)}">${tick}<span ${avatarTap}>${av(me?S.me.avatar:c.avatar,bubbleAvatarClass(c,me))}</span><div class="col" ${h}${lp}>${inner}${ts}</div></div>`;}
 function msgEnterClass(m){return m&&m.role==='assistant'&&!m._call&&m.type!=='sys'&&Date.now()-(+m.time||0)<20000?' msg-enter':'';}
 function buildPart(c,m,me){
@@ -12233,7 +12257,7 @@ async function refreshMoments(){const pool=S.contacts.filter(c=>!c.deleted&&!c.b
   for(const c of picks){try{if(!await publishRoleSocialAutonomous(c,'moment',{source:'refresh'}))toast((c.remark||c.name)+'这次没有重复发布');}catch(e){toast('生成失败：'+e.message);}}}
 
 /* ---------- 通用弹窗 ---------- */
-function openModal(html){const m=$('#modal'),p=cur().p,host=document.fullscreenElement;if(!m._home)m._home=m.parentNode;if(document.body.classList.contains('cin-theater-open')&&host&&!host.contains(m))host.appendChild(m);m.classList.toggle('wxmodal-light',S.me.wxTheme==='white'&&['wechat','chat','chatDetails','contactInfo','friendInfo','contactSettings','roleMoments','roleMomentDetail','roleFeatures','newfriends','wxonlychat','wxgroups','wxlabels','wxgroupcreate','contactEdit'].includes(p));m.classList.toggle('north-glass-modal',glassThemeOn());$('#modalSheet').innerHTML=html;m.classList.add('show');}
+function openModal(html){const m=$('#modal'),p=cur().p,host=document.fullscreenElement;if(!m._home)m._home=m.parentNode;if(document.body.classList.contains('cin-theater-open')&&host&&!host.contains(m))host.appendChild(m);m.classList.toggle('wxmodal-light',S.me.wxTheme==='white'&&['wechat','chat','chatDetails','contactInfo','friendInfo','contactSettings','roleMoments','roleMomentDetail','roleFeatures','newfriends','wxonlychat','wxgroups','wxlabels','wxgroupcreate','contactEdit','wxprofile','wxqr','wxscan','wxservices','wxwallet','wxchange','wxbank','wxfamily','wxbills','wxsupport','wxfavorites','wxalbum','wxemoji','wxsettings','wxaccounts'].includes(p));m.classList.toggle('north-glass-modal',glassThemeOn());$('#modalSheet').innerHTML=html;m.classList.add('show');}
 function openCallModal(html){openModal(html);$('#modal').classList.add('call-modal');}
 function closeModal(){const m=$('#modal');m.classList.remove('show');m.classList.remove('wxmodal-light');m.classList.remove('call-modal');if(m._home&&m.parentNode!==m._home)m._home.appendChild(m);}
 /* 自建确认弹窗：主屏幕Web应用里原生 confirm() 会被静默拦截(点了没反应)，所以全部走这个 */

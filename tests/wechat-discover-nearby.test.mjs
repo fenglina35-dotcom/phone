@@ -48,9 +48,10 @@ assert.match(functionSource('friendRequestSweep'),/wxNearbySweep\(false\)/);
 
 assert.match(css,/\.wx-discover-row\.locked\{[^}]*opacity:[^}]*filter:grayscale\(1\)[^}]*pointer-events:none/);
 assert.match(css,/\.wx-nearby-avatar/);
-assert.match(functionSource('offInputPointerDown'),/offInputStabilize\(ta,false\)/);
-assert.doesNotMatch(functionSource('offInputPointerDown'),/preventDefault/);
-assert.match(functionSource('offInputMount'),/tagName==='TEXTAREA'[\s\S]*createElement\('input'\)[\s\S]*pointerdown[\s\S]*touchend[\s\S]*click/);
+for(const removed of ['offInputStabilize','offInputPointerDown','offInputMount']){
+  assert.equal(app.includes(`function ${removed}(`),false,`${removed} must stay removed so the native textarea and keyboard keep working`);
+}
+assert.doesNotMatch(app,/if\(c\.p==='off'\)offInputMount\(\)/);
 assert.match(shell,/\.offinput #off_in\{[^}]*height:42px!important[^}]*line-height:42px!important[^}]*touch-action:manipulation/);
 assert.match(app,/cohabSettingsPanelBase[\s\S]*cohab-settings-wrap/);
 assert.match(shell,/\.cohab-settings\[open\]\+\.cohab-debug-reply\{display:none\}/);

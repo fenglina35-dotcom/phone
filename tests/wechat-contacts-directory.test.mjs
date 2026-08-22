@@ -39,7 +39,8 @@ assert.doesNotMatch(functionSource('renderWxGroupCreate'),/企业微信/);
 
 assert.match(functionSource('wxQuickMenuHTML'),/发起群聊/);
 assert.match(functionSource('wxQuickMenuHTML'),/添加朋友/);
-assert.doesNotMatch(functionSource('wxQuickMenuHTML'),/扫一扫|收付款/);
+assert.match(functionSource('wxQuickMenuHTML'),/go\('wxscan'\)[\s\S]*扫一扫/);
+assert.doesNotMatch(functionSource('wxQuickMenuHTML'),/收付款/);
 assert.match(functionSource('toggleWxQuickMenu'),/_wxQuickOpen/);
 
 assert.match(app,/else if\(c\.p==='wxonlychat'\)html=renderWxOnlyChat\(\)/);

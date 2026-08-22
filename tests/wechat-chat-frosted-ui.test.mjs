@@ -5,7 +5,7 @@ const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const glass=fs.readFileSync(new URL('../glass-theme.css',import.meta.url),'utf8');
 
-assert.match(app,/c\.p==='chat'\?' wx-chat-premium'/,'chat has a scoped visual skin');
+assert.match(app,/\['chat','pfchat','pfgroup','group'\]\.includes\(c\.p\)\?' wx-chat-premium'/,'chat and group routes have the scoped visual skin');
 assert.match(app,/class="nav chat-glass-nav/,'chat title bar uses the frosted layer');
 assert.match(app,/class="moodbar chat-glass-mood/,'role mood uses the frosted chip');
 assert.doesNotMatch(app,/class="nav chat-glass-nav[^`]*耳/,'chat title has no ear ornament');
