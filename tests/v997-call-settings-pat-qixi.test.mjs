@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1045 · 微信运动与外卖精准直达整合版'/);
+  assert.match(app,/APP_VER='v1046 · 微信运动与绿色头衔修正版'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1045/);
-  assert.match(html,/sw\.js\?v=1045&r=v1045-wechat-steps-delivery-routes-1/);
+  assert.match(html,/north-sw-reloaded-1046/);
+  assert.match(html,/sw\.js\?v=1046&r=v1046-wechat-motion-title-layout-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{

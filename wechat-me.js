@@ -9,6 +9,7 @@ function F(){
   f.banks=Array.isArray(f.banks)?f.banks:[];f.familyCards=Array.isArray(f.familyCards)?f.familyCards:[];
   f.roleLogins=Array.isArray(f.roleLogins)?f.roleLogins:[];
   f.globalBubble=f.globalBubble||null;f.fontScale=f.fontScale||'normal';f.albumCollapsed=!!f.albumCollapsed;
+  if(typeof f.showTitleBadge!=='boolean')f.showTitleBadge=true;
   if(!f.banks.length)f.banks.push({id:'bank_'+uid(),name:'江苏银行储蓄卡',last4:String(Math.floor(1000+Math.random()*9000)),balance:0,color:'jiangsu'});
   f.banks.forEach((b,i)=>{b.last4=String(b.last4||Math.floor(1000+Math.random()*9000)).replace(/\D/g,'').slice(-4).padStart(4,'0');if(i===0&&(b.name==='我的储蓄卡'||!b.name)){b.name='江苏银行储蓄卡';b.color='jiangsu';}});
   return f;
@@ -24,7 +25,7 @@ function wxMeHomeIcon(kind){const icons={
 function wxMeQrIcon(){return `<svg viewBox="0 0 28 28" aria-hidden="true"><path d="M3.5 3.5h8v8h-8zM6.1 6.1h2.8v2.8H6.1zM16.5 3.5h8v8h-8zM19.1 6.1h2.8v2.8h-2.8zM3.5 16.5h8v8h-8zM6.1 19.1h2.8v2.8H6.1zM16.4 16.4h3.1v3.1h-3.1zM21.5 16.4h3v3M16.4 21.5h3v3M22 22h2.5v2.5M13.7 13.7h2.2M20.6 13.7h3.9M13.7 20.6v3.9"/></svg>`;}
 function wxMeHomeRow(kind,title,action){return `<button type="button" class="wxme-home-row wxme-home-${kind}" onclick="${action}"><i>${wxMeHomeIcon(kind)}</i><span>${esc(title)}</span><em aria-hidden="true">›</em></button>`;}
 function wxMe1037(){F();return `<div class="wxme-home">
-  <button class="wxme-profile-card" onclick="go('wxprofile')">${av(S.me.avatar,'lg')}<span><b>${esc(S.me.name)}</b><small>微信号：${esc(S.me.wxid||'未设置')}</small></span><i onclick="event.stopPropagation();go('wxqr')" aria-label="我的二维码">${wxMeQrIcon()}</i><em aria-hidden="true">›</em></button>
+  <button class="wxme-profile-card" onclick="go('wxprofile')">${av(S.me.avatar,'lg')}<span><b>${esc(S.me.name)}${collarBadge()}</b><small>微信号：${esc(S.me.wxid||'未设置')}</small></span><i onclick="event.stopPropagation();go('wxqr')" aria-label="我的二维码">${wxMeQrIcon()}</i><em aria-hidden="true">›</em></button>
   <section>${wxMeHomeRow('service','服务',"go('wxservices')")}</section>
   <section>${wxMeHomeRow('favorite','收藏',"go('wxfavorites')")}${wxMeHomeRow('moments','朋友圈',"go('wxalbum')")}${wxMeHomeRow('emoji','表情',"go('wxemoji')")}</section>
   <section>${wxMeHomeRow('settings','设置',"go('wxsettings')")}</section>
@@ -214,13 +215,14 @@ function wxSettingsFilter(v){const q=String(v||'').trim().toLowerCase();document
 function renderWxSettings(){const f=F(),dark=S.me.wxTheme!=='white';return `${WNav('设置')}<div class="scroll wxme-scroll wxsettings-page">
   <div class="wxsettings-search"><label>${svgIc('search',19,'currentColor')}<input type="search" placeholder="搜索" oninput="wxSettingsFilter(this.value)"></label></div>
   <div class="wxsettings-group"><h4>账号</h4><section>${wxSettingsRow('个人资料','',"go('wxprofile')")}${wxSettingsRow('我的二维码','',"go('wxqr')")}</section></div>
-  <div class="wxsettings-group"><h4>界面与显示</h4><section>${wxSettingsRow('界面模式',dark?'深色':'浅色',"wxThemeToggle()")}${wxSettingsRow('聊天字体',f.fontScale==='large'?'较大':f.fontScale==='small'?'较小':'标准',"wxFontCycle()")}${wxSettingsRow('全局聊天气泡',f.globalBubble?'已设置':'默认样式',"wxGlobalBubbleOpen()")}</section></div>
+  <div class="wxsettings-group"><h4>界面与显示</h4><section>${wxSettingsRow('界面模式',dark?'深色':'浅色',"wxThemeToggle()")}${wxSettingsRow('显示归属头衔',f.showTitleBadge?'已开启':'已关闭',"wxTitleBadgeToggle()")}${wxSettingsRow('聊天字体',f.fontScale==='large'?'较大':f.fontScale==='small'?'较小':'标准',"wxFontCycle()")}${wxSettingsRow('全局聊天气泡',f.globalBubble?'已设置':'默认样式',"wxGlobalBubbleOpen()")}</section></div>
   <div class="wxsettings-group"><h4>聊天</h4><section>${wxSettingsRow('通知声音',S.settings.sound?'已开启':'已关闭',"S.settings.sound=!S.settings.sound;save();render()")}${wxSettingsRow('聊天引用',S.settings.quoteOn===false?'已关闭':'已开启',"S.settings.quoteOn=S.settings.quoteOn===false;save();render()")}${wxSettingsRow('心情气泡',S.settings.showMoodTag===false?'已关闭':'已开启',"S.settings.showMoodTag=S.settings.showMoodTag===false;save();render()")}</section></div>
   <div class="wxsettings-group"><h4>通用</h4><section>${wxSettingsRow('收藏',F().favorites.length+' 条',"go('wxfavorites')")}${wxSettingsRow('存储说明','',"wxStorageInfo()")}</section></div>
   <div class="wxsettings-group"><h4>帮助与关于</h4><section>${wxSettingsRow('帮助与反馈','',"go('wxsupport')")}</section></div>
   <div class="wxsettings-group wxsettings-switch"><section>${wxSettingsRow('切换账号','',"go('wxaccounts')",'centered')}</section></div>
   <p class="wx-safe-note">微信设置不读取、不显示、也不修改 API、模型或外置语音密钥。</p></div>`;}
 function wxThemeToggle(){S.me.wxTheme=S.me.wxTheme==='white'?'black':'white';save();render();}
+function wxTitleBadgeToggle(){const f=F();f.showTitleBadge=!f.showTitleBadge;save();render();}
 function wxFontCycle(){const f=F(),a=['small','normal','large'];f.fontScale=a[(a.indexOf(f.fontScale)+1)%a.length];save();render();}
 function wxStorageInfo(){openModal('<h3>微信存储</h3><div class="hint">聊天、收藏、朋友圈相册、钱包和账号设置都随小手机存档保存。删除朋友圈相册项目会删除原朋友圈；取消收藏只删除收藏副本。</div><button class="btn g" onclick="closeModal()">知道了</button>');}
 function wxGlobalBubbleOpen(){const f=F(),keys=Object.keys(BUBBLE_PRESETS);openModal(`<h3>全局聊天气泡</h3><div class="hint">覆盖所有角色的默认气泡；若某个角色在聊天详情里单独设置过气泡，则以角色单独设置为准。</div>${keys.map(k=>`<button class="btn g" style="margin-bottom:8px" onclick="wxGlobalBubbleSet('${k}')">${esc({strawberry:'草莓',cake:'奶油蛋糕',panda:'云蓝',mint:'薄荷',classic:'微信经典',night:'深夜'}[k]||k)}</button>`).join('')}<button class="btn d" onclick="wxGlobalBubbleSet('')">恢复系统默认</button>`);}
@@ -237,7 +239,7 @@ window.renderWxProfile=renderWxProfile;window.wxProfileAvatar=wxProfileAvatar;wi
 window.renderWxQr=renderWxQr;window.wxQrPaint=wxQrPaint;window.wxQrSave=wxQrSave;
 window.renderWxScan=renderWxScan;window.wxScanStart=wxScanStart;window.wxScanStop=wxScanStop;window.wxScanAlbum=wxScanAlbum;
 window.renderWxServices=renderWxServices;window.renderWxWallet=renderWxWallet;window.renderWxChange=renderWxChange;window.renderWxBank=renderWxBank;window.renderWxFamily=renderWxFamily;window.renderWxBills=renderWxBills;window.renderWxSupport=renderWxSupport;window.renderWxFavorites=renderWxFavorites;window.renderWxAlbum=renderWxAlbum;window.renderWxEmoji=renderWxEmoji;window.renderWxSettings=renderWxSettings;window.renderWxAccounts=renderWxAccounts;
-Object.assign(window,{wxWealthInfo,wxWalletIdentity,wxWalletPaymentSettings,wxChangeRecharge,wxChangeRechargeAmount,wxChangeRechargeDo,wxTransferOpen,wxTransferDo,wxBankAdd,wxBankAddDo,wxBankOpen,wxBankTop,wxFamilyOpen,wxFamilyToggle,wxSupportAsk,wxFavoriteAdd,wxFavoriteRemove,wxFavoritesToggle,wxFavoritePlay,wxAlbumPress,wxAlbumPressEnd,wxAlbumDelete,wxSettingsFilter,wxThemeToggle,wxFontCycle,wxStorageInfo,wxGlobalBubbleOpen,wxGlobalBubbleSet,wxAccountSwitch,wxAccountForget,wxRoleLoginForget});
+Object.assign(window,{wxWealthInfo,wxWalletIdentity,wxWalletPaymentSettings,wxChangeRecharge,wxChangeRechargeAmount,wxChangeRechargeDo,wxTransferOpen,wxTransferDo,wxBankAdd,wxBankAddDo,wxBankOpen,wxBankTop,wxFamilyOpen,wxFamilyToggle,wxSupportAsk,wxFavoriteAdd,wxFavoriteRemove,wxFavoritesToggle,wxFavoritePlay,wxAlbumPress,wxAlbumPressEnd,wxAlbumDelete,wxSettingsFilter,wxThemeToggle,wxTitleBadgeToggle,wxFontCycle,wxStorageInfo,wxGlobalBubbleOpen,wxGlobalBubbleSet,wxAccountSwitch,wxAccountForget,wxRoleLoginForget});
 const wxOriginalHisStartSession=hisStartSession;
 hisStartSession=function(cid){const f=F(),old=f.roleLogins.find(x=>x.cid===cid);if(old)old.time=Date.now();else f.roleLogins.unshift({cid,time:Date.now()});f.roleLogins=f.roleLogins.slice(0,20);save();return wxOriginalHisStartSession(cid);};
 wxMe=wxMe1037;openWallet=()=>go('wxwallet');accountMgr=()=>go('wxaccounts');

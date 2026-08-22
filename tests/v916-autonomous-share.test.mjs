@@ -11,8 +11,8 @@ const pip = read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/
 const project = read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 
 test('v929 web and private versions are aligned', () => {
-  assert.match(app, /APP_VER='v1045 · 微信运动与外卖精准直达整合版'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='1045'/);
+  assert.match(app, /APP_VER='v1046 · 微信运动与绿色头衔修正版'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='1046'/);
   assert.match(project, /CURRENT_PROJECT_VERSION = 165;/);
   assert.match(project, /MARKETING_VERSION = 1\.0\.165;/);
   assert.match(bridge, /contractVersion = 25/);

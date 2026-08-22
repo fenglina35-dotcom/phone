@@ -13,7 +13,8 @@ test('role, real friend, and real group chats share one time-sorted list', () =>
   assert.match(chats, /list\.forEach\(c=>/);
   assert.match(chats, /\(p\.friends\|\|\[\]\)\.forEach\(f=>/);
   assert.match(chats, /\(p\.groups\|\|\[\]\)\.forEach\(g=>/);
-  assert.match(chats, /entries\.map\(x=>x\.html\)/);
+  assert.match(chats, /entries\.slice\(0,motionAt\)\.map\(x=>x\.html\)/);
+  assert.match(chats, /entries\.slice\(motionAt\)\.map\(x=>x\.html\)/);
 });
 
 test('pinned chats remain above recent unpinned chats', () => {
@@ -21,4 +22,9 @@ test('pinned chats remain above recent unpinned chats', () => {
   assert.match(chats, /add\(lm&&lm\.time,c\.pinned,roleRow\(c\)\)/);
   assert.match(chats, /add\(lm&&lm\.time,f\.pinned,/);
   assert.match(chats, /add\(lm&&lm\.time,g\.pinned,/);
+});
+
+test('WeChat Motion stays below every pinned chat and above regular chats', () => {
+  assert.match(chats, /const firstRegular=entries\.findIndex\(x=>!x\.pinned\),motionAt=firstRegular<0\?entries\.length:firstRegular/);
+  assert.match(chats, /entries\.slice\(0,motionAt\)[\s\S]*wxStepsChatRow\(\)[\s\S]*entries\.slice\(motionAt\)/);
 });

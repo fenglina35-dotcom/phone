@@ -14,8 +14,12 @@ const html=fs.readFileSync(path.join(root,'小手机.html'),'utf8');
 assert.match(app,/function stepMotion\(e\)[\s\S]*S\.me\.steps=\(S\.me\.steps\|\|0\)\+1/);
 assert.match(app,/function toggleSteps\(\)[\s\S]*addEventListener\('devicemotion',_stepHandler\)/);
 assert.match(app,/function renderWxSteps\(\)[\s\S]*onclick="wxStepsToggle\(\)"/);
+assert.match(app,/const firstRegular=entries\.findIndex\(x=>!x\.pinned\),motionAt=firstRegular<0\?entries\.length:firstRegular/);
+assert.match(app,/entries\.slice\(0,motionAt\)[\s\S]*wxStepsChatRow\(\)[\s\S]*entries\.slice\(motionAt\)/);
 assert.match(app,/function wxStepsToggle\(\)[\s\S]*await toggleSteps\(\)/);
 assert.match(app,/function wxChats\(\)[\s\S]*wxStepsChatRow\(\)/);
+assert.match(app,/mode\.includes\('steps-on'\)[\s\S]*S\.me\.steps=6382/);
+assert.match(app,/function glassReferenceLayout\(\)\{\}/);
 assert.match(app,/c\.p==='wxsteps'/);
 assert.match(glass,/\.wx-steps-chat-row/);
 assert.match(glass,/\.wxsteps-page/);
@@ -25,9 +29,10 @@ assert.match(app,/class="nav offnav off-date-nav"/);
 assert.match(html,/\.off-date-nav\{[^}]*grid-template-columns:34px minmax\(0,1fr\) auto/);
 assert.match(html,/\.off-date-nav>\.off-nav-actions\{[^}]*position:static/);
 
-// 编辑角色的双列输入和表单控件不能把页面撑宽或向左漂移。
+// 编辑角色的成对字段改为逐行展示，长职业、称呼和消息数量不能再被双列网格截断。
 assert.match(glass,/\.wx-contact-editor\{[^}]*overflow-x:hidden/);
-assert.match(glass,/\.wx-editor-two\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+assert.match(glass,/\.wx-editor-two\{[^}]*grid-template-columns:minmax\(0,1fr\)/);
+assert.match(glass,/\.wx-editor-two label>span\{[^}]*flex:0 0 96px[^}]*overflow:visible/);
 assert.match(glass,/\.wx-contact-editor label input[^}]*max-width:100%/);
 
 // 通话头像支持持久化图片引用，通话层始终有不透明背景并且退出时清理。

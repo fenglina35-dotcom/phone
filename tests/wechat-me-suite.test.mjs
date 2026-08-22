@@ -115,6 +115,11 @@ assert.match(glass,/\.wx-classic-group-avatar[^}]*#08bd66/);
 
 assert.match(feature,/function wxSettingsRow\(title,value,action,cls\)/);
 assert.match(feature,/class="wxsetting-row/);
+assert.match(feature,/function wxMe1037\(\)[\s\S]*collarBadge\(\)/);
+assert.match(feature,/显示归属头衔/);
+assert.match(feature,/function wxTitleBadgeToggle\(\)/);
+assert.match(feature,/Object\.assign\(window,\{[^}]*wxTitleBadgeToggle/);
+assert.match(css,/\.wx-title-badge\{[^}]*#07c160/);
 const wxSettingsBody=feature.match(/function renderWxSettings\(\)[\s\S]*?\nfunction wxThemeToggle/)?.[0]||'';
 assert.ok(wxSettingsBody,'missing renderWxSettings body');
 assert.doesNotMatch(wxSettingsBody,/(?:^|[^A-Za-z])Row\('/);

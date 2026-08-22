@@ -11,8 +11,8 @@ const delegate = fs.readFileSync(new URL('../native/private-small-phone/XcodePro
 const project = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj', import.meta.url), 'utf8');
 
 test('current release versions align', () => {
-  assert.match(app, /APP_VER='v1045 · 微信运动与外卖精准直达整合版'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='1045'/);
+  assert.match(app, /APP_VER='v1046 · 微信运动与绿色头衔修正版'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='1046'/);
   assert.match(project, /CURRENT_PROJECT_VERSION = 165;/);
   assert.match(project, /MARKETING_VERSION = 1\.0\.165;/);
   assert.match(bridge, /contractVersion = 25/);
