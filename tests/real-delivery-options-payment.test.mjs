@@ -8,7 +8,7 @@ const browser=fs.readFileSync(new URL('../services/phone-delivery-browser/src/ta
 
 assert.match(client,/selectedOptions:selected/,'the selected real platform options must be sent when creating an order');
 assert.match(client,/每个 required 组必须选择/,'the role must choose every required option from platform data');
-assert.match(client,/用户本次明确说出的杯型、糖度、冰度、口味和小料都是硬条件/,'explicit user drink and flavor requirements must outrank role preferences');
+assert.match(client,/用户本次明确说出的杯型、份量、糖度、冰度、温度、口味、辣度、搭配和加料都是硬条件/,'explicit user food and drink requirements must outrank role preferences');
 assert.doesNotMatch(client,/deliverySetAutoPay|deliveryOpenWallet|deliveryTopUp|deliverySaveWallet/,'manual-only delivery must not expose fake wallet or auto-pay controls');
 assert.match(client,/平台结算页已自动优惠/,'the client must report only checkout-confirmed discount facts');
 assert.match(client,/offer_options/,'the client must fetch options only after selecting a fast candidate');
@@ -27,5 +27,7 @@ assert.match(browser,/期间不会再次打开或重搜/,'cooldown retries must 
 assert.match(browser,/支付成功\|付款成功/,'payment status must come from an explicit platform-page receipt');
 assert.match(browser,/checkoutAmounts\(body\)/,'the payable total must use checkout-specific parsing');
 assert.match(browser,/购物车已有商品，为避免混单/,'an existing platform cart must stop role-created order mixing');
+assert.match(browser,/searchInsideShop/,'a saved shop must try its own product search instead of taking the first menu item');
+assert.match(browser,/rememberedRoutes\.slice\(0, 3\)/,'role ordering must inspect no more than three saved shops');
 
 console.log('real delivery option and payment tests passed');

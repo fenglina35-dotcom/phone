@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { DeliveryAdapter } from '../src/adapter.mjs';
 import { sign, verifySignedRequest } from '../src/security.mjs';
-import { brandMatches, checkoutAmounts, knownRouteKey, preferredBrand, publicAddressLabel, riskChallengeKind, TaobaoFlashBrowser } from '../src/taobao-flash-browser.mjs';
+import { brandMatches, checkoutAmounts, knownRouteKey, preferredBrand, productMatchesSavedItem, publicAddressLabel, riskChallengeKind, shopClosedReason, TaobaoFlashBrowser } from '../src/taobao-flash-browser.mjs';
 
 class FakeBrowser {
   constructor() { this.submits = 0; this.statusCalls = 0; this.statusValue = 'pending_payment'; }
@@ -62,6 +62,11 @@ test('known product routes ignore the requested sugar and ice modifiers', () => 
   assert.notEqual(knownRouteKey('瑞幸咖啡 生椰拿铁'), knownRouteKey('瑞幸咖啡 橙C美式'));
 });
 
+test('closed shop text is recognized before attempting to add a product', () => {
+  assert.equal(shopClosedReason('瑞幸咖啡（测试店） 休息中 明天6:30开始营业'), '休息中 明天6:30开始营业');
+  assert.equal(shopClosedReason('生椰拿铁 月售 2000'), '');
+});
+
 test('a successful real product route survives a service restart', async () => {
   const profile = await fs.mkdtemp(path.join(os.tmpdir(), 'phone-delivery-known-route-'));
   try {
@@ -86,6 +91,73 @@ test('a successful real product route survives a service restart', async () => {
   } finally {
     await fs.rm(profile, { recursive: true, force: true });
   }
+});
+
+test('the same product can keep separate direct routes for several shops', async () => {
+  const profile = await fs.mkdtemp(path.join(os.tmpdir(), 'phone-delivery-multi-route-'));
+  try {
+    const browser = new TaobaoFlashBrowser({ profile });
+    await browser.rememberKnownRoute({
+      query: '瑞幸咖啡 生椰拿铁 少糖', merchant: '瑞幸咖啡（一店）', merchantId: 'luckin-1',
+      itemName: '生椰拿铁', shopUrl: 'https://h5.ele.me/newretail/p/ushop/?store_id=luckin-1',
+    });
+    await browser.rememberKnownRoute({
+      query: '瑞幸咖啡 生椰拿铁 少糖', merchant: '瑞幸咖啡（二店）', merchantId: 'luckin-2',
+      itemName: '生椰拿铁', shopUrl: 'https://h5.ele.me/newretail/p/ushop/?store_id=luckin-2',
+    });
+    const routes = await new TaobaoFlashBrowser({ profile }).knownRoutesFor('瑞幸咖啡 生椰拿铁 少冰', 6, true);
+    assert.equal(routes.length, 2);
+    assert.deepEqual(new Set(routes.map(route => route.merchantId)), new Set(['luckin-1', 'luckin-2']));
+  } finally {
+    await fs.rm(profile, { recursive: true, force: true });
+  }
+});
+
+test('an exact saved drink is never replaced by a shorter generic menu item', () => {
+  assert.equal(productMatchesSavedItem('生椰拿铁', '生椰拿铁'), true);
+  assert.equal(productMatchesSavedItem('生椰拿铁（大杯）', '生椰拿铁'), true);
+  assert.equal(productMatchesSavedItem('拿铁', '生椰拿铁'), false);
+  assert.equal(productMatchesSavedItem('冰吸生椰拿铁', '生椰拿铁'), true);
+});
+
+test('a closed first route is skipped and the exact product is read from the next shop', async () => {
+  const browser = new TaobaoFlashBrowser();
+  const first = { routeKey: 'route-1', merchant: '瑞幸咖啡（一店）', merchantId: 'luckin-1', itemName: '生椰拿铁', shopUrl: 'https://h5.ele.me/newretail/p/ushop/?store_id=luckin-1' };
+  const second = { routeKey: 'route-2', merchant: '瑞幸咖啡（二店）', merchantId: 'luckin-2', itemName: '生椰拿铁', shopUrl: 'https://h5.ele.me/newretail/p/ushop/?store_id=luckin-2' };
+  browser.knownRoute = async () => first;
+  browser.knownRoutesFor = async () => [first, second];
+  browser.enterShop = async () => {
+    if (browser.shops[0].name.includes('一店')) throw new Error('门店休息中');
+    return { url: () => second.shopUrl };
+  };
+  browser.requireLogin = async () => {};
+  browser.riskCheck = async () => 0;
+  browser.extractMenu = async () => [
+    { name: '拿铁', description: '菜单第一项', price: 12, buttonIndex: 1 },
+    { name: '生椰拿铁', description: '少糖可选', price: 18, buttonIndex: 7 },
+  ];
+  browser.markKnownRouteClosed = async () => {};
+  browser.goto = async () => { throw new Error('不应进入全平台搜索'); };
+  const offers = await browser.search('瑞幸咖啡 生椰拿铁 少糖', 3, { allowGlobalSearch: false });
+  assert.equal(offers[0].merchant, '瑞幸咖啡（二店）');
+  assert.equal(offers[0].name, '生椰拿铁');
+  assert.equal(offers[0].browserRef.buttonIndex, 7);
+});
+
+test('all saved shops being closed stops without any global search', async () => {
+  const browser = new TaobaoFlashBrowser();
+  const routes = [
+    { routeKey: 'route-1', merchant: '瑞幸咖啡（一店）', itemName: '生椰拿铁', shopUrl: 'https://h5.ele.me/newretail/p/ushop/?store_id=luckin-1' },
+    { routeKey: 'route-2', merchant: '瑞幸咖啡（二店）', itemName: '生椰拿铁', shopUrl: 'https://h5.ele.me/newretail/p/ushop/?store_id=luckin-2' },
+  ];
+  browser.knownRoute = async () => routes[0];
+  browser.knownRoutesFor = async () => routes;
+  browser.enterShop = async () => { throw new Error('门店已打烊'); };
+  browser.markKnownRouteClosed = async () => {};
+  let globalSearches = 0;
+  browser.goto = async () => { globalSearches += 1; };
+  await assert.rejects(browser.search('瑞幸咖啡 生椰拿铁', 3, { allowGlobalSearch: false }), /全部打烊/);
+  assert.equal(globalSearches, 0);
 });
 
 test('a remembered route skips global search but still reads the current menu price', async () => {
@@ -189,6 +261,17 @@ test('concurrent cold requests share one browser launch', async () => {
   assert.equal(starts, 1);
 });
 
+test('a manually closed browser page is replaced before the next operation', async () => {
+  const browser = new TaobaoFlashBrowser({ headless: true });
+  const replacement = { isClosed: () => false };
+  browser.page = { isClosed: () => true };
+  browser.context = { pages: () => [replacement], async newPage() { throw new Error('existing page should be reused'); } };
+  let launches = 0;
+  browser.start = async () => { launches += 1; };
+  assert.equal(await browser.ensure(), replacement);
+  assert.equal(launches, 0);
+});
+
 test('concurrent first requests share one browser prewarm', async () => {
   const browser = new TaobaoFlashBrowser();
   let warms = 0;
@@ -211,6 +294,24 @@ test('capabilities reuses one warm status result for repeated settings checks', 
   assert.equal(first.addressLabel, '家');
   assert.equal(second.addressLabel, '家');
   assert.equal(browser.statusCalls, 1);
+});
+
+test('role search uses saved routes only and does not reopen the address or global search pages', async () => {
+  let addressReads = 0; let searchOptions = null;
+  const browser = {
+    async currentAddress() { addressReads += 1; return { label: '家', fingerprintSource: 'secret' }; },
+    async search(query, limit, options) {
+      searchOptions = options;
+      return [{ merchantId: 'luckin-1', merchant: '瑞幸咖啡', name: '生椰拿铁', price: 18, deliveryFee: 0, total: 18, browserRef: {} }];
+    },
+  };
+  const adapter = new DeliveryAdapter({ browser, secret: '12345678901234567890123456789012' });
+  const result = await adapter.handle('search', {
+    query: '瑞幸咖啡 生椰拿铁 少糖', roleId: 'role-1', addressLabel: '家', addressFingerprint: 'approved-address-fingerprint', limit: 3,
+  }, { target: 'yb_test' });
+  assert.equal(result.offers[0].name, '生椰拿铁');
+  assert.equal(addressReads, 0);
+  assert.deepEqual(searchOptions, { allowGlobalSearch: false });
 });
 
 test('adapter exposes manual payment and preserves real options', async () => {

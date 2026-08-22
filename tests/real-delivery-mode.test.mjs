@@ -24,7 +24,12 @@ assert.match(delivery,/automatic:false/,'the role-created order must stop for us
 assert.match(delivery,/safePayUrl\(data\.payUrl\)/,'payment links must be scheme allowlisted');
 assert.match(delivery,/deliveryConfirmAddress/,'the user must have an explicit address-confirmation action');
 assert.doesNotMatch(delivery,/deliverySaveConnector/,'ordinary users must not be asked to configure a connector URL');
-assert.match(delivery,/奶茶口味偏好/);
+assert.match(delivery,/奶茶偏好/);
+assert.match(delivery,/主食偏好/);
+assert.match(delivery,/咖啡偏好/);
+assert.match(delivery,/KFC 偏好/);
+assert.match(delivery,/deliveryOpenSavedRoutes/,'users must be able to inspect the routes available to role ordering');
+assert.match(delivery,/角色不会全网自动搜索/,'role ordering must stay on verified direct routes');
 assert.match(delivery,/本次口头要求永远优先/);
 assert.doesNotMatch(delivery,/Math\.random\(\).*rating|生成6个相关餐品|骑手已接单🛵/,'real layer must not fabricate commerce facts');
 

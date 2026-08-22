@@ -15,6 +15,19 @@ export function riskChallengeKind(value) {
   return '';
 }
 
+export function shopClosedReason(value) {
+  const body = clean(value, 12_000);
+  const match = body.match(/(?:休息中(?:\s*明天?\s*\d{1,2}(?::\d{2})?\s*开始营业)?|已打烊|本店休息|商家休息|暂停营业|不在营业时间|今日已休息)/i);
+  return clean(match?.[0], 80);
+}
+
+export function productMatchesSavedItem(candidateName, savedItemName) {
+  const candidate = knownRouteKey(candidateName);
+  const target = knownRouteKey(savedItemName);
+  if (!candidate || !target) return false;
+  return candidate === target || candidate.includes(target);
+}
+
 export function preferredBrand(value) {
   const query = clean(value, 120);
   if (/瑞幸(?:咖啡)?|luckin/i.test(query)) return 'luckin';
@@ -129,7 +142,26 @@ export class TaobaoFlashBrowser {
     await page.bringToFront().catch(() => {});
   }
 
-  async ensure() { await this.start(); await this.reveal(this.page); return this.page; }
+  async ensure() {
+    let alive = false;
+    if (this.context) {
+      try {
+        const pages = this.context.pages().filter(page => !page.isClosed());
+        if (!this.page || this.page.isClosed()) this.page = pages[0] || await this.context.newPage();
+        alive = Boolean(this.page && !this.page.isClosed());
+      } catch (_) {
+        alive = false;
+      }
+    }
+    if (!alive) {
+      this.context = null;
+      this.page = null;
+      this.prewarmed = false;
+      await this.start();
+    }
+    await this.reveal(this.page);
+    return this.page;
+  }
   pageReady(url, text) {
     if (/\/search\//i.test(url)) return /起送|月售|配送|暂无搜索结果|未找到/.test(text);
     if (/address/i.test(url)) return /编辑|新增收货地址|请选择收货地址/.test(text);
@@ -207,40 +239,67 @@ export class TaobaoFlashBrowser {
     return this.knownRoutesWrite;
   }
 
-  async knownRoute(query) {
+  async knownRoutesFor(query, limit = 6, includeClosed = false) {
     const key = knownRouteKey(query);
-    if (!key) return null;
+    if (!key) return [];
     const routes = await this.loadKnownRoutes();
-    if (routes[key]) return { ...routes[key], routeKey: key };
+    const now = Date.now();
     const brand = preferredBrand(query);
     const found = Object.entries(routes)
       .filter(([, entry]) => !brand || brandMatches(brand, `${entry.merchant} ${entry.query}`))
+      .filter(([, entry]) => includeClosed || Number(entry.closedUntil || 0) <= now)
       .filter(([, entry]) => {
         const itemKey = knownRouteKey(entry.itemName);
         return itemKey && (key.includes(itemKey) || itemKey.includes(key));
       })
-      .sort(([, left], [, right]) => Number(right.savedAt || 0) - Number(left.savedAt || 0))[0];
-    return found ? { ...found[1], routeKey: found[0] } : null;
+      .sort(([leftKey, left], [rightKey, right]) => Number(rightKey === key) - Number(leftKey === key) || Number(right.savedAt || 0) - Number(left.savedAt || 0))
+      .slice(0, Math.max(1, Math.min(20, Number(limit) || 6)))
+      .map(([routeKey, entry]) => ({ ...entry, routeKey }));
+    return found;
+  }
+
+  async knownRoute(query) {
+    return (await this.knownRoutesFor(query, 1, false))[0] || null;
+  }
+
+  async listKnownRoutes() {
+    const routes = await this.loadKnownRoutes();
+    return Object.entries(routes).map(([routeKey, entry]) => ({
+      routeKey, query: clean(entry.query, 160), merchant: clean(entry.merchant, 100),
+      itemName: clean(entry.itemName, 140), savedAt: Number(entry.savedAt || 0),
+      closedUntil: Number(entry.closedUntil || 0), closedReason: clean(entry.closedReason, 80),
+    })).sort((left, right) => right.savedAt - left.savedAt);
+  }
+
+  async markKnownRouteClosed(routeKey, reason, durationMs = 12 * 60 * 60_000) {
+    const routes = await this.loadKnownRoutes();
+    if (!routeKey || !routes[routeKey]) return;
+    routes[routeKey].closedUntil = Date.now() + Math.max(30 * 60_000, Number(durationMs) || 0);
+    routes[routeKey].closedReason = clean(reason, 80) || '门店休息中';
+    await this.writeKnownRoutes();
   }
 
   async forgetKnownRoute(query) {
-    const key = knownRouteKey(query);
     const routes = await this.loadKnownRoutes();
+    const directKey = clean(query, 300);
+    const key = routes[directKey] ? directKey : knownRouteKey(query);
     if (!key || !routes[key]) return;
     delete routes[key];
     await this.writeKnownRoutes();
   }
 
   async rememberKnownRoute(ref) {
-    const key = knownRouteKey(ref?.query);
-    if (!key || !shopUrl(ref?.shopUrl) || !clean(ref?.itemName, 140)) return;
+    const queryKey = knownRouteKey(ref?.query);
+    if (!queryKey || !shopUrl(ref?.shopUrl) || !clean(ref?.itemName, 140)) return;
     const routes = await this.loadKnownRoutes();
+    const merchantKey = knownRouteKey(ref?.merchantId || ref?.merchant || ref?.shopUrl).slice(0, 100);
+    const key = merchantKey ? `${queryKey}::${merchantKey}` : queryKey;
     for (const [routeKey, entry] of Object.entries(routes)) {
       if (routeKey !== key && knownRouteKey(entry.itemName) === knownRouteKey(ref.itemName) && clean(entry.shopUrl, 1000) === clean(ref.shopUrl, 1000)) delete routes[routeKey];
     }
     routes[key] = {
       query: clean(ref.query, 160), merchant: clean(ref.merchant, 100), merchantId: clean(ref.merchantId, 120),
-      itemName: clean(ref.itemName, 140), shopUrl: clean(ref.shopUrl, 1000), savedAt: Date.now(),
+      itemName: clean(ref.itemName, 140), shopUrl: clean(ref.shopUrl, 1000), savedAt: Date.now(), closedUntil: 0, closedReason: '',
     };
     await this.writeKnownRoutes();
   }
@@ -341,7 +400,7 @@ export class TaobaoFlashBrowser {
     return value;
   }
 
-  async search(query, limit = 12) {
+  async search(query, limit = 12, { allowGlobalSearch = true } = {}) {
     await this.assertRiskCooldown();
     const startedAt = Date.now();
     let humanWaitMs = 0;
@@ -353,10 +412,16 @@ export class TaobaoFlashBrowser {
       assertWithinSearchTime();
     };
     const remembered = await this.knownRoute(query);
-    if (remembered) {
+    const stored = await this.knownRoutesFor(query, 12, true);
+    const rememberedRoutes = [];
+    if (remembered) rememberedRoutes.push(remembered);
+    for (const route of stored) if (!rememberedRoutes.some(row => row.routeKey === route.routeKey) && Number(route.closedUntil || 0) <= Date.now()) rememberedRoutes.push(route);
+    const closedRoutes = stored.filter(route => Number(route.closedUntil || 0) > Date.now());
+    const closedMerchants = [];
+    for (const rememberedRoute of rememberedRoutes.slice(0, 3)) {
       const shop = {
-        index: 0, name: remembered.merchant || '已记住的商家', storeId: remembered.merchantId || '',
-        anchorUrl: remembered.shopUrl, directUrl: remembered.shopUrl, deliveryFee: 0, freeDeliveryThreshold: 0,
+        index: 0, name: rememberedRoute.merchant || '已记住的商家', storeId: rememberedRoute.merchantId || '',
+        anchorUrl: rememberedRoute.shopUrl, directUrl: rememberedRoute.shopUrl, deliveryFee: 0, freeDeliveryThreshold: 0,
         etaMinutes: 0, rating: 0, monthlySales: 0, couponLabel: '',
       };
       this.searchUrl = '';
@@ -364,9 +429,13 @@ export class TaobaoFlashBrowser {
       try {
         const page = await this.enterShop(0, { preferSaved: true });
         await this.requireLogin(page); await waitForHumanVerification(page);
-        const items = await this.extractMenu(page, Math.max(12, limit), query);
-        const target = knownRouteKey(remembered.itemName);
-        const item = items.find(row => knownRouteKey(row.name) === target) || items.find(row => knownRouteKey(row.name).includes(target) || target.includes(knownRouteKey(row.name)));
+        let items = await this.extractMenu(page, Math.max(12, limit), query);
+        let item = items.find(row => productMatchesSavedItem(row.name, rememberedRoute.itemName));
+        if (!item && await this.searchInsideShop(page, rememberedRoute.itemName)) {
+          await waitForHumanVerification(page);
+          items = await this.extractMenu(page, Math.max(12, limit), rememberedRoute.itemName);
+          item = items.find(row => productMatchesSavedItem(row.name, rememberedRoute.itemName));
+        }
         if (item) {
           const deliveryFee = shop.freeDeliveryThreshold > 0 && item.price >= shop.freeDeliveryThreshold ? 0 : shop.deliveryFee;
           return [{
@@ -377,13 +446,25 @@ export class TaobaoFlashBrowser {
             browserRef: { shopIndex: 0, itemName: item.name, buttonIndex: item.buttonIndex, detailUrl: '', shopUrl: shop.anchorUrl || shop.directUrl, query, merchant: shop.name, merchantId: shop.storeId || '' },
           }];
         }
-        await this.forgetKnownRoute(remembered.routeKey || query);
+        await this.forgetKnownRoute(rememberedRoute.routeKey || query);
       } catch (error) {
         const message = String(error?.message || error);
+        if (/门店已打烊|门店休息中|暂停营业|不在营业时间/.test(message)) {
+          const reason = clean(message.replace(/^.*?(?=门店已打烊|门店休息中|暂停营业|不在营业时间)/, ''), 80) || '门店休息中';
+          closedMerchants.push(shop.name);
+          await this.markKnownRouteClosed(rememberedRoute.routeKey, reason).catch(() => {});
+          continue;
+        }
         if (!/真实商家已失效|未能进入淘宝闪购商家|没有在真实商家中定位到同一件商品/.test(message)) throw error;
-        await this.forgetKnownRoute(remembered.routeKey || query).catch(() => {});
+        await this.forgetKnownRoute(rememberedRoute.routeKey || query).catch(() => {});
       }
     }
+    if (closedMerchants.length || closedRoutes.length) {
+      const names = [...new Set([...closedMerchants, ...closedRoutes.map(route => route.merchant).filter(Boolean)])].slice(0, 3).join('、');
+      throw new Error(`已登记的${names || '匹配门店'}目前全部打烊或休息中；本轮已停止，没有重新全网搜索`);
+    }
+    if (stored.length || rememberedRoutes.length) throw new Error('已登记的同品牌同商品路线当前均不可用；为了避免人机验证，本轮没有重新全网搜索');
+    if (!allowGlobalSearch) throw new Error('还没有登记这个品牌和商品的常用直达路线；为了避免人机验证，角色不会发起全网自动搜索，请由本人先在外卖页成功打开并读取一次规格');
     const page = await this.goto(`https://h5.ele.me/search/?keyword=${encodeURIComponent(query)}`, 2500);
     await this.requireLogin(page); await waitForHumanVerification(page);
     let shops = [];
@@ -485,6 +566,9 @@ export class TaobaoFlashBrowser {
     shop.storeId = storeId;
     await page.waitForTimeout(500);
     await this.dismissPromoOverlays(page);
+    const earlyBody = clean(await page.locator('body').innerText().catch(() => ''), 4000);
+    const closedReason = shopClosedReason(earlyBody);
+    if (closedReason) throw new Error(`门店已打烊：${shop.name}（${closedReason}）`);
     await this.waitForPurchaseControls(page, 8000);
     const shopBody = clean(await page.locator('body').innerText().catch(() => ''), 1800);
     const merchantMatch = shopBody.match(/环境\s+(.{2,50}?)\s+评分\s*([0-5](?:\.\d)?)/) || shopBody.match(/商家\s+(.{2,50}?)\s+(?:刚刚搜过|买过|热销|点餐)/);
@@ -555,6 +639,28 @@ export class TaobaoFlashBrowser {
     return unique.map((item, index) => ({ item, index, score: score(item) }))
       .sort((left, right) => right.score - left.score || left.index - right.index)
       .slice(0, limit).map(row => row.item);
+  }
+
+  async searchInsideShop(page, itemName) {
+    if (!shopUrl(page?.url?.()) || !clean(itemName, 140)) return false;
+    const fields = page.locator([
+      'input[placeholder*="搜索店内"]', 'input[placeholder*="搜索商品"]',
+      'input[aria-label*="搜索店内"]', 'input[aria-label*="搜索商品"]',
+    ].join(', '));
+    let field = await this.visibleLocator(fields, true);
+    if (!field) {
+      const trigger = await this.visibleLocator(page.locator('[aria-label*="搜索店内"], [aria-label*="搜索商品"]'), true);
+      if (trigger) {
+        await this.activateControl(page, trigger).catch(() => {});
+        await page.waitForTimeout(350);
+        field = await this.visibleLocator(fields, true);
+      }
+    }
+    if (!field) return false;
+    await field.fill(clean(itemName, 140));
+    await field.press('Enter').catch(() => {});
+    await this.waitForContent(page, 1800);
+    return true;
   }
 
   purchaseControls(page) {

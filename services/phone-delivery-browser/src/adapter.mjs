@@ -29,6 +29,7 @@ export class DeliveryAdapter {
     if (action === 'diagnostic_cleanup_item' && process.env.PHONE_DELIVERY_DIAGNOSTIC_PATH) return this.browser.diagnosticCleanupItem(clean(payload.itemName, 140));
     if (action === 'capabilities') return this.capabilities();
     if (action === 'confirm_address') return this.confirmAddress(payload);
+    if (action === 'saved_routes') return this.savedRoutes();
     if (action === 'search') return this.search(payload, context);
     if (action === 'offer_options') return this.offerOptions(payload, context);
     if (action === 'create_order') return this.createOrder(payload, context);
@@ -72,9 +73,12 @@ export class DeliveryAdapter {
   async search(payload, context) {
     const query = clean(payload.query, 120);
     if (!query) throw new Error('请输入要搜索的餐品或店铺');
-    const address = await this.browser.currentAddress();
-    const found = await this.browser.search(query, Math.min(this.maxOffers, Number(payload.limit) || this.maxOffers));
-    const addressFingerprint = opaqueFingerprint(this.secret, address.fingerprintSource);
+    const routeOnly = Boolean(clean(payload.roleId, 120));
+    const suppliedFingerprint = clean(payload.addressFingerprint, 180);
+    if (routeOnly && !suppliedFingerprint) throw new Error('角色点单前需要由本人先确认一次平台默认收货地址');
+    const address = routeOnly ? { label: clean(payload.addressLabel, 80) || '平台默认地址' } : await this.browser.currentAddress();
+    const found = await this.browser.search(query, Math.min(this.maxOffers, Number(payload.limit) || this.maxOffers), { allowGlobalSearch: !routeOnly });
+    const addressFingerprint = routeOnly ? suppliedFingerprint : opaqueFingerprint(this.secret, address.fingerprintSource);
     const offers = found.slice(0, this.maxOffers).map(item => {
       const offerId = `tb_${crypto.randomUUID()}`;
       const quoteId = `q_${crypto.randomUUID()}`;
@@ -96,6 +100,14 @@ export class DeliveryAdapter {
       return offer;
     });
     return { offers, addressLabel: clean(address.label, 80) };
+  }
+
+  async savedRoutes() {
+    const routes = await this.browser.listKnownRoutes();
+    return { routes: routes.map(route => ({
+      query: clean(route.query, 160), merchant: clean(route.merchant, 100), itemName: clean(route.itemName, 140),
+      savedAt: Number(route.savedAt || 0), closedUntil: Number(route.closedUntil || 0), closedReason: clean(route.closedReason, 80),
+    })) };
   }
 
   async offerOptions(payload, context) {

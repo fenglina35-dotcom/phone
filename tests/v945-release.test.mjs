@@ -12,22 +12,22 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v1044 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1044 · 远控字幕与外卖风控降扰修复版'/);
-  assert.match(app,/const url='sw\.js\?v=1044&r=v1044-remote-delivery-safety-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1044'/);
-  assert.match(html,/app\.js\?v=1044/);
-  assert.match(sw,/const BUILD='1044'/);
-  assert.match(sw,/north-shell-v1044/);
-  assert.match(index,/小手机\.html\?v=1044/);
-  assert.match(repair,/小手机\.html\?v=1044/);
+test('v1045 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v1045 · 微信运动与外卖精准直达整合版'/);
+  assert.match(app,/const url='sw\.js\?v=1045&r=v1045-wechat-steps-delivery-routes-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1045'/);
+  assert.match(html,/app\.js\?v=1045/);
+  assert.match(sw,/const BUILD='1045'/);
+  assert.match(sw,/north-shell-v1045/);
+  assert.match(index,/小手机\.html\?v=1045/);
+  assert.match(repair,/小手机\.html\?v=1045/);
 });
 
-test('the private iOS package embeds web v1044 and keeps 1.0.164 delivery',()=>{
-  assert.match(privateBundle,/<string>1044<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.164;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 164;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.164 \(164\)'/);
+test('the private iOS package embeds web v1045 and keeps 1.0.165 delivery',()=>{
+  assert.match(privateBundle,/<string>1045<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.165;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 165;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.165 \(165\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 
