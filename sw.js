@@ -1,6 +1,6 @@
-const BUILD='1038';
-const HOTFIX='v1038-real-delivery-reply-1';
-const SHELL_CACHE='north-shell-v1038';
+const BUILD='1039';
+const HOTFIX='v1039-wechat-pages-1';
+const SHELL_CACHE='north-shell-v1039';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
@@ -22,6 +22,10 @@ const OPTIONAL_FILES=[
   './thought-card-effects.js?v='+BUILD,
   './pet-game.js?v='+BUILD,
   './pet-game.css?v='+BUILD,
+  './wechat-me.css?v='+BUILD,
+  './wechat-me.js?v='+BUILD,
+  './vendor/qr/qrcode.js?v='+BUILD,
+  './vendor/qr/jsQR.js?v='+BUILD,
   './vendor/mp4box.all.mjs?v='+BUILD,
   './vendor/rolldown-runtime-w6R9maHv.mjs',
   './vendor/styp-9TIZZDLN.mjs',

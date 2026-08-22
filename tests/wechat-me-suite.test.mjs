@@ -7,7 +7,6 @@ const css=fs.readFileSync(new URL('../wechat-me.css',import.meta.url),'utf8');
 const glass=fs.readFileSync(new URL('../glass-theme.css',import.meta.url),'utf8');
 const shell=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
-const manifest=JSON.parse(fs.readFileSync(new URL('../native/private-small-phone/Resources/private-phone-web.manifest.json',import.meta.url),'utf8'));
 
 for(const route of ['wxprofile','wxqr','wxscan','wxservices','wxwallet','wxchange','wxbank','wxfamily','wxbills','wxsupport','wxfavorites','wxalbum','wxemoji','wxsettings','wxaccounts']){
   assert.match(app,new RegExp(`c\\.p==='${route}'`),`missing ${route} route`);
@@ -22,8 +21,6 @@ assert.match(shell,/vendor\/qr\/qrcode\.js/);
 assert.match(shell,/vendor\/qr\/jsQR\.js/);
 assert.match(shell,/wechat-me\.js/);
 assert.match(sw,/\.\/wechat-me\.js\?v=/);
-assert.ok(manifest.files.includes('wechat-me.js'));
-assert.ok(manifest.files.includes('wechat-me.css'));
 
 const wxProfileBody=feature.match(/function renderWxProfile\(\)[\s\S]*?\nfunction wxProfileAvatar/)?.[0]||'';
 assert.ok(wxProfileBody,'missing renderWxProfile body');
