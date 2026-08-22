@@ -60,6 +60,13 @@ assert.match(glass,/\.wx-contact-letter>h4\{[^}]*position:sticky;top:0/);
 assert.match(glass,/\.wx-contact-person>\.pfavwrap\{[^}]*flex:0 0 40px/);
 assert.match(glass,/\.wx-directory-head\{[^}]*backdrop-filter:blur/);
 assert.match(glass,/\.wx-chat-premium>\.manual-reply-row,[^{]+\{[^}]*background:transparent!important/);
-assert.match(glass,/\.wx-chat-premium \.chatbg>\.chat-glass-mood\{[^}]*width:calc\(100% - 24px\)/);
+assert.match(glass,/\.wx-chat-premium>\.chat-glass-mood\{[^}]*width:calc\(100% - 24px\)[^}]*flex:0 0 auto/);
+
+assert.match(app,/_wxLightDirectory=\[[^\]]*'pffriends'/,'小手机好友页必须进入微信白色主题目录');
+assert.match(functionSource('renderPhoneFriends'),/class="scroll pf-friends-page"/);
+assert.match(functionSource('renderPhoneFriends'),/class="pf-friends-search"/);
+assert.match(functionSource('renderPhoneFriends'),/svgIc\('refresh',20,'currentColor'\)/);
+assert.match(glass,/\.wxlight \.pf-friends-page\{background:#ededed!important;color:#111\}/);
+assert.match(glass,/\.wxlight \.pf-friends-search\{[^}]*background:#f2f2f4!important/);
 
 console.log('wechat contacts directory tests passed');

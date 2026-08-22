@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1039'){
+if(window.__NORTH_SHELL_BUILD__!=='1040'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -378,7 +378,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1039 · 微信个人页与客服完善版';
+const APP_VER='v1040 · 微信交互与客服知识修复版';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1495,7 +1495,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1039&r=v1039-wechat-pages-1';
+  const url='sw.js?v=1040&r=v1040-wechat-pages-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -2158,7 +2158,7 @@ function render(){
   const _wxG='';
   const _setG=glassThemeOn()&&c.p==='settings'?' settings-glass':'';
   const _wxLightBase=['wechat','chat','chatDetails','contactInfo','friendInfo','contactSettings','roleMoments','roleMomentDetail','roleFeatures'].includes(c.p);
-  const _wxLightDirectory=['wxmoment','wxlive','wxnearby','wxprofile','wxqr','wxscan','wxservices','wxwallet','wxchange','wxbank','wxfamily','wxbills','wxsupport','wxfavorites','wxalbum','wxemoji','wxsettings','wxaccounts','newfriends','wxonlychat','wxgroups','wxlabels','wxgroupcreate','contactEdit','pfchat','pfgroup','group'].includes(c.p);
+  const _wxLightDirectory=['wxmoment','wxlive','wxnearby','wxprofile','wxqr','wxscan','wxservices','wxwallet','wxchange','wxbank','wxfamily','wxbills','wxsupport','wxfavorites','wxalbum','wxemoji','wxsettings','wxaccounts','newfriends','wxonlychat','wxgroups','wxlabels','wxgroupcreate','contactEdit','pffriends','pfchat','pfgroup','group'].includes(c.p);
   const _wxL=(S.me.wxTheme==='white'&&(_wxLightBase||_wxLightDirectory))?' wxlight':'';
   const _wxStandalonePremium=['wxprofile','wxqr','wxscan','wxservices','wxwallet','wxchange','wxbank','wxfamily','wxbills','wxsupport','wxfavorites','wxalbum','wxemoji','wxsettings','wxaccounts'].includes(c.p);
   const _wxP=(c.p==='wechat'||_wxStandalonePremium)?' wx-premium':['chat','pfchat','pfgroup','group'].includes(c.p)?' wx-chat-premium':'';
@@ -2167,6 +2167,7 @@ function render(){
   app.innerHTML='<div class="page'+_glass+_wxG+_setG+_wxL+_wxP+_wxSection+_wxFont+'">'+html+'</div>';
   if(c.p==='music'){const b=app.querySelector('.music-app-head>button:first-child');if(b)b.onclick=back;}
   if(c.p==='browser'){const b=app.querySelector('.br-nav .l');if(b)b.onclick=back;}
+  if(c.p==='gameshub'){const b=app.querySelector('.gamehub-nav .l');if(b)b.onclick=back;}
   /* Private App pages keep stored images as short idb: references. Restore
      already-cached sources in the same paint so a busy event loop cannot leave
      the freshly rebuilt page black until a later timer gets CPU time. */
@@ -5369,25 +5370,25 @@ function wxSearchRun(q){const box=$('#wxs_res');if(!box)return;q=(q||'').trim().
 
 function renderPhoneFriends(){const p=phoneFriendState();phoneFriendMaybeSync(false);const incoming=pfReqs('incoming'),outgoing=pfReqs('outgoing'),search=p.search||{};
   const found=(search.items||[]).map(x=>{const id=(''+(x.phone_id||x.id||'')).toUpperCase();const already=id===p.id||phoneFriendById(id);return `<div class="row">${already?av(x.avatar||'🙂','sm'):wxNearbyAvatar()}<div class="meta"><div class="n">${esc(x.display_name||'小手机用户')}</div><div class="s">小手机ID：${esc(id)}</div></div>${already?'<span class="pfsoft">已是好友</span>':`<button class="minibtn" style="background:#07c160;color:#fff" onclick="phoneFriendRequest('${id}')">添加</button>`}</div>`;}).join('');
-  return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">小手机好友</span><span class="r" onclick="phoneFriendSync(false,true)">${svgIc('refresh',20,'#ccc')}</span></div>
-  <div class="scroll" style="background:${S.me.wxTheme==='white'?'#ededed':'#000'}">
-    <div class="section" style="margin:12px">
-      <div style="padding:13px 14px 6px;color:#9ec5fe;font-weight:700">我的小手机ID</div>
+  return `<div class="nav pf-friends-nav"><span class="l" onclick="back()">‹</span><span class="t">小手机好友</span><span class="r" onclick="phoneFriendSync(false,true)">${svgIc('refresh',20,'currentColor')}</span></div>
+  <div class="scroll pf-friends-page">
+    <div class="section pf-friends-section" style="margin:12px">
+      <div class="pf-friends-kicker pf-id-title">我的小手机ID</div>
       <div class="it"><span style="font-size:22px;font-weight:800;letter-spacing:1px">${esc(p.id)}</span><button class="minibtn" onclick="copyPhoneFriendId()">复制</button></div>
       <div class="it"><span>允许别人通过ID搜到我</span><span class="sw ${p.allowSearch!==false?'on':''}" onclick="phoneFriendToggleSearch()"></span></div>
       ${p._repairNote?`<div class="hint" style="color:#9ec5fe">${esc(p._repairNote)}</div>`:''}${p.lastError?`<div class="hint" style="color:#e8a85b">${esc(p.lastError)}</div>`:''}
     </div>
-    <div class="section" style="margin:12px">
-      <div style="padding:12px 14px 4px;color:#cdd;font-weight:700">添加好友</div>
-      <div style="display:flex;gap:8px;padding:6px 14px 12px"><input id="pf_search" value="${esc(search.q||'')}" placeholder="输入对方小手机ID，如 SPXXXXXX" style="flex:1;border:1px solid #38383a;border-radius:9px;padding:9px;background:#2c2c2e;color:#eee;text-transform:uppercase">${(search.q||(search.items&&search.items.length))?'<button class="minibtn" onclick="phoneFriendSearchClear()">清空</button>':''}<button class="send" onclick="phoneFriendSearch()">搜索</button></div>
+    <div class="section pf-friends-section" style="margin:12px">
+      <div class="pf-friends-kicker">添加好友</div>
+      <div class="pf-friends-search-row"><input class="pf-friends-search" id="pf_search" value="${esc(search.q||'')}" placeholder="输入对方小手机ID，如 SPXXXXXX">${(search.q||(search.items&&search.items.length))?'<button class="minibtn" onclick="phoneFriendSearchClear()">清空</button>':''}<button class="send" onclick="phoneFriendSearch()">搜索</button></div>
       ${search.busy?'<div class="empty" style="padding:14px;color:#888">搜索中…</div>':search.err?`<div class="hint" style="color:#e8a85b">${esc(search.err)}</div>`:(found||((search.q||'')?'<div class="empty" style="padding:14px;color:#888">没搜到这个ID</div>':''))}
     </div>
-    ${incoming.length?`<div class="section" style="margin:12px"><div style="padding:12px 14px 4px;color:#ffb6d0;font-weight:700">新的申请</div>${incoming.map(r=>{const busy=!!_pfRespondBusy[r.id]||!!r._responding;return `<div class="it">${wxNearbyAvatar()}<span style="flex:1">${esc(r.from_name||r.from_id)}</span><button class="minibtn" style="background:#07c160;color:#fff" onclick="phoneFriendRespond('${r.id}',true)" ${busy?'disabled':''}>${busy?'处理中…':'通过'}</button><button class="minibtn" onclick="phoneFriendRespond('${r.id}',false)" ${busy?'disabled':''}>忽略</button></div>`;}).join('')}</div>`:''}
-    ${outgoing.length?`<div class="section" style="margin:12px"><div style="padding:12px 14px 4px;color:#aaa;font-weight:700">已发送申请</div>${outgoing.map(r=>`<div class="it"><span>${esc(r.to_name||r.to_id)}</span><span class="v">等待通过</span></div>`).join('')}</div>`:''}
-    <div class="section" style="margin:12px">
-      <div class="it" onclick="phoneFriendCreateGroupModal()"><span style="display:inline-flex;align-items:center;gap:8px">${svgIc('users',18,'#c3c6d2')}新建小手机群</span><span class="v">›</span></div>
+    ${incoming.length?`<div class="section pf-friends-section" style="margin:12px"><div class="pf-friends-kicker pf-request-title">新的申请</div>${incoming.map(r=>{const busy=!!_pfRespondBusy[r.id]||!!r._responding;return `<div class="it">${wxNearbyAvatar()}<span style="flex:1">${esc(r.from_name||r.from_id)}</span><button class="minibtn" style="background:#07c160;color:#fff" onclick="phoneFriendRespond('${r.id}',true)" ${busy?'disabled':''}>${busy?'处理中…':'通过'}</button><button class="minibtn" onclick="phoneFriendRespond('${r.id}',false)" ${busy?'disabled':''}>忽略</button></div>`;}).join('')}</div>`:''}
+    ${outgoing.length?`<div class="section pf-friends-section" style="margin:12px"><div class="pf-friends-kicker pf-outgoing-title">已发送申请</div>${outgoing.map(r=>`<div class="it"><span>${esc(r.to_name||r.to_id)}</span><span class="v">等待通过</span></div>`).join('')}</div>`:''}
+    <div class="section pf-friends-section" style="margin:12px">
+      <div class="it" onclick="phoneFriendCreateGroupModal()"><span class="pf-friends-create-group">${svgIc('users',18,'currentColor')}新建小手机群</span><span class="v">›</span></div>
     </div>
-    <div class="list">${pfGroupRowsHTML()}${pfFriendRowsHTML()||'<div class="empty" style="padding:24px;color:#888">还没有小手机好友<br>让对方把小手机ID发给你，或复制你的ID给对方</div>'}</div>
+    <div class="list pf-friends-list">${pfGroupRowsHTML()}${pfFriendRowsHTML()||'<div class="empty" style="padding:24px;color:#888">还没有小手机好友<br>让对方把小手机ID发给你，或复制你的ID给对方</div>'}</div>
     <div style="height:30px"></div>
   </div>`;}
 function renderPhoneFriendChat(id){const p=phoneFriendState();id=(''+id).toUpperCase();const f=phoneFriendById(id)||{phone_id:id,display_name:id,avatar:'🙂'};const arr=phoneFriendChatMessages(id);
@@ -9666,7 +9667,8 @@ function renderChat(id){const c=getC(id);if(!c)return '';
   const qbar=(S.settings.quoteOn!==false&&_quoting&&_quoting.id===id)?`<div style="display:flex;align-items:center;gap:8px;padding:7px 14px;background:rgba(120,130,170,.12);border-left:3px solid #8a93c8;margin:0 8px;border-radius:8px;font-size:12px;color:#aab"><span style="flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">引用${_quoting.who==='me'?'你自己':'ta'}：${esc((_quoting.text||'').slice(0,30))}${(_quoting.text||'').length>30?'…':''}</span><span onclick="quoteClear()" style="cursor:pointer;color:#889;font-size:15px;padding:0 4px">✕</span></div>`:'';
   const cohabBadge=cohabWechatNavBadge(c);
   return `<div class="nav chat-glass-nav ${cohabBadge?'cohab-wx-nav':''}"><span class="l" onclick="back()">‹</span><span class="t ${cohabBadge?'cohab-wx-title':''}"><b>${esc(c.remark||c.name)}${c.muted?' 🔕':''}</b>${cohabBadge}</span><span class="r" onclick="go('contactInfo',{id:'${id}'})">⋯</span></div>
-    <div class="chatbg" id="chatbg" style="${bg}">${mood}${body}</div>
+    ${mood}
+    <div class="chatbg" id="chatbg" style="${bg}">${body}</div>
     <div class="panel chat-tools-panel" id="panel" data-page="${_panelPage}">
       <div class="chat-panel-pane chat-function-pane ${_panelPage==='emoji'?'':'on'}">${chatFunctionPanel(id)}</div>
       <div class="chat-panel-pane chat-emoji-pane ${_panelPage==='emoji'?'on':''}"><div class="ppage">${emojiPanel(id)}</div></div>

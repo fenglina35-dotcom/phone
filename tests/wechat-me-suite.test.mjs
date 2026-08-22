@@ -57,11 +57,22 @@ assert.match(css,/\.wxbank-card\.jiangsu[^}]*linear-gradient/);
 assert.match(css,/\.wx-jsb-logo/);
 
 assert.match(feature,/const WX_SUPPORT_QUICK=/);
+assert.match(feature,/角色心情气泡[\s\S]*心情标签[\s\S]*心声标签[\s\S]*微信 → 我 → 设置 → 聊天 → 心情气泡/);
+for(const localHelp of ['创建与管理角色','世界书','回复方式与手动回复','聊天 API 多路线','联网搜索','图片识别','语音转文字','电话与音视频通话','主屏外观与布局','锁屏与屏保','微信聊天操作','音乐与一起听','放映室','游戏大厅','线下约会与共同生活','角色扮演与剧情应用','情侣空间与远程控制','任务便签、日历与信箱','购物、外卖与浏览器','X、抖音与朋友圈内容','手机授权与私人 App','存储、清理与数据安全','全部功能概览'])assert.match(feature,new RegExp(localHelp),`missing local support entry: ${localHelp}`);
 assert.match(feature,/API 密钥怎么配置/);
 assert.match(feature,/角色语音在哪里设置/);
 assert.match(feature,/function wxSupportMatch\(q\)/);
 assert.match(feature,/function wxSupportRisk\(q\)/);
 assert.match(feature,/function wxSupportDocs\(\)/);
+const helpLiteral=feature.match(/const WX_HELP=(\[[\s\S]*?\r?\n\]);\r?\nconst WX_SUPPORT_QUICK=/)?.[1];
+assert.ok(helpLiteral,'missing local support knowledge array');
+const localHelp=Function(`return ${helpLiteral}`)();
+const norm=s=>String(s||'').toLowerCase().replace(/[\s_\-—–·：:，,。！？!?、（）()“”"'‘’/\\]/g,'');
+const localMatch=q=>{const n=norm(q);let hit=null,best=0;localHelp.forEach(x=>[x.title,...x.aliases].forEach(a=>{const k=norm(a);if(k&&n.includes(k)&&k.length>best){hit=x;best=k.length;}}));return hit;};
+assert.equal(localMatch('角色心情标签在哪里开启？')?.title,'角色心情气泡');
+assert.equal(localMatch('放映室怎么一起看电影？')?.title,'放映室');
+assert.equal(localMatch('怎么切换 API 路线二？')?.title,'聊天 API 多路线');
+assert.equal(localMatch('小手机都有哪些功能？')?.title,'全部功能概览');
 assert.match(feature,/async function wxSupportAsk\(q\)/);
 assert.match(feature,/常见问题不会调用模型/);
 assert.match(feature,/wxSupportRisk\(q\),hit=!risk&&wxSupportMatch\(q\)/);
@@ -88,9 +99,9 @@ assert.match(albumBody,/class="wxalbum-group"/);
 assert.match(css,/\.wxalbum-group\{[^}]*grid-template-columns:58px/);
 
 assert.match(app,/const mood=`<div class="moodbar chat-glass-mood"/);
-assert.match(app,/<div class="chatbg"[^`]*>\$\{mood\}\$\{body\}<\/div>/);
+assert.match(app,/\$\{mood\}[\s\S]*<div class="chatbg"[^`]*>\$\{body\}<\/div>/);
 assert.match(glass,/\.wx-chat-premium>\.manual-reply-row[^}]*background:transparent!important/);
-assert.match(glass,/\.wx-chat-premium \.chatbg>\.chat-glass-mood/);
+assert.match(glass,/\.wx-chat-premium>\.chat-glass-mood/);
 
 assert.match(app,/function wxNearbyFallbackPeople\(seed\)[\s\S]*骚扰/);
 assert.match(app,/pending\?wxNearbyAvatar\(\):av/);

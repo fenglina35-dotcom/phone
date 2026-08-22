@@ -72,6 +72,20 @@ html.north-glass-ui .wx-glass.wxlight textarea,
 html.north-glass-ui .wx-glass.wxlight input,
 html.north-glass-ui .wx-glass.wxlight select{border-color:rgba(255,255,255,.8)!important;background:rgba(255,255,255,.59)!important;box-shadow:inset 0 1px #fff}
 
+/* 小手机好友完整跟随微信黑白主题，避免白色主题只换外框、卡片仍是黑色。 */
+.pf-friends-page{background:#000!important;color:#f0f0f0}
+.pf-friends-kicker{padding:12px 14px 4px;color:#c9cbd0;font-weight:700}
+.pf-id-title{padding-top:13px;padding-bottom:6px;color:#9ec5fe}
+.pf-request-title{color:#ffb6d0}.pf-outgoing-title{color:#aaa}
+.pf-friends-search-row{display:flex;gap:8px;padding:6px 14px 12px}
+.pf-friends-search{min-width:0;flex:1;border:1px solid #38383a;border-radius:9px;padding:9px;background:#2c2c2e;color:#eee;text-transform:uppercase}
+.pf-friends-create-group{display:inline-flex;align-items:center;gap:8px;color:#c3c6d2}
+.wxlight .pf-friends-page{background:#ededed!important;color:#111}
+.wxlight .pf-friends-kicker{color:#55585e}.wxlight .pf-id-title{color:#3377b9}.wxlight .pf-request-title{color:#bb5f81}.wxlight .pf-outgoing-title{color:#777}
+.wxlight .pf-friends-search{border-color:#dedee2!important;background:#f2f2f4!important;color:#111!important;box-shadow:none!important}
+.wxlight .pf-friends-create-group{color:#52545a}
+.wxlight .pf-friends-list{background:#fff}
+
 /* 设置页同样使用完整玻璃层，而不是只改一张设置卡。 */
 html.north-glass-ui .settings-glass{background:radial-gradient(circle at 88% 0,rgba(130,101,177,.25),transparent 34%),linear-gradient(180deg,#151419,#211c23)!important}
 html.north-glass-ui .settings-glass>.nav{background:rgba(31,28,35,.68)!important;border-color:var(--ng-line-soft)!important;box-shadow:inset 0 1px rgba(255,255,255,.1);backdrop-filter:blur(30px) saturate(160%);-webkit-backdrop-filter:blur(30px) saturate(160%)}
@@ -445,8 +459,8 @@ html.north-android.north-glass-ui .settings-glass .minibtn{backdrop-filter:none!
 .wx-chat-premium>.chat-glass-nav{height:58px;flex:0 0 58px;padding:0 13px;border:0!important;border-bottom:.5px solid var(--chat-line)!important;background:radial-gradient(circle at 28% -45%,rgba(255,255,255,.13),transparent 58%),linear-gradient(180deg,rgba(38,38,42,.88),rgba(18,18,20,.91))!important;box-shadow:inset 0 1px rgba(255,255,255,.06),0 8px 26px rgba(0,0,0,.13)!important;backdrop-filter:blur(34px) saturate(150%);-webkit-backdrop-filter:blur(34px) saturate(150%);position:relative;z-index:9;isolation:isolate}
 .wx-chat-premium.wxlight>.chat-glass-nav{background:radial-gradient(circle at 28% -45%,rgba(255,255,255,.98),transparent 58%),linear-gradient(180deg,rgba(255,255,255,.88),rgba(244,244,247,.92))!important;box-shadow:inset 0 1px rgba(255,255,255,.95),0 8px 24px rgba(0,0,0,.035)!important}
 .wx-chat-premium>.chat-glass-nav .t{left:50%;right:auto;max-width:64%;font-size:17px;font-weight:600;letter-spacing:.05px}.wx-chat-premium>.chat-glass-nav .t b{font:inherit}.wx-chat-premium>.chat-glass-nav .l{font:300 38px/1 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;color:#dedee1}.wx-chat-premium>.chat-glass-nav .r{font-size:25px;letter-spacing:2px;color:#dedee1}.wx-chat-premium.wxlight>.chat-glass-nav .l,.wx-chat-premium.wxlight>.chat-glass-nav .r{color:#171719}
-.wx-chat-premium .chatbg>.chat-glass-mood{width:calc(100% - 24px);max-width:680px;min-height:30px;margin:0 auto 12px;padding:5px 14px;border:.5px solid rgba(255,255,255,.105);border-radius:999px;background:linear-gradient(135deg,rgba(58,58,63,.68),rgba(30,30,34,.72));box-shadow:inset 0 1px rgba(255,255,255,.055),0 6px 18px rgba(0,0,0,.08);backdrop-filter:blur(20px) saturate(135%);-webkit-backdrop-filter:blur(20px) saturate(135%);box-sizing:border-box;color:#aaaab0;font-size:11px;position:relative;z-index:5}
-.wx-chat-premium.wxlight .chatbg>.chat-glass-mood{border-color:rgba(0,0,0,.07);background:linear-gradient(135deg,rgba(255,255,255,.86),rgba(235,235,239,.84));box-shadow:inset 0 1px rgba(255,255,255,.8),0 5px 16px rgba(0,0,0,.035);color:#77777d}
+.wx-chat-premium>.chat-glass-mood{width:calc(100% - 24px);max-width:680px;min-height:30px;flex:0 0 auto;margin:8px auto;padding:5px 14px;border:.5px solid rgba(255,255,255,.105);border-radius:999px;background:linear-gradient(135deg,rgba(58,58,63,.68),rgba(30,30,34,.72));box-shadow:inset 0 1px rgba(255,255,255,.055),0 6px 18px rgba(0,0,0,.08);backdrop-filter:blur(20px) saturate(135%);-webkit-backdrop-filter:blur(20px) saturate(135%);box-sizing:border-box;color:#aaaab0;font-size:11px;position:relative;z-index:5}
+.wx-chat-premium.wxlight>.chat-glass-mood{border-color:rgba(0,0,0,.07);background:linear-gradient(135deg,rgba(255,255,255,.86),rgba(235,235,239,.84));box-shadow:inset 0 1px rgba(255,255,255,.8),0 5px 16px rgba(0,0,0,.035);color:#77777d}
 .wx-chat-premium>.chatbg{min-height:0;background-color:#101011!important}.wx-chat-premium.wxlight>.chatbg{background-color:#ededed!important}
 .wx-chat-premium .chatbg .msgt{display:none!important}
 .wx-chat-premium .chatbg .tstamp span{padding:2px 4px;background:transparent!important;box-shadow:none!important;color:#77777d}.wx-chat-premium.wxlight .chatbg .tstamp span{color:#99999f}

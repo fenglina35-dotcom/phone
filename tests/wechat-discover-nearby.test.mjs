@@ -35,6 +35,7 @@ for(const key of ['moments','music','cinema','browser','games'])assert.match(ope
 assert.doesNotMatch(open,/kind==='live'/);
 assert.match(open,/_dyFromWx=true[\s\S]*dyTab='feed'[\s\S]*go\('dy',\{from:'wechat'\}\)/);
 assert.match(functionSource('dyBack'),/_dyFromWx[\s\S]*back\(\)/);
+assert.match(app,/if\(c\.p==='gameshub'\)\{const b=app\.querySelector\('\.gamehub-nav \.l'\);if\(b\)b\.onclick=back;\}/);
 
 assert.match(functionSource('renderWeChat'),/wxTab==='moments'\)body=wxDiscover\(\)/);
 assert.match(functionSource('renderWxMomentFeed'),/momentTools\(\)[\s\S]*wxMoments\(\)/);

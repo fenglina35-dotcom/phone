@@ -12,15 +12,15 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v1039 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1039 · 微信个人页与客服完善版'/);
-  assert.match(app,/const url='sw\.js\?v=1039&r=v1039-wechat-pages-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1039'/);
-  assert.match(html,/app\.js\?v=1039/);
-  assert.match(sw,/const BUILD='1039'/);
-  assert.match(sw,/north-shell-v1039/);
-  assert.match(index,/小手机\.html\?v=1039/);
-  assert.match(repair,/小手机\.html\?v=1039/);
+test('v1040 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v1040 · 微信交互与客服知识修复版'/);
+  assert.match(app,/const url='sw\.js\?v=1040&r=v1040-wechat-pages-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1040'/);
+  assert.match(html,/app\.js\?v=1040/);
+  assert.match(sw,/const BUILD='1040'/);
+  assert.match(sw,/north-shell-v1040/);
+  assert.match(index,/小手机\.html\?v=1040/);
+  assert.match(repair,/小手机\.html\?v=1040/);
 });
 
 test('the private iOS package embeds web v1038 and keeps 1.0.158 delivery',()=>{
