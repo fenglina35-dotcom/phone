@@ -1,6 +1,6 @@
-const BUILD='1037';
-const HOTFIX='v1037-wechat-real-delivery-card-1';
-const SHELL_CACHE='north-shell-v1037';
+const BUILD='1038';
+const HOTFIX='v1038-real-delivery-reply-1';
+const SHELL_CACHE='north-shell-v1038';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];

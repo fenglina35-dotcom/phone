@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1037'){
+if(window.__NORTH_SHELL_BUILD__!=='1038'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -376,7 +376,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1037 · 微信真实外卖订单卡片';
+const APP_VER='v1038 · 真实外卖回复闭环';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1492,7 +1492,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1037&r=v1037-wechat-real-delivery-card-1';
+  const url='sw.js?v=1038&r=v1038-real-delivery-reply-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -10919,7 +10919,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
     if(!_initiativeNoImage&&note&&/【本轮允许主动照片】/.test(note)&&!initiativePhotoCaptionOk(note,content))_initiativeNoImage=true;
     content=refreshDirectClockReply(content,_userText,Date.now());
     if(nativeInspectionPending(_lu,id)){if(typingEl&&typingEl.isConnected)typingEl.remove();return true;}/* 同一条消息若刚发起真实读取，等待读取结果；否则普通回复照常落地。 */
-    const _replyCandidate=String(content||'').trim(),_realDeliveryCommandTurn=typeof deliveryRealEnabled==='function'&&deliveryRealEnabled()&&/[\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：]/.test(_replyCandidate),lines=splitChatBubbles(content,30);let got=false;let txtN=0;let diceUsed=false;let pendQuote=null;let photoTail=0;
+    const _replyCandidate=String(content||'').trim(),_realDeliveryCommandTurn=typeof deliveryRealEnabled==='function'&&deliveryRealEnabled()&&/[\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：]/.test(_replyCandidate),lines=splitChatBubbles(content,30);let got=false;let txtN=0;let diceUsed=false;let pendQuote=null;let photoTail=0;let _realDeliveryCommandSeen=false,_realDeliveryPreludeShown=false;
     for(let i=0;i<lines.length;i++){
       let line=cleanRolePunct(normalizeImageLine(normTag(lines[i]))),hadHiddenThought=hiddenThoughtTagPresent(line);line=stripHiddenThoughtTags(line,c);if(hadHiddenThought)save();if(!line)continue;
       if(_initiativeNoImage&&/^[\[【]\s*(?:图片|照片|自拍)(?:\s*[|｜:：]|\s*[\]】])/.test(line)){photoTail=3;continue;}
@@ -10944,10 +10944,11 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
       if(replyStale(id,replyToken,replyAccount)||actId()!==replyAccount)break;
       if(offlineReplyBlocked(replyIntent,id))break;
       if(wxLoginBlockReply(id,note))break;/* 回复生成到一半时若角色开始登录，也立刻停止继续发 */
-      if(_realDeliveryCommandTurn&&!/^[\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：]/.test(line))continue;/* 真实下单完成前不展示模型抢先写出的成功宣称；结果由真实回执后的角色模型另行生成 */
+      const _realDeliveryTag=/^[\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：]/.test(line);
+      if(_realDeliveryCommandTurn&&!_realDeliveryTag){if(_realDeliveryCommandSeen||typeof deliveryRolePreludeAllowed!=='function'||!deliveryRolePreludeAllowed(line))continue;_realDeliveryPreludeShown=true;}/* 只允许标签前那句安全的自然“我去看看”；下单结果仍由真实回执后的角色模型另行生成 */
       got=true;
-      mm=line.match(/^\[真实外卖\|([^\]]*)\]$/);if(mm){if(typeof deliveryHandleRoleRequest==='function')deliveryHandleRoleRequest(id,(mm[1]||'').trim());continue;}
-      mm=line.match(/^\[点外卖\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){if(typeof deliveryRealEnabled==='function'&&deliveryRealEnabled()){if(typeof deliveryHandleRoleRequest==='function')deliveryHandleRoleRequest(id,(mm[1]||'').trim());continue;}const nowF=Date.now();if(msgs(id).some(x=>x.type==='food'&&x.from==='ta'&&nowF-(x.time||0)<1200000))continue;/* 20分钟内已点过就不重复 */const fc={role:'assistant',type:'food',name:mm[1]||'外卖',price:+mm[2]||0,shop:'',from:'ta',received:false,declined:false,deliverAt:nowF+900000,arrived:false,id:uid(),time:nowF};msgs(id).push(fc);notifyIncoming(c,fc);save();refreshChatMessages(id);continue;}
+      mm=line.match(/^\[真实外卖\|([^\]]*)\]$/);if(mm){_realDeliveryCommandSeen=true;if(!_realDeliveryPreludeShown){got=false;continue;}if(typeof deliveryHandleRoleRequest==='function')deliveryHandleRoleRequest(id,(mm[1]||'').trim());continue;}
+      mm=line.match(/^\[点外卖\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){if(typeof deliveryRealEnabled==='function'&&deliveryRealEnabled()){_realDeliveryCommandSeen=true;if(!_realDeliveryPreludeShown){got=false;continue;}if(typeof deliveryHandleRoleRequest==='function')deliveryHandleRoleRequest(id,(mm[1]||'').trim());continue;}const nowF=Date.now();if(msgs(id).some(x=>x.type==='food'&&x.from==='ta'&&nowF-(x.time||0)<1200000))continue;/* 20分钟内已点过就不重复 */const fc={role:'assistant',type:'food',name:mm[1]||'外卖',price:+mm[2]||0,shop:'',from:'ta',received:false,declined:false,deliverAt:nowF+900000,arrived:false,id:uid(),time:nowF};msgs(id).push(fc);notifyIncoming(c,fc);save();refreshChatMessages(id);continue;}
       mm=line.match(/^\[送礼\|([^|\]]*)(?:\|([^|\]]*))?(?:\|([^\]]*))?\]$/);if(mm){giftSend(id,(mm[1]||'礼物').trim(),+mm[2]||0,mm[3]||'');continue;}
       mm=line.match(/^\[一起听\|([^\]]*)\]$/);if(mm){const ti=(mm[1]||'').trim();const mc={role:'assistant',type:'musicinvite',title:ti||'一首歌',artist:'',from:'ta',time:Date.now(),id:uid()};msgs(id).push(mc);notifyIncoming(c,mc);save();refreshChatMessages(id);continue;}
       mm=line.match(/^\[放映邀请\|([^\]]*)\]$/);if(mm){if(!cinemaRoleInvite(id,(mm[1]||'').trim()))toast('角色想邀请的作品不在视频盒或书架里');continue;}

@@ -10,6 +10,7 @@
   var oldOpenFoodOrders=window.openFoodOrders;
   var pollBusy=false;
   var manualOptionOffer=null;
+  var roleRequests={};
   var TERMINAL={delivered:1,canceled:1,refunded:1,failed:1};
   var STATUS_RANK={quote:0,created:1,pending_payment:1,paid:2,merchant_confirmed:3,preparing:4,courier_assigned:5,picked_up:6,delivering:7,delivered:8};
   var STATUS_TEXT={quote:'待下单',created:'订单已创建',pending_payment:'待付款',paid:'已付款',merchant_confirmed:'商家已接单',preparing:'商家备餐中',courier_assigned:'骑手已接单',picked_up:'骑手已取餐',delivering:'配送中',delivered:'已送达',canceled:'已取消',refunded:'已退款',failed:'订单失败'};
@@ -139,7 +140,7 @@
     order.paymentAttemptId=order.paymentAttemptId||uid();save();
     var data=await request('pay_order',{orderId:order.remoteId,paymentPreference:['alipay'],automatic:false,roleId:order.roleId||'',clientRequestId:order.paymentAttemptId},35000);
     order.status=text(data.status,40)||'pending_payment';order.paymentMethod=text(data.paymentMethod,40);order.payUrl=safePayUrl(data.payUrl);order.payQrDataUrl=safePayQr(data.payQrDataUrl);order.pendingReason=text(data.reason,180);order.updatedAt=Date.now();
-    save();return order;
+    syncRoleOrderCard(order);save();return order;
   }
   function openOptionPicker(offer){
     manualOptionOffer=offer;var groups=offer.optionGroups||[],body=groups.map(function(g,gi){var fields=g.multiple?g.choices.map(function(c){return '<label class="delivery-option-check"><input class="delivery-option-multi" data-group="'+gi+'" type="checkbox" value="'+esc(c.id)+'">'+esc(c.label)+(c.priceDelta?' +¥'+num(c.priceDelta).toFixed(2):'')+'</label>';}).join(''):'<select class="delivery-option-single" data-group="'+gi+'"><option value="">请选择</option>'+g.choices.map(function(c){return '<option value="'+esc(c.id)+'">'+esc(c.label)+(c.priceDelta?' +¥'+num(c.priceDelta).toFixed(2):'')+'</option>';}).join('')+'</select>';return '<div class="delivery-option-group"><b>'+esc(g.name)+(g.required?' *':'')+'</b>'+fields+'</div>';}).join('');openModal('<div class="delivery-settings"><div class="delivery-settings-head"><div><small>ORDER OPTIONS</small><h3>'+esc(offer.name)+'</h3></div><button onclick="closeModal()">×</button></div>'+body+'<label class="delivery-option-qty">数量<input id="delivery_option_qty" type="number" min="1" max="20" value="1"></label><button class="delivery-save" onclick="deliveryConfirmOptions()">按这些口味创建订单</button></div>');
@@ -202,16 +203,20 @@
   }
   async function roleRequest(cid,query){
     var c=getC(cid);if(!c)return false;if(!enabled()){return false;}var r=foodState();
+    if(roleRequests[cid])return true;
     if(!connectorUrl()){resultReply(c,null,'还没有连接真实外卖服务');return true;}
     if(!query){resultReply(c,null,'没有提供可搜索的餐品或店铺');return true;}
     if((S.food.orders||[]).some(function(x){return x.real&&x.roleId===cid&&Date.now()-(+x.createdAt||0)<20*60000&&!TERMINAL[x.status];})){resultReply(c,null,'20分钟内已有一笔角色真实外卖订单仍在处理，为避免重复没有再下单');return true;}
-    var order=null;try{var offers=await realSearch(query,{roleId:cid}),offer=await chooseOffer(c,query,offers);await loadOfferOptions(offer);var choice=await chooseOptions(c,query,offer);order=await createOrder(offer,{roleId:cid,quantity:choice.quantity,selectedOptions:choice.selectedOptions});await payOrder(order);resultReply(c,order,'');return true;}
+    roleRequests[cid]={query:query,startedAt:Date.now()};
+    var order=null;try{var offers=await realSearch(query,{roleId:cid}),offer=await chooseOffer(c,query,offers);await loadOfferOptions(offer);var choice=await chooseOptions(c,query,offer);order=await createOrder(offer,{roleId:cid,quantity:choice.quantity,selectedOptions:choice.selectedOptions});pushRoleOrderCard(c,order);await payOrder(order);resultReply(c,order,'');return true;}
     catch(e){resultReply(c,order,e.message||'真实外卖操作失败');return true;}
+    finally{delete roleRequests[cid];}
   }
+  function rolePreludeAllowed(line){line=text(line,160);if(!line||/已经|订单|收银台|付款|支付|骑手|接单|配送|送到|优惠券|实付|待付|下单|点好|买好|订好|付好/.test(line))return false;return /等|稍等|等我|我来|我去|我先|给我一下|看看|找找|挑挑|选选|别急/.test(line);}
   function rolePrompt(){
     var r=foodState();
     if(!r.enabled)return '\n\n# 外卖能力\n当前真实外卖未开启。[点外卖|餐品名|价格] 只会创建虚拟小手机里的剧情外卖，不能把它说成淘宝闪购、美团、微信支付、支付宝或现实订单。';
-    return '\n\n# 真实外卖能力与硬边界\n真实外卖已开启。你可以按本人判断主动使用，也可以在'+S.me.name+'口头说想喝或想吃某样东西时搜索。真正决定尝试下单时只输出一行 [真实外卖|具体搜索词]；搜索词要保留用户明确说出的品牌/店名和具体饮品，不要把糖度、冰度、口味或小料改写成别的。系统只会使用淘宝闪购真实候选和真实规格，严格匹配后创建支付宝待付款订单，由用户本人付款。用户没明确说的部分才参考已保存的奶茶偏好并按你的人设自主选择。\n输出标签的这一轮只能自然表达“准备找/准备看看”，绝不能提前声称已经找到、用了优惠券、下单、付款、骑手接单或送达；只有收到后续真实操作结果后才能说对应事实。找不到准确品牌、饮品或规格时必须如实失败，不能换别家、换饮品或改口味，也不能改走虚拟外卖。不要再使用 [点外卖|餐品|价格]。';
+    return '\n\n# 真实外卖能力与硬边界\n真实外卖已开启，但你始终保留自己的判断和意愿：可以按你的人设、关系、情绪与当下处境同意，也有权直接拒绝给'+S.me.name+'点单。拒绝时只需用你自己的口吻正常说明，不要输出任何外卖标签，也不会启动真实订单。你可以按本人判断主动使用，也可以在'+S.me.name+'明确让你点某样东西时搜索。若对方只是泛泛说“想喝奶茶”“想吃点东西”，还没说明具体品牌/门店或具体饮品，也没有明确让你自行决定，就必须先按你自己的语气自然问清楚并等待回答；这一轮绝不能输出真实外卖标签。只有你自己同意，并且对方已经说清具体品牌/门店与饮品，或者在你询问后明确让你自行决定，才可以开始真实搜索。\n真正决定尝试时，必须先发一句符合你本人语气的简短可见消息，让'+S.me.name+'知道你正在找，例如自然表达“等我一下”“我去看看”；紧接着再单独输出一行 [真实外卖|具体搜索词]。搜索词要保留用户明确说出的品牌/店名和具体饮品，不要把糖度、冰度、口味或小料改写成别的。系统只会使用淘宝闪购真实候选和真实规格，严格匹配后创建支付宝待付款订单，由用户本人付款。用户没明确说的部分才参考已保存的奶茶偏好并按你的人设自主选择。\n开始操作的可见消息只能表达“准备找/准备看看”，绝不能提前声称已经找到、用了优惠券、下单、付款、骑手接单或送达；只有收到后续真实操作结果后才能说对应事实。找不到准确品牌、饮品或规格时必须如实失败，不能换别家、换饮品或改口味，也不能改走虚拟外卖。不要再使用 [点外卖|餐品|价格]。';
   }
 
   foodState();deliveryPreferences();
@@ -233,6 +238,7 @@
   window.deliveryLaunchPay=launchPay;
   window.deliveryPollOrders=pollOrders;
   window.deliveryHandleRoleRequest=roleRequest;
+  window.deliveryRolePreludeAllowed=rolePreludeAllowed;
   window.deliveryRealChatCardHTML=chatOrderCardHTML;
   window.deliveryOpenChatOrder=openChatOrder;
   window.deliveryStatusText=statusText;
