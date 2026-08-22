@@ -8,6 +8,8 @@
     "license-gate.js",
     "delivery.js",
     "commerce-ui.js",
+    "wechat-me.js",
+    "wechat-me.css",
     "pet-game.js",
     "pet-game.css",
     "gift-effects.js",

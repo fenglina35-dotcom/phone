@@ -22,6 +22,11 @@ test('game hall exposes a direct electronic-pet entry',()=>{
   assert.match(preview,/M8 8q4-2 8 0/,'the preview icon must match the repaired game-hall icon');
 });
 
+test('leaving the pet returns to the existing game hall without creating a loop',()=>{
+  assert.match(app,/function openGames\(\)[\s\S]*cur\(\)\.p==='pet'[\s\S]*stack\[stack\.length-2\]\.p==='gameshub'[\s\S]*stack\.pop\(\)/);
+  assert.match(app,/if\(cur\(\)\.p==='gameshub'\)return render\(\)/);
+});
+
 test('pet state is isolated, persistent and limited to four pets',()=>{
   assert.match(pet,/S\.me\.ePet/);
   assert.match(pet,/const PET_MAX=4/);
@@ -172,8 +177,8 @@ test('Maine Coon, three hamsters and three white rabbit breeds use persistent li
 });
 
 test('preview and app load the complete visual module',()=>{
-assert.match(html,/pet-game\.css\?v=1040/);
-assert.match(html,/pet-game\.js\?v=1040/);
+assert.match(html,/pet-game\.css\?v=1041/);
+assert.match(html,/pet-game\.js\?v=1041/);
   assert.match(preview,/north-pet-preview/);
   assert.match(preview,/onclick="openPetGame\(\)"/);
   assert.match(css,/assets\/pet-room-v1\.webp/);

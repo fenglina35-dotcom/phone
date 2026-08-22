@@ -12,22 +12,22 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v1040 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1040 · 微信交互与客服知识修复版'/);
-  assert.match(app,/const url='sw\.js\?v=1040&r=v1040-wechat-pages-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1040'/);
-  assert.match(html,/app\.js\?v=1040/);
-  assert.match(sw,/const BUILD='1040'/);
-  assert.match(sw,/north-shell-v1040/);
-  assert.match(index,/小手机\.html\?v=1040/);
-  assert.match(repair,/小手机\.html\?v=1040/);
+test('v1041 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v1041 · 微信引用、视频兼容与游戏返回修复版'/);
+  assert.match(app,/const url='sw\.js\?v=1041&r=v1041-quote-video-game-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1041'/);
+  assert.match(html,/app\.js\?v=1041/);
+  assert.match(sw,/const BUILD='1041'/);
+  assert.match(sw,/north-shell-v1041/);
+  assert.match(index,/小手机\.html\?v=1041/);
+  assert.match(repair,/小手机\.html\?v=1041/);
 });
 
-test('the private iOS package embeds web v1038 and keeps 1.0.158 delivery',()=>{
-  assert.match(privateBundle,/<string>1038<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.158;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 158;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.158 \(158\)'/);
+test('the private iOS package embeds web v1041 and keeps 1.0.160 delivery',()=>{
+  assert.match(privateBundle,/<string>1041<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.160;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 160;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.160 \(160\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 
