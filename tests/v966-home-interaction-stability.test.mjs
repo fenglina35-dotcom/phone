@@ -14,9 +14,9 @@ const project=fs.readFileSync(path.join(root,'native/private-small-phone/XcodePr
 const native=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift'),'utf8');
 
 test('v1045 web keeps private 1.0.165 compatibility',()=>{
-  assert.match(app,/APP_VER='v1046 · 微信运动与绿色头衔修正版'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1046'/);
-  assert.match(sw,/BUILD='1046'/);
+  assert.match(app,/APP_VER='v1047 · 微信绿色操作控件修正版'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1047'/);
+  assert.match(sw,/BUILD='1047'/);
   assert.match(plist,/<string>1045<\/string>/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 165;/g)||[]).length,12);
   assert.equal((project.match(/MARKETING_VERSION = 1\.0\.165;/g)||[]).length,12);

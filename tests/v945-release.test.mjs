@@ -13,14 +13,14 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1045 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1046 · 微信运动与绿色头衔修正版'/);
-  assert.match(app,/const url='sw\.js\?v=1046&r=v1046-wechat-motion-title-layout-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1046'/);
-  assert.match(html,/app\.js\?v=1046/);
-  assert.match(sw,/const BUILD='1046'/);
-  assert.match(sw,/north-shell-v1046/);
-  assert.match(index,/小手机\.html\?v=1046/);
-  assert.match(repair,/小手机\.html\?v=1046/);
+  assert.match(app,/APP_VER='v1047 · 微信绿色操作控件修正版'/);
+  assert.match(app,/const url='sw\.js\?v=1047&r=v1047-wechat-green-controls-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1047'/);
+  assert.match(html,/app\.js\?v=1047/);
+  assert.match(sw,/const BUILD='1047'/);
+  assert.match(sw,/north-shell-v1047/);
+  assert.match(index,/小手机\.html\?v=1047/);
+  assert.match(repair,/小手机\.html\?v=1047/);
 });
 
 test('the private iOS package embeds web v1045 and keeps 1.0.165 delivery',()=>{

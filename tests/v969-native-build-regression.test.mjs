@@ -13,9 +13,9 @@ const reportApp = read('native/private-small-phone/XcodeProject/PhoneCompanionRe
 const reportScene = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/TotalActivityReport.swift');
 
 test('v1045 web and private iOS 1.0.165 keep explicit build identities', () => {
-  assert.match(app, /APP_VER='v1046 · 微信运动与绿色头衔修正版'/);
-  assert.match(app, /sw\.js\?v=1046&r=v1046-wechat-motion-title-layout-1/);
-  assert.match(shell, /north-shell-v1046/);
+  assert.match(app, /APP_VER='v1047 · 微信绿色操作控件修正版'/);
+  assert.match(app, /sw\.js\?v=1047&r=v1047-wechat-green-controls-1/);
+  assert.match(shell, /north-shell-v1047/);
   assert.match(bundleInfo, /<string>1045<\/string>/);
   assert.match(localWebView, /1\.0\.165 \(165\)/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 165;/g) || []).length, 12);

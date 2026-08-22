@@ -35,6 +35,19 @@ assert.match(glass,/\.wx-editor-two\{[^}]*grid-template-columns:minmax\(0,1fr\)/
 assert.match(glass,/\.wx-editor-two label>span\{[^}]*flex:0 0 96px[^}]*overflow:visible/);
 assert.match(glass,/\.wx-contact-editor label input[^}]*max-width:100%/);
 
+// 微信相关弹窗、角色编辑开关和选中标签统一使用微信绿，不改动全局粉色主题。
+assert.match(app,/classList\.toggle\('wxmodal-green',wxPages\.includes\(p\)\)/);
+assert.match(app,/classList\.remove\('wxmodal-green'\)/);
+assert.match(glass,/\.modal\.wxmodal-green \.btn\.p\{[^}]*#07c160/);
+assert.match(glass,/\.modal\.wxmodal-green \.sw\.on\{background:#07c160/);
+assert.match(glass,/\.wx-contact-editor \.sw\.on\{background:#07c160/);
+assert.match(glass,/\.wx-editor-chip\[aria-pressed="true"\]\{background:#07c160/);
+assert.match(app,/微信显示模式[\s\S]*?background:#07c160;color:#fff/);
+assert.match(app,/function powerChip\(el\)[^\n]*on\?'#07c160'/);
+assert.match(app,/background:#07c160;color:#fff[^\n]*acceptFamily/);
+assert.match(app,/background:#07c160;color:#fff[^\n]*acceptDate/);
+assert.match(app,/background:#07c160;color:#fff[^\n]*suspicionRequestAction/);
+
 // 通话头像支持持久化图片引用，通话层始终有不透明背景并且退出时清理。
 assert.match(app,/function callStoredImageSource\(v\)/);
 assert.match(app,/function callApplyBackdrop\(L,c\)/);
