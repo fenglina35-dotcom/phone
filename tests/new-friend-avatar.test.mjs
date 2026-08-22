@@ -5,7 +5,6 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
-const css = fs.readFileSync(path.join(root, "glass-theme.css"), "utf8");
 const start = source.indexOf("function friendLineAvatar(");
 const end = source.indexOf("function friendDiscoveryProfile", start);
 const avatarFn = source.slice(start, end);
@@ -20,7 +19,5 @@ assert.equal((avatarFn.match(/<circle/g) || []).length, 1, "only the head circle
 assert.equal((avatarFn.match(/<path/g) || []).length, 1, "only the shoulder outline should remain");
 assert.doesNotMatch(avatarFn, /linearGradient|url\(#g\)|cx="76"|M31 72/);
 assert.doesNotMatch(cardFn, /<i><\/i>/, "friend request cards should not render a status dot");
-assert.match(source,/if\(v==='👤'\)return `<div class="\$\{cls\} wx-stranger-avatar">/);
-assert.match(css,/\.wx-stranger-avatar\{[^}]*linear-gradient\(145deg,#777b82,#41444a\)/);
 
 console.log("new friend avatar tests passed");

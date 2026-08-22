@@ -13,8 +13,8 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1037 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1037 · 微信个人页与好友交互完善版'/);
-  assert.match(app,/const url='sw\.js\?v=1037&r=v1037-wechat-me-friends-1'/);
+  assert.match(app,/APP_VER='v1037 · 微信真实外卖订单卡片'/);
+  assert.match(app,/const url='sw\.js\?v=1037&r=v1037-wechat-real-delivery-card-1'/);
   assert.match(html,/__NORTH_SHELL_BUILD__='1037'/);
   assert.match(html,/app\.js\?v=1037/);
   assert.match(sw,/const BUILD='1037'/);

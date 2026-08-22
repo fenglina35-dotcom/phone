@@ -7,14 +7,14 @@ from zipfile import ZIP_DEFLATED, ZipFile
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "native" / "private-small-phone" / "XcodeProject"
 DELIVERY = ROOT / "delivery-v1037"
-PACKAGE_NAME = "SmallPhone_v1037_WeChatMeFriends_iOS157"
+PACKAGE_NAME = "SmallPhone_v1037_WeChatRealDeliveryCard_iOS157_MacReady"
 STAGING = DELIVERY / PACKAGE_NAME
 ZIP_PATH = DELIVERY / f"{PACKAGE_NAME}.zip"
-INSTALL_GUIDE = "第一百五十七次安装_v1037_微信个人页与好友交互完善_请先读.md"
+INSTALL_GUIDE = "第一百五十七次安装_v1037_微信真实外卖订单卡片_请先读.md"
 
 
 def should_skip(relative: Path) -> bool:
-    if any(part in {".git", ".codex_tmp", "__pycache__", "preview", "review-v1037"} for part in relative.parts):
+    if any(part in {".git", ".codex_tmp", "__pycache__"} for part in relative.parts):
         return True
     if relative.suffix.lower() in {".pyc", ".zip"}:
         return True
@@ -34,10 +34,6 @@ required = [
     SOURCE / "PhoneCompanionTest" / "PhoneWeb.bundle" / "index.html",
     SOURCE / "PhoneCompanionTest" / "PhoneWeb.bundle" / "app.js",
     SOURCE / "PhoneCompanionTest" / "PhoneWeb.bundle" / "delivery.js",
-    SOURCE / "PhoneCompanionTest" / "PhoneWeb.bundle" / "wechat-me.js",
-    SOURCE / "PhoneCompanionTest" / "PhoneWeb.bundle" / "wechat-me.css",
-    SOURCE / "PhoneCompanionTest" / "PhoneWeb.bundle" / "vendor" / "qr" / "qrcode.js",
-    SOURCE / "PhoneCompanionTest" / "PhoneWeb.bundle" / "vendor" / "qr" / "jsQR.js",
     SOURCE / "请在Mac编译前先读.md",
     SOURCE / INSTALL_GUIDE,
 ]
@@ -67,19 +63,22 @@ app_files = list(STAGING.rglob("PhoneWeb.bundle/app.js"))
 if len(app_files) != 1:
     raise RuntimeError("package must contain exactly one PhoneWeb.bundle/app.js")
 app_text = app_files[0].read_text(encoding="utf-8")
-if "APP_VER='v1037 · 微信个人页与好友交互完善版';" not in app_text:
+if "APP_VER='v1037 · 微信真实外卖订单卡片';" not in app_text:
     raise RuntimeError("bundled web version is not v1037")
-for marker in ["wxQuickMenuHTML", "wxNearbyRefresh", "chat-glass-mood", "renderWxSettings"]:
-    sources = app_text + (STAGING / "PhoneCompanionTest" / "PhoneWeb.bundle" / "wechat-me.js").read_text(encoding="utf-8")
-    if marker not in sources:
-        raise RuntimeError(f"bundled WeChat feature is missing: {marker}")
-if "<textarea id=\"off_in\"" not in app_text or "offInputMount" in app_text:
-    raise RuntimeError("bundled common-life native textarea repair is missing")
-delivery_text = (STAGING / "PhoneCompanionTest" / "PhoneWeb.bundle" / "delivery.js").read_text(encoding="utf-8")
-for marker in ["type:'deliveryorder'", "deliveryRealChatCardHTML", "支付宝官方付款二维码"]:
-    if marker not in delivery_text:
-        raise RuntimeError(f"bundled real delivery order card is missing: {marker}")
-project_text = (STAGING / "PhoneCompanionTest.xcodeproj" / "project.pbxproj").read_text(encoding="utf-8")
+delivery_files = list(STAGING.rglob("PhoneWeb.bundle/delivery.js"))
+if len(delivery_files) != 1:
+    raise RuntimeError("package must contain exactly one PhoneWeb.bundle/delivery.js")
+delivery_text = delivery_files[0].read_text(encoding="utf-8")
+for required_text in [
+    "type:'deliveryorder'",
+    "deliveryRealChatCardHTML",
+    "支付宝官方付款二维码",
+]:
+    if required_text not in delivery_text:
+        raise RuntimeError(f"real delivery card source is missing: {required_text}")
+project_text = (STAGING / "PhoneCompanionTest.xcodeproj" / "project.pbxproj").read_text(
+    encoding="utf-8"
+)
 if project_text.count("CURRENT_PROJECT_VERSION = 157;") != 12:
     raise RuntimeError("private iOS build number is not consistently 157")
 if project_text.count("MARKETING_VERSION = 1.0.157;") != 12:

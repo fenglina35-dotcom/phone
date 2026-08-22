@@ -14,7 +14,7 @@ const project=fs.readFileSync(path.join(root,'native/private-small-phone/XcodePr
 const native=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift'),'utf8');
 
 test('v1037 web keeps private 1.0.157 compatibility',()=>{
-  assert.match(app,/APP_VER='v1037 · 微信个人页与好友交互完善版'/);
+  assert.match(app,/APP_VER='v1037 · 微信真实外卖订单卡片'/);
   assert.match(html,/__NORTH_SHELL_BUILD__='1037'/);
   assert.match(sw,/BUILD='1037'/);
   assert.match(plist,/<string>1037<\/string>/);

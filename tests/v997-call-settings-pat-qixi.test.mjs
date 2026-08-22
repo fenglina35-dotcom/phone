@@ -18,11 +18,11 @@ test('v1037 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1037 · 微信个人页与好友交互完善版'/);
+  assert.match(app,/APP_VER='v1037 · 微信真实外卖订单卡片'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
   assert.match(html,/north-sw-reloaded-1037/);
-  assert.match(html,/sw\.js\?v=1037&r=v1037-wechat-me-friends-1/);
+  assert.match(html,/sw\.js\?v=1037&r=v1037-wechat-real-delivery-card-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{

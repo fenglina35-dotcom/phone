@@ -13,8 +13,8 @@ const reportApp = read('native/private-small-phone/XcodeProject/PhoneCompanionRe
 const reportScene = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/TotalActivityReport.swift');
 
 test('v1037 web and private iOS 1.0.157 keep explicit build identities', () => {
-  assert.match(app, /APP_VER='v1037 · 微信个人页与好友交互完善版'/);
-  assert.match(app, /sw\.js\?v=1037&r=v1037-wechat-me-friends-1/);
+  assert.match(app, /APP_VER='v1037 · 微信真实外卖订单卡片'/);
+  assert.match(app, /sw\.js\?v=1037&r=v1037-wechat-real-delivery-card-1/);
   assert.match(shell, /north-shell-v1037/);
   assert.match(bundleInfo, /<string>1037<\/string>/);
   assert.match(localWebView, /1\.0\.157 \(157\)/);

@@ -44,19 +44,7 @@ test('Douyin profile uses a real profile grid and vector heart icons', () => {
 });
 
 test('delivery and presentation layers load after app.js and are available offline', () => {
-  const scripts = [
-    ['app.js', '1037'],
-    ['vendor/qr/qrcode.js', '2.0.4'],
-    ['vendor/qr/jsQR.js', '1.4.0'],
-    ['wechat-me.js', '1037'],
-    ['delivery.js', '1037'],
-    ['commerce-ui.js', '1037'],
-  ];
-  const positions = scripts.map(([name, version]) => html.indexOf(`<script src="${name}?v=${version}"`));
-  positions.forEach((position, index) => assert.ok(position >= 0, `missing script: ${scripts[index][0]}?v=${scripts[index][1]}`));
-  for (let index = 1; index < positions.length; index++) {
-    assert.ok(positions[index] > positions[index - 1], `${scripts[index][0]} must load after ${scripts[index - 1][0]}`);
-  }
+  assert.match(html, /<script src="app\.js\?v=(\d+)"[^>]*><\/script>\s*<script src="delivery\.js\?v=\1"[^>]*><\/script>\s*<script src="commerce-ui\.js\?v=\1"/);
   assert.match(html, /\.shop-card\{/);
   assert.match(html, /\.mt-card\{/);
   assert.match(html, /\.dy-scene\{/);

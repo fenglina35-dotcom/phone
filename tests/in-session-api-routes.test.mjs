@@ -48,12 +48,7 @@ assert.match(mount,/#talewrap/);
 assert.match(mount,/\.offstage/);
 assert.match(source,/const _isWxPage=_wxGlassPages\.includes\(c\.p\);/);
 assert.match(source,/const _wxG='';/);
-assert.match(source,/const _wxStandalonePremium=\[[^\]]*'wxprofile'[^\]]*'wxaccounts'[^\]]*\]\.includes\(c\.p\)/);
-assert.match(source,/const _wxP=\(c\.p==='wechat'\|\|_wxStandalonePremium\)\?' wx-premium':\['chat','pfchat','pfgroup','group'\]\.includes\(c\.p\)\?' wx-chat-premium':''/);
-assert.match(source,/const _wxSection=c\.p==='wechat'\?' wx-'\+String\(wxTab==='moments'\?'discover':\(wxTab\|\|'chats'\)\):''/);
-assert.match(source,/const _wxFont=S\.me&&S\.me\.wxFeatures&&S\.me\.wxFeatures\.fontScale!=='normal'\?' wx-font-'\+S\.me\.wxFeatures\.fontScale:''/);
-assert.match(source,/app\.innerHTML='<div class="page'\+_glass\+_wxG\+_setG\+_wxL\+_wxP\+_wxSection\+_wxFont\+'">'\+html\+'<\/div>'/);
-assert.ok(source.indexOf('chatRouteMount(c);') > source.indexOf("app.innerHTML='<div class=\"page'"));
+assert.match(source,/const _wxP=c\.p==='wechat'\?' wx-premium':c\.p==='chat'\?' wx-chat-premium':'';\s*const _wxSection=c\.p==='wechat'\?' wx-'\+String\(wxTab==='moments'\?'discover':\(wxTab\|\|'chats'\)\):'';\s*app\.innerHTML='<div class="page'\+_glass\+_wxG\+_setG\+_wxL\+_wxP\+_wxSection\+'">'\+html\+'<\/div>';[\s\S]{0,420}?chatRouteMount\(c\);/);
 
 const calls=[];
 const context=vm.createContext({

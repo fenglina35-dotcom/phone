@@ -5,7 +5,7 @@ const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const glass=fs.readFileSync(new URL('../glass-theme.css',import.meta.url),'utf8');
 
-assert.match(app,/\['chat','pfchat','pfgroup','group'\]\.includes\(c\.p\)\?' wx-chat-premium'/,'all WeChat chat variants share the scoped visual skin');
+assert.match(app,/c\.p==='chat'\?' wx-chat-premium'/,'chat has a scoped visual skin');
 assert.match(app,/class="nav chat-glass-nav/,'chat title bar uses the frosted layer');
 assert.match(app,/class="moodbar chat-glass-mood/,'role mood uses the frosted chip');
 assert.doesNotMatch(app,/class="nav chat-glass-nav[^`]*耳/,'chat title has no ear ornament');
@@ -40,8 +40,6 @@ assert.match(glass,/\.chat-function-toggle>span::before,\.chat-function-toggle>s
 assert.match(glass,/\.wx-chat-premium \.chatbg \.msgt\{display:none!important\}/,'per-message clock labels are hidden only by presentation');
 assert.match(app,/const ts=m\.time\?`<div class="msgt">\$\{hm\(m\.time\)\}<\/div>`:''/,'message timestamps remain in the data/render path for compatibility');
 assert.match(glass,/\.wx-chat-premium \.chatbg \.tstamp span\{[^}]*background:transparent!important;[^}]*box-shadow:none!important/,'center date and time text remains without a dark badge');
-assert.match(glass,/\.wx-chat-premium>\.manual-reply-row,\.wx-chat-premium\.wxlight>\.manual-reply-row\{[^}]*width:auto[^}]*background:transparent!important[^}]*border:0!important/,'manual reply keeps only the chip and never paints a full-width separator');
-assert.doesNotMatch(glass,/\.wx-glass\.wx-chat-premium>\.manual-reply-row/,'manual reply transparency must not depend on a missing wrapper class');
 
 assert.match(app,/class="off-nav-actions">\$\{replyTop\}/,'offline reply action lives in the upper-right navigation area');
 assert.match(app,/class="off-reply-top"/);

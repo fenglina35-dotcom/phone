@@ -39,8 +39,7 @@ assert.doesNotMatch(functionSource('renderWxGroupCreate'),/企业微信/);
 
 assert.match(functionSource('wxQuickMenuHTML'),/发起群聊/);
 assert.match(functionSource('wxQuickMenuHTML'),/添加朋友/);
-assert.match(functionSource('wxQuickMenuHTML'),/扫一扫/);
-assert.doesNotMatch(functionSource('wxQuickMenuHTML'),/收付款/);
+assert.doesNotMatch(functionSource('wxQuickMenuHTML'),/扫一扫|收付款/);
 assert.match(functionSource('toggleWxQuickMenu'),/_wxQuickOpen/);
 
 assert.match(app,/else if\(c\.p==='wxonlychat'\)html=renderWxOnlyChat\(\)/);
@@ -60,6 +59,6 @@ assert.match(glass,/\.wx-contact-letter>h4\{[^}]*position:sticky;top:0/);
 assert.match(glass,/\.wx-contact-person>\.pfavwrap\{[^}]*flex:0 0 40px/);
 assert.match(glass,/\.wx-directory-head\{[^}]*backdrop-filter:blur/);
 assert.match(glass,/\.wx-chat-premium>\.manual-reply-row,[^{]+\{[^}]*background:transparent!important/);
-assert.match(glass,/\.wx-chat-premium \.chatbg>\.chat-glass-mood\{[^}]*width:max-content/);
+assert.match(glass,/\.wx-chat-premium>\.chat-glass-mood\{[^}]*width:max-content/);
 
 console.log('wechat contacts directory tests passed');
