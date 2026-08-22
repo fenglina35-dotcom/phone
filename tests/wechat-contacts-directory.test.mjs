@@ -59,6 +59,6 @@ assert.match(glass,/\.wx-contact-letter>h4\{[^}]*position:sticky;top:0/);
 assert.match(glass,/\.wx-contact-person>\.pfavwrap\{[^}]*flex:0 0 40px/);
 assert.match(glass,/\.wx-directory-head\{[^}]*backdrop-filter:blur/);
 assert.match(glass,/\.wx-chat-premium>\.manual-reply-row,[^{]+\{[^}]*background:transparent!important/);
-assert.match(glass,/\.wx-chat-premium>\.chat-glass-mood\{[^}]*width:max-content/);
+assert.match(glass,/\.wx-chat-premium \.chatbg>\.chat-glass-mood\{[^}]*width:calc\(100% - 24px\)/);
 
 console.log('wechat contacts directory tests passed');

@@ -11,11 +11,16 @@ assert.match(app,/class="moodbar chat-glass-mood/,'role mood uses the frosted ch
 assert.doesNotMatch(app,/class="nav chat-glass-nav[^`]*耳/,'chat title has no ear ornament');
 
 assert.match(app,/class="chat-function-viewport"[^>]*onscroll="chatFunctionPanelScroll\(this\)"/);
-assert.equal((app.match(/class="chat-function-page"/g)||[]).length,2,'function panel has exactly two swipe pages');
+const rolePanel=app.match(/function chatFunctionPanel\(id\)[\s\S]*?function renderChat\(id\)/)?.[0]||'';
+assert.equal((rolePanel.match(/class="chat-function-page"/g)||[]).length,2,'ordinary role function panel keeps exactly two swipe pages');
 assert.match(glass,/scroll-snap-type:x mandatory/,'two function pages use native horizontal snapping');
 assert.match(glass,/touch-action:pan-x/,'horizontal panel gestures do not hijack vertical chat scrolling');
 assert.match(app,/chatPanelToggle\('emoji'\)/,'smile opens the emoji page');
 assert.match(app,/chatPanelToggle\('fn'\)/,'plus opens the function page');
+assert.match(app,/function groupComposerHTML\(scope,id,inputId,placeholder,sendAction,panelId\)[\s\S]*chat-voice-toggle[\s\S]*chat-emoji-toggle[\s\S]*chat-function-toggle/,'all group composers reuse the role chat voice, emoji, and plus icon set');
+assert.match(app,/groupComposerHTML\('pfgroup',gid,'pfg_input'/,'real small-phone groups use the shared composer');
+assert.match(app,/groupComposerHTML\('group',id,'ginput'/,'role groups use the shared composer');
+assert.match(app,/if\(c\.p==='group'\|\|c\.p==='pfgroup'\)afterGroupComposer\(c\)/,'group composers bind text input and enter-to-send after rendering');
 assert.match(app,/chatFunctionItem\('多选转发'/,'only existing small-phone actions are exposed');
 assert.match(glass,/\.chat-function-page\{[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/,'both function pages share the same evenly spread four-column layout');
 assert.doesNotMatch(glass,/\.chat-function-page:nth-child\(2\)/,'the second function page is not compressed into a separate narrow group');
