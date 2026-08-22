@@ -106,9 +106,10 @@ test('remote role subtitles survive a natural-text model response without fake f
 test('remote model timeouts abort the real request and the first detail retries only with real model output',()=>{
   assert.match(app,/function remoteControlModelCall\(messages,opt,timeoutMs\)\{const ms=Math\.max\(10000,\+timeoutMs\|\|30000\),callOpt=Object\.assign\(\{\},opt\|\|\{\},\{timeout:ms\}\);return chatAPI\(messages,callOpt\);\}/);
   assert.doesNotMatch(app,/remote-control-model-timeout/);
-  assert.match(app,/if\(\(mustSpeak\|\|ownPost\)&&!response\.lines\.length\)/);
+  assert.match(app,/if\(\(mustSpeak\|\|ownPost\)&&\(!response\|\|!response\.lines\.length\)\)/);
+  assert.match(app,/requestError\?'角色回复中断，正在重新连接':'角色正在重新组织真实反应'/);
   assert.match(app,/角色正在重新组织真实反应/);
-  assert.match(app,/上一版没有形成可显示的角色台词，或只说了操作过程/);
+  assert.match(app,/上一轮没有拿到可显示的角色台词（可能是请求失败、空回复或只说了操作过程）/);
   assert.match(app,/lastRoleCaptionError='model-returned-no-visible-role-line'/);
   assert.doesNotMatch(app,/function remoteControlSayFallback/);
 });
@@ -134,6 +135,25 @@ test('the first real detail retries an operational-only model answer and returns
   assert.deepEqual(out.lines,['这条聊天为什么没告诉我？']);
   assert.equal(ctl.roleSpokenCount,1);
   assert.equal(ctl.lastRoleCaptionError,undefined);
+});
+
+test('the first real detail retries after a rejected model request instead of swallowing all role captions',async()=>{
+  const source=app.match(/async function remoteControlRoleReaction\(c,a,r\)\{[\s\S]*?\n\}(?=\nasync function remoteControlRoleLines)/)?.[0]||'';
+  assert.ok(source,'remote role reaction function must exist');
+  let calls=0;
+  const remoteControlModelCall=async()=>{calls++;if(calls===1)throw new Error('请求超时');return '{"lines":["这条消息为什么没有告诉我？"],"delete":false,"messageIndex":-1}';};
+  const remoteControlRoleResponse=raw=>{const payload=JSON.parse(raw);return{payload,lines:payload.lines||[]};};
+  const ctl={roleSpokenCount:0,actions:[]};
+  const progress=[];
+  const reaction=Function('$','remoteControlDeleteCapability','remoteControlOwnershipNote','remoteControlIntentContext','S','_remoteCtl','remoteControlProgress','remoteControlModelCall','remoteControlRoleResponse','buildSystem',`${source};return remoteControlRoleReaction;`)(
+    ()=>null,()=>null,()=>'',()=>'',{me:{name:'用户'}},ctl,text=>progress.push(text),remoteControlModelCall,remoteControlRoleResponse,()=>''
+  );
+  const out=await reaction({id:'role-1',name:'角色'},{op:'view',targetName:'聊天详情',targetType:'role'},{detail:'用户：你为什么没有告诉我',facts:['用户：你为什么没有告诉我']});
+  assert.equal(calls,2);
+  assert.deepEqual(out.lines,['这条消息为什么没有告诉我？']);
+  assert.equal(ctl.roleSpokenCount,1);
+  assert.equal(ctl.lastRoleCaptionError,undefined);
+  assert.ok(progress.includes('角色回复中断，正在重新连接'));
 });
 
 test('remote control never revisits the same view page in one session',()=>{

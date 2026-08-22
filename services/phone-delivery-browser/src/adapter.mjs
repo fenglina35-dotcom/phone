@@ -15,6 +15,8 @@ export class DeliveryAdapter {
     this.orders = new Map();
     this.createAttempts = new Map();
     this.payAttempts = new Map();
+    this.capabilitiesCache = null;
+    this.capabilitiesPromise = null;
   }
 
   async handle(action, payload = {}, context = {}) {
@@ -36,27 +38,35 @@ export class DeliveryAdapter {
   }
 
   async capabilities() {
-    const status = await this.browser.status();
-    return {
-      providers: ['taobao_flash'],
-      payments: ['alipay'],
-      automaticPayments: false,
-      addressConfirmation: true,
-      realtimeWebhooks: false,
-      addressLabel: clean(status.addressLabel, 80),
-      loginRequired: status.loggedIn !== true,
-      loginUrl: clean(status.loginUrl, 500),
-    };
+    if (this.capabilitiesCache && Date.now() - this.capabilitiesCache.cachedAt < 60_000) return { ...this.capabilitiesCache.value };
+    if (!this.capabilitiesPromise) this.capabilitiesPromise = (async () => {
+      const status = await this.browser.status();
+      const value = {
+        providers: ['taobao_flash'],
+        payments: ['alipay'],
+        automaticPayments: false,
+        addressConfirmation: true,
+        realtimeWebhooks: false,
+        addressLabel: clean(status.addressLabel, 80),
+        loginRequired: status.loggedIn !== true,
+        loginUrl: clean(status.loginUrl, 500),
+      };
+      this.capabilitiesCache = { cachedAt: Date.now(), value };
+      return value;
+    })();
+    try { return { ...await this.capabilitiesPromise }; } finally { this.capabilitiesPromise = null; }
   }
 
   async confirmAddress(payload) {
     if (payload.confirmedByUser !== true) throw new Error('必须由本人确认收货地址');
     const address = await this.browser.currentAddress();
     if (!address?.label || !address?.fingerprintSource) throw new Error('未能从淘宝闪购读取当前默认地址');
-    return {
+    const result = {
       addressLabel: clean(address.label, 80),
       addressFingerprint: opaqueFingerprint(this.secret, address.fingerprintSource),
     };
+    if (this.capabilitiesCache) this.capabilitiesCache = { cachedAt: Date.now(), value: { ...this.capabilitiesCache.value, addressLabel: result.addressLabel, loginRequired: false, loginUrl: '' } };
+    return result;
   }
 
   async search(payload, context) {

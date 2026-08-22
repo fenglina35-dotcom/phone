@@ -47,6 +47,7 @@
     r.approvedAddressFingerprint=text(r.approvedAddressFingerprint,180);
     r.lastCapability=r.lastCapability&&typeof r.lastCapability==='object'?r.lastCapability:null;
     r.pendingCreates=Array.isArray(r.pendingCreates)?r.pendingCreates.filter(function(x){return x&&Date.now()-(+x.at||0)<10*60000;}).slice(0,12):[];
+    r.roleAttempts=r.roleAttempts&&typeof r.roleAttempts==='object'?r.roleAttempts:{};Object.keys(r.roleAttempts).forEach(function(cid){var a=r.roleAttempts[cid];if(!a||typeof a!=='object'){delete r.roleAttempts[cid];return;}if(!a.endedAt&&a.startedAt&&Date.now()-a.startedAt>180000){a.status='failed';a.endedAt=a.startedAt+180000;a.error='真实外卖操作超过3分钟，已结束本轮';}});
     S.food.real=r;
     return r;
   }
@@ -112,7 +113,7 @@
 
   async function realSearch(query,opt){
     query=text(query,120);if(!query)throw new Error('请输入要搜索的餐品或店铺');
-    var data=await request('search',{query:query,providers:['taobao_flash'],paymentPreference:['alipay'],roleId:opt&&opt.roleId||'',limit:opt&&opt.roleId?2:4},45000);
+    var data=await request('search',{query:query,providers:['taobao_flash'],paymentPreference:['alipay'],roleId:opt&&opt.roleId||'',limit:opt&&opt.roleId?2:4},165000);
     var offers=(Array.isArray(data)?data:data.offers||[]).map(safeOffer).filter(function(x){return x.offerId&&x.name&&x.total>0;});
     var r=foodState();if(data&&data.addressLabel)r.addressLabel=text(data.addressLabel,80);if(!offers.length)throw new Error('真实平台没有返回可下单商品');
     return offers;
@@ -207,15 +208,17 @@
     if(!connectorUrl()){resultReply(c,null,'还没有连接真实外卖服务');return true;}
     if(!query){resultReply(c,null,'没有提供可搜索的餐品或店铺');return true;}
     if((S.food.orders||[]).some(function(x){return x.real&&x.roleId===cid&&Date.now()-(+x.createdAt||0)<20*60000&&!TERMINAL[x.status];})){resultReply(c,null,'20分钟内已有一笔角色真实外卖订单仍在处理，为避免重复没有再下单');return true;}
-    roleRequests[cid]={query:query,startedAt:Date.now()};
-    var order=null;try{var offers=await realSearch(query,{roleId:cid}),offer=await chooseOffer(c,query,offers);await loadOfferOptions(offer);var choice=await chooseOptions(c,query,offer);order=await createOrder(offer,{roleId:cid,quantity:choice.quantity,selectedOptions:choice.selectedOptions});pushRoleOrderCard(c,order);await payOrder(order);resultReply(c,order,'');return true;}
-    catch(e){resultReply(c,order,e.message||'真实外卖操作失败');return true;}
+    var attempt={query:query,startedAt:Date.now(),endedAt:0,status:'running',error:''};roleRequests[cid]=attempt;r.roleAttempts[cid]=attempt;save();
+    var order=null;try{var offers=await realSearch(query,{roleId:cid}),offer=await chooseOffer(c,query,offers);await loadOfferOptions(offer);var choice=await chooseOptions(c,query,offer);order=await createOrder(offer,{roleId:cid,quantity:choice.quantity,selectedOptions:choice.selectedOptions});pushRoleOrderCard(c,order);await payOrder(order);attempt.status='completed';attempt.endedAt=Date.now();save();resultReply(c,order,'');return true;}
+    catch(e){attempt.status='failed';attempt.endedAt=Date.now();attempt.error=text(e.message||'真实外卖操作失败',180);save();resultReply(c,order,attempt.error);return true;}
     finally{delete roleRequests[cid];}
   }
   function rolePreludeAllowed(line){line=text(line,160);if(!line||/已经|订单|收银台|付款|支付|骑手|接单|配送|送到|优惠券|实付|待付|下单|点好|买好|订好|付好/.test(line))return false;return /等|稍等|等我|我来|我去|我先|给我一下|看看|找找|挑挑|选选|别急/.test(line);}
-  function rolePrompt(){
-    var r=foodState();
+  function rolePrompt(c){
+    var r=foodState(),attempt=c&&r.roleAttempts[c.id],lastUser=c&&(msgs(c.id)||[]).filter(function(m){return m&&m.role==='user'&&!m._silent;}).slice(-1)[0],lastUserAt=lastUser&&(+lastUser.time||+lastUser.ts||0)||0;
     if(!r.enabled)return '\n\n# 外卖能力\n当前真实外卖未开启。[点外卖|餐品名|价格] 只会创建虚拟小手机里的剧情外卖，不能把它说成淘宝闪购、美团、微信支付、支付宝或现实订单。';
+    if(c&&(roleRequests[c.id]||attempt&&attempt.status==='running'&&!attempt.endedAt))return '\n\n# 真实外卖当前状态\n你刚才启动的真实外卖仍在同一轮搜索或下单中。绝对不要再次说“等一下/我再找找”，不要再次输出 [真实外卖|...] 或 [点外卖|...]，也不要重启操作；等待这一轮返回真实结果。其他普通聊天照常。';
+    if(attempt&&attempt.endedAt&&lastUserAt<=attempt.endedAt)return '\n\n# 真实外卖本轮已结束\n刚才那一轮真实外卖已经'+(attempt.status==='completed'?'完成':'失败或超时')+'。在'+S.me.name+'发来新的明确请求之前，绝对不要再次说“等一下/我再找找”，不要输出 [真实外卖|...] 或 [点外卖|...]，不要自动重试。只根据系统提供的真实结果自然回复一次；其他普通聊天照常。';
     return '\n\n# 真实外卖能力与硬边界\n真实外卖已开启，但你始终保留自己的判断和意愿：可以按你的人设、关系、情绪与当下处境同意，也有权直接拒绝给'+S.me.name+'点单。拒绝时只需用你自己的口吻正常说明，不要输出任何外卖标签，也不会启动真实订单。你可以按本人判断主动使用，也可以在'+S.me.name+'明确让你点某样东西时搜索。若对方只是泛泛说“想喝奶茶”“想吃点东西”，还没说明具体品牌/门店或具体饮品，也没有明确让你自行决定，就必须先按你自己的语气自然问清楚并等待回答；这一轮绝不能输出真实外卖标签。只有你自己同意，并且对方已经说清具体品牌/门店与饮品，或者在你询问后明确让你自行决定，才可以开始真实搜索。\n真正决定尝试时，必须先发一句符合你本人语气的简短可见消息，让'+S.me.name+'知道你正在找，例如自然表达“等我一下”“我去看看”；紧接着再单独输出一行 [真实外卖|具体搜索词]。搜索词要保留用户明确说出的品牌/店名和具体饮品，不要把糖度、冰度、口味或小料改写成别的。系统只会使用淘宝闪购真实候选和真实规格，严格匹配后创建支付宝待付款订单，由用户本人付款。用户没明确说的部分才参考已保存的奶茶偏好并按你的人设自主选择。\n开始操作的可见消息只能表达“准备找/准备看看”，绝不能提前声称已经找到、用了优惠券、下单、付款、骑手接单或送达；只有收到后续真实操作结果后才能说对应事实。找不到准确品牌、饮品或规格时必须如实失败，不能换别家、换饮品或改口味，也不能改走虚拟外卖。不要再使用 [点外卖|餐品|价格]。';
   }
 

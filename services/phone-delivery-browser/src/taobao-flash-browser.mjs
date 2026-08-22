@@ -7,6 +7,31 @@ const number = value => Number(String(value ?? '').match(/[\d.]+/)?.[0] || 0);
 const groupHeading = /^(规格|套餐|杯型|份量|容量|温度|冰度|糖度|甜度|口味|辣度|(?:推荐)?(?:加料|小料|配料).{0,40}|酱料|做法|主食\d*|小食\d*|甜品(?:\/小食)?|小食\/甜品|饮料|赠送|全鸡|配餐|蘸酱)(?:\s*[（(]?(?:请选|请选择|任选)\s*\d+\s*份[）)]?)?$/;
 const shopUrl = url => /newretail\/p\/ushop|pages\/ele-takeout-index/i.test(String(url || ''));
 
+export function riskChallengeKind(value) {
+  const body = clean(value, 12_000);
+  if (/请选择符合描述的所有图片|没有新图片可以点后.*提交|请选择所有.*图片/i.test(body)) return '图片验证';
+  if (/滑块|安全验证|请完成验证|访问过于频繁|验证码/i.test(body)) return '安全验证';
+  return '';
+}
+
+export function preferredBrand(value) {
+  const query = clean(value, 120);
+  if (/瑞幸(?:咖啡)?|luckin/i.test(query)) return 'luckin';
+  if (/喜茶|heytea/i.test(query)) return 'heytea';
+  if (/霸王茶姬|chagee/i.test(query)) return 'chagee';
+  if (/奈雪/i.test(query)) return 'nayuki';
+  return '';
+}
+
+export function brandMatches(brand, value) {
+  const name = clean(value, 120);
+  if (brand === 'luckin') return /瑞幸(?:咖啡)?|luckin/i.test(name);
+  if (brand === 'heytea') return /喜茶|heytea/i.test(name);
+  if (brand === 'chagee') return /霸王茶姬|chagee/i.test(name);
+  if (brand === 'nayuki') return /奈雪/i.test(name);
+  return false;
+}
+
 export function publicAddressLabel(raw) {
   const value = clean(raw, 300);
   const common = value.match(/(?:常用|标签)\s*(家|公司|学校)/);
@@ -43,6 +68,9 @@ export class TaobaoFlashBrowser {
     this.executablePath = process.env.PHONE_DELIVERY_CHROME_PATH || '';
     this.context = null;
     this.page = null;
+    this.startPromise = null;
+    this.prewarmPromise = null;
+    this.prewarmed = false;
     this.searchUrl = '';
     this.shops = [];
     this.addressCache = null;
@@ -50,6 +78,18 @@ export class TaobaoFlashBrowser {
 
   async start() {
     if (this.context) return;
+    if (this.startPromise) return this.startPromise;
+    this.startPromise = this.startOnce();
+    try { await this.startPromise; }
+    catch (error) {
+      await this.context?.close().catch(() => {});
+      this.context = null; this.page = null;
+      this.prewarmed = false;
+      throw error;
+    } finally { this.startPromise = null; }
+  }
+
+  async startOnce() {
     await fs.mkdir(this.profile, { recursive: true });
     const { chromium } = await import('playwright');
     this.context = await chromium.launchPersistentContext(this.profile, {
@@ -60,15 +100,110 @@ export class TaobaoFlashBrowser {
       userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
       args: ['--disable-dev-shm-usage'],
     });
+    await this.context.route('**/*', async route => {
+      if (route.request().resourceType() === 'media') return route.abort().catch(() => {});
+      return route.continue().catch(() => {});
+    });
     this.context.setDefaultTimeout(this.timeout);
     this.page = this.context.pages()[0] || await this.context.newPage();
+    await this.reveal(this.page);
   }
 
-  async ensure() { await this.start(); return this.page; }
-  async goto(url, wait = 2500) { const page = await this.ensure(); await page.goto(url, { waitUntil: 'domcontentloaded' }); await page.waitForTimeout(wait); return page; }
+  async reveal(page = this.page) {
+    if (this.headless || !page) return;
+    await page.bringToFront().catch(() => {});
+  }
+
+  async ensure() { await this.start(); await this.reveal(this.page); return this.page; }
+  pageReady(url, text) {
+    if (/\/search\//i.test(url)) return /起送|月售|配送|暂无搜索结果|未找到/.test(text);
+    if (/address/i.test(url)) return /编辑|新增收货地址|请选择收货地址/.test(text);
+    if (shopUrl(url)) return /选规格|加购|点餐|月售|商品/.test(text);
+    if (/buy|order|confirm/i.test(url)) return /提交订单|立即支付|实付款|合计/.test(text);
+    return text.length >= 120;
+  }
+
+  async waitForContent(page, maxWait = 2500) {
+    const limit = Math.max(300, Number(maxWait) || 2500);
+    const minimum = Math.min(220, limit);
+    await page.waitForTimeout(minimum);
+    const deadline = Date.now() + Math.max(0, limit - minimum);
+    let previous = '';
+    let stable = 0;
+    while (Date.now() < deadline) {
+      const snapshot = await page.evaluate(() => {
+        const rows = [];
+        const visit = root => {
+          const text = (root.innerText || root.textContent || '').replace(/\s+/g, ' ').trim();
+          if (text) rows.push(text);
+          for (const node of root.querySelectorAll?.('*') || []) if (node.shadowRoot) visit(node.shadowRoot);
+        };
+        visit(document); return rows.join(' ').slice(0, 12_000);
+      }).catch(() => '');
+      if (snapshot && this.pageReady(page.url(), snapshot)) return true;
+      stable = snapshot && snapshot === previous ? stable + 1 : 0;
+      if (stable >= 2 && !/\/search\/|address|newretail\/p\/ushop|pages\/ele-takeout-index|buy|order|confirm/i.test(page.url())) return true;
+      previous = snapshot;
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) break;
+      await page.waitForTimeout(Math.min(180, remaining));
+    }
+    return false;
+  }
+
+  async goto(url, wait = 2500) {
+    const page = await this.ensure();
+    await page.goto(url, { waitUntil: 'domcontentloaded' });
+    await this.reveal(page);
+    await this.waitForContent(page, wait);
+    return page;
+  }
+
+  async prewarm() {
+    if (this.prewarmed && this.context && this.page) return true;
+    if (this.prewarmPromise) return this.prewarmPromise;
+    this.prewarmPromise = (async () => {
+      const page = await this.ensure();
+      if (page.url() === 'about:blank') await this.goto(MSITE, 1800);
+      this.prewarmed = true;
+      return true;
+    })();
+    try { return await this.prewarmPromise; } finally { this.prewarmPromise = null; }
+  }
   needsLogin(page) { return /\/login|login\.ele\.me|passport/i.test(page.url()); }
   async requireLogin(page) { if (this.needsLogin(page)) throw new Error('淘宝闪购登录已失效，请在浏览器窗口用手机号、短信验证码和滑块重新登录'); }
-  async riskCheck(page) { const body = clean(await page.locator('body').innerText().catch(() => ''), 2000); if (/滑块|安全验证|请完成验证|访问过于频繁/.test(body)) throw new Error('淘宝闪购触发安全验证，请在浏览器窗口人工完成后重试'); }
+  async riskText(page) {
+    const frames = typeof page.frames === 'function' ? page.frames() : [page];
+    const rows = [];
+    for (const frame of frames.length ? frames : [page]) {
+      const value = typeof frame.evaluate === 'function' ? await frame.evaluate(() => {
+        const rows = [];
+        const visit = root => {
+          const body = root.body || root;
+          const text = String(body?.innerText || body?.textContent || '').trim();
+          if (text) rows.push(text);
+          for (const el of root.querySelectorAll?.('*') || []) if (el.shadowRoot) visit(el.shadowRoot);
+        };
+        visit(document);
+        return rows.join(' ');
+      }).catch(() => frame.locator('body').innerText().catch(() => '')) : await frame.locator('body').innerText().catch(() => '');
+      if (value) rows.push(value);
+    }
+    return clean(rows.join(' '), 12_000);
+  }
+
+  async riskCheck(page, { waitForHuman = false, maxWaitMs = 0 } = {}) {
+    const startedAt = Date.now();
+    for (;;) {
+      const kind = riskChallengeKind(await this.riskText(page));
+      if (!kind) return Date.now() - startedAt;
+      if (!waitForHuman || Date.now() - startedAt >= maxWaitMs) {
+        throw new Error(`淘宝闪购出现${kind}，本轮已暂停且不会自动重试；请在电脑浏览器手动完成后重新告诉角色开始`);
+      }
+      await this.reveal(page);
+      await page.waitForTimeout(1000);
+    }
+  }
 
   async status() {
     const page = await this.goto(MSITE, 3500);
@@ -109,13 +244,29 @@ export class TaobaoFlashBrowser {
   }
 
   async search(query, limit = 12) {
+    const startedAt = Date.now();
+    let humanWaitMs = 0;
+    const assertWithinSearchTime = () => {
+      if (Date.now() - startedAt - humanWaitMs > 35_000) throw new Error('淘宝闪购搜索超过35秒，本轮已结束且不会自动重试');
+    };
+    const waitForHumanVerification = async page => {
+      humanWaitMs += await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
+      assertWithinSearchTime();
+    };
     const page = await this.goto(`https://h5.ele.me/search/?keyword=${encodeURIComponent(query)}`, 2500);
-    await this.requireLogin(page); await this.riskCheck(page);
+    await this.requireLogin(page); await waitForHumanVerification(page);
     let shops = [];
     for (let attempt = 0; attempt < 12; attempt += 1) {
+      assertWithinSearchTime();
+      await waitForHumanVerification(page);
       shops = await this.extractShops(page);
       if (shops.length) break;
       await page.waitForTimeout(500);
+    }
+    const brand = preferredBrand(query);
+    if (brand) {
+      const exact = shops.filter(shop => brandMatches(brand, shop.name));
+      if (exact.length) shops = exact.slice(0, 1);
     }
     this.searchUrl = page.url();
     this.shops = shops;
@@ -123,8 +274,10 @@ export class TaobaoFlashBrowser {
     const offers = [];
     const maxShops = Math.min(this.shops.length, 2, Math.max(1, limit));
     for (let shopIndex = 0; shopIndex < maxShops && offers.length < limit; shopIndex += 1) {
+      assertWithinSearchTime();
       const shop = this.shops[shopIndex];
       const shopPage = await this.enterShop(shopIndex);
+      await waitForHumanVerification(shopPage);
       const items = await this.extractMenu(shopPage, Math.max(1, Math.ceil(limit / maxShops)), query);
       for (const item of items) {
         const deliveryFee = shop.freeDeliveryThreshold > 0 && item.price >= shop.freeDeliveryThreshold ? 0 : shop.deliveryFee;

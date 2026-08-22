@@ -2,11 +2,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DeliveryAdapter } from '../src/adapter.mjs';
 import { sign, verifySignedRequest } from '../src/security.mjs';
-import { checkoutAmounts, publicAddressLabel } from '../src/taobao-flash-browser.mjs';
+import { brandMatches, checkoutAmounts, preferredBrand, publicAddressLabel, riskChallengeKind, TaobaoFlashBrowser } from '../src/taobao-flash-browser.mjs';
 
 class FakeBrowser {
-  constructor() { this.submits = 0; this.statusValue = 'pending_payment'; }
-  async status() { return { loggedIn: true, addressLabel: '家' }; }
+  constructor() { this.submits = 0; this.statusCalls = 0; this.statusValue = 'pending_payment'; }
+  async status() { this.statusCalls += 1; return { loggedIn: true, addressLabel: '家' }; }
   async currentAddress() { return { label: '家', fingerprintSource: 'secret-full-address' }; }
   async search() { return [{ merchantId: 'kfc-1', merchant: '肯德基', name: '原味鸡套餐', price: 39, deliveryFee: 3, total: 42, browserRef: { item: 1 }, optionGroups: [], optionsLoaded: false }]; }
   async inspectOptionsFor() { return [{ id: 'drink', name: '饮料', required: true, multiple: false, choices: [{ id: 'cola', label: '可乐', available: true }, { id: 'coffee', label: '咖啡', available: true }] }]; }
@@ -32,6 +32,81 @@ test('public address labels never expose the full platform address row', () => {
 test('checkout total does not mistake the discount for the payable amount', () => {
   const amounts = checkoutAmounts('配送费 惊喜减3元 ¥5.6 ¥2.6 合计 已优惠 ¥3 ¥26.6 购红包 本单立减5元 合计¥26.6 已优惠 ¥3 立即支付');
   assert.deepEqual(amounts, { total: 26.6, discount: 3 });
+});
+
+test('headful browser is brought to the foreground while headless mode stays silent', async () => {
+  let calls = 0;
+  const page = { async bringToFront() { calls += 1; } };
+  await new TaobaoFlashBrowser({ headless: false }).reveal(page);
+  assert.equal(calls, 1);
+  await new TaobaoFlashBrowser({ headless: true }).reveal(page);
+  assert.equal(calls, 1);
+});
+
+test('known drink brands are recognized without widening to another merchant', () => {
+  assert.equal(preferredBrand('瑞幸咖啡 生椰拿铁 少冰'), 'luckin');
+  assert.equal(preferredBrand('喜茶 多肉葡萄'), 'heytea');
+  assert.equal(preferredBrand('随便来杯咖啡'), '');
+  assert.equal(brandMatches('luckin', '瑞幸咖啡（人民广场店）'), true);
+  assert.equal(brandMatches('luckin', '某某奶茶店'), false);
+});
+
+test('image captcha is recognized and a manually completed challenge resumes in place', async () => {
+  assert.equal(riskChallengeKind('请选择符合描述的所有图片，没有新图片可以点后，请点击“提交”'), '图片验证');
+  assert.equal(riskChallengeKind('瑞幸咖啡 生椰拿铁 月售 1200'), '');
+  let reads = 0; let waits = 0;
+  const frame = { locator: () => ({ innerText: async () => reads++ === 0 ? '请选择符合描述的所有图片' : '搜索结果' }) };
+  const page = { frames: () => [frame], async bringToFront() {}, async waitForTimeout() { waits += 1; } };
+  await new TaobaoFlashBrowser({ headless: false }).riskCheck(page, { waitForHuman: true, maxWaitMs: 10_000 });
+  assert.equal(waits, 1);
+});
+
+test('adaptive page wait continues as soon as real search content appears', async () => {
+  const waits = [];
+  const page = {
+    async waitForTimeout(ms) { waits.push(ms); },
+    async evaluate() { return '瑞幸咖啡 月售 2000 配送约 30 分钟 起送 ¥20'; },
+    url() { return 'https://h5.ele.me/search/?keyword=luckin'; },
+  };
+  const ready = await new TaobaoFlashBrowser().waitForContent(page, 2500);
+  assert.equal(ready, true);
+  assert.deepEqual(waits, [220]);
+});
+
+test('concurrent cold requests share one browser launch', async () => {
+  const browser = new TaobaoFlashBrowser();
+  let starts = 0;
+  browser.startOnce = async () => {
+    starts += 1;
+    await Promise.resolve();
+    browser.context = { close: async () => {} };
+  };
+  await Promise.all([browser.start(), browser.start(), browser.start()]);
+  assert.equal(starts, 1);
+});
+
+test('concurrent first requests share one browser prewarm', async () => {
+  const browser = new TaobaoFlashBrowser();
+  let warms = 0;
+  const page = { url: () => 'about:blank' };
+  browser.context = { close: async () => {} };
+  browser.page = page;
+  browser.ensure = async () => page;
+  browser.goto = async () => { warms += 1; await Promise.resolve(); return {}; };
+  await Promise.all([browser.prewarm(), browser.prewarm(), browser.prewarm()]);
+  assert.equal(warms, 1);
+  await browser.prewarm();
+  assert.equal(warms, 1);
+});
+
+test('capabilities reuses one warm status result for repeated settings checks', async () => {
+  const browser = new FakeBrowser();
+  const adapter = new DeliveryAdapter({ browser, secret: '12345678901234567890123456789012' });
+  const first = await adapter.capabilities();
+  const second = await adapter.capabilities();
+  assert.equal(first.addressLabel, '家');
+  assert.equal(second.addressLabel, '家');
+  assert.equal(browser.statusCalls, 1);
 });
 
 test('adapter exposes manual payment and preserves real options', async () => {

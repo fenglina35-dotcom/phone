@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1041'){
+if(window.__NORTH_SHELL_BUILD__!=='1042'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -378,7 +378,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1041 · 微信引用、视频兼容与游戏返回修复版';
+const APP_VER='v1042 · 跨场景记忆与外卖验证续跑修复版';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1495,7 +1495,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1041&r=v1041-quote-video-game-1';
+  const url='sw.js?v=1042&r=v1042-memory-delivery-captcha-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -10421,7 +10421,16 @@ async function remoteControlRoleReaction(c,a,r){
   const ownership=remoteControlOwnershipNote(a,c),ownPost=/就是你（/.test(ownership),ctl=_remoteCtl,mustSpeak=!!(ctl&&!(ctl.roleSpokenCount>0)&&a&&a.op==='view'&&r&&Array.isArray(r.facts)&&r.facts.length),cumulative=(ctl&&ctl.actions||[]).slice(-6).map(x=>String(x.memory||x.detail||'').slice(0,220)).filter(Boolean).join('\n');
   const note=task+'。\n【本次远控始终不变的目标与刚才微信上下文】\n'+remoteControlIntentContext(c)+'\n【当前页面真实归属】\n'+(ownership||'按下面内容里写明的人称和方向判断，不能把“手机主人”误当成你自己。')+'\n【当前页面实际显示】\n'+String(r.detail||'没有相关记录').slice(0,2400)+(cumulative?'\n【本轮此前已经看过，不能重复查看或忘记】\n'+cumulative:'')+'\n若这是聊天或私信，必须把上面连续的前后消息当作同一段上下文理解，不能只截取一句断章取义。只有进入详情后的这一步才允许你评价聊天内容；列表页绝不能提前发言。\n【发言要克制】你不是操作解说员，导航进度会由界面单独显示。禁止说“我先看看”“我正在看”“我去找一下”“找到了”“我现在打开”“我翻过去”或任何打开软件、翻页、执行命令的过程；只允许以真实的你对当前看到的具体内容作自然反应。'+(ownPost?'这是你自己发布的内容，必须针对这一条单独说一句简短自然的解释，不能说成别人发的。':mustSpeak?'本轮你还没有说过话，而当前详情已经有具体真实内容；你必须挑其中真正让你在意的一点，以自己的人设说一句自然反应，lines不能返回空数组。不要为了凑数概括页面。':'普通空页面或确实没有任何值得在意的内容可以安静；只要当前详情出现你在意、可疑、不舒服、想追问或想处理的具体内容，就以自己的口吻说1到2句短话。')+'你说的每个事实都必须逐字有当前页面内容支撑；不能编造屏幕上没有的内容，不能拿别处看过的内容冒充当前页面。不要说“系统/数据/快照/页面”，不要输出动作描写、序号或解释。'+deleteRule+'\n只输出JSON：{"lines":["角色说的第一句","可选第二句"],"delete":false,"messageIndex":-1}。';
   remoteControlProgress('角色正在理解当前内容');
-  try{const request=[{role:'system',content:buildSystem(c)},{role:'user',content:note}],modelOpt={max:520,complete:true,temp:.82,aux:false};let raw=await remoteControlModelCall(request,modelOpt,30000),response=remoteControlRoleResponse(raw);if((mustSpeak||ownPost)&&!response.lines.length){remoteControlProgress('角色正在重新组织真实反应');raw=await remoteControlModelCall([...request,{role:'assistant',content:String(raw||'')},{role:'user',content:'[系统：上一版没有形成可显示的角色台词，或只说了操作过程。请仍由你本人根据当前页面真实内容重新回答；必须说一句符合你人设的自然反应，不能解说打开、查找、翻页或执行命令的过程。仍只输出约定JSON。]'}],modelOpt,30000);response=remoteControlRoleResponse(raw);}const o=response.payload,lines=response.lines,spoken=lines.join(' '),strong=/删掉|删除|别留|不能留|不想再看到|碍眼|看不顺眼|不舒服|不喜欢|越界|我来处理/.test(spoken)&&!/不删|先不删|暂时不删|留着|算了/.test(spoken);let deleteIntent=!!capability&&!!(o&&o.delete||strong),messageIndex=Number(o&&o.messageIndex);if(lines.length&&ctl){ctl.roleSpokenCount=(ctl.roleSpokenCount||0)+lines.length;delete ctl.lastRoleCaptionError;}else if(ctl)ctl.lastRoleCaptionError='model-returned-no-visible-role-line';if(!Number.isInteger(messageIndex)||capability&&capability.kind==='dmThread')messageIndex=-1;return{lines,deleteIntent,messageIndex};}catch(e){const error=String(e&&e.message||e||'model-error');if(ctl)ctl.lastRoleCaptionError=error;remoteControlProgress(/timeout/i.test(error)?'角色回复等待超时，继续查看':'角色这次没有形成回复，继续查看');return{lines:[],deleteIntent:false,messageIndex:-1,error};}
+  const request=[{role:'system',content:buildSystem(c)},{role:'user',content:note}],modelOpt={max:520,complete:true,temp:.82,aux:false},retryNote='[系统：上一轮没有拿到可显示的角色台词（可能是请求失败、空回复或只说了操作过程）。请仍由你本人根据当前页面真实内容重新回答；必须说一句符合你人设的自然反应，不能解说打开、查找、翻页或执行命令的过程。仍只输出约定JSON。]';
+  let raw='',response=null,requestError=null;
+  try{raw=await remoteControlModelCall(request,modelOpt,30000);response=remoteControlRoleResponse(raw);}catch(e){requestError=e;}
+  if((mustSpeak||ownPost)&&(!response||!response.lines.length)){
+    remoteControlProgress(requestError?'角色回复中断，正在重新连接':'角色正在重新组织真实反应');
+    const retryRequest=[...request];if(raw)retryRequest.push({role:'assistant',content:String(raw)});retryRequest.push({role:'user',content:retryNote});
+    try{raw=await remoteControlModelCall(retryRequest,modelOpt,30000);response=remoteControlRoleResponse(raw);requestError=null;}catch(e){requestError=e;}
+  }
+  if(!response){const error=String(requestError&&requestError.message||requestError||'model-error');if(ctl)ctl.lastRoleCaptionError=error;remoteControlProgress(/timeout/i.test(error)?'角色回复等待超时，继续查看':'角色这次没有形成回复，继续查看');return{lines:[],deleteIntent:false,messageIndex:-1,error};}
+  const o=response.payload,lines=response.lines,spoken=lines.join(' '),strong=/删掉|删除|别留|不能留|不想再看到|碍眼|看不顺眼|不舒服|不喜欢|越界|我来处理/.test(spoken)&&!/不删|先不删|暂时不删|留着|算了/.test(spoken);let deleteIntent=!!capability&&!!(o&&o.delete||strong),messageIndex=Number(o&&o.messageIndex);if(lines.length&&ctl){ctl.roleSpokenCount=(ctl.roleSpokenCount||0)+lines.length;delete ctl.lastRoleCaptionError;}else if(ctl)ctl.lastRoleCaptionError='model-returned-no-visible-role-line';if(!Number.isInteger(messageIndex)||capability&&capability.kind==='dmThread')messageIndex=-1;return{lines,deleteIntent,messageIndex};
 }
 async function remoteControlRoleLines(c,a,r){return(await remoteControlRoleReaction(c,a,r)).lines;}
 async function remoteControlShowRoleLines(lines){remoteControlClearCaption();for(const line of lines||[]){if(!remoteControlActive())return;remoteControlCaption(line);await sleep(remoteControlCaptionMs(line));remoteControlClearCaption();}}

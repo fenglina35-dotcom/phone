@@ -8,6 +8,10 @@ const browser=fs.readFileSync(new URL('../services/phone-delivery-browser/src/ta
 assert.match(delivery,/var roleRequests=\{\}/,'role delivery must keep an in-flight lock');
 assert.match(delivery,/if\(roleRequests\[cid\]\)return true/,'a repeated role command must not start a second browser order');
 assert.match(delivery,/finally\{delete roleRequests\[cid\];\}/,'the in-flight lock must always be released');
+assert.match(delivery,/r\.roleAttempts\[cid\]=attempt/,'a completed or failed role attempt must be remembered');
+assert.match(delivery,/Date\.now\(\)-a\.startedAt>180000/,'a stale restored attempt must terminate instead of remaining busy forever');
+assert.match(delivery,/lastUserAt<=attempt\.endedAt/,'a terminal result cannot restart until the user sends a new message');
+assert.match(delivery,/绝对不要再次说“等一下\/我再找找”/,'the role must not repeat the search prelude while an attempt is running or terminal');
 assert.match(delivery,/pushRoleOrderCard\(c,order\);await payOrder\(order\)/,'the real order card must appear before payment-link retrieval');
 assert.match(delivery,/必须先按你自己的语气自然问清楚并等待回答/,'vague delivery wishes must be clarified before automation');
 assert.match(delivery,/始终保留自己的判断和意愿/,'the role may accept or refuse the delivery request according to its persona');
