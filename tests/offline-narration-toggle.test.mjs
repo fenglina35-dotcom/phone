@@ -47,5 +47,15 @@ test('the same send button stores narration or normal dialogue according to the 
   assert.match(send,/!manualReplySceneOn\('offline'\)\)offAI\(\)/);
   assert.match(functionSource('offRender'),/offNarrationDecorate/);
   assert.match(html,/\.offinput \.off-narrate\.on/);
-  assert.match(html,/\.offinput\.narration-mode #off_in/);
+  assert.match(html,/\.offinput\.narration-mode textarea/);
+});
+
+test('common-life keeps the proven native textarea keyboard path',()=>{
+  const cohab=functionSource('renderCohab');
+  assert.match(cohab,/<textarea id="off_in" rows="1"/);
+  assert.match(cohab,/event\.key==='Enter'&&!event\.shiftKey/);
+  assert.doesNotMatch(source,/function offInput(?:Mount|PointerDown|Stabilize)\(/);
+  assert.doesNotMatch(source,/replaceWith\(input\)/);
+  assert.match(html,/\.offinput textarea\{[^}]*caret-color:#4aa3ff/);
+  assert.doesNotMatch(html,/\.offinput (?:#off_in|textarea)\{[^}]*(?:appearance|touch-action|height:42px|line-height:42px|overflow:hidden)/);
 });

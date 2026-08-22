@@ -69,7 +69,8 @@ test('Android touch devices keep glass styling without fragile large backdrop la
 });
 
 test('WeChat uses a full-bleed frame while original chat internals stay intact',()=>{
-  assert.match(app,/const _wxP=c\.p==='wechat'\?' wx-premium':c\.p==='chat'\?' wx-chat-premium':''/);
+  assert.match(app,/const _wxStandalonePremium=\[[^\]]*'wxprofile'[^\]]*'wxaccounts'[^\]]*\]\.includes\(c\.p\)/);
+  assert.match(app,/const _wxP=\(c\.p==='wechat'\|\|_wxStandalonePremium\)\?' wx-premium':\['chat','pfchat','pfgroup','group'\]\.includes\(c\.p\)\?' wx-chat-premium':''/);
   assert.match(app,/const _wxSection=c\.p==='wechat'\?' wx-'\+String\(wxTab==='moments'\?'discover':\(wxTab\|\|'chats'\)\):''/);
   assert.match(html,/\.wx-premium>\.nav\{/);
   assert.match(html,/\.wx-premium>\.tabbar\{/);

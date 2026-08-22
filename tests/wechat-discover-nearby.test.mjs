@@ -41,6 +41,8 @@ assert.match(functionSource('renderWxMomentFeed'),/momentTools\(\)[\s\S]*wxMomen
 assert.match(functionSource('renderWxLive'),/直播功能开发中/);
 
 assert.match(functionSource('wxNearbyRefresh'),/aiGen\([\s\S]*生成12个[\s\S]*wxNearbyFallbackPeople/);
+assert.match(functionSource('wxNearbyRefresh'),/before=wxNearbyFingerprint\(d\.people\)[\s\S]*seq=\+\+d\.refreshSeq[\s\S]*wxNearbyFingerprint\(people\)===before/);
+assert.match(functionSource('wxNearbyFallbackPeople'),/seq\*7[\s\S]*near_'\+salt\+'_'\+seq/);
 assert.match(functionSource('wxNearbyAdd'),/acceptAt:Date\.now\(\)\+10000[\s\S]*setTimeout\(\(\)=>wxNearbySweep\(false\),10050\)/);
 assert.match(functionSource('wxNearbyContact'),/S\.contacts\.push\(c\)[\s\S]*附近的人/);
 assert.match(functionSource('wxNearbySweep'),/status='accepted'[\s\S]*scheduleReply/);
@@ -48,12 +50,13 @@ assert.match(functionSource('friendRequestSweep'),/wxNearbySweep\(false\)/);
 
 assert.match(css,/\.wx-discover-row\.locked\{[^}]*opacity:[^}]*filter:grayscale\(1\)[^}]*pointer-events:none/);
 assert.match(css,/\.wx-nearby-avatar/);
-assert.match(functionSource('offInputPointerDown'),/offInputStabilize\(ta,false\)/);
-assert.doesNotMatch(functionSource('offInputPointerDown'),/preventDefault/);
-assert.match(functionSource('offInputMount'),/tagName==='TEXTAREA'[\s\S]*createElement\('input'\)[\s\S]*pointerdown[\s\S]*touchend[\s\S]*click/);
-assert.match(shell,/\.offinput #off_in\{[^}]*height:42px!important[^}]*line-height:42px!important[^}]*touch-action:manipulation/);
+assert.match(app,/function renderCohab\([\s\S]*?<textarea id="off_in" rows="1"[\s\S]*?event\.shiftKey/);
+assert.doesNotMatch(app,/function offInput(?:Mount|PointerDown|Stabilize)\(/);
+assert.doesNotMatch(app,/replaceWith\(input\)|createElement\('input'\)[\s\S]{0,500}off_in/);
+assert.match(shell,/\.offinput textarea\{[^}]*caret-color:#4aa3ff/);
+assert.doesNotMatch(shell,/\.offinput (?:#off_in|textarea)\{[^}]*(?:appearance|touch-action|height:42px|line-height:42px|overflow:hidden)/);
 assert.match(app,/cohabSettingsPanelBase[\s\S]*cohab-settings-wrap/);
 assert.match(shell,/\.cohab-settings\[open\]\+\.cohab-debug-reply\{display:none\}/);
 assert.match(shell,/\.cohab-nav \.off-nav-actions \.cohab-status-chip\{[^}]*min-width:70px[^}]*max-width:142px/);
 
-console.log('wechat discover, nearby people, lock state, and offline input focus tests passed');
+console.log('wechat discover, nearby people, lock state, and native offline textarea tests passed');

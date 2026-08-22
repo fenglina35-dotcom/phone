@@ -176,7 +176,7 @@ test('private boot keeps historical image references lazy without allowing image
   assert.match(app,/const lazy=privateNativeAppOn\(\),keys=lazy\?privateBootImageKeys\(\):imageRefKeys\(S\)/);
   assert.match(app,/if\(!lazy\)_rehydrate\(S\)/);
   assert.match(app,/function imgGC\(\)[\s\S]*?if\(isStoredImgRef\(v\)\)used\.add\(v\.slice\(4\)\)/);
-  assert.match(app,/app\.innerHTML=[\s\S]{0,500}?if\(privateNativeAppOn\(\)\)hydrateStoredImageNodes\(\)/);
+  assert.match(app,/app\.innerHTML=[\s\S]{0,1800}?if\(privateNativeAppOn\(\)\)hydrateStoredImageNodes\(\)/);
   assert.match(app,/const _visibleImageMisses=new Map\(\)/);
   assert.match(app,/function visibleImageRetryDelay\(count\)[\s\S]*?Math\.min\(120000/);
   assert.match(app,/eligible\.slice\(0,12\)/);

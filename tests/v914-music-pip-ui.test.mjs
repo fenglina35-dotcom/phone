@@ -8,7 +8,7 @@ const pip=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/Ph
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
 test('v1037 web source keeps private 1.0.157 compatibility',()=>{
-  assert.match(app,/APP_VER='v1037 · 微信真实外卖订单卡片'/);
+  assert.match(app,/APP_VER='v1037 · 微信个人页与好友交互完善版'/);
   assert.match(project,/CURRENT_PROJECT_VERSION = 157;/);
   assert.match(project,/MARKETING_VERSION = 1\.0\.157;/);
 });
