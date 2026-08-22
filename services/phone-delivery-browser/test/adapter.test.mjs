@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { DeliveryAdapter } from '../src/adapter.mjs';
 import { sign, verifySignedRequest } from '../src/security.mjs';
-import { brandMatches, checkoutAmounts, knownRouteKey, normalizeOptionPanelGroups, preferredBrand, productMatchesSavedItem, publicAddressLabel, requestedItemName, riskChallengeKind, shopClosedReason, TaobaoFlashBrowser } from '../src/taobao-flash-browser.mjs';
+import { brandMatches, checkoutAmounts, knownRouteKey, minimumOrderInfo, normalizeOptionPanelGroups, preferredBrand, productMatchesSavedItem, publicAddressLabel, requestedItemName, riskChallengeKind, shopClosedReason, TaobaoFlashBrowser } from '../src/taobao-flash-browser.mjs';
 
 class FakeBrowser {
   constructor() { this.submits = 0; this.statusCalls = 0; this.statusValue = 'pending_payment'; }
@@ -35,6 +35,12 @@ test('public address labels never expose the full platform address row', () => {
 test('checkout total does not mistake the discount for the payable amount', () => {
   const amounts = checkoutAmounts('配送费 惊喜减3元 ¥5.6 ¥2.6 合计 已优惠 ¥3 ¥26.6 购红包 本单立减5元 合计¥26.6 已优惠 ¥3 立即支付');
   assert.deepEqual(amounts, { total: 26.6, discount: 3 });
+});
+
+test('minimum order text provides a resumable same-item quantity', () => {
+  assert.deepEqual(minimumOrderInfo('购物车 ¥12.00 还差 ¥28 元起送 ¥40起送', 12, 1), {
+    threshold: 40, shortfall: 28, current: 12, minimumQuantity: 4,
+  });
 });
 
 test('bundle option parser removes platform hints and preserves the required item count', () => {
@@ -164,6 +170,32 @@ test('a closed first route is skipped and the exact product is read from the nex
 test('shop-internal search removes the brand and option words but keeps the exact product', () => {
   assert.equal(requestedItemName('瑞幸咖啡 生椰拿铁 少少甜 少冰'), '生椰拿铁');
   assert.equal(requestedItemName('KFC 香辣鸡腿堡 不要辣'), '香辣鸡腿堡');
+});
+
+test('global search always performs one exact search inside each candidate shop', async () => {
+  const browser = new TaobaoFlashBrowser();
+  const searchPage = { url: () => 'https://h5.ele.me/search/?keyword=luckin', waitForTimeout: async () => {} };
+  const shopPage = { url: () => 'https://h5.ele.me/newretail/p/ushop/?store_id=luckin-1' };
+  browser.knownRoute = async () => null;
+  browser.knownRoutesFor = async () => [];
+  browser.goto = async () => searchPage;
+  browser.requireLogin = async () => {};
+  browser.riskCheck = async () => 0;
+  browser.extractShops = async () => [{ index: 0, name: '瑞幸咖啡（测试店）', storeId: 'luckin-1', deliveryFee: 0, freeDeliveryThreshold: 0, etaMinutes: 20, rating: 5, monthlySales: 1000, couponLabel: '' }];
+  browser.enterShop = async () => shopPage;
+  let menuReads = 0;
+  browser.extractMenu = async () => menuReads++ === 0
+    ? [{ name: '生椰拿铁推荐装', description: '店铺首页推荐', price: 15, buttonIndex: 1 }]
+    : [{ name: '生椰拿铁', description: '店内精确搜索结果', price: 18, buttonIndex: 9 }];
+  const internalQueries = [];
+  browser.searchInsideShop = async (_page, itemName) => { internalQueries.push(itemName); return true; };
+
+  const offers = await browser.search('瑞幸咖啡 生椰拿铁 少糖', 3);
+
+  assert.deepEqual(internalQueries, ['生椰拿铁']);
+  assert.equal(menuReads, 2);
+  assert.equal(offers[0].name, '生椰拿铁');
+  assert.equal(offers[0].browserRef.buttonIndex, 9);
 });
 
 test('all saved shops being closed stops without any global search', async () => {

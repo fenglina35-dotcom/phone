@@ -1,6 +1,6 @@
-const BUILD='1050';
-const HOTFIX='v1050-delivery-clarification-1';
-const SHELL_CACHE='north-shell-v1050';
+const BUILD='1051';
+const HOTFIX='v1051-delivery-shop-search-title-badge-1';
+const SHELL_CACHE='north-shell-v1051';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];

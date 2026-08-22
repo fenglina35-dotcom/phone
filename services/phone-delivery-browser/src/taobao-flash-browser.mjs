@@ -117,6 +117,20 @@ export function checkoutAmounts(raw) {
   };
 }
 
+export function minimumOrderInfo(raw, itemPrice = 0, quantity = 1) {
+  const body = clean(raw, 12_000);
+  const amount = value => Math.round(Math.max(0, Number(value) || 0) * 100) / 100;
+  const thresholdMatch = body.match(/[¥￥]\s*(\d+(?:\.\d+)?)\s*起送/) || body.match(/起送(?:价|金额)?\s*[¥￥]?\s*(\d+(?:\.\d+)?)/);
+  const shortfallMatch = body.match(/(?:还差|差)\s*[¥￥]?\s*(\d+(?:\.\d+)?)\s*(?:元)?(?:起送|可结算)/);
+  const threshold = number(thresholdMatch?.[1]);
+  const shortfall = number(shortfallMatch?.[1]);
+  const unitPrice = amount(itemPrice);
+  const currentQuantity = Math.max(1, Number(quantity) || 1);
+  const current = threshold > 0 && shortfall > 0 ? Math.max(0, amount(threshold - shortfall)) : amount(unitPrice * currentQuantity);
+  const minimumQuantity = threshold > 0 && unitPrice > 0 ? Math.max(currentQuantity + 1, Math.ceil(threshold / unitPrice)) : 0;
+  return { threshold, shortfall: shortfall || (threshold > current ? amount(threshold - current) : 0), current, minimumQuantity };
+}
+
 export class TaobaoFlashBrowser {
   constructor({ profile, headless = false, timeout = 30_000, cdpUrl = '' } = {}) {
     this.profile = profile || './profile';
@@ -523,7 +537,7 @@ export class TaobaoFlashBrowser {
             description: item.description, price: item.price, deliveryFee, total: item.price + deliveryFee,
             rating: shop.rating, monthlySales: shop.monthlySales, etaMinutes: shop.etaMinutes, couponLabel: shop.couponLabel,
             optionGroups: [], optionsLoaded: false,
-            browserRef: { shopIndex: 0, itemName: item.name, buttonIndex: item.buttonIndex, detailUrl: '', shopUrl: shop.anchorUrl || shop.directUrl, query, merchant: shop.name, merchantId: shop.storeId || '' },
+            browserRef: { shopIndex: 0, itemName: item.name, unitPrice: item.price, buttonIndex: item.buttonIndex, detailUrl: '', shopUrl: shop.anchorUrl || shop.directUrl, query, merchant: shop.name, merchantId: shop.storeId || '' },
           }];
         }
         await this.forgetKnownRoute(rememberedRoute.routeKey || query);
@@ -577,7 +591,11 @@ export class TaobaoFlashBrowser {
       await waitForHumanVerification(shopPage);
       const itemQuery = requestedItemName(query);
       let items = await this.extractMenu(shopPage, Math.max(4, Math.ceil(limit / maxShops)), itemQuery);
-      if (!items.some(item => productMatchesSavedItem(item.name, itemQuery)) && await this.searchInsideShop(shopPage, itemQuery)) {
+      // The outer search is only for finding candidate shops. Storefront preview
+      // cards are incomplete and can contain a fuzzy match that hides the exact
+      // product deeper in the menu, so always perform one store-local search.
+      const searchedInsideShop = await this.searchInsideShop(shopPage, itemQuery);
+      if (searchedInsideShop) {
         await waitForHumanVerification(shopPage);
         items = await this.extractMenu(shopPage, Math.max(4, Math.ceil(limit / maxShops)), itemQuery);
       }
@@ -588,7 +606,7 @@ export class TaobaoFlashBrowser {
           description: item.description, price: item.price, deliveryFee,
           total: item.price + deliveryFee, rating: shop.rating, monthlySales: shop.monthlySales,
           etaMinutes: shop.etaMinutes, couponLabel: shop.couponLabel, optionGroups: [], optionsLoaded: false,
-          browserRef: { shopIndex, itemName: item.name, buttonIndex: item.buttonIndex, detailUrl: item.detailUrl || '', shopUrl: shop.anchorUrl || '', query, merchant: shop.name, merchantId: shop.storeId || '' },
+          browserRef: { shopIndex, itemName: item.name, unitPrice: item.price, buttonIndex: item.buttonIndex, detailUrl: item.detailUrl || '', shopUrl: shop.anchorUrl || '', query, merchant: shop.name, merchantId: shop.storeId || '' },
         });
         if (offers.length >= limit) break;
       }
@@ -746,10 +764,15 @@ export class TaobaoFlashBrowser {
     const fields = page.locator([
       'input[placeholder*="搜索店内"]', 'input[placeholder*="搜索商品"]',
       'input[aria-label*="搜索店内"]', 'input[aria-label*="搜索商品"]',
+      'input[type="search"][placeholder*="搜索"]',
     ].join(', '));
     let field = await this.visibleLocator(fields, true);
     if (!field) {
-      const trigger = await this.visibleLocator(page.locator('[aria-label*="搜索店内"], [aria-label*="搜索商品"]'), true);
+      const trigger = await this.visibleLocator(
+        page.locator('[aria-label*="搜索店内"], [aria-label*="搜索商品"]')
+          .or(page.getByText(/^(店内搜索|搜索店内|搜索商品)$/)),
+        true,
+      );
       if (trigger) {
         await this.activateControl(page, trigger).catch(() => {});
         await page.waitForTimeout(350);
@@ -1122,7 +1145,13 @@ export class TaobaoFlashBrowser {
     }
     const checkout = await this.visibleLocator(page.getByText('去结算', { exact: false }), true);
     if (!checkout) {
+      const checkoutBody = clean(await page.locator('body').innerText().catch(() => ''), 12_000);
+      const minimum = minimumOrderInfo(checkoutBody, ref.unitPrice, quantity);
       const suffix = await this.cleanupFailureSuffix(ref.itemName);
+      if (minimum.threshold > 0) {
+        const quantityHint = minimum.minimumQuantity > quantity ? `；同款至少需要${minimum.minimumQuantity}份` : '';
+        throw new Error(`该门店最低起送金额为¥${minimum.threshold.toFixed(2)}，当前商品合计约¥${minimum.current.toFixed(2)}，还差约¥${minimum.shortfall.toFixed(2)}${quantityHint}；${suffix}`);
+      }
       throw new Error(`未达到起送金额或无法结算，${suffix}，请重新选择商品或数量`);
     }
     const checkoutUrl = page.url();

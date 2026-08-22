@@ -14,7 +14,7 @@ assert.match(delivery,/lastUserAt<=attempt\.endedAt/,'a terminal result cannot r
 assert.match(delivery,/绝对不要再次说“等一下\/我再找找”/,'the role must not repeat the search prelude while an attempt is running or terminal');
 assert.match(delivery,/pushRoleOrderCard\(c,order\);await payOrder\(order\)/,'the real order card must appear before payment-link retrieval');
 assert.match(delivery,/function roleSystemNotice/,'technical delivery results must have a system-only status channel');
-assert.match(delivery,/if\(error\)\{[\s\S]*roleSystemNotice[\s\S]*failureKind==='shop_closed'[\s\S]*scheduleReply/,'only a confirmed closed-shop fact may schedule a natural role reply after failure');
+assert.match(delivery,/if\(error\)\{[\s\S]*roleSystemNotice[\s\S]*failureKind==='shop_closed'[\s\S]*scheduleReply/,'a confirmed closed-shop fact may schedule a natural role reply after failure');
 assert.match(delivery,/全部打烊或休息中/,'closed saved shops must be reported as a factual availability result');
 assert.match(delivery,/不要复述技术提示/,'the role must not paste internal delivery diagnostics into chat');
 assert.doesNotMatch(delivery,/\[真实外卖操作结果\]/,'internal delivery-operation prompts must never be sent into role chat');
@@ -26,6 +26,9 @@ assert.match(delivery,/autonomous:intent\.autonomous/,'the attempt must remember
 assert.match(delivery,/后台保存的长期偏好就是默认选择/,'saved delivery preferences must fill unspecified real options');
 assert.match(delivery,/真正想选热饮、但该商品只有冰饮或冷饮时，必须返回 matched:false/,'an unavailable hot option must pause instead of silently choosing a cold drink');
 assert.match(delivery,/function requestRoleClarification/,'uncertain real options must pause for a user clarification');
+assert.match(delivery,/kind==='minimum_order'/,'a real minimum-order block must pause instead of leaving the role silent');
+assert.match(delivery,/等待起送确认/,'the role must resume after the user answers the minimum-order question');
+assert.match(delivery,/同款增加到至少/,'the role must naturally ask before increasing quantity to meet the minimum order');
 assert.match(delivery,/如果你想选热饮而当前商品没有热饮，只需自然问是否换一种/,'the role must naturally ask before switching away from an unavailable hot drink');
 assert.match(delivery,/真实外卖等待规格确认/,'the next user answer must resume the paused option flow');
 assert.match(delivery,/\[真实外卖\|换品:/,'a newly named product must abandon the old candidate and run one fresh search');

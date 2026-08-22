@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1050'){
+if(window.__NORTH_SHELL_BUILD__!=='1051'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -378,7 +378,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1050 · 外卖规格确认与续选修正版';
+const APP_VER='v1051 · 店内精搜与项圈配色修正版';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1496,7 +1496,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1050&r=v1050-delivery-clarification-1';
+  const url='sw.js?v=1051&r=v1051-delivery-shop-search-title-badge-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -8370,7 +8370,8 @@ function collarRelationshipTitle(text){text=String(text||'').replace(/[「」『
 function collarBadge(){if(S.me&&S.me.wxFeatures&&S.me.wxFeatures.showTitleBadge===false)return '';let cl=S.me.collar;if(cl&&cl.text&&!collarRelationshipTitle(cl.text)){S.me.collar={text:'先生的小宝贝',by:cl.by||'',ts:Date.now(),repairedFrom:String(cl.text).slice(0,40)};save(500);cl=S.me.collar;}if(!cl||!cl.text)return '';
   const t=(''+cl.text).replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}️❤‍⃣]/gu,'').replace(/\s+/g,' ').trim();
   if(!t)return '';
-  return `<span class="wx-title-badge" title="归属印记·你自己摘不掉，得求ta取下">${esc(t)}</span>`;}
+  const f=S.me&&S.me.wxFeatures||{},bg=/^#[0-9a-f]{6}$/i.test(f.titleBadgeBg||'')?f.titleBadgeBg:'',tx=/^#[0-9a-f]{6}$/i.test(f.titleBadgeText||'')?f.titleBadgeText:'',style=(bg?'--wx-title-badge-bg:'+bg+';':'')+(tx?'--wx-title-badge-text:'+tx+';':'');
+  return `<span class="wx-title-badge"${style?` style="${style}"`:''} title="归属印记·你自己摘不掉，得求ta取下">${esc(t)}</span>`;}
 function wxMe(){ensureDailySteps();const on=isOnline();const md=S.me.onlineMode||'auto';
   return `<div class="list">
     <div class="row" onclick="editMe()" style="padding:18px 14px"><div style="position:relative">${av(S.me.avatar,'lg')}<span style="position:absolute;right:-1px;bottom:-1px;width:14px;height:14px;border-radius:50%;background:${on?'#2bd66a':'#888'};border:2px solid #1c1c1e"></span></div>
