@@ -20,6 +20,9 @@ assert.match(delivery,/不要复述技术提示/,'the role must not paste intern
 assert.doesNotMatch(delivery,/\[真实外卖操作结果\]/,'internal delivery-operation prompts must never be sent into role chat');
 assert.match(delivery,/失败原因已经由系统在外卖控制页提示/,'the role prompt must keep failure details out of chat');
 assert.match(delivery,/必须先按你自己的语气自然问清楚并等待回答/,'vague delivery wishes must be clarified before automation');
+assert.match(delivery,/这就已经是完整答案：不要再追问品牌、商品、口味、糖度、温度或规格/,'an autonomous order grant must not trigger another clarification loop');
+assert.match(delivery,/function roleRequestIntent/,'the browser request must retain actual user messages separately from role search text');
+assert.match(delivery,/autonomous:intent\.autonomous/,'the attempt must remember whether the user delegated the choice');
 assert.match(delivery,/始终保留自己的判断和意愿/,'the role may accept or refuse the delivery request according to its persona');
 assert.match(delivery,/必须先发一句符合你本人语气的简短可见消息/,'the role must acknowledge before starting automation');
 assert.match(delivery,/function rolePreludeAllowed/,'only a safe pre-order acknowledgement may be shown beside a command');

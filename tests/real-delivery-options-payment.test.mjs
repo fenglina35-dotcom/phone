@@ -14,6 +14,9 @@ assert.match(client,/平台结算页已自动优惠/,'the client must report onl
 assert.match(client,/offer_options/,'the client must fetch options only after selecting a fast candidate');
 assert.match(client,/候选没有完全对应项时必须返回 matched:false/,'explicit brands and products must never be silently substituted');
 assert.match(client,/真实选项缺少任意一项时必须返回 matched:false/,'explicit drink options must never be silently substituted');
+assert.match(client,/角色生成的检索词只是找商品用的，不是用户原话/,'role-created search text must not become a user hard requirement');
+assert.match(client,/本轮是否获得自主选择授权/,'offer and option selection must receive the real autonomy grant');
+assert.match(client,/matched:false 的 reason 必须具体写出缺少哪一项/,'option mismatch diagnostics must name the exact missing requirement');
 assert.match(client,/safePayQr/,'payment QR data must pass a strict client-side allowlist');
 assert.match(client,/支付宝待付款订单/,'the virtual phone must expose the official pending-payment checkout');
 assert.match(edge,/optionGroups: optionGroups/,'the edge connector must preserve sanitized platform option groups');
