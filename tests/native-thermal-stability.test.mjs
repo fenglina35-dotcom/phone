@@ -185,7 +185,9 @@ test('private boot keeps historical image references lazy without allowing image
 });
 
 test('startup avoids immediate whole-state cloud and recovery work',()=>{
-  assert.match(app,/setTimeout\(cloudAutoTick,1800000\)/);
+  assert.match(app,/setTimeout\(cloudAutoTick,8000\)/);
+  assert.match(app,/privatePrimaryMirrorCheck\(\{silent:true\}\)/);
+  assert.match(app,/if\(privateNativeAppOn\(\)\)\{privatePhoneCloudWake\(\);return;\}/);
   assert.doesNotMatch(app,/setTimeout\(\(\)=>\{if\(S\.settings&&S\.settings\.cloudAuto\)cloudBackup\(\)/);
   assert.match(app,/function queueRecoverySnapshot\(json,savedAt\)\{savedAt=[\s\S]*?_recoverySnapshotAt[\s\S]*?return _recoverySnapshotWrite;let data;try\{data=JSON\.parse\(json\)/);
   assert.doesNotMatch(app,/privateNativeCoreStorageKey\(CORE_IDB_KEY\)&&!_coreOverflowMode\)save\(0\)/);

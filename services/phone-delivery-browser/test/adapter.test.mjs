@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { DeliveryAdapter } from '../src/adapter.mjs';
 import { sign, verifySignedRequest } from '../src/security.mjs';
-import { brandMatches, checkoutAmounts, knownRouteKey, preferredBrand, productMatchesSavedItem, publicAddressLabel, riskChallengeKind, shopClosedReason, TaobaoFlashBrowser } from '../src/taobao-flash-browser.mjs';
+import { brandMatches, checkoutAmounts, knownRouteKey, preferredBrand, productMatchesSavedItem, publicAddressLabel, requestedItemName, riskChallengeKind, shopClosedReason, TaobaoFlashBrowser } from '../src/taobao-flash-browser.mjs';
 
 class FakeBrowser {
   constructor() { this.submits = 0; this.statusCalls = 0; this.statusValue = 'pending_payment'; }
@@ -144,6 +144,11 @@ test('a closed first route is skipped and the exact product is read from the nex
   assert.equal(offers[0].browserRef.buttonIndex, 7);
 });
 
+test('shop-internal search removes the brand and option words but keeps the exact product', () => {
+  assert.equal(requestedItemName('瑞幸咖啡 生椰拿铁 少少甜 少冰'), '生椰拿铁');
+  assert.equal(requestedItemName('KFC 香辣鸡腿堡 不要辣'), '香辣鸡腿堡');
+});
+
 test('all saved shops being closed stops without any global search', async () => {
   const browser = new TaobaoFlashBrowser();
   const routes = [
@@ -222,15 +227,30 @@ test('expired product routes are not reused', async () => {
   }
 });
 
-test('image captcha stops immediately and persists a retry cooldown', async () => {
+test('image captcha pauses once and resumes the same operation after manual verification', async () => {
   assert.equal(riskChallengeKind('请选择符合描述的所有图片，没有新图片可以点后，请点击“提交”'), '图片验证');
   assert.equal(riskChallengeKind('瑞幸咖啡 生椰拿铁 月售 1200'), '');
   const profile = await fs.mkdtemp(path.join(os.tmpdir(), 'phone-delivery-risk-cooldown-'));
   try {
-    const frame = { locator: () => ({ innerText: async () => '请选择符合描述的所有图片' }) };
-    const page = { frames: () => [frame] };
+    let reads = 0;
+    const frame = { locator: () => ({ innerText: async () => reads++ < 1 ? '请选择符合描述的所有图片' : '瑞幸咖啡 生椰拿铁' }) };
+    const page = { frames: () => [frame], async waitForTimeout() {}, async bringToFront() {} };
     const browser = new TaobaoFlashBrowser({ profile, headless: false });
-    await assert.rejects(browser.riskCheck(page, { waitForHuman: true, maxWaitMs: 10_000 }), /立即停止.*冷却30分钟/);
+    const waited = await browser.riskCheck(page, { waitForHuman: true, maxWaitMs: 10_000 });
+    assert.ok(waited >= 0);
+    await new TaobaoFlashBrowser({ profile }).assertRiskCooldown();
+  } finally {
+    await fs.rm(profile, { recursive: true, force: true });
+  }
+});
+
+test('unresolved image captcha times out once and persists a retry cooldown', async () => {
+  const profile = await fs.mkdtemp(path.join(os.tmpdir(), 'phone-delivery-risk-timeout-'));
+  try {
+    const frame = { locator: () => ({ innerText: async () => '请选择符合描述的所有图片' }) };
+    const page = { frames: () => [frame], async waitForTimeout() {}, async bringToFront() {} };
+    const browser = new TaobaoFlashBrowser({ profile, headless: false });
+    await assert.rejects(browser.riskCheck(page, { waitForHuman: true, maxWaitMs: 1 }), /等待本人完成验证已超时.*冷却30分钟/);
     await assert.rejects(new TaobaoFlashBrowser({ profile }).assertRiskCooldown(), /期间不会再次打开或重搜/);
   } finally {
     await fs.rm(profile, { recursive: true, force: true });
@@ -296,7 +316,7 @@ test('capabilities reuses one warm status result for repeated settings checks', 
   assert.equal(browser.statusCalls, 1);
 });
 
-test('role search uses saved routes only and does not reopen the address or global search pages', async () => {
+test('role search keeps the confirmed address and allows one bounded global search', async () => {
   let addressReads = 0; let searchOptions = null;
   const browser = {
     async currentAddress() { addressReads += 1; return { label: '家', fingerprintSource: 'secret' }; },
@@ -307,11 +327,11 @@ test('role search uses saved routes only and does not reopen the address or glob
   };
   const adapter = new DeliveryAdapter({ browser, secret: '12345678901234567890123456789012' });
   const result = await adapter.handle('search', {
-    query: '瑞幸咖啡 生椰拿铁 少糖', roleId: 'role-1', addressLabel: '家', addressFingerprint: 'approved-address-fingerprint', limit: 3,
+    query: '瑞幸咖啡 生椰拿铁 少糖', roleId: 'role-1', addressLabel: '家', addressFingerprint: 'approved-address-fingerprint', allowGlobalSearch: true, limit: 3,
   }, { target: 'yb_test' });
   assert.equal(result.offers[0].name, '生椰拿铁');
   assert.equal(addressReads, 0);
-  assert.deepEqual(searchOptions, { allowGlobalSearch: false });
+  assert.deepEqual(searchOptions, { allowGlobalSearch: true });
 });
 
 test('adapter exposes manual payment and preserves real options', async () => {

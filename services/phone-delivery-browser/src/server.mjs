@@ -12,6 +12,7 @@ const browser = new TaobaoFlashBrowser({
   profile: process.env.PHONE_DELIVERY_PROFILE || './profile',
   headless: /^(1|true|yes)$/i.test(process.env.PHONE_DELIVERY_HEADLESS || 'false'),
   timeout: Number(process.env.PHONE_DELIVERY_BROWSER_TIMEOUT || 30_000),
+  cdpUrl: process.env.PHONE_DELIVERY_CDP_URL || '',
 });
 const adapter = new DeliveryAdapter({
   browser, secret,
@@ -67,7 +68,7 @@ server.listen(port, host, () => {
 
 for (const signal of ['SIGINT', 'SIGTERM']) {
   process.on(signal, async () => {
-    await browser.context?.close().catch(() => {});
+    await browser.close().catch(() => {});
     server.close(() => process.exit(0));
   });
 }

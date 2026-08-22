@@ -77,7 +77,8 @@ export class DeliveryAdapter {
     const suppliedFingerprint = clean(payload.addressFingerprint, 180);
     if (routeOnly && !suppliedFingerprint) throw new Error('角色点单前需要由本人先确认一次平台默认收货地址');
     const address = routeOnly ? { label: clean(payload.addressLabel, 80) || '平台默认地址' } : await this.browser.currentAddress();
-    const found = await this.browser.search(query, Math.min(this.maxOffers, Number(payload.limit) || this.maxOffers), { allowGlobalSearch: !routeOnly });
+    const allowGlobalSearch = !routeOnly || payload.allowGlobalSearch === true;
+    const found = await this.browser.search(query, Math.min(this.maxOffers, Number(payload.limit) || this.maxOffers), { allowGlobalSearch });
     const addressFingerprint = routeOnly ? suppliedFingerprint : opaqueFingerprint(this.secret, address.fingerprintSource);
     const offers = found.slice(0, this.maxOffers).map(item => {
       const offerId = `tb_${crypto.randomUUID()}`;
@@ -152,6 +153,7 @@ export class DeliveryAdapter {
       orderId, provider: 'taobao_flash', merchantId: quote.merchantId, merchant: quote.merchant,
       items: Array.isArray(draft.items) && draft.items.length ? draft.items : [{ name: quote.name, quantity, price: quote.price, options: this.optionText(quote.optionGroups, selectedOptions) }],
       total, discount: money(draft.discount), couponLabel: clean(draft.couponLabel, 100), status: 'created', paymentMethod: 'alipay', addressLabel: clean(address.label, 80),
+      imageUrl: clean(quote.imageUrl, 800), etaMinutes: Number.isFinite(Number(quote.etaMinutes)) ? Math.max(0, Math.floor(Number(quote.etaMinutes))) : null,
       addressFingerprint: opaqueFingerprint(this.secret, address.fingerprintSource), risk: Array.isArray(draft.risk) ? draft.risk : [],
       browserOrderRef: draft.browserOrderRef, createdAt: Date.now(), clientRequestId: clean(payload.clientRequestId, 160),
     };
@@ -218,6 +220,7 @@ export class DeliveryAdapter {
       items: order.items, total: order.total, status: order.status, paymentMethod: order.paymentMethod,
       discount: order.discount || 0, couponLabel: order.couponLabel || '',
       payUrl: order.payUrl || '', payQrDataUrl: order.payQrDataUrl || '', addressLabel: order.addressLabel,
+      imageUrl: order.imageUrl || '', etaMinutes: order.etaMinutes,
       addressFingerprint: order.addressFingerprint, risk: order.risk || [],
     };
   }

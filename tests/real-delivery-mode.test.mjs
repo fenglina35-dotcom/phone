@@ -29,7 +29,8 @@ assert.match(delivery,/主食偏好/);
 assert.match(delivery,/咖啡偏好/);
 assert.match(delivery,/KFC 偏好/);
 assert.match(delivery,/deliveryOpenSavedRoutes/,'users must be able to inspect the routes available to role ordering');
-assert.match(delivery,/角色不会全网自动搜索/,'role ordering must stay on verified direct routes');
+assert.match(delivery,/没有路线时自动进行一次受限搜索/,'role ordering must prefer verified routes and retain one bounded automatic-search fallback');
+assert.match(delivery,/最多检查三家匹配门店/,'role ordering must bound automatic shop switching');
 assert.match(delivery,/本次口头要求永远优先/);
 assert.doesNotMatch(delivery,/Math\.random\(\).*rating|生成6个相关餐品|骑手已接单🛵/,'real layer must not fabricate commerce facts');
 

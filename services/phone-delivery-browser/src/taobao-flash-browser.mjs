@@ -52,6 +52,15 @@ export function knownRouteKey(value) {
     .replace(/[^\p{L}\p{N}]+/gu, '');
 }
 
+export function requestedItemName(value) {
+  const source = clean(value, 160);
+  const stripped = source
+    .replace(/(?:瑞幸(?:咖啡)?|luckin|喜茶|heytea|霸王茶姬|chagee|奈雪(?:的茶)?|肯德基|kfc|麦当劳|星巴克|库迪(?:咖啡)?|manner)/gi, ' ')
+    .replace(/(?:无糖|零糖|少少甜|少糖|微糖|半糖|全糖|正常糖|不另外加糖|少冰|少少冰|去冰|正常冰|多冰|热饮|冷饮|常温|大杯|中杯|小杯|不加冰|不要香菜|不要辣|微辣|中辣|特辣|不加奶油|椰乳|燕麦奶|加珍珠|加料)/g, ' ')
+    .replace(/\s+/g, ' ').trim();
+  return stripped || source;
+}
+
 export function publicAddressLabel(raw) {
   const value = clean(raw, 300);
   const common = value.match(/(?:常用|标签)\s*(家|公司|学校)/);
@@ -81,11 +90,14 @@ export function checkoutAmounts(raw) {
 }
 
 export class TaobaoFlashBrowser {
-  constructor({ profile, headless = false, timeout = 30_000 } = {}) {
+  constructor({ profile, headless = false, timeout = 30_000, cdpUrl = '' } = {}) {
     this.profile = profile || './profile';
     this.headless = headless;
     this.timeout = timeout;
     this.executablePath = process.env.PHONE_DELIVERY_CHROME_PATH || '';
+    this.cdpUrl = clean(cdpUrl || process.env.PHONE_DELIVERY_CDP_URL, 500);
+    this.browser = null;
+    this.attached = false;
     this.context = null;
     this.page = null;
     this.startPromise = null;
@@ -109,8 +121,8 @@ export class TaobaoFlashBrowser {
     this.startPromise = this.startOnce();
     try { await this.startPromise; }
     catch (error) {
-      await this.context?.close().catch(() => {});
-      this.context = null; this.page = null;
+      if (!this.attached) await this.context?.close().catch(() => {});
+      this.browser = null; this.context = null; this.page = null; this.attached = false;
       this.prewarmed = false;
       throw error;
     } finally { this.startPromise = null; }
@@ -120,12 +132,22 @@ export class TaobaoFlashBrowser {
     await fs.mkdir(this.profile, { recursive: true });
     await this.loadRiskState();
     const { chromium } = await import('playwright');
+    if (this.cdpUrl) {
+      this.browser = await chromium.connectOverCDP(this.cdpUrl);
+      this.context = this.browser.contexts()[0];
+      if (!this.context) throw new Error('没有找到可连接的 Chrome/Edge 浏览器上下文');
+      this.attached = true;
+      this.context.setDefaultTimeout(this.timeout);
+      const pages = this.context.pages().filter(page => !page.isClosed());
+      this.page = pages.find(page => /(?:h5\.ele\.me|taobao\.com|alipay\.com)/i.test(page.url())) || pages[0] || await this.context.newPage();
+      await this.reveal(this.page);
+      return;
+    }
     this.context = await chromium.launchPersistentContext(this.profile, {
       headless: this.headless,
       ...(this.executablePath ? { executablePath: this.executablePath } : {}),
       viewport: { width: 430, height: 932 },
-      locale: 'zh-CN', timezoneId: 'Asia/Shanghai', isMobile: true, hasTouch: true,
-      userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1',
+      locale: 'zh-CN', timezoneId: 'Asia/Shanghai',
       args: ['--disable-dev-shm-usage'],
     });
     await this.context.route('**/*', async route => {
@@ -154,13 +176,24 @@ export class TaobaoFlashBrowser {
       }
     }
     if (!alive) {
+      this.browser = null;
       this.context = null;
       this.page = null;
+      this.attached = false;
       this.prewarmed = false;
       await this.start();
     }
     await this.reveal(this.page);
     return this.page;
+  }
+
+  async close() {
+    if (!this.attached) await this.context?.close().catch(() => {});
+    this.browser = null; this.context = null; this.page = null; this.attached = false; this.prewarmed = false;
+  }
+
+  async tapPoint(page, x, y) {
+    await page.mouse.click(x, y);
   }
   pageReady(url, text) {
     if (/\/search\//i.test(url)) return /起送|月售|配送|暂无搜索结果|未找到/.test(text);
@@ -326,6 +359,12 @@ export class TaobaoFlashBrowser {
     this.riskBlockReason = clean(kind, 40) || '安全验证';
     await fs.writeFile(this.riskStatePath, JSON.stringify({ blockedUntil: this.riskBlockedUntil, reason: this.riskBlockReason }, null, 2), 'utf8');
   }
+  async clearRiskChallenge() {
+    this.riskBlockedUntil = 0;
+    this.riskBlockReason = '';
+    await fs.mkdir(this.profile, { recursive: true });
+    await fs.writeFile(this.riskStatePath, JSON.stringify({ blockedUntil: 0, reason: '' }, null, 2), 'utf8');
+  }
   async assertRiskCooldown() {
     await this.loadRiskState();
     if (this.riskBlockedUntil <= Date.now()) return;
@@ -356,10 +395,22 @@ export class TaobaoFlashBrowser {
 
   async riskCheck(page, { waitForHuman = false, maxWaitMs = 0 } = {}) {
     const startedAt = Date.now();
-    const kind = riskChallengeKind(await this.riskText(page));
+    let kind = riskChallengeKind(await this.riskText(page));
     if (!kind) return Date.now() - startedAt;
+    if (waitForHuman && !this.headless && maxWaitMs > 0) {
+      await this.reveal(page);
+      const deadline = Date.now() + Math.max(1_000, Number(maxWaitMs) || 0);
+      while (Date.now() < deadline) {
+        await page.waitForTimeout(Math.min(1_000, Math.max(100, deadline - Date.now())));
+        kind = riskChallengeKind(await this.riskText(page));
+        if (!kind) {
+          await this.clearRiskChallenge();
+          return Date.now() - startedAt;
+        }
+      }
+    }
     await this.recordRiskChallenge(kind);
-    throw new Error(`淘宝闪购出现${kind}，本轮立即停止；自动搜索已冷却30分钟，期间不会再次打开或重搜`);
+    throw new Error(`淘宝闪购出现${kind}，等待本人完成验证已超时；本轮已暂停并冷却30分钟，期间不会重复搜索`);
   }
 
   async status() {
@@ -373,7 +424,8 @@ export class TaobaoFlashBrowser {
   async currentAddress() {
     if (this.addressCache && Date.now() - this.addressCache.cachedAt < 5 * 60_000) return this.addressCache.value;
     const page = await this.goto(ADDRESS_URL, 3200);
-    await this.requireLogin(page); await this.riskCheck(page);
+    await this.requireLogin(page);
+    await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
     const rows = await page.evaluate(() => {
       const visible = el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0; };
       const values = [];
@@ -459,11 +511,11 @@ export class TaobaoFlashBrowser {
         await this.forgetKnownRoute(rememberedRoute.routeKey || query).catch(() => {});
       }
     }
-    if (closedMerchants.length || closedRoutes.length) {
+    if (!allowGlobalSearch && (closedMerchants.length || closedRoutes.length)) {
       const names = [...new Set([...closedMerchants, ...closedRoutes.map(route => route.merchant).filter(Boolean)])].slice(0, 3).join('、');
       throw new Error(`已登记的${names || '匹配门店'}目前全部打烊或休息中；本轮已停止，没有重新全网搜索`);
     }
-    if (stored.length || rememberedRoutes.length) throw new Error('已登记的同品牌同商品路线当前均不可用；为了避免人机验证，本轮没有重新全网搜索');
+    if (!allowGlobalSearch && (stored.length || rememberedRoutes.length)) throw new Error('已登记的同品牌同商品路线当前均不可用；本轮已停止，没有重新全网搜索');
     if (!allowGlobalSearch) throw new Error('还没有登记这个品牌和商品的常用直达路线；为了避免人机验证，角色不会发起全网自动搜索，请由本人先在外卖页成功打开并读取一次规格');
     const page = await this.goto(`https://h5.ele.me/search/?keyword=${encodeURIComponent(query)}`, 2500);
     await this.requireLogin(page); await waitForHumanVerification(page);
@@ -478,19 +530,29 @@ export class TaobaoFlashBrowser {
     const brand = preferredBrand(query);
     if (brand) {
       const exact = shops.filter(shop => brandMatches(brand, shop.name));
-      if (exact.length) shops = exact.slice(0, 1);
+      if (exact.length) shops = exact.slice(0, Math.min(3, Math.max(1, limit)));
     }
     this.searchUrl = page.url();
     this.shops = shops;
     if (!this.shops.length) throw new Error('淘宝闪购没有解析到可配送商家，请确认地址或在浏览器窗口处理验证');
     const offers = [];
-    const maxShops = Math.min(this.shops.length, 2, Math.max(1, limit));
+    const maxShops = Math.min(this.shops.length, 3, Math.max(1, limit));
     for (let shopIndex = 0; shopIndex < maxShops && offers.length < limit; shopIndex += 1) {
       assertWithinSearchTime();
       const shop = this.shops[shopIndex];
-      const shopPage = await this.enterShop(shopIndex);
+      let shopPage;
+      try { shopPage = await this.enterShop(shopIndex); }
+      catch (error) {
+        if (/门店已打烊|门店休息中|暂停营业|不在营业时间/.test(String(error?.message || error))) continue;
+        throw error;
+      }
       await waitForHumanVerification(shopPage);
-      const items = await this.extractMenu(shopPage, Math.max(1, Math.ceil(limit / maxShops)), query);
+      const itemQuery = requestedItemName(query);
+      let items = await this.extractMenu(shopPage, Math.max(4, Math.ceil(limit / maxShops)), itemQuery);
+      if (!items.some(item => productMatchesSavedItem(item.name, itemQuery)) && await this.searchInsideShop(shopPage, itemQuery)) {
+        await waitForHumanVerification(shopPage);
+        items = await this.extractMenu(shopPage, Math.max(4, Math.ceil(limit / maxShops)), itemQuery);
+      }
       for (const item of items) {
         const deliveryFee = shop.freeDeliveryThreshold > 0 && item.price >= shop.freeDeliveryThreshold ? 0 : shop.deliveryFee;
         offers.push({
@@ -542,15 +604,18 @@ export class TaobaoFlashBrowser {
     const current = await this.ensure();
     let page = current;
     if (preferSaved && shop.directUrl) page = await this.goto(shop.directUrl, 2200);
-    else if (!shopUrl(page.url())) {
+    else {
+      if (!preferSaved && shopUrl(page.url())) page = await this.goto(this.searchUrl, 2200);
+      if (!shopUrl(page.url())) {
       if (preferSaved && shop.directUrl) page = await this.goto(shop.directUrl, 2200);
       else {
         page = page.url() === this.searchUrl ? page : await this.goto(this.searchUrl, 2200);
         for (const x of [110, 190, 280]) {
-          await page.touchscreen.tap(x, Math.max(80, shop.anchorY - 75));
+          await this.tapPoint(page, x, Math.max(80, shop.anchorY - 75));
           await page.waitForTimeout(900);
           if (shopUrl(page.url())) break;
         }
+      }
       }
     }
     if (!shopUrl(page.url())) throw new Error('未能进入淘宝闪购商家，页面可能已变化');
@@ -593,7 +658,7 @@ export class TaobaoFlashBrowser {
       await this.tapControl(page, close).catch(() => {});
       break;
     }
-    if (await promo.isVisible().catch(() => false)) await page.touchscreen.tap(402, 194).catch(() => {});
+    if (await promo.isVisible().catch(() => false)) await this.tapPoint(page, 402, 194).catch(() => {});
     await page.waitForTimeout(350);
   }
 
@@ -612,7 +677,14 @@ export class TaobaoFlashBrowser {
           const text = (node.innerText || '').replace(/\s+/g, ' ').trim();
           const nameNode = node.querySelector('.menuItem--info--box') || node;
           const nameText = (nameNode.innerText || '').replace(/\s+/g, ' ').trim();
-          if (/¥|￥/.test(text)) return { text, nameText };
+          if (/¥|￥/.test(text)) {
+            let imageRoot = node;
+            for (let parentDepth = 0; imageRoot?.parentElement && parentDepth < 3; parentDepth += 1) imageRoot = imageRoot.parentElement;
+            const image = imageRoot?.querySelector?.('img') || node.parentElement?.querySelector?.('img') || null;
+            const rawImageUrl = String(image?.currentSrc || image?.src || image?.getAttribute?.('data-src') || '').trim();
+            const imageUrl = rawImageUrl.startsWith('//') ? `${location.protocol}${rawImageUrl}` : rawImageUrl;
+            return { text, nameText, imageUrl };
+          }
         }
         return null;
       }).catch(() => null);
@@ -623,7 +695,7 @@ export class TaobaoFlashBrowser {
         .map(match => number(`${match[1]}${match[2] ? `.${match[2]}` : ''}`)).filter(value => value > 0);
       const price = prices.at(-1) || 0;
       const name = clean(card.nameText.split(/月售|近期\d+人|[¥￥]/)[0], 60).replace(/^(热销|大家喜欢吃，才叫真好吃)\s*/, '').replace(/\s+\d+次$/, '');
-      if (name && price > 0) items.push({ buttonIndex, name, price, description: clean(text, 240) });
+      if (name && price > 0) items.push({ buttonIndex, name, price, description: clean(text, 240), imageUrl: /^https:\/\//i.test(card.imageUrl || '') ? clean(card.imageUrl, 800) : '' });
     }
     const unique = items.filter((item, index) => items.findIndex(other => other.name === item.name) === index);
     const normalizedQuery = clean(query, 120).toLowerCase().replace(/\s+/g, '');
@@ -706,6 +778,7 @@ export class TaobaoFlashBrowser {
 
   async inspectOptionsFor(ref) {
     const page = ref.shopUrl ? await this.goto(ref.shopUrl, 900) : await this.enterShop(ref.shopIndex, { preferSaved: true });
+    await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
     await this.waitForPurchaseControls(page, 8000);
     const button = await this.productControl(page, ref.itemName);
     if (!button) throw new Error('没有在真实商家中定位到同一件商品，请重新搜索');
@@ -828,7 +901,7 @@ export class TaobaoFlashBrowser {
     await control.scrollIntoViewIfNeeded().catch(() => {});
     const box = await control.boundingBox().catch(() => null);
     if (!box) throw new Error('真实商品按钮当前不可见，请重新搜索');
-    await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+    await this.tapPoint(page, box.x + box.width / 2, box.y + box.height / 2);
   }
 
   async activateControl(page, control) {
@@ -936,6 +1009,7 @@ export class TaobaoFlashBrowser {
       if (!body.includes(ref.itemName)) throw new Error('真实商品详情已失效，请重新搜索');
     } else {
       page = ref.shopUrl ? await this.goto(ref.shopUrl, 900) : await this.enterShop(ref.shopIndex, { preferSaved: true });
+      await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
       await this.waitForPurchaseControls(page, 8000);
       const existingCartLabel = clean(await page.locator('[aria-label*="购物车总计金额"]').first().getAttribute('aria-label', { timeout: 1500 }).catch(() => ''));
       const existingCheckout = await this.visibleLocator(page.getByText('去结算', { exact: false }), true);
@@ -1050,7 +1124,8 @@ export class TaobaoFlashBrowser {
       const suffix = await this.cleanupFailureSuffix(ref.itemName);
       throw new Error(`淘宝闪购没有进入订单确认页，${suffix}，请重新搜索后再试`);
     }
-    await page.waitForTimeout(1800); await this.riskCheck(page);
+    await page.waitForTimeout(1800);
+    await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
     const body = clean(await page.locator('body').innerText(), 6000);
     const amounts = checkoutAmounts(body);
     const total = amounts.total;
@@ -1076,11 +1151,13 @@ export class TaobaoFlashBrowser {
   async submitOrder(browserOrderRef) {
     const page = await this.ensure();
     if (!/buy|order|confirm/i.test(page.url()) && browserOrderRef?.url) await this.goto(browserOrderRef.url, 1800);
+    await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
     const beforePages = new Set(this.context.pages());
     for (let attempt = 0; attempt < 3; attempt += 1) {
       const button = await this.visibleLocator(page.getByText(/提交订单|提交并支付|去支付|立即支付/, { exact: false }), true);
       if (!button) throw new Error('未找到淘宝闪购提交订单按钮，请在浏览器窗口核对');
       await this.tapControl(page, button); await page.waitForTimeout(700);
+      await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
       const promptBody = clean(await page.locator('body').innerText().catch(() => ''), 7000);
       if (/选择餐具份数/.test(promptBody)) {
         const noUtensils = await this.visibleLocator(page.getByText('无需餐具', { exact: true }), true);
@@ -1197,7 +1274,7 @@ export class TaobaoFlashBrowser {
     const page = await this.ensure();
     const cartTrigger = await this.renderedLocator(page.locator('[aria-label*="购物车总计金额"]'));
     if (cartTrigger) await this.activateControl(page, cartTrigger);
-    else await page.touchscreen.tap(42, 866);
+    else await this.tapPoint(page, 42, 866);
     await page.waitForTimeout(700);
     await page.screenshot({ path, fullPage: false });
     const body = clean(await page.locator('body').innerText().catch(() => ''), 3200)
@@ -1221,7 +1298,7 @@ export class TaobaoFlashBrowser {
     if (!openedMinus) {
       const cartTrigger = await this.renderedLocator(page.locator('[aria-label*="购物车总计金额"]'));
       if (cartTrigger) await this.activateControl(page, cartTrigger);
-      else await page.touchscreen.tap(42, 866);
+      else await this.tapPoint(page, 42, 866);
       await page.waitForTimeout(600);
       openedMinus = await this.visibleLocator(decrementControls, true);
     }
