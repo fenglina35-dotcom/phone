@@ -11,7 +11,8 @@ assert.match(delivery,/imageUrl:safeUrl\(data\.imageUrl\|\|offer\.imageUrl/,'the
 assert.match(delivery,/etaMinutes:Number\.isFinite\(\+data\.etaMinutes\)/,'the platform ETA must follow the selected offer without fabrication');
 assert.match(delivery,/平台暂未给出预计送达时间/,'missing ETA must be disclosed instead of invented');
 assert.match(delivery,/可以截图后，在支付宝“扫一扫”中从相册选择/,'the official payment QR must explain the screenshot workflow');
-assert.match(delivery,/不要固定使用“宝宝”或任何模板称呼/,'the short companion reply must remain persona-driven');
+assert.match(delivery,/只按你自己的说话习惯自然说一句/,'the short companion reply must remain persona-driven');
+assert.doesNotMatch(delivery,/\[真实外卖操作结果\]/,'technical operation prompts must not leak into chat bubbles');
 assert.match(app,/m\.type==='deliveryorder'.*deliveryRealChatCardHTML/s,'chat rendering must use the real delivery card component');
 assert.match(theme,/\.wx-real-delivery-card/,'the card must have dedicated dark-theme styling');
 assert.match(theme,/\.wxlight \.wx-real-delivery-card/,'the card must have dedicated light-theme styling');

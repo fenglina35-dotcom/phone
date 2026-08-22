@@ -38,7 +38,7 @@ export class DeliveryAdapter {
   }
 
   async capabilities() {
-    if (this.capabilitiesCache && Date.now() - this.capabilitiesCache.cachedAt < 60_000) return { ...this.capabilitiesCache.value };
+    if (this.capabilitiesCache && Date.now() - this.capabilitiesCache.cachedAt < 10 * 60_000) return { ...this.capabilitiesCache.value };
     if (!this.capabilitiesPromise) this.capabilitiesPromise = (async () => {
       const status = await this.browser.status();
       const value = {

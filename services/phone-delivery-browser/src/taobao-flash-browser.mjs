@@ -84,6 +84,10 @@ export class TaobaoFlashBrowser {
     this.knownRoutes = null;
     this.knownRoutesWrite = Promise.resolve();
     this.knownRoutesPath = path.join(path.resolve(this.profile), 'known-product-routes.json');
+    this.riskStateLoaded = false;
+    this.riskBlockedUntil = 0;
+    this.riskBlockReason = '';
+    this.riskStatePath = path.join(path.resolve(this.profile), 'risk-state.json');
   }
 
   async start() {
@@ -101,6 +105,7 @@ export class TaobaoFlashBrowser {
 
   async startOnce() {
     await fs.mkdir(this.profile, { recursive: true });
+    await this.loadRiskState();
     const { chromium } = await import('playwright');
     this.context = await chromium.launchPersistentContext(this.profile, {
       headless: this.headless,
@@ -239,6 +244,35 @@ export class TaobaoFlashBrowser {
     };
     await this.writeKnownRoutes();
   }
+  async loadRiskState() {
+    if (this.riskStateLoaded) return;
+    this.riskStateLoaded = true;
+    try {
+      const parsed = JSON.parse(await fs.readFile(this.riskStatePath, 'utf8'));
+      this.riskBlockedUntil = Number(parsed?.blockedUntil || 0);
+      this.riskBlockReason = clean(parsed?.reason, 40);
+    } catch (_) {
+      this.riskBlockedUntil = 0;
+      this.riskBlockReason = '';
+    }
+    if (this.riskBlockedUntil <= Date.now()) {
+      this.riskBlockedUntil = 0;
+      this.riskBlockReason = '';
+    }
+  }
+  async recordRiskChallenge(kind) {
+    await fs.mkdir(this.profile, { recursive: true });
+    await this.loadRiskState();
+    this.riskBlockedUntil = Math.max(this.riskBlockedUntil, Date.now() + 30 * 60_000);
+    this.riskBlockReason = clean(kind, 40) || '安全验证';
+    await fs.writeFile(this.riskStatePath, JSON.stringify({ blockedUntil: this.riskBlockedUntil, reason: this.riskBlockReason }, null, 2), 'utf8');
+  }
+  async assertRiskCooldown() {
+    await this.loadRiskState();
+    if (this.riskBlockedUntil <= Date.now()) return;
+    const minutes = Math.max(1, Math.ceil((this.riskBlockedUntil - Date.now()) / 60_000));
+    throw new Error(`淘宝闪购刚触发${this.riskBlockReason || '安全验证'}，自动搜索已冷却${minutes}分钟，期间不会再次打开或重搜；稍后再试`);
+  }
   needsLogin(page) { return /\/login|login\.ele\.me|passport/i.test(page.url()); }
   async requireLogin(page) { if (this.needsLogin(page)) throw new Error('淘宝闪购登录已失效，请在浏览器窗口用手机号、短信验证码和滑块重新登录'); }
   async riskText(page) {
@@ -263,15 +297,10 @@ export class TaobaoFlashBrowser {
 
   async riskCheck(page, { waitForHuman = false, maxWaitMs = 0 } = {}) {
     const startedAt = Date.now();
-    for (;;) {
-      const kind = riskChallengeKind(await this.riskText(page));
-      if (!kind) return Date.now() - startedAt;
-      if (!waitForHuman || Date.now() - startedAt >= maxWaitMs) {
-        throw new Error(`淘宝闪购出现${kind}，本轮已暂停且不会自动重试；请在电脑浏览器手动完成后重新告诉角色开始`);
-      }
-      await this.reveal(page);
-      await page.waitForTimeout(1000);
-    }
+    const kind = riskChallengeKind(await this.riskText(page));
+    if (!kind) return Date.now() - startedAt;
+    await this.recordRiskChallenge(kind);
+    throw new Error(`淘宝闪购出现${kind}，本轮立即停止；自动搜索已冷却30分钟，期间不会再次打开或重搜`);
   }
 
   async status() {
@@ -313,6 +342,7 @@ export class TaobaoFlashBrowser {
   }
 
   async search(query, limit = 12) {
+    await this.assertRiskCooldown();
     const startedAt = Date.now();
     let humanWaitMs = 0;
     const assertWithinSearchTime = () => {

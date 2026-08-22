@@ -101,6 +101,8 @@ test('remote role subtitles survive a natural-text model response without fake f
   assert.deepEqual(parse('这条聊天为什么没告诉我？').lines,['这条聊天为什么没告诉我？']);
   assert.deepEqual(parse('{"lines":["这是谁？"],"delete":false,"messageIndex":-1}').lines,['这是谁？']);
   assert.equal(parse('{"line":"你最好解释清楚。","delete":false}').lines[0],'你最好解释清楚。');
+  assert.equal(parse('{"caption":"你先把这件事说清楚。"}').lines[0],'你先把这件事说清楚。');
+  assert.deepEqual(parse('["这条消息是谁发的？"]' ).lines,['这条消息是谁发的？']);
 });
 
 test('remote model timeouts abort the real request and the first detail retries only with real model output',()=>{
@@ -133,7 +135,7 @@ test('the first real detail retries an operational-only model answer and returns
   const out=await reaction({id:'role-1',name:'角色'},{op:'view',targetName:'聊天详情',targetType:'role'},{detail:'用户：你为什么没有告诉我',facts:['用户：你为什么没有告诉我']});
   assert.equal(calls,2);
   assert.deepEqual(out.lines,['这条聊天为什么没告诉我？']);
-  assert.equal(ctl.roleSpokenCount,1);
+  assert.equal(ctl.roleSpokenCount,0,'only a subtitle actually inserted into the overlay counts as spoken');
   assert.equal(ctl.lastRoleCaptionError,undefined);
 });
 
@@ -151,9 +153,41 @@ test('the first real detail retries after a rejected model request instead of sw
   const out=await reaction({id:'role-1',name:'角色'},{op:'view',targetName:'聊天详情',targetType:'role'},{detail:'用户：你为什么没有告诉我',facts:['用户：你为什么没有告诉我']});
   assert.equal(calls,2);
   assert.deepEqual(out.lines,['这条消息为什么没有告诉我？']);
-  assert.equal(ctl.roleSpokenCount,1);
+  assert.equal(ctl.roleSpokenCount,0,'model output alone must not be mistaken for a visible subtitle');
   assert.equal(ctl.lastRoleCaptionError,undefined);
   assert.ok(progress.includes('角色回复中断，正在重新连接'));
+});
+
+test('visible remote subtitles are counted only after the caption element accepts them',async()=>{
+  const source=app.match(/async function remoteControlShowRoleLines\(lines\)\{[^\n]+\}/)?.[0]||'';
+  assert.ok(source,'remote subtitle renderer must exist');
+  const ctl={active:true,roleSpokenCount:0};
+  const shown=[];
+  const render=Function('remoteControlClearCaption','remoteControlActive','remoteControlCaption','_remoteCtl','sleep','remoteControlCaptionMs',`${source};return remoteControlShowRoleLines;`)(
+    ()=>{},()=>true,line=>{shown.push(line);return true;},ctl,async()=>{},()=>0
+  );
+  assert.equal(await render(['第一句','第二句']),2);
+  assert.deepEqual(shown,['第一句','第二句']);
+  assert.equal(ctl.roleSpokenCount,2);
+});
+
+test('a whole remote session with no visible subtitle gets one final real-model retry instead of a fake line',async()=>{
+  const evidenceSource=app.match(/function remoteControlRoleEvidence\(ctl\)\{[^\n]+\}/)?.[0]||'';
+  const ensureSource=app.match(/async function remoteControlEnsureRoleCaption\(c\)\{[^\n]+\}/)?.[0]||'';
+  assert.ok(evidenceSource&&ensureSource,'remote session caption guarantee must exist');
+  let calls=0;
+  const ctl={active:true,cancelled:false,roleSpokenCount:0,actions:[{targetType:'role',detail:'聊天详情：用户说今晚很晚才回家'}]};
+  const remoteControlModelCall=async()=>++calls===1?'{"lines":[]}':'{"lines":["这么晚回来，提前跟我说一声。"]}';
+  const remoteControlRoleResponse=raw=>{const payload=JSON.parse(raw);return{payload,lines:payload.lines||[]};};
+  const progress=[];
+  const ensure=Function('_remoteCtl','S','remoteControlIntentContext','buildSystem','remoteControlProgress','remoteControlModelCall','remoteControlRoleResponse',`${evidenceSource};${ensureSource};return remoteControlEnsureRoleCaption;`)(
+    ctl,{me:{name:'用户'}},()=>'',()=>'',text=>progress.push(text),remoteControlModelCall,remoteControlRoleResponse
+  );
+  assert.deepEqual(await ensure({id:'role-1',name:'角色'}),['这么晚回来，提前跟我说一声。']);
+  assert.equal(calls,2);
+  assert.equal(ctl.roleSpokenCount,0,'the final real line is counted only after the overlay displays it');
+  assert.ok(progress.includes('角色回复中断，正在最后重连'));
+  assert.doesNotMatch(ensureSource,/return\s*\[["'`][^\]]+["'`]\]/,'must not manufacture a canned role line');
 });
 
 test('remote control never revisits the same view page in one session',()=>{

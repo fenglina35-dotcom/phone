@@ -22,6 +22,8 @@ assert.match(edge,/payQrDataURL/,'the edge connector must validate payment QR da
 assert.match(adapter,/automaticPayments: false/,'browser automation must never advertise automatic payment');
 assert.match(adapter,/QRCode\.toDataURL/,'the official cashier URL must be convertible to a scannable QR');
 assert.match(browser,/安全验证/,'captcha and risk control must stop for human handling');
+assert.match(browser,/riskBlockedUntil/,'a platform challenge must create a browser-level cooldown');
+assert.match(browser,/期间不会再次打开或重搜/,'cooldown retries must stop before another platform navigation');
 assert.match(browser,/支付成功\|付款成功/,'payment status must come from an explicit platform-page receipt');
 assert.match(browser,/checkoutAmounts\(body\)/,'the payable total must use checkout-specific parsing');
 assert.match(browser,/购物车已有商品，为避免混单/,'an existing platform cart must stop role-created order mixing');

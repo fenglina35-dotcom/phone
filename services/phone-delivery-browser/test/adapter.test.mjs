@@ -150,14 +150,19 @@ test('expired product routes are not reused', async () => {
   }
 });
 
-test('image captcha is recognized and a manually completed challenge resumes in place', async () => {
+test('image captcha stops immediately and persists a retry cooldown', async () => {
   assert.equal(riskChallengeKind('请选择符合描述的所有图片，没有新图片可以点后，请点击“提交”'), '图片验证');
   assert.equal(riskChallengeKind('瑞幸咖啡 生椰拿铁 月售 1200'), '');
-  let reads = 0; let waits = 0;
-  const frame = { locator: () => ({ innerText: async () => reads++ === 0 ? '请选择符合描述的所有图片' : '搜索结果' }) };
-  const page = { frames: () => [frame], async bringToFront() {}, async waitForTimeout() { waits += 1; } };
-  await new TaobaoFlashBrowser({ headless: false }).riskCheck(page, { waitForHuman: true, maxWaitMs: 10_000 });
-  assert.equal(waits, 1);
+  const profile = await fs.mkdtemp(path.join(os.tmpdir(), 'phone-delivery-risk-cooldown-'));
+  try {
+    const frame = { locator: () => ({ innerText: async () => '请选择符合描述的所有图片' }) };
+    const page = { frames: () => [frame] };
+    const browser = new TaobaoFlashBrowser({ profile, headless: false });
+    await assert.rejects(browser.riskCheck(page, { waitForHuman: true, maxWaitMs: 10_000 }), /立即停止.*冷却30分钟/);
+    await assert.rejects(new TaobaoFlashBrowser({ profile }).assertRiskCooldown(), /期间不会再次打开或重搜/);
+  } finally {
+    await fs.rm(profile, { recursive: true, force: true });
+  }
 });
 
 test('adaptive page wait continues as soon as real search content appears', async () => {

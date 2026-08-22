@@ -13,6 +13,10 @@ assert.match(delivery,/Date\.now\(\)-a\.startedAt>180000/,'a stale restored atte
 assert.match(delivery,/lastUserAt<=attempt\.endedAt/,'a terminal result cannot restart until the user sends a new message');
 assert.match(delivery,/绝对不要再次说“等一下\/我再找找”/,'the role must not repeat the search prelude while an attempt is running or terminal');
 assert.match(delivery,/pushRoleOrderCard\(c,order\);await payOrder\(order\)/,'the real order card must appear before payment-link retrieval');
+assert.match(delivery,/function roleSystemNotice/,'technical delivery results must have a system-only status channel');
+assert.match(delivery,/if\(error\)\{roleSystemNotice[\s\S]*?return;\}/,'failed delivery details must stop before scheduling a role chat reply');
+assert.doesNotMatch(delivery,/\[真实外卖操作结果\]/,'internal delivery-operation prompts must never be sent into role chat');
+assert.match(delivery,/失败原因已经由系统在外卖控制页提示/,'the role prompt must keep failure details out of chat');
 assert.match(delivery,/必须先按你自己的语气自然问清楚并等待回答/,'vague delivery wishes must be clarified before automation');
 assert.match(delivery,/始终保留自己的判断和意愿/,'the role may accept or refuse the delivery request according to its persona');
 assert.match(delivery,/必须先发一句符合你本人语气的简短可见消息/,'the role must acknowledge before starting automation');
