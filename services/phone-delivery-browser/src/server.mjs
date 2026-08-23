@@ -48,22 +48,18 @@ const server = http.createServer(async (request, response) => {
   try {
     const input = JSON.parse(rawBody || '{}');
     action = String(input.action || 'unknown').slice(0, 40);
-    await browser.prewarm();
     const data = await adapter.handle(action, input.payload || {}, input.context || {});
     console.log(`[phone-delivery-browser] action=${action} ok ms=${Date.now() - startedAt}`);
     return reply(response, 200, { ok: true, data });
   } catch (error) {
     const message = String(error?.message || error || '真实外卖浏览器服务错误').slice(0, 240);
     console.warn(`[phone-delivery-browser] action=${action} failed ms=${Date.now() - startedAt}: ${message}`);
-    return reply(response, /登录|验证|地址|规格|报价|金额|不存在|不支持|请输入/.test(message) ? 409 : 502, { ok: false, error: message });
+    return reply(response, /登录|验证|地址|规格|报价|金额|不存在|不支持|请输入|红包|优惠券|吃货豆|结算|提交订单|付款/.test(message) ? 409 : 502, { ok: false, error: message });
   }
 });
 
 server.listen(port, host, () => {
   console.log(`[phone-delivery-browser] listening on http://${host}:${port}/delivery`);
-  browser.prewarm().then(() => console.log('[phone-delivery-browser] browser prewarmed')).catch(error => {
-    console.warn(`[phone-delivery-browser] prewarm deferred: ${String(error?.message || error).slice(0, 160)}`);
-  });
 });
 
 for (const signal of ['SIGINT', 'SIGTERM']) {

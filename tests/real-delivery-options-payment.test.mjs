@@ -28,8 +28,9 @@ assert.match(browser,/安全验证/,'captcha and risk control must stop for huma
 assert.match(browser,/riskBlockedUntil/,'a platform challenge must create a browser-level cooldown');
 assert.match(browser,/期间不会再次打开或重搜/,'cooldown retries must stop before another platform navigation');
 assert.match(browser,/支付成功\|付款成功/,'payment status must come from an explicit platform-page receipt');
-assert.match(browser,/checkoutAmounts\(body\)/,'the payable total must use checkout-specific parsing');
-assert.match(browser,/购物车已有商品，为避免混单/,'an existing platform cart must stop role-created order mixing');
+assert.match(browser,/checkoutAmounts\((?:body|raw)\)/,'the payable total must use checkout-specific parsing');
+assert.match(browser,/useExistingCartIfMatching/,'an existing platform cart must be verified before reuse');
+assert.match(browser,/购物车已有商品但尚未达到起送金额/,'an under-minimum existing cart must pause instead of appending duplicate items');
 assert.match(browser,/searchInsideShop/,'a saved shop must try its own product search instead of taking the first menu item');
 assert.match(browser,/rememberedRoutes\.slice\(0, 3\)/,'role ordering must inspect no more than three saved shops');
 

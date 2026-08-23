@@ -34,7 +34,7 @@ test('online and co-living inspections share one exclusive lane',()=>{
 
 test('unchanged facts deduplicate across online and co-living channels',()=>{
   const context=vm.createContext({replyDedupNorm:v=>String(v).toLowerCase(),wxLoginWechatSummary:()=>'',save:()=>{},String,Date,Math});
-  vm.runInContext(`${functionSource('rolePhoneInspectionKey')}${functionSource('rolePhoneInspectionSignature')}${functionSource('rolePhoneInspectionUnchanged')}${functionSource('rolePhoneInspectionCommit')}this.signature=rolePhoneInspectionSignature;this.unchanged=rolePhoneInspectionUnchanged;this.commit=rolePhoneInspectionCommit;`,context);
+  vm.runInContext(`${functionSource('rolePhoneInspectionKey')}${functionSource('rolePhoneUsageSnapshotFromInspection')}${functionSource('rolePhoneInspectionSignature')}${functionSource('rolePhoneInspectionUnchanged')}${functionSource('rolePhoneInspectionCommit')}this.signature=rolePhoneInspectionSignature;this.unchanged=rolePhoneInspectionUnchanged;this.commit=rolePhoneInspectionCommit;`,context);
   const role={id:'c1'};
   const fact=context.signature(role,'抖音',{label:'抖音',data:'搜索：猫咪；点赞：一条视频'});
   assert.equal(context.unchanged(role,fact),false);

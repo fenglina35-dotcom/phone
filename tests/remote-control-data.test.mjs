@@ -65,10 +65,12 @@ test('chat and DM detail choices remain role-driven',()=>{
   assert.match(app,/else if\(a\.fromDmList\)await remoteControlDmExitToList\(a\.app\)/);
 });
 
-test('remote subtitles are role-generated and quiet on list pages',()=>{
+test('remote subtitles are role-generated from real detail or visible list previews',()=>{
   assert.match(app,/function remoteControlRoleLines\(c,a,r\)/);
   assert.match(app,/function remoteControlRoleReaction\(c,a,r\)/);
-  assert.match(app,/\['wechatList','xDmList','dyDmList'\]\.includes\(a&&a\.targetType\)\)return\{lines:\[\],deleteIntent:false/);
+  assert.doesNotMatch(app,/\['wechatList','xDmList','dyDmList'\]\.includes\(a&&a\.targetType\)\)return\{lines:\[\],deleteIntent:false/);
+  assert.match(app,/const visibleFacts=r&&Array\.isArray\(r\.facts\)/);
+  assert.match(app,/列表里实际显示的名称和预览同样是你亲眼看到的真实内容/);
   assert.match(app,/max:520,complete:true,temp:\.82,aux:false/);
   assert.match(app,/const reaction=await remoteControlRoleReaction\(c,a,r\)/);
   assert.match(app,/await remoteControlShowRoleLines\(await remoteControlRoleLines\(c,a,r\)\)/);
@@ -79,7 +81,7 @@ test('remote subtitles are role-generated and quiet on list pages',()=>{
   assert.doesNotMatch(app,/cap\.appendChild\(b\);while\(cap\.children\.length>3\)/);
   assert.match(app,/你不是操作解说员/);
   assert.match(app,/roleSpokenCount:0/);
-  assert.match(app,/本轮你还没有说过话，而当前详情已经有具体真实内容/);
+  assert.match(app,/本轮你还没有说过话，而当前屏幕已经有具体真实内容/);
   assert.match(app,/角色正在理解当前内容/);
   assert.match(app,/function remoteControlCaptionMs\(t\)\{return Math\.max\(3800,Math\.min\(8000/);
   assert.match(app,/禁止说“?我先看看/);
@@ -89,6 +91,33 @@ test('remote subtitles are role-generated and quiet on list pages',()=>{
   assert.doesNotMatch(app,/remoteControlCaption\('找到了，我现在打开/);
   assert.doesNotMatch(app,/remoteControlTimed/);
   assert.doesNotMatch(app,/function remoteControlSayFallback/);
+});
+
+test('the first visible WeChat list preview can trigger a genuine role line',async()=>{
+  const source=app.match(/async function remoteControlRoleReaction\(c,a,r\)\{[\s\S]*?\n\}(?=\nasync function remoteControlRoleLines)/)?.[0]||'';
+  assert.ok(source,'remote role reaction function must exist');
+  let calls=0;
+  const remoteControlModelCall=async()=>{calls++;return '{"lines":["他怎么突然说今晚不回来了？"],"delete":false,"messageIndex":-1}';};
+  const remoteControlRoleResponse=raw=>{const payload=JSON.parse(raw);return{payload,lines:payload.lines||[]};};
+  const ctl={roleSpokenCount:0,actions:[]};
+  const reaction=Function('$','remoteControlDeleteCapability','remoteControlOwnershipNote','remoteControlIntentContext','S','_remoteCtl','remoteControlProgress','remoteControlModelCall','remoteControlRoleResponse','buildSystem',`${source};return remoteControlRoleReaction;`)(
+    ()=>null,()=>null,()=>'',()=>'',{me:{name:'用户'}},ctl,()=>{},remoteControlModelCall,remoteControlRoleResponse,()=>''
+  );
+  const out=await reaction({id:'role-1',name:'角色'},{op:'view',targetName:'微信聊天列表',targetType:'wechatList'},{detail:'正在查看微信聊天列表：先生：今晚不回来了',facts:['先生：今晚不回来了']});
+  assert.equal(calls,1);
+  assert.deepEqual(out.lines,['他怎么突然说今晚不回来了？']);
+  assert.equal(ctl.lastRoleCaptionStage,'reaction:wechatList');
+});
+
+test('an empty list still stays silent without calling the model',async()=>{
+  const source=app.match(/async function remoteControlRoleReaction\(c,a,r\)\{[\s\S]*?\n\}(?=\nasync function remoteControlRoleLines)/)?.[0]||'';
+  let calls=0;
+  const reaction=Function('$','remoteControlDeleteCapability','remoteControlOwnershipNote','remoteControlIntentContext','S','_remoteCtl','remoteControlProgress','remoteControlModelCall','remoteControlRoleResponse','buildSystem',`${source};return remoteControlRoleReaction;`)(
+    ()=>null,()=>null,()=>'',()=>'',{me:{name:'用户'}},{roleSpokenCount:0,actions:[]},()=>{},async()=>{calls++;return'';},()=>null,()=>''
+  );
+  const out=await reaction({id:'role-1',name:'角色'},{op:'view',targetName:'微信聊天列表',targetType:'wechatList'},{detail:'正在查看微信聊天列表：没有看到相关记录',facts:[]});
+  assert.equal(calls,0);
+  assert.deepEqual(out.lines,[]);
 });
 
 test('remote role subtitles survive a natural-text model response without fake fallback text',()=>{
@@ -187,7 +216,19 @@ test('a whole remote session with no visible subtitle gets one final real-model 
   assert.equal(calls,2);
   assert.equal(ctl.roleSpokenCount,0,'the final real line is counted only after the overlay displays it');
   assert.ok(progress.includes('角色回复中断，正在最后重连'));
+  assert.equal(ctl.lastRoleCaptionStage,'final-evidence-retry');
   assert.doesNotMatch(ensureSource,/return\s*\[["'`][^\]]+["'`]\]/,'must not manufacture a canned role line');
+});
+
+test('final subtitle evidence keeps real list previews and drops empty placeholders',()=>{
+  const source=app.match(/function remoteControlRoleEvidence\(ctl\)\{[^\n]+\}/)?.[0]||'';
+  assert.ok(source,'remote role evidence function must exist');
+  const evidence=Function(`${source};return remoteControlRoleEvidence;`)();
+  assert.deepEqual(evidence({actions:[
+    {targetType:'wechatList',detail:'微信聊天列表：先生：今晚不回家'},
+    {targetType:'xFeed',detail:'微博动态：角色发布了一张夜景'},
+    {targetType:'dyDmList',detail:'抖音私信列表：没有看到相关记录'}
+  ]}),['微信聊天列表：先生：今晚不回家','微博动态：角色发布了一张夜景']);
 });
 
 test('remote control never revisits the same view page in one session',()=>{
@@ -218,6 +259,7 @@ test('Douyin inspection visibly scrolls rather than resetting one screen',()=>{
 test('remote control restores the page the user was on',()=>{
   assert.match(app,/returnStack:stack\.map\(x=>Object\.assign\(\{\},x\)\)/);
   assert.match(app,/stack=returnStack\.length\?returnStack:\[\{p:'home'\}\];render\(\)/);
+  assert.match(app,/captionDiagnostic=\{spokenCount:\+ctl\.roleSpokenCount\|\|0,lastStage:String\(ctl\.lastRoleCaptionStage\|\|''\),lastError:String\(ctl\.lastRoleCaptionError\|\|''\)\}/);
 });
 
 test('all remote reasoning stays on the primary model',()=>{

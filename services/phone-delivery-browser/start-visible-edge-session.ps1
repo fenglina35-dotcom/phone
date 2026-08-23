@@ -9,7 +9,7 @@ if (-not $edgeCandidates) {
   throw '没有找到 Microsoft Edge，请先安装 Edge 或在 .env 中改用可用的 Chrome CDP 地址。'
 }
 
-$profile = Join-Path $env:LOCALAPPDATA 'SmallPhoneDeliveryEdgeProfile'
+$profile = Join-Path $PSScriptRoot 'profile'
 New-Item -ItemType Directory -Force -Path $profile | Out-Null
 
 Start-Process -FilePath $edgeCandidates[0] -WindowStyle Normal -ArgumentList @(

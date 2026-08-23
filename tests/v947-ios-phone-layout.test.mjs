@@ -8,7 +8,7 @@ const app=read('../app.js');
 const bundledHtml=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/小手机.html');
 const bundledApp=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js');
 
-test('phone identity and subtitle layout are shared by web Apple and Android, but not private App',()=>{
+test('phone identity and subtitle layout are shared by web Apple, Android and the synchronized private App',()=>{
   assert.match(html,/html\.north-ios-home-safe \.phoneui \.phtop\{padding-top:calc\(12px \+ var\(--north-ios-home-safe-top\)\)/);
   assert.match(app,/<div class="phcallperson"><div class="phcallidentity">/);
   assert.match(html,/\.phcalltop\{[^}]*transform:translateY\(18px\)/);
@@ -17,8 +17,8 @@ test('phone identity and subtitle layout are shared by web Apple and Android, bu
   assert.match(html,/\.phcallperson \.avatar\{width:94px;height:94px/);
   assert.match(html,/\.phcallctl svg\{width:60px;height:60px/);
   assert.doesNotMatch(html,/html\.north-ios-home-safe \.phcall(?:ui|person|identity|sub|grid|ctl|name|num|region|text|endbtn)/,'phone content layout is not hidden inside Apple compatibility');
-  assert.doesNotMatch(bundledApp,/phcallidentity/,'private App phone markup remains unchanged');
-  assert.doesNotMatch(bundledHtml,/\.phcalltop\{[^}]*translateY\(18px\)/,'private App phone position remains unchanged');
+  assert.match(bundledApp,/<div class="phcallperson"><div class="phcallidentity">/,'private App receives the synchronized phone identity markup');
+  assert.match(bundledHtml,/\.phcalltop\{[^}]*translateY\(18px\)/,'private App receives the synchronized phone position');
   assert.match(bundledApp,/function appleHomeCompatEnvironment\(\)\{return appleHomeCompatBrowserEnvironment\(\);\}/);
 });
 

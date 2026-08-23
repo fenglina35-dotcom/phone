@@ -4,6 +4,11 @@ import { opaqueFingerprint } from './security.mjs';
 
 const money = value => Math.max(0, Math.round((Number(value) || 0) * 100) / 100);
 const clean = (value, max = 200) => String(value ?? '').trim().slice(0, max);
+const cleanImage = value => {
+  const raw = clean(value, 440_000);
+  if (/^data:image\/(?:png|jpe?g|webp);base64,[a-z0-9+/=]+$/i.test(raw)) return raw;
+  return /^https:\/\//i.test(raw) ? raw.slice(0, 800) : '';
+};
 
 export class DeliveryAdapter {
   constructor({ browser, secret, maxOrderAmount = 100, maxOffers = 12 }) {
@@ -40,22 +45,25 @@ export class DeliveryAdapter {
 
   async capabilities() {
     if (this.capabilitiesCache && Date.now() - this.capabilitiesCache.cachedAt < 10 * 60_000) return { ...this.capabilitiesCache.value };
-    if (!this.capabilitiesPromise) this.capabilitiesPromise = (async () => {
-      const status = await this.browser.status();
-      const value = {
-        providers: ['taobao_flash'],
-        payments: ['alipay'],
-        automaticPayments: false,
-        addressConfirmation: true,
-        realtimeWebhooks: false,
-        addressLabel: clean(status.addressLabel, 80),
-        loginRequired: status.loggedIn !== true,
-        loginUrl: clean(status.loginUrl, 500),
-      };
-      this.capabilitiesCache = { cachedAt: Date.now(), value };
-      return value;
-    })();
-    try { return { ...await this.capabilitiesPromise }; } finally { this.capabilitiesPromise = null; }
+    // This endpoint is called when the phone page is refreshed and when the
+    // settings panel is opened. It must remain passive: probing the live
+    // marketplace here used to launch/navigate the automated browser even
+    // though the user had not started an order, which needlessly increased
+    // marketplace risk challenges. Login and address are verified only by the
+    // explicit confirm/search/order actions that actually need the browser.
+    const value = {
+      providers: ['taobao_flash'],
+      payments: ['alipay'],
+      automaticPayments: false,
+      addressConfirmation: true,
+      realtimeWebhooks: false,
+      addressLabel: '',
+      loginRequired: null,
+      loginUrl: '',
+      passive: true,
+    };
+    this.capabilitiesCache = { cachedAt: Date.now(), value };
+    return { ...value };
   }
 
   async confirmAddress(payload) {
@@ -91,9 +99,11 @@ export class DeliveryAdapter {
         reviewCount: Number.isFinite(Number(item.reviewCount)) ? Number(item.reviewCount) : null,
         monthlySales: Number.isFinite(Number(item.monthlySales)) ? Number(item.monthlySales) : null,
         etaMinutes: Number.isFinite(Number(item.etaMinutes)) ? Number(item.etaMinutes) : null,
-        couponLabel: clean(item.couponLabel, 100), imageUrl: clean(item.imageUrl, 800),
+        couponLabel: clean(item.couponLabel, 100), imageUrl: cleanImage(item.imageUrl),
         optionGroups: Array.isArray(item.optionGroups) ? item.optionGroups : [],
         optionsLoaded: item.optionsLoaded === true,
+        requiresConfirmation: item.requiresConfirmation === true,
+        confirmationReason: clean(item.confirmationReason, 240),
         addressLabel: clean(address.label, 80), addressFingerprint, quoteExpiresAt: Date.now() + 8 * 60_000,
         rawVersion: clean(item.rawVersion || 'taobao-flash-browser-v1', 80),
       };
@@ -136,6 +146,9 @@ export class DeliveryAdapter {
     const key = `${context.target || ''}:${clean(payload.offerId, 160)}`;
     const quote = this.quotes.get(key);
     if (!quote || quote.quoteId !== clean(payload.quoteId, 160) || quote.expiresAt < Date.now()) throw new Error('真实报价已过期，请重新搜索');
+    if (quote.requiresConfirmation && payload.confirmedHistoricalSuperset !== true) {
+      throw new Error(quote.confirmationReason || '这笔历史订单包含本次没有明确要求的额外商品，必须先由本人确认');
+    }
     if (!quote.optionsLoaded) {
       quote.optionGroups = await this.browser.inspectOptionsFor(quote.browserRef);
       quote.optionsLoaded = true;
@@ -148,13 +161,16 @@ export class DeliveryAdapter {
     if (!total) throw new Error('平台没有返回有效订单金额');
     if (this.maxOrderAmount > 0 && total > this.maxOrderAmount) throw new Error(`订单金额 ¥${total.toFixed(2)} 超过服务端上限`);
     const orderId = `tbd_${crypto.randomUUID()}`;
-    const address = await this.browser.currentAddress();
     const order = {
-      orderId, provider: 'taobao_flash', merchantId: quote.merchantId, merchant: quote.merchant,
+      orderId, provider: 'taobao_flash', merchantId: quote.merchantId, merchant: clean(draft.merchant || quote.merchant, 100),
       items: Array.isArray(draft.items) && draft.items.length ? draft.items : [{ name: quote.name, quantity, price: quote.price, options: this.optionText(quote.optionGroups, selectedOptions) }],
-      total, discount: money(draft.discount), couponLabel: clean(draft.couponLabel, 100), status: 'created', paymentMethod: 'alipay', addressLabel: clean(address.label, 80),
-      imageUrl: clean(quote.imageUrl, 800), etaMinutes: Number.isFinite(Number(quote.etaMinutes)) ? Math.max(0, Math.floor(Number(quote.etaMinutes))) : null,
-      addressFingerprint: opaqueFingerprint(this.secret, address.fingerprintSource), risk: Array.isArray(draft.risk) ? draft.risk : [],
+      total, discount: money(draft.discount), couponLabel: clean(draft.couponLabel, 100), status: 'created', paymentMethod: 'alipay', addressLabel: clean(quote.addressLabel, 80),
+      imageUrl: cleanImage(draft.imageUrl || draft.items?.find(item => item?.imageUrl)?.imageUrl || quote.imageUrl), etaMinutes: Number.isFinite(Number(quote.etaMinutes)) ? Math.max(0, Math.floor(Number(quote.etaMinutes))) : null,
+      etaText: clean(draft.etaText, 80),
+      // The address was already confirmed and fingerprinted when this quote
+      // was created.  Reading it again here navigates away from the live
+      // checkout page and makes the one-time confirmation URL stale.
+      addressFingerprint: clean(quote.addressFingerprint, 180), risk: Array.isArray(draft.risk) ? draft.risk : [],
       browserOrderRef: draft.browserOrderRef, createdAt: Date.now(), clientRequestId: clean(payload.clientRequestId, 160),
     };
     this.orders.set(`${context.target || ''}:${orderId}`, order);
@@ -173,6 +189,11 @@ export class DeliveryAdapter {
       if (!order.payUrl && order.status !== 'paid') {
         const submitted = await this.browser.submitOrder(order.browserOrderRef);
         order.payUrl = clean(submitted.payUrl, 1000);
+        if (submitted.etaText) order.etaText = clean(submitted.etaText, 80);
+        if (submitted.imageUrl) order.imageUrl = cleanImage(submitted.imageUrl);
+        if (Number(submitted.total) > 0) order.total = money(submitted.total);
+        if (submitted.discount != null) order.discount = money(submitted.discount);
+        if (submitted.couponLabel) order.couponLabel = clean(submitted.couponLabel, 100);
         order.browserOrderRef = submitted.browserOrderRef || order.browserOrderRef;
         order.status = submitted.status === 'paid' ? 'paid' : 'pending_payment';
         if (order.payUrl) order.payQrDataUrl = await QRCode.toDataURL(order.payUrl, { errorCorrectionLevel: 'M', margin: 2, width: 420 });
@@ -189,6 +210,10 @@ export class DeliveryAdapter {
     const update = await this.browser.orderStatus(order.browserOrderRef);
     if (update?.status) order.status = update.status;
     if (Number(update?.total) > 0) order.total = money(update.total);
+    if (update?.etaText) order.etaText = clean(update.etaText, 80);
+    if (update?.imageUrl) order.imageUrl = cleanImage(update.imageUrl);
+    if (update?.discount != null) order.discount = money(update.discount);
+    if (update?.couponLabel) order.couponLabel = clean(update.couponLabel, 100);
     return this.publicOrder(order);
   }
 
@@ -222,7 +247,7 @@ export class DeliveryAdapter {
       items: order.items, total: order.total, status: order.status, paymentMethod: order.paymentMethod,
       discount: order.discount || 0, couponLabel: order.couponLabel || '',
       payUrl: order.payUrl || '', payQrDataUrl: order.payQrDataUrl || '', addressLabel: order.addressLabel,
-      imageUrl: order.imageUrl || '', etaMinutes: order.etaMinutes,
+      imageUrl: order.imageUrl || '', etaMinutes: order.etaMinutes, etaText: order.etaText || '',
       addressFingerprint: order.addressFingerprint, risk: order.risk || [],
     };
   }

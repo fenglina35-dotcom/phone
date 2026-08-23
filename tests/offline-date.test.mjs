@@ -14,6 +14,10 @@ const manualSummary=source.slice(source.indexOf('async function offManualSummary
 assert.doesNotMatch(manualSummary,/offlineDeactivate/);
 const html = fs.readFileSync(path.join(root, "\u5c0f\u624b\u673a.html"), "utf8");
 
+assert.match(source,/const dateActions=root\.querySelector\('\.off-date-nav>\.off-nav-actions'\)/);
+assert.match(source,/dateActions\.insertAdjacentHTML\('afterbegin',chatRouteQuickButton\(color\)\)/);
+assert.match(html,/\.off-date-nav>\.off-nav-actions>\[data-chat-route-quick\]\{position:static!important/);
+
 assert.match(source, /offlineWechatLive:true/);
 assert.match(source, /约会中同步到线上/);
 assert.match(source, /关闭：线上与线下按平行独立世界处理/);
@@ -54,7 +58,7 @@ assert.match(liveSandbox.prompt, /约会间隙拿出手机/);
 assert.match(liveSandbox.prompt, /手动分段总结/);
 assert.match(liveSandbox.prompt, /地点：江边/);
 
-assert.match(source, /v1051 · 店内精搜与项圈配色修正版/);
+assert.match(source, /v1053 · 外卖偏好与真实图片修正版/);
 assert.match(source, /function timeAwarenessPrompt\(who,kind\)/);
 assert.match(source, /23:20\u523023:49[\s\S]*\u7edd\u5bf9\u4e0d\u8981\u8bf4\u5341\u4e8c\u70b9\u4e86/);
 assert.match(source, /timeAwarenessPrompt\(S\.me\.name,'wechat'\)/);
@@ -657,6 +661,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=1051/);
+assert.match(html, /app\.js\?v=1053/);
 
 console.log("offline date tests passed");

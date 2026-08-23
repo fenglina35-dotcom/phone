@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1045 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1051 · 店内精搜与项圈配色修正版'/);
-  assert.match(app,/const url='sw\.js\?v=1051&r=v1051-delivery-shop-search-title-badge-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1051'/);
-  assert.match(html,/app\.js\?v=1051/);
-  assert.match(sw,/const BUILD='1051'/);
-  assert.match(sw,/north-shell-v1051/);
-  assert.match(index,/小手机\.html\?v=1051/);
-  assert.match(repair,/小手机\.html\?v=1051/);
+  assert.match(app,/APP_VER='v1053 · 外卖偏好与真实图片修正版'/);
+  assert.match(app,/const url='sw\.js\?v=1053&r=v1053-delivery-preferences-image-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1053'/);
+  assert.match(html,/app\.js\?v=1053/);
+  assert.match(sw,/const BUILD='1053'/);
+  assert.match(sw,/north-shell-v1053/);
+  assert.match(index,/小手机\.html\?v=1053/);
+  assert.match(repair,/小手机\.html\?v=1053/);
 });
 
-test('the private iOS package embeds web v1045 and keeps 1.0.169 delivery',()=>{
-  assert.match(privateBundle,/<string>1051<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.169;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 169;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.169 \(169\)'/);
+test('the private iOS package embeds web v1053 and keeps 1.0.176 delivery',()=>{
+  assert.match(privateBundle,/<string>1053<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.176;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 176;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.176 \(176\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

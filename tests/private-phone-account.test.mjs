@@ -22,6 +22,10 @@ test('phone account UI is private-app only and preserves local data before a cho
   assert.match(app, /系统没有自动上传或下载/);
   assert.match(app, /当前本机不会在确认前发生任何变化/);
   assert.match(app, /S=mergeStateData\(d\);normalizeLoadedState\(\);phoneFriendState\(\)/);
+  assert.match(app, /PRIVATE_PHONE_RESTORE_ROLLBACK_KEY='__private_phone_restore_rollback'/);
+  assert.match(app, /before=await fullBackupState\(\);await imgPut\(PRIVATE_PHONE_RESTORE_ROLLBACK_KEY/);
+  assert.match(app, /撤回上次恢复/);
+  assert.match(app, /async function privatePhoneCloudRestoreRollback\(\)/);
 });
 
 test('private app stores auth tokens in Keychain and never returns them to JavaScript', () => {

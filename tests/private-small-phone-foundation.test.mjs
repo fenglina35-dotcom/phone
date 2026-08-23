@@ -31,7 +31,9 @@ test('private app loads bundled phone resources instead of a remote shell', () =
   assert.match(webView, /webView\.window\?\.safeAreaInsets/);
   assert.match(webView, /north-native-app/);
   assert.match(webView, /root\.classList\.add\('north-native-app'\)/);
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.169 \(169\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.176 \(176\)'/);
+  assert.match(webView, /\n      window\.__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.176 \(176\)'/);
+  assert.doesNotMatch(webView, /\nwindow\.__SMALL_PHONE_PRIVATE_BUILD__/);
   assert.match(webView, /SmallPhoneRolePushTapped/);
   assert.match(webView, /window\.__smallPhoneOpenRolePush/);
   assert.doesNotMatch(webView, /https?:\/\//);
@@ -126,8 +128,8 @@ test('real Mac project keeps all Screen Time targets and becomes 小手机', () 
   }
   assert.match(project, /INFOPLIST_KEY_CFBundleDisplayName = "小手机";/);
   assert.match(project, /PRODUCT_BUNDLE_IDENTIFIER = com\.qianyi\.PhoneCompanionTest;/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 169;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.169;/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 176;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.176;/);
 
   const scheme = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/xcshareddata/xcschemes/PhoneCompanionTest.xcscheme'
@@ -255,6 +257,9 @@ test('private app isolates role audio from recognition and reuses the proven web
   assert.match(project, /INFOPLIST_KEY_NSMicrophoneUsageDescription/g);
   assert.match(project, /INFOPLIST_KEY_NSSpeechRecognitionUsageDescription/g);
   assert.match(webView, /WKNavigationDelegate, WKUIDelegate/);
+  assert.match(webView, /createWebViewWith configuration: WKWebViewConfiguration/);
+  assert.match(webView, /navigationAction\.targetFrame == nil/);
+  assert.match(webView, /UIApplication\.shared\.open\(url\)/);
   assert.match(webView, /requestMediaCapturePermissionFor/);
   assert.match(webView, /type == \.cameraAndMicrophone/);
   assert.match(webView, /window\.SmallPhoneNativeSpeech = Object\.freeze/);

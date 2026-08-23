@@ -4,6 +4,7 @@ import vm from 'node:vm';
 
 const source=fs.readFileSync(new URL('../delivery.js',import.meta.url),'utf8');
 const notices=[];
+const chatMessages=[];
 let oldSearchCalls=0;
 let sequence=0;
 const role={id:'role-1',name:'North',remark:'',avatar:'🖤'};
@@ -16,6 +17,7 @@ const ctx={
   privateNativeAppOn(){return false;},save(){},render(){},toast(){},uid(){return 'id-'+(++sequence);},
   getC(id){return id===role.id?role:null;},cur(){return{p:'home'};},
   scheduleReply(id,note){notices.push({id,note});return true;},
+  msgs(id){return id===role.id?chatMessages:[];},
   chatAPI:async()=>'{"matched":true,"offerId":"offer-1","reason":""}',
   esc:s=>String(s),av:s=>String(s),openModal(){},closeModal(){},
   document:{hidden:false,getElementById(id){return id==='food_q'?{value:'奶茶'}:null;},addEventListener(){}},
@@ -37,7 +39,7 @@ ctx.fetch=async(_url,init)=>{
   if(mode==='search-fail')return {ok:false,status:503,json:async()=>({ok:false,error:'平台维护'})};
   if(body.action==='search')return {ok:true,status:200,json:async()=>({ok:true,data:{offers:[{offerId:'offer-1',provider:'taobao_flash',merchantId:'m1',merchant:'真实奶茶店',name:'真实奶茶',price:18,deliveryFee:2,total:20,quoteId:'q1',addressFingerprint:'addr-1',optionsLoaded:true,optionGroups:[]}]}})};
   if(body.action==='create_order')return {ok:true,status:200,json:async()=>({ok:true,data:{orderId:'order-1',provider:'taobao_flash',merchantId:'m1',merchant:'真实奶茶店',items:[{name:'真实奶茶',quantity:1,price:18}],total:20,status:'created',addressFingerprint:'addr-1'}})};
-  if(body.action==='pay_order')return {ok:true,status:200,json:async()=>({ok:true,data:{status:'pending_payment',paymentMethod:'alipay',payUrl:'https://alipay.example.test/cashier'}})};
+  if(body.action==='pay_order')return {ok:true,status:200,json:async()=>({ok:true,data:{status:'pending_payment',paymentMethod:'alipay',payUrl:'https://alipay.example.test/cashier',payQrDataUrl:'data:image/png;base64,iVBORw0KGgo='}})};
   throw new Error('unexpected action '+body.action);
 };
 await ctx.foodSearch();
@@ -55,7 +57,10 @@ await ctx.deliveryHandleRoleRequest(role.id,'奶茶');
 assert.equal(ctx.S.food.orders[0].status,'pending_payment','ordinary users receive an official unpaid order');
 assert.equal(role.deliveryWallet.balance,100,'the retired role wallet is never debited');
 assert.equal(role.deliveryWallet.spentToday,0);
+assert.equal(chatMessages.length,1,'a complete unpaid order with an official QR becomes one chat card');
 assert.equal(notices.length,1,'the role receives one model-generation fact prompt for the result');
-assert.match(notices[0].note,/当前真实状态：待付款/);
+assert.match(notices[0].note,/当前仍是“待付款”，并未付款/,'the role fact must preserve the real unpaid state without claiming payment');
+assert.match(notices[0].note,/禁止提到“卡片”“系统”“二维码”“付款入口”“收银台”/,'the model prompt must keep payment UI jargon out of the role reply');
+assert.match(notices[0].note,/禁止说“自己去付款”/,'the role must not issue a system-like payment command');
 
 console.log('real delivery state-machine tests passed');

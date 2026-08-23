@@ -191,6 +191,20 @@ struct LocalPhoneWebView: UIViewRepresentable {
             }
         }
 
+        func webView(
+            _ webView: WKWebView,
+            createWebViewWith configuration: WKWebViewConfiguration,
+            for navigationAction: WKNavigationAction,
+            windowFeatures: WKWindowFeatures
+        ) -> WKWebView? {
+            guard navigationAction.targetFrame == nil,
+                  let url = navigationAction.request.url else {
+                return nil
+            }
+            UIApplication.shared.open(url)
+            return nil
+        }
+
         private static func allowedEmbeddedPlayer(_ url: URL) -> Bool {
             let host = url.host?.lowercased() ?? ""
             if host == "music.163.com" && url.path == "/outchain/player" {
@@ -330,7 +344,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.169 (169)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.176 (176)';
       const root = document.documentElement;
       root.classList.add('north-native-app');
       root.style.setProperty('--north-native-safe-top', 'env(safe-area-inset-top, 0px)');

@@ -51,6 +51,23 @@ test('private account backup also publishes the private-primary mirror', () => {
   assert.match(web, /mirrorReady=!cloudUrl\(\)\|\|!cloudKey\(\)/);
 });
 
+test('manual private publish can replace a legacy web snapshot only after the explicit private action', () => {
+  assert.match(web, /privatePrimaryMirrorUpload\(snapshot,\{allowLegacy:true\}\)/);
+  assert.match(web, /一键同步到网页版/);
+});
+
+test('private restore is hard-routed to the phone account backup and cannot read a web snapshot', () => {
+  assert.match(web, /async function cloudRestore\(idOverride\)\{if\(privateNativeAppOn\(\)\)throw new Error\('私人 App 禁止读取网页快照；请使用手机号私人备份恢复'\)/);
+  assert.match(web, /async function cloudDoRestore\(\)\{if\(privateNativeAppOn\(\)\)\{privatePhoneCloudRestoreOpen\(\);return;\}return privateMirrorPullNow\(\);\}/);
+  assert.match(web, /native\?'<div class="hint">私人 App 只允许恢复手机号私人备份，不提供网页旧快照恢复入口。<\/div>':'<button class="btn g" style="width:100%" onclick="cloudUseOtherId\(\)">输入旧云ID兼容恢复<\/button>'/);
+});
+
+test('web pull only accepts a marked private-ios mirror', () => {
+  assert.match(web, /const row=await cloudFetchRow\(\),meta=row&&privateMirrorMeta\(row\.data,row\)/);
+  assert.match(web, /if\(!meta\)throw new Error\('云端仍是旧网页备份，请先在私人 App 点“一键同步到网页版”'\)/);
+  assert.match(web, /privateMirrorApplyRemote\(row\.data,row,true\)/);
+});
+
 test('web and private bundle keep cloud mirror implementation identical', () => {
   const block = source => source.slice(source.indexOf("const PRIVATE_MIRROR_MODE="), source.indexOf('/* ---------- 存储用量 ---------- */'));
   assert.ok(block(web).length > 5000);

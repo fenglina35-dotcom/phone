@@ -128,7 +128,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v1051 · 店内精搜与项圈配色修正版'/);
+  assert.match(app, /const APP_VER='v1053 · 外卖偏好与真实图片修正版'/);
 });
 
 test('manual sync reads locally in the bundled app and keeps cloud fallback', () => {
@@ -884,4 +884,56 @@ test('companion device page is fixed to vertical scrolling without clipped contr
   assert.match(phone, /#cou_companion_apps\{overflow:hidden!important/);
   assert.match(phone, /\.companion-app-card\{[^}]*width:100%;max-width:100%;min-width:0/);
   assert.match(phone, /\.companion-app-card>div:last-child\{margin-left:0!important\}/);
+});
+
+test('a role-read usage snapshot remains authoritative across foreground and background replies', () => {
+  const today = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Shanghai', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date()).replaceAll('/', '-');
+  const state = {
+    screenTimeAvailable: true,
+    usageDay: today,
+    usageTimeZone: 'Asia/Shanghai',
+    usageRevision: 7,
+    usageGeneratedAt: Date.now(),
+    screenTimeSec: 7 * 3600 + 30 * 60,
+    apps: [{ name: '抖音', usedSec: 3 * 3600 + 42 * 60 }, { name: '微信', usedSec: 55 * 60 }],
+  };
+  const context = vm.createContext({ state, Intl, Date, Math, Number, Object, String, Array });
+  vm.runInContext(`
+    function replyDedupNorm(v){return String(v||'').toLowerCase();}
+    function companionRoleDataState(){return state;}
+    ${functionSource('companionUsageDayAt')}
+    ${functionSource('companionDuration')}
+    ${functionSource('rolePhoneInspectionKey')}
+    ${functionSource('rolePhoneUsageSnapshotFromInspection')}
+    ${functionSource('rolePhoneUsageAppsKey')}
+    ${functionSource('rolePhoneInspectionSignature')}
+    ${functionSource('rolePhoneInspectionUnchanged')}
+    ${functionSource('rolePhoneAuthoritativeUsage')}
+    ${functionSource('rolePhoneAuthoritativeUsageContext')}
+    ${functionSource('rolePhoneUsageClaimMinutes')}
+    ${functionSource('rolePhoneUsageConflict')}
+    ${functionSource('rolePhoneUsageStripConflicts')}
+    this.fact=rolePhoneInspectionSignature({},'屏幕使用时长',{label:'屏幕使用时长',data:'今日屏幕总使用 7小时30分钟；逐 App：抖音 3小时42分钟'});
+    this.contact={_phoneInspectionFacts:{'screen-time':{hash:this.fact.hash,ts:Date.now(),usage:this.fact.usage}}};
+    this.truth=rolePhoneAuthoritativeUsageContext(this.contact);
+    this.same=rolePhoneInspectionUnchanged(this.contact,this.fact);
+    this.oldSame=rolePhoneInspectionUnchanged({_phoneInspectionFacts:{'screen-time':{hash:this.fact.hash,usage:{...this.fact.usage,apps:[{name:'抖音',usedSec:169*60}]}}}},this.fact);
+    this.oldConflict=rolePhoneUsageConflict(this.contact,'抖音169分钟。');
+    this.currentConflict=rolePhoneUsageConflict(this.contact,'抖音3小时42分钟。');
+    this.historicalConflict=rolePhoneUsageConflict(this.contact,'之前抖音169分钟。');
+    this.cleaned=rolePhoneUsageStripConflicts(this.contact,'先问你一件事。\\n抖音169分钟。');
+  `, context);
+  assert.equal(context.fact.usage.apps[0].usedSec, 3 * 3600 + 42 * 60);
+  assert.match(context.truth, /抖音 3小时42分钟/);
+  assert.equal(context.same, true);
+  assert.equal(context.oldSame, false);
+  assert.equal(context.oldConflict, true);
+  assert.equal(context.currentConflict, false);
+  assert.equal(context.historicalConflict, false);
+  assert.equal(context.cleaned, '先问你一件事。');
+  assert.match(functionSource('roleServerPushRecentContext'), /rolePhoneAuthoritativeUsageContext\(c\)/);
+  assert.match(functionSource('initiativeGroundingContext'), /rolePhoneAuthoritativeUsageContext\(c\)/);
+  assert.match(functionSource('aiReply'), /rolePhoneUsageConflict\(c,content\)/);
 });

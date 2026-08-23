@@ -1,12 +1,31 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { spawn } from 'node:child_process';
 
 const MSITE = 'https://h5.ele.me/';
 const ADDRESS_URL = 'https://h5.ele.me/minisite/pages-poi/address/index';
 const clean = (value, max = 200) => String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
 const number = value => Number(String(value ?? '').match(/[\d.]+/)?.[0] || 0);
-const groupHeading = /^(规格|套餐|杯型|份量|容量|温度|冰度|糖度|甜度|口味|辣度|(?:推荐)?(?:加料|小料|配料).{0,40}|酱料|做法|主食\d*|小食\d*|甜品(?:\/小食)?|小食\/甜品|饮料|赠送|全鸡|配餐|蘸酱)(?:\s*[（(]?(?:请选|请选择|任选)\s*\d+\s*份[）)]?)?$/;
+const groupHeading = /^(规格|套餐|杯型|份量|容量|温度|冰度|糖度|甜度|口味|辣度|咖啡豆|奶油|咖啡浓度|(?:推荐)?(?:加料|小料|配料).{0,40}|酱料|做法|主食\d*|小食\d*|甜品(?:\/小食)?|小食\/甜品|饮料|赠送|全鸡|配餐|蘸酱)(?:\s*[（(]?(?:请选|请选择|任选)\s*\d+\s*(?:份|种)[）)]?)?$/;
 const shopUrl = url => /newretail\/p\/ushop|pages\/ele-takeout-index/i.test(String(url || ''));
+const shopSearchUrl = url => /pages\/ele-index-search/i.test(String(url || ''));
+
+export function sameShopUrl(currentUrl, targetUrl) {
+  try {
+    const current = new URL(String(currentUrl || ''));
+    const target = new URL(String(targetUrl || ''));
+    if (current.href === target.href) return true;
+    if (!shopUrl(current.href) || !shopUrl(target.href)) return false;
+    for (const key of ['shopId', 'store_id', 'restaurant_id']) {
+      const left = clean(current.searchParams.get(key), 120);
+      const right = clean(target.searchParams.get(key), 120);
+      if (left && right) return left === right;
+    }
+    return current.origin === target.origin && current.pathname === target.pathname;
+  } catch {
+    return false;
+  }
+}
 
 const optionPanelNoise = /^(?:已选\s*[:：]?|价格计算中|选规格|选套餐|请选择|请选|确定|取消|加入购物车|数量|猜你喜欢|温馨小贴士)$/;
 
@@ -16,16 +35,16 @@ export function normalizeOptionPanelGroups(value = []) {
     const originalName = clean(raw?.name, 80);
     if (!originalName) continue;
     const rawChoices = (Array.isArray(raw?.choices) ? raw.choices : []).map(label => clean(label, 80)).filter(Boolean);
-    const hint = [originalName, ...rawChoices].map(label => label.match(/(?:请选|请选择|任选)\s*(\d+)\s*份/)).find(Boolean);
+    const hint = [originalName, ...rawChoices].map(label => label.match(/(?:请选|请选择|任选)\s*(\d+)\s*(?:份|种)/)).find(Boolean);
     const selectionCount = Math.max(1, Math.min(20, Number(hint?.[1]) || 1));
     const choices = [...new Set(rawChoices.filter(label => {
       if (optionPanelNoise.test(label)) return false;
-      if (/^(?:请选|请选择|任选)\s*\d+\s*份$/.test(label)) return false;
+      if (/^(?:请选|请选择|任选)\s*\d+\s*(?:份|种)$/.test(label)) return false;
       if (/^(?:已选\s*[:：]?.*|价格(?:计算中|待计算)|共\s*\d+\s*件)$/.test(label)) return false;
       return !/^[+×xX]$/.test(label);
     }))];
     if (!choices.length) continue;
-    const baseName = clean(originalName.replace(/[（(]?(?:请选|请选择|任选)\s*\d+\s*份[）)]?/g, ''), 60) || '规格';
+    const baseName = clean(originalName.replace(/[（(]?(?:请选|请选择|任选)\s*\d+\s*(?:份|种)[）)]?/g, ''), 60) || '规格';
     groups.push({
       name: selectionCount > 1 ? `${baseName}（请选择${selectionCount}份）` : baseName,
       choices,
@@ -50,43 +69,217 @@ export function shopClosedReason(value) {
 }
 
 export function productMatchesSavedItem(candidateName, savedItemName) {
+  const candidateText = clean(candidateName, 240);
+  const targetText = clean(savedItemName, 160);
   const candidate = knownRouteKey(candidateName);
   const target = knownRouteKey(savedItemName);
   if (!candidate || !target) return false;
+  // A single requested drink must never be satisfied by a bundle merely
+  // because the bundle title contains the same drink name.  The user may ask
+  // for a bundle explicitly; only then is a bundle candidate eligible.
+  const bundle = /(?:双杯|两杯|2杯|套餐|组合|买一送一|\+|＋)/i;
+  if (!bundle.test(targetText) && bundle.test(candidateText)) return false;
   return candidate === target || candidate.includes(target);
+}
+
+export function preferredExactProduct(items, itemName) {
+  const targetText = clean(itemName, 160);
+  const targetKey = knownRouteKey(itemName);
+  const chosen = (Array.isArray(items) ? items : [])
+    .filter(item => productMatchesSavedItem(item?.name, itemName))
+    .map((item, index) => {
+      const name = clean(item?.name, 240);
+      const key = knownRouteKey(name);
+      const rank = name.startsWith(targetText) ? 0 : key === targetKey ? 1 : 2;
+      return { item, index, rank, length: name.length };
+    })
+    .sort((left, right) => left.rank - right.rank || left.length - right.length || left.index - right.index)[0];
+  if (chosen && chosen.rank <= 1) return chosen.item;
+  // A user may intentionally leave the exact KFC single item to the role
+  // ("汉堡、薯条、蛋挞、可乐").  In that case choose a real single item from
+  // the requested category, but never let a combo/bucket masquerade as it.
+  const categoryPatterns = {
+    '汉堡': /(?:汉堡|鸡腿堡|牛肉堡|鳕鱼堡|虾堡|田园堡)/,
+    '薯条': /薯条/,
+    '蛋挞': /蛋挞/,
+    '可乐': /可乐/,
+    '鸡翅': /鸡翅/,
+    '原味鸡': /原味鸡/,
+  };
+  const category = categoryPatterns[targetText];
+  if (!category) return null;
+  const bundle = /(?:双杯|两杯|2杯|套餐|组合|买一送一|全家桶|多人餐|双人餐|三人餐|四人餐|桶餐|拼盘|\+|＋)/i;
+  return (Array.isArray(items) ? items : [])
+    .filter(item => category.test(clean(item?.name, 240)) && !bundle.test(clean(item?.name, 240)))
+    .map((item, index) => ({ item, index, length: clean(item?.name, 240).length }))
+    .sort((left, right) => left.length - right.length || left.index - right.index)[0]?.item || null;
 }
 
 export function preferredBrand(value) {
   const query = clean(value, 120);
+  if (/曼玲粥/i.test(query)) return 'manling';
+  if (/茶百道|cha\s*pa\s*dao/i.test(query)) return 'chabaidao';
   if (/瑞幸(?:咖啡)?|luckin/i.test(query)) return 'luckin';
   if (/喜茶|heytea/i.test(query)) return 'heytea';
   if (/霸王茶姬|chagee/i.test(query)) return 'chagee';
   if (/奈雪/i.test(query)) return 'nayuki';
+  if (/肯德基|\bkfc\b/i.test(query)) return 'kfc';
   return '';
 }
 
 export function brandMatches(brand, value) {
   const name = clean(value, 120);
+  if (brand === 'manling') return /曼玲粥/i.test(name);
+  if (brand === 'chabaidao') return /茶百道|cha\s*pa\s*dao/i.test(name);
   if (brand === 'luckin') return /瑞幸(?:咖啡)?|luckin/i.test(name);
   if (brand === 'heytea') return /喜茶|heytea/i.test(name);
   if (brand === 'chagee') return /霸王茶姬|chagee/i.test(name);
   if (brand === 'nayuki') return /奈雪/i.test(name);
+  if (brand === 'kfc') return /肯德基|\bkfc\b/i.test(name);
   return false;
+}
+
+export function activeShopMatchesBrand(query, url, body = '') {
+  const brand = preferredBrand(query);
+  if (!brand) return true;
+  let decodedUrl = String(url || '');
+  try { decodedUrl = decodeURIComponent(decodedUrl); } catch {}
+  return brandMatches(brand, `${decodedUrl} ${clean(body, 12_000)}`);
 }
 
 export function knownRouteKey(value) {
   return clean(value, 160).toLowerCase()
-    .replace(/(?:无糖|零糖|少糖|微糖|半糖|全糖|正常糖|不另外加糖|少冰|少少冰|去冰|正常冰|多冰|热饮|冷饮|常温|大杯|中杯|小杯)/g, '')
+    .replace(/(?:无糖|零糖|不加糖|少糖|微糖|半糖|全糖|正常糖|不(?:额外|另外)加糖|少冰|少少冰|去冰|正常冰|多冰|热饮|冷饮|常温|大杯|中杯|小杯)/g, '')
     .replace(/[^\p{L}\p{N}]+/gu, '');
 }
 
+export function requestedKfcItems(value) {
+  const source = clean(value, 300);
+  if (!/(?:肯德基|\bkfc\b)/i.test(source)) return [];
+  const stripped = source
+    .replace(/(?:肯德基|\bkfc\b)/gi, ' ')
+    .replace(/(?:帮我|给我|想吃|要吃|来点|点一份|点一些|随便点|单点|单品)/g, ' ');
+  const items = stripped.split(/[\s，,、；;和与]+/u)
+    .map(item => clean(item.replace(/^(?:再来|加|配|还有)(?:一个|一份)?/u, ''), 60))
+    .filter(item => item && !/^(?:不要|不加|少|多|无糖|零糖|常温|热|冰|去冰|微辣|中辣|特辣)/.test(item));
+  return [...new Set(items)];
+}
+
 export function requestedItemName(value) {
+  const kfcItems = requestedKfcItems(value);
+  if (kfcItems.length) return kfcItems[0];
   const source = clean(value, 160);
   const stripped = source
-    .replace(/(?:瑞幸(?:咖啡)?|luckin|喜茶|heytea|霸王茶姬|chagee|奈雪(?:的茶)?|肯德基|kfc|麦当劳|星巴克|库迪(?:咖啡)?|manner)/gi, ' ')
-    .replace(/(?:无糖|零糖|少少甜|少糖|微糖|半糖|全糖|正常糖|不另外加糖|少冰|少少冰|去冰|正常冰|多冰|热饮|冷饮|常温|大杯|中杯|小杯|不加冰|不要香菜|不要辣|微辣|中辣|特辣|不加奶油|椰乳|燕麦奶|加珍珠|加料)/g, ' ')
-    .replace(/\s+/g, ' ').trim();
+    .replace(/(?:曼玲粥|茶百道|cha\s*pa\s*dao|瑞幸(?:咖啡)?|luckin|喜茶|heytea|霸王茶姬|chagee|奈雪(?:的茶)?|肯德基|kfc|麦当劳|星巴克|库迪(?:咖啡)?|manner)/gi, ' ')
+    .replace(/(?:加|再来|配)(?:一个|一份)?\s*(?:茶叶蛋)/g, ' ')
+    .replace(/(?:无糖|零糖|不加糖|少少甜|少糖|微糖|半糖|全糖|正常糖|不(?:额外|另外)加糖|少冰|少少冰|去冰|正常冰|多冰|热饮|冷饮|常温|大杯|中杯|小杯|不加冰|不要香菜|不要辣|微辣|中辣|特辣|不加奶油|椰乳|燕麦奶|加珍珠|加料)/g, ' ')
+    .replace(/\s+/g, ' ').trim()
+    .replace(/牛奶燕麦粥/g, '燕麦牛奶粥');
   return stripped || source;
+}
+
+export function requestedMealSide(value) {
+  return requestedExtraItems(value).find(item => /茶叶蛋/.test(item)) || '';
+}
+
+export function requestedExtraItems(value) {
+  const kfcItems = requestedKfcItems(value);
+  if (kfcItems.length) return kfcItems.slice(1);
+  const source = clean(value, 240);
+  const items = [...source.matchAll(/(?<!不)(?:加|再来|配)(?:一个|一份)?\s*([^\s，,、；;]{1,24})/gu)]
+    .map(match => clean(match[1], 60))
+    .filter(item => item && !/^(?:糖|冰|热|温|奶油|椰乳|燕麦奶|辣|香菜)/.test(item));
+  return [...new Set(items)];
+}
+
+export function requestedStandaloneItems(value) {
+  const kfcItems = requestedKfcItems(value);
+  if (kfcItems.length) return kfcItems.slice(1);
+  const modifiers = /^(?:珍珠|椰果|冻冻|奶冻|芋圆|西米|布丁|仙草|红豆|椰奶冻|脆啵啵|麻薯|糖|冰|热|温|奶油|椰乳|燕麦奶|浓缩|辣|香菜)$/;
+  return requestedExtraItems(value).filter(item => !modifiers.test(item));
+}
+
+export function repeatPurchaseMatchKind(raw, itemName, request = '') {
+  const body = clean(raw, 4000);
+  const target = clean(itemName, 140);
+  if (!body || !target || !/买过|再来一单/.test(body) || !productMatchesSavedItem(body, target)) return 'none';
+  const query = clean(request, 300);
+  // KFC requests are intentionally assembled one single item at a time.  A
+  // historical "再来一单" may contain a combo or unrequested goods and must
+  // never short-circuit the explicit item checklist.
+  if (requestedKfcItems(query).length) return 'none';
+  const requestedExtras = requestedExtraItems(query);
+  if (requestedExtras.some(item => !productMatchesSavedItem(body, item))) return 'none';
+  // “再来一单” repeats the whole historical cart.  An exact cart can be used
+  // immediately; a superset (for example porridge + tea egg + an old beef pie)
+  // remains a valid candidate but must be confirmed by the user first.
+  const historicalCount = Number(body.match(/共\s*(\d+)\s*件/)?.[1]) || 0;
+  const expectedCount = 1 + requestedExtras.length + (/双杯|两杯|2\s*杯/.test(query) ? 1 : 0);
+  const required = [
+    [/无糖|零糖|不加糖|不(?:额外|另外)加糖/, /无糖|零糖|不加糖|不(?:额外|另外)加糖/],
+    [/少少甜|少糖|三分糖|3分糖/, /少少甜|少糖|三分糖|3分糖/],
+    [/微糖|五分糖|5分糖|半糖/, /微糖|五分糖|5分糖|半糖/],
+    [/少冰/, /少冰/],
+    [/去冰|不加冰/, /去冰|不加冰/],
+    [/常温/, /常温/],
+    [/热饮|温热|热的|温的/, /热饮|温热|热的|温的/],
+    [/大杯/, /大杯/],
+    [/中杯/, /中杯/],
+    [/小杯/, /小杯/],
+  ];
+  if (!required.every(([wanted, matched]) => !wanted.test(query) || matched.test(body))) return 'none';
+  return historicalCount > expectedCount ? 'superset' : 'exact';
+}
+
+export function repeatPurchaseMatches(raw, itemName, request = '') {
+  return repeatPurchaseMatchKind(raw, itemName, request) !== 'none';
+}
+
+export function availableCouponAmount(raw) {
+  const body = clean(raw, 12_000);
+  const matches = [...body.matchAll(/(?:未选红包[^。；\n]{0,40}?最高\s*|最高\s*)(\d+(?:\.\d+)?)\s*元可用/g)]
+    .map(match => Number(match[1]) || 0).filter(value => value > 0);
+  return matches.length ? Math.max(...matches) : 0;
+}
+
+export function appliedCouponAmount(raw) {
+  const body = clean(raw, 12_000).replace(/(\d)\s+\.(\d)/g, '$1.$2');
+  const matches = [...body.matchAll(/(?:闪购红包|红包优惠|配送费红包)[^。；\n]{0,24}?[-−]\s*[¥￥]?\s*(\d+(?:\.\d+)?)/g)]
+    .map(match => Number(match[1]) || 0).filter(value => value > 0);
+  return matches.length ? Math.max(...matches) : 0;
+}
+
+export function savedTopUpItems(raw, mainItem = '') {
+  const body = clean(raw, 12_000);
+  if (!/买过|再来一单/.test(body)) return [];
+  const main = knownRouteKey(mainItem);
+  const common = ['冻冻', '椰果', '奶冻', '珍珠', '芋圆', '西米', '布丁', '仙草', '红豆', '椰奶冻', '脆啵啵', '麻薯'];
+  return common.filter((name, index) => body.includes(name)
+    && knownRouteKey(name) !== main
+    && common.findIndex(other => other === name) === index);
+}
+
+export function milkTeaTopUpEligible(value) {
+  const text = clean(value, 300);
+  if (!text) return false;
+  // Coffee and meal orders must never be padded with milk-tea toppings.  Those
+  // categories need a normal same-category item or an explicit user choice.
+  if (/咖啡|美式|馥芮白|摩卡|卡布奇诺|浓缩|生椰拿铁|主食|米饭|炒饭|盖饭|面|粉|粥|汉堡|炸鸡|鸡翅|薯条|披萨|卷饼|套餐|肯德基|\bkfc\b|麦当劳/i.test(text)) return false;
+  return /奶茶|果茶|茶饮|冰奶|鲜奶茶|茶拿铁|奶绿|奶盖|茉莉|葡萄|杨枝甘露|柠檬茶|椰椰|啵啵|茶百道|喜茶|霸王茶姬|奈雪/i.test(text);
+}
+
+export function multiServingEligible(value) {
+  const text = clean(value, 300);
+  if (!text) return false;
+  if (/肯德基|\bkfc\b|麦当劳|主食|米饭|炒饭|盖饭|面|粉|粥|汉堡|炸鸡|鸡翅|薯条|披萨|卷饼|便当|套餐饭/i.test(text)) return false;
+  if (/瑞幸(?:咖啡)?|luckin/i.test(text)) return true;
+  return milkTeaTopUpEligible(text);
+}
+
+export function mealSideTopUpEligible(value) {
+  const text = clean(value, 300);
+  if (!text || /咖啡|美式|拿铁|奶茶|果茶|茶饮|冰奶|肯德基|\bkfc\b|麦当劳|汉堡|炸鸡|鸡翅|薯条|披萨/i.test(text)) return false;
+  return /主食|米饭|炒饭|盖饭|面|粉|粥|便当|馄饨|饺子|包子/i.test(text);
 }
 
 export function publicAddressLabel(raw) {
@@ -115,6 +308,50 @@ export function checkoutAmounts(raw) {
     total: directTotals.at(-1) || discountedTotals.at(-1) || paymentTotals.at(-1) || 0,
     discount: discounts.at(-1) || 0,
   };
+}
+
+const flexibleTextPattern = value => clean(value, 120).split('').map(char => {
+  if (/\s/.test(char)) return '\\s*';
+  return char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}).join('\\s*');
+
+export function checkoutCartState(raw, itemName, query = '', quantity = 1, { allowSuperset = false, requiredItems = [] } = {}) {
+  const body = clean(raw, 12_000);
+  const required = (Array.isArray(requiredItems) && requiredItems.length
+    ? requiredItems
+    : [clean(itemName, 120), ...requestedStandaloneItems(query)]).filter(Boolean);
+  const expectedMainQuantity = Math.max(1, Number(quantity) || 1);
+  const rows = required.map((name, index) => {
+    const pattern = flexibleTextPattern(name);
+    const match = pattern
+      ? body.match(new RegExp(`${pattern}[^×]{0,180}×\\s*(\\d+)`, 'i'))
+      : null;
+    return { name, quantity: Number(match?.[1]) || 0, expected: index === 0 ? expectedMainQuantity : 1 };
+  });
+  const renderedRows = [...body.matchAll(/×\s*(\d+)\s*[¥￥]/g)].map(match => Number(match[1]) || 0);
+  const missing = rows.filter(row => row.quantity === 0).map(row => row.name);
+  const duplicates = rows.filter(row => row.quantity > row.expected).map(row => row.name);
+  const wrongQuantities = rows.filter(row => row.quantity > 0 && row.quantity !== row.expected).map(row => row.name);
+  const extraRows = Math.max(0, renderedRows.length - rows.filter(row => row.quantity > 0).length);
+  const matches = !missing.length && !wrongQuantities.length && (allowSuperset || extraRows === 0);
+  return { matches, required: rows, missing, duplicates, extraRows, renderedRows: renderedRows.length };
+}
+
+export function checkoutPageReady(url, raw) {
+  const body = clean(raw, 12_000);
+  return /checkout|confirm|buy/i.test(String(url || ''))
+    || (/确认订单/.test(body) && /提交订单|提交并支付|立即支付|餐具|订单备注/.test(body));
+}
+
+export function checkoutEtaText(raw) {
+  const body = clean(raw, 20_000).replace(/[：﹕]/g, ':');
+  const match = body.match(/预计(?:送达|到达)?(?:时间)?\s*[:：]?\s*(\d{1,2})\s*:\s*(\d{2})\s*[-–—至~～]\s*(\d{1,2})\s*:\s*(\d{2})(?:\s*(?:送达|到达))?/);
+  if (!match) return '';
+  const [, startHour, startMinute, endHour, endMinute] = match;
+  const valid = (hour, minute) => Number(hour) >= 0 && Number(hour) <= 23 && Number(minute) >= 0 && Number(minute) <= 59;
+  if (!valid(startHour, startMinute) || !valid(endHour, endMinute)) return '';
+  const clock = (hour, minute) => `${String(Number(hour)).padStart(2, '0')}:${minute}`;
+  return `${clock(startHour, startMinute)}-${clock(endHour, endMinute)}送达`;
 }
 
 export function minimumOrderInfo(raw, itemPrice = 0, quantity = 1) {
@@ -175,14 +412,11 @@ export class TaobaoFlashBrowser {
     await this.loadRiskState();
     const { chromium } = await import('playwright');
     if (this.cdpUrl) {
-      this.browser = await chromium.connectOverCDP(this.cdpUrl);
-      this.context = this.browser.contexts()[0];
-      if (!this.context) throw new Error('没有找到可连接的 Chrome/Edge 浏览器上下文');
-      this.attached = true;
-      this.context.setDefaultTimeout(this.timeout);
-      const pages = this.context.pages().filter(page => !page.isClosed());
-      this.page = pages.find(page => /(?:h5\.ele\.me|taobao\.com|alipay\.com)/i.test(page.url())) || pages[0] || await this.context.newPage();
-      await this.reveal(this.page);
+      await this.attachCdp(chromium, this.cdpUrl);
+      return;
+    }
+    if (process.platform === 'win32' && this.executablePath) {
+      await this.launchWindowsVisibleCdp(chromium);
       return;
     }
     this.context = await chromium.launchPersistentContext(this.profile, {
@@ -199,6 +433,38 @@ export class TaobaoFlashBrowser {
     this.context.setDefaultTimeout(this.timeout);
     this.page = this.context.pages()[0] || await this.context.newPage();
     await this.reveal(this.page);
+  }
+
+  async attachCdp(chromium, endpoint) {
+    this.browser = await chromium.connectOverCDP(endpoint);
+    this.context = this.browser.contexts()[0];
+    if (!this.context) throw new Error('没有找到可连接的 Chrome/Edge 浏览器上下文');
+    this.attached = true;
+    this.cdpUrl = endpoint;
+    this.context.setDefaultTimeout(this.timeout);
+    const pages = this.context.pages().filter(page => !page.isClosed());
+    this.page = pages.find(page => /(?:h5\.ele\.me|taobao\.com|alipay\.com)/i.test(page.url())) || pages[0] || await this.context.newPage();
+    await this.reveal(this.page);
+  }
+
+  async launchWindowsVisibleCdp(chromium) {
+    const endpoint = 'http://127.0.0.1:9222';
+    const profile = path.resolve(this.profile);
+    let ready = false;
+    try { ready = (await fetch(`${endpoint}/json/version`, { cache: 'no-store' })).ok; } catch {}
+    if (!ready) {
+      const child = spawn(this.executablePath, [
+        '--remote-debugging-port=9222', `--user-data-dir=${profile}`, '--no-first-run', MSITE,
+      ], { detached: true, stdio: 'ignore', windowsHide: false });
+      child.unref();
+      const deadline = Date.now() + 20_000;
+      while (Date.now() < deadline) {
+        await new Promise(resolve => setTimeout(resolve, 250));
+        try { if ((await fetch(`${endpoint}/json/version`, { cache: 'no-store' })).ok) { ready = true; break; } } catch {}
+      }
+    }
+    if (!ready) throw new Error('专用 Edge 没有启动成功，请运行 start-visible-edge-session.ps1 后重试');
+    await this.attachCdp(chromium, endpoint);
   }
 
   async reveal(page = this.page) {
@@ -410,6 +676,16 @@ export class TaobaoFlashBrowser {
   async assertRiskCooldown() {
     await this.loadRiskState();
     if (this.riskBlockedUntil <= Date.now()) return;
+    // A closeable image challenge can disappear between operations (for
+    // example after its X is pressed).  Do not keep blocking a live, clean
+    // storefront merely because an older cooldown file still exists.
+    if (this.page && !this.page.isClosed?.()) {
+      const kind = riskChallengeKind(await this.riskText(this.page));
+      if (!kind || await this.dismissCloseableRiskOverlay(this.page, kind)) {
+        await this.clearRiskChallenge();
+        return;
+      }
+    }
     const minutes = Math.max(1, Math.ceil((this.riskBlockedUntil - Date.now()) / 60_000));
     throw new Error(`淘宝闪购刚触发${this.riskBlockReason || '安全验证'}，自动搜索已冷却${minutes}分钟，期间不会再次打开或重搜；稍后再试`);
   }
@@ -435,10 +711,49 @@ export class TaobaoFlashBrowser {
     return clean(rows.join(' '), 12_000);
   }
 
+  async dismissCloseableRiskOverlay(page, expectedKind = '') {
+    const currentKind = riskChallengeKind(await this.riskText(page));
+    if (!currentKind || (expectedKind && currentKind !== expectedKind)) return false;
+    const frames = typeof page.frames === 'function' ? page.frames() : [page];
+    for (const frame of frames.length ? frames : [page]) {
+      const candidates = frame.locator([
+        'button[aria-label*="关闭"]', '[role="button"][aria-label*="关闭"]',
+        'button[title*="关闭"]', '[role="button"][title*="关闭"]',
+        '[class*="close" i]',
+        '[class*="captcha" i] [class*="close" i]', '[class*="verify" i] [class*="close" i]',
+        'button:has-text("×")', '[role="button"]:has-text("×")',
+        'button:has-text("✕")', '[role="button"]:has-text("✕")',
+      ].join(', '));
+      if (!candidates || typeof candidates.count !== 'function') continue;
+      const visible = [];
+      for (let index = 0; index < await candidates.count(); index += 1) {
+        const candidate = candidates.nth(index);
+        if (!await candidate.isVisible().catch(() => false)) continue;
+        const signature = clean(await candidate.evaluate(node => [
+          node.getAttribute('aria-label'), node.getAttribute('title'), node.className, node.textContent,
+        ].filter(Boolean).join(' ')).catch(() => ''), 500);
+        if (!/关闭|close|cancel|×|✕|^x$/i.test(signature)) continue;
+        const box = await candidate.boundingBox().catch(() => null);
+        visible.push({ candidate, score: box ? box.x + box.y * 0.25 : 0 });
+      }
+      visible.sort((left, right) => right.score - left.score);
+      for (const { candidate } of visible) {
+        await candidate.click({ timeout: 1800, noWaitAfter: true }).catch(() => {});
+        await page.waitForTimeout(500);
+        if (!riskChallengeKind(await this.riskText(page))) return true;
+      }
+    }
+    return false;
+  }
+
   async riskCheck(page, { waitForHuman = false, maxWaitMs = 0 } = {}) {
     const startedAt = Date.now();
     let kind = riskChallengeKind(await this.riskText(page));
     if (!kind) return Date.now() - startedAt;
+    if (await this.dismissCloseableRiskOverlay(page, kind)) {
+      await this.clearRiskChallenge();
+      return Date.now() - startedAt;
+    }
     if (waitForHuman && !this.headless && maxWaitMs > 0) {
       await this.reveal(page);
       const deadline = Date.now() + Math.max(1_000, Number(maxWaitMs) || 0);
@@ -496,6 +811,9 @@ export class TaobaoFlashBrowser {
 
   async search(query, limit = 12, { allowGlobalSearch = true } = {}) {
     await this.assertRiskCooldown();
+    if (requestedKfcItems(query).some(item => /(?:套餐|组合|全家桶|多人餐|双人餐|桶餐|拼盘)/.test(item))) {
+      throw new Error('KFC 只允许逐件选择单品，不会搜索或加入套餐、组合或全家桶');
+    }
     const startedAt = Date.now();
     let humanWaitMs = 0;
     const assertWithinSearchTime = () => {
@@ -523,6 +841,24 @@ export class TaobaoFlashBrowser {
       try {
         const page = await this.enterShop(0, { preferSaved: true });
         await this.requireLogin(page); await waitForHumanVerification(page);
+        const repeat = await this.repeatPurchase(page, rememberedRoute.itemName, query);
+        if (repeat) {
+          return [{
+            merchantId: shop.storeId || 'saved-shop', merchant: shop.name, name: rememberedRoute.itemName,
+            description: clean(`历史订单：${repeat.summary}`, 240), price: repeat.total, deliveryFee: 0,
+            total: repeat.total, rating: shop.rating, monthlySales: shop.monthlySales, etaMinutes: shop.etaMinutes,
+            couponLabel: shop.couponLabel, optionGroups: [], optionsLoaded: true,
+            requiresConfirmation: repeat.requiresConfirmation,
+            confirmationReason: repeat.confirmationReason,
+            browserRef: {
+              shopIndex: 0, itemName: rememberedRoute.itemName, unitPrice: repeat.total,
+              buttonIndex: -1, detailUrl: '', shopUrl: shop.anchorUrl || shop.directUrl, query,
+              merchant: shop.name, merchantId: shop.storeId || '', repeatPurchase: true,
+              repeatSummary: repeat.summary, repeatQuantity: repeat.quantity,
+              requiresConfirmation: repeat.requiresConfirmation,
+            },
+          }];
+        }
         let items = await this.extractMenu(page, Math.max(12, limit), query);
         let item = items.find(row => productMatchesSavedItem(row.name, rememberedRoute.itemName));
         if (!item && await this.searchInsideShop(page, rememberedRoute.itemName)) {
@@ -553,13 +889,68 @@ export class TaobaoFlashBrowser {
         await this.forgetKnownRoute(rememberedRoute.routeKey || query).catch(() => {});
       }
     }
+    // If the user already has the intended merchant open, treat that visible
+    // storefront as the safest route.  This avoids an unnecessary outer
+    // marketplace search (and its verification risk) on a clean live page.
+    const activePage = this.page && !this.page.isClosed?.() && (shopUrl(this.page.url()) || shopSearchUrl(this.page.url())) ? this.page : null;
+    if (activePage) {
+      await this.requireLogin(activePage); await waitForHumanVerification(activePage);
+      const activeUrl = activePage.url();
+      const activeBody = clean(await activePage.locator('body').innerText().catch(() => ''), 12_000);
+      const brand = preferredBrand(query);
+      if (activeShopMatchesBrand(query, activeUrl, activeBody)) {
+        const itemQuery = requestedItemName(query);
+        const repeat = await this.repeatPurchase(activePage, itemQuery, query);
+        if (repeat) {
+          return [{
+            merchantId: 'active-shop', merchant: clean(activeBody.match(/(?:商家|环境)\s+(.{2,50}?)(?:\s+评分|\s+买过|\s+热销)/)?.[1], 50) || '当前商家',
+            name: itemQuery, description: clean(`历史订单：${repeat.summary}`, 240), price: repeat.total,
+            deliveryFee: 0, total: repeat.total, rating: 0, monthlySales: 0, etaMinutes: 0,
+            couponLabel: '', optionGroups: [], optionsLoaded: true,
+            requiresConfirmation: repeat.requiresConfirmation,
+            confirmationReason: repeat.confirmationReason,
+            browserRef: {
+              shopIndex: 0, itemName: itemQuery, unitPrice: repeat.total, buttonIndex: -1,
+              detailUrl: '', shopUrl: activeUrl, query, merchant: '当前商家', merchantId: 'active-shop',
+              repeatPurchase: true, repeatSummary: repeat.summary, repeatQuantity: repeat.quantity,
+              requiresConfirmation: repeat.requiresConfirmation,
+            },
+          }];
+        }
+        let items = await this.extractMenu(activePage, Math.max(12, limit), itemQuery);
+        let item = preferredExactProduct(items, itemQuery);
+        if (!item && await this.searchInsideShop(activePage, itemQuery)) {
+          await waitForHumanVerification(activePage);
+          items = await this.extractMenu(activePage, Math.max(12, limit), itemQuery);
+          item = preferredExactProduct(items, itemQuery);
+        }
+        if (item) {
+          const merchant = clean(activeBody.match(/(?:商家|环境)\s+(.{2,50}?)(?:\s+评分|\s+买过|\s+热销)/)?.[1], 50)
+            || (brand === 'chabaidao' ? '茶百道（当前门店）' : '当前商家');
+          const ref = {
+            shopIndex: 0, itemName: item.name, unitPrice: item.price, buttonIndex: item.buttonIndex,
+            detailUrl: item.detailUrl || '', shopUrl: activeUrl, query, merchant, merchantId: 'active-shop',
+          };
+          await this.rememberKnownRoute(ref).catch(() => {});
+          return [{
+            merchantId: 'active-shop', merchant, name: item.name, description: item.description,
+            price: item.price, deliveryFee: 0, total: item.price, rating: 0, monthlySales: 0,
+            etaMinutes: 0, couponLabel: '', optionGroups: [], optionsLoaded: false, browserRef: ref,
+          }];
+        }
+      }
+    }
     if (!allowGlobalSearch && (closedMerchants.length || closedRoutes.length)) {
       const names = [...new Set([...closedMerchants, ...closedRoutes.map(route => route.merchant).filter(Boolean)])].slice(0, 3).join('、');
       throw new Error(`已登记的${names || '匹配门店'}目前全部打烊或休息中；本轮已停止，没有重新全网搜索`);
     }
     if (!allowGlobalSearch && (stored.length || rememberedRoutes.length)) throw new Error('已登记的同品牌同商品路线当前均不可用；本轮已停止，没有重新全网搜索');
     if (!allowGlobalSearch) throw new Error('还没有登记这个品牌和商品的常用直达路线；为了避免人机验证，角色不会发起全网自动搜索，请由本人先在外卖页成功打开并读取一次规格');
-    const page = await this.goto(`https://h5.ele.me/search/?keyword=${encodeURIComponent(query)}`, 2500);
+    // The marketplace search only locates the merchant and first requested
+    // product. Remaining cart items are searched inside that storefront.
+    const brandQuery = /(?:肯德基|\bkfc\b)/i.test(query) ? '肯德基' : clean(query, 160).split(/\s+/)[0];
+    const marketplaceQuery = [brandQuery, requestedItemName(query)].filter(Boolean).join(' ');
+    const page = await this.goto(`https://h5.ele.me/search/?keyword=${encodeURIComponent(marketplaceQuery)}`, 2500);
     await this.requireLogin(page); await waitForHumanVerification(page);
     let shops = [];
     for (let attempt = 0; attempt < 12; attempt += 1) {
@@ -590,16 +981,41 @@ export class TaobaoFlashBrowser {
       }
       await waitForHumanVerification(shopPage);
       const itemQuery = requestedItemName(query);
+      const repeat = await this.repeatPurchase(shopPage, itemQuery, query);
+      if (repeat) {
+        offers.push({
+          merchantId: shop.storeId || String(shopIndex), merchant: shop.name, name: itemQuery,
+          description: clean(`历史订单：${repeat.summary}`, 240), price: repeat.total, deliveryFee: 0,
+          total: repeat.total, rating: shop.rating, monthlySales: shop.monthlySales,
+          etaMinutes: shop.etaMinutes, couponLabel: shop.couponLabel, optionGroups: [], optionsLoaded: true,
+          requiresConfirmation: repeat.requiresConfirmation,
+          confirmationReason: repeat.confirmationReason,
+          browserRef: {
+            shopIndex, itemName: itemQuery, unitPrice: repeat.total, buttonIndex: -1, detailUrl: '',
+            shopUrl: shop.anchorUrl || '', query, merchant: shop.name, merchantId: shop.storeId || '',
+            repeatPurchase: true, repeatSummary: repeat.summary, repeatQuantity: repeat.quantity,
+            requiresConfirmation: repeat.requiresConfirmation,
+          },
+        });
+        if (offers.length >= limit) break;
+        continue;
+      }
       let items = await this.extractMenu(shopPage, Math.max(4, Math.ceil(limit / maxShops)), itemQuery);
+      let exactItem = preferredExactProduct(items, itemQuery);
+      let exactItems = exactItem ? [exactItem] : [];
       // The outer search is only for finding candidate shops. Storefront preview
       // cards are incomplete and can contain a fuzzy match that hides the exact
-      // product deeper in the menu, so always perform one store-local search.
-      const searchedInsideShop = await this.searchInsideShop(shopPage, itemQuery);
+      // product deeper in the menu.  A precise single item already visible on
+      // the storefront (for example Luckin's signature coconut latte) is safe
+      // to use directly; otherwise perform one store-local search.
+      const searchedInsideShop = exactItems.length ? false : await this.searchInsideShop(shopPage, itemQuery);
       if (searchedInsideShop) {
         await waitForHumanVerification(shopPage);
         items = await this.extractMenu(shopPage, Math.max(4, Math.ceil(limit / maxShops)), itemQuery);
+        exactItem = preferredExactProduct(items, itemQuery);
+        exactItems = exactItem ? [exactItem] : [];
       }
-      for (const item of items) {
+      for (const item of exactItems) {
         const deliveryFee = shop.freeDeliveryThreshold > 0 && item.price >= shop.freeDeliveryThreshold ? 0 : shop.deliveryFee;
         offers.push({
           merchantId: shop.storeId || String(shopIndex), merchant: shop.name, name: item.name,
@@ -649,7 +1065,7 @@ export class TaobaoFlashBrowser {
     if (!shop) throw new Error('真实商家已失效，请重新搜索');
     const current = await this.ensure();
     let page = current;
-    if (preferSaved && shop.directUrl) page = await this.goto(shop.directUrl, 2200);
+    if (preferSaved && shop.directUrl && !sameShopUrl(page.url(), shop.directUrl)) page = await this.goto(shop.directUrl, 2200);
     else {
       if (!preferSaved && shopUrl(page.url())) page = await this.goto(this.searchUrl, 2200);
       if (!shopUrl(page.url())) {
@@ -708,39 +1124,270 @@ export class TaobaoFlashBrowser {
     await page.waitForTimeout(350);
   }
 
+  async repeatPurchase(page, itemName, request = '', { click = false } = {}) {
+    if (!page || typeof page.getByText !== 'function') return null;
+    const controls = page.getByText(/^再来一单$/);
+    for (let index = 0; index < await controls.count(); index += 1) {
+      const control = controls.nth(index);
+      if (!await control.isVisible().catch(() => false)) continue;
+      const summary = clean(await control.evaluate((node, name) => {
+        const normalized = value => String(value || '').replace(/\s+/g, ' ').trim();
+        let best = '';
+        for (let parent = node, depth = 0; parent && depth < 10; parent = parent.parentElement, depth += 1) {
+          const text = normalized(parent.innerText);
+          if (text.includes(name) && /买过|再来一单/.test(text) && (!best || text.length < best.length)) best = text;
+        }
+        return best;
+      }, clean(itemName, 140)).catch(() => ''), 4000);
+      const matchKind = repeatPurchaseMatchKind(summary, itemName, request);
+      if (matchKind === 'none') continue;
+      const quantity = Math.max(1, number(summary.match(/共\s*(\d+)\s*件/)?.[1]));
+      const total = number(summary.match(/共\s*\d+\s*件\s*[¥￥]\s*(\d+(?:\.\d+)?)/)?.[1]);
+      if (click) await this.tapControl(page, control);
+      return {
+        control, summary, quantity, total, matchKind,
+        requiresConfirmation: matchKind === 'superset',
+        confirmationReason: matchKind === 'superset'
+          ? `匹配的历史订单包含本次指定商品，但整单还有额外商品：${summary}`
+          : '',
+      };
+    }
+    return null;
+  }
+
+  async boughtOrderSummary(page, itemName) {
+    if (!page || typeof page.getByText !== 'function') return '';
+    const controls = page.getByText(/^再来一单$/);
+    for (let index = 0; index < await controls.count(); index += 1) {
+      const control = controls.nth(index);
+      if (!await control.isVisible().catch(() => false)) continue;
+      const summary = clean(await control.evaluate((node, name) => {
+        const normalized = value => String(value || '').replace(/\s+/g, ' ').trim();
+        let best = '';
+        for (let parent = node, depth = 0; parent && depth < 10; parent = parent.parentElement, depth += 1) {
+          const text = normalized(parent.innerText);
+          if (text.includes(name) && /买过|再来一单/.test(text) && (!best || text.length < best.length)) best = text;
+        }
+        return best;
+      }, clean(itemName, 140)).catch(() => ''), 4000);
+      if (summary) return summary;
+    }
+    return '';
+  }
+
+  async applyBestAvailableCoupon(page) {
+    const beforeBody = await this.riskText(page);
+    const appliedBefore = appliedCouponAmount(beforeBody);
+    if (appliedBefore > 0) return { applied: true, amount: appliedBefore };
+    const advertised = availableCouponAmount(beforeBody);
+    if (!advertised) return { applied: false, amount: 0 };
+    const beforeTotal = checkoutAmounts(beforeBody).total;
+    const entryText = await this.visibleLocator(page.getByText(/未选红包[^\n]{0,40}最高\s*\d+(?:\.\d+)?\s*元可用/, { exact: false }), true)
+      || await this.visibleLocator(page.getByText(/最高\s*\d+(?:\.\d+)?\s*元可用/, { exact: false }), true);
+    const entry = await this.visibleLocator(page.locator('.food-extra__hongbao'), true) || entryText;
+    if (!entry) throw new Error(`订单显示有¥${advertised.toFixed(2)}红包可用，但没有找到红包选择入口，已停止提交`);
+    await this.tapControl(page, entry); await page.waitForTimeout(650);
+    let openedBody = await this.riskText(page);
+    const amountPattern = String(Number(advertised)).replace('.', '\\.');
+    let alreadySelected = new RegExp(`已选\s*\d+\s*张[^。；\n]{0,30}可减\s*[¥￥]?\s*${amountPattern}\s*元?`).test(openedBody);
+    let directCoupon = null;
+    if (!alreadySelected) {
+      const enabledCoupons = page.locator('.shtc-base-coupon__wrap:not(.disable)');
+      for (let index = 0; index < await enabledCoupons.count().catch(() => 0); index += 1) {
+        const candidate = enabledCoupons.nth(index);
+        if (!await candidate.isVisible().catch(() => false)) continue;
+        const text = clean(await candidate.innerText().catch(() => ''), 500);
+        if (/不可用原因|已失效/.test(text)) continue;
+        if (new RegExp(`(?:[¥￥]\\s*${amountPattern}(?:\\.0+)?|${amountPattern}(?:\\.0+)?\\s*元)`).test(text)) {
+          directCoupon = candidate;
+          break;
+        }
+      }
+    }
+    if (!alreadySelected && directCoupon) {
+      await this.tapControl(page, directCoupon); await page.waitForTimeout(500);
+      let redemptionBody = await this.riskText(page);
+      if (/是否兑换|兑换将消耗\s*\d+\s*吃货豆/.test(redemptionBody)) {
+        const redeem = await this.visibleLocator(page.getByText(/^(?:立即兑换|确认兑换|兑换并使用|确认使用)$/), true);
+        if (!redeem) throw new Error(`¥${advertised.toFixed(2)}红包需要消耗吃货豆，但没有找到兑换确认按钮，已停止提交`);
+        await this.tapControl(page, redeem); await page.waitForTimeout(650);
+        redemptionBody = await this.riskText(page);
+        if (/吃货豆不足|余额不足|兑换失败/.test(redemptionBody)) {
+          throw new Error(`¥${advertised.toFixed(2)}红包兑换失败或吃货豆不足，已停止提交`);
+        }
+      }
+      openedBody = await this.riskText(page);
+      alreadySelected = new RegExp(`已选\s*\d+\s*张[^。；\n]{0,30}可减\s*[¥￥]?\s*${amountPattern}\s*元?`).test(openedBody);
+    }
+    if (alreadySelected) {
+      const done = await this.visibleLocator(page.getByText(/^(确定|完成|使用)$/), true);
+      if (!done) throw new Error(`¥${advertised.toFixed(2)}红包已自动选中，但没有找到确认按钮，已停止提交`);
+      await this.activateControl(page, done);
+      for (let wait = 0; wait < 16; wait += 1) {
+        await page.waitForTimeout(250);
+        if (!/ele-select-hongbao|选择红包|已选\s*\d+\s*张[^。；\n]{0,30}可减/i.test(`${page.url()} ${await this.riskText(page)}`)) break;
+      }
+    }
+    await page.locator('[data-phone-delivery-coupon]').evaluateAll(nodes => nodes.forEach(node => node.removeAttribute('data-phone-delivery-coupon'))).catch(() => {});
+    const marked = alreadySelected || Boolean(directCoupon) || await page.evaluate(amount => {
+      const visible = node => { const box = node.getBoundingClientRect(); return box.width > 0 && box.height > 0; };
+      const normalized = value => String(value || '').replace(/\s+/g, ' ').replace(/(\d)\s+\.(\d)/g, '$1.$2').trim();
+      const amountText = String(Number(amount));
+      const leaves = [...document.querySelectorAll('*')].filter(node => visible(node) && node.children.length === 0);
+      const seeds = leaves.filter(node => {
+        const text = normalized(node.textContent);
+        if (!text || text.length > 100 || /不可用|已失效|最高|未选|返豆|吃货卡/.test(text)) return false;
+        return new RegExp(`(?:减\\s*[¥￥]?\\s*${amountText}(?:\\.0+)?\\s*元?|[¥￥]\\s*${amountText}(?:\\.0+)?|${amountText}(?:\\.0+)?\\s*元(?:红包|券)?|^${amountText}(?:\\.0+)?\\s*元$)`).test(text);
+      });
+      let best = null; let bestLength = Infinity;
+      for (const seed of seeds) {
+        for (let node = seed, depth = 0; node && depth < 7; node = node.parentElement, depth += 1) {
+          const text = normalized(node.innerText);
+          if (!text || text.length > 600 || /不可用|已失效/.test(text)) continue;
+          const clickable = node.getAttribute?.('role') === 'button' || typeof node.onclick === 'function'
+            || /coupon|红包|优惠券|select|radio/i.test(String(node.className || ''));
+          if (clickable && text.length < bestLength) { best = node; bestLength = text.length; }
+        }
+      }
+      if (!best && seeds[0]) best = seeds[0];
+      if (!best) return false;
+      best.setAttribute('data-phone-delivery-coupon', '1');
+      return true;
+    }, advertised).catch(() => false);
+    if (!marked) throw new Error(`订单显示有¥${advertised.toFixed(2)}红包可用，但没有识别到对应可用券，已停止提交`);
+    if (!alreadySelected && !directCoupon) {
+      await this.tapControl(page, page.locator('[data-phone-delivery-coupon="1"]').first());
+      await page.waitForTimeout(550);
+    }
+    const done = await this.visibleLocator(page.getByText(/^(确定|完成|使用)$/), true);
+    if (done && /ele-select-hongbao|选择红包|已选\s*\d+\s*张/i.test(`${page.url()} ${await this.riskText(page)}`)) {
+      await this.tapControl(page, done); await page.waitForTimeout(550);
+    }
+    for (let wait = 0; wait < 16 && /ele-select-hongbao|选择红包/i.test(`${page.url()} ${await this.riskText(page)}`); wait += 1) {
+      await page.waitForTimeout(250);
+    }
+    const afterBody = await this.riskText(page);
+    const afterTotal = checkoutAmounts(afterBody).total;
+    const stillUnselected = availableCouponAmount(afterBody) > 0;
+    const explicitApplied = new RegExp(`(?:已选|已减|优惠)[^。；\\n]{0,30}${String(Number(advertised))}(?:\\.0+)?\\s*元`).test(afterBody);
+    if (stillUnselected || (!explicitApplied && !(beforeTotal > 0 && afterTotal > 0 && afterTotal < beforeTotal))) {
+      throw new Error(`¥${advertised.toFixed(2)}红包没有确认选中，已停止提交，避免按原价创建订单`);
+    }
+    return { applied: true, amount: beforeTotal > 0 && afterTotal > 0 ? Math.round((beforeTotal - afterTotal) * 100) / 100 : advertised };
+  }
+
+  async dismissPointsRedemption(page) {
+    const body = await this.riskText(page);
+    if (!/是否兑换|兑换将消耗\s*\d+\s*吃货豆|未兑换\s*需\s*\d+\s*吃货豆/.test(body)) return false;
+    const semantic = page.locator('[aria-label*="关闭"], [aria-label*="取消"], [class*="close" i], [class*="cancel" i]')
+      .or(page.getByText(/^(?:×|✕|X|关闭|取消|暂不兑换|以后再说)$/i));
+    for (let index = (await semantic.count().catch(() => 0)) - 1; index >= 0; index -= 1) {
+      const control = semantic.nth(index);
+      if (!await control.isVisible().catch(() => false)) continue;
+      const label = clean(await control.getAttribute('aria-label').catch(() => ''), 60);
+      const text = clean(await control.textContent().catch(() => ''), 60);
+      if (/立即兑换/.test(`${label} ${text}`)) continue;
+      await this.tapControl(page, control).catch(() => {});
+      await page.waitForTimeout(350);
+      if (!/是否兑换|兑换将消耗\s*\d+\s*吃货豆/.test(await this.riskText(page))) return true;
+    }
+    const marked = await page.evaluate(() => {
+      const visible = node => { const box = node.getBoundingClientRect(); return box.width > 0 && box.height > 0; };
+      const normalized = value => String(value || '').replace(/\s+/g, ' ').trim();
+      const nodes = [...document.querySelectorAll('button, [role="button"], div, span')].filter(visible);
+      const modal = nodes.filter(node => /是否兑换/.test(normalized(node.innerText)) && /吃货豆/.test(normalized(node.innerText)))
+        .sort((a, b) => a.getBoundingClientRect().width * a.getBoundingClientRect().height - b.getBoundingClientRect().width * b.getBoundingClientRect().height)[0];
+      if (!modal) return false;
+      const box = modal.getBoundingClientRect();
+      const candidates = [...modal.querySelectorAll('button, [role="button"], [class*="close" i], [class*="cancel" i], div, span')]
+        .filter(node => {
+          if (!visible(node) || /立即兑换/.test(normalized(node.innerText))) return false;
+          const rect = node.getBoundingClientRect();
+          const text = normalized(node.textContent);
+          const label = normalized(node.getAttribute?.('aria-label'));
+          const explicit = /^(?:×|✕|X|关闭|取消|暂不兑换|以后再说)$/i.test(text) || /关闭|取消/.test(label) || /close|cancel/i.test(String(node.className || ''));
+          const iconSized = rect.width >= 18 && rect.width <= 80 && rect.height >= 18 && rect.height <= 80;
+          const nearEdge = rect.right >= box.right - 90 || rect.bottom >= box.bottom - 90;
+          return explicit || (iconSized && nearEdge && !text);
+        })
+        .sort((a, b) => {
+          const at = /关闭|取消|close|cancel|×|✕|X/i.test(`${a.getAttribute?.('aria-label') || ''} ${a.className || ''} ${a.textContent || ''}`) ? 0 : 1;
+          const bt = /关闭|取消|close|cancel|×|✕|X/i.test(`${b.getAttribute?.('aria-label') || ''} ${b.className || ''} ${b.textContent || ''}`) ? 0 : 1;
+          return at - bt;
+        });
+      if (!candidates[0]) return false;
+      candidates[0].setAttribute('data-phone-delivery-points-close', '1');
+      return true;
+    }).catch(() => false);
+    if (marked) {
+      await this.tapControl(page, page.locator('[data-phone-delivery-points-close="1"]').first()).catch(() => {});
+      await page.waitForTimeout(350);
+    }
+    if (/是否兑换|兑换将消耗\s*\d+\s*吃货豆/.test(await this.riskText(page))) {
+      throw new Error('吃货豆兑换弹窗没有安全关闭，已停止提交；不会消耗吃货豆');
+    }
+    return true;
+  }
+
   async extractMenu(page, limit, query = '') {
     const controls = this.purchaseControls(page);
     await this.waitForPurchaseControls(page, 8000);
     const items = [];
     for (let buttonIndex = 0; buttonIndex < Math.min(await controls.count(), 80); buttonIndex += 1) {
       const control = controls.nth(buttonIndex);
-      const card = await control.evaluate(button => {
+      const card = await control.evaluate((button, allowTopRows) => {
         const box = button.getBoundingClientRect();
-        if (box.width <= 0 || box.height <= 0 || box.y <= 140) return null;
+        if (box.width <= 0 || box.height <= 0 || box.y <= (allowTopRows ? 40 : 140)) return null;
         let node = button;
         for (let depth = 0; node && depth < 10; depth += 1, node = node.parentElement) {
           if (!node.classList?.contains('menuItem--info')) continue;
           const text = (node.innerText || '').replace(/\s+/g, ' ').trim();
-          const nameNode = node.querySelector('.menuItem--info--box') || node;
+          // The box also contains the description. Use the dedicated title
+          // node so the next step can locate the same product exactly.
+          const nameNode = node.querySelector('.menuItem--info-title')
+            || node.querySelector('.menuItem--info-title--warp')
+            || node.querySelector('.menuItem--info--box') || node;
           const nameText = (nameNode.innerText || '').replace(/\s+/g, ' ').trim();
           if (/¥|￥/.test(text)) {
             let imageRoot = node;
-            for (let parentDepth = 0; imageRoot?.parentElement && parentDepth < 3; parentDepth += 1) imageRoot = imageRoot.parentElement;
-            const image = imageRoot?.querySelector?.('img') || node.parentElement?.querySelector?.('img') || null;
-            const rawImageUrl = String(image?.currentSrc || image?.src || image?.getAttribute?.('data-src') || '').trim();
-            const imageUrl = rawImageUrl.startsWith('//') ? `${location.protocol}${rawImageUrl}` : rawImageUrl;
+            for (let parentDepth = 0; imageRoot?.parentElement && parentDepth < 4; parentDepth += 1) imageRoot = imageRoot.parentElement;
+            const absoluteImage = value => {
+              const raw = String(value || '').trim();
+              if (!raw) return '';
+              if (raw.startsWith('//')) return `${location.protocol}${raw}`;
+              try { return new URL(raw, location.href).href; } catch { return ''; }
+            };
+            const media = [...(imageRoot?.querySelectorAll?.('img, div, span') || [])].map(candidate => {
+              const rect = candidate.getBoundingClientRect();
+              const raw = candidate.tagName === 'IMG'
+                ? candidate.currentSrc || candidate.src || candidate.getAttribute('data-src')
+                : String(getComputedStyle(candidate).backgroundImage || '').match(/url\(["']?([^"')]+)["']?\)/i)?.[1];
+              const url = absoluteImage(raw);
+              const square = rect.width > 0 && rect.height > 0 && Math.abs(rect.width / rect.height - 1) < .3;
+              const promo = /(?:w_90[,/]h_53|w_\d{1,2}[,/]h_\d{1,2})/i.test(url) || rect.width < 72 || rect.height < 72;
+              let score = promo || !url ? -1 : 0;
+              if (square) score += 30;
+              if (Math.min(rect.width, rect.height) >= 88) score += 25;
+              if (/(?:w_192[,/]h_192|resize[^?]*192)/i.test(url)) score += 40;
+              if (/cube\.eleme\.cn/i.test(url)) score += 10;
+              return { url, score };
+            }).filter(candidate => candidate.score >= 0).sort((left, right) => right.score - left.score);
+            const imageUrl = media[0]?.url || '';
             return { text, nameText, imageUrl };
           }
         }
         return null;
-      }).catch(() => null);
+      }, shopSearchUrl(page.url())).catch(() => null);
       if (!card || /非卖品|请勿下单|单点不送/.test(card.text)) continue;
       const text = card.text;
       const priceSource = /预估到手|预估价/.test(text) ? text.split(/预估到手|预估价/)[0] : text;
       const prices = [...priceSource.matchAll(/[¥￥]\s*(\d+)(?:\s*\.\s*(\d+))?/g)]
         .map(match => number(`${match[1]}${match[2] ? `.${match[2]}` : ''}`)).filter(value => value > 0);
       const price = prices.at(-1) || 0;
-      const name = clean(card.nameText.split(/月售|近期\d+人|[¥￥]/)[0], 60).replace(/^(热销|大家喜欢吃，才叫真好吃)\s*/, '').replace(/\s+\d+次$/, '');
+      const name = clean(card.nameText.split(/月售|近期\d+人|[¥￥]/)[0], 60)
+        .replace(/^(热销|大家喜欢吃，才叫真好吃)\s*/, '')
+        .replace(/\s*\d+天内\d+人下单.*$/, '')
+        .replace(/\s+\d+次$/, '');
       if (name && price > 0) items.push({ buttonIndex, name, price, description: clean(text, 240), imageUrl: /^https:\/\//i.test(card.imageUrl || '') ? clean(card.imageUrl, 800) : '' });
     }
     const unique = items.filter((item, index) => items.findIndex(other => other.name === item.name) === index);
@@ -760,29 +1407,59 @@ export class TaobaoFlashBrowser {
   }
 
   async searchInsideShop(page, itemName) {
-    if (!shopUrl(page?.url?.()) || !clean(itemName, 140)) return false;
+    if (!(shopUrl(page?.url?.()) || shopSearchUrl(page?.url?.())) || !clean(itemName, 140)) return false;
+    const query = clean(itemName, 140);
     const fields = page.locator([
       'input[placeholder*="搜索店内"]', 'input[placeholder*="搜索商品"]',
       'input[aria-label*="搜索店内"]', 'input[aria-label*="搜索商品"]',
       'input[type="search"][placeholder*="搜索"]',
+      'input.search-input', 'input.mor-comp-input-content',
     ].join(', '));
     let field = await this.visibleLocator(fields, true);
     if (!field) {
-      const trigger = await this.visibleLocator(
-        page.locator('[aria-label*="搜索店内"], [aria-label*="搜索商品"]')
-          .or(page.getByText(/^(店内搜索|搜索店内|搜索商品)$/)),
-        true,
-      );
+      // Open the store-local search with the actual magnifier control. Do not
+      // use a broad icon/coordinate fallback: on the H5 storefront the refresh
+      // control can sit beside the search icon and was previously mistaken for
+      // search after a layout change.
+      const triggerCandidates = page.locator([
+        'button[aria-label*="搜索"]', '[role="button"][aria-label*="搜索"]',
+        '[title*="搜索"]', '[data-testid*="search" i]', '[data-test*="search" i]',
+        // The current H5 storefront binds the React handler to the whole
+        // "搜一搜" wrapper. Clicking only the nested magnifier does nothing.
+        '.nav__search__wrap', '.shop__search--expland', '.nav__search',
+        '[class*="searchIcon" i]', '[class*="search-icon" i]',
+      ].join(', ')).or(page.getByText(/^(店内搜索|搜索店内|搜索商品)$/));
+      let trigger = null;
+      for (let index = 0; index < await triggerCandidates.count(); index += 1) {
+        const candidate = triggerCandidates.nth(index);
+        if (!await candidate.isVisible().catch(() => false)) continue;
+        const signature = clean(await candidate.evaluate(node => [
+          node.getAttribute('aria-label'), node.getAttribute('title'),
+          node.getAttribute('data-testid'), node.getAttribute('data-test'),
+          node.className, node.textContent,
+          node.innerHTML,
+        ].filter(Boolean).join(' ')).catch(() => ''), 1200);
+        if (/刷新|重试|reload|refresh/i.test(signature)) continue;
+        if (!/搜索|search/i.test(signature)) continue;
+        trigger = candidate;
+        break;
+      }
       if (trigger) {
-        await this.activateControl(page, trigger).catch(() => {});
+        await this.tapControl(page, trigger).catch(() => {});
         await page.waitForTimeout(350);
         field = await this.visibleLocator(fields, true);
       }
     }
     if (!field) return false;
-    await field.fill(clean(itemName, 140));
-    await field.press('Enter').catch(() => {});
+    await this.tapControl(page, field).catch(() => {});
+    await field.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A').catch(() => {});
+    await field.pressSequentially(query, { delay: 35 });
+    const submit = await this.visibleLocator(page.getByText(/^搜索$/), true);
+    if (submit) await this.tapControl(page, submit);
+    else await field.press('Enter');
     await this.waitForContent(page, 1800);
+    const value = clean(await field.inputValue().catch(() => ''), 140);
+    if (value !== query) throw new Error('店内搜索没有正确输入商品名称，已停止而不是刷新页面');
     return true;
   }
 
@@ -828,10 +1505,27 @@ export class TaobaoFlashBrowser {
   }
 
   async inspectOptionsFor(ref) {
-    const page = ref.shopUrl ? await this.goto(ref.shopUrl, 900) : await this.enterShop(ref.shopIndex, { preferSaved: true });
+    const current = await this.ensure();
+    const page = ref.shopUrl
+      ? (sameShopUrl(current.url(), ref.shopUrl) ? current : await this.goto(ref.shopUrl, 900))
+      : await this.enterShop(ref.shopIndex, { preferSaved: true });
     await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
     await this.waitForPurchaseControls(page, 8000);
-    const button = await this.productControl(page, ref.itemName);
+    if (ref.repeatPurchase) {
+      const repeat = await this.repeatPurchase(page, ref.itemName, ref.query);
+      if (!repeat) throw new Error('匹配的历史订单已经失效，将在下一次搜索时改用店内搜索');
+      return [];
+    }
+    // A quote discovered through the storefront search page loses that search
+    // state when we later re-enter the shop to inspect its options.  Re-run the
+    // exact store-local query before locating the product so a homepage promo
+    // or similarly named first item can never replace the quoted drink.
+    let button = await this.productControl(page, ref.itemName);
+    if (!button && await this.searchInsideShop(page, ref.itemName)) {
+      await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
+      await this.waitForPurchaseControls(page, 8000);
+      button = await this.productControl(page, ref.itemName);
+    }
     if (!button) throw new Error('没有在真实商家中定位到同一件商品，请重新搜索');
     const groups = await this.inspectOptionsControl(page, button, ref);
     await this.rememberKnownRoute(ref).catch(() => {});
@@ -865,12 +1559,19 @@ export class TaobaoFlashBrowser {
       const leaves = [...root.querySelectorAll('*')].filter(el => !el.children.length).map(el => {
         const r = el.getBoundingClientRect(); return { text: (el.textContent || '').replace(/\s+/g, ' ').trim(), x: r.x, y: r.y, w: r.width, h: r.height };
       }).filter(item => item.text && item.w > 0 && item.h > 0 && item.text.length <= 30).sort((a, b) => a.y - b.y || a.x - b.x);
-      const headings = leaves.filter(item => heading.test(item.text));
+      const classHeadings = [...root.querySelectorAll('[class*="sku--body_h2"], [class*="sku--body_h3"]')].map(el => {
+        const r = el.getBoundingClientRect();
+        return { text: (el.textContent || '').replace(/\s+/g, ' ').trim(), x: r.x, y: r.y, w: r.width, h: r.height };
+      }).filter(item => item.text && item.w > 0 && item.h > 0 && heading.test(item.text));
+      const headings = (classHeadings.length ? classHeadings : leaves.filter(item => heading.test(item.text)))
+        .sort((a, b) => a.y - b.y || a.x - b.x);
       const result = [];
       for (let i = 0; i < headings.length; i += 1) {
         const start = headings[i].y + headings[i].h;
         const end = headings[i + 1]?.y ?? Infinity;
-        const choices = leaves.filter(item => item.y >= start && item.y < end && item.x > headings[i].x - 5 && !/确定|取消|加入购物车|¥|￥|\d+(?:\.\d+)?折|数量/.test(item.text));
+        const choices = leaves.filter(item => item.y >= start && item.y < end && item.x > headings[i].x - 5
+          && !/确定|取消|加入购物车|¥|￥|\d+(?:\.\d+)?折|数量|预估到手/.test(item.text)
+          && !/^\d+(?:\.\d+)?$/.test(item.text));
         const unique = [...new Set(choices.map(item => item.text))].slice(0, 30);
         if (unique.length) result.push({ name: headings[i].text, choices: unique });
       }
@@ -972,6 +1673,57 @@ export class TaobaoFlashBrowser {
     return best;
   }
 
+  async checkoutSubmitControl(page) {
+    const labels = /提交订单|提交并支付|去支付|立即支付/;
+    for (let wait = 0; wait < 12; wait += 1) {
+      let control = await this.visibleLocator(page.getByText(labels, { exact: false }), true).catch(() => null);
+      const nativeControls = page.locator('.submit-btn__button').filter({ hasText: labels });
+      if (!control) control = await this.visibleLocator(nativeControls, true).catch(() => null);
+      if (!control) control = await this.renderedLocator(nativeControls).catch(() => null);
+      if (control) return control;
+      await page.waitForTimeout(250);
+    }
+    return null;
+  }
+
+  async advancePaymentSelection(page) {
+    const body = clean(await page.locator('body').innerText().catch(() => ''), 5000);
+    if (!/支付宝/.test(body) || !/确认支付/.test(body)) return false;
+    const alipay = await this.visibleLocator(page.locator('.payment-option__item').filter({ hasText: /^支付宝$/ }), true)
+      || await this.visibleLocator(page.getByText(/^支付宝$/, { exact: true }), true);
+    if (!alipay) throw new Error('在线支付页没有识别到支付宝选项，已停止，不会改用其他付款方式');
+    await this.activateControl(page, alipay); await page.waitForTimeout(350);
+    const confirm = await this.visibleLocator(page.locator('.payment-footer__button').filter({ hasText: /^确认支付$/ }), true)
+      || await this.visibleLocator(page.getByText(/^确认支付$/, { exact: true }), true);
+    if (!confirm) throw new Error('在线支付页没有识别到“确认支付”按钮，已停止');
+    await this.activateControl(page, confirm); await page.waitForTimeout(700);
+    return true;
+  }
+
+  async waitForPaymentSelection(page, beforePages = new Set()) {
+    const deadline = Date.now() + 12_000;
+    while (Date.now() < deadline) {
+      const pages = this.context.pages().filter(candidate => !candidate.isClosed());
+      const preferred = pages.find(candidate => !beforePages.has(candidate)) || pages.at(-1) || page;
+      const candidates = [preferred, ...pages].filter((candidate, index, list) => candidate && list.indexOf(candidate) === index);
+      for (const candidate of candidates) {
+        const body = clean(await candidate.locator('body').innerText().catch(() => ''), 5000);
+        const paymentButton = await this.visibleLocator(candidate.getByText(/^付款$/, { exact: true }), true).catch(() => null);
+        if (/alipay|cashier|counter|tradepay|payment|\/pay/i.test(candidate.url()) && paymentButton && /(?:^|\s)付款(?:\s|$)/.test(body)) {
+          this.page = candidate;
+          return candidate;
+        }
+        if (/支付宝/.test(body) && /确认支付/.test(body)) {
+          this.page = candidate;
+          await this.advancePaymentSelection(candidate);
+          return candidate;
+        }
+      }
+      await page.waitForTimeout(250);
+    }
+    return page;
+  }
+
   async nearestControlAtY(locator, targetY) {
     let best = null; let bestDistance = Infinity;
     for (let index = 0; index < await locator.count(); index += 1) {
@@ -986,24 +1738,66 @@ export class TaobaoFlashBrowser {
 
   async productControl(page, itemName) {
     await page.locator('[data-phone-delivery-target]').evaluateAll(nodes => nodes.forEach(node => node.removeAttribute('data-phone-delivery-target'))).catch(() => {});
-    const marked = await page.evaluate(name => {
+    const marked = await page.evaluate(({ name, allowTopRows }) => {
       const normalized = value => String(value || '').replace(/\s+/g, ' ').trim();
+      const canonicalTitle = value => normalized(value)
+        .replace(/[（(](?:首创|招牌|经典)[）)]/g, '')
+        .replace(/[【[].*$/, '')
+        .trim();
+      const bundle = /(?:双杯|两杯|2杯|套餐|组合|买一送一|\+|＋)/i;
+      const targetIsBundle = bundle.test(name);
       const controls = [...document.querySelectorAll('[aria-label*="加购"], [aria-label*="选规格"], [aria-label*="选套餐"]')]
-        .map(node => ({ node, box: node.getBoundingClientRect() })).filter(item => item.box.width > 0 && item.box.height > 0 && item.box.y > 140);
-      let best = null; let bestLength = Infinity;
+        .map(node => ({ node, box: node.getBoundingClientRect() }))
+        .filter(item => item.box.width > 0 && item.box.height > 0 && item.box.y > (allowTopRows ? 40 : 140));
+      const targetTitle = canonicalTitle(name);
+      const titleNodes = [...document.querySelectorAll('[class*="menuItem--info-title"], [class*="goods-title"], [class*="product-title"]')];
+      const exactTitles = titleNodes.filter(node => {
+        const box = node.getBoundingClientRect();
+        const text = normalized(node.innerText || node.textContent);
+        return box.width > 0 && box.height > 0 && box.y > (allowTopRows ? 40 : 140) && text.length <= 80
+          && canonicalTitle(text) === targetTitle
+          && (targetIsBundle || !bundle.test(text));
+      }).map(node => ({ node, box: node.getBoundingClientRect(), text: normalized(node.innerText || node.textContent) }))
+        .sort((left, right) => left.box.width * left.box.height - right.box.width * right.box.height || left.box.y - right.box.y);
+      for (const title of exactTitles) {
+        let card = title.node;
+        for (let depth = 0; card && depth < 8; depth += 1, card = card.parentElement) {
+          const cardControls = [...card.querySelectorAll('[aria-label*="加购"], [aria-label*="选规格"], [aria-label*="选套餐"]')]
+            .filter(node => {
+              const box = node.getBoundingClientRect();
+              return box.width > 0 && box.height > 0;
+          });
+          if (cardControls.length !== 1) continue;
+          cardControls[0].setAttribute('data-phone-delivery-target', '1');
+          return true;
+        }
+      }
+      for (const title of exactTitles) {
+        const targetY = title.box.y + title.box.height / 2;
+        const closest = controls.map(control => ({ control, distance: Math.abs(control.box.y + control.box.height / 2 - targetY) }))
+          .sort((left, right) => left.distance - right.distance)[0];
+        if (closest && closest.distance <= 160) {
+          closest.control.node.setAttribute('data-phone-delivery-target', '1');
+          return true;
+        }
+      }
+      let best = null; let bestRank = Infinity; let bestLength = Infinity;
       for (const control of controls) {
         let parent = control.node.parentElement;
         for (let depth = 0; parent && depth < 6; depth += 1, parent = parent.parentElement) {
           const text = normalized(parent.innerText);
-          if (text.includes(name) && text.length <= 900 && text.length < bestLength) {
-            best = control.node; bestLength = text.length;
+          if (!text.includes(name) || text.length > 900) continue;
+          if (!targetIsBundle && bundle.test(text)) continue;
+          const rank = text.startsWith(name) ? 0 : 1;
+          if (rank < bestRank || (rank === bestRank && text.length < bestLength)) {
+            best = control.node; bestRank = rank; bestLength = text.length;
             break;
           }
         }
       }
       if (best) { best.setAttribute('data-phone-delivery-target', '1'); return true; }
       return false;
-    }, itemName).catch(() => false);
+    }, { name: itemName, allowTopRows: shopSearchUrl(page.url()) }).catch(() => false);
     return marked ? page.locator('[data-phone-delivery-target="1"]').first() : null;
   }
 
@@ -1043,20 +1837,335 @@ export class TaobaoFlashBrowser {
     }
   }
 
+  async readCheckoutDraft(page, ref, quantity = 1, { validateCart = true } = {}) {
+    let raw = '';
+    let amounts = { total: 0, discount: 0 };
+    for (let attempt = 0; attempt < 24; attempt += 1) {
+      raw = await page.locator('body').innerText().catch(() => '');
+      amounts = checkoutAmounts(raw);
+      if (amounts.total > 0) break;
+      await page.waitForTimeout(250);
+    }
+    if (!amounts.total) throw new Error('没有从淘宝闪购确认页读到有效金额，本轮已停止');
+    const cart = checkoutCartState(raw, ref.itemName, ref.query, quantity, {
+      allowSuperset: ref.requiresConfirmation === true,
+      requiredItems: ref.cartItems,
+    });
+    if (validateCart && !cart.matches) {
+      if (cart.duplicates.length) {
+        throw new Error(`购物车里的“${cart.duplicates.join('、')}”数量已经重复，本轮不会继续叠加或提交`);
+      }
+      if (cart.missing.length) {
+        throw new Error(`购物车缺少本次要求的“${cart.missing.join('、')}”，本轮不会把其他商品混入订单`);
+      }
+      if (cart.extraRows > 0) {
+        throw new Error('购物车含有本次没有确认的其他商品，本轮不会继续混单');
+      }
+      throw new Error('购物车商品或数量与本次要求不一致，本轮不会继续提交');
+    }
+    const checkoutFacts = await page.evaluate(requiredNames => {
+      const cleanText = value => String(value || '').replace(/\s+/g, ' ').trim();
+      const absoluteImage = value => {
+        const raw = String(value || '').trim();
+        if (!raw) return '';
+        if (raw.startsWith('//')) return `${location.protocol}${raw}`;
+        try { return new URL(raw, location.href).href; } catch { return ''; }
+      };
+      const backgroundUrl = node => {
+        if (!node) return '';
+        const match = String(getComputedStyle(node).backgroundImage || '').match(/url\(["']?([^"')]+)["']?\)/i);
+        return absoluteImage(match && match[1]);
+      };
+      const bestImage = root => [...root.querySelectorAll('img, div, span')].map(node => {
+        const rect = node.getBoundingClientRect();
+        const url = node.tagName === 'IMG'
+          ? absoluteImage(node.currentSrc || node.src || node.getAttribute('data-src'))
+          : backgroundUrl(node);
+        const square = rect.width > 0 && rect.height > 0 && Math.abs(rect.width / rect.height - 1) < .3;
+        const promo = /(?:w_90[,/]h_53|w_\d{1,2}[,/]h_\d{1,2})/i.test(url) || rect.width < 64 || rect.height < 64;
+        let score = promo || !url ? -1 : 0;
+        if (square) score += 30;
+        if (Math.min(rect.width, rect.height) >= 80) score += 25;
+        if (/(?:w_192[,/]h_192|resize[^?]*192)/i.test(url)) score += 40;
+        if (/cube\.eleme\.cn/i.test(url)) score += 10;
+        return { url, score };
+      }).filter(candidate => candidate.score >= 0).sort((left, right) => right.score - left.score)[0]?.url || '';
+      const rowSelector = [
+        '.food-item', '[class*="food-item"]', '[class*="foodItem"]',
+        '[class*="order-item"]', '[class*="orderItem"]',
+        '[class*="goods-item"]', '[class*="goodsItem"]',
+      ].join(',');
+      const rows = [...new Set(document.querySelectorAll(rowSelector))].map(node => {
+        const imageUrl = bestImage(node);
+        const priceText = cleanText(node.querySelector('.food-item__price-unit-price')?.textContent)
+          || cleanText(node.querySelector('.food-item__price')?.textContent);
+        const prices = [...priceText.matchAll(/\d+(?:\.\d+)?/g)].map(match => Number(match[0])).filter(Number.isFinite);
+        return {
+          name: cleanText(node.querySelector('.food-item__title-text-checkout, .food-item__title')?.textContent),
+          options: cleanText(node.querySelector('.food-item__subTitle-text, .food-item__subTitle')?.textContent),
+          quantity: Math.max(1, Number(cleanText(node.querySelector('.food-item__number')?.textContent).match(/\d+/)?.[0]) || 1),
+          price: prices.length ? prices.at(-1) : 0,
+          imageUrl,
+        };
+      }).filter(row => row.name);
+      const normalized = value => cleanText(value).replace(/[\s·•()（）【】\[\]_-]+/g, '');
+      const wanted = (requiredNames || []).map(normalized).filter(Boolean);
+      const matchedPageImage = [...document.querySelectorAll('img, div, span')].map(node => {
+        const rect = node.getBoundingClientRect();
+        const url = node.tagName === 'IMG'
+          ? absoluteImage(node.currentSrc || node.src || node.getAttribute('data-src'))
+          : backgroundUrl(node);
+        if (!url || rect.width < 56 || rect.height < 56 || /(?:qrcode|qr-code|avatar|logo|icon)/i.test(url)) return null;
+        let parent = node;
+        let nearby = '';
+        for (let depth = 0; depth < 6 && parent; depth += 1, parent = parent.parentElement) {
+          nearby += ` ${cleanText(parent.textContent).slice(0, 500)}`;
+        }
+        const haystack = normalized(nearby);
+        const nameMatch = wanted.some(name => name && (haystack.includes(name) || name.includes(haystack)));
+        if (!nameMatch) return null;
+        let score = 100;
+        if (Math.abs(rect.width / rect.height - 1) < .35) score += 25;
+        if (Math.min(rect.width, rect.height) >= 80) score += 20;
+        if (/cube\.eleme\.cn/i.test(url)) score += 10;
+        return { url, score };
+      }).filter(Boolean).sort((left, right) => right.score - left.score)[0]?.url || '';
+      return {
+        merchant: cleanText(document.querySelector('.food-list__title')?.textContent),
+        imageUrl: rows.find(row => row.imageUrl)?.imageUrl || matchedPageImage || '',
+        rows,
+      };
+    }, cart.required.map(row => row.name)).catch(() => ({ merchant: '', imageUrl: '', rows: [] }));
+    const items = cart.required.map(row => {
+      const live = checkoutFacts.rows.find(item => item.name.includes(row.name) || row.name.includes(item.name));
+      return {
+        name: row.name,
+        quantity: row.quantity || row.expected,
+        price: live?.price || 0,
+        options: live?.options || (ref.repeatPurchase ? '沿用购物车中已经核对的真实规格' : ''),
+        imageUrl: live?.imageUrl || '',
+      };
+    });
+    const itemNames = cart.required.map(row => row.name);
+    // Capture the genuine product thumbnail while the confirmation page still
+    // owns it. Alibaba image URLs can be short-lived or reject a later iOS
+    // WebView request, and the cashier page no longer contains the product
+    // tile. Persisting a small data URL here survives both transitions.
+    const capturedImageUrl = await this.readOrderImage(page, itemNames);
+    const imageUrl = capturedImageUrl || checkoutFacts.imageUrl;
+    return {
+      total: amounts.total,
+      discount: amounts.discount,
+      etaText: checkoutEtaText(raw),
+      merchant: checkoutFacts.merchant,
+      imageUrl,
+      items,
+      browserOrderRef: { stage: 'confirm', url: page.url(), itemNames, imageUrl },
+      risk: [],
+    };
+  }
+
+  async useExistingCartIfMatching(page, ref, quantity = 1) {
+    let cartLabel = '';
+    let checkout = null;
+    // The storefront often paints the cart footer after the menu itself.  A
+    // single immediate read can miss a real existing cart and then duplicate
+    // it with “再来一单”, so give only this passive footer read a short bound.
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      cartLabel = clean(await page.locator('[aria-label*="购物车总计金额"]').first()
+        .getAttribute('aria-label', { timeout: 400 }).catch(() => ''));
+      checkout = await this.visibleLocator(page.getByText('去结算', { exact: false }), true);
+      if (number(cartLabel) > 0 || checkout) break;
+      await page.waitForTimeout(250);
+    }
+    if (!(number(cartLabel) > 0 || checkout)) return null;
+    if (!checkout) {
+      throw new Error('当前门店购物车已有商品但尚未达到起送金额；系统不会重复加购，请先确认要补充的商品');
+    }
+    await this.tapControl(page, checkout);
+    let body = '';
+    for (let attempt = 0; attempt < 18; attempt += 1) {
+      await page.waitForTimeout(250);
+      body = await page.locator('body').innerText().catch(() => '');
+      if (checkoutPageReady(page.url(), body)) break;
+    }
+    if (!checkoutPageReady(page.url(), body)) {
+      throw new Error('购物车已有商品，但平台没有进入订单确认页；本轮不会重复加购');
+    }
+    await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
+    return this.readCheckoutDraft(page, ref, quantity, { validateCart: true });
+  }
+
+  async createRepeatPurchaseOrder(ref) {
+    const current = await this.ensure();
+    const page = ref.shopUrl
+      ? (sameShopUrl(current.url(), ref.shopUrl) ? current : await this.goto(ref.shopUrl, 900))
+      : await this.enterShop(ref.shopIndex, { preferSaved: true });
+    await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
+    const existing = await this.useExistingCartIfMatching(page, ref, 1);
+    if (existing) return existing;
+    const repeat = await this.repeatPurchase(page, ref.itemName, ref.query, { click: true });
+    if (!repeat) throw new Error('匹配的历史订单已经失效，本轮没有误点其他订单');
+    await page.waitForTimeout(900);
+    let body = clean(await page.locator('body').innerText().catch(() => ''), 12_000);
+    if (!checkoutPageReady(page.url(), body)) {
+      const checkout = await this.visibleLocator(page.getByText('去结算', { exact: false }), true);
+      if (!checkout) throw new Error('历史订单已加入购物车，但平台没有提供可用的去结算按钮');
+      await this.tapControl(page, checkout);
+      for (let attempt = 0; attempt < 14; attempt += 1) {
+        await page.waitForTimeout(300);
+        body = clean(await page.locator('body').innerText().catch(() => ''), 12_000);
+        if (checkoutPageReady(page.url(), body)) break;
+      }
+    }
+    if (!checkoutPageReady(page.url(), body)) throw new Error('历史订单没有进入订单确认页，本轮已停止');
+    await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
+    return this.readCheckoutDraft(page, ref, 1, { validateCart: true });
+  }
+
+  async returnToStorefrontWithoutRefresh(page) {
+    for (let attempt = 0; attempt < 3 && !shopUrl(page.url()); attempt += 1) {
+      if (typeof page.goBack !== 'function') break;
+      await page.goBack({ waitUntil: 'domcontentloaded', timeout: 5000 }).catch(() => null);
+      await page.waitForTimeout(450);
+    }
+    if (!shopUrl(page.url())) throw new Error('无法在不刷新页面的情况下返回商家主页，已停止凑单');
+    return page;
+  }
+
+  async topUpWithSavedItems(page, ref) {
+    if (!milkTeaTopUpEligible([ref?.merchant, ref?.itemName, ref?.query].filter(Boolean).join(' '))) {
+      return { checkout: null, added: [], expected: [], exhausted: true, eligible: false };
+    }
+    await this.returnToStorefrontWithoutRefresh(page);
+    const historySummary = ref.repeatSummary || await this.boughtOrderSummary(page, ref.itemName);
+    const names = savedTopUpItems(historySummary, ref.itemName);
+    const added = [];
+    for (const name of names) {
+      let control = await this.productControl(page, name);
+      if (!control && await this.searchInsideShop(page, name)) {
+        await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
+        await this.waitForPurchaseControls(page, 8000);
+        control = await this.productControl(page, name);
+      }
+      if (!control) {
+        if (!shopUrl(page.url())) await this.returnToStorefrontWithoutRefresh(page);
+        continue;
+      }
+      await this.activateControl(page, control); await page.waitForTimeout(550);
+      const dialog = await this.optionPanel(page);
+      if (dialog) {
+        const raw = clean(await dialog.innerText().catch(() => ''), 3000);
+        const selectedDefault = raw.match(/已选\s*[:：]\s*([^¥￥\n]{1,100})/)?.[1]?.trim() || '';
+        const confirm = await this.visibleLocator(dialog.getByText(/^(加入购物车|确定|选好了)$/), true);
+        if (selectedDefault && confirm) {
+          await this.tapControl(page, confirm); await page.waitForTimeout(650);
+        } else {
+          const cancel = await this.visibleLocator(dialog.getByText(/^(取消|关闭)$/), true)
+            || await this.visibleLocator(dialog.locator('[aria-label*="关闭"]'), true);
+          if (cancel) await this.tapControl(page, cancel).catch(() => {});
+          throw new Error(`历史凑单小料“${name}”现在要求重新选规格且没有安全默认项，请让角色先问你再继续`);
+        }
+      }
+      added.push(name);
+      const checkout = await this.visibleLocator(page.getByText('去结算', { exact: false }), true);
+      if (checkout) return { checkout, added, expected: names, exhausted: false, eligible: true };
+      if (!shopUrl(page.url())) await this.returnToStorefrontWithoutRefresh(page);
+    }
+    return { checkout: null, added, expected: names, exhausted: true, eligible: true };
+  }
+
+  async topUpWithMealSide(page, ref, sideName) {
+    if (!mealSideTopUpEligible([ref?.merchant, ref?.itemName, ref?.query].filter(Boolean).join(' ')) || !clean(sideName, 60)) {
+      return { checkout: null, added: [] };
+    }
+    await this.returnToStorefrontWithoutRefresh(page);
+    let control = await this.productControl(page, sideName);
+    if (!control && await this.searchInsideShop(page, sideName)) {
+      await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
+      await this.waitForPurchaseControls(page, 8000);
+      control = await this.productControl(page, sideName);
+    }
+    if (!control) return { checkout: null, added: [] };
+    await this.activateControl(page, control); await page.waitForTimeout(550);
+    const dialog = await this.optionPanel(page);
+    if (dialog) {
+      const raw = clean(await dialog.innerText().catch(() => ''), 3000);
+      const selectedDefault = raw.match(/已选\s*[:：]\s*([^¥￥\n]{1,100})/)?.[1]?.trim() || '';
+      const confirm = await this.visibleLocator(dialog.getByText(/^(加入购物车|确定|选好了)$/), true);
+      if (!selectedDefault || !confirm) throw new Error(`主食凑单小吃“${sideName}”现在要求选择规格，请让角色先问你再继续`);
+      await this.tapControl(page, confirm); await page.waitForTimeout(650);
+    }
+    const checkout = await this.visibleLocator(page.getByText('去结算', { exact: false }), true);
+    return { checkout, added: [sideName] };
+  }
+
+  async addRequestedStandaloneItems(page, ref) {
+    const requested = requestedStandaloneItems(ref.query);
+    const added = [];
+    for (const requestedName of requested) {
+      if (!shopUrl(page.url())) await this.returnToStorefrontWithoutRefresh(page);
+      let menu = await this.extractMenu(page, 24, requestedName).catch(() => []);
+      let chosen = preferredExactProduct(menu, requestedName);
+      if (!chosen && await this.searchInsideShop(page, requestedName)) {
+        await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
+        await this.waitForPurchaseControls(page, 8000);
+        menu = await this.extractMenu(page, 24, requestedName).catch(() => []);
+        chosen = preferredExactProduct(menu, requestedName);
+      }
+      const actualName = clean(chosen?.name || requestedName, 140);
+      let control = await this.productControl(page, actualName);
+      if (!control && actualName !== requestedName) control = await this.productControl(page, requestedName);
+      if (!control) {
+        throw new Error(`购物车还缺少本次明确要求的“${requestedName}”，系统不会因为达到起送价而提前结算`);
+      }
+      await this.activateControl(page, control); await page.waitForTimeout(550);
+      const dialog = await this.optionPanel(page);
+      if (dialog) {
+        const raw = clean(await dialog.innerText().catch(() => ''), 3000);
+        const selectedDefault = raw.match(/已选\s*[:：]\s*([^¥￥\n]{1,100})/)?.[1]?.trim() || '';
+        const confirm = await this.visibleLocator(dialog.getByText(/^(加入购物车|确定|选好了)$/), true);
+        if (!confirm || (!selectedDefault && /请选择|必选/.test(raw))) {
+          throw new Error(`单品“${actualName}”还需要确认真实规格，系统已暂停且不会跳过这件商品`);
+        }
+        await this.tapControl(page, confirm); await page.waitForTimeout(650);
+      }
+      added.push(actualName);
+      // Do not inspect or click checkout here.  Every requested item must run
+      // through this loop even if the first item already reached the minimum.
+    }
+    if (!shopUrl(page.url())) await this.returnToStorefrontWithoutRefresh(page);
+    const checkout = await this.visibleLocator(page.getByText('去结算', { exact: false }), true);
+    return { checkout, added };
+  }
+
   async createOrder({ ref, selectedOptions, optionGroups = [], quantity }) {
-    let page; let targetControlY = null;
+    if (quantity > 1 && !multiServingEligible([ref?.merchant, ref?.itemName, ref?.query].filter(Boolean).join(' '))) {
+      throw new Error('双杯/同款多份只允许用于奶茶或瑞幸咖啡；KFC、正餐和主食不会自动复制数量');
+    }
+    if (ref.repeatPurchase) return this.createRepeatPurchaseOrder(ref);
+    let page; let targetControlY = null; let addedStandaloneItems = [];
     if (ref.detailUrl) {
       page = await this.goto(ref.detailUrl, 1800);
       const body = clean(await page.locator('body').innerText().catch(() => ''), 2400);
       if (!body.includes(ref.itemName)) throw new Error('真实商品详情已失效，请重新搜索');
     } else {
-      page = ref.shopUrl ? await this.goto(ref.shopUrl, 900) : await this.enterShop(ref.shopIndex, { preferSaved: true });
+      const current = await this.ensure();
+      page = ref.shopUrl
+        ? (sameShopUrl(current.url(), ref.shopUrl) ? current : await this.goto(ref.shopUrl, 900))
+        : await this.enterShop(ref.shopIndex, { preferSaved: true });
       await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
       await this.waitForPurchaseControls(page, 8000);
-      const existingCartLabel = clean(await page.locator('[aria-label*="购物车总计金额"]').first().getAttribute('aria-label', { timeout: 1500 }).catch(() => ''));
-      const existingCheckout = await this.visibleLocator(page.getByText('去结算', { exact: false }), true);
-      if (number(existingCartLabel) > 0 || existingCheckout) throw new Error('淘宝闪购当前门店购物车已有商品，为避免混单请先在官方页面处理购物车');
-      let add = null;
+      const existing = await this.useExistingCartIfMatching(page, ref, quantity);
+      if (existing) return existing;
+      // Prefer an exact single item already visible on the storefront.  Only
+      // open store-local search when the signature item is not on the page.
+      let add = await this.productControl(page, ref.itemName);
+      if (!add && await this.searchInsideShop(page, ref.itemName)) {
+        await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
+        await this.waitForPurchaseControls(page, 8000);
+        add = await this.productControl(page, ref.itemName);
+      }
       for (let attempt = 0; attempt < 20 && !add; attempt += 1) {
         add = await this.productControl(page, ref.itemName);
         if (!add) await page.waitForTimeout(500);
@@ -1090,8 +2199,9 @@ export class TaobaoFlashBrowser {
       }
       const targetBox = await add.boundingBox().catch(() => null);
       if (targetBox) targetControlY = targetBox.y + targetBox.height / 2;
-      await add.evaluate(node => node.click()); await page.waitForTimeout(700);
-      if (/pages\/ele-index-search/i.test(page.url())) throw new Error('真实商品按钮发生页面漂移，请重新搜索');
+      const startedOnInternalSearch = shopSearchUrl(page.url());
+      await this.activateControl(page, add); await page.waitForTimeout(700);
+      if (!startedOnInternalSearch && shopSearchUrl(page.url())) throw new Error('真实商品按钮发生页面漂移，请重新搜索');
       }
     }
     if (/pages\/ele-product-detail/i.test(page.url())) {
@@ -1140,48 +2250,76 @@ export class TaobaoFlashBrowser {
         const suffix = await this.cleanupFailureSuffix(ref.itemName);
         throw new Error(`平台没有找到第${i + 1}份同规格商品的增加入口，${suffix}`);
       }
-      await plus.evaluate(node => node.click()).catch(() => this.activateControl(page, plus));
+      await this.activateControl(page, plus);
       await page.waitForTimeout(350);
     }
-    const checkout = await this.visibleLocator(page.getByText('去结算', { exact: false }), true);
+    const explicitItems = await this.addRequestedStandaloneItems(page, ref);
+    addedStandaloneItems = explicitItems.added;
+    ref.cartItems = [ref.itemName, ...addedStandaloneItems];
+    let checkout = explicitItems.checkout || await this.visibleLocator(page.getByText('去结算', { exact: false }), true);
     if (!checkout) {
       const checkoutBody = clean(await page.locator('body').innerText().catch(() => ''), 12_000);
       const minimum = minimumOrderInfo(checkoutBody, ref.unitPrice, quantity);
-      const suffix = await this.cleanupFailureSuffix(ref.itemName);
       if (minimum.threshold > 0) {
+        const explicitMealSide = requestedMealSide(ref.query);
+        if (explicitMealSide && !addedStandaloneItems.some(item => productMatchesSavedItem(item, explicitMealSide)) && mealSideTopUpEligible([ref?.merchant, ref?.itemName, ref?.query].filter(Boolean).join(' '))) {
+          const mealTopUp = await this.topUpWithMealSide(page, ref, explicitMealSide);
+          checkout = mealTopUp.checkout;
+          addedStandaloneItems.push(...mealTopUp.added);
+          ref.cartItems = [ref.itemName, ...addedStandaloneItems];
+          if (!checkout) throw new Error(`已按你的要求加入“${explicitMealSide}”，但仍未达到该门店起送金额；请让角色先问你是否继续加其他主食小吃`);
+        } else {
+        const toppedUp = await this.topUpWithSavedItems(page, ref);
+        checkout = toppedUp.checkout;
+        if (checkout && !toppedUp.exhausted) {
+          addedStandaloneItems.push(...toppedUp.added);
+          ref.cartItems = [ref.itemName, ...addedStandaloneItems];
+          // Continue with the same checkout path below.  The saved add-ons are
+          // added one at a time and stop as soon as the minimum is met.
+        } else if (toppedUp.eligible === false) {
+          const quantityHint = minimum.minimumQuantity > quantity ? `；同款至少需要${minimum.minimumQuantity}份` : '';
+          throw new Error(`该门店最低起送金额为¥${minimum.threshold.toFixed(2)}，咖啡、主食和非茶饮商品不会自动加入奶茶小料凑单${quantityHint}；请让角色先问你要添加哪件同类商品`);
+        } else if (toppedUp.added.length) {
+          const missing = toppedUp.expected.filter(name => !toppedUp.added.includes(name));
+          const missingText = missing.length ? `；尚缺历史小料：${missing.join('、')}` : '';
+          throw new Error(`已按历史记录加入凑单小料（${toppedUp.added.join('、')}），但本轮没有完整进入结算${missingText}；请让角色问你后再继续`);
+        } else {
+          const quantityHint = minimum.minimumQuantity > quantity ? `；同款至少需要${minimum.minimumQuantity}份` : '';
+          throw new Error(`该门店最低起送金额为¥${minimum.threshold.toFixed(2)}，没有找到可复用的历史凑单小料${quantityHint}；请让角色先问你要加什么`);
+        }
+        }
+      }
+      if (!checkout) {
+        const suffix = await this.cleanupFailureSuffix(ref.itemName);
+        if (minimum.threshold > 0) {
         const quantityHint = minimum.minimumQuantity > quantity ? `；同款至少需要${minimum.minimumQuantity}份` : '';
         throw new Error(`该门店最低起送金额为¥${minimum.threshold.toFixed(2)}，当前商品合计约¥${minimum.current.toFixed(2)}，还差约¥${minimum.shortfall.toFixed(2)}${quantityHint}；${suffix}`);
+        }
+        throw new Error(`未达到起送金额或无法结算，${suffix}，请重新选择商品或数量`);
       }
-      throw new Error(`未达到起送金额或无法结算，${suffix}，请重新选择商品或数量`);
     }
-    const checkoutUrl = page.url();
-    await checkout.evaluate(node => {
-      let target = node;
-      for (let depth = 0; target && depth < 6; depth += 1, target = target.parentElement) {
-        const role = target.getAttribute?.('role') || '';
-        const cls = String(target.className || '');
-        if (role === 'button' || typeof target.onclick === 'function' || /submit|checkout|cart.*button|settle/i.test(cls)) { target.click(); return; }
-      }
-      node.click();
-    }).catch(() => this.activateControl(page, checkout));
-    for (let attempt = 0; attempt < 12 && page.url() === checkoutUrl; attempt += 1) await page.waitForTimeout(300);
-    if (page.url() === checkoutUrl) {
-      await this.activateControl(page, checkout); await page.waitForTimeout(1800);
+    const checkoutState = async () => ({ url: page.url(), body: clean(await page.locator('body').innerText().catch(() => ''), 12_000) });
+    await this.tapControl(page, checkout);
+    let state = await checkoutState();
+    for (let attempt = 0; attempt < 14 && !checkoutPageReady(state.url, state.body); attempt += 1) {
+      await page.waitForTimeout(300);
+      state = await checkoutState();
     }
-    if (!/checkout|confirm|buy/i.test(page.url())) {
+    if (!checkoutPageReady(state.url, state.body)) {
+      const retry = await this.visibleLocator(page.getByText('去结算', { exact: false }), true);
+      if (retry) await this.activateControl(page, retry);
+      await page.waitForTimeout(1400);
+      state = await checkoutState();
+    }
+    if (!checkoutPageReady(state.url, state.body)) {
       const suffix = await this.cleanupFailureSuffix(ref.itemName);
       throw new Error(`淘宝闪购没有进入订单确认页，${suffix}，请重新搜索后再试`);
     }
     await page.waitForTimeout(1800);
     await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
-    const body = clean(await page.locator('body').innerText(), 6000);
-    const amounts = checkoutAmounts(body);
-    const total = amounts.total;
-    if (!total) {
-      const suffix = await this.cleanupFailureSuffix(ref.itemName);
-      throw new Error(`没有从淘宝闪购确认页读到有效金额，${suffix}`);
-    }
-    return { total, discount: amounts.discount, items: [{ name: ref.itemName, quantity, price: total, options: selectedLabels.join('、') }], browserOrderRef: { stage: 'confirm', url: page.url() }, risk: [] };
+    const draft = await this.readCheckoutDraft(page, ref, quantity, { validateCart: true });
+    draft.items = [{ name: ref.itemName, quantity, price: draft.total, options: selectedLabels.join('、') }, ...addedStandaloneItems.map(name => ({ name, quantity: 1, price: 0, options: '逐项加购的单品' }))];
+    return draft;
   }
 
   async dialogGroups(dialog) {
@@ -1196,50 +2334,175 @@ export class TaobaoFlashBrowser {
     return groups;
   }
 
+  async readOrderImage(page, itemNames = []) {
+    const candidate = await page.evaluate(requiredNames => {
+      const cleanText = value => String(value || '').replace(/\s+/g, ' ').trim();
+      const normalized = value => cleanText(value).replace(/[\s·•()（）【】\[\]_-]+/g, '');
+      const absoluteImage = value => {
+        const raw = String(value || '').trim();
+        if (!raw) return '';
+        if (raw.startsWith('//')) return `${location.protocol}${raw}`;
+        try { return new URL(raw, location.href).href; } catch { return ''; }
+      };
+      const backgroundUrl = node => {
+        const match = String(getComputedStyle(node).backgroundImage || '').match(/url\(["']?([^"')]+)["']?\)/i);
+        return absoluteImage(match && match[1]);
+      };
+      const wanted = (requiredNames || []).map(normalized).filter(Boolean);
+      document.querySelectorAll('[data-phone-delivery-order-image]').forEach(node => node.removeAttribute('data-phone-delivery-order-image'));
+      const candidates = [...document.querySelectorAll('img, div, span')].map((node, index) => {
+        const rect = node.getBoundingClientRect();
+        const url = node.tagName === 'IMG'
+          ? absoluteImage(node.currentSrc || node.src || node.getAttribute('data-src'))
+          : backgroundUrl(node);
+        if (!/^(?:https:\/\/|data:image\/(?:png|jpe?g|webp)[;,])/i.test(url) || rect.width < 48 || rect.height < 48 || /(?:qrcode|qr-code|avatar|icon)/i.test(url)) return null;
+        let parent = node;
+        let nearby = '';
+        for (let depth = 0; depth < 7 && parent; depth += 1, parent = parent.parentElement) {
+          nearby += ` ${cleanText(parent.textContent).slice(0, 700)}`;
+        }
+        const haystack = normalized(nearby);
+        const nameMatch = Boolean(haystack) && wanted.some(name => name && (haystack.includes(name) || name.includes(haystack)));
+        const orderDetailThumbnail = /(?:minimized-fee__content-left-logo|order[^ ]*(?:item|goods)[^ ]*(?:image|logo)|(?:item|goods)[^ ]*(?:image|logo))/i.test(String(node.className || ''));
+        if (wanted.length && !nameMatch && !orderDetailThumbnail) return null;
+        let score = 1000 - Math.min(index, 800);
+        if (nameMatch) score += 500;
+        if (orderDetailThumbnail) score += 700;
+        if (node.tagName === 'IMG') score += 320;
+        if (Math.abs(rect.width / rect.height - 1) < .35) score += 120;
+        if (Math.min(rect.width, rect.height) >= 80) score += 80;
+        if (Math.max(rect.width, rect.height) <= 360) score += 90;
+        if (Math.max(rect.width, rect.height) > 720) score -= 500;
+        if (/(?:alicdn\.com|cube\.eleme\.cn)/i.test(url)) score += 60;
+        if (/logo/i.test(url)) score -= 20;
+        return { node, url, score, index, tag: node.tagName };
+      }).filter(Boolean).sort((left, right) => right.score - left.score);
+      const best = candidates[0];
+      if (!best) return null;
+      best.node.setAttribute('data-phone-delivery-order-image', '1');
+      return { url: best.url, score: best.score, index: best.index, tag: best.tag };
+    }, itemNames).catch(() => null);
+    if (!candidate) return '';
+    let helper = null;
+    try {
+      const ready = await page.evaluate(url => new Promise(resolve => {
+        document.getElementById('phone-delivery-order-image-capture')?.remove();
+        const host = document.createElement('div');
+        host.id = 'phone-delivery-order-image-capture';
+        host.setAttribute('aria-hidden', 'true');
+        Object.assign(host.style, {
+          position: 'fixed', left: '8px', top: '8px', width: '192px', height: '192px', zIndex: '2147483647',
+          overflow: 'hidden', borderRadius: '18px', background: '#f4f1ea', pointerEvents: 'none', opacity: '1',
+        });
+        const image = document.createElement('img');
+        image.alt = '';
+        Object.assign(image.style, { width: '100%', height: '100%', objectFit: 'cover', display: 'block' });
+        let settled = false;
+        const done = ok => { if (settled) return; settled = true; resolve(ok); };
+        image.onload = () => done(image.naturalWidth > 0 && image.naturalHeight > 0);
+        image.onerror = () => done(false);
+        host.appendChild(image);
+        document.body.appendChild(host);
+        image.src = url;
+        if (image.complete) done(image.naturalWidth > 0 && image.naturalHeight > 0);
+        setTimeout(() => done(false), 3500);
+      }), candidate.url).catch(() => false);
+      if (ready) {
+        helper = page.locator('#phone-delivery-order-image-capture');
+        const image = await helper.screenshot({ type: 'jpeg', quality: 82, animations: 'disabled', caret: 'hide' });
+        if (image.length > 0 && image.length <= 440_000) return `data:image/jpeg;base64,${image.toString('base64')}`;
+      }
+      const original = page.locator('[data-phone-delivery-order-image="1"]').first();
+      if (await original.count()) {
+        const image = await original.screenshot({ type: 'jpeg', quality: 76, animations: 'disabled', caret: 'hide' });
+        if (image.length > 0 && image.length <= 440_000) return `data:image/jpeg;base64,${image.toString('base64')}`;
+      }
+    } catch {}
+    finally {
+      await page.evaluate(() => {
+        document.getElementById('phone-delivery-order-image-capture')?.remove();
+        document.querySelectorAll('[data-phone-delivery-order-image]').forEach(node => node.removeAttribute('data-phone-delivery-order-image'));
+      }).catch(() => {});
+    }
+    return candidate.url || '';
+  }
+
   async submitOrder(browserOrderRef) {
     const page = await this.ensure();
     if (!/buy|order|confirm/i.test(page.url()) && browserOrderRef?.url) await this.goto(browserOrderRef.url, 1800);
     await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
     const beforePages = new Set(this.context.pages());
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      const button = await this.visibleLocator(page.getByText(/提交订单|提交并支付|去支付|立即支付/, { exact: false }), true);
-      if (!button) throw new Error('未找到淘宝闪购提交订单按钮，请在浏览器窗口核对');
-      await this.tapControl(page, button); await page.waitForTimeout(700);
+    const initialBody = clean(await page.locator('body').innerText().catch(() => ''), 20_000);
+    let etaText = checkoutEtaText(initialBody);
+    const itemNames = Array.isArray(browserOrderRef?.itemNames) ? browserOrderRef.itemNames.map(name => clean(name, 160)).filter(Boolean) : [];
+    const existingImageUrl = clean(browserOrderRef?.imageUrl, 440_000);
+    const initialImageUrl = (existingImageUrl.startsWith('data:image/') ? existingImageUrl : '')
+      || await this.readOrderImage(page, itemNames)
+      || existingImageUrl;
+    const alreadyAtPaymentSelection = /支付宝/.test(initialBody) && /确认支付/.test(initialBody);
+    if (!alreadyAtPaymentSelection) {
+      await this.applyBestAvailableCoupon(page);
       await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
-      const promptBody = clean(await page.locator('body').innerText().catch(() => ''), 7000);
-      if (/选择餐具份数/.test(promptBody)) {
-        const noUtensils = await this.visibleLocator(page.getByText('无需餐具', { exact: true }), true);
-        if (!noUtensils) throw new Error('淘宝闪购要求选择餐具，但没有提供“无需餐具”选项');
-        await this.tapControl(page, noUtensils); await page.waitForTimeout(600);
-        continue;
+      etaText = checkoutEtaText(await page.locator('body').innerText().catch(() => '')) || etaText;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const button = await this.checkoutSubmitControl(page);
+        if (!button) throw new Error('未找到淘宝闪购提交订单按钮，请在浏览器窗口核对');
+        await this.tapControl(page, button); await page.waitForTimeout(700);
+        await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
+        const promptBody = clean(await page.locator('body').innerText().catch(() => ''), 7000);
+        if (/选择餐具份数/.test(promptBody)) {
+          const utensils = await this.visibleLocator(page.getByText(/^(?:有餐具|需要餐具|(?:需要|选择)?\s*(?:1|一)\s*份餐具|(?:1|一)\s*份)$/, { exact: false }), true);
+          if (!utensils) throw new Error('淘宝闪购要求选择餐具，但没有识别到“有餐具/1份餐具”选项，已停止提交');
+          await this.tapControl(page, utensils); await page.waitForTimeout(450);
+          const confirmUtensils = await this.visibleLocator(page.getByText(/^(确定|完成)$/, { exact: true }), true);
+          if (confirmUtensils) await this.tapControl(page, confirmUtensils);
+          // The React sheet needs time to close and restore the submit control.
+          // Do not mistake the temporary absence of that control for success.
+          for (let wait = 0; wait < 12; wait += 1) {
+            await page.waitForTimeout(250);
+            const currentBody = clean(await page.locator('body').innerText().catch(() => ''), 4000);
+            if (!/选择餐具份数/.test(currentBody)) break;
+          }
+          continue;
+        }
+        break;
       }
-      break;
     }
+    const paymentPage = await this.waitForPaymentSelection(page, beforePages);
+    await this.riskCheck(paymentPage, { waitForHuman: true, maxWaitMs: 120_000 });
     for (let i = 0; i < 25; i += 1) {
       await page.waitForTimeout(500);
       const candidate = this.context.pages().find(item => !beforePages.has(item)) || this.context.pages().at(-1) || page;
-      if (/alipay|cashier|counter|tradepay|payment|\/pay/i.test(candidate.url())) {
+      const candidateBody = clean(await candidate.locator('body').innerText().catch(() => ''), 20_000);
+      const paymentButton = await this.visibleLocator(candidate.getByText(/^付款$/, { exact: true }), true).catch(() => null);
+      if (/alipay|cashier|counter|tradepay|payment|\/pay/i.test(candidate.url()) && paymentButton && /(?:^|\s)付款(?:\s|$)/.test(candidateBody)) {
         this.page = candidate;
-        return { status: 'pending_payment', payUrl: candidate.url(), browserOrderRef: { stage: 'cashier', url: candidate.url() } };
+        const imageUrl = initialImageUrl || await this.readOrderImage(candidate, itemNames);
+        const exactEtaText = checkoutEtaText(candidateBody) || checkoutEtaText(await page.locator('body').innerText().catch(() => '')) || etaText;
+        return { status: 'pending_payment', payUrl: candidate.url(), etaText: exactEtaText, imageUrl, browserOrderRef: { stage: 'cashier', url: candidate.url(), itemNames, imageUrl } };
       }
     }
     const body = clean(await page.locator('body').innerText().catch(() => ''), 3000);
-    if (/支付成功|付款成功/.test(body)) return { status: 'paid', payUrl: '', browserOrderRef: { stage: 'paid', url: page.url() } };
+    if (/支付成功|付款成功/.test(body)) return { status: 'paid', payUrl: '', etaText, browserOrderRef: { stage: 'paid', url: page.url() } };
     if (/确认订单/.test(body) && /立即支付|提交订单/.test(body)) throw new Error('淘宝闪购仍停留在订单确认页，没有完成真实订单提交');
-    return { status: 'pending_payment', payUrl: '', browserOrderRef: { stage: 'cashier', url: page.url() } };
+    if (/网络不太好|刷新页面|加载失败/.test(body)) throw new Error('淘宝闪购提交后出现网络错误，没有到达支付宝“付款”页面，本轮不能算创建成功');
+    throw new Error('淘宝闪购没有到达支付宝“付款”页面，本轮不能算创建成功');
   }
 
   async orderStatus(browserOrderRef) {
     const page = await this.ensure();
     if (browserOrderRef?.url && page.url() !== browserOrderRef.url) await this.goto(browserOrderRef.url, 1800).catch(() => {});
     const body = clean(await page.locator('body').innerText().catch(() => ''), 5000);
+    const itemNames = Array.isArray(browserOrderRef?.itemNames) ? browserOrderRef.itemNames.map(name => clean(name, 160)).filter(Boolean) : [];
+    const imageUrl = await this.readOrderImage(page, itemNames) || clean(browserOrderRef?.imageUrl, 440_000);
     const states = [
       [/已送达|订单完成/, 'delivered'], [/配送中|骑手正在配送/, 'delivering'], [/骑手已取餐|已取货/, 'picked_up'],
       [/骑手已接单|等待骑手取餐/, 'courier_assigned'], [/备餐中|商家制作中/, 'preparing'], [/商家已接单|商家已确认/, 'merchant_confirmed'],
       [/支付成功|付款成功|已支付/, 'paid'], [/已取消|订单取消/, 'canceled'], [/退款成功|已退款/, 'refunded'],
     ];
-    for (const [pattern, status] of states) if (pattern.test(body)) return { status };
-    return { status: browserOrderRef?.stage === 'cashier' ? 'pending_payment' : 'created' };
+    const etaText = checkoutEtaText(body);
+    for (const [pattern, status] of states) if (pattern.test(body)) return { status, etaText, imageUrl };
+    return { status: browserOrderRef?.stage === 'cashier' ? 'pending_payment' : 'created', etaText, imageUrl };
   }
 
   async diagnostic(path) {
