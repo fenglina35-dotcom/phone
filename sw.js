@@ -1,5 +1,5 @@
 const BUILD='1056';
-const HOTFIX='v1056-delivery-direct-automation-1';
+const HOTFIX='v1056-delivery-role-prelude-2';
 const SHELL_CACHE='north-shell-v1056';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];

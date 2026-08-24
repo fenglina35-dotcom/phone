@@ -15,6 +15,6 @@ assert.match(app, /postMessage\(\{type:'north-version-query'\}\)/);
 assert.match(sw, /client\.postMessage\(\{type:'north-update-ready',build:BUILD\}\)/);
 assert.match(sw, /event\.data\.type!==['"]north-version-query['"]/);
 assert.match(html, /window\.__NORTH_SHELL_BUILD__='1056'/);
-assert.match(html, /sw\.js\?v=1056&r=v1056-delivery-direct-automation-1/);
+assert.match(html, /sw\.js\?v=1056&r=v1056-delivery-role-prelude-2/);
 
 console.log("update prompt tests passed");

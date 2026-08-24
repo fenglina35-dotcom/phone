@@ -60,10 +60,10 @@ assert.match(delivery,/\[真实外卖\|换品:/,'a newly named product must aban
 assert.match(delivery,/详细原因已保留在外卖设置/,'long technical diagnostics must stay out of the chat overlay');
 assert.match(delivery,/始终保留自己的判断和意愿/,'the role may accept or refuse the delivery request according to its persona');
 assert.match(app,/_realDeliveryCommandSeen=false/,'the parser must track the command boundary');
-assert.doesNotMatch(app,/_realDeliveryPreludeShown/,'automation must not require a visible acknowledgement first');
-assert.match(app,/if\(_realDeliveryCommandTurn&&!_realDeliveryTag\)continue/,'all model prose in a structured order turn must remain hidden until the automation finishes');
+assert.match(app,/_realDeliveryPreludeShown=false/,'the parser must limit a structured order turn to one visible opening line');
+assert.match(app,/typeof deliveryRolePreludeAllowed==='function'&&deliveryRolePreludeAllowed\(line\)/,'only a safe current-model prelude may be shown before automation');
 assert.match(app,/replace\(\/\(\[\^\\r\\n\]\)\(\[\\\[【\]/,'an acknowledgement and embedded action tag must be split before bubble parsing');
-assert.doesNotMatch(app,/deliveryRolePreludeAllowed\(line\)/,'the parser must not emit a pre-order model acknowledgement');
+assert.match(delivery,/不能使用系统固定话术/,'the opening line must never be manufactured from canned system text');
 assert.doesNotMatch(delivery,/setInterval\(function\(\)\{pollOrders/,'background timers must not navigate the delivery browser');
 assert.doesNotMatch(delivery,/visibilitychange[^\n]*pollOrders|addEventListener\('online'[^\n]*pollOrders|setTimeout\(function\(\)\{pollOrders/,'refresh, foreground and network events must not poll the marketplace');
 assert.match(browser,/function normalizeOptionPanelGroups/,'platform hint rows must be removed before a bundle is offered to the role');

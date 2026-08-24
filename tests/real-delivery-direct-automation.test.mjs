@@ -25,8 +25,12 @@ const context=vm.createContext({
 for(const name of [
   'text','roleOrderIntent','deliveryMatchKey','deliveryBigrams','deliveryMatchScore',
   'chooseOffer','deliveryRequirementText','deliveryExcluded','deliveryChoiceMentionScore',
-  'explicitToppings','deliverySemanticChoice','chooseOptions',
+  'explicitToppings','deliverySemanticChoice','chooseOptions','rolePreludeAllowed',
 ])vm.runInContext(functionSource(name),context);
+
+assert.equal(context.rolePreludeAllowed('等我一下，我给你找找。'),true,'a persona-generated preparation line must remain visible');
+assert.equal(context.rolePreludeAllowed('我去看看今天还有没有。'),true,'a natural role opening must remain visible');
+assert.equal(context.rolePreludeAllowed('已经替你下单付款了。'),false,'premature commerce claims must never be shown as an opening line');
 
 const offers=[
   {offerId:'wrong',merchant:'手工拉面',name:'牛肉饼',description:''},

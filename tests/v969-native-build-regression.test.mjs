@@ -14,7 +14,7 @@ const reportScene = read('native/private-small-phone/XcodeProject/PhoneCompanion
 
 test('v1056 web and private iOS 1.0.179 keep explicit build identities', () => {
   assert.match(app, /APP_VER='v1056 · 外卖自动执行链路修正版'/);
-  assert.match(app, /sw\.js\?v=1056&r=v1056-delivery-direct-automation-1/);
+  assert.match(app, /sw\.js\?v=1056&r=v1056-delivery-role-prelude-2/);
   assert.match(shell, /north-shell-v1056/);
   assert.match(bundleInfo, /<string>1056<\/string>/);
   assert.match(localWebView, /1\.0\.179 \(179\)/);

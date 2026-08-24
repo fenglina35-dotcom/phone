@@ -33,7 +33,7 @@
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=1056&r=v1056-delivery-direct-automation-1';
+  var url='sw.js?v=1056&r=v1056-delivery-role-prelude-2';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
