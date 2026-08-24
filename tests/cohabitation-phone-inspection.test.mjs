@@ -118,6 +118,19 @@ test('only the originating channel receives the inspection reaction',()=>{
   assert.match(logout,/else\{if\(!c\.blocked&&!unchanged\)/);
 });
 
+test('WeChat login completion follows active co-living and otherwise stays online',()=>{
+  const context=vm.createContext({S:{cohabitation:null}});
+  vm.runInContext(`${functionSource('wxLoginCompletionChannel')}this.channel=wxLoginCompletionChannel;`,context);
+  assert.equal(context.channel('c1',{}),'online');
+  context.S.cohabitation={enabled:true,paused:false,cid:'c1'};
+  assert.equal(context.channel('c1',{}),'cohab');
+  assert.equal(context.channel('c2',{}),'online');
+  context.S.cohabitation.paused=true;
+  assert.equal(context.channel('c1',{}),'online');
+  assert.equal(context.channel('c1',{channel:'cohab'}),'cohab');
+  assert.match(functionSource('wxDoLogin'),/channel=wxLoginCompletionChannel\(cid,opt\)/);
+});
+
 test('a co-living reply-tag turn produces only the completed inspection reaction',()=>{
   const timers=[];
   const context=vm.createContext({

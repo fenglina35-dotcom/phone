@@ -99,6 +99,7 @@ export class DeliveryAdapter {
       intentSummary: clean(source.intentSummary, 200), status: clean(source.status, 40),
       revision: Math.max(1, Math.floor(Number(source.revision) || 1)),
       autonomous: source.autonomous === true,
+      authorizationConstraints: clean(source.authorizationConstraints || source.userConstraints, 800),
       userConstraints: clean(source.userConstraints, 800),
     };
     if (!task.taskId || !task.roleId || !task.accountId || !task.sessionId || !task.turnId || !task.createdAt || !task.intentSummary) throw new Error('角色点单缺少完整的结构化授权任务');
@@ -108,11 +109,16 @@ export class DeliveryAdapter {
     const key = `${context.target || ''}:${task.taskId}`;
     const known = this.roleTasks.get(key);
     if (known) {
-      for (const field of ['authorizationSource', 'roleId', 'accountId', 'sessionId', 'turnId', 'createdAt', 'intentSummary', 'autonomous', 'userConstraints']) {
+      for (const field of ['authorizationSource', 'roleId', 'accountId', 'sessionId', 'turnId', 'createdAt', 'intentSummary', 'autonomous', 'authorizationConstraints']) {
         if (known[field] !== task[field]) throw new Error('角色点单授权任务与原始回合不一致');
       }
       if (TERMINAL_TASKS.has(known.status)) throw new Error('已结束的角色点单授权任务不能恢复');
-      known.revision = Math.max(known.revision, task.revision);
+      if (task.revision < known.revision || task.revision > known.revision + 1) throw new Error('角色点单澄清修订不连续');
+      if (task.revision === known.revision && known.userConstraints !== task.userConstraints) throw new Error('同一角色点单修订不能改变用户约束');
+      if (task.revision === known.revision + 1) {
+        known.revision = task.revision;
+        known.userConstraints = task.userConstraints;
+      }
       return { key, task: known };
     }
     this.roleTasks.set(key, { ...task, status: 'authorized' });

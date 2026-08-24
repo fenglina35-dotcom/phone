@@ -5,7 +5,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { DeliveryAdapter } from '../src/adapter.mjs';
 import { sign, verifySignedRequest } from '../src/security.mjs';
-import { activeShopMatchesBrand, appliedCouponAmount, availableCouponAmount, brandMatches, cartItemVerification, checkoutAmounts, checkoutCartState, checkoutEtaText, checkoutItemOptionsFromText, checkoutPageReady, collapseRepeatedOptionText, couponCheckoutState, dessertTopUpCandidates, dessertTopUpEligible, fruitServingEligible, fruitServingWeightGrams, fruitTopUpCandidates, fruitTopUpEligible, kfcDefaultSignatureBundleRequested, kfcItemCoveredByText, kfcSignatureBundle, kfcStandaloneSearchTerm, knownRouteKey, mcdonaldsBreakfastBundleOptions, mealSideTopUpEligible, mealSnackCandidates, menuCardName, menuCardPrice, merchantNameMatchScore, milkTeaToppingCandidates, milkTeaTopUpEligible, minimumOrderInfo, missingSelectedOptionRequirements, multiServingEligible, normalizeOptionPanelGroups, preferredBrand, preferredExactProduct, productMatchesSavedItem, publicAddressLabel, repeatPurchaseMatches, repeatPurchaseMatchKind, requestedExtraItems, requestedFruitExclusions, requestedItemName, requestedKfcItems, requestedMaxDistanceKm, requestedMealSide, requestedMilkTeaToppingPreferences, requestedStandaloneItems, requestedStoreItemName, retailShopSearchUrl, riskChallengeKind, sameShopUrl, savedTopUpItems, selectedOptionsCoverItem, shopClosedReason, shopRowsFromVisibleText, singleFruitItemMatches, singleFruitKeyword, snackTopUpCandidates, snackTopUpEligible, TaobaoFlashBrowser } from '../src/taobao-flash-browser.mjs';
+import { activeShopMatchesBrand, appliedCouponAmount, availableCouponAmount, brandMatches, cartItemVerification, checkoutAmounts, checkoutCartState, checkoutEtaText, checkoutItemOptionsFromText, checkoutPageReady, collapseRepeatedOptionText, couponCheckoutState, dessertTopUpCandidates, dessertTopUpEligible, fruitServingEligible, fruitServingWeightGrams, fruitTopUpCandidates, fruitTopUpEligible, kfcDefaultSignatureBundleRequested, kfcItemCoveredByText, kfcSignatureBundle, kfcStandaloneSearchTerm, knownRouteKey, mcdonaldsBreakfastBundleOptions, mealSideTopUpEligible, mealSnackCandidates, menuCardName, menuCardPrice, merchantNameMatchScore, milkTeaToppingCandidates, milkTeaTopUpEligible, minimumOrderInfo, missingSelectedOptionRequirements, multiServingEligible, normalizeOptionPanelGroups, preferredBrand, preferredExactProduct, productMatchesSavedItem, publicAddressLabel, repeatPurchaseMatches, repeatPurchaseMatchKind, requestedExtraItems, requestedFruitExclusions, requestedItemName, requestedKfcItems, requestedMaxDistanceKm, requestedMealSide, requestedMilkTeaToppingPreferences, requestedStandaloneItems, requestedStoreItemName, retailShopSearchUrl, riskChallengeKind, sameShopUrl, savedTopUpItems, selectedOptionsCoverItem, shortFoodTitleAliasEligible, shopClosedReason, shopRowsFromVisibleText, singleFruitItemMatches, singleFruitKeyword, snackTopUpCandidates, snackTopUpEligible, TaobaoFlashBrowser } from '../src/taobao-flash-browser.mjs';
+import { storeSearchTermMatches } from '../src/taobao-flash-browser.mjs';
+import { merchantFromShopText } from '../src/taobao-flash-browser.mjs';
+import { requestedSinglePersonSoupCombo } from '../src/taobao-flash-browser.mjs';
 
 class FakeBrowser {
   constructor() { this.submits = 0; this.statusCalls = 0; this.statusValue = 'pending_payment'; }
@@ -506,6 +509,7 @@ test('bundle option parser removes platform hints and preserves the required ite
     choices: ['茉莉奶绿（大杯）', '黑糖珍珠奶茶Pro（大杯）'],
     multiple: true,
     selectionCount: 2,
+    selectionRequired: true,
   }]);
 });
 
@@ -568,7 +572,7 @@ test('McDonalds default bundle never falls back to a store-local search', async 
   assert.match(source, /const homepageOnly = mcdonaldsHomepageOnly \|\| kfcHomepageOnly/);
   assert.match(source, /menuSelectionAllowed && !homepageOnly/);
   assert.match(source, /searchResultSelectionAllowed && !homepageOnly/);
-  assert.match(source, /exactItems\.length \|\| homepageOnly \? false : await this\.searchInsideShop/);
+  assert.match(source, /!searchedInsideShop && !exactItems\.length && !homepageOnly[\s\S]*?searchInsideShop\(shopPage, itemQuery\)/);
   assert.match(source, /!button && !mcdonaldsHomepageOnly && !kfcHomepageOnly && await this\.searchInsideShop/);
   assert.match(source, /!resumeExistingMain && !add && !mcdonaldsHomepageOnly && !kfcHomepageOnly && await this\.searchInsideShop/);
 });
@@ -616,6 +620,9 @@ test('known drink brands are recognized without widening to another merchant', (
 });
 
 test('merchant similarity accepts inserted descriptors but rejects unrelated first cards', () => {
+  assert.deepEqual(merchantFromShopText('返红包 杨姥佬家de撒汤·煎饺·灌汤包(平江万达店) 评分 4.8 月售1000+'), {
+    name: '杨姥佬家de撒汤·煎饺·灌汤包(平江万达店)', rating: 4.8,
+  });
   assert.ok(merchantNameMatchScore('DQ冰淇淋', 'DQ·蛋糕·冰淇淋(苏州宫巷店)') >= 70);
   assert.ok(merchantNameMatchScore('兰州牛肉面', '兰州牛肉拉面(相城店)') >= 70);
   assert.equal(merchantNameMatchScore('兰州牛肉面', '手工拉面'), 0);
@@ -659,6 +666,7 @@ test('meal brands, products, and explicit side dishes remain separate', () => {
   assert.deepEqual(requestedExtraItems('不足起送价时添加任意小料'), []);
   assert.deepEqual(requestedExtraItems('不足起送价时逐个添加不同的同店小吃'), []);
   assert.deepEqual(requestedExtraItems('不足起送价时添加其他店内小吃'), []);
+  assert.deepEqual(requestedExtraItems('撒汤 加冰豆浆；然后单独搜索并添加标题含冰豆浆的唯一商品'), ['冰豆浆']);
   assert.deepEqual(requestedStandaloneItems('不足起送价时回商家主页，在小料专区添加小料'), []);
   assert.deepEqual(requestedStandaloneItems('逐个添加不同且与水果饮品兼容的小料'), []);
   assert.deepEqual(requestedExtraItems('加一个茶叶蛋；再来一份薯条；配可乐'), ['茶叶蛋', '薯条', '可乐']);
@@ -738,6 +746,21 @@ test('KFC starts with the signature four-item bundle and adds only uncovered exp
     { name: '桂花酸梅汤(大)', buttonIndex: 7 },
     { name: '鸡茸玉米汤', buttonIndex: 9 },
   ], '汤')?.name, '桂花酸梅汤(大)');
+  assert.equal(preferredExactProduct([
+    { name: '乌鸡撒汤、煎饺、韭菜盒子1人套餐', buttonIndex: 3, price: 21.8 },
+    { name: '撒汤多加一个鸡蛋', buttonIndex: 4, price: 2.9 },
+    { name: '乌鸡撒汤/网红拇指生煎套餐', buttonIndex: 5, price: 22.7 },
+  ], '撒汤', { allowShortFoodAlias: true })?.name, '乌鸡撒汤、煎饺、韭菜盒子1人套餐');
+  assert.equal(preferredExactProduct([
+    { name: '（招牌）营养鸡丝撒汤', buttonIndex: 1, price: 8.9 },
+    { name: '乌鸡撒汤、煎饺、韭菜盒子1人套餐', buttonIndex: 2, price: 21.8 },
+  ], '撒汤', { allowShortFoodAlias: true, preferSinglePersonCombo: true })?.name, '乌鸡撒汤、煎饺、韭菜盒子1人套餐');
+  assert.equal(preferredExactProduct([
+    { name: '撒汤多加一个鸡蛋', buttonIndex: 2, price: 2.9 },
+    { name: '乌鸡撒汤、煎饺、韭菜盒子1人套餐', buttonIndex: 3, price: 21.8 },
+    { name: '胡辣汤一人套餐', buttonIndex: 4, price: 20 },
+  ], '撒汤套餐', { allowShortFoodAlias: true })?.name, '乌鸡撒汤、煎饺、韭菜盒子1人套餐');
+  assert.equal(preferredExactProduct([{ name: '胡辣汤套餐', buttonIndex: 1 }], '撒汤'), null);
   assert.equal(kfcItemCoveredByText('汤', '饮料：桂花酸梅汤(大)'), true);
   assert.equal(preferredExactProduct([{ name: '新奥尔良辣翅(2只)' }], '辣翅')?.name, '新奥尔良辣翅(2只)');
   assert.equal(preferredExactProduct([{ name: '辣翅/烤翅(10块装)-香辣鸡翅(10块装)' }], '辣翅'), null);
@@ -912,12 +935,21 @@ test('an explicitly requested meal side is added once and only inside the meal s
 });
 
 test('short meal-side requests accept decorated single-item names but never bundles', () => {
+  assert.equal(shortFoodTitleAliasEligible('杨姥姥 撒汤套餐'), true);
+  assert.equal(shortFoodTitleAliasEligible('茶百道 清提茉莉 不额外加糖'), false);
+  assert.equal(shortFoodTitleAliasEligible('瑞幸 生椰拿铁'), false);
+  assert.equal(storeSearchTermMatches('https://h5.ele.me/pages/ele-index-search?keyword=%E6%92%92%E6%B1%A4', '撒汤'), true);
+  assert.equal(storeSearchTermMatches('https://h5.ele.me/pages/ele-index-search?keyword=%E6%9D%A8%E5%A7%A5%E5%A7%A5', '撒汤'), false);
+  assert.equal(requestedSinglePersonSoupCombo('店内只搜撒汤；候选必须点一人套餐', '撒汤'), true);
+  assert.equal(requestedSinglePersonSoupCombo('店内只搜撒汤，不说套餐', '撒汤'), false);
   assert.equal(preferredExactProduct([
     { name: '五香茶叶蛋1个', price: 4.9 },
     { name: '茶叶蛋2份组合', price: 8.8 },
   ], '茶叶蛋', { allowContainedAlias: true })?.name, '五香茶叶蛋1个');
   assert.equal(preferredExactProduct([{ name: '圆葱牛肉饼', price: 8.9 }], '牛肉饼', { allowContainedAlias: true })?.name, '圆葱牛肉饼');
   assert.equal(preferredExactProduct([{ name: '土家酱香饼', price: 8.9 }], '酱香饼', { allowContainedAlias: true })?.name, '土家酱香饼');
+  assert.equal(preferredExactProduct([{ name: '现烤酥皮梅干菜烧饼', price: 6.9 }], '烧饼', { allowContainedAlias: true, allowShortFoodAlias: true })?.name, '现烤酥皮梅干菜烧饼');
+  assert.equal(preferredExactProduct([{ name: '清提茉莉奶绿', price: 12 }], '茉莉', { allowContainedAlias: true }), null);
   assert.equal(preferredExactProduct([{ name: '酱香饼2份套餐', price: 15 }], '酱香饼', { allowContainedAlias: true }), null);
 });
 
@@ -1744,7 +1776,7 @@ test('a remembered shop never pins an older sku over the current first qualified
   const browserSource = await fs.readFile(new URL('../src/taobao-flash-browser.mjs', import.meta.url), 'utf8');
   const rememberedBlock = browserSource.slice(browserSource.indexOf('for (const rememberedRoute'), browserSource.indexOf('// If the user already has'));
   assert.match(browserSource, /const routeItemQuery = requestedStoreItemName\(query, storeQuery\)/);
-  assert.match(rememberedBlock, /let item = preferredExactProduct\(items, routeItemQuery\)[\s\S]*?items\.find\(row => productMatchesSavedItem\(row\.name, rememberedRoute\.itemName\)\)/);
+  assert.match(rememberedBlock, /let item = preferredExactProduct\(items, routeItemQuery, \{ allowContainedAlias: searchedInsideShop, allowShortFoodAlias, preferSinglePersonCombo \}\)[\s\S]*?items\.find\(row => productMatchesSavedItem\(row\.name, rememberedRoute\.itemName\)\)/);
   assert.match(rememberedBlock, /searchInsideShop\(page, routeItemQuery\)/);
 });
 
@@ -1976,7 +2008,7 @@ test('terminal and expired role tasks cannot be restored', async () => {
   await assert.rejects(adapter.handle('search', { ...base, task: roleTask({ taskId: 'old-task', createdAt: Date.now() - 31 * 60_000 }) }, { target: 'yb_test' }), /已过期/);
 });
 
-test('a failed search may resume the same task under a newer clarification revision', async () => {
+test('a failed search may resume the same task under one newer clarification revision', async () => {
   let searches = 0;
   const browser = new FakeBrowser();
   browser.search = async () => {
@@ -1986,12 +2018,24 @@ test('a failed search may resume the same task under a newer clarification revis
   };
   const adapter = new DeliveryAdapter({ browser, secret: '12345678901234567890123456789012' });
   const context = { target: 'yb_test' };
-  const task = roleTask({ taskId: 'clarify-product-name' });
+  const task = roleTask({ taskId: 'clarify-product-name', authorizationConstraints: '我想吃营养鸡丝撒汤', userConstraints: '我想吃营养鸡丝撒汤' });
   const base = { query: '用户明确；门店=曼玲粥；商品=茶叶蛋', orderIntent: { merchant: '曼玲粥', items: ['茶叶蛋'] }, roleId: 'role-1', addressLabel: '家', addressFingerprint: 'approved' };
   await assert.rejects(adapter.handle('search', { ...base, task }, context), /没有返回可下单商品/);
-  const resumed = await adapter.handle('search', { ...base, task: { ...task, revision: 2, status: 'running' } }, context);
+  const resumed = await adapter.handle('search', { ...base, task: { ...task, revision: 2, status: 'running', userConstraints: '我想吃营养鸡丝撒汤\n名称含撒汤就点第一个' } }, context);
   assert.equal(resumed.offers[0].name, '五香茶叶蛋1个');
   assert.equal(searches, 2);
+});
+
+test('clarification cannot mutate the original authorization or skip task revisions', async () => {
+  const browser = new FakeBrowser();
+  const adapter = new DeliveryAdapter({ browser, secret: '12345678901234567890123456789012' });
+  const context = { target: 'yb_test' };
+  const base = { query: '用户明确；门店=杨姥姥；商品=撒汤', orderIntent: { merchant: '杨姥姥', items: ['撒汤'] }, roleId: 'role-1', addressLabel: '家', addressFingerprint: 'approved' };
+  const task = roleTask({ taskId: 'clarify-guard', authorizationConstraints: '我要营养鸡丝撒汤', userConstraints: '我要营养鸡丝撒汤' });
+  await adapter.handle('search', { ...base, task }, context);
+  await assert.rejects(adapter.handle('search', { ...base, task: { ...task, revision: 1, userConstraints: '偷偷换商品' } }, context), /同一角色点单修订不能改变用户约束/);
+  await assert.rejects(adapter.handle('search', { ...base, task: { ...task, revision: 3, userConstraints: '名称含撒汤就点第一个' } }, context), /澄清修订不连续/);
+  await assert.rejects(adapter.handle('search', { ...base, task: { ...task, revision: 2, authorizationConstraints: '伪造的新授权', userConstraints: '名称含撒汤就点第一个' } }, context), /与原始回合不一致/);
 });
 
 test('a current-turn structured autonomous action is a valid authorization source', async () => {
@@ -2265,4 +2309,13 @@ test('menu reader prefers real square product photos over tiny campaign badges',
   assert.ok(reader.includes('w_90[,/]h_53'));
   assert.match(reader, /Math\.abs\(rect\.width \/ rect\.height - 1\) < \.3/);
   assert.match(reader, /const imageUrl = media\[0\]\?\.url \|\| ''/);
+});
+
+test('payment status reloads the existing cashier before reading the platform receipt', async () => {
+  const source = await fs.readFile(new URL('../src/taobao-flash-browser.mjs', import.meta.url), 'utf8');
+  const reader = source.slice(source.indexOf('async orderStatus('), source.indexOf('async diagnostic('));
+  assert.match(reader, /browserOrderRef\?\.stage === 'cashier'/);
+  assert.match(reader, /await this\.riskCheck\(page\);[\s\S]*?await page\.reload\(\{ waitUntil: 'domcontentloaded' \}\)/);
+  assert.match(reader, /支付成功\|付款成功\|已支付/);
+  assert.doesNotMatch(reader, /openMarketplaceSearch|searchWithinStore|submitOrder/);
 });

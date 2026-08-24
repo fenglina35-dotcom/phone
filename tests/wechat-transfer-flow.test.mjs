@@ -23,17 +23,19 @@ test('transfer cards expose every incoming and outgoing state with stable copy',
   vm.runInContext(`${functionSource('transferState')}\n${functionSource('transferCardCopy')}`,context);
   assert.equal(context.transferCardCopy({},false),'请收款');
   assert.equal(context.transferCardCopy({},true),'你发起了一笔转账');
-  assert.equal(context.transferCardCopy({received:true},false),'已收款');
+  assert.equal(context.transferCardCopy({received:true},false),'已被接收');
   assert.equal(context.transferCardCopy({payState:'received'},true),'已被接收');
-  assert.equal(context.transferCardCopy({refunded:true},false),'已退还');
+  assert.equal(context.transferCardCopy({received:true,_transferReceipt:true},true),'已收款');
+  assert.equal(context.transferCardCopy({refunded:true},false),'已被退还');
   assert.equal(context.transferCardCopy({declined:true},true),'已被退还');
+  assert.equal(context.transferCardCopy({refunded:true,_transferReceipt:true},false),'已退还');
   const preview=functionSource('previewTransferRows');
   const order=['in_pending','in_received','in_refunded','out_pending','out_received','out_refunded'].map(key=>preview.indexOf(`preview_transfer_${key}`));
   assert.ok(order.every((at,index)=>at>=0&&(index===0||at>order[index-1])),'preview must group incoming states before outgoing states');
   assert.match(preview,/wechat-transfer-chat-\(incoming\|outgoing\)-\(pending\|received\|refunded\)/);
-  assert.match(preview,/return row\?\[row\]:\[rows\[0\]\]/);
-  assert.equal((preview.match(/amount:1(?:,|\})/g)||[]).length,3,'incoming before and after previews must keep the same amount');
-  assert.equal((preview.match(/amount:5\.2(?:,|\})/g)||[]).length,3,'outgoing before and after previews must keep the same amount');
+  assert.match(preview,/receipt\?\[row,receipt\]:\[row\]/);
+  assert.equal((preview.match(/amount:1(?:,|\})/g)||[]).length,5,'incoming previews include the original cards and both receipts');
+  assert.equal((preview.match(/amount:5\.2(?:,|\})/g)||[]).length,5,'outgoing previews include the original cards and both receipts');
 });
 
 test('card click opens an independent detail page instead of directly settling money',()=>{
@@ -59,6 +61,8 @@ test('pending incoming detail can receive or refund and records exact timestamps
   assert.match(action,/m\.receivedAt=now/);
   assert.match(action,/m\.refundedAt=now/);
   assert.match(action,/m\._walletSettled=true;[^}]*addBill/);
+  assert.match(action,/transferReceiptEnsure\(hit\.cid,m,'user','receive',now\)/);
+  assert.match(action,/transferReceiptEnsure\(hit\.cid,m,'user','refund',now\)/);
   assert.match(action,/transferCounterpartyReaction\(hit\.cid,m,'receive'\)/);
   assert.match(action,/transferCounterpartyReaction\(hit\.cid,m,'refund'\)/);
   assert.match(reaction,/scheduleFeatureReply\(cid,featureEventNote\(kind/);
@@ -66,11 +70,13 @@ test('pending incoming detail can receive or refund and records exact timestamps
   assert.match(reaction,/你发出的转账被退还/);
   assert.match(reaction,/不能再输出 \[收款\] 或 \[拒收\] 标签/);
   assert.doesNotMatch(reaction,/msgs\([^)]*\)\.push\(\{role:'assistant'/,'transfer reactions must not manufacture a fixed role reply');
-  assert.doesNotMatch(action,/type:'transfer'/,'settling must update the original card instead of adding another transfer card');
-  assert.match(app,/mix\(m\.payState\);mix\(m\.receivedAt\);mix\(m\.refundedAt\)/);
+  assert.match(functionSource('transferReceiptEnsure'),/_transferReceipt:true/);
+  assert.match(functionSource('transferReceiptEnsure'),/receiptOf:m\.id/);
+  assert.match(functionSource('transferReceiptEnsure'),/rows\.find\([^)]*x\.receiptOf===m\.id\)/);
+  assert.match(app,/mix\(m\.payState\);mix\(m\.receivedAt\);mix\(m\.refundedAt\);mix\(m\._transferReceipt\);mix\(m\.receiptOf\);mix\(m\.receiptAction\)/);
 });
 
-test('receiving or refunding schedules one genuine contextual role reaction without duplicating the card',()=>{
+test('incoming receive and refund create one linked user receipt and one genuine contextual reaction',()=>{
   const makeContext=()=>{
     const transfer={id:'t1',role:'assistant',type:'transfer',amount:8.8,note:'给你买早餐',time:100};
     const rows=[transfer],replies=[];
@@ -83,29 +89,71 @@ test('receiving or refunding schedules one genuine contextual role reaction with
       featureEventNote:(kind,detail)=>`EVENT:${kind}\n${detail}`,
       scheduleFeatureReply:(cid,note,delay)=>{replies.push({cid,note,delay});return true;}
     });
-    vm.runInContext(`${functionSource('transferState')}\n${functionSource('transferCounterpartyReaction')}\n${functionSource('transferDetailAction')}`,context);
+    vm.runInContext(`${functionSource('transferState')}\n${functionSource('transferCardCopy')}\n${functionSource('transferReceiptEnsure')}\n${functionSource('transferCounterpartyReaction')}\n${functionSource('transferDetailAction')}`,context);
     return{context,transfer,rows,replies};
   };
 
   const received=makeContext();
   received.context.transferDetailAction('c1','t1','receive');
   assert.equal(received.transfer.payState,'received');
-  assert.equal(received.rows.filter(m=>m.type==='transfer').length,1);
+  const receivedCards=received.rows.filter(m=>m.type==='transfer');
+  assert.equal(receivedCards.length,2);
+  assert.equal(received.context.transferCardCopy(receivedCards[0],false),'已被接收');
+  assert.equal(received.context.transferCardCopy(receivedCards[1],true),'已收款');
+  assert.equal(receivedCards[1].role,'user');
+  assert.equal(receivedCards[1].receiptOf,'t1');
   assert.equal(received.replies.length,1);
   assert.match(received.replies[0].note,/EVENT:你发出的转账被收款/);
   assert.match(received.replies[0].note,/North刚在你之前转给ta的 ¥8\.80 转账详情页亲手点击了【收款】/);
   received.context.transferDetailAction('c1','t1','receive');
+  assert.equal(received.rows.filter(m=>m.type==='transfer').length,2,'a settled card must not create a second receipt');
   assert.equal(received.replies.length,1,'a settled card must not generate a second reaction');
 
   const refunded=makeContext();
   refunded.context.transferDetailAction('c1','t1','refund');
   assert.equal(refunded.transfer.payState,'refunded');
-  assert.equal(refunded.rows.filter(m=>m.type==='transfer').length,1);
+  const refundedCards=refunded.rows.filter(m=>m.type==='transfer');
+  assert.equal(refundedCards.length,2);
+  assert.equal(refunded.context.transferCardCopy(refundedCards[0],false),'已被退还');
+  assert.equal(refunded.context.transferCardCopy(refundedCards[1],true),'已退还');
+  assert.equal(refundedCards[1].role,'user');
+  assert.equal(refundedCards[1].receiptOf,'t1');
   assert.equal(refunded.replies.length,1);
   assert.match(refunded.replies[0].note,/EVENT:你发出的转账被退还/);
   assert.match(refunded.replies[0].note,/是ta退还你的转账，不是你退还ta的钱/);
   refunded.context.transferDetailAction('c1','t1','refund');
+  assert.equal(refunded.rows.filter(m=>m.type==='transfer').length,2,'a refunded card must not create a second receipt');
   assert.equal(refunded.replies.length,1,'a refunded card must not generate a second reaction');
+});
+
+test('outgoing receive and refund create the matching assistant-side receipt without a second settlement',()=>{
+  const run=mode=>{
+    const original={id:'out1',role:'user',type:'transfer',amount:5.2,time:100};
+    const rows=[original];
+    const context=vm.createContext({msgs:()=>rows,uid:()=>`r${rows.length}`});
+    vm.runInContext(`${functionSource('transferState')}\n${functionSource('transferCardCopy')}\n${functionSource('transferReceiptEnsure')}\n${functionSource('markTransfer')}`,context);
+    const settled=context.markTransfer('c1',mode);
+    return{context,original,rows,settled};
+  };
+
+  const received=run('collect');
+  assert.equal(received.settled,received.original);
+  assert.equal(received.rows.length,2);
+  assert.equal(received.context.transferCardCopy(received.rows[0],true),'已被接收');
+  assert.equal(received.context.transferCardCopy(received.rows[1],false),'已收款');
+  assert.equal(received.rows[1].role,'assistant');
+  assert.equal(received.rows[1].receiptOf,'out1');
+  assert.equal(received.context.markTransfer('c1','collect'),null);
+  assert.equal(received.rows.length,2);
+
+  const refunded=run('reject');
+  assert.equal(refunded.rows.length,2);
+  assert.equal(refunded.context.transferCardCopy(refunded.rows[0],true),'已被退还');
+  assert.equal(refunded.context.transferCardCopy(refunded.rows[1],false),'已退还');
+  assert.equal(refunded.rows[1].role,'assistant');
+  assert.equal(refunded.rows[1].receiptOf,'out1');
+  assert.equal(refunded.context.markTransfer('c1','reject'),null);
+  assert.equal(refunded.rows.length,2);
 });
 
 test('legacy duplicate collection and rejection cards stay hidden',()=>{
