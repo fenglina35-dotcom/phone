@@ -30,7 +30,7 @@ assert.match(delivery,/全部打烊或休息中/,'closed saved shops must be rep
 assert.match(delivery,/不要复述技术提示/,'the role must not paste internal delivery diagnostics into chat');
 assert.doesNotMatch(delivery,/\[真实外卖操作结果\]/,'internal delivery-operation prompts must never be sent into role chat');
 assert.match(delivery,/失败原因已经由系统在外卖控制页提示/,'the role prompt must keep failure details out of chat');
-assert.match(delivery,/必须先按你自己的语气自然问清楚并等待回答/,'vague delivery wishes must be clarified before automation');
+assert.match(delivery,/你可以按人设追问，也可以直接自主决定/,'a vague food wish may be clarified or become the role current-turn autonomous choice');
 assert.match(delivery,/这就已经是完整答案：不要再追问品牌、商品、口味、糖度、温度或规格/,'an autonomous order grant must not trigger another clarification loop');
 assert.match(delivery,/function roleRequestIntent/,'the browser request must retain actual user messages separately from role search text');
 assert.match(delivery,/authorizationConstraints:text\(task&&task\.authorizationConstraints\|\|/,'the service must bind the immutable original user authorization separately');
@@ -39,7 +39,8 @@ assert.match(delivery,/task\.autonomous=intent\.autonomous/,'the task must remem
 assert.match(delivery,/authorizationSource:source/,'every task must persist its authorization source');
 assert.match(delivery,/task\.authorizationSource==='role_current_turn'/,'a current-turn role action must explicitly carry autonomous authorization');
 assert.match(delivery,/structuredModelAction/,'browser work must require the current real-model structured action marker');
-assert.match(delivery,/没有这类真实依据时不得凭空主动下单/,'proactive ordering must require real recent meal-neglect evidence');
+assert.match(delivery,/可以在任何当前真实模型回合按本人意愿主动发起/,'the role may autonomously initiate delivery in any current genuine-model turn');
+assert.match(delivery,/只有这个当前结构化动作能授权启动/,'autonomous permission must still be expressed by the current model action instead of stale chat or page restoration');
 assert.match(delivery,/choice\.selected/,'unspecified options must preserve a real platform-selected default');
 assert.match(delivery,/平台“'\+name\+'”没有本次明确要求/,'an unavailable explicit option must pause instead of silently choosing another specification');
 assert.match(delivery,/function requestRoleClarification/,'uncertain real options must pause for a user clarification');

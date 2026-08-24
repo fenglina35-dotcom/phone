@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const source=fs.readFileSync(new URL('../delivery.js',import.meta.url),'utf8');
+const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 
 function makeRuntime(answer){
   let n=0;
@@ -80,4 +81,43 @@ test('an unclear answer cannot guess a candidate or create a new search',async()
   const {ctx,searches,meta}=makeRuntime('你看着办');
   assert.equal(await ctx.deliveryTryClarificationFallback('role-1','你看着办',meta),false);
   assert.equal(searches.length,0);
+});
+
+test('a one-word role approval repairs an explicit current delivery turn only once',()=>{
+  const {ctx,meta}=makeRuntime('我想吃杨姥佬家的撒汤');
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  meta.userText='我想吃杨姥佬家的撒汤';
+  const prompt=ctx.deliveryMissingActionRepairPrompt('role-1',meta.userText,'好',meta);
+  assert.match(prompt,/真实外卖动作补判/);
+  assert.match(prompt,/只输出一行完整的 \[真实外卖\|/);
+  assert.equal(ctx.deliveryMissingActionRepairPrompt('role-1',meta.userText,'好',meta),'','the same message may run at most one genuine-model repair');
+});
+
+test('an ordinary chat followed by 好 cannot enter delivery repair',()=>{
+  const {ctx,meta}=makeRuntime('今天在忙什么');
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  meta.userText='今天在忙什么';
+  assert.equal(ctx.deliveryMissingActionRepairPrompt('role-1',meta.userText,'好',meta),'');
+});
+
+test('the role can repair a current autonomous meal-care decision without waiting for a direct order',()=>{
+  const {ctx,meta}=makeRuntime('我今天没吃饭');
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  meta.userText='我今天没吃饭';
+  const prompt=ctx.deliveryMissingActionRepairPrompt('role-1',meta.userText,'等着。',meta);
+  assert.match(prompt,/你本人在当前回合基于人设与上下文自主决定/);
+  assert.match(prompt,/自主决定必须使用“主动关心”来源/);
+});
+
+test('a terse 都要 clarification can use the original task without another user message',()=>{
+  const {ctx,meta}=makeRuntime('都要');
+  const prompt=ctx.deliveryMissingActionRepairPrompt('role-1','都要','行，都给你点。',meta);
+  assert.match(prompt,/澄清回答必须严格沿用上方原 taskId 语义/);
+});
+
+test('chat wiring tries same-task fallback first, then one hidden real-model action repair',()=>{
+  assert.match(app,/_deliveryClarificationFallbackHandled=false[\s\S]*?deliveryTryClarificationFallback\(id,_userText,_deliveryActionMeta\)/);
+  assert.match(app,/deliveryMissingActionRepairPrompt\(id,_userText,content,_deliveryActionMeta\)[\s\S]*?await chatAPI\(/);
+  assert.match(app,/_deliveryRepairActions\.length===1[\s\S]*?\+'\\n\[真实外卖\|'/);
+  assert.doesNotMatch(app,/deliveryRequestPreludeRetry\(id/,'missing actions must be repaired in the same authorized turn, not by scheduling a new background turn');
 });

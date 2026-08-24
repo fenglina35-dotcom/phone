@@ -113,7 +113,7 @@ assert.ok(saves>=4,'learning and deletion must persist through the existing app 
 
 assert.equal(delivery,privateDelivery,'root and private delivery.js must stay byte-identical');
 assert.equal(app.replace(/\r\n/g,'\n'),privateApp.replace(/\r\n/g,'\n'),'root and private app.js must stay content-identical');
-assert.match(app,/deliveryConsumeMemoryTags\(content,c,\{structuredModelAction:true,allowNewTask:_deliveryCurrentUserTurn,accountId:String\(replyAccount/,'chat replies must bind learned memories to the current structured model turn');
+assert.match(app,/_deliveryActionMeta=\{structuredModelAction:true,allowNewTask:_deliveryCurrentUserTurn,accountId:String\(replyAccount[\s\S]{0,420}deliveryConsumeMemoryTags\(content,c,_deliveryActionMeta\)/,'chat replies must bind learned memories to the current structured model turn');
 assert.match(app,/channel:'call'[\s\S]{0,260}userText:/,'call replies must bind learned memories to the current structured model turn');
 assert.match(app,/换气泡\|外卖记忆/,'an unconsumed memory action must never appear as a role chat bubble');
 
