@@ -23,9 +23,9 @@ test('the narration button toggles the existing composer without a modal',()=>{
   const classes=new Set();
   const button={classList:{toggle(name,on){if(on)classes.add(name);else classes.delete(name);}},setAttribute(name,value){this[name]=value;},title:''};
   const bar={classList:{toggle(name,on){if(on)classes.add(`bar:${name}`);else classes.delete(`bar:${name}`);}}};
-  const textarea={placeholder:'',focus(){this.focused=true;},closest:()=>bar};
+  const textarea={placeholder:'',style:{},scrollHeight:42,scrollTop:0,focus(){this.focused=true;},closest:()=>bar};
   const context=vm.createContext({document:{},_off:{mode:'cohab',busy:false,narrateMode:false},$:selector=>selector==='.off-narrate'?button:selector==='#off_in'?textarea:null});
-  vm.runInContext(`${functionSource('offNarrationMode')}${functionSource('offNarrationDecorate')}${functionSource('offNarrate')}this.toggle=offNarrate;`,context);
+  vm.runInContext(`${functionSource('offNarrationMode')}${functionSource('offInputAutoSize')}${functionSource('offNarrationDecorate')}${functionSource('offNarrate')}this.toggle=offNarrate;`,context);
   context.toggle();
   assert.equal(context._off.narrateMode,true);
   assert.equal(button['aria-pressed'],'true');

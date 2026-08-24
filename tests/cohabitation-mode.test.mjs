@@ -35,8 +35,9 @@ test('co-living state pauses without deleting and advances work to return home',
     Date,console,
     getC:id=>id==='c1'?sandbox.S.contacts[0]:null,
     uid:(()=>{let n=0;return()=>`u${++n}`;})(),
-    save:()=>{},render:()=>{},toast:()=>{},openOfflineMenu:()=>{},closeModal:()=>{},
-    go:()=>{},home:()=>{},openChat:()=>{},cur:()=>({p:'home'}),initiativeArm:()=>{},
+    save:()=>{},saveNow:()=>{sandbox.saveNowCalls++;return true;},saveNowCalls:0,render:()=>{},toast:()=>{},openOfflineMenu:()=>{},closeModal:()=>{},
+    routes:[],homeCalls:0,controlCalls:0,
+    go:(p,params)=>sandbox.routes.push({p,...params}),home:()=>{sandbox.homeCalls++;},openChat:()=>{},cur:()=>({p:'home'}),initiativeArm:()=>{},cohabScheduleArrival:()=>{},
     offDateTime:()=> '2026年8月9日 12:00',offElapsed:()=> '1天',esc:String,
     uiConfirm:async()=>true,_off:null,_offSel:null
   };
@@ -64,6 +65,19 @@ test('co-living state pauses without deleting and advances work to return home',
     globalThis.doorState={phase:d.phase,activity:d.activity,changed:atDoor};
     const entered=cohabInferOnlineState('进来了。\\n过来，让我看看你。','c1',d);
     globalThis.enteredState={phase:d.phase,activity:d.activity,changed:entered,source:d.stateSource,unreadReturn:d.unreadReturn};
+    cohabSetPhase('c1','work',60,{silent:true,source:'manual'});
+    const beforeRoutes=globalThis.routes.length;
+    const enteredWork=cohabEnter('c1');
+    const directRoutes=globalThis.routes.length;
+    cohabActionTap(null,'enter','c1');
+    const firstRoutes=globalThis.routes.length;
+    cohabActionTap(null,'enter','c1');
+    const secondRoutes=globalThis.routes.length;
+    cohabControls=()=>{globalThis.controlCalls++;};
+    offQuit=()=>{globalThis.homeCalls++;return true;};
+    cohabActionTap(null,'controls','c1');
+    cohabActionTap(null,'quit','c1');
+    globalThis.workEntry={enteredWork,beforeRoutes,directRoutes,firstRoutes,secondRoutes,route:globalThis.routes.at(-1),phase:d.phase,saveNowCalls:globalThis.saveNowCalls,controlCalls:globalThis.controlCalls,homeCalls:globalThis.homeCalls};
   `,sandbox);
   assert.deepEqual({...sandbox.enabled},{enabled:true,paused:false,msgs:1,startedAt:sandbox.enabled.startedAt});
   assert.equal(sandbox.paused.enabled,false);
@@ -79,6 +93,15 @@ test('co-living state pauses without deleting and advances work to return home',
   assert.deepEqual({...sandbox.thoughtState},{phase:'away',changed:false});
   assert.deepEqual({...sandbox.doorState},{phase:'returning',activity:'在门口',changed:true});
   assert.deepEqual({...sandbox.enteredState},{phase:'home',activity:'在家',changed:true,source:'wechat-natural-arrival',unreadReturn:true});
+  assert.equal(sandbox.workEntry.enteredWork,true);
+  assert.equal(sandbox.workEntry.directRoutes,sandbox.workEntry.beforeRoutes+1,'work state must still enter immediately');
+  assert.equal(sandbox.workEntry.firstRoutes,sandbox.workEntry.directRoutes+1,'the first guarded entry tap must route synchronously');
+  assert.equal(sandbox.workEntry.secondRoutes,sandbox.workEntry.firstRoutes,'duplicate entry tap must be idempotently ignored');
+  assert.deepEqual({...sandbox.workEntry.route},{p:'off',id:'c1',mode:'cohab'});
+  assert.equal(sandbox.workEntry.phase,'work');
+  assert.ok(sandbox.workEntry.saveNowCalls>=3,'toggle and entry must persist immediately');
+  assert.equal(sandbox.workEntry.controlCalls,1,'a different control must not be swallowed by the entry guard');
+  assert.equal(sandbox.workEntry.homeCalls,1,'back action must remain available in work state');
 });
 
 test('online and face-to-face activity use a narrow shared status boundary',()=>{
@@ -91,7 +114,7 @@ test('online and face-to-face activity use a narrow shared status boundary',()=>
   assert.match(source,/共同生活页面里的动作与对白不会复制到微信/);
   assert.match(source,/微信消息也不会冒充面对面台词/);
   assert.match(source,/function offlineFocusActive\(\)\{if\(typeof cohabSceneActive==='function'&&cohabSceneActive\(\)\)return true/);
-  assert.match(source,/function incomingCall\(id,kind,opt\)\{if\(roleOnlineProactiveBlocked\(id\)\)return false/);
+  assert.match(source,/function incomingCall\(id,kind,opt\).*cohabRestricted&&!opt\.requestedByUser.*roleOnlineProactiveBlocked\(id\).*requestedByUser/s);
   assert.match(source,/async function maybeProactive\(id\)\{if\(!isMain\(\)\|\|roleOnlineProactiveBlocked\(id\)/);
   assert.match(source,/function roleOnlineProactiveBlocked\(id\).*offlineWechatLiveState\(c\).*cohabOnlineQuiet\(id\).*offlineFocusActive\(\)/);
   assert.match(source,/面对面在一起，普通后台主动微信与来电必须静默/);
@@ -151,12 +174,24 @@ test('co-living UI exposes persistent status, return notice and test controls',(
   assert.match(html,/\.cohab-wx-state/);
   assert.match(source,/function cohabWechatNavBadge\(c\)/);
   assert.match(source,/page\.p==='off'&&stage\.querySelector\('\.cohab-status-chip'\)/);
-  assert.match(source,/function cohabActionTap\(e,action,id\).*preventDefault.*stopPropagation.*setTimeout/s,'mobile co-living controls must consume the original tap before changing the route');
-  assert.match(source,/type="button" onclick="return cohabActionTap\(event,'enter','\$\{cid\}'\)"/,'the entry button must use the guarded route');
+  assert.match(source,/function cohabActionTap\(e,action,id\).*preventDefault.*stopPropagation.*action==='controls'.*action==='quit'/s,'all mobile co-living controls must share the synchronous guarded route');
+  assert.doesNotMatch(functionSource('cohabActionTap'),/setTimeout/,'co-living taps must not wait for a later event-loop turn');
+  assert.match(source,/type="button" onclick="return cohabActionTap\(null,'enter','\$\{cid\}'\)"/,'the entry button must use the guarded route without relying on a global event object');
+  assert.match(source,/aria-label="返回桌面" onclick="return cohabActionTap\(null,'quit','\$\{id\}'\)"/,'the co-living back control must be a real synchronous button');
   assert.match(functionSource('cohabEnter'),/go\('off',\{id,mode:'cohab'\}\).*return true/s,'co-living entry must preserve its mode in navigation history');
   assert.match(preview,/共同生活 · 测试版/);
   assert.match(preview,/data-phase="work"/);
   assert.match(preview,/先生\^\^回来了/);
+});
+
+test('co-living calls require a current explicit user request and remain the real model choice',()=>{
+  const explicit=vm.runInNewContext(`(${functionSource('explicitIncomingCallRequest')})`);
+  for(const text of ['你现在给我打个电话','给我打过来','打视频电话给我'])assert.equal(explicit(text),true,text);
+  for(const text of ['我给你打电话','他刚才给我打电话了','你为什么没给我打电话','今天工作忙吗'])assert.equal(explicit(text),false,text);
+  assert.match(source,/_explicitCallTurn=!note&&explicitIncomingCallRequest\(_userText\)/,'only the current ordinary user turn can authorize a call');
+  assert.match(source,/incomingCall\(c\.id,k==='\u89c6\u9891'\?'video':'voice',\{requestedByUser:_explicitCallTurn,source:'current-model-turn'\}\)/,'the model call action must carry that current-turn authorization');
+  assert.match(source,/共同生活开启期间不得在没有当前命令时自行来电/);
+  assert.match(source,/按本人性格、情绪和电话频率决定是否输出来电动作，不打也可以/);
 });
 
 test('co-living condenses the user-selected number of completed rounds into isolated role memories',()=>{

@@ -1,6 +1,6 @@
-const BUILD='1057';
-const HOTFIX='v1057-cohab-pet-battery-transfer-1';
-const SHELL_CACHE='north-shell-v1057';
+const BUILD='1058';
+const HOTFIX='v1058-cohab-call-storage-transfer-offline-input-1';
+const SHELL_CACHE='north-shell-v1058';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];

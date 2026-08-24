@@ -53,7 +53,11 @@ for(const removed of ['offInputStabilize','offInputPointerDown','offInputMount']
   assert.equal(app.includes(`function ${removed}(`),false,`${removed} must stay removed so the native textarea and keyboard keep working`);
 }
 assert.doesNotMatch(app,/if\(c\.p==='off'\)offInputMount\(\)/);
-assert.match(shell,/\.offinput #off_in\{[^}]*height:42px!important[^}]*line-height:42px!important[^}]*touch-action:manipulation/);
+assert.match(shell,/\.offinput #off_in\{[^}]*height:42px;[^}]*min-height:42px!important[^}]*max-height:90px!important[^}]*line-height:20px!important[^}]*touch-action:manipulation/);
+assert.match(shell,/\.offinput\{[^}]*align-items:flex-end/);
+assert.match(shell,/\.offinput \.send\{[^}]*height:42px[^}]*align-self:flex-end/);
+assert.match(app,/function offInputAutoSize\(ta\)/);
+assert.match(app,/document\.addEventListener\('input',e=>\{const ta=e&&e\.target;if\(ta&&ta\.id==='off_in'\)offInputAutoSize\(ta\);\},\{passive:true\}\)/);
 assert.match(app,/cohabSettingsPanelBase[\s\S]*cohab-settings-wrap/);
 assert.match(shell,/\.cohab-settings\[open\]\+\.cohab-debug-reply\{display:none\}/);
 assert.match(shell,/\.cohab-nav \.off-nav-actions \.cohab-status-chip\{[^}]*min-width:70px[^}]*max-width:142px/);

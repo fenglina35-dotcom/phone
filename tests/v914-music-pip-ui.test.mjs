@@ -7,10 +7,10 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const pip=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/CallPictureInPictureController.swift',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-test('v1057 web source keeps private 1.0.180 compatibility',()=>{
-  assert.match(app,/APP_VER='v1057 · 共同生活宠物电量与转账整合版'/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 180;/);
-  assert.match(project,/MARKETING_VERSION = 1\.0\.180;/);
+test('v1058 web source keeps private 1.0.181 compatibility',()=>{
+  assert.match(app,/APP_VER='v1058 · 共同生活通话、存储散热、转账回复与约会输入修复版'/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 181;/);
+  assert.match(project,/MARKETING_VERSION = 1\.0\.181;/);
 });
 
 test('public music search needs no user login and reuses together-listen songs',()=>{

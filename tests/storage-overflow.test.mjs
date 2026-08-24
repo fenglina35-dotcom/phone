@@ -67,7 +67,8 @@ test('storage meter distinguishes the compact core index from browser-wide capac
   assert.match(app, /overflow=!!_coreOverflowMode/);
   assert.match(app, /数据量 '\+si\.logicalMb\.toFixed\(2\)\+'MB · 大容量模式/);
   assert.match(app, /当前数字是本站已经使用的数据量，不是容量上限/);
-  assert.match(app, /coreDanger=!si\.overflow&&si\.pct>=99/);
+  assert.match(app, /nativeCore=privateNativeCoreStorageKey\(CORE_IDB_KEY\)/);
+  assert.match(app, /coreDanger=!nativeCore&&!si\.overflow&&si\.pct>=99/);
   assert.match(app, /navigator\.storage&&navigator\.storage\.persist/);
 });
 

@@ -184,6 +184,39 @@ test('private boot keeps historical image references lazy without allowing image
   assert.doesNotMatch(app,/function scheduleVisibleStoredImages\(\)[\s\S]{0,300}?requestAnimationFrame/);
 });
 
+test('a rejected visible-image batch backs off instead of immediately retrying the same database reads',async()=>{
+  const start=app.indexOf('let _visibleImageHydrateTimer=');
+  const end=app.indexOf('function refreshHydratedUI()',start);
+  assert.ok(start>=0&&end>start,'visible image hydration block is present');
+  const timers=[],sandbox={
+    Date,Map,Set,Promise,
+    _imgCache:{},_imgRev:new Map(),_imgReady:new Set(),
+    visibleStoredImageKeys:()=>Array.from({length:13},(_,i)=>'img'+i),
+    hydrateStoredImageNodes:()=>{},
+    imgMany:async()=>{sandbox.reads++;throw new Error('database temporarily unavailable');},
+    reads:0,
+    setTimeout:(fn,delay)=>{timers.push({fn,delay});return timers.length;},
+    requestIdleCallback:()=>{throw new Error('batch failure must not immediately request another idle read');}
+  };
+  vm.runInNewContext(app.slice(start,end)+`;
+    globalThis.runHydrate=()=>hydrateVisibleStoredImages(false);
+    globalThis.missCount=()=>_visibleImageMisses.size;
+    globalThis.immediateAgain=()=>_visibleImageHydrateAgain;
+  `,sandbox);
+  assert.equal(await sandbox.runHydrate(),false);
+  assert.equal(sandbox.reads,1);
+  assert.equal(sandbox.missCount(),12,'every failed key receives retry state');
+  assert.equal(sandbox.immediateAgain(),false,'the failed batch cannot request an immediate follow-up');
+  assert.equal(timers.length,1,'exactly one delayed retry is scheduled');
+  assert.ok(timers[0].delay>=4000,'retry delay is at least four seconds');
+});
+
+test('private storage warnings use the native bridge rather than the web five-megabyte ceiling',()=>{
+  assert.match(app,/function refreshNativeStorageEstimate\(force\)\{if\(!privateNativeAppOn\(\)/);
+  assert.match(app,/native=privateNativeAppOn\(\)\?await refreshNativeStorageEstimate\(true\):null/);
+  assert.match(app,/function checkStorageWarn\(\).*nativeCore=privateNativeCoreStorageKey\(CORE_IDB_KEY\).*coreDanger=!nativeCore&&!si\.overflow/s);
+});
+
 test('startup avoids immediate whole-state cloud and recovery work',()=>{
   assert.match(app,/setTimeout\(cloudAutoTick,8000\)/);
   assert.match(app,/privatePrimaryMirrorCheck\(\{silent:true\}\)/);
