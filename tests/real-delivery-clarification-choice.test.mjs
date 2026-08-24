@@ -16,7 +16,7 @@ function makeRuntime(answer){
     {id:'a3',role:'assistant',type:'text',content:'你要加哪个。',time:now-500},
     {id:'user-current',role:'user',type:'text',content:answer,time:now-100},
   ];
-  const searches=[];
+  const searches=[],merchants=[];
   const ctx={
     console,URL,AbortController,JSON,Date,Math,Promise,Number,String,Array,Object,RegExp,
     COMPANION_URL:'https://delivery.example.test',COMPANION_KEY:'public-test-key',APP_VER:'v-test',
@@ -32,6 +32,7 @@ function makeRuntime(answer){
   ctx.fetch=async(_url,init)=>{
     const body=JSON.parse(init.body);
     if(body.action==='search'){
+      merchants.push(body.payload.orderIntent.merchant);
       searches.push({taskId:body.payload.task.taskId,items:[...body.payload.orderIntent.items]});
       return {ok:true,status:200,json:async()=>({ok:true,data:{offers:[{
         offerId:'offer-1',provider:'taobao_flash',merchantId:'shop-1',merchant:'杨姥佬家de撒汤',
@@ -59,7 +60,7 @@ function makeRuntime(answer){
   ctx.S.food.real.roleAttempts[role.id]=task;
   ctx.S.food.real.roleClarifications[role.id]={taskId:task.taskId,kind:'minimum_order',query:task.query,merchant:'杨姥佬家de撒汤',item:'撒汤',reason:'未达到起送价',at:now-800};
   const meta={structuredModelAction:true,allowNewTask:true,accountId:'main',sessionId:'role-1:main',turnId:'user-current',messageId:'user-current',modelReplyId:'reply-current',channel:'chat',userText:answer};
-  return {ctx,searches,meta,task};
+  return {ctx,searches,merchants,meta,task};
 }
 
 test('a named add-on resumes only that item on the original task',async()=>{
@@ -110,6 +111,68 @@ test('an ordinary chat followed by 好 cannot enter delivery repair',()=>{
   assert.equal(ctx.deliveryMissingActionRepairPrompt('role-1',meta.userText,'好',meta),'');
 });
 
+test('a genuine one-word approval directly starts an explicit order without a second model call',async()=>{
+  const {ctx,searches,merchants,meta}=makeRuntime('我想吃那个杨姥姥家de撒汤，商品名叫：撒汤');
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  delete ctx.S.food.real.roleAttempts['role-1'];
+  ctx.S.food.real.roleTasks={};
+  meta.userText='我想吃那个杨姥姥家de撒汤，商品名叫：撒汤';
+  await ctx.deliveryTryExplicitApprovalFallback('role-1',meta.userText,'好。',meta);
+  assert.deepEqual(searches,[{taskId:'delivery_id-1',items:['撒汤']}]);
+  assert.deepEqual(merchants,['杨姥姥']);
+});
+
+test('approved broad and product-only food requests are allowed to reach search',async()=>{
+  const first=makeRuntime('随便点一个主食');
+  delete first.ctx.S.food.real.roleClarifications['role-1'];
+  delete first.ctx.S.food.real.roleAttempts['role-1'];
+  first.ctx.S.food.real.roleTasks={};
+  first.meta.userText='随便点一个主食';
+  await first.ctx.deliveryTryExplicitApprovalFallback('role-1',first.meta.userText,'行，我看看。',first.meta);
+  assert.deepEqual(first.searches[0].items,['主食']);
+  const second=makeRuntime('点一碗兰州牛肉面');
+  delete second.ctx.S.food.real.roleClarifications['role-1'];
+  delete second.ctx.S.food.real.roleAttempts['role-1'];
+  second.ctx.S.food.real.roleTasks={};
+  second.meta.userText='点一碗兰州牛肉面';
+  await second.ctx.deliveryTryExplicitApprovalFallback('role-1',second.meta.userText,'等着。',second.meta);
+  assert.deepEqual(second.searches[0].items,['兰州牛肉面']);
+});
+
+test('an approved natural multi-item request reaches search as one deduplicated checklist',async()=>{
+  const {ctx,searches,meta}=makeRuntime('我想吃燕麦牛奶粥+茶叶蛋');
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  delete ctx.S.food.real.roleAttempts['role-1'];
+  ctx.S.food.real.roleTasks={};
+  meta.userText='我想吃燕麦牛奶粥+茶叶蛋';
+  await ctx.deliveryTryExplicitApprovalFallback('role-1',meta.userText,'可以，我去看。',meta);
+  assert.deepEqual(searches[0].items,['燕麦牛奶粥','茶叶蛋']);
+});
+
+test('broader but explicit genuine-role approval wording starts the current food request',async()=>{
+  const {ctx,searches,meta}=makeRuntime('我想吃一碗粥');
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  delete ctx.S.food.real.roleAttempts['role-1'];
+  ctx.S.food.real.roleTasks={};
+  meta.userText='我想吃一碗粥';
+  await ctx.deliveryTryExplicitApprovalFallback('role-1',meta.userText,'没问题，交给我。',meta);
+  assert.deepEqual(searches[0].items,['粥']);
+});
+
+test('ordinary chat still cannot use a one-word role reply to start delivery',()=>{
+  const {ctx,meta}=makeRuntime('今天累不累');
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  meta.userText='今天累不累';
+  assert.equal(ctx.deliveryTryExplicitApprovalFallback('role-1',meta.userText,'好。',meta),false);
+});
+
+test('a genuine role refusal never starts the relaxed approval bridge',()=>{
+  const {ctx,meta}=makeRuntime('点一碗兰州牛肉面');
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  meta.userText='点一碗兰州牛肉面';
+  assert.equal(ctx.deliveryTryExplicitApprovalFallback('role-1',meta.userText,'好吧，还是不点了。',meta),false);
+});
+
 test('the role can repair a current autonomous meal-care decision without waiting for a direct order',()=>{
   const {ctx,meta}=makeRuntime('我今天没吃饭');
   delete ctx.S.food.real.roleClarifications['role-1'];
@@ -125,8 +188,9 @@ test('a terse 都要 clarification can use the original task without another use
   assert.match(prompt,/澄清回答必须严格沿用上方原 taskId 语义/);
 });
 
-test('chat wiring tries same-task fallback first, then one hidden real-model action repair',()=>{
-  assert.match(app,/_deliveryClarificationFallbackHandled=false[\s\S]*?deliveryTryClarificationFallback\(id,_userText,_deliveryActionMeta\)/);
+test('chat wiring tries same-task and direct approval fallbacks before hidden model repair',()=>{
+  assert.match(app,/_deliveryActionFallbackHandled=false[\s\S]*?deliveryTryClarificationFallback\(id,_userText,_deliveryActionMeta\)/);
+  assert.match(app,/deliveryTryExplicitApprovalFallback\(id,_userText,content,_deliveryActionMeta\)[\s\S]*?_deliveryActionFallbackHandled=!!_directRun/);
   assert.match(app,/deliveryMissingActionRepairPrompt\(id,_userText,content,_deliveryActionMeta\)[\s\S]*?await chatAPI\(/);
   assert.match(app,/_deliveryRepairActions\.length===1[\s\S]*?\+'\\n\[真实外卖\|'/);
   assert.doesNotMatch(app,/deliveryRequestPreludeRetry\(id/,'missing actions must be repaired in the same authorized turn, not by scheduling a new background turn');

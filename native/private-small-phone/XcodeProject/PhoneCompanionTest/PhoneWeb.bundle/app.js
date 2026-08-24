@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1062'){
+if(window.__NORTH_SHELL_BUILD__!=='1063'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -378,7 +378,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1062 · 外卖澄清动作与同任务续接修复版';
+const APP_VER='v1063 · 外卖角色同意直传与首单恢复版';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1509,7 +1509,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1062&r=v1062-delivery-clarification-bridge-1';
+  const url='sw.js?v=1063&r=v1063-delivery-approval-bridge-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -11057,8 +11057,9 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
     if(typeof deliveryConsumeMemoryTags==='function')content=deliveryConsumeMemoryTags(content,c,_deliveryActionMeta);else content=String(content||'').replace(/[\[【]\s*外卖记忆\s*[|｜:：][^\]】]*[\]】]/g,'');
     if(typeof deliveryCaptureClarificationCandidates==='function')deliveryCaptureClarificationCandidates(id,content,_deliveryActionMeta);
     content=String(content||'').replace(/([^\r\n])([\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：][^\]】]*[\]】])/g,'$1\n$2').replace(/([\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：][^\]】]*[\]】])([^\r\n])/g,'$1\n$2');
-    let _deliveryClarificationFallbackHandled=false;if(_deliveryCurrentUserTurn&&!/[\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：]/.test(content)&&typeof deliveryTryClarificationFallback==='function'&&typeof deliveryRolePreludeAllowed==='function'&&String(content||'').split(/\r?\n/).some(x=>deliveryRolePreludeAllowed(x))){const _fallbackRun=deliveryTryClarificationFallback(id,_userText,_deliveryActionMeta);_deliveryClarificationFallbackHandled=!!_fallbackRun;if(_fallbackRun&&typeof _fallbackRun.catch==='function')_fallbackRun.catch(()=>{});}
-    if(_deliveryCurrentUserTurn&&!_deliveryClarificationFallbackHandled&&!/[\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：]/.test(content)&&typeof deliveryMissingActionRepairPrompt==='function'){const _deliveryRepairPrompt=deliveryMissingActionRepairPrompt(id,_userText,content,_deliveryActionMeta);if(_deliveryRepairPrompt){let _deliveryRepair='';try{_deliveryRepair=await chatAPI([{role:'system',content:_stableSys},...hist,{role:'assistant',content:String(content||'')},{role:'user',content:_deliveryRepairPrompt},_pin],_md);}catch(_){}if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;const _deliveryRepairActions=String(_deliveryRepair||'').match(/[\[【]\s*真实外卖\s*[|｜:：]\s*[^\]】]+[\]】]/g)||[];if(_deliveryRepairActions.length===1){const _deliveryRepairBody=(_deliveryRepairActions[0].match(/[\[【]\s*真实外卖\s*[|｜:：]\s*([^\]】]+)[\]】]/)||[])[1];if(_deliveryRepairBody)content=String(content||'').trim()+'\n[真实外卖|'+_deliveryRepairBody.trim()+']';}}}
+    let _deliveryActionFallbackHandled=false;if(_deliveryCurrentUserTurn&&!/[\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：]/.test(content)&&typeof deliveryTryClarificationFallback==='function'&&typeof deliveryRolePreludeAllowed==='function'&&String(content||'').split(/\r?\n/).some(x=>deliveryRolePreludeAllowed(x))){const _fallbackRun=deliveryTryClarificationFallback(id,_userText,_deliveryActionMeta);_deliveryActionFallbackHandled=!!_fallbackRun;if(_fallbackRun&&typeof _fallbackRun.catch==='function')_fallbackRun.catch(()=>{});}
+    if(_deliveryCurrentUserTurn&&!_deliveryActionFallbackHandled&&!/[\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：]/.test(content)&&typeof deliveryTryExplicitApprovalFallback==='function'){const _directRun=deliveryTryExplicitApprovalFallback(id,_userText,content,_deliveryActionMeta);_deliveryActionFallbackHandled=!!_directRun;if(_directRun&&typeof _directRun.catch==='function')_directRun.catch(()=>{});}
+    if(_deliveryCurrentUserTurn&&!_deliveryActionFallbackHandled&&!/[\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：]/.test(content)&&typeof deliveryMissingActionRepairPrompt==='function'){const _deliveryRepairPrompt=deliveryMissingActionRepairPrompt(id,_userText,content,_deliveryActionMeta);if(_deliveryRepairPrompt){let _deliveryRepair='';try{_deliveryRepair=await chatAPI([{role:'system',content:_stableSys},...hist,{role:'assistant',content:String(content||'')},{role:'user',content:_deliveryRepairPrompt},_pin],_md);}catch(_){}if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;const _deliveryRepairActions=String(_deliveryRepair||'').match(/[\[【]\s*真实外卖\s*[|｜:：]\s*[^\]】]+[\]】]/g)||[];if(_deliveryRepairActions.length===1){const _deliveryRepairBody=(_deliveryRepairActions[0].match(/[\[【]\s*真实外卖\s*[|｜:：]\s*([^\]】]+)[\]】]/)||[])[1];if(_deliveryRepairBody)content=String(content||'').trim()+'\n[真实外卖|'+_deliveryRepairBody.trim()+']';}}}
     const _replyCandidate=String(content||'').trim(),_realDeliveryCommandTurn=typeof deliveryRealEnabled==='function'&&deliveryRealEnabled()&&/[\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：]/.test(_replyCandidate),lines=splitChatBubbles(content,30);let got=false;let txtN=0;let diceUsed=false;let pendQuote=null;let photoTail=0;let _realDeliveryCommandSeen=false;let _realDeliveryPreludeShown=false;
     for(let i=0;i<lines.length;i++){
       let line=cleanRolePunct(normalizeImageLine(normTag(lines[i]))),hadHiddenThought=hiddenThoughtTagPresent(line);line=stripHiddenThoughtTags(line,c);if(hadHiddenThought)save();if(!line)continue;
