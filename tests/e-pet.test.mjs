@@ -120,6 +120,15 @@ test('mobile pet taps react inside the pointer lifecycle without long-press sele
   assert.match(css,/\.pet-world \.pet-character \.pet-svg,\.pet-world \.pet-character \.pet-room-name\{pointer-events:none\}/,'SVG paths and labels must not steal mobile long presses from the draggable pet');
 });
 
+test('dragging a pet cannot leak a synthesized tap into the bowl or shop',()=>{
+  assert.match(pet,/let _petSceneTapBlockUntil=0/);
+  assert.match(pet,/function petSceneHotspotAllowed\(e\).*Date\.now\(\)<_petSceneTapBlockUntil/s);
+  assert.match(pet,/const blockSceneTap=\(\)=>\{_petSceneTapBlockUntil=Date\.now\(\)\+700;\}/);
+  assert.match(pet,/if\(moved\)blockSceneTap\(\)/);
+  assert.match(pet,/function petBowl\(e\)\{if\(!petSceneHotspotAllowed\(e\)\)return/);
+  assert.match(pet,/else if\(target==='bowl'\)setTimeout\(\(\)=>\{render\(\);petBowl\(\);\},20\)/,'an intentional bowl drop still feeds without a DOM click event');
+});
+
 test('sleeping faces use pose-local ears and bichon keeps a closed crown',()=>{
   assert.match(pet,/const sleepEars=/);
   assert.match(pet,/const sleepMark=/);
@@ -177,8 +186,8 @@ test('Maine Coon, three hamsters and three white rabbit breeds use persistent li
 });
 
 test('preview and app load the complete visual module',()=>{
-assert.match(html,/pet-game\.css\?v=1056/);
-assert.match(html,/pet-game\.js\?v=1056/);
+assert.match(html,/pet-game\.css\?v=1057/);
+assert.match(html,/pet-game\.js\?v=1057/);
   assert.match(preview,/north-pet-preview/);
   assert.match(preview,/onclick="openPetGame\(\)"/);
   assert.match(css,/assets\/pet-room-v1\.webp/);

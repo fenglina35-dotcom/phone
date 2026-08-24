@@ -151,6 +151,9 @@ test('co-living UI exposes persistent status, return notice and test controls',(
   assert.match(html,/\.cohab-wx-state/);
   assert.match(source,/function cohabWechatNavBadge\(c\)/);
   assert.match(source,/page\.p==='off'&&stage\.querySelector\('\.cohab-status-chip'\)/);
+  assert.match(source,/function cohabActionTap\(e,action,id\).*preventDefault.*stopPropagation.*setTimeout/s,'mobile co-living controls must consume the original tap before changing the route');
+  assert.match(source,/type="button" onclick="return cohabActionTap\(event,'enter','\$\{cid\}'\)"/,'the entry button must use the guarded route');
+  assert.match(functionSource('cohabEnter'),/go\('off',\{id,mode:'cohab'\}\).*return true/s,'co-living entry must preserve its mode in navigation history');
   assert.match(preview,/共同生活 · 测试版/);
   assert.match(preview,/data-phase="work"/);
   assert.match(preview,/先生\^\^回来了/);

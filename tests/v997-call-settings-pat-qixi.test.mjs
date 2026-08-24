@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1056 · 外卖自动执行链路修正版'/);
+  assert.match(app,/APP_VER='v1057 · 共同生活宠物电量与转账整合版'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1056/);
-  assert.match(html,/sw\.js\?v=1056&r=v1056-delivery-role-prelude-2/);
+  assert.match(html,/north-sw-reloaded-1057/);
+  assert.match(html,/sw\.js\?v=1057&r=v1057-cohab-pet-battery-transfer-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{
