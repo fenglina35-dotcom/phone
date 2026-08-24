@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import QRCode from 'qrcode';
 import { opaqueFingerprint } from './security.mjs';
+import { knownRouteKey, requestedFruitExclusions } from './taobao-flash-browser.mjs';
 
 const money = value => Math.max(0, Math.round((Number(value) || 0) * 100) / 100);
 const clean = (value, max = 200) => String(value ?? '').trim().slice(0, max);
@@ -9,6 +10,7 @@ const cleanImage = value => {
   if (/^data:image\/(?:png|jpe?g|webp);base64,[a-z0-9+/=]+$/i.test(raw)) return raw;
   return /^https:\/\//i.test(raw) ? raw.slice(0, 800) : '';
 };
+const TERMINAL_TASKS = new Set(['completed', 'canceled', 'expired', 'failed']);
 
 export class DeliveryAdapter {
   constructor({ browser, secret, maxOrderAmount = 100, maxOffers = 12 }) {
@@ -20,6 +22,9 @@ export class DeliveryAdapter {
     this.orders = new Map();
     this.createAttempts = new Map();
     this.payAttempts = new Map();
+    this.roleTasks = new Map();
+    this.roleSearchAttempts = new Map();
+    this.roleCreateAttempts = new Map();
     this.capabilitiesCache = null;
     this.capabilitiesPromise = null;
   }
@@ -34,6 +39,7 @@ export class DeliveryAdapter {
     if (action === 'diagnostic_cleanup_item' && process.env.PHONE_DELIVERY_DIAGNOSTIC_PATH) return this.browser.diagnosticCleanupItem(clean(payload.itemName, 140));
     if (action === 'capabilities') return this.capabilities();
     if (action === 'confirm_address') return this.confirmAddress(payload);
+    if (action === 'confirm_risk_cleared') return this.confirmRiskCleared(payload);
     if (action === 'saved_routes') return this.savedRoutes();
     if (action === 'search') return this.search(payload, context);
     if (action === 'offer_options') return this.offerOptions(payload, context);
@@ -78,39 +84,108 @@ export class DeliveryAdapter {
     return result;
   }
 
+  async confirmRiskCleared(payload) {
+    if (payload.confirmedByUser !== true) throw new Error('必须由本人确认已经完成平台安全验证');
+    return this.browser.confirmRiskClearedByUser();
+  }
+
+  authorizeRoleTask(payload, context) {
+    const source = payload?.task && typeof payload.task === 'object' ? payload.task : {};
+    const task = {
+      taskId: clean(source.taskId, 160), authorizationSource: clean(source.authorizationSource, 40),
+      roleId: clean(source.roleId, 120), accountId: clean(source.accountId, 120),
+      sessionId: clean(source.sessionId, 160), turnId: clean(source.turnId, 160),
+      messageId: clean(source.messageId, 160), createdAt: Number(source.createdAt) || 0,
+      intentSummary: clean(source.intentSummary, 200), status: clean(source.status, 40),
+      revision: Math.max(1, Math.floor(Number(source.revision) || 1)),
+      autonomous: source.autonomous === true,
+      userConstraints: clean(source.userConstraints, 800),
+    };
+    if (!task.taskId || !task.roleId || !task.accountId || !task.sessionId || !task.turnId || !task.createdAt || !task.intentSummary) throw new Error('角色点单缺少完整的结构化授权任务');
+    if (!['user_explicit', 'role_current_turn'].includes(task.authorizationSource)) throw new Error('角色点单授权来源无效');
+    if (TERMINAL_TASKS.has(task.status)) throw new Error('已完成、过期、取消或失败的授权任务不能恢复');
+    if (Date.now() - task.createdAt > 30 * 60_000 || task.createdAt > Date.now() + 60_000) throw new Error('角色点单授权任务已过期');
+    const key = `${context.target || ''}:${task.taskId}`;
+    const known = this.roleTasks.get(key);
+    if (known) {
+      for (const field of ['authorizationSource', 'roleId', 'accountId', 'sessionId', 'turnId', 'createdAt', 'intentSummary', 'autonomous', 'userConstraints']) {
+        if (known[field] !== task[field]) throw new Error('角色点单授权任务与原始回合不一致');
+      }
+      if (TERMINAL_TASKS.has(known.status)) throw new Error('已结束的角色点单授权任务不能恢复');
+      known.revision = Math.max(known.revision, task.revision);
+      return { key, task: known };
+    }
+    this.roleTasks.set(key, { ...task, status: 'authorized' });
+    return { key, task: this.roleTasks.get(key) };
+  }
+
   async search(payload, context) {
     const query = clean(payload.query, 120);
     if (!query) throw new Error('请输入要搜索的餐品或店铺');
     const routeOnly = Boolean(clean(payload.roleId, 120));
-    const suppliedFingerprint = clean(payload.addressFingerprint, 180);
-    if (routeOnly && !suppliedFingerprint) throw new Error('角色点单前需要由本人先确认一次平台默认收货地址');
-    const address = routeOnly ? { label: clean(payload.addressLabel, 80) || '平台默认地址' } : await this.browser.currentAddress();
-    const allowGlobalSearch = !routeOnly || payload.allowGlobalSearch === true;
-    const found = await this.browser.search(query, Math.min(this.maxOffers, Number(payload.limit) || this.maxOffers), { allowGlobalSearch });
-    const addressFingerprint = routeOnly ? suppliedFingerprint : opaqueFingerprint(this.secret, address.fingerprintSource);
-    const offers = found.slice(0, this.maxOffers).map(item => {
-      const offerId = `tb_${crypto.randomUUID()}`;
-      const quoteId = `q_${crypto.randomUUID()}`;
-      const offer = {
-        offerId, quoteId, provider: 'taobao_flash', merchantId: clean(item.merchantId, 120),
-        merchant: clean(item.merchant, 100), name: clean(item.name, 140), description: clean(item.description, 240),
-        price: money(item.price), deliveryFee: money(item.deliveryFee), total: money(item.total ?? (money(item.price) + money(item.deliveryFee))),
-        rating: Number.isFinite(Number(item.rating)) ? Number(item.rating) : null,
-        reviewCount: Number.isFinite(Number(item.reviewCount)) ? Number(item.reviewCount) : null,
-        monthlySales: Number.isFinite(Number(item.monthlySales)) ? Number(item.monthlySales) : null,
-        etaMinutes: Number.isFinite(Number(item.etaMinutes)) ? Number(item.etaMinutes) : null,
-        couponLabel: clean(item.couponLabel, 100), imageUrl: cleanImage(item.imageUrl),
-        optionGroups: Array.isArray(item.optionGroups) ? item.optionGroups : [],
-        optionsLoaded: item.optionsLoaded === true,
-        requiresConfirmation: item.requiresConfirmation === true,
-        confirmationReason: clean(item.confirmationReason, 240),
-        addressLabel: clean(address.label, 80), addressFingerprint, quoteExpiresAt: Date.now() + 8 * 60_000,
-        rawVersion: clean(item.rawVersion || 'taobao-flash-browser-v1', 80),
-      };
-      this.quotes.set(`${context.target || ''}:${offerId}`, { ...offer, browserRef: item.browserRef, expiresAt: offer.quoteExpiresAt });
-      return offer;
-    });
-    return { offers, addressLabel: clean(address.label, 80) };
+    const authorization = routeOnly ? this.authorizeRoleTask(payload, context) : null;
+    const intent = payload.orderIntent && typeof payload.orderIntent === 'object' ? payload.orderIntent : {};
+    const merchant = clean(intent.merchant, 100);
+    const items = [...new Set((Array.isArray(intent.items) ? intent.items : []).map(item => clean(item, 100)).filter(Boolean))].slice(0, 12);
+    if (routeOnly && (authorization.task.roleId !== clean(payload.roleId, 120) || !merchant || !items.length)) throw new Error('角色点单必须分别提供一个门店和逐项商品清单');
+    const attemptKey = authorization ? `${authorization.key}:${authorization.task.revision}` : '';
+    if (attemptKey && this.roleSearchAttempts.has(attemptKey)) return this.roleSearchAttempts.get(attemptKey);
+    const attempt = (async () => {
+      const suppliedFingerprint = clean(payload.addressFingerprint, 180);
+      if (routeOnly && !suppliedFingerprint) throw new Error('角色点单前需要由本人先确认一次平台默认收货地址');
+      const address = routeOnly ? { label: clean(payload.addressLabel, 80) || '平台默认地址' } : await this.browser.currentAddress();
+      const allowGlobalSearch = !routeOnly || payload.allowGlobalSearch === true;
+      const browserQuery = routeOnly ? [merchant, items[0], ...items.slice(1).map(item => `加${item}`)].join(' ') : query;
+      const userAllowsMenuChoice = /(?:随便(?:点|选)?|任意(?:一|单)?(?:杯|份|个)?|什么都(?:可以|行)|都(?:可以|行)|你(?:来)?(?:决定|点|选)|你看着(?:点|选)?)/u.test(query);
+      const intentText = [query, authorization?.task.userConstraints].filter(Boolean).join('\n');
+      const found = await this.browser.search(browserQuery, Math.min(this.maxOffers, Number(payload.limit) || this.maxOffers), {
+        allowGlobalSearch, storeQuery: routeOnly ? merchant : '', intentText,
+        menuSelectionAllowed: authorization?.task.autonomous === true,
+        // A broad explicit request (for example “古茗随便点一杯”) may scan the
+        // current store-search results, but remains user_explicit and must not
+        // silently widen to an arbitrary homepage category.
+        searchResultSelectionAllowed: userAllowsMenuChoice,
+        forceMerchantEntry: payload.forceMerchantEntry === true,
+      });
+      const addressFingerprint = routeOnly ? suppliedFingerprint : opaqueFingerprint(this.secret, address.fingerprintSource);
+      const excludedFruits = requestedFruitExclusions(intentText);
+      const permitted = found.filter(item => !excludedFruits.some(fruit => {
+        const name = knownRouteKey(item?.name);
+        if (fruit === '橙子') return /橙子|脐橙|鲜橙/.test(name);
+        return name.includes(knownRouteKey(fruit));
+      }));
+      if (found.length && !permitted.length && excludedFruits.length) throw new Error(`真实候选全部命中了明确禁止的水果：${excludedFruits.join('、')}`);
+      const offers = permitted.slice(0, this.maxOffers).map(item => {
+        const offerId = `tb_${crypto.randomUUID()}`;
+        const quoteId = `q_${crypto.randomUUID()}`;
+        const offer = {
+          offerId, quoteId, provider: 'taobao_flash', merchantId: clean(item.merchantId, 120),
+          merchant: clean(item.merchant, 100), name: clean(item.name, 140), description: clean(item.description, 240),
+          price: money(item.price), deliveryFee: money(item.deliveryFee), total: money(item.total ?? (money(item.price) + money(item.deliveryFee))),
+          rating: Number.isFinite(Number(item.rating)) ? Number(item.rating) : null,
+          reviewCount: Number.isFinite(Number(item.reviewCount)) ? Number(item.reviewCount) : null,
+          monthlySales: Number.isFinite(Number(item.monthlySales)) ? Number(item.monthlySales) : null,
+          etaMinutes: Number.isFinite(Number(item.etaMinutes)) ? Number(item.etaMinutes) : null,
+          couponLabel: clean(item.couponLabel, 100), imageUrl: cleanImage(item.imageUrl),
+          optionGroups: Array.isArray(item.optionGroups) ? item.optionGroups : [], optionsLoaded: item.optionsLoaded === true,
+          requiresConfirmation: item.requiresConfirmation === true, confirmationReason: clean(item.confirmationReason, 240),
+          addressLabel: clean(address.label, 80), addressFingerprint, quoteExpiresAt: Date.now() + (routeOnly ? 30 : 8) * 60_000,
+          rawVersion: clean(item.rawVersion || 'taobao-flash-browser-v1', 80),
+        };
+        this.quotes.set(`${context.target || ''}:${offerId}`, { ...offer, browserRef: item.browserRef, expiresAt: offer.quoteExpiresAt, taskId: authorization?.task.taskId || '', taskRevision: authorization?.task.revision || 0 });
+        return offer;
+      });
+      if (authorization) authorization.task.status = 'quoted';
+      return { offers, addressLabel: clean(address.label, 80) };
+    })();
+    if (attemptKey) this.roleSearchAttempts.set(attemptKey, attempt);
+    try { return await attempt; } catch (error) {
+      // A browser search miss can become a same-task product-name or option
+      // clarification in the phone client.  Keep the server-side grant alive;
+      // only a terminal task received from the client may be terminal here.
+      if (authorization) authorization.task.status = 'authorized';
+      throw error;
+    }
   }
 
   async savedRoutes() {
@@ -133,19 +208,26 @@ export class DeliveryAdapter {
   }
 
   async createOrder(payload, context) {
+    const roleId = clean(payload.roleId, 120);
+    const authorization = roleId ? this.authorizeRoleTask(payload, context) : null;
+    const roleAttemptKey = authorization ? `${authorization.key}:${authorization.task.revision}` : '';
+    if (roleAttemptKey && this.roleCreateAttempts.has(roleAttemptKey)) return this.roleCreateAttempts.get(roleAttemptKey);
     const requestId = clean(payload.clientRequestId, 160);
     if (!requestId) throw new Error('下单请求缺少幂等标识');
     const requestKey = `${context.target || ''}:${requestId}`;
     if (this.createAttempts.has(requestKey)) return this.createAttempts.get(requestKey);
     const attempt = this.createOrderOnce(payload, context);
     this.createAttempts.set(requestKey, attempt);
-    try { return await attempt; } catch (error) { this.createAttempts.delete(requestKey); throw error; }
+    if (roleAttemptKey) this.roleCreateAttempts.set(roleAttemptKey, attempt);
+    try { const result = await attempt; if (authorization) authorization.task.status = 'ordered'; return result; } catch (error) { this.createAttempts.delete(requestKey); if (roleAttemptKey) this.roleCreateAttempts.delete(roleAttemptKey); throw error; }
   }
 
   async createOrderOnce(payload, context) {
     const key = `${context.target || ''}:${clean(payload.offerId, 160)}`;
     const quote = this.quotes.get(key);
     if (!quote || quote.quoteId !== clean(payload.quoteId, 160) || quote.expiresAt < Date.now()) throw new Error('真实报价已过期，请重新搜索');
+    const taskId = clean(payload.task?.taskId, 160);
+    if ((taskId || quote.taskId) && quote.taskId !== taskId) throw new Error('真实报价不属于当前授权任务');
     if (quote.requiresConfirmation && payload.confirmedHistoricalSuperset !== true) {
       throw new Error(quote.confirmationReason || '这笔历史订单包含本次没有明确要求的额外商品，必须先由本人确认');
     }
@@ -156,7 +238,10 @@ export class DeliveryAdapter {
     const selectedOptions = payload.selectedOptions && typeof payload.selectedOptions === 'object' ? payload.selectedOptions : {};
     this.validateOptions(quote.optionGroups, selectedOptions);
     const quantity = Math.max(1, Math.min(20, Number(payload.quantity) || 1));
-    const draft = await this.browser.createOrder({ ref: quote.browserRef, selectedOptions, optionGroups: quote.optionGroups, quantity });
+    const draft = await this.browser.createOrder({
+      ref: quote.browserRef, selectedOptions, optionGroups: quote.optionGroups, quantity,
+      replaceMismatchedCart: Boolean(taskId),
+    });
     const total = money(draft.total);
     if (!total) throw new Error('平台没有返回有效订单金额');
     if (this.maxOrderAmount > 0 && total > this.maxOrderAmount) throw new Error(`订单金额 ¥${total.toFixed(2)} 超过服务端上限`);
@@ -165,6 +250,7 @@ export class DeliveryAdapter {
       orderId, provider: 'taobao_flash', merchantId: quote.merchantId, merchant: clean(draft.merchant || quote.merchant, 100),
       items: Array.isArray(draft.items) && draft.items.length ? draft.items : [{ name: quote.name, quantity, price: quote.price, options: this.optionText(quote.optionGroups, selectedOptions) }],
       total, discount: money(draft.discount), couponLabel: clean(draft.couponLabel, 100), status: 'created', paymentMethod: 'alipay', addressLabel: clean(quote.addressLabel, 80),
+      couponCheckStatus: 'pending', couponCheckAmount: 0, couponCheckEvidence: '',
       imageUrl: cleanImage(draft.imageUrl || draft.items?.find(item => item?.imageUrl)?.imageUrl || quote.imageUrl), etaMinutes: Number.isFinite(Number(quote.etaMinutes)) ? Math.max(0, Math.floor(Number(quote.etaMinutes))) : null,
       etaText: clean(draft.etaText, 80),
       // The address was already confirmed and fingerprinted when this quote
@@ -194,6 +280,12 @@ export class DeliveryAdapter {
         if (Number(submitted.total) > 0) order.total = money(submitted.total);
         if (submitted.discount != null) order.discount = money(submitted.discount);
         if (submitted.couponLabel) order.couponLabel = clean(submitted.couponLabel, 100);
+        order.couponCheckStatus = clean(submitted.couponCheck?.status, 40);
+        order.couponCheckAmount = money(submitted.couponCheck?.amount);
+        order.couponCheckEvidence = clean(submitted.couponCheck?.evidence, 100);
+        if (!['applied', 'none'].includes(order.couponCheckStatus)) {
+          throw new Error('订单没有可核验的优惠券检查结果，不能进入待支付状态');
+        }
         order.browserOrderRef = submitted.browserOrderRef || order.browserOrderRef;
         order.status = submitted.status === 'paid' ? 'paid' : 'pending_payment';
         if (order.payUrl) order.payQrDataUrl = await QRCode.toDataURL(order.payUrl, { errorCorrectionLevel: 'M', margin: 2, width: 420 });
@@ -246,6 +338,8 @@ export class DeliveryAdapter {
       orderId: order.orderId, provider: order.provider, merchantId: order.merchantId, merchant: order.merchant,
       items: order.items, total: order.total, status: order.status, paymentMethod: order.paymentMethod,
       discount: order.discount || 0, couponLabel: order.couponLabel || '',
+      couponCheckStatus: order.couponCheckStatus || 'pending', couponCheckAmount: order.couponCheckAmount || 0,
+      couponCheckEvidence: order.couponCheckEvidence || '',
       payUrl: order.payUrl || '', payQrDataUrl: order.payQrDataUrl || '', addressLabel: order.addressLabel,
       imageUrl: order.imageUrl || '', etaMinutes: order.etaMinutes, etaText: order.etaText || '',
       addressFingerprint: order.addressFingerprint, risk: order.risk || [],

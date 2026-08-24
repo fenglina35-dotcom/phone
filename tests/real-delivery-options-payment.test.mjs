@@ -12,8 +12,13 @@ assert.match(client,/用户本次明确说出的杯型、份量、糖度、冰�
 assert.doesNotMatch(client,/deliverySetAutoPay|deliveryOpenWallet|deliveryTopUp|deliverySaveWallet/,'manual-only delivery must not expose fake wallet or auto-pay controls');
 assert.match(client,/平台结算页已自动优惠/,'the client must report only checkout-confirmed discount facts');
 assert.match(client,/offer_options/,'the client must fetch options only after selecting a fast candidate');
-assert.match(client,/候选没有完全对应项时必须返回 matched:false/,'explicit brands and products must never be silently substituted');
+assert.match(client,/候选不能满足时必须返回 matched:false/,'explicit brands products categories and exclusions must never be silently substituted');
+assert.match(client,/餐品类别、排除项、忌口和数量都是硬条件/,'autonomous choice must preserve every explicit category exclusion allergy and quantity constraint');
 assert.match(client,/真实选项缺少任意一项时必须返回 matched:false/,'explicit drink options must never be silently substituted');
+assert.match(client,/等同用户说的不加糖、无糖、零糖或0糖/,'no-sugar wording must map to the platform no-added-sugar option');
+assert.match(client,/规格匹配先看语义，不要求逐字一致/,'option selection must use semantic aliases instead of exact wording only');
+assert.match(client,/用户没有指定的规格组必须由你按人设、商品特点和真实可选项直接决定/,'the role must choose unspecified options instead of stopping');
+assert.match(client,/明确糖度、冰度、口味、忌口或过敏绝不能降级成不同选项/,'semantic flexibility must not weaken explicit hard constraints');
 assert.match(client,/角色生成的检索词只是找商品用的，不是用户原话/,'role-created search text must not become a user hard requirement');
 assert.match(client,/本轮是否获得自主选择授权/,'offer and option selection must receive the real autonomy grant');
 assert.match(client,/matched:false 的 reason 必须具体写出缺少哪一项/,'option mismatch diagnostics must name the exact missing requirement');
@@ -25,8 +30,9 @@ assert.match(edge,/payQrDataURL/,'the edge connector must validate payment QR da
 assert.match(adapter,/automaticPayments: false/,'browser automation must never advertise automatic payment');
 assert.match(adapter,/QRCode\.toDataURL/,'the official cashier URL must be convertible to a scannable QR');
 assert.match(browser,/安全验证/,'captcha and risk control must stop for human handling');
-assert.match(browser,/riskBlockedUntil/,'a platform challenge must create a browser-level cooldown');
-assert.match(browser,/期间不会再次打开或重搜/,'cooldown retries must stop before another platform navigation');
+assert.match(browser,/riskBlocked/,'a platform challenge must persist a browser-level verification marker');
+assert.match(browser,/验证状态仍存在时不会自动重搜/,'an active verification state must stop before another platform navigation');
+assert.doesNotMatch(browser,/冷却30分钟|已冷却\$\{minutes\}/,'risk handling must not impose a fixed waiting period');
 assert.match(browser,/支付成功\|付款成功/,'payment status must come from an explicit platform-page receipt');
 assert.match(browser,/checkoutAmounts\((?:body|raw)\)/,'the payable total must use checkout-specific parsing');
 assert.match(browser,/useExistingCartIfMatching/,'an existing platform cart must be verified before reuse');

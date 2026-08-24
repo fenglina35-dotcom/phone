@@ -31,13 +31,14 @@ ctx.fetch=async(_url,init)=>{
 };
 
 vm.runInNewContext(source,ctx,{filename:'delivery.js'});
+const roleAction=(turn,userText='帮我点一杯奶茶')=>({structuredModelAction:true,accountId:'main',sessionId:'role-settlement:main',turnId:turn,messageId:turn,modelReplyId:'reply-'+turn,channel:'chat',userText});
 ctx.S.food.real.connectorUrl='https://delivery.example.test/api';
 ctx.deliverySetEnabled(true);
 await ctx.deliveryConfirmAddress();
 assert.equal(ctx.S.food.real.approvedAddressFingerprint,'addr-1','the user can explicitly approve the current address');
 
 role.deliveryWallet={balance:100,singleLimit:100,dailyLimit:200,spentDay:'',spentToday:0,ledger:[]};
-await ctx.deliveryHandleRoleRequest(role.id,'奶茶');
+await ctx.deliveryHandleRoleRequest(role.id,'用户明确；门店=真实奶茶店；商品=真实奶茶',roleAction('turn-1'));
 const order=ctx.S.food.orders[0];
 assert.equal(order.status,'pending_payment');
 assert.equal(order.payUrl,'','unsafe payment URLs must be rejected');
@@ -68,10 +69,11 @@ await ctx.deliveryPollOrders(false);
 assert.equal(ctx.S.food.orders[0].status,'delivering','stale platform responses must not move an order backwards');
 
 createFails=true;
-await ctx.deliveryHandleRoleRequest(role.id,'奶茶');
-await ctx.deliveryHandleRoleRequest(role.id,'奶茶');
-const failedCreates=calls.filter(x=>x.action==='create_order').slice(-2);
-assert.equal(failedCreates.length,2);
-assert.equal(failedCreates[0].payload.clientRequestId,failedCreates[1].payload.clientRequestId,'a retried create request must reuse its durable idempotency key');
+await ctx.deliveryHandleRoleRequest(role.id,'用户明确；门店=真实奶茶店；商品=真实奶茶',roleAction('turn-2'));
+await ctx.deliveryHandleRoleRequest(role.id,'用户明确；门店=真实奶茶店；商品=真实奶茶',roleAction('turn-2'));
+const failedCreates=calls.filter(x=>x.action==='create_order').slice(-1);
+assert.equal(failedCreates.length,1);
+assert.ok(failedCreates[0].payload.task.taskId,'the failed create remains bound to one durable task id');
+assert.equal(calls.filter(x=>x.action==='create_order'&&x.payload.task.taskId===failedCreates[0].payload.task.taskId).length,1,'replaying the same model turn must not create a second order attempt');
 
 console.log('real delivery settlement tests passed');

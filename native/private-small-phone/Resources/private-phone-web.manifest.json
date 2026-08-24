@@ -17,7 +17,8 @@
     "glass-theme.css",
     "wedding-game.js",
     "wedding-game.css",
-    "icon.png"
+    "icon.png",
+    "assets/delivery-fallback-kangaroo.jpg"
   ],
   "directories": [
     "assets/incoming-wechat-call-default-v2.mp3",

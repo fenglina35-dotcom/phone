@@ -27,7 +27,7 @@ for (const [name, src] of [['web', root], ['private', bundled]]) {
 
   test(`${name}: category rules preserve meal combos and KFC single items`, () => {
     assert.match(src, /KFC 门店固定为肯德基，并逐件选择单品，严禁套餐/);
-    assert.match(src, /其余一律归为主食/);
+    assert.match(src, /其余归为普通主食/);
     assert.match(src, /主食允许套餐或单点/);
     assert.match(src, /明确说套餐或单点，必须照做/);
     assert.match(src, /主动决定时，也只能从某一类别中选一家门店和少量具体商品/);

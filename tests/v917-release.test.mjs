@@ -10,14 +10,14 @@ const account = read('ai-account.js');
 const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v1053 web source keeps private 1.0.176 compatibility', () => {
-  assert.match(app, /APP_VER='v1053 · 外卖偏好与真实图片修正版'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='1053'/);
-  assert.match(sw, /const BUILD='1053'/);
+test('v1054 web source keeps private 1.0.177 compatibility', () => {
+  assert.match(app, /APP_VER='v1054 · 外卖授权与流程稳定修正版'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='1054'/);
+  assert.match(sw, /const BUILD='1054'/);
   assert.doesNotMatch(project, /CURRENT_PROJECT_VERSION = 40|MARKETING_VERSION = 1\.0\.40/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 176;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.176;/g) || []).length, 12);
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.176 \(176\)'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 177;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.177;/g) || []).length, 12);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.177 \(177\)'/);
 });
 
 test('AI account first screen carries the approved visible red notice', () => {

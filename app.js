@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1053'){
+if(window.__NORTH_SHELL_BUILD__!=='1054'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -378,7 +378,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1053 · 外卖偏好与真实图片修正版';
+const APP_VER='v1054 · 外卖授权与流程稳定修正版';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1496,7 +1496,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1053&r=v1053-delivery-preferences-image-1';
+  const url='sw.js?v=1054&r=v1054-delivery-task-stability-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -11011,6 +11011,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
     if(!_initiativeNoImage&&note&&/【本轮允许主动照片】/.test(note)&&!initiativePhotoCaptionOk(note,content))_initiativeNoImage=true;
     content=refreshDirectClockReply(content,_userText,Date.now());
     if(nativeInspectionPending(_lu,id)){if(typingEl&&typingEl.isConnected)typingEl.remove();return true;}/* 同一条消息若刚发起真实读取，等待读取结果；否则普通回复照常落地。 */
+    if(typeof deliveryConsumeMemoryTags==='function')content=deliveryConsumeMemoryTags(content,c,{structuredModelAction:true,accountId:String(replyAccount||''),sessionId:String(accountMessageKey(id,replyAccount)||''),turnId:String(_lu&&_lu.id||replyToken||''),messageId:String(_lu&&_lu.id||''),modelReplyId:String(replyToken||''),channel:'chat',userText:String(_userText||'').slice(0,240)});else content=String(content||'').replace(/[\[【]\s*外卖记忆\s*[|｜:：][^\]】]*[\]】]/g,'');
     content=String(content||'').replace(/([^\r\n])([\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：][^\]】]*[\]】])/g,'$1\n$2').replace(/([\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：][^\]】]*[\]】])([^\r\n])/g,'$1\n$2');
     const _replyCandidate=String(content||'').trim(),_realDeliveryCommandTurn=typeof deliveryRealEnabled==='function'&&deliveryRealEnabled()&&/[\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：]/.test(_replyCandidate),lines=splitChatBubbles(content,30);let got=false;let txtN=0;let diceUsed=false;let pendQuote=null;let photoTail=0;let _realDeliveryCommandSeen=false,_realDeliveryPreludeShown=false;
     for(let i=0;i<lines.length;i++){
@@ -11020,7 +11021,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
       if(photoTail>0&&isPhotoPromptFragment(line)){photoTail--;continue;}
       if(/^\[联网\|/.test(line))continue;
       const mt0=parseMomentCommandLine(line);if(mt0!=null){if(mt0)postRoleMoment(c,mt0,{toast:true,userText:_userText});continue;}
-      if(/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|突脸|选择|改日记密码|改密码|改备注|登录微信|删好友|删我好友|群昵称|订票|送票|换头像|发朋友圈|发推|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|心情值|同意游戏|拒绝游戏|换气泡)\s*[|｜:：\]]/.test(line))continue;// 管控/记仇指令标签：即便没生效，也绝不作为消息发出
+      if(/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|突脸|选择|改日记密码|改密码|改备注|登录微信|删好友|删我好友|群昵称|订票|送票|换头像|发朋友圈|发推|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|心情值|同意游戏|拒绝游戏|换气泡|外卖记忆)\s*[|｜:：\]]/.test(line))continue;// 管控/记仇/外卖记忆指令标签：即便没生效，也绝不作为消息发出
       if(/^\s*[🔒🔓🔇🔊🔕]/.test(line)||/^\s*(?:ta|TA|他|她)(把你|锁了你|禁言了你|解除了你|解禁了你|解锁了你)/.test(line))continue;
       if(isRefusal(line))continue;
       let mm=line.match(/^\[内心\|([^\]]*)\]$/);if(mm){if(_naturalOn&&setNaturalInnerThought(c,mm[1]))save();continue;}
@@ -11040,8 +11041,8 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
       const _realDeliveryTag=/^[\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：]/.test(line);
       if(_realDeliveryCommandTurn&&!_realDeliveryTag){if(_realDeliveryCommandSeen||typeof deliveryRolePreludeAllowed!=='function'||!deliveryRolePreludeAllowed(line))continue;_realDeliveryPreludeShown=true;}/* 只允许标签前那句安全的自然“我去看看”；下单结果仍由真实回执后的角色模型另行生成 */
       got=true;
-      mm=line.match(/^\[真实外卖\|([^\]]*)\]$/);if(mm){_realDeliveryCommandSeen=true;if(!_realDeliveryPreludeShown){got=false;if(typeof deliveryRequestPreludeRetry==='function')deliveryRequestPreludeRetry(id,(mm[1]||'').trim());continue;}if(typeof deliveryHandleRoleRequest==='function')deliveryHandleRoleRequest(id,(mm[1]||'').trim());continue;}
-      mm=line.match(/^\[点外卖\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){if(typeof deliveryRealEnabled==='function'&&deliveryRealEnabled()){_realDeliveryCommandSeen=true;if(!_realDeliveryPreludeShown){got=false;if(typeof deliveryRequestPreludeRetry==='function')deliveryRequestPreludeRetry(id,(mm[1]||'').trim());continue;}if(typeof deliveryHandleRoleRequest==='function')deliveryHandleRoleRequest(id,(mm[1]||'').trim());continue;}const nowF=Date.now();if(msgs(id).some(x=>x.type==='food'&&x.from==='ta'&&nowF-(x.time||0)<1200000))continue;/* 20分钟内已点过就不重复 */const fc={role:'assistant',type:'food',name:mm[1]||'外卖',price:+mm[2]||0,shop:'',from:'ta',received:false,declined:false,deliverAt:nowF+900000,arrived:false,id:uid(),time:nowF};msgs(id).push(fc);notifyIncoming(c,fc);save();refreshChatMessages(id);continue;}
+      mm=line.match(/^\[真实外卖\|([^\]]*)\]$/);if(mm){_realDeliveryCommandSeen=true;if(!_realDeliveryPreludeShown){got=false;if(typeof deliveryRequestPreludeRetry==='function')deliveryRequestPreludeRetry(id,(mm[1]||'').trim());continue;}if(typeof deliveryHandleRoleRequest==='function')deliveryHandleRoleRequest(id,(mm[1]||'').trim(),{structuredModelAction:true,accountId:String(replyAccount||''),sessionId:String(accountMessageKey(id,replyAccount)||''),turnId:String(_lu&&_lu.id||replyToken||''),messageId:String(_lu&&_lu.id||''),modelReplyId:String(replyToken||''),channel:'chat',userText:String(_userText||'').slice(0,240)});continue;}
+      mm=line.match(/^\[点外卖\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){if(typeof deliveryRealEnabled==='function'&&deliveryRealEnabled()){_realDeliveryCommandSeen=true;if(!_realDeliveryPreludeShown){got=false;if(typeof deliveryRequestPreludeRetry==='function')deliveryRequestPreludeRetry(id,(mm[1]||'').trim());continue;}if(typeof deliveryHandleRoleRequest==='function')deliveryHandleRoleRequest(id,(mm[1]||'').trim(),{structuredModelAction:true,accountId:String(replyAccount||''),sessionId:String(accountMessageKey(id,replyAccount)||''),turnId:String(_lu&&_lu.id||replyToken||''),messageId:String(_lu&&_lu.id||''),modelReplyId:String(replyToken||''),channel:'chat',userText:String(_userText||'').slice(0,240)});continue;}const nowF=Date.now();if(msgs(id).some(x=>x.type==='food'&&x.from==='ta'&&nowF-(x.time||0)<1200000))continue;/* 20分钟内已点过就不重复 */const fc={role:'assistant',type:'food',name:mm[1]||'外卖',price:+mm[2]||0,shop:'',from:'ta',received:false,declined:false,deliverAt:nowF+900000,arrived:false,id:uid(),time:nowF};msgs(id).push(fc);notifyIncoming(c,fc);save();refreshChatMessages(id);continue;}
       mm=line.match(/^\[送礼\|([^|\]]*)(?:\|([^|\]]*))?(?:\|([^\]]*))?\]$/);if(mm){giftSend(id,(mm[1]||'礼物').trim(),+mm[2]||0,mm[3]||'');continue;}
       mm=line.match(/^\[一起听\|([^\]]*)\]$/);if(mm){const ti=(mm[1]||'').trim();const mc={role:'assistant',type:'musicinvite',title:ti||'一首歌',artist:'',from:'ta',time:Date.now(),id:uid()};msgs(id).push(mc);notifyIncoming(c,mc);save();refreshChatMessages(id);continue;}
       mm=line.match(/^\[放映邀请\|([^\]]*)\]$/);if(mm){if(!cinemaRoleInvite(id,(mm[1]||'').trim()))toast('角色想邀请的作品不在视频盒或书架里');continue;}
@@ -11827,8 +11828,9 @@ async function callAI(sysNote,opts){if(!_call)return;
     content=applyControlTags(content,c,_call.id,_statedPwd,(_luc&&msgToText(_luc))||'');
     dialogueEmotionOnReply(c,content,(_luc&&msgToText(_luc))||'');
     content=wechatNaturalOn()?content.replace(/[\[【]\s*(?:记仇|消气)\s*(?:[|｜:：]\s*[^\]】]*)?[\]】]/g,''):applyGrudgeTags(content,c);content=applyStarTags(content);content=cohabConsumeOnlineState(content,c,_call.id);
-    content=content.replace(/[\[【]\s*真实外卖\s*[\|｜:：]([^\]】]*)[\]】]/g,(mm,q)=>{if(typeof deliveryHandleRoleRequest==='function')deliveryHandleRoleRequest(_call.id,(q||'').trim());return '';});
-    content=content.replace(/[\[【]\s*点外卖\s*[\|｜:：]([^\|｜\]】]*)[\|｜]?([^\]】]*)[\]】]/g,(mm,nm,pr)=>{nm=(nm||'外卖').trim();if(typeof deliveryRealEnabled==='function'&&deliveryRealEnabled()){if(typeof deliveryHandleRoleRequest==='function')deliveryHandleRoleRequest(_call.id,nm);return '';}const now=Date.now();if(msgs(_call.id).some(x=>x.type==='food'&&x.from==='ta'&&now-(x.time||0)<1200000))return '';/* 20分钟内已经点过外卖就不再点(不管菜名)，防止一通电话重复点 */const fc={role:'assistant',type:'food',name:nm,price:+pr||0,shop:'',from:'ta',received:false,declined:false,deliverAt:now+900000,arrived:false,id:uid(),time:now};msgs(_call.id).push(fc);notifyIncoming(c,fc);save();return '';});
+    if(typeof deliveryConsumeMemoryTags==='function')content=deliveryConsumeMemoryTags(content,c,{structuredModelAction:true,accountId:String(actId()||'main'),sessionId:String(sess||''),turnId:String(_luc&&_luc.id||sess||''),messageId:String(_luc&&_luc.id||''),modelReplyId:String(sess||''),channel:'call',userText:String(_luc&&msgToText(_luc)||'').slice(0,240)});else content=String(content||'').replace(/[\[【]\s*外卖记忆\s*[|｜:：][^\]】]*[\]】]/g,'');
+    content=content.replace(/[\[【]\s*真实外卖\s*[\|｜:：]([^\]】]*)[\]】]/g,(mm,q)=>{if(typeof deliveryHandleRoleRequest==='function')deliveryHandleRoleRequest(_call.id,(q||'').trim(),{structuredModelAction:true,accountId:String(actId()||'main'),sessionId:String(sess||''),turnId:String(_luc&&_luc.id||sess||''),messageId:String(_luc&&_luc.id||''),modelReplyId:String(sess||''),channel:'call',userText:String(_luc&&msgToText(_luc)||'').slice(0,240)});return '';});
+    content=content.replace(/[\[【]\s*点外卖\s*[\|｜:：]([^\|｜\]】]*)[\|｜]?([^\]】]*)[\]】]/g,(mm,nm,pr)=>{nm=(nm||'外卖').trim();if(typeof deliveryRealEnabled==='function'&&deliveryRealEnabled()){if(typeof deliveryHandleRoleRequest==='function')deliveryHandleRoleRequest(_call.id,nm,{structuredModelAction:true,accountId:String(actId()||'main'),sessionId:String(sess||''),turnId:String(_luc&&_luc.id||sess||''),messageId:String(_luc&&_luc.id||''),modelReplyId:String(sess||''),channel:'call',userText:String(_luc&&msgToText(_luc)||'').slice(0,240)});return '';}const now=Date.now();if(msgs(_call.id).some(x=>x.type==='food'&&x.from==='ta'&&now-(x.time||0)<1200000))return '';/* 20分钟内已经点过外卖就不再点(不管菜名)，防止一通电话重复点 */const fc={role:'assistant',type:'food',name:nm,price:+pr||0,shop:'',from:'ta',received:false,declined:false,deliverAt:now+900000,arrived:false,id:uid(),time:now};msgs(_call.id).push(fc);notifyIncoming(c,fc);save();return '';});
     // 通话里口头让ta定闹钟 / 记东西 / 记日程，也能真的落地
     content=content.replace(/[\[【]\s*记住\s*[\|｜:：]([^\]】]+)[\]】]/g,(mm,tx)=>{const mv=aboutMeNoteText(tx),mr=rememberForChar(c,tx);if(mr!=='none'){save();if(mr==='added'||mr==='replaced')toast((mr==='replaced'?'已更新记忆：':'已记住：')+mv.slice(0,12));else if(mr==='conflict')toast('发现新旧信息不同，下轮会先向你确认');}return '';});
     content=content.replace(/[\[【]\s*闹钟\s*[\|｜:：]([0-9]{1,2}:[0-9]{2})\s*[\|｜:：]?([^\]】]*)[\]】]/g,(mm,t,lb)=>{addAlarm(c.id,t,(lb||'起床').trim());return '';});

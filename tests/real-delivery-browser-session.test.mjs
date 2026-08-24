@@ -64,9 +64,10 @@ test('option inspection and cart creation restore the exact store-local search s
   const orderEnd = source.indexOf('async dialogGroups', orderStart);
   const orderBlock = source.slice(orderStart, orderEnd);
   assert.match(orderBlock, /searchInsideShop\(page, ref\.itemName\)/);
-  assert.match(orderBlock, /await this\.activateControl\(page, add\)/);
+  assert.match(orderBlock, /await this\.activateProductControl\(page, add\)/);
   assert.match(orderBlock, /await this\.activateControl\(page, plus\)/);
-  assert.doesNotMatch(orderBlock, /add\.evaluate\(node => node\.click\(\)\)/);
+  assert.match(source, /async activateProductControl\(page, control\)[\s\S]*?control\.evaluate\(node => node\.click\(\)\)/);
+  assert.doesNotMatch(orderBlock, /await add\.evaluate\(node => node\.click\(\)\)/);
 });
 
 test('real product imagery is carried from the platform menu into the final order card data', () => {

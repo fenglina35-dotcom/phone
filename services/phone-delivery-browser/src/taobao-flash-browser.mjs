@@ -5,10 +5,33 @@ import { spawn } from 'node:child_process';
 const MSITE = 'https://h5.ele.me/';
 const ADDRESS_URL = 'https://h5.ele.me/minisite/pages-poi/address/index';
 const clean = (value, max = 200) => String(value ?? '').replace(/\s+/g, ' ').trim().slice(0, max);
+export const collapseRepeatedOptionText = value => {
+  let text = clean(value, 1000);
+  while (text.length >= 12 && text.length % 2 === 0) {
+    const half = text.length / 2;
+    if (text.slice(0, half) !== text.slice(half)) break;
+    text = text.slice(0, half);
+  }
+  return text;
+};
 const number = value => Number(String(value ?? '').match(/[\d.]+/)?.[0] || 0);
-const groupHeading = /^(规格|套餐|杯型|份量|容量|温度|冰度|糖度|甜度|口味|辣度|咖啡豆|奶油|咖啡浓度|(?:推荐)?(?:加料|小料|配料).{0,40}|酱料|做法|主食\d*|小食\d*|甜品(?:\/小食)?|小食\/甜品|饮料|赠送|全鸡|配餐|蘸酱)(?:\s*[（(]?(?:请选|请选择|任选)\s*\d+\s*(?:份|种)[）)]?)?$/;
+const groupHeading = /^(规格|套餐|杯型|份量|容量|温度|冰度|糖度|甜度|口味|辣度|咖啡豆|奶油|咖啡浓度|(?:推荐)?(?:加料|小料|配料)(?:专区)?|酱料|做法|主食\d*|小食\d*|甜品(?:\/小食)?|小食\/甜品|饮料|选择麦满分|(?:选择)?套餐内(?:主食|小食|甜品|饮料)|赠送|全鸡|配餐|蘸酱)(?:\s*[【\[(（][^】\])）]{1,40}[】\])）])?(?:\s*[（(]?(?:请选|请选择|任选)\s*\d+\s*(?:份|种)[）)]?)?$/;
+export const mcdonaldsBreakfastBundleOptions = Object.freeze({
+  product: '麦满分单人餐随心选',
+  mains: Object.freeze(['大脆鸡扒麦满分', '火腿扒麦满分', '吉士蛋麦满分', '原味板烧鸡腿麦满分', '猪柳麦满分']),
+  sides: Object.freeze(['脆薯饼', '脆香油条']),
+  drinks: Object.freeze(['小杯鲜萃咖啡', '小杯优品豆浆', '鲜萃冰咖']),
+});
+const mcdonaldsDefaultBundleRequested = value => {
+  const text = clean(value, 400);
+  if (!/麦当劳|mcdonald/i.test(text)) return false;
+  if (/麦满分单人餐随心选/.test(text)) return true;
+  return /(?:^|[\s；;，,、=])套餐(?:$|[\s；;，,、])/u.test(text)
+    || /(?:随便|任意|都(?:可以|行)|你(?:来)?(?:决定|点|选)|你看着)(?:点|选)?[^；;，,。]{0,12}(?:套餐|早餐|麦当劳)?/u.test(text);
+};
 const shopUrl = url => /newretail\/p\/ushop|pages\/ele-takeout-index/i.test(String(url || ''));
-const shopSearchUrl = url => /pages\/ele-index-search/i.test(String(url || ''));
+const shopSearchUrl = url => /pages\/ele-index-search|newretail\/p\/ushopsearch/i.test(String(url || ''));
+export const retailShopSearchUrl = url => /newretail\/p\/ushopsearch/i.test(String(url || ''));
 
 export function sameShopUrl(currentUrl, targetUrl) {
   try {
@@ -35,24 +58,55 @@ export function normalizeOptionPanelGroups(value = []) {
     const originalName = clean(raw?.name, 80);
     if (!originalName) continue;
     const rawChoices = (Array.isArray(raw?.choices) ? raw.choices : []).map(label => clean(label, 80)).filter(Boolean);
-    const hint = [originalName, ...rawChoices].map(label => label.match(/(?:请选|请选择|任选)\s*(\d+)\s*(?:份|种)/)).find(Boolean);
-    const selectionCount = Math.max(1, Math.min(20, Number(hint?.[1]) || 1));
-    const choices = [...new Set(rawChoices.filter(label => {
-      if (optionPanelNoise.test(label)) return false;
-      if (/^(?:请选|请选择|任选)\s*\d+\s*(?:份|种)$/.test(label)) return false;
-      if (/^(?:已选\s*[:：]?.*|价格(?:计算中|待计算)|共\s*\d+\s*件)$/.test(label)) return false;
-      return !/^[+×xX]$/.test(label);
-    }))];
-    if (!choices.length) continue;
-    const baseName = clean(originalName.replace(/[（(]?(?:请选|请选择|任选)\s*\d+\s*(?:份|种)[）)]?/g, ''), 60) || '规格';
-    groups.push({
-      name: selectionCount > 1 ? `${baseName}（请选择${selectionCount}份）` : baseName,
-      choices,
-      multiple: raw?.multiple === true || selectionCount > 1,
-      selectionCount,
-    });
+    // Some Eleme SKU dialogs expose only the first heading as a DOM heading
+    // and flatten later decorated headings (for example “温度【…】” and
+    // “甜度【…】”) into that first group's choices. Split those markers back
+    // into independent single-select groups before assigning stable ids.
+    const sections = [{ name: originalName, choices: [], multiple: raw?.multiple === true }];
+    for (const label of rawChoices) {
+      const embeddedHeading = label.match(groupHeading);
+      if (embeddedHeading && clean(embeddedHeading[1], 60) !== clean(sections.at(-1).name.match(groupHeading)?.[1], 60)) {
+        sections.push({ name: label, choices: [], multiple: false });
+      } else {
+        sections.at(-1).choices.push(label);
+      }
+    }
+    for (const section of sections) {
+      const hint = [section.name, ...section.choices].map(label => label.match(/(?:请选|请选择|任选)\s*(\d+)\s*(?:份|种)/)).find(Boolean);
+      const selectionCount = Math.max(1, Math.min(20, Number(hint?.[1]) || 1));
+      const choices = [...new Set(section.choices.filter(label => {
+        if (optionPanelNoise.test(label)) return false;
+        if (/^(?:请选|请选择|任选)\s*\d+\s*(?:份|种)$/.test(label)) return false;
+        if (/^(?:已选\s*[:：]?.*|价格(?:计算中|待计算)|共\s*\d+\s*件)$/.test(label)) return false;
+        return !/^[+×xX]$/.test(label);
+      }))];
+      if (!choices.length) continue;
+      const baseName = clean(section.name
+        .replace(/\s*[【\[].{1,40}[】\]]\s*$/g, '')
+        .replace(/[（(]?(?:请选|请选择|任选)\s*\d+\s*(?:份|种)[）)]?/g, ''), 60) || '规格';
+      groups.push({
+        name: selectionCount > 1 ? `${baseName}（请选择${selectionCount}份）` : baseName,
+        choices,
+        multiple: section.multiple === true || selectionCount > 1,
+        selectionCount,
+      });
+    }
   }
   return groups;
+}
+
+export function missingSelectedOptionRequirements(actualValue, selectedLabels = []) {
+  const canonicalize = value => clean(value, 1000).toLowerCase()
+    .replace(/火腿[巴扒]麦满分/g, '火腿扒麦满分')
+    .replace(/七分糖/g, '7分糖').replace(/三分糖/g, '3分糖')
+    .replace(/不(?:额外|另外)?加糖|无糖|零糖|0糖/g, '无糖')
+    .replace(/[\s（）()【】\[\]：:、,，/|l]/g, '');
+  const actual = canonicalize(actualValue);
+  const requirements = [...new Set((selectedLabels || []).flatMap(value => {
+    const label = canonicalize(value);
+    return label.match(/大脆鸡扒麦满分|火腿扒麦满分|吉士蛋麦满分|原味板烧鸡腿麦满分|猪柳麦满分|脆薯饼|脆香油条|小杯鲜萃咖啡|小杯优品豆浆|鲜萃冰咖|中杯|大杯|芝士不分装|芝士分装|去冰|少冰|正常冰|常温|温热|热|[1375]分糖|全糖|无糖/g) || [];
+  }))];
+  return requirements.filter(requirement => !actual.includes(canonicalize(requirement)));
 }
 
 export function riskChallengeKind(value) {
@@ -68,6 +122,113 @@ export function shopClosedReason(value) {
   return clean(match?.[0], 80);
 }
 
+function comparableProductKey(value) {
+  return knownRouteKey(value)
+    .replace(/^(?:手工|招牌|特色|经典)+/u, '')
+    .replace(/牛肉拉面/g, '牛肉面');
+}
+
+export function merchantNameMatchScore(requested, candidate) {
+  const target = knownRouteKey(requested);
+  const name = knownRouteKey(candidate);
+  if (!target || !name) return 0;
+  if (name === target) return 120;
+  if (name.startsWith(target)) return 110;
+  if (name.includes(target)) return 100;
+  if (target.startsWith(name) && name.length >= Math.max(4, target.length - 2)) return 90;
+  const targetChars = Array.from(target);
+  const namePairs = new Set();
+  const nameChars = Array.from(name);
+  for (let index = 0; index + 1 < nameChars.length; index += 1) namePairs.add(`${nameChars[index]}${nameChars[index + 1]}`);
+  const targetPairs = [];
+  for (let index = 0; index + 1 < targetChars.length; index += 1) targetPairs.push(`${targetChars[index]}${targetChars[index + 1]}`);
+  const uniquePairs = [...new Set(targetPairs)];
+  const matched = uniquePairs.filter(pair => namePairs.has(pair)).length;
+  const ratio = uniquePairs.length ? matched / uniquePairs.length : 0;
+  // Require several adjacent fragments. This accepts inserted descriptors such
+  // as “DQ·蛋糕·冰淇淋” while rejecting a generic first card like “手工拉面”
+  // for “兰州牛肉面”.
+  if (matched >= 2 && ratio >= 0.5) return 70 + Math.round(ratio * 20);
+  return 0;
+}
+
+export function requestedMaxDistanceKm(value) {
+  const text = clean(value, 300);
+  const match = text.match(/(?:不超过|最多|小于等于|不大于|限|≤)\s*(\d+(?:\.\d+)?)\s*(?:公里|km)/i)
+    || text.match(/(\d+(?:\.\d+)?)\s*(?:公里|km)\s*(?:内|以内|范围内)/i);
+  return match ? Math.max(0, number(match[1])) : 0;
+}
+
+function marketplaceMatchScore(shop, itemName) {
+  const nameScore = merchantNameMatchScore(itemName, shop?.name);
+  if (nameScore) return nameScore;
+  const target = comparableProductKey(itemName);
+  const merchant = comparableProductKey(shop?.name);
+  // Retail cards put the merchant metadata first and product previews much
+  // later. Keep enough normalized preview text to reach those titles; the
+  // ordinary route key is intentionally capped at 160 characters.
+  const preview = clean(shop?.previewText, 4000).toLowerCase()
+    .replace(/(?:无糖|零糖|不加糖|少糖|微糖|半糖|全糖|正常糖|不(?:额外|另外)加糖|少冰|少少冰|去冰|正常冰|多冰|热饮|冷饮|常温|大杯|中杯|小杯)/g, '')
+    .replace(/鸡腿汉堡/g, '鸡腿堡')
+    .replace(/牛肉拉面/g, '牛肉面')
+    .replace(/[^\p{L}\p{N}]+/gu, '');
+  if (!target) return 0;
+  if (merchant === target) return 120;
+  if (merchant.startsWith(target)) return 110;
+  if (merchant.includes(target)) return 100;
+  if (target.startsWith(merchant) && merchant.length >= Math.max(4, target.length - 2)) return 90;
+  if (preview.includes(target)) return 80;
+  // Product previews commonly insert flavour/style words between the user's
+  // qualifier and category, e.g. “巧克力巴斯克芝士蛋糕” for “巧克力蛋糕”.
+  // Score adjacent fragments across the full preview (not the 160-character
+  // route key) so the relevant merchant can be entered; the exact product is
+  // still verified again inside that shop before anything is added.
+  const targetChars = Array.from(target);
+  const previewChars = Array.from(preview);
+  const previewPairs = new Set();
+  for (let index = 0; index + 1 < previewChars.length; index += 1) previewPairs.add(`${previewChars[index]}${previewChars[index + 1]}`);
+  const targetPairs = [];
+  for (let index = 0; index + 1 < targetChars.length; index += 1) targetPairs.push(`${targetChars[index]}${targetChars[index + 1]}`);
+  const uniquePairs = [...new Set(targetPairs)];
+  const matched = uniquePairs.filter(pair => previewPairs.has(pair)).length;
+  const ratio = uniquePairs.length ? matched / uniquePairs.length : 0;
+  if (matched >= 2 && ratio >= 0.5) return 60 + Math.round(ratio * 20);
+  return 0;
+}
+
+export function shopRowsFromVisibleText(rawLeaves, storeQuery = '') {
+  const leaves = (Array.isArray(rawLeaves) ? rawLeaves : [])
+    .map(item => ({ text: clean(item?.text, 80), x: Number(item?.x) || 0, y: Number(item?.y) || 0 }))
+    .filter(item => item.text && Number.isFinite(item.y));
+  const rawAnchors = leaves.filter(item => /起送/.test(item.text)).sort((a, b) => a.y - b.y);
+  const anchors = rawAnchors.filter((item, index) => index === 0 || item.y - rawAnchors[index - 1].y > 24);
+  const storeKey = knownRouteKey(storeQuery);
+  return anchors.slice(0, 12).map((anchor, index) => {
+    const nextY = anchors[index + 1]?.y ?? anchor.y + 260;
+    const lineRows = leaves.filter(item => item.y >= anchor.y - 150 && item.y < nextY - 20);
+    const lines = lineRows.map(item => item.text);
+    const nameRows = lineRows.filter(item => item.text.length >= 2 && item.text.length <= 60
+      && !/^\d+(?:\.\d+)?\+?$/.test(item.text)
+      && !/月售|评分|起送|配送|分钟|公里|km|\d+(?:\.\d+)?m\b|优惠|¥/i.test(item.text)
+      && !/^(?:综合排序|销量优先|速度优先|距离优先|商家好评优先|人均价低到高|筛选|清空|查看|蜂鸟准时达|支持商家会员|支持预订|支持自取|开发票)$/.test(item.text)
+      && !/周边优质商家|近期\d+人好评|浏览过\d+次|已售\d+/.test(item.text));
+    const matchingNames = nameRows.filter(item => storeKey && merchantNameMatchScore(storeQuery, item.text) > 0)
+      .sort((left, right) => Math.abs(left.y - anchor.y) - Math.abs(right.y - anchor.y));
+    const fallbackNames = [...nameRows].sort((left, right) => Math.abs(left.y - anchor.y) - Math.abs(right.y - anchor.y));
+    const name = matchingNames[0]?.text || fallbackNames[0]?.text || `商家${index + 1}`;
+    return {
+      index, name, anchorY: anchor.y,
+      rating: number(lines.find(text => /评分|\d\.\d分/.test(text))),
+      monthlySales: number(lines.find(text => /月售/.test(text))),
+      deliveryFee: number(lines.find(text => /配送费/.test(text))),
+      etaMinutes: number(lines.find(text => /分钟/.test(text))),
+      distanceKm: number(lines.find(text => /\d+(?:\.\d+)?\s*km/i.test(text))),
+      couponLabel: clean(lines.find(text => /减|券|折/.test(text)), 100),
+      previewText: clean(lines.join(' '), 1000),
+    };
+  });
+}
+
 export function productMatchesSavedItem(candidateName, savedItemName) {
   const candidateText = clean(candidateName, 240);
   const targetText = clean(savedItemName, 160);
@@ -77,42 +238,123 @@ export function productMatchesSavedItem(candidateName, savedItemName) {
   // A single requested drink must never be satisfied by a bundle merely
   // because the bundle title contains the same drink name.  The user may ask
   // for a bundle explicitly; only then is a bundle candidate eligible.
-  const bundle = /(?:双杯|两杯|2杯|套餐|组合|买一送一|\+|＋)/i;
+  const bundle = /(?:双杯|两杯|2杯|套餐|组合|礼包|整箱|多包|多罐|买一送一|(?:推荐|分享|家庭)装|\d+杯装|\+|＋)/i;
   if (!bundle.test(targetText) && bundle.test(candidateText)) return false;
-  return candidate === target || candidate.includes(target);
+  const comparableCandidate = comparableProductKey(candidateName);
+  const comparableTarget = comparableProductKey(savedItemName);
+  if (candidate === target || candidate.includes(target)
+    || comparableCandidate === comparableTarget || comparableCandidate.includes(comparableTarget)) return true;
+  // Explicit pack requests commonly have flavour/weight copy inserted between
+  // the product and pack words (for example “薯片原味…大礼包”).  Accept the
+  // separated adjacent fragments only when the user also asked for a pack;
+  // this keeps a single “薯片” request from silently becoming a whole box.
+  const packCore = comparableTarget.replace(/(?:双杯|两杯|2杯|套餐|组合|大礼包|礼包|整箱|多包|多罐|买一送一)/gi, '');
+  return bundle.test(targetText) && packCore.length >= 2 && comparableCandidate.includes(packCore)
+    && merchantNameMatchScore(targetText, candidateText) >= 80;
 }
 
-export function preferredExactProduct(items, itemName) {
+export function preferredExactProduct(items, itemName, { allowContainedAlias = false } = {}) {
   const targetText = clean(itemName, 160);
-  const targetKey = knownRouteKey(itemName);
-  const chosen = (Array.isArray(items) ? items : [])
+  const targetKey = comparableProductKey(itemName);
+  const targetFruit = singleFruitKeyword(targetText);
+  const multiServingPattern = /(?:双份|两份|二份|2\s*份|双杯|两杯|2杯|\d+\s*件装|套餐|组合|礼包|整箱|多包|多罐|买一送一|\+|＋)/i;
+  const explicitPack = multiServingPattern.test(targetText);
+  // A bare product name means one serving. A candidate whose own title says
+  // “2份/双份” is a different quantity and must not win merely because it
+  // starts with the requested name. The user must explicitly request that pack.
+  const candidateItems = (Array.isArray(items) ? items : []).filter(item =>
+    (explicitPack || !multiServingPattern.test(clean(item?.name, 240)))
+    && (!targetFruit || fruitServingEligible(fruitServingWeightGrams(item?.name) > 0
+      ? item?.name : `${item?.name || ''} ${item?.description || ''}`))
+  );
+  const qualifiedCategories = [
+    { label: '薯片', pattern: /(?:薯片|马铃薯片|土豆片)/ },
+    { label: '冰淇淋', pattern: /(?:冰淇淋|冰激凌)/ },
+    { label: '水果捞', pattern: /水果捞/ },
+    { label: '水果拼盘', pattern: /(?:水果拼盘|果盘|(?:[大一二三四五六七八九十\d]+拼|多拼|混合)果切)/ },
+    { label: '西瓜', pattern: /(?:西瓜(?:果切|切盒|切|桶)|(?:鲜切|现切|切盒|果切)[^+，,、]{0,20}西瓜)/, exclude: /(?:拼|混合|果盘|水果捞|组合)/ },
+    { label: '芒果', pattern: /(?:芒果(?:果切|切盒|切|桶)|(?:鲜切|现切|切盒|果切)[^+，,、]{0,20}芒果)/, exclude: /(?:拼|混合|果盘|水果捞|组合)/ },
+    { label: '橙子', pattern: /(?:(?:橙子|脐橙|鲜橙)(?:果切|切盒|切|桶)|(?:鲜切|现切|切盒|果切)[^+，,、]{0,20}(?:橙子|脐橙|鲜橙))/, exclude: /(?:拼|混合|果盘|水果捞|组合)/ },
+    { label: '茶叶蛋', pattern: /茶叶蛋/, exclude: /(?:套餐|组合|多份|双份|两份|2\s*份)/ },
+    { label: '牛肉饼', pattern: /牛肉饼/, exclude: /(?:套餐|组合|多份|双份|两份|2\s*份)/ },
+    { label: '酱香饼', pattern: /酱香饼/, exclude: /(?:套餐|组合|多份|双份|两份|2\s*份)/ },
+    { label: '蛋糕', pattern: /蛋糕/ },
+    { label: '奶茶', pattern: /奶茶/ },
+    { label: '咖啡', pattern: /咖啡/ },
+  ];
+  const qualifiedCategory = qualifiedCategories.find(row => targetText.includes(row.label));
+  const qualifierKey = qualifiedCategory
+    ? knownRouteKey(targetText.replace(qualifiedCategory.label, ''))
+    : '';
+  if (qualifiedCategory && qualifierKey.length >= 2) {
+    const qualified = candidateItems.map((item, index) => ({ item, index })).filter(({ item }) => {
+      const name = clean(item?.name, 240);
+      if (!qualifiedCategory.pattern.test(name) || qualifiedCategory.exclude?.test(name) || !knownRouteKey(name).includes(qualifierKey)) return false;
+      return true;
+    }).sort((left, right) => {
+      const leftPromo = Number(left.item?.price) > 0 && Number(left.item.price) <= 1.01 ? 0 : 1;
+      const rightPromo = Number(right.item?.price) > 0 && Number(right.item.price) <= 1.01 ? 0 : 1;
+      const leftVisibleIndex = Number.isInteger(left.item?.buttonIndex) ? left.item.buttonIndex : left.index;
+      const rightVisibleIndex = Number.isInteger(right.item?.buttonIndex) ? right.item.buttonIndex : right.index;
+      return leftPromo - rightPromo || leftVisibleIndex - rightVisibleIndex || left.index - right.index;
+    })[0]?.item;
+    if (qualified) return qualified;
+  }
+  if (qualifiedCategory && qualifierKey.length < 2) {
+    const firstCategoryItem = candidateItems.map((item, index) => ({ item, index })).filter(({ item }) => {
+      const name = clean(item?.name, 240);
+      return qualifiedCategory.pattern.test(name) && !qualifiedCategory.exclude?.test(name);
+    }).sort((left, right) => {
+      const leftPromo = Number(left.item?.price) > 0 && Number(left.item.price) <= 1.01 ? 0 : 1;
+      const rightPromo = Number(right.item?.price) > 0 && Number(right.item.price) <= 1.01 ? 0 : 1;
+      const leftVisibleIndex = Number.isInteger(left.item?.buttonIndex) ? left.item.buttonIndex : left.index;
+      const rightVisibleIndex = Number.isInteger(right.item?.buttonIndex) ? right.item.buttonIndex : right.index;
+      return leftPromo - rightPromo || leftVisibleIndex - rightVisibleIndex || left.index - right.index;
+    })[0]?.item;
+    if (firstCategoryItem) return firstCategoryItem;
+  }
+  const chosen = candidateItems
     .filter(item => productMatchesSavedItem(item?.name, itemName))
     .map((item, index) => {
       const name = clean(item?.name, 240);
-      const key = knownRouteKey(name);
-      const rank = name.startsWith(targetText) ? 0 : key === targetKey ? 1 : 2;
+      const key = comparableProductKey(name);
+      const undecoratedName = name.replace(/^(?:(?:[（(【[]\s*)?(?:招牌|热销|推荐)(?:\s*[）)】\]])?[\s·:：-]*)+/u, '');
+      const rank = (name.startsWith(targetText) || undecoratedName.startsWith(targetText)) ? 0 : (key === targetKey || key.startsWith(targetKey)) ? 1 : 2;
       return { item, index, rank, length: name.length };
     })
     .sort((left, right) => left.rank - right.rank || left.length - right.length || left.index - right.index)[0];
   if (chosen && chosen.rank <= 1) return chosen.item;
+  // A complete contiguous four-character product term is a valid match even
+  // when the real menu adds a flavour/tea-base prefix, e.g. “葡萄冰奶” ->
+  // “茉莉葡萄冰奶”. Bundle filtering already happened above, so this cannot
+  // silently turn one requested item into a pack or multi-cup offer.
+  if (allowContainedAlias && chosen && Array.from(targetKey).length >= 4) {
+    const chosenName = clean(chosen.item?.name, 240);
+    const keywordAt = chosenName.indexOf(targetText);
+    if (keywordAt >= 0) return chosen.item;
+  }
+  if (chosen && /(?:套餐|组合|礼包|整箱|多包|多罐)/i.test(targetText)
+    && merchantNameMatchScore(targetText, chosen.item?.name) >= 80) return chosen.item;
   // A user may intentionally leave the exact KFC single item to the role
   // ("汉堡、薯条、蛋挞、可乐").  In that case choose a real single item from
   // the requested category, but never let a combo/bucket masquerade as it.
   const categoryPatterns = {
     '汉堡': /(?:汉堡|鸡腿堡|牛肉堡|鳕鱼堡|虾堡|田园堡)/,
-    '薯条': /薯条/,
+    '薯条': /(?:薯条|[大中小]薯)/,
     '蛋挞': /蛋挞/,
     '可乐': /可乐/,
-    '鸡翅': /鸡翅/,
+    '鸡翅': /(?:鸡翅|烤翅|翅中|翅根)/,
     '原味鸡': /原味鸡/,
+    '薯片': /(?:薯片|马铃薯片|土豆片)/,
   };
   const category = categoryPatterns[targetText];
   if (!category) return null;
-  const bundle = /(?:双杯|两杯|2杯|套餐|组合|买一送一|全家桶|多人餐|双人餐|三人餐|四人餐|桶餐|拼盘|\+|＋)/i;
-  return (Array.isArray(items) ? items : [])
+  const bundle = /(?:双杯|两杯|2杯|套餐|组合|礼包|整箱|多包|多罐|买一送一|全家桶|多人餐|双人餐|三人餐|四人餐|桶餐|拼盘|\+|＋)/i;
+  const categoryItems = (Array.isArray(items) ? items : [])
     .filter(item => category.test(clean(item?.name, 240)) && !bundle.test(clean(item?.name, 240)))
-    .map((item, index) => ({ item, index, length: clean(item?.name, 240).length }))
-    .sort((left, right) => left.length - right.length || left.index - right.index)[0]?.item || null;
+    .map((item, index) => ({ item, index, length: clean(item?.name, 240).length }));
+  if (targetText === '薯片') return categoryItems[0]?.item || null;
+  return categoryItems.sort((left, right) => left.length - right.length || left.index - right.index)[0]?.item || null;
 }
 
 export function preferredBrand(value) {
@@ -124,6 +366,7 @@ export function preferredBrand(value) {
   if (/霸王茶姬|chagee/i.test(query)) return 'chagee';
   if (/奈雪/i.test(query)) return 'nayuki';
   if (/肯德基|\bkfc\b/i.test(query)) return 'kfc';
+  if (/麦当劳|mcdonald/i.test(query)) return 'mcdonalds';
   return '';
 }
 
@@ -136,6 +379,7 @@ export function brandMatches(brand, value) {
   if (brand === 'chagee') return /霸王茶姬|chagee/i.test(name);
   if (brand === 'nayuki') return /奈雪/i.test(name);
   if (brand === 'kfc') return /肯德基|\bkfc\b/i.test(name);
+  if (brand === 'mcdonalds') return /麦当劳|mcdonald/i.test(name);
   return false;
 }
 
@@ -150,13 +394,19 @@ export function activeShopMatchesBrand(query, url, body = '') {
 export function knownRouteKey(value) {
   return clean(value, 160).toLowerCase()
     .replace(/(?:无糖|零糖|不加糖|少糖|微糖|半糖|全糖|正常糖|不(?:额外|另外)加糖|少冰|少少冰|去冰|正常冰|多冰|热饮|冷饮|常温|大杯|中杯|小杯)/g, '')
+    .replace(/鸡腿汉堡/g, '鸡腿堡')
     .replace(/[^\p{L}\p{N}]+/gu, '');
 }
 
 export function requestedKfcItems(value) {
   const source = clean(value, 300);
   if (!/(?:肯德基|\bkfc\b)/i.test(source)) return [];
-  const stripped = source
+  // Client role actions carry structured fields such as
+  // “用户明确；门店=肯德基；商品=汉堡、薯条”.  Only the 商品 field is a cart
+  // checklist; treating 门店= or 用户明确 as products blocks checkout after
+  // the real requested items have already been added.
+  const structuredItems = source.match(/(?:^|[；;])\s*商品\s*=\s*([^；;]+)/)?.[1];
+  const stripped = clean(structuredItems || source, 300)
     .replace(/(?:肯德基|\bkfc\b)/gi, ' ')
     .replace(/(?:帮我|给我|想吃|要吃|来点|点一份|点一些|随便点|单点|单品)/g, ' ');
   const items = stripped.split(/[\s，,、；;和与]+/u)
@@ -178,6 +428,24 @@ export function requestedItemName(value) {
   return stripped || source;
 }
 
+export function requestedStoreItemName(value, storeQuery = '') {
+  if (mcdonaldsDefaultBundleRequested(`${value} ${storeQuery}`)) return mcdonaldsBreakfastBundleOptions.product;
+  const kfcItems = requestedKfcItems(value);
+  if (kfcItems.length) return kfcItems[0];
+  let source = clean(value, 160);
+  const store = clean(storeQuery, 100);
+  if (store) {
+    const index = source.indexOf(store);
+    if (index >= 0) source = clean(`${source.slice(0, index)} ${source.slice(index + store.length)}`, 160);
+  }
+  // The adapter deliberately serializes a multi-item checklist as
+  // “主商品 加商品2 加商品3”. Only the first item belongs in the current
+  // store-search field; the remaining items are handled one at a time by
+  // addRequestedStandaloneItems after the first add succeeds.
+  source = source.replace(/\s+(?:加|再来|配)(?:一个|一份)?\s*[^\s，,、；;。！？!?]{1,24}/gu, ' ');
+  return requestedItemName(source);
+}
+
 export function requestedMealSide(value) {
   return requestedExtraItems(value).find(item => /茶叶蛋/.test(item)) || '';
 }
@@ -186,17 +454,85 @@ export function requestedExtraItems(value) {
   const kfcItems = requestedKfcItems(value);
   if (kfcItems.length) return kfcItems.slice(1);
   const source = clean(value, 240);
-  const items = [...source.matchAll(/(?<!不)(?:加|再来|配)(?:一个|一份)?\s*([^\s，,、；;]{1,24})/gu)]
-    .map(match => clean(match[1], 60))
-    .filter(item => item && !/^(?:糖|冰|热|温|奶油|椰乳|燕麦奶|辣|香菜)/.test(item));
+  const items = [...source.matchAll(/(?:加|再来|配)(?:一个|一份)?\s*([^\s，,、；;。！？!?]{1,24})/gu)]
+    .filter(match => {
+      const prefix = source.slice(Math.max(0, (match.index || 0) - 28), match.index || 0);
+      // Only positive add-on instructions may create cart requirements.  A
+      // sentence such as “不得再加第二杯饮品” used to be misread as a request
+      // for another drink because the old guard only recognised immediate
+      // “不加”.  Keep the check local to this action so “不足起送价时加小料”
+      // remains a valid positive instruction.
+      return !/(?:不(?:额外|另外)?$|(?:不得|不能|不要|不再|不允许|不可以|不准|不许|勿|别|禁止|严禁|避免)[^，,、；;。！？!?]{0,16}$)/u.test(prefix);
+    })
+    .map(match => clean(match[1], 60)
+      // Natural requests commonly put the quantity after the product name
+      // (“加茶叶蛋一份”) while the canonical checklist puts it before the
+      // name (“加一份茶叶蛋”).  Both mean one identical required item; keeping
+      // the trailing counter created a phantom fourth product and restarted
+      // store search after the real three-item cart was already complete.
+      .replace(/(?:一|1)\s*(?:份|个|杯)$/u, '')
+      .trim())
+    .filter(item => item
+      && !/^(?:糖|冰|热|温|奶油|椰乳|燕麦奶|辣|香菜)/.test(item)
+      // Generic category words authorize the bounded top-up flow; they are
+      // not product names and must never be submitted as an in-shop search.
+      && !/^(?:(?:不同|不重复|其他|其它|任意|随便|若干|多种|几个|几份)(?:的)?)?(?:(?:同店|店内|本店|可凑单)(?:的)?)?(?:小料|加料|配料|小吃)$/u.test(item)
+      && !/(?:^|的)(?:小料|加料|配料|小吃)$/u.test(item)
+      && !/(?:第二杯|另一杯|再一杯|额外一杯).*(?:饮品|奶茶|咖啡|果茶)/.test(item));
   return [...new Set(items)];
 }
+
+const milkTeaToppingKey = value => {
+  const text = clean(value, 100);
+  const aliases = [
+    ['脆波波', /脆(?:波波|啵啵)/], ['奶冻', /奶冻/], ['小西米', /小西米|西米/],
+    ['黑糖珍珠', /黑糖(?:珍珠|波波)/], ['珍珠', /珍珠/], ['冻冻', /冻冻/], ['椰果', /椰果/],
+    ['葡萄肉', /葡萄肉/], ['奶麻薯', /奶麻薯/], ['麻薯', /麻薯/], ['芝士奶盖', /芝士奶盖/],
+    ['雪糯米', /(?:雪|血)糯米/], ['大多肉', /大多肉/], ['小多肉', /小多肉/], ['厚芋泥', /厚芋泥/], ['西柚粒', /西柚粒/],
+    ['芋圆', /芋圆/], ['布丁', /布丁/], ['仙草', /仙草/], ['红豆', /红豆/], ['椰奶冻', /椰奶冻/],
+  ];
+  return aliases.find(([, pattern]) => pattern.test(text))?.[0] || '';
+};
+
+export function requestedMilkTeaToppingPreferences(value) {
+  const source = clean(value, 300);
+  const preferred = requestedExtraItems(source).map(milkTeaToppingKey).filter(Boolean);
+  // One add verb can govern several coordinated toppings: “加葡萄肉和芋圆”
+  // must create two hard requirements rather than one merged label.
+  for (const segment of source.matchAll(/(?:加|放|配)([^，,；;。！？!?]{1,80})/gu)) {
+    for (const mention of segment[1].matchAll(/脆(?:波波|啵啵)|奶冻|小西米|西米|黑糖(?:珍珠|波波)|珍珠|冻冻|椰果|葡萄肉|奶麻薯|麻薯|芝士奶盖|(?:雪|血)糯米|大多肉|小多肉|厚芋泥|西柚粒|芋圆|布丁|仙草|红豆|椰奶冻/gu)) {
+      const key = milkTeaToppingKey(mention[0]);
+      if (key) preferred.push(key);
+    }
+  }
+  const excluded = [];
+  const mentions = /脆(?:波波|啵啵)|奶冻|小西米|西米|黑糖(?:珍珠|波波)|珍珠|冻冻|椰果|葡萄肉|奶麻薯|麻薯|芝士奶盖|(?:雪|血)糯米|大多肉|小多肉|厚芋泥|西柚粒|芋圆|布丁|仙草|红豆|椰奶冻/gu;
+  for (const match of source.matchAll(mentions)) {
+    const prefix = source.slice(Math.max(0, (match.index || 0) - 20), match.index || 0);
+    if (/(?:不要|别|不得|不能|不允许|不可以|不准|不许|勿|禁止|排除|去除|去掉|移除)(?:再)?(?:加|放|要|选)?[^，,、；;。！？!?]{0,6}$/u.test(prefix)) {
+      const key = milkTeaToppingKey(match[0]);
+      if (key) excluded.push(key);
+    }
+  }
+  return {
+    preferred: [...new Set(preferred)].filter(key => !excluded.includes(key)),
+    excluded: [...new Set(excluded)],
+  };
+}
+
+const milkTeaToppingPhrase = value => {
+  const remainder = clean(value, 120)
+    .replace(/脆(?:波波|啵啵)|奶冻|小西米|西米|黑糖(?:珍珠|波波)|珍珠|冻冻|椰果|葡萄肉|奶麻薯|麻薯|芝士奶盖|(?:雪|血)糯米|大多肉|小多肉|厚芋泥|西柚粒|芋圆|布丁|仙草|红豆|椰奶冻/gu, '')
+    .replace(/(?:和|与|及|以及|还有|再|、|\/)/gu, '')
+    .trim();
+  return !remainder;
+};
 
 export function requestedStandaloneItems(value) {
   const kfcItems = requestedKfcItems(value);
   if (kfcItems.length) return kfcItems.slice(1);
   const modifiers = /^(?:珍珠|椰果|冻冻|奶冻|芋圆|西米|布丁|仙草|红豆|椰奶冻|脆啵啵|麻薯|糖|冰|热|温|奶油|椰乳|燕麦奶|浓缩|辣|香菜)$/;
-  return requestedExtraItems(value).filter(item => !modifiers.test(item));
+  return requestedExtraItems(value).filter(item => !modifiers.test(item) && !milkTeaToppingPhrase(item));
 }
 
 export function repeatPurchaseMatchKind(raw, itemName, request = '') {
@@ -244,9 +580,53 @@ export function availableCouponAmount(raw) {
 
 export function appliedCouponAmount(raw) {
   const body = clean(raw, 12_000).replace(/(\d)\s+\.(\d)/g, '$1.$2');
-  const matches = [...body.matchAll(/(?:闪购红包|红包优惠|配送费红包)[^。；\n]{0,24}?[-−]\s*[¥￥]?\s*(\d+(?:\.\d+)?)/g)]
+  const matches = [...body.matchAll(/(?:闪购红包|红包优惠|配送费红包|店铺\/商品红包)[^。；\n]{0,24}?[-−]\s*[¥￥]?\s*(\d+(?:\.\d+)?)/g)]
     .map(match => Number(match[1]) || 0).filter(value => value > 0);
   return matches.length ? Math.max(...matches) : 0;
+}
+
+const singleItemCategoryPattern = value => {
+  const name = clean(value, 160);
+  return [/(?:汉堡|鸡腿堡|牛肉堡|鳕鱼堡|虾堡|田园堡)/, /(?:薯条|[大中小]薯)/, /(?:鸡翅|烤翅|翅中|翅根)/, /蛋挞/, /可乐/]
+    .find(pattern => pattern.test(name)) || null;
+};
+
+const singleItemCategoryMatches = (actualName, expectedName) => {
+  const actual = clean(actualName, 160);
+  if (/(?:套餐|组合|全家桶|多人餐|双人餐|桶餐|拼盘)/.test(actual)) return false;
+  const category = singleItemCategoryPattern(expectedName);
+  return Boolean(category && category.test(actual));
+};
+
+export function cartItemVerification(items = [], expectedNames = [], { allowRepeatedSnack = false } = {}) {
+  const rows = (Array.isArray(items) ? items : []).map(item => ({
+    name: clean(item?.name, 160), quantity: Math.max(0, Math.floor(Number(item?.quantity) || 0)),
+  })).filter(item => item.name);
+  const duplicates = rows.filter(item => item.quantity !== 1
+    && !(allowRepeatedSnack && snackTopUpEligible(item.name))).map(item => item.name);
+  const missing = (Array.isArray(expectedNames) ? expectedNames : []).map(name => clean(name, 160)).filter(Boolean)
+    .filter(name => !rows.some(item => productMatchesSavedItem(item.name, name)
+      || productMatchesSavedItem(name, item.name) || singleItemCategoryMatches(item.name, name)
+      || singleFruitItemMatches(item.name, name)));
+  return { ok: !duplicates.length && !missing.length, rows, duplicates, missing };
+}
+
+export function couponCheckoutState(raw, url = '') {
+  const body = clean(raw, 12_000).replace(/(\d)\s+\.(\d)/g, '$1.$2');
+  const applied = appliedCouponAmount(body);
+  if (applied > 0) return { status: 'applied', amount: applied, evidence: 'checkout_applied_discount' };
+  const available = availableCouponAmount(body);
+  if (available > 0) return { status: 'available', amount: available, evidence: 'checkout_available_coupon' };
+  if (/(?:闪购红包|配送费红包|优惠券|红包)[^。；\n]{0,36}(?:无可用|暂无可用|没有可用|0\s*张可用|均不可用)/.test(body)) {
+    return { status: 'none', amount: 0, evidence: 'checkout_explicit_none' };
+  }
+  // A fully rendered checkout page with no coupon offer is still a completed
+  // coupon inspection.  A loading/non-checkout page remains unknown and must
+  // never be allowed to submit as if it had been checked.
+  if (checkoutPageReady(url, body) && /(?:合计|实付|商品金额|配送费)/.test(body)) {
+    return { status: 'none', amount: 0, evidence: 'checkout_scanned_no_offer' };
+  }
+  return { status: 'unknown', amount: 0, evidence: 'checkout_not_verifiable' };
 }
 
 export function savedTopUpItems(raw, mainItem = '') {
@@ -259,27 +639,179 @@ export function savedTopUpItems(raw, mainItem = '') {
     && common.findIndex(other => other === name) === index);
 }
 
+const foodCategoryContext = value => clean(value, 300)
+  .replace(/(?:主)?页面|界面|方面|表面|里面|外面|前面|后面/gu, '');
+
 export function milkTeaTopUpEligible(value) {
-  const text = clean(value, 300);
+  const text = foodCategoryContext(value);
   if (!text) return false;
   // Coffee and meal orders must never be padded with milk-tea toppings.  Those
   // categories need a normal same-category item or an explicit user choice.
   if (/咖啡|美式|馥芮白|摩卡|卡布奇诺|浓缩|生椰拿铁|主食|米饭|炒饭|盖饭|面|粉|粥|汉堡|炸鸡|鸡翅|薯条|披萨|卷饼|套餐|肯德基|\bkfc\b|麦当劳/i.test(text)) return false;
-  return /奶茶|果茶|茶饮|冰奶|鲜奶茶|茶拿铁|奶绿|奶盖|茉莉|葡萄|杨枝甘露|柠檬茶|椰椰|啵啵|茶百道|喜茶|霸王茶姬|奈雪/i.test(text);
+  return /奶茶|果茶|茶饮|冰奶|鲜奶茶|茶拿铁|奶绿|奶盖|茉莉|葡萄|杨枝甘露|柠檬茶|椰椰|啵啵|茶百道|喜茶|霸王茶姬|奈雪|蜜雪冰城|古茗/i.test(text);
 }
 
 export function multiServingEligible(value) {
   const text = clean(value, 300);
   if (!text) return false;
-  if (/肯德基|\bkfc\b|麦当劳|主食|米饭|炒饭|盖饭|面|粉|粥|汉堡|炸鸡|鸡翅|薯条|披萨|卷饼|便当|套餐饭/i.test(text)) return false;
+  if (/肯德基|\bkfc\b|麦当劳|主食|米饭|炒饭|盖饭|面|粉|粥|汉堡|炸鸡|鸡翅|薯条|披萨|卷饼|便当|套餐饭|奶茶|果茶|茶饮|冰奶|鲜奶茶|茶拿铁|奶绿|奶盖|茉莉|葡萄|杨枝甘露|柠檬茶|椰椰|啵啵|茶百道|喜茶|霸王茶姬|奈雪/i.test(text)) return false;
   if (/瑞幸(?:咖啡)?|luckin/i.test(text)) return true;
-  return milkTeaTopUpEligible(text);
+  return false;
 }
 
 export function mealSideTopUpEligible(value) {
-  const text = clean(value, 300);
+  const text = foodCategoryContext(value);
   if (!text || /咖啡|美式|拿铁|奶茶|果茶|茶饮|冰奶|肯德基|\bkfc\b|麦当劳|汉堡|炸鸡|鸡翅|薯条|披萨/i.test(text)) return false;
   return /主食|米饭|炒饭|盖饭|面|粉|粥|便当|馄饨|饺子|包子/i.test(text);
+}
+
+export function milkTeaToppingCandidates(items = [], mainItem = '') {
+  const main = knownRouteKey(mainItem);
+  // Milk-tea-only vocabulary learned from the user's normal add-on choices.
+  // Keep both common platform spellings (脆波波/脆啵啵) and longer labels;
+  // matching these words never authorizes a full second drink.
+  const topping = /冻冻|椰果|葡萄肉|奶冻|黑糖(?:珍珠|波波)|珍珠|芋圆|小西米|西米|布丁|仙草|红豆|椰奶冻|脆(?:啵啵|波波)|奶麻薯|麻薯|芝士奶盖|(?:雪|血)糯米|大多肉|小多肉|厚芋泥|西柚粒|小料/i;
+  const fullDrink = /奶茶|果茶|茶饮|冰奶|鲜奶茶|茶拿铁|奶绿|奶盖(?:茶|奶茶|果茶|饮品)|柠檬水|果霸|咖啡|美式|拿铁|豆乳.*麻薯|米麻薯|\d+\s*杯(?:装|套餐)?|双杯|两杯|买一送一/i;
+  const nonFood = /盲盒|盲袋|积木|玩具|挂件|冰箱贴|钥匙扣|周边/i;
+  const eligible = (Array.isArray(items) ? items : []).filter(item => {
+    const name = clean(item?.name || item, 140);
+    const description = clean(item?.description, 500);
+    // Storefront add-on products are ordered with their platform default
+    // (normally 分装), so a warning against mixing one into a fruit/hot drink
+    // does not make that separately packed topping ineligible.
+    return !/\+?\s*\d+\s*份起售/.test(description)
+      && Number(item?.price ?? 1) > 0 && !fullDrink.test(name) && !nonFood.test(name);
+  });
+  return eligible.map(item => clean(item?.name || item, 140)).filter((name, index, all) => {
+    const key = knownRouteKey(name);
+    return name && topping.test(name) && key !== main && all.findIndex(other => knownRouteKey(other?.name || other) === key) === index;
+  });
+}
+
+export function mealSnackCandidates(items = [], mainItem = '') {
+  const main = knownRouteKey(mainItem);
+  const snack = /茶叶蛋|卤蛋|煎蛋|荷包蛋|鸡蛋|小酥肉|鸡排|鸡腿|鸡翅|锅贴|春卷|小笼包|小笼|蒸饺|煎饺|凉菜|小菜|海带|豆皮|豆腐|拍黄瓜|酸梅汤|豆浆/i;
+  const eligible = (Array.isArray(items) ? items : []).filter(item => !/\+?\s*\d+\s*份起售/.test(clean(item?.description, 300)) && Number(item?.price ?? 1) > 0);
+  return eligible.map(item => clean(item?.name || item, 140)).filter((name, index, all) => {
+    const key = knownRouteKey(name);
+    return name && snack.test(name) && key !== main && all.findIndex(other => knownRouteKey(other?.name || other) === key) === index;
+  });
+}
+
+export function snackTopUpEligible(value) {
+  const text = clean(value, 300);
+  return /薯片|零食|饼干|锅巴|辣条|海苔|坚果|肉脯|果冻|糖果|巧克力/i.test(text);
+}
+
+export function snackTopUpCandidates(items = [], mainItem = '') {
+  const main = knownRouteKey(mainItem);
+  const snack = /薯片|饼干|锅巴|辣条|海苔|坚果|肉脯|果冻|糖果|巧克力|豆干|面筋|小鱼仔|鸡丝|干脆面/i;
+  const nonFood = /盲盒|盲袋|玩具|挂件|钥匙扣|周边/i;
+  const bundle = /(?:双杯|两杯|2杯|\d+\s*件装|套餐|组合|礼包|整箱|多包|多罐|买一送一|\+|＋)/i;
+  return (Array.isArray(items) ? items : []).filter(item => {
+    const name = clean(item?.name || item, 140);
+    return name && snack.test(name) && !nonFood.test(name) && !bundle.test(name)
+      && !/\+?\s*\d+\s*份起售/.test(clean(item?.description, 300))
+      && Number(item?.price ?? 1) > 0;
+  }).map(item => clean(item?.name || item, 140)).filter((name, index, all) => {
+    const key = knownRouteKey(name);
+    return key !== main && all.findIndex(other => knownRouteKey(other?.name || other) === key) === index;
+  });
+}
+
+export function fruitTopUpEligible(value) {
+  return /水果捞|水果拼盘|果切|切果|西瓜|哈密瓜|葡萄|草莓|芒果|火龙果|菠萝|橙子|脐橙|猕猴桃|蓝莓|香蕉/i.test(clean(value, 300));
+}
+
+export function singleFruitKeyword(value) {
+  const source = clean(value, 240);
+  if (!source || /(?:拼|混合|果盘|水果捞|组合|套餐)/.test(source)) return '';
+  if (/西瓜/.test(source)) return '西瓜';
+  if (/芒果/.test(source)) return '芒果';
+  if (/(?:橙子|脐橙|鲜橙)/.test(source)) return '橙子';
+  return '';
+}
+
+export function fruitServingWeightGrams(value) {
+  const source = clean(value, 500).toLowerCase();
+  const weights = [...source.matchAll(/(\d+(?:\.\d+)?)\s*(kg|千克|公斤|g|克|斤)/giu)].map(match => {
+    const amount = Number(match[1]) || 0;
+    if (/^(?:kg|千克|公斤)$/iu.test(match[2])) return amount * 1000;
+    if (match[2] === '斤') return amount * 500;
+    return amount;
+  }).filter(weight => weight > 0);
+  return weights.length ? Math.max(...weights) : 0;
+}
+
+export function fruitServingEligible(value) {
+  const source = clean(value, 500);
+  if (/(?:大桶|桶装|水果桶|果桶|西瓜桶|芒果桶|橙子桶|含桶|半个|整个|夹心|夹馅|夹乌梅|乌梅|酸奶|奶油|果酱|蘸料|爆珠|大口吃芒果)/u.test(source)) return false;
+  const weight = fruitServingWeightGrams(source);
+  const maximum = singleFruitKeyword(source) === '西瓜' ? 500 : 250;
+  return weight > 0 && weight <= maximum;
+}
+
+export function singleFruitItemMatches(actualName, expectedName) {
+  const expected = singleFruitKeyword(expectedName);
+  return Boolean(expected && singleFruitKeyword(actualName) === expected && fruitServingEligible(actualName));
+}
+
+export function requestedFruitExclusions(value) {
+  const source = clean(value, 1200);
+  const fruits = ['西瓜', '哈密瓜', '葡萄', '草莓', '芒果', '火龙果', '菠萝', '橙子', '脐橙', '猕猴桃', '蓝莓', '香蕉'];
+  return fruits.filter(fruit => {
+    const escaped = fruit.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const before = new RegExp(`(?:不要(?:点|加|选|买|放)?|别(?:点|加|选|买|放)?|禁止(?:点|加|选|买|放)?|排除|去掉|不吃|不爱吃|不喜欢|不想吃|不点)\\s*${escaped}(?=[，。；、\\s]|$)`, 'u');
+    const after = new RegExp(`${escaped}\\s*(?:不要(?:点|加|选|买|放)?|别(?:点|加|选|买|放)?|禁止(?:点|加|选|买|放)?|排除|去掉|不吃|不爱吃|不喜欢|不想吃|不点)(?=[，。；、\\s]|$)`, 'u');
+    const except = new RegExp(`除了\\s*${escaped}(?=[，。；、\\s]|不要|别|都|其|外|以|$)`, 'u');
+    return before.test(source) || after.test(source) || except.test(source);
+  });
+}
+
+function fruitExclusionMatches(name, excluded = []) {
+  const key = knownRouteKey(name);
+  return excluded.some(fruit => {
+    const fruitKey = knownRouteKey(fruit);
+    if (fruit === '橙子') return /橙子|脐橙|鲜橙/.test(key);
+    if (fruit === '脐橙') return /脐橙/.test(key);
+    return fruitKey && key.includes(fruitKey);
+  });
+}
+
+export function fruitTopUpCandidates(items = [], mainItem = '', request = '') {
+  const main = knownRouteKey(mainItem);
+  const excluded = requestedFruitExclusions(request);
+  const fruit = /水果捞|水果拼盘|果切|切果|西瓜|哈密瓜|葡萄|草莓|芒果|火龙果|菠萝|橙|猕猴桃|蓝莓|香蕉/i;
+  const drink = /果茶|奶茶|饮料|果汁|冰淇淋|冰激凌|酸奶饮品/i;
+  const bundle = /(?:双杯|两杯|2杯|\d+\s*件装|套餐|组合|礼包|整箱|多盒|多杯|买一送一|\+|＋)/i;
+  return (Array.isArray(items) ? items : []).filter(item => {
+    const name = clean(item?.name || item, 140);
+    return name && fruit.test(name) && !fruitExclusionMatches(name, excluded) && !drink.test(name) && !bundle.test(name)
+      && fruitServingEligible(fruitServingWeightGrams(name) > 0 ? name : `${name} ${item?.description || ''}`)
+      && !/\+?\s*\d+\s*份起售/.test(clean(item?.description, 300)) && Number(item?.price ?? 1) > 0;
+  }).map(item => clean(item?.name || item, 140)).filter((name, index, all) => {
+    const key = knownRouteKey(name);
+    return key !== main && all.findIndex(other => knownRouteKey(other?.name || other) === key) === index;
+  });
+}
+
+export function dessertTopUpEligible(value) {
+  return /巧克力蛋糕|蛋糕|甜品|慕斯/i.test(clean(value, 300));
+}
+
+export function dessertTopUpCandidates(items = [], mainItem = '') {
+  const main = knownRouteKey(mainItem);
+  const dessert = /蛋糕|甜品|慕斯|泡芙|布丁|蛋挞|曲奇|面包|可颂|司康/i;
+  const drink = /奶茶|果茶|咖啡|饮料|果汁/i;
+  const bundle = /(?:双杯|两杯|2杯|\d+\s*件装|套餐|组合|礼包|整箱|买一送一|\+|＋)/i;
+  return (Array.isArray(items) ? items : []).filter(item => {
+    const name = clean(item?.name || item, 140);
+    return name && dessert.test(name) && !drink.test(name) && !bundle.test(name)
+      && !/\+?\s*\d+\s*份起售/.test(clean(item?.description, 300)) && Number(item?.price ?? 1) > 0;
+  }).map(item => clean(item?.name || item, 140)).filter((name, index, all) => {
+    const key = knownRouteKey(name);
+    return key !== main && all.findIndex(other => knownRouteKey(other?.name || other) === key) === index;
+  });
 }
 
 export function publicAddressLabel(raw) {
@@ -323,9 +855,26 @@ export function checkoutCartState(raw, itemName, query = '', quantity = 1, { all
   const expectedMainQuantity = Math.max(1, Number(quantity) || 1);
   const rows = required.map((name, index) => {
     const pattern = flexibleTextPattern(name);
-    const match = pattern
+    let match = pattern
       ? body.match(new RegExp(`${pattern}[^×]{0,180}×\\s*(\\d+)`, 'i'))
       : null;
+    const category = singleItemCategoryPattern(name);
+    const bundle = /(?:套餐|组合|全家桶|多人餐|双人餐|桶餐|拼盘)/;
+    if (match && category && !bundle.test(name) && bundle.test(match[0])) match = null;
+    if (!match) {
+      const candidates = category ? [...body.matchAll(new RegExp(`([^×]{0,100}${category.source}[^×]{0,100})×\\s*(\\d+)`, 'gi'))] : [];
+      const categoryMatch = candidates.find(candidate => !bundle.test(candidate[1]));
+      if (categoryMatch) match = [categoryMatch[0], categoryMatch[2]];
+    }
+    if (!match) {
+      const fruit = singleFruitKeyword(name);
+      const fruitPattern = fruit === '橙子' ? '(?:橙子|脐橙|鲜橙)' : fruit;
+      const candidates = fruitPattern
+        ? [...body.matchAll(new RegExp(`([^×]{0,100}${fruitPattern}[^×]{0,100})×\\s*(\\d+)`, 'gi'))]
+        : [];
+      const fruitMatch = candidates.find(candidate => singleFruitKeyword(candidate[1]) === fruit);
+      if (fruitMatch) match = [fruitMatch[0], fruitMatch[2]];
+    }
     return { name, quantity: Number(match?.[1]) || 0, expected: index === 0 ? expectedMainQuantity : 1 };
   });
   const renderedRows = [...body.matchAll(/×\s*(\d+)\s*[¥￥]/g)].map(match => Number(match[1]) || 0);
@@ -368,6 +917,27 @@ export function minimumOrderInfo(raw, itemPrice = 0, quantity = 1) {
   return { threshold, shortfall: shortfall || (threshold > current ? amount(threshold - current) : 0), current, minimumQuantity };
 }
 
+export function menuCardPrice(raw) {
+  const text = clean(raw, 1200);
+  const priceSource = /预估到手|预估价/.test(text) ? text.split(/预估到手|预估价/)[0] : text;
+  const prices = [...priceSource.matchAll(/[¥￥]\s*(\d+)(?:\s*\.\s*(\d+))?/g)]
+    .map(match => number(`${match[1]}${match[2] ? `.${match[2]}` : ''}`)).filter(value => value > 0);
+  if (!prices.length) return 0;
+  return prices.length > 1 && /折|特价|限\s*\d+\s*份/.test(text) ? Math.min(...prices) : prices.at(-1);
+}
+
+export function menuCardName(titleText, cardText) {
+  const direct = clean(titleText, 1000);
+  // Some Mor custom-title wrappers exist but expose empty innerText. Recover
+  // only from the same product card so a neighbouring title can never leak in.
+  const source = !direct || /^(?:选规格|选套餐|加购|加入购物车)$/.test(direct)
+    ? clean(cardText, 1200) : direct;
+  return clean(source.split(/月售|近期\d+人|\d+(?:\.\d+)?折|限\s*\d+\s*份|[¥￥]/)[0], 60)
+    .replace(/^(热销|大家喜欢吃，才叫真好吃)\s*/, '')
+    .replace(/\s*\d+天内\d+人下单.*$/, '')
+    .replace(/\s+\d+次$/, '');
+}
+
 export class TaobaoFlashBrowser {
   constructor({ profile, headless = false, timeout = 30_000, cdpUrl = '' } = {}) {
     this.profile = profile || './profile';
@@ -389,9 +959,12 @@ export class TaobaoFlashBrowser {
     this.knownRoutesWrite = Promise.resolve();
     this.knownRoutesPath = path.join(path.resolve(this.profile), 'known-product-routes.json');
     this.riskStateLoaded = false;
-    this.riskBlockedUntil = 0;
+    this.riskBlocked = false;
     this.riskBlockReason = '';
     this.riskStatePath = path.join(path.resolve(this.profile), 'risk-state.json');
+    this.lastStoreSearchAt = 0;
+    this.lastStoreSearchKey = '';
+    this.lastStoreSearchUrl = '';
   }
 
   async start() {
@@ -547,6 +1120,21 @@ export class TaobaoFlashBrowser {
     return page;
   }
 
+  async openMarketplaceSearch(query) {
+    const target = `https://h5.ele.me/search/?keyword=${encodeURIComponent(clean(query, 100))}`;
+    let page = await this.goto(target, 2500);
+    if (shopSearchUrl(page.url())) {
+      // After leaving a store, the marketplace search URL can be hijacked by
+      // the store-local SPA router and keep the merchant name as an in-store
+      // keyword.  Reset to the marketplace home once, then retry the exact
+      // merchant-only URL.  Never continue from a store-local search page.
+      await this.goto(MSITE, 1800);
+      page = await this.goto(target, 2500);
+    }
+    if (shopSearchUrl(page.url())) throw new Error('淘宝闪购全局商家搜索被店内搜索页拦截，本轮已停止且没有把门店名当成商品名');
+    return page;
+  }
+
   async prewarm() {
     if (this.prewarmed && this.context && this.page) return true;
     if (this.prewarmPromise) return this.prewarmPromise;
@@ -565,7 +1153,7 @@ export class TaobaoFlashBrowser {
     try { saved = JSON.parse(await fs.readFile(this.knownRoutesPath, 'utf8')); } catch {}
     const now = Date.now();
     this.knownRoutes = Object.fromEntries(Object.entries(saved && typeof saved === 'object' ? saved : {}).filter(([, entry]) =>
-      entry && typeof entry === 'object' && shopUrl(entry.shopUrl) && clean(entry.itemName, 140) && now - Number(entry.savedAt || 0) < 30 * 24 * 60 * 60_000
+      entry && typeof entry === 'object' && (shopUrl(entry.shopUrl) || shopSearchUrl(entry.shopUrl)) && clean(entry.itemName, 140) && now - Number(entry.savedAt || 0) < 30 * 24 * 60 * 60_000
     ));
     return this.knownRoutes;
   }
@@ -631,7 +1219,10 @@ export class TaobaoFlashBrowser {
 
   async rememberKnownRoute(ref) {
     const queryKey = knownRouteKey(ref?.query);
-    if (!queryKey || !shopUrl(ref?.shopUrl) || !clean(ref?.itemName, 140)) return;
+    // A verified store-local result is a better product route than the store
+    // homepage: reopening it avoids another search submission and preserves
+    // the exact card used for option inspection and cart creation.
+    if (!queryKey || !(shopUrl(ref?.shopUrl) || shopSearchUrl(ref?.shopUrl)) || !clean(ref?.itemName, 140)) return;
     const routes = await this.loadKnownRoutes();
     const merchantKey = knownRouteKey(ref?.merchantId || ref?.merchant || ref?.shopUrl).slice(0, 100);
     const key = merchantKey ? `${queryKey}::${merchantKey}` : queryKey;
@@ -649,45 +1240,53 @@ export class TaobaoFlashBrowser {
     this.riskStateLoaded = true;
     try {
       const parsed = JSON.parse(await fs.readFile(this.riskStatePath, 'utf8'));
-      this.riskBlockedUntil = Number(parsed?.blockedUntil || 0);
+      // Fixed cooldown timestamps belonged to the retired policy and must not
+      // block a new user request after this upgrade. Only the new state marker
+      // means that the current page still needs to be checked once.
+      this.riskBlocked = parsed?.blocked === true;
       this.riskBlockReason = clean(parsed?.reason, 40);
     } catch (_) {
-      this.riskBlockedUntil = 0;
+      this.riskBlocked = false;
       this.riskBlockReason = '';
     }
-    if (this.riskBlockedUntil <= Date.now()) {
-      this.riskBlockedUntil = 0;
-      this.riskBlockReason = '';
-    }
+    if (!this.riskBlocked) this.riskBlockReason = '';
   }
   async recordRiskChallenge(kind) {
     await fs.mkdir(this.profile, { recursive: true });
     await this.loadRiskState();
-    this.riskBlockedUntil = Math.max(this.riskBlockedUntil, Date.now() + 30 * 60_000);
+    this.riskBlocked = true;
     this.riskBlockReason = clean(kind, 40) || '安全验证';
-    await fs.writeFile(this.riskStatePath, JSON.stringify({ blockedUntil: this.riskBlockedUntil, reason: this.riskBlockReason }, null, 2), 'utf8');
+    await fs.writeFile(this.riskStatePath, JSON.stringify({ blocked: true, reason: this.riskBlockReason, observedAt: Date.now() }, null, 2), 'utf8');
   }
   async clearRiskChallenge() {
-    this.riskBlockedUntil = 0;
+    this.riskBlocked = false;
     this.riskBlockReason = '';
     await fs.mkdir(this.profile, { recursive: true });
-    await fs.writeFile(this.riskStatePath, JSON.stringify({ blockedUntil: 0, reason: '' }, null, 2), 'utf8');
+    await fs.writeFile(this.riskStatePath, JSON.stringify({ blocked: false, reason: '', observedAt: 0 }, null, 2), 'utf8');
   }
   async assertRiskCooldown() {
     await this.loadRiskState();
-    if (this.riskBlockedUntil <= Date.now()) return;
-    // A closeable image challenge can disappear between operations (for
-    // example after its X is pressed).  Do not keep blocking a live, clean
-    // storefront merely because an older cooldown file still exists.
-    if (this.page && !this.page.isClosed?.()) {
-      const kind = riskChallengeKind(await this.riskText(this.page));
-      if (!kind || await this.dismissCloseableRiskOverlay(this.page, kind)) {
-        await this.clearRiskChallenge();
-        return;
-      }
+    if (!this.riskBlocked) return;
+    // A challenge blocks only the operation that encountered it. Each new,
+    // explicitly authorized request may inspect the current page once. If the
+    // challenge has disappeared, continue immediately without a fixed timer.
+    const page = this.page && !this.page.isClosed?.() ? this.page : await this.ensure().catch(() => null);
+    if (!page) throw new Error('无法确认淘宝闪购验证状态，本轮已停止且不会自动重搜');
+    const kind = riskChallengeKind(await this.riskText(page));
+    if (!kind || await this.dismissCloseableRiskOverlay(page, kind)) {
+      await this.clearRiskChallenge();
+      return;
     }
-    const minutes = Math.max(1, Math.ceil((this.riskBlockedUntil - Date.now()) / 60_000));
-    throw new Error(`淘宝闪购刚触发${this.riskBlockReason || '安全验证'}，自动搜索已冷却${minutes}分钟，期间不会再次打开或重搜；稍后再试`);
+    throw new Error(`当前页面仍显示${kind || this.riskBlockReason || '安全验证'}，本轮已停止；验证状态仍存在时不会自动重搜`);
+  }
+  async confirmRiskClearedByUser() {
+    const page = await this.ensure();
+    const kind = riskChallengeKind(await this.riskText(page));
+    if (kind) throw new Error(`页面仍显示${kind}，请本人完成后再确认`);
+    const body = clean(await page.locator('body').innerText().catch(() => ''), 12_000);
+    if (!body || this.needsLogin(page)) throw new Error('当前外卖页面尚未恢复到可用状态，不能提前解除安全验证状态');
+    await this.clearRiskChallenge();
+    return { cleared: true, url: clean(page.url(), 1000) };
   }
   needsLogin(page) { return /\/login|login\.ele\.me|passport/i.test(page.url()); }
   async requireLogin(page) { if (this.needsLogin(page)) throw new Error('淘宝闪购登录已失效，请在浏览器窗口用手机号、短信验证码和滑块重新登录'); }
@@ -721,6 +1320,8 @@ export class TaobaoFlashBrowser {
         'button[title*="关闭"]', '[role="button"][title*="关闭"]',
         '[class*="close" i]',
         '[class*="captcha" i] [class*="close" i]', '[class*="verify" i] [class*="close" i]',
+        '[class*="punish" i] [class*="close" i]', '[id*="captcha" i] [class*="close" i]',
+        'img[alt*="关闭"]', '[data-spm*="close" i]',
         'button:has-text("×")', '[role="button"]:has-text("×")',
         'button:has-text("✕")', '[role="button"]:has-text("✕")',
       ].join(', '));
@@ -767,7 +1368,7 @@ export class TaobaoFlashBrowser {
       }
     }
     await this.recordRiskChallenge(kind);
-    throw new Error(`淘宝闪购出现${kind}，等待本人完成验证已超时；本轮已暂停并冷却30分钟，期间不会重复搜索`);
+    throw new Error(`淘宝闪购出现${kind}，等待本人完成验证已超时；本轮已暂停，新的用户请求可在验证消失后立即继续，系统不会自动重复搜索`);
   }
 
   async status() {
@@ -809,7 +1410,22 @@ export class TaobaoFlashBrowser {
     return value;
   }
 
-  async search(query, limit = 12, { allowGlobalSearch = true } = {}) {
+  async search(query, limit = 12, { allowGlobalSearch = true, storeQuery = '', intentText = '', menuSelectionAllowed = false, searchResultSelectionAllowed = false, forceMerchantEntry = false } = {}) {
+    // `query` is the adapter's canonical structured checklist (for example
+    // “曼玲粥 皮蛋瘦肉粥 加茶叶蛋 加酱香饼”).  `intentText` carries the
+    // original conversational constraints.  Never let the latter replace the
+    // checklist: a natural sentence may name all products without repeating
+    // the add verb, which previously made explicit sides disappear and opened
+    // the generic minimum-order top-up path.
+    const requestQuery = clean([query, intentText].filter(Boolean).join(' '), 600);
+    const maxDistanceKm = requestedMaxDistanceKm(requestQuery);
+    const autonomousMenuItems = items => (Array.isArray(items) ? items : []).filter(item => {
+      const name = clean(item?.name, 240);
+      if (!name) return false;
+      if (milkTeaTopUpEligible(`${storeQuery} ${query} ${name}`)
+        && /(?:双杯|两杯|\d+\s*杯(?:装|套餐)?|买一送一|多人分享|组合装)/i.test(name)) return false;
+      return true;
+    });
     await this.assertRiskCooldown();
     if (requestedKfcItems(query).some(item => /(?:套餐|组合|全家桶|多人餐|双人餐|桶餐|拼盘)/.test(item))) {
       throw new Error('KFC 只允许逐件选择单品，不会搜索或加入套餐、组合或全家桶');
@@ -821,10 +1437,25 @@ export class TaobaoFlashBrowser {
     };
     const waitForHumanVerification = async page => {
       humanWaitMs += await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
-      assertWithinSearchTime();
+      // Do not reject a result that finished painting at the deadline. Callers
+      // read the current page immediately after this gate; the next loop or
+      // navigation still invokes assertWithinSearchTime before taking another
+      // search action. Thus a visible exact card can finish the same task
+      // without granting any extra search submission.
     };
-    const remembered = await this.knownRoute(query);
-    const stored = await this.knownRoutesFor(query, 12, true);
+    const routeItemQuery = requestedStoreItemName(query, storeQuery);
+    const mcdonaldsHomepageOnly = mcdonaldsDefaultBundleRequested(`${requestQuery} ${storeQuery} ${routeItemQuery}`);
+    const fruitHomepageFirst = Boolean(singleFruitKeyword(routeItemQuery));
+    // A fresh merchant-entry request is used for an explicit end-to-end test
+    // (or when the current store-search history cannot safely return home).
+    // It bypasses shortcuts but still performs the normal bounded merchant
+    // search -> merchant storefront -> single product search sequence.
+    // A user-authorized broad choice must inspect today's live search results;
+    // a remembered SKU or an already open homepage could otherwise select a
+    // different product than the first eligible result the user can see.
+    const freshMerchantEntry = forceMerchantEntry || searchResultSelectionAllowed;
+    const remembered = freshMerchantEntry ? null : await this.knownRoute(query);
+    const stored = freshMerchantEntry ? [] : await this.knownRoutesFor(query, 12, true);
     const rememberedRoutes = [];
     if (remembered) rememberedRoutes.push(remembered);
     for (const route of stored) if (!rememberedRoutes.some(row => row.routeKey === route.routeKey) && Number(route.closedUntil || 0) <= Date.now()) rememberedRoutes.push(route);
@@ -839,9 +1470,25 @@ export class TaobaoFlashBrowser {
       this.searchUrl = '';
       this.shops = [shop];
       try {
-        const page = await this.enterShop(0, { preferSaved: true });
+        let page = await this.enterShop(0, { preferSaved: true });
+        if (fruitHomepageFirst && shopSearchUrl(page.url())) page = await this.returnToStorefrontWithoutRefresh(page);
         await this.requireLogin(page); await waitForHumanVerification(page);
-        const repeat = await this.repeatPurchase(page, rememberedRoute.itemName, query);
+        if (menuSelectionAllowed && !mcdonaldsHomepageOnly) {
+          const visibleMenu = autonomousMenuItems(await this.extractMenu(page, Math.max(12, limit), ''));
+          const menuOffers = visibleMenu.slice(0, limit).map(item => ({
+            merchantId: shop.storeId || 'saved-shop', merchant: shop.name, name: item.name,
+            description: item.description, price: item.price, deliveryFee: 0, total: item.price,
+            rating: shop.rating, monthlySales: shop.monthlySales, etaMinutes: shop.etaMinutes,
+            couponLabel: shop.couponLabel, optionGroups: [], optionsLoaded: false,
+            browserRef: {
+              shopIndex: 0, itemName: item.name, unitPrice: item.price, buttonIndex: item.buttonIndex,
+              detailUrl: item.detailUrl || '', shopUrl: page.url(),
+              query: `${shop.name} ${item.name}`, merchant: shop.name, merchantId: shop.storeId || '',
+            },
+          }));
+          if (menuOffers.length) return menuOffers;
+        }
+        const repeat = await this.repeatPurchase(page, rememberedRoute.itemName, requestQuery);
         if (repeat) {
           return [{
             merchantId: shop.storeId || 'saved-shop', merchant: shop.name, name: rememberedRoute.itemName,
@@ -852,19 +1499,26 @@ export class TaobaoFlashBrowser {
             confirmationReason: repeat.confirmationReason,
             browserRef: {
               shopIndex: 0, itemName: rememberedRoute.itemName, unitPrice: repeat.total,
-              buttonIndex: -1, detailUrl: '', shopUrl: shop.anchorUrl || shop.directUrl, query,
+              buttonIndex: -1, detailUrl: '', shopUrl: shop.anchorUrl || shop.directUrl, query: requestQuery,
               merchant: shop.name, merchantId: shop.storeId || '', repeatPurchase: true,
               repeatSummary: repeat.summary, repeatQuantity: repeat.quantity,
               requiresConfirmation: repeat.requiresConfirmation,
             },
           }];
         }
-        let items = await this.extractMenu(page, Math.max(12, limit), query);
-        let item = items.find(row => productMatchesSavedItem(row.name, rememberedRoute.itemName));
-        if (!item && await this.searchInsideShop(page, rememberedRoute.itemName)) {
+        if (fruitHomepageFirst) await this.openFruitPromotionCategory(page).catch(() => false);
+        let items = await this.extractMenu(page, Math.max(12, limit), routeItemQuery);
+        // A remembered shop is only a route shortcut. It must not pin a
+        // previously chosen SKU when the current request deliberately leaves
+        // several matching flavours/sizes open; choose the first currently
+        // visible qualified product for this request instead.
+        let item = preferredExactProduct(items, routeItemQuery)
+          || items.find(row => productMatchesSavedItem(row.name, rememberedRoute.itemName));
+        if (!item && !mcdonaldsHomepageOnly && await this.searchInsideShop(page, routeItemQuery)) {
           await waitForHumanVerification(page);
-          items = await this.extractMenu(page, Math.max(12, limit), rememberedRoute.itemName);
-          item = items.find(row => productMatchesSavedItem(row.name, rememberedRoute.itemName));
+          items = await this.extractMenu(page, Math.max(12, limit), routeItemQuery);
+          item = preferredExactProduct(items, routeItemQuery, { allowContainedAlias: true })
+            || items.find(row => productMatchesSavedItem(row.name, rememberedRoute.itemName));
         }
         if (item) {
           const deliveryFee = shop.freeDeliveryThreshold > 0 && item.price >= shop.freeDeliveryThreshold ? 0 : shop.deliveryFee;
@@ -873,7 +1527,7 @@ export class TaobaoFlashBrowser {
             description: item.description, price: item.price, deliveryFee, total: item.price + deliveryFee,
             rating: shop.rating, monthlySales: shop.monthlySales, etaMinutes: shop.etaMinutes, couponLabel: shop.couponLabel,
             optionGroups: [], optionsLoaded: false,
-            browserRef: { shopIndex: 0, itemName: item.name, unitPrice: item.price, buttonIndex: item.buttonIndex, detailUrl: '', shopUrl: shop.anchorUrl || shop.directUrl, query, merchant: shop.name, merchantId: shop.storeId || '' },
+            browserRef: { shopIndex: 0, itemName: item.name, unitPrice: item.price, buttonIndex: item.buttonIndex, detailUrl: '', shopUrl: page.url(), query: requestQuery, merchant: shop.name, merchantId: shop.storeId || '' },
           }];
         }
         await this.forgetKnownRoute(rememberedRoute.routeKey || query);
@@ -892,15 +1546,36 @@ export class TaobaoFlashBrowser {
     // If the user already has the intended merchant open, treat that visible
     // storefront as the safest route.  This avoids an unnecessary outer
     // marketplace search (and its verification risk) on a clean live page.
-    const activePage = this.page && !this.page.isClosed?.() && (shopUrl(this.page.url()) || shopSearchUrl(this.page.url())) ? this.page : null;
+    let activePage = !freshMerchantEntry && this.page && !this.page.isClosed?.() && (shopUrl(this.page.url()) || shopSearchUrl(this.page.url())) ? this.page : null;
+    if (activePage && fruitHomepageFirst && shopSearchUrl(activePage.url())) activePage = await this.returnToStorefrontWithoutRefresh(activePage);
     if (activePage) {
       await this.requireLogin(activePage); await waitForHumanVerification(activePage);
       const activeUrl = activePage.url();
       const activeBody = clean(await activePage.locator('body').innerText().catch(() => ''), 12_000);
       const brand = preferredBrand(query);
-      if (activeShopMatchesBrand(query, activeUrl, activeBody)) {
-        const itemQuery = requestedItemName(query);
-        const repeat = await this.repeatPurchase(activePage, itemQuery, query);
+      const requestedStoreKey = knownRouteKey(storeQuery);
+      const activeStoreMatches = requestedStoreKey
+        ? (preferredBrand(storeQuery) ? activeShopMatchesBrand(storeQuery, activeUrl, activeBody) : knownRouteKey(activeBody).includes(requestedStoreKey))
+        : activeShopMatchesBrand(query, activeUrl, activeBody);
+      if (activeStoreMatches) {
+        const itemQuery = requestedStoreItemName(query, storeQuery);
+        const merchant = clean(activeBody.match(/(?:商家|环境)\s+(.{2,50}?)(?:\s+评分|\s+买过|\s+热销)/)?.[1], 50)
+          || (brand === 'chabaidao' ? '茶百道（当前门店）' : '当前商家');
+        if (menuSelectionAllowed && !mcdonaldsHomepageOnly) {
+          const visibleMenu = autonomousMenuItems(await this.extractMenu(activePage, Math.max(12, limit), ''));
+          const menuOffers = visibleMenu.slice(0, limit).map(item => ({
+            merchantId: 'active-shop', merchant, name: item.name, description: item.description,
+            price: item.price, deliveryFee: 0, total: item.price, rating: 0, monthlySales: 0,
+            etaMinutes: 0, couponLabel: '', optionGroups: [], optionsLoaded: false,
+            browserRef: {
+              shopIndex: 0, itemName: item.name, unitPrice: item.price, buttonIndex: item.buttonIndex,
+              detailUrl: item.detailUrl || '', shopUrl: activeUrl, query: `${merchant} ${item.name}`,
+              merchant, merchantId: 'active-shop',
+            },
+          }));
+          if (menuOffers.length) return menuOffers;
+        }
+        const repeat = await this.repeatPurchase(activePage, itemQuery, requestQuery);
         if (repeat) {
           return [{
             merchantId: 'active-shop', merchant: clean(activeBody.match(/(?:商家|环境)\s+(.{2,50}?)(?:\s+评分|\s+买过|\s+热销)/)?.[1], 50) || '当前商家',
@@ -911,25 +1586,24 @@ export class TaobaoFlashBrowser {
             confirmationReason: repeat.confirmationReason,
             browserRef: {
               shopIndex: 0, itemName: itemQuery, unitPrice: repeat.total, buttonIndex: -1,
-              detailUrl: '', shopUrl: activeUrl, query, merchant: '当前商家', merchantId: 'active-shop',
+              detailUrl: '', shopUrl: activeUrl, query: requestQuery, merchant: '当前商家', merchantId: 'active-shop',
               repeatPurchase: true, repeatSummary: repeat.summary, repeatQuantity: repeat.quantity,
               requiresConfirmation: repeat.requiresConfirmation,
             },
           }];
         }
+        if (fruitHomepageFirst) await this.openFruitPromotionCategory(activePage).catch(() => false);
         let items = await this.extractMenu(activePage, Math.max(12, limit), itemQuery);
         let item = preferredExactProduct(items, itemQuery);
-        if (!item && await this.searchInsideShop(activePage, itemQuery)) {
+        if (!item && !mcdonaldsHomepageOnly && await this.searchInsideShop(activePage, itemQuery)) {
           await waitForHumanVerification(activePage);
           items = await this.extractMenu(activePage, Math.max(12, limit), itemQuery);
-          item = preferredExactProduct(items, itemQuery);
+          item = preferredExactProduct(items, itemQuery, { allowContainedAlias: true });
         }
         if (item) {
-          const merchant = clean(activeBody.match(/(?:商家|环境)\s+(.{2,50}?)(?:\s+评分|\s+买过|\s+热销)/)?.[1], 50)
-            || (brand === 'chabaidao' ? '茶百道（当前门店）' : '当前商家');
           const ref = {
             shopIndex: 0, itemName: item.name, unitPrice: item.price, buttonIndex: item.buttonIndex,
-            detailUrl: item.detailUrl || '', shopUrl: activeUrl, query, merchant, merchantId: 'active-shop',
+            detailUrl: item.detailUrl || '', shopUrl: activePage.url(), query: requestQuery, merchant, merchantId: 'active-shop',
           };
           await this.rememberKnownRoute(ref).catch(() => {});
           return [{
@@ -946,24 +1620,55 @@ export class TaobaoFlashBrowser {
     }
     if (!allowGlobalSearch && (stored.length || rememberedRoutes.length)) throw new Error('已登记的同品牌同商品路线当前均不可用；本轮已停止，没有重新全网搜索');
     if (!allowGlobalSearch) throw new Error('还没有登记这个品牌和商品的常用直达路线；为了避免人机验证，角色不会发起全网自动搜索，请由本人先在外卖页成功打开并读取一次规格');
-    // The marketplace search only locates the merchant and first requested
-    // product. Remaining cart items are searched inside that storefront.
-    const brandQuery = /(?:肯德基|\bkfc\b)/i.test(query) ? '肯德基' : clean(query, 160).split(/\s+/)[0];
-    const marketplaceQuery = [brandQuery, requestedItemName(query)].filter(Boolean).join(' ');
-    const page = await this.goto(`https://h5.ele.me/search/?keyword=${encodeURIComponent(marketplaceQuery)}`, 2500);
+    // The marketplace search locates only the merchant. Every product is
+    // searched separately after entering that storefront.
+    const brandQuery = clean(storeQuery, 100) || (/(?:肯德基|\bkfc\b)/i.test(query) ? '肯德基' : clean(query, 160).split(/\s+/)[0]);
+    const marketplaceQuery = brandQuery;
+    const page = await this.openMarketplaceSearch(marketplaceQuery);
     await this.requireLogin(page); await waitForHumanVerification(page);
+    const brand = preferredBrand(query);
+    const productOnlyItem = requestedStoreItemName(query, '');
     let shops = [];
-    for (let attempt = 0; attempt < 12; attempt += 1) {
+    // Product-search cards can paint their prices and skeletons several
+    // seconds before the structured merchant/product titles arrive.  Reusing
+    // the same loaded result page is safer than declaring "not found" and
+    // issuing another marketplace search, which also raises verification risk.
+    for (let attempt = 0; attempt < 36; attempt += 1) {
       assertWithinSearchTime();
       await waitForHumanVerification(page);
-      shops = await this.extractShops(page);
-      if (shops.length) break;
+      // A product-only marketplace search renders product previews beneath
+      // each merchant. Passing the product as a "store name" makes those
+      // previews outrank the real merchant title and the click opens nothing.
+      shops = await this.extractShops(page, storeQuery ? brandQuery : '');
+      const completeCard = storeQuery
+        ? shops.some(shop => marketplaceMatchScore(shop, storeQuery) > 0)
+        : brand ? shops.some(shop => brandMatches(brand, shop.name))
+          : shops.some(shop => marketplaceMatchScore(shop, productOnlyItem) > 0);
+      if (shops.length && completeCard) break;
+      shops = [];
       await page.waitForTimeout(500);
     }
-    const brand = preferredBrand(query);
-    if (brand) {
+    if (storeQuery) {
+      // Sponsored cards can still appear before the requested merchant. Rank
+      // every visible card and exclude zero-overlap merchants; branch suffixes
+      // and product aliases remain valid through the normalized score.
+      shops = shops.map((shop, order) => ({ shop, order, score: marketplaceMatchScore(shop, storeQuery) }))
+        .filter(row => row.score > 0 && (!maxDistanceKm || (row.shop.distanceKm > 0 && row.shop.distanceKm <= maxDistanceKm)))
+        .sort((left, right) => right.score - left.score || left.order - right.order)
+        .slice(0, 1)
+        .map(row => row.shop);
+    } else if (brand) {
       const exact = shops.filter(shop => brandMatches(brand, shop.name));
       if (exact.length) shops = exact.slice(0, Math.min(3, Math.max(1, limit)));
+    } else {
+      // With only a product name, the first outer card may be an unrelated
+      // sponsored merchant. Scan every visible card and move cards that expose
+      // the requested product in their shop title or preview ahead of the rest.
+      const itemName = requestedStoreItemName(query, '');
+      shops = shops.map((shop, order) => ({ shop, order, score: marketplaceMatchScore(shop, itemName) }))
+        .filter(row => row.score > 0)
+        .sort((left, right) => right.score - left.score || left.order - right.order)
+        .map(row => row.shop);
     }
     this.searchUrl = page.url();
     this.shops = shops;
@@ -980,8 +1685,45 @@ export class TaobaoFlashBrowser {
         throw error;
       }
       await waitForHumanVerification(shopPage);
-      const itemQuery = requestedItemName(query);
-      const repeat = await this.repeatPurchase(shopPage, itemQuery, query);
+      const itemQuery = requestedStoreItemName(query, storeQuery);
+      if (searchResultSelectionAllowed && !mcdonaldsHomepageOnly && await this.searchInsideShop(shopPage, itemQuery)) {
+        await waitForHumanVerification(shopPage);
+        const searchItems = autonomousMenuItems(await this.extractMenu(shopPage, Math.max(20, limit), itemQuery));
+        for (const item of searchItems.slice(0, Math.max(1, limit - offers.length))) {
+          const deliveryFee = shop.freeDeliveryThreshold > 0 && item.price >= shop.freeDeliveryThreshold ? 0 : shop.deliveryFee;
+          offers.push({
+            merchantId: shop.storeId || String(shopIndex), merchant: shop.name, name: item.name,
+            description: item.description, price: item.price, deliveryFee, total: item.price + deliveryFee,
+            rating: shop.rating, monthlySales: shop.monthlySales, etaMinutes: shop.etaMinutes,
+            couponLabel: shop.couponLabel, optionGroups: [], optionsLoaded: false,
+            browserRef: {
+              shopIndex, itemName: item.name, unitPrice: item.price, buttonIndex: item.buttonIndex,
+              detailUrl: item.detailUrl || '', shopUrl: shopPage.url(), query: requestQuery,
+              merchant: shop.name, merchantId: shop.storeId || '',
+            },
+          });
+        }
+        if (searchItems.length) continue;
+      }
+      if (menuSelectionAllowed && !mcdonaldsHomepageOnly) {
+        const visibleMenu = autonomousMenuItems(await this.extractMenu(shopPage, Math.max(12, limit), ''));
+        for (const item of visibleMenu.slice(0, Math.max(1, limit - offers.length))) {
+          const deliveryFee = shop.freeDeliveryThreshold > 0 && item.price >= shop.freeDeliveryThreshold ? 0 : shop.deliveryFee;
+          offers.push({
+            merchantId: shop.storeId || String(shopIndex), merchant: shop.name, name: item.name,
+            description: item.description, price: item.price, deliveryFee, total: item.price + deliveryFee,
+            rating: shop.rating, monthlySales: shop.monthlySales, etaMinutes: shop.etaMinutes,
+            couponLabel: shop.couponLabel, optionGroups: [], optionsLoaded: false,
+            browserRef: {
+              shopIndex, itemName: item.name, unitPrice: item.price, buttonIndex: item.buttonIndex,
+              detailUrl: item.detailUrl || '', shopUrl: shopPage.url(), query: `${shop.name} ${item.name}`,
+              merchant: shop.name, merchantId: shop.storeId || '',
+            },
+          });
+        }
+        if (visibleMenu.length) continue;
+      }
+      const repeat = await this.repeatPurchase(shopPage, itemQuery, requestQuery);
       if (repeat) {
         offers.push({
           merchantId: shop.storeId || String(shopIndex), merchant: shop.name, name: itemQuery,
@@ -992,7 +1734,7 @@ export class TaobaoFlashBrowser {
           confirmationReason: repeat.confirmationReason,
           browserRef: {
             shopIndex, itemName: itemQuery, unitPrice: repeat.total, buttonIndex: -1, detailUrl: '',
-            shopUrl: shop.anchorUrl || '', query, merchant: shop.name, merchantId: shop.storeId || '',
+            shopUrl: shop.anchorUrl || '', query: requestQuery, merchant: shop.name, merchantId: shop.storeId || '',
             repeatPurchase: true, repeatSummary: repeat.summary, repeatQuantity: repeat.quantity,
             requiresConfirmation: repeat.requiresConfirmation,
           },
@@ -1000,7 +1742,11 @@ export class TaobaoFlashBrowser {
         if (offers.length >= limit) break;
         continue;
       }
-      let items = await this.extractMenu(shopPage, Math.max(4, Math.ceil(limit / maxShops)), itemQuery);
+      // The offer quota is not a safe scan quota. A highly relevant second
+      // card can outrank the first visually matching product, so retain enough
+      // real rows to apply the user's first-visible rule after extraction.
+      if (fruitHomepageFirst) await this.openFruitPromotionCategory(shopPage).catch(() => false);
+      let items = await this.extractMenu(shopPage, Math.max(20, Math.ceil(limit / maxShops)), itemQuery);
       let exactItem = preferredExactProduct(items, itemQuery);
       let exactItems = exactItem ? [exactItem] : [];
       // The outer search is only for finding candidate shops. Storefront preview
@@ -1008,12 +1754,24 @@ export class TaobaoFlashBrowser {
       // product deeper in the menu.  A precise single item already visible on
       // the storefront (for example Luckin's signature coconut latte) is safe
       // to use directly; otherwise perform one store-local search.
-      const searchedInsideShop = exactItems.length ? false : await this.searchInsideShop(shopPage, itemQuery);
+      const searchedInsideShop = exactItems.length || mcdonaldsHomepageOnly ? false : await this.searchInsideShop(shopPage, itemQuery);
       if (searchedInsideShop) {
         await waitForHumanVerification(shopPage);
-        items = await this.extractMenu(shopPage, Math.max(4, Math.ceil(limit / maxShops)), itemQuery);
-        exactItem = preferredExactProduct(items, itemQuery);
+        items = await this.extractMenu(shopPage, Math.max(20, Math.ceil(limit / maxShops)), itemQuery);
+        exactItem = preferredExactProduct(items, itemQuery, { allowContainedAlias: true });
         exactItems = exactItem ? [exactItem] : [];
+        // If the requested name is already visible, a component repaint must
+        // not become a one-shot failure. Re-read this same page only: no new
+        // search submission, shop switch, or widened product name.
+        const wantedKey = comparableProductKey(itemQuery);
+        for (let reread = 0; !exactItems.length && reread < 2; reread += 1) {
+          const visibleKey = comparableProductKey(await this.riskText(shopPage));
+          if (!wantedKey || !visibleKey.includes(wantedKey)) break;
+          await shopPage.waitForTimeout(450);
+          items = await this.extractMenu(shopPage, Math.max(20, Math.ceil(limit / maxShops)), itemQuery);
+          exactItem = preferredExactProduct(items, itemQuery, { allowContainedAlias: true });
+          exactItems = exactItem ? [exactItem] : [];
+        }
       }
       for (const item of exactItems) {
         const deliveryFee = shop.freeDeliveryThreshold > 0 && item.price >= shop.freeDeliveryThreshold ? 0 : shop.deliveryFee;
@@ -1022,7 +1780,7 @@ export class TaobaoFlashBrowser {
           description: item.description, price: item.price, deliveryFee,
           total: item.price + deliveryFee, rating: shop.rating, monthlySales: shop.monthlySales,
           etaMinutes: shop.etaMinutes, couponLabel: shop.couponLabel, optionGroups: [], optionsLoaded: false,
-          browserRef: { shopIndex, itemName: item.name, unitPrice: item.price, buttonIndex: item.buttonIndex, detailUrl: item.detailUrl || '', shopUrl: shop.anchorUrl || '', query, merchant: shop.name, merchantId: shop.storeId || '' },
+          browserRef: { shopIndex, itemName: item.name, unitPrice: item.price, buttonIndex: item.buttonIndex, detailUrl: item.detailUrl || '', shopUrl: shopPage.url(), query: requestQuery, merchant: shop.name, merchantId: shop.storeId || '' },
         });
         if (offers.length >= limit) break;
       }
@@ -1030,34 +1788,44 @@ export class TaobaoFlashBrowser {
     return offers;
   }
 
-  async extractShops(page) {
+  async extractShops(page, storeQuery = '') {
     const leaves = await page.evaluate(() => {
       const out = [];
       function visit(root) {
-        for (const el of root.querySelectorAll('*')) {
-          if (el.shadowRoot) visit(el.shadowRoot);
-          if (el.children.length) continue;
-          const text = (el.textContent || '').replace(/\s+/g, ' ').trim();
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          const el = node.parentElement;
+          const text = (node.nodeValue || '').replace(/\s+/g, ' ').trim();
+          if (!el || !text || text.length > 80) continue;
           const r = el.getBoundingClientRect();
-          if (text && text.length <= 60 && r.width > 0 && r.height > 0) out.push({ text, x: r.x, y: r.y + r.height / 2 });
+          if (r.width > 0 && r.height > 0) out.push({ text, x: r.x, y: r.y + r.height / 2 });
         }
+        for (const el of root.querySelectorAll('*')) if (el.shadowRoot) visit(el.shadowRoot);
       }
-      visit(document); return out.slice(0, 1000);
+      visit(document);
+      // The current marketplace renders merchant and preview titles through a
+      // custom rich-text element.  Its visible glyphs come from the JSON in the
+      // `nodes` attribute and therefore do not exist as DOM text nodes.
+      for (const rich of document.querySelectorAll('tiga-rich-text[nodes]')) {
+        const box = rich.getBoundingClientRect();
+        if (!(box.width > 0 && box.height > 0)) continue;
+        let nodes;
+        try { nodes = JSON.parse(rich.getAttribute('nodes') || '[]'); } catch { continue; }
+        const rows = [];
+        const read = value => {
+          if (!value) return;
+          if (Array.isArray(value)) { for (const item of value) read(item); return; }
+          if (typeof value !== 'object') return;
+          if (value.type === 'text' && typeof value.text === 'string') rows.push(value.text);
+          read(value.children);
+        };
+        read(nodes);
+        const text = rows.join('').replace(/\s+/g, ' ').trim();
+        if (text && text.length <= 80) out.push({ text, x: box.x, y: box.y + box.height / 2 });
+      }
+      return out.slice(0, 3000);
     });
-    const anchors = leaves.filter(item => /起送/.test(item.text)).sort((a, b) => a.y - b.y);
-    return anchors.slice(0, 12).map((anchor, index) => {
-      const nextY = anchors[index + 1]?.y ?? anchor.y + 260;
-      const lines = leaves.filter(item => item.y >= anchor.y - 150 && item.y < nextY - 20).map(item => item.text);
-      const name = lines.find(text => text.length >= 2 && text.length <= 30 && !/月售|评分|起送|配送|分钟|公里|优惠|¥/.test(text)) || `商家${index + 1}`;
-      return {
-        index, name, anchorY: anchor.y,
-        rating: number(lines.find(text => /评分|\d\.\d分/.test(text))),
-        monthlySales: number(lines.find(text => /月售/.test(text))),
-        deliveryFee: number(lines.find(text => /配送费/.test(text))),
-        etaMinutes: number(lines.find(text => /分钟/.test(text))),
-        couponLabel: clean(lines.find(text => /减|券|折/.test(text)), 100),
-      };
-    });
+    return shopRowsFromVisibleText(leaves, storeQuery);
   }
 
   async enterShop(index, { preferSaved = false } = {}) {
@@ -1068,27 +1836,78 @@ export class TaobaoFlashBrowser {
     if (preferSaved && shop.directUrl && !sameShopUrl(page.url(), shop.directUrl)) page = await this.goto(shop.directUrl, 2200);
     else {
       if (!preferSaved && shopUrl(page.url())) page = await this.goto(this.searchUrl, 2200);
-      if (!shopUrl(page.url())) {
+      if (!(shopUrl(page.url()) || (preferSaved && shopSearchUrl(page.url())))) {
       if (preferSaved && shop.directUrl) page = await this.goto(shop.directUrl, 2200);
       else {
         page = page.url() === this.searchUrl ? page : await this.goto(this.searchUrl, 2200);
-        for (const x of [110, 190, 280]) {
-          await this.tapPoint(page, x, Math.max(80, shop.anchorY - 75));
+        // Prefer the exact structured merchant title. Marketplace card heights
+        // vary with promo tags and product carousels, so a coordinate derived
+        // from the “起送” row can otherwise land on a product preview.
+        const richTitles = page.locator('tiga-rich-text[nodes]');
+        let merchantTitle = null;
+        const richTitleCount = typeof richTitles?.count === 'function' ? await richTitles.count() : 0;
+        for (let titleIndex = 0; titleIndex < richTitleCount; titleIndex += 1) {
+          const candidate = richTitles.nth(titleIndex);
+          if (!await candidate.isVisible().catch(() => false)) continue;
+          const titleText = await candidate.evaluate(node => {
+            let value;
+            try { value = JSON.parse(node.getAttribute('nodes') || '[]'); } catch { return ''; }
+            const rows = [];
+            const read = item => {
+              if (!item) return;
+              if (Array.isArray(item)) { for (const child of item) read(child); return; }
+              if (typeof item !== 'object') return;
+              if (item.type === 'text' && typeof item.text === 'string') rows.push(item.text);
+              read(item.children);
+            };
+            read(value);
+            return rows.join('').replace(/\s+/g, ' ').trim();
+          }).catch(() => '');
+          if (merchantNameMatchScore(shop.name, titleText) < 90) continue;
+          merchantTitle = candidate;
+          break;
+        }
+        if (merchantTitle) {
+          await this.tapControl(page, merchantTitle);
           await page.waitForTimeout(900);
-          if (shopUrl(page.url())) break;
+        }
+        if (!shopUrl(page.url()) && typeof page.getByText === 'function') {
+          const plainMerchantTitle = await this.visibleLocator(page.getByText(shop.name, { exact: true }), true);
+          if (plainMerchantTitle) {
+            await this.tapControl(page, plainMerchantTitle);
+            await page.waitForTimeout(900);
+          }
+        }
+        // `anchorY` is the selected card's own "起送" header row. The old
+        // anchorY-75 offset can fall back into the previous card on the current
+        // compact marketplace layout, so click around this card's header itself.
+        if (!shopUrl(page.url())) {
+          const cardYs = [shop.anchorY, shop.anchorY + 35, Math.max(80, shop.anchorY - 35)];
+          for (const y of cardYs) {
+            for (const x of [110, 190, 280]) {
+              await this.tapPoint(page, x, y);
+              await page.waitForTimeout(900);
+              if (shopUrl(page.url())) break;
+            }
+            if (shopUrl(page.url())) break;
+          }
         }
       }
       }
     }
-    if (!shopUrl(page.url())) throw new Error('未能进入淘宝闪购商家，页面可能已变化');
+    if (!(shopUrl(page.url()) || (preferSaved && shopSearchUrl(page.url())))) throw new Error('未能进入淘宝闪购商家，页面可能已变化');
     if (!shop.anchorUrl) shop.anchorUrl = page.url();
     const parsed = new URL(page.url());
-    const direct = new URL(`${parsed.origin}${parsed.pathname}`);
-    for (const key of ['shopId', 'store_id', 'restaurant_id', 'brandId', 'geohash', 'longitude', 'latitude']) {
-      const value = parsed.searchParams.get(key);
-      if (value) direct.searchParams.set(key, value);
+    if (shopSearchUrl(page.url())) {
+      shop.directUrl = page.url();
+    } else {
+      const direct = new URL(`${parsed.origin}${parsed.pathname}`);
+      for (const key of ['shopId', 'store_id', 'restaurant_id', 'brandId', 'geohash', 'longitude', 'latitude']) {
+        const value = parsed.searchParams.get(key);
+        if (value) direct.searchParams.set(key, value);
+      }
+      shop.directUrl = direct.toString();
     }
-    shop.directUrl = direct.toString();
     const storeId = parsed.searchParams.get('store_id') || parsed.searchParams.get('shopId') || '';
     shop.storeId = storeId;
     await page.waitForTimeout(500);
@@ -1176,11 +1995,23 @@ export class TaobaoFlashBrowser {
   }
 
   async applyBestAvailableCoupon(page) {
-    const beforeBody = await this.riskText(page);
-    const appliedBefore = appliedCouponAmount(beforeBody);
-    if (appliedBefore > 0) return { applied: true, amount: appliedBefore };
-    const advertised = availableCouponAmount(beforeBody);
-    if (!advertised) return { applied: false, amount: 0 };
+    let beforeBody = '';
+    let initialState = { status: 'unknown', amount: 0, evidence: 'checkout_not_verifiable' };
+    // The checkout shell renders before its promotion rows.  Wait only for a
+    // verifiable coupon state; never turn a temporarily incomplete page into
+    // “no coupon” and never continue past the bounded wait while still unknown.
+    for (let attempt = 0; attempt < 16; attempt += 1) {
+      beforeBody = await this.riskText(page);
+      initialState = couponCheckoutState(beforeBody, page.url());
+      if (initialState.status !== 'unknown') break;
+      await page.waitForTimeout(250);
+    }
+    if (initialState.status === 'applied') return initialState;
+    if (initialState.status === 'none') return initialState;
+    if (initialState.status !== 'available') {
+      throw new Error('没有确认优惠券检查结果，已停止提交，避免漏用可用优惠券');
+    }
+    const advertised = initialState.amount;
     const beforeTotal = checkoutAmounts(beforeBody).total;
     const entryText = await this.visibleLocator(page.getByText(/未选红包[^\n]{0,40}最高\s*\d+(?:\.\d+)?\s*元可用/, { exact: false }), true)
       || await this.visibleLocator(page.getByText(/最高\s*\d+(?:\.\d+)?\s*元可用/, { exact: false }), true);
@@ -1189,23 +2020,41 @@ export class TaobaoFlashBrowser {
     await this.tapControl(page, entry); await page.waitForTimeout(650);
     let openedBody = await this.riskText(page);
     const amountPattern = String(Number(advertised)).replace('.', '\\.');
-    let alreadySelected = new RegExp(`已选\s*\d+\s*张[^。；\n]{0,30}可减\s*[¥￥]?\s*${amountPattern}\s*元?`).test(openedBody);
+    let alreadySelected = /已选\s*[1-9]\d*\s*张/.test(openedBody)
+      || new RegExp(`已选\s*\d+\s*张[^。；\n]{0,30}可减\s*[¥￥]?\s*${amountPattern}\s*元?`).test(openedBody);
     let directCoupon = null;
+    const couponCardSelected = async coupon => Boolean(coupon && await coupon.evaluate(node => {
+      const selected = current => {
+        const state = `${current.getAttribute?.('aria-checked') || ''} ${current.getAttribute?.('aria-selected') || ''} ${current.className || ''}`;
+        return /(?:^|\s)(?:true|checked|selected|active)(?:\s|$)/i.test(state);
+      };
+      return selected(node) || [...node.querySelectorAll('*')].some(selected);
+    }).catch(() => false));
     if (!alreadySelected) {
-      const enabledCoupons = page.locator('.shtc-base-coupon__wrap:not(.disable)');
-      for (let index = 0; index < await enabledCoupons.count().catch(() => 0); index += 1) {
-        const candidate = enabledCoupons.nth(index);
-        if (!await candidate.isVisible().catch(() => false)) continue;
-        const text = clean(await candidate.innerText().catch(() => ''), 500);
-        if (/不可用原因|已失效/.test(text)) continue;
-        if (new RegExp(`(?:[¥￥]\\s*${amountPattern}(?:\\.0+)?|${amountPattern}(?:\\.0+)?\\s*元)`).test(text)) {
+      // The platform orders usable red packets before the disabled section.
+      // Follow the user's stable rule: choose the first visible usable card,
+      // rather than depending on a brittle amount-text match.  The list often
+      // renders later than its shell, so wait for the real card rows first.
+      for (let attempt = 0; attempt < 16 && !directCoupon; attempt += 1) {
+        const couponCards = page.locator('.shtc-base-coupon__wrap');
+        for (let index = 0; index < await couponCards.count().catch(() => 0); index += 1) {
+          const candidate = couponCards.nth(index);
+          if (!await candidate.isVisible().catch(() => false)) continue;
+          const text = clean(await candidate.innerText().catch(() => ''), 700);
+          const classes = clean(await candidate.getAttribute('class').catch(() => ''), 300);
+          if (!text || /不可用原因|已失效/.test(text) || /(?:^|\s)disable(?:d)?(?:\s|$)/i.test(classes)) continue;
           directCoupon = candidate;
           break;
         }
+        if (!directCoupon) await page.waitForTimeout(250);
       }
     }
     if (!alreadySelected && directCoupon) {
-      await this.tapControl(page, directCoupon); await page.waitForTimeout(500);
+      const explicitUse = await this.visibleLocator(directCoupon.getByText(/^(?:选择|使用|立即使用|兑换|立即兑换)$/), true).catch(() => null);
+      const toggle = explicitUse
+        || await this.visibleLocator(directCoupon.locator('[role="radio"], [role="checkbox"], [aria-checked], [class*="radio"], [class*="check"], [class*="select"]'), true).catch(() => null)
+        || directCoupon;
+      await this.tapControl(page, toggle); await page.waitForTimeout(500);
       let redemptionBody = await this.riskText(page);
       if (/是否兑换|兑换将消耗\s*\d+\s*吃货豆/.test(redemptionBody)) {
         const redeem = await this.visibleLocator(page.getByText(/^(?:立即兑换|确认兑换|兑换并使用|确认使用)$/), true);
@@ -1217,10 +2066,12 @@ export class TaobaoFlashBrowser {
         }
       }
       openedBody = await this.riskText(page);
-      alreadySelected = new RegExp(`已选\s*\d+\s*张[^。；\n]{0,30}可减\s*[¥￥]?\s*${amountPattern}\s*元?`).test(openedBody);
+      alreadySelected = /已选\s*[1-9]\d*\s*张/.test(openedBody)
+        || new RegExp(`(?:已选\s*\d+\s*张[^。；\n]{0,30}可减|已选择|已使用)[^。；\n]{0,30}[¥￥]?\s*${amountPattern}\s*元?`).test(openedBody)
+        || await couponCardSelected(directCoupon);
     }
     if (alreadySelected) {
-      const done = await this.visibleLocator(page.getByText(/^(确定|完成|使用)$/), true);
+      const done = await this.visibleLocator(page.getByText(/^(?:确定|完成|使用|确认|确认使用|选好了)$/), true);
       if (!done) throw new Error(`¥${advertised.toFixed(2)}红包已自动选中，但没有找到确认按钮，已停止提交`);
       await this.activateControl(page, done);
       for (let wait = 0; wait < 16; wait += 1) {
@@ -1229,7 +2080,7 @@ export class TaobaoFlashBrowser {
       }
     }
     await page.locator('[data-phone-delivery-coupon]').evaluateAll(nodes => nodes.forEach(node => node.removeAttribute('data-phone-delivery-coupon'))).catch(() => {});
-    const marked = alreadySelected || Boolean(directCoupon) || await page.evaluate(amount => {
+    const marked = alreadySelected || await page.evaluate(amount => {
       const visible = node => { const box = node.getBoundingClientRect(); return box.width > 0 && box.height > 0; };
       const normalized = value => String(value || '').replace(/\s+/g, ' ').replace(/(\d)\s+\.(\d)/g, '$1.$2').trim();
       const amountText = String(Number(amount));
@@ -1255,11 +2106,11 @@ export class TaobaoFlashBrowser {
       return true;
     }, advertised).catch(() => false);
     if (!marked) throw new Error(`订单显示有¥${advertised.toFixed(2)}红包可用，但没有识别到对应可用券，已停止提交`);
-    if (!alreadySelected && !directCoupon) {
+    if (!alreadySelected && marked) {
       await this.tapControl(page, page.locator('[data-phone-delivery-coupon="1"]').first());
       await page.waitForTimeout(550);
     }
-    const done = await this.visibleLocator(page.getByText(/^(确定|完成|使用)$/), true);
+    const done = await this.visibleLocator(page.getByText(/^(?:确定|完成|使用|确认|确认使用|选好了)$/), true);
     if (done && /ele-select-hongbao|选择红包|已选\s*\d+\s*张/i.test(`${page.url()} ${await this.riskText(page)}`)) {
       await this.tapControl(page, done); await page.waitForTimeout(550);
     }
@@ -1273,7 +2124,41 @@ export class TaobaoFlashBrowser {
     if (stillUnselected || (!explicitApplied && !(beforeTotal > 0 && afterTotal > 0 && afterTotal < beforeTotal))) {
       throw new Error(`¥${advertised.toFixed(2)}红包没有确认选中，已停止提交，避免按原价创建订单`);
     }
-    return { applied: true, amount: beforeTotal > 0 && afterTotal > 0 ? Math.round((beforeTotal - afterTotal) * 100) / 100 : advertised };
+    return {
+      status: 'applied',
+      amount: beforeTotal > 0 && afterTotal > 0 ? Math.round((beforeTotal - afterTotal) * 100) / 100 : advertised,
+      evidence: 'coupon_selected_and_total_verified',
+    };
+  }
+
+  async selectEarliestDeliveryWindow(page) {
+    let body = await this.riskText(page);
+    if (!/选择送达\s*时间/.test(body)) return '';
+    const entry = await this.visibleLocator(page.getByText(/选择送达\s*时间/, { exact: false }), true);
+    if (entry) {
+      await this.tapControl(page, entry);
+      await page.waitForTimeout(500);
+      body = await this.riskText(page);
+    }
+    if (!/选择送达时间/.test(body)) throw new Error('预约门店要求选择送达时间，但时间面板没有打开');
+    const windows = page.getByText(/^\d{1,2}:\d{2}\s*[-–—至]\s*\d{1,2}:\d{2}/, { exact: false });
+    let first = null;
+    let selectedText = '';
+    for (let index = 0; index < await windows.count(); index += 1) {
+      const candidate = windows.nth(index);
+      if (!await candidate.isVisible().catch(() => false)) continue;
+      first = candidate;
+      selectedText = clean(await candidate.innerText().catch(() => ''), 120).match(/\d{1,2}:\d{2}\s*[-–—至]\s*\d{1,2}:\d{2}/)?.[0] || '';
+      break;
+    }
+    if (!first || !selectedText) throw new Error('预约门店没有可验证的送达时间选项，已停止提交');
+    await this.tapControl(page, first);
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      await page.waitForTimeout(250);
+      body = await this.riskText(page);
+      if (!/选择送达时间\s+今日/.test(body) && body.includes(selectedText)) return selectedText;
+    }
+    throw new Error('平台没有确认最早送达时间，已停止提交');
   }
 
   async dismissPointsRedemption(page) {
@@ -1329,25 +2214,37 @@ export class TaobaoFlashBrowser {
     return true;
   }
 
-  async extractMenu(page, limit, query = '') {
+  async extractMenu(page, limit, query = '', { includeAddOnOnly = false } = {}) {
     const controls = this.purchaseControls(page);
     await this.waitForPurchaseControls(page, 8000);
+    // Retail search paints the most relevant rows first, then fills selected
+    // and top-ranked rows. Reading on the first add button can therefore omit
+    // the actual first card. Give this one page type a small passive settle.
+    if (shopSearchUrl(page.url())) await page.waitForTimeout?.(650);
     const items = [];
     for (let buttonIndex = 0; buttonIndex < Math.min(await controls.count(), 80); buttonIndex += 1) {
       const control = controls.nth(buttonIndex);
       const card = await control.evaluate((button, allowTopRows) => {
         const box = button.getBoundingClientRect();
-        if (box.width <= 0 || box.height <= 0 || box.y <= (allowTopRows ? 40 : 140)) return null;
+        if (box.width <= 0 || box.height <= 0 || box.y <= 20) return null;
         let node = button;
         for (let depth = 0; node && depth < 10; depth += 1, node = node.parentElement) {
-          if (!node.classList?.contains('menuItem--info')) continue;
+          const retailCardWrapper = allowTopRows && /cardWrapper/i.test(String(node.className || ''));
+          const accessibleNameNode = allowTopRows ? [...node.querySelectorAll('[aria-label]')].find(candidate => {
+            const label = (candidate.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim();
+            const rect = candidate.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0 && label.length >= 2 && label.length <= 160
+              && !/按钮|价格信息|领取|搜索|购物车|综合|销量|价格|切换.*图|减购|加购|选规格|选套餐|加入购物车/.test(label);
+          }) : null;
+          if (!node.classList?.contains('menuItem--info') && !node.classList?.contains('cell__props') && !accessibleNameNode && !retailCardWrapper) continue;
           const text = (node.innerText || '').replace(/\s+/g, ' ').trim();
           // The box also contains the description. Use the dedicated title
           // node so the next step can locate the same product exactly.
           const nameNode = node.querySelector('.menuItem--info-title')
             || node.querySelector('.menuItem--info-title--warp')
-            || node.querySelector('.menuItem--info--box') || node;
-          const nameText = (nameNode.innerText || '').replace(/\s+/g, ' ').trim();
+            || node.querySelector('.menuItem--info--box') || node.querySelector('.cell__props') || accessibleNameNode || node;
+          const nameText = (retailCardWrapper ? text.split(/买过\s*\d+\s*次|[¥￥]/)[0]
+            : (accessibleNameNode && nameNode === accessibleNameNode ? nameNode.getAttribute('aria-label') : nameNode.innerText) || '').replace(/\s+/g, ' ').trim();
           if (/¥|￥/.test(text)) {
             let imageRoot = node;
             for (let parentDepth = 0; imageRoot?.parentElement && parentDepth < 4; parentDepth += 1) imageRoot = imageRoot.parentElement;
@@ -1373,22 +2270,73 @@ export class TaobaoFlashBrowser {
               return { url, score };
             }).filter(candidate => candidate.score >= 0).sort((left, right) => right.score - left.score);
             const imageUrl = media[0]?.url || '';
-            return { text, nameText, imageUrl };
+            const retailPrices = retailCardWrapper ? [...text.matchAll(/[¥￥]\s*(\d+)(?:\s*\.\s*(\d+))?/g)]
+              .map(match => Number(`${match[1]}${match[2] ? `.${match[2]}` : ''}`)).filter(value => value > 0) : [];
+            return { text, nameText, imageUrl, price: retailPrices[0] || 0 };
           }
         }
         return null;
       }, shopSearchUrl(page.url())).catch(() => null);
-      if (!card || /非卖品|请勿下单|单点不送/.test(card.text)) continue;
+      if (!card || /非卖品|请勿下单/.test(card.text) || (!includeAddOnOnly && /单点不送/.test(card.text))) continue;
       const text = card.text;
-      const priceSource = /预估到手|预估价/.test(text) ? text.split(/预估到手|预估价/)[0] : text;
-      const prices = [...priceSource.matchAll(/[¥￥]\s*(\d+)(?:\s*\.\s*(\d+))?/g)]
-        .map(match => number(`${match[1]}${match[2] ? `.${match[2]}` : ''}`)).filter(value => value > 0);
-      const price = prices.at(-1) || 0;
-      const name = clean(card.nameText.split(/月售|近期\d+人|[¥￥]/)[0], 60)
-        .replace(/^(热销|大家喜欢吃，才叫真好吃)\s*/, '')
-        .replace(/\s*\d+天内\d+人下单.*$/, '')
-        .replace(/\s+\d+次$/, '');
+      const price = Number(card.price) > 0 ? Number(card.price) : menuCardPrice(text);
+      const name = menuCardName(card.nameText, text);
       if (name && price > 0) items.push({ buttonIndex, name, price, description: clean(text, 240), imageUrl: /^https:\/\//i.test(card.imageUrl || '') ? clean(card.imageUrl, 800) : '' });
+    }
+    if (retailShopSearchUrl(page.url())) {
+      // Retail/supermarket results use accessibility labels instead of the
+      // restaurant menuItem classes. Bind each visible add button to the
+      // nearest product-title and price labels in its own horizontal card.
+      // Do not mix these exact rows with the generic ancestor parser: its
+      // button indexes can collide while referring to a different ancestor,
+      // which previously dropped the first visible retail product.
+      const genericItems = [...items];
+      items.length = 0;
+      const retailCards = await page.evaluate(() => {
+        const visible = element => {
+          const rect = element.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        };
+        const adds = [...document.querySelectorAll('[aria-label*="加购"]')].filter(visible);
+        const labelled = [...document.querySelectorAll('[aria-label]')].filter(visible).map(element => ({
+          element, label: (element.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim(),
+          box: element.getBoundingClientRect(),
+        }));
+        return adds.map((button, buttonIndex) => {
+          const box = button.getBoundingClientRect();
+          const names = labelled.filter(row => row.box.x < box.x && row.box.y >= box.y - 150 && row.box.y <= box.y + 12
+            && row.label.length >= 2 && row.label.length <= 160
+            && !/按钮|价格信息|领取|搜索|购物车|综合|销量|价格|切换.*图|减购|加购|选规格|选套餐|加入购物车/.test(row.label)
+            && !/^(?:共\s*\d+\s*件|第\s*\d+\s*份.*|已优惠.*|[\d.]+\s*元)$/.test(row.label))
+            .sort((left, right) => Math.abs(left.box.y - box.y) - Math.abs(right.box.y - box.y));
+          const prices = labelled.filter(row => /价格信息/.test(row.label)
+            && Math.abs(row.box.y - box.y) <= 70).sort((left, right) => Math.abs(left.box.y - box.y) - Math.abs(right.box.y - box.y));
+          const name = names[0]?.label || '';
+          const price = Number(prices[0]?.label.match(/(\d+(?:\.\d+)?)/)?.[1] || 0);
+          let root = button;
+          let description = '';
+          let imageUrl = '';
+          for (let depth = 0; root && depth < 12; depth += 1, root = root.parentElement) {
+            const text = (root.innerText || '').replace(/\s+/g, ' ').trim();
+            if (name && text.includes(name) && /¥|￥/.test(text)) {
+              description = text;
+              const image = root.querySelector('img');
+              imageUrl = image?.currentSrc || image?.src || '';
+              break;
+            }
+          }
+          return { buttonIndex, name, price, description, imageUrl };
+        }).filter(card => card.name && card.price > 0);
+      }).catch(() => []);
+      for (const card of retailCards) {
+        if (items.some(item => item.buttonIndex === card.buttonIndex || item.name === card.name)) continue;
+        items.push({
+          buttonIndex: card.buttonIndex, name: clean(card.name, 140), price: card.price,
+          description: clean(card.description, 240),
+          imageUrl: /^https:\/\//i.test(card.imageUrl || '') ? clean(card.imageUrl, 800) : '',
+        });
+      }
+      if (!items.length) items.push(...genericItems);
     }
     const unique = items.filter((item, index) => items.findIndex(other => other.name === item.name) === index);
     const normalizedQuery = clean(query, 120).toLowerCase().replace(/\s+/g, '');
@@ -1406,9 +2354,16 @@ export class TaobaoFlashBrowser {
       .slice(0, limit).map(row => row.item);
   }
 
-  async searchInsideShop(page, itemName) {
+  async searchInsideShop(page, itemName, { riskRetry = 0 } = {}) {
     if (!(shopUrl(page?.url?.()) || shopSearchUrl(page?.url?.())) || !clean(itemName, 140)) return false;
+    await this.assertRiskCooldown();
+    await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
     const query = clean(itemName, 140);
+    const searchKey = knownRouteKey(query);
+    const searchUrl = clean(page.url(), 1000);
+    const hiddenRiskCount = () => page.evaluate(() => performance.getEntriesByType('resource')
+      .filter(entry => /\/_____tmd_____\/(?:punish|newslidecaptcha)/i.test(String(entry.name || ''))).length).catch(() => 0);
+    const riskResourcesBefore = await hiddenRiskCount();
     const fields = page.locator([
       'input[placeholder*="搜索店内"]', 'input[placeholder*="搜索商品"]',
       'input[aria-label*="搜索店内"]', 'input[aria-label*="搜索商品"]',
@@ -1451,13 +2406,52 @@ export class TaobaoFlashBrowser {
       }
     }
     if (!field) return false;
+    const currentValue = clean(await field.inputValue().catch(() => ''), 140);
+    if (riskRetry === 0 && currentValue === query && this.lastStoreSearchKey === searchKey
+      && this.lastStoreSearchUrl === searchUrl && Date.now() - this.lastStoreSearchAt < 30_000) return true;
+    // Rapidly submitting several store-local searches is one of the strongest
+    // triggers for Alibaba's image/slider challenge.  Keep each item separate,
+    // but space actual submissions and never re-submit an identical live result.
+    const searchGap = 3_000 - (Date.now() - this.lastStoreSearchAt);
+    if (searchGap > 0) await page.waitForTimeout(searchGap);
     await this.tapControl(page, field).catch(() => {});
     await field.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A').catch(() => {});
     await field.pressSequentially(query, { delay: 35 });
     const submit = await this.visibleLocator(page.getByText(/^搜索$/), true);
     if (submit) await this.tapControl(page, submit);
     else await field.press('Enter');
-    await this.waitForContent(page, 1800);
+    this.lastStoreSearchAt = Date.now();
+    this.lastStoreSearchKey = searchKey;
+    this.lastStoreSearchUrl = searchUrl;
+    // The SPA keeps the previous result DOM briefly after a new keyword is
+    // submitted. Without a render floor, waitForContent can accept those stale
+    // cards and the subsequent extraction sees the transition's empty state.
+    await page.waitForTimeout(650);
+    await this.waitForContent(page, 2200);
+    const suggestionBody = clean(await page.locator('body').innerText().catch(() => ''), 6000);
+    if (/历史搜索/.test(suggestionBody) && /猜你想搜/.test(suggestionBody)) {
+      // On the retail search page the visible “搜索” text can be a plain label
+      // rather than the node that owns the submit handler. The input value is
+      // correct but the page remains on suggestions. Submit the same query by
+      // keyboard once; this is not a second keyword or a new search task.
+      await field.press('Enter');
+      this.lastStoreSearchAt = Date.now();
+      await page.waitForTimeout(650);
+      await this.waitForContent(page, 2200);
+    }
+    const riskResourcesAfter = await hiddenRiskCount();
+    if (riskResourcesAfter > riskResourcesBefore) {
+      const visibleKind = riskChallengeKind(await this.riskText(page));
+      if (visibleKind && await this.dismissCloseableRiskOverlay(page, visibleKind)) {
+        await this.clearRiskChallenge();
+        if (riskRetry < 1) {
+          await page.waitForTimeout(3_000);
+          return this.searchInsideShop(page, itemName, { riskRetry: riskRetry + 1 });
+        }
+      }
+      await this.recordRiskChallenge('隐式安全验证');
+      throw new Error('淘宝闪购店内搜索被平台隐式安全验证拦截；页面显示的“没结果”不代表商品缺失，本轮已暂停；新的用户请求可立即重新检查当前页面，但系统不会自动连续重搜');
+    }
     const value = clean(await field.inputValue().catch(() => ''), 140);
     if (value !== query) throw new Error('店内搜索没有正确输入商品名称，已停止而不是刷新页面');
     return true;
@@ -1516,12 +2510,11 @@ export class TaobaoFlashBrowser {
       if (!repeat) throw new Error('匹配的历史订单已经失效，将在下一次搜索时改用店内搜索');
       return [];
     }
-    // A quote discovered through the storefront search page loses that search
-    // state when we later re-enter the shop to inspect its options.  Re-run the
-    // exact store-local query before locating the product so a homepage promo
-    // or similarly named first item can never replace the quoted drink.
+    // Keep an exact product card already visible on the storefront. Store-local
+    // search is a fallback only when the homepage does not expose that item.
     let button = await this.productControl(page, ref.itemName);
-    if (!button && await this.searchInsideShop(page, ref.itemName)) {
+    const mcdonaldsHomepageOnly = mcdonaldsDefaultBundleRequested(`${ref?.merchant} ${ref?.itemName} ${ref?.query}`);
+    if (!button && !mcdonaldsHomepageOnly && await this.searchInsideShop(page, ref.itemName)) {
       await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
       await this.waitForPurchaseControls(page, 8000);
       button = await this.productControl(page, ref.itemName);
@@ -1534,7 +2527,7 @@ export class TaobaoFlashBrowser {
 
   async inspectOptionsControl(page, button, itemRef = null) {
     const originUrl = page.url();
-    await this.tapControl(page, button); await page.waitForTimeout(700);
+    await this.activateProductControl(page, button); await page.waitForTimeout(700);
     const enteredDetail = /pages\/ele-product-detail/i.test(page.url());
     if (enteredDetail) {
       if (itemRef) itemRef.detailUrl = page.url();
@@ -1652,6 +2645,93 @@ export class TaobaoFlashBrowser {
     catch { await control.click({ force: true, noWaitAfter: true, timeout: 3000 }); }
   }
 
+  async activateProductControl(page, control) {
+    // A fixed recommendation strip can cover a scrolled menu button. Dispatch
+    // to the exact bound DOM control first so the coordinate cannot land on a
+    // different product painted above it.
+    if (typeof control?.scrollIntoViewIfNeeded === 'function') await control.scrollIntoViewIfNeeded().catch(() => {});
+    if (typeof control?.evaluate !== 'function') return this.activateControl(page, control);
+    try { await control.evaluate(node => node.click()); }
+    catch {
+      try { await control.click({ force: true, noWaitAfter: true, timeout: 3000 }); }
+      catch { await this.tapControl(page, control); }
+    }
+  }
+
+  async readSelectedCartItems(page, { close = true } = {}) {
+    let openedHere = false;
+    let cards = page.locator('.mod-mes-card');
+    const visibleCards = async () => {
+      const rows = [];
+      for (let index = 0; index < await cards.count().catch(() => 0); index += 1) {
+        const card = cards.nth(index);
+        if (await card.isVisible().catch(() => false)) rows.push(card);
+      }
+      return rows;
+    };
+    let rendered = await visibleCards();
+    if (!rendered.length) {
+      const retailPanelOpen = Boolean(await this.visibleLocator(page.locator('[aria-label="清空购物车"]'), true));
+      if (!retailPanelOpen) {
+        const basket = await this.visibleLocator(page.locator('[aria-label*="购物车篮子"]'), true);
+        if (basket) await this.tapControl(page, basket);
+        else {
+          const height = await page.evaluate(() => window.innerHeight).catch(() => 896);
+          await this.tapPoint(page, 58, Math.max(120, height - 54));
+        }
+        await page.waitForTimeout(500);
+        openedHere = true;
+      }
+      cards = page.locator('.mod-mes-card');
+      rendered = await visibleCards();
+    }
+    const items = [];
+    for (const card of rendered) {
+      const name = clean(await card.locator('.menu__info_name__text').first().innerText().catch(() => ''), 160);
+      const quantityText = clean(await card.locator('.cartNum').first().innerText().catch(() => ''), 20)
+        || clean(await card.locator('[aria-label]').evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-label')).find(value => /^\d+$/.test(value || '')) || '').catch(() => ''), 20);
+      const quantity = Math.max(0, Math.floor(Number(quantityText) || 0));
+      if (name) items.push({ name, quantity });
+    }
+    if (!items.length) {
+      const retailCards = page.locator('[class*="groupItem__"]');
+      for (let index = 0; index < await retailCards.count().catch(() => 0); index += 1) {
+        const card = retailCards.nth(index);
+        if (!await card.isVisible().catch(() => false)) continue;
+        const raw = clean(await card.innerText().catch(() => ''), 1200);
+        const name = clean(raw.split(/\s+(?:特价|限\s*\d+\s*份|优惠价|¥|￥)/)[0], 160);
+        const quantityLabel = clean(await card.locator('[aria-label^="共"]').first().getAttribute('aria-label').catch(() => ''), 40);
+        const quantity = Math.max(0, Math.floor(Number(quantityLabel.match(/共\s*(\d+)\s*件/)?.[1]) || 0));
+        if (name && quantity) items.push({ name, quantity });
+      }
+    }
+    if (close && (openedHere || rendered.length)) {
+      const panelClose = await this.visibleLocator(page.locator('[aria-label*="关闭面板"]'), true);
+      if (panelClose) await this.tapControl(page, panelClose).catch(() => {});
+      else {
+        const height = await page.evaluate(() => window.innerHeight).catch(() => 896);
+        await this.tapPoint(page, 58, Math.max(120, height - 54)).catch(() => {});
+      }
+      await page.waitForTimeout(350);
+    }
+    return items;
+  }
+
+  async verifyUniqueCartItems(page, expectedNames, { allowRepeatedSnack = false } = {}) {
+    let verification = { rows: [], duplicates: [], missing: [...expectedNames] };
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      verification = cartItemVerification(await this.readSelectedCartItems(page), expectedNames, { allowRepeatedSnack });
+      // Quantity duplication is a hard failure and must never be treated as a
+      // transient render delay.
+      if (verification.duplicates.length) {
+        throw new Error(`购物车出现重复商品（${verification.duplicates.join('、')}），系统已停止且不会提交订单`);
+      }
+      if (!verification.missing.length) return verification.rows;
+      if (attempt < 3) await page.waitForTimeout(300);
+    }
+    throw new Error(`加购后购物车没有真实出现（${verification.missing.join('、')}），系统已停止且不会把点击动作当成成功`);
+  }
+
   async visibleLocator(locator, reverse = false) {
     const count = await locator.count();
     for (let step = 0; step < count; step += 1) {
@@ -1684,6 +2764,55 @@ export class TaobaoFlashBrowser {
       await page.waitForTimeout(250);
     }
     return null;
+  }
+
+  async resolveCheckoutUtensils(page) {
+    const body = clean(await page.locator('body').innerText().catch(() => ''), 7000);
+    if (!/选择餐具份数/.test(body)) return false;
+
+    // The current checkout uses a wheel plus a large orange footer, not a
+    // normal radio dialog. Select one serving explicitly, then click the
+    // largest rendered “需要餐具” node (the footer rather than the wheel row).
+    const oneServing = await this.renderedLocator(page.getByText(/^(?:1|一)\s*份$/, { exact: true })).catch(() => null);
+    if (oneServing) {
+      await oneServing.evaluate(node => node.click()).catch(() => this.activateControl(page, oneServing));
+      await page.waitForTimeout(250);
+    }
+    const confirm = await this.renderedLocator(page.getByText(/^需要餐具，商家依据餐量提供$/, { exact: true })).catch(() => null)
+      || await this.renderedLocator(page.getByText(/^(?:有餐具|需要餐具)$/, { exact: true })).catch(() => null);
+    if (!confirm) throw new Error('淘宝闪购要求选择餐具，但没有识别到餐具面板的确认按钮，已停止提交');
+    await confirm.evaluate(node => node.click()).catch(() => this.activateControl(page, confirm));
+    for (let wait = 0; wait < 16; wait += 1) {
+      await page.waitForTimeout(250);
+      const currentBody = clean(await page.locator('body').innerText().catch(() => ''), 4000);
+      if (!/选择餐具份数/.test(currentBody)) return true;
+    }
+    throw new Error('已选择1份餐具，但平台餐具面板没有关闭；已停止且不会继续盲点提交按钮');
+  }
+
+  async checkoutControl(page) {
+    return await this.visibleLocator(page.getByText('去结算', { exact: false }), true)
+      || this.visibleLocator(page.getByText(/^(?:领券结算|结算)$/), true);
+  }
+
+  async satisfyRequiredStoreItem(page, expectedNames = []) {
+    const requiredPrompt = await this.visibleLocator(page.getByText('未选必选品', { exact: true }), true).catch(() => null);
+    if (!requiredPrompt) return { checkout: null, added: [] };
+    await this.tapControl(page, requiredPrompt);
+    await page.waitForTimeout(500);
+    // Some restaurants require one explicit row from a “下单必选” section.
+    // Prefer the real zero-price “无需餐具” row: it satisfies the merchant's
+    // form without inventing a paid candle, glove, fork or spoon request.
+    const noUtensils = '无需餐具（默认任何餐具都不配备）我坚决不要任何餐具';
+    const control = await this.productControl(page, noUtensils)
+      || await this.productControl(page, '无需餐具');
+    if (!control) throw new Error('门店要求选择下单必选品，但没有识别到免费的“无需餐具”选项；已停止且不会擅自购买收费餐具');
+    await this.activateProductControl(page, control);
+    await page.waitForTimeout(550);
+    await this.verifyUniqueCartItems(page, [...expectedNames, noUtensils]);
+    const checkout = await this.checkoutControl(page);
+    if (!checkout) throw new Error('已选择免费的“无需餐具”，但门店仍未提供可用的结算按钮；已停止且不会重复添加必选品');
+    return { checkout, added: [noUtensils] };
   }
 
   async advancePaymentSelection(page) {
@@ -1738,24 +2867,81 @@ export class TaobaoFlashBrowser {
 
   async productControl(page, itemName) {
     await page.locator('[data-phone-delivery-target]').evaluateAll(nodes => nodes.forEach(node => node.removeAttribute('data-phone-delivery-target'))).catch(() => {});
-    const marked = await page.evaluate(({ name, allowTopRows }) => {
+    const marked = await page.evaluate(({ name, allowTopRows, fruitKeyword, strictFruitTitle }) => {
       const normalized = value => String(value || '').replace(/\s+/g, ' ').trim();
       const canonicalTitle = value => normalized(value)
         .replace(/[（(](?:首创|招牌|经典)[）)]/g, '')
+        .replace(/^(?:招牌|热销|推荐)[\s·:：-]*/u, '')
+        .replace(/^【[^】]{1,30}】\s*/u, '')
+        .replace(/^\[[^\]]{1,30}\]\s*/u, '')
         .replace(/[【[].*$/, '')
         .trim();
       const bundle = /(?:双杯|两杯|2杯|套餐|组合|买一送一|\+|＋)/i;
       const targetIsBundle = bundle.test(name);
+      const fruitSizeAndPurityAllowed = value => {
+        const title = normalized(value);
+        if (/(?:大桶|桶装|水果桶|果桶|西瓜桶|芒果桶|橙子桶|含桶|半个|整个|夹心|夹馅|夹乌梅|乌梅|酸奶|奶油|果酱|蘸料|爆珠|大口吃芒果)/.test(title)) return false;
+        const weight = title.match(/(\d+(?:\.\d+)?)\s*(kg|千克|公斤|g|克|斤)/i);
+        if (!weight) return true;
+        const grams = /^(?:kg|千克|公斤)$/i.test(weight[2]) ? Number(weight[1]) * 1000
+          : weight[2] === '斤' ? Number(weight[1]) * 500 : Number(weight[1]);
+        return grams > 0 && grams <= 250;
+      };
+      const fruitTitleMatches = value => {
+        if (!fruitKeyword) return false;
+        if (strictFruitTitle) return canonicalTitle(value) === targetTitle;
+        const title = normalized(value).replace(/^【[^】]{1,30}】\s*/u, '');
+        if (/(?:拼|混合|果盘|水果捞|组合|套餐)/.test(title) || !fruitSizeAndPurityAllowed(title)) return false;
+        return fruitKeyword === '橙子' ? /(?:橙子|脐橙|鲜橙)/.test(title) : title.includes(fruitKeyword);
+      };
+      const titleMatches = value => (!fruitKeyword || fruitSizeAndPurityAllowed(value))
+        && (canonicalTitle(value) === targetTitle || fruitTitleMatches(value));
       const controls = [...document.querySelectorAll('[aria-label*="加购"], [aria-label*="选规格"], [aria-label*="选套餐"]')]
         .map(node => ({ node, box: node.getBoundingClientRect() }))
-        .filter(item => item.box.width > 0 && item.box.height > 0 && item.box.y > (allowTopRows ? 40 : 140));
+        .filter(item => item.box.width > 0 && item.box.height > 0 && item.box.y > 20);
       const targetTitle = canonicalTitle(name);
-      const titleNodes = [...document.querySelectorAll('[class*="menuItem--info-title"], [class*="goods-title"], [class*="product-title"]')];
+      {
+        // Retail search results expose each product title and add button as
+        // separate accessibility nodes. Bind the full exact title to the
+        // nearest button on the same row before any ancestor fallback; a large
+        // virtual-list wrapper can otherwise connect an off-screen title to the
+        // first visible cart button.
+        const exactRetailTitles = [...document.querySelectorAll('[aria-label]')].map(node => ({
+          node,
+          label: normalized(node.getAttribute('aria-label')).replace(/^商品标题[：:]\s*/u, ''),
+          box: node.getBoundingClientRect(),
+        })).filter(item => item.box.width > 0 && item.box.height > 0
+          && canonicalTitle(item.label) === targetTitle
+          && (!fruitKeyword || fruitSizeAndPurityAllowed(item.label)));
+        for (const title of exactRetailTitles) {
+          const targetY = title.box.y + title.box.height / 2;
+          const closest = controls.map(control => ({ control, distance: Math.abs(control.box.y + control.box.height / 2 - targetY) }))
+            .sort((left, right) => left.distance - right.distance)[0];
+          if (closest && closest.distance <= 120) {
+            closest.control.node.setAttribute('data-phone-delivery-target', '1');
+            closest.control.node.setAttribute('data-phone-delivery-binding', 'exact-title-row');
+            return true;
+          }
+        }
+      }
+      // Sticky recommendation cards share one large wrapper. Bind each button
+      // to its own small `.cell__props` card before considering any fallback;
+      // otherwise the first + button can inherit a title from a sibling card.
+      for (const control of controls) {
+        const cell = control.node.closest('.cell__props');
+        const cellTitle = cell?.querySelector('.cell__props-name');
+        const cellText = normalized(cellTitle?.innerText || cellTitle?.textContent);
+        if (cellText && titleMatches(cellText) && (targetIsBundle || !bundle.test(cellText))) {
+          control.node.setAttribute('data-phone-delivery-target', '1');
+          return true;
+        }
+      }
+      const titleNodes = [...document.querySelectorAll('[class*="menuItem--info-title"], [class*="goods-title"], [class*="product-title"], .cell__props-name')];
       const exactTitles = titleNodes.filter(node => {
         const box = node.getBoundingClientRect();
         const text = normalized(node.innerText || node.textContent);
         return box.width > 0 && box.height > 0 && box.y > (allowTopRows ? 40 : 140) && text.length <= 80
-          && canonicalTitle(text) === targetTitle
+          && titleMatches(text)
           && (targetIsBundle || !bundle.test(text));
       }).map(node => ({ node, box: node.getBoundingClientRect(), text: normalized(node.innerText || node.textContent) }))
         .sort((left, right) => left.box.width * left.box.height - right.box.width * right.box.height || left.box.y - right.box.y);
@@ -1781,13 +2967,37 @@ export class TaobaoFlashBrowser {
           return true;
         }
       }
+      if (fruitKeyword) {
+        const accessibleFruitTitles = [...document.querySelectorAll('[aria-label]')].map(node => ({
+          node,
+          label: normalized(node.getAttribute('aria-label')),
+          box: node.getBoundingClientRect(),
+        })).filter(item => item.box.width > 0 && item.box.height > 0 && item.box.y > (allowTopRows ? 40 : 140)
+          && item.label.length <= 100 && !/(?:加购|选规格|选套餐|价格信息|按钮)/.test(item.label)
+          && fruitTitleMatches(item.label));
+        for (const title of accessibleFruitTitles) {
+          const targetY = title.box.y + title.box.height / 2;
+          const closest = controls.map(control => ({ control, distance: Math.abs(control.box.y + control.box.height / 2 - targetY) }))
+            .sort((left, right) => left.distance - right.distance)[0];
+          if (closest && closest.distance <= 160) {
+            closest.control.node.setAttribute('data-phone-delivery-target', '1');
+            return true;
+          }
+        }
+      }
       let best = null; let bestRank = Infinity; let bestLength = Infinity;
       for (const control of controls) {
-        let parent = control.node.parentElement;
-        for (let depth = 0; parent && depth < 6; depth += 1, parent = parent.parentElement) {
+        let parent = control.node.closest('[data-item-id], .menuItem, .food-item--wrap, .cell__props, [class*="goods-item"], [class*="product-item"], [class*="food-item"]');
+        for (let depth = 0; parent && depth < 3; depth += 1, parent = parent.parentElement) {
           const text = normalized(parent.innerText);
-          if (!text.includes(name) || text.length > 900) continue;
+          if ((!text.includes(name) && !fruitTitleMatches(text)) || text.length > 900) continue;
           if (!targetIsBundle && bundle.test(text)) continue;
+          const exactCardTitle = [...parent.querySelectorAll('[class*="menuItem--info-title"], [class*="goods-title"], [class*="product-title"], .cell__props-name')]
+            .some(node => titleMatches(node.innerText || node.textContent)) || fruitTitleMatches(text);
+          if (!exactCardTitle) continue;
+          const parentControls = [...parent.querySelectorAll('[aria-label*="加购"], [aria-label*="选规格"], [aria-label*="选套餐"]')]
+            .filter(node => { const box = node.getBoundingClientRect(); return box.width > 0 && box.height > 0; });
+          if (parentControls.length !== 1 || parentControls[0] !== control.node) continue;
           const rank = text.startsWith(name) ? 0 : 1;
           if (rank < bestRank || (rank === bestRank && text.length < bestLength)) {
             best = control.node; bestRank = rank; bestLength = text.length;
@@ -1797,7 +3007,12 @@ export class TaobaoFlashBrowser {
       }
       if (best) { best.setAttribute('data-phone-delivery-target', '1'); return true; }
       return false;
-    }, { name: itemName, allowTopRows: shopSearchUrl(page.url()) }).catch(() => false);
+    }, {
+      name: itemName,
+      allowTopRows: shopSearchUrl(page.url()),
+      fruitKeyword: singleFruitKeyword(itemName),
+      strictFruitTitle: Boolean(singleFruitKeyword(itemName) && fruitServingWeightGrams(itemName) > 0),
+    }).catch(() => false);
     return marked ? page.locator('[data-phone-delivery-target="1"]').first() : null;
   }
 
@@ -1838,6 +3053,11 @@ export class TaobaoFlashBrowser {
   }
 
   async readCheckoutDraft(page, ref, quantity = 1, { validateCart = true } = {}) {
+    const expandItems = await this.visibleLocator(page.getByText(/^(?:展开|查看全部)(?:[（(]?共\s*\d+\s*件[）)]?)?$/, { exact: true }), true).catch(() => null);
+    if (expandItems) {
+      await this.tapControl(page, expandItems);
+      await page.waitForTimeout(500);
+    }
     let raw = '';
     let amounts = { total: 0, discount: 0 };
     for (let attempt = 0; attempt < 24; attempt += 1) {
@@ -1847,7 +3067,18 @@ export class TaobaoFlashBrowser {
       await page.waitForTimeout(250);
     }
     if (!amounts.total) throw new Error('没有从淘宝闪购确认页读到有效金额，本轮已停止');
-    const cart = checkoutCartState(raw, ref.itemName, ref.query, quantity, {
+    const retailCheckoutRows = await page.evaluate(() => {
+      const list = document.querySelector('[class*="goodsListWrap"]');
+      if (!list) return [];
+      return [...list.querySelectorAll('[role="button"][aria-label]')].map(node => ({
+        name: String(node.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim(),
+        quantity: Math.max(1, Number(String(node.innerText || node.textContent || '').match(/[x×]\s*(\d+)/i)?.[1]) || 1),
+      })).filter(row => row.name && !/^共\s*\d+\s*件/.test(row.name));
+    }).catch(() => []);
+    const validationRaw = retailCheckoutRows.length
+      ? `${raw}\n${retailCheckoutRows.map(row => `${row.name} × ${row.quantity} ¥0`).join('\n')}`
+      : raw;
+    const cart = checkoutCartState(validationRaw, ref.itemName, ref.query, quantity, {
       allowSuperset: ref.requiresConfirmation === true,
       requiredItems: ref.cartItems,
     });
@@ -1895,19 +3126,29 @@ export class TaobaoFlashBrowser {
         '[class*="order-item"]', '[class*="orderItem"]',
         '[class*="goods-item"]', '[class*="goodsItem"]',
       ].join(',');
-      const rows = [...new Set(document.querySelectorAll(rowSelector))].map(node => {
+      let rows = [...new Set(document.querySelectorAll(rowSelector))].map(node => {
         const imageUrl = bestImage(node);
         const priceText = cleanText(node.querySelector('.food-item__price-unit-price')?.textContent)
           || cleanText(node.querySelector('.food-item__price')?.textContent);
         const prices = [...priceText.matchAll(/\d+(?:\.\d+)?/g)].map(match => Number(match[0])).filter(Number.isFinite);
         return {
           name: cleanText(node.querySelector('.food-item__title-text-checkout, .food-item__title')?.textContent),
-          options: cleanText(node.querySelector('.food-item__subTitle-text, .food-item__subTitle')?.textContent),
+          options: collapseRepeatedOptionText(cleanText(node.querySelector('.food-item__subTitle-text, .food-item__subTitle')?.textContent)),
           quantity: Math.max(1, Number(cleanText(node.querySelector('.food-item__number')?.textContent).match(/\d+/)?.[0]) || 1),
           price: prices.length ? prices.at(-1) : 0,
           imageUrl,
         };
       }).filter(row => row.name);
+      if (!rows.length) {
+        const retailList = document.querySelector('[class*="goodsListWrap"]');
+        rows = [...(retailList?.querySelectorAll?.('[role="button"][aria-label]') || [])].map(node => ({
+          name: cleanText(node.getAttribute('aria-label')),
+          options: '',
+          quantity: Math.max(1, Number(cleanText(node.innerText || node.textContent).match(/[x×]\s*(\d+)/i)?.[1]) || 1),
+          price: 0,
+          imageUrl: bestImage(node),
+        })).filter(row => row.name && !/^共\s*\d+\s*件/.test(row.name));
+      }
       const normalized = value => cleanText(value).replace(/[\s·•()（）【】\[\]_-]+/g, '');
       const wanted = (requiredNames || []).map(normalized).filter(Boolean);
       const matchedPageImage = [...document.querySelectorAll('img, div, span')].map(node => {
@@ -1965,7 +3206,7 @@ export class TaobaoFlashBrowser {
     };
   }
 
-  async useExistingCartIfMatching(page, ref, quantity = 1) {
+  async useExistingCartIfMatching(page, ref, quantity = 1, { replaceMismatchedCart = false } = {}) {
     let cartLabel = '';
     let checkout = null;
     // The storefront often paints the cart footer after the menu itself.  A
@@ -1974,12 +3215,55 @@ export class TaobaoFlashBrowser {
     for (let attempt = 0; attempt < 12; attempt += 1) {
       cartLabel = clean(await page.locator('[aria-label*="购物车总计金额"]').first()
         .getAttribute('aria-label', { timeout: 400 }).catch(() => ''));
-      checkout = await this.visibleLocator(page.getByText('去结算', { exact: false }), true);
+      checkout = await this.checkoutControl(page);
       if (number(cartLabel) > 0 || checkout) break;
       await page.waitForTimeout(250);
     }
-    if (!(number(cartLabel) > 0 || checkout)) return null;
+    if (!(number(cartLabel) > 0 || checkout)) {
+      // Store-local result pages can temporarily hide the cart footer even
+      // though the same shop still owns an unfinished cart.  Inspect the real
+      // cart rows once before adding; otherwise a retry can turn quantity 1
+      // into quantity 2 and only discover it after the click.
+      const hiddenRows = await this.readSelectedCartItems(page).catch(() => []);
+      if (!hiddenRows.length) return null;
+      const exactExisting = hiddenRows.length === 1 && hiddenRows[0].quantity === quantity
+        && (productMatchesSavedItem(hiddenRows[0].name, ref.itemName)
+          || singleFruitItemMatches(hiddenRows[0].name, ref.itemName));
+      if (exactExisting) return { resumeBelowMinimum: true, items: hiddenRows };
+      if (!replaceMismatchedCart) throw new Error('当前门店已有另一份未结算购物车；系统不会覆盖或重复加购');
+      const cleared = await this.cleanupCartItem(ref.itemName, { clearAll: true });
+      if (cleared.cartAmount === 0) return null;
+      throw new Error('本次授权检测到页面隐藏的旧购物车，但平台没有确认清空，已安全停止');
+    }
+    // A below-minimum storefront can briefly expose a rendered node whose text
+    // looks like a checkout action even though the footer still says that more
+    // items are required.  The threshold text is the authoritative state: keep
+    // the verified main item and continue with the remaining explicit items
+    // instead of tapping the false checkout control and stopping the task.
+    const storefrontBody = await page.locator('body').innerText().catch(() => '');
+    const explicitlyBelowMinimum = /(?:还差|差)\s*(?:¥|￥)?\s*\d+(?:\.\d+)?\s*元?\s*起送/.test(storefrontBody);
+    if (explicitlyBelowMinimum) {
+      const belowMinimumRows = await this.readSelectedCartItems(page).catch(() => []);
+      const exactExisting = belowMinimumRows.length === 1 && belowMinimumRows[0].quantity === quantity
+        && (productMatchesSavedItem(belowMinimumRows[0].name, ref.itemName)
+          || singleFruitItemMatches(belowMinimumRows[0].name, ref.itemName));
+      if (exactExisting) return { resumeBelowMinimum: true, items: belowMinimumRows };
+      if (replaceMismatchedCart) {
+        const cleared = await this.cleanupCartItem(ref.itemName, { clearAll: true });
+        if (cleared.cartAmount === 0) return null;
+      }
+      throw new Error('当前门店购物车已有商品但尚未达到起送金额；系统不会重复加购，请先确认要补充的商品');
+    }
     if (!checkout) {
+      const belowMinimumRows = await this.readSelectedCartItems(page).catch(() => []);
+      const exactExisting = belowMinimumRows.length === 1 && belowMinimumRows[0].quantity === quantity
+        && (productMatchesSavedItem(belowMinimumRows[0].name, ref.itemName)
+          || singleFruitItemMatches(belowMinimumRows[0].name, ref.itemName));
+      if (exactExisting) return { resumeBelowMinimum: true, items: belowMinimumRows };
+      if (replaceMismatchedCart) {
+        const cleared = await this.cleanupCartItem(ref.itemName, { clearAll: true });
+        if (cleared.cartAmount === 0) return null;
+      }
       throw new Error('当前门店购物车已有商品但尚未达到起送金额；系统不会重复加购，请先确认要补充的商品');
     }
     await this.tapControl(page, checkout);
@@ -1993,7 +3277,15 @@ export class TaobaoFlashBrowser {
       throw new Error('购物车已有商品，但平台没有进入订单确认页；本轮不会重复加购');
     }
     await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
-    return this.readCheckoutDraft(page, ref, quantity, { validateCart: true });
+    try {
+      return await this.readCheckoutDraft(page, ref, quantity, { validateCart: true });
+    } catch (error) {
+      const mismatch = /购物车(?:里的|缺少|含有|商品或数量)/.test(String(error?.message || error));
+      if (!replaceMismatchedCart || !mismatch) throw error;
+      const cleared = await this.cleanupCartItem(ref.itemName, { clearAll: true });
+      if (cleared.cartAmount !== 0) throw new Error('本次授权允许替换未提交的旧购物车，但平台没有确认清空，已安全停止');
+      return null;
+    }
   }
 
   async createRepeatPurchaseOrder(ref) {
@@ -2009,7 +3301,7 @@ export class TaobaoFlashBrowser {
     await page.waitForTimeout(900);
     let body = clean(await page.locator('body').innerText().catch(() => ''), 12_000);
     if (!checkoutPageReady(page.url(), body)) {
-      const checkout = await this.visibleLocator(page.getByText('去结算', { exact: false }), true);
+      const checkout = await this.checkoutControl(page);
       if (!checkout) throw new Error('历史订单已加入购物车，但平台没有提供可用的去结算按钮');
       await this.tapControl(page, checkout);
       for (let attempt = 0; attempt < 14; attempt += 1) {
@@ -2024,26 +3316,25 @@ export class TaobaoFlashBrowser {
   }
 
   async returnToStorefrontWithoutRefresh(page) {
-    for (let attempt = 0; attempt < 3 && !shopUrl(page.url()); attempt += 1) {
+    for (let attempt = 0; attempt < 3 && (!shopUrl(page.url()) || shopSearchUrl(page.url())); attempt += 1) {
       if (typeof page.goBack !== 'function') break;
       await page.goBack({ waitUntil: 'domcontentloaded', timeout: 5000 }).catch(() => null);
       await page.waitForTimeout(450);
     }
-    if (!shopUrl(page.url())) throw new Error('无法在不刷新页面的情况下返回商家主页，已停止凑单');
+    if (!shopUrl(page.url()) || shopSearchUrl(page.url())) throw new Error('无法在不刷新页面的情况下返回商家主页，已停止凑单');
     return page;
   }
 
-  async topUpWithSavedItems(page, ref) {
-    if (!milkTeaTopUpEligible([ref?.merchant, ref?.itemName, ref?.query].filter(Boolean).join(' '))) {
-      return { checkout: null, added: [], expected: [], exhausted: true, eligible: false };
-    }
-    await this.returnToStorefrontWithoutRefresh(page);
-    const historySummary = ref.repeatSummary || await this.boughtOrderSummary(page, ref.itemName);
-    const names = savedTopUpItems(historySummary, ref.itemName);
+  async topUpWithCandidateItems(page, ref, candidateNames = [], excludedItems = [], kindLabel = '凑单商品', { searchResultsOnly = false, categoryOnly = false, requiredNames = [] } = {}) {
+    const excluded = [ref.itemName, ...excludedItems].map(item => clean(item, 140)).filter(Boolean);
+    const names = candidateNames.map(name => clean(name, 140)).filter((name, index, all) => name && all.indexOf(name) === index && !excluded.some(item => productMatchesSavedItem(item, name) || productMatchesSavedItem(name, item)));
+    const required = requiredNames.map(name => clean(name, 140)).filter(Boolean);
     const added = [];
     for (const name of names) {
+      if (searchResultsOnly && !shopSearchUrl(page.url())) throw new Error('奶茶凑单必须从店内“小料”搜索结果继续，不能改从首页推荐区点商品');
+      if (categoryOnly && (!shopUrl(page.url()) || shopSearchUrl(page.url()))) throw new Error('奶茶凑单必须留在商家“加小料区”，不能改走店内搜索');
       let control = await this.productControl(page, name);
-      if (!control && await this.searchInsideShop(page, name)) {
+      if (!searchResultsOnly && !categoryOnly && !control && await this.searchInsideShop(page, name)) {
         await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
         await this.waitForPurchaseControls(page, 8000);
         control = await this.productControl(page, name);
@@ -2052,7 +3343,7 @@ export class TaobaoFlashBrowser {
         if (!shopUrl(page.url())) await this.returnToStorefrontWithoutRefresh(page);
         continue;
       }
-      await this.activateControl(page, control); await page.waitForTimeout(550);
+      await this.activateProductControl(page, control); await page.waitForTimeout(550);
       const dialog = await this.optionPanel(page);
       if (dialog) {
         const raw = clean(await dialog.innerText().catch(() => ''), 3000);
@@ -2064,15 +3355,167 @@ export class TaobaoFlashBrowser {
           const cancel = await this.visibleLocator(dialog.getByText(/^(取消|关闭)$/), true)
             || await this.visibleLocator(dialog.locator('[aria-label*="关闭"]'), true);
           if (cancel) await this.tapControl(page, cancel).catch(() => {});
-          throw new Error(`历史凑单小料“${name}”现在要求重新选规格且没有安全默认项，请让角色先问你再继续`);
+          throw new Error(`${kindLabel}“${name}”现在要求重新选规格且没有安全默认项，请让角色先问你再继续`);
         }
       }
+      await this.verifyUniqueCartItems(page, [ref.itemName, ...excludedItems, ...added, name]);
       added.push(name);
-      const checkout = await this.visibleLocator(page.getByText('去结算', { exact: false }), true);
-      if (checkout) return { checkout, added, expected: names, exhausted: false, eligible: true };
-      if (!shopUrl(page.url())) await this.returnToStorefrontWithoutRefresh(page);
+      const checkout = await this.checkoutControl(page);
+      const requiredComplete = required.every(wanted => added.some(item => productMatchesSavedItem(item, wanted) || productMatchesSavedItem(wanted, item)));
+      if (checkout && requiredComplete) return { checkout, added, expected: names, exhausted: false, eligible: true };
+      if (added.length >= 8) break;
+      if (!searchResultsOnly && !shopUrl(page.url())) await this.returnToStorefrontWithoutRefresh(page);
     }
     return { checkout: null, added, expected: names, exhausted: true, eligible: true };
+  }
+
+  async openStoreMenuCategory(page, categoryName) {
+    if (!shopUrl(page?.url?.()) || shopSearchUrl(page?.url?.()) || !clean(categoryName, 80)) return false;
+    let target = null;
+    const requested = clean(categoryName, 80);
+    const groups = [
+      page.getByText(requested, { exact: true }),
+      // Stores use several names for the same section, including “加小料区”
+      // and “小料常点区”. A short category label containing 小料 is enough;
+      // full product descriptions and recommendation copy remain excluded.
+      page.getByText(/^(?=.{2,10}$).*小料.*$/u, { exact: true }),
+    ];
+    for (const candidates of groups) {
+      for (let index = 0; index < await candidates.count(); index += 1) {
+        const candidate = candidates.nth(index);
+        // The category can start below the fold in the left menu. Scrolling the
+        // exact category node is page-local navigation and does not submit a
+        // search request, so it also avoids the marketplace search risk gate.
+        await candidate.scrollIntoViewIfNeeded().catch(() => {});
+        if (await candidate.isVisible().catch(() => false)) { target = candidate; break; }
+      }
+      if (target) break;
+    }
+    if (!target) return false;
+    await this.tapControl(page, target).catch(async () => target.click({ force: true, noWaitAfter: true, timeout: 3000 }));
+    await page.waitForTimeout(650);
+    return true;
+  }
+
+  async openFruitPromotionCategory(page) {
+    if (!shopUrl(page?.url?.()) || shopSearchUrl(page?.url?.())) return false;
+    // This category is page-local navigation, not a search request. Stores may
+    // label the same one-item promotion differently; use only the two observed
+    // exact headings and still validate the product title, purity and weight.
+    return await this.openStoreMenuCategory(page, '超值单品任选一件')
+      || await this.openStoreMenuCategory(page, '活动商品');
+  }
+
+  async topUpWithSavedItems(page, ref, excludedItems = []) {
+    if (!milkTeaTopUpEligible([ref?.merchant, ref?.itemName, ref?.query].filter(Boolean).join(' '))) {
+      return { checkout: null, added: [], expected: [], exhausted: true, eligible: false };
+    }
+    await this.returnToStorefrontWithoutRefresh(page);
+    const historySummary = ref.repeatSummary || await this.boughtOrderSummary(page, ref.itemName);
+    // Milk-tea top-ups stay on the current storefront. Open the merchant's
+    // exact “加小料区” category and read its real products without issuing a
+    // second search request; this both preserves the user's one-drink rule and
+    // avoids an unnecessary marketplace risk trigger.
+    if (!await this.openStoreMenuCategory(page, '加小料区')) {
+      return { checkout: null, added: [], expected: [], exhausted: true, eligible: true };
+    }
+    await this.waitForPurchaseControls(page, 8000);
+    const menu = await this.extractMenu(page, 50, '', { includeAddOnOnly: true }).catch(() => []);
+    const preferences = requestedMilkTeaToppingPreferences(ref.query);
+    const excludedKeys = new Set(preferences.excluded);
+    const completedKeys = new Set(excludedItems.map(milkTeaToppingKey).filter(Boolean));
+    const liveNames = milkTeaToppingCandidates(menu, `${ref.itemName} ${ref.query || ''}`)
+      .filter(name => !excludedKeys.has(milkTeaToppingKey(name)));
+    const preferredNames = preferences.preferred.map(key => liveNames.find(name => milkTeaToppingKey(name) === key)).filter(Boolean);
+    const missingPreferred = preferences.preferred.filter(key => !completedKeys.has(key) && !preferredNames.some(name => milkTeaToppingKey(name) === key));
+    if (missingPreferred.length) {
+      throw new Error(`商家“加小料区”没有找到你明确要求的${missingPreferred.join('、')}，本轮不会用其他小料代替`);
+    }
+    const savedNames = savedTopUpItems(historySummary, ref.itemName)
+      .filter(saved => !excludedKeys.has(milkTeaToppingKey(saved)))
+      .filter(saved => liveNames.some(name => productMatchesSavedItem(name, saved) || productMatchesSavedItem(saved, name)));
+    const pendingPreferredNames = preferredNames.filter(name => !completedKeys.has(milkTeaToppingKey(name)));
+    const names = [...pendingPreferredNames, ...savedNames, ...liveNames].filter((name, index, all) => all.indexOf(name) === index);
+    return this.topUpWithCandidateItems(page, ref, names, excludedItems, '奶茶凑单小料', { categoryOnly: true, requiredNames: pendingPreferredNames });
+  }
+
+  async topUpWithMealSnacks(page, ref, excludedItems = []) {
+    if (!mealSideTopUpEligible([ref?.merchant, ref?.itemName, ref?.query].filter(Boolean).join(' '))) {
+      return { checkout: null, added: [], expected: [], exhausted: true, eligible: false };
+    }
+    await this.returnToStorefrontWithoutRefresh(page);
+    const menu = await this.extractMenu(page, 50, '', { includeAddOnOnly: true }).catch(() => []);
+    return this.topUpWithCandidateItems(page, ref, mealSnackCandidates(menu, ref.itemName), excludedItems, '主食凑单小吃');
+  }
+
+  async topUpWithSnackItems(page, ref, excludedItems = []) {
+    if (!snackTopUpEligible([ref?.merchant, ref?.itemName, ref?.query].filter(Boolean).join(' '))) {
+      return { checkout: null, added: [], expected: [], exhausted: true, eligible: false };
+    }
+    // When no other snack was explicitly named, the user allows the same snack
+    // to be repeated solely to reach the minimum order. Other categories keep
+    // the one-item rule.
+    let rows = await this.readSelectedCartItems(page).catch(() => []);
+    let repeatedMainQuantity = rows.find(item => productMatchesSavedItem(item.name, ref.itemName))?.quantity || 1;
+    let repeatUnsupported = false;
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const checkout = await this.checkoutControl(page);
+      if (checkout) return { checkout, added: [], expected: [], exhausted: false, eligible: true, repeatedMainQuantity };
+      const plus = await this.productQuantityPlus(page, ref.itemName);
+      if (!plus) { repeatUnsupported = true; break; }
+      await this.activateProductControl(page, plus);
+      await page.waitForTimeout(450);
+      rows = await this.readSelectedCartItems(page).catch(() => []);
+      const main = rows.find(item => productMatchesSavedItem(item.name, ref.itemName));
+      if (!main || main.quantity <= repeatedMainQuantity) { repeatUnsupported = true; break; }
+      repeatedMainQuantity = main.quantity;
+      await this.verifyUniqueCartItems(page, [ref.itemName], { allowRepeatedSnack: true });
+    }
+    if (repeatUnsupported) {
+      // Some retail promotions expose a plus button but enforce one unit per
+      // SKU. Keep the requested snack, then fall back to distinct edible
+      // snacks from the same real menu instead of misreporting a repeat.
+      let menu = await this.extractMenu(page, 50, '', { includeAddOnOnly: true }).catch(() => []);
+      let candidates = snackTopUpCandidates(menu, ref.itemName);
+      if (!candidates.length && await this.searchInsideShop(page, '零食')) {
+        await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
+        await this.waitForPurchaseControls(page, 8000);
+        menu = await this.extractMenu(page, 50, '', { includeAddOnOnly: true }).catch(() => []);
+        candidates = snackTopUpCandidates(menu, ref.itemName);
+      }
+      const fallback = await this.topUpWithCandidateItems(page, ref, candidates, excludedItems, '零食凑单商品');
+      return { ...fallback, repeatedMainQuantity };
+    }
+    return { checkout: null, added: [], expected: [ref.itemName], exhausted: true, eligible: true, repeatedMainQuantity };
+  }
+
+  async topUpWithCategoryItems(page, ref, excludedItems, { eligible, candidatesFor, searchTerm, kindLabel }) {
+    if (!eligible([ref?.merchant, ref?.itemName, ref?.query].filter(Boolean).join(' '))) {
+      return { checkout: null, added: [], expected: [], exhausted: true, eligible: false };
+    }
+    let menu = await this.extractMenu(page, 50, '', { includeAddOnOnly: true }).catch(() => []);
+    let candidates = candidatesFor(menu, ref.itemName, ref.query);
+    if (!candidates.length && await this.searchInsideShop(page, searchTerm)) {
+      await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
+      await this.waitForPurchaseControls(page, 8000);
+      menu = await this.extractMenu(page, 50, '', { includeAddOnOnly: true }).catch(() => []);
+      candidates = candidatesFor(menu, ref.itemName, ref.query);
+    }
+    return this.topUpWithCandidateItems(page, ref, candidates, excludedItems, kindLabel);
+  }
+
+  async topUpWithFruitItems(page, ref, excludedItems = []) {
+    return this.topUpWithCategoryItems(page, ref, excludedItems, {
+      eligible: fruitTopUpEligible, candidatesFor: fruitTopUpCandidates,
+      searchTerm: '水果', kindLabel: '水果凑单商品',
+    });
+  }
+
+  async topUpWithDessertItems(page, ref, excludedItems = []) {
+    return this.topUpWithCategoryItems(page, ref, excludedItems, {
+      eligible: dessertTopUpEligible, candidatesFor: dessertTopUpCandidates,
+      searchTerm: '甜品', kindLabel: '甜品凑单商品',
+    });
   }
 
   async topUpWithMealSide(page, ref, sideName) {
@@ -2087,7 +3530,7 @@ export class TaobaoFlashBrowser {
       control = await this.productControl(page, sideName);
     }
     if (!control) return { checkout: null, added: [] };
-    await this.activateControl(page, control); await page.waitForTimeout(550);
+    await this.activateProductControl(page, control); await page.waitForTimeout(550);
     const dialog = await this.optionPanel(page);
     if (dialog) {
       const raw = clean(await dialog.innerText().catch(() => ''), 3000);
@@ -2096,7 +3539,8 @@ export class TaobaoFlashBrowser {
       if (!selectedDefault || !confirm) throw new Error(`主食凑单小吃“${sideName}”现在要求选择规格，请让角色先问你再继续`);
       await this.tapControl(page, confirm); await page.waitForTimeout(650);
     }
-    const checkout = await this.visibleLocator(page.getByText('去结算', { exact: false }), true);
+    await this.verifyUniqueCartItems(page, [ref.itemName, sideName]);
+    const checkout = await this.checkoutControl(page);
     return { checkout, added: [sideName] };
   }
 
@@ -2105,13 +3549,34 @@ export class TaobaoFlashBrowser {
     const added = [];
     for (const requestedName of requested) {
       if (!shopUrl(page.url())) await this.returnToStorefrontWithoutRefresh(page);
+      const mcdonaldsDessert = /麦当劳|mcdonald/i.test([ref?.merchant, ref?.itemName, ref?.query].filter(Boolean).join(' '))
+        && /麦(?:旋|炫)风|香芋派|菠萝派|脆薯饼/.test(requestedName);
+      if (mcdonaldsDessert) {
+        // McDonald's exposes these as separate storefront products under the
+        // stable “小食甜品/其他” category. Open that category before reading
+        // the item and do not submit a store-search request for it.
+        const opened = await this.openStoreMenuCategory(page, '小食甜品/其他');
+        if (!opened) throw new Error('麦当劳当前页面没有找到“小食甜品/其他”分类，本轮不会用其他商品替代');
+        await this.waitForPurchaseControls(page, 8000);
+      }
       let menu = await this.extractMenu(page, 24, requestedName).catch(() => []);
       let chosen = preferredExactProduct(menu, requestedName);
-      if (!chosen && await this.searchInsideShop(page, requestedName)) {
+      if (!chosen && !mcdonaldsDessert && await this.searchInsideShop(page, requestedName)) {
         await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
         await this.waitForPurchaseControls(page, 8000);
         menu = await this.extractMenu(page, 24, requestedName).catch(() => []);
-        chosen = preferredExactProduct(menu, requestedName);
+        chosen = preferredExactProduct(menu, requestedName, { allowContainedAlias: true });
+      }
+      if (!chosen) {
+        // Some restaurant search pages render a perfectly visible product title
+        // and add button but omit the card metadata used by extractMenu. Read
+        // only those visible title nodes, resolve the bounded core category, and
+        // pass the resulting full platform name to productControl.
+        const visibleNames = await page.locator('[class*="menuItem--info-title"]').evaluateAll(nodes => [...new Set(nodes.map(node => {
+          const box = node.getBoundingClientRect();
+          return box.width > 0 && box.height > 0 ? (node.innerText || node.textContent || '').replace(/\s+/g, ' ').trim() : '';
+        }).filter(Boolean))]).catch(() => []);
+        chosen = preferredExactProduct(visibleNames.map(name => ({ name, price: 1 })), requestedName, { allowContainedAlias: true });
       }
       const actualName = clean(chosen?.name || requestedName, 140);
       let control = await this.productControl(page, actualName);
@@ -2119,7 +3584,7 @@ export class TaobaoFlashBrowser {
       if (!control) {
         throw new Error(`购物车还缺少本次明确要求的“${requestedName}”，系统不会因为达到起送价而提前结算`);
       }
-      await this.activateControl(page, control); await page.waitForTimeout(550);
+      await this.activateProductControl(page, control); await page.waitForTimeout(550);
       const dialog = await this.optionPanel(page);
       if (dialog) {
         const raw = clean(await dialog.innerText().catch(() => ''), 3000);
@@ -2130,21 +3595,23 @@ export class TaobaoFlashBrowser {
         }
         await this.tapControl(page, confirm); await page.waitForTimeout(650);
       }
+      await this.verifyUniqueCartItems(page, [ref.itemName, ...added, actualName]);
       added.push(actualName);
       // Do not inspect or click checkout here.  Every requested item must run
       // through this loop even if the first item already reached the minimum.
     }
+    if (added.length !== requested.length) throw new Error('用户明确指定的商品尚未全部完成，不能检查起送金额或进入结算');
     if (!shopUrl(page.url())) await this.returnToStorefrontWithoutRefresh(page);
-    const checkout = await this.visibleLocator(page.getByText('去结算', { exact: false }), true);
+    const checkout = await this.checkoutControl(page);
     return { checkout, added };
   }
 
-  async createOrder({ ref, selectedOptions, optionGroups = [], quantity }) {
+  async createOrder({ ref, selectedOptions, optionGroups = [], quantity, replaceMismatchedCart = false }) {
     if (quantity > 1 && !multiServingEligible([ref?.merchant, ref?.itemName, ref?.query].filter(Boolean).join(' '))) {
-      throw new Error('双杯/同款多份只允许用于奶茶或瑞幸咖啡；KFC、正餐和主食不会自动复制数量');
+      throw new Error('同一种奶茶、主食、KFC 或其他正餐只能点一份；达到起送价只能逐个添加小料或同店小吃');
     }
     if (ref.repeatPurchase) return this.createRepeatPurchaseOrder(ref);
-    let page; let targetControlY = null; let addedStandaloneItems = [];
+    let page; let targetControlY = null; let addedStandaloneItems = []; let resumeExistingMain = false;
     if (ref.detailUrl) {
       page = await this.goto(ref.detailUrl, 1800);
       const body = clean(await page.locator('body').innerText().catch(() => ''), 2400);
@@ -2156,21 +3623,23 @@ export class TaobaoFlashBrowser {
         : await this.enterShop(ref.shopIndex, { preferSaved: true });
       await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
       await this.waitForPurchaseControls(page, 8000);
-      const existing = await this.useExistingCartIfMatching(page, ref, quantity);
-      if (existing) return existing;
+      const existing = await this.useExistingCartIfMatching(page, ref, quantity, { replaceMismatchedCart });
+      if (existing?.resumeBelowMinimum) resumeExistingMain = true;
+      else if (existing) return existing;
       // Prefer an exact single item already visible on the storefront.  Only
       // open store-local search when the signature item is not on the page.
-      let add = await this.productControl(page, ref.itemName);
-      if (!add && await this.searchInsideShop(page, ref.itemName)) {
+      let add = resumeExistingMain ? null : await this.productControl(page, ref.itemName);
+      const mcdonaldsHomepageOnly = mcdonaldsDefaultBundleRequested(`${ref?.merchant} ${ref?.itemName} ${ref?.query}`);
+      if (!resumeExistingMain && !add && !mcdonaldsHomepageOnly && await this.searchInsideShop(page, ref.itemName)) {
         await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
         await this.waitForPurchaseControls(page, 8000);
         add = await this.productControl(page, ref.itemName);
       }
-      for (let attempt = 0; attempt < 20 && !add; attempt += 1) {
+      for (let attempt = 0; !resumeExistingMain && attempt < 20 && !add; attempt += 1) {
         add = await this.productControl(page, ref.itemName);
         if (!add) await page.waitForTimeout(500);
       }
-      if (!add) {
+      if (!resumeExistingMain && !add) {
         const title = await this.productTitle(page, ref.itemName);
         if (!title) throw new Error('没有在真实商家中定位到同一件商品，请重新搜索');
         await title.evaluate(node => {
@@ -2183,7 +3652,9 @@ export class TaobaoFlashBrowser {
         await page.waitForTimeout(1000);
         if (!/pages\/ele-product-detail/i.test(page.url())) throw new Error('真实商品标题没有打开对应详情，请重新搜索');
       }
-      if (!add) {
+      if (resumeExistingMain) {
+        targetControlY = null;
+      } else if (!add) {
         targetControlY = null;
       } else {
       if (process.env.PHONE_DELIVERY_DIAGNOSTIC_PATH) {
@@ -2193,24 +3664,24 @@ export class TaobaoFlashBrowser {
             const text = (parent.innerText || '').replace(/\s+/g, ' ').trim();
             if (text.length >= 4 && text.length <= 360) { summary = text; if (/¥|￥/.test(text)) break; }
           }
-          return { aria: node.getAttribute('aria-label') || '', text: (node.textContent || '').trim(), x: Math.round(box.x), y: Math.round(box.y), w: Math.round(box.width), h: Math.round(box.height), summary };
+          return { aria: node.getAttribute('aria-label') || '', binding: node.getAttribute('data-phone-delivery-binding') || '', text: (node.textContent || '').trim(), x: Math.round(box.x), y: Math.round(box.y), w: Math.round(box.width), h: Math.round(box.height), summary };
         }).catch(() => ({}));
-        console.error('[phone-delivery-browser] exact product control:', JSON.stringify(debug));
+        console.error('[phone-delivery-browser] exact product control:', JSON.stringify({ ...debug, url: page.url() }));
       }
       const targetBox = await add.boundingBox().catch(() => null);
       if (targetBox) targetControlY = targetBox.y + targetBox.height / 2;
       const startedOnInternalSearch = shopSearchUrl(page.url());
-      await this.activateControl(page, add); await page.waitForTimeout(700);
+      await this.activateProductControl(page, add); await page.waitForTimeout(700);
       if (!startedOnInternalSearch && shopSearchUrl(page.url())) throw new Error('真实商品按钮发生页面漂移，请重新搜索');
       }
     }
-    if (/pages\/ele-product-detail/i.test(page.url())) {
+    if (!resumeExistingMain && /pages\/ele-product-detail/i.test(page.url())) {
       const detailActions = page.locator('[aria-label*="选规格"], [aria-label*="选套餐"], [aria-label*="加入购物车"]').or(page.getByText(/^(选规格|选套餐|加入购物车)$/));
       const detailAdd = await this.visibleLocator(detailActions, true) || await this.renderedLocator(detailActions);
       if (!detailAdd) throw new Error('商品详情页没有可用的加入购物车按钮');
       await this.activateControl(page, detailAdd); await page.waitForTimeout(900);
     }
-    const dialog = await this.optionPanel(page);
+    const dialog = resumeExistingMain ? null : await this.optionPanel(page);
     const selectedLabels = [];
     const applySelectedOptions = async (panel, collectLabels = false) => {
       for (const [groupId, ids] of Object.entries(selectedOptions || {})) {
@@ -2232,6 +3703,7 @@ export class TaobaoFlashBrowser {
     if (dialog) {
       await applySelectedOptions(dialog, true);
     }
+    await this.verifyUniqueCartItems(page, [ref.itemName]);
     for (let i = 1; i < quantity; i += 1) {
       const plus = await this.productQuantityPlus(page, ref.itemName, targetControlY);
       if (!plus) {
@@ -2255,8 +3727,30 @@ export class TaobaoFlashBrowser {
     }
     const explicitItems = await this.addRequestedStandaloneItems(page, ref);
     addedStandaloneItems = explicitItems.added;
+    let explicitToppingCheckout = null;
+    const explicitToppingPreferences = requestedMilkTeaToppingPreferences(ref.query);
+    if (explicitToppingPreferences.preferred.length) {
+      if (!milkTeaTopUpEligible([ref?.merchant, ref?.itemName, ref?.query].filter(Boolean).join(' '))) {
+        throw new Error('当前商品不支持按奶茶小料流程完成明确加料要求');
+      }
+      const explicitToppings = await this.topUpWithSavedItems(page, ref, addedStandaloneItems);
+      const completedToppingKeys = new Set([...addedStandaloneItems, ...explicitToppings.added].map(milkTeaToppingKey).filter(Boolean));
+      const missingToppings = explicitToppingPreferences.preferred.filter(key => !completedToppingKeys.has(key));
+      if (missingToppings.length) throw new Error(`购物车还缺少本次明确要求的${missingToppings.join('、')}，不能提前结算`);
+      addedStandaloneItems.push(...explicitToppings.added);
+      explicitToppingCheckout = explicitToppings.checkout;
+    }
     ref.cartItems = [ref.itemName, ...addedStandaloneItems];
-    let checkout = explicitItems.checkout || await this.visibleLocator(page.getByText('去结算', { exact: false }), true);
+    ref.explicitItemsComplete = true;
+    let checkout = explicitToppingCheckout || await this.checkoutControl(page) || explicitItems.checkout;
+    if (!checkout) {
+      const required = await this.satisfyRequiredStoreItem(page, ref.cartItems);
+      checkout = required.checkout;
+      if (required.added.length) {
+        addedStandaloneItems.push(...required.added);
+        ref.cartItems = [ref.itemName, ...addedStandaloneItems];
+      }
+    }
     if (!checkout) {
       const checkoutBody = clean(await page.locator('body').innerText().catch(() => ''), 12_000);
       const minimum = minimumOrderInfo(checkoutBody, ref.unitPrice, quantity);
@@ -2267,37 +3761,55 @@ export class TaobaoFlashBrowser {
           checkout = mealTopUp.checkout;
           addedStandaloneItems.push(...mealTopUp.added);
           ref.cartItems = [ref.itemName, ...addedStandaloneItems];
-          if (!checkout) throw new Error(`已按你的要求加入“${explicitMealSide}”，但仍未达到该门店起送金额；请让角色先问你是否继续加其他主食小吃`);
-        } else {
-        const toppedUp = await this.topUpWithSavedItems(page, ref);
+        }
+        if (!ref.explicitItemsComplete) throw new Error('用户明确指定的商品尚未全部完成，不能开始凑单');
+        const mealOrder = mealSideTopUpEligible([ref?.merchant, ref?.itemName, ref?.query].filter(Boolean).join(' '));
+        const snackOrder = snackTopUpEligible([ref?.merchant, ref?.itemName, ref?.query].filter(Boolean).join(' '));
+        const fruitOrder = fruitTopUpEligible([ref?.merchant, ref?.itemName, ref?.query].filter(Boolean).join(' '));
+        const dessertOrder = dessertTopUpEligible([ref?.merchant, ref?.itemName, ref?.query].filter(Boolean).join(' '));
+        const randomMainChoiceAuthorized = /(?:随便(?:点|选)?|任意(?:一|单)?(?:杯|份|个)?|什么都(?:可以|行)|都(?:可以|行)|你(?:来)?(?:决定|点|选)|你看着(?:点|选)?)/u.test(clean(ref?.query, 400));
+        if (!checkout && fruitOrder && !randomMainChoiceAuthorized) {
+          throw new Error(`该门店最低起送金额为¥${minimum.threshold.toFixed(2)}，明确指定的水果已经全部完成，但你没有授权随机添加其他水果；请让角色先问你还要哪一种`);
+        }
+        const toppedUp = checkout ? { checkout, added: [], expected: [], exhausted: false, eligible: true }
+          : mealOrder ? await this.topUpWithMealSnacks(page, ref, addedStandaloneItems)
+            : snackOrder ? await this.topUpWithSnackItems(page, ref, addedStandaloneItems)
+              : fruitOrder ? await this.topUpWithFruitItems(page, ref, addedStandaloneItems)
+                : dessertOrder ? await this.topUpWithDessertItems(page, ref, addedStandaloneItems)
+                  : await this.topUpWithSavedItems(page, ref, addedStandaloneItems);
         checkout = toppedUp.checkout;
-        if (checkout && !toppedUp.exhausted) {
-          addedStandaloneItems.push(...toppedUp.added);
+        let requiredAdded = [];
+        if (!checkout) {
+          const required = await this.satisfyRequiredStoreItem(page, [ref.itemName, ...addedStandaloneItems, ...toppedUp.added]);
+          checkout = required.checkout;
+          requiredAdded = required.added;
+        }
+        if (Number(toppedUp.repeatedMainQuantity) > quantity) quantity = Number(toppedUp.repeatedMainQuantity);
+        if (checkout) {
+          addedStandaloneItems.push(...toppedUp.added, ...requiredAdded);
           ref.cartItems = [ref.itemName, ...addedStandaloneItems];
           // Continue with the same checkout path below.  The saved add-ons are
           // added one at a time and stop as soon as the minimum is met.
         } else if (toppedUp.eligible === false) {
-          const quantityHint = minimum.minimumQuantity > quantity ? `；同款至少需要${minimum.minimumQuantity}份` : '';
-          throw new Error(`该门店最低起送金额为¥${minimum.threshold.toFixed(2)}，咖啡、主食和非茶饮商品不会自动加入奶茶小料凑单${quantityHint}；请让角色先问你要添加哪件同类商品`);
+          throw new Error(`该门店最低起送金额为¥${minimum.threshold.toFixed(2)}，当前类别没有可自动添加的同店小料或小吃；请让角色先问你要加什么`);
         } else if (toppedUp.added.length) {
           const missing = toppedUp.expected.filter(name => !toppedUp.added.includes(name));
-          const missingText = missing.length ? `；尚缺历史小料：${missing.join('、')}` : '';
-          throw new Error(`已按历史记录加入凑单小料（${toppedUp.added.join('、')}），但本轮没有完整进入结算${missingText}；请让角色问你后再继续`);
+          const missingText = missing.length ? `；尚未加入：${missing.join('、')}` : '';
+          throw new Error(`已逐个加入凑单商品（${toppedUp.added.join('、')}），但本轮没有完整进入结算${missingText}；请让角色问你后再继续`);
         } else {
-          const quantityHint = minimum.minimumQuantity > quantity ? `；同款至少需要${minimum.minimumQuantity}份` : '';
-          throw new Error(`该门店最低起送金额为¥${minimum.threshold.toFixed(2)}，没有找到可复用的历史凑单小料${quantityHint}；请让角色先问你要加什么`);
-        }
+          throw new Error(`该门店最低起送金额为¥${minimum.threshold.toFixed(2)}，没有找到可验证且不重复的${mealOrder ? '同店小吃' : snackOrder ? '同店零食' : fruitOrder ? '同店水果' : dessertOrder ? '同店甜品' : '奶茶小料'}；请让角色先问你要加什么`);
         }
       }
       if (!checkout) {
         const suffix = await this.cleanupFailureSuffix(ref.itemName);
         if (minimum.threshold > 0) {
-        const quantityHint = minimum.minimumQuantity > quantity ? `；同款至少需要${minimum.minimumQuantity}份` : '';
-        throw new Error(`该门店最低起送金额为¥${minimum.threshold.toFixed(2)}，当前商品合计约¥${minimum.current.toFixed(2)}，还差约¥${minimum.shortfall.toFixed(2)}${quantityHint}；${suffix}`);
+        throw new Error(`该门店最低起送金额为¥${minimum.threshold.toFixed(2)}，当前商品合计约¥${minimum.current.toFixed(2)}，还差约¥${minimum.shortfall.toFixed(2)}；系统不会复制同款，只能加不重复的小料或同店小吃；${suffix}`);
         }
         throw new Error(`未达到起送金额或无法结算，${suffix}，请重新选择商品或数量`);
       }
     }
+    if (!ref.explicitItemsComplete || !checkout) throw new Error('结算条件不完整：必须先完成全部指定商品并达到起送金额');
+    await this.verifyUniqueCartItems(page, ref.cartItems, { allowRepeatedSnack: snackTopUpEligible([ref?.merchant, ref?.itemName, ref?.query].filter(Boolean).join(' ')) });
     const checkoutState = async () => ({ url: page.url(), body: clean(await page.locator('body').innerText().catch(() => ''), 12_000) });
     await this.tapControl(page, checkout);
     let state = await checkoutState();
@@ -2306,7 +3818,7 @@ export class TaobaoFlashBrowser {
       state = await checkoutState();
     }
     if (!checkoutPageReady(state.url, state.body)) {
-      const retry = await this.visibleLocator(page.getByText('去结算', { exact: false }), true);
+      const retry = await this.checkoutControl(page);
       if (retry) await this.activateControl(page, retry);
       await page.waitForTimeout(1400);
       state = await checkoutState();
@@ -2318,7 +3830,39 @@ export class TaobaoFlashBrowser {
     await page.waitForTimeout(1800);
     await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
     const draft = await this.readCheckoutDraft(page, ref, quantity, { validateCart: true });
-    draft.items = [{ name: ref.itemName, quantity, price: draft.total, options: selectedLabels.join('、') }, ...addedStandaloneItems.map(name => ({ name, quantity: 1, price: 0, options: '逐项加购的单品' }))];
+    const excludedFruits = requestedFruitExclusions(ref.query);
+    const forbiddenFruitItems = draft.items.filter(item => fruitExclusionMatches(item?.name, excludedFruits));
+    if (forbiddenFruitItems.length) {
+      throw new Error(`订单确认页包含明确禁止的水果“${forbiddenFruitItems.map(item => item.name).join('、')}”，本轮不会继续提交`);
+    }
+    const unsafeFruitItems = draft.items.filter(item => singleFruitKeyword(item?.name)
+      && !fruitServingEligible(`${item?.name || ''} ${item?.options || ''}`));
+    if (unsafeFruitItems.length) {
+      throw new Error(`订单确认页的水果不符合纯单果、无夹心、非桶装，且西瓜单份不超过500克、其他水果不超过250克的硬性要求：“${unsafeFruitItems.map(item => item.name).join('、')}”`);
+    }
+    const liveMain = draft.items.find(item => String(item.name || '').includes(ref.itemName)
+      || String(ref.itemName || '').includes(item.name)
+      || singleFruitItemMatches(item.name, ref.itemName));
+    const intendedRequirements = missingSelectedOptionRequirements('', selectedLabels);
+    if (intendedRequirements.length && !clean(liveMain?.options, 1000)) {
+      throw new Error('订单确认页没有显示可核对的真实规格，本轮不会继续提交');
+    }
+    const missingRequirements = missingSelectedOptionRequirements(liveMain?.options, selectedLabels);
+    if (missingRequirements.length) {
+      throw new Error(`订单确认页的真实规格缺少“${missingRequirements.join('、')}”，本轮不会继续提交`);
+    }
+    draft.items = [{
+      name: liveMain?.name || ref.itemName,
+      quantity,
+      price: liveMain?.price || draft.total,
+      options: liveMain?.options || selectedLabels.join('、'),
+      imageUrl: liveMain?.imageUrl || '',
+    }, ...addedStandaloneItems.map(name => {
+      const live = draft.items.find(item => String(item.name || '').includes(name)
+        || String(name).includes(item.name)
+        || singleFruitItemMatches(item.name, name));
+      return { name: live?.name || name, quantity: 1, price: live?.price || 0, options: live?.options || '逐项加购的单品', imageUrl: live?.imageUrl || '' };
+    })];
     return draft;
   }
 
@@ -2432,41 +3976,56 @@ export class TaobaoFlashBrowser {
     if (!/buy|order|confirm/i.test(page.url()) && browserOrderRef?.url) await this.goto(browserOrderRef.url, 1800);
     await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
     const beforePages = new Set(this.context.pages());
-    const initialBody = clean(await page.locator('body').innerText().catch(() => ''), 20_000);
+    let initialBody = clean(await page.locator('body').innerText().catch(() => ''), 20_000);
     let etaText = checkoutEtaText(initialBody);
     const itemNames = Array.isArray(browserOrderRef?.itemNames) ? browserOrderRef.itemNames.map(name => clean(name, 160)).filter(Boolean) : [];
+    const assertRetailCartUnchanged = async () => {
+      if (!itemNames.length) return;
+      const currentNames = await page.evaluate(() => {
+        const list = document.querySelector('[class*="goodsListWrap"]');
+        if (!list) return [];
+        return [...list.querySelectorAll('[role="button"][aria-label]')]
+          .map(node => String(node.getAttribute('aria-label') || '').replace(/\s+/g, ' ').trim())
+          .filter(name => name && !/^共\s*\d+\s*件/.test(name));
+      }).catch(() => []);
+      if (!currentNames.length) return;
+      const same = currentNames.length === itemNames.length
+        && itemNames.every(name => currentNames.some(current => productMatchesSavedItem(current, name) || productMatchesSavedItem(name, current)));
+      if (!same) throw new Error('提交前零售购物车发生变化，已停止；不会把换购或其他商品混入订单');
+    };
     const existingImageUrl = clean(browserOrderRef?.imageUrl, 440_000);
     const initialImageUrl = (existingImageUrl.startsWith('data:image/') ? existingImageUrl : '')
       || await this.readOrderImage(page, itemNames)
       || existingImageUrl;
     const alreadyAtPaymentSelection = /支付宝/.test(initialBody) && /确认支付/.test(initialBody);
+    let couponCheck = browserOrderRef?.couponCheck || null;
     if (!alreadyAtPaymentSelection) {
-      await this.applyBestAvailableCoupon(page);
+      const selectedWindow = await this.selectEarliestDeliveryWindow(page);
+      if (selectedWindow) {
+        initialBody = clean(await page.locator('body').innerText().catch(() => ''), 20_000);
+        etaText = selectedWindow;
+      }
+      couponCheck = await this.applyBestAvailableCoupon(page);
+      if (!['applied', 'none'].includes(couponCheck?.status)) {
+        throw new Error('优惠券检查没有得到“已使用”或“确认无券”的结果，已停止提交');
+      }
       await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
       etaText = checkoutEtaText(await page.locator('body').innerText().catch(() => '')) || etaText;
       for (let attempt = 0; attempt < 3; attempt += 1) {
+        await assertRetailCartUnchanged();
         const button = await this.checkoutSubmitControl(page);
         if (!button) throw new Error('未找到淘宝闪购提交订单按钮，请在浏览器窗口核对');
-        await this.tapControl(page, button); await page.waitForTimeout(700);
+        await button.evaluate(node => node.click()).catch(() => this.activateControl(page, button));
+        await page.waitForTimeout(700);
         await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
-        const promptBody = clean(await page.locator('body').innerText().catch(() => ''), 7000);
-        if (/选择餐具份数/.test(promptBody)) {
-          const utensils = await this.visibleLocator(page.getByText(/^(?:有餐具|需要餐具|(?:需要|选择)?\s*(?:1|一)\s*份餐具|(?:1|一)\s*份)$/, { exact: false }), true);
-          if (!utensils) throw new Error('淘宝闪购要求选择餐具，但没有识别到“有餐具/1份餐具”选项，已停止提交');
-          await this.tapControl(page, utensils); await page.waitForTimeout(450);
-          const confirmUtensils = await this.visibleLocator(page.getByText(/^(确定|完成)$/, { exact: true }), true);
-          if (confirmUtensils) await this.tapControl(page, confirmUtensils);
-          // The React sheet needs time to close and restore the submit control.
-          // Do not mistake the temporary absence of that control for success.
-          for (let wait = 0; wait < 12; wait += 1) {
-            await page.waitForTimeout(250);
-            const currentBody = clean(await page.locator('body').innerText().catch(() => ''), 4000);
-            if (!/选择餐具份数/.test(currentBody)) break;
-          }
+        if (await this.resolveCheckoutUtensils(page)) {
           continue;
         }
         break;
       }
+    }
+    if (alreadyAtPaymentSelection && !['applied', 'none'].includes(couponCheck?.status)) {
+      throw new Error('订单已在收银台，但缺少本单提交前的优惠券核验记录，不能把本轮算作完整成功');
     }
     const paymentPage = await this.waitForPaymentSelection(page, beforePages);
     await this.riskCheck(paymentPage, { waitForHuman: true, maxWaitMs: 120_000 });
@@ -2479,7 +4038,10 @@ export class TaobaoFlashBrowser {
         this.page = candidate;
         const imageUrl = initialImageUrl || await this.readOrderImage(candidate, itemNames);
         const exactEtaText = checkoutEtaText(candidateBody) || checkoutEtaText(await page.locator('body').innerText().catch(() => '')) || etaText;
-        return { status: 'pending_payment', payUrl: candidate.url(), etaText: exactEtaText, imageUrl, browserOrderRef: { stage: 'cashier', url: candidate.url(), itemNames, imageUrl } };
+        return {
+          status: 'pending_payment', payUrl: candidate.url(), etaText: exactEtaText, imageUrl, couponCheck,
+          browserOrderRef: { stage: 'cashier', url: candidate.url(), itemNames, imageUrl, couponCheck },
+        };
       }
     }
     const body = clean(await page.locator('body').innerText().catch(() => ''), 3000);
@@ -2585,7 +4147,10 @@ export class TaobaoFlashBrowser {
     const page = await this.ensure();
     const cartTrigger = await this.renderedLocator(page.locator('[aria-label*="购物车总计金额"]'));
     if (cartTrigger) await this.activateControl(page, cartTrigger);
-    else await this.tapPoint(page, 42, 866);
+    else {
+      const height = await page.evaluate(() => window.innerHeight).catch(() => 896);
+      await this.tapPoint(page, 58, Math.max(120, height - 54));
+    }
     await page.waitForTimeout(700);
     await page.screenshot({ path, fullPage: false });
     const body = clean(await page.locator('body').innerText().catch(() => ''), 3200)
@@ -2597,20 +4162,48 @@ export class TaobaoFlashBrowser {
     return { url: page.url(), body, aria, path };
   }
 
-  async cleanupCartItem(itemName) {
+  async cleanupCartItem(itemName, { clearAll = false } = {}) {
     if (!itemName) throw new Error('缺少要清理的测试商品名');
     let page = await this.ensure();
     if (/checkout|confirm|buy/i.test(page.url())) {
       await page.goBack({ waitUntil: 'domcontentloaded' }).catch(() => {});
       await page.waitForTimeout(1200);
     }
-    const decrementControls = page.locator('[aria-label*="减少"], [aria-label*="减购"]');
+    const retailPanelOpen = async () => Boolean(await this.visibleLocator(page.locator('[aria-label="清空购物车"]'), true));
+    if (clearAll && await retailPanelOpen()) {
+      const clearCart = await this.visibleLocator(page.locator('[aria-label="清空购物车"]'), true);
+      await clearCart.evaluate(node => node.click()).catch(() => this.activateControl(page, clearCart));
+      await page.waitForTimeout(300);
+      const confirm = await this.visibleLocator(page.getByText(/^(?:确定|确认)$/), true);
+      if (confirm) await confirm.evaluate(node => node.click()).catch(() => this.activateControl(page, confirm));
+      await page.waitForTimeout(500);
+      const remainingRows = await this.readSelectedCartItems(page).catch(() => []);
+      if (!remainingRows.length) return { removed: 1, cartAmount: 0 };
+      throw new Error('本次授权允许清空旧购物车，但平台没有确认清空，已安全停止');
+    }
+    const decrementControls = page.locator('.mod-mes-card [aria-label*="减少"], .mod-mes-card [aria-label*="减购"]');
     let openedMinus = await this.visibleLocator(decrementControls, true);
     if (!openedMinus) {
+      const basket = await this.visibleLocator(page.locator('[aria-label*="购物车篮子"]'), true);
       const cartTrigger = await this.renderedLocator(page.locator('[aria-label*="购物车总计金额"]'));
-      if (cartTrigger) await this.activateControl(page, cartTrigger);
-      else await this.tapPoint(page, 42, 866);
+      if (basket) await this.activateControl(page, basket);
+      else if (cartTrigger) await this.activateControl(page, cartTrigger);
+      else {
+        const height = await page.evaluate(() => window.innerHeight).catch(() => 896);
+        await this.tapPoint(page, 58, Math.max(120, height - 54));
+      }
       await page.waitForTimeout(600);
+      if (clearAll && await retailPanelOpen()) {
+        const clearCart = await this.visibleLocator(page.locator('[aria-label="清空购物车"]'), true);
+        await clearCart.evaluate(node => node.click()).catch(() => this.activateControl(page, clearCart));
+        await page.waitForTimeout(300);
+        const confirm = await this.visibleLocator(page.getByText(/^(?:确定|确认)$/), true);
+        if (confirm) await confirm.evaluate(node => node.click()).catch(() => this.activateControl(page, confirm));
+        await page.waitForTimeout(500);
+        const remainingRows = await this.readSelectedCartItems(page).catch(() => []);
+        if (!remainingRows.length) return { removed: 1, cartAmount: 0 };
+        throw new Error('本次授权允许清空旧购物车，但平台没有确认清空，已安全停止');
+      }
       openedMinus = await this.visibleLocator(decrementControls, true);
     }
     let removed = 0;
@@ -2627,7 +4220,7 @@ export class TaobaoFlashBrowser {
     const cartLabels = page.locator('[aria-label*="购物车总计金额"]');
     const cartLabel = clean(await cartLabels.first().getAttribute('aria-label', { timeout: 1500 }).catch(() => ''));
     const remainingMinus = await this.visibleLocator(decrementControls, true);
-    const cartAmount = cartLabel ? number(cartLabel) : (removed > 0 && !remainingMinus ? 0 : null);
+    const cartAmount = removed > 0 && !remainingMinus ? 0 : (cartLabel ? number(cartLabel) : null);
     if (cartAmount !== 0 && !remainingMinus) throw new Error('没有找到购物车商品对应的减少按钮');
     return { removed, cartAmount };
   }
