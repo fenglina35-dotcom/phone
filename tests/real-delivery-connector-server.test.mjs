@@ -9,6 +9,10 @@ assert.match(edge,/phone_delivery_authenticate/,'connector must authenticate eac
 assert.match(edge,/PHONE_DELIVERY_UPSTREAM_URL/,'official provider access must stay server-side');
 assert.match(edge,/PHONE_DELIVERY_UPSTREAM_SECRET/,'provider signing secret must stay server-side');
 assert.match(edge,/x-phone-delivery-signature/,'upstream calls must be signed');
+assert.match(edge,/response\.status === 502 && !text\(decoded\.error, 180\)/,'a generic intermediary 502 may be retried once');
+assert.match(edge,/attempt < 2/,'transient upstream retry must stay bounded to one retry');
+assert.match(edge,/retryable = new Set\(\[[^\]]*"create_order"[^\]]*\]\)/,'create-order retry must reuse the existing idempotent request path');
+assert.doesNotMatch(edge,/retryable = new Set\(\[[^\]]*"pay_order"/,'payment submission must never enter the generic gateway retry allow-list');
 assert.match(edge,/client_request_id/,'orders and payments must use durable idempotency');
 assert.match(edge,/订单金额高于角色自动付款授权金额/,'the server must enforce the automatic-payment authorization');
 assert.match(edge,/付款前订单金额发生变化，已阻止自动付款/,'the server must recheck amount before payment');

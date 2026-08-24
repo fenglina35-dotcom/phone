@@ -1093,16 +1093,28 @@ export function checkoutEtaText(raw) {
   return `${clock(startHour, startMinute)}-${clock(endHour, endMinute)}送达`;
 }
 
-export function minimumOrderInfo(raw, itemPrice = 0, quantity = 1) {
+export function minimumOrderInfo(raw, itemPrice = 0, quantity = 1, visibleCartAmount = 0) {
   const body = clean(raw, 12_000);
   const amount = value => Math.round(Math.max(0, Number(value) || 0) * 100) / 100;
-  const thresholdMatch = body.match(/[¥￥]\s*(\d+(?:\.\d+)?)\s*起送/) || body.match(/起送(?:价|金额)?\s*[¥￥]?\s*(\d+(?:\.\d+)?)/);
-  const shortfallMatch = body.match(/(?:还差|差)\s*[¥￥]?\s*(\d+(?:\.\d+)?)\s*(?:元)?(?:起送|可结算)/);
-  const threshold = number(thresholdMatch?.[1]);
+  const shortfallMatch = body.match(/(?:还差|差)\s*[¥￥]?\s*(\d+(?:\.\d+)?)\s*(?:元)?\s*(?:起送|可结算)/);
+  // “差¥9.1起送” describes the shortfall, not a ¥9.1 minimum.  Exclude
+  // amounts immediately owned by 差/还差 before accepting an explicit
+  // “¥20起送” label.  When the storefront only exposes the shortfall, the
+  // cart footer's genuine total lets us reconstruct the threshold exactly.
+  const thresholdMatch = [...body.matchAll(/[¥￥]\s*(\d+(?:\.\d+)?)\s*起送/g)]
+    .find(match => !/(?:还差|差)\s*$/.test(body.slice(Math.max(0, (match.index || 0) - 8), match.index)))
+    || body.match(/起送(?:价|金额)?\s*[¥￥]?\s*(\d+(?:\.\d+)?)/);
   const shortfall = number(shortfallMatch?.[1]);
   const unitPrice = amount(itemPrice);
   const currentQuantity = Math.max(1, Number(quantity) || 1);
-  const current = threshold > 0 && shortfall > 0 ? Math.max(0, amount(threshold - shortfall)) : amount(unitPrice * currentQuantity);
+  const followingAmounts = shortfallMatch
+    ? [...body.slice((shortfallMatch.index || 0) + shortfallMatch[0].length, (shortfallMatch.index || 0) + shortfallMatch[0].length + 180)
+      .matchAll(/[¥￥]\s*(\d+(?:\.\d+)?)/g)].map(match => amount(match[1])).filter(value => value > 0)
+    : [];
+  const cartAmount = amount(visibleCartAmount) || followingAmounts[0] || 0;
+  const baseCurrent = cartAmount > 0 ? cartAmount : amount(unitPrice * currentQuantity);
+  const threshold = number(thresholdMatch?.[1]) || (shortfall > 0 && baseCurrent > 0 ? amount(baseCurrent + shortfall) : 0);
+  const current = threshold > 0 && shortfall > 0 ? Math.max(0, amount(threshold - shortfall)) : baseCurrent;
   const minimumQuantity = threshold > 0 && unitPrice > 0 ? Math.max(currentQuantity + 1, Math.ceil(threshold / unitPrice)) : 0;
   return { threshold, shortfall: shortfall || (threshold > current ? amount(threshold - current) : 0), current, minimumQuantity };
 }
@@ -3469,8 +3481,19 @@ export class TaobaoFlashBrowser {
     // items are required.  The threshold text is the authoritative state: keep
     // the verified main item and continue with the remaining explicit items
     // instead of tapping the false checkout control and stopping the task.
-    const storefrontBody = await page.locator('body').innerText().catch(() => '');
-    const explicitlyBelowMinimum = /(?:还差|差)\s*(?:¥|￥)?\s*\d+(?:\.\d+)?\s*元?\s*起送/.test(storefrontBody);
+    let storefrontBody = '';
+    let explicitlyBelowMinimum = false;
+    // Closing the real cart panel repaints the sticky footer.  During that
+    // repaint a stale “结算” descendant can become visible a few frames before
+    // the authoritative “还差…起送” label.  Read the same page passively for a
+    // short bound before any click so clarification resumes the existing main
+    // item and reaches addRequestedStandaloneItems without duplicating it.
+    for (let attempt = 0; attempt < 7; attempt += 1) {
+      storefrontBody = await page.locator('body').innerText().catch(() => '');
+      explicitlyBelowMinimum = /(?:还差|差)\s*(?:¥|￥)?\s*\d+(?:\.\d+)?\s*元?\s*起送/.test(storefrontBody);
+      if (explicitlyBelowMinimum) break;
+      if (attempt < 6) await page.waitForTimeout(250);
+    }
     if (explicitlyBelowMinimum) {
       const belowMinimumRows = await this.readSelectedCartItems(page).catch(() => []);
       const exactExisting = belowMinimumRows.length === 1 && belowMinimumRows[0].quantity === quantity
@@ -4070,7 +4093,9 @@ export class TaobaoFlashBrowser {
     }
     if (!checkout) {
       const checkoutBody = clean(await page.locator('body').innerText().catch(() => ''), 12_000);
-      const minimum = minimumOrderInfo(checkoutBody, ref.unitPrice, quantity);
+      const visibleCartLabel = clean(await page.locator('[aria-label*="购物车总计金额"]').first()
+        .getAttribute('aria-label', { timeout: 500 }).catch(() => ''), 120);
+      const minimum = minimumOrderInfo(checkoutBody, ref.unitPrice, quantity, number(visibleCartLabel));
       if (minimum.threshold > 0) {
         const explicitMealSide = requestedMealSide(ref.query);
         if (explicitMealSide && !addedStandaloneItems.some(item => productMatchesSavedItem(item, explicitMealSide)) && mealSideTopUpEligible([ref?.merchant, ref?.itemName, ref?.query].filter(Boolean).join(' '))) {

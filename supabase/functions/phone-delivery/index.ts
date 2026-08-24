@@ -190,26 +190,41 @@ async function upstream(action: string, payload: JsonObject, context: JsonObject
   const parsed = new URL(url);
   if (parsed.protocol !== "https:") throw new Error("delivery-upstream-must-use-https");
   const body = JSON.stringify({ action, payload, context });
-  const timestamp = String(Date.now());
-  const signature = await hexHMAC(secret, `${timestamp}.${body}`);
-  const response = await fetch(parsed.href, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-phone-delivery-timestamp": timestamp,
-      "x-phone-delivery-signature": signature,
-      "x-phone-delivery-contract": "1",
-    },
-    body,
-    signal: AbortSignal.timeout(action === "search" ? 50000 : 35000),
-  });
-  const raw = await response.text();
-  let decoded: JsonObject = {};
-  try { decoded = object(raw ? JSON.parse(raw) : {}); } catch (_) { /* handled below */ }
-  if (!response.ok || decoded.ok === false) {
-    throw new Error(text(decoded.error || `真实外卖上游 HTTP ${response.status}`, 180));
+  const retryable = new Set(["capabilities", "confirm_address", "search", "offer_options", "create_order", "order_status", "saved_routes"]);
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const timestamp = String(Date.now());
+    const signature = await hexHMAC(secret, `${timestamp}.${body}`);
+    const response = await fetch(parsed.href, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-phone-delivery-timestamp": timestamp,
+        "x-phone-delivery-signature": signature,
+        "x-phone-delivery-contract": "1",
+      },
+      body,
+      signal: AbortSignal.timeout(action === "search" ? 50000 : 35000),
+    });
+    const raw = await response.text();
+    let decoded: JsonObject = {};
+    try { decoded = object(raw ? JSON.parse(raw) : {}); } catch (_) { /* handled below */ }
+    // Cloudflare can briefly return a plain HTML 502 before the request reaches
+    // the signed browser service. Retry that ambiguous intermediary response
+    // once with the identical task/clientRequestId. The browser adapter and
+    // database both enforce idempotency for create_order. A specific JSON
+    // error from the browser is never retried, and payment submission is not in
+    // the retry allow-list.
+    const transientGateway = response.status === 502 && !text(decoded.error, 180);
+    if (attempt === 0 && transientGateway && retryable.has(action)) {
+      await new Promise((resolve) => setTimeout(resolve, 750));
+      continue;
+    }
+    if (!response.ok || decoded.ok === false) {
+      throw new Error(text(decoded.error || `真实外卖上游 HTTP ${response.status}`, 180));
+    }
+    return object(decoded.data ?? decoded);
   }
-  return object(decoded.data ?? decoded);
+  throw new Error("真实外卖上游暂时不可用");
 }
 
 function capabilityResult(value: JsonObject) {

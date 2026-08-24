@@ -51,6 +51,12 @@ test('checkout total does not mistake the discount for the payable amount', () =
   assert.deepEqual(amounts, { total: 26.6, discount: 3 });
 });
 
+test('a below-minimum shortfall is not misreported as the minimum threshold', () => {
+  assert.deepEqual(minimumOrderInfo('还差\n9.1元\n起送\n凑单\n立减\n5\n1\n¥\n10.9\n免配送费\n¥2.8\n差¥9.1起送', 8.9, 1), {
+    threshold: 20, shortfall: 9.1, current: 10.9, minimumQuantity: 3,
+  });
+});
+
 test('checkout option text collapses an exact duplicated platform subtitle', () => {
   const options = '大脆鸡扒麦满分/脆薯饼/小杯鲜萃咖啡';
   assert.equal(collapseRepeatedOptionText(options + options), options);
@@ -984,10 +990,10 @@ test('standalone meal sides pass the visible full platform title to the add-butt
 test('a below-minimum storefront resumes the verified main item before any checkout click', async () => {
   const source = await fs.readFile(new URL('../src/taobao-flash-browser.mjs', import.meta.url), 'utf8');
   const method = source.slice(source.indexOf('async useExistingCartIfMatching('), source.indexOf('async createRepeatPurchaseOrder('));
-  const thresholdGuard = method.indexOf('const explicitlyBelowMinimum =');
+  const thresholdGuard = method.indexOf('let explicitlyBelowMinimum =');
   assert.ok(thresholdGuard >= 0);
-  assert.match(method, /const storefrontBody = await page\.locator\('body'\)\.innerText/);
-  assert.doesNotMatch(method, /const storefrontBody = clean\(/);
+  assert.match(method, /for \(let attempt = 0; attempt < 7; attempt \+= 1\)/);
+  assert.match(method, /storefrontBody = await page\.locator\('body'\)\.innerText/);
   assert.match(method, /\(\?:还差\|差\).*起送/);
   assert.ok(method.indexOf('return { resumeBelowMinimum: true', thresholdGuard) > thresholdGuard);
   assert.ok(method.indexOf('await this.tapControl(page, checkout)') > thresholdGuard);

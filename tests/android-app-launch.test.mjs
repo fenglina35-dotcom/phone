@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 
-assert.match(source, /const APP_VER='v1063 · 外卖角色同意直传与首单恢复版'/);
+assert.match(source, /const APP_VER='v1064 · 外卖澄清续单与网关恢复版'/);
 assert.match(source, /const APP_TAP_MOVE=26,APP_TAP_MS=650,APP_DRAG_MS=620/);
 assert.match(source, /onclick="appTap\(event,\\''\+k\+'\\'\)"/);
 assert.match(source, /onpointerdown="appDown\(event,\\''\+k\+'\\'\)"/);
