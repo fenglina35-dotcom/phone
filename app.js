@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1059'){
+if(window.__NORTH_SHELL_BUILD__!=='1060'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -378,7 +378,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1059 · 真实外卖匹配与生活功能整合修复版';
+const APP_VER='v1060 · 微信忙碌与外卖澄清续接修复版';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1509,7 +1509,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1059&r=v1059-delivery-match-life-integration-1';
+  const url='sw.js?v=1060&r=v1060-busy-delivery-clarification-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -6483,7 +6483,7 @@ function cohabSetPlace(id,place,opt){const d=cohabData(id);place=cohabPlaceClean
 function cohabStatusLabel(d){if(!d)return'在家';const phase=cohabPhaseLabel(d.phase),place=cohabPlaceClean(d.place),activity=cohabActivityClean(d.activity);if(d.phase==='home'&&place)return'在家 · 在'+place;if(d.phase==='together-away')return place?'一起外出 · '+place:'一起外出';return activity&&activity!==phase&&activity!==cohabPhaseDefaultActivity(d.phase)?phase+' · '+activity:phase;}
 function cohabPhaseFact(d){return d&&d.phase==='work'?'角色现在在外上班，你们暂时不在同一空间；可以通过微信联系。':d&&d.phase==='returning'?'角色正在回家路上，尚未到家；可以通过微信联系。':d&&d.phase==='away'?'角色现在单独外出，你们暂时不在同一空间；可以通过微信联系。':d&&d.phase==='together-away'?'你们正在一起外出，仍处于同一个面对面共同生活现场，不要切回微信冒充分开。':'角色现在已经在家，进入共同生活页面后按面对面相处。';}
 function cohabOnlineQuiet(id){const r=cohabRoot();if(!r.enabled||r.paused||r.cid!==id)return false;const d=cohabAdvance(id);return cohabTogetherScene(d);}
-function roleOnlineProactiveBlocked(id){const c=id&&typeof getC==='function'?getC(id):null,offline=!!(c&&typeof offlineWechatLiveState==='function'&&offlineWechatLiveState(c)),together=!!(typeof cohabOnlineQuiet==='function'&&cohabOnlineQuiet(id));return !!(offline||together||(typeof offlineFocusActive==='function'&&offlineFocusActive())||(typeof _call!=='undefined'&&_call));}
+function roleOnlineProactiveBlocked(id){const c=id&&typeof getC==='function'?getC(id):null,offline=!!(c&&typeof offlineWechatLiveState==='function'&&offlineWechatLiveState(c)),together=!!(typeof cohabOnlineQuiet==='function'&&cohabOnlineQuiet(id)),busy=!!(c&&typeof roleBusyActive==='function'&&roleBusyActive(c));return !!(offline||together||busy||(typeof offlineFocusActive==='function'&&offlineFocusActive())||(typeof _call!=='undefined'&&_call));}
 function cohabCallRestricted(id){const r=S&&S.cohabitation;return !!(id&&r&&r.enabled&&!r.paused&&r.cid===id);}
 function explicitIncomingCallRequest(text){let t=String(text||'').replace(/[\s，。！？!?、；;：“”"']/g,'');if(!t)return false;t=t.replace(/^(?:好吧|那|行|可以|嗯|好)+/,'');return /^(?:(?:我(?:想|要|现在想)?(?:让|叫)你|请你|你))?(?:现在|马上|一会儿|等下|待会儿)?(?:可以|能不能|可不可以)?(?:给我(?:打|拨|发起|开)(?:个|一个|一通)?(?:语音|视频)?(?:电话|通话)|给我(?:打|拨)(?:电话)?过来|(?:打|拨)(?:个|一个|一通)?(?:语音|视频)?(?:电话|通话)?给我|(?:打|拨)(?:电话)?过来|给我来(?:个|一个|一通)?(?:语音|视频)?电话)(?:吧|吗|好不好)?$/.test(t);}
 function roleOnlineLiveStateText(c){if(!c)return'';const name=c.remark||c.name||'角色',user=S.me&&S.me.name||'用户',o=offlineWechatLiveState(c),d=cohabWechatState(c);if(o)return '【实时状态】'+user+'和'+name+'正在同一场线下约会现场，普通微信主动消息必须静默；若'+user+'主动从微信发来消息，只能理解为约会间隙拿起手机，不代表分开或许久未联系。地点'+(S.settings.timeAware?'/时间：'+[o.loc,o.when,o.daypart].filter(Boolean).join(' · '):'：'+String(o.loc||'当前约会地点'));if(d){const together=cohabTogetherScene(d),fact=cohabPhaseFact(d);return '【实时状态】共同生活已开启且未暂停，'+user+'和'+name+'当前为持续同居/共同生活；当前状态【'+cohabStatusLabel(d)+'】。'+fact+(together?' 现在两人面对面在一起，普通后台主动微信与来电必须静默；只有共同生活现场里本人明确选择的“发微信”动作才可送出，绝不能催回复、假装异地、分居、等待落地或很久没见。':' 这是同居中的短暂分开，可以自然发消息；不能说恢复异地或分居。')+' 共同生活开启期间不得在没有当前命令时自行来电；只有'+user+'在当前消息里明确要求你给ta打语音或视频电话时，你才可以按本人性格、情绪和电话频率决定是否输出来电动作，不打也可以。';}return'';}
@@ -9185,6 +9185,14 @@ function renderFriendInfo(id){const c=getC(id);if(!c)return '';const groups=cont
   </div></div>`;}
 function contactStarToggle(id){const c=getC(id);if(!c)return;c.star=!c.star;save();render();toast(c.star?'已设为星标朋友':'已取消星标');}
 function contactReport(id){const c=getC(id);if(!c)return;openModal(`<h3>投诉</h3><div class="hint">请选择要反馈的问题。模拟角色不会真的向外部平台发送资料。</div><div class="section"><div class="it" onclick="toast('已记录：内容不适');closeModal()"><span>内容让我不适</span><span class="v">›</span></div><div class="it" onclick="toast('已记录：频繁打扰');closeModal()"><span>频繁打扰</span><span class="v">›</span></div><div class="it" onclick="toast('已记录：其他问题');closeModal()"><span>其他问题</span><span class="v">›</span></div></div><button class="btn g" onclick="closeModal()">取消</button>`);}
+function roleBusyState(c,create){if(!c)return null;let st=c.wechatBusy;if(!st||typeof st!=='object'){if(create===false)return null;st=c.wechatBusy={active:false,status:'idle',sessionId:'',accountId:'',startedAt:0,endedAt:0,pendingMessageIds:[],returnSentAt:0};}st.pendingMessageIds=Array.isArray(st.pendingMessageIds)?st.pendingMessageIds.map(String).filter(Boolean).slice(-40):[];st.active=st.active===true;st.status=String(st.status||'idle');st.sessionId=String(st.sessionId||'');st.accountId=String(st.accountId||'');st.startedAt=Math.max(0,+st.startedAt||0);st.endedAt=Math.max(0,+st.endedAt||0);st.returnSentAt=Math.max(0,+st.returnSentAt||0);return st;}
+function roleBusyActive(c,aid){const st=roleBusyState(c,false);return !!(st&&st.active&&(!st.accountId||st.accountId===(aid||actId())));}
+function roleBusyPendingRows(c,st){if(!c||!st)return[];const rows=msgsForAccount(c.id,st.accountId||actId()),ids=new Set(st.pendingMessageIds||[]);return rows.filter(m=>m&&m.role==='user'&&m.type!=='sys'&&!m._call&&((m.id&&ids.has(String(m.id)))||(!ids.size&&msgClearTime(m)>=st.startedAt))).slice(-12);}
+function roleBusyDeferReply(id,note,aid){if(note)return false;const c=getC(id),st=roleBusyState(c,false);aid=aid||actId();if(!c||!st||!st.active||st.accountId&&st.accountId!==aid)return false;const rows=msgsForAccount(id,aid),fresh=rows.filter(m=>m&&m.role==='user'&&m.type!=='sys'&&!m._call&&msgClearTime(m)>=st.startedAt);fresh.forEach(m=>{const mid=String(m.id||'');if(mid&&st.pendingMessageIds.indexOf(mid)<0)st.pendingMessageIds.push(mid);});st.pendingMessageIds=st.pendingMessageIds.slice(-40);st.status='busy';st.lastPendingAt=Date.now();save();return true;}
+function roleBusyFinish(id,sessionId,success){const c=getC(id),st=roleBusyState(c,false);if(!st||st.sessionId!==sessionId)return;if(success){st.pendingMessageIds=[];st.status='completed';st.returnSentAt=Date.now();}else st.status='return_pending';save();if(cur().p==='chat'&&cur().id===id)render();if(!success)toast('角色真实回复暂时没有生成，等待的消息仍保留着');}
+function roleBusyEndAndReply(c,st){const pending=roleBusyPendingRows(c,st);st.active=false;st.endedAt=Date.now();if(!pending.length){st.status='completed';save();render();toast('忙碌状态已关闭；没有等待回复的消息');return true;}st.status='returning';const sessionId=st.sessionId,lines=pending.map(m=>'· '+String(msgToText(m)||'').replace(/\s+/g,' ').slice(0,240)).filter(x=>x.length>2).join('\n').slice(0,1800),note='[系统：你刚刚结束了由'+S.me.name+'手动开启的忙碌状态。你一直在线，但忙碌期间没有回复；现在必须用你自己的完整人设、当前关系和自然说话习惯，接住下面这些等待中的真实消息。可以合并回应，不必逐条复述；可以自然说明刚才在忙，但不能照抄固定道歉话术，也不要提按钮、测试、系统或后台。等待消息：\n'+lines+']';save();render();const queued=scheduleReply(c.id,note,ok=>roleBusyFinish(c.id,sessionId,ok===true),st.accountId||actId());if(!queued)roleBusyFinish(c.id,sessionId,false);return queued;}
+function roleBusyTestToggle(id){const c=getC(id);if(!c)return;let st=roleBusyState(c,true),aid=actId();if(roleBusyActive(c,aid)){roleBusyEndAndReply(c,st);if(typeof roleServerPushSyncSoon==='function')roleServerPushSyncSoon(id);return;}const retry=st.status==='return_pending'&&st.pendingMessageIds.length>0;st.active=true;st.status='busy';st.accountId=aid;st.sessionId=retry&&st.sessionId?st.sessionId:'busy_'+uid();st.startedAt=retry&&st.startedAt?st.startedAt:Date.now();st.endedAt=0;st.returnSentAt=0;if(!retry)st.pendingMessageIds=[];if(typeof replyTouch==='function')replyTouch(id,aid);save();render();if(typeof roleServerPushSyncSoon==='function')roleServerPushSyncSoon(id);toast('忙碌状态已开启：保持在线，期间消息会在关闭后统一回复');}
+function roleBusyHeaderBadge(c){return roleBusyActive(c)?'<small style="display:block;margin-top:2px;color:#d7b77a;font-size:10px;font-weight:500">在线 · 忙碌中</small>':'';}
 function recommendContact(id){const c=getC(id),targets=S.contacts.filter(x=>x&&!x.deleted&&x.id!==id);if(!c)return;openModal(`<h3>把ta推荐给朋友</h3>${targets.length?`<div class="section">${targets.map(t=>`<div class="it" onclick="sendNamecard('${t.id}','${id}');closeModal();openChat('${t.id}')">${av(t.avatar,'sm')}<span style="flex:1;margin-left:10px">${esc(t.remark||t.name)}</span><span class="v">发送 ›</span></div>`).join('')}</div>`:'<div class="empty">没有其他联系人可以推荐</div>'}<button class="btn g" style="margin-top:10px" onclick="closeModal()">取消</button>`);}
 function renderContactSettings(id){const c=getC(id);if(!c)return '';
   return `<div class="wx-subpage"><div class="wx-real-nav titled"><button onclick="back()">‹</button><b>设置</b><span></span></div><div class="wx-real-scroll wx-info-scroll contact-setting-list">
@@ -9231,6 +9239,7 @@ function renderRoleManagementAll(id){const c=getC(id);if(!c)return '';const sp=g
     </div>
     <div class="wx-feature-title">主动联系与通知</div><div class="section" style="margin:0 12px 12px">
       ${isMain()?`<div class="it" onclick="alterPick('${id}')"><span>以ta的身份去找别人聊</span><span class="v" style="color:#b07be0">沙盒·实验 ›</span></div>`:''}
+      <div class="it"><span>忙碌状态（测试）<br><small style="color:#888">开启后仍在线，但暂不回复你新发的消息；关闭后由真实角色一次接住等待内容</small></span><button type="button" class="sw ${roleBusyActive(c)?'on':''}" onclick="roleBusyTestToggle('${id}')" aria-label="${roleBusyActive(c)?'关闭':'开启'}忙碌状态"></button></div>
       <div class="it"><span>置顶聊天</span><span class="sw ${c.pinned?'on':''}" onclick="c_pin('${id}')"></span></div>
       <div class="it"><span>消息免打扰</span><span class="sw ${c.muted?'on':''}" onclick="c_mute('${id}')"></span></div>
       <div class="it"><span>主动消息</span><span class="sw ${c.proactive.enabled?'on':''}" onclick="togProactive('${id}')"></span></div>
@@ -9722,7 +9731,7 @@ function renderChat(id){const c=getC(id);if(!c)return '';
   const quoteName=_quoting&&_quoting.who==='me'?(S.me.name||'我'):(c.remark||c.name||'TA');
   const qbar=(S.settings.quoteOn!==false&&_quoting&&_quoting.id===id)?`<div class="chat-quote-pending" id="chatQuotePending" role="status"><span class="chat-quote-pending-text"><b>${esc(quoteName)}：</b>${esc((_quoting.text||'').slice(0,72))}${(_quoting.text||'').length>72?'…':''}</span><button type="button" class="chat-quote-cancel" aria-label="取消引用" onclick="event.stopPropagation();quoteClear()"><span aria-hidden="true">×</span></button></div>`:'';
   const cohabBadge=cohabWechatNavBadge(c);
-  return `<div class="nav chat-glass-nav ${cohabBadge?'cohab-wx-nav':''}"><span class="l" onclick="back()">‹</span><span class="t ${cohabBadge?'cohab-wx-title':''}"><b>${esc(c.remark||c.name)}${c.muted?' 🔕':''}</b>${cohabBadge}</span><span class="r" onclick="go('contactInfo',{id:'${id}'})">⋯</span></div>
+  return `<div class="nav chat-glass-nav ${cohabBadge?'cohab-wx-nav':''}"><span class="l" onclick="back()">‹</span><span class="t ${cohabBadge?'cohab-wx-title':''}"><b>${esc(c.remark||c.name)}${c.muted?' 🔕':''}</b>${roleBusyHeaderBadge(c)}${cohabBadge}</span><span class="r" onclick="go('contactInfo',{id:'${id}'})">⋯</span></div>
     ${mood}
     <div class="chatbg" id="chatbg" style="${bg}">${body}</div>
     <div class="panel chat-tools-panel" id="panel" data-page="${_panelPage}">
@@ -11128,6 +11137,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
           if(cur().p==='chat'&&cur().id===id){appendChatMessageHTML(id,c,msg,{replaceTyping:true});typingEl=null;}
           else if(cur().p==='wechat')render();}}
       }
+    if(!_realDeliveryCommandSeen&&_deliveryCurrentUserTurn&&typeof deliveryTryClarificationFallback==='function'&&typeof deliveryRolePreludeAllowed==='function'&&deliveryRolePreludeAllowed(_replyCandidate)){deliveryTryClarificationFallback(id,_userText,{structuredModelAction:true,allowNewTask:true,accountId:String(replyAccount||''),sessionId:String(accountMessageKey(id,replyAccount)||''),turnId:String(_lu&&_lu.id||replyToken||''),messageId:String(_lu&&_lu.id||''),modelReplyId:String(replyToken||''),channel:'chat',userText:String(_userText||'').slice(0,240)});}
     if(typingEl&&typingEl.isConnected)typingEl.remove();
     if(_hlPlan&&got){hlRecord(c,_hlPlan,content);save();}
     if(got)relationshipCommit(c,_relIntent,content);
@@ -11250,6 +11260,7 @@ function scheduleReply(id,note,onDone,replyAid){
   const aid=replyAid||actId(),k=replyStateKey(id,aid);if(featureEventAutoActive(note)&&!featureEventNoteActive(note))note=featureEventNote('真实操作变化',note);if(featureEventNoteActive(note))featureEventQueueAdd(id,note,aid);const queuedFeature=featureEventQueueEntries(id,aid);if(queuedFeature.length){clearTimeout(_replyFeatureTimers[k]);delete _replyFeatureTimers[k];note=featureEventQueueMerge(id,note,aid);}const replyIntent=offlineReplyIntent(id,note);if(offlineReplyBlocked(replyIntent,id)){if(typeof onDone==='function')onDone(false);return false;}
   if(typeof cinemaRoleOccupied==='function'&&cinemaRoleOccupied(id)){if(typeof onDone==='function')onDone(false);return false;}
   if(wxLoginBlockReply(id,note)){if(typeof onDone==='function')onDone(false);return false;}
+  if(typeof roleBusyDeferReply==='function'&&roleBusyDeferReply(id,note,aid)){if(cur().p==='chat'&&cur().id===id)render();return true;}
   if(note&&_call&&_call.state==='active'&&_call.id===id&&/任务|便签|没完成|未完成|完成|验收|奖励|惩罚|罚/.test(note)){
     callAI(String(note).replace(/\]\s*$/,'\n【重要·此刻正在通话中】你们正在通话，这件事必须在电话里直接说，绝对不要另发微信消息。]'));
     if(typeof onDone==='function')onDone(true);return true;
@@ -11262,6 +11273,7 @@ function manualReply(id){
   const aid=actId(),key=replyGenerationKey(id,aid);if(replyGenerationBusy(id,aid))return false;
   if(hasPendingVision(id)){toast('图片还在识别，等识别结束后再点');return false;}
   const c=getC(id);if(!c||c.blocked||c.deleted)return false;
+  if(typeof roleBusyActive==='function'&&roleBusyActive(c,aid)){toast('ta现在处于忙碌状态；关闭后会统一回复等待消息');return false;}
   if(replyGenerationCount()>=MANUAL_REPLY_LIMIT){_replyQueue.push({id,aid,key});replyGenerationRefresh(id,aid);toast('已排队，前面的回复完成后自动生成');return true;}
   replyGenerationRun(id,aid);return true;
 }

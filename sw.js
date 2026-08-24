@@ -1,6 +1,6 @@
-const BUILD='1059';
-const HOTFIX='v1059-delivery-match-life-integration-1';
-const SHELL_CACHE='north-shell-v1059';
+const BUILD='1060';
+const HOTFIX='v1060-busy-delivery-clarification-1';
+const SHELL_CACHE='north-shell-v1060';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
