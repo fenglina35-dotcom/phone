@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { DeliveryAdapter } from '../src/adapter.mjs';
 import { sign, verifySignedRequest } from '../src/security.mjs';
-import { activeShopMatchesBrand, appliedCouponAmount, availableCouponAmount, brandMatches, cartItemVerification, checkoutAmounts, checkoutCartState, checkoutEtaText, checkoutPageReady, collapseRepeatedOptionText, couponCheckoutState, dessertTopUpCandidates, dessertTopUpEligible, fruitServingEligible, fruitServingWeightGrams, fruitTopUpCandidates, fruitTopUpEligible, knownRouteKey, mcdonaldsBreakfastBundleOptions, mealSideTopUpEligible, mealSnackCandidates, menuCardName, menuCardPrice, merchantNameMatchScore, milkTeaToppingCandidates, milkTeaTopUpEligible, minimumOrderInfo, missingSelectedOptionRequirements, multiServingEligible, normalizeOptionPanelGroups, preferredBrand, preferredExactProduct, productMatchesSavedItem, publicAddressLabel, repeatPurchaseMatches, repeatPurchaseMatchKind, requestedExtraItems, requestedFruitExclusions, requestedItemName, requestedKfcItems, requestedMaxDistanceKm, requestedMealSide, requestedMilkTeaToppingPreferences, requestedStandaloneItems, requestedStoreItemName, retailShopSearchUrl, riskChallengeKind, sameShopUrl, savedTopUpItems, shopClosedReason, shopRowsFromVisibleText, singleFruitItemMatches, singleFruitKeyword, snackTopUpCandidates, snackTopUpEligible, TaobaoFlashBrowser } from '../src/taobao-flash-browser.mjs';
+import { activeShopMatchesBrand, appliedCouponAmount, availableCouponAmount, brandMatches, cartItemVerification, checkoutAmounts, checkoutCartState, checkoutEtaText, checkoutItemOptionsFromText, checkoutPageReady, collapseRepeatedOptionText, couponCheckoutState, dessertTopUpCandidates, dessertTopUpEligible, fruitServingEligible, fruitServingWeightGrams, fruitTopUpCandidates, fruitTopUpEligible, kfcDefaultSignatureBundleRequested, kfcItemCoveredByText, kfcSignatureBundle, kfcStandaloneSearchTerm, knownRouteKey, mcdonaldsBreakfastBundleOptions, mealSideTopUpEligible, mealSnackCandidates, menuCardName, menuCardPrice, merchantNameMatchScore, milkTeaToppingCandidates, milkTeaTopUpEligible, minimumOrderInfo, missingSelectedOptionRequirements, multiServingEligible, normalizeOptionPanelGroups, preferredBrand, preferredExactProduct, productMatchesSavedItem, publicAddressLabel, repeatPurchaseMatches, repeatPurchaseMatchKind, requestedExtraItems, requestedFruitExclusions, requestedItemName, requestedKfcItems, requestedMaxDistanceKm, requestedMealSide, requestedMilkTeaToppingPreferences, requestedStandaloneItems, requestedStoreItemName, retailShopSearchUrl, riskChallengeKind, sameShopUrl, savedTopUpItems, selectedOptionsCoverItem, shopClosedReason, shopRowsFromVisibleText, singleFruitItemMatches, singleFruitKeyword, snackTopUpCandidates, snackTopUpEligible, TaobaoFlashBrowser } from '../src/taobao-flash-browser.mjs';
 
 class FakeBrowser {
   constructor() { this.submits = 0; this.statusCalls = 0; this.statusValue = 'pending_payment'; }
@@ -52,6 +52,12 @@ test('checkout option text collapses an exact duplicated platform subtitle', () 
   const options = '大脆鸡扒麦满分/脆薯饼/小杯鲜萃咖啡';
   assert.equal(collapseRepeatedOptionText(options + options), options);
   assert.equal(collapseRepeatedOptionText(options), options);
+});
+
+test('checkout option fallback reads only the text between a product title and its quantity', () => {
+  const raw = '确认订单 招牌汉堡4件套 劲脆鸡腿汉堡/劲爆鸡米花(小)/红豆派(1只装)/桂花酸梅汤(大) × 1 ¥39.9 经典草莓圣代 × 1 ¥13.5';
+  assert.equal(checkoutItemOptionsFromText(raw, '招牌汉堡4件套'), '劲脆鸡腿汉堡/劲爆鸡米花(小)/红豆派(1只装)/桂花酸梅汤(大)');
+  assert.equal(checkoutItemOptionsFromText(raw, '经典草莓圣代'), '');
 });
 
 test('a sticky storefront product card uses its discounted price instead of the crossed-out price', () => {
@@ -148,7 +154,7 @@ test('explicit milk-tea topping preferences prioritize the requested item and ex
 test('explicit milk-tea toppings are completed before checkout is accepted', async () => {
   const source = await fs.readFile(new URL('../src/taobao-flash-browser.mjs', import.meta.url), 'utf8');
   const create = source.slice(source.indexOf('async createOrder({ ref'), source.indexOf('async applyAvailableCoupon('));
-  const toppingGate = create.indexOf('const explicitToppingPreferences = requestedMilkTeaToppingPreferences(ref.query)');
+  const toppingGate = create.indexOf('const explicitToppingPreferences = milkTeaOrder');
   const checkoutGate = create.indexOf('let checkout = explicitToppingCheckout');
   assert.ok(toppingGate > 0 && checkoutGate > toppingGate);
   assert.match(create, /missingToppings\.length[\s\S]*?不能提前结算/);
@@ -503,6 +509,11 @@ test('bundle option parser removes platform hints and preserves the required ite
   }]);
 });
 
+test('KFC bundle option parser removes the visual default badge from drink choices', () => {
+  const groups = normalizeOptionPanelGroups([{ name: '饮料（请选择1份）', choices: ['默认: 标准.', '百事可乐(冷/中)', '桂花酸梅汤(大)'] }]);
+  assert.deepEqual(groups[0].choices, ['百事可乐(冷/中)', '桂花酸梅汤(大)']);
+});
+
 test('milk tea option parser restores decorated temperature and sweetness headings flattened by the platform', () => {
   const groups = normalizeOptionPanelGroups([{
     name: '规格',
@@ -554,11 +565,12 @@ test('McDonalds default bundle is read from the storefront and keeps the learned
 test('McDonalds default bundle never falls back to a store-local search', async () => {
   const source = await fs.readFile(new URL('../src/taobao-flash-browser.mjs', import.meta.url), 'utf8');
   assert.match(source, /const mcdonaldsHomepageOnly = mcdonaldsDefaultBundleRequested/);
-  assert.match(source, /menuSelectionAllowed && !mcdonaldsHomepageOnly/);
-  assert.match(source, /searchResultSelectionAllowed && !mcdonaldsHomepageOnly/);
-  assert.match(source, /exactItems\.length \|\| mcdonaldsHomepageOnly \? false : await this\.searchInsideShop/);
-  assert.match(source, /!button && !mcdonaldsHomepageOnly && await this\.searchInsideShop/);
-  assert.match(source, /!resumeExistingMain && !add && !mcdonaldsHomepageOnly && await this\.searchInsideShop/);
+  assert.match(source, /const homepageOnly = mcdonaldsHomepageOnly \|\| kfcHomepageOnly/);
+  assert.match(source, /menuSelectionAllowed && !homepageOnly/);
+  assert.match(source, /searchResultSelectionAllowed && !homepageOnly/);
+  assert.match(source, /exactItems\.length \|\| homepageOnly \? false : await this\.searchInsideShop/);
+  assert.match(source, /!button && !mcdonaldsHomepageOnly && !kfcHomepageOnly && await this\.searchInsideShop/);
+  assert.match(source, /!resumeExistingMain && !add && !mcdonaldsHomepageOnly && !kfcHomepageOnly && await this\.searchInsideShop/);
 });
 
 test('checkout option verification distinguishes exact ice and sweetness requirements', () => {
@@ -571,6 +583,12 @@ test('checkout option verification enforces the exact McDonalds bundle selection
   const selected = ['火腿巴麦满分', '脆香油条', '小杯优品豆浆'];
   assert.deepEqual(missingSelectedOptionRequirements('火腿扒麦满分/脆香油条/小杯优品豆浆', selected), []);
   assert.deepEqual(missingSelectedOptionRequirements('吉士蛋麦满分/脆薯饼/鲜萃冰咖', selected), ['火腿扒麦满分', '脆香油条', '小杯优品豆浆']);
+});
+
+test('checkout option verification enforces the exact KFC signature-bundle selections', () => {
+  const selected = ['主食：劲脆鸡腿汉堡', '小食：劲爆鸡米花(小)', '甜品/小食：红豆派(1只装)', '饮料：桂花酸梅汤(大)'];
+  assert.deepEqual(missingSelectedOptionRequirements('劲脆鸡腿汉堡/劲爆鸡米花(小)/红豆派(1只装)/桂花酸梅汤(大)', selected), []);
+  assert.deepEqual(missingSelectedOptionRequirements('香辣鸡腿汉堡/黄金鸡块/葡式蛋挞/百事可乐', selected), ['劲脆鸡腿汉堡', '劲爆鸡米花', '红豆派', '桂花酸梅汤']);
 });
 
 test('adapter requires the exact number of selections for a real bundle', () => {
@@ -666,7 +684,7 @@ test('a meal repeat-order superset is kept for confirmation but never treated as
   ), 'none');
 });
 
-test('historical exact and superset rules remain for drinks and coffee, while KFC is always assembled as single items', () => {
+test('historical exact and superset rules remain for drinks and coffee, while KFC never blindly repeats a historical cart', () => {
   assert.equal(repeatPurchaseMatchKind(
     '4天前买过 共2件 茉莉葡萄冰奶 不额外加糖 椰果 再来一单',
     '茉莉葡萄冰奶', '茶百道 茉莉葡萄冰奶 无糖',
@@ -685,19 +703,56 @@ test('historical exact and superset rules remain for drinks and coffee, while KF
   ), 'none');
 });
 
-test('KFC parses every requested single item and refuses to stop at the minimum order amount', async () => {
+test('KFC starts with the signature four-item bundle and adds only uncovered explicit items', async () => {
   const query = '肯德基 汉堡 加薯条 加蛋挞 加可乐';
   assert.equal(preferredBrand(query), 'kfc');
   assert.equal(brandMatches('kfc', '肯德基（测试店）'), true);
   assert.deepEqual(requestedKfcItems(query), ['汉堡', '薯条', '蛋挞', '可乐']);
   const structured = '用户明确；门店=肯德基；商品=汉堡、薯条、鸡翅、蛋挞、可乐';
   assert.deepEqual(requestedKfcItems(structured), ['汉堡', '薯条', '鸡翅', '蛋挞', '可乐']);
-  assert.deepEqual(requestedStandaloneItems(structured), ['薯条', '鸡翅', '蛋挞', '可乐']);
+  assert.equal(kfcDefaultSignatureBundleRequested(structured), true);
+  assert.equal(requestedStoreItemName(structured, '肯德基'), '招牌汉堡4件套');
+  assert.deepEqual(requestedStandaloneItems(structured), ['汉堡', '薯条', '鸡翅', '蛋挞', '可乐']);
+  assert.deepEqual(requestedStandaloneItems(structured, '招牌汉堡4件套 主食：香辣鸡腿汉堡(辣) 甜品/小食：葡式蛋挞(1只装) 饮料：百事可乐(冷/中)'), ['薯条', '鸡翅']);
+  assert.equal(kfcItemCoveredByText('辣翅', '主食：香辣鸡腿汉堡(辣)'), false);
+  assert.equal(kfcItemCoveredByText('辣翅', '新奥尔良辣翅'), true);
+  assert.equal(kfcItemCoveredByText('香辣鸡腿堡', '主食：香辣鸡腿汉堡(辣)'), true);
+  assert.equal(selectedOptionsCoverItem('香辣鸡腿堡', '主食：香辣鸡腿汉堡(辣)'), true);
+  assert.equal(selectedOptionsCoverItem('脆香油条', '小食：脆香油条 饮料：小杯优品豆浆'), true);
+  assert.equal(selectedOptionsCoverItem('豆浆', '小食：脆香油条 饮料：小杯优品豆浆'), true);
+  assert.equal(selectedOptionsCoverItem('香芋派', '小食：脆香油条 饮料：小杯优品豆浆'), false);
+  assert.deepEqual(requestedStandaloneItems(
+    '麦当劳 麦满分单人餐随心选 加脆香油条 加豆浆 加香芋派',
+    '小食：脆香油条 饮料：小杯优品豆浆',
+  ), ['香芋派']);
+  assert.equal(kfcStandaloneSearchTerm('辣翅'), '香辣鸡翅');
+  assert.equal(kfcStandaloneSearchTerm('草莓圣代'), '经典草莓圣代');
+  const shorthand = '用户明确；门店=肯德基；商品=脆鸡腿堡、鸡米花、红豆派、草莓圣代、酸梅汤、辣翅';
+  assert.equal(requestedStoreItemName(shorthand, '肯德基'), '招牌汉堡4件套');
+  assert.deepEqual(requestedStandaloneItems(shorthand, '主食：劲脆鸡腿汉堡 小食：劲爆鸡米花(小) 甜品/小食：红豆派(1只装) 饮料：桂花酸梅汤(大)'), ['草莓圣代', '辣翅']);
+  const spicyBundle = '用户明确；门店=肯德基；商品=香辣鸡腿堡、黄金鸡块、薯条、百事可乐、蛋挞';
+  assert.deepEqual(requestedStandaloneItems(spicyBundle, '主食：香辣鸡腿汉堡(辣) 小食：黄金鸡块(5块装) 甜品/小食：薯条(中) 饮料：百事可乐(冷/中)'), ['蛋挞']);
+  assert.equal(preferredExactProduct([{ name: '劲爆鸡米花(小)' }], '鸡米花')?.name, '劲爆鸡米花(小)');
+  assert.equal(preferredExactProduct([{ name: '桂花酸梅汤(大)' }], '酸梅汤')?.name, '桂花酸梅汤(大)');
+  assert.equal(preferredExactProduct([
+    { name: '桂花酸梅汤(大)', buttonIndex: 7 },
+    { name: '鸡茸玉米汤', buttonIndex: 9 },
+  ], '汤')?.name, '桂花酸梅汤(大)');
+  assert.equal(kfcItemCoveredByText('汤', '饮料：桂花酸梅汤(大)'), true);
+  assert.equal(preferredExactProduct([{ name: '新奥尔良辣翅(2只)' }], '辣翅')?.name, '新奥尔良辣翅(2只)');
+  assert.equal(preferredExactProduct([{ name: '辣翅/烤翅(10块装)-香辣鸡翅(10块装)' }], '辣翅'), null);
+  assert.equal(preferredExactProduct([
+    { name: '香辣鸡翅(2块装)', price: 15.5, buttonIndex: 0 },
+    { name: '香辣鸡翅(20块装)', price: 99, buttonIndex: 1 },
+    { name: '辣翅/烤翅(10块装)', price: 54, buttonIndex: 2 },
+    { name: '辣翅买一送一', description: '香辣鸡翅(2块装)x2', price: 15.5, buttonIndex: 3 },
+  ], '辣翅')?.name, '香辣鸡翅(2块装)');
+  assert.deepEqual(kfcSignatureBundle.mains, ['香辣鸡腿汉堡(辣)', '劲脆鸡腿汉堡']);
   assert.doesNotMatch(requestedStandaloneItems(structured).join(' '), /门店|商品|用户明确/);
   assert.equal(requestedItemName(query), '汉堡');
-  assert.equal(requestedStoreItemName(query, '肯德基'), '汉堡');
+  assert.equal(requestedStoreItemName(query, '肯德基'), '招牌汉堡4件套');
   assert.deepEqual(requestedExtraItems(query), ['薯条', '蛋挞', '可乐']);
-  assert.deepEqual(requestedStandaloneItems(query), ['薯条', '蛋挞', '可乐']);
+  assert.deepEqual(requestedStandaloneItems(query), ['汉堡', '薯条', '蛋挞', '可乐']);
   assert.equal(preferredExactProduct([
     { name: '香辣鸡腿堡套餐' },
     { name: '香辣鸡腿堡' },
@@ -717,10 +772,36 @@ test('KFC parses every requested single item and refuses to stop at the minimum 
   browser.verifyUniqueCartItems = async () => [];
   browser.optionPanel = async () => null;
   browser.visibleLocator = async locator => locator?.id === 'checkout-locator' ? { id: 'checkout' } : null;
-  const result = await browser.addRequestedStandaloneItems(page, { query });
-  assert.deepEqual(clicks, ['薯条', '蛋挞', '可乐']);
-  assert.deepEqual(result.added, ['薯条', '蛋挞', '可乐']);
+  const result = await browser.addRequestedStandaloneItems(page, { query, itemName: '招牌汉堡4件套' }, '招牌汉堡4件套 主食：香辣鸡腿汉堡(辣) 甜品/小食：葡式蛋挞(1只装)');
+  assert.deepEqual(clicks, ['薯条', '可乐']);
+  assert.deepEqual(result.added, ['薯条', '可乐']);
   assert.equal(result.checkout.id, 'checkout');
+});
+
+test('KFC red-bean pie never enters the milk-tea topping flow', async () => {
+  const source = await fs.readFile(new URL('../src/taobao-flash-browser.mjs', import.meta.url), 'utf8');
+  const create = source.slice(source.indexOf('async createOrder({ ref'), source.indexOf('async applyAvailableCoupon('));
+  assert.match(create, /const milkTeaOrder = milkTeaTopUpEligible/);
+  assert.match(create, /milkTeaOrder\s*\? requestedMilkTeaToppingPreferences\(ref\.query\)\s*:\s*\{ preferred: \[\], excluded: \[\] \}/);
+  assert.doesNotMatch(create, /当前商品不支持按奶茶小料流程完成明确加料要求/);
+});
+
+test('bundle selections wait for the live option sheet before confirming', async () => {
+  const source = await fs.readFile(new URL('../src/taobao-flash-browser.mjs', import.meta.url), 'utf8');
+  const create = source.slice(source.indexOf('async createOrder({ ref'), source.indexOf('async applyAvailableCoupon('));
+  assert.match(create, /tapChoiceCard\(choice\.label\)[\s\S]{0,500}waitForSelectedChoice\(choice\.label\)/);
+  assert.match(create, /if \(collectLabels\) selectedLabels\.push/);
+  assert.match(create, /currentMinus && desiredPlus[\s\S]{0,700}tapChoiceStepper\(choice\.label, 'plus'\)/);
+  assert.match(create, /Radio-style cards—including \+¥ surcharge choices/);
+  assert.match(create, /平台没有真实选中规格/);
+});
+
+test('checkout blocks any standalone item already represented inside bundle options', async () => {
+  const source = await fs.readFile(new URL('../src/taobao-flash-browser.mjs', import.meta.url), 'utf8');
+  const create = source.slice(source.indexOf('async createOrder({ ref'), source.indexOf('async applyAvailableCoupon('));
+  assert.match(create, /duplicatedBundleComponents/);
+  assert.match(create, /selectedOptionsCoverItem\(item\?\.name, liveMain\?\.options\)/);
+  assert.match(create, /又作为单品重复加入，本轮不会提交/);
 });
 
 test('McDonalds explicit dessert opens the storefront category and never submits a store search', async () => {
@@ -2071,6 +2152,23 @@ test('existing cart is reusable only when requested items and quantities match',
   assert.equal(unrelated.matches, false);
   assert.equal(unrelated.extraRows, 1);
   assert.equal(checkoutCartState('确认订单 燕麦牛奶粥 无糖 × 1 ¥12.9 五香茶叶蛋1个 × 1 ¥4.9 圆葱牛肉饼 × 1 ¥9.5 合计¥27.3', '燕麦牛奶粥', '曼玲粥 燕麦牛奶粥 加一个茶叶蛋', 1, { allowSuperset: true }).matches, true);
+});
+
+test('a new option-sensitive task rebuilds an unsubmitted cart instead of inheriting stale bundle choices', async () => {
+  const browser = new TaobaoFlashBrowser();
+  const page = {
+    locator: () => ({ first: () => ({ getAttribute: async () => '购物车总计金额 ¥39.9' }) }),
+  };
+  browser.checkoutControl = async () => ({ id: 'checkout' });
+  browser.cleanupCartItem = async (_name, options) => {
+    assert.deepEqual(options, { clearAll: true });
+    return { cartAmount: 0 };
+  };
+  const result = await browser.useExistingCartIfMatching(page, { itemName: '招牌汉堡4件套' }, 1, {
+    replaceMismatchedCart: true,
+    requiredOptionLabels: ['饮料：桂花酸梅汤(大)'],
+  });
+  assert.equal(result, null);
 });
 
 test('retail checkout thumbnail rows validate every selected item and expose extras', () => {

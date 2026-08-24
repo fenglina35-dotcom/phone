@@ -25,12 +25,23 @@ for (const [name, src] of [['web', root], ['private', bundled]]) {
     assert.match(src, /例如「曼玲粥」是品牌/);
   });
 
-  test(`${name}: category rules preserve meal combos and KFC single items`, () => {
-    assert.match(src, /KFC 门店固定为肯德基，并逐件选择单品，严禁套餐/);
+  test(`${name}: category rules preserve meal combos and KFC signature-bundle completion`, () => {
+    assert.match(src, /KFC 门店固定为肯德基/);
+    assert.match(src, /招牌汉堡4件套/);
+    assert.match(src, /套餐未包含的明确商品再逐件搜索补齐/);
+    assert.match(src, /套餐已经包含的商品不得重复/);
     assert.match(src, /其余归为普通主食/);
     assert.match(src, /主食允许套餐或单点/);
     assert.match(src, /明确说套餐或单点，必须照做/);
     assert.match(src, /主动决定时，也只能从某一类别中选一家门店和少量具体商品/);
+  });
+
+  test(`${name}: sold-out options pause the same task and return to the real role`, () => {
+    assert.match(src, /kind:'unavailable_item'/);
+    assert.match(src, /requestRoleUnavailable/);
+    assert.match(src, /应视为当前售罄或不可选/);
+    assert.match(src, /句式必须由你自己生成/);
+    assert.match(src, /沿用同一个 taskId 继续/);
   });
 }
 
