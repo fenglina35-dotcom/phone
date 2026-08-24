@@ -80,7 +80,7 @@ delivery_text = (bundle / "delivery.js").read_text(encoding="utf-8")
 for token in [
     "roleRequestIntent", "roleRequest", "realSearch", "createOrder",
     "requestRoleClarification", "roleTasks", "structuredModelAction",
-    "麦满分单人餐随心选", "couponCheckStatus",
+    "麦满分单人餐随心选", "couponLabel",
 ]:
     if token not in delivery_text:
         raise RuntimeError(f"v1054 bundled delivery feature missing: {token}")
