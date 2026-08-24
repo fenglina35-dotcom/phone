@@ -84,7 +84,7 @@ for token in [
 ]:
     if token not in delivery_text:
         raise RuntimeError(f"v1054 bundled delivery feature missing: {token}")
-if sha256(delivery_text.encode("utf-8")).digest() != sha256((ROOT / "delivery.js").read_bytes()).digest():
+if sha256((bundle / "delivery.js").read_bytes()).digest() != sha256((ROOT / "delivery.js").read_bytes()).digest():
     raise RuntimeError("root and private delivery.js are not byte-identical")
 
 shell_text = (bundle / "index.html").read_text(encoding="utf-8")
