@@ -8,6 +8,7 @@ const chatMessages=[];
 const roleSearches=[];
 let oldSearchCalls=0;
 let sequence=0;
+let intermediateModelCalls=0;
 const role={id:'role-1',name:'North',remark:'',avatar:'🖤'};
 const ctx={
   console,URL,AbortController,JSON,Date,Math,Promise,Number,String,Array,Object,RegExp,
@@ -19,7 +20,7 @@ const ctx={
   getC(id){return id===role.id?role:null;},cur(){return{p:'home'};},
   scheduleReply(id,note){notices.push({id,note});return true;},
   msgs(id){return id===role.id?chatMessages:[];},
-  chatAPI:async()=>'{"matched":true,"offerId":"offer-1","reason":""}',
+  chatAPI:async()=>{intermediateModelCalls++;return '{"matched":true,"offerId":"offer-1","reason":""}';},
   esc:s=>String(s),av:s=>String(s),openModal(){},closeModal(){},
   document:{hidden:false,getElementById(id){return id==='food_q'?{value:'奶茶'}:null;},addEventListener(){}},
   setInterval(){return 1;},setTimeout(){return 1;},clearTimeout(){},
@@ -27,7 +28,7 @@ const ctx={
 };
 ctx.window=ctx;
 vm.runInNewContext(source,ctx,{filename:'delivery.js'});
-const roleAction={structuredModelAction:true,accountId:'main',sessionId:'role-1:main',turnId:'message-1',messageId:'message-1',modelReplyId:'reply-1',channel:'chat',userText:'帮我在真实奶茶店点一杯真实奶茶'};
+const roleAction={structuredModelAction:true,allowNewTask:true,accountId:'main',sessionId:'role-1:main',turnId:'message-1',messageId:'message-1',modelReplyId:'reply-1',channel:'chat',userText:'帮我在真实奶茶店点一杯真实奶茶'};
 
 assert.equal(ctx.deliveryRealEnabled(),false,'real delivery defaults off at runtime');
 await ctx.foodSearch();
@@ -90,5 +91,6 @@ assert.equal(notices.length,2,'the role receives one clarification prompt and on
 assert.match(notices[1].note,/当前仍是“待付款”，并未付款/,'the role fact must preserve the real unpaid state without claiming payment');
 assert.match(notices[1].note,/禁止提到“卡片”“系统”“二维码”“付款入口”“收银台”/,'the model prompt must keep payment UI jargon out of the role reply');
 assert.match(notices[1].note,/禁止说“自己去付款”/,'the role must not issue a system-like payment command');
+assert.equal(intermediateModelCalls,0,'candidate and option automation must finish without a second model request');
 
 console.log('real delivery state-machine tests passed');

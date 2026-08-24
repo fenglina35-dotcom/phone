@@ -31,7 +31,7 @@ ctx.fetch=async(_url,init)=>{
 };
 
 vm.runInNewContext(source,ctx,{filename:'delivery.js'});
-const roleAction=(turn,userText='帮我点一杯奶茶')=>({structuredModelAction:true,accountId:'main',sessionId:'role-settlement:main',turnId:turn,messageId:turn,modelReplyId:'reply-'+turn,channel:'chat',userText});
+const roleAction=(turn,userText='帮我点一杯奶茶')=>({structuredModelAction:true,allowNewTask:true,accountId:'main',sessionId:'role-settlement:main',turnId:turn,messageId:turn,modelReplyId:'reply-'+turn,channel:'chat',userText});
 ctx.S.food.real.connectorUrl='https://delivery.example.test/api';
 ctx.deliverySetEnabled(true);
 await ctx.deliveryConfirmAddress();
@@ -75,5 +75,13 @@ const failedCreates=calls.filter(x=>x.action==='create_order').slice(-1);
 assert.equal(failedCreates.length,1);
 assert.ok(failedCreates[0].payload.task.taskId,'the failed create remains bound to one durable task id');
 assert.equal(calls.filter(x=>x.action==='create_order'&&x.payload.task.taskId===failedCreates[0].payload.task.taskId).length,1,'replaying the same model turn must not create a second order attempt');
+
+const beforeDifferentText=calls.length;
+await ctx.deliveryHandleRoleRequest(role.id,'用户明确；门店=另一家奶茶店；商品=果汁',roleAction('turn-2','改成另一家果汁'));
+assert.equal(calls.length,beforeDifferentText,'the same user turn cannot create a second task by changing merchant or product text');
+
+const beforeBackground=calls.length;
+await ctx.deliveryHandleRoleRequest(role.id,'主动关心；门店=任意奶茶店；商品=果汁',{...roleAction('turn-3','之前说过想喝东西'),allowNewTask:false});
+assert.equal(calls.length,beforeBackground,'a background or restored model reply cannot start search from stale user text');
 
 console.log('real delivery settlement tests passed');

@@ -37,8 +37,9 @@ assert.doesNotMatch(delivery,/Math\.random\(\).*rating|生成6个相关餐品|�
 assert.match(app,/\[真实外卖\\\|\(\[\^\\\]\]\*\)\\\]\$\/\)/,'chat parser must consume the real-delivery tag');
 assert.match(app,/deliveryRealEnabled\(\)\)\{if\(typeof deliveryHandleRoleRequest/,'legacy delivery tag must route to real handling while real mode is on');
 assert.match(app,/if\(_realDeliveryCommandTurn&&!_realDeliveryTag\)/,'a command turn must filter unsafe premature result text');
-assert.match(app,/_realDeliveryPreludeShown=true/,'a safe pre-order acknowledgement must remain visible before automation');
-  assert.match(app,/if\(!_realDeliveryPreludeShown\)\{got=false;if\(typeof deliveryRequestPreludeRetry==='function'\)deliveryRequestPreludeRetry/,'a bare command tag must request a bounded real-model acknowledgement without starting a real order');
+assert.doesNotMatch(app,/_realDeliveryPreludeShown/,'automation must not wait for an intermediate role acknowledgement');
+assert.doesNotMatch(app,/if\(!_realDeliveryPreludeShown\)[^\n]*deliveryRequestPreludeRetry/,'a bare structured action must start directly instead of asking the model to repeat it');
+assert.match(app,/if\(_callRealDeliveryCommandTurn\)content=''/,'call ordering must also suppress intermediate model speech until a real result or block');
 assert.match(app,/if\(_main&&typeof deliveryRolePrompt==='function'\)s\+=deliveryRolePrompt\(c\)/,'main role prompt must receive delivery capability facts');
 assert.match(commerce,/var real=typeof deliveryRealEnabled/);
 assert.match(commerce,/仅展示平台实际返回/);

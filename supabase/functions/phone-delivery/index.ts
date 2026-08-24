@@ -85,6 +85,7 @@ function optionGroups(value: unknown) {
         label: text(item.label || item.name || item.value, 80),
         priceDelta: money(item.priceDelta || item.extraPrice || 0),
         available: item.available !== false,
+        selected: item.selected === true,
       };
     }).filter((choice) => choice.id && choice.label && choice.available);
     return {
@@ -92,6 +93,7 @@ function optionGroups(value: unknown) {
       name: text(row.name || row.label, 80),
       required: row.required !== false,
       multiple: row.multiple === true,
+      selectionCount: Math.max(1, Math.min(20, Number(row.selectionCount) || 1)),
       choices,
     };
   }).filter((group) => group.id && group.name && group.choices.length);

@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1055 · 快餐套餐与去重修正版'/);
+  assert.match(app,/APP_VER='v1056 · 外卖自动执行链路修正版'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1055/);
-  assert.match(html,/sw\.js\?v=1055&r=v1055-fast-food-bundle-dedupe-1/);
+  assert.match(html,/north-sw-reloaded-1056/);
+  assert.match(html,/sw\.js\?v=1056&r=v1056-delivery-direct-automation-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{

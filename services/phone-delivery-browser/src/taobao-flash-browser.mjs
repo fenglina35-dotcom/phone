@@ -114,6 +114,7 @@ export function normalizeOptionPanelGroups(value = []) {
         choices,
         multiple: section.multiple === true || selectionCount > 1,
         selectionCount,
+        selectionRequired: Boolean(hint),
       });
     }
   }
@@ -1601,7 +1602,7 @@ export class TaobaoFlashBrowser {
           if (menuOffers.length) return menuOffers;
         }
         const repeat = await this.repeatPurchase(page, rememberedRoute.itemName, requestQuery);
-        if (repeat) {
+        if (repeat && !repeat.requiresConfirmation) {
           return [{
             merchantId: shop.storeId || 'saved-shop', merchant: shop.name, name: rememberedRoute.itemName,
             description: clean(`历史订单：${repeat.summary}`, 240), price: repeat.total, deliveryFee: 0,
@@ -1688,7 +1689,7 @@ export class TaobaoFlashBrowser {
           if (menuOffers.length) return menuOffers;
         }
         const repeat = await this.repeatPurchase(activePage, itemQuery, requestQuery);
-        if (repeat) {
+        if (repeat && !repeat.requiresConfirmation) {
           return [{
             merchantId: 'active-shop', merchant: clean(activeBody.match(/(?:商家|环境)\s+(.{2,50}?)(?:\s+评分|\s+买过|\s+热销)/)?.[1], 50) || '当前商家',
             name: itemQuery, description: clean(`历史订单：${repeat.summary}`, 240), price: repeat.total,
@@ -1836,7 +1837,7 @@ export class TaobaoFlashBrowser {
         if (visibleMenu.length) continue;
       }
       const repeat = await this.repeatPurchase(shopPage, itemQuery, requestQuery);
-      if (repeat) {
+      if (repeat && !repeat.requiresConfirmation) {
         offers.push({
           merchantId: shop.storeId || String(shopIndex), merchant: shop.name, name: itemQuery,
           description: clean(`历史订单：${repeat.summary}`, 240), price: repeat.total, deliveryFee: 0,
@@ -2660,6 +2661,7 @@ export class TaobaoFlashBrowser {
       if (enteredDetail) { await page.goto(originUrl, { waitUntil: 'domcontentloaded' }).catch(() => {}); await page.waitForTimeout(700); }
       return [];
     }
+    const selectedSummary = clean((await dialog.innerText().catch(() => '')).match(/已选\s*[:：]\s*([^\n]+)/)?.[1], 240);
     const groups = await dialog.evaluate((root, headingSource) => {
       const heading = new RegExp(headingSource);
       const leaves = [...root.querySelectorAll('*')].filter(el => !el.children.length).map(el => {
@@ -2712,9 +2714,10 @@ export class TaobaoFlashBrowser {
     }
     return normalizedGroups.map((group, groupIndex) => {
       return {
-        id: `g${groupIndex}`, name: clean(group.name, 80), required: true,
-        multiple: group.multiple,
-        choices: group.choices.map((label, choiceIndex) => ({ id: `g${groupIndex}c${choiceIndex}`, label: clean(label, 80), priceDelta: number(label.match(/\+\s*¥?([\d.]+)/)?.[1]), available: true })),
+        id: `g${groupIndex}`, name: clean(group.name, 80),
+        required: group.selectionRequired === true || !/加料|小料|配料/.test(group.name),
+        multiple: group.multiple, selectionCount: group.selectionCount,
+        choices: group.choices.map((label, choiceIndex) => ({ id: `g${groupIndex}c${choiceIndex}`, label: clean(label, 80), priceDelta: number(label.match(/\+\s*¥?([\d.]+)/)?.[1]), available: true, selected: Boolean(selectedSummary && selectedSummary.includes(clean(label.replace(/\+\s*¥?[\d.]+/g, ''), 80))) })),
       };
     }).filter(group => group.choices.length);
   }

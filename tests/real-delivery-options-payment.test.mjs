@@ -7,24 +7,21 @@ const adapter=fs.readFileSync(new URL('../services/phone-delivery-browser/src/ad
 const browser=fs.readFileSync(new URL('../services/phone-delivery-browser/src/taobao-flash-browser.mjs',import.meta.url),'utf8');
 
 assert.match(client,/selectedOptions:selected/,'the selected real platform options must be sent when creating an order');
-assert.match(client,/每个 required 组必须选择/,'the role must choose every required option from platform data');
-assert.match(client,/用户本次明确说出的杯型、份量、糖度、冰度、温度、口味、辣度、搭配和加料都是硬条件/,'explicit user food and drink requirements must outrank role preferences');
+assert.match(client,/group\.required&&!matched\.length/,'automation must choose every required option from platform data');
+assert.match(client,/function deliverySemanticChoice/,'explicit user food and drink requirements must be handled deterministically');
 assert.doesNotMatch(client,/deliverySetAutoPay|deliveryOpenWallet|deliveryTopUp|deliverySaveWallet/,'manual-only delivery must not expose fake wallet or auto-pay controls');
 assert.match(client,/平台结算页已自动优惠/,'the client must report only checkout-confirmed discount facts');
 assert.match(client,/offer_options/,'the client must fetch options only after selecting a fast candidate');
-assert.match(client,/候选不能满足时必须返回 matched:false/,'explicit brands products categories and exclusions must never be silently substituted');
-assert.match(client,/餐品类别、排除项、忌口和数量都是硬条件/,'autonomous choice must preserve every explicit category exclusion allergy and quantity constraint');
-assert.match(client,/真实选项缺少任意一项时必须返回 matched:false/,'explicit drink options must never be silently substituted');
-assert.match(client,/等同用户说的不加糖、无糖、零糖或0糖/,'no-sugar wording must map to the platform no-added-sugar option');
-assert.match(client,/规格匹配先看语义，不要求逐字一致/,'option selection must use semantic aliases instead of exact wording only');
-assert.match(client,/用户没有指定的规格组必须由你按人设、商品特点和真实可选项直接决定/,'the role must choose unspecified options instead of stopping');
-assert.match(client,/明确糖度、冰度、口味、忌口或过敏绝不能降级成不同选项/,'semantic flexibility must not weaken explicit hard constraints');
-assert.match(client,/角色生成的检索词只是找商品用的，不是用户原话/,'role-created search text must not become a user hard requirement');
-assert.match(client,/本轮是否获得自主选择授权/,'offer and option selection must receive the real autonomy grant');
-assert.match(client,/matched:false 的 reason 必须具体写出缺少哪一项/,'option mismatch diagnostics must name the exact missing requirement');
+assert.match(client,/淘宝闪购候选没有匹配本次门店和商品/,'explicit brands and products must never be silently substituted');
+for(const alias of ['无糖','零糖','0糖','不加冰','去冰'])assert.ok(client.includes(alias),'option aliases must include '+alias);
+assert.match(client,/matched=choices\.filter\(function\(choice\)\{return choice\.selected/,'unspecified options must preserve platform defaults');
+assert.match(client,/平台“'\+name\+'”没有本次明确要求；现有选项/,'option mismatch diagnostics must name the exact missing requirement and available options');
+for(const fn of ['chooseOffer','chooseOptions']){const start=client.indexOf('function '+fn),end=client.indexOf('\n  function ',start+12);assert.ok(start>=0);assert.doesNotMatch(client.slice(start,end),/chatAPI\(/,fn+' must not make an intermediate model call');}
 assert.match(client,/safePayQr/,'payment QR data must pass a strict client-side allowlist');
 assert.match(client,/支付宝待付款订单/,'the virtual phone must expose the official pending-payment checkout');
 assert.match(edge,/optionGroups: optionGroups/,'the edge connector must preserve sanitized platform option groups');
+assert.match(edge,/selected: item\.selected === true/,'the edge connector must preserve real platform-selected defaults');
+assert.match(edge,/selectionCount:/,'the edge connector must preserve required multi-choice counts');
 assert.match(edge,/"offer_options"/,'the edge connector must expose the second-stage option request');
 assert.match(edge,/payQrDataURL/,'the edge connector must validate payment QR data');
 assert.match(adapter,/automaticPayments: false/,'browser automation must never advertise automatic payment');
