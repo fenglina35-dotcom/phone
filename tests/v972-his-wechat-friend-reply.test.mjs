@@ -73,7 +73,7 @@ test('the send and UI paths use the reliable per-friend queue',()=>{
   assert.doesNotMatch(source,/let _hisReplyBusy=false/);
   assert.match(fn('renderHisChat'),/hisFriendReplyBusy\(cid,fid\)/);
   assert.match(fn('renderHisChat'),/对方正在输入/);
-  assert.match(source,/APP_VER='v1061 · 外卖同意直传与角色自主发起修复版'/);
+  assert.match(source,/APP_VER='v1062 · 外卖澄清动作与同任务续接修复版'/);
   assert.match(bundle,/queueHisFriendReply\(cid,fid\)/);
   assert.doesNotMatch(bundle,/let _hisReplyBusy=false/);
 });

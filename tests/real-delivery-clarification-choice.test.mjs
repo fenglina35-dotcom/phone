@@ -77,6 +77,16 @@ test('都要 resumes every candidate named by the role and stays idempotent',asy
   assert.equal(searches.length,1,'the same clarification answer must not start twice');
 });
 
+test('role-listed add-ons are stored on the same task before a terse answer arrives',async()=>{
+  const {ctx,searches,meta,task}=makeRuntime('都要');
+  const stored=ctx.deliveryCaptureClarificationCandidates('role-1','这家店里可以点煎饺和灌汤包，你要哪个。',meta);
+  assert.deepEqual(Array.from(stored),['煎饺','灌汤包']);
+  assert.deepEqual(Array.from(task.clarificationCandidates),['煎饺','灌汤包']);
+  ctx.msgs('role-1').splice(0,3);
+  await ctx.deliveryTryClarificationFallback('role-1','都要',meta);
+  assert.deepEqual(searches,[{taskId:'delivery-existing',items:['撒汤','煎饺','灌汤包']}]);
+});
+
 test('an unclear answer cannot guess a candidate or create a new search',async()=>{
   const {ctx,searches,meta}=makeRuntime('你看着办');
   assert.equal(await ctx.deliveryTryClarificationFallback('role-1','你看着办',meta),false);
@@ -120,4 +130,9 @@ test('chat wiring tries same-task fallback first, then one hidden real-model act
   assert.match(app,/deliveryMissingActionRepairPrompt\(id,_userText,content,_deliveryActionMeta\)[\s\S]*?await chatAPI\(/);
   assert.match(app,/_deliveryRepairActions\.length===1[\s\S]*?\+'\\n\[真实外卖\|'/);
   assert.doesNotMatch(app,/deliveryRequestPreludeRetry\(id/,'missing actions must be repaired in the same authorized turn, not by scheduling a new background turn');
+});
+
+test('full-width Chinese delivery actions are normalized before execution',()=>{
+  assert.match(app,/replace\(\/\^【\\s\*\(真实外卖\|点外卖\)[\s\S]*?'\[\$1\|\$2\]'\)/);
+  assert.match(app,/const _realDeliveryTag=\/\^\[\\\[【\][\s\S]*?真实外卖\|点外卖/);
 });
