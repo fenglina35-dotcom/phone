@@ -12,14 +12,14 @@ const pip = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/Cal
 const reportApp = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/PhoneCompanionReport.swift');
 const reportScene = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/TotalActivityReport.swift');
 
-test('v1066 web and private iOS 1.0.189 keep explicit build identities', () => {
-  assert.match(app, /APP_VER='v1066 · 伴生轮询日期格式化卡顿发热修复版'/);
-  assert.match(app, /sw\.js\?v=1066&r=v1066-companion-date-formatter-thermal-repair-1/);
-  assert.match(shell, /north-shell-v1066/);
-  assert.match(bundleInfo, /<string>1066<\/string>/);
-  assert.match(localWebView, /1\.0\.189 \(189\)/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 189;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.189;/g) || []).length, 12);
+test('v1067 web and private iOS 1.0.190 keep explicit build identities', () => {
+  assert.match(app, /APP_VER='v1067 · 私人 App Intl 热点隔离与白屏恢复版'/);
+  assert.match(app, /sw\.js\?v=1067&r=v1067-private-intl-webcontent-recovery-1/);
+  assert.match(shell, /north-shell-v1067/);
+  assert.match(bundleInfo, /<string>1067<\/string>/);
+  assert.match(localWebView, /1\.0\.190 \(190\)/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 190;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.190;/g) || []).length, 12);
 });
 
 test('native shared-media gain uses only public AVFoundation types', () => {

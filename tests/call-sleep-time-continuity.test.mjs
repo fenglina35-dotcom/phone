@@ -20,6 +20,9 @@ function functionSource(name){
 
 function roleTimeSources(){return[
   'const ROLE_TIME_ZONE_CACHE_MS=5*60*1000;let _deviceTimeZoneCache={value:"",at:0};const _timeZoneValidCache=new Map(),_roleTimeFormatterCache=new Map();',
+  'function privateNativeAppOn(){return false;}',
+  functionSource('nativeTimeEnvironment'),functionSource('nativeTimeZoneOffsets'),
+  functionSource('nativeTimeZoneOffset'),
   functionSource('deviceTimeZone'),functionSource('timeZoneValid'),functionSource('roleTimeZone'),
   functionSource('roleTimeFormatter'),functionSource('localRoleTimeParts'),functionSource('roleTimeParts'),
 ];}

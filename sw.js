@@ -1,6 +1,6 @@
-const BUILD='1066';
-const HOTFIX='v1066-companion-date-formatter-thermal-repair-1';
-const SHELL_CACHE='north-shell-v1066';
+const BUILD='1067';
+const HOTFIX='v1067-private-intl-webcontent-recovery-1';
+const SHELL_CACHE='north-shell-v1067';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];

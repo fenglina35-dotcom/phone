@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1066 · 伴生轮询日期格式化卡顿发热修复版'/);
+  assert.match(app,/APP_VER='v1067 · 私人 App Intl 热点隔离与白屏恢复版'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1066/);
-  assert.match(html,/sw\.js\?v=1066&r=v1066-companion-date-formatter-thermal-repair-1/);
+  assert.match(html,/north-sw-reloaded-1067/);
+  assert.match(html,/sw\.js\?v=1067&r=v1067-private-intl-webcontent-recovery-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{

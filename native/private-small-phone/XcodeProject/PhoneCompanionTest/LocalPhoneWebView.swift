@@ -12,6 +12,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
         private var didLoadPhone = false
         private var openingRolePush = false
         private var syncingRolePush = false
+        private var webContentTerminationTimes: [TimeInterval] = []
 
         override init() {
             super.init()
@@ -191,6 +192,45 @@ struct LocalPhoneWebView: UIViewRepresentable {
             }
         }
 
+        func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+            didLoadPhone = false
+            openingRolePush = false
+            syncingRolePush = false
+            showingLoadFailure = false
+
+            let now = Date().timeIntervalSince1970
+            webContentTerminationTimes = webContentTerminationTimes.filter {
+                now - $0 < 120
+            }
+            webContentTerminationTimes.append(now)
+            let attempt = webContentTerminationTimes.count
+            print(
+                "[SmallPhoneWeb] WebContent terminated; " +
+                "bounded recovery attempt \(attempt)/2"
+            )
+
+            guard attempt <= 2 else {
+                let error = NSError(
+                    domain: "SmallPhoneWebContent",
+                    code: 3,
+                    userInfo: [
+                        NSLocalizedDescriptionKey:
+                            "WebContent 在两分钟内连续终止，已停止自动重载"
+                    ]
+                )
+                showLoadFailure(in: webView, error: error)
+                return
+            }
+
+            // A terminated WebContent process leaves the WKWebView visually
+            // present but unable to receive taps or JavaScript. Reload only
+            // the bundled page; the authoritative archive remains in native
+            // storage and is restored through the existing bridge bootstrap.
+            DispatchQueue.main.async { [weak webView] in
+                webView?.reload()
+            }
+        }
+
         func webView(
             _ webView: WKWebView,
             createWebViewWith configuration: WKWebViewConfiguration,
@@ -247,6 +287,13 @@ struct LocalPhoneWebView: UIViewRepresentable {
         configuration.userContentController.add(
             context.coordinator.bridge,
             name: PhoneNativeBridge.handlerName
+        )
+        configuration.userContentController.addUserScript(
+            WKUserScript(
+                source: Self.nativeEnvironmentBootstrap(),
+                injectionTime: .atDocumentStart,
+                forMainFrameOnly: true
+            )
         )
         configuration.userContentController.addUserScript(
             WKUserScript(
@@ -341,10 +388,34 @@ struct LocalPhoneWebView: UIViewRepresentable {
     </body>
     """
 
+    private static func nativeEnvironmentBootstrap() -> String {
+        let now = Date()
+        let local = TimeZone.autoupdatingCurrent
+        var offsets: [String: Int] = [:]
+        offsets.reserveCapacity(TimeZone.knownTimeZoneIdentifiers.count)
+        for identifier in TimeZone.knownTimeZoneIdentifiers {
+            guard let zone = TimeZone(identifier: identifier) else { continue }
+            offsets[identifier] = zone.secondsFromGMT(for: now) / 60
+        }
+        offsets[local.identifier] = local.secondsFromGMT(for: now) / 60
+        let environment: [String: Any] = [
+            "timeZone": local.identifier,
+            "timeZoneOffsetMinutes": local.secondsFromGMT(for: now) / 60,
+            "timeZoneOffsets": offsets,
+            "generatedAt": Int64(now.timeIntervalSince1970 * 1000)
+        ]
+        guard JSONSerialization.isValidJSONObject(environment),
+              let data = try? JSONSerialization.data(withJSONObject: environment),
+              let json = String(data: data, encoding: .utf8) else {
+            return "window.__SMALL_PHONE_NATIVE_ENV__ = {};"
+        }
+        return "window.__SMALL_PHONE_NATIVE_ENV__ = \(json);"
+    }
+
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.189 (189)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.190 (190)';
       const root = document.documentElement;
       root.classList.add('north-native-app');
       root.style.setProperty('--north-native-safe-top', 'env(safe-area-inset-top, 0px)');
