@@ -58,6 +58,12 @@ for(const [name,source] of [['web',root],['private bundle',bundle]]){
   const croppedMirror=ctx.roleImageStudioPrompt(c,{scene:'拍一张对镜半身照',requestText:'拍一张对镜半身照'});
   assert.doesNotMatch(croppedMirror,/【全身对镜遮脸特例】/);
   assert.equal(ctx.roleImageGenerateOptions(c,croppedMirror).faceMode,'required');
+  const directCamera=ctx.roleImageStudioPrompt(c,{scene:'不要拿手机遮脸，假装凶一点看镜头',requestText:'不要拿手机遮脸，假装凶一点看镜头'});
+  assert.match(directCamera,/脸部清晰无遮挡/,`${name}: negative phone wording becomes a positive visible-face instruction`);
+  assert.match(directCamera,/直视镜头/);
+  assert.doesNotMatch(directCamera,/不要拿手机遮脸|手机完全遮(?:住)?脸/,`${name}: the final studio prompt cannot retain the legacy phone-cover scene`);
+  assert.match(directCamera,/用户没有要求手机时，画面中不要出现手机/);
+  assert.equal(ctx.roleImageGenerateOptions(c,directCamera).faceMode,'required');
 
   assert.match(source,/else if\(c\.p==='roleImageStudio'\)html=renderRoleImageStudio\(c\.id\)/);
   assert.match(source,/go\('roleImageStudio',\{id:'\$\{id\}'\}\)/);
@@ -73,5 +79,8 @@ for(const [name,source] of [['web',root],['private bundle',bundle]]){
   assert.match(source,/查看识别详情/,`${name}: long face analysis is hidden behind an optional detail view`);
   assert.doesNotMatch(source,/\$\{esc\(ref\.note\|\|'已作为固定脸参考'\)\}/,`${name}: long face analysis is no longer rendered inline`);
   assert.match(source,/faceMode==='mirror'\?mirror:faceMode==='required'\?required/,`${name}: the final image prompt supports both the narrow mirror exception and the visible-face lock`);
-  assert.match(source,/roleImageStudioPrompt\(c,\{scene:sanitizeRolePhotoScene\(scene\),requestText:scene,objectOnly,userRequest:scene\}\)/,`${name}: studio test bypasses legacy chat object classification`);
+  assert.match(source,/roleImageStudioPrompt\(c,\{scene,requestText:scene,objectOnly,userRequest:scene\}\)/,`${name}: studio test bypasses the legacy face-masking sanitizer`);
+  assert.match(source,/scene=studio\?rawScene:sanitizeRolePhotoScene\(rawScene\)/,`${name}: chat images preserve the real request whenever the studio is enabled`);
+  assert.match(source,/safe=studio\?\(raw\|\|String\(text\|\|''\)\.slice\(0,180\)\):sanitizeRolePhotoScene/,`${name}: social images also bypass the old face-mask rewrite`);
+  assert.match(source,/body=faceMode==='required'\?roleImageStudioVisibleScene\(prompt\)/,`${name}: retries clean legacy phone-cover text before the image request`);
 }

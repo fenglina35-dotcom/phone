@@ -1,6 +1,6 @@
-const BUILD='1072';
-const HOTFIX='v1072-role-delivery-resume-private-integration-1';
-const SHELL_CACHE='north-shell-v1072';
+const BUILD='1073';
+const HOTFIX='v1073-role-image-visible-face-integration-1';
+const SHELL_CACHE='north-shell-v1073';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
