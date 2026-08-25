@@ -42,6 +42,22 @@ for(const [name,source] of [['web',root],['private bundle',bundle]]){
   const personTest=ctx.roleImageStudioPrompt(c,{scene:'坐在沙发上拿着鞭子',requestText:'坐在沙发上拿着鞭子',objectOnly:ctx.roleImageStudioTestObjectOnly('坐在沙发上拿着鞭子')});
   assert.match(personTest,/画面人物只能是当前角色本人/,`${name}: the studio test prompt requires the role`);
   assert.doesNotMatch(personTest,/ZERO PEOPLE|NO CHARACTER IN FRAME/,`${name}: the studio test prompt must not inherit the old empty-scene lock`);
+  c.imageStudio.identityNote='必须露出脸，不可遮挡';
+  const faceTest=ctx.roleImageStudioPrompt(c,{scene:'工作室里认真工作的一张侧脸视角照片',requestText:'工作室里认真工作的一张侧脸视角照片'});
+  assert.match(faceTest,/【本次露脸硬要求】/,`${name}: an explicit face request becomes a hard requirement`);
+  assert.match(faceTest,/都可以按场景正常出现，但不得遮住眼睛、鼻子、嘴巴/);
+  assert.doesNotMatch(faceTest,/禁止手机、手、头发、口罩、阴影、裁切/);
+  assert.equal(ctx.roleImageGenerateOptions(c,faceTest).faceMode,'required',`${name}: generation receives the required-face mode instead of the old hidden lock`);
+  c.imageStudio.identityNote='固定脸型';
+  const ordinaryTest=ctx.roleImageStudioPrompt(c,{scene:'在工作室整理文件',requestText:'在工作室整理文件'});
+  assert.match(ordinaryTest,/【本次露脸硬要求】/,`${name}: ordinary character photos keep the face visible`);
+  assert.equal(ctx.roleImageGenerateOptions(c,ordinaryTest).faceMode,'required');
+  const mirrorTest=ctx.roleImageStudioPrompt(c,{scene:'穿今天的衣服拍一张全身对镜照片',requestText:'穿今天的衣服拍一张全身对镜照片'});
+  assert.match(mirrorTest,/【全身对镜遮脸特例】/,`${name}: only an explicit full-body mirror photo permits occasional phone occlusion`);
+  assert.equal(ctx.roleImageGenerateOptions(c,mirrorTest).faceMode,'mirror');
+  const croppedMirror=ctx.roleImageStudioPrompt(c,{scene:'拍一张对镜半身照',requestText:'拍一张对镜半身照'});
+  assert.doesNotMatch(croppedMirror,/【全身对镜遮脸特例】/);
+  assert.equal(ctx.roleImageGenerateOptions(c,croppedMirror).faceMode,'required');
 
   assert.match(source,/else if\(c\.p==='roleImageStudio'\)html=renderRoleImageStudio\(c\.id\)/);
   assert.match(source,/go\('roleImageStudio',\{id:'\$\{id\}'\}\)/);
@@ -53,5 +69,9 @@ for(const [name,source] of [['web',root],['private bundle',bundle]]){
   assert.match(source,/roleImageStudioOutfitEdit/);
   assert.match(source,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/,`${name}: wardrobe uses a compact two-column grid`);
   assert.match(source,/aria-label="衣物操作"/,`${name}: compact cards retain item actions`);
+  assert.match(source,/aria-label="面部参考操作"/,`${name}: face references use compact cards too`);
+  assert.match(source,/查看识别详情/,`${name}: long face analysis is hidden behind an optional detail view`);
+  assert.doesNotMatch(source,/\$\{esc\(ref\.note\|\|'已作为固定脸参考'\)\}/,`${name}: long face analysis is no longer rendered inline`);
+  assert.match(source,/faceMode==='mirror'\?mirror:faceMode==='required'\?required/,`${name}: the final image prompt supports both the narrow mirror exception and the visible-face lock`);
   assert.match(source,/roleImageStudioPrompt\(c,\{scene:sanitizeRolePhotoScene\(scene\),requestText:scene,objectOnly,userRequest:scene\}\)/,`${name}: studio test bypasses legacy chat object classification`);
 }

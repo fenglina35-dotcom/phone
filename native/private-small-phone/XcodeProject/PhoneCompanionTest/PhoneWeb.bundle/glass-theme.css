@@ -109,6 +109,7 @@ html.north-glass-ui.north-shell-pink .statusbar{background:#ffeaf3!important;col
 html.north-glass-ui.north-shell-blue .statusbar{background:#eaf4ff!important;color:#355271!important}
 html.north-glass-ui.north-shell-gray .statusbar{background:#e6e8ec!important;color:#42464e!important}
 html.north-glass-ui.north-shell-white .statusbar{background:#fff!important;color:#111!important}
+html.north-native-app .statusbar{display:none!important}
 /* Web/PWA outer chrome and safe-area backdrop follow the selected shell theme.
    The native private app keeps using its dedicated status-bar bridge. */
 html.north-shell-black,html.north-shell-black body,html.north-shell-black .phone{background-color:#000!important}

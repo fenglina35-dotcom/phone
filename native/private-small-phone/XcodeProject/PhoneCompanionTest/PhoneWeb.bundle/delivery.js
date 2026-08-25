@@ -32,13 +32,34 @@
   function safeOptionGroups(v){
     return (Array.isArray(v)?v:[]).slice(0,12).map(function(g){g=g&&typeof g==='object'?g:{};var choices=(Array.isArray(g.choices)?g.choices:[]).slice(0,30).map(function(c){c=c&&typeof c==='object'?c:{label:c};return{id:text(c.id||c.value||c.label,120),label:text(c.label||c.name||c.value,80),priceDelta:num(c.priceDelta||c.extraPrice||0),available:c.available!==false,selected:c.selected===true};}).filter(function(c){return c.id&&c.label&&c.available;});return{id:text(g.id||g.name,120),name:text(g.name||g.label,80),required:g.required!==false,multiple:g.multiple===true,selectionCount:Math.max(1,Math.min(20,+g.selectionCount||1)),choices:choices};}).filter(function(g){return g.id&&g.name&&g.choices.length;});
   }
+  function deliveryRuntimeConfig(){
+    var raw=null;try{raw=window.NORTH_DELIVERY_CONFIG;}catch(_){}
+    if(!raw||typeof raw!=='object')return{explicit:false,valid:true,endpoint:'',publishableKey:'',projectRef:'',deploymentId:'legacy'};
+    var endpoint=text(raw.endpoint,500).replace(/\/+$/,''),publishableKey=text(raw.publishableKey,500),projectRef=text(raw.projectRef,80).toLowerCase(),deploymentId=text(raw.deploymentId,120).toLowerCase(),valid=false,error='';
+    try{var parsed=new URL(endpoint);valid=parsed.protocol==='https:'&&parsed.hostname===projectRef+'.supabase.co'&&parsed.pathname==='/functions/v1/phone-delivery'&&/^[a-z0-9]{20}$/.test(projectRef)&&/^[a-z0-9][a-z0-9_-]{15,119}$/.test(deploymentId)&&(/^sb_publishable_/i.test(publishableKey)||/^eyJ[a-z0-9_-]+\.[a-z0-9_-]+\.[a-z0-9_-]+$/i.test(publishableKey));}catch(_){}
+    if(!valid)error='朋友专用外卖配置无效或项目不一致，已禁止回退到伴生云';
+    return{explicit:true,valid:valid,endpoint:valid?endpoint:'',publishableKey:valid?publishableKey:'',projectRef:projectRef,deploymentId:deploymentId||'invalid',error:error};
+  }
   function builtInConnectorUrl(){
+    var cfg=deliveryRuntimeConfig();if(cfg.explicit)return cfg.endpoint;
     try{return typeof COMPANION_URL==='string'&&/^https:\/\//i.test(COMPANION_URL)?COMPANION_URL.replace(/\/+$/,'')+'/functions/v1/phone-delivery':'';}catch(_){return'';}
   }
-  function deliveryConnectorSecret(){
-    var key='north_delivery_connector_secret_v1',secret='';try{secret=localStorage.getItem(key)||'';}catch(_){}
+  function deliveryConnectorSecret(scope){
+    scope=text(scope,120).replace(/[^a-z0-9_-]/gi,'_')||'legacy';var key=scope==='legacy'?'north_delivery_connector_secret_v1':'north_delivery_connector_secret_v2_'+scope,secret='';try{secret=localStorage.getItem(key)||'';}catch(_){}
     if(secret.length<24){try{var bytes=new Uint8Array(32);crypto.getRandomValues(bytes);secret='dls_'+Array.from(bytes).map(function(x){return x.toString(16).padStart(2,'0');}).join('');}catch(_){secret='dls_'+uid()+uid();}try{localStorage.setItem(key,secret);}catch(_){}}
     return secret;
+  }
+  function deliveryClientTarget(scope){
+    scope=text(scope,120).replace(/[^a-z0-9_-]/gi,'_')||'isolated';var key='north_delivery_client_target_v2_'+scope,target='';try{target=localStorage.getItem(key)||'';}catch(_){}
+    if(!/^yb_[a-z0-9]{20,96}$/.test(target)){try{var bytes=new Uint8Array(24);crypto.getRandomValues(bytes);target='yb_'+Array.from(bytes).map(function(x){return x.toString(16).padStart(2,'0');}).join('');}catch(_){target='yb_'+String(uid()+uid()).toLowerCase().replace(/[^a-z0-9]/g,'').padEnd(24,'0').slice(0,48);}try{localStorage.setItem(key,target);}catch(_){}}
+    return target;
+  }
+  function isolateDeliveryState(r,cfg){
+    if(!cfg.explicit)return;
+    var fingerprint=(cfg.valid?'isolated:':'invalid:')+cfg.projectRef+'|'+cfg.deploymentId+'|'+cfg.endpoint;
+    if(r.connectorConfigFingerprint===fingerprint)return;
+    r.enabled=false;r.autoPay=false;r.addressLabel='';r.approvedAddressFingerprint='';r.lastCapability=null;r.lastRoleNotice=null;r.pendingCreates=[];r.roleTasks={};r.roleAttempts={};r.roleClarifications={};r.learnedMemories=[];r.preferences={};r.connectorConfigFingerprint=fingerprint;r.configIsolationAppliedAt=Date.now();
+    S.food.cart=[];S.food.results=[];S.food.orders=(S.food.orders||[]).filter(function(order){return !order||order.real!==true;});
   }
   function foodState(){
     S.food=S.food&&typeof S.food==='object'?S.food:{};
@@ -46,10 +67,12 @@
     S.food.results=Array.isArray(S.food.results)?S.food.results:[];
     S.food.orders=Array.isArray(S.food.orders)?S.food.orders:[];
     var r=S.food.real&&typeof S.food.real==='object'?S.food.real:{};
+    var cfg=deliveryRuntimeConfig();isolateDeliveryState(r,cfg);
     if(typeof r.enabled!=='boolean')r.enabled=false;
     r.roleGlobalSearch=true;
     r.autoPay=false;
     r.connectorUrl=builtInConnectorUrl();
+    r.connectorConfigError=cfg.error||'';
     r.addressLabel=text(r.addressLabel,80);
     r.approvedAddressFingerprint=text(r.approvedAddressFingerprint,180);
     r.lastCapability=r.lastCapability&&typeof r.lastCapability==='object'?r.lastCapability:null;
@@ -115,8 +138,9 @@
     if(!url)throw new Error('还没有连接真实外卖服务');
     var ctl=typeof AbortController==='function'?new AbortController():null,timer=ctl?setTimeout(function(){ctl.abort();},timeout||25000):0;
     try{
-      var official=url===builtInConnectorUrl(),headers={'content-type':'application/json','x-north-delivery-contract':'1'};try{if(typeof COMPANION_KEY==='string'&&official){headers.apikey=COMPANION_KEY;headers.Authorization='Bearer '+COMPANION_KEY;}}catch(_){}
-      var client={appVersion:String(APP_VER||''),privateApp:typeof privateNativeAppOn==='function'&&privateNativeAppOn(),target:typeof cloudId==='function'?cloudId():'',ownerSecret:official&&typeof companionOwnerSecret==='function'?companionOwnerSecret():deliveryConnectorSecret()};
+      var cfg=deliveryRuntimeConfig(),official=url===builtInConnectorUrl(),headers={'content-type':'application/json','x-north-delivery-contract':'1'};
+      if(cfg.explicit&&cfg.valid&&official){headers.apikey=cfg.publishableKey;headers.Authorization='Bearer '+cfg.publishableKey;}else try{if(typeof COMPANION_KEY==='string'&&official){headers.apikey=COMPANION_KEY;headers.Authorization='Bearer '+COMPANION_KEY;}}catch(_){}
+      var client=cfg.explicit?{appVersion:String(APP_VER||''),privateApp:typeof privateNativeAppOn==='function'&&privateNativeAppOn(),target:deliveryClientTarget(cfg.deploymentId),ownerSecret:deliveryConnectorSecret(cfg.deploymentId)}:{appVersion:String(APP_VER||''),privateApp:typeof privateNativeAppOn==='function'&&privateNativeAppOn(),target:typeof cloudId==='function'?cloudId():'',ownerSecret:official&&typeof companionOwnerSecret==='function'?companionOwnerSecret():deliveryConnectorSecret()};
       var res=await fetch(url,{method:'POST',credentials:'include',headers:headers,body:JSON.stringify({action:action,payload:payload||{},client:client}),signal:ctl&&ctl.signal});
       var body=null;try{body=await res.json();}catch(_){}
       if(!res.ok||!body||body.ok===false)throw new Error(text(body&&body.error||('真实外卖服务 HTTP '+res.status),180));

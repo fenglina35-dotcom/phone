@@ -14,9 +14,10 @@ assert.doesNotMatch(delivery,/单笔自动付款上限|每日自动付款总上�
 assert.match(delivery,/paymentPreference:\['alipay'\]/,'the implemented payment route must be Alipay only');
 assert.match(delivery,/providers:\['taobao_flash'\]/,'the implemented provider route must be Taobao Flash only');
 assert.match(delivery,/functions\/v1\/phone-delivery/,'the official companion cloud must be the built-in connector');
-assert.match(delivery,/ownerSecret:official&&typeof companionOwnerSecret/,'the companion owner proof may only be sent to the official connector');
+assert.match(delivery,/cfg\.explicit\?.*ownerSecret:deliveryConnectorSecret\(cfg\.deploymentId\).*ownerSecret:official&&typeof companionOwnerSecret/s,'an explicit friend connector must use a delivery-only identity while the legacy owner proof stays on the legacy connector');
 assert.match(delivery,/deliveryConnectorSecret\(\)/,'custom connectors must receive a separate scoped secret');
 assert.match(delivery,/headers\.apikey=COMPANION_KEY/,'built-in connector calls must use the companion project key');
+assert.match(delivery,/朋友专用外卖配置无效或项目不一致，已禁止回退到伴生云/,'invalid explicit delivery config must fail closed instead of falling back to companion sync');
 assert.match(delivery,/S\.food\.results=\[\];foodState\(\)\.lastError/,'real search failure must leave no generated results');
 assert.match(delivery,/clientRequestId:requestId/,'real order creation must carry an idempotency key');
 assert.match(delivery,/pendingCreates=Array\.isArray/,'unfinished order creation must retain its idempotency key for retry');
