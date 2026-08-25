@@ -94,7 +94,7 @@ test('remote subtitles are role-generated from real detail or visible list previ
 });
 
 test('the first visible WeChat list preview can trigger a genuine role line',async()=>{
-  const source=app.match(/async function remoteControlRoleReaction\(c,a,r\)\{[\s\S]*?\n\}(?=\nasync function remoteControlRoleLines)/)?.[0]||'';
+  const source=app.match(/async function remoteControlRoleReaction\(c,a,r\)\{[\s\S]*?\r?\n\}(?=\r?\nasync function remoteControlRoleLines)/)?.[0]||'';
   assert.ok(source,'remote role reaction function must exist');
   let calls=0;
   const remoteControlModelCall=async()=>{calls++;return '{"lines":["他怎么突然说今晚不回来了？"],"delete":false,"messageIndex":-1}';};
@@ -110,7 +110,7 @@ test('the first visible WeChat list preview can trigger a genuine role line',asy
 });
 
 test('an empty list still stays silent without calling the model',async()=>{
-  const source=app.match(/async function remoteControlRoleReaction\(c,a,r\)\{[\s\S]*?\n\}(?=\nasync function remoteControlRoleLines)/)?.[0]||'';
+  const source=app.match(/async function remoteControlRoleReaction\(c,a,r\)\{[\s\S]*?\r?\n\}(?=\r?\nasync function remoteControlRoleLines)/)?.[0]||'';
   let calls=0;
   const reaction=Function('$','remoteControlDeleteCapability','remoteControlOwnershipNote','remoteControlIntentContext','S','_remoteCtl','remoteControlProgress','remoteControlModelCall','remoteControlRoleResponse','buildSystem',`${source};return remoteControlRoleReaction;`)(
     ()=>null,()=>null,()=>'',()=>'',{me:{name:'用户'}},{roleSpokenCount:0,actions:[]},()=>{},async()=>{calls++;return'';},()=>null,()=>''
@@ -146,7 +146,7 @@ test('remote model timeouts abort the real request and the first detail retries 
 });
 
 test('the first real detail retries an operational-only model answer and returns the next real role line',async()=>{
-  const source=app.match(/async function remoteControlRoleReaction\(c,a,r\)\{[\s\S]*?\n\}(?=\nasync function remoteControlRoleLines)/)?.[0]||'';
+  const source=app.match(/async function remoteControlRoleReaction\(c,a,r\)\{[\s\S]*?\r?\n\}(?=\r?\nasync function remoteControlRoleLines)/)?.[0]||'';
   assert.ok(source,'remote role reaction function must exist');
   let calls=0;
   const remoteControlModelCall=async()=>++calls===1
@@ -169,7 +169,7 @@ test('the first real detail retries an operational-only model answer and returns
 });
 
 test('the first real detail retries after a rejected model request instead of swallowing all role captions',async()=>{
-  const source=app.match(/async function remoteControlRoleReaction\(c,a,r\)\{[\s\S]*?\n\}(?=\nasync function remoteControlRoleLines)/)?.[0]||'';
+  const source=app.match(/async function remoteControlRoleReaction\(c,a,r\)\{[\s\S]*?\r?\n\}(?=\r?\nasync function remoteControlRoleLines)/)?.[0]||'';
   assert.ok(source,'remote role reaction function must exist');
   let calls=0;
   const remoteControlModelCall=async()=>{calls++;if(calls===1)throw new Error('请求超时');return '{"lines":["这条消息为什么没有告诉我？"],"delete":false,"messageIndex":-1}';};

@@ -163,6 +163,48 @@ test('a genuine one-word approval directly starts an explicit order without a se
   assert.deepEqual(merchants,['杨姥姥']);
 });
 
+test('a McDonalds breakfast bundle request is normalized to the homepage bundle and exact option labels',async()=>{
+  const request='先生我要吃麦当劳套餐要选那个吉士蛋+油条+要豆浆🥺';
+  const {ctx,searches,merchants,meta}=makeRuntime(request);
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  delete ctx.S.food.real.roleAttempts['role-1'];
+  ctx.S.food.real.roleTasks={};
+  meta.userText=request;
+  await ctx.deliveryTryExplicitApprovalFallback('role-1',request,'等着。',meta);
+  assert.deepEqual(merchants,['麦当劳']);
+  assert.deepEqual(searches,[{taskId:'delivery_id-1',items:['麦满分单人餐随心选']}]);
+  const task=Object.values(ctx.S.food.real.roleTasks)[0];
+  assert.match(task.query,/规格=吉士蛋麦满分、脆香油条、小杯优品豆浆/);
+});
+
+test('a malformed current structured action is repaired from the same explicit McDonalds turn',async()=>{
+  const request='先生我要吃麦当劳套餐要选那个吉士蛋+油条+要豆浆🥺';
+  const {ctx,searches,merchants,meta}=makeRuntime(request);
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  delete ctx.S.food.real.roleAttempts['role-1'];
+  ctx.S.food.real.roleTasks={};
+  meta.userText=request;
+  await ctx.deliveryHandleRoleRequest('role-1','用户明确',meta);
+  assert.deepEqual(merchants,['麦当劳']);
+  assert.deepEqual(searches,[{taskId:'delivery_id-1',items:['麦满分单人餐随心选']}]);
+  const task=Object.values(ctx.S.food.real.roleTasks)[0];
+  assert.match(task.query,/规格=吉士蛋麦满分、脆香油条、小杯优品豆浆/);
+});
+
+test('a complete but untrained McDonalds action is normalized before browser search',async()=>{
+  const request='先生我要吃麦当劳套餐要选那个吉士蛋+油条+要豆浆🥺';
+  const {ctx,searches,merchants,meta}=makeRuntime(request);
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  delete ctx.S.food.real.roleAttempts['role-1'];
+  ctx.S.food.real.roleTasks={};
+  meta.userText=request;
+  await ctx.deliveryHandleRoleRequest('role-1','用户明确；门店=麦当劳；商品=吉士蛋、油条、豆浆',meta);
+  assert.deepEqual(merchants,['麦当劳']);
+  assert.deepEqual(searches,[{taskId:'delivery_id-1',items:['麦满分单人餐随心选']}]);
+  const task=Object.values(ctx.S.food.real.roleTasks)[0];
+  assert.match(task.query,/规格=吉士蛋麦满分、脆香油条、小杯优品豆浆/);
+});
+
 test('broad and product-only requests wait for the current role to choose a concrete structured route',async()=>{
   const first=makeRuntime('随便点一个主食');
   delete first.ctx.S.food.real.roleClarifications['role-1'];
