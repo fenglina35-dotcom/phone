@@ -31,8 +31,8 @@ test('private app loads bundled phone resources instead of a remote shell', () =
   assert.match(webView, /webView\.window\?\.safeAreaInsets/);
   assert.match(webView, /north-native-app/);
   assert.match(webView, /root\.classList\.add\('north-native-app'\)/);
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.198 \(198\)'/);
-  assert.match(webView, /\n      window\.__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.198 \(198\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.199 \(199\)'/);
+  assert.match(webView, /\n      window\.__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.199 \(199\)'/);
   assert.doesNotMatch(webView, /\nwindow\.__SMALL_PHONE_PRIVATE_BUILD__/);
   assert.match(webView, /SmallPhoneRolePushTapped/);
   assert.match(webView, /window\.__smallPhoneOpenRolePush/);
@@ -89,7 +89,8 @@ test('private app has a versioned native bridge and shared-resource staging', ()
   assert.match(app, /nativeCore\|\|_coreOverflowMode/);
   assert.match(app, /原生主存档/);
   assert.match(app, /原生保护副本/);
-  assert.match(app, /v==null\?imgGetIDB\(k\):v/,'an existing web archive remains readable before native migration');
+  assert.match(app, /Promise\.all\(\[privateNativeCoreGet\(k\)\.catch\(\(\)=>null\),imgGetIDB\(k\)\]\)/,'an existing web archive remains readable before native migration');
+  assert.match(app, /newestStoredCore\(rows\[0\],rows\[1\]\)/,'the newest valid native or web archive wins');
 });
 
 test('bundled license requests use the restricted native network bridge', () => {
@@ -128,8 +129,8 @@ test('real Mac project keeps all Screen Time targets and becomes 小手机', () 
   }
   assert.match(project, /INFOPLIST_KEY_CFBundleDisplayName = "小手机";/);
   assert.match(project, /PRODUCT_BUNDLE_IDENTIFIER = com\.qianyi\.PhoneCompanionTest;/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 198;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.198;/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 199;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.199;/);
 
   const scheme = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/xcshareddata/xcschemes/PhoneCompanionTest.xcscheme'

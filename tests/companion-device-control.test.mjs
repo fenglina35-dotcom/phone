@@ -128,7 +128,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v1073 · 形象工作室露脸修复版'/);
+  assert.match(app, /const APP_VER='v1074 · 存档歌单与网页电量修复版'/);
 });
 
 test('manual sync reads locally in the bundled app and keeps cloud fallback', () => {
@@ -429,7 +429,8 @@ test('critical-battery automation cannot invent screen, steps or watch state', (
 test('ordinary phone activity does not leak cached real-device telemetry', () => {
   const activity = functionSource('myActivity');
   assert.doesNotMatch(activity, /companionRoleLocationText|companionRoleScreenTimeText/);
-  assert.match(activity, /!privatePhoneAccountAvailable\(\)&&S\.me\.battery/);
+  assert.match(activity, /const liveBattery=webBatteryFactText\(\)/);
+  assert.doesNotMatch(activity, /!privatePhoneAccountAvailable\(\)&&S\.me\.battery/);
   assert.match(app, /没有本次读取编号，也没有执行新的设备采集/);
   assert.match(app, /不得说“没刷新、没刷出来、没同步、没戴手表、读取不到”/);
 });

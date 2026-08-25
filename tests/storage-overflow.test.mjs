@@ -42,7 +42,7 @@ test('large core state migrates to IndexedDB before localStorage reaches its bro
   assert.match(app, /backup=await imgGet\(RECOVERY_IDB_KEY\)/);
   assert.match(app, /recoveryStateMeaningful\(stats\)/);
   assert.match(app, /S=mergeStateData\(restored\)/);
-  assert.match(functionSource('bootImages'), /^async function bootImages\(\)\{await bootOverflowCore\(\);if\(privateNativeAppOn\(\)&&!_recoverySnapshotAt\)_recoverySnapshotAt=Date\.now\(\);try\{/);
+  assert.match(functionSource('bootImages'), /^async function bootImages\(\)\{await bootOverflowCore\(\);await musicManifestRestore\(\);if\(privateNativeAppOn\(\)&&!_recoverySnapshotAt\)_recoverySnapshotAt=Date\.now\(\);try\{/);
   assert.match(app, /if\(_coreBootRef&&!_appBootFinished\)return true/);
 });
 
@@ -55,11 +55,13 @@ test('overflow saves are verified asynchronously and failures are rate limited',
   assert.match(app, /now-_storageFailureToastAt>60000/);
   assert.match(app, /now-_storageFailureModalAt>300000/);
   assert.match(app, /大容量存档保存失败/);
-  assert.match(app, /无痕\/隐私模式/);
+  assert.match(app, /原生主存档与备用数据库本次都没有确认写入/);
   assert.match(app, /const IMG_DB_VERSION=2/);
   assert.match(functionSource('imgDB'), /objectStoreNames\.contains\('img'\)/);
   assert.match(functionSource('imgPutIDBWithRetry'), /attempt<3/);
-  assert.match(functionSource('imgPut'), /imgPutIDBWithRetry\(k,v\)/);
+  assert.match(functionSource('privateNativeCorePut'), /attempt<3/);
+  assert.match(app, /function imgPut\(k,v\)\{if\(privateNativeCoreStorageKey\(k\)\)return privateNativeCorePut\(k,v\)\.catch\(\(\)=>imgPutIDBWithRetry\(k,v\)\)/);
+  assert.match(app, /function imgGet\(k\)\{if\(privateNativeCoreStorageKey\(k\)\)[\s\S]*?newestStoredCore\(rows\[0\],rows\[1\]\)/);
   assert.doesNotMatch(app, /catch\(e\)\{toast\(isQuotaError\(e\)\?'核心存档写不进去了/);
 });
 
@@ -96,6 +98,14 @@ test('storage details separate core, chats, images, voice cache and music', () =
   assert.match(app, /parts\.cinemaSubtitle/);
   assert.match(app, /核心数据[\s\S]*长聊天库[\s\S]*图片[\s\S]*语音\/通话缓存[\s\S]*音乐文件/);
   assert.match(app, /onclick="showStorageBreakdown\(\)">查看占用明细/);
+});
+
+test('music playlist metadata has an independent manifest beside audio blobs',()=>{
+  assert.match(app,/const MUSIC_MANIFEST_KEY='__music_manifest_v1'/);
+  assert.match(functionSource('saveNow'),/musicManifestQueueSave\(savedAt\)/);
+  assert.match(functionSource('musicManifestQueueSave'),/mPut\(MUSIC_MANIFEST_KEY,next\)/);
+  assert.match(functionSource('musicManifestRestore'),/manifestAt<=coreAt/);
+  assert.match(functionSource('musicManifestRestore'),/S\.music=row\.music;musicInit\(\)/);
 });
 
 test('private storage details avoid cloning every large IndexedDB value', () => {
@@ -155,6 +165,7 @@ test('real save flow keeps only the newest queued large snapshot and restores it
     },
     imgGet: async key => db.get(key) ?? null,
     queueRecoverySnapshot: () => Promise.resolve(true),
+    musicManifestQueueSave: () => Promise.resolve(true),
     storageSaveFailure: error => { throw error; },
     toast: () => {},
   });
@@ -187,6 +198,29 @@ test('real save flow keeps only the newest queued large snapshot and restores it
   vm.runInContext(`S=coreBootShell(Date.now());_appBootFinished=false`, context);
   assert.equal(await vm.runInContext('bootOverflowCore()', context), true);
   assert.equal(vm.runInContext('S.marker', context), 'newest');
+});
+
+test('newest core snapshot wins between native storage and IndexedDB fallback',()=>{
+  const context=vm.createContext({});
+  vm.runInContext(functionSource('newestStoredCore'),context);
+  assert.equal(vm.runInContext(`newestStoredCore({savedAt:10,name:'native'},{savedAt:20,name:'idb'}).name`,context),'idb');
+  assert.equal(vm.runInContext(`newestStoredCore({savedAt:30,name:'native'},{savedAt:20,name:'idb'}).name`,context),'native');
+});
+
+test('newer music manifest restores a playlist even when the core snapshot is stale',async()=>{
+  const context=vm.createContext({
+    S:{_persistedAt:100,music:{songs:[]}},
+    mGet:async()=>({savedAt:200,music:{songs:[{id:'song-kept',name:'保留的歌'}],playlists:[],favorites:[]}}),
+    musicInit(){},
+  });
+  vm.runInContext(`const MUSIC_MANIFEST_KEY='__music_manifest_v1';`,context);
+  vm.runInContext(functionSource('musicManifestRestore'),context);
+  assert.equal(await vm.runInContext('musicManifestRestore()',context),true);
+  assert.equal(vm.runInContext('S.music.songs[0].id',context),'song-kept');
+  context.S._persistedAt=300;
+  context.S.music={songs:[{id:'core-newer'}]};
+  assert.equal(await vm.runInContext('musicManifestRestore()',context),false);
+  assert.equal(vm.runInContext('S.music.songs[0].id',context),'core-newer');
 });
 
 test('a missing large primary snapshot falls back to the protected recovery snapshot', async () => {
