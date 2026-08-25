@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1045 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1065 · 外卖澄清修订连续性修复版'/);
-  assert.match(app,/const url='sw\.js\?v=1065&r=v1065-delivery-clarification-revision-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1065'/);
-  assert.match(html,/app\.js\?v=1065/);
-  assert.match(sw,/const BUILD='1065'/);
-  assert.match(sw,/north-shell-v1065/);
-  assert.match(index,/小手机\.html\?v=1065/);
-  assert.match(repair,/小手机\.html\?v=1065/);
+  assert.match(app,/APP_VER='v1066 · 伴生轮询日期格式化卡顿发热修复版'/);
+  assert.match(app,/const url='sw\.js\?v=1066&r=v1066-companion-date-formatter-thermal-repair-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1066'/);
+  assert.match(html,/app\.js\?v=1066/);
+  assert.match(sw,/const BUILD='1066'/);
+  assert.match(sw,/north-shell-v1066/);
+  assert.match(index,/小手机\.html\?v=1066/);
+  assert.match(repair,/小手机\.html\?v=1066/);
 });
 
-test('the private iOS package embeds web v1065 and keeps 1.0.188 delivery',()=>{
-  assert.match(privateBundle,/<string>1065<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.188;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 188;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.188 \(188\)'/);
+test('the private iOS package embeds web v1066 and keeps 1.0.189 delivery',()=>{
+  assert.match(privateBundle,/<string>1066<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.189;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 189;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.189 \(189\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

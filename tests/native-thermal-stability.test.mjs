@@ -184,6 +184,40 @@ test('private boot keeps historical image references lazy without allowing image
   assert.doesNotMatch(app,/function scheduleVisibleStoredImages\(\)[\s\S]{0,300}?requestAnimationFrame/);
 });
 
+test('private companion polling never constructs Intl.DateTimeFormat on the WebContent timer',()=>{
+  assert.match(app,/const _companionUsageDayFormatters=new Map\(\)/);
+  const start=app.indexOf('const _companionUsageDayFormatters=');
+  const end=app.indexOf('function companionUsagePayloadDecision(',start);
+  assert.ok(start>=0&&end>start,'companion usage day helpers are present');
+  const sandbox={
+    Date,Map,Number,String,
+    privateNativeAppOn:()=>true,
+    Intl:{DateTimeFormat(){throw new Error('private poll reached the expensive Intl constructor');}}
+  };
+  vm.runInNewContext(app.slice(start,end)+`;globalThis.day=companionUsageDayAt(1787587440000,'Asia/Shanghai');`,sandbox);
+  const expected=new Date(1787587440000);
+  const local=expected.getFullYear()+'-'+String(expected.getMonth()+1).padStart(2,'0')+'-'+String(expected.getDate()).padStart(2,'0');
+  assert.equal(sandbox.day,local);
+});
+
+test('web companion usage reuses one formatter per reported phone time zone',()=>{
+  const start=app.indexOf('const _companionUsageDayFormatters=');
+  const end=app.indexOf('function companionUsagePayloadDecision(',start);
+  let constructions=0;
+  const sandbox={
+    Date,Map,Number,String,
+    privateNativeAppOn:()=>false,
+    Intl:{DateTimeFormat:function(){constructions++;return{formatToParts:()=>[
+      {type:'year',value:'2026'},{type:'literal',value:'/'},{type:'month',value:'08'},
+      {type:'literal',value:'/'},{type:'day',value:'25'}
+    ]};}}
+  };
+  vm.runInNewContext(app.slice(start,end)+`;globalThis.first=companionUsageDayAt(1,'Asia/Shanghai');globalThis.second=companionUsageDayAt(2,'Asia/Shanghai');`,sandbox);
+  assert.equal(sandbox.first,'2026-08-25');
+  assert.equal(sandbox.second,'2026-08-25');
+  assert.equal(constructions,1);
+});
+
 test('a rejected visible-image batch backs off instead of immediately retrying the same database reads',async()=>{
   const start=app.indexOf('let _visibleImageHydrateTimer=');
   const end=app.indexOf('function refreshHydratedUI()',start);

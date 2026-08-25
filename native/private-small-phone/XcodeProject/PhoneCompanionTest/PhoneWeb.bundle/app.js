@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1065'){
+if(window.__NORTH_SHELL_BUILD__!=='1066'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -378,7 +378,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1065 · 外卖澄清修订连续性修复版';
+const APP_VER='v1066 · 伴生轮询日期格式化卡顿发热修复版';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1509,7 +1509,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1065&r=v1065-delivery-clarification-revision-1';
+  const url='sw.js?v=1066&r=v1066-companion-date-formatter-thermal-repair-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -7953,7 +7953,8 @@ function companionPruneAudit(st,now){now=Number.isFinite(+now)?+now:Date.now();s
 function companionLockIntentsNormalize(value,apps,oldSchema,now){const out={};if(value&&typeof value==='object')for(const [id,row] of Object.entries(value)){if(!id||!row||typeof row!=='object')continue;out[id]={desiredLocked:row.desiredLocked===true,source:String(row.source||'explicit').slice(0,40),updatedAt:Math.max(0,+row.updatedAt||0)};}if(+oldSchema<7)for(const app of Array.isArray(apps)?apps:[]){const id=String(app&&app.id||'');if(id&&app&&app.locked===true&&!out[id])out[id]={desiredLocked:true,source:'schema6-migration',updatedAt:Math.max(0,+now||Date.now())};}return out;}
 function companionDesiredLocked(st,app){const id=String(app&&app.id||app||''),row=st&&st.lockIntents&&st.lockIntents[id];return !!(row&&row.desiredLocked===true);}
 function companionSetLockIntent(st,app,desired,source){const id=String(app&&app.id||app||'');if(!st||!id)return false;st.lockIntents=st.lockIntents&&typeof st.lockIntents==='object'?st.lockIntents:{};st.lockIntents[id]={desiredLocked:desired===true,source:String(source||'explicit').slice(0,40),updatedAt:Date.now()};return true;}
-function companionUsageDayAt(ts,timeZone){const date=new Date(Number.isFinite(+ts)?+ts:Date.now());try{const parts=new Intl.DateTimeFormat('en-US',{timeZone:timeZone||undefined,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date),get=type=>(parts.find(x=>x.type===type)||{}).value||'';return get('year')+'-'+get('month')+'-'+get('day');}catch(_){return date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0');}}
+const _companionUsageDayFormatters=new Map();
+function companionUsageDayAt(ts,timeZone){const date=new Date(Number.isFinite(+ts)?+ts:Date.now()),local=date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0')+'-'+String(date.getDate()).padStart(2,'0');/* 原生屏幕时间与 WKWebView 位于同一台 iPhone、使用同一系统时区。iOS WebKit 的 Intl.DateTimeFormat 首次构造曾在真实 trace 中把 WebContent 主线程连续占满，因此私人 App 绝不能在伴生轮询定时器里创建它。 */if(typeof privateNativeAppOn==='function'&&privateNativeAppOn())return local;const zone=String(timeZone||'').trim();if(!zone)return local;try{let formatter=_companionUsageDayFormatters.get(zone);if(!formatter){formatter=new Intl.DateTimeFormat('en-US',{timeZone:zone,year:'numeric',month:'2-digit',day:'2-digit'});_companionUsageDayFormatters.set(zone,formatter);}const parts=formatter.formatToParts(date),get=type=>(parts.find(x=>x.type===type)||{}).value||'';return get('year')+'-'+get('month')+'-'+get('day');}catch(_){return local;}}
 function companionUsagePayloadDecision(st,screen){const timeZone=String(screen&&screen.timeZone||'').trim(),usageDay=String(screen&&screen.usageDay||'').trim(),usageRevision=Math.max(0,+screen?.usageRevision||0),generatedAt=companionTime(screen&&screen.generatedAt),today=companionUsageDayAt(Date.now(),timeZone);if(!screen||screen.reportAvailable!==true||!usageDay||usageDay!==today)return {accept:false,reason:'not-current-day',usageDay,timeZone,usageRevision,generatedAt};if(st&&st.usageDay===usageDay&&((usageRevision&&usageRevision<=Math.max(0,+st.usageRevision||0))||(!usageRevision&&generatedAt&&generatedAt<=Math.max(0,+st.usageGeneratedAt||0))))return {accept:false,reason:'stale-revision',usageDay,timeZone,usageRevision,generatedAt};return {accept:true,reason:'new-usage',usageDay,timeZone,usageRevision,generatedAt};}
 function companionUsageSnapshotFresh(st,now,maxAge){now=Number.isFinite(+now)?+now:Date.now();maxAge=Math.max(1000,+maxAge||20*60000);return !!(st&&st.usageDay===companionUsageDayAt(now,st.usageTimeZone)&&+st.usageGeneratedAt>0&&now-(+st.usageGeneratedAt)>=0&&now-(+st.usageGeneratedAt)<=maxAge);}
 function companionNormalizeHomeLocation(value){if(!value||typeof value!=='object'||!Number.isFinite(+value.lat)||!Number.isFinite(+value.lng))return null;return {lat:+value.lat,lng:+value.lng,radius:Math.max(100,Math.min(1000,+value.radius||250)),setAt:Math.max(0,+value.setAt||0)};}

@@ -1,6 +1,13 @@
 # 私人「小手机」Xcode 工程
 
-> 当前候选交付：网页核心 v1065；私人 iOS 1.0.188 (188)；原生桥 25。请使用本次第一百八十八次安装说明，并打开全新 `SmallPhone_v1065_DeliveryClarificationRevision_iOS188_MacReady`，不要覆盖任何旧工程目录。
+> 当前候选交付：网页核心 v1066；私人 iOS 1.0.189 (189)；原生桥 25。请使用本次第一百八十九次安装说明，并打开全新 `SmallPhone_v1066_CompanionDateFormatterThermal_iOS189_MacReady`，不要覆盖任何旧工程目录。
+
+## v1066／1.0.189 伴生轮询日期格式化卡顿发热修复版
+
+- Instruments 官方导出证据显示，卡顿时 WebContent 的热点集中在 DOM 定时器里的 `JSC::constructIntlDateTimeFormat`，首次异常样本约在启动后 3.184 秒；私人 App 的伴生快照轮询恰在 3.2 秒启动。
+- 私人 App 的屏幕时间报告和 WKWebView 使用同一台 iPhone 的系统时区，因此伴生日期核对改用本机日期，不再在轮询定时器里构造 `Intl.DateTimeFormat`；网页版的指定时区 formatter 改为按时区缓存复用。
+- 本版不改变伴生轮询频率和数据语义，也不触碰普通回复、朋友圈、后台通知、远控字幕、通话、语音、共同相册及外卖链路。
+- Windows 已完成专项与全量自动测试；仍须在 Mac 编译签名，并在真实 iPhone 从冷启动后观察至少 2 分钟，且继续使用数日确认偶发问题没有复现。
 
 ## v1065／1.0.188 外卖澄清修订连续性修复版
 
