@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1045 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1076 · 用户动作优先衣柜版'/);
-  assert.match(app,/const url='sw\.js\?v=1076&r=v1076-user-pose-first-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1076'/);
-  assert.match(html,/app\.js\?v=1076/);
-  assert.match(sw,/const BUILD='1076'/);
-  assert.match(sw,/north-shell-v1076/);
-  assert.match(index,/小手机\.html\?v=1076/);
-  assert.match(repair,/小手机\.html\?v=1076/);
+  assert.match(app,/APP_VER='v1074 · 存档歌单与网页电量修复版'/);
+  assert.match(app,/const url='sw\.js\?v=1074&r=v1074-storage-music-battery-recovery-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1074'/);
+  assert.match(html,/app\.js\?v=1074/);
+  assert.match(sw,/const BUILD='1074'/);
+  assert.match(sw,/north-shell-v1074/);
+  assert.match(index,/小手机\.html\?v=1074/);
+  assert.match(repair,/小手机\.html\?v=1074/);
 });
 
-test('the private iOS package embeds web v1076 and keeps 1.0.201 delivery',()=>{
-  assert.match(privateBundle,/<string>1076<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.201;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 201;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.201 \(201\)'/);
+test('the private iOS package embeds web v1074 and keeps 1.0.199 delivery',()=>{
+  assert.match(privateBundle,/<string>1074<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.199;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 199;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.199 \(199\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 
