@@ -40,15 +40,17 @@ for(const [name,source] of [['web',root],['private bundle',bundle]]){
   assert.match(prompt,/角色形象工作室·替代旧外观提示词/);
   assert.match(prompt,/白色医生工服/);
   assert.match(prompt,/【衣柜唯一服装ID:work】/);
-  assert.match(prompt,/衣柜服装硬锁·最高优先级/);
-  assert.match(prompt,/禁止生成、替换、叠穿或额外添加衣柜外/);
+  assert.match(prompt,/动作与构图最高优先级/);
+  assert.match(prompt,/衣柜服装选择/);
+  assert.match(prompt,/绝不能让衣柜照片里原有的人物姿势/);
   const scene=ctx.roleImageStudioPrompt(c,{scene:'桌上的咖啡',objectOnly:true});
   assert.match(scene,/ZERO PEOPLE, NO CHARACTER IN FRAME/);
-  assert.deepEqual(Array.from(ctx.roleImageGenerateOptions(c,prompt).references),['face-front','work-ref']);
-  assert.equal(ctx.roleImageGenerateOptions(c,prompt).outfitId,'work',`${name}: prompt and API references keep the same selected outfit`);
+  assert.deepEqual(Array.from(ctx.roleImageGenerateOptions(c,prompt).references),['face-front'],`${name}: high-fidelity references keep identity only and cannot leak the wardrobe model pose`);
+  assert.equal(ctx.roleImageGenerateOptions(c,prompt).outfitId,'work',`${name}: prompt keeps the same selected outfit through its text description`);
+  assert.equal(ctx.roleImageGenerateOptions(c,prompt).outfitReferenceMode,'text-only');
   const sparsePrompt=ctx.roleImageStudioPrompt(sparse,{scene:'在健身房跑步',requestText:'穿红色运动服在健身房跑步'});
   assert.match(sparsePrompt,/【衣柜唯一服装ID:only-home】/);
-  assert.match(sparsePrompt,/场景分类没有对应衣服时，本次选择仍然有效/);
+  assert.match(sparsePrompt,/场景分类没有对应衣服时，仍从衣柜中选择一套自然适配/);
   assert.equal(ctx.roleImageGenerateOptions(sparse,sparsePrompt).outfitId,'only-home');
   const empty={id:'empty',imageStudio:{enabled:true,faceMode:'hidden',identityRefs:[],outfits:[]}};
   assert.match(ctx.roleImageGenerateOptions(empty,ctx.roleImageStudioPrompt(empty,{scene:'在客厅拍照'})).blockedReason,/衣柜里没有已启用的衣服/);
@@ -56,6 +58,9 @@ for(const [name,source] of [['web',root],['private bundle',bundle]]){
   assert.equal(ctx.roleImageStudioTestObjectOnly('只拍沙发和鞭子，不要人物'),true,`${name}: an explicit people exclusion stays object-only`);
   const personTest=ctx.roleImageStudioPrompt(c,{scene:'坐在沙发上拿着鞭子',requestText:'坐在沙发上拿着鞭子',objectOnly:ctx.roleImageStudioTestObjectOnly('坐在沙发上拿着鞭子')});
   assert.match(personTest,/画面人物只能是当前角色本人/,`${name}: the studio test prompt requires the role`);
+  assert.match(personTest,/坐在沙发上拿着鞭子/);
+  assert.match(personTest,/站、坐、躺、跪/);
+  assert.match(personTest,/衣服只能自然贴合这个动作/);
   assert.doesNotMatch(personTest,/ZERO PEOPLE|NO CHARACTER IN FRAME/,`${name}: the studio test prompt must not inherit the old empty-scene lock`);
   c.imageStudio.identityNote='必须露出脸，不可遮挡';
   const faceTest=ctx.roleImageStudioPrompt(c,{scene:'工作室里认真工作的一张侧脸视角照片',requestText:'工作室里认真工作的一张侧脸视角照片'});
@@ -99,7 +104,9 @@ for(const [name,source] of [['web',root],['private bundle',bundle]]){
   assert.match(source,/scene=studio\?rawScene:sanitizeRolePhotoScene\(rawScene\)/,`${name}: chat images preserve the real request whenever the studio is enabled`);
   assert.match(source,/safe=studio\?\(raw\|\|String\(text\|\|''\)\.slice\(0,180\)\):sanitizeRolePhotoScene/,`${name}: social images also bypass the old face-mask rewrite`);
   assert.match(source,/body=faceMode==='required'\?roleImageStudioVisibleScene\(prompt\)/,`${name}: retries clean legacy phone-cover text before the image request`);
-  assert.match(source,/ABSOLUTE WARDROBE RULE/,`${name}: final provider prompt receives an English wardrobe hard lock`);
+  assert.match(source,/ABSOLUTE SCENE AND POSE RULE/,`${name}: final provider prompt makes the requested action higher priority than clothing`);
+  assert.match(source,/WARDROBE SELECTION RULE/,`${name}: final provider prompt preserves wardrobe selection without copying its composition`);
+  assert.doesNotMatch(source,/ABSOLUTE WARDROBE RULE/,`${name}: the old wardrobe composition hard lock is removed`);
   assert.match(source,/if\(opt\.blockedReason\)throw new Error\(opt\.blockedReason\)/,`${name}: an empty wardrobe cannot silently generate arbitrary clothing`);
   assert.match(source,/场景没有对应分类时，也会从衣柜其余已启用衣服中挑一件/,`${name}: UI explains the strict fallback behavior`);
 }

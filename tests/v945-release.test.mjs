@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1045 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1075 · 角色衣柜强制锁定版'/);
-  assert.match(app,/const url='sw\.js\?v=1075&r=v1075-role-wardrobe-hard-lock-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1075'/);
-  assert.match(html,/app\.js\?v=1075/);
-  assert.match(sw,/const BUILD='1075'/);
-  assert.match(sw,/north-shell-v1075/);
-  assert.match(index,/小手机\.html\?v=1075/);
-  assert.match(repair,/小手机\.html\?v=1075/);
+  assert.match(app,/APP_VER='v1076 · 用户动作优先衣柜版'/);
+  assert.match(app,/const url='sw\.js\?v=1076&r=v1076-user-pose-first-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1076'/);
+  assert.match(html,/app\.js\?v=1076/);
+  assert.match(sw,/const BUILD='1076'/);
+  assert.match(sw,/north-shell-v1076/);
+  assert.match(index,/小手机\.html\?v=1076/);
+  assert.match(repair,/小手机\.html\?v=1076/);
 });
 
-test('the private iOS package embeds web v1075 and keeps 1.0.200 delivery',()=>{
-  assert.match(privateBundle,/<string>1075<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.200;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 200;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.200 \(200\)'/);
+test('the private iOS package embeds web v1076 and keeps 1.0.201 delivery',()=>{
+  assert.match(privateBundle,/<string>1076<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.201;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 201;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.201 \(201\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 
