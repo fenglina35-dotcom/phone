@@ -269,6 +269,14 @@
     return Promise.resolve(ranked[0].offer);
   }
   function deliveryRequirementText(query,intent){return text(((intent&&intent.userMessages)||[]).join('\n')+'\n'+query,1200);}
+  function deliverySpecificationText(query,intent,offer){
+    var requirement=deliveryRequirementText(query,intent),explicit=[],order=roleOrderIntent(query),names=((order&&order.items)||[]).slice();
+    String(query||'').replace(/(?:^|[；;|])\s*(?:规格|口味|选项)\s*[=:：]\s*([^；;|\n]+)/g,function(_,value){explicit.push(value);return _;});
+    requirement=requirement.replace(/(?:^|[；;|])\s*(?:门店|商家|品牌|商品)\s*[=:：]\s*[^；;|\n]+/g,' ');
+    if(offer&&offer.name)names.push(offer.name);
+    names.map(function(name){return text(name,160);}).filter(function(name){return name.length>=2;}).sort(function(a,b){return b.length-a.length;}).forEach(function(name){requirement=requirement.split(name).join(' ');});
+    return text(explicit.join('\n')+'\n'+requirement,1200);
+  }
   function deliveryExcluded(textValue,label){var key=deliveryMatchKey(label),source=deliveryMatchKey(textValue);if(!key)return false;return ['不要','不加','去除','排除','不选','不吃'].some(function(prefix){return source.includes(deliveryMatchKey(prefix+key));});}
   function deliveryChoiceMentionScore(label,textValue){var key=deliveryMatchKey(label),source=deliveryMatchKey(textValue);if(!key||!source)return 0;if(source.includes(key))return 100;var grams=deliveryBigrams(key),hit=grams.filter(function(x){return source.includes(x);}).length;return grams.length>=2?Math.round(hit/grams.length*100):0;}
   function explicitToppings(textValue){var source=String(textValue||''),names=['脆波波','脆啵啵','奶冻','小西米','黑糖珍珠','珍珠','冻冻','椰果','奶麻薯','芝士奶盖','雪糯米','芋圆','厚芋泥','西柚粒','黑糖波波','多肉'];return names.filter(function(name){return source.includes(name)&&!deliveryExcluded(source,name);});}
@@ -281,11 +289,11 @@
     if(!rules.length)return null;var choice=group.choices.find(function(x){return rules.some(function(rule){return rule.test(x.label);});});if(!choice)throw new Error('平台“'+name+'”没有本次明确要求；现有选项：'+group.choices.map(function(x){return x.label;}).join('、'));return choice;
   }
   function chooseOptions(c,query,offer,intent,resumeDetail){
-    var groups=offer.optionGroups||[];if(!groups.length)return Promise.resolve({quantity:1,selectedOptions:{}});var requirement=deliveryRequirementText(query,intent),requirementKey=deliveryMatchKey(requirement),selected={};
+    var groups=offer.optionGroups||[];if(!groups.length)return Promise.resolve({quantity:1,selectedOptions:{}});var requirement=deliveryRequirementText(query,intent),specification=deliverySpecificationText(query,intent,offer),specificationKey=deliveryMatchKey(specification),selected={};
     groups.forEach(function(group){var choices=group.choices.filter(function(choice){return !deliveryExcluded(requirement,choice.label);}),semantic=deliverySemanticChoice(group,requirement),matched=[];
       if(semantic&&!deliveryExcluded(requirement,semantic.label))matched=[semantic];
-      if(!matched.length)matched=choices.filter(function(choice){var key=deliveryMatchKey(choice.label);return key.length>=2&&requirementKey.includes(key);});
-      if(!matched.length){var scored=choices.map(function(choice,index){return{choice:choice,index:index,score:deliveryChoiceMentionScore(choice.label,requirement)};}).filter(function(row){return row.score>=34;}).sort(function(a,b){return b.score-a.score||a.index-b.index;});if(scored.length)matched=group.multiple?scored.map(function(row){return row.choice;}):[scored[0].choice];}
+      if(!matched.length)matched=choices.filter(function(choice){var key=deliveryMatchKey(choice.label);return key.length>=2&&specificationKey.includes(key);});
+      if(!matched.length){var scored=choices.map(function(choice,index){return{choice:choice,index:index,score:deliveryChoiceMentionScore(choice.label,specification)};}).filter(function(row){return row.score>=34;}).sort(function(a,b){return b.score-a.score||a.index-b.index;});if(scored.length)matched=group.multiple?scored.map(function(row){return row.choice;}):[scored[0].choice];}
       if(/加料|小料|配料/.test(group.name)){var toppings=explicitToppings(requirement);if(toppings.length){var toppingMatches=choices.filter(function(choice){return toppings.some(function(name){return deliveryMatchScore(name,choice.label)>=30;});});if(!toppingMatches.length)throw new Error('平台“'+group.name+'”没有本次明确加料“'+toppings.join('、')+'”；现有选项：'+choices.map(function(x){return x.label;}).join('、'));matched=toppingMatches;}}
       if(!matched.length)matched=choices.filter(function(choice){return choice.selected;});
       if(!matched.length&&group.required)matched=choices.slice(0,Math.max(1,group.multiple?group.selectionCount:1));

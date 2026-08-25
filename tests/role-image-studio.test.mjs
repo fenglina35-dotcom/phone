@@ -37,6 +37,11 @@ for(const [name,source] of [['web',root],['private bundle',bundle]]){
   const scene=ctx.roleImageStudioPrompt(c,{scene:'桌上的咖啡',objectOnly:true});
   assert.match(scene,/ZERO PEOPLE, NO CHARACTER IN FRAME/);
   assert.deepEqual(Array.from(ctx.roleImageGenerateOptions(c,prompt).references),['face-front','work-ref']);
+  assert.equal(ctx.roleImageStudioTestObjectOnly('坐在沙发上拿着鞭子'),false,`${name}: studio tests default to the role being present`);
+  assert.equal(ctx.roleImageStudioTestObjectOnly('只拍沙发和鞭子，不要人物'),true,`${name}: an explicit people exclusion stays object-only`);
+  const personTest=ctx.roleImageStudioPrompt(c,{scene:'坐在沙发上拿着鞭子',requestText:'坐在沙发上拿着鞭子',objectOnly:ctx.roleImageStudioTestObjectOnly('坐在沙发上拿着鞭子')});
+  assert.match(personTest,/画面人物只能是当前角色本人/,`${name}: the studio test prompt requires the role`);
+  assert.doesNotMatch(personTest,/ZERO PEOPLE|NO CHARACTER IN FRAME/,`${name}: the studio test prompt must not inherit the old empty-scene lock`);
 
   assert.match(source,/else if\(c\.p==='roleImageStudio'\)html=renderRoleImageStudio\(c\.id\)/);
   assert.match(source,/go\('roleImageStudio',\{id:'\$\{id\}'\}\)/);
@@ -46,4 +51,7 @@ for(const [name,source] of [['web',root],['private bundle',bundle]]){
   assert.match(source,/genOptions:roleImageStudioOn\(cch\)\?\{roleId:cch\.id\}:null/);
   assert.match(source,/genImage\(prompt,\{roleId:c\.id\}\)/);
   assert.match(source,/roleImageStudioOutfitEdit/);
+  assert.match(source,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/,`${name}: wardrobe uses a compact two-column grid`);
+  assert.match(source,/aria-label="衣物操作"/,`${name}: compact cards retain item actions`);
+  assert.match(source,/roleImageStudioPrompt\(c,\{scene:sanitizeRolePhotoScene\(scene\),requestText:scene,objectOnly,userRequest:scene\}\)/,`${name}: studio test bypasses legacy chat object classification`);
 }

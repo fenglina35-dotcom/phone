@@ -24,7 +24,7 @@ const context=vm.createContext({
 });
 for(const name of [
   'text','roleOrderIntent','deliveryMatchKey','deliveryBigrams','deliveryMatchScore',
-  'chooseOffer','deliveryRequirementText','deliveryExcluded','deliveryChoiceMentionScore',
+  'chooseOffer','deliveryRequirementText','deliverySpecificationText','deliveryExcluded','deliveryChoiceMentionScore',
   'explicitToppings','deliverySemanticChoice','chooseOptions','rolePreludeAllowed',
 ])vm.runInContext(functionSource(name),context);
 
@@ -53,6 +53,15 @@ assert.equal(choice.quantity,1);
 
 choice=await context.chooseOptions({},'用户明确；门店=曼玲粥；商品=燕麦牛奶粥',offer,{userMessages:['燕麦牛奶粥']});
 assert.deepEqual({...choice.selectedOptions},{portion:'one',sugar:'none'},'unspecified specs must preserve platform-selected defaults');
+
+const yogurt={name:'草莓桃儿白糯米酸奶奶昔',optionGroups:[{id:'rice',name:'糯米选择',required:true,multiple:false,selectionCount:1,choices:[
+  {id:'standard',label:'经典黑糯米',selected:true},
+  {id:'white',label:'现蒸白糯米',selected:false},
+]}]};
+choice=await context.chooseOptions({},'用户明确；门店=李若桃；商品=草莓桃儿白糯米酸奶奶昔',yogurt,{userMessages:['我想喝李若桃家的：草莓桃儿白糯米酸奶奶昔']});
+assert.equal(choice.selectedOptions.rice,'standard','words inside the product title must not invent a separate hard specification');
+choice=await context.chooseOptions({},'用户明确；门店=李若桃；商品=草莓桃儿白糯米酸奶奶昔；规格=现蒸白糯米',yogurt,{userMessages:['要现蒸白糯米']});
+assert.equal(choice.selectedOptions.rice,'white','an explicitly requested specification must still select the matching real choice');
 
 assert.throws(
   ()=>context.chooseOptions({},'用户明确；门店=茶百道；商品=茉莉奶绿；规格=七分糖',offer,{userMessages:['七分糖']}),
