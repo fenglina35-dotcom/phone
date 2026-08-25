@@ -7,12 +7,13 @@ const source=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const preview=fs.readFileSync(new URL('../cohabitation-preview.html',import.meta.url),'utf8');
 
-function functionSource(name){
-  const start=source.indexOf('function '+name+'(');
+function functionSourceFrom(input,name){
+  const start=input.indexOf('function '+name+'(');
   assert.ok(start>=0,'missing '+name);
-  const next=source.indexOf('\nfunction ',start+10);
-  return source.slice(start,next<0?source.length:next).trim();
+  const next=input.indexOf('\nfunction ',start+10);
+  return input.slice(start,next<0?input.length:next).trim();
 }
+function functionSource(name){return functionSourceFrom(source,name);}
 
 test('co-living stays separate from one-time dates and is opt-in',()=>{
   assert.match(source,/function cohabRoot\(\)/);
@@ -113,7 +114,7 @@ test('online and face-to-face activity use a narrow shared status boundary',()=>
   assert.match(source,/仅在“约会中同步到线上”开关开启时生效/);
   assert.match(source,/共同生活页面里的动作与对白不会复制到微信/);
   assert.match(source,/微信消息也不会冒充面对面台词/);
-  assert.match(source,/function offlineFocusActive\(\)\{if\(typeof cohabSceneActive==='function'&&cohabSceneActive\(\)\)return true/);
+  assert.match(source,/function offlineFocusActive\(\)\{if\(cohabSceneBlocksOnline\(\)\)return true/);
   assert.match(source,/function incomingCall\(id,kind,opt\).*cohabRestricted&&!opt\.requestedByUser.*roleOnlineProactiveBlocked\(id\).*requestedByUser/s);
   assert.match(source,/async function maybeProactive\(id\)\{if\(!isMain\(\)\|\|roleOnlineProactiveBlocked\(id\)/);
   assert.match(source,/function roleOnlineProactiveBlocked\(id\).*offlineWechatLiveState\(c\).*cohabOnlineQuiet\(id\).*offlineFocusActive\(\)/);
@@ -125,6 +126,21 @@ test('online and face-to-face activity use a narrow shared status boundary',()=>
   assert.match(source,/content=cohabConsumeOnlineState\(content,c,id\)/);
   assert.match(source,/只有你确实已经抵达、说“我到家了\/进门了”时才能切到到家/);
   assert.match(source,/你可以自己选择挂什么简短状态/);
+});
+
+test('co-living only silences online messages while both people are physically together',()=>{
+  const helper=functionSource('cohabSceneBlocksOnline');
+  const run=phase=>vm.runInNewContext(`(${helper})()`,{
+    privateCompanionAppOn:()=>true,
+    cohabSceneActive:()=>true,
+    _off:{id:'c1'},
+    cohabData:()=>({phase}),
+    cohabTogetherScene:d=>d.phase==='home'||d.phase==='together-away'
+  });
+  assert.equal(run('home'),true,'at home remains face-to-face and quiet');
+  assert.equal(run('together-away'),true,'going out together remains face-to-face and quiet');
+  for(const phase of ['work','away','returning'])assert.equal(run(phase),false,phase+' must allow background WeChat delivery');
+  assert.equal(vm.runInNewContext(`(${helper})()`,{privateCompanionAppOn:()=>false,cohabSceneActive:()=>true}),true,'the web build keeps its existing quiet behavior');
 });
 
 test('WeChat, calls and face-to-face scenes share a speaker-safe chronological anchor',()=>{

@@ -66,6 +66,7 @@ for(const [name,source] of [['web',root],['private bundle',bundle]]){
   assert.equal(ctx.roleImageGenerateOptions(c,directCamera).faceMode,'required');
 
   assert.match(source,/else if\(c\.p==='roleImageStudio'\)html=renderRoleImageStudio\(c\.id\)/);
+  assert.match(source,/未经允许不可侵犯他人肖像权，后果自负。/,`${name}: the studio shows the portrait-rights warning before its controls`);
   assert.match(source,/go\('roleImageStudio',\{id:'\$\{id\}'\}\)/);
   assert.match(source,/没有上传正面或侧面身份参考时，即使选了允许露脸，也会自动按“不允许露脸”执行/);
   assert.match(source,/function imageGenerateReferenceEdit\(/);

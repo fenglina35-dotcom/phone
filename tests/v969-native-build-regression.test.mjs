@@ -12,14 +12,14 @@ const pip = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/Cal
 const reportApp = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/PhoneCompanionReport.swift');
 const reportScene = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/TotalActivityReport.swift');
 
-test('v1073 web and private iOS 1.0.197 keep explicit build identities', () => {
+test('v1073 web and private iOS 1.0.198 keep explicit build identities', () => {
   assert.match(app, /APP_VER='v1073 · 形象工作室露脸修复版'/);
   assert.match(app, /sw\.js\?v=1073&r=v1073-role-image-visible-face-integration-1/);
   assert.match(shell, /north-shell-v1073/);
   assert.match(bundleInfo, /<string>1073<\/string>/);
-  assert.match(localWebView, /1\.0\.197 \(197\)/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 197;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.197;/g) || []).length, 12);
+  assert.match(localWebView, /1\.0\.198 \(198\)/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 198;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.198;/g) || []).length, 12);
 });
 
 test('native shared-media gain uses only public AVFoundation types', () => {
