@@ -137,11 +137,14 @@ test('native timezone snapshot is injected before bridge bootstrap', () => {
   assert.match(webView, /window\.__SMALL_PHONE_NATIVE_ENV__/);
 });
 
-test('terminated WebContent receives bounded reload without touching native archive', () => {
+test('terminated WebContent receives one delayed exact-bundle recovery without reload storm', () => {
   assert.match(webView, /func webViewWebContentProcessDidTerminate\(_ webView: WKWebView\)/);
   assert.match(webView, /now - \$0 < 120/);
-  assert.match(webView, /guard attempt <= 2 else/);
-  assert.match(webView, /webView\?\.reload\(\)/);
+  assert.match(webView, /guard attempt == 1 else/);
+  assert.match(webView, /deadline: \.now\(\) \+ 5/);
+  assert.match(webView, /webView\.loadFileURL\([\s\S]{0,160}?allowingReadAccessTo: readAccessURL/);
+  assert.match(webView, /configureBundledPage\([\s\S]{0,140}?fileURL: fileURL[\s\S]{0,140}?readAccessURL: readAccessURL/);
+  assert.doesNotMatch(webView, /webView\?\.reload\(\)/);
   assert.doesNotMatch(webView, /websiteDataStore\.removeData/);
 });
 

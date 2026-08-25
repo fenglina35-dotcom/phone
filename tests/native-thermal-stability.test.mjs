@@ -249,7 +249,7 @@ test('a rejected visible-image batch backs off instead of immediately retrying t
 
 test('private storage warnings use the native bridge rather than the web five-megabyte ceiling',()=>{
   assert.match(app,/function refreshNativeStorageEstimate\(force\)\{if\(!privateNativeAppOn\(\)/);
-  assert.match(app,/native=privateNativeAppOn\(\)\?await refreshNativeStorageEstimate\(true\):null/);
+  assert.match(app,/safePrivate=privateNativeAppOn\(\).*native=safePrivate\?await refreshNativeStorageEstimate\(true\):null/s);
   assert.match(app,/function checkStorageWarn\(\).*nativeCore=privateNativeCoreStorageKey\(CORE_IDB_KEY\).*coreDanger=!nativeCore&&!si\.overflow/s);
 });
 

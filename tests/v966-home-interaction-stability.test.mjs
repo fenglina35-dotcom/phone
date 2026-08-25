@@ -13,14 +13,14 @@ const plist=fs.readFileSync(path.join(root,'native/private-small-phone/Resources
 const project=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj'),'utf8');
 const native=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift'),'utf8');
 
-test('v1069 web keeps private 1.0.192 compatibility',()=>{
+test('v1069 web keeps private 1.0.193 compatibility',()=>{
   assert.match(app,/APP_VER='v1069 · 角色外卖续触发与私人稳定整合版'/);
   assert.match(html,/__NORTH_SHELL_BUILD__='1069'/);
   assert.match(sw,/BUILD='1069'/);
   assert.match(plist,/<string>1069<\/string>/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 192;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.192;/g)||[]).length,12);
-  assert.match(native,/1\.0\.192 \(192\)/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 193;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.193;/g)||[]).length,12);
+  assert.match(native,/1\.0\.193 \(193\)/);
 });
 
 test('normal taps and paging stay native until a real long press drag begins',()=>{

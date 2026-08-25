@@ -312,7 +312,7 @@ test('native foreground and delivered role notifications wake the web inbox with
   assert.match(localPhoneWebView, /name: Notification\.Name\("SmallPhoneRolePushSyncRequested"\)/);
   assert.match(localPhoneWebView, /syncPendingRolePushIfReady\(\)/);
   assert.match(localPhoneWebView, /window\.__smallPhoneSyncRolePush && window\.__smallPhoneSyncRolePush\(\)/);
-  assert.match(localPhoneWebView, /didFinish navigation[\s\S]{0,360}syncPendingRolePushIfReady\(\)/);
+  assert.match(localPhoneWebView, /didFinish navigation[\s\S]{0,520}syncPendingRolePushIfReady\(\)/);
 });
 
 test('recently consumed real pushes can be reconciled without resurrecting deleted messages', () => {

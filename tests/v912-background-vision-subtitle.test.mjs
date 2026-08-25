@@ -13,8 +13,8 @@ const project = fs.readFileSync(new URL('../native/private-small-phone/XcodeProj
 test('current release versions align', () => {
   assert.match(app, /APP_VER='v1069 · 角色外卖续触发与私人稳定整合版'/);
   assert.match(html, /__NORTH_SHELL_BUILD__='1069'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 192;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.192;/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 193;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.193;/);
   assert.match(bridge, /contractVersion = 25/);
 });
 

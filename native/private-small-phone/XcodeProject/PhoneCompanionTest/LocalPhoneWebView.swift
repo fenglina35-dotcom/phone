@@ -13,6 +13,9 @@ struct LocalPhoneWebView: UIViewRepresentable {
         private var openingRolePush = false
         private var syncingRolePush = false
         private var webContentTerminationTimes: [TimeInterval] = []
+        private var pendingWebContentRecovery: DispatchWorkItem?
+        private var bundledFileURL: URL?
+        private var bundledReadAccessURL: URL?
         private var lastSafeAreaInsets: UIEdgeInsets?
 
         override init() {
@@ -50,7 +53,16 @@ struct LocalPhoneWebView: UIViewRepresentable {
         }
 
         deinit {
+            pendingWebContentRecovery?.cancel()
             NotificationCenter.default.removeObserver(self)
+        }
+
+        func configureBundledPage(
+            fileURL: URL,
+            readAccessURL: URL
+        ) {
+            bundledFileURL = fileURL
+            bundledReadAccessURL = readAccessURL
         }
 
         @objc private func deviceOrientationChanged() {
@@ -149,6 +161,8 @@ struct LocalPhoneWebView: UIViewRepresentable {
             didFinish navigation: WKNavigation!
         ) {
             if !showingLoadFailure {
+                pendingWebContentRecovery?.cancel()
+                pendingWebContentRecovery = nil
                 didLoadPhone = true
                 updateSafeArea(in: webView)
                 sendNativePressure(memoryWarning: false)
@@ -258,29 +272,45 @@ struct LocalPhoneWebView: UIViewRepresentable {
             let attempt = webContentTerminationTimes.count
             print(
                 "[SmallPhoneWeb] WebContent terminated; " +
-                "bounded recovery attempt \(attempt)/2"
+                "bounded recovery attempt \(attempt)/1"
             )
 
-            guard attempt <= 2 else {
+            pendingWebContentRecovery?.cancel()
+            pendingWebContentRecovery = nil
+
+            guard attempt == 1 else {
                 let error = NSError(
                     domain: "SmallPhoneWebContent",
                     code: 3,
                     userInfo: [
                         NSLocalizedDescriptionKey:
-                            "WebContent 在两分钟内连续终止，已停止自动重载"
+                            "WebContent 在两分钟内再次终止，已停止自动重载以避免持续发热"
                     ]
                 )
                 showLoadFailure(in: webView, error: error)
                 return
             }
 
-            // A terminated WebContent process leaves the WKWebView visually
-            // present but unable to receive taps or JavaScript. Reload only
-            // the bundled page; the authoritative archive remains in native
-            // storage and is restored through the existing bridge bootstrap.
-            DispatchQueue.main.async { [weak webView] in
-                webView?.reload()
+            // A rapid reload while iOS is still reclaiming the terminated
+            // process can create a white-screen/lock-screen reload storm.
+            // Wait for pressure to settle, then load the exact bundled entry.
+            let work = DispatchWorkItem { [weak self, weak webView] in
+                guard let self, let webView,
+                      let fileURL = self.bundledFileURL,
+                      let readAccessURL = self.bundledReadAccessURL else {
+                    return
+                }
+                self.pendingWebContentRecovery = nil
+                webView.loadFileURL(
+                    fileURL,
+                    allowingReadAccessTo: readAccessURL
+                )
             }
+            pendingWebContentRecovery = work
+            DispatchQueue.main.asyncAfter(
+                deadline: .now() + 5,
+                execute: work
+            )
         }
 
         func webView(
@@ -362,7 +392,10 @@ struct LocalPhoneWebView: UIViewRepresentable {
         context.coordinator.bridge.webView = webView
         context.coordinator.bridge.openDeviceManagement =
             onOpenDeviceManagement
-        loadBundledPhone(in: webView)
+        loadBundledPhone(
+            in: webView,
+            coordinator: context.coordinator
+        )
         return webView
     }
 
@@ -387,7 +420,10 @@ struct LocalPhoneWebView: UIViewRepresentable {
         webView.uiDelegate = nil
     }
 
-    private func loadBundledPhone(in webView: WKWebView) {
+    private func loadBundledPhone(
+        in webView: WKWebView,
+        coordinator: Coordinator
+    ) {
         guard let bundleURL = Bundle.main.url(
             forResource: "PhoneWeb",
             withExtension: "bundle"
@@ -416,6 +452,10 @@ struct LocalPhoneWebView: UIViewRepresentable {
         let readAccessURL = fileURL
             .deletingLastPathComponent()
             .standardizedFileURL
+        coordinator.configureBundledPage(
+            fileURL: fileURL,
+            readAccessURL: readAccessURL
+        )
         webView.loadFileURL(
             fileURL,
             allowingReadAccessTo: readAccessURL
@@ -467,7 +507,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.192 (192)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.193 (193)';
       const root = document.documentElement;
       root.classList.add('north-native-app');
       root.style.setProperty('--north-native-safe-top', 'env(safe-area-inset-top, 0px)');

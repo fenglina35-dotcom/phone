@@ -98,6 +98,30 @@ test('storage details separate core, chats, images, voice cache and music', () =
   assert.match(app, /onclick="showStorageBreakdown\(\)">查看占用明细/);
 });
 
+test('private storage details avoid cloning every large IndexedDB value', () => {
+  assert.match(app, /function privateAppStorageBreakdown\(\)/);
+  assert.match(app, /safePrivate\?await privateAppStorageBreakdown\(\):await appStorageBreakdown\(\)/);
+  assert.match(app, /不会逐张载入图片/);
+  assert.match(app, /WebKit 媒体与数据库/);
+  const start=app.indexOf('function privateAppStorageBreakdown()');
+  const end=app.indexOf('function storageSizeLabel(',start);
+  const privatePath=app.slice(start,end);
+  assert.doesNotMatch(privatePath,/scanIDBStoreBytes|openCursor|imgAll/);
+});
+
+test('private image memory cache is bounded without deleting stored media', () => {
+  assert.match(app, /const PRIVATE_IMAGE_CACHE_CHAR_LIMIT=48\*1024\*1024/);
+  assert.match(app, /function privateTrimImageMemoryCache\(extraKeys\)/);
+  assert.match(app, /privateBootImageKeys\(\)/);
+  assert.match(app, /visibleStoredImageKeys\(\)/);
+  assert.match(app, /if\(memory\|\|state==='serious'\|\|state==='critical'\)privateTrimImageMemoryCache\(\)/);
+  const start=app.indexOf('function privateTrimImageMemoryCache(');
+  const end=app.indexOf('function imgManyChunk(',start);
+  const trim=app.slice(start,end);
+  assert.doesNotMatch(trim,/imgDel|indexedDB\.deleteDatabase|localStorage\.clear/);
+  assert.doesNotMatch(trim,/\(function live\(|\}\)\(S\)/,'memory pressure trimming must not traverse the full saved state');
+});
+
 test('browser compatibility fallbacks cover clipboard, notifications, DOM replacement and iOS exports', () => {
   assert.match(app, /function copyTextCompat\(text,input\)/);
   assert.match(app, /document\.execCommand&&document\.execCommand\('copy'\)/);
