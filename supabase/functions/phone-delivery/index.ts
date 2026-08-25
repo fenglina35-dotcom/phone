@@ -549,7 +549,10 @@ Deno.serve(async (request) => {
     return await handleClientAction(request, input, client);
   } catch (error) {
     const message = text(error instanceof Error ? error.message : error, 180) || "真实外卖连接器错误";
-    const statusCode = /auth/i.test(message) ? 403 : /invalid|缺少|不支持|必须/.test(message) ? 400 : 502;
+    const statusCode = /auth/i.test(message) ? 403
+      : /invalid|缺少|不支持|必须/.test(message) ? 400
+      : /任务|修订|澄清|约束|状态/.test(message) ? 409
+      : 502;
     return reply(request, { ok: false, error: message }, statusCode);
   }
 });

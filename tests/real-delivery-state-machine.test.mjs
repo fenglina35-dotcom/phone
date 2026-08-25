@@ -81,7 +81,7 @@ const clarificationAction={...roleAction,turnId:'message-2',messageId:'message-2
 await ctx.deliveryHandleRoleRequest(role.id,'换品:用户明确；门店=真实奶茶店；商品=真实奶茶',clarificationAction);
 assert.equal(roleSearches.length,2);
 assert.equal(roleSearches[1].taskId,roleSearches[0].taskId,'the clarification answer must continue the original authorized task');
-assert.ok(roleSearches[1].revision>roleSearches[0].revision,'the same task uses a new revision for the corrected product');
+assert.equal(roleSearches[1].revision,roleSearches[0].revision+1,'a clarification answer advances the same task by exactly one revision');
 assert.deepEqual(roleSearches[1].items,['真实奶茶']);
 assert.equal(ctx.S.food.orders[0].status,'pending_payment','ordinary users receive an official unpaid order');
 assert.equal(role.deliveryWallet.balance,100,'the retired role wallet is never debited');

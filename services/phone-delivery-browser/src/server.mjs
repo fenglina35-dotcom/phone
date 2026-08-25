@@ -54,7 +54,7 @@ const server = http.createServer(async (request, response) => {
   } catch (error) {
     const message = String(error?.message || error || '真实外卖浏览器服务错误').slice(0, 240);
     console.warn(`[phone-delivery-browser] action=${action} failed ms=${Date.now() - startedAt}: ${message}`);
-    return reply(response, /登录|验证|地址|规格|报价|金额|不存在|不支持|请输入|红包|优惠券|吃货豆|结算|提交订单|付款/.test(message) ? 409 : 502, { ok: false, error: message });
+    return reply(response, /登录|验证|地址|规格|报价|金额|不存在|不支持|请输入|红包|优惠券|吃货豆|结算|提交订单|付款|任务|修订|澄清|约束|状态/.test(message) ? 409 : 502, { ok: false, error: message });
   }
 });
 

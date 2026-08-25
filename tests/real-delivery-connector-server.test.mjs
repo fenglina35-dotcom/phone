@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const edge=fs.readFileSync(new URL('../supabase/functions/phone-delivery/index.ts',import.meta.url),'utf8');
+const browserServer=fs.readFileSync(new URL('../services/phone-delivery-browser/src/server.mjs',import.meta.url),'utf8');
 const migration=fs.readFileSync(new URL('../supabase/migrations/202608210003_phone_delivery_connector.sql',import.meta.url),'utf8');
 const push=fs.readFileSync(new URL('../supabase/functions/phone-role-push/index.ts',import.meta.url),'utf8');
 
@@ -13,6 +14,8 @@ assert.match(edge,/response\.status === 502 && !text\(decoded\.error, 180\)/,'a 
 assert.match(edge,/attempt < 2/,'transient upstream retry must stay bounded to one retry');
 assert.match(edge,/retryable = new Set\(\[[^\]]*"create_order"[^\]]*\]\)/,'create-order retry must reuse the existing idempotent request path');
 assert.doesNotMatch(edge,/retryable = new Set\(\[[^\]]*"pay_order"/,'payment submission must never enter the generic gateway retry allow-list');
+assert.match(browserServer,/付款\|任务\|修订\|澄清\|约束\|状态/,'task-state conflicts must remain explicit 409 responses instead of becoming upstream 502');
+assert.match(edge,/任务\|修订\|澄清\|约束\|状态[^\n]*\? 409/,'the edge connector must preserve task-state conflicts as client-visible 409 responses');
 assert.match(edge,/client_request_id/,'orders and payments must use durable idempotency');
 assert.match(edge,/订单金额高于角色自动付款授权金额/,'the server must enforce the automatic-payment authorization');
 assert.match(edge,/付款前订单金额发生变化，已阻止自动付款/,'the server must recheck amount before payment');

@@ -5,7 +5,7 @@ const app = fs.readFileSync(new URL("../app.js", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../小手机.html", import.meta.url), "utf8");
 const sw = fs.readFileSync(new URL("../sw.js", import.meta.url), "utf8");
 
-assert.match(app, /APP_VER='v1064 · 外卖澄清续单与网关恢复版'/);
+assert.match(app, /APP_VER='v1065 · 外卖澄清修订连续性修复版'/);
 assert.match(app, /function northUpdateAvailable\(build\)/);
 assert.match(app, /发现新版本 v\$\{esc\(build\)\}/);
 assert.match(app, /不需要退出或划掉小手机/);
@@ -14,7 +14,7 @@ assert.match(app, /setInterval\(\(\)=>reg\.update\(\)\.catch\(\(\)=>\{\}\),15\*6
 assert.match(app, /postMessage\(\{type:'north-version-query'\}\)/);
 assert.match(sw, /client\.postMessage\(\{type:'north-update-ready',build:BUILD\}\)/);
 assert.match(sw, /event\.data\.type!==['"]north-version-query['"]/);
-assert.match(html, /window\.__NORTH_SHELL_BUILD__='1064'/);
-assert.match(html, /sw\.js\?v=1064&r=v1064-delivery-clarification-resume-1/);
+assert.match(html, /window\.__NORTH_SHELL_BUILD__='1065'/);
+assert.match(html, /sw\.js\?v=1065&r=v1065-delivery-clarification-revision-1/);
 
 console.log("update prompt tests passed");
