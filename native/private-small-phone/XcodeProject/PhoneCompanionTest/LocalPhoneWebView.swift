@@ -13,6 +13,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
         private var openingRolePush = false
         private var syncingRolePush = false
         private var webContentTerminationTimes: [TimeInterval] = []
+        private var lastSafeAreaInsets: UIEdgeInsets?
 
         override init() {
             super.init()
@@ -32,6 +33,18 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 self,
                 selector: #selector(rolePushSyncRequested),
                 name: Notification.Name("SmallPhoneRolePushSyncRequested"),
+                object: nil
+            )
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(thermalStateChanged),
+                name: ProcessInfo.thermalStateDidChangeNotification,
+                object: nil
+            )
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(memoryWarningReceived),
+                name: UIApplication.didReceiveMemoryWarningNotification,
                 object: nil
             )
         }
@@ -54,6 +67,30 @@ struct LocalPhoneWebView: UIViewRepresentable {
 
         @objc private func rolePushSyncRequested() {
             syncPendingRolePushIfReady()
+        }
+
+        @objc private func thermalStateChanged() {
+            sendNativePressure(memoryWarning: false)
+        }
+
+        @objc private func memoryWarningReceived() {
+            sendNativePressure(memoryWarning: true)
+        }
+
+        private func sendNativePressure(memoryWarning: Bool) {
+            guard didLoadPhone, let webView = bridge.webView else { return }
+            let state: String
+            switch ProcessInfo.processInfo.thermalState {
+            case .nominal: state = "nominal"
+            case .fair: state = "fair"
+            case .serious: state = "serious"
+            case .critical: state = "critical"
+            @unknown default: state = "serious"
+            }
+            let script = "window.__smallPhoneNativePressure && window.__smallPhoneNativePressure({thermalState:'\(state)',memoryWarning:\(memoryWarning ? "true" : "false")});"
+            DispatchQueue.main.async { [weak webView] in
+                webView?.evaluateJavaScript(script)
+            }
         }
 
         private func syncPendingRolePushIfReady() {
@@ -114,6 +151,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
             if !showingLoadFailure {
                 didLoadPhone = true
                 updateSafeArea(in: webView)
+                sendNativePressure(memoryWarning: false)
                 bridge.announceReady()
                 openPendingRolePushIfReady()
                 syncPendingRolePushIfReady()
@@ -144,6 +182,20 @@ struct LocalPhoneWebView: UIViewRepresentable {
             let bottom = max(viewInsets.bottom, windowInsets.bottom)
             let left = max(viewInsets.left, windowInsets.left)
             let right = max(viewInsets.right, windowInsets.right)
+            let next = UIEdgeInsets(
+                top: top,
+                left: left,
+                bottom: bottom,
+                right: right
+            )
+            if let last = lastSafeAreaInsets,
+               abs(last.top - next.top) < 0.5,
+               abs(last.bottom - next.bottom) < 0.5,
+               abs(last.left - next.left) < 0.5,
+               abs(last.right - next.right) < 0.5 {
+                return
+            }
+            lastSafeAreaInsets = next
             let script = """
             window.__smallPhoneNativeInsets && window.__smallPhoneNativeInsets({
               top: \(top), bottom: \(bottom), left: \(left), right: \(right)
@@ -415,7 +467,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.190 (190)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.192 (192)';
       const root = document.documentElement;
       root.classList.add('north-native-app');
       root.style.setProperty('--north-native-safe-top', 'env(safe-area-inset-top, 0px)');

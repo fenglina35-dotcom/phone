@@ -111,6 +111,47 @@ test('an ordinary chat followed by 好 cannot enter delivery repair',()=>{
   assert.equal(ctx.deliveryMissingActionRepairPrompt('role-1',meta.userText,'好',meta),'');
 });
 
+test('a precise merchant and product reply stays actionable without repeating 点 or 想喝',async()=>{
+  const {ctx,searches,merchants,meta}=makeRuntime('李若桃家的：草莓桃儿白糯米酸奶昔');
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  delete ctx.S.food.real.roleAttempts['role-1'];
+  ctx.S.food.real.roleTasks={};
+  meta.userText='李若桃家的：草莓桃儿白糯米酸奶昔';
+  await ctx.deliveryTryExplicitApprovalFallback('role-1',meta.userText,'等我看看。',meta);
+  assert.deepEqual(merchants,['李若桃']);
+  assert.deepEqual(searches[0].items,['草莓桃儿白糯米酸奶昔']);
+});
+
+test('a precise merchant and product turn reaches genuine-model repair even with an unusual role reply',()=>{
+  const {ctx,meta}=makeRuntime('李若桃家的：草莓桃儿白糯米酸奶昔');
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  meta.userText='李若桃家的：草莓桃儿白糯米酸奶昔';
+  const prompt=ctx.deliveryMissingActionRepairPrompt('role-1',meta.userText,'我来处理。',meta);
+  assert.match(prompt,/你的当前真实决定是唯一授权/);
+  assert.match(prompt,/不要因为缺少“点”字而漏掉/);
+});
+
+test('a later fresh message can retry the same precise item without being swallowed by the prior task',async()=>{
+  const {ctx,searches,meta}=makeRuntime('李若桃家的：草莓桃儿白糯米酸奶昔');
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  delete ctx.S.food.real.roleAttempts['role-1'];
+  ctx.S.food.real.roleTasks={};
+  meta.userText='李若桃家的：草莓桃儿白糯米酸奶昔';
+  await ctx.deliveryTryExplicitApprovalFallback('role-1',meta.userText,'等我看看。',meta);
+  const retry={...meta,turnId:'user-retry',messageId:'user-retry',modelReplyId:'reply-retry'};
+  await ctx.deliveryTryExplicitApprovalFallback('role-1',retry.userText,'这次我来。',retry);
+  assert.equal(searches.length,2);
+  assert.notEqual(searches[0].taskId,searches[1].taskId);
+});
+
+test('an autonomous role commitment can request a structured decision without a food keyword in the user turn',()=>{
+  const {ctx,meta}=makeRuntime('今天有点忙');
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  meta.userText='今天有点忙';
+  const prompt=ctx.deliveryMissingActionRepairPrompt('role-1',meta.userText,'你忙你的，我去给你点点吃的。',meta);
+  assert.match(prompt,/主动关心/);
+});
+
 test('a genuine one-word approval directly starts an explicit order without a second model call',async()=>{
   const {ctx,searches,merchants,meta}=makeRuntime('我想吃那个杨姥姥家de撒汤，商品名叫：撒汤');
   delete ctx.S.food.real.roleClarifications['role-1'];
@@ -122,41 +163,89 @@ test('a genuine one-word approval directly starts an explicit order without a se
   assert.deepEqual(merchants,['杨姥姥']);
 });
 
-test('approved broad and product-only food requests are allowed to reach search',async()=>{
+test('broad and product-only requests wait for the current role to choose a concrete structured route',async()=>{
   const first=makeRuntime('随便点一个主食');
   delete first.ctx.S.food.real.roleClarifications['role-1'];
   delete first.ctx.S.food.real.roleAttempts['role-1'];
   first.ctx.S.food.real.roleTasks={};
   first.meta.userText='随便点一个主食';
-  await first.ctx.deliveryTryExplicitApprovalFallback('role-1',first.meta.userText,'行，我看看。',first.meta);
-  assert.deepEqual(first.searches[0].items,['主食']);
+  assert.equal(await first.ctx.deliveryTryExplicitApprovalFallback('role-1',first.meta.userText,'行，我看看。',first.meta),false);
+  assert.equal(first.searches.length,0);
+  assert.match(first.ctx.deliveryMissingActionRepairPrompt('role-1',first.meta.userText,'行，我看看。',first.meta),/唯一授权/);
   const second=makeRuntime('点一碗兰州牛肉面');
   delete second.ctx.S.food.real.roleClarifications['role-1'];
   delete second.ctx.S.food.real.roleAttempts['role-1'];
   second.ctx.S.food.real.roleTasks={};
   second.meta.userText='点一碗兰州牛肉面';
-  await second.ctx.deliveryTryExplicitApprovalFallback('role-1',second.meta.userText,'等着。',second.meta);
-  assert.deepEqual(second.searches[0].items,['兰州牛肉面']);
+  assert.equal(await second.ctx.deliveryTryExplicitApprovalFallback('role-1',second.meta.userText,'等着。',second.meta),false);
+  assert.equal(second.searches.length,0);
+  assert.match(second.ctx.deliveryMissingActionRepairPrompt('role-1',second.meta.userText,'等着。',second.meta),/唯一授权/);
 });
 
-test('an approved natural multi-item request reaches search as one deduplicated checklist',async()=>{
+test('a merchant-free multi-item request waits for the role structured choice instead of inventing a shop',async()=>{
   const {ctx,searches,meta}=makeRuntime('我想吃燕麦牛奶粥+茶叶蛋');
   delete ctx.S.food.real.roleClarifications['role-1'];
   delete ctx.S.food.real.roleAttempts['role-1'];
   ctx.S.food.real.roleTasks={};
   meta.userText='我想吃燕麦牛奶粥+茶叶蛋';
-  await ctx.deliveryTryExplicitApprovalFallback('role-1',meta.userText,'可以，我去看。',meta);
-  assert.deepEqual(searches[0].items,['燕麦牛奶粥','茶叶蛋']);
+  assert.equal(await ctx.deliveryTryExplicitApprovalFallback('role-1',meta.userText,'可以，我去看。',meta),false);
+  assert.equal(searches.length,0);
+  assert.match(ctx.deliveryMissingActionRepairPrompt('role-1',meta.userText,'可以，我去看。',meta),/唯一授权/);
 });
 
-test('broader but explicit genuine-role approval wording starts the current food request',async()=>{
+test('a broad meal request reaches role decision but not a parser-invented merchant',async()=>{
   const {ctx,searches,meta}=makeRuntime('我想吃一碗粥');
   delete ctx.S.food.real.roleClarifications['role-1'];
   delete ctx.S.food.real.roleAttempts['role-1'];
   ctx.S.food.real.roleTasks={};
   meta.userText='我想吃一碗粥';
-  await ctx.deliveryTryExplicitApprovalFallback('role-1',meta.userText,'没问题，交给我。',meta);
-  assert.deepEqual(searches[0].items,['粥']);
+  assert.equal(await ctx.deliveryTryExplicitApprovalFallback('role-1',meta.userText,'没问题，交给我。',meta),false);
+  assert.equal(searches.length,0);
+  assert.match(ctx.deliveryMissingActionRepairPrompt('role-1',meta.userText,'没问题，交给我。',meta),/唯一授权/);
+});
+
+test('ordinary non-food arrangements cannot be converted into delivery by a one-word approval',async()=>{
+  const {ctx,searches,meta}=makeRuntime('这件工作你安排一下');
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  meta.userText='这件工作你安排一下';
+  assert.equal(await ctx.deliveryTryExplicitApprovalFallback('role-1',meta.userText,'好。',meta),false);
+  assert.equal(ctx.deliveryMissingActionRepairPrompt('role-1',meta.userText,'好。',meta),'');
+  assert.equal(searches.length,0);
+});
+
+test('malformed autonomous chat text inside a delivery tag is rejected before search',async()=>{
+  const {ctx,searches,meta}=makeRuntime('今天聊点别的');
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  delete ctx.S.food.real.roleAttempts['role-1'];
+  ctx.S.food.real.roleTasks={};
+  meta.userText='今天聊点别的';
+  await ctx.deliveryHandleRoleRequest('role-1','主动关心:什么？ y。]！！我只爱老公',meta);
+  assert.equal(searches.length,0);
+  assert.equal(Object.keys(ctx.S.food.real.roleTasks).length,0);
+});
+
+test('a short ordinary-chat phrase cannot become an autonomous product query',async()=>{
+  const {ctx,searches,meta}=makeRuntime('最近随便聊聊');
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  delete ctx.S.food.real.roleAttempts['role-1'];
+  ctx.S.food.real.roleTasks={};
+  meta.userText='最近随便聊聊';
+  await ctx.deliveryHandleRoleRequest('role-1','主动关心；门店=李若桃；商品=不太好',meta);
+  assert.equal(searches.length,0);
+  assert.equal(Object.keys(ctx.S.food.real.roleTasks).length,0);
+});
+
+test('a canonical current-turn autonomous action still has full authority to start',async()=>{
+  const {ctx,searches,merchants,meta}=makeRuntime('今天有点忙');
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  delete ctx.S.food.real.roleAttempts['role-1'];
+  ctx.S.food.real.roleTasks={};
+  meta.userText='今天有点忙';
+  await ctx.deliveryHandleRoleRequest('role-1','主动关心；门店=曼玲粥店；商品=皮蛋瘦肉粥',meta);
+  assert.deepEqual(merchants,['曼玲粥店']);
+  assert.deepEqual(searches[0].items,['皮蛋瘦肉粥']);
+  const task=Object.values(ctx.S.food.real.roleTasks)[0];
+  assert.equal(task.authorizationSource,'role_current_turn');
 });
 
 test('ordinary chat still cannot use a one-word role reply to start delivery',()=>{
@@ -179,7 +268,7 @@ test('the role can repair a current autonomous meal-care decision without waitin
   meta.userText='我今天没吃饭';
   const prompt=ctx.deliveryMissingActionRepairPrompt('role-1',meta.userText,'等着。',meta);
   assert.match(prompt,/你本人在当前回合基于人设与上下文自主决定/);
-  assert.match(prompt,/自主决定必须使用“主动关心”来源/);
+  assert.match(prompt,/自主决定时拥有完整选择权，并必须使用“主动关心”来源/);
 });
 
 test('a terse 都要 clarification can use the original task without another user message',()=>{

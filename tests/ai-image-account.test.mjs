@@ -21,7 +21,7 @@ assert.match(app,/function aiCoreOn\(\)\{return false;\}/);
 
 assert.doesNotMatch(app,/function aiImageInit|function aiImageRelayOn|aiRelay\('image'/);
 assert.match(app,/function imageGenerationAvailable\(\)\{const ch=S\.settings\.chat\|\|\{\};return !!\(\(S\.settings\.imgBase\|\|ch\.base\)&&\(S\.settings\.imgKey\|\|ch\.key\)\);\}/);
-assert.match(app,/async function genImage\(prompt\)[\s\S]*imageGenerateExternal\(base,key,model,prompt,'1024x1536'\)/);
+assert.match(app,/async function genImage\(prompt,opt\)[\s\S]*imageGenerateExternal\(base,key,model,prompt,'1024x1536','medium',\{references\}\)/);
 assert.match(app,/function dgImageConfigured\(\)[\s\S]*S\.settings\.imgBase\|\|ch\.base/);
 assert.doesNotMatch(app,/内置图片怎么用|AI账户里开启中转站图片|两个开关都开启/);
 assert.match(app,/让角色发真照片[\s\S]*使用下方外置图片接口生成，由对应平台计费/);

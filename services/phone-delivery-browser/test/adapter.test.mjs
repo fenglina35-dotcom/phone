@@ -9,6 +9,7 @@ import { activeShopMatchesBrand, appliedCouponAmount, availableCouponAmount, bra
 import { storeSearchTermMatches } from '../src/taobao-flash-browser.mjs';
 import { merchantFromShopText } from '../src/taobao-flash-browser.mjs';
 import { requestedSinglePersonSoupCombo } from '../src/taobao-flash-browser.mjs';
+import { optionChoiceMatchesSummary } from '../src/taobao-flash-browser.mjs';
 
 class FakeBrowser {
   constructor() { this.submits = 0; this.statusCalls = 0; this.statusValue = 'pending_payment'; }
@@ -282,6 +283,15 @@ test('every live cart add is rejected when the intended item is missing or any p
   assert.deepEqual(bad.duplicates, ['*三米豆浆（450ml）请于两小时内饮用']);
   assert.deepEqual(bad.missing, ['皮蛋瘦肉粥']);
   assert.equal(bad.ok, false);
+});
+
+test('new label-only SKU cards still verify selected choices without inventing sold-out state', async () => {
+  assert.equal(optionChoiceMatchesSummary('已选：现蒸白糯米', '现蒸白糯米'), true);
+  assert.equal(optionChoiceMatchesSummary('已选：白糯米', '现蒸白糯米'), true);
+  assert.equal(optionChoiceMatchesSummary('已选：黑糯米', '现蒸白糯米'), false);
+  const source = await fs.readFile(new URL('../src/taobao-flash-browser.mjs', import.meta.url), 'utf8');
+  assert.match(source, /const box = \(card \|\| node\)\.getBoundingClientRect\(\)/);
+  assert.match(source, /target\.click\(\{ force: true \}\)/);
 });
 
 test('single-fruit cart verification accepts platform title variation but never a mixed fruit product', () => {
@@ -748,6 +758,12 @@ test('KFC starts with the signature four-item bundle and adds only uncovered exp
   assert.deepEqual(requestedStandaloneItems(spicyBundle, '主食：香辣鸡腿汉堡(辣) 小食：黄金鸡块(5块装) 甜品/小食：薯条(中) 饮料：百事可乐(冷/中)'), ['蛋挞']);
   assert.equal(preferredExactProduct([{ name: '劲爆鸡米花(小)' }], '鸡米花')?.name, '劲爆鸡米花(小)');
   assert.equal(preferredExactProduct([{ name: '桂花酸梅汤(大)' }], '酸梅汤')?.name, '桂花酸梅汤(大)');
+  assert.equal(preferredExactProduct([
+    { name: '草莓桃儿白糯米酸奶奶昔', price: 24, buttonIndex: 0 },
+  ], '草莓桃儿白糯米酸奶昔')?.name, '草莓桃儿白糯米酸奶奶昔');
+  assert.equal(preferredExactProduct([
+    { name: '草莓桃儿白糯米酸奶茶', price: 24, buttonIndex: 0 },
+  ], '草莓桃儿白糯米酸奶昔'), null);
   assert.equal(preferredExactProduct([
     { name: '桂花酸梅汤(大)', buttonIndex: 7 },
     { name: '鸡茸玉米汤', buttonIndex: 9 },

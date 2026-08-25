@@ -138,7 +138,9 @@ test('private saves avoid repeated full chat serialization on the tap path',()=>
   assert.match(app,/function messageArchiveStamp\(store\)/);
   assert.match(app,/_heavyReady\.has\('messages'\)&&_heavyStamp\.messages===stamp/);
   assert.match(app,/requestIdleCallback\(\(\)=>\{_saveIdleHandle=0;if\(_savePending\)saveNow\(\)/);
-  assert.match(app,/native&&requested>0\?Math\.max\(700,requested\):requested/);
+  assert.match(app,/const PRIVATE_NATIVE_SAVE_GAP_MS=15000/);
+  assert.match(app,/gap=native&&requested>0&&_saveLast\?Math\.max\(0,PRIVATE_NATIVE_SAVE_GAP_MS-\(Date\.now\(\)-_saveLast\)\):0/);
+  assert.match(app,/native&&requested>0\?Math\.max\(700,requested,gap\):requested/);
 });
 
 test('inactive native helpers do not keep waking the main thread',()=>{

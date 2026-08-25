@@ -13,6 +13,8 @@ const order={
 const requests=[];
 const replies=[];
 const opened=[];
+const sheets=[];
+const messages=[{id:'delivery-card-1',type:'deliveryorder',orderId:order.id,remoteId:order.remoteId,order:{...order}}];
 const ctx={
   console,URL,AbortController,JSON,Date,Math,Promise,Number,String,Array,Object,RegExp,
   COMPANION_URL:'https://delivery.example.test',COMPANION_KEY:'public-test-key',APP_VER:'v-test',
@@ -21,9 +23,9 @@ const ctx={
   privateNativeAppOn(){return false;},save(){},render(){},toast(){},uid(){return 'test-id';},
   actId(){return'main';},
   getC(id){return id===role.id?role:null;},cur(){return{p:'home'};},
-  msgs(){return[];},
+  msgs(id){return id===role.id?messages:[];},
   scheduleReply(id,note){replies.push({id,note});return true;},
-  esc:value=>String(value),av:value=>String(value),openModal(){},closeModal(){},
+  esc:value=>String(value),av:value=>String(value),openModal(html){sheets.push(String(html));},closeModal(){},
   document:{hidden:false,getElementById(){return null;},addEventListener(){}},
   setInterval(){return 1;},setTimeout(){return 1;},clearTimeout(){},addEventListener(){},
   open(url,target,features){opened.push({url,target,features});},
@@ -37,6 +39,11 @@ ctx.fetch=async(_url,init)=>{
 
 vm.runInNewContext(source,ctx,{filename:'delivery.js'});
 ctx.S.food.real.enabled=true;
+
+ctx.deliveryOpenChatOrder(role.id,messages[0].id);
+assert.match(sheets.at(-1),/<small>订单状态<\/small><b>订单已提交<\/b>/,'an existing pending checkout opens as a submitted order after an update');
+assert.doesNotMatch(sheets.at(-1),/<small>订单状态<\/small><b>待付款<\/b>/,'the role chat-card detail no longer exposes the internal pending-payment label');
+assert.doesNotMatch(sheets.at(-1),/我已确认付款/,'the detail remains visually clean without a manual confirmation button');
 
 ctx.deliveryLaunchPay(order.id);
 assert.equal(opened.length,1,'the official payment handoff opens exactly once');
@@ -54,7 +61,8 @@ assert.match(replies[0].note,/平台确认处于「已付款」/);
 
 const prompt=ctx.deliveryRolePrompt(role);
 assert.match(prompt,/"status":"paid"/,'later role replies keep the confirmed order status');
-assert.match(prompt,/绝不能仅凭旧的“待付款”状态指责TA没付款或没吃/,'a stale platform state cannot override the user current statement');
+assert.match(prompt,/order_submitted/,'a submitted checkout remains a durable order fact for later role turns');
+assert.match(prompt,/绝不能拿旧同步结果指责TA没付款或没吃/,'a stale platform state cannot override the user current statement');
 
 await ctx.deliverySyncPaymentReturn('focus');
 assert.equal(requests.filter(item=>item.action==='order_status').length,1,'a confirmed order is never polled twice by the return hook');

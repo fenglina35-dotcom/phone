@@ -131,6 +131,15 @@ export function normalizeOptionPanelGroups(value = []) {
   return groups;
 }
 
+export function optionChoiceMatchesSummary(summary = '', label = '') {
+  const key = value => clean(value, 240).toLowerCase().replace(/[\s·•，,。:：；;、（）()【】\[\]"'“”‘’/\\+＋\-]/g, '');
+  const selected = key(summary); const wanted = key(label);
+  if (!selected || !wanted) return false;
+  if (selected.includes(wanted)) return true;
+  const core = wanted.replace(/^(?:默认|现蒸|现做|现煮|现烤|现炸|新鲜现做|招牌|经典)/, '');
+  return core.length >= 2 && selected.includes(core);
+}
+
 export function missingSelectedOptionRequirements(actualValue, selectedLabels = []) {
   const canonicalize = value => clean(value, 1000).toLowerCase()
     .replace(/火腿[巴扒]麦满分/g, '火腿扒麦满分')
@@ -170,6 +179,28 @@ function comparableProductKey(value) {
   return knownRouteKey(value)
     .replace(/^(?:手工|招牌|特色|经典)+/u, '')
     .replace(/牛肉拉面/g, '牛肉面');
+}
+
+function productKeysEquivalent(left, right) {
+  if (!left || !right) return false;
+  if (left === right) return true;
+  // Real menu titles occasionally repeat one Han character while the search
+  // keyword does not (for example “酸奶奶昔” vs “酸奶昔”).  Accept only a
+  // single adjacent duplicate and only when the complete remaining title is
+  // identical.  This fixes a platform-title typo without weakening matching
+  // to arbitrary fuzzy or two-character containment.
+  const removeOneAdjacentDuplicate = value => {
+    const chars = Array.from(value);
+    const variants = [];
+    for (let index = 1; index < chars.length; index += 1) {
+      if (chars[index] !== chars[index - 1] || !/\p{Script=Han}/u.test(chars[index])) continue;
+      variants.push(chars.slice(0, index).concat(chars.slice(index + 1)).join(''));
+    }
+    return variants;
+  };
+  return Array.from(left).length >= 4 && Array.from(right).length >= 4
+    && (removeOneAdjacentDuplicate(left).includes(right)
+      || removeOneAdjacentDuplicate(right).includes(left));
 }
 
 export function merchantNameMatchScore(requested, candidate) {
@@ -287,7 +318,8 @@ export function productMatchesSavedItem(candidateName, savedItemName) {
   const comparableCandidate = comparableProductKey(candidateName);
   const comparableTarget = comparableProductKey(savedItemName);
   if (candidate === target || candidate.includes(target)
-    || comparableCandidate === comparableTarget || comparableCandidate.includes(comparableTarget)) return true;
+    || productKeysEquivalent(comparableCandidate, comparableTarget)
+    || comparableCandidate.includes(comparableTarget)) return true;
   // Explicit pack requests commonly have flavour/weight copy inserted between
   // the product and pack words (for example “薯片原味…大礼包”).  Accept the
   // separated adjacent fragments only when the user also asked for a pack;
@@ -409,7 +441,8 @@ export function preferredExactProduct(items, itemName, { allowContainedAlias = f
       const name = clean(item?.name, 240);
       const key = comparableProductKey(name);
       const undecoratedName = name.replace(/^(?:(?:[（(【[]\s*)?(?:招牌|热销|推荐)(?:\s*[）)】\]])?[\s·:：-]*)+/u, '');
-      const rank = (name.startsWith(targetText) || undecoratedName.startsWith(targetText)) ? 0 : (key === targetKey || key.startsWith(targetKey)) ? 1 : 2;
+      const rank = (name.startsWith(targetText) || undecoratedName.startsWith(targetText)) ? 0
+        : (productKeysEquivalent(key, targetKey) || key.startsWith(targetKey)) ? 1 : 2;
       return { item, index, rank, length: name.length };
     })
     .sort((left, right) => left.rank - right.rank || left.length - right.length || left.index - right.index)[0];
@@ -3977,8 +4010,11 @@ export class TaobaoFlashBrowser {
         if (!labelNode) return false;
         await labelNode.scrollIntoViewIfNeeded().catch(() => {});
         const point = await labelNode.evaluate(node => {
-          const card = node.closest('.sku-option__root');
-          const box = card?.getBoundingClientRect();
+          // Eleme serves multiple SKU DOM versions. Newer cards can leave the
+          // exact visible label as the only stable target; clicking it bubbles
+          // to the real React option and must not be mistaken for sold-out.
+          const card = node.closest('.sku-option__root, [role="radio"], [role="option"], [aria-checked], [aria-selected], button, [class*="sku-option"], [class*="spec-option"]');
+          const box = (card || node).getBoundingClientRect();
           return box && box.width > 0 && box.height > 0
             ? { x: box.x + box.width / 2, y: box.y + box.height / 2 }
             : null;
@@ -3987,9 +4023,16 @@ export class TaobaoFlashBrowser {
         await this.tapPoint(page, point.x, point.y);
         return true;
       };
+      const choiceNodeSelected = target => target.evaluate(node => {
+        for (let current = node, depth = 0; current && depth < 6; current = current.parentElement, depth += 1) {
+          if (current.getAttribute('aria-checked') === 'true' || current.getAttribute('aria-selected') === 'true') return true;
+          if (/(?:^|[\s_-])(?:is-)?selected(?:$|[\s_-])|(?:^|[\s_-])checked(?:$|[\s_-])/.test(String(current.className || '').toLowerCase())) return true;
+        }
+        return false;
+      }).catch(() => false);
       const waitForSelectedChoice = async label => {
         let summary = await selectedSummary();
-        for (let attempt = 0; attempt < 12 && !summary.includes(label); attempt += 1) {
+        for (let attempt = 0; attempt < 12 && !optionChoiceMatchesSummary(summary, label); attempt += 1) {
           await page.waitForTimeout(100);
           summary = await selectedSummary();
         }
@@ -4004,8 +4047,8 @@ export class TaobaoFlashBrowser {
           const target = await this.visibleLocator(panel.getByText(choice.label, { exact: true }), true);
           if (!target) throw new Error(`平台规格“${choice.label}”当前不可选择，请重新搜索`);
           let summary = await selectedSummary();
-          if (!summary.includes(choice.label)) {
-            const current = (group.choices || []).find(item => summary.includes(item.label));
+          if (!optionChoiceMatchesSummary(summary, choice.label) && !await choiceNodeSelected(target)) {
+            const current = (group.choices || []).find(item => optionChoiceMatchesSummary(summary, item.label));
             const currentMinus = current && current.label !== choice.label
               ? await choiceStepperPoint(current.label, 'minus') : null;
             const desiredPlus = await choiceStepperPoint(choice.label, 'plus');
@@ -4023,8 +4066,12 @@ export class TaobaoFlashBrowser {
               // check, so wait adaptively for the genuine “已选” text.
               if (!await tapChoiceCard(choice.label)) throw new Error(`平台规格“${choice.label}”当前不可点击，请重新搜索`);
               summary = await waitForSelectedChoice(choice.label);
+              if (!optionChoiceMatchesSummary(summary, choice.label) && !await choiceNodeSelected(target)) {
+                await target.click({ force: true }).catch(() => target.evaluate(node => node.click()).catch(() => {}));
+                summary = await waitForSelectedChoice(choice.label);
+              }
             }
-            if (!summary.includes(choice.label)) throw new Error(`平台没有真实选中规格“${choice.label}”，本轮已停止`);
+            if (!optionChoiceMatchesSummary(summary, choice.label) && !await choiceNodeSelected(target)) throw new Error(`平台没有真实选中规格“${choice.label}”，本轮已停止`);
           }
           if (collectLabels) selectedLabels.push(`${group.name}：${choice.label}`);
         }

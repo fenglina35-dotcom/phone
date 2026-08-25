@@ -160,7 +160,7 @@ assert.equal(repeatContext.repeated('r1','刚忙完，突然想听听你今天�
 assert.equal(repeatContext.repeated('r1','那你想听什么？'),false,'user text must not be treated as a prior assistant reply');
 assert.match(source,/initiativeNoteActive\(note\)&&initiativeRecentlyRepeated\(id,content\)/,'all proactive deliveries must pass the semantic duplicate guard');
 assert.match(functionSource('wechatNaturalInitiativePlan'),/独立新事件/,'local proactive contact must be framed as a new event');
-assert.match(functionSource('wechatNaturalInitiativePlan'),/主动关心:你决定的品牌和具体商品/,'a role may autonomously order unpaid food only from real recent meal-neglect evidence');
+assert.match(functionSource('wechatNaturalInitiativePlan'),/主动关心；门店=你决定的一家具体门店；商品=你决定的全部具体商品/,'a role may autonomously order unpaid food only through a complete current structured action');
 assert.match(functionSource('wechatNaturalInitiativePlan'),/不是等待你继续回答的当前回合/,'recent chat must be background rather than an unanswered turn');
 assert.match(functionSource('initiativeQueueNote'),/roleServerPushConversationBoundary\(c\)/,'every foreground proactive generation must carry a completed-turn boundary');
 assert.doesNotMatch(functionSource('initiativeMemory'),/initiativeRecentUser\(c\)/,'memory retrieval must not be seeded from the final completed user message');

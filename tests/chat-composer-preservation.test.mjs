@@ -64,6 +64,22 @@ assert.ok(render.indexOf('restoreChatComposer(c,_composerState)') > render.index
 const refresh = functionSource('refreshChatMessages');
 assert.match(refresh, /cb\.innerHTML=chatMessageListHTML\(id,c\)/, 'incoming messages must repaint only the message list');
 assert.doesNotMatch(refresh, /app\.innerHTML|render\(\)/, 'incoming message refresh must never replace the composer');
+assert.match(refresh, /if\(stick\)chatPinBottom\(cb\)/, 'a message-list refresh must keep a bottom-pinned conversation stable');
+
+const pinBottom = functionSource('chatPinBottom');
+const pinFrames = [];
+const pinBox = {isConnected: true, scrollHeight: 900, clientHeight: 600, scrollTop: 0};
+const pinContext = vm.createContext({Math, requestAnimationFrame: fn => pinFrames.push(fn)});
+vm.runInContext(`${pinBottom}\nchatPinBottom(box)`, Object.assign(pinContext, {box: pinBox}));
+assert.equal(pinBox.scrollTop, 300, 'the reply must pin to the final layout synchronously instead of first scrolling toward a stale height');
+pinBox.scrollHeight = 930;
+pinFrames.shift()();
+assert.equal(pinBox.scrollTop, 330, 'the next paint may correct late layout growth without an animated bounce');
+assert.doesNotMatch(pinBottom, /scrollTo\(|smooth/, 'iOS WebView must not animate while the typing bubble is being replaced');
+
+const appendChat = functionSource('appendChatHTML');
+assert.match(appendChat, /typing\.remove\(\)[\s\S]*if\(stick\)chatPinBottom\(cb\)/, 'the typing bubble must be replaced before the final bottom position is applied');
+assert.doesNotMatch(appendChat, /behavior:\s*['"]smooth['"]/, 'role replies must not start a competing smooth scroll');
 
 const serverPull = functionSource('roleServerPushPull');
 assert.match(serverPull, /if\(cur\(\)\.p==='chat'\)refreshChatMessages\(cur\(\)\.id\)/, 'server push pull must preserve the open composer');

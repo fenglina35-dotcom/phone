@@ -88,7 +88,9 @@ assert.equal(role.deliveryWallet.balance,100,'the retired role wallet is never d
 assert.equal(role.deliveryWallet.spentToday,0);
 assert.equal(chatMessages.length,1,'a complete unpaid order with an official QR becomes one chat card');
 assert.equal(notices.length,2,'the role receives one clarification prompt and one final result prompt');
-assert.match(notices[1].note,/当前仍是“待付款”，并未付款/,'the role fact must preserve the real unpaid state without claiming payment');
+assert.match(notices[1].note,/真实外卖已经提交，平台已经生成这笔真实订单/,'the role must know that the checkout card represents a submitted real order');
+assert.doesNotMatch(notices[1].note,/当前仍是“待付款”，并未付款/,'the role must not narrate the internal pending-payment label');
+assert.match(notices[1].note,/平台没有返回付款结果时也不要擅自声称已经付款/,'submitted must not be misrepresented as a confirmed payment');
 assert.match(notices[1].note,/禁止提到“卡片”“系统”“二维码”“付款入口”“收银台”/,'the model prompt must keep payment UI jargon out of the role reply');
 assert.match(notices[1].note,/禁止说“自己去付款”/,'the role must not issue a system-like payment command');
 assert.equal(intermediateModelCalls,0,'candidate and option automation must finish without a second model request');

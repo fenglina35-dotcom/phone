@@ -730,10 +730,22 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                         return
                     }
                     if let currentData,
-                       self.nativeStorageRecord(from: currentData) != nil {
+                       let current = self.nativeStorageRecord(from: currentData) {
                         let backupURL = self.nativeStorageBackupURL(for: url)
-                        try currentData.write(to: backupURL, options: .atomic)
-                        try self.applyNativeStorageProtection(to: backupURL)
+                        let backupData = try? Data(contentsOf: backupURL)
+                        let backupRecord = backupData.flatMap {
+                            self.nativeStorageRecord(from: $0)
+                        }
+                        let currentSavedAt = self.nativeStorageSavedAt(in: current)
+                        let backupSavedAt = backupRecord.map {
+                            self.nativeStorageSavedAt(in: $0)
+                        } ?? 0
+                        let shouldRefreshBackup = backupSavedAt <= 0 ||
+                            currentSavedAt - backupSavedAt >= 300_000
+                        if shouldRefreshBackup {
+                            try currentData.write(to: backupURL, options: .atomic)
+                            try self.applyNativeStorageProtection(to: backupURL)
+                        }
                     }
                     try data.write(to: url, options: .atomic)
                     try self.applyNativeStorageProtection(to: url)

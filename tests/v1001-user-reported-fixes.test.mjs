@@ -134,7 +134,7 @@ test('an explicit request to post the previous announcement photo cannot silentl
   assert.match(explicit, /配图\|带图\|照片\|图片\|官宣照\|生图\|生成/);
   const generate = functionSource(app, 'roleMomentGenerateRequestedImage');
   assert.match(generate, /for\(let attempt=0;attempt<2;attempt\+\+\)/);
-  assert.match(generate, /await genImage\(prompt\)/);
+  assert.match(generate, /await genImage\(prompt,\{roleId:c\.id\}\)/);
   const post = functionSource(app, 'postRoleMoment');
   assert.match(post, /roleMomentReferencedChatImage\(c,opt\)/);
   assert.match(post, /roleMomentGenerateRequestedImage\(c,tx,opt\)\.then/);

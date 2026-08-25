@@ -22,6 +22,9 @@ assert.match(delivery,/function orderEtaText\(order,withClock\)\{var exact=safeE
 assert.match(delivery,/syncRoleOrderCard\(order\)[\s\S]*?refreshChatMessages\(order\.roleId\)/,'payment QR, amount, and ETA updates must rerender the visible role chat card immediately');
 assert.match(delivery,/平台暂未给出预计送达时间/,'missing ETA must be disclosed instead of invented');
 assert.match(delivery,/可以截图后，在支付宝“扫一扫”中从相册选择/,'the official payment QR must explain the screenshot workflow');
+assert.match(delivery,/function orderStatusText\(o\)\{return o&&\(o\.status==='created'\|\|o\.status==='pending_payment'\)\?'订单已提交'/,'the role chat card must present a generated checkout as a submitted order');
+assert.match(delivery,/<small>订单状态<\/small><b>'\+esc\(orderStatusText\(o\)\)/,'the opened chat-card detail must use the submitted-order label too');
+assert.doesNotMatch(delivery,/deliveryConfirmPayment/,'the chat-card detail must not add a manual payment confirmation button');
 assert.match(delivery,/请严格按你自己的完整人设、当前关系和说话习惯/,'the short companion reply must remain persona-driven');
 assert.doesNotMatch(delivery,/只按你自己的说话习惯自然说一句让对方查看卡片/,'the role must not be prompted to narrate the card UI');
 assert.match(delivery,/禁止提到“卡片”“系统”“二维码”“付款入口”“收银台”/,'the role result must stay natural and must not expose payment UI instructions');

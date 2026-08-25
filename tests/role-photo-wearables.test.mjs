@@ -86,7 +86,7 @@ promptContext.msgs=()=>[
 assert.equal(promptContext.rolePhotoContextRequest({id:'c1'}),'拍一下窗外夜景');
 
 assert.match(app,/先结合最近几句对话提取主体、颜色、款式和构图/);
-assert.match(app,/imageGenerateExternal\(base,key,model,prompt,'1024x1536'\)/);
+assert.match(app,/imageGenerateExternal\(base,key,model,prompt,'1024x1536','medium',\{references\}\)/);
 assert.match(backend,/image-feature-retired/);
 assert.doesNotMatch(backend,/guardedChatImagePrompt|generateImageThroughRoute/);
 
