@@ -31,12 +31,27 @@ for(const [name,source] of [['web',root],['private bundle',bundle]]){
   assert.equal(ctx.roleImageWardrobePick(c,'他在家里客厅准备睡觉').id,'sleep');
   assert.equal(ctx.roleImageWardrobePick(c,'他正在医院值班').id,'work');
   assert.equal(ctx.roleImageWardrobePick(c,'在家里穿白色医生工服拍照').id,'work','explicit outfit name overrides scene');
+  const sparse={id:'c2',imageStudio:{enabled:true,faceMode:'hidden',identityRefs:[],outfits:[
+    {id:'only-home',name:'灰色家居服',occasion:'home',image:'only-home-ref',note:'灰色棉质'},
+    {id:'only-work',name:'深色工作服',occasion:'work',image:'only-work-ref',note:'深色制服'},
+  ]}};
+  assert.equal(ctx.roleImageWardrobePick(sparse,'在健身房跑步').id,'only-home',`${name}: a missing occasion still chooses an enabled wardrobe item`);
   const prompt=ctx.roleImageStudioPrompt(c,{scene:'他正在医院整理病历',requestText:'工作室里拍一张半身照'});
   assert.match(prompt,/角色形象工作室·替代旧外观提示词/);
   assert.match(prompt,/白色医生工服/);
+  assert.match(prompt,/【衣柜唯一服装ID:work】/);
+  assert.match(prompt,/衣柜服装硬锁·最高优先级/);
+  assert.match(prompt,/禁止生成、替换、叠穿或额外添加衣柜外/);
   const scene=ctx.roleImageStudioPrompt(c,{scene:'桌上的咖啡',objectOnly:true});
   assert.match(scene,/ZERO PEOPLE, NO CHARACTER IN FRAME/);
   assert.deepEqual(Array.from(ctx.roleImageGenerateOptions(c,prompt).references),['face-front','work-ref']);
+  assert.equal(ctx.roleImageGenerateOptions(c,prompt).outfitId,'work',`${name}: prompt and API references keep the same selected outfit`);
+  const sparsePrompt=ctx.roleImageStudioPrompt(sparse,{scene:'在健身房跑步',requestText:'穿红色运动服在健身房跑步'});
+  assert.match(sparsePrompt,/【衣柜唯一服装ID:only-home】/);
+  assert.match(sparsePrompt,/场景分类没有对应衣服时，本次选择仍然有效/);
+  assert.equal(ctx.roleImageGenerateOptions(sparse,sparsePrompt).outfitId,'only-home');
+  const empty={id:'empty',imageStudio:{enabled:true,faceMode:'hidden',identityRefs:[],outfits:[]}};
+  assert.match(ctx.roleImageGenerateOptions(empty,ctx.roleImageStudioPrompt(empty,{scene:'在客厅拍照'})).blockedReason,/衣柜里没有已启用的衣服/);
   assert.equal(ctx.roleImageStudioTestObjectOnly('坐在沙发上拿着鞭子'),false,`${name}: studio tests default to the role being present`);
   assert.equal(ctx.roleImageStudioTestObjectOnly('只拍沙发和鞭子，不要人物'),true,`${name}: an explicit people exclusion stays object-only`);
   const personTest=ctx.roleImageStudioPrompt(c,{scene:'坐在沙发上拿着鞭子',requestText:'坐在沙发上拿着鞭子',objectOnly:ctx.roleImageStudioTestObjectOnly('坐在沙发上拿着鞭子')});
@@ -84,4 +99,7 @@ for(const [name,source] of [['web',root],['private bundle',bundle]]){
   assert.match(source,/scene=studio\?rawScene:sanitizeRolePhotoScene\(rawScene\)/,`${name}: chat images preserve the real request whenever the studio is enabled`);
   assert.match(source,/safe=studio\?\(raw\|\|String\(text\|\|''\)\.slice\(0,180\)\):sanitizeRolePhotoScene/,`${name}: social images also bypass the old face-mask rewrite`);
   assert.match(source,/body=faceMode==='required'\?roleImageStudioVisibleScene\(prompt\)/,`${name}: retries clean legacy phone-cover text before the image request`);
+  assert.match(source,/ABSOLUTE WARDROBE RULE/,`${name}: final provider prompt receives an English wardrobe hard lock`);
+  assert.match(source,/if\(opt\.blockedReason\)throw new Error\(opt\.blockedReason\)/,`${name}: an empty wardrobe cannot silently generate arbitrary clothing`);
+  assert.match(source,/场景没有对应分类时，也会从衣柜其余已启用衣服中挑一件/,`${name}: UI explains the strict fallback behavior`);
 }
