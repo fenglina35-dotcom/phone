@@ -122,13 +122,54 @@ test('a precise merchant and product reply stays actionable without repeating �
   assert.deepEqual(searches[0].items,['草莓桃儿白糯米酸奶昔']);
 });
 
+test('a natural brand product and specification starts on the first current ordering turn',async()=>{
+  const request='百分茶的暴打土芭乐柠檬茶，不另加糖';
+  const {ctx,searches,merchants,meta}=makeRuntime(request);
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  delete ctx.S.food.real.roleAttempts['role-1'];
+  ctx.S.food.real.roleTasks={};
+  meta.userText=request;
+  await ctx.deliveryTryExplicitApprovalFallback('role-1',request,'等我看看。',meta);
+  assert.deepEqual(merchants,['百分茶']);
+  assert.deepEqual(searches,[{taskId:'delivery_id-1',items:['暴打土芭乐柠檬茶']}]);
+  const task=Object.values(ctx.S.food.real.roleTasks)[0];
+  assert.match(task.query,/门店=百分茶；商品=暴打土芭乐柠檬茶；规格=不另外加糖/);
+});
+
+test('a malformed current structured action is repaired from the natural brand product sentence',async()=>{
+  const request='百分茶的暴打土芭乐柠檬茶，不另加糖';
+  const {ctx,searches,merchants,meta}=makeRuntime(request);
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  delete ctx.S.food.real.roleAttempts['role-1'];
+  ctx.S.food.real.roleTasks={};
+  meta.userText=request;
+  await ctx.deliveryHandleRoleRequest('role-1','用户明确',meta);
+  assert.deepEqual(merchants,['百分茶']);
+  assert.deepEqual(searches,[{taskId:'delivery_id-1',items:['暴打土芭乐柠檬茶']}]);
+  const task=Object.values(ctx.S.food.real.roleTasks)[0];
+  assert.match(task.query,/规格=不另外加糖/);
+});
+
+test('history refusal and opinion sentences never enter the natural ordering bridge',async()=>{
+  for(const request of ['我以前喝过百分茶的暴打土芭乐柠檬茶','不要点百分茶的暴打土芭乐柠檬茶','你觉得百分茶的暴打土芭乐柠檬茶怎么样']){
+    const {ctx,searches,meta}=makeRuntime(request);
+    delete ctx.S.food.real.roleClarifications['role-1'];
+    delete ctx.S.food.real.roleAttempts['role-1'];
+    ctx.S.food.real.roleTasks={};
+    meta.userText=request;
+    assert.equal(await ctx.deliveryTryExplicitApprovalFallback('role-1',request,'等我看看。',meta),false,request);
+    assert.equal(ctx.deliveryMissingActionRepairPrompt('role-1',request,'等我看看。',meta),'',request);
+    assert.equal(searches.length,0,request);
+  }
+});
+
 test('a precise merchant and product turn reaches genuine-model repair even with an unusual role reply',()=>{
   const {ctx,meta}=makeRuntime('李若桃家的：草莓桃儿白糯米酸奶昔');
   delete ctx.S.food.real.roleClarifications['role-1'];
   meta.userText='李若桃家的：草莓桃儿白糯米酸奶昔';
   const prompt=ctx.deliveryMissingActionRepairPrompt('role-1',meta.userText,'我来处理。',meta);
   assert.match(prompt,/你的当前真实决定是唯一授权/);
-  assert.match(prompt,/不要因为缺少“点”字而漏掉/);
+  assert.match(prompt,/不要因为缺少“点”字(?:或冒号)?而漏掉/);
 });
 
 test('a later fresh message can retry the same precise item without being swallowed by the prior task',async()=>{
