@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1079 · 图文照片卡与吃货豆红包修复版'/);
+  assert.match(app,/APP_VER='v1080 · 外卖角色回执真实性修复版'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1079/);
-  assert.match(html,/sw\.js\?v=1079&r=v1079-photo-text-card-points-coupon-1/);
+  assert.match(html,/north-sw-reloaded-1080/);
+  assert.match(html,/sw\.js\?v=1080&r=v1080-real-delivery-role-ack-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{

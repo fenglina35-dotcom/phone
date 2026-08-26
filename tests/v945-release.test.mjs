@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1045 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1079 · 图文照片卡与吃货豆红包修复版'/);
-  assert.match(app,/const url='sw\.js\?v=1079&r=v1079-photo-text-card-points-coupon-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1079'/);
-  assert.match(html,/app\.js\?v=1079/);
-  assert.match(sw,/const BUILD='1079'/);
-  assert.match(sw,/north-shell-v1079/);
-  assert.match(index,/小手机\.html\?v=1079/);
-  assert.match(repair,/小手机\.html\?v=1079/);
+  assert.match(app,/APP_VER='v1080 · 外卖角色回执真实性修复版'/);
+  assert.match(app,/const url='sw\.js\?v=1080&r=v1080-real-delivery-role-ack-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1080'/);
+  assert.match(html,/app\.js\?v=1080/);
+  assert.match(sw,/const BUILD='1080'/);
+  assert.match(sw,/north-shell-v1080/);
+  assert.match(index,/小手机\.html\?v=1080/);
+  assert.match(repair,/小手机\.html\?v=1080/);
 });
 
-test('the private iOS package embeds web v1079 and keeps 1.0.204 delivery',()=>{
-  assert.match(privateBundle,/<string>1079<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.204;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 204;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.204 \(204\)'/);
+test('the private iOS package embeds web v1080 and keeps 1.0.205 delivery',()=>{
+  assert.match(privateBundle,/<string>1080<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.205;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 205;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.205 \(205\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

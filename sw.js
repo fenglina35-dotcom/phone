@@ -1,6 +1,6 @@
-const BUILD='1079';
-const HOTFIX='v1079-photo-text-card-points-coupon-1';
-const SHELL_CACHE='north-shell-v1079';
+const BUILD='1080';
+const HOTFIX='v1080-real-delivery-role-ack-1';
+const SHELL_CACHE='north-shell-v1080';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];

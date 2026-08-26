@@ -29,6 +29,11 @@ assert.match(delivery,/请严格按你自己的完整人设、当前关系和说
 assert.doesNotMatch(delivery,/只按你自己的说话习惯自然说一句让对方查看卡片/,'the role must not be prompted to narrate the card UI');
 assert.match(delivery,/禁止提到“卡片”“系统”“二维码”“付款入口”“收银台”/,'the role result must stay natural and must not expose payment UI instructions');
 assert.match(delivery,/禁止说“自己去付款”/,'the role must not order the user around with system-like payment wording');
+assert.match(delivery,/featureEventNote\('真实外卖订单已提交',fact\)/,'a submitted order must be delivered as a durable feature event instead of a discardable proactive message');
+assert.match(delivery,/明确使用第一人称“我”/,'the role must personally acknowledge that it placed the order');
+assert.match(delivery,/不能只发送订单卡片后保持沉默/,'the card must be followed by a genuine persona reply');
+assert.match(delivery,/禁止催TA“快去付款”/,'the role must never turn the order acknowledgement into a payment command');
+assert.match(delivery,/只有平台确实返回已付款才能说已经付款/,'payment may only be claimed from a real paid platform status');
 assert.match(delivery,/平台本次唯一可信的预计送达时间/,'the role must receive the same exact ETA window used by the card');
 assert.match(delivery,/不得沿用历史聊天中的十五分钟、四十分钟或其他旧时间/,'old fallback ETA language must not override the current platform window');
 assert.match(delivery,/if\(data\.imageUrl!=null\)\{var paidImage=/,'a real image returned at cashier time must update the live order and visible card');

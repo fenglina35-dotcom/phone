@@ -30,6 +30,8 @@ assert.match(delivery,/全部打烊或休息中/,'closed saved shops must be rep
 assert.match(delivery,/不要复述技术提示/,'the role must not paste internal delivery diagnostics into chat');
 assert.doesNotMatch(delivery,/\[真实外卖操作结果\]/,'internal delivery-operation prompts must never be sent into role chat');
 assert.match(delivery,/失败原因已经由系统在外卖控制页提示/,'the role prompt must keep failure details out of chat');
+assert.match(delivery,/订单卡片只负责展示真实订单明细/,'the card must not replace the role acknowledgement');
+assert.match(delivery,/不能因为已经发送订单卡片而保持沉默/,'a completed order must still receive a first-person persona reply');
 assert.match(delivery,/你可以按人设追问，也可以直接自主决定/,'a vague food wish may be clarified or become the role current-turn autonomous choice');
 assert.match(delivery,/这就已经是完整答案：不要再追问品牌、商品、口味、糖度、温度或规格/,'an autonomous order grant must not trigger another clarification loop');
 assert.match(delivery,/function roleRequestIntent/,'the browser request must retain actual user messages separately from role search text');
