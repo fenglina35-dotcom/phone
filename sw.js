@@ -1,6 +1,6 @@
-const BUILD='1078';
-const HOTFIX='v1078-time-date-memory-phone-friend-1';
-const SHELL_CACHE='north-shell-v1078';
+const BUILD='1079';
+const HOTFIX='v1079-photo-text-card-points-coupon-1';
+const SHELL_CACHE='north-shell-v1079';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];

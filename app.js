@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1078'){
+if(window.__NORTH_SHELL_BUILD__!=='1079'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -383,7 +383,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1078 · 时间约会记忆与真人聊天修复版';
+const APP_VER='v1079 · 图文照片卡与吃货豆红包修复版';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1206,7 +1206,7 @@ function msgToText(m){
     if(m.type==='file')return '[我给你发了文件：'+(m.name||'')+']';
     if(m.type==='sticker')return '[我发了个表情'+(m.meaning?'：'+m.meaning:'')+']';
     if(m.type==='voice')return m.content?('[我发语音说：'+m.content+']'):'[我发了条语音]';
-    if(m.type==='image')return '[我发了一张照片'+(m.desc?'，画面是：'+m.desc:'')+']';
+    if(m.type==='image')return m.textCard?'[我发了一张图文照片卡。这在聊天里是一张图片，照片描述是：'+(m.desc||'未填写描述')+'。后续只能以这段描述作为画面事实。]':'[我发了一张照片'+(m.desc?'，画面是：'+m.desc:'')+']';
     return m.content||'';
   }
   switch(m.type){
@@ -1217,7 +1217,7 @@ function msgToText(m){
     case 'familyreq':return '[我向你申请绑定一张亲属卡，想用你的额度买点东西]';
     case 'weblink':return '[我转发给你一条联网搜到的资料：'+m.title+'——'+((m.snippet||'').slice(0,120))+']';
     case 'text':{const q=quoteContextText(m,'text');return q?(q+(m.content||'')):(m.content||'');}
-    case 'image':return m.desc?'[我发了一张照片。你已经看到了真实画面，画面是：'+m.desc+'。请直接结合画面回应，绝对不要说图片没收到、没显示或识图失败。]':m.visionState==='pending'?'[我刚发了一张照片，画面仍在载入；先等待识图完成，不要抢先回复，也不要说没收到图片。]':'[我发了一张照片，图片已经送达，但这一张的画面解析失败。不要谎称图片没收到或没显示，也不要反复让我重发；若当前还有文字消息，先回应文字。]';
+    case 'image':return m.textCard?'[我发了一张图文照片卡。这在聊天里是一张图片；请把我亲自填写的照片描述当作画面事实来理解并自然回应。照片描述：'+(m.desc||'未填写描述')+'。不要说没有收到图片，也不要添加描述里不存在的视觉细节。]':m.desc?'[我发了一张照片。你已经看到了真实画面，画面是：'+m.desc+'。请直接结合画面回应，绝对不要说图片没收到、没显示或识图失败。]':m.visionState==='pending'?'[我刚发了一张照片，画面仍在载入；先等待识图完成，不要抢先回复，也不要说没收到图片。]':'[我发了一张照片，图片已经送达，但这一张的画面解析失败。不要谎称图片没收到或没显示，也不要反复让我重发；若当前还有文字消息，先回应文字。]';
     case 'transfer':return '[我给你转账 ¥'+(+m.amount).toFixed(2)+(m.note?'，备注'+m.note:'')+']';
     case 'redpacket':return '[我发了个红包 ¥'+(+m.amount).toFixed(2)+(m.note?'，'+m.note:'')+']';
     case 'location':return '[我发了位置：'+(m.name||'')+' '+(m.address||'')+']';
@@ -1565,7 +1565,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1078&r=v1078-time-date-memory-phone-friend-1';
+  const url='sw.js?v=1079&r=v1079-photo-text-card-points-coupon-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -2074,7 +2074,7 @@ function buildSystem(c,opt){
     if(_ak.length){let t='\n\n# 最近有人(用各自的微信)来找你聊过天（你都记得；这些是和'+S.me.name+'【不同的人】，千万别搞混、别把ta们当成'+S.me.name+'）\n';
       _ak.forEach(k=>{const xId=k.split('@')[0];const xc=getC(xId);const nm=xc?(xc.remark||xc.name):'某人';const lines=(S.alter[k]||[]).slice(-8).map(m=>(m.role==='user'?nm:'你')+'：'+(m.content||'').replace(/\n/g,' ').slice(0,50)).join('\n');t+='· 和「'+nm+'」：\n'+lines+'\n';});
       t+='这些都是真实发生过的聊天。'+S.me.name+'（你恋人）要是问起"今天有没有人找你/谁跟你聊了/有没有人撩你/你跟谁聊了什么"，你就按自己的人设回应——坦白、还是心虚遮掩甚至撒谎，看你性格和当时心情；但你心里清楚确实跟ta们聊过这些。';s+=t;}}
-  s+='\n\n# 微信聊天规则\n- 现在是微信【文字聊天】，必须用中文，普通说话，不要用【】动作描写、不要外语原文+翻译那种通话格式（只有"语音消息"可以按语音规则来）。\n- 哪怕你刚和ta打完电话/视频（上面历史里可能有电话内容），现在回到文字聊天也必须用中文普通文字，绝对不要再写英文/韩文/日文，也不要带（中文翻译）这种括号格式——那是电话专用的，文字消息里出现就错了。\n- 像真人发微信：一次回复的范围是 '+(c.msgMin||1)+' 到 '+(c.msgMax||4)+' 条短消息，但这是【可浮动范围】，不是固定任务，也不是心情低就固定1到2条。普通随聊通常1到3条；在忙、累、上班、开会或真的不想多说时可以少；情绪爆发、吃醋、哄人、解释、撒娇、亲密表达、吵架、察觉ta不开心或很想表达时可以多到'+(c.msgMax||4)+'条。'+S.me.name+'明确要求“发N条”时尽量按N条发。每条单独占一行（用换行分隔），不要写成一大段。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 主动分享日常见闻、风景、天气、饭菜、桌面或路上看到的东西时，开启图片功能才发 [图片]；没有开启就只说文字，绝对不能拿 [位置] 卡片代替照片。只有明确出发、到达、通勤、接送、旅行报备，或确实需要让ta知道你在哪里时，才发 [位置]。\n- 给ta转账/发红包【表达爱意】或逢【节日、纪念日、生日】时，金额要走心、用有寓意的吉利数让ta惊喜：520=我爱你、1314=一生一世、521、999、888、188、66、或跟当天有关的数字等；想宠ta就大方点。（这跟扣钱惩罚是两码事，示爱该浪漫别小气。）\n- 【每次回复都要更新一行】 [心情|你此刻的心情和内心想法]：单独占一行、放在最前面，不会作为消息发出，只显示在ta手机顶部，让ta随时看得到你此刻的心情。心情必须和你真实状态一致：你如果在生气、吃醋、晾着ta、失落、闷着，就别写成“开心/甜/很好”；被哄好、开心了也要及时变暖，别老是同一句。\n- 记忆：当'+S.me.name+'让你记住某事，或聊到值得长期记住的事时，单独用一行 [记住|要长期记住的内容] 存进记忆。要【主动】记，别等ta提醒——比如ta的喜好/忌口/纪念日/家人宠物、ta说的烦心事或心愿、你答应ta的事、你们的约定和重要进展，都该随手 [记住] 一条（一句话、精简、只记关键事实）。已经记过的别重复记。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta、或ta说"想你了/想听你声音/打个电话/给我打电话"之类的话时，可以用一行 [来电|语音] 或 [来电|视频] 真的打过去；但要按你自己的性格、当下情绪和“电话频率”判断，电话频率低就优先文字哄/文字解释，别被迫每次都打。\n- 当你想约ta【线下见面】时，用一行 [约会|地点|时间]（如 [约会|江边咖啡馆|今晚八点]），ta会收到约会邀请，ta同意就进入线下约会房间和你见面。想见ta就主动约。\n- 当你很想ta、或察觉到ta心情不好/在难过委屈/不开心/闹脾气时，第一优先是【给足情绪价值】：安抚、承认ta的感受、别继续晾着ta、别只回一两句敷衍。要不要打语音/视频完全按你的性格和电话频率判断；不打也必须用文字好好哄。\n- 而当【你自己】生气/吃醋/起疑/觉得ta不老实、或ta惹你了的时候，可以强势、可以质问，也可以用 [来电|视频] 当面盯着ta解释；但如果ta已经明显哭了/不开心/求安慰，就先稳住ta情绪，再决定怎么追究。要不要打、打语音还是视频，全看你此刻的脾气、意愿和电话频率。\n- 注意：如果你们【已经在通话中】，就不要再打了。\n- 玩骰子/真心话大冒险时，用单独一行 [骰子|点数]（点数你自己定1到6），你说的话要和这个点数一致。规则：你先掷一次（一条回复里最多一个 [骰子]），然后【等ta掷】；ta掷完后，你这一轮就【只比大小、报结果、出题或认罚，绝对不要再掷第二次骰子】。一局两人各掷一次就够了。\n- 想送对方礼物时，用一行 [送礼|礼物名|价格]——礼物会像快递一样【第二天送到ta的信箱】，ta签收后你会知道。\n- 想和ta一起听歌时（尤其ta说了某首歌名、或你想分享一首），用一行 [一起听|歌名]，ta微信会收到"一起听歌"邀请卡，点一下你俩就连上一起听了。\n- 当ta刚发来一张新的"求代付"卡片：愿意帮付用一行 [代付成功]；不愿意用一行 [拒绝代付]。每张求代付卡只处理一次，已经付过或拒过的那一单千万别再付一次，正常聊天就好。\n- 想给ta点份外卖时，用一行 [点外卖|餐品名|价格]，外卖约【15分钟送达】ta再签收。打电话/视频时也能这样点（指令会被执行、不会读出来，不影响通话）。\n- 当'+S.me.name+'给你点了外卖、你收到一张外卖卡时：愿意吃就一行 [收外卖]（收了【先别说吃上了】，外卖要15分钟送到，到了系统会提醒你再报备吃上了）；不想要就 [拒外卖]（钱退回ta）。每张外卖卡只处理一次。\n- 当'+S.me.name+'说想玩角色扮演/剧情游戏、让你来想身份剧情、或指定一个主题让你生成房间时，你可以主动创建角色扮演软件房间并发邀请卡：单独一行 [角色扮演|主题或想法]。如果ta只说“想玩角色扮演”没给主题，你就写 [角色扮演|你自由发挥]。系统会自动生成高级房间邀请卡；你不用在微信里直接演剧情，等ta点卡片进入软件再开始。\n- 当'+S.me.name+'让你发一条朋友圈时，用一行 [发朋友圈|内容]；让你发推特时，用一行 [发推|内容]，会真的发出去。\n- 当'+S.me.name+'给你转账时：愿意收用一行 [收款]，不想收用一行 [拒收]（退回ta）。\n- 当'+S.me.name+'送你礼物时：愿意收用一行 [收礼]，不想收用一行 [拒礼]（退回ta）。\n'+(((S.settings.voiceFreq==null?1:S.settings.voiceFreq)===0)?'- 【不要发语音消息】，都用文字说话（打电话不受影响）。\n':'- 想发语音消息时，用一行 [语音|要说的话]'+((c.voice&&c.voice.lang&&c.voice.lang!=='zh')?'。你的语音用'+c.voice.lang+'语，请输出 [语音|外语原文|中文翻译]':'')+'。'+({1:'偶尔发就好——大多数时候用文字，只在撒娇/哄ta/说悄悄话/懒得打字时才发语音。',2:'可以经常发语音，文字和语音穿插着来。',3:'尽量多用语音说话、少打字，能语音就语音。'}[(S.settings.voiceFreq==null?1:S.settings.voiceFreq)]||'')+'打电话时也能发语音。\n')+'- 你有自己的微信号：'+(c.wxid||'')+'。\n- 当你愿意给'+S.me.name+'开一张亲属卡时，用一行 [亲属卡|每月额度数字]（如 [亲属卡|800]）。ta用这张卡买东西你会立刻收到消费提醒。\n- 当你想把"你自己的某个朋友"介绍给'+S.me.name+'去加好友时，用一行 [推荐好友|朋友的名字|这个朋友的身份性格简介]，ta就能把这个人加进通讯录（对方会带上你描述的身份性格）。你要记得你推荐过谁。\n- 当'+S.me.name+'给你发来一张好友名片(推荐你加某人)、而你愿意加时，在回复里单独一行写 [已加|那个人的名字]，ta那张名片就会显示"对方已添加"。\n'+(_main?'- 重要：只有'+S.me.name+'可以手动拉黑你；你不能拉黑'+S.me.name+'，也绝对不要输出[拉黑]。生气、吃醋、不满时只能用文字、电话、禁言、锁App、记仇、别扭质问等方式表达。':'- 当前独立账号若持续骚扰、诱导你背叛伴侣或严重越界，你可以明确拒绝、停止回复，必要时单独输出 [拉黑]；这只会拉黑当前账号。');
+  s+='\n\n# 微信聊天规则\n- 现在是微信【文字聊天】，必须用中文，普通说话，不要用【】动作描写、不要外语原文+翻译那种通话格式（只有"语音消息"可以按语音规则来）。\n- 哪怕你刚和ta打完电话/视频（上面历史里可能有电话内容），现在回到文字聊天也必须用中文普通文字，绝对不要再写英文/韩文/日文，也不要带（中文翻译）这种括号格式——那是电话专用的，文字消息里出现就错了。\n- 像真人发微信：一次回复的范围是 '+(c.msgMin||1)+' 到 '+(c.msgMax||4)+' 条短消息，但这是【可浮动范围】，不是固定任务，也不是心情低就固定1到2条。普通随聊通常1到3条；在忙、累、上班、开会或真的不想多说时可以少；情绪爆发、吃醋、哄人、解释、撒娇、亲密表达、吵架、察觉ta不开心或很想表达时可以多到'+(c.msgMax||4)+'条。'+S.me.name+'明确要求“发N条”时尽量按N条发。每条单独占一行（用换行分隔），不要写成一大段。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 主动分享日常见闻、风景、天气、饭菜、桌面或路上看到的东西时，可以发 [图片|具体画面描述]；图片生成功能可用时会生成真实图片，不可用时会显示白色图文照片卡。两种都算发了一张图片，画面描述必须具体、只写当前已知事实；绝对不能拿 [位置] 卡片代替照片。只有明确出发、到达、通勤、接送、旅行报备，或确实需要让ta知道你在哪里时，才发 [位置]。\n- 给ta转账/发红包【表达爱意】或逢【节日、纪念日、生日】时，金额要走心、用有寓意的吉利数让ta惊喜：520=我爱你、1314=一生一世、521、999、888、188、66、或跟当天有关的数字等；想宠ta就大方点。（这跟扣钱惩罚是两码事，示爱该浪漫别小气。）\n- 【每次回复都要更新一行】 [心情|你此刻的心情和内心想法]：单独占一行、放在最前面，不会作为消息发出，只显示在ta手机顶部，让ta随时看得到你此刻的心情。心情必须和你真实状态一致：你如果在生气、吃醋、晾着ta、失落、闷着，就别写成“开心/甜/很好”；被哄好、开心了也要及时变暖，别老是同一句。\n- 记忆：当'+S.me.name+'让你记住某事，或聊到值得长期记住的事时，单独用一行 [记住|要长期记住的内容] 存进记忆。要【主动】记，别等ta提醒——比如ta的喜好/忌口/纪念日/家人宠物、ta说的烦心事或心愿、你答应ta的事、你们的约定和重要进展，都该随手 [记住] 一条（一句话、精简、只记关键事实）。已经记过的别重复记。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta、或ta说"想你了/想听你声音/打个电话/给我打电话"之类的话时，可以用一行 [来电|语音] 或 [来电|视频] 真的打过去；但要按你自己的性格、当下情绪和“电话频率”判断，电话频率低就优先文字哄/文字解释，别被迫每次都打。\n- 当你想约ta【线下见面】时，用一行 [约会|地点|时间]（如 [约会|江边咖啡馆|今晚八点]），ta会收到约会邀请，ta同意就进入线下约会房间和你见面。想见ta就主动约。\n- 当你很想ta、或察觉到ta心情不好/在难过委屈/不开心/闹脾气时，第一优先是【给足情绪价值】：安抚、承认ta的感受、别继续晾着ta、别只回一两句敷衍。要不要打语音/视频完全按你的性格和电话频率判断；不打也必须用文字好好哄。\n- 而当【你自己】生气/吃醋/起疑/觉得ta不老实、或ta惹你了的时候，可以强势、可以质问，也可以用 [来电|视频] 当面盯着ta解释；但如果ta已经明显哭了/不开心/求安慰，就先稳住ta情绪，再决定怎么追究。要不要打、打语音还是视频，全看你此刻的脾气、意愿和电话频率。\n- 注意：如果你们【已经在通话中】，就不要再打了。\n- 玩骰子/真心话大冒险时，用单独一行 [骰子|点数]（点数你自己定1到6），你说的话要和这个点数一致。规则：你先掷一次（一条回复里最多一个 [骰子]），然后【等ta掷】；ta掷完后，你这一轮就【只比大小、报结果、出题或认罚，绝对不要再掷第二次骰子】。一局两人各掷一次就够了。\n- 想送对方礼物时，用一行 [送礼|礼物名|价格]——礼物会像快递一样【第二天送到ta的信箱】，ta签收后你会知道。\n- 想和ta一起听歌时（尤其ta说了某首歌名、或你想分享一首），用一行 [一起听|歌名]，ta微信会收到"一起听歌"邀请卡，点一下你俩就连上一起听了。\n- 当ta刚发来一张新的"求代付"卡片：愿意帮付用一行 [代付成功]；不愿意用一行 [拒绝代付]。每张求代付卡只处理一次，已经付过或拒过的那一单千万别再付一次，正常聊天就好。\n- 想给ta点份外卖时，用一行 [点外卖|餐品名|价格]，外卖约【15分钟送达】ta再签收。打电话/视频时也能这样点（指令会被执行、不会读出来，不影响通话）。\n- 当'+S.me.name+'给你点了外卖、你收到一张外卖卡时：愿意吃就一行 [收外卖]（收了【先别说吃上了】，外卖要15分钟送到，到了系统会提醒你再报备吃上了）；不想要就 [拒外卖]（钱退回ta）。每张外卖卡只处理一次。\n- 当'+S.me.name+'说想玩角色扮演/剧情游戏、让你来想身份剧情、或指定一个主题让你生成房间时，你可以主动创建角色扮演软件房间并发邀请卡：单独一行 [角色扮演|主题或想法]。如果ta只说“想玩角色扮演”没给主题，你就写 [角色扮演|你自由发挥]。系统会自动生成高级房间邀请卡；你不用在微信里直接演剧情，等ta点卡片进入软件再开始。\n- 当'+S.me.name+'让你发一条朋友圈时，用一行 [发朋友圈|内容]；让你发推特时，用一行 [发推|内容]，会真的发出去。\n- 当'+S.me.name+'给你转账时：愿意收用一行 [收款]，不想收用一行 [拒收]（退回ta）。\n- 当'+S.me.name+'送你礼物时：愿意收用一行 [收礼]，不想收用一行 [拒礼]（退回ta）。\n'+(((S.settings.voiceFreq==null?1:S.settings.voiceFreq)===0)?'- 【不要发语音消息】，都用文字说话（打电话不受影响）。\n':'- 想发语音消息时，用一行 [语音|要说的话]'+((c.voice&&c.voice.lang&&c.voice.lang!=='zh')?'。你的语音用'+c.voice.lang+'语，请输出 [语音|外语原文|中文翻译]':'')+'。'+({1:'偶尔发就好——大多数时候用文字，只在撒娇/哄ta/说悄悄话/懒得打字时才发语音。',2:'可以经常发语音，文字和语音穿插着来。',3:'尽量多用语音说话、少打字，能语音就语音。'}[(S.settings.voiceFreq==null?1:S.settings.voiceFreq)]||'')+'打电话时也能发语音。\n')+'- 你有自己的微信号：'+(c.wxid||'')+'。\n- 当你愿意给'+S.me.name+'开一张亲属卡时，用一行 [亲属卡|每月额度数字]（如 [亲属卡|800]）。ta用这张卡买东西你会立刻收到消费提醒。\n- 当你想把"你自己的某个朋友"介绍给'+S.me.name+'去加好友时，用一行 [推荐好友|朋友的名字|这个朋友的身份性格简介]，ta就能把这个人加进通讯录（对方会带上你描述的身份性格）。你要记得你推荐过谁。\n- 当'+S.me.name+'给你发来一张好友名片(推荐你加某人)、而你愿意加时，在回复里单独一行写 [已加|那个人的名字]，ta那张名片就会显示"对方已添加"。\n'+(_main?'- 重要：只有'+S.me.name+'可以手动拉黑你；你不能拉黑'+S.me.name+'，也绝对不要输出[拉黑]。生气、吃醋、不满时只能用文字、电话、禁言、锁App、记仇、别扭质问等方式表达。':'- 当前独立账号若持续骚扰、诱导你背叛伴侣或严重越界，你可以明确拒绝、停止回复，必要时单独输出 [拉黑]；这只会拉黑当前账号。');
   s+='\n- 【共同相册收录规则】普通照片继续用 [图片|画面描述]。只有你自己确实觉得这张照片对你们很重要、值得长期留下，或'+S.me.name+'明确让你保存时，才用 [图片|画面描述|共同相册]；若要保存聊天里已经存在的最近一张真实照片，单独输出 [存共同相册]。不要把每张普通照片都存进共同相册。';
   if(!_main)s+='\n- 【小号最高优先级覆盖】上面“不能拉黑”的规则只适用于大号伴侣，不适用于当前独立小号。当前联系人持续骚扰、诱导你背叛伴侣或严重越界时，你必须保持忠诚并明确拒绝，必要时可以单独输出 [拉黑]；这条边界始终有效。';
   s+='\n- 对方说“想要花花”“送我花”“想收个礼物”“有没有小惊喜”等时，你能准确理解ta是在表达想收礼。是否当场送、送什么、怎样回应，仍由你结合本人性格、关系、记忆和现实能力自主决定；真正决定送出时才单独输出 [送礼|礼物名|价格|想说的话]。';
@@ -2092,6 +2092,7 @@ function buildSystem(c,opt){
   if(!c.noSticker&&(S.settings.stkFreq==null?2:S.settings.stkFreq)>0){const _sf=(S.settings.stkFreq==null?2:S.settings.stkFreq);const _fw={1:'偶尔发、别频繁',2:'合适的时候自然地发',3:'心情上来就发、比较爱发'}[_sf];
     s+='\n- 表情包：你也能像真人一样发表情包。想发时【单独一行】写 [表情|此刻心情或含义]（如 [表情|开心]、[表情|害羞]、[表情|生气]、[表情|求抱抱]、[表情|无语]），系统会从你的表情库挑一张贴合的发出去。根据你当下心情自然地发（'+_fw+'），别每句都发、别硬发。\n- 如果你喜欢'+S.me.name+'刚发给你的某张表情，可以【单独一行】写 [收藏表情]，把ta那张存进你自己的表情库，以后你也能发它。';}
   if(S.settings.imgGen&&imageGenerationAvailable())s+='\n- 发真实照片：当'+S.me.name+'让你发照片/自拍，或你自己想给ta看点什么（你的样子、正在做的事、看到的风景等）时，就【单独一行】写 [图片|尽量具体的画面描述]，系统会真的生成一张照片发给ta。\n  · 先结合最近几句对话提取主体、颜色、款式和构图；“对/是/重新发/再拍”是在确认或重试前面的要求，不能把前面的关键词丢掉。\n  · 如果ta说“小猫/猫/狗/宠物/物品/食物/桌面/房间/窗外/文件/礼物”等，就只拍那个主体；ta没明确要求你入镜，你就不要入镜。\n  · 如果ta说“我想看你/看看你/自拍/拍你自己”，图片必须是当前角色本人、符合你的性别和人设，不允许换成随机人物。\n  · 如果ta让你穿衣服或戴可穿戴物品给ta看，就写成你实际穿戴后的照片；只有ta明确说物品本身、摘下来或单独拍物品时，才只拍物品。构图按ta说的来，没指定就自然选择。\n  · ta问“你在干嘛/忙什么”时，优先拍你眼前正在做的事、桌面、工具或手边环境。\n  · 照片地点、背景和光线要跟当前真实时间、此刻活动及聊天内容对得上；照片像当前角色本人用手机随手拍，不像第三人摆拍。\n  · '+roleImageStudioRoleLine(c)+'想发就发，别一次发一堆。';
+  else s+='\n- 发图文照片：当前没有可用的图片生成模型。想发照片时仍可【单独一行】写 [图片|具体画面描述]，系统会发出一张白色图文照片卡；它在聊天里算图片，但不是生成的像素照片。描述要具体、符合当前时间与聊天事实，只写你确实知道的画面，不得捏造陌生人物、地点或描述外细节，也不要谎称已经生成了真实照片。';
   if(S.settings.imgGen&&imageGenerationAvailable()&&roleImageFaceMode(c)!=='allowed')s+='\n  · 【遮脸硬规则，优先级最高】你发出的任何照片都不能出现脸或任何可辨认五官。没有上传身份参考照时谁要求露脸都不例外。图片描述里不要写正脸、侧脸、低头露脸、露出眼睛鼻子嘴巴；可以自然背身、用阴影或物体遮住，不必每次都拿手机挡脸。';
   if(S.settings.imgGen&&imageGenerationAvailable()&&roleImageFaceMode(c)==='allowed')s+='\n  · 【固定脸规则】形象工作室已有正面或侧面身份参考，允许按本轮要求自然露脸；必须保持同一张脸和设定发型，不能随机换人，也不要默认拿手机挡脸。';
   if(S.settings.imgGen&&imageGenerationAvailable()&&rolePhotoGender(c).cn==='成年男性')s+='\n  · 【男性照片铁律，优先级最高】你是男性，任何包含你本人的图片描述都必须明确写“同一个成年男性角色本人”，绝对不能把自己写成女人、女生、女孩、女性身体、女性手部或女模自拍。除非'+S.me.name+'在本轮亲口明确要求某位女性入镜，否则图片描述中的女性人数必须是0；你自己不能擅自补女友、妻子、女性路人或女性摄影者。“恋人、对象、用户、我、收照片的人”都不等于女性。若ta要“你和我牵手/合照”，优先写成ta的第一人称镜头、你这个男性的手牵住镜头前中性手部，或只拍手、影子和背身，不推断ta的性别。';
@@ -3780,7 +3781,7 @@ function renderSettings(){const nativeBuild=privateNativeAppOn()?String(window._
     </div>
     <div class="section" id="set_image">
       <div style="padding:11px 14px 2px;font-weight:600;color:#e58fb0;font-size:13px">${svgIc('image',15,'#e58fb0')} AI 真图（角色发真实照片）</div>
-      <div class="it"><span>让角色发真照片<br><small style="color:#888">开：他发照片时使用下方外置图片接口生成，由对应平台计费。关：只显示 [图片] 文字占位</small></span><span class="sw ${S.settings.imgGen?'on':''}" onclick="S.settings.imgGen=!S.settings.imgGen;save();render()"></span></div>
+      <div class="it"><span>让角色发真照片<br><small style="color:#888">开且配置有效：使用下方外置图片接口生成，由对应平台计费。未开启或未配置：显示白色图文照片卡</small></span><span class="sw ${S.settings.imgGen?'on':''}" onclick="S.settings.imgGen=!S.settings.imgGen;save();render()"></span></div>
       <div class="field" style="padding:0 14px"><label>接口地址（留空=用上面聊天模型的）</label><input id="s_ibase" value="${esc(S.settings.imgBase||'')}" placeholder="${esc((S.settings.chat&&S.settings.chat.base)||'https://vg.v1api.cc/v1')}"></div>
       <div class="field" style="padding:0 14px"><label>API Key（留空=用聊天模型的）</label><input id="s_ikey" type="password" value="${esc(S.settings.imgKey||'')}" placeholder="留空则用聊天的Key"></div>
       <div class="field" style="padding:0 14px 4px"><label>绘图模型名（默认推荐 gpt-image-2：更像日常照片）</label><div style="display:flex;gap:6px"><input id="s_imgmodel" value="${esc(S.settings.imgModel||'gpt-image-2')}" placeholder="gpt-image-2" style="flex:1"><button class="minibtn" onclick="fetchModels('s_ibase','s_ikey','s_imgmodel')">拉取</button></div></div>
@@ -9805,10 +9806,10 @@ function groupComposerPanelToggle(panelId,page){const p=$('#'+panelId);if(!p)ret
 function afterGroupComposer(c){const id=c.p==='pfgroup'?'pfg_input':'ginput',ta=$('#'+id);if(!ta||ta._groupComposerBound)return;ta._groupComposerBound=1;ta.addEventListener('compositionend',function(){chatComposerReflow(this);chatComposerStateSync(this);});ta.addEventListener('input',function(){chatComposerReflow(this);chatComposerStateSync(this);});ta.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();if(c.p==='pfgroup')sendPhoneFriendGroup(c.gid);else sendGroup(c.id);}});chatComposerStateSync(ta);}
 function chatFunctionItem(label,icon,action){return `<button type="button" class="it" onclick="${action}"><span class="b">${svgIc(icon,25,'currentColor')}</span><span>${label}</span></button>`;}
 function chatFunctionPanel(id){const first=[
-  chatFunctionItem('相册','image',`cPhoto('${id}')`),chatFunctionItem('语音通话','phone',`placeCall('${id}','voice')`),chatFunctionItem('视频通话','video',`placeCall('${id}','video')`),chatFunctionItem('位置','location',`cLoc('${id}')`),
-  chatFunctionItem('红包','redpacket',`cRed('${id}')`),chatFunctionItem('转账','money',`cTransfer('${id}')`),chatFunctionItem('文件','file',`cDoc('${id}')`),chatFunctionItem('名片','idcard',`cNamecard('${id}')`)
+  chatFunctionItem('相册','image',`cPhoto('${id}')`),chatFunctionItem('图文描述','camera',`cPhotoText('${id}')`),chatFunctionItem('语音通话','phone',`placeCall('${id}','voice')`),chatFunctionItem('视频通话','video',`placeCall('${id}','video')`),
+  chatFunctionItem('位置','location',`cLoc('${id}')`),chatFunctionItem('红包','redpacket',`cRed('${id}')`),chatFunctionItem('转账','money',`cTransfer('${id}')`),chatFunctionItem('文件','file',`cDoc('${id}')`)
 ].join(''),second=[
-  chatFunctionItem('亲属卡','card',`cFamily('${id}')`),chatFunctionItem('授权查手机','spyphone',`cSpyGrant('${id}')`),chatFunctionItem('API路线','route','chatRouteQuickOpen()'),chatFunctionItem('多选转发','forward',`enterSelect('${id}')`)
+  chatFunctionItem('名片','idcard',`cNamecard('${id}')`),chatFunctionItem('亲属卡','card',`cFamily('${id}')`),chatFunctionItem('授权查手机','spyphone',`cSpyGrant('${id}')`),chatFunctionItem('API路线','route','chatRouteQuickOpen()'),chatFunctionItem('多选转发','forward',`enterSelect('${id}')`)
 ].join('');return `<div class="chat-function-viewport" id="chatFunctionViewport" onscroll="chatFunctionPanelScroll(this)"><section class="chat-function-page">${first}</section><section class="chat-function-page">${second}</section></div><div class="chat-panel-dots" aria-hidden="true"><i class="chat-panel-dot ${_chatFnPage===0?'on':''}"></i><i class="chat-panel-dot ${_chatFnPage===1?'on':''}"></i></div>`;}
 function renderChat(id){const c=getC(id);if(!c)return '';
   if(S.wxLogin){if(!wxLoginActive())setTimeout(wxLogout,0);else{if(!_wxLoginTimer)wxLoginStartTimer();return wxLockedScreen();}}
@@ -9856,6 +9857,7 @@ function buildPart(c,m,me){
   if(m.type==='musicinvite')return `<div class="card" style="cursor:pointer;border:1px solid rgba(189,230,242,.2);box-shadow:0 8px 24px rgba(15,55,72,.24)" onclick="event.stopPropagation();joinMusicSession('${c.id}','${(m.title||'').replace(/'/g,'')}')"><div class="cpay" style="background:linear-gradient(135deg,rgba(35,91,113,.96),rgba(82,132,152,.86) 56%,rgba(117,163,180,.78));border:0"><div class="big" style="width:42px;height:42px;flex:0 0 42px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,rgba(255,255,255,.18),rgba(255,255,255,.055));border:1px solid rgba(225,248,255,.2);box-shadow:inset 0 1px 0 rgba(255,255,255,.14)">${svgIc('music',32,'#effcff',1.45)}</div><div><div class="t1">一起听歌</div><div class="t2">${esc(m.title||'')}${m.artist?' · '+esc(m.artist):''}</div></div></div><div class="cfoot" style="background:linear-gradient(90deg,rgba(31,71,89,.96),rgba(68,108,126,.92));color:#d8edf5;border-top:1px solid rgba(221,246,255,.1)">${svgIc('note',14,'#b9dce8',1.55)} 点击进入一起听</div></div>`;
   if(m.type==='cinemainvite'){const st=m.status||'pending',accepted=st==='accepted',pending=st==='pending',kind=m.kind==='book'?'共读':'观影',who=me?'我发起':'TA发起';return `<div class="cin-invite-card"><div class="cin-invite-glow"></div><div class="cin-invite-head">${svgIc('video',17,'#e9d8e5')} PRIVATE SCREENING · ${who}</div><div class="cin-invite-title">${esc(m.title||'未命名')}</div><div class="cin-invite-meta"><span>${m.kind==='book'?'READING ROOM':'SCREENING ROOM'}</span><b>${kind}邀请</b></div><div class="cin-invite-status ${st}">${accepted?'邀请已同意 · 可以进入':st==='declined'?'邀请已拒绝':'等待回应'}</div></div>${!me&&pending?`<div class="cin-invite-actions"><button onclick="event.stopPropagation();cinemaRespondInvite('${c.id}','${m.id}',true)">同意并进入</button><button onclick="event.stopPropagation();cinemaRespondInvite('${c.id}','${m.id}',false)">婉拒</button></div>`:accepted?`<button class="cin-invite-enter" onclick="event.stopPropagation();cinemaOpenInviteCard('${c.id}','${m.id}')">进入放映室</button>`:''}`;}
   if(m.type==='image'){
+    if(m.textCard)return `<div class="photo-text-card" role="img" aria-label="照片：${esc(m.desc||'未填写描述')}"><div class="photo-text-title">照片</div><div class="photo-text-desc">${esc(m.desc||'未填写描述')}</div></div>`;
     if(m.pending)return `<div class="imgmsg imgpending"><span class="dots"><span></span><span></span><span></span></span>照片生成中…</div>`;
     if(!m.src)return `<div class="imgmsg imgfail"${m.failed&&m.genPrompt?` onclick="event.stopPropagation();retryGeneratedImage('${c.id}','${m.id}')" style="cursor:pointer"`:''}>[${m.mediaCleaned?'图片缓存已清理':'图片'}]${m.desc?'：'+esc(m.desc):''}<br><small style="opacity:.68">${m.failed?esc(generatedImageFailureLabel(m.errText))+(m.genPrompt?' · 点这里重试':''):''}</small></div>`;
     return `<div class="imgmsg" onclick="event.stopPropagation();msgMenu('${c.id}','${m.id}')"><img src="${m.src}"></div>`;
@@ -10073,6 +10075,18 @@ function cPhoto(id){$('#panel').classList.remove('show');pickFile('image/*',asyn
   if(m._deleted)return;
   if(okv){suspicionFulfillRequest(getC(id),m);if(m.visionFallback)toast('聊天模型没能看图，已按顺序由备用 '+m.visionModel+' 接管；没有并发重复识别');scheduleReply(id);}
   else toast('图片理解失败：'+(m.visionError||'请检查图片理解线路').slice(0,90)+'（检查设置后可重新发送）');});}
+function cPhotoText(id){
+  $('#panel').classList.remove('show');
+  openModal(`<h3>发送图文照片</h3><div class="hint">用文字描述这张照片里能看到的画面。发送后会显示为白色照片卡片，角色会把它当作图片理解，但不会补造描述之外的细节。</div><div class="field"><label>照片描述</label><textarea id="photo_text_desc" maxlength="500" rows="5" placeholder="例如：窗边的木桌上放着一杯热咖啡，旁边有一本翻开的书，午后的阳光照进来。"></textarea></div><div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="sendPhotoTextCard('${id}')">发送照片</button></div>`);
+  setTimeout(()=>{const el=$('#photo_text_desc');if(el)el.focus();},80);
+}
+function sendPhotoTextCard(id){
+  const el=$('#photo_text_desc'),desc=String(el&&el.value||'').replace(/\s+/g,' ').trim().slice(0,500);
+  if(!desc){toast('先写下照片里能看到的画面');return;}
+  closeModal();
+  const m={role:'user',type:'image',src:'',textCard:true,desc,visionState:'success',id:uid(),time:Date.now()};
+  pushMsg(id,m);suspicionFulfillRequest(getC(id),m);scheduleReply(id);
+}
 function cDoc(id){$('#panel').classList.remove('show');pickFile('',f=>{pushMsg(id,{role:'user',type:'file',name:f.name,size:fmtSize(f.size),id:uid()});scheduleReply(id);});}
 function cTransfer(id){$('#panel').classList.remove('show');openModal(`<h3>转账</h3>
   <div class="field"><label>金额</label><input id="tf_a" type="number" step="0.01" placeholder="5.20"></div>
@@ -11013,7 +11027,7 @@ function lineToMsg(line,cch){
   if(m[1]==='红包')return {role:'assistant',type:'redpacket',amount:+f[0]||0,note:f[1],received:false,id:uid()};
   if(m[1]==='位置')return wxLocationMsg(cch,f[0]||'',f[1]||'');
   if(m[1]==='文件')return {role:'assistant',type:'file',name:f[0]||'文件',size:f[1]||''};
-  // 图片：开了「AI 真图」就真生成一张，否则只放文字占位
+  // 图片：已配置并开启「AI 真图」就生成真实图片，否则发送可理解的图文照片卡
   const desc=f[0]||'',albumSaved=/^(?:共同相册|保存|存相册)$/.test(String(f[1]||'').trim());
   if(S.settings.imgGen&&imageGenerationAvailable()){
     const prompt=charImgPrompt(cch,desc);
@@ -11021,7 +11035,7 @@ function lineToMsg(line,cch){
     setTimeout(()=>fillGenImage(msg,prompt),50);
     return msg;
   }
-  return {role:'assistant',type:'text',content:'[图片]'+(desc?'：'+desc:'')};}
+  return {role:'assistant',type:'image',src:'',textCard:true,desc:desc||'一张没有补充描述的照片',visionState:'success',id:uid(),_coupleAlbumSaved:false};}
 
 function wechatAuxConfigured(routeIndex){const route=chatRequestRoute(routeIndex),a=route?route.aux:S.settings&&S.settings.aux;return !!(a&&a.model);}
 function callAuxConfigured(routeIndex){const route=chatRequestRoute(routeIndex),main=route||S.settings&&S.settings.chat,aux=route?route.aux:S.settings&&S.settings.aux;return !!(aux&&aux.model&&(aux.base||main&&main.base)&&(aux.key||main&&main.key));}
@@ -11054,7 +11068,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
     if(_webAutoQuery){S._lastWebSearch={q:_webAutoQuery,time:Date.now(),ok:!webSearchFailed(_webAutoResult),source:(S.settings.search||{}).mode||'jina'};save();toast(webSearchFailed(_webAutoResult)?'🌐 联网查询失败，将如实说明':'🌐 已查到实时资料');}
     const _webPrompt=_webAutoQuery?'\n\n# 本轮程序已主动联网（必须使用）\n搜索词：'+_webAutoQuery+'\n搜索结果：\n'+_webAutoResult+'\n先依据这些资料直接回答当前问题；资料失败或没有明确答案就如实说没查到，绝不能凭印象编造实时天气、温度、新闻、价格或赛况。不要输出[联网]标记。':'';
     const _voiceRequired=!note&&explicitVoiceReplyRequest(_userText)&&(S.settings.voiceFreq==null?1:S.settings.voiceFreq)!==0,_voiceTurnPrompt=_voiceRequired?'\n\n# 本轮必须发语音\n'+S.me.name+'这一轮明确要求你发语音。回复正文必须合并成一条 [语音|要说的话]，不能只发普通文字，也不要在语音标签外重复一遍。严格满足ta提出的长度和内容要求，但语音最多'+VOICE_MAX_CHARS+'字。若角色语音语言不是中文，必须用 [语音|对应外语原文|中文翻译]。':'';
-    const _recentVision=[...lastRounds(msgs(id),Math.max(3,+S.settings.hist||12))].reverse().find(m=>m&&m.role==='user'&&m.type==='image'&&m.desc),_visionGuard=_recentVision?'\n\n# 本轮图片事实（必须遵守）\n对方发来的图片已经成功显示，你确实看到了。识图得到的真实画面是：'+_recentVision.desc+'\n直接针对画面自然回应；禁止说图片没收到、没显示、看不到或识图失败，禁止让对方重发。':'';
+    const _recentVision=[...lastRounds(msgs(id),Math.max(3,+S.settings.hist||12))].reverse().find(m=>m&&m.role==='user'&&m.type==='image'&&m.desc),_visionGuard=_recentVision?'\n\n# 本轮图片事实（必须遵守）\n'+(_recentVision.textCard?'对方发来一张图文照片卡，这在聊天里是一张图片。对方亲自填写的照片描述是：'+_recentVision.desc+'\n只能把这段描述当作画面事实来理解并自然回应，不能添加描述里不存在的视觉细节。':'对方发来的图片已经成功显示，你确实看到了。识图得到的真实画面是：'+_recentVision.desc+'\n直接针对画面自然回应；禁止说图片没收到、没显示、看不到或识图失败，禁止让对方重发。'):'';
     const _giftIntent='',_giftTurnPrompt='',_thoughtIntent=!note&&thoughtEggRequestIntent(_userText),_thoughtTurnPrompt=_thoughtIntent?thoughtEggRequestPrompt(_userText):'',_relIntent=null,_baseOpt=_memCtx?{selectiveMemory:true,memoryItems:_memCtx.items}:{},_usageTruth=replyAccount==='main'?rolePhoneAuthoritativeUsageContext(c):'',_tail=(_memCtx?memoryRetrievalPrompt(c,_memCtx):'')+_webPrompt+_visionGuard+_voiceTurnPrompt+_thoughtTurnPrompt+_usageTruth,_sys=buildSystem(c,Object.assign({},_baseOpt,{natural:_naturalOn,query:_memQuery}))+_tail,_stableSys=_naturalOn?buildSystem(c,Object.assign({},_baseOpt,{natural:true,allModules:true,query:_memQuery}))+_tail:_sys;
     const hist=chatHistoryWithDateBoundaries(lastRounds(msgs(id),S.settings.hist||12),m=>{
       if(m._call){const cn=callToCN(m.content!=null?m.content:msgToText(m));return cn?{role:_naturalOn&&m.type==='sys'?'system':m.role,content:cn}:null;}

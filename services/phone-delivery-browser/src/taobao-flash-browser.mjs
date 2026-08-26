@@ -2271,11 +2271,16 @@ export class TaobaoFlashBrowser {
       || await this.visibleLocator(page.getByText(/最高\s*\d+(?:\.\d+)?\s*元可用/, { exact: false }), true);
     const entry = await this.visibleLocator(page.locator('.food-extra__hongbao'), true) || entryText;
     if (!entry) throw new Error(`订单显示有¥${advertised.toFixed(2)}红包可用，但没有找到红包选择入口，已停止提交`);
-    await this.tapControl(page, entry); await page.waitForTimeout(650);
+    // The checkout's sticky payment bar can visually cover the coupon row's
+    // center point.  Dispatch on the exact verified row before falling back to
+    // a coordinate tap.
+    await entry.evaluate(node => node.click()).catch(() => this.tapControl(page, entry));
+    await page.waitForTimeout(650);
     let openedBody = await this.riskText(page);
     const amountPattern = String(Number(advertised)).replace('.', '\\.');
     let alreadySelected = /已选\s*[1-9]\d*\s*张/.test(openedBody)
       || new RegExp(`已选\s*\d+\s*张[^。；\n]{0,30}可减\s*[¥￥]?\s*${amountPattern}\s*元?`).test(openedBody);
+    const hasUnredeemedPointsOffer = /未兑换\s*(?:需|需要)\s*\d+\s*吃货豆/.test(openedBody);
     let directCoupon = null;
     const couponCardSelected = async coupon => Boolean(coupon && await coupon.evaluate(node => {
       const selected = current => {
@@ -2284,12 +2289,67 @@ export class TaobaoFlashBrowser {
       };
       return selected(node) || [...node.querySelectorAll('*')].some(selected);
     }).catch(() => false));
-    if (!alreadySelected) {
+    const pointsRedemptionPromptVisible = body => /是否兑换/.test(body) && /吃货豆/.test(body)
+      || /兑换将消耗\s*\d+\s*吃货豆/.test(body);
+    const redeemPointsCouponIfPrompted = async (coupon, { afterConfirm = false } = {}) => {
+      let promptBody = '';
+      let promptVisible = false;
+      let selectedAt = -1;
+      const expectPointsPrompt = /未兑换\s*(?:需|需要)\s*\d+\s*吃货豆/.test(clean(await coupon.innerText().catch(() => ''), 700));
+      const extendedPromptWait = afterConfirm && expectPointsPrompt;
+      const promptWaitAttempts = extendedPromptWait ? 40 : 8;
+      const maxPromptAttempts = extendedPromptWait ? 44 : 24;
+      // The redemption dialog is painted after the coupon row first looks
+      // selected.  Wait for either the real dialog or a verifiable selection;
+      // otherwise a covered “确定” button can be mistaken for the next action.
+      for (let attempt = 0; attempt < maxPromptAttempts; attempt += 1) {
+        promptBody = await this.riskText(page);
+        if (/吃货豆不足|余额不足|兑换失败/.test(promptBody)) {
+          throw new Error(`¥${advertised.toFixed(2)}红包兑换失败或吃货豆不足，已停止提交`);
+        }
+        promptVisible = pointsRedemptionPromptVisible(promptBody);
+        if (promptVisible) break;
+        const selected = /已选\s*[1-9]\d*\s*张/.test(promptBody) || await couponCardSelected(coupon);
+        if (selected && selectedAt < 0) selectedAt = attempt;
+        // Points-backed cards can paint the dialog several seconds after the
+        // transient checkmark, especially after repeated checkout attempts.
+        // Only those explicit cards get the longer bounded observation.
+        if (selectedAt >= 0 && attempt - selectedAt >= promptWaitAttempts) return false;
+        await page.waitForTimeout(250);
+      }
+      if (!promptVisible) return false;
+      const redeem = await this.visibleLocator(page.getByText(/^(?:立即兑换|确认兑换|兑换并使用|确认使用)$/), true);
+      if (!redeem) throw new Error(`¥${advertised.toFixed(2)}红包需要消耗吃货豆，但没有找到兑换确认按钮，已停止提交`);
+      // The modal button owns a framework click handler, but an overlay in
+      // this H5 build can absorb a coordinate tap at the same visual center.
+      // Dispatch the click on the exact verified button node first.
+      await redeem.evaluate(node => node.click()).catch(() => this.tapControl(page, redeem));
+      let sawSuccess = false;
+      for (let attempt = 0; attempt < 32; attempt += 1) {
+        await page.waitForTimeout(250);
+        const body = await this.riskText(page);
+        if (/吃货豆不足|余额不足|兑换失败/.test(body)) {
+          throw new Error(`¥${advertised.toFixed(2)}红包兑换失败或吃货豆不足，已停止提交`);
+        }
+        if (/兑换成功|已成功兑换|兑换完成/.test(body)) sawSuccess = true;
+        if (!pointsRedemptionPromptVisible(body)
+          && (sawSuccess || /已选\s*[1-9]\d*\s*张/.test(body) || await couponCardSelected(coupon))) return true;
+      }
+      throw new Error(`¥${advertised.toFixed(2)}红包已点击立即兑换，但平台没有确认兑换成功，已停止提交`);
+    };
+    if (!alreadySelected || hasUnredeemedPointsOffer) {
       // The platform orders usable red packets before the disabled section.
       // Follow the user's stable rule: choose the first visible usable card,
       // rather than depending on a brittle amount-text match.  The list often
       // renders later than its shell, so wait for the real card rows first.
       for (let attempt = 0; attempt < 16 && !directCoupon; attempt += 1) {
+        const panelBody = await this.riskText(page);
+        if (/系统问题[，,]?我来康康|尝试刷新一下吧/.test(panelBody)) {
+          throw new Error('平台红包页暂时异常，已停止本次优惠券检查；不会重复打开或按原价提交');
+        }
+        if (!/ele-select-hongbao|选择红包/i.test(`${page.url()} ${panelBody}`)) {
+          throw new Error('平台红包页没有保持打开，已停止本次优惠券检查；不会重复打开或按原价提交');
+        }
         const couponCards = page.locator('.shtc-base-coupon__wrap');
         for (let index = 0; index < await couponCards.count().catch(() => 0); index += 1) {
           const candidate = couponCards.nth(index);
@@ -2303,31 +2363,61 @@ export class TaobaoFlashBrowser {
         if (!directCoupon) await page.waitForTimeout(250);
       }
     }
+    const panelBody = await this.riskText(page);
+    if (/系统问题[，,]?我来康康|尝试刷新一下吧/.test(panelBody)) {
+      throw new Error('平台红包页暂时异常，已停止本次优惠券检查；不会重复打开或按原价提交');
+    }
+    if (!/ele-select-hongbao|选择红包/i.test(`${page.url()} ${panelBody}`)) {
+      throw new Error('平台红包页没有保持打开，已停止本次优惠券检查；不会重复打开或按原价提交');
+    }
+    let directRequiresPoints = false;
+    if (directCoupon) {
+      const directText = clean(await directCoupon.innerText().catch(() => ''), 700);
+      // Eleme paints “已选1张” before the points-backed coupon has actually
+      // been redeemed.  The coupon card's own “未兑换” state wins.
+      directRequiresPoints = /未兑换\s*(?:需|需要)\s*\d+\s*吃货豆/.test(directText);
+      if (directRequiresPoints) alreadySelected = false;
+    }
     if (!alreadySelected && directCoupon) {
       const explicitUse = await this.visibleLocator(directCoupon.getByText(/^(?:选择|使用|立即使用|兑换|立即兑换)$/), true).catch(() => null);
       const toggle = explicitUse
-        || await this.visibleLocator(directCoupon.locator('[role="radio"], [role="checkbox"], [aria-checked], [class*="radio"], [class*="check"], [class*="select"]'), true).catch(() => null)
+        // The points-backed card itself owns Eleme's real click handler.  Its
+        // descendant `right-checkstyle` node is only artwork and does not
+        // bubble a usable selection event on this H5 build.
+        || (directRequiresPoints ? directCoupon : await this.visibleLocator(directCoupon.locator('[role="radio"], [role="checkbox"], [aria-checked], [class*="radio"], [class*="check"], [class*="select"]'), true).catch(() => null))
         || directCoupon;
-      await this.tapControl(page, toggle); await page.waitForTimeout(500);
-      let redemptionBody = await this.riskText(page);
-      if (/是否兑换|兑换将消耗\s*\d+\s*吃货豆/.test(redemptionBody)) {
-        const redeem = await this.visibleLocator(page.getByText(/^(?:立即兑换|确认兑换|兑换并使用|确认使用)$/), true);
-        if (!redeem) throw new Error(`¥${advertised.toFixed(2)}红包需要消耗吃货豆，但没有找到兑换确认按钮，已停止提交`);
-        await this.tapControl(page, redeem); await page.waitForTimeout(650);
-        redemptionBody = await this.riskText(page);
-        if (/吃货豆不足|余额不足|兑换失败/.test(redemptionBody)) {
-          throw new Error(`¥${advertised.toFixed(2)}红包兑换失败或吃货豆不足，已停止提交`);
-        }
+      const promptAlreadyOpen = pointsRedemptionPromptVisible(await this.riskText(page));
+      if (!promptAlreadyOpen) await this.tapControl(page, toggle);
+      const redeemed = await redeemPointsCouponIfPrompted(directCoupon);
+      for (let attempt = 0; attempt < 24; attempt += 1) {
+        openedBody = await this.riskText(page);
+        alreadySelected = /已选\s*[1-9]\d*\s*张/.test(openedBody)
+          || new RegExp(`(?:已选\s*\d+\s*张[^。；\n]{0,30}可减|已选择|已使用)[^。；\n]{0,30}[¥￥]?\s*${amountPattern}\s*元?`).test(openedBody)
+          || await couponCardSelected(directCoupon);
+        if (alreadySelected) break;
+        await page.waitForTimeout(250);
       }
-      openedBody = await this.riskText(page);
-      alreadySelected = /已选\s*[1-9]\d*\s*张/.test(openedBody)
-        || new RegExp(`(?:已选\s*\d+\s*张[^。；\n]{0,30}可减|已选择|已使用)[^。；\n]{0,30}[¥￥]?\s*${amountPattern}\s*元?`).test(openedBody)
-        || await couponCardSelected(directCoupon);
+      if (!alreadySelected) {
+        throw new Error(redeemed
+          ? `¥${advertised.toFixed(2)}红包已兑换，但平台没有确认选中，已停止提交`
+          : `¥${advertised.toFixed(2)}红包点击后没有出现兑换确认或选中结果，已停止提交`);
+      }
     }
     if (alreadySelected) {
       const done = await this.visibleLocator(page.getByText(/^(?:确定|完成|使用|确认|确认使用|选好了)$/), true);
       if (!done) throw new Error(`¥${advertised.toFixed(2)}红包已自动选中，但没有找到确认按钮，已停止提交`);
       await this.activateControl(page, done);
+      // Points-backed coupons ask for redemption only after the first bottom
+      // confirmation.  Redeem there, then confirm the now-real coupon once
+      // more before returning to checkout.
+      const redeemedAfterConfirm = directCoupon
+        ? await redeemPointsCouponIfPrompted(directCoupon, { afterConfirm: true })
+        : false;
+      if (redeemedAfterConfirm && /ele-select-hongbao|选择红包/i.test(`${page.url()} ${await this.riskText(page)}`)) {
+        const finalDone = await this.visibleLocator(page.getByText(/^(?:确定|完成|使用|确认|确认使用|选好了)$/), true);
+        if (!finalDone) throw new Error(`¥${advertised.toFixed(2)}红包已兑换，但没有找到最终确认按钮，已停止提交`);
+        await this.activateControl(page, finalDone);
+      }
       for (let wait = 0; wait < 16; wait += 1) {
         await page.waitForTimeout(250);
         if (!/ele-select-hongbao|选择红包|已选\s*\d+\s*张[^。；\n]{0,30}可减/i.test(`${page.url()} ${await this.riskText(page)}`)) break;
@@ -2362,7 +2452,21 @@ export class TaobaoFlashBrowser {
     if (!marked) throw new Error(`订单显示有¥${advertised.toFixed(2)}红包可用，但没有识别到对应可用券，已停止提交`);
     if (!alreadySelected && marked) {
       await this.tapControl(page, page.locator('[data-phone-delivery-coupon="1"]').first());
-      await page.waitForTimeout(550);
+      const markedCoupon = page.locator('[data-phone-delivery-coupon="1"]').first();
+      const redeemed = await redeemPointsCouponIfPrompted(markedCoupon);
+      for (let attempt = 0; attempt < 24; attempt += 1) {
+        openedBody = await this.riskText(page);
+        alreadySelected = /已选\s*[1-9]\d*\s*张/.test(openedBody)
+          || new RegExp(`(?:已选\s*\d+\s*张[^。；\n]{0,30}可减|已选择|已使用)[^。；\n]{0,30}[¥￥]?\s*${amountPattern}\s*元?`).test(openedBody)
+          || await couponCardSelected(markedCoupon);
+        if (alreadySelected) break;
+        await page.waitForTimeout(250);
+      }
+      if (!alreadySelected) {
+        throw new Error(redeemed
+          ? `¥${advertised.toFixed(2)}红包已兑换，但平台没有确认选中，已停止提交`
+          : `¥${advertised.toFixed(2)}红包点击后没有出现兑换确认或选中结果，已停止提交`);
+      }
     }
     const done = await this.visibleLocator(page.getByText(/^(?:确定|完成|使用|确认|确认使用|选好了)$/), true);
     if (done && /ele-select-hongbao|选择红包|已选\s*\d+\s*张/i.test(`${page.url()} ${await this.riskText(page)}`)) {

@@ -1566,6 +1566,7 @@ test('checkout submission applies an available red packet before clicking paymen
   assert.match(source, /async selectEarliestDeliveryWindow\(page\)[\s\S]*?const windows = page\.getByText[\s\S]*?windows\.nth\(index\)/);
   assert.ok(submit.indexOf('selectEarliestDeliveryWindow(page)') < submit.indexOf('applyBestAvailableCoupon(page)'));
   assert.match(source, /const couponCards = page\.locator\('\.shtc-base-coupon__wrap'\)/);
+  assert.match(source, /entry\.evaluate\(node => node\.click\(\)\)/);
   assert.match(source, /不可用原因\|已失效/);
   assert.match(source, /attempt < 16 && !directCoupon/);
   assert.match(source, /已选\\s\*\[1-9\]/);
@@ -1575,6 +1576,20 @@ test('checkout submission applies an available red packet before clicking paymen
   assert.match(source, /确认使用\|选好了/);
   assert.match(source, /立即兑换\|确认兑换\|兑换并使用\|确认使用/);
   assert.match(source, /吃货豆不足\|余额不足\|兑换失败/);
+  assert.match(source, /const redeemPointsCouponIfPrompted = async \(coupon, \{ afterConfirm = false \} = \{\}\) =>/);
+  assert.match(source, /hasUnredeemedPointsOffer[\s\S]*?未兑换\\s\*\(\?:需\|需要\)[\s\S]*?directCoupon/);
+  assert.match(source, /directRequiresPoints \? directCoupon/);
+  assert.match(source, /promptAlreadyOpen[\s\S]*?if \(!promptAlreadyOpen\) await this\.tapControl/);
+  assert.match(source, /平台红包页暂时异常[\s\S]*?不会重复打开或按原价提交/);
+  assert.match(source, /平台红包页没有保持打开[\s\S]*?不会重复打开或按原价提交/);
+  assert.match(source, /afterConfirm && expectPointsPrompt/);
+  assert.match(source, /extendedPromptWait \? 40 : 8/);
+  assert.match(source, /extendedPromptWait \? 44 : 24/);
+  assert.match(source, /attempt < maxPromptAttempts[\s\S]*?selectedAt[\s\S]*?attempt - selectedAt >= promptWaitAttempts/);
+  assert.match(source, /redeemPointsCouponIfPrompted\(directCoupon, \{ afterConfirm: true \}\)[\s\S]*?finalDone/);
+  assert.match(source, /redeem\.evaluate\(node => node\.click\(\)\)[\s\S]*?attempt < 32[\s\S]*?兑换成功\|已成功兑换\|兑换完成/);
+  assert.match(source, /redeemPointsCouponIfPrompted\(directCoupon\)[\s\S]*?if \(!alreadySelected\)/);
+  assert.ok(source.indexOf('redeemPointsCouponIfPrompted(directCoupon)') < source.indexOf('const done = await this.visibleLocator(page.getByText(/^(?:确定'));
   assert.match(submit, /\['applied', 'none'\]\.includes\(couponCheck\?\.status\)/);
   assert.match(submit, /缺少本单提交前的优惠券核验记录/);
   assert.match(source, /renderedLocator\(nativeControls\)/);
