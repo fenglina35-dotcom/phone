@@ -180,7 +180,9 @@ test('web client opt-in sends bounded memory and recent context', () => {
   assert.match(functionSource('roleServerPushRecentContext'), /slice\(-8000\)/);
   assert.match(functionSource('roleServerPushRecentContext'), /roleOnlineLiveStateText\(c\)/);
   assert.doesNotMatch(functionSource('roleServerPushEffectiveEnabled'), /roleOnlineProactiveBlocked/,'temporary live states must not persistently disable the server profile');
-  assert.match(functionSource('roleServerAutomationConfig'), /suspended/,'temporary live states remain a reversible server-side suspension');
+  assert.match(functionSource('roleServerAutomationConfig'), /suspended/,'temporary non-cohabitation live states remain a reversible server-side suspension');
+  assert.match(functionSource('roleServerAutomationConfig'), /roleServerPushDeliveryBlocked\(c\.id\)/);
+  assert.doesNotMatch(functionSource('roleServerAutomationConfig'), /cohabOnlineQuiet/,'cohabitation must not suspend companion background generation');
   assert.match(functionSource('roleServerAutomationConfig'), /return base/,'suspension must be synchronized even without role data access');
   assert.match(functionSource('roleServerPushMemoryContext'), /slice\(0,16000\)/);
   assert.match(functionSource('roleServerPushMemoryContext'), /memoryList\(c,scope\)/);
@@ -204,7 +206,7 @@ test('completed chat turns are marked before scheduled proactive generation', ()
   assert.match(edge, /turnBoundary\.pending \?/);
 });
 
-test('temporary offline or face-to-face states suspend without disabling background contact', () => {
+test('temporary offline states suspend without disabling background contact, while cohabitation stays live', () => {
   assert.match(edgeFunctionSource('profileTemporarilySuspended'), /automation_config/);
   assert.match(edgeFunctionSource('profileTemporarilySuspended'), /snapshotTime\(value\.suspendedUntil\)/);
   assert.match(edgeFunctionSource('profileTemporarilySuspended'), /until > Date\.now\(\)/);
@@ -273,7 +275,13 @@ test('returned role messages are deduplicated and appended to the matching chat'
   const pull = functionSource('roleServerPushPull');
   assert.match(pull, /phone_role_push_pull/);
   assert.match(pull, /getC\(row\.roleId\)/);
-  assert.match(pull, /roleOnlineProactiveBlocked\(c\.id\)/);
+  assert.match(pull, /roleServerPushDeliveryBlocked\(c\.id\)/);
+  assert.doesNotMatch(pull, /roleOnlineProactiveBlocked\(c\.id\)/,'already generated companion text must not queue behind cohabitation');
+  const deliveryBlock=functionSource('roleServerPushDeliveryBlocked');
+  assert.match(deliveryBlock,/offlineWechatLiveState\(c\)/);
+  assert.match(deliveryBlock,/roleBusyActive\(c\)/);
+  assert.match(deliveryBlock,/focus&&!cohabFocus/);
+  assert.doesNotMatch(deliveryBlock,/cohabOnlineQuiet/,'cohabitation alone cannot block durable server text delivery');
   assert.match(pull, /roleServerPushSyncSoon\(c\.id\)/);
   assert.match(pull, /_rolePushId===row\.id/);
   assert.doesNotMatch(pull, /initiativeRecentlyRepeated\(c\.id,body/);

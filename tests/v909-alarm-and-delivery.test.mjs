@@ -27,7 +27,7 @@ test('role push acknowledgement follows durable local persistence', () => {
   const pull = functionSource('roleServerPushPull');
   assert.match(pull, /needsPersist&&\!\(await persistWechatMessagesNow\(\)\)/);
   assert.ok(pull.indexOf('await persistWechatMessagesNow()') < pull.indexOf("phone_role_push_ack"));
-  assert.match(pull, /roleOnlineProactiveBlocked\(c\.id\)\)\{roleServerPushSyncSoon\(c\.id\);continue;\}/);
+  assert.match(pull, /roleServerPushDeliveryBlocked\(c\.id\)\)\{roleServerPushSyncSoon\(c\.id\);continue;\}/);
 });
 
 test('private iOS app synchronizes web alarms through AlarmKit while web fallback remains', () => {

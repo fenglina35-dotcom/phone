@@ -18,6 +18,13 @@ test('time facts include short exact gaps and generated claims are verified once
   assert.match(app,/把3分钟说成10分钟/);
   assert.match(app,/roleTimeRepairPrompt\(c,_timeIssue,_timeNow\)/);
   assert.match(app,/content=fix&&!roleTimeClaimIssue\(fix,c,_timeNow\)\?fix:''/);
+  assert.match(app,/function roleReplyClockPin\(now\)/);
+  assert.match(app,/只供你内部知道，不要机械复述/);
+  assert.match(app,/除非当前话题确实涉及时间、作息、吃饭或日期，否则不要主动报时/);
+  assert.match(app,/const _pin=\{role:'system',content:personaPin\(c\)\+roleReplyClockPin\(Date\.now\(\)\)\}/);
+  const ai=app.slice(app.indexOf('async function aiReply'),app.indexOf('function replyNoVisibleReasonFromContent'));
+  assert.equal((ai.match(/roleTimeRepairPrompt\(c,_timeIssue,_timeNow\)/g)||[]).length,1,'a reply gets at most one true-model time repair');
+  assert.ok(ai.indexOf('roleTimeRepairPrompt(c,_timeIssue,_timeNow)')>ai.indexOf('const comfortN='),'time verification must run after all content rewrites and immediately before delivery parsing');
 });
 
 test('clock verification tolerates two minutes including hour boundaries',()=>{
@@ -31,6 +38,18 @@ test('clock verification tolerates two minutes including hour boundaries',()=>{
   assert.equal(distance('9','56','','',{hour:9,minute:59}),3);
   assert.equal(distance('11','','','',{hour:9,minute:0}),120);
   assert.equal(distance('十二','','','凌晨',{hour:23,minute:59}),1);
+});
+
+test('final clock guard catches a bare jumped hour but leaves schedules and two-minute drift alone',()=>{
+  const names=['clockNumberValue','clockMinuteDistance','roleClockClaimDistance','roleTimeClaimIssue'];
+  const src=names.map(name=>app.match(new RegExp(`function ${name}\\([^\\n]+`))?.[0]).filter(Boolean);
+  assert.equal(src.length,names.length);
+  const issue=Function(`const S={settings:{timeAware:true}};const ROLE_TIME_TOLERANCE_MINUTES=2;function roleTimeParts(){return {hour:3,minute:50};}function conversationGapFact(){return null;}function conversationGapExact(){return '';}\n${src.join('\n')}\nreturn roleTimeClaimIssue;`)();
+  assert.match(issue('四点了，快睡吧',{id:'c'},1),/当前时间说成了四点/);
+  assert.equal(issue('现在三点五十二分',{id:'c'},1),'');
+  assert.equal(issue('我们四点见',{id:'c'},1),'');
+  assert.equal(issue('已经约好四点见',{id:'c'},1),'');
+  assert.equal(issue('等到四点了再叫我',{id:'c'},1),'');
 });
 
 test('one-time date end is durable and never falls back to a manufactured role line',()=>{

@@ -7,10 +7,10 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const pip=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/CallPictureInPictureController.swift',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-test('v1081 web source keeps private 1.0.206 compatibility',()=>{
-  assert.match(app,/APP_VER='v1081 · 自然点单解析与KFC首页套餐修复版'/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 206;/);
-  assert.match(project,/MARKETING_VERSION = 1\.0\.206;/);
+test('v1082 web source keeps private 1.0.207 compatibility',()=>{
+  assert.match(app,/APP_VER='v1082 · 共同生活伴生畅通与真实时间复核版'/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 207;/);
+  assert.match(project,/MARKETING_VERSION = 1\.0\.207;/);
 });
 
 test('public music search needs no user login and reuses together-listen songs',()=>{

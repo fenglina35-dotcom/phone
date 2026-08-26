@@ -58,7 +58,7 @@ assert.match(liveSandbox.prompt, /约会间隙拿出手机/);
 assert.match(liveSandbox.prompt, /手动分段总结/);
 assert.match(liveSandbox.prompt, /地点：江边/);
 
-assert.match(source, /v1081 · 自然点单解析与KFC首页套餐修复版/);
+assert.match(source, /v1082 · 共同生活伴生畅通与真实时间复核版/);
 assert.match(source, /function timeAwarenessPrompt\(who,kind\)/);
 assert.match(source, /23:20\u523023:49[\s\S]*\u7edd\u5bf9\u4e0d\u8981\u8bf4\u5341\u4e8c\u70b9\u4e86/);
 assert.match(source, /timeAwarenessPrompt\(S\.me\.name,'wechat'\)/);
@@ -317,7 +317,7 @@ assert.doesNotMatch(source, /Object\.values\(S\.offline\|\|\{\}\)\.some\(o=>o&&o
 assert.match(source, /function enterJail\(cid,reason,test\)[\s\S]*?offlineFocusStop\(\)/);
 assert.match(source, /function releaseJail\(backdoor\)[\s\S]*?offlineFocusStop\(\);save\(\)/);
 assert.match(source, /function offlineReplyIntent\(id,note,explicit\)/);
-assert.match(source, /function offlineReplyBlocked\(intent,id\)\{return intent!==\x27user\x27&&roleOnlineProactiveBlocked\(id\);\}/);
+assert.match(source, /function offlineReplyBlocked\(intent,id\)\{if\(intent===\x27user\x27\)return false;if\(intent===\x27companion\x27\)return roleServerPushDeliveryBlocked\(id\);return roleOnlineProactiveBlocked\(id\);\}/);
 assert.match(source, /async function aiReply\(id,note,replyToken,replyAccount,replyIntent\)\{replyAccount=replyAccount\|\|actId\(\);replyIntent=offlineReplyIntent\(id,note,replyIntent\);if\(offlineReplyBlocked\(replyIntent,id\)\)return/);
 assert.match(source, /function scheduleReply\(id,note,onDone,replyAid\)\{[\s\S]*?const replyIntent=offlineReplyIntent\(id,note\);if\(offlineReplyBlocked\(replyIntent,id\)\)/);
 assert.match(source, /function incomingCall\(id,kind,opt\)\{opt=opt&&typeof opt==='object'\?opt:\{\};const cohabRestricted=cohabCallRestricted\(id\);if\(cohabRestricted&&!opt\.requestedByUser\)return false;if\(roleOnlineProactiveBlocked\(id\)&&!\(cohabRestricted&&opt\.requestedByUser\)\)return false/);
@@ -661,6 +661,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=1081/);
+assert.match(html, /app\.js\?v=1082/);
 
 console.log("offline date tests passed");

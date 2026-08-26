@@ -106,7 +106,8 @@ test('co-living takes over mandatory daily checks and shares completion markers 
 });
 
 test('only the originating channel receives the inspection reaction',()=>{
-  assert.match(functionSource('companionAutomationMaybeSend'),/cohabOnlineQuiet/);
+  assert.match(functionSource('companionAutomationMaybeSend'),/roleServerPushDeliveryBlocked\(c\.id\)/);
+  assert.doesNotMatch(functionSource('companionAutomationMaybeSend'),/cohabOnlineQuiet/,'companion background facts must still reach online chat during co-living');
   assert.doesNotMatch(functionSource('initiativeMaybeSend'),/cohabOnlineQuiet/,'co-living must still allow ordinary proactive contact when no face-to-face scene is open');
   assert.match(functionSource('maybeSpyIdle'),/cohabOnlineQuiet/);
   assert.match(functionSource('checkSpyTime'),/cohabOnlineQuiet/);

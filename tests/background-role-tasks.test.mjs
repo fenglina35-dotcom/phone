@@ -83,7 +83,8 @@ test('background automations require fresh device facts and only record delivere
 test('foreground and background automations have one owner and respect occupied scenes', () => {
   assert.match(app, /roleBackgroundAvailable==='function'&&roleBackgroundAvailable\(c\.id\)\)return false/);
   assert.match(app, /localRuns:Object\.assign\(\{\},st\.automationRuns\|\|\{\}\)/);
-  assert.match(app, /suspended=!!\(roleOnlineProactiveBlocked\(c\.id\)/);
+  assert.match(app, /suspended=!!\(roleServerPushDeliveryBlocked\(c\.id\)/);
+  assert.doesNotMatch(app.match(/function roleServerAutomationConfig\(c\)[^\n]+/)?.[0]||'',/cohabOnlineQuiet/);
   assert.match(edge, /if \(profileTemporarilySuspended\(profile\) && !pendingManualUnlock\) return null/);
   assert.match(edge, /!candidate && profileTemporarilySuspended\(profile\)/);
   assert.doesNotMatch(edge, /if \(config\.suspended === true\) return null/);

@@ -247,4 +247,6 @@ test('companion automation reuses the existing initiative queue and its wake che
   assert.match(app, /document\.visibilityState==='hidden'/);
   assert.match(functionSource('sendText'), /companionGoodMorningSchedule\(c,t\)/);
   assert.match(functionSource('companionAutomationMaybeSend'), /required=!!\(candidate&&candidate\.requiredDaily\)/);
+  assert.match(functionSource('offlineReplyIntent'), /设备真实快照.*return'companion'/);
+  assert.match(functionSource('offlineReplyBlocked'), /intent==='companion'.*roleServerPushDeliveryBlocked\(id\)/);
 });

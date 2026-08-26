@@ -118,7 +118,8 @@ test('online and face-to-face activity use a narrow shared status boundary',()=>
   assert.match(source,/function incomingCall\(id,kind,opt\).*cohabRestricted&&!opt\.requestedByUser.*roleOnlineProactiveBlocked\(id\).*requestedByUser/s);
   assert.match(source,/async function maybeProactive\(id\)\{if\(!isMain\(\)\|\|roleOnlineProactiveBlocked\(id\)/);
   assert.match(source,/function roleOnlineProactiveBlocked\(id\).*offlineWechatLiveState\(c\).*cohabOnlineQuiet\(id\).*offlineFocusActive\(\)/);
-  assert.match(source,/面对面在一起，普通后台主动微信与来电必须静默/);
+  assert.match(source,/伴生后台生成的普通文字消息仍可照常送到线上微信/);
+  assert.match(source,/共同生活开启期间不得在没有当前命令时自行来电/);
   assert.match(functionSource('cohabToggle'),/c\.proactive\.enabled=true;c\.proactive\.serverPush=true;initiativeArm\(c\)/);
   assert.match(source,/去微信联系TA吧/);
   assert.match(source,/function cohabConsumeOnlineState\(text,c,id\)/);
