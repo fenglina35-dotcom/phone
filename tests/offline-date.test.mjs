@@ -58,7 +58,7 @@ assert.match(liveSandbox.prompt, /约会间隙拿出手机/);
 assert.match(liveSandbox.prompt, /手动分段总结/);
 assert.match(liveSandbox.prompt, /地点：江边/);
 
-assert.match(source, /v1077 · 麦当劳套餐触发修复版/);
+assert.match(source, /v1078 · 时间约会记忆与真人聊天修复版/);
 assert.match(source, /function timeAwarenessPrompt\(who,kind\)/);
 assert.match(source, /23:20\u523023:49[\s\S]*\u7edd\u5bf9\u4e0d\u8981\u8bf4\u5341\u4e8c\u70b9\u4e86/);
 assert.match(source, /timeAwarenessPrompt\(S\.me\.name,'wechat'\)/);
@@ -498,7 +498,7 @@ assert.match(source, /function offCreateWechatHandoff\(c,ended\)/);
 assert.match(source, /function offHandoffRecallQuery\(text\)/);
 assert.match(source, /function offWechatHandoffPrompt\(c,query\)/);
 assert.match(source, /原文没有的台词、动作、承诺和称呼一律不能猜/);
-assert.match(offEndSource, /if\(c\)c\._offlineHandoff=offCreateWechatHandoff\(c,full\)/);
+assert.match(offEndSource, /if\(c\)\{c\._offlineHandoff=offCreateWechatHandoff\(c,full\);c\._lastOfflineEnded=/);
 assert.match(source, /function offReinjectLatestHandoff\(id,silent\)/);
 assert.match(source, /offRetryLatestSummary[\s\S]{0,900}offReinjectLatestHandoff\(id,true\)/);
 assert.match(source, /重新注入最近约会原文/);
@@ -661,6 +661,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=1077/);
+assert.match(html, /app\.js\?v=1078/);
 
 console.log("offline date tests passed");

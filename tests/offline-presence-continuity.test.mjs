@@ -31,13 +31,10 @@ assert.match(functionSource('cohabDeliverOnlineMessage'), /msgs\(c\.id\)\.push\(
 
 const eventInfo = Function(`return (${functionSource('offEndReplyEventInfo')})`)();
 const replyMatches = Function(`return (${functionSource('offEndReplyMatches')})`)();
-const fallback = Function(`return (${functionSource('offEndReplyFallback')})`)();
 const event = eventInfo('[系统：你和小北刚结束在「江边」的这次线下见面，已经回到微信聊天。]');
 assert.deepEqual(event, { loc: '江边' });
 assert.equal(replyMatches(event, '你一整天都没回我，干嘛一直不理我？'), false, 'the old no-reply accusation contradicts the just-ended meeting');
 assert.equal(replyMatches(event, '刚才分开就开始想你了，路上注意安全。'), true);
-assert.match(fallback(event), /江边/);
-assert.match(fallback(event), /刚/);
 
 const end = functionSource('offEnd');
 assert.match(end, /这是本轮最新且必须先承接的真实事件/);
@@ -45,8 +42,8 @@ assert.match(end, /绝不能说ta一整天没回/);
 const aiReply = functionSource('aiReply');
 assert.match(aiReply, /_offEndInfo=replyAccount==='main'\?offEndReplyEventInfo\(note\):null/);
 assert.match(aiReply, /if\(_offEndInfo&&!offEndReplyMatches\(_offEndInfo,content\)\)/);
-assert.match(aiReply, /offEndReplyFallback\(_offEndInfo\)/);
+assert.match(aiReply, /if\(fix&&offEndReplyMatches\(_offEndInfo,fix\)\)content=fix;else content=''/);
 assert.match(privateSource, /offlineWechatLiveState\(c\).*cohabOnlineQuiet\(id\).*offlineFocusActive\(\)/, 'the private bundle must preserve the same presence block');
-assert.match(privateSource, /offEndReplyFallback\(_offEndInfo\)/, 'the private bundle must contain the end-of-date fallback');
+assert.doesNotMatch(privateSource, /offEndReplyFallback\(_offEndInfo\)/, 'the private bundle must not manufacture an end-of-date role line');
 
 console.log('offline presence continuity tests passed');

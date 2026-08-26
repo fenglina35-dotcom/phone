@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1045 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1077 · 麦当劳套餐触发修复版'/);
-  assert.match(app,/const url='sw\.js\?v=1077&r=v1077-mcdonalds-bundle-trigger-repair-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1077'/);
-  assert.match(html,/app\.js\?v=1077/);
-  assert.match(sw,/const BUILD='1077'/);
-  assert.match(sw,/north-shell-v1077/);
-  assert.match(index,/小手机\.html\?v=1077/);
-  assert.match(repair,/小手机\.html\?v=1077/);
+  assert.match(app,/APP_VER='v1078 · 时间约会记忆与真人聊天修复版'/);
+  assert.match(app,/const url='sw\.js\?v=1078&r=v1078-time-date-memory-phone-friend-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1078'/);
+  assert.match(html,/app\.js\?v=1078/);
+  assert.match(sw,/const BUILD='1078'/);
+  assert.match(sw,/north-shell-v1078/);
+  assert.match(index,/小手机\.html\?v=1078/);
+  assert.match(repair,/小手机\.html\?v=1078/);
 });
 
-test('the private iOS package embeds web v1077 and keeps 1.0.202 delivery',()=>{
-  assert.match(privateBundle,/<string>1077<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.202;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 202;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.202 \(202\)'/);
+test('the private iOS package embeds web v1078 and keeps 1.0.203 delivery',()=>{
+  assert.match(privateBundle,/<string>1078<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.203;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 203;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.203 \(203\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

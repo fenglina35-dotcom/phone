@@ -4,7 +4,7 @@ import fs from "node:fs";
 const source = fs.readFileSync(new URL("../app.js", import.meta.url), "utf8");
 
 // System-triggered call turns must never masquerade as user speech.
-assert.match(source, /role:m\.type===\x27sys\x27\?\x27system\x27:m\.role/);
+assert.match(source, /role:m\.type===\x27sys\x27\|\|m\._transferReceipt\?\x27system\x27:m\.role/);
 assert.match(source, /if\(sysNote&&!_videoVisionAutomatic\)hist\.push\(\{role:_screenShareEvent\|\|_silentContinuation\|\|_connectionEvent\?'user':'system',content:sysNote\}\)/);
 assert.match(source, /ta没有开口时，绝对不能说ta重复了你的话/);
 

@@ -126,6 +126,24 @@ test('incoming receive and refund create one linked user receipt and one genuine
   assert.equal(refunded.replies.length,1,'a refunded card must not generate a second reaction');
 });
 
+test('linked transfer receipts are authoritative facts, never reverse transfers',()=>{
+  const context=vm.createContext({
+    aboutMeNoteText:(x)=>String(x||''),
+    quoteContextText:()=>'',
+  });
+  vm.runInContext(functionSource('msgToText'),context);
+  const received=context.msgToText({role:'user',type:'transfer',amount:8.8,_transferReceipt:true,receiptAction:'receive',payState:'received'});
+  assert.match(received,/你此前转给用户的 ¥8\.80 已被用户收下/);
+  assert.match(received,/不是用户给你转账/);
+  assert.doesNotMatch(received,/我给你转/);
+  const refunded=context.msgToText({role:'user',type:'transfer',amount:8.8,_transferReceipt:true,receiptAction:'refund',payState:'refunded'});
+  assert.match(refunded,/用户把你此前转给ta的 ¥8\.80 原路退还给你/);
+  const guards=functionSource('featureEventReplyNeedsRepair');
+  vm.runInContext(guards,context);
+  assert.equal(context.featureEventReplyNeedsRepair('功能事件即时反应｜你发出的转账被收款','你怎么又给我转回来了'),true);
+  assert.equal(context.featureEventReplyNeedsRepair('功能事件即时反应｜你发出的转账被收款','好，看到你收下了'),false);
+});
+
 test('outgoing receive and refund create the matching assistant-side receipt without a second settlement',()=>{
   const run=mode=>{
     const original={id:'out1',role:'user',type:'transfer',amount:5.2,time:100};
