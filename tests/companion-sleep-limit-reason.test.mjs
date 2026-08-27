@@ -31,25 +31,20 @@ test('companion sleep selects one latest deduplicated session', () => {
   );
 });
 
-test('native snapshot keeps daily-limit and manual lock reasons separate', () => {
-  assert.match(sync, /"manualLocked": manualLockedTokens\.contains\(token\)/);
-  assert.match(sync, /"limitReached": limitLockedTokens\.contains\(token\)/);
-  assert.match(sync, /private func reconcileReachedDailyLimits/);
-  assert.match(sync, /usageDay\(for: report\.generatedAt\) == usageDay\(for: Date\(\)\)/);
-  assert.match(sync, /usedSeconds >= Double\(minutes \* 60\)/);
-  assert.match(sync, /dailyLimitStore\.shield\.applications = reached/);
-  assert.match(sync, /saveLimitLockedTokens\(reached\)/);
+test('snapshot refresh never reapplies a reached limit after an explicit unlock', () => {
+  assert.doesNotMatch(sync, /private func reconcileReachedDailyLimits/);
+  assert.doesNotMatch(sync, /reconcileReachedDailyLimits\(report:/);
+  assert.doesNotMatch(sync, /"manualLocked":/);
+  assert.doesNotMatch(sync, /"limitReached":/);
 });
 
-test('small-phone UI labels a reached daily limit in red instead of calling it a role lock', () => {
-  assert.match(
-    app,
-    /limitReached\?'今日限额已达到':manualLocked\?'角色或手动锁定'/
-  );
-  assert.match(app, /app\.limitReached\?'#ff526d'/);
-  assert.match(app, /font-weight:\$\{app\.limitReached\?'700':'400'\}/);
-  assert.match(app, /row\.limitReached===true/);
-  assert.match(app, /row\.manualLocked===true/);
+test('changing a native daily limit clears the stale reached lock for that app', () => {
+  assert.match(sync, /case "limit":[\s\S]{0,900}var reachedTokens = loadLimitLockedTokens\(\)/);
+  assert.match(sync, /reachedTokens\.remove\(token\)/);
+  assert.match(sync, /dailyLimitStore\.shield\.applications = reachedTokens\.isEmpty/);
+  assert.match(sync, /saveLimitLockedTokens\(reachedTokens\)/);
+  assert.doesNotMatch(app, /row\.limitReached===true/);
+  assert.doesNotMatch(app, /row\.manualLocked===true/);
 });
 
 test('real companion sleep hides legacy timer durations and call lull is not called measured sleep', () => {
