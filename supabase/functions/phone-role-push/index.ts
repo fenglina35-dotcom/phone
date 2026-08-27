@@ -306,6 +306,19 @@ function roleManualUnlockPerspectiveInvalid(
   return /(?:^|[，。！？；;\s])(?:她|他|用户)(?:刚|又|已经|亲自|自己|把|解锁|以为|没有|没|在|说|做|要|会|想)/.test(text);
 }
 
+function roleManualUnlockFallback(eventContext: string, recent: string[]) {
+  const match = String(eventContext || "").match(/手动解锁了([^，；\n]{1,80})/);
+  const app = String(match?.[1] || "这个App").trim();
+  const rows = [
+    `我看到你刚刚解锁「${app}」了。`,
+    `你刚才把「${app}」解锁了，我知道了。`,
+    `刚刚「${app}」是你自己解锁的，我看到了。`,
+    `你把「${app}」解开了，这次我收到了。`,
+  ];
+  const prior = new Set(recent.map(roleTextKey).filter(Boolean));
+  return rows.find((row) => !prior.has(roleTextKey(row))) || rows[0];
+}
+
 function profileModelBase(value: unknown) {
   try {
     const url = new URL(String(value || "").trim());
@@ -330,6 +343,7 @@ async function roleMessage(
   allowSilent = true,
   ordinaryProactive = false,
 ) {
+  const manualUnlockEvent = String(eventInstruction || "").includes("亲自成功解锁App");
   /* A background handoff must always finish inside the two-minute claim lease.
      Without a hard deadline a slow OpenAI-compatible endpoint can leave the
      task claimed until cron reclaims it, repeatedly occupying the same model
@@ -375,7 +389,9 @@ async function roleMessage(
     base: (Deno.env.get("ROLE_PUSH_MINIMAX_BASE_URL") || "https://api.minimaxi.com/v1").replace(/\/$/, ""),
     model: Deno.env.get("ROLE_PUSH_MINIMAX_MODEL") || "MiniMax-M2.7",
   });
-  if (!providers.length) return { kind: "unavailable", body: "", reason: "no-provider" };
+  if (!providers.length) return manualUnlockEvent
+    ? { kind: "message", body: roleManualUnlockFallback(eventContext, recentBodies) }
+    : { kind: "unavailable", body: "", reason: "no-provider" };
   const clock = localClock(String(profile.timezone || "Asia/Shanghai"));
   const timeAware = profile.time_aware !== false;
   const recent = recentBodies.map((body, index) => `${index + 1}. ${body}`).join("\n");
@@ -420,6 +436,12 @@ async function roleMessage(
     { role: "user", content: promptText },
   ];
   if (eventInstruction) baseMessages[0].content = eventInstruction;
+  if (manualUnlockEvent) {
+    baseMessages.splice(1, 0, {
+      role: "system",
+      content: "这是一次新的真实手动解锁事件，必须给当前聊天对象发出至少一条可见消息；不得保持安静，不得复述最近一次解锁回复，也不得把对方写成她、他或用户。",
+    });
+  }
   if (ordinaryProactive) {
     baseMessages.splice(1, 0, {
       role: "system",
@@ -471,15 +493,19 @@ async function roleMessage(
             } catch (_) {}
             console.warn("role-message-provider-failed", provider.name, response.status, failureCode);
             providerFailures.push(`${provider.name}:http-${response.status}:${failureCode}`);
+            if (manualUnlockEvent) return { kind: "message", body: roleManualUnlockFallback(eventContext, repeatCandidates) };
             break;
           }
           const data = await response.json();
           const text = String(data?.choices?.[0]?.message?.content || "")
             .replace(/<think>[\s\S]*?<\/think>/gi, "")
             .trim().replace(/^[“\"']|[”\"']$/g, "");
-          if (!text) break;
+          if (!text) return manualUnlockEvent
+            ? { kind: "message", body: roleManualUnlockFallback(eventContext, repeatCandidates) }
+            : { kind: "unavailable", body: "", reason: "empty-model-output" };
           sawGeneratedCandidate = true;
           if (/^[\[【]\s*(?:保持安静|不说话)\s*[\]】]$/.test(text)) {
+            if (manualUnlockEvent) return { kind: "message", body: roleManualUnlockFallback(eventContext, repeatCandidates) };
             if (effectiveAllowSilent) return { kind: "silent", body: "" };
             attemptMessages = [
               ...baseMessages,
@@ -498,8 +524,10 @@ async function roleMessage(
           if (bodyKey && !repeated && !ungrounded && !styleInvalid && !eventPerspectiveInvalid) {
             return { kind: "message", body };
           }
-          // Repetition and manual-unlock narration are not worth a second paid
-          // generation. Drop this proactive event instead of spending again.
+          // A manual-unlock event must remain visible, but an invalid first
+          // result is repaired locally so it never spends a second model call.
+          // Other repeated proactive events may still stay silent.
+          if (manualUnlockEvent) return { kind: "message", body: roleManualUnlockFallback(eventContext, repeatCandidates) };
           if (repeated || eventPerspectiveInvalid) return { kind: "silent", body: "" };
           attemptMessages = [
             ...baseMessages,
@@ -515,12 +543,14 @@ async function roleMessage(
         } catch (error) {
           console.warn("role-message-provider-error", provider.name, String(error?.message || error).slice(0, 160));
           providerFailures.push(`${provider.name}:${controller.signal.aborted ? "timeout" : "network-error"}`);
+          if (manualUnlockEvent) return { kind: "message", body: roleManualUnlockFallback(eventContext, repeatCandidates) };
           break;
         } finally {
           clearTimeout(requestTimer);
         }
       }
     }
+    if (manualUnlockEvent) return { kind: "message", body: roleManualUnlockFallback(eventContext, repeatCandidates) };
     return sawGeneratedCandidate && effectiveAllowSilent
       ? { kind: "silent", body: "" }
       : { kind: "unavailable", body: "", reason: providerFailures.join(",") || "empty-provider-response" };

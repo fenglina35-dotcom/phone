@@ -229,14 +229,14 @@ test('foreground replies cancel a racing server handoff before generation and be
   assert.ok(finalGuard > generation && finalGuard < delivery,'a foreground reply finishing during the fallback model call must still prevent duplicate delivery');
 });
 
-test('foreground chat does not enqueue a second model call until the app actually backgrounds', () => {
+test('foreground chat hands off quickly only after the app actually backgrounds', () => {
   const prepare = functionSource('roleBackgroundPrepare');
   const flush = functionSource('roleBackgroundFlush');
   const resume = functionSource('roleBackgroundResumeForeground');
   const localActive = functionSource('roleBackgroundLocalReplyActive');
   assert.match(prepare, /kind!=='reply_handoff'/,'ordinary visible chat keeps only a local fallback marker');
   assert.match(prepare, /document\.hidden[\s\S]{0,180}Date\.now\(\)\+5000/,'an already hidden page may hand off immediately');
-  assert.match(flush, /Date\.now\(\)\+5000/,'a real background transition activates the server handoff');
+  assert.match(flush, /Date\.now\(\)\+5000/,'a real background transition activates the fast server handoff');
   assert.match(localActive, /replyGenerationBusy\(id\)/,'a genuinely live local generation can take ownership again');
   assert.match(localActive, /_replyTimers&&_replyTimers\[key\]/,'a queued local foreground reply also counts as live');
   assert.match(localActive, /role==='assistant'[\s\S]{0,180}baseline\+1000/,'an already persisted foreground answer can safely cancel the handoff');
@@ -259,10 +259,18 @@ test('manual unlock messages address the current partner instead of narrating he
   assert.equal(perspectiveInvalid('她刚下班。', '普通主动消息'), false, 'the guard cannot affect ordinary role messages');
   assert.match(edge, /eventPerspectiveInvalid = roleManualUnlockPerspectiveInvalid\(body, eventInstruction\)/);
   assert.match(edge, /!styleInvalid && !eventPerspectiveInvalid/);
-  assert.match(edge, /if \(repeated \|\| eventPerspectiveInvalid\) return \{ kind: "silent", body: "" \};/);
+  const fallbackSource = edgeFunctionSource('roleManualUnlockFallback')
+    .replace('eventContext: string', 'eventContext')
+    .replace('recent: string[]', 'recent');
+  const fallback = Function('roleTextKey', `${fallbackSource}\nreturn roleManualUnlockFallback;`)((value) => String(value || '').replace(/[^\p{L}\p{N}]/gu, '').toLowerCase());
+  const first = fallback('用户亲自手动解锁了抖音，成功记录2026-08-27T10:00:00Z', []);
+  const second = fallback('用户亲自手动解锁了抖音，成功记录2026-08-27T11:00:00Z', [first]);
+  assert.match(first, /你.*抖音|抖音.*你/);
+  assert.notEqual(second, first, 'a later real unlock gets a different visible fallback if the model repeats');
+  assert.match(edge, /if \(manualUnlockEvent\) return \{ kind: "message", body: roleManualUnlockFallback\(eventContext, repeatCandidates\) \};/);
   assert.ok(
-    edge.indexOf('if (repeated || eventPerspectiveInvalid) return { kind: "silent", body: "" };') < edge.indexOf('attemptMessages = [', edge.indexOf('const eventPerspectiveInvalid')),
-    'repeat and third-person unlock output must be dropped before any paid rewrite'
+    edge.indexOf('if (manualUnlockEvent) return { kind: "message", body: roleManualUnlockFallback(eventContext, repeatCandidates) };', edge.indexOf('const eventPerspectiveInvalid')) < edge.indexOf('attemptMessages = [', edge.indexOf('const eventPerspectiveInvalid')),
+    'a new unlock must become a visible direct message before any paid rewrite'
   );
   assert.match(edge, /不得默认审问/);
 });

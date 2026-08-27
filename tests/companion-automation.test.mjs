@@ -235,15 +235,13 @@ test('snapshots cannot manufacture manual unlock authority and explicit events s
   assert.match(app, /event\.delivered=true/);
 });
 
-test('local manual unlock replies are blocked without a rewrite or repeated model call', () => {
-  let lastUserAt = 0;
+test('local manual unlock events stay visible without a rewrite or repeated model call', () => {
   const context = vm.createContext({
     initiativeVisibleText: (value) => String(value || '').replace(/\[[^\]]+\]/g, '').trim(),
     replyDedupNorm: (value) => String(value || '').replace(/[^\p{L}\p{N}]/gu, '').toLowerCase(),
     replyLcsContainment: (a, b) => (a === b ? 1 : 0),
     replyBigramScore: (a, b) => (a === b ? 1 : 0),
     initiativeRecentlyRepeated: () => false,
-    lastUserTs: () => lastUserAt,
     save: () => {},
   });
   vm.runInContext(`
@@ -252,9 +250,9 @@ test('local manual unlock replies are blocked without a rewrite or repeated mode
     ${functionSource('manualUnlockReplyPerspectiveInvalid')}
     ${functionSource('manualUnlockReplyRepeated')}
     ${functionSource('manualUnlockReplyNeedsRepair')}
-    ${functionSource('manualUnlockReplyGuard')}
     ${functionSource('manualUnlockEventApp')}
-    ${functionSource('manualUnlockEventRedundant')}
+    ${functionSource('manualUnlockReplyFallback')}
+    ${functionSource('manualUnlockReplyGuard')}
     ${functionSource('manualUnlockReplyRemember')}
   `, context);
   const note = '本轮只允许提到这一次明确的手动解锁事件；用户本人亲自解锁了「抖音」';
@@ -262,33 +260,32 @@ test('local manual unlock replies are blocked without a rewrite or repeated mode
   assert.equal(context.manualUnlockReplyNeedsRepair('c1', 'main', note, '你解锁抖音了，我看到了。', {}), '');
   assert.equal(context.manualUnlockReplyNeedsRepair('c1', 'main', note, '你解锁抖音了，我看到了。', { _manualUnlockReplyText: '你解锁抖音了，我看到了。' }), 'repeat');
   assert.equal(context.manualUnlockReplyNeedsRepair('c1', 'main', '普通主动消息', '她刚下班。', {}), '');
-  assert.equal(context.manualUnlockReplyNeedsRepair('c1', 'main', note, '[保持安静]', {}), '');
+  assert.equal(context.manualUnlockReplyNeedsRepair('c1', 'main', note, '[保持安静]', {}), 'silent');
   const contact = { id: 'c1' };
   context.manualUnlockReplyRemember(contact, '这次先不说你。', note);
   assert.equal(contact._manualUnlockReplyText, '这次先不说你。');
   assert.equal(contact._manualUnlockReplyApp, '抖音');
-  assert.equal(context.manualUnlockEventRedundant(contact, note), true, 'same app is consumed before generation when the user has not replied');
-  lastUserAt = contact._manualUnlockReplyAt + 1;
-  assert.equal(context.manualUnlockEventRedundant(contact, note), false, 'a newer user message permits a genuinely new response');
-  lastUserAt = 0;
-  assert.equal(context.manualUnlockEventRedundant(contact, note.replace('抖音', 'QQ')), false, 'a different app is a distinct event');
   const blocked = context.manualUnlockReplyGuard('c1', 'main', note, '她把抖音自己解锁了。', {});
-  assert.equal(blocked.consumed, true);
-  assert.equal(blocked.content, '');
+  assert.equal(blocked.consumed, false);
+  assert.match(blocked.content, /你.*解锁.*抖音|抖音.*你.*解锁/);
   const repeated = context.manualUnlockReplyGuard('c1', 'main', note, '你解锁抖音了，我看到了。', { _manualUnlockReplyText: '你解锁抖音了，我看到了。' });
-  assert.equal(repeated.consumed, true);
-  assert.equal(repeated.content, '');
+  assert.equal(repeated.consumed, false);
+  assert.notEqual(repeated.content, '你解锁抖音了，我看到了。');
+  const silent = context.manualUnlockReplyGuard('c1', 'main', note, '[保持安静]', {});
+  assert.equal(silent.consumed, false);
+  assert.ok(silent.content);
   const valid = context.manualUnlockReplyGuard('c1', 'main', note, '你这次想刷点什么？', {});
   assert.equal(valid.content, '你这次想刷点什么？');
   assert.equal(valid.consumed, false);
   const localGate = functionSource('aiReply');
   assert.match(localGate, /manualUnlockReplyGuard\(id,replyAccount,note,content,c\)/);
-  assert.match(localGate, /if\(checked\.consumed\)[\s\S]{0,120}return true/);
   assert.doesNotMatch(localGate, /manualUnlockReplyRepairPrompt/);
+  assert.match(localGate, /const _ordinaryRepeat=ordinaryReplyRepeatInfo[\s\S]{0,80}if\(_ordinaryRepeat&&!_manualUnlockNote\)/);
+  assert.match(localGate, /initiativeNoteActive\(note\)&&initiativeRecentlyRepeated\(id,content\)&&!_manualUnlockNote/);
   assert.match(localGate, /if\(got&&manualUnlockReplyActive\(note\)\)manualUnlockReplyRemember/);
   const preGenerationGate = functionSource('companionAutomationMaybeSend');
-  assert.match(preGenerationGate, /if\(manual&&manualUnlockEventRedundant\(c,candidate\.note\)\)\{companionAutomationRecord\(candidate\);return true;\}/);
-  assert.ok(preGenerationGate.indexOf('manualUnlockEventRedundant') < preGenerationGate.indexOf('scheduleReply'), 'same-app duplicates are consumed before the model route');
+  assert.doesNotMatch(preGenerationGate, /manualUnlockEventRedundant/);
+  assert.match(preGenerationGate, /scheduleReply\(c\.id,candidate\.note/);
 });
 
 test('a private-app manual unlock is handed to the server instead of being stranded locally', () => {

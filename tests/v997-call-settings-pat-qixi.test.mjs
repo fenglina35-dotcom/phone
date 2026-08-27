@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1086 · 私人App降载回退与图片引用修复版'/);
+  assert.match(app,/APP_VER='v1087 · 后台解锁去重与必达修复版'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1086/);
-  assert.match(html,/sw\.js\?v=1086&r=v1086-private-performance-rollback-image-quote-1/);
+  assert.match(html,/north-sw-reloaded-1087/);
+  assert.match(html,/sw\.js\?v=1087&r=v1087-background-unlock-delivery-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{

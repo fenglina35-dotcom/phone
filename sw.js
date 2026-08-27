@@ -1,6 +1,6 @@
-const BUILD='1086';
-const HOTFIX='v1086-private-performance-rollback-image-quote-1';
-const SHELL_CACHE='north-shell-v1086';
+const BUILD='1087';
+const HOTFIX='v1087-background-unlock-delivery-1';
+const SHELL_CACHE='north-shell-v1087';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
