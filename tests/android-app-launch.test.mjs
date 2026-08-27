@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 
-assert.match(source, /const APP_VER='v1085 · WebContent降载与微信手动总结版'/);
+assert.match(source, /const APP_VER='v1086 · 私人App降载回退与图片引用修复版'/);
 assert.match(source, /const APP_TAP_MOVE=26,APP_TAP_MS=650,APP_DRAG_MS=620/);
 assert.match(source, /onclick="appTap\(event,\\''\+k\+'\\'\)"/);
 assert.match(source, /onpointerdown="appDown\(event,\\''\+k\+'\\'\)"/);
@@ -23,7 +23,7 @@ assert.match(source, /tale:\(\)=>openApp\('tale'\)/);
 assert.match(source, /dread:\(\)=>openApp\('dread'\)/);
 assert.match(source, /tale:taleStart/);
 assert.match(source, /dread:dreadStart/);
-assert.match(source, /function appLaunch\(k\)[\s\S]*?if\(f\)setTimeout\(f,0\)/,'all shells leave the pointer event before changing pages');
+assert.match(source, /function appLaunch\(k\)[\s\S]*?privateNativeAppOn\(\)&&typeof queueMicrotask===['"]function['"]\)queueMicrotask\(f\);else setTimeout\(f,0\)/,'the private shell keeps its previously stable prioritized launch while other shells defer');
 assert.match(source, /offline:openOfflineMenu/,'offline opening inherits the shared deferred pointerup launch');
 
 console.log("android app launch tests passed");

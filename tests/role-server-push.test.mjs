@@ -259,7 +259,11 @@ test('manual unlock messages address the current partner instead of narrating he
   assert.equal(perspectiveInvalid('她刚下班。', '普通主动消息'), false, 'the guard cannot affect ordinary role messages');
   assert.match(edge, /eventPerspectiveInvalid = roleManualUnlockPerspectiveInvalid\(body, eventInstruction\)/);
   assert.match(edge, /!styleInvalid && !eventPerspectiveInvalid/);
-  assert.match(edge, /上一版把当前聊天对象写成了她、他或用户/);
+  assert.match(edge, /if \(repeated \|\| eventPerspectiveInvalid\) return \{ kind: "silent", body: "" \};/);
+  assert.ok(
+    edge.indexOf('if (repeated || eventPerspectiveInvalid) return { kind: "silent", body: "" };') < edge.indexOf('attemptMessages = [', edge.indexOf('const eventPerspectiveInvalid')),
+    'repeat and third-person unlock output must be dropped before any paid rewrite'
+  );
   assert.match(edge, /不得默认审问/);
 });
 
@@ -341,7 +345,8 @@ test('returned role messages are deduplicated and appended to the matching chat'
   assert.doesNotMatch(deliveryBlock,/cohabOnlineQuiet/,'cohabitation alone cannot block durable server text delivery');
   assert.match(pull, /roleServerPushSyncSoon\(c\.id\)/);
   assert.match(pull, /_rolePushId===row\.id/);
-  assert.match(pull, /triggerKind\|\|''\)==='reply_handoff'&&roleServerPushHandoffAlreadyVisible\(c,body,rowAt\)/,'a persisted fallback that exactly matches the foreground reply is consumed instead of appended');
+  assert.match(pull, /if\(roleServerPushHandoffAlreadyVisible\(c,body,rowAt\)\)\{queueAck\(row,true\);continue;\}/,'a persisted fallback that exactly matches a visible foreground reply is consumed instead of appended');
+  assert.doesNotMatch(pull, /triggerKind[\s\S]{0,100}roleServerPushHandoffAlreadyVisible/,'replay protection must not depend on the server task label');
   assert.doesNotMatch(pull, /initiativeRecentlyRepeated\(c\.id,body/);
   assert.match(pull, /roleServerPushParts\(c,body\)/);
   assert.match(pull, /roleServerPushCallKind\(rawBody\)/);

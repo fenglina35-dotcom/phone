@@ -498,6 +498,9 @@ async function roleMessage(
           if (bodyKey && !repeated && !ungrounded && !styleInvalid && !eventPerspectiveInvalid) {
             return { kind: "message", body };
           }
+          // Repetition and manual-unlock narration are not worth a second paid
+          // generation. Drop this proactive event instead of spending again.
+          if (repeated || eventPerspectiveInvalid) return { kind: "silent", body: "" };
           attemptMessages = [
             ...baseMessages,
             { role: "assistant", content: body },

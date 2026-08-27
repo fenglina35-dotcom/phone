@@ -160,16 +160,6 @@ test('inactive native helpers do not keep waking the main thread',()=>{
   assert.match(app,/setInterval\(blockedPhoneSweepVisible,5000\)/);
 });
 
-test('measured native pressure pauses noncritical contact and initiative scans without stopping inbox sync',()=>{
-  for(const name of ['friendRequestSweep','blockedPhoneSweepVisible','friendDiscoveryCheck','checkInitiative','checkSpyTime']){
-    assert.match(app,new RegExp(`(?:async )?function ${name}\\([^)]*\\)\\{[\\s\\S]{0,220}?northNativeMaintenancePaused\\(\\)`),`${name} observes the native pressure window`);
-  }
-  const inboxStart=app.indexOf('async function roleServerPushPull(');
-  const inboxEnd=app.indexOf('function roleServerPushWakePull(',inboxStart);
-  assert.ok(inboxStart>=0&&inboxEnd>inboxStart,'role inbox pull is present');
-  assert.doesNotMatch(app.slice(inboxStart,inboxEnd),/northNativeMaintenancePaused/,'real background inbox sync stays active');
-});
-
 test('private core storage stays off MainActor and restores large state through bounded chunks',()=>{
   assert.match(app,/const args=\{key:k,ver:[\s\S]*?stateJSON:String\(v\.json\|\|''\)\}[\s\S]*?request\('storage\.put',args\)/);
   assert.doesNotMatch(app,/request\('storage\.put',\{key:k,value:v\}\)/);
@@ -198,8 +188,7 @@ test('private boot keeps historical image references lazy without allowing image
   assert.match(app,/app\.innerHTML=[\s\S]{0,900}?if\(privateNativeAppOn\(\)\)hydrateStoredImageNodes\(\)/);
   assert.match(app,/const _visibleImageMisses=new Map\(\)/);
   assert.match(app,/function visibleImageRetryDelay\(count\)[\s\S]*?Math\.min\(120000/);
-  assert.match(app,/eligible\.slice\(0,4\)/);
-  assert.match(app,/if\(!force&&northNativeMaintenancePaused\(\)\)/);
+  assert.match(app,/eligible\.slice\(0,12\)/);
   assert.match(app,/function scheduleVisibleStoredImages\(force,alreadyHydrated\)[\s\S]*?if\(!alreadyHydrated\)hydrateStoredImageNodes\(\)[\s\S]*?requestIdleCallback\(run,\{timeout:1200\}\)/);
   assert.match(app,/if\(privateNativeAppOn\(\)\)hydrateStoredImageNodes\(\)/);
   assert.match(app,/scheduleVisibleStoredImages\(false,true\);[\s\S]{0,220}?northNativePerformanceSample\('render-'\+c\.p/);
@@ -207,8 +196,8 @@ test('private boot keeps historical image references lazy without allowing image
   assert.doesNotMatch(app,/function scheduleVisibleStoredImages\(\)[\s\S]{0,300}?requestAnimationFrame/);
 });
 
-test('private navigation yields out of the pointer event and slow renders enter the measured performance guard',()=>{
-  assert.match(app,/function appLaunch\(k\)[\s\S]*?if\(f\)setTimeout\(f,0\)/);
+test('private navigation is prioritized and slow renders enter the measured performance guard',()=>{
+  assert.match(app,/function appLaunch\(k\)[\s\S]*?privateNativeAppOn\(\)&&typeof queueMicrotask===['"]function['"]\)queueMicrotask\(f\);else setTimeout\(f,0\)/);
   assert.match(app,/function render\(\)\{\s*const c=cur\(\);const app=\$\('#app'\),_renderStarted=privateNativeAppOn\(\)/);
   assert.match(app,/northNativePerformanceSample\('render-'\+c\.p,/);
 });
@@ -255,7 +244,6 @@ test('a rejected visible-image batch backs off instead of immediately retrying t
     Date,Map,Set,Promise,
     _imgCache:{},_imgRev:new Map(),_imgReady:new Set(),
     visibleStoredImageKeys:()=>Array.from({length:13},(_,i)=>'img'+i),
-    northNativeMaintenancePaused:()=>false,
     hydrateStoredImageNodes:()=>{},
     imgMany:async()=>{sandbox.reads++;throw new Error('database temporarily unavailable');},
     reads:0,
@@ -269,7 +257,7 @@ test('a rejected visible-image batch backs off instead of immediately retrying t
   `,sandbox);
   assert.equal(await sandbox.runHydrate(),false);
   assert.equal(sandbox.reads,1);
-  assert.equal(sandbox.missCount(),4,'every failed key in the bounded batch receives retry state');
+  assert.equal(sandbox.missCount(),12,'every failed key receives retry state');
   assert.equal(sandbox.immediateAgain(),false,'the failed batch cannot request an immediate follow-up');
   assert.equal(timers.length,1,'exactly one delayed retry is scheduled');
   assert.ok(timers[0].delay>=4000,'retry delay is at least four seconds');
@@ -304,7 +292,6 @@ test('native performance protection is adaptive and preserves the normal visual 
   assert.match(app,/function northNativePerformanceWatchStart\(\)/);
   assert.match(app,/north-native-startup-quiet/);
   assert.match(app,/north-native-performance-guard/);
-  assert.match(app,/function northNativePerformanceGuard\(reason,delay\)[\s\S]*?_nativePressureUntil=Math\.max\(_nativePressureUntil,now\+hold\)[\s\S]*?privateTrimImageMemoryCache\(\)/);
   assert.match(css,/north-native-performance-guard,.north-native-startup-quiet/);
   assert.match(css,/animation-play-state:paused!important/);
 });
