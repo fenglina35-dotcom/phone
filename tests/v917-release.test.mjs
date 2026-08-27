@@ -10,10 +10,10 @@ const account = read('ai-account.js');
 const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v1096 web source keeps private 1.0.221 compatibility', () => {
-  assert.match(app, /APP_VER='v1096 · 媒体云端总结持久修复版'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='1096'/);
-  assert.match(sw, /const BUILD='1096'/);
+test('v1097 web source keeps private 1.0.221 compatibility', () => {
+  assert.match(app, /APP_VER='v1097 · 上下文连续性与百回合版'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='1097'/);
+  assert.match(sw, /const BUILD='1097'/);
   assert.doesNotMatch(project, /CURRENT_PROJECT_VERSION = 40|MARKETING_VERSION = 1\.0\.40/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 221;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1\.0\.221;/g) || []).length, 12);

@@ -21,7 +21,7 @@ test('time facts include short exact gaps and generated claims are verified once
   assert.match(app,/function roleReplyClockPin\(now\)/);
   assert.match(app,/只供你内部知道，不要机械复述/);
   assert.match(app,/除非当前话题确实涉及时间、作息、吃饭或日期，否则不要主动报时/);
-  assert.match(app,/const _pin=\{role:'system',content:personaPin\(c\)\+roleReplyClockPin\(Date\.now\(\)\)\+roleReplyTimelinePin\(c\)\}/);
+  assert.match(app,/const _pin=\{role:'system',content:personaPin\(c\)\+roleReplyClockPin\(Date\.now\(\)\)\+roleReplyTimelinePin\(c\)\+roleReplyContinuityPin\(c,Date\.now\(\)\)\}/);
   assert.match(app,/未满一小时不能主动说“怎么这么久没理我”/);
   assert.match(app,/超过一小时才允许按人设自然在意/);
   assert.match(app,/对方直接询问时，无论间隔长短都必须按真实时间戳准确回答/);
