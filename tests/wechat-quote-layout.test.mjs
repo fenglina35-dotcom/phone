@@ -10,7 +10,8 @@ assert.match(app,/class="chat-quote-cancel"[^>]*onpointerdown="event\.stopPropag
 assert.match(app,/function quoteClear\(ev\)\{if\(ev\)\{if\(ev\.preventDefault\)ev\.preventDefault\(\);if\(ev\.stopPropagation\)ev\.stopPropagation\(\);\}/,'the cancel handler must clear safely even when an event object is not implicit');
 assert.match(css,/\.wx-chat-premium>\.chat-quote-pending\{order:1;/,'the active quote must sit below the order-zero input bar and above the order-two tool panel');
 assert.match(css,/\.wx-chat-premium:has\(>\.chat-quote-pending\)>\.manual-reply-row\{bottom:111px\}/,'the fixed manual-reply chip must move above the composer when a quote row is present');
-assert.match(app,/function quoteComposerRefresh\(cid\)[\s\S]*?draft[\s\S]*?focus\(\{preventScroll:true\}\)/,'quoting and cancelling must preserve the draft and restore input focus');
+assert.match(app,/function quoteComposerRefresh\(cid\)[\s\S]*?insertAdjacentHTML\('beforebegin',html\)/,'quoting and cancelling must update only the composer row');
+assert.doesNotMatch(app,/function quoteComposerRefresh\(cid\)\{[^\n]*render\(\)/,'quoting must not rebuild the whole chat page');
 assert.match(app,/return `<div class="bubble\$\{_bl\.cls\}"[\s\S]*?\$\{quoteBar\(c,m\)\}`;/,'a sent text quote must follow its message bubble');
 assert.match(app,/m\.showText\?[\s\S]*?\$\{quoteBar\(c,m\)\}`;/,'a sent voice quote must follow the voice bubble and translation');
 assert.match(css,/\.chat-quote-sent\{/,'sent quotes must use the dedicated card styling');
