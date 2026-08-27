@@ -21,7 +21,10 @@ test('time facts include short exact gaps and generated claims are verified once
   assert.match(app,/function roleReplyClockPin\(now\)/);
   assert.match(app,/只供你内部知道，不要机械复述/);
   assert.match(app,/除非当前话题确实涉及时间、作息、吃饭或日期，否则不要主动报时/);
-  assert.match(app,/const _pin=\{role:'system',content:personaPin\(c\)\+roleReplyClockPin\(Date\.now\(\)\)\}/);
+  assert.match(app,/const _pin=\{role:'system',content:personaPin\(c\)\+roleReplyClockPin\(Date\.now\(\)\)\+roleReplyTimelinePin\(c\)\}/);
+  assert.match(app,/未满一小时不能主动说“怎么这么久没理我”/);
+  assert.match(app,/超过一小时才允许按人设自然在意/);
+  assert.match(app,/对方直接询问时，无论间隔长短都必须按真实时间戳准确回答/);
   const ai=app.slice(app.indexOf('async function aiReply'),app.indexOf('function replyNoVisibleReasonFromContent'));
   assert.equal((ai.match(/roleTimeRepairPrompt\(c,_timeIssue,_timeNow\)/g)||[]).length,1,'a reply gets at most one true-model time repair');
   assert.ok(ai.indexOf('roleTimeRepairPrompt(c,_timeIssue,_timeNow)')>ai.indexOf('const comfortN='),'time verification must run after all content rewrites and immediately before delivery parsing');
@@ -44,12 +47,58 @@ test('final clock guard catches a bare jumped hour but leaves schedules and two-
   const names=['clockNumberValue','clockMinuteDistance','roleClockClaimDistance','roleTimeClaimIssue'];
   const src=names.map(name=>app.match(new RegExp(`function ${name}\\([^\\n]+`))?.[0]).filter(Boolean);
   assert.equal(src.length,names.length);
-  const issue=Function(`const S={settings:{timeAware:true}};const ROLE_TIME_TOLERANCE_MINUTES=2;function roleTimeParts(){return {hour:3,minute:50};}function conversationGapFact(){return null;}function conversationGapExact(){return '';}\n${src.join('\n')}\nreturn roleTimeClaimIssue;`)();
+  const issue=Function(`const S={settings:{timeAware:true}};const ROLE_TIME_TOLERANCE_MINUTES=2;function roleTimeParts(){return {hour:3,minute:50};}function conversationGapFact(){return null;}function conversationClaimGapFact(){return null;}function conversationComplaintGapFact(){return null;}function conversationGapQuestion(){return false;}function conversationGapExact(){return '';}function msgToText(){return '';}\n${src.join('\n')}\nreturn roleTimeClaimIssue;`)();
   assert.match(issue('四点了，快睡吧',{id:'c'},1),/当前时间说成了四点/);
   assert.equal(issue('现在三点五十二分',{id:'c'},1),'');
   assert.equal(issue('我们四点见',{id:'c'},1),'');
   assert.equal(issue('已经约好四点见',{id:'c'},1),'');
   assert.equal(issue('等到四点了再叫我',{id:'c'},1),'');
+});
+
+test('direct gap questions use the earlier real return point instead of the latest few seconds',()=>{
+  const pick=name=>app.match(new RegExp(`function ${name}\\([^\\n]+`))?.[0];
+  const names=['conversationGapExact','clockNumberValue','clockMinuteDistance','roleClockClaimDistance','conversationVisibleRows','conversationGapFact','conversationGapQuestion','conversationHistoricalGapQuestion','conversationReferencedGapFact','conversationClaimGapFact','conversationComplaintGapFact','roleTimeClaimIssue'];
+  const src=names.map(pick).filter(Boolean);
+  assert.equal(src.length,names.length);
+  const rows=[
+    {id:'a1',role:'assistant',type:'text',content:'我在这儿等你',time:Date.UTC(2026,7,27,12,0)},
+    {id:'s1',role:'user',type:'sys',content:'系统内部记录',time:Date.UTC(2026,7,27,14,3)},
+    {id:'u1',role:'user',type:'text',content:'我刷视频回来啦',time:Date.UTC(2026,7,27,14,5)},
+    {id:'a2',role:'assistant',type:'text',content:'看了什么',time:Date.UTC(2026,7,27,14,5,10)},
+    {id:'u2',role:'user',type:'text',content:'我刚才隔了多久才回来？',time:Date.UTC(2026,7,27,14,6)}
+  ];
+  const make=Function('rows',`const S={settings:{timeAware:true}};const ROLE_TIME_TOLERANCE_MINUTES=2;function msgs(){return rows;}function msgToText(m){return m&&m.content||'';}function roleTimeParts(){return {hour:14,minute:6};}\n${src.join('\n')}\nreturn {current:conversationGapFact({id:'c'}),referenced:conversationReferencedGapFact({id:'c'}),issue:roleTimeClaimIssue};`);
+  const result=make(rows);
+  assert.equal(result.current.gap,50*1000,'the current follow-up itself is only fifty seconds later');
+  assert.equal(result.referenced.gap,125*60000,'the asked-about return was two hours and five minutes later');
+  assert.match(result.issue('你两分钟前跟我说去刷视频，现在才回来。',{id:'c'},Date.UTC(2026,7,27,14,6)),/2小时5分钟/);
+});
+
+test('a first return question uses its current gap rather than an unrelated older gap',()=>{
+  const pick=name=>app.match(new RegExp(`function ${name}\\([^\\n]+`))?.[0];
+  const names=['conversationVisibleRows','conversationGapFact','conversationGapQuestion','conversationHistoricalGapQuestion','conversationReferencedGapFact','conversationClaimGapFact'];
+  const src=names.map(pick).filter(Boolean);
+  assert.equal(src.length,names.length);
+  const rows=[
+    {id:'u0',role:'user',type:'text',content:'早',time:Date.UTC(2026,7,27,8,0)},
+    {id:'a0',role:'assistant',type:'text',content:'早',time:Date.UTC(2026,7,27,8,1)},
+    {id:'u1',role:'user',type:'text',content:'距离我们上次说话多久了？',time:Date.UTC(2026,7,27,8,21)}
+  ];
+  const fact=Function('rows',`function msgs(){return rows;}function msgToText(m){return m&&m.content||'';}\n${src.join('\n')}\nreturn conversationClaimGapFact({id:'c'});`)(rows);
+  assert.equal(fact.gap,20*60000);
+  assert.equal(fact.referenced,undefined);
+});
+
+test('long-silence complaints are blocked before one hour and allowed at one hour',()=>{
+  const pick=name=>app.match(new RegExp(`function ${name}\\([^\\n]+`))?.[0];
+  const names=['conversationGapExact','clockNumberValue','clockMinuteDistance','roleClockClaimDistance','conversationVisibleRows','conversationGapFact','conversationGapQuestion','conversationHistoricalGapQuestion','conversationReferencedGapFact','conversationClaimGapFact','conversationComplaintGapFact','roleTimeClaimIssue'];
+  const src=names.map(pick).filter(Boolean);
+  assert.equal(src.length,names.length);
+  const make=Function('rows',`const S={settings:{timeAware:true}};const ROLE_TIME_TOLERANCE_MINUTES=2;function msgs(){return rows;}function msgToText(m){return m&&m.content||'';}function roleTimeParts(){return {hour:15,minute:0};}\n${src.join('\n')}\nreturn roleTimeClaimIssue;`);
+  const at=Date.UTC(2026,7,27,14,20),rows=[{id:'u',role:'user',type:'text',content:'我去看会儿动画',time:at},{id:'a',role:'assistant',type:'text',content:'好',time:at+1000}];
+  const issue=make(rows);
+  assert.match(issue('怎么这么久没理我？',{id:'c'},at+59*60000),/未满一小时/);
+  assert.equal(issue('怎么这么久没理我？',{id:'c'},at+60*60000),'');
 });
 
 test('one-time date end is durable and never falls back to a manufactured role line',()=>{

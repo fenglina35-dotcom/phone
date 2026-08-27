@@ -100,6 +100,7 @@ const raceContext=vm.createContext({
   S:{music:{songs:[{id:'first',src:{t:'idb'}},{id:'second',src:{t:'idb'}}]}},
   musicInit(){},mLyricLoopStop(){},mLyricTick(){},mLyricLoopStart(){},mTick(){},mEnded(){},mBtns(){},
   Audio:FakeAudio,toast(){},save(){},render(){},setTimeout,
+  musicVideoLike(){return false;},
   mGet(id){return new Promise(resolve=>pending.set(id,resolve));},
   URL:{createObjectURL(blob){return 'blob:'+blob.id;},revokeObjectURL(url){revoked.push(url);}},
 });
