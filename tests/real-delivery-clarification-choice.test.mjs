@@ -287,6 +287,35 @@ test('a broad meal request reaches role decision but not a parser-invented merch
   assert.match(ctx.deliveryMissingActionRepairPrompt('role-1',meta.userText,'没问题，交给我。',meta),/唯一授权/);
 });
 
+test('an accepted merchant-free fruit-tea request becomes a committed action repair',()=>{
+  const request='给我点一杯果茶，随便点一杯，不加糖就行';
+  const {ctx,meta}=makeRuntime(request);
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  delete ctx.S.food.real.roleAttempts['role-1'];
+  ctx.S.food.real.roleTasks={};
+  meta.userText=request;
+  const prompt=ctx.deliveryMissingActionRepairPrompt('role-1',request,'行，我给你找。',meta);
+  assert.match(prompt,/已经明确答应/);
+  assert.match(prompt,/主动关心；门店=你现在选定的一家真实具体门店；商品=你现在选定的一件具体果茶商品/);
+  assert.match(prompt,/不加糖/);
+  assert.match(prompt,/不能改成拒绝、追问或 \[不启动外卖\]/);
+});
+
+test('an invalid first repair gets one strict retry only after the role committed',()=>{
+  const request='给我点一杯果茶，随便点一杯，不加糖就行';
+  const {ctx,meta}=makeRuntime(request);
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  delete ctx.S.food.real.roleAttempts['role-1'];
+  ctx.S.food.real.roleTasks={};
+  meta.userText=request;
+  const retry=ctx.deliveryMissingActionRetryPrompt('role-1',request,'行，我给你找。','我再看看。',meta);
+  assert.match(retry,/最后一次动作格式纠正/);
+  assert.match(retry,/只输出一行/);
+  assert.match(retry,/规格=不加糖/);
+  assert.equal(ctx.deliveryMissingActionRetryPrompt('role-1',request,'不了，不给你找。','',meta),'');
+  assert.equal(ctx.deliveryMissingActionRetryPrompt('role-1','今天在忙什么','我给你回消息。','',meta),'');
+});
+
 test('ordinary non-food arrangements cannot be converted into delivery by a one-word approval',async()=>{
   const {ctx,searches,meta}=makeRuntime('这件工作你安排一下');
   delete ctx.S.food.real.roleClarifications['role-1'];
@@ -365,6 +394,9 @@ test('chat wiring tries same-task and direct approval fallbacks before hidden mo
   assert.match(app,/deliveryTryExplicitApprovalFallback\(id,_userText,content,_deliveryActionMeta\)[\s\S]*?_deliveryActionFallbackHandled=!!_directRun/);
   assert.match(app,/deliveryMissingActionRepairPrompt\(id,_userText,content,_deliveryActionMeta\)[\s\S]*?await chatAPI\(/);
   assert.match(app,/_deliveryRepairActions\.length===1[\s\S]*?\+'\\n\[真实外卖\|'/);
+  assert.match(app,/deliveryMissingActionRetryPrompt\(id,_userText,content,_deliveryRepair,_deliveryActionMeta\)/);
+  assert.match(app,/_deliveryStrictRepairActions\.length===1/);
+  assert.match(app,/deliveryReportActionRepairFailure\(id,_userText,content,_deliveryActionMeta\)/);
   assert.doesNotMatch(app,/deliveryRequestPreludeRetry\(id/,'missing actions must be repaired in the same authorized turn, not by scheduling a new background turn');
 });
 

@@ -128,7 +128,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v1089 · 群聊退出与关心进度修复版'/);
+  assert.match(app, /const APP_VER='v1090 · 自然外卖承诺执行修复版'/);
 });
 
 test('manual sync reads locally in the bundled app and keeps cloud fallback', () => {
