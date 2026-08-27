@@ -122,7 +122,7 @@ test('online and face-to-face activity use a narrow shared status boundary',()=>
   assert.match(source,/共同生活开启期间不得在没有当前命令时自行来电/);
   assert.match(functionSource('cohabToggle'),/c\.proactive\.enabled=true;c\.proactive\.serverPush=true;initiativeArm\(c\)/);
   assert.match(source,/去微信联系TA吧/);
-  assert.match(source,/function cohabConsumeOnlineState\(text,c,id\)/);
+  assert.match(source,/function cohabConsumeOnlineState\(text,c,id,opt\)/);
   assert.match(source,/function cohabInferOnlineState\(text,id,d\)/);
   assert.match(source,/content=cohabConsumeOnlineState\(content,c,id\)/);
   assert.match(source,/只有你确实已经抵达、说“我到家了\/进门了”时才能切到到家/);
