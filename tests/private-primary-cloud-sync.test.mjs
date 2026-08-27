@@ -14,7 +14,7 @@ test('private primary snapshots carry source, monotonic revision, and capture ti
 
 test('web mirror refuses to push over a private primary record', () => {
   assert.match(web, /当前云ID由私人版本主设备管理；网页仅作镜像，不能反向覆盖私人数据/);
-  assert.match(web, /if\(current&&privateMirrorMeta\(current\.data,current\)\)return/);
+  assert.match(web, /const current=await cloudFetchRow\(\)\.catch\(\(\)=>null\);if\(current\)return/);
   assert.match(web, /method='PATCH'/);
   assert.match(web, /updated_at=eq\./);
   assert.match(web, /云端修订已变化，本次没有覆盖/);
@@ -62,10 +62,17 @@ test('private restore is hard-routed to the phone account backup and cannot read
   assert.match(web, /native\?'<div class="hint">私人 App 只允许恢复手机号私人备份，不提供网页旧快照恢复入口。<\/div>':'<button class="btn g" style="width:100%" onclick="cloudUseOtherId\(\)">输入旧云ID兼容恢复<\/button>'/);
 });
 
-test('web pull only accepts a marked private-ios mirror', () => {
+test('web pull accepts both private mirrors and original web backups without overwriting either', () => {
   assert.match(web, /const row=await cloudFetchRow\(\),meta=row&&privateMirrorMeta\(row\.data,row\)/);
-  assert.match(web, /if\(!meta\)throw new Error\('云端仍是旧网页备份，请先在私人 App 点“一键同步到网页版”'\)/);
   assert.match(web, /privateMirrorApplyRemote\(row\.data,row,true\)/);
+  assert.match(web, /cloudApplyLegacyRow\(row\.data,row,cloudId\(\)\)/);
+  assert.match(web, /privateMirrorSaveRollback\('manual-web-cloud-restore'\)/);
+  assert.match(web, /网页已读取原有云备份；读取前快照可撤回/);
+  assert.doesNotMatch(web, /云端仍是旧网页备份，请先在私人 App 点“一键同步到网页版”/);
+});
+
+test('web automatic sync never overwrites an existing legacy cloud backup before manual reading', () => {
+  assert.match(web, /const current=await cloudFetchRow\(\)\.catch\(\(\)=>null\);if\(current\)return;cloudBackup\(\)\.catch/);
 });
 
 test('web and private bundle keep cloud mirror implementation identical', () => {

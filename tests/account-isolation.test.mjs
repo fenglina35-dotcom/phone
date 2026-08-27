@@ -330,7 +330,7 @@ resolveSummary("小号独立总结".repeat(12));
 await pendingSummary;
 assert.equal(summaryWrites.length, 1);
 assert.equal(summaryWrites[0].aid, "alt_1", "async summary must remain bound to its originating account after a switch");
-assert.equal(asyncSandbox.summaryStateApi(asyncRole, "alt_1").count, 8);
+assert.equal(asyncSandbox.summaryStateApi(asyncRole, "alt_1").count, 10);
 assert.equal(asyncSandbox.summaryStateApi(asyncRole, "main").count, 0);
 
 console.log("account isolation tests passed");

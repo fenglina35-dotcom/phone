@@ -20,14 +20,16 @@ function functionSource(source,name){
 }
 
 assert.equal(root,bundled,'web source and private iOS bundle must keep the same music extraction logic');
-assert.match(functionSource(root,'mPickVideoFile'),/musicPreparePickedFile\(f,'video'/,'video selection must extract before accepting the file');
-assert.match(functionSource(root,'musicExtractMp4AudioBlob'),/new Blob\(\[init,\.\.\.fragments\],\{type:'audio\/mp4'\}\)/,'MP4 and MOV imports must become an audio-only MP4');
-assert.match(functionSource(root,'musicExtractMp4AudioBlob'),/这段录屏没有声音，无法作为音乐导入/);
+assert.match(functionSource(root,'mPickVideoFile'),/musicPreparePickedFile\(f,'video'/,'video selection must validate before accepting the file');
+assert.match(functionSource(root,'musicExtractMp4AudioBlob'),/musicKeepOriginalMediaBlob/,'MP4 imports must preserve the original playable container');
+assert.doesNotMatch(functionSource(root,'musicExtractMp4AudioBlob'),/initializeSegmentation|fragments|new Blob/,'video import must not assemble MSE fragments as a standalone M4A');
+assert.match(functionSource(root,'musicProbePlayableBlob'),/onloadedmetadata=ready/);
+assert.match(functionSource(root,'mPutVerified'),/musicProbePlayableBlob\(saved,'导入的音乐'\)/,'the exact persisted blob must pass a real media probe');
+assert.match(functionSource(root,'mPutVerified'),/catch\(e\)\{await mDelIDB\(k\);throw e;\}/,'unplayable blobs must be removed instead of accepted');
 assert.match(functionSource(root,'musicAddSave'),/mPutVerified\(id,picked\)/);
 assert.doesNotMatch(functionSource(root,'musicAddSave'),/musicVideoLike|musicExtractMp4AudioBlob/,'saving must only receive a file that selection already prepared');
-assert.match(functionSource(root,'musicRepairFile'),/musicPreparePickedFile\(f,kind\)[\s\S]*mPutVerified\(id,prepared\.blob\)/,'repairing from a video must extract its audio before storing');
-assert.match(functionSource(root,'musicPlay'),/musicVideoLike\(b,s\.fileName,s\.fileType\|\|b\.type\)[\s\S]*musicPreparePickedFile\(b,'video'/,'legacy raw videos must self-heal before playback');
-assert.match(functionSource(root,'musicPlay'),/musicApplyStoredMeta\(s,prepared,stored\)/,'legacy self-healing must persist the new audio metadata');
+assert.match(functionSource(root,'musicRepairFile'),/musicPreparePickedFile\(f,kind\)[\s\S]*mPutVerified\(id,prepared\.blob\)/,'repairing from a video must validate the selected original before storing');
+assert.doesNotMatch(functionSource(root,'musicPlay'),/musicExtractMp4AudioBlob|musicPreparePickedFile\(b,'video'/,'playback must not rewrite an already stored playable recording');
 
 const helperContext=vm.createContext({String,Number});
 for(const name of ['musicVideoLike','musicAudioFileName','musicApplyStoredMeta'])vm.runInContext('this.'+name+'='+functionSource(root,name),helperContext);
@@ -38,18 +40,24 @@ const meta={};
 helperContext.musicApplyStoredMeta(meta,{fileName:'三分钟录屏.m4a',sourceVideoName:'三分钟录屏.mov',sourceVideoSize:1234,mediaDuration:180},{size:456,type:'audio/mp4',sig:'ok'});
 assert.deepEqual({...meta},{fileName:'三分钟录屏.m4a',fileSize:456,fileType:'audio/mp4',fileSig:'ok',sourceVideoName:'三分钟录屏.mov',sourceVideoSize:1234,mediaDuration:180});
 
-let readySent=false;
-const noAudioMp4={
-  onReady:null,onError:null,
-  appendBuffer(){if(!readySent){readySent=true;this.onReady({audioTracks:[],tracks:[]});}},
-  flush(){},
-};
-const noAudioContext=vm.createContext({
-  Blob,Math,Number,String,Error,setTimeout,
-  async cinemaMp4Library(){return{createFile(){return noAudioMp4;}};},
-  musicAudioFileName:helperContext.musicAudioFileName,
-});
-vm.runInContext('this.musicExtractMp4AudioBlob='+functionSource(root,'musicExtractMp4AudioBlob'),noAudioContext);
-await assert.rejects(noAudioContext.musicExtractMp4AudioBlob(new Blob([new Uint8Array(32)],{type:'video/mp4'}),null,'无声录屏.mp4'),/这段录屏没有声音，无法作为音乐导入/);
+class PlayableAudio{
+  constructor(){this.duration=0;}
+  load(){if(!this.src)return;this.duration=180;queueMicrotask(()=>this.onloadedmetadata&&this.onloadedmetadata());}
+  pause(){}
+  removeAttribute(){this.src='';}
+}
+const playableContext=vm.createContext({Blob,Math,Number,String,Error,Promise,Audio:PlayableAudio,setTimeout,clearTimeout,queueMicrotask,URL:{createObjectURL:()=> 'blob:test',revokeObjectURL:()=>{}}});
+for(const name of ['musicProbePlayableBlob','musicKeepOriginalMediaBlob','musicExtractMp4AudioBlob'])vm.runInContext('this.'+name+'='+functionSource(root,name),playableContext);
+const original=new Blob([new Uint8Array(64)],{type:'video/mp4'});
+Object.defineProperty(original,'name',{value:'三分钟录屏.mp4'});
+const prepared=await playableContext.musicExtractMp4AudioBlob(original,null,original.name);
+assert.equal(prepared.blob,original,'validated video must be stored byte-for-byte instead of remuxed');
+assert.equal(prepared.fileName,'三分钟录屏.mp4');
+assert.equal(prepared.mediaDuration,180);
+
+class BrokenAudio extends PlayableAudio{load(){if(!this.src)return;queueMicrotask(()=>this.onerror&&this.onerror());}}
+const brokenContext=vm.createContext({Blob,Math,Number,String,Error,Promise,Audio:BrokenAudio,setTimeout,clearTimeout,queueMicrotask,URL:{createObjectURL:()=> 'blob:bad',revokeObjectURL:()=>{}}});
+vm.runInContext('this.musicProbePlayableBlob='+functionSource(root,'musicProbePlayableBlob'),brokenContext);
+await assert.rejects(brokenContext.musicProbePlayableBlob(new Blob(['broken'],{type:'audio/mpeg'}),'导入的音乐'),/不是当前设备可播放的完整音频/);
 
 console.log('music video audio extraction tests passed');

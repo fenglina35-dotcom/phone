@@ -11,10 +11,10 @@ const pip = read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/
 const project = read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 
 test('v929 web and private versions are aligned', () => {
-  assert.match(app, /APP_VER='v1095 · 微信退出回话可靠交付版'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='1095'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 220;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.220;/);
+  assert.match(app, /APP_VER='v1096 · 媒体云端总结持久修复版'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='1096'/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 221;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.221;/);
   assert.match(bridge, /contractVersion = 25/);
 });
 
