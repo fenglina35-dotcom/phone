@@ -1,6 +1,6 @@
-const BUILD='1088';
-const HOTFIX='v1088-screen-time-control-rollback-1';
-const SHELL_CACHE='north-shell-v1088';
+const BUILD='1089';
+const HOTFIX='v1089-group-leave-care-progress-1';
+const SHELL_CACHE='north-shell-v1089';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
