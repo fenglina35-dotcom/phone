@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1092 · 微信登录回话与交互流畅修复版'/);
+  assert.match(app,/APP_VER='v1093 · 微信登录退出回话修复版'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1092/);
-  assert.match(html,/sw\.js\?v=1092&r=v1092-wechat-login-performance-1/);
+  assert.match(html,/north-sw-reloaded-1093/);
+  assert.match(html,/sw\.js\?v=1093&r=v1093-wechat-login-return-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{

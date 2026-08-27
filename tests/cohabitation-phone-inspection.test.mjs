@@ -134,16 +134,18 @@ test('every completed WeChat login speaks once without reducing the turn to a re
   assert.match(logout,/scheduleFeatureReply/,'completion keeps the genuine model route and its bounded retry');
 });
 
-test('WeChat login completion follows active co-living and otherwise stays online',()=>{
-  const context=vm.createContext({S:{cohabitation:null}});
+test('WeChat login completion follows the latest user channel instead of merely following the co-living switch',()=>{
+  let latest='online';const contact={id:'c1'};
+  const context=vm.createContext({S:{cohabitation:null},getC:id=>id==='c1'?contact:null,roleLatestUserChannel:()=>latest});
   vm.runInContext(`${functionSource('wxLoginCompletionChannel')}this.channel=wxLoginCompletionChannel;`,context);
   assert.equal(context.channel('c1',{}),'online');
   context.S.cohabitation={enabled:true,paused:false,cid:'c1'};
+  assert.equal(context.channel('c1',{}),'online','an enabled co-living switch cannot steal a result from the online chat');
+  latest='cohab';
   assert.equal(context.channel('c1',{}),'cohab');
   assert.equal(context.channel('c2',{}),'online');
-  context.S.cohabitation.paused=true;
-  assert.equal(context.channel('c1',{}),'online');
   assert.equal(context.channel('c1',{channel:'cohab'}),'cohab');
+  assert.equal(context.channel('c1',{channel:'online'}),'online');
   assert.match(functionSource('wxDoLogin'),/channel=wxLoginCompletionChannel\(cid,opt\)/);
 });
 

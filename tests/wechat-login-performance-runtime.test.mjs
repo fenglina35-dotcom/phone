@@ -44,16 +44,53 @@ test('explicit remark requests bypass autonomous cooldown and use one genuine-mo
   assert.equal(calls.length,1);
 });
 
-test('login completion rejects operation-only output and accepts a real reaction',()=>{
+test('login completion repairs operation-only output without turning a genuine visible reply into silence',()=>{
   const ctx=vm.createContext({initiativeVisibleText:v=>String(v||'')});
-  vm.runInContext(`${functionSource('wxLoginCompletionFeature')};${functionSource('wxLoginCompletionReplyValid')};globalThis.feature=wxLoginCompletionFeature;globalThis.valid=wxLoginCompletionReplyValid;`,ctx);
+  vm.runInContext(`${functionSource('wxLoginCompletionFeature')};${functionSource('wxLoginCompletionReplyValid')};${functionSource('wxLoginCompletionRepairPrompt')};globalThis.feature=wxLoginCompletionFeature;globalThis.valid=wxLoginCompletionReplyValid;globalThis.prompt=wxLoginCompletionRepairPrompt;`,ctx);
   assert.equal(ctx.feature('功能事件即时反应｜角色退出微信登录\n事实'),true);
   for(const line of ['','我看完了。','我改了备注。','我刚退出微信。','我弄好了。'])assert.equal(ctx.valid(line),false,line);
   assert.equal(ctx.valid('我看完了。那个群里没什么新动静。'),true);
   assert.equal(ctx.valid('我把备注改好了，这个名字更像我。'),true);
+  assert.match(ctx.prompt(),/只输出一至三条角色本人会说的话/);
+  assert.match(ctx.prompt(),/禁止输出任何方括号标签/);
   const schedule=functionSource('scheduleReply');
   assert.match(schedule,/!wxLoginCompletionFeature\(note\).*roleBusyDeferReply/,'login completion must not be parked behind persona busy mode');
-  assert.match(app,/if\(wxLoginCompletionFeature\(note\)&&!wxLoginCompletionReplyValid\(content\)\)content=''/,'operation-only output is discarded before it can become a visible role message');
+  assert.match(app,/wxLoginCompletionRepairPrompt\(\)/,'an operation-only first result receives one focused genuine-model repair');
+  assert.match(app,/else content=initiativeVisibleText\(original\)\?original:''/,'a genuine visible first result is retained if repair still fails');
+  assert.match(app,/got=replyVisibleAssistantCount\(id,replyAccount\)>_wxLoginVisibleBefore/,'hidden tags cannot falsely acknowledge the completion as delivered');
+});
+
+test('login completion enters the reply scheduler immediately instead of waiting in an in-memory handoff timer',()=>{
+  const calls=[],ctx=vm.createContext({actId:()=> 'main',featureEventNoteActive:()=>true,wxLoginCompletionFeature:()=>true,scheduleReply(...args){calls.push(args);return true;}});
+  vm.runInContext(`${functionSource('scheduleFeatureReply')};globalThis.run=scheduleFeatureReply;`,ctx);
+  assert.equal(ctx.run('role','功能事件即时反应｜角色退出微信登录',220,null,'main'),true);
+  assert.equal(calls.length,1);
+  assert.deepEqual(Array.from(calls[0].slice(0,2)),['role','功能事件即时反应｜角色退出微信登录']);
+});
+
+test('real logout state machine sends an online-started login completion straight back to online chat',()=>{
+  const contact={id:'role',blocked:false},scheduled=[],cohab=[],released=[];
+  const S={me:{name:'用户'},cohabitation:{enabled:true,paused:false,cid:'role'},wxLogin:null};
+  const ctx=vm.createContext({S,Date,String,Math,getC:()=>contact,roleLatestUserChannel:()=> 'online',save(){},wxLoginCommitHistory(){},wxLoginSnapshotNorm:v=>String(v||''),rolePhoneInspectionSignature:()=>({key:'wechat',hash:'new'}),rolePhoneInspectionUnchanged:()=>false,rolePhoneInspectionCommit(){},featureEventNote:(kind,detail)=>`[功能事件即时反应｜${kind}]\n${detail}`,featureEventNoteActive:n=>/功能事件即时反应/.test(String(n||'')),actId:()=> 'main',scheduleReply:(...args)=>{scheduled.push(args);return true;},cohabPhoneLoginFinished:(...args)=>cohab.push(args),rolePhoneInspectionRelease:t=>released.push(t),cur:()=>({p:'home'}),render(){},clearInterval(){},setTimeout(fn){fn();return 1;}});
+  vm.runInContext(`let _wxLoginTimer=null;${functionSource('wxLoginCompletionFeature')};${functionSource('wxLoginCompletionChannel')};${functionSource('scheduleFeatureReply')};${functionSource('wxLogout')};globalThis.channel=wxLoginCompletionChannel;globalThis.logout=wxLogout;`,ctx);
+  S.wxLogin={by:'role',channel:ctx.channel('role',{}),laneToken:'lane',did:[],actions:[],saw:'联系人摘要',previousSaw:''};
+  assert.equal(S.wxLogin.channel,'online');
+  ctx.logout();
+  assert.equal(S.wxLogin,null);
+  assert.equal(scheduled.length,1,'the completion must enter online scheduling in the same logout turn');
+  assert.match(String(scheduled[0][1]),/角色退出微信登录/);
+  assert.equal(cohab.length,0,'an enabled co-living switch must not steal the online completion');
+  assert.deepEqual(released,['lane']);
+});
+
+test('real logout state machine keeps an explicitly co-living login inside co-living',()=>{
+  const contact={id:'role',blocked:false},scheduled=[],cohab=[];
+  const S={me:{name:'用户'},wxLogin:{by:'role',channel:'cohab',laneToken:'lane',did:[],actions:[],saw:'现场摘要',previousSaw:''}};
+  const ctx=vm.createContext({S,Date,String,Math,getC:()=>contact,save(){},wxLoginCommitHistory(){},wxLoginSnapshotNorm:v=>String(v||''),rolePhoneInspectionSignature:()=>({key:'wechat',hash:'new'}),rolePhoneInspectionUnchanged:()=>false,rolePhoneInspectionCommit(){},featureEventNote:(kind,detail)=>`[功能事件即时反应｜${kind}]\n${detail}`,featureEventNoteActive:n=>/功能事件即时反应/.test(String(n||'')),actId:()=> 'main',scheduleReply:(...args)=>{scheduled.push(args);return true;},cohabPhoneLoginFinished:(...args)=>cohab.push(args),rolePhoneInspectionRelease(){},cur:()=>({p:'home'}),render(){},clearInterval(){},setTimeout(fn){fn();return 1;}});
+  vm.runInContext(`let _wxLoginTimer=null;${functionSource('wxLoginCompletionFeature')};${functionSource('scheduleFeatureReply')};${functionSource('wxLogout')};globalThis.logout=wxLogout;`,ctx);
+  ctx.logout();
+  assert.equal(scheduled.length,0);
+  assert.equal(cohab.length,1);
 });
 
 test('quoting updates only the composer row and preserves the live textarea node',()=>{
