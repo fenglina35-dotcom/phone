@@ -245,6 +245,24 @@ test('foreground chat does not enqueue a second model call until the app actuall
   assert.match(app, /visibilitychange[\s\S]{0,1200}else\{roleBackgroundResumeForeground\(\)/);
 });
 
+test('manual unlock messages address the current partner instead of narrating her in third person', () => {
+  const guard = edgeFunctionSource('roleManualUnlockPerspectiveInvalid');
+  assert.match(guard, /亲自成功解锁App/);
+  assert.match(guard, /她\|他\|用户/);
+  const executableGuard = guard
+    .replace('value: string', 'value')
+    .replace('eventInstruction: string', 'eventInstruction');
+  const perspectiveInvalid = Function(`function roleVisibleMessageText(value){return String(value||'');}\n${executableGuard}\nreturn roleManualUnlockPerspectiveInvalid;`)();
+  const unlockInstruction = '你收到了当前聊天对象本人亲自成功解锁App的真实记录。';
+  assert.equal(perspectiveInvalid('她把抖音自己解锁了。', unlockInstruction), true, 'the screenshot narration is rejected before delivery');
+  assert.equal(perspectiveInvalid('你解锁抖音了。', unlockInstruction), false, 'a direct message to the current partner remains valid');
+  assert.equal(perspectiveInvalid('她刚下班。', '普通主动消息'), false, 'the guard cannot affect ordinary role messages');
+  assert.match(edge, /eventPerspectiveInvalid = roleManualUnlockPerspectiveInvalid\(body, eventInstruction\)/);
+  assert.match(edge, /!styleInvalid && !eventPerspectiveInvalid/);
+  assert.match(edge, /上一版把当前聊天对象写成了她、他或用户/);
+  assert.match(edge, /不得默认审问/);
+});
+
 test('temporary offline states suspend without disabling background contact, while cohabitation stays live', () => {
   assert.match(edgeFunctionSource('profileTemporarilySuspended'), /automation_config/);
   assert.match(edgeFunctionSource('profileTemporarilySuspended'), /snapshotTime\(value\.suspendedUntil\)/);

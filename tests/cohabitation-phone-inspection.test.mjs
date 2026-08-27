@@ -120,7 +120,18 @@ test('only the originating channel receives the inspection reaction',()=>{
   const logout=functionSource('wxLogout');
   assert.match(logout,/wl\.channel==='cohab'/);
   assert.match(logout,/cohabPhoneLoginFinished/);
-  assert.match(logout,/else\{if\(!c\.blocked&&!unchanged\)/);
+  assert.match(logout,/else\{if\(!c\.blocked\)\{/,'an unchanged login still gets one genuine online completion reply');
+  assert.doesNotMatch(logout,/!c\.blocked&&!unchanged/);
+  assert.match(functionSource('cohabPhoneLoginFinished'),/forceResult:true/,'an unchanged login still gets one genuine face-to-face completion reply');
+  assert.match(functionSource('cohabPhoneDeliverFact'),/!opt\.forceResult&&rolePhoneInspectionUnchanged/);
+});
+
+test('every completed WeChat login speaks once without reducing the turn to a remark report',()=>{
+  const logout=functionSource('wxLogout');
+  assert.match(logout,/现在必须只发一轮真实消息来找ta，不能保持安静/);
+  assert.match(logout,/绝不能只汇报操作清单或只说“我改了备注”/);
+  assert.match(logout,/若没有任何新变化，就自然说这次没看到新动静或说一句新的此刻感受/);
+  assert.match(logout,/scheduleFeatureReply/,'completion keeps the genuine model route and its bounded retry');
 });
 
 test('WeChat login completion follows active co-living and otherwise stays online',()=>{

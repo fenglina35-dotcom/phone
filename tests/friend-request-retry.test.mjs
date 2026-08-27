@@ -54,6 +54,9 @@ const sweepSandbox = {
     sweepCreateCalls.push(id);
   },
   wxNearbySweep() {},
+  northNativeMaintenancePaused() {
+    return false;
+  },
 };
 vm.runInNewContext(
   source.slice(helperStart, helperEnd) +

@@ -64,12 +64,12 @@ test('private app time and number helpers never enter WebKit Intl', () => {
           'Asia/Shanghai': 480,
           'Asia/Tokyo': 540
         }
-      },
-      SmallPhoneNative: { request() {} }
+      }
     },
     esc: value => String(value)
   });
   const names = [
+    'privateNativeShellOn',
     'privateNativeAppOn',
     'nativeTimeEnvironment',
     'nativeTimeZoneOffsets',
@@ -111,19 +111,19 @@ test('private app time and number helpers never enter WebKit Intl', () => {
 });
 
 test('all remaining Intl and locale fallbacks are fenced away from private app', () => {
-  assert.match(functionSource('deviceTimeZone'), /nativeZone[\s\S]*?return nativeZone;[\s\S]*?Intl\.DateTimeFormat/);
-  assert.match(functionSource('timeZoneValid'), /if\(privateNativeAppOn\(\)\)[\s\S]*?return valid;[\s\S]*?new Intl\.DateTimeFormat/);
-  assert.match(functionSource('roleTimeParts'), /if\(privateNativeAppOn\(\)\)[\s\S]*?return localRoleTimeParts[\s\S]*?roleTimeFormatter/);
-  assert.match(functionSource('timeZoneOptions'), /if\(privateNativeAppOn\(\)\)[\s\S]*?else\{try\{all=Intl\.supportedValuesOf/);
-  assert.match(functionSource('northLocaleNumber'), /if\(!privateNativeAppOn\(\)\)return n\.toLocaleString/);
-  assert.match(functionSource('northLocaleDate'), /if\(!privateNativeAppOn\(\)\)return d\.toLocaleString/);
+  assert.match(functionSource('deviceTimeZone'), /nativeZone[\s\S]*?return nativeZone;[\s\S]*?if\(privateNativeShellOn\(\)\)[\s\S]*?return value;[\s\S]*?Intl\.DateTimeFormat/);
+  assert.match(functionSource('timeZoneValid'), /if\(privateNativeShellOn\(\)\)[\s\S]*?return valid;[\s\S]*?new Intl\.DateTimeFormat/);
+  assert.match(functionSource('roleTimeParts'), /if\(privateNativeShellOn\(\)\)[\s\S]*?return localRoleTimeParts[\s\S]*?roleTimeFormatter/);
+  assert.match(functionSource('timeZoneOptions'), /if\(privateNativeShellOn\(\)\)[\s\S]*?else\{try\{all=Intl\.supportedValuesOf/);
+  assert.match(functionSource('northLocaleNumber'), /if\(!privateNativeShellOn\(\)\)return n\.toLocaleString/);
+  assert.match(functionSource('northLocaleDate'), /if\(!privateNativeShellOn\(\)\)return d\.toLocaleString/);
   const localeSites = [...app.matchAll(/\.toLocaleString\(/g)].map(match => match.index);
   const allowed = [
     functionSource('northLocaleNumber'),
     functionSource('northLocaleDate')
   ].reduce((sum, source) => sum + (source.match(/\.toLocaleString\(/g) || []).length, 0);
   assert.equal(localeSites.length, allowed);
-  assert.match(functionSource('companionUsageDayAt'), /if\(typeof privateNativeAppOn[\s\S]*?privateNativeAppOn\(\)\)return local;[\s\S]*?Intl\.DateTimeFormat/);
+  assert.match(functionSource('companionUsageDayAt'), /if\(typeof privateNativeShellOn[\s\S]*?privateNativeShellOn\(\)\)return local;[\s\S]*?Intl\.DateTimeFormat/);
 });
 
 test('native timezone snapshot is injected before bridge bootstrap', () => {
@@ -140,8 +140,9 @@ test('native timezone snapshot is injected before bridge bootstrap', () => {
 test('terminated WebContent receives one delayed exact-bundle recovery without reload storm', () => {
   assert.match(webView, /func webViewWebContentProcessDidTerminate\(_ webView: WKWebView\)/);
   assert.match(webView, /now - \$0 < 120/);
+  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v2/);
   assert.match(webView, /guard attempt == 1 else/);
-  assert.match(webView, /deadline: \.now\(\) \+ 5/);
+  assert.match(webView, /deadline: \.now\(\) \+ 15/);
   assert.match(webView, /webView\.loadFileURL\([\s\S]{0,160}?allowingReadAccessTo: readAccessURL/);
   assert.match(webView, /configureBundledPage\([\s\S]{0,140}?fileURL: fileURL[\s\S]{0,140}?readAccessURL: readAccessURL/);
   assert.doesNotMatch(webView, /webView\?\.reload\(\)/);

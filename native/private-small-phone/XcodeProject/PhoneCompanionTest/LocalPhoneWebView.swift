@@ -14,11 +14,12 @@ struct LocalPhoneWebView: UIViewRepresentable {
         private var syncingRolePush = false
         private var rolePushSyncRetryCount = 0
         private var pendingRolePushSyncRetry: DispatchWorkItem?
-        private var webContentTerminationTimes: [TimeInterval] = []
         private var pendingWebContentRecovery: DispatchWorkItem?
         private var bundledFileURL: URL?
         private var bundledReadAccessURL: URL?
         private var lastSafeAreaInsets: UIEdgeInsets?
+        private static let webContentTerminationKey =
+            "smallPhone.webContentTerminationTimes.v2"
 
         override init() {
             super.init()
@@ -303,11 +304,20 @@ struct LocalPhoneWebView: UIViewRepresentable {
             showingLoadFailure = false
 
             let now = Date().timeIntervalSince1970
-            webContentTerminationTimes = webContentTerminationTimes.filter {
-                now - $0 < 120
-            }
-            webContentTerminationTimes.append(now)
-            let attempt = webContentTerminationTimes.count
+            // Keep the recovery budget outside this Coordinator. SwiftUI may
+            // recreate UIViewRepresentable after a WebContent crash; an
+            // instance-only counter then resets and can reload the page again
+            // and again, producing the white-screen/home-screen heat loop.
+            let defaults = UserDefaults.standard
+            var terminationTimes = (defaults.array(
+                forKey: Self.webContentTerminationKey
+            ) as? [Double] ?? []).filter { now - $0 < 120 }
+            terminationTimes.append(now)
+            defaults.set(
+                terminationTimes,
+                forKey: Self.webContentTerminationKey
+            )
+            let attempt = terminationTimes.count
             print(
                 "[SmallPhoneWeb] WebContent terminated; " +
                 "bounded recovery attempt \(attempt)/1"
@@ -332,6 +342,8 @@ struct LocalPhoneWebView: UIViewRepresentable {
             // A rapid reload while iOS is still reclaiming the terminated
             // process can create a white-screen/lock-screen reload storm.
             // Wait for pressure to settle, then load the exact bundled entry.
+            // Five seconds was still inside the observed iOS reclaim window
+            // on the large real archive, so use one longer bounded recovery.
             let work = DispatchWorkItem { [weak self, weak webView] in
                 guard let self, let webView,
                       let fileURL = self.bundledFileURL,
@@ -346,7 +358,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
             }
             pendingWebContentRecovery = work
             DispatchQueue.main.asyncAfter(
-                deadline: .now() + 5,
+                deadline: .now() + 15,
                 execute: work
             )
         }
@@ -545,7 +557,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.209 (209)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.210 (210)';
       const root = document.documentElement;
       root.classList.add('north-native-app');
       root.style.setProperty('--north-native-safe-top', 'env(safe-area-inset-top, 0px)');

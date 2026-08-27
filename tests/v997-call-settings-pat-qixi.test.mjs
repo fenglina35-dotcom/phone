@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1084 · 睡眠来源与限额锁标识版'/);
+  assert.match(app,/APP_VER='v1085 · WebContent降载与微信手动总结版'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1084/);
-  assert.match(html,/sw\.js\?v=1084&r=v1084-sleep-limit-clarity-1/);
+  assert.match(html,/north-sw-reloaded-1085/);
+  assert.match(html,/sw\.js\?v=1085&r=v1085-webcontent-memory-wechat-summary-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{

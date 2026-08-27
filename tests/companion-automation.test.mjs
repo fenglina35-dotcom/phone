@@ -226,6 +226,9 @@ test('snapshots cannot manufacture manual unlock authority and explicit events s
   assert.match(app, /companionSetLockIntent\(st,app,false/);
   assert.match(functionSource('companionRecordExplicitManualUnlock'), /explicit:true/);
   assert.match(app, /真实 iPhone 的明确执行记录/);
+  assert.match(app, /此刻正在和你聊天的.*本人亲自解锁了/);
+  assert.match(app, /禁止把ta写成“她”“他”“用户”或第三人称旁白/);
+  assert.match(app, /不要默认审问/);
   assert.doesNotMatch(functionSource('companionAutomationMaybeSend'), /c\.proactive/);
   assert.match(app, /now-\(\+x\.ts\|\|0\)<24\*3600000/);
   assert.match(functionSource('companionAutomationMaybeSend'), /if\(!manual&&/);

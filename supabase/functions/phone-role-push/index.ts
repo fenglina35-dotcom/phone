@@ -293,6 +293,19 @@ function roleMessageStyleInvalid(value: string, maxParts = 4) {
     || parts.some((part) => /^[\[【]/.test(part) && !/^[\[【](?:(?:图片|位置)[|｜][^\]】]+|来电[|｜](?:语音|视频)|送礼[|｜][^\]】]+|一起听[|｜][^\]】]+|放映邀请[|｜][^\]】]+|约会[|｜][^\]】]+|角色扮演[|｜][^\]】]+|你画我猜)[\]】]$/.test(part));
 }
 
+function roleManualUnlockPerspectiveInvalid(
+  value: string,
+  eventInstruction: string,
+) {
+  if (!String(eventInstruction || "").includes("亲自成功解锁App")) return false;
+  const text = roleVisibleMessageText(value).replace(/\s+/g, " ").trim();
+  if (!text) return false;
+  // The event source calls the owner "用户". In the private chat that owner
+  // is the role's current conversation partner, never an observed third
+  // person. Reject narration such as "她把抖音解锁了" before delivery.
+  return /(?:^|[，。！？；;\s])(?:她|他|用户)(?:刚|又|已经|亲自|自己|把|解锁|以为|没有|没|在|说|做|要|会|想)/.test(text);
+}
+
 function profileModelBase(value: unknown) {
   try {
     const url = new URL(String(value || "").trim());
@@ -481,13 +494,16 @@ async function roleMessage(
           const repeated = !!bodyKey && repeatCandidates.some((old) => roleMessageRepeated(body, old));
           const ungrounded = roleUserFactUnsupported(body, `${recentContext}\n${memoryContext}`);
           const styleInvalid = roleMessageStyleInvalid(body, messageMax);
-          if (bodyKey && !repeated && !ungrounded && !styleInvalid) {
+          const eventPerspectiveInvalid = roleManualUnlockPerspectiveInvalid(body, eventInstruction);
+          if (bodyKey && !repeated && !ungrounded && !styleInvalid && !eventPerspectiveInvalid) {
             return { kind: "message", body };
           }
           attemptMessages = [
             ...baseMessages,
             { role: "assistant", content: body },
-            { role: "user", content: ungrounded
+            { role: "user", content: eventPerspectiveInvalid
+              ? "上一版把当前聊天对象写成了她、他或用户，像旁白和内心独白。解锁App的人就是你正在对话的亲密对象；保持角色本人第一人称，直接用你或平时的昵称对ta说话。不要解释纠正过程，也不要默认审问或指控。"
+              : ungrounded
               ? "上一版编造了聊天和记忆里没有发生过的用户自拍、衣着、位置、动作、身体状态或其他具体事件。删除所有没有真实依据的用户事实，只使用已经给出的上下文；可以按人设表达想念、担心、询问，或分享你自己的普通日常。不要解释纠正过程。"
               : styleInvalid
               ? `上一版格式不像真人微信聊天，或使用了破折号、横杠、错误标签。请保持角色本人身份，在 ${messageMin} 到 ${messageMax} 条之间自由决定，每条单独一行；不要为了凑数拆句，不要使用任何破折号或横杠。${effectiveAllowSilent ? "也可以只输出 [保持安静]。" : "不能保持安静。"}`
@@ -1348,7 +1364,7 @@ Deno.serve(async (request) => {
         absenceBattery: "用户至少3小时没有回复后，你因为担心而查看了已授权的电量和最近位置。这些只是真实事实；查完必须马上采取一种对方可见的行动：发1到2句消息，或发起来电。禁止保持安静，也不要把最近位置说成持续跟踪。",
         criticalBattery: "你发现已授权iPhone电量为5%或更低。按人设立即提醒充电，不提系统通知或持续监控。",
         emotionCare: "用户刚才表达难过或当前对话正在谈是否相信对方。你只把最新心率作为关心线索，不得据此证明撒谎、哭泣、疾病或作医疗诊断。",
-        manualUnlock: "你收到了用户亲自成功解锁App的真实记录。按人设立即自然反应，不得凭空认定欺骗、背叛或做坏事。",
+        manualUnlock: "你收到了当前聊天对象本人亲自成功解锁App的真实记录。若决定发消息，必须以角色本人第一人称直接对ta说，用你或平时昵称称呼；禁止写成她、他、用户等第三人称旁白，也不要写成内心独白或观察报告。按人设自然反应，可以关心、调侃、询问、不满或不追究，但不得默认审问，更不能凭空认定欺骗、背叛或做坏事。",
       };
       const decision = await roleMessage(profile, [], instructions[candidate.kind] || "", candidate.facts);
       const automationDelivered = decision.kind === "message"

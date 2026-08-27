@@ -120,9 +120,11 @@ test('private storage details avoid cloning every large IndexedDB value', () => 
 });
 
 test('private image memory cache is bounded without deleting stored media', () => {
-  assert.match(app, /const PRIVATE_IMAGE_CACHE_CHAR_LIMIT=48\*1024\*1024/);
+  assert.match(app, /const PRIVATE_IMAGE_CACHE_CHAR_LIMIT=16\*1024\*1024/);
   assert.match(app, /function privateTrimImageMemoryCache\(extraKeys\)/);
   assert.match(app, /privateBootImageKeys\(\)/);
+  assert.match(app, /function privateBootImageKeys\(\)[\s\S]*?avatar:me\.avatar[\s\S]*?lockBg:me\.lockBg[\s\S]*?homeBg:me\.homeBg/);
+  assert.doesNotMatch(app, /function privateBootImageKeys\(\)[^\n]*(?:contacts|groups|appIcons)/);
   assert.match(app, /visibleStoredImageKeys\(\)/);
   assert.match(app, /if\(memory\|\|state==='serious'\|\|state==='critical'\)privateTrimImageMemoryCache\(\)/);
   const start=app.indexOf('function privateTrimImageMemoryCache(');
