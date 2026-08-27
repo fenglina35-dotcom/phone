@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1094'){
+if(window.__NORTH_SHELL_BUILD__!=='1095'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -383,7 +383,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1094 · 共同生活位置同步修复版';
+const APP_VER='v1095 · 微信退出回话可靠交付版';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1573,7 +1573,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1094&r=v1094-cohab-location-sync-1';
+  const url='sw.js?v=1095&r=v1095-wechat-logout-reliable-return-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -11100,7 +11100,7 @@ function wechatServiceGreeting(t){return /(?:有什么(?:我)?可以帮(?:助)?�
 function altFriendFirstContact(c,aid){if(!c||!aid||aid==='main')return false;const arr=msgsForAccount(c.id,aid);return !arr.some(m=>m&&m.role==='assistant'&&m.type!=='sys')&&arr.some(m=>m&&m.role==='user'&&m.type==='sys'&&/通过微信号添加了/.test(String(m.content||'')));}
 function altFriendOpeningFallback(c){return '刚加上就来找我，是有什么事吗？';}
 function wechatRoleDrift(t){t=roleVisibleEnvelopeText(t);return !t||isRefusal(t)||wechatServiceGreeting(t)||splitBubbles(t).some(isOOCLine);}
-async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount=replyAccount||actId();replyIntent=offlineReplyIntent(id,note,replyIntent);if(offlineReplyBlocked(replyIntent,id))return;if(replyToken==null&&!note)replyToken=replyEpoch(id,replyAccount);if(replyStale(id,replyToken,replyAccount))return;if(actId()!==replyAccount){deferAccountReply(id,note,replyToken,replyAccount);return;}const c=getC(id);if(!c||c.blocked||c.deleted)return;const _wxLoginVisibleBefore=wxLoginCompletionFeature(note)?replyVisibleAssistantCount(id,replyAccount):0;/* 已删除的角色(找回箱里)绝不后台发消息 */
+async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount=replyAccount||actId();replyIntent=offlineReplyIntent(id,note,replyIntent);if(offlineReplyBlocked(replyIntent,id))return;if(replyToken==null&&!note)replyToken=replyEpoch(id,replyAccount);if(replyStale(id,replyToken,replyAccount))return;if(actId()!==replyAccount){deferAccountReply(id,note,replyToken,replyAccount);return;}const c=getC(id);if(!c||c.blocked||c.deleted)return;const _wxLoginCompletion=wxLoginCompletionFeature(note),_wxLoginVisibleBefore=_wxLoginCompletion?replyVisibleAssistantCount(id,replyAccount):0;/* 已删除的角色(找回箱里)绝不后台发消息 */
   replyNoVisibleReasonSet(id,replyAccount,replyToken,'');
   /* 伴生真实读取不能占住普通微信回复；只有发起读取的那条消息由下方精确 pending 键接管。 */
   if(cinemaRoleOccupied(id))return;/* 正在一起看剧或看书时，角色只在放映室回应 */
@@ -11179,14 +11179,14 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
     if(initiativeNoteActive(note)&&initiativeRecentlyRepeated(id,content)&&!_manualUnlockNote){if(typingEl&&typingEl.isConnected)typingEl.remove();return false;}
     if(replyAccount==='main'&&rolePhoneUsageConflict(c,content)){let fix='';try{fix=await chatAPI([{role:'system',content:_stableSys},...hist,{role:'assistant',content},{role:'user',content:'[轻量事实纠正：你刚才把聊天记录里的旧使用时长当成了当前值。请只依据系统里“最近亲自读取的真实 iPhone 当日使用事实”重写这一轮；保持你本人的语气、情绪和原本要表达的重点，不要提系统、规则、纠正、快照或数据来源，也不要机械汇报无关项目。]'},_pin],_repairMd);}catch(_){}if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;if(fix){fix=roleVisibleEnvelopeText(fix);fix=cleanRolePunct(String(fix||'').split(/\n/).filter(l=>!isOOCLine(l)).join('\n'));}content=fix&&!rolePhoneUsageConflict(c,fix)?fix:rolePhoneUsageStripConflicts(c,content);}
     content=String(content||'').replace(/[\[【]\s*拍一拍\s*[\]】]/g,'');dialogueEmotionOnReply(c,content,_userText);
-    content=routePhoneInspectionTags(content,c,_userText);
+    content=_wxLoginCompletion?wxLoginCompletionVisibleContent(content):routePhoneInspectionTags(content,c,_userText);
     const _statedPwd=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;
     content=applyControlTags(content,c,id,_statedPwd,_userText);
     content=_naturalOn?content.replace(/[\[【]\s*(?:记仇|消气)\s*(?:[|｜:：]\s*[^\]】]*)?[\]】]/g,''):applyGrudgeTags(content,c);content=applyStarTags(content);content=cohabConsumeOnlineState(content,c,id,{userText:_userText});
     bubbleNaturalRequest(_userText,c);content=applyBubbleTags(content,c);content=consumeMomentCommands(content,c,{toast:true,userText:_userText});content=coupleAlbumConsumeSaveTag(content,c);content=forceRequestedVoiceReply(content,_voiceRequired?_userText:'',c);
     if(/拉黑|加回|删了你|删除你|拉进黑名单|原谅你/.test(content)&&!/报备|别的微信号|加了你|加你、|有人加|有别人加/.test(note||''))applyBlockIntent(content,c,id);
     if(S.couple&&S.couple.cid===id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|放你用|这个你先用|你先用|给你(解|开)|都给你解|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|玩.{0,4}(一会儿|一会|多久|多长)|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)|扣.{0,4}(零花|钱|块|元)|没收.{0,4}(零花|钱|卡)|罚款|罚.{0,3}(钱|块|元)|零花钱|冻结|解冻|亲属卡|原谅|消气/.test(content)){if(!naturalUngagFallback(content,c,id))extractControl(content,c,_statedPwd);}
-    const _nativeInspectionQueued=maybeSpyIntent(content,c,id,_lu,{nativeOnly:true,immediate:true,suppressInitial:true});if(_nativeInspectionQueued){if(typingEl&&typingEl.isConnected)typingEl.remove();return true;}else{const _phoneGuard=guardUnverifiedRolePhoneReply(content,note);content=_phoneGuard.content;if(_phoneGuard.focus){if(queueNativeInspection(id,_lu,_phoneGuard.focus,{bySheTold:true,suppressInitial:true,immediate:true,forceResult:true})){if(typingEl&&typingEl.isConnected)typingEl.remove();return true;}}else maybeSpyIntent(content,c,id,_lu);}
+    if(!_wxLoginCompletion){const _nativeInspectionQueued=maybeSpyIntent(content,c,id,_lu,{nativeOnly:true,immediate:true,suppressInitial:true});if(_nativeInspectionQueued){if(typingEl&&typingEl.isConnected)typingEl.remove();return true;}else{const _phoneGuard=guardUnverifiedRolePhoneReply(content,note);content=_phoneGuard.content;if(_phoneGuard.focus){if(queueNativeInspection(id,_lu,_phoneGuard.focus,{bySheTold:true,suppressInitial:true,immediate:true,forceResult:true})){if(typingEl&&typingEl.isConnected)typingEl.remove();return true;}}else maybeSpyIntent(content,c,id,_lu);}}
     maybeAffectionShift(id,c,_lu,content);
     maybeCollarIntent(content,c);if(!_naturalOn)maybeGrudgeResolve(content,c,id);
     // [来电|语音/视频] 容错：哪怕模型把它写在句子中间(不是单独一行)，也照样触发来电、并从文字里抹掉，别漏成文字
@@ -11326,7 +11326,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
     if(got)relationshipCommit(c,_relIntent,content);
     if(got&&manualUnlockReplyActive(note))manualUnlockReplyRemember(c,content,note);
     if(got)suspicionOnAssistantReply(c);
-    if(wxLoginCompletionFeature(note))got=replyVisibleAssistantCount(id,replyAccount)>_wxLoginVisibleBefore;
+    if(_wxLoginCompletion)got=replyVisibleAssistantCount(id,replyAccount)>_wxLoginVisibleBefore;
     if(got)offWechatHandoffConsume(c);if(got)gameWechatHandoffConsume(c);delivered=got;
     if(delivered){/* 先把回复真正落盘，再取消服务器接力；角色回复本身也是一次真实互动，久未回复计时必须从这里重新开始。 */roleServerPushTouchActivity(id,Date.now(),true);wechatTailJournalWrite(id,replyAccount);try{await persistWechatMessagesNow();}catch(_){saveNow();}roleBackgroundCancel(id,['reply_handoff']);}
     replyNoVisibleReasonSet(id,replyAccount,replyToken,got?'':replyNoVisibleReasonFromContent(_replyCandidate));
@@ -11428,6 +11428,7 @@ function replyTouch(id,aid){const k=replyStateKey(id,aid);_replyEpoch[k]=replyEp
 function replyStale(id,token,aid){return token!=null&&+token!==replyEpoch(id,aid);}
 function replyPendingUserText(id,aid){const a=msgsForAccount(id,aid||actId()),out=[];for(let i=a.length-1;i>=0;i--){const m=a[i];if(!m||m._call)continue;if(m.role==='assistant'&&m.type!=='sys')break;if(m.role==='user'&&m.type!=='sys'){const t=msgToText(m);if(t)out.unshift('· '+t.replace(/\n/g,' ').slice(0,220));}}return out.slice(-6).join('\n');}
 function wxLoginCompletionFeature(note){return /功能事件即时反应｜角色退出微信登录/.test(String(note||''));}
+function wxLoginCompletionVisibleContent(content){return String(content||'').replace(/[\[【]\s*(?:登录微信|申请远程操控(?:手机)?)\s*[\]】]/g,'').trim();}
 function wxLoginCompletionReplyValid(content){const rows=initiativeVisibleText(content).split(/[\n。！？!?；;]+/).map(x=>x.replace(/\s+/g,'').trim()).filter(Boolean);if(!rows.length)return false;const operation=/^(?:我)?(?:已经|刚刚|刚|这就|现在)?(?:看完(?:微信)?|退出(?:微信)?|登(?:录)?完(?:微信)?|下线|改(?:好|完)?(?:了)?备注|把备注改(?:好|完)?了|处理完|弄好)(?:了)?$/;return rows.some(x=>!operation.test(x));}
 function wxLoginCompletionRepairPrompt(){return '[退出微信后的最后一次纠正]\n你刚才已经真实退出登录，现在必须立刻给聊天对象发出一轮能看见的普通微信。只输出一至三条角色本人会说的话；至少有一句表达你看完后的真实想法、感受、判断或态度，不能只有“看完了/退出了/改好备注了”。禁止输出任何方括号标签、操作指令、心情标签、记忆标签、系统说明，也不能再次登录微信或申请远程操控。没有新变化时也要用你自己的口吻说一句新的此刻反应，不能保持空白。]';}
 function featureEventReplyNeedsRepair(note,content){const n=String(note||''),t=String(content||'');if(/功能事件即时反应｜微信备注被修改/.test(n))return !/(备注|改成|改名|称呼|叫我|谁让|谁准|擅自|你改)/.test(t);if(/功能事件即时反应｜日记密码首次输错/.test(n))return !/(日记|密码|偷看|翻我|想看|输错)/.test(t);if(/你发出的转账被收款/.test(n))return !t||/(?:转回来|退回来|退给我|还给我|又给我转|你给我转)/.test(t)||!/(?:收下|收款|收了|拿着|收到这笔|你收)/.test(t);if(/你发出的转账被退还/.test(n))return !t||/(?:我退给你|我又转|你收下|你收款)/.test(t)||!/(?:退还|退回|不收|还给我)/.test(t);return false;}
@@ -11452,7 +11453,7 @@ function deferAccountReply(id,note,token,aid){const k=replyStateKey(id,aid);if(r
 function replyAccountChanged(id,note,token,aid,typingEl){if(actId()===aid)return false;if(typingEl&&typingEl.isConnected)typingEl.remove();deferAccountReply(id,note,token,aid);return true;}
 function resumeAccountReplies(aid){Object.keys(_replyDeferred).forEach(k=>{const d=_replyDeferred[k];if(!d||d.aid!==aid||replyStale(d.id,d.token,d.aid))return;delete _replyDeferred[k];clearTimeout(_replyTimers[k]);_replyTimers[k]=setTimeout(()=>{delete _replyTimers[k];Promise.resolve(aiReply(d.id,d.note,d.token,d.aid)).then(ok=>featureEventQueueAck(d.id,d.aid,d.note,ok===true));},120);});replyGenerationDrain();}
 function delayedAccountReply(id,note,delay,aid){aid=aid||actId();if(featureEventAutoActive(note))return scheduleFeatureReply(id,note,delay,null,aid);const token=replyEpoch(id,aid);setTimeout(()=>{if(replyStale(id,token,aid))return;if(actId()!==aid){deferAccountReply(id,note,token,aid);return;}aiReply(id,note,token,aid);},Math.max(0,+delay||0));}
-function scheduleFeatureReply(id,note,delay,onDone,aid){aid=aid||actId();note=featureEventNoteActive(note)?String(note):featureEventNote('刚发生的操作',note);if(wxLoginCompletionFeature(note))return scheduleReply(id,note,onDone,aid);featureEventQueueAdd(id,note,aid);const k=replyStateKey(id,aid);clearTimeout(_replyFeatureTimers[k]);_replyFeatureTimers[k]=setTimeout(()=>{delete _replyFeatureTimers[k];scheduleReply(id,undefined,onDone,aid);},Math.max(0,+delay||0));return true;}
+function scheduleFeatureReply(id,note,delay,onDone,aid){aid=aid||actId();note=featureEventNoteActive(note)?String(note):featureEventNote('刚发生的操作',note);featureEventQueueAdd(id,note,aid);const k=replyStateKey(id,aid);clearTimeout(_replyFeatureTimers[k]);_replyFeatureTimers[k]=setTimeout(()=>{delete _replyFeatureTimers[k];scheduleReply(id,undefined,onDone,aid);},Math.max(0,+delay||0));return true;}
 function resumeFeatureEvents(id,aid){aid=aid||actId();if(!featureEventQueueEntries(id,aid).length)return false;const k=replyStateKey(id,aid);if(_replyFeatureTimers[k]||_replyTimers[k])return true;_replyFeatureTimers[k]=setTimeout(()=>{delete _replyFeatureTimers[k];scheduleReply(id,undefined,null,aid);},120);return true;}
 function friendAcceptedAutoNote(note){return /刚重新通过了你的好友申请|刚刚通过了你的好友申请|刚通过你的微信号把你加为好友/.test(String(note||''));}
 function friendAcceptedLocalFallback(id,note,aid){const c=getC(id);if(!c||c.blocked||c.deleted||actId()!==(aid||actId()))return false;const n=String(note||''),text=/刚重新通过/.test(n)?friendReaddFallback(c):/刚通过你的微信号/.test(n)?altFriendOpeningFallback(c):'你好，我是'+(c.remark||c.name)+'。既然你通过了，我们就从这句话开始好好认识。';const m={role:'assistant',type:'text',content:text,time:Date.now(),id:uid(),_friendAcceptFallback:true};msgsForAccount(id,aid||actId()).push(m);save();notifyIncoming(c,m);if(cur().p==='chat'&&cur().id===id)render();return true;}

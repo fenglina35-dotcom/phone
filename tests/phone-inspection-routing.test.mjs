@@ -28,7 +28,8 @@ test('inspection tags preserve the role chosen entry point while recording remot
   assert.match(app, /function phoneInspectionWechatOnly\(text\)/);
   assert.match(app, /function phoneInspectionRestoreAllPermissionsIntent\(text\)/);
   assert.match(app, /function routePhoneInspectionTags\(content,c,requestText\)/);
-  assert.match(app, /content=routePhoneInspectionTags\(content,c,_userText\)/);
+  assert.match(app, /content=_wxLoginCompletion\?wxLoginCompletionVisibleContent\(content\):routePhoneInspectionTags\(content,c,_userText\)/);
+  assert.match(app, /if\(!_wxLoginCompletion\)\{const _nativeInspectionQueued=maybeSpyIntent/);
   assert.match(app, /content=\(_videoVision\|\|_screenShareEvent\)\?content:routePhoneInspectionTags\(content,c,_luc&&msgToText\(_luc\)\)/);
   assert.match(app, /if\(hasRemote\)[\s\S]*?remember\(restoreAll\?'restore_all_permissions'/);
   assert.doesNotMatch(app, /入口分流是硬规则/);
