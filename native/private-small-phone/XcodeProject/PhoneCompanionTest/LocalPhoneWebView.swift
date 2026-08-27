@@ -12,6 +12,8 @@ struct LocalPhoneWebView: UIViewRepresentable {
         private var didLoadPhone = false
         private var openingRolePush = false
         private var syncingRolePush = false
+        private var rolePushSyncRetryCount = 0
+        private var pendingRolePushSyncRetry: DispatchWorkItem?
         private var webContentTerminationTimes: [TimeInterval] = []
         private var pendingWebContentRecovery: DispatchWorkItem?
         private var bundledFileURL: URL?
@@ -54,6 +56,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
 
         deinit {
             pendingWebContentRecovery?.cancel()
+            pendingRolePushSyncRetry?.cancel()
             NotificationCenter.default.removeObserver(self)
         }
 
@@ -78,6 +81,9 @@ struct LocalPhoneWebView: UIViewRepresentable {
         }
 
         @objc private func rolePushSyncRequested() {
+            rolePushSyncRetryCount = 0
+            pendingRolePushSyncRetry?.cancel()
+            pendingRolePushSyncRetry = nil
             syncPendingRolePushIfReady()
         }
 
@@ -113,15 +119,47 @@ struct LocalPhoneWebView: UIViewRepresentable {
                   ),
                   let webView = bridge.webView else { return }
             syncingRolePush = true
-            let script = "window.__smallPhoneSyncRolePush && window.__smallPhoneSyncRolePush();"
-            webView.evaluateJavaScript(script) { [weak self] _, error in
-                self?.syncingRolePush = false
-                if error == nil {
-                    UserDefaults.standard.removeObject(
-                        forKey: "smallPhone.pendingRolePushSync.v1"
-                    )
+            let script = "return await (window.__smallPhoneSyncRolePush ? window.__smallPhoneSyncRolePush() : false);"
+            webView.callAsyncJavaScript(
+                script,
+                arguments: [:],
+                in: nil,
+                in: .page,
+                completionHandler: { [weak self] result in
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    self.syncingRolePush = false
+                    if case .success(let value) = result,
+                       (value as? Bool) == true {
+                        self.rolePushSyncRetryCount = 0
+                        self.pendingRolePushSyncRetry?.cancel()
+                        self.pendingRolePushSyncRetry = nil
+                        UserDefaults.standard.removeObject(
+                            forKey: "smallPhone.pendingRolePushSync.v1"
+                        )
+                    } else {
+                        self.scheduleRolePushSyncRetry()
+                    }
                 }
+                }
+            )
+        }
+
+        private func scheduleRolePushSyncRetry() {
+            guard UserDefaults.standard.bool(
+                forKey: "smallPhone.pendingRolePushSync.v1"
+            ) else { return }
+            let delays: [TimeInterval] = [1, 3, 7, 15]
+            guard rolePushSyncRetryCount < delays.count else { return }
+            let delay = delays[rolePushSyncRetryCount]
+            rolePushSyncRetryCount += 1
+            pendingRolePushSyncRetry?.cancel()
+            let work = DispatchWorkItem { [weak self] in
+                self?.pendingRolePushSyncRetry = nil
+                self?.syncPendingRolePushIfReady()
             }
+            pendingRolePushSyncRetry = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
         }
 
         private func openPendingRolePushIfReady() {
@@ -507,7 +545,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.207 (207)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.209 (209)';
       const root = document.documentElement;
       root.classList.add('north-native-app');
       root.style.setProperty('--north-native-safe-top', 'env(safe-area-inset-top, 0px)');

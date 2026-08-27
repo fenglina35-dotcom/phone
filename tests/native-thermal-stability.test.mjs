@@ -14,6 +14,7 @@ const privateRoot=fs.readFileSync(path.join(root,'native/private-small-phone/Xco
 const screenShare=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/ScreenShareCoordinator.swift'),'utf8');
 const appDelegate=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneCompanionTestApp.swift'),'utf8');
 const location=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/LocationManager.swift'),'utf8');
+const localPhoneWebView=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift'),'utf8');
 
 function swiftFunction(source,name,nextName){
   const start=source.indexOf(`func ${name}(`);
@@ -129,8 +130,9 @@ test('motion step tracking never saves at the sensor callback rate',()=>{
 test('resume listeners collapse duplicate forced native and inbox pulls',()=>{
   assert.match(app,/function companionPollMinDelay\(\)[\s\S]*?:60000/);
   assert.match(app,/companionPollSnapshot\(force\)[\s\S]*?minDelay=force\?5000:companionPollMinDelay\(\)/);
-  assert.match(app,/roleServerPushPull\(force\)[\s\S]*?minDelay=force\?5000:45000/);
-  assert.match(app,/function privateResumeSyncSoon\(\)[\s\S]*?companionPollSnapshot\(true\);roleServerPushPull\(true\)/);
+  assert.match(app,/roleServerPushPull\(force\)[\s\S]*?minDelay=force\?1000:45000/);
+  assert.match(app,/function privateResumeSyncSoon\(\)[\s\S]*?companionPollSnapshot\(true\);roleServerPushWakePull\(\)/);
+  assert.match(app,/function roleServerPushWakePull\(\)[\s\S]*?const waits=\[0,900,2200,4500\]/);
   assert.doesNotMatch(app,/setTimeout\(\(\)=>companionPollSnapshot\(true\),960\)/);
 });
 
@@ -141,6 +143,11 @@ test('private saves avoid repeated full chat serialization on the tap path',()=>
   assert.match(app,/const PRIVATE_NATIVE_SAVE_GAP_MS=15000/);
   assert.match(app,/gap=native&&requested>0&&_saveLast\?Math\.max\(0,PRIVATE_NATIVE_SAVE_GAP_MS-\(Date\.now\(\)-_saveLast\)\):0/);
   assert.match(app,/native&&requested>0\?Math\.max\(700,requested,gap\):requested/);
+});
+
+test('native role inbox wake uses the project-compatible WebKit callback signature',()=>{
+  assert.match(localPhoneWebView,/callAsyncJavaScript\([\s\S]*?arguments: \[:\],[\s\S]*?in: nil,[\s\S]*?in: \.page,[\s\S]*?completionHandler:/);
+  assert.doesNotMatch(localPhoneWebView,/contentWorld: \.page/);
 });
 
 test('inactive native helpers do not keep waking the main thread',()=>{
@@ -182,8 +189,17 @@ test('private boot keeps historical image references lazy without allowing image
   assert.match(app,/const _visibleImageMisses=new Map\(\)/);
   assert.match(app,/function visibleImageRetryDelay\(count\)[\s\S]*?Math\.min\(120000/);
   assert.match(app,/eligible\.slice\(0,12\)/);
-  assert.match(app,/function scheduleVisibleStoredImages\(force\)[\s\S]*?requestIdleCallback\(run,\{timeout:1200\}\)/);
+  assert.match(app,/function scheduleVisibleStoredImages\(force,alreadyHydrated\)[\s\S]*?if\(!alreadyHydrated\)hydrateStoredImageNodes\(\)[\s\S]*?requestIdleCallback\(run,\{timeout:1200\}\)/);
+  assert.match(app,/if\(privateNativeAppOn\(\)\)hydrateStoredImageNodes\(\)/);
+  assert.match(app,/scheduleVisibleStoredImages\(false,true\);[\s\S]{0,220}?northNativePerformanceSample\('render-'\+c\.p/);
+  assert.match(app,/function refreshHydratedUI\(\)[\s\S]{0,260}?scheduleVisibleStoredImages\(false,true\)/);
   assert.doesNotMatch(app,/function scheduleVisibleStoredImages\(\)[\s\S]{0,300}?requestAnimationFrame/);
+});
+
+test('private navigation is prioritized and slow renders enter the measured performance guard',()=>{
+  assert.match(app,/function appLaunch\(k\)[\s\S]*?privateNativeAppOn\(\)&&typeof queueMicrotask===['"]function['"]\)queueMicrotask\(f\);else setTimeout\(f,0\)/);
+  assert.match(app,/function render\(\)\{\s*const c=cur\(\);const app=\$\('#app'\),_renderStarted=privateNativeAppOn\(\)/);
+  assert.match(app,/northNativePerformanceSample\('render-'\+c\.p,/);
 });
 
 test('private companion polling never constructs Intl.DateTimeFormat on the WebContent timer',()=>{

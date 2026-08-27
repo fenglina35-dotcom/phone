@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import vm from 'node:vm';
 
 const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
@@ -63,6 +64,38 @@ test('camera frames use the existing vision route and feed a natural in-call rep
   assert.match(callAI,/callVideoVisionReplyGrounded/,'vision replies must mention a concrete scene detail');
 });
 
+test('screen-share observations keep bounded ordered memory for later call turns',()=>{
+  const analyze=functionSource('callVideoVisionAnalyze');
+  const callAI=functionSource('callAI');
+  assert.match(analyze,/callVisualHistoryRemember\(source,desc\)/,'a successfully recognized frame is remembered before the role reply runs');
+  assert.match(callAI,/callVisualHistoryPrompt\(_videoVision\?_videoVisionScene:''\)/,'ordinary later call turns receive prior visual observations too');
+  assert.match(functionSource('callPersist'),/visualHistory:Array\.isArray\(_call\.visualHistory\)\?_call\.visualHistory\.slice\(-10\):\[\]/,'visual observations survive private background call restoration');
+  assert.match(functionSource('restoreActiveCall'),/visualHistory:Array\.isArray\(p\.visualHistory\)\?p\.visualHistory\.slice\(-10\):\[\]/);
+
+  let persisted=0;
+  const context=vm.createContext({
+    _call:{id:'c1',state:'active',visualHistory:[]},
+    Date,
+    String,
+    Array,
+    factStamp:at=>`T${at}`,
+    callPersist:()=>{persisted+=1;},
+  });
+  vm.runInContext(`${functionSource('callVisualHistoryRemember')}\n${functionSource('callVisualHistoryPrompt')}\nthis.remember=callVisualHistoryRemember;this.prompt=callVisualHistoryPrompt;`,context);
+  for(let i=1;i<=12;i+=1)context.remember('屏幕共享',`第${i}个真实页面，显示条目 ${i}`);
+  assert.equal(context._call.visualHistory.length,10,'only the latest ten textual observations are retained');
+  assert.equal(persisted,12,'each successful visual observation is persisted, not merely kept in a transient last-frame variable');
+  const later=context.prompt('');
+  assert.doesNotMatch(later,/第1个真实页面|第2个真实页面/,'old overflow entries are bounded');
+  assert.match(later,/第3个真实页面/);
+  assert.match(later,/第12个真实页面/);
+  assert.match(later,/此前画面/,'an ordinary later turn treats every retained observation as historical');
+  const current=context.prompt('第12个真实页面，显示条目 12');
+  assert.match(current,/屏幕共享｜本轮当前画面/,'the newest frame is explicitly distinguished from history only in its own vision turn');
+  assert.match(current,/只有明确标成【本轮当前画面】的一条才代表此刻仍可见/,'the model is forbidden to present older frames as current');
+  assert.doesNotMatch(current,/data:image|base64|截图数据/,'no image bytes enter model context or persisted visual memory');
+});
+
 test('preferences expose minute interval and an automatic-only per-call limit',()=>{
   const settings=functionSource('renderSettings');
   const save=functionSource('saveSettings');
@@ -83,8 +116,8 @@ test('private iOS app grants bundled camera capture and declares privacy usage',
   assert.match(webView,/type == \.cameraAndMicrophone/);
   assert.match(webView,/bundledPage && supportedCapture \? \.grant : \.deny/);
   assert.match(project,/INFOPLIST_KEY_NSCameraUsageDescription/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 207/);
-  assert.match(project,/MARKETING_VERSION = 1\.0\.207/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 209/);
+  assert.match(project,/MARKETING_VERSION = 1\.0\.209/);
 });
 
 test('private iOS camera preview keeps one media session across recognized sentences',()=>{

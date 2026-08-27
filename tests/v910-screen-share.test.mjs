@@ -14,9 +14,9 @@ const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest
 const info = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/Info.plist');
 
 test('current release versions stay aligned after v910 screen-share support', () => {
-  assert.match(app, /APP_VER='v1082 · 共同生活伴生畅通与真实时间复核版'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 207;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.207;/);
+  assert.match(app, /APP_VER='v1084 · 睡眠来源与限额锁标识版'/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 209;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.209;/);
   assert.match(bridge, /contractVersion = 25/);
 });
 
@@ -64,5 +64,5 @@ test('proactive messages prioritize ordinary real chat and silence context', () 
   assert.match(edge, /这是与上一轮分开的独立主动联系事件/);
   assert.match(edge, /禁止再次回答用户最后一句/);
   assert.match(edge, /silenceMinutes/);
-  assert.match(edge, /用户距离最近一次真实回复约/);
+  assert.match(edge, /距离同一角色最近一次真实互动约/);
 });

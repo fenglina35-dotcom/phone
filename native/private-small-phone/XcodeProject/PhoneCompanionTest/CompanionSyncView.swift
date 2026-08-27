@@ -1488,8 +1488,17 @@ final class CompanionSyncService: ObservableObject {
         controlOnly: Bool = false
     ) async -> [String: Any] {
         let selection = loadSelection()
+        reconcileReachedDailyLimits(report: report, selection: selection)
         let lockedTokens = effectiveLockedTokens()
         let limitSettings = loadLimitSettings()
+        let manualLockedTokens =
+            (manualLockStore.shield.applications ?? [])
+            .union(loadLockedTokens())
+            .union(persistentLockStore.shield.applications ?? [])
+            .union(loadPersistentLockLedger())
+        let limitLockedTokens =
+            (dailyLimitStore.shield.applications ?? [])
+            .union(loadLimitLockedTokens())
 
         let usageByID = Dictionary(
             uniqueKeysWithValues: (report?.apps ?? []).map {
@@ -1544,7 +1553,9 @@ final class CompanionSyncService: ObservableObject {
                 "limitMinutes": setting?.isEnabled == true
                     ? (setting?.minutes ?? 0)
                     : 0,
-                "locked": lockedTokens.contains(token)
+                "locked": lockedTokens.contains(token),
+                "manualLocked": manualLockedTokens.contains(token),
+                "limitReached": limitLockedTokens.contains(token)
             ])
             includedIDs.insert(externalID)
         }
@@ -1557,7 +1568,9 @@ final class CompanionSyncService: ObservableObject {
                 "name": appAliases[usage.externalAppID] ?? "",
                 "usedSeconds": usage.usedSeconds,
                 "limitMinutes": 0,
-                "locked": false
+                "locked": false,
+                "manualLocked": false,
+                "limitReached": false
             ])
         }
 
@@ -1714,6 +1727,46 @@ final class CompanionSyncService: ObservableObject {
         lastAppCount = appRows.count
         lastFootprintCount = footprintRows.count
         return snapshot
+    }
+
+    private func reconcileReachedDailyLimits(
+        report: DeviceReportSnapshot?,
+        selection: FamilyActivitySelection
+    ) {
+        guard let report,
+              usageDay(for: report.generatedAt) == usageDay(for: Date()) else {
+            // A cached report from yesterday is still useful for display, but
+            // it must never reapply today's shield from yesterday's usage.
+            return
+        }
+        let usageByID = Dictionary(
+            uniqueKeysWithValues: report.apps.map {
+                ($0.externalAppID, max(0, $0.usedSeconds))
+            }
+        )
+        let settingsByToken = Dictionary(
+            uniqueKeysWithValues: loadLimitSettings()
+                .filter(\.isEnabled)
+                .map { ($0.token, $0.minutes) }
+        )
+        var reached = loadLimitLockedTokens()
+        var changed = false
+
+        for token in selection.applicationTokens {
+            guard let minutes = settingsByToken[token],
+                  let externalID = stableExternalID(for: token),
+                  let usedSeconds = usageByID[externalID],
+                  usedSeconds >= Double(minutes * 60),
+                  !reached.contains(token) else {
+                continue
+            }
+            reached.insert(token)
+            changed = true
+        }
+
+        guard changed else { return }
+        dailyLimitStore.shield.applications = reached
+        saveLimitLockedTokens(reached)
     }
 
     private func loadFreshTodayPoints() -> [FootprintPoint] {

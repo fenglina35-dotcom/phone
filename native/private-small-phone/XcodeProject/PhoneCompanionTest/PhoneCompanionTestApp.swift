@@ -188,6 +188,12 @@ final class CompanionPushAppDelegate: NSObject,
         didFinishLaunchingWithOptions launchOptions:
             [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        // A terminated process cannot still own a live web call. Clear a stale
+        // marker before foreground notification presentation is enabled.
+        UserDefaults.standard.set(
+            false,
+            forKey: PhoneNativeBridge.roleCallActiveDefaultsKey
+        )
         UNUserNotificationCenter.current().delegate = self
         Task { @MainActor in
             urgentBatteryObserver = NotificationCenter.default.addObserver(
@@ -354,6 +360,14 @@ final class CompanionPushAppDelegate: NSObject,
         await clearAppBadge()
         if notification.request.content.userInfo["rolePush"] != nil {
             requestRolePushSync()
+            if UserDefaults.standard.bool(
+                forKey: PhoneNativeBridge.roleCallActiveDefaultsKey
+            ) {
+                // Ask the web layer to consume a raced ordinary scheduled row,
+                // but never interrupt an active role call with banner or sound.
+                // Explicit durable feature events keep their own delivery rules.
+                return []
+            }
         }
         return [.banner, .list, .sound]
     }

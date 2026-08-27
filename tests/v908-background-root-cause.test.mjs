@@ -24,7 +24,7 @@ test('private app installs its wake handler at app launch, not inside a settings
 test('explicit server tasks cannot be canceled by the autonomous quiet response', () => {
   assert.match(edge, /const explicitHandoff = \["reply_handoff", "device_handoff", "one_minute_test", "app_watch_test", "delivery_status"\]/);
   assert.match(edge, /!explicitHandoff,/);
-  assert.match(edge, /if \(allowSilent\) return \{ kind: "silent", body: "" \}/);
+  assert.match(edge, /if \(effectiveAllowSilent\) return \{ kind: "silent", body: "" \}/);
   assert.match(edge, /这次是用户明确发起并等待结果的任务，不能保持安静/);
 });
 

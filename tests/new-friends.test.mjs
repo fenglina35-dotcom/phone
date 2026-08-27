@@ -25,7 +25,7 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-assert.match(source, /APP_VER='v1082 · 共同生活伴生畅通与真实时间复核版'/);
+assert.match(source, /APP_VER='v1084 · 睡眠来源与限额锁标识版'/);
 assert.match(source, /friendDiscovery:\{enabled:false,freq:180,max:2/);
 assert.match(source, /else if\(c\.p==='newfriends'\)html=renderNewFriends\(\)/);
 assert.match(source, /好友申请与最近添加/);
@@ -48,6 +48,8 @@ assert.match(html, /\.nf-card/);
 assert.match(html, /\.nf-entry-icon/);
 assert.doesNotMatch(source, /每一次认识，都有来意/);
 assert.match(source, /content:wasReadd\?'你重新通过了'\+c\.name\+'的好友申请':'你刚刚通过了'\+c\.name\+'的好友申请'/);
+assert.match(functionSource("acceptFriend"), /initialFriendInnerThought\(c,\{kind:r\.kind,readd:wasReadd,at:now\}\)/);
+assert.match(functionSource("wxNearbyContact"), /initialFriendInnerThought\(c,\{kind:'nearby',at:now\}\)/);
 assert.match(source, /if\(r\.kind==='created'&&!coupleHasActiveRole\(\)\)S\.couple=coupleDefaultState\(c\.id\)/);
 assert.match(source, /function friendLineAvatar\(seed\)/);
 assert.match(functionSource("friendDiscoveryProfile"), /tn=target&&target\.name\|\|''/);
@@ -68,16 +70,26 @@ vm.runInContext([
   functionSource("friendRequestVisible"),
   functionSource("friendDiscoveryTarget"),
   functionSource("friendDiscoveryRepairRoleName"),
+  functionSource("initialFriendInnerThought"),
   functionSource("friendLineAvatar"),
   functionSource("friendDiscoveryProfile"),
   functionSource("friendOriginPrompt"),
-  "globalThis.api={friendDiscoveryState,friendRequestVisible,friendDiscoveryRepairRoleName,friendDiscoveryProfile,friendOriginPrompt};",
+  "globalThis.api={friendDiscoveryState,friendRequestVisible,friendDiscoveryRepairRoleName,initialFriendInnerThought,friendDiscoveryProfile,friendOriginPrompt};",
 ].join("\n"), ctx);
 
 assert.equal(ctx.api.friendDiscoveryState().max, 0, "daily max=0 must stay disabled instead of reverting to 2");
 const now = Date.now();
 assert.equal(ctx.api.friendRequestVisible({ time: now, visibleAt: now + 10000 }, now), false);
 assert.equal(ctx.api.friendRequestVisible({ time: now, visibleAt: now + 10000 }, now + 10000), true);
+const freshFriend={friendOrigin:{kind:'created'}};
+assert.equal(ctx.api.initialFriendInnerThought(freshFriend,{kind:'created',at:now}),true);
+assert.match(freshFriend.innerThought,/刚正式加上好友/);
+assert.equal(freshFriend.innerThoughtAt,now);
+const existingThought={innerThought:'保留角色已经形成的真实想法'};
+assert.equal(ctx.api.initialFriendInnerThought(existingThought,{kind:'created',at:now}),false);
+assert.equal(existingThought.innerThought,'保留角色已经形成的真实想法');
+assert.doesNotMatch(functionSource("initialFriendInnerThought"),/msgs\(|scheduleReply|chatAPI/,
+  "initial mood state must not manufacture a role reply or invoke the model");
 
 ctx.S.contacts = [{ id: "lead", name: "顾沉", remark: "先生^^", pinned: true, deleted: false }];
 for (let i = 0; i < 24; i++) {

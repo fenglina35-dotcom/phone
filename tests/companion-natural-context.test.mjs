@@ -78,5 +78,5 @@ test('server ambient context is permission scoped, fresh and optional', () => {
   assert.match(edge, /fresh\(telemetry\.generatedAt, 20 \* 60_000\)/);
   assert.match(edge, /split\(\/\\r\?\\n\/\)\.slice\(-4\)/);
   assert.match(edge, /其中某一项与本轮联系自然相关时，才带入最多一项；否则完全忽略/);
-  assert.match(edge, /roleMessage\(profile, recentBodies, ambientInstruction, ambientFacts\)/);
+  assert.match(edge, /roleMessage\(profile, recentBodies, ambientInstruction, ambientFacts, true, true\)/);
 });

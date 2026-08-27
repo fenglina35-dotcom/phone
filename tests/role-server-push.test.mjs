@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import vm from 'node:vm';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -19,6 +20,7 @@ const edge = readFileSync(join(root, 'supabase', 'functions', 'phone-role-push',
 const notificationService = readFileSync(join(root, 'native', 'private-small-phone', 'XcodeProject', 'RoleNotificationService', 'NotificationService.swift'), 'utf8');
 const localPhoneWebView = readFileSync(join(root, 'native', 'private-small-phone', 'XcodeProject', 'PhoneCompanionTest', 'LocalPhoneWebView.swift'), 'utf8');
 const companionApp = readFileSync(join(root, 'native', 'private-small-phone', 'XcodeProject', 'PhoneCompanionTest', 'PhoneCompanionTestApp.swift'), 'utf8');
+const nativeBridge = readFileSync(join(root, 'native', 'private-small-phone', 'XcodeProject', 'PhoneCompanionTest', 'PhoneNativeBridge.swift'), 'utf8');
 
 function functionSource(name) {
   const start = app.indexOf(`function ${name}(`);
@@ -131,6 +133,8 @@ test('server proactive contact compares ordinary role replies and starts a new e
     recent_context: '2026/8/9 21:20:00 North：我先去洗澡\n2026/8/9 21:20:08 小北：嗯，去吧宝宝。',
   };
   assert.deepEqual(recent(profile), ['嗯，去吧宝宝。']);
+  profile.recent_context = '2026/8/27 09:03:00 [微信]North：你问我咋了？\n2026/8/27 09:03:08 [微信]小北：现在是早上九点零三分。';
+  assert.deepEqual(recent(profile), ['现在是早上九点零三分。'],'channel labels must not hide foreground replies from server repetition checks');
   assert.match(edge, /repeatCandidates\.some\(\(old\) => roleMessageRepeated\(body, old\)\)/);
   assert.match(edge, /这是与上一轮分开的独立主动联系事件/);
   assert.match(edge, /禁止再次回答用户最后一句/);
@@ -169,16 +173,22 @@ test('iOS notification service upgrades role pushes to communication notificatio
 
 test('web client opt-in sends bounded memory and recent context', () => {
   const profile = functionSource('roleServerPushProfile');
+  const recent = functionSource('roleServerPushRecentContext');
   assert.match(profile, /roleName/);
   assert.match(profile, /persona/);
   assert.match(profile, /slice\(0,1200\)/);
   assert.match(profile, /recentContext:roleServerPushRecentContext\(c\)/);
   assert.match(profile, /memoryContext:roleServerPushMemoryContext\(c\)/);
-  assert.match(profile, /lastUserAt:roleServerPushLastUserAt\(c\)/);
+  assert.match(profile, /lastUserAt:roleServerPushLastActivityAt\(c\)\|\|roleServerPushLastUserAt\(c\)/);
   assert.match(profile, /enabled:roleServerPushEffectiveEnabled\(c\)/);
   assert.match(profile, /messageMin:min,messageMax:max/);
-  assert.match(functionSource('roleServerPushRecentContext'), /slice\(-8000\)/);
-  assert.match(functionSource('roleServerPushRecentContext'), /roleOnlineLiveStateText\(c\)/);
+  assert.match(recent, /filter\(x=>x\.channel==='online'\)\.slice\(-40\)/,'the forty-message limit applies after non-WeChat rows are separated');
+  assert.match(recent, /filter\(x=>x\.channel==='cohab'\)\.slice\(-12\)/);
+  assert.match(recent, /\[电话连续性\]/);
+  assert.match(recent, /\[共同生活连续性\]/);
+  assert.match(recent, /\[最新用户发言渠道\]/);
+  assert.match(recent, /slice\(-8000\)/);
+  assert.match(recent, /roleOnlineLiveStateText\(c\)/);
   assert.doesNotMatch(functionSource('roleServerPushEffectiveEnabled'), /roleOnlineProactiveBlocked/,'temporary live states must not persistently disable the server profile');
   assert.match(functionSource('roleServerAutomationConfig'), /suspended/,'temporary non-cohabitation live states remain a reversible server-side suspension');
   assert.match(functionSource('roleServerAutomationConfig'), /roleServerPushDeliveryBlocked\(c\.id\)/);
@@ -203,7 +213,36 @@ test('completed chat turns are marked before scheduled proactive generation', ()
   assert.match(functionSource('roleServerPushConversationBoundary'), /上一轮已经结束/);
   assert.match(functionSource('roleServerPushConversationBoundary'), /正式随机主动联系必须保持安静/);
   assert.match(edgeFunctionSource('roleRecentTurnBoundary'), /上一轮已经结束/);
+  assert.match(edgeFunctionSource('roleRecentTurnBoundary'), /微信\|共同生活\|电话/,'the server must parse the channel-qualified boundary emitted by the current client');
   assert.match(edge, /turnBoundary\.pending \?/);
+});
+
+test('foreground replies cancel a racing server handoff before generation and before delivery', () => {
+  const completed = edgeFunctionSource('replyHandoffAlreadyCompleted');
+  assert.match(completed, /latestActivity > baseline \+ 1000/);
+  assert.match(completed, /微信\|共同生活\|电话/);
+  const firstGuard = edge.indexOf('task.kind === "reply_handoff" && replyHandoffAlreadyCompleted(profile, baseline)');
+  const generation = edge.indexOf('const decision = await roleMessage(', firstGuard);
+  const finalGuard = edge.indexOf('replyHandoffAlreadyCompleted(currentProfile, baseline)', generation);
+  const delivery = edge.indexOf('const backgroundDelivered =', generation);
+  assert.ok(firstGuard >= 0 && firstGuard < generation,'a completed foreground reply must cancel the fallback before it spends another model call');
+  assert.ok(finalGuard > generation && finalGuard < delivery,'a foreground reply finishing during the fallback model call must still prevent duplicate delivery');
+});
+
+test('foreground chat does not enqueue a second model call until the app actually backgrounds', () => {
+  const prepare = functionSource('roleBackgroundPrepare');
+  const flush = functionSource('roleBackgroundFlush');
+  const resume = functionSource('roleBackgroundResumeForeground');
+  const localActive = functionSource('roleBackgroundLocalReplyActive');
+  assert.match(prepare, /kind!=='reply_handoff'/,'ordinary visible chat keeps only a local fallback marker');
+  assert.match(prepare, /document\.hidden[\s\S]{0,180}Date\.now\(\)\+5000/,'an already hidden page may hand off immediately');
+  assert.match(flush, /Date\.now\(\)\+5000/,'a real background transition activates the server handoff');
+  assert.match(localActive, /replyGenerationBusy\(id\)/,'a genuinely live local generation can take ownership again');
+  assert.match(localActive, /_replyTimers&&_replyTimers\[key\]/,'a queued local foreground reply also counts as live');
+  assert.match(localActive, /role==='assistant'[\s\S]{0,180}baseline\+1000/,'an already persisted foreground answer can safely cancel the handoff');
+  assert.match(resume, /!roleBackgroundLocalReplyActive\(id,row\)\)return/,'a dead local reply must leave the only server handoff alive');
+  assert.match(resume, /phone_role_background_cancel/,'a live or persisted local reply cancels the remote fallback before it can spend another call');
+  assert.match(app, /visibilitychange[\s\S]{0,1200}else\{roleBackgroundResumeForeground\(\)/);
 });
 
 test('temporary offline states suspend without disabling background contact, while cohabitation stays live', () => {
@@ -284,13 +323,16 @@ test('returned role messages are deduplicated and appended to the matching chat'
   assert.doesNotMatch(deliveryBlock,/cohabOnlineQuiet/,'cohabitation alone cannot block durable server text delivery');
   assert.match(pull, /roleServerPushSyncSoon\(c\.id\)/);
   assert.match(pull, /_rolePushId===row\.id/);
+  assert.match(pull, /triggerKind\|\|''\)==='reply_handoff'&&roleServerPushHandoffAlreadyVisible\(c,body,rowAt\)/,'a persisted fallback that exactly matches the foreground reply is consumed instead of appended');
   assert.doesNotMatch(pull, /initiativeRecentlyRepeated\(c\.id,body/);
   assert.match(pull, /roleServerPushParts\(c,body\)/);
   assert.match(pull, /roleServerPushCallKind\(rawBody\)/);
   assert.match(pull, /incomingCall\(c\.id,callKind,\{serverPush:true\}\)/);
   assert.match(app, /window\.__smallPhoneOpenRolePush=async payload/);
   assert.match(app, /window\.__smallPhoneSyncRolePush=async\(\)=>/);
-  assert.match(app, /setTimeout\(\(\)=>roleServerPushPull\(true\),6500\)/);
+  assert.match(app, /const waits=\[0,900,2200,4500\]/);
+  assert.match(pull, /roleServerPushInsertByTime\(list,msg\)/);
+  assert.match(pull, /staleArrival/);
   assert.match(pull, /msg\._serverProactive=true/);
   assert.match(pull, /phone_role_push_ack/);
   assert.match(pull, /await persistWechatMessagesNow\(\)/);
@@ -307,8 +349,21 @@ test('returned role messages are deduplicated and appended to the matching chat'
     'chat rows and the durable receipt must both be saved before the server ack'
   );
   assert.match(app, /setInterval\(\(\)=>\{if\(_appBootFinished\)roleServerPushPull\(false\);\},60000\)/);
-  assert.match(app, /function privateResumeSyncSoon\(\)[\s\S]{0,360}roleServerPushPull\(true\)/);
+  assert.match(app, /function privateResumeSyncSoon\(\)[\s\S]{0,360}roleServerPushWakePull\(\)/);
   assert.match(app, /visibilitychange[\s\S]{0,1600}privateResumeSyncSoon\(\)/);
+});
+
+test('an exact foreground bubble sequence consumes a late reply handoff without hiding new text', () => {
+  const local = [
+    { role:'assistant', type:'text', content:'你问我咋了？', time:1000 },
+    { role:'assistant', type:'text', content:'现在是早上九点零三分。', time:1900 },
+    { role:'assistant', type:'text', content:'你的屏幕使用时间快七个小时了。', time:2800 },
+  ];
+  const parse = (_c, body) => String(body).split('\n').map(content=>({type:'text',content}));
+  const normalize = value => String(value||'').replace(/[\s，。！？、,.!?：:；;“”"'（）()【】\[\]]/g,'').toLowerCase();
+  const alreadyVisible = Function('roleServerPushParts','msgs','msgToText','replyDedupNorm','Date',`${functionSource('roleServerPushHandoffAlreadyVisible')};return roleServerPushHandoffAlreadyVisible;`)(parse,()=>local,m=>m.content,normalize,Date);
+  assert.equal(alreadyVisible({id:'c1'},local.map(m=>m.content).join('\n'),3000),true);
+  assert.equal(alreadyVisible({id:'c1'},'这是此前没有说过的新内容。',3000),false);
 });
 
 test('native foreground and delivered role notifications wake the web inbox without requiring a tap', () => {
@@ -319,8 +374,146 @@ test('native foreground and delivered role notifications wake the web inbox with
   assert.match(companionApp, /SmallPhoneRolePushSyncRequested/);
   assert.match(localPhoneWebView, /name: Notification\.Name\("SmallPhoneRolePushSyncRequested"\)/);
   assert.match(localPhoneWebView, /syncPendingRolePushIfReady\(\)/);
-  assert.match(localPhoneWebView, /window\.__smallPhoneSyncRolePush && window\.__smallPhoneSyncRolePush\(\)/);
+  assert.match(localPhoneWebView, /callAsyncJavaScript/);
+  assert.match(localPhoneWebView, /return await \(window\.__smallPhoneSyncRolePush \? window\.__smallPhoneSyncRolePush\(\) : false\)/);
+  assert.match(localPhoneWebView, /arguments: \[:\],[\s\S]{0,100}in: nil,[\s\S]{0,100}in: \.page,[\s\S]{0,100}completionHandler:/,'use the callback API labels already compiled elsewhere in this Xcode project');
+  assert.doesNotMatch(localPhoneWebView, /contentWorld: \.page/,'contentWorld plus a trailing closure selects no compatible WebKit overload in the target Xcode toolchain');
+  assert.match(localPhoneWebView, /\(value as\? Bool\) == true[\s\S]{0,420}smallPhone\.pendingRolePushSync\.v1/,'the native pending flag clears only after the web pull reports success');
+  assert.match(localPhoneWebView, /let delays: \[TimeInterval\] = \[1, 3, 7, 15\]/);
   assert.match(localPhoneWebView, /didFinish navigation[\s\S]{0,520}syncPendingRolePushIfReady\(\)/);
+});
+
+test('active calls invalidate ordinary scheduled pushes and restart quiet time at hangup', () => {
+  const started=functionSource('roleServerPushCallStarted');
+  const ended=functionSource('roleServerPushCallEnded');
+  const renew=functionSource('roleServerPushCallLeaseRenew');
+  const pull=functionSource('roleServerPushPull');
+  assert.match(started,/roleServerPushCallLeaseRenew\(id\)/,'starting a call immediately renews the server-side suspension lease');
+  assert.match(started,/setInterval[\s\S]{0,240}4\*60000/,'long and quiet calls renew the suspension before its server lease expires');
+  assert.match(renew,/roleServerPushTouchActivity\(id,Date\.now\(\),true\)/,'a live call continuously counts as real interaction');
+  assert.match(renew,/roleServerPushSyncSoon\(id\)/,'the server profile continuously carries the live-call suspension state');
+  assert.match(ended,/roleServerPushTouchActivity\(id,Date\.now\(\),true\)/,'hangup starts a fresh inactivity window');
+  assert.match(ended,/clearInterval\(_roleServerCallLeaseTimers\[id\]\)/,'hangup stops the call lease');
+  assert.doesNotMatch(ended,/roleServerPushWakePull/,'hangup must not flush old proactive rows into chat');
+  assert.match(pull,/activeRoleCall[\s\S]{0,180}String\(row\.triggerKind\|\|''\)==='scheduled'[\s\S]{0,180}queueAck\(row,true\);continue/,'a scheduled row racing with the active call is consumed without becoming a chat message');
+  assert.match(functionSource('restoreActiveCall'),/roleServerPushCallStarted\(p\.id\)/,'a restored background call reinstates the server suspension before normal operation resumes');
+  assert.match(nativeBridge,/case "call\.pip\.start":[\s\S]{0,180}roleCallActiveDefaultsKey/);
+  assert.match(nativeBridge,/case "call\.pip\.end":[\s\S]{0,180}false,[\s\S]{0,100}roleCallActiveDefaultsKey/);
+  assert.match(companionApp,/willPresent notification[\s\S]{0,520}roleCallActiveDefaultsKey[\s\S]{0,300}return \[\]/,'foreground role push has no banner, list item or sound during the call');
+  assert.match(companionApp,/didFinishLaunchingWithOptions[\s\S]{0,420}false,[\s\S]{0,100}roleCallActiveDefaultsKey/,'a crash or force quit cannot leave notifications permanently muted');
+});
+
+test('server suspension happens before scheduled model generation and does not block call speech', () => {
+  const scheduledStart=edge.indexOf('const profiles = Array.isArray(due)');
+  assert.notEqual(scheduledStart,-1);
+  const scheduled=edge.slice(scheduledStart);
+  const firstSuspend=scheduled.indexOf('if (profileTemporarilySuspended(freshProfile))');
+  const generation=scheduled.indexOf('const decision = await roleMessage(profile');
+  const latestSuspend=scheduled.indexOf('profileTemporarilySuspended(latestProfile)',generation);
+  assert.ok(firstSuspend>=0&&firstSuspend<generation,'the live-call lease is checked before any scheduled model request can spend balance');
+  assert.ok(latestSuspend>generation,'a call beginning during an already in-flight request still prevents an outbox row and notification');
+  const silence=functionSource('checkCallSilence');
+  const callReply=functionSource('callAI');
+  assert.match(silence,/callAI\(/,'the role can still proactively speak inside an active call');
+  assert.doesNotMatch(silence,/roleServerPushDeliveryBlocked|roleOnlineProactiveBlocked/,'server background suspension must not silence call-native proactive speech');
+  assert.doesNotMatch(callReply,/roleServerPushDeliveryBlocked|roleOnlineProactiveBlocked/,'ordinary foreground call replies stay on their original model path');
+});
+
+test('a scheduled push racing with a live call is acknowledged without entering chat', async () => {
+  const rpcCalls=[];
+  const context=vm.createContext({
+    Date,
+    Set,
+    String,
+    Math,
+    S:{couple:{cid:'c1'},_rolePushReceipts:[]},
+    document:{hidden:false},
+    _call:{id:'c1',session:'live-call'},
+    gateOK:()=>true,
+    isMain:()=>true,
+    cloudId:()=>`test-target`,
+    companionOwnerSecret:()=>`test-owner`,
+    getC:id=>id==='c1'?{id:'c1',deleted:false}:null,
+    msgs:()=>[],
+    companionTime:value=>Date.parse(value)||0,
+    companionRpc:async(name,args)=>{
+      rpcCalls.push({name,args});
+      if(name==='phone_role_push_pull')return [{id:'push-1',roleId:'c1',triggerKind:'scheduled',createdAt:new Date().toISOString(),body:'旧主动消息'}];
+      if(name==='phone_role_push_ack')return true;
+      throw new Error(`unexpected rpc ${name}`);
+    },
+    roleServerPushSyncEnabled:async()=>true,
+    saveNowAsync:async()=>true,
+    persistWechatMessagesNow:async()=>true,
+    roleServerPushLastActivityAt:()=>0,
+    roleServerPushNormalizeBody:(_c,value)=>String(value||''),
+    roleServerPushCallKind:()=>'',
+    roleServerPushVisibleBody:value=>value,
+    splitChatBubbles:()=>[],
+    roleServerPushActionTag:()=>false,
+    roleServerPushParts:()=>[],
+    roleServerPushInsertByTime:()=>true,
+    roleServerPushDeliveryBlocked:()=>true,
+    roleServerPushSyncSoon:()=>{},
+    wechatTailJournalWrite:()=>{},
+    save:()=>{},
+    cur:()=>({p:'chat',id:'c1'}),
+    refreshChatMessages:()=>{},
+    render:()=>{},
+    sleep:async()=>{},
+    notifyIncoming:()=>{throw new Error('scheduled push must not notify during a call');},
+    showMsgBanner:()=>{throw new Error('scheduled push must not show a banner during a call');},
+    playMessageDing:()=>{throw new Error('scheduled push must not play a sound during a call');},
+    incomingCall:()=>false,
+    offlineFocusActive:()=>false,
+    cinemaRoleOccupied:()=>false,
+    uid:()=>`id-${Math.random()}`,
+    setTimeout:fn=>{fn();return 1;},
+  });
+  vm.runInContext(`
+    let _roleServerPushPullBusy=false,_roleServerPushPullAt=0;
+    ${functionSource('roleServerPushReceiptRows')}
+    ${functionSource('roleServerPushReceiptHas')}
+    ${functionSource('roleServerPushReceiptMark')}
+    ${functionSource('roleServerPushReceiptForget')}
+    async ${functionSource('roleServerPushPull')}
+    this.pull=roleServerPushPull;
+  `,context);
+  assert.equal(await context.pull(true),true);
+  assert.equal(context.S._rolePushReceipts.some(row=>row.id==='push-1'),true,'discarded scheduled row receives a local receipt');
+  const ack=rpcCalls.find(call=>call.name==='phone_role_push_ack');
+  assert.deepEqual(Array.from(ack?.args?.p_ids||[]),['push-1'],'discarded row is acknowledged server-side instead of waiting for hangup');
+  assert.deepEqual(context.msgs('c1'),[],'no chat message is appended');
+});
+
+test('the latest real user channel and activity include WeChat, completed calls and co-living', () => {
+  const context=vm.createContext({
+    S:{me:{name:'我'},cohabitation:{homes:{c1:{msgs:[{who:'me',text:'共同生活最后一句',time:400}]}}}},
+    msgs:()=>[
+      {role:'user',type:'text',content:'微信旧消息',time:100},
+      {role:'assistant',type:'text',content:'微信回复',time:200},
+      {role:'user',type:'text',content:'电话里说过',time:300,_call:true,_cs:'s1'},
+    ],
+    msgToText:m=>m.content||'',msgClearTime:m=>m.time||0,String,
+  });
+  vm.runInContext(`${functionSource('roleInteractionRows')}${functionSource('roleLatestUserChannel')}${functionSource('roleServerPushLastActivityAt')}this.latest=roleLatestUserChannel;this.activity=roleServerPushLastActivityAt;`,context);
+  assert.equal(context.latest({id:'c1'},'online'),'cohab');
+  assert.equal(context.activity({id:'c1'}),400);
+  context.S.cohabitation.homes.c1.msgs.push({who:'ta',text:'共同生活角色回应',time:450});
+  assert.equal(context.latest({id:'c1'},'online'),'cohab','a role response must not change the destination chosen from the latest user message');
+  assert.equal(context.activity({id:'c1'}),450,'role replies also reset the no-interaction clock');
+});
+
+test('ordinary server contact uses the live backend clock and the 30/60-minute topic boundary', () => {
+  const roleMessage=edgeFunctionSource('roleMessage');
+  assert.match(roleMessage, /const clock = localClock\(String\(profile\.timezone \|\| "Asia\/Shanghai"\)\)/);
+  assert.match(roleMessage, /当地时间：\$\{clock\.day\}/);
+  assert.match(roleMessage, /ordinaryProactive = false/);
+  assert.match(roleMessage, /silenceMinutes < 60/);
+  assert.match(roleMessage, /只能自然承接最近一轮话题/);
+  assert.match(roleMessage, /超过一小时，可以按角色本人意愿自然换话题/);
+  assert.match(roleMessage, /除明确睡眠外，本次不允许输出 \[保持安静\]/);
+  assert.match(edge, /roleMessage\(profile, recentBodies, ambientInstruction, ambientFacts, true, true\)/);
 });
 
 test('recently consumed real pushes can be reconciled without resurrecting deleted messages', () => {

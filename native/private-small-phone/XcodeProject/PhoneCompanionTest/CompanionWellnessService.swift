@@ -199,11 +199,15 @@ final class CompanionWellnessService: ObservableObject {
         let calendar = Calendar.current
         let now = Date()
         let today = calendar.startOfDay(for: now)
+        // Search far enough back to find the latest real sleep session, then
+        // select only that session below. The previous "yesterday 06:00 until
+        // now" window could add two nights, naps and duplicate sources into
+        // one misleading total.
         let sleepStart = calendar.date(
-            byAdding: .hour,
-            value: -18,
-            to: today
-        ) ?? today.addingTimeInterval(-64_800)
+            byAdding: .day,
+            value: -7,
+            to: now
+        ) ?? now.addingTimeInterval(-7 * 86_400)
 
         async let steps = cumulativeQuantity(
             identifier: .stepCount,
@@ -431,19 +435,84 @@ final class CompanionWellnessService: ObservableObject {
                     HKCategoryValueSleepAnalysis.asleepDeep.rawValue,
                     HKCategoryValueSleepAnalysis.asleepREM.rawValue
                 ]
-                let rows = (samples as? [HKCategorySample] ?? []).filter {
-                    asleepValues.contains($0.value)
-                }
-                let seconds = rows.reduce(0) {
-                    $0 + max(0, $1.endDate.timeIntervalSince($1.startDate))
-                }
-                let sources = Array(
-                    Set(rows.map { $0.sourceRevision.source.name })
-                ).sorted()
-                continuation.resume(returning: (min(86_400, seconds), sources))
+                let rows = (samples as? [HKCategorySample] ?? [])
+                    .filter { asleepValues.contains($0.value) }
+                    .compactMap { sample -> SleepInterval? in
+                        let clippedStart = max(start, sample.startDate)
+                        let clippedEnd = min(end, sample.endDate)
+                        guard clippedEnd > clippedStart else { return nil }
+                        return SleepInterval(
+                            start: clippedStart,
+                            end: clippedEnd,
+                            sources: [sample.sourceRevision.source.name]
+                        )
+                    }
+
+                let latest = Self.latestSleepSession(rows)
+                continuation.resume(
+                    returning: (
+                        min(86_400, latest.seconds),
+                        latest.sources.sorted()
+                    )
+                )
             }
             healthStore.execute(query)
         }
+    }
+
+    private struct SleepInterval {
+        var start: Date
+        var end: Date
+        var sources: Set<String>
+    }
+
+    private static func latestSleepSession(
+        _ rawIntervals: [SleepInterval]
+    ) -> (seconds: Double, sources: Set<String>) {
+        let sorted = rawIntervals.sorted {
+            if $0.start == $1.start { return $0.end < $1.end }
+            return $0.start < $1.start
+        }
+        guard !sorted.isEmpty else { return (0, []) }
+
+        // First union overlaps from Apple Watch, iPhone and third-party apps so
+        // the same minute can never be counted twice.
+        var merged: [SleepInterval] = []
+        for interval in sorted {
+            if var last = merged.last, interval.start <= last.end {
+                last.end = max(last.end, interval.end)
+                last.sources.formUnion(interval.sources)
+                merged[merged.count - 1] = last
+            } else {
+                merged.append(interval)
+            }
+        }
+
+        // Sleep stages can contain short awake gaps. Treat gaps up to 30
+        // minutes as one session, but never add those awake minutes themselves.
+        let maximumSessionGap: TimeInterval = 30 * 60
+        var sessions: [[SleepInterval]] = []
+        for interval in merged {
+            if let lastEnd = sessions.last?.last?.end,
+               interval.start.timeIntervalSince(lastEnd) <= maximumSessionGap {
+                sessions[sessions.count - 1].append(interval)
+            } else {
+                sessions.append([interval])
+            }
+        }
+
+        guard let latest = sessions.max(by: {
+            ($0.last?.end ?? .distantPast) < ($1.last?.end ?? .distantPast)
+        }) else {
+            return (0, [])
+        }
+        let seconds = latest.reduce(0) {
+            $0 + max(0, $1.end.timeIntervalSince($1.start))
+        }
+        let sources = latest.reduce(into: Set<String>()) {
+            $0.formUnion($1.sources)
+        }
+        return (seconds, sources)
     }
 
     @available(iOS 18.0, *)

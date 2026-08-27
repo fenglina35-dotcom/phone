@@ -12,6 +12,8 @@ import WebKit
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
     static let contractVersion = 25
+    static let roleCallActiveDefaultsKey =
+        "smallPhone.roleCallActive.v1"
 
     weak var webView: WKWebView? {
         didSet {
@@ -187,6 +189,10 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             finishVisionBackgroundTask(token: token)
             reply(requestID: requestID, result: ["finished": true])
         case "call.pip.start":
+            UserDefaults.standard.set(
+                true,
+                forKey: Self.roleCallActiveDefaultsKey
+            )
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             let name = arguments["name"] as? String ?? "角色"
             let kind = arguments["kind"] as? String ?? "video"
@@ -211,6 +217,10 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             )
             reply(requestID: requestID, result: ["supported": supported])
         case "call.pip.update":
+            UserDefaults.standard.set(
+                true,
+                forKey: Self.roleCallActiveDefaultsKey
+            )
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             CallPictureInPictureController.shared.update(
                 name: arguments["name"] as? String ?? "角色",
@@ -222,6 +232,10 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             )
             reply(requestID: requestID, result: ["updated": true])
         case "call.pip.end":
+            UserDefaults.standard.set(
+                false,
+                forKey: Self.roleCallActiveDefaultsKey
+            )
             CallPictureInPictureController.shared.end()
             reply(requestID: requestID, result: ["ended": true])
         case "call.audio.play":

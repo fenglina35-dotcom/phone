@@ -228,7 +228,8 @@ function roleRecentAssistantMessages(profile) {
   if (!roleName) return [];
   const marker = `${roleName}：`;
   return String(profile?.recent_context || "").split(/\r?\n/).map((line) => String(line || "").trim()
-    .replace(/^\d{4}\/\d{1,2}\/\d{1,2}\s+\d{1,2}:\d{2}:\d{2}\s+/, ""))
+    .replace(/^\d{4}\/\d{1,2}\/\d{1,2}\s+\d{1,2}:\d{2}:\d{2}\s+/, "")
+    .replace(/^\[(?:微信|共同生活|电话(?:·已发生)?)\]\s*/, ""))
     .filter((line) => line.startsWith(marker))
     .map((line) => line.slice(marker.length).trim()).filter(Boolean).slice(-20);
 }
@@ -314,6 +315,7 @@ async function roleMessage(
   eventInstruction = "",
   eventContext = "",
   allowSilent = true,
+  ordinaryProactive = false,
 ) {
   /* A background handoff must always finish inside the two-minute claim lease.
      Without a hard deadline a slow OpenAI-compatible endpoint can leave the
@@ -369,8 +371,10 @@ async function roleMessage(
   const memoryContext = String(profile.memory_context || "").slice(-16000).trim();
   const lastUserAt = snapshotTime(profile.last_user_at);
   const silenceMinutes = timeAware && lastUserAt ? Math.max(0, Math.floor((Date.now() - lastUserAt) / 60_000)) : 0;
+  const userSleeping = /预计仍在休息|睡眠计时显示正在睡觉|现在必须保持安静，不能发消息/.test(recentContext);
   const repeatCandidates = [...recentBodies, ...roleRecentAssistantMessages(profile)];
   const turnBoundary = roleRecentTurnBoundary(profile);
+  const effectiveAllowSilent = allowSilent && (!ordinaryProactive || userSleeping || turnBoundary.pending);
   const messageMin = Math.max(1, Math.min(10, Number(profile.message_min) || 1));
   const messageMax = Math.max(messageMin, Math.min(10, Number(profile.message_max) || 4));
   const prompt = [
@@ -382,7 +386,7 @@ async function roleMessage(
     memoryContext ? `同步的长期记忆、对话总结与世界设定：\n${memoryContext}` : "没有可用的长期记忆。",
     recentContext ? `你与用户最近的真实聊天（按时间顺序）：\n${recentContext}` : "最近没有可用的聊天上下文。",
     recent ? `你最近通过这条后台主动联系通道发过：\n${recent}` : "这条后台主动联系通道暂时没有近期消息。",
-    timeAware && lastUserAt ? `用户距离最近一次真实回复约 ${silenceMinutes} 分钟。` : "不提供用户沉默时长。",
+    timeAware && lastUserAt ? `距离同一角色最近一次真实互动约 ${silenceMinutes} 分钟。` : "不提供用户沉默时长。",
     `本次对话边界：${turnBoundary.text}`,
   ];
   if (!timeAware) {
@@ -403,6 +407,18 @@ async function roleMessage(
     { role: "user", content: promptText },
   ];
   if (eventInstruction) baseMessages[0].content = eventInstruction;
+  if (ordinaryProactive) {
+    baseMessages.splice(1, 0, {
+      role: "system",
+      content: turnBoundary.pending
+        ? "最新用户回合仍未得到正常回复，本次普通主动联系必须只输出 [保持安静]，不能抢答或另开话题。"
+        : userSleeping
+        ? "用户已经明确在睡觉且预计仍未醒来。本次必须只输出 [保持安静]，不能用通知打扰，也不能另开话题。"
+        : silenceMinutes < 60
+        ? "距离同一角色在微信、电话或共同生活里的最后一次真实互动尚未超过一小时。本次若发送，只能自然承接最近一轮话题、询问后续或分享与该话题直接相关的新想法；禁止突然跳到无关事情。用户若明确说了换个话题，可以按其要求换。除明确睡眠外，本次不允许输出 [保持安静]、[不说话] 或空内容。"
+        : "距离最后一次真实互动已经超过一小时，可以按角色本人意愿自然换话题，但仍必须沿用最新事实、关系、情绪、共同生活状态和真实时间。除明确睡眠外，本次不允许输出 [保持安静]、[不说话] 或空内容。",
+    });
+  }
   if (!allowSilent) {
     baseMessages.splice(2, 0, {
       role: "system",
@@ -451,11 +467,11 @@ async function roleMessage(
           if (!text) break;
           sawGeneratedCandidate = true;
           if (/^[\[【]\s*(?:保持安静|不说话)\s*[\]】]$/.test(text)) {
-            if (allowSilent) return { kind: "silent", body: "" };
+            if (effectiveAllowSilent) return { kind: "silent", body: "" };
             attemptMessages = [
               ...baseMessages,
               { role: "assistant", content: text },
-              { role: "user", content: "这次是用户明确发起并等待结果的任务，不能保持安静。请根据本次真实事件和角色设定，直接生成一条自然的新消息。" },
+              { role: "user", content: ordinaryProactive ? "用户没有在睡觉。按本轮30至60分钟或一小时以上的话题规则，生成一条自然消息，不能保持安静；不要解释规则。" : "这次是用户明确发起并等待结果的任务，不能保持安静。请根据本次真实事件和角色设定，直接生成一条自然的新消息。" },
             ];
             continue;
           }
@@ -474,8 +490,8 @@ async function roleMessage(
             { role: "user", content: ungrounded
               ? "上一版编造了聊天和记忆里没有发生过的用户自拍、衣着、位置、动作、身体状态或其他具体事件。删除所有没有真实依据的用户事实，只使用已经给出的上下文；可以按人设表达想念、担心、询问，或分享你自己的普通日常。不要解释纠正过程。"
               : styleInvalid
-              ? `上一版格式不像真人微信聊天，或使用了破折号、横杠、错误标签。请保持角色本人身份，在 ${messageMin} 到 ${messageMax} 条之间自由决定，每条单独一行；不要为了凑数拆句，不要使用任何破折号或横杠。也可以只输出 [保持安静]。`
-              : "这次内容与近期已经发过的话过于相似。仍由你本人决定：换一个真正不同的话题、事实和句式，或者只输出 [保持安静]；不要只改几个字重复原意。" },
+              ? `上一版格式不像真人微信聊天，或使用了破折号、横杠、错误标签。请保持角色本人身份，在 ${messageMin} 到 ${messageMax} 条之间自由决定，每条单独一行；不要为了凑数拆句，不要使用任何破折号或横杠。${effectiveAllowSilent ? "也可以只输出 [保持安静]。" : "不能保持安静。"}`
+              : effectiveAllowSilent ? "这次内容与近期已经发过的话过于相似。仍由你本人决定：换一个真正不同的话题、事实和句式，或者只输出 [保持安静]；不要只改几个字重复原意。" : "这次内容与近期已经发过的话过于相似。请遵守本轮话题窗口，换一个不重复但仍然相关的角度和句式；不能保持安静，也不能跳到无关话题。" },
           ];
         } catch (error) {
           console.warn("role-message-provider-error", provider.name, String(error?.message || error).slice(0, 160));
@@ -486,7 +502,7 @@ async function roleMessage(
         }
       }
     }
-    return sawGeneratedCandidate && allowSilent
+    return sawGeneratedCandidate && effectiveAllowSilent
       ? { kind: "silent", body: "" }
       : { kind: "unavailable", body: "", reason: providerFailures.join(",") || "empty-provider-response" };
   } catch (_) {
@@ -790,23 +806,32 @@ function snapshotAutomationFacts(snapshot: Record<string, unknown>, kind: string
 
 function roleRecentTurnBoundary(profile: Record<string, unknown>) {
   const raw = String(profile?.recent_context || "");
-  if (/\[对话边界\]\s*用户最近一条消息尚未得到角色回复/.test(raw)) {
+  if (/\[对话边界\]\s*用户最近一条(?:微信|共同生活|电话)?消息尚未得到角色回复/.test(raw)) {
     return { pending: true, text: "用户最后一条消息仍在等待正常回复；本次正式随机主动联系必须保持安静。" };
   }
-  if (/\[对话边界\]\s*用户最近一条消息已经得到角色回复/.test(raw)) {
+  if (/\[对话边界\]\s*用户最近一条(?:微信|共同生活|电话)?消息已经得到角色回复/.test(raw)) {
     return { pending: false, text: "用户最后一条消息已经由角色回复，上一轮已经结束；不得再次回答、复述或改写那一轮。" };
   }
   const userName = String(profile?.user_name || "你").trim();
   const roleName = String(profile?.role_name || "角色").trim();
   let lastSpeaker = "";
   for (const source of raw.split(/\r?\n/)) {
-    const line = String(source || "").trim().replace(/^\d{4}[/-]\d{1,2}[/-]\d{1,2}\s+\d{1,2}:\d{2}(?::\d{2})?\s+/, "");
+    const line = String(source || "").trim()
+      .replace(/^\d{4}[/-]\d{1,2}[/-]\d{1,2}\s+\d{1,2}:\d{2}(?::\d{2})?\s+/, "")
+      .replace(/^\[(?:微信|共同生活|电话(?:·已发生)?)\]\s*/, "");
     if (userName && line.startsWith(`${userName}：`)) lastSpeaker = "user";
     else if (roleName && line.startsWith(`${roleName}：`)) lastSpeaker = "assistant";
   }
   return lastSpeaker === "user"
     ? { pending: true, text: "最近聊天停在用户消息，尚未看到角色回复；本次正式随机主动联系必须保持安静。" }
     : { pending: false, text: "最近聊天没有待回答的用户回合；这是与上一轮分开的独立主动联系事件。" };
+}
+
+function replyHandoffAlreadyCompleted(profile: Record<string, unknown> | null | undefined, baseline: number) {
+  if (!profile) return false;
+  const latestActivity = snapshotTime(profile.last_user_at);
+  if (baseline && latestActivity > baseline + 1000) return true;
+  return /\[对话边界\]\s*用户最近一条(?:微信|共同生活|电话)?消息已经得到角色回复/.test(String(profile.recent_context || ""));
 }
 
 function profileTemporarilySuspended(profile: Record<string, unknown> | null | undefined) {
@@ -1121,7 +1146,7 @@ Deno.serve(async (request) => {
       const explicitHandoff = ["reply_handoff", "device_handoff", "one_minute_test", "app_watch_test", "delivery_status"].includes(String(task.kind || ""));
       /* 这些任务由用户操作直接创建，不能因页面退后台后 profile.enabled 的瞬时变化被取消。
          正式主动消息仍保持原来的 enabled 与新消息基线限制。 */
-      if (!profile || (!explicitHandoff && (!profile.enabled || profileTemporarilySuspended(profile))) || (!explicitHandoff && baseline && latestUser > baseline + 1000)) {
+      if (!profile || (!explicitHandoff && (!profile.enabled || profileTemporarilySuspended(profile))) || (!explicitHandoff && baseline && latestUser > baseline + 1000) || task.kind === "reply_handoff" && replyHandoffAlreadyCompleted(profile, baseline)) {
         await client.from("phone_role_background_tasks").update({ status: "canceled", completed_at: new Date().toISOString() }).eq("id", task.id);
         continue;
       }
@@ -1210,7 +1235,15 @@ Deno.serve(async (request) => {
         !explicitHandoff,
       );
       const currentTask = (await client.from("phone_role_background_tasks").select("status").eq("id", task.id).maybeSingle()).data;
-      if (currentTask?.status === "canceled") continue;
+      const currentProfile = task.kind === "reply_handoff"
+        ? (await client.from("phone_role_push_profiles").select("last_user_at,recent_context").eq("target", task.target).eq("role_id", task.role_id).maybeSingle()).data
+        : null;
+      if (currentTask?.status === "canceled" || task.kind === "reply_handoff" && replyHandoffAlreadyCompleted(currentProfile, baseline)) {
+        if (currentTask?.status !== "canceled") {
+          await client.from("phone_role_background_tasks").update({ status: "canceled", completed_at: new Date().toISOString(), claimed_until: null }).eq("id", task.id);
+        }
+        continue;
+      }
       const choseLock = task.kind === "app_followup" && decision.kind === "message" && String(payload.followupChoice || "message") === "lock";
       if (choseLock) {
         const appId = String(payload.appId || ""), appName = String(payload.appName || "");
@@ -1452,7 +1485,7 @@ Deno.serve(async (request) => {
       const ambientInstruction = ambientFacts
         ? "最近真实聊天、用户情绪和正在发生的事情永远优先。本次伴生数据只是可选日常背景：只有其中某一项与本轮联系自然相关时，才带入最多一项；否则完全忽略。禁止逐项汇报、硬转话题、反复提醒，也不提系统、监控、读取或后台。"
         : "";
-      const decision = await roleMessage(profile, recentBodies, ambientInstruction, ambientFacts);
+      const decision = await roleMessage(profile, recentBodies, ambientInstruction, ambientFacts, true, true);
       const { data: latestProfile } = await client.from("phone_role_push_profiles")
         .select("enabled,next_due_at,last_user_at,quiet_until_at,recent_context,memory_context,automation_config")
         .eq("target", profile.target).eq("role_id", profile.role_id).maybeSingle();

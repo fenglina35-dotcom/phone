@@ -73,9 +73,11 @@ test('wake-up wording cannot be mistaken for another sleep request',()=>{
   assert.equal(sandbox.start('我要睡了，晚安'),true);
 });
 
-test('call prompt makes wake-up the new cross-day event',()=>{
+test('call prompt makes wake-up the new cross-day event without inventing measured sleep',()=>{
   const prompt=functionSource('callSleepWakePrompt');
-  assert.match(prompt,/刚刚醒来的真实事件/);
+  assert.match(prompt,/刚刚结束通话陪睡/);
+  assert.match(prompt,/不是手表或 HealthKit 测得的真实睡眠/);
+  assert.match(prompt,/绝不能说“你睡了这么久”/);
   assert.match(prompt,/睡前的话题属于过去/);
   assert.match(prompt,/跨过了【/);
   assert.match(functionSource('callPersist'),/sleepStartedAt:\+_call\.sleepStartedAt\|\|0,lastSleep:_call\.lastSleep\|\|null/);

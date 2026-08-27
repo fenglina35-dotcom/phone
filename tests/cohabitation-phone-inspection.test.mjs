@@ -66,6 +66,8 @@ test('co-living inspection is autonomous, factual, visible and not daily-count l
   assert.match(run,/spyFocusData\(id,target\)/);
   assert.match(run,/cohabPhoneProgress/);
   assert.match(run,/cohabTogetherScene\(d\)/);
+  assert.match(run,/roleLatestUserChannel\(c,'cohab'\)/);
+  assert.match(run,/latestChannel==='online'\?await doSpyViewCore/,'a co-living inspection returns online when the latest user message was online');
   assert.match(deliver,/rolePhoneInspectionUnchanged/);
   assert.match(deliver,/rolePhoneInspectionCommit\(c,fact,'cohab'\)/);
   assert.match(deliver,/不要把结果发到微信或电话/);
@@ -113,6 +115,8 @@ test('only the originating channel receives the inspection reaction',()=>{
   assert.match(functionSource('checkSpyTime'),/cohabOnlineQuiet/);
   assert.match(functionSource('doSpyView'),/rolePhoneInspectionAcquire\('online'/);
   assert.match(functionSource('cohabRunPhoneInspection'),/rolePhoneInspectionAcquire\('cohab'/);
+  assert.match(functionSource('doSpyView'),/roleLatestUserChannel\(c,'online'\)==='cohab'/);
+  assert.match(functionSource('doSpyView'),/cohabPhoneDeliverFact/,'an online-started inspection returns to co-living when that is now the latest user channel');
   const logout=functionSource('wxLogout');
   assert.match(logout,/wl\.channel==='cohab'/);
   assert.match(logout,/cohabPhoneLoginFinished/);

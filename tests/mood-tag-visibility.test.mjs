@@ -12,6 +12,8 @@ assert.match(source, /const thought=wechatNaturalOn\(\)\?String\(c\.innerThought
 assert.match(source, /id="chatMoodBar"/);
 assert.match(source, /display:\$\{S\.settings\.showMoodTag!==false&&thought\?'flex':'none'\}/);
 assert.match(source, /function refreshChatMood\(id\)/);
+assert.match(source, /function initialFriendInnerThought\(c,opt\)/);
+assert.match(source, /initialFriendInnerThought\(c,\{kind:r\.kind,readd:wasReadd,at:now\}\)/);
 assert.match(source, /thoughtOpen=wechatNaturalOn\(\)\?'showInnerThought':'showMood'/);
 assert.match(source, /function showInnerThought\(id\)/);
 

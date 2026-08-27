@@ -47,6 +47,7 @@ test('pointerup launches on the next task so WeChat cannot click through into a 
   const calls = [];
   const ctx = vm.createContext({
     appLocked: () => false,
+    privateNativeAppOn: () => false,
     toast() {},
     LOCKABLE: {},
     APPRUN: { wechat: () => calls.push('wechat'), douyin: () => calls.push('douyin') },

@@ -12,12 +12,12 @@ const migration = read('supabase/migrations/202608130001_background_app_watch_te
 const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const nativeWeb = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v1082 web source keeps private 1.0.207 compatibility', () => {
-  assert.match(app, /APP_VER='v1082 · 共同生活伴生畅通与真实时间复核版'/);
-  assert.match(html, /app\.js\?v=1082/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 207;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.207;/);
-  assert.match(nativeWeb, /1\.0\.207 \(207\)/);
+test('v1084 web source keeps private 1.0.209 compatibility', () => {
+  assert.match(app, /APP_VER='v1084 · 睡眠来源与限额锁标识版'/);
+  assert.match(html, /app\.js\?v=1084/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 209;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.209;/);
+  assert.match(nativeWeb, /1\.0\.209 \(209\)/);
 });
 
 test('Apple compatibility alone moves call identity and mood updates live', () => {
@@ -43,7 +43,8 @@ test('pet family supports four members, forward-only growth, sickness and medici
 
 test('background tests expose failures and app test is durable', () => {
   assert.match(app, /function roleBackgroundPreflight\(id,needWatch\)/);
-  assert.match(app, /Date\.now\(\)\+60000,_roleBackgroundPending\[id\]\.baseline/);
+  assert.match(app, /kind!=='reply_handoff'/,'visible foreground replies must not pre-enqueue a second model call');
+  assert.match(app, /function roleBackgroundFlush\(\)[\s\S]{0,360}Date\.now\(\)\+5000/,'the durable handoff starts only after a real background transition');
   assert.doesNotMatch(app, /roleAppWatchImmediateTest\('\$\{id\}'\)/);
   assert.doesNotMatch(app, /roleAppWatchImmediateTest|'app_watch_test'.*Date\.now\(\)\+60000/s);
   assert.match(migration, /'app_watch_test'/);
