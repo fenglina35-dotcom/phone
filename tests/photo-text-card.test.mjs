@@ -46,6 +46,30 @@ test('prompt explicitly separates configured real photos from fallback cards',()
   assert.match(app,/图片生成功能可用时会生成真实图片，不可用时会显示白色图文照片卡/);
 });
 
+test('per-role image frequency is opt-in and keeps current behavior when disabled',()=>{
+  assert.match(app,/if\(c\.photoFreqEnabled==null\)c\.photoFreqEnabled=false/);
+  assert.match(app,/发送图片频率<br><small[^>]*>默认关闭：沿用当前由角色自己决定的方式/);
+  assert.match(app,/\[\[1,'偶尔'\],\[2,'经常'\],\[3,'高频'\]\]/);
+  assert.match(app,/function rolePhotoFrequencyPrompt\(c\)[\s\S]*?这个设置只改变倾向，不允许为了达到频率捏造照片/);
+  assert.match(app,/function roleServerPushRecentContext\(c\)[\s\S]*?rolePhotoFrequencyContext\(c\)/,'the same preference reaches background proactive messages');
+  assert.match(app,/function roleSocialVisualPlan\(c,platform,text\)[\s\S]*?if\(!real\)return roleSocialCardPlan\(c,platform,text\)/,'unconfigured Moments do not spend another model call');
+  assert.match(app,/function roleSocialCardPlan\(c,platform,text\)[\s\S]*?!c\.photoFreqEnabled/,'default-off autonomous Moments remain text-only without image configuration');
+});
+
+test('Moments offer real photos and described photo cards as separate choices',()=>{
+  assert.match(app,/function postMoment\(\)[\s\S]*?添加真实照片[\s\S]*?添加图文照片/);
+  assert.match(app,/id="mm_card_desc"[\s\S]*?这是图文照片卡，不会调用生图模型/);
+  assert.match(app,/function doPostMoment\(\)[\s\S]*?photoCards:cardDesc\?\[\{desc:cardDesc\.slice\(0,500\)\}\]:\[\]/);
+  assert.match(app,/function momentHTML\(p\)[\s\S]*?momentPhotoCards\(p\.photoCards\)\.map\(momentPhotoCardHTML\)/);
+  assert.match(app,/function reactToMyMoment\(p\)[\s\S]*?图文照片卡，照片描述是/,'roles receive the user-authored visual fact');
+});
+
+test('role Moments use configured generation and only fall back to cards when generation is unavailable',()=>{
+  assert.match(app,/function roleSocialMedia\(c,platform,text\)[\s\S]*?S\.settings\.imgGen&&imageGenerationAvailable\(\)[\s\S]*?roleSocialImages[\s\S]*?platform==='moment'[\s\S]*?photoCards:\[\{desc:plan\.imagePrompt\}\]/);
+  assert.match(app,/function postRoleMoment\(c,tx,opt\)[\s\S]*?!S\.settings\.imgGen\|\|!imageGenerationAvailable\(\)[\s\S]*?publishRoleMomentCardFallback/);
+  assert.match(app,/function publishRoleMomentCardFallback\(c,tx,opt\)[\s\S]*?photoCards:\[roleMomentFallbackCard/);
+});
+
 test('web and private bundle app scripts stay byte-identical',()=>{
   const bundled=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js'),'utf8');
   assert.equal(bundled,app);
