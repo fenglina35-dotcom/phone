@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1045 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1099 · 媒体总结通话稳定版'/);
-  assert.match(app,/const url='sw\.js\?v=1099&r=v1099-media-summary-call-stability-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1099'/);
-  assert.match(html,/app\.js\?v=1099/);
-  assert.match(sw,/const BUILD='1099'/);
-  assert.match(sw,/north-shell-v1099/);
-  assert.match(index,/小手机\.html\?v=1099/);
-  assert.match(repair,/小手机\.html\?v=1099/);
+  assert.match(app,/APP_VER='v1100 · 图片频率与图文朋友圈版'/);
+  assert.match(app,/const url='sw\.js\?v=1100&r=v1100-role-photo-frequency-cards-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1100'/);
+  assert.match(html,/app\.js\?v=1100/);
+  assert.match(sw,/const BUILD='1100'/);
+  assert.match(sw,/north-shell-v1100/);
+  assert.match(index,/小手机\.html\?v=1100/);
+  assert.match(repair,/小手机\.html\?v=1100/);
 });
 
-test('the private iOS package embeds web v1099 and keeps 1.0.223 delivery',()=>{
-  assert.match(privateBundle,/<string>1099<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.223;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 223;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.223 \(223\)'/);
+test('the private iOS package embeds web v1100 and keeps 1.0.224 delivery',()=>{
+  assert.match(privateBundle,/<string>1100<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.224;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 224;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.224 \(224\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

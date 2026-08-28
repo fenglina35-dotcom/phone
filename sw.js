@@ -1,6 +1,6 @@
-const BUILD='1099';
-const HOTFIX='v1099-media-summary-call-stability-1';
-const SHELL_CACHE='north-shell-v1099';
+const BUILD='1100';
+const HOTFIX='v1100-role-photo-frequency-cards-1';
+const SHELL_CACHE='north-shell-v1100';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
