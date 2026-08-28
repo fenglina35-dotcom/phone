@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1097 · 上下文连续性与百回合版'/);
+  assert.match(app,/APP_VER='v1098 · 共同生活双人云程版'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1097/);
-  assert.match(html,/sw\.js\?v=1097&r=v1097-context-continuity-100-rounds-1/);
+  assert.match(html,/north-sw-reloaded-1098/);
+  assert.match(html,/sw\.js\?v=1098&r=v1098-cohab-two-person-travel-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{
