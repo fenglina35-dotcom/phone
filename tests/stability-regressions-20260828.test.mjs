@@ -74,3 +74,35 @@ test('recording imports probe and play with a video element while ordinary songs
   assert.match(functionSource('musicMediaElement'),/kind==='video'\?document\.createElement\('video'\)/);
   assert.match(functionSource('musicPlay'),/musicMediaElement\(kind\)/);
 });
+
+test('a role cannot claim early clock-out during configured work without synchronizing cohabitation',()=>{
+  const S={settings:{timeAware:true},cohabitation:{enabled:true,paused:false,cid:'role1'}};
+  const sandbox=vm.createContext({
+    S,String,Date,
+    roleClockDate:()=>new Date(2026,7,28,15,40,0,0),
+    roleLeaveOn:()=>null,roleWorkday:()=>true,
+    toMin:v=>{const [h,m]=String(v).split(':').map(Number);return h*60+m;},
+  });
+  vm.runInContext('this.roleScheduleSyncTag='+functionSource('roleScheduleSyncTag')+';this.roleScheduleClaimIssue='+functionSource('roleScheduleClaimIssue'),sandbox);
+  const role={id:'role1',sched:{on:true,amS:'08:00',amE:'12:00',pmS:'14:00',pmE:'18:00'}};
+  assert.match(sandbox.roleScheduleClaimIssue('我提前下班了。',role,0),/没有同步共同生活状态/);
+  assert.equal(sandbox.roleScheduleClaimIssue('我提前下班了。\n[共同生活状态|回家路上|30|刚下班]',role,0),'');
+  assert.equal(sandbox.roleScheduleClaimIssue('我还在上班，六点再走。',role,0),'');
+  assert.match(functionSource('roleSchedulePrompt'),/当前处于下午工作时段，默认仍在工作/);
+  assert.match(functionSource('roleTimeRepairPrompt'),/使台词与顶部状态同步/);
+});
+
+test('new modals immediately hydrate stored photos and music avatars never print idb keys',()=>{
+  assert.match(functionSource('openModal'),/querySelector\('\[data-idb-avatar\],img\[src\^="idb:"\],\[style\*="idb:"\]'\)/);
+  assert.match(functionSource('openModal'),/scheduleVisibleStoredImages\(true\)/);
+  const sandbox=vm.createContext({
+    isImg:()=>false,isStoredImgRef:v=>String(v).startsWith('idb:'),
+    _imgCache:{},esc:v=>String(v),_avIc:()=>'<svg></svg>',Math,
+  });
+  vm.runInContext('this.renderAvatar='+functionSource('_mAvHTML'),sandbox);
+  const pending=sandbox.renderAvatar('idb:music-avatar-1','me',66);
+  assert.match(pending,/data-idb-avatar="music-avatar-1"/);
+  assert.doesNotMatch(pending,/>idb:music-avatar-1</);
+  sandbox._imgCache['music-avatar-1']='data:image/jpeg;base64,ready';
+  assert.match(sandbox.renderAvatar('idb:music-avatar-1','me',66),/<img src="data:image\/jpeg;base64,ready"/);
+});
