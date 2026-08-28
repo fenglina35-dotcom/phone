@@ -105,6 +105,7 @@ const raceContext=vm.createContext({
   URL:{createObjectURL(blob){return 'blob:'+blob.id;},revokeObjectURL(url){revoked.push(url);}},
 });
 vm.runInContext('let _ma=null,_mCur=null,_mPlaying=false,_mUrl=null,_mWantPlay=false,_mLyricIndex=-2,_mLyricPaintAt=0,_mPlayToken=0,_mAudioSongId=null;',raceContext);
+vm.runInContext('function musicMediaElement(){if(!_ma)_ma=new Audio();return _ma;}',raceContext);
 vm.runInContext('async '+functionSource('musicPlay'),raceContext);
 const firstPlay=raceContext.musicPlay('first');
 const secondPlay=raceContext.musicPlay('second');
@@ -116,12 +117,12 @@ assert.equal(vm.runInContext('_ma.src',raceContext),'blob:second');
 assert.deepEqual(revoked,[],'the stale request must not revoke the latest song URL');
 
 assert.match(source,/if\(_mAudioSongId!==id\|\|!_ma\|\|!_ma\.src\)await musicPlay\(id\)/);
-assert.match(functionSource('musicImportSong'),/mPutVerified\(s\.id,blob\)/,'music packs must verify every IndexedDB write');
+assert.match(functionSource('musicImportSong'),/mPutVerified\(s\.id,blob,kind\)/,'music packs must verify every IndexedDB write with the original media kind');
 assert.match(functionSource('musicPlay'),/musicMissingModal\(s\)/,'missing audio must offer in-place repair instead of telling users to delete timed lyrics');
 assert.match(source,/跳过 '\+skipped\+' 首不完整歌曲/);
-assert.match(functionSource('musicPlay'),/onloadedmetadata=\(\)=>mLyricTick\(true\)/,'metadata readiness must repaint keyed lyrics');
-assert.match(functionSource('musicPlay'),/onseeked=\(\)=>mLyricTick\(true\)/,'seeking to an authored cue must repaint immediately');
-assert.match(functionSource('musicPlay'),/onplaying=\(\)=>\{mLyricTick\(true\);mLyricLoopStart\(\);\}/,'actual playback must restart the lyric clock');
+assert.match(functionSource('musicMediaElement'),/onloadedmetadata=\(\)=>mLyricTick\(true\)/,'metadata readiness must repaint keyed lyrics');
+assert.match(functionSource('musicMediaElement'),/onseeked=\(\)=>mLyricTick\(true\)/,'seeking to an authored cue must repaint immediately');
+assert.match(functionSource('musicMediaElement'),/onplaying=\(\)=>\{mLyricTick\(true\);mLyricLoopStart\(\);\}/,'actual playback must restart the lyric clock');
 assert.match(functionSource('musicPlay'),/token!==_mPlayToken/,'rapid song changes must discard stale asynchronous loads');
 assert.match(functionSource('mLyricTick'),/_mAudioSongId!==_mCur/,'lyric timing must only read audio for the displayed song');
 assert.match(functionSource('mLyricTick'),/changed\|\|_mLyricFollowPending/,'timed lyrics must scroll only when the active cue changes');

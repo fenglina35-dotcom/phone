@@ -70,7 +70,7 @@ test('offline model memory tags execute once and never leak into visible dialogu
 
 test('feature-operation-only text cannot enter important chat memory', () => {
   assert.match(app, /if\(!v\|\|memoryOperationalEventOnly\(v\)\)return'none'/);
-  assert.match(app, /if\(!full\|\|memoryOperationalEventOnly\(full\)\)return false/);
+  assert.match(app, /if\(!full\|\|memoryOperationalEventOnly\(full\)\)return'rejected'/);
   assert.match(app, /登录或退出微信、查看手机、屏幕共享、远程控制、同步、读取、上传和报错都只是功能操作，不能写进长期记忆/);
 });
 

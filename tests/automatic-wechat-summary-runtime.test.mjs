@@ -37,9 +37,11 @@ test('automatic summary fires at the configured number of user rounds, saves its
     pruneSummaries:()=>{},save:()=>{saves++;},msgToText:m=>m.content||'',summaryUserLabel:()=> '用户',
     summaryCleanText:(c,t)=>t,perspRule:()=>'',IMP_INSTR:'',cleanReply:x=>x,
     rateAndText:x=>({text:x,imp:4}),trimSentence:x=>x,
-    addSummary:(c,text,imp)=>{c.summaries.push({text,imp});return true;},
+    summaryPerspectiveValid:()=>true,wechatSummarySystem:()=>'',
+    summaryStoreResult:(c,text,imp)=>{c.summaries.push({text,imp});return'added';},
     chatAPI:async()=>{apiCalls++;await new Promise(r=>setTimeout(r,15));return '我记得用户很喜欢草莓蛋糕，这是一项值得长期记住的口味偏好；用户还和我认真约好周六一起去公园，这是我们刚刚共同确认的安排。我会按约定赴约，也会在以后选择甜点时优先想到草莓蛋糕。';},
   });
+  vm.runInContext('this.summaryCompletedRounds='+functionSource('summaryCompletedRounds'),sandbox);
   vm.runInContext('this.maybeSummarize='+functionSource('maybeSummarize'),sandbox);
   const first=sandbox.maybeSummarize('c1','main');
   const duplicate=await sandbox.maybeSummarize('c1','main');
@@ -52,4 +54,19 @@ test('automatic summary fires at the configured number of user rounds, saves its
   rows.push({role:'user',type:'text',content:'今天有点累'},{role:'assistant',type:'text',content:'早点休息'});
   assert.equal(await sandbox.maybeSummarize('c1','main'),false,'one new user round is below the configured two-round threshold');
   assert.equal(apiCalls,1);
+});
+
+test('summary interval counts completed exchanges rather than each consecutive user bubble',()=>{
+  const sandbox=vm.createContext({});
+  vm.runInContext('this.summaryCompletedRounds='+functionSource('summaryCompletedRounds'),sandbox);
+  const rows=[
+    {role:'user',type:'text',content:'第一条'},
+    {role:'user',type:'text',content:'补充一句'},
+    {role:'assistant',type:'text',content:'一起回复'},
+    {role:'user',type:'text',content:'下一轮'},
+  ];
+  sandbox.msgToText=m=>m.content||'';
+  assert.equal(sandbox.summaryCompletedRounds(rows),1);
+  rows.push({role:'assistant',type:'text',content:'第二轮回复'});
+  assert.equal(sandbox.summaryCompletedRounds(rows),2);
 });

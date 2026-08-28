@@ -10,7 +10,7 @@ assert.match(source, /function msgsForAccount\(id,aid\)/);
 assert.match(source, /function summaryList\(c,aid\)/);
 assert.match(source, /function summaryState\(c,aid\)/);
 assert.match(source, /function maybeSummarize\(id,aid\)[\s\S]*?msgsForAccount\(id,aid\)[\s\S]*?summaryList\(c,aid\)[\s\S]*?summaryState\(c,aid\)/);
-assert.match(source, /addSummary\(c,trimSentence\(rt\.text,220\),rt\.imp,'',aid\)/);
+assert.match(source, /summaryStoreResult\(c,candidate,rt\.imp,'',aid\)/);
 assert.match(source, /summarizeCall\(id,kindTxt,sess,aid\)[\s\S]*?msgsForAccount\(id,aid\)/);
 assert.match(source, /_accountSummaries/);
 assert.match(source, /_accountSummaryState/);
@@ -304,7 +304,13 @@ const asyncSandbox = {
   rateAndText: raw => ({ imp: 3, text: raw }),
   cleanReply: x => x,
   trimSentence: x => x,
-  addSummary: (c, text, imp, prefix, aid) => summaryWrites.push({ c, text, imp, prefix, aid }),
+  summaryCompletedRounds: rows => rows.filter(m => m && m.role === "assistant").length,
+  wechatSummarySystem: () => "",
+  summaryPerspectiveValid: () => true,
+  summaryStoreResult: (c, text, imp, prefix, aid) => {
+    summaryWrites.push({ c, text, imp, prefix, aid });
+    return "added";
+  },
   perspRule: () => "",
   IMP_INSTR: "",
 };

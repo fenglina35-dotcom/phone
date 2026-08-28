@@ -25,11 +25,11 @@ assert.match(functionSource('musicExportOne'),/musicBinaryPackBlob\(s,measured\.
 assert.match(functionSource('musicExportOne'),/\.northmusic/);
 assert.doesNotMatch(functionSource('musicExportOne'),/MUSIC_EXPORT_ONE_SAFE_BYTES|mBlobDataURL/);
 assert.match(functionSource('musicImportPack'),/\.northmusic/);
-assert.match(functionSource('musicImportSong'),/mPutVerified\(s\.id,blob\)/);
+assert.match(functionSource('musicImportSong'),/mPutVerified\(s\.id,blob,kind\)/);
 assert.match(functionSource('mPutVerified'),/savedSize!==expectedSize/);
 assert.match(functionSource('mPutVerified'),/savedSig!==expectedSig/);
 assert.match(functionSource('musicPersistStorage'),/navigator\.storage\.persist/);
-assert.match(functionSource('musicRepairFile'),/musicPreparePickedFile\(f,kind\)[\s\S]*mPutVerified\(id,prepared\.blob\)/);
+assert.match(functionSource('musicRepairFile'),/musicPreparePickedFile\(f,kind\)[\s\S]*mPutVerified\(id,prepared\.blob,prepared\.mediaKind\)/);
 assert.doesNotMatch(functionSource('musicRepairFile'),/lyrics\s*=/,'repairing audio must preserve lyrics and timestamps');
 assert.match(functionSource('musicMissingModal'),/歌词和已经打好的时间轴都还在/);
 assert.match(functionSource('beautySaveFile'),/blob&&blob\.type\|\|'application\/octet-stream'/);

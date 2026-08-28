@@ -188,10 +188,10 @@ test('private boot keeps historical image references lazy without allowing image
   assert.match(app,/app\.innerHTML=[\s\S]{0,900}?if\(privateNativeAppOn\(\)\)hydrateStoredImageNodes\(\)/);
   assert.match(app,/const _visibleImageMisses=new Map\(\)/);
   assert.match(app,/function visibleImageRetryDelay\(count\)[\s\S]*?Math\.min\(120000/);
-  assert.match(app,/eligible\.slice\(0,12\)/);
+  assert.match(app,/eligible\.slice\(0,4\)/);
   assert.match(app,/function scheduleVisibleStoredImages\(force,alreadyHydrated\)[\s\S]*?if\(!alreadyHydrated\)hydrateStoredImageNodes\(\)[\s\S]*?requestIdleCallback\(run,\{timeout:1200\}\)/);
   assert.match(app,/if\(privateNativeAppOn\(\)\)hydrateStoredImageNodes\(\)/);
-  assert.match(app,/scheduleVisibleStoredImages\(false,true\);[\s\S]{0,220}?northNativePerformanceSample\('render-'\+c\.p/);
+  assert.match(app,/scheduleVisibleStoredImages\(_imageRouteChanged,true\);[\s\S]{0,220}?northNativePerformanceSample\('render-'\+c\.p/);
   assert.match(app,/function refreshHydratedUI\(\)[\s\S]{0,260}?scheduleVisibleStoredImages\(false,true\)/);
   assert.doesNotMatch(app,/function scheduleVisibleStoredImages\(\)[\s\S]{0,300}?requestAnimationFrame/);
 });
@@ -257,7 +257,7 @@ test('a rejected visible-image batch backs off instead of immediately retrying t
   `,sandbox);
   assert.equal(await sandbox.runHydrate(),false);
   assert.equal(sandbox.reads,1);
-  assert.equal(sandbox.missCount(),12,'every failed key receives retry state');
+  assert.equal(sandbox.missCount(),4,'every key in the bounded failed batch receives retry state');
   assert.equal(sandbox.immediateAgain(),false,'the failed batch cannot request an immediate follow-up');
   assert.equal(timers.length,1,'exactly one delayed retry is scheduled');
   assert.ok(timers[0].delay>=4000,'retry delay is at least four seconds');

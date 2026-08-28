@@ -53,7 +53,12 @@ function makeSandbox(messages = []) {
     rateAndText: value => ({ text: value, imp: 4 }),
     cleanReply: value => value,
     trimSentence: value => value,
-    addSummary: (c, text, imp, prefix, aid) => { calls.added.push({ c, text, imp, prefix, aid }); return true; },
+    wechatSummarySystem: () => '',
+    summaryPerspectiveValid: () => true,
+    summaryStoreResult: (c, text, imp, prefix, aid) => {
+      calls.added.push({ c, text, imp, prefix, aid });
+      return 'added';
+    },
   });
   vm.runInContext(`const _manualWechatSummaryBusy=new Set();\n${functionSource('manualWechatSummarySource')}\n${functionSource('manualWechatSummary')}\nthis.run=manualWechatSummary;`, sandbox);
   return { sandbox, role, calls, resolve: value => resolveApi(value) };
