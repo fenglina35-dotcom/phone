@@ -768,6 +768,20 @@ export function requestedStandaloneItems(value, coveredBy = '') {
     && !selectedOptionsCoverItem(item, coveredBy));
 }
 
+// Some meal-side requests put a hard size before the product name even though
+// Eleme exposes that size only inside the product's SKU sheet.  Keep the menu
+// search bounded to the real product title, then require the exact live option
+// before it can be added.  This is intentionally narrow: words such as “大份”
+// remain part of ordinary product titles unless the item is a known meal side
+// whose size is selected separately on the current platform.
+export function standaloneItemSpecIntent(value) {
+  const requestedName = clean(value, 120);
+  const match = requestedName.match(/^(大份|中份|小份)\s*((?:土家)?酱香饼)$/u);
+  return match
+    ? { requestedName, productName: match[2], requiredOption: match[1] }
+    : { requestedName, productName: requestedName, requiredOption: '' };
+}
+
 export function repeatPurchaseMatchKind(raw, itemName, request = '') {
   const body = clean(raw, 4000);
   const target = clean(itemName, 140);
@@ -3968,8 +3982,11 @@ export class TaobaoFlashBrowser {
     const requested = requestedStandaloneItems(ref.query, coveredBy);
     const kfcOrder = /肯德基|\bkfc\b/i.test([ref?.merchant, ref?.itemName, ref?.query].filter(Boolean).join(' '));
     const added = [];
+    const selections = [];
     for (const requestedName of requested) {
-      const allowShortFoodAlias = shortFoodTitleAliasEligible([ref?.merchant, ref?.itemName, ref?.query, requestedName].filter(Boolean).join(' '));
+      const specIntent = standaloneItemSpecIntent(requestedName);
+      const productName = specIntent.productName;
+      const allowShortFoodAlias = shortFoodTitleAliasEligible([ref?.merchant, ref?.itemName, ref?.query, productName].filter(Boolean).join(' '));
       if (!shopUrl(page.url())) await this.returnToStorefrontWithoutRefresh(page);
       const mcdonaldsDessert = /麦当劳|mcdonald/i.test([ref?.merchant, ref?.itemName, ref?.query].filter(Boolean).join(' '))
         && /麦(?:旋|炫)风|香芋派|菠萝派|脆薯饼/.test(requestedName);
@@ -3981,14 +3998,14 @@ export class TaobaoFlashBrowser {
         if (!opened) throw new Error('麦当劳当前页面没有找到“小食甜品/其他”分类，本轮不会用其他商品替代');
         await this.waitForPurchaseControls(page, 8000);
       }
-      const storeSearchName = kfcOrder ? kfcStandaloneSearchTerm(requestedName) : requestedName;
+      const storeSearchName = kfcOrder ? kfcStandaloneSearchTerm(productName) : productName;
       let menu = await this.extractMenu(page, 24, storeSearchName).catch(() => []);
-      let chosen = preferredExactProduct(menu, requestedName, { allowShortFoodAlias });
+      let chosen = preferredExactProduct(menu, productName, { allowShortFoodAlias });
       if (!chosen && !mcdonaldsDessert && await this.searchInsideShop(page, storeSearchName)) {
         await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
         await this.waitForPurchaseControls(page, 8000);
         menu = await this.extractMenu(page, 24, storeSearchName).catch(() => []);
-        chosen = preferredExactProduct(menu, requestedName, { allowContainedAlias: true, allowShortFoodAlias });
+        chosen = preferredExactProduct(menu, productName, { allowContainedAlias: true, allowShortFoodAlias });
       }
       if (!chosen) {
         // Some restaurant search pages render a perfectly visible product title
@@ -3999,34 +4016,60 @@ export class TaobaoFlashBrowser {
           const box = node.getBoundingClientRect();
           return box.width > 0 && box.height > 0 ? (node.innerText || node.textContent || '').replace(/\s+/g, ' ').trim() : '';
         }).filter(Boolean))]).catch(() => []);
-        chosen = preferredExactProduct(visibleNames.map(name => ({ name, price: 1 })), requestedName, { allowContainedAlias: true, allowShortFoodAlias });
+        chosen = preferredExactProduct(visibleNames.map(name => ({ name, price: 1 })), productName, { allowContainedAlias: true, allowShortFoodAlias });
       }
-      const actualName = clean(chosen?.name || requestedName, 140);
+      const actualName = clean(chosen?.name || productName, 140);
       let control = await this.productControl(page, actualName);
-      if (!control && actualName !== requestedName) control = await this.productControl(page, requestedName);
+      if (!control && actualName !== productName) control = await this.productControl(page, productName);
       if (!control) {
         throw new Error(`购物车还缺少本次明确要求的“${requestedName}”，系统不会因为达到起送价而提前结算`);
       }
       await this.activateProductControl(page, control); await page.waitForTimeout(550);
       const dialog = await this.optionPanel(page);
       if (dialog) {
-        const raw = clean(await dialog.innerText().catch(() => ''), 3000);
-        const selectedDefault = raw.match(/已选\s*[:：]\s*([^¥￥\n]{1,100})/)?.[1]?.trim() || '';
+        let raw = clean(await dialog.innerText().catch(() => ''), 3000);
+        let selectedDefault = raw.match(/已选\s*[:：]\s*([^¥￥\n]{1,100})/)?.[1]?.trim() || '';
+        if (specIntent.requiredOption) {
+          const target = await this.visibleLocator(dialog.getByText(specIntent.requiredOption, { exact: true }), true);
+          if (!target) throw new Error(`单品“${actualName}”当前没有可选择的“${specIntent.requiredOption}”规格，本轮已停止`);
+          const choiceSelected = async () => target.evaluate(node => {
+            for (let current = node, depth = 0; current && depth < 6; current = current.parentElement, depth += 1) {
+              if (current.getAttribute('aria-checked') === 'true' || current.getAttribute('aria-selected') === 'true') return true;
+              if (/(?:^|[\s_-])(?:is-)?selected(?:$|[\s_-])|(?:^|[\s_-])checked(?:$|[\s_-])/.test(String(current.className || '').toLowerCase())) return true;
+            }
+            return false;
+          }).catch(() => false);
+          if (!optionChoiceMatchesSummary(selectedDefault, specIntent.requiredOption) && !await choiceSelected()) {
+            await this.tapControl(page, target);
+            for (let attempt = 0; attempt < 12; attempt += 1) {
+              await page.waitForTimeout(100);
+              raw = clean(await dialog.innerText().catch(() => ''), 3000);
+              selectedDefault = raw.match(/已选\s*[:：]\s*([^¥￥\n]{1,100})/)?.[1]?.trim() || '';
+              if (optionChoiceMatchesSummary(selectedDefault, specIntent.requiredOption) || await choiceSelected()) break;
+            }
+          }
+          if (!optionChoiceMatchesSummary(selectedDefault, specIntent.requiredOption) && !await choiceSelected()) {
+            throw new Error(`平台没有真实选中单品“${actualName}”的“${specIntent.requiredOption}”规格，本轮已停止`);
+          }
+        }
         const confirm = await this.visibleLocator(dialog.getByText(/^(加入购物车|确定|选好了)$/), true);
         if (!confirm || (!selectedDefault && /请选择|必选/.test(raw))) {
           throw new Error(`单品“${actualName}”还需要确认真实规格，系统已暂停且不会跳过这件商品`);
         }
         await this.tapControl(page, confirm); await page.waitForTimeout(650);
+      } else if (specIntent.requiredOption && !clean(actualName, 140).includes(specIntent.requiredOption)) {
+        throw new Error(`单品“${actualName}”没有显示可核对的“${specIntent.requiredOption}”规格，本轮已停止`);
       }
       await this.verifyUniqueCartItems(page, [ref.itemName, ...added, actualName]);
       added.push(actualName);
+      if (specIntent.requiredOption) selections.push({ requestedName, actualName, requiredOption: specIntent.requiredOption });
       // Do not inspect or click checkout here.  Every requested item must run
       // through this loop even if the first item already reached the minimum.
     }
     if (added.length !== requested.length) throw new Error('用户明确指定的商品尚未全部完成，不能检查起送金额或进入结算');
     if (!shopUrl(page.url())) await this.returnToStorefrontWithoutRefresh(page);
     const checkout = await this.checkoutControl(page);
-    return { checkout, added };
+    return { checkout, added, selections };
   }
 
   async createOrder({ ref, selectedOptions, optionGroups = [], quantity, replaceMismatchedCart = false }) {
@@ -4355,6 +4398,14 @@ export class TaobaoFlashBrowser {
     await page.waitForTimeout(1800);
     await this.riskCheck(page, { waitForHuman: true, maxWaitMs: 120_000 });
     const draft = await this.readCheckoutDraft(page, ref, quantity, { validateCart: true });
+    for (const selection of explicitItems.selections || []) {
+      const live = draft.items.find(item => String(item.name || '').includes(selection.actualName)
+        || String(selection.actualName).includes(item.name));
+      const evidence = clean(`${live?.name || ''} ${live?.options || ''}`, 1000);
+      if (!evidence.includes(selection.requiredOption)) {
+        throw new Error(`订单确认页没有显示单品“${selection.actualName}”的“${selection.requiredOption}”规格，本轮不会提交`);
+      }
+    }
     const excludedFruits = requestedFruitExclusions(ref.query);
     const forbiddenFruitItems = draft.items.filter(item => fruitExclusionMatches(item?.name, excludedFruits));
     if (forbiddenFruitItems.length) {

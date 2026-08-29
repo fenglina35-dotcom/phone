@@ -150,6 +150,21 @@ test('a malformed current structured action is repaired from the natural brand p
   assert.match(task.query,/规格=不另外加糖/);
 });
 
+test('a malformed proactive action is repaired from the exact multi-item user order',async()=>{
+  const request='想吃刘记土家の，现熬黑米粥+大份酱香饼+茶叶蛋';
+  const {ctx,searches,merchants,meta}=makeRuntime(request);
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  delete ctx.S.food.real.roleAttempts['role-1'];
+  ctx.S.food.real.roleTasks={};
+  meta.userText=request;
+  await ctx.deliveryHandleRoleRequest('role-1','主动关心',meta);
+  assert.deepEqual(merchants,['刘记土家']);
+  assert.deepEqual(searches,[{taskId:'delivery_id-1',items:['现熬黑米粥','大份酱香饼','茶叶蛋']}]);
+  const task=Object.values(ctx.S.food.real.roleTasks)[0];
+  assert.equal(task.authorizationSource,'user_explicit');
+  assert.match(task.query,/用户明确；门店=刘记土家；商品=现熬黑米粥、(?:大份)?酱香饼、茶叶蛋/);
+});
+
 test('history refusal and opinion sentences never enter the natural ordering bridge',async()=>{
   for(const request of ['我以前喝过百分茶的暴打土芭乐柠檬茶','不要点百分茶的暴打土芭乐柠檬茶','你觉得百分茶的暴打土芭乐柠檬茶怎么样']){
     const {ctx,searches,meta}=makeRuntime(request);

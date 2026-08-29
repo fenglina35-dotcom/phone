@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { DeliveryAdapter } from '../src/adapter.mjs';
 import { sign, verifySignedRequest } from '../src/security.mjs';
-import { activeShopMatchesBrand, appliedCouponAmount, availableCouponAmount, brandMatches, cartItemVerification, checkoutAmounts, checkoutCartState, checkoutEtaText, checkoutItemOptionsFromText, checkoutPageReady, collapseRepeatedOptionText, couponCheckoutState, dessertTopUpCandidates, dessertTopUpEligible, fruitServingEligible, fruitServingWeightGrams, fruitTopUpCandidates, fruitTopUpEligible, kfcDefaultSignatureBundleRequested, kfcHomepageSignatureBundle, kfcItemCoveredByText, kfcSignatureBundle, kfcStandaloneSearchTerm, knownRouteKey, mcdonaldsBreakfastBundleOptions, mealSideTopUpEligible, mealSnackCandidates, menuCardName, menuCardPrice, merchantNameMatchScore, milkTeaToppingCandidates, milkTeaTopUpEligible, minimumOrderInfo, missingSelectedOptionRequirements, multiServingEligible, normalizeOptionPanelGroups, preferredBrand, preferredExactProduct, productMatchesSavedItem, publicAddressLabel, repeatPurchaseMatches, repeatPurchaseMatchKind, requestedExtraItems, requestedFruitExclusions, requestedItemName, requestedKfcItems, requestedMaxDistanceKm, requestedMealSide, requestedMilkTeaToppingPreferences, requestedStandaloneItems, requestedStoreItemName, retailShopSearchUrl, riskChallengeKind, sameShopUrl, savedTopUpItems, selectedOptionsCoverItem, shortFoodTitleAliasEligible, shopClosedReason, shopRowsFromVisibleText, singleFruitItemMatches, singleFruitKeyword, snackTopUpCandidates, snackTopUpEligible, TaobaoFlashBrowser } from '../src/taobao-flash-browser.mjs';
+import { activeShopMatchesBrand, appliedCouponAmount, availableCouponAmount, brandMatches, cartItemVerification, checkoutAmounts, checkoutCartState, checkoutEtaText, checkoutItemOptionsFromText, checkoutPageReady, collapseRepeatedOptionText, couponCheckoutState, dessertTopUpCandidates, dessertTopUpEligible, fruitServingEligible, fruitServingWeightGrams, fruitTopUpCandidates, fruitTopUpEligible, kfcDefaultSignatureBundleRequested, kfcHomepageSignatureBundle, kfcItemCoveredByText, kfcSignatureBundle, kfcStandaloneSearchTerm, knownRouteKey, mcdonaldsBreakfastBundleOptions, mealSideTopUpEligible, mealSnackCandidates, menuCardName, menuCardPrice, merchantNameMatchScore, milkTeaToppingCandidates, milkTeaTopUpEligible, minimumOrderInfo, missingSelectedOptionRequirements, multiServingEligible, normalizeOptionPanelGroups, preferredBrand, preferredExactProduct, productMatchesSavedItem, publicAddressLabel, repeatPurchaseMatches, repeatPurchaseMatchKind, requestedExtraItems, requestedFruitExclusions, requestedItemName, requestedKfcItems, requestedMaxDistanceKm, requestedMealSide, requestedMilkTeaToppingPreferences, requestedStandaloneItems, requestedStoreItemName, retailShopSearchUrl, riskChallengeKind, sameShopUrl, savedTopUpItems, selectedOptionsCoverItem, shortFoodTitleAliasEligible, shopClosedReason, shopRowsFromVisibleText, singleFruitItemMatches, singleFruitKeyword, snackTopUpCandidates, snackTopUpEligible, standaloneItemSpecIntent, TaobaoFlashBrowser } from '../src/taobao-flash-browser.mjs';
 import { storeSearchTermMatches } from '../src/taobao-flash-browser.mjs';
 import { merchantFromShopText } from '../src/taobao-flash-browser.mjs';
 import { requestedSinglePersonSoupCombo } from '../src/taobao-flash-browser.mjs';
@@ -1021,12 +1021,20 @@ test('structured meal items cannot be replaced by conversational intent text or 
 });
 
 test('standalone meal sides pass the visible full platform title to the add-button locator', async () => {
+  assert.deepEqual(standaloneItemSpecIntent('大份酱香饼'), {
+    requestedName: '大份酱香饼', productName: '酱香饼', requiredOption: '大份',
+  });
+  assert.deepEqual(standaloneItemSpecIntent('茶叶蛋'), {
+    requestedName: '茶叶蛋', productName: '茶叶蛋', requiredOption: '',
+  });
   const source = await fs.readFile(new URL('../src/taobao-flash-browser.mjs', import.meta.url), 'utf8');
   const method = source.slice(source.indexOf('async addRequestedStandaloneItems('), source.indexOf('async createOrder({ ref'));
   assert.match(method, /locator\('\[class\*="menuItem--info-title"\]'\)/);
-  assert.match(method, /preferredExactProduct\(visibleNames\.map\(name => \(\{ name, price: 1 \}\)\), requestedName/);
+  assert.match(method, /preferredExactProduct\(visibleNames\.map\(name => \(\{ name, price: 1 \}\)\), productName/);
   assert.ok(method.indexOf('const actualName =') > method.indexOf('visibleNames.map'));
   assert.match(method, /this\.productControl\(page, actualName\)/);
+  assert.match(method, /getByText\(specIntent\.requiredOption, \{ exact: true \}\)/);
+  assert.match(method, /平台没有真实选中单品/);
 });
 
 test('a below-minimum storefront resumes the verified main item before any checkout click', async () => {
