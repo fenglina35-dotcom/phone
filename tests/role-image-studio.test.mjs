@@ -25,6 +25,9 @@ for(const [name,source] of [['web',root],['private bundle',bundle]]){
     {id:'work',name:'白色医生工服',occasion:'work',image:'work-ref',note:'白色制服'},
     {id:'daily',name:'黑色长风衣',occasion:'daily',image:'daily-ref',note:'黑色羊毛'},
   ]}};
+  const replaceOnly={id:'replace',name:'暗纹黑色哥特长款礼服大衣',occasion:'formal',image:'old-ref',note:'原有补充说明',enabled:false};
+  assert.equal(ctx.roleImageStudioOutfitApplyImage(replaceOnly,'new-ref'),true,`${name}: an existing wardrobe image can be replaced`);
+  assert.deepEqual({...replaceOnly},{id:'replace',name:'暗纹黑色哥特长款礼服大衣',occasion:'formal',image:'new-ref',note:'原有补充说明',enabled:false},`${name}: image-only replacement preserves every text and state field`);
   assert.equal(ctx.roleImageFaceMode(c),'hidden',`${name}: no reference must never expose a face`);
   c.imageStudio.identityRefs=[{id:'front',angle:'front',image:'face-front',note:'固定脸型'}];
   assert.equal(ctx.roleImageFaceMode(c),'allowed',`${name}: a fixed identity reference may allow a face`);
@@ -74,6 +77,29 @@ for(const [name,source] of [['web',root],['private bundle',bundle]]){
   assert.match(source,/genOptions:roleImageStudioOn\(cch\)\?\{roleId:cch\.id\}:null/);
   assert.match(source,/genImage\(prompt,\{roleId:c\.id\}\)/);
   assert.match(source,/roleImageStudioOutfitEdit/);
+  assert.match(source,/>仅替换图片<\//,`${name}: the edit modal exposes a dedicated image-only action`);
+  const replaceSource=source.slice(source.indexOf('function roleImageStudioOutfitReplaceImage'),source.indexOf('\nfunction roleImageStudioOutfitActions'));
+  assert.match(replaceSource,/roleImageStudioOutfitApplyImage\(row,src\)/,`${name}: the replacement path uses the image-only mutator`);
+  assert.doesNotMatch(replaceSource,/roleImageStudioDescribe|row\.(?:name|occasion|note|enabled)\s*=/,`${name}: replacing an image cannot rerun recognition or rewrite wardrobe metadata`);
+  const flowRow={id:'replace',name:'原衣物名',occasion:'formal',image:'old-ref',note:'原补充说明',enabled:false};
+  let pending,saveCount=0,toastText='',reopenedDraft=null;
+  const flow=vm.createContext({
+    $:key=>({value:key==='#rio_name'?'尚未保存的新名字':key==='#rio_occasion'?'date':'尚未保存的新说明'}),
+    pickFile:(_accept,callback)=>{pending=callback({name:'new.png'});},
+    getC:()=>({id:'c1'}),roleImageStudio:()=>({outfits:[flowRow]}),aiLoad:()=>{},aiDone:()=>{},
+    compress:async()=>'new-ref',primeImageForSave:async()=>{},save:()=>{saveCount++;},
+    roleImageStudioOutfitApplyImage:(row,src)=>{row.image=String(src);return true;},
+    roleImageStudioOutfitModal:(_id,draft)=>{reopenedDraft={...draft};},toast:text=>{toastText=text;},
+  });
+  vm.runInContext(`let _roleImageOutfitDraft=null;${replaceSource};globalThis.setOutfitDraft=v=>{_roleImageOutfitDraft=v}`,flow);
+  flow.setOutfitDraft({id:'replace',roleId:'c1',image:'old-ref',name:'原衣物名',occasion:'formal',note:'原补充说明',enabled:false,edit:true});
+  flow.roleImageStudioOutfitReplaceImage('c1');
+  await pending;
+  assert.deepEqual({...flowRow},{id:'replace',name:'原衣物名',occasion:'formal',image:'new-ref',note:'原补充说明',enabled:false},`${name}: the real picker flow persists only the new image`);
+  assert.equal(saveCount,1,`${name}: replacement is saved once`);
+  assert.equal(reopenedDraft.image,'new-ref');
+  assert.equal(reopenedDraft.name,'尚未保存的新名字',`${name}: unsaved form edits remain visible but are not written by image replacement`);
+  assert.match(toastText,/文字信息保持不变/);
   assert.match(source,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/,`${name}: wardrobe uses a compact two-column grid`);
   assert.match(source,/aria-label="衣物操作"/,`${name}: compact cards retain item actions`);
   assert.match(source,/aria-label="面部参考操作"/,`${name}: face references use compact cards too`);
