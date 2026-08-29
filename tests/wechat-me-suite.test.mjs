@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import {execFileSync} from 'node:child_process';
 
 const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const feature=fs.readFileSync(new URL('../wechat-me.js',import.meta.url),'utf8');
@@ -7,6 +8,10 @@ const css=fs.readFileSync(new URL('../wechat-me.css',import.meta.url),'utf8');
 const glass=fs.readFileSync(new URL('../glass-theme.css',import.meta.url),'utf8');
 const shell=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
+const privateFeature=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/wechat-me.js',import.meta.url),'utf8');
+const privateCss=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/wechat-me.css',import.meta.url),'utf8');
+const privateQr=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/vendor/qr/qrcode.js',import.meta.url),'utf8');
+const privateScan=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/vendor/qr/jsQR.js',import.meta.url),'utf8');
 
 for(const route of ['wxprofile','wxqr','wxscan','wxservices','wxwallet','wxchange','wxbank','wxfamily','wxbills','wxsupport','wxfavorites','wxalbum','wxemoji','wxsettings','wxaccounts']){
   assert.match(app,new RegExp(`c\\.p==='${route}'`),`missing ${route} route`);
@@ -28,6 +33,13 @@ assert.match(shell,/vendor\/qr\/qrcode\.js/);
 assert.match(shell,/vendor\/qr\/jsQR\.js/);
 assert.match(shell,/wechat-me\.js/);
 assert.match(sw,/\.\/wechat-me\.js\?v=/);
+assert.equal(privateFeature,feature,'private package must embed the current WeChat me component');
+assert.equal(privateCss,css,'private package must embed the current WeChat me styles');
+assert.equal(privateQr,fs.readFileSync(new URL('../vendor/qr/qrcode.js',import.meta.url),'utf8'));
+assert.equal(privateScan,fs.readFileSync(new URL('../vendor/qr/jsQR.js',import.meta.url),'utf8'));
+for(const file of ['wechat-me.js','wechat-me.css','vendor/qr/qrcode.js','vendor/qr/jsQR.js']){
+  execFileSync('git',['ls-files','--error-unmatch',`native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/${file}`],{stdio:'ignore'});
+}
 
 const wxProfileBody=feature.match(/function renderWxProfile\(\)[\s\S]*?\nfunction wxProfileAvatar/)?.[0]||'';
 assert.ok(wxProfileBody,'missing renderWxProfile body');
