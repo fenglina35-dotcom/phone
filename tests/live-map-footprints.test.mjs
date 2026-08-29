@@ -65,6 +65,6 @@ assert.match(html, /\.lmzones path/);
 assert.match(html, /\.lmroutes path/);
 assert.match(lineFunctionSource('liveMapRegionSVG'), /class="lmzones"/);
 assert.match(lineFunctionSource('liveMapRegionSVG'), /class="lmroutes"/);
-assert.match(html, /app\.js\?v=1101/);
+assert.match(html, /app\.js\?v=1102/);
 
 console.log('live map footprint tests passed');

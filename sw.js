@@ -1,6 +1,6 @@
-const BUILD='1101';
-const HOTFIX='v1101-real-delivery-multi-item-spec-1';
-const SHELL_CACHE='north-shell-v1101';
+const BUILD='1102';
+const HOTFIX='v1102-android-large-store-startup-1';
+const SHELL_CACHE='north-shell-v1102';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];

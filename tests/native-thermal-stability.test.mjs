@@ -182,15 +182,16 @@ test('native background and inbox work waits for the restored core to finish boo
 });
 
 test('private boot keeps historical image references lazy without allowing image garbage collection',()=>{
-  assert.match(app,/const lazy=privateNativeAppOn\(\),keys=lazy\?privateBootImageKeys\(\):imageRefKeys\(S\)/);
+  assert.match(app,/function lazyStoredImagesOn\(\)\{return privateNativeAppOn\(\)\|\|NORTH_ANDROID;\}/);
+  assert.match(app,/const lazy=lazyStoredImagesOn\(\),keys=lazy\?privateBootImageKeys\(\):imageRefKeys\(S\)/);
   assert.match(app,/if\(!lazy\)_rehydrate\(S\)/);
   assert.match(app,/function imgGC\(\)[\s\S]*?if\(isStoredImgRef\(v\)\)used\.add\(v\.slice\(4\)\)/);
-  assert.match(app,/app\.innerHTML=[\s\S]{0,900}?if\(privateNativeAppOn\(\)\)hydrateStoredImageNodes\(\)/);
+  assert.match(app,/app\.innerHTML=[\s\S]{0,900}?if\(lazyStoredImagesOn\(\)\)hydrateStoredImageNodes\(\)/);
   assert.match(app,/const _visibleImageMisses=new Map\(\)/);
   assert.match(app,/function visibleImageRetryDelay\(count\)[\s\S]*?Math\.min\(120000/);
   assert.match(app,/eligible\.slice\(0,4\)/);
   assert.match(app,/function scheduleVisibleStoredImages\(force,alreadyHydrated\)[\s\S]*?if\(!alreadyHydrated\)hydrateStoredImageNodes\(\)[\s\S]*?requestIdleCallback\(run,\{timeout:1200\}\)/);
-  assert.match(app,/if\(privateNativeAppOn\(\)\)hydrateStoredImageNodes\(\)/);
+  assert.match(app,/if\(lazyStoredImagesOn\(\)\)hydrateStoredImageNodes\(\)/);
   assert.match(app,/scheduleVisibleStoredImages\(_imageRouteChanged,true\);[\s\S]{0,220}?northNativePerformanceSample\('render-'\+c\.p/);
   assert.match(app,/function refreshHydratedUI\(\)[\s\S]{0,260}?scheduleVisibleStoredImages\(false,true\)/);
   assert.doesNotMatch(app,/function scheduleVisibleStoredImages\(\)[\s\S]{0,300}?requestAnimationFrame/);
