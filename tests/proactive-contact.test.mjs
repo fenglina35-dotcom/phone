@@ -44,7 +44,10 @@ assert.match(maybeSource, /lm&&lm\.role===['"]user['"]/,'an unanswered user mess
 assert.match(maybeSource, /initiativeQueueNote\(c,plan,plan\.note\)/,'queued initiative must carry a freshness baseline');
 assert.match(maybeSource, /const plan=wechatNaturalInitiativePlan\(c\)/, 'the role model must choose the proactive message or function');
 assert.doesNotMatch(maybeSource, /currentRoleActivity\(/, 'the program must not invent a current activity for the role');
-assert.doesNotMatch(maybeSource, /effCallProb|proCall\(/, 'the program must not randomly preselect a call');
+assert.match(maybeSource, /callChance=effCallProb\(c\)/, 'eligible proactive opportunities must honor the configured call chance');
+assert.match(maybeSource, /roleOnlineProactiveBlocked/, 'a call chance hit must still respect live call, busy, offline and face-to-face blocks');
+assert.ok(maybeSource.indexOf("lm.role==='user'") < maybeSource.indexOf('callChance=effCallProb(c)'), 'an unanswered user turn must be rejected before sampling a proactive call');
+assert.ok(maybeSource.indexOf('pc.n>=') < maybeSource.indexOf('callChance=effCallProb(c)'), 'the daily quota must be checked before sampling a proactive call');
 assert.match(source, /setInterval\(checkInitiative,15000\)/);
 assert.match(source, /visibilitychange['"],initiativeWakeCheck/);
 assert.match(source, /pageshow['"],initiativeWakeCheck/);
@@ -282,13 +285,13 @@ const cooldownState={turn:2,lastCheckinAt:Date.now()-5*60000};
 assert.equal(planContext.checkin(strictRole,cooldownState,Date.now()),'','check-ins must respect a short anti-spam cooldown');
 }
 
-function schedulerContext({planKind = 'share', callProb = 0, queue = true, delivered = queue, activityKey = 'work',lastRole='assistant'} = {}) {
+function schedulerContext({planKind = 'share', callProb = 0, callRandom = 0, callBlocked = false, callSucceeds = true, queue = true, delivered = queue, activityKey = 'work',lastRole='assistant'} = {}) {
   const now = Date.now();
   const state = {nextAt: now - 1, lastAt: 0, lastKind: '', lastMemory: '', turn: 0};
   const c = {id: 'r1', proactive: {enabled: true, start: 0, end: 23, times: 10}, followups: []};
   const calls = {queued: 0, called: 0, saved: 0};
   const sandboxMath = Object.create(Math);
-  sandboxMath.random = () => 0;
+  sandboxMath.random = () => callRandom;
   const context = vm.createContext({
     S: {
       settings: {manualReply: true, initiative: true, replyDelay: 0, proactiveIdleMin: 1},
@@ -318,7 +321,8 @@ function schedulerContext({planKind = 'share', callProb = 0, queue = true, deliv
     wechatNaturalInitiativePlan: () => ({kind:'autonomy', memory:null, note:'[主动联系自主决策]'}),
     initiativeQueueNote: (c,plan,note) => note,
     effCallProb: () => callProb,
-    proCall: () => { calls.called++; return true; },
+    roleOnlineProactiveBlocked: () => callBlocked,
+    proCall: () => { calls.called++; return callSucceeds; },
     scheduleReply: (id, note, done) => { calls.queued++; if (done) done(delivered); return queue; },
     memoryNorm: (v) => String(v),
     save: () => { calls.saved++; },
@@ -352,16 +356,29 @@ assert.equal(failedDelivery.result, true);
 assert.equal(failedDelivery.S._proactiveCount.r1, undefined, 'an AI failure after queuing must not consume the daily quota');
 
 const call = schedulerContext({callProb: 100});
-assert.equal(call.calls.called, 0, 'the program must not randomly replace a model-led proactive opportunity with a call');
-assert.equal(call.calls.queued, 1);
+assert.equal(call.calls.called, 1, 'a 100% eligible proactive call chance must place one real incoming call');
+assert.equal(call.calls.queued, 0, 'a successful direct call must not spend a second text-model request');
+assert.equal(call.S._proactiveCount.r1.n, 1, 'a delivered call consumes exactly one proactive opportunity');
 
-const location = schedulerContext({planKind: 'location', callProb: 100});
-assert.equal(location.calls.called, 0, 'location sharing must not be replaced by a call');
-assert.equal(location.calls.queued, 1);
+const eightyHit = schedulerContext({callProb: 80, callRandom: 0.79});
+assert.equal(eightyHit.calls.called, 1, '80% must include values below the configured threshold');
+assert.equal(eightyHit.calls.queued, 0);
+const eightyMiss = schedulerContext({callProb: 80, callRandom: 0.81});
+assert.equal(eightyMiss.calls.called, 0, '80% must leave values above the threshold to ordinary role messaging');
+assert.equal(eightyMiss.calls.queued, 1);
 
-const conflictCall=schedulerContext({planKind:'conflict',callProb:100});
-assert.equal(conflictCall.calls.called,0,'an unresolved argument follow-up must not suddenly become a casual proactive call');
-assert.equal(conflictCall.calls.queued,1);
+const blockedCall = schedulerContext({callProb: 100, callBlocked: true});
+assert.equal(blockedCall.calls.called, 0, 'an active call, busy state, offline session or face-to-face scene must block proactive calling');
+assert.equal(blockedCall.calls.queued, 1, 'blocking the call must preserve the ordinary proactive message instead of losing the opportunity');
+
+const unavailableCall = schedulerContext({callProb: 100, callSucceeds: false});
+assert.equal(unavailableCall.calls.called, 1, 'the configured call path may attempt once');
+assert.equal(unavailableCall.calls.queued, 1, 'if the real call cannot start, the role must still send its ordinary proactive message');
+
+assert.match(source, /id="s_callprob"[\s\S]*?min="0" max="100"/, 'settings must expose the configured 0-100 proactive call chance');
+assert.match(functionSource('saveSettings'), /S\.settings\.callProb=Math\.max\(0,Math\.min\(100,/, 'saving settings must preserve and clamp the call chance');
+assert.doesNotMatch(functionSource('saveSettings'), /delete S\.settings\.callProb/, 'saving unrelated settings must not delete the configured call chance');
+assert.match(functionSource('roleServerAutomationConfig'), /proactiveCallChance:roleOnlineProactiveBlocked\(c\.id\)\?0:effCallProb\(c\)/, 'background automation must receive the same chance but zero it while calls are blocked');
 
 assert.match(
   duePreservationSql,
@@ -385,6 +402,9 @@ assert.match(
 );
 
 assert.match(pushFunction, /name:\s*"minimax"/i, 'scheduled role messages need an independent third provider fallback');
+assert.match(pushFunction, /Number\(automation\.proactiveCallChance\)/, 'the background worker must honor the synchronized proactive call chance');
+assert.match(pushFunction, /ordinaryProactive && !userSleeping && proactiveCallChance > 0/, 'background calls must only replace an eligible ordinary proactive opportunity while the user is awake');
+assert.ok(pushFunction.indexOf('Number(automation.proactiveCallChance)') < pushFunction.indexOf('const prompt = ['), 'a background call chance hit must happen before constructing or calling the text-model route');
 assert.match(pushFunction, /ROLE_PUSH_MINIMAX_BASE_URL/i, 'scheduled role messages must use the current MiniMax OpenAI-compatible endpoint');
 assert.match(pushFunction, /unavailableReasons/i, 'provider failures must be diagnosable without exposing credentials');
 assert.doesNotMatch(pushFunction, /providerFailures\.push\([^\n]*failureText/i, 'provider diagnostics must not echo arbitrary upstream bodies');

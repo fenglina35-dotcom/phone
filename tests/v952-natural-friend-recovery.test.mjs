@@ -63,7 +63,8 @@ assert.match(source, /if\(note\)hist\.push\(\{role:friendAcceptedAutoNote\(note\
 assert.match(source, /!friendAcceptedAutoNote\(note\)\)toast\('模型未回复：'\+em,10000\)/);
 
 assert.match(source, /const plan=wechatNaturalInitiativePlan\(c\)/);
-assert.doesNotMatch(functionSource('initiativeMaybeSend'), /callEligible|effCallProb|proCall\(/);
+assert.match(functionSource('initiativeMaybeSend'), /callChance=effCallProb\(c\)/, 'the restored user setting may select a call only after a natural proactive opportunity becomes due');
+assert.match(functionSource('initiativeMaybeSend'), /roleOnlineProactiveBlocked/, 'the restored call chance must not bypass live scene and call guards');
 assert.match(source, /function blockedPhoneStart\(c,now\)[\s\S]*?dueAt:t\+20000[\s\S]*?max:3/);
 assert.match(source, /function blockedPhoneRetry\(call,why\)[\s\S]*?Date\.now\(\)\+20000/);
 assert.match(source, /if\(isMain\(\)\)blockedPhoneStart\(c,now\)/);

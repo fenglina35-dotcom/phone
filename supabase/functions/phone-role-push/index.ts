@@ -422,6 +422,10 @@ async function roleMessage(
      to stay quiet. A genuine foreground/background reply handoff is a
      different task and still reaches the model through ordinaryProactive=false. */
   if (ordinaryProactive && turnBoundary.pending) return { kind: "silent", body: "" };
+  const proactiveCallChance = Math.max(0, Math.min(100, Number(automation.proactiveCallChance) || 0));
+  if (ordinaryProactive && !userSleeping && proactiveCallChance > 0 && Math.random() * 100 < proactiveCallChance) {
+    return { kind: "message", body: Math.random() < 0.25 ? "[来电|视频]" : "[来电|语音]" };
+  }
   const effectiveAllowSilent = allowSilent && (!ordinaryProactive || userSleeping || turnBoundary.pending);
   const messageMin = Math.max(1, Math.min(10, Number(profile.message_min) || 1));
   const messageMax = Math.max(messageMin, Math.min(10, Number(profile.message_max) || 4));
