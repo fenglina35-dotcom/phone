@@ -293,6 +293,21 @@ function roleMessageStyleInvalid(value: string, maxParts = 4) {
     || parts.some((part) => /^[\[【]/.test(part) && !/^[\[【](?:(?:图片|位置)[|｜][^\]】]+|来电[|｜](?:语音|视频)|送礼[|｜][^\]】]+|一起听[|｜][^\]】]+|放映邀请[|｜][^\]】]+|约会[|｜][^\]】]+|角色扮演[|｜][^\]】]+|你画我猜)[\]】]$/.test(part));
 }
 
+function roleModelOutputLeak(value: string) {
+  const text = String(value || "").trim();
+  if (!text) return false;
+  return /<\/?think\b|\b(?:I need to carefully analyze|The user's last message|But the instruction says|The key instruction|looking at the chat log|I must stay quiet|system prompt|developer message|chain[ -]of[ -]thought|assistant analysis)\b|(?:本次对话边界|\[对话边界\]|正式随机主动联系必须保持安静|用户(?:最后|最近)一条(?:微信|共同生活|电话)?消息(?:仍在等待正常回复|尚未得到角色回复)|只供内部思考，?绝不能照抄|不要解释(?:本次|上述)?规则)/i.test(text);
+}
+
+function roleOnlineNarrationInvalid(value: string, roleName = "") {
+  const text = roleVisibleMessageText(value).replace(/\s+/g, " ").trim();
+  if (!text) return false;
+  const escapedName = String(roleName || "").trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const actor = escapedName ? `(?:他|她|${escapedName})` : "(?:他|她)";
+  return /^[（(【][\s\S]*[）)】]$/.test(text)
+    || new RegExp(`^${actor}[^。！？?]{0,36}(?:走|坐|站|看|抬|低|伸|按|靠|笑|说|问|盯|转身|拿|放|回到|走进|走出|躺|抱|吻|摸|呼吸)`).test(text) && !/[你您][^。！？?]{0,30}[吗呢呀啊？?]/.test(text);
+}
+
 function roleManualUnlockPerspectiveInvalid(
   value: string,
   eventInstruction: string,
@@ -403,6 +418,10 @@ async function roleMessage(
   const userSleeping = /预计仍在休息|睡眠计时显示正在睡觉|现在必须保持安静，不能发消息/.test(recentContext);
   const repeatCandidates = [...recentBodies, ...roleRecentAssistantMessages(profile)];
   const turnBoundary = roleRecentTurnBoundary(profile);
+  /* A scheduled check-in must not spend a model call merely to ask the model
+     to stay quiet. A genuine foreground/background reply handoff is a
+     different task and still reaches the model through ordinaryProactive=false. */
+  if (ordinaryProactive && turnBoundary.pending) return { kind: "silent", body: "" };
   const effectiveAllowSilent = allowSilent && (!ordinaryProactive || userSleeping || turnBoundary.pending);
   const messageMin = Math.max(1, Math.min(10, Number(profile.message_min) || 1));
   const messageMax = Math.max(messageMin, Math.min(10, Number(profile.message_max) || 4));
@@ -432,6 +451,7 @@ async function roleMessage(
   const promptText = prompt.filter(Boolean).join("\n");
   const baseMessages = [
     { role: "system", content: turnBoundary.pending ? "最近真实聊天仍停在一条尚未完成正常回复的用户消息。本次是正式随机主动联系，必须只输出 [保持安静]，不能抢答、补答或另开话题。" : "这是与上一轮分开的独立主动联系事件。最近真实聊天只用于理解已经发生的事实、关系、情绪和用户明确交代的去向，不是等待你继续作答的当前回合。可以自然关心交代过的事情后来怎么样，或开启符合本人生活的新话题，但禁止再次回答用户最后一句，禁止复述或改写角色已经给过的回答。" },
+    { role: "system", content: "本次输出只会进入线上微信。共同生活片段只作已经发生的事实背景；绝不能续写第三人称旁白、动作描写或现场场景，只能以角色本人第一人称直接对当前聊天对象说话。" },
     { role: "system", content: `这是恋人或亲密关系里的私人微信聊天，要像真实恋人的日常聊天，不是文案创作，也不是系统命令。必须按以下优先顺序理解：1.角色基础人设、身份与说话习惯；2.世界书中的真实设定和明确规则；3.当前真实事件、长期记忆、对话总结和最近真实聊天；4.角色本人自主判断与自然表达；5.可用功能及权限边界。功能只告诉你能做什么，不替你决定情绪或行动。\n先完整阅读同步内容，再以角色本人身份决定此刻是否真的想联系用户、带着什么情绪、想说什么或想做什么。只有本轮随机等待的30至60分钟安静期已经结束、当前没有正在聊天生成、通话或线下互动时，这次任务才会出现；不要把它描述成刚刚还在对话。若用户很久没出现且没有交代去向，可以按角色性格自然担心、询问、想念或焦虑；若用户已经说过去做什么，就承接那条真实交代，正常想念、报备或分享自己的日常。不要把这些选项当固定流程，也不要每次都问同一句。若最近上下文包含“最近关心事项进度”，那是从真实聊天提取的当前阶段：可以不提这件事；但一旦关心就必须沿用阶段，只能询问下一步，不能退回去重问已经得到答案的基础问题。\n你不是只能发文字，也不要总等用户先要求。符合本人性格、关系、记忆、当前事实和权限时，可以主动打电话 [来电|语音] / [来电|视频]、送礼 [送礼|礼物名|价格|附言]、邀请一起听 [一起听|歌名]、邀请看当前可用作品 [放映邀请|作品名]、邀请见面 [约会|地点|时间]、邀请玩 [你画我猜] 或 [角色扮演|主题]。也可以发普通文字、[图片|具体画面描述] 或 [位置|地点|地址]。这些都是可用能力，不是本轮任务；是否使用、使用哪一种、何时使用全由角色本人决定。除电话必须单独发送外，其他动作可以配一两句自然的话；每轮最多一个主要功能动作，所有消息和动作都计入 ${messageMin} 到 ${messageMax} 条范围。\n只输出角色此刻真正要发送的消息正文，每条单独一行；绝对不要抄写聊天记录中的日期、时间、角色名、用户称呼或“某某：”说话人前缀。图片必须把 [图片|具体画面描述] 完整单独放在一行。\n只允许根据上下文陈述用户做过、发过、穿过、去过或身体发生过的事。没有明确依据时，绝不能声称翻过用户自拍、看见用户衣着、知道用户位置、动作、身体、睡眠或心率；可以改成询问，但不能把猜测写成事实。角色可以分享符合本人设定的普通日常，但不能捏造涉及用户的共同事件。不得复述近期已经发过的话或只换几个字重复原意。口语要自然、有生活感，不像诗、小说、广告或AI范文，不要悬空比喻，不要每次直呼用户全名；严禁使用破折号或横杠字符（—、——、–、―、--），不提AI、系统、定时、通知或后台。如果本人此刻不想联系，只输出 [保持安静]。` },
     { role: "user", content: promptText },
   ];
@@ -503,6 +523,15 @@ async function roleMessage(
           if (!text) return manualUnlockEvent
             ? { kind: "message", body: roleManualUnlockFallback(eventContext, repeatCandidates) }
             : { kind: "unavailable", body: "", reason: "empty-model-output" };
+          /* Never send model deliberation, copied prompt text, or a cohabitation
+             scene narration as a private WeChat proactive message. Do not ask
+             the model to rewrite it: scheduled contact stays silent, while an
+             explicit task may retry later under its existing bounded policy. */
+          if (roleModelOutputLeak(text)) return manualUnlockEvent
+            ? { kind: "message", body: roleManualUnlockFallback(eventContext, repeatCandidates) }
+            : ordinaryProactive
+            ? { kind: "silent", body: "" }
+            : { kind: "unavailable", body: "", reason: "unsafe-model-output" };
           sawGeneratedCandidate = true;
           if (/^[\[【]\s*(?:保持安静|不说话)\s*[\]】]$/.test(text)) {
             if (manualUnlockEvent) return { kind: "message", body: roleManualUnlockFallback(eventContext, repeatCandidates) };
@@ -521,14 +550,15 @@ async function roleMessage(
           const ungrounded = roleUserFactUnsupported(body, `${recentContext}\n${memoryContext}`);
           const styleInvalid = roleMessageStyleInvalid(body, messageMax);
           const eventPerspectiveInvalid = roleManualUnlockPerspectiveInvalid(body, eventInstruction);
-          if (bodyKey && !repeated && !ungrounded && !styleInvalid && !eventPerspectiveInvalid) {
+          const onlineNarrationInvalid = roleOnlineNarrationInvalid(body, String(profile.role_name || "角色"));
+          if (bodyKey && !repeated && !ungrounded && !styleInvalid && !eventPerspectiveInvalid && !onlineNarrationInvalid) {
             return { kind: "message", body };
           }
           // A manual-unlock event must remain visible, but an invalid first
           // result is repaired locally so it never spends a second model call.
           // Other repeated proactive events may still stay silent.
           if (manualUnlockEvent) return { kind: "message", body: roleManualUnlockFallback(eventContext, repeatCandidates) };
-          if (repeated || eventPerspectiveInvalid) return { kind: "silent", body: "" };
+          if (repeated || eventPerspectiveInvalid || onlineNarrationInvalid) return { kind: "silent", body: "" };
           attemptMessages = [
             ...baseMessages,
             { role: "assistant", content: body },
@@ -855,23 +885,30 @@ function snapshotAutomationFacts(snapshot: Record<string, unknown>, kind: string
 
 function roleRecentTurnBoundary(profile: Record<string, unknown>) {
   const raw = String(profile?.recent_context || "");
-  if (/\[对话边界\]\s*用户最近一条(?:微信|共同生活|电话)?消息尚未得到角色回复/.test(raw)) {
-    return { pending: true, text: "用户最后一条消息仍在等待正常回复；本次正式随机主动联系必须保持安静。" };
-  }
   if (/\[对话边界\]\s*用户最近一条(?:微信|共同生活|电话)?消息已经得到角色回复/.test(raw)) {
     return { pending: false, text: "用户最后一条消息已经由角色回复，上一轮已经结束；不得再次回答、复述或改写那一轮。" };
   }
   const userName = String(profile?.user_name || "你").trim();
   const roleName = String(profile?.role_name || "角色").trim();
-  let lastSpeaker = "";
+  const turns: Array<{ speaker: string; channel: string }> = [];
   for (const source of raw.split(/\r?\n/)) {
     const line = String(source || "").trim()
-      .replace(/^\d{4}[/-]\d{1,2}[/-]\d{1,2}\s+\d{1,2}:\d{2}(?::\d{2})?\s+/, "")
-      .replace(/^\[(?:微信|共同生活|电话(?:·已发生)?)\]\s*/, "");
-    if (userName && line.startsWith(`${userName}：`)) lastSpeaker = "user";
-    else if (roleName && line.startsWith(`${roleName}：`)) lastSpeaker = "assistant";
+      .replace(/^\d{4}[/-]\d{1,2}[/-]\d{1,2}\s+\d{1,2}:\d{2}(?::\d{2})?\s+/, "");
+    const channelMatch = line.match(/^\[(微信|共同生活|电话(?:·已发生)?)\]\s*/);
+    const channel = channelMatch ? String(channelMatch[1]).startsWith("电话") ? "电话" : channelMatch[1] : "";
+    const body = channelMatch ? line.slice(channelMatch[0].length) : line;
+    if (userName && body.startsWith(`${userName}：`)) turns.push({ speaker: "user", channel });
+    else if (roleName && body.startsWith(`${roleName}：`)) turns.push({ speaker: "assistant", channel });
   }
-  return lastSpeaker === "user"
+  let lastUser = -1;
+  for (let i = turns.length - 1; i >= 0; i -= 1) if (turns[i].speaker === "user") { lastUser = i; break; }
+  if (lastUser >= 0 && turns.slice(lastUser + 1).some((turn) => turn.speaker === "assistant" && (!turns[lastUser].channel || turn.channel === turns[lastUser].channel))) {
+    return { pending: false, text: "用户最后一条消息已经由角色回复，上一轮已经结束；不得再次回答、复述或改写那一轮。" };
+  }
+  if (/\[对话边界\]\s*用户最近一条(?:微信|共同生活|电话)?消息尚未得到角色回复/.test(raw)) {
+    return { pending: true, text: "用户最后一条消息仍在等待正常回复；本次正式随机主动联系必须保持安静。" };
+  }
+  return lastUser >= 0 && turns[lastUser].speaker === "user"
     ? { pending: true, text: "最近聊天停在用户消息，尚未看到角色回复；本次正式随机主动联系必须保持安静。" }
     : { pending: false, text: "最近聊天没有待回答的用户回合；这是与上一轮分开的独立主动联系事件。" };
 }
@@ -1175,6 +1212,162 @@ async function backgroundTaskStatus(
   });
 }
 
+const EMPATHY_DOLL_EVENTS = new Set([
+  "DEVICE_ONLINE",
+  "HAND_TOUCH",
+  "HUG_STARTED",
+  "HUG_HELD",
+  "HUG_ENDED",
+]);
+
+function empathyDollAuthorized(request: Request) {
+  const expected = String(Deno.env.get("EMPATHY_DOLL_TOKEN") || "");
+  const supplied = String(request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
+  return expected.length >= 32 && supplied.length === expected.length && supplied === expected;
+}
+
+async function empathyDollProfiles(client: ReturnType<typeof createClient>) {
+  const target = String(Deno.env.get("EMPATHY_DOLL_TARGET") || "").trim();
+  const roleId = String(Deno.env.get("EMPATHY_DOLL_ROLE_ID") || "").trim();
+  if (target && roleId) {
+    const { data } = await client.from("phone_role_push_profiles")
+      .select("*").eq("target", target).eq("role_id", roleId).maybeSingle();
+    return data ? [data as Record<string, unknown>] : [];
+  }
+  const { data, error } = await client.from("phone_role_push_profiles")
+    .select("*").order("updated_at", { ascending: false }).limit(20);
+  if (error) throw error;
+  return (Array.isArray(data) ? data : []) as Array<Record<string, unknown>>;
+}
+
+function empathyDollFacts(eventType: string, state: Record<string, unknown>) {
+  if (eventType === "HAND_TOUCH") {
+    return "娃娃左手臂的独立压力片确认感应到用户持续触碰约一秒。这是真实传感事件，只能理解为用户正在摸或握你的手，不能改说成脚、头或其他部位。";
+  }
+  if (eventType === "HUG_STARTED") {
+    return state.hugActive === true
+      ? "娃娃至少两个有效压力区域同时持续约一秒，确认用户现在正在抱住你。这是真实传感事件。"
+      : "娃娃刚刚确认用户抱住过你，但云端随后已经收到松手事件；现在不能继续声称用户仍抱着你。";
+  }
+  return "";
+}
+
+async function empathyDollRequest(
+  request: Request,
+  client: ReturnType<typeof createClient>,
+  input: Record<string, unknown>,
+) {
+  if (!empathyDollAuthorized(request)) return reply({ error: "unauthorized" }, 401);
+  const profiles = await empathyDollProfiles(client);
+  if (input.action === "empathy_doll_probe") {
+    return reply({
+      ok: true,
+      paired: profiles.length === 1 && !!Deno.env.get("EMPATHY_DOLL_TARGET") && !!Deno.env.get("EMPATHY_DOLL_ROLE_ID"),
+      profiles: profiles.map((row) => ({
+        ...(() => {
+          const automation = row.automation_state && typeof row.automation_state === "object"
+            ? row.automation_state as Record<string, unknown> : {};
+          const doll = automation.empathyDoll && typeof automation.empathyDoll === "object"
+            ? automation.empathyDoll as Record<string, unknown> : {};
+          return {
+            deviceId: String(doll.deviceId || ""),
+            lastSeenAt: String(doll.lastSeenAt || ""),
+            lastEventType: String(doll.lastEventType || ""),
+            hugActive: doll.hugActive === true,
+          };
+        })(),
+        target: String(row.target || ""),
+        roleId: String(row.role_id || ""),
+        roleName: String(row.role_name || "角色"),
+        enabled: row.enabled === true,
+      })),
+    });
+  }
+  if (profiles.length !== 1) return reply({ error: "empathy-doll-not-paired" }, 409);
+  const profile = profiles[0];
+  const eventType = String(input.type || "").trim();
+  const eventId = String(input.eventId || "").trim();
+  const deviceId = String(input.deviceId || "").trim();
+  if (!EMPATHY_DOLL_EVENTS.has(eventType) || !/^[A-Za-z0-9._:-]{1,160}$/.test(eventId) ||
+      !/^[A-Za-z0-9._:-]{1,120}$/.test(deviceId)) {
+    return reply({ error: "invalid-empathy-doll-event" }, 400);
+  }
+
+  const externalKey = `empathy:${deviceId}:${eventId}`;
+  const { data: duplicate } = await client.from("phone_role_background_tasks")
+    .select("id,status").eq("external_key", externalKey).maybeSingle();
+  if (duplicate?.id) return reply({ ok: true, accepted: false, duplicate: true });
+
+  const automation = profile.automation_state && typeof profile.automation_state === "object"
+    ? profile.automation_state as Record<string, unknown> : {};
+  const previous = automation.empathyDoll && typeof automation.empathyDoll === "object"
+    ? automation.empathyDoll as Record<string, unknown> : {};
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const state: Record<string, unknown> = {
+    ...previous,
+    deviceId,
+    lastEventId: eventId,
+    lastEventType: eventType,
+    lastSeenAt: nowIso,
+  };
+  if (eventType === "HAND_TOUCH") state.lastHandTouchAt = nowIso;
+  if (eventType === "HUG_STARTED") {
+    state.hugActive = true;
+    state.hugStartedAt = nowIso;
+    state.lastHeldAt = nowIso;
+  } else if (eventType === "HUG_HELD") {
+    state.hugActive = true;
+    state.lastHeldAt = nowIso;
+  } else if (eventType === "HUG_ENDED") {
+    state.hugActive = false;
+    state.hugEndedAt = nowIso;
+  }
+
+  const lastReplyAt = Date.parse(String(previous.lastRoleReplyAt || ""));
+  const replyEdge = eventType === "HAND_TOUCH" || eventType === "HUG_STARTED";
+  const cooldownMs = Math.max(30_000, Math.min(3600_000,
+    Number(Deno.env.get("EMPATHY_DOLL_REPLY_COOLDOWN_SECONDS") || 180) * 1000));
+  const roleReplyAllowed = replyEdge && (!Number.isFinite(lastReplyAt) || now.getTime() - lastReplyAt >= cooldownMs);
+  if (roleReplyAllowed) state.lastRoleReplyAt = nowIso;
+
+  const payload = {
+    empathyDoll: true,
+    eventType,
+    eventId,
+    deviceId,
+    activeCount: Math.max(0, Math.min(3, Number(input.activeCount || 0))),
+    channels: input.channels && typeof input.channels === "object" ? input.channels : {},
+    facts: empathyDollFacts(eventType, state),
+    receivedAt: nowIso,
+  };
+  const taskRow: Record<string, unknown> = {
+    target: profile.target,
+    role_id: profile.role_id,
+    kind: "device_handoff",
+    payload,
+    baseline_user_at: profile.last_user_at || null,
+    due_at: nowIso,
+    status: roleReplyAllowed ? "pending" : "completed",
+    completed_at: roleReplyAllowed ? null : nowIso,
+    external_key: externalKey,
+  };
+  const { error: taskError } = await client.from("phone_role_background_tasks").insert(taskRow);
+  if (taskError) {
+    if (String(taskError.code || "") === "23505") return reply({ ok: true, accepted: false, duplicate: true });
+    throw taskError;
+  }
+  const { error: stateError } = await client.from("phone_role_push_profiles")
+    .update({ automation_state: { ...automation, empathyDoll: state } })
+    .eq("target", profile.target).eq("role_id", profile.role_id);
+  if (stateError) throw stateError;
+  return reply({ ok: true, accepted: true, roleReplyAllowed, state: {
+    hugActive: state.hugActive === true,
+    lastSeenAt: state.lastSeenAt,
+    lastEventType: state.lastEventType,
+  } });
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (request.method === "GET") return serveAvatar(request);
@@ -1183,6 +1376,9 @@ Deno.serve(async (request) => {
     const input = await request.json().catch(() => ({}));
     const { url, client } = supabaseAdmin();
     if (input?.action === "task_status") return backgroundTaskStatus(client, input);
+    if (input?.action === "empathy_doll_probe" || input?.action === "empathy_doll_event") {
+      return empathyDollRequest(request, client, input);
+    }
     if (input?.action !== "dispatch_due") return reply({ error: "invalid-action" }, 400);
     let backgroundSent = 0, automationSent = 0;
 
@@ -1259,13 +1455,27 @@ Deno.serve(async (request) => {
         instruction = "用户在你正在回复时退到了后台。这是同一轮回复的服务器接管，必须直接回应payload里的最新用户消息，不得复述旧回答，不提后台或任务。";
         context = `最新用户消息：${String(payload.userText || "")}\n${context}`;
       } else if (task.kind === "device_handoff") {
-        instruction = "这是一次已经开始的真实iPhone数据查看的后台接管，只能使用事件数据里的事实，以角色本人语气自然说出看到了什么；没有新鲜事实就如实说这次没有取得新数据，不使用旧快照冒充。";
-        const link = (await client.from("phone_companion_links").select("snapshot").eq("target", task.target).maybeSingle()).data;
-        const snapshot = (link?.snapshot || {}) as Record<string, unknown>;
-        const captured = snapshotLatestTime(snapshot);
-        context = captured && Date.now() - captured <= 5 * 60_000
-          ? `查看目标：${String(payload.focus || "已授权设备数据")}\n本次新鲜快照：${JSON.stringify(snapshot).slice(0, 12000)}`
-          : `查看目标：${String(payload.focus || "已授权设备数据")}\n本次没有取得5分钟内的新鲜快照。`;
+        if (payload.empathyDoll === true) {
+          const current = (await client.from("phone_role_push_profiles").select("automation_state")
+            .eq("target", task.target).eq("role_id", task.role_id).maybeSingle()).data;
+          const currentAutomation = current?.automation_state && typeof current.automation_state === "object"
+            ? current.automation_state as Record<string, unknown> : {};
+          const currentState = currentAutomation.empathyDoll && typeof currentAutomation.empathyDoll === "object"
+            ? currentAutomation.empathyDoll as Record<string, unknown> : {};
+          const eventType = String(payload.eventType || "");
+          instruction = eventType === "HAND_TOUCH"
+            ? "这是娃娃刚刚确认收到的真实摸手事件。只依据事件事实，以角色本人的第一人称自然回应对方正在摸或握你的手；禁止改写成脚、头等其他部位，禁止提传感器、系统、数据或技术。"
+            : "这是娃娃刚刚确认收到的真实拥抱事件。只依据事件和当前云端状态，以角色本人的第一人称自然回应；若当前仍在拥抱，可以感受到对方正在抱你；若随后已经松手，只能说刚刚被抱过，不能声称现在还抱着。禁止提传感器、系统、数据或技术。";
+          context = `${String(payload.facts || "")}\n当前拥抱状态：${currentState.hugActive === true ? "仍在拥抱" : "已经松手"}\n事件接收时间：${String(payload.receivedAt || "")}`;
+        } else {
+          instruction = "这是一次已经开始的真实iPhone数据查看的后台接管，只能使用事件数据里的事实，以角色本人语气自然说出看到了什么；没有新鲜事实就如实说这次没有取得新数据，不使用旧快照冒充。";
+          const link = (await client.from("phone_companion_links").select("snapshot").eq("target", task.target).maybeSingle()).data;
+          const snapshot = (link?.snapshot || {}) as Record<string, unknown>;
+          const captured = snapshotLatestTime(snapshot);
+          context = captured && Date.now() - captured <= 5 * 60_000
+            ? `查看目标：${String(payload.focus || "已授权设备数据")}\n本次新鲜快照：${JSON.stringify(snapshot).slice(0, 12000)}`
+            : `查看目标：${String(payload.focus || "已授权设备数据")}\n本次没有取得5分钟内的新鲜快照。`;
+        }
       } else if (task.kind === "app_followup") {
         instruction = String(payload.followupChoice || "message") === "lock"
           ? "这是查看软件后没有得到用户回复的最后一步。你本轮已经决定暂时锁定事件中的App；正文必须明确自然地告诉用户你锁定了它，不要再询问第二次。"
@@ -1305,7 +1515,7 @@ Deno.serve(async (request) => {
         }
       }
       const backgroundDelivered = decision.kind === "message"
-        ? await persistAndPush(client, url, profile, decision.body, task.kind, `task:${task.id}`)
+        ? await persistAndPush(client, url, profile, decision.body, payload.empathyDoll === true ? "empathy-doll" : task.kind, `task:${task.id}`)
         : false;
       const { data: deliveryOutbox } = decision.kind === "message"
         ? await client.from("phone_role_push_outbox")

@@ -217,6 +217,56 @@ test('completed chat turns are marked before scheduled proactive generation', ()
   assert.match(edge, /turnBoundary\.pending \?/);
 });
 
+test('scheduled proactive contact never calls a model for a genuinely pending user turn', () => {
+  const source = edgeFunctionSource('roleMessage');
+  const preflight = source.indexOf('if (ordinaryProactive && turnBoundary.pending) return { kind: "silent", body: "" };');
+  const providerLoop = source.indexOf('for (const provider of providers)');
+  assert.ok(preflight >= 0 && preflight < providerLoop, 'the pending-turn guard must run before every paid provider request');
+});
+
+test('server and client reject leaked reasoning without hiding normal proactive messages', () => {
+  const serverSource = edgeFunctionSource('roleModelOutputLeak').replace('value: string', 'value');
+  const serverUnsafe = Function(`${serverSource}\nreturn roleModelOutputLeak;`)();
+  const clientUnsafe = Function(`${functionSource('roleServerPushUnsafeBody')}\nreturn roleServerPushUnsafeBody;`)();
+  const leaked = `I need to carefully analyze the situation:\nThe user's last message still hasn't been properly replied to?\nBut the instruction says: "用户最近一条共同生活消息尚未得到角色回复".\nThe key instruction: "本次正式随机主动联系必须保持安静".`;
+  for (const guard of [serverUnsafe, clientUnsafe]) {
+    assert.equal(guard(leaked), true, 'the exact screenshot-style reasoning dump is blocked');
+    assert.equal(guard('刚忙完，想问你现在好一点没有。'), false, 'an ordinary direct role message remains visible');
+    assert.equal(guard('[图片|窗边的一杯热茶]'), false, 'a valid proactive image action remains available');
+  }
+  assert.match(edge, /roleModelOutputLeak\(text\)/);
+  assert.match(functionSource('roleServerPushParts'), /roleServerPushUnsafeBody\(body\)/);
+  assert.match(functionSource('roleServerPushVisibleBody'), /roleServerPushUnsafeBody\(body\)/);
+});
+
+test('a real cohabitation reply overrides a stale pending boundary marker', () => {
+  const source = edgeFunctionSource('roleRecentTurnBoundary')
+    .replace('profile: Record<string, unknown>', 'profile')
+    .replace('const turns: Array<{ speaker: string; channel: string }> = [];', 'const turns = [];');
+  const boundary = Function(`${source}\nreturn roleRecentTurnBoundary;`)();
+  const answered = boundary({
+    user_name: 'North', role_name: '先生^^',
+    recent_context: '2026/8/29 12:21:00 [共同生活]North：主人……\n2026/8/29 15:28:00 [共同生活]先生^^：再叫一次。\n[对话边界] 用户最近一条共同生活消息尚未得到角色回复。正式随机主动联系必须保持安静。',
+  });
+  assert.equal(answered.pending, false, 'the transcript proves the cohabitation turn was answered');
+  const pending = boundary({
+    user_name: 'North', role_name: '先生^^',
+    recent_context: '2026/8/29 12:21:00 [共同生活]North：主人……\n[对话边界] 用户最近一条共同生活消息尚未得到角色回复。正式随机主动联系必须保持安静。',
+  });
+  assert.equal(pending.pending, true, 'an actually unanswered cohabitation turn still blocks random contact');
+});
+
+test('online proactive output rejects cohabitation scene narration conservatively', () => {
+  const source = edgeFunctionSource('roleOnlineNarrationInvalid')
+    .replace('value: string', 'value')
+    .replace('roleName = ""', 'roleName = ""');
+  const invalid = Function('roleVisibleMessageText', `${source}\nreturn roleOnlineNarrationInvalid;`)((value) => String(value || ''));
+  assert.equal(invalid('他没有急着开口，只是看了她几秒。', '先生^^'), true);
+  assert.equal(invalid('刚忙完，想问你现在好一点没有。', '先生^^'), false);
+  assert.equal(invalid('她今天又来找你了吗？', '先生^^'), false, 'a direct question about a real third party is not mistaken for scene narration');
+  assert.match(edge, /本次输出只会进入线上微信/);
+});
+
 test('foreground replies cancel a racing server handoff before generation and before delivery', () => {
   const completed = edgeFunctionSource('replyHandoffAlreadyCompleted');
   assert.match(completed, /latestActivity > baseline \+ 1000/);
@@ -515,6 +565,46 @@ test('a scheduled push racing with a live call is acknowledged without entering 
   const ack=rpcCalls.find(call=>call.name==='phone_role_push_ack');
   assert.deepEqual(Array.from(ack?.args?.p_ids||[]),['push-1'],'discarded row is acknowledged server-side instead of waiting for hangup');
   assert.deepEqual(context.msgs('c1'),[],'no chat message is appended');
+});
+
+test('a queued reasoning leak is consumed without a bubble, notification, or action', async () => {
+  const rpcCalls=[];
+  const messages=[];
+  const leaked=`I need to carefully analyze the situation:\nThe user's last message still hasn't been properly replied to?\nBut the instruction says: "用户最近一条共同生活消息尚未得到角色回复".\nThe key instruction: "本次正式随机主动联系必须保持安静".`;
+  const context=vm.createContext({
+    Date,Set,String,Math,S:{couple:{cid:'c1'},_rolePushReceipts:[]},document:{hidden:false},_call:null,
+    gateOK:()=>true,isMain:()=>true,cloudId:()=>`test-target`,companionOwnerSecret:()=>`test-owner`,
+    getC:id=>id==='c1'?{id:'c1',deleted:false,msgMax:4}:null,msgs:()=>messages,
+    companionTime:value=>Date.parse(value)||0,
+    companionRpc:async(name,args)=>{rpcCalls.push({name,args});if(name==='phone_role_push_pull')return [{id:'push-leak',roleId:'c1',triggerKind:'scheduled',createdAt:new Date().toISOString(),body:leaked}];if(name==='phone_role_push_ack')return true;throw new Error(`unexpected rpc ${name}`);},
+    roleServerPushSyncEnabled:async()=>true,saveNowAsync:async()=>true,persistWechatMessagesNow:async()=>true,
+    roleServerPushLastActivityAt:()=>0,roleServerPushNormalizeBody:(_c,value)=>String(value||''),
+    splitChatBubbles:value=>String(value||'').split(/\n+/).filter(Boolean),roleServerPushActionTag:()=>false,
+    lineToMsgs:()=>{throw new Error('unsafe text must be empty before bubble parsing');},
+    roleServerPushHandoffAlreadyVisible:()=>false,roleServerPushApplyAction:async()=>{throw new Error('unsafe text must not execute an action');},
+    roleServerPushInsertByTime:()=>{throw new Error('unsafe text must not enter chat');},roleServerPushDeliveryBlocked:()=>false,
+    roleServerPushSyncSoon:()=>{},wechatTailJournalWrite:()=>{},save:()=>{},cur:()=>({p:'chat',id:'c1'}),refreshChatMessages:()=>{},render:()=>{},sleep:async()=>{},
+    notifyIncoming:()=>{throw new Error('unsafe text must not notify');},showMsgBanner:()=>{throw new Error('unsafe text must not show a banner');},playMessageDing:()=>{throw new Error('unsafe text must not ding');},
+    incomingCall:()=>false,offlineFocusActive:()=>false,cinemaRoleOccupied:()=>false,uid:()=>`id-${Math.random()}`,setTimeout:fn=>{fn();return 1;},
+  });
+  vm.runInContext(`
+    let _roleServerPushPullBusy=false,_roleServerPushPullAt=0;
+    ${functionSource('roleServerPushUnsafeBody')}
+    ${functionSource('roleServerPushCallKind')}
+    ${functionSource('roleServerPushVisibleBody')}
+    ${functionSource('roleServerPushParts')}
+    ${functionSource('roleServerPushReceiptRows')}
+    ${functionSource('roleServerPushReceiptHas')}
+    ${functionSource('roleServerPushReceiptMark')}
+    ${functionSource('roleServerPushReceiptForget')}
+    async ${functionSource('roleServerPushPull')}
+    this.pull=roleServerPushPull;
+  `,context);
+  assert.equal(await context.pull(true),true);
+  assert.deepEqual(messages,[]);
+  assert.equal(context.S._rolePushReceipts.some(row=>row.id==='push-leak'),true);
+  const ack=rpcCalls.find(call=>call.name==='phone_role_push_ack');
+  assert.deepEqual(Array.from(ack?.args?.p_ids||[]),['push-leak']);
 });
 
 test('the latest real user channel and activity include WeChat, completed calls and co-living', () => {

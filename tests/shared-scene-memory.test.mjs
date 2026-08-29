@@ -48,6 +48,30 @@ test('one-off date and common-life rows share one chronological hidden timeline'
   assert.equal(state.rows.find(x=>x.text==='线下说过的事').current,false,'the non-current scene must not become the pending turn');
 });
 
+test('unified scene prompt keeps the newest context inside a bounded character budget',()=>{
+  const sandbox={Array,String,Math};
+  vm.runInNewContext(functionSource('offlineTimelinePromptRows')+';globalThis.run=offlineTimelinePromptRows;',sandbox);
+  const rows=Array.from({length:240},(_,i)=>({key:`r${i}`,text:`${i}:`+'长'.repeat(318)}));
+  const normal=Array.from(sandbox.run(rows,30));
+  const maximum=Array.from(sandbox.run(rows,80));
+  assert.equal(normal.at(-1).key,'r239','the newest record must survive trimming');
+  assert.ok(normal.length<=60,'default setting may not expand to three independent full histories');
+  assert.ok(normal.reduce((n,x)=>n+x.text.length+80,0)<=9600,'default unified timeline must remain under its prompt budget');
+  assert.equal(maximum.at(-1).key,'r239');
+  assert.ok(maximum.length<=120,'even the highest setting stays bounded');
+  assert.ok(maximum.reduce((n,x)=>n+x.text.length+80,0)<=18000,'maximum unified timeline must remain under its hard safety budget');
+});
+
+test('current-scene archive is not duplicated when the unified timeline is already enabled',()=>{
+  const sandbox={S:{me:{name:'用户'}}};
+  vm.runInNewContext(functionSource('offlineArchivedHistory')+functionSource('offlineRequestMessages')+';globalThis.run=offlineRequestMessages;',sandbox);
+  const hist=[{role:'user',content:'本场旧消息'}];
+  const unified=sandbox.run('统一时间线已有本场消息',hist,null,'当前消息',{unified:true});
+  const isolated=sandbox.run('未启用统一时间线',hist,null,'当前消息');
+  assert.doesNotMatch(unified[0].content,/本场旧消息/);
+  assert.match(isolated[0].content,/本场旧消息/,'isolated mode must still receive its local history');
+});
+
 test('active one-off WeChat prompt carries the latest real face-to-face progress',()=>{
   const sandbox={
     S:{me:{name:'用户'}},Math,
