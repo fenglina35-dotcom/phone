@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1045 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1106 · 共同生活时间与跨浏览器授权修复版'/);
-  assert.match(app,/const url='sw\.js\?v=1106&r=v1106-cohab-time-license-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1106'/);
-  assert.match(html,/app\.js\?v=1106/);
-  assert.match(sw,/const BUILD='1106'/);
-  assert.match(sw,/north-shell-v1106/);
-  assert.match(index,/小手机\.html\?v=1106/);
-  assert.match(repair,/小手机\.html\?v=1106/);
+  assert.match(app,/APP_VER='v1107 · 跨渠道时间与线下记忆连续修复版'/);
+  assert.match(app,/const url='sw\.js\?v=1107&r=v1107-cross-channel-continuity-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1107'/);
+  assert.match(html,/app\.js\?v=1107/);
+  assert.match(sw,/const BUILD='1107'/);
+  assert.match(sw,/north-shell-v1107/);
+  assert.match(index,/小手机\.html\?v=1107/);
+  assert.match(repair,/小手机\.html\?v=1107/);
 });
 
-test('the private iOS package embeds web v1106 and keeps 1.0.228 delivery',()=>{
-  assert.match(privateBundle,/<string>1106<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.228;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 228;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.228 \(228\)'/);
+test('the private iOS package embeds web v1107 and keeps 1.0.229 delivery',()=>{
+  assert.match(privateBundle,/<string>1107<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.229;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 229;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.229 \(229\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

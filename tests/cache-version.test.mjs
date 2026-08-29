@@ -6,6 +6,7 @@ const html = fs.readFileSync(new URL('../小手机.html', import.meta.url), 'utf
 const sw = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
 const index = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const repair = fs.readFileSync(new URL('../repair.html', import.meta.url), 'utf8');
+const privateHtml = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/小手机.html', import.meta.url), 'utf8');
 
 const version = app.match(/APP_VER='v(\d+)\b/)?.[1];
 assert.ok(version, 'app.js must expose a numeric APP_VER');
@@ -34,5 +35,10 @@ assert.match(activation, /self\.clients\.claim\(\)/);
 assert.doesNotMatch(activation, /client\.navigate|location\.(?:replace|reload)|clients\.openWindow/,'cache activation must never interrupt the active app page');
 assert.match(index, new RegExp(`小手机\\.html\\?v=${version}\\b`));
 assert.match(repair, new RegExp(`小手机\\.html\\?v=${version}\\b`));
+assert.match(privateHtml, new RegExp(`window\\.__NORTH_SHELL_BUILD__='${version}'`));
+assert.match(privateHtml, new RegExp(`app\\.js\\?v=${version}\\b`));
+assert.match(privateHtml, new RegExp(`ai-account\\.js\\?v=${version}\\b`));
+assert.match(privateHtml, new RegExp(`delivery\\.js\\?v=${version}\\b`));
+assert.match(privateHtml, new RegExp(`pet-game\\.js\\?v=${version}\\b`));
 
 console.log(`cache version tests passed (v${version})`);
