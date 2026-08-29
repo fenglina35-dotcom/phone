@@ -7,9 +7,9 @@ const css = fs.readFileSync(new URL('../glass-theme.css', import.meta.url), 'utf
 const app = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const project = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj', import.meta.url), 'utf8');
 
-test('v1111 web keeps private 1.0.233 compatibility', () => {
-  assert.match(app, /APP_VER='v1111 · 共同生活当前剧情连续修复版'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='1111'/);
+test('v1112 web keeps private 1.0.233 compatibility', () => {
+  assert.match(app, /APP_VER='v1112 · 个人外卖电脑隔离试用版'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='1112'/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 233;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1\.0\.233;/g) || []).length, 12);
 });

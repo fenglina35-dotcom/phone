@@ -13,18 +13,18 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1045 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1111 · 共同生活当前剧情连续修复版'/);
-  assert.match(app,/const url='sw\.js\?v=1111&r=v1111-cohab-current-scene-continuity-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1111'/);
-  assert.match(html,/app\.js\?v=1111/);
-  assert.match(sw,/const BUILD='1111'/);
-  assert.match(sw,/north-shell-v1111/);
-  assert.match(index,/小手机\.html\?v=1111/);
-  assert.match(repair,/小手机\.html\?v=1111/);
+  assert.match(app,/APP_VER='v1112 · 个人外卖电脑隔离试用版'/);
+  assert.match(app,/const url='sw\.js\?v=1112&r=v1112-personal-delivery-device-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1112'/);
+  assert.match(html,/app\.js\?v=1112/);
+  assert.match(sw,/const BUILD='1112'/);
+  assert.match(sw,/north-shell-v1112/);
+  assert.match(index,/小手机\.html\?v=1112/);
+  assert.match(repair,/小手机\.html\?v=1112/);
 });
 
-test('the private iOS package embeds web v1111 and keeps 1.0.233 delivery',()=>{
-  assert.match(privateBundle,/<string>1111<\/string>/);
+test('the private iOS package embeds web v1112 and keeps 1.0.233 delivery',()=>{
+  assert.match(privateBundle,/<string>1112<\/string>/);
   assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.233;/g)||[]).length,12);
   assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 233;/g)||[]).length,12);
   assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.233 \(233\)'/);

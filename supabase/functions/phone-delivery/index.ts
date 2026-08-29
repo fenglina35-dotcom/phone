@@ -10,6 +10,12 @@ const DELIVERY_ACTIONS = new Set([
   "create_order",
   "pay_order",
   "order_status",
+  "saved_routes",
+]);
+const DELIVERY_DEVICE_ACTIONS = new Set([
+  "device_pairing_begin",
+  "device_status",
+  "device_revoke",
 ]);
 const ORDER_STATUSES = new Set([
   "created",
@@ -178,9 +184,19 @@ async function authenticate(client: ReturnType<typeof admin>, input: JsonObject)
   if (data !== true) throw new Error("delivery-client-auth-failed");
   return {
     target,
+    ownerSecret,
     appVersion: text(context.appVersion, 100),
     privateApp: context.privateApp === true,
   };
+}
+
+class DeliveryDeviceJobPending extends Error {
+  jobId: string;
+  constructor(jobId: string) {
+    super("personal-delivery-device-working");
+    this.name = "DeliveryDeviceJobPending";
+    this.jobId = jobId;
+  }
 }
 
 async function upstream(action: string, payload: JsonObject, context: JsonObject) {
@@ -225,6 +241,49 @@ async function upstream(action: string, payload: JsonObject, context: JsonObject
     return object(decoded.data ?? decoded);
   }
   throw new Error("真实外卖上游暂时不可用");
+}
+
+async function routedUpstream(
+  client: ReturnType<typeof admin>,
+  caller: Awaited<ReturnType<typeof authenticate>>,
+  action: string,
+  payload: JsonObject,
+  context: JsonObject,
+  requestKey: string,
+) {
+  const linked = (await client.from("phone_delivery_devices")
+    .select("target")
+    .eq("target", caller.target)
+    .is("revoked_at", null)
+    .maybeSingle()).data;
+  if (linked?.target) {
+    if (!/^dlr_[a-z0-9-]{16,120}$/i.test(requestKey)) {
+      throw new Error("personal-delivery-request-key-required");
+    }
+    const queued = await client.rpc("phone_delivery_enqueue_device_job", {
+      p_target: caller.target,
+      p_owner_secret: caller.ownerSecret,
+      p_request_key: requestKey,
+      p_action: action,
+      p_payload: payload,
+      p_context: context,
+    });
+    if (queued.error) throw queued.error;
+    const job = object(queued.data);
+    const state = text(job.status, 30);
+    if (state === "completed") return object(job.result);
+    if (state === "failed" || state === "expired") {
+      throw new Error(text(job.error, 240) || "个人外卖电脑执行失败");
+    }
+    throw new DeliveryDeviceJobPending(text(job.id, 80));
+  }
+
+  const legacyTargets = new Set((Deno.env.get("PHONE_DELIVERY_LEGACY_TARGETS") || "")
+    .split(",").map((item) => item.trim()).filter(Boolean));
+  if (!legacyTargets.has(caller.target)) {
+    throw new Error("此小手机尚未绑定本人的外卖电脑，已禁止连接其他人的后台");
+  }
+  return upstream(action, payload, context);
 }
 
 function capabilityResult(value: JsonObject) {
@@ -310,17 +369,54 @@ async function handleClientAction(
   client: ReturnType<typeof admin>,
 ) {
   const action = text(input.action, 40);
-  if (!DELIVERY_ACTIONS.has(action)) return reply(request, { ok: false, error: "不支持的真实外卖操作" }, 400);
+  if (!DELIVERY_ACTIONS.has(action) && !DELIVERY_DEVICE_ACTIONS.has(action)) {
+    return reply(request, { ok: false, error: "不支持的真实外卖操作" }, 400);
+  }
   const caller = await authenticate(client, input);
   const payload = object(input.payload);
-  const context = { ...caller, requestId: crypto.randomUUID() };
+  if (action === "device_pairing_begin") {
+    const paired = await client.rpc("phone_delivery_begin_device_pairing", {
+      p_target: caller.target,
+      p_owner_secret: caller.ownerSecret,
+    });
+    if (paired.error) throw paired.error;
+    return reply(request, { ok: true, data: object(paired.data) });
+  }
+  if (action === "device_status") {
+    const statusResult = await client.rpc("phone_delivery_device_status", {
+      p_target: caller.target,
+      p_owner_secret: caller.ownerSecret,
+    });
+    if (statusResult.error) throw statusResult.error;
+    return reply(request, { ok: true, data: object(statusResult.data) });
+  }
+  if (action === "device_revoke") {
+    if (payload.confirmedByUser !== true) {
+      return reply(request, { ok: false, error: "必须由本人确认解绑外卖电脑" }, 400);
+    }
+    const revoked = await client.rpc("phone_delivery_revoke_device", {
+      p_target: caller.target,
+      p_owner_secret: caller.ownerSecret,
+    });
+    if (revoked.error) throw revoked.error;
+    return reply(request, { ok: true, data: { revoked: revoked.data === true } });
+  }
+
+  const clientInfo = object(input.client);
+  const requestKey = text(clientInfo.relayRequestId, 140);
+  const context = {
+    target: caller.target,
+    appVersion: caller.appVersion,
+    privateApp: caller.privateApp,
+    requestId: requestKey || crypto.randomUUID(),
+  };
 
   if (action === "capabilities") {
-    return reply(request, { ok: true, data: capabilityResult(await upstream(action, payload, context)) });
+    return reply(request, { ok: true, data: capabilityResult(await routedUpstream(client, caller, action, payload, context, requestKey)) });
   }
   if (action === "confirm_address") {
     if (payload.confirmedByUser !== true) return reply(request, { ok: false, error: "必须由本人确认收货地址" }, 400);
-    const data = await upstream(action, payload, context);
+    const data = await routedUpstream(client, caller, action, payload, context, requestKey);
     const fingerprint = text(data.addressFingerprint, 180);
     if (!fingerprint) throw new Error("平台没有返回地址校验标识");
     return reply(request, { ok: true, data: { addressFingerprint: fingerprint, addressLabel: text(data.addressLabel, 80) } });
@@ -328,7 +424,7 @@ async function handleClientAction(
   if (action === "search") {
     const query = text(payload.query, 120);
     if (!query) return reply(request, { ok: false, error: "请输入要搜索的餐品或店铺" }, 400);
-    const data = await upstream(action, { ...payload, query }, context);
+    const data = await routedUpstream(client, caller, action, { ...payload, query }, context, requestKey);
     const source = Array.isArray(data.offers) ? data.offers : [];
     const offers = source.slice(0, 30).map(offerResult);
     return reply(request, { ok: true, data: { offers, addressLabel: text(data.addressLabel, 80) } });
@@ -337,8 +433,23 @@ async function handleClientAction(
     const offerId = text(payload.offerId, 160);
     const quoteId = text(payload.quoteId, 160);
     if (!offerId || !quoteId) return reply(request, { ok: false, error: "真实规格请求缺少报价标识" }, 400);
-    const data = await upstream(action, { offerId, quoteId }, context);
+    const data = await routedUpstream(client, caller, action, { offerId, quoteId }, context, requestKey);
     return reply(request, { ok: true, data: { offerId, quoteId, optionGroups: optionGroups(data.optionGroups), optionsLoaded: true } });
+  }
+  if (action === "saved_routes") {
+    const data = await routedUpstream(client, caller, action, {}, context, requestKey);
+    const routes = (Array.isArray(data.routes) ? data.routes : []).slice(0, 80).map((value) => {
+      const row = object(value);
+      return {
+        query: text(row.query, 160),
+        merchant: text(row.merchant, 100),
+        itemName: text(row.itemName, 140),
+        savedAt: Number(row.savedAt || 0) || 0,
+        closedUntil: Number(row.closedUntil || 0) || 0,
+        closedReason: text(row.closedReason, 80),
+      };
+    });
+    return reply(request, { ok: true, data: { routes } });
   }
   if (action === "create_order") {
     const clientRequestId = text(payload.clientRequestId, 160);
@@ -346,7 +457,7 @@ async function handleClientAction(
     const existing = (await client.from("phone_delivery_orders").select("*")
       .eq("target", caller.target).eq("client_request_id", clientRequestId).maybeSingle()).data;
     if (existing) return reply(request, { ok: true, data: orderResponse(object(existing)) });
-    const data = await upstream(action, payload, context);
+    const data = await routedUpstream(client, caller, action, payload, context, requestKey);
     const provider = text(data.provider, 40);
     const remoteOrderId = text(data.orderId || data.id, 160);
     if (!PROVIDERS.has(provider) || !remoteOrderId) throw new Error("平台没有返回有效订单");
@@ -405,11 +516,11 @@ async function handleClientAction(
         authorized_total: authorizedTotal,
       }).select("id").single();
     if (attempt.error || !attempt.data?.id) throw attempt.error || new Error("payment-attempt-not-created");
-    const data = await upstream(action, {
+    const data = await routedUpstream(client, caller, action, {
       ...payload,
       orderId: remoteOrderId,
       authorizedTotal,
-    }, context);
+    }, context, requestKey);
     const result = {
       status: status(data.status, "pending_payment"),
       paymentMethod: PAYMENTS.has(text(data.paymentMethod, 40)) ? text(data.paymentMethod, 40) : "",
@@ -440,7 +551,7 @@ async function handleClientAction(
   const order = (await client.from("phone_delivery_orders").select("*")
     .eq("target", caller.target).eq("remote_order_id", remoteOrderId).maybeSingle()).data;
   if (!order) return reply(request, { ok: false, error: "真实订单不存在或不属于当前设备" }, 404);
-  const data = await upstream(action, { orderId: remoteOrderId, provider: order.provider }, context);
+  const data = await routedUpstream(client, caller, action, { orderId: remoteOrderId, provider: order.provider }, context, requestKey);
   const next = status(data.status, String(order.status));
   const accepted = shouldAdvance(String(order.status), next) ? next : String(order.status);
   const result = {
@@ -548,6 +659,14 @@ Deno.serve(async (request) => {
     const input = object(raw ? JSON.parse(raw) : {});
     return await handleClientAction(request, input, client);
   } catch (error) {
+    if (error instanceof DeliveryDeviceJobPending) {
+      return reply(request, {
+        ok: true,
+        pending: true,
+        jobId: error.jobId,
+        retryAfterMs: 1200,
+      }, 202);
+    }
     const message = text(error instanceof Error ? error.message : error, 180) || "真实外卖连接器错误";
     const statusCode = /auth/i.test(message) ? 403
       : /invalid|缺少|不支持|必须/.test(message) ? 400

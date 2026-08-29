@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>小手机外卖伴生程序</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main>
+    <header><span>小手机</span><h1>外卖伴生程序</h1><p>一人一机 · 只连接你自己的外卖账号</p></header>
+    <section id="setup" class="card">
+      <h2>第一次连接</h2>
+      <ol><li>打开小手机的“真实外卖设置”</li><li>点“生成配对码”</li><li>把十位数字填在下面</li></ol>
+      <label>小手机配对码</label>
+      <input id="pairCode" inputmode="numeric" maxlength="11" placeholder="例如 12345 67890">
+      <button id="pair">连接我的小手机</button>
+    </section>
+    <section id="linked" class="card hidden">
+      <div class="status"><i id="statusDot"></i><div><h2 id="statusTitle">正在检查</h2><p id="statusText"></p></div></div>
+      <button id="login" class="primary">打开我的专用外卖 Edge</button>
+      <button id="smallPhone" class="secondary">打开小手机</button>
+      <button id="update" class="secondary">检查点单规则更新</button>
+      <p class="notice">首次请在专用 Edge 登录你自己的淘宝闪购／饿了么，并确认地址。验证码、支付和生物识别始终由你本人完成。</p>
+      <button id="forget" class="danger">清除本机绑定</button>
+      <button id="purge" class="danger">退出并删除本机外卖登录资料</button>
+    </section>
+    <div id="message" role="status"></div>
+    <footer>Cookie、完整地址和账号密码只保存在这台电脑的专用 Edge 资料中，不上传小手机云端。</footer>
+  </main>
+  <script src="renderer.js"></script>
+</body>
+</html>

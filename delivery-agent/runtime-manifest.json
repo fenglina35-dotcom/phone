@@ -1,0 +1,11 @@
+{
+  "payload": {
+    "version": "0.1.0",
+    "url": "https://kaining921.github.io/phone/delivery-agent/small-phone-delivery-runtime-0.1.0.zip",
+    "sha256": "b93aa04a9ad0faf4115db0847fc229ce576261c8f526fd53d3e87bcead431ce2",
+    "size": 83027,
+    "createdAt": "2026-08-29T21:45:15.526Z"
+  },
+  "signature": "5nGbEPiFfsqLeCEYURxxXL/+Xf3gldeP3LioNsleqPcmbSFbzK5GYbJVJuWYDtIIs/beGmeNyX6FczypDiUmCg==",
+  "algorithm": "Ed25519"
+}

@@ -29,6 +29,7 @@
   function safeOrderImage(v){v=text(v,440000);if(/^data:image\/(?:png|jpe?g|webp);base64,[a-z0-9+/=]+$/i.test(v))return v;return safeUrl(v,['https:'],800);}
   function safePayUrl(v){return safeUrl(v,['https:','weixin:','alipays:','alipay:'],1000);}
   function safePayQr(v){v=text(v,320000);return /^data:image\/png;base64,[a-z0-9+/=]+$/i.test(v)?v:'';}
+  function deliveryRelayRequestId(){try{return'dlr_'+crypto.randomUUID().toLowerCase();}catch(_){return'dlr_'+String(uid()+uid()).toLowerCase().replace(/[^a-z0-9-]/g,'').slice(0,80);}}
   function safeOptionGroups(v){
     return (Array.isArray(v)?v:[]).slice(0,12).map(function(g){g=g&&typeof g==='object'?g:{};var choices=(Array.isArray(g.choices)?g.choices:[]).slice(0,30).map(function(c){c=c&&typeof c==='object'?c:{label:c};return{id:text(c.id||c.value||c.label,120),label:text(c.label||c.name||c.value,80),priceDelta:num(c.priceDelta||c.extraPrice||0),available:c.available!==false,selected:c.selected===true};}).filter(function(c){return c.id&&c.label&&c.available;});return{id:text(g.id||g.name,120),name:text(g.name||g.label,80),required:g.required!==false,multiple:g.multiple===true,selectionCount:Math.max(1,Math.min(20,+g.selectionCount||1)),choices:choices};}).filter(function(g){return g.id&&g.name&&g.choices.length;});
   }
@@ -76,6 +77,7 @@
     r.addressLabel=text(r.addressLabel,80);
     r.approvedAddressFingerprint=text(r.approvedAddressFingerprint,180);
     r.lastCapability=r.lastCapability&&typeof r.lastCapability==='object'?r.lastCapability:null;
+    r.deviceLinkStatus=r.deviceLinkStatus&&typeof r.deviceLinkStatus==='object'?r.deviceLinkStatus:null;
     r.lastRoleNotice=r.lastRoleNotice&&typeof r.lastRoleNotice==='object'?{message:text(r.lastRoleNotice.message,180),kind:text(r.lastRoleNotice.kind,20)||'info',at:+r.lastRoleNotice.at||0}:null;
     r.pendingCreates=Array.isArray(r.pendingCreates)?r.pendingCreates.filter(function(x){return x&&Date.now()-(+x.at||0)<10*60000;}).slice(0,12):[];
     r.roleTasks=r.roleTasks&&typeof r.roleTasks==='object'?r.roleTasks:{};Object.keys(r.roleTasks).forEach(function(taskId){var task=r.roleTasks[taskId];if(!task||typeof task!=='object'){delete r.roleTasks[taskId];return;}task.taskId=text(task.taskId||taskId,160);task.status=text(task.status,40)||'failed';task.completedItems=Array.isArray(task.completedItems)?task.completedItems.map(function(x){return text(x,140);}).filter(Boolean).slice(0,30):[];if(!TASK_TERMINAL[task.status]&&task.expiresAt&&Date.now()>+task.expiresAt){task.status='expired';task.endedAt=Date.now();task.error='真实外卖授权任务已过期';task.clarification=null;}else if(!TASK_TERMINAL[task.status]&&task.status!=='awaiting_clarification'&&task.startedAt&&Date.now()-task.startedAt>180000){task.status='failed';task.endedAt=task.startedAt+180000;task.error='真实外卖操作超过3分钟，已结束本轮';}else if(task.status==='awaiting_clarification'&&Date.now()-(+task.updatedAt||+task.createdAt||0)>30*60000){task.status='expired';task.endedAt=Date.now();task.error='真实外卖澄清已过期';task.clarification=null;}});
@@ -136,22 +138,35 @@
   async function request(action,payload,timeout){
     var url=connectorUrl();
     if(!url)throw new Error('还没有连接真实外卖服务');
-    var ctl=typeof AbortController==='function'?new AbortController():null,timer=ctl?setTimeout(function(){ctl.abort();},timeout||25000):0;
+    var deadline=Date.now()+(timeout||25000),relayRequestId=deliveryRelayRequestId();
+    while(Date.now()<deadline){var ctl=typeof AbortController==='function'?new AbortController():null,remaining=Math.max(1000,deadline-Date.now()),timer=ctl?setTimeout(function(){ctl.abort();},remaining):0;
     try{
       var cfg=deliveryRuntimeConfig(),official=url===builtInConnectorUrl(),headers={'content-type':'application/json','x-north-delivery-contract':'1'};
       if(cfg.explicit&&cfg.valid&&official){headers.apikey=cfg.publishableKey;headers.Authorization='Bearer '+cfg.publishableKey;}else try{if(typeof COMPANION_KEY==='string'&&official){headers.apikey=COMPANION_KEY;headers.Authorization='Bearer '+COMPANION_KEY;}}catch(_){}
       var client=cfg.explicit?{appVersion:String(APP_VER||''),privateApp:typeof privateNativeAppOn==='function'&&privateNativeAppOn(),target:deliveryClientTarget(cfg.deploymentId),ownerSecret:deliveryConnectorSecret(cfg.deploymentId)}:{appVersion:String(APP_VER||''),privateApp:typeof privateNativeAppOn==='function'&&privateNativeAppOn(),target:typeof cloudId==='function'?cloudId():'',ownerSecret:official&&typeof companionOwnerSecret==='function'?companionOwnerSecret():deliveryConnectorSecret()};
+      client.relayRequestId=relayRequestId;
       var res=await fetch(url,{method:'POST',credentials:'include',headers:headers,body:JSON.stringify({action:action,payload:payload||{},client:client}),signal:ctl&&ctl.signal});
       var body=null;try{body=await res.json();}catch(_){}
+      if(res.status===202&&body&&body.pending===true){if(timer)clearTimeout(timer);await new Promise(function(resolve){setTimeout(resolve,Math.max(500,Math.min(3000,+body.retryAfterMs||1200)));});continue;}
       if(!res.ok||!body||body.ok===false)throw new Error(text(body&&body.error||('真实外卖服务 HTTP '+res.status),180));
       return body.data==null?body:body.data;
-    }catch(e){if(e&&e.name==='AbortError')throw new Error('真实外卖服务响应超时');throw e;}finally{if(timer)clearTimeout(timer);}
+    }catch(e){if(e&&e.name==='AbortError')throw new Error('真实外卖服务响应超时');throw e;}finally{if(timer)clearTimeout(timer);}}
+    throw new Error('真实外卖服务响应超时');
   }
   function setEnabled(on){
     var r=foodState();r.enabled=!!on;r.autoPay=false;
     S.food.results=[];S.food.cart=[];save();render();toast(r.enabled?'已切换为真实外卖；不会使用虚拟结果':'已关闭真实外卖，恢复虚拟外卖');setTimeout(openSettings,0);
     if(r.enabled)refreshCapabilities(false);
   }
+  async function refreshDeviceStatus(show){
+    var r=foodState();try{var data=await request('device_status',{},15000);r.deviceLinkStatus={linked:data.linked===true,online:data.online===true,deviceName:text(data.deviceName,80),deviceId:text(data.deviceId,160),agentVersion:text(data.agentVersion,40),pairedAt:data.pairedAt||'',lastSeenAt:data.lastSeenAt||'',at:Date.now()};save();if(show)openSettings();return r.deviceLinkStatus;}
+    catch(e){r.deviceLinkStatus={linked:false,online:false,error:text(e&&e.message,160),at:Date.now()};save();if(show)openSettings();return r.deviceLinkStatus;}finally{r._deviceStatusLoading=false;}}
+  async function beginDevicePairing(){
+    try{var data=await request('device_pairing_begin',{},15000),code=text(data.pairCode,20);if(!/^\d{10}$/.test(code))throw new Error('没有取得有效配对码');var shown=code.slice(0,5)+' '+code.slice(5);openModal('<div class="delivery-settings"><div class="delivery-settings-head"><div><small>ONE PERSON · ONE DEVICE</small><h3>绑定本人的外卖电脑</h3></div><button onclick="deliveryOpenSettings()">‹</button></div><div class="delivery-notice">在朋友电脑安装“小手机外卖伴生程序”，打开后输入下面的一次性号码。号码十分钟后失效。</div><div style="font-size:30px;font-weight:900;letter-spacing:4px;text-align:center;padding:24px 8px;color:#fff">'+esc(shown)+'</div><div class="delivery-safety">伴生程序只会使用这台电脑自己的专用 Edge、外卖账号和地址；不会取得聊天、照片或你的其他设备权限。</div><button class="delivery-save" onclick="deliveryRefreshDeviceStatus(true)">电脑已经输入，检查绑定</button></div>');}
+    catch(e){toast(e&&e.message||'生成配对码失败');}
+  }
+  function confirmDeviceRevoke(){openModal('<h3>解绑这台外卖电脑？</h3><div class="hint">解绑后，旧电脑会立即失去领取新点单任务的权限；不会删除平台账号或历史订单。</div><div class="btns"><button class="btn g" onclick="deliveryOpenSettings()">取消</button><button class="btn p" onclick="deliveryRevokeDevice()">确认解绑</button></div>');}
+  async function revokeDevice(){try{await request('device_revoke',{confirmedByUser:true},15000);var r=foodState();r.deviceLinkStatus={linked:false,online:false,at:Date.now()};r.enabled=false;r.lastCapability=null;save();toast('已解绑旧外卖电脑');openSettings();}catch(e){toast(e&&e.message||'解绑失败');}}
   async function refreshCapabilities(show){
     var r=foodState();
     try{var cap=await request('capabilities',{},15000);r.lastCapability={ok:true,at:Date.now(),providers:Array.isArray(cap.providers)?cap.providers.map(String):[],payments:Array.isArray(cap.payments)?cap.payments.map(String):[],addressLabel:text(cap.addressLabel,80),addressConfirmation:cap.addressConfirmation!==false};if(r.lastCapability.addressLabel)r.addressLabel=r.lastCapability.addressLabel;r.autoPay=false;save();if(show)toast('淘宝闪购真实服务已连接');render();return true;}
@@ -163,8 +178,10 @@
   }
   function openSettings(){
     var r=foodState(),cap=r.lastCapability,connected=cap&&cap.ok,capText=connected?'淘宝闪购已连接 · 支付宝由本人确认':cap&&cap.error?'未连接：'+cap.error:'尚未检测真实服务',notice=r.lastRoleNotice,noticeHtml=notice&&notice.message?'<div class="delivery-notice"><b>最近系统提示</b><br>'+esc(notice.message)+'</div>':'';
+    var device=r.deviceLinkStatus,deviceSub=device&&device.linked?(device.online?'在线 · '+(device.deviceName||'本人的 Windows 电脑'):'已绑定但当前离线 · '+(device.deviceName||'Windows 电脑')):device&&device.error?'尚未绑定：'+device.error:'尚未检查个人外卖电脑',deviceAction=device&&device.linked?'<button onclick="deliveryConfirmDeviceRevoke()">解绑</button>':'<button onclick="deliveryBeginDevicePairing()">生成配对码</button>',deviceHtml='<div class="delivery-field"><label>我的外卖电脑</label><div><input value="'+esc(deviceSub)+'" disabled>'+deviceAction+'</div><small>每个账号只能绑定一台电脑；未绑定时禁止连接任何其他人的后台。</small></div>';
     var prefRows=Object.keys(PREF_CONFIG).map(function(kind){var cfg=PREF_CONFIG[kind];return'<button class="delivery-role-row" onclick="deliveryOpenPreferences(\''+kind+'\')"><span>'+cfg.icon+'</span><span><b>'+cfg.title+'</b><small>'+esc(preferenceCategoryText(kind))+'</small></span><i>›</i></button>';}).join('');
-    openModal('<div class="delivery-settings"><div class="delivery-settings-head"><div><small>DELIVERY CONTROL</small><h3>淘宝闪购真实外卖</h3></div><button onclick="closeModal()">×</button></div><div class="delivery-notice">只显示淘宝闪购真实返回的商家、商品、价格和平台状态；失败时不会用虚拟订单代替。</div>'+noticeHtml+'<label class="delivery-toggle"><span><b>开启真实外卖</b><small>开启后角色可自动搜索、换店、选规格并进入付款页</small></span><input type="checkbox" '+(r.enabled?'checked':'')+' onchange="deliverySetEnabled(this.checked)"><i></i></label><div class="delivery-notice"><b>付款方式：支付宝本人确认</b><br>搜索、换店、商品、真实规格、购物车和结算由角色自动完成；支付密码或生物识别只由你本人完成。</div><div class="delivery-section-title">我的外卖偏好</div>'+prefRows+'<button class="delivery-role-row" onclick="deliveryOpenLearnedMemories()"><span>🧠</span><span><b>角色学会的偏好</b><small>来自有依据的真实聊天 · '+r.learnedMemories.length+' 条 · 可查看和删除</small></span><i>›</i></button><button class="delivery-role-row" onclick="deliveryOpenSavedRoutes()"><span>📍</span><span><b>常用直达路线</b><small>同款优先直达；没有路线时自动进行一次受限搜索</small></span><i>›</i></button><div class="delivery-field"><label>真实服务状态</label><div><input value="'+esc(capText)+'" disabled><button onclick="deliveryRefreshCapabilities(true)" '+(!r.enabled?'disabled':'')+'>重新检测</button></div></div><div class="delivery-field"><label>当前收货地址</label><div><input value="'+esc(r.addressLabel||'尚未确认')+'" disabled><button onclick="deliveryConfirmAddress()" '+(!r.enabled||!connected||(cap&&cap.addressConfirmation===false)?'disabled':'')+'>本人确认</button></div><small>'+(cap&&cap.addressConfirmation===false?'当前真实外卖服务不支持地址确认':r.approvedAddressFingerprint?'已确认当前平台默认地址':'连接成功后，请在创建订单前确认平台默认地址')+'</small></div><div class="delivery-safety">角色优先使用常用直达路线；路线打烊或失效时会自动换店，并最多检查三家匹配门店。只有平台强制验证时才暂停，验证消失后继续原步骤；支付确认始终由你本人完成。</div></div>');
+    openModal('<div class="delivery-settings"><div class="delivery-settings-head"><div><small>DELIVERY CONTROL</small><h3>淘宝闪购真实外卖</h3></div><button onclick="closeModal()">×</button></div><div class="delivery-notice">只显示淘宝闪购真实返回的商家、商品、价格和平台状态；失败时不会用虚拟订单代替。</div>'+noticeHtml+deviceHtml+'<label class="delivery-toggle"><span><b>开启真实外卖</b><small>开启后角色可自动搜索、换店、选规格并进入付款页</small></span><input type="checkbox" '+(r.enabled?'checked':'')+' onchange="deliverySetEnabled(this.checked)"><i></i></label><div class="delivery-notice"><b>付款方式：支付宝本人确认</b><br>搜索、换店、商品、真实规格、购物车和结算由角色自动完成；支付密码或生物识别只由你本人完成。</div><div class="delivery-section-title">我的外卖偏好</div>'+prefRows+'<button class="delivery-role-row" onclick="deliveryOpenLearnedMemories()"><span>🧠</span><span><b>角色学会的偏好</b><small>来自有依据的真实聊天 · '+r.learnedMemories.length+' 条 · 可查看和删除</small></span><i>›</i></button><button class="delivery-role-row" onclick="deliveryOpenSavedRoutes()"><span>📍</span><span><b>常用直达路线</b><small>同款优先直达；没有路线时自动进行一次受限搜索</small></span><i>›</i></button><div class="delivery-field"><label>真实服务状态</label><div><input value="'+esc(capText)+'" disabled><button onclick="deliveryRefreshCapabilities(true)" '+(!r.enabled?'disabled':'')+'>重新检测</button></div></div><div class="delivery-field"><label>当前收货地址</label><div><input value="'+esc(r.addressLabel||'尚未确认')+'" disabled><button onclick="deliveryConfirmAddress()" '+(!r.enabled||!connected||(cap&&cap.addressConfirmation===false)?'disabled':'')+'>本人确认</button></div><small>'+(cap&&cap.addressConfirmation===false?'当前真实外卖服务不支持地址确认':r.approvedAddressFingerprint?'已确认当前平台默认地址':'连接成功后，请在创建订单前确认平台默认地址')+'</small></div><div class="delivery-safety">角色优先使用常用直达路线；路线打烊或失效时会自动换店，并最多检查三家匹配门店。只有平台强制验证时才暂停，验证消失后继续原步骤；支付确认始终由你本人完成。</div></div>');
+    if((!device||Date.now()-(+device.at||0)>30000)&&!r._deviceStatusLoading){r._deviceStatusLoading=true;setTimeout(function(){refreshDeviceStatus(true);},0);}
   }
   async function confirmAddress(){
     var r=foodState();if(!r.enabled||!connectorUrl()){toast('请先连接真实外卖服务');return;}if(r.lastCapability&&r.lastCapability.addressConfirmation===false){toast('当前真实外卖服务不支持地址确认');return;}
@@ -506,6 +523,10 @@
   window.deliverySetEnabled=setEnabled;
   window.deliveryConfirmAddress=confirmAddress;
   window.deliveryRefreshCapabilities=refreshCapabilities;
+  window.deliveryRefreshDeviceStatus=refreshDeviceStatus;
+  window.deliveryBeginDevicePairing=beginDevicePairing;
+  window.deliveryConfirmDeviceRevoke=confirmDeviceRevoke;
+  window.deliveryRevokeDevice=revokeDevice;
   window.deliveryOpenPreferences=openPreferences;
   window.deliveryPreferenceAdd=addPreferenceItem;
   window.deliveryPreferenceRemove=removePreferenceItem;

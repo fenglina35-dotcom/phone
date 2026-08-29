@@ -1214,13 +1214,16 @@ export function menuCardName(titleText, cardText) {
 }
 
 export class TaobaoFlashBrowser {
-  constructor({ profile, headless = false, timeout = 30_000, cdpUrl = '' } = {}) {
+  constructor({ profile, headless = false, timeout = 30_000, cdpUrl = '', cdpPort = 0 } = {}) {
     this.profile = profile || './profile';
     this.headless = headless;
     this.timeout = timeout;
     this.executablePath = process.env.PHONE_DELIVERY_CHROME_PATH || '';
     this.cdpUrl = clean(cdpUrl || process.env.PHONE_DELIVERY_CDP_URL, 500);
+    const requestedPort = Number(cdpPort || process.env.PHONE_DELIVERY_CDP_PORT || 9222);
+    this.cdpPort = Number.isInteger(requestedPort) && requestedPort >= 1024 && requestedPort <= 65535 ? requestedPort : 9222;
     this.browser = null;
+    this.edgeProcess = null;
     this.attached = false;
     this.context = null;
     this.page = null;
@@ -1296,14 +1299,15 @@ export class TaobaoFlashBrowser {
   }
 
   async launchWindowsVisibleCdp(chromium) {
-    const endpoint = 'http://127.0.0.1:9222';
+    const endpoint = `http://127.0.0.1:${this.cdpPort}`;
     const profile = path.resolve(this.profile);
     let ready = false;
     try { ready = (await fetch(`${endpoint}/json/version`, { cache: 'no-store' })).ok; } catch {}
     if (!ready) {
       const child = spawn(this.executablePath, [
-        '--remote-debugging-port=9222', `--user-data-dir=${profile}`, '--no-first-run', MSITE,
+        `--remote-debugging-port=${this.cdpPort}`, `--user-data-dir=${profile}`, '--no-first-run', MSITE,
       ], { detached: true, stdio: 'ignore', windowsHide: false });
+      this.edgeProcess = child;
       child.unref();
       const deadline = Date.now() + 20_000;
       while (Date.now() < deadline) {
@@ -1345,6 +1349,14 @@ export class TaobaoFlashBrowser {
 
   async close() {
     if (!this.attached) await this.context?.close().catch(() => {});
+    this.browser = null; this.context = null; this.page = null; this.attached = false; this.prewarmed = false;
+  }
+
+  async forceClose() {
+    if (this.attached) await this.browser?.close().catch(() => {});
+    else await this.context?.close().catch(() => {});
+    if (this.edgeProcess && !this.edgeProcess.killed) this.edgeProcess.kill();
+    this.edgeProcess = null;
     this.browser = null; this.context = null; this.page = null; this.attached = false; this.prewarmed = false;
   }
 

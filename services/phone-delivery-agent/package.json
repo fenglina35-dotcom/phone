@@ -1,0 +1,69 @@
+{
+  "name": "small-phone-delivery-agent",
+  "version": "0.1.0",
+  "description": "小手机一人一机外卖浏览器伴生程序",
+  "author": "Small Phone",
+  "private": true,
+  "type": "module",
+  "main": "src/main.mjs",
+  "scripts": {
+    "ensure-signing-key": "node build/ensure-signing-key.mjs",
+    "sync-runtime": "npm run ensure-signing-key && node build/sync-runtime.mjs",
+    "dev": "npm run sync-runtime && electron .",
+    "test": "node --test test/*.test.mjs",
+    "dist": "npm run sync-runtime && electron-builder --win nsis",
+    "release-runtime": "npm run sync-runtime && node build/release-runtime.mjs"
+  },
+  "dependencies": {
+    "adm-zip": "0.6.0",
+    "playwright": "1.55.1",
+    "qrcode": "1.5.4"
+  },
+  "devDependencies": {
+    "electron": "39.2.7",
+    "electron-builder": "26.0.12"
+  },
+  "build": {
+    "appId": "com.north.smallphone.delivery",
+    "productName": "小手机外卖伴生程序",
+    "asar": true,
+    "asarUnpack": [
+      "runtime/**"
+    ],
+    "files": [
+      "src/**",
+      "runtime/**",
+      "package.json",
+      "node_modules/playwright/**",
+      "node_modules/playwright-core/**",
+      "node_modules/qrcode/**",
+      "node_modules/pngjs/**",
+      "node_modules/adm-zip/**"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "SmallPhoneDeliveryAgent-${version}-Setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowElevation": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "小手机外卖伴生程序",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": true
+    }
+  }
+}

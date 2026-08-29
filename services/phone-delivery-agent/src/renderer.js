@@ -1,0 +1,10 @@
+const api=window.smallPhoneDelivery,$=id=>document.getElementById(id),message=(value,kind='')=>{const el=$('message');el.textContent=value||'';el.className=kind;};
+function render(state){const linked=state&&state.linked;$('setup').classList.toggle('hidden',linked);$('linked').classList.toggle('hidden',!linked);if(!linked)return;const online=state.worker==='online',busy=state.worker==='busy',dot=$('statusDot');dot.className=online||busy?'online':'offline';$('statusTitle').textContent=busy?'正在执行点单':online?'已安全连接':'正在重新连接';$('statusText').textContent=`${state.deviceName||'这台电脑'} · 程序 ${state.version||''}${state.runtimeVersion?' · 规则 '+state.runtimeVersion:''}`;}
+async function refresh(){try{render(await api.state());}catch(e){message(e.message||'状态读取失败','error');}}
+$('pair').onclick=async()=>{const button=$('pair'),code=$('pairCode').value.replace(/\D/g,'');if(code.length!==10)return message('请输入小手机显示的十位配对码','error');button.disabled=true;message('正在安全绑定…');try{const state=await api.pair(code);render(state);message('绑定成功。下一步请打开专用外卖 Edge，登录你自己的账号。','ok');}catch(e){message(e.message||'绑定失败','error');}finally{button.disabled=false;}};
+$('login').onclick=async()=>{message('正在打开专用 Edge…');try{await api.openLogin();message('请只在弹出的专用 Edge 登录你自己的外卖账号。','ok');}catch(e){message(e.message||'Edge 打开失败','error');}};
+$('smallPhone').onclick=()=>api.openSmallPhone();
+$('update').onclick=async()=>{message('正在检查更新…');try{const r=await api.checkUpdate();message(r.message||'已经是最新版',r.updated?'ok':'');await refresh();}catch(e){message(e.message||'更新检查失败','error');}};
+$('forget').onclick=async()=>{if(!confirm('只清除这台电脑里的绑定？请同时在小手机里点“解绑”，旧任务才会立即失效。'))return;await api.forgetLocal();await refresh();message('本机绑定已清除。','ok');};
+$('purge').onclick=async()=>{if(!confirm('这会退出专用 Edge，并永久删除这台电脑里的外卖登录、Cookie、地址缓存和绑定。确定继续吗？'))return;message('正在清除本机外卖资料…');try{await api.purgeLocal();await refresh();message('本机外卖登录资料和绑定已经清除。请再到小手机真实外卖设置中点“解绑”。','ok');}catch(e){message(`${e.message||'清除失败'}。请先关闭专用 Edge 后重试。`,'error');}};
+api.onState(render);refresh();setInterval(refresh,10000);

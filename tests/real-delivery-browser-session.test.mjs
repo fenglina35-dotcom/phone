@@ -11,7 +11,7 @@ test('delivery browser uses its real browser identity and can attach to a visibl
   assert.match(source, /chromium\.connectOverCDP\(endpoint\)/);
   assert.match(server, /PHONE_DELIVERY_CDP_URL/);
   assert.match(source, /process\.platform === 'win32'[\s\S]*launchWindowsVisibleCdp/);
-  assert.match(source, /--remote-debugging-port=9222/);
+  assert.match(source, /--remote-debugging-port=\$\{this\.cdpPort\}/);
   assert.doesNotMatch(source, /ignoredDefaultArgs|disable-blink-features=AutomationControlled|navigator\s*,\s*['"]webdriver/);
 });
 
