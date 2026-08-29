@@ -6,9 +6,9 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-assert.match(source,/APP_VER='v1102 · 安卓大存档启动修复版'/);
-assert.match(html,/__NORTH_SHELL_BUILD__='1102'/);
-assert.match(sw,/BUILD='1102'/);
+assert.match(source,/APP_VER='v1103 · 安卓缓存解锁与存档保护版'/);
+assert.match(html,/__NORTH_SHELL_BUILD__='1103'/);
+assert.match(sw,/BUILD='1103'/);
 assert.equal((project.match(/CURRENT_PROJECT_VERSION = 225;/g)||[]).length,12);
 assert.equal((project.match(/MARKETING_VERSION = 1\.0\.225;/g)||[]).length,12);
 

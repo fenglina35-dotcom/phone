@@ -1,6 +1,6 @@
-const BUILD='1102';
-const HOTFIX='v1102-android-large-store-startup-1';
-const SHELL_CACHE='north-shell-v1102';
+const BUILD='1103';
+const HOTFIX='v1103-android-cache-unlock-store-1';
+const SHELL_CACHE='north-shell-v1103';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
@@ -79,6 +79,18 @@ async function currentCore(cache,kind){
   const item=CORE_FILES.find(x=>x.kind===kind);
   return item?cache.match(item.url):null;
 }
+async function warmOptionalFiles(){
+  const cache=await caches.open(SHELL_CACHE);
+  await Promise.all(OPTIONAL_FILES.map(async url=>{
+    try{const response=await fetchRetry(url,{cache:'no-cache'},1);if(response&&response.ok)await cache.put(url,response);}catch(_){}
+  }));
+  const iconCache=await caches.open(GLASS_ICON_CACHE);
+  for(let i=0;i<GLASS_ICON_FILES.length;i+=8){
+    await Promise.all(GLASS_ICON_FILES.slice(i,i+8).map(async url=>{
+      try{const response=await fetchRetry(url,{cache:'no-cache'},1);if(response&&response.ok)await iconCache.put(url,response);}catch(_){}
+    }));
+  }
+}
 
 self.addEventListener('install',event=>{
   event.waitUntil((async()=>{
@@ -88,18 +100,6 @@ self.addEventListener('install',event=>{
       return {item,response};
     }));
     for(const entry of core)await cache.put(entry.item.url,entry.response);
-    await Promise.all(OPTIONAL_FILES.map(async url=>{
-      try{
-        const response=await fetchRetry(url,{cache:'no-cache'},2);
-        if(response&&response.ok)await cache.put(url,response);
-      }catch(_){}
-    }));
-    const iconCache=await caches.open(GLASS_ICON_CACHE);
-    for(let i=0;i<GLASS_ICON_FILES.length;i+=8){
-      await Promise.all(GLASS_ICON_FILES.slice(i,i+8).map(async url=>{
-        try{const response=await fetchRetry(url,{cache:'no-cache'},2);if(response&&response.ok)await iconCache.put(url,response);}catch(_){}
-      }));
-    }
     await self.skipWaiting();
   })());
 });
@@ -115,6 +115,7 @@ self.addEventListener('activate',event=>{
     await self.clients.claim();
     const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
     windows.forEach(client=>{try{client.postMessage({type:'north-update-ready',build:BUILD});}catch(_){}});
+    setTimeout(()=>warmOptionalFiles().catch(()=>{}),15000);
   })());
 });
 
@@ -144,6 +145,17 @@ self.addEventListener('fetch',event=>{
   // never be replaced by the cached small-phone application shell.
   if(request.mode==='navigate'&&/\/north-(?:support|privacy|role-controller)\.html$/.test(url.pathname))return;
 
+  // Recovery and launcher pages must bypass the application shell cache.
+  // Otherwise the old worker serves the broken app shell again and the
+  // "repair cache" button appears to do nothing.
+  if(request.mode==='navigate'&&/(?:^|\/)(?:repair|index)\.html$/.test(url.pathname)){
+    event.respondWith(fetch(request,{cache:'no-store'}).catch(()=>new Response(
+      '<meta charset="utf-8"><body style="background:#111;color:#eee;font-family:sans-serif;padding:30px;text-align:center">修复页暂时无法下载，请检查网络后重试；本机数据没有被删除。</body>',
+      {headers:{'Content-Type':'text/html;charset=utf-8','Cache-Control':'no-store'}}
+    )));
+    return;
+  }
+
   // Local visual previews must always load the exact requested document.
   // Otherwise an old cached app shell can replace the preview with the gate.
   if(request.mode==='navigate'&&(
@@ -158,12 +170,14 @@ self.addEventListener('fetch',event=>{
     event.respondWith((async()=>{
       const cache=await caches.open(SHELL_CACHE);
       const cached=await currentCore(cache,'html');
-      if(cached)return cached;
+      const explicit=/\/小手机\.html$/.test(url.pathname)&&(url.searchParams.has('reload')||url.searchParams.has('open')||url.searchParams.has('from'));
+      if(cached&&!explicit)return cached;
       try{
         const response=await checkedResponse(request,'html',1);
         await cache.put(CORE_FILES[0].url,response.clone());
         return response;
       }catch(_){
+        if(cached)return cached;
         return new Response(
           '<meta charset="utf-8"><body style="background:#111;color:#eee;font-family:sans-serif;padding:30px;text-align:center">页面文件没有完整下载，请连接可访问 GitHub Pages 的网络后重新打开。聊天和角色数据不会丢失。</body>',
           {headers:{'Content-Type':'text/html;charset=utf-8'}}
@@ -194,7 +208,8 @@ self.addEventListener('fetch',event=>{
     })());
     return;
   }
-  if(/\/commerce-ui\.js$/.test(url.pathname)||/\/(?:gift-effects|thought-card-effects)\.js$/.test(url.pathname)||/\/pet-game\.js$/.test(url.pathname)||/\/pet-game\.css$/.test(url.pathname)||/\/assets\/pet-room-v1\.webp$/.test(url.pathname)||/\/icon\.png$/.test(url.pathname)||/\/vendor\//.test(url.pathname)){
+  const optionalPath=OPTIONAL_FILES.some(value=>{try{return new URL(value,self.location.href).pathname===url.pathname;}catch(_){return false;}});
+  if(optionalPath||/\/commerce-ui\.js$/.test(url.pathname)||/\/(?:gift-effects|thought-card-effects)\.js$/.test(url.pathname)||/\/pet-game\.js$/.test(url.pathname)||/\/pet-game\.css$/.test(url.pathname)||/\/assets\/pet-room-v1\.webp$/.test(url.pathname)||/\/icon\.png$/.test(url.pathname)||/\/vendor\//.test(url.pathname)){
     event.respondWith((async()=>{
       const cache=await caches.open(SHELL_CACHE);
       const cached=await cache.match(request,{ignoreSearch:true});
