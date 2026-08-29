@@ -71,8 +71,9 @@ test('all common-life controls are inline above the chat and save without a page
 });
 
 test('context, reply route and summary route feed the real common-life model chain',()=>{
-  assert.match(functionSource('cohabReplyCore'),/offlineHistoryMessages\(o,cohabContextLimit\(o\)/);
-  assert.match(functionSource('cohabRepairMessages'),/offlineHistoryMessages\(o,cohabContextLimit\(o\)/);
+  assert.match(functionSource('cohabReplyHistory'),/offlineHistoryMessages\(o,cohabContextLimit\(o\)/);
+  assert.match(functionSource('cohabReplyCore'),/cohabReplyHistory\(c,o\)/);
+  assert.match(functionSource('cohabRepairMessages'),/cohabReplyHistory\(c,o\)/);
   assert.match(functionSource('cohabRoleChat'),/aux:cohabReplyAux\(c,d\)/);
   assert.match(functionSource('cohabRoleChat'),/routeIndex:cohabReplyRouteIndex\(d\)/);
   assert.match(functionSource('cohabSummarize'),/aux=cohabSummaryAux\(c,d\)/);

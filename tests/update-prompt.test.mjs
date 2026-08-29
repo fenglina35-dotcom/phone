@@ -5,7 +5,7 @@ const app = fs.readFileSync(new URL("../app.js", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../小手机.html", import.meta.url), "utf8");
 const sw = fs.readFileSync(new URL("../sw.js", import.meta.url), "utf8");
 
-assert.match(app, /APP_VER='v1110 · 共同生活双向连续修复版'/);
+assert.match(app, /APP_VER='v1111 · 共同生活当前剧情连续修复版'/);
 assert.match(app, /function northUpdateAvailable\(build\)/);
 assert.match(app, /发现新版本 v\$\{esc\(build\)\}/);
 assert.match(app, /不需要退出或划掉小手机/);
@@ -14,7 +14,7 @@ assert.match(app, /setInterval\(\(\)=>reg\.update\(\)\.catch\(\(\)=>\{\}\),15\*6
 assert.match(app, /postMessage\(\{type:'north-version-query'\}\)/);
 assert.match(sw, /client\.postMessage\(\{type:'north-update-ready',build:BUILD\}\)/);
 assert.match(sw, /event\.data\.type!==['"]north-version-query['"]/);
-assert.match(html, /window\.__NORTH_SHELL_BUILD__='1110'/);
-assert.match(html, /sw\.js\?v=1110&r=v1110-cohab-bidirectional-continuity-1/);
+assert.match(html, /window\.__NORTH_SHELL_BUILD__='1111'/);
+assert.match(html, /sw\.js\?v=1111&r=v1111-cohab-current-scene-continuity-1/);
 
 console.log("update prompt tests passed");

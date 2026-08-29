@@ -14,9 +14,9 @@ const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest
 const info = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/Info.plist');
 
 test('current release versions stay aligned after v910 screen-share support', () => {
-  assert.match(app, /APP_VER='v1110 · 共同生活双向连续修复版'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 232;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.232;/);
+  assert.match(app, /APP_VER='v1111 · 共同生活当前剧情连续修复版'/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 233;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.233;/);
   assert.match(bridge, /contractVersion = 25/);
 });
 

@@ -73,6 +73,20 @@ test('returning to common life continues newer online plot exactly once',()=>{
   assert.equal(sandbox.run({name:'先生'},{}),'旧共同生活续演');
 });
 
+test('a scene-side proactive role line cannot erase the users latest online channel',()=>{
+  const online=[{time:200,source:'微信',speaker:'user',who:'我',text:'线上刚确认去机场。'},{time:250,source:'微信',speaker:'assistant',who:'先生',text:'我把车开下来。'}],scene=[
+    {time:100,source:'共同生活现场',speaker:'user',who:'我',text:'旧线下话题。',current:false},
+    {time:275,source:'共同生活现场',speaker:'assistant',who:'先生',text:'期间出现的线下主动一句。',current:false},
+    {time:300,source:'共同生活现场',speaker:'user',who:'我',text:'走吧。',current:true}
+  ],sandbox={cohabContextLimit:()=>30,offlineOnlineTimelineRows:()=>online,offlineSceneTimelineRows:()=>scene};
+  vm.runInNewContext(`${functionSource('cohabOnlineReturnState')}\nglobalThis.run=cohabOnlineReturnState;`,sandbox);
+  const state=sandbox.run({name:'先生'},{});
+  assert.ok(state,'handoff follows the latest user channel, not a later role-authored bubble');
+  assert.equal(state.previousUser.text,'线上刚确认去机场。');
+  assert.deepEqual(Array.from(state.onlineRows,x=>x.text),['线上刚确认去机场。','我把车开下来。']);
+  assert.deepEqual(Array.from(state.currentRows,x=>x.text),['走吧。']);
+});
+
 test('the final common-life model request carries the last complete online round as the current handoff',()=>{
   const online=[
     {time:200,source:'微信',speaker:'user',who:'我',text:'我在微信说明天早上八点出发。'},
@@ -89,6 +103,16 @@ test('the final common-life model request carries the last complete online round
   assert.match(request.at(-1).content,/提前把车开到楼下/);
   assert.match(request.at(-1).content,/现在先睡觉/);
   assert.match(request.at(-1).content,/第三人称动作旁白/);
+});
+
+test('the first common-life return request drops the stale scene transcript and restores it after handoff',()=>{
+  let online=[{time:200,source:'微信',speaker:'user',who:'我',text:'线上新话题。'},{time:250,source:'微信',speaker:'assistant',who:'先生',text:'线上已经回应。'}];
+  let scene=[{time:100,source:'共同生活现场',speaker:'assistant',who:'先生',text:'旧线下线程。',current:false},{time:300,source:'共同生活现场',speaker:'user',who:'我',text:'现在继续。',current:true}];
+  const stale=[{role:'assistant',content:'旧线下线程。'}],sandbox={cohabContextLimit:()=>30,offlineOnlineTimelineRows:()=>online,offlineSceneTimelineRows:()=>scene,offlineHistoryMessages:()=>stale};
+  vm.runInNewContext(`${functionSource('cohabOnlineReturnState')}\n${functionSource('cohabReplyHistory')}\nglobalThis.run=cohabReplyHistory;`,sandbox);
+  assert.deepEqual(Array.from(sandbox.run({name:'先生'},{})),[],'old common-life messages must not compete with the newer online round');
+  scene=scene.concat({time:350,source:'共同生活现场',speaker:'assistant',who:'先生',text:'已经承接。',current:false});
+  assert.deepEqual(Array.from(sandbox.run({name:'先生'},{})),stale,'normal scene history returns after the cross-channel reply is delivered');
 });
 
 test('an online arrival queues and writes one real face-to-face handoff without copying the WeChat line',async()=>{

@@ -33,18 +33,19 @@ function runtime(sync=true){
     {id:'c-role',who:'ta',text:'我在线下已经回应了',time:now-2*60000}
   ]}}}};
   const sandbox={S,Date,String,Math,Number,offlineWechatLiveOn:()=>sync,msgs:()=>online,msgToText:m=>m&&m.content||'',previewOf:m=>m&&m.content||'',msgClearTime:m=>+m.time||0,fmtDT:t=>`T${t}`,roleTimeParts:()=>({hour:12,minute:0}),conversationGapQuestion:()=>false,conversationGapFact:()=>null,conversationClaimGapFact:()=>null,conversationComplaintGapFact:()=>null,personaPin:()=>'<persona>',roleReplyClockPin:()=>'<clock>',roleReplyContinuityPin:()=>'<continuity>'};
-  const names=['conversationGapExact','clockNumberValue','clockMinuteDistance','roleClockClaimDistance','conversationVisibleRows','cohabCrossChannelOn','roleCrossChannelOn','roleRecentChannelRounds','roleInteractionRows','roleReplyTimelineRows','roleReplyGapFact','roleReplyTimelinePin','roleReplyContinuityPin','roleReplyCrossChannelHandoff','roleReplyCrossChannelHandoffPrompt','roleReplyRequestPin','roleTimeClaimIssue'];
-  vm.runInNewContext(`const ROLE_TIME_TOLERANCE_MINUTES=2;${names.map(functionSource).join('\n')};globalThis.api={rows:roleReplyTimelineRows,gap:roleReplyGapFact,pin:roleReplyTimelinePin,handoff:roleReplyCrossChannelHandoff,handoffPrompt:roleReplyCrossChannelHandoffPrompt,requestPin:roleReplyRequestPin,issue:roleTimeClaimIssue};`,sandbox);
+  const names=['conversationGapExact','clockNumberValue','clockMinuteDistance','roleClockClaimDistance','conversationVisibleRows','cohabCrossChannelOn','roleCrossChannelOn','roleRecentChannelRounds','roleInteractionRows','roleReplyTimelineRows','roleReplyGapFact','roleReplyTimelinePin','roleReplyContinuityPin','roleReplyCrossChannelHandoff','roleReplyOnlineHistorySource','roleReplyCrossChannelHandoffPrompt','roleReplyRequestPin','roleTimeClaimIssue'];
+  vm.runInNewContext(`const ROLE_TIME_TOLERANCE_MINUTES=2;${names.map(functionSource).join('\n')};globalThis.api={rows:roleReplyTimelineRows,gap:roleReplyGapFact,pin:roleReplyTimelinePin,handoff:roleReplyCrossChannelHandoff,history:roleReplyOnlineHistorySource,handoffPrompt:roleReplyCrossChannelHandoffPrompt,requestPin:roleReplyRequestPin,issue:roleTimeClaimIssue};`,sandbox);
   return {api:sandbox.api,now,online,S};
 }
 
 test('returning to WeChat uses the latest cohabitation turn instead of the old WeChat bubble gap',()=>{
-  const {api,now}=runtime(true),rows=Array.from(api.rows({id:'role',name:'角色'},10));
+  const {api,now,online}=runtime(true),rows=Array.from(api.rows({id:'role',name:'角色'},10));
   assert.deepEqual(rows.map(x=>x.channel),['online','cohab','cohab','online']);
   assert.match(api.pin({id:'role',name:'角色'}),/刚才在线下说过的重要事情/);
   assert.match(api.pin({id:'role',name:'角色'}),/微信气泡之间即使隔了很多小时/);
   assert.match(api.handoffPrompt({id:'role',name:'角色'},now),/本轮是从线下回到微信后的第一条/);
   assert.match(api.handoffPrompt({id:'role',name:'角色'},now),/我在线下已经回应了/);
+  assert.deepEqual(Array.from(api.history({id:'role',name:'角色'},online,now),x=>x.content),['我回微信了'],'the stale online thread must not compete with the completed common-life turn during the handoff request');
   assert.match(api.requestPin({id:'role',name:'角色'},now).content,/禁止第三人称小说旁白/);
   assert.equal(api.gap({id:'role'},now).gap,2*60000);
   assert.match(api.issue('你失联十四个小时了。',{id:'role'},now),/跨渠道互动未满一小时/);
@@ -63,7 +64,19 @@ test('cross-channel handoff applies only to the first online return turn',()=>{
   online.push({id:'w-answer',role:'assistant',type:'text',content:'已经承接线下',time:now+1000});
   online.push({id:'w-next',role:'user',type:'text',content:'继续说',time:now+2000});
   assert.equal(api.handoff(c,now+2000),null);
+  assert.deepEqual(Array.from(api.history(c,online,now+2000),x=>x.content),online.map(x=>x.content),'ordinary online history resumes immediately after the first handoff reply');
   assert.doesNotMatch(api.requestPin(c,now+2000).content,/本轮是从线下回到微信后的第一条/);
+});
+
+test('an online proactive role message cannot erase the users latest common-life channel',()=>{
+  const {api,now,online,S}=runtime(true),c={id:'role',name:'角色'};
+  online.splice(1,0,{id:'w-proactive',role:'assistant',type:'text',content:'共同生活期间到达的后台消息',time:now-30000});
+  const handoff=api.handoff(c,now);
+  assert.ok(handoff,'the handoff follows the latest user channel instead of the latest role bubble channel');
+  assert.equal(handoff.previousUser.channel,'cohab');
+  assert.match(api.handoffPrompt(c,now),/刚才在线下说过的重要事情/);
+  assert.deepEqual(Array.from(api.history(c,online,now),x=>x.content),['我回微信了'],'the unrelated proactive bubble is removed from the first return request');
+  assert.ok(S.cohabitation.homes.role.msgs.length);
 });
 
 test('a long common-life reply cannot push the user action out of the online handoff',()=>{

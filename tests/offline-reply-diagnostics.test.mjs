@@ -72,6 +72,7 @@ test('the real common-life reply pipeline delivers the first genuine answer when
   const context=vm.createContext({
     Date,Map,String,
     offlineHistoryMessages:()=>[],cohabContextLimit:()=>30,
+    cohabOnlineReturnState:()=>null,
     cohabSystem:()=>'',cohabMemoryPrompt:()=>'',offlineRequestMessages:()=>[],
     cohabRepairMessages:()=>[],
     personaPin:()=>'',offlineFormatPin:()=>'',roleReplyContinuityPin:()=>'',offlineWechatLiveOn:()=>true,
@@ -84,7 +85,7 @@ test('the real common-life reply pipeline delivers the first genuine answer when
     cohabExtractTravelTags:x=>({text:x,plans:[],errors:[]}),cohabApplyStateTags:x=>({text:x,matched:true}),
     cohabInferVisiblePlace:()=>{},offDedupeItems:x=>x,cohabCommitTripPlans:()=>[]
   });
-  vm.runInContext(`${functionSource('offlineKeepValidReplyOnRepairFailure')}${functionSource('cohabReplyCore')}this.run=cohabReplyCore;`,context);
+  vm.runInContext(`${functionSource('offlineKeepValidReplyOnRepairFailure')}${functionSource('cohabReplyHistory')}${functionSource('cohabReplyCore')}this.run=cohabReplyCore;`,context);
   const result=await context.run({id:'role',name:'角色'},{},'最新一句','最新一句',600,{});
   assert.equal(runtime.calls,2,'one successful main request plus one failed optional repair');
   assert.deepEqual(Array.from(result.items,x=>x.text),['我在。'],'the genuine first response remains deliverable');
