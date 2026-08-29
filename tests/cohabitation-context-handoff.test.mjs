@@ -73,6 +73,24 @@ test('returning to common life continues newer online plot exactly once',()=>{
   assert.equal(sandbox.run({name:'先生'},{}),'旧共同生活续演');
 });
 
+test('the final common-life model request carries the last complete online round as the current handoff',()=>{
+  const online=[
+    {time:200,source:'微信',speaker:'user',who:'我',text:'我在微信说明天早上八点出发。'},
+    {time:250,source:'微信',speaker:'assistant',who:'先生',text:'好，我会提前把车开到楼下。'}
+  ],scene=[
+    {time:100,source:'共同生活现场',speaker:'assistant',who:'先生',text:'旧现场已经回应。',current:false},
+    {time:300,source:'共同生活现场',speaker:'user',who:'我',text:'那我们现在先睡觉吧。',current:true}
+  ],sandbox={S:{me:{name:'我'}},String,Math,cohabContextLimit:()=>30,offlineOnlineTimelineRows:()=>online,offlineSceneTimelineRows:()=>scene,offlineCurrentTurnPrompt:()=>'错误退回旧现场'};
+  vm.runInNewContext(`${functionSource('cohabOnlineReturnState')}\n${functionSource('cohabCurrentTurnPrompt')}\n${functionSource('offlineArchivedHistory')}\n${functionSource('offlineRequestMessages')}\nglobalThis.make=(c,o)=>offlineRequestMessages('SYS',[],{role:'system',content:'PIN'},cohabCurrentTurnPrompt(c,o,''));`,sandbox);
+  const request=Array.from(sandbox.make({name:'先生'},{}));
+  assert.deepEqual(request.map(x=>x.role),['system','system','user']);
+  assert.match(request.at(-1).content,/从线上聊天返回共同生活/);
+  assert.match(request.at(-1).content,/明天早上八点出发/);
+  assert.match(request.at(-1).content,/提前把车开到楼下/);
+  assert.match(request.at(-1).content,/现在先睡觉/);
+  assert.match(request.at(-1).content,/第三人称动作旁白/);
+});
+
 test('an online arrival queues and writes one real face-to-face handoff without copying the WeChat line',async()=>{
   const d={phase:'away',msgs:[],pendingArrival:null},root={enabled:true,paused:false,cid:'c1'},scheduled=[];
   const sandbox={
@@ -133,11 +151,11 @@ test('common-life reply core is wired to the common-life repair prompt and arriv
   assert.deepEqual(notices,[['已切换副模型',3000],['已切换主模型',3000]]);
 });
 
-test('the existing online-offline sync switch also gates common-life context',()=>{
-  assert.match(source,/function cohabWechatState\(c\)\{[^}]*!offlineWechatLiveOn\(\)/);
-  assert.match(source,/const contextLimit=cohabContextLimit\(o\),shared=offlineWechatLiveOn\(\)\?offlineUnifiedTimelinePrompt\(c,o,contextLimit\)/);
-  assert.match(source,/约会中同步到线上 · 含共同生活/);
-  assert.match(source,/可见记录与格式不互相复制/);
+test('common life always shares context while the switch only controls one-time dates',()=>{
+  assert.doesNotMatch(functionSource('cohabWechatState'),/offlineWechatLiveOn/);
+  assert.match(source,/const contextLimit=cohabContextLimit\(o\),shared=offlineUnifiedTimelinePrompt\(c,o,contextLimit\)/);
+  assert.match(source,/单次约会同步到线上/);
+  assert.match(source,/共同生活永远与微信、电话共用同一条连续上下文/);
   assert.match(source,/const _wechatLive=_main\?wechatLiveScene\(c\):null/);
   assert.match(source,/const _liveScene=!!_wechatLive/);
   assert.match(source,/if\(!_natural&&!_liveScene&&lu\)/);

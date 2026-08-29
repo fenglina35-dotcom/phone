@@ -116,8 +116,8 @@ test('private iOS app grants bundled camera capture and declares privacy usage',
   assert.match(webView,/type == \.cameraAndMicrophone/);
   assert.match(webView,/bundledPage && supportedCapture \? \.grant : \.deny/);
   assert.match(project,/INFOPLIST_KEY_NSCameraUsageDescription/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 231/);
-  assert.match(project,/MARKETING_VERSION = 1\.0\.231/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 232/);
+  assert.match(project,/MARKETING_VERSION = 1\.0\.232/);
 });
 
 test('private iOS camera preview keeps one media session across recognized sentences',()=>{

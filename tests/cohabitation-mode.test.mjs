@@ -111,7 +111,7 @@ test('online and face-to-face activity use a narrow shared status boundary',()=>
   assert.match(source,/不能拿来否定同居/);
   assert.match(source,/不许说“最近一次见面是某天”“还在异国恋\/分居”“等你落地\/改签机票”/);
   assert.match(source,/roleOnlineLiveStateText\(c\)/);
-  assert.match(source,/仅在“约会中同步到线上”开关开启时生效/);
+  assert.match(source,/不受单次约会同步开关影响/);
   assert.match(source,/共同生活页面里的动作与对白不会复制到微信/);
   assert.match(source,/微信消息也不会冒充面对面台词/);
   assert.match(source,/function offlineFocusActive\(\)\{if\(cohabSceneBlocksOnline\(\)\)return true/);

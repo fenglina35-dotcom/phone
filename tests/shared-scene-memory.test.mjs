@@ -112,5 +112,5 @@ test('all three role contexts receive own-Moments memory without changing reply 
   assert.match(functionSource('offlineSystem'),/offlineLifeNotesPrompt\(c,query\)\+roleOwnMomentsPrompt\(c,6\)/);
   assert.match(functionSource('cohabSystem'),/offlineLifeNotesPrompt\(c,query\)\+roleOwnMomentsPrompt\(c,6\)/);
   assert.match(functionSource('offlineSystem'),/offlineWechatLiveOn\(\)\?offlineUnifiedTimelinePrompt/);
-  assert.match(source,/线上\/线下同步已关闭[\s\S]{0,120}平行独立世界处理/);
+  assert.match(source,/单次约会同步已关闭[\s\S]{0,180}共同生活的固定互通规则不受这个开关影响/);
 });
