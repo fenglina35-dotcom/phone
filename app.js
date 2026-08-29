@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1107'){
+if(window.__NORTH_SHELL_BUILD__!=='1108'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -385,7 +385,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1107 · 跨渠道时间与线下记忆连续修复版';
+const APP_VER='v1108 · 私人微信与共同生活承接修复版';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1588,7 +1588,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1107&r=v1107-cross-channel-continuity-1';
+  const url='sw.js?v=1108&r=v1108-private-wechat-cohab-handoff-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -1807,6 +1807,8 @@ function offlineWechatLiveOn(){return !(S.settings&&S.settings.offlineWechatLive
 function offlineWechatLiveState(c){if(!c||!offlineWechatLiveOn())return null;const o=S.offline&&S.offline[c.id];return o&&o.started===true?o:null;}
 function offlineWechatLivePrompt(c,o){o=o||offlineWechatLiveState(c);if(!o)return'';const detail=[o.loc?('地点：'+o.loc):'',o.when?('约会时间：'+o.when):'',o.daypart?('当前时段：'+o.daypart):''].filter(Boolean).join('；'),limit=typeof offlineContextLimit==='function'?offlineContextLimit():20,rows=typeof offlineSceneTimelineRows==='function'?offlineSceneTimelineRows(c,o,Math.min(20,limit),{kind:'date',current:false}):[],recent=rows.length?'\n\n# 本场线下约会最近真实进展（隐藏背景，不复制成微信消息）\n'+rows.map((x,i)=>(i+1)+'. ['+(x.time?fmtDT(x.time):'时间未知')+']['+x.who+'] '+x.text).join('\n')+'\n上面是刚刚在线下真实发生的最新剧情。现在微信里的回复必须从最后一条进展继续，不能回到约会开始前悬着的旧微信话题；不要照抄旁白、编号或把面对面原话伪装成新微信消息。':'';return '\n\n# 当前剧情状态：线下约会仍在进行（实时状态，优先级最高）\n你和'+S.me.name+'的线下约会尚未结束，'+S.me.name+'人就在约会现场，此刻只是约会间隙拿出手机向你发送消息，并非你们已经分开。'+(detail?'\n'+detail+'。':'')+'\n【时间与上下文铁律】当前这场线下约会是最新现实上下文；微信和线下共用同一条时间线，较早微信话题、较早机票/见面/分居记忆只能当旧背景，绝不能盖过“正在见面中”。\n即使刚刚做过手动分段总结，那也只是归档本场已发生的进度，不代表约会结束。回复必须承认你们仍在同一个约会现场，不能把约会说成已经结束的过往，不能说'+S.me.name+'长期没理你，也不能因为微信消息间隔而质问'+S.me.name+'为何许久没回。'+recent;}
 function cohabWechatState(c){const r=S.cohabitation;if(!c||!offlineWechatLiveOn()||!r||!r.enabled||r.paused||r.cid!==c.id)return null;const d=typeof cohabAdvance==='function'?cohabAdvance(c.id):r.homes&&r.homes[c.id];return d||null;}
+function wechatLiveSceneLastAt(data){if(!data)return 0;const msgAt=(data.msgs||[]).reduce((last,m)=>Math.max(last,+((m&&m.time)||(m&&m.ts))||0),0);return Math.max(msgAt,+data.startedAt||0);}
+function wechatLiveScene(c){if(!c||!offlineWechatLiveOn())return null;const offline=offlineWechatLiveState(c),cohab=cohabWechatState(c);if(!offline&&!cohab)return null;if(!offline)return{kind:'cohab',data:cohab};if(!cohab)return{kind:'offline',data:offline};return wechatLiveSceneLastAt(cohab)>=wechatLiveSceneLastAt(offline)?{kind:'cohab',data:cohab}:{kind:'offline',data:offline};}
 function cohabClockText(t){t=t||Date.now();return ymdFull(t)+' '+weekdayCN(t)+' '+hm(t);}
 function cohabTimeContext(d){if(!S.settings.timeAware)return'\n时间感知已关闭：不知道共同生活开始时间、状态持续时长或最近到家时间。';const now=Date.now(),bits=['当前准确时间：'+cohabClockText(now)];if(d&&d.startedAt)bits.push('共同生活开始于：'+fmtDT(d.startedAt)+'，已经持续约'+fmtDur(Math.max(0,now-d.startedAt)));if(d&&d.phaseAt)bits.push('当前“'+cohabStatusLabel(d)+'”状态从：'+fmtDT(d.phaseAt)+'开始，已经约'+fmtDur(Math.max(0,now-d.phaseAt)));if(d&&d.returnedAt&&d.phase==='home')bits.push('最近一次真正回到家：'+fmtDT(d.returnedAt)+'，距现在约'+fmtDur(Math.max(0,now-d.returnedAt)));return'\n'+bits.join('\n');}
 function cohabRecentContext(d,c,limit){const rows=(d&&d.msgs||[]).filter(m=>m&&m.who!=='日期'&&String(m.text||'').trim()).slice(-Math.max(1,+limit||10));if(!rows.length)return'';return'\n\n# 最近共同生活现场（隐藏背景，不复制成微信消息）\n'+rows.map((m,i)=>(i+1)+'. ['+(m.who==='me'?S.me.name:m.who==='旁白'?'现场旁白':(c.remark||c.name))+'] '+String(m.text||'').replace(/\s+/g,' ').trim().slice(0,320)).join('\n')+'\n这些内容只让你记得刚才共同生活里真实发生过什么；不要在微信里照抄旁白、伪装成刚刚发出的消息或继续面对面动作。';}
@@ -1950,7 +1952,7 @@ function buildSystem(c,opt){
   s+='\n\n# 时间感知（最高优先级）\n'+timeAwarenessPrompt(S.me.name,'wechat')+memoryAutoPrompt(c);
   {const _careProgress=recentMealProgressPrompt(c);if(_careProgress)s+='\n\n# 最近关心事项必须沿用进度\n'+_careProgress;}
   if(_main)s+=offLastEndedPrompt(c);
-  const _offlineLive=_main?offlineWechatLiveState(c):null;if(_offlineLive)s+=offlineWechatLivePrompt(c,_offlineLive);const _cohabLive=_main&&!_offlineLive?cohabWechatState(c):null;if(_cohabLive)s+=cohabWechatPrompt(c,_cohabLive);const _liveScene=!!(_offlineLive||_cohabLive);
+  const _wechatLive=_main?wechatLiveScene(c):null,_offlineLive=_wechatLive&&_wechatLive.kind==='offline'?_wechatLive.data:null,_cohabLive=_wechatLive&&_wechatLive.kind==='cohab'?_wechatLive.data:null;if(_offlineLive)s+=offlineWechatLivePrompt(c,_offlineLive);if(_cohabLive)s+=cohabWechatPrompt(c,_cohabLive);const _liveScene=!!_wechatLive;
   if(S.settings.timeAware&& !_liveScene){const _gn=conversationGapNote(c);if(_gn)s+='\n\n# 当前这条消息和上一轮聊天之间的时间差（重要）\n'+_gn;}
   if(S.settings.timeAware&& !_liveScene){const _lu=[...msgs(c.id)].reverse().find(m=>m.role==='user'&&m.time);const _gap=_lu?Date.now()-_lu.time:0;
    if(!_natural&&_lu&&_gap>=25*60000){const _dg=dayGap(_lu.time,Date.now());
@@ -8548,24 +8550,14 @@ function collarBadge(){if(S.me&&S.me.wxFeatures&&S.me.wxFeatures.showTitleBadge=
   if(!t)return '';
   const f=S.me&&S.me.wxFeatures||{},bg=/^#[0-9a-f]{6}$/i.test(f.titleBadgeBg||'')?f.titleBadgeBg:'',tx=/^#[0-9a-f]{6}$/i.test(f.titleBadgeText||'')?f.titleBadgeText:'',style=(bg?'--wx-title-badge-bg:'+bg+';':'')+(tx?'--wx-title-badge-text:'+tx+';':'');
   return `<span class="wx-title-badge"${style?` style="${style}"`:''} title="归属印记·你自己摘不掉，得求ta取下">${esc(t)}</span>`;}
-function wxMe(){ensureDailySteps();const on=isOnline();const md=S.me.onlineMode||'auto';
-  return `<div class="list">
-    <div class="row" onclick="editMe()" style="padding:18px 14px"><div style="position:relative">${av(S.me.avatar,'lg')}<span style="position:absolute;right:-1px;bottom:-1px;width:14px;height:14px;border-radius:50%;background:${on?'#2bd66a':'#888'};border:2px solid #1c1c1e"></span></div>
-      <div class="meta"><div class="n" style="font-size:19px">${esc(S.me.name)}${collarBadge()} <span style="font-size:12px;color:${on?'#2bd66a':'#888'}">${on?'● 在线':'○ 离线'}</span></div>
-      <div class="s">微信号：${esc(S.me.wxid)}</div><div class="s">${esc(S.me.signature)}</div></div><span style="color:#ccc">›</span></div>
-  </div>
-  <div class="section" style="margin:12px">
-    <div class="it"><span>在线状态</span><span class="v">${['auto','on','off'].map(m=>`<span onclick="S.me.onlineMode='${m}';save();render()" style="cursor:pointer;padding:3px 8px;border-radius:8px;${md===m?'background:#07c160;color:#fff':'color:#888'}">${m==='auto'?'自动':m==='on'?'在线':'离线'}</span>`).join('')}</span></div>
-    <div class="it" onclick="openWallet()"><span style="display:inline-flex;align-items:center;gap:8px">${svgIc('wallet',18,'#c3c6d2')}钱包</span><span class="v">¥${(+S.me.balance).toFixed(2)}</span></div>
-    <div class="it"><span style="display:inline-flex;align-items:center;gap:8px">${svgIc('steps',18,'#c3c6d2')}微信步数 ${(S.me.steps||0)}</span><span class="v" onclick="toggleSteps()">${_stepOn?'计步中(点停)':'开启计步 ›'}</span></div>
-    <div class="it" onclick="editMe()"><span style="display:inline-flex;align-items:center;gap:8px">${svgIc('mask',18,'#c3c6d2')}我的人设（全局）</span><span class="v">所有角色可见</span></div>
-    <div class="it" onclick="accountMgr()"><span style="display:inline-flex;align-items:center;gap:8px">${svgIc('idcard',18,'#c3c6d2')}小号 / 切换身份</span><span class="v">${(S.me.accounts||[]).length>1?'当前：'+esc(S.me.name):'添加 ›'}</span></div>
-    <div class="it" onclick="openApp('moments')"><span style="display:inline-flex;align-items:center;gap:8px">${svgIc('camera',18,'#c3c6d2')}朋友圈</span><span class="v">›</span></div>
-  </div>
-  <div class="section" style="margin:12px">
-    <div class="it" onclick="openSettings()"><span style="display:inline-flex;align-items:center;gap:8px">${svgIc('gear',18,'#c3c6d2')}设置 / API</span><span class="v">›</span></div>
-  </div>`;
-}
+function wxMeFallbackRow(kind,icon,title,action){return `<button type="button" class="wxme-home-row wxme-home-${kind}" onclick="${action}"><i>${svgIc(icon,28,'currentColor')}</i><span>${esc(title)}</span><em aria-hidden="true">›</em></button>`;}
+/* 新版组件未能加载时也必须保持新版“我”页入口，不能静默退回旧设置面板。 */
+function wxMe(){ensureDailySteps();return `<div class="wxme-home" data-wxme-renderer="core-fallback">
+  <button class="wxme-profile-card" onclick="go('wxprofile')">${av(S.me.avatar,'lg')}<span><b>${esc(S.me.name)}${collarBadge()}</b><small>微信号：${esc(S.me.wxid||'未设置')}</small></span><i onclick="event.stopPropagation();go('wxqr')" aria-label="我的二维码">${svgIc('card',28,'currentColor')}</i><em aria-hidden="true">›</em></button>
+  <section>${wxMeFallbackRow('service','wallet','服务',"go('wxservices')")}</section>
+  <section>${wxMeFallbackRow('favorite','image','收藏',"go('wxfavorites')")}${wxMeFallbackRow('moments','camera','朋友圈',"go('wxalbum')")}${wxMeFallbackRow('emoji','smile','表情',"go('wxemoji')")}</section>
+  <section>${wxMeFallbackRow('settings','gear','设置',"go('wxsettings')")}</section>
+  </div>`;}
 function editMe(){ensureDailySteps();openModal(`<h3>我的资料</h3>
   <div class="field"><label>头像</label><div class="avline">${av(S.me.avatar,'sm')}<input id="me_av" value="${esc(S.me.avatar)}" placeholder="emoji 或上传"><button class="minibtn" onclick="upMe()"></button></div></div>
   <div class="field"><label>昵称</label><input id="me_name" value="${esc(S.me.name)}"></div>
@@ -9753,6 +9745,9 @@ function initiativeUserAwayContext(c){if(!c)return{kind:'',text:'',at:0,until:0}
 function initiativeAwayPrompt(c){const a=initiativeUserAwayContext(c);if(a.kind==='busy')return'\n对方最后明确交代了「'+a.text.slice(0,120)+'」。这段没回复有合理经过，禁止质问“为什么不理我/怎么不回”；可以自然问事情忙得怎么样、是否结束，或分享你自己的当下日常。';if(a.kind==='sleep')return a.until>Date.now()?'\n对方最后明确说去睡觉，预计仍在休息。现在必须保持安静，不能发消息、不能打电话，更不能问为什么不理你。':'\n对方之前明确说去睡觉，这段没回复是正常休息，不是故意冷落你。若此刻联系，只能自然承接睡醒后的生活，不能问为什么不回。';return'\n对方没有明确交代离开原因；你仍须按关系和人设判断，可以关心或分享日常，但不能默认对方故意冷落你。';}
 function roleServerPushQuietUntil(c){const a=initiativeUserAwayContext(c),st=roleBusyState(c,false),busy=st&&st.active&&st.until>Date.now()?st.until:0,sleep=a.kind==='sleep'&&a.until>Date.now()?a.until:0;return Math.max(busy,sleep);}
 function roleInteractionRows(c){if(!c)return[];const rows=[];(msgs(c.id)||[]).forEach(m=>{if(!m||m.type==='sys'||m._callTranslationOf)return;const text=String(msgToText(m)||'').replace(/\s+/g,' ').trim(),at=msgClearTime(m);if(!text||!at)return;rows.push({at,channel:m._call?'call':'online',session:m._call?String(m._cs||''):'' ,role:m.role==='user'?'user':'assistant',text:text.slice(0,500)});});const home=S.cohabitation&&S.cohabitation.homes&&S.cohabitation.homes[c.id];(home&&home.msgs||[]).forEach(m=>{if(!m||m.who==='日期')return;const text=String(m.text||'').replace(/\s+/g,' ').trim(),at=+m.time||0;if(!text||!at)return;const user=m.who==='me'||m.source==='me';rows.push({at,channel:'cohab',session:'',role:user?'user':'assistant',text:text.slice(0,500)});});return rows.sort((a,b)=>a.at-b.at);}
+function roleReplyCrossChannelHandoff(c,now){if(!c||!offlineWechatLiveOn())return null;now=+now||Date.now();const rows=roleInteractionRows(c).filter(x=>x&&x.at<=now);if(!rows.length)return null;const current=rows[rows.length-1];if(current.channel!=='online'||current.role!=='user')return null;let previousOnlineAt=0;for(let i=rows.length-2;i>=0;i--){if(rows[i].channel==='online'){previousOnlineAt=rows[i].at;break;}}const between=rows.filter(x=>x.channel!=='online'&&x.at>previousOnlineAt&&x.at<=current.at);if(!between.length)return null;return{current,between:between.slice(-12),previousOnlineAt};}
+function roleReplyCrossChannelHandoffPrompt(c,now){const handoff=roleReplyCrossChannelHandoff(c,now);if(!handoff)return'';const me=S.me&&S.me.name||'用户',role=c.remark||c.name||'角色';return '\n【本轮是从线下回到微信后的第一条（最高优先级）】\n当前微信消息到来前，双方刚在共同生活或电话中有过更新；更早的微信话题只能当背景，不能沿用成当前进度。介于上一段微信与本条微信之间的真实内容是：\n'+handoff.between.map(x=>'['+fmtDT(x.at)+']['+(x.channel==='cohab'?'共同生活':'电话')+']['+(x.role==='user'?me:role)+'] '+x.text.slice(0,220)).join('\n')+'\n现在必须先承接上面最后一轮已经发生的状态、事实和话题，再自然回复当前这条微信。共同生活旁白只提供事实，输出仍必须是角色本人第一人称的普通微信消息；禁止第三人称小说旁白、内部分析、规则说明或把线下原话重新表演一遍。';}
+function roleReplyRequestPin(c,now){now=+now||Date.now();return{role:'system',content:personaPin(c)+roleReplyClockPin(now)+roleReplyTimelinePin(c)+roleReplyContinuityPin(c,now)+roleReplyCrossChannelHandoffPrompt(c,now)};}
 function recentMealProgressState(text){const t=String(text||'').replace(/\s+/g,' ').trim();if(!t||/(?:不吃|不想吃|不准备吃|还没吃|没有吃|没吃|别问.{0,4}吃)/.test(t)||/(?:你|他|她|角色).{0,6}(?:吃饭|吃早饭|吃早餐|吃午饭|吃晚饭|吃东西)/.test(t))return'';if(/(?:吃完|吃好)(?:饭|早饭|早餐|午饭|晚饭)?(?:了|啦)?|(?:已经|刚刚|刚才|刚|才).{0,5}(?:吃了|吃过)(?:饭|早饭|早餐|午饭|晚饭)?/.test(t))return'finished';if(/(?:^|[，。！？,.!?\s])(?:我)?(?:先|现在|马上|这就|准备|打算|要|得|该|去|正在|开始).{0,5}(?:吃饭|吃早饭|吃早餐|吃午饭|吃晚饭|吃东西)|(?:我)?(?:吃饭|吃早饭|吃早餐|吃午饭|吃晚饭)去了|(?:我)?吃饭了(?:呀|啊|啦)?(?:$|[，。！？,.!?\s])/.test(t))return'started';return'';}
 function recentMealBaselineQuestion(text){return/(?:吃|用)(?:饭|早饭|早餐|午饭|晚饭)(?:了)?(?:吗|没|没有)|(?:吃了没|吃过了吗|有没有吃(?:饭|早饭|早餐|午饭|晚饭)?)/.test(String(text||'').replace(/\s+/g,''));}
 function recentMealProgress(c,now){now=+now||Date.now();const rows=roleInteractionRows(c).filter(x=>x&&x.at<=now&&now-x.at<=4*3600000);let user=null,state='';for(let i=rows.length-1;i>=0;i--){if(rows[i].role!=='user')continue;const found=recentMealProgressState(rows[i].text);if(found){user=rows[i];state=found;break;}}if(!user)return null;const asked=rows.some(x=>x.role==='assistant'&&x.at>=user.at-2*3600000&&x.at<=now&&recentMealBaselineQuestion(x.text));return{state,at:user.at,text:user.text.slice(0,120),asked};}
@@ -11190,7 +11185,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
       if(m._call){const cn=callToCN(m.content!=null?m.content:msgToText(m));return cn?{role:_naturalOn&&m.type==='sys'?'system':m.role,content:cn}:null;}
       return {role:(_naturalOn&&m.type==='sys')||m._transferReceipt?'system':m.role,content:msgToText(m)};}).filter(x=>x&&x.content!=null);
     if(note)hist.push({role:friendAcceptedAutoNote(note)||initiativeNoteActive(note)||wechatNaturalCallEventActive(note)||featureEventNoteActive(note)?'user':(_naturalOn?'system':'user'),content:note});
-    const _pin={role:'system',content:personaPin(c)+roleReplyClockPin(Date.now())+roleReplyTimelinePin(c)+roleReplyContinuityPin(c,Date.now())};
+    const _pin=roleReplyRequestPin(c,Date.now());
     const _md={aux:c.model==='aux',complete:true},_repairMd=Object.assign({},_md,{aux:c.model==='aux'||wechatAuxConfigured()}),_routeState={fallback:false};// 正常回复走角色选定模型；主模型失败/跳出角色时才用副模型重试一次
     let content;try{content=await wechatPrimaryReply([{role:'system',content:_sys},...hist,_pin],_md,_routeState,c);}catch(e){if(!_naturalOn||_routeState.fallback)throw e;_routeState.fallback=true;wechatModelRouteNotice(c,_repairMd.aux);content=await chatAPI([{role:'system',content:_stableSys},...hist,_pin],_repairMd);}content=roleVisibleEnvelopeText(content);
     if(nativeInspectionPending(_lu,id)){if(typingEl&&typingEl.isConnected)typingEl.remove();return true;}/* 只允许当前这条用户消息自己的读取任务接管；其他伴生读取不得吞掉普通回复。 */

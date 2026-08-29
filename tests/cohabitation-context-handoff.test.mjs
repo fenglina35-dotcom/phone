@@ -138,7 +138,8 @@ test('the existing online-offline sync switch also gates common-life context',()
   assert.match(source,/const contextLimit=cohabContextLimit\(o\),shared=offlineWechatLiveOn\(\)\?offlineUnifiedTimelinePrompt\(c,o,contextLimit\)/);
   assert.match(source,/约会中同步到线上 · 含共同生活/);
   assert.match(source,/可见记录与格式不互相复制/);
-  assert.match(source,/const _liveScene=!!\(_offlineLive\|\|_cohabLive\)/);
+  assert.match(source,/const _wechatLive=_main\?wechatLiveScene\(c\):null/);
+  assert.match(source,/const _liveScene=!!_wechatLive/);
   assert.match(source,/if\(!_natural&&!_liveScene&&lu\)/);
 });
 

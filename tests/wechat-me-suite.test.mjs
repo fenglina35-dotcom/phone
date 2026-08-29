@@ -13,6 +13,13 @@ for(const route of ['wxprofile','wxqr','wxscan','wxservices','wxwallet','wxchang
 }
 
 assert.match(feature,/wxMe=wxMe1037/);
+assert.match(app,/function wxMe\(\)[\s\S]*data-wxme-renderer="core-fallback"/);
+const coreWxMe=app.match(/function wxMe\(\)[\s\S]*?\nfunction editMe/)?.[0]||'';
+assert.ok(coreWxMe,'missing core WeChat me fallback');
+assert.match(coreWxMe,/class="wxme-home"/);
+assert.match(coreWxMe,/go\('wxservices'\)/);
+assert.match(coreWxMe,/go\('wxsettings'\)/);
+assert.doesNotMatch(coreWxMe,/在线状态|设置 \/ API/);
 assert.match(feature,/function wxQrPayload\(\)[\s\S]*smallphone_friend/);
 assert.match(feature,/navigator\.mediaDevices\.getUserMedia/);
 assert.match(feature,/typeof jsQR==='function'/);

@@ -80,7 +80,8 @@ test('continuity pin keeps raw cross-channel statements without turning examples
 
 test('continuity is limited to reply routes and excluded from global and visual-special prompts', () => {
   assert.doesNotMatch(functionSource(app, 'buildSystem'), /roleReplyContinuityPin/);
-  assert.match(app, /roleReplyTimelinePin\(c\)\+roleReplyContinuityPin\(c,Date\.now\(\)\)/);
+  assert.match(app, /const _pin=roleReplyRequestPin\(c,Date\.now\(\)\)/);
+  assert.match(functionSource(app, 'roleReplyRequestPin'), /roleReplyTimelinePin\(c\)\+roleReplyContinuityPin\(c,now\)\+roleReplyCrossChannelHandoffPrompt\(c,now\)/);
   assert.match(functionSource(app, 'roleServerPushRecentContext'), /roleReplyContinuityPin\(c,Date\.now\(\)\)/);
   assert.match(functionSource(app, 'cohabReplyCore'), /offlineFormatPin\(c\)\+roleReplyContinuityPin\(c,Date\.now\(\),\{channel:'cohab'\}\)/);
   assert.match(functionSource(app, 'cohabRepairMessages'), /offlineFormatPin\(c\)\+roleReplyContinuityPin\(c,Date\.now\(\),\{channel:'cohab'\}\)/);
