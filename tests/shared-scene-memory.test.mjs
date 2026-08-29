@@ -62,14 +62,15 @@ test('unified scene prompt keeps the newest context inside a bounded character b
   assert.ok(maximum.reduce((n,x)=>n+x.text.length+80,0)<=18000,'maximum unified timeline must remain under its hard safety budget');
 });
 
-test('current-scene archive is not duplicated when the unified timeline is already enabled',()=>{
+test('unified common-life request still carries its real closed local turns',()=>{
   const sandbox={S:{me:{name:'用户'}}};
   vm.runInNewContext(functionSource('offlineArchivedHistory')+functionSource('offlineRequestMessages')+';globalThis.run=offlineRequestMessages;',sandbox);
   const hist=[{role:'user',content:'本场旧消息'}];
   const unified=sandbox.run('统一时间线已有本场消息',hist,null,'当前消息',{unified:true});
   const isolated=sandbox.run('未启用统一时间线',hist,null,'当前消息');
-  assert.doesNotMatch(unified[0].content,/本场旧消息/);
+  assert.match(unified[0].content,/本场旧消息/,'sync must not replace the actual common-life conversation with only a flattened timeline hint');
   assert.match(isolated[0].content,/本场旧消息/,'isolated mode must still receive its local history');
+  assert.equal(unified.filter(x=>x.role==='user'&&x.content==='当前消息').length,1,'the current turn remains unique');
 });
 
 test('active one-off WeChat prompt carries the latest real face-to-face progress',()=>{

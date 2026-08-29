@@ -66,7 +66,7 @@ test('continuity pin keeps raw cross-channel statements without turning examples
     offlineWechatLiveOn: () => true,
     fmtDT: value => new Date(value).toISOString(),
   });
-  vm.runInContext(`${functionSource(app, 'roleReplyContinuityPin')};this.pin=roleReplyContinuityPin`, context);
+  vm.runInContext(`${functionSource(app, 'roleRecentChannelRounds')}${functionSource(app, 'roleReplyContinuityPin')};this.pin=roleReplyContinuityPin`, context);
   const prompt = context.pin({ name: '角色' }, now);
   assert.doesNotMatch(prompt, /原话0|原话1/);
   assert.match(prompt, /\[电话\]/);
@@ -103,7 +103,7 @@ test('disabled online and co-living sync keeps both continuity worlds isolated',
     offlineWechatLiveOn: () => false,
     fmtDT: value => new Date(value).toISOString(),
   });
-  vm.runInContext(`${functionSource(app, 'roleReplyContinuityPin')};this.pin=roleReplyContinuityPin`, context);
+  vm.runInContext(`${functionSource(app, 'roleRecentChannelRounds')}${functionSource(app, 'roleReplyContinuityPin')};this.pin=roleReplyContinuityPin`, context);
   const online = context.pin({ name: '角色' }, now);
   assert.match(online, /微信里的事情/);
   assert.match(online, /电话里的回答/);

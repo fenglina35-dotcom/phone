@@ -33,7 +33,7 @@ function runtime(sync=true){
     {id:'c-role',who:'ta',text:'我在线下已经回应了',time:now-2*60000}
   ]}}}};
   const sandbox={S,Date,String,Math,Number,offlineWechatLiveOn:()=>sync,msgs:()=>online,msgToText:m=>m&&m.content||'',previewOf:m=>m&&m.content||'',msgClearTime:m=>+m.time||0,fmtDT:t=>`T${t}`,roleTimeParts:()=>({hour:12,minute:0}),conversationGapQuestion:()=>false,conversationGapFact:()=>null,conversationClaimGapFact:()=>null,conversationComplaintGapFact:()=>null,personaPin:()=>'<persona>',roleReplyClockPin:()=>'<clock>',roleReplyContinuityPin:()=>'<continuity>'};
-  const names=['conversationGapExact','clockNumberValue','clockMinuteDistance','roleClockClaimDistance','conversationVisibleRows','roleInteractionRows','roleReplyTimelineRows','roleReplyGapFact','roleReplyTimelinePin','roleReplyCrossChannelHandoff','roleReplyCrossChannelHandoffPrompt','roleReplyRequestPin','roleTimeClaimIssue'];
+  const names=['conversationGapExact','clockNumberValue','clockMinuteDistance','roleClockClaimDistance','conversationVisibleRows','roleRecentChannelRounds','roleInteractionRows','roleReplyTimelineRows','roleReplyGapFact','roleReplyTimelinePin','roleReplyContinuityPin','roleReplyCrossChannelHandoff','roleReplyCrossChannelHandoffPrompt','roleReplyRequestPin','roleTimeClaimIssue'];
   vm.runInNewContext(`const ROLE_TIME_TOLERANCE_MINUTES=2;${names.map(functionSource).join('\n')};globalThis.api={rows:roleReplyTimelineRows,gap:roleReplyGapFact,pin:roleReplyTimelinePin,handoff:roleReplyCrossChannelHandoff,handoffPrompt:roleReplyCrossChannelHandoffPrompt,requestPin:roleReplyRequestPin,issue:roleTimeClaimIssue};`,sandbox);
   return {api:sandbox.api,now,online,S};
 }
@@ -64,6 +64,34 @@ test('cross-channel handoff applies only to the first online return turn',()=>{
   online.push({id:'w-next',role:'user',type:'text',content:'继续说',time:now+2000});
   assert.equal(api.handoff(c,now+2000),null);
   assert.doesNotMatch(api.requestPin(c,now+2000).content,/本轮是从线下回到微信后的第一条/);
+});
+
+test('a long common-life reply cannot push the user action out of the online handoff',()=>{
+  const now=Date.now(),online=[
+    {id:'w-old',role:'assistant',type:'text',content:'旧微信话题',time:now-3600000},
+    {id:'w-now',role:'user',type:'text',content:'我回线上了',time:now}
+  ],cohab=[{id:'c-user',who:'me',text:'我们刚刚已经一起把晚饭吃完了',time:now-120000}];
+  for(let i=0;i<20;i++)cohab.push({id:`c-role-${i}`,who:i%2?'ta':'旁白',source:'ta',text:`线下承接第${i+1}段`,time:now-119000+i});
+  const S={settings:{timeAware:true},me:{name:'用户'},cohabitation:{homes:{role:{msgs:cohab}}}},sandbox={
+    S,Date,String,Math,Number,Set,offlineWechatLiveOn:()=>true,msgs:()=>online,msgToText:m=>m&&m.content||'',msgClearTime:m=>+m.time||0,fmtDT:t=>`T${t}`,
+    personaPin:()=>'',roleReplyClockPin:()=>'',roleReplyTimelinePin:()=>''
+  };
+  const names=['roleRecentChannelRounds','roleInteractionRows','roleReplyContinuityPin','roleReplyCrossChannelHandoff','roleReplyCrossChannelHandoffPrompt','roleReplyRequestPin'];
+  vm.runInNewContext(`${names.map(functionSource).join('\n')};globalThis.api={handoff:roleReplyCrossChannelHandoff,prompt:roleReplyCrossChannelHandoffPrompt,pin:roleReplyRequestPin};`,sandbox);
+  const handoff=sandbox.api.handoff({id:'role',name:'角色'},now);
+  assert.equal(handoff.between[0].text,'我们刚刚已经一起把晚饭吃完了','the first user fact of the completed scene round must survive even when the role emitted many bubbles');
+  assert.match(sandbox.api.prompt({id:'role',name:'角色'},now),/我们刚刚已经一起把晚饭吃完了/);
+  assert.match(sandbox.api.pin({id:'role',name:'角色'},now).content,/我们刚刚已经一起把晚饭吃完了/);
+});
+
+test('the latest complete common-life round remains an internal fact after the first online reply',()=>{
+  const {api,now,online}=runtime(true),c={id:'role',name:'角色'};
+  online.push({id:'w-answer',role:'assistant',type:'text',content:'已经接住线下',time:now+1000});
+  online.push({id:'w-next',role:'user',type:'text',content:'那继续说',time:now+2000});
+  const pin=api.requestPin(c,now+2000).content;
+  assert.doesNotMatch(pin,/本轮是从线下回到微信后的第一条/);
+  assert.match(pin,/刚才在线下说过的重要事情/,'later online turns must retain the latest full scene round instead of falling back to the old online thread');
+  assert.match(pin,/我在线下已经回应了/);
 });
 
 test('newest active live scene wins instead of always preferring a stale one-time date',()=>{
