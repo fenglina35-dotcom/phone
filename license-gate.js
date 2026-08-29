@@ -180,6 +180,7 @@
     let preferredId = current && current.endpointId || '';
     if (!preferredId && ['restore_options', 'restore_verify'].includes(action)) {
       try { preferredId = localStorage.getItem(LAST_ENDPOINT_KEY) || ''; } catch (_) {}
+      if (!preferredId && endpoints.some((endpoint) => endpoint.id === 'license-failover')) preferredId = 'license-failover';
     }
     if (!preferredId || ['activate', 'legacy_activate'].includes(action)) return endpoints;
     return endpoints.slice().sort((left, right) =>
@@ -197,6 +198,11 @@
     const status = Number(error && error.status || 0);
     return !!(error && error.network) || status === 0 || status === 408 || status === 425 || status === 429 || status >= 500
       || ((status === 401 || status === 403) && !(error && error.code));
+  }
+
+  function passkeyMissingOnEndpoint(error) {
+    return !!(error && error.server && Number(error.status) === 400
+      && /(?:这台手机没有可恢复的授权|没有读到手机通行密钥)/.test(String(error.message || '')));
   }
 
   async function requestEndpoint(endpoint, action, body, timeoutMs) {
@@ -348,39 +354,57 @@
     if (!supportsPasskey()) throw new Error(isPrivateApp() ? '当前 App 无法调用系统扫脸/指纹，请检查系统设置' : '当前浏览器不支持系统扫脸/指纹，不能恢复设备授权');
     const endpoints = licenseEndpoints('restore_options', {});
     if (!endpoints.length) throw new Error('授权服务尚未配置');
-    let endpoint = null;
-    let start = null;
-    let startError = null;
+    let firstTemporary = null;
+    let lastError = null;
+    let missingCount = 0;
     for (const candidate of endpoints) {
+      let start;
       try {
         start = await requestEndpoint(candidate, 'restore_options', {}, 25000);
-        endpoint = candidate;
-        break;
       } catch (error) {
-        startError = error;
-        if (!retryableLicenseError(error)) break;
+        lastError = error;
+        if (retryableLicenseError(error)) {
+          if (!firstTemporary) firstTemporary = error;
+          continue;
+        }
+        throw error;
+      }
+      let credential;
+      try {
+        credential = await navigator.credentials.get({ publicKey: requestOptions(start.options) });
+      } catch (error) {
+        if (error && (error.name === 'NotAllowedError' || error.name === 'AbortError')) throw new Error('已取消恢复授权');
+        throw new Error(isPrivateApp() ? '系统恢复验证失败，请稍后重试' : '系统恢复验证失败，请换Safari或Chrome重试');
+      }
+      if (!credential) throw new Error('系统没有返回恢复结果');
+      try {
+        const result = await requestEndpoint(candidate, 'restore_verify', {
+          challengeId: start.challengeId,
+          credential: authenticationCredentialJSON(credential),
+          deviceLabel: deviceLabel(),
+        }, 25000);
+        saveSession(result.session, {
+          sessionCount: result.session.activeCount || 1,
+          passkeyCount: 1,
+          evicted: result.session.evicted || [],
+        }, candidate.id);
+        return result;
+      } catch (error) {
+        lastError = error;
+        if (passkeyMissingOnEndpoint(error)) {
+          missingCount += 1;
+          continue;
+        }
+        if (retryableLicenseError(error)) {
+          if (!firstTemporary) firstTemporary = error;
+          continue;
+        }
+        throw error;
       }
     }
-    if (!start || !endpoint) throw startError || new Error('授权服务暂时不可用');
-    let credential;
-    try {
-      credential = await navigator.credentials.get({ publicKey: requestOptions(start.options) });
-    } catch (error) {
-      if (error && (error.name === 'NotAllowedError' || error.name === 'AbortError')) throw new Error('已取消恢复授权');
-      throw new Error(isPrivateApp() ? '系统恢复验证失败，请稍后重试' : '系统恢复验证失败，请换Safari或Chrome重试');
-    }
-    if (!credential) throw new Error('系统没有返回恢复结果');
-    const result = await requestEndpoint(endpoint, 'restore_verify', {
-      challengeId: start.challengeId,
-      credential: authenticationCredentialJSON(credential),
-      deviceLabel: deviceLabel(),
-    }, 25000);
-    saveSession(result.session, {
-      sessionCount: result.session.activeCount || 1,
-      passkeyCount: 1,
-      evicted: result.session.evicted || [],
-    }, endpoint.id);
-    return result;
+    if (firstTemporary) throw firstTemporary;
+    if (missingCount) throw new Error('系统扫脸或指纹已通过，但这枚手机验证没有绑定到当前授权。请回到仍能进入的小手机浏览器，在设置里点“检查 / 补绑手机验证”后再试');
+    throw lastError || new Error('授权服务暂时不可用');
   }
 
   async function retirePreviousSession(previous, result) {
@@ -483,6 +507,6 @@
     revokeSession,
     syncAIIdentity,
     syncPhoneFriendIdentity,
-    _test: { b64urlToBuffer, bufferToB64url, creationOptions, requestOptions, licenseEndpoints, retryableLicenseError },
+    _test: { b64urlToBuffer, bufferToB64url, creationOptions, requestOptions, licenseEndpoints, retryableLicenseError, passkeyMissingOnEndpoint },
   };
 })();

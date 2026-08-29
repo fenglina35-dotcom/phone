@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1105'){
+if(window.__NORTH_SHELL_BUILD__!=='1106'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -385,7 +385,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1105 · 聊天图片与主动来电修复版';
+const APP_VER='v1106 · 共同生活时间与跨浏览器授权修复版';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1586,7 +1586,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1105&r=v1105-chat-image-proactive-call-1';
+  const url='sw.js?v=1106&r=v1106-cohab-time-license-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -6772,6 +6772,10 @@ function offlineRepeatAudit(text,o,currentInput){const parts=offResponseParts(te
 function offlineRepeatFails(text,o,currentInput){return offlineRepeatAudit(text,o,currentInput).fails;}
 function offlineRepeatScore(text,o,currentInput){return offlineRepeatAudit(text,o,currentInput).score;}
 function offlineRepeatRepairNote(c,fails){return '[系统：上一版有线下约会复读问题：'+fails.join('；')+'。请完全重写本轮，只接住'+S.me.name+'刚才在现场说的话或动作并推进当前场景。不要把长期记忆、小事簿、相处小账里的任务、吃饭、睡觉、报备等旧内容重新拿出来审问；除非ta本轮主动提起。不能只替换几个词重复同一问题或同一句台词。保持「'+(c.remark||c.name)+'」本人，至少一段【第三人称动作旁白】和自然台词，不要解释纠正过程。]';}
+function cohabTimeTopicInput(text){return /(?:几点|现在.{0,4}(?:时间|几点)|什么时间|多久|几分钟|几小时|日期|几号|星期几|今天|昨天|明天|早上|上午|中午|下午|晚上|凌晨|上班|下班|迟到|到点|约定|预约|航班|车次|出发|到达)/.test(String(text||''));}
+function cohabNarrationReportsClock(text){text=String(text||'').replace(/\s+/g,'').trim();if(!text)return false;const clock=/(?:[01]?\d|2[0-3])[:：][0-5]\d|(?:凌晨|早上|上午|中午|下午|傍晚|晚上|夜里|深夜)?[零〇一二两三四五六七八九十百\d]{1,4}点(?:半|一刻|三刻|[零〇一二两三四五六七八九十百\d]{1,4}分)?/;if(!clock.test(text))return false;return /^(?:现在|当前|此刻|这会儿|这时|当下|时间|时钟|钟表|手机屏幕|墙上的钟|窗外|天色|凌晨|早上|上午|中午|下午|傍晚|晚上|夜里|深夜)/.test(text)||/(?:现在|当前|此刻|这会儿|时间|时钟|钟表).{0,12}(?:显示|指向|来到|已经|已是|正是|是)/.test(text);}
+function cohabTimeEchoAudit(text,o,currentInput){if(cohabTimeTopicInput(currentInput))return{fails:[],score:0};const current=offResponseParts(text).filter(x=>x.kind==='nar'&&cohabNarrationReportsClock(x.text)),recent=(o&&o.msgs||[]).filter(m=>m&&m.who==='旁白'&&m.source!=='me').slice(-4).filter(m=>cohabNarrationReportsClock(m.text)),fails=[];let score=0;if(current.length>1){score+=current.length*3;fails.push('同一轮多个旁白都在重复报时');}else if(current.length&&recent.length>=2){score+=4;fails.push('连续多轮旁白都把当前钟点当成开场白');}return{fails,score};}
+function cohabRepeatRepairNote(c,fails){return '[系统：上一版共同生活回复需要重写：'+fails.join('；')+'。准确时间只供内部校准先后，不要用“现在几点、时钟显示、此刻已是几点”反复给每段旁白报时；只有本轮确实在谈时间、约定、行程或作息时才自然提一次。请只接住'+S.me.name+'刚才在现场说的话或动作并推进当前场景，不复述旧旁白或旧台词。保持「'+(c.remark||c.name)+'」本人，至少一段【第三人称动作旁白】和自然台词，不要解释纠正过程。]';}
 function offlineSystem(c,query){let s=(c.persona||'')+traitDesc(c)+rolePriorityPrompt();
   s+=adultRoleRule(c.remark||c.name||'角色');
   s+=offlineRoleGuard(c);
@@ -6812,6 +6816,7 @@ function cohabSystem(c,o,query){
   s+=worldbookPrompt([(c.persona||'')+traitDesc(c),shared,(o.msgs||[]).slice(-contextLimit).map(m=>m.text).join('\n'),remembered.map(memoryText).join('\n'),oldDates.map(offMemText).join('\n')].join('\n'),c.id,'共同生活','offline');
   s+=offlineLifeNotesPrompt(c,query)+roleOwnMomentsPrompt(c,6)+offlineBehaviorLedgerPrompt(c)+dialogueEmotionPrompt(c)+memoryCriticalPrompt(c)+cohabPhonePrompt(c)+cohabTripContext(c,o);
   s+=offlineMemoryRule(c);
+  s+='\n\n# 时间只用于内部校准（共同生活可见输出硬规则）\n- 上面的准确钟点、日期、时段和持续时长是隐藏事实，用来保证先后正确，不是每段旁白都要播报的内容。\n- 除非'+S.me.name+'正在问时间、约定/行程/作息确实依赖时间，或现场发生了有意义的跨时段变化，否则不要主动写“现在几点”“时钟显示几点”“此刻已是几点”。\n- 同一轮最多自然提一次必要的钟点；禁止每段旁白都用时间开头。允许正常谈时间，不能为了避开复述而假装不知道时间。';
   s+='\n\n# 共同生活双人购票能力\n只有当你们在共同生活里真正决定两个人一起出去玩，而且目的地、日期和准确出发时间都已经确定时，才另起一行附加：[共同生活订票|目的地|YYYY-MM-DD|HH:MM]。这会在云程后台生成双人订单，并且只在共同生活弹出系统提示；绝不能发微信订单卡、共同生活角色卡片或固定角色消息。信息不全、只是提议、询问、假设或还没有决定时不能订，必须先自然问清楚。出发时间必须读取上面的真实当前时间并填写未来时间。';
   s+='\n\n# 共同生活实时状态（测试版）\n- 这不是一次约会，也不是微信聊天，而是你和'+S.me.name+'已经住在一起后持续发生的日常生活。它不会因为退出页面自动结束。\n- 当前状态：'+cohabStatusLabel(o)+'。'+cohabPhaseFact(o)+cohabTimeContext(o)+'\n- “在家”和“一起外出”都代表两个人仍在同一个面对面共同生活现场；只有你单独上班、单独外出或独自回家路上时，才应通过微信联系。\n- 如果'+S.me.name+'当面明确让你“微信/手机给我发消息”，真正决定发送时另起一行：[共同生活发消息|微信|消息正文]；这会写入你们正式微信并通知，不能再把同一句当面说一遍。若明确说群聊，使用 [共同生活发消息|准确群名|消息正文]；无法确定唯一群聊时必须先自然追问群名，绝不能随机选择。\n- “约会中同步到线上”开关同时管理一次性约会与共同生活。开启时使用同一个角色、角色选定的模型路线和连续上下文；关闭时两边隔离。无论是否同步，两边可见记录与格式始终分开：微信只作为隐藏背景，不能复制成面对面台词；共同生活内容也不能渲染进微信历史。\n'+(S.settings.timeAware?'- 你必须按上面的准确日期、时间和状态持续时长理解先后，不能把旧事说成刚刚。\n':'- 时间感知已关闭，不得利用日期、钟点、作息、持续时长或过了一夜来推断任何事。\n')+'- 面对面时，你的动作、神态、环境和心理用【第三人称旁白】；说出口的话用普通台词。每轮至少有一段与当前动作相接的旁白。\n- 生活应符合你自己的人设、职业、作息和关系阶段，可以做饭、收拾、休息、各忙各的、出门或回家，不要每轮都制造约会感。'+(S.settings.timeAware?'作息表会按真实钟点自动把共同生活状态推进为在家、上班、回家路上；你必须承认当前已同步的状态，并在台词与动作中自然承接，不能仍假装没有去上班。':'时间感知关闭时不得用作息表自动推进上班或休息。')+'\n- 当你或'+S.me.name+'已经实际移动到卧室、书房、客厅、厨房、阳台或其他地点，必须附加隐藏标签：[共同生活位置|准确地点]。只是说“想去”、询问“要不要去”、拒绝或尚未行动时不要更新。\n- 你单独出门才使用：[共同生活状态|外出|状态]。你们两人一起出门必须使用：[共同生活状态|一起外出|准确地点]，继续面对面对话，绝不能切回微信。一起回家使用：[共同生活状态|一起回家|玄关]。\n- 你独自上班、回家路上或真正到家时仍使用：[共同生活状态|上班|预计分钟|状态]、[共同生活状态|回家路上|预计分钟|状态]、[共同生活状态|到家|在玄关]。标签只更新状态，不会显示给'+S.me.name+'。不要为了测试机械切换。\n- 你可以按本人设定和现实安排自主请假或调整上下班时间。决定请假时必须使用：[共同生活请假|开始日期YYYY-MM-DD|结束日期YYYY-MM-DD|简短原因]；一天假开始与结束写同一天，多天假写真实起止日期。决定销假时使用：[共同生活销假|开始日期|结束日期]。决定长期调整日常作息时使用：[共同生活作息|上午上班HH:MM|上午下班HH:MM|下午上班HH:MM|下午下班HH:MM]。这些标签不会显示，但会真实更新作息表；未真正决定时不要输出，不能只在嘴上说改了却不附标签。\n- 永远不要提AI、系统、测试规则或提示词。';
   return s;
@@ -6829,8 +6834,8 @@ async function cohabReplyCore(c,o,turn,current,replyMax,flow){
   let r=roleVisibleEnvelopeText(await cohabRoleChat(c,offlineRequestMessages(sys,hist,pin,turn,{unified:offlineWechatLiveOn()}),{max:replyMax,temp:.75,complete:true},route,o));
   for(let i=0;i<3&&offlineRoleDrift(r);i++){const fix=roleVisibleEnvelopeText(await cohabRoleChat(c,cohabRepairMessages(c,o,turn,r,offlineRoleRepairPrompt(c,r)),{max:replyMax,temp:.72,complete:true},route,o));if(fix)r=fix;if(fix&&!offlineRoleDrift(fix))break;}
   if(offlineRoleDrift(r)&&offlineUnsafeRoleDrift(r))r='';
-  const repeats=offlineRepeatFails(r,o,current);
-  if(repeats.length){let best=r,bestScore=offlineRepeatScore(r,o,current),fix='';try{fix=await cohabRoleChat(c,cohabRepairMessages(c,o,turn,r,offlineRepeatRepairNote(c,repeats)),{max:replyMax,temp:.78,complete:true},route,o);}catch(e){offlineKeepValidReplyOnRepairFailure(r,e);}if(fix&&!offlineRoleDrift(fix)&&offlineRepeatScore(fix,o,current)<bestScore)best=fix;r=best;}
+  const repeatAudit=offlineRepeatAudit(r,o,current),timeEcho=cohabTimeEchoAudit(r,o,current),repairFails=[...new Set([...repeatAudit.fails,...timeEcho.fails])];
+  if(repairFails.length){let best=r,bestScore=repeatAudit.score+timeEcho.score,fix='';try{fix=await cohabRoleChat(c,cohabRepairMessages(c,o,turn,r,cohabRepeatRepairNote(c,repairFails)),{max:replyMax,temp:.78,complete:true},route,o);}catch(e){offlineKeepValidReplyOnRepairFailure(r,e);}if(fix&&!offlineRoleDrift(fix)){const fixedRepeat=offlineRepeatAudit(fix,o,current),fixedTime=cohabTimeEchoAudit(fix,o,current),fixedScore=fixedRepeat.score+fixedTime.score;if(fixedScore<bestScore)best=fix;}r=best;}
   r=applyGrudgeTags(r,c);r=offlineApplyMemoryTags(r,c).text;
   let inspection='',phone=cohabApplyPhoneTags(r,c,o,{schedule:flow.inspectionOwner!=='offAI'}),online=cohabApplyOnlineMessageTags(phone.text,c),schedule=cohabApplyScheduleTags(online.text,c,{source:'role'}),travel=cohabExtractTravelTags(schedule.text,c,{allow:!!flow.allowTravel});
   const state=cohabApplyStateTags(travel.text,c.id);

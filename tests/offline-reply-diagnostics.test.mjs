@@ -62,7 +62,7 @@ test('a failed optional de-duplication rewrite keeps an already valid genuine mo
 test('only optional repeat repair may preserve an earlier reply; initial and empty retries still fail closed',()=>{
   const off=functionSource('offAI'),cohab=functionSource('cohabReplyCore');
   assert.match(off,/repeats\.length[\s\S]*try\{fix=roleVisibleEnvelopeText\(await chatAPI[\s\S]*offlineKeepValidReplyOnRepairFailure\(r,e\)/);
-  assert.match(cohab,/repeats\.length[\s\S]*try\{fix=await cohabRoleChat[\s\S]*offlineKeepValidReplyOnRepairFailure\(r,e\)/);
+  assert.match(cohab,/repairFails\.length[\s\S]*try\{fix=await cohabRoleChat[\s\S]*cohabRepeatRepairNote\(c,repairFails\)[\s\S]*offlineKeepValidReplyOnRepairFailure\(r,e\)/);
   assert.doesNotMatch(off,/let retry[\s\S]{0,240}offlineKeepValidReplyOnRepairFailure/);
   assert.doesNotMatch(cohab,/let retry[\s\S]{0,240}offlineKeepValidReplyOnRepairFailure/);
 });
@@ -78,7 +78,7 @@ test('the real common-life reply pipeline delivers the first genuine answer when
     roleVisibleEnvelopeText:x=>String(x||''),offlineRoleDrift:()=>false,
     offReplyItems:x=>x?[{id:'genuine',who:'ta',text:'我在。'}]:[],
     cohabRoleChat:async()=>{runtime.calls++;if(runtime.failFirst||runtime.calls===2)throw new Error('network failed');return '【他抬眼看过来。】\n我在。';},
-    offlineRepeatFails:()=>['重复风险'],offlineRepeatScore:()=>5,offlineRepeatRepairNote:()=>'',
+    offlineRepeatAudit:()=>({fails:['重复风险'],score:5}),cohabTimeEchoAudit:()=>({fails:[],score:0}),cohabRepeatRepairNote:()=>'',
     applyGrudgeTags:x=>x,offlineApplyMemoryTags:x=>({text:x}),
     cohabApplyPhoneTags:x=>({text:x}),cohabApplyOnlineMessageTags:x=>({text:x}),cohabApplyScheduleTags:x=>({text:x}),
     cohabExtractTravelTags:x=>({text:x,plans:[],errors:[]}),cohabApplyStateTags:x=>({text:x,matched:true}),

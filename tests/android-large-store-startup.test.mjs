@@ -35,7 +35,7 @@ function bootGuardSource(){
 test('the 12 second Android watchdog reports progress without replacing the app',()=>{
   const timers=new Map(),listeners={},message={textContent:''};
   const host={_html:'',querySelector:sel=>sel==='.bootmsg'?message:null,set innerHTML(v){this._html=v;},get innerHTML(){return this._html;}};
-  const window={__NORTH_SHELL_BUILD__:'1105',addEventListener:(type,fn)=>{listeners[type]=fn;}};
+  const window={__NORTH_SHELL_BUILD__:'1106',addEventListener:(type,fn)=>{listeners[type]=fn;}};
   const context=vm.createContext({window,document:{getElementById:id=>id==='app'?host:null},location:{pathname:'/小手机.html',hash:''},setTimeout:(fn,ms)=>{timers.set(ms,fn);return ms;},String,Date});
   vm.runInContext(bootGuardSource(),context);
   timers.get(12000)();

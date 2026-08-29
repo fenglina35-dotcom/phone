@@ -1,6 +1,6 @@
-const BUILD='1105';
-const HOTFIX='v1105-chat-image-proactive-call-1';
-const SHELL_CACHE='north-shell-v1105';
+const BUILD='1106';
+const HOTFIX='v1106-cohab-time-license-1';
+const SHELL_CACHE='north-shell-v1106';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
