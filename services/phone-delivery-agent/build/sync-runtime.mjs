@@ -12,7 +12,7 @@ const files = ['adapter.mjs', 'security.mjs', 'taobao-flash-browser.mjs'];
 await fs.rm(destination, { recursive: true, force: true });
 await fs.mkdir(codeDestination, { recursive: true });
 for (const file of files) await fs.copyFile(path.join(source, file), path.join(codeDestination, file));
-await fs.writeFile(path.join(codeDestination, 'runtime-version.json'), `${JSON.stringify({ version: process.env.SMALL_PHONE_DELIVERY_RUNTIME_VERSION || '0.1.0', files }, null, 2)}\n`);
+await fs.writeFile(path.join(codeDestination, 'runtime-version.json'), `${JSON.stringify({ version: process.env.SMALL_PHONE_DELIVERY_RUNTIME_VERSION || '0.1.1', files }, null, 2)}\n`);
 const webApp = await fs.readFile(path.resolve(root, '..', '..', 'app.js'), 'utf8');
 const supabaseUrl = webApp.match(/const\s+COMPANION_URL='([^']+)'/)?.[1] || '';
 const publishableKey = webApp.match(/const\s+COMPANION_KEY='([^']+)'/)?.[1] || '';
@@ -26,8 +26,8 @@ try {
 await fs.writeFile(path.join(destination, 'public-config.json'), `${JSON.stringify({
   supabaseUrl,
   publishableKey,
-  smallPhoneUrl: 'https://kaining921.github.io/phone/',
-  runtimeManifestUrl: 'https://kaining921.github.io/phone/delivery-agent/runtime-manifest.json',
+  smallPhoneUrl: 'https://fenglina35-dotcom.github.io/phone/',
+  runtimeManifestUrl: 'https://fenglina35-dotcom.github.io/phone/delivery-agent/runtime-manifest.json',
   runtimeUpdatePublicKey,
 }, null, 2)}\n`);
 await fs.copyFile(

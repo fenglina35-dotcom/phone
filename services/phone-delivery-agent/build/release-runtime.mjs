@@ -26,7 +26,7 @@ zip.writeZip(archivePath);
 const archive = await fs.readFile(archivePath);
 const payload = {
   version,
-  url: `https://kaining921.github.io/phone/delivery-agent/${archiveName}`,
+  url: `https://fenglina35-dotcom.github.io/phone/delivery-agent/${archiveName}`,
   sha256: crypto.createHash('sha256').update(archive).digest('hex'),
   size: archive.length,
   createdAt: new Date().toISOString(),
