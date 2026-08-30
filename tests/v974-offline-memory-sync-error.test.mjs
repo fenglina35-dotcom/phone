@@ -18,8 +18,8 @@ test('offline and cohab prompts use the same hidden long-term memory tag as WeCh
   assert.match(app, /重要记忆（与微信使用同一套长期记忆）/);
   assert.equal((app.match(/s\+=offlineMemoryRule\(c\);/g) || []).length, 2);
   assert.match(app, /登录\/退出微信、查看手机、屏幕共享、远程控制、同步、读取、上传和报错都只是功能操作/);
-  assert.match(app, /r=applyGrudgeTags\(r,c\);r=offlineApplyMemoryTags\(r,c\)\.text/);
-  assert.match(app, /retry=applyGrudgeTags\(retry,c\);retry=offlineApplyMemoryTags\(retry,c\)\.text/);
+  assert.match(app, /r=applyGrudgeTags\(r,c\);r=offlineApplyMemoryTags\(r,c,current\)\.text/);
+  assert.match(app, /retry=applyGrudgeTags\(retry,c\);retry=offlineApplyMemoryTags\(retry,c,current\)\.text/);
   assert.match(app, /if\(!note\)offlineRememberExplicitRequest\(c,current\)/);
 });
 
@@ -50,18 +50,22 @@ test('offline model memory tags execute once and never leak into visible dialogu
   const remembered = [];
   let saves = 0;
   const sandbox = {
-    rememberForChar: (_c, text) => {
-      remembered.push(text);
+    String,
+    rememberFromConversation: (_c, text, userText, replyText) => {
+      remembered.push({text,userText,replyText});
       return 'added';
     },
     save() { saves += 1; },
   };
   vm.runInNewContext(
     lineFunction('offlineApplyMemoryTags') +
-      ';globalThis.result=offlineApplyMemoryTags("【记住｜她不吃香菜】\\n【他把菜单收起来】\\n我记下了。",{});',
+      ';globalThis.result=offlineApplyMemoryTags("【记住｜她不吃香菜】\\n【他把菜单收起来】\\n我记下了。",{},"我不吃香菜");',
     sandbox,
   );
-  assert.deepEqual(remembered, ['她不吃香菜']);
+  assert.equal(remembered.length,1);
+  assert.equal(remembered[0].text,'她不吃香菜');
+  assert.equal(remembered[0].userText,'我不吃香菜');
+  assert.match(remembered[0].replyText,/我记下了/);
   assert.equal(sandbox.result.changed, true);
   assert.doesNotMatch(sandbox.result.text, /记住|不吃香菜/);
   assert.match(sandbox.result.text, /我记下了/);

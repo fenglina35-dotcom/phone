@@ -7,6 +7,15 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const runtimeCode = path.resolve(here, '..', 'runtime', 'code');
+const packageRoot = path.resolve(here, '..');
+
+test('installer unpacks browser automation beside the updateable runtime', async () => {
+  const pkg = JSON.parse(await fs.readFile(path.join(packageRoot, 'package.json'), 'utf8'));
+  const unpacked = pkg.build?.asarUnpack || [];
+  assert.ok(unpacked.includes('runtime/**'));
+  assert.ok(unpacked.includes('node_modules/playwright/**'));
+  assert.ok(unpacked.includes('node_modules/playwright-core/**'));
+});
 
 test('signed runtime imports after being copied outside every project node_modules folder', async (t) => {
   const isolated = await fs.mkdtemp(path.join(os.tmpdir(), 'small-phone-runtime-'));

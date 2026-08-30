@@ -32,7 +32,7 @@ await build({
   legalComments: 'inline',
   logLevel: 'silent',
 });
-await fs.writeFile(path.join(codeDestination, 'runtime-version.json'), `${JSON.stringify({ version: process.env.SMALL_PHONE_DELIVERY_RUNTIME_VERSION || '0.1.2', files }, null, 2)}\n`);
+await fs.writeFile(path.join(codeDestination, 'runtime-version.json'), `${JSON.stringify({ version: process.env.SMALL_PHONE_DELIVERY_RUNTIME_VERSION || '0.1.3', files }, null, 2)}\n`);
 const webApp = await fs.readFile(path.resolve(root, '..', '..', 'app.js'), 'utf8');
 const supabaseUrl = webApp.match(/const\s+COMPANION_URL='([^']+)'/)?.[1] || '';
 const publishableKey = webApp.match(/const\s+COMPANION_KEY='([^']+)'/)?.[1] || '';

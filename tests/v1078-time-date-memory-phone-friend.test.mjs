@@ -115,14 +115,16 @@ test('active memory frequency is a meaningful daily ceiling',()=>{
   assert.match(app,/memoryFreq:1/);
   assert.match(app,/function memoryFrequencyLimit\(\)/);
   assert.match(app,/return n===5\?5:n===3\?3:1/);
-  assert.match(app,/function rememberFromConversation\(c,text,userText\)/);
+  assert.match(app,/function rememberFromConversation\(c,text,userText,replyText\)/);
   assert.match(app,/function memoryImportantCandidate\(text\)/);
+  assert.match(app,/function memoryCandidateQuality\(text\)/);
+  assert.match(app,/function memoryCandidateGrounded\(c,text,userText,replyText\)/);
   assert.match(app,/没有重要内容就不要输出，绝不能为达到数量编造/);
   assert.match(app,/偶尔 · 1条\/天/);
   assert.match(app,/经常 · 3条\/天/);
   assert.match(app,/总是 · 5条\/天/);
-  assert.match(app,/rememberFromConversation\(c,mm\[1\],_userText\)/);
-  assert.match(app,/rememberFromConversation\(c,tx,\(_luc&&msgToText\(_luc\)\)\|\|''\)/);
+  assert.match(app,/rememberFromConversation\(c,mm\[1\],_userText,content\)/);
+  assert.match(app,/rememberFromConversation\(c,tx,\(_luc&&msgToText\(_luc\)\)\|\|'',content\)/);
 });
 
 test('real-person recall is visible and group members can leave safely',()=>{

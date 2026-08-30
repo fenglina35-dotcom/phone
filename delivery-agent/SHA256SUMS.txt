@@ -1,1 +1,1 @@
-59aed86b0dd80238547560de704a0d17ca934a8b800a085b5b9fe837204893a0  small-phone-delivery-runtime-0.1.2.zip
+e77ccb61a89c29630dff7b4c9d6a74b1993a3352f53deee1131e9eb74be18d11  small-phone-delivery-runtime-0.1.3.zip
