@@ -50,6 +50,7 @@ test('a role lock message is withheld until the real device command completes', 
   assert.match(edge, /stage: "awaiting_lock"/);
   assert.match(edge, /action: "lock"[\s\S]{0,220}by: "role-app-watch"/);
   assert.match(sync, /command\.by == "role-app-watch"/);
+  assert.match(sync, /RemoteCommand\([\s\S]{0,260}actor: actor,\s*by: nil\s*\)/);
   assert.match(sync, /guard effectiveLockedTokens\(\)\.contains\(token\)/);
   assert.match(sync, /saveShieldRoleActors\(previousRoleActors\)/);
 });

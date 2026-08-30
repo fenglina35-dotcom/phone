@@ -1079,7 +1079,8 @@ final class CompanionSyncService: ObservableObject {
             externalAppId: externalAppID,
             minutes: minutes,
             scope: scope,
-            actor: actor
+            actor: actor,
+            by: nil
         )
         let message = try await applyRemoteCommand(
             command,

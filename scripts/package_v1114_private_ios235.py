@@ -22,6 +22,14 @@ for old, new in [
     template = template.replace(old, new)
 template = template.replace("if existing != [ZIP_PATH]:", "if existing and existing != [ZIP_PATH]:")
 template = template.replace(
+    'DELIVERY = ROOT / "delivery-v1114-private235-final"',
+    'DELIVERY = ROOT / "delivery-v1114-private235-compilefix-final"',
+)
+template = template.replace(
+    'PACKAGE_NAME = "SmallPhone_v1114_MomentRoleRoute_iOS235_MacReady"',
+    'PACKAGE_NAME = "SmallPhone_v1114_MomentRoleRoute_iOS235_CompileFix_MacReady"',
+)
+template = template.replace(
     '        "remoteControlRoleReaction",',
     '        "remoteControlRoleReaction",\n'
     '        "function roleVisibleUserMomentsPrompt",\n'
@@ -34,7 +42,7 @@ exec(compile(template, __file__, "exec"))
 root = Path(__file__).resolve().parents[1]
 source = root / "native/private-small-phone/XcodeProject"
 bundle_source = source / "PhoneCompanionTest/PhoneWeb.bundle"
-package = root / "delivery-v1114-private235-final" / "SmallPhone_v1114_MomentRoleRoute_iOS235_MacReady.zip"
+package = root / "delivery-v1114-private235-compilefix-final" / "SmallPhone_v1114_MomentRoleRoute_iOS235_CompileFix_MacReady.zip"
 
 
 def file_map(path: Path) -> dict[str, bytes]:
@@ -63,6 +71,7 @@ with ZipFile(package) as archive:
     app = archived_bundle["app.js"].decode("utf-8")
     project = archive.read(prefix + "PhoneCompanionTest.xcodeproj/project.pbxproj").decode("utf-8")
     webview = archive.read(prefix + "PhoneCompanionTest/LocalPhoneWebView.swift").decode("utf-8")
+    companion_sync = archive.read(prefix + "PhoneCompanionTest/CompanionSyncView.swift").decode("utf-8")
     for token in [
         "const APP_VER='v1114 · 朋友圈评论与角色独立路线版'",
         "function roleVisibleUserMomentsPrompt",
@@ -74,6 +83,8 @@ with ZipFile(package) as archive:
             raise RuntimeError(f"bundled protected feature missing: {token}")
     if "window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.235 (235)'" not in webview:
         raise RuntimeError("private build marker mismatch")
+    if "actor: actor,\n            by: nil" not in companion_sync:
+        raise RuntimeError("RemoteCommand initializer compile fix missing")
     if project.count("CURRENT_PROJECT_VERSION = 235;") != 12 or project.count("MARKETING_VERSION = 1.0.235;") != 12:
         raise RuntimeError("iOS version mismatch")
     for required in ["app.js", "delivery.js", "index.html", "小手机.html", "vendor/qr/jsQR.js", "vendor/qr/qrcode.js", "wechat-me.css", "wechat-me.js"]:
