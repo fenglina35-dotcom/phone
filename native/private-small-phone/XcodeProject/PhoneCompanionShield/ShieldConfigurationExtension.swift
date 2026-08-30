@@ -1,16 +1,21 @@
+import CryptoKit
+import FamilyControls
+import Foundation
 import ManagedSettings
 import ManagedSettingsUI
 import UIKit
 
 final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
     private let appGroupID = "group.com.qianyi.PhoneCompanionTest"
-    private let shieldActorKey = "companion.shield.actor.v1"
+    private let shieldRoleActorsKey = "companion.shield.roleActors.v1"
+    private let shieldLimitDaysKey = "companion.shield.limitDays.v1"
 
     override func configuration(
         shielding application: Application
     ) -> ShieldConfiguration {
         makeConfiguration(
-            appName: application.localizedDisplayName ?? "此 App"
+            appName: application.localizedDisplayName ?? "此 App",
+            token: application.token
         )
     }
 
@@ -19,19 +24,35 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
         in category: ActivityCategory
     ) -> ShieldConfiguration {
         makeConfiguration(
-            appName: application.localizedDisplayName ?? "此 App"
+            appName: application.localizedDisplayName ?? "此 App",
+            token: application.token
         )
     }
 
     private func makeConfiguration(
-        appName: String
+        appName: String,
+        token: ApplicationToken?
     ) -> ShieldConfiguration {
-        let rawActor = UserDefaults(suiteName: appGroupID)?
-            .string(forKey: shieldActorKey)?
+        let defaults = UserDefaults(suiteName: appGroupID)
+        let externalID = token.flatMap { stableExternalID(for: $0) } ?? ""
+        let rawActor = (defaults?.dictionary(forKey: shieldRoleActorsKey)
+            as? [String: String])?[externalID]?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let actor = rawActor.isEmpty
-            ? "绑定角色"
-            : String(rawActor.prefix(24))
+        let limitDay = (defaults?.dictionary(forKey: shieldLimitDaysKey)
+            as? [String: String])?[externalID] ?? ""
+        let isRoleLock = !rawActor.isEmpty
+        let isDailyLimit = !isRoleLock && limitDay == usageDay(for: Date())
+        let actor = String((rawActor.isEmpty ? "绑定角色" : rawActor).prefix(24))
+        let titleText = isRoleLock
+            ? "\(appName) 已被\(actor)锁定"
+            : isDailyLimit
+            ? "\(appName) 今日限额已达到"
+            : "\(appName) 暂时已锁定"
+        let subtitleText = isRoleLock
+            ? "这是角色主动锁定，不是今日使用限额。请回到小手机找\(actor)。"
+            : isDailyLimit
+            ? "这是今天的使用时间达到限额，不是角色主动锁定。"
+            : "锁定来源尚未同步；不会把它误写成角色锁定或今日限额。"
 
         return ShieldConfiguration(
             backgroundBlurStyle: .systemUltraThinMaterialDark,
@@ -43,7 +64,7 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
             ),
             icon: UIImage(systemName: "lock.shield.fill"),
             title: ShieldConfiguration.Label(
-                text: "\(appName) 已被\(actor)锁定",
+                text: titleText,
                 color: UIColor(
                     red: 1.0,
                     green: 0.29,
@@ -52,7 +73,7 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
                 )
             ),
             subtitle: ShieldConfiguration.Label(
-                text: "已达到今日使用限额。若要继续使用，请回到小手机找\(actor)解锁。",
+                text: subtitleText,
                 color: UIColor(
                     red: 0.78,
                     green: 0.76,
@@ -72,5 +93,25 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
             ),
             secondaryButtonLabel: nil
         )
+    }
+
+    private func stableExternalID(
+        for token: ApplicationToken
+    ) -> String? {
+        guard let tokenData = try? JSONEncoder().encode(token) else {
+            return nil
+        }
+        let digest = SHA256.hash(data: tokenData)
+        let hex = digest.map { String(format: "%02x", $0) }.joined()
+        return "ios." + hex
+    }
+
+    private func usageDay(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
     }
 }

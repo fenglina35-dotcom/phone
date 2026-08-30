@@ -12,12 +12,12 @@ const migration = read('supabase/migrations/202608130001_background_app_watch_te
 const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const nativeWeb = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v1112 web source keeps private 1.0.233 compatibility', () => {
-  assert.match(app, /APP_VER='v1112 · 个人外卖电脑隔离试用版'/);
-  assert.match(html, /app\.js\?v=1112/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 233;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.233;/);
-  assert.match(nativeWeb, /1\.0\.233 \(233\)/);
+test('v1113 web source keeps private 1.0.234 compatibility', () => {
+  assert.match(app, /APP_VER='v1113 · 角色软件锁定与共同生活入口版'/);
+  assert.match(html, /app\.js\?v=1113/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 234;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.234;/);
+  assert.match(nativeWeb, /1\.0\.234 \(234\)/);
 });
 
 test('Apple compatibility alone moves call identity and mood updates live', () => {
@@ -49,5 +49,6 @@ test('background tests expose failures and app test is durable', () => {
   assert.doesNotMatch(app, /roleAppWatchImmediateTest|'app_watch_test'.*Date\.now\(\)\+60000/s);
   assert.match(migration, /'app_watch_test'/);
   assert.match(edge, /task\.kind === "app_watch_test"/);
-  assert.match(edge, /Date\.now\(\) \+ 5 \* 60_000/);
+  assert.doesNotMatch(edge, /followupChoice: Math\.random/);
+  assert.match(edge, /appInspect: \{\s*stage: "awaiting_lock"/);
 });

@@ -1,6 +1,7 @@
 import DeviceActivity
 import FamilyControls
 import Foundation
+import CryptoKit
 import ManagedSettings
 
 extension ManagedSettingsStore.Name {
@@ -12,6 +13,7 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
     private let tokenKeyPrefix = "limit.token."
     private let lockedLimitTokensKey = "limit.lockedTokens"
     private let lockedLimitDayKey = "limit.lockedUsageDay"
+    private let shieldLimitDaysKey = "companion.shield.limitDays.v1"
     private let store = ManagedSettingsStore(named: .dailyLimit)
 
     private var sharedDefaults: UserDefaults? {
@@ -76,6 +78,12 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         if let encoded = try? JSONEncoder().encode(lockedTokens) {
             defaults.set(encoded, forKey: lockedLimitTokensKey)
             defaults.set(today, forKey: lockedLimitDayKey)
+            if let externalID = stableExternalID(for: token) {
+                var days = defaults.dictionary(forKey: shieldLimitDaysKey)
+                    as? [String: String] ?? [:]
+                days[externalID] = today
+                defaults.set(days, forKey: shieldLimitDaysKey)
+            }
         }
     }
 
@@ -83,6 +91,18 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
         store.shield.applications = nil
         sharedDefaults?.removeObject(forKey: lockedLimitTokensKey)
         sharedDefaults?.removeObject(forKey: lockedLimitDayKey)
+        sharedDefaults?.removeObject(forKey: shieldLimitDaysKey)
+    }
+
+    private func stableExternalID(
+        for token: ApplicationToken
+    ) -> String? {
+        guard let tokenData = try? JSONEncoder().encode(token) else {
+            return nil
+        }
+        let digest = SHA256.hash(data: tokenData)
+        let hex = digest.map { String(format: "%02x", $0) }.joined()
+        return "ios." + hex
     }
 
     private func usageDay(for date: Date) -> String {

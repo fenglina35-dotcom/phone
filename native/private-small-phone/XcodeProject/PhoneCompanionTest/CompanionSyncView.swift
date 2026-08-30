@@ -476,6 +476,7 @@ private struct RemoteCommand: Decodable {
     let minutes: Int?
     let scope: String?
     let actor: String?
+    let by: String?
 }
 
 @MainActor
@@ -532,7 +533,8 @@ final class CompanionSyncService: ObservableObject {
     private let footprintStorageKey = "PhoneCompanionTodayFootprint"
     private var cachedFootprintData: Data?
     private var cachedTodayPoints: [FootprintPoint] = []
-    private let shieldActorKey = "companion.shield.actor.v1"
+    private let shieldRoleActorsKey = "companion.shield.roleActors.v1"
+    private let shieldLimitDaysKey = "companion.shield.limitDays.v1"
     private let snapshotSequenceKey = "companion.snapshot.sequence.v1"
     private let manualUnlockEventsKey =
         "companion.manual-unlock-events.v1"
@@ -1887,7 +1889,10 @@ final class CompanionSyncService: ObservableObject {
                     screenTimeControlAuthorizationFailure(action: "锁定")
                 )
             }
-            rememberShieldActor(command.actor)
+            let previousRoleActors = shieldRoleActors()
+            if command.by == "role-app-watch" {
+                rememberRoleShieldActor(command.actor, for: token)
+            }
             let previousManualTokens =
                 manualLockStore.shield.applications ?? loadLockedTokens()
             let previousLedgerTokens =
@@ -1912,6 +1917,7 @@ final class CompanionSyncService: ObservableObject {
                     : previousLedgerTokens
                 saveLockedTokens(previousManualTokens)
                 savePersistentLockLedger(previousLedgerTokens)
+                saveShieldRoleActors(previousRoleActors)
                 throw CompanionSyncError.message("本地屏蔽配置写入失败，未发送成功回执")
             }
             return "屏蔽配置已写入；最终是否生效请以打开目标 App 时的系统屏蔽页为准"
@@ -1964,10 +1970,10 @@ final class CompanionSyncService: ObservableObject {
                 savePersistentLockLedger(previousLedgerTokens)
                 throw CompanionSyncError.message("本地屏蔽配置移除失败，未发送成功回执")
             }
+            forgetRoleShieldActor(for: token)
             return "屏蔽配置已移除；最终是否生效请以目标 App 能否正常打开为准"
 
         case "limit":
-            rememberShieldActor(command.actor)
             let minutes = min(
                 720,
                 max(1, command.minutes ?? 1)
@@ -1999,14 +2005,40 @@ final class CompanionSyncService: ObservableObject {
         }
     }
 
-    private func rememberShieldActor(_ rawActor: String?) {
+    private func shieldRoleActors() -> [String: String] {
+        sharedDefaults?.dictionary(forKey: shieldRoleActorsKey)
+            as? [String: String] ?? [:]
+    }
+
+    private func saveShieldRoleActors(_ actors: [String: String]) {
+        guard !actors.isEmpty else {
+            sharedDefaults?.removeObject(forKey: shieldRoleActorsKey)
+            return
+        }
+        sharedDefaults?.set(actors, forKey: shieldRoleActorsKey)
+    }
+
+    private func rememberRoleShieldActor(
+        _ rawActor: String?,
+        for token: ApplicationToken
+    ) {
+        guard let externalID = stableExternalID(for: token) else { return }
         let trimmed = rawActor?.trimmingCharacters(
             in: .whitespacesAndNewlines
         ) ?? ""
         let actor = trimmed.isEmpty
             ? "绑定角色"
             : String(trimmed.prefix(24))
-        sharedDefaults?.set(actor, forKey: shieldActorKey)
+        var actors = shieldRoleActors()
+        actors[externalID] = actor
+        saveShieldRoleActors(actors)
+    }
+
+    private func forgetRoleShieldActor(for token: ApplicationToken) {
+        guard let externalID = stableExternalID(for: token) else { return }
+        var actors = shieldRoleActors()
+        actors.removeValue(forKey: externalID)
+        saveShieldRoleActors(actors)
     }
 
     private func screenTimeControlIsAuthorized() -> Bool {
@@ -2274,10 +2306,15 @@ final class CompanionSyncService: ObservableObject {
         if let data = try? JSONEncoder().encode(tokens),
            let defaults = sharedDefaults {
             defaults.set(data, forKey: lockedLimitTokensKey)
-            defaults.set(
-                usageDay(for: Date()),
-                forKey: lockedLimitDayKey
-            )
+            let today = usageDay(for: Date())
+            defaults.set(today, forKey: lockedLimitDayKey)
+            var days: [String: String] = [:]
+            for token in tokens {
+                if let externalID = stableExternalID(for: token) {
+                    days[externalID] = today
+                }
+            }
+            defaults.set(days, forKey: shieldLimitDaysKey)
         }
     }
 
@@ -2285,6 +2322,7 @@ final class CompanionSyncService: ObservableObject {
         dailyLimitStore.shield.applications = nil
         sharedDefaults?.removeObject(forKey: lockedLimitTokensKey)
         sharedDefaults?.removeObject(forKey: lockedLimitDayKey)
+        sharedDefaults?.removeObject(forKey: shieldLimitDaysKey)
     }
 
     private func loadPersistentLockLedger() -> Set<ApplicationToken> {

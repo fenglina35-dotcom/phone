@@ -63,11 +63,13 @@ test('an explicit background test tries each synchronized external route once an
 
 test('app awareness is gated, limited, mutually exclusive and cooled down', () => {
   assert.match(app, /appWatchEnabled:!!\(c\.proactive&&c\.proactive\.appWatch\)/);
+  assert.match(app, /roleAppLockEnabled:!!\(c&&c\.proactive&&c\.proactive\.appWatchRoleLock\)/);
   assert.match(app, /Math\.max\(0,Math\.min\(5,/);
   assert.match(edge, /Math\.random\(\) < 0\.5/);
   assert.match(edge, /nextDue\(profile, 90\)/);
-  assert.match(edge, /due_at: new Date\(Date\.now\(\) \+ 5 \* 60_000\)/);
-  assert.match(edge, /String\(payload\.followupChoice \|\| "message"\) === "lock"/);
+  assert.match(edge, /stage: "awaiting_lock"/);
+  assert.match(edge, /commandStatus === "completed"/);
+  assert.doesNotMatch(edge, /followupChoice: Math\.random/);
 });
 
 test('background automations require fresh device facts and only record delivered events', () => {

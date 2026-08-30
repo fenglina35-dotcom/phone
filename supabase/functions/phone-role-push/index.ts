@@ -350,6 +350,20 @@ function profileModelBase(value: unknown) {
   }
 }
 
+function parseRoleAppDecision(value: unknown) {
+  const text = String(value || "").trim();
+  const head = text.match(/^\s*[\[【]\s*应用处理\s*[|｜]\s*(锁定|提醒)\s*[\]】]\s*/);
+  if (!head) return null;
+  const action = head[1] === "锁定" ? "lock" : "remind";
+  const rest = text.slice(head[0].length).trim();
+  if (action === "remind") return rest ? { action, body: rest, failureBody: "" } : null;
+  const success = rest.match(/[\[【]\s*锁定成功\s*[\]】]([\s\S]*?)(?=[\[【]\s*锁定失败\s*[\]】])/);
+  const failure = rest.match(/[\[【]\s*锁定失败\s*[\]】]([\s\S]*)$/);
+  const body = String(success?.[1] || "").trim();
+  const failureBody = String(failure?.[1] || "").trim();
+  return body && failureBody ? { action, body, failureBody } : null;
+}
+
 async function roleMessage(
   profile: Record<string, unknown>,
   recentBodies: string[],
@@ -357,6 +371,7 @@ async function roleMessage(
   eventContext = "",
   allowSilent = true,
   ordinaryProactive = false,
+  appDecision = false,
 ) {
   const manualUnlockEvent = String(eventInstruction || "").includes("亲自成功解锁App");
   /* A background handoff must always finish inside the two-minute claim lease.
@@ -484,6 +499,12 @@ async function roleMessage(
       content: "这是用户明确发起且正在等待结果的任务，必须生成一条真实、自然的角色消息；本次不允许输出 [保持安静]、[不说话] 或空内容。普通随机主动联系是否保持安静的规则不适用于本次任务。",
     });
   }
+  if (appDecision) {
+    baseMessages.splice(1, 0, {
+      role: "system",
+      content: "这是一次真实软件使用事件，必须自主二选一，不能保持安静，也不能给第三种结果。若只提醒，第一行输出 [应用处理|提醒]，后面直接写要发给对方的自然提醒。若决定锁定，第一行输出 [应用处理|锁定]，随后依次输出 [锁定成功] 和确认手机真实锁定后要发的话、[锁定失败] 和手机未锁成功时要发的话。两段都必须是角色本人第一人称、直接对当前聊天对象说；成功段必须明确是自己锁的且不是今日限额，失败段必须如实说没有锁成功并改为提醒。不要提系统、任务、模型、标签或技术。",
+    });
+  }
   try {
     let sawGeneratedCandidate = false;
     for (const provider of providers) {
@@ -537,6 +558,43 @@ async function roleMessage(
             ? { kind: "silent", body: "" }
             : { kind: "unavailable", body: "", reason: "unsafe-model-output" };
           sawGeneratedCandidate = true;
+          if (appDecision) {
+            const parsed = parseRoleAppDecision(text);
+            if (!parsed) {
+              attemptMessages = [
+                ...baseMessages,
+                { role: "assistant", content: text },
+                { role: "user", content: "格式不完整。必须严格二选一：提醒用 [应用处理|提醒] 加正文；锁定用 [应用处理|锁定]、[锁定成功] 正文、[锁定失败] 正文。不要解释格式。" },
+              ];
+              continue;
+            }
+            const normalizedBody = roleNormalizeGeneratedText(parsed.body.slice(0, 900), String(profile.role_name || "角色"));
+            const body = roleMessageParts(normalizedBody, messageMax).join("\n").trim();
+            const normalizedFailure = parsed.action === "lock"
+              ? roleNormalizeGeneratedText(parsed.failureBody.slice(0, 900), String(profile.role_name || "角色"))
+              : "";
+            const failureBody = normalizedFailure ? roleMessageParts(normalizedFailure, messageMax).join("\n").trim() : "";
+            const candidates = [body, failureBody].filter(Boolean);
+            const invalid = !body || parsed.action === "lock" && !failureBody || candidates.some((candidate) => {
+              const bodyKey = roleTextKey(candidate);
+              return !bodyKey || repeatCandidates.some((old) => roleMessageRepeated(candidate, old)) ||
+                roleUserFactUnsupported(candidate, `${recentContext}\n${memoryContext}`) ||
+                roleMessageStyleInvalid(candidate, messageMax) ||
+                roleOnlineNarrationInvalid(candidate, String(profile.role_name || "角色"));
+            });
+            if (!invalid) return {
+              kind: "message",
+              body,
+              failureBody,
+              appAction: parsed.action,
+            };
+            attemptMessages = [
+              ...baseMessages,
+              { role: "assistant", content: text },
+              { role: "user", content: "上一版重复近期话语、编造了没有依据的事实、像旁白，或消息格式不合格。保持同一个二选一决定，重写成不重复的真人微信口吻；锁定时成功和失败两段都必须完整。不要解释纠正过程。" },
+            ];
+            continue;
+          }
           if (/^[\[【]\s*(?:保持安静|不说话)\s*[\]】]$/.test(text)) {
             if (manualUnlockEvent) return { kind: "message", body: roleManualUnlockFallback(eventContext, repeatCandidates) };
             if (effectiveAllowSilent) return { kind: "silent", body: "" };
@@ -1481,9 +1539,7 @@ Deno.serve(async (request) => {
             : `查看目标：${String(payload.focus || "已授权设备数据")}\n本次没有取得5分钟内的新鲜快照。`;
         }
       } else if (task.kind === "app_followup") {
-        instruction = String(payload.followupChoice || "message") === "lock"
-          ? "这是查看软件后没有得到用户回复的最后一步。你本轮已经决定暂时锁定事件中的App；正文必须明确自然地告诉用户你锁定了它，不要再询问第二次。"
-          : "这是查看软件后没有得到用户回复的最后一步。你本轮已经决定不锁定，只再发一次自然询问并结束；正文不得声称锁定。";
+        instruction = "这是旧版本留下的一次软件查看后续。只能再发一次自然提醒并结束，绝不能声称已经锁定，也不能再创建锁定命令。";
         context = `软件：${String(payload.appName || "已授权App")}\n软件稳定ID：${String(payload.appId || "")}\n${context}`;
       } else if (task.kind === "delivery_status") {
         instruction = "这是一笔由你创建的真实外卖订单刚收到的平台状态回执。只依据payload里的真实字段，按你自己的完整人设、关系和说话习惯决定怎样提醒用户；不得照抄模板，不得编造优惠、骑手位置、到达时间或其他未提供事实。订单进入已付款、配送中、已送达、已退款或失败等重要状态时应明确提醒。";
@@ -1507,17 +1563,6 @@ Deno.serve(async (request) => {
         }
         continue;
       }
-      const choseLock = task.kind === "app_followup" && decision.kind === "message" && String(payload.followupChoice || "message") === "lock";
-      if (choseLock) {
-        const appId = String(payload.appId || ""), appName = String(payload.appName || "");
-        if (appId && appName) {
-          await enqueueCompanionCommand(client, String(task.target), {
-            schema: 1, action: "lock", externalAppId: appId, externalAppName: appName,
-            scope: "external", actor: String(profile.role_name || "角色"), by: "role-app-watch",
-            createdAt: new Date().toISOString(),
-          });
-        }
-      }
       const backgroundDelivered = decision.kind === "message"
         ? await persistAndPush(client, url, profile, decision.body, payload.empathyDoll === true ? "empathy-doll" : task.kind, `task:${task.id}`)
         : false;
@@ -1533,13 +1578,6 @@ Deno.serve(async (request) => {
         checkedAt: new Date().toISOString(),
       };
       if (backgroundDelivered) backgroundSent += 1;
-      if (backgroundDelivered && task.kind === "app_watch_test" && appTestDetected) {
-        await client.from("phone_role_background_tasks").insert({
-          target: profile.target, role_id: profile.role_id, kind: "app_followup",
-          payload: { appId: appTestDetected.id, appName: appTestDetected.name, context, test: true, followupChoice: Math.random() < 0.5 ? "lock" : "message" },
-          baseline_user_at: profile.last_user_at, due_at: new Date(Date.now() + 5 * 60_000).toISOString(),
-        });
-      }
       /* Explicit tests and reply handoffs must yield quickly to real chat.
          A transient 503 is useful diagnostic evidence, not permission to keep
          six concurrent generations alive for more than ten minutes. */
@@ -1643,7 +1681,54 @@ Deno.serve(async (request) => {
     for (const profile of profiles) {
       const { data: freshProfile } = await client.from("phone_role_push_profiles")
         .select("*").eq("target", profile.target).eq("role_id", profile.role_id).maybeSingle();
-      if (!freshProfile?.enabled || !activityQuietForThirtyMinutes(freshProfile) || !profileQuietPeriodEnded(freshProfile) || Date.parse(String(freshProfile.next_due_at || "")) > Date.now()) {
+      if (!freshProfile) {
+        await client.from("phone_role_push_profiles").update({ claimed_until: null, updated_at: new Date().toISOString() })
+          .eq("target", profile.target).eq("role_id", profile.role_id);
+        continue;
+      }
+      Object.assign(profile, freshProfile);
+      const earlyAppState = profile.automation_state && typeof profile.automation_state === "object"
+        ? profile.automation_state as Record<string, unknown> : {};
+      const earlyInspect = earlyAppState.appInspect && typeof earlyAppState.appInspect === "object"
+        ? earlyAppState.appInspect as Record<string, unknown> : null;
+      /* A device lock already happened (or failed) outside the ordinary
+         proactive-message cadence.  Its truthful result must not be stranded
+         behind the 30-minute idle gate or the ordinary daily message limit. */
+      if (earlyInspect?.stage === "awaiting_lock") {
+        if (profileTemporarilySuspended(freshProfile)) {
+          await client.from("phone_role_push_profiles").update({
+            claimed_until: null, next_due_at: nextDue(profile, 1), updated_at: new Date().toISOString(),
+          }).eq("target", profile.target).eq("role_id", profile.role_id);
+          continue;
+        }
+        const commandId = String(earlyInspect.commandId || "");
+        const command = commandId
+          ? (await client.from("phone_companion_commands").select("id,status,created_at,result").eq("id", commandId).eq("target", profile.target).maybeSingle()).data
+          : null;
+        const commandStatus = String(command?.status || "");
+        const elapsed = Date.now() - snapshotTime(command?.created_at || earlyInspect.startedAt);
+        const completed = commandStatus === "completed";
+        const failed = ["failed", "expired", "canceled", "superseded"].includes(commandStatus) || elapsed >= 15 * 60_000;
+        if (!completed && !failed) {
+          await client.from("phone_role_push_profiles").update({
+            claimed_until: null, next_due_at: nextDue(profile, 1), updated_at: new Date().toISOString(),
+          }).eq("target", profile.target).eq("role_id", profile.role_id);
+          continue;
+        }
+        const outcomeBody = String(completed ? earlyInspect.body || "" : earlyInspect.failureBody || "").trim();
+        if (outcomeBody) {
+          sent += await persistAndPush(
+            client, url, profile, outcomeBody, completed ? "app-lock" : "app-lock-failed",
+            `app-lock:${commandId || String(earlyInspect.startedAt || "missing")}`,
+          ) ? 1 : 0;
+        }
+        await client.from("phone_role_push_profiles").update({
+          claimed_until: null, automation_state: { ...earlyAppState, appInspect: null },
+          next_due_at: nextDue(profile, 90), updated_at: new Date().toISOString(),
+        }).eq("target", profile.target).eq("role_id", profile.role_id);
+        continue;
+      }
+      if (!freshProfile.enabled || !activityQuietForThirtyMinutes(freshProfile) || !profileQuietPeriodEnded(freshProfile) || Date.parse(String(freshProfile.next_due_at || "")) > Date.now()) {
         await client.from("phone_role_push_profiles").update({ claimed_until: null, updated_at: new Date().toISOString() })
           .eq("target", profile.target).eq("role_id", profile.role_id);
         continue;
@@ -1656,7 +1741,8 @@ Deno.serve(async (request) => {
         }).eq("target", profile.target).eq("role_id", profile.role_id);
         continue;
       }
-      Object.assign(profile, freshProfile);
+      const automationConfig = profile.automation_config && typeof profile.automation_config === "object"
+        ? profile.automation_config as Record<string, unknown> : {};
       const clock = localClock(profile.timezone);
       const count = profile.daily_day === clock.day ? Number(profile.daily_count || 0) : 0;
       const start = Number(profile.start_hour ?? 9), end = Number(profile.end_hour ?? 23);
@@ -1678,6 +1764,7 @@ Deno.serve(async (request) => {
         ? profile.automation_state as Record<string, unknown> : {};
       const inspect = appState.appInspect && typeof appState.appInspect === "object"
         ? appState.appInspect as Record<string, unknown> : null;
+      const roleAppLockEnabled = automationConfig.roleAppLockEnabled === true;
       if (inspect?.stage === "awaiting") {
         const link = (await client.from("phone_companion_links").select("snapshot").eq("target", profile.target).maybeSingle()).data;
         const snapshot = (link?.snapshot || {}) as Record<string, unknown>;
@@ -1686,16 +1773,50 @@ Deno.serve(async (request) => {
         const detected = captured >= requested && Date.now() - captured <= 5 * 60_000
           ? appWatchDetected(snapshot, (inspect.baseline || {}) as Record<string, unknown>) : null;
         if (detected) {
-          const instruction = "你刚按自己的意愿查看了用户此刻正在使用的一个已授权App。只依据真实软件名和本次新增使用量自然发消息，不提监控、系统或技术；可以关心、吃醋、询问或分享感受，但不能编造App里的具体内容。";
+          const instruction = roleAppLockEnabled
+            ? "你刚按自己的意愿查看了用户此刻正在使用的一个已授权App。必须根据本人性格和当前上下文在提醒或锁定中自主二选一，不能不处理。只依据真实软件名和本次新增使用量，不能编造App里的具体内容。"
+            : "你刚按自己的意愿查看了用户此刻正在使用的一个已授权App。角色锁定开关关闭，本轮必须选择提醒并发出自然消息，不能保持安静，也绝不能声称已经锁定。只依据真实软件名和本次新增使用量，不能编造App里的具体内容。";
           const context = `用户当前在使用：${detected.name}\n本次观察窗口新增使用：${Math.max(1, Math.round((detected.used - detected.before) / 60))}分钟`;
-          const decision = await roleMessage(profile, [], instruction, context);
+          const recentRows = (await client.from("phone_role_push_outbox").select("body").eq("target", profile.target).eq("role_id", profile.role_id).order("created_at", { ascending: false }).limit(6)).data || [];
+          const decision = await roleMessage(
+            profile,
+            recentRows.map((row) => String(row.body || "")),
+            instruction,
+            context,
+            false,
+            false,
+            true,
+          );
           if (decision.kind === "message") {
-            sent += await persistAndPush(client, url, profile, decision.body, "app-watch", `app-watch:${profile.target}:${profile.role_id}:${Date.now()}`) ? 1 : 0;
-            await client.from("phone_role_background_tasks").insert({
-              target: profile.target, role_id: profile.role_id, kind: "app_followup",
-              payload: { appId: detected.id, appName: detected.name, context, followupChoice: Math.random() < 0.5 ? "lock" : "message" }, baseline_user_at: profile.last_user_at,
-              due_at: new Date(Date.now() + 5 * 60_000).toISOString(),
-            });
+            const appDecisionResult = decision as Record<string, unknown>;
+            if (roleAppLockEnabled && appDecisionResult.appAction === "lock") {
+              const commandId = await enqueueCompanionCommand(client, String(profile.target), {
+                schema: 1, action: "lock", externalAppId: detected.id, externalAppName: detected.name,
+                scope: "external", actor: String(profile.role_name || "角色"), by: "role-app-watch",
+                createdAt: new Date().toISOString(),
+              });
+              if (commandId) {
+                await client.from("phone_role_push_profiles").update({
+                  claimed_until: null, app_watch_day: clock.day, app_watch_count: appDayCount + 1,
+                  automation_state: { ...appState, appInspect: {
+                    stage: "awaiting_lock", startedAt: new Date().toISOString(), commandId,
+                    appId: detected.id, appName: detected.name, body: decision.body,
+                    failureBody: String(appDecisionResult.failureBody || ""),
+                  } },
+                  next_due_at: nextDue(profile, 1), updated_at: new Date().toISOString(),
+                }).eq("target", profile.target).eq("role_id", profile.role_id);
+                continue;
+              }
+              sent += await persistAndPush(client, url, profile, String(appDecisionResult.failureBody || ""), "app-lock-failed", `app-lock-failed:${profile.target}:${profile.role_id}:${Date.now()}`) ? 1 : 0;
+            } else {
+              const reminderBody = appDecisionResult.appAction === "lock" ? String(appDecisionResult.failureBody || "") : decision.body;
+              sent += await persistAndPush(client, url, profile, reminderBody, "app-watch", `app-watch:${profile.target}:${profile.role_id}:${Date.now()}`) ? 1 : 0;
+            }
+          } else {
+            await client.from("phone_role_push_profiles").update({
+              claimed_until: null, next_due_at: nextDue(profile, 1), updated_at: new Date().toISOString(),
+            }).eq("target", profile.target).eq("role_id", profile.role_id);
+            continue;
           }
           await client.from("phone_role_push_profiles").update({
             claimed_until: null, app_watch_day: clock.day, app_watch_count: appDayCount + 1,

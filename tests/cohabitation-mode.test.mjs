@@ -33,7 +33,7 @@ test('co-living state pauses without deleting and advances work to return home',
   assert.ok(start>=0&&end>start);
   const sandbox={
     S:{contacts:[{id:'c1',name:'角色'}],couple:{cid:'c1'}},
-    Date,console,
+    Date,console,requestAnimationFrame:fn=>fn(),setTimeout:()=>0,
     getC:id=>id==='c1'?sandbox.S.contacts[0]:null,
     uid:(()=>{let n=0;return()=>`u${++n}`;})(),
     save:()=>{},saveNow:()=>{sandbox.saveNowCalls++;return true;},saveNowCalls:0,render:()=>{},toast:()=>{},openOfflineMenu:()=>{},closeModal:()=>{},
@@ -100,7 +100,7 @@ test('co-living state pauses without deleting and advances work to return home',
   assert.equal(sandbox.workEntry.secondRoutes,sandbox.workEntry.firstRoutes,'duplicate entry tap must be idempotently ignored');
   assert.deepEqual({...sandbox.workEntry.route},{p:'off',id:'c1',mode:'cohab'});
   assert.equal(sandbox.workEntry.phase,'work');
-  assert.ok(sandbox.workEntry.saveNowCalls>=3,'toggle and entry must persist immediately');
+  assert.ok(sandbox.workEntry.saveNowCalls>=2,'toggle state must persist; entry persistence is intentionally deferred until after paint');
   assert.equal(sandbox.workEntry.controlCalls,1,'a different control must not be swallowed by the entry guard');
   assert.equal(sandbox.workEntry.homeCalls,1,'back action must remain available in work state');
 });
@@ -193,9 +193,9 @@ test('co-living UI exposes persistent status, return notice and test controls',(
   assert.match(source,/page\.p==='off'&&stage\.querySelector\('\.cohab-status-chip'\)/);
   assert.match(source,/function cohabActionTap\(e,action,id\).*preventDefault.*stopPropagation.*action==='controls'.*action==='quit'/s,'all mobile co-living controls must share the synchronous guarded route');
   assert.doesNotMatch(functionSource('cohabActionTap'),/setTimeout/,'co-living taps must not wait for a later event-loop turn');
-  assert.match(source,/type="button" onclick="return cohabActionTap\(null,'enter','\$\{cid\}'\)"/,'the entry button must use the guarded route without relying on a global event object');
+  assert.match(source,/type="button" onclick="return cohabActionTap\(event,'enter','\$\{cid\}'\)"/,'the entry button must pass the real tap event through the guarded route');
   assert.match(source,/aria-label="返回桌面" onclick="return cohabActionTap\(null,'quit','\$\{id\}'\)"/,'the co-living back control must be a real synchronous button');
-  assert.match(functionSource('cohabEnter'),/go\('off',\{id,mode:'cohab'\}\).*return true/s,'co-living entry must preserve its mode in navigation history');
+  assert.match(functionSource('cohabEnter'),/go\('off',\{id,mode:'cohab'\}\);cohabPersistAfterEnter\(\).*return true/s,'co-living entry must navigate before deferring the potentially heavy save');
   assert.match(preview,/共同生活 · 测试版/);
   assert.match(preview,/data-phase="work"/);
   assert.match(preview,/先生\^\^回来了/);

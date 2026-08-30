@@ -14,9 +14,9 @@ const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest
 const info = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/Info.plist');
 
 test('current release versions stay aligned after v910 screen-share support', () => {
-  assert.match(app, /APP_VER='v1112 · 个人外卖电脑隔离试用版'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 233;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.233;/);
+  assert.match(app, /APP_VER='v1113 · 角色软件锁定与共同生活入口版'/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 234;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.234;/);
   assert.match(bridge, /contractVersion = 25/);
 });
 
@@ -52,12 +52,14 @@ test('native app provides broadcast extension, PiP subtitles, and background aud
   assert.match(info, /<string>audio<\/string>/);
 });
 
-test('app-watch refreshes snapshots and records deterministic 50-50 follow-up choice', () => {
+test('app-watch refreshes snapshots and lets the role choose without a random follow-up', () => {
   assert.match(edge, /stage: "request_snapshot"/);
   assert.match(edge, /fresh_snapshot_no_usage_delta/);
   assert.match(edge, /requestedAt/);
-  assert.match(edge, /followupChoice: Math\.random\(\) < 0\.5 \? "lock" : "message"/);
-  assert.match(edge, /String\(payload\.followupChoice \|\| "message"\) === "lock"/);
+  assert.match(edge, /parseRoleAppDecision/);
+  assert.match(edge, /appAction: parsed\.action/);
+  assert.doesNotMatch(edge, /followupChoice: Math\.random\(\) < 0\.5 \? "lock" : "message"/);
+  assert.doesNotMatch(edge, /String\(payload\.followupChoice \|\| "message"\) === "lock"/);
 });
 
 test('proactive messages prioritize ordinary real chat and silence context', () => {

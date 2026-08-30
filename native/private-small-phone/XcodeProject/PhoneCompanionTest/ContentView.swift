@@ -5,6 +5,7 @@ import FamilyControls
 import ManagedSettings
 import DeviceActivity
 import CoreLocation
+import CryptoKit
 
 extension DeviceActivityName {
     static let dailyAppLimits = Self("dailyAppLimits")
@@ -47,6 +48,8 @@ struct ContentView: View {
     private let dailyLimitsKey = "limit.savedSettings"
     private let tokenKeyPrefix = "limit.token."
     private let lockedLimitTokensKey = "limit.lockedTokens"
+    private let shieldRoleActorsKey = "companion.shield.roleActors.v1"
+    private let shieldLimitDaysKey = "companion.shield.limitDays.v1"
 
     private let reportContext =
         DeviceActivityReport.Context("Total Activity")
@@ -670,6 +673,7 @@ struct ContentView: View {
     }
 
     private func toggleManualLock(for token: ApplicationToken) {
+        clearRoleLockSources(for: [token])
         if lockedAppTokens.contains(token) {
             CompanionSyncService.shared.recordExplicitManualUnlock([token])
             lockedAppTokens.remove(token)
@@ -691,6 +695,7 @@ struct ContentView: View {
             return
         }
 
+        clearRoleLockSources(for: selection.applicationTokens)
         lockedAppTokens = selection.applicationTokens
         lockStatusText =
             "已锁定全部所选的 \(lockedAppTokens.count) 个 App"
@@ -698,6 +703,7 @@ struct ContentView: View {
     }
 
     private func unlockAllManuallyLockedApps() {
+        clearRoleLockSources(for: lockedAppTokens)
         CompanionSyncService.shared.recordExplicitManualUnlock(
             lockedAppTokens
         )
@@ -721,6 +727,36 @@ struct ContentView: View {
         manualLockStore.shield.applications =
             lockedAppTokens.isEmpty ? nil : lockedAppTokens
         saveLockedApps()
+    }
+
+    private func clearRoleLockSources(
+        for tokens: Set<ApplicationToken>
+    ) {
+        guard !tokens.isEmpty,
+              let defaults = sharedDefaults else { return }
+        var actors = defaults.dictionary(forKey: shieldRoleActorsKey)
+            as? [String: String] ?? [:]
+        for token in tokens {
+            if let externalID = stableExternalID(for: token) {
+                actors.removeValue(forKey: externalID)
+            }
+        }
+        if actors.isEmpty {
+            defaults.removeObject(forKey: shieldRoleActorsKey)
+        } else {
+            defaults.set(actors, forKey: shieldRoleActorsKey)
+        }
+    }
+
+    private func stableExternalID(
+        for token: ApplicationToken
+    ) -> String? {
+        guard let tokenData = try? JSONEncoder().encode(token) else {
+            return nil
+        }
+        let digest = SHA256.hash(data: tokenData)
+        let hex = digest.map { String(format: "%02x", $0) }.joined()
+        return "ios." + hex
     }
 
     private func enableDailyLimit(for token: ApplicationToken) {
@@ -752,6 +788,7 @@ struct ContentView: View {
         activityCenter.stopMonitoring([.dailyAppLimits])
         dailyLimitStore.shield.applications = nil
         sharedDefaults?.removeObject(forKey: lockedLimitTokensKey)
+        sharedDefaults?.removeObject(forKey: shieldLimitDaysKey)
         saveDailyLimitSettings()
         limitStatusText = "已取消全部每日使用时长限制"
     }
@@ -760,6 +797,7 @@ struct ContentView: View {
         activityCenter.stopMonitoring([.dailyAppLimits])
         dailyLimitStore.shield.applications = nil
         sharedDefaults?.removeObject(forKey: lockedLimitTokensKey)
+        sharedDefaults?.removeObject(forKey: shieldLimitDaysKey)
 
         guard !enabledDailyLimitTokens.isEmpty else {
             return
