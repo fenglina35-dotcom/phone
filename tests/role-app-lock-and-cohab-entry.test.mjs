@@ -56,15 +56,18 @@ test('a role lock message is withheld until the real device command completes', 
 });
 
 test('shield UI distinguishes lock sources in the title without gray subtitle text', () => {
-  assert.match(shield, /\? "\\\(appName\) 已被\\\(actor\)锁定"/);
+  assert.match(shield, /\? "\\\(appName\)已被\\\(actor\)锁定"/);
   assert.match(shield, /\? "\\\(appName\) 今日限额已达到"/);
   assert.match(shield, /: "\\\(appName\) 暂时已锁定"/);
   assert.match(shield, /subtitle: nil/);
   assert.doesNotMatch(shield, /let subtitleText/);
+  assert.doesNotMatch(shield, /绑定角色|某某/);
+  assert.doesNotMatch(sync, /绑定角色|某某/);
   assert.match(shield, /companion\.shield\.roleActors\.v1/);
   assert.match(shield, /companion\.shield\.limitDays\.v1/);
   assert.match(monitor, /days\[externalID\] = today/);
   assert.match(sync, /forgetRoleShieldActor\(for: token\)/);
+  assert.match(sync, /sharedDefaults\?\.set\(actors, forKey: shieldRoleActorsKey\)[\s\S]{0,260}sharedDefaults\?\.synchronize\(\)/);
   assert.match(content, /clearRoleLockSources\(for: \[token\]\)/);
   assert.match(content, /removeObject\(forKey: shieldLimitDaysKey\)/);
 });

@@ -2014,9 +2014,14 @@ final class CompanionSyncService: ObservableObject {
     private func saveShieldRoleActors(_ actors: [String: String]) {
         guard !actors.isEmpty else {
             sharedDefaults?.removeObject(forKey: shieldRoleActorsKey)
+            sharedDefaults?.synchronize()
             return
         }
         sharedDefaults?.set(actors, forKey: shieldRoleActorsKey)
+        // The shield extension may be launched immediately after the
+        // ManagedSettings write. Flush the real role name to the shared suite
+        // first so its very first frame does not fall back to an unknown source.
+        sharedDefaults?.synchronize()
     }
 
     private func rememberRoleShieldActor(
@@ -2027,9 +2032,8 @@ final class CompanionSyncService: ObservableObject {
         let trimmed = rawActor?.trimmingCharacters(
             in: .whitespacesAndNewlines
         ) ?? ""
-        let actor = trimmed.isEmpty
-            ? "绑定角色"
-            : String(trimmed.prefix(24))
+        guard !trimmed.isEmpty else { return }
+        let actor = String(trimmed.prefix(24))
         var actors = shieldRoleActors()
         actors[externalID] = actor
         saveShieldRoleActors(actors)

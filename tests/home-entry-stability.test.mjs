@@ -34,7 +34,7 @@ test('cancelled taps retain the click fallback while real drags stay suppressed'
     clearTimeout() {},
     $() { return null; },
   });
-  vm.runInContext(`let _aTimer=null,_aFlip=null,_aFlipDir=0,_aPend={k:'douyin'},_aDrag=null,_aNoClick=7;${functionSource('appCancel')};globalThis.api={cancel:appCancel,noClick:()=>_aNoClick,setDrag:v=>{_aDrag=v}};`, ctx);
+  vm.runInContext(`let _aTimer=null,_aFlip=null,_aFlipDir=0,_aPend={k:'douyin'},_aDrag=null,_aNoClick=7;function appTouchGuardDetach(){};${functionSource('appCancel')};globalThis.api={cancel:appCancel,noClick:()=>_aNoClick,setDrag:v=>{_aDrag=v}};`, ctx);
   ctx.api.cancel();
   assert.equal(ctx.api.noClick(), 7, 'a simple pointercancel must not block the browser click fallback');
   ctx.api.setDrag({ ghost: { remove() {} } });

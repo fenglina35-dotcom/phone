@@ -42,9 +42,9 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
             as? [String: String])?[externalID] ?? ""
         let isRoleLock = !rawActor.isEmpty
         let isDailyLimit = !isRoleLock && limitDay == usageDay(for: Date())
-        let actor = String((rawActor.isEmpty ? "绑定角色" : rawActor).prefix(24))
+        let actor = String(rawActor.prefix(24))
         let titleText = isRoleLock
-            ? "\(appName) 已被\(actor)锁定"
+            ? "\(appName)已被\(actor)锁定"
             : isDailyLimit
             ? "\(appName) 今日限额已达到"
             : "\(appName) 暂时已锁定"

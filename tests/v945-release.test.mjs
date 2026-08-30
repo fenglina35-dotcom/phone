@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1045 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1117 · 输出与存储稳定版'/);
-  assert.match(app,/const url='sw\.js\?v=1117&r=v1117-trip-avatar-sticker-hotfix-2'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1117'/);
-  assert.match(html,/app\.js\?v=1117/);
-  assert.match(sw,/const BUILD='1117'/);
-  assert.match(sw,/north-shell-v1117/);
-  assert.match(index,/小手机\.html\?v=1117/);
-  assert.match(repair,/小手机\.html\?v=1117/);
+  assert.match(app,/APP_VER='v1118 · 交互与角色锁定稳定版'/);
+  assert.match(app,/const url='sw\.js\?v=1118&r=v1118-interaction-role-lock-delivery-hotfix-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1118'/);
+  assert.match(html,/app\.js\?v=1118/);
+  assert.match(sw,/const BUILD='1118'/);
+  assert.match(sw,/north-shell-v1118/);
+  assert.match(index,/小手机\.html\?v=1118/);
+  assert.match(repair,/小手机\.html\?v=1118/);
 });
 
-test('the private iOS package embeds web v1117 and keeps 1.0.238 delivery',()=>{
-  assert.match(privateBundle,/<string>1117<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.238;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 238;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.238 \(238\)'/);
+test('the private iOS package embeds web v1118 and keeps 1.0.239 delivery',()=>{
+  assert.match(privateBundle,/<string>1118<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.239;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 239;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.239 \(239\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

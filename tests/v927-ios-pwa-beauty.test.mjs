@@ -7,11 +7,11 @@ const css = fs.readFileSync(new URL('../glass-theme.css', import.meta.url), 'utf
 const app = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const project = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj', import.meta.url), 'utf8');
 
-test('v1117 web keeps private 1.0.238 compatibility', () => {
-  assert.match(app, /APP_VER='v1117 · 输出与存储稳定版'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='1117'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 238;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.238;/g) || []).length, 12);
+test('v1118 web keeps private 1.0.239 compatibility', () => {
+  assert.match(app, /APP_VER='v1118 · 交互与角色锁定稳定版'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='1118'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 239;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.239;/g) || []).length, 12);
 });
 
 test('first glass page reserves a non-shrinking line box for every app name', () => {
@@ -53,6 +53,8 @@ test('native paging stays responsive while long-press dragging remains available
   assert.doesNotMatch(app, /function appPanMove\(/);
   assert.match(app, /function appTouchMove\(e\)[\s\S]*?if\(_aDrag\)[\s\S]*?appGhostMove\(t\.clientX,t\.clientY\)[\s\S]*?appPendingMove\(t\.clientX,t\.clientY\)/);
   assert.match(app, /function appTouchEnd\(e\)[\s\S]*?if\(_aDrag\)\{appDrop\(t\.clientX,t\.clientY\);return;\}appUp\(\{clientX:t\.clientX,clientY:t\.clientY\}\)/);
-  assert.match(app, /function appDrop\(x,y\)\{const d=_aDrag;if\(d&&Number\.isFinite\(x\)&&Number\.isFinite\(y\)\)appLiveReorder\(x,y\);_aDrag=null;_aPend=null;clearTimeout\(_aTimer\)/);
+  assert.match(app, /function appDrop\(x,y\)\{const d=_aDrag;if\(d&&Number\.isFinite\(x\)&&Number\.isFinite\(y\)\)appLiveReorder\(x,y\);appTouchGuardDetach\(\);_aDrag=null;_aPend=null;clearTimeout\(_aTimer\)/);
+  assert.match(app, /function appTouchGuardAttach\(\)[\s\S]*?addEventListener\('touchmove',appTouchDragGuard,\{passive:false\}\)/);
+  assert.match(app, /function appTouchGuardDetach\(\)[\s\S]*?removeEventListener\('touchmove',appTouchDragGuard\)/);
   assert.match(app, /addEventListener\('touchmove',appTouchMove,\{passive:false\}\)/);
 });
