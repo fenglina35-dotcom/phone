@@ -54,6 +54,11 @@ assert.equal(parsed.music.songs[0].lyrics,'[00:12.34]第一句');
 assert.equal(parsed.music.songs[1].src.url,'https://example.com/a.mp3');
 assert.equal(parsed.music.discColor,'blue');
 
+ctx.S.music.discColor='#12ab34';
+const customColorBlob=await ctx.musicPackBlob(songs,false,new Map([['local',new Blob(['ABC'],{type:'audio/mpeg'})]]));
+const customColorPack=JSON.parse(await customColorBlob.text());
+assert.equal(customColorPack.music.discColor,'#12ab34','custom disc colors must survive music backup export');
+
 const longAudio=new Blob([new Uint8Array(40*1024*1024)],{type:'video/mp4'});
 const binaryBlob=ctx.musicBinaryPackBlob({...songs[0],fileName:'四分钟录屏.mp4'},longAudio);
 assert.equal(binaryBlob.size>longAudio.size,true);

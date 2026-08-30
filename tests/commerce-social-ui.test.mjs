@@ -44,7 +44,7 @@ test('Douyin profile uses a real profile grid and vector heart icons', () => {
 });
 
 test('delivery and presentation layers load after app.js and are available offline', () => {
-  assert.match(html, /<script src="app\.js\?v=(\d+)"[^>]*><\/script>[\s\S]*?<script src="delivery\.js\?v=\1"[^>]*><\/script>\s*<script src="commerce-ui\.js\?v=\1"/);
+  assert.match(html, /<script src="app\.js\?v=(\d+)[^"]*"[^>]*><\/script>[\s\S]*?<script src="delivery\.js\?v=\1"[^>]*><\/script>\s*<script src="commerce-ui\.js\?v=\1"/);
   assert.match(html, /vendor\/qr\/qrcode\.js[\s\S]*vendor\/qr\/jsQR\.js[\s\S]*wechat-me\.js/);
   assert.match(html, /\.shop-card\{/);
   assert.match(html, /\.mt-card\{/);

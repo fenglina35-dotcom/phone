@@ -14,7 +14,7 @@ const reportScene = read('native/private-small-phone/XcodeProject/PhoneCompanion
 
 test('v1119 web and private iOS 1.0.240 keep explicit build identities', () => {
   assert.match(app, /APP_VER='v1119 · 图标美化补全版'/);
-  assert.match(app, /sw\.js\?v=1119&r=v1119-app-icon-upload-hotfix-1/);
+  assert.match(app, /sw\.js\?v=1119&r=v1119-music-disc-color-hotfix-1/);
   assert.match(shell, /north-shell-v1119/);
   assert.match(bundleInfo, /<string>1119<\/string>/);
   assert.match(localWebView, /1\.0\.240 \(240\)/);

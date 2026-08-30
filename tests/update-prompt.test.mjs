@@ -15,6 +15,6 @@ assert.match(app, /postMessage\(\{type:'north-version-query'\}\)/);
 assert.match(sw, /client\.postMessage\(\{type:'north-update-ready',build:BUILD\}\)/);
 assert.match(sw, /event\.data\.type!==['"]north-version-query['"]/);
 assert.match(html, /window\.__NORTH_SHELL_BUILD__='1119'/);
-assert.match(html, /sw\.js\?v=1119&r=v1119-app-icon-upload-hotfix-1/);
+assert.match(html, /sw\.js\?v=1119&r=v1119-music-disc-color-hotfix-1/);
 
 console.log("update prompt tests passed");

@@ -1,6 +1,6 @@
 const BUILD='1119';
-const HOTFIX='v1119-app-icon-upload-hotfix-1';
-const SHELL_CACHE='north-shell-v1119-app-icon-upload-1';
+const HOTFIX='v1119-music-disc-color-hotfix-1';
+const SHELL_CACHE='north-shell-v1119-music-disc-color-1';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
