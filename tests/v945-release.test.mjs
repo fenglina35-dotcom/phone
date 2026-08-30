@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1045 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1113 · 角色软件锁定与共同生活入口版'/);
-  assert.match(app,/const url='sw\.js\?v=1113&r=v1113-role-app-lock-cohab-entry-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1113'/);
-  assert.match(html,/app\.js\?v=1113/);
-  assert.match(sw,/const BUILD='1113'/);
-  assert.match(sw,/north-shell-v1113/);
-  assert.match(index,/小手机\.html\?v=1113/);
-  assert.match(repair,/小手机\.html\?v=1113/);
+  assert.match(app,/APP_VER='v1114 · 朋友圈评论与角色独立路线版'/);
+  assert.match(app,/const url='sw\.js\?v=1114&r=v1114-moment-role-route-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1114'/);
+  assert.match(html,/app\.js\?v=1114/);
+  assert.match(sw,/const BUILD='1114'/);
+  assert.match(sw,/north-shell-v1114/);
+  assert.match(index,/小手机\.html\?v=1114/);
+  assert.match(repair,/小手机\.html\?v=1114/);
 });
 
-test('the private iOS package embeds web v1113 and keeps 1.0.234 delivery',()=>{
-  assert.match(privateBundle,/<string>1113<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.234;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 234;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.234 \(234\)'/);
+test('the private iOS package embeds web v1114 and keeps 1.0.235 delivery',()=>{
+  assert.match(privateBundle,/<string>1114<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.235;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 235;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.235 \(235\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

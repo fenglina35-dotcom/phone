@@ -1,6 +1,6 @@
-const BUILD='1113';
-const HOTFIX='v1113-role-app-lock-cohab-entry-1';
-const SHELL_CACHE='north-shell-v1113';
+const BUILD='1114';
+const HOTFIX='v1114-moment-role-route-1';
+const SHELL_CACHE='north-shell-v1114';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];

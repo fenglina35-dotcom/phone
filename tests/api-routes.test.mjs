@@ -45,6 +45,7 @@ const fields = {
   testC: { textContent: "old" },
   testX: { textContent: "old-aux" },
 };
+let currentPage = { p: 'settings' };
 const context = vm.createContext({
   S: { settings: { chat: { base: "https://old.example/v1", key: "sk-old", model: "old", temp: 0.8, maxTokens: 900 }, aux: { base: "https://legacy-aux.example/v1", key: "sk-legacy-aux", model: "legacy-aux" } } },
   CHAT_ROUTE_NAMES: ["路线一", "路线二", "路线三", "路线四"],
@@ -56,8 +57,11 @@ const context = vm.createContext({
   closeModal: () => { context.closed = (context.closed || 0) + 1; },
   render: () => { context.rendered = (context.rendered || 0) + 1; },
   esc: (text) => String(text ?? ""),
+  cur: () => currentPage,
+  getC: id => (context.S.contacts || []).find(contact => contact.id === id) || null,
+  roleServerPushSync: () => { context.serverPushSynced = (context.serverPushSynced || 0) + 1; },
 });
-for (const name of ["chatModelIsTtsOnly", "chatModelTypeError", "chatMainCopy", "chatAuxCopy", "chatRouteCopy", "chatRoutesInit", "chatModelPairError", "chatModelFormReady", "chatRouteSummary", "chatRouteCaptureForm", "chatRouteApply", "chatRouteFillForm", "chatRouteRefreshUI", "chatRouteSwitch", "chatRouteSaveCurrent", "chatRouteQuickOpen", "chatRouteQuickSwitch"]) {
+for (const name of ["chatModelIsTtsOnly", "chatModelTypeError", "chatMainCopy", "chatAuxCopy", "chatRouteCopy", "chatRoutesInit", "chatRouteContextContact", "roleChatRouteIndex", "chatRouteCurrentIndex", "chatModelPairError", "chatModelFormReady", "chatRouteSummary", "chatRouteCaptureForm", "chatRouteApply", "chatRouteFillForm", "chatRouteRefreshUI", "chatRouteSwitch", "chatRouteSaveCurrent", "chatRouteQuickOpen", "chatRouteQuickSwitch"]) {
   vm.runInContext(functionSource(name), context);
 }
 
@@ -144,6 +148,24 @@ assert.equal(context.S.settings.chatRouteActive, 2);
 context.S.settings.chatRoutes[3] = { base: "https://voice.example/v1", key: "voice", model: "speech-2.8-hd", aux: { base: "", key: "", model: "" } };
 assert.equal(context.chatRouteQuickSwitch(3), false, "an old saved route containing a TTS model must be blocked when activated");
 assert.equal(context.S.settings.chatRouteActive, 2);
+
+context.S.contacts = [
+  { id: 'role-a', name: '角色甲' },
+  { id: 'role-b', name: '角色乙' },
+];
+currentPage = { p: 'chat', id: 'role-a' };
+assert.equal(context.chatRouteQuickSwitch(0), true);
+assert.equal(context.S.contacts[0].chatRouteIndex, 0, 'the current role stores its own route');
+assert.equal(context.S.contacts[1].chatRouteIndex, undefined, 'switching role A must not mutate role B');
+assert.equal(context.S.settings.chatRouteActive, 2, 'switching a role must not mutate the global default route');
+currentPage = { p: 'off', id: 'role-b' };
+assert.equal(context.chatRouteQuickSwitch(1), true, 'the role route button in an offline scene must still target that role');
+assert.equal(context.S.contacts[0].chatRouteIndex, 0);
+assert.equal(context.S.contacts[1].chatRouteIndex, 1);
+assert.equal(context.roleChatRouteIndex(context.S.contacts[0]), 0);
+assert.equal(context.roleChatRouteIndex(context.S.contacts[1]), 1);
+assert.equal(context.S.settings.chatRouteActive, 2);
+currentPage = { p: 'settings' };
 
 context.S.settings.chatRoutes = [
   { base: "https://legacy-one.example/v1", key: "one", model: "legacy-one" },

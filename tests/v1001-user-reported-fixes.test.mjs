@@ -70,7 +70,7 @@ test('Moment comment repair keeps the July 30 contextual reply behavior without 
   assert.match(reply, /selectRelevantMemory\(c,query,3\)/);
   assert.match(reply, /selectiveMemory:true/);
   assert.match(reply, /roleBackgroundCancel\(c\.id,\['one_minute_test','app_watch_test'\]\)/);
-  assert.match(reply, /modelOptions=\{aux:c\.model==='aux',complete:true,timeout:70000\}/);
+  assert.match(reply, /modelOptions=\{routeIndex:roleChatRouteIndex\(c\),aux:c\.model==='aux',complete:true,timeout:70000\}/);
   assert.match(reply, /chatAPI\(request,modelOptions\)/);
   assert.match(reply, /\+e\.status===503/);
   assert.doesNotMatch(reply, /看到了|我看到了|收到|知道了|好的|让我想想/);

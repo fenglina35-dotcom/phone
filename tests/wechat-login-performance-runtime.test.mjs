@@ -32,11 +32,12 @@ test('an explicit recent remark request is detected but a refusal is not',()=>{
 test('explicit remark requests bypass autonomous cooldown and use one genuine-model retry',async()=>{
   const now=Date.now(),contact={id:'role',remark:'旧备注',_remarkAt:now,_remarkHistory:[]},calls=[];
   const S={me:{name:'用户'},contacts:[contact],wxLogin:{by:'role',sessionId:'session',did:[],actions:[]}};
-  const ctx=vm.createContext({S,Date,String,buildSystem:()=>'',chatAPI:async messages=>{calls.push(messages);return '[改备注|诊室外的先生]';}});
+  const ctx=vm.createContext({S,Date,String,buildSystem:()=>'',roleChatRouteIndex:()=>2,chatAPI:async (messages,options)=>{calls.push({messages,options});return '[改备注|诊室外的先生]';}});
   vm.runInContext([functionSource('roleRemarkApply'),functionSource('wxLoginSelfName'),functionSource('wxLoginRecordAction'),functionSource('wxLoginApplyRemarkResponse'),'async '+functionSource('wxLoginEnsureRequestedRemark')].join('\n')+';globalThis.apply=wxLoginApplyRemarkResponse;globalThis.retry=wxLoginEnsureRequestedRemark;',ctx);
   assert.equal(ctx.apply(contact,'[改备注|自主昵称]',{remark:false}),false,'autonomous changes still respect the cooldown');
   assert.equal(await ctx.retry(contact,'role','session',{remark:true},'我先看看'),true);
   assert.equal(calls.length,1,'a missing requested action consumes only one bounded repair call');
+  assert.equal(calls[0].options.routeIndex,2,'the bounded remark repair follows this role\'s own route');
   assert.equal(contact.remark,'诊室外的先生');
   assert.equal(S.wxLogin.actions.length,1);
   assert.equal(S.wxLogin.did.length,1);

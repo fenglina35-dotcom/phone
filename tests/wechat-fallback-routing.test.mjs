@@ -15,7 +15,8 @@ assert.doesNotMatch(source,/_off\.memory\.map\(offMemText\)/);
 assert.match(source,/let content;try\{content=await wechatPrimaryReply\(\[\{role:'system',content:_sys\},\.\.\.hist,_pin\],_md,_routeState,c\)/);
 assert.match(source,/wechatRoleDrift\(content\)&&!_routeState\.fallback/);
 assert.match(source,/content:_stableSys/,'natural mode failures must use the complete stable prompt');
-assert.match(source,/_repairMd=Object\.assign\(\{\},_md,\{aux:c\.model==='aux'\|\|wechatAuxConfigured\(\)\}\)/);
+assert.match(source,/const _routeIndex=roleChatRouteIndex\(c\),_md=\{routeIndex:_routeIndex,aux:c\.model==='aux',complete:true\}/);
+assert.match(source,/_repairMd=Object\.assign\(\{\},_md,\{aux:c\.model==='aux'\|\|wechatAuxConfigured\(_routeIndex\)\}\)/);
 assert.match(source,/const fix=await wechatRoleRepair\(\[\{role:'system',content:_stableSys\}/,'role drift should use the bounded auxiliary repair helper');
 assert.match(source,/toast\(c\.model==='aux'\?'已切换副模型':'已切换主模型',3000\)/,'manual model changes should use the short three-second notice');
 
