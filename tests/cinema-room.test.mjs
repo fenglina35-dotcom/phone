@@ -32,7 +32,7 @@ function lineFunctionSource(name) {
   return source.slice(start, end < 0 ? source.length : end).trim();
 }
 
-assert.match(source, /APP_VER='v1119 · 图标美化补全版'/);
+assert.match(source, /APP_VER='v1120 · 影院开麦连续播放版'/);
 assert.match(source, /cinema:\{e:'',c:'linear-gradient\([^\n]+t:'放映室',icon:'cinema',lk:1\}/);
 assert.match(source, /cinema:\(\)=>openApp\('cinema'\)/);
 assert.match(source, /cinema:\(\)=>\{cinemaInit\(\);go\('cinema'\);\}/);
@@ -579,7 +579,8 @@ assert.match(functionSource("scheduleReply"), /cinemaRoleOccupied\(id\)/);
 assert.match(functionSource("incomingCall"), /cinemaRoleOccupied\(id\)/);
 assert.match(functionSource("aiReply"), /cinemaRoleOccupied\(id\)/);
 assert.match(functionSource("initiativeMaybeSend"), /cinemaRoleOccupied\(c\.id\)/);
-assert.match(source, /function cinemaMicToggle/);
+  assert.match(source, /function cinemaMicToggle/);
+  assert.match(source, /function cinemaMicProtectVideo/);
 assert.match(source, /function cinemaMicResumeVideo/);
 assert.match(source, /function cinemaMicRestart/);
 assert.match(source, /function cinemaMicStop/);
@@ -606,24 +607,46 @@ const micPlaybackContext=vm.createContext({
 vm.runInContext(functionSource("cinemaMicHeard")+';globalThis.heard=cinemaMicHeard;',micPlaybackContext);
 micPlaybackContext.heard('video','我边看边说');
 assert.equal(micPauseCount,0,'continuous microphone speech must never pause the playing video');
-assert.equal(micInput.value,'我边看边说');
-assert.equal(micSendCount,1,'recognized speech must still be sent to the role');
-let liveHeard='',liveStart=0,liveStop=0;
-const liveSr={start:()=>{liveStart++;},stop:()=>{liveStop++;}};
-const liveMicContext=vm.createContext({
-  _cin:{micKind:'',micBusy:false,micSR:null,micIgnoreUntil:0},
-  _rec:null,
-  makeSR:()=>liveSr,
-  cinemaMicPaint:()=>{},
-  cinemaMicResumeVideo:()=>{},
-  cinemaMicHeard:(kind,text)=>{liveHeard=kind+':'+text;},
-  cinemaSetStatus:()=>{},
-  toast:()=>{},
+  assert.equal(micInput.value,'我边看边说');
+  assert.equal(micSendCount,1,'recognized speech must still be sent to the role');
+  let protectedPlayCount=0;
+  const protectedVideo={paused:true,ended:false,isConnected:true,play:()=>{protectedPlayCount++;protectedVideo.paused=false;return Promise.resolve();}};
+  const protectedMicContext=vm.createContext({
+    _cin:{micKind:'video',micKeepVideoPlaying:true,micVideoPlayToken:0,asrGuardPaused:false,extracting:false},
+    $:selector=>selector==='#cinVideo'?protectedVideo:null,
+    document:{hidden:false},
+    setTimeout:fn=>fn(),
+  });
+  vm.runInContext(functionSource("cinemaMicProtectVideo")+';globalThis.protect=cinemaMicProtectVideo;',protectedMicContext);
+  assert.equal(protectedMicContext.protect(),true,'a microphone-induced iOS pause must be recognized while playback intent is active');
+  assert.equal(protectedPlayCount,1,'the cinema must resume immediately after the microphone audio session interrupts playback');
+  protectedVideo.paused=true;
+  protectedMicContext._cin.micKeepVideoPlaying=false;
+  assert.equal(protectedMicContext.protect(),false,'an explicit user pause must never be overridden');
+  assert.equal(protectedPlayCount,1);
+  protectedMicContext._cin.micKeepVideoPlaying=true;
+  protectedMicContext._cin.asrGuardPaused=true;
+  assert.equal(protectedMicContext.protect(),false,'subtitle extraction guard pauses must remain authoritative');
+  assert.equal(protectedPlayCount,1);
+  let liveHeard='',liveStart=0,liveStop=0;
+  const liveSr={start:()=>{liveStart++;},stop:()=>{liveStop++;}};
+  const liveVideo={paused:false,ended:false,isConnected:true,play:()=>Promise.resolve()};
+  const liveMicContext=vm.createContext({
+    _cin:{micKind:'',micBusy:false,micSR:null,micIgnoreUntil:0,micKeepVideoPlaying:false,micVideoPlayToken:0,asrGuardPaused:false,extracting:false},
+    _rec:null,
+    $:selector=>selector==='#cinVideo'?liveVideo:null,
+    document:{hidden:false},
+    makeSR:()=>liveSr,
+    cinemaMicPaint:()=>{},
+    cinemaMicHeard:(kind,text)=>{liveHeard=kind+':'+text;},
+    cinemaSetStatus:()=>{},
+    toast:()=>{},
   setTimeout:(fn)=>fn(),
 });
-vm.runInContext(functionSource("cinemaMicRestart")+'\n'+functionSource("cinemaMicStop")+'\n'+functionSource("cinemaMicToggle")+';globalThis.toggle=cinemaMicToggle;',liveMicContext);
-liveMicContext.toggle('video');
-assert.equal(liveMicContext._cin.micKind,'video');
+  vm.runInContext(functionSource("cinemaMicProtectVideo")+'\n'+functionSource("cinemaMicResumeVideo")+'\n'+functionSource("cinemaMicRestart")+'\n'+functionSource("cinemaMicStop")+'\n'+functionSource("cinemaMicToggle")+';globalThis.toggle=cinemaMicToggle;',liveMicContext);
+  liveMicContext.toggle('video');
+  assert.equal(liveMicContext._cin.micKind,'video');
+  assert.equal(liveMicContext._cin.micKeepVideoPlaying,true,'opening the microphone must remember that the movie was playing');
 assert.equal(liveStart,1);
 liveSr.onresult({resultIndex:0,results:Object.assign([{0:{transcript:'我看到这里了'},isFinal:true}],{length:1})});
 assert.equal(liveHeard,'video:我看到这里了');
@@ -650,6 +673,6 @@ assert.match(functionSource("cinemaSend"), /cinemaRoleReply\([\s\S]*,false\)/);
 assert.match(functionSource("cinemaBookComment"), /,false\)/);
 assert.doesNotMatch(functionSource("cinemaBookPage"), /autoCount=.*\+1/);
 assert.match(html, /\.cin-reader-companion/);
-assert.match(html, /app\.js\?v=1119/);
+assert.match(html, /app\.js\?v=1120/);
 
 console.log("cinema room tests passed");

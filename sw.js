@@ -1,6 +1,6 @@
-const BUILD='1119';
-const HOTFIX='v1119-cinema-mp4-file-hotfix-1';
-const SHELL_CACHE='north-shell-v1119-cinema-mp4-file-1';
+const BUILD='1120';
+const HOTFIX='v1120-cinema-mic-playback-hotfix-1';
+const SHELL_CACHE='north-shell-v1120-cinema-mic-playback-1';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
