@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1120 · 影院开麦连续播放版'/);
+  assert.match(app,/APP_VER='v1121 · 云状态可信显示版'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1120/);
-  assert.match(html,/sw\.js\?v=1120&r=v1120-cinema-mic-playback-hotfix-1/);
+  assert.match(html,/north-sw-reloaded-1121/);
+  assert.match(html,/sw\.js\?v=1121&r=v1121-cloud-status-reliability-hotfix-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{

@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1045 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1120 · 影院开麦连续播放版'/);
-  assert.match(app,/const url='sw\.js\?v=1120&r=v1120-cinema-mic-playback-hotfix-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1120'/);
-  assert.match(html,/app\.js\?v=1120/);
-  assert.match(sw,/const BUILD='1120'/);
-  assert.match(sw,/north-shell-v1120/);
-  assert.match(index,/小手机\.html\?v=1120/);
-  assert.match(repair,/小手机\.html\?v=1120/);
+  assert.match(app,/APP_VER='v1121 · 云状态可信显示版'/);
+  assert.match(app,/const url='sw\.js\?v=1121&r=v1121-cloud-status-reliability-hotfix-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1121'/);
+  assert.match(html,/app\.js\?v=1121/);
+  assert.match(sw,/const BUILD='1121'/);
+  assert.match(sw,/north-shell-v1121/);
+  assert.match(index,/小手机\.html\?v=1121/);
+  assert.match(repair,/小手机\.html\?v=1121/);
 });
 
-test('the private iOS package embeds web v1120 and keeps 1.0.241 delivery',()=>{
-  assert.match(privateBundle,/<string>1120<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.241;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 241;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.241 \(241\)'/);
+test('the private iOS package embeds web v1121 and keeps 1.0.242 delivery',()=>{
+  assert.match(privateBundle,/<string>1121<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.242;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 242;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.242 \(242\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 
