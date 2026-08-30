@@ -27,4 +27,13 @@ template = template.replace(
     "v1117 · 通话视频与记忆证据版",
     "v1117 · 输出与存储稳定版",
 )
+template = template.replace(
+    'exec(compile(template, __file__, "exec"))',
+    'template = template.replace(\n'
+    '    "not in companion_sync:",\n'
+    '    "not in companion_sync.replace(chr(13) + chr(10), chr(10)):",\n'
+    '    1,\n'
+    ')\n'
+    'exec(compile(template, __file__, "exec"))',
+)
 exec(compile(template, __file__, "exec"))
