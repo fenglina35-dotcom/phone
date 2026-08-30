@@ -1,6 +1,6 @@
 {
   "name": "small-phone-delivery-agent",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "小手机一人一机外卖浏览器伴生程序",
   "author": "Small Phone",
   "private": true,
@@ -10,7 +10,7 @@
     "ensure-signing-key": "node build/ensure-signing-key.mjs",
     "sync-runtime": "npm run ensure-signing-key && node build/sync-runtime.mjs",
     "dev": "npm run sync-runtime && electron .",
-    "test": "node --test test/*.test.mjs",
+    "test": "node build/sync-runtime.mjs && node --test test/*.test.mjs",
     "dist": "npm run sync-runtime && electron-builder --win nsis",
     "release-runtime": "npm run sync-runtime && node build/release-runtime.mjs"
   },
@@ -20,8 +20,9 @@
     "qrcode": "1.5.4"
   },
   "devDependencies": {
-    "electron": "39.2.7",
-    "electron-builder": "26.0.12"
+    "electron": "39.8.10",
+    "electron-builder": "26.15.3",
+    "esbuild": "0.25.10"
   },
   "build": {
     "appId": "com.north.smallphone.delivery",
@@ -43,6 +44,7 @@
     "directories": {
       "output": "dist"
     },
+    "electronDist": "node_modules/electron/dist",
     "win": {
       "signAndEditExecutable": false,
       "target": [

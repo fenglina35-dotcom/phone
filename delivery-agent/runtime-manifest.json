@@ -1,11 +1,11 @@
 {
   "payload": {
-    "version": "0.1.1",
-    "url": "https://fenglina35-dotcom.github.io/phone/delivery-agent/small-phone-delivery-runtime-0.1.1.zip",
-    "sha256": "2c2a1c990b662ee5aa94557d51138a7ac3484fc2ab095aa29073dd7dd838d461",
-    "size": 83027,
-    "createdAt": "2026-08-29T22:00:53.466Z"
+    "version": "0.1.2",
+    "url": "https://fenglina35-dotcom.github.io/phone/delivery-agent/small-phone-delivery-runtime-0.1.2.zip",
+    "sha256": "59aed86b0dd80238547560de704a0d17ca934a8b800a085b5b9fe837204893a0",
+    "size": 111215,
+    "createdAt": "2026-08-30T05:54:39.669Z"
   },
-  "signature": "KpZawD5wDRh5b0yzIRdhxH1q+zhOTsc3NjRyI5tobLUsj9TaARrxOz9+n3+b8sF/k3XvXVrgSii6Yf0RSSwFCg==",
+  "signature": "8tV5U2Ux8j4Gu5C2DWMxXdKXwg+Pj6GHJLgBSoxo+yMY7z0wZBXxdeIxXyieXgA0tuOkN4K5IAJCO3Aq35DtAg==",
   "algorithm": "Ed25519"
 }
