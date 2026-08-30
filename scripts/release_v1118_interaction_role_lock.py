@@ -26,27 +26,27 @@ for path in [
     replace(
         path,
         "sw.js?v=1117&r=v1117-home-mood-wedding-social-hotfix-3",
-        "sw.js?v=1118&r=v1118-interaction-role-lock-delivery-hotfix-1",
+        "sw.js?v=1118&r=v1118-interaction-role-lock-delivery-hotfix-2",
         1,
     )
 
 replace(
     "sw.js",
     "v1117-home-mood-wedding-social-hotfix-3",
-    "v1118-interaction-role-lock-delivery-hotfix-1",
+    "v1118-interaction-role-lock-delivery-hotfix-2",
     1,
 )
 replace(
     "sw.js",
     "north-shell-v1117-home-mood-wedding-social-3",
-    "north-shell-v1118-interaction-role-lock-delivery-1",
+    "north-shell-v1118-interaction-role-lock-delivery-2",
     1,
 )
 replace("sw.js", "const BUILD='1117';", "const BUILD='1118';", 1)
 replace(
     "小手机.html",
     "sw.js?v=1117&r=v1117-home-mood-wedding-social-hotfix-3",
-    "sw.js?v=1118&r=v1118-interaction-role-lock-delivery-hotfix-1",
+    "sw.js?v=1118&r=v1118-interaction-role-lock-delivery-hotfix-2",
     1,
 )
 replace("小手机.html", "window.__NORTH_SHELL_BUILD__='1117'", "window.__NORTH_SHELL_BUILD__='1118'", 1)
@@ -100,8 +100,8 @@ for target in sorted((ROOT / "tests").glob("*.mjs")):
         continue
     updated = (
         text.replace("v1117 · 输出与存储稳定版", "v1118 · 交互与角色锁定稳定版")
-        .replace("v1117-home-mood-wedding-social-hotfix-3", "v1118-interaction-role-lock-delivery-hotfix-1")
-        .replace("north-shell-v1117-home-mood-wedding-social-3", "north-shell-v1118-interaction-role-lock-delivery-1")
+        .replace("v1117-home-mood-wedding-social-hotfix-3", "v1118-interaction-role-lock-delivery-hotfix-2")
+        .replace("north-shell-v1117-home-mood-wedding-social-3", "north-shell-v1118-interaction-role-lock-delivery-2")
         .replace("north-shell-v1117", "north-shell-v1118")
         .replace("?v=1117", "?v=1118")
         .replace("reloaded-1117", "reloaded-1118")

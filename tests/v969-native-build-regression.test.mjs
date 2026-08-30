@@ -14,7 +14,7 @@ const reportScene = read('native/private-small-phone/XcodeProject/PhoneCompanion
 
 test('v1118 web and private iOS 1.0.239 keep explicit build identities', () => {
   assert.match(app, /APP_VER='v1118 · 交互与角色锁定稳定版'/);
-  assert.match(app, /sw\.js\?v=1118&r=v1118-interaction-role-lock-delivery-hotfix-1/);
+  assert.match(app, /sw\.js\?v=1118&r=v1118-interaction-role-lock-delivery-hotfix-2/);
   assert.match(shell, /north-shell-v1118/);
   assert.match(bundleInfo, /<string>1118<\/string>/);
   assert.match(localWebView, /1\.0\.239 \(239\)/);

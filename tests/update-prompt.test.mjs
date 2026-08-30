@@ -15,6 +15,6 @@ assert.match(app, /postMessage\(\{type:'north-version-query'\}\)/);
 assert.match(sw, /client\.postMessage\(\{type:'north-update-ready',build:BUILD\}\)/);
 assert.match(sw, /event\.data\.type!==['"]north-version-query['"]/);
 assert.match(html, /window\.__NORTH_SHELL_BUILD__='1118'/);
-assert.match(html, /sw\.js\?v=1118&r=v1118-interaction-role-lock-delivery-hotfix-1/);
+assert.match(html, /sw\.js\?v=1118&r=v1118-interaction-role-lock-delivery-hotfix-2/);
 
 console.log("update prompt tests passed");

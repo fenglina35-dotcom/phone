@@ -3,6 +3,7 @@ import fs from "node:fs";
 
 const source = fs.readFileSync(new URL("../app.js", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../小手机.html", import.meta.url), "utf8");
+const privateSource = fs.readFileSync(new URL("../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js", import.meta.url), "utf8");
 
 const listStart = source.indexOf("const HOMEAPPS=");
 const listEnd = source.indexOf("function appIconEditor", listStart);
@@ -11,6 +12,10 @@ const list = source.slice(listStart, listEnd);
 
 assert.match(list, /\['phoneapp','☎','电话'\]/);
 assert.match(list, /\['douyin','🎵','抖音'\]/);
+assert.match(list, /\['tale','🕯️','规则怪谈'\]/);
+assert.match(list, /\['dread','🩸','惊悚抉择'\]/);
+assert.match(privateSource, /const HOMEAPPS=[\s\S]*?\['tale','🕯️','规则怪谈'\]/);
+assert.match(privateSource, /const HOMEAPPS=[\s\S]*?\['dread','🩸','惊悚抉择'\]/);
 assert.match(source, /function compressSquare\(file,size,q\)/);
 assert.match(source, /function setAppIcon\(key\)[\s\S]*?S\.me\.appIcons\[key\]=await compressSquare\(f,256,/);
 assert.match(source, /custom\?' custom-app-icon':''/);

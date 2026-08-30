@@ -14,7 +14,7 @@ const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTes
 
 test('v1045 web files use one cache-busting build number',()=>{
   assert.match(app,/APP_VER='v1118 · 交互与角色锁定稳定版'/);
-  assert.match(app,/const url='sw\.js\?v=1118&r=v1118-interaction-role-lock-delivery-hotfix-1'/);
+  assert.match(app,/const url='sw\.js\?v=1118&r=v1118-interaction-role-lock-delivery-hotfix-2'/);
   assert.match(html,/__NORTH_SHELL_BUILD__='1118'/);
   assert.match(html,/app\.js\?v=1118/);
   assert.match(sw,/const BUILD='1118'/);
