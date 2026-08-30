@@ -91,6 +91,6 @@ test('the preview and offline shell load the hidden-card effect',()=>{
   assert.match(preview,/opening:'我攒了一些没来得及说的话/);
   assert.match(preview,/frameCount:100/);
   assert.match(preview,/我没有时时刻刻说想你，但我一直在想你/);
-assert.match(html,/thought-card-effects\.js\?v=1114/);
+assert.match(html,/thought-card-effects\.js\?v=1115/);
   assert.match(sw,/thought-card-effects\.js\?v='\+BUILD/);
 });

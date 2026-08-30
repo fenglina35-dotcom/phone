@@ -35,7 +35,13 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-const context = vm.createContext({ ttsUseRelay: () => false, ttsCfg: () => ({}), DEFAULT_TTS_VOICE: "male-qn-qingse" });
+const context = vm.createContext({
+  ttsUseRelay: () => false,
+  ttsCfg: () => ({}),
+  ttsEnabled: (tts) => !!(tts && tts.enabled !== false),
+  ttsRelayOn: (tts) => !!(tts && tts.relay),
+  DEFAULT_TTS_VOICE: "male-qn-qingse",
+});
 for (const name of ["ttsStyleKind", "ttsCueKind", "ttsAutoCue", "ttsRequestedCue", "tts2p8Interjection", "tts2p8IsInterjectionCue", "ttsRelayInterjection", "ttsFishSoundLead", "ttsFishTags", "ttsFishEmphasis", "ttsFishPerformance", "ttsBracketPerformance", "voiceRate", "voicePitch", "voiceApiPitch", "voiceApiTuningOn", "voicePauseSeconds", "ttsSentencePauseText", "ttsVoiceProfile", "parseVoiceTagLine", "normVoiceLang", "ttsContentLang", "ttsLanguageBoost", "normVoiceAccent", "voiceEnglishPrompt", "applySystemVoice", "hasForeign", "voiceLangName", "explicitVoiceReplyRequest", "voiceReplyTagValid", "requestedVoiceNeedsFix", "voiceTagNeedsLangFix", "ttsVoiceAccessErrorText", "ttsRelayVoiceIds"]) {
   vm.runInContext(functionSource(name), context);
 }
@@ -141,9 +147,7 @@ assert.equal(context.ttsPerformanceText("Come here.", null, minimax28, { cue: "�
 assert.equal(context.ttsPerformanceText("Come here.", null, minimax02, { cue: "亲亲" }), "Come here.");
 assert.equal(context.ttsPerformanceText("Tell me.", null, eleven3, { cue: "质问" }), "[angry, controlled] Tell me.");
 assert.equal(context.ttsPerformanceText("Come here.", null, fish21, { cue: "亲亲" }), "[kissing softly] Mwah. Come here.");
-context.ttsUseRelay = () => true;
-assert.equal(context.ttsPerformanceText("That was funny.", null, minimax02, { cue: "giggle" }), "Heh... That was funny.");
-context.ttsUseRelay = () => false;
+assert.equal(context.ttsPerformanceText("That was funny.", null, { ...minimax02, enabled: true, relay: true }, { cue: "giggle" }), "Heh... That was funny.");
 assert.deepEqual(
   JSON.parse(JSON.stringify(context.ttsVoiceProfile("Tell me why.", { cue: "angry" }, minimax28))),
   { speed: 1, vol: 1, pitch: 0, emotion: "angry" },
@@ -179,7 +183,7 @@ assert.equal(context.ttsVoiceAccessErrorText("tts-private-voice-not-owned"), tru
 assert.match(source, /const ids=ttsRelayVoiceIds\(tts\)/);
 assert.doesNotMatch(source, /ttsRelayVoiceIds\(v&&v\.ttsVoice,tts\)/);
 assert.doesNotMatch(source, /ttsRelayOn\(t\)&&!ttsExternalOn\(t\)/);
-assert.match(source, /function ttsUseRelay\(\)\{const t=ttsCfg\(\);return !!\(ttsEnabled\(t\)&&ttsRelayOn\(t\)\);\}/);
+assert.match(source, /function ttsUseRelay\(o\)\{const t=ttsCfg\(o\);return !!\(ttsEnabled\(t\)&&ttsRelayOn\(t\)\);\}/);
 assert.match(source, /try\{if\(ttsUseRelay\(\)\)\{const d=await aiRelay\('tts_voices'/);
 assert.match(backend, /model = "speech-02-turbo"/);
 assert.match(backend, /language_boost: safeTTSLanguageBoost\(languageBoost\)/);
@@ -273,7 +277,7 @@ assert.match(functionSource("audioUnlock"), /navigator[\s\S]*userActivation[\s\S
 assert.doesNotMatch(functionSource("audioUnlock"), /ac&&ac\.state!==['"]running['"]\)\{[^}]*createBuffer/, "a context that claims to be running must not skip the unlock pulse");
 assert.match(functionSource("playUrl"), /audioDataToBuf\(url\)[\s\S]*decodeBuf\(ab\)[\s\S]*playBuf\(buf\)/, "cached voice playback must fall back to WebAudio when HTML audio is blocked");
 assert.match(functionSource("phSimRoleSay"), /!voiceProgressiveOn\(\)/);
-assert.match(functionSource("callAI"), /ttsApiOn\(\)&&!voiceProgressiveOn\(\)/);
+assert.match(functionSource("callAI"), /ttsApiOn\(c\)&&!voiceProgressiveOn\(\)/);
 assert.match(source, /hasNextSpoken&&voicePauseMs\(c\)>0/);
 assert.match(source, /await sleep\(voicePauseMs\(c\)\)/);
 assert.equal(context.ttsSentencePauseText("One. Two.", { pause: 1 }), "One. Two.");

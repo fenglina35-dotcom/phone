@@ -44,7 +44,7 @@ assert.match(source, /canTextVoice=m\.role==='assistant'&&m\.type==='text'/);
 assert.match(source, /onclick="openTextToVoice\('\$\{cid\}','\$\{mid\}'\)"/);
 assert.match(source, /重复播放不会再次扣点/);
 assert.match(source, /已转为语音，本次扣除 '\+info\.points\+' 点；重复播放不再扣点/);
-assert.match(source, /const info=textToVoiceInfo\(m\.content,c\),useRelay=ttsUseRelay\(\)/);
+assert.match(source, /const info=textToVoiceInfo\(m\.content,c\),useRelay=ttsUseRelay\(c\)/);
 assert.match(source, /_textToVoiceBusy\.has\(mid\)/);
 assert.match(source, /m\.type='voice'/);
 assert.match(source, /m\.type='text';delete m\.showText/);

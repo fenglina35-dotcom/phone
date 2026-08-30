@@ -61,7 +61,7 @@ assert.match(account, /'俄':'Привет, я проверяю/);
 assert.match(app, /function ttsContentLang\(c\)/);
 assert.match(app, /function ttsLanguageBoost\(c\)/);
 assert.match(account, /language_boost:typeof ttsLanguageBoost==='function'\?ttsLanguageBoost\(null\):'auto'/);
-assert.match(app, /ttsUseRelay\(\)&&t\.relayLang\?t\.relayLang:role/);
+assert.match(app, /ttsUseRelay\(c\)&&t\.relayLang\?t\.relayLang:role/);
 assert.match(app, /_vlang=ttsContentLang\(c\)/);
 assert.match(app, /const _lang=ttsContentLang\(c\)/);
 

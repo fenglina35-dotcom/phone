@@ -50,7 +50,9 @@ assert.match(app, /tts\.relayVoice/);
 assert.match(app, /typeof aiInternalVoiceId==='function'\?aiInternalVoiceId\(\):tts\.voice/);
 assert.match(app, /const ids=ttsRelayVoiceIds\(tts\)/);
 assert.doesNotMatch(app, /ttsRelayVoiceIds\(v&&v\.ttsVoice,tts\)/);
-assert.match(app, /仅关闭内置语音、使用外置接口时生效/);
+assert.match(app, /角色使用的外置语音路线/);
+assert.match(app, /每条路线的角色音色ID会分开保存/);
+assert.match(app, /ttsRouteVoices/);
 assert.match(backend, /\{ id: "qingshouyin20260726", name: "青受音", clone: true, preset: true \}/);
 assert.match(backend, /\{ id: "xiayizhou20260725", name: "夏以昼", clone: true, preset: true \}/);
 

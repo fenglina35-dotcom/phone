@@ -42,12 +42,15 @@ test('publishing a Moment shows the real role comment immediately and sends the 
     buildSystem: () => 'role-system',
     cleanMomentText: text => String(text || ''),
     cleanReply: text => String(text || '').trim(),
+    replyDedupNorm: text => String(text || '').replace(/\s|[，。！？、,.!?]/g, ''),
+    replyBigramScore: (a, b) => a === b ? 1 : 0,
     roleChatRouteIndex: c => c.chatRouteIndex,
     save: () => { context.saves = (context.saves || 0) + 1; },
     cur: () => ({ p: 'wxmoment' }),
     wxTab: 'chat',
     momentRenderKeepScroll: id => renders.push(id),
   });
+  vm.runInContext(functionSource('momentRoleCommentRepeated'), context);
   vm.runInContext(functionSource('reactToMyMoment'), context);
   await context.reactToMyMoment(post);
   assert.equal(post.comments.length, 1);
@@ -57,6 +60,59 @@ test('publishing a Moment shows the real role comment immediately and sends the 
   assert.match(context.request[1].content, /今天终于把小猫接回家了/);
   assert.match(context.request[1].content, /小猫趴在新的软垫上/);
   assert.match(context.request[1].content, /不是评论区回复/);
+});
+
+test('multi-role Moment reactions keep each real persona output and retry one duplicate once', async () => {
+  const roles = [
+    { id: 'role-a', name: '先生', remark: '先生', persona: '冷静克制', model: 'main', chatRouteIndex: 1 },
+    { id: 'role-b', name: '哥哥', remark: '哥哥', persona: '温柔活泼', model: 'main', chatRouteIndex: 3 },
+  ];
+  const post = { id: 'post-multi', authorId: 'me', text: '先生就是个小气鬼', images: [], photoCards: [], likes: [], comments: [], acct: 'main', time: Date.now() };
+  const calls = [];
+  const outputs = ['小气鬼现在就在书房坐着，有本事当面说。', '小气鬼现在就在书房坐着，有本事当面说。', '谁欺负你了，哥哥先听你告状。'];
+  const context = vm.createContext({
+    S: { me: { name: 'North' }, contacts: roles, messages: {}, moments: [post] },
+    Date, String, Array, Object, Promise, Math, Set,
+    momentVisibleTo: () => true,
+    recordVisit: () => {},
+    msgs: () => [],
+    msgToText: msg => msg.text || '',
+    momentPhotoCards: value => value || [],
+    chatAPI: async (messages, options) => { calls.push({ messages, options }); return outputs[calls.length - 1]; },
+    buildSystem: role => `角色=${role.name};人设=${role.persona}`,
+    cleanMomentText: text => String(text || ''),
+    cleanReply: text => String(text || '').trim(),
+    replyDedupNorm: text => String(text || '').replace(/\s|[，。！？、,.!?]/g, ''),
+    replyBigramScore: (a, b) => a === b ? 1 : 0,
+    roleChatRouteIndex: role => role.chatRouteIndex,
+    save: () => {},
+    cur: () => ({ p: 'home' }),
+    wxTab: 'chat',
+    momentRenderKeepScroll: () => {},
+  });
+  vm.runInContext(functionSource('momentRoleCommentRepeated'), context);
+  vm.runInContext(functionSource('reactToMyMoment'), context);
+  await context.reactToMyMoment(post);
+  assert.deepEqual(post.comments.map(comment => comment.text), [
+    '小气鬼现在就在书房坐着，有本事当面说。',
+    '谁欺负你了，哥哥先听你告状。',
+  ]);
+  assert.equal(calls.length, 3, 'only the duplicate role gets one bounded genuine-model retry');
+  assert.match(calls[0].messages[0].content, /角色=先生;人设=冷静克制/);
+  assert.match(calls[1].messages[0].content, /角色=哥哥;人设=温柔活泼/);
+  assert.equal(calls[1].options.routeIndex, 3);
+  assert.match(calls[1].messages[1].content, /先生：小气鬼现在就在书房坐着/);
+  assert.match(calls[1].messages[1].content, /不能复述、套用或只改几个字模仿/);
+  assert.match(calls[2].messages.at(-1).content, /与其他角色已有评论重复/);
+});
+
+test('gag bars are red, emoji-free, and lead back to the bound role chat', () => {
+  assert.doesNotMatch(source, /🔇 ta把/);
+  assert.doesNotMatch(source, /去情侣空间输密码解禁|去情侣空间查看/);
+  assert.equal((source.match(/去求他解锁/g) || []).length, 3);
+  assert.equal((source.match(/onclick="gagAskUnlock\(\)" style="color:inherit;text-decoration:underline;cursor:pointer">去求他解锁/g) || []).length, 3);
+  assert.match(functionSource('gagAskUnlock'), /openChat\(cid\)/);
+  assert.match(functionSource('gagAskUnlock'), /当前没有可联系的绑定角色/);
 });
 
 test('a role remembers only user Moments visible to that role, including body and described media', () => {
