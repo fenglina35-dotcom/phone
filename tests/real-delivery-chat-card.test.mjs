@@ -6,8 +6,10 @@ const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const theme=fs.readFileSync(new URL('../glass-theme.css',import.meta.url),'utf8');
 
 assert.match(delivery,/type:'deliveryorder'/,'a successful role order must create a dedicated chat card');
-assert.match(delivery,/!safePayQr\(order\.payQrDataUrl\)/,'a role order card must require a real scannable payment QR');
-assert.match(delivery,/var card=order&&pushRoleOrderCard\(c,order\);if\(order&&!card\)/,'an order without a real payment QR must remain a system-only state');
+assert.doesNotMatch(delivery,/function pushRoleOrderCard\(c,order\)\{[^\n]*safePayQr\(order\.payQrDataUrl\)/,'a submitted order card must not depend on an externally shareable payment QR');
+assert.match(delivery,/function pushRoleOrderCard\(c,order\)\{[^\n]*created\|pending_payment\|paid/,'only a real submitted or later platform status may create a role order card');
+assert.match(delivery,/var card=order&&pushRoleOrderCard\(c,order\);if\(order&&!card\)roleSystemNotice\([^\n]*else roleSystemNotice\('真实外卖订单已提交'/,'card rendering failure may be reported internally but must not stop the role acknowledgement');
+assert.doesNotMatch(delivery,/var card=order&&pushRoleOrderCard\(c,order\);if\(order&&!card\)\{[^}]*return;/,'a missing QR or card renderer must never suppress the role reply after a real order was submitted');
 assert.doesNotMatch(delivery,/createOrder\([\s\S]{0,500}pushRoleOrderCard\(c,order\);await payOrder\(order\)/,'a confirm-page draft must not appear as a completed chat card before the cashier is reached');
 assert.match(delivery,/imageUrl:safeOrderImage\(data\.imageUrl\|\|offer\.imageUrl/,'the real platform product image must follow the selected offer');
 assert.match(delivery,/function safeOrderImage\(v\)\{[\s\S]*?data:image/,'a browser-captured real image must remain usable as an embedded card image');

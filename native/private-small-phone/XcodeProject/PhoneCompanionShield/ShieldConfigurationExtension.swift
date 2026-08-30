@@ -48,12 +48,6 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
             : isDailyLimit
             ? "\(appName) 今日限额已达到"
             : "\(appName) 暂时已锁定"
-        let subtitleText = isRoleLock
-            ? "这是角色主动锁定，不是今日使用限额。请回到小手机找\(actor)。"
-            : isDailyLimit
-            ? "这是今天的使用时间达到限额，不是角色主动锁定。"
-            : "锁定来源尚未同步；不会把它误写成角色锁定或今日限额。"
-
         return ShieldConfiguration(
             backgroundBlurStyle: .systemUltraThinMaterialDark,
             backgroundColor: UIColor(
@@ -72,15 +66,7 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
                     alpha: 1.0
                 )
             ),
-            subtitle: ShieldConfiguration.Label(
-                text: subtitleText,
-                color: UIColor(
-                    red: 0.78,
-                    green: 0.76,
-                    blue: 0.82,
-                    alpha: 1.0
-                )
-            ),
+            subtitle: nil,
             primaryButtonLabel: ShieldConfiguration.Label(
                 text: "知道了",
                 color: .white

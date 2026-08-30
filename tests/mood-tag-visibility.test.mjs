@@ -8,13 +8,13 @@ assert.match(source, /showMoodTag:true/);
 assert.match(source, /# 角色内心想法（仅展示，不控制角色）/);
 assert.match(wechat, /心情气泡/);
 assert.match(wechat, /S\.settings\.showMoodTag=S\.settings\.showMoodTag===false;save\(\);render\(\)/);
-assert.match(source, /const thought=wechatNaturalOn\(\)\?String\(c\.innerThought\|\|''\):String\(c\.mood\|\|''\)/);
+assert.match(source, /thought=natural&&\(\+c\.innerThoughtMissingAt\|\|0\)>\(\+c\.innerThoughtAt\|\|0\)\?'':natural\?String\(c\.innerThought\|\|''\):String\(c\.mood\|\|''\)/);
 assert.match(source, /id="chatMoodBar"/);
 assert.match(source, /display:\$\{S\.settings\.showMoodTag!==false&&thought\?'flex':'none'\}/);
 assert.match(source, /function refreshChatMood\(id\)/);
 assert.match(source, /function initialFriendInnerThought\(c,opt\)/);
 assert.match(source, /initialFriendInnerThought\(c,\{kind:r\.kind,readd:wasReadd,at:now\}\)/);
-assert.match(source, /thoughtOpen=wechatNaturalOn\(\)\?'showInnerThought':'showMood'/);
+assert.match(source, /thoughtOpen=_naturalMood\?'showInnerThought':'showMood'/);
 assert.match(source, /function showInnerThought\(id\)/);
 
 console.log('mood tag visibility tests passed');

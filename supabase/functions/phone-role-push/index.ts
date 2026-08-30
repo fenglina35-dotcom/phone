@@ -296,7 +296,13 @@ function roleMessageStyleInvalid(value: string, maxParts = 4) {
 function roleModelOutputLeak(value: string) {
   const text = String(value || "").trim();
   if (!text) return false;
-  return /<\/?think\b|\b(?:I need to carefully analyze|The user's last message|But the instruction says|The key instruction|looking at the chat log|I must stay quiet|system prompt|developer message|chain[ -]of[ -]thought|assistant analysis)\b|(?:本次对话边界|\[对话边界\]|正式随机主动联系必须保持安静|用户(?:最后|最近)一条(?:微信|共同生活|电话)?消息(?:仍在等待正常回复|尚未得到角色回复)|只供内部思考，?绝不能照抄|不要解释(?:本次|上述)?规则)/i.test(text);
+  if (/<\/?(?:think|analysis)\b|[<＜]\s*(?:指令解析|思考过程|推理过程|分析过程)\s*[>＞]|\b(?:I need to carefully analyze|The user's last message|But the instruction says|The key instruction|looking at the chat log|I must stay quiet|system prompt|developer message|chain[ -]of[ -]thought|assistant analysis)\b|(?:本次对话边界|\[对话边界\]|正式随机主动联系必须保持安静|用户(?:最后|最近)一条(?:微信|共同生活|电话)?消息(?:仍在等待正常回复|尚未得到角色回复)|只供内部思考，?绝不能照抄|不要解释(?:本次|上述)?规则)/i.test(text)) return true;
+  let score = 0;
+  if (/(?:^|\n)\s*(?:用户输入|当前输入|用户当前输入)\s*[:：]/m.test(text)) score += 1;
+  if (/(?:^|\n)\s*(?:结合上下文|上下文分析|对话分析)\s*[:：]?/m.test(text)) score += 1;
+  if (/(?:^|\n)\s*(?:分析|推理|思考|指令解析|任务分析|回复策略)\s*[:：]/m.test(text)) score += 1;
+  if (/(?:系统提示|开发者消息|提示词|指令要求|模型应当|作为(?:AI|助手|角色模型))/i.test(text)) score += 1;
+  return score >= 2;
 }
 
 function roleOnlineNarrationInvalid(value: string, roleName = "") {
@@ -304,7 +310,8 @@ function roleOnlineNarrationInvalid(value: string, roleName = "") {
   if (!text) return false;
   const escapedName = String(roleName || "").trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const actor = escapedName ? `(?:他|她|${escapedName})` : "(?:他|她)";
-  return /^[（(【][\s\S]*[）)】]$/.test(text)
+  return /^(?:动作|旁白|神态|心理|镜头|画面|场景)(?:描写)?\s*[:：]?\s*[^。！？!?]{0,80}(?:顿了顿|眼神|视线|眸色|眉头|嘴角|呼吸|指尖|手指|喉结|肩膀|抬手|伸手|转身|看向|望向|低头|抬眼|沉默)/.test(text)
+    || /^[（(【][\s\S]*[）)】]$/.test(text)
     || new RegExp(`^${actor}[^。！？?]{0,36}(?:走|坐|站|看|抬|低|伸|按|靠|笑|说|问|盯|转身|拿|放|回到|走进|走出|躺|抱|吻|摸|呼吸)`).test(text) && !/[你您][^。！？?]{0,30}[吗呢呀啊？?]/.test(text);
 }
 
@@ -552,11 +559,21 @@ async function roleMessage(
              scene narration as a private WeChat proactive message. Do not ask
              the model to rewrite it: scheduled contact stays silent, while an
              explicit task may retry later under its existing bounded policy. */
-          if (roleModelOutputLeak(text)) return manualUnlockEvent
-            ? { kind: "message", body: roleManualUnlockFallback(eventContext, repeatCandidates) }
-            : ordinaryProactive
-            ? { kind: "silent", body: "" }
-            : { kind: "unavailable", body: "", reason: "unsafe-model-output" };
+          if (roleModelOutputLeak(text)) {
+            if (attempt === 0) {
+              attemptMessages = [
+                ...baseMessages,
+                { role: "assistant", content: text },
+                { role: "user", content: "上一版泄露了内部分析、指令解析或推理过程。重新生成同一轮真实微信，只输出角色直接发送的正文和允许的功能标签；禁止分析步骤、用户输入复述、规则解释、第三人称旁白和思维链。不要新增事实。" },
+              ];
+              continue;
+            }
+            return manualUnlockEvent
+              ? { kind: "message", body: roleManualUnlockFallback(eventContext, repeatCandidates) }
+              : ordinaryProactive
+              ? { kind: "silent", body: "" }
+              : { kind: "unavailable", body: "", reason: "unsafe-model-output" };
+          }
           sawGeneratedCandidate = true;
           if (appDecision) {
             const parsed = parseRoleAppDecision(text);

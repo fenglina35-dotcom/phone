@@ -55,10 +55,12 @@ test('a role lock message is withheld until the real device command completes', 
   assert.match(sync, /saveShieldRoleActors\(previousRoleActors\)/);
 });
 
-test('shield UI distinguishes role locks, daily limits and unknown legacy locks', () => {
-  assert.match(shield, /这是角色主动锁定，不是今日使用限额/);
-  assert.match(shield, /这是今天的使用时间达到限额，不是角色主动锁定/);
-  assert.match(shield, /锁定来源尚未同步/);
+test('shield UI distinguishes lock sources in the title without gray subtitle text', () => {
+  assert.match(shield, /\? "\\\(appName\) 已被\\\(actor\)锁定"/);
+  assert.match(shield, /\? "\\\(appName\) 今日限额已达到"/);
+  assert.match(shield, /: "\\\(appName\) 暂时已锁定"/);
+  assert.match(shield, /subtitle: nil/);
+  assert.doesNotMatch(shield, /let subtitleText/);
   assert.match(shield, /companion\.shield\.roleActors\.v1/);
   assert.match(shield, /companion\.shield\.limitDays\.v1/);
   assert.match(monitor, /days\[externalID\] = today/);

@@ -41,7 +41,9 @@ test('ordinary WeChat rejects bare third-person novel prose but keeps real dialo
   assert.equal(sandbox.wechatNarrationLeakLine('她发了个伤心表情，没打字，接了视频。',role),true);
   assert.equal(sandbox.wechatNarrationLeakLine('他没急着开口，就那么看了她几秒。',role),true);
   assert.equal(sandbox.wechatNarrationLeakLine('办公室门关着，整个房间只有屏幕的冷白光打在他脸上。',role),true);
+  assert.equal(sandbox.wechatNarrationLeakLine('动作顿了顿，眼神沉了几分。',role),true);
   assert.equal(sandbox.wechatNarrationLeakLine('他是谁？',role),false);
+  assert.equal(sandbox.wechatNarrationLeakLine('动作这个功能怎么开？',role),false);
   assert.equal(sandbox.wechatNarrationLeakLine('她今天来找我，我没理她。',role),false);
   assert.equal(sandbox.wechatNarrationLeakLine('我现在还在门诊，等会儿回你。',role),false);
 });

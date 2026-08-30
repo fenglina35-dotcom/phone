@@ -19,7 +19,7 @@ button{background:#ff8fab;color:white}a{margin-top:10px;background:#2d2f36;color
   <div class="t">修复小手机缓存</div>
   <div class="m" id="msg">如果刷出了很老的版本，点下面按钮会清掉网页缓存和 Service Worker。不会删除聊天、角色、密钥。</div>
   <button id="btn">清缓存并打开最新版</button>
-    <a href="./小手机.html?v=1116&open=repair">直接打开最新版</a>
+    <a href="./小手机.html?v=1117&open=repair">直接打开最新版</a>
 </div>
 <script>
 async function repair(){
@@ -29,7 +29,7 @@ async function repair(){
   try{if(window.caches){var ks=await caches.keys();await Promise.all(ks.map(function(k){return caches.delete(k)}));}}catch(e){}
   try{if(navigator.serviceWorker){var rs=await navigator.serviceWorker.getRegistrations();await Promise.all(rs.map(function(r){return r.unregister()}));}}catch(e){}
   if(msg)msg.textContent='清理完成，正在打开最新版…';
-    location.replace('./小手机.html?v=1116&open='+Date.now());
+    location.replace('./小手机.html?v=1117&open='+Date.now());
 }
 document.getElementById('btn').onclick=repair;
 </script>

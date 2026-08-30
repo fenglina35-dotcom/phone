@@ -227,11 +227,13 @@ test('scheduled proactive contact never calls a model for a genuinely pending us
 test('server and client reject leaked reasoning without hiding normal proactive messages', () => {
   const serverSource = edgeFunctionSource('roleModelOutputLeak').replace('value: string', 'value');
   const serverUnsafe = Function(`${serverSource}\nreturn roleModelOutputLeak;`)();
-  const clientUnsafe = Function(`${functionSource('roleServerPushUnsafeBody')}\nreturn roleServerPushUnsafeBody;`)();
+  const clientUnsafe = Function(`const roleVisibleEnvelopeText=value=>String(value==null?'':value).trim();\n${functionSource('wechatReasoningLeak')}\n${functionSource('roleServerPushUnsafeBody')}\nreturn roleServerPushUnsafeBody;`)();
   const leaked = `I need to carefully analyze the situation:\nThe user's last message still hasn't been properly replied to?\nBut the instruction says: "用户最近一条共同生活消息尚未得到角色回复".\nThe key instruction: "本次正式随机主动联系必须保持安静".`;
   for (const guard of [serverUnsafe, clientUnsafe]) {
     assert.equal(guard(leaked), true, 'the exact screenshot-style reasoning dump is blocked');
+    assert.equal(guard('<指令解析>\n用户输入：“不是！”\n结合上下文\n分析：角色应该继续追问。'), true, 'Chinese instruction analysis from weak models is blocked');
     assert.equal(guard('刚忙完，想问你现在好一点没有。'), false, 'an ordinary direct role message remains visible');
+    assert.equal(guard('我认真分析了一下，还是想先听你说。'), false, 'an ordinary use of the word analysis is not over-blocked');
     assert.equal(guard('[图片|窗边的一杯热茶]'), false, 'a valid proactive image action remains available');
   }
   assert.match(edge, /roleModelOutputLeak\(text\)/);
@@ -589,6 +591,8 @@ test('a queued reasoning leak is consumed without a bubble, notification, or act
   });
   vm.runInContext(`
     let _roleServerPushPullBusy=false,_roleServerPushPullAt=0;
+    const roleVisibleEnvelopeText=value=>String(value==null?'':value).trim();
+    ${functionSource('wechatReasoningLeak')}
     ${functionSource('roleServerPushUnsafeBody')}
     ${functionSource('roleServerPushCallKind')}
     ${functionSource('roleServerPushVisibleBody')}

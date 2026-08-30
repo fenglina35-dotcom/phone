@@ -34,6 +34,7 @@ const sandbox={
     return md.aux?'aux reply':'main reply';
   },
   isRefusal:t=>/refusal/i.test(String(t||'')),
+  wechatReasoningLeak:()=>false,
   splitBubbles:t=>String(t||'').split('\n'),
   isOOCLine:t=>/^OOC/.test(String(t||'')),
 };
