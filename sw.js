@@ -1,6 +1,6 @@
 const BUILD='1119';
-const HOTFIX='v1119-music-disc-color-hotfix-1';
-const SHELL_CACHE='north-shell-v1119-music-disc-color-1';
+const HOTFIX='v1119-cinema-mp4-file-hotfix-1';
+const SHELL_CACHE='north-shell-v1119-cinema-mp4-file-1';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
@@ -27,6 +27,7 @@ const OPTIONAL_FILES=[
   './vendor/qr/qrcode.js?v='+BUILD,
   './vendor/qr/jsQR.js?v='+BUILD,
   './vendor/mp4box.all.mjs?v='+BUILD,
+  './vendor/mp4box.all.js?v='+BUILD+'&r=file-safe-1',
   './vendor/rolldown-runtime-w6R9maHv.mjs',
   './vendor/styp-9TIZZDLN.mjs',
   './vendor/MP4BOX-LICENSE.txt'
