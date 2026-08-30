@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1118 · 交互与角色锁定稳定版'/);
+  assert.match(app,/APP_VER='v1119 · 图标美化补全版'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1118/);
-  assert.match(html,/sw\.js\?v=1118&r=v1118-interaction-role-lock-delivery-hotfix-2/);
+  assert.match(html,/north-sw-reloaded-1119/);
+  assert.match(html,/sw\.js\?v=1119&r=v1119-app-icon-upload-hotfix-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{
