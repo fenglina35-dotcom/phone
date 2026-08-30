@@ -14,7 +14,7 @@ const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTes
 
 test('v1045 web files use one cache-busting build number',()=>{
   assert.match(app,/APP_VER='v1117 · 输出与存储稳定版'/);
-  assert.match(app,/const url='sw\.js\?v=1117&r=v1117-output-storage-stability-1'/);
+  assert.match(app,/const url='sw\.js\?v=1117&r=v1117-trip-avatar-sticker-hotfix-2'/);
   assert.match(html,/__NORTH_SHELL_BUILD__='1117'/);
   assert.match(html,/app\.js\?v=1117/);
   assert.match(sw,/const BUILD='1117'/);

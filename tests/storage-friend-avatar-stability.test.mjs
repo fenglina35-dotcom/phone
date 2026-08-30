@@ -53,6 +53,7 @@ const localizeContext = vm.createContext({
 });
 vm.runInContext([
   functionSource('pfAvatarStorageKey'),
+  functionSource('pfAvatarRevision'),
   functionSource('pfLocalizeRemoteAvatar'),
   functionSource('pfLocalizeRemoteRows'),
   functionSource('pfLocalizeRemoteData'),
@@ -71,6 +72,15 @@ assert.ok(!Object.hasOwn(localized, 'groups'), 'an incremental response without 
 const invalidRemoteRef = await localizeContext.localize({friends: [{phone_id: 'AB-12', avatar: 'idb:other-device-key'}]});
 assert.ok(!Object.hasOwn(invalidRemoteRef.friends[0], 'avatar'),
   'another device local IndexedDB key must not overwrite a valid avatar on this device');
+
+const emptyRemote = await localizeContext.localize({friends: [{phone_id: 'AB-12', avatar: ''}]});
+assert.ok(!Object.hasOwn(emptyRemote.friends[0], 'avatar'),
+  'an empty incremental avatar must not erase the last valid local copy');
+assert.equal(typeof localized.friends[0]._avatarRev, 'string');
+assert.ok(localized.friends[0]._avatarRev.length > 10,
+  'localized avatars need a small revision stamp so an avatar-only sync repaints immediately');
+assert.match(functionSource('pfRemoteListStamp'), /pfAvatarRevision/,
+  'friend and group change detection must include avatar revisions');
 
 assert.match(functionSource('pfProfilePayload'), /await rolePushAvatarData/,
   'profile upload must resolve local image references into a transport-safe avatar');

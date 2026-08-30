@@ -71,6 +71,28 @@ test('undecided, malformed, same-city and isolated non-common-life tags fail clo
   assert.equal(blocked.plans.length,0);
 });
 
+test('weak-model ticket variants stay inside common life and never degrade to a single-person order',()=>{
+  const sandbox=bookingSandbox(),role={id:'c1',name:'角色',wallet:5000},now=new Date(2026,7,28,10,0,0).getTime();
+  const generic=sandbox.extract('我来订。\n[订票|成都|2026-08-30|09:45]',role,{allow:true,now});
+  assert.equal(generic.text,'我来订。');
+  assert.equal(generic.errors.length,0);
+  const made=sandbox.commit(role,generic.plans);
+  assert.equal(made.length,1);
+  assert.equal(made[0].pax,2);
+  assert.equal(made[0].flier,'both');
+  assert.equal(made[0].cohab,true);
+
+  const missingTime=sandbox.extract('先订票。\n[订票|杭州|2026-09-02]',role,{allow:true,now});
+  assert.equal(missingTime.text,'先订票。');
+  assert.equal(missingTime.plans.length,0);
+  assert.deepEqual(Array.from(missingTime.errors),['缺少准确出发时间']);
+});
+
+test('a validated tag-only two-person plan is not discarded merely because the model omitted dialogue',()=>{
+  const core=functionSource('cohabReplyCore');
+  assert.match(core,/\(items\.length\|\|travel\.plans\.length\)\?cohabCommitTripPlans/);
+});
+
 test('departure and arrival advance from exact timestamps without creating chat messages',()=>{
   const sandbox=bookingSandbox(),depart=new Date(2026,7,30,9,45,0).getTime(),arrive=depart+2*3600000,d={phase:'home',activity:'在家',place:'卧室',notices:[]};
   sandbox.S.travel.trips.push({id:'t1',cid:'c1',cohab:true,status:'upcoming',from:'苏州',to:'成都',no:'CA1234',date:'2026-08-30',departAt:depart,arriveAt:arrive});

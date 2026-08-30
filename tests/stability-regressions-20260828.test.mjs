@@ -95,7 +95,7 @@ test('a role cannot claim early clock-out during configured work without synchro
 });
 
 test('new modals immediately hydrate stored photos and music avatars never print idb keys',()=>{
-  assert.match(functionSource('openModal'),/querySelector\('\[data-idb-avatar\],img\[src\^="idb:"\],\[style\*="idb:"\]'\)/);
+  assert.match(functionSource('openModal'),/querySelector\('\[data-idb-avatar\],img\[src\^="idb:"\],img\[data-idb-src\],\[style\*="idb:"\]'\)/);
   assert.match(functionSource('openModal'),/scheduleVisibleStoredImages\(true\)/);
   const sandbox=vm.createContext({
     isImg:()=>false,isStoredImgRef:v=>String(v).startsWith('idb:'),

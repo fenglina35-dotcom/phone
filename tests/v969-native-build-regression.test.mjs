@@ -14,7 +14,7 @@ const reportScene = read('native/private-small-phone/XcodeProject/PhoneCompanion
 
 test('v1117 web and private iOS 1.0.238 keep explicit build identities', () => {
   assert.match(app, /APP_VER='v1117 · 输出与存储稳定版'/);
-  assert.match(app, /sw\.js\?v=1117&r=v1117-output-storage-stability-1/);
+  assert.match(app, /sw\.js\?v=1117&r=v1117-trip-avatar-sticker-hotfix-2/);
   assert.match(shell, /north-shell-v1117/);
   assert.match(bundleInfo, /<string>1117<\/string>/);
   assert.match(localWebView, /1\.0\.238 \(238\)/);
