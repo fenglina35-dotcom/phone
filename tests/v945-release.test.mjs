@@ -25,9 +25,9 @@ test('v1045 web files use one cache-busting build number',()=>{
 
 test('the private iOS package embeds web v1122 and keeps 1.0.243 delivery',()=>{
   assert.match(privateBundle,/<string>1122<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.247;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 247;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.247 \(247\)'/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.248;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 248;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.248 \(248\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

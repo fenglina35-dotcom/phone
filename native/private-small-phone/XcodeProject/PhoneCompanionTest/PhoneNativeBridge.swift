@@ -15,7 +15,7 @@ enum SmallPhoneDiagnosticsStore {
     )
     private static let maximumBytes = 256 * 1_024
     private static let maximumLines = 200
-    private static let build = "1.0.247 (247)"
+    private static let build = "1.0.248 (248)"
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -251,15 +251,20 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             let requested = arguments["theme"] as? String ?? "black"
             let allowed = Set(["black", "pink", "blue", "gray", "white"])
             let theme = allowed.contains(requested) ? requested : "black"
+            let previous = UserDefaults.standard.string(
+                forKey: "smallPhone.statusBarTheme.v1"
+            ) ?? "black"
             UserDefaults.standard.set(
                 theme,
                 forKey: "smallPhone.statusBarTheme.v1"
             )
-            NotificationCenter.default.post(
-                name: .smallPhoneStatusBarThemeChanged,
-                object: nil,
-                userInfo: ["theme": theme]
-            )
+            if previous != theme {
+                NotificationCenter.default.post(
+                    name: .smallPhoneStatusBarThemeChanged,
+                    object: nil,
+                    userInfo: ["theme": theme]
+                )
+            }
             reply(requestID: requestID, result: ["theme": theme])
         case "alarm.sync":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
@@ -793,6 +798,8 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             ?? (legacyValue?["stats"] as? [String: Any])
         let transferToken = arguments["transferToken"] as? String ?? ""
         let chunkOffset = (arguments["offset"] as? NSNumber)?.intValue ?? 0
+        let readBackup = arguments["backup"] as? Bool ?? false
+        let readPrimaryOnly = arguments["primaryOnly"] as? Bool ?? false
 
         storageQueue.async { [weak self] in
             guard let self else { return }
@@ -803,11 +810,23 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                 }
                 switch action {
                 case "storage.get":
-                    guard let stored = self.nativeStorageDataWithRecovery(
-                        at: url
-                    ), let record = self.nativeStorageRecord(
-                        from: stored.data
-                    ), let stateJSON = record["json"] as? String else {
+                    let stored: (data: Data, recovered: Bool)?
+                    if readBackup || readPrimaryOnly {
+                        let readURL = readBackup
+                            ? self.nativeStorageBackupURL(for: url) : url
+                        if let data = try? Data(contentsOf: readURL),
+                           self.nativeStorageRecord(from: data) != nil {
+                            stored = (data, false)
+                        } else {
+                            stored = nil
+                        }
+                    } else {
+                        stored = self.nativeStorageDataWithRecovery(at: url)
+                    }
+                    guard let stored,
+                          let record = self.nativeStorageRecord(
+                              from: stored.data
+                          ), let stateJSON = record["json"] as? String else {
                         self.replyStorage(
                             requestID: requestID,
                             result: ["found": false]
@@ -819,7 +838,9 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                         "found": true,
                         "ver": (record["ver"] as? NSNumber)?.intValue ?? 1,
                         "savedAt": self.nativeStorageSavedAt(in: record),
-                        "recovered": stored.recovered
+                        "recovered": stored.recovered,
+                        "backup": readBackup,
+                        "primaryOnly": readPrimaryOnly
                     ]
                     if let stats = record["stats"],
                        JSONSerialization.isValidJSONObject(stats) {

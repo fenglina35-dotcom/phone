@@ -3,7 +3,7 @@
   'use strict';
   if(window.__SMALL_PHONE_PRIVATE__!==true)return;
 
-  const OVERLAY_VERSION='247-auto-backup-diagnostics-v1';
+  const OVERLAY_VERSION='248-report-host-diagnostics-v1';
   const lastEventAt=Object.create(null);
   const clock=()=>typeof performance!=='undefined'&&performance.now?performance.now():Date.now();
   const cleanFields=input=>{

@@ -143,11 +143,11 @@ function makeAutoBackupHarness() {
   return { context, calls, advance: ms => { now += ms; } };
 }
 
-test('private iOS 247 overlay owns the disable marker and cancels automatic scheduling', async () => {
+test('private iOS 248 overlay owns the disable marker and cancels automatic scheduling', async () => {
   const { context, calls } = makeAutoBackupHarness();
   assert.equal(
     context.__SMALL_PHONE_PRIVATE_RUNTIME__,
-    '247-auto-backup-diagnostics-v1'
+    '248-report-host-diagnostics-v1'
   );
   assert.equal(context.__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__, true);
   assert.equal(context.__testPrivateCloud.timer(), null);
@@ -205,7 +205,7 @@ test('manual backup and both restore actions remain free of the automatic-disabl
   ]) {
     const source = functionSource(app, name);
     assert.doesNotMatch(source, /__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__/);
-    assert.doesNotMatch(source, /247-auto-backup-diagnostics-v1/);
+    assert.doesNotMatch(source, /248-report-host-diagnostics-v1/);
   }
   assert.doesNotMatch(
     overlay,
@@ -263,17 +263,17 @@ test('diagnostic append is fire-and-forget, bounded, rate-limited and not a time
   assert.match(appendLine, /isExcludedFromBackup = true/);
 });
 
-test('native failure UI includes recent persistent diagnostics and the private 247 identity', () => {
+test('native failure UI includes recent persistent diagnostics and the private 248 identity', () => {
   assert.match(webView, /SmallPhoneDiagnosticsStore\.recentText\(limit: 20\)/);
   assert.match(webView, /私人 App 已保留本次失败前的有界诊断记录/);
   assert.match(webView, /id="diag"/);
   assert.match(webView, /function copyDiag\(\)/);
   assert.match(webView, /writeText\(text\)\.catch\(function\(\)\{fallbackCopy\(text\);\}\)/);
-  assert.match(webView, /私人 iOS 1\.0\.247 \(247\)/);
+  assert.match(webView, /私人 iOS 1\.0\.248 \(248\)/);
 
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.247 \(247\)'/);
-  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v4\.build247/);
-  assert.match(bridge, /private static let build = "1\.0\.247 \(247\)"/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.248 \(248\)'/);
+  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v4\.build248/);
+  assert.match(bridge, /private static let build = "1\.0\.248 \(248\)"/);
   assert.match(bridge, /case "diagnostics\.read"/);
   assert.match(bridge, /"bounded": true/);
   assert.match(bridge, /"maximumBytes": 256 \* 1_024/);

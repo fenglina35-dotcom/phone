@@ -154,8 +154,10 @@ test('inactive native helpers do not keep waking the main thread',()=>{
   assert.match(screenShare,/schedulePoll\(after: 4\)/);
   assert.match(screenShare,/schedulePoll\(after: 0\.5\)/);
   assert.doesNotMatch(screenShare,/withTimeInterval: 0\.5, repeats: true/);
-  assert.match(privateRoot,/if reportMounted \{\s*DeviceActivityReport/);
-  assert.match(privateRoot,/reportMounted = false/);
+  assert.match(privateRoot,/SmallPhoneUsageReportMountController: UIViewController/);
+  assert.match(privateRoot,/SmallPhoneUsageReportMountView: UIViewControllerRepresentable/);
+  assert.match(privateRoot,/Task\.sleep\(nanoseconds: 12_000_000_000\)/);
+  assert.doesNotMatch(privateRoot,/@State private var reportMounted/);
   assert.match(app,/setInterval\(friendRequestSweep,5000\)/);
   assert.match(app,/setInterval\(blockedPhoneSweepVisible,5000\)/);
 });

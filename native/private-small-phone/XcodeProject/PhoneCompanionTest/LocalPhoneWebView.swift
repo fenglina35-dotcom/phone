@@ -5,9 +5,13 @@ import WebKit
 
 struct LocalPhoneWebView: UIViewRepresentable {
     let onOpenDeviceManagement: () -> Void
+    private static let processSessionID =
+        String(UUID().uuidString.prefix(8))
 
     final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         let bridge = PhoneNativeBridge()
+        let coordinatorID = String(UUID().uuidString.prefix(8))
+        private var webViewID = ""
         private var showingLoadFailure = false
         private var didLoadPhone = false
         private var openingRolePush = false
@@ -23,7 +27,12 @@ struct LocalPhoneWebView: UIViewRepresentable {
             super.init()
             SmallPhoneDiagnosticsStore.append(
                 "native.coordinator.init",
-                fields: ["thermalState": Self.thermalStateName()]
+                fields: [
+                    "coordinatorID": coordinatorID,
+                    "processSessionID": LocalPhoneWebView.processSessionID,
+                    "pid": ProcessInfo.processInfo.processIdentifier,
+                    "thermalState": Self.thermalStateName()
+                ]
             )
             NotificationCenter.default.addObserver(
                 self,
@@ -58,6 +67,14 @@ struct LocalPhoneWebView: UIViewRepresentable {
         }
 
         deinit {
+            SmallPhoneDiagnosticsStore.append(
+                "native.coordinator.deinit",
+                fields: [
+                    "coordinatorID": coordinatorID,
+                    "webViewID": webViewID,
+                    "processSessionID": LocalPhoneWebView.processSessionID
+                ]
+            )
             pendingWebContentRecovery?.cancel()
             pendingStableWebContentReset?.cancel()
             pendingRolePushSyncRetry?.cancel()
@@ -113,6 +130,31 @@ struct LocalPhoneWebView: UIViewRepresentable {
             DispatchQueue.main.async { [weak webView] in
                 webView?.evaluateJavaScript(script)
             }
+        }
+
+        func recordWebViewMade() {
+            // A diagnostic token is safer than exposing or depending on a
+            // process address, and remains enough to detect duplicate views.
+            webViewID = String(UUID().uuidString.prefix(8))
+            SmallPhoneDiagnosticsStore.append(
+                "native.webview.make",
+                fields: [
+                    "coordinatorID": coordinatorID,
+                    "webViewID": webViewID,
+                    "processSessionID": LocalPhoneWebView.processSessionID
+                ]
+            )
+        }
+
+        func recordWebViewDismantled() {
+            SmallPhoneDiagnosticsStore.append(
+                "native.webview.dismantle",
+                fields: [
+                    "coordinatorID": coordinatorID,
+                    "webViewID": webViewID,
+                    "processSessionID": LocalPhoneWebView.processSessionID
+                ]
+            )
         }
 
         private static func thermalStateName() -> String {
@@ -219,6 +261,9 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 SmallPhoneDiagnosticsStore.append(
                     "native.page.didFinish",
                     fields: [
+                        "coordinatorID": coordinatorID,
+                        "webViewID": webViewID,
+                        "processSessionID": LocalPhoneWebView.processSessionID,
                         "source": webView.url?.isFileURL == true
                             ? "bundled-file" : "other",
                         "thermalState": Self.thermalStateName()
@@ -361,6 +406,9 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 "native.webcontent.terminated",
                 fields: [
                     "attempt": attempt,
+                    "coordinatorID": coordinatorID,
+                    "webViewID": webViewID,
+                    "processSessionID": LocalPhoneWebView.processSessionID,
                     "thermalState": Self.thermalStateName()
                 ]
             )
@@ -438,7 +486,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
         }
 
         private static let webContentTerminationDefaultsKey =
-            "smallPhone.webContentTerminationTimes.v4.build247"
+            "smallPhone.webContentTerminationTimes.v4.build248"
 
         private func showLoadFailure(
             in webView: WKWebView,
@@ -449,6 +497,9 @@ struct LocalPhoneWebView: UIViewRepresentable {
             SmallPhoneDiagnosticsStore.append(
                 "native.page.loadFailure",
                 fields: [
+                    "coordinatorID": coordinatorID,
+                    "webViewID": webViewID,
+                    "processSessionID": LocalPhoneWebView.processSessionID,
                     "domain": String((error as NSError).domain.prefix(80)),
                     "code": (error as NSError).code,
                     "thermalState": Self.thermalStateName()
@@ -491,6 +542,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
         )
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
+        context.coordinator.recordWebViewMade()
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
         webView.scrollView.contentInsetAdjustmentBehavior = .never
@@ -516,6 +568,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
         _ webView: WKWebView,
         coordinator: Coordinator
     ) {
+        coordinator.recordWebViewDismantled()
         webView.configuration.userContentController.removeScriptMessageHandler(
             forName: PhoneNativeBridge.handlerName
         )
@@ -588,7 +641,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
         <body style="margin:0;background:#111;color:white;font-family:-apple-system;padding:28px">
           <h2>小手机本地页面没有加载成功</h2>
           <p>原始数据没有被删除。私人 App 已保留本次失败前的有界诊断记录。</p>
-          <p style="color:#aaa;font-size:13px">错误代码：\(code) · 私人 iOS 1.0.247 (247)</p>
+          <p style="color:#aaa;font-size:13px">错误代码：\(code) · 私人 iOS 1.0.248 (248)</p>
           <button onclick="copyDiag()" style="border:0;border-radius:10px;padding:10px 14px;background:#ff86ad;color:#fff;font-weight:700">复制诊断记录</button>
           <pre id="diag" style="margin-top:14px;padding:12px;border-radius:10px;background:#1d1d1f;white-space:pre-wrap;word-break:break-all;font-size:10px;line-height:1.5;user-select:text;-webkit-user-select:text">\(detail)</pre>
           <script>
@@ -639,7 +692,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.247 (247)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.248 (248)';
       window.__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__ = true;
       const privateDiagLast = new Map();
       window.__smallPhoneNativeDiag = (event, fields = {}, minGap = 10000) => {
@@ -671,7 +724,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
       };
       window.__smallPhoneNativeDiag(
         'native.bootstrap.ready',
-        { build: '1.0.247 (247)', autoBackupPaused: true },
+        { build: '1.0.248 (248)', autoBackupPaused: true },
         0
       );
       // Keep private-App background maintenance away from the WebContent main
