@@ -136,18 +136,21 @@ test('native timezone snapshot is injected before bridge bootstrap', () => {
   assert.match(webView, /window\.__SMALL_PHONE_NATIVE_ENV__/);
 });
 
-test('terminated WebContent receives one delayed exact-bundle recovery without a Coordinator reset loop', () => {
+test('terminated WebContent reloads only once while active and thermally safe', () => {
   assert.match(webView, /func webViewWebContentProcessDidTerminate\(_ webView: WKWebView\)/);
   assert.match(webView, /now - \$0 < 120/);
-  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v4\.build249/);
+  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v5\.build250/);
   assert.match(webView, /UserDefaults\.standard[\s\S]*?terminationTimes/);
   assert.match(webView, /WebContent stable for 90s; recovery budget reset/);
-  assert.match(webView, /guard attempt == 1 else/);
+  assert.match(webView, /guard attempt == 1,[\s\S]*?appIsActive,[\s\S]*?thermalState == "nominal" \|\| thermalState == "fair" else/);
+  assert.match(webView, /native\.webcontent\.recoveryOffered/);
+  assert.match(webView, /native\.webcontent\.reloadDeferred/);
   assert.match(webView, /deadline: \.now\(\) \+ 10/);
   assert.match(webView, /webView\.loadFileURL\([\s\S]{0,160}?allowingReadAccessTo: readAccessURL/);
   assert.match(webView, /configureBundledPage\([\s\S]{0,140}?fileURL: fileURL[\s\S]{0,140}?readAccessURL: readAccessURL/);
   assert.doesNotMatch(webView, /webView\?\.reload\(\)/);
   assert.doesNotMatch(webView, /websiteDataStore\.removeData/);
+  assert.doesNotMatch(webView, /loadHTMLString\(\s*LocalPhoneWebView\.loadFailureHTML/);
 });
 
 test('recovery suite is pinned to the private bundled app only', () => {

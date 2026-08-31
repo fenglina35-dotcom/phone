@@ -384,6 +384,16 @@ html:is(.north-native-performance-guard,.north-native-startup-quiet) .locpulse,
 html:is(.north-native-performance-guard,.north-native-startup-quiet) .lmmarker span{animation-play-state:paused!important}
 html.north-native-performance-guard .music-ambient,
 html.north-native-performance-guard .dybg{filter:none!important}
+/* A measured private-App stall temporarily removes only decorative shadows
+   and image filters from the home screen. Layout, taps, labels, stored image
+   sources and the selected theme remain unchanged and return automatically
+   when the guard expires. */
+html.north-native-app.north-native-performance-guard .home .ic,
+html.north-native-app.north-native-performance-guard .home .hwid,
+html.north-native-app.north-native-performance-guard .home .dock,
+html.north-native-app.north-native-performance-guard .home .glass-second-portrait,
+html.north-native-app.north-native-performance-guard .home .glass-second-photos{box-shadow:none!important}
+html.north-native-app.north-native-performance-guard .home img{filter:none!important}
 html.north-native-app.north-glass-ui.north-pack-pink .glass-second-portrait,
 html.north-native-app.north-glass-ui.north-pack-pink .glass-second-photos,
 html.north-native-app.north-glass-ui .home.tpink .glass-second-portrait,

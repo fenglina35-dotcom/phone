@@ -19,6 +19,7 @@ const app = readPrivate('PhoneWeb.bundle/app.js');
 const overlay = readPrivate('PhoneWeb.bundle/private-runtime-diagnostics.js');
 const webView = readPrivate('LocalPhoneWebView.swift');
 const bridge = readPrivate('PhoneNativeBridge.swift').replace(/\r\n/g, '\n');
+const rootView = readPrivate('SmallPhonePrivateRootView.swift');
 
 function functionSource(source, name) {
   const functionStart = source.indexOf(`function ${name}(`);
@@ -143,11 +144,11 @@ function makeAutoBackupHarness() {
   return { context, calls, advance: ms => { now += ms; } };
 }
 
-test('private iOS 249 overlay owns the disable marker and cancels automatic scheduling', async () => {
+test('private iOS 250 overlay owns the disable marker and cancels automatic scheduling', async () => {
   const { context, calls } = makeAutoBackupHarness();
   assert.equal(
     context.__SMALL_PHONE_PRIVATE_RUNTIME__,
-    '249-safe-chat-recovery-v1'
+    '250-native-recovery-icon-pressure-v1'
   );
   assert.equal(context.__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__, true);
   assert.equal(context.__testPrivateCloud.timer(), null);
@@ -157,18 +158,18 @@ test('private iOS 249 overlay owns the disable marker and cancels automatic sche
   assert.equal(context.privatePhoneCloudSchedule(1000), false);
   assert.equal(context.__testPrivateCloud.timer(), null);
   assert.deepEqual(calls.cleared, [41, 73]);
-  assert.equal(calls.timers.length, 0, 'disabled scheduling must not create a timer');
+  assert.equal(calls.timers.length, 1, 'only the one-shot native recovery handoff is scheduled');
 
   context.privatePhoneCloudMarkDirty(15_000);
   assert.equal(context.__testPrivateCloud.dirty(), 15_000);
   assert.equal(context.__testPrivateCloud.timer(), null);
-  assert.equal(calls.timers.length, 0);
+  assert.equal(calls.timers.length, 1);
 
   context.__testPrivateCloud.setPersisted(18_000);
   context.privatePhoneCloudWake();
   assert.equal(context.__testPrivateCloud.dirty(), 18_000);
   assert.equal(context.__testPrivateCloud.timer(), null);
-  assert.equal(calls.timers.length, 0);
+  assert.equal(calls.timers.length, 1);
 
   assert.equal(await context.privatePhoneCloudAutoBackup(), false);
   assert.equal(await context.privatePhoneCloudAutoBackup(), false);
@@ -205,7 +206,7 @@ test('manual backup and both restore actions remain free of the automatic-disabl
   ]) {
     const source = functionSource(app, name);
     assert.doesNotMatch(source, /__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__/);
-    assert.doesNotMatch(source, /249-safe-chat-recovery-v1/);
+    assert.doesNotMatch(source, /250-native-recovery-icon-pressure-v1/);
   }
   assert.doesNotMatch(
     overlay,
@@ -263,17 +264,16 @@ test('diagnostic append is fire-and-forget, bounded, rate-limited and not a time
   assert.match(appendLine, /isExcludedFromBackup = true/);
 });
 
-test('native failure UI includes recent persistent diagnostics and the private 249 identity', () => {
-  assert.match(webView, /SmallPhoneDiagnosticsStore\.recentText\(limit: 20\)/);
-  assert.match(webView, /私人 App 已保留本次失败前的有界诊断记录/);
-  assert.match(webView, /id="diag"/);
-  assert.match(webView, /function copyDiag\(\)/);
-  assert.match(webView, /writeText\(text\)\.catch\(function\(\)\{fallbackCopy\(text\);\}\)/);
-  assert.match(webView, /私人 iOS 1\.0\.249 \(249\)/);
+test('native recovery UI stays outside WebKit and carries the private 250 identity', () => {
+  assert.match(rootView, /SmallPhoneDiagnosticsStore\.recentText\(limit: 80\)/);
+  assert.match(rootView, /聊天、角色、图片、登录信息或密钥/);
+  assert.match(rootView, /安全重新打开小手机/);
+  assert.match(rootView, /复制诊断给开发者/);
+  assert.doesNotMatch(webView, /LocalPhoneWebView\.loadFailureHTML/);
 
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.249 \(249\)'/);
-  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v4\.build249/);
-  assert.match(bridge, /private static let build = "1\.0\.249 \(249\)"/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.250 \(250\)'/);
+  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v5\.build250/);
+  assert.match(bridge, /private static let build = "1\.0\.250 \(250\)"/);
   assert.match(bridge, /case "diagnostics\.read"/);
   assert.match(bridge, /"bounded": true/);
   assert.match(bridge, /"maximumBytes": 256 \* 1_024/);

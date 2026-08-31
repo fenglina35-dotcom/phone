@@ -176,8 +176,98 @@ private struct SmallPhoneUsageReportMountView: UIViewControllerRepresentable {
     ) {}
 }
 
+private struct SmallPhoneNativeRecoveryOverlay: View {
+    let reason: String
+    let isPreparing: Bool
+    let onReopen: () -> Void
+    let onInspectArchive: () -> Void
+    let onContinueWaiting: () -> Void
+    @State private var copied = false
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.96)
+                .ignoresSafeArea()
+
+            ScrollView {
+                VStack(spacing: 16) {
+                    Image(systemName: "wrench.and.screwdriver.fill")
+                        .font(.system(size: 42, weight: .semibold))
+                        .foregroundStyle(Color(red: 1, green: 0.52, blue: 0.68))
+
+                    Text("小手机页面已停止响应")
+                        .font(.title2.weight(.bold))
+                        .multilineTextAlignment(.center)
+
+                    Text(reason)
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text("重开不会主动删除已经落盘的聊天、角色、图片、登录信息或密钥。重开前会先等待存档写入；若页面彻底卡死，最后尚未落盘的变化无法绝对保证。")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Color(red: 0.48, green: 0.88, blue: 0.65))
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Button(action: onReopen) {
+                        Text(isPreparing ? "正在保存并准备重开…" : "安全重新打开小手机")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color(red: 1, green: 0.52, blue: 0.68))
+                    .controlSize(.large)
+                    .disabled(isPreparing)
+
+                    Button(action: onInspectArchive) {
+                        Text("重开后检查本机存档")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                    .disabled(isPreparing)
+
+                    Button(action: onContinueWaiting) {
+                        Text("继续等待，不重开")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                    .disabled(isPreparing)
+
+                    Button {
+                        UIPasteboard.general.string =
+                            SmallPhoneDiagnosticsStore.recentText(limit: 80)
+                        copied = true
+                    } label: {
+                        Text(copied ? "诊断已复制" : "复制诊断给开发者")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.large)
+                }
+                .foregroundStyle(.white)
+                .padding(24)
+                .frame(maxWidth: 520)
+                .background(Color(red: 0.10, green: 0.10, blue: 0.11))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 24)
+                        .stroke(Color.white.opacity(0.14), lineWidth: 1)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 24))
+                .padding(.horizontal, 22)
+                .padding(.vertical, 48)
+            }
+        }
+    }
+}
+
 struct SmallPhonePrivateRootView: View {
     @State private var showsDeviceManagement = false
+    @State private var webViewGeneration = 0
+    @State private var recoveryReason: String?
+    @State private var recoveryRestartPending = false
     // Start with the persisted theme so first-page rendering does not need an
     // immediate root-state transition that can disturb the WKWebView host.
     @State private var statusBarTheme = SmallPhoneStatusBarTheme.persisted
@@ -190,9 +280,32 @@ struct SmallPhonePrivateRootView: View {
             statusBarTheme.color
                 .ignoresSafeArea(.container, edges: .top)
 
-            LocalPhoneWebView {
-                showsDeviceManagement = true
-            }
+            LocalPhoneWebView(
+                onOpenDeviceManagement: {
+                    showsDeviceManagement = true
+                },
+                onRecoveryNeeded: { reason in
+                    recoveryRestartPending = false
+                    recoveryReason = reason
+                },
+                onRecoveryRestartReady: { inspectArchive in
+                    if inspectArchive {
+                        SmallPhoneRecoveryLaunchStore.request()
+                    }
+                    SmallPhoneDiagnosticsStore.append(
+                        "native.recovery.manualReopen",
+                        fields: ["inspectArchive": inspectArchive]
+                    )
+                    recoveryRestartPending = false
+                    recoveryReason = nil
+                    webViewGeneration += 1
+                },
+                onRecoveryContinued: {
+                    recoveryRestartPending = false
+                    recoveryReason = nil
+                }
+            )
+            .id(webViewGeneration)
 
             // Keep the report host structurally stable and let its UIKit child
             // mount the system report only for a real read. The former 12-second
@@ -202,6 +315,26 @@ struct SmallPhonePrivateRootView: View {
             SmallPhoneUsageReportMountView()
                 .frame(width: 2, height: 2)
                 .allowsHitTesting(false)
+
+            if let recoveryReason {
+                SmallPhoneNativeRecoveryOverlay(
+                    reason: recoveryReason,
+                    isPreparing: recoveryRestartPending,
+                    onReopen: {
+                        requestRecoveryRestart(inspectArchive: false)
+                    },
+                    onInspectArchive: {
+                        requestRecoveryRestart(inspectArchive: true)
+                    },
+                    onContinueWaiting: {
+                        NotificationCenter.default.post(
+                            name: LocalPhoneWebView.recoveryContinueRequested,
+                            object: nil
+                        )
+                    }
+                )
+                .zIndex(10_000)
+            }
         }
         // The private WKWebView must continue beneath the home-indicator area.
         // The top status area remains system-owned while its color follows theme.
@@ -234,5 +367,21 @@ struct SmallPhonePrivateRootView: View {
                     }
             }
         }
+    }
+
+    private func requestRecoveryRestart(inspectArchive: Bool) {
+        let thermalState = ProcessInfo.processInfo.thermalState
+        guard thermalState != .serious, thermalState != .critical else {
+            recoveryRestartPending = false
+            recoveryReason =
+                "系统仍处于严重发热状态，已阻止反复重开。请先点“继续等待，不重开”，等手机降温后再尝试。"
+            return
+        }
+        recoveryRestartPending = true
+        NotificationCenter.default.post(
+            name: LocalPhoneWebView.recoveryRestartRequested,
+            object: nil,
+            userInfo: ["inspectArchive": inspectArchive]
+        )
     }
 }

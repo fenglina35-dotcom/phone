@@ -15,7 +15,7 @@ enum SmallPhoneDiagnosticsStore {
     )
     private static let maximumBytes = 256 * 1_024
     private static let maximumLines = 200
-    private static let build = "1.0.249 (249)"
+    private static let build = "1.0.250 (250)"
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -169,6 +169,22 @@ enum SmallPhoneDiagnosticsStore {
     }
 }
 
+enum SmallPhoneRecoveryLaunchStore {
+    private static let key = "smallPhone.recoveryLaunchRequested.v1"
+
+    static func request() {
+        UserDefaults.standard.set(true, forKey: key)
+    }
+
+    static func isRequested() -> Bool {
+        UserDefaults.standard.bool(forKey: key)
+    }
+
+    static func acknowledge() {
+        UserDefaults.standard.removeObject(forKey: key)
+    }
+}
+
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
@@ -211,9 +227,8 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         }
 
         if action == "diagnostics.append" {
-            SmallPhoneDiagnosticsStore.appendScriptPayload(
-                payload["payload"] as? [String: Any] ?? [:]
-            )
+            let diagnostic = payload["payload"] as? [String: Any] ?? [:]
+            SmallPhoneDiagnosticsStore.appendScriptPayload(diagnostic)
             return
         }
 
@@ -234,6 +249,16 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         case "diagnostics.clear":
             SmallPhoneDiagnosticsStore.clear()
             reply(requestID: requestID, result: ["cleared": true])
+        case "recovery.launch.peek":
+            reply(
+                requestID: requestID,
+                result: [
+                    "requested": SmallPhoneRecoveryLaunchStore.isRequested()
+                ]
+            )
+        case "recovery.launch.ack":
+            SmallPhoneRecoveryLaunchStore.acknowledge()
+            reply(requestID: requestID, result: ["acknowledged": true])
         case "bridge.info":
             reply(
                 requestID: requestID,

@@ -38,7 +38,7 @@ test('cloud dialog identifies the runtime and restores the web immediate-backup 
   assert.match(app, /class="sw \$\{S\.settings\.cloudAuto[^\n]*flex:0 0 44px/);
 });
 
-test('web and private bundle carry identical repaired code and styles', async () => {
+test('web and private bundle both carry the repaired controls without erasing private-only styles', async () => {
   const [webApp, privateApp, webCss, privateCss] = await Promise.all([
     read(root, 'app.js'), read(privateBundle, 'app.js'), read(root, 'glass-theme.css'), read(privateBundle, 'glass-theme.css')
   ]);
@@ -50,7 +50,14 @@ test('web and private bundle carry identical repaired code and styles', async ()
     assert.ok(webApp.includes(marker),`web marker missing: ${marker}`);
     assert.ok(privateApp.includes(marker),`private marker missing: ${marker}`);
   }
-  assert.equal(privateCss, webCss);
+  for(const marker of [
+    '.home-vinyl-card .vinyl-record.home-vinyl-custom',
+    'html.north-glass-ui .home .app .ic.glass-pack-icon',
+  ]){
+    assert.ok(webCss.includes(marker),`web style marker missing: ${marker}`);
+    assert.ok(privateCss.includes(marker),`private style marker missing: ${marker}`);
+  }
+  assert.match(privateCss,/html\.north-native-app\.north-native-performance-guard \.home \.ic/,'private-only native performance guard must survive web/private synchronization');
 });
 
 test('private phone account keeps local login visible when only remote backup status fails', async () => {

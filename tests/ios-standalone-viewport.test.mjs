@@ -94,5 +94,6 @@ test('restored v950 shell keeps automatic Apple safe-area offsets disabled',()=>
   assert.match(nativeRoot,/\.ignoresSafeArea\(\.container, edges: \.bottom\)/,'the private native container keeps the web surface behind the home indicator');
   assert.match(nativeRoot,/statusBarTheme\.color[\s\S]*?\.ignoresSafeArea\(\.container, edges: \.top\)/,'the private app paints only the reserved status-bar lane with the selected theme');
   assert.match(nativeRoot,/case \.black:[\s\S]*?return \.black/,'pure black remains the safe fallback theme');
-  assert.doesNotMatch(nativeRoot,/\.ignoresSafeArea\(\)/,'the web view must never extend under the iPhone status bar');
+  const webViewMount=nativeRoot.slice(nativeRoot.indexOf('LocalPhoneWebView('),nativeRoot.indexOf('.id(webViewGeneration)')+'.id(webViewGeneration)'.length);
+  assert.doesNotMatch(webViewMount,/\.ignoresSafeArea\(\)/,'the web view itself must never extend under the iPhone status bar');
 });

@@ -17,9 +17,9 @@ test('v1123 web and private iOS 1.0.243 keep explicit build identities', () => {
   assert.match(app, /sw\.js\?v=1123&r=v1123-route-diagnostics-hotfix-1/);
   assert.match(shell, /north-shell-v1123/);
   assert.match(bundleInfo, /<string>1123<\/string>/);
-  assert.match(localWebView, /1\.0\.249 \(249\)/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 249;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.249;/g) || []).length, 12);
+  assert.match(localWebView, /1\.0\.250 \(250\)/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 250;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.250;/g) || []).length, 12);
 });
 
 test('native shared-media gain uses only public AVFoundation types', () => {

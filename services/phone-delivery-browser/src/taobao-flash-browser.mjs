@@ -4622,10 +4622,12 @@ export class TaobaoFlashBrowser {
     }
     const paymentPage = await this.waitForPaymentSelection(page, beforePages);
     await this.riskCheck(paymentPage, { waitForHuman: true, maxWaitMs: 120_000 });
+    let paymentSelectionFallback = null;
     for (let i = 0; i < 25; i += 1) {
       await page.waitForTimeout(500);
       const candidate = this.context.pages().find(item => !beforePages.has(item)) || this.context.pages().at(-1) || page;
       const candidateBody = clean(await candidate.locator('body').innerText().catch(() => ''), 20_000);
+      if (/支付宝/.test(candidateBody) && /确认支付/.test(candidateBody)) paymentSelectionFallback = candidate;
       const paymentButton = await this.visibleLocator(candidate.getByText(/^付款$/, { exact: true }), true).catch(() => null);
       if (/alipay|cashier|counter|tradepay|payment|\/pay/i.test(candidate.url()) && paymentButton && /(?:^|\s)付款(?:\s|$)/.test(candidateBody)) {
         this.page = candidate;
@@ -4634,6 +4636,19 @@ export class TaobaoFlashBrowser {
         return {
           status: 'pending_payment', payUrl: candidate.url(), etaText: exactEtaText, imageUrl, couponCheck,
           browserOrderRef: { stage: 'cashier', url: candidate.url(), itemNames, imageUrl, couponCheck },
+        };
+      }
+    }
+    if (paymentSelectionFallback && !paymentSelectionFallback.isClosed()) {
+      const selectionBody = clean(await paymentSelectionFallback.locator('body').innerText().catch(() => ''), 20_000);
+      if (/支付宝/.test(selectionBody) && /确认支付/.test(selectionBody)) {
+        this.page = paymentSelectionFallback;
+        const selectionUrl = paymentSelectionFallback.url();
+        const imageUrl = initialImageUrl || await this.readOrderImage(paymentSelectionFallback, itemNames);
+        const exactEtaText = checkoutEtaText(selectionBody) || checkoutEtaText(await page.locator('body').innerText().catch(() => '')) || etaText;
+        return {
+          status: 'pending_payment', payUrl: /alipay|cashier|counter|tradepay|payment|\/pay/i.test(selectionUrl) ? selectionUrl : '', etaText: exactEtaText, imageUrl, couponCheck,
+          browserOrderRef: { stage: 'payment_selection', url: selectionUrl, itemNames, imageUrl, couponCheck },
         };
       }
     }
@@ -4649,7 +4664,7 @@ export class TaobaoFlashBrowser {
     const targetUrl = clean(browserOrderRef?.url, 1000);
     if (targetUrl && page.url() !== targetUrl) {
       page = await this.goto(targetUrl, 1800);
-    } else if (targetUrl && browserOrderRef?.stage === 'cashier') {
+    } else if (targetUrl && ['cashier', 'payment_selection'].includes(browserOrderRef?.stage)) {
       // The user may have completed this checkout in Alipay or another browser.
       // A still-open cashier tab otherwise keeps its pre-payment DOM forever and
       // makes the role believe an already paid meal is still unpaid.
@@ -4669,7 +4684,7 @@ export class TaobaoFlashBrowser {
     ];
     const etaText = checkoutEtaText(body);
     for (const [pattern, status] of states) if (pattern.test(body)) return { status, etaText, imageUrl };
-    return { status: browserOrderRef?.stage === 'cashier' ? 'pending_payment' : 'created', etaText, imageUrl };
+    return { status: ['cashier', 'payment_selection'].includes(browserOrderRef?.stage) ? 'pending_payment' : 'created', etaText, imageUrl };
   }
 
   async diagnostic(path) {

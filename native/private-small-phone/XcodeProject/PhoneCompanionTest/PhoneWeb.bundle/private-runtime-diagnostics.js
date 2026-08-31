@@ -3,7 +3,7 @@
   'use strict';
   if(window.__SMALL_PHONE_PRIVATE__!==true)return;
 
-  const OVERLAY_VERSION='249-safe-chat-recovery-v1';
+  const OVERLAY_VERSION='250-native-recovery-icon-pressure-v1';
   const lastEventAt=Object.create(null);
   const clock=()=>typeof performance!=='undefined'&&performance.now?performance.now():Date.now();
   const cleanFields=input=>{
@@ -139,6 +139,50 @@
     try{await window.SmallPhoneNative.request('diagnostics.clear');const box=document.getElementById('privateRuntimeDiagnosticsText');if(box)box.value='诊断记录已清空';toast('诊断记录已清空');}catch(_){toast('诊断记录清空失败');}
   };
 
+  async function openRequestedRecoveryScanner(){
+    const modal=document.getElementById('modal');
+    let modalWasShown=false,observer=null;
+    if(modal){
+      modal.style.setProperty('z-index','12000','important');
+      observer=new MutationObserver(()=>{
+        if(modal.classList.contains('show'))modalWasShown=true;
+        if(modalWasShown&&!modal.classList.contains('show')){
+          modal.style.removeProperty('z-index');
+          observer.disconnect();
+        }
+      });
+      observer.observe(modal,{attributes:true,attributeFilter:['class']});
+    }
+    emit('recovery.scanner.open',{nativeRequest:true},0);
+    try{
+      await Promise.resolve(window.emergencyRestoreAll());
+      await window.SmallPhoneNative.request('recovery.launch.ack');
+    }catch(error){
+      emit('recovery.scanner.failed',{error:String(error&&error.name||'Error').slice(0,40)},0);
+      if(modal){
+        modal.style.removeProperty('z-index');
+        if(observer)observer.disconnect();
+      }
+    }
+  }
+
+  async function consumeNativeRecoveryLaunch(attempt){
+    attempt=Math.max(0,Number(attempt)||0);
+    if(!window.__northBootReady||
+       !window.SmallPhoneNative||
+       typeof window.SmallPhoneNative.request!=='function'||
+       typeof window.emergencyRestoreAll!=='function'){
+      if(attempt<80)setTimeout(()=>consumeNativeRecoveryLaunch(attempt+1),250);
+      return;
+    }
+    try{
+      const result=await window.SmallPhoneNative.request('recovery.launch.peek');
+      if(result&&result.requested===true)await openRequestedRecoveryScanner();
+    }catch(error){
+      emit('recovery.launch.consume.failed',{error:String(error&&error.name||'Error').slice(0,40)},0);
+    }
+  }
+
   if(typeof window.privatePhoneAccountSection==='function'){
     const originalSection=window.privatePhoneAccountSection;
     window.privatePhoneAccountSection=function(){
@@ -147,6 +191,7 @@
   }
 
   emit('runtime.overlay.ready',{version:OVERLAY_VERSION,autoBackupPaused:true},0);
+  setTimeout(()=>consumeNativeRecoveryLaunch(0),0);
   try{
     if(typeof _bootImagesPromise!=='undefined'&&_bootImagesPromise&&typeof _bootImagesPromise.then==='function'){
       const started=clock();emit('boot.images.wait.begin',{},0);

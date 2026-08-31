@@ -22,6 +22,8 @@ assert.match(delivery,/etaText:safeEtaText\(data\.etaText\)/,'the exact checkout
 assert.match(delivery,/etaText:safeEtaText\(order\.etaText\)/,'the exact delivery window must be copied into the chat-card snapshot');
 assert.match(delivery,/function orderEtaText\(order,withClock\)\{var exact=safeEtaText\(order&&order\.etaText\);if\(exact\)return exact;/,'the chat card must prefer the exact platform delivery window');
 assert.match(delivery,/syncRoleOrderCard\(order\)[\s\S]*?refreshChatMessages\(order\.roleId\)/,'payment QR, amount, and ETA updates must rerender the visible role chat card immediately');
+assert.match(delivery,/function recoverRoleOrderCard\(order\)[\s\S]*?order\.status==='created'[\s\S]*?pushRoleOrderCard\(c,order\)[\s\S]*?scheduleRoleOrderAcknowledgement\(c,order\)/,'a later platform-confirmed checkout must repair a missing card and its role acknowledgement exactly once');
+assert.match(delivery,/function mergeStatus\(order,data\)[\s\S]*?recoverRoleOrderCard\(order\)/,'platform polling must repair a missing card instead of only updating cards that already exist');
 assert.match(delivery,/平台暂未给出预计送达时间/,'missing ETA must be disclosed instead of invented');
 assert.match(delivery,/可以截图后，在支付宝“扫一扫”中从相册选择/,'the official payment QR must explain the screenshot workflow');
 assert.match(delivery,/function orderStatusText\(o\)\{return o&&\(o\.status==='created'\|\|o\.status==='pending_payment'\)\?'订单已提交'/,'the role chat card must present a generated checkout as a submitted order');

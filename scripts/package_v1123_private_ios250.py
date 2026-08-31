@@ -11,12 +11,12 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "native/private-small-phone/XcodeProject"
 BUNDLE_SOURCE = SOURCE / "PhoneCompanionTest/PhoneWeb.bundle"
 INSTALL_GUIDE_SOURCE = (
-    SOURCE / "第二百四十九次安装_v1123_私人存档安全合并_请先读.md"
+    SOURCE / "第二百五十次安装_v1123_私人卡顿原生脱困与外卖补卡_请先读.md"
 )
-DELIVERY = ROOT / "delivery-v1123-private249-safe-chat-recovery-final"
-PACKAGE_NAME = "SmallPhone_v1123_PrivateSafeChatRecovery_iOS249_MacReady"
+DELIVERY = ROOT / "delivery-v1123-private250-native-recovery-candidate"
+PACKAGE_NAME = "SmallPhone_v1123_PrivateNativeRecovery_iOS250_Candidate_MacReady"
 ZIP_PATH = DELIVERY / f"{PACKAGE_NAME}.zip"
-USER_ZIP = ROOT.parent / "小手机_v1123_私人版_iOS249_存档安全合并_最终私人包.zip"
+USER_ZIP = ROOT.parent / "小手机_v1123_私人版_iOS250_卡顿原生脱困与外卖补卡_候选私人包.zip"
 EXPECTED_BUNDLE_FILES = 146
 EXPECTED_PACKAGE_FILES = 185
 ALLOW_DIRTY_PACKAGE = "--allow-dirty" in sys.argv[1:]
@@ -69,7 +69,7 @@ def file_map(root: Path) -> dict[str, bytes]:
 
 tracked_status = run_git("status", "--porcelain=v1", "--untracked-files=no").strip()
 if tracked_status and not ALLOW_DIRTY_PACKAGE:
-    raise RuntimeError("tracked working tree is dirty; commit private iOS 249 first")
+    raise RuntimeError("tracked working tree is dirty; commit private iOS 250 first")
 
 branch = run_git("symbolic-ref", "--short", "HEAD").decode("utf-8").strip()
 if branch != "main":
@@ -123,7 +123,7 @@ if DELIVERY.exists() and any(DELIVERY.iterdir()):
     raise RuntimeError(f"refusing to overwrite non-empty delivery: {DELIVERY}")
 DELIVERY.mkdir(exist_ok=True)
 
-with tempfile.TemporaryDirectory(prefix="smallphone-v1123-ios249-", dir=ROOT) as temp:
+with tempfile.TemporaryDirectory(prefix="smallphone-v1123-ios250-", dir=ROOT) as temp:
     staging = Path(temp) / PACKAGE_NAME
     staging.mkdir(parents=True)
     for relative, source in sorted(source_files.items()):
@@ -133,7 +133,7 @@ with tempfile.TemporaryDirectory(prefix="smallphone-v1123-ios249-", dir=ROOT) as
 
     shutil.copy2(INSTALL_GUIDE_SOURCE, staging / INSTALL_GUIDE_SOURCE.name)
     (staging / "SOURCE_COMMIT.txt").write_text(
-        f"branch=main\ncommit={head}\nworktree={'dirty-uncommitted' if tracked_status else 'clean'}\nweb=v1123\nios=1.0.249 (249)\nbridge=25\n",
+        f"branch=main\ncommit={head}\nworktree={'dirty-uncommitted' if tracked_status else 'clean'}\nweb=v1123\nios=1.0.250 (250)\nbridge=25\n",
         encoding="utf-8",
         newline="\n",
     )
@@ -149,7 +149,7 @@ with tempfile.TemporaryDirectory(prefix="smallphone-v1123-ios249-", dir=ROOT) as
     shell = index_bytes.decode("utf-8")
     for token in [
         "window.__NORTH_SHELL_BUILD__='1123'",
-        'private-runtime-diagnostics.js?v=249',
+        'private-runtime-diagnostics.js?v=250',
         "app.js?v=1123",
     ]:
         if token not in shell:
@@ -217,25 +217,33 @@ with tempfile.TemporaryDirectory(prefix="smallphone-v1123-ios249-", dir=ROOT) as
         "userText:text(meta.userText,800)",
         "knownMerchant=/(?:KFC|肯德基|麦当劳|茶百道",
         "|芭乐|甘露)/u",
+        "function recoverRoleOrderCard(order)",
+        "scheduleRoleOrderAcknowledgement(c,order)",
     ]:
         if token not in delivery_runtime:
             raise RuntimeError(f"protected delivery runtime token missing: {token}")
 
     overlay = (bundle / "private-runtime-diagnostics.js").read_text(encoding="utf-8")
-    if "249-safe-chat-recovery-v1" not in overlay:
-        raise RuntimeError("private 249 safe-chat recovery marker missing")
+    for token in [
+        "250-native-recovery-icon-pressure-v1",
+        "recovery.launch.peek",
+        "recovery.launch.ack",
+        "window.emergencyRestoreAll()",
+    ]:
+        if token not in overlay:
+            raise RuntimeError(f"private 250 recovery marker missing: {token}")
 
     project = (
         staging / "PhoneCompanionTest.xcodeproj/project.pbxproj"
     ).read_text(encoding="utf-8")
-    if project.count("CURRENT_PROJECT_VERSION = 249;") != 12:
-        raise RuntimeError("private build 249 is not set on all targets/configurations")
-    if project.count("MARKETING_VERSION = 1.0.249;") != 12:
-        raise RuntimeError("private version 1.0.249 is not set consistently")
-    if "CURRENT_PROJECT_VERSION = 248;" in project:
-        raise RuntimeError("private project still contains build 248")
-    if "MARKETING_VERSION = 1.0.248;" in project:
-        raise RuntimeError("private project still contains version 1.0.248")
+    if project.count("CURRENT_PROJECT_VERSION = 250;") != 12:
+        raise RuntimeError("private build 250 is not set on all targets/configurations")
+    if project.count("MARKETING_VERSION = 1.0.250;") != 12:
+        raise RuntimeError("private version 1.0.250 is not set consistently")
+    if "CURRENT_PROJECT_VERSION = 249;" in project:
+        raise RuntimeError("private project still contains build 249")
+    if "MARKETING_VERSION = 1.0.249;" in project:
+        raise RuntimeError("private project still contains version 1.0.249")
 
     root_view = (
         staging / "PhoneCompanionTest/SmallPhonePrivateRootView.swift"
@@ -247,6 +255,10 @@ with tempfile.TemporaryDirectory(prefix="smallphone-v1123-ios249-", dir=ROOT) as
         "native.usageReport.unmount",
         "Task.sleep(nanoseconds: 12_000_000_000)",
         "@State private var statusBarTheme = SmallPhoneStatusBarTheme.persisted",
+        "SmallPhoneNativeRecoveryOverlay",
+        "继续等待，不重开",
+        "SmallPhoneRecoveryLaunchStore.request()",
+        ".id(webViewGeneration)",
     ]:
         if token not in root_view:
             raise RuntimeError(f"private report-host token missing: {token}")
@@ -257,12 +269,17 @@ with tempfile.TemporaryDirectory(prefix="smallphone-v1123-ios249-", dir=ROOT) as
         encoding="utf-8"
     )
     for token in [
-        "1.0.249 (249)",
-        "smallPhone.webContentTerminationTimes.v4.build249",
+        "1.0.250 (250)",
+        "smallPhone.webContentTerminationTimes.v5.build250",
         "native.webview.make",
         "native.webview.dismantle",
         "native.coordinator.deinit",
         "processSessionID",
+        "native.responsiveness.timeout",
+        "native.recovery.restartDeferred",
+        "UIApplication.willResignActiveNotification",
+        "UIApplication.didBecomeActiveNotification",
+        "typeof window.saveNowAsync === 'function'",
     ]:
         if token not in webview:
             raise RuntimeError(f"private lifecycle token missing: {token}")
@@ -272,9 +289,11 @@ with tempfile.TemporaryDirectory(prefix="smallphone-v1123-ios249-", dir=ROOT) as
     )
     for token in [
         "contractVersion = 25",
-        'private static let build = "1.0.249 (249)"',
+        'private static let build = "1.0.250 (250)"',
         'case "diagnostics.read"',
         'case "diagnostics.clear"',
+        'case "recovery.launch.peek"',
+        'case "recovery.launch.ack"',
         "maximumBytes = 256 * 1_024",
         'let readBackup = arguments["backup"] as? Bool ?? false',
         'let readPrimaryOnly = arguments["primaryOnly"] as? Bool ?? false',
@@ -285,8 +304,8 @@ with tempfile.TemporaryDirectory(prefix="smallphone-v1123-ios249-", dir=ROOT) as
             raise RuntimeError(f"private bridge/recovery token missing: {token}")
 
     main_guide = (staging / "请在Mac编译前先读.md").read_text(encoding="utf-8")
-    if "私人 iOS 1.0.249 (249)" not in main_guide:
-        raise RuntimeError("Mac guide does not identify private iOS 249")
+    if "私人 iOS 1.0.250 (250)" not in main_guide:
+        raise RuntimeError("Mac guide does not identify private iOS 250")
 
     root_files = sorted(path.name for path in staging.iterdir() if path.is_file())
     expected_root_files = sorted([

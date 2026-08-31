@@ -5,25 +5,50 @@ import WebKit
 
 struct LocalPhoneWebView: UIViewRepresentable {
     let onOpenDeviceManagement: () -> Void
+    let onRecoveryNeeded: (String) -> Void
+    let onRecoveryRestartReady: (Bool) -> Void
+    let onRecoveryContinued: () -> Void
+    static let recoveryRestartRequested = Notification.Name(
+        "SmallPhoneNativeRecoveryRestartRequested"
+    )
+    static let recoveryContinueRequested = Notification.Name(
+        "SmallPhoneNativeRecoveryContinueRequested"
+    )
     private static let processSessionID =
         String(UUID().uuidString.prefix(8))
 
     final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         let bridge = PhoneNativeBridge()
+        let onRecoveryNeeded: (String) -> Void
+        let onRecoveryRestartReady: (Bool) -> Void
+        let onRecoveryContinued: () -> Void
         let coordinatorID = String(UUID().uuidString.prefix(8))
         private var webViewID = ""
-        private var showingLoadFailure = false
         private var didLoadPhone = false
+        private var recoveryNoticeActive = false
+        private var responsivenessProbeToken = 0
         private var openingRolePush = false
         private var syncingRolePush = false
         private var rolePushSyncRetryCount = 0
         private var pendingRolePushSyncRetry: DispatchWorkItem?
         private var pendingWebContentRecovery: DispatchWorkItem?
         private var pendingStableWebContentReset: DispatchWorkItem?
+        private var pendingResponsivenessProbe: DispatchWorkItem?
+        private var pendingResponsivenessTimeout: DispatchWorkItem?
+        private var pendingRecoveryRestartTimeout: DispatchWorkItem?
+        private var recoveryRestartInFlight = false
+        private var recoveryRestartToken = 0
         private var bundledFileURL: URL?
         private var bundledReadAccessURL: URL?
         private var lastSafeAreaInsets: UIEdgeInsets?
-        override init() {
+        init(
+            onRecoveryNeeded: @escaping (String) -> Void,
+            onRecoveryRestartReady: @escaping (Bool) -> Void,
+            onRecoveryContinued: @escaping () -> Void
+        ) {
+            self.onRecoveryNeeded = onRecoveryNeeded
+            self.onRecoveryRestartReady = onRecoveryRestartReady
+            self.onRecoveryContinued = onRecoveryContinued
             super.init()
             SmallPhoneDiagnosticsStore.append(
                 "native.coordinator.init",
@@ -64,6 +89,30 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 name: UIApplication.didReceiveMemoryWarningNotification,
                 object: nil
             )
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(applicationWillResignActive),
+                name: UIApplication.willResignActiveNotification,
+                object: nil
+            )
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(applicationDidBecomeActive),
+                name: UIApplication.didBecomeActiveNotification,
+                object: nil
+            )
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(recoveryRestartRequested(_:)),
+                name: LocalPhoneWebView.recoveryRestartRequested,
+                object: nil
+            )
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(recoveryContinueRequested),
+                name: LocalPhoneWebView.recoveryContinueRequested,
+                object: nil
+            )
         }
 
         deinit {
@@ -77,6 +126,9 @@ struct LocalPhoneWebView: UIViewRepresentable {
             )
             pendingWebContentRecovery?.cancel()
             pendingStableWebContentReset?.cancel()
+            pendingResponsivenessProbe?.cancel()
+            pendingResponsivenessTimeout?.cancel()
+            pendingRecoveryRestartTimeout?.cancel()
             pendingRolePushSyncRetry?.cancel()
             NotificationCenter.default.removeObserver(self)
         }
@@ -108,12 +160,145 @@ struct LocalPhoneWebView: UIViewRepresentable {
             syncPendingRolePushIfReady()
         }
 
+        @objc private func recoveryContinueRequested() {
+            guard recoveryNoticeActive, !recoveryRestartInFlight else { return }
+            recoveryNoticeActive = false
+            if bridge.webView != nil {
+                didLoadPhone = true
+                scheduleResponsivenessProbe(after: 4)
+            }
+            SmallPhoneDiagnosticsStore.append(
+                "native.recovery.continueWaiting",
+                fields: [
+                    "coordinatorID": coordinatorID,
+                    "webViewID": webViewID
+                ]
+            )
+            DispatchQueue.main.async { [onRecoveryContinued] in
+                onRecoveryContinued()
+            }
+        }
+
+        @objc private func recoveryRestartRequested(_ notification: Notification) {
+            guard recoveryNoticeActive, !recoveryRestartInFlight else { return }
+            let inspectArchive = notification.userInfo?["inspectArchive"] as? Bool == true
+            let thermalState = Self.thermalStateName()
+            guard thermalState != "serious", thermalState != "critical" else {
+                DispatchQueue.main.async { [onRecoveryNeeded] in
+                    onRecoveryNeeded(
+                        "系统仍处于严重发热状态，已阻止反复重开。请先继续等待手机降温；聊天、图片和密钥都不会被清除。"
+                    )
+                }
+                return
+            }
+            prepareRecoveryRestart(inspectArchive: inspectArchive)
+        }
+
+        private func prepareRecoveryRestart(inspectArchive: Bool) {
+            guard let webView = bridge.webView else {
+                onRecoveryRestartReady(inspectArchive)
+                return
+            }
+            recoveryRestartInFlight = true
+            recoveryRestartToken += 1
+            let token = recoveryRestartToken
+            SmallPhoneDiagnosticsStore.append(
+                "native.recovery.flush.begin",
+                fields: [
+                    "coordinatorID": coordinatorID,
+                    "webViewID": webViewID,
+                    "inspectArchive": inspectArchive
+                ]
+            )
+            let finish: () -> Void = { [weak self] in
+                DispatchQueue.main.async {
+                    guard let self,
+                          self.recoveryRestartInFlight,
+                          self.recoveryRestartToken == token else { return }
+                    self.recoveryRestartInFlight = false
+                    self.pendingRecoveryRestartTimeout?.cancel()
+                    self.pendingRecoveryRestartTimeout = nil
+                    let thermalState = Self.thermalStateName()
+                    let appIsActive =
+                        UIApplication.shared.applicationState == .active
+                    guard appIsActive,
+                          thermalState == "nominal" ||
+                            thermalState == "fair" else {
+                        SmallPhoneDiagnosticsStore.append(
+                            "native.recovery.restartDeferred",
+                            fields: [
+                                "coordinatorID": self.coordinatorID,
+                                "webViewID": self.webViewID,
+                                "inspectArchive": inspectArchive,
+                                "thermalState": thermalState,
+                                "appIsActive": appIsActive
+                            ]
+                        )
+                        let reason = appIsActive
+                            ? "保存等待期间系统温度再次升高，已取消本次重开，避免继续发热。请继续等待降温后再试。"
+                            : "保存等待期间 App 已离开前台，已取消本次重开。回到小手机后再决定是否安全重开。"
+                        self.onRecoveryNeeded(reason)
+                        return
+                    }
+                    SmallPhoneDiagnosticsStore.append(
+                        "native.recovery.flush.end",
+                        fields: [
+                            "coordinatorID": self.coordinatorID,
+                            "webViewID": self.webViewID,
+                            "inspectArchive": inspectArchive
+                        ]
+                    )
+                    self.onRecoveryRestartReady(inspectArchive)
+                }
+            }
+            let timeout = DispatchWorkItem(block: finish)
+            pendingRecoveryRestartTimeout = timeout
+            DispatchQueue.main.asyncAfter(
+                deadline: .now() + 8,
+                execute: timeout
+            )
+            webView.callAsyncJavaScript(
+                """
+                try {
+                  if (typeof window.saveNowAsync === 'function') {
+                    return await window.saveNowAsync();
+                  }
+                  if (typeof window.saveNow === 'function') {
+                    return !!window.saveNow();
+                  }
+                  return true;
+                } catch (_) {
+                  return false;
+                }
+                """,
+                arguments: [:],
+                in: nil,
+                in: .page,
+                completionHandler: { _ in
+                    finish()
+                }
+            )
+        }
+
         @objc private func thermalStateChanged() {
             sendNativePressure(memoryWarning: false)
         }
 
         @objc private func memoryWarningReceived() {
             sendNativePressure(memoryWarning: true)
+        }
+
+        @objc private func applicationWillResignActive() {
+            responsivenessProbeToken += 1
+            pendingResponsivenessProbe?.cancel()
+            pendingResponsivenessProbe = nil
+            pendingResponsivenessTimeout?.cancel()
+            pendingResponsivenessTimeout = nil
+        }
+
+        @objc private func applicationDidBecomeActive() {
+            guard didLoadPhone, !recoveryNoticeActive else { return }
+            scheduleResponsivenessProbe(after: 4)
         }
 
         private func sendNativePressure(memoryWarning: Bool) {
@@ -147,6 +332,13 @@ struct LocalPhoneWebView: UIViewRepresentable {
         }
 
         func recordWebViewDismantled() {
+            didLoadPhone = false
+            pendingWebContentRecovery?.cancel()
+            pendingStableWebContentReset?.cancel()
+            pendingResponsivenessProbe?.cancel()
+            pendingResponsivenessTimeout?.cancel()
+            pendingRecoveryRestartTimeout?.cancel()
+            recoveryRestartInFlight = false
             SmallPhoneDiagnosticsStore.append(
                 "native.webview.dismantle",
                 fields: [
@@ -164,6 +356,99 @@ struct LocalPhoneWebView: UIViewRepresentable {
             case .serious: return "serious"
             case .critical: return "critical"
             @unknown default: return "unknown"
+            }
+        }
+
+        private func offerNativeRecovery(
+            reason: String,
+            event: String
+        ) {
+            guard !recoveryNoticeActive else { return }
+            recoveryNoticeActive = true
+            pendingWebContentRecovery?.cancel()
+            pendingWebContentRecovery = nil
+            pendingStableWebContentReset?.cancel()
+            pendingStableWebContentReset = nil
+            pendingResponsivenessProbe?.cancel()
+            pendingResponsivenessProbe = nil
+            pendingResponsivenessTimeout?.cancel()
+            pendingResponsivenessTimeout = nil
+            SmallPhoneDiagnosticsStore.append(
+                event,
+                fields: [
+                    "coordinatorID": coordinatorID,
+                    "webViewID": webViewID,
+                    "processSessionID": LocalPhoneWebView.processSessionID,
+                    "thermalState": Self.thermalStateName()
+                ]
+            )
+            DispatchQueue.main.async { [onRecoveryNeeded] in
+                onRecoveryNeeded(reason)
+            }
+        }
+
+        private func scheduleResponsivenessProbe(
+            after delay: TimeInterval = 8
+        ) {
+            guard didLoadPhone, !recoveryNoticeActive else { return }
+            pendingResponsivenessProbe?.cancel()
+            let work = DispatchWorkItem { [weak self] in
+                self?.runResponsivenessProbe()
+            }
+            pendingResponsivenessProbe = work
+            DispatchQueue.main.asyncAfter(
+                deadline: .now() + delay,
+                execute: work
+            )
+        }
+
+        private func runResponsivenessProbe() {
+            pendingResponsivenessProbe = nil
+            guard didLoadPhone, !recoveryNoticeActive else { return }
+            guard UIApplication.shared.applicationState == .active,
+                  let webView = bridge.webView else { return }
+            responsivenessProbeToken += 1
+            let token = responsivenessProbeToken
+            pendingResponsivenessTimeout?.cancel()
+            let timeout = DispatchWorkItem { [weak self] in
+                guard let self,
+                      self.didLoadPhone,
+                      !self.recoveryNoticeActive,
+                      self.responsivenessProbeToken == token,
+                      UIApplication.shared.applicationState == .active else {
+                    return
+                }
+                self.offerNativeRecovery(
+                    reason: "小手机页面已连续 6 秒没有响应。私人 App 已停止自动重载；你可以继续等待它自行恢复，或在手机降温后安全重开。",
+                    event: "native.responsiveness.timeout"
+                )
+            }
+            pendingResponsivenessTimeout = timeout
+            DispatchQueue.main.asyncAfter(
+                deadline: .now() + 6,
+                execute: timeout
+            )
+            webView.evaluateJavaScript("void 0") { [weak self] _, error in
+                DispatchQueue.main.async {
+                    guard let self,
+                          self.responsivenessProbeToken == token,
+                          UIApplication.shared.applicationState == .active else {
+                        return
+                    }
+                    self.pendingResponsivenessTimeout?.cancel()
+                    self.pendingResponsivenessTimeout = nil
+                    if error != nil {
+                        self.didLoadPhone = false
+                        self.offerNativeRecovery(
+                            reason: "小手机页面进程当前不可用。原始数据没有清除；可以继续等待，或在手机降温后安全重开。",
+                            event: "native.responsiveness.unavailable"
+                        )
+                        return
+                    }
+                    if self.didLoadPhone && !self.recoveryNoticeActive {
+                        self.scheduleResponsivenessProbe()
+                    }
+                }
             }
         }
 
@@ -254,45 +539,44 @@ struct LocalPhoneWebView: UIViewRepresentable {
             _ webView: WKWebView,
             didFinish navigation: WKNavigation!
         ) {
-            if !showingLoadFailure {
-                pendingWebContentRecovery?.cancel()
-                pendingWebContentRecovery = nil
-                didLoadPhone = true
-                SmallPhoneDiagnosticsStore.append(
-                    "native.page.didFinish",
-                    fields: [
-                        "coordinatorID": coordinatorID,
-                        "webViewID": webViewID,
-                        "processSessionID": LocalPhoneWebView.processSessionID,
-                        "source": webView.url?.isFileURL == true
-                            ? "bundled-file" : "other",
-                        "thermalState": Self.thermalStateName()
-                    ]
+            pendingWebContentRecovery?.cancel()
+            pendingWebContentRecovery = nil
+            didLoadPhone = true
+            SmallPhoneDiagnosticsStore.append(
+                "native.page.didFinish",
+                fields: [
+                    "coordinatorID": coordinatorID,
+                    "webViewID": webViewID,
+                    "processSessionID": LocalPhoneWebView.processSessionID,
+                    "source": webView.url?.isFileURL == true
+                        ? "bundled-file" : "other",
+                    "thermalState": Self.thermalStateName()
+                ]
+            )
+            updateSafeArea(in: webView)
+            sendNativePressure(memoryWarning: false)
+            bridge.announceReady()
+            openPendingRolePushIfReady()
+            syncPendingRolePushIfReady()
+            scheduleResponsivenessProbe()
+            // A successful navigation is not enough to call a WebContent
+            // process healthy: a pressure loop can finish loading and die
+            // again a few seconds later. Clear the cross-Coordinator crash
+            // budget only after the same page has stayed alive for 90s.
+            pendingStableWebContentReset?.cancel()
+            let stableReset = DispatchWorkItem { [weak self] in
+                guard let self, self.didLoadPhone else { return }
+                UserDefaults.standard.removeObject(
+                    forKey: Self.webContentTerminationDefaultsKey
                 )
-                updateSafeArea(in: webView)
-                sendNativePressure(memoryWarning: false)
-                bridge.announceReady()
-                openPendingRolePushIfReady()
-                syncPendingRolePushIfReady()
-                // A successful navigation is not enough to call a WebContent
-                // process healthy: a pressure loop can finish loading and die
-                // again a few seconds later. Clear the cross-Coordinator crash
-                // budget only after the same page has stayed alive for 90s.
-                pendingStableWebContentReset?.cancel()
-                let stableReset = DispatchWorkItem { [weak self] in
-                    guard let self, self.didLoadPhone else { return }
-                    UserDefaults.standard.removeObject(
-                        forKey: Self.webContentTerminationDefaultsKey
-                    )
-                    self.pendingStableWebContentReset = nil
-                    print("[SmallPhoneWeb] WebContent stable for 90s; recovery budget reset")
-                }
-                pendingStableWebContentReset = stableReset
-                DispatchQueue.main.asyncAfter(
-                    deadline: .now() + 90,
-                    execute: stableReset
-                )
+                self.pendingStableWebContentReset = nil
+                print("[SmallPhoneWeb] WebContent stable for 90s; recovery budget reset")
             }
+            pendingStableWebContentReset = stableReset
+            DispatchQueue.main.asyncAfter(
+                deadline: .now() + 90,
+                execute: stableReset
+            )
         }
 
         func webView(
@@ -346,7 +630,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
             didFail navigation: WKNavigation!,
             withError error: Error
         ) {
-            showLoadFailure(in: webView, error: error)
+            reportLoadFailure(error)
         }
 
         func webView(
@@ -354,7 +638,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
             didFailProvisionalNavigation navigation: WKNavigation!,
             withError error: Error
         ) {
-            showLoadFailure(in: webView, error: error)
+            reportLoadFailure(error)
         }
 
         func webView(
@@ -385,9 +669,12 @@ struct LocalPhoneWebView: UIViewRepresentable {
             didLoadPhone = false
             openingRolePush = false
             syncingRolePush = false
-            showingLoadFailure = false
             pendingStableWebContentReset?.cancel()
             pendingStableWebContentReset = nil
+            pendingResponsivenessProbe?.cancel()
+            pendingResponsivenessProbe = nil
+            pendingResponsivenessTimeout?.cancel()
+            pendingResponsivenessTimeout = nil
 
             let now = Date().timeIntervalSince1970
             let defaults = UserDefaults.standard
@@ -402,6 +689,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 forKey: Self.webContentTerminationDefaultsKey
             )
             let attempt = terminationTimes.count
+            let thermalState = Self.thermalStateName()
             SmallPhoneDiagnosticsStore.append(
                 "native.webcontent.terminated",
                 fields: [
@@ -409,7 +697,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
                     "coordinatorID": coordinatorID,
                     "webViewID": webViewID,
                     "processSessionID": LocalPhoneWebView.processSessionID,
-                    "thermalState": Self.thermalStateName()
+                    "thermalState": thermalState
                 ]
             )
             print(
@@ -420,16 +708,22 @@ struct LocalPhoneWebView: UIViewRepresentable {
             pendingWebContentRecovery?.cancel()
             pendingWebContentRecovery = nil
 
-            guard attempt == 1 else {
-                let error = NSError(
-                    domain: "SmallPhoneWebContent",
-                    code: 3,
-                    userInfo: [
-                        NSLocalizedDescriptionKey:
-                            "WebContent 在两分钟内再次终止，已停止自动重载以避免持续发热"
-                    ]
+            let appIsActive = UIApplication.shared.applicationState == .active
+            guard attempt == 1,
+                  appIsActive,
+                  thermalState == "nominal" || thermalState == "fair" else {
+                let reason: String
+                if thermalState == "serious" || thermalState == "critical" {
+                    reason = "系统已处于严重发热状态，私人 App 已停止自动重载，避免继续升温。聊天、图片和密钥都没有被清除。"
+                } else if !appIsActive {
+                    reason = "小手机页面在后台被系统终止。私人 App 已停止后台自动重载；回到前台后可安全重开。"
+                } else {
+                    reason = "小手机页面在两分钟内再次被系统终止，已停止自动重载，避免白屏和屏保反复跳转。原始数据没有清除。"
+                }
+                offerNativeRecovery(
+                    reason: reason,
+                    event: "native.webcontent.recoveryOffered"
                 )
-                showLoadFailure(in: webView, error: error)
                 return
             }
 
@@ -443,6 +737,15 @@ struct LocalPhoneWebView: UIViewRepresentable {
                     return
                 }
                 self.pendingWebContentRecovery = nil
+                let state = Self.thermalStateName()
+                guard UIApplication.shared.applicationState == .active,
+                      state == "nominal" || state == "fair" else {
+                    self.offerNativeRecovery(
+                        reason: "自动重开前检测到系统仍在发热或 App 已离开前台，已停止重载。原始数据没有清除。",
+                        event: "native.webcontent.reloadDeferred"
+                    )
+                    return
+                }
                 webView.loadFileURL(
                     fileURL,
                     allowingReadAccessTo: readAccessURL
@@ -486,35 +789,44 @@ struct LocalPhoneWebView: UIViewRepresentable {
         }
 
         private static let webContentTerminationDefaultsKey =
-            "smallPhone.webContentTerminationTimes.v4.build249"
+            "smallPhone.webContentTerminationTimes.v5.build250"
 
-        private func showLoadFailure(
-            in webView: WKWebView,
-            error: Error
-        ) {
-            guard !showingLoadFailure else { return }
-            showingLoadFailure = true
+        private func reportLoadFailure(_ error: Error) {
+            let nativeError = error as NSError
+            if nativeError.domain == NSURLErrorDomain &&
+                nativeError.code == NSURLErrorCancelled {
+                return
+            }
+            if nativeError.domain == WKError.errorDomain &&
+                nativeError.code ==
+                    WKError.Code.frameLoadInterruptedByPolicyChange.rawValue {
+                return
+            }
             SmallPhoneDiagnosticsStore.append(
                 "native.page.loadFailure",
                 fields: [
                     "coordinatorID": coordinatorID,
                     "webViewID": webViewID,
                     "processSessionID": LocalPhoneWebView.processSessionID,
-                    "domain": String((error as NSError).domain.prefix(80)),
-                    "code": (error as NSError).code,
+                    "domain": String(nativeError.domain.prefix(80)),
+                    "code": nativeError.code,
                     "thermalState": Self.thermalStateName()
                 ]
             )
             print("[SmallPhoneWeb] load failed: \(error.localizedDescription)")
-            webView.loadHTMLString(
-                LocalPhoneWebView.loadFailureHTML(error: error),
-                baseURL: nil
+            offerNativeRecovery(
+                reason: "小手机本地页面加载失败。原始数据没有清除；请从原生恢复面板安全重开。",
+                event: "native.page.recoveryOffered"
             )
         }
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator()
+        Coordinator(
+            onRecoveryNeeded: onRecoveryNeeded,
+            onRecoveryRestartReady: onRecoveryRestartReady,
+            onRecoveryContinued: onRecoveryContinued
+        )
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -629,42 +941,6 @@ struct LocalPhoneWebView: UIViewRepresentable {
     </body>
     """
 
-    fileprivate static func loadFailureHTML(error: Error) -> String {
-        let diagnostics = SmallPhoneDiagnosticsStore.recentText(limit: 20)
-        let detail = htmlEscaped(
-            diagnostics.isEmpty ? "暂无持久诊断记录" : diagnostics
-        )
-        let code = (error as NSError).code
-        return """
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width,initial-scale=1">
-        <body style="margin:0;background:#111;color:white;font-family:-apple-system;padding:28px">
-          <h2>小手机本地页面没有加载成功</h2>
-          <p>原始数据没有被删除。私人 App 已保留本次失败前的有界诊断记录。</p>
-          <p style="color:#aaa;font-size:13px">错误代码：\(code) · 私人 iOS 1.0.249 (249)</p>
-          <button onclick="copyDiag()" style="border:0;border-radius:10px;padding:10px 14px;background:#ff86ad;color:#fff;font-weight:700">复制诊断记录</button>
-          <pre id="diag" style="margin-top:14px;padding:12px;border-radius:10px;background:#1d1d1f;white-space:pre-wrap;word-break:break-all;font-size:10px;line-height:1.5;user-select:text;-webkit-user-select:text">\(detail)</pre>
-          <script>
-          function fallbackCopy(text){
-            var box=document.createElement('textarea');box.value=text;document.body.appendChild(box);box.select();document.execCommand('copy');box.remove();
-          }
-          function copyDiag(){
-            var text=document.getElementById('diag').innerText;
-            if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).catch(function(){fallbackCopy(text);});return;}
-            fallbackCopy(text);
-          }
-          </script>
-        </body>
-        """
-    }
-
-    private static func htmlEscaped(_ value: String) -> String {
-        value
-            .replacingOccurrences(of: "&", with: "&amp;")
-            .replacingOccurrences(of: "<", with: "&lt;")
-            .replacingOccurrences(of: ">", with: "&gt;")
-    }
-
     private static func nativeEnvironmentBootstrap() -> String {
         let now = Date()
         let local = TimeZone.autoupdatingCurrent
@@ -692,7 +968,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.249 (249)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.250 (250)';
       window.__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__ = true;
       const privateDiagLast = new Map();
       window.__smallPhoneNativeDiag = (event, fields = {}, minGap = 10000) => {
@@ -724,7 +1000,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
       };
       window.__smallPhoneNativeDiag(
         'native.bootstrap.ready',
-        { build: '1.0.249 (249)', autoBackupPaused: true },
+        { build: '1.0.250 (250)', autoBackupPaused: true },
         0
       );
       // Keep private-App background maintenance away from the WebContent main

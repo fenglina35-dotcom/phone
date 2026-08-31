@@ -1631,6 +1631,8 @@ test('checkout submission applies an available red packet before clicking paymen
   assert.match(submit, /waitForPaymentSelection\(page, beforePages\)/);
   assert.match(source, /async advancePaymentSelection\(page\)[\s\S]*?\^支付宝\$[\s\S]*?\^确认支付\$/);
   assert.match(source, /async waitForPaymentSelection\(page, beforePages = new Set\(\)\)[\s\S]*?12_000[\s\S]*?advancePaymentSelection\(candidate\)/);
+  assert.match(submit, /paymentSelectionFallback[\s\S]*?支付宝[\s\S]*?确认支付[\s\S]*?stage: 'payment_selection'/);
+  assert.match(source, /\['cashier', 'payment_selection'\]\.includes\(browserOrderRef\?\.stage\)[\s\S]*?'pending_payment' : 'created'/);
   assert.match(source, /_____tmd_____[\s\S]*?隐式安全验证/);
   assert.doesNotMatch(source, /riskBlockReason !== '隐式安全验证'/);
   assert.match(source, /continue immediately without a fixed timer/);
@@ -2382,10 +2384,10 @@ test('menu reader prefers real square product photos over tiny campaign badges',
   assert.match(reader, /const imageUrl = media\[0\]\?\.url \|\| ''/);
 });
 
-test('payment status reloads the existing cashier before reading the platform receipt', async () => {
+test('payment status reloads the existing cashier or payment selector before reading the platform receipt', async () => {
   const source = await fs.readFile(new URL('../src/taobao-flash-browser.mjs', import.meta.url), 'utf8');
   const reader = source.slice(source.indexOf('async orderStatus('), source.indexOf('async diagnostic('));
-  assert.match(reader, /browserOrderRef\?\.stage === 'cashier'/);
+  assert.match(reader, /\['cashier', 'payment_selection'\]\.includes\(browserOrderRef\?\.stage\)/);
   assert.match(reader, /await this\.riskCheck\(page\);[\s\S]*?await page\.reload\(\{ waitUntil: 'domcontentloaded' \}\)/);
   assert.match(reader, /支付成功\|付款成功\|已支付/);
   assert.doesNotMatch(reader, /openMarketplaceSearch|searchWithinStore|submitOrder/);
