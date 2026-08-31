@@ -11,12 +11,12 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "native/private-small-phone/XcodeProject"
 BUNDLE_SOURCE = SOURCE / "PhoneCompanionTest/PhoneWeb.bundle"
 INSTALL_GUIDE_SOURCE = (
-    SOURCE / "第二百四十九次安装_v1123_模型路线真实诊断_请先读.md"
+    SOURCE / "第二百四十九次安装_v1123_私人存档安全合并_请先读.md"
 )
-DELIVERY = ROOT / "delivery-v1123-private249-route-diagnostics-final"
-PACKAGE_NAME = "SmallPhone_v1123_ModelRouteDiagnostics_iOS249_MacReady"
+DELIVERY = ROOT / "delivery-v1123-private249-safe-chat-recovery-final"
+PACKAGE_NAME = "SmallPhone_v1123_PrivateSafeChatRecovery_iOS249_MacReady"
 ZIP_PATH = DELIVERY / f"{PACKAGE_NAME}.zip"
-USER_ZIP = ROOT.parent / "小手机_v1123_私人版_iOS249_模型路线真实诊断_最终完整包.zip"
+USER_ZIP = ROOT.parent / "小手机_v1123_私人版_iOS249_存档安全合并_最终私人包.zip"
 EXPECTED_BUNDLE_FILES = 146
 EXPECTED_PACKAGE_FILES = 185
 ALLOW_DIRTY_PACKAGE = "--allow-dirty" in sys.argv[1:]
@@ -168,11 +168,23 @@ with tempfile.TemporaryDirectory(prefix="smallphone-v1123-ios249-", dir=ROOT) as
 
     app = (bundle / "app.js").read_text(encoding="utf-8")
     for token in [
-        "APP_VER='v1123 · 模型路线真实诊断版';",
+        "APP_VER='v1123 · 模型路线真实诊断与私人存档安全合并版';",
         "function glassWidgetsRestoreAll()",
         "function emergencyRestorePreview(index)",
         "function recoveryRollbackState()",
         "function recoveryRollbackArchive(blob,live,label)",
+        "function recoveryBuildSafeMergePlan(index,opt)",
+        "function emergencyRestoreSafeMergeConfirm()",
+        "function recoveryCurrentFriendStores()",
+        "function recoveryPersistStateNow()",
+        "function recoveryInlineCoreSave()",
+        "recoveryReadCandidateRaw(row.x)",
+        "以这份为主，安全合并全部角色聊天",
+        "safe-message-merge",
+        "当前好友聊天库",
+        "当前好友群聊库",
+        "确认期间刚收到新的角色消息",
+        "恢复前完整快照校验失败",
         "opt.backup===true&&r.backup!==true",
         "opt.primaryOnly===true&&r.primaryOnly!==true",
         "snapshotSaved=false,stateMutated=false",
@@ -210,8 +222,8 @@ with tempfile.TemporaryDirectory(prefix="smallphone-v1123-ios249-", dir=ROOT) as
             raise RuntimeError(f"protected delivery runtime token missing: {token}")
 
     overlay = (bundle / "private-runtime-diagnostics.js").read_text(encoding="utf-8")
-    if "248-report-host-diagnostics-v1" not in overlay:
-        raise RuntimeError("private 248 diagnostics marker missing")
+    if "249-safe-chat-recovery-v1" not in overlay:
+        raise RuntimeError("private 249 safe-chat recovery marker missing")
 
     project = (
         staging / "PhoneCompanionTest.xcodeproj/project.pbxproj"

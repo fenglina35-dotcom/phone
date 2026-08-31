@@ -18,7 +18,7 @@ const readPrivate = relative => fs.readFileSync(
 const app = readPrivate('PhoneWeb.bundle/app.js');
 const overlay = readPrivate('PhoneWeb.bundle/private-runtime-diagnostics.js');
 const webView = readPrivate('LocalPhoneWebView.swift');
-const bridge = readPrivate('PhoneNativeBridge.swift');
+const bridge = readPrivate('PhoneNativeBridge.swift').replace(/\r\n/g, '\n');
 
 function functionSource(source, name) {
   const functionStart = source.indexOf(`function ${name}(`);
@@ -143,11 +143,11 @@ function makeAutoBackupHarness() {
   return { context, calls, advance: ms => { now += ms; } };
 }
 
-test('private iOS 248 overlay owns the disable marker and cancels automatic scheduling', async () => {
+test('private iOS 249 overlay owns the disable marker and cancels automatic scheduling', async () => {
   const { context, calls } = makeAutoBackupHarness();
   assert.equal(
     context.__SMALL_PHONE_PRIVATE_RUNTIME__,
-    '248-report-host-diagnostics-v1'
+    '249-safe-chat-recovery-v1'
   );
   assert.equal(context.__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__, true);
   assert.equal(context.__testPrivateCloud.timer(), null);
@@ -205,7 +205,7 @@ test('manual backup and both restore actions remain free of the automatic-disabl
   ]) {
     const source = functionSource(app, name);
     assert.doesNotMatch(source, /__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__/);
-    assert.doesNotMatch(source, /248-report-host-diagnostics-v1/);
+    assert.doesNotMatch(source, /249-safe-chat-recovery-v1/);
   }
   assert.doesNotMatch(
     overlay,
@@ -263,7 +263,7 @@ test('diagnostic append is fire-and-forget, bounded, rate-limited and not a time
   assert.match(appendLine, /isExcludedFromBackup = true/);
 });
 
-test('native failure UI includes recent persistent diagnostics and the private 248 identity', () => {
+test('native failure UI includes recent persistent diagnostics and the private 249 identity', () => {
   assert.match(webView, /SmallPhoneDiagnosticsStore\.recentText\(limit: 20\)/);
   assert.match(webView, /私人 App 已保留本次失败前的有界诊断记录/);
   assert.match(webView, /id="diag"/);

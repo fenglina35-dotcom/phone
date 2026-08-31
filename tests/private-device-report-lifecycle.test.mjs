@@ -31,6 +31,27 @@ const privateApp = fs.readFileSync(
   ),
   'utf8'
 );
+const privateIndex = fs.readFileSync(
+  new URL(
+    '../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html',
+    import.meta.url
+  ),
+  'utf8'
+);
+const privateAlias = fs.readFileSync(
+  new URL(
+    '../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/小手机.html',
+    import.meta.url
+  ),
+  'utf8'
+);
+const privateRepair = fs.readFileSync(
+  new URL(
+    '../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/repair.html',
+    import.meta.url
+  ),
+  'utf8'
+);
 
 test('Screen Time report is isolated from the private phone root lifecycle', () => {
   assert.match(rootView, /SmallPhoneUsageReportMountController: UIViewController/);
@@ -69,9 +90,16 @@ test('status-bar theme does not force an avoidable first root transition', () =>
   assert.match(bridge, /if previous != theme\s*\{[\s\S]*?smallPhoneStatusBarThemeChanged/);
 });
 
-test('private build advances without changing the bundled page version', () => {
+test('private build and bundled recovery page advance together', () => {
   assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.249 \(249\)'/);
   assert.match(webView, /smallPhone\.webContentTerminationTimes\.v4\.build249/);
+  assert.match(privateApp, /APP_VER='v1123 · 模型路线真实诊断与私人存档安全合并版'/);
+  assert.equal(privateAlias, privateIndex);
+  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1123'/);
+  assert.match(privateIndex, /app\.js\?v=1123/);
+  assert.match(privateIndex, /private-runtime-diagnostics\.js\?v=249/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1123/);
+  assert.match(privateApp, /__NORTH_SHELL_BUILD__!==\'1123\'/);
 });
 
 test('glass home widgets can be restored after an old-build over-install', () => {
@@ -101,27 +129,32 @@ test('local recovery lists physical candidates and remains rollback-safe', () =>
   assert.match(privateApp, /let _recoveryCandidate=null,_recoveryCandidates=\[\]/);
   assert.match(privateApp, /function emergencyRestorePreview\(index\)/);
   assert.match(privateApp, /找到 \$\{rows\.length\} 份本机候选/);
-  assert.match(privateApp, /查看并选择这份/);
-  assert.match(privateApp, /不要只看最新时间/);
+  assert.match(privateApp, /安全合并全部角色聊天/);
+  assert.match(privateApp, /推荐选择角色、记忆和朋友圈较完整的新存档作为基底/);
   assert.match(privateApp, /privateNativeCoreGet\(row\[0\],\{primaryOnly:true\}\)/);
   assert.match(privateApp, /privateNativeCoreGet\(row\[0\],\{backup:true\}\)/);
   assert.match(privateApp, /imgGetIDB\(row\[0\]\)/);
-  assert.match(privateApp, /候选自身聊天/);
+  assert.match(privateApp, /recoveryReadCandidateRaw\(row\.x\)/);
+  assert.match(privateApp, /'native-primary',row\[0\]/);
+  assert.match(privateApp, /safe-message-merge/);
   assert.match(privateApp, /PRIVATE_LOCAL_RECOVERY_ROLLBACK_KEY/);
   assert.match(privateApp, /imgPutIDBWithRetry\(PRIVATE_LOCAL_RECOVERY_ROLLBACK_KEY/);
   assert.match(privateApp, /function emergencyRestoreRollback\(\)/);
   assert.match(privateApp, /function recoveryRollbackState\(\)/);
   assert.match(privateApp, /function recoveryRollbackArchive\(blob,live,label\)/);
-  assert.match(privateApp, /JSON\.stringify\(S,_imgReplacer\)/);
+  assert.match(privateApp, /JSON\.stringify\(S\)/);
+  assert.doesNotMatch(recoverySection, /JSON\.stringify\(S,_imgReplacer\)/);
   assert.match(privateApp, /当前数据没有改变，请稍后重试/);
   assert.match(privateApp, /opt\.backup===true&&r\.backup!==true/);
   assert.match(privateApp, /opt\.primaryOnly===true&&r\.primaryOnly!==true/);
   assert.match(privateApp, /snapshotSaved=false,stateMutated=false/);
-  assert.match(privateApp, /if\(stateMutated&&snapshotSaved&&before\)/);
+  assert.match(privateApp, /if\(stateMutated&&snapshotSaved&&beforeJSON\)/);
+  assert.match(privateApp, /function recoveryPersistStateNow\(\)/);
   assert.match(privateApp, /recoveryHydrateCandidate\(raw,\{mergeArchive:false\}\)/);
   assert.doesNotMatch(recoverySection, /fullBackupState\(/);
   assert.doesNotMatch(recoverySection, /imgAll\(/);
-  assert.match(privateApp, /恢复失败会自动回退/);
+  assert.match(privateApp, /已自动回到恢复前状态/);
+  assert.match(privateApp, /已自动回到合并前状态/);
   assert.match(privateApp, /原生保护副本/);
   assert.match(bridge, /let readBackup = arguments\["backup"\] as\? Bool \?\? false/);
   assert.match(bridge, /let readPrimaryOnly = arguments\["primaryOnly"\] as\? Bool \?\? false/);

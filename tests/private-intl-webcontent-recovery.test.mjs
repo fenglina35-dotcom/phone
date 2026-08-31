@@ -151,6 +151,6 @@ test('terminated WebContent receives one delayed exact-bundle recovery without a
 });
 
 test('recovery suite is pinned to the private bundled app only', () => {
-  assert.match(app, /APP_VER='v1123 · 模型路线真实诊断版';/);
+  assert.match(app, /APP_VER='v1123 · 模型路线真实诊断与私人存档安全合并版';/);
   assert.match(app, /function emergencyRestorePreview\(index\)/);
 });
