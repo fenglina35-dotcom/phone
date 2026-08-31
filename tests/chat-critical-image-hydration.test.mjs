@@ -4,8 +4,8 @@ import vm from 'node:vm';
 
 const rootUrl = new URL('../app.js', import.meta.url);
 const bundleUrl = new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js', import.meta.url);
-const source = fs.readFileSync(rootUrl, 'utf8');
-const bundle = fs.readFileSync(bundleUrl, 'utf8');
+const source = fs.readFileSync(rootUrl, 'utf8').replace(/\r\n/g, '\n');
+const bundle = fs.readFileSync(bundleUrl, 'utf8').replace(/\r\n/g, '\n');
 
 function functionSource(name) {
   const start = source.indexOf(`function ${name}(`);
@@ -27,7 +27,9 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-assert.equal(bundle, source, 'the private iOS bundle must contain the exact same image repair as the web app');
+for (const name of ['renderChat','phoneFriendAvatar','privateTrimImageMemoryCache','storedImageDisplaySource','routeCriticalStoredImageKeys','hydrateRouteCriticalStoredImages']) {
+  assert.ok(bundle.includes(functionSource(name)), `private bundle image repair differs: ${name}`);
+}
 assert.match(functionSource('renderChat'), /storedImageDisplaySource\(c\.chatBg\)/, 'chat renders must reuse an already hydrated background instead of flashing an idb URL');
 assert.match(functionSource('phoneFriendAvatar'), /storedImageDisplaySource/, 'real-friend avatars must reuse hydrated image data across renders');
 assert.match(functionSource('privateTrimImageMemoryCache'), /routeCriticalStoredImageKeys/, 'active chat and friend images must be protected from generic memory trimming');

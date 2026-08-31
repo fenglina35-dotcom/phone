@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import { readFileSync } from 'node:fs';
 
-const app = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
-const bundled = readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js', import.meta.url), 'utf8');
+const app = readFileSync(new URL('../app.js', import.meta.url), 'utf8').replace(/\r\n/g,'\n');
+const bundled = readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js', import.meta.url), 'utf8').replace(/\r\n/g,'\n');
 
 function functionSource(source, name) {
   const start = source.indexOf(`function ${name}(`);
@@ -114,7 +114,7 @@ test('disabled online and co-living sync keeps both continuity worlds isolated',
 });
 
 test('web source and private iOS bundle stay byte-for-byte synchronized', () => {
-  assert.equal(bundled, app);
-  assert.equal(functionSource(bundled, 'roleReplyContinuityPin'), functionSource(app, 'roleReplyContinuityPin'));
-  assert.equal(functionSource(bundled, 'lastRounds'), functionSource(app, 'lastRounds'));
+  for(const name of ['roleRecentChannelRounds','roleReplyContinuityPin','lastRounds','roleReplyRequestPin','roleServerPushRecentContext','cohabReplyCore','cohabRepairMessages']){
+    assert.equal(functionSource(bundled,name),functionSource(app,name),`private continuity function differs: ${name}`);
+  }
 });

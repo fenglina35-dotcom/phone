@@ -386,7 +386,7 @@
     var authoritativeEta=orderEtaText(order,false),paymentConfirmed=(STATUS_RANK[order&&order.status]||0)>=STATUS_RANK.paid;fact='[系统事实：你刚刚为'+S.me.name+'选的真实外卖已经提交，平台已经生成这笔真实订单。平台本次唯一可信的预计送达时间是「'+authoritativeEta+'」。'+(paymentConfirmed?'平台已经确认这笔订单付款成功。':'平台目前只确认订单已经提交，没有返回已付款结果。')+'请严格按你自己的完整人设、当前关系和说话习惯，明确使用第一人称“我”自然告诉TA这笔外卖是你本人点的、已经点好或下过单，不能只发送订单卡片后保持沉默；具体句式由你自己决定。如果提到送达时间，只能准确使用这一个平台时间，不得沿用历史聊天中的十五分钟、四十分钟或其他旧时间，也可以不主动复述时间。禁止提到“卡片”“系统”“二维码”“付款入口”“收银台”或“待付款”，禁止说“自己去付款”，禁止催TA“快去付款”或发出任何付款命令，不要复述其他订单字段；'+(paymentConfirmed?'可以如实说你已经付好了。':'平台没有返回付款结果时也不要擅自声称已经付款；只有平台确实返回已付款才能说已经付款，本轮不得虚构付款成功。')+']';
     var resultNote=typeof featureEventNote==='function'?featureEventNote('真实外卖订单已提交',fact):fact;scheduleReply(c.id,resultNote);
   }
-  function safeRoleActionMeta(meta){meta=meta&&typeof meta==='object'?meta:{};return{structuredModelAction:meta.structuredModelAction===true,allowNewTask:meta.allowNewTask===true,accountId:text(meta.accountId,120),sessionId:text(meta.sessionId,160),turnId:text(meta.turnId,160),messageId:text(meta.messageId,160),modelReplyId:text(meta.modelReplyId,160),channel:text(meta.channel,24),userText:text(meta.userText,240)};}
+  function safeRoleActionMeta(meta){meta=meta&&typeof meta==='object'?meta:{};return{structuredModelAction:meta.structuredModelAction===true,allowNewTask:meta.allowNewTask===true,accountId:text(meta.accountId,120),sessionId:text(meta.sessionId,160),turnId:text(meta.turnId,160),messageId:text(meta.messageId,160),modelReplyId:text(meta.modelReplyId,160),channel:text(meta.channel,24),userText:text(meta.userText,800)};}
   function roleOrderIntent(query){
     var raw=text(query,240),proactive=/^主动关心(?:\s*[:：|；;]|$)/.test(raw),body=raw.replace(/^主动关心\s*[:：|；;]?\s*/,'').replace(/^用户明确\s*[:：|；;]?\s*/,'');
     var merchant=text((body.match(/(?:^|[；;|])\s*门店\s*[=:：]\s*([^；;|]+)/)||[])[1],100),itemsText=text((body.match(/(?:^|[；;|])\s*商品\s*[=:：]\s*([^；;|]+)/)||[])[1],180),items=[];
@@ -412,16 +412,21 @@
     merchant=merchant.replace(/^(?:那个|这个|这家|一家)/,'').trim();if(!japaneseOwned)merchant=merchant.replace(/(?:家|店)$/,'').trim();if(!merchant)return null;
     return{merchant:merchant,items:items.slice(0,8),specs:specs.slice(0,12),proactive:false,summary:text(merchant+' / '+items.join('、'),200)};
   }
+  function splitTrailingDeliverySpecs(value){
+    var item=text(value,100).trim(),specs=[],match=null,pattern=/(不(?:另|另外|额外)?加糖|无糖|零糖|少少甜|少糖|微糖|半糖|三分糖|五分糖|七分糖|全糖|正常糖|少冰|少少冰|去冰|正常冰|多冰|热饮|热的|冷饮|常温|大杯|中杯|小杯|不加冰|不要香菜|不要辣|微辣|中辣|特辣|不加奶油|椰乳|燕麦奶|加珍珠|加料)\s*$/u;
+    while(item&&(match=item.match(pattern))&&specs.length<8){var spec=text(match[1],40).replace(/^不另加糖$/,'不另外加糖');specs.unshift(spec);item=item.slice(0,match.index).trim();}
+    return{item:item,specs:specs};
+  }
   function contextualNaturalOrderIntent(value){
     var normalized=text(value,240).replace(/\bde\b/ig,'的').replace(/の/g,'的').trim();
     if(!normalized||deliveryOrderContextRejected(normalized))return null;
     var match=normalized.match(/^\s*(?:我要|我想要|给我|帮我|替我|来一(?:杯|份|个|碗)|点一?(?:杯|份|个|碗)?|要)?\s*([\p{L}\p{N}·&（）()\-]{2,32}?)(?:家的?|店的?|的)\s*[:：]?\s*([^，,。；;]{2,100})(?:[，,。；;]\s*(.{1,100}))?\s*$/iu);
     if(!match)return null;
-    var merchant=text(match[1],100).replace(/^(?:那个|这个|这家|一家)/,'').replace(/(?:家|店)$/,'').trim(),item=text(match[2],100).replace(/\s*(?:就行|就可以|可以了|谢谢)\s*$/u,'').trim(),tail=text(match[3],100),food=/(?:饭|餐|粥|面|粉|汤|包|饺|饼|馒头|烧麦|奶|茶|咖啡|果汁|饮料|汉堡|薯条|蛋挞|水果|甜品|烧烤|零食|豆浆|酸奶|冰淇淋|鸡|鸭|鱼|虾|牛|羊|猪|肉|套餐|西瓜|芒果|橙子|葡萄|草莓|柠檬|芭乐)/u;
-    if(!merchant||!item||!food.test(item))return null;
-    var specs=[];
+    var merchant=text(match[1],100).replace(/^(?:那个|这个|这家|一家)/,'').replace(/(?:家|店)$/,'').trim(),rawItem=text(match[2],100).replace(/\s*(?:就行|就可以|可以了|谢谢)\s*$/u,'').trim(),split=splitTrailingDeliverySpecs(rawItem),item=split.item,tail=text(match[3],100),food=/(?:饭|餐|粥|面|粉|汤|包|饺|饼|馒头|烧麦|奶|茶|咖啡|果汁|饮料|汉堡|薯条|蛋挞|水果|甜品|烧烤|零食|豆浆|酸奶|冰淇淋|鸡|鸭|鱼|虾|牛|羊|猪|肉|套餐|西瓜|芒果|橙子|葡萄|草莓|柠檬|芭乐|甘露)/u,knownMerchant=/(?:KFC|肯德基|麦当劳|茶百道|蜜雪冰城|曼玲粥|瑞幸咖啡|瑞幸|古茗|沪上阿姨|DQ)/iu.test(merchant);
+    if(!merchant||!item||(!food.test(item)&&!knownMerchant))return null;
+    var specs=split.specs.slice();
     if(tail){var valid=true;tail.split(/[+＋、，,；;]/).forEach(function(part){part=text(part,60).replace(/不另加糖/g,'不另外加糖').replace(/\s*(?:就行|就可以|可以了|谢谢)\s*$/u,'').trim();if(!part)return;if(!/^(?:不(?:另外|额外)?加糖|无糖|零糖|少少甜|少糖|微糖|半糖|三分糖|五分糖|七分糖|全糖|正常糖|少冰|少少冰|去冰|正常冰|多冰|热饮|热的|冷饮|常温|大杯|中杯|小杯|不加冰|不要香菜|不要辣|微辣|中辣|特辣|不加奶油|椰乳|燕麦奶|加珍珠|加料)$/u.test(part)){valid=false;return;}specs.push(part);});if(!valid)return null;}
-    return{merchant:merchant,items:[item],specs:specs.slice(0,12),proactive:false,summary:text(merchant+' / '+item,200)};
+    specs=specs.filter(function(x,i,a){return a.indexOf(x)===i;});return{merchant:merchant,items:[item],specs:specs.slice(0,12),proactive:false,summary:text(merchant+' / '+item,200)};
   }
   function normalizeExplicitOrderIntent(intent,userText){
     if(!intent)return null;var raw=text(userText,240),merchant=text(intent.merchant,100),items=(intent.items||[]).map(function(x){return text(x,100);}).filter(Boolean),specs=(intent.specs||[]).map(function(x){return text(x,100);}).filter(Boolean);

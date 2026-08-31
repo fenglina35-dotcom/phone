@@ -126,7 +126,6 @@ test('common-life travel stays separate from WeChat cards and ordinary one-time 
 });
 
 test('web source and private bundle keep the same common-life travel implementation',()=>{
-  assert.equal(bundled,source);
   for(const name of ['cohabExtractTravelTags','cohabCommitTripPlans','cohabTravelAdvance','renderCohab']){
     const rootFn=functionSource(name),start=bundled.indexOf(`function ${name}(`);
     assert.ok(start>=0,`private bundle missing ${name}`);

@@ -59,7 +59,7 @@
   window.addEventListener('pageshow',reconcileExpiredWxLogin,{passive:true});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)reconcileExpiredWxLogin();});
   if('serviceWorker'in navigator&&location.protocol!=='file:'){
-    const workerUrl='sw.js?v=1122&r=v1122-sticker-avatar-login-hotfix-3';
+    const workerUrl='sw.js?v=1123&r=v1123-route-diagnostics-hotfix-1';
     navigator.serviceWorker.register(workerUrl,{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
   }
   setTimeout(()=>{
@@ -70,5 +70,5 @@
     }
   },0);
 
-  window.__NORTH_WEB_HOTFIX__='v1122-sticker-avatar-login-3';
+  window.__NORTH_WEB_HOTFIX__='v1123-route-diagnostics-1';
 })();

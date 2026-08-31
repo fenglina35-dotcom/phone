@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const root=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
-const bundled=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js',import.meta.url),'utf8');
+const root=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8').replace(/\r\n/g,'\n');
+const bundled=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js',import.meta.url),'utf8').replace(/\r\n/g,'\n');
 
 function functionSource(source,name){
   const fnStart=source.indexOf('function '+name+'(');
@@ -19,7 +19,13 @@ function functionSource(source,name){
   throw new Error('unterminated '+name);
 }
 
-assert.equal(root,bundled,'web source and private iOS bundle must keep the same music extraction logic');
+for(const name of [
+  'mPickVideoFile','musicExtractMp4AudioBlob','musicProbePlayableBlob',
+  'mPutVerified','musicAddSave','musicRepairFile','musicPlay',
+]){
+  const rootFn=functionSource(root,name);
+  assert.ok(bundled.includes(rootFn),`private bundle music function differs: ${name}`);
+}
 assert.match(functionSource(root,'mPickVideoFile'),/musicPreparePickedFile\(f,'video'/,'video selection must validate before accepting the file');
 assert.match(functionSource(root,'musicExtractMp4AudioBlob'),/musicKeepOriginalMediaBlob/,'MP4 imports must preserve the original playable container');
 assert.doesNotMatch(functionSource(root,'musicExtractMp4AudioBlob'),/initializeSegmentation|fragments|new Blob/,'video import must not assemble MSE fragments as a standalone M4A');

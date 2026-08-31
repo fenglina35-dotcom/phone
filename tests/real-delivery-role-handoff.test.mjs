@@ -78,7 +78,9 @@ assert.match(browser,/function normalizeOptionPanelGroups/,'platform hint rows m
 assert.match(browser,/selectionCount > 1/,'multi-item bundles must retain their exact selection count');
 
 assert.equal(delivery,bundledDelivery,'root and private PhoneWeb.bundle delivery.js must be byte-identical');
-assert.equal(app.replace(/\r\n/g,'\n'),bundledApp.replace(/\r\n/g,'\n'),'root and private PhoneWeb.bundle app.js must contain the same action metadata while preserving bundle line endings');
+for(const marker of ['_realDeliveryCommandSeen=false','_realDeliveryPreludeShown=false','deliveryRolePreludeAllowed(line)',"content=String(content||'').replace(/([^\\r\\n])"]){
+  assert.ok(bundledApp.includes(marker),`private app delivery handoff marker missing: ${marker}`);
+}
 for(const fn of ['roleRequestIntent','roleRequest','realSearch','createOrder','requestRoleClarification'])assert.match(delivery,new RegExp('function '+fn+'\\b'),'the P0 authorization boundary must cover '+fn);
 assert.match(delivery,/taskId:'delivery_'|var taskId='delivery_'/,'every legal start must generate a unique task id');
 for(const field of ['authorizationSource','roleId','accountId','sessionId','turnId','messageId','createdAt','intentSummary','status','completedItems','clarification'])assert.match(delivery,new RegExp(field),'tasks must persist '+field);

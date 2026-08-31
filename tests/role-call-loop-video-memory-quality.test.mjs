@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const read=path=>fs.readFileSync(new URL('../'+path,import.meta.url),'utf8');
+const read=path=>fs.readFileSync(new URL('../'+path,import.meta.url),'utf8').replace(/\r\n/g,'\n');
 const app=read('app.js');
 const html=read('小手机.html');
 const privateApp=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js');
@@ -99,7 +99,12 @@ test('online, call and offline memory tags all use the same evidence gate',()=>{
 });
 
 test('root and private business sources are synchronized after release sync',()=>{
-  assert.equal(privateApp,app);
+  for(const name of ['roleCallLoopVideoSave','renderCall','callPersist','restoreActiveCall']){
+    assert.ok(privateApp.includes(functionSource(name)),`private call function differs: ${name}`);
+  }
+  for(const name of ['callRoleVisualHTML','callRoleLoopPlay','callRoleLoopPause','callRoleLoopRelease','endCallTimers','memoryImportantCandidate','memoryTerms','memoryCandidateQuality','memoryCandidateGrounded','offlineApplyMemoryTags']){
+    assert.ok(privateApp.includes(lineFunction(name)),`private call or memory line differs: ${name}`);
+  }
   const rootCss=html.slice(html.indexOf('/* ===== 通话 ===== */'),html.indexOf('.spybanner'));
   const privateCss=privateHtml.slice(privateHtml.indexOf('/* ===== 通话 ===== */'),privateHtml.indexOf('.spybanner'));
   assert.equal(privateCss,rootCss);

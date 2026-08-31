@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const root=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
-const bundled=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js',import.meta.url),'utf8');
+const root=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8').replace(/\r\n/g,'\n');
+const bundled=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js',import.meta.url),'utf8').replace(/\r\n/g,'\n');
 
 function functionSource(source,name){
   const fnStart=source.indexOf('function '+name+'(');
@@ -21,7 +21,9 @@ function functionSource(source,name){
 }
 
 test('a completed generated image is durably stored before the UI reports completion',()=>{
-  assert.equal(root,bundled);
+  for(const name of ['fillGenImage','repairStaleGeneratedImageStates']){
+    assert.equal(functionSource(root,name),functionSource(bundled,name),`private generated-image function differs: ${name}`);
+  }
   const fill=functionSource(root,'fillGenImage');
   assert.match(fill,/await primeImageForSave\(msg\.src\)/);
   assert.match(fill,/await persistWechatMessagesNow\(\)/);

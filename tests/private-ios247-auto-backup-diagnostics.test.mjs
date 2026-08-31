@@ -269,11 +269,11 @@ test('native failure UI includes recent persistent diagnostics and the private 2
   assert.match(webView, /id="diag"/);
   assert.match(webView, /function copyDiag\(\)/);
   assert.match(webView, /writeText\(text\)\.catch\(function\(\)\{fallbackCopy\(text\);\}\)/);
-  assert.match(webView, /私人 iOS 1\.0\.248 \(248\)/);
+  assert.match(webView, /私人 iOS 1\.0\.249 \(249\)/);
 
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.248 \(248\)'/);
-  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v4\.build248/);
-  assert.match(bridge, /private static let build = "1\.0\.248 \(248\)"/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.249 \(249\)'/);
+  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v4\.build249/);
+  assert.match(bridge, /private static let build = "1\.0\.249 \(249\)"/);
   assert.match(bridge, /case "diagnostics\.read"/);
   assert.match(bridge, /"bounded": true/);
   assert.match(bridge, /"maximumBytes": 256 \* 1_024/);

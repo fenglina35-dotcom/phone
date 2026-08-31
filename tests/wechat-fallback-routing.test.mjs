@@ -25,6 +25,7 @@ const notices=[];
 const sandbox={
   S:{settings:{aux:{model:'backup-model'}}},
   chatRequestRoute:()=>null,
+  apiRawErrorDetail:value=>String(value||'').slice(0,220),
   toast:(text,ms)=>notices.push([text,ms]),
   mode:'normal',
   async chatAPI(_messages,md){
@@ -44,7 +45,11 @@ const role={id:'c1'};
 sandbox.mode='throw';let directState={fallback:false};
 assert.equal(await sandbox.wechatPrimaryReply([], {aux:false}, directState,{id:'direct-failure'}),'aux reply');
 assert.deepEqual(calls.splice(0),[false,true]);
-assert.deepEqual(notices.splice(0),[['已切换副模型',3000]],'the first request must announce a direct main-to-aux fallback');
+let fallbackNotices=notices.splice(0);
+assert.equal(fallbackNotices.length,1,'the first request must emit one precise fallback notice');
+assert.match(fallbackNotices[0][0],/主模型.*失败.*副模型.*成功回复/);
+assert.equal(fallbackNotices[0][1],8000);
+assert.equal(directState.fallback,true);
 
 let state={fallback:false};
 sandbox.mode='normal';
@@ -57,7 +62,13 @@ sandbox.mode='throw';state={fallback:false};
 assert.equal(await sandbox.wechatPrimaryReply([], {aux:false}, state,role),'aux reply');
 assert.deepEqual(calls.splice(0),[false,true]);
 assert.equal(state.fallback,true);
-assert.deepEqual(notices.splice(0),[['已切换副模型',3000]]);
+fallbackNotices=notices.splice(0);
+assert.equal(fallbackNotices.length,1);
+assert.match(fallbackNotices[0][0],/主模型.*失败.*副模型.*成功回复/);
+assert.equal(role._chatRouteDiagnostic.outcome,'fallback');
+assert.equal(role._chatRouteDiagnostic.actualSlot,'副模型');
+assert.match(role._chatRouteDiagnostic.reason,/primary failed/);
+assert.equal(role._chatRouteDiagnostic.messageCount,0);
 
 sandbox.mode='normal';state={fallback:false};
 assert.equal(await sandbox.wechatPrimaryReply([], {aux:false}, state,role),'main reply');
@@ -68,7 +79,9 @@ sandbox.mode='empty';state={fallback:false};
 assert.equal(await sandbox.wechatPrimaryReply([], {aux:false}, state,role),'aux reply');
 assert.deepEqual(calls.splice(0),[false,true]);
 assert.equal(state.fallback,true);
-assert.deepEqual(notices.splice(0),[['已切换副模型',3000]]);
+fallbackNotices=notices.splice(0);
+assert.equal(fallbackNotices.length,1);
+assert.match(fallbackNotices[0][0],/主模型.*失败.*副模型.*成功回复/);
 
 sandbox.mode='throw';state={fallback:false};
 sandbox.chatAPI=async(_messages,md)=>{calls.push(!!md.aux);throw new Error(md.aux?'aux failed':'primary failed');};
@@ -76,12 +89,22 @@ await assert.rejects(()=>sandbox.wechatPrimaryReply([], {aux:false}, state,role)
 assert.deepEqual(calls.splice(0),[false,true]);
 assert.equal(state.fallback,true,'a failed auxiliary attempt must still consume the one fallback');
 assert.deepEqual(notices.splice(0),[],'remaining on the already-visible auxiliary route should not duplicate the notice');
+assert.equal(role._chatRouteDiagnostic.outcome,'failed');
+assert.match(role._chatRouteDiagnostic.reason,/主模型：primary failed；副模型：aux failed/);
 
 sandbox.S.settings.aux.model='';sandbox.mode='throw';state={fallback:false};
 sandbox.chatAPI=async(_messages,md)=>{calls.push(!!md.aux);throw new Error('primary failed');};
 await assert.rejects(()=>sandbox.wechatPrimaryReply([], {aux:false}, state,role),/primary failed/);
 assert.deepEqual(calls.splice(0),[false]);
 assert.equal(state.fallback,false);
+
+sandbox.S.settings.aux.model='backup-model';state={fallback:false};
+sandbox.chatAPI=async(_messages,md)=>{calls.push(!!md.aux);throw new Error('auxiliary 503');};
+await assert.rejects(()=>sandbox.wechatPrimaryReply([], {aux:true}, state,role),/auxiliary 503/);
+assert.deepEqual(calls.splice(0),[true],'a role already configured for the auxiliary model must make exactly one auxiliary request');
+assert.equal(state.fallback,false,'there is no second auxiliary model to fall back to');
+assert.equal(role._chatRouteDiagnostic.slot,'副模型');
+assert.match(role._chatRouteDiagnostic.reason,/auxiliary 503/);
 
 assert.equal(sandbox.wechatRoleDrift('normal reply'),false);
 assert.equal(sandbox.wechatRoleDrift('refusal'),true);

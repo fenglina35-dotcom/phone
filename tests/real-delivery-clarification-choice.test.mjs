@@ -405,13 +405,13 @@ test('a terse 都要 clarification can use the original task without another use
 });
 
 test('chat wiring tries same-task and direct approval fallbacks before hidden model repair',()=>{
-  assert.match(app,/_deliveryActionFallbackHandled=false[\s\S]*?deliveryTryClarificationFallback\(id,_userText,_deliveryActionMeta\)/);
-  assert.match(app,/deliveryTryExplicitApprovalFallback\(id,_userText,content,_deliveryActionMeta\)[\s\S]*?_deliveryActionFallbackHandled=!!_directRun/);
-  assert.match(app,/deliveryMissingActionRepairPrompt\(id,_userText,content,_deliveryActionMeta\)[\s\S]*?await chatAPI\(/);
+  assert.match(app,/_deliveryActionFallbackHandled=false[\s\S]*?deliveryTryClarificationFallback\(id,_deliveryPendingUserText,_deliveryActionMeta\)/);
+  assert.match(app,/deliveryTryExplicitApprovalFallback\(id,_deliveryPendingUserText,content,_deliveryActionMeta\)[\s\S]*?_deliveryActionFallbackHandled=!!_directRun/);
+  assert.match(app,/deliveryMissingActionRepairPrompt\(id,_deliveryPendingUserText,content,_deliveryActionMeta\)[\s\S]*?await chatAPI\(/);
   assert.match(app,/_deliveryRepairActions\.length===1[\s\S]*?\+'\\n\[真实外卖\|'/);
-  assert.match(app,/deliveryMissingActionRetryPrompt\(id,_userText,content,_deliveryRepair,_deliveryActionMeta\)/);
+  assert.match(app,/deliveryMissingActionRetryPrompt\(id,_deliveryPendingUserText,content,_deliveryRepair,_deliveryActionMeta\)/);
   assert.match(app,/_deliveryStrictRepairActions\.length===1/);
-  assert.match(app,/deliveryReportActionRepairFailure\(id,_userText,content,_deliveryActionMeta\)/);
+  assert.match(app,/deliveryReportActionRepairFailure\(id,_deliveryPendingUserText,content,_deliveryActionMeta\)/);
   assert.doesNotMatch(app,/deliveryRequestPreludeRetry\(id/,'missing actions must be repaired in the same authorized turn, not by scheduling a new background turn');
 });
 

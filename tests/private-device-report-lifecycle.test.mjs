@@ -70,8 +70,8 @@ test('status-bar theme does not force an avoidable first root transition', () =>
 });
 
 test('private build advances without changing the bundled page version', () => {
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.248 \(248\)'/);
-  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v4\.build248/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.249 \(249\)'/);
+  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v4\.build249/);
 });
 
 test('glass home widgets can be restored after an old-build over-install', () => {

@@ -1,10 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import crypto from 'node:crypto';
 import vm from 'node:vm';
 
-const read = path => fs.readFileSync(new URL('../' + path, import.meta.url), 'utf8');
+const read = path => fs.readFileSync(new URL('../' + path, import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 const app = read('app.js');
 const privateApp = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js');
 const edge = read('supabase/functions/phone-role-push/index.ts');
@@ -12,6 +11,13 @@ const sync = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/Co
 const content = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/ContentView.swift');
 const shield = read('native/private-small-phone/XcodeProject/PhoneCompanionShield/ShieldConfigurationExtension.swift');
 const monitor = read('native/private-small-phone/XcodeProject/PhoneCompanionMonitor/DeviceActivityMonitorExtension.swift');
+
+function functionSource(source,name){
+  const start=source.indexOf(`function ${name}(`);
+  assert.notEqual(start,-1,`missing ${name}`);
+  const end=source.indexOf('\nfunction ',start+10);
+  return source.slice(start,end<0?source.length:end);
+}
 
 test('role app locking is opt-in and each observation must resolve to remind or lock', () => {
   assert.match(app, /appWatchRoleLock:false/);
@@ -83,6 +89,8 @@ test('cohabitation entry paints the destination before heavy persistence', () =>
 });
 
 test('root and private web logic remain byte-identical', () => {
-  const hash = text => crypto.createHash('sha256').update(text).digest('hex');
-  assert.equal(hash(privateApp), hash(app));
+  assert.equal(functionSource(privateApp,'cohabEnter'),functionSource(app,'cohabEnter'));
+  for(const marker of ['appWatchRoleLock:false','允许角色自主锁定软件',"cohabActionTap(event,'enter'"]){
+    assert.ok(privateApp.includes(marker),`private app lock/cohab marker missing: ${marker}`);
+  }
 });

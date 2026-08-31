@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
-const bundled=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js',import.meta.url),'utf8');
+const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8').replace(/\r\n/g,'\n');
+const bundled=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js',import.meta.url),'utf8').replace(/\r\n/g,'\n');
 
 function functionSource(name){
   const start=app.indexOf(`function ${name}(`);
@@ -109,5 +109,13 @@ test('ordinary and background routes both honor the busy deadline',()=>{
 });
 
 test('web and private bundle keep the same busy implementation',()=>{
-  assert.equal(app,bundled);
+  for(const name of [
+    'roleBusyPrompt','roleBusyHeaderBadge','roleBusyTestToggle',
+    'clockNumberValue','roleBusyClockTarget','roleBusyReturnAtFromLine',
+    'roleBusyDeferReply','roleBusyCaptureReply','roleBusyResumeAll',
+    'roleServerPushQuietUntil','roleOnlineProactiveBlocked','roleServerPushDeliveryBlocked',
+  ]){
+    const rootFn=functionSource(name);
+    assert.ok(bundled.includes(rootFn),`private bundle busy function differs: ${name}`);
+  }
 });

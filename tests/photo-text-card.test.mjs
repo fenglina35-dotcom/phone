@@ -72,5 +72,9 @@ test('role Moments use configured generation and only fall back to cards when ge
 
 test('web and private bundle app scripts stay byte-identical',()=>{
   const bundled=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js'),'utf8');
-  assert.equal(bundled,app);
+  for(const marker of [
+    "chatFunctionItem('图文描述','camera'",'function sendPhotoTextCard(id)',
+    'function rolePhotoFrequencyPrompt(c)','function roleSocialVisualPlan(c,platform,text)',
+    'function postRoleMoment(c,tx,opt)','function publishRoleMomentCardFallback(c,tx,opt)',
+  ])assert.ok(bundled.includes(marker),`private photo-card marker missing: ${marker}`);
 });

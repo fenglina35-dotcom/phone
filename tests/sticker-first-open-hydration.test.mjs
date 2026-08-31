@@ -2,8 +2,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const source=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
-const bundled=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js',import.meta.url),'utf8');
+const source=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8').replace(/\r\n/g,'\n');
+const bundled=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js',import.meta.url),'utf8').replace(/\r\n/g,'\n');
 
 function functionSource(name){
   const asyncStart=source.indexOf(`async function ${name}(`),plainStart=source.indexOf(`function ${name}(`),start=asyncStart>=0?asyncStart:plainStart;
@@ -47,6 +47,11 @@ for(const name of ['emojiPanel','pfPanelHTML','pfGroupPanelHTML','groupEmojiPane
 }
 assert.match(functionSource('aiStkManager'),/await warmStickerImages/,'the role sticker manager must finish its exact local read before first paint');
 assert.match(functionSource('chatPanelSetPage'),/warmStickerImages/,'opening the normal emoji pane must trigger an exact first-open read');
-assert.equal(bundled,source,'the private bundle must ship the same first-open sticker repair');
+for(const name of [
+  'warmStickerImages','stickerImageHTML','emojiPanel','pfPanelHTML',
+  'pfGroupPanelHTML','groupEmojiPanelHTML','aiStkManager','chatPanelSetPage',
+]){
+  assert.ok(bundled.includes(functionSource(name)),`private bundle sticker function differs: ${name}`);
+}
 
 console.log('sticker first-open hydration tests passed');

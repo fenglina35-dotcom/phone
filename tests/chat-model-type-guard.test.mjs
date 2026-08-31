@@ -45,9 +45,12 @@ const fields = {
   testX: { style: {}, textContent: "" },
 };
 let fetches = 0;
+let response = { ok: true, status: 200, text: async () => "" };
 const context = vm.createContext({
+  CHAT_ROUTE_NAMES: ["路线一", "路线二", "路线三", "路线四"],
+  S: { settings: { chatRouteActive: 0 } },
   $: (selector) => fields[String(selector).replace(/^#/, "")] || null,
-  fetchT: async () => { fetches++; return { ok: true, json: async () => ({}) }; },
+  fetchT: async () => { fetches++; return response; },
   apiErrorCN: () => "接口错误",
   apiCaughtCN: (e) => String(e && e.message || e),
 });
@@ -79,5 +82,12 @@ fields.s_cmodel.value = "gpt-4o-mini";
 await context.testModel("s_cbase", "s_ckey", "s_cmodel", "testC", "gpt-4o-mini");
 assert.equal(fetches, 1, "a normal chat model must keep using the existing test request");
 assert.match(fields.testC.textContent, /连接成功/);
+assert.match(fields.testC.textContent, /路线一 · 主模型「gpt-4o-mini」/);
+
+response = { ok: false, status: 503, text: async () => '{"error":{"message":"upstream worker overloaded"}}' };
+await context.testModel("s_cbase", "s_ckey", "s_cmodel", "testC", "gpt-4o-mini");
+assert.equal(fetches, 2);
+assert.match(fields.testC.textContent, /路线一 · 主模型「gpt-4o-mini」测试失败/);
+assert.match(fields.testC.textContent, /接口错误/);
 
 console.log("chat model type guard tests passed");

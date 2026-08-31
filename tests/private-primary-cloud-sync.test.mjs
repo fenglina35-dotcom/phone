@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const root = new URL('../', import.meta.url);
-const web = fs.readFileSync(new URL('app.js', root), 'utf8');
-const privateWeb = fs.readFileSync(new URL('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js', root), 'utf8');
+const web = fs.readFileSync(new URL('app.js', root), 'utf8').replace(/\r\n/g, '\n');
+const privateWeb = fs.readFileSync(new URL('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js', root), 'utf8').replace(/\r\n/g, '\n');
 
 test('private primary snapshots carry source, monotonic revision, and capture time', () => {
   assert.match(web, /mode:PRIVATE_MIRROR_MODE,source:'private-ios',revision,capturedAt,updatedAt/);

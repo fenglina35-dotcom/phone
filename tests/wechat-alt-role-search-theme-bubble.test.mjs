@@ -6,8 +6,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
-const app = readFileSync(join(root, 'app.js'), 'utf8');
-const privateApp = readFileSync(join(root, 'native', 'private-small-phone', 'XcodeProject', 'PhoneCompanionTest', 'PhoneWeb.bundle', 'app.js'), 'utf8');
+const app = readFileSync(join(root, 'app.js'), 'utf8').replace(/\r\n/g, '\n');
+const privateApp = readFileSync(join(root, 'native', 'private-small-phone', 'XcodeProject', 'PhoneCompanionTest', 'PhoneWeb.bundle', 'app.js'), 'utf8').replace(/\r\n/g, '\n');
 const css = readFileSync(join(root, 'glass-theme.css'), 'utf8');
 const privateCss = readFileSync(join(root, 'native', 'private-small-phone', 'XcodeProject', 'PhoneCompanionTest', 'PhoneWeb.bundle', 'glass-theme.css'), 'utf8');
 

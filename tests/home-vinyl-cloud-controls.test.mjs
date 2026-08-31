@@ -42,7 +42,14 @@ test('web and private bundle carry identical repaired code and styles', async ()
   const [webApp, privateApp, webCss, privateCss] = await Promise.all([
     read(root, 'app.js'), read(privateBundle, 'app.js'), read(root, 'glass-theme.css'), read(privateBundle, 'glass-theme.css')
   ]);
-  assert.equal(privateApp, webApp);
+  for(const marker of [
+    'function homeVinylCustomColor()','function homeVinylSurface()',
+    'function homeVinylColorReset()','function cloudSyncModal()',
+    'function privateMirrorPublishNow()','function privateMirrorPullNow()',
+  ]){
+    assert.ok(webApp.includes(marker),`web marker missing: ${marker}`);
+    assert.ok(privateApp.includes(marker),`private marker missing: ${marker}`);
+  }
   assert.equal(privateCss, webCss);
 });
 

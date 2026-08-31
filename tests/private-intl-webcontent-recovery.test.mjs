@@ -139,7 +139,7 @@ test('native timezone snapshot is injected before bridge bootstrap', () => {
 test('terminated WebContent receives one delayed exact-bundle recovery without a Coordinator reset loop', () => {
   assert.match(webView, /func webViewWebContentProcessDidTerminate\(_ webView: WKWebView\)/);
   assert.match(webView, /now - \$0 < 120/);
-  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v4\.build248/);
+  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v4\.build249/);
   assert.match(webView, /UserDefaults\.standard[\s\S]*?terminationTimes/);
   assert.match(webView, /WebContent stable for 90s; recovery budget reset/);
   assert.match(webView, /guard attempt == 1 else/);
@@ -151,6 +151,6 @@ test('terminated WebContent receives one delayed exact-bundle recovery without a
 });
 
 test('recovery suite is pinned to the private bundled app only', () => {
-  assert.match(app, /APP_VER='v1122 · 主屏唱片与网页云备份稳定版';/);
+  assert.match(app, /APP_VER='v1123 · 模型路线真实诊断版';/);
   assert.match(app, /function emergencyRestorePreview\(index\)/);
 });

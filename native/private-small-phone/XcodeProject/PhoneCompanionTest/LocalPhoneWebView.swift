@@ -486,7 +486,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
         }
 
         private static let webContentTerminationDefaultsKey =
-            "smallPhone.webContentTerminationTimes.v4.build248"
+            "smallPhone.webContentTerminationTimes.v4.build249"
 
         private func showLoadFailure(
             in webView: WKWebView,
@@ -641,7 +641,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
         <body style="margin:0;background:#111;color:white;font-family:-apple-system;padding:28px">
           <h2>小手机本地页面没有加载成功</h2>
           <p>原始数据没有被删除。私人 App 已保留本次失败前的有界诊断记录。</p>
-          <p style="color:#aaa;font-size:13px">错误代码：\(code) · 私人 iOS 1.0.248 (248)</p>
+          <p style="color:#aaa;font-size:13px">错误代码：\(code) · 私人 iOS 1.0.249 (249)</p>
           <button onclick="copyDiag()" style="border:0;border-radius:10px;padding:10px 14px;background:#ff86ad;color:#fff;font-weight:700">复制诊断记录</button>
           <pre id="diag" style="margin-top:14px;padding:12px;border-radius:10px;background:#1d1d1f;white-space:pre-wrap;word-break:break-all;font-size:10px;line-height:1.5;user-select:text;-webkit-user-select:text">\(detail)</pre>
           <script>
@@ -692,7 +692,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.248 (248)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.249 (249)';
       window.__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__ = true;
       const privateDiagLast = new Map();
       window.__smallPhoneNativeDiag = (event, fields = {}, minGap = 10000) => {
@@ -724,7 +724,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
       };
       window.__smallPhoneNativeDiag(
         'native.bootstrap.ready',
-        { build: '1.0.248 (248)', autoBackupPaused: true },
+        { build: '1.0.249 (249)', autoBackupPaused: true },
         0
       );
       // Keep private-App background maintenance away from the WebContent main
