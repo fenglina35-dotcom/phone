@@ -409,7 +409,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
         }
 
         private static let webContentTerminationDefaultsKey =
-            "smallPhone.webContentTerminationTimes.v3"
+            "smallPhone.webContentTerminationTimes.v4.build246"
 
         private func showLoadFailure(
             in webView: WKWebView,
@@ -575,7 +575,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.245 (245)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.246 (246)';
       // Keep private-App background maintenance away from the WebContent main
       // thread while the page is hidden, starting, thermally constrained, or
       // already showing measured event-loop pressure. This does not touch the

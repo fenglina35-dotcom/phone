@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>修复小手机本地页面</title>
+  <style>
+    html,body{margin:0;min-height:100%;background:#111;color:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif}
+    body{display:grid;place-items:center;padding:28px;box-sizing:border-box}
+    main{width:min(560px,100%);padding:30px 24px;border:1px solid #34343a;border-radius:24px;background:#1b1b1f;box-sizing:border-box;text-align:center}
+    h1{font-size:26px;margin:0 0 14px}p{font-size:16px;line-height:1.7;color:#c7c7cd;margin:10px 0}.safe{color:#8fd6a7;font-weight:700}
+    button{width:100%;margin-top:20px;padding:16px;border:0;border-radius:16px;background:#ff82ad;color:#fff;font-size:18px;font-weight:700}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>正在修复本地页面</h1>
+    <p id="status">正在清理页面脚本缓存，然后重新打开完整本地页面。</p>
+    <p class="safe">不会删除聊天、角色、图片、密钥或本机存档。</p>
+    <button id="retry" type="button" hidden>重新打开小手机</button>
+  </main>
+  <script>
+  (()=>{
+    const status=document.getElementById('status');
+    const retry=document.getElementById('retry');
+    const target=()=>`index.html?repair=1&v=1122&t=${Date.now()}`;
+    const reopen=()=>location.replace(target());
+    retry.addEventListener('click',reopen);
+    (async()=>{
+      try{
+        if('serviceWorker' in navigator){
+          const registrations=await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map(item=>item.unregister()));
+        }
+      }catch(_){ }
+      try{
+        if('caches' in window){
+          const names=await caches.keys();
+          await Promise.all(names.map(name=>caches.delete(name)));
+        }
+      }catch(_){ }
+      status.textContent='页面缓存已检查，正在重新打开小手机。';
+      setTimeout(reopen,180);
+      setTimeout(()=>{retry.hidden=false;},1800);
+    })().catch(()=>{status.textContent='自动修复没有完成，请点下面按钮重新打开。';retry.hidden=false;});
+  })();
+  </script>
+</body>
+</html>

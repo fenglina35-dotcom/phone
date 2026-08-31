@@ -31,22 +31,40 @@ test('private app loads bundled phone resources instead of a remote shell', () =
   assert.match(webView, /webView\.window\?\.safeAreaInsets/);
   assert.match(webView, /north-native-app/);
   assert.match(webView, /root\.classList\.add\('north-native-app'\)/);
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.245 \(245\)'/);
-  assert.match(webView, /\n      window\.__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.245 \(245\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.246 \(246\)'/);
+  assert.match(webView, /\n      window\.__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.246 \(246\)'/);
   assert.doesNotMatch(webView, /\nwindow\.__SMALL_PHONE_PRIVATE_BUILD__/);
   assert.match(webView, /SmallPhoneRolePushTapped/);
   assert.match(webView, /window\.__smallPhoneOpenRolePush/);
   assert.doesNotMatch(webView, /https?:\/\//);
 });
 
-test('private shell has a fresh cache identity without changing the public web release', () => {
+test('private shell and bundled script use the same strict boot identity', () => {
   const privateHTML = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html'
   );
-  const publicHTML = read('小手机.html');
-  assert.match(privateHTML, /window\.__NORTH_SHELL_BUILD__='1124'/);
-  assert.match(privateHTML, /app\.js\?v=1124/);
-  assert.match(publicHTML, /window\.__NORTH_SHELL_BUILD__='1122'/);
+  const privateApp = read(
+    'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js'
+  );
+  const shellBuild = privateHTML.match(/window\.__NORTH_SHELL_BUILD__='(\d+)'/)?.[1];
+  const scriptBuild = privateApp.match(/window\.__NORTH_SHELL_BUILD__!==\'(\d+)\'/)?.[1];
+  assert.equal(shellBuild, '1122');
+  assert.equal(scriptBuild, shellBuild);
+  assert.match(privateHTML, new RegExp(`app\\.js\\?v=${shellBuild}\\b`));
+});
+
+test('private boot repair link points to a bundled non-destructive recovery page', () => {
+  const privateHTML = read(
+    'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html'
+  );
+  const privateRepair = read(
+    'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/repair.html'
+  );
+  assert.match(privateHTML, /replace\(\/\[\^\/\]\*\$\/,'repair\.html'\)/);
+  assert.match(privateRepair, /location\.replace\(target\(\)\)/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1122/);
+  assert.doesNotMatch(privateRepair, /localStorage\.(?:clear|removeItem)/);
+  assert.doesNotMatch(privateRepair, /indexedDB\.deleteDatabase/);
 });
 
 test('private app has a versioned native bridge and shared-resource staging', () => {
@@ -139,8 +157,8 @@ test('real Mac project keeps all Screen Time targets and becomes 小手机', () 
   }
   assert.match(project, /INFOPLIST_KEY_CFBundleDisplayName = "小手机";/);
   assert.match(project, /PRODUCT_BUNDLE_IDENTIFIER = com\.qianyi\.PhoneCompanionTest;/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 245;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.245;/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 246;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.246;/);
 
   const scheme = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/xcshareddata/xcschemes/PhoneCompanionTest.xcscheme'

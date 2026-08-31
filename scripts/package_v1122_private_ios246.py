@@ -9,17 +9,19 @@ from zipfile import ZIP_DEFLATED, ZipFile
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "native/private-small-phone/XcodeProject"
 BUNDLE_SOURCE = SOURCE / "PhoneCompanionTest/PhoneWeb.bundle"
-DELIVERY = ROOT / "delivery-v1124-private245-full-final"
-PACKAGE_NAME = "SmallPhone_v1124_PrivateTimerCircuitBreaker_iOS245_Full_MacReady"
+DELIVERY = ROOT / "delivery-v1122-private246-boot-repair-final"
+PACKAGE_NAME = "SmallPhone_v1122_PrivateBootAndRepairFix_iOS246_Full_MacReady"
 ZIP_PATH = DELIVERY / f"{PACKAGE_NAME}.zip"
-INSTALL_GUIDE = "第二百四十五次安装_v1124_私人App定时器熔断_请先读.md"
+INSTALL_GUIDE = "第二百四十六次安装_v1122_私人App启动身份修复_请先读.md"
 
 
-GUIDE_TEXT = """# 第二百四十五次安装：v1124 私人 App 定时器熔断版
+GUIDE_TEXT = """# 第二百四十六次安装：v1122 私人 App 启动身份修复版
 
 ## 这次只改了什么
 
 - 只改私人 iOS App 壳层，没有修改网页版正式源码。
+- 修正私人 HTML 与完整脚本的严格启动身份，使两者统一为 v1122；不再误报“页面与脚本版本不一致”。
+- 补齐私人包内真实存在的 `repair.html`；修复按钮只清页面脚本缓存，不删除聊天、角色、图片、密钥或 IndexedDB 存档。
 - 私人 App 在启动安静期、后台或检测到主线程卡顿时，会暂停非关键的生活维护定时器。
 - 后台角色消息、伴生数据轮询、通话、闹钟、用户点击、图片读取和远控链路不在暂停名单中。
 - 原生 WebContent 异常恢复次数跨界面重建保留，避免白屏时反复无限刷新并继续发热。
@@ -27,9 +29,9 @@ GUIDE_TEXT = """# 第二百四十五次安装：v1124 私人 App 定时器熔断
 
 ## 版本
 
-- 私人安装包：v1124
-- iOS App：1.0.245（build 245）
-- 内嵌网页核心：v1122（故意保持；本次禁止改网页版业务代码）
+- 私人完整页面：v1122
+- iOS App：1.0.246（build 246）
+- 内嵌网页核心：v1122（HTML 与脚本必须一致）
 - 原生桥协议：25
 
 ## 在 Mac 上安装
@@ -113,6 +115,7 @@ required = [
     SOURCE / "PhoneCompanionTest/PhoneNativeBridge.swift",
     SOURCE / "PhoneCompanionTest/PhoneWeb.bundle/index.html",
     SOURCE / "PhoneCompanionTest/PhoneWeb.bundle/小手机.html",
+    SOURCE / "PhoneCompanionTest/PhoneWeb.bundle/repair.html",
     SOURCE / "PhoneCompanionTest/PhoneWeb.bundle/app.js",
     SOURCE / "PhoneCompanionTest/PhoneWeb.bundle/ai-account.js",
     SOURCE / "PhoneCompanionTest/PhoneWeb.bundle/delivery.js",
@@ -129,7 +132,7 @@ for path in required:
     if not path.is_file():
         raise RuntimeError(f"missing required package file: {path}")
 
-with tempfile.TemporaryDirectory(prefix="smallphone-v1124-ios245-", dir=ROOT) as temp:
+with tempfile.TemporaryDirectory(prefix="smallphone-v1122-ios246-", dir=ROOT) as temp:
     staging = Path(temp) / PACKAGE_NAME
     staging.mkdir(parents=True)
     for source, relative in source_files():
@@ -163,12 +166,19 @@ with tempfile.TemporaryDirectory(prefix="smallphone-v1124-ios245-", dir=ROOT) as
     if index_bytes != (bundle / "小手机.html").read_bytes():
         raise RuntimeError("private HTML entry files are not byte-identical")
     shell_text = index_bytes.decode("utf-8")
-    if "window.__NORTH_SHELL_BUILD__='1124'" not in shell_text:
-        raise RuntimeError("private shell is not v1124")
+    if "window.__NORTH_SHELL_BUILD__='1122'" not in shell_text:
+        raise RuntimeError("private shell is not v1122")
+    repair_text = (bundle / "repair.html").read_text(encoding="utf-8")
+    if "index.html?repair=1&v=1122" not in repair_text:
+        raise RuntimeError("private repair page does not return to the v1122 local entry")
+    for destructive in ["localStorage.clear", "localStorage.removeItem", "indexedDB.deleteDatabase"]:
+        if destructive in repair_text:
+            raise RuntimeError(f"private repair page contains destructive storage action: {destructive}")
 
     app_text = (bundle / "app.js").read_text(encoding="utf-8")
     protected_tokens = [
         "APP_VER='v1122 · 主屏唱片与网页云备份稳定版';",
+        "if(window.__NORTH_SHELL_BUILD__!=='1122')",
         "const PRIVATE_IMAGE_CACHE_CHAR_LIMIT=48*1024*1024",
         "appIcons:me.appIcons",
         "contacts:(S.contacts||[]).map",
@@ -184,15 +194,15 @@ with tempfile.TemporaryDirectory(prefix="smallphone-v1124-ios245-", dir=ROOT) as
             raise RuntimeError(f"protected private route missing: {token}")
 
     project_text = (staging / "PhoneCompanionTest.xcodeproj/project.pbxproj").read_text(encoding="utf-8")
-    if project_text.count("CURRENT_PROJECT_VERSION = 245;") != 12:
-        raise RuntimeError("private build number is not consistently 245")
-    if project_text.count("MARKETING_VERSION = 1.0.245;") != 12:
-        raise RuntimeError("private marketing version is not consistently 1.0.245")
+    if project_text.count("CURRENT_PROJECT_VERSION = 246;") != 12:
+        raise RuntimeError("private build number is not consistently 246")
+    if project_text.count("MARKETING_VERSION = 1.0.246;") != 12:
+        raise RuntimeError("private marketing version is not consistently 1.0.246")
 
     webview_text = (staging / "PhoneCompanionTest/LocalPhoneWebView.swift").read_text(encoding="utf-8")
     native_tokens = [
-        "__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.245 (245)'",
-        "smallPhone.webContentTerminationTimes.v3",
+        "__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.246 (246)'",
+        "smallPhone.webContentTerminationTimes.v4.build246",
         "const optionalMaintenance = new Set([",
         "const privateMaintenancePaused = () => {",
         "const guardedMaintenanceCallback = callback => function(...args)",
