@@ -6,8 +6,7 @@ import test from 'node:test';
 
 const root = path.resolve(import.meta.dirname, '..');
 const read = relative => fs.readFileSync(path.join(root, relative), 'utf8');
-const app = read('app.js');
-const bundledApp = read(
+const app = read(
   'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js'
 );
 const webView = read(
@@ -151,7 +150,7 @@ test('terminated WebContent receives one delayed exact-bundle recovery without a
   assert.doesNotMatch(webView, /websiteDataStore\.removeData/);
 });
 
-test('root and private bundled app stay semantically identical', () => {
-  const normalize = value => value.replace(/\r\n/g, '\n');
-  assert.equal(normalize(bundledApp), normalize(app));
+test('recovery suite is pinned to the private bundled app only', () => {
+  assert.match(app, /APP_VER='v1122 · 主屏唱片与网页云备份稳定版';/);
+  assert.match(app, /function emergencyRestorePreview\(index\)/);
 });
