@@ -14,8 +14,8 @@ struct LocalPhoneWebView: UIViewRepresentable {
         private var syncingRolePush = false
         private var rolePushSyncRetryCount = 0
         private var pendingRolePushSyncRetry: DispatchWorkItem?
-        private var webContentTerminationTimes: [TimeInterval] = []
         private var pendingWebContentRecovery: DispatchWorkItem?
+        private var pendingStableWebContentReset: DispatchWorkItem?
         private var bundledFileURL: URL?
         private var bundledReadAccessURL: URL?
         private var lastSafeAreaInsets: UIEdgeInsets?
@@ -55,6 +55,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
 
         deinit {
             pendingWebContentRecovery?.cancel()
+            pendingStableWebContentReset?.cancel()
             pendingRolePushSyncRetry?.cancel()
             NotificationCenter.default.removeObserver(self)
         }
@@ -206,6 +207,24 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 bridge.announceReady()
                 openPendingRolePushIfReady()
                 syncPendingRolePushIfReady()
+                // A successful navigation is not enough to call a WebContent
+                // process healthy: a pressure loop can finish loading and die
+                // again a few seconds later. Clear the cross-Coordinator crash
+                // budget only after the same page has stayed alive for 90s.
+                pendingStableWebContentReset?.cancel()
+                let stableReset = DispatchWorkItem { [weak self] in
+                    guard let self, self.didLoadPhone else { return }
+                    UserDefaults.standard.removeObject(
+                        forKey: Self.webContentTerminationDefaultsKey
+                    )
+                    self.pendingStableWebContentReset = nil
+                    print("[SmallPhoneWeb] WebContent stable for 90s; recovery budget reset")
+                }
+                pendingStableWebContentReset = stableReset
+                DispatchQueue.main.asyncAfter(
+                    deadline: .now() + 90,
+                    execute: stableReset
+                )
             }
         }
 
@@ -300,13 +319,22 @@ struct LocalPhoneWebView: UIViewRepresentable {
             openingRolePush = false
             syncingRolePush = false
             showingLoadFailure = false
+            pendingStableWebContentReset?.cancel()
+            pendingStableWebContentReset = nil
 
             let now = Date().timeIntervalSince1970
-            webContentTerminationTimes = webContentTerminationTimes.filter {
+            let defaults = UserDefaults.standard
+            var terminationTimes = (defaults.array(
+                forKey: Self.webContentTerminationDefaultsKey
+            ) as? [Double] ?? []).filter {
                 now - $0 < 120
             }
-            webContentTerminationTimes.append(now)
-            let attempt = webContentTerminationTimes.count
+            terminationTimes.append(now)
+            defaults.set(
+                terminationTimes,
+                forKey: Self.webContentTerminationDefaultsKey
+            )
+            let attempt = terminationTimes.count
             print(
                 "[SmallPhoneWeb] WebContent terminated; " +
                 "bounded recovery attempt \(attempt)/1"
@@ -345,7 +373,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
             }
             pendingWebContentRecovery = work
             DispatchQueue.main.asyncAfter(
-                deadline: .now() + 5,
+                deadline: .now() + 10,
                 execute: work
             )
         }
@@ -379,6 +407,9 @@ struct LocalPhoneWebView: UIViewRepresentable {
             }
             return false
         }
+
+        private static let webContentTerminationDefaultsKey =
+            "smallPhone.webContentTerminationTimes.v3"
 
         private func showLoadFailure(
             in webView: WKWebView,
@@ -544,18 +575,41 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.243 (243)';
-      // The web source performs a whole IndexedDB image sweep one minute
-      // after boot. On a long-lived private App sandbox this can mean walking
-      // gigabytes of media and opening one delete transaction per stale image.
-      // Suppress only that automatic sweep here; explicit user cleanup stays
-      // available and the shared web source remains untouched.
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.245 (245)';
+      // Keep private-App background maintenance away from the WebContent main
+      // thread while the page is hidden, starting, thermally constrained, or
+      // already showing measured event-loop pressure. This does not touch the
+      // role inbox, message delivery, calls, alarms, user actions, companion
+      // reads, or any image. It only defers optional periodic housekeeping.
       const nativeSetTimeout = window.setTimeout.bind(window);
+      const nativeSetInterval = window.setInterval.bind(window);
+      const optionalMaintenance = new Set([
+        'scanAutoPost',
+        'checkFoodDelivery',
+        'checkGiftDelivery',
+        'checkCalendar',
+        'cleanupOld',
+        'checkInitiative',
+        'checkSpyTime'
+      ]);
+      const privateMaintenancePaused = () => {
+        const root = document.documentElement;
+        return document.hidden ||
+          root.classList.contains('north-native-startup-quiet') ||
+          root.classList.contains('north-native-performance-guard');
+      };
+      const guardedMaintenanceCallback = callback => function(...args) {
+        if (privateMaintenancePaused()) return;
+        return callback.apply(window, args);
+      };
       window.setTimeout = (callback, delay, ...args) => {
+        if (typeof callback === 'function' &&
+            callback.name === 'suspicionTick') {
+          return 0;
+        }
         if (Number(delay) === 60000 &&
             typeof callback === 'function' &&
             callback.name === 'imgGC') {
-          window.setTimeout = nativeSetTimeout;
           try {
             localStorage.setItem(
               'north_private_auto_image_gc_suppressed_v1',
@@ -564,7 +618,32 @@ struct LocalPhoneWebView: UIViewRepresentable {
           } catch (_) {}
           return nativeSetTimeout(() => {}, 0);
         }
+        if (typeof callback === 'function' &&
+            optionalMaintenance.has(callback.name)) {
+          return nativeSetTimeout(
+            guardedMaintenanceCallback(callback),
+            delay,
+            ...args
+          );
+        }
         return nativeSetTimeout(callback, delay, ...args);
+      };
+      window.setInterval = (callback, delay, ...args) => {
+        if (typeof callback === 'function' &&
+            callback.name === 'suspicionTick') {
+          // suspicionTick is intentionally a no-op in the current core. Do
+          // not wake WebContent every second forever to call `return false`.
+          return 0;
+        }
+        if (typeof callback === 'function' &&
+            optionalMaintenance.has(callback.name)) {
+          return nativeSetInterval(
+            guardedMaintenanceCallback(callback),
+            delay,
+            ...args
+          );
+        }
+        return nativeSetInterval(callback, delay, ...args);
       };
       const root = document.documentElement;
       root.classList.add('north-native-app');

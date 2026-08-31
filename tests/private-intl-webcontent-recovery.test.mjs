@@ -137,13 +137,14 @@ test('native timezone snapshot is injected before bridge bootstrap', () => {
   assert.match(webView, /window\.__SMALL_PHONE_NATIVE_ENV__/);
 });
 
-test('terminated WebContent receives one delayed exact-bundle recovery without reload storm', () => {
+test('terminated WebContent receives one delayed exact-bundle recovery without a Coordinator reset loop', () => {
   assert.match(webView, /func webViewWebContentProcessDidTerminate\(_ webView: WKWebView\)/);
   assert.match(webView, /now - \$0 < 120/);
-  assert.match(webView, /private var webContentTerminationTimes: \[TimeInterval\] = \[\]/);
-  assert.doesNotMatch(webView, /smallPhone\.webContentTerminationTimes\.v2/);
+  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v3/);
+  assert.match(webView, /UserDefaults\.standard[\s\S]*?terminationTimes/);
+  assert.match(webView, /WebContent stable for 90s; recovery budget reset/);
   assert.match(webView, /guard attempt == 1 else/);
-  assert.match(webView, /deadline: \.now\(\) \+ 5/);
+  assert.match(webView, /deadline: \.now\(\) \+ 10/);
   assert.match(webView, /webView\.loadFileURL\([\s\S]{0,160}?allowingReadAccessTo: readAccessURL/);
   assert.match(webView, /configureBundledPage\([\s\S]{0,140}?fileURL: fileURL[\s\S]{0,140}?readAccessURL: readAccessURL/);
   assert.doesNotMatch(webView, /webView\?\.reload\(\)/);

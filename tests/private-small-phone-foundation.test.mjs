@@ -31,12 +31,22 @@ test('private app loads bundled phone resources instead of a remote shell', () =
   assert.match(webView, /webView\.window\?\.safeAreaInsets/);
   assert.match(webView, /north-native-app/);
   assert.match(webView, /root\.classList\.add\('north-native-app'\)/);
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.243 \(243\)'/);
-  assert.match(webView, /\n      window\.__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.243 \(243\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.245 \(245\)'/);
+  assert.match(webView, /\n      window\.__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.245 \(245\)'/);
   assert.doesNotMatch(webView, /\nwindow\.__SMALL_PHONE_PRIVATE_BUILD__/);
   assert.match(webView, /SmallPhoneRolePushTapped/);
   assert.match(webView, /window\.__smallPhoneOpenRolePush/);
   assert.doesNotMatch(webView, /https?:\/\//);
+});
+
+test('private shell has a fresh cache identity without changing the public web release', () => {
+  const privateHTML = read(
+    'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html'
+  );
+  const publicHTML = read('小手机.html');
+  assert.match(privateHTML, /window\.__NORTH_SHELL_BUILD__='1124'/);
+  assert.match(privateHTML, /app\.js\?v=1124/);
+  assert.match(publicHTML, /window\.__NORTH_SHELL_BUILD__='1122'/);
 });
 
 test('private app has a versioned native bridge and shared-resource staging', () => {
@@ -129,8 +139,8 @@ test('real Mac project keeps all Screen Time targets and becomes 小手机', () 
   }
   assert.match(project, /INFOPLIST_KEY_CFBundleDisplayName = "小手机";/);
   assert.match(project, /PRODUCT_BUNDLE_IDENTIFIER = com\.qianyi\.PhoneCompanionTest;/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 243;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.243;/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 245;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.245;/);
 
   const scheme = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/xcshareddata/xcschemes/PhoneCompanionTest.xcscheme'
