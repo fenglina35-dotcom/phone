@@ -15,6 +15,7 @@ assert.match(app, /postMessage\(\{type:'north-version-query'\}\)/);
 assert.match(sw, /client\.postMessage\(\{type:'north-update-ready',build:BUILD\}\)/);
 assert.match(sw, /event\.data\.type!==['"]north-version-query['"]/);
 assert.match(html, /window\.__NORTH_SHELL_BUILD__='1122'/);
-assert.match(html, /sw\.js\?v=1122&r=v1122-home-vinyl-web-backup-hotfix-1/);
+assert.match(html, /sw\.js\?v=1122&r=v1122-sticker-login-expiry-hotfix-2/);
+assert.match(html, /web-hotfix\.js\?v=1122&r=sticker-login-expiry-2/);
 
 console.log("update prompt tests passed");

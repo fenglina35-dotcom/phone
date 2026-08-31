@@ -1,6 +1,6 @@
 const BUILD='1122';
-const HOTFIX='v1122-home-vinyl-web-backup-hotfix-1';
-const SHELL_CACHE='north-shell-v1122-home-vinyl-web-backup-1';
+const HOTFIX='v1122-sticker-login-expiry-hotfix-2';
+const SHELL_CACHE='north-shell-v1122-sticker-login-expiry-2';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
@@ -9,6 +9,7 @@ const CORE_FILES=[
   {url:'./小手机.html?v='+BUILD+'&r='+HOTFIX,kind:'html'},
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
   {url:'./app.js?v='+BUILD+'&r='+HOTFIX,kind:'app'},
+  {url:'./web-hotfix.js?v='+BUILD+'&r=sticker-login-expiry-2',kind:'hotfix'},
   {url:'./ai-account.js?v='+BUILD,kind:'ai'}
 ];
 const OPTIONAL_FILES=[
@@ -59,6 +60,10 @@ function validShellText(kind,text){
     &&text.includes("const APP_VER='v"+BUILD+' ')
     &&text.includes("window.__NORTH_SHELL_BUILD__!=='"+BUILD+"'")
     &&text.includes('showGate();');
+  if(kind==='hotfix')return text.length>800
+    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1122-sticker-login-expiry-2'")
+    &&text.includes('reconcileExpiredWxLogin')
+    &&text.includes('isStoredImgRef');
   if(kind==='license')return text.length>10000
     &&text.includes('window.NorthLicense')
     &&text.includes('restorePasskey')
