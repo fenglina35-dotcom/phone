@@ -140,7 +140,7 @@ test('native timezone snapshot is injected before bridge bootstrap', () => {
 test('terminated WebContent receives one delayed exact-bundle recovery without a Coordinator reset loop', () => {
   assert.match(webView, /func webViewWebContentProcessDidTerminate\(_ webView: WKWebView\)/);
   assert.match(webView, /now - \$0 < 120/);
-  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v4\.build246/);
+  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v4\.build247/);
   assert.match(webView, /UserDefaults\.standard[\s\S]*?terminationTimes/);
   assert.match(webView, /WebContent stable for 90s; recovery budget reset/);
   assert.match(webView, /guard attempt == 1 else/);

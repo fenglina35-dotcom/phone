@@ -8,6 +8,167 @@ import Speech
 import UIKit
 import WebKit
 
+enum SmallPhoneDiagnosticsStore {
+    private static let queue = DispatchQueue(
+        label: "com.smallphone.private-diagnostics",
+        qos: .utility
+    )
+    private static let maximumBytes = 256 * 1_024
+    private static let maximumLines = 200
+    private static let build = "1.0.247 (247)"
+    // Accessed only from `queue`; caching the line count avoids rereading and
+    // atomically rewriting the whole bounded log for every event.
+    private static var cachedLineCount: Int?
+
+    static func append(
+        _ event: String,
+        fields: [String: Any] = [:]
+    ) {
+        var safeFields: [String: Any] = [:]
+        for (rawKey, value) in fields.prefix(8) {
+            let key = String(rawKey.prefix(40))
+            if let number = value as? NSNumber {
+                safeFields[key] = number
+            } else if let text = value as? String {
+                safeFields[key] = String(text.prefix(160))
+            }
+        }
+        let record: [String: Any] = [
+            "at": Int64(Date().timeIntervalSince1970 * 1_000),
+            "event": String(event.prefix(80)),
+            "build": build,
+            "fields": safeFields
+        ]
+        guard JSONSerialization.isValidJSONObject(record),
+              let line = try? JSONSerialization.data(withJSONObject: record) else {
+            return
+        }
+        queue.async {
+            appendLine(line)
+        }
+    }
+
+    static func appendScriptPayload(_ payload: [String: Any]) {
+        let event = payload["event"] as? String ?? "js.event"
+        let fields = payload["fields"] as? [String: Any] ?? [:]
+        append(event, fields: fields)
+    }
+
+    static func recentText(limit: Int = 24) -> String {
+        queue.sync {
+            guard let url = fileURL(),
+                  let data = try? Data(contentsOf: url),
+                  let text = String(data: data, encoding: .utf8) else {
+                return ""
+            }
+            return text
+                .split(separator: "\n", omittingEmptySubsequences: true)
+                .suffix(max(1, min(limit, maximumLines)))
+                .joined(separator: "\n")
+        }
+    }
+
+    static func clear() {
+        queue.async {
+            guard let url = fileURL() else { return }
+            try? FileManager.default.removeItem(at: url)
+            cachedLineCount = 0
+        }
+    }
+
+    private static func fileURL() -> URL? {
+        guard let directory = FileManager.default.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first else { return nil }
+        try? FileManager.default.createDirectory(
+            at: directory,
+            withIntermediateDirectories: true
+        )
+        return directory.appendingPathComponent(
+            "small-phone-runtime-diagnostics-v1.jsonl",
+            isDirectory: false
+        )
+    }
+
+    private static func appendLine(_ line: Data) {
+        guard let url = fileURL() else { return }
+        let manager = FileManager.default
+        let needsMetadata = cachedLineCount == nil ||
+            !manager.fileExists(atPath: url.path)
+        if !manager.fileExists(atPath: url.path) {
+            _ = manager.createFile(atPath: url.path, contents: nil)
+        }
+        if cachedLineCount == nil {
+            let existing = (try? Data(contentsOf: url)) ?? Data()
+            cachedLineCount = existing.reduce(into: 0) { count, byte in
+                if byte == 0x0A { count += 1 }
+            }
+        }
+
+        var appended = false
+        do {
+            let handle = try FileHandle(forWritingTo: url)
+            defer { try? handle.close() }
+            try handle.seekToEnd()
+            try handle.write(contentsOf: line)
+            try handle.write(contentsOf: Data([0x0A]))
+            appended = true
+        } catch {
+            // Keep diagnostics best-effort. A failed append must never block
+            // the App or change any business/storage path.
+        }
+        guard appended else { return }
+        cachedLineCount = (cachedLineCount ?? 0) + 1
+        let fileSize = (try? url.resourceValues(
+            forKeys: [.fileSizeKey]
+        ).fileSize) ?? 0
+        if fileSize > maximumBytes ||
+            (cachedLineCount ?? 0) > maximumLines {
+            compact(url)
+        }
+        if needsMetadata {
+            excludeFromBackup(url)
+        }
+    }
+
+    private static func compact(_ url: URL) {
+        var data = (try? Data(contentsOf: url)) ?? Data()
+        let text = String(data: data, encoding: .utf8) ?? ""
+        let lines = text.split(
+            separator: "\n",
+            omittingEmptySubsequences: true
+        )
+        var finalLineCount = lines.count
+        if data.count > maximumBytes || lines.count > maximumLines {
+            var kept: [Substring] = []
+            var keptBytes = 1
+            for row in lines.reversed() {
+                let rowBytes = row.utf8.count + 1
+                if kept.count >= maximumLines ||
+                    keptBytes + rowBytes > maximumBytes {
+                    break
+                }
+                kept.append(row)
+                keptBytes += rowBytes
+            }
+            let bounded = kept.reversed().joined(separator: "\n")
+            data = Data((bounded + "\n").utf8)
+            finalLineCount = kept.count
+        }
+        try? data.write(to: url, options: .atomic)
+        cachedLineCount = finalLineCount
+        excludeFromBackup(url)
+    }
+
+    private static func excludeFromBackup(_ url: URL) {
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        var mutableURL = url
+        try? mutableURL.setResourceValues(values)
+    }
+}
+
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
@@ -45,12 +206,34 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     ) {
         guard message.name == Self.handlerName,
               let payload = message.body as? [String: Any],
-              let requestID = payload["requestId"] as? String,
               let action = payload["action"] as? String else {
             return
         }
 
+        if action == "diagnostics.append" {
+            SmallPhoneDiagnosticsStore.appendScriptPayload(
+                payload["payload"] as? [String: Any] ?? [:]
+            )
+            return
+        }
+
+        guard let requestID = payload["requestId"] as? String else {
+            return
+        }
+
         switch action {
+        case "diagnostics.read":
+            reply(
+                requestID: requestID,
+                result: [
+                    "text": SmallPhoneDiagnosticsStore.recentText(limit: 80),
+                    "bounded": true,
+                    "maximumBytes": 256 * 1_024
+                ]
+            )
+        case "diagnostics.clear":
+            SmallPhoneDiagnosticsStore.clear()
+            reply(requestID: requestID, result: ["cleared": true])
         case "bridge.info":
             reply(
                 requestID: requestID,

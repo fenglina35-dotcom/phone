@@ -21,6 +21,10 @@ struct LocalPhoneWebView: UIViewRepresentable {
         private var lastSafeAreaInsets: UIEdgeInsets?
         override init() {
             super.init()
+            SmallPhoneDiagnosticsStore.append(
+                "native.coordinator.init",
+                fields: ["thermalState": Self.thermalStateName()]
+            )
             NotificationCenter.default.addObserver(
                 self,
                 selector: #selector(deviceOrientationChanged),
@@ -97,17 +101,27 @@ struct LocalPhoneWebView: UIViewRepresentable {
 
         private func sendNativePressure(memoryWarning: Bool) {
             guard didLoadPhone, let webView = bridge.webView else { return }
-            let state: String
-            switch ProcessInfo.processInfo.thermalState {
-            case .nominal: state = "nominal"
-            case .fair: state = "fair"
-            case .serious: state = "serious"
-            case .critical: state = "critical"
-            @unknown default: state = "serious"
-            }
+            let state = Self.thermalStateName()
+            SmallPhoneDiagnosticsStore.append(
+                memoryWarning ? "native.memory.warning" : "native.thermal.sample",
+                fields: [
+                    "thermalState": state,
+                    "memoryWarning": memoryWarning ? 1 : 0
+                ]
+            )
             let script = "window.__smallPhoneNativePressure && window.__smallPhoneNativePressure({thermalState:'\(state)',memoryWarning:\(memoryWarning ? "true" : "false")});"
             DispatchQueue.main.async { [weak webView] in
                 webView?.evaluateJavaScript(script)
+            }
+        }
+
+        private static func thermalStateName() -> String {
+            switch ProcessInfo.processInfo.thermalState {
+            case .nominal: return "nominal"
+            case .fair: return "fair"
+            case .serious: return "serious"
+            case .critical: return "critical"
+            @unknown default: return "unknown"
             }
         }
 
@@ -202,6 +216,14 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 pendingWebContentRecovery?.cancel()
                 pendingWebContentRecovery = nil
                 didLoadPhone = true
+                SmallPhoneDiagnosticsStore.append(
+                    "native.page.didFinish",
+                    fields: [
+                        "source": webView.url?.isFileURL == true
+                            ? "bundled-file" : "other",
+                        "thermalState": Self.thermalStateName()
+                    ]
+                )
                 updateSafeArea(in: webView)
                 sendNativePressure(memoryWarning: false)
                 bridge.announceReady()
@@ -335,6 +357,13 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 forKey: Self.webContentTerminationDefaultsKey
             )
             let attempt = terminationTimes.count
+            SmallPhoneDiagnosticsStore.append(
+                "native.webcontent.terminated",
+                fields: [
+                    "attempt": attempt,
+                    "thermalState": Self.thermalStateName()
+                ]
+            )
             print(
                 "[SmallPhoneWeb] WebContent terminated; " +
                 "bounded recovery attempt \(attempt)/1"
@@ -409,7 +438,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
         }
 
         private static let webContentTerminationDefaultsKey =
-            "smallPhone.webContentTerminationTimes.v4.build246"
+            "smallPhone.webContentTerminationTimes.v4.build247"
 
         private func showLoadFailure(
             in webView: WKWebView,
@@ -417,9 +446,17 @@ struct LocalPhoneWebView: UIViewRepresentable {
         ) {
             guard !showingLoadFailure else { return }
             showingLoadFailure = true
+            SmallPhoneDiagnosticsStore.append(
+                "native.page.loadFailure",
+                fields: [
+                    "domain": String((error as NSError).domain.prefix(80)),
+                    "code": (error as NSError).code,
+                    "thermalState": Self.thermalStateName()
+                ]
+            )
             print("[SmallPhoneWeb] load failed: \(error.localizedDescription)")
             webView.loadHTMLString(
-                LocalPhoneWebView.loadFailureHTML,
+                LocalPhoneWebView.loadFailureHTML(error: error),
                 baseURL: nil
             )
         }
@@ -539,14 +576,41 @@ struct LocalPhoneWebView: UIViewRepresentable {
     </body>
     """
 
-    fileprivate static let loadFailureHTML = """
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <body style="margin:0;background:#111;color:white;font-family:-apple-system;padding:28px">
-      <h2>小手机本地页面没有加载成功</h2>
-      <p>原始数据没有被删除。请保留此页面并把 Xcode 日志发给开发者。</p>
-    </body>
-    """
+    fileprivate static func loadFailureHTML(error: Error) -> String {
+        let diagnostics = SmallPhoneDiagnosticsStore.recentText(limit: 20)
+        let detail = htmlEscaped(
+            diagnostics.isEmpty ? "暂无持久诊断记录" : diagnostics
+        )
+        let code = (error as NSError).code
+        return """
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width,initial-scale=1">
+        <body style="margin:0;background:#111;color:white;font-family:-apple-system;padding:28px">
+          <h2>小手机本地页面没有加载成功</h2>
+          <p>原始数据没有被删除。私人 App 已保留本次失败前的有界诊断记录。</p>
+          <p style="color:#aaa;font-size:13px">错误代码：\(code) · 私人 iOS 1.0.247 (247)</p>
+          <button onclick="copyDiag()" style="border:0;border-radius:10px;padding:10px 14px;background:#ff86ad;color:#fff;font-weight:700">复制诊断记录</button>
+          <pre id="diag" style="margin-top:14px;padding:12px;border-radius:10px;background:#1d1d1f;white-space:pre-wrap;word-break:break-all;font-size:10px;line-height:1.5;user-select:text;-webkit-user-select:text">\(detail)</pre>
+          <script>
+          function fallbackCopy(text){
+            var box=document.createElement('textarea');box.value=text;document.body.appendChild(box);box.select();document.execCommand('copy');box.remove();
+          }
+          function copyDiag(){
+            var text=document.getElementById('diag').innerText;
+            if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(text).catch(function(){fallbackCopy(text);});return;}
+            fallbackCopy(text);
+          }
+          </script>
+        </body>
+        """
+    }
+
+    private static func htmlEscaped(_ value: String) -> String {
+        value
+            .replacingOccurrences(of: "&", with: "&amp;")
+            .replacingOccurrences(of: "<", with: "&lt;")
+            .replacingOccurrences(of: ">", with: "&gt;")
+    }
 
     private static func nativeEnvironmentBootstrap() -> String {
         let now = Date()
@@ -575,7 +639,41 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.246 (246)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.247 (247)';
+      window.__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__ = true;
+      const privateDiagLast = new Map();
+      window.__smallPhoneNativeDiag = (event, fields = {}, minGap = 10000) => {
+        const name = String(event || 'runtime.event').slice(0, 80);
+        const now = Date.now();
+        const gap = Math.max(0, Number(minGap) || 0);
+        if (gap && now - (privateDiagLast.get(name) || 0) < gap) return false;
+        privateDiagLast.set(name, now);
+        const safe = {};
+        Object.keys(fields && typeof fields === 'object' ? fields : {})
+          .slice(0, 8)
+          .forEach(key => {
+            const value = fields[key];
+            if (typeof value === 'boolean' || typeof value === 'number') {
+              safe[String(key).slice(0, 40)] = value;
+            } else if (typeof value === 'string') {
+              safe[String(key).slice(0, 40)] = value.slice(0, 120);
+            }
+          });
+        try {
+          window.webkit.messageHandlers.smallPhoneNative.postMessage({
+            action: 'diagnostics.append',
+            payload: { event: name, at: now, fields: safe }
+          });
+          return true;
+        } catch (_) {
+          return false;
+        }
+      };
+      window.__smallPhoneNativeDiag(
+        'native.bootstrap.ready',
+        { build: '1.0.247 (247)', autoBackupPaused: true },
+        0
+      );
       // Keep private-App background maintenance away from the WebContent main
       // thread while the page is hidden, starting, thermally constrained, or
       // already showing measured event-loop pressure. This does not touch the
