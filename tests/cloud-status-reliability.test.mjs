@@ -40,11 +40,12 @@ test('server push verification repaints the role feature page after success or f
   }
 });
 
-test('the web mirror remains read-only while the private app retains the backup action', () => {
+test('the web runtime can back up its own data while private-managed cloud ids remain protected', () => {
   for (const source of [app, bundled]) {
     const modal = functionSource(source, 'cloudSyncModal');
     assert.match(modal, /privateMirrorPullNow\(\).*一键读取云端版本/);
     assert.match(modal, /网页版不会反向覆盖私人 App/);
-    assert.doesNotMatch(modal, /cloudDoBackup\(\)/);
+    assert.match(modal, /cloudDoBackup\(\).*立即备份当前网页版/);
+    assert.match(source, /当前云ID由私人版本主设备管理；网页仅作镜像，不能反向覆盖私人数据/);
   }
 });

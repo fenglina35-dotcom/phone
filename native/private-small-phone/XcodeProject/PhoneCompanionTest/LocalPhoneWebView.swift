@@ -544,7 +544,28 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.242 (242)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.243 (243)';
+      // The web source performs a whole IndexedDB image sweep one minute
+      // after boot. On a long-lived private App sandbox this can mean walking
+      // gigabytes of media and opening one delete transaction per stale image.
+      // Suppress only that automatic sweep here; explicit user cleanup stays
+      // available and the shared web source remains untouched.
+      const nativeSetTimeout = window.setTimeout.bind(window);
+      window.setTimeout = (callback, delay, ...args) => {
+        if (Number(delay) === 60000 &&
+            typeof callback === 'function' &&
+            callback.name === 'imgGC') {
+          window.setTimeout = nativeSetTimeout;
+          try {
+            localStorage.setItem(
+              'north_private_auto_image_gc_suppressed_v1',
+              String(Date.now())
+            );
+          } catch (_) {}
+          return nativeSetTimeout(() => {}, 0);
+        }
+        return nativeSetTimeout(callback, delay, ...args);
+      };
       const root = document.documentElement;
       root.classList.add('north-native-app');
       root.style.setProperty('--north-native-safe-top', 'env(safe-area-inset-top, 0px)');

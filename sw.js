@@ -1,6 +1,6 @@
-const BUILD='1121';
-const HOTFIX='v1121-cloud-status-reliability-hotfix-1';
-const SHELL_CACHE='north-shell-v1121-cloud-status-reliability-1';
+const BUILD='1122';
+const HOTFIX='v1122-home-vinyl-web-backup-hotfix-1';
+const SHELL_CACHE='north-shell-v1122-home-vinyl-web-backup-1';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];

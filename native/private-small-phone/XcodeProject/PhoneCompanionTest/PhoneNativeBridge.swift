@@ -1351,11 +1351,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             } catch {
                 self.reply(
                     requestID: requestID,
-                    result: [
-                        "ok": false,
-                        "code": "account_request_failed",
-                        "message": "账号服务暂时不可用，请稍后重试"
-                    ]
+                    result: self.privateAccountFailureResult(error)
                 )
             }
         }
@@ -1472,7 +1468,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         }
         var request = URLRequest(url: url)
         request.httpMethod = method
-        request.timeoutInterval = 60
+        request.timeoutInterval = 18
         request.setValue(Self.privateAccountAPIKey, forHTTPHeaderField: "apikey")
         request.setValue(
             "Bearer " + (bearer ?? Self.privateAccountAPIKey),
@@ -1486,6 +1482,45 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         let object = data.isEmpty ? nil : try? JSONSerialization.jsonObject(with: data)
         return PrivateAccountHTTPResponse(status: status, body: object)
+    }
+
+    private func privateAccountFailureResult(_ error: Error) -> [String: Any] {
+        let nsError = error as NSError
+        let detail = nsError.localizedDescription
+        if detail.contains("手机号登录已保留") || detail.contains("云端暂时无法验证") {
+            return [
+                "ok": false,
+                "code": "account_auth_temporarily_unavailable",
+                "message": detail
+            ]
+        }
+        if nsError.domain == NSURLErrorDomain {
+            if nsError.code == URLError.timedOut.rawValue {
+                return [
+                    "ok": false,
+                    "code": "account_auth_timeout",
+                    "message": "账号认证服务器响应超时；手机号登录凭证仍保留在本机，请稍后刷新"
+                ]
+            }
+            if [
+                URLError.notConnectedToInternet.rawValue,
+                URLError.networkConnectionLost.rawValue,
+                URLError.cannotConnectToHost.rawValue,
+                URLError.cannotFindHost.rawValue,
+                URLError.dnsLookupFailed.rawValue
+            ].contains(nsError.code) {
+                return [
+                    "ok": false,
+                    "code": "account_network_unavailable",
+                    "message": "当前网络无法连接账号服务器；手机号登录凭证仍保留在本机"
+                ]
+            }
+        }
+        return [
+            "ok": false,
+            "code": "account_request_failed",
+            "message": "账号服务器暂时不可用；手机号登录凭证仍保留在本机，请稍后刷新"
+        ]
     }
 
     private func privateAccountPublicResult(

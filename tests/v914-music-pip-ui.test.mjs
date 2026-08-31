@@ -7,10 +7,10 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const pip=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/CallPictureInPictureController.swift',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-test('v1121 web source keeps private 1.0.242 compatibility',()=>{
-  assert.match(app,/APP_VER='v1121 · 云状态可信显示版'/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 242;/);
-  assert.match(project,/MARKETING_VERSION = 1\.0\.242;/);
+test('v1122 web source keeps private 1.0.243 compatibility',()=>{
+  assert.match(app,/APP_VER='v1122 · 主屏唱片与网页云备份稳定版'/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 243;/);
+  assert.match(project,/MARKETING_VERSION = 1\.0\.243;/);
 });
 
 test('public music search needs no user login and reuses together-listen songs',()=>{
