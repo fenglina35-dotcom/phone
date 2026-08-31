@@ -91,13 +91,13 @@ test('status-bar theme does not force an avoidable first root transition', () =>
 });
 
 test('private build and bundled recovery page advance together', () => {
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.250 \(250\)'/);
-  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v5\.build250/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.251 \(251\)'/);
+  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v5\.build251/);
   assert.match(privateApp, /APP_VER='v1123 · 模型路线真实诊断与私人存档安全合并版'/);
   assert.equal(privateAlias, privateIndex);
   assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1123'/);
   assert.match(privateIndex, /app\.js\?v=1123/);
-  assert.match(privateIndex, /private-runtime-diagnostics\.js\?v=250/);
+  assert.match(privateIndex, /private-runtime-diagnostics\.js\?v=251/);
   assert.match(privateRepair, /index\.html\?repair=1&v=1123/);
   assert.match(privateApp, /__NORTH_SHELL_BUILD__!==\'1123\'/);
 });

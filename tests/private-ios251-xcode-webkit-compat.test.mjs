@@ -50,7 +50,7 @@ test('thermal pressure and repeated termination stop WebKit self-reload loops', 
   assert.match(webView, /thermalState == "serious" \|\| thermalState == "critical"/);
   assert.match(webView, /native\.webcontent\.recoveryOffered/);
   assert.match(webView, /native\.webcontent\.reloadDeferred/);
-  assert.match(webView, /webContentTerminationTimes\.v5\.build250/);
+  assert.match(webView, /webContentTerminationTimes\.v5\.build251/);
   assert.doesNotMatch(webView, /showingLoadFailure/);
   assert.doesNotMatch(webView, /LocalPhoneWebView\.loadFailureHTML/);
   assert.doesNotMatch(webView, /websiteDataStore\.removeData/);
@@ -76,7 +76,11 @@ test('manual recovery is heat-gated and flushes before rebuilding', () => {
   assert.match(webView, /onRecoveryRestartReady\(inspectArchive\)/);
   assert.match(
     webView,
-    /WKError\.Code\.frameLoadInterruptedByPolicyChange\.rawValue/
+    /frameLoadInterruptedByPolicyChangeCode = 102/
+  );
+  assert.doesNotMatch(
+    webView,
+    /WKError\.Code\.frameLoadInterruptedByPolicyChange/
   );
 });
 
@@ -105,18 +109,18 @@ test('private glass images use asynchronous decode without lazy-loading blank ri
   assert.match(css, /north-native-app\.north-native-performance-guard \.home img\{filter:none!important\}/);
 });
 
-test('both private entry files and every iOS target carry build 250', () => {
+test('both private entry files and every iOS target carry build 251', () => {
   assert.equal(index, alias);
-  assert.match(index, /private-runtime-diagnostics\.js\?v=250/);
-  assert.match(overlay, /250-native-recovery-icon-pressure-v1/);
-  assert.match(webView, /1\.0\.250 \(250\)/);
-  assert.match(bridge, /1\.0\.250 \(250\)/);
+  assert.match(index, /private-runtime-diagnostics\.js\?v=251/);
+  assert.match(overlay, /251-xcode-webkit-compat-v1/);
+  assert.match(webView, /1\.0\.251 \(251\)/);
+  assert.match(bridge, /1\.0\.251 \(251\)/);
   assert.equal(
-    (project.match(/CURRENT_PROJECT_VERSION = 250;/g) || []).length,
+    (project.match(/CURRENT_PROJECT_VERSION = 251;/g) || []).length,
     12
   );
   assert.equal(
-    (project.match(/MARKETING_VERSION = 1\.0\.250;/g) || []).length,
+    (project.match(/MARKETING_VERSION = 1\.0\.251;/g) || []).length,
     12
   );
 });
