@@ -15,7 +15,7 @@ assert.match(app, /postMessage\(\{type:'north-version-query'\}\)/);
 assert.match(sw, /client\.postMessage\(\{type:'north-update-ready',build:BUILD\}\)/);
 assert.match(sw, /event\.data\.type!==['"]north-version-query['"]/);
 assert.match(html, /window\.__NORTH_SHELL_BUILD__='1123'/);
-assert.match(html, /sw\.js\?v=1123&r=v1123-route-diagnostics-hotfix-1/);
-assert.match(html, /web-hotfix\.js\?v=1123&r=route-diagnostics-1/);
+assert.match(html, /sw\.js\?v=1123&r=v1123-wardrobe-time-range-1/);
+assert.match(html, /web-hotfix\.js\?v=1123&r=wardrobe-time-range-1/);
 
 console.log("update prompt tests passed");

@@ -21,8 +21,8 @@ test('automatic task failures stay silent and the cache identity is new',()=>{
   assert.match(app,/APP_VER='v1123 · 模型路线真实诊断版'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1123-route-diagnostics-1/);
-  assert.match(html,/sw\.js\?v=1123&r=v1123-route-diagnostics-hotfix-1/);
+  assert.match(html,/north-sw-reloaded-1123-wardrobe-time-range-1/);
+  assert.match(html,/sw\.js\?v=1123&r=v1123-wardrobe-time-range-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{

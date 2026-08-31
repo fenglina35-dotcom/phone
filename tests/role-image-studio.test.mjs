@@ -34,6 +34,19 @@ for(const [name,source] of [['web',root],['private bundle',bundle]]){
   assert.equal(ctx.roleImageWardrobePick(c,'他在家里客厅准备睡觉').id,'sleep');
   assert.equal(ctx.roleImageWardrobePick(c,'他正在医院值班').id,'work');
   assert.equal(ctx.roleImageWardrobePick(c,'在家里穿白色医生工服拍照').id,'work','explicit outfit name overrides scene');
+  const timed={id:'timed',imageStudio:{enabled:true,faceMode:'hidden',identityRefs:[],outfits:[
+    {id:'seven',name:'七点晨装',occasion:'daily',image:'seven-ref',note:'固定晨装',timeStart:'07:00',timeEnd:'09:00'},
+    {id:'night',name:'夜间长袍',occasion:'home',image:'night-ref',note:'跨午夜',timeStart:'22:00',timeEnd:'02:00'},
+    {id:'random',name:'未固定风衣',occasion:'daily',image:'random-ref',note:'普通随机'},
+  ]}};
+  assert.equal(ctx.roleImageWardrobePick(timed,'随手拍一张照片',7*60).id,'seven',`${name}: 07:00 enters an exact wardrobe time range`);
+  assert.equal(ctx.roleImageWardrobePick(timed,'正在医院工作',8*60+59).id,'seven',`${name}: a fixed time range wins even when its scene category differs`);
+  assert.equal(ctx.roleImageWardrobePick(timed,'随手拍一张照片',9*60).id,'random',`${name}: the range end is exclusive and returns to untimed random outfits`);
+  assert.equal(ctx.roleImageWardrobePick(timed,'准备睡觉',23*60).id,'night',`${name}: custom wardrobe ranges may cross midnight`);
+  assert.equal(ctx.roleImageWardrobePick(timed,'准备睡觉',60).id,'night',`${name}: after-midnight minutes remain inside a crossing range`);
+  assert.equal(ctx.roleImageWardrobePick(timed,'穿七点晨装去散步',15*60).id,'seven',`${name}: explicitly naming an outfit still overrides its fixed time`);
+  const fixedOnly={imageStudio:{enabled:true,outfits:[{id:'office',name:'晨间工装',occasion:'work',image:'office-ref',timeStart:'07:00',timeEnd:'09:00'}]}};
+  assert.equal(ctx.roleImageWardrobePick(fixedOnly,'正在办公室工作',12*60),null,`${name}: an inactive fixed outfit is never reused outside its configured time`);
   const prompt=ctx.roleImageStudioPrompt(c,{scene:'他正在医院整理病历',requestText:'工作室里拍一张半身照'});
   assert.match(prompt,/角色形象工作室·替代旧外观提示词/);
   assert.match(prompt,/白色医生工服/);
@@ -80,26 +93,33 @@ for(const [name,source] of [['web',root],['private bundle',bundle]]){
   assert.match(source,/>仅替换图片<\//,`${name}: the edit modal exposes a dedicated image-only action`);
   const replaceSource=source.slice(source.indexOf('function roleImageStudioOutfitReplaceImage'),source.indexOf('\nfunction roleImageStudioOutfitActions'));
   assert.match(replaceSource,/roleImageStudioOutfitApplyImage\(row,src\)/,`${name}: the replacement path uses the image-only mutator`);
-  assert.doesNotMatch(replaceSource,/roleImageStudioDescribe|row\.(?:name|occasion|note|enabled)\s*=/,`${name}: replacing an image cannot rerun recognition or rewrite wardrobe metadata`);
-  const flowRow={id:'replace',name:'原衣物名',occasion:'formal',image:'old-ref',note:'原补充说明',enabled:false};
+  assert.doesNotMatch(replaceSource,/roleImageStudioDescribe|row\.(?:name|occasion|note|enabled|timeStart|timeEnd)\s*=/,`${name}: replacing an image cannot rerun recognition or rewrite wardrobe metadata`);
+  const flowRow={id:'replace',name:'原衣物名',occasion:'formal',image:'old-ref',note:'原补充说明',enabled:false,timeStart:'07:00',timeEnd:'09:00'};
   let pending,saveCount=0,toastText='',reopenedDraft=null;
   const flow=vm.createContext({
     $:key=>({value:key==='#rio_name'?'尚未保存的新名字':key==='#rio_occasion'?'date':'尚未保存的新说明'}),
     pickFile:(_accept,callback)=>{pending=callback({name:'new.png'});},
     getC:()=>({id:'c1'}),roleImageStudio:()=>({outfits:[flowRow]}),aiLoad:()=>{},aiDone:()=>{},
     compress:async()=>'new-ref',primeImageForSave:async()=>{},save:()=>{saveCount++;},
+    roleImageStudioOutfitReadTimeRange:()=>({enabled:true,start:'10:00',end:'12:00'}),
     roleImageStudioOutfitApplyImage:(row,src)=>{row.image=String(src);return true;},
     roleImageStudioOutfitModal:(_id,draft)=>{reopenedDraft={...draft};},toast:text=>{toastText=text;},
   });
   vm.runInContext(`let _roleImageOutfitDraft=null;${replaceSource};globalThis.setOutfitDraft=v=>{_roleImageOutfitDraft=v}`,flow);
-  flow.setOutfitDraft({id:'replace',roleId:'c1',image:'old-ref',name:'原衣物名',occasion:'formal',note:'原补充说明',enabled:false,edit:true});
+  flow.setOutfitDraft({id:'replace',roleId:'c1',image:'old-ref',name:'原衣物名',occasion:'formal',note:'原补充说明',enabled:false,timeStart:'07:00',timeEnd:'09:00',edit:true});
   flow.roleImageStudioOutfitReplaceImage('c1');
   await pending;
-  assert.deepEqual({...flowRow},{id:'replace',name:'原衣物名',occasion:'formal',image:'new-ref',note:'原补充说明',enabled:false},`${name}: the real picker flow persists only the new image`);
+  assert.deepEqual({...flowRow},{id:'replace',name:'原衣物名',occasion:'formal',image:'new-ref',note:'原补充说明',enabled:false,timeStart:'07:00',timeEnd:'09:00'},`${name}: the real picker flow persists only the new image`);
   assert.equal(saveCount,1,`${name}: replacement is saved once`);
   assert.equal(reopenedDraft.image,'new-ref');
   assert.equal(reopenedDraft.name,'尚未保存的新名字',`${name}: unsaved form edits remain visible but are not written by image replacement`);
-  assert.match(toastText,/文字信息保持不变/);
+  assert.equal(reopenedDraft.timeStart,'10:00',`${name}: unsaved time edits remain visible after replacing the image`);
+  assert.equal(reopenedDraft.timeEnd,'12:00');
+  assert.match(toastText,/文字和时间设置保持不变/);
+  assert.match(source,/id="rio_time_fixed" type="checkbox"/,`${name}: every outfit exposes an independent fixed-time switch`);
+  assert.match(source,/id="rio_time_start" type="time"/,`${name}: exact start time is editable`);
+  assert.match(source,/id="rio_time_end" type="time"/,`${name}: exact end time is editable`);
+  assert.match(source,/结束时间早于开始时间时会自动按跨午夜处理/,`${name}: the UI explains crossing-midnight ranges`);
   assert.match(source,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/,`${name}: wardrobe uses a compact two-column grid`);
   assert.match(source,/aria-label="衣物操作"/,`${name}: compact cards retain item actions`);
   assert.match(source,/aria-label="面部参考操作"/,`${name}: face references use compact cards too`);

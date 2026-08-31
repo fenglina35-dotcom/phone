@@ -50,7 +50,7 @@ test('thermal pressure and repeated termination stop WebKit self-reload loops', 
   assert.match(webView, /thermalState == "serious" \|\| thermalState == "critical"/);
   assert.match(webView, /native\.webcontent\.recoveryOffered/);
   assert.match(webView, /native\.webcontent\.reloadDeferred/);
-  assert.match(webView, /webContentTerminationTimes\.v5\.build251/);
+  assert.match(webView, /webContentTerminationTimes\.v5\.build252/);
   assert.doesNotMatch(webView, /showingLoadFailure/);
   assert.doesNotMatch(webView, /LocalPhoneWebView\.loadFailureHTML/);
   assert.doesNotMatch(webView, /websiteDataStore\.removeData/);
@@ -109,18 +109,29 @@ test('private glass images use asynchronous decode without lazy-loading blank ri
   assert.match(css, /north-native-app\.north-native-performance-guard \.home img\{filter:none!important\}/);
 });
 
-test('both private entry files and every iOS target carry build 251', () => {
+test('private wardrobe exposes exact and overnight time ranges without removing random mode', () => {
+  assert.match(app, /function roleImageTimeRangeActive\(row,minutes\)/);
+  assert.match(app, /function roleImageTimeRangeLabel\(row\)/);
+  assert.match(app, /id="rio_time_start" type="time"/);
+  assert.match(app, /id="rio_time_end" type="time"/);
+  assert.match(app, /启用固定穿着时间/);
+  assert.match(app, /结束时间早于开始时间时会自动按跨午夜处理/);
+  assert.match(app, /eligible=fixed\.length\?fixed:unfixed;if\(!eligible\.length\)return null/);
+  assert.match(app, /if\(named\.length\)return named/);
+});
+
+test('both private entry files and every iOS target carry build 252', () => {
   assert.equal(index, alias);
-  assert.match(index, /private-runtime-diagnostics\.js\?v=251/);
-  assert.match(overlay, /251-xcode-webkit-compat-v1/);
-  assert.match(webView, /1\.0\.251 \(251\)/);
-  assert.match(bridge, /1\.0\.251 \(251\)/);
+  assert.match(index, /private-runtime-diagnostics\.js\?v=252/);
+  assert.match(overlay, /252-wardrobe-time-delivery-v1/);
+  assert.match(webView, /1\.0\.252 \(252\)/);
+  assert.match(bridge, /1\.0\.252 \(252\)/);
   assert.equal(
-    (project.match(/CURRENT_PROJECT_VERSION = 251;/g) || []).length,
+    (project.match(/CURRENT_PROJECT_VERSION = 252;/g) || []).length,
     12
   );
   assert.equal(
-    (project.match(/MARKETING_VERSION = 1\.0\.251;/g) || []).length,
+    (project.match(/MARKETING_VERSION = 1\.0\.252;/g) || []).length,
     12
   );
 });

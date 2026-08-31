@@ -139,7 +139,7 @@ test('native timezone snapshot is injected before bridge bootstrap', () => {
 test('terminated WebContent reloads only once while active and thermally safe', () => {
   assert.match(webView, /func webViewWebContentProcessDidTerminate\(_ webView: WKWebView\)/);
   assert.match(webView, /now - \$0 < 120/);
-  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v5\.build251/);
+  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v5\.build252/);
   assert.match(webView, /UserDefaults\.standard[\s\S]*?terminationTimes/);
   assert.match(webView, /WebContent stable for 90s; recovery budget reset/);
   assert.match(webView, /guard attempt == 1,[\s\S]*?appIsActive,[\s\S]*?thermalState == "nominal" \|\| thermalState == "fair" else/);

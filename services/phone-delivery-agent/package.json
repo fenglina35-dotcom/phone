@@ -1,6 +1,6 @@
 {
   "name": "small-phone-delivery-agent",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "小手机一人一机外卖浏览器伴生程序",
   "author": "Small Phone",
   "private": true,

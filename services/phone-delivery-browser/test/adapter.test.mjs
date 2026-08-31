@@ -1631,7 +1631,7 @@ test('checkout submission applies an available red packet before clicking paymen
   assert.match(submit, /waitForPaymentSelection\(page, beforePages\)/);
   assert.match(source, /async advancePaymentSelection\(page\)[\s\S]*?\^支付宝\$[\s\S]*?\^确认支付\$/);
   assert.match(source, /async waitForPaymentSelection\(page, beforePages = new Set\(\)\)[\s\S]*?12_000[\s\S]*?advancePaymentSelection\(candidate\)/);
-  assert.match(submit, /paymentSelectionFallback[\s\S]*?支付宝[\s\S]*?确认支付[\s\S]*?stage: 'payment_selection'/);
+  assert.match(submit, /paymentTransition\?\.confirmed[\s\S]*?paymentSelectionFallback[\s\S]*?stage: 'payment_selection'[\s\S]*?confirmed: true/);
   assert.match(source, /\['cashier', 'payment_selection'\]\.includes\(browserOrderRef\?\.stage\)[\s\S]*?'pending_payment' : 'created'/);
   assert.match(source, /_____tmd_____[\s\S]*?隐式安全验证/);
   assert.doesNotMatch(source, /riskBlockReason !== '隐式安全验证'/);
@@ -1688,9 +1688,45 @@ test('payment selection waits for the asynchronously rendered Alipay chooser', a
 
   const result = await browser.waitForPaymentSelection(page, new Set());
 
-  assert.equal(result, candidate);
+  assert.equal(result.page, candidate);
+  assert.equal(result.stage, 'payment_selection');
+  assert.equal(result.confirmed, true);
+  assert.match(result.body, /支付宝[\s\S]*确认支付/);
   assert.equal(advanced, 1);
   assert.ok(reads >= 2);
+});
+
+test('checkout keeps confirmed Alipay-selection evidence after the DOM immediately navigates away', async () => {
+  const browser = new TaobaoFlashBrowser();
+  let bodyReads = 0;
+  const page = {
+    isClosed: () => false,
+    url: () => 'https://h5.ele.me/order/confirm?trade=1',
+    locator: selector => selector === 'body'
+      ? { innerText: async () => (++bodyReads === 1 ? '支付宝 确认支付' : '正在跳转，请稍候') }
+      : {},
+    getByText: () => ({ id: 'payment' }),
+    waitForTimeout: async () => {},
+  };
+  browser.ensure = async () => page;
+  browser.context = { pages: () => [page] };
+  browser.riskCheck = async () => 0;
+  browser.visibleLocator = async () => null;
+  browser.waitForPaymentSelection = async () => ({
+    page, stage: 'payment_selection', confirmed: true,
+    url: page.url(), body: '支付宝 微信支付 确认支付',
+  });
+
+  const result = await browser.submitOrder({
+    url: page.url(), itemNames: ['测试饮品'], imageUrl: 'data:image/jpeg;base64,AA',
+    couponCheck: { status: 'none', amount: 0, evidence: 'checkout_scanned_no_offer' },
+  });
+
+  assert.equal(result.status, 'pending_payment');
+  assert.equal(result.browserOrderRef.stage, 'payment_selection');
+  assert.equal(result.browserOrderRef.confirmed, true);
+  assert.equal(result.payUrl, '');
+  assert.ok(bodyReads > 1, 'the test must exercise the post-click loading DOM');
 });
 
 test('option inspection keeps an exact homepage card without opening store-local search', async () => {

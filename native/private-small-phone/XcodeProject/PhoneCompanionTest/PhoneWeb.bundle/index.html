@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-1123';
+  var key='north-sw-reloaded-1123-wardrobe-time-range-1';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=1123';
+  var url='sw.js?v=1123&r=v1123-wardrobe-time-range-1';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -1424,8 +1424,8 @@ html.north-apple-remote-safe .music-chat-dock{margin-bottom:4px;scroll-margin-bo
 })();
 </script>
 <script src="license-gate.js?v=1123" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=1123&r=cinema-mp4-file-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="private-runtime-diagnostics.js?v=251" onerror="__northBootFail('私人 App 性能保护组件载入失败（安装包不完整）')"></script>
+<script src="app.js?v=1123&r=wardrobe-time-range-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="private-runtime-diagnostics.js?v=252" onerror="__northBootFail('私人 App 性能保护组件载入失败（安装包不完整）')"></script>
 <script src="vendor/qr/qrcode.js?v=2.0.4"></script>
 <script src="vendor/qr/jsQR.js?v=1.4.0"></script>
 <script src="wechat-me.js?v=1123" onerror="__northBootFail('微信个人页组件载入失败（可能是网络或 404）')"></script>

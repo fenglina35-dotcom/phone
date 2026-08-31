@@ -18,9 +18,9 @@ test('v1123 web keeps private 1.0.243 compatibility',()=>{
   assert.match(html,/__NORTH_SHELL_BUILD__='1123'/);
   assert.match(sw,/BUILD='1123'/);
   assert.match(plist,/<string>1123<\/string>/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 251;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.251;/g)||[]).length,12);
-  assert.match(native,/1\.0\.251 \(251\)/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 252;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.252;/g)||[]).length,12);
+  assert.match(native,/1\.0\.252 \(252\)/);
 });
 
 test('normal taps and paging stay native until a real long press drag begins',()=>{

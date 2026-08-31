@@ -14,7 +14,7 @@ const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTes
 
 test('v1045 web files use one cache-busting build number',()=>{
   assert.match(app,/APP_VER='v1123 · 模型路线真实诊断版'/);
-  assert.match(app,/const url='sw\.js\?v=1123&r=v1123-route-diagnostics-hotfix-1'/);
+  assert.match(app,/const url='sw\.js\?v=1123&r=v1123-wardrobe-time-range-1'/);
   assert.match(html,/__NORTH_SHELL_BUILD__='1123'/);
   assert.match(html,/app\.js\?v=1123/);
   assert.match(sw,/const BUILD='1123'/);
@@ -25,9 +25,9 @@ test('v1045 web files use one cache-busting build number',()=>{
 
 test('the private iOS package embeds web v1123 and keeps 1.0.243 delivery',()=>{
   assert.match(privateBundle,/<string>1123<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.251;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 251;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.251 \(251\)'/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.252;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 252;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.252 \(252\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 
