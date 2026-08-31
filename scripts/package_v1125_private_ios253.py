@@ -148,15 +148,15 @@ with tempfile.TemporaryDirectory(prefix="smallphone-v1125-ios253-", dir=ROOT) as
         raise RuntimeError("private index.html and 小手机.html are not identical")
     shell = index_bytes.decode("utf-8")
     for token in [
-        "window.__NORTH_SHELL_BUILD__='1123'",
+        "window.__NORTH_SHELL_BUILD__='1125'",
         'private-runtime-diagnostics.js?v=253',
-        "app.js?v=1123",
+        "app.js?v=1125",
     ]:
         if token not in shell:
             raise RuntimeError(f"private shell token missing: {token}")
 
     repair = (bundle / "repair.html").read_text(encoding="utf-8")
-    if "index.html?repair=1&v=1123" not in repair:
+    if "index.html?repair=1&v=1125" not in repair:
         raise RuntimeError("private repair page does not return to v1125")
     for destructive in [
         "localStorage.clear",
