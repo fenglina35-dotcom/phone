@@ -42,7 +42,9 @@ test('offline reply errors distinguish balance, auth, throttling, timeout and em
 test('offline reply UI reports the real reason while preserving the conversation', () => {
   const off = functionSource('offAI');
   assert.match(off, /线下回复未生成：.*offlineReplyEmptyReason/);
-  assert.match(off, /线下回复失败：.*offlineReplyFailureReason\(e\)/);
+  assert.match(off, /const reason=offlineReplyFailureReason\(e\)[\s\S]*线下回复失败：'\+reason/);
+  assert.match(off, /routeIndex=roleChatRouteIndex\(c\)[\s\S]*offlineReplyChatRequest\(req/,'single-date replies must use the route shown for that role');
+  assert.match(off, /roleInterceptDiagnosticTurnFailure\(_offAudit,e,\{reason\}\)/,'a failed request must remain inspectable without inventing a reply');
   assert.match(off, /原对话没有被改动/);
   assert.doesNotMatch(off, /线下回复暂时没有生成，原对话没有被改动/);
 });
@@ -67,7 +69,7 @@ test('only optional repeat repair may preserve an earlier reply; initial and emp
   assert.match(off,/repeats\.length[\s\S]*try\{const fixRaw=await chatAPI[\s\S]*offlineKeepValidReplyOnRepairFailure\(r,e\)/);
   assert.match(cohab,/repairFails\.length[\s\S]*try\{const fixRaw=await cohabRoleChat[\s\S]*cohabRepeatRepairNote\(c,repairFails\)[\s\S]*offlineKeepValidReplyOnRepairFailure\(r,e\)/);
   assert.match(cohab,/return\{items,route,inspection,trips,travelErrors:travel\.errors\|\|\[\],_interceptAudit:audit,_interceptFinal:auditFinal,_interceptPartial:auditPartial,_interceptActionHandled:auditActionHandled,_interceptDone:false\}/);
-  assert.match(cohab,/catch\(e\)\{roleInterceptDiagnosticTurnFinish\(audit,auditFinal,\{delivered:auditActionHandled,partial:auditPartial\}\);throw e;\}/);
+  assert.match(cohab,/catch\(e\)\{roleInterceptDiagnosticTurnFailure\(audit,e,\{reason:offlineReplyFailureReason\(e\)\}\);throw e;\}/);
   assert.match(functionSource('cohabReplyAuditFinish'),/result\._interceptDone=true;return roleInterceptDiagnosticTurnFinish\(result\._interceptAudit,result\._interceptFinal,\{delivered:!!delivered,partial:!!\(result\._interceptPartial\|\|partial\)\}\)/);
   assert.doesNotMatch(off,/let retry[\s\S]{0,240}offlineKeepValidReplyOnRepairFailure/);
   assert.doesNotMatch(cohab,/let retry[\s\S]{0,240}offlineKeepValidReplyOnRepairFailure/);
@@ -87,6 +89,8 @@ test('the real common-life reply pipeline delivers the first genuine answer when
     roleInterceptDiagnosticTurnSelect:()=>true,
     roleInterceptDiagnosticTurnOutcome:()=>true,
     roleInterceptDiagnosticTurnFinish:()=>{runtime.auditFinished++;return false;},
+    roleInterceptDiagnosticTurnFailure:(_audit,error)=>{runtime.auditFinished++;return !!error;},
+    offlineReplyFailureReason:error=>String(error&&error.message||error),
     offReplyItems:x=>x?[{id:'genuine',who:'ta',text:'我在。'}]:[],
     cohabRoleChat:async()=>{runtime.calls++;if(runtime.failFirst||runtime.calls===2)throw new Error('network failed');return '【他抬眼看过来。】\n我在。';},
     offlineRepeatAudit:()=>({fails:['重复风险'],score:5}),cohabTimeEchoAudit:()=>({fails:[],score:0}),cohabRepeatRepairNote:()=>'',
@@ -106,4 +110,24 @@ test('the real common-life reply pipeline delivers the first genuine answer when
   runtime.calls=0;runtime.failFirst=true;runtime.auditFinished=0;
   await assert.rejects(()=>context.run({id:'role',name:'角色'},{},'最新一句','最新一句',600,{}),/network failed/,'a failed first request still cannot create a fake reply');
   assert.equal(runtime.auditFinished,1,'the common-life audit must also finish after a failed first request');
+});
+
+test('a transport failure retries once with the same genuine model route and never retries HTTP/auth errors',async()=>{
+  const retryable=functionSource('offlineReplyTransportRetryable'),request=functionSource('offlineReplyChatRequest');
+  let calls=0,lastOptions=null;
+  const context=vm.createContext({
+    String,Object,Math,Promise,setTimeout,
+    chatAPI:async(_messages,opt)=>{calls++;lastOptions=opt;if(calls===1){const error=new Error('Load failed');error.transportRaw='Load failed';throw error;}return '真实模型回复';}
+  });
+  vm.runInContext(`${retryable}${request}this.run=offlineReplyChatRequest;`,context);
+  const reply=await context.run([],{routeIndex:2,aux:false,roleInterceptStage:'单次约会主候选'});
+  assert.equal(reply,'真实模型回复');
+  assert.equal(calls,2);
+  assert.equal(lastOptions.routeIndex,2,'retry must stay on the same selected route');
+  assert.match(lastOptions.roleInterceptStage,/网络重试/);
+
+  calls=0;
+  context.chatAPI=async()=>{calls++;const error=new Error('HTTP 401 unauthorized');error.status=401;throw error;};
+  await assert.rejects(()=>context.run([],{routeIndex:2}),/401/);
+  assert.equal(calls,1,'an auth or HTTP response must not be retried or charged again');
 });

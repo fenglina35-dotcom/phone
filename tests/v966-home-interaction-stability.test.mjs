@@ -13,10 +13,10 @@ const plist=fs.readFileSync(path.join(root,'native/private-small-phone/Resources
 const project=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj'),'utf8');
 const native=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift'),'utf8');
 
-test('v1127 web keeps private 1.0.253 compatibility',()=>{
-  assert.match(app,/APP_VER='v1127 · 上一轮拦截诊断版'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1127'/);
-  assert.match(sw,/BUILD='1127'/);
+test('v1128 web keeps private 1.0.253 compatibility',()=>{
+  assert.match(app,/APP_VER='v1128 · 备份与线下回复修复版'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1128'/);
+  assert.match(sw,/BUILD='1128'/);
   assert.match(plist,/<string>1125<\/string>/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 253;/g)||[]).length,12);
   assert.equal((project.match(/MARKETING_VERSION = 1\.0\.253;/g)||[]).length,12);

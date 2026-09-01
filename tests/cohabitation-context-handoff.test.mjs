@@ -168,7 +168,8 @@ test('common-life reply core is wired to the common-life repair prompt and arriv
     cohabReplyRouteIndex:()=>null,
     wechatAuxConfigured:()=>true,
     toast:(text,ms)=>notices.push([text,ms]),
-    chatAPI:async(_messages,opt)=>{calls.push(opt.aux?'aux':'main');if(calls.length===1)throw new Error('primary failed');return calls.length===2?'aux rewrite':'main reply';}
+    chatAPI:async(_messages,opt)=>{calls.push(opt.aux?'aux':'main');if(calls.length===1)throw new Error('primary failed');return calls.length===2?'aux rewrite':'main reply';},
+    offlineReplyChatRequest:async(messages,opt)=>sandbox.chatAPI(messages,opt)
   };
   vm.runInNewContext(`const _cohabActualModelRoute=new Map();${functionSource('cohabModelRouteNotice')}${functionSource('cohabRoleChat')}globalThis.run=cohabRoleChat;`,sandbox);
   await sandbox.run({id:'c1'},[],{},{});

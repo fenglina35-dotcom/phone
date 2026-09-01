@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1127 · 上一轮拦截诊断版'/);
+  assert.match(app,/APP_VER='v1128 · 备份与线下回复修复版'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1127-social-studio-worldbook-1/);
-  assert.match(html,/sw\.js\?v=1127&r=v1127-social-studio-worldbook-1/);
+  assert.match(html,/north-sw-reloaded-1128-backup-offline-failure-evidence-1/);
+  assert.match(html,/sw\.js\?v=1128&r=v1128-backup-offline-failure-evidence-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{
