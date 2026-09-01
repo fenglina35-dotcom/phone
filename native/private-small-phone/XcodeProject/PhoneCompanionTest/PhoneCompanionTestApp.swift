@@ -182,18 +182,126 @@ final class CompanionPushAppDelegate: NSObject,
     private var urgentBatterySyncTask: Task<Void, Never>?
     private var foregroundSyncInFlight = false
     private var lastForegroundSyncAt = Date.distantPast
+    private var diagnosticLifecycleObservers: [NSObjectProtocol] = []
+    private static let diagnosticSessionKey =
+        "smallPhone.diagnostics.previousSession.v1"
+    private static let diagnosticPhaseKey =
+        "smallPhone.diagnostics.previousPhase.v1"
+    private static let diagnosticPhaseAtKey =
+        "smallPhone.diagnostics.previousPhaseAt.v1"
+    private static let diagnosticPIDKey =
+        "smallPhone.diagnostics.previousPID.v1"
+
+    private func diagnosticLaunchKind(
+        _ launchOptions: [UIApplication.LaunchOptionsKey: Any]?
+    ) -> String {
+        guard let launchOptions, !launchOptions.isEmpty else { return "none" }
+        if launchOptions[.remoteNotification] != nil {
+            return "remote-notification"
+        }
+        if launchOptions[.location] != nil { return "location" }
+        if launchOptions[.url] != nil { return "url" }
+        if launchOptions[.shortcutItem] != nil { return "shortcut" }
+        return "other"
+    }
+
+    private func recordDiagnosticLifecycle(_ phase: String) {
+        let defaults = UserDefaults.standard
+        let at = Int64(Date().timeIntervalSince1970 * 1_000)
+        let pid = ProcessInfo.processInfo.processIdentifier
+        defaults.set(
+            SmallPhoneDiagnosticsStore.processSessionID,
+            forKey: Self.diagnosticSessionKey
+        )
+        defaults.set(phase, forKey: Self.diagnosticPhaseKey)
+        defaults.set(at, forKey: Self.diagnosticPhaseAtKey)
+        defaults.set(pid, forKey: Self.diagnosticPIDKey)
+        SmallPhoneDiagnosticsStore.append(
+            "native.app.phase",
+            fields: [
+                "phase": phase,
+                "pid": pid,
+                "processSessionID": SmallPhoneDiagnosticsStore.processSessionID
+            ]
+        )
+    }
+
+    private func installDiagnosticLifecycleObservers() {
+        guard diagnosticLifecycleObservers.isEmpty else { return }
+        let center = NotificationCenter.default
+        let phases: [(Notification.Name, String)] = [
+            (UIApplication.didBecomeActiveNotification, "active"),
+            (UIApplication.willResignActiveNotification, "resign-active"),
+            (UIApplication.didEnterBackgroundNotification, "background"),
+            (UIApplication.willEnterForegroundNotification, "foreground"),
+            (UIApplication.willTerminateNotification, "terminated")
+        ]
+        diagnosticLifecycleObservers = phases.map { name, phase in
+            center.addObserver(
+                forName: name,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                self?.recordDiagnosticLifecycle(phase)
+            }
+        }
+    }
+
+    private func recordDiagnosticLaunch(
+        _ launchOptions: [UIApplication.LaunchOptionsKey: Any]?
+    ) {
+        let defaults = UserDefaults.standard
+        let previousSession = defaults.string(
+            forKey: Self.diagnosticSessionKey
+        ) ?? ""
+        let previousPhase = defaults.string(
+            forKey: Self.diagnosticPhaseKey
+        ) ?? ""
+        let previousAt = Int64(
+            defaults.double(forKey: Self.diagnosticPhaseAtKey)
+        )
+        let previousPID = defaults.integer(forKey: Self.diagnosticPIDKey)
+        let now = Int64(Date().timeIntervalSince1970 * 1_000)
+        let previousAgeMs = previousAt > 0
+            ? max(0, min(86_400_000, now - previousAt)) : 0
+        let previousExit: String
+        switch previousPhase {
+        case "": previousExit = "none"
+        case "terminated": previousExit = "clean"
+        case "background": previousExit = "prior-background"
+        default: previousExit = "unclean-or-force-close"
+        }
+        SmallPhoneDiagnosticsStore.append(
+            "native.app.launch",
+            fields: [
+                "launchKind": diagnosticLaunchKind(launchOptions),
+                "previousExit": previousExit,
+                "previousPhase": previousPhase,
+                "previousAgeMs": previousAgeMs,
+                "previousPID": previousPID,
+                "previousSessionID": previousSession,
+                "pid": ProcessInfo.processInfo.processIdentifier
+            ]
+        )
+        recordDiagnosticLifecycle("launching")
+    }
 
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions:
             [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        recordDiagnosticLaunch(launchOptions)
         // A terminated process cannot still own a live web call. Clear a stale
         // marker before foreground notification presentation is enabled.
         UserDefaults.standard.set(
             false,
             forKey: PhoneNativeBridge.roleCallActiveDefaultsKey
         )
+        // This SwiftUI app owns a generated scene manifest. UIApplication's
+        // legacy delegate phase callbacks are not guaranteed for scene-based
+        // lifecycle, while these application notifications remain available.
+        installDiagnosticLifecycleObservers()
         UNUserNotificationCenter.current().delegate = self
         Task { @MainActor in
             urgentBatteryObserver = NotificationCenter.default.addObserver(

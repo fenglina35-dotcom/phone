@@ -54,9 +54,10 @@ test('ordinary offline date and common life share a first-render autosize listen
 });
 
 test('web and private app keep the offline input fix identical',()=>{
-  assert.equal(functionSource(privateApp,'offInputAutoSize'),functionSource(web,'offInputAutoSize'));
-  assert.equal(functionSource(privateApp,'offNarrationDecorate'),functionSource(web,'offNarrationDecorate'));
+  const normalize=value=>value.replaceAll('\r\n','\n');
+  assert.equal(normalize(functionSource(privateApp,'offInputAutoSize')),normalize(functionSource(web,'offInputAutoSize')));
+  assert.equal(normalize(functionSource(privateApp,'offNarrationDecorate')),normalize(functionSource(web,'offNarrationDecorate')));
   const css=/\.offinput\{[^}]+\}\s*\.offinput #off_in\{[^}]+\}\s*\.offinput #off_in::\-webkit-scrollbar\{[^}]+\}/;
-  assert.equal(privateShell.match(css)?.[0],shell.match(css)?.[0]);
-  assert.equal(privateIndex.match(css)?.[0],privateShell.match(css)?.[0]);
+  assert.equal(normalize(privateShell.match(css)?.[0]),normalize(shell.match(css)?.[0]));
+  assert.equal(normalize(privateIndex.match(css)?.[0]),normalize(privateShell.match(css)?.[0]));
 });

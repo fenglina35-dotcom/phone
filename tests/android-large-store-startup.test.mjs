@@ -8,6 +8,7 @@ import {dirname,join} from 'node:path';
 const root=dirname(dirname(fileURLToPath(import.meta.url)));
 const html=readFileSync(join(root,'小手机.html'),'utf8');
 const app=readFileSync(join(root,'app.js'),'utf8');
+const privateApp=readFileSync(join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js'),'utf8');
 const sw=readFileSync(join(root,'sw.js'),'utf8');
 const repair=readFileSync(join(root,'repair.html'),'utf8');
 
@@ -60,11 +61,11 @@ test('real critical script errors still fail immediately',()=>{
   assert.match(host.innerHTML,/浏览器内核过旧或脚本没有完整加载/);
 });
 
-test('Android uses visible image hydration while desktop web keeps full hydration',()=>{
+test('Android uses visible image hydration while the private bundle keeps empty-route protection',()=>{
   assert.match(app,/function lazyStoredImagesOn\(\)\{return privateNativeAppOn\(\)\|\|NORTH_ANDROID;\}/);
   assert.match(app,/const lazy=lazyStoredImagesOn\(\),keys=lazy\?privateBootImageKeys\(\):imageRefKeys\(S\)/);
   assert.match(app,/if\(!lazy\)_rehydrate\(S\)/);
-  assert.match(app,/function scheduleVisibleStoredImages\(force,alreadyHydrated\)\{if\(!lazyStoredImagesOn\(\)\)return;/);
+  assert.match(privateApp,/function scheduleVisibleStoredImages\(force,alreadyHydrated\)\{if\(!lazyStoredImagesOn\(\)\|\|!visibleStoredImageNodesOnPage\(\)\)return;/);
 });
 
 test('the cache repair page bypasses the app shell and explicit recovery is network first',()=>{

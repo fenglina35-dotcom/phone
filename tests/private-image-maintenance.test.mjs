@@ -25,15 +25,22 @@ test('the timer shim keeps image GC suppressed while leaving ordinary timers unc
     nativeWebView.indexOf('window.setInterval =',start)
   );
   assert.ok(start>=0&&end>start,'native timer guard source is present');
-  const calls=[],stored={};
-  let paused=false;
+  const calls=[],stored={},diagnostics=[],coreWatchdogResets=[];
+  let paused=false,clock=0,visibilityChange=null;
   const context={
     Number,String,Date,
-    document:{hidden:false,documentElement:{classList:{contains(){return paused;}}}},
+    performance:{now:()=>clock},
+    document:{
+      hidden:false,
+      documentElement:{classList:{contains(){return paused;}}},
+      addEventListener(event,callback){if(event==='visibilitychange')visibilityChange=callback;}
+    },
     Set,
     window:{
       setTimeout(callback,delay,...args){calls.push({kind:'timeout',callback,delay,args});return calls.length;},
-      setInterval(callback,delay,...args){calls.push({kind:'interval',callback,delay,args});return calls.length;}
+      setInterval(callback,delay,...args){calls.push({kind:'interval',callback,delay,args});return calls.length;},
+      __northNativePerformanceWatchReset(epoch,phase){coreWatchdogResets.push({epoch,phase});return true;},
+      __smallPhoneNativeDiag(event,fields){diagnostics.push({event,fields});return true;}
     },
     localStorage:{setItem(key,value){stored[key]=value;}},
   };
@@ -67,6 +74,56 @@ test('the timer shim keeps image GC suppressed while leaving ordinary timers unc
   context.window.setInterval(roleServerPushPull,60000);
   assert.equal(calls.length,5);
   assert.equal(calls[4].callback,roleServerPushPull,'critical role inbox work is never wrapped');
+  let watchdogRuns=0;
+  const watchdog=()=>{watchdogRuns++;};
+  Object.defineProperty(watchdog,'name',{value:''});
+  context.window.setInterval(watchdog,2000);
+  assert.equal(calls.length,6);
+  assert.notEqual(calls[5].callback,watchdog,'only the existing event-loop watchdog is measured');
+  clock=3000;
+  calls[5].callback();
+  assert.equal(watchdogRuns,1);
+  assert.equal(diagnostics.at(-1).event,'event-loop.lag');
+  assert.equal(diagnostics.at(-1).fields.ms,1000,'one isolated watchdog delay is retained');
+  const lagCount=diagnostics.filter(row=>row.event==='event-loop.lag').length;
+  context.document.hidden=true;
+  visibilityChange();
+  clock=100000;
+  context.document.hidden=false;
+  visibilityChange();
+  calls[5].callback();
+  assert.equal(
+    diagnostics.filter(row=>row.event==='event-loop.lag').length,
+    lagCount,
+    'the first callback after foreground cannot turn background time into fake lag'
+  );
+  const beforeNativeLifecycleLagCount=diagnostics.filter(row=>row.event==='event-loop.lag').length;
+  context.window.__smallPhoneNativeWatchdogEpochReset({epoch:1,phase:'resign-active'});
+  assert.equal(context.window.__SMALL_PHONE_WATCHDOG_STATE__.active,false);
+  clock=156000;
+  calls[5].callback();
+  context.window.__smallPhoneNativeWatchdogEpochReset({epoch:2,phase:'background'});
+  context.window.__smallPhoneNativeWatchdogEpochReset({epoch:3,phase:'foreground'});
+  context.window.__smallPhoneNativeWatchdogEpochReset({epoch:4,phase:'active'});
+  assert.equal(context.window.__SMALL_PHONE_WATCHDOG_STATE__.active,true);
+  clock=158000;
+  calls[5].callback();
+  assert.equal(
+    diagnostics.filter(row=>row.event==='event-loop.lag').length,
+    beforeNativeLifecycleLagCount,
+    'a native-only lifecycle transition cannot turn background time into fake lag'
+  );
+  const stableEpoch=context.window.__SMALL_PHONE_WATCHDOG_STATE__.epoch;
+  const resetCount=coreWatchdogResets.length;
+  context.window.__smallPhoneNativeWatchdogEpochReset({epoch:3,phase:'foreground'});
+  assert.equal(context.window.__SMALL_PHONE_WATCHDOG_STATE__.epoch,stableEpoch,'stale native epochs are ignored');
+  assert.equal(coreWatchdogResets.length,resetCount,'stale epochs do not reset the core watchdog again');
+  clock=161000;
+  calls[5].callback();
+  const foregroundLag=diagnostics.filter(row=>row.event==='event-loop.lag').at(-1);
+  assert.equal(foregroundLag.fields.ms,1000,'a later genuine foreground stall is still diagnosed');
+  assert.equal(foregroundLag.fields.scope,'stable');
+  assert.ok(coreWatchdogResets.some(row=>row.phase==='active'),'native lifecycle resets reach the core watchdog');
 });
 
 test('private timer circuit breaker pauses only optional maintenance and removes the no-op one-second wake',()=>{

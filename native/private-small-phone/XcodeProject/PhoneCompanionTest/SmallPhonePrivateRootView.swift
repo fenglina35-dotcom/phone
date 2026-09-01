@@ -181,6 +181,7 @@ private struct SmallPhoneNativeRecoveryOverlay: View {
     let isPreparing: Bool
     let onReopen: () -> Void
     let onInspectArchive: () -> Void
+    let onUseLowComposition: () -> Void
     let onContinueWaiting: () -> Void
     @State private var copied = false
 
@@ -211,6 +212,15 @@ private struct SmallPhoneNativeRecoveryOverlay: View {
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
 
+                    Button(action: onUseLowComposition) {
+                        Text("切到 B 低合成并继续等待")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color(red: 0.34, green: 0.78, blue: 0.82))
+                    .controlSize(.large)
+                    .disabled(isPreparing)
+
                     Button(action: onReopen) {
                         Text(isPreparing ? "正在保存并准备重开…" : "安全重新打开小手机")
                             .frame(maxWidth: .infinity)
@@ -238,7 +248,7 @@ private struct SmallPhoneNativeRecoveryOverlay: View {
 
                     Button {
                         UIPasteboard.general.string =
-                            SmallPhoneDiagnosticsStore.recentText(limit: 80)
+                            SmallPhoneDiagnosticsStore.recentText(limit: 200)
                         copied = true
                     } label: {
                         Text(copied ? "诊断已复制" : "复制诊断给开发者")
@@ -281,6 +291,9 @@ struct SmallPhonePrivateRootView: View {
                 .ignoresSafeArea(.container, edges: .top)
 
             LocalPhoneWebView(
+                generation: webViewGeneration,
+                mountReason: webViewGeneration == 0
+                    ? "initial" : "manual-recovery",
                 onOpenDeviceManagement: {
                     showsDeviceManagement = true
                 },
@@ -325,6 +338,24 @@ struct SmallPhonePrivateRootView: View {
                     },
                     onInspectArchive: {
                         requestRecoveryRestart(inspectArchive: true)
+                    },
+                    onUseLowComposition: {
+                        SmallPhoneDiagnosticsStore.append(
+                            "native.compositionAB.userRequested",
+                            fields: [
+                                "mode": "B",
+                                "thermalState": Self.thermalStateName()
+                            ]
+                        )
+                        NotificationCenter.default.post(
+                            name: LocalPhoneWebView.compositionModeRequested,
+                            object: nil,
+                            userInfo: ["mode": "B"]
+                        )
+                        NotificationCenter.default.post(
+                            name: LocalPhoneWebView.recoveryContinueRequested,
+                            object: nil
+                        )
                     },
                     onContinueWaiting: {
                         NotificationCenter.default.post(
@@ -383,5 +414,15 @@ struct SmallPhonePrivateRootView: View {
             object: nil,
             userInfo: ["inspectArchive": inspectArchive]
         )
+    }
+
+    private static func thermalStateName() -> String {
+        switch ProcessInfo.processInfo.thermalState {
+        case .nominal: return "nominal"
+        case .fair: return "fair"
+        case .serious: return "serious"
+        case .critical: return "critical"
+        @unknown default: return "unknown"
+        }
     }
 }

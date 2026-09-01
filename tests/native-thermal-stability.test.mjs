@@ -6,7 +6,7 @@ import vm from 'node:vm';
 import { fileURLToPath } from 'node:url';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
-const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
+const app=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js'),'utf8');
 const css=fs.readFileSync(path.join(root,'glass-theme.css'),'utf8');
 const sync=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/CompanionSyncView.swift'),'utf8');
 const bridge=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),'utf8');
@@ -169,7 +169,7 @@ test('private core storage stays off MainActor and restores large state through 
   assert.match(bridge,/storageQueue\.async \{ \[weak self\] in/);
   assert.match(bridge,/stateData\.count > 131_072[\s\S]*?"chunked"\] = true[\s\S]*?"chunkBytes"\] = 196_608/);
   assert.match(bridge,/case "storage\.get\.chunk"[\s\S]*?chunkOffset \+ 196_608[\s\S]*?chunk\.base64EncodedString\(\)/);
-  assert.match(app,/async function privateNativeCoreGet\(k\)[\s\S]*?new TextDecoder\('utf-8'\)[\s\S]*?request\('storage\.get\.chunk',[\s\S]*?parts\.join\(''\)/);
+  assert.match(app,/async function privateNativeCoreGet\(k,opt\)[\s\S]*?new TextDecoder\('utf-8'\)[\s\S]*?request\('storage\.get\.chunk',[\s\S]*?parts\.join\(''\)/);
   assert.match(bridge,/nonisolated private func replyStorage[\s\S]*?let stateJSON = result\["stateJSON"\] as\? String/);
   assert.match(bridge,/let chunkBase64 = result\["chunkBase64"\] as\? String[\s\S]*?"chunkBase64": chunkBase64[\s\S]*?in: \.page/);
   assert.match(bridge,/callAsyncJavaScript\([\s\S]*?arguments: \[[\s\S]*?"stateJSON": stateJSON[\s\S]*?in: \.page/);
@@ -195,15 +195,15 @@ test('private boot keeps historical image references lazy without allowing image
   assert.match(app,/eligible\.slice\(0,4\)/);
   assert.match(app,/function scheduleVisibleStoredImages\(force,alreadyHydrated\)[\s\S]*?if\(!alreadyHydrated\)hydrateStoredImageNodes\(\)[\s\S]*?requestIdleCallback\(run,\{timeout:1200\}\)/);
   assert.match(app,/if\(lazyStoredImagesOn\(\)\)hydrateStoredImageNodes\(\)/);
-  assert.match(app,/scheduleVisibleStoredImages\(_imageRouteChanged,true\);[\s\S]{0,220}?northNativePerformanceSample\('render-'\+c\.p/);
+  assert.match(app,/scheduleVisibleStoredImages\(_imageRouteChanged,true\);[\s\S]{0,1400}?northNativePerformanceSample\('render-'\+c\.p/);
   assert.match(app,/function refreshHydratedUI\(\)[\s\S]{0,260}?scheduleVisibleStoredImages\(false,true\)/);
   assert.doesNotMatch(app,/function scheduleVisibleStoredImages\(\)[\s\S]{0,300}?requestAnimationFrame/);
 });
 
 test('private navigation is prioritized and slow renders enter the measured performance guard',()=>{
   assert.match(app,/function appLaunch\(k\)[\s\S]*?privateNativeAppOn\(\)&&typeof queueMicrotask===['"]function['"]\)queueMicrotask\(f\);else setTimeout\(f,0\)/);
-  assert.match(app,/function render\(\)\{\s*const c=cur\(\);const app=\$\('#app'\),_renderStarted=privateNativeAppOn\(\)/);
-  assert.match(app,/northNativePerformanceSample\('render-'\+c\.p,/);
+  assert.match(app,/function render\(\)\{\s*const c=cur\(\),app=\$\('#app'\),_renderClock=/);
+  assert.match(app,/__smallPhonePrivateRenderTrace[\s\S]{0,900}?northNativePerformanceSample\('render-'\+c\.p,/);
 });
 
 test('private companion polling never constructs Intl.DateTimeFormat on the WebContent timer',()=>{
@@ -294,6 +294,9 @@ test('background transitions perform one core save instead of two full state tra
 test('native performance protection is adaptive and preserves the normal visual path',()=>{
   assert.match(app,/function northNativeTimedJSON\(value,replacer,kind\)/);
   assert.match(app,/function northNativePerformanceWatchStart\(\)/);
+  assert.match(app,/function northNativeWatchdogEpoch\(\)/);
+  assert.match(app,/window\.__northNativePerformanceWatchReset=function\(epoch\)/);
+  assert.match(app,/epoch!==_nativePerfObservedEpoch[\s\S]{0,100}?__northNativePerformanceWatchReset\(epoch\)/);
   assert.match(app,/north-native-startup-quiet/);
   assert.match(app,/north-native-performance-guard/);
   assert.match(css,/north-native-performance-guard,.north-native-startup-quiet/);

@@ -144,11 +144,11 @@ function makeAutoBackupHarness() {
   return { context, calls, advance: ms => { now += ms; } };
 }
 
-test('private iOS 253 overlay owns the disable marker and cancels automatic scheduling', async () => {
+test('private iOS 257 overlay owns the disable marker and cancels automatic scheduling', async () => {
   const { context, calls } = makeAutoBackupHarness();
   assert.equal(
     context.__SMALL_PHONE_PRIVATE_RUNTIME__,
-    '253-chat-continuity-alarm-v1'
+    '258-post-render-protection-v1'
   );
   assert.equal(context.__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__, true);
   assert.equal(context.__testPrivateCloud.timer(), null);
@@ -206,7 +206,7 @@ test('manual backup and both restore actions remain free of the automatic-disabl
   ]) {
     const source = functionSource(app, name);
     assert.doesNotMatch(source, /__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__/);
-    assert.doesNotMatch(source, /253-chat-continuity-alarm-v1/);
+    assert.doesNotMatch(source, /253-natural-output-v1/);
   }
   assert.doesNotMatch(
     overlay,
@@ -221,7 +221,8 @@ test('manual backup and both restore actions remain free of the automatic-disabl
 
 test('diagnostic append is fire-and-forget, bounded, rate-limited and not a timer hot source', () => {
   const emit = functionSource(overlay, 'emit');
-  assert.match(emit, /lastEventAt\[event\]/);
+  assert.match(emit, /const bucket=event\+'\|'\+/);
+  assert.match(emit, /lastEventAt\[bucket\]/);
   assert.match(emit, /minGap==null\?10000:minGap/);
   assert.match(emit, /action:'diagnostics\.append'/);
   assert.doesNotMatch(emit, /\bawait\b|\.then\s*\(|console\.|localStorage|JSON\.stringify/);
@@ -250,7 +251,9 @@ test('diagnostic append is fire-and-forget, bounded, rate-limited and not a time
     '\n}\n\n@MainActor'
   );
   assert.match(bridge, /private static let maximumBytes = 256 \* 1_024/);
-  assert.match(bridge, /private static let maximumLines = 200/);
+  assert.match(bridge, /private static let retainedBytes = 192 \* 1_024/);
+  assert.match(bridge, /private static let maximumLines = 300/);
+  assert.match(bridge, /private static let retainedLines = 200/);
   assert.match(appendLine, /FileHandle\(forWritingTo: url\)/);
   assert.match(appendLine, /cachedLineCount == nil/);
   assert.match(appendLine, /try handle\.seekToEnd\(\)/);
@@ -258,22 +261,22 @@ test('diagnostic append is fire-and-forget, bounded, rate-limited and not a time
   assert.match(appendLine, /data\.count > maximumBytes/);
   assert.match(appendLine, /lines\.count > maximumLines/);
   assert.match(appendLine, /for row in lines\.reversed\(\)/);
-  assert.match(appendLine, /kept\.count >= maximumLines/);
-  assert.match(appendLine, /keptBytes \+ rowBytes > maximumBytes/);
+  assert.match(appendLine, /kept\.count >= retainedLines/);
+  assert.match(appendLine, /keptBytes \+ rowBytes > retainedBytes/);
   assert.match(appendLine, /kept\.reversed\(\)\.joined/);
   assert.match(appendLine, /isExcludedFromBackup = true/);
 });
 
-test('native recovery UI stays outside WebKit and carries the private 253 identity', () => {
-  assert.match(rootView, /SmallPhoneDiagnosticsStore\.recentText\(limit: 80\)/);
+test('native recovery UI stays outside WebKit and carries the private 260 identity', () => {
+  assert.match(rootView, /SmallPhoneDiagnosticsStore\.recentText\(limit: 200\)/);
   assert.match(rootView, /聊天、角色、图片、登录信息或密钥/);
   assert.match(rootView, /安全重新打开小手机/);
   assert.match(rootView, /复制诊断给开发者/);
   assert.doesNotMatch(webView, /LocalPhoneWebView\.loadFailureHTML/);
 
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.253 \(253\)'/);
-  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v5\.build253/);
-  assert.match(bridge, /private static let build = "1\.0\.253 \(253\)"/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.260 \(260\)'/);
+  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v5\.build260/);
+  assert.match(bridge, /private static let build = "1\.0\.260 \(260\)"/);
   assert.match(bridge, /case "diagnostics\.read"/);
   assert.match(bridge, /"bounded": true/);
   assert.match(bridge, /"maximumBytes": 256 \* 1_024/);

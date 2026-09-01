@@ -14,8 +14,11 @@ enum SmallPhoneDiagnosticsStore {
         qos: .utility
     )
     private static let maximumBytes = 256 * 1_024
-    private static let maximumLines = 200
-    private static let build = "1.0.253 (253)"
+    private static let retainedBytes = 192 * 1_024
+    private static let maximumLines = 300
+    private static let retainedLines = 200
+    private static let build = "1.0.260 (260)"
+    static let processSessionID = String(UUID().uuidString.prefix(8))
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -37,6 +40,8 @@ enum SmallPhoneDiagnosticsStore {
             "at": Int64(Date().timeIntervalSince1970 * 1_000),
             "event": String(event.prefix(80)),
             "build": build,
+            "pid": ProcessInfo.processInfo.processIdentifier,
+            "processSessionID": processSessionID,
             "fields": safeFields
         ]
         guard JSONSerialization.isValidJSONObject(record),
@@ -145,8 +150,8 @@ enum SmallPhoneDiagnosticsStore {
             var keptBytes = 1
             for row in lines.reversed() {
                 let rowBytes = row.utf8.count + 1
-                if kept.count >= maximumLines ||
-                    keptBytes + rowBytes > maximumBytes {
+                if kept.count >= retainedLines ||
+                    keptBytes + rowBytes > retainedBytes {
                     break
                 }
                 kept.append(row)
@@ -213,6 +218,14 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     // the UI actor between bounded bridge chunks.
     nonisolated(unsafe) private var storageReadSessions:
         [String: NativeStorageReadSession] = [:]
+    private struct PrivateBackupUploadSession {
+        var data: Data
+        var expiresAt: TimeInterval
+    }
+    private static let privateBackupChunkMaximumBytes = 256 * 1_024
+    private static let privateBackupMaximumBytes = 192 * 1_024 * 1_024
+    private var privateBackupUploadSessions:
+        [String: PrivateBackupUploadSession] = [:]
     private var pendingSpeechEvents: [[String: Any]] = []
     private var visionBackgroundTasks: [String: UIBackgroundTaskIdentifier] = [:]
 
@@ -241,7 +254,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             reply(
                 requestID: requestID,
                 result: [
-                    "text": SmallPhoneDiagnosticsStore.recentText(limit: 80),
+                    "text": SmallPhoneDiagnosticsStore.recentText(limit: 200),
                     "bounded": true,
                     "maximumBytes": 256 * 1_024
                 ]
@@ -249,6 +262,27 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         case "diagnostics.clear":
             SmallPhoneDiagnosticsStore.clear()
             reply(requestID: requestID, result: ["cleared": true])
+        case "diagnostics.compositionMode":
+            let arguments = payload["payload"] as? [String: Any] ?? [:]
+            let requested = String(
+                arguments["mode"] as? String ?? "A"
+            ).uppercased() == "B" ? "B" : "A"
+            let rawSource = String(
+                (arguments["source"] as? String ?? "web-control").prefix(30)
+            )
+            let source = rawSource.replacingOccurrences(of: "'", with: "")
+            NotificationCenter.default.post(
+                name: LocalPhoneWebView.compositionModeRequested,
+                object: nil,
+                userInfo: [
+                    "mode": requested,
+                    "source": "web-\(source)"
+                ]
+            )
+            reply(
+                requestID: requestID,
+                result: ["requestedMode": requested]
+            )
         case "recovery.launch.peek":
             reply(
                 requestID: requestID,
@@ -323,6 +357,8 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         case "account.status", "account.password.signup",
              "account.password.signin",
              "account.signout", "account.backup.info",
+             "account.backup.begin", "account.backup.chunk",
+             "account.backup.commit", "account.backup.cancel",
              "account.backup.upload", "account.backup.restore",
              "companion.controller.claim":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
@@ -1373,6 +1409,14 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             return
         }
 
+        if handlePrivateBackupTransferAction(
+            requestID: requestID,
+            action: action,
+            arguments: arguments
+        ) {
+            return
+        }
+
         Task { [weak self] in
             guard let self else { return }
             do {
@@ -1459,45 +1503,55 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                         requestID: requestID,
                         result: self.privateBackupResult(response, includesPayload: false)
                     )
-                case "account.backup.upload":
+                case "account.backup.upload", "account.backup.commit":
                     let session = try await self.validPrivateAccountSession()
-                    guard let snapshot = arguments["snapshot"],
-                          JSONSerialization.isValidJSONObject(snapshot) else {
-                        self.reply(requestID: requestID, error: "invalid_backup_payload")
-                        return
+                    let snapshotData: Data
+                    if action == "account.backup.commit" {
+                        let transferID = arguments["transferId"] as? String ?? ""
+                        guard !transferID.isEmpty,
+                              let upload = self.privateBackupUploadSessions
+                                .removeValue(forKey: transferID),
+                              !upload.data.isEmpty,
+                              upload.data.count <= Self.privateBackupMaximumBytes else {
+                            self.reply(requestID: requestID, error: "invalid_backup_transfer")
+                            return
+                        }
+                        let expectedBytes = (arguments["byteCount"] as? NSNumber)?.intValue ?? 0
+                        guard expectedBytes <= 0 || expectedBytes == upload.data.count else {
+                            self.reply(requestID: requestID, error: "incomplete_backup_transfer")
+                            return
+                        }
+                        snapshotData = upload.data
+                    } else {
+                        guard let snapshot = arguments["snapshot"],
+                              JSONSerialization.isValidJSONObject(snapshot) else {
+                            self.reply(requestID: requestID, error: "invalid_backup_payload")
+                            return
+                        }
+                        snapshotData = try JSONSerialization.data(withJSONObject: snapshot)
                     }
-                    let snapshotData = try JSONSerialization.data(withJSONObject: snapshot)
-                    let checksum = SHA256.hash(data: snapshotData)
-                        .map { String(format: "%02x", $0) }
-                        .joined()
                     let capturedMilliseconds =
                         (arguments["capturedAt"] as? NSNumber)?.doubleValue ??
                         Date().timeIntervalSince1970 * 1_000
-                    let capturedDate = Date(
-                        timeIntervalSince1970: capturedMilliseconds / 1_000
-                    )
-                    let formatter = ISO8601DateFormatter()
-                    formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-                    let body: [String: Any] = [
-                        "p_payload": snapshot,
-                        "p_captured_at": formatter.string(from: capturedDate),
-                        "p_source_build": String(
+                    let prepared = try await Self.preparePrivateBackupUpload(
+                        snapshotData: snapshotData,
+                        capturedMilliseconds: capturedMilliseconds,
+                        sourceBuild: String(
                             (arguments["sourceBuild"] as? String ?? "").prefix(80)
-                        ),
-                        "p_checksum": checksum,
-                        "p_byte_count": snapshotData.count
-                    ]
+                        )
+                    )
                     let response = try await self.privateAccountJSONRequest(
                         path: "/rest/v1/rpc/save_private_phone_backup",
                         method: "POST",
-                        body: body,
-                        bearer: session.accessToken
+                        rawBody: prepared.requestBody,
+                        bearer: session.accessToken,
+                        timeoutInterval: 120
                     )
                     var result = self.privateAccountPublicResult(response)
                     if response.status >= 200, response.status < 300 {
                         result["ok"] = true
                         result["byteCount"] = snapshotData.count
-                        result["checksum"] = checksum
+                        result["checksum"] = prepared.checksum
                         if let rows = response.body as? [[String: Any]], let row = rows.first {
                             result["backup"] = row
                         }
@@ -1584,6 +1638,112 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                 )
             }
         }
+    }
+
+    private func handlePrivateBackupTransferAction(
+        requestID: String,
+        action: String,
+        arguments: [String: Any]
+    ) -> Bool {
+        let now = Date().timeIntervalSince1970
+        privateBackupUploadSessions = privateBackupUploadSessions.filter {
+            $0.value.expiresAt > now
+        }
+        switch action {
+        case "account.backup.begin":
+            let transferID = UUID().uuidString
+            privateBackupUploadSessions[transferID] = PrivateBackupUploadSession(
+                data: Data(),
+                expiresAt: now + 300
+            )
+            reply(
+                requestID: requestID,
+                result: [
+                    "transferId": transferID,
+                    "chunkCharacters": 49_152,
+                    "maximumBytes": Self.privateBackupMaximumBytes
+                ]
+            )
+            return true
+        case "account.backup.chunk":
+            let transferID = arguments["transferId"] as? String ?? ""
+            let offset = (arguments["offset"] as? NSNumber)?.intValue ?? -1
+            let chunk = arguments["chunk"] as? String ?? ""
+            let chunkData = Data(chunk.utf8)
+            guard var upload = privateBackupUploadSessions[transferID],
+                  offset == upload.data.count,
+                  !chunkData.isEmpty,
+                  chunkData.count <= Self.privateBackupChunkMaximumBytes,
+                  upload.data.count + chunkData.count <= Self.privateBackupMaximumBytes else {
+                reply(requestID: requestID, error: "invalid_backup_chunk")
+                return true
+            }
+            upload.data.append(chunkData)
+            upload.expiresAt = now + 300
+            privateBackupUploadSessions[transferID] = upload
+            reply(
+                requestID: requestID,
+                result: [
+                    "accepted": true,
+                    "nextOffset": upload.data.count
+                ]
+            )
+            return true
+        case "account.backup.cancel":
+            let transferID = arguments["transferId"] as? String ?? ""
+            if !transferID.isEmpty {
+                privateBackupUploadSessions.removeValue(forKey: transferID)
+            }
+            reply(requestID: requestID, result: ["cancelled": true])
+            return true
+        default:
+            return false
+        }
+    }
+
+    private struct PreparedPrivateBackupUpload: Sendable {
+        let requestBody: Data
+        let checksum: String
+    }
+
+    nonisolated private static func preparePrivateBackupUpload(
+        snapshotData: Data,
+        capturedMilliseconds: Double,
+        sourceBuild: String
+    ) async throws -> PreparedPrivateBackupUpload {
+        try await Task.detached(priority: .utility) {
+            let object = try JSONSerialization.jsonObject(with: snapshotData)
+            guard object is [String: Any] else {
+                throw NSError(domain: "PrivatePhoneBackup", code: 400)
+            }
+            let checksum = SHA256.hash(data: snapshotData)
+                .map { String(format: "%02x", $0) }
+                .joined()
+            let capturedDate = Date(
+                timeIntervalSince1970: capturedMilliseconds / 1_000
+            )
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            let metadata: [String: Any] = [
+                "p_captured_at": formatter.string(from: capturedDate),
+                "p_source_build": sourceBuild,
+                "p_checksum": checksum,
+                "p_byte_count": snapshotData.count
+            ]
+            let metadataData = try JSONSerialization.data(withJSONObject: metadata)
+            guard metadataData.count >= 2 else {
+                throw NSError(domain: "PrivatePhoneBackup", code: 400)
+            }
+            var requestBody = Data("{\"p_payload\":".utf8)
+            requestBody.append(snapshotData)
+            requestBody.append(Data(",".utf8))
+            requestBody.append(metadataData.subdata(in: 1..<(metadataData.count - 1)))
+            requestBody.append(Data("}".utf8))
+            return PreparedPrivateBackupUpload(
+                requestBody: requestBody,
+                checksum: checksum
+            )
+        }.value
     }
 
     private func normalizedPrivatePhone(_ raw: String) -> String? {
@@ -1690,21 +1850,25 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         path: String,
         method: String,
         body: [String: Any]? = nil,
-        bearer: String? = nil
+        rawBody: Data? = nil,
+        bearer: String? = nil,
+        timeoutInterval: TimeInterval = 18
     ) async throws -> PrivateAccountHTTPResponse {
         guard let url = URL(string: Self.privateAccountBaseURL + path) else {
             throw NSError(domain: "PrivatePhoneAccount", code: 400)
         }
         var request = URLRequest(url: url)
         request.httpMethod = method
-        request.timeoutInterval = 18
+        request.timeoutInterval = timeoutInterval
         request.setValue(Self.privateAccountAPIKey, forHTTPHeaderField: "apikey")
         request.setValue(
             "Bearer " + (bearer ?? Self.privateAccountAPIKey),
             forHTTPHeaderField: "Authorization"
         )
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        if let body {
+        if let rawBody {
+            request.httpBody = rawBody
+        } else if let body {
             request.httpBody = try JSONSerialization.data(withJSONObject: body)
         }
         let (data, response) = try await URLSession.shared.data(for: request)

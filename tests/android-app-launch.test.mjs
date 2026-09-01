@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
+const privateSource = fs.readFileSync(path.join(root, "native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "小手机.html"), "utf8");
 
 assert.match(source, /const APP_VER='v1128 · 备份与线下回复修复版'/);
@@ -30,7 +31,7 @@ assert.match(source, /offline:openOfflineMenu/,'offline opening inherits the sha
 assert.match(source, /const NORTH_ANDROID=.*?Android/,'Android is detected without changing the private iOS path');
 assert.match(source, /function lazyStoredImagesOn\(\)\{return privateNativeAppOn\(\)\|\|NORTH_ANDROID;\}/);
 assert.match(source, /const lazy=lazyStoredImagesOn\(\),keys=lazy\?privateBootImageKeys\(\):imageRefKeys\(S\)/,'Android startup avoids loading every historical image before first paint');
-assert.match(source, /function scheduleVisibleStoredImages\(force,alreadyHydrated\)\{if\(!lazyStoredImagesOn\(\)\)return;/,'Android reuses the visible-image lazy loader after startup');
+assert.match(privateSource, /function scheduleVisibleStoredImages\(force,alreadyHydrated\)\{if\(!lazyStoredImagesOn\(\)\|\|!visibleStoredImageNodesOnPage\(\)\)return;/,'the private bundle skips the visible-image lazy loader when the current page has no stored-image nodes');
 assert.match(source, /limit=NORTH_ANDROID&&!privateNativeAppOn\(\)\?24\*1024\*1024:PRIVATE_IMAGE_CACHE_CHAR_LIMIT/,'Android image memory is bounded independently of iOS');
 assert.match(html, /window\.__northBootProgress=function/);
 assert.match(html, /setTimeout\(function\(\)\{if\(!window\.__northBootReady\)window\.__northBootProgress[\s\S]*?\},12000\)/,'12 seconds reports slow progress instead of replacing a healthy boot');

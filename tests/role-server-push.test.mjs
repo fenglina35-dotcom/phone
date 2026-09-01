@@ -463,7 +463,10 @@ test('native foreground and delivered role notifications wake the web inbox with
   assert.doesNotMatch(localPhoneWebView, /contentWorld: \.page/,'contentWorld plus a trailing closure selects no compatible WebKit overload in the target Xcode toolchain');
   assert.match(localPhoneWebView, /\(value as\? Bool\) == true[\s\S]{0,420}smallPhone\.pendingRolePushSync\.v1/,'the native pending flag clears only after the web pull reports success');
   assert.match(localPhoneWebView, /let delays: \[TimeInterval\] = \[1, 3, 7, 15\]/);
-  assert.match(localPhoneWebView, /didFinish navigation[\s\S]{0,1200}syncPendingRolePushIfReady\(\)/);
+  const didFinishStart=localPhoneWebView.indexOf('didFinish navigation');
+  const didFinishEnd=localPhoneWebView.indexOf('requestMediaCapturePermissionFor',didFinishStart);
+  assert.ok(didFinishStart>=0&&didFinishEnd>didFinishStart,'the bundled-page didFinish delegate must remain present');
+  assert.match(localPhoneWebView.slice(didFinishStart,didFinishEnd),/syncPendingRolePushIfReady\(\)/);
 });
 
 test('active calls invalidate ordinary scheduled pushes and restart quiet time at hangup', () => {

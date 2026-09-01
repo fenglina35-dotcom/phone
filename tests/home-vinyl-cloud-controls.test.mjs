@@ -68,7 +68,9 @@ test('private phone account keeps local login visible when only remote backup st
   assert.match(app, /if\(_privatePhoneAccount\.loggedIn\)\{try\{const info=await privatePhoneAccountCall\('account\.backup\.info'\)/);
   assert.match(app, /_privatePhoneAccount\.backup=\{found:false,unknown:true\}/);
   assert.match(app, /手机号登录仍保留在本机/);
-  assert.match(bridge, /request\.timeoutInterval = 18/);
+  assert.match(bridge, /timeoutInterval: TimeInterval = 18/);
+  assert.match(bridge, /request\.timeoutInterval = timeoutInterval/);
+  assert.match(bridge, /rawBody: prepared\.requestBody,[\s\S]{0,120}timeoutInterval: 120/);
   assert.match(bridge, /privateAccountFailureResult\(_ error: Error\)/);
   assert.match(bridge, /account_auth_timeout/);
   assert.match(bridge, /手机号登录凭证仍保留在本机/);

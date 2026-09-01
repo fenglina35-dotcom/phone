@@ -4,6 +4,8 @@ import UIKit
 import WebKit
 
 struct LocalPhoneWebView: UIViewRepresentable {
+    let generation: Int
+    let mountReason: String
     let onOpenDeviceManagement: () -> Void
     let onRecoveryNeeded: (String) -> Void
     let onRecoveryRestartReady: (Bool) -> Void
@@ -14,14 +16,19 @@ struct LocalPhoneWebView: UIViewRepresentable {
     static let recoveryContinueRequested = Notification.Name(
         "SmallPhoneNativeRecoveryContinueRequested"
     )
+    static let compositionModeRequested = Notification.Name(
+        "SmallPhoneNativeCompositionModeRequested"
+    )
     private static let processSessionID =
-        String(UUID().uuidString.prefix(8))
+        SmallPhoneDiagnosticsStore.processSessionID
 
     final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         let bridge = PhoneNativeBridge()
         let onRecoveryNeeded: (String) -> Void
         let onRecoveryRestartReady: (Bool) -> Void
         let onRecoveryContinued: () -> Void
+        let generation: Int
+        let mountReason: String
         let coordinatorID = String(UUID().uuidString.prefix(8))
         private var webViewID = ""
         private var didLoadPhone = false
@@ -38,14 +45,22 @@ struct LocalPhoneWebView: UIViewRepresentable {
         private var pendingRecoveryRestartTimeout: DispatchWorkItem?
         private var recoveryRestartInFlight = false
         private var recoveryRestartToken = 0
+        private var automaticWebContentRecoveryInFlight = false
+        private var automaticWebContentRecoveryToken = 0
+        private var compositionMode = "A"
+        private var performanceWatchdogLifecycleEpoch = 0
         private var bundledFileURL: URL?
         private var bundledReadAccessURL: URL?
         private var lastSafeAreaInsets: UIEdgeInsets?
         init(
+            generation: Int,
+            mountReason: String,
             onRecoveryNeeded: @escaping (String) -> Void,
             onRecoveryRestartReady: @escaping (Bool) -> Void,
             onRecoveryContinued: @escaping () -> Void
         ) {
+            self.generation = generation
+            self.mountReason = mountReason
             self.onRecoveryNeeded = onRecoveryNeeded
             self.onRecoveryRestartReady = onRecoveryRestartReady
             self.onRecoveryContinued = onRecoveryContinued
@@ -56,7 +71,9 @@ struct LocalPhoneWebView: UIViewRepresentable {
                     "coordinatorID": coordinatorID,
                     "processSessionID": LocalPhoneWebView.processSessionID,
                     "pid": ProcessInfo.processInfo.processIdentifier,
-                    "thermalState": Self.thermalStateName()
+                    "thermalState": Self.thermalStateName(),
+                    "generation": generation,
+                    "mountReason": mountReason
                 ]
             )
             NotificationCenter.default.addObserver(
@@ -97,6 +114,18 @@ struct LocalPhoneWebView: UIViewRepresentable {
             )
             NotificationCenter.default.addObserver(
                 self,
+                selector: #selector(applicationDidEnterBackground),
+                name: UIApplication.didEnterBackgroundNotification,
+                object: nil
+            )
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(applicationWillEnterForeground),
+                name: UIApplication.willEnterForegroundNotification,
+                object: nil
+            )
+            NotificationCenter.default.addObserver(
+                self,
                 selector: #selector(applicationDidBecomeActive),
                 name: UIApplication.didBecomeActiveNotification,
                 object: nil
@@ -113,6 +142,12 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 name: LocalPhoneWebView.recoveryContinueRequested,
                 object: nil
             )
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(compositionModeRequested(_:)),
+                name: LocalPhoneWebView.compositionModeRequested,
+                object: nil
+            )
         }
 
         deinit {
@@ -121,7 +156,9 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 fields: [
                     "coordinatorID": coordinatorID,
                     "webViewID": webViewID,
-                    "processSessionID": LocalPhoneWebView.processSessionID
+                    "processSessionID": LocalPhoneWebView.processSessionID,
+                    "generation": generation,
+                    "mountReason": mountReason
                 ]
             )
             pendingWebContentRecovery?.cancel()
@@ -162,6 +199,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
 
         @objc private func recoveryContinueRequested() {
             guard recoveryNoticeActive, !recoveryRestartInFlight else { return }
+            cancelAutomaticWebContentRecovery()
             recoveryNoticeActive = false
             if bridge.webView != nil {
                 didLoadPhone = true
@@ -176,6 +214,90 @@ struct LocalPhoneWebView: UIViewRepresentable {
             )
             DispatchQueue.main.async { [onRecoveryContinued] in
                 onRecoveryContinued()
+            }
+        }
+
+        @objc private func compositionModeRequested(
+            _ notification: Notification
+        ) {
+            let requested = String(
+                notification.userInfo?["mode"] as? String ?? "A"
+            ).uppercased() == "B" ? "B" : "A"
+            let rawSource = String(
+                (notification.userInfo?["source"] as? String ?? "recovery")
+                    .prefix(30)
+            )
+            let requestSource = rawSource.filter {
+                $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_"
+            }
+            let thermalState = Self.thermalStateName()
+            if requested == "A" &&
+                (thermalState == "serious" || thermalState == "critical") {
+                SmallPhoneDiagnosticsStore.append(
+                    "native.compositionAB.denied",
+                    fields: [
+                        "mode": requested,
+                        "source": requestSource,
+                        "thermalState": thermalState,
+                        "coordinatorID": coordinatorID,
+                        "webViewID": webViewID
+                    ]
+                )
+                if let webView = bridge.webView {
+                    applyCompositionMode(
+                        to: webView,
+                        source: "native-thermal-denied"
+                    )
+                }
+                return
+            }
+            compositionMode = requested
+            SmallPhoneDiagnosticsStore.append(
+                "native.compositionAB.request",
+                fields: [
+                    "mode": requested,
+                    "source": requestSource,
+                    "thermalState": thermalState,
+                    "coordinatorID": coordinatorID,
+                    "webViewID": webViewID
+                ]
+            )
+            guard let webView = bridge.webView else { return }
+            let applySource = requestSource.hasPrefix("web-")
+                ? "native-\(requestSource)" : "native-recovery"
+            applyCompositionMode(to: webView, source: applySource)
+        }
+
+        private func applyCompositionMode(
+            to webView: WKWebView,
+            source: String
+        ) {
+            let requested = compositionMode
+            let script = "window.privateCompositionABSet ? " +
+                "window.privateCompositionABSet(" +
+                "'\(requested)','\(source)') : " +
+                "'unavailable';"
+            webView.evaluateJavaScript(script) { [weak self] result, error in
+                guard let self else { return }
+                let returned = result as? String ?? ""
+                let status: String
+                if error != nil {
+                    status = "error"
+                } else if returned == requested {
+                    status = "ok"
+                } else {
+                    status = "unavailable"
+                }
+                SmallPhoneDiagnosticsStore.append(
+                    "native.compositionAB.applied",
+                    fields: [
+                        "mode": requested,
+                        "source": source,
+                        "status": status,
+                        "coordinatorID": self.coordinatorID,
+                        "webViewID": self.webViewID
+                    ]
+                )
             }
         }
 
@@ -195,6 +317,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
         }
 
         private func prepareRecoveryRestart(inspectArchive: Bool) {
+            cancelAutomaticWebContentRecovery()
             guard let webView = bridge.webView else {
                 onRecoveryRestartReady(inspectArchive)
                 return
@@ -289,6 +412,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
         }
 
         @objc private func applicationWillResignActive() {
+            resetWebPerformanceWatchdog(phase: "resign-active")
             responsivenessProbeToken += 1
             pendingResponsivenessProbe?.cancel()
             pendingResponsivenessProbe = nil
@@ -296,9 +420,54 @@ struct LocalPhoneWebView: UIViewRepresentable {
             pendingResponsivenessTimeout = nil
         }
 
+        @objc private func applicationDidEnterBackground() {
+            resetWebPerformanceWatchdog(phase: "background")
+        }
+
+        @objc private func applicationWillEnterForeground() {
+            resetWebPerformanceWatchdog(phase: "foreground")
+        }
+
         @objc private func applicationDidBecomeActive() {
+            resetWebPerformanceWatchdog(phase: "active")
             guard didLoadPhone, !recoveryNoticeActive else { return }
             scheduleResponsivenessProbe(after: 4)
+        }
+
+        private func resetWebPerformanceWatchdog(phase: String) {
+            performanceWatchdogLifecycleEpoch += 1
+            let epoch = performanceWatchdogLifecycleEpoch
+            guard let webView = bridge.webView,
+                  let payloadData = try? JSONSerialization.data(
+                    withJSONObject: ["epoch": epoch, "phase": phase]
+                  ),
+                  let payload = String(data: payloadData, encoding: .utf8) else {
+                return
+            }
+            let script = """
+            (() => {
+              if (typeof window.__smallPhoneNativeWatchdogEpochReset !== 'function') {
+                return 'unavailable';
+              }
+              window.__smallPhoneNativeWatchdogEpochReset(\(payload));
+              return 'applied';
+            })()
+            """
+            webView.evaluateJavaScript(script) { [weak self] result, error in
+                guard let self else { return }
+                SmallPhoneDiagnosticsStore.append(
+                    "native.watchdog.epoch",
+                    fields: [
+                        "phase": phase,
+                        "epoch": epoch,
+                        "status": error == nil
+                            ? String(result as? String ?? "unknown")
+                            : "error",
+                        "coordinatorID": self.coordinatorID,
+                        "webViewID": self.webViewID
+                    ]
+                )
+            }
         }
 
         private func sendNativePressure(memoryWarning: Bool) {
@@ -326,14 +495,16 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 fields: [
                     "coordinatorID": coordinatorID,
                     "webViewID": webViewID,
-                    "processSessionID": LocalPhoneWebView.processSessionID
+                    "processSessionID": LocalPhoneWebView.processSessionID,
+                    "generation": generation,
+                    "mountReason": mountReason
                 ]
             )
         }
 
         func recordWebViewDismantled() {
             didLoadPhone = false
-            pendingWebContentRecovery?.cancel()
+            cancelAutomaticWebContentRecovery()
             pendingStableWebContentReset?.cancel()
             pendingResponsivenessProbe?.cancel()
             pendingResponsivenessTimeout?.cancel()
@@ -344,7 +515,9 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 fields: [
                     "coordinatorID": coordinatorID,
                     "webViewID": webViewID,
-                    "processSessionID": LocalPhoneWebView.processSessionID
+                    "processSessionID": LocalPhoneWebView.processSessionID,
+                    "generation": generation,
+                    "mountReason": mountReason
                 ]
             )
         }
@@ -365,8 +538,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
         ) {
             guard !recoveryNoticeActive else { return }
             recoveryNoticeActive = true
-            pendingWebContentRecovery?.cancel()
-            pendingWebContentRecovery = nil
+            cancelAutomaticWebContentRecovery()
             pendingStableWebContentReset?.cancel()
             pendingStableWebContentReset = nil
             pendingResponsivenessProbe?.cancel()
@@ -539,6 +711,28 @@ struct LocalPhoneWebView: UIViewRepresentable {
             _ webView: WKWebView,
             didFinish navigation: WKNavigation!
         ) {
+            let automaticRecoverySucceeded =
+                automaticWebContentRecoveryInFlight &&
+                webView.url?.isFileURL == true
+            if automaticRecoverySucceeded {
+                automaticWebContentRecoveryInFlight = false
+                automaticWebContentRecoveryToken += 1
+                SmallPhoneDiagnosticsStore.append(
+                    "native.webcontent.reloadSucceeded",
+                    fields: [
+                        "coordinatorID": coordinatorID,
+                        "webViewID": webViewID,
+                        "processSessionID": LocalPhoneWebView.processSessionID,
+                        "source": "bundled-file"
+                    ]
+                )
+                if recoveryNoticeActive {
+                    recoveryNoticeActive = false
+                    DispatchQueue.main.async { [onRecoveryContinued] in
+                        onRecoveryContinued()
+                    }
+                }
+            }
             pendingWebContentRecovery?.cancel()
             pendingWebContentRecovery = nil
             didLoadPhone = true
@@ -556,6 +750,9 @@ struct LocalPhoneWebView: UIViewRepresentable {
             updateSafeArea(in: webView)
             sendNativePressure(memoryWarning: false)
             bridge.announceReady()
+            if compositionMode == "B" {
+                applyCompositionMode(to: webView, source: "page-finished")
+            }
             openPendingRolePushIfReady()
             syncPendingRolePushIfReady()
             scheduleResponsivenessProbe()
@@ -705,8 +902,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 "bounded recovery attempt \(attempt)/1"
             )
 
-            pendingWebContentRecovery?.cancel()
-            pendingWebContentRecovery = nil
+            cancelAutomaticWebContentRecovery()
 
             let appIsActive = UIApplication.shared.applicationState == .active
             guard attempt == 1,
@@ -730,8 +926,19 @@ struct LocalPhoneWebView: UIViewRepresentable {
             // A rapid reload while iOS is still reclaiming the terminated
             // process can create a white-screen/lock-screen reload storm.
             // Wait for pressure to settle, then load the exact bundled entry.
+            let recoveryToken = automaticWebContentRecoveryToken
+            SmallPhoneDiagnosticsStore.append(
+                "native.webcontent.reloadScheduled",
+                fields: [
+                    "coordinatorID": coordinatorID,
+                    "webViewID": webViewID,
+                    "processSessionID": LocalPhoneWebView.processSessionID,
+                    "delayMs": 10_000
+                ]
+            )
             let work = DispatchWorkItem { [weak self, weak webView] in
                 guard let self, let webView,
+                      self.automaticWebContentRecoveryToken == recoveryToken,
                       let fileURL = self.bundledFileURL,
                       let readAccessURL = self.bundledReadAccessURL else {
                     return
@@ -740,12 +947,32 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 let state = Self.thermalStateName()
                 guard UIApplication.shared.applicationState == .active,
                       state == "nominal" || state == "fair" else {
+                    SmallPhoneDiagnosticsStore.append(
+                        "native.webcontent.reloadDeferred",
+                        fields: [
+                            "coordinatorID": self.coordinatorID,
+                            "webViewID": self.webViewID,
+                            "processSessionID": LocalPhoneWebView.processSessionID,
+                            "thermalState": state,
+                            "appIsActive": UIApplication.shared.applicationState == .active
+                        ]
+                    )
                     self.offerNativeRecovery(
                         reason: "自动重开前检测到系统仍在发热或 App 已离开前台，已停止重载。原始数据没有清除。",
-                        event: "native.webcontent.reloadDeferred"
+                        event: "native.webcontent.recoveryOffered"
                     )
                     return
                 }
+                self.automaticWebContentRecoveryInFlight = true
+                SmallPhoneDiagnosticsStore.append(
+                    "native.webcontent.reloadStarted",
+                    fields: [
+                        "coordinatorID": self.coordinatorID,
+                        "webViewID": self.webViewID,
+                        "processSessionID": LocalPhoneWebView.processSessionID,
+                        "thermalState": state
+                    ]
+                )
                 webView.loadFileURL(
                     fileURL,
                     allowingReadAccessTo: readAccessURL
@@ -789,7 +1016,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
         }
 
         private static let webContentTerminationDefaultsKey =
-            "smallPhone.webContentTerminationTimes.v5.build253"
+            "smallPhone.webContentTerminationTimes.v5.build260"
         // WebKit exposes this legacy NSError code inconsistently across Xcode SDKs.
         // Keep the stable numeric value so older SDKs do not need the missing
         // Swift enum member for this legacy policy-change error.
@@ -804,6 +1031,20 @@ struct LocalPhoneWebView: UIViewRepresentable {
             if nativeError.domain == WKError.errorDomain &&
                 nativeError.code == Self.frameLoadInterruptedByPolicyChangeCode {
                 return
+            }
+            if automaticWebContentRecoveryInFlight {
+                automaticWebContentRecoveryInFlight = false
+                automaticWebContentRecoveryToken += 1
+                SmallPhoneDiagnosticsStore.append(
+                    "native.webcontent.reloadFailed",
+                    fields: [
+                        "coordinatorID": coordinatorID,
+                        "webViewID": webViewID,
+                        "processSessionID": LocalPhoneWebView.processSessionID,
+                        "domain": String(nativeError.domain.prefix(80)),
+                        "code": nativeError.code
+                    ]
+                )
             }
             SmallPhoneDiagnosticsStore.append(
                 "native.page.loadFailure",
@@ -822,10 +1063,19 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 event: "native.page.recoveryOffered"
             )
         }
+
+        private func cancelAutomaticWebContentRecovery() {
+            automaticWebContentRecoveryToken += 1
+            automaticWebContentRecoveryInFlight = false
+            pendingWebContentRecovery?.cancel()
+            pendingWebContentRecovery = nil
+        }
     }
 
     func makeCoordinator() -> Coordinator {
         Coordinator(
+            generation: generation,
+            mountReason: mountReason,
             onRecoveryNeeded: onRecoveryNeeded,
             onRecoveryRestartReady: onRecoveryRestartReady,
             onRecoveryContinued: onRecoveryContinued
@@ -971,15 +1221,21 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.253 (253)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.260 (260)';
       window.__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__ = true;
       const privateDiagLast = new Map();
-      window.__smallPhoneNativeDiag = (event, fields = {}, minGap = 10000) => {
+      window.__smallPhoneNativeDiag = (
+        event,
+        fields = {},
+        minGap = 10000,
+        throttleKey = ''
+      ) => {
         const name = String(event || 'runtime.event').slice(0, 80);
+        const bucket = `${name}|${String(throttleKey || '').slice(0, 120)}`;
         const now = Date.now();
         const gap = Math.max(0, Number(minGap) || 0);
-        if (gap && now - (privateDiagLast.get(name) || 0) < gap) return false;
-        privateDiagLast.set(name, now);
+        if (gap && now - (privateDiagLast.get(bucket) || 0) < gap) return false;
+        privateDiagLast.set(bucket, now);
         const safe = {};
         Object.keys(fields && typeof fields === 'object' ? fields : {})
           .slice(0, 8)
@@ -1003,7 +1259,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
       };
       window.__smallPhoneNativeDiag(
         'native.bootstrap.ready',
-        { build: '1.0.253 (253)', autoBackupPaused: true },
+        { build: '1.0.260 (260)', autoBackupPaused: true },
         0
       );
       // Keep private-App background maintenance away from the WebContent main
@@ -1022,15 +1278,225 @@ struct LocalPhoneWebView: UIViewRepresentable {
         'checkInitiative',
         'checkSpyTime'
       ]);
+      let timerHeartbeatAt = 0;
+      let timerVisibilityEpoch = 0;
+      let timerNativeLifecycleEpoch = 0;
+      let timerNativeLifecyclePhase = 'bootstrap';
+      const timerWatchdogState = phase => {
+        const nativeInactive = timerNativeLifecyclePhase === 'resign-active' ||
+          timerNativeLifecyclePhase === 'background' ||
+          timerNativeLifecyclePhase === 'foreground';
+        return {
+          epoch: timerVisibilityEpoch,
+          nativeEpoch: timerNativeLifecycleEpoch,
+          phase: String(phase || timerNativeLifecyclePhase).slice(0, 30),
+          nativePhase: timerNativeLifecyclePhase,
+          visible: !document.hidden,
+          active: !document.hidden && !nativeInactive
+        };
+      };
+      const publishTimerWatchdogEpoch = (phase, nativeEpoch = 0) => {
+        const parsedNativeEpoch = Math.max(
+          0,
+          Math.floor(Number(nativeEpoch) || 0)
+        );
+        if (parsedNativeEpoch) {
+          if (parsedNativeEpoch <= timerNativeLifecycleEpoch) {
+            return timerVisibilityEpoch;
+          }
+          timerNativeLifecycleEpoch = parsedNativeEpoch;
+          timerNativeLifecyclePhase = String(phase || 'unknown').slice(0, 30);
+        }
+        timerVisibilityEpoch += 1;
+        const state = timerWatchdogState(phase);
+        window.__SMALL_PHONE_WATCHDOG_STATE__ = state;
+        if (typeof window.__northNativePerformanceWatchReset === 'function') {
+          window.__northNativePerformanceWatchReset(
+            timerVisibilityEpoch,
+            state.phase
+          );
+        }
+        return timerVisibilityEpoch;
+      };
+      window.__SMALL_PHONE_WATCHDOG_STATE__ = timerWatchdogState('bootstrap');
+      window.__smallPhoneNativeWatchdogEpochReset = payload => {
+        const safe = payload && typeof payload === 'object' ? payload : {};
+        return publishTimerWatchdogEpoch(safe.phase, safe.epoch);
+      };
+      if (typeof document.addEventListener === 'function') {
+        document.addEventListener(
+          'visibilitychange',
+          () => publishTimerWatchdogEpoch(
+            document.hidden ? 'web-hidden' : 'web-visible'
+          ),
+          { passive: true }
+        );
+      }
+      const timerLifecycleActive = () => {
+        const watchdogState = window.__SMALL_PHONE_WATCHDOG_STATE__;
+        return !document.hidden &&
+          !(watchdogState && watchdogState.active === false);
+      };
       const privateMaintenancePaused = () => {
         const root = document.documentElement;
-        return document.hidden ||
+        return !timerLifecycleActive() ||
           root.classList.contains('north-native-startup-quiet') ||
           root.classList.contains('north-native-performance-guard');
       };
       const guardedMaintenanceCallback = callback => function(...args) {
         if (privateMaintenancePaused()) return;
         return callback.apply(window, args);
+      };
+      const timerDiagnosticContext = () => {
+        let page = 'unknown';
+        try {
+          const route = typeof window.cur === 'function'
+            ? window.cur() : null;
+          page = String(route && route.p || 'unknown').slice(0, 40);
+        } catch (_) {}
+        const root = document.documentElement;
+        const traceState = window.__SMALL_PHONE_RENDER_TRACE__;
+        const trace = traceState && typeof traceState === 'object'
+          ? traceState : {};
+        if (page === 'unknown' && trace.page) {
+          page = String(trace.page).slice(0, 40);
+        }
+        const compositionState = window.__SMALL_PHONE_COMPOSITION_STATE__;
+        return {
+          page,
+          abMode: root.classList.contains(
+            'north-private-composition-b'
+          ) ? 'B' : 'A',
+          trace: Math.max(0, Math.floor(Number(trace.trace) || 0)),
+          routeEpoch: Math.max(
+            0,
+            Math.floor(Number(trace.routeEpoch) || 0)
+          ),
+          abEpoch: Math.max(
+            0,
+            Math.floor(Number(
+              trace.abEpoch ||
+              (compositionState && compositionState.epoch)
+            ) || 0)
+          ),
+          guardActive: root.classList.contains(
+            'north-native-performance-guard'
+          ),
+          startupQuiet: root.classList.contains(
+            'north-native-startup-quiet'
+          )
+        };
+      };
+      const timerDiagnosticScope = (before, after) => {
+        const routeChanged = before.page !== after.page ||
+          before.routeEpoch !== after.routeEpoch;
+        const abChanged = before.abMode !== after.abMode ||
+          before.abEpoch !== after.abEpoch;
+        if (routeChanged && abChanged) return 'route+ab';
+        if (routeChanged) return 'route-transition';
+        if (abChanged) return 'ab-transition';
+        if (before.trace !== after.trace) return 'render-transition';
+        return 'stable';
+      };
+      const measuredTimerCallback = (callback, kind, delay, originalName) => {
+        const callbackName = String(
+          originalName || callback.name || 'anonymous'
+        ).slice(0, 60);
+        const declaredDelay = Math.max(0, Math.round(Number(delay) || 0));
+        const timerClock = () =>
+          typeof performance !== 'undefined' && performance.now
+            ? performance.now() : Date.now();
+        let expectedAt = timerClock() + declaredDelay;
+        let observedWatchdogEpoch = timerVisibilityEpoch;
+        let previousContext = timerDiagnosticContext();
+        return function(...args) {
+          const started = timerClock();
+          const callbackWatchdogEpoch = timerVisibilityEpoch;
+          const watchdogEpochChanged =
+            observedWatchdogEpoch !== callbackWatchdogEpoch;
+          observedWatchdogEpoch = callbackWatchdogEpoch;
+          const context = timerDiagnosticContext();
+          const beforeContext = previousContext;
+          const diagnosticScope = timerDiagnosticScope(beforeContext, context);
+          previousContext = context;
+          const scheduleLag = !watchdogEpochChanged &&
+            kind === 'interval' && declaredDelay >= 500
+            ? Math.max(0, Math.round(started - expectedAt)) : 0;
+          expectedAt = started + declaredDelay;
+          if (timerLifecycleActive() && scheduleLag >= 650 &&
+              typeof window.__smallPhoneNativeDiag === 'function') {
+            window.__smallPhoneNativeDiag(
+              'event-loop.lag',
+              {
+                ms: scheduleLag,
+                source: 'timer-schedule',
+                page: context.page,
+                abMode: context.abMode,
+                fromPage: beforeContext.page,
+                fromABMode: beforeContext.abMode,
+                scope: diagnosticScope,
+                trace: context.trace
+              },
+              15000,
+              [
+                callbackName,
+                diagnosticScope,
+                beforeContext.page,
+                context.page,
+                beforeContext.abMode,
+                context.abMode
+              ].join('|')
+            );
+          }
+          if (callbackName === 'native-performance-watch' &&
+              (watchdogEpochChanged || !timerLifecycleActive())) {
+            return;
+          }
+          if (timerLifecycleActive() &&
+              callbackName === 'native-performance-watch' &&
+              started - timerHeartbeatAt >= 60000) {
+            timerHeartbeatAt = started;
+            if (typeof window.__smallPhoneNativeDiag === 'function') {
+              window.__smallPhoneNativeDiag(
+                'runtime.heartbeat',
+                {
+                  source: 'timer-piggyback',
+                  page: context.page,
+                  abMode: context.abMode,
+                  guardActive: context.guardActive,
+                  startupQuiet: context.startupQuiet
+                },
+                0
+              );
+            }
+          }
+          try {
+            return callback.apply(this, args);
+          } finally {
+            const ended = timerClock();
+            const elapsed = Math.max(0, Math.round(ended - started));
+            if (elapsed >= 650 &&
+                timerLifecycleActive() &&
+                callbackWatchdogEpoch === timerVisibilityEpoch &&
+                typeof window.__smallPhoneNativeDiag === 'function') {
+              const finishedContext = timerDiagnosticContext();
+              window.__smallPhoneNativeDiag(
+                'timer.callback.slow',
+                {
+                  kind,
+                  delay: declaredDelay,
+                  callback: callbackName,
+                  page: finishedContext.page,
+                  ms: elapsed,
+                  abMode: finishedContext.abMode,
+                  guardActive: finishedContext.guardActive
+                },
+                15000,
+                [callbackName, finishedContext.page].join('|')
+              );
+            }
+          }
+        };
       };
       window.setTimeout = (callback, delay, ...args) => {
         if (typeof callback === 'function' &&
@@ -1050,8 +1516,14 @@ struct LocalPhoneWebView: UIViewRepresentable {
         }
         if (typeof callback === 'function' &&
             optionalMaintenance.has(callback.name)) {
+          const guarded = guardedMaintenanceCallback(callback);
           return nativeSetTimeout(
-            guardedMaintenanceCallback(callback),
+            measuredTimerCallback(
+              guarded,
+              'timeout',
+              delay,
+              callback.name
+            ),
             delay,
             ...args
           );
@@ -1067,8 +1539,31 @@ struct LocalPhoneWebView: UIViewRepresentable {
         }
         if (typeof callback === 'function' &&
             optionalMaintenance.has(callback.name)) {
+          const guarded = guardedMaintenanceCallback(callback);
           return nativeSetInterval(
-            guardedMaintenanceCallback(callback),
+            measuredTimerCallback(
+              guarded,
+              'interval',
+              delay,
+              callback.name
+            ),
+            delay,
+            ...args
+          );
+        }
+        if (typeof callback === 'function' &&
+            callback.name === '' && Number(delay) === 2000) {
+          // The current core has exactly one anonymous two-second interval:
+          // its private event-loop watchdog. Measuring that callback records
+          // one isolated schedule stall without wrapping inbox, call, alarm,
+          // companion-sync, or other ordinary timers.
+          return nativeSetInterval(
+            measuredTimerCallback(
+              callback,
+              'interval',
+              delay,
+              'native-performance-watch'
+            ),
             delay,
             ...args
           );
@@ -1105,7 +1600,8 @@ struct LocalPhoneWebView: UIViewRepresentable {
         request(action, payload = {}) {
           return new Promise((resolve, reject) => {
             const requestId = `native-${Date.now()}-${++sequence}`;
-            const timeoutMs = action === 'device.snapshot' ? 25000 : 60000;
+            const timeoutMs = action === 'device.snapshot' ? 25000
+              : action === 'account.backup.commit' ? 150000 : 60000;
             const timer = setTimeout(() => {
               if (!waiting.has(requestId)) return;
               waiting.delete(requestId);
