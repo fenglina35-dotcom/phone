@@ -78,7 +78,7 @@ test('co-living role limit tags use the existing bound dual-side limit path',()=
   const calls=[];
   const context=vm.createContext({
     companionDispatchRoleByText:(...args)=>{calls.push(args);return true;},
-    cohabPhoneTarget:()=>'',cohabRunPhoneInspection:()=>{},setTimeout:()=>{},String,parseInt
+    cohabPhoneTarget:()=>'',cohabRunPhoneInspection:()=>{},roleInterceptDiagnosticAction:(_outcome,ok)=>!!ok,setTimeout:()=>{},String,parseInt
   });
   vm.runInContext(`${functionSource('cohabApplyPhoneTags')}this.apply=cohabApplyPhoneTags;`,context);
   const result=context.apply('[共同生活限额|抖音|45]\n我给你改好了。',{id:'c1',remark:'角色'});
@@ -154,7 +154,8 @@ test('a co-living reply-tag turn produces only the completed inspection reaction
   const context=vm.createContext({
     cohabPhoneTarget:target=>String(target||'').trim(),
     cohabRunPhoneInspection:()=>true,
-    companionDispatchRoleByText:()=>true,
+    companionDispatchRoleByText:()=>true,roleInterceptDiagnosticAction:(_outcome,ok)=>!!ok,
+    roleInterceptDiagnosticTurnRememberFailure:()=>false,
     setTimeout:fn=>{timers.push(fn);return timers.length;},
     String,parseInt
   });
@@ -164,9 +165,9 @@ test('a co-living reply-tag turn produces only the completed inspection reaction
   assert.equal(timers.length,0,'the initiating reply must not schedule a second parallel delivery');
   const core=functionSource('cohabReplyCore'),send=functionSource('offAI');
   assert.match(core,/inspectionOwner==='offAI'&&phone\.inspect/);
-  assert.match(core,/inspection=phone\.inspect;items=\[\]/);
+  assert.match(core,/inspection=phone\.inspect;[^}]*items=\[\]/);
   assert.match(send,/await cohabRunPhoneInspection\(c\.id,inspection/);
-  assert.match(send,/if\(!items\.length&&!inspection\)toast/);
+  assert.match(send,/if\(!items\.length&&!inspection&&!\(_offAuditActionHandled\|\|_cohabAuditActionHandled\)\)toast/);
   assert.match(send,/if\(life&&!inspection\)cohabMaybeSummarize/);
 });
 

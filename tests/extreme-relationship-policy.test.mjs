@@ -16,7 +16,7 @@ assert.match(source,/function powerOn\(\)\{return false;\}/);
 assert.match(source,/function bdsmKnowledgeOn\(\)\{return false;\}/);
 assert.match(source,/function humanLikeOn\(\)\{return false;\}/);
 assert.match(source,/function extremeLoveOn\(\)\{return false;\}/);
-assert.match(source,/content=applyControlTags\(content,c,id,_statedPwd,_userText\)/,'real function execution remains connected');
+assert.match(source,/content=applyControlTags\(content,c,id,_statedPwd,_userText,_replyActionOutcome\)/,'real function execution remains connected');
 assert.match(source,/role:_naturalOn&&m\.type==='sys'\?'system':m\.role/,'real events remain system facts instead of forged user speech');
 
 console.log('role autonomy policy tests passed');

@@ -61,14 +61,20 @@ test('a failed optional de-duplication rewrite keeps an already valid genuine mo
 
 test('only optional repeat repair may preserve an earlier reply; initial and empty retries still fail closed',()=>{
   const off=functionSource('offAI'),cohab=functionSource('cohabReplyCore');
-  assert.match(off,/repeats\.length[\s\S]*try\{fix=roleVisibleEnvelopeText\(await chatAPI[\s\S]*offlineKeepValidReplyOnRepairFailure\(r,e\)/);
-  assert.match(cohab,/repairFails\.length[\s\S]*try\{fix=await cohabRoleChat[\s\S]*cohabRepeatRepairNote\(c,repairFails\)[\s\S]*offlineKeepValidReplyOnRepairFailure\(r,e\)/);
+  assert.match(off,/roleInterceptDiagnosticTurn\(c,'offline',null,'单次约会'\)/);
+  assert.match(cohab,/roleInterceptDiagnosticTurn\(c,'cohab',null,'共同生活'\)/);
+  assert.match(cohab,/auditOpt=\(opt,stage\)=>Object\.assign\(\{\},opt,\{roleInterceptAudit:audit,roleInterceptStage:stage\}\)/);
+  assert.match(off,/repeats\.length[\s\S]*try\{const fixRaw=await chatAPI[\s\S]*offlineKeepValidReplyOnRepairFailure\(r,e\)/);
+  assert.match(cohab,/repairFails\.length[\s\S]*try\{const fixRaw=await cohabRoleChat[\s\S]*cohabRepeatRepairNote\(c,repairFails\)[\s\S]*offlineKeepValidReplyOnRepairFailure\(r,e\)/);
+  assert.match(cohab,/return\{items,route,inspection,trips,travelErrors:travel\.errors\|\|\[\],_interceptAudit:audit,_interceptFinal:auditFinal,_interceptPartial:auditPartial,_interceptActionHandled:auditActionHandled,_interceptDone:false\}/);
+  assert.match(cohab,/catch\(e\)\{roleInterceptDiagnosticTurnFinish\(audit,auditFinal,\{delivered:auditActionHandled,partial:auditPartial\}\);throw e;\}/);
+  assert.match(functionSource('cohabReplyAuditFinish'),/result\._interceptDone=true;return roleInterceptDiagnosticTurnFinish\(result\._interceptAudit,result\._interceptFinal,\{delivered:!!delivered,partial:!!\(result\._interceptPartial\|\|partial\)\}\)/);
   assert.doesNotMatch(off,/let retry[\s\S]{0,240}offlineKeepValidReplyOnRepairFailure/);
   assert.doesNotMatch(cohab,/let retry[\s\S]{0,240}offlineKeepValidReplyOnRepairFailure/);
 });
 
 test('the real common-life reply pipeline delivers the first genuine answer when only its optional rewrite loses network',async()=>{
-  const runtime={calls:0,failFirst:false};
+  const runtime={calls:0,failFirst:false,auditFinished:0};
   const context=vm.createContext({
     Date,Map,String,
     offlineHistoryMessages:()=>[],cohabContextLimit:()=>30,
@@ -77,6 +83,10 @@ test('the real common-life reply pipeline delivers the first genuine answer when
     cohabRepairMessages:()=>[],
     personaPin:()=>'',offlineFormatPin:()=>'',roleReplyContinuityPin:()=>'',offlineWechatLiveOn:()=>true,
     roleVisibleEnvelopeText:x=>String(x||''),offlineRoleDrift:()=>false,
+    roleInterceptDiagnosticTurn:()=>({candidates:[],selectedId:0}),
+    roleInterceptDiagnosticTurnSelect:()=>true,
+    roleInterceptDiagnosticTurnOutcome:()=>true,
+    roleInterceptDiagnosticTurnFinish:()=>{runtime.auditFinished++;return false;},
     offReplyItems:x=>x?[{id:'genuine',who:'ta',text:'我在。'}]:[],
     cohabRoleChat:async()=>{runtime.calls++;if(runtime.failFirst||runtime.calls===2)throw new Error('network failed');return '【他抬眼看过来。】\n我在。';},
     offlineRepeatAudit:()=>({fails:['重复风险'],score:5}),cohabTimeEchoAudit:()=>({fails:[],score:0}),cohabRepeatRepairNote:()=>'',
@@ -85,10 +95,15 @@ test('the real common-life reply pipeline delivers the first genuine answer when
     cohabExtractTravelTags:x=>({text:x,plans:[],errors:[]}),cohabApplyStateTags:x=>({text:x,matched:true}),
     cohabInferVisiblePlace:()=>{},offDedupeItems:x=>x,cohabCommitTripPlans:()=>[]
   });
-  vm.runInContext(`${functionSource('offlineKeepValidReplyOnRepairFailure')}${functionSource('cohabReplyHistory')}${functionSource('cohabReplyCore')}this.run=cohabReplyCore;`,context);
+  vm.runInContext(`${functionSource('offlineKeepValidReplyOnRepairFailure')}${functionSource('cohabReplyHistory')}${functionSource('cohabReplyCore')}${functionSource('cohabReplyAuditFinish')}this.run=cohabReplyCore;this.finish=cohabReplyAuditFinish;`,context);
   const result=await context.run({id:'role',name:'角色'},{},'最新一句','最新一句',600,{});
   assert.equal(runtime.calls,2,'one successful main request plus one failed optional repair');
+  context.finish(result,true,false);
+  assert.equal(runtime.auditFinished,1,'the common-life audit must finish even when optional repair loses network');
+  context.finish(result,true,false);
+  assert.equal(runtime.auditFinished,1,'finishing the same delivered result twice must not duplicate the audit');
   assert.deepEqual(Array.from(result.items,x=>x.text),['我在。'],'the genuine first response remains deliverable');
-  runtime.calls=0;runtime.failFirst=true;
+  runtime.calls=0;runtime.failFirst=true;runtime.auditFinished=0;
   await assert.rejects(()=>context.run({id:'role',name:'角色'},{},'最新一句','最新一句',600,{}),/network failed/,'a failed first request still cannot create a fake reply');
+  assert.equal(runtime.auditFinished,1,'the common-life audit must also finish after a failed first request');
 });

@@ -19,5 +19,5 @@ test('cohabitation can persist a requested online message without duplicating it
   assert.match(app, /g\.msgs\.push\(m\);save\(\);gNotify\(g,c\)/);
   assert.match(app, /const exact=groups\.filter/);
   assert.match(app, /群聊时必须先自然追问群名，绝不能随机选择/);
-  assert.match(app, /online=cohabApplyOnlineMessageTags\(phone\.text,c\)/);
+  assert.match(app, /online=cohabApplyOnlineMessageTags\(phone\.text,c,actionOutcome\)/);
 });

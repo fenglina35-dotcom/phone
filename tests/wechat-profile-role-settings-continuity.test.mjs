@@ -82,7 +82,7 @@ test('role moments use a dated timeline, full detail route, and can inherit the 
   assert.match(app,/发布于 \$\{fmtDT\(p\.time\)\}/);
   assert.match(app,/function roleMomentRequestedUserImage\(c,opt\)/);
   assert.match(app,/opt\.images=\[src\]/);
-  assert.match(app,/consumeMomentCommands\(content,c,\{toast:true,userText:_userText\}\)/);
+  assert.match(app,/consumeMomentCommands\(content,c,\{toast:true,userText:_userText\},_replyActionOutcome\)/);
   assert.match(html,/\.wx-role-detail\{/);
   assert.match(html,/\.wx-role-moment-card \.moment-main>img/);
 });

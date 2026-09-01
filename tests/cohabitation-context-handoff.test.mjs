@@ -25,7 +25,8 @@ test('co-living may use the role-selected auxiliary model without changing old s
     gameModelSessionPage:()=>false,chatRouteSessionPage:()=>true,aiCoreOn:()=>false,
     chatRequestRoute:()=>null,chatMainCopy:x=>({...x}),
     fetchT:async(url,opt)=>{calls.push({url,body:JSON.parse(opt.body)});return{ok:true,json:async()=>({choices:[{message:{content:'ok'}}]})};},
-    chatResultText:async(_m,_o,d)=>d.choices[0].message.content,apiErrorCN:()=>'',Object
+    chatResultText:async(_m,_o,d)=>d.choices[0].message.content,apiErrorCN:()=>'',
+    roleInterceptDiagnosticTurnCandidate:()=>{},Object
   };
   vm.runInNewContext([
     functionSource('chatModelIsTtsOnly'),functionSource('chatModelTypeError'),functionSource('chatModelAssertText'),
@@ -122,13 +123,14 @@ test('an online arrival queues and writes one real face-to-face handoff without 
     cohabWechatState:()=>d,
     cohabApplyScheduleTags:text=>({text}),
     cohabApplyStateTags:text=>{d.phase='home';return{matched:true,text:String(text).replace(/\[[^\]]+\]/g,'').trim()};},
-    cohabInferOnlineState:()=>false,
+    cohabInferOnlineState:()=>false,roleInterceptDiagnosticAction:(_outcome,ok)=>!!ok,
     cohabRoot:()=>root,cohabData:()=>d,getC:()=>({id:'c1',name:'先生',model:'aux'}),
     uid:(()=>{let n=0;return()=>`id${++n}`;})(),save:()=>{},
     setTimeout:fn=>{scheduled.push(fn);return scheduled.length;},
     cohabSceneActive:()=>false,_off:null,offRender:()=>{},toast:()=>{},
     offlineReplyBudget:()=>600,
     cohabReplyCore:async()=>({items:[{id:'n1',who:'旁白',source:'ta',text:'他推门进屋，把外套挂好。'},{id:'t1',who:'ta',source:'ta',text:'我回来了。'}]}),
+    cohabReplyAuditFinish:()=>{},
     cohabPushMessage:(_d,m)=>{_d.msgs.push(m);return m;},cohabMaybeSummarize:()=>{}
   };
   vm.runInNewContext([

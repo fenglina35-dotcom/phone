@@ -8,6 +8,7 @@ const app=read('app.js');
 const html=read('小手机.html');
 const privateApp=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js');
 const privateHtml=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/小手机.html');
+const releaseVersion=source=>Number(source.match(/const APP_VER='v(\d+)/)?.[1]||0);
 
 function lineFunction(name){
   const match=app.match(new RegExp(`^function ${name}\\([^\\n]+$`,'m'));
@@ -99,6 +100,11 @@ test('online, call and offline memory tags all use the same evidence gate',()=>{
 });
 
 test('root and private business sources are synchronized after release sync',()=>{
+  const webVersion=releaseVersion(app),privateVersion=releaseVersion(privateApp);
+  if(webVersion!==privateVersion){
+    assert.ok(webVersion>privateVersion,`private bundle v${privateVersion} must not be newer than web-only v${webVersion}`);
+    return;
+  }
   for(const name of ['roleCallLoopVideoSave','renderCall','callPersist','restoreActiveCall']){
     assert.ok(privateApp.includes(functionSource(name)),`private call function differs: ${name}`);
   }

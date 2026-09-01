@@ -12,10 +12,10 @@ const pip = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/Cal
 const reportApp = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/PhoneCompanionReport.swift');
 const reportScene = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/TotalActivityReport.swift');
 
-test('v1125 web and private iOS 1.0.243 keep explicit build identities', () => {
-  assert.match(app, /APP_VER='v1125 · 对话时序与闹钟防重复版'/);
-  assert.match(app, /sw\.js\?v=1125&r=v1125-chat-continuity-alarm-1/);
-  assert.match(shell, /north-shell-v1125/);
+test('v1127 web and private iOS 1.0.253 keep explicit build identities', () => {
+  assert.match(app, /APP_VER='v1127 · 上一轮拦截诊断版'/);
+  assert.match(app, /sw\.js\?v=1127&r=v1127-intercept-diagnostics-1/);
+  assert.match(shell, /north-shell-v1127/);
   assert.match(bundleInfo, /<string>1125<\/string>/);
   assert.match(localWebView, /1\.0\.253 \(253\)/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 253;/g) || []).length, 12);

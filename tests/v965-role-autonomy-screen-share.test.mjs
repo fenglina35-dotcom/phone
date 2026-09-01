@@ -19,7 +19,7 @@ assert.match(app,/_hlPlan=null/);
 assert.match(app,/_relIntent=null/);
 assert.match(app,/function roleCapabilityPrompt\(\)/);
 assert.match(app,/执行后你要记得那是自己做过的真实事件/);
-assert.match(app,/content=applyControlTags\(content,c,id,_statedPwd,_userText\)/);
+assert.match(app,/content=applyControlTags\(content,c,id,_statedPwd,_userText,_replyActionOutcome\)/);
 assert.match(push,/必须按以下优先顺序理解：1\.角色基础人设/);
 assert.match(push,/是否使用、使用哪一种、何时使用全由角色本人决定/);
 

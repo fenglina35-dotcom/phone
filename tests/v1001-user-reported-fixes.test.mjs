@@ -139,8 +139,8 @@ test('an explicit request to post the previous announcement photo cannot silentl
   assert.match(post, /roleMomentReferencedChatImage\(c,opt\)/);
   assert.match(post, /roleMomentGenerateRequestedImage\(c,tx,opt\)\.then/);
   assert.ok(post.indexOf('roleMomentGenerateRequestedImage') < post.indexOf('publishRoleMoment(c,tx,Object.assign'), 'publication must wait for the real image attempt');
-  assert.match(app, /function consumeMomentCommands\(content,c,opt\)[\s\S]*?postRoleMoment\(c,body,opt\)[\s\S]*?return stripPostedMomentEcho\(out,posted\);\s*\}/);
-  assert.match(app, /consumeMomentCommands\(content,c,\{toast:true,userText:_userText\}\)/);
+  assert.match(app, /function consumeMomentCommands\(content,c,opt,outcome\)[\s\S]*?postRoleMoment\(c,body,opt\)[\s\S]*?return stripPostedMomentEcho\(out,posted\);\s*\}/);
+  assert.match(app, /consumeMomentCommands\(content,c,\{toast:true,userText:_userText\},_replyActionOutcome\)/);
 });
 
 test('remote control visibly enters each exact target instead of tapping one unchanged page', () => {

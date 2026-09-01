@@ -63,6 +63,7 @@ const integration=vm.createContext({
   companionRequestedAllControlAction:()=>'',
   companionStripSupersededAllControlTags:text=>text,
   companionDispatchRoleAll:()=>false,
+  roleInterceptDiagnosticAction:(_outcome,ok)=>!!ok,
   save:()=>{saveCount++;},
   cur:()=>({p:'chat'}),
   render:()=>{renderCount++;},

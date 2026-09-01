@@ -18,8 +18,8 @@ test('offline and cohab prompts use the same hidden long-term memory tag as WeCh
   assert.match(app, /重要记忆（与微信使用同一套长期记忆）/);
   assert.equal((app.match(/s\+=offlineMemoryRule\(c\);/g) || []).length, 2);
   assert.match(app, /登录\/退出微信、查看手机、屏幕共享、远程控制、同步、读取、上传和报错都只是功能操作/);
-  assert.match(app, /r=applyGrudgeTags\(r,c\);r=offlineApplyMemoryTags\(r,c,current\)\.text/);
-  assert.match(app, /retry=applyGrudgeTags\(retry,c\);retry=offlineApplyMemoryTags\(retry,c,current\)\.text/);
+  assert.match(app, /r=applyGrudgeTags\(r,c,(?:actionOutcome|_offActionOutcome)\);r=offlineApplyMemoryTags\(r,c,current,(?:actionOutcome|_offActionOutcome)\)\.text/);
+  assert.match(app, /retry=applyGrudgeTags\(retry,c,(?:actionOutcome|_retryActionOutcome)\);retry=offlineApplyMemoryTags\(retry,c,current,(?:actionOutcome|_retryActionOutcome)\)\.text/);
   assert.match(app, /if\(!note\)offlineRememberExplicitRequest\(c,current\)/);
 });
 
@@ -56,6 +56,7 @@ test('offline model memory tags execute once and never leak into visible dialogu
       return 'added';
     },
     save() { saves += 1; },
+    roleInterceptDiagnosticAction:(_outcome,ok)=>!!ok,
   };
   vm.runInNewContext(
     lineFunction('offlineApplyMemoryTags') +

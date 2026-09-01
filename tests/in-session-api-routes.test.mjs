@@ -48,7 +48,7 @@ assert.match(mount,/#talewrap/);
 assert.match(mount,/\.offstage/);
 assert.match(source,/const _isWxPage=_wxGlassPages\.includes\(c\.p\);/);
 assert.match(source,/const _wxG='';/);
-assert.match(source,/const _wxStandalonePremium=\[[^\]]*'wxprofile'[^\]]*'wxsupport'[^\]]*\]\.includes\(c\.p\);\s*const _wxP=\(c\.p==='wechat'\|\|_wxStandalonePremium\)\?' wx-premium':\['chat','pfchat','pfgroup','group'\]\.includes\(c\.p\)\?' wx-chat-premium':'';[\s\S]{0,520}?app\.innerHTML='<div class="page'\+_glass\+_wxG\+_setG\+_wxL\+_wxP\+_wxSection\+_wxFont\+'">'\+html\+'<\/div>';[\s\S]{0,700}?chatRouteMount\(c\);/);
+assert.match(source,/const _wxStandalonePremium=\[[^\]]*'wxprofile'[^\]]*'wxsupport'[^\]]*\]\.includes\(c\.p\);\s*const _wxP=\(c\.p==='wechat'\|\|_wxStandalonePremium\)\?' wx-premium':\['chat','pfchat','pfgroup','group'\]\.includes\(c\.p\)\?' wx-chat-premium':'';[\s\S]{0,520}?app\.innerHTML='<div class="page'\+_glass\+_wxG\+_setG\+_wxL\+_wxP\+_wxSection\+_wxFont\+'">'\+html\+'<\/div>';[\s\S]{0,1200}?chatRouteMount\(c\);/);
 
 const calls=[];
 const context=vm.createContext({
@@ -59,6 +59,7 @@ const context=vm.createContext({
   chatMainCopy:x=>({...x}),
   fetchT:async(url,opt)=>{calls.push({url,body:JSON.parse(opt.body)});return{ok:true,json:async()=>({choices:[{message:{content:'ok'}}]})};},
   chatResultText:async(_messages,_opt,data)=>data.choices[0].message.content,
+  roleInterceptDiagnosticTurnCandidate:(_audit,value)=>value,
   apiCaughtCN:e=>String(e),
   apiErrorCN:(status,msg)=>`${status}:${msg}`,
 });

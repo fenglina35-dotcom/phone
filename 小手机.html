@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='1125';</script>
+<script>window.__NORTH_SHELL_BUILD__='1127';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-1125-chat-continuity-alarm-1';
+  var key='north-sw-reloaded-1127-intercept-diagnostics-1';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=1125&r=v1125-chat-continuity-alarm-1';
+  var url='sw.js?v=1127&r=v1127-intercept-diagnostics-1';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -1367,9 +1367,9 @@ html.north-apple-remote-safe .music-chat-dock{margin-bottom:4px;scroll-margin-bo
 .wxlight .wx-real-profile,.wxlight .wx-subpage,.wxlight .wx-role-moments,.wxlight .wx-real-scroll,.wxlight .wx-info-scroll,.wxlight .wx-role-detail{background:#f7f7f7;color:#111}.wxlight .wx-real-nav{background:#f7f7f7;border-bottom-color:#ddd}.wxlight .wx-real-nav button,.wxlight .wx-real-nav span{color:#111}.wxlight .wx-profile-hero{background:#f7f7f7;color:#111}.wxlight .wx-profile-block,.wxlight .wx-profile-row,.wxlight .wx-profile-actions,.wxlight .wx-info-group,.wxlight .wx-chat-members{background:#fff;border-color:#e5e5e5}.wxlight .wx-chat-details-scroll{background:#f7f7f7}.wxlight .wx-chat-members button{color:#555}.wxlight .wx-chat-members button.add i{border-color:#aaa;color:#888}.wxlight .wx-profile-actions button{border-color:#e5e5e5}.wxlight .wx-info-group button{color:#111;border-color:#e8e8e8}.wxlight .wx-role-feed,.wxlight .wx-role-moment-card{background:#f7f7f7;color:#111}.wxlight .wx-role-moment-card .moment-main{border-color:#ddd}.wxlight .wx-role-moment-card .copy small,.wxlight .wx-role-moment-card>time{color:#151515}.wxlight .wx-role-detail-text{color:#111}.wxlight .wx-role-detail-actions,.wxlight .wx-role-detail-actions button+button{border-color:#ddd}.wxlight .wx-role-detail-social{background:#ebebee;color:#222}.wxlight .wx-role-detail-compose{border-color:#ddd;background:rgba(247,247,247,.97)}.wxlight .wx-role-detail-compose input{background:#e8e8eb;color:#111}.wxlight .wx-role-cover .avatar.lg{border-color:#f7f7f7}.wxlight .wx-feature-category{border-color:#ddd;background:#fff;color:#111;box-shadow:0 8px 22px rgba(0,0,0,.05)}.wxlight .wx-feature-category small{color:#74747a}.wxlight .wx-feature-tabs button{border-color:#d5d5da;background:#fff;color:#777}.wxlight .wx-feature-tabs button.on{border-color:#6c7faf;background:#edf1fb;color:#45577f}
 @media(max-width:390px){.wx-profile-hero{padding-left:17px;padding-right:17px}.wx-profile-thumbs i{width:50px;height:50px}.wx-role-cover{height:315px;flex-basis:315px}.wx-info-group button{padding-left:17px;padding-right:17px}.wx-info-group button>em{max-width:58%}}
 </style>
-<link rel="stylesheet" href="glass-theme.css?v=1125&r=music-disc-color-1">
-<link rel="stylesheet" href="wechat-me.css?v=1125">
-<link rel="stylesheet" href="pet-game.css?v=1125">
+<link rel="stylesheet" href="glass-theme.css?v=1127&r=music-disc-color-1">
+<link rel="stylesheet" href="wechat-me.css?v=1127">
+<link rel="stylesheet" href="pet-game.css?v=1127">
 <link rel="stylesheet" href="wedding-game.css?v=wedding-dual-17">
 </head>
 <body>
@@ -1423,18 +1423,18 @@ html.north-apple-remote-safe .music-chat-dock{margin-bottom:4px;scroll-margin-bo
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail(window.__northBootStarted?'本机存档读取超过 60 秒，请重新加载；仍不会删除聊天、角色或主题':'关键页面文件加载超过 60 秒，请检查网络后重新加载');},60000);
 })();
 </script>
-<script src="license-gate.js?v=1125" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=1125&r=chat-continuity-alarm-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="web-hotfix.js?v=1125&r=chat-continuity-alarm-1" onerror="__northBootFail('网页热修复组件载入失败（可能是网络或 404）')"></script>
+<script src="license-gate.js?v=1127" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=1127&r=v1127-intercept-diagnostics-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="web-hotfix.js?v=1127&r=v1127-intercept-diagnostics-1" onerror="__northBootFail('网页热修复组件载入失败（可能是网络或 404）')"></script>
 <script src="vendor/qr/qrcode.js?v=2.0.4"></script>
 <script src="vendor/qr/jsQR.js?v=1.4.0"></script>
-<script src="wechat-me.js?v=1125" onerror="__northBootFail('微信个人页组件载入失败（可能是网络或 404）')"></script>
-<script src="delivery.js?v=1125" onerror="__northBootFail('真实外卖组件载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=1125" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="pet-game.js?v=1125" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
-<script src="gift-effects.js?v=1125" onerror="console.warn('礼物粒子特效载入失败')"></script>
-<script src="thought-card-effects.js?v=1125" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
-<script src="ai-account.js?v=1125"></script>
+<script src="wechat-me.js?v=1127" onerror="__northBootFail('微信个人页组件载入失败（可能是网络或 404）')"></script>
+<script src="delivery.js?v=1127" onerror="__northBootFail('真实外卖组件载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=1127" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="pet-game.js?v=1127" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
+<script src="gift-effects.js?v=1127" onerror="console.warn('礼物粒子特效载入失败')"></script>
+<script src="thought-card-effects.js?v=1127" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
+<script src="ai-account.js?v=1127"></script>
 <script src="wedding-game.js?v=wedding-dual-17" onerror="console.warn('现代婚礼预览载入失败')"></script>
 </body>
 </html>

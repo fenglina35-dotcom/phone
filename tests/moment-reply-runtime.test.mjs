@@ -102,7 +102,7 @@ test('malformed or same-line inner thoughts stay hidden in Moments and ordinary 
   assert.equal(run.role.innerThought, '她叫我臭老登，这只小狗胆子越来越大了');
   assert.equal(run.context.stripHiddenThoughtTags('[内心|其实已经心软了]\n还要再哄我一句', run.role), '还要再哄我一句');
   assert.match(functionSource('cleanWechatVisibleLine'), /stripHiddenThoughtTags/);
-  assert.match(source, /hadHiddenThought=hiddenThoughtTagPresent\(line\);line=stripHiddenThoughtTags\(line,c\)/);
+  assert.match(source, /hiddenThoughtTags=\[[\s\S]*?hadHiddenThought=hiddenThoughtTags\.length>0,hiddenThoughtFailed=[\s\S]*?line=stripHiddenThoughtTags\(line,c\)/);
 });
 
 test('a failed Moment model call records failure and never fabricates a role comment', async () => {

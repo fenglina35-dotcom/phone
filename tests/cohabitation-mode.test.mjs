@@ -206,7 +206,10 @@ test('co-living calls require a current explicit user request and remain the rea
   for(const text of ['你现在给我打个电话','给我打过来','打视频电话给我'])assert.equal(explicit(text),true,text);
   for(const text of ['我给你打电话','他刚才给我打电话了','你为什么没给我打电话','今天工作忙吗'])assert.equal(explicit(text),false,text);
   assert.match(source,/_explicitCallTurn=!note&&explicitIncomingCallRequest\(_userText\)/,'only the current ordinary user turn can authorize a call');
-  assert.match(source,/incomingCall\(c\.id,k==='\u89c6\u9891'\?'video':'voice',\{requestedByUser:_explicitCallTurn,source:'current-model-turn'\}\)/,'the model call action must carry that current-turn authorization');
+  assert.match(source,/_queueReplyIncoming=kind=>\{const pending=new Promise\(resolve=>setTimeout\(\(\)=>\{[\s\S]*?incomingCall\(c\.id,kind,\{requestedByUser:_explicitCallTurn,source:'current-model-turn'\}\)[\s\S]*?resolve\(ok\);\},600\)\);_replyDeferredIncoming\.push\(pending\);return pending;\}/,'the queued model call must carry current-turn authorization and preserve its real result');
+  assert.match(source,/content=content\.replace\([\s\S]*?_queueReplyIncoming\(k==='\u89c6\u9891'\?'video':'voice'\);return '';\}\);/,'an inline call tag must use the same queued execution path');
+  assert.match(source,/mm=line\.match\(\/\^\\\[\u6765\u7535[\s\S]*?if\(mm\)\{_queueReplyIncoming\(mm\[1\]==='\u89c6\u9891'\?'video':'voice'\);continue;\}/,'a standalone call tag must use the same queued execution path');
+  assert.match(source,/if\(_replyDeferredIncoming\.length\)\{const callResults=await Promise\.all\(_replyDeferredIncoming\);if\(callResults\.some\(Boolean\)\)_replyAuditHandled=true;if\(callResults\.some\(ok=>!ok\)\)_replyAuditPartial=true;\}/,'the reply must await real call outcomes before completing diagnostics');
   assert.match(source,/共同生活开启期间不得在没有当前命令时自行来电/);
   assert.match(source,/按本人性格、情绪和电话频率决定是否输出来电动作，不打也可以/);
 });

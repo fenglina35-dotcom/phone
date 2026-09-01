@@ -51,6 +51,6 @@ assert.match(source,/不是心情值，不改变任何数值、亲密度、行�
 assert.match(source,/role:_naturalOn&&m\.type==='sys'\?'system':m\.role/,'system events must not masquerade as user speech');
 assert.match(source,/是否舍不得挂电话、是否挽留以及如何挽留，都由你本人的基础人设、当前关系和这通电话的真实内容决定/,'call clinginess remains character-led');
 assert.match(source,/对方明确有事、很困、要停止或重复提出挂断时必须尊重/,'clinginess retains its hard stop boundary');
-assert.match(source,/content=applyControlTags\(content,c,id,_statedPwd,_userText\)/,'lock and control execution remains connected');
+assert.match(source,/content=applyControlTags\(content,c,id,_statedPwd,_userText,_replyActionOutcome\)/,'lock and control execution remains connected');
 
 console.log('WeChat role autonomy tests passed');

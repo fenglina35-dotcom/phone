@@ -155,7 +155,7 @@ test('an incorrect internal-only model tag cannot downgrade a spoken all-lock or
   const apply=functionSource('applyControlTags');
   assert.ok(apply.indexOf('companionRequestedAllControlAction(content,requestText)') < apply.indexOf("content.replace(/[\\[【]\\s*(锁定|上锁|解锁"));
   assert.match(apply,/companionDispatchRoleAll\(allControlAction/);
-  assert.match(apply,/changed=companionReads\.changed\|\|phonePwdChanged\|\|diaryPwdChanged\|\|!!allControlAction/);
+  assert.match(apply,/changed=companionReads\.changed\|\|phonePwdChanged\|\|diaryPwdChanged\|\|allControlChanged/);
 });
 
 test('an explicit user all-control request upgrades a matching internal-only model action', () => {

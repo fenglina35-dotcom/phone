@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 
 const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const bundled=readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js',import.meta.url),'utf8');
+const releaseVersion=text=>Number(text.match(/const APP_VER='v(\d+)/)?.[1]||0);
 
 function functionSource(name){
   const start=source.indexOf(`function ${name}(`);
@@ -126,6 +127,11 @@ test('common-life travel stays separate from WeChat cards and ordinary one-time 
 });
 
 test('web source and private bundle keep the same common-life travel implementation',()=>{
+  const webVersion=releaseVersion(source),privateVersion=releaseVersion(bundled);
+  if(webVersion!==privateVersion){
+    assert.ok(webVersion>privateVersion,`private bundle v${privateVersion} must not be newer than web-only v${webVersion}`);
+    return;
+  }
   for(const name of ['cohabExtractTravelTags','cohabCommitTripPlans','cohabTravelAdvance','renderCohab']){
     const rootFn=functionSource(name),start=bundled.indexOf(`function ${name}(`);
     assert.ok(start>=0,`private bundle missing ${name}`);

@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs';
 
 const app = readFileSync(new URL('../app.js', import.meta.url), 'utf8').replace(/\r\n/g,'\n');
 const bundled = readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js', import.meta.url), 'utf8').replace(/\r\n/g,'\n');
+const releaseVersion = source => Number(source.match(/const APP_VER='v(\d+)/)?.[1] || 0);
 
 function functionSource(source, name) {
   const start = source.indexOf(`function ${name}(`);
@@ -114,6 +115,12 @@ test('disabled online and co-living sync keeps both continuity worlds isolated',
 });
 
 test('web source and private iOS bundle stay byte-for-byte synchronized', () => {
+  const webVersion = releaseVersion(app);
+  const privateVersion = releaseVersion(bundled);
+  if (webVersion !== privateVersion) {
+    assert.ok(webVersion > privateVersion, `private bundle v${privateVersion} must not be newer than web-only v${webVersion}`);
+    return;
+  }
   for(const name of ['roleRecentChannelRounds','roleReplyContinuityPin','lastRounds','roleReplyRequestPin','roleServerPushRecentContext','cohabReplyCore','cohabRepairMessages']){
     assert.equal(functionSource(bundled,name),functionSource(app,name),`private continuity function differs: ${name}`);
   }

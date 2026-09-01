@@ -57,7 +57,7 @@ assert.match(source, /【本轮允许位置报备】/);
 assert.match(source, /普通问候、催回复、关心、查岗和争吵承接绝对不能顺带附图/);
 assert.match(source, /_initiativeNoImage=initiativeBlocksImage\(note\)/);
 assert.match(source, /_initiativeNoLocation=initiativeBlocksLocation\(note\)/);
-assert.match(source, /_initiativeNoImage&&[\s\S]*photoTail=3;continue/);
+assert.match(source, /_initiativeNoImage&&[\s\S]*photoTail=3;_replyAuditPartial=true;continue/);
 assert.match(source, /_initiativeNoLocation&&[\s\S]*位置/);
 
 const blockContext = vm.createContext({});

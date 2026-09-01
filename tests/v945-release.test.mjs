@@ -13,14 +13,14 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1045 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1125 · 对话时序与闹钟防重复版'/);
-  assert.match(app,/const url='sw\.js\?v=1125&r=v1125-chat-continuity-alarm-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1125'/);
-  assert.match(html,/app\.js\?v=1125/);
-  assert.match(sw,/const BUILD='1125'/);
-  assert.match(sw,/north-shell-v1125/);
-  assert.match(index,/小手机\.html\?v=1125/);
-  assert.match(repair,/小手机\.html\?v=1125/);
+  assert.match(app,/APP_VER='v1127 · 上一轮拦截诊断版'/);
+  assert.match(app,/const url='sw\.js\?v=1127&r=v1127-intercept-diagnostics-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1127'/);
+  assert.match(html,/app\.js\?v=1127/);
+  assert.match(sw,/const BUILD='1127'/);
+  assert.match(sw,/north-shell-v1127/);
+  assert.match(index,/小手机\.html\?v=1127/);
+  assert.match(repair,/小手机\.html\?v=1127/);
 });
 
 test('the private iOS package embeds web v1125 and keeps 1.0.243 delivery',()=>{
