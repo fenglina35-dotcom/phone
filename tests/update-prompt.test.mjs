@@ -15,7 +15,7 @@ assert.match(app, /postMessage\(\{type:'north-version-query'\}\)/);
 assert.match(sw, /client\.postMessage\(\{type:'north-update-ready',build:BUILD\}\)/);
 assert.match(sw, /event\.data\.type!==['"]north-version-query['"]/);
 assert.match(html, /window\.__NORTH_SHELL_BUILD__='1127'/);
-assert.match(html, /sw\.js\?v=1127&r=v1127-intercept-diagnostics-1/);
-assert.match(html, /web-hotfix\.js\?v=1127&r=v1127-intercept-diagnostics-1/);
+assert.match(html, /sw\.js\?v=1127&r=v1127-social-studio-worldbook-1/);
+assert.match(html, /web-hotfix\.js\?v=1127&r=v1127-social-studio-worldbook-1/);
 
 console.log("update prompt tests passed");
