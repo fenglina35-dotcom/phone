@@ -82,7 +82,7 @@ assert.match(browser,/selectionCount > 1/,'multi-item bundles must retain their 
 for(const marker of ['roleRequestIntent','roleRequest','realSearch','createOrder','requestRoleClarification']){
   assert.match(bundledDelivery,new RegExp('function '+marker+'\\b'),`private delivery handoff function missing: ${marker}`);
 }
-assert.match(delivery,/function recoverExplicitDeliveryIdentity/,'the friend web entry must recover an isolated delivery identity mismatch');
+assert.match(delivery,/function recoverScopedDeliveryIdentity/,'the friend web entry must recover an isolated delivery identity mismatch');
 for(const marker of ['_realDeliveryCommandSeen=false','_realDeliveryPreludeShown=false','deliveryRolePreludeAllowed(line)',"content=String(content||'').replace(/([^\\r\\n])"]){
   assert.ok(bundledApp.includes(marker),`private app delivery handoff marker missing: ${marker}`);
 }

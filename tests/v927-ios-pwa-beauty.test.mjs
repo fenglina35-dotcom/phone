@@ -7,9 +7,9 @@ const css = fs.readFileSync(new URL('../glass-theme.css', import.meta.url), 'utf
 const app = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const project = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj', import.meta.url), 'utf8');
 
-test('v1151 web keeps private 1.0.253 compatibility', () => {
-  assert.match(app, /APP_VER='v1151 · 安卓大备份安全导入版'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='1151'/);
+test('v1153 web keeps private 1.0.253 compatibility', () => {
+  assert.match(app, /APP_VER='v1153 · 外卖独立身份与拦截释放版'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='1153'/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 253;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1\.0\.253;/g) || []).length, 12);
 });

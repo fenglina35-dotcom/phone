@@ -26,7 +26,7 @@ function runtime(config,options={}){
     uid:()=>`id${Math.random().toString(36).slice(2)}000000000000000000000000`,
     cloudId:()=> 'yb_legacycloudidentity0000000000',
     companionOwnerSecret:()=> 'legacy-companion-owner-secret',
-    privateNativeAppOn:()=>false,actId:()=> 'main',msgs:()=>[],getC:()=>null,
+    privateNativeAppOn:()=>options.privateNativeApp===true,actId:()=> 'main',msgs:()=>[],getC:()=>null,
     save(){},render(){},toast(){},openModal(){},closeModal(){},esc:v=>String(v),
     scheduleReply(){},chatAPI:async()=>'',cur:()=>({p:'chat'}),
     fetch:async(url,fetchOptions)=>{calls.push({url,options:fetchOptions});if(options.fetch)return options.fetch(url,fetchOptions,calls.length);return{ok:true,status:200,json:async()=>({ok:true,data:{providers:['taobao_flash'],payments:['alipay'],addressLabel:'朋友本人地址',addressConfirmation:true}})};}
@@ -64,6 +64,53 @@ assert.notEqual(body.client.target,'yb_legacycloudidentity0000000000');
 assert.match(body.client.ownerSecret,/^dls_/);
 assert.notEqual(body.client.ownerSecret,'legacy-companion-owner-secret');
 
+const oldTarget='yb_oldfriendidentity000000000000';
+const oldSecret='dls_oldfriendsecret000000000000';
+
+const publicWeb=runtime(undefined);
+publicWeb.context.S.food.real.enabled=true;
+await publicWeb.context.deliveryRefreshCapabilities(false);
+assert.equal(publicWeb.calls.length,1,'the shared public web page should call the built-in delivery service once');
+const publicClient=JSON.parse(publicWeb.calls[0].options.body).client;
+assert.equal(publicClient.privateApp,false);
+assert.match(publicClient.target,/^yb_[a-z0-9]{20,96}$/);
+assert.match(publicClient.ownerSecret,/^dls_/);
+assert.notEqual(publicClient.target,'yb_legacycloudidentity0000000000','public web delivery must not reuse an imported cloudId');
+assert.notEqual(publicClient.ownerSecret,'legacy-companion-owner-secret','public web delivery must not reuse the general companion secret');
+assert.equal(publicWeb.storage.get('north_delivery_client_target_v2_public_web'),publicClient.target);
+assert.equal(publicWeb.storage.get('north_delivery_connector_secret_v2_public_web'),publicClient.ownerSecret);
+
+const publicTargetKey='north_delivery_client_target_v2_public_web';
+const publicSecretKey='north_delivery_connector_secret_v2_public_web';
+const publicRecovered=runtime(undefined,{
+  storage:{[publicTargetKey]:oldTarget,[publicSecretKey]:oldSecret,unrelated_key:'keep-me'},
+  fetch:async(_url,_options,index)=>index===1
+    ?{ok:false,status:401,json:async()=>({ok:false,error:'delivery-client-auth-failed'})}
+    :{ok:true,status:200,json:async()=>({ok:true,data:{providers:['taobao_flash'],payments:['alipay'],addressLabel:'',addressConfirmation:true}})}
+});
+publicRecovered.context.S.food.real.enabled=true;
+await publicRecovered.context.deliveryRefreshCapabilities(false);
+assert.equal(publicRecovered.calls.length,2,'the public web identity should self-recover once when its own scoped secret mismatches');
+const publicFirst=JSON.parse(publicRecovered.calls[0].options.body).client;
+const publicSecond=JSON.parse(publicRecovered.calls[1].options.body).client;
+assert.equal(publicFirst.target,oldTarget);
+assert.equal(publicFirst.ownerSecret,oldSecret);
+assert.notEqual(publicSecond.target,publicFirst.target);
+assert.notEqual(publicSecond.ownerSecret,publicFirst.ownerSecret);
+assert.equal(publicRecovered.storage.get('unrelated_key'),'keep-me');
+
+const privateLegacy=runtime(undefined,{
+  privateNativeApp:true,
+  fetch:async()=>({ok:false,status:401,json:async()=>({ok:false,error:'delivery-client-auth-failed'})})
+});
+privateLegacy.context.S.food.real.enabled=true;
+await privateLegacy.context.deliveryRefreshCapabilities(false);
+assert.equal(privateLegacy.calls.length,1,'the private app legacy identity must never be rotated by the public web recovery path');
+const privateClient=JSON.parse(privateLegacy.calls[0].options.body).client;
+assert.equal(privateClient.privateApp,true);
+assert.equal(privateClient.target,'yb_legacycloudidentity0000000000');
+assert.equal(privateClient.ownerSecret,'legacy-companion-owner-secret');
+
 const invalid=runtime({
   endpoint:'https://cccccccccccccccccccc.supabase.co/functions/v1/phone-delivery',
   publishableKey,projectRef,deploymentId
@@ -76,8 +123,6 @@ assert.equal(invalid.calls.length,0,'an invalid explicit config must never call 
 
 const targetKey=`north_delivery_client_target_v2_${deploymentId}`;
 const secretKey=`north_delivery_connector_secret_v2_${deploymentId}`;
-const oldTarget='yb_oldfriendidentity000000000000';
-const oldSecret='dls_oldfriendsecret000000000000';
 const recovered=runtime({
   endpoint:`https://${projectRef}.supabase.co/functions/v1/phone-delivery`,
   publishableKey,projectRef,deploymentId
