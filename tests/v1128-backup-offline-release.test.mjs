@@ -26,16 +26,16 @@ function functionSource(name){
   throw new Error(`unterminated ${name}`);
 }
 
-test('v1153 has a unique visible identity across every public entry and cache layer',()=>{
-  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1153\'/);
-  assert.match(app,/APP_VER='v1153 · 外卖独立身份与拦截释放版'/);
-  assert.match(shell,/__NORTH_SHELL_BUILD__='1153'/);
-  assert.match(shell,/app\.js\?v=1153&r=v1153-delivery-identity-intercept-release-1/);
-  assert.match(index,/小手机\.html\?v=1153/);
-  assert.match(repair,/小手机\.html\?v=1153/);
-  assert.match(worker,/const BUILD='1153'/);
-  assert.match(worker,/north-shell-v1153-delivery-identity-intercept-release-1/);
-  assert.match(hotfix,/sw\.js\?v=1153&r=v1153-delivery-identity-intercept-release-1/);
+test('v1155 has a unique visible identity across every public entry and cache layer',()=>{
+  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1155\'/);
+  assert.match(app,/APP_VER='v1155 · 角色朋友圈图片权限版'/);
+  assert.match(shell,/__NORTH_SHELL_BUILD__='1155'/);
+  assert.match(shell,/app\.js\?v=1155&r=v1155-role-moment-image-permission-1/);
+  assert.match(index,/小手机\.html\?v=1155/);
+  assert.match(repair,/小手机\.html\?v=1155/);
+  assert.match(worker,/const BUILD='1155'/);
+  assert.match(worker,/north-shell-v1155-role-moment-image-permission-1/);
+  assert.match(hotfix,/sw\.js\?v=1155&r=v1155-role-moment-image-permission-1/);
   for(const [name,source] of Object.entries({app,shell,index,repair,worker,hotfix})){
     assert.doesNotMatch(source,/v?1127/,`${name} must not reuse the prior web version`);
   }
@@ -47,7 +47,7 @@ test('the published backup path crosses the private bridge in bounded unicode-sa
     JSON,Object,String,Math,Promise,setTimeout,Buffer,
     privatePhoneAccountCall:async(action,payload)=>{
       calls.push(action);
-      if(action==='account.backup.begin')return{transferId:'v1153-transfer',chunkCharacters:49152};
+      if(action==='account.backup.begin')return{transferId:'v1155-transfer',chunkCharacters:49152};
       if(action==='account.backup.chunk'){
         received.push(payload.chunk);
         return{accepted:true,nextOffset:Buffer.byteLength(received.join(''),'utf8')};
@@ -59,7 +59,7 @@ test('the published backup path crosses the private bridge in bounded unicode-sa
   });
   vm.runInContext(`${functionSource('privatePhoneBackupChunkEnd')}\n${functionSource('privatePhoneAccountBackupUpload')}\nthis.upload=privatePhoneAccountBackupUpload;`,context);
   const snapshot={settings:{ok:true},value:'a'.repeat(49151)+'😀'+'中'.repeat(55000)};
-  const result=await context.upload(snapshot,{capturedAt:1153});
+  const result=await context.upload(snapshot,{capturedAt:1155});
   assert.equal(result.ok,true);
   assert.equal(received.join(''),JSON.stringify(snapshot));
   assert.ok(received.length>=3);

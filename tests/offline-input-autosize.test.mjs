@@ -57,6 +57,7 @@ test('web and private app keep the offline input fix identical',()=>{
   assert.equal(functionSource(privateApp,'offInputAutoSize'),functionSource(web,'offInputAutoSize'));
   assert.equal(functionSource(privateApp,'offNarrationDecorate'),functionSource(web,'offNarrationDecorate'));
   const css=/\.offinput\{[^}]+\}\s*\.offinput #off_in\{[^}]+\}\s*\.offinput #off_in::\-webkit-scrollbar\{[^}]+\}/;
-  assert.equal(privateShell.match(css)?.[0],shell.match(css)?.[0]);
-  assert.equal(privateIndex.match(css)?.[0],privateShell.match(css)?.[0]);
+  const normEol=value=>String(value||'').replace(/\r\n/g,'\n');
+  assert.equal(normEol(privateShell.match(css)?.[0]),normEol(shell.match(css)?.[0]));
+  assert.equal(normEol(privateIndex.match(css)?.[0]),normEol(privateShell.match(css)?.[0]));
 });

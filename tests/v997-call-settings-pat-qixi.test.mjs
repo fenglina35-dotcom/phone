@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1153 · 外卖独立身份与拦截释放版'/);
+  assert.match(app,/APP_VER='v1155 · 角色朋友圈图片权限版'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1153-delivery-identity-intercept-release-1/);
-  assert.match(html,/sw\.js\?v=1153&r=v1153-delivery-identity-intercept-release-1/);
+  assert.match(html,/north-sw-reloaded-1155-role-moment-image-permission-1/);
+  assert.match(html,/sw\.js\?v=1155&r=v1155-role-moment-image-permission-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{

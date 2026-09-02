@@ -12,15 +12,15 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v1153 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1153 · 外卖独立身份与拦截释放版'/);
-  assert.match(app,/const url='sw\.js\?v=1153&r=v1153-delivery-identity-intercept-release-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1153'/);
-  assert.match(html,/app\.js\?v=1153/);
-  assert.match(sw,/const BUILD='1153'/);
-  assert.match(sw,/north-shell-v1153/);
-  assert.match(index,/小手机\.html\?v=1153/);
-  assert.match(repair,/小手机\.html\?v=1153/);
+test('v1155 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v1155 · 角色朋友圈图片权限版'/);
+  assert.match(app,/const url='sw\.js\?v=1155&r=v1155-role-moment-image-permission-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1155'/);
+  assert.match(html,/app\.js\?v=1155/);
+  assert.match(sw,/const BUILD='1155'/);
+  assert.match(sw,/north-shell-v1155/);
+  assert.match(index,/小手机\.html\?v=1155/);
+  assert.match(repair,/小手机\.html\?v=1155/);
 });
 
 test('the private iOS package embeds web v1125 and keeps 1.0.243 delivery',()=>{
