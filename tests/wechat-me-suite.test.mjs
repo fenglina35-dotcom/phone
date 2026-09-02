@@ -33,8 +33,12 @@ assert.match(shell,/vendor\/qr\/qrcode\.js/);
 assert.match(shell,/vendor\/qr\/jsQR\.js/);
 assert.match(shell,/wechat-me\.js/);
 assert.match(sw,/\.\/wechat-me\.js\?v=/);
-assert.equal(privateFeature,feature,'private package must embed the current WeChat me component');
-assert.equal(privateCss,css,'private package must embed the current WeChat me styles');
+assert.match(privateFeature,/wxMe=wxMe1037/,'private package must retain its verified WeChat me component');
+assert.match(privateCss,/\.wxme-home/,'private package must retain its verified WeChat me styles');
+assert.match(feature,/wxServiceTile\('smarthome','智能家电'/,'public web must carry the Windows smart-home entry');
+assert.match(css,/\.wx-smart-home-page/,'public web must carry the smart-home page styles');
+assert.doesNotMatch(privateFeature,/Windows 真实控制/,'web-only computer relay must not be copied into the completed private package');
+assert.doesNotMatch(privateCss,/\.wx-smart-home-page/,'web-only computer relay styles must not be copied into the completed private package');
 assert.equal(privateQr,fs.readFileSync(new URL('../vendor/qr/qrcode.js',import.meta.url),'utf8'));
 assert.equal(privateScan,fs.readFileSync(new URL('../vendor/qr/jsQR.js',import.meta.url),'utf8'));
 for(const file of ['wechat-me.js','wechat-me.css','vendor/qr/qrcode.js','vendor/qr/jsQR.js']){

@@ -1,0 +1,10 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+const here=path.dirname(fileURLToPath(import.meta.url)),root=path.resolve(here,'..'),runtime=path.join(root,'runtime');
+await fs.rm(runtime,{recursive:true,force:true});await fs.mkdir(runtime,{recursive:true});
+const webApp=await fs.readFile(path.resolve(root,'..','..','app.js'),'utf8');
+const supabaseUrl=webApp.match(/const\s+COMPANION_URL='([^']+)'/)?.[1]||'',publishableKey=webApp.match(/const\s+COMPANION_KEY='([^']+)'/)?.[1]||'';
+if(!/^https:\/\/[a-z0-9]{20}\.supabase\.co$/.test(supabaseUrl)||publishableKey.length<40)throw new Error('没有从当前小手机网页读取到一致的公开云配置');
+await fs.writeFile(path.join(runtime,'public-config.json'),JSON.stringify({supabaseUrl,publishableKey,smallPhoneUrl:'https://fenglina35-dotcom.github.io/phone/'},null,2)+'\n');
+await fs.copyFile(path.resolve(root,'..','..','native','private-small-phone','XcodeProject','PhoneCompanionTest','Assets.xcassets','AppIcon.appiconset','AppIcon 11024x1024.png'),path.join(runtime,'icon.png'));

@@ -1,0 +1,42 @@
+{
+  "name": "small-phone-smart-home-agent",
+  "version": "0.1.3",
+  "description": "小手机 Windows 智能家电助手",
+  "author": "Small Phone",
+  "private": true,
+  "type": "module",
+  "main": "src/main.mjs",
+  "scripts": {
+    "sync-runtime": "node build/sync-runtime.mjs",
+    "dev": "npm run sync-runtime && electron .",
+    "test": "node --test test/*.test.mjs",
+    "test:real": "npm run sync-runtime && node test/real-cloud-smoke.mjs",
+    "dist": "npm test && npm run sync-runtime && electron-builder --win nsis"
+  },
+  "dependencies": {
+    "multicast-dns": "7.2.5"
+  },
+  "devDependencies": {
+    "electron": "39.8.10",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "com.north.smallphone.smarthome",
+    "productName": "小手机智能家电助手",
+    "asar": true,
+    "asarUnpack": ["runtime/**"],
+    "files": ["src/**", "runtime/**", "package.json", "node_modules/multicast-dns/**", "node_modules/dns-packet/**", "node_modules/thunky/**"],
+    "directories": { "output": "dist" },
+    "win": { "icon": "runtime/icon.png", "signExecutable": false, "target": [{ "target": "nsis", "arch": ["x64"] }], "artifactName": "SmallPhoneSmartHomeAgent-${version}-Setup.${ext}" },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowElevation": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "小手机智能家电助手",
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": true
+    }
+  }
+}
