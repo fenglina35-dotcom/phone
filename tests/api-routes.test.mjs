@@ -61,7 +61,7 @@ const context = vm.createContext({
   getC: id => (context.S.contacts || []).find(contact => contact.id === id) || null,
   roleServerPushSync: () => { context.serverPushSynced = (context.serverPushSynced || 0) + 1; },
 });
-for (const name of ["chatModelIsTtsOnly", "chatModelTypeError", "chatMainCopy", "chatAuxCopy", "chatRouteCopy", "chatRoutesInit", "chatRouteContextContact", "roleChatRouteIndex", "chatRouteCurrentIndex", "chatModelPairError", "chatModelFormReady", "chatRouteSummary", "chatRouteCaptureForm", "chatRouteApply", "chatRouteFillForm", "chatRouteRefreshUI", "chatRouteSwitch", "chatRouteSaveCurrent", "chatRouteQuickOpen", "chatRouteQuickSwitch"]) {
+for (const name of ["chatModelIsTtsOnly", "chatModelTypeError", "chatMainCopy", "chatAuxCopy", "chatRouteCopy", "chatRoutesInit", "chatRouteContextContact", "roleChatRouteOwnIndex", "roleChatRouteIndex", "roleChatRouteSource", "chatRouteCurrentIndex", "chatModelPairError", "chatModelFormReady", "chatRouteSummary", "chatRouteCaptureForm", "chatRouteApply", "chatRouteFillForm", "chatRouteRefreshUI", "chatRouteSwitch", "chatRouteSaveCurrent", "chatRouteQuickOpen", "chatRouteQuickSwitch"]) {
   vm.runInContext(functionSource(name), context);
 }
 
@@ -154,8 +154,10 @@ context.S.contacts = [
   { id: 'role-b', name: '角色乙' },
 ];
 currentPage = { p: 'chat', id: 'role-a' };
+context.S.contacts[0]._chatRouteDiagnostic={routeName:'路线三'};
 assert.equal(context.chatRouteQuickSwitch(0), true);
 assert.equal(context.S.contacts[0].chatRouteIndex, 0, 'the current role stores its own route');
+assert.equal(context.S.contacts[0]._chatRouteDiagnostic, undefined, 'switching the role must clear the stale previous-route diagnosis');
 assert.equal(context.S.contacts[1].chatRouteIndex, undefined, 'switching role A must not mutate role B');
 assert.equal(context.S.settings.chatRouteActive, 2, 'switching a role must not mutate the global default route');
 currentPage = { p: 'off', id: 'role-b' };

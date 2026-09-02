@@ -43,7 +43,7 @@ test('large core state migrates to IndexedDB before localStorage reaches its bro
   assert.match(app, /recoveryStateMeaningful\(stats\)/);
   assert.match(app, /S=mergeStateData\(restored\)/);
   assert.match(functionSource('bootImages'), /^async function bootImages\(\)\{await bootOverflowCore\(\);await musicManifestRestore\(\);if\(privateNativeAppOn\(\)&&!_recoverySnapshotAt\)_recoverySnapshotAt=Date\.now\(\);try\{/);
-  assert.match(app, /if\(_coreBootRef&&!_appBootFinished\)return true/);
+  assert.match(app, /_coreBootRef\|\|\(typeof _androidOrphanCoreProbe!=='undefined'&&_androidOrphanCoreProbe\)/);
 });
 
 test('overflow saves are verified asynchronously and failures are rate limited', () => {

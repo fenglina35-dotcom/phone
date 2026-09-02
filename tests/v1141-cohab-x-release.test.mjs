@@ -6,25 +6,25 @@ import test from 'node:test';
 const root = process.cwd();
 const read = (...parts) => fs.readFileSync(path.join(root, ...parts), 'utf8');
 
-test('v1145 web identity and cache markers are aligned', () => {
+test('v1148 web identity and cache markers are aligned', () => {
   const app = read('app.js');
   const shell = read('小手机.html');
   const sw = read('sw.js');
   const hotfix = read('web-hotfix.js');
   const index = read('index.html');
   const repair = read('repair.html');
-  assert.match(app, /__NORTH_SHELL_BUILD__!=='1145'/);
-  assert.match(app, /APP_VER='v1145 · 共同生活入口兼容修复版'/);
-  assert.match(shell, /__NORTH_SHELL_BUILD__='1145'/);
-  assert.match(shell, /app\.js\?v=1145&r=v1145-cohab-entry-webkit-1/);
-  assert.match(sw, /const BUILD='1145'/);
-  assert.match(sw, /v1145-cohab-entry-webkit-hotfix-1/);
-  assert.match(hotfix, /v1145-cohab-entry-webkit-1/);
-  assert.match(index, /小手机\.html\?v=1145/);
-  assert.match(repair, /小手机\.html\?v=1145/);
+  assert.match(app, /__NORTH_SHELL_BUILD__!=='1148'/);
+  assert.match(app, /APP_VER='v1148 · 安卓启动与模型路线修复版'/);
+  assert.match(shell, /__NORTH_SHELL_BUILD__='1148'/);
+  assert.match(shell, /app\.js\?v=1148&r=v1148-android-startup-route-1/);
+  assert.match(sw, /const BUILD='1148'/);
+  assert.match(sw, /v1148-android-startup-route-hotfix-1/);
+  assert.match(hotfix, /v1148-android-startup-route-1/);
+  assert.match(index, /小手机\.html\?v=1148/);
+  assert.match(repair, /小手机\.html\?v=1148/);
 });
 
-test('v1145 publishes shared cohab memory and X comment controls', () => {
+test('v1148 publishes shared cohab memory and X comment controls', () => {
   const app = read('app.js');
   const privateCopy = read('native', 'private-small-phone', 'XcodeProject', 'PhoneCompanionTest', 'PhoneWeb.bundle', 'app.js');
   for (const source of [app, privateCopy]) {

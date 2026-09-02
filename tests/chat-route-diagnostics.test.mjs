@@ -24,11 +24,14 @@ assert.match(source,/reason:'主模型：'\+firstReason\+'；副模型：'\+wech
 const role={id:'r1',model:'chat',chatRouteIndex:0,_chatRouteDiagnostic:{at:1,outcome:'fallback',routeName:'路线一',slot:'主模型',model:'model-main',actualRoute:'路线一',actualSlot:'副模型',actualModel:'model-aux',status:503,reason:'worker <overloaded>',messageCount:14,requestChars:16384}};
 let modal='';
 const uiSandbox={
-  S:{settings:{chat:{model:'model-main'},aux:{model:'model-aux'}}},
+  S:{settings:{chat:{model:'model-main'},aux:{model:'model-aux'},chatRouteActive:0}},
   CHAT_ROUTE_NAMES:['路线一','路线二','路线三','路线四'],
-  chatRequestRoute:()=>({model:'model-main',aux:{model:'model-aux'}}),
+  chatRoutesInit:()=>Array.from({length:4},(_,i)=>({base:'https://route-'+i+'.example/v1',key:'key-'+i,model:'model-'+i,aux:{model:'aux-'+i}})),
+  chatRequestRoute:i=>({model:'model-'+i,aux:{model:'aux-'+i}}),
   getC:id=>id==='r1'?role:null,
-  roleChatRouteIndex:()=>0,
+  roleChatRouteOwnIndex:c=>Number.isInteger(c.chatRouteIndex)?c.chatRouteIndex:null,
+  roleChatRouteIndex:c=>Number.isInteger(c.chatRouteIndex)?c.chatRouteIndex:0,
+  roleChatRouteSource:c=>Number.isInteger(c.chatRouteIndex)?'角色独立路线':'跟随默认路线',
   fmtDT:()=> '2026/8/31 12:00',
   esc:value=>String(value??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'),
   openModal:html=>{modal=html;},
@@ -43,6 +46,12 @@ assert.match(modal,/model-aux/);
 assert.match(modal,/14 条 · 16384 字符/);
 assert.match(modal,/HTTP 503/);
 assert.match(modal,/worker &lt;overloaded&gt;/,'raw provider details must be HTML-escaped before display');
+
+role.chatRouteIndex=1;
+uiSandbox.roleChatDiagnosticOpen('r1');
+assert.match(modal,/切换前实际结果/,'an old route-three-style record must not masquerade as the current route');
+assert.match(modal,/当前路线尚未发起新请求|当前路线二尚未发起新请求/);
+role.chatRouteIndex=0;
 
 role.model='aux';
 role._chatRouteDiagnostic={at:2,outcome:'failed',routeName:'路线一',slot:'副模型',model:'model-aux',actualRoute:'路线一',actualSlot:'副模型',actualModel:'model-aux',status:503,reason:'provider overloaded',messageCount:18,requestChars:22000};
