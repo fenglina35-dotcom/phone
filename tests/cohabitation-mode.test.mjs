@@ -191,9 +191,10 @@ test('co-living UI exposes persistent status, return notice and test controls',(
   assert.match(html,/\.cohab-wx-state/);
   assert.match(source,/function cohabWechatNavBadge\(c\)/);
   assert.match(source,/page\.p==='off'&&stage\.querySelector\('\.cohab-status-chip'\)/);
-  assert.match(source,/function cohabActionTap\(e,action,id\).*preventDefault.*stopPropagation.*action==='controls'.*action==='quit'/s,'all mobile co-living controls must share the synchronous guarded route');
+  assert.match(source,/function cohabActionTap\(source,action,id\).*el\.dataset\.cohabAction.*el\.dataset\.cohabCid.*_cohabActionGuard.*action==='controls'.*action==='quit'/s,'all mobile co-living controls must use element data through the synchronous guarded route');
   assert.doesNotMatch(functionSource('cohabActionTap'),/setTimeout/,'co-living taps must not wait for a later event-loop turn');
-  assert.match(source,/type="button" onclick="return cohabActionTap\(event,'enter','\$\{cid\}'\)"/,'the entry button must pass the real tap event through the guarded route');
+  assert.doesNotMatch(functionSource('cohabActionTap'),/\bevent\b/,'the shared tap handler must not depend on WebKit exposing an implicit global event');
+  assert.match(source,/type="button" data-cohab-action="enter" data-cohab-cid="\$\{esc\(cid\)\}" onclick="return cohabActionTap\(this\)"/,'the entry button must pass its own stable element through the guarded route');
   assert.match(source,/aria-label="返回桌面" onclick="return cohabActionTap\(null,'quit','\$\{id\}'\)"/,'the co-living back control must be a real synchronous button');
   assert.match(functionSource('cohabEnter'),/go\('off',\{id,mode:'cohab'\}\);cohabPersistAfterEnter\(\).*return true/s,'co-living entry must navigate before deferring the potentially heavy save');
   assert.match(preview,/共同生活 · 测试版/);

@@ -83,14 +83,15 @@ test('cohabitation entry paints the destination before heavy persistence', () =>
   const end = app.indexOf('\nfunction ', start + 10);
   const fn = app.slice(start, end);
   assert.ok(fn.indexOf("go('off',{id,mode:'cohab'})") < fn.indexOf('cohabPersistAfterEnter()'));
-  assert.match(app, /cohabActionTap\(event,'enter','\$\{cid\}'\)/);
+  assert.match(app, /data-cohab-action="enter" data-cohab-cid="\$\{esc\(cid\)\}" onclick="return cohabActionTap\(this\)"/);
   assert.match(app, /requestAnimationFrame\(\(\)=>setTimeout\(run,0\)\)/);
   assert.match(app, /function closeModal\(\)\{const m=\$\('#modal'\);if\(!m\)return false/);
 });
 
 test('root and private web logic remain byte-identical', () => {
   assert.equal(functionSource(privateApp,'cohabEnter'),functionSource(app,'cohabEnter'));
-  for(const marker of ['appWatchRoleLock:false','允许角色自主锁定软件',"cohabActionTap(event,'enter'"]){
+  assert.equal(functionSource(privateApp,'cohabActionTap'),functionSource(app,'cohabActionTap'));
+  for(const marker of ['appWatchRoleLock:false','允许角色自主锁定软件','data-cohab-action="enter"','cohabActionTap(this)']){
     assert.ok(privateApp.includes(marker),`private app lock/cohab marker missing: ${marker}`);
   }
 });

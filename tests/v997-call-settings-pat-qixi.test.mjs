@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1141 · 共同生活记忆与X评论定制版'/);
+  assert.match(app,/APP_VER='v1145 · 共同生活入口兼容修复版'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1141-cohab-memory-x-comments-1/);
-  assert.match(html,/sw\.js\?v=1141&r=v1141-cohab-memory-x-comments-1/);
+  assert.match(html,/north-sw-reloaded-1145-cohab-memory-x-comments-1/);
+  assert.match(html,/sw\.js\?v=1145&r=v1145-cohab-entry-webkit-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{
