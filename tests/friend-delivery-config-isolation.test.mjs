@@ -5,8 +5,9 @@ import vm from 'node:vm';
 
 const source=fs.readFileSync(new URL('../delivery.js',import.meta.url),'utf8');
 
-function runtime(config){
+function runtime(config,options={}){
   const storage=new Map();
+  for(const [key,value] of Object.entries(options.storage||{}))storage.set(key,String(value));
   const calls=[];
   const context={
     NORTH_DELIVERY_CONFIG:config,
@@ -18,7 +19,7 @@ function runtime(config){
       orders:[{id:'old-real',real:true},{id:'virtual-story',real:false}],
       real:{enabled:true,addressLabel:'作者旧地址',approvedAddressFingerprint:'old-fingerprint',lastCapability:{ok:true},roleTasks:{old:{}},learnedMemories:[{id:'old'}],preferences:{milkTea:{brands:'old'}}}
     }},
-    localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,String(v))},
+    localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,String(v)),removeItem:k=>storage.delete(k)},
     crypto:crypto.webcrypto,URL,AbortController,Date,Math,JSON,Promise,console,
     document:{hidden:false,addEventListener(){}},
     addEventListener(){},setTimeout(){return 0},clearTimeout(){},
@@ -28,7 +29,7 @@ function runtime(config){
     privateNativeAppOn:()=>false,actId:()=> 'main',msgs:()=>[],getC:()=>null,
     save(){},render(){},toast(){},openModal(){},closeModal(){},esc:v=>String(v),
     scheduleReply(){},chatAPI:async()=>'',cur:()=>({p:'chat'}),
-    fetch:async(url,options)=>{calls.push({url,options});return{ok:true,status:200,json:async()=>({ok:true,data:{providers:['taobao_flash'],payments:['alipay'],addressLabel:'朋友本人地址',addressConfirmation:true}})};}
+    fetch:async(url,fetchOptions)=>{calls.push({url,options:fetchOptions});if(options.fetch)return options.fetch(url,fetchOptions,calls.length);return{ok:true,status:200,json:async()=>({ok:true,data:{providers:['taobao_flash'],payments:['alipay'],addressLabel:'朋友本人地址',addressConfirmation:true}})};}
   };
   context.window=context;
   vm.runInNewContext(source,context,{filename:'delivery.js'});
@@ -72,5 +73,65 @@ assert.match(invalid.context.S.food.real.connectorConfigError,/禁止回退到�
 invalid.context.deliverySetEnabled(true);
 await invalid.context.deliveryRefreshCapabilities(false);
 assert.equal(invalid.calls.length,0,'an invalid explicit config must never call the legacy companion URL');
+
+const targetKey=`north_delivery_client_target_v2_${deploymentId}`;
+const secretKey=`north_delivery_connector_secret_v2_${deploymentId}`;
+const oldTarget='yb_oldfriendidentity000000000000';
+const oldSecret='dls_oldfriendsecret000000000000';
+const recovered=runtime({
+  endpoint:`https://${projectRef}.supabase.co/functions/v1/phone-delivery`,
+  publishableKey,projectRef,deploymentId
+},{
+  storage:{[targetKey]:oldTarget,[secretKey]:oldSecret,unrelated_key:'keep-me'},
+  fetch:async(_url,_options,index)=>index===1
+    ?{ok:false,status:401,json:async()=>({ok:false,error:'delivery-client-auth-failed'})}
+    :{ok:true,status:200,json:async()=>({ok:true,data:{providers:['taobao_flash'],payments:['alipay'],addressLabel:'',addressConfirmation:true}})}
+});
+recovered.context.S.food.real.enabled=true;
+recovered.context.S.food.real.addressLabel='朋友旧地址';
+recovered.context.S.food.real.approvedAddressFingerprint='old-address-proof';
+recovered.context.S.food.real.lastCapability={ok:true};
+recovered.context.S.food.real.deviceLinkStatus={linked:true,online:true};
+recovered.context.S.food.real.pendingCreates=[{id:'old'}];
+recovered.context.S.food.real.roleTasks={old:{status:'running'}};
+recovered.context.S.food.real.roleAttempts={old:{status:'running'}};
+recovered.context.S.food.real.roleClarifications={old:{taskId:'old'}};
+recovered.context.S.food.real.learnedMemories=[{id:'memory-kept',roleId:'r1',active:true}];
+recovered.context.S.food.real.preferences={milkTea:{brands:'朋友自己的偏好'}};
+recovered.context.S.food.cart=[{offerId:'stale-real-cart'}];
+recovered.context.S.food.results=[{offerId:'stale-result'}];
+recovered.context.S.food.orders=[{id:'stale-real',real:true},{id:'story-kept',real:false}];
+await recovered.context.deliveryRefreshCapabilities(false);
+assert.equal(recovered.calls.length,2,'an explicit auth mismatch should rotate identity and retry exactly once');
+const firstAuth=JSON.parse(recovered.calls[0].options.body).client;
+const secondAuth=JSON.parse(recovered.calls[1].options.body).client;
+assert.equal(firstAuth.target,oldTarget);
+assert.equal(firstAuth.ownerSecret,oldSecret);
+assert.match(secondAuth.target,/^yb_[a-z0-9]{20,96}$/);
+assert.match(secondAuth.ownerSecret,/^dls_/);
+assert.notEqual(secondAuth.target,firstAuth.target);
+assert.notEqual(secondAuth.ownerSecret,firstAuth.ownerSecret);
+assert.equal(recovered.storage.get('unrelated_key'),'keep-me','identity recovery must not clear unrelated site data');
+assert.equal(recovered.context.S.food.real.enabled,true,'identity recovery should keep the user setting enabled');
+assert.equal(recovered.context.S.food.real.addressLabel,'');
+assert.equal(recovered.context.S.food.real.approvedAddressFingerprint,'');
+assert.equal(recovered.context.S.food.real.deviceLinkStatus,null);
+assert.deepEqual(recovered.context.S.food.orders.map(row=>row.id),['story-kept']);
+assert.equal(recovered.context.S.food.cart.length,0);
+assert.equal(recovered.context.S.food.results.length,0);
+assert.equal(recovered.context.S.food.real.learnedMemories[0].id,'memory-kept','learned preferences must survive identity recovery');
+assert.equal(recovered.context.S.food.real.preferences.milkTea.brands,'朋友自己的偏好','manual preferences must survive identity recovery');
+
+const repeatedFailure=runtime({
+  endpoint:`https://${projectRef}.supabase.co/functions/v1/phone-delivery`,
+  publishableKey,projectRef,deploymentId
+},{
+  storage:{[targetKey]:oldTarget,[secretKey]:oldSecret},
+  fetch:async()=>({ok:false,status:401,json:async()=>({ok:false,error:'delivery-client-auth-failed'})})
+});
+repeatedFailure.context.S.food.real.enabled=true;
+await repeatedFailure.context.deliveryRefreshCapabilities(false);
+assert.equal(repeatedFailure.calls.length,2,'a repeated auth failure must stop after one identity rotation');
+assert.equal(repeatedFailure.context.S.food.real.lastCapability.error,'delivery-client-auth-failed');
 
 console.log('friend delivery config isolation tests passed');

@@ -6,25 +6,25 @@ import test from 'node:test';
 const root = process.cwd();
 const read = (...parts) => fs.readFileSync(path.join(root, ...parts), 'utf8');
 
-test('v1149 web identity and cache markers are aligned', () => {
+test('v1150 web identity and cache markers are aligned', () => {
   const app = read('app.js');
   const shell = read('小手机.html');
   const sw = read('sw.js');
   const hotfix = read('web-hotfix.js');
   const index = read('index.html');
   const repair = read('repair.html');
-  assert.match(app, /__NORTH_SHELL_BUILD__!=='1149'/);
-  assert.match(app, /APP_VER='v1149 · 顶部心情稳定显示版'/);
-  assert.match(shell, /__NORTH_SHELL_BUILD__='1149'/);
-  assert.match(shell, /app\.js\?v=1149&r=v1149-mood-stability-1/);
-  assert.match(sw, /const BUILD='1149'/);
-  assert.match(sw, /v1149-mood-stability-hotfix-1/);
-  assert.match(hotfix, /v1149-mood-stability-1/);
-  assert.match(index, /小手机\.html\?v=1149/);
-  assert.match(repair, /小手机\.html\?v=1149/);
+  assert.match(app, /__NORTH_SHELL_BUILD__!=='1150'/);
+  assert.match(app, /APP_VER='v1150 · 朋友外卖身份自愈版'/);
+  assert.match(shell, /__NORTH_SHELL_BUILD__='1150'/);
+  assert.match(shell, /app\.js\?v=1150&r=v1150-delivery-auth-recovery-1/);
+  assert.match(sw, /const BUILD='1150'/);
+  assert.match(sw, /v1150-delivery-auth-recovery-hotfix-1/);
+  assert.match(hotfix, /v1150-delivery-auth-recovery-1/);
+  assert.match(index, /小手机\.html\?v=1150/);
+  assert.match(repair, /小手机\.html\?v=1150/);
 });
 
-test('v1149 publishes shared cohab memory and X comment controls', () => {
+test('v1150 publishes shared cohab memory and X comment controls', () => {
   const app = read('app.js');
   const privateCopy = read('native', 'private-small-phone', 'XcodeProject', 'PhoneCompanionTest', 'PhoneWeb.bundle', 'app.js');
   for (const source of [app, privateCopy]) {

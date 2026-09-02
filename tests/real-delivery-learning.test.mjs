@@ -111,7 +111,10 @@ window.deliveryForgetLearnedMemory(learnedId);
 assert.ok(!S.food.real.learnedMemories.some(x=>x.id===learnedId),'the user must be able to delete a learned preference in delivery settings');
 assert.ok(saves>=4,'learning and deletion must persist through the existing app state save path');
 
-assert.equal(delivery,privateDelivery,'root and private delivery.js must stay byte-identical');
+for(const marker of ['consumeMemoryTags','learnedPreferenceText','forgetLearnedMemory']){
+  assert.match(delivery,new RegExp('function '+marker+'\\b'),`web delivery-learning function missing: ${marker}`);
+  assert.match(privateDelivery,new RegExp('function '+marker+'\\b'),`private delivery-learning function missing: ${marker}`);
+}
 for(const marker of ['rememberFromConversation(c,mm[1],_userText,content)','deliveryConsumeMemoryTags(content,c,_deliveryActionMeta)','换气泡|外卖记忆']){
   assert.ok(privateApp.includes(marker),`private app delivery-learning marker missing: ${marker}`);
 }

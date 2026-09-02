@@ -55,6 +55,19 @@
     if(!/^yb_[a-z0-9]{20,96}$/.test(target)){try{var bytes=new Uint8Array(24);crypto.getRandomValues(bytes);target='yb_'+Array.from(bytes).map(function(x){return x.toString(16).padStart(2,'0');}).join('');}catch(_){target='yb_'+String(uid()+uid()).toLowerCase().replace(/[^a-z0-9]/g,'').padEnd(24,'0').slice(0,48);}try{localStorage.setItem(key,target);}catch(_){}}
     return target;
   }
+  function freshDeliveryConnectorSecret(){try{var bytes=new Uint8Array(32);crypto.getRandomValues(bytes);return'dls_'+Array.from(bytes).map(function(x){return x.toString(16).padStart(2,'0');}).join('');}catch(_){return'dls_'+uid()+uid();}}
+  function freshDeliveryClientTarget(){try{var bytes=new Uint8Array(24);crypto.getRandomValues(bytes);return'yb_'+Array.from(bytes).map(function(x){return x.toString(16).padStart(2,'0');}).join('');}catch(_){return'yb_'+String(uid()+uid()).toLowerCase().replace(/[^a-z0-9]/g,'').padEnd(24,'0').slice(0,48);}}
+  function recoverExplicitDeliveryIdentity(r,cfg){
+    if(!cfg||!cfg.explicit||!cfg.valid)return false;
+    var scope=text(cfg.deploymentId,120).replace(/[^a-z0-9_-]/gi,'_');if(!scope)return false;
+    var targetKey='north_delivery_client_target_v2_'+scope,secretKey='north_delivery_connector_secret_v2_'+scope,oldTarget=null,oldSecret=null,newTarget=freshDeliveryClientTarget(),newSecret=freshDeliveryConnectorSecret();
+    try{oldTarget=localStorage.getItem(targetKey);oldSecret=localStorage.getItem(secretKey);localStorage.setItem(targetKey,newTarget);localStorage.setItem(secretKey,newSecret);if(localStorage.getItem(targetKey)!==newTarget||localStorage.getItem(secretKey)!==newSecret)throw new Error('delivery-identity-storage-failed');}
+    catch(_){try{if(oldTarget==null)localStorage.removeItem(targetKey);else localStorage.setItem(targetKey,oldTarget);if(oldSecret==null)localStorage.removeItem(secretKey);else localStorage.setItem(secretKey,oldSecret);}catch(__){}return false;}
+    r.addressLabel='';r.approvedAddressFingerprint='';r.lastCapability=null;r.deviceLinkStatus=null;r.lastRoleNotice=null;r.pendingCreates=[];r.roleTasks={};r.roleAttempts={};r.roleClarifications={};r.identityRecoveredAt=Date.now();
+    S.food.cart=[];S.food.results=[];S.food.orders=(S.food.orders||[]).filter(function(order){return !order||order.real!==true;});
+    try{save();}catch(_){}
+    return true;
+  }
   function isolateDeliveryState(r,cfg){
     if(!cfg.explicit)return;
     var fingerprint=(cfg.valid?'isolated:':'invalid:')+cfg.projectRef+'|'+cfg.deploymentId+'|'+cfg.endpoint;
@@ -138,7 +151,7 @@
   async function request(action,payload,timeout){
     var url=connectorUrl();
     if(!url)throw new Error('还没有连接真实外卖服务');
-    var deadline=Date.now()+(timeout||25000),relayRequestId=deliveryRelayRequestId();
+    var deadline=Date.now()+(timeout||25000),relayRequestId=deliveryRelayRequestId(),identityRecoveryAttempted=false;
     while(Date.now()<deadline){var ctl=typeof AbortController==='function'?new AbortController():null,remaining=Math.max(1000,deadline-Date.now()),timer=ctl?setTimeout(function(){ctl.abort();},remaining):0;
     try{
       var cfg=deliveryRuntimeConfig(),official=url===builtInConnectorUrl(),headers={'content-type':'application/json','x-north-delivery-contract':'1'};
@@ -148,7 +161,7 @@
       var res=await fetch(url,{method:'POST',credentials:'include',headers:headers,body:JSON.stringify({action:action,payload:payload||{},client:client}),signal:ctl&&ctl.signal});
       var body=null;try{body=await res.json();}catch(_){}
       if(res.status===202&&body&&body.pending===true){if(timer)clearTimeout(timer);await new Promise(function(resolve){setTimeout(resolve,Math.max(500,Math.min(3000,+body.retryAfterMs||1200)));});continue;}
-      if(!res.ok||!body||body.ok===false)throw new Error(text(body&&body.error||('真实外卖服务 HTTP '+res.status),180));
+      if(!res.ok||!body||body.ok===false){var serviceError=text(body&&body.error||('真实外卖服务 HTTP '+res.status),180);if(serviceError==='delivery-client-auth-failed'&&!identityRecoveryAttempted&&cfg.explicit&&cfg.valid){identityRecoveryAttempted=true;if(recoverExplicitDeliveryIdentity(foodState(),cfg))continue;throw new Error('外卖身份无法安全重建，请确认浏览器允许保存网站数据后重试');}throw new Error(serviceError);}
       return body.data==null?body:body.data;
     }catch(e){if(e&&e.name==='AbortError')throw new Error('真实外卖服务响应超时');throw e;}finally{if(timer)clearTimeout(timer);}}
     throw new Error('真实外卖服务响应超时');

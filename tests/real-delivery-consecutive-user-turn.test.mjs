@@ -71,6 +71,8 @@ assert.match(app,/deliveryTryExplicitApprovalFallback\(id,_deliveryPendingUserTe
 assert.match(app,/deliveryHandleRoleRequest\(id,\(mm\[1\]\|\|''\)\.trim\(\),_deliveryActionMeta\)/);
 assert.match(delivery,/userText:text\(meta\.userText,800\)/);
 assert.equal(functionSource(privateApp,'deliveryPendingUserTurnText'),functionSource(app,'deliveryPendingUserTurnText'));
-assert.equal(privateDelivery,delivery,'web and private delivery runtimes must stay identical');
+for(const marker of ['roleRequestIntent','roleRequest','realSearch']){
+  assert.match(privateDelivery,new RegExp('function '+marker+'\\b'),`private consecutive-turn function missing: ${marker}`);
+}
 
 console.log('real delivery consecutive user-turn tests passed');

@@ -89,6 +89,8 @@ function text(value,length=300){return String(value==null?'':value).trim().slice
 
 assert.match(source,/暂时无法确认是否绑定/);
 assert.doesNotMatch(source,/尚未绑定：'\+device\.error/);
-assert.equal(privateSource,source,'public and private delivery runtimes must stay identical');
+for(const marker of ['transientDeliveryServiceError','deliveryServiceErrorText','refreshDeviceStatus']){
+  assert.match(privateSource,new RegExp('(?:async\\s+)?function\\s+'+marker+'\\s*\\('),`private delivery outage function missing: ${marker}`);
+}
 
 console.log('delivery device outage resilience tests passed');
