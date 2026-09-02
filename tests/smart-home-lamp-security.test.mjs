@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const read = path => fs.readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
-const web = read('smart-home.js');
 const main = read('services/phone-smart-home-agent/src/main.mjs');
 const relay = read('services/phone-smart-home-agent/src/relay-worker.mjs');
 const local = read('services/phone-smart-home-agent/src/meross-local.mjs');
@@ -21,7 +20,6 @@ assert.match(migration, /unique index[\s\S]*lamp_id_hash/i, 'cloud must prevent 
 assert.match(migration, /lamp-already-bound-to-another-home/, 'duplicate claims must return an explicit error');
 assert.match(migration, /revoke execute on function public\.phone_smart_home_bind_device[\s\S]*from anon,authenticated/, 'the unverified legacy bind RPC must be disabled');
 assert.match(migration, /phone_smart_home_pull_verified/, 'jobs may only be pulled by the agent bound to the same lamp fingerprint');
-assert.match(web, /securityVerified/, 'web controls and role access must require verified lamp ownership');
 assert.match(guide, /亲眼确认闪烁的是自己的灯/);
 assert.match(guide, /公共Wi‑Fi/);
 assert.doesNotMatch(guide, /Wi-Fi 密码.{0,20}(?:填写|输入|上传)/);

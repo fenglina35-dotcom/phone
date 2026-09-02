@@ -55,9 +55,8 @@ const runtime={
 runtime.window=runtime;
 vm.runInNewContext(feature,runtime);
 const freshPage=runtime.renderWxSmartHome();
-assert.match(freshPage,/连接并验证电脑助手/,'an unpaired browser must render the physical verification pairing page');
+assert.match(freshPage,/连接电脑助手/,'an unpaired browser must render the real pairing page');
 assert.match(freshPage,/生成十位配对码/);
-assert.match(freshPage,/闪烁两次/);
 assert.doesNotMatch(freshPage,/角色控制待接入|预览/,'the retired private preview must not be rendered on public web');
 
 console.log('smart-home web and role security tests passed');

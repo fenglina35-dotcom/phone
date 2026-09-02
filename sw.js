@@ -1,6 +1,6 @@
-const BUILD='1142';
-const HOTFIX='v1142-smart-home-verified-lamp-hotfix-1';
-const SHELL_CACHE='north-shell-v1142-smart-home-verified-lamp-1';
+const BUILD='1141';
+const HOTFIX='v1141-cohab-memory-x-comments-hotfix-1';
+const SHELL_CACHE='north-shell-v1141-cohab-memory-x-comments-1';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
@@ -9,7 +9,7 @@ const CORE_FILES=[
   {url:'./小手机.html?v='+BUILD+'&r='+HOTFIX,kind:'html'},
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
   {url:'./app.js?v='+BUILD+'&r='+HOTFIX,kind:'app'},
-  {url:'./web-hotfix.js?v='+BUILD+'&r=v1142-smart-home-verified-lamp-1',kind:'hotfix'},
+  {url:'./web-hotfix.js?v='+BUILD+'&r=v1141-cohab-memory-x-comments-1',kind:'hotfix'},
   {url:'./ai-account.js?v='+BUILD,kind:'ai'}
 ];
 const OPTIONAL_FILES=[
@@ -62,7 +62,7 @@ function validShellText(kind,text){
     &&text.includes("window.__NORTH_SHELL_BUILD__!=='"+BUILD+"'")
     &&text.includes('showGate();');
   if(kind==='hotfix')return text.length>800
-    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1142-smart-home-verified-lamp-1'")
+    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1141-cohab-memory-x-comments-1'")
     &&text.includes('reconcileExpiredWxLogin')
     &&text.includes('withBaseImageCheck')
     &&text.includes('isStoredImgRef');
