@@ -12,6 +12,12 @@ export const NAMED_COLORS = Object.freeze({
   purple: [282, 58], white: [0, 0],
 });
 
+export function lampFingerprint(accessoryId) {
+  const value = String(accessoryId || '').trim().toLowerCase();
+  if (!/^[0-9a-z:-]{8,96}$/.test(value)) throw new Error('灯具没有提供可固定的唯一身份');
+  return `sha256:${crypto.createHash('sha256').update(`msl430|${value}`).digest('hex')}`;
+}
+
 function privateAddress(value) {
   if (net.isIPv4(value)) {
     const parts = value.split('.').map(Number);
@@ -142,8 +148,9 @@ export class MerossLocalController {
     } finally {
       for (const socket of sockets) socket.destroy();
     }
-    return [...services.values()].filter(service => String(service.txt.md || '').toLowerCase() === 'msl430' && hosts.has(service.target) && service.port > 0).map(service => ({
+    return [...services.values()].filter(service => String(service.txt.md || '').toLowerCase() === 'msl430' && hosts.has(service.target) && service.port > 0 && service.txt.id).map(service => ({
       host: hosts.get(service.target), port: service.port, model: 'MSL430', name: service.instance.replace(/\._hap\._tcp\.local\.?$/i, ''),
+      fingerprint: lampFingerprint(service.txt.id),
     }));
   }
 
@@ -195,6 +202,40 @@ export class MerossLocalController {
     if (capacity & 1) light.rgb = rgb;
     if (capacity & 2) light.temperature = warmth;
     await this.request('SET', 'Appliance.Control.Light', { light });
+  }
+
+  async restoreState(state) {
+    const light = {
+      channel: 0,
+      gradual: 0,
+      capacity: Number(state.capacity),
+      luminance: Math.max(1, Math.min(100, Math.round(Number(state.brightness) || 1))),
+    };
+    if (light.capacity & 1) light.rgb = Number(state.rgb);
+    if (light.capacity & 2) light.temperature = Number(state.warmth);
+    await this.request('SET', 'Appliance.Control.Light', { light });
+    await this.setPower(state.power === true);
+  }
+
+  async identify() {
+    const before = await this.snapshot();
+    try {
+      await this.setPower(true);
+      await wait(220);
+      await this.setPower(false);
+      await wait(220);
+      await this.setPower(true);
+      await wait(220);
+      await this.setPower(false);
+      await wait(220);
+    } finally {
+      await this.restoreState(before);
+    }
+    const restored = await this.snapshot();
+    if (restored.power !== before.power || Math.abs(restored.brightness - before.brightness) > 1 || restored.rgb !== before.rgb || Math.abs(restored.warmth - before.warmth) > 1) {
+      throw new Error('识别闪烁后没有恢复灯具原状态');
+    }
+    return { identified: true, restored: true, state: restored };
   }
 
   matches(state, plan) {

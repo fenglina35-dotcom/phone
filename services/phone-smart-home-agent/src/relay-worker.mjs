@@ -1,3 +1,120 @@
-import os from 'node:os';import {MerossLocalController} from './meross-local.mjs';
-const wait=ms=>new Promise(r=>setTimeout(r,ms));
-export class RelayWorker{constructor({config,binding,version,onState}){Object.assign(this,{config,binding,version,onState:onState||(()=>{})});this.stopped=true;this.busy=false;this.controller=null;this.lamp=null;this.lastError='';this.lastRead=null;}state(){return{worker:this.busy?'busy':this.stopped?'offline':'online',lamp:this.lamp,lastError:this.lastError,lastRead:this.lastRead};}emit(){this.onState(this.state());}async rpc(name,body){const response=await fetch(`${this.config.supabaseUrl}/rest/v1/rpc/${name}`,{method:'POST',headers:{apikey:this.config.publishableKey,authorization:`Bearer ${this.config.publishableKey}`,'content-type':'application/json'},body:JSON.stringify(body||{}),signal:AbortSignal.timeout(20000)}),raw=await response.text();let data;try{data=raw?JSON.parse(raw):null;}catch{data=raw;}if(!response.ok)throw new Error(String(data?.message||data||`云端请求失败 ${response.status}`).slice(0,240));return data;}async ensureLamp(){if(this.controller)return this.controller;const devices=await MerossLocalController.discover({timeout:6000});if(devices.length!==1)throw new Error(devices.length?'发现多盏 MSL430，当前版本请只绑定一盏':'同一局域网没有发现 MSL430');this.lamp=devices[0];this.controller=new MerossLocalController({host:this.lamp.host});const state=await this.controller.snapshot();this.lastRead=state.readAt;this.emit();return this.controller;}start(){if(!this.stopped)return;this.stopped=false;this.loop().catch(e=>{this.lastError=String(e?.message||e);this.stopped=true;this.emit();});}async stop(){this.stopped=true;this.emit();}async loop(){let backoff=1200;while(!this.stopped){try{const controller=await this.ensureLamp(),jobs=await this.rpc('phone_smart_home_pull',{p_target:this.binding.target,p_device_secret:this.binding.deviceSecret,p_agent_version:this.version,p_lamp_model:'MSL430',p_lamp_name:this.lamp.name});if(jobs===null)throw new Error('电脑绑定已失效，请重新配对');this.lastError='';backoff=1200;for(const job of Array.isArray(jobs)?jobs:[])await this.execute(job,controller);this.emit();await wait(1500);}catch(e){this.lastError=String(e?.message||e).slice(0,180);this.controller=null;this.lamp=null;this.emit();await wait(backoff);backoff=Math.min(20000,Math.round(backoff*1.7));}}}async execute(job,controller){const id=String(job?.id||'');if(!/^[0-9a-f-]{36}$/i.test(id))return;this.busy=true;this.emit();let ok=false,result={},error='';try{if(job.action==='snapshot'){const state=await controller.snapshot();result={ok:true,verified:true,state};}else if(job.action==='control')result=await controller.execute(job.payload?.plan||{});else throw new Error('电脑拒绝了未知动作');if(result?.verified!==true||!result?.state)throw new Error('没有取得真实成功回读');this.lastRead=result.state.readAt;ok=true;}catch(e){error=String(e?.message||e||'灯具控制失败').slice(0,240);}try{const completed=await this.rpc('phone_smart_home_complete',{p_target:this.binding.target,p_device_secret:this.binding.deviceSecret,p_job_id:id,p_ok:ok,p_result:ok?result:{},p_error:error});if(completed!==true)throw new Error('云端拒绝任务回执');}finally{this.busy=false;this.emit();}}}
+import { MerossLocalController } from './meross-local.mjs';
+
+const wait = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
+
+export class RelayWorker {
+  constructor({ config, binding, version, onState }) {
+    Object.assign(this, { config, binding, version, onState: onState || (() => {}) });
+    this.stopped = true;
+    this.busy = false;
+    this.controller = null;
+    this.lamp = null;
+    this.lastError = '';
+    this.lastRead = null;
+  }
+
+  state() {
+    return { worker: this.busy ? 'busy' : this.stopped ? 'offline' : 'online', lamp: this.lamp, lastError: this.lastError, lastRead: this.lastRead };
+  }
+
+  emit() { this.onState(this.state()); }
+
+  async rpc(name, body) {
+    const response = await fetch(`${this.config.supabaseUrl}/rest/v1/rpc/${name}`, {
+      method: 'POST',
+      headers: { apikey: this.config.publishableKey, authorization: `Bearer ${this.config.publishableKey}`, 'content-type': 'application/json' },
+      body: JSON.stringify(body || {}),
+      signal: AbortSignal.timeout(20000),
+    });
+    const raw = await response.text();
+    let data;
+    try { data = raw ? JSON.parse(raw) : null; } catch { data = raw; }
+    if (!response.ok) throw new Error(String(data?.message || data || `云端请求失败 ${response.status}`).slice(0, 240));
+    return data;
+  }
+
+  async ensureLamp() {
+    if (this.controller) return this.controller;
+    if (!/^sha256:[0-9a-f]{64}$/.test(this.binding?.lampFingerprint || '')) throw new Error('这台电脑需要重新完成灯具安全验证');
+    const devices = await MerossLocalController.discover({ timeout: 6000 });
+    const matched = devices.find(device => device.fingerprint === this.binding.lampFingerprint);
+    if (!matched) throw new Error(devices.length ? '已固定的那盏 MSL430 当前不在线；不会改连其他灯' : '同一局域网没有发现已固定的 MSL430');
+    this.lamp = { ...matched, fingerprint: undefined };
+    this.controller = new MerossLocalController({ host: matched.host });
+    const state = await this.controller.snapshot();
+    this.lastRead = state.readAt;
+    this.emit();
+    return this.controller;
+  }
+
+  start() {
+    if (!this.stopped) return;
+    this.stopped = false;
+    this.loop().catch(error => {
+      this.lastError = String(error?.message || error);
+      this.stopped = true;
+      this.emit();
+    });
+  }
+
+  async stop() { this.stopped = true; this.emit(); }
+
+  async loop() {
+    let backoff = 1200;
+    while (!this.stopped) {
+      try {
+        const controller = await this.ensureLamp();
+        const jobs = await this.rpc('phone_smart_home_pull_verified', {
+          p_target: this.binding.target,
+          p_device_secret: this.binding.deviceSecret,
+          p_agent_version: this.version,
+          p_lamp_model: 'MSL430',
+          p_lamp_name: this.lamp.name,
+          p_lamp_id_hash: this.binding.lampFingerprint,
+        });
+        if (jobs === null) throw new Error('电脑或灯具绑定已失效，请重新配对');
+        this.lastError = '';
+        backoff = 1200;
+        for (const job of Array.isArray(jobs) ? jobs : []) await this.execute(job, controller);
+        this.emit();
+        await wait(1500);
+      } catch (error) {
+        this.lastError = String(error?.message || error).slice(0, 180);
+        this.controller = null;
+        this.lamp = null;
+        this.emit();
+        await wait(backoff);
+        backoff = Math.min(20000, Math.round(backoff * 1.7));
+      }
+    }
+  }
+
+  async execute(job, controller) {
+    const id = String(job?.id || '');
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return;
+    this.busy = true;
+    this.emit();
+    let ok = false, result = {}, error = '';
+    try {
+      if (job.action === 'snapshot') {
+        const state = await controller.snapshot();
+        result = { ok: true, verified: true, state };
+      } else if (job.action === 'control') result = await controller.execute(job.payload?.plan || {});
+      else throw new Error('电脑拒绝了未知动作');
+      if (result?.verified !== true || !result?.state) throw new Error('没有取得真实成功回读');
+      this.lastRead = result.state.readAt;
+      ok = true;
+    } catch (caught) { error = String(caught?.message || caught || '灯具控制失败').slice(0, 240); }
+    try {
+      const completed = await this.rpc('phone_smart_home_complete', {
+        p_target: this.binding.target,
+        p_device_secret: this.binding.deviceSecret,
+        p_job_id: id,
+        p_ok: ok,
+        p_result: ok ? result : {},
+        p_error: error,
+      });
+      if (completed !== true) throw new Error('云端拒绝任务回执');
+    } finally { this.busy = false; this.emit(); }
+  }
+}

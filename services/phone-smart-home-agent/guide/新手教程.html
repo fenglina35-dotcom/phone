@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>小手机网页智能家电助手｜新手教程</title>
+<style>
+body{margin:0;background:#09090b;color:#eee;font:16px/1.75 "Microsoft YaHei",sans-serif}main{max-width:820px;margin:auto;padding:28px 20px 80px}h1{font-size:32px}h2{margin-top:34px;color:#f2a4c8}.card{margin:18px 0;padding:20px;border:1px solid #333;border-radius:18px;background:#151419}.step{display:flex;gap:14px;margin:20px 0}.n{flex:0 0 38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#b95586;font-weight:bold}.ok{border-color:#286a4f;background:#102a20}.warn{border-color:#7b592e;background:#2c200f;color:#ffdda9}code{padding:2px 6px;border-radius:6px;background:#27242b}li{margin:8px 0}a{color:#f2a4c8}small{color:#aaa}
+</style>
+</head>
+<body><main>
+<h1>小手机网页智能家电控制：从零开始</h1>
+<p>适用于 Windows 电脑、网页版小手机和已实测的 Meross HomeKit 床头灯。照顺序操作，不需要编程，也不要把任何密码或配对码发给别人。</p>
+
+<section class="card warn"><strong>购买前先看：</strong>当前正式验收的灯具内部型号只有 <code>MSL430</code>。商品应明确写明支持 HomeKit，推荐购买已经核实的 <code>MSL430HK</code>。外观相同、型号不同或不支持 HomeKit的版本不能当作兼容。</section>
+
+<h2>一、准备好这些东西</h2>
+<ul>
+<li>一盏已确认型号的 MSL430 HomeKit 灯。</li>
+<li>一台可以长期保持开机的 Windows 10/11 电脑。</li>
+<li>自己家里的私人路由器。灯连接2.4GHz；电脑可用网线、2.4GHz或5GHz，但必须与灯处于同一家庭局域网。</li>
+<li>苹果手机上的“家庭”App或 Meross 官方App，用来先完成灯具的正常配网。</li>
+</ul>
+<section class="card warn">不要使用酒店、商场、宿舍公共Wi‑Fi或开启“访客隔离”的网络。手机日常打开网页时可以使用流量或其他网络，但电脑与灯必须留在同一个家庭局域网。</section>
+
+<h2>二、先让灯能够被手机正常控制</h2>
+<div class="step"><div class="n">1</div><div>给灯通电。手机连接自己家的2.4GHz Wi‑Fi。</div></div>
+<div class="step"><div class="n">2</div><div>按照灯具说明书，用苹果“家庭”App或 Meross App添加灯。HomeKit配对码只在官方添加过程中使用，不要截图发给别人。</div></div>
+<div class="step"><div class="n">3</div><div>在手机上分别测试开灯、关灯、亮度、颜色和色温。任何一项不正常，先不要安装电脑助手，应先解决官方控制或退换灯具。</div></div>
+
+<h2>三、安装 Windows 助手</h2>
+<div class="step"><div class="n">1</div><div>打开压缩包中的“安装程序”文件夹，双击 <code>SmallPhoneSmartHomeAgent-0.1.4-Setup.exe</code>。</div></div>
+<div class="step"><div class="n">2</div><div>如果 Windows 显示“已保护你的电脑”，先确认文件名正是上面的 <code>0.1.4</code> 安装程序，再点击“更多信息 → 仍要运行”。这是因为当前安装包没有购买商业代码签名证书，并不代表可以跳过文件名核对。</div></div>
+<div class="step"><div class="n">3</div><div>安装完成后程序会自动打开，并创建桌面快捷方式。以后登录 Windows 时会自动运行。</div></div>
+<div class="step"><div class="n">4</div><div>如果 Windows 防火墙询问是否允许网络通信，<strong>只勾选“专用网络”</strong>，不要勾选“公用网络”，然后点击允许。</div></div>
+<div class="step"><div class="n">5</div><div>确认电脑与灯连接同一个私人路由器。如果电脑使用网线，这是正常的，不要求电脑也连接2.4GHz。</div></div>
+
+<h2>四、网页与电脑配对</h2>
+<div class="step"><div class="n">1</div><div>打开网页版小手机，进入“微信 → 我 → 服务 → 智能家电”。</div></div>
+<div class="step"><div class="n">2</div><div>点击“生成十位配对码”。配对码十分钟后失效，只能给自己眼前的这台电脑使用。</div></div>
+<div class="step"><div class="n">3</div><div>把十位数字输入 Windows 助手，点击“寻找灯具并让它闪烁”。</div></div>
+<div class="step"><div class="n">4</div><div>准备绑定的灯会连续闪烁两次，随后自动恢复之前的开关、亮度和颜色。</div></div>
+<div class="step"><div class="n">5</div><div><strong>亲眼确认闪烁的是自己的灯</strong>，再点击“是，这是我的灯”。没有看到、闪错灯或不确定时必须取消。</div></div>
+<div class="step"><div class="n">6</div><div>程序会固定这盏灯的唯一指纹。以后即使同一网络出现另一盏 MSL430，也不会自动改连。</div></div>
+
+<h2>五、完成验收</h2>
+<div class="step"><div class="n">1</div><div>Windows 助手显示“唯一灯具指纹已固定”。点击“读取并验证现在的灯”。</div></div>
+<div class="step"><div class="n">2</div><div>回到网页点击“重新读取真实状态”，确认网页显示与灯的实际状态一致。</div></div>
+<div class="step"><div class="n">3</div><div>依次测试开关、亮度、粉色、蓝色和色温。每次都必须等到真实状态回读成功。</div></div>
+<div class="step"><div class="n">4</div><div>最后再和角色说“要不要帮我开灯”或“选一个你喜欢的颜色”。角色可以同意或拒绝；只有执行并回读成功后才能说已经完成。</div></div>
+
+<section class="card ok"><strong>日常使用：</strong>灯保持通电，Windows电脑保持开机，助手在后台运行。手机可以离开家庭Wi‑Fi。官方 Meross App、苹果家庭和灯具按键仍然可以继续使用。</section>
+
+<h2>六、常见问题</h2>
+<ul>
+<li><strong>找不到灯：</strong>确认灯已在官方App中可控；电脑和灯属于同一路由器；不要使用访客网络；暂时关闭路由器的AP隔离/设备隔离。</li>
+<li><strong>发现多盏灯：</strong>首次绑定时只让准备绑定的那一盏 MSL430 在线，其他同型号灯暂时断电。绑定完成后可重新通电。</li>
+<li><strong>灯没有闪：</strong>不要点击确认。取消后检查网络和灯具，再重新生成配对码。</li>
+<li><strong>提示已绑定到其他家庭：</strong>回到原网页“智能家电”页面解除电脑连接；确认原绑定释放后再重试。</li>
+<li><strong>电脑关机后不能控制：</strong>这是当前低成本方案的正常限制。网页会显示离线，不会伪造成功。</li>
+<li><strong>换路由器：</strong>先用官方App重新给灯配网，再确保电脑加入新路由器。灯的HomeKit身份未重置时通常无需重新绑定；如果恢复出厂设置，则必须重新完成闪烁确认。</li>
+</ul>
+
+<h2>七、安全边界</h2>
+<ul>
+<li>网页、云端和电脑助手不保存 Wi‑Fi 密码、HomeKit配对码或二维码。</li>
+<li>每个网页家庭有独立身份；十位配对码仅短时有效；电脑密钥由 Windows 加密存储。</li>
+<li>一盏灯的唯一指纹不能同时绑定给两个网页家庭。</li>
+<li>物理闪烁确认主要防止误连和普通串灯；它不能让不可信的公共网络变安全。请始终使用自己的私人家庭路由器。</li>
+</ul>
+
+<p><small>教程版本：网页 v1142 / Windows 助手 0.1.4。若界面文字与教程不同，请先确认没有打开旧安装包或浏览器旧缓存。</small></p>
+</main></body></html>

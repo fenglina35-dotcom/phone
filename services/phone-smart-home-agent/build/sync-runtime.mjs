@@ -8,3 +8,4 @@ const supabaseUrl=webApp.match(/const\s+COMPANION_URL='([^']+)'/)?.[1]||'',publi
 if(!/^https:\/\/[a-z0-9]{20}\.supabase\.co$/.test(supabaseUrl)||publishableKey.length<40)throw new Error('没有从当前小手机网页读取到一致的公开云配置');
 await fs.writeFile(path.join(runtime,'public-config.json'),JSON.stringify({supabaseUrl,publishableKey,smallPhoneUrl:'https://fenglina35-dotcom.github.io/phone/'},null,2)+'\n');
 await fs.copyFile(path.resolve(root,'..','..','native','private-small-phone','XcodeProject','PhoneCompanionTest','Assets.xcassets','AppIcon.appiconset','AppIcon 11024x1024.png'),path.join(runtime,'icon.png'));
+await fs.copyFile(path.join(root,'guide','新手教程.html'),path.join(runtime,'新手教程.html'));
