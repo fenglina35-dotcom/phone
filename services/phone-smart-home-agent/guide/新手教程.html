@@ -9,13 +9,22 @@ body{margin:0;background:#09090b;color:#eee;font:16px/1.75 "Microsoft YaHei",san
 </head>
 <body><main>
 <h1>小手机网页智能家电控制：从零开始</h1>
-<p>适用于 Windows 电脑、网页版小手机和已实测的 Meross HomeKit 床头灯。照顺序操作，不需要编程，也不要把任何密码或配对码发给别人。</p>
+<p>适用于 Windows 电脑、苹果手机上的网页版小手机和已实测的 Meross HomeKit 床头灯。照顺序操作，不需要编程，也不要把任何密码或配对码发给别人。</p>
 
-<section class="card warn"><strong>购买前先看：</strong>当前正式验收的灯具内部型号只有 <code>MSL430</code>。商品应明确写明支持 HomeKit，推荐购买已经核实的 <code>MSL430HK</code>。外观相同、型号不同或不支持 HomeKit的版本不能当作兼容。</section>
+<section class="card warn"><strong>当前只支持苹果：</strong>本教程与当前正式验收范围只包括 iPhone、苹果“家庭”App 和 HomeKit。安卓手机暂不属于当前支持范围，也不能用安卓端的控制成功代替苹果端验收。</section>
+
+<section class="card warn">
+<strong>买灯有两种方式：</strong>
+<ul>
+<li><strong>优先使用开发者推荐链接：</strong><a href="https://item.taobao.com/item.htm?id=628614473300" target="_blank" rel="noopener noreferrer">点击打开已经实测过的淘宝候选商品</a>。下单前仍要向卖家核对实际发货型号为 <code>MSL430HK</code>、支持 HomeKit，并保留退换保障；实物底部铭牌可能显示内部型号 <code>MSL430</code>。</li>
+<li><strong>也可以自行在淘宝搜索：</strong>请选择明确支持苹果“家庭”/HomeKit、具有开关、亮度、RGB颜色和色温功能的完整灯具，并优先选择支持无理由退换的商品。</li>
+</ul>
+<p><strong>重要：</strong>自行搜索不等于一定匹配成功。当前 Windows 助手只正式实测并开放内部型号 <code>MSL430</code>；外观相同、仅写“支持 HomeKit”或其他型号的灯，即使能加入苹果“家庭”，也可能无法被电脑助手识别。未实测型号需要后续单独适配，不能把它当作已经兼容。</p>
+</section>
 
 <h2>一、准备好这些东西</h2>
 <ul>
-<li>一盏已确认型号的 MSL430 HomeKit 灯。</li>
+<li>一盏已确认内部型号为 MSL430 的 HomeKit 灯；如果是自行搜索购买，先保留包装并确认仍在退换期内。</li>
 <li>一台可以长期保持开机的 Windows 10/11 电脑。</li>
 <li>自己家里的私人路由器。灯连接2.4GHz；电脑可用网线、2.4GHz或5GHz，但必须与灯处于同一家庭局域网。</li>
 <li>苹果手机上的“家庭”App或 Meross 官方App，用来先完成灯具的正常配网。</li>
@@ -28,8 +37,8 @@ body{margin:0;background:#09090b;color:#eee;font:16px/1.75 "Microsoft YaHei",san
 <div class="step"><div class="n">3</div><div>在手机上分别测试开灯、关灯、亮度、颜色和色温。任何一项不正常，先不要安装电脑助手，应先解决官方控制或退换灯具。</div></div>
 
 <h2>三、安装 Windows 助手</h2>
-<div class="step"><div class="n">1</div><div>打开压缩包中的“安装程序”文件夹，双击 <code>SmallPhoneSmartHomeAgent-0.1.4-Setup.exe</code>。</div></div>
-<div class="step"><div class="n">2</div><div>如果 Windows 显示“已保护你的电脑”，先确认文件名正是上面的 <code>0.1.4</code> 安装程序，再点击“更多信息 → 仍要运行”。这是因为当前安装包没有购买商业代码签名证书，并不代表可以跳过文件名核对。</div></div>
+<div class="step"><div class="n">1</div><div>打开压缩包中的“安装程序”文件夹，双击 <code>SmallPhoneSmartHomeAgent-0.1.6-Setup.exe</code>。</div></div>
+<div class="step"><div class="n">2</div><div>如果 Windows 显示“已保护你的电脑”，先确认文件名正是上面的 <code>0.1.6</code> 安装程序，再点击“更多信息 → 仍要运行”。这是因为当前安装包没有购买商业代码签名证书，并不代表可以跳过文件名核对。</div></div>
 <div class="step"><div class="n">3</div><div>安装完成后程序会自动打开，并创建桌面快捷方式。以后登录 Windows 时会自动运行。</div></div>
 <div class="step"><div class="n">4</div><div>如果 Windows 防火墙询问是否允许网络通信，<strong>只勾选“专用网络”</strong>，不要勾选“公用网络”，然后点击允许。</div></div>
 <div class="step"><div class="n">5</div><div>确认电脑与灯连接同一个私人路由器。如果电脑使用网线，这是正常的，不要求电脑也连接2.4GHz。</div></div>
@@ -68,5 +77,5 @@ body{margin:0;background:#09090b;color:#eee;font:16px/1.75 "Microsoft YaHei",san
 <li>物理闪烁确认主要防止误连和普通串灯；它不能让不可信的公共网络变安全。请始终使用自己的私人家庭路由器。</li>
 </ul>
 
-<p><small>教程版本：网页 v1142 / Windows 助手 0.1.4。若界面文字与教程不同，请先确认没有打开旧安装包或浏览器旧缓存。</small></p>
+<p><small>教程版本：网页 v1142 / Windows 助手 0.1.6 / 当前仅支持苹果。若界面文字与教程不同，请先确认没有打开旧安装包或浏览器旧缓存。</small></p>
 </main></body></html>
