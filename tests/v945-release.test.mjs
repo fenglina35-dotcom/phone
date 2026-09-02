@@ -12,15 +12,15 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v1150 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1150 · 朋友外卖身份自愈版'/);
-  assert.match(app,/const url='sw\.js\?v=1150&r=v1150-delivery-auth-recovery-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1150'/);
-  assert.match(html,/app\.js\?v=1150/);
-  assert.match(sw,/const BUILD='1150'/);
-  assert.match(sw,/north-shell-v1150/);
-  assert.match(index,/小手机\.html\?v=1150/);
-  assert.match(repair,/小手机\.html\?v=1150/);
+test('v1151 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v1151 · 安卓大备份安全导入版'/);
+  assert.match(app,/const url='sw\.js\?v=1151&r=v1151-android-backup-import-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1151'/);
+  assert.match(html,/app\.js\?v=1151/);
+  assert.match(sw,/const BUILD='1151'/);
+  assert.match(sw,/north-shell-v1151/);
+  assert.match(index,/小手机\.html\?v=1151/);
+  assert.match(repair,/小手机\.html\?v=1151/);
 });
 
 test('the private iOS package embeds web v1125 and keeps 1.0.243 delivery',()=>{

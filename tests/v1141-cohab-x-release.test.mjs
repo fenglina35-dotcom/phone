@@ -6,25 +6,25 @@ import test from 'node:test';
 const root = process.cwd();
 const read = (...parts) => fs.readFileSync(path.join(root, ...parts), 'utf8');
 
-test('v1150 web identity and cache markers are aligned', () => {
+test('v1151 web identity and cache markers are aligned', () => {
   const app = read('app.js');
   const shell = read('小手机.html');
   const sw = read('sw.js');
   const hotfix = read('web-hotfix.js');
   const index = read('index.html');
   const repair = read('repair.html');
-  assert.match(app, /__NORTH_SHELL_BUILD__!=='1150'/);
-  assert.match(app, /APP_VER='v1150 · 朋友外卖身份自愈版'/);
-  assert.match(shell, /__NORTH_SHELL_BUILD__='1150'/);
-  assert.match(shell, /app\.js\?v=1150&r=v1150-delivery-auth-recovery-1/);
-  assert.match(sw, /const BUILD='1150'/);
-  assert.match(sw, /v1150-delivery-auth-recovery-hotfix-1/);
-  assert.match(hotfix, /v1150-delivery-auth-recovery-1/);
-  assert.match(index, /小手机\.html\?v=1150/);
-  assert.match(repair, /小手机\.html\?v=1150/);
+  assert.match(app, /__NORTH_SHELL_BUILD__!=='1151'/);
+  assert.match(app, /APP_VER='v1151 · 安卓大备份安全导入版'/);
+  assert.match(shell, /__NORTH_SHELL_BUILD__='1151'/);
+  assert.match(shell, /app\.js\?v=1151&r=v1151-android-backup-import-1/);
+  assert.match(sw, /const BUILD='1151'/);
+  assert.match(sw, /v1151-android-backup-import-hotfix-1/);
+  assert.match(hotfix, /v1151-android-backup-import-1/);
+  assert.match(index, /小手机\.html\?v=1151/);
+  assert.match(repair, /小手机\.html\?v=1151/);
 });
 
-test('v1150 publishes shared cohab memory and X comment controls', () => {
+test('v1151 publishes shared cohab memory and X comment controls', () => {
   const app = read('app.js');
   const privateCopy = read('native', 'private-small-phone', 'XcodeProject', 'PhoneCompanionTest', 'PhoneWeb.bundle', 'app.js');
   for (const source of [app, privateCopy]) {

@@ -278,7 +278,7 @@ test('startup avoids immediate whole-state cloud and recovery work',()=>{
   assert.match(app,/privatePrimaryMirrorCheck\(\{silent:true\}\)/);
   assert.match(app,/if\(privateNativeAppOn\(\)\)\{privatePhoneCloudWake\(\);return;\}/);
   assert.doesNotMatch(app,/setTimeout\(\(\)=>\{if\(S\.settings&&S\.settings\.cloudAuto\)cloudBackup\(\)/);
-  assert.match(app,/function queueRecoverySnapshot\(json,savedAt\)\{savedAt=[\s\S]*?_recoverySnapshotAt[\s\S]*?return _recoverySnapshotWrite;let data;try\{data=JSON\.parse\(json\)/);
+  assert.match(app,/function queueRecoverySnapshot\(json,savedAt,force\)\{savedAt=[\s\S]*?!force&&_recoverySnapshotAt[\s\S]*?return _recoverySnapshotWrite;let data;try\{data=JSON\.parse\(json\)/);
   assert.doesNotMatch(app,/privateNativeCoreStorageKey\(CORE_IDB_KEY\)&&!_coreOverflowMode\)save\(0\)/);
   assert.match(app,/if\(!privateNativeAppOn\(\)\)setTimeout\(\(\)=>\{try\{const savedAt=Date\.now\(\),json=JSON\.stringify/);
 });

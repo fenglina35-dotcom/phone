@@ -9,7 +9,7 @@ const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const expectedCodes = [
   "MFM", "TPE", "LXA", "URC", "KMG", "KUL", "ARN", "AKL", "MCO",
   "SIN", "MEL", "FCO", "SVO", "SYD", "KEF", "BKK", "ZRH", "PPT",
-  "YYZ", "IST", "HEL", "CPH", "DUB", "OSL", "KHN",
+  "YYZ", "IST", "HEL", "CPH", "DUB", "OSL", "KHN", "CGQ",
 ];
 for (const code of expectedCodes) {
   assert.match(source, new RegExp(`c:'${code}'`), `missing city code ${code}`);
@@ -25,5 +25,6 @@ assert.match(source, /placeholder="搜索城市、地区或机场代码"/);
 assert.match(source, /a:\['马来西亚'\]/);
 assert.match(source, /a:\['云南'\]/);
 assert.match(source, /\{n:'南昌',c:'KHN'[\s\S]*?r:'江西',a:\['江西'\]\}/);
+assert.match(source, /\{n:'长春',c:'CGQ'[\s\S]*?r:'吉林',a:\['吉林','吉林长春'\]\}/);
 
 console.log("travel city picker tests passed");
