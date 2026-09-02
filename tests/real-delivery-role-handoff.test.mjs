@@ -49,6 +49,8 @@ assert.match(delivery,/function requestRoleClarification/,'uncertain real option
 assert.match(delivery,/kind==='minimum_order'/,'a real minimum-order block must pause instead of leaving the role silent');
 assert.match(delivery,/kind==='history_repeat'/,'a historical cart with extra items must have its own clarification state');
 assert.match(delivery,/真实外卖等待历史套餐确认/,'the role must wait for explicit approval before reusing a historical superset');
+assert.match(delivery,/之前买过的那个套餐、上次点过的套餐、买过的套餐/,'the role must preserve a previous-purchase package selector instead of inventing a product title');
+assert.match(delivery,/只会在这家指定门店内选择唯一带“买过”标记的真实套餐/,'the role prompt must keep the bought-package selector scoped to one explicit merchant');
 assert.match(delivery,/包含本次全部指定商品、但还带有额外商品/,'the role must explain the real extra-item fact without pretending the order succeeded');
 assert.ok(delivery.includes("clarification.kind==='history_repeat'&&/^继续确认历史订单$/.test"),'only the dedicated explicit-approval command may unlock a historical superset');
 assert.match(delivery,/confirmedHistoricalSuperset:intent\.confirmedHistoricalSuperset===true/,'explicit approval must be carried to the protected create-order request');

@@ -171,12 +171,12 @@ test('WeChat, calls and face-to-face scenes share a speaker-safe chronological a
 });
 
 test('co-living memory list supports manual deletion without clearing source chat',()=>{
-  assert.match(source,/function cohabMemoryOpen\(id\)/);
+  assert.match(source,/function cohabMemoryOpen\(id,opt\)/);
   assert.match(source,/function cohabMemoryDelete\(id,key\)/);
   assert.match(source,/只删除这条总结，不会删除共同生活原聊天/);
   assert.match(source,/function cohabMemoryClear\(id\)/);
   assert.match(source,/只清空共同生活总结，不会删除原聊天、微信或单次线下约会/);
-  assert.match(source,/onclick="cohabMemoryDelete\('\$\{id\}','\$\{key\}'\)"/);
+  assert.match(source,/onclick="cohabMemoryDelete\(this\.dataset\.cid,this\.dataset\.mid\)"/);
 });
 
 test('co-living UI exposes persistent status, return notice and test controls',()=>{

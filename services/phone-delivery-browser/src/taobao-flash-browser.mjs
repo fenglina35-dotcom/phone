@@ -170,7 +170,8 @@ export function shopClosedReason(value) {
 
 export function merchantFromShopText(value) {
   const body = clean(value, 4000);
-  const match = body.match(/环境\s+(.{2,80}?)\s+评分\s*([0-5](?:\.\d)?)/)
+  const match = body.match(/搜一搜\s+(.{2,80}?)\s+评分\s*([0-5](?:\.\d)?)/)
+    || body.match(/环境\s+(.{2,80}?)\s+评分\s*([0-5](?:\.\d)?)/)
     || body.match(/商家\s+(.{2,80}?)\s+(?:刚刚搜过|买过|热销|点餐)/)
     || body.match(/返红包\s+(.{2,80}?)\s+评分\s*([0-5](?:\.\d)?)/);
   return { name: clean(match?.[1], 80), rating: number(match?.[2]) };
@@ -328,6 +329,13 @@ export function productMatchesSavedItem(candidateName, savedItemName) {
   const packCore = comparableTarget.replace(/(?:双杯|两杯|2杯|套餐|组合|大礼包|礼包|整箱|多包|多罐|买一送一)/gi, '');
   return bundle.test(targetText) && packCore.length >= 2 && comparableCandidate.includes(packCore)
     && merchantNameMatchScore(targetText, candidateText) >= 80;
+}
+
+export function previouslyBoughtPackageRequested(value) {
+  const text = clean(value, 600).replace(/\s+/g, '');
+  if (!text || /(?:没|没有|未曾|从未)买过/.test(text)) return false;
+  return /(?:(?:之前|以前|上次|曾经|原来|前面).{0,12})?(?:买过|点过)(?:的)?(?:那个|那份|这一份|这份)?套餐/.test(text)
+    || /(?:之前|以前|上次|曾经|原来|前面)(?:买过|点过)(?:的)?(?:那个|那份|这一份|这份)?/.test(text) && /套餐/.test(text);
 }
 
 export function preferredExactProduct(items, itemName, { allowContainedAlias = false, allowShortFoodAlias = false, preferSinglePersonCombo = false } = {}) {
@@ -785,8 +793,13 @@ export function standaloneItemSpecIntent(value) {
 export function repeatPurchaseMatchKind(raw, itemName, request = '') {
   const body = clean(raw, 4000);
   const target = clean(itemName, 140);
-  if (!body || !target || !/买过|再来一单/.test(body) || !productMatchesSavedItem(body, target)) return 'none';
   const query = clean(request, 300);
+  if (!body || !/买过|购买过|再来一单/.test(body)) return 'none';
+  // “之前买过的那个套餐” explicitly refers to the whole visible historical
+  // purchase card, not to a product title containing those placeholder words.
+  // The caller separately enforces that exactly one such card is visible.
+  if (previouslyBoughtPackageRequested(query)) return 'exact';
+  if (!target || !productMatchesSavedItem(body, target)) return 'none';
   // KFC requests are intentionally assembled one single item at a time.  A
   // historical "再来一单" may contain a combo or unrequested goods and must
   // never short-circuit the explicit item checklist.
@@ -1736,6 +1749,7 @@ export class TaobaoFlashBrowser {
     const mcdonaldsHomepageOnly = mcdonaldsDefaultBundleRequested(`${requestQuery} ${storeQuery} ${routeItemQuery}`);
     const kfcHomepageOnly = kfcDefaultSignatureBundleRequested(`${requestQuery} ${storeQuery} ${routeItemQuery}`);
     const homepageOnly = mcdonaldsHomepageOnly || kfcHomepageOnly;
+    const boughtPackageIntent = previouslyBoughtPackageRequested(requestQuery);
     const fruitHomepageFirst = Boolean(singleFruitKeyword(routeItemQuery));
     // A fresh merchant-entry request is used for an explicit end-to-end test
     // (or when the current store-search history cannot safely return home).
@@ -1762,8 +1776,30 @@ export class TaobaoFlashBrowser {
       this.shops = [shop];
       try {
         let page = await this.enterShop(0, { preferSaved: true });
-        if ((fruitHomepageFirst || homepageOnly) && shopSearchUrl(page.url())) page = await this.returnToStorefrontWithoutRefresh(page);
+        if ((fruitHomepageFirst || homepageOnly || boughtPackageIntent) && shopSearchUrl(page.url())) page = await this.returnToStorefrontWithoutRefresh(page);
         await this.requireLogin(page); await waitForHumanVerification(page);
+        if (boughtPackageIntent) {
+          const repeat = await this.repeatPurchase(page, rememberedRoute.itemName, requestQuery);
+          if (repeat && !repeat.requiresConfirmation) {
+          const repeatName = repeat.displayName || rememberedRoute.itemName;
+          return [{
+            merchantId: shop.storeId || 'saved-shop', merchant: shop.name, name: repeatName,
+            description: clean(`历史订单：${repeat.summary}`, 240), price: repeat.total, deliveryFee: 0,
+            total: repeat.total, rating: shop.rating, monthlySales: shop.monthlySales, etaMinutes: shop.etaMinutes,
+            couponLabel: shop.couponLabel, optionGroups: [], optionsLoaded: true,
+            requiresConfirmation: repeat.requiresConfirmation,
+            confirmationReason: repeat.confirmationReason,
+            browserRef: {
+              shopIndex: 0, itemName: repeatName, unitPrice: repeat.total,
+              buttonIndex: -1, detailUrl: '', shopUrl: shop.anchorUrl || shop.directUrl, query: requestQuery,
+              merchant: shop.name, merchantId: shop.storeId || '', repeatPurchase: true,
+              repeatSummary: repeat.summary, repeatQuantity: repeat.quantity,
+              requiresConfirmation: repeat.requiresConfirmation,
+            },
+            }];
+          }
+          throw new Error('当前门店没有找到唯一的“买过”历史订单卡和“再来一单”按钮，本轮已停止且没有改点普通商品');
+        }
         if (menuSelectionAllowed && !mcdonaldsHomepageOnly) {
           const visibleMenu = autonomousMenuItems(await this.extractMenu(page, Math.max(12, limit), ''));
           const menuOffers = visibleMenu.slice(0, limit).map(item => ({
@@ -1844,20 +1880,46 @@ export class TaobaoFlashBrowser {
     // storefront as the safest route.  This avoids an unnecessary outer
     // marketplace search (and its verification risk) on a clean live page.
     let activePage = !freshMerchantEntry && this.page && !this.page.isClosed?.() && (shopUrl(this.page.url()) || shopSearchUrl(this.page.url())) ? this.page : null;
-    if (activePage && (fruitHomepageFirst || homepageOnly) && shopSearchUrl(activePage.url())) activePage = await this.returnToStorefrontWithoutRefresh(activePage);
+    if (activePage && (fruitHomepageFirst || homepageOnly || boughtPackageIntent) && shopSearchUrl(activePage.url())) activePage = await this.returnToStorefrontWithoutRefresh(activePage);
     if (activePage) {
       await this.requireLogin(activePage); await waitForHumanVerification(activePage);
       const activeUrl = activePage.url();
       const activeBody = clean(await activePage.locator('body').innerText().catch(() => ''), 12_000);
       const brand = preferredBrand(query);
       const requestedStoreKey = knownRouteKey(storeQuery);
+      let decodedActiveUrl = activeUrl;
+      try { decodedActiveUrl = decodeURIComponent(activeUrl); } catch {}
       const activeStoreMatches = requestedStoreKey
-        ? (preferredBrand(storeQuery) ? activeShopMatchesBrand(storeQuery, activeUrl, activeBody) : knownRouteKey(activeBody).includes(requestedStoreKey))
+        ? (preferredBrand(storeQuery)
+          ? activeShopMatchesBrand(storeQuery, activeUrl, activeBody)
+          : knownRouteKey(`${activeBody} ${decodedActiveUrl}`).includes(requestedStoreKey))
         : activeShopMatchesBrand(query, activeUrl, activeBody);
       if (activeStoreMatches) {
         const itemQuery = requestedStoreItemName(query, storeQuery);
-        const merchant = clean(activeBody.match(/(?:商家|环境)\s+(.{2,50}?)(?:\s+评分|\s+买过|\s+热销)/)?.[1], 50)
+        const merchant = merchantFromShopText(activeBody).name
+          || clean(activeBody.match(/(?:商家|环境)\s+(.{2,50}?)(?:\s+评分|\s+买过|\s+热销)/)?.[1], 50)
           || (brand === 'chabaidao' ? '茶百道（当前门店）' : '当前商家');
+        if (boughtPackageIntent) {
+          const repeat = await this.repeatPurchase(activePage, itemQuery, requestQuery);
+          if (repeat && !repeat.requiresConfirmation) {
+          const repeatName = repeat.displayName || itemQuery;
+          return [{
+            merchantId: 'active-shop', merchant, name: repeatName,
+            description: clean(`历史订单：${repeat.summary}`, 240), price: repeat.total,
+            deliveryFee: 0, total: repeat.total, rating: 0, monthlySales: 0, etaMinutes: 0,
+            couponLabel: '', optionGroups: [], optionsLoaded: true,
+            requiresConfirmation: repeat.requiresConfirmation,
+            confirmationReason: repeat.confirmationReason,
+            browserRef: {
+              shopIndex: 0, itemName: repeatName, unitPrice: repeat.total, buttonIndex: -1,
+              detailUrl: '', shopUrl: activeUrl, query: requestQuery, merchant, merchantId: 'active-shop',
+              repeatPurchase: true, repeatSummary: repeat.summary, repeatQuantity: repeat.quantity,
+              requiresConfirmation: repeat.requiresConfirmation,
+            },
+            }];
+          }
+          throw new Error('当前门店没有找到唯一的“买过”历史订单卡和“再来一单”按钮，本轮已停止且没有改点普通商品');
+        }
         if (menuSelectionAllowed && !mcdonaldsHomepageOnly) {
           const visibleMenu = autonomousMenuItems(await this.extractMenu(activePage, Math.max(12, limit), ''));
           const menuOffers = visibleMenu.slice(0, limit).map(item => ({
@@ -1875,7 +1937,7 @@ export class TaobaoFlashBrowser {
         const repeat = await this.repeatPurchase(activePage, itemQuery, requestQuery);
         if (repeat && !repeat.requiresConfirmation) {
           return [{
-            merchantId: 'active-shop', merchant: clean(activeBody.match(/(?:商家|环境)\s+(.{2,50}?)(?:\s+评分|\s+买过|\s+热销)/)?.[1], 50) || '当前商家',
+            merchantId: 'active-shop', merchant,
             name: itemQuery, description: clean(`历史订单：${repeat.summary}`, 240), price: repeat.total,
             deliveryFee: 0, total: repeat.total, rating: 0, monthlySales: 0, etaMinutes: 0,
             couponLabel: '', optionGroups: [], optionsLoaded: true,
@@ -1883,7 +1945,7 @@ export class TaobaoFlashBrowser {
             confirmationReason: repeat.confirmationReason,
             browserRef: {
               shopIndex: 0, itemName: itemQuery, unitPrice: repeat.total, buttonIndex: -1,
-              detailUrl: '', shopUrl: activeUrl, query: requestQuery, merchant: '当前商家', merchantId: 'active-shop',
+              detailUrl: '', shopUrl: activeUrl, query: requestQuery, merchant, merchantId: 'active-shop',
               repeatPurchase: true, repeatSummary: repeat.summary, repeatQuantity: repeat.quantity,
               requiresConfirmation: repeat.requiresConfirmation,
             },
@@ -1987,9 +2049,32 @@ export class TaobaoFlashBrowser {
         if (/门店已打烊|门店休息中|暂停营业|不在营业时间/.test(String(error?.message || error))) continue;
         throw error;
       }
-      if (homepageOnly && shopSearchUrl(shopPage.url())) shopPage = await this.returnToStorefrontWithoutRefresh(shopPage);
+      if ((homepageOnly || boughtPackageIntent) && shopSearchUrl(shopPage.url())) shopPage = await this.returnToStorefrontWithoutRefresh(shopPage);
       await waitForHumanVerification(shopPage);
       const itemQuery = requestedStoreItemName(query, storeQuery);
+      if (boughtPackageIntent) {
+        const repeat = await this.repeatPurchase(shopPage, itemQuery, requestQuery);
+        if (repeat && !repeat.requiresConfirmation) {
+        const repeatName = repeat.displayName || itemQuery;
+        offers.push({
+          merchantId: shop.storeId || String(shopIndex), merchant: shop.name, name: repeatName,
+          description: clean(`历史订单：${repeat.summary}`, 240), price: repeat.total, deliveryFee: 0,
+          total: repeat.total, rating: shop.rating, monthlySales: shop.monthlySales,
+          etaMinutes: shop.etaMinutes, couponLabel: shop.couponLabel, optionGroups: [], optionsLoaded: true,
+          requiresConfirmation: repeat.requiresConfirmation,
+          confirmationReason: repeat.confirmationReason,
+          browserRef: {
+            shopIndex, itemName: repeatName, unitPrice: repeat.total, buttonIndex: -1, detailUrl: '',
+            shopUrl: shop.anchorUrl || '', query: requestQuery, merchant: shop.name, merchantId: shop.storeId || '',
+            repeatPurchase: true, repeatSummary: repeat.summary, repeatQuantity: repeat.quantity,
+            requiresConfirmation: repeat.requiresConfirmation,
+          },
+        });
+          if (offers.length >= limit) break;
+          continue;
+        }
+        throw new Error('当前门店没有找到唯一的“买过”历史订单卡和“再来一单”按钮，本轮已停止且没有改点普通商品');
+      }
       if (searchResultSelectionAllowed && !homepageOnly && await this.searchInsideShop(shopPage, itemQuery)) {
         await waitForHumanVerification(shopPage);
         const searchItems = autonomousMenuItems(await this.extractMenu(shopPage, Math.max(20, limit), itemQuery));
@@ -2255,33 +2340,51 @@ export class TaobaoFlashBrowser {
 
   async repeatPurchase(page, itemName, request = '', { click = false } = {}) {
     if (!page || typeof page.getByText !== 'function') return null;
+    const historicalSelector = previouslyBoughtPackageRequested(request);
     const controls = page.getByText(/^再来一单$/);
+    const candidates = [];
     for (let index = 0; index < await controls.count(); index += 1) {
       const control = controls.nth(index);
       if (!await control.isVisible().catch(() => false)) continue;
-      const summary = clean(await control.evaluate((node, name) => {
+      const summary = clean(await control.evaluate((node, input) => {
         const normalized = value => String(value || '').replace(/\s+/g, ' ').trim();
         let best = '';
         for (let parent = node, depth = 0; parent && depth < 10; parent = parent.parentElement, depth += 1) {
           const text = normalized(parent.innerText);
-          if (text.includes(name) && /买过|再来一单/.test(text) && (!best || text.length < best.length)) best = text;
+          const historicalItems = text.split('再来一单').slice(1).join('再来一单').trim();
+          const matched = input.historicalSelector
+            ? /买过|购买过/.test(text) && /再来一单/.test(text) && /共\s*\d+\s*件/.test(text)
+              && historicalItems.length >= 2 && !/^x\s*\d+$/i.test(historicalItems)
+            : text.includes(input.name) && /买过|再来一单/.test(text);
+          if (matched && (!best || text.length < best.length)) best = text;
         }
         return best;
-      }, clean(itemName, 140)).catch(() => ''), 4000);
+      }, { name: clean(itemName, 140), historicalSelector }).catch(() => ''), 4000);
       const matchKind = repeatPurchaseMatchKind(summary, itemName, request);
       if (matchKind === 'none') continue;
       const quantity = Math.max(1, number(summary.match(/共\s*(\d+)\s*件/)?.[1]));
       const total = number(summary.match(/共\s*\d+\s*件\s*[¥￥]\s*(\d+(?:\.\d+)?)/)?.[1]);
-      if (click) await this.tapControl(page, control);
-      return {
+      const displayName = historicalSelector
+        ? clean(summary.split('再来一单').slice(1).join('再来一单').replace(/\s+x\s*\d+\b/gi, ' '), 140) || '之前买过的套餐'
+        : clean(itemName, 140);
+      const candidate = {
         control, summary, quantity, total, matchKind,
+        displayName,
         requiresConfirmation: matchKind === 'superset',
         confirmationReason: matchKind === 'superset'
           ? `匹配的历史订单包含本次指定商品，但整单还有额外商品：${summary}`
           : '',
       };
+      if (!historicalSelector) {
+        if (click) await this.tapControl(page, control);
+        return candidate;
+      }
+      candidates.push(candidate);
     }
-    return null;
+    if (historicalSelector && candidates.length > 1) throw new Error(`当前门店同时显示${candidates.length}张买过的历史订单卡，不能擅自点击第一张“再来一单”`);
+    const selected = candidates[0] || null;
+    if (selected && click) await this.tapControl(page, selected.control);
+    return selected;
   }
 
   async boughtOrderSummary(page, itemName) {

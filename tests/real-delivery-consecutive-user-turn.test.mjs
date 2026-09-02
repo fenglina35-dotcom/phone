@@ -60,6 +60,10 @@ function text(value,length=300){return String(value==null?'':value).trim().slice
   assert.equal(separate?.merchant,'茶百道');
   assert.deepEqual(Array.from(separate?.items||[]),['杨枝甘露']);
   assert.deepEqual(Array.from(separate?.specs||[]),['不加糖']);
+  const boughtPackage=sandbox.parse('我想吃河南正宗胡辣汤水煎包家的之前买过的那个套餐');
+  assert.equal(boughtPackage?.merchant,'河南正宗胡辣汤水煎包');
+  assert.deepEqual(Array.from(boughtPackage?.items||[]),['之前买过的那个套餐']);
+  assert.equal(sandbox.parse('你觉得之前买过的那个套餐好不好'),null,'retrospective discussion must not start delivery');
 }
 
 assert.match(app,/_deliveryPendingUserText=deliveryPendingUserTurnText\(id,replyAccount,_userText\)/);

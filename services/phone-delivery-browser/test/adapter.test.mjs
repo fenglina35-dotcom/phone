@@ -10,6 +10,7 @@ import { storeSearchTermMatches } from '../src/taobao-flash-browser.mjs';
 import { merchantFromShopText } from '../src/taobao-flash-browser.mjs';
 import { requestedSinglePersonSoupCombo } from '../src/taobao-flash-browser.mjs';
 import { optionChoiceMatchesSummary } from '../src/taobao-flash-browser.mjs';
+import { previouslyBoughtPackageRequested } from '../src/taobao-flash-browser.mjs';
 
 class FakeBrowser {
   constructor() { this.submits = 0; this.statusCalls = 0; this.statusValue = 'pending_payment'; }
@@ -105,6 +106,56 @@ test('saved bought-order add-ons are reused as top-ups in their historical order
   const history = '4天前买过 共4件 茉莉葡萄冰奶 冻冻 椰果 奶冻 再来一单';
   assert.deepEqual(savedTopUpItems(history, '茉莉葡萄冰奶'), ['冻冻', '椰果', '奶冻']);
   assert.deepEqual(savedTopUpItems('当前菜单 冻冻 椰果 奶冻', '茉莉葡萄冰奶'), []);
+});
+
+test('a previous-purchase package request means the whole bought-order card behind 再来一单', () => {
+  const request = '河南正宗胡辣汤水煎包家的之前买过的那个套餐';
+  assert.equal(previouslyBoughtPackageRequested(request), true);
+  assert.equal(previouslyBoughtPackageRequested('这家店随便点一个套餐'), false);
+  assert.equal(previouslyBoughtPackageRequested('我从来没有买过这个套餐'), false);
+  assert.equal(repeatPurchaseMatchKind(
+    '今天购买过 共1件 ¥20.88 再来一单 特色牛肉胡辣汤1+牛肉水煎包3个+茶叶蛋1个 x1',
+    '之前买过的那个套餐', request,
+  ), 'exact');
+});
+
+test('more than one visible bought-order card stops before clicking any 再来一单 button', async () => {
+  const browser = new TaobaoFlashBrowser();
+  const summaries = [
+    '今天购买过 共1件 ¥20.88 再来一单 牛肉胡辣汤套餐 x1',
+    '3天前购买过 共1件 ¥18.80 再来一单 素胡辣汤套餐 x1',
+  ];
+  let taps = 0;
+  browser.tapControl = async () => { taps += 1; };
+  const controls = {
+    count: async () => summaries.length,
+    nth: index => ({
+      isVisible: async () => true,
+      evaluate: async () => summaries[index],
+    }),
+  };
+  const page = { getByText: () => controls };
+  await assert.rejects(
+    browser.repeatPurchase(page, '之前买过的那个套餐', '点之前买过的那个套餐', { click: true }),
+    /同时显示2张买过的历史订单卡/,
+  );
+  assert.equal(taps, 0);
+});
+
+test('one bought-order card keeps the real product title beneath 再来一单', async () => {
+  const browser = new TaobaoFlashBrowser();
+  const summary = '今天购买过 共1件 ¥20.88 再来一单 特色牛肉胡辣汤1+牛肉水煎包3个+茶叶蛋1个 x1';
+  const controls = {
+    count: async () => 1,
+    nth: () => ({ isVisible: async () => true, evaluate: async () => summary }),
+  };
+  const selected = await browser.repeatPurchase(
+    { getByText: () => controls },
+    '之前买过的那个套餐',
+    '我想吃河南正宗胡辣汤水煎包家的之前买过的那个套餐',
+  );
+  assert.equal(selected.displayName, '特色牛肉胡辣汤1+牛肉水煎包3个+茶叶蛋1个');
+  assert.equal(selected.total, 20.88);
 });
 
 test('brand-drink top-up accepts only toppings and rejects snacks, full drinks, and merchandise', () => {
@@ -638,6 +689,9 @@ test('known drink brands are recognized without widening to another merchant', (
 test('merchant similarity accepts inserted descriptors but rejects unrelated first cards', () => {
   assert.deepEqual(merchantFromShopText('返红包 杨姥佬家de撒汤·煎饺·灌汤包(平江万达店) 评分 4.8 月售1000+'), {
     name: '杨姥佬家de撒汤·煎饺·灌汤包(平江万达店)', rating: 4.8,
+  });
+  assert.deepEqual(merchantFromShopText('搜一搜 河南正宗胡辣汤水煎包烩面(活力中岛广场店) 评分 4.7 月售1000+ 商家 河南正宗胡辣汤水煎包烩面(活力中岛广场店) 猜你喜欢 买过'), {
+    name: '河南正宗胡辣汤水煎包烩面(活力中岛广场店)', rating: 4.7,
   });
   assert.ok(merchantNameMatchScore('DQ冰淇淋', 'DQ·蛋糕·冰淇淋(苏州宫巷店)') >= 70);
   assert.ok(merchantNameMatchScore('兰州牛肉面', '兰州牛肉拉面(相城店)') >= 70);
@@ -1551,6 +1605,40 @@ test('an already open matching storefront is searched before any outer marketpla
   assert.equal(offers[0].browserRef.shopUrl, active.url());
 });
 
+test('an already open requested merchant uses the unique bought-order card and never searches the placeholder text', async () => {
+  const browser = new TaobaoFlashBrowser();
+  const active = {
+    isClosed: () => false,
+    url: () => 'https://h5.ele.me/2021001185671035/pages/ele-takeout-index/ele-takeout-index?shopId=henan-1&keyword=%E6%B2%B3%E5%8D%97%E6%AD%A3%E5%AE%97%E8%83%A1%E8%BE%A3%E6%B1%A4%E6%B0%B4%E7%85%8E%E5%8C%85%E5%AE%B6',
+    locator: () => ({ innerText: async () => '猜你喜欢 买过 今天购买过 共1件 ¥20.88 再来一单' }),
+  };
+  browser.page = active;
+  browser.assertRiskCooldown = async () => {};
+  browser.knownRoute = async () => null;
+  browser.knownRoutesFor = async () => [];
+  browser.requireLogin = async () => {};
+  browser.riskCheck = async () => 0;
+  browser.extractMenu = async () => { throw new Error('must not read normal product cards for this selector'); };
+  browser.searchInsideShop = async () => { throw new Error('must not search the placeholder phrase'); };
+  browser.repeatPurchase = async () => ({
+    summary: '今天购买过 共1件 ¥20.88 再来一单 特色牛肉胡辣汤1+牛肉水煎包3个+茶叶蛋1个 x1',
+    quantity: 1, total: 20.88,
+    displayName: '特色牛肉胡辣汤1+牛肉水煎包3个+茶叶蛋1个',
+    requiresConfirmation: false, confirmationReason: '',
+  });
+  browser.rememberKnownRoute = async () => {};
+  browser.goto = async () => { throw new Error('outer search must not run'); };
+
+  const offers = await browser.search('河南正宗胡辣汤水煎包家 之前买过的那个套餐', 3, {
+    allowGlobalSearch: false, storeQuery: '河南正宗胡辣汤水煎包家',
+  });
+
+  assert.equal(offers.length, 1);
+  assert.equal(offers[0].name, '特色牛肉胡辣汤1+牛肉水煎包3个+茶叶蛋1个');
+  assert.equal(offers[0].browserRef.itemName, offers[0].name);
+  assert.equal(offers[0].browserRef.repeatPurchase, true);
+});
+
 test('autonomous role selection reads the current menu without submitting a store search', async () => {
   const browser = new TaobaoFlashBrowser();
   const active = {
@@ -1645,8 +1733,8 @@ test('checkout submission applies an available red packet before clicking paymen
   assert.match(source, /text\.split\(\/买过\\s\*\\d\+\\s\*次\|\[¥￥\]\//);
   assert.match(source, /price: retailPrices\[0\] \|\| 0/);
   assert.match(source, /const fruitHomepageFirst = Boolean\(singleFruitKeyword\(routeItemQuery\)\)/);
-  assert.match(source, /\(fruitHomepageFirst \|\| homepageOnly\) && shopSearchUrl\(page\.url\(\)\)[\s\S]*?returnToStorefrontWithoutRefresh\(page\)/);
-  assert.match(source, /activePage && \(fruitHomepageFirst \|\| homepageOnly\) && shopSearchUrl\(activePage\.url\(\)\)[\s\S]*?returnToStorefrontWithoutRefresh\(activePage\)/);
+  assert.match(source, /\(fruitHomepageFirst \|\| homepageOnly \|\| boughtPackageIntent\) && shopSearchUrl\(page\.url\(\)\)[\s\S]*?returnToStorefrontWithoutRefresh\(page\)/);
+  assert.match(source, /activePage && \(fruitHomepageFirst \|\| homepageOnly \|\| boughtPackageIntent\) && shopSearchUrl\(activePage\.url\(\)\)[\s\S]*?returnToStorefrontWithoutRefresh\(activePage\)/);
   assert.match(source, /forceMerchantEntry[\s\S]*?normal bounded merchant/);
   assert.match(source, /dismissCloseableRiskOverlay\(page, visibleKind\)[\s\S]*?riskRetry < 1[\s\S]*?waitForTimeout\(3_000\)/);
   assert.match(source, /async readCheckoutDraft\(page[\s\S]*?展开\|查看全部[\s\S]*?tapControl\(page, expandItems\)/);

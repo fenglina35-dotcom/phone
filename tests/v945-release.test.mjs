@@ -12,15 +12,15 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v1140 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1140 · 网页智能家电与角色实灯控制版'/);
-  assert.match(app,/const url='sw\.js\?v=1140&r=v1140-web-smart-home-relay-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1140'/);
-  assert.match(html,/app\.js\?v=1140/);
-  assert.match(sw,/const BUILD='1140'/);
-  assert.match(sw,/north-shell-v1140/);
-  assert.match(index,/小手机\.html\?v=1140/);
-  assert.match(repair,/小手机\.html\?v=1140/);
+test('v1141 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v1141 · 共同生活记忆与X评论定制版'/);
+  assert.match(app,/const url='sw\.js\?v=1141&r=v1141-cohab-memory-x-comments-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1141'/);
+  assert.match(html,/app\.js\?v=1141/);
+  assert.match(sw,/const BUILD='1141'/);
+  assert.match(sw,/north-shell-v1141/);
+  assert.match(index,/小手机\.html\?v=1141/);
+  assert.match(repair,/小手机\.html\?v=1141/);
 });
 
 test('the private iOS package embeds web v1125 and keeps 1.0.243 delivery',()=>{
