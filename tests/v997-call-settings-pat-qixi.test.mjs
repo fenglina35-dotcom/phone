@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1148 · 安卓启动与模型路线修复版'/);
+  assert.match(app,/APP_VER='v1149 · 顶部心情稳定显示版'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1148-android-startup-route-1/);
-  assert.match(html,/sw\.js\?v=1148&r=v1148-android-startup-route-1/);
+  assert.match(html,/north-sw-reloaded-1149-mood-stability-1/);
+  assert.match(html,/sw\.js\?v=1149&r=v1149-mood-stability-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{

@@ -12,15 +12,15 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v1148 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1148 · 安卓启动与模型路线修复版'/);
-  assert.match(app,/const url='sw\.js\?v=1148&r=v1148-android-startup-route-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1148'/);
-  assert.match(html,/app\.js\?v=1148/);
-  assert.match(sw,/const BUILD='1148'/);
-  assert.match(sw,/north-shell-v1148/);
-  assert.match(index,/小手机\.html\?v=1148/);
-  assert.match(repair,/小手机\.html\?v=1148/);
+test('v1149 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v1149 · 顶部心情稳定显示版'/);
+  assert.match(app,/const url='sw\.js\?v=1149&r=v1149-mood-stability-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1149'/);
+  assert.match(html,/app\.js\?v=1149/);
+  assert.match(sw,/const BUILD='1149'/);
+  assert.match(sw,/north-shell-v1149/);
+  assert.match(index,/小手机\.html\?v=1149/);
+  assert.match(repair,/小手机\.html\?v=1149/);
 });
 
 test('the private iOS package embeds web v1125 and keeps 1.0.243 delivery',()=>{

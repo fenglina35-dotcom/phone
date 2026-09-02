@@ -7,13 +7,13 @@ const bundleUrl = new URL('../native/private-small-phone/XcodeProject/PhoneCompa
 const source = fs.readFileSync(rootUrl, 'utf8').replace(/\r\n/g, '\n');
 const bundle = fs.readFileSync(bundleUrl, 'utf8').replace(/\r\n/g, '\n');
 
-function functionSource(name) {
-  const start = source.indexOf(`function ${name}(`);
+function functionSource(name, text = source) {
+  const start = text.indexOf(`function ${name}(`);
   assert.ok(start >= 0, `missing ${name}`);
-  const brace = source.indexOf('{', start);
+  const brace = text.indexOf('{', start);
   let depth = 0, quote = '', escaped = false;
-  for (let i = brace; i < source.length; i++) {
-    const ch = source[i];
+  for (let i = brace; i < text.length; i++) {
+    const ch = text[i];
     if (quote) {
       if (escaped) escaped = false;
       else if (ch === '\\') escaped = true;
@@ -22,15 +22,16 @@ function functionSource(name) {
     }
     if (ch === "'" || ch === '"' || ch === '`') { quote = ch; continue; }
     if (ch === '{') depth++;
-    else if (ch === '}' && --depth === 0) return source.slice(start, i + 1);
+    else if (ch === '}' && --depth === 0) return text.slice(start, i + 1);
   }
   throw new Error(`unterminated ${name}`);
 }
 
-for (const name of ['renderChat','phoneFriendAvatar','privateTrimImageMemoryCache','storedImageDisplaySource','routeCriticalStoredImageKeys','hydrateRouteCriticalStoredImages']) {
+for (const name of ['phoneFriendAvatar','privateTrimImageMemoryCache','storedImageDisplaySource','routeCriticalStoredImageKeys','hydrateRouteCriticalStoredImages']) {
   assert.ok(bundle.includes(functionSource(name)), `private bundle image repair differs: ${name}`);
 }
 assert.match(functionSource('renderChat'), /storedImageDisplaySource\(c\.chatBg\)/, 'chat renders must reuse an already hydrated background instead of flashing an idb URL');
+assert.match(functionSource('renderChat', bundle), /storedImageDisplaySource\(c\.chatBg\)/, 'private chat renders must keep the same critical image hydration contract even when unrelated header behavior releases later');
 assert.match(functionSource('phoneFriendAvatar'), /storedImageDisplaySource/, 'real-friend avatars must reuse hydrated image data across renders');
 assert.match(functionSource('privateTrimImageMemoryCache'), /routeCriticalStoredImageKeys/, 'active chat and friend images must be protected from generic memory trimming');
 

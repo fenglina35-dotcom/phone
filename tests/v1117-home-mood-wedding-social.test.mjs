@@ -27,11 +27,15 @@ test('long-press drag blocks native touch scrolling only after a real drag begin
   context._aDrag={};context.guard({cancelable:true,preventDefault(){prevented+=1;}});assert.equal(prevented,1,'active icon drag must keep horizontal movement in the app');
 });
 
-test('top mood switch is discoverable without fabricating stale mood',()=>{
+test('top mood stays visible across a failed refresh without fabricating new mood',()=>{
   assert.match(wechat,/界面与显示 → 顶部心情/);
   assert.match(wechat,/wxSettingsRow\('顶部心情',S\.settings\.showMoodTag===false\?'已关闭':'已开启'/);
   assert.doesNotMatch(wechat,/<h4>聊天<\/h4>[\s\S]{0,350}wxSettingsRow\('心情气泡'/);
-  assert.match(app,/innerThoughtMissingAt/,'missing model mood remains governed by the existing stale-content guard');
+  const context=vm.createContext({wechatNaturalOn:()=>true,String});
+  vm.runInContext(`${functionSource(app,'visibleRoleThought')};this.visibleRoleThought=visibleRoleThought`,context);
+  assert.equal(context.visibleRoleThought({innerThought:'上一条真实心声',innerThoughtAt:10,innerThoughtMissingAt:20}),'上一条真实心声');
+  assert.equal(context.visibleRoleThought({innerThought:'',innerThoughtMissingAt:20}),'','no confirmed thought must remain empty');
+  assert.match(app,/else\{c\.innerThoughtMissingAt=Date\.now\(\);save\(\);refreshChatMood\(id\);\}/,'failed extraction remains diagnosable without erasing stored thought');
 });
 
 test('manual wedding date is authoritative but does not rewrite ceremony records',()=>{
