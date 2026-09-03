@@ -91,15 +91,15 @@ test('status-bar theme does not force an avoidable first root transition', () =>
 });
 
 test('private build and bundled recovery page advance together', () => {
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.292 \(292\)'/);
-  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v5\.build292/);
-  assert.match(privateApp, /APP_VER='v1165 · 回复、心动审判与HomeKit修正版'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.293 \(293\)'/);
+  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v5\.build293/);
+  assert.match(privateApp, /APP_VER='v1166 · 心动审判分批出题修正版'/);
   assert.equal(privateAlias, privateIndex);
-  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1165'/);
-  assert.match(privateIndex, /app\.js\?v=1165/);
-  assert.match(privateIndex, /private-runtime-diagnostics\.js\?v=292/);
-  assert.match(privateRepair, /index\.html\?repair=1&v=1165/);
-  assert.match(privateApp, /__NORTH_SHELL_BUILD__!==\'1165\'/);
+  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1166'/);
+  assert.match(privateIndex, /app\.js\?v=1166/);
+  assert.match(privateIndex, /private-runtime-diagnostics\.js\?v=293/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1166/);
+  assert.match(privateApp, /__NORTH_SHELL_BUILD__!==\'1166\'/);
 });
 
 test('glass home widgets can be restored after an old-build over-install', () => {

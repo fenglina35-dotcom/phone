@@ -789,7 +789,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
         }
 
         private static let webContentTerminationDefaultsKey =
-            "smallPhone.webContentTerminationTimes.v5.build292"
+            "smallPhone.webContentTerminationTimes.v5.build293"
         // WebKit exposes this legacy NSError code inconsistently across Xcode SDKs.
         // Keep the stable numeric value so older SDKs do not need the missing
         // Swift enum member for this legacy policy-change error.
@@ -971,7 +971,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.292 (292)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.293 (293)';
       window.__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__ = true;
       const privateDiagLast = new Map();
       window.__smallPhoneNativeDiag = (event, fields = {}, minGap = 10000) => {
@@ -1003,7 +1003,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
       };
       window.__smallPhoneNativeDiag(
         'native.bootstrap.ready',
-        { build: '1.0.292 (292)', autoBackupPaused: true },
+        { build: '1.0.293 (293)', autoBackupPaused: true },
         0
       );
       // Keep private-App background maintenance away from the WebContent main

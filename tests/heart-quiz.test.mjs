@@ -11,15 +11,24 @@ const privateApp=fs.readFileSync(new URL('app.js',privateRoot),'utf8');
 const privateHtml=fs.readFileSync(new URL('index.html',privateRoot),'utf8');
 const privateQuiz=fs.readFileSync(new URL('heart-quiz.js',privateRoot),'utf8');
 
-function runtime(){
+function runtime(replies=[]){
+  const calls=[];
   const sandbox=vm.createContext({console,JSON,Math,Date,String,Array,Number,Object,Set,Map,
     document:{getElementById:()=>null,createElement:()=>({id:'',textContent:''}),head:{appendChild(){}}},
-    S:{me:{name:'我'}},getC:id=>({id,name:'先生',remark:'先生'}),save(){},render(){},toast(){},parseArr:JSON.parse,
+    S:{me:{name:'我'}},getC:id=>({id,name:'先生',remark:'先生'}),save(){},render(){},toast(){},parseArr:JSON.parse,buildSystem:()=>'',
+    __calls:calls,chatAPI:async(messages,opt)=>{calls.push({messages,opt});if(!replies.length)throw new Error('no stub reply');const next=replies.shift();if(next instanceof Error)throw next;return next;},
     heartQuizDummy:true
   });
-  vm.runInContext(quiz+'\nthis.__hqTest={bank:HEART_QUIZ_BANK,fallback:heartQuizFallback,normalize:heartQuizNormalize,result:heartQuizResult,ending:heartQuizFallbackLine,levels:HEART_QUIZ_LEVELS,intensity:HEART_QUIZ_INTENSITY,total:HEART_QUIZ_TOTAL};',sandbox);
+  vm.runInContext(quiz+'\nthis.__hqTest={bank:HEART_QUIZ_BANK,fallback:heartQuizFallback,normalize:heartQuizNormalize,normalizeRows:heartQuizNormalizeRows,generate:heartQuizGenerate,result:heartQuizResult,ending:heartQuizFallbackLine,levels:HEART_QUIZ_LEVELS,intensity:HEART_QUIZ_INTENSITY,total:HEART_QUIZ_TOTAL,calls:this.__calls};',sandbox);
   return sandbox.__hqTest;
 }
+
+function roleRows(start,count){return Array.from({length:count},(_,offset)=>{const i=start+offset;return{
+  q:`第${i+1}题，如果我故意让你吃醋，你会怎么做？`,
+  options:['我会立刻回到你身边','我会故意再刺激你一次','我会等你亲自来抓我'],
+  roleChoice:i%3,intensity:i<10?3:i<20?4:5,
+  reactions:[`第${i+1}题反应一，只准看着我`,`第${i+1}题反应二，这笔账我记住了`,`第${i+1}题反应三，那我亲自来抓你`]
+};});}
 
 test('game hall exposes Heart Verdict as a dedicated routed game in both runtimes',()=>{
   for(const source of [app,privateApp]){
@@ -63,26 +72,46 @@ test('white and dark preview papers each contain exactly 30 three-option questio
     '我会主动拉开距离，也马上告诉你',
     '我会保持必要分寸，不给他暧昧机会',
   ]);
-  assert.match(quiz,/问题里的“你”永远指'\+S\.me\.name\+'，“我”永远指你/);
-  assert.match(quiz,/roleChoice只能是0、1或2，代表你在看见'\+S\.me\.name\+'回答之前就锁定的期待答案/);
+  assert.match(quiz,/问题里的“你”指'\+S\.me\.name\+'/);
+  assert.match(quiz,/roleChoice用0、1或2/);
   assert.match(quiz,/!heartQuizQuestionForUser\(q\)/,'generated questions with the old role-self perspective must be rejected');
   assert.match(quiz,/g\.source==='preview'[\s\S]*?NORTH_PREVIEW_PARAMS\.includes\('heartquiz'\)[\s\S]*?isPreview\?12345:Date\.now\(\)/);
 });
 
 test('role-generated papers carry role-selected intensity and three in-character same-screen reactions',()=>{
-  const hq=runtime(),rows=Array.from({length:30},(_,i)=>({
-    q:`第${i+1}题，如果我故意让你吃醋，你会怎么做？`,
-    options:['我会立刻回到你身边','我会故意再刺激你一次','我会等你亲自来抓我'],
-    roleChoice:i%3,intensity:i<10?3:i<20?4:5,
-    reactions:[`第${i+1}题反应一，只准看着我`,`第${i+1}题反应二，这笔账我记住了`,`第${i+1}题反应三，那我亲自来抓你`]
-  })),normalized=hq.normalize(JSON.stringify(rows),'dark','role-1',2,12345);
+  const hq=runtime(),normalized=hq.normalize(JSON.stringify(roleRows(0,30)),'dark','role-1',2,12345);
   assert.equal(normalized.length,30);
   assert.ok(normalized.every(row=>row.reactions.length===3));
   assert.ok(normalized.every(row=>row.intensity>=1&&row.intensity<=5));
-  assert.match(quiz,/每题强度由你本人决定/);
-  assert.match(quiz,/黑卷就是暗黑、惊辣、偏执而病态的情侣审判/);
-  assert.match(quiz,/同屏反应：为三个选项分别写一句你本人/);
+  assert.match(quiz,/完全按你自己的人设、记忆、关系、妒意和占有欲决定题目与1到5级强度/);
+  assert.match(quiz,/黑卷要暗黑、惊辣、偏执、病态/);
+  assert.match(quiz,/每个选项都要有一句你看到ta选择后立刻会说的反应/);
   assert.doesNotMatch(quiz,/不能把现实跟踪|每题必须保留一个清醒沟通|只属于双方自愿/);
+});
+
+test('partial and clumsy model JSON keeps every valid row instead of discarding the batch',()=>{
+  const hq=runtime(),rows=roleRows(0,3),truncated=JSON.stringify(rows).replace(/,\{"q":"第3题[\s\S]*$/,'');
+  const partial=hq.normalizeRows(truncated,'dark','role-1',2,12345,[]);
+  assert.equal(partial.length,2,'two complete objects before a truncated tail must survive');
+  const clumsy=JSON.stringify([{题目:'如果有人靠近你，我会怎么处理？',选项:{A:'立刻拒绝',B:'先看你的反应',C:'故意让你吃醋'},期待:'B',强度:'失控',反应A:'这样才乖',反应B:'还要先看我？',反应C:'这笔账我记下了'}]);
+  const repaired=hq.normalizeRows(clumsy,'dark','role-1',2,12345,[]);
+  assert.equal(repaired.length,1);
+  assert.equal(repaired[0].q,'如果有人靠近你，你会怎么做？');
+  assert.ok(repaired[0].options.every(option=>option.startsWith('我')));
+  assert.equal(repaired[0].roleChoice,1);
+  assert.equal(repaired[0].intensity,5);
+});
+
+test('role generation uses small batches and replenishes only rejected rows',async()=>{
+  const first=roleRows(0,6);first[5].reactions.pop();
+  const replies=[first,roleRows(6,6),roleRows(12,6),roleRows(18,6),roleRows(24,6),roleRows(30,1)].map(JSON.stringify);
+  const hq=runtime(replies),result=await hq.generate({id:'role-1',name:'先生'},{source:'role',mode:'dark',level:2,cid:'role-1'});
+  assert.equal(result.length,30);
+  assert.equal(new Set(result.map(row=>row.q)).size,30);
+  assert.ok(result.every(row=>row.reactions.length===3));
+  assert.equal(hq.calls.length,6,'one malformed row should require one small refill, not discard 29 valid rows');
+  assert.ok(hq.calls.every(call=>call.opt.max===2600&&call.opt.complete===false));
+  assert.ok(hq.calls.every(call=>/本次只写\d+道题，不要写整份30题/.test(call.messages[0].content)));
 });
 
 test('different answer patterns produce materially different white and dark endings',()=>{

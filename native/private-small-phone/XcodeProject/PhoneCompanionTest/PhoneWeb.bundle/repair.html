@@ -23,7 +23,7 @@
   (()=>{
     const status=document.getElementById('status');
     const retry=document.getElementById('retry');
-    const target=()=>`index.html?repair=1&v=1165&t=${Date.now()}`;
+    const target=()=>`index.html?repair=1&v=1166&t=${Date.now()}`;
     const reopen=()=>location.replace(target());
     retry.addEventListener('click',reopen);
     (async()=>{

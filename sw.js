@@ -1,6 +1,6 @@
-const BUILD='1165';
-const HOTFIX='v1165-reply-heartquiz-homekit-hotfix-1';
-const SHELL_CACHE='north-shell-v1165-reply-heartquiz-homekit-1';
+const BUILD='1166';
+const HOTFIX='v1166-heartquiz-batches-hotfix-1';
+const SHELL_CACHE='north-shell-v1166-heartquiz-batches-1';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
@@ -9,7 +9,7 @@ const CORE_FILES=[
   {url:'./小手机.html?v='+BUILD+'&r='+HOTFIX,kind:'html'},
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
   {url:'./app.js?v='+BUILD+'&r='+HOTFIX,kind:'app'},
-  {url:'./web-hotfix.js?v='+BUILD+'&r=v1165-reply-heartquiz-homekit-1',kind:'hotfix'},
+  {url:'./web-hotfix.js?v='+BUILD+'&r=v1166-heartquiz-batches-1',kind:'hotfix'},
   {url:'./ai-account.js?v='+BUILD,kind:'ai'}
 ];
 const OPTIONAL_FILES=[
@@ -63,7 +63,7 @@ function validShellText(kind,text){
     &&text.includes("window.__NORTH_SHELL_BUILD__!=='"+BUILD+"'")
     &&text.includes('showGate();');
   if(kind==='hotfix')return text.length>800
-    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1165-reply-heartquiz-homekit-1'")
+    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1166-heartquiz-batches-1'")
     &&text.includes('reconcileExpiredWxLogin')
     &&text.includes('withBaseImageCheck')
     &&text.includes('isStoredImgRef');
