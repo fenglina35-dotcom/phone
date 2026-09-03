@@ -235,7 +235,7 @@ with tempfile.TemporaryDirectory(prefix="smallphone-v1164-ios291-", dir=ROOT) as
         "function splitTrailingDeliverySpecs",
         "userText:text(meta.userText,800)",
         "knownMerchant=/(?:KFC|肯德基|麦当劳|茶百道",
-        "|芭乐|甘露)/u",
+        "|芭乐|甘露|红豆|桃胶)/u",
         "function recoverRoleOrderCard(order)",
         "scheduleRoleOrderAcknowledgement(c,order)",
     ]:
