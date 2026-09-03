@@ -23,7 +23,7 @@ Review steps:
 2. On the review iPhone, open North → **Local Management**, authorize Screen Time, and select at least one test app. Then open **Role Remote Management**, enter the controller ID and pairing code, connect, and tap **Upload real data now** once.
 3. Keep North open during the first review test. In the Role Controller, select the uploaded app and test **Refresh data**, **Lock**, **Unlock**, and **Set 15-minute daily limit**. The recent-command list changes from pending to the device-reported final status.
 
-North does not read messages, private content, photos, or pages inside WeChat, TikTok, or any other third-party app. Optional HealthKit and location access are not required to test role remote management.
+North does not read messages, private content, photos, or pages inside WeChat, TikTok, or any other third-party app. Optional HealthKit access is limited to step count only. HealthKit and location access are not required to test role remote management.
 
 Support: https://fenglina35-dotcom.github.io/phone/north-support.html
 

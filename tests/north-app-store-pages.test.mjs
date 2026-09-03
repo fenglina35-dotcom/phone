@@ -22,7 +22,7 @@ test('North support page gives review-safe setup and recovery guidance',()=>{
 
 test('North privacy page truthfully describes sensitive-data boundaries',()=>{
   assert.match(privacy,/<title>North 隐私政策<\/title>/);
-  for(const phrase of ['屏幕使用时间','步数和睡眠','位置数据','不出售个人数据','Supabase','HealthKit','取消配对']){
+  for(const phrase of ['屏幕使用时间','今日步数','不申请其他健康数据','位置数据','不出售个人数据','Supabase','HealthKit','取消配对']){
     assert.match(privacy,new RegExp(phrase));
   }
   assert.match(privacy,/不读取微信、抖音或其他第三方 App 的聊天、私信、照片、页面内容/);

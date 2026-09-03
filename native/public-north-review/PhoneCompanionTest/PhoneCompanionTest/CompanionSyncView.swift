@@ -252,7 +252,7 @@ struct CompanionSyncView: View {
                     }
                 }
 
-                Section("电量与 Apple Watch 健康") {
+                Section("电量与步数") {
                     LabeledContent(
                         "iPhone 电量",
                         value: wellnessService.batteryDisplayText
@@ -263,7 +263,7 @@ struct CompanionSyncView: View {
                     )
 
                     Toggle(
-                        "同步健康摘要给小手机",
+                        "同步今日步数给角色控制端",
                         isOn: Binding(
                             get: { wellnessService.healthSyncEnabled },
                             set: { enabled in
@@ -284,7 +284,7 @@ struct CompanionSyncView: View {
                         .font(.footnote)
                         .foregroundStyle(.secondary)
 
-                    Text("Apple Watch 的步数、活动能量、心率、HRV 和睡眠会先同步到 iPhone 健康 App，再由本页读取摘要。心境只读取你主动记录的内容，不会根据心率猜测情绪。")
+                    Text("North 仅在你明确授权后读取健康 App 中的今日步数，不申请或读取其他健康数据。")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                 }

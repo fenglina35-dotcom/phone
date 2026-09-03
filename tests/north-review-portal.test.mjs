@@ -68,8 +68,8 @@ test('public North visibly identifies role remote management for ordinary users'
     assert.match(swift,new RegExp(phrase));
   }
   assert.doesNotMatch(swift,/TestFlight|appStoreReceiptURL|isAppReview|reviewDevice|审核设备/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 6;/g)||[]).length,10);
-  assert.doesNotMatch(project,/CURRENT_PROJECT_VERSION = [0-5];/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 8;/g)||[]).length,10);
+  assert.doesNotMatch(project,/CURRENT_PROJECT_VERSION = [0-7];/);
   assert.match(project,/INFOPLIST_KEY_CFBundleDisplayName = North;/);
   assert.match(project,/PRODUCT_BUNDLE_IDENTIFIER = com\.qianyi\.PhoneCompanionTest;/);
 });
