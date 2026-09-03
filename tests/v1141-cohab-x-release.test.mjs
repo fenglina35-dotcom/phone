@@ -6,25 +6,25 @@ import test from 'node:test';
 const root = process.cwd();
 const read = (...parts) => fs.readFileSync(path.join(root, ...parts), 'utf8');
 
-test('v1156 web identity and cache markers are aligned', () => {
+test('v1159 web identity and cache markers are aligned', () => {
   const app = read('app.js');
   const shell = read('小手机.html');
   const sw = read('sw.js');
   const hotfix = read('web-hotfix.js');
   const index = read('index.html');
   const repair = read('repair.html');
-  assert.match(app, /__NORTH_SHELL_BUILD__!=='1156'/);
-  assert.match(app, /APP_VER='v1156 · 安卓大存档增量恢复版'/);
-  assert.match(shell, /__NORTH_SHELL_BUILD__='1156'/);
-  assert.match(shell, /app\.js\?v=1156&r=v1156-via-durable-journal-1/);
-  assert.match(sw, /const BUILD='1156'/);
-  assert.match(sw, /v1156-via-durable-journal-hotfix-1/);
-  assert.match(hotfix, /v1156-via-durable-journal-1/);
-  assert.match(index, /小手机\.html\?v=1156/);
-  assert.match(repair, /小手机\.html\?v=1156/);
+  assert.match(app, /__NORTH_SHELL_BUILD__!=='1159'/);
+  assert.match(app, /APP_VER='v1159 · 微信外语文字自动翻译版'/);
+  assert.match(shell, /__NORTH_SHELL_BUILD__='1159'/);
+  assert.match(shell, /app\.js\?v=1159&r=v1159-wechat-text-auto-translation-1/);
+  assert.match(sw, /const BUILD='1159'/);
+  assert.match(sw, /v1159-wechat-text-auto-translation-hotfix-1/);
+  assert.match(hotfix, /v1159-wechat-text-auto-translation-1/);
+  assert.match(index, /小手机\.html\?v=1159/);
+  assert.match(repair, /小手机\.html\?v=1159/);
 });
 
-test('v1156 publishes shared cohab memory and X comment controls', () => {
+test('v1159 publishes shared cohab memory and X comment controls', () => {
   const app = read('app.js');
   const privateCopy = read('native', 'private-small-phone', 'XcodeProject', 'PhoneCompanionTest', 'PhoneWeb.bundle', 'app.js');
   for (const source of [app, privateCopy]) {

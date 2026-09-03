@@ -26,16 +26,16 @@ function functionSource(name){
   throw new Error(`unterminated ${name}`);
 }
 
-test('v1156 has a unique visible identity across every public entry and cache layer',()=>{
-  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1156\'/);
-  assert.match(app,/APP_VER='v1156 · 安卓大存档增量恢复版'/);
-  assert.match(shell,/__NORTH_SHELL_BUILD__='1156'/);
-  assert.match(shell,/app\.js\?v=1156&r=v1156-via-durable-journal-1/);
-  assert.match(index,/小手机\.html\?v=1156/);
-  assert.match(repair,/小手机\.html\?v=1156/);
-  assert.match(worker,/const BUILD='1156'/);
-  assert.match(worker,/north-shell-v1156-via-durable-journal-1/);
-  assert.match(hotfix,/sw\.js\?v=1156&r=v1156-via-durable-journal-1/);
+test('v1159 has a unique visible identity across every public entry and cache layer',()=>{
+  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1159\'/);
+  assert.match(app,/APP_VER='v1159 · 微信外语文字自动翻译版'/);
+  assert.match(shell,/__NORTH_SHELL_BUILD__='1159'/);
+  assert.match(shell,/app\.js\?v=1159&r=v1159-wechat-text-auto-translation-1/);
+  assert.match(index,/小手机\.html\?v=1159/);
+  assert.match(repair,/小手机\.html\?v=1159/);
+  assert.match(worker,/const BUILD='1159'/);
+  assert.match(worker,/north-shell-v1159-wechat-text-auto-translation-1/);
+  assert.match(hotfix,/sw\.js\?v=1159&r=v1159-wechat-text-auto-translation-1/);
   for(const [name,source] of Object.entries({app,shell,index,repair,worker,hotfix})){
     assert.doesNotMatch(source,/v?1127/,`${name} must not reuse the prior web version`);
   }
