@@ -6,25 +6,25 @@ import test from 'node:test';
 const root = process.cwd();
 const read = (...parts) => fs.readFileSync(path.join(root, ...parts), 'utf8');
 
-test('v1163 web identity and cache markers are aligned', () => {
+test('v1164 web identity and cache markers are aligned', () => {
   const app = read('app.js');
   const shell = read('小手机.html');
   const sw = read('sw.js');
   const hotfix = read('web-hotfix.js');
   const index = read('index.html');
   const repair = read('repair.html');
-  assert.match(app, /__NORTH_SHELL_BUILD__!=='1163'/);
-  assert.match(app, /APP_VER='v1163 · 主动消息与心动审判修正版'/);
-  assert.match(shell, /__NORTH_SHELL_BUILD__='1163'/);
-  assert.match(shell, /app\.js\?v=1163&r=v1163-proactive-heart-1/);
-  assert.match(sw, /const BUILD='1163'/);
-  assert.match(sw, /v1163-proactive-heart-hotfix-1/);
-  assert.match(hotfix, /v1163-proactive-heart-1/);
-  assert.match(index, /小手机\.html\?v=1163/);
-  assert.match(repair, /小手机\.html\?v=1163/);
+  assert.match(app, /__NORTH_SHELL_BUILD__!=='1164'/);
+  assert.match(app, /APP_VER='v1164 · 列表、视频与智能家电修正版'/);
+  assert.match(shell, /__NORTH_SHELL_BUILD__='1164'/);
+  assert.match(shell, /app\.js\?v=1164&r=v1164-scroll-camera-smart-home-1/);
+  assert.match(sw, /const BUILD='1164'/);
+  assert.match(sw, /v1164-scroll-camera-smart-home-hotfix-1/);
+  assert.match(hotfix, /v1164-scroll-camera-smart-home-1/);
+  assert.match(index, /小手机\.html\?v=1164/);
+  assert.match(repair, /小手机\.html\?v=1164/);
 });
 
-test('v1163 publishes shared cohab memory and X comment controls', () => {
+test('v1164 publishes shared cohab memory and X comment controls', () => {
   const app = read('app.js');
   const privateCopy = read('native', 'private-small-phone', 'XcodeProject', 'PhoneCompanionTest', 'PhoneWeb.bundle', 'app.js');
   for (const source of [app, privateCopy]) {

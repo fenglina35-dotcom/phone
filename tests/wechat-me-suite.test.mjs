@@ -37,11 +37,11 @@ assert.match(privateFeature,/wxMe=wxMe1037/,'private package must retain its ver
 assert.match(privateCss,/\.wxme-home/,'private package must retain its verified WeChat me styles');
 assert.match(feature,/wxServiceTile\('smarthome','智能家电'/,'public web must carry the Windows smart-home entry');
 assert.match(css,/\.wx-smart-home-page/,'public web must carry the smart-home page styles');
-assert.doesNotMatch(privateFeature,/Windows 真实控制/,'web-only computer relay must not be copied into the completed private package');
-assert.doesNotMatch(privateCss,/\.wx-smart-home-page/,'web-only computer relay styles must not be copied into the completed private package');
+assert.match(privateFeature,/wxServiceTile\('smarthome','智能家电'/,'private package must include every public smart-home entry');
+assert.match(privateCss,/\.wx-smart-home-page/,'private package must include every public smart-home style');
 assert.equal(privateQr,fs.readFileSync(new URL('../vendor/qr/qrcode.js',import.meta.url),'utf8'));
 assert.equal(privateScan,fs.readFileSync(new URL('../vendor/qr/jsQR.js',import.meta.url),'utf8'));
-for(const file of ['wechat-me.js','wechat-me.css','vendor/qr/qrcode.js','vendor/qr/jsQR.js']){
+for(const file of ['wechat-me.js','wechat-me.css','smart-home.js','vendor/qr/qrcode.js','vendor/qr/jsQR.js']){
   execFileSync('git',['ls-files','--error-unmatch',`native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/${file}`],{stdio:'ignore'});
 }
 

@@ -9,6 +9,12 @@ const services=fs.readFileSync(new URL('../wechat-me.js',import.meta.url),'utf8'
 const css=fs.readFileSync(new URL('../wechat-me.css',import.meta.url),'utf8');
 const edge=fs.readFileSync(new URL('../supabase/functions/phone-smart-home/index.ts',import.meta.url),'utf8');
 const migration=fs.readFileSync(new URL('../supabase/migrations/202609020005_phone_smart_home_device_relay.sql',import.meta.url),'utf8');
+const privateBase='../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/';
+const privateApp=fs.readFileSync(new URL(privateBase+'app.js',import.meta.url),'utf8');
+const privateHtml=fs.readFileSync(new URL(privateBase+'小手机.html',import.meta.url),'utf8');
+const privateFeature=fs.readFileSync(new URL(privateBase+'smart-home.js',import.meta.url),'utf8');
+const privateServices=fs.readFileSync(new URL(privateBase+'wechat-me.js',import.meta.url),'utf8');
+const privateCss=fs.readFileSync(new URL(privateBase+'wechat-me.css',import.meta.url),'utf8');
 
 assert.match(html,/smart-home\.js\?v=\d+/,'public shell must load the smart-home runtime');
 assert.match(services,/wxServiceTile\('smarthome','智能家电'/,'service page must expose a smart-home tile');
@@ -24,6 +30,14 @@ assert.match(app,/smartHomeRoleColorMismatch/,'named color claims must be checke
 assert.match(app,/Windows 助手没有确认灯具成功/,'failure prompt must use truthful device evidence');
 assert.match(app,/smartHomeRoleFinalize\(content,c,_userText/,'chat replies must wait for smart-home finalization');
 assert.match(app,/smartHomeRoleFinalize\(content,c,\(_luc/,'call replies must wait for smart-home finalization');
+assert.match(privateHtml,/smart-home\.js\?v=\d+/,'private shell must load every public smart-home runtime');
+assert.match(privateServices,/wxServiceTile\('smarthome','智能家电'/,'private service page must expose the same smart-home entry');
+assert.match(privateCss,/\.wx-smart-home-page/,'private package must carry the smart-home page styles');
+assert.match(privateApp,/c\.p==='wxsmarthome'/,'private router must expose the smart-home page');
+assert.match(privateApp,/function smartHomeRoleDecision/,'private role replies must use the same smart-home whitelist parser');
+assert.match(privateApp,/smartHomeRoleFinalize\(content,c,_userText/,'private chat replies must wait for verified device state');
+assert.match(privateApp,/smartHomeRoleFinalize\(content,c,\(_luc/,'private calls must wait for verified device state');
+assert.equal(privateFeature.replace(/\r\n/g,'\n'),feature.replace(/\r\n/g,'\n'),'private package must embed the complete public smart-home runtime');
 
 assert.match(feature,/response\.status===202/,'web must poll the same pending job');
 assert.match(feature,/result\.verified!==true/,'unverified control results must be rejected');

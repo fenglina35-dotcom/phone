@@ -29,6 +29,7 @@ const sandbox = {
   render() {},
   updateCallSub() {},
   hfHeard(text) { heard.push(text); },
+  callVideoCameraVerifyAfterSpeech() {},
   _call: { sub: null },
   _callBusy: false,
   _audioMicGranted: false,

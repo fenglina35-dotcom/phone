@@ -89,6 +89,7 @@ function wxServiceIcon(kind){const icons={
   favorite:'<path d="m16 4 10 5.7-10 5.8L6 9.7 16 4Z"/><path d="M26 9.7v12L16 28V15.5l10-5.8ZM16 28 6 22V9.7l10 5.8V28Z"/>',
   album:'<rect x="4" y="6" width="24" height="20" rx="2"/><circle cx="21.5" cy="12.2" r="2"/><path d="m6.5 23 6.6-7 4.6 4.2 3-2.8 4.8 5.6"/>',
   support:'<path d="M6 17v-2a10 10 0 0 1 20 0v2"/><path d="M6 16.5h3.5v7H8a2 2 0 0 1-2-2v-5ZM26 16.5h-3.5v7H24a2 2 0 0 0 2-2v-5Z"/><path d="M22.5 24c-1.4 2-3.5 3-6.5 3h-2"/>',
+  smarthome:'<path d="M5 14.5 16 5l11 9.5V27H19v-8h-6v8H5V14.5Z"/>',
   recharge:'<rect x="8" y="3.5" width="16" height="25" rx="2.5"/><path d="M12 8h8M12 23h8"/><path d="m13 12 3 3 3-3M16 15v5"/>',
   utilities:'<path d="M16 3.5c4.8 5.8 8 9.5 8 14.1a8 8 0 0 1-16 0c0-4.6 3.2-8.3 8-14.1Z"/><path d="m11.5 18 3 3 6-7"/>',
   city:'<path d="M4 27h24M7 27V13h7v14M14 27V6h7v21M21 27V16h5v11"/><path d="M10 17h1M10 21h1M17 10h1M17 14h1M17 18h1M24 20h.5"/>'
@@ -96,7 +97,7 @@ function wxServiceIcon(kind){const icons={
 function wxServiceTile(kind,title,sub,action,cls){return `<button type="button" class="wx-service-tile wx-service-${kind} ${cls||''}" ${action?`onclick="${action}"`:'disabled'}><i>${wxServiceIcon(kind)}</i><b>${esc(title)}</b>${sub?`<small>${esc(sub)}</small>`:''}</button>`;}
 function renderWxServices(){return `${WNav('服务')}<div class="scroll wxme-scroll wxservices">
   <div class="wx-service-hero">${wxServiceTile('receive','收付款','模拟展示，不可点击','')}${wxServiceTile('wallet','钱包',wxMoney(S.me.balance),"go('wxwallet')")}</div>
-  <section class="wx-service-card"><h4>小手机服务</h4><div class="wx-service-grid">${wxServiceTile('travel','云程','机票与行程',"tvInit();go('travel',{from:'wxservices'})")}${wxServiceTile('delivery','真实外卖','进入外卖应用',"openApp('food')")}${wxServiceTile('favorite','收藏','聊天收藏',"go('wxfavorites')")}${wxServiceTile('album','朋友圈相册','照片与视频',"go('wxalbum')")}${wxServiceTile('support','客服中心','功能解答',"go('wxsupport')")}</div></section>
+  <section class="wx-service-card"><h4>小手机服务</h4><div class="wx-service-grid">${wxServiceTile('travel','云程','机票与行程',"tvInit();go('travel',{from:'wxservices'})")}${wxServiceTile('delivery','真实外卖','进入外卖应用',"openApp('food')")}${wxServiceTile('favorite','收藏','聊天收藏',"go('wxfavorites')")}${wxServiceTile('album','朋友圈相册','照片与视频',"go('wxalbum')")}${wxServiceTile('support','客服中心','功能解答',"go('wxsupport')")}${wxServiceTile('smarthome','智能家电','Windows 真实控制',"go('wxsmarthome')")}</div></section>
   <section class="wx-service-card"><h4>更多服务</h4><div class="wx-service-grid">${wxServiceTile('recharge','手机充值','开发中','')}${wxServiceTile('utilities','生活缴费','开发中','')}${wxServiceTile('city','城市服务','开发中','')}</div></section>
   </div>`;}
 

@@ -15,7 +15,7 @@ enum SmallPhoneDiagnosticsStore {
     )
     private static let maximumBytes = 256 * 1_024
     private static let maximumLines = 200
-    private static let build = "1.0.290 (290)"
+    private static let build = "1.0.291 (291)"
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -2029,7 +2029,10 @@ private final class NativeSpeechRecognitionController {
         }
     }
 
-    private func beginRecognition(language: String) throws {
+    private func beginRecognition(
+        language: String,
+        preserveAudioSession: Bool = false
+    ) throws {
         guard isActive, !isPaused, !sessionID.isEmpty else { return }
         guard let recognizer = SFSpeechRecognizer(
             locale: Locale(identifier: language)
@@ -2037,13 +2040,15 @@ private final class NativeSpeechRecognitionController {
             throw NativeSpeechError.unavailable
         }
 
-        let audioSession = AVAudioSession.sharedInstance()
-        try audioSession.setCategory(
-            .playAndRecord,
-            mode: .voiceChat,
-            options: [.defaultToSpeaker, .allowBluetoothHFP, .mixWithOthers]
-        )
-        try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+        if !preserveAudioSession {
+            let audioSession = AVAudioSession.sharedInstance()
+            try audioSession.setCategory(
+                .playAndRecord,
+                mode: .voiceChat,
+                options: [.defaultToSpeaker, .allowBluetoothHFP, .mixWithOthers]
+            )
+            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+        }
 
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = true
@@ -2147,7 +2152,14 @@ private final class NativeSpeechRecognitionController {
                   !self.isPaused,
                   self.sessionID == session else { return }
             do {
-                try self.beginRecognition(language: self.language)
+                // A completed sentence only rotates Speech's engine/request.
+                // The active play-and-record session may also be carrying the
+                // WKWebView camera preview; reapplying its category here can
+                // leave the video track live while its frames stop advancing.
+                try self.beginRecognition(
+                    language: self.language,
+                    preserveAudioSession: true
+                )
                 self.restartFailures = 0
             } catch {
                 self.restartFailures += 1
