@@ -49,8 +49,8 @@ function text(value,length=300){return String(value==null?'':value).trim().slice
 
 {
   const sandbox=vm.createContext({text});
-  const names=['deliveryMatchKey','deliveryOrderContextRejected','splitTrailingDeliverySpecs','contextualNaturalOrderIntent','explicitOrderQuery'];
-  vm.runInContext(`${names.map(name=>functionSource(delivery,name)).join('\n')};this.parse=contextualNaturalOrderIntent;this.query=explicitOrderQuery;`,sandbox);
+  const names=['deliveryMatchKey','deliveryOrderContextRejected','explicitApprovedOrderIntent','splitTrailingDeliverySpecs','contextualNaturalOrderIntent','normalizeExplicitOrderIntent','explicitOrderQuery'];
+  vm.runInContext(`${names.map(name=>functionSource(delivery,name)).join('\n')};this.parse=contextualNaturalOrderIntent;this.parseExplicit=explicitApprovedOrderIntent;this.normalize=normalizeExplicitOrderIntent;this.query=explicitOrderQuery;`,sandbox);
   const exact=sandbox.parse('茶百道的杨枝甘露不加糖');
   assert.deepEqual(JSON.parse(JSON.stringify(exact)),{
     merchant:'茶百道',items:['杨枝甘露'],specs:['不加糖'],proactive:false,summary:'茶百道 / 杨枝甘露'
@@ -63,6 +63,15 @@ function text(value,length=300){return String(value==null?'':value).trim().slice
   const boughtPackage=sandbox.parse('我想吃河南正宗胡辣汤水煎包家的之前买过的那个套餐');
   assert.equal(boughtPackage?.merchant,'河南正宗胡辣汤水煎包');
   assert.deepEqual(Array.from(boughtPackage?.items||[]),['之前买过的那个套餐']);
+  const unknownBrand=sandbox.parseExplicit('想喝暖燕家的红豆桃胶呵护饮🥺');
+  assert.equal(unknownBrand?.merchant,'暖燕','an explicit owned-store request must not require a known-brand whitelist');
+  assert.deepEqual(Array.from(unknownBrand?.items||[]),['红豆桃胶呵护饮'],'trailing emoji must not leak into the platform search term');
+  assert.equal(sandbox.query(sandbox.normalize(unknownBrand,'想喝暖燕家的红豆桃胶呵护饮🥺')),'用户明确；门店=暖燕；商品=红豆桃胶呵护饮');
+  const unknownBrandSupplement=sandbox.parse('暖燕家的红豆桃胶呵护饮');
+  assert.equal(unknownBrandSupplement?.merchant,'暖燕');
+  assert.deepEqual(Array.from(unknownBrandSupplement?.items||[]),['红豆桃胶呵护饮']);
+  assert.equal(sandbox.parseExplicit('我想看哥哥家的猫'),null,'a non-food possessive sentence must not start delivery');
+  assert.equal(sandbox.parse('我想看哥哥家的猫'),null,'the contextual parser must keep ordinary chat out of delivery');
   assert.equal(sandbox.parse('你觉得之前买过的那个套餐好不好'),null,'retrospective discussion must not start delivery');
 }
 

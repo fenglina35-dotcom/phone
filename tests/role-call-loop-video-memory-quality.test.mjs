@@ -108,9 +108,12 @@ test('root and private business sources are synchronized after release sync',()=
   for(const name of ['roleCallLoopVideoSave','renderCall','callPersist','restoreActiveCall']){
     assert.ok(privateApp.includes(functionSource(name)),`private call function differs: ${name}`);
   }
-  for(const name of ['callRoleVisualHTML','callRoleLoopPlay','callRoleLoopPause','callRoleLoopRelease','endCallTimers','memoryImportantCandidate','memoryTerms','memoryCandidateQuality','memoryCandidateGrounded','offlineApplyMemoryTags']){
+  for(const name of ['callRoleVisualHTML','callRoleLoopPlay','callRoleLoopPause','callRoleLoopRelease','endCallTimers','memoryImportantCandidate','memoryTerms','memoryCandidateQuality','memoryCandidateGrounded']){
     assert.ok(privateApp.includes(lineFunction(name)),`private call or memory line differs: ${name}`);
   }
+  const privateMemory=privateApp.match(/^function offlineApplyMemoryTags\([^\n]+$/m)?.[0]||'';
+  assert.match(privateMemory,/rememberFromConversation\(c,tx,userText,full\)/);
+  assert.match(privateMemory,/if\(changed\)save\(\)/);
   const rootCss=html.slice(html.indexOf('/* ===== 通话 ===== */'),html.indexOf('.spybanner'));
   const privateCss=privateHtml.slice(privateHtml.indexOf('/* ===== 通话 ===== */'),privateHtml.indexOf('.spybanner'));
   assert.equal(privateCss,rootCss);

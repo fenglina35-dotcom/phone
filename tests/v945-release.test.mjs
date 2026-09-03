@@ -12,22 +12,22 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v1159 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1159 · 微信外语文字自动翻译版'/);
-  assert.match(app,/const url='sw\.js\?v=1159&r=v1159-wechat-text-auto-translation-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1159'/);
-  assert.match(html,/app\.js\?v=1159/);
-  assert.match(sw,/const BUILD='1159'/);
-  assert.match(sw,/north-shell-v1159/);
-  assert.match(index,/小手机\.html\?v=1159/);
-  assert.match(repair,/小手机\.html\?v=1159/);
+test('v1161 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v1161 · 外卖未知品牌识别版'/);
+  assert.match(app,/const url='sw\.js\?v=1161&r=v1161-delivery-unknown-brand-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1161'/);
+  assert.match(html,/app\.js\?v=1161/);
+  assert.match(sw,/const BUILD='1161'/);
+  assert.match(sw,/north-shell-v1161/);
+  assert.match(index,/小手机\.html\?v=1161/);
+  assert.match(repair,/小手机\.html\?v=1161/);
 });
 
-test('the private iOS package embeds web v1125 and keeps 1.0.243 delivery',()=>{
-  assert.match(privateBundle,/<string>1125<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.253;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 253;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.253 \(253\)'/);
+test('the private iOS package embeds web v1161 and keeps 1.0.243 delivery',()=>{
+  assert.match(privateBundle,/<string>1161<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.288;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 288;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.288 \(288\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

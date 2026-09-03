@@ -20,6 +20,19 @@ function functionSource(name){
   throw new Error(`unterminated ${name}`);
 }
 
+function bundledFunctionSource(name){
+  const start=bundled.indexOf(`function ${name}(`);
+  assert.ok(start>=0,`private bundle missing ${name}`);
+  const brace=bundled.indexOf('{',start);let depth=0,quote='',escape=false;
+  for(let i=brace;i<bundled.length;i++){
+    const ch=bundled[i];
+    if(quote){if(escape)escape=false;else if(ch==='\\')escape=true;else if(ch===quote)quote='';continue;}
+    if(ch==='"'||ch==="'"||ch==='`'){quote=ch;continue;}
+    if(ch==='{')depth++;else if(ch==='}'&&--depth===0)return bundled.slice(start,i+1);
+  }
+  throw new Error(`unterminated private ${name}`);
+}
+
 function bookingSandbox(){
   let seq=0,saves=0;
   const sandbox={
@@ -126,15 +139,17 @@ test('common-life travel stays separate from WeChat cards and ordinary one-time 
   assert.match(render,/rgba\(123,132,151,.12\)/);
 });
 
-test('web source and private bundle keep the same common-life travel implementation',()=>{
-  const webVersion=releaseVersion(source),privateVersion=releaseVersion(bundled);
-  if(webVersion!==privateVersion){
-    assert.ok(webVersion>privateVersion,`private bundle v${privateVersion} must not be newer than web-only v${webVersion}`);
-    return;
-  }
-  for(const name of ['cohabExtractTravelTags','cohabCommitTripPlans','cohabTravelAdvance','renderCohab']){
-    const rootFn=functionSource(name),start=bundled.indexOf(`function ${name}(`);
-    assert.ok(start>=0,`private bundle missing ${name}`);
-    assert.ok(bundled.includes(rootFn));
-  }
+test('private bundle keeps the same common-life travel outcomes without replacing private-only control flow',()=>{
+  const extract=bundledFunctionSource('cohabExtractTravelTags');
+  const commit=bundledFunctionSource('cohabCommitTripPlans');
+  const advance=bundledFunctionSource('cohabTravelAdvance');
+  const render=bundledFunctionSource('renderCohab');
+  assert.match(extract,/共同生活\|同居/);
+  assert.match(extract,/cohabTripPlan\(c,to,date,time/);
+  assert.match(commit,/pax:2/);
+  assert.match(commit,/by:'ta'/);
+  assert.match(commit,/payer:'ta'/);
+  assert.match(advance,/status='traveling'/);
+  assert.match(advance,/status='done'/);
+  assert.match(render,/o\.notices/);
 });

@@ -55,6 +55,18 @@
     if(!/^yb_[a-z0-9]{20,96}$/.test(target)){try{var bytes=new Uint8Array(24);crypto.getRandomValues(bytes);target='yb_'+Array.from(bytes).map(function(x){return x.toString(16).padStart(2,'0');}).join('');}catch(_){target='yb_'+String(uid()+uid()).toLowerCase().replace(/[^a-z0-9]/g,'').padEnd(24,'0').slice(0,48);}try{localStorage.setItem(key,target);}catch(_){}}
     return target;
   }
+  function freshDeliveryConnectorSecret(){try{var bytes=new Uint8Array(32);crypto.getRandomValues(bytes);return'dls_'+Array.from(bytes).map(function(x){return x.toString(16).padStart(2,'0');}).join('');}catch(_){return'dls_'+uid()+uid();}}
+  function freshDeliveryClientTarget(){try{var bytes=new Uint8Array(24);crypto.getRandomValues(bytes);return'yb_'+Array.from(bytes).map(function(x){return x.toString(16).padStart(2,'0');}).join('');}catch(_){return'yb_'+String(uid()+uid()).toLowerCase().replace(/[^a-z0-9]/g,'').padEnd(24,'0').slice(0,48);}}
+  function recoverScopedDeliveryIdentity(r,scope){
+    scope=text(scope,120).replace(/[^a-z0-9_-]/gi,'_');if(!scope)return false;
+    var targetKey='north_delivery_client_target_v2_'+scope,secretKey='north_delivery_connector_secret_v2_'+scope,oldTarget=null,oldSecret=null,newTarget=freshDeliveryClientTarget(),newSecret=freshDeliveryConnectorSecret();
+    try{oldTarget=localStorage.getItem(targetKey);oldSecret=localStorage.getItem(secretKey);localStorage.setItem(targetKey,newTarget);localStorage.setItem(secretKey,newSecret);if(localStorage.getItem(targetKey)!==newTarget||localStorage.getItem(secretKey)!==newSecret)throw new Error('delivery-identity-storage-failed');}
+    catch(_){try{if(oldTarget==null)localStorage.removeItem(targetKey);else localStorage.setItem(targetKey,oldTarget);if(oldSecret==null)localStorage.removeItem(secretKey);else localStorage.setItem(secretKey,oldSecret);}catch(__){}return false;}
+    r.addressLabel='';r.approvedAddressFingerprint='';r.lastCapability=null;r.deviceLinkStatus=null;r.lastRoleNotice=null;r.pendingCreates=[];r.roleTasks={};r.roleAttempts={};r.roleClarifications={};r.identityRecoveredAt=Date.now();
+    S.food.cart=[];S.food.results=[];S.food.orders=(S.food.orders||[]).filter(function(order){return !order||order.real!==true;});
+    try{save();}catch(_){}
+    return true;
+  }
   function isolateDeliveryState(r,cfg){
     if(!cfg.explicit)return;
     var fingerprint=(cfg.valid?'isolated:':'invalid:')+cfg.projectRef+'|'+cfg.deploymentId+'|'+cfg.endpoint;
@@ -138,17 +150,17 @@
   async function request(action,payload,timeout){
     var url=connectorUrl();
     if(!url)throw new Error('还没有连接真实外卖服务');
-    var deadline=Date.now()+(timeout||25000),relayRequestId=deliveryRelayRequestId();
+    var deadline=Date.now()+(timeout||25000),relayRequestId=deliveryRelayRequestId(),identityRecoveryAttempted=false;
     while(Date.now()<deadline){var ctl=typeof AbortController==='function'?new AbortController():null,remaining=Math.max(1000,deadline-Date.now()),timer=ctl?setTimeout(function(){ctl.abort();},remaining):0;
     try{
-      var cfg=deliveryRuntimeConfig(),official=url===builtInConnectorUrl(),headers={'content-type':'application/json','x-north-delivery-contract':'1'};
+      var cfg=deliveryRuntimeConfig(),official=url===builtInConnectorUrl(),privateApp=typeof privateNativeAppOn==='function'&&privateNativeAppOn(),identityScope=cfg.explicit&&cfg.valid?cfg.deploymentId:(!privateApp&&official?'public_web':''),headers={'content-type':'application/json','x-north-delivery-contract':'1'};
       if(cfg.explicit&&cfg.valid&&official){headers.apikey=cfg.publishableKey;headers.Authorization='Bearer '+cfg.publishableKey;}else try{if(typeof COMPANION_KEY==='string'&&official){headers.apikey=COMPANION_KEY;headers.Authorization='Bearer '+COMPANION_KEY;}}catch(_){}
-      var client=cfg.explicit?{appVersion:String(APP_VER||''),privateApp:typeof privateNativeAppOn==='function'&&privateNativeAppOn(),target:deliveryClientTarget(cfg.deploymentId),ownerSecret:deliveryConnectorSecret(cfg.deploymentId)}:{appVersion:String(APP_VER||''),privateApp:typeof privateNativeAppOn==='function'&&privateNativeAppOn(),target:typeof cloudId==='function'?cloudId():'',ownerSecret:official&&typeof companionOwnerSecret==='function'?companionOwnerSecret():deliveryConnectorSecret()};
+      var client=identityScope?{appVersion:String(APP_VER||''),privateApp:privateApp,target:deliveryClientTarget(identityScope),ownerSecret:deliveryConnectorSecret(identityScope)}:{appVersion:String(APP_VER||''),privateApp:privateApp,target:typeof cloudId==='function'?cloudId():'',ownerSecret:official&&typeof companionOwnerSecret==='function'?companionOwnerSecret():deliveryConnectorSecret()};
       client.relayRequestId=relayRequestId;
       var res=await fetch(url,{method:'POST',credentials:'include',headers:headers,body:JSON.stringify({action:action,payload:payload||{},client:client}),signal:ctl&&ctl.signal});
       var body=null;try{body=await res.json();}catch(_){}
       if(res.status===202&&body&&body.pending===true){if(timer)clearTimeout(timer);await new Promise(function(resolve){setTimeout(resolve,Math.max(500,Math.min(3000,+body.retryAfterMs||1200)));});continue;}
-      if(!res.ok||!body||body.ok===false)throw new Error(text(body&&body.error||('真实外卖服务 HTTP '+res.status),180));
+      if(!res.ok||!body||body.ok===false){var serviceError=text(body&&body.error||('真实外卖服务 HTTP '+res.status),180);if(serviceError==='delivery-client-auth-failed'&&!identityRecoveryAttempted&&identityScope){identityRecoveryAttempted=true;if(recoverScopedDeliveryIdentity(foodState(),identityScope))continue;throw new Error('外卖身份无法安全重建，请确认浏览器允许保存网站数据后重试');}throw new Error(serviceError);}
       return body.data==null?body:body.data;
     }catch(e){if(e&&e.name==='AbortError')throw new Error('真实外卖服务响应超时');throw e;}finally{if(timer)clearTimeout(timer);}}
     throw new Error('真实外卖服务响应超时');
@@ -403,16 +415,16 @@
   function explicitApprovedOrderIntent(value){
     var raw=text(value,240),normalized=raw.replace(/\bde\b/ig,'的').replace(/の/g,'的');
     if(deliveryOrderContextRejected(normalized))return null;
-    var orderWords=/(?:想吃|想喝|要吃|要喝|给我(?:点|买|弄|安排)|帮我(?:点|买|弄|安排)|替我(?:点|买|弄|安排)|随便(?:点|选|挑)|你来(?:点|选|挑)|点(?:个|份|杯|碗|一(?:个|份|杯|碗)?)?|来(?:个|一份|一杯|一碗)|买(?:个|一|份|杯|碗)?|安排|下单|外卖)|(?:(?:要|弄|订).{0,40}(?:饭|餐|粥|面|汤|包|饺|奶茶|咖啡|果汁|饮料|汉堡|薯条|蛋挞|水果|甜品|烧烤|零食))/u,precise=normalized.match(/(?:^|[，,。；;\s])([\p{L}\p{N}·&（）()\-]{2,32}?)(?:家的?|店的?)\s*[:：]\s*([^，,。；;]{2,100})/iu),labeled=normalized.match(/(?:门店|商家|品牌)(?:名|名字)?(?:叫|是|为|选)?\s*[:：]\s*([^，,。；;+、]{2,40})[\s\S]{0,80}?商品(?:名|名字)?(?:叫|是|为)?\s*[:：]\s*([^，,。；;]{2,80})/u),preciseFood=precise&&/(?:饭|餐|粥|面|汤|包|饺|饼|奶|茶|咖啡|果汁|饮料|汉堡|薯条|蛋挞|水果|甜品|烧烤|零食|豆浆|酸奶|冰淇淋|鸡|鸭|鱼|牛|羊|猪|肉|套餐)/u.test(precise[2]);
+    var orderWords=/(?:想吃|想喝|要吃|要喝|给我(?:点|买|弄|安排)|帮我(?:点|买|弄|安排)|替我(?:点|买|弄|安排)|随便(?:点|选|挑)|你来(?:点|选|挑)|点(?:个|份|杯|碗|一(?:个|份|杯|碗)?)?|来(?:个|一份|一杯|一碗)|买(?:个|一|份|杯|碗)?|安排|下单|外卖)|(?:(?:要|弄|订).{0,40}(?:饭|餐|粥|面|汤|包|饺|奶茶|咖啡|果汁|饮料|汉堡|薯条|蛋挞|水果|甜品|烧烤|零食))/u,precise=normalized.match(/(?:^|[，,。；;\s])([\p{L}\p{N}·&（）()\-]{2,32}?)(?:家的?|店的?)\s*[:：]\s*([^，,。；;]{2,100})/iu),labeled=normalized.match(/(?:门店|商家|品牌)(?:名|名字)?(?:叫|是|为|选)?\s*[:：]\s*([^，,。；;+、]{2,40})[\s\S]{0,80}?商品(?:名|名字)?(?:叫|是|为)?\s*[:：]\s*([^，,。；;]{2,80})/u),actionOwned=normalized.match(/(?:想吃|想喝|要吃|要喝|给我(?:点|买|弄|安排)|帮我(?:点|买|弄|安排)|替我(?:点|买|弄|安排)|点(?:个|份|杯|碗|一(?:个|份|杯|碗)?)?|来(?:个|一份|一杯|一碗)?|买(?:个|一|份|杯|碗)?|要)\s*(?:点|那个|这个|这家|一家)?\s*([\p{L}\p{N}·&（）()\-]{2,32}?)(?:家|店)?的\s*/iu),preciseFood=precise&&/(?:饭|餐|粥|面|汤|包|饺|饼|奶|茶|咖啡|果汁|饮料|汉堡|薯条|蛋挞|水果|甜品|烧烤|零食|豆浆|酸奶|冰淇淋|鸡|鸭|鱼|牛|羊|猪|肉|套餐)/u.test(precise[2]);
     var knownFood=/(?:饭|餐|粥|面|粉|汤|包|饺|饼|馒头|烧麦|奶|茶|咖啡|果汁|饮料|汉堡|薯条|蛋挞|水果|甜品|烧烤|零食|豆浆|酸奶|冰淇淋|鸡|鸭|鱼|虾|牛|羊|猪|肉|套餐|西瓜|芒果|橙子|葡萄|草莓)/u.test(normalized);
     if(!orderWords.test(normalized)&&!preciseFood&&!labeled)return null;
-    if(!preciseFood&&!labeled&&!knownFood)return null;
-    var merchant='',source='',shop=normalized.match(/(?:门店|商家|品牌)(?:名|名字)?(?:叫|是|为|选)?\s*[:：]?\s*([^，,。；;+、]{2,40})/u),japaneseOwned=raw.match(/(?:想吃|想喝|要吃|要喝|给我(?:点|买|弄|安排)|帮我(?:点|买|弄|安排)|替我(?:点|买|弄|安排)|点(?:个|份|杯|碗|一(?:个|份|杯|碗)?)?|来(?:个|一份|一杯|一碗)?|买(?:个|一|份|杯|碗)?|要)\s*(?:点|那个|这个|这家|一家)?\s*([\p{L}\p{N}·&（）()\-]{2,32}?)の\s*/iu),owned=normalized.match(/(?:想吃|想喝|要吃|要喝|给我(?:点|买|弄|安排)|帮我(?:点|买|弄|安排)|替我(?:点|买|弄|安排)|点(?:个|份|杯|碗|一(?:个|份|杯|碗)?)?|来(?:个|一份|一杯|一碗)?|买(?:个|一|份|杯|碗)?|要)\s*(?:点|那个|这个|这家|一家)?\s*([\p{L}\p{N}·&（）()\-]{2,32}?)(?:家|店)?的\s*/iu),atShop=normalized.match(/(?:帮我|给我|替我)?(?:在|去)\s*([\p{L}\p{N}·&（）()\-]{2,32}?(?:家|店))\s*(?:点|买|弄|安排)\s*/iu),known=normalized.match(/(?:KFC|肯德基|麦当劳|茶百道|蜜雪冰城|曼玲粥|瑞幸咖啡|瑞幸|古茗|沪上阿姨|DQ|杨姥姥[^，,。；;+、的]{0,12})/iu);
+    if(!preciseFood&&!labeled&&!knownFood&&!actionOwned)return null;
+    var merchant='',source='',shop=normalized.match(/(?:门店|商家|品牌)(?:名|名字)?(?:叫|是|为|选)?\s*[:：]?\s*([^，,。；;+、]{2,40})/u),japaneseOwned=raw.match(/(?:想吃|想喝|要吃|要喝|给我(?:点|买|弄|安排)|帮我(?:点|买|弄|安排)|替我(?:点|买|弄|安排)|点(?:个|份|杯|碗|一(?:个|份|杯|碗)?)?|来(?:个|一份|一杯|一碗)?|买(?:个|一|份|杯|碗)?|要)\s*(?:点|那个|这个|这家|一家)?\s*([\p{L}\p{N}·&（）()\-]{2,32}?)の\s*/iu),owned=actionOwned,atShop=normalized.match(/(?:帮我|给我|替我)?(?:在|去)\s*([\p{L}\p{N}·&（）()\-]{2,32}?(?:家|店))\s*(?:点|买|弄|安排)\s*/iu),known=normalized.match(/(?:KFC|肯德基|麦当劳|茶百道|蜜雪冰城|曼玲粥|瑞幸咖啡|瑞幸|古茗|沪上阿姨|DQ|杨姥姥[^，,。；;+、的]{0,12})/iu);
     if(labeled)merchant=text(labeled[1],100);else if(preciseFood)merchant=text(precise[1],100);else if(shop)merchant=text(shop[1],100);else if(japaneseOwned)merchant=text(japaneseOwned[1],100);else if(owned)merchant=text(owned[1],100);else if(atShop)merchant=text(atShop[1],100);else if(known)merchant=text(known[0],100);merchant=text(merchant.replace(/^(?:我)?(?:想吃|想喝|要吃|要喝|给我(?:点|买|弄|安排)|帮我(?:点|买|弄|安排)|替我(?:点|买|弄|安排))\s*/u,''),100);
     if(labeled)source=text(labeled[2],100);else if(preciseFood)source=text(precise[2],100);else if(owned)source=normalized.slice((owned.index||0)+owned[0].length);else if(atShop)source=normalized.slice((atShop.index||0)+atShop[0].length);else if(known)source=normalized.slice((known.index||0)+known[0].length).replace(/^\s*(?:家|店)?的?\s*/,'');else source=normalized.replace(/^.*?(?:想吃|想喝|要吃|要喝|给我(?:点|买|弄|安排)|帮我(?:点|买|弄|安排)|替我(?:点|买|弄|安排)|随便(?:点|选|挑)|你来(?:点|选|挑)|点(?:个|份|杯|碗|一(?:个|份|杯|碗)?)?|来(?:个|一份|一杯|一碗)?|买(?:个|一|份|杯|碗)?|安排|要)\s*/u,'');
     var named=normalized.match(/商品(?:名|名字)?(?:叫|是|为)?\s*[:：]?\s*([^，,。；;+、]{2,60})/u),parts=(source||'').split(/[+＋、，,；;]|(?:和|还有|以及|跟)|(?:再)?(?:加|配)(?:一个|一份|一杯|一碗)?/u),items=[],specs=[],seen={};
     if(named)parts.unshift(named[1]);
-    parts.forEach(function(part){part=text(part,80).replace(/^\s*(?:商品(?:名|名字)?(?:叫|是|为)?\s*[:：]?|我(?:想|要)?|给我|帮我|替我|点|买|弄|安排|那个|这个|一份|一个|一杯|一碗)\s*/u,'').replace(/\s*(?:给我|就行|就可以|可以了|都行|都可以|随便(?:点|选|挑)?|谢谢).*$/u,'').trim().replace(/不另加糖/g,'不另外加糖');if(!part)return;if(/(?:不(?:另外|额外)?加糖|无糖|零糖|少少甜|少糖|微糖|半糖|三分糖|五分糖|七分糖|全糖|正常糖|少冰|少少冰|去冰|正常冰|多冰|热饮|热的|常温|不要|去除|不放|不加)|^(?:椰果|奶冻|脆波波|波波|珍珠|黑糖珍珠|小西米|冻冻|芋圆|葡萄肉|奶麻薯|芝士奶盖|雪糯米|西柚粒)$/u.test(part)){specs.push(part);return;}var key=deliveryMatchKey(part);if(key&&key.length>=1&&!seen[key]){seen[key]=1;items.push(part);}});
+    parts.forEach(function(part){part=text(part,80).replace(/^\s*(?:商品(?:名|名字)?(?:叫|是|为)?\s*[:：]?|我(?:想|要)?|给我|帮我|替我|点|买|弄|安排|那个|这个|一份|一个|一杯|一碗)\s*/u,'').replace(/\s*(?:给我|就行|就可以|可以了|都行|都可以|随便(?:点|选|挑)?|谢谢).*$/u,'').replace(/[\u{1F000}-\u{1FAFF}\u2600-\u27BF\uFE0F\u200D]+$/gu,'').trim().replace(/不另加糖/g,'不另外加糖');if(!part)return;if(/(?:不(?:另外|额外)?加糖|无糖|零糖|少少甜|少糖|微糖|半糖|三分糖|五分糖|七分糖|全糖|正常糖|少冰|少少冰|去冰|正常冰|多冰|热饮|热的|常温|不要|去除|不放|不加)|^(?:椰果|奶冻|脆波波|波波|珍珠|黑糖珍珠|小西米|冻冻|芋圆|葡萄肉|奶麻薯|芝士奶盖|雪糯米|西柚粒)$/u.test(part)){specs.push(part);return;}var key=deliveryMatchKey(part);if(key&&key.length>=1&&!seen[key]){seen[key]=1;items.push(part);}});
     if(!items.length||!merchant)return null;
     merchant=merchant.replace(/^(?:那个|这个|这家|一家)/,'').trim();if(!japaneseOwned)merchant=merchant.replace(/(?:家|店)$/,'').trim();if(!merchant)return null;
     return{merchant:merchant,items:items.slice(0,8),specs:specs.slice(0,12),proactive:false,summary:text(merchant+' / '+items.join('、'),200)};
@@ -427,7 +439,7 @@
     if(!normalized||deliveryOrderContextRejected(normalized))return null;
     var match=normalized.match(/^\s*(?:我要|我想要|我想吃|我想喝|我要吃|我要喝|给我|帮我|替我|来一(?:杯|份|个|碗)|点一?(?:杯|份|个|碗)?|要)?\s*([\p{L}\p{N}·&（）()\-]{2,32}?)(?:家的?|店的?|的)\s*[:：]?\s*([^，,。；;]{2,100})(?:[，,。；;]\s*(.{1,100}))?\s*$/iu);
     if(!match)return null;
-    var merchant=text(match[1],100).replace(/^(?:那个|这个|这家|一家)/,'').replace(/(?:家|店)$/,'').trim(),rawItem=text(match[2],100).replace(/\s*(?:就行|就可以|可以了|谢谢)\s*$/u,'').trim(),split=splitTrailingDeliverySpecs(rawItem),item=split.item,tail=text(match[3],100),food=/(?:饭|餐|粥|面|粉|汤|包|饺|饼|馒头|烧麦|奶|茶|咖啡|果汁|饮料|汉堡|薯条|蛋挞|水果|甜品|烧烤|零食|豆浆|酸奶|冰淇淋|鸡|鸭|鱼|虾|牛|羊|猪|肉|套餐|西瓜|芒果|橙子|葡萄|草莓|柠檬|芭乐|甘露)/u,knownMerchant=/(?:KFC|肯德基|麦当劳|茶百道|蜜雪冰城|曼玲粥|瑞幸咖啡|瑞幸|古茗|沪上阿姨|DQ)/iu.test(merchant);
+    var merchant=text(match[1],100).replace(/^(?:我要|我想要|我想吃|我想喝|我要吃|我要喝|想吃|想喝|要吃|要喝|给我|帮我|替我|来一(?:杯|份|个|碗)|点一?(?:杯|份|个|碗)?|要)\s*/u,'').replace(/^(?:那个|这个|这家|一家)/,'').replace(/(?:家|店)$/,'').trim(),rawItem=text(match[2],100).replace(/\s*(?:就行|就可以|可以了|谢谢)\s*$/u,'').replace(/[\u{1F000}-\u{1FAFF}\u2600-\u27BF\uFE0F\u200D]+$/gu,'').trim(),split=splitTrailingDeliverySpecs(rawItem),item=split.item,tail=text(match[3],100),food=/(?:饭|餐|粥|面|粉|汤|包|饺|饼|馒头|烧麦|奶|茶|咖啡|果汁|饮料|饮品|饮|羹|糊|汉堡|薯条|蛋挞|水果|甜品|烧烤|零食|豆浆|酸奶|冰淇淋|鸡|鸭|鱼|虾|牛|羊|猪|肉|套餐|西瓜|芒果|橙子|葡萄|草莓|柠檬|芭乐|甘露|红豆|桃胶)/u,knownMerchant=/(?:KFC|肯德基|麦当劳|茶百道|蜜雪冰城|曼玲粥|瑞幸咖啡|瑞幸|古茗|沪上阿姨|DQ)/iu.test(merchant);
     if(!merchant||!item||(!food.test(item)&&!knownMerchant))return null;
     var specs=split.specs.slice();
     if(tail){var valid=true;tail.split(/[+＋、，,；;]/).forEach(function(part){part=text(part,60).replace(/不另加糖/g,'不另外加糖').replace(/\s*(?:就行|就可以|可以了|谢谢)\s*$/u,'').trim();if(!part)return;if(!/^(?:不(?:另外|额外)?加糖|无糖|零糖|少少甜|少糖|微糖|半糖|三分糖|五分糖|七分糖|全糖|正常糖|少冰|少少冰|去冰|正常冰|多冰|热饮|热的|冷饮|常温|大杯|中杯|小杯|不加冰|不要香菜|不要辣|微辣|中辣|特辣|不加奶油|椰乳|燕麦奶|加珍珠|加料)$/u.test(part)){valid=false;return;}specs.push(part);});if(!valid)return null;}
