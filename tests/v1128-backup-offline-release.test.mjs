@@ -26,16 +26,16 @@ function functionSource(name){
   throw new Error(`unterminated ${name}`);
 }
 
-test('v1161 has a unique visible identity across every public entry and cache layer',()=>{
-  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1161\'/);
-  assert.match(app,/APP_VER='v1161 · 外卖未知品牌识别版'/);
-  assert.match(shell,/__NORTH_SHELL_BUILD__='1161'/);
-  assert.match(shell,/app\.js\?v=1161&r=v1161-delivery-unknown-brand-1/);
-  assert.match(index,/小手机\.html\?v=1161/);
-  assert.match(repair,/小手机\.html\?v=1161/);
-  assert.match(worker,/const BUILD='1161'/);
-  assert.match(worker,/north-shell-v1161-delivery-unknown-brand-1/);
-  assert.match(hotfix,/sw\.js\?v=1161&r=v1161-delivery-unknown-brand-1/);
+test('v1163 has a unique visible identity across every public entry and cache layer',()=>{
+  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1163\'/);
+  assert.match(app,/APP_VER='v1163 · 主动消息与心动审判修正版'/);
+  assert.match(shell,/__NORTH_SHELL_BUILD__='1163'/);
+  assert.match(shell,/app\.js\?v=1163&r=v1163-proactive-heart-1/);
+  assert.match(index,/小手机\.html\?v=1163/);
+  assert.match(repair,/小手机\.html\?v=1163/);
+  assert.match(worker,/const BUILD='1163'/);
+  assert.match(worker,/north-shell-v1163-proactive-heart-1/);
+  assert.match(hotfix,/sw\.js\?v=1163&r=v1163-proactive-heart-1/);
   for(const [name,source] of Object.entries({app,shell,index,repair,worker,hotfix})){
     assert.doesNotMatch(source,/v?1127/,`${name} must not reuse the prior web version`);
   }

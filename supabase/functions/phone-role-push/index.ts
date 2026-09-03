@@ -191,6 +191,77 @@ function roleTextRepeated(current: string, previous: string) {
   return a.length >= 2 && prior[a.length] / a.length >= roleRepeatThreshold(a.length);
 }
 
+function rolePushFailureWaitMinutes(profile: Record<string, unknown>) {
+  const failures = Math.max(0, Math.floor(Number(profile.consecutive_unavailable || 0))) + 1;
+  return [10, 20, 40, 60][Math.min(3, failures - 1)];
+}
+
+function rolePushRouteSummary(profile: Record<string, unknown>) {
+  const rows: Array<Record<string, string>> = [];
+  const add = (name: string, baseValue: unknown, modelValue: unknown) => {
+    const base = profileModelBase(baseValue);
+    const model = String(modelValue || "").trim().slice(0, 200);
+    if (!base || !model) return;
+    let host = "invalid-host";
+    try { host = new URL(base).host; } catch (_) {}
+    rows.push({ name, host, model });
+  };
+  const automation = (profile.automation_config && typeof profile.automation_config === "object"
+    ? profile.automation_config : {}) as Record<string, unknown>;
+  const syncedRoutes = Array.isArray(automation.modelRoutes)
+    ? automation.modelRoutes.slice(0, 2)
+    : [automation.modelRoute];
+  syncedRoutes.forEach((value, index) => {
+    const route = (value && typeof value === "object" ? value : {}) as Record<string, unknown>;
+    if (String(route.key || "").trim()) add(index === 0 ? "profile-current" : "profile-secondary", route.base, route.model);
+  });
+  if (Deno.env.get("OPENAI_API_KEY")) add(
+    "configured",
+    Deno.env.get("OPENAI_BASE_URL") || "https://api.openai.com/v1",
+    Deno.env.get("ROLE_PUSH_MODEL") || Deno.env.get("CHAT_MODEL") || "gpt-4o-mini",
+  );
+  if (Deno.env.get("DASHSCOPE_API_KEY")) add(
+    "dashscope",
+    Deno.env.get("DASHSCOPE_BASE_URL") || "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    Deno.env.get("ROLE_PUSH_DASHSCOPE_MODEL") || "qwen-plus",
+  );
+  if (Deno.env.get("MINIMAX_API_KEY")) add(
+    "minimax",
+    Deno.env.get("ROLE_PUSH_MINIMAX_BASE_URL") || "https://api.minimaxi.com/v1",
+    Deno.env.get("ROLE_PUSH_MINIMAX_MODEL") || "MiniMax-M2.7",
+  );
+  return rows;
+}
+
+async function recordRolePushAttempt(
+  client: ReturnType<typeof createClient>,
+  profile: Record<string, unknown>,
+  outcome: "message" | "silent" | "unavailable" | "superseded",
+  reason: string,
+  startedAt: number,
+  nextDueAt: string | null,
+  outboxId = "",
+  pushStatus = "",
+) {
+  try {
+    const { error } = await client.from("phone_role_push_attempts").insert({
+      target: profile.target,
+      role_id: profile.role_id,
+      attempted_at: new Date(startedAt).toISOString(),
+      outcome,
+      reason: String(reason || "").slice(0, 600),
+      duration_ms: Math.max(0, Date.now() - startedAt),
+      next_due_at: nextDueAt,
+      route_summary: rolePushRouteSummary(profile),
+      outbox_id: outboxId || null,
+      push_status: String(pushStatus || "").slice(0, 80),
+    });
+    if (error) console.warn("role-push-attempt-record-failed", String(error.message || error).slice(0, 180));
+  } catch (error) {
+    console.warn("role-push-attempt-record-failed", String(error?.message || error).slice(0, 180));
+  }
+}
+
 function roleNormalizeGeneratedText(value: string, roleName = "") {
   const escapedName = String(roleName || "").trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return String(value || "").split(/\r?\n/).map((raw) => {
@@ -523,7 +594,7 @@ async function roleMessage(
           return { kind: "unavailable", body: "", reason: providerFailures.join(",") };
         }
         const controller = new AbortController();
-        const requestTimer = setTimeout(() => controller.abort(), Math.min(27_000, remaining));
+        const requestTimer = setTimeout(() => controller.abort(), Math.min(18_000, remaining));
         try {
           const response = await fetch(`${provider.base}/chat/completions`, {
             method: "POST",
@@ -1886,27 +1957,40 @@ Deno.serve(async (request) => {
       const ambientInstruction = ambientFacts
         ? "最近真实聊天、用户情绪和正在发生的事情永远优先。本次伴生数据只是可选日常背景：只有其中某一项与本轮联系自然相关时，才带入最多一项；否则完全忽略。禁止逐项汇报、硬转话题、反复提醒，也不提系统、监控、读取或后台。"
         : "";
+      const attemptStartedAt = Date.now();
       const decision = await roleMessage(profile, recentBodies, ambientInstruction, ambientFacts, true, true);
       const { data: latestProfile } = await client.from("phone_role_push_profiles")
-        .select("enabled,next_due_at,last_user_at,quiet_until_at,recent_context,memory_context,automation_config")
+        .select("enabled,next_due_at,last_user_at,quiet_until_at,recent_context,memory_context,automation_config,consecutive_unavailable")
         .eq("target", profile.target).eq("role_id", profile.role_id).maybeSingle();
       if (!latestProfile?.enabled || profileTemporarilySuspended(latestProfile) || !activityQuietForThirtyMinutes(latestProfile) || !profileQuietPeriodEnded(latestProfile) || Date.parse(String(latestProfile.next_due_at || "")) > Date.now()) {
+        await recordRolePushAttempt(client, profile, "superseded", "profile-changed-while-generating", attemptStartedAt, String(latestProfile?.next_due_at || "") || null);
         await client.from("phone_role_push_profiles").update({ claimed_until: null, updated_at: new Date().toISOString() })
           .eq("target", profile.target).eq("role_id", profile.role_id);
         continue;
       }
       if (decision.kind !== "message") {
+        const attemptedAt = new Date().toISOString();
+        let reason = "role-chose-silence";
+        let failureCount = 0;
+        let nextDueAt = nextDue(profile);
         if (decision.kind === "silent") silent += 1;
         else {
           unavailable += 1;
-          const reason = String(decision.reason || "unknown").slice(0, 600);
+          reason = String(decision.reason || "unknown").slice(0, 600);
           unavailableReasons[reason] = (unavailableReasons[reason] || 0) + 1;
+          failureCount = Math.max(0, Number(latestProfile.consecutive_unavailable || 0)) + 1;
+          nextDueAt = nextDue(profile, rolePushFailureWaitMinutes(latestProfile));
         }
         await client.from("phone_role_push_profiles").update({
           claimed_until: null,
-          next_due_at: nextDue(profile),
-          updated_at: new Date().toISOString(),
+          next_due_at: nextDueAt,
+          last_attempt_at: attemptedAt,
+          last_attempt_outcome: decision.kind,
+          last_attempt_reason: reason,
+          consecutive_unavailable: failureCount,
+          updated_at: attemptedAt,
         }).eq("target", profile.target).eq("role_id", profile.role_id);
+        await recordRolePushAttempt(client, profile, decision.kind, reason, attemptStartedAt, nextDueAt);
         continue;
       }
       const body = decision.body;
@@ -1947,14 +2031,21 @@ Deno.serve(async (request) => {
         }).eq("id", outboxId);
         sent += push.status === "sent" ? 1 : 0;
       }
+      const completedAt = new Date().toISOString();
+      const nextDueAt = nextDue(profile);
       await client.from("phone_role_push_profiles").update({
         claimed_until: null,
         daily_day: clock.day,
         daily_count: count + 1,
-        last_sent_at: new Date().toISOString(),
-        next_due_at: nextDue(profile),
-        updated_at: new Date().toISOString(),
+        last_sent_at: completedAt,
+        next_due_at: nextDueAt,
+        last_attempt_at: completedAt,
+        last_attempt_outcome: "message",
+        last_attempt_reason: "",
+        consecutive_unavailable: 0,
+        updated_at: completedAt,
       }).eq("target", profile.target).eq("role_id", profile.role_id);
+      await recordRolePushAttempt(client, profile, "message", "", attemptStartedAt, nextDueAt, outboxId, push.status);
     }
     return reply({ ok: true, claimed: profiles.length, sent, backgroundSent, automationSent, silent, unavailable, unavailableReasons });
   } catch (error) {

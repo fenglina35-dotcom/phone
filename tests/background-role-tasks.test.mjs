@@ -56,7 +56,7 @@ test('background generation uses the role current model and reports the real tas
 
 test('an explicit background test tries each synchronized external route once and then releases the queue', () => {
   assert.match(edge, /automation\.modelRoutes\.slice\(0, 2\)/);
-  assert.match(edge, /Math\.min\(27_000, remaining\)/);
+  assert.match(edge, /Math\.min\(18_000, remaining\)/);
   assert.match(edge, /task\.kind === "one_minute_test" \|\| task\.kind === "app_watch_test"[\s\S]{0,80}\? 1/);
   assert.doesNotMatch(edge, /task\.kind === "one_minute_test" \|\| task\.kind === "app_watch_test" \|\| task\.kind === "reply_handoff"[\s\S]{0,80}\? 2/);
 });

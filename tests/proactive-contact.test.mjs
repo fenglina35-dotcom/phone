@@ -11,6 +11,10 @@ const pushFunction = fs.readFileSync(
   new URL('../supabase/functions/phone-role-push/index.ts', import.meta.url),
   'utf8'
 );
+const pushAttemptDiagnosticsSql = fs.readFileSync(
+  new URL('../supabase/migrations/202609040001_phone_role_push_attempt_diagnostics.sql', import.meta.url),
+  'utf8'
+);
 
 function functionSource(name) {
   const start = source.indexOf(`function ${name}`);
@@ -408,5 +412,24 @@ assert.ok(pushFunction.indexOf('Number(automation.proactiveCallChance)') < pushF
 assert.match(pushFunction, /ROLE_PUSH_MINIMAX_BASE_URL/i, 'scheduled role messages must use the current MiniMax OpenAI-compatible endpoint');
 assert.match(pushFunction, /unavailableReasons/i, 'provider failures must be diagnosable without exposing credentials');
 assert.doesNotMatch(pushFunction, /providerFailures\.push\([^\n]*failureText/i, 'provider diagnostics must not echo arbitrary upstream bodies');
+assert.match(pushFunction, /Math\.min\(18_000, remaining\)/, 'one slow route must leave enough of the 58-second decision budget for real fallback routes');
+assert.doesNotMatch(pushFunction, /Math\.min\(27_000, remaining\)/, 'a single timed-out route must not consume almost half of the whole fallback budget');
+assert.match(pushFunction, /\[10, 20, 40, 60\]\[Math\.min\(3, failures - 1\)\]/, 'model unavailability must retry with bounded 10/20/40/60-minute backoff');
+assert.match(pushFunction, /from\("phone_role_push_attempts"\)\.insert/, 'every ordinary generation attempt must leave a durable diagnostic record');
+assert.match(pushFunction, /route_summary:\s*rolePushRouteSummary\(profile\)/, 'diagnostics must record the attempted model routes without their credentials');
+assert.doesNotMatch(pushFunction, /route_summary:[\s\S]{0,220}(?:route\.key|provider\.key)/, 'durable route diagnostics must never persist provider keys');
+assert.match(pushFunction, /last_attempt_outcome:\s*decision\.kind/, 'silent and unavailable decisions must be visible on the profile status');
+assert.match(pushFunction, /consecutive_unavailable:\s*0/, 'a real generated message must clear the failure streak');
+assert.doesNotMatch(pushFunction, /模型(?:暂时)?不可用[^\n]{0,80}kind:\s*"message"/, 'model failure must not manufacture a fixed role message');
+
+assert.match(pushAttemptDiagnosticsSql, /add column if not exists last_attempt_at timestamptz/i);
+assert.match(pushAttemptDiagnosticsSql, /add column if not exists consecutive_unavailable integer not null default 0/i);
+assert.match(pushAttemptDiagnosticsSql, /create table if not exists public\.phone_role_push_attempts/i);
+assert.match(pushAttemptDiagnosticsSql, /alter table public\.phone_role_push_attempts enable row level security/i);
+assert.match(pushAttemptDiagnosticsSql, /revoke all on public\.phone_role_push_attempts from public, anon, authenticated/i);
+assert.match(pushAttemptDiagnosticsSql, /'lastAttemptOutcome', v_profile\.last_attempt_outcome/i);
+assert.match(pushAttemptDiagnosticsSql, /'consecutiveUnavailable', coalesce\(v_profile\.consecutive_unavailable, 0\)/i);
+const attemptsTableSql=pushAttemptDiagnosticsSql.match(/create table if not exists public\.phone_role_push_attempts\s*\([\s\S]*?\n\);/i)?.[0]||'';
+assert.doesNotMatch(attemptsTableSql, /(?:api[_-]?key|owner_secret|device_secret)/i, 'diagnostic storage must not add any credential-bearing field');
 
 console.log('proactive contact tests passed');

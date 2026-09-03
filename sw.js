@@ -1,6 +1,6 @@
-const BUILD='1161';
-const HOTFIX='v1161-delivery-unknown-brand-hotfix-1';
-const SHELL_CACHE='north-shell-v1161-delivery-unknown-brand-1';
+const BUILD='1163';
+const HOTFIX='v1163-proactive-heart-hotfix-1';
+const SHELL_CACHE='north-shell-v1163-proactive-heart-1';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
@@ -9,7 +9,7 @@ const CORE_FILES=[
   {url:'./小手机.html?v='+BUILD+'&r='+HOTFIX,kind:'html'},
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
   {url:'./app.js?v='+BUILD+'&r='+HOTFIX,kind:'app'},
-  {url:'./web-hotfix.js?v='+BUILD+'&r=v1161-delivery-unknown-brand-1',kind:'hotfix'},
+  {url:'./web-hotfix.js?v='+BUILD+'&r=v1163-proactive-heart-1',kind:'hotfix'},
   {url:'./ai-account.js?v='+BUILD,kind:'ai'}
 ];
 const OPTIONAL_FILES=[
@@ -20,6 +20,7 @@ const OPTIONAL_FILES=[
   './commerce-ui.js?v='+BUILD,
   './delivery.js?v='+BUILD,
   './gift-effects.js?v='+BUILD,
+  './heart-quiz.js?v='+BUILD,
   './thought-card-effects.js?v='+BUILD,
   './pet-game.js?v='+BUILD,
   './pet-game.css?v='+BUILD,
@@ -62,7 +63,7 @@ function validShellText(kind,text){
     &&text.includes("window.__NORTH_SHELL_BUILD__!=='"+BUILD+"'")
     &&text.includes('showGate();');
   if(kind==='hotfix')return text.length>800
-    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1161-delivery-unknown-brand-1'")
+    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1163-proactive-heart-1'")
     &&text.includes('reconcileExpiredWxLogin')
     &&text.includes('withBaseImageCheck')
     &&text.includes('isStoredImgRef');

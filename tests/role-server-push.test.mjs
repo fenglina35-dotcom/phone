@@ -99,7 +99,7 @@ test('edge dispatcher writes the message first and then attempts APNs', () => {
   assert.match(edge, /真实恋人的日常聊天/);
   assert.match(edge, /严禁使用破折号或横杠字符/);
   assert.match(edge, /roleMessageStyleInvalid\(body, messageMax\)/);
-  assert.match(edge, /select\("enabled,next_due_at,last_user_at,quiet_until_at,recent_context,memory_context,automation_config"\)/);
+  assert.match(edge, /select\("enabled,next_due_at,last_user_at,quiet_until_at,recent_context,memory_context,automation_config,consecutive_unavailable"\)/);
   assert.match(edge, /!profileQuietPeriodEnded\(freshProfile\)/);
   assert.match(edge, /!profileQuietPeriodEnded\(latestProfile\)/);
   assert.match(edge, /!activityQuietForThirtyMinutes\(freshProfile\)/);
