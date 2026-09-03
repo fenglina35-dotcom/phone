@@ -28,7 +28,7 @@ test('optional realtime understanding is role-paced and reacts only to changed s
   assert.match(app, /screenShare\.realtime\.frame/);
   assert.match(bridge, /case "screenShare\.realtime\.frame"/);
   assert.match(coordinator, /__smallPhoneScreenShareFrameEvent/);
-  assert.match(bridge, /contractVersion = 25/);
+  assert.match(bridge, /contractVersion = 26/);
 });
 
 test('private screen share can recognize exactly once after each completed user sentence', () => {

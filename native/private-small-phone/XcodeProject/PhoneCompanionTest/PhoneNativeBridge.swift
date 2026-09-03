@@ -15,7 +15,7 @@ enum SmallPhoneDiagnosticsStore {
     )
     private static let maximumBytes = 256 * 1_024
     private static let maximumLines = 200
-    private static let build = "1.0.291 (291)"
+    private static let build = "1.0.292 (292)"
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -188,7 +188,7 @@ enum SmallPhoneRecoveryLaunchStore {
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
-    static let contractVersion = 25
+    static let contractVersion = 26
     static let roleCallActiveDefaultsKey =
         "smallPhone.roleCallActive.v1"
 
@@ -200,6 +200,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     }
     var openDeviceManagement: (() -> Void)?
     private let nativeSpeech = NativeSpeechRecognitionController()
+    private lazy var homeKitLights = HomeKitLightBridge.shared
     private let storageQueue = DispatchQueue(
         label: "com.smallphone.private-storage",
         qos: .utility
@@ -317,6 +318,15 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                 requestID: requestID,
                 arguments: arguments
             )
+        case "homekit.lights.snapshot":
+            homeKitLights.snapshot { [weak self] result in
+                self?.reply(requestID: requestID, result: result)
+            }
+        case "homekit.light.command":
+            let arguments = payload["payload"] as? [String: Any] ?? [:]
+            homeKitLights.command(arguments: arguments) { [weak self] result in
+                self?.reply(requestID: requestID, result: result)
+            }
         case "license.request":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             performLicenseRequest(requestID: requestID, arguments: arguments)

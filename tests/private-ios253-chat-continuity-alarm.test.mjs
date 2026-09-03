@@ -50,7 +50,7 @@ test('thermal pressure and repeated termination stop WebKit self-reload loops', 
   assert.match(webView, /thermalState == "serious" \|\| thermalState == "critical"/);
   assert.match(webView, /native\.webcontent\.recoveryOffered/);
   assert.match(webView, /native\.webcontent\.reloadDeferred/);
-  assert.match(webView, /webContentTerminationTimes\.v5\.build291/);
+  assert.match(webView, /webContentTerminationTimes\.v5\.build292/);
   assert.doesNotMatch(webView, /showingLoadFailure/);
   assert.doesNotMatch(webView, /LocalPhoneWebView\.loadFailureHTML/);
   assert.doesNotMatch(webView, /websiteDataStore\.removeData/);
@@ -120,18 +120,18 @@ test('private wardrobe exposes exact and overnight time ranges without removing 
   assert.match(app, /if\(named\.length\)return named/);
 });
 
-test('both private entry files and every iOS target carry build 291', () => {
+test('both private entry files and every iOS target carry build 292', () => {
   assert.equal(index, alias);
-  assert.match(index, /private-runtime-diagnostics\.js\?v=291/);
-  assert.match(overlay, /291-scroll-camera-smart-home-v1/);
-  assert.match(webView, /1\.0\.291 \(291\)/);
-  assert.match(bridge, /1\.0\.291 \(291\)/);
+  assert.match(index, /private-runtime-diagnostics\.js\?v=292/);
+  assert.match(overlay, /292-reply-heartquiz-homekit-v1/);
+  assert.match(webView, /1\.0\.292 \(292\)/);
+  assert.match(bridge, /1\.0\.292 \(292\)/);
   assert.equal(
-    (project.match(/CURRENT_PROJECT_VERSION = 291;/g) || []).length,
+    (project.match(/CURRENT_PROJECT_VERSION = 292;/g) || []).length,
     12
   );
   assert.equal(
-    (project.match(/MARKETING_VERSION = 1\.0\.291;/g) || []).length,
+    (project.match(/MARKETING_VERSION = 1\.0\.292;/g) || []).length,
     12
   );
 });

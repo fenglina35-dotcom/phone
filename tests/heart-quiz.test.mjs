@@ -14,10 +14,10 @@ const privateQuiz=fs.readFileSync(new URL('heart-quiz.js',privateRoot),'utf8');
 function runtime(){
   const sandbox=vm.createContext({console,JSON,Math,Date,String,Array,Number,Object,Set,Map,
     document:{getElementById:()=>null,createElement:()=>({id:'',textContent:''}),head:{appendChild(){}}},
-    S:{me:{name:'我'}},getC:id=>({id,name:'先生',remark:'先生'}),save(){},render(){},toast(){},
+    S:{me:{name:'我'}},getC:id=>({id,name:'先生',remark:'先生'}),save(){},render(){},toast(){},parseArr:JSON.parse,
     heartQuizDummy:true
   });
-  vm.runInContext(quiz+'\nthis.__hqTest={bank:HEART_QUIZ_BANK,fallback:heartQuizFallback,result:heartQuizResult,ending:heartQuizFallbackLine,levels:HEART_QUIZ_LEVELS,total:HEART_QUIZ_TOTAL};',sandbox);
+  vm.runInContext(quiz+'\nthis.__hqTest={bank:HEART_QUIZ_BANK,fallback:heartQuizFallback,normalize:heartQuizNormalize,result:heartQuizResult,ending:heartQuizFallbackLine,levels:HEART_QUIZ_LEVELS,intensity:HEART_QUIZ_INTENSITY,total:HEART_QUIZ_TOTAL};',sandbox);
   return sandbox.__hqTest;
 }
 
@@ -49,11 +49,14 @@ test('white and dark preview papers each contain exactly 30 three-option questio
       assert.ok(row.options.every(option=>option.startsWith('我')),'every answer option must use the chooser first-person voice');
       assert.equal(row.traits.length,3);
       assert.ok(row.roleChoice>=0&&row.roleChoice<3);
+      assert.ok(row.intensity>=1&&row.intensity<=5);
+      assert.deepEqual(Array.from(row.reactions),[],'preview questions must not impersonate a live role reaction');
     }
   }
   assert.equal(hq.total,30);
   assert.equal(hq.levels.white.length,3);
   assert.equal(hq.levels.dark.length,3);
+  assert.equal(hq.intensity.dark.length,5);
   assert.equal(hq.bank.dark[0][0],'如果有别的男人靠近你，你应该怎么做？');
   assert.deepEqual(Array.from(hq.bank.dark[0][1]),[
     '我会立刻明确拒绝，告诉他我已经有你',
@@ -61,9 +64,25 @@ test('white and dark preview papers each contain exactly 30 three-option questio
     '我会保持必要分寸，不给他暧昧机会',
   ]);
   assert.match(quiz,/问题里的“你”永远指'\+S\.me\.name\+'，“我”永远指你/);
-  assert.match(quiz,/roleChoice只能是0、1或2，代表你在看见'\+S\.me\.name\+'回答之前就锁定的、你期待ta选择的答案，不是你自己的行动/);
+  assert.match(quiz,/roleChoice只能是0、1或2，代表你在看见'\+S\.me\.name\+'回答之前就锁定的期待答案/);
   assert.match(quiz,/!heartQuizQuestionForUser\(q\)/,'generated questions with the old role-self perspective must be rejected');
   assert.match(quiz,/g\.source==='preview'[\s\S]*?NORTH_PREVIEW_PARAMS\.includes\('heartquiz'\)[\s\S]*?isPreview\?12345:Date\.now\(\)/);
+});
+
+test('role-generated papers carry role-selected intensity and three in-character same-screen reactions',()=>{
+  const hq=runtime(),rows=Array.from({length:30},(_,i)=>({
+    q:`第${i+1}题，如果我故意让你吃醋，你会怎么做？`,
+    options:['我会立刻回到你身边','我会故意再刺激你一次','我会等你亲自来抓我'],
+    roleChoice:i%3,intensity:i<10?3:i<20?4:5,
+    reactions:[`第${i+1}题反应一，只准看着我`,`第${i+1}题反应二，这笔账我记住了`,`第${i+1}题反应三，那我亲自来抓你`]
+  })),normalized=hq.normalize(JSON.stringify(rows),'dark','role-1',2,12345);
+  assert.equal(normalized.length,30);
+  assert.ok(normalized.every(row=>row.reactions.length===3));
+  assert.ok(normalized.every(row=>row.intensity>=1&&row.intensity<=5));
+  assert.match(quiz,/每题强度由你本人决定/);
+  assert.match(quiz,/黑卷就是暗黑、惊辣、偏执而病态的情侣审判/);
+  assert.match(quiz,/同屏反应：为三个选项分别写一句你本人/);
+  assert.doesNotMatch(quiz,/不能把现实跟踪|每题必须保留一个清醒沟通|只属于双方自愿/);
 });
 
 test('different answer patterns produce materially different white and dark endings',()=>{
@@ -71,11 +90,11 @@ test('different answer patterns produce materially different white and dark endi
   const soulmate=hq.result({mode:'white',answers:Array.from({length:30},()=>answer('bond',true))});
   const apart=hq.result({mode:'white',answers:Array.from({length:30},()=>answer('space',false))});
   const abyss=hq.result({mode:'dark',answers:Array.from({length:30},()=>answer('obsess',true))});
-  const awake=hq.result({mode:'dark',answers:Array.from({length:30},()=>answer('boundary',false))});
+  const awake=hq.result({mode:'dark',answers:Array.from({length:30},()=>answer('defy',false))});
   assert.equal(soulmate.title,'心有灵犀');
   assert.equal(apart.title,'清醒相爱');
   assert.equal(abyss.title,'双向沉沦');
-  assert.equal(awake.title,'清醒猎物');
+  assert.equal(awake.title,'驯服反噬');
   assert.notEqual(soulmate.desc,apart.desc);
   assert.notEqual(abyss.desc,awake.desc);
 });
@@ -86,7 +105,7 @@ test('dark mismatch feedback is dramatic but bounded and accessibility-aware',()
   assert.match(quiz,/navigator\.vibrate\(\[65,45,110\]\)/);
   assert.match(quiz,/setTimeout\(\(\)=>\{[\s\S]*?classList\.remove\('hq-scare'\)[\s\S]*?\},920\)/);
   assert.match(quiz,/@media\(prefers-reduced-motion:reduce\)/);
-  assert.match(quiz,/答案没有现实意义上的对错/);
+  assert.match(quiz,/选定后立即揭晓TA锁定的期待/);
 });
 
 test('white matches use bounded heart, heartbeat, and reduced-motion feedback without sound',()=>{
@@ -106,11 +125,15 @@ test('paper names stay concise and each reveal shows the role expectation for th
   assert.match(quiz,/<b>黑卷<\/b>/);
   assert.match(quiz,/<b>心动审判<\/b>/);
   assert.match(quiz,/TA希望你这样回答/);
-  assert.match(quiz,/已锁定期待答案/);
+  assert.match(quiz,/已锁定期待/);
   assert.match(quiz,/你的回答与TA期待已揭晓/);
   assert.match(quiz,/期待我选/);
   assert.doesNotMatch(quiz,/heartQuizGenerateReaction|heartQuizPreviewReaction/);
-  assert.doesNotMatch(quiz,/预览反应|他的反应|正在回应你的选择|hq-reaction/);
+  assert.match(quiz,/class="hq-reaction"/);
+  assert.match(quiz,/>TA反应</);
+  assert.match(quiz,/reaction:Array\.isArray\(q\.reactions\)/);
+  assert.match(quiz,/由TA决定/);
+  assert.match(quiz,/TA定档/);
   assert.match(quiz,/<button class="hq-next" onclick="heartQuizNext\(\)">/);
 });
 
@@ -136,7 +159,7 @@ test('preview setup stays compact, uses a circular partner portrait, and has no 
   assert.match(quiz,/\.hq-partner \.avatar\{[^}]*flex:0 0 38px!important[^}]*border-radius:50%!important/);
   assert.match(quiz,/<div><b>\$\{esc\(c\.remark\|\|c\.name\)\}<\/b><p>\$\{esc\(answer\.roleText\)\}<\/p>/);
   assert.doesNotMatch(quiz,/<div>\$\{av\(c\.avatar,'sm'\)\}<b>\$\{esc\(answer\.roleText\)\}/);
-  assert.match(quiz,/无需API，直接体验完整流程/);
+  assert.match(quiz,/无需API，直接体验流程/);
 });
 
 test('Heart Verdict uses a dedicated compact chat invitation card in both directions',()=>{

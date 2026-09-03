@@ -4,6 +4,8 @@
 <dict>
 	<key>NSAlarmKitUsageDescription</key>
 	<string>用于按你设置的时间，让角色通过系统闹钟可靠地提醒你。</string>
+	<key>NSHomeKitUsageDescription</key>
+	<string>用于在你点击允许后直接读取并控制苹果家庭中的灯具，并在操作后核对真实状态。</string>
 	<key>NSUserActivityTypes</key>
 	<array>
 		<string>INSendMessageIntent</string>
