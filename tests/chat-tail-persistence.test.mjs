@@ -51,6 +51,7 @@ test('the latest visible role reply has a compact synchronous recovery tail',()=
 
 test('each completed role turn is journaled and durably flushed before reply completion',()=>{
   const ai=functionSource('aiReply');
+  assert.match(functionSource('pushMsg'),/msgs\(id\)\.push\(m\);if\(m\.role==='user'&&m\.type!=='sys'\)wechatTailJournalWrite\(id,actId\(\)\);save\(\)/,'the user message must reach the synchronous tail before the model request can start');
   assert.match(ai,/msgs\(id\)\.push\(vm\);wechatTailJournalWrite\(id,replyAccount\)/);
   assert.match(ai,/msgs\(id\)\.push\(msg\);wechatTailJournalWrite\(id,replyAccount\)/);
   const durable=ai.match(/if\(delivered\)\{\/\* 先把回复真正落盘[\s\S]*?roleBackgroundCancel\(id,\['reply_handoff'\]\);\}/)?.[0]||'';

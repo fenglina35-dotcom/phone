@@ -381,7 +381,7 @@ test('every visible conversation message resets a random 30-60 minute server qui
   assert.match(touch, /p_activity_ms:\+activityAt\|\|Date\.now\(\)/);
   assert.match(touch, /p_quiet_until_ms:roleServerPushQuietUntil\(c\)/);
   const push = functionSource('pushMsg');
-  assert.match(push, /msgs\(id\)\.push\(m\);save\(\);if\(m\.role==='user'&&m\.type!=='sys'\)\{roleBackgroundCancel\(id,\['one_minute_test','app_watch_test'\]\);roleServerPushTouchActivity\(id,m\.time,true\);roleBackgroundPrepare\(id,'reply_handoff'/);
+  assert.match(push, /msgs\(id\)\.push\(m\);if\(m\.role==='user'&&m\.type!=='sys'\)wechatTailJournalWrite\(id,actId\(\)\);save\(\);if\(m\.role==='user'&&m\.type!=='sys'\)\{roleBackgroundCancel\(id,\['one_minute_test','app_watch_test'\]\);roleServerPushTouchActivity\(id,m\.time,true\);roleBackgroundPrepare\(id,'reply_handoff'/);
 });
 
 test('zero interval uses random daily scheduling while a nonzero interval is exact', () => {
