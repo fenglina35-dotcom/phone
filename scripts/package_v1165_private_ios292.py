@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "native/private-small-phone/XcodeProject"
 BUNDLE_SOURCE = SOURCE / "PhoneCompanionTest/PhoneWeb.bundle"
 INSTALL_GUIDE_SOURCE = (
-    SOURCE / "第二百九十一次安装_v1165_回复心动审判与HomeKit修复_请先读.md"
+    SOURCE / "第二百九十二次安装_v1165_回复心动审判与HomeKit修复_请先读.md"
 )
 DELIVERY = ROOT / "delivery-v1165-private292-reply-heartquiz-homekit-candidate"
 PACKAGE_NAME = "SmallPhone_v1165_ReplyHeartQuizHomeKit_iOS292_MacReady"
