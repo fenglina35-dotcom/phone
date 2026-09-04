@@ -6,25 +6,25 @@ import test from 'node:test';
 const root = process.cwd();
 const read = (...parts) => fs.readFileSync(path.join(root, ...parts), 'utf8');
 
-test('v1169 web identity and cache markers are aligned', () => {
+test('v1171 web identity and cache markers are aligned', () => {
   const app = read('app.js');
   const shell = read('小手机.html');
   const sw = read('sw.js');
   const hotfix = read('web-hotfix.js');
   const index = read('index.html');
   const repair = read('repair.html');
-  assert.match(app, /__NORTH_SHELL_BUILD__!=='1169'/);
-  assert.match(app, /APP_VER='v1169 · 心动审判逐题补齐版'/);
-  assert.match(shell, /__NORTH_SHELL_BUILD__='1169'/);
-  assert.match(shell, /app\.js\?v=1169&r=v1169-heartquiz-progressive-fill-1/);
-  assert.match(sw, /const BUILD='1169'/);
-  assert.match(sw, /v1169-heartquiz-progressive-fill-hotfix-1/);
-  assert.match(hotfix, /v1169-heartquiz-progressive-fill-1/);
-  assert.match(index, /小手机\.html\?v=1169/);
-  assert.match(repair, /小手机\.html\?v=1169/);
+  assert.match(app, /__NORTH_SHELL_BUILD__!=='1171'/);
+  assert.match(app, /APP_VER='v1171 · 共同生活多人剧场版'/);
+  assert.match(shell, /__NORTH_SHELL_BUILD__='1171'/);
+  assert.match(shell, /app\.js\?v=1171&r=v1171-cohab-theater-1/);
+  assert.match(sw, /const BUILD='1171'/);
+  assert.match(sw, /v1171-cohab-theater-hotfix-1/);
+  assert.match(hotfix, /v1171-cohab-theater-1/);
+  assert.match(index, /小手机\.html\?v=1171/);
+  assert.match(repair, /小手机\.html\?v=1171/);
 });
 
-test('v1169 publishes shared cohab memory and X comment controls', () => {
+test('v1171 publishes shared cohab memory and X comment controls', () => {
   const app = read('app.js');
   const privateCopy = read('native', 'private-small-phone', 'XcodeProject', 'PhoneCompanionTest', 'PhoneWeb.bundle', 'app.js');
   for (const source of [app, privateCopy]) {

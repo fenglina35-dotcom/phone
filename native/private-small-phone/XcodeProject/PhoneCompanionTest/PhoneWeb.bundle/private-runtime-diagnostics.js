@@ -3,7 +3,7 @@
   'use strict';
   if(window.__SMALL_PHONE_PRIVATE__!==true)return;
 
-  const OVERLAY_VERSION='296-heartquiz-progressive-fill-v1';
+  const OVERLAY_VERSION='298-cohab-theater-v1';
   const lastEventAt=Object.create(null);
   let lastMeasuredSyncOp='',lastMeasuredSyncMs=0,lastMeasuredSyncAt=0;
   const clock=()=>typeof performance!=='undefined'&&performance.now?performance.now():Date.now();
@@ -146,8 +146,8 @@
   window.__smallPhonePhoneFriendSyncTrace=function(fields){
     fields=fields&&typeof fields==='object'?fields:{};
     const stage=safeRuntimeToken(fields.stage,'unknown'),bulk=fields.bulk===true,payload={page:currentPageName()};
-    ['forceProfile','forceFull','bulk','full','changed','hadError'].forEach(key=>{if(typeof fields[key]==='boolean')payload[key]=fields[key];});
-    ['ms','messages','groupMessages','bodyChars','friendInserted','groupInserted','friendBuckets','groupBuckets'].forEach(key=>{const value=Number(fields[key]);if(Number.isFinite(value))payload[key]=Math.max(0,Math.min(1000000000,Math.round(value)));});
+    ['forceProfile','forceFull','profileDeferred','bulk','full','changed','hadError'].forEach(key=>{if(typeof fields[key]==='boolean')payload[key]=fields[key];});
+    ['ms','messages','groupMessages','bodyChars','friendInserted','groupInserted','friendBuckets','groupBuckets','scanned','acked','rendered','hidden'].forEach(key=>{const value=Number(fields[key]);if(Number.isFinite(value))payload[key]=Math.max(0,Math.min(1000000000,Math.round(value)));});
     if(fields.error)payload.error=safeRuntimeToken(fields.error,'Error').slice(0,40);
     return emit('phoneFriend.'+stage,payload,bulk||stage==='error'?0:60000,bulk?'bulk':stage);
   };

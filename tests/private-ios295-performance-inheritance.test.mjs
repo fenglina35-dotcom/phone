@@ -45,20 +45,20 @@ function functionSource(sourceText, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('v1169 shared identifiers retain the private performance chain', () => {
+test('v1171 private identifiers retain the performance chain while public stays v1171', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1169'/);
-  assert.match(index, /app\.js\?v=1169&r=v1169-heartquiz-progressive-fill-1/);
-  assert.match(index, /private-runtime-diagnostics\.js\?v=296/);
-  assert.match(app, /APP_VER='v1169 · 心动审判逐题补齐版'/);
-  assert.match(overlay, /296-heartquiz-progressive-fill-v1/);
-  assert.match(webview, /1\.0\.296 \(296\)/);
-  assert.match(bridge, /private static let build = "1\.0\.296 \(296\)"/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1171'/);
+  assert.match(index, /app\.js\?v=1171&r=v1171-cohab-theater-1/);
+  assert.match(index, /private-runtime-diagnostics\.js\?v=298/);
+  assert.match(app, /APP_VER='v1171 · 共同生活多人剧场版'/);
+  assert.match(overlay, /298-cohab-theater-v1/);
+  assert.match(webview, /1\.0\.298 \(298\)/);
+  assert.match(bridge, /private static let build = "1\.0\.298 \(298\)"/);
   assert.match(bridge, /static let contractVersion = 35/);
-  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 296;/g) || []).length, 12);
-  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.296;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1169 · 心动审判逐题补齐版'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1169'/);
+  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 298;/g) || []).length, 12);
+  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.298;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1171 · 共同生活多人剧场版'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1171'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
@@ -77,7 +77,7 @@ test('latest private features remain present after performance repair', () => {
 
 test('friend sync yields, caches payload parsing and reconciles touched buckets', () => {
   const sync = functionSource(app, 'phoneFriendSync');
-  assert.match(app, /let _pfPayloadCache=null/);
+  assert.match(app, /const _pfPayloadCache=typeof WeakMap/);
   assert.match(app, /function pfSyncMaybeYield\(index\)/);
   assert.match(app, /function pfStoreMessage\(m,bulk\)/);
   assert.match(app, /function pfStoreGroupMessage\(m,bulk\)/);
@@ -86,7 +86,7 @@ test('friend sync yields, caches payload parsing and reconciles touched buckets'
   assert.match(sync, /pfSyncMaybeYield\(i\+1\)/);
   assert.match(sync, /pfReconcileReadInference\(full\?null:bulk\.friendTouched,full\?null:bulk\.groupTouched/);
   assert.doesNotMatch(sync, /srvMsgs\.forEach|srvGroupMsgs\.forEach/);
-  assert.match(sync, /finally\{_pfPayloadCache=null/);
+  assert.doesNotMatch(sync, /_pfPayloadCache=/);
   assert.match(app, /function phoneFriendMaybeSync\(force\)[\s\S]{0,260}?northNativeMaintenancePaused\(\)/);
   assert.doesNotMatch(functionSource(app, 'phoneFriendMaybeSync'), /!active/);
 });
@@ -146,19 +146,20 @@ test('diagnostics identify the protected stage without collecting content', () =
   assert.doesNotMatch(overlay, /messageBody|chatContent|authorizationToken/);
 });
 
-test('Mac guides state the safe v1169 shared delivery boundary', () => {
+test('Mac guides state the safe v1171 private-only delivery boundary', () => {
   const install = fs.readFileSync(
-    path.join(project, '第二百九十六次安装_v1169_心动审判逐题补齐_请先读.md'),
+    path.join(project, '第二百九十八次安装_v1171_共同生活多人剧场_请先读.md'),
     'utf8',
   );
   const mac = fs.readFileSync(path.join(project, '请在Mac编译前先读.md'), 'utf8');
   for (const guide of [install, mac]) {
-    assert.match(guide, /v1169/);
-    assert.match(guide, /1\.0\.296 \(296\)/);
+    assert.match(guide, /v1171/);
+    assert.match(guide, /1\.0\.298 \(298\)/);
     assert.match(guide, /原生桥 35/);
     assert.match(guide, /不要.*删除.*App/);
     assert.match(guide, /Mac.*编译/);
     assert.match(guide, /真机|真实 iPhone/);
   }
-  assert.match(mac, /网页与私人完整页面 v1169/);
+  assert.match(mac, /网页候选源码 v1171（本次不上传）/);
+  assert.match(install, /网页候选源码为 v1171，但本次不上传网页/);
 });
