@@ -7,9 +7,9 @@ const privateApp=fs.readFileSync(new URL('../native/private-small-phone/XcodePro
 const classic=fs.readFileSync(new URL('../vendor/mp4box.all.js',import.meta.url),'utf8');
 const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
 
-assert.match(app,/cinemaMp4Library\(\)[\s\S]*?mp4box\.all\.js\?v=1166&r=file-safe-1/);
+assert.match(app,/cinemaMp4Library\(\)[\s\S]*?mp4box\.all\.js\?v=1167&r=file-safe-1/);
 assert.doesNotMatch(app,/cinemaMp4Library\(\)[\s\S]*?import\('\.\/vendor\/mp4box\.all\.mjs/);
-assert.equal(privateApp.includes("mp4box.all.js?v=1166&r=file-safe-1"),true);
+assert.equal(privateApp.includes("mp4box.all.js?v=1167&r=file-safe-1"),true);
 assert.match(sw,/mp4box\.all\.js\?v='\+BUILD\+'&r=file-safe-1/);
 
 const context={};

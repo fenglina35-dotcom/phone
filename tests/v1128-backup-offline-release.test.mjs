@@ -26,16 +26,16 @@ function functionSource(name){
   throw new Error(`unterminated ${name}`);
 }
 
-test('v1166 has a unique visible identity across every public entry and cache layer',()=>{
-  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1166\'/);
-  assert.match(app,/APP_VER='v1166 · 心动审判分批出题修正版'/);
-  assert.match(shell,/__NORTH_SHELL_BUILD__='1166'/);
-  assert.match(shell,/app\.js\?v=1166&r=v1166-heartquiz-batches-1/);
-  assert.match(index,/小手机\.html\?v=1166/);
-  assert.match(repair,/小手机\.html\?v=1166/);
-  assert.match(worker,/const BUILD='1166'/);
-  assert.match(worker,/north-shell-v1166-heartquiz-batches-1/);
-  assert.match(hotfix,/sw\.js\?v=1166&r=v1166-heartquiz-batches-1/);
+test('v1167 has a unique visible identity across every public entry and cache layer',()=>{
+  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1167\'/);
+  assert.match(app,/APP_VER='v1167 · 心动审判共同生活记忆修复版'/);
+  assert.match(shell,/__NORTH_SHELL_BUILD__='1167'/);
+  assert.match(shell,/app\.js\?v=1167&r=v1167-heart-cohab-x-memory-1/);
+  assert.match(index,/小手机\.html\?v=1167/);
+  assert.match(repair,/小手机\.html\?v=1167/);
+  assert.match(worker,/const BUILD='1167'/);
+  assert.match(worker,/north-shell-v1167-heart-cohab-x-memory-1/);
+  assert.match(hotfix,/sw\.js\?v=1167&r=v1167-heart-cohab-x-memory-1/);
   for(const [name,source] of Object.entries({app,shell,index,repair,worker,hotfix})){
     assert.doesNotMatch(source,/v?1127/,`${name} must not reuse the prior web version`);
   }

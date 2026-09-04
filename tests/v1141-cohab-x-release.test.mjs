@@ -6,25 +6,25 @@ import test from 'node:test';
 const root = process.cwd();
 const read = (...parts) => fs.readFileSync(path.join(root, ...parts), 'utf8');
 
-test('v1166 web identity and cache markers are aligned', () => {
+test('v1167 web identity and cache markers are aligned', () => {
   const app = read('app.js');
   const shell = read('小手机.html');
   const sw = read('sw.js');
   const hotfix = read('web-hotfix.js');
   const index = read('index.html');
   const repair = read('repair.html');
-  assert.match(app, /__NORTH_SHELL_BUILD__!=='1166'/);
-  assert.match(app, /APP_VER='v1166 · 心动审判分批出题修正版'/);
-  assert.match(shell, /__NORTH_SHELL_BUILD__='1166'/);
-  assert.match(shell, /app\.js\?v=1166&r=v1166-heartquiz-batches-1/);
-  assert.match(sw, /const BUILD='1166'/);
-  assert.match(sw, /v1166-heartquiz-batches-hotfix-1/);
-  assert.match(hotfix, /v1166-heartquiz-batches-1/);
-  assert.match(index, /小手机\.html\?v=1166/);
-  assert.match(repair, /小手机\.html\?v=1166/);
+  assert.match(app, /__NORTH_SHELL_BUILD__!=='1167'/);
+  assert.match(app, /APP_VER='v1167 · 心动审判共同生活记忆修复版'/);
+  assert.match(shell, /__NORTH_SHELL_BUILD__='1167'/);
+  assert.match(shell, /app\.js\?v=1167&r=v1167-heart-cohab-x-memory-1/);
+  assert.match(sw, /const BUILD='1167'/);
+  assert.match(sw, /v1167-heart-cohab-x-memory-hotfix-1/);
+  assert.match(hotfix, /v1167-heart-cohab-x-memory-1/);
+  assert.match(index, /小手机\.html\?v=1167/);
+  assert.match(repair, /小手机\.html\?v=1167/);
 });
 
-test('v1166 publishes shared cohab memory and X comment controls', () => {
+test('v1167 publishes shared cohab memory and X comment controls', () => {
   const app = read('app.js');
   const privateCopy = read('native', 'private-small-phone', 'XcodeProject', 'PhoneCompanionTest', 'PhoneWeb.bundle', 'app.js');
   for (const source of [app, privateCopy]) {

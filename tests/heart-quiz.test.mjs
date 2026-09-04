@@ -19,7 +19,7 @@ function runtime(replies=[]){
     __calls:calls,chatAPI:async(messages,opt)=>{calls.push({messages,opt});if(!replies.length)throw new Error('no stub reply');const next=replies.shift();if(next instanceof Error)throw next;return next;},
     heartQuizDummy:true
   });
-  vm.runInContext(quiz+'\nthis.__hqTest={bank:HEART_QUIZ_BANK,fallback:heartQuizFallback,normalize:heartQuizNormalize,normalizeRows:heartQuizNormalizeRows,generate:heartQuizGenerate,result:heartQuizResult,ending:heartQuizFallbackLine,levels:HEART_QUIZ_LEVELS,intensity:HEART_QUIZ_INTENSITY,total:HEART_QUIZ_TOTAL,calls:this.__calls};',sandbox);
+  vm.runInContext(quiz+'\nthis.__hqTest={bank:HEART_QUIZ_BANK,fallback:heartQuizFallback,textRows:heartQuizTextRows,normalize:heartQuizNormalize,normalizeRows:heartQuizNormalizeRows,generate:heartQuizGenerate,result:heartQuizResult,ending:heartQuizFallbackLine,levels:HEART_QUIZ_LEVELS,intensity:HEART_QUIZ_INTENSITY,total:HEART_QUIZ_TOTAL,calls:this.__calls};',sandbox);
   return sandbox.__hqTest;
 }
 
@@ -73,7 +73,7 @@ test('white and dark preview papers each contain exactly 30 three-option questio
     '我会保持必要分寸，不给他暧昧机会',
   ]);
   assert.match(quiz,/问题里的“你”指'\+S\.me\.name\+'/);
-  assert.match(quiz,/roleChoice用0、1或2/);
+  assert.match(quiz,/期待只写A、B或C/);
   assert.match(quiz,/!heartQuizQuestionForUser\(q\)/,'generated questions with the old role-self perspective must be rejected');
   assert.match(quiz,/g\.source==='preview'[\s\S]*?NORTH_PREVIEW_PARAMS\.includes\('heartquiz'\)[\s\S]*?isPreview\?12345:Date\.now\(\)/);
 });
@@ -102,6 +102,35 @@ test('partial and clumsy model JSON keeps every valid row instead of discarding 
   assert.equal(repaired[0].intensity,5);
 });
 
+test('plain tagged output from a weak model is accepted without JSON',()=>{
+  const hq=runtime(),plain=`这里是题目：
+题目：如果有别人半夜给你发暧昧消息，你会怎么做？
+A：我会当场拒绝并告诉你
+B：我会先问清楚再告诉你
+C：我会故意留着看你吃醋
+期待：A
+强度：5
+反应A：这才是我想要的乖
+反应B：你还需要先问清楚？
+反应C：很好，今晚别想躲
+---
+题目：如果聚会上有人一直盯着你，你会怎么选择？
+A：我会直接走到你身边
+B：我会无视对方继续聊天
+C：我会等你亲自宣示主权
+期待：C
+强度：4
+反应A：知道回到我身边就好
+反应B：无视还不够，我要他看懂
+反应C：如你所愿，我会让所有人知道`;
+  const rows=hq.normalizeRows(plain,'dark','role-1',2,12345,[]);
+  assert.equal(rows.length,2);
+  assert.equal(rows[0].roleChoice,0);
+  assert.equal(rows[1].roleChoice,2);
+  assert.ok(rows.every(row=>row.reactions.length===3));
+  assert.match(quiz,/不要写JSON/);
+});
+
 test('role generation uses small batches and replenishes only rejected rows',async()=>{
   const first=roleRows(0,6);first[5].reactions.pop();
   const replies=[first,roleRows(6,6),roleRows(12,6),roleRows(18,6),roleRows(24,6),roleRows(30,1)].map(JSON.stringify);
@@ -112,6 +141,8 @@ test('role generation uses small batches and replenishes only rejected rows',asy
   assert.equal(hq.calls.length,6,'one malformed row should require one small refill, not discard 29 valid rows');
   assert.ok(hq.calls.every(call=>call.opt.max===2600&&call.opt.complete===false));
   assert.ok(hq.calls.every(call=>/本次只写\d+道题，不要写整份30题/.test(call.messages[0].content)));
+  assert.ok(hq.calls.every(call=>/按九行文字格式写/.test(call.messages[1].content)));
+  assert.ok(hq.calls.every(call=>!/[Jj][Ss][Oo][Nn]/.test(call.messages[1].content)));
 });
 
 test('different answer patterns produce materially different white and dark endings',()=>{

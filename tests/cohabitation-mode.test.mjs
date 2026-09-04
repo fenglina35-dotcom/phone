@@ -40,7 +40,7 @@ test('co-living state pauses without deleting and advances work to return home',
     routes:[],homeCalls:0,controlCalls:0,
     go:(p,params)=>sandbox.routes.push({p,...params}),home:()=>{sandbox.homeCalls++;},openChat:()=>{},cur:()=>({p:'home'}),initiativeArm:()=>{},cohabScheduleArrival:()=>{},
     offDateTime:()=> '2026年8月9日 12:00',offElapsed:()=> '1天',esc:String,
-    uiConfirm:async()=>true,_off:null,_offSel:null
+    uiConfirm:async()=>true,_off:null,_offSel:null,stack:[{p:'home'}]
   };
   vm.runInNewContext(source.slice(start,end)+`
     globalThis.root=cohabRoot();

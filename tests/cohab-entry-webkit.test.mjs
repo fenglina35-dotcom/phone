@@ -46,5 +46,36 @@ test('co-living entry reports a visible error and re-enables the button if navig
   assert.equal(failed.entered,'');
   assert.equal(failed.button.disabled,false);
   assert.equal(failed.errors.length,1);
-  assert.deepEqual(failed.messages,['共同生活入口异常，请返回线下约会后重试']);
+  assert.deepEqual(failed.messages,['共同生活入口异常，已安全复位：paint failed']);
+});
+
+test('co-living repairs malformed persisted rows before rendering and rolls navigation back on failure',()=>{
+  for(const [label,input] of [['web',root],['private bundle',bundled]]){
+    const repair=functionSource(input,'cohabRepairRows');
+    const sandbox={uid:(()=>{let n=0;return()=>`fixed-${++n}`;})()};
+    vm.runInNewContext(`${repair};this.run=cohabRepairRows;`,sandbox);
+    const rows=sandbox.run([null,'旧旁白',{id:'ok',who:'me',text:'  我回来了  ',time:10},[],{text:''}],'message',100);
+    assert.equal(rows.length,2,`${label} must drop null, arrays and empty rows`);
+    assert.equal(rows[0].who,'旁白');
+    assert.equal(rows[0].text,'旧旁白');
+    assert.equal(rows[1].text,'我回来了');
+    assert.match(functionSource(input,'renderCohab'),/messages=\(o\.msgs\|\|\[\]\)\.filter\(m=>m&&typeof m==='object'\)/);
+    assert.match(functionSource(input,'cohabEnter'),/previousStack=stack\.slice\(\)/);
+    assert.match(functionSource(input,'cohabEnter'),/stack\.length=0;previousStack\.forEach/);
+  }
+});
+
+test('co-living entry restores the previous route, role and scene when render throws',()=>{
+  for(const [label,input] of [['web',root],['private bundle',bundled]]){
+    const sandbox={root:{enabled:true,paused:false,cid:'old'},stack:[{p:'home'},{p:'offline'}],_off:{id:'old',mode:'date'},Date,
+      cohabRoot:()=>sandbox.root,cohabDefaultCid:()=>'',getC:id=>id==='c1'?{id}:null,closeModal(){},
+      cohabAdvance:()=>({phoneInspectDueAt:1}),go:(p,params)=>{sandbox.stack.push({p,...params});throw new Error('render failed');},
+      cohabPersistAfterEnter(){},cohabScheduleArrival(){},toast(){}};
+    const before=JSON.stringify(sandbox.stack),oldOff=sandbox._off;
+    vm.runInNewContext(`${functionSource(input,'cohabEnter')};this.enter=cohabEnter;`,sandbox);
+    assert.throws(()=>sandbox.enter('c1'),/render failed/,label);
+    assert.equal(sandbox.root.cid,'old');
+    assert.equal(sandbox._off,oldOff);
+    assert.equal(JSON.stringify(sandbox.stack),before);
+  }
 });
