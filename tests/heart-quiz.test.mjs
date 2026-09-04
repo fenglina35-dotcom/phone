@@ -131,6 +131,26 @@ C：我会等你亲自宣示主权
   assert.match(quiz,/不要写JSON/);
 });
 
+test('weak model headings fullwidth letters and grouped reactions are accepted',()=>{
+  const hq=runtime(),plain=`Q1：如果有人当面向你示好，你会怎么处理？
+Ａ）：我会马上拒绝并走到你身边
+Ｂ）：我会礼貌解释自己已经有伴侣
+Ｃ）：我会故意等你来宣示主权
+角色期待答案：A
+刺激度：高
+角色反应：
+A：过来，站到我身边
+B：解释得还算清楚
+C：你最好承受得住我亲自来
+`;
+  const rows=hq.normalizeRows(plain,'dark','role-1',2,12345,[]);
+  assert.equal(rows.length,1);
+  assert.equal(rows[0].roleChoice,0);
+  assert.equal(rows[0].intensity,4);
+  assert.equal(rows[0].options[0],'我会马上拒绝并走到你身边');
+  assert.equal(rows[0].reactions.length,3);
+});
+
 test('role generation uses small batches and replenishes only rejected rows',async()=>{
   const first=roleRows(0,6);first[5].reactions.pop();
   const replies=[first,roleRows(6,6),roleRows(12,6),roleRows(18,6),roleRows(24,6),roleRows(30,1)].map(JSON.stringify);
@@ -139,10 +159,31 @@ test('role generation uses small batches and replenishes only rejected rows',asy
   assert.equal(new Set(result.map(row=>row.q)).size,30);
   assert.ok(result.every(row=>row.reactions.length===3));
   assert.equal(hq.calls.length,6,'one malformed row should require one small refill, not discard 29 valid rows');
-  assert.ok(hq.calls.every(call=>call.opt.max===2600&&call.opt.complete===false));
+  assert.ok(hq.calls.every(call=>call.opt.max===2400&&call.opt.complete===true));
   assert.ok(hq.calls.every(call=>/本次只写\d+道题，不要写整份30题/.test(call.messages[0].content)));
   assert.ok(hq.calls.every(call=>/按九行文字格式写/.test(call.messages[1].content)));
   assert.ok(hq.calls.every(call=>!/[Jj][Ss][Oo][Nn]/.test(call.messages[1].content)));
+});
+
+test('after regular batches the generator fills every remaining slot one question at a time',async()=>{
+  const replies=[];
+  for(let i=0;i<12;i++)replies.push(JSON.stringify(roleRows(i*2,2)));
+  for(let i=24;i<30;i++)replies.push(JSON.stringify(roleRows(i,1)));
+  const hq=runtime(replies),result=await hq.generate({id:'role-1',name:'先生'},{source:'role',mode:'dark',level:2,cid:'role-1'});
+  assert.equal(result.length,30);
+  assert.equal(hq.calls.length,18);
+  assert.ok(hq.calls.slice(0,12).every(call=>call.opt.max===2400&&call.opt.complete===true));
+  assert.ok(hq.calls.slice(12).every(call=>call.opt.max===1200&&call.opt.complete===true));
+  assert.ok(hq.calls.slice(12).every(call=>call.opt.roleInterceptStage==='心动审判逐题补齐'));
+});
+
+test('an exhausted weak-model run reports accepted count and rejection reasons',async()=>{
+  const broken=JSON.stringify([{q:'如果有人靠近你，你会怎么做？',options:['我会拒绝','我会离开','我会告诉你']}]);
+  const hq=runtime(Array.from({length:10},()=>broken));
+  await assert.rejects(
+    hq.generate({id:'role-1',name:'先生'},{source:'role',mode:'dark',level:2,cid:'role-1'}),
+    /只收齐0\/30题（共请求10次；反应缺失10、空批10）/
+  );
 });
 
 test('different answer patterns produce materially different white and dark endings',()=>{

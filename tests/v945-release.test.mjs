@@ -12,22 +12,22 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v1167 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1167 · 心动审判共同生活记忆修复版'/);
-  assert.match(app,/const url='sw\.js\?v=1167&r=v1167-heart-cohab-x-memory-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1167'/);
-  assert.match(html,/app\.js\?v=1167/);
-  assert.match(sw,/const BUILD='1167'/);
-  assert.match(sw,/north-shell-v1167/);
-  assert.match(index,/小手机\.html\?v=1167/);
-  assert.match(repair,/小手机\.html\?v=1167/);
+test('v1169 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v1169 · 心动审判逐题补齐版'/);
+  assert.match(app,/const url='sw\.js\?v=1169&r=v1169-heartquiz-progressive-fill-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1169'/);
+  assert.match(html,/app\.js\?v=1169/);
+  assert.match(sw,/const BUILD='1169'/);
+  assert.match(sw,/north-shell-v1169/);
+  assert.match(index,/小手机\.html\?v=1169/);
+  assert.match(repair,/小手机\.html\?v=1169/);
 });
 
-test('the private iOS package embeds private web v1168 and keeps the current native delivery',()=>{
-  assert.match(privateBundle,/<string>1168<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.295;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 295;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.295 \(295\)'/);
+test('the private iOS package embeds private web v1169 and keeps the current native delivery',()=>{
+  assert.match(privateBundle,/<string>1169<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.296;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 296;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.296 \(296\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

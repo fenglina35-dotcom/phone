@@ -45,20 +45,20 @@ function functionSource(sourceText, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('v1168 private identifiers advance while public web stays on v1167', () => {
+test('v1169 shared identifiers retain the private performance chain', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1168'/);
-  assert.match(index, /app\.js\?v=1168&r=v1168-private-performance-inheritance-1/);
-  assert.match(index, /private-runtime-diagnostics\.js\?v=295/);
-  assert.match(app, /APP_VER='v1168 · 私人性能链继承修复版'/);
-  assert.match(overlay, /295-private-performance-inheritance-v1/);
-  assert.match(webview, /1\.0\.295 \(295\)/);
-  assert.match(bridge, /private static let build = "1\.0\.295 \(295\)"/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1169'/);
+  assert.match(index, /app\.js\?v=1169&r=v1169-heartquiz-progressive-fill-1/);
+  assert.match(index, /private-runtime-diagnostics\.js\?v=296/);
+  assert.match(app, /APP_VER='v1169 · 心动审判逐题补齐版'/);
+  assert.match(overlay, /296-heartquiz-progressive-fill-v1/);
+  assert.match(webview, /1\.0\.296 \(296\)/);
+  assert.match(bridge, /private static let build = "1\.0\.296 \(296\)"/);
   assert.match(bridge, /static let contractVersion = 35/);
-  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 295;/g) || []).length, 12);
-  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.295;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1167 · 心动审判共同生活记忆修复版'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1167'/);
+  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 296;/g) || []).length, 12);
+  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.296;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1169 · 心动审判逐题补齐版'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1169'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
@@ -70,7 +70,8 @@ test('latest private features remain present after performance repair', () => {
     'function alarmPendingDuplicate',
   ]) assert.ok(app.includes(token), token);
   assert.match(heartQuiz, /async function heartQuizGenerate\(c,g\)/);
-  assert.match(heartQuiz, /while\(out\.length<HEART_QUIZ_TOTAL&&calls<10\)/);
+  assert.match(heartQuiz, /while\(out\.length<HEART_QUIZ_TOTAL&&batch<12\)/);
+  assert.match(heartQuiz, /while\(out\.length<HEART_QUIZ_TOTAL&&single<singleLimit/);
   assert.match(heartQuiz, /heartQuizTextRows/);
 });
 
@@ -145,19 +146,19 @@ test('diagnostics identify the protected stage without collecting content', () =
   assert.doesNotMatch(overlay, /messageBody|chatContent|authorizationToken/);
 });
 
-test('Mac guides state the safe private-only delivery boundary', () => {
+test('Mac guides state the safe v1169 shared delivery boundary', () => {
   const install = fs.readFileSync(
-    path.join(project, '第二百九十五次安装_v1168_私人性能链继承修复_请先读.md'),
+    path.join(project, '第二百九十六次安装_v1169_心动审判逐题补齐_请先读.md'),
     'utf8',
   );
   const mac = fs.readFileSync(path.join(project, '请在Mac编译前先读.md'), 'utf8');
   for (const guide of [install, mac]) {
-    assert.match(guide, /v1168/);
-    assert.match(guide, /1\.0\.295 \(295\)/);
+    assert.match(guide, /v1169/);
+    assert.match(guide, /1\.0\.296 \(296\)/);
     assert.match(guide, /原生桥 35/);
     assert.match(guide, /不要.*删除.*App/);
     assert.match(guide, /Mac.*编译/);
     assert.match(guide, /真机|真实 iPhone/);
   }
-  assert.match(mac, /公开网页源码与公开网页版本不改/);
+  assert.match(mac, /网页与私人完整页面 v1169/);
 });
