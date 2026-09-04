@@ -26,16 +26,16 @@ function functionSource(name){
   throw new Error(`unterminated ${name}`);
 }
 
-test('v1171 has a unique visible identity across every public entry and cache layer',()=>{
-  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1171\'/);
-  assert.match(app,/APP_VER='v1171 · 共同生活多人剧场版'/);
-  assert.match(shell,/__NORTH_SHELL_BUILD__='1171'/);
-  assert.match(shell,/app\.js\?v=1171&r=v1171-cohab-theater-1/);
-  assert.match(index,/小手机\.html\?v=1171/);
-  assert.match(repair,/小手机\.html\?v=1171/);
-  assert.match(worker,/const BUILD='1171'/);
-  assert.match(worker,/north-shell-v1171-cohab-theater-1/);
-  assert.match(hotfix,/sw\.js\?v=1171&r=v1171-cohab-theater-1/);
+test('v1176 has a unique visible identity across every public entry and cache layer',()=>{
+  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1176\'/);
+  assert.match(app,/APP_VER='v1176 · 多人剧场退场署名保留版'/);
+  assert.match(shell,/__NORTH_SHELL_BUILD__='1176'/);
+  assert.match(shell,/app\.js\?v=1176&r=v1176-cohab-theater-history-names-1/);
+  assert.match(index,/小手机\.html\?v=1176/);
+  assert.match(repair,/小手机\.html\?v=1176/);
+  assert.match(worker,/const BUILD='1176'/);
+  assert.match(worker,/north-shell-v1176-cohab-theater-history-names-1/);
+  assert.match(hotfix,/sw\.js\?v=1176&r=v1176-cohab-theater-history-names-1/);
   for(const [name,source] of Object.entries({app,shell,index,repair,worker,hotfix})){
     assert.doesNotMatch(source,/v?1127/,`${name} must not reuse the prior web version`);
   }

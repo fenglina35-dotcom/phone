@@ -52,7 +52,7 @@ assert.match(phoneSound,/decay:type==='call'/);
 assert.doesNotMatch(phoneSound,/call:\[\[[^\]]+\],\[/,'dialing must not return to any alternating two-tone alarm pattern');
 assert.match(functionSource('ringAssetStart'),/incomingRingUrl/,'incoming calls must resolve the saved ringtone choice');
 assert.match(functionSource('ringAssetStart'),/a\.loop=true/);
-assert.doesNotMatch(incomingRing+functionSource('ringAssetStart'),/playMediaTone|webToneSequence|880|1174|520|660/,'incoming calls must use only a bundled selectable ringtone asset');
+assert.doesNotMatch(incomingRing+functionSource('ringAssetStart'),/playMediaTone|webToneSequence|880|1175|520|660/,'incoming calls must use only a bundled selectable ringtone asset');
 assert.match(outgoingCall,/\[\[880,\.22\]\][\s\S]*outgoing-call-message-soft-v3[\s\S]*decay:true/,'role calls must use the same single-note soft family');
 
 assert.doesNotMatch(source,/# 标点和口吻（必须遵守）/);

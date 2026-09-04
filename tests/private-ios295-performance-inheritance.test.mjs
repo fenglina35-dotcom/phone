@@ -45,20 +45,20 @@ function functionSource(sourceText, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('v1171 private identifiers retain the performance chain while public stays v1171', () => {
+test('v1176 private identifiers retain the performance chain while public stays v1176', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1171'/);
-  assert.match(index, /app\.js\?v=1171&r=v1171-cohab-theater-1/);
-  assert.match(index, /private-runtime-diagnostics\.js\?v=298/);
-  assert.match(app, /APP_VER='v1171 · 共同生活多人剧场版'/);
-  assert.match(overlay, /298-cohab-theater-v1/);
-  assert.match(webview, /1\.0\.298 \(298\)/);
-  assert.match(bridge, /private static let build = "1\.0\.298 \(298\)"/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1176'/);
+  assert.match(index, /app\.js\?v=1176&r=v1176-cohab-theater-history-names-1/);
+  assert.match(index, /private-runtime-diagnostics\.js\?v=302/);
+  assert.match(app, /APP_VER='v1176 · 多人剧场退场署名保留版'/);
+  assert.match(overlay, /302-cohab-history-names-v1/);
+  assert.match(webview, /1\.0\.302 \(302\)/);
+  assert.match(bridge, /private static let build = "1\.0\.302 \(302\)"/);
   assert.match(bridge, /static let contractVersion = 35/);
-  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 298;/g) || []).length, 12);
-  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.298;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1171 · 共同生活多人剧场版'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1171'/);
+  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 302;/g) || []).length, 12);
+  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.302;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1176 · 多人剧场退场署名保留版'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1176'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
@@ -146,20 +146,20 @@ test('diagnostics identify the protected stage without collecting content', () =
   assert.doesNotMatch(overlay, /messageBody|chatContent|authorizationToken/);
 });
 
-test('Mac guides state the safe v1171 private-only delivery boundary', () => {
+test('Mac guides state the safe shared v1176 delivery boundary', () => {
   const install = fs.readFileSync(
-    path.join(project, '第二百九十八次安装_v1171_共同生活多人剧场_请先读.md'),
+    path.join(project, '第三百零二次安装_v1176_多人剧场退场署名保留_请先读.md'),
     'utf8',
   );
   const mac = fs.readFileSync(path.join(project, '请在Mac编译前先读.md'), 'utf8');
   for (const guide of [install, mac]) {
-    assert.match(guide, /v1171/);
-    assert.match(guide, /1\.0\.298 \(298\)/);
+    assert.match(guide, /v1176/);
+    assert.match(guide, /1\.0\.302 \(302\)/);
     assert.match(guide, /原生桥 35/);
     assert.match(guide, /不要.*删除.*App/);
     assert.match(guide, /Mac.*编译/);
     assert.match(guide, /真机|真实 iPhone/);
   }
-  assert.match(mac, /网页候选源码 v1171（本次不上传）/);
-  assert.match(install, /网页候选源码为 v1171，但本次不上传网页/);
+  assert.match(mac, /网页与私人版共同发布 v1176/);
+  assert.match(install, /本包对应网页与私人版共同发布：网页源码为 v1176/);
 });

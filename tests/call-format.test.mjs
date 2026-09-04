@@ -65,6 +65,7 @@ for (const name of [
   "callBadForeignLine",
   "callDrifted",
   "callEnglishTranslationRequired",
+  "callCantoneseTranslationRequired",
   "callTranslationIssue",
   "callOutputIssue",
   "callExplicitSelfHarmIntent",
@@ -86,19 +87,22 @@ assert.equal(context.callDrifted("baby嘴还敢硬?\n（宝贝还敢顶嘴？）
 assert.equal(context.callDrifted("任务是23:59之前交完\n（任务截止时间是23:59）", "英语"), true);
 assert.equal(context.callDrifted("【凑近镜头笑】\nBaby, still talking back?\n（宝贝，还敢顶嘴？）", "英语"), false);
 assert.equal(context.callTranslationIssue("Baby, still talking back?\n（宝贝，还敢顶嘴？）", "英语"), "");
-assert.equal(context.callTranslationIssue("Baby, still talking back?", "英语"), "英语长句没有逐句中文翻译");
-assert.equal(context.callTranslationIssue("I want you to stay right here with me.\n（我要你留在这里陪我。）\nYou need to look directly at me now.", "英语"), "英语长句没有逐句中文翻译");
+assert.equal(context.callTranslationIssue("Baby, still talking back?", "英语"), "英语台词没有逐句普通话翻译");
+assert.equal(context.callTranslationIssue("I want you to stay right here with me.\n（我要你留在这里陪我。）\nYou need to look directly at me now.", "英语"), "英语台词没有逐句普通话翻译");
 assert.equal(context.callTranslationIssue("I cannot continue this intimate roleplay with you.", "zh"), "");
 assert.equal(context.callTranslationIssue("Claude", "zh"), "");
 assert.equal(context.callTranslationIssue("North", "英语"), "");
 assert.equal(context.callTranslationIssue("My darling.", "英语"), "");
-assert.equal(context.callTranslationIssue("好掛住你", "粤语"), "");
+assert.equal(context.callTranslationIssue("好掛住你", "粤语"), "粤语台词没有逐句普通话翻译");
+assert.equal(context.callTranslationIssue("好掛住你\n（很想你。）", "粤语"), "");
 assert.equal(context.callTranslationIssue("好きだよ", "日语"), "");
 assert.equal(context.callTranslationIssue("사랑해", "韩语"), "");
 assert.equal(context.callOutputIssue("model refusal", { lang: "英" }, false, {}), "模型跳出角色或输出了拒绝/说教内容");
 assert.equal(context.callOutputIssue("Stay here.\n（待在这里。）", { lang: "英" }, false, {}), "");
 assert.equal(context.callOutputIssue("North", { lang: "英" }, false, {}), "");
-assert.equal(context.callOutputIssue("I want you to stay right here with me.", { lang: "英" }, false, {}), "英语长句没有逐句中文翻译");
+assert.equal(context.callOutputIssue("I want you to stay right here with me.", { lang: "英" }, false, {}), "英语台词没有逐句普通话翻译");
+assert.equal(context.callOutputIssue("我好掛住你", { lang: "粤" }, false, {}), "粤语台词没有逐句普通话翻译");
+assert.equal(context.callOutputIssue("我好掛住你\n（我很想你。）", { lang: "粤" }, false, {}), "");
 assert.equal(context.callExplicitSelfHarmIntent("疼，轻一点"), false);
 assert.equal(context.callExplicitSelfHarmIntent("我真的想自杀"), true);
 assert.equal(context.callHasVideoAction("你好\n【凑近镜头笑】"), true);
@@ -115,6 +119,7 @@ assert.equal(context.ensureVideoCallDialogue("【看着镜头】", "英"), "【�
 assert.match(source, /英文原文行不能夹中文称谓/);
 assert.match(source, /中文翻译必须写“宝贝\/亲爱的”/);
 assert.match(source, /每一轮都必须至少说1句真正会被听见的台词，同时至少有1行动作/);
+assert.match(source, /语言纠正重试仍未提供逐句普通话翻译/);
 assert.match(source, /上一版只有动作、神态或控制标签，没有任何真正说出口的台词/);
 assert.match(source, /if\(isAction\)\{_call\.sub=\{who:'them',text:subText\};updateCallSub\(\);await sleep\(callPaceMs\(Math\.max\(1150,Array\.from\(u\.orig\)\.length\*105\),760\)\);continue;\}/);
 assert.doesNotMatch(source, /Math\.min\(980,360\+Array\.from\(u\.orig\)\.length\*17\)/);

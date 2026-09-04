@@ -1,2 +1,3 @@
 /Generated/
-XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/
+XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/*
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-reply-intercept.js

@@ -3,7 +3,7 @@
   'use strict';
   if(window.__SMALL_PHONE_PRIVATE__!==true)return;
 
-  const OVERLAY_VERSION='298-cohab-theater-v1';
+  const OVERLAY_VERSION='302-cohab-history-names-v1';
   const lastEventAt=Object.create(null);
   let lastMeasuredSyncOp='',lastMeasuredSyncMs=0,lastMeasuredSyncAt=0;
   const clock=()=>typeof performance!=='undefined'&&performance.now?performance.now():Date.now();

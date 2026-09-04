@@ -7,11 +7,13 @@ const source=fs.readFileSync(new URL('../cohab-theater.js',import.meta.url),'utf
 
 function harness(){
   let serial=0;
-  const host={id:'host',name:'先生',remark:'先生',relation:'恋人',summaries:[]};
+  const host={id:'host',name:'先生',remark:'先生',relation:'恋人',gender:'男',summaries:[]};
   const guest={id:'guest',name:'小雨',remark:'小雨',persona:'安静的朋友',summaries:[]};
   const home={msgs:[],notices:[],summaries:[],msgSeq:0,startedAt:1,phaseAt:1,phase:'home'};
+  const wechat={guest:[]};
   const inputs={
-    ct_host_rel:{value:'恋人'},ct_guest_id:{value:'guest'},ct_guest_me:{value:'朋友'},ct_guest_host:{value:'初次见面'},
+    ct_host_rel:{value:'恋人'},ct_guest_id:{value:'guest'},ct_guest_me:{value:'宝贝的妈妈'},ct_guest_host:{value:'主角的丈母娘'},
+    ct_support_bubbles:{value:'2'},
     ct_me_color:{value:'#224466'},ct_host_color:{value:'#332211'},ct_guest_color:{value:'#55386f'},
     ct_extra_name:{value:''},ct_extra_persona:{value:''},ct_extra_me:{value:''},ct_extra_host:{value:''},ct_extra_color:{value:'#6b4f2e'},
   };
@@ -19,25 +21,31 @@ function harness(){
   const baseData=()=>home;
   const basePush=(d,m)=>{m.cohabSeq=++d.msgSeq;d.msgs.push(m);return m;};
   const noop=()=>{};
-  const context={
+  const actorCalls=[],hostCalls=[];
+  let context;
+  context={
     console,Set,Map,Date,Math,JSON,String,Array,Object,Number,RegExp,Promise,setTimeout,clearTimeout,S,
     document:{getElementById:id=>inputs[id]||null,createElement:()=>({}),head:{appendChild:noop}},
     cohabRepairRows:rows=>rows||[],cohabData:baseData,cohabPushMessage:basePush,cohabSystem:()=>'',cohabCurrentTurnPrompt:()=>'',
-    offAI:async()=>{},offSay:noop,renderCohab:()=>'<div class="cohab-meta"></div>',offlineMsgContent:m=>m.text,
+    cohabReplyCore:async()=>({items:[{id:'host-reply',who:'ta',source:'ta',text:'主角先认真回答这一句话'}],inspection:'',trips:[],travelErrors:[]}),
+    offAI:async()=>{hostCalls.push({before:home.msgs.map(x=>x.who),system:context.cohabSystem(host,home,'')});if(context.emitHost!==false)context.cohabPushMessage(home,{id:`host-${serial+1}`,who:'ta',source:'ta',text:'主角先认真回答这一句话',time:Date.now()});},offSay:noop,renderCohab:()=>'<div class="offstage"><div class="cohab-meta"></div></div>',offlineMsgContent:m=>m.text,
     offlineSceneTimelineRows:()=>[],roleInteractionRows:()=>[],roleReplyGapFact:()=>null,roleReplyTimelinePin:()=>'',roleReplyContinuityPin:()=>'',
     roleReplyCrossChannelHandoffPrompt:()=>'',roleServerPushRecentContext:()=>'',roleDiaryRecentFacts:()=>'',
     getC:id=>id==='host'?host:id==='guest'?guest:null,uid:()=>`id${++serial}`,save:noop,saveNowAsync:async()=>true,
     cohabPushNotice:(d,text,opt)=>d.notices.push({text,...opt}),cohabSceneActive:()=>false,render:noop,openOfflineMenu:noop,toast:noop,closeModal:noop,
     summaryList:c=>c.summaries,pruneSummaries:noop,ymd:()=> '2026-09-04',perspRule:()=>'',roleChatRouteIndex:()=>0,
-    chatAPI:async()=> '我记得自己作为小雨来到共同生活现场，听见用户和先生分别说清彼此的想法，也亲自简短回应了他们；这些是我在场期间真正看到和听到的内容，人物归属没有混淆。',
+    msgs:id=>wechat[id]||(wechat[id]=[]),msgToText:m=>m&&m.content||'',persistWechatMessagesNow:async()=>true,notifyIncoming:noop,refreshChatMessages:noop,
+    chatAPI:async messages=>{actorCalls.push(messages);const system=String(messages&&messages[0]&&messages[0].content||'');if(system.includes('只输出一个JSON对象'))return'{"speak":"配角简短回答","action":"","leave":false}';if(system.includes('主动发一条自然的普通文字消息'))return'我回到微信了，刚才在你们那里发生的事我都记得，之后再慢慢和你聊。';return'我记得自己作为小雨来到共同生活现场，听见宝贝和女婿分别说清彼此的想法，也亲自简短回应了他们；这些是我在场期间真正看到和听到的内容，人物归属没有混淆。';},
     roleVisibleEnvelopeText:x=>x,cleanReply:x=>x,trimSentence:x=>x,
   };
   for(const name of ['offSummaryUserCall','offlinePendingStart','fmtDT','conversationGapExact','roleReplyTimelineRows','roleCrossChannelOn','roleRecentChannelRounds','roleOnlineLiveStateText','initiativeAwayPrompt','recentMealProgressPrompt','rolePhoneAuthoritativeUsageContext','rolePhotoFrequencyContext','roleLatestUserChannel','roleServerPushConversationBoundary','msgs','msgToText','msgClearTime','topSummaries','summaryCleanText','traitDesc','offCurrentInput','offRender','cohabTogetherScene','cohabPhaseLabel','manualReplySceneOn','offNarrationMode','cohabAdvance','cohabSettingsPanel','offRevealText','offElapsed','cohabClockText','cohabStatusLabel','cohabSeen','cohabGoWechat','cohabActionTap','openModal','esc','offNarrationDecorate']){
     if(!(name in context))context[name]=noop;
   }
-  context.offSummaryUserCall=()=> '用户';context.esc=x=>String(x??'');context.window=context;
+  context._off={id:'host',mode:'cohab',busy:false};context._offSel=null;context.emitHost=true;context.offCurrentInput=()=> '用户本轮';context.offRevealTiming=()=>({step:0,total:0});context.cohabAdvance=()=>home;
+  context.offSummaryUserCall=()=> '用户';context.esc=x=>String(x??'');context.offRevealText=m=>String(m&&m.text||'');context.cohabSettingsPanel=()=>'<div class="cohab-settings-wrap"><details class="cohab-settings"><summary>共同生活设置</summary></details><button type="button" class="cohab-debug-reply">让TA回</button></div>';context.window=context;
+  context.topSummaries=()=>[];
   vm.runInNewContext(source,context,{filename:'cohab-theater.js'});
-  return{context,home,host,guest,inputs};
+  return{context,home,host,guest,wechat,inputs,actorCalls,hostCalls};
 }
 
 test('pending cast starts observing only when theater is enabled',async()=>{
@@ -56,8 +64,8 @@ test('pending cast starts observing only when theater is enabled',async()=>{
   assert.equal(home.notices.length,1);
 });
 
-test('active guest exit writes one attributed summary and a retry cannot duplicate it',async()=>{
-  const {context,home,guest}=harness();
+test('active guest exit writes one attributed summary and one genuine WeChat follow-up without duplicates',async()=>{
+  const {context,home,guest,wechat}=harness();
   context.cohabTheaterSave('host');
   await context.cohabTheaterToggle('host');
   context.cohabPushMessage(home,{id:'u',who:'me',text:'欢迎你',time:10});
@@ -66,8 +74,121 @@ test('active guest exit writes one attributed summary and a retry cannot duplica
   await context.cohabTheaterDismissGuest('host','手动请离');
   await new Promise(resolve=>setTimeout(resolve,0));
   assert.equal(guest.summaries.length,1);
-  assert.match(guest.summaries[0].text,/共同生活来客·先生/);
+  assert.match(guest.summaries[0].text,/共同生活来客·女婿/);
+  assert.match(guest.summaries[0].text,/宝贝和女婿/);
   assert.ok(guest.summaries[0].cohabGuestEpisodeId);
+  assert.equal(wechat.guest.length,1);
+  assert.match(wechat.guest[0].content,/回到微信/);
+  assert.equal(wechat.guest[0]._cohabGuestExitEpisodeId,guest.summaries[0].cohabGuestEpisodeId);
   await context.cohabTheaterRetrySummaries('host');
   assert.equal(guest.summaries.length,1);
+  assert.equal(wechat.guest.length,1);
+});
+
+test('selected addressee controls queue order and support remains shorter than host',async()=>{
+  const {context,home,hostCalls}=harness();
+  context.cohabTheaterSave('host');
+  await context.cohabTheaterToggle('host');
+  home.theater.addressTo='guest';
+  await context.offAI();
+  assert.deepEqual(Array.from(home.msgs,x=>x.who),['guest','ta']);
+  assert.deepEqual(hostCalls[0].before,['guest']);
+  assert.match(hostCalls[0].system,/这次请求只生成主角/);
+  assert.match(hostCalls[0].system,/本轮已经先发生的配角反应[\s\S]*配角简短回答/);
+  home.theater.addressTo='host';
+  const before=home.msgs.length;
+  await context.offAI();
+  assert.deepEqual(Array.from(home.msgs.slice(before),x=>x.who),['ta','guest']);
+});
+
+test('manual support bubble limit counts actions and speech together',async()=>{
+  const {context,home,inputs}=harness();
+  inputs.ct_support_bubbles.value='4';
+  context.cohabTheaterSave('host');
+  await context.cohabTheaterToggle('host');
+  home.theater.addressTo='guest';
+  context.chatAPI=async()=>JSON.stringify({bubbles:[
+    {type:'action',text:'抬眼看向两人'},
+    {type:'speak',text:'第一句'},
+    {type:'action',text:'轻轻敲了敲桌面'},
+    {type:'speak',text:'第二句'},
+    {type:'speak',text:'不得出现的第五条'},
+  ],leave:false});
+  await context.offAI();
+  assert.equal(home.theater.supportBubbleLimit,4);
+  assert.deepEqual(Array.from(home.msgs.slice(0,4),x=>x.who),['旁白','guest','旁白','guest']);
+  assert.equal(home.msgs.length,5);
+  assert.doesNotMatch(home.msgs.map(x=>x.text).join('\n'),/第五条/);
+});
+
+test('all and host addressed turns independently generate host then one support actor every turn',async()=>{
+  const {context,home,actorCalls}=harness();
+  context.cohabTheaterSave('host');
+  await context.cohabTheaterToggle('host');
+  home.theater.addressTo='all';
+  await context.offAI();
+  assert.deepEqual(Array.from(home.msgs,x=>x.who),['ta','guest']);
+  assert.match(actorCalls.at(-1).map(x=>x.content).join('\n'),/主角先认真回答这一句话/);
+  home.theater.addressTo='host';
+  const before=home.msgs.length;
+  await context.offAI();
+  assert.deepEqual(Array.from(home.msgs.slice(before),x=>x.who),['ta','guest']);
+});
+
+test('a failed host generation is never masked by a support-only reply',async()=>{
+  const {context,home,actorCalls}=harness();
+  context.cohabTheaterSave('host');
+  await context.cohabTheaterToggle('host');
+  home.theater.addressTo='host';
+  context.emitHost=false;
+  await context.offAI();
+  assert.equal(home.msgs.length,0);
+  assert.equal(actorCalls.length,0);
+});
+
+test('target pill lives beside manual reply only while enabled and off restores base rendering',async()=>{
+  const {context,home}=harness();
+  context.cohabTheaterSave('host');
+  await context.cohabTheaterToggle('host');
+  const panel=context.cohabSettingsPanel('host',home);
+  assert.ok(panel.indexOf('cohab-theater-settings')<panel.indexOf('</details>'));
+  assert.ok(panel.indexOf('cohab-debug-reply')<panel.indexOf('cohab-theater-target'));
+  assert.doesNotMatch(panel,/>对谁说<\/span>/);
+  await context.cohabTheaterToggle('host');
+  assert.doesNotMatch(context.cohabSettingsPanel('host',home),/cohab-theater-target/);
+  assert.equal(context.renderCohab('host'),'<div class="offstage"><div class="cohab-meta"></div></div>');
+});
+
+test('speech, actor actions and typing bubbles expose remarks without role suffixes',async()=>{
+  const {context,home}=harness();
+  context.cohabTheaterSave('host');
+  await context.cohabTheaterToggle('host');
+  context.cohabPushMessage(home,{id:'me-line',who:'me',actorType:'me',displayNameSnapshot:'我',text:'我说的话',time:10});
+  context.cohabPushMessage(home,{id:'host-line',who:'ta',actorType:'host',displayNameSnapshot:'先生',text:'主角说的话',time:11});
+  context.cohabPushMessage(home,{id:'guest-line',who:'guest',actorType:'guest',displayNameSnapshot:'小雨',text:'来客说的话',time:12});
+  context.cohabPushMessage(home,{id:'guest-action',who:'旁白',actorType:'guest',displayNameSnapshot:'小雨',text:'抬起手',time:13});
+  context.cohabPushMessage(home,{id:'me-action',who:'旁白',actorType:'me',displayNameSnapshot:'我',text:'点点头',time:14});
+  home.theater.activeActor='guest';
+  context._off.busy=true;
+  const html=context.renderCohab('host');
+  const labels=Array.from(html.matchAll(/class="(?:cohab-speaker|cohab-narrator-name)">([^<]*)<\/small>/g),m=>m[1]);
+  assert.deepEqual(labels,['我','先生','小雨','小雨','我','小雨']);
+  assert.doesNotMatch(labels.join('\n'),/主角|微信来客|临时路人|动作/);
+});
+
+test('closing theater keeps historical support names but restores unlabeled host and user bubbles',async()=>{
+  const {context,home}=harness();
+  context.cohabTheaterSave('host');
+  await context.cohabTheaterToggle('host');
+  context.cohabPushMessage(home,{id:'me-line',who:'me',text:'我说的话',time:10});
+  context.cohabPushMessage(home,{id:'host-line',who:'ta',text:'主角说的话',time:11});
+  context.cohabPushMessage(home,{id:'guest-line',who:'guest',text:'来客说的话',time:12});
+  context.cohabPushMessage(home,{id:'guest-action',who:'旁白',actorType:'guest',text:'抬起手',time:13});
+  await context.cohabTheaterToggle('host');
+  const html=context.renderCohab('host');
+  const labels=Array.from(html.matchAll(/class="(?:cohab-speaker|cohab-narrator-name)">([^<]*)<\/small>/g),m=>m[1]);
+  assert.deepEqual(labels,['小雨','小雨']);
+  assert.doesNotMatch(html,/cohab-theater-target/);
+  assert.match(html,/我说的话/);
+  assert.match(html,/主角说的话/);
 });
