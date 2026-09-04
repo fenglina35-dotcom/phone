@@ -138,7 +138,7 @@ test('deleted-card recovery actions reuse prepared content without forcing a new
 
 test('private bridge saves original wedding art to Photos with add-only permission', () => {
   assert.match(bridge, /import Photos/);
-  assert.match(bridge, /static let contractVersion = 26/);
+  assert.match(bridge, /static let contractVersion = 35/);
   assert.match(bridge, /case "media\.photo\.save"/);
   assert.match(bridge, /authorizationStatus\(for: \.addOnly\)/);
   assert.match(bridge, /PHAssetChangeRequest\.creationRequestForAsset/);

@@ -49,8 +49,8 @@ test('thermal pressure and repeated termination stop WebKit self-reload loops', 
   assert.match(webView, /thermalState == "nominal" \|\| thermalState == "fair"/);
   assert.match(webView, /thermalState == "serious" \|\| thermalState == "critical"/);
   assert.match(webView, /native\.webcontent\.recoveryOffered/);
-  assert.match(webView, /native\.webcontent\.reloadDeferred/);
-  assert.match(webView, /webContentTerminationTimes\.v5\.build294/);
+  assert.match(webView, /native\.webcontent\.remountDeferred/);
+  assert.match(webView, /webContentTerminationTimes\.v6\.build295/);
   assert.doesNotMatch(webView, /showingLoadFailure/);
   assert.doesNotMatch(webView, /LocalPhoneWebView\.loadFailureHTML/);
   assert.doesNotMatch(webView, /websiteDataStore\.removeData/);
@@ -120,18 +120,18 @@ test('private wardrobe exposes exact and overnight time ranges without removing 
   assert.match(app, /if\(named\.length\)return named/);
 });
 
-test('both private entry files and every iOS target carry build 294', () => {
+test('both private entry files and every iOS target carry build 295', () => {
   assert.equal(index, alias);
-  assert.match(index, /private-runtime-diagnostics\.js\?v=294/);
-  assert.match(overlay, /294-heart-cohab-x-memory-v1/);
-  assert.match(webView, /1\.0\.294 \(294\)/);
-  assert.match(bridge, /1\.0\.294 \(294\)/);
+  assert.match(index, /private-runtime-diagnostics\.js\?v=295/);
+  assert.match(overlay, /295-private-performance-inheritance-v1/);
+  assert.match(webView, /1\.0\.295 \(295\)/);
+  assert.match(bridge, /1\.0\.295 \(295\)/);
   assert.equal(
-    (project.match(/CURRENT_PROJECT_VERSION = 294;/g) || []).length,
+    (project.match(/CURRENT_PROJECT_VERSION = 295;/g) || []).length,
     12
   );
   assert.equal(
-    (project.match(/MARKETING_VERSION = 1\.0\.294;/g) || []).length,
+    (project.match(/MARKETING_VERSION = 1\.0\.295;/g) || []).length,
     12
   );
 });

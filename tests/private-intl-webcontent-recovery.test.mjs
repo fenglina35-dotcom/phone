@@ -136,24 +136,30 @@ test('native timezone snapshot is injected before bridge bootstrap', () => {
   assert.match(webView, /window\.__SMALL_PHONE_NATIVE_ENV__/);
 });
 
-test('terminated WebContent reloads only once while active and thermally safe', () => {
+test('terminated WebContent remounts once while active and thermally safe', () => {
   assert.match(webView, /func webViewWebContentProcessDidTerminate\(_ webView: WKWebView\)/);
   assert.match(webView, /now - \$0 < 120/);
-  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v5\.build294/);
+  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v6\.build295/);
   assert.match(webView, /UserDefaults\.standard[\s\S]*?terminationTimes/);
   assert.match(webView, /WebContent stable for 90s; recovery budget reset/);
   assert.match(webView, /guard attempt == 1,[\s\S]*?appIsActive,[\s\S]*?thermalState == "nominal" \|\| thermalState == "fair" else/);
   assert.match(webView, /native\.webcontent\.recoveryOffered/);
-  assert.match(webView, /native\.webcontent\.reloadDeferred/);
+  assert.match(webView, /native\.webcontent\.remountScheduled/);
+  assert.match(webView, /native\.webcontent\.remountDeferred/);
+  assert.match(webView, /native\.webcontent\.remountStarted/);
   assert.match(webView, /deadline: \.now\(\) \+ 10/);
-  assert.match(webView, /webView\.loadFileURL\([\s\S]{0,160}?allowingReadAccessTo: readAccessURL/);
-  assert.match(webView, /configureBundledPage\([\s\S]{0,140}?fileURL: fileURL[\s\S]{0,140}?readAccessURL: readAccessURL/);
+  assert.match(webView, /onRecoveryRestartReady\(false\)/);
+  assert.match(webView, /private func cancelAutomaticWebContentRecovery\(\)/);
+  const terminatedStart = webView.indexOf('func webViewWebContentProcessDidTerminate');
+  const terminatedEnd = webView.indexOf('        func webView(', terminatedStart + 1);
+  const terminated = webView.slice(terminatedStart, terminatedEnd);
+  assert.doesNotMatch(terminated, /webView\.loadFileURL/);
   assert.doesNotMatch(webView, /webView\?\.reload\(\)/);
   assert.doesNotMatch(webView, /websiteDataStore\.removeData/);
   assert.doesNotMatch(webView, /loadHTMLString\(\s*LocalPhoneWebView\.loadFailureHTML/);
 });
 
 test('recovery suite is pinned to the private bundled app only', () => {
-  assert.match(app, /APP_VER='v1167 · 心动审判共同生活记忆修复版';/);
+  assert.match(app, /APP_VER='v1168 · 私人性能链继承修复版';/);
   assert.match(app, /function emergencyRestorePreview\(index\)/);
 });

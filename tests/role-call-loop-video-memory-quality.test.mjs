@@ -101,10 +101,7 @@ test('online, call and offline memory tags all use the same evidence gate',()=>{
 
 test('root and private business sources are synchronized after release sync',()=>{
   const webVersion=releaseVersion(app),privateVersion=releaseVersion(privateApp);
-  if(webVersion!==privateVersion){
-    assert.ok(webVersion>privateVersion,`private bundle v${privateVersion} must not be newer than web-only v${webVersion}`);
-    return;
-  }
+  assert.ok(privateVersion>=webVersion,`private bundle v${privateVersion} must contain public web v${webVersion}`);
   for(const name of ['roleCallLoopVideoSave','renderCall','callPersist','restoreActiveCall']){
     assert.ok(privateApp.includes(functionSource(name)),`private call function differs: ${name}`);
   }

@@ -3,8 +3,9 @@
   'use strict';
   if(window.__SMALL_PHONE_PRIVATE__!==true)return;
 
-  const OVERLAY_VERSION='294-heart-cohab-x-memory-v1';
+  const OVERLAY_VERSION='295-private-performance-inheritance-v1';
   const lastEventAt=Object.create(null);
+  let lastMeasuredSyncOp='',lastMeasuredSyncMs=0,lastMeasuredSyncAt=0;
   const clock=()=>typeof performance!=='undefined'&&performance.now?performance.now():Date.now();
   const cleanFields=input=>{
     const out={},src=input&&typeof input==='object'?input:{};
@@ -15,15 +16,17 @@
     });
     return out;
   };
-  function emit(event,fields,minGap){
+  function emit(event,fields,minGap,throttleKey){
     event=String(event||'runtime.event').slice(0,80);
+    const bucket=event+'|'+String(throttleKey||'').slice(0,120);
     const now=Date.now(),gap=Math.max(0,Number(minGap==null?10000:minGap)||0);
-    if(gap&&now-(lastEventAt[event]||0)<gap)return false;
-    lastEventAt[event]=now;
+    if(gap&&now-(lastEventAt[bucket]||0)<gap)return false;
+    lastEventAt[bucket]=now;
     const payload={event,at:now,fields:cleanFields(fields)};
     try{
       if(typeof window.__smallPhoneNativeDiag==='function'){
-        window.__smallPhoneNativeDiag(event,payload.fields,gap);
+        const nativeThrottleKey=String(throttleKey||'').slice(0,120);
+        window.__smallPhoneNativeDiag(event,payload.fields,nativeThrottleKey?0:gap,nativeThrottleKey);
         return true;
       }
       const handler=window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.smallPhoneNative;
@@ -37,6 +40,18 @@
 
   window.__SMALL_PHONE_PRIVATE_RUNTIME__=OVERLAY_VERSION;
   window.__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__=true;
+
+  function currentPageName(){
+    try{const page=typeof window.cur==='function'?window.cur():null;return String(page&&page.p||'unknown').slice(0,40);}catch(_){return'unknown';}
+  }
+  function safeRuntimeToken(value,fallback){
+    const text=String(value||'');
+    return /^[A-Za-z][A-Za-z0-9_-]{0,39}$/.test(text)?text:String(fallback||'unknown');
+  }
+  function recentSyncFields(){
+    const age=lastMeasuredSyncAt?Math.max(0,Date.now()-lastMeasuredSyncAt):0;
+    return age&&age<=30000?{lastOp:lastMeasuredSyncOp,lastOpMs:lastMeasuredSyncMs,lastOpAgeMs:age}:{lastOp:'',lastOpMs:0,lastOpAgeMs:0};
+  }
 
   function cancelAutomaticBackupTimer(){
     try{
@@ -90,9 +105,14 @@
         if(span)emit(name+'.end',fields,0);
         else if(elapsed>=threshold)emit('slow.'+name,fields,15000);
       };
-      let result;
-      try{result=original.apply(this,args);}catch(error){finish('throw',error);throw error;}
-      if(result&&typeof result.then==='function')return Promise.resolve(result).then(value=>{finish('ok');return value;},error=>{finish('reject',error);throw error;});
+      let result,syncElapsed=0;
+      try{result=original.apply(this,args);}catch(error){syncElapsed=Math.max(0,Math.round(clock()-started));finish('throw',error);throw error;}
+      syncElapsed=Math.max(0,Math.round(clock()-started));
+      if(syncElapsed>=120){lastMeasuredSyncOp=name;lastMeasuredSyncMs=syncElapsed;lastMeasuredSyncAt=Date.now();}
+      if(result&&typeof result.then==='function'){
+        if(syncElapsed>=120)emit('slow.'+name+'.sync',Object.assign({},meta,{ms:syncElapsed,status:'returned-promise'}),15000);
+        return Promise.resolve(result).then(value=>{finish('ok');return value;},error=>{finish('reject',error);throw error;});
+      }
       finish('ok');
       return result;
     }
@@ -107,15 +127,36 @@
   wrapMeasured('persistWechatMessagesNow',{threshold:800});
   wrapMeasured('phoneFriendSync',{threshold:800});
   wrapMeasured('companionPollSnapshot',{threshold:800});
+  wrapMeasured('licenseCheckSession',{span:true,meta:args=>({page:currentPageName(),source:safeRuntimeToken(args[0]&&args[0].source,'direct')})});
+  wrapMeasured('licenseSyncManagedIdentities',{span:true,meta:args=>({page:currentPageName(),source:safeRuntimeToken(args[0]&&args[0].source,'direct')})});
   wrapMeasured('privateNativeCoreGet',{threshold:800});
   wrapMeasured('privateNativeCorePut',{threshold:800});
   wrapMeasured('fullBackupState',{span:true});
   wrapMeasured('privatePhoneCloudBackup',{span:true,meta:args=>({firstBind:args[0]===true,silent:args[1]===true})});
 
+  window.__smallPhoneLicenseIdentityTrace=function(input){
+    const row=input&&typeof input==='object'?input:{},event=String(row.event||'');
+    if(!['license.identityAutoSkipped','license.identityAutoScheduled','license.identityAutoStarted'].includes(event))return false;
+    const fields={page:currentPageName(),source:safeRuntimeToken(row.source,'unknown'),reason:safeRuntimeToken(row.reason,'unknown')};
+    ['aiNeeded','phoneFriendNeeded'].forEach(key=>{if(typeof row[key]==='boolean')fields[key]=row[key];});
+    if(Number.isFinite(Number(row.delayMs)))fields.delayMs=Math.max(0,Math.min(600000,Math.round(Number(row.delayMs))));
+    return emit(event,fields,event==='license.identityAutoSkipped'?300000:0,event+'|'+fields.reason);
+  };
+
+  window.__smallPhonePhoneFriendSyncTrace=function(fields){
+    fields=fields&&typeof fields==='object'?fields:{};
+    const stage=safeRuntimeToken(fields.stage,'unknown'),bulk=fields.bulk===true,payload={page:currentPageName()};
+    ['forceProfile','forceFull','bulk','full','changed','hadError'].forEach(key=>{if(typeof fields[key]==='boolean')payload[key]=fields[key];});
+    ['ms','messages','groupMessages','bodyChars','friendInserted','groupInserted','friendBuckets','groupBuckets'].forEach(key=>{const value=Number(fields[key]);if(Number.isFinite(value))payload[key]=Math.max(0,Math.min(1000000000,Math.round(value)));});
+    if(fields.error)payload.error=safeRuntimeToken(fields.error,'Error').slice(0,40);
+    return emit('phoneFriend.'+stage,payload,bulk||stage==='error'?0:60000,bulk?'bulk':stage);
+  };
+
   if(typeof window.northNativePerformanceGuard==='function'){
     const originalGuard=window.northNativePerformanceGuard;
     window.northNativePerformanceGuard=function(reason,delay){
-      emit('performance.guard',{reason:String(reason||'event-loop').slice(0,80),holdMs:Math.round(Number(delay)||0)},15000);
+      const text=String(reason||'event-loop').slice(0,80),recent=recentSyncFields(),page=currentPageName();
+      emit('performance.guard',{reason:text,holdMs:Math.round(Number(delay)||0),page,lastOp:recent.lastOp,lastOpMs:recent.lastOpMs,lastOpAgeMs:recent.lastOpAgeMs},15000,text.replace(/:[0-9]+$/,'')+'|'+page);
       return originalGuard.apply(this,arguments);
     };
   }

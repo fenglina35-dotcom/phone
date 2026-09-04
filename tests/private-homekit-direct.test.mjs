@@ -21,7 +21,7 @@ test('private iOS declares HomeKit permission and exposes the direct native brid
   assert.match(bridge,/HMServiceTypeLightbulb/);
   assert.match(bridge,/verifyReadback/);
   assert.match(bridge,/"verified": true/);
-  assert.match(native,/static let contractVersion = 26/);
+  assert.match(native,/static let contractVersion = 35/);
   assert.match(native,/case "homekit\.lights\.snapshot"/);
   assert.match(native,/case "homekit\.light\.command"/);
 });

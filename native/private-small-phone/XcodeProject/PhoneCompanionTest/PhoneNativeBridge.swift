@@ -15,7 +15,7 @@ enum SmallPhoneDiagnosticsStore {
     )
     private static let maximumBytes = 256 * 1_024
     private static let maximumLines = 200
-    private static let build = "1.0.294 (294)"
+    private static let build = "1.0.295 (295)"
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -188,7 +188,7 @@ enum SmallPhoneRecoveryLaunchStore {
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
-    static let contractVersion = 26
+    static let contractVersion = 35
     static let roleCallActiveDefaultsKey =
         "smallPhone.roleCallActive.v1"
 
@@ -1332,23 +1332,144 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        Task { [weak self] in
-            guard let self else { return }
-            do {
-                let (data, response) = try await URLSession.shared.data(for: request)
-                guard let http = response as? HTTPURLResponse,
+        let diagnosticAction = String(action.prefix(40))
+        let startedAt = ProcessInfo.processInfo.systemUptime
+        SmallPhoneDiagnosticsStore.append(
+            "native.license.request.begin",
+            fields: [
+                "action": diagnosticAction,
+                "timeoutMs": Int(timeoutMS)
+            ]
+        )
+        URLSession.shared.dataTask(with: request) { [weak self] data, response, error in
+            let networkMS = Int(max(
+                0,
+                (ProcessInfo.processInfo.systemUptime - startedAt) * 1_000
+            ).rounded())
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            SmallPhoneDiagnosticsStore.append(
+                "native.license.request.networkEnd",
+                fields: [
+                    "action": diagnosticAction,
+                    "ms": networkMS,
+                    "status": status,
+                    "bytes": data?.count ?? 0,
+                    "outcome": error == nil ? "response" : "network-error"
+                ]
+            )
+
+            let decodeStartedAt = ProcessInfo.processInfo.systemUptime
+            var replyPayload: [String: Any] = ["requestId": requestID]
+            var outcome = "ok"
+            if error != nil {
+                outcome = "network-error"
+                replyPayload["error"] = "license_network_unavailable"
+            } else if let data,
+                      let http = response as? HTTPURLResponse,
                       let object = try? JSONSerialization.jsonObject(with: data),
-                      let responseBody = object as? [String: Any] else {
-                    self.reply(requestID: requestID, error: "invalid_license_response")
-                    return
-                }
-                self.reply(
-                    requestID: requestID,
-                    result: ["status": http.statusCode, "payload": responseBody]
-                )
-            } catch {
-                self.reply(requestID: requestID, error: "license_network_unavailable")
+                      let responseBody = object as? [String: Any] {
+                replyPayload["result"] = [
+                    "status": http.statusCode,
+                    "payload": responseBody
+                ]
+            } else {
+                outcome = "invalid-response"
+                replyPayload["error"] = "invalid_license_response"
             }
+            let decodeMS = Int(max(
+                0,
+                (ProcessInfo.processInfo.systemUptime - decodeStartedAt) * 1_000
+            ).rounded())
+            SmallPhoneDiagnosticsStore.append(
+                "native.license.request.decodeEnd",
+                fields: [
+                    "action": diagnosticAction,
+                    "ms": decodeMS,
+                    "status": status,
+                    "outcome": outcome
+                ]
+            )
+            guard JSONSerialization.isValidJSONObject(replyPayload),
+                  let replyData = try? JSONSerialization.data(
+                    withJSONObject: replyPayload
+                  ),
+                  let replyJSON = String(data: replyData, encoding: .utf8) else {
+                SmallPhoneDiagnosticsStore.append(
+                    "native.license.request.replyCompleted",
+                    fields: [
+                        "action": diagnosticAction,
+                        "status": status,
+                        "outcome": "encode-error"
+                    ]
+                )
+                return
+            }
+            Task { @MainActor [weak self] in
+                self?.replyLicensePayload(
+                    replyJSON,
+                    action: diagnosticAction,
+                    status: status,
+                    outcome: outcome,
+                    requestStartedAt: startedAt
+                )
+            }
+        }.resume()
+    }
+
+    private func replyLicensePayload(
+        _ json: String,
+        action: String,
+        status: Int,
+        outcome: String,
+        requestStartedAt: TimeInterval
+    ) {
+        let totalMS = Int(max(
+            0,
+            (ProcessInfo.processInfo.systemUptime - requestStartedAt) * 1_000
+        ).rounded())
+        SmallPhoneDiagnosticsStore.append(
+            "native.license.request.replyDispatched",
+            fields: [
+                "action": action,
+                "status": status,
+                "outcome": outcome,
+                "totalMs": totalMS
+            ]
+        )
+        guard let webView else {
+            SmallPhoneDiagnosticsStore.append(
+                "native.license.request.replyCompleted",
+                fields: [
+                    "action": action,
+                    "status": status,
+                    "outcome": "webview-unavailable",
+                    "totalMs": totalMS
+                ]
+            )
+            return
+        }
+        let replyStartedAt = ProcessInfo.processInfo.systemUptime
+        webView.evaluateJavaScript(
+            "window.__smallPhoneNativeReply && window.__smallPhoneNativeReply(\(json));"
+        ) { _, error in
+            let replyMS = Int(max(
+                0,
+                (ProcessInfo.processInfo.systemUptime - replyStartedAt) * 1_000
+            ).rounded())
+            let finishedMS = Int(max(
+                0,
+                (ProcessInfo.processInfo.systemUptime - requestStartedAt) * 1_000
+            ).rounded())
+            SmallPhoneDiagnosticsStore.append(
+                "native.license.request.replyCompleted",
+                fields: [
+                    "action": action,
+                    "status": status,
+                    "outcome": error == nil ? outcome : "webcontent-error",
+                    "replyMs": replyMS,
+                    "totalMs": finishedMS
+                ]
+            )
         }
     }
 

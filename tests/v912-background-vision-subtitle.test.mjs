@@ -13,9 +13,9 @@ const project = fs.readFileSync(new URL('../native/private-small-phone/XcodeProj
 test('current release versions align', () => {
   assert.match(app, /APP_VER='v1167 · 心动审判共同生活记忆修复版'/);
   assert.match(html, /__NORTH_SHELL_BUILD__='1167'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 294;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.294;/);
-  assert.match(bridge, /contractVersion = 26/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 295;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.295;/);
+  assert.match(bridge, /contractVersion = 35/);
 });
 
 test('shared-screen vision owns a finite native background task', () => {

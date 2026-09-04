@@ -38,6 +38,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
         private var pendingRecoveryRestartTimeout: DispatchWorkItem?
         private var recoveryRestartInFlight = false
         private var recoveryRestartToken = 0
+        private var automaticWebContentRecoveryToken = 0
         private var bundledFileURL: URL?
         private var bundledReadAccessURL: URL?
         private var lastSafeAreaInsets: UIEdgeInsets?
@@ -162,6 +163,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
 
         @objc private func recoveryContinueRequested() {
             guard recoveryNoticeActive, !recoveryRestartInFlight else { return }
+            cancelAutomaticWebContentRecovery()
             recoveryNoticeActive = false
             if bridge.webView != nil {
                 didLoadPhone = true
@@ -195,6 +197,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
         }
 
         private func prepareRecoveryRestart(inspectArchive: Bool) {
+            cancelAutomaticWebContentRecovery()
             guard let webView = bridge.webView else {
                 onRecoveryRestartReady(inspectArchive)
                 return
@@ -669,6 +672,9 @@ struct LocalPhoneWebView: UIViewRepresentable {
             didLoadPhone = false
             openingRolePush = false
             syncingRolePush = false
+            // A late responsiveness-probe callback from the terminated
+            // process must not cancel the fresh-view recovery scheduled below.
+            responsivenessProbeToken += 1
             pendingStableWebContentReset?.cancel()
             pendingStableWebContentReset = nil
             pendingResponsivenessProbe?.cancel()
@@ -705,8 +711,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 "bounded recovery attempt \(attempt)/1"
             )
 
-            pendingWebContentRecovery?.cancel()
-            pendingWebContentRecovery = nil
+            cancelAutomaticWebContentRecovery()
 
             let appIsActive = UIApplication.shared.applicationState == .active
             guard attempt == 1,
@@ -727,29 +732,54 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 return
             }
 
-            // A rapid reload while iOS is still reclaiming the terminated
-            // process can create a white-screen/lock-screen reload storm.
-            // Wait for pressure to settle, then load the exact bundled entry.
-            let work = DispatchWorkItem { [weak self, weak webView] in
-                guard let self, let webView,
-                      let fileURL = self.bundledFileURL,
-                      let readAccessURL = self.bundledReadAccessURL else {
+            // The terminated WKWebView is no longer a reliable reload target.
+            // Wait for pressure to settle, then ask SwiftUI to mount a fresh
+            // WKWebView while leaving the shared website data store intact.
+            let recoveryToken = automaticWebContentRecoveryToken
+            SmallPhoneDiagnosticsStore.append(
+                "native.webcontent.remountScheduled",
+                fields: [
+                    "coordinatorID": coordinatorID,
+                    "webViewID": webViewID,
+                    "processSessionID": LocalPhoneWebView.processSessionID,
+                    "delayMs": 10_000
+                ]
+            )
+            let work = DispatchWorkItem { [weak self] in
+                guard let self,
+                      self.automaticWebContentRecoveryToken == recoveryToken else {
                     return
                 }
                 self.pendingWebContentRecovery = nil
                 let state = Self.thermalStateName()
                 guard UIApplication.shared.applicationState == .active,
                       state == "nominal" || state == "fair" else {
+                    SmallPhoneDiagnosticsStore.append(
+                        "native.webcontent.remountDeferred",
+                        fields: [
+                            "coordinatorID": self.coordinatorID,
+                            "webViewID": self.webViewID,
+                            "processSessionID": LocalPhoneWebView.processSessionID,
+                            "thermalState": state,
+                            "appIsActive": UIApplication.shared.applicationState == .active
+                        ]
+                    )
                     self.offerNativeRecovery(
-                        reason: "自动重开前检测到系统仍在发热或 App 已离开前台，已停止重载。原始数据没有清除。",
-                        event: "native.webcontent.reloadDeferred"
+                        reason: "自动重建前检测到系统仍在发热或 App 已离开前台，已停止重建。原始数据没有清除。",
+                        event: "native.webcontent.recoveryOffered"
                     )
                     return
                 }
-                webView.loadFileURL(
-                    fileURL,
-                    allowingReadAccessTo: readAccessURL
+                SmallPhoneDiagnosticsStore.append(
+                    "native.webcontent.remountStarted",
+                    fields: [
+                        "coordinatorID": self.coordinatorID,
+                        "webViewID": self.webViewID,
+                        "processSessionID": LocalPhoneWebView.processSessionID,
+                        "thermalState": state
+                    ]
                 )
+                self.onRecoveryRestartReady(false)
             }
             pendingWebContentRecovery = work
             DispatchQueue.main.asyncAfter(
@@ -789,7 +819,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
         }
 
         private static let webContentTerminationDefaultsKey =
-            "smallPhone.webContentTerminationTimes.v5.build294"
+            "smallPhone.webContentTerminationTimes.v6.build295"
         // WebKit exposes this legacy NSError code inconsistently across Xcode SDKs.
         // Keep the stable numeric value so older SDKs do not need the missing
         // Swift enum member for this legacy policy-change error.
@@ -821,6 +851,12 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 reason: "小手机本地页面加载失败。原始数据没有清除；请从原生恢复面板安全重开。",
                 event: "native.page.recoveryOffered"
             )
+        }
+
+        private func cancelAutomaticWebContentRecovery() {
+            automaticWebContentRecoveryToken += 1
+            pendingWebContentRecovery?.cancel()
+            pendingWebContentRecovery = nil
         }
     }
 
@@ -971,7 +1007,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.294 (294)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.295 (295)';
       window.__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__ = true;
       const privateDiagLast = new Map();
       window.__smallPhoneNativeDiag = (event, fields = {}, minGap = 10000) => {
@@ -1003,7 +1039,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
       };
       window.__smallPhoneNativeDiag(
         'native.bootstrap.ready',
-        { build: '1.0.294 (294)', autoBackupPaused: true },
+        { build: '1.0.295 (295)', autoBackupPaused: true },
         0
       );
       // Keep private-App background maintenance away from the WebContent main

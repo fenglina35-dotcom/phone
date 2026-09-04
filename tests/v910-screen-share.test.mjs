@@ -15,9 +15,9 @@ const info = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/In
 
 test('current release versions stay aligned after v910 screen-share support', () => {
   assert.match(app, /APP_VER='v1167 · 心动审判共同生活记忆修复版'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 294;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.294;/);
-  assert.match(bridge, /contractVersion = 26/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 295;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.295;/);
+  assert.match(bridge, /contractVersion = 35/);
 });
 
 test('only the private app can switch recognition source to screen share', () => {
