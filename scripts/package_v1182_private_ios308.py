@@ -28,6 +28,9 @@ code = (
     .replace("CURRENT_PROJECT_VERSION = 307;", "CURRENT_PROJECT_VERSION = 308;")
     .replace("build307", "build308")
     .replace("307-release-v1182", "308-release-v1182")
+    .replace("?v=307", "?v=308")
+    .replace("private307", "private308")
+    .replace("iOS307", "iOS308")
 )
 
 replacements = [
