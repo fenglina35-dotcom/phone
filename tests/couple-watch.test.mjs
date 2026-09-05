@@ -11,7 +11,7 @@ function harness(kind='chat',random=0){
   engine.tick();
   return{engine,events,owner,get snapshot(){return snapshot;},set snapshot(v){snapshot=v;engine.tick();},advance(ms){while(ms>0){const step=Math.min(ms,250);at+=step;ms-=step;engine.tick();}},jump(ms){at+=ms;engine.tick();},setTime(value){at=value;engine.tick();}};
 }
-for(const [kind,min] of [['chat',30000],['app',20000]]){
+for(const [kind,min] of [['chat',10000],['app',20000]]){
   test(`${kind}: minimum threshold and one event per visit`,()=>{const h=harness(kind);h.advance(min-1);assert.equal(h.events.length,0);h.advance(1);assert.equal(h.events.length,1);h.advance(180000);assert.equal(h.events.length,1);h.jump(10000);h.advance(60000);assert.equal(h.events.length,1);});
   test(`${kind}: maximum random threshold is 60 seconds`,()=>{const h=harness(kind,1);h.advance(59999);assert.equal(h.events.length,0);h.advance(1);assert.equal(h.events.length,1);});
   test(`${kind}: short visit is private, reentry restarts timer and counts it`,()=>{const h=harness(kind);const s=h.snapshot;h.advance(min-1);h.snapshot=null;h.snapshot=s;h.advance(min-1);assert.equal(h.events.length,0);h.advance(1);assert.equal(h.events[0].event.count,2);});

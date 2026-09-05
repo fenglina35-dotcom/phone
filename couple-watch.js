@@ -26,7 +26,7 @@
       const context=s.context||s.key;
       if(s.exempt){session=null;return;}
       if(gap||!session||session.context!==context){
-        const min=s.kind==='chat'?30000:20000;
+        const min=s.kind==='chat'?10000:20000;
         session={context,at,due:at+min+Math.min(1,Math.max(0,random()))*(60000-min),attempted:false,visit};
       }
       if(visit.attempted||at<session.due)return;
