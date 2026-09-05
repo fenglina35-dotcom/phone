@@ -17,6 +17,41 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let processSessionID =
         String(UUID().uuidString.prefix(8))
 
+    /// Keeps the bundled page and the system keyboard on one UIKit layout
+    /// timeline.  Letting SwiftUI resize the representable and then letting
+    /// WebKit react to the new viewport produces two visible moves on a real
+    /// iPhone (keyboard first, composer second), especially on first focus.
+    /// UIKeyboardLayoutGuide is driven by the keyboard's own animation and
+    /// therefore moves the web surface and its composer in the same frame.
+    final class KeyboardSynchronizedContainer: UIView {
+        let webView: WKWebView
+
+        init(webView: WKWebView) {
+            self.webView = webView
+            super.init(frame: .zero)
+
+            backgroundColor = .black
+            clipsToBounds = true
+            keyboardLayoutGuide.usesBottomSafeArea = false
+
+            webView.translatesAutoresizingMaskIntoConstraints = false
+            addSubview(webView)
+            NSLayoutConstraint.activate([
+                webView.topAnchor.constraint(equalTo: topAnchor),
+                webView.leadingAnchor.constraint(equalTo: leadingAnchor),
+                webView.trailingAnchor.constraint(equalTo: trailingAnchor),
+                webView.bottomAnchor.constraint(
+                    equalTo: keyboardLayoutGuide.topAnchor
+                )
+            ])
+        }
+
+        @available(*, unavailable)
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+    }
+
     final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         let bridge = PhoneNativeBridge()
         let onRecoveryNeeded: (String) -> Void
@@ -819,7 +854,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
         }
 
         private static let webContentTerminationDefaultsKey =
-            "smallPhone.webContentTerminationTimes.v19.build310"
+            "smallPhone.webContentTerminationTimes.v20.build311"
         // WebKit exposes this legacy NSError code inconsistently across Xcode SDKs.
         // Keep the stable numeric value so older SDKs do not need the missing
         // Swift enum member for this legacy policy-change error.
@@ -868,7 +903,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
         )
     }
 
-    func makeUIView(context: Context) -> WKWebView {
+    func makeUIView(context: Context) -> KeyboardSynchronizedContainer {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = .default()
         configuration.allowsInlineMediaPlayback = true
@@ -904,21 +939,25 @@ struct LocalPhoneWebView: UIViewRepresentable {
             in: webView,
             coordinator: context.coordinator
         )
-        return webView
+        return KeyboardSynchronizedContainer(webView: webView)
     }
 
-    func updateUIView(_ webView: WKWebView, context: Context) {
+    func updateUIView(
+        _ container: KeyboardSynchronizedContainer,
+        context: Context
+    ) {
         context.coordinator.bridge.openDeviceManagement =
             onOpenDeviceManagement
         DispatchQueue.main.async {
-            context.coordinator.updateSafeArea(in: webView)
+            context.coordinator.updateSafeArea(in: container.webView)
         }
     }
 
     static func dismantleUIView(
-        _ webView: WKWebView,
+        _ container: KeyboardSynchronizedContainer,
         coordinator: Coordinator
     ) {
+        let webView = container.webView
         coordinator.recordWebViewDismantled()
         webView.configuration.userContentController.removeScriptMessageHandler(
             forName: PhoneNativeBridge.handlerName
@@ -1007,7 +1046,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.310 (310)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.311 (311)';
       window.__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__ = true;
       const privateDiagLast = new Map();
       window.__smallPhoneNativeDiag = (event, fields = {}, minGap = 10000) => {
@@ -1039,7 +1078,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
       };
       window.__smallPhoneNativeDiag(
         'native.bootstrap.ready',
-        { build: '1.0.310 (310)', autoBackupPaused: true },
+        { build: '1.0.311 (311)', autoBackupPaused: true },
         0
       );
       // Keep private-App background maintenance away from the WebContent main

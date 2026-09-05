@@ -31,8 +31,8 @@ test('private app loads bundled phone resources instead of a remote shell', () =
   assert.match(webView, /webView\.window\?\.safeAreaInsets/);
   assert.match(webView, /north-native-app/);
   assert.match(webView, /root\.classList\.add\('north-native-app'\)/);
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.310 \(310\)'/);
-  assert.match(webView, /\n      window\.__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.310 \(310\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.311 \(311\)'/);
+  assert.match(webView, /\n      window\.__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.311 \(311\)'/);
   assert.doesNotMatch(webView, /\nwindow\.__SMALL_PHONE_PRIVATE_BUILD__/);
   assert.match(webView, /SmallPhoneRolePushTapped/);
   assert.match(webView, /window\.__smallPhoneOpenRolePush/);
@@ -157,8 +157,8 @@ test('real Mac project keeps all Screen Time targets and becomes 小手机', () 
   }
   assert.match(project, /INFOPLIST_KEY_CFBundleDisplayName = "小手机";/);
   assert.match(project, /PRODUCT_BUNDLE_IDENTIFIER = com\.qianyi\.PhoneCompanionTest;/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 310;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.310;/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 311;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.311;/);
 
   const scheme = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/xcshareddata/xcschemes/PhoneCompanionTest.xcscheme'
@@ -334,8 +334,11 @@ test('private app isolates role audio from recognition and reuses the proven web
   assert.doesNotMatch(webView, /observe\([\s\S]*\\\.contentOffset/);
   assert.doesNotMatch(webView, /setContentOffset\(target, animated: false\)/);
   assert.doesNotMatch(webView, /alwaysBounceVertical = false/);
-  assert.doesNotMatch(privateRoot, /\.ignoresSafeArea\(\.keyboard, edges: \.bottom\)/,
-    'the private root must follow the actual keyboard-safe frame so dismissal does not lag');
+  assert.match(privateRoot, /\.ignoresSafeArea\(\.keyboard, edges: \.bottom\)/,
+    'SwiftUI must leave keyboard motion to the UIKit keyboard layout guide');
+  assert.match(webView, /final class KeyboardSynchronizedContainer: UIView/);
+  assert.match(webView, /keyboardLayoutGuide\.usesBottomSafeArea = false/);
+  assert.match(webView, /webView\.bottomAnchor\.constraint\([\s\S]{0,100}keyboardLayoutGuide\.topAnchor/);
   assert.doesNotMatch(app, /callinput-native|callTypingOpen|callTypingClose/);
   assert.match(app, /const callInput=_call\.state==='active'\?`<div class="callinput show"/);
   assert.match(html, /\.callinput\{[^}]*bottom:150px/);

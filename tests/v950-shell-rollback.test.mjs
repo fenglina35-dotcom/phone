@@ -9,6 +9,7 @@ const privateHtml=read('../native/private-small-phone/XcodeProject/PhoneCompanio
 const privateAlias=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/小手机.html');
 const privateApp=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js');
 const privateRoot=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/SmallPhonePrivateRootView.swift');
+const privateWebView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('private shells retain the stable manifest contract with native content resizing',()=>{
   for(const html of [privateHtml,privateAlias]){
@@ -40,6 +41,9 @@ test('all dynamic system-bar repair code is gone while private App still covers 
     assert.doesNotMatch(app,/pwaSystemBarColorApply|pwaWallpaperBottomColor|pwaSystemBarSync|north-ios-pwa-shell|north-ios-pwa-bottom/);
   }
   assert.match(privateRoot,/ignoresSafeArea\(\.container, edges: \.bottom\)/);
-  assert.doesNotMatch(privateRoot,/ignoresSafeArea\(\.keyboard, edges: \.bottom\)/,
+  assert.match(privateRoot,/ignoresSafeArea\(\.keyboard, edges: \.bottom\)/,
+    'SwiftUI must not independently resize the private WKWebView for the keyboard');
+  assert.match(privateWebView,/keyboardLayoutGuide\.usesBottomSafeArea = false/);
+  assert.match(privateWebView,/webView\.bottomAnchor\.constraint\([\s\S]{0,100}keyboardLayoutGuide\.topAnchor/,
     'the private WKWebView must follow the native keyboard frame without a delayed second jump');
 });

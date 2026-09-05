@@ -9,6 +9,7 @@ const privateApp = readFileSync(new URL('../native/private-small-phone/XcodeProj
 const privateHtml = readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/小手机.html', import.meta.url), 'utf8');
 const privateIndex = readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html', import.meta.url), 'utf8');
 const privateRoot = readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/SmallPhonePrivateRootView.swift', import.meta.url), 'utf8');
+const privateWebView = readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift', import.meta.url), 'utf8');
 const theater = readFileSync(new URL('../cohab-theater.js', import.meta.url), 'utf8');
 
 function functionSource(source, name) {
@@ -79,11 +80,18 @@ test('the private iOS fixed-phone workaround also covers the offline date compos
     'the native-only fixed shell remains unchanged for screens without a text composer');
 });
 
-test('web and private iOS use the same native resize contract without a second focus', () => {
+test('private iOS keeps one keyboard animation timeline without changing the web viewport contract', () => {
   assert.match(html, /interactive-widget=resizes-content/);
   for (const page of [privateHtml, privateIndex]) assert.match(page, /interactive-widget=resizes-content/);
-  assert.doesNotMatch(privateRoot, /\.ignoresSafeArea\(\.keyboard, edges: \.bottom\)/,
-    'the private root must deliver the real keyboard-safe frame instead of dismissing one animation late');
+  assert.match(privateRoot, /\.ignoresSafeArea\(\.keyboard, edges: \.bottom\)/,
+    'SwiftUI must not perform a second keyboard-safe-area resize');
+  assert.match(privateWebView, /final class KeyboardSynchronizedContainer: UIView/);
+  assert.match(privateWebView, /keyboardLayoutGuide\.usesBottomSafeArea = false/,
+    'the hidden keyboard must return the web surface behind the home indicator');
+  assert.match(privateWebView, /webView\.bottomAnchor\.constraint\([\s\S]{0,100}keyboardLayoutGuide\.topAnchor/,
+    'the web composer must move on the system keyboard layout timeline');
+  assert.doesNotMatch(privateWebView, /keyboardWill(?:Show|Hide|ChangeFrame)Notification/,
+    'manual keyboard notifications would reintroduce a competing animation');
   for (const code of [app, privateApp]) {
     const runtimeCode = code.replace(functionSource(code, 'northViewportDiagnosticStart'), '');
     assert.doesNotMatch(runtimeCode, /visualViewport\.addEventListener\(['"]resize/,
