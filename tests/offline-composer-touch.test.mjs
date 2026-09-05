@@ -69,33 +69,45 @@ test('offline composer uses iOS-safe typography and guards send taps from openin
   assert.match(theater, /offComposerEvent==='function'/);
 });
 
-test('the private iOS fixed-phone workaround also covers the offline date composer', () => {
-  for (const page of [html, privateHtml]) {
-    assert.match(page, /html\.north-native-app \.phone:has\(\.offinput\)/);
-    assert.match(page, /html\.north-ios-home-safe \.phone:has\(\.offinput\)/);
-    assert.match(page, /\.phone:has\(\.offinput\)[^{]*\{position:absolute\}/,
-      'offline textarea must leave the fixed-position ancestor while the native keyboard is active');
+test('private offline focus anchors the conversation to its true last message before WebKit moves it', () => {
+  const box = { scrollTop: 40, scrollHeight: 960 };
+  const sandbox = vm.createContext({ $: selector => selector === '#offbg' ? box : null });
+  vm.runInContext(`${functionSource(privateApp, 'offComposerPinLatest')}\nthis.pin=offComposerPinLatest;`, sandbox);
+  sandbox.pin({ id: 'cinput' });
+  assert.equal(box.scrollTop, 40, 'unrelated editors must not move the offline conversation');
+  sandbox.pin({ id: 'off_in' });
+  assert.equal(box.scrollTop, 960, 'offline focus must start from the newest message, not an older scroll position');
+});
+
+test('the public workaround stays intact while private offline returns to normal document flow', () => {
+  assert.match(html, /html\.north-native-app \.phone:has\(\.offinput\)/);
+  assert.match(html, /html\.north-ios-home-safe \.phone:has\(\.offinput\)/);
+  for (const page of [privateHtml, privateIndex]) {
+    assert.doesNotMatch(page, /html\.north-native-app \.phone:has\(\.offinput\)/);
+    assert.doesNotMatch(page, /html\.north-ios-home-safe \.phone:has\(\.offinput\)/);
+    assert.match(page, /html\.north-native-app \.phone:has\(\.chat-inputbar\),html\.north-ios-home-safe \.phone:has\(\.chat-inputbar\)\{position:absolute\}/,
+      'private WeChat must keep its exact v1179 fixed-ancestor workaround');
   }
   assert.match(html, /html\.north-native-app \.phone\{position:fixed/,
     'the native-only fixed shell remains unchanged for screens without a text composer');
 });
 
-test('private iOS prevents only the offline composer from double-scrolling', () => {
+test('private iOS restores the v1179 single-owner keyboard contract', () => {
   assert.match(html, /interactive-widget=resizes-content/);
-  for (const page of [privateHtml, privateIndex]) assert.match(page, /interactive-widget=resizes-content/);
-  assert.doesNotMatch(privateRoot, /ignoresSafeArea\(\.keyboard/,
-    'private WeChat must retain the previously working SwiftUI and WebKit resize path');
+  for (const page of [privateHtml, privateIndex]) assert.doesNotMatch(page, /interactive-widget=resizes-content/);
+  assert.match(privateRoot, /ignoresSafeArea\(\.keyboard, edges: \.bottom\)/,
+    'the private host must stay on the known-good v1179 keyboard timeline');
   assert.doesNotMatch(privateWebView, /KeyboardSynchronizedContainer|keyboardLayoutGuide/,
     'the failed global keyboard guide must be removed');
   assert.match(privateWebView, /func makeUIView\(context: Context\) -> WKWebView/);
-  assert.match(privateWebView, /smallPhoneOfflineKeyboardScope/);
-  assert.match(privateWebView, /target\.id === 'off_in'/);
-  assert.match(privateWebView, /keyboardDidHideNotification/,
-    'a completed dismissal must restore normal outer scrolling');
-  assert.match(privateWebView, /scrollView\.isScrollEnabled = false/);
-  assert.match(privateWebView, /scrollView\.isScrollEnabled = true/);
-  assert.doesNotMatch(privateWebView, /setContentOffset|\.contentOffset[\s\S]{0,80}observe/,
-    'do not revive the failed native scroll-position rewrite');
+  assert.doesNotMatch(privateWebView, /smallPhoneOfflineKeyboardScope|keyboardWillChangeFrameNotification|keyboardDidHideNotification/);
+  assert.doesNotMatch(privateWebView, /scrollView\.isScrollEnabled|setContentOffset|\.contentOffset[\s\S]{0,80}observe/,
+    'native code must not compete with WebKit for focus scrolling or dismissal');
+  assert.match(privateApp, /function offComposerPinLatest\(target\)/);
+  assert.match(privateApp, /offComposerPinLatest\(target\);/,
+    'the private offline composer must anchor the inner conversation before keyboard focus');
+  assert.doesNotMatch(app, /function offComposerPinLatest\(target\)/,
+    'the public web build is outside this private-only repair');
   for (const code of [app, privateApp]) {
     const runtimeCode = code.replace(functionSource(code, 'northViewportDiagnosticStart'), '');
     assert.doesNotMatch(runtimeCode, /visualViewport\.addEventListener\(['"]resize/,

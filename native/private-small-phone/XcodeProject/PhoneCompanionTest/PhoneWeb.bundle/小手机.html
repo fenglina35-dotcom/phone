@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=resizes-content" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
@@ -1321,7 +1321,7 @@ html.north-ios-home-safe .pet-together-play{top:calc(181px + var(--north-ios-hom
 html.north-native-app .phone{position:fixed;inset:0;width:100%;height:auto;min-height:0;max-height:none}
 html.north-native-app .screen{width:100%;height:100%;min-height:0;max-height:none}
 /* iOS 26 WebKit：键盘会让 fixed 祖先的视觉位置与光标坐标脱节。只在角色聊天存在时改为同尺寸 absolute，其他页面、Android 与系统底栏不变。 */
-html.north-native-app .phone:has(.chat-inputbar),html.north-native-app .phone:has(.offinput),html.north-ios-home-safe .phone:has(.chat-inputbar),html.north-ios-home-safe .phone:has(.offinput){position:absolute}
+html.north-native-app .phone:has(.chat-inputbar),html.north-ios-home-safe .phone:has(.chat-inputbar){position:absolute}
 /* 同一 WebKit 问题也会影响整屏通话输入：只在苹果兼容环境且通话输入已显示时释放 fixed 坐标系；Android 不进入该规则。 */
 html.north-native-app .phone:has(.callscreen.show:not(.mini) .callinput.show),html.north-ios-home-safe .phone:has(.callscreen.show:not(.mini) .callinput.show){position:absolute}
   /* 私人 App 的电话页与已验证正常的网页版共用同一套输入、挂断和键盘整体位移。
@@ -1432,7 +1432,7 @@ html.north-apple-remote-safe .music-chat-dock{margin-bottom:4px;scroll-margin-bo
 <script src="cohab-theater.js?v=1184&r=v1184-ios-web-crash-cohab-turn-keyboard-1" onerror="__northBootFail('共同生活多人剧场组件载入失败（可能是网络或 404）')"></script>
 <script src="bead-studio.js?v=1184&r=v1184-pixel-puzzle-4" onerror="__northBootFail('像素拼拼乐组件载入失败（安装包不完整）')"></script>
 <script src="heart-quiz.js?v=1184" onerror="console.warn('心动审判预览组件载入失败')"></script>
-<script src="private-runtime-diagnostics.js?v=312" onerror="__northBootFail('私人 App 性能保护组件载入失败（安装包不完整）')"></script>
+<script src="private-runtime-diagnostics.js?v=313" onerror="__northBootFail('私人 App 性能保护组件载入失败（安装包不完整）')"></script>
 <script src="vendor/qr/qrcode.js?v=2.0.4"></script>
 <script src="vendor/qr/jsQR.js?v=1.4.0"></script>
 <script src="wechat-me.js?v=1184" onerror="__northBootFail('微信个人页组件载入失败（可能是网络或 404）')"></script>

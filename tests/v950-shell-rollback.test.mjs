@@ -11,9 +11,10 @@ const privateApp=read('../native/private-small-phone/XcodeProject/PhoneCompanion
 const privateRoot=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/SmallPhonePrivateRootView.swift');
 const privateWebView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('private shells retain the stable manifest contract with native content resizing',()=>{
+test('private shells retain the stable manifest contract with the v1179 viewport',()=>{
   for(const html of [privateHtml,privateAlias]){
-    assert.match(html,/name="viewport" content="width=device-width, initial-scale=1\.0, maximum-scale=1\.0, user-scalable=no, interactive-widget=resizes-content"/);
+    assert.match(html,/name="viewport" content="width=device-width, initial-scale=1\.0, maximum-scale=1\.0, user-scalable=no"/);
+    assert.doesNotMatch(html,/interactive-widget=resizes-content/);
     assert.doesNotMatch(html,/viewport-fit=cover/);
     assert.match(html,/apple-mobile-web-app-status-bar-style" content="black"/);
     assert.doesNotMatch(html,/black-translucent/);
@@ -41,13 +42,10 @@ test('all dynamic system-bar repair code is gone while private App still covers 
     assert.doesNotMatch(app,/pwaSystemBarColorApply|pwaWallpaperBottomColor|pwaSystemBarSync|north-ios-pwa-shell|north-ios-pwa-bottom/);
   }
   assert.match(privateRoot,/ignoresSafeArea\(\.container, edges: \.bottom\)/);
-  assert.doesNotMatch(privateRoot,/ignoresSafeArea\(\.keyboard/,
-    'WeChat keeps the previously working SwiftUI keyboard path');
+  assert.match(privateRoot,/ignoresSafeArea\(\.keyboard, edges: \.bottom\)/,
+    'private keyboard layout returns to the known-good v1179 host path');
   assert.doesNotMatch(privateWebView,/KeyboardSynchronizedContainer|keyboardLayoutGuide/);
-  assert.match(privateWebView,/smallPhoneOfflineKeyboardScope/);
-  assert.match(privateWebView,/target\.id === 'off_in'/);
-  assert.match(privateWebView,/scrollView\.isScrollEnabled = false/,
-    'only offline focus disables the redundant outer WebKit scroll');
-  assert.match(privateWebView,/scrollView\.isScrollEnabled = true/);
-  assert.match(privateWebView,/keyboardDidHideNotification/);
+  assert.doesNotMatch(privateWebView,/smallPhoneOfflineKeyboardScope|keyboardWillChangeFrameNotification|keyboardDidHideNotification/);
+  assert.doesNotMatch(privateWebView,/scrollView\.isScrollEnabled|setContentOffset/,
+    'native code must not alter WebKit keyboard scrolling');
 });

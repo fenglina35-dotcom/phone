@@ -31,8 +31,8 @@ test('private app loads bundled phone resources instead of a remote shell', () =
   assert.match(webView, /webView\.window\?\.safeAreaInsets/);
   assert.match(webView, /north-native-app/);
   assert.match(webView, /root\.classList\.add\('north-native-app'\)/);
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.312 \(312\)'/);
-  assert.match(webView, /\n      window\.__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.312 \(312\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.313 \(313\)'/);
+  assert.match(webView, /\n      window\.__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.313 \(313\)'/);
   assert.doesNotMatch(webView, /\nwindow\.__SMALL_PHONE_PRIVATE_BUILD__/);
   assert.match(webView, /SmallPhoneRolePushTapped/);
   assert.match(webView, /window\.__smallPhoneOpenRolePush/);
@@ -157,8 +157,8 @@ test('real Mac project keeps all Screen Time targets and becomes 小手机', () 
   }
   assert.match(project, /INFOPLIST_KEY_CFBundleDisplayName = "小手机";/);
   assert.match(project, /PRODUCT_BUNDLE_IDENTIFIER = com\.qianyi\.PhoneCompanionTest;/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 312;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.312;/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 313;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.313;/);
 
   const scheme = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/xcshareddata/xcschemes/PhoneCompanionTest.xcscheme'
@@ -323,7 +323,7 @@ test('private app isolates role audio from recognition and reuses the proven web
   assert.match(app, /await sleep\(760\)/);
   assert.match(app, /typeof _callSR\.rebuild==='function'/);
   assert.doesNotMatch(app, /_callHFPending\.push\(\{text:t,meta\}\)/);
-  assert.match(webView, /keyboardWillChangeFrameNotification/);
+  assert.doesNotMatch(webView, /keyboardWillChangeFrameNotification|keyboardDidHideNotification/);
   assert.doesNotMatch(webView, /__smallPhoneNativeKeyboard/);
   assert.doesNotMatch(webView, /window\.scrollTo\(0,0\)/);
   assert.doesNotMatch(html, /north-native-keyboard-open/);
@@ -333,16 +333,12 @@ test('private app isolates role audio from recognition and reuses the proven web
   assert.doesNotMatch(webView, /observe\([\s\S]*\\\.contentOffset/);
   assert.doesNotMatch(webView, /setContentOffset\(target, animated: false\)/);
   assert.doesNotMatch(webView, /alwaysBounceVertical = false/);
-  assert.doesNotMatch(privateRoot, /ignoresSafeArea\(\.keyboard/,
-    'WeChat must keep the last working SwiftUI keyboard resize path');
+  assert.match(privateRoot, /ignoresSafeArea\(\.keyboard, edges: \.bottom\)/,
+    'private WeChat and offline scenes return to the stable v1179 host frame');
   assert.doesNotMatch(webView, /KeyboardSynchronizedContainer|keyboardLayoutGuide/);
   assert.match(webView, /func makeUIView\(context: Context\) -> WKWebView/);
-  assert.match(webView, /smallPhoneOfflineKeyboardScope/);
-  assert.match(webView, /target\.id === 'off_in'/);
-  assert.match(webView, /keyboardDidHideNotification/);
-  assert.match(webView, /switchToAnotherEditor/);
-  assert.match(webView, /scrollView\.isScrollEnabled = false/);
-  assert.match(webView, /scrollView\.isScrollEnabled = true/);
+  assert.doesNotMatch(webView, /smallPhoneOfflineKeyboardScope|switchToAnotherEditor/);
+  assert.doesNotMatch(webView, /scrollView\.isScrollEnabled/);
   assert.doesNotMatch(app, /callinput-native|callTypingOpen|callTypingClose/);
   assert.match(app, /const callInput=_call\.state==='active'\?`<div class="callinput show"/);
   assert.match(html, /\.callinput\{[^}]*bottom:150px/);

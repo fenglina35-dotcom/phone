@@ -16,14 +16,8 @@ struct LocalPhoneWebView: UIViewRepresentable {
     )
     private static let processSessionID =
         String(UUID().uuidString.prefix(8))
-    private static let offlineKeyboardScopeHandlerName =
-        "smallPhoneOfflineKeyboardScope"
-
-    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate,
-        WKScriptMessageHandler {
+    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         let bridge = PhoneNativeBridge()
-        private weak var keyboardWebView: WKWebView?
-        private var offlineFocusRequested = false
         let onRecoveryNeeded: (String) -> Void
         let onRecoveryRestartReady: (Bool) -> Void
         let onRecoveryContinued: () -> Void
@@ -119,18 +113,6 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 name: LocalPhoneWebView.recoveryContinueRequested,
                 object: nil
             )
-            NotificationCenter.default.addObserver(
-                self,
-                selector: #selector(offlineKeyboardWillChangeFrame(_:)),
-                name: UIResponder.keyboardWillChangeFrameNotification,
-                object: nil
-            )
-            NotificationCenter.default.addObserver(
-                self,
-                selector: #selector(offlineKeyboardDidHide(_:)),
-                name: UIResponder.keyboardDidHideNotification,
-                object: nil
-            )
         }
 
         deinit {
@@ -149,73 +131,6 @@ struct LocalPhoneWebView: UIViewRepresentable {
             pendingRecoveryRestartTimeout?.cancel()
             pendingRolePushSyncRetry?.cancel()
             NotificationCenter.default.removeObserver(self)
-        }
-
-        func userContentController(
-            _ userContentController: WKUserContentController,
-            didReceive message: WKScriptMessage
-        ) {
-            guard message.name == LocalPhoneWebView.offlineKeyboardScopeHandlerName,
-                  let payload = message.body as? [String: Any],
-                  let focused = payload["focused"] as? Bool else {
-                return
-            }
-            setOfflineComposerFocused(
-                focused,
-                switchToAnotherEditor:
-                    payload["switchToAnotherEditor"] as? Bool ?? false
-            )
-        }
-
-        func bindOfflineKeyboardScope(to webView: WKWebView) {
-            keyboardWebView = webView
-        }
-
-        func unbindOfflineKeyboardScope() {
-            restoreOuterWebViewScrolling()
-            offlineFocusRequested = false
-            keyboardWebView = nil
-        }
-
-        private func setOfflineComposerFocused(
-            _ focused: Bool,
-            switchToAnotherEditor: Bool
-        ) {
-            offlineFocusRequested = focused
-            if focused {
-                suspendOuterWebViewScrolling()
-            } else if switchToAnotherEditor {
-                restoreOuterWebViewScrolling()
-            }
-        }
-
-        @objc private func offlineKeyboardWillChangeFrame(
-            _ notification: Notification
-        ) {
-            guard offlineFocusRequested else { return }
-            suspendOuterWebViewScrolling()
-        }
-
-        @objc private func offlineKeyboardDidHide(
-            _ notification: Notification
-        ) {
-            restoreOuterWebViewScrolling()
-        }
-
-        private func suspendOuterWebViewScrolling() {
-            guard let scrollView = keyboardWebView?.scrollView,
-                  scrollView.isScrollEnabled else { return }
-            // The full-screen offline scene owns its inner message scroller.
-            // Disabling only WKWebView's outer scroll prevents WebKit from
-            // adding a second automatic focus scroll while SwiftUI moves the
-            // whole web surface with the keyboard. Do not rewrite contentOffset.
-            scrollView.isScrollEnabled = false
-        }
-
-        private func restoreOuterWebViewScrolling() {
-            guard let scrollView = keyboardWebView?.scrollView,
-                  !scrollView.isScrollEnabled else { return }
-            scrollView.isScrollEnabled = true
         }
 
         func configureBundledPage(
@@ -903,7 +818,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
         }
 
         private static let webContentTerminationDefaultsKey =
-            "smallPhone.webContentTerminationTimes.v21.build312"
+            "smallPhone.webContentTerminationTimes.v22.build313"
         // WebKit exposes this legacy NSError code inconsistently across Xcode SDKs.
         // Keep the stable numeric value so older SDKs do not need the missing
         // Swift enum member for this legacy policy-change error.
@@ -961,10 +876,6 @@ struct LocalPhoneWebView: UIViewRepresentable {
             context.coordinator.bridge,
             name: PhoneNativeBridge.handlerName
         )
-        configuration.userContentController.add(
-            context.coordinator,
-            name: Self.offlineKeyboardScopeHandlerName
-        )
         configuration.userContentController.addUserScript(
             WKUserScript(
                 source: Self.nativeEnvironmentBootstrap(),
@@ -979,13 +890,6 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 forMainFrameOnly: true
             )
         )
-        configuration.userContentController.addUserScript(
-            WKUserScript(
-                source: Self.offlineKeyboardScopeBootstrap,
-                injectionTime: .atDocumentStart,
-                forMainFrameOnly: true
-            )
-        )
 
         let webView = WKWebView(frame: .zero, configuration: configuration)
         context.coordinator.recordWebViewMade()
@@ -995,7 +899,6 @@ struct LocalPhoneWebView: UIViewRepresentable {
         context.coordinator.bridge.webView = webView
         context.coordinator.bridge.openDeviceManagement =
             onOpenDeviceManagement
-        context.coordinator.bindOfflineKeyboardScope(to: webView)
         loadBundledPhone(
             in: webView,
             coordinator: context.coordinator
@@ -1022,10 +925,6 @@ struct LocalPhoneWebView: UIViewRepresentable {
         webView.configuration.userContentController.removeScriptMessageHandler(
             forName: PhoneNativeBridge.handlerName
         )
-        webView.configuration.userContentController.removeScriptMessageHandler(
-            forName: Self.offlineKeyboardScopeHandlerName
-        )
-        coordinator.unbindOfflineKeyboardScope()
         coordinator.bridge.webView = nil
         coordinator.bridge.openDeviceManagement = nil
         webView.navigationDelegate = nil
@@ -1110,7 +1009,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.312 (312)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.313 (313)';
       window.__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__ = true;
       const privateDiagLast = new Map();
       window.__smallPhoneNativeDiag = (event, fields = {}, minGap = 10000) => {
@@ -1142,7 +1041,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
       };
       window.__smallPhoneNativeDiag(
         'native.bootstrap.ready',
-        { build: '1.0.312 (312)', autoBackupPaused: true },
+        { build: '1.0.313 (313)', autoBackupPaused: true },
         0
       );
       // Keep private-App background maintenance away from the WebContent main
@@ -1445,35 +1344,6 @@ struct LocalPhoneWebView: UIViewRepresentable {
           return client;
         }
       });
-    })();
-    """
-
-    private static let offlineKeyboardScopeBootstrap = """
-    (() => {
-      const report = (focused, switchToAnotherEditor = false) => {
-        try {
-          window.webkit.messageHandlers.smallPhoneOfflineKeyboardScope
-            .postMessage({
-              focused: focused === true,
-              switchToAnotherEditor: switchToAnotherEditor === true
-            });
-        } catch (_) {}
-      };
-      document.addEventListener('focusin', event => {
-        const target = event && event.target;
-        report(!!(target && target.id === 'off_in'));
-      }, true);
-      document.addEventListener('focusout', event => {
-        const target = event && event.target;
-        if (!target || target.id !== 'off_in') return;
-        setTimeout(() => {
-          const active = document.activeElement;
-          const stillOffline = !!(active && active.id === 'off_in');
-          const anotherEditor = !!(active && !stillOffline &&
-            /^(INPUT|TEXTAREA)$/.test(active.tagName || ''));
-          report(stillOffline, anotherEditor);
-        }, 0);
-      }, true);
     })();
     """
 }

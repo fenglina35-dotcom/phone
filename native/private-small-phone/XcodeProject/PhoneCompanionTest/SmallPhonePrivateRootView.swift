@@ -340,9 +340,10 @@ struct SmallPhonePrivateRootView: View {
         // The top status area remains system-owned while its color follows theme.
         .ignoresSafeArea(.container, edges: .bottom)
         .preferredColorScheme(statusBarTheme.colorScheme)
-        // Let SwiftUI deliver the real keyboard-safe frame to WKWebView.
-        // The web composer no longer forces a second focus, so freezing this
-        // safe area only leaves dismissal one animation behind Safari.
+        // v1179 baseline: keep one stable WKWebView frame and let WebKit move
+        // the focused composer from the real chat bottom. SwiftUI must not
+        // resize the same page on a second keyboard animation timeline.
+        .ignoresSafeArea(.keyboard, edges: .bottom)
         .onReceive(
             NotificationCenter.default.publisher(
                 for: .smallPhoneStatusBarThemeChanged

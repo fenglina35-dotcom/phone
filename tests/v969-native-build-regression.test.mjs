@@ -12,14 +12,14 @@ const pip = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/Cal
 const reportApp = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/PhoneCompanionReport.swift');
 const reportScene = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/TotalActivityReport.swift');
 
-test('public and private web v1184 remain compatible with native iOS 1.0.312', () => {
+test('public and private web v1184 remain compatible with native iOS 1.0.313', () => {
   assert.match(app, /APP_VER='v1184 · iPhone稳定、剧场顺序与键盘修复版'/);
   assert.match(app, /sw\.js\?v=1184&r=v1184-ios-web-crash-cohab-turn-keyboard-1/);
   assert.match(shell, /north-shell-v1184-ios-web-crash-cohab-turn-keyboard-1/);
   assert.match(bundleInfo, /<string>1184<\/string>/);
-  assert.match(localWebView, /1\.0\.312 \(312\)/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 312;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.312;/g) || []).length, 12);
+  assert.match(localWebView, /1\.0\.313 \(313\)/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 313;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.313;/g) || []).length, 12);
 });
 
 test('native shared-media gain uses only public AVFoundation types', () => {
