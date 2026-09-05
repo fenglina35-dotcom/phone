@@ -49,14 +49,14 @@ test('v1184 private identifiers retain the performance chain while public stays 
   assert.equal(index, alias);
   assert.match(index, /window\.__NORTH_SHELL_BUILD__='1184'/);
   assert.match(index, /app\.js\?v=1184&r=v1184-ios-web-crash-cohab-turn-keyboard-1/);
-  assert.match(index, /private-runtime-diagnostics\.js\?v=311/);
+  assert.match(index, /private-runtime-diagnostics\.js\?v=312/);
   assert.match(app, /APP_VER='v1184 · iPhone稳定、剧场顺序与键盘修复版'/);
-  assert.match(overlay, /311-private-v1185-keyboard-layout-guide-1/);
-  assert.match(webview, /1\.0\.311 \(311\)/);
-  assert.match(bridge, /private static let build = "1\.0\.311 \(311\)"/);
+  assert.match(overlay, /312-private-v1186-cohab-keyboard-isolation-1/);
+  assert.match(webview, /1\.0\.312 \(312\)/);
+  assert.match(bridge, /private static let build = "1\.0\.312 \(312\)"/);
   assert.match(bridge, /static let contractVersion = 35/);
-  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 311;/g) || []).length, 12);
-  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.311;/g) || []).length, 12);
+  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 312;/g) || []).length, 12);
+  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.312;/g) || []).length, 12);
   assert.match(publicApp, /APP_VER='v1184 · iPhone稳定、剧场顺序与键盘修复版'/);
   assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1184'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
@@ -146,22 +146,22 @@ test('diagnostics identify the protected stage without collecting content', () =
   assert.doesNotMatch(overlay, /messageBody|chatContent|authorizationToken/);
 });
 
-test('Mac guides state the private v1185 and unchanged web v1184 boundary', () => {
+test('Mac guides state the private v1186 and unchanged web v1184 boundary', () => {
   const install = fs.readFileSync(
-    path.join(project, '第三百一十一次安装_v1185_共同生活键盘同步修复_请先读.md'),
+    path.join(project, '第三百一十二次安装_v1186_共同生活键盘隔离修复_请先读.md'),
     'utf8',
   );
   const mac = fs.readFileSync(path.join(project, '请在Mac编译前先读.md'), 'utf8');
   for (const guide of [install, mac]) {
     assert.match(guide, /v1184/);
-    assert.match(guide, /1\.0\.311 \(311\)/);
+    assert.match(guide, /1\.0\.312 \(312\)/);
     assert.match(guide, /原生桥 35/);
     assert.match(guide, /不要.*删除.*App/);
     assert.match(guide, /Mac.*编译/);
     assert.match(guide, /真机|真实 iPhone/);
   }
-  assert.match(mac, /私人壳发布 v1185/);
+  assert.match(mac, /私人壳发布 v1186/);
   assert.match(mac, /内置网页功能基线 v1184（网页未改）/);
   assert.match(install, /内置网页功能基线 `v1184`/);
-  assert.match(install, /本次没有更新或推送网页版/);
+  assert.match(install, /本次没有(?:修改|更新)或推送网页版/);
 });

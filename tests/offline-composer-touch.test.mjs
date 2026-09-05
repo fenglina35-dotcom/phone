@@ -80,18 +80,22 @@ test('the private iOS fixed-phone workaround also covers the offline date compos
     'the native-only fixed shell remains unchanged for screens without a text composer');
 });
 
-test('private iOS keeps one keyboard animation timeline without changing the web viewport contract', () => {
+test('private iOS prevents only the offline composer from double-scrolling', () => {
   assert.match(html, /interactive-widget=resizes-content/);
   for (const page of [privateHtml, privateIndex]) assert.match(page, /interactive-widget=resizes-content/);
-  assert.match(privateRoot, /\.ignoresSafeArea\(\.keyboard, edges: \.bottom\)/,
-    'SwiftUI must not perform a second keyboard-safe-area resize');
-  assert.match(privateWebView, /final class KeyboardSynchronizedContainer: UIView/);
-  assert.match(privateWebView, /keyboardLayoutGuide\.usesBottomSafeArea = false/,
-    'the hidden keyboard must return the web surface behind the home indicator');
-  assert.match(privateWebView, /webView\.bottomAnchor\.constraint\([\s\S]{0,100}keyboardLayoutGuide\.topAnchor/,
-    'the web composer must move on the system keyboard layout timeline');
-  assert.doesNotMatch(privateWebView, /keyboardWill(?:Show|Hide|ChangeFrame)Notification/,
-    'manual keyboard notifications would reintroduce a competing animation');
+  assert.doesNotMatch(privateRoot, /ignoresSafeArea\(\.keyboard/,
+    'private WeChat must retain the previously working SwiftUI and WebKit resize path');
+  assert.doesNotMatch(privateWebView, /KeyboardSynchronizedContainer|keyboardLayoutGuide/,
+    'the failed global keyboard guide must be removed');
+  assert.match(privateWebView, /func makeUIView\(context: Context\) -> WKWebView/);
+  assert.match(privateWebView, /smallPhoneOfflineKeyboardScope/);
+  assert.match(privateWebView, /target\.id === 'off_in'/);
+  assert.match(privateWebView, /keyboardDidHideNotification/,
+    'a completed dismissal must restore normal outer scrolling');
+  assert.match(privateWebView, /scrollView\.isScrollEnabled = false/);
+  assert.match(privateWebView, /scrollView\.isScrollEnabled = true/);
+  assert.doesNotMatch(privateWebView, /setContentOffset|\.contentOffset[\s\S]{0,80}observe/,
+    'do not revive the failed native scroll-position rewrite');
   for (const code of [app, privateApp]) {
     const runtimeCode = code.replace(functionSource(code, 'northViewportDiagnosticStart'), '');
     assert.doesNotMatch(runtimeCode, /visualViewport\.addEventListener\(['"]resize/,

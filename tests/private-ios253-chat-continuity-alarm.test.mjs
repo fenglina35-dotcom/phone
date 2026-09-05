@@ -50,7 +50,7 @@ test('thermal pressure and repeated termination stop WebKit self-reload loops', 
   assert.match(webView, /thermalState == "serious" \|\| thermalState == "critical"/);
   assert.match(webView, /native\.webcontent\.recoveryOffered/);
   assert.match(webView, /native\.webcontent\.remountDeferred/);
-  assert.match(webView, /webContentTerminationTimes\.v20\.build311/);
+  assert.match(webView, /webContentTerminationTimes\.v21\.build312/);
   assert.doesNotMatch(webView, /showingLoadFailure/);
   assert.doesNotMatch(webView, /LocalPhoneWebView\.loadFailureHTML/);
   assert.doesNotMatch(webView, /websiteDataStore\.removeData/);
@@ -120,18 +120,18 @@ test('private wardrobe exposes exact and overnight time ranges without removing 
   assert.match(app, /if\(named\.length\)return named/);
 });
 
-test('both private entry files and every iOS target carry build 311', () => {
+test('both private entry files and every iOS target carry build 312', () => {
   assert.equal(index, alias);
-  assert.match(index, /private-runtime-diagnostics\.js\?v=311/);
-  assert.match(overlay, /311-private-v1185-keyboard-layout-guide-1/);
-  assert.match(webView, /1\.0\.311 \(311\)/);
-  assert.match(bridge, /1\.0\.311 \(311\)/);
+  assert.match(index, /private-runtime-diagnostics\.js\?v=312/);
+  assert.match(overlay, /312-private-v1186-cohab-keyboard-isolation-1/);
+  assert.match(webView, /1\.0\.312 \(312\)/);
+  assert.match(bridge, /1\.0\.312 \(312\)/);
   assert.equal(
-    (project.match(/CURRENT_PROJECT_VERSION = 311;/g) || []).length,
+    (project.match(/CURRENT_PROJECT_VERSION = 312;/g) || []).length,
     12
   );
   assert.equal(
-    (project.match(/MARKETING_VERSION = 1\.0\.311;/g) || []).length,
+    (project.match(/MARKETING_VERSION = 1\.0\.312;/g) || []).length,
     12
   );
 });

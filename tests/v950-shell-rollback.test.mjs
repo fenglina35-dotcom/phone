@@ -41,9 +41,13 @@ test('all dynamic system-bar repair code is gone while private App still covers 
     assert.doesNotMatch(app,/pwaSystemBarColorApply|pwaWallpaperBottomColor|pwaSystemBarSync|north-ios-pwa-shell|north-ios-pwa-bottom/);
   }
   assert.match(privateRoot,/ignoresSafeArea\(\.container, edges: \.bottom\)/);
-  assert.match(privateRoot,/ignoresSafeArea\(\.keyboard, edges: \.bottom\)/,
-    'SwiftUI must not independently resize the private WKWebView for the keyboard');
-  assert.match(privateWebView,/keyboardLayoutGuide\.usesBottomSafeArea = false/);
-  assert.match(privateWebView,/webView\.bottomAnchor\.constraint\([\s\S]{0,100}keyboardLayoutGuide\.topAnchor/,
-    'the private WKWebView must follow the native keyboard frame without a delayed second jump');
+  assert.doesNotMatch(privateRoot,/ignoresSafeArea\(\.keyboard/,
+    'WeChat keeps the previously working SwiftUI keyboard path');
+  assert.doesNotMatch(privateWebView,/KeyboardSynchronizedContainer|keyboardLayoutGuide/);
+  assert.match(privateWebView,/smallPhoneOfflineKeyboardScope/);
+  assert.match(privateWebView,/target\.id === 'off_in'/);
+  assert.match(privateWebView,/scrollView\.isScrollEnabled = false/,
+    'only offline focus disables the redundant outer WebKit scroll');
+  assert.match(privateWebView,/scrollView\.isScrollEnabled = true/);
+  assert.match(privateWebView,/keyboardDidHideNotification/);
 });
