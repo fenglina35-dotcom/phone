@@ -60,6 +60,11 @@ function text(value,length=300){return String(value==null?'':value).trim().slice
   assert.equal(separate?.merchant,'茶百道');
   assert.deepEqual(Array.from(separate?.items||[]),['杨枝甘露']);
   assert.deepEqual(Array.from(separate?.specs||[]),['不加糖']);
+  const chagee=sandbox.parse('霸王茶姬的伯牙绝弦，大杯，微糖');
+  assert.equal(chagee?.merchant,'霸王茶姬','CHAGEE must be recognized as a milk-tea merchant even when its product name has no generic tea word');
+  assert.deepEqual(Array.from(chagee?.items||[]),['伯牙绝弦']);
+  assert.deepEqual(Array.from(chagee?.specs||[]),['大杯','微糖']);
+  assert.equal(sandbox.query(chagee),'用户明确；门店=霸王茶姬；商品=伯牙绝弦；规格=大杯、微糖');
   const boughtPackage=sandbox.parse('我想吃河南正宗胡辣汤水煎包家的之前买过的那个套餐');
   assert.equal(boughtPackage?.merchant,'河南正宗胡辣汤水煎包');
   assert.deepEqual(Array.from(boughtPackage?.items||[]),['之前买过的那个套餐']);

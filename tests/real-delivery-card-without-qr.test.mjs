@@ -22,6 +22,7 @@ const messages=[];
 const replies=[];
 const notices=[];
 const role={id:'role-no-qr',name:'North',blocked:false};
+const roleTasks={};
 const context={
   Date,Math,String,RegExp,
   text(value,max){return String(value??'').trim().slice(0,max||300);},
@@ -33,6 +34,7 @@ const context={
   roleSystemNotice(message,kind){notices.push({message,kind});},
   orderEtaText(){return'平台暂未给出预计送达时间';},
   getC(id){return id===role.id?role:null;},
+  foodState(){return{roleTasks};},
   TERMINAL:{canceled:true,refunded:true,failed:true},
   STATUS_RANK:{created:1,pending_payment:1,paid:2,merchant_confirmed:3,preparing:4,courier_assigned:5,picked_up:6,delivering:7,delivered:8},
   S:{me:{name:'我'}},
@@ -40,9 +42,15 @@ const context={
   scheduleReply(id,note){replies.push({id,note});return true;},
 };
 vm.createContext(context);
-vm.runInContext(`${functionSource('pushRoleOrderCard')}\n${functionSource('scheduleRoleOrderAcknowledgement')}\n${functionSource('recoverRoleOrderCard')}\n${functionSource('resultReply')}`,context);
+vm.runInContext(`${functionSource('pushRoleOrderCard')}\n${functionSource('roleOrderReplyViolatesPaymentBoundary')}\n${functionSource('scheduleRoleOrderAcknowledgement')}\n${functionSource('recoverRoleOrderCard')}\n${functionSource('resultReply')}`,context);
 
-const pending={id:'order-1',remoteId:'remote-1',status:'pending_payment',payUrl:'',payQrDataUrl:'',merchant:'测试店',items:[{name:'测试餐品'}]};
+assert.equal(context.roleOrderReplyViolatesPaymentBoundary({content:'我已经点好了。'},false),false,'a natural first-person order acknowledgement remains visible');
+assert.equal(context.roleOrderReplyViolatesPaymentBoundary({content:'我点好了，你快去付款。'},false),true,'a generated payment command is rejected after generation');
+assert.equal(context.roleOrderReplyViolatesPaymentBoundary({content:'我已经付好了。'},false),true,'pending platform state cannot be narrated as paid');
+assert.equal(context.roleOrderReplyViolatesPaymentBoundary({content:'我已经付好了。'},true),false,'a role may mention its own payment only after a real paid receipt');
+
+roleTasks['task-1']={taskId:'task-1',roleId:role.id,status:'completed'};
+const pending={id:'order-1',remoteId:'remote-1',taskId:'task-1',roleId:role.id,cardDeliveryTaskId:'task-1',cardDeliveryAuthorizedAt:Date.now(),status:'pending_payment',payUrl:'',payQrDataUrl:'',merchant:'测试店',items:[{name:'测试餐品'}]};
 context.resultReply(role,pending,'');
 assert.equal(messages.length,1,'a real pending-payment order without a QR still creates one chat card');
 assert.equal(messages[0].type,'deliveryorder');
@@ -56,7 +64,8 @@ context.resultReply(role,pending,'');
 assert.equal(messages.length,1,'a repeated result reuses the existing card instead of duplicating it');
 assert.equal(replies.length,2,'each distinct successful result path can still request its role acknowledgement');
 
-const recovered={id:'order-recovered',remoteId:'remote-recovered',roleId:role.id,status:'pending_payment',payUrl:'',payQrDataUrl:'',merchant:'恢复店',items:[{name:'恢复餐品'}],notifiedStatuses:[]};
+roleTasks['task-recovered']={taskId:'task-recovered',roleId:role.id,status:'completed'};
+const recovered={id:'order-recovered',remoteId:'remote-recovered',taskId:'task-recovered',roleId:role.id,cardDeliveryTaskId:'task-recovered',cardDeliveryAuthorizedAt:Date.now(),cardDeliveryRecoveryUntil:Date.now()+60000,status:'pending_payment',payUrl:'',payQrDataUrl:'',merchant:'恢复店',items:[{name:'恢复餐品'}],notifiedStatuses:[]};
 assert.ok(context.recoverRoleOrderCard(recovered),'a later platform-confirmed pending order repairs its missing card');
 assert.equal(messages.length,2,'the recovered order creates exactly one missing chat card');
 assert.equal(replies.length,3,'card recovery also schedules one genuine role acknowledgement');
@@ -66,6 +75,13 @@ context.recoverRoleOrderCard(recovered);
 assert.equal(messages.length,2,'repeated polling reuses the recovered card');
 assert.equal(replies.length,3,'repeated polling does not repeat the recovered acknowledgement');
 
+const stale={id:'order-stale',remoteId:'remote-stale',taskId:'task-stale',roleId:role.id,status:'pending_payment',merchant:'旧订单店',items:[{name:'旧订单餐品'}],notifiedStatuses:[]};
+assert.equal(context.recoverRoleOrderCard(stale),null,'a persisted old order without a current one-time card credential must never reappear in chat');
+assert.equal(messages.length,2,'startup polling cannot manufacture a card for a stale order');
+context.resultReply(role,stale,'');
+assert.equal(messages.length,2,'even an accidental result callback cannot publish an order without its completed-task credential');
+assert.match(notices.at(-1).message,/禁止向聊天补发旧订单/);
+
 const draft={id:'order-draft',remoteId:'remote-draft',roleId:role.id,status:'created',merchant:'未确认店',items:[{name:'未确认餐品'}],notifiedStatuses:[]};
 assert.equal(context.recoverRoleOrderCard(draft),null,'a checkout draft without confirmed payment selection never fabricates a card');
 assert.equal(messages.length,2);
@@ -73,5 +89,9 @@ assert.equal(messages.length,2);
 const failed={id:'order-2',remoteId:'remote-2',status:'failed',payQrDataUrl:''};
 assert.equal(context.pushRoleOrderCard(role,failed),null,'a failed non-order status never creates a card');
 assert.equal(messages.length,2);
+
+messages.splice(messages.findIndex(item=>item.orderId===pending.id),1);
+assert.equal(context.recoverRoleOrderCard(pending),null,'a card that was already delivered and later removed is never replayed by polling');
+assert.equal(messages.some(item=>item.orderId===pending.id),false,'deleting an already delivered card remains final');
 
 console.log('real delivery card without QR tests passed');

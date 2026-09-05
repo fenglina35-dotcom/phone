@@ -8,7 +8,7 @@ const theme=fs.readFileSync(new URL('../glass-theme.css',import.meta.url),'utf8'
 assert.match(delivery,/type:'deliveryorder'/,'a successful role order must create a dedicated chat card');
 assert.doesNotMatch(delivery,/function pushRoleOrderCard\(c,order\)\{[^\n]*safePayQr\(order\.payQrDataUrl\)/,'a submitted order card must not depend on an externally shareable payment QR');
 assert.match(delivery,/function pushRoleOrderCard\(c,order\)\{[^\n]*created\|pending_payment\|paid/,'only a real submitted or later platform status may create a role order card');
-assert.match(delivery,/var card=order&&pushRoleOrderCard\(c,order\);if\(order&&!card\)roleSystemNotice\([^\n]*else roleSystemNotice\('真实外卖订单已提交'/,'card rendering failure may be reported internally but must not stop the role acknowledgement');
+assert.match(delivery,/var card=order&&pushRoleOrderCard\(c,order\);if\(card\)\{order\.cardDeliveryDeliveredAt=[^\n]*if\(order&&!card\)roleSystemNotice\([^\n]*else roleSystemNotice\('真实外卖订单已提交'/,'card rendering failure may be reported internally but must not stop the role acknowledgement');
 assert.doesNotMatch(delivery,/var card=order&&pushRoleOrderCard\(c,order\);if\(order&&!card\)\{[^}]*return;/,'a missing QR or card renderer must never suppress the role reply after a real order was submitted');
 assert.doesNotMatch(delivery,/createOrder\([\s\S]{0,500}pushRoleOrderCard\(c,order\);await payOrder\(order\)/,'a confirm-page draft must not appear as a completed chat card before the cashier is reached');
 assert.match(delivery,/imageUrl:safeOrderImage\(data\.imageUrl\|\|offer\.imageUrl/,'the real platform product image must follow the selected offer');
@@ -22,7 +22,8 @@ assert.match(delivery,/etaText:safeEtaText\(data\.etaText\)/,'the exact checkout
 assert.match(delivery,/etaText:safeEtaText\(order\.etaText\)/,'the exact delivery window must be copied into the chat-card snapshot');
 assert.match(delivery,/function orderEtaText\(order,withClock\)\{var exact=safeEtaText\(order&&order\.etaText\);if\(exact\)return exact;/,'the chat card must prefer the exact platform delivery window');
 assert.match(delivery,/syncRoleOrderCard\(order\)[\s\S]*?refreshChatMessages\(order\.roleId\)/,'payment QR, amount, and ETA updates must rerender the visible role chat card immediately');
-assert.match(delivery,/function recoverRoleOrderCard\(order\)[\s\S]*?order\.status==='created'[\s\S]*?pushRoleOrderCard\(c,order\)[\s\S]*?scheduleRoleOrderAcknowledgement\(c,order\)/,'a later platform-confirmed checkout must repair a missing card and its role acknowledgement exactly once');
+assert.match(delivery,/function recoverRoleOrderCard\(order\)[\s\S]*?cardDeliveryAuthorizedAt[\s\S]*?cardDeliveryTaskId!==order\.taskId[\s\S]*?cardDeliveryRecoveryUntil<=now[\s\S]*?pushRoleOrderCard\(c,order\)[\s\S]*?scheduleRoleOrderAcknowledgement\(c,order\)/,'only a just-completed current task may repair its own missing card once');
+assert.match(delivery,/缺少本轮完成任务的卡片凭证，已禁止向聊天补发旧订单/,'an old order can never be published by an accidental result callback');
 assert.match(delivery,/function mergeStatus\(order,data\)[\s\S]*?recoverRoleOrderCard\(order\)/,'platform polling must repair a missing card instead of only updating cards that already exist');
 assert.match(delivery,/平台暂未给出预计送达时间/,'missing ETA must be disclosed instead of invented');
 assert.match(delivery,/可以截图后，在支付宝“扫一扫”中从相册选择/,'the official payment QR must explain the screenshot workflow');
@@ -38,6 +39,10 @@ assert.match(delivery,/明确使用第一人称“我”/,'the role must persona
 assert.match(delivery,/不能只发送订单卡片后保持沉默/,'the card must be followed by a genuine persona reply');
 assert.match(delivery,/禁止催TA“快去付款”/,'the role must never turn the order acknowledgement into a payment command');
 assert.match(delivery,/只有平台确实返回已付款才能说已经付款/,'payment may only be claimed from a real paid platform status');
+assert.match(delivery,/function roleOrderReplyViolatesPaymentBoundary\(message,paymentConfirmed\)/,'a post-generation boundary must verify the actual role reply instead of trusting prompt compliance');
+assert.match(delivery,/invalid\.forEach\(function\(m\)\{var index=list\.indexOf\(m\);if\(index>=0\)list\.splice\(index,1\);\}\)/,'a generated payment command must be removed before it can remain in chat');
+assert.match(delivery,/if\(!valid\.length&&!repair\)run\(true\)/,'an entirely invalid role acknowledgement must receive one persona-generated repair attempt');
+assert.match(delivery,/已拦截且没有伪造角色话术/,'a second violation must stop without manufacturing fixed text as the role');
 assert.match(delivery,/平台本次唯一可信的预计送达时间/,'the role must receive the same exact ETA window used by the card');
 assert.match(delivery,/不得沿用历史聊天中的十五分钟、四十分钟或其他旧时间/,'old fallback ETA language must not override the current platform window');
 assert.match(delivery,/if\(data\.imageUrl!=null\)\{var paidImage=/,'a real image returned at cashier time must update the live order and visible card');

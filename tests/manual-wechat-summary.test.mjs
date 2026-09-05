@@ -24,8 +24,8 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-function makeSandbox(messages = []) {
-  const role = { id: 'c1', name: '先生', summaries: [], _accountSummaryState: { main: { count: 0, cursorV2: true } } };
+function makeSandbox(messages = [], initialState = { count: 0, cursorV2: true }) {
+  const role = { id: 'c1', name: '先生', summaries: [], _accountSummaryState: { main: { ...initialState } } };
   const calls = { api: 0, confirm: 0, saved: 0, added: [], edited: 0, toasts: [] };
   let resolveApi = null;
   const sandbox = vm.createContext({
@@ -39,7 +39,11 @@ function makeSandbox(messages = []) {
     msgsForAccount: () => messages,
     summaryList: c => c.summaries,
     summaryState: c => c._accountSummaryState.main,
-    summaryStateSave: (c, aid, upto) => { c._accountSummaryState[aid] = { count: upto, cursorV2: true }; },
+    summaryStateDone: (c, aid, all) => Math.max(0, Math.min(all.length, +c._accountSummaryState.main.count || 0)),
+    summaryStateSave: (c, aid, upto, rows = messages) => {
+      const anchor = upto > 0 && rows[upto - 1];
+      c._accountSummaryState[aid] = { count: upto, cursorV2: true, lastMessageId: anchor?.id || '' };
+    },
     msgToText: m => m.content || '',
     summaryUserLabel: () => 'North',
     summaryCleanText: (c, text) => text,
@@ -60,7 +64,7 @@ function makeSandbox(messages = []) {
       return 'added';
     },
   });
-  vm.runInContext(`const _manualWechatSummaryBusy=new Set();\n${functionSource('manualWechatSummarySource')}\n${functionSource('manualWechatSummary')}\nthis.run=manualWechatSummary;`, sandbox);
+  vm.runInContext(`const _manualWechatSummaryBusy=new Set();\n${functionSource('manualWechatSummarySource')}\n${functionSource('manualWechatSummaryCanRepairClearedCursor')}\n${functionSource('manualWechatSummary')}\nthis.run=manualWechatSummary;`, sandbox);
   return { sandbox, role, calls, resolve: value => resolveApi(value) };
 }
 
@@ -77,6 +81,23 @@ test('manual WeChat summary spends no model call when there is no new chat', asy
   assert.equal(calls.api, 0);
   assert.equal(calls.confirm, 0);
   assert.match(calls.toasts.join('\n'), /没有尚未总结的新微信/);
+});
+
+test('manual WeChat summary can recover an ambiguous cursor left by an older clear', async () => {
+  const messages = [
+    { id: 'new-u', role: 'user', content: '清空以后重新聊天。' },
+    { id: 'new-a', role: 'assistant', content: '这次要记住。' },
+  ];
+  const { sandbox, role, calls, resolve } = makeSandbox(messages, { count: 2, cursorV2: true });
+  const pending = sandbox.run('c1');
+  for (let i = 0; i < 5 && calls.api === 0; i += 1) await new Promise(setImmediate);
+  assert.equal(calls.confirm, 2, 'repair and paid summary each require explicit confirmation');
+  assert.equal(calls.api, 1);
+  assert.equal(role._accountSummaryState.main.count, 0, 'repair exposes current chat before the model succeeds');
+  resolve('我记得North清空以后又重新和我聊天，也明确说希望这次的新内容能够继续被我认真记住。我会从现在的对话重新整理，不让旧进度再挡住新的共同记忆。');
+  assert.equal(await pending, true);
+  assert.equal(role._accountSummaryState.main.count, messages.length);
+  assert.equal(role._accountSummaryState.main.lastMessageId, 'new-a');
 });
 
 test('manual WeChat summary excludes calls and system rows, saves once, and advances only after success', async () => {

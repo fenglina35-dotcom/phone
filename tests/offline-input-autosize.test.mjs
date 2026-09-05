@@ -43,14 +43,14 @@ test('offline textarea grows from one line to three lines and then scrolls inter
 });
 
 test('offline textarea uses a normal caret line height instead of a 42px caret',()=>{
-  assert.match(shell,/\.offinput #off_in\{[^}]*max-height:90px!important[^}]*padding:10px 12px!important[^}]*line-height:20px!important/);
+  assert.match(shell,/\.offinput #off_in\{[^}]*max-height:90px!important[^}]*padding:10px 12px 9px!important[^}]*line-height:21px!important[^}]*font-size:16px!important/);
   assert.doesNotMatch(shell,/\.offinput #off_in\{[^}]*line-height:42px/);
 });
 
 test('ordinary offline date and common life share a first-render autosize listener',()=>{
   assert.equal((web.match(/<textarea id="off_in"/g)||[]).length,2);
   assert.match(web,/document\.addEventListener\('input',e=>\{const ta=e&&e\.target;if\(ta&&ta\.id==='off_in'\)offInputAutoSize\(ta\);\},\{passive:true\}\)/);
-  assert.match(functionSource(web,'offNarrationDecorate'),/offInputAutoSize\(ta\)/);
+  assert.match(functionSource(web,'offNarrationDecorate'),/document\.activeElement!==ta\)offInputAutoSize\(ta\)/);
 });
 
 test('web and private app keep the offline input fix identical',()=>{

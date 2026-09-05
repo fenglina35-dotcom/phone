@@ -33,6 +33,7 @@ test('automatic summary fires at the configured number of user rounds, saves its
     S:{settings:{summaryRounds:2,summaryModel:'main'}},
     getC:()=>contact,memoryScopeKey:a=>a||'main',msgsForAccount:()=>rows,
     summaryList:c=>c.summaries,summaryState:c=>c._accountSummaryState.main,
+    summaryStateDone:(c,aid,all)=>Math.max(0,Math.min(all.length,+c._accountSummaryState.main.count||0)),
     summaryStateSave:(c,aid,upto)=>(c._accountSummaryState.main={count:upto,cursorV2:true}),
     pruneSummaries:()=>{},save:()=>{saves++;},msgToText:m=>m.content||'',summaryUserLabel:()=> '用户',
     summaryCleanText:(c,t)=>t,perspRule:()=>'',IMP_INSTR:'',cleanReply:x=>x,

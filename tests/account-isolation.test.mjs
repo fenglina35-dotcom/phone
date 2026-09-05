@@ -323,6 +323,7 @@ vm.runInNewContext(
     "summaryList",
     "summaryState",
     "summaryStateSave",
+    "summaryStateDone",
     "maybeSummarize",
   ]
     .map(extractFunction)

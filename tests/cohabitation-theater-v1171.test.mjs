@@ -14,9 +14,9 @@ const privateApp=read('native/private-small-phone/XcodeProject/PhoneCompanionTes
 
 test('v1178 shared theater asset is byte-identical and loaded after app core',()=>{
   assert.equal(bundleTheater,theater);
-  assert.match(webHtml,/app\.js\?v=1179[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1179&r=v1179-format-bead-fix-1"/);
-  for(const html of [privateHtml,privateAlias])assert.match(html,/app\.js\?v=1179[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1179[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1179&r=v1179-format-bead-fix-1"/);
-  assert.match(read('sw.js'),/cohab-theater\.js\?v='\+BUILD\+'\&r=v1179-format-bead-fix-1',kind:'theater'/);
+  assert.match(webHtml,/app\.js\?v=1180[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1180&r=v1180-summary-call-offline-1"/);
+  for(const html of [privateHtml,privateAlias])assert.match(html,/app\.js\?v=1180[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1180[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1180&r=v1180-summary-call-offline-1"/);
+  assert.match(read('sw.js'),/cohab-theater\.js\?v='\+BUILD\+'\&r=v1180-summary-call-offline-1',kind:'theater'/);
 });
 
 test('cast storage has exactly one host guest slot and one temporary-extra slot',()=>{
@@ -96,7 +96,7 @@ test('a cast member configured while disabled is only pending and cannot absorb 
   assert.match(theater,/if\(!g\.joinedSeq\|\|!g\.joinedAt\)\{save\(\)/);
   assert.match(theater,/if\(t\.guest&&!t\.guest\.joinedSeq\)\{/);
   assert.match(theater,/if\(!t\.enabled&&!castHistory\)return baseRenderCohab\(id\)/);
-  assert.match(theater,/if\(!t\.enabled\)return baseOffSay\(\)/);
+  assert.match(theater,/if\(!t\.enabled\)return baseOffSay\(e\)/);
 });
 
 test('guest exit summary is idempotent, first-person and saved only to that guest',()=>{
@@ -122,16 +122,16 @@ test('guest exit sends exactly one genuine memory-grounded WeChat message',()=>{
   assert.doesNotMatch(theater,/content:\s*['"](?:我回来了|我都记得)/);
 });
 
-test('private artifact identity is v1179 and iOS 1.0.305 (305)',()=>{
-  assert.match(privateApp,/const APP_VER='v1179 · 格式与拼图修正版'/);
-  assert.match(privateHtml,/private-runtime-diagnostics\.js\?v=305/);
-  assert.match(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),/1\.0\.305 \(305\)/);
+test('private artifact identity is v1180 and iOS 1.0.306 (306)',()=>{
+  assert.match(privateApp,/const APP_VER='v1180 · 综合稳定、像素与外卖修正版'/);
+  assert.match(privateHtml,/private-runtime-diagnostics\.js\?v=306/);
+  assert.match(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),/1\.0\.306 \(306\)/);
   const project=read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
-  assert.ok((project.match(/CURRENT_PROJECT_VERSION = 305;/g)||[]).length>=12);
-  assert.ok((project.match(/MARKETING_VERSION = 1\.0\.305;/g)||[]).length>=12);
+  assert.ok((project.match(/CURRENT_PROJECT_VERSION = 306;/g)||[]).length>=12);
+  assert.ok((project.match(/MARKETING_VERSION = 1\.0\.306;/g)||[]).length>=12);
 });
 
-test('v1170 private friend-entry fix remains present in the v1179 private superset',()=>{
+test('v1170 private friend-entry fix remains present in the v1180 private superset',()=>{
   assert.match(privateApp,/function pfEnsureForSync\(/);
   assert.match(privateApp,/profileDeferred=await pfEnsureForSync/);
   assert.doesNotMatch(read('app.js'),/function pfEnsureForSync\(/);

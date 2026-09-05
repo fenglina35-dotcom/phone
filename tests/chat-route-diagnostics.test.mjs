@@ -47,6 +47,12 @@ assert.match(modal,/14 条 · 16384 字符/);
 assert.match(modal,/HTTP 503/);
 assert.match(modal,/worker &lt;overloaded&gt;/,'raw provider details must be HTML-escaped before display');
 
+role._chatRouteDiagnostic={at:1,outcome:'fallback',routeName:'路线一',slot:'主模型',model:'[CR]claude-opus-4-6',actualRoute:'路线一',actualSlot:'副模型',actualModel:'[AI]gemini-3.1-pro',status:403,reason:'用户额度不足，剩余额度: ¥-0.640000',messageCount:354,requestChars:76849};
+uiSandbox.roleChatDiagnosticOpen('r1');
+assert.match(modal,/不是小手机计算出的本地余额/,'provider balance errors must not masquerade as a local app balance calculation');
+assert.match(modal,/同一站点的另一模型通道成功，也不能证明这个通道可用/);
+assert.match(modal,/超过 6 万字符/,'large requests should be called out as a cost variable without claiming causation');
+
 role.chatRouteIndex=1;
 uiSandbox.roleChatDiagnosticOpen('r1');
 assert.match(modal,/切换前实际结果/,'an old route-three-style record must not masquerade as the current route');

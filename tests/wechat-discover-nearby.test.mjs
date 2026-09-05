@@ -53,7 +53,7 @@ for(const removed of ['offInputStabilize','offInputPointerDown','offInputMount']
   assert.equal(app.includes(`function ${removed}(`),false,`${removed} must stay removed so the native textarea and keyboard keep working`);
 }
 assert.doesNotMatch(app,/if\(c\.p==='off'\)offInputMount\(\)/);
-assert.match(shell,/\.offinput #off_in\{[^}]*height:42px;[^}]*min-height:42px!important[^}]*max-height:90px!important[^}]*line-height:20px!important[^}]*touch-action:manipulation/);
+assert.match(shell,/\.offinput #off_in\{[^}]*height:42px;[^}]*min-height:42px!important[^}]*max-height:90px!important[^}]*line-height:21px!important[^}]*touch-action:manipulation[^}]*font-family:[^}]*font-size:16px!important/);
 assert.match(shell,/\.offinput\{[^}]*align-items:flex-end/);
 assert.match(shell,/\.offinput \.send\{[^}]*height:42px[^}]*align-self:flex-end/);
 assert.match(app,/function offInputAutoSize\(ta\)/);
