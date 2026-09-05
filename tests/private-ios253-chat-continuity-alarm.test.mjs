@@ -50,7 +50,7 @@ test('thermal pressure and repeated termination stop WebKit self-reload loops', 
   assert.match(webView, /thermalState == "serious" \|\| thermalState == "critical"/);
   assert.match(webView, /native\.webcontent\.recoveryOffered/);
   assert.match(webView, /native\.webcontent\.remountDeferred/);
-  assert.match(webView, /webContentTerminationTimes\.v24\.build315/);
+  assert.match(webView, /webContentTerminationTimes\.v25\.build316/);
   assert.doesNotMatch(webView, /showingLoadFailure/);
   assert.doesNotMatch(webView, /LocalPhoneWebView\.loadFailureHTML/);
   assert.doesNotMatch(webView, /websiteDataStore\.removeData/);
@@ -122,16 +122,16 @@ test('private wardrobe exposes exact and overnight time ranges without removing 
 
 test('both private entry files and every iOS target carry build 315', () => {
   assert.equal(index, alias);
-  assert.match(index, /private-runtime-diagnostics\.js\?v=315/);
-  assert.match(overlay, /315-private-v1189-cohab-keyboard-coordinate-1/);
-  assert.match(webView, /1\.0\.315 \(315\)/);
-  assert.match(bridge, /1\.0\.315 \(315\)/);
+  assert.match(index, /private-runtime-diagnostics\.js\?v=316/);
+  assert.match(overlay, /316-couple-watch-1/);
+  assert.match(webView, /1\.0\.316 \(316\)/);
+  assert.match(bridge, /1\.0\.316 \(316\)/);
   assert.equal(
-    (project.match(/CURRENT_PROJECT_VERSION = 315;/g) || []).length,
+    (project.match(/CURRENT_PROJECT_VERSION = 316;/g) || []).length,
     12
   );
   assert.equal(
-    (project.match(/MARKETING_VERSION = 1\.0\.315;/g) || []).length,
+    (project.match(/MARKETING_VERSION = 1\.0\.316;/g) || []).length,
     12
   );
 });

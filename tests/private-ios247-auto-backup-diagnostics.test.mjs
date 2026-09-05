@@ -148,7 +148,7 @@ test('private iOS 315 overlay owns the disable marker and cancels automatic sche
   const { context, calls } = makeAutoBackupHarness();
   assert.equal(
     context.__SMALL_PHONE_PRIVATE_RUNTIME__,
-    '315-private-v1189-cohab-keyboard-coordinate-1'
+    '316-couple-watch-1'
   );
   assert.equal(context.__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__, true);
   assert.equal(context.__testPrivateCloud.timer(), null);
@@ -206,7 +206,7 @@ test('manual backup and both restore actions remain free of the automatic-disabl
   ]) {
     const source = functionSource(app, name);
     assert.doesNotMatch(source, /__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__/);
-    assert.doesNotMatch(source, /315-private-v1189-cohab-keyboard-coordinate-1/);
+    assert.doesNotMatch(source, /316-couple-watch-1/);
   }
   assert.doesNotMatch(
     overlay,
@@ -271,9 +271,9 @@ test('native recovery UI stays outside WebKit and carries the private 315 identi
   assert.match(rootView, /复制诊断给开发者/);
   assert.doesNotMatch(webView, /LocalPhoneWebView\.loadFailureHTML/);
 
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.315 \(315\)'/);
-  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v24\.build315/);
-  assert.match(bridge, /private static let build = "1\.0\.315 \(315\)"/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.316 \(316\)'/);
+  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v25\.build316/);
+  assert.match(bridge, /private static let build = "1\.0\.316 \(316\)"/);
   assert.match(bridge, /case "diagnostics\.read"/);
   assert.match(bridge, /"bounded": true/);
   assert.match(bridge, /"maximumBytes": 256 \* 1_024/);

@@ -13,13 +13,13 @@ const reportApp = read('native/private-small-phone/XcodeProject/PhoneCompanionRe
 const reportScene = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/TotalActivityReport.swift');
 
 test('public web v1184 and private web v1189 remain compatible with native iOS 1.0.315', () => {
-  assert.match(app, /APP_VER='v1184 · iPhone稳定、剧场顺序与键盘修复版'/);
-  assert.match(app, /sw\.js\?v=1184&r=v1184-ios-web-crash-cohab-turn-keyboard-1/);
-  assert.match(shell, /north-shell-v1184-ios-web-crash-cohab-turn-keyboard-1/);
-  assert.match(bundleInfo, /<string>1189<\/string>/);
-  assert.match(localWebView, /1\.0\.315 \(315\)/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 315;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.315;/g) || []).length, 12);
+  assert.match(app, /APP_VER='v1190 · 情侣空间聊天与软件监管版'/);
+  assert.match(app, /sw\.js\?v=1190&r=v1190-couple-watch-1/);
+  assert.match(shell, /north-shell-v1190-couple-watch-1/);
+  assert.match(bundleInfo, /<string>1190<\/string>/);
+  assert.match(localWebView, /1\.0\.316 \(316\)/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 316;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.316;/g) || []).length, 12);
 });
 
 test('native shared-media gain uses only public AVFoundation types', () => {

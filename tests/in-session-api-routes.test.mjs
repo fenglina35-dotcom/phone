@@ -30,8 +30,8 @@ for(const page of ['gameshub','gs','drawguess','mgroom','uc','wg']){
 }
 
 const chatApiSource=functionSource('chatAPI');
-assert.match(chatApiSource,/if\(gameModelSessionPage\(\)\)opt\.aux=gameModelUseAux\(\)/);
-assert.match(chatApiSource,/else if\(chatRouteSessionPage\(\)&&!opt\.allowSessionModel\)opt\.aux=false/);
+assert.match(chatApiSource,/if\(!opt\.independentRoleModel&&gameModelSessionPage\(\)\)opt\.aux=gameModelUseAux\(\)/);
+assert.match(chatApiSource,/else if\(!opt\.independentRoleModel&&chatRouteSessionPage\(\)&&!opt\.allowSessionModel\)opt\.aux=false/);
 assert.match(functionSource('chatRouteQuickOpen'),/新路线从下一次回复开始生效/);
 assert.match(functionSource('chatRouteQuickButton'),/data-chat-route-quick="1"/);
 assert.match(functionSource('chatRouteQuickButton'),/\$\{i\+1\}/);

@@ -4,6 +4,8 @@
   "files": [
     "小手机.html",
     "app.js",
+    "couple-watch.js",
+    "couple-watch-runtime.js",
     "ai-account.js",
     "license-gate.js",
     "delivery.js",
