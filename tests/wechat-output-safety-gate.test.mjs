@@ -31,6 +31,7 @@ function safetySandbox(){
   sandbox.cleanRolePunct=(line)=>String(line||'');
   sandbox.wxKnownTagLine=(line)=>/^[\[【]/.test(String(line||''));
   sandbox.isOOCLine=()=>false;
+  vm.runInContext('this.normalizeHiddenThoughtFormats='+oneLineFunctionSource('normalizeHiddenThoughtFormats'),sandbox);
   vm.runInContext('this.wechatReasoningLeak='+oneLineFunctionSource('wechatReasoningLeak'),sandbox);
   for(const name of ['wxEscRe','wechatNarrationLeakLine','wechatNarrationFiltered','wechatHasDirectVisibleLine','wechatInnerThoughtValue','wechatInnerThoughtOnlyValue'])vm.runInContext('this.'+name+'='+oneLineFunctionSource(name),sandbox);
   vm.runInContext('this.wxNarrationNameRe='+functionSource('wxNarrationNameRe'),sandbox);

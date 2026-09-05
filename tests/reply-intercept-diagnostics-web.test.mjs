@@ -220,9 +220,9 @@ async function runInlineIncoming(callResult){
 }
 
 function runOnlineGameDecision(actionResult){
-  const ctx={gameInviteDecide:()=>actionResult};
+  const ctx={gameInviteDecide:()=>actionResult,roleGameAcceptOrReinvite:()=>actionResult};
   vm.createContext(ctx);
-  vm.runInContext(`this.run=function(){const id='a';let content='答应你\\n[同意游戏]',_replyAuditPartial=false;${onlineGameDecisionLine.trim()}return{content,partial:_replyAuditPartial};};`,ctx);
+  vm.runInContext(`this.run=function(){const id='a';let content='答应你\\n[同意游戏]',_replyAuditPartial=false,_replyAuditHandled=false;${onlineGameDecisionLine.trim()}return{content,partial:_replyAuditPartial};};`,ctx);
   return ctx.run();
 }
 

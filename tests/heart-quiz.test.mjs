@@ -271,7 +271,8 @@ test('Heart Verdict uses a dedicated compact chat invitation card in both direct
     assert.match(source,/我发出的邀请/);
     assert.match(source,/邀请你/);
     assert.match(source,/function roleGameInvite\(id,kind\)/);
-    assert.match(source,/kind=kind==='heartquiz'\?'heartquiz':'drawguess'/);
+    assert.match(source,/kind=gameKindFromLabel\(kind\)\|\|'drawguess'/);
+    assert.match(source,/像素\|拼拼乐\|拼豆/,'the shared invite normalizer must preserve pixel-game invitations');
     assert.match(source,/roleGameInvite\(id,'heartquiz'\)/);
     assert.match(source,/roleGameInvite\(c\.id,'heartquiz'\)/);
     assert.match(source,/心动审判情侣问卷：\[心动审判\]/);

@@ -26,16 +26,16 @@ function functionSource(name){
   throw new Error(`unterminated ${name}`);
 }
 
-test('v1177 has a unique visible identity across every public entry and cache layer',()=>{
-  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1177\'/);
-  assert.match(app,/APP_VER='v1177 · 主动消息与外卖单品修复版'/);
-  assert.match(shell,/__NORTH_SHELL_BUILD__='1177'/);
-  assert.match(shell,/app\.js\?v=1177&r=v1177-proactive-delivery-target-1/);
-  assert.match(index,/小手机\.html\?v=1177/);
-  assert.match(repair,/小手机\.html\?v=1177/);
-  assert.match(worker,/const BUILD='1177'/);
-  assert.match(worker,/north-shell-v1177-proactive-delivery-target-1/);
-  assert.match(hotfix,/sw\.js\?v=1177&r=v1177-proactive-delivery-target-1/);
+test('v1178 has a unique visible identity across every public entry and cache layer',()=>{
+  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1179\'/);
+  assert.match(app,/APP_VER='v1179 · 格式与拼图修正版'/);
+  assert.match(shell,/__NORTH_SHELL_BUILD__='1179'/);
+  assert.match(shell,/app\.js\?v=1179&r=v1179-format-bead-fix-1/);
+  assert.match(index,/小手机\.html\?v=1179/);
+  assert.match(repair,/小手机\.html\?v=1179/);
+  assert.match(worker,/const BUILD='1179'/);
+  assert.match(worker,/north-shell-v1179-format-bead-fix-1/);
+  assert.match(hotfix,/sw\.js\?v=1179&r=v1179-format-bead-fix-1/);
   for(const [name,source] of Object.entries({app,shell,index,repair,worker,hotfix})){
     assert.doesNotMatch(source,/v?1127/,`${name} must not reuse the prior web version`);
   }

@@ -1,3 +1,4 @@
 /Generated/
 XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/*
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-reply-intercept.js
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/bead-studio.js

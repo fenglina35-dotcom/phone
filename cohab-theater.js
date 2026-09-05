@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 if(window.__NORTH_COHAB_THEATER__)return;
-window.__NORTH_COHAB_THEATER__='v1177-proactive-delivery-target-1';
+window.__NORTH_COHAB_THEATER__='v1179-format-bead-fix-1';
 
 const _guestSummaryBusy=new Set();
 const _guestWechatBusy=new Set();

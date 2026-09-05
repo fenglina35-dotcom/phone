@@ -63,6 +63,7 @@ function runtime(result, options = {}) {
     cur: () => ({ p: 'roleMomentDetail' }),
     wxTab: 'moments',
   });
+  vm.runInContext(functionSource('normalizeHiddenThoughtFormats'), context);
   vm.runInContext(functionSource('stripHiddenThoughtTags'), context);
   vm.runInContext(functionSource('momentReplySpecific'), context);
   vm.runInContext(functionSource('reactToComment'), context);

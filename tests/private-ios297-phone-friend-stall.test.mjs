@@ -88,7 +88,7 @@ test('private diagnostics expose only stage timing and counts', () => {
   assert.doesNotMatch(overlay, /messageBody|chatContent|authorizationToken/);
 });
 
-test('v1177 public candidate adds only the shared theater layer, not the private friend repair', () => {
-  assert.match(publicSource, /APP_VER='v1177 · 主动消息与外卖单品修复版'/);
+test('v1178 public candidate adds only the shared theater layer, not the private friend repair', () => {
+  assert.match(publicSource, /APP_VER='v1179 · 格式与拼图修正版'/);
   assert.doesNotMatch(publicSource, /function pfEnsureForSync/);
 });

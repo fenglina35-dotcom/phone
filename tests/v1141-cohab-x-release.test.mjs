@@ -6,25 +6,25 @@ import test from 'node:test';
 const root = process.cwd();
 const read = (...parts) => fs.readFileSync(path.join(root, ...parts), 'utf8');
 
-test('v1177 web identity and cache markers are aligned', () => {
+test('v1179 web identity and cache markers are aligned', () => {
   const app = read('app.js');
   const shell = read('小手机.html');
   const sw = read('sw.js');
   const hotfix = read('web-hotfix.js');
   const index = read('index.html');
   const repair = read('repair.html');
-  assert.match(app, /__NORTH_SHELL_BUILD__!=='1177'/);
-  assert.match(app, /APP_VER='v1177 · 主动消息与外卖单品修复版'/);
-  assert.match(shell, /__NORTH_SHELL_BUILD__='1177'/);
-  assert.match(shell, /app\.js\?v=1177&r=v1177-proactive-delivery-target-1/);
-  assert.match(sw, /const BUILD='1177'/);
-  assert.match(sw, /v1177-proactive-delivery-target-1/);
-  assert.match(hotfix, /v1177-proactive-delivery-target-1/);
-  assert.match(index, /小手机\.html\?v=1177/);
-  assert.match(repair, /小手机\.html\?v=1177/);
+  assert.match(app, /__NORTH_SHELL_BUILD__!=='1179'/);
+  assert.match(app, /APP_VER='v1179 · 格式与拼图修正版'/);
+  assert.match(shell, /__NORTH_SHELL_BUILD__='1179'/);
+  assert.match(shell, /app\.js\?v=1179&r=v1179-format-bead-fix-1/);
+  assert.match(sw, /const BUILD='1179'/);
+  assert.match(sw, /v1179-format-bead-fix-1/);
+  assert.match(hotfix, /v1179-format-bead-fix-1/);
+  assert.match(index, /小手机\.html\?v=1179/);
+  assert.match(repair, /小手机\.html\?v=1179/);
 });
 
-test('v1177 publishes shared cohab memory and X comment controls', () => {
+test('v1179 publishes shared cohab memory and X comment controls', () => {
   const app = read('app.js');
   const privateCopy = read('native', 'private-small-phone', 'XcodeProject', 'PhoneCompanionTest', 'PhoneWeb.bundle', 'app.js');
   for (const source of [app, privateCopy]) {
