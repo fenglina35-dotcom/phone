@@ -27,7 +27,9 @@ if git('branch', '--show-current').decode().strip() != 'main':
 if OUTPUT.exists():
     raise RuntimeError('Refusing to reuse or overwrite output: ' + str(OUTPUT))
 head = git('rev-parse', 'HEAD').decode().strip()
-archive = ZipFile(BytesIO(git('archive', '--format=zip', 'HEAD', SOURCE)))
+# Windows core.autocrlf can transform archive text. Preserve the committed blobs
+# so byte-for-byte checks compare the exact Git source, not a checkout transform.
+archive = ZipFile(BytesIO(git('-c', 'core.autocrlf=false', 'archive', '--format=zip', 'HEAD', SOURCE)))
 files = {}
 for item in archive.infolist():
     if item.is_dir():
