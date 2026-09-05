@@ -66,6 +66,6 @@ assert.match(html, /\.lmroutes path/);
 assert.match(lineFunctionSource('liveMapRegionSVG'), /class="lmzones"/);
 assert.match(lineFunctionSource('liveMapRegionSVG'), /class="lmroutes"/);
 assert.match(source, /\{n:'长春',country:'中国'[\s\S]*?a:\['长春','吉林','吉林长春','CGQ','Changchun'\]\}/);
-assert.match(html, /app\.js\?v=1182/);
+assert.match(html, /app\.js\?v=1183/);
 
 console.log('live map footprint tests passed');

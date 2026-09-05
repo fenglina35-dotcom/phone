@@ -23,21 +23,22 @@ test('the narration button toggles the existing composer without a modal',()=>{
   const classes=new Set();
   const button={classList:{toggle(name,on){if(on)classes.add(name);else classes.delete(name);}},setAttribute(name,value){this[name]=value;},title:''};
   const bar={classList:{toggle(name,on){if(on)classes.add(`bar:${name}`);else classes.delete(`bar:${name}`);}}};
-  const textarea={placeholder:'',style:{},scrollHeight:42,scrollTop:0,focus(){this.focused=true;},closest:()=>bar};
-  const context=vm.createContext({document:{activeElement:null},requestAnimationFrame:fn=>fn(),Date,Number,_off:{mode:'cohab',busy:false,narrateMode:false},$:selector=>selector==='.off-narrate'?button:selector==='#off_in'?textarea:null});
+  const textarea={placeholder:'',style:{},scrollHeight:42,scrollTop:0,selectionStart:3,selectionEnd:3,setSelectionRange(start,end){this.selection=[start,end];},closest:()=>bar};
+  const context=vm.createContext({document:{activeElement:textarea},requestAnimationFrame:fn=>fn(),Date,Number,_off:{mode:'cohab',busy:false,narrateMode:false},$:selector=>selector==='.off-narrate'?button:selector==='#off_in'?textarea:null});
   vm.runInContext(`let _offNarrationPointerAt=0;${functionSource('offNarrationMode')}${functionSource('offInputAutoSize')}${functionSource('offNarrationDecorate')}${functionSource('offNarrate')}this.toggle=offNarrate;`,context);
   context.toggle();
   assert.equal(context._off.narrateMode,true);
   assert.equal(button['aria-pressed'],'true');
   assert.equal(classes.has('on'),true);
   assert.match(textarea.placeholder,/第三人称动作/);
-  assert.equal(textarea.focused,true);
+  assert.deepEqual(textarea.selection,[3,3]);
   context.toggle();
   assert.equal(context._off.narrateMode,false);
   assert.equal(button['aria-pressed'],'false');
   assert.equal(classes.has('on'),false);
   assert.match(textarea.placeholder,/当面对TA说/);
   assert.doesNotMatch(functionSource('offNarrate'),/prompt\(/);
+  assert.doesNotMatch(functionSource('offNarrate'),/\.focus\(/);
 });
 
 test('the same send button stores narration or normal dialogue according to the toggle',()=>{

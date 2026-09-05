@@ -144,11 +144,11 @@ function makeAutoBackupHarness() {
   return { context, calls, advance: ms => { now += ms; } };
 }
 
-test('private iOS 308 overlay owns the disable marker and cancels automatic scheduling', async () => {
+test('private iOS 309 overlay owns the disable marker and cancels automatic scheduling', async () => {
   const { context, calls } = makeAutoBackupHarness();
   assert.equal(
     context.__SMALL_PHONE_PRIVATE_RUNTIME__,
-    '308-release-v1182-v1'
+    '309-release-v1183-v1'
   );
   assert.equal(context.__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__, true);
   assert.equal(context.__testPrivateCloud.timer(), null);
@@ -206,7 +206,7 @@ test('manual backup and both restore actions remain free of the automatic-disabl
   ]) {
     const source = functionSource(app, name);
     assert.doesNotMatch(source, /__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__/);
-    assert.doesNotMatch(source, /308-release-v1182-v1/);
+    assert.doesNotMatch(source, /309-release-v1183-v1/);
   }
   assert.doesNotMatch(
     overlay,
@@ -264,16 +264,16 @@ test('diagnostic append is fire-and-forget, bounded, rate-limited and not a time
   assert.match(appendLine, /isExcludedFromBackup = true/);
 });
 
-test('native recovery UI stays outside WebKit and carries the private 308 identity', () => {
+test('native recovery UI stays outside WebKit and carries the private 309 identity', () => {
   assert.match(rootView, /SmallPhoneDiagnosticsStore\.recentText\(limit: 80\)/);
   assert.match(rootView, /聊天、角色、图片、登录信息或密钥/);
   assert.match(rootView, /安全重新打开小手机/);
   assert.match(rootView, /复制诊断给开发者/);
   assert.doesNotMatch(webView, /LocalPhoneWebView\.loadFailureHTML/);
 
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.308 \(308\)'/);
-  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v17\.build308/);
-  assert.match(bridge, /private static let build = "1\.0\.308 \(308\)"/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.309 \(309\)'/);
+  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v18\.build309/);
+  assert.match(bridge, /private static let build = "1\.0\.309 \(309\)"/);
   assert.match(bridge, /case "diagnostics\.read"/);
   assert.match(bridge, /"bounded": true/);
   assert.match(bridge, /"maximumBytes": 256 \* 1_024/);

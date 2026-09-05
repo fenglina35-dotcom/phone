@@ -139,7 +139,7 @@ test('native timezone snapshot is injected before bridge bootstrap', () => {
 test('terminated WebContent remounts once while active and thermally safe', () => {
   assert.match(webView, /func webViewWebContentProcessDidTerminate\(_ webView: WKWebView\)/);
   assert.match(webView, /now - \$0 < 120/);
-  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v17\.build308/);
+  assert.match(webView, /smallPhone\.webContentTerminationTimes\.v18\.build309/);
   assert.match(webView, /UserDefaults\.standard[\s\S]*?terminationTimes/);
   assert.match(webView, /WebContent stable for 90s; recovery budget reset/);
   assert.match(webView, /guard attempt == 1,[\s\S]*?appIsActive,[\s\S]*?thermalState == "nominal" \|\| thermalState == "fair" else/);
@@ -160,6 +160,6 @@ test('terminated WebContent remounts once while active and thermally safe', () =
 });
 
 test('recovery suite is pinned to the private bundled app only', () => {
-  assert.match(app, /APP_VER='v1182 · 连续性、记忆与键盘修复版';/);
+  assert.match(app, /APP_VER='v1183 · 共同生活键盘与唱片配色修复版';/);
   assert.match(app, /function emergencyRestorePreview\(index\)/);
 });

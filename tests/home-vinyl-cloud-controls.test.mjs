@@ -1,19 +1,38 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import vm from 'node:vm';
 import { readFile } from 'node:fs/promises';
 
 const root = new URL('../', import.meta.url);
 const privateBundle = new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/', import.meta.url);
 const read = (base, name) => readFile(new URL(name, base), 'utf8');
 
+function functionSource(source, name) {
+  const start = source.indexOf(`function ${name}(`);
+  assert.notEqual(start, -1, `missing ${name}`);
+  let depth = 0;
+  let opened = false;
+  for (let i = start; i < source.length; i += 1) {
+    if (source[i] === '{') { depth += 1; opened = true; }
+    if (source[i] === '}' && opened && --depth === 0) return source.slice(start, i + 1);
+  }
+  throw new Error(`unterminated ${name}`);
+}
+
 test('main-screen vinyl color is independent from the music app disc and remains optional', async () => {
-  const [app, css] = await Promise.all([read(root, 'app.js'), read(root, 'glass-theme.css')]);
+  const [app, css, html] = await Promise.all([read(root, 'app.js'), read(root, 'glass-theme.css'), read(root, '小手机.html')]);
   assert.match(app, /function homeVinylCustomColor\(\).*homeVinylColor/);
   assert.match(app, /function homeVinylSurface\(\).*home-vinyl-custom/);
   assert.match(app, /主屏唱片颜色/);
   assert.match(app, /只改桌面外面的圆盘；不影响音乐 App 的唱片设置/);
   assert.match(app, /主屏唱片恢复跟随主题/);
   assert.match(app, /function homeVinylColorReset\(\).*delete S\.me\.homeVinylColor/);
+  assert.match(app, /function homeVinylColorPaint\(value\)/);
+  assert.match(app, /data-home-vinyl-color/);
+  assert.match(app, /安卓兼容唱片颜色/);
+  assert.doesNotMatch(app.match(/function homeVinylColorSet\(value\)\{[^}]*\}/)?.[0] || '', /render\(/,
+    'Android color input must not destroy its own picker by rendering the whole app');
+  assert.match(html, /\.home-vinyl-color-presets button\{/);
   assert.match(css, /\.home-vinyl-card \.vinyl-record\.home-vinyl-custom\{[^}]*--home-vinyl-color[^}]*!important/);
   for (const line of app.match(/\[[^\n]*homeVinylColor[^\n]*\]/g) || []) assert.doesNotMatch(line, /musicDiscColor/);
 });
@@ -25,6 +44,36 @@ test('main-screen vinyl color survives cleanup and beauty export/import', async 
   assert.match(app, /\['widgets'[^\n]*'homeVinylColor'[^\n]*全部主屏\/微信外观/);
   assert.match(app, /me:pickObj\(me,\[[^\n]*'homeVinylColor'/);
   assert.match(app, /beautyAssign\(S\.me,pack\.me,\[[^\n]*'homeVinylColor'/);
+});
+
+test('Android-compatible vinyl swatches save and repaint without a page render', async () => {
+  const app = await read(root, 'app.js');
+  const styles = new Map();
+  const record = { classList: { add(value) { this.value = value; } }, style: { setProperty(k, v) { styles.set(k, v); } } };
+  const input = { value: '#858683' };
+  const state = { me: {} };
+  const saves = [];
+  const sandbox = vm.createContext({
+    S: state,
+    document: {
+      querySelectorAll(selector) {
+        if (selector.includes('vinyl-record')) return [record];
+        if (selector.includes('data-home-vinyl-color')) return [input];
+        return [];
+      },
+    },
+    widgetHex(value, fallback) { return /^#[0-9a-f]{6}$/i.test(value) ? value.toLowerCase() : fallback; },
+    homeVinylThemeColor() { return '#858683'; },
+    musicDiscColorBlend(color) { return color; },
+    save(delay) { saves.push(delay); },
+  });
+  vm.runInContext(`${functionSource(app, 'homeVinylColorPaint')}\n${functionSource(app, 'homeVinylColorSet')}\nthis.setColor=homeVinylColorSet;`, sandbox);
+  assert.equal(sandbox.setColor('#7E6AA8'), true);
+  assert.equal(state.me.homeVinylColor, '#7e6aa8');
+  assert.equal(record.classList.value, 'home-vinyl-custom');
+  assert.equal(styles.get('--home-vinyl-color'), '#7e6aa8');
+  assert.equal(input.value, '#7e6aa8');
+  assert.deepEqual(saves, [250]);
 });
 
 test('cloud dialog identifies the runtime and restores the web immediate-backup action safely', async () => {
@@ -44,7 +93,8 @@ test('web and private bundle both carry the repaired controls without erasing pr
   ]);
   for(const marker of [
     'function homeVinylCustomColor()','function homeVinylSurface()',
-    'function homeVinylColorReset()','function cloudSyncModal()',
+    'function homeVinylColorPaint(value)','function homeVinylColorReset()','function cloudSyncModal()',
+    'function musicDiscColorInput(color)',
     'function privateMirrorPublishNow()','function privateMirrorPullNow()',
   ]){
     assert.ok(webApp.includes(marker),`web marker missing: ${marker}`);

@@ -27,15 +27,15 @@ function functionSource(name){
 }
 
 test('v1178 has a unique visible identity across every public entry and cache layer',()=>{
-  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1182\'/);
-  assert.match(app,/APP_VER='v1182 · 连续性、记忆与键盘修复版'/);
-  assert.match(shell,/__NORTH_SHELL_BUILD__='1182'/);
-  assert.match(shell,/app\.js\?v=1182&r=v1182-theater-presence-release-1/);
-  assert.match(index,/小手机\.html\?v=1182/);
-  assert.match(repair,/小手机\.html\?v=1182/);
-  assert.match(worker,/const BUILD='1182'/);
-  assert.match(worker,/north-shell-v1182-theater-presence-release-1/);
-  assert.match(hotfix,/sw\.js\?v=1182&r=v1182-theater-presence-release-1/);
+  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1183\'/);
+  assert.match(app,/APP_VER='v1183 · 共同生活键盘与唱片配色修复版'/);
+  assert.match(shell,/__NORTH_SHELL_BUILD__='1183'/);
+  assert.match(shell,/app\.js\?v=1183&r=v1183-cohab-keyboard-vinyl-release-1/);
+  assert.match(index,/小手机\.html\?v=1183/);
+  assert.match(repair,/小手机\.html\?v=1183/);
+  assert.match(worker,/const BUILD='1183'/);
+  assert.match(worker,/north-shell-v1183-cohab-keyboard-vinyl-release-1/);
+  assert.match(hotfix,/sw\.js\?v=1183&r=v1183-cohab-keyboard-vinyl-release-1/);
   for(const [name,source] of Object.entries({app,shell,index,repair,worker,hotfix})){
     assert.doesNotMatch(source,/v?1127/,`${name} must not reuse the prior web version`);
   }

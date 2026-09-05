@@ -8,6 +8,7 @@ const html = readFileSync(new URL('../小手机.html', import.meta.url), 'utf8')
 const privateApp = readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js', import.meta.url), 'utf8');
 const privateHtml = readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/小手机.html', import.meta.url), 'utf8');
 const privateIndex = readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html', import.meta.url), 'utf8');
+const privateRoot = readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/SmallPhonePrivateRootView.swift', import.meta.url), 'utf8');
 const theater = readFileSync(new URL('../cohab-theater.js', import.meta.url), 'utf8');
 
 function functionSource(source, name) {
@@ -29,6 +30,7 @@ test('a focused iOS touch toggles narration once and preserves the text selectio
     Date,
     Number,
     String,
+    document: { activeElement: ta },
     _off: state,
     $: selector => selector === '#off_in' ? ta : null,
     offNarrationDecorate() {},
@@ -54,8 +56,9 @@ test('offline composer uses iOS-safe typography and guards send taps from openin
     assert.match(code, /if\(Date\.now\(\)<_offComposerGuardUntil\)return/);
     assert.match(code, /document\.activeElement!==ta/);
     const toggle = functionSource(code, 'offNarrate');
-    assert.match(toggle, /ta\.focus\(\{preventScroll:true\}\)[\s\S]*requestAnimationFrame/,
-      'the textarea must regain focus synchronously inside the user gesture before the next paint');
+    assert.match(toggle, /document\.activeElement===ta/);
+    assert.doesNotMatch(toggle, /\.focus\(/,
+      'the narration switch must not close and reopen the private WKWebView keyboard');
   }
   assert.match(theater, /offSay=function\(e\)/);
   assert.match(theater, /offComposerEvent==='function'/);
@@ -72,10 +75,11 @@ test('the private iOS fixed-phone workaround also covers the offline date compos
     'the native-only fixed shell remains unchanged for screens without a text composer');
 });
 
-test('Android keyboards resize the shared layout instead of covering the co-living composer', () => {
-  for (const page of [html, privateHtml, privateIndex]) {
-    assert.match(page, /interactive-widget=resizes-content/);
-  }
+test('web Android resizes content while the private WKWebView keeps one stable keyboard owner', () => {
+  assert.match(html, /interactive-widget=resizes-content/);
+  for (const page of [privateHtml, privateIndex]) assert.doesNotMatch(page, /interactive-widget=resizes-content/);
+  assert.match(privateRoot, /\.ignoresSafeArea\(\.keyboard, edges: \.bottom\)/,
+    'SwiftUI must not resize the WKWebView a second time during keyboard animation');
   for (const code of [app, privateApp]) {
     const runtimeCode = code.replace(functionSource(code, 'northViewportDiagnosticStart'), '');
     assert.doesNotMatch(runtimeCode, /visualViewport\.addEventListener\(['"]resize/,

@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1182 · 连续性、记忆与键盘修复版'/);
+  assert.match(app,/APP_VER='v1183 · 共同生活键盘与唱片配色修复版'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1182-summary-call-offline-1/);
-  assert.match(html,/sw\.js\?v=1182&r=v1182-theater-presence-release-1/);
+  assert.match(html,/north-sw-reloaded-1183-cohab-keyboard-vinyl-1/);
+  assert.match(html,/sw\.js\?v=1183&r=v1183-cohab-keyboard-vinyl-release-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{
