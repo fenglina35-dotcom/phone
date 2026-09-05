@@ -3,7 +3,7 @@
   'use strict';
   if(window.__SMALL_PHONE_PRIVATE__!==true)return;
 
-  const OVERLAY_VERSION='309-release-v1183-v1';
+  const OVERLAY_VERSION='310-release-v1184-v1';
   const lastEventAt=Object.create(null);
   let lastMeasuredSyncOp='',lastMeasuredSyncMs=0,lastMeasuredSyncAt=0;
   const clock=()=>typeof performance!=='undefined'&&performance.now?performance.now():Date.now();

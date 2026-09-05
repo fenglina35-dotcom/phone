@@ -119,8 +119,8 @@ test('private storage details avoid cloning every large IndexedDB value', () => 
   assert.doesNotMatch(privatePath,/scanIDBStoreBytes|openCursor|imgAll/);
 });
 
-test('private image memory cache is bounded without deleting stored media', () => {
-  assert.match(app, /const PRIVATE_IMAGE_CACHE_CHAR_LIMIT=48\*1024\*1024/);
+test('mobile image memory cache is bounded without deleting stored media', () => {
+  assert.match(app, /const PRIVATE_IMAGE_CACHE_CHAR_LIMIT=48\*1024\*1024,IOS_WEB_IMAGE_CACHE_CHAR_LIMIT=24\*1024\*1024/);
   assert.match(app, /function privateTrimImageMemoryCache\(extraKeys\)/);
   assert.match(app, /privateBootImageKeys\(\)/);
   assert.match(app, /function privateBootImageKeys\(\)[^\n]*(?:contacts|groups|appIcons)/);

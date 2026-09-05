@@ -14,9 +14,9 @@ const privateApp=read('native/private-small-phone/XcodeProject/PhoneCompanionTes
 
 test('v1178 shared theater asset is byte-identical and loaded after app core',()=>{
   assert.equal(bundleTheater,theater);
-  assert.match(webHtml,/app\.js\?v=1183[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1183&r=v1183-cohab-keyboard-vinyl-release-1"/);
-  for(const html of [privateHtml,privateAlias])assert.match(html,/app\.js\?v=1183[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1183[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1183&r=v1183-cohab-keyboard-vinyl-release-1"/);
-  assert.match(read('sw.js'),/cohab-theater\.js\?v='\+BUILD\+'\&r=v1183-cohab-keyboard-vinyl-release-1',kind:'theater'/);
+  assert.match(webHtml,/app\.js\?v=1184[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1184&r=v1184-ios-web-crash-cohab-turn-keyboard-1"/);
+  for(const html of [privateHtml,privateAlias])assert.match(html,/app\.js\?v=1184[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1184[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1184&r=v1184-ios-web-crash-cohab-turn-keyboard-1"/);
+  assert.match(read('sw.js'),/cohab-theater\.js\?v='\+BUILD\+'\&r=v1184-ios-web-crash-cohab-turn-keyboard-1',kind:'theater'/);
 });
 
 test('cast storage has exactly one host guest slot and one temporary-extra slot',()=>{
@@ -91,6 +91,12 @@ test('host and support use separate generations in selected addressee order',()=
   assert.match(theater,/动作和台词合计最多/);
   assert.match(theater,/本次请求只生成你自己/);
   assert.match(theater,/这次请求只生成主角/);
+  const activeOffAI=theater.slice(theater.lastIndexOf('offAI=async function(note){'),theater.indexOf('async function cohabTheaterContinue'));
+  const supportTurn=activeOffAI.slice(activeOffAI.indexOf('if(supportFirst){'),activeOffAI.indexOf('const before=',activeOffAI.indexOf('if(supportFirst){')));
+  assert.doesNotMatch(supportTurn,/t\.activeActor='host';offRender\(\);\}\}[^]*?_off\.busy=false[^]*?await baseOffAI\(note\)/,
+    'support-to-host handoff must not reopen the composer before the same round finishes');
+  assert.match(supportTurn,/await baseOffAI\(note\)[^]*?if\(_off&&_off\.id===id\)_off\.busy=false/,
+    'the whole support-first round releases the composer only after the host continuation');
   assert.match(read('app.js'),/const item=items\[i\],timing=offRevealTiming\(item\)/);
   assert.doesNotMatch(theater,/cohabPushMessage\(d,\{id:uid\(\),who:kind/);
 });
@@ -133,16 +139,16 @@ test('guest exit sends exactly one genuine memory-grounded WeChat message',()=>{
   assert.doesNotMatch(theater,/content:\s*['"](?:我回来了|我都记得)/);
 });
 
-test('private artifact identity is v1183 and iOS 1.0.309 (309)',()=>{
-  assert.match(privateApp,/const APP_VER='v1183 · 共同生活键盘与唱片配色修复版'/);
-  assert.match(privateHtml,/private-runtime-diagnostics\.js\?v=309/);
-  assert.match(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),/1\.0\.309 \(309\)/);
+test('private artifact identity is v1184 and iOS 1.0.310 (310)',()=>{
+  assert.match(privateApp,/const APP_VER='v1184 · iPhone稳定、剧场顺序与键盘修复版'/);
+  assert.match(privateHtml,/private-runtime-diagnostics\.js\?v=310/);
+  assert.match(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),/1\.0\.310 \(310\)/);
   const project=read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
-  assert.ok((project.match(/CURRENT_PROJECT_VERSION = 309;/g)||[]).length>=12);
-  assert.ok((project.match(/MARKETING_VERSION = 1\.0\.309;/g)||[]).length>=12);
+  assert.ok((project.match(/CURRENT_PROJECT_VERSION = 310;/g)||[]).length>=12);
+  assert.ok((project.match(/MARKETING_VERSION = 1\.0\.310;/g)||[]).length>=12);
 });
 
-test('v1170 private friend-entry fix remains present in the v1183 private superset',()=>{
+test('v1170 private friend-entry fix remains present in the v1184 private superset',()=>{
   assert.match(privateApp,/function pfEnsureForSync\(/);
   assert.match(privateApp,/profileDeferred=await pfEnsureForSync/);
   assert.doesNotMatch(read('app.js'),/function pfEnsureForSync\(/);

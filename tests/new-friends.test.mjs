@@ -25,7 +25,7 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-assert.match(source, /APP_VER='v1183 · 共同生活键盘与唱片配色修复版'/);
+assert.match(source, /APP_VER='v1184 · iPhone稳定、剧场顺序与键盘修复版'/);
 assert.match(source, /friendDiscovery:\{enabled:false,freq:180,max:2/);
 assert.match(source, /else if\(c\.p==='newfriends'\)html=renderNewFriends\(\)/);
 assert.match(source, /好友申请与最近添加/);

@@ -7,7 +7,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "小手机.html"), "utf8");
 
-assert.match(source, /const APP_VER='v1183 · 共同生活键盘与唱片配色修复版'/);
+assert.match(source, /const APP_VER='v1184 · iPhone稳定、剧场顺序与键盘修复版'/);
 assert.match(source, /const APP_TAP_MOVE=26,APP_TAP_MS=650,APP_DRAG_MS=620/);
 assert.match(source, /onclick="appTap\(event,\\''\+k\+'\\'\)"/);
 assert.match(source, /onpointerdown="appDown\(event,\\''\+k\+'\\'\)"/);
@@ -28,10 +28,10 @@ assert.match(source, /function appLaunch\(k\)[\s\S]*?privateNativeAppOn\(\)&&typ
 assert.match(source, /offline:openOfflineMenu/,'offline opening inherits the shared deferred pointerup launch');
 
 assert.match(source, /const NORTH_ANDROID=.*?Android/,'Android is detected without changing the private iOS path');
-assert.match(source, /function lazyStoredImagesOn\(\)\{return privateNativeAppOn\(\)\|\|NORTH_ANDROID;\}/);
+assert.match(source, /function lazyStoredImagesOn\(\)\{return privateNativeAppOn\(\)\|\|NORTH_ANDROID\|\|NORTH_IOS_WEBKIT;\}/);
 assert.match(source, /const lazy=lazyStoredImagesOn\(\),keys=lazy\?privateBootImageKeys\(\):imageRefKeys\(S\)/,'Android startup avoids loading every historical image before first paint');
 assert.match(source, /function scheduleVisibleStoredImages\(force,alreadyHydrated\)\{if\(!lazyStoredImagesOn\(\)\)return;/,'Android reuses the visible-image lazy loader after startup');
-assert.match(source, /limit=NORTH_ANDROID&&!privateNativeAppOn\(\)\?24\*1024\*1024:PRIVATE_IMAGE_CACHE_CHAR_LIMIT/,'Android image memory is bounded independently of iOS');
+assert.match(source, /NORTH_ANDROID&&!privateNativeAppOn\(\)\?24\*1024\*1024:PRIVATE_IMAGE_CACHE_CHAR_LIMIT/,'Android image memory remains bounded independently of iOS');
 assert.match(html, /window\.__northBootProgress=function/);
 assert.match(html, /setTimeout\(function\(\)\{if\(!window\.__northBootReady\)window\.__northBootProgress[\s\S]*?\},12000\)/,'12 seconds reports slow progress instead of replacing a healthy boot');
 assert.match(html, /setTimeout\(function\(\)\{if\(!window\.__northBootReady\)window\.__northBootFail[\s\S]*?\},60000\)/,'a genuinely stuck boot still exposes recovery');

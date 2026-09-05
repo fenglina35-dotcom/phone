@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 
-window.__NORTH_BEAD_STUDIO__='v1183-pixel-puzzle-4';
+window.__NORTH_BEAD_STUDIO__='v1184-pixel-puzzle-4';
 
 const BEAD_COLORS=[
   {id:'#f7f3e8',code:'A1',name:'奶白'},{id:'#f4d491',code:'A11',name:'奶杏'},{id:'#bde8cf',code:'B20',name:'薄荷'},

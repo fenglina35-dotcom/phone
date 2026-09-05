@@ -1,6 +1,6 @@
-const BUILD='1183';
-const HOTFIX='v1183-cohab-keyboard-vinyl-release-1';
-const SHELL_CACHE='north-shell-v1183-cohab-keyboard-vinyl-release-1';
+const BUILD='1184';
+const HOTFIX='v1184-ios-web-crash-cohab-turn-keyboard-1';
+const SHELL_CACHE='north-shell-v1184-ios-web-crash-cohab-turn-keyboard-1';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
@@ -9,8 +9,8 @@ const CORE_FILES=[
   {url:'./小手机.html?v='+BUILD+'&r='+HOTFIX,kind:'html'},
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
   {url:'./app.js?v='+BUILD+'&r='+HOTFIX,kind:'app'},
-  {url:'./cohab-theater.js?v='+BUILD+'&r=v1183-cohab-keyboard-vinyl-release-1',kind:'theater'},
-  {url:'./web-hotfix.js?v='+BUILD+'&r=v1183-cohab-keyboard-vinyl-release-1',kind:'hotfix'},
+  {url:'./cohab-theater.js?v='+BUILD+'&r=v1184-ios-web-crash-cohab-turn-keyboard-1',kind:'theater'},
+  {url:'./web-hotfix.js?v='+BUILD+'&r=v1184-ios-web-crash-cohab-turn-keyboard-1',kind:'hotfix'},
   {url:'./ai-account.js?v='+BUILD,kind:'ai'}
 ];
 const OPTIONAL_FILES=[
@@ -22,7 +22,7 @@ const OPTIONAL_FILES=[
   './delivery.js?v='+BUILD,
   './gift-effects.js?v='+BUILD,
   './heart-quiz.js?v='+BUILD,
-  './bead-studio.js?v='+BUILD+'&r=v1183-pixel-puzzle-4',
+  './bead-studio.js?v='+BUILD+'&r=v1184-pixel-puzzle-4',
   './thought-card-effects.js?v='+BUILD,
   './pet-game.js?v='+BUILD,
   './pet-game.css?v='+BUILD,
@@ -65,14 +65,14 @@ function validShellText(kind,text){
     &&text.includes("window.__NORTH_SHELL_BUILD__!=='"+BUILD+"'")
     &&text.includes('showGate();');
   if(kind==='theater')return text.length>30000
-    &&text.includes("window.__NORTH_COHAB_THEATER__='v1183-cohab-keyboard-vinyl-release-1'")
+    &&text.includes("window.__NORTH_COHAB_THEATER__='v1184-ios-web-crash-cohab-turn-keyboard-1'")
     &&text.includes('cohabTheaterSummarizeEpisode')
     &&text.includes('cohab-theater-target')
     &&text.includes('offAI=async')
     &&text.includes('theaterRevealActorItems')
     &&!text.includes('cohabReplyCore=async');
   if(kind==='hotfix')return text.length>800
-    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1183-cohab-keyboard-vinyl-release-1'")
+    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1184-ios-web-crash-cohab-turn-keyboard-1'")
     &&text.includes('reconcileExpiredWxLogin')
     &&text.includes('withBaseImageCheck')
     &&text.includes('isStoredImgRef');

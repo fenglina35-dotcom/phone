@@ -45,20 +45,20 @@ function functionSource(sourceText, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('v1183 private identifiers retain the performance chain while public stays v1183', () => {
+test('v1184 private identifiers retain the performance chain while public stays v1184', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1183'/);
-  assert.match(index, /app\.js\?v=1183&r=v1183-cohab-keyboard-vinyl-release-1/);
-  assert.match(index, /private-runtime-diagnostics\.js\?v=309/);
-  assert.match(app, /APP_VER='v1183 · 共同生活键盘与唱片配色修复版'/);
-  assert.match(overlay, /309-release-v1183-v1/);
-  assert.match(webview, /1\.0\.309 \(309\)/);
-  assert.match(bridge, /private static let build = "1\.0\.309 \(309\)"/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1184'/);
+  assert.match(index, /app\.js\?v=1184&r=v1184-ios-web-crash-cohab-turn-keyboard-1/);
+  assert.match(index, /private-runtime-diagnostics\.js\?v=310/);
+  assert.match(app, /APP_VER='v1184 · iPhone稳定、剧场顺序与键盘修复版'/);
+  assert.match(overlay, /310-release-v1184-v1/);
+  assert.match(webview, /1\.0\.310 \(310\)/);
+  assert.match(bridge, /private static let build = "1\.0\.310 \(310\)"/);
   assert.match(bridge, /static let contractVersion = 35/);
-  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 309;/g) || []).length, 12);
-  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.309;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1183 · 共同生活键盘与唱片配色修复版'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1183'/);
+  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 310;/g) || []).length, 12);
+  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.310;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1184 · iPhone稳定、剧场顺序与键盘修复版'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1184'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
@@ -146,20 +146,20 @@ test('diagnostics identify the protected stage without collecting content', () =
   assert.doesNotMatch(overlay, /messageBody|chatContent|authorizationToken/);
 });
 
-test('Mac guides state the safe shared v1183 delivery boundary', () => {
+test('Mac guides state the safe shared v1184 delivery boundary', () => {
   const install = fs.readFileSync(
-    path.join(project, '第三百零九次安装_v1183_共同生活键盘与安卓唱片配色修复_请先读.md'),
+    path.join(project, '第三百一十次安装_v1184_iPhone稳定剧场顺序与键盘修复_请先读.md'),
     'utf8',
   );
   const mac = fs.readFileSync(path.join(project, '请在Mac编译前先读.md'), 'utf8');
   for (const guide of [install, mac]) {
-    assert.match(guide, /v1183/);
-    assert.match(guide, /1\.0\.309 \(309\)/);
+    assert.match(guide, /v1184/);
+    assert.match(guide, /1\.0\.310 \(310\)/);
     assert.match(guide, /原生桥 35/);
     assert.match(guide, /不要.*删除.*App/);
     assert.match(guide, /Mac.*编译/);
     assert.match(guide, /真机|真实 iPhone/);
   }
-  assert.match(mac, /网页与私人版共同版本 v1183/);
-  assert.match(install, /本包对应网页与私人版共同版本：网页源码和私人内置页面均为 v1183/);
+  assert.match(mac, /网页与私人版共同版本 v1184/);
+  assert.match(install, /本包对应网页与私人版共同版本：网页源码和私人内置页面均为 v1184/);
 });

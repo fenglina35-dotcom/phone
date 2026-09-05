@@ -12,14 +12,14 @@ const pip = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/Cal
 const reportApp = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/PhoneCompanionReport.swift');
 const reportScene = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/TotalActivityReport.swift');
 
-test('public and private web v1183 remain compatible with native iOS 1.0.309', () => {
-  assert.match(app, /APP_VER='v1183 · 共同生活键盘与唱片配色修复版'/);
-  assert.match(app, /sw\.js\?v=1183&r=v1183-cohab-keyboard-vinyl-release-1/);
-  assert.match(shell, /north-shell-v1183-cohab-keyboard-vinyl-release-1/);
-  assert.match(bundleInfo, /<string>1183<\/string>/);
-  assert.match(localWebView, /1\.0\.309 \(309\)/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 309;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.309;/g) || []).length, 12);
+test('public and private web v1184 remain compatible with native iOS 1.0.310', () => {
+  assert.match(app, /APP_VER='v1184 · iPhone稳定、剧场顺序与键盘修复版'/);
+  assert.match(app, /sw\.js\?v=1184&r=v1184-ios-web-crash-cohab-turn-keyboard-1/);
+  assert.match(shell, /north-shell-v1184-ios-web-crash-cohab-turn-keyboard-1/);
+  assert.match(bundleInfo, /<string>1184<\/string>/);
+  assert.match(localWebView, /1\.0\.310 \(310\)/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 310;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.310;/g) || []).length, 12);
 });
 
 test('native shared-media gain uses only public AVFoundation types', () => {

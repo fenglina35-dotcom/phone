@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 if(window.__NORTH_COHAB_THEATER__)return;
-window.__NORTH_COHAB_THEATER__='v1183-cohab-keyboard-vinyl-release-1';
+window.__NORTH_COHAB_THEATER__='v1184-ios-web-crash-cohab-turn-keyboard-1';
 
 const _guestSummaryBusy=new Set();
 const _guestWechatBusy=new Set();
@@ -185,7 +185,7 @@ async function theaterRevealActorItems(id,d,t,actor){let shown=0;for(const item 
 async function theaterFinishNaturalLeave(id,t){const leave=t.pendingNaturalLeave;t.pendingNaturalLeave='';if(leave==='guest'||leave==='extra')cohabTheaterPresence(id,leave,false,'角色说自己暂时离开');}
 
 offAI=async function(note){if(!_off||_off.mode!=='cohab')return baseOffAI(note);const id=_off.id,d=cohabData(id),t=theaterState(d);if(!t.enabled)return baseOffAI(note);const turn=theaterTurnTarget(d,t,note),target=turn.target;if(target==='guest'&&!t.guest||target==='extra'&&!t.extra){const name=turn.pending&&turn.pending.addressNameSnapshot||'所选配角';toast(name+' 已不在场，本轮不会改由其他角色回答');return;}_theaterTurnTargets.set(id,target);try{const c=getC(id),current=offCurrentInput(d,note),kind=theaterTurnActorKind(t,target),supportFirst=kind&&(target==='guest'||target==='extra');if(!kind){t.activeActor='host';try{return await baseOffAI(note);}finally{t.activeActor='';if(_off&&_off.id===id&&_off.mode==='cohab')offRender();}}
-  if(supportFirst){let lead='';_off.busy=true;t.activeActor=kind;offRender();try{const actor=await cohabTheaterActorItems(id,kind,current,80,'');await theaterRevealActorItems(id,d,t,actor);lead=theaterTurnText(actor.items,d,c);}finally{if(_off&&_off.id===id){_off.busy=false;t.activeActor='host';offRender();}}if(!_off||_off.id!==id||_off.mode!=='cohab')return;if(lead)_theaterHostLead.set(id,lead);try{await baseOffAI(note);}finally{_theaterHostLead.delete(id);await theaterFinishNaturalLeave(id,t);t.activeActor='';if(_off&&_off.id===id&&_off.mode==='cohab')offRender();}return;}
+  if(supportFirst){let lead='';_off.busy=true;t.activeActor=kind;offRender();try{const actor=await cohabTheaterActorItems(id,kind,current,80,'');await theaterRevealActorItems(id,d,t,actor);lead=theaterTurnText(actor.items,d,c);}finally{if(_off&&_off.id===id){t.activeActor='host';offRender();}}if(!_off||_off.id!==id||_off.mode!=='cohab')return;if(lead)_theaterHostLead.set(id,lead);try{await baseOffAI(note);}finally{_theaterHostLead.delete(id);await theaterFinishNaturalLeave(id,t);if(_off&&_off.id===id)_off.busy=false;t.activeActor='';if(_off&&_off.id===id&&_off.mode==='cohab')offRender();}return;}
   const before=+d.msgSeq||0;t.activeActor='host';await baseOffAI(note);if(!_off||_off.id!==id||_off.mode!=='cohab'||!t.enabled)return;const hostRows=(d.msgs||[]).filter(m=>+m.cohabSeq>before&&theaterActorKind(m)==='host');if(!hostRows.length){t.activeActor='';offRender();return;}const hostChars=hostRows.filter(m=>m.who==='ta').reduce((n,m)=>n+Array.from(String(m.text||'')).length,0);_off.busy=true;t.activeActor=kind;offRender();try{const actor=await cohabTheaterActorItems(id,kind,current,hostChars,theaterTurnText(hostRows,d,c));await theaterRevealActorItems(id,d,t,actor);await theaterFinishNaturalLeave(id,t);}finally{if(_off&&_off.id===id){_off.busy=false;t.activeActor='';offRender();}}}finally{_theaterTurnTargets.delete(id);}};
 offAI=async function(note){
   if(!_off||_off.mode!=='cohab')return baseOffAI(note);
@@ -206,10 +206,10 @@ offAI=async function(note){
     if(!kind){t.activeActor='host';try{return await baseOffAI(note);}finally{t.activeActor='';if(_off&&_off.id===id&&_off.mode==='cohab')offRender();}}
     if(supportFirst){
       let lead='';_off.busy=true;t.activeActor=kind;offRender();
-      try{const actor=await cohabTheaterActorItems(id,kind,current,80,'');await theaterRevealActorItems(id,d,t,actor);lead=theaterTurnText(actor.items,d,c);}finally{if(_off&&_off.id===id){_off.busy=false;t.activeActor='host';offRender();}}
+      try{const actor=await cohabTheaterActorItems(id,kind,current,80,'');await theaterRevealActorItems(id,d,t,actor);lead=theaterTurnText(actor.items,d,c);}finally{if(_off&&_off.id===id){t.activeActor='host';offRender();}}
       if(!_off||_off.id!==id||_off.mode!=='cohab')return;
       if(lead)_theaterHostLead.set(id,lead);
-      try{await baseOffAI(note);}finally{_theaterHostLead.delete(id);await theaterFinishNaturalLeave(id,t);t.activeActor='';if(_off&&_off.id===id&&_off.mode==='cohab')offRender();}
+      try{await baseOffAI(note);}finally{_theaterHostLead.delete(id);await theaterFinishNaturalLeave(id,t);if(_off&&_off.id===id)_off.busy=false;t.activeActor='';if(_off&&_off.id===id&&_off.mode==='cohab')offRender();}
       return;
     }
     const before=+d.msgSeq||0;t.activeActor='host';await baseOffAI(note);
@@ -242,7 +242,7 @@ async function cohabTheaterContinue(id){
     }
     if(!_off||_off.id!==id||theaterPresent(t,'me')||!theaterPresent(t,'host'))return false;
     if(!lead){toast('配角这一轮没有生成可显示内容，已停止；没有调用主角继续');return false;}
-    _theaterHostLead.set(id,lead);t.activeActor='host';_off.busy=false;offRender();
+    _theaterHostLead.set(id,lead);t.activeActor='host';offRender();
     await baseOffAI(note);
     return true;
   }finally{

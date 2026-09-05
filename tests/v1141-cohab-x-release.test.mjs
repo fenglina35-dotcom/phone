@@ -6,25 +6,25 @@ import test from 'node:test';
 const root = process.cwd();
 const read = (...parts) => fs.readFileSync(path.join(root, ...parts), 'utf8');
 
-test('v1183 web identity and cache markers are aligned', () => {
+test('v1184 web identity and cache markers are aligned', () => {
   const app = read('app.js');
   const shell = read('小手机.html');
   const sw = read('sw.js');
   const hotfix = read('web-hotfix.js');
   const index = read('index.html');
   const repair = read('repair.html');
-  assert.match(app, /__NORTH_SHELL_BUILD__!=='1183'/);
-  assert.match(app, /APP_VER='v1183 · 共同生活键盘与唱片配色修复版'/);
-  assert.match(shell, /__NORTH_SHELL_BUILD__='1183'/);
-  assert.match(shell, /app\.js\?v=1183&r=v1183-cohab-keyboard-vinyl-release-1/);
-  assert.match(sw, /const BUILD='1183'/);
-  assert.match(sw, /v1183-cohab-keyboard-vinyl-release-1/);
-  assert.match(hotfix, /v1183-cohab-keyboard-vinyl-release-1/);
-  assert.match(index, /小手机\.html\?v=1183/);
-  assert.match(repair, /小手机\.html\?v=1183/);
+  assert.match(app, /__NORTH_SHELL_BUILD__!=='1184'/);
+  assert.match(app, /APP_VER='v1184 · iPhone稳定、剧场顺序与键盘修复版'/);
+  assert.match(shell, /__NORTH_SHELL_BUILD__='1184'/);
+  assert.match(shell, /app\.js\?v=1184&r=v1184-ios-web-crash-cohab-turn-keyboard-1/);
+  assert.match(sw, /const BUILD='1184'/);
+  assert.match(sw, /v1184-ios-web-crash-cohab-turn-keyboard-1/);
+  assert.match(hotfix, /v1184-ios-web-crash-cohab-turn-keyboard-1/);
+  assert.match(index, /小手机\.html\?v=1184/);
+  assert.match(repair, /小手机\.html\?v=1184/);
 });
 
-test('v1183 publishes shared cohab memory and X comment controls', () => {
+test('v1184 publishes shared cohab memory and X comment controls', () => {
   const app = read('app.js');
   const privateCopy = read('native', 'private-small-phone', 'XcodeProject', 'PhoneCompanionTest', 'PhoneWeb.bundle', 'app.js');
   for (const source of [app, privateCopy]) {

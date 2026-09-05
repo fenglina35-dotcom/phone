@@ -23,7 +23,7 @@ function functionSource(source, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('a focused iOS touch toggles narration once and preserves the text selection', () => {
+test('a focused iOS touchstart toggles narration once and suppresses pointer/click duplicates', () => {
   const ta = { selectionStart: 2, selectionEnd: 4, focus() {}, setSelectionRange(a, b) { this.restored = [a, b]; } };
   const state = { busy: false, narrateMode: false };
   const sandbox = vm.createContext({
@@ -37,9 +37,11 @@ test('a focused iOS touch toggles narration once and preserves the text selectio
     requestAnimationFrame: fn => fn(),
   });
   vm.runInContext(`let _offComposerGuardUntil=0,_offNarrationPointerAt=0;${functionSource(app, 'offNarrationMode')}\n${functionSource(app, 'offComposerEvent')}\n${functionSource(app, 'offNarrationPress')}\n${functionSource(app, 'offNarrate')}\nthis.press=offNarrationPress;this.click=offNarrate;`, sandbox);
-  const event = { type: 'pointerdown', pointerType: 'touch', preventDefault() {}, stopPropagation() {} };
-  sandbox.press(event);
+  const touch = { type: 'touchstart', preventDefault() {}, stopPropagation() {} };
+  sandbox.press(touch);
   assert.equal(state.narrateMode, true);
+  sandbox.press({ type: 'pointerdown', pointerType: 'touch', preventDefault() {}, stopPropagation() {} });
+  assert.equal(state.narrateMode, true, 'the pointer event following touchstart must not toggle again');
   sandbox.click();
   assert.equal(state.narrateMode, true, 'the click following the touch must not toggle the mode back');
   assert.deepEqual(ta.restored, [2, 4]);
@@ -52,6 +54,8 @@ test('offline composer uses iOS-safe typography and guards send taps from openin
     assert.match(page, /font-size:16px!important/);
   }
   for (const code of [app, privateApp]) {
+    assert.match(code, /document\.addEventListener\('touchstart',offComposerTouchStart,\{capture:true,passive:false\}\)/,
+      'iOS must cancel the focus-changing touch before the narration button receives it');
     assert.match(code, /document\.addEventListener\('pointerdown',[\s\S]*?\.off-note/);
     assert.match(code, /if\(Date\.now\(\)<_offComposerGuardUntil\)return/);
     assert.match(code, /document\.activeElement!==ta/);
@@ -75,11 +79,11 @@ test('the private iOS fixed-phone workaround also covers the offline date compos
     'the native-only fixed shell remains unchanged for screens without a text composer');
 });
 
-test('web Android resizes content while the private WKWebView keeps one stable keyboard owner', () => {
+test('web and private iOS use the same native resize contract without a second focus', () => {
   assert.match(html, /interactive-widget=resizes-content/);
-  for (const page of [privateHtml, privateIndex]) assert.doesNotMatch(page, /interactive-widget=resizes-content/);
-  assert.match(privateRoot, /\.ignoresSafeArea\(\.keyboard, edges: \.bottom\)/,
-    'SwiftUI must not resize the WKWebView a second time during keyboard animation');
+  for (const page of [privateHtml, privateIndex]) assert.match(page, /interactive-widget=resizes-content/);
+  assert.doesNotMatch(privateRoot, /\.ignoresSafeArea\(\.keyboard, edges: \.bottom\)/,
+    'the private root must deliver the real keyboard-safe frame instead of dismissing one animation late');
   for (const code of [app, privateApp]) {
     const runtimeCode = code.replace(functionSource(code, 'northViewportDiagnosticStart'), '');
     assert.doesNotMatch(runtimeCode, /visualViewport\.addEventListener\(['"]resize/,

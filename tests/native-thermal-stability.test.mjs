@@ -183,8 +183,21 @@ test('native background and inbox work waits for the restored core to finish boo
   assert.match(app,/setInterval\(\(\)=>\{if\(_appBootFinished\)phoneFriendMaybeSync\(false\);\},2500\)/);
 });
 
-test('private boot keeps historical image references lazy without allowing image garbage collection',()=>{
-  assert.match(app,/function lazyStoredImagesOn\(\)\{return privateNativeAppOn\(\)\|\|NORTH_ANDROID;\}/);
+test('mobile WebKit boot keeps historical image references lazy without allowing image garbage collection',()=>{
+  assert.match(app,/function lazyStoredImagesOn\(\)\{return privateNativeAppOn\(\)\|\|NORTH_ANDROID\|\|NORTH_IOS_WEBKIT;\}/);
+  const lazyStoredImagesSource=app.match(/function lazyStoredImagesOn\(\)\{[^}]+\}/)?.[0];
+  assert.ok(lazyStoredImagesSource,'lazy image policy helper is present');
+  const lazyFor=({native=false,android=false,ios=false}={})=>vm.runInNewContext(
+    `${lazyStoredImagesSource};lazyStoredImagesOn()`,
+    {privateNativeAppOn:()=>native,NORTH_ANDROID:android,NORTH_IOS_WEBKIT:ios}
+  );
+  assert.equal(lazyFor({ios:true}),true,'ordinary iPhone Safari uses the lazy image boot path');
+  assert.equal(lazyFor({android:true}),true,'Android keeps the existing lazy image boot path');
+  assert.equal(lazyFor({native:true}),true,'the private native shell keeps the existing lazy image boot path');
+  assert.equal(lazyFor(),false,'desktop web continues to hydrate the complete image archive');
+  assert.match(app,/IOS_WEB_IMAGE_CACHE_CHAR_LIMIT=24\*1024\*1024/);
+  assert.match(app,/NORTH_IOS_WEBKIT&&!privateNativeAppOn\(\)\?IOS_WEB_IMAGE_CACHE_CHAR_LIMIT/,
+    'ordinary iPhone Safari must not decode every stored chat image during boot');
   assert.match(app,/const lazy=lazyStoredImagesOn\(\),keys=lazy\?privateBootImageKeys\(\):imageRefKeys\(S\)/);
   assert.match(app,/if\(!lazy\)_rehydrate\(S\)/);
   assert.match(app,/function imgUsedKeys\(\)\{const used=new Set\(imageRefKeys\(S\)\)/);

@@ -61,7 +61,7 @@ test('real critical script errors still fail immediately',()=>{
 });
 
 test('Android uses visible image hydration while desktop web keeps full hydration',()=>{
-  assert.match(app,/function lazyStoredImagesOn\(\)\{return privateNativeAppOn\(\)\|\|NORTH_ANDROID;\}/);
+  assert.match(app,/function lazyStoredImagesOn\(\)\{return privateNativeAppOn\(\)\|\|NORTH_ANDROID\|\|NORTH_IOS_WEBKIT;\}/);
   assert.match(app,/const lazy=lazyStoredImagesOn\(\),keys=lazy\?privateBootImageKeys\(\):imageRefKeys\(S\)/);
   assert.match(app,/if\(!lazy\)_rehydrate\(S\)/);
   assert.match(app,/function scheduleVisibleStoredImages\(force,alreadyHydrated\)\{if\(!lazyStoredImagesOn\(\)\)return;/);
