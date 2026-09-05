@@ -69,14 +69,13 @@ test('offline composer uses iOS-safe typography and guards send taps from openin
   assert.match(theater, /offComposerEvent==='function'/);
 });
 
-test('private offline focus anchors the conversation to its true last message before WebKit moves it', () => {
-  const box = { scrollTop: 40, scrollHeight: 960 };
-  const sandbox = vm.createContext({ $: selector => selector === '#offbg' ? box : null });
-  vm.runInContext(`${functionSource(privateApp, 'offComposerPinLatest')}\nthis.pin=offComposerPinLatest;`, sandbox);
-  sandbox.pin({ id: 'cinput' });
-  assert.equal(box.scrollTop, 40, 'unrelated editors must not move the offline conversation');
-  sandbox.pin({ id: 'off_in' });
-  assert.equal(box.scrollTop, 960, 'offline focus must start from the newest message, not an older scroll position');
+test('private offline focus does not move the conversation during iOS caret hit testing', () => {
+  assert.doesNotMatch(privateApp, /function offComposerPinLatest\(target\)/,
+    'touching the textarea must not rewrite scrollTop while WebKit calculates the caret');
+  assert.doesNotMatch(privateApp, /offComposerPinLatest\(target\);/,
+    'touchstart and pointerdown must stay free of pre-focus scrolling');
+  assert.doesNotMatch(privateApp, /target\.id\s*===?\s*['"]off_in['"][\s\S]{0,160}scrollTop\s*=/,
+    'the private composer must not add another equivalent touch-time scroll mutation');
 });
 
 test('the public workaround stays intact while private offline returns to normal document flow', () => {
@@ -103,9 +102,8 @@ test('private iOS restores the v1179 single-owner keyboard contract', () => {
   assert.doesNotMatch(privateWebView, /smallPhoneOfflineKeyboardScope|keyboardWillChangeFrameNotification|keyboardDidHideNotification/);
   assert.doesNotMatch(privateWebView, /scrollView\.isScrollEnabled|setContentOffset|\.contentOffset[\s\S]{0,80}observe/,
     'native code must not compete with WebKit for focus scrolling or dismissal');
-  assert.match(privateApp, /function offComposerPinLatest\(target\)/);
-  assert.match(privateApp, /offComposerPinLatest\(target\);/,
-    'the private offline composer must anchor the inner conversation before keyboard focus');
+  assert.doesNotMatch(privateApp, /function offComposerPinLatest\(target\)/,
+    'the private offline composer must leave caret placement and keyboard movement to WebKit');
   assert.doesNotMatch(app, /function offComposerPinLatest\(target\)/,
     'the public web build is outside this private-only repair');
   for (const code of [app, privateApp]) {

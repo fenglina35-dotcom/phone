@@ -45,18 +45,18 @@ function functionSource(sourceText, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('v1184 private identifiers retain the performance chain while public stays v1184', () => {
+test('v1188 private identifiers retain the performance chain while public stays v1184', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1184'/);
-  assert.match(index, /app\.js\?v=1184&r=v1184-ios-web-crash-cohab-turn-keyboard-1/);
-  assert.match(index, /private-runtime-diagnostics\.js\?v=313/);
-  assert.match(app, /APP_VER='v1184 · iPhone稳定、剧场顺序与键盘修复版'/);
-  assert.match(overlay, /313-private-v1187-v1179-keyboard-baseline-1/);
-  assert.match(webview, /1\.0\.313 \(313\)/);
-  assert.match(bridge, /private static let build = "1\.0\.313 \(313\)"/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1188'/);
+  assert.match(index, /app\.js\?v=1188&r=v1188-private-offline-native-focus-1/);
+  assert.match(index, /private-runtime-diagnostics\.js\?v=314/);
+  assert.match(app, /APP_VER='v1188 · 私人线下原生聚焦修复版'/);
+  assert.match(overlay, /314-private-v1188-offline-native-focus-1/);
+  assert.match(webview, /1\.0\.314 \(314\)/);
+  assert.match(bridge, /private static let build = "1\.0\.314 \(314\)"/);
   assert.match(bridge, /static let contractVersion = 35/);
-  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 313;/g) || []).length, 12);
-  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.313;/g) || []).length, 12);
+  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 314;/g) || []).length, 12);
+  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.314;/g) || []).length, 12);
   assert.match(publicApp, /APP_VER='v1184 · iPhone稳定、剧场顺序与键盘修复版'/);
   assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1184'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
@@ -146,23 +146,24 @@ test('diagnostics identify the protected stage without collecting content', () =
   assert.doesNotMatch(overlay, /messageBody|chatContent|authorizationToken/);
 });
 
-test('Mac guides state the private v1187 and unchanged web v1184 boundary', () => {
+test('Mac guides state the private v1188 and unchanged public web v1184 boundary', () => {
   const install = fs.readFileSync(
-    path.join(project, '第三百一十三次安装_v1187_v1179键盘基线恢复_请先读.md'),
+    path.join(project, '第三百一十四次安装_v1188_线下原生聚焦修复_请先读.md'),
     'utf8',
   );
   const mac = fs.readFileSync(path.join(project, '请在Mac编译前先读.md'), 'utf8');
   for (const guide of [install, mac]) {
-    assert.match(guide, /v1184/);
-    assert.match(guide, /1\.0\.313 \(313\)/);
-    assert.match(guide, /原生桥 35/);
+    assert.match(guide, /v1188/);
+    assert.match(guide, /公开网页.*v1184/);
+    assert.match(guide, /1\.0\.314 \(314\)/);
+    assert.match(guide, /原生桥.*35/);
     assert.match(guide, /不要先删除.*App/);
     assert.match(guide, /不要.*覆盖.*旧工程目录/);
     assert.match(guide, /Mac.*编译/);
     assert.match(guide, /真机|真实 iPhone/);
   }
-  assert.match(mac, /私人壳发布 v1187/);
-  assert.match(mac, /内置网页功能基线 v1184（网页未改）/);
-  assert.match(install, /内置网页功能基线 `v1184`/);
-  assert.match(install, /本次(?:没有修改或推送公开网页版|只处理私人 App)/);
+  assert.match(mac, /当前候选：私人版本 v1188/);
+  assert.match(mac, /公开网页仍为 v1184/);
+  assert.match(install, /内置网页为 v1188，公开网页仍为 v1184/);
+  assert.match(install, /本包范围仅为私人版本/);
 });
