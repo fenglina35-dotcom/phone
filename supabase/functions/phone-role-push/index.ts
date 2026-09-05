@@ -375,6 +375,17 @@ function roleCompletedTurnReanswer(value: string, profile: Record<string, unknow
   return parts.some((part) => roleTextKey(part).length >= 3 && roleMessageRepeated(part, userText));
 }
 
+function roleMealProgressInvalid(value: string, recentContext: string) {
+  const context = String(recentContext || "");
+  const finished = /最近关心事项进度[\s\S]{0,420}用户已经明确吃完或吃好了/.test(context);
+  const started = !finished && /最近关心事项进度[\s\S]{0,420}用户已经明确准备去吃、正在吃或刚开始吃/.test(context);
+  if (!finished && !started) return false;
+  const text = roleVisibleMessageText(value).replace(/\s+/g, "");
+  const baseline = /(?:吃|用)(?:饭|早饭|早餐|午饭|晚饭)(?:了)?(?:吗|没|没有)|(?:吃了没|吃过了吗|有没有吃(?:饭|早饭|早餐|午饭|晚饭)?)|(?:面|面条|粥|东西)(?:吃|喝)(?:了)?(?:吗|没|没有)/.test(text);
+  const asksFinished = /(?:吃好|吃完)(?:了)?(?:吗|没|没有)|(?:面|面条|粥)(?:吃|喝)(?:好|完)(?:了)?(?:吗|没|没有)/.test(text);
+  return finished ? baseline || asksFinished : baseline;
+}
+
 function roleVisibleMessageText(value: string) {
   return roleMessageParts(value, 10).filter((part) => !/^[\[【](?:(?:图片|位置|来电|送礼|一起听|放映邀请|约会|角色扮演)[|｜]|你画我猜[\]】])/.test(part)).join(" ");
 }
@@ -740,7 +751,8 @@ async function roleMessage(
                 (!replyHandoffEvent && !turnBoundary.pending && roleCompletedTurnReanswer(candidate, profile)) ||
                 roleUserFactUnsupported(candidate, `${recentContext}\n${memoryContext}`) ||
                 roleMessageStyleInvalid(candidate, messageMax) ||
-                roleOnlineNarrationInvalid(candidate, String(profile.role_name || "角色"));
+                roleOnlineNarrationInvalid(candidate, String(profile.role_name || "角色")) ||
+                roleMealProgressInvalid(candidate, recentContext);
             });
             if (!invalid) return {
               kind: "message",
@@ -774,7 +786,8 @@ async function roleMessage(
           const eventPerspectiveInvalid = roleManualUnlockPerspectiveInvalid(body, eventInstruction);
           const onlineNarrationInvalid = roleOnlineNarrationInvalid(body, String(profile.role_name || "角色"));
           const reanswersCompleted = !replyHandoffEvent && !turnBoundary.pending && roleCompletedTurnReanswer(body, profile);
-          if (bodyKey && !repeated && !ungrounded && !styleInvalid && !eventPerspectiveInvalid && !onlineNarrationInvalid && !reanswersCompleted) {
+          const mealProgressInvalid = roleMealProgressInvalid(body, recentContext);
+          if (bodyKey && !repeated && !ungrounded && !styleInvalid && !eventPerspectiveInvalid && !onlineNarrationInvalid && !reanswersCompleted && !mealProgressInvalid) {
             return { kind: "message", body };
           }
           // A manual-unlock event must remain visible, but an invalid first
@@ -791,7 +804,15 @@ async function roleMessage(
             ];
             continue;
           }
-          if (repeated || eventPerspectiveInvalid || onlineNarrationInvalid || reanswersCompleted) {
+          if (mealProgressInvalid && attempt === 0) {
+            attemptMessages = [
+              ...baseMessages,
+              { role: "assistant", content: body },
+              { role: "user", content: "上一版把用户已经说清楚的吃饭进度倒退了。若上下文写明已经吃完，禁止再问吃了吗、面吃了吗、吃完了吗；若写明已经开始吃，禁止再问吃饭了吗。可以不谈吃饭，或只问味道、吃了什么、现在感觉如何。重新生成一轮真正的新消息，不要解释纠正过程。" },
+            ];
+            continue;
+          }
+          if (repeated || eventPerspectiveInvalid || onlineNarrationInvalid || reanswersCompleted || mealProgressInvalid) {
             return effectiveAllowSilent
               ? { kind: "silent", body: "" }
               : { kind: "unavailable", body: "", reason: reanswersCompleted ? "completed-turn-reanswer" : "invalid-model-output" };

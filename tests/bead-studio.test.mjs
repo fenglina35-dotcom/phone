@@ -36,9 +36,9 @@ test('game hall routes the shared Bead Atelier in web and private runtimes',()=>
     assert.match(source,/<button type="button" class="l" onclick="home\(\)" aria-label="返回主屏幕">/,'the game lobby back control must be a real accessible button');
     assert.match(source,/c\.p==='gameshub'[\s\S]{0,120}onclick=back/,'the lobby returns through its real route stack so WeChat and home entries both remain correct');
   }
-  assert.match(html,/bead-studio\.js\?v=1181&r=v1181-pixel-puzzle-4/);
-  assert.match(privateHtml,/bead-studio\.js\?v=1181&r=v1181-pixel-puzzle-4/);
-  assert.match(sw,/bead-studio\.js\?v='\+BUILD\+'\&r=v1181-pixel-puzzle-4/);
+  assert.match(html,/bead-studio\.js\?v=1182&r=v1182-pixel-puzzle-4/);
+  assert.match(privateHtml,/bead-studio\.js\?v=1182&r=v1182-pixel-puzzle-4/);
+  assert.match(sw,/bead-studio\.js\?v='\+BUILD\+'\&r=v1182-pixel-puzzle-4/);
   assert.equal(privateBead,bead,'web and private App must use the same Bead Atelier runtime');
 });
 

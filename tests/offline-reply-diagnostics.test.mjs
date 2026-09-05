@@ -67,7 +67,7 @@ test('only optional repeat repair may preserve an earlier reply; initial and emp
   assert.match(cohab,/roleInterceptDiagnosticTurn\(c,'cohab',null,'共同生活'\)/);
   assert.match(cohab,/auditOpt=\(opt,stage\)=>Object\.assign\(\{\},opt,\{roleInterceptAudit:audit,roleInterceptStage:stage\}\)/);
   assert.match(off,/repeats\.length[\s\S]*try\{const fixRaw=await chatAPI[\s\S]*offlineKeepValidReplyOnRepairFailure\(r,e\)/);
-  assert.match(cohab,/repairFails\.length[\s\S]*try\{const fixRaw=await cohabRoleChat[\s\S]*cohabRepeatRepairNote\(c,repairFails\)[\s\S]*offlineKeepValidReplyOnRepairFailure\(r,e\)/);
+  assert.match(cohab,/repairFails\.length[\s\S]*repairNote=cohabRepeatRepairNote\(c,repairFails\)[\s\S]*try\{const fixRaw=await cohabRoleChat[\s\S]*offlineKeepValidReplyOnRepairFailure\(r,e\)/);
   assert.match(cohab,/return\{items,route,inspection,trips,travelErrors:travel\.errors\|\|\[\],_interceptAudit:audit,_interceptFinal:auditFinal,_interceptPartial:auditPartial,_interceptActionHandled:auditActionHandled,_interceptDone:false\}/);
   assert.match(cohab,/catch\(e\)\{roleInterceptDiagnosticTurnFailure\(audit,e,\{reason:offlineReplyFailureReason\(e\)\}\);throw e;\}/);
   assert.match(functionSource('cohabReplyAuditFinish'),/result\._interceptDone=true;return roleInterceptDiagnosticTurnFinish\(result\._interceptAudit,result\._interceptFinal,\{delivered:!!delivered,partial:!!\(result\._interceptPartial\|\|partial\)\}\)/);
@@ -94,6 +94,7 @@ test('the real common-life reply pipeline delivers the first genuine answer when
     offReplyItems:x=>x?[{id:'genuine',who:'ta',text:'我在。'}]:[],
     cohabRoleChat:async()=>{runtime.calls++;if(runtime.failFirst||runtime.calls===2)throw new Error('network failed');return '【他抬眼看过来。】\n我在。';},
     offlineRepeatAudit:()=>({fails:['重复风险'],score:5}),cohabTimeEchoAudit:()=>({fails:[],score:0}),cohabRepeatRepairNote:()=>'',
+    recentMealProgressIssue:()=>'',recentMealProgressRepairPrompt:()=>'',
     applyGrudgeTags:x=>x,offlineApplyMemoryTags:x=>({text:x}),
     cohabApplyPhoneTags:x=>({text:x}),cohabApplyOnlineMessageTags:x=>({text:x}),cohabApplyScheduleTags:x=>({text:x}),
     cohabExtractTravelTags:x=>({text:x,plans:[],errors:[]}),cohabApplyStateTags:x=>({text:x,matched:true}),

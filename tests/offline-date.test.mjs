@@ -59,7 +59,7 @@ assert.match(liveSandbox.prompt, /约会间隙拿出手机/);
 assert.match(liveSandbox.prompt, /手动分段总结/);
 assert.match(liveSandbox.prompt, /地点：江边/);
 
-assert.match(source, /v1181 · 综合稳定、像素与多人暂离版/);
+assert.match(source, /v1182 · 连续性、记忆与键盘修复版/);
 assert.match(source, /function timeAwarenessPrompt\(who,kind\)/);
 assert.match(source, /23:20\u523023:49[\s\S]*\u7edd\u5bf9\u4e0d\u8981\u8bf4\u5341\u4e8c\u70b9\u4e86/);
 assert.match(source, /timeAwarenessPrompt\(S\.me\.name,'wechat'\)/);
@@ -208,7 +208,7 @@ vm.runInNewContext(
     "globalThis.userRaisedTask=offlineRepeatFails('\\u4efb\\u52a1\\u5df2\\u7ecf\\u505a\\u5b8c\\u4e86',date,'\\u6211\\u7684\\u4efb\\u52a1\\u505a\\u5b8c\\u4e86');" +
     "globalThis.freshScene=offlineRepeatFails('\\u6211\\u4eec\\u5750\\u5230\\u7a97\\u8fb9\\u53bb\\u5427',date,'\\u6211\\u4eec\\u53bb\\u770b\\u7535\\u5f71\\u5427');" +
     "globalThis.sameTurn=offlineRepeatFails('\\u3010\\u4ed6\\u62c9\\u5f00\\u4e86\\u6905\\u5b50\\u3011\\n\\u5750\\u8fd9\\u91cc\\u5427\\n\\u3010\\u4ed6\\u62c9\\u5f00\\u4e86\\u6905\\u5b50\\u3011\\n\\u5750\\u8fd9\\u91cc\\u5427',{msgs:[]},'\\u6211\\u4eec\\u8fdb\\u53bb\\u5427');" +
-    "const oldTurn={msgs:[{who:'\\u65c1\\u767d',source:'ta',text:'\\u4ed6\\u653e\\u4e0b\\u884c\\u674e\\u7bb1\\uff0c\\u4f38\\u624b\\u63c9\\u4e86\\u63c9\\u5979\\u7684\\u5934\\u53d1'},{who:'ta',text:'\\u4e8c\\u5341\\u5929\\u6ca1\\u89c1'},{who:'\\u65c1\\u767d',source:'ta',text:'\\u4ed6\\u7684\\u58f0\\u97f3\\u538b\\u5f97\\u5f88\\u4f4e\\uff0c\\u62c7\\u6307\\u8f7b\\u8f7b\\u64e6\\u8fc7\\u5979\\u7684\\u8138\\u988a'},{who:'ta',text:'\\u7626\\u4e86'}]};" +
+    "const oldTurn={msgs:[{who:'\\u65c1\\u767d',source:'ta',text:'\\u4ed6\\u653e\\u4e0b\\u884c\\u674e\\u7bb1\\uff0c\\u4f38\\u624b\\u63c9\\u4e86\\u63c9\\u5979\\u7684\\u5934\\u53d1'},{who:'ta',text:'\\u4e8c\\u5341\\u5929\\u6ca1\\u89c1'},{who:'\\u65c1\\u767d',source:'ta',text:'\\u4ed6\\u7684\\u58f0\\u97f3\\u538b\\u5f97\\u5f88\\u4f4e\\uff0c\\u62c7\\u6308\\u8f7b\\u8f7b\\u64e6\\u8fc7\\u5979\\u7684\\u8138\\u988a'},{who:'ta',text:'\\u7626\\u4e86'}]};" +
     "globalThis.crossTurn=offlineRepeatFails('\\u3010\\u4ed6\\u653e\\u4e0b\\u884c\\u674e\\u7bb1\\uff0c\\u4f38\\u624b\\u63c9\\u4e86\\u63c9\\u5979\\u7684\\u5934\\u53d1\\u3011\\n\\u4e8c\\u5341\\u5929\\u6ca1\\u89c1',oldTurn,'\\u597d\\u770b\\u5417');" +
     "globalThis.deduped=offDedupeItems([" +
     "{who:'\\u65c1\\u767d',text:'\\u4ed6\\u62c9\\u5f00\\u4e86\\u6905\\u5b50'}," +
@@ -218,7 +218,7 @@ vm.runInNewContext(
     "globalThis.crossDeduped=offDedupeItems([" +
     "{who:'\\u65c1\\u767d',text:'\\u4ed6\\u653e\\u4e0b\\u884c\\u674e\\u7bb1\\uff0c\\u4f38\\u624b\\u63c9\\u4e86\\u63c9\\u5979\\u7684\\u5934\\u53d1'}," +
     "{who:'ta',text:'\\u4e8c\\u5341\\u5929\\u6ca1\\u89c1'}," +
-    "{who:'\\u65c1\\u767d',text:'\\u4ed6\\u7684\\u58f0\\u97f3\\u538b\\u5f97\\u5f88\\u4f4e\\uff0c\\u62c7\\u6307\\u8f7b\\u8f7b\\u64e6\\u8fc7\\u5979\\u7684\\u8138\\u988a'}," +
+    "{who:'\\u65c1\\u767d',text:'\\u4ed6\\u7684\\u58f0\\u97f3\\u538b\\u5f97\\u5f88\\u4f4e\\uff0c\\u62c7\\u6308\\u8f7b\\u8f7b\\u64e6\\u8fc7\\u5979\\u7684\\u8138\\u988a'}," +
     "{who:'ta',text:'\\u7626\\u4e86'}," +
     "{who:'ta',text:'\\u597d\\u770b'}],oldTurn,'\\u597d\\u770b\\u5417');" +
     "const staleTurn={msgs:[" +
@@ -662,6 +662,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=1181/);
+assert.match(html, /app\.js\?v=1182/);
 
 console.log("offline date tests passed");

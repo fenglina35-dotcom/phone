@@ -4,6 +4,7 @@ import vm from 'node:vm';
 import { readFileSync } from 'node:fs';
 
 const source=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+const bundled=readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js',import.meta.url),'utf8');
 const html=readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 
 function functionSource(name){
@@ -43,6 +44,23 @@ test('unchanged facts deduplicate across online and co-living channels',()=>{
   assert.equal(role._phoneInspectionFacts.douyin.channel,'online');
   context.commit(role,fact,'cohab');
   assert.equal(role._phoneInspectionFacts.douyin.channel,'cohab');
+  assert.equal(typeof role._phoneInspectionFacts.douyin.snapshot,'string');
+});
+
+test('a changed WeChat snapshot exposes only new lines instead of replaying everything already viewed',()=>{
+  const context=vm.createContext({replyDedupNorm:v=>String(v).toLowerCase(),wxLoginWechatSummary:()=>'',save:()=>{},String,Date,Math,Set});
+  vm.runInContext(`${functionSource('rolePhoneInspectionKey')}${functionSource('rolePhoneUsageSnapshotFromInspection')}${functionSource('rolePhoneInspectionSignature')}${functionSource('rolePhoneInspectionNovelText')}${functionSource('rolePhoneInspectionCommit')}this.signature=rolePhoneInspectionSignature;this.novel=rolePhoneInspectionNovelText;this.commit=rolePhoneInspectionCommit;`,context);
+  const role={id:'c1'};
+  const first=context.signature(role,'微信聊天',{label:'完整微信',data:'【朋友A】\n[20:10] 小狗：旧问题\n[20:11] North：已经解释过'});
+  context.commit(role,first,'online');
+  const changed=context.signature(role,'微信聊天',{label:'完整微信',data:'【朋友A】\n[20:10] 小狗：旧问题\n[20:11] North：已经解释过\n[22:40] 小狗：真正的新消息'});
+  const delta=context.novel(role,changed);
+  assert.match(delta,/真正的新消息/);
+  assert.doesNotMatch(delta,/旧问题|已经解释过/);
+  assert.match(functionSource('doSpyViewCore'),/factBody=priorInspection&&inspectionFact\.key==='wechat'/);
+  assert.match(bundled,/function rolePhoneInspectionNovelText/);
+  assert.match(bundled,/novel=rolePhoneInspectionNovelText\(c,fact\)/);
+  assert.match(bundled,/inspectionNovel=opts\.intent\?rolePhoneInspectionNovelText\(c,inspectionFact\):''/);
 });
 
 test('co-living inspection is autonomous, factual, visible and not daily-count limited',()=>{
@@ -68,6 +86,8 @@ test('co-living inspection is autonomous, factual, visible and not daily-count l
   assert.match(run,/cohabTogetherScene\(d\)/);
   assert.match(run,/roleLatestUserChannel\(c,'cohab'\)/);
   assert.match(run,/latestChannel==='online'\?await doSpyViewCore/,'a co-living inspection returns online when the latest user message was online');
+  assert.match(run,/forceResult:opt\.forceResult===true/,'routing to WeChat must not force an unchanged autonomous result');
+  assert.doesNotMatch(run,/bySheTold:opt\.source==='direct-user',forceResult:true/);
   assert.match(deliver,/rolePhoneInspectionUnchanged/);
   assert.match(deliver,/rolePhoneInspectionCommit\(c,fact,'cohab'\)/);
   assert.match(deliver,/不要把结果发到微信或电话/);

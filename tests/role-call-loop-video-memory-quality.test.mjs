@@ -92,9 +92,9 @@ test('automatic memory accepts grounded durable facts and rejects copied fragmen
 });
 
 test('online, call and offline memory tags all use the same evidence gate',()=>{
-  assert.match(app,/rememberFromConversation\(c,mm\[1\],_userText,content\)/);
-  assert.match(app,/rememberFromConversation\(c,tx,\(_luc&&msgToText\(_luc\)\)\|\|'',content\)/);
-  assert.match(lineFunction('offlineApplyMemoryTags'),/rememberFromConversation\(c,tx,userText,full\)/);
+  assert.match(app,/rememberFromConversation\(c,mm\[1\],_userText,content,\{rolePerspective:true\}\)/);
+  assert.match(app,/rememberFromConversation\(c,tx,\(_luc&&msgToText\(_luc\)\)\|\|'',content,\{rolePerspective:true\}\)/);
+  assert.match(lineFunction('offlineApplyMemoryTags'),/rememberFromConversation\(c,tx,userText,full,\{rolePerspective:true\}\)/);
   assert.match(app,/不能复制聊天原句/);
   assert.match(app,/不得保存疑问、反问、辱骂、情绪碎片、截断的半句话/);
 });
@@ -109,7 +109,7 @@ test('root and private business sources are synchronized after release sync',()=
     assert.ok(privateApp.includes(lineFunction(name)),`private call or memory line differs: ${name}`);
   }
   const privateMemory=privateApp.match(/^function offlineApplyMemoryTags\([^\n]+$/m)?.[0]||'';
-  assert.match(privateMemory,/rememberFromConversation\(c,tx,userText,full\)/);
+  assert.match(privateMemory,/rememberFromConversation\(c,tx,userText,full,\{rolePerspective:true\}\)/);
   assert.match(privateMemory,/if\(changed\)save\(\)/);
   const rootCss=html.slice(html.indexOf('/* ===== 通话 ===== */'),html.indexOf('.spybanner'));
   const privateCss=privateHtml.slice(privateHtml.indexOf('/* ===== 通话 ===== */'),privateHtml.indexOf('.spybanner'));

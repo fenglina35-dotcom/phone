@@ -340,10 +340,9 @@ struct SmallPhonePrivateRootView: View {
         // The top status area remains system-owned while its color follows theme.
         .ignoresSafeArea(.container, edges: .bottom)
         .preferredColorScheme(statusBarTheme.colorScheme)
-        // Keep the WKWebView frame fixed when the software keyboard appears.
-        // Otherwise SwiftUI first shrinks the representable and WebKit then
-        // scrolls the focused field, producing the visible down/up bounce.
-        .ignoresSafeArea(.keyboard, edges: .bottom)
+        // Let SwiftUI and WKWebView follow the native keyboard frame together.
+        // Freezing this safe area leaves the web composer underneath the
+        // keyboard and makes dismissal visibly lag behind Safari's behavior.
         .onReceive(
             NotificationCenter.default.publisher(
                 for: .smallPhoneStatusBarThemeChanged

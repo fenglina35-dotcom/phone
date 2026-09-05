@@ -7,6 +7,7 @@ const app = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const html = readFileSync(new URL('../小手机.html', import.meta.url), 'utf8');
 const privateApp = readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js', import.meta.url), 'utf8');
 const privateHtml = readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/小手机.html', import.meta.url), 'utf8');
+const privateIndex = readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html', import.meta.url), 'utf8');
 const theater = readFileSync(new URL('../cohab-theater.js', import.meta.url), 'utf8');
 
 function functionSource(source, name) {
@@ -52,6 +53,9 @@ test('offline composer uses iOS-safe typography and guards send taps from openin
     assert.match(code, /document\.addEventListener\('pointerdown',[\s\S]*?\.off-note/);
     assert.match(code, /if\(Date\.now\(\)<_offComposerGuardUntil\)return/);
     assert.match(code, /document\.activeElement!==ta/);
+    const toggle = functionSource(code, 'offNarrate');
+    assert.match(toggle, /ta\.focus\(\{preventScroll:true\}\)[\s\S]*requestAnimationFrame/,
+      'the textarea must regain focus synchronously inside the user gesture before the next paint');
   }
   assert.match(theater, /offSay=function\(e\)/);
   assert.match(theater, /offComposerEvent==='function'/);
@@ -66,4 +70,15 @@ test('the private iOS fixed-phone workaround also covers the offline date compos
   }
   assert.match(html, /html\.north-native-app \.phone\{position:fixed/,
     'the native-only fixed shell remains unchanged for screens without a text composer');
+});
+
+test('Android keyboards resize the shared layout instead of covering the co-living composer', () => {
+  for (const page of [html, privateHtml, privateIndex]) {
+    assert.match(page, /interactive-widget=resizes-content/);
+  }
+  for (const code of [app, privateApp]) {
+    const runtimeCode = code.replace(functionSource(code, 'northViewportDiagnosticStart'), '');
+    assert.doesNotMatch(runtimeCode, /visualViewport\.addEventListener\(['"]resize/,
+      'do not restore the visualViewport keyboard listener that broke iOS caret placement');
+  }
 });

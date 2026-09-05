@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 if(window.__NORTH_COHAB_THEATER__)return;
-window.__NORTH_COHAB_THEATER__='v1181-theater-presence-release-1';
+window.__NORTH_COHAB_THEATER__='v1182-theater-presence-release-1';
 
 const _guestSummaryBusy=new Set();
 const _guestWechatBusy=new Set();

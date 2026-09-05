@@ -12,14 +12,14 @@ const pip = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/Cal
 const reportApp = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/PhoneCompanionReport.swift');
 const reportScene = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/TotalActivityReport.swift');
 
-test('public and private web v1181 remain compatible with native iOS 1.0.307', () => {
-  assert.match(app, /APP_VER='v1181 · 综合稳定、像素与多人暂离版'/);
-  assert.match(app, /sw\.js\?v=1181&r=v1181-theater-presence-release-1/);
-  assert.match(shell, /north-shell-v1181-theater-presence-release-1/);
-  assert.match(bundleInfo, /<string>1181<\/string>/);
-  assert.match(localWebView, /1\.0\.307 \(307\)/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 307;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.307;/g) || []).length, 12);
+test('public and private web v1182 remain compatible with native iOS 1.0.308', () => {
+  assert.match(app, /APP_VER='v1182 · 连续性、记忆与键盘修复版'/);
+  assert.match(app, /sw\.js\?v=1182&r=v1182-theater-presence-release-1/);
+  assert.match(shell, /north-shell-v1182-theater-presence-release-1/);
+  assert.match(bundleInfo, /<string>1182<\/string>/);
+  assert.match(localWebView, /1\.0\.308 \(308\)/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 308;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.308;/g) || []).length, 12);
 });
 
 test('native shared-media gain uses only public AVFoundation types', () => {

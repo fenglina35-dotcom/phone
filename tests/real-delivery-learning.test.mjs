@@ -115,7 +115,7 @@ for(const marker of ['consumeMemoryTags','learnedPreferenceText','forgetLearnedM
   assert.match(delivery,new RegExp('function '+marker+'\\b'),`web delivery-learning function missing: ${marker}`);
   assert.match(privateDelivery,new RegExp('function '+marker+'\\b'),`private delivery-learning function missing: ${marker}`);
 }
-for(const marker of ['rememberFromConversation(c,mm[1],_userText,content)','deliveryConsumeMemoryTags(content,c,_deliveryActionMeta)','换气泡|外卖记忆']){
+for(const marker of ['rememberFromConversation(c,mm[1],_userText,content,{rolePerspective:true})','deliveryConsumeMemoryTags(content,c,_deliveryActionMeta)','换气泡|外卖记忆']){
   assert.ok(privateApp.includes(marker),`private app delivery-learning marker missing: ${marker}`);
 }
 assert.match(app,/_deliveryActionMeta=\{structuredModelAction:true,allowNewTask:_deliveryCurrentUserTurn,accountId:String\(replyAccount[\s\S]{0,420}deliveryConsumeMemoryTags\(content,c,_deliveryActionMeta\)/,'chat replies must bind learned memories to the current structured model turn');

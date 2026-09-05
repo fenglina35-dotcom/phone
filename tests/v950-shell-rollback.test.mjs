@@ -12,7 +12,7 @@ const privateRoot=read('../native/private-small-phone/XcodeProject/PhoneCompanio
 
 test('private shells retain the pre-repair v600 viewport and manifest contract',()=>{
   for(const html of [privateHtml,privateAlias]){
-    assert.match(html,/name="viewport" content="width=device-width, initial-scale=1\.0, maximum-scale=1\.0, user-scalable=no"/);
+    assert.match(html,/name="viewport" content="width=device-width, initial-scale=1\.0, maximum-scale=1\.0, user-scalable=no, interactive-widget=resizes-content"/);
     assert.doesNotMatch(html,/viewport-fit=cover/);
     assert.match(html,/apple-mobile-web-app-status-bar-style" content="black"/);
     assert.doesNotMatch(html,/black-translucent/);
@@ -25,7 +25,7 @@ test('private shells retain the pre-repair v600 viewport and manifest contract',
 });
 
 test('the public web shell restores the successful v950 viewport contract',()=>{
-  assert.match(webHtml,/name="viewport" content="width=device-width, initial-scale=1\.0, maximum-scale=1\.0, user-scalable=no"/);
+  assert.match(webHtml,/name="viewport" content="width=device-width, initial-scale=1\.0, maximum-scale=1\.0, user-scalable=no, interactive-widget=resizes-content"/);
   assert.doesNotMatch(webHtml,/viewport-fit=cover/);
   assert.match(webHtml,/apple-mobile-web-app-status-bar-style" content="default"/);
   assert.doesNotMatch(webHtml,/black-translucent/);
@@ -40,5 +40,6 @@ test('all dynamic system-bar repair code is gone while private App still covers 
     assert.doesNotMatch(app,/pwaSystemBarColorApply|pwaWallpaperBottomColor|pwaSystemBarSync|north-ios-pwa-shell|north-ios-pwa-bottom/);
   }
   assert.match(privateRoot,/ignoresSafeArea\(\.container, edges: \.bottom\)/);
-  assert.match(privateRoot,/ignoresSafeArea\(\.keyboard, edges: \.bottom\)/);
+  assert.doesNotMatch(privateRoot,/ignoresSafeArea\(\.keyboard, edges: \.bottom\)/,
+    'the private WKWebView must resize with the native keyboard so its composer stays above it');
 });

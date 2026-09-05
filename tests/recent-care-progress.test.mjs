@@ -37,7 +37,7 @@ function mealRuntime(rows) {
     fmtDT: (at) => new Date(at).toISOString(),
   };
   vm.createContext(context);
-  for (const name of ['recentMealProgressState', 'recentMealBaselineQuestion', 'recentMealProgress', 'recentMealProgressPrompt']) {
+  for (const name of ['recentMealProgressState', 'recentMealBaselineQuestion', 'recentMealProgress', 'recentMealProgressPrompt', 'recentMealProgressIssue', 'recentMealProgressRepairPrompt']) {
     vm.runInContext(functionSource(app, name), context);
   }
   return context;
@@ -79,10 +79,30 @@ test('meal care recognizes completion, expires, and ignores questions about the 
   assert.equal(runtime.recentMealProgress({}, now), null, 'old meal state must not leak into a later meal');
 });
 
+test('finished noodles cannot fall back to asking whether they were eaten', () => {
+  const now = Date.parse('2026-09-05T22:41:00+08:00');
+  const runtime = mealRuntime([
+    { at: Date.parse('2026-09-05T21:30:00+08:00'), channel: 'cohab', role: 'user', text: '我面已经吃完了' },
+  ]);
+  assert.equal(runtime.recentMealProgress({}, now).state, 'finished');
+  assert.equal(runtime.recentMealBaselineQuestion('面吃了吗。'), true);
+  assert.match(runtime.recentMealProgressIssue({}, '面吃了吗。', now), /已经明确吃完/);
+  assert.equal(runtime.recentMealProgressIssue({}, '面味道怎么样？', now), '');
+  assert.match(runtime.recentMealProgressRepairPrompt({}, '用户已经明确吃完', now), /不能再问/);
+});
+
+test('both ordinary WeChat and co-living replies enforce meal progress before display', () => {
+  assert.match(app, /_mealIssue=recentMealProgressIssue\(c,content,_timeNow\)/);
+  assert.match(functionSource(app, 'cohabReplyCore'), /mealIssue=recentMealProgressIssue\(c,r\)/);
+});
+
 test('foreground, private bundle, and server proactive prompts share the same progress rule', () => {
   assert.equal(functionSource(app, 'recentMealProgressPrompt'), functionSource(bundled, 'recentMealProgressPrompt'));
   assert.match(app, /# 最近关心事项必须沿用进度/);
   assert.match(functionSource(app, 'roleServerPushRecentContext'), /recentMealProgressPrompt\(c\)/);
   assert.match(edge, /若最近上下文包含“最近关心事项进度”/);
   assert.match(edge, /只能询问下一步，不能退回去重问已经得到答案的基础问题/);
+  assert.match(edge, /function roleMealProgressInvalid/);
+  assert.match(edge, /mealProgressInvalid && attempt === 0/);
+  assert.match(edge, /禁止再问吃了吗、面吃了吗、吃完了吗/);
 });
