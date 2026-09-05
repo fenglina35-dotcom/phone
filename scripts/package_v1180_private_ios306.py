@@ -21,7 +21,7 @@ code = materialize_packager(template_path)
 # tighten the names and integrity tokens that are unique to this release.
 if "v1179" not in code or "305" not in code:
     raise RuntimeError("v1179/iOS305 packaging baseline is missing")
-code = code.replace("v1179", "v1180").replace("305", "306")
+code = code.replace("v1179", "v1180").replace("1179", "1180").replace("305", "306")
 
 replacements = [
     (
