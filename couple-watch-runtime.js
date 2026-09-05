@@ -95,7 +95,7 @@ function coupleWatchReady(event){
   return !reason;
 }
 function coupleWatchReplyLines(raw){
-  const text=roleVisibleEnvelopeText(raw);
+  const text=stripHiddenThoughtTags(roleVisibleEnvelopeText(raw));
   // Metadata may share a line with the actual reply; do not discard its speech.
   // Control/action tags remain rejected, so this text-only event cannot claim
   // an action was executed without going through the action engine.
@@ -121,6 +121,8 @@ async function coupleWatchReact(event,valid){
     if(!lines.length||lines.length>10||lines.some(x=>/[\[【][^\]】]*[\]】]/.test(x)||isOOCLine(x)||/系统提示|聊天监管|软件监管/.test(x))){coupleWatchOutcome('failed','invalid-model-output');return false;}
     const messages=lines.map(content=>({id:uid(),role:'assistant',type:'text',content,time:Date.now()}));
     if(!fresh()){coupleWatchOutcome('cancelled','context-changed');return false;}
+    const thought=wechatInnerThoughtValue(raw);
+    if(thought)setNaturalInnerThought(c,thought);
     msgsForAccount(c.id,aid).push(...messages);save();messages.forEach(m=>notifyIncoming(c,m));
     if(cur().p==='chat'&&cur().id===c.id&&typeof refreshChatMessages==='function')refreshChatMessages(c.id);
     coupleWatchOutcome('sent');

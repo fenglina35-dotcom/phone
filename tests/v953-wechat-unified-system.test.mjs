@@ -6,9 +6,9 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-assert.match(source,/APP_VER='v1192 · 情侣空间聊天监管十秒起版'/);
-assert.match(html,/__NORTH_SHELL_BUILD__='1192'/);
-assert.match(sw,/BUILD='1192'/);
+assert.match(source,/APP_VER='v1193 · 情侣空间监管内心解析修复版'/);
+assert.match(html,/__NORTH_SHELL_BUILD__='1193'/);
+assert.match(sw,/BUILD='1193'/);
 assert.equal((project.match(/CURRENT_PROJECT_VERSION = 316;/g)||[]).length,12);
 assert.equal((project.match(/MARKETING_VERSION = 1\.0\.316;/g)||[]).length,12);
 

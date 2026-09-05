@@ -14,7 +14,7 @@ const privateApp=read('native/private-small-phone/XcodeProject/PhoneCompanionTes
 
 test('v1178 shared theater asset is byte-identical and loaded after app core',()=>{
   assert.equal(bundleTheater,theater);
-  assert.match(webHtml,/app\.js\?v=1192[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1192&r=v1184-ios-web-crash-cohab-turn-keyboard-1"/);
+  assert.match(webHtml,/app\.js\?v=1193[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1193&r=v1184-ios-web-crash-cohab-turn-keyboard-1"/);
   for(const html of [privateHtml,privateAlias])assert.match(html,/app\.js\?v=1190[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1190[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1190&r=v1184-ios-web-crash-cohab-turn-keyboard-1"/);
   assert.match(read('sw.js'),/cohab-theater\.js\?v='\+BUILD\+'\&r=v1184-ios-web-crash-cohab-turn-keyboard-1',kind:'theater'/);
 });
