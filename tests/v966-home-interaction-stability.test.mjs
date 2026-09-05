@@ -14,9 +14,9 @@ const project=fs.readFileSync(path.join(root,'native/private-small-phone/XcodePr
 const native=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift'),'utf8');
 
 test('v1184 web keeps private 1.0.315 compatibility',()=>{
-  assert.match(app,/APP_VER='v1190 · 情侣空间聊天与软件监管版'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1190'/);
-  assert.match(sw,/BUILD='1190'/);
+  assert.match(app,/APP_VER='v1191 · 情侣空间监管触发修复版'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1191'/);
+  assert.match(sw,/BUILD='1191'/);
   assert.match(plist,/<string>1190<\/string>/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 316;/g)||[]).length,12);
   assert.equal((project.match(/MARKETING_VERSION = 1\.0\.316;/g)||[]).length,12);

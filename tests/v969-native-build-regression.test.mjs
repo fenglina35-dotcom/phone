@@ -13,9 +13,9 @@ const reportApp = read('native/private-small-phone/XcodeProject/PhoneCompanionRe
 const reportScene = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/TotalActivityReport.swift');
 
 test('public web v1184 and private web v1189 remain compatible with native iOS 1.0.315', () => {
-  assert.match(app, /APP_VER='v1190 · 情侣空间聊天与软件监管版'/);
-  assert.match(app, /sw\.js\?v=1190&r=v1190-couple-watch-1/);
-  assert.match(shell, /north-shell-v1190-couple-watch-1/);
+  assert.match(app, /APP_VER='v1191 · 情侣空间监管触发修复版'/);
+  assert.match(app, /sw\.js\?v=1191&r=v1191-couple-watch-trigger-1/);
+  assert.match(shell, /north-shell-v1191-couple-watch-trigger-1/);
   assert.match(bundleInfo, /<string>1190<\/string>/);
   assert.match(localWebView, /1\.0\.316 \(316\)/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 316;/g) || []).length, 12);

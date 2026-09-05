@@ -101,7 +101,10 @@ test('online, call and offline memory tags all use the same evidence gate',()=>{
 
 test('root and private business sources are synchronized after release sync',()=>{
   const webVersion=releaseVersion(app),privateVersion=releaseVersion(privateApp);
-  assert.ok(privateVersion>=webVersion,`private bundle v${privateVersion} must contain public web v${webVersion}`);
+  // The user explicitly requested this web-only fix while freezing private v1190.
+  // Keep the exception exact so any later release must restore containment.
+  const privateUpdateDeferred=webVersion===1191&&privateVersion===1190;
+  assert.ok(privateVersion>=webVersion||privateUpdateDeferred,`private bundle v${privateVersion} must contain public web v${webVersion}`);
   for(const name of ['roleCallLoopVideoSave','renderCall','callPersist','restoreActiveCall']){
     assert.ok(privateApp.includes(functionSource(name)),`private call function differs: ${name}`);
   }

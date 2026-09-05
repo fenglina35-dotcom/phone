@@ -57,8 +57,8 @@ test('v1189 private identifiers retain the performance chain while public stays 
   assert.match(bridge, /static let contractVersion = 35/);
   assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 316;/g) || []).length, 12);
   assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.316;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1190 · 情侣空间聊天与软件监管版'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1190'/);
+  assert.match(publicApp, /APP_VER='v1191 · 情侣空间监管触发修复版'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1191'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
