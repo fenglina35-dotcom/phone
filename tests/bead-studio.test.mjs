@@ -36,9 +36,9 @@ test('game hall routes the shared Bead Atelier in web and private runtimes',()=>
     assert.match(source,/<button type="button" class="l" onclick="home\(\)" aria-label="返回主屏幕">/,'the game lobby back control must be a real accessible button');
     assert.match(source,/c\.p==='gameshub'[\s\S]{0,120}onclick=back/,'the lobby returns through its real route stack so WeChat and home entries both remain correct');
   }
-  assert.match(html,/bead-studio\.js\?v=1180&r=v1180-pixel-puzzle-3/);
-  assert.match(privateHtml,/bead-studio\.js\?v=1180&r=v1180-pixel-puzzle-3/);
-  assert.match(sw,/bead-studio\.js\?v='\+BUILD\+'\&r=v1180-pixel-puzzle-3/);
+  assert.match(html,/bead-studio\.js\?v=1181&r=v1181-pixel-puzzle-4/);
+  assert.match(privateHtml,/bead-studio\.js\?v=1181&r=v1181-pixel-puzzle-4/);
+  assert.match(sw,/bead-studio\.js\?v='\+BUILD\+'\&r=v1181-pixel-puzzle-4/);
   assert.equal(privateBead,bead,'web and private App must use the same Bead Atelier runtime');
 });
 
@@ -100,7 +100,7 @@ test('local robot planning needs no model and cannot control coordinates',()=>{
 });
 
 test('completion follow-up is durably queued once with real artwork facts',()=>{
-  const b=runtime(),g=b.fresh('r1',16,16);g.phase='done';g.workName='企鹅';g.sourceName='IMG_0475.jpg';g.target=Array(256).fill('#2b292c');
+  const b=runtime(),g=b.fresh('r1',16,16);g.phase='done';g.workName='企鹅';g.sourceName='IMG_0475.jpg';g.target=Array(256).fill('#2b292c');g.owners=Array(256).fill('').map((_,i)=>i<96?'me':'ta');
   assert.equal(b.queueCompletionMessage(g),true);
   assert.equal(b.queueCompletionMessage(g),false,'the same saved work cannot enqueue twice');
   assert.equal(b.__scheduled.length,1);
@@ -108,6 +108,22 @@ test('completion follow-up is durably queued once with real artwork facts',()=>{
   assert.match(b.__scheduled[0].note,/作品名《企鹅》/);
   assert.match(b.__scheduled[0].note,/原图名称“IMG_0475\.jpg”/);
   assert.match(b.__scheduled[0].note,/炭黑 256格/);
+  assert.match(b.__scheduled[0].note,/你（先生）和我共同完成并保存的协作画作/);
+  assert.match(b.__scheduled[0].note,/我实际填了 96 格，你实际填了 160 格/);
+});
+
+test('finished pixel works live in the single shared artwork gallery instead of taking draft slots',()=>{
+  assert.match(app,/onclick="dgOpenGallery\(\)"[\s\S]{0,180}<b>我的画作<\/b>/);
+  assert.match(app,/beadGalleryItemsHTML/);
+  assert.match(privateApp,/beadGalleryItemsHTML/);
+  assert.match(bead,/filter\(g=>g&&g\.phase!=='done'\)/,'finished pixel works must not remain in the horizontal continue-game rail');
+  assert.doesNotMatch(bead,/const saved=works\.slice/,'saved works must not be duplicated as individual lobby cards');
+  assert.match(bead,/我的画作 · 已保存 \$\{workCount\} 幅像素作品/,'the setup offers one compact gallery entry instead of one button per work');
+  assert.match(bead,/function beadGalleryItemsHTML\(/);
+  assert.match(bead,/previewSrc:beadThumbnailData\(g\)/,'new pixel works keep a compact gallery thumbnail');
+  assert.match(bead,/src=x\.previewSrc\|\|beadThumbnailData\(x\)/,'older archived pixel works receive a gallery thumbnail when first opened');
+  assert.match(bead,/collaboration:Object\.assign\(\{\},g\.collaboration\)/,'the archived work keeps the two collaborators and their actual contributions');
+  assert.equal(privateBead,bead,'web and private App must use the same consolidated pixel gallery runtime');
 });
 
 test('uploaded images are converted into square color-code charts up to 128 cells',()=>{
@@ -158,6 +174,6 @@ test('uploaded images are converted into square color-code charts up to 128 cell
   assert.match(bead,/box\.works\.push\(snapshot\)/,'completed named works are archived for later viewing');
   assert.match(bead,/if\(!_bead\.archivedView\)beadSave\(_bead\)/,'viewing a saved work must not overwrite the active draft on exit');
   assert.match(bead,/if\(box\.works\.length>10\)/,'archive count is capped to protect local storage');
-  assert.match(bead,/works\.length\?`<div class="bead-saved-title">已保存作品 · 点击可随时查看/,'all retained works have an explicit gallery in the setup panel');
+  assert.match(bead,/typeof dgOpenGallery==='function'/,'pixel setup links to the shared artwork gallery');
   assert.doesNotMatch(bead,/ctx\.arc\(x\*size/,'exported artwork must use square cells, not round beads');
 });

@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='1180';</script>
+<script>window.__NORTH_SHELL_BUILD__='1181';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-1180-summary-call-offline-1';
+  var key='north-sw-reloaded-1181-summary-call-offline-1';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=1180&r=v1180-summary-call-offline-1';
+  var url='sw.js?v=1181&r=v1181-theater-presence-release-1';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -1168,6 +1168,7 @@ body{min-height:0}
 /* 播放页纵向比例：唱片与歌词留出一行呼吸空间，底部控制区独立锚定。 */
 .music-stage{min-height:0;flex:0 0 clamp(190px,28vh,240px)}.music-vinyl-wrap{width:clamp(190px,28vh,240px);height:clamp(190px,28vh,240px)}.music-meta{margin-top:clamp(18px,2.4vh,24px);padding:0 26px 3px}.music-lyrics{height:clamp(92px,14vh,120px);padding:0 22px}.music-lyrics .mlrc{font-size:13px;line-height:1.8}.music-controls{margin-top:auto;padding:1px 22px 16px}.music-chat-toggle{font-size:13px}
 @media(max-height:720px){.music-meta{margin-top:14px}.music-meta b{font-size:16px}.music-meta span{margin-top:2px;font-size:10px}.music-lyrics .mlrc{font-size:12px;line-height:1.75}.music-controls{padding-bottom:12px}.music-chat-toggle{font-size:12px}}
+.dg-gallery .bead-gallery-thumb{width:70px;height:54px;box-sizing:border-box;display:grid;place-items:center;flex:none;border-radius:10px;background:#f8f4ed;color:#8a7868;cursor:pointer}.dg-gallery .bead-gallery-thumb svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.65}
 </style>
 <style>
 .lmview{background-color:#06101a;background-image:radial-gradient(circle at 53% 43%,rgba(35,76,108,.2),transparent 29%),linear-gradient(rgba(116,158,194,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(116,158,194,.045) 1px,transparent 1px),linear-gradient(rgba(116,158,194,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(116,158,194,.02) 1px,transparent 1px)!important;background-size:auto,40px 40px,40px 40px,160px 160px,160px 160px!important}.lmview:before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(120deg,transparent 0 42%,rgba(126,185,236,.05) 50%,transparent 58%);mix-blend-mode:screen}.lmzones path{fill:rgba(72,107,137,.055);stroke:rgba(154,190,222,.18);stroke-width:1.1;vector-effect:non-scaling-stroke}.lmroutes path{fill:none;stroke:url(#lmRoute);stroke-width:2.2;stroke-linecap:round;stroke-dasharray:9 15;vector-effect:non-scaling-stroke}.lmregionnames text{fill:rgba(191,216,235,.28);font:700 10px -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;letter-spacing:1.7px;text-anchor:middle}.lmmeridians path{stroke:rgba(150,188,222,.065)!important}.lmlands path{fill:rgba(72,107,137,.035)!important;stroke:rgba(154,190,222,.08)!important;filter:none!important}.lmcity i{background:#a6c0d7;box-shadow:0 0 0 3px rgba(166,192,215,.1),0 0 12px rgba(116,178,232,.2)}.lmtrail{border-color:rgba(148,197,239,.38);background:linear-gradient(145deg,rgba(9,21,34,.93),rgba(14,24,36,.84));box-shadow:0 12px 28px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.05)}.lmtrail i{background:linear-gradient(145deg,#f2f6fb,#a8c7e7);color:#0b1722}.lmfootrow>i{background:linear-gradient(145deg,rgba(112,163,209,.24),rgba(63,99,132,.12));color:#c8e1f5}
@@ -1319,7 +1320,7 @@ html.north-ios-home-safe .pet-together-play{top:calc(181px + var(--north-ios-hom
 html.north-native-app .phone{position:fixed;inset:0;width:100%;height:auto;min-height:0;max-height:none}
 html.north-native-app .screen{width:100%;height:100%;min-height:0;max-height:none}
 /* iOS 26 WebKit：键盘会让 fixed 祖先的视觉位置与光标坐标脱节。只在角色聊天存在时改为同尺寸 absolute，其他页面、Android 与系统底栏不变。 */
-html.north-native-app .phone:has(.chat-inputbar),html.north-ios-home-safe .phone:has(.chat-inputbar){position:absolute}
+html.north-native-app .phone:has(.chat-inputbar),html.north-native-app .phone:has(.offinput),html.north-ios-home-safe .phone:has(.chat-inputbar),html.north-ios-home-safe .phone:has(.offinput){position:absolute}
 /* 同一 WebKit 问题也会影响整屏通话输入：只在苹果兼容环境且通话输入已显示时释放 fixed 坐标系；Android 不进入该规则。 */
 html.north-native-app .phone:has(.callscreen.show:not(.mini) .callinput.show),html.north-ios-home-safe .phone:has(.callscreen.show:not(.mini) .callinput.show){position:absolute}
   /* 私人 App 的电话页与已验证正常的网页版共用同一套输入、挂断和键盘整体位移。
@@ -1368,9 +1369,9 @@ html.north-apple-remote-safe .music-chat-dock{margin-bottom:4px;scroll-margin-bo
 .wxlight .wx-real-profile,.wxlight .wx-subpage,.wxlight .wx-role-moments,.wxlight .wx-real-scroll,.wxlight .wx-info-scroll,.wxlight .wx-role-detail{background:#f7f7f7;color:#111}.wxlight .wx-real-nav{background:#f7f7f7;border-bottom-color:#ddd}.wxlight .wx-real-nav button,.wxlight .wx-real-nav span{color:#111}.wxlight .wx-profile-hero{background:#f7f7f7;color:#111}.wxlight .wx-profile-block,.wxlight .wx-profile-row,.wxlight .wx-profile-actions,.wxlight .wx-info-group,.wxlight .wx-chat-members{background:#fff;border-color:#e5e5e5}.wxlight .wx-chat-details-scroll{background:#f7f7f7}.wxlight .wx-chat-members button{color:#555}.wxlight .wx-chat-members button.add i{border-color:#aaa;color:#888}.wxlight .wx-profile-actions button{border-color:#e5e5e5}.wxlight .wx-info-group button{color:#111;border-color:#e8e8e8}.wxlight .wx-role-feed,.wxlight .wx-role-moment-card{background:#f7f7f7;color:#111}.wxlight .wx-role-moment-card .moment-main{border-color:#ddd}.wxlight .wx-role-moment-card .copy small,.wxlight .wx-role-moment-card>time{color:#151515}.wxlight .wx-role-detail-text{color:#111}.wxlight .wx-role-detail-actions,.wxlight .wx-role-detail-actions button+button{border-color:#ddd}.wxlight .wx-role-detail-social{background:#ebebee;color:#222}.wxlight .wx-role-detail-compose{border-color:#ddd;background:rgba(247,247,247,.97)}.wxlight .wx-role-detail-compose input{background:#e8e8eb;color:#111}.wxlight .wx-role-cover .avatar.lg{border-color:#f7f7f7}.wxlight .wx-feature-category{border-color:#ddd;background:#fff;color:#111;box-shadow:0 8px 22px rgba(0,0,0,.05)}.wxlight .wx-feature-category small{color:#74747a}.wxlight .wx-feature-tabs button{border-color:#d5d5da;background:#fff;color:#777}.wxlight .wx-feature-tabs button.on{border-color:#6c7faf;background:#edf1fb;color:#45577f}
 @media(max-width:390px){.wx-profile-hero{padding-left:17px;padding-right:17px}.wx-profile-thumbs i{width:50px;height:50px}.wx-role-cover{height:315px;flex-basis:315px}.wx-info-group button{padding-left:17px;padding-right:17px}.wx-info-group button>em{max-width:58%}}
 </style>
-<link rel="stylesheet" href="glass-theme.css?v=1180&r=music-disc-color-1">
-<link rel="stylesheet" href="wechat-me.css?v=1180">
-<link rel="stylesheet" href="pet-game.css?v=1180">
+<link rel="stylesheet" href="glass-theme.css?v=1181&r=music-disc-color-1">
+<link rel="stylesheet" href="wechat-me.css?v=1181">
+<link rel="stylesheet" href="pet-game.css?v=1181">
 <link rel="stylesheet" href="wedding-game.css?v=wedding-dual-17">
 </head>
 <body>
@@ -1424,23 +1425,23 @@ html.north-apple-remote-safe .music-chat-dock{margin-bottom:4px;scroll-margin-bo
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail(window.__northBootStarted?'本机存档读取超过 60 秒，请重新加载；仍不会删除聊天、角色或主题':'关键页面文件加载超过 60 秒，请检查网络后重新加载');},60000);
 })();
 </script>
-<script src="license-gate.js?v=1180" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="app.js?v=1180&r=v1180-summary-call-offline-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="private-reply-intercept.js?v=1180&r=v1178-private-intercept-parity-1" onerror="__northBootFail('私人回复拦截记录组件载入失败（安装包不完整）')"></script>
-<script src="cohab-theater.js?v=1180&r=v1180-summary-call-offline-1" onerror="__northBootFail('共同生活多人剧场组件载入失败（可能是网络或 404）')"></script>
-<script src="bead-studio.js?v=1180&r=v1180-pixel-puzzle-3" onerror="__northBootFail('像素拼拼乐组件载入失败（安装包不完整）')"></script>
-<script src="heart-quiz.js?v=1180" onerror="console.warn('心动审判预览组件载入失败')"></script>
-<script src="private-runtime-diagnostics.js?v=306" onerror="__northBootFail('私人 App 性能保护组件载入失败（安装包不完整）')"></script>
+<script src="license-gate.js?v=1181" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=1181&r=v1181-theater-presence-release-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="private-reply-intercept.js?v=1181&r=v1178-private-intercept-parity-1" onerror="__northBootFail('私人回复拦截记录组件载入失败（安装包不完整）')"></script>
+<script src="cohab-theater.js?v=1181&r=v1181-theater-presence-release-1" onerror="__northBootFail('共同生活多人剧场组件载入失败（可能是网络或 404）')"></script>
+<script src="bead-studio.js?v=1181&r=v1181-pixel-puzzle-4" onerror="__northBootFail('像素拼拼乐组件载入失败（安装包不完整）')"></script>
+<script src="heart-quiz.js?v=1181" onerror="console.warn('心动审判预览组件载入失败')"></script>
+<script src="private-runtime-diagnostics.js?v=307" onerror="__northBootFail('私人 App 性能保护组件载入失败（安装包不完整）')"></script>
 <script src="vendor/qr/qrcode.js?v=2.0.4"></script>
 <script src="vendor/qr/jsQR.js?v=1.4.0"></script>
-<script src="wechat-me.js?v=1180" onerror="__northBootFail('微信个人页组件载入失败（可能是网络或 404）')"></script>
-<script src="smart-home.js?v=1180" onerror="__northBootFail('智能家电组件载入失败（可能是网络或 404）')"></script>
-<script src="delivery.js?v=1180" onerror="__northBootFail('真实外卖组件载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=1180" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="pet-game.js?v=1180" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
-<script src="gift-effects.js?v=1180" onerror="console.warn('礼物粒子特效载入失败')"></script>
-<script src="thought-card-effects.js?v=1180" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
-<script src="ai-account.js?v=1180"></script>
+<script src="wechat-me.js?v=1181" onerror="__northBootFail('微信个人页组件载入失败（可能是网络或 404）')"></script>
+<script src="smart-home.js?v=1181" onerror="__northBootFail('智能家电组件载入失败（可能是网络或 404）')"></script>
+<script src="delivery.js?v=1181" onerror="__northBootFail('真实外卖组件载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=1181" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="pet-game.js?v=1181" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
+<script src="gift-effects.js?v=1181" onerror="console.warn('礼物粒子特效载入失败')"></script>
+<script src="thought-card-effects.js?v=1181" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
+<script src="ai-account.js?v=1181"></script>
 <script src="wedding-game.js?v=wedding-dual-17" onerror="console.warn('现代婚礼预览载入失败')"></script>
 </body>
 </html>

@@ -106,7 +106,7 @@ assert.match(html,/\.chat-inputbar \.plus\{width:30px;\}/,'only the chat side co
 assert.match(html,/\.chat-inputbar \.send\{padding-left:10px;padding-right:10px;\}/,'the send button remains in place while yielding visible width to the textarea');
 assert.match(html,/\.chat-inputbar textarea\{padding-top:6px;padding-bottom:10px;line-height:20px;\}/,'the caret keeps more room below its line without changing the proven 36px box');
 assert.match(html,/\.manual-reply-row\{display:flex;justify-content:flex-end;padding:5px 10px 0;background:#0b0b0c;\}/,'the manual reply button keeps its established position');
-assert.match(html,/html\.north-native-app \.phone:has\(\.chat-inputbar\),html\.north-ios-home-safe \.phone:has\(\.chat-inputbar\)\{position:absolute\}/,'Apple chat alone must remove the fixed ancestor that desynchronizes the iOS 26 caret');
+assert.match(html,/html\.north-native-app \.phone:has\(\.chat-inputbar\),html\.north-native-app \.phone:has\(\.offinput\),html\.north-ios-home-safe \.phone:has\(\.chat-inputbar\),html\.north-ios-home-safe \.phone:has\(\.offinput\)\{position:absolute\}/,'Apple WeChat and offline-date composers must remove the fixed ancestor that desynchronizes the iOS 26 caret');
 assert.doesNotMatch(html,/html[^\n]*Android[^\n]*\.phone:has\(\.chat-inputbar\)/i,'the iOS caret workaround must not alter Android geometry');
 
 assert.match(source, /\[点外卖\\\|[\s\S]*?refreshChatMessages\(id\);continue;/, 'special role cards must use the safe message-only refresh');

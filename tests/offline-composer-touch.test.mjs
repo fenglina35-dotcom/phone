@@ -56,3 +56,14 @@ test('offline composer uses iOS-safe typography and guards send taps from openin
   assert.match(theater, /offSay=function\(e\)/);
   assert.match(theater, /offComposerEvent==='function'/);
 });
+
+test('the private iOS fixed-phone workaround also covers the offline date composer', () => {
+  for (const page of [html, privateHtml]) {
+    assert.match(page, /html\.north-native-app \.phone:has\(\.offinput\)/);
+    assert.match(page, /html\.north-ios-home-safe \.phone:has\(\.offinput\)/);
+    assert.match(page, /\.phone:has\(\.offinput\)[^{]*\{position:absolute\}/,
+      'offline textarea must leave the fixed-position ancestor while the native keyboard is active');
+  }
+  assert.match(html, /html\.north-native-app \.phone\{position:fixed/,
+    'the native-only fixed shell remains unchanged for screens without a text composer');
+});

@@ -12,22 +12,22 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v1180 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1180 · 综合稳定、像素与外卖修正版'/);
-  assert.match(app,/const url='sw\.js\?v=1180&r=v1180-summary-call-offline-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1180'/);
-  assert.match(html,/app\.js\?v=1180/);
-  assert.match(sw,/const BUILD='1180'/);
-  assert.match(sw,/north-shell-v1180-summary-call-offline-1/);
-  assert.match(index,/小手机\.html\?v=1180/);
-  assert.match(repair,/小手机\.html\?v=1180/);
+test('v1181 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v1181 · 综合稳定、像素与多人暂离版'/);
+  assert.match(app,/const url='sw\.js\?v=1181&r=v1181-theater-presence-release-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1181'/);
+  assert.match(html,/app\.js\?v=1181/);
+  assert.match(sw,/const BUILD='1181'/);
+  assert.match(sw,/north-shell-v1181-theater-presence-release-1/);
+  assert.match(index,/小手机\.html\?v=1181/);
+  assert.match(repair,/小手机\.html\?v=1181/);
 });
 
-test('the private iOS source embeds private web v1180 and keeps native build 306 before repackaging',()=>{
-  assert.match(privateBundle,/<string>1180<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.306;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 306;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.306 \(306\)'/);
+test('the private iOS source embeds private web v1181 and keeps native build 307 before repackaging',()=>{
+  assert.match(privateBundle,/<string>1181<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.307;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 307;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.307 \(307\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

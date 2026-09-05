@@ -27,15 +27,15 @@ function functionSource(name){
 }
 
 test('v1178 has a unique visible identity across every public entry and cache layer',()=>{
-  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1180\'/);
-  assert.match(app,/APP_VER='v1180 · 综合稳定、像素与外卖修正版'/);
-  assert.match(shell,/__NORTH_SHELL_BUILD__='1180'/);
-  assert.match(shell,/app\.js\?v=1180&r=v1180-summary-call-offline-1/);
-  assert.match(index,/小手机\.html\?v=1180/);
-  assert.match(repair,/小手机\.html\?v=1180/);
-  assert.match(worker,/const BUILD='1180'/);
-  assert.match(worker,/north-shell-v1180-summary-call-offline-1/);
-  assert.match(hotfix,/sw\.js\?v=1180&r=v1180-summary-call-offline-1/);
+  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1181\'/);
+  assert.match(app,/APP_VER='v1181 · 综合稳定、像素与多人暂离版'/);
+  assert.match(shell,/__NORTH_SHELL_BUILD__='1181'/);
+  assert.match(shell,/app\.js\?v=1181&r=v1181-theater-presence-release-1/);
+  assert.match(index,/小手机\.html\?v=1181/);
+  assert.match(repair,/小手机\.html\?v=1181/);
+  assert.match(worker,/const BUILD='1181'/);
+  assert.match(worker,/north-shell-v1181-theater-presence-release-1/);
+  assert.match(hotfix,/sw\.js\?v=1181&r=v1181-theater-presence-release-1/);
   for(const [name,source] of Object.entries({app,shell,index,repair,worker,hotfix})){
     assert.doesNotMatch(source,/v?1127/,`${name} must not reuse the prior web version`);
   }

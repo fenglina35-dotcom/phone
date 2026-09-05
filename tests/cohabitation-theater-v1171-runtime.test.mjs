@@ -29,7 +29,7 @@ function harness(){
     document:{getElementById:id=>inputs[id]||null,createElement:()=>({}),head:{appendChild:noop}},
     cohabRepairRows:rows=>rows||[],cohabData:baseData,cohabPushMessage:basePush,cohabSystem:()=>'',cohabCurrentTurnPrompt:()=>'',
     cohabReplyCore:async()=>({items:[{id:'host-reply',who:'ta',source:'ta',text:'主角先认真回答这一句话'}],inspection:'',trips:[],travelErrors:[]}),
-    offAI:async()=>{hostCalls.push({before:home.msgs.map(x=>x.who),system:context.cohabSystem(host,home,'')});if(context.emitHost!==false)context.cohabPushMessage(home,{id:`host-${serial+1}`,who:'ta',source:'ta',text:'主角先认真回答这一句话',time:Date.now()});},offSay:noop,renderCohab:()=>'<div class="offstage"><div class="cohab-meta"></div></div>',offlineMsgContent:m=>m.text,
+    offAI:async()=>{hostCalls.push({before:home.msgs.map(x=>x.who),system:context.cohabSystem(host,home,'')});if(context.emitHost!==false)context.cohabPushMessage(home,{id:`host-${serial+1}`,who:'ta',source:'ta',text:'主角先认真回答这一句话',time:Date.now()});},offSay:noop,offReply:noop,renderCohab:()=>'<div class="offstage"><div class="cohab-meta"></div></div>',offlineMsgContent:m=>m.text,
     offlineSceneTimelineRows:()=>[],roleInteractionRows:()=>[],roleReplyGapFact:()=>null,roleReplyTimelinePin:()=>'',roleReplyContinuityPin:()=>'',
     roleReplyCrossChannelHandoffPrompt:()=>'',roleServerPushRecentContext:()=>'',roleDiaryRecentFacts:()=>'',
     getC:id=>id==='host'?host:id==='guest'?guest:null,uid:()=>`id${++serial}`,save:noop,saveNowAsync:async()=>true,
@@ -43,7 +43,7 @@ function harness(){
     if(!(name in context))context[name]=noop;
   }
   context.offlinePendingStart=rows=>{let first=-1;for(let i=rows.length-1;i>=0;i--){const m=rows[i]||{},kind=m.who==='me'||m.actorType==='me'?'me':m.who==='ta'||m.actorType==='host'||m.who==='guest'||m.who==='extra'||/^(guest|extra)$/.test(m.actorType||'')?'assistant':'';if(kind==='assistant')return first;if(kind==='me')first=i;}return first;};
-  context._off={id:'host',mode:'cohab',busy:false};context._offSel=null;context.emitHost=true;context.offCurrentInput=()=> '用户本轮';context.offRevealTiming=()=>({step:0,total:0});context.cohabAdvance=()=>home;
+  context._off={id:'host',mode:'cohab',busy:false};context._offSel=null;context.emitHost=true;context.offCurrentInput=()=> '用户本轮';context.offRevealTiming=()=>({step:0,total:0});context.cohabAdvance=()=>home;context.cohabTogetherScene=()=>true;
   context.offSummaryUserCall=()=> '用户';context.esc=x=>String(x??'');context.offRevealText=m=>String(m&&m.text||'');context.cohabSettingsPanel=()=>'<div class="cohab-settings-wrap"><details class="cohab-settings"><summary>共同生活设置</summary></details><button type="button" class="cohab-debug-reply">让TA回</button></div>';context.window=context;
   context.topSummaries=()=>[];
   vm.runInNewContext(source,context,{filename:'cohab-theater.js'});
@@ -217,4 +217,81 @@ test('closing theater keeps historical support names but restores unlabeled host
   assert.doesNotMatch(html,/cohab-theater-target/);
   assert.match(html,/我说的话/);
   assert.match(html,/主角说的话/);
+});
+
+test('temporary leave keeps the configured guest and never creates an exit summary or WeChat follow-up',async()=>{
+  const {context,home,guest,wechat}=harness();
+  context.cohabTheaterSave('host');
+  await context.cohabTheaterToggle('host');
+  assert.equal(context.cohabTheaterPresence('host','guest',false,'去做饭'),true);
+  assert.equal(home.theater.guest.contactId,'guest');
+  assert.equal(home.theater.presence.guest,false);
+  assert.equal(home.theater.guestHistory.length,0);
+  assert.equal(guest.summaries.length,0);
+  assert.equal(wechat.guest.length,0);
+  assert.doesNotMatch(context.cohabSettingsPanel('host',home),/对小雨说/);
+  context.cohabTheaterPresence('host','guest',true);
+  assert.equal(home.theater.presence.guest,true);
+});
+
+test('a support actor natural leave is temporary rather than a permanent guest dismissal',async()=>{
+  const {context,home,guest,wechat}=harness();
+  context.cohabTheaterSave('host');
+  await context.cohabTheaterToggle('host');
+  home.theater.addressTo='guest';
+  context.chatAPI=async messages=>String(messages[0].content).includes('只输出一个JSON对象')?'{"bubbles":[{"type":"speak","text":"我先去做饭，你们等我，我一会儿回来"}],"leave":false}':'记忆文本';
+  await context.offAI();
+  assert.equal(home.theater.guest.contactId,'guest');
+  assert.equal(home.theater.presence.guest,false);
+  assert.equal(home.theater.guestHistory.length,0);
+  assert.equal(guest.summaries.length,0);
+  assert.equal(wechat.guest.length,0);
+});
+
+test('when the host is temporarily away an addressed support replies alone',async()=>{
+  const {context,home,hostCalls}=harness();
+  context.cohabTheaterSave('host');
+  await context.cohabTheaterToggle('host');
+  context.cohabTheaterPresence('host','host',false);
+  home.theater.addressTo='guest';
+  await context.offAI();
+  assert.deepEqual(Array.from(home.msgs,x=>x.who),['guest']);
+  assert.equal(hostCalls.length,0);
+});
+
+test('the existing manual reply button runs exactly one support-host round while the user is away',async()=>{
+  const {context,home,actorCalls,hostCalls}=harness();
+  context.cohabTheaterSave('host');
+  await context.cohabTheaterToggle('host');
+  context.cohabTheaterPresence('host','me',false);
+  const panel=context.cohabSettingsPanel('host',home);
+  assert.match(panel,/>让TA回<\/button>/);
+  assert.doesNotMatch(panel,/cohab-theater-target/);
+  const html=context.renderCohab('host');
+  assert.match(html,/我回到现场/);
+  assert.match(html,/点上方原有“让TA回”/);
+  assert.doesNotMatch(html,/onclick="cohabTheaterContinue\('/);
+  assert.doesNotMatch(html,/class="inputbar offinput"/);
+  await context.offReply();
+  assert.deepEqual(Array.from(home.msgs,x=>x.who),['guest','ta']);
+  assert.equal(actorCalls.length,1);
+  assert.equal(hostCalls.length,1);
+  assert.match(hostCalls[0].system,/用户现在暂时离场/);
+  await context.offReply();
+  assert.deepEqual(Array.from(home.msgs,x=>x.who),['guest','ta','guest','ta']);
+  assert.equal(actorCalls.length,2);
+  assert.equal(hostCalls.length,2);
+});
+
+test('one manual away click gives every present support one turn and the host exactly one final turn',async()=>{
+  const {context,home,actorCalls,hostCalls}=harness();
+  context.cohabTheaterSave('host');
+  await context.cohabTheaterToggle('host');
+  home.theater.extra={episodeId:'extra-1',name:'周医生',persona:'冷静',relationToUser:'医生',relationToHost:'同事',joinedSeq:1,joinedAt:1,_announced:true};
+  context.cohabTheaterPresence('host','me',false);
+  await context.offReply();
+  assert.deepEqual(Array.from(home.msgs,x=>x.who),['guest','extra','ta']);
+  assert.equal(actorCalls.length,2);
+  assert.equal(hostCalls.length,1);
+  assert.match(hostCalls[0].system,/本轮已经先发生的配角反应[\s\S]*小雨[\s\S]*周医生/);
 });

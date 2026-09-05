@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1180 · 综合稳定、像素与外卖修正版'/);
+  assert.match(app,/APP_VER='v1181 · 综合稳定、像素与多人暂离版'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1180-summary-call-offline-1/);
-  assert.match(html,/sw\.js\?v=1180&r=v1180-summary-call-offline-1/);
+  assert.match(html,/north-sw-reloaded-1181-summary-call-offline-1/);
+  assert.match(html,/sw\.js\?v=1181&r=v1181-theater-presence-release-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{

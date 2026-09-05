@@ -31,8 +31,8 @@ test('private app loads bundled phone resources instead of a remote shell', () =
   assert.match(webView, /webView\.window\?\.safeAreaInsets/);
   assert.match(webView, /north-native-app/);
   assert.match(webView, /root\.classList\.add\('north-native-app'\)/);
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.306 \(306\)'/);
-  assert.match(webView, /\n      window\.__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.306 \(306\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.307 \(307\)'/);
+  assert.match(webView, /\n      window\.__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.307 \(307\)'/);
   assert.doesNotMatch(webView, /\nwindow\.__SMALL_PHONE_PRIVATE_BUILD__/);
   assert.match(webView, /SmallPhoneRolePushTapped/);
   assert.match(webView, /window\.__smallPhoneOpenRolePush/);
@@ -48,7 +48,7 @@ test('private shell and bundled script use the same strict boot identity', () =>
   );
   const shellBuild = privateHTML.match(/window\.__NORTH_SHELL_BUILD__='(\d+)'/)?.[1];
   const scriptBuild = privateApp.match(/window\.__NORTH_SHELL_BUILD__!==\'(\d+)\'/)?.[1];
-  assert.equal(shellBuild, '1180');
+  assert.equal(shellBuild, '1181');
   assert.equal(scriptBuild, shellBuild);
   assert.match(privateHTML, new RegExp(`app\\.js\\?v=${shellBuild}\\b`));
 });
@@ -62,7 +62,7 @@ test('private boot repair link points to a bundled non-destructive recovery page
   );
   assert.match(privateHTML, /replace\(\/\[\^\/\]\*\$\/,'repair\.html'\)/);
   assert.match(privateRepair, /location\.replace\(target\(\)\)/);
-  assert.match(privateRepair, /index\.html\?repair=1&v=1180/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1181/);
   assert.doesNotMatch(privateRepair, /localStorage\.(?:clear|removeItem)/);
   assert.doesNotMatch(privateRepair, /indexedDB\.deleteDatabase/);
 });
@@ -157,8 +157,8 @@ test('real Mac project keeps all Screen Time targets and becomes 小手机', () 
   }
   assert.match(project, /INFOPLIST_KEY_CFBundleDisplayName = "小手机";/);
   assert.match(project, /PRODUCT_BUNDLE_IDENTIFIER = com\.qianyi\.PhoneCompanionTest;/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 306;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.306;/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 307;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.307;/);
 
   const scheme = read(
     'native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/xcshareddata/xcschemes/PhoneCompanionTest.xcscheme'
