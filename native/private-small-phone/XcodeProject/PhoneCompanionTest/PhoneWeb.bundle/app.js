@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1188'){
+if(window.__NORTH_SHELL_BUILD__!=='1189'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -419,7 +419,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1188 · 私人线下原生聚焦修复版';
+const APP_VER='v1189 · 私人共同生活键盘坐标修复版';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1639,7 +1639,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1188&r=v1188-private-offline-native-focus-1';
+  const url='sw.js?v=1189&r=v1189-private-cohab-keyboard-coordinate-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -7050,14 +7050,15 @@ function offNarrationMode(){return !!(_off&&_off.narrateMode);}
 function offInputAutoSize(ta){if(!ta)return;const min=42,max=90;ta.style.height=min+'px';const raw=Math.ceil(Number(ta.scrollHeight)||min),height=Math.max(min,Math.min(max,raw));ta.style.height=height+'px';ta.style.overflowY=raw>max?'auto':'hidden';if(raw<=max)ta.scrollTop=0;}
 if(typeof document!=='undefined')document.addEventListener('input',e=>{const ta=e&&e.target;if(ta&&ta.id==='off_in')offInputAutoSize(ta);},{passive:true});
 if(typeof document!=='undefined'){
-  const offComposerTouchStart=e=>{const target=e&&e.target,btn=target&&target.closest&&target.closest('.off-narrate'),note=target&&target.closest&&target.closest('.off-note');if(note)_offComposerGuardUntil=Date.now()+650;if(btn)offNarrationPress(e);};
+  const offComposerTouchStart=e=>{const target=e&&e.target,btn=target&&target.closest&&target.closest('.off-narrate'),note=target&&target.closest&&target.closest('.off-note');if(btn||note)_offComposerGuardUntil=Date.now()+1600;if(btn)offNarrationPress(e);};
   document.addEventListener('touchstart',offComposerTouchStart,{capture:true,passive:false});
   document.addEventListener('pointerdown',e=>{const target=e&&e.target;if(Date.now()-_offNarrationPointerAt<800)return;const btn=target&&target.closest&&target.closest('.off-narrate'),note=target&&target.closest&&target.closest('.off-note');if(note)_offComposerGuardUntil=Date.now()+650;if(btn&&(e.pointerType==='touch'||e.pointerType==='pen'))offNarrationPress(e);},{capture:true});
+  document.addEventListener('click',e=>{if(Date.now()>=_offComposerGuardUntil)return;const target=e&&e.target,behind=target&&target.closest&&target.closest('.offmsg,.offnar');if(!behind)return;try{e.preventDefault();e.stopImmediatePropagation();}catch(_){}},{capture:true});
 }
 function offNarrationDecorate(){if(typeof document==='undefined')return;const btn=$('.off-narrate'),ta=$('#off_in'),on=offNarrationMode();if(btn){btn.classList.toggle('on',on);btn.setAttribute('aria-pressed',String(on));btn.title=on?'旁白输入已开启，再点恢复普通对话':'切换为旁白输入';}if(ta){ta.placeholder=on?'输入第三人称动作 / 场景旁白…':(_off&&_off.mode==='cohab'?'当面对TA说…':'当面对他说…');const bar=ta.closest&&ta.closest('.offinput');if(bar)bar.classList.toggle('narration-mode',on);if(document.activeElement!==ta)offInputAutoSize(ta);}}
 function offRender(){if(cur().p==='off'){render();setTimeout(offNarrationDecorate,0);}}
 let _offComposerGuardUntil=0,_offNarrationPointerAt=0;
-function offComposerEvent(e){try{if(e){e.preventDefault();e.stopPropagation();}}catch(_){}_offComposerGuardUntil=Date.now()+650;}
+function offComposerEvent(e){try{if(e){e.preventDefault();e.stopPropagation();}}catch(_){}_offComposerGuardUntil=Date.now()+1600;}
 function offNarrationPress(e){if(e&&(e.type==='touchstart'||e.type==='pointerdown')){if(e.type==='touchstart'||e.pointerType==='touch'||e.pointerType==='pen'){offComposerEvent(e);if(Date.now()-_offNarrationPointerAt<500)return false;_offNarrationPointerAt=Date.now();offNarrate(true);return false;}return true;}if(e&&e.type==='click'&&Date.now()-_offNarrationPointerAt<800){offComposerEvent(e);return false;}offComposerEvent(e);offNarrate();return false;}
 function offSay(e){if(e)offComposerEvent(e);if(!_off||_off.busy)return;const o=offSceneData(_off.id),c=getC(_off.id);if(_off.mode==='cohab'&&!cohabTogetherScene(o)){toast((c.remark||c.name)+'现在'+cohabPhaseLabel(o.phase)+'，去微信联系TA吧');return;}const ta=$('#off_in');if(!ta)return;const v=(ta.value||'').trim();if(!v)return;ta.value='';
   const item=offNarrationMode()?{id:uid(),who:'旁白',source:'me',text:v,time:Date.now()}:{id:uid(),who:'me',text:v,time:Date.now()};if(_off.mode==='cohab')cohabPushMessage(o,item);else o.msgs.push(item);save();offRender();if(!manualReplySceneOn('offline'))offAI();}

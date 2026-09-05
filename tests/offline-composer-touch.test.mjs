@@ -78,17 +78,22 @@ test('private offline focus does not move the conversation during iOS caret hit 
     'the private composer must not add another equivalent touch-time scroll mutation');
 });
 
-test('the public workaround stays intact while private offline returns to normal document flow', () => {
+test('private common-life uses the same iOS caret coordinate basis as working WeChat', () => {
   assert.match(html, /html\.north-native-app \.phone:has\(\.offinput\)/);
   assert.match(html, /html\.north-ios-home-safe \.phone:has\(\.offinput\)/);
   for (const page of [privateHtml, privateIndex]) {
-    assert.doesNotMatch(page, /html\.north-native-app \.phone:has\(\.offinput\)/);
-    assert.doesNotMatch(page, /html\.north-ios-home-safe \.phone:has\(\.offinput\)/);
-    assert.match(page, /html\.north-native-app \.phone:has\(\.chat-inputbar\),html\.north-ios-home-safe \.phone:has\(\.chat-inputbar\)\{position:absolute\}/,
-      'private WeChat must keep its exact v1179 fixed-ancestor workaround');
+    assert.match(page, /html\.north-native-app \.phone:has\(\.chat-inputbar\),html\.north-native-app \.phone:has\(\.offinput\),html\.north-ios-home-safe \.phone:has\(\.chat-inputbar\),html\.north-ios-home-safe \.phone:has\(\.offinput\)\{position:absolute\}/,
+      'private common-life and WeChat must leave the fixed ancestor on the same iOS timeline');
   }
   assert.match(html, /html\.north-native-app \.phone\{position:fixed/,
     'the native-only fixed shell remains unchanged for screens without a text composer');
+});
+
+test('private narration tap cannot fall through to a message edit/delete action', () => {
+  assert.match(privateApp, /_offComposerGuardUntil=Date\.now\(\)\+1600/,
+    'the guard must cover the delayed iOS synthetic click after keyboard reflow');
+  assert.match(privateApp, /document\.addEventListener\('click',e=>\{if\(Date\.now\(\)>=_offComposerGuardUntil\)return;[\s\S]*?closest\('\.offmsg,\.offnar'\)[\s\S]*?stopImmediatePropagation\(\)/,
+    'a delayed click retargeted behind the composer must be consumed before offMsgMenu');
 });
 
 test('private iOS restores the v1179 single-owner keyboard contract', () => {
