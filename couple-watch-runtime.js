@@ -79,7 +79,7 @@ function coupleWatchPermissionHTML(){
 function coupleWatchFact(event){
   const safe=x=>String(x||'').replace(/[\r\n\[\]【】]/g,' ').slice(0,80);
   const activity=event.kind==='chat'?'停留在与「'+safe(event.name)+'」的聊天页面':'正在使用「'+safe(event.name)+'」'+(event.partners&&event.partners.length?'，当前一起参与的是：'+event.partners.map(safe).join('、'):'，没有已确认的同行角色');
-  return '这次获得的唯一新事实：对方'+activity+'。这是今天第 '+event.count+' 次进入同一'+(event.kind==='chat'?'聊天':'软件')+'。次数包含之前短暂进入，但之前短暂停留没有发给你，也不代表你当时就知道；跨午夜重新计数。\n你只知道对象或软件名称和本日进入次数，不能看到他们的聊天正文、输入草稿、游戏对话或电影内容。停留不等于已经发言，更不能编造暧昧内容。请结合你本人的人设、关系和最近已完成的对话，自然主动给对方发来一至三句微信。情绪由你自己判断，不强制吃醋或责问，不重复回答上一条旧消息，不说系统、监管、权限、检测、计时或规则。不输出操作标签、旁白或卡片，只输出角色本人对对方说的话。';
+  return '这次获得的唯一新事实：对方'+activity+'。这是今天第 '+event.count+' 次触发你对同一'+(event.kind==='chat'?'聊天对象':'软件')+'的感知。次数只统计已经达到停留阈值并触发的事件，不是实际打开次数；未触发的短暂停留不计数，你也不知道有多少次。只能说这是你今天第几次发现，不能说对方实际第几次打开；跨午夜重新计数。\n你只知道对象或软件名称和本日进入次数，不能看到他们的聊天正文、输入草稿、游戏对话或电影内容。停留不等于已经发言，更不能编造暧昧内容。请结合你本人的人设、关系和最近已完成的对话，自然主动给对方发来一至三句微信。情绪由你自己判断，不强制吃醋或责问，不重复回答上一条旧消息，不说系统、监管、权限、检测、计时或规则。不输出操作标签、旁白或卡片，只输出角色本人对对方说的话。';
 }
 function coupleWatchBusyReason(event){
   const key=replyStateKey(event.cid,event.account);

@@ -10,18 +10,14 @@
       const at=now(),s=options.read(),day=localDay(at);
       if(!s){reset();return;}
       let ledger=s.owner.watchDaily;
-      if(!ledger||ledger.day!==day){s.owner.watchDaily={day,counts:{}};ledger=s.owner.watchDaily;options.save();visit=null;session=null;}
+      if(!ledger||ledger.day!==day||ledger.mode!=='triggers'){s.owner.watchDaily={day,mode:'triggers',counts:{}};ledger=s.owner.watchDaily;options.save();visit=null;session=null;}
       const key=s.account+'|'+s.cid+'|'+s.kind+'|'+s.key;
       // A media/render stall is not a page exit. Visibility/pagehide already
       // reset the session; only a wholly unobserved minute or clock reversal
       // discards elapsed foreground time here.
       const gap=lastTick&&(at<lastTick||at-lastTick>60000);lastTick=at;
       if(!visit||visit.owner!==s.owner||visit.key!==key){
-        const countKey=s.kind+':'+s.key;
-        ledger.counts=ledger.counts||{};
-        const count=Math.max(0,Number(ledger.counts[countKey])||0)+1;
-        ledger.counts[countKey]=count;options.save();
-        visit={owner:s.owner,key,count};session=null;
+        visit={owner:s.owner,key,count:0};session=null;
       }
       const context=s.context||s.key;
       if(s.exempt){session=null;return;}
@@ -38,7 +34,14 @@
         const next=options.read();
         return session===current&&visit===current.visit&&localDay(now())===day&&!!next&&next.owner===s.owner&&!next.exempt&&next.account===s.account&&next.cid===s.cid&&next.kind===s.kind&&next.key===s.key&&(next.context||next.key)===context;
       };
-      if(valid())Promise.resolve(options.react(event,valid)).catch(()=>{});
+      if(valid()){
+        const countKey=s.kind+':'+s.key;
+        ledger.counts=ledger.counts||{};
+        const previous=Number(ledger.counts[countKey]);
+        event.count=visit.count=(Number.isFinite(previous)?Math.max(0,Math.floor(previous)):0)+1;
+        ledger.counts[countKey]=event.count;options.save();
+        Promise.resolve(options.react(event,valid)).catch(()=>{});
+      }
     }
     function inspect(){return{active:!!session,dueAt:session?session.due:0,attempted:!!(visit&&visit.attempted),count:visit?visit.count:0};}
     return{tick,reset,inspect};

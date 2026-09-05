@@ -25,7 +25,7 @@ function harness(){
   const toasts=[];
   let context;
   context={
-    console,Set,Map,Date,Math,JSON,String,Array,Object,Number,RegExp,Promise,setTimeout,clearTimeout,S,
+    console,Set,Map,Date,Math,JSON,String,Array,Object,Number,RegExp,Promise,setTimeout,clearTimeout,S,offlineForegroundRequest:work=>work(),
     document:{getElementById:id=>inputs[id]||null,createElement:()=>({}),head:{appendChild:noop}},
     cohabRepairRows:rows=>rows||[],cohabData:baseData,cohabPushMessage:basePush,cohabSystem:()=>'',cohabCurrentTurnPrompt:()=>'',
     cohabReplyCore:async()=>({items:[{id:'host-reply',who:'ta',source:'ta',text:'主角先认真回答这一句话'}],inspection:'',trips:[],travelErrors:[]}),
@@ -65,6 +65,8 @@ test('pending cast starts observing only when theater is enabled',async()=>{
   assert.equal(home.theater.guest.joinedSeq,1);
   assert.equal(home.notices.length,1);
 });
+
+test('cancelled support-first generation releases busy state without starting the host',async()=>{const {context,home,hostCalls}=harness();context.cohabTheaterSave('host');await context.cohabTheaterToggle('host');home.theater.addressTo='guest';context.offlineForegroundRequest=async()=>{const e=new Error('resume');e.code='OFFLINE_RESUME_CANCELLED';throw e;};await context.offAI();assert.equal(context._off.busy,false);assert.equal(home.theater.activeActor,'');assert.equal(hostCalls.length,0);});
 
 test('active guest exit writes one attributed summary and one genuine WeChat follow-up without duplicates',async()=>{
   const {context,home,guest,wechat}=harness();

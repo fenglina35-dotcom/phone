@@ -117,7 +117,7 @@ test('a transport failure retries once with the same genuine model route and nev
   const retryable=functionSource('offlineReplyTransportRetryable'),request=functionSource('offlineReplyChatRequest');
   let calls=0,lastOptions=null;
   const context=vm.createContext({
-    String,Object,Math,Promise,setTimeout,
+    String,Object,Math,Promise,setTimeout,offlineForegroundRequest:work=>work(),
     chatAPI:async(_messages,opt)=>{calls++;lastOptions=opt;if(calls===1){const error=new Error('Load failed');error.transportRaw='Load failed';throw error;}return '真实模型回复';}
   });
   vm.runInContext(`${retryable}${request}this.run=offlineReplyChatRequest;`,context);

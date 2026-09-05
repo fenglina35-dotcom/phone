@@ -84,7 +84,7 @@ test('a long common-life reply cannot push the user action out of the online han
     {id:'w-old',role:'assistant',type:'text',content:'旧微信话题',time:now-3600000},
     {id:'w-now',role:'user',type:'text',content:'我回线上了',time:now}
   ],cohab=[{id:'c-user',who:'me',text:'我们刚刚已经一起把晚饭吃完了',time:now-120000}];
-  for(let i=0;i<20;i++)cohab.push({id:`c-role-${i}`,who:i%2?'ta':'旁白',source:'ta',text:`线下承接第${i+1}段`,time:now-119000+i});
+  for(let i=0;i<20;i++)cohab.push({id:`c-role-${i}`,who:i%2?'ta':'旁白',source:'ta',text:`线下承接第${i+1}段`,time:now-119500+i});
   const S={settings:{timeAware:true},me:{name:'用户'},cohabitation:{homes:{role:{msgs:cohab}}}},sandbox={
     S,Date,String,Math,Number,Set,offlineWechatLiveOn:()=>true,roleCrossChannelOn:()=>true,msgs:()=>online,msgToText:m=>m&&m.content||'',msgClearTime:m=>+m.time||0,fmtDT:t=>`T${t}`,
     personaPin:()=>'',roleReplyClockPin:()=>'',roleReplyTimelinePin:()=>''
@@ -143,7 +143,7 @@ test('the final online model request carries the complete latest common-life rou
     {id:'w-now',role:'user',type:'text',content:'我回到微信了，刚才那件事呢？',time:now}
   ],home={startedAt:now-7200000,phaseAt:now-600000,msgs:[
     {id:'c-user',who:'me',text:'我当面说我们把旅行行李收好了',time:now-120000},
-    {id:'c-nar',who:'旁白',source:'ta',text:'他把最后一件外套放进行李箱。',time:now-119000},
+    {id:'c-nar',who:'旁白',source:'ta',text:'他把最后一件外套放进行李箱。',time:now-119500},
     {id:'c-role',who:'ta',text:'那明天就直接出发。',time:now-118000}
   ]},S={settings:{offlineWechatLive:false,timeAware:true},me:{name:'用户'},cohabitation:{enabled:true,paused:false,cid:'role',homes:{role:home}},offline:{}},sandbox={
     S,Date,String,Math,Number,Set,msgs:()=>online,msgToText:m=>m&&m.content||'',msgClearTime:m=>+m.time||0,fmtDT:t=>`T${t}`,
