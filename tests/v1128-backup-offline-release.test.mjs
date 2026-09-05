@@ -27,15 +27,15 @@ function functionSource(name){
 }
 
 test('v1178 has a unique visible identity across every public entry and cache layer',()=>{
-  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1193\'/);
-  assert.match(app,/APP_VER='v1193 · 情侣空间监管内心解析修复版'/);
-  assert.match(shell,/__NORTH_SHELL_BUILD__='1193'/);
-  assert.match(shell,/app\.js\?v=1193&r=v1193-couple-watch-trigger-1/);
-  assert.match(index,/小手机\.html\?v=1193/);
-  assert.match(repair,/小手机\.html\?v=1193/);
-  assert.match(worker,/const BUILD='1193'/);
-  assert.match(worker,/north-shell-v1193-couple-watch-trigger-1/);
-  assert.match(hotfix,/sw\.js\?v=1193&r=v1193-couple-watch-trigger-1/);
+  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1194\'/);
+  assert.match(app,/APP_VER='v1194 · 顶部心情有效内容保留版'/);
+  assert.match(shell,/__NORTH_SHELL_BUILD__='1194'/);
+  assert.match(shell,/app\.js\?v=1194&r=v1194-couple-watch-trigger-1/);
+  assert.match(index,/小手机\.html\?v=1194/);
+  assert.match(repair,/小手机\.html\?v=1194/);
+  assert.match(worker,/const BUILD='1194'/);
+  assert.match(worker,/north-shell-v1194-couple-watch-trigger-1/);
+  assert.match(hotfix,/sw\.js\?v=1194&r=v1194-couple-watch-trigger-1/);
   for(const [name,source] of Object.entries({app,shell,index,repair,worker,hotfix})){
     assert.doesNotMatch(source,/v?1127/,`${name} must not reuse the prior web version`);
   }

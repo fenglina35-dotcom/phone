@@ -32,7 +32,7 @@ test('top mood stays visible across a failed refresh without fabricating new moo
   assert.match(wechat,/wxSettingsRow\('顶部心情',S\.settings\.showMoodTag===false\?'已关闭':'已开启'/);
   assert.doesNotMatch(wechat,/<h4>聊天<\/h4>[\s\S]{0,350}wxSettingsRow\('心情气泡'/);
   const context=vm.createContext({wechatNaturalOn:()=>true,String});
-  vm.runInContext(`${functionSource(app,'visibleRoleThought')};this.visibleRoleThought=visibleRoleThought`,context);
+  vm.runInContext(`${functionSource(app,'naturalInnerThoughtText')};${functionSource(app,'rememberValidInnerThought')};${functionSource(app,'visibleRoleThought')};this.visibleRoleThought=visibleRoleThought`,context);
   assert.equal(context.visibleRoleThought({innerThought:'上一条真实心声',innerThoughtAt:10,innerThoughtMissingAt:20}),'上一条真实心声');
   assert.equal(context.visibleRoleThought({innerThought:'',innerThoughtMissingAt:20}),'','no confirmed thought must remain empty');
   assert.match(app,/else\{c\.innerThoughtMissingAt=Date\.now\(\);save\(\);refreshChatMood\(id\);\}/,'failed extraction remains diagnosable without erasing stored thought');

@@ -8,7 +8,7 @@ const pip=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/Ph
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
 test('v1184 web source keeps private 1.0.315 compatibility',()=>{
-  assert.match(app,/APP_VER='v1193 · 情侣空间监管内心解析修复版'/);
+  assert.match(app,/APP_VER='v1194 · 顶部心情有效内容保留版'/);
   assert.match(project,/CURRENT_PROJECT_VERSION = 316;/);
   assert.match(project,/MARKETING_VERSION = 1\.0\.316;/);
 });

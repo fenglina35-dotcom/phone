@@ -13,15 +13,15 @@ test('v1184 web identity and cache markers are aligned', () => {
   const hotfix = read('web-hotfix.js');
   const index = read('index.html');
   const repair = read('repair.html');
-  assert.match(app, /__NORTH_SHELL_BUILD__!=='1193'/);
-  assert.match(app, /APP_VER='v1193 · 情侣空间监管内心解析修复版'/);
-  assert.match(shell, /__NORTH_SHELL_BUILD__='1193'/);
-  assert.match(shell, /app\.js\?v=1193&r=v1193-couple-watch-trigger-1/);
-  assert.match(sw, /const BUILD='1193'/);
+  assert.match(app, /__NORTH_SHELL_BUILD__!=='1194'/);
+  assert.match(app, /APP_VER='v1194 · 顶部心情有效内容保留版'/);
+  assert.match(shell, /__NORTH_SHELL_BUILD__='1194'/);
+  assert.match(shell, /app\.js\?v=1194&r=v1194-couple-watch-trigger-1/);
+  assert.match(sw, /const BUILD='1194'/);
   assert.match(sw, /v1184-ios-web-crash-cohab-turn-keyboard-1/);
-  assert.match(hotfix, /v1193-couple-watch-trigger-1/);
-  assert.match(index, /小手机\.html\?v=1193/);
-  assert.match(repair, /小手机\.html\?v=1193/);
+  assert.match(hotfix, /v1194-couple-watch-trigger-1/);
+  assert.match(index, /小手机\.html\?v=1194/);
+  assert.match(repair, /小手机\.html\?v=1194/);
 });
 
 test('v1184 publishes shared cohab memory and X comment controls', () => {
