@@ -22,6 +22,7 @@ function harness(){
   const basePush=(d,m)=>{m.cohabSeq=++d.msgSeq;d.msgs.push(m);return m;};
   const noop=()=>{};
   const actorCalls=[],hostCalls=[];
+  const toasts=[];
   let context;
   context={
     console,Set,Map,Date,Math,JSON,String,Array,Object,Number,RegExp,Promise,setTimeout,clearTimeout,S,
@@ -32,7 +33,7 @@ function harness(){
     offlineSceneTimelineRows:()=>[],roleInteractionRows:()=>[],roleReplyGapFact:()=>null,roleReplyTimelinePin:()=>'',roleReplyContinuityPin:()=>'',
     roleReplyCrossChannelHandoffPrompt:()=>'',roleServerPushRecentContext:()=>'',roleDiaryRecentFacts:()=>'',
     getC:id=>id==='host'?host:id==='guest'?guest:null,uid:()=>`id${++serial}`,save:noop,saveNowAsync:async()=>true,
-    cohabPushNotice:(d,text,opt)=>d.notices.push({text,...opt}),cohabSceneActive:()=>false,render:noop,openOfflineMenu:noop,toast:noop,closeModal:noop,
+    cohabPushNotice:(d,text,opt)=>d.notices.push({text,...opt}),cohabSceneActive:()=>false,render:noop,openOfflineMenu:noop,toast:text=>toasts.push(String(text)),closeModal:noop,
     summaryList:c=>c.summaries,pruneSummaries:noop,ymd:()=> '2026-09-04',perspRule:()=>'',roleChatRouteIndex:()=>0,
     msgs:id=>wechat[id]||(wechat[id]=[]),msgToText:m=>m&&m.content||'',persistWechatMessagesNow:async()=>true,notifyIncoming:noop,refreshChatMessages:noop,
     chatAPI:async messages=>{actorCalls.push(messages);const system=String(messages&&messages[0]&&messages[0].content||'');if(system.includes('只输出一个JSON对象'))return'{"speak":"配角简短回答","action":"","leave":false}';if(system.includes('主动发一条自然的普通文字消息'))return'我回到微信了，刚才在你们那里发生的事我都记得，之后再慢慢和你聊。';return'我记得自己作为小雨来到共同生活现场，听见宝贝和女婿分别说清彼此的想法，也亲自简短回应了他们；这些是我在场期间真正看到和听到的内容，人物归属没有混淆。';},
@@ -41,11 +42,12 @@ function harness(){
   for(const name of ['offSummaryUserCall','offlinePendingStart','fmtDT','conversationGapExact','roleReplyTimelineRows','roleCrossChannelOn','roleRecentChannelRounds','roleOnlineLiveStateText','initiativeAwayPrompt','recentMealProgressPrompt','rolePhoneAuthoritativeUsageContext','rolePhotoFrequencyContext','roleLatestUserChannel','roleServerPushConversationBoundary','msgs','msgToText','msgClearTime','topSummaries','summaryCleanText','traitDesc','offCurrentInput','offRender','cohabTogetherScene','cohabPhaseLabel','manualReplySceneOn','offNarrationMode','cohabAdvance','cohabSettingsPanel','offRevealText','offElapsed','cohabClockText','cohabStatusLabel','cohabSeen','cohabGoWechat','cohabActionTap','openModal','esc','offNarrationDecorate']){
     if(!(name in context))context[name]=noop;
   }
+  context.offlinePendingStart=rows=>{let first=-1;for(let i=rows.length-1;i>=0;i--){const m=rows[i]||{},kind=m.who==='me'||m.actorType==='me'?'me':m.who==='ta'||m.actorType==='host'||m.who==='guest'||m.who==='extra'||/^(guest|extra)$/.test(m.actorType||'')?'assistant':'';if(kind==='assistant')return first;if(kind==='me')first=i;}return first;};
   context._off={id:'host',mode:'cohab',busy:false};context._offSel=null;context.emitHost=true;context.offCurrentInput=()=> '用户本轮';context.offRevealTiming=()=>({step:0,total:0});context.cohabAdvance=()=>home;
   context.offSummaryUserCall=()=> '用户';context.esc=x=>String(x??'');context.offRevealText=m=>String(m&&m.text||'');context.cohabSettingsPanel=()=>'<div class="cohab-settings-wrap"><details class="cohab-settings"><summary>共同生活设置</summary></details><button type="button" class="cohab-debug-reply">让TA回</button></div>';context.window=context;
   context.topSummaries=()=>[];
   vm.runInNewContext(source,context,{filename:'cohab-theater.js'});
-  return{context,home,host,guest,wechat,inputs,actorCalls,hostCalls};
+  return{context,home,host,guest,wechat,inputs,actorCalls,hostCalls,toasts};
 }
 
 test('pending cast starts observing only when theater is enabled',async()=>{
@@ -99,6 +101,30 @@ test('selected addressee controls queue order and support remains shorter than h
   const before=home.msgs.length;
   await context.offAI();
   assert.deepEqual(Array.from(home.msgs.slice(before),x=>x.who),['ta','guest']);
+});
+
+test('a pending user message keeps its own addressee even if the selector changes before reply',async()=>{
+  const {context,home,hostCalls}=harness();
+  context.cohabTheaterSave('host');
+  await context.cohabTheaterToggle('host');
+  context.cohabPushMessage(home,{id:'pending-to-guest',who:'me',actorType:'me',displayNameSnapshot:'我',addressTo:'guest',addressNameSnapshot:'小雨',text:'这句话只先问小雨',time:10});
+  home.theater.addressTo='host';
+  await context.offAI();
+  assert.deepEqual(Array.from(home.msgs.slice(1),x=>x.who),['guest','ta']);
+  assert.deepEqual(hostCalls[0].before,['me','guest']);
+  assert.match(hostCalls[0].system,/当前用户主要在对【小雨】说话/);
+});
+
+test('a departed pending addressee never silently falls back to the host',async()=>{
+  const {context,home,hostCalls,toasts}=harness();
+  context.cohabTheaterSave('host');
+  await context.cohabTheaterToggle('host');
+  context.cohabPushMessage(home,{id:'pending-to-guest',who:'me',actorType:'me',displayNameSnapshot:'我',addressTo:'guest',addressNameSnapshot:'小雨',text:'这句话只问小雨',time:10});
+  home.theater.guest=null;
+  await context.offAI();
+  assert.equal(hostCalls.length,0);
+  assert.deepEqual(Array.from(home.msgs,x=>x.who),['me']);
+  assert.match(toasts.at(-1),/小雨 已不在场/);
 });
 
 test('manual support bubble limit counts actions and speech together',async()=>{

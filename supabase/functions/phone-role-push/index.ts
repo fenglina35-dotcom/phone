@@ -298,11 +298,81 @@ function roleRecentAssistantMessages(profile) {
   const roleName = String(profile?.role_name || "角色").trim();
   if (!roleName) return [];
   const marker = `${roleName}：`;
-  return String(profile?.recent_context || "").split(/\r?\n/).map((line) => String(line || "").trim()
-    .replace(/^\d{4}\/\d{1,2}\/\d{1,2}\s+\d{1,2}:\d{2}:\d{2}\s+/, "")
+  const automation = profile?.automation_config && typeof profile.automation_config === "object"
+    ? profile.automation_config as Record<string, unknown> : {};
+  const structured = Array.isArray(automation.recentAssistantMessages)
+    ? automation.recentAssistantMessages.map((value) => String(value || "").trim()).filter(Boolean)
+    : [];
+  const parsed = String(profile?.recent_context || "").split(/\r?\n/).map((line) => String(line || "").trim()
+    .replace(/^(?:\d{4}年\d{1,2}月\d{1,2}日|\d{4}[\/-]\d{1,2}[\/-]\d{1,2})\s+\d{1,2}:\d{2}(?::\d{2})?\s+/, "")
     .replace(/^\[(?:微信|共同生活|电话(?:·已发生)?)\]\s*/, ""))
     .filter((line) => line.startsWith(marker))
-    .map((line) => line.slice(marker.length).trim()).filter(Boolean).slice(-20);
+    .map((line) => line.slice(marker.length).trim()).filter(Boolean);
+  const seen = new Set<string>();
+  return [...parsed, ...structured].filter((value) => {
+    const key = roleTextKey(value);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(-30);
+}
+
+function roleTranscriptConversationBoundary(profile: Record<string, unknown>) {
+  const raw = String(profile?.recent_context || "");
+  const userName = String(profile?.user_name || "你").trim();
+  const roleName = String(profile?.role_name || "角色").trim();
+  const turns: Array<{ speaker: string; channel: string; text: string }> = [];
+  for (const source of raw.split(/\r?\n/)) {
+    const line = String(source || "").trim()
+      .replace(/^(?:\d{4}年\d{1,2}月\d{1,2}日|\d{4}[\/-]\d{1,2}[\/-]\d{1,2})\s+\d{1,2}:\d{2}(?::\d{2})?\s+/, "");
+    const channelMatch = line.match(/^\[(微信|共同生活|电话(?:·已发生)?)\]\s*/);
+    if (!channelMatch) continue;
+    const channel = String(channelMatch[1]).startsWith("电话") ? "电话" : channelMatch[1];
+    const body = line.slice(channelMatch[0].length);
+    if (userName && body.startsWith(`${userName}：`)) turns.push({ speaker: "user", channel, text: body.slice(userName.length + 1).trim() });
+    else if (roleName && body.startsWith(`${roleName}：`)) turns.push({ speaker: "assistant", channel, text: body.slice(roleName.length + 1).trim() });
+  }
+  let lastUser = -1;
+  for (let i = turns.length - 1; i >= 0; i -= 1) if (turns[i].speaker === "user") { lastUser = i; break; }
+  if (lastUser < 0) return null;
+  const user = turns[lastUser];
+  const assistants = turns.slice(lastUser + 1).filter((turn) => turn.speaker === "assistant" && turn.channel === user.channel);
+  const explicitAnswered = /\[对话边界\]\s*用户最近一条(?:微信|共同生活|电话)?消息已经得到角色回复/.test(raw);
+  const explicitPending = /\[对话边界\]\s*用户最近一条(?:微信|共同生活|电话)?消息尚未得到角色回复/.test(raw);
+  return {
+    hasUser: true,
+    answered: explicitAnswered || !explicitPending && assistants.length > 0,
+    userText: user.text.slice(0, 320),
+    assistantMessages: assistants.slice(-6).map((turn) => turn.text.slice(0, 320)),
+  };
+}
+
+function roleStructuredConversationBoundary(profile: Record<string, unknown>) {
+  const transcript = roleTranscriptConversationBoundary(profile);
+  if (transcript) return transcript;
+  const automation = profile?.automation_config && typeof profile.automation_config === "object"
+    ? profile.automation_config as Record<string, unknown> : {};
+  const raw = automation.conversationBoundary;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const boundary = raw as Record<string, unknown>;
+  if (boundary.hasUser !== true) return { hasUser: false, answered: false, userText: "", assistantMessages: [] as string[] };
+  return {
+    hasUser: true,
+    answered: boundary.answered === true,
+    userText: String(boundary.userText || "").trim().slice(0, 320),
+    assistantMessages: Array.isArray(boundary.assistantMessages)
+      ? boundary.assistantMessages.map((value) => String(value || "").trim()).filter(Boolean).slice(-6)
+      : [] as string[],
+  };
+}
+
+function roleCompletedTurnReanswer(value: string, profile: Record<string, unknown>) {
+  const boundary = roleStructuredConversationBoundary(profile);
+  if (!boundary?.hasUser || !boundary.answered) return false;
+  const userText = String(boundary.userText || "").trim();
+  if (roleTextKey(userText).length < 3) return false;
+  const parts = roleMessageParts(roleVisibleMessageText(value), 10);
+  return parts.some((part) => roleTextKey(part).length >= 3 && roleMessageRepeated(part, userText));
 }
 
 function roleVisibleMessageText(value: string) {
@@ -452,6 +522,7 @@ async function roleMessage(
   appDecision = false,
 ) {
   const manualUnlockEvent = String(eventInstruction || "").includes("亲自成功解锁App");
+  const replyHandoffEvent = /同一轮回复的服务器接管|直接回应payload里的最新用户消息/.test(String(eventInstruction || ""));
   /* A background handoff must always finish inside the two-minute claim lease.
      Without a hard deadline a slow OpenAI-compatible endpoint can leave the
      task claimed until cron reclaims it, repeatedly occupying the same model
@@ -519,7 +590,7 @@ async function roleMessage(
   if (ordinaryProactive && !userSleeping && proactiveCallChance > 0 && Math.random() * 100 < proactiveCallChance) {
     return { kind: "message", body: Math.random() < 0.25 ? "[来电|视频]" : "[来电|语音]" };
   }
-  const effectiveAllowSilent = allowSilent && (!ordinaryProactive || userSleeping || turnBoundary.pending);
+  const effectiveAllowSilent = allowSilent;
   const messageMin = Math.max(1, Math.min(10, Number(profile.message_min) || 1));
   const messageMax = Math.max(messageMin, Math.min(10, Number(profile.message_max) || 4));
   const prompt = [
@@ -567,8 +638,8 @@ async function roleMessage(
         : userSleeping
         ? "用户已经明确在睡觉且预计仍未醒来。本次必须只输出 [保持安静]，不能用通知打扰，也不能另开话题。"
         : silenceMinutes < 60
-        ? "距离同一角色在微信、电话或共同生活里的最后一次真实互动尚未超过一小时。本次若发送，只能自然承接最近一轮话题、询问后续或分享与该话题直接相关的新想法；禁止突然跳到无关事情。用户若明确说了换个话题，可以按其要求换。除明确睡眠外，本次不允许输出 [保持安静]、[不说话] 或空内容。"
-        : "距离最后一次真实互动已经超过一小时，可以按角色本人意愿自然换话题，但仍必须沿用最新事实、关系、情绪、共同生活状态和真实时间。除明确睡眠外，本次不允许输出 [保持安静]、[不说话] 或空内容。",
+        ? "距离同一角色在微信、电话或共同生活里的最后一次真实互动尚未超过一小时。若上一条用户消息已经得到角色回复，本次只能推进到回复后的下一阶段，例如询问事情后来怎么样、分享真正新增的相关想法，或自然结束；绝不能重新确认、重新回答、下同一条命令，或换几个字复述那条用户消息。若没有自然且不重复的下一句话，只输出 [保持安静]。用户若明确说了换个话题，可以按其要求换。"
+        : "距离最后一次真实互动已经超过一小时，可以按角色本人意愿自然换话题，但仍必须沿用最新事实、关系、情绪、共同生活状态和真实时间；绝不能把已经答完的最后一条用户消息当成待回复消息重新回答。若此刻没有自然且不重复的新内容，可以只输出 [保持安静]。",
     });
   }
   if (!allowSilent) {
@@ -666,6 +737,7 @@ async function roleMessage(
             const invalid = !body || parsed.action === "lock" && !failureBody || candidates.some((candidate) => {
               const bodyKey = roleTextKey(candidate);
               return !bodyKey || repeatCandidates.some((old) => roleMessageRepeated(candidate, old)) ||
+                (!replyHandoffEvent && !turnBoundary.pending && roleCompletedTurnReanswer(candidate, profile)) ||
                 roleUserFactUnsupported(candidate, `${recentContext}\n${memoryContext}`) ||
                 roleMessageStyleInvalid(candidate, messageMax) ||
                 roleOnlineNarrationInvalid(candidate, String(profile.role_name || "角色"));
@@ -701,14 +773,29 @@ async function roleMessage(
           const styleInvalid = roleMessageStyleInvalid(body, messageMax);
           const eventPerspectiveInvalid = roleManualUnlockPerspectiveInvalid(body, eventInstruction);
           const onlineNarrationInvalid = roleOnlineNarrationInvalid(body, String(profile.role_name || "角色"));
-          if (bodyKey && !repeated && !ungrounded && !styleInvalid && !eventPerspectiveInvalid && !onlineNarrationInvalid) {
+          const reanswersCompleted = !replyHandoffEvent && !turnBoundary.pending && roleCompletedTurnReanswer(body, profile);
+          if (bodyKey && !repeated && !ungrounded && !styleInvalid && !eventPerspectiveInvalid && !onlineNarrationInvalid && !reanswersCompleted) {
             return { kind: "message", body };
           }
           // A manual-unlock event must remain visible, but an invalid first
           // result is repaired locally so it never spends a second model call.
           // Other repeated proactive events may still stay silent.
           if (manualUnlockEvent) return { kind: "message", body: roleManualUnlockFallback(eventContext, repeatCandidates) };
-          if (repeated || eventPerspectiveInvalid || onlineNarrationInvalid) return { kind: "silent", body: "" };
+          if (reanswersCompleted && attempt === 0) {
+            const boundary = roleStructuredConversationBoundary(profile);
+            const answered = boundary?.assistantMessages?.join(" / ") || "（已回复）";
+            attemptMessages = [
+              ...baseMessages,
+              { role: "assistant", content: body },
+              { role: "user", content: `上一版又把已经完成的用户回合当成待回复消息了。用户当时说的是「${String(boundary?.userText || "").slice(0, 160)}」，角色已经回答过「${answered.slice(0, 320)}」。不要再回应、复述或改写这句话；只能说真正发生在回答之后的下一步。若没有自然的新内容，只输出 [保持安静]。不要解释纠正过程。` },
+            ];
+            continue;
+          }
+          if (repeated || eventPerspectiveInvalid || onlineNarrationInvalid || reanswersCompleted) {
+            return effectiveAllowSilent
+              ? { kind: "silent", body: "" }
+              : { kind: "unavailable", body: "", reason: reanswersCompleted ? "completed-turn-reanswer" : "invalid-model-output" };
+          }
           attemptMessages = [
             ...baseMessages,
             { role: "assistant", content: body },
@@ -1043,7 +1130,7 @@ function roleRecentTurnBoundary(profile: Record<string, unknown>) {
   const turns: Array<{ speaker: string; channel: string }> = [];
   for (const source of raw.split(/\r?\n/)) {
     const line = String(source || "").trim()
-      .replace(/^\d{4}[/-]\d{1,2}[/-]\d{1,2}\s+\d{1,2}:\d{2}(?::\d{2})?\s+/, "");
+      .replace(/^(?:\d{4}年\d{1,2}月\d{1,2}日|\d{4}[\/-]\d{1,2}[\/-]\d{1,2})\s+\d{1,2}:\d{2}(?::\d{2})?\s+/, "");
     const channelMatch = line.match(/^\[(微信|共同生活|电话(?:·已发生)?)\]\s*/);
     const channel = channelMatch ? String(channelMatch[1]).startsWith("电话") ? "电话" : channelMatch[1] : "";
     const body = channelMatch ? line.slice(channelMatch[0].length) : line;

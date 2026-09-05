@@ -10,6 +10,7 @@ import { storeSearchTermMatches } from '../src/taobao-flash-browser.mjs';
 import { merchantFromShopText } from '../src/taobao-flash-browser.mjs';
 import { requestedSinglePersonSoupCombo } from '../src/taobao-flash-browser.mjs';
 import { optionChoiceMatchesSummary } from '../src/taobao-flash-browser.mjs';
+import { kfcStandaloneCategoryKey, kfcStandaloneProductEligible } from '../src/taobao-flash-browser.mjs';
 import { previouslyBoughtPackageRequested } from '../src/taobao-flash-browser.mjs';
 
 class FakeBrowser {
@@ -781,14 +782,21 @@ test('historical exact and superset rules remain for drinks and coffee, while KF
   ), 'none');
 });
 
-test('KFC starts with the signature four-item bundle and adds only uncovered explicit items', async () => {
+test('KFC explicit item lists search and add each standalone item, while bundle requests stay on the homepage bundle', async () => {
   const query = '肯德基 汉堡 加薯条 加蛋挞 加可乐';
   assert.equal(preferredBrand(query), 'kfc');
   assert.equal(brandMatches('kfc', '肯德基（测试店）'), true);
   assert.deepEqual(requestedKfcItems(query), ['汉堡', '薯条', '蛋挞', '可乐']);
   const structured = '用户明确；门店=肯德基；商品=汉堡、薯条、鸡翅、蛋挞、可乐';
   assert.deepEqual(requestedKfcItems(structured), ['汉堡', '薯条', '鸡翅', '蛋挞', '可乐']);
-  assert.equal(kfcDefaultSignatureBundleRequested(structured), true);
+  assert.deepEqual(requestedKfcItems(`${structured}\n我想吃肯德基，汉堡，薯条，鸡翅，蛋挞！`), ['汉堡', '薯条', '鸡翅', '蛋挞', '可乐']);
+  assert.deepEqual(requestedKfcItems('肯德基 汉堡、薯条、鸡翅、辣翅、蛋挞'), ['汉堡', '薯条', '鸡翅', '蛋挞']);
+  assert.equal(kfcStandaloneCategoryKey('香辣鸡翅'), '鸡翅');
+  assert.equal(kfcStandaloneCategoryKey('辣翅'), '鸡翅');
+  assert.equal(kfcStandaloneProductEligible('我爱原味鸡汉堡餐', '汉堡'), false);
+  assert.equal(kfcStandaloneProductEligible('原味鸡汉堡', '汉堡'), true);
+  assert.equal(kfcStandaloneProductEligible('原味鸡汉堡4件套', '汉堡'), false);
+  assert.equal(kfcDefaultSignatureBundleRequested(structured), false);
   assert.equal(kfcDefaultSignatureBundleRequested('用户明确；门店=肯德基；商品=招牌汉堡4件套；不得改成全家桶或重复单点套餐内商品'), true);
   assert.equal(kfcDefaultSignatureBundleRequested('肯德基 套餐里已经有的商品不要重复单点'), true);
   assert.equal(kfcDefaultSignatureBundleRequested('肯德基 单点香辣鸡腿堡'), false);
@@ -799,8 +807,8 @@ test('KFC starts with the signature four-item bundle and adds only uncovered exp
     { name: '炸鸡吃堡堡双人餐' },
   ])?.name, '【夜宵专享】吃堡堡4件套');
   assert.equal(kfcHomepageSignatureBundle([{ name: '炸鸡吃堡堡双人餐' }, { name: '美味炸鸡桶' }]), null);
-  assert.equal(requestedStoreItemName(structured, '肯德基'), '【夜宵专享】吃堡堡4件套');
-  assert.deepEqual(requestedStandaloneItems(structured), ['汉堡', '薯条', '鸡翅', '蛋挞', '可乐']);
+  assert.equal(requestedStoreItemName(structured, '肯德基'), '汉堡');
+  assert.deepEqual(requestedStandaloneItems(structured), ['薯条', '鸡翅', '蛋挞', '可乐']);
   assert.deepEqual(requestedStandaloneItems(structured, '招牌汉堡4件套 主食：香辣鸡腿汉堡(辣) 甜品/小食：葡式蛋挞(1只装) 饮料：百事可乐(冷/中)'), ['薯条', '鸡翅']);
   assert.equal(kfcItemCoveredByText('辣翅', '主食：香辣鸡腿汉堡(辣)'), false);
   assert.equal(kfcItemCoveredByText('辣翅', '新奥尔良辣翅'), true);
@@ -816,7 +824,7 @@ test('KFC starts with the signature four-item bundle and adds only uncovered exp
   assert.equal(kfcStandaloneSearchTerm('辣翅'), '香辣鸡翅');
   assert.equal(kfcStandaloneSearchTerm('草莓圣代'), '经典草莓圣代');
   const shorthand = '用户明确；门店=肯德基；商品=脆鸡腿堡、鸡米花、红豆派、草莓圣代、酸梅汤、辣翅';
-  assert.equal(requestedStoreItemName(shorthand, '肯德基'), '【夜宵专享】吃堡堡4件套');
+  assert.equal(requestedStoreItemName(shorthand, '肯德基'), '脆鸡腿堡');
   assert.deepEqual(requestedStandaloneItems(shorthand, '主食：劲脆鸡腿汉堡 小食：劲爆鸡米花(小) 甜品/小食：红豆派(1只装) 饮料：桂花酸梅汤(大)'), ['草莓圣代', '辣翅']);
   const spicyBundle = '用户明确；门店=肯德基；商品=香辣鸡腿堡、黄金鸡块、薯条、百事可乐、蛋挞';
   assert.deepEqual(requestedStandaloneItems(spicyBundle, '主食：香辣鸡腿汉堡(辣) 小食：黄金鸡块(5块装) 甜品/小食：薯条(中) 饮料：百事可乐(冷/中)'), ['蛋挞']);
@@ -875,31 +883,50 @@ test('KFC starts with the signature four-item bundle and adds only uncovered exp
   assert.match(kfcCreateSource, /!mcdonaldsHomepageOnly && !kfcHomepageOnly && await this\.searchInsideShop/);
   assert.doesNotMatch(requestedStandaloneItems(structured).join(' '), /门店|商品|用户明确/);
   assert.equal(requestedItemName(query), '汉堡');
-  assert.equal(requestedStoreItemName(query, '肯德基'), '【夜宵专享】吃堡堡4件套');
+  assert.equal(requestedStoreItemName(query, '肯德基'), '汉堡');
   assert.deepEqual(requestedExtraItems(query), ['薯条', '蛋挞', '可乐']);
-  assert.deepEqual(requestedStandaloneItems(query), ['汉堡', '薯条', '蛋挞', '可乐']);
+  assert.deepEqual(requestedStandaloneItems(query), ['薯条', '蛋挞', '可乐']);
   assert.equal(preferredExactProduct([
     { name: '香辣鸡腿堡套餐' },
     { name: '香辣鸡腿堡' },
   ], '汉堡')?.name, '香辣鸡腿堡');
+  assert.equal(preferredExactProduct([
+    { name: '我爱原味鸡汉堡餐', price: 28.4 },
+    { name: '原味鸡汉堡', price: 22.5 },
+  ], '汉堡', { requireKfcStandalone: true })?.name, '原味鸡汉堡');
+  assert.equal(preferredExactProduct([
+    { name: '葡式蛋挞(6只装)', price: 36 },
+    { name: '葡式蛋挞(1只装)', price: 6 },
+    { name: '蛋挞欢乐套餐', price: 5 },
+  ], '蛋挞', { requireKfcStandalone: true, preferLowestPrice: true })?.name, '葡式蛋挞(1只装)');
+  assert.equal(preferredExactProduct([
+    { name: '葡式蛋挞(6只装)' },
+    { name: '葡式蛋挞(1只装)' },
+  ], '蛋挞', { requireKfcStandalone: true, preferLowestPrice: true }), null);
   assert.equal(preferredExactProduct([{ name: '香辣鸡腿汉堡(辣)' }], '香辣鸡腿堡')?.name, '香辣鸡腿汉堡(辣)');
 
   const browser = new TaobaoFlashBrowser();
   const clicks = [];
+  const searches = [];
   const page = {
     url: () => 'https://h5.ele.me/newretail/p/ushop/?store_id=kfc-1',
     getByText: () => ({ id: 'checkout-locator' }),
     async waitForTimeout() {},
   };
-  browser.extractMenu = async (_page, _limit, name) => [{ name }];
+  browser.extractMenu = async (_page, _limit, name) => [{ name, price: name === '蛋挞' ? 6 : 10 }];
+  browser.searchInsideShop = async (_page, name) => { searches.push(name); return true; };
+  browser.riskCheck = async () => {};
+  browser.waitForPurchaseControls = async () => {};
   browser.productControl = async (_page, name) => ({ id: name });
   browser.activateControl = async (_page, control) => { clicks.push(control.id); };
   browser.verifyUniqueCartItems = async () => [];
   browser.optionPanel = async () => null;
   browser.visibleLocator = async locator => locator?.id === 'checkout-locator' ? { id: 'checkout' } : null;
-  const result = await browser.addRequestedStandaloneItems(page, { query, itemName: '招牌汉堡4件套' }, '招牌汉堡4件套 主食：香辣鸡腿汉堡(辣) 甜品/小食：葡式蛋挞(1只装)');
-  assert.deepEqual(clicks, ['薯条', '可乐']);
-  assert.deepEqual(result.added, ['薯条', '可乐']);
+  const exactNaturalRequest = '用户明确；门店=肯德基；商品=汉堡、薯条、蛋挞、鸡翅';
+  const result = await browser.addRequestedStandaloneItems(page, { query: exactNaturalRequest, itemName: '汉堡', merchant: '肯德基' }, '汉堡');
+  assert.deepEqual(searches, ['薯条', '蛋挞', '鸡翅']);
+  assert.deepEqual(clicks, ['薯条', '蛋挞', '鸡翅']);
+  assert.deepEqual(result.added, ['薯条', '蛋挞', '鸡翅']);
   assert.equal(result.checkout.id, 'checkout');
 });
 
@@ -1084,7 +1111,7 @@ test('standalone meal sides pass the visible full platform title to the add-butt
   const source = await fs.readFile(new URL('../src/taobao-flash-browser.mjs', import.meta.url), 'utf8');
   const method = source.slice(source.indexOf('async addRequestedStandaloneItems('), source.indexOf('async createOrder({ ref'));
   assert.match(method, /locator\('\[class\*="menuItem--info-title"\]'\)/);
-  assert.match(method, /preferredExactProduct\(visibleNames\.map\(name => \(\{ name, price: 1 \}\)\), productName/);
+  assert.match(method, /preferredExactProduct\(visibleNames\.map\(name => \(\{ name, price: 0 \}\)\), productName/);
   assert.ok(method.indexOf('const actualName =') > method.indexOf('visibleNames.map'));
   assert.match(method, /this\.productControl\(page, actualName\)/);
   assert.match(method, /getByText\(specIntent\.requiredOption, \{ exact: true \}\)/);
@@ -1878,6 +1905,8 @@ test('store search explicitly recognizes the storefront magnifier class', async 
   assert.match(source, /'\.nav__search__wrap'/);
   assert.match(source, /'\.shop__search--expland'/);
   assert.match(source, /'\.nav__search'/);
+  assert.match(source, /let trigger = await this\.visibleLocator\(page\.locator\('\.nav__search'\), true\)/);
+  assert.match(source, /for \(let index = 0; !trigger && index < await triggerCandidates\.count\(\)/);
   assert.match(source, /'input\.search-input'/);
   assert.match(source, /刷新\|重试\|reload\|refresh/);
 });
@@ -1973,7 +2002,7 @@ test('a remembered shop never pins an older sku over the current first qualified
   const browserSource = await fs.readFile(new URL('../src/taobao-flash-browser.mjs', import.meta.url), 'utf8');
   const rememberedBlock = browserSource.slice(browserSource.indexOf('for (const rememberedRoute'), browserSource.indexOf('// If the user already has'));
   assert.match(browserSource, /const routeItemQuery = requestedStoreItemName\(query, storeQuery\)/);
-  assert.match(rememberedBlock, /let item = preferredExactProduct\(items, routeItemQuery, \{ allowContainedAlias: searchedInsideShop, allowShortFoodAlias, preferSinglePersonCombo \}\)[\s\S]*?items\.find\(row => productMatchesSavedItem\(row\.name, rememberedRoute\.itemName\)\)/);
+  assert.match(rememberedBlock, /let item = preferredExactProduct\(items, routeItemQuery, \{ allowContainedAlias: searchedInsideShop, allowShortFoodAlias, preferSinglePersonCombo,[\s\S]*?items\.find\(row => productMatchesSavedItem\(row\.name, rememberedRoute\.itemName\)\)/);
   assert.match(rememberedBlock, /searchInsideShop\(page, routeItemQuery\)/);
 });
 

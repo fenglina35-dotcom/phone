@@ -49,8 +49,8 @@ function text(value,length=300){return String(value==null?'':value).trim().slice
 
 {
   const sandbox=vm.createContext({text});
-  const names=['deliveryMatchKey','deliveryOrderContextRejected','explicitApprovedOrderIntent','splitTrailingDeliverySpecs','contextualNaturalOrderIntent','normalizeExplicitOrderIntent','explicitOrderQuery'];
-  vm.runInContext(`${names.map(name=>functionSource(delivery,name)).join('\n')};this.parse=contextualNaturalOrderIntent;this.parseExplicit=explicitApprovedOrderIntent;this.normalize=normalizeExplicitOrderIntent;this.query=explicitOrderQuery;`,sandbox);
+  const names=['deliveryMatchKey','deliveryOrderContextRejected','explicitApprovedOrderIntent','splitTrailingDeliverySpecs','contextualNaturalOrderIntent','normalizeExplicitOrderIntent','explicitOrderQuery','explicitKfcStandaloneIntent','roleOrderActionSafeForStart'];
+  vm.runInContext(`${names.map(name=>functionSource(delivery,name)).join('\n')};this.parse=contextualNaturalOrderIntent;this.parseExplicit=explicitApprovedOrderIntent;this.normalize=normalizeExplicitOrderIntent;this.query=explicitOrderQuery;this.kfcStandalone=explicitKfcStandaloneIntent;this.safe=roleOrderActionSafeForStart;`,sandbox);
   const exact=sandbox.parse('茶百道的杨枝甘露不加糖');
   assert.deepEqual(JSON.parse(JSON.stringify(exact)),{
     merchant:'茶百道',items:['杨枝甘露'],specs:['不加糖'],proactive:false,summary:'茶百道 / 杨枝甘露'
@@ -73,6 +73,15 @@ function text(value,length=300){return String(value==null?'':value).trim().slice
   assert.equal(sandbox.parseExplicit('我想看哥哥家的猫'),null,'a non-food possessive sentence must not start delivery');
   assert.equal(sandbox.parse('我想看哥哥家的猫'),null,'the contextual parser must keep ordinary chat out of delivery');
   assert.equal(sandbox.parse('你觉得之前买过的那个套餐好不好'),null,'retrospective discussion must not start delivery');
+  const kfcText='我想吃肯德基，汉堡，薯条，蛋挞，鸡翅！';
+  const kfc=sandbox.parseExplicit(kfcText);
+  assert.equal(kfc?.merchant,'肯德基');
+  assert.deepEqual(Array.from(kfc?.items||[]),['汉堡','薯条','蛋挞','鸡翅'],'sentence punctuation must not leak into the last KFC item');
+  const kfcQuery=sandbox.query(sandbox.normalize(kfc,kfcText));
+  assert.equal(kfcQuery,'用户明确；门店=肯德基；商品=汉堡、薯条、蛋挞、鸡翅');
+  assert.equal(sandbox.kfcStandalone(kfc,kfcText),true,'the deterministic handoff must preserve an explicit KFC item checklist even if the model suggests a bundle');
+  assert.equal(sandbox.kfcStandalone(kfc,'肯德基这几个随便组成一个套餐'),false,'an actual delegated bundle request must keep the homepage bundle path');
+  assert.equal(sandbox.safe(kfc,kfcQuery,{userText:kfcText}),true,'the exact natural KFC request must pass the start gate');
 }
 
 assert.match(app,/_deliveryPendingUserText=deliveryPendingUserTurnText\(id,replyAccount,_userText\)/);

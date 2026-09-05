@@ -12,22 +12,22 @@ const privateBundle=read('../native/private-small-phone/Resources/PhoneWebBundle
 const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
-test('v1176 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1176 · 多人剧场退场署名保留版'/);
-  assert.match(app,/const url='sw\.js\?v=1176&r=v1176-cohab-theater-history-names-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1176'/);
-  assert.match(html,/app\.js\?v=1176/);
-  assert.match(sw,/const BUILD='1176'/);
-  assert.match(sw,/north-shell-v1176/);
-  assert.match(index,/小手机\.html\?v=1176/);
-  assert.match(repair,/小手机\.html\?v=1176/);
+test('v1177 web files use one cache-busting build number',()=>{
+  assert.match(app,/APP_VER='v1177 · 主动消息与外卖单品修复版'/);
+  assert.match(app,/const url='sw\.js\?v=1177&r=v1177-proactive-delivery-target-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1177'/);
+  assert.match(html,/app\.js\?v=1177/);
+  assert.match(sw,/const BUILD='1177'/);
+  assert.match(sw,/north-shell-v1177/);
+  assert.match(index,/小手机\.html\?v=1177/);
+  assert.match(repair,/小手机\.html\?v=1177/);
 });
 
-test('the private iOS package embeds private web v1176 and keeps the current native delivery',()=>{
-  assert.match(privateBundle,/<string>1176<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.302;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 302;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.302 \(302\)'/);
+test('the private iOS package embeds private web v1177 and keeps the current native delivery',()=>{
+  assert.match(privateBundle,/<string>1177<\/string>/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1\.0\.303;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 303;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.303 \(303\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

@@ -12,11 +12,11 @@ const privateHtml=read('native/private-small-phone/XcodeProject/PhoneCompanionTe
 const privateAlias=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/小手机.html');
 const privateApp=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js');
 
-test('v1176 shared theater asset is byte-identical and loaded after app core',()=>{
+test('v1177 shared theater asset is byte-identical and loaded after app core',()=>{
   assert.equal(bundleTheater,theater);
-  assert.match(webHtml,/app\.js\?v=1176[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1176&r=v1176-cohab-theater-history-names-1"/);
-  for(const html of [privateHtml,privateAlias])assert.match(html,/app\.js\?v=1176[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1176[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1176&r=v1176-cohab-theater-history-names-1"/);
-  assert.match(read('sw.js'),/cohab-theater\.js\?v='\+BUILD\+'\&r=v1176-cohab-theater-history-names-1',kind:'theater'/);
+  assert.match(webHtml,/app\.js\?v=1177[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1177&r=v1177-proactive-delivery-target-1"/);
+  for(const html of [privateHtml,privateAlias])assert.match(html,/app\.js\?v=1177[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1177[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1177&r=v1177-proactive-delivery-target-1"/);
+  assert.match(read('sw.js'),/cohab-theater\.js\?v='\+BUILD\+'\&r=v1177-proactive-delivery-target-1',kind:'theater'/);
 });
 
 test('cast storage has exactly one host guest slot and one temporary-extra slot',()=>{
@@ -63,7 +63,11 @@ test('disabled theater preserves only historical support attribution',()=>{
 test('host and support use separate generations in selected addressee order',()=>{
   assert.match(theater,/const baseOffAI=offAI/);
   assert.doesNotMatch(theater,/baseCohabReplyCore|cohabReplyCore=async/);
-  assert.match(theater,/supportFirst=kind&&\(t\.addressTo==='guest'\|\|t\.addressTo==='extra'\)/);
+  assert.match(theater,/supportFirst=kind&&\(target==='guest'\|\|target==='extra'\)/);
+  assert.match(theater,/addressTo:t\.addressTo,addressNameSnapshot:theaterAudienceName\(o,t\.addressTo\)/);
+  assert.match(theater,/const turn=theaterTurnTarget\(d,t,note\),target=turn\.target/);
+  assert.match(theater,/_theaterTurnTargets\.set\(id,target\)/);
+  assert.match(theater,/_theaterTurnTargets\.delete\(id\)/);
   assert.match(theater,/if\(lead\)_theaterHostLead\.set\(id,lead\)/);
   assert.match(theater,/await baseOffAI\(note\)/);
   assert.match(theater,/if\(!hostRows\.length\)\{t\.activeActor='';offRender\(\);return;\}/);
@@ -118,16 +122,16 @@ test('guest exit sends exactly one genuine memory-grounded WeChat message',()=>{
   assert.doesNotMatch(theater,/content:\s*['"](?:我回来了|我都记得)/);
 });
 
-test('private artifact identity is v1176 and iOS 1.0.302 (302)',()=>{
-  assert.match(privateApp,/const APP_VER='v1176 · 多人剧场退场署名保留版'/);
-  assert.match(privateHtml,/private-runtime-diagnostics\.js\?v=302/);
-  assert.match(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),/1\.0\.302 \(302\)/);
+test('private artifact identity is v1177 and iOS 1.0.303 (303)',()=>{
+  assert.match(privateApp,/const APP_VER='v1177 · 主动消息与外卖单品修复版'/);
+  assert.match(privateHtml,/private-runtime-diagnostics\.js\?v=303/);
+  assert.match(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),/1\.0\.303 \(303\)/);
   const project=read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
-  assert.ok((project.match(/CURRENT_PROJECT_VERSION = 302;/g)||[]).length>=12);
-  assert.ok((project.match(/MARKETING_VERSION = 1\.0\.302;/g)||[]).length>=12);
+  assert.ok((project.match(/CURRENT_PROJECT_VERSION = 303;/g)||[]).length>=12);
+  assert.ok((project.match(/MARKETING_VERSION = 1\.0\.303;/g)||[]).length>=12);
 });
 
-test('v1170 private friend-entry fix remains present in the v1176 private superset',()=>{
+test('v1170 private friend-entry fix remains present in the v1177 private superset',()=>{
   assert.match(privateApp,/function pfEnsureForSync\(/);
   assert.match(privateApp,/profileDeferred=await pfEnsureForSync/);
   assert.doesNotMatch(read('app.js'),/function pfEnsureForSync\(/);

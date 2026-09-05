@@ -28,7 +28,8 @@ for (const [name, src] of [['web', root], ['private', bundled]]) {
   test(`${name}: category rules preserve meal combos and KFC signature-bundle completion`, () => {
     assert.match(src, /KFC 门店固定为肯德基/);
     assert.match(src, /招牌汉堡4件套/);
-    assert.match(src, /套餐未包含的明确商品再逐件搜索补齐/);
+    assert.match(src, /没有说套餐[\s\S]*多个单品[\s\S]*一个一个搜索并加入购物车/);
+    assert.match(src, /明确说套餐、四件套时/);
     assert.match(src, /套餐已经包含的商品不得重复/);
     assert.match(src, /其余归为普通主食/);
     assert.match(src, /主食允许套餐或单点/);

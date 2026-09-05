@@ -50,7 +50,7 @@ test('thermal pressure and repeated termination stop WebKit self-reload loops', 
   assert.match(webView, /thermalState == "serious" \|\| thermalState == "critical"/);
   assert.match(webView, /native\.webcontent\.recoveryOffered/);
   assert.match(webView, /native\.webcontent\.remountDeferred/);
-  assert.match(webView, /webContentTerminationTimes\.v12\.build302/);
+  assert.match(webView, /webContentTerminationTimes\.v13\.build303/);
   assert.doesNotMatch(webView, /showingLoadFailure/);
   assert.doesNotMatch(webView, /LocalPhoneWebView\.loadFailureHTML/);
   assert.doesNotMatch(webView, /websiteDataStore\.removeData/);
@@ -120,18 +120,18 @@ test('private wardrobe exposes exact and overnight time ranges without removing 
   assert.match(app, /if\(named\.length\)return named/);
 });
 
-test('both private entry files and every iOS target carry build 302', () => {
+test('both private entry files and every iOS target carry build 303', () => {
   assert.equal(index, alias);
-  assert.match(index, /private-runtime-diagnostics\.js\?v=302/);
-  assert.match(overlay, /302-cohab-history-names-v1/);
-  assert.match(webView, /1\.0\.302 \(302\)/);
-  assert.match(bridge, /1\.0\.302 \(302\)/);
+  assert.match(index, /private-runtime-diagnostics\.js\?v=303/);
+  assert.match(overlay, /303-proactive-delivery-target-v1/);
+  assert.match(webView, /1\.0\.303 \(303\)/);
+  assert.match(bridge, /1\.0\.303 \(303\)/);
   assert.equal(
-    (project.match(/CURRENT_PROJECT_VERSION = 302;/g) || []).length,
+    (project.match(/CURRENT_PROJECT_VERSION = 303;/g) || []).length,
     12
   );
   assert.equal(
-    (project.match(/MARKETING_VERSION = 1\.0\.302;/g) || []).length,
+    (project.match(/MARKETING_VERSION = 1\.0\.303;/g) || []).length,
     12
   );
 });

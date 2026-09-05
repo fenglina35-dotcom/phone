@@ -59,7 +59,7 @@
   window.addEventListener('pageshow',reconcileExpiredWxLogin,{passive:true});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)reconcileExpiredWxLogin();});
   if('serviceWorker'in navigator&&location.protocol!=='file:'){
-    const workerUrl='sw.js?v=1176&r=v1176-cohab-theater-history-names-1';
+    const workerUrl='sw.js?v=1177&r=v1177-proactive-delivery-target-1';
     navigator.serviceWorker.register(workerUrl,{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
   }
   setTimeout(()=>{
@@ -70,5 +70,5 @@
     }
   },0);
 
-  window.__NORTH_WEB_HOTFIX__='v1176-cohab-theater-history-names-1';
+  window.__NORTH_WEB_HOTFIX__='v1177-proactive-delivery-target-1';
 })();
