@@ -33,7 +33,7 @@ function safetySandbox(){
   sandbox.isOOCLine=()=>false;
   vm.runInContext('this.normalizeHiddenThoughtFormats='+oneLineFunctionSource('normalizeHiddenThoughtFormats'),sandbox);
   vm.runInContext('this.wechatReasoningLeak='+oneLineFunctionSource('wechatReasoningLeak'),sandbox);
-  for(const name of ['wxEscRe','wechatNarrationLeakLine','wechatNarrationFiltered','wechatHasDirectVisibleLine','wechatInnerThoughtValue','wechatInnerThoughtOnlyValue'])vm.runInContext('this.'+name+'='+oneLineFunctionSource(name),sandbox);
+  for(const name of ['naturalInnerThoughtText','wxEscRe','wechatNarrationLeakLine','wechatNarrationFiltered','wechatHasDirectVisibleLine','wechatInnerThoughtValue','wechatInnerThoughtOnlyValue'])vm.runInContext('this.'+name+'='+oneLineFunctionSource(name),sandbox);
   vm.runInContext('this.wxNarrationNameRe='+functionSource('wxNarrationNameRe'),sandbox);
   return sandbox;
 }
@@ -71,6 +71,7 @@ test('foreground repair is anomaly-only and never rewrites a normal reply just t
   const ai=functionSource('aiReply');
   assert.match(ai,/if\(wechatReasoningLeak\(content\)\)/);
   assert.match(ai,/const kept=wechatNarrationFiltered\(content,c\);if\(wechatHasDirectVisibleLine\(kept\)\)content=kept/);
-  assert.match(ai,/thought\)content='\[内心\|'/);
-  assert.match(ai,/else\{c\.innerThoughtMissingAt=Date\.now\(\);save\(\);refreshChatMood\(id\);\}/);
+  const missing=ai.split('\n').find(x=>x.includes('if(_naturalOn&&S.settings.showMoodTag!==false&&String(content'));
+  assert.match(missing,/c\.innerThoughtMissingAt=Date\.now\(\);save\(\);refreshChatMood\(id\);/);
+  assert.doesNotMatch(missing,/await |chatAPI/);
 });

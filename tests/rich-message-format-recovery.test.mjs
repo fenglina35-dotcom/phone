@@ -29,12 +29,13 @@ test('common duration-prefixed voice tags become playable voice payloads',()=>{
 test('malformed inner-thought brackets are normalized locally before any repair request',()=>{
   for(const source of [app,privateApp]){
     const ctx=vm.createContext({String,roleVisibleEnvelopeText:v=>String(v||'')});
-    vm.runInContext(fnSource(source,'normalizeHiddenThoughtFormats')+'\n'+fnSource(source,'wechatInnerThoughtValue')+'\nthis.norm=normalizeHiddenThoughtFormats;this.value=wechatInnerThoughtValue;',ctx);
+    vm.runInContext(fnSource(source,'naturalInnerThoughtText')+'\n'+fnSource(source,'normalizeHiddenThoughtFormats')+'\n'+fnSource(source,'wechatInnerThoughtValue')+'\nthis.norm=normalizeHiddenThoughtFormats;this.value=wechatInnerThoughtValue;',ctx);
     const raw='[内心]周末本来没什么长会，小狗拼完图知道来找我了。]\n开完了。';
     assert.equal(ctx.norm(raw),'[内心|周末本来没什么长会，小狗拼完图知道来找我了。]\n开完了。');
     assert.equal(ctx.value(raw),'周末本来没什么长会，小狗拼完图知道来找我了。');
     assert.equal(ctx.value('【内心】有点想她】\n早点回来。'),'有点想她');
-    assert.match(source,/!wechatInnerThoughtValue\(content\)\)\{let thought='';try\{const raw=await chatAPI/,'the paid repair call remains behind the normalized local-value check');
+    const missing=source.split('\n').find(x=>x.includes('if(_naturalOn&&S.settings.showMoodTag!==false&&String(content'));
+    assert.doesNotMatch(missing,/await |chatAPI/,'missing mood must not trigger a paid repair');
   }
 });
 

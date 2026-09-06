@@ -35,7 +35,7 @@ test('top mood stays visible across a failed refresh without fabricating new moo
   vm.runInContext(`${functionSource(app,'naturalInnerThoughtText')};${functionSource(app,'rememberValidInnerThought')};${functionSource(app,'visibleRoleThought')};this.visibleRoleThought=visibleRoleThought`,context);
   assert.equal(context.visibleRoleThought({innerThought:'上一条真实心声',innerThoughtAt:10,innerThoughtMissingAt:20}),'上一条真实心声');
   assert.equal(context.visibleRoleThought({innerThought:'',innerThoughtMissingAt:20}),'','no confirmed thought must remain empty');
-  assert.match(app,/else\{c\.innerThoughtMissingAt=Date\.now\(\);save\(\);refreshChatMood\(id\);\}/,'failed extraction remains diagnosable without erasing stored thought');
+  assert.match(app,/\{c\.innerThoughtMissingAt=Date\.now\(\);save\(\);refreshChatMood\(id\);\}/,'failed extraction remains diagnosable without erasing stored thought');
 });
 
 test('manual wedding date is authoritative but does not rewrite ceremony records',()=>{

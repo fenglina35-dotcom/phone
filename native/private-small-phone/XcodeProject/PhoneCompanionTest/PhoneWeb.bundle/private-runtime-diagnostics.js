@@ -3,7 +3,7 @@
   'use strict';
   if(window.__SMALL_PHONE_PRIVATE__!==true)return;
 
-  const OVERLAY_VERSION='317-trigger-count-1';
+  const OVERLAY_VERSION='318-inner-thought-1';
   const lastEventAt=Object.create(null);
   let lastMeasuredSyncOp='',lastMeasuredSyncMs=0,lastMeasuredSyncAt=0;
   const clock=()=>typeof performance!=='undefined'&&performance.now?performance.now():Date.now();
