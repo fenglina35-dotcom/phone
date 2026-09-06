@@ -1,16 +1,17 @@
-const BUILD='1196';
-const HOTFIX='v1196-couple-watch-trigger-1';
-const SHELL_CACHE='north-shell-v1196-couple-watch-trigger-1';
+const BUILD='1197';
+const HOTFIX='v1197-couple-watch-trigger-1';
+const SHELL_CACHE='north-shell-v1197-couple-watch-trigger-1';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
 const GLASS_ICON_FILES=GLASS_ICON_PACKS.flatMap(pack=>GLASS_ICON_KEYS.map(key=>'./assets/app-icons/glass/'+pack+'/'+key+'.webp'));
 const CORE_FILES=[
+  {url:'./cohab-model-diagnostics.js?v='+BUILD,kind:'cohabDiagnostics'},
   {url:'./小手机.html?v='+BUILD+'&r='+HOTFIX,kind:'html'},
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
   {url:'./app.js?v='+BUILD+'&r='+HOTFIX,kind:'app'},
   {url:'./cohab-theater.js?v='+BUILD+'&r=v1184-ios-web-crash-cohab-turn-keyboard-1',kind:'theater'},
-  {url:'./web-hotfix.js?v='+BUILD+'&r=v1196-couple-watch-trigger-1',kind:'hotfix'},
+  {url:'./web-hotfix.js?v='+BUILD+'&r=v1197-couple-watch-trigger-1',kind:'hotfix'},
   {url:'./ai-account.js?v='+BUILD,kind:'ai'},
   {url:'./couple-watch.js?v='+BUILD,kind:'watch'},
   {url:'./couple-watch-runtime.js?v='+BUILD,kind:'watchRuntime'}
@@ -57,6 +58,7 @@ async function fetchRetry(request,options,tries){
   throw last||new Error('network failed');
 }
 function validShellText(kind,text){
+  if(kind==='cohabDiagnostics')return text.includes('window.cohabModelDiagnosticOpen=')&&text.includes('const records=new Map()');
   if(kind==='watch')return text.includes('function localDay(at)')&&text.includes('function create(options)');
   if(kind==='watchRuntime')return text.includes('function coupleWatchRead()')&&text.includes('async function coupleWatchReact(');
   if(kind==='html')return text.length>80000
@@ -76,7 +78,7 @@ function validShellText(kind,text){
     &&text.includes('theaterRevealActorItems')
     &&!text.includes('cohabReplyCore=async');
   if(kind==='hotfix')return text.length>800
-    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1196-couple-watch-trigger-1'")
+    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1197-couple-watch-trigger-1'")
     &&text.includes('reconcileExpiredWxLogin')
     &&text.includes('withBaseImageCheck')
     &&text.includes('isStoredImgRef');
@@ -233,6 +235,9 @@ self.addEventListener('fetch',event=>{
   if(/\/couple-watch(?:-runtime)?\.js$/.test(url.pathname)){
     const kind=url.pathname.endsWith('-runtime.js')?'watchRuntime':'watch';
     event.respondWith((async()=>{const cache=await caches.open(SHELL_CACHE);return (await currentCore(cache,kind))||checkedResponse(request,kind,2);})());return;
+  }
+  if(/\/cohab-model-diagnostics\.js$/.test(url.pathname)){
+    event.respondWith((async()=>{const cache=await caches.open(SHELL_CACHE);return (await currentCore(cache,'cohabDiagnostics'))||checkedResponse(request,'cohabDiagnostics',2);})());return;
   }
   const optionalPath=OPTIONAL_FILES.some(value=>{try{return new URL(value,self.location.href).pathname===url.pathname;}catch(_){return false;}});
   if(optionalPath||/\/commerce-ui\.js$/.test(url.pathname)||/\/(?:gift-effects|thought-card-effects)\.js$/.test(url.pathname)||/\/pet-game\.js$/.test(url.pathname)||/\/pet-game\.css$/.test(url.pathname)||/\/assets\/pet-room-v1\.webp$/.test(url.pathname)||/\/icon\.png$/.test(url.pathname)||/\/vendor\//.test(url.pathname)){
