@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1200'){
+if(window.__NORTH_SHELL_BUILD__!=='1202'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -395,7 +395,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1200 · 回复接力互斥版';
+const APP_VER='v1202 · 像素少女照顾版';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1652,7 +1652,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1200&r=v1200-couple-watch-trigger-1';
+  const url='sw.js?v=1202&r=v1202-couple-watch-trigger-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -2239,6 +2239,7 @@ function restoreRenderScroll(c,st){const t=renderScrollTarget(c);if(!t)return;co
 function render(){
   const c=cur();const app=$('#app'),_renderStarted=privateNativeAppOn()?(typeof performance!=='undefined'&&performance.now?performance.now():Date.now()):0;
   if(typeof coupleWatchTick==='function')coupleWatchTick();
+  if(typeof pixelHomeKeepFrame==='function'&&pixelHomeKeepFrame())return;
   applyAppleHomeCompat();
   applyGlassTheme();
   const _sb=$('#statusbar');if(_sb)_sb.className='statusbar'+(c.p==='home'?'':' dark');
@@ -2295,6 +2296,7 @@ function render(){
   else if(c.p==='phonecontact')html=renderPhoneContact(c.num);
   else if(c.p==='phonecall')html=renderPhoneCall();
   else if(c.p==='gameshub')html=renderGameHub();
+  else if(c.p==='pixelhome')html=renderPixelHome();
   else if(c.p==='heartquiz')html=renderHeartQuiz();
   else if(c.p==='beadstudio')html=typeof renderBeadStudio==='function'?renderBeadStudio():'<div class="empty">像素拼拼乐组件尚未载入</div>';
   else if(c.p==='pet')html=renderPetGame();
@@ -2552,7 +2554,7 @@ function cinemaAsrGuardSync(job,finished){const covered=finished?Math.max(0,Numb
 function cinemaAsrGuardPlayback(v){if(!v||!_cin.extracting||_cin.asrMode!=='watch')return false;const covered=Math.max(0,Number(_cin.asrCoveredUntil)||0),limit=covered>0?Math.max(0,covered-10):20,current=Math.max(0,Number(v.currentTime)||0);if(current<limit-.15)return false;if(v.paused&&!_cin.asrGuardPaused)return false;if(current>limit+.25)v.currentTime=limit;_cin.asrGuardPaused=true;v.pause();cinemaSetStatus('已暂停等字幕 · 当前可看到 '+cinemaFmt(covered||limit),'working');return true;}
 function cinemaAsrGuardRelease(resume){const v=$('#cinVideo'),held=_cin.asrGuardPaused;_cin.asrGuardPaused=false;if(resume&&held&&v)v.play().catch(()=>{});}
 async function cinemaRestoreStoredSubtitles(s,token){if(!s||s.kind!=='video')return;const manual=await cinGet(cinemaManualSubtitleKey(s));if(token!==_cin.token||cinemaSession()!==s)return;if(manual&&Array.isArray(manual.cues)&&manual.cues.length){const n=cinemaApplyCues(manual.cues,manual.name||'手动导入字幕','subtitle');cinemaSetStatus('已恢复手动字幕 · '+n+' 句','ready');return;}const job=await cinemaAsrLoadJob(s);if(token!==_cin.token||cinemaSession()!==s||!job)return;cinemaAsrTaskUpdate(s,job);cinemaAsrGuardSync(job,job.status==='done');const cues=cinemaAsrJobCues(job);if(cues.length){cinemaApplyCues(cues,job.status==='done'?'已保存的提取字幕':'未完成的提取字幕','extract');cinemaSetStatus(job.status==='done'?'已恢复 '+cues.length+' 句字幕':'已恢复部分字幕 · 可继续提取','ready');}}
-async function cinemaMp4Library(){if(globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function')return globalThis.NorthMP4Box;if(!_cinMp4Module)_cinMp4Module=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='./vendor/mp4box.all.js?v=1200&r=file-safe-1';script.async=true;script.dataset.northMp4box='1';script.onload=()=>globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function'?resolve(globalThis.NorthMP4Box):reject(new Error('字幕解析组件没有正常启动'));script.onerror=()=>reject(new Error('字幕解析组件加载失败，请重新打开小手机后再试'));document.head.appendChild(script);}).catch(e=>{_cinMp4Module=null;const stale=document.querySelector('script[data-north-mp4box="1"]');if(stale)stale.remove();throw e;});return _cinMp4Module;}
+async function cinemaMp4Library(){if(globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function')return globalThis.NorthMP4Box;if(!_cinMp4Module)_cinMp4Module=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='./vendor/mp4box.all.js?v=1202&r=file-safe-1';script.async=true;script.dataset.northMp4box='1';script.onload=()=>globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function'?resolve(globalThis.NorthMP4Box):reject(new Error('字幕解析组件没有正常启动'));script.onerror=()=>reject(new Error('字幕解析组件加载失败，请重新打开小手机后再试'));document.head.appendChild(script);}).catch(e=>{_cinMp4Module=null;const stale=document.querySelector('script[data-north-mp4box="1"]');if(stale)stale.remove();throw e;});return _cinMp4Module;}
 async function cinemaVideoCodecProbe(file){if(!file||typeof file.slice!=='function')return null;if(_cin.videoInfo)return _cin.videoInfo;try{const MP4Box=await cinemaMp4Library(),mp4=MP4Box.createFile(false);let info=null,parseError='';mp4.onReady=x=>{info=x;};mp4.onError=e=>{parseError=String(e||'');};const step=1024*1024;for(let offset=0,guard=0;offset<file.size&&guard++<256&&!info;){const end=Math.min(file.size,offset+step),ab=await file.slice(offset,end).arrayBuffer();ab.fileStart=offset;const next=Number(mp4.appendBuffer(ab));offset=Number.isFinite(next)&&next>end?Math.min(file.size,next):end;if(guard%8===0)await new Promise(resolve=>setTimeout(resolve,0));}if(!info)mp4.flush();if(!info)return _cin.videoInfo={parseError:parseError||'未读到 MP4 / MOV 媒体信息'};const video=(info.videoTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.video),audio=(info.audioTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.audio);return _cin.videoInfo={videoCodec:String(video&&video.codec||''),audioCodec:String(audio&&audio.codec||''),width:Number(video&&video.video&&video.video.width||video&&video.track_width||0),height:Number(video&&video.video&&video.video.height||video&&video.track_height||0)};}catch(e){return _cin.videoInfo={parseError:String(e&&e.message||e||'媒体信息读取失败')};}}
 function cinemaVideoErrorReason(code,info){const vc=String(info&&info.videoCodec||''),ac=String(info&&info.audioCodec||''),hevc=/^(?:hvc1|hev1|hevc|dvhe|dvh1)/i.test(vc),android=cinemaAndroidBrowser();if(android&&hevc)return '检测到视频编码 '+vc+'（HEVC / H.265）。苹果设备能够播放，并不代表当前安卓浏览器或手机具备同样的网页解码能力。';if(android&&code===3)return '安卓浏览器已经读到文件，但解码画面或声音失败。';if(android&&code===4)return '安卓浏览器不支持这个文件的容器、视频编码或音频编码。';if(code===3)return '浏览器已读到文件，但解码画面或声音失败。';if(code===4)return '当前浏览器不支持这个视频的容器或编码。';return '浏览器没有读到可播放的视频数据。';}
 function cinemaVideoRetryCompatible(info){const vc=String(info&&info.videoCodec||''),ac=String(info&&info.audioCodec||'');return /^(?:avc1|avc3)(?:\.|$)/i.test(vc)&&(!ac||/^(?:mp4a|aac)(?:\.|$)/i.test(ac));}
@@ -3624,7 +3626,7 @@ function openApp(key){if(S.jail&&S.jail.active){toast('你被关在禁闭室里�
 /* ---------- 软件使用时长 / 限额倒计时（只对授权的软件生效） ---------- */
 // 把当前所在页面映射到 LOCKABLE 的 appKey；不在任何受控软件里返回 null
 function curAppKey(){const p=cur().p;
-  const map={browser:'browser',wxmoment:'moments',spy:'spy',shop:'shop',shopcs:'shop',calendar:'calendar',food:'food',mail:'mail',phoneapp:'phoneapp',phonesms:'phoneapp',phonecontact:'phoneapp',phonecall:'phoneapp',gameshub:'games',gs:'games',drawguess:'games',heartquiz:'games',beadstudio:'games',uc:'games',mgroom:'games',offline:'offline',off:'offline',rphub:'roleplay',rpset:'roleplay',rp:'roleplay',tale:'tale',dread:'dread',music:'music',cinema:'cinema',cinemawatch:'cinema',cinemaread:'cinema',x:'x',xtweet:'x',xdm:'x',xuser:'x',dy:'douyin',dydm:'douyin'};
+  const map={browser:'browser',wxmoment:'moments',spy:'spy',shop:'shop',shopcs:'shop',calendar:'calendar',food:'food',mail:'mail',phoneapp:'phoneapp',phonesms:'phoneapp',phonecontact:'phoneapp',phonecall:'phoneapp',gameshub:'games',pixelhome:'games',gs:'games',drawguess:'games',heartquiz:'games',beadstudio:'games',uc:'games',mgroom:'games',offline:'offline',off:'offline',rphub:'roleplay',rpset:'roleplay',rp:'roleplay',tale:'tale',dread:'dread',music:'music',cinema:'cinema',cinemawatch:'cinema',cinemaread:'cinema',x:'x',xtweet:'x',xdm:'x',xuser:'x',dy:'douyin',dydm:'douyin'};
   if(map[p])return map[p];
   if(p==='wechat'&&wxTab==='moments')return 'moments';
   return null;}
@@ -6208,6 +6210,7 @@ function resetHomeBg(){S.me.homeBg='';save();render();toast('已恢复默认');}
 function setLockBg(){pickFile('image/*',async f=>{S.me.lockBg=await compressBackground(f);save();renderLockScreen(true);if(cur().p==='settings')render();toast('锁屏壁纸已换');});}
 function setCallBg(){pickFile('image/*',async f=>{S.me.callBg=await compressBackground(f);save();if(cur().p==='settings')render();if(_call)renderCall();toast('通话背景已换');});}
 const GAMES=[
+  {k:'pixelhome',e:'',n:'像素少女',tag:'情侣照顾 · 喂饭洗漱 · 每日穿搭'},
   {k:'pet',e:'',n:'电子宠物',tag:'领养 · 换装 · 共同照顾'},
   {k:'drawguess',e:'',n:'你画我猜',tag:'逐笔画布'},
   {k:'beads',e:'',n:'像素拼拼乐',tag:'上传图片 · 百级精细方格'},
@@ -6239,10 +6242,10 @@ function gameHubSettings(){openModal(`<h3>游戏设置</h3><div class="hint">上
 function renderGameHub(){const drafts=gsDraftList(),dd=dgDraftList(),bd=typeof beadDraftCardsHTML==='function'?beadDraftCardsHTML():'',aux=gameModelUseAux();return `<div class="gamehub"><div class="nav gamehub-nav"><button type="button" class="l" onclick="home()" aria-label="返回主屏幕">‹</button><span class="t">游戏大厅<small>GAME STUDIO</small></span><span class="r gamehub-actions"><button type="button" class="gamehub-model ${aux?'aux':''}" onclick="gameModelToggle()" title="切换游戏回复模型" aria-label="切换游戏回复模型，当前${aux?'副模型':'主模型'}">${svgIc('route',13,aux?'#d9c4f1':'#cbd4df')}<b>${aux?'副模型':'主模型'}</b></button><button type="button" class="gamehub-settings" onclick="gameHubSettings()">设置</button></span></div><div class="gamehub-scroll">
   <section class="gamehub-hero"><div><small>PLAY TOGETHER</small><h2>选一场游戏</h2><p>邀请角色进入独立游戏空间。第一版优先保证保存、退出和记忆稳定。</p></div><i>${gameLineIcon('drawguess')}</i></section>
   ${(drafts.length||dd.length||bd)?`<div class="gamehub-title"><b>继续游戏</b><span>点开可继续画布或重新选模式</span></div><div class="gamehub-drafts">${bd}${dd.map((d,i)=>{const c=getC(d.cid);return `<button onclick="dgOpenSetup('${d.cid}')"><i>${gameLineIcon('drawguess')}</i><span><b>继续画作</b><small>${esc((c&&(c.remark||c.name))||'角色')} · 可继续或重新选择</small></span></button>`;}).join('')}${drafts.map((d,i)=>`<button onclick="gsResumeDraft(${i})"><i>${gameLineIcon(d.kind)}</i><span><b>${esc(d.title||'未结束的游戏')}</b><small>${esc(((getC(d.cid)||{}).remark||(getC(d.cid)||{}).name||'角色'))} · ${(d.msgs||[]).length} 条记录</small></span></button>`).join('')}</div>`:''}
-  <div class="gamehub-title"><b>全部游戏</b><span>电子宠物可直接进入，其他游戏先选择搭档</span></div><div class="gamehub-grid">${GAMES.map(g=>`<article class="gamehub-card ${g.k==='drawguess'||g.k==='beads'||g.k==='pet'||g.k==='heartquiz'?'featured':''}" onclick="${g.k==='pet'?'openPetGame()':`pickGameChar('${g.k}')`}"><i>${gameLineIcon(g.k)}</i><div><b>${esc(g.n)}</b><small>${esc(g.tag||(MIX_GAME_KEYS.indexOf(g.k)>=0?'支持单人 / 多人房':'单人游戏'))}</small></div>${MIX_GAME_KEYS.indexOf(g.k)>=0?`<button onclick="event.stopPropagation();openMixedGamePicker('${g.k}')">多人</button>`:'<span>›</span>'}</article>`).join('')}</div>
+  <div class="gamehub-title"><b>全部游戏</b><span>电子宠物可直接进入，其他游戏先选择搭档</span></div><div class="gamehub-grid">${GAMES.map(g=>`<article class="gamehub-card ${g.k==='drawguess'||g.k==='beads'||g.k==='pet'||g.k==='heartquiz'?'featured':''}" onclick="${g.k==='pixelhome'?'openPixelHome()':g.k==='pet'?'openPetGame()':`pickGameChar('${g.k}')`}"><i>${g.k==='pixelhome'?'<img src="games/pixel-home/assets/teddy-p07.png" alt="" style="width:52px;height:52px;object-fit:contain">':gameLineIcon(g.k)}</i><div><b>${esc(g.n)}</b><small>${esc(g.tag||(MIX_GAME_KEYS.indexOf(g.k)>=0?'支持单人 / 多人房':'单人游戏'))}</small></div>${MIX_GAME_KEYS.indexOf(g.k)>=0?`<button onclick="event.stopPropagation();openMixedGamePicker('${g.k}')">多人</button>`:'<span>›</span>'}</article>`).join('')}</div>
   <button class="gamehub-gallery" onclick="dgOpenGallery()">${gameLineIcon('drawguess')}<span><b>我的画作</b><small>查看、保留或删除已经完成的画布</small></span><em>›</em></button>
   </div></div>`;}
-function pickGameChar(k){const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){toast('先创建一个角色');return;}
+function pickGameChar(k){if(k==='pixelhome')return openPixelHome();const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){toast('先创建一个角色');return;}
   openModal(`<h3>邀请谁一起玩？</h3><div class="hint">会给ta发一张【游戏邀请卡片】，ta同意之后，你才能和ta进游戏空间一起玩～</div>${cs.map(c=>`<div class="section"><div class="it" onclick="sendGameInvite('${k}','${c.id}')">${esc(c.remark||c.name)}<span class="v">›</span></div></div>`).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
 function sendGameInvite(k,cid){const g=GAMES.find(x=>x.k===k);const c=getC(cid);if(!g||!c)return;closeModal();
   if(c.blocked){toast('ta把你拉黑了，没法邀请');return;}
@@ -6254,13 +6257,14 @@ function gameInviteDecide(id,ok){const c=getC(id);if(!c)return false;const inv=[
   inv.status=ok?'accepted':'declined';
   if(ok){c.gamesPlayed=c.gamesPlayed||[];if(inv.gname&&c.gamesPlayed.indexOf(inv.gname)<0){c.gamesPlayed.push(inv.gname);if(c.gamesPlayed.length>30)c.gamesPlayed.shift();}}
   save();if(cur().p==='chat'&&cur().id===id)refreshChatMessages(id);else if(cur().p==='wechat')render();return true;}
-function gameKindFromLabel(label){const text=String(label||'').trim().toLowerCase();if(!text)return'';if(/像素|拼拼乐|拼豆/.test(text))return'beads';if(/心动审判|情侣问答/.test(text))return'heartquiz';if(/你画我猜|画画/.test(text))return'drawguess';const hit=GAMES.find(x=>x&&(String(x.k).toLowerCase()===text||String(x.n).toLowerCase()===text));return hit&&hit.k||'';}
+function gameKindFromLabel(label){const text=String(label||'').trim().toLowerCase();if(!text)return'';if(/像素少女/.test(text))return'pixelhome';if(/像素|拼拼乐|拼豆/.test(text))return'beads';if(/心动审判|情侣问答/.test(text))return'heartquiz';if(/你画我猜|画画/.test(text))return'drawguess';const hit=GAMES.find(x=>x&&(String(x.k).toLowerCase()===text||String(x.n).toLowerCase()===text));return hit&&hit.k||'';}
 function latestUserGameInvite(id){return[...msgs(id)].reverse().find(x=>x&&x.type==='gameinvite'&&x.role==='user')||null;}
 function roleGameAcceptOrReinvite(id,label){if(gameInviteDecide(id,true))return true;const latest=latestUserGameInvite(id),kind=gameKindFromLabel(label)||(latest&&latest.game)||'';return !!(latest&&latest.status==='declined'&&kind&&roleGameInvite(id,kind));}
 function roleGameInvite(id,kind){kind=gameKindFromLabel(kind)||'drawguess';const c=getC(id),g=GAMES.find(x=>x.k===kind);if(!c||!g)return false;const recent=[...msgs(id)].reverse().find(x=>x&&x.type==='gameinvite'&&x.game===kind&&x.role==='assistant'&&x.status==='pending');if(recent)return true;const m={role:'assistant',type:'gameinvite',game:kind,gname:g.n,ge:'',status:'pending',from:'ta',id:uid(),time:Date.now()};msgs(id).push(m);notifyIncoming(c,m);save();refreshChatMessages(id);return true;}
 function roleGameInviteDecide(id,mid,ok){const c=getC(id),m=msgs(id).find(x=>x&&x.id===mid&&x.type==='gameinvite'&&x.role==='assistant');if(!c||!m||m.status!=='pending')return;m.status=ok?'accepted':'declined';if(ok){c.gamesPlayed=c.gamesPlayed||[];if(c.gamesPlayed.indexOf(m.gname)<0)c.gamesPlayed.push(m.gname);}save();render();if(ok)toast('邀请已接受，可以进入'+(m.gname||'游戏')+'了');}
 function enterGameNow(cid,k){const inv=[...msgs(cid)].reverse().find(x=>x.type==='gameinvite'&&x.game===k);if(inv&&inv.status!=='accepted'){toast('要等ta同意了才能进去玩哦');return;}startGame(k,cid);}
 function startGame(k,cid){const g=GAMES.find(x=>x.k===k);if(!g)return;closeModal();
+  if(k==='pixelhome')return openPixelHome();
   if(k==='pet')return openPetGame();
   if(k==='drawguess')return dgOpenSetup(cid);
   if(k==='beads'&&typeof beadOpenSetup==='function')return beadOpenSetup(cid);

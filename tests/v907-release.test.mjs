@@ -13,11 +13,11 @@ const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest
 const nativeWeb = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web source keeps private 1.0.315 compatibility', () => {
-  assert.match(app, /APP_VER='v1200 · 回复接力互斥版'/);
-  assert.match(html, /app\.js\?v=1200/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 322;/);
-  assert.match(project, /MARKETING_VERSION = 1\.0\.322;/);
-  assert.match(nativeWeb, /1\.0\.322 \(322\)/);
+  assert.match(app, /APP_VER='v1202 · 像素少女照顾版'/);
+  assert.match(html, /app\.js\?v=1202/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 323;/);
+  assert.match(project, /MARKETING_VERSION = 1\.0\.323;/);
+  assert.match(nativeWeb, /1\.0\.323 \(323\)/);
 });
 
 test('Apple compatibility alone moves call identity and mood updates live', () => {

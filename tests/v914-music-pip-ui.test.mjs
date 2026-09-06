@@ -8,9 +8,9 @@ const pip=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/Ph
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
 test('v1184 web source keeps private 1.0.315 compatibility',()=>{
-  assert.match(app,/APP_VER='v1200 · 回复接力互斥版'/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 322;/);
-  assert.match(project,/MARKETING_VERSION = 1\.0\.322;/);
+  assert.match(app,/APP_VER='v1202 · 像素少女照顾版'/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 323;/);
+  assert.match(project,/MARKETING_VERSION = 1\.0\.323;/);
 });
 
 test('public music search needs no user login and reuses together-listen songs',()=>{

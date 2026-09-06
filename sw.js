@@ -1,6 +1,6 @@
-const BUILD='1200';
-const HOTFIX='v1200-couple-watch-trigger-1';
-const SHELL_CACHE='north-shell-v1200-couple-watch-trigger-1';
+const BUILD='1202';
+const HOTFIX='v1202-couple-watch-trigger-1';
+const SHELL_CACHE='north-shell-v1202-couple-watch-trigger-1';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
@@ -12,12 +12,14 @@ const CORE_FILES=[
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
   {url:'./app.js?v='+BUILD+'&r='+HOTFIX,kind:'app'},
   {url:'./cohab-theater.js?v='+BUILD+'&r=v1184-ios-web-crash-cohab-turn-keyboard-1',kind:'theater'},
-  {url:'./web-hotfix.js?v='+BUILD+'&r=v1200-couple-watch-trigger-1',kind:'hotfix'},
+  {url:'./web-hotfix.js?v='+BUILD+'&r=v1202-couple-watch-trigger-1',kind:'hotfix'},
   {url:'./ai-account.js?v='+BUILD,kind:'ai'},
   {url:'./couple-watch.js?v='+BUILD,kind:'watch'},
   {url:'./couple-watch-runtime.js?v='+BUILD,kind:'watchRuntime'}
 ];
 const OPTIONAL_FILES=[
+  './pixel-home-policy.js?v='+BUILD,
+  './pixel-home.js?v='+BUILD,
   './icon.png',
   './assets/incoming-wechat-call-default-v2.mp3',
   './assets/message-notification-user-v1.mp3',
@@ -80,7 +82,7 @@ function validShellText(kind,text){
     &&text.includes('theaterRevealActorItems')
     &&!text.includes('cohabReplyCore=async');
   if(kind==='hotfix')return text.length>800
-    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1200-couple-watch-trigger-1'")
+    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1202-couple-watch-trigger-1'")
     &&text.includes('reconcileExpiredWxLogin')
     &&text.includes('withBaseImageCheck')
     &&text.includes('isStoredImgRef');
@@ -156,6 +158,15 @@ self.addEventListener('fetch',event=>{
   let url;
   try{url=new URL(request.url);}catch(_){return;}
   if(url.origin!==self.location.origin)return;
+
+  // The embedded game has its own document, never the phone shell fallback.
+  if(/\/games\/pixel-home\//.test(url.pathname)){
+    event.respondWith((async()=>{
+      const cache=await caches.open(SHELL_CACHE),key=new Request(url.origin+url.pathname),cached=await cache.match(key);
+      if(cached)return cached;
+      const response=await fetch(request);if(response.ok)await cache.put(key,response.clone());return response;
+    })());return;
+  }
 
   if(/\/assets\/app-icons\/glass\/(?:black|gray|pink|blue)\/[^/]+\.webp$/.test(url.pathname)){
     event.respondWith((async()=>{

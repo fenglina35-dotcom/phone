@@ -10,6 +10,7 @@ function coupleWatchParticipants(p){
   if(p==='gs')return one(_gs);
   if(p==='wg')return one(_wg);
   if(p==='drawguess')return one(_dg);
+  if(p==='pixelhome')return S.couple&&S.couple.cid?[S.couple.cid]:[];
   if(p==='heartquiz')return typeof _hq==='undefined'?[]:one(_hq);
   if(p==='beadstudio')return typeof _bead==='undefined'?[]:one(_bead);
   if(p==='uc')return _uc?(_uc.players||[]).filter(x=>!x.isMe&&!x.bot&&String(x.id).startsWith('p_')).map(x=>x.id.slice(2)):[];
