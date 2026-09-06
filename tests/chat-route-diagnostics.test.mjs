@@ -39,6 +39,7 @@ const uiSandbox={
 const uiStart=source.indexOf('function wechatAuxConfigured(');
 const uiEnd=source.indexOf('const _wechatActualModelRoute',uiStart);
 vm.runInNewContext(source.slice(uiStart,uiEnd),uiSandbox);
+uiSandbox.window=uiSandbox;vm.runInNewContext(fs.readFileSync(new URL('../request-size-details.js',import.meta.url),'utf8'),uiSandbox);
 uiSandbox.roleChatDiagnosticOpen('r1');
 assert.match(modal,/路线一 · 主模型/);
 assert.match(modal,/路线一 · 副模型/);
