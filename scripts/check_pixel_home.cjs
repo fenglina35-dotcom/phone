@@ -13,12 +13,13 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
     S.me.locked=false;S.couple={cid:null};go('gameshub');openPixelHome();window.unboundBlocked=cur().p==='gameshub';
     const c=S.contacts[0];S.couple.cid=c.id;window.testCid=c.id;window.modelCalls=0;
     const cfg={base:'https://fake.invalid/v1',key:'fixture-secret',model:'fixture-role',temp:.7,maxTokens:900};S.settings.chat=cfg;S.settings.aux={};chatRequestRoute=()=>cfg;aiCoreOn=()=>false;
-    fetchT=async(url,opt)=>{window.lastPixelRequest=JSON.parse(opt.body);if(!lastPixelRequest.messages[0].content.includes("正在照顾代表玩家的小屋少女"))return {ok:true,json:async()=>({choices:[{message:{content:"[内心|想陪你聊一会儿]\n我在。"},finish_reason:"stop"}]})};modelCalls++;return {ok:true,json:async()=>({choices:[{message:{content:JSON.stringify({actions:['feed','touch','ball','bath','comb','teeth','face','teddy'],looks:[0,1,0,1,0,1,0]})},finish_reason:'stop'}]})};};
+    fetchT=async(url,opt)=>{window.lastPixelRequest=JSON.parse(opt.body);if(!lastPixelRequest.messages[0].content.includes("正在照顾代表玩家的小屋少女"))return {ok:true,json:async()=>({choices:[{message:{content:"[内心|想陪你聊一会儿]\n我在。"},finish_reason:"stop"}]})};modelCalls++;return {ok:true,json:async()=>({choices:[{message:{content:JSON.stringify({actions:['feed','touch','ball','bath','comb','teeth','face','teddy'],looks:[0,1,0,1,0,1,0]})},finish_reason:'length'}]})};};
     openPixelHome();
   });
   assert(await p.evaluate(()=>unboundBlocked));
   const f=p.frameLocator('#pixel-home-frame');await f.locator('#loading').waitFor({state:'detached',timeout:30000});
   await p.waitForFunction(()=>modelCalls===1&&!_pixelHome.pending);assert.equal(await f.locator('#care').innerText(),'让他照顾');assert.equal(await f.locator('#light').count(),0);assert.equal(await f.locator('.side-tools [data-panel="album"]').count(),1);assert.equal(await f.locator('.dock [data-panel="album"]').count(),0);
+  assert.equal(await f.locator('#fullscreen').count(),0);assert.equal(await f.locator('#help').count(),1);await f.locator('#help').click();assert(await f.locator('#drawer').isVisible());await f.locator('#close-drawer').click();await f.locator('#photo').click();await p.waitForFunction(()=>pixelHomeEntry(_pixelHome).state.photos.length===1);assert(await f.locator('#drawer').isVisible());await f.locator('#close-drawer').click();
   assert.equal(await p.evaluate(()=>curAppKey()),'games');assert.equal(await p.evaluate(()=>gameKindFromLabel('像素少女')),'pixelhome');assert.equal(await p.evaluate(()=>gameKindFromLabel('像素拼拼乐')),'beads');
   const frame=await p.locator('#pixel-home-frame').elementHandle();await p.evaluate(()=>{for(let i=0;i<3;i++)render();});assert(await frame.evaluate(e=>e.isConnected));
   await f.locator('#sleep').click();assert(await f.locator('body').evaluate(e=>e.classList.contains('lights-off')));await f.locator('#sleep').click();assert(!await f.locator('body').evaluate(e=>e.classList.contains('lights-off')));
@@ -35,6 +36,6 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
   await p.screenshot({path:path.join(root,'preview/rose-doll-p01',privateApp?'p08-private-entry.png':'p08-web-entry.png')});
   // Unbinding during a slow model response closes the game and its pending work.
   await p.evaluate(()=>{fetchT=async(url,opt)=>{if(!JSON.parse(opt.body).messages[0].content.includes('正在照顾代表玩家的小屋少女'))return{ok:true,json:async()=>({choices:[{message:{content:'我在。'},finish_reason:'stop'}]})};modelCalls++;await new Promise(r=>setTimeout(r,1600));return{ok:true,json:async()=>({choices:[{message:{content:JSON.stringify({actions:['feed'],looks:[0,1,0,1,0,1,0]})},finish_reason:'stop'}]})};};});await f.locator('#care').click();await p.waitForTimeout(200);await p.evaluate(()=>S.couple.cid=null);await p.waitForTimeout(2200);assert.equal(await p.evaluate(()=>cur().p),'gameshub');assert.equal(await p.locator('#pixel-home-frame').count(),0);
-  assert.deepEqual(errors,[]);console.log(JSON.stringify({privateApp,checks:16,modelCalls:await p.evaluate(()=>modelCalls),errors}));await p.close();
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({privateApp,checks:20,modelCalls:await p.evaluate(()=>modelCalls),errors}));await p.close();
  }}finally{await browser.close();server.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;server.close();});

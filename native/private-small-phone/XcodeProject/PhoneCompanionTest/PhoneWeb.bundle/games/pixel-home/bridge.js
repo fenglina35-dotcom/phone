@@ -11,6 +11,7 @@ window.PixelHomeBridge=(()=>{
     const m=e.data;if(e.source!==parent||e.origin!==(location.protocol==='file:'?'null':location.origin)||m?.type!=='pixel-home-response'||m.token!==token)return;
     if(m.id==='invalid'){live=false;document.dispatchEvent(new Event('pixel-home:invalid'));return;}
     if(m.id==='morning'){document.dispatchEvent(new CustomEvent('pixel-home:morning',{detail:m.data}));return;}
+    if(m.id==='storage'){document.dispatchEvent(new CustomEvent('pixel-home:storage',{detail:m.error}));return;}
     const p=pending.get(m.id);if(!p)return;pending.delete(m.id);clearTimeout(p.timer);m.error?p.reject(new Error(m.error)):p.resolve(m.data);
   });
   return Object.freeze({request});

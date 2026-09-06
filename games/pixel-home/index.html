@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#eee3d5">
   <link rel="icon" href="data:,">
-  <title>像素少女小屋 · v1202</title>
+  <title>像素少女小屋 · v1203</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="immersive.css">
 </head>
@@ -24,7 +24,7 @@
     <div class="loading" id="loading">正在打开小屋<span>把阳光和裙摆准备好…</span></div>
     <button id="exit-home" class="exit-home" aria-label="返回游戏大厅">‹ 返回</button><div class="topbar"><button class="coin" id="shop-short" aria-label="打开小铺"><span>✧</span> <b id="coins">120</b></button></div>
     <div class="welcome"><span class="date" id="today"></span><div>今天，也要被好好照顾<span>♡</span></div></div>
-    <div class="side-tools"><button id="photo" aria-label="拍下当前穿搭" title="拍下当前穿搭">相机</button><button id="sound" aria-label="选择音乐歌单" title="音乐歌单">音乐</button><button data-panel="album" aria-label="今天的收藏" title="今天的收藏">收藏</button><button id="fullscreen" aria-label="进入全屏" title="全屏">全屏</button><button id="help" aria-label="怎么玩" title="怎么玩">玩法</button></div>
+    <div class="side-tools"><button id="photo" aria-label="拍下当前穿搭" title="拍下当前穿搭">相机</button><button id="sound" aria-label="选择音乐歌单" title="音乐歌单">音乐</button><button data-panel="album" aria-label="今天的收藏" title="今天的收藏">收藏</button><button id="help" aria-label="玩法" title="玩法">玩法</button></div>
     <div class="speech" id="speech" role="status" aria-live="polite">轻轻戳一下我的脸颊吧 ♡</div>
     <div id="feedback" class="feedback" hidden></div>
     <button id="save-warning" class="save-warning" hidden>进度未保存 · 腾出浏览器空间后点此重试</button>
@@ -43,7 +43,7 @@
   <section class="drawer" id="drawer" hidden aria-label="游戏面板"><div class="drawer-head"><div><small id="drawer-kicker"></small><h2 id="drawer-title"></h2></div><button id="close-drawer" aria-label="关闭面板">×</button></div><p id="panel-feedback"></p><div id="drawer-content"></div></section>
   <div class="flash" id="flash"></div>
   <div class="night-vignette" id="night"></div>
-  <span class="build">v1202 · 像素少女</span>
+  <span class="build">v1203 · 像素少女</span>
 </main>
 <aside class="journal"><div class="eyebrow">LITTLE MOMENTS</div><h2>今天的小确幸</h2><p>衣服会留下回忆，<br>照顾也会。</p><ol id="diary"></ol><div class="journal-bottom">轻戳 · 抚摸 · 拖拽 · 换装<br><span>用鼠标或手指，都可以陪她玩。</span></div></aside>
 <div id="care-cursor" hidden aria-hidden="true"><div id="care-held"></div><svg width="32" height="40" viewBox="0 0 32 40"><path d="M3 2 L3 31 L11 24 L18 38 L24 35 L17 22 L29 22 Z" fill="#fff9ef" stroke="#b57587" stroke-width="2"/></svg></div>
@@ -52,6 +52,7 @@
 <script src="music.js"></script>
 <script src="core.js"></script>
 <script src="care-policy.js"></script>
+<script src="assets.js"></script>
 <script src="game.js"></script>
 </body>
 </html>
