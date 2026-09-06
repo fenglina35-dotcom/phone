@@ -49,6 +49,7 @@ p.write_text(s[:a]+part+s[b:],'utf-8')
 
 source=(ROOT/'scripts/package_v1200_private_ios322.py').read_text('utf-8')
 source=source.replace('1200','1202').replace('322','323').replace('第三百二十二次安装_v1202_回复接力互斥_请先读.md',guide).replace('HandoffOwnership','PixelGirlCare').replace('回复接力互斥','像素少女照顾版')
+source=source.replace('像素少女照顾版版','像素少女照顾版')
 source=source.replace('public-source=v1202 (check Git push separately)','public-source=v1202 (NOT PUSHED OR DEPLOYED)')
 source=source.replace("files['SOURCE_COMMIT.txt']=",'''# Verify all new nested game resources, not only top-level script tags.
 for name in ['pixel-home.js','pixel-home-policy.js']:

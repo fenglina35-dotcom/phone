@@ -55,7 +55,7 @@ require(app,'phone_role_background_complete_turn')
 require(app,"roleInterceptPurpose:'delivery-action'")
 require(files[BUNDLE+'delivery.js'].decode('utf-8'),'currentDeliveryRepairReply(replyText)')
 require(files[BUNDLE+'private-reply-intercept.js'].decode('utf-8'),'这是外卖辅助请求结果，不是聊天格式错误')
-require(app,"APP_VER='v1202 · 像素少女照顾版版'")
+require(app,"APP_VER='v1202 · 像素少女照顾版'")
 require(app,'_offComposerGuardUntil=Date.now()+1600')
 public_app=git('show','HEAD:app.js').decode('utf-8')
 assert app[app.index('const _replyHandoffClaims='):app.index('const _roleBackgroundPending=')] == public_app[public_app.index('const _replyHandoffClaims='):public_app.index('const _roleBackgroundPending=')]
