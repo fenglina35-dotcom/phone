@@ -419,3 +419,26 @@ test('full-width Chinese delivery actions are normalized before execution',()=>{
   assert.match(app,/replace\(\/\^【\\s\*\(真实外卖\|点外卖\)[\s\S]*?'\[\$1\|\$2\]'\)/);
   assert.match(app,/const _realDeliveryTag=\/\^\[\\\[【\][\s\S]*?真实外卖\|点外卖/);
 });
+
+
+for(const [label,user,reply] of [
+  ['screenshot future reminder','忘了咬你','咬。\n过来厨房，先生脖子伸好了等你。\n咬完了记得把香菜挑干净继续吃，别浪费粮食。\n先生欠你一口，下次点面亲自盯着备注写去香菜三个大字。\n[记住|小狗点牛肉拉面必须备注去香菜，她讨厌吃香菜，这次忘了备注她很不开心，下次绝对不能再忘]'],
+  ['canonical memory','忘了咬你','咬。\n[记住|我给你点牛肉面要去香菜]'],
+  ['canonical thought','陪我说话','[内心|我给你点牛肉面]\n我在。'],
+  ['future visible promise','陪我说话','下次我给你点牛肉面。'],
+  ['past visible order','陪我说话','刚才我给你点了牛肉面。'],
+  ['conditional order','陪我说话','如果饿了我给你点牛肉面。'],
+  ['non-food commitment','陪我说话','我帮你找工作。'],
+  ['food mention without commitment','陪我说话','锅里还有面，你先吃。'],
+]) test(label+' must not cause an extra delivery model request',()=>{
+  const {ctx,meta,searches}=makeRuntime(user);
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  assert.equal(ctx.deliveryMissingActionRepairPrompt('role-1',user,reply,meta),'');
+  assert.equal(searches.length,0);
+});
+
+test('removing a hidden historical thought does not suppress a current visible delivery commitment',()=>{
+  const {ctx,meta}=makeRuntime('今天有点忙');
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  assert.match(ctx.deliveryMissingActionRepairPrompt('role-1',meta.userText,'[内心|下次不能再忘记]\n我去给你点点吃的。',meta),/真实外卖动作补判/);
+});

@@ -47,18 +47,18 @@ function functionSource(sourceText, name) {
 
 test('v1189 private identifiers retain the performance chain while public stays v1184', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1198'/);
-  assert.match(index, /app\.js\?v=1198&r=v1198-couple-watch-1/);
-  assert.match(index, /private-runtime-diagnostics\.js\?v=320/);
-  assert.match(app, /APP_VER='v1198 · 请求规模详情版'/);
-  assert.match(overlay, /320-request-size-1/);
-  assert.match(webview, /1\.0\.320 \(320\)/);
-  assert.match(bridge, /private static let build = "1\.0\.320 \(320\)"/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1199'/);
+  assert.match(index, /app\.js\?v=1199&r=v1199-couple-watch-1/);
+  assert.match(index, /private-runtime-diagnostics\.js\?v=321/);
+  assert.match(app, /APP_VER='v1199 · 外卖补判降耗版'/);
+  assert.match(overlay, /321-delivery-cost-1/);
+  assert.match(webview, /1\.0\.321 \(321\)/);
+  assert.match(bridge, /private static let build = "1\.0\.321 \(321\)"/);
   assert.match(bridge, /static let contractVersion = 35/);
-  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 320;/g) || []).length, 12);
-  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.320;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1198 · 请求规模详情版'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1198'/);
+  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 321;/g) || []).length, 12);
+  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.321;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1199 · 外卖补判降耗版'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1199'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
@@ -148,22 +148,22 @@ test('diagnostics identify the protected stage without collecting content', () =
 
 test('Mac guides state the private v1189 and unchanged public web v1184 boundary', () => {
   const install = fs.readFileSync(
-    path.join(project, '第三百二十次安装_v1198_请求规模详情_请先读.md'),
+    path.join(project, '第三百二十一次安装_v1199_外卖补判降耗_请先读.md'),
     'utf8',
   );
   const mac = fs.readFileSync(path.join(project, '请在Mac编译前先读.md'), 'utf8');
   for (const guide of [install, mac]) {
-    assert.match(guide, /v1198/);
+    assert.match(guide, /v1199/);
     assert.match(guide, /网页.*推送/);
-    assert.match(guide, /1\.0\.320 \(320\)/);
+    assert.match(guide, /1\.0\.321 \(321\)/);
     assert.match(guide, /原生桥.*35/);
     assert.match(guide, /不要先删除.*App/);
     assert.match(guide, /不要.*覆盖.*旧工程目录/);
     assert.match(guide, /Mac.*编译/);
     assert.match(guide, /真机|真实 iPhone/);
   }
-  assert.match(mac, /当前候选：网页源码与私人内置网页 v1198/);
+  assert.match(mac, /当前候选：网页源码与私人内置网页 v1199/);
   assert.match(mac, /网页.*推送/);
-  assert.match(install, /网页源码与私人内置网页均为 v1198/);
+  assert.match(install, /网页源码与私人内置网页均为 v1199/);
   assert.match(install, /两边共有/);
 });
