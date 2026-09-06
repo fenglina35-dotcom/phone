@@ -617,6 +617,7 @@ test('a scheduled push racing with a live call is acknowledged without entering 
     ${functionSource('roleServerPushReceiptHas')}
     ${functionSource('roleServerPushReceiptMark')}
     ${functionSource('roleServerPushReceiptForget')}
+    ${app.slice(app.indexOf('const _replyHandoffClaims='),app.indexOf('const _roleBackgroundPending='))}
     async ${functionSource('roleServerPushPull')}
     this.pull=roleServerPushPull;
   `,context);
@@ -659,6 +660,7 @@ test('a queued reasoning leak is consumed without a bubble, notification, or act
     ${functionSource('roleServerPushReceiptHas')}
     ${functionSource('roleServerPushReceiptMark')}
     ${functionSource('roleServerPushReceiptForget')}
+    ${app.slice(app.indexOf('const _replyHandoffClaims='),app.indexOf('const _roleBackgroundPending='))}
     async ${functionSource('roleServerPushPull')}
     this.pull=roleServerPushPull;
   `,context);

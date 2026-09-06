@@ -29,6 +29,8 @@ assert.match(source, /replyGenState==='queued'\?'排队中…'/, 'queued chats m
 
 const calls = [];
 const context = vm.createContext({
+  replyPendingUserText:()=>'',
+  msgsForAccount:()=>[],
   _replying: {},
   _replyQueue: [],
   MANUAL_REPLY_LIMIT: 2,
@@ -43,6 +45,7 @@ const context = vm.createContext({
 });
 
 vm.runInContext([
+  source.slice(source.indexOf('const _replyHandoffClaims='),source.indexOf('const _roleBackgroundPending=')),
   functionSource('replyGenerationStore'),
   functionSource('replyGenerationKey'),
   functionSource('replyGenerationState'),

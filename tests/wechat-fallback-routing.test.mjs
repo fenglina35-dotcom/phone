@@ -18,7 +18,7 @@ assert.match(source,/_md=\{routeIndex:_routeIndex,aux:c\.model==='aux',complete:
 assert.match(source,/_repairMd=Object\.assign\(\{\},_md,\{aux:c\.model==='aux'\|\|wechatAuxConfigured\(_routeIndex\),roleInterceptStage:'微信纠正候选'\}\)/);
 assert.match(source,/if\(wechatRoleDrift\(content\)\)\{if\(!_routeState\.fallback\)\{/);
 assert.match(source,/roleInterceptDiagnosticTurnSelect\(_replyAudit,content\)/);
-assert.match(source,/finally\{roleInterceptDiagnosticTurnOutcome\(_replyAudit,\{handled:_replyAuditHandled\?1:0,failed:_replyAuditPartial\?1:0\}\);roleInterceptDiagnosticTurnFinish\(_replyAudit,_replyAuditFinal,\{delivered:delivered\|\|_replyAuditHandled,partial:_replyAuditPartial\}\);\}/);
+assert.match(source,/finally\{if\(replyHandoffMarkLocal\(_handoffTurn\)\)save\(\);replyHandoffRelease\(_handoffTurn\);roleInterceptDiagnosticTurnOutcome\(_replyAudit,\{handled:_replyAuditHandled\?1:0,failed:_replyAuditPartial\?1:0\}\);roleInterceptDiagnosticTurnFinish\(_replyAudit,_replyAuditFinal,\{delivered:delivered\|\|_replyAuditHandled,partial:_replyAuditPartial\}\);\}/);
 assert.match(source,/content:_stableSys/,'natural mode failures must use the complete stable prompt');
 assert.match(source,/const fix=await wechatRoleRepair\(\[\{role:'system',content:_stableSys\}/,'role drift should use the bounded auxiliary repair helper');
 assert.match(source,/toast\(c\.model==='aux'\?'已切换副模型':'已切换主模型',3000\)/,'manual model changes should use the short three-second notice');

@@ -77,7 +77,7 @@ assert.ok((source.match(/roleInterceptDiagnosticTurnCandidate\(opt\.roleIntercep
 assert.match(source,/roleInterceptDiagnosticTurn\(c,'online',replyAccount,'线上微信'\)/);
 assert.match(source,/roleInterceptDiagnosticTurn\(c,'cohab',null,'共同生活'\)/);
 assert.match(source,/roleInterceptDiagnosticTurn\(c,'offline',null,'单次约会'\)/);
-const onlineFinallyLine=source.split(/\r?\n/).find(line=>line.includes('finally{roleInterceptDiagnosticTurnOutcome(_replyAudit'))||'';
+const onlineFinallyLine=source.split(/\r?\n/).find(line=>line.includes('finally{')&&line.includes('roleInterceptDiagnosticTurnOutcome(_replyAudit'))||'';
 assert.ok(onlineFinallyLine,'online reply finally must attach real action outcome before finishing the diagnostic turn');
 assert.doesNotMatch(onlineFinallyLine,/roleInterceptDiagnosticOnlyHandled/,'finally must not infer success from a tag name alone');
 assert.match(onlineFinallyLine,/roleInterceptDiagnosticTurnOutcome\(_replyAudit,\{handled:_replyAuditHandled\?1:0,failed:_replyAuditPartial\?1:0\}\);roleInterceptDiagnosticTurnFinish/);
@@ -367,10 +367,12 @@ async function runOnlineConsumer(raw,opt={}){
   };
   vm.createContext(ctx);
   vm.runInContext(`
+    ${source.slice(source.indexOf('const _replyHandoffClaims='),source.indexOf('const _roleBackgroundPending='))}
     this.exercise=async function(content){
       const id='a',c=role,replyAccount=${JSON.stringify(opt.account||'main')},replyToken=1,replyIntent=null,note='',_userText='',_deliveryActionMeta={},_explicitCallTurn=false;
       const _initiativeNoImage=false,_initiativeNoLocation=false,_naturalOn=${opt.naturalOn===true},cap=20;
       let _replyAuditFinal='',_replyAuditPartial=false,_replyAuditHandled=false,_replyDeferredIncoming=[];
+      const _handoffTurn=null;
       const _queueReplyIncoming=kind=>{runtime.incomingCalls=(runtime.incomingCalls||0)+1;const pending=Promise.resolve(runtime.opt.incomingResult!==false);_replyDeferredIncoming.push(pending);return pending;};
       ${onlineLoop}
       return {partial:_replyAuditPartial,handled:_replyAuditHandled,got,final:_replyAuditFinal,pendQuote};
