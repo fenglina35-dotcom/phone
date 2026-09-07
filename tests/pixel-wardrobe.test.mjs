@@ -11,3 +11,13 @@ test('wardrobe snapshot rejects unknown items, nonfinite sizes and arbitrary fie
 test('room snapshot persists wardrobe and morning day without losing proportions',()=>{const s={version:3,mood:50,food:50,energy:50,health:50,clean:50,wardrobe:original,wardrobeDay:'2026-09-07'};const result=P.snapshot(s);assert.deepEqual(result.wardrobe,original);assert.equal(result.wardrobeDay,s.wardrobeDay);assert(!P.snapshot({...s,wardrobeDay:'bad'}).wardrobeDay)});
 test('private wardrobe is byte-identical to shared current runtime and images',()=>{const a='games/pixel-home/wardrobe',b='native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/'+a;for(const f of fs.readdirSync(a,{recursive:true})){if(fs.statSync(a+'/'+f).isFile())assert.deepEqual(fs.readFileSync(a+'/'+f),fs.readFileSync(b+'/'+f),f)}const c=JSON.parse(fs.readFileSync(a+'/catalog.json'));assert.equal(c.outfits.length,11);assert.equal(c.hairs.length,8);assert.equal(c.faces.length,5);assert.equal(c.accessories.length,10);assert(!c.outfits.some(o=>o.dress==='outfit0-dress'))});
 test('offline embedded image bytes match every catalog hash and on-disk PNG',()=>{const root='games/pixel-home/wardrobe/',ctx={window:{}};vm.runInNewContext(fs.readFileSync(root+'data.js','utf8'),ctx);const d=ctx.window.PixelWardrobeData;for(const [f,hash] of Object.entries(d.catalog.files)){const bytes=Buffer.from(d.images[f].split(',')[1],'base64');assert.deepEqual(bytes,fs.readFileSync(root+f),f);assert.equal(createHash('sha256').update(bytes).digest('hex'),hash,f)}});
+test('custom sets preserve independent looks, body and every selected adjustment through parent snapshot',()=>{
+ const a=structuredClone(original),b={...structuredClone(original),hair:'hair6',body:{size:120,legs:80,legWidth:85},motion:false};
+ const s={...original,savedOutfits:[{id:'set-one',name:'小白裙',look:a},{id:'set-two',name:'月牙小辫',look:b}]};
+ const result=P.snapshot({version:3,mood:50,food:50,energy:50,health:50,clean:50,wardrobe:s}).wardrobe;
+ assert.deepEqual(result,s);result.savedOutfits[0].look.adjustments['face2/face2-closed'].width=80;assert.equal(a.adjustments['face2/face2-closed'].width,93);assert.equal(result.savedOutfits[1].look.adjustments['face2/face2-closed'].width,93);
+});
+test('saved set validation rejects recursive libraries, duplicates, excessive lists and malformed looks',()=>{
+ const set={id:'set-ok',name:'日常',look:original};
+ for(const savedOutfits of [[set,set],Array.from({length:31},(_,i)=>({...set,id:'set-'+i})),[{...set,name:' '}],[{...set,name:'x'.repeat(31)}],[{...set,look:{...original,savedOutfits:[]}}],[{...set,look:{...original,hair:'hair88'}}],[{...set,id:'__proto__'}]])assert.throws(()=>P.wardrobe({...original,savedOutfits}));
+});

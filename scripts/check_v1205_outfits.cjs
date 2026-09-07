@@ -1,0 +1,50 @@
+const {chromium}=require('playwright'),fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict'),{pathToFileURL}=require('node:url');
+const root=path.resolve(__dirname,'..'),qa=path.join(root,'.qa/v1205');fs.mkdirSync(qa,{recursive:true});
+(async()=>{const b=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});try{
+ for(const kind of ['web','private']){
+  const dir=path.join(root,kind==='web'?'games/pixel-home':'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/games/pixel-home');
+  let html=fs.readFileSync(path.join(dir,'index.html'),'utf8').replace('<head>','<head><base href="'+pathToFileURL(dir+path.sep).href+'">');
+  html=html.replace('<script src="bridge.js?v=1205"></script>',`<script src="${pathToFileURL(path.join(root,'pixel-home-policy.js')).href}"></script><script>window.fixtureState=null;window.PixelHomeBridge={request:async(method,state)=>{if(method==='hello')return{state:JSON.parse(localStorage.getItem('fixture-v1205-${kind}')||'null'),scope:'v1205-${kind}',name:'测试伴侣',morning:{look:0}};if(method==='save'){window.fixtureState=PixelHomePolicy.snapshot(state);localStorage.setItem('fixture-v1205-${kind}',JSON.stringify(fixtureState));return{saved:true}};if(method==='morning')return{look:0};return{}}};</script>`);
+  const file=path.join(qa,kind+'-file.html');fs.writeFileSync(file,html);
+  const p=await b.newPage({viewport:{width:430,height:932}}),errors=[];p.on('pageerror',e=>errors.push(e.message));
+  await p.goto(pathToFileURL(file).href);await p.locator('#loading').waitFor({state:'detached',timeout:45000});
+  const controls=async()=>{
+   const rows=await p.evaluate(()=>[...document.querySelectorAll('.dock button')].map((el,i)=>{const a=el.getBoundingClientRect(),b=document.querySelectorAll('.side-tools button')[i].getBoundingClientRect();return{y:a.y-b.y,h:a.height-b.height};}));assert.equal(rows.length,4);assert(rows.every(r=>Math.abs(r.y)<1&&Math.abs(r.h)<1));
+   assert.equal(await p.locator('#exit-home').innerText(),'返回');assert.equal(await p.locator('.side-tools #body-toggle').count(),0);const a=await p.locator('#body-toggle').boundingBox(),b=await p.locator('#shop-short').boundingBox();assert(a.x+a.width<=b.x&&b.x-a.x-a.width<10);
+  };await controls();
+  const open=async()=>{await p.locator('[data-panel=wardrobe]').click();await p.frameLocator('#wardrobe-frame').locator('#loading').waitFor({state:'hidden',timeout:45000});return p.frames().find(x=>x.url().includes('wardrobe/index.html'));};
+  let f=await open();assert.equal(await p.locator('#wardrobe-close').count(),0);
+  const state=()=>f.evaluate(()=>wardrobe.getState());
+  const saveSet=async name=>{await f.locator('#save-custom').click();await f.locator('#set-name').fill(name);await f.locator('#set-confirm').click();await f.locator('#set-dialog').waitFor({state:'hidden'});};
+  const hair=async name=>{await f.getByRole('button',{name:'发型',exact:true}).click();await f.getByRole('button',{name,exact:true}).click();};
+  await hair('月牙双小揪揪');await f.locator('#adjust summary').click();await f.locator('#body-legs').fill('82');await f.locator('#body-legs').dispatchEvent('input');await f.locator('#body-legWidth').fill('88');await f.locator('#body-legWidth').dispatchEvent('input');
+  await f.locator('#target').selectOption('hair6');await f.locator('#x-number').fill('12.5');await f.locator('#x-number').dispatchEvent('input');await f.locator('#motion').click();await f.locator('#adjust summary').click();
+  await f.locator('#preview-scale').fill('100');await f.locator('#preview-scale').dispatchEvent('input');const first=await state();await saveSet('月牙小辫 · 小白裙');await p.waitForFunction(()=>fixtureState?.wardrobe?.savedOutfits?.length===1);
+  await hair('初始双小辫');await saveSet('初始小辫 · 小白裙');assert.equal((await state()).savedOutfits.length,2);
+  await f.getByRole('button',{name:'穿上 月牙小辫 · 小白裙',exact:true}).click();let worn=await state();assert.equal(worn.hair,'hair6');assert.deepEqual(worn.body,first.body);assert.deepEqual(worn.adjustments['hair6'],first.adjustments['hair6']);assert.equal(worn.motion,first.motion);
+  // A screenshot and the save control must not change or dismiss the current look.
+  await f.locator('#save').click();let before=await state();await p.screenshot({path:path.join(qa,kind+'-custom-outfits.png')});assert.deepEqual(await state(),before);assert(await p.locator('#wardrobe-overlay').isVisible());
+  assert(await f.locator('#save').evaluate(el=>{const r=el.getBoundingClientRect();return el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}));
+  // JSON export roundtrip includes the library. Old P82 exports stay compatible.
+  const downloadEvent=p.waitForEvent('download');await f.locator('#adjust summary').click();await f.locator('#export').click();const download=await downloadEvent;const exported=path.join(qa,kind+'-sets.json');await download.saveAs(exported);assert.equal(JSON.parse(fs.readFileSync(exported)).state.savedOutfits.length,2);
+  await f.locator('#import').setInputFiles(path.join(root,'games/pixel-home/wardrobe/approved-config.json'));await f.getByRole('status').getByText('已保存',{exact:true}).waitFor();assert.equal((await state()).savedOutfits.length,2);
+  await f.locator('#import').setInputFiles(exported);await f.getByRole('status').getByText('已保存',{exact:true}).waitFor();assert.equal((await state()).hair,'hair6');await f.locator('#adjust summary').click();
+  await f.getByRole('button',{name:'改名 初始小辫 · 小白裙',exact:true}).click();await f.locator('#set-name').fill('初始小辫 · 日常');await f.locator('#set-confirm').click();await f.locator('#set-dialog').waitFor({state:'hidden'});
+  await f.getByRole('button',{name:'删除 初始小辫 · 日常',exact:true}).click();await f.locator('#set-cancel').click();assert.equal((await state()).savedOutfits.length,2);
+  await f.getByRole('link',{name:'返回小屋'}).click();await p.locator('#wardrobe-overlay').waitFor({state:'hidden'});await p.reload();await p.locator('#loading').waitFor({state:'detached',timeout:45000});assert.equal(await p.evaluate(()=>RoseWardrobe.getState().savedOutfits.length),2);assert.equal(await p.evaluate(()=>RoseWardrobe.getState().hair),'hair6');
+  await p.screenshot({path:path.join(qa,kind+'-crescent-room.png')});
+  f=await open();await f.getByRole('button',{name:'我的套装',exact:true}).click();await f.getByRole('button',{name:'穿上 初始小辫 · 日常',exact:true}).click();await f.getByRole('link',{name:'返回小屋'}).click();await p.locator('#wardrobe-overlay').waitFor({state:'hidden'});await p.screenshot({path:path.join(qa,kind+'-initial-room.png')});
+  // Render actual current assets in browser at a readable close-up scale.
+  f=await open();await f.getByRole('button',{name:'我的套装',exact:true}).click();await p.screenshot({path:path.join(qa,kind+'-custom-outfits.png')});
+  await p.setViewportSize({width:600,height:700});for(const [id,name]of [['hair0','initial'],['hair6','crescent']]){await f.evaluate(id=>{const c=document.createElement('canvas');c.id='hair-inspection';c.width=520;c.height=520;c.style.cssText='position:fixed;inset:0;z-index:99;background:#536452';document.body.append(c);const g=c.getContext('2d');g.fillStyle='#536452';g.fillRect(0,0,520,520);g.imageSmoothingEnabled=false;g.translate(260,20);g.scale(1.2,1.2);g.translate(-512,-85);wardrobe.render(g,{...wardrobe.getState(),hair:id,body:{size:100,legs:100,legWidth:100}},{});},id);await f.locator('#hair-inspection').screenshot({path:path.join(qa,name+'-hair-fixed.png')});await f.locator('#hair-inspection').evaluate(el=>el.remove());}
+  await p.setViewportSize({width:430,height:932});
+  // Update and delete affect only the targeted saved set.
+  await hair('月牙双小揪揪');await f.getByRole('button',{name:'我的套装',exact:true}).click();await f.getByRole('button',{name:'更新 初始小辫 · 日常',exact:true}).click();await f.locator('#set-confirm').click();await f.locator('#set-dialog').waitFor({state:'hidden'});assert.equal((await state()).savedOutfits[1].look.hair,'hair6');
+  await f.getByRole('button',{name:'删除 初始小辫 · 日常',exact:true}).click();await f.locator('#set-confirm').click();await f.locator('#set-dialog').waitFor({state:'hidden'});assert.equal((await state()).savedOutfits.length,1);
+  // Failed local persistence never claims success or exits the wardrobe.
+  before=await state();await f.evaluate(()=>{window.restoreStorage=Storage.prototype.setItem;Storage.prototype.setItem=function(k,v){if(k.startsWith('pixel-wardrobe:'))throw Error('quota fixture');return restoreStorage.call(this,k,v);};});await f.locator('#save-custom').click();await f.locator('#set-name').fill('不能写入');await f.locator('#set-confirm').click();assert.deepEqual(await state(),before);assert(await f.locator('#set-dialog').isVisible());await f.locator('#set-cancel').click();await f.getByRole('link',{name:'返回小屋'}).click();assert(await p.locator('#wardrobe-overlay').isVisible());await f.evaluate(()=>Storage.prototype.setItem=restoreStorage);
+  await p.setViewportSize({width:320,height:700});assert(await f.locator('#save').evaluate(el=>{const r=el.getBoundingClientRect();return r.right<=innerWidth&&el.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}));
+  await f.getByRole('link',{name:'返回小屋'}).click();await p.locator('#wardrobe-overlay').waitFor({state:'hidden'});await controls();await p.locator('#next-room').click();await p.locator('#next-room').click();await p.locator('#mirror-hotspot').click();const exit=await p.locator('#exit-home').boundingBox(),mirror=await p.locator('#mirror-back').boundingBox();assert(exit.y+exit.height<mirror.y);await p.screenshot({path:path.join(qa,kind+'-mirror-buttons.png')});await p.locator('#mirror-back').click();
+  assert.deepEqual(errors,[]);console.log('PASS '+kind+': named sets, full fits, apply/save/screenshot/reload, rename/update/delete/cancel, export/import/P82 compatibility, quota rollback, 320px unobstructed save, 0 errors');await p.close();
+ }
+}finally{await b.close()}})().catch(e=>{console.error(e);process.exitCode=1});

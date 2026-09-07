@@ -3,7 +3,14 @@ const KEY='pixel-wardrobe:'+String(window.RoseWardrobeScope||new URLSearchParams
 const blank=()=>({x:0,y:0,scale:100,width:100,height:100,rotation:0,gap:0});
 function fresh(c){if(window.PixelWardrobeData?.approved)return structuredClone(window.PixelWardrobeData.approved);return {version:c.version,dress:c.outfits[c.outfits.length-1].dress,shoes:c.outfits[c.outfits.length-1].shoes,hair:c.hairs[7],face:'face2',accessory:c.outfits[c.outfits.length-1].accessory,adjustments:{},body:{size:100,legs:85,legWidth:100},motion:true};}
 function contextKey(state,id){return id?.includes('accessory')||id==='retained-pink-headband'?id+'@'+state.hair:id;}
-function valid(s,c){return s?.version===c.version&&(!s.body||(Number.isFinite(s.body.size)&&s.body.size>=60&&s.body.size<=150&&Number.isFinite(s.body.legs)&&s.body.legs>=55&&s.body.legs<=110&&(s.body.legWidth===undefined||(Number.isFinite(s.body.legWidth)&&s.body.legWidth>=60&&s.body.legWidth<=140))))&&c.outfits.some(o=>o.dress===s.dress)&&c.outfits.some(o=>o.shoes===s.shoes)&&c.hairs.includes(s.hair)&&c.faces.includes(s.face)&&(!s.accessory||c.accessories.includes(s.accessory))&&s.adjustments&&typeof s.adjustments==='object'&&Object.values(s.adjustments).every(t=>t&&Object.entries(t).every(([k,v])=>['x','y','scale','width','height','rotation','gap'].includes(k)&&Number.isFinite(v)&&(k==='scale'||k==='width'||k==='height'?v>=20&&v<=250:Math.abs(v)<=1600)));}
+function validLook(s,c){return s?.version===c.version&&(!s.body||(Number.isFinite(s.body.size)&&s.body.size>=60&&s.body.size<=150&&Number.isFinite(s.body.legs)&&s.body.legs>=55&&s.body.legs<=110&&(s.body.legWidth===undefined||(Number.isFinite(s.body.legWidth)&&s.body.legWidth>=60&&s.body.legWidth<=140))))&&c.outfits.some(o=>o.dress===s.dress)&&c.outfits.some(o=>o.shoes===s.shoes)&&c.hairs.includes(s.hair)&&c.faces.includes(s.face)&&(!s.accessory||c.accessories.includes(s.accessory))&&s.adjustments&&typeof s.adjustments==='object'&&Object.values(s.adjustments).every(t=>t&&Object.entries(t).every(([k,v])=>['x','y','scale','width','height','rotation','gap'].includes(k)&&Number.isFinite(v)&&(k==='scale'||k==='width'||k==='height'?v>=20&&v<=250:Math.abs(v)<=1600)));}
+function valid(s,c,nested=false){
+ if(!validLook(s,c))return false;
+ if(s.savedOutfits===undefined)return true;
+ if(nested||!Array.isArray(s.savedOutfits)||s.savedOutfits.length>30)return false;
+ const ids=new Set();return s.savedOutfits.every(p=>{if(!p||typeof p.id!=='string'||!/^set-[\w-]{1,80}$/.test(p.id)||ids.has(p.id)||typeof p.name!=='string'||!p.name.trim()||p.name.length>30||/[\u0000-\u001f]/.test(p.name)||!valid(p.look,c,true))return false;ids.add(p.id);return true;});
+}
+
 function getAdjust(s,id,part=''){return {...blank(),...s.adjustments[contextKey(s,id)+(part?'/'+part:'')]};}
 function blink(t){const p=t%4300;return p<78?'half':p<173?'closed':p<248?'half':'open';}
 async function loadCatalog(){const {catalog,images:encoded}=window.PixelWardrobeData,images={};await Promise.all(Object.entries(encoded).map(async([f,url])=>{const im=new Image();im.src=url;await im.decode();images[f]=im;}));return{catalog,images};}
@@ -39,14 +46,14 @@ function poseAt(t){const p=t%9800;return p<7000?0:p<7290?1:p<7850?2:p<8140?1:0;}
 const spriteCache=new WeakMap();
 function render(g,c,images,s,opts={}){
  if(opts.only){renderRaw(g,c,images,s,opts);return;}
- let cache=spriteCache.get(images);const key=JSON.stringify(s);
+ let cache=spriteCache.get(images);const {savedOutfits,...visibleState}=s;const key=JSON.stringify(visibleState);
  if(!cache||cache.key!==key){cache={key,frames:new Map()};spriteCache.set(images,cache);}
  const pose=opts.animate&&s.motion?poseAt(opts.time||0):0,breath=opts.animate&&s.motion?breathAt(opts.time||0):0,k=(opts.frame||'open')+':'+pose+':'+breath;
  if(!cache.frames.has(k)){const layer=new OffscreenCanvas(1024,1536),ctx=layer.getContext('2d');ctx.imageSmoothingEnabled=false;renderRaw(ctx,c,images,s,opts);cache.frames.set(k,breath?breathLayer(layer,breath):layer);if(cache.frames.size>18)cache.frames.delete(cache.frames.keys().next().value);}
  const bp=bodyParams(s),size=bp.size/100;g.save();g.translate(512,1450);g.scale(size,size);g.translate(-512,-1450+legOffset(s));g.drawImage(cache.frames.get(k),0,0);g.restore();
 }
 
-const bodyParams=s=>({size:100,legs:85,legWidth:100,...s.body});
+const bodyParams=(s={})=>({size:100,legs:85,legWidth:100,...s.body});
 const legOffset=s=>490*(1-bodyParams(s).legs/100);
 // Each leg narrows around its own axis, with an ankle transition to intact shoes.
 function legWidthAt(y,width){return 1+(width-1)*Math.max(0,Math.min(1,(1310-y)/60));}
@@ -74,7 +81,7 @@ window.roseWardrobeReady=loadCatalog().then(({catalog,images})=>{
  function refresh(){try{const n=JSON.parse(localStorage.getItem(KEY));if(valid(n,catalog))state=n;}catch{}}
  try{localStorage.setItem(KEY,JSON.stringify(state));}catch{}
  window.addEventListener('storage',e=>{if(e.key===KEY)refresh()});
- window.RoseWardrobe={catalog,refresh,getState:()=>structuredClone(state),
+ window.RoseWardrobe={catalog,refresh,applyState(next){if(valid(next,catalog)){state=structuredClone(next);this.saveBody();}},getState:()=>structuredClone(state),
  draw(g,x,y,h,opts={}){g.save();const z=h/1536;g.imageSmoothingEnabled=false;g.translate(Math.round(x-512*z),Math.round(y));g.scale(z,z);render(g,catalog,images,opts.portrait?{...state,body:{size:100,legs:100,legWidth:100}}:state,{frame:opts.closed?'closed':opts.still?'open':blink(performance.now()+600),time:performance.now(),animate:!opts.still&&!matchMedia('(prefers-reduced-motion: reduce)').matches});g.restore();},
  setBody(k,v){if(!['size','legs','legWidth'].includes(k))return;const min=k==='legs'?55:60,max=k==='size'?150:k==='legs'?110:140;state.body={...bodyParams(state),[k]:Math.max(min,Math.min(max,Number(v)||100))};},
  saveBody(){try{localStorage.setItem(KEY,JSON.stringify(state));window.dispatchEvent(new Event('wardrobe-saved'));return true;}catch{return false;}},

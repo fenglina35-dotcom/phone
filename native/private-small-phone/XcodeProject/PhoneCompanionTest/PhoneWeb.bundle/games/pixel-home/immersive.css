@@ -44,4 +44,17 @@ body:has(#care-progress:not([hidden])) .feedback{display:none}
 /* Approved room controls: keep arrows without bubbles; former fullscreen slot is gameplay. */
 .scene-arrow{background:none;border:0;outline:none;border-radius:0;box-shadow:none;text-shadow:0 1px 2px #fff4df}.scene-arrow:focus-visible{outline:2px solid #c38d70}.side-tools #help{height:57px;width:47px;background:none;border-radius:0;margin-top:0;font-size:9px}
 
-#wardrobe-overlay{position:fixed;inset:0;z-index:150;background:#f3e9df}#wardrobe-overlay[hidden]{display:none}#wardrobe-frame{width:100%;height:100%;border:0}#wardrobe-close{position:absolute;right:6px;top:5px;z-index:2}#exit-home{position:fixed;top:max(8px,env(safe-area-inset-top));left:8px;z-index:40;font-size:11px;background:#fff5e4dd;color:#674538;border:1px solid #d6b891;border-radius:18px;padding:6px 10px}
+#wardrobe-overlay{position:fixed;inset:0;z-index:150;background:#f3e9df}#wardrobe-overlay[hidden]{display:none}#wardrobe-frame{width:100%;height:100%;border:0}#exit-home{position:fixed;top:max(8px,env(safe-area-inset-top));left:8px;z-index:40;font-size:11px;background:#fff5e4dd;color:#674538;border:1px solid #d6b891;border-radius:18px;padding:6px 10px}
+
+/* Separate mirror return from game exit, including safe areas on narrow phones. */
+#exit-home{position:absolute;top:max(10px,env(safe-area-inset-top));left:10px;max-width:calc(100% - 110px)}
+.mirror-back{top:calc(max(10px,env(safe-area-inset-top)) + 44px);left:10px;margin:0}
+
+/* Four matching rows, with proportions moved beside the compact coin counter. */
+.topbar{top:max(10px,env(safe-area-inset-top));right:10px;left:auto;gap:6px;align-items:center}
+.topbar #body-toggle{pointer-events:auto;font:10px/1.3 system-ui,sans-serif;padding:5px 8px;border:1px solid #d6b891;border-radius:14px;background:#fff5e4dd;color:#674538;min-height:28px}
+.topbar .coin{padding:4px 8px;min-height:28px;display:flex;align-items:center;gap:4px}.topbar .coin span{font-size:12px}.topbar .coin b{font:600 11px/1.2 system-ui,sans-serif;letter-spacing:0}
+.dock,.side-tools{top:128px;gap:14px;width:51px;padding:0}.dock{left:9px}.side-tools{right:9px}
+.dock button,.dock #care,.side-tools button,.side-tools #help{width:51px;height:58px;min-height:58px;margin:0;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;border:0;border-radius:0;background:none;box-shadow:none;font:9px/1.3 "Microsoft YaHei",sans-serif}
+.dock button canvas,.side-tools button canvas,.side-tools #help canvas{width:49px;height:46px}
+@media(max-width:350px){.dock,.side-tools{width:44px;gap:9px}.dock{left:7px}.side-tools{right:7px}.dock button,.dock #care,.side-tools button,.side-tools #help{width:44px;height:53px;min-height:53px}.dock button canvas,.side-tools button canvas,.side-tools #help canvas{width:42px;height:42px}}
