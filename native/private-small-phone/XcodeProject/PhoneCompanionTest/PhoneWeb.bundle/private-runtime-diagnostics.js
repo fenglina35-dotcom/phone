@@ -3,7 +3,7 @@
   'use strict';
   if(window.__SMALL_PHONE_PRIVATE__!==true)return;
 
-  const OVERLAY_VERSION='326-custom-outfits';
+  const OVERLAY_VERSION='327-role-nickname';
   const lastEventAt=Object.create(null);
   let lastMeasuredSyncOp='',lastMeasuredSyncMs=0,lastMeasuredSyncAt=0;
   const clock=()=>typeof performance!=='undefined'&&performance.now?performance.now():Date.now();
