@@ -146,7 +146,7 @@ test('diagnostics identify the protected stage without collecting content', () =
   assert.doesNotMatch(overlay, /messageBody|chatContent|authorizationToken/);
 });
 
-test('current Mac guides identify private v1205 and web not deployed', () => {
+test('current Mac guides identify private v1205, authorized web push and real-device limits', () => {
   const install = fs.readFileSync(
     path.join(project, '第三百二十六次安装_v1205_完整衣柜_请先读.md'),
     'utf8',
