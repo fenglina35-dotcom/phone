@@ -20,7 +20,18 @@
     out.lastAt=Number.isFinite(s.lastAt)?s.lastAt:Date.now();out.inventory=Array.from({length:8},(_,i)=>Math.round(Math.max(0,Math.min(99,Number(s.inventory?.[i])||0))));
     out.look=s.look===1?1:0;out.rewards=Object.fromEntries(Object.entries(s.rewards||{}).filter(([k,v])=>/^\d{4}-\d{2}-\d{2}:[a-z]+$/.test(k)&&v===true).slice(-30));
     out.diary=(Array.isArray(s.diary)?s.diary:[]).filter(x=>typeof x?.text==='string'&&typeof x?.time==='string').slice(-8).map(x=>({text:x.text.slice(0,240),time:x.time.slice(0,40)}));
-    out.photos=(Array.isArray(s.photos)?s.photos:[]).filter(x=>typeof x?.image==='string'&&/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(x.image)&&x.image.length<300000).slice(-6).map(x=>({image:x.image,label:String(x.label||'').slice(0,80)}));return out;
+    out.photos=(Array.isArray(s.photos)?s.photos:[]).filter(x=>typeof x?.image==='string'&&/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(x.image)&&x.image.length<300000).slice(-6).map(x=>({image:x.image,label:String(x.label||'').slice(0,80)}));
+    if(s.wardrobe)out.wardrobe=wardrobe(s.wardrobe);
+    if(/^\d{4}-\d{2}-\d{2}$/.test(s.wardrobeDay||''))out.wardrobeDay=s.wardrobeDay;
+    return out;
   }
-  return Object.freeze({dateKey,days,due,parse,snapshot});
+  function wardrobe(s){
+    if(!s||s.version!=='wardrobe-p82-v1'||!/^outfit(?:[1-9]|1[01])-dress$/.test(s.dress)||!/^outfit(?:[1-9]|1[01])-shoes$/.test(s.shoes)||!/^hair[0-7]$/.test(s.hair)||!/^face(?:[0-3]|-original)$/.test(s.face)||(s.accessory!==null&&!/^outfit(?:[1-9]|1[01])-accessory$/.test(s.accessory)&&s.accessory!=='retained-pink-headband'))throw new Error('衣柜配置不完整，未覆盖原存档');
+    const out={version:s.version,dress:s.dress,shoes:s.shoes,hair:s.hair,face:s.face,accessory:s.accessory,motion:s.motion!==false,body:{},adjustments:{}};
+    for(const [k,lo,hi,d]of [['size',60,150,100],['legs',55,110,85],['legWidth',60,140,100]]){const v=s.body?.[k]??d;if(!Number.isFinite(v)||v<lo||v>hi)throw new Error('人物比例参数无效');out.body[k]=v;}
+    const entries=Object.entries(s.adjustments||{});if(entries.length>400)throw new Error('衣柜调整项过多');
+    for(const [k,a]of entries){if(!/^(?:outfit(?:[1-9]|1[01])-(?:dress|shoes|accessory)|hair[0-7]|face(?:[0-3]|-original)|retained-pink-headband)(?:@hair[0-7])?(?:\/[\w-]+)?$/.test(k)||k.length>160||!a||typeof a!=='object')throw new Error('衣柜调整项无效');const t={};for(const [name,v]of Object.entries(a)){if(!['x','y','scale','width','height','rotation','gap'].includes(name)||!Number.isFinite(v)||(['scale','width','height'].includes(name)?v<20||v>250:Math.abs(v)>1600))throw new Error('衣柜调整值无效');t[name]=v;}out.adjustments[k]=t;}
+    return out;
+  }
+  return Object.freeze({dateKey,days,due,parse,snapshot,wardrobe});
 });

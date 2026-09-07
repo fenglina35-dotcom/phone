@@ -1,0 +1,13 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {createRequire} from 'node:module';
+import vm from 'node:vm';
+import {createHash} from 'node:crypto';
+const require=createRequire(import.meta.url),P=require('../pixel-home-policy.js');
+const original=JSON.parse(fs.readFileSync('games/pixel-home/wardrobe/approved-config.json','utf8')).state;
+test('approved wardrobe retains exact user face and body configuration',()=>{assert.deepEqual(P.wardrobe(original),original);assert.equal(original.body.size,118);assert.equal(original.adjustments['face2/face2-closed'].width,93)});
+test('wardrobe snapshot rejects unknown items, nonfinite sizes and arbitrary fields',()=>{for(const change of [{dress:'outfit0-dress'},{hair:'hair99'},{face:'face9'},{body:{...original.body,legWidth:999}},{adjustments:{apiKey:{x:1}}},{adjustments:{face2:{scale:NaN}}}])assert.throws(()=>P.wardrobe({...original,...change}));assert(!('apiKey'in P.wardrobe({...original,apiKey:'never-copy'})));});
+test('room snapshot persists wardrobe and morning day without losing proportions',()=>{const s={version:3,mood:50,food:50,energy:50,health:50,clean:50,wardrobe:original,wardrobeDay:'2026-09-07'};const result=P.snapshot(s);assert.deepEqual(result.wardrobe,original);assert.equal(result.wardrobeDay,s.wardrobeDay);assert(!P.snapshot({...s,wardrobeDay:'bad'}).wardrobeDay)});
+test('private wardrobe is byte-identical to shared current runtime and images',()=>{const a='games/pixel-home/wardrobe',b='native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/'+a;for(const f of fs.readdirSync(a,{recursive:true})){if(fs.statSync(a+'/'+f).isFile())assert.deepEqual(fs.readFileSync(a+'/'+f),fs.readFileSync(b+'/'+f),f)}const c=JSON.parse(fs.readFileSync(a+'/catalog.json'));assert.equal(c.outfits.length,11);assert.equal(c.hairs.length,8);assert.equal(c.faces.length,5);assert.equal(c.accessories.length,10);assert(!c.outfits.some(o=>o.dress==='outfit0-dress'))});
+test('offline embedded image bytes match every catalog hash and on-disk PNG',()=>{const root='games/pixel-home/wardrobe/',ctx={window:{}};vm.runInNewContext(fs.readFileSync(root+'data.js','utf8'),ctx);const d=ctx.window.PixelWardrobeData;for(const [f,hash] of Object.entries(d.catalog.files)){const bytes=Buffer.from(d.images[f].split(',')[1],'base64');assert.deepEqual(bytes,fs.readFileSync(root+f),f);assert.equal(createHash('sha256').update(bytes).digest('hex'),hash,f)}});

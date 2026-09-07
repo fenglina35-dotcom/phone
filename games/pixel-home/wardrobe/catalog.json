@@ -1,0 +1,4360 @@
+{
+  "version": "wardrobe-p82-v1",
+  "canvas": [
+    1024,
+    1536
+  ],
+  "outfits": [
+    {
+      "id": "outfit1",
+      "name": "雏菊小白裙",
+      "dress": "outfit1-dress",
+      "shoes": "outfit1-shoes",
+      "accessory": "outfit1-accessory"
+    },
+    {
+      "id": "outfit2",
+      "name": "黑白女仆裙",
+      "dress": "outfit2-dress",
+      "shoes": "outfit2-shoes",
+      "accessory": "outfit2-accessory"
+    },
+    {
+      "id": "outfit3",
+      "name": "粉格兔兔睡衣",
+      "dress": "outfit3-dress",
+      "shoes": "outfit3-shoes",
+      "accessory": "outfit3-accessory"
+    },
+    {
+      "id": "outfit4",
+      "name": "草莓奶油裙",
+      "dress": "outfit4-dress",
+      "shoes": "outfit4-shoes",
+      "accessory": "outfit4-accessory"
+    },
+    {
+      "id": "outfit5",
+      "name": "校园裙",
+      "dress": "outfit5-dress",
+      "shoes": "outfit5-shoes",
+      "accessory": "outfit5-accessory"
+    },
+    {
+      "id": "outfit6",
+      "name": "粉白蕾丝裙",
+      "dress": "outfit6-dress",
+      "shoes": "outfit6-shoes",
+      "accessory": null
+    },
+    {
+      "id": "outfit7",
+      "name": "猫咪格纹裙",
+      "dress": "outfit7-dress",
+      "shoes": "outfit7-shoes",
+      "accessory": "outfit7-accessory"
+    },
+    {
+      "id": "outfit8",
+      "name": "草莓兔兔裙",
+      "dress": "outfit8-dress",
+      "shoes": "outfit8-shoes",
+      "accessory": "outfit8-accessory"
+    },
+    {
+      "id": "outfit9",
+      "name": "粉色JK",
+      "dress": "outfit9-dress",
+      "shoes": "outfit9-shoes",
+      "accessory": null
+    },
+    {
+      "id": "outfit10",
+      "name": "奶油粉玫瑰裙",
+      "dress": "outfit10-dress",
+      "shoes": "outfit10-shoes",
+      "accessory": "outfit10-accessory"
+    },
+    {
+      "id": "outfit11",
+      "name": "草莓花语裙",
+      "dress": "outfit11-dress",
+      "shoes": "outfit11-shoes",
+      "accessory": "outfit11-accessory"
+    }
+  ],
+  "hairs": [
+    "hair0",
+    "hair1",
+    "hair2",
+    "hair3",
+    "hair4",
+    "hair5",
+    "hair6",
+    "hair7"
+  ],
+  "faces": [
+    "face-original",
+    "face0",
+    "face1",
+    "face2",
+    "face3"
+  ],
+  "accessories": [
+    "outfit1-accessory",
+    "outfit2-accessory",
+    "outfit3-accessory",
+    "outfit4-accessory",
+    "outfit5-accessory",
+    "outfit7-accessory",
+    "outfit8-accessory",
+    "outfit10-accessory",
+    "outfit11-accessory",
+    "retained-pink-headband"
+  ],
+  "sources": {
+    "selection": {
+      "version": "p73-user-corrected",
+      "activeOutfits": [
+        "white-fit-p29",
+        "outfit-arms-p28/maid",
+        "pajamas-fit-p23",
+        "strawberry-fit-p25",
+        "school-fit-p30",
+        "pink-waist-p38",
+        "cat-fit-p39",
+        "bunny-fit-p40",
+        "jk-fit-p43",
+        "floral-fit-p44",
+        "berry-princess-fit-p50"
+      ],
+      "excludedOutfits": [
+        "lolita-fit-p27",
+        "casual-fit-p31",
+        "floral-fit-p45",
+        "fitted-doll-p12"
+      ],
+      "retainedAccessories": [
+        {
+          "name": "粉色蝴蝶结蕾丝发箍",
+          "sourceOutfit": "lolita-fit-p27",
+          "approvedPart": {
+            "x": 512,
+            "y": 180.5,
+            "scale": 1,
+            "rotation": 0,
+            "file": "assets/headband.png",
+            "origin": {
+              "x": 512.0,
+              "y": 180.5
+            },
+            "bounds": [
+              365,
+              83,
+              659,
+              278
+            ],
+            "sha256": "3afa273100f06a663fbd22bec79f4873924f899755641e36adc7783ba1504266"
+          }
+        }
+      ],
+      "sharedFootwear": {
+        "source": "lolita-fit-p27",
+        "usedBy": "pink-fit-p33",
+        "retain": true
+      },
+      "note": "User removed original P35 entries 6 and 9. Source files remain archived; excluded outfits must not be reintroduced into active wardrobe. Retained headband keeps approved transform.",
+      "latestApprovedLayout": "berry-princess-fit-p50/approved-layout-v1.json",
+      "outfitLimit": {
+        "target": 12,
+        "countingRule": "Count unique retained outfit styles only; exclude discarded outfits and alternate revisions. Standalone retained accessories are not outfits.",
+        "currentCount": 11,
+        "atTarget": "Tell user twelve outfits are complete and ask them to stop adding outfits; do not automatically generate another.",
+        "reached": true
+      }
+    },
+    "fitted-doll-p12": {
+      "version": 1,
+      "base": "p12-approved",
+      "canvas": [
+        1024,
+        1536
+      ],
+      "layers": {
+        "dress": {
+          "x": 0,
+          "y": 0,
+          "scale": 1,
+          "rotation": 0
+        },
+        "left": {
+          "x": 0,
+          "y": 0,
+          "scale": 1,
+          "rotation": 0
+        },
+        "right": {
+          "x": 0,
+          "y": 0,
+          "scale": 1,
+          "rotation": 0
+        },
+        "hair": {
+          "x": 0,
+          "y": 0,
+          "scale": 1,
+          "rotation": 0
+        },
+        "face": {
+          "x": 0,
+          "y": 0,
+          "scale": 1,
+          "rotation": 0
+        },
+        "clip": {
+          "x": 0,
+          "y": 0,
+          "scale": 1,
+          "rotation": 0
+        }
+      }
+    },
+    "white-fit-p29": {
+      "schema": "rose-outfit-layout",
+      "version": 1,
+      "outfit": "white-fit-p29",
+      "canvas": [
+        1024,
+        1536
+      ],
+      "savedAt": "2026-09-06T21:24:21.769Z",
+      "base": "assets/base-armless.png",
+      "parts": {
+        "dress": {
+          "x": 510.5,
+          "y": 669,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/dress.png",
+          "origin": {
+            "x": 510.5,
+            "y": 669.0
+          },
+          "bounds": [
+            287,
+            392,
+            734,
+            946
+          ],
+          "sha256": "0ef7f2e742ebfbb7e3340d99e3b407b64c67aa68d072686cefbd8679ac8dad4f"
+        },
+        "left": {
+          "x": 464,
+          "y": 1351,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/left.png",
+          "origin": {
+            "x": 465.0,
+            "y": 1351.0
+          },
+          "bounds": [
+            419,
+            1245,
+            511,
+            1457
+          ],
+          "sha256": "a9883c9eae5f700e1b88be8119b53bee3aac1d437a885a2fe8e2e94db137b54e"
+        },
+        "right": {
+          "x": 550,
+          "y": 1351,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/right.png",
+          "origin": {
+            "x": 557.0,
+            "y": 1351.0
+          },
+          "bounds": [
+            511,
+            1245,
+            603,
+            1457
+          ],
+          "sha256": "1355c89c5d3295b0e369e7bda1af5a3d0bf00f28192c4d97fa513168ab98670b"
+        },
+        "headband": {
+          "x": 606,
+          "y": 179.5,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/headband.png",
+          "origin": {
+            "x": 606.0,
+            "y": 179.5
+          },
+          "bounds": [
+            550,
+            135,
+            662,
+            224
+          ],
+          "sha256": "a77b16b0adf63b6ae3923d545187037185d2f597539d97fba9b19e488da12187"
+        }
+      }
+    },
+    "outfit-arms-p28/maid": {
+      "canvas": [
+        1024,
+        1536
+      ],
+      "order": [
+        "base",
+        "left",
+        "right",
+        "dress",
+        "arms-front",
+        "face",
+        "hair",
+        "headband"
+      ],
+      "files": {
+        "base": "assets/base.png",
+        "left": "assets/left.png",
+        "right": "assets/right.png",
+        "dress": "assets/dress.png",
+        "arms-front": "assets/arms-front.png",
+        "face": "assets/face.png",
+        "hair": "assets/hair.png",
+        "headband": "assets/headband.png"
+      }
+    },
+    "pajamas-fit-p23": {
+      "schema": "rose-outfit-layout",
+      "version": 1,
+      "outfit": "pajamas-p22",
+      "canvas": [
+        1024,
+        1536
+      ],
+      "savedAt": "2026-09-06T20:42:01.197Z",
+      "base": "../pajamas-p22/assets/base-armless.png",
+      "parts": {
+        "dress": {
+          "x": 513,
+          "y": 629,
+          "scale": 1,
+          "rotation": 0,
+          "file": "../pajamas-p22/assets/dress-arms.png",
+          "origin": {
+            "x": 513.0,
+            "y": 638.0
+          },
+          "bounds": [
+            280,
+            394,
+            746,
+            882
+          ],
+          "sha256": "103d2d504429adb079a65c4646a45fc1a009f9bf338f6e5040ca84048e41a7ca"
+        },
+        "left": {
+          "x": 464,
+          "y": 1397,
+          "scale": 1.07,
+          "rotation": 0,
+          "file": "../pajamas-p22/assets/shoe-0.png",
+          "origin": {
+            "x": 467.0,
+            "y": 1397.0
+          },
+          "bounds": [
+            422,
+            1339,
+            512,
+            1455
+          ],
+          "sha256": "627d32b714e4ea2d0ab35e16797b524fc0deae50e1572a0dae6f396a123faac6"
+        },
+        "right": {
+          "x": 554,
+          "y": 1398,
+          "scale": 1.06,
+          "rotation": 0,
+          "file": "../pajamas-p22/assets/shoe-1.png",
+          "origin": {
+            "x": 557.0,
+            "y": 1398.0
+          },
+          "bounds": [
+            511,
+            1339,
+            603,
+            1457
+          ],
+          "sha256": "ec5240315539f119f3b9feb5b292059f8a7d3ecd114280dce4cb398391ef5ced"
+        },
+        "bow": {
+          "x": 616.5,
+          "y": 210.5,
+          "scale": 0.98,
+          "rotation": 0,
+          "file": "../pajamas-p22/assets/bow.png",
+          "origin": {
+            "x": 630.5,
+            "y": 210.5
+          },
+          "bounds": [
+            594,
+            175,
+            667,
+            246
+          ],
+          "sha256": "5a89595eb1db95af331a75d8bc213109dd06201231d46d1d830f216fcf6d33d7"
+        }
+      }
+    },
+    "strawberry-fit-p25": {
+      "schema": "rose-outfit-layout",
+      "version": 1,
+      "outfit": "strawberry-fit-p25",
+      "canvas": [
+        1024,
+        1536
+      ],
+      "savedAt": "2026-09-06T20:56:18.161Z",
+      "base": "assets/base-armless.png",
+      "parts": {
+        "dress": {
+          "x": 511.5,
+          "y": 632,
+          "scale": 1.02,
+          "rotation": 0,
+          "file": "assets/dress.png",
+          "origin": {
+            "x": 511.5,
+            "y": 634.0
+          },
+          "bounds": [
+            276,
+            390,
+            747,
+            878
+          ],
+          "sha256": "117e7ccdd8d6b3124d76fd8c230418bab4bc7a79ccbab7d0711832a1b5cbcb51"
+        },
+        "left": {
+          "x": 451.5,
+          "y": 1271,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/left.png",
+          "origin": {
+            "x": 454.5,
+            "y": 1271.0
+          },
+          "bounds": [
+            393,
+            1088,
+            516,
+            1454
+          ],
+          "sha256": "0f783b78b90261971c5bd43397989cc86fbd30476086c2c21ede40ec31d6aa63"
+        },
+        "right": {
+          "x": 558.5,
+          "y": 1271,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/right.png",
+          "origin": {
+            "x": 562.5,
+            "y": 1271.0
+          },
+          "bounds": [
+            504,
+            1088,
+            621,
+            1454
+          ],
+          "sha256": "b513a7043ba7540fc553da9b5807028ee2eb6b864e36ddca3bbf33c419d71818"
+        },
+        "bowLeft": {
+          "x": 410,
+          "y": 210.5,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/bowLeft.png",
+          "origin": {
+            "x": 410.0,
+            "y": 194.5
+          },
+          "bounds": [
+            363,
+            131,
+            457,
+            258
+          ],
+          "sha256": "d5376c1d872af491ae286fa3676a1edea2d8c7150b027b84ff33f1b006e763d3"
+        },
+        "bowRight": {
+          "x": 622.9,
+          "y": 210.5,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/bowRight.png",
+          "origin": {
+            "x": 621.0,
+            "y": 194.5
+          },
+          "bounds": [
+            574,
+            131,
+            668,
+            258
+          ],
+          "sha256": "11c03d8a1976b392b92c3e74b54260f335896777410326f61b154dd7364eb7d8"
+        }
+      }
+    },
+    "school-fit-p30": {
+      "schema": "rose-outfit-layout",
+      "version": 1,
+      "outfit": "school-fit-p30",
+      "canvas": [
+        1024,
+        1536
+      ],
+      "savedAt": "2026-09-06T21:36:59.070Z",
+      "base": "assets/base-armless.png",
+      "parts": {
+        "dress": {
+          "x": 510.5,
+          "y": 651.5,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/dress.png",
+          "origin": {
+            "x": 510.5,
+            "y": 651.5
+          },
+          "bounds": [
+            287,
+            379,
+            734,
+            924
+          ],
+          "sha256": "3fc2c91ca31db5d3076de507b20eb751269bffec0d7fe1876971cbf25fb11e44"
+        },
+        "left": {
+          "x": 462,
+          "y": 1366.5,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/left.png",
+          "origin": {
+            "x": 464.0,
+            "y": 1366.5
+          },
+          "bounds": [
+            418,
+            1276,
+            510,
+            1457
+          ],
+          "sha256": "71f9314f53dc405bfb8c55a042c38bdd5ae2f34be74fda9a3e04501e44e15c06"
+        },
+        "right": {
+          "x": 552,
+          "y": 1366.5,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/right.png",
+          "origin": {
+            "x": 550.0,
+            "y": 1366.5
+          },
+          "bounds": [
+            504,
+            1276,
+            596,
+            1457
+          ],
+          "sha256": "41e0dbc9ad0e057483c5de613ba523a175c1b7f518d815e7cddbdc78ccca7ce9"
+        },
+        "clipStar": {
+          "x": 593.3,
+          "y": 220.6,
+          "scale": 1,
+          "rotation": -39,
+          "file": "assets/clipStar.png",
+          "origin": {
+            "x": 607.5,
+            "y": 203.5
+          },
+          "bounds": [
+            578,
+            191,
+            637,
+            216
+          ],
+          "sha256": "7950a9767a0e51303a02198a83a5491c806358abdb42f0b3ecf8bd6afabe0f33"
+        },
+        "clipBook": {
+          "x": 607.2,
+          "y": 238.4,
+          "scale": 0.98,
+          "rotation": -31,
+          "file": "assets/clipBook.png",
+          "origin": {
+            "x": 610.0,
+            "y": 227.0
+          },
+          "bounds": [
+            584,
+            214,
+            636,
+            240
+          ],
+          "sha256": "5c103fb2368b4dce472a38139887b147d6992631f707563c5155fb3dcb9dbe91"
+        }
+      }
+    },
+    "pink-waist-p38": {
+      "schema": "rose-outfit-layout",
+      "version": 1,
+      "outfit": "pink-waist-p38",
+      "canvas": [
+        1024,
+        1536
+      ],
+      "savedAt": "2026-09-06T21:56:32.529Z",
+      "base": "assets/base-armless.png",
+      "parts": {
+        "dress": {
+          "x": 503.9,
+          "y": 654.9,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/dress.png",
+          "origin": {
+            "x": 511.5,
+            "y": 658.0
+          },
+          "bounds": [
+            286,
+            390,
+            737,
+            926
+          ],
+          "sha256": "6db4cf7ce11ee16ad7a90601694e40987a8b62037ef7e4f978515032e856f8a5"
+        },
+        "left": {
+          "x": 466,
+          "y": 1354,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/left.png",
+          "origin": {
+            "x": 466.0,
+            "y": 1354.0
+          },
+          "bounds": [
+            420,
+            1253,
+            512,
+            1455
+          ],
+          "sha256": "8d8e4dba474357fd6e075380e7cf32e275c989731010574cf748ccadf95f231f"
+        },
+        "right": {
+          "x": 550,
+          "y": 1356,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/right.png",
+          "origin": {
+            "x": 550.0,
+            "y": 1356.0
+          },
+          "bounds": [
+            504,
+            1255,
+            596,
+            1457
+          ],
+          "sha256": "c9004941ee90a898219c141e60e74eb759383d873b0f34e9cd0df8b62c797554"
+        },
+        "choker": {
+          "x": 511.5,
+          "y": 382.6,
+          "scale": 1.05,
+          "rotation": 0,
+          "file": "assets/choker.png",
+          "origin": {
+            "x": 511.5,
+            "y": 375.0
+          },
+          "bounds": [
+            480,
+            364,
+            543,
+            386
+          ],
+          "sha256": "767e0e11dfd2f56359819bb7a77c618061e8eb39f853faeebdd62e4a413755b9"
+        },
+        "legband": {
+          "x": 553.8,
+          "y": 937.4,
+          "scale": 1.15,
+          "rotation": 0,
+          "file": "assets/legband.png",
+          "origin": {
+            "x": 560.0,
+            "y": 954.5
+          },
+          "bounds": [
+            520,
+            942,
+            600,
+            967
+          ],
+          "sha256": "cad8e357712bed3df8407e27b3c9a3b5249f7c2dca78c5f02f66c346a879aa8d"
+        },
+        "wristLeft": {
+          "x": 342,
+          "y": 699.5,
+          "scale": 1.04,
+          "rotation": 0,
+          "file": "assets/wristLeft.png",
+          "origin": {
+            "x": 342.0,
+            "y": 705.5
+          },
+          "bounds": [
+            319,
+            689,
+            365,
+            722
+          ],
+          "sha256": "559f3a63b0ef8496c1de22fd915133133238eafbc3f8954349389c6694252164"
+        },
+        "wristRight": {
+          "x": 665.3,
+          "y": 701.2,
+          "scale": 1.04,
+          "rotation": 0,
+          "file": "assets/wristRight.png",
+          "origin": {
+            "x": 681.0,
+            "y": 705.5
+          },
+          "bounds": [
+            658,
+            689,
+            704,
+            722
+          ],
+          "sha256": "8f80533154908290e9b9f9ed23d2a838a68055bc27cbde66f113495c844e4ce5"
+        }
+      }
+    },
+    "cat-fit-p39": {
+      "schema": "rose-outfit-layout",
+      "version": 1,
+      "outfit": "cat-fit-p39",
+      "canvas": [
+        1024,
+        1536
+      ],
+      "savedAt": "2026-09-06T22:17:04.454Z",
+      "base": "assets/base-armless.png",
+      "parts": {
+        "dress": {
+          "x": 509.6,
+          "y": 665.5,
+          "scale": 1.02,
+          "rotation": 0,
+          "file": "assets/dress.png",
+          "origin": {
+            "x": 510.5,
+            "y": 665.5
+          },
+          "bounds": [
+            287,
+            390,
+            734,
+            941
+          ],
+          "sha256": "73b6389daba967b8b2a04fe897ba7da970d2b003c9fc27431bd429cf0a59949d"
+        },
+        "left": {
+          "x": 462,
+          "y": 1359.5,
+          "scale": 0.89,
+          "rotation": 0,
+          "file": "assets/left.png",
+          "origin": {
+            "x": 465.0,
+            "y": 1342.5
+          },
+          "bounds": [
+            417,
+            1239,
+            513,
+            1457
+          ],
+          "sha256": "521f1c5ed4e2ad2686c51606e6101a6220a04467119b07e6bd8813771846f20a"
+        },
+        "right": {
+          "x": 554,
+          "y": 1357.5,
+          "scale": 0.88,
+          "rotation": 0,
+          "file": "assets/right.png",
+          "origin": {
+            "x": 551.0,
+            "y": 1342.5
+          },
+          "bounds": [
+            503,
+            1239,
+            599,
+            1457
+          ],
+          "sha256": "d6660d566297d91b390299dead2fec091ded5f4d60753c8247a77b36ddf17e45"
+        },
+        "headband": {
+          "x": 606,
+          "y": 199,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/headband.png",
+          "origin": {
+            "x": 606.0,
+            "y": 199.0
+          },
+          "bounds": [
+            552,
+            140,
+            660,
+            258
+          ],
+          "sha256": "02a04af39689354cbaf7e4ed6f0c4f1a3eb3d1432b88bb9f23d60de042e8e901"
+        }
+      }
+    },
+    "bunny-fit-p40": {
+      "schema": "rose-outfit-layout",
+      "version": 1,
+      "outfit": "bunny-fit-p40",
+      "canvas": [
+        1024,
+        1536
+      ],
+      "savedAt": "2026-09-06T22:27:58.329Z",
+      "base": "assets/base-armless.png",
+      "parts": {
+        "dress": {
+          "x": 510.5,
+          "y": 646.5,
+          "scale": 0.94,
+          "rotation": 0,
+          "file": "assets/dress.png",
+          "origin": {
+            "x": 510.5,
+            "y": 663.5
+          },
+          "bounds": [
+            287,
+            388,
+            734,
+            939
+          ],
+          "sha256": "49d6ea24faf34dd3015398275ccde7619b95314382a839d52d54cd662af4efeb"
+        },
+        "left": {
+          "x": 463.5,
+          "y": 1359,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/left.png",
+          "origin": {
+            "x": 463.5,
+            "y": 1359.0
+          },
+          "bounds": [
+            418,
+            1261,
+            509,
+            1457
+          ],
+          "sha256": "24733dd6ef23bc4ab394ef690cf8e9b4a28e3a000875e76fc20d0b6bf9bcb4c6"
+        },
+        "right": {
+          "x": 553.5,
+          "y": 1358.5,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/right.png",
+          "origin": {
+            "x": 553.5,
+            "y": 1358.5
+          },
+          "bounds": [
+            508,
+            1260,
+            599,
+            1457
+          ],
+          "sha256": "151c1399892d87ae12f9b4955177642db409b0bba600d87ab2cff846893138fc"
+        },
+        "headband": {
+          "x": 605.5,
+          "y": 195,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/headband.png",
+          "origin": {
+            "x": 605.5,
+            "y": 195.0
+          },
+          "bounds": [
+            550,
+            143,
+            661,
+            247
+          ],
+          "sha256": "d64c12413ac5a8e40bff0638bcb92139640c2a972c263cbf0442155f761074d8"
+        }
+      }
+    },
+    "jk-fit-p43": {
+      "schema": "rose-outfit-layout",
+      "version": 1,
+      "outfit": "jk-fit-p43",
+      "canvas": [
+        1024,
+        1536
+      ],
+      "savedAt": "2026-09-06T22:46:37.616Z",
+      "base": "assets/base-armless.png",
+      "parts": {
+        "dress": {
+          "x": 510.5,
+          "y": 610.5,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/dress.png",
+          "origin": {
+            "x": 510.5,
+            "y": 610.5
+          },
+          "bounds": [
+            313,
+            371,
+            708,
+            850
+          ],
+          "sha256": "278ad5d406dd05541dd6b8e5e7b331ca3a6fc808fd2470319f04b00c9bf04789"
+        },
+        "left": {
+          "x": 457,
+          "y": 1289.5,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/left.png",
+          "origin": {
+            "x": 460.0,
+            "y": 1289.5
+          },
+          "bounds": [
+            411,
+            1121,
+            509,
+            1458
+          ],
+          "sha256": "eb4bbb975097828ab211793874c94ecb68052fd2453a2ba1b5675076a360f93f"
+        },
+        "right": {
+          "x": 561.5,
+          "y": 1289.5,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/right.png",
+          "origin": {
+            "x": 557.5,
+            "y": 1289.5
+          },
+          "bounds": [
+            508,
+            1121,
+            607,
+            1458
+          ],
+          "sha256": "68253f1cc1aa2b011d58367bcc54252a097585ce831645e8482396f3ba035c7b"
+        }
+      }
+    },
+    "floral-fit-p44": {
+      "schema": "rose-outfit-layout",
+      "version": 1,
+      "outfit": "floral-fit-p44",
+      "canvas": [
+        1024,
+        1536
+      ],
+      "savedAt": "2026-09-06T22:55:22.777Z",
+      "base": "assets/base-armless.png",
+      "parts": {
+        "dress": {
+          "x": 510.9,
+          "y": 622.8,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/dress.png",
+          "origin": {
+            "x": 511.5,
+            "y": 630.0
+          },
+          "bounds": [
+            274,
+            390,
+            749,
+            870
+          ],
+          "sha256": "92f12db1f12e6dd9e9716e8f7a5b74c8df996bec9671dc50caeba7c66765112e"
+        },
+        "left": {
+          "x": 463,
+          "y": 1368.5,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/left.png",
+          "origin": {
+            "x": 463.0,
+            "y": 1368.5
+          },
+          "bounds": [
+            417,
+            1280,
+            509,
+            1457
+          ],
+          "sha256": "85ce56379231522f03fb1054b099db20f21a0772bd228d44878a9dea7438fc49"
+        },
+        "right": {
+          "x": 551.5,
+          "y": 1368.5,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/right.png",
+          "origin": {
+            "x": 551.5,
+            "y": 1368.5
+          },
+          "bounds": [
+            505,
+            1280,
+            598,
+            1457
+          ],
+          "sha256": "e9c79e01dd079569904de5755b2da6df9fd2e0e0ecc3e009778dd781097fb5c8"
+        },
+        "headband": {
+          "x": 610,
+          "y": 193,
+          "scale": 1,
+          "rotation": -26,
+          "file": "assets/headband.png",
+          "origin": {
+            "x": 610.0,
+            "y": 193.0
+          },
+          "bounds": [
+            563,
+            153,
+            657,
+            233
+          ],
+          "sha256": "9783351907a46d1ca49617c58ef2e5c874547b0bf4d7eb6272379da7ace29b0e"
+        }
+      }
+    },
+    "berry-princess-fit-p50": {
+      "schema": "rose-outfit-layout",
+      "version": 1,
+      "outfit": "berry-princess-fit-p50",
+      "canvas": [
+        1024,
+        1536
+      ],
+      "savedAt": "2026-09-06T23:24:49.964Z",
+      "base": "assets/base-armless.png",
+      "parts": {
+        "dress": {
+          "x": 508.5,
+          "y": 637,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/dress.png",
+          "origin": {
+            "x": 508.5,
+            "y": 637.0
+          },
+          "bounds": [
+            269,
+            389,
+            748,
+            885
+          ],
+          "sha256": "071477f2513d8639b3d95a8444b0c06beb9d5ecc440caee172a1b345ab6660fa"
+        },
+        "left": {
+          "x": 461.5,
+          "y": 1263.5,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/left.png",
+          "origin": {
+            "x": 455.5,
+            "y": 1273.5
+          },
+          "bounds": [
+            395,
+            1089,
+            516,
+            1458
+          ],
+          "sha256": "72f77cdcc90995f96538c8e89dd39c8270c9ad8e50cd78071397daa567fcdd8d"
+        },
+        "right": {
+          "x": 556,
+          "y": 1261,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/right.png",
+          "origin": {
+            "x": 558.0,
+            "y": 1273.0
+          },
+          "bounds": [
+            498,
+            1089,
+            618,
+            1457
+          ],
+          "sha256": "45b23d8471285e1b19c80c172b351ba6e6169bc41f82d9a5e810e7acfa3169eb"
+        },
+        "bowLeft": {
+          "x": 409,
+          "y": 217,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/bowLeft.png",
+          "origin": {
+            "x": 409.0,
+            "y": 211.0
+          },
+          "bounds": [
+            364,
+            158,
+            454,
+            264
+          ],
+          "sha256": "2289f2144b60feb3dbc8b8f2aa4b644d47b03c7c610fe28713129cb40045741f"
+        },
+        "bowRight": {
+          "x": 618.1,
+          "y": 217,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/bowRight.png",
+          "origin": {
+            "x": 621.0,
+            "y": 211.0
+          },
+          "bounds": [
+            576,
+            158,
+            666,
+            264
+          ],
+          "sha256": "3beba7a113a0c392fb418a552b01961981a3beddb3cc5df85dadbd7442e3cab6"
+        },
+        "choker": {
+          "x": 512,
+          "y": 381,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/choker.png",
+          "origin": {
+            "x": 512.0,
+            "y": 381.0
+          },
+          "bounds": [
+            478,
+            371,
+            546,
+            391
+          ],
+          "sha256": "1519d467c9af37d720d41fbb7a7624b87118e25c1a626e716e0a77618b2e5e76"
+        }
+      }
+    },
+    "hair-loose-fit-p62": {
+      "schema": "rose-hair-loose-p62",
+      "version": 1,
+      "savedAt": "2026-09-07T00:57:36.651Z",
+      "canvas": [
+        1024,
+        1536
+      ],
+      "params": {
+        "scale": 105,
+        "width": 100,
+        "height": 105,
+        "x": 0,
+        "y": 0
+      },
+      "origin": {
+        "sourceAnchor": [
+          627,
+          27
+        ],
+        "targetAnchor": [
+          512,
+          100
+        ],
+        "scale": 0.385,
+        "sourceSize": [
+          1254,
+          1254
+        ]
+      },
+      "assets": {
+        "doll-under.png": "e58a15f95b2921bef3191fca260222545e502b9596d05a59ea48b634177a6107",
+        "face-closed.png": "f6ef5c43f99bf4a9ffaa86893c6c3b4689cd5f7e0be2182b10a4c8b8399cd282",
+        "face-half.png": "178223eadecce218fb26d752b1b839d8afde35a9da56fff0ab3bd2217daaa876",
+        "face-open.png": "5458b18f0fa55345dd5737873a1c66ddf158f9524bf62f33380ecceaa579ade0",
+        "hair-front.png": "244aa9e30cd4db927b08b885f6d86d63e71afbf9c872444b5c4c5df611c46033",
+        "hair-rear.png": "05d2d1035ef68837ccf932d68e27d0bdfd0cd7acfc1950eac1b46b5250bda584",
+        "hair-source.png": "e48e1b2932099e769d07ea9311f2f77dcb39d3b7764a7d580305df64d7031e03",
+        "hair.png": "9c98b40b3bfdfc8cfd4b8b297e537afb9fe2f048f1328b6c96fd13d04582313a",
+        "rear-fill-source.png": "94337c60db1680e48243cdff0fbfab34c92dba9a61e7ce9ed73bf18d1c5d6ac2"
+      }
+    },
+    "hair-slim-twin-fit-p67": {
+      "schema": "rose-hair-slim-twin-p67",
+      "version": 1,
+      "savedAt": "2026-09-07T01:40:47.465Z",
+      "canvas": [
+        1024,
+        1536
+      ],
+      "params": {
+        "scale": 116,
+        "width": 84,
+        "height": 83,
+        "x": -1,
+        "y": 16.5
+      },
+      "origin": {
+        "sourceAnchor": [
+          620,
+          115
+        ],
+        "targetAnchor": [
+          512,
+          95
+        ],
+        "scale": 0.5,
+        "sourceSize": [
+          1254,
+          1254
+        ]
+      },
+      "assets": {
+        "doll-under.png": "e58a15f95b2921bef3191fca260222545e502b9596d05a59ea48b634177a6107",
+        "face-closed.png": "f6ef5c43f99bf4a9ffaa86893c6c3b4689cd5f7e0be2182b10a4c8b8399cd282",
+        "face-half.png": "178223eadecce218fb26d752b1b839d8afde35a9da56fff0ab3bd2217daaa876",
+        "face-open.png": "5458b18f0fa55345dd5737873a1c66ddf158f9524bf62f33380ecceaa579ade0",
+        "hair-front.png": "a377d64c35802a6865ed0cb97c60573f1f8ddc34b421d221f2b42f297edcec06",
+        "hair-rear.png": "96fc5c9398d8e4281a1ae7742048fc638c36ce7df87b280f8a014d67f8e16b07",
+        "hair-source.png": "13c6a35b686c721101228078e3b9bce0ee1add79d5b41c2d0159288d9c74e13f",
+        "hair.png": "96fc5c9398d8e4281a1ae7742048fc638c36ce7df87b280f8a014d67f8e16b07"
+      }
+    },
+    "hair-bob-fit-p64": {
+      "schema": "rose-hair-bob-p64",
+      "version": 1,
+      "savedAt": "2026-09-07T01:18:17.980Z",
+      "canvas": [
+        1024,
+        1536
+      ],
+      "params": {
+        "scale": 103,
+        "width": 96,
+        "height": 100,
+        "x": 0,
+        "y": 7
+      },
+      "origin": {
+        "sourceAnchor": [
+          627,
+          245
+        ],
+        "targetAnchor": [
+          512,
+          100
+        ],
+        "scale": 0.42,
+        "sourceSize": [
+          1254,
+          1254
+        ]
+      },
+      "assets": {
+        "doll-under.png": "e58a15f95b2921bef3191fca260222545e502b9596d05a59ea48b634177a6107",
+        "face-closed.png": "f6ef5c43f99bf4a9ffaa86893c6c3b4689cd5f7e0be2182b10a4c8b8399cd282",
+        "face-half.png": "178223eadecce218fb26d752b1b839d8afde35a9da56fff0ab3bd2217daaa876",
+        "face-open.png": "5458b18f0fa55345dd5737873a1c66ddf158f9524bf62f33380ecceaa579ade0",
+        "hair-front.png": "6a20b502e0e52137918d6c5a49397d0d95da4432e6ce854e849d917d7083290b",
+        "hair-rear.png": "53d6488dbd5d165c379166e2184728081b9965d13c06505b266f7250cd6e6fd7",
+        "hair-source.png": "baae1d3f9f19bd9c59c6f664d7a597a6c3ed449088f3ce66314df39af8e24a45",
+        "hair.png": "6a20b502e0e52137918d6c5a49397d0d95da4432e6ce854e849d917d7083290b"
+      }
+    },
+    "hair-braids-fit-p65": {
+      "schema": "rose-hair-braids-p65",
+      "version": 1,
+      "savedAt": "2026-09-07T01:24:29.313Z",
+      "canvas": [
+        1024,
+        1536
+      ],
+      "params": {
+        "scale": 104,
+        "width": 98,
+        "height": 105,
+        "x": 0,
+        "y": 0
+      },
+      "origin": {
+        "sourceAnchor": [
+          627,
+          160
+        ],
+        "targetAnchor": [
+          512,
+          100
+        ],
+        "scale": 0.54,
+        "sourceSize": [
+          1254,
+          1254
+        ]
+      },
+      "assets": {
+        "doll-under.png": "e58a15f95b2921bef3191fca260222545e502b9596d05a59ea48b634177a6107",
+        "face-closed.png": "f6ef5c43f99bf4a9ffaa86893c6c3b4689cd5f7e0be2182b10a4c8b8399cd282",
+        "face-half.png": "178223eadecce218fb26d752b1b839d8afde35a9da56fff0ab3bd2217daaa876",
+        "face-open.png": "5458b18f0fa55345dd5737873a1c66ddf158f9524bf62f33380ecceaa579ade0",
+        "hair-front.png": "0aca4dd1bc17fd6dec38c6db0bfac2131f4c42e08a50c42b2e168c31559b4804",
+        "hair-rear.png": "53d6488dbd5d165c379166e2184728081b9965d13c06505b266f7250cd6e6fd7",
+        "hair-source.png": "cbaab68333eab616e877504c878b595ba0b20515f4a9ba6c606b4460b54ce51c",
+        "hair.png": "0aca4dd1bc17fd6dec38c6db0bfac2131f4c42e08a50c42b2e168c31559b4804"
+      }
+    },
+    "hair-low-buns-fit-p66": {
+      "schema": "rose-hair-low-buns-p66",
+      "version": 1,
+      "savedAt": "2026-09-07T01:32:38.339Z",
+      "canvas": [
+        1024,
+        1536
+      ],
+      "params": {
+        "scale": 96,
+        "width": 100,
+        "height": 104,
+        "x": 2.5,
+        "y": 5.5
+      },
+      "origin": {
+        "sourceAnchor": [
+          627,
+          235
+        ],
+        "targetAnchor": [
+          512,
+          100
+        ],
+        "scale": 0.39,
+        "sourceSize": [
+          1254,
+          1254
+        ]
+      },
+      "assets": {
+        "doll-under.png": "e58a15f95b2921bef3191fca260222545e502b9596d05a59ea48b634177a6107",
+        "face-closed.png": "f6ef5c43f99bf4a9ffaa86893c6c3b4689cd5f7e0be2182b10a4c8b8399cd282",
+        "face-half.png": "178223eadecce218fb26d752b1b839d8afde35a9da56fff0ab3bd2217daaa876",
+        "face-open.png": "5458b18f0fa55345dd5737873a1c66ddf158f9524bf62f33380ecceaa579ade0",
+        "hair-front.png": "6b5b333fccd788a004280136522de76afe166a751d8d6e9ec65a643b2c630abc",
+        "hair-rear.png": "53d6488dbd5d165c379166e2184728081b9965d13c06505b266f7250cd6e6fd7",
+        "hair-source.png": "ea65bbd01737de60b8698cf758295001e3405b096df27ab0860fdc542bd0631c",
+        "hair.png": "6b5b333fccd788a004280136522de76afe166a751d8d6e9ec65a643b2c630abc"
+      }
+    },
+    "hair-crescent-fit-p69": {
+      "schema": "rose-hair-crescent-p69",
+      "version": 1,
+      "savedAt": "2026-09-07T01:59:42.176Z",
+      "canvas": [
+        1024,
+        1536
+      ],
+      "params": {
+        "scale": 100,
+        "width": 96,
+        "height": 98,
+        "x": 0,
+        "y": 3.5
+      },
+      "origin": {
+        "sourceAnchor": [
+          627,
+          225
+        ],
+        "targetAnchor": [
+          512,
+          100
+        ],
+        "scale": 0.43,
+        "sourceSize": [
+          1254,
+          1254
+        ]
+      },
+      "assets": {
+        "doll-under.png": "e58a15f95b2921bef3191fca260222545e502b9596d05a59ea48b634177a6107",
+        "face-closed.png": "f6ef5c43f99bf4a9ffaa86893c6c3b4689cd5f7e0be2182b10a4c8b8399cd282",
+        "face-half.png": "178223eadecce218fb26d752b1b839d8afde35a9da56fff0ab3bd2217daaa876",
+        "face-open.png": "5458b18f0fa55345dd5737873a1c66ddf158f9524bf62f33380ecceaa579ade0",
+        "hair-front.png": "c5015401ac441c9865ac6b6e62bb988c272172c282fbb18dd2ddbcc41a7a5435",
+        "hair-rear.png": "53d6488dbd5d165c379166e2184728081b9965d13c06505b266f7250cd6e6fd7",
+        "hair-source.png": "4ffaa820a993b51cc3dabf6983e54a70afefa66c2c3f4766ce8f1b43b0774f77",
+        "hair.png": "c5015401ac441c9865ac6b6e62bb988c272172c282fbb18dd2ddbcc41a7a5435"
+      }
+    },
+    "hair-princess-fit-p71": {
+      "schema": "rose-hair-princess-p71",
+      "version": 1,
+      "savedAt": "2026-09-07T02:21:10.096Z",
+      "canvas": [
+        1024,
+        1536
+      ],
+      "params": {
+        "scale": 102,
+        "width": 102,
+        "height": 100,
+        "x": 5,
+        "y": 0
+      },
+      "origin": {
+        "sourceAnchor": [
+          573,
+          15
+        ],
+        "targetAnchor": [
+          512,
+          100
+        ],
+        "scale": 0.44,
+        "sourceSize": [
+          1145,
+          1374
+        ]
+      },
+      "assets": {
+        "doll-under.png": "e58a15f95b2921bef3191fca260222545e502b9596d05a59ea48b634177a6107",
+        "face-closed.png": "f6ef5c43f99bf4a9ffaa86893c6c3b4689cd5f7e0be2182b10a4c8b8399cd282",
+        "face-half.png": "178223eadecce218fb26d752b1b839d8afde35a9da56fff0ab3bd2217daaa876",
+        "face-open.png": "5458b18f0fa55345dd5737873a1c66ddf158f9524bf62f33380ecceaa579ade0",
+        "hair-front.png": "3158830e5e5411ba97ce91b7db001321247caaf15269d893a28d5c94ee319336",
+        "hair-rear.png": "b0783a8e42d90ec4d861030f3da04e690c819e89b3345c1f678ca520919b19fc",
+        "hair-source.png": "3f81e733f9e15e9988270f8b7af8620fc724116682595c45b297966ea540185f",
+        "hair.png": "27e947d9caf2d19c1771da3fc047f7c9faf83062fddb17779f4772f01301307e"
+      }
+    },
+    "eyes-blink-p51": {},
+    "eyes-blink-p52": {},
+    "eyes-fit-p58": {
+      "schema": "rose-gentle-eyes-p58",
+      "version": 1,
+      "savedAt": "2026-09-07T00:07:30.044Z",
+      "canvas": [
+        1024,
+        1536
+      ],
+      "params": {
+        "scale": 145,
+        "width": 73,
+        "height": 78,
+        "gap": 94,
+        "x": 0,
+        "y": 0,
+        "blush": true
+      },
+      "eyeOrigin": {
+        "centerX": 512,
+        "centerY": 283.5,
+        "frameWidth": 47,
+        "frameHeight": 41
+      },
+      "assets": {
+        "doll-over.png": "2ad4983df79d13cb8a96330e1d72c6d2d0b379d21e4bbc0356bed87ca5bc90a0",
+        "doll-under.png": "e58a15f95b2921bef3191fca260222545e502b9596d05a59ea48b634177a6107",
+        "gentle-blush.png": "6506c2da59c379d7e7c685dd7f02c385d58db149db3f97fbdff58c603aa3cf5c",
+        "left-closed.png": "8446d56357e6fff3180f5527f43975933c2ff49cb2349bb6f926007a2dce2533",
+        "left-half.png": "6af3e9010dced41b966d7ab4b123bc6bce7c908649142fa38be585ee5bd01478",
+        "left-open.png": "ffa4e58903b96e9f9e94adfe2089455c248fa4fd98bb19483eb84410634585aa",
+        "mouth-source.png": "05eb803b02fd761796a6f20c819d6656aca786800209ecdb0215f4fcfc0e5992",
+        "mouth.png": "a588b18afc583a6fd90958415fb8ab5bacb446229e33cca99c8be0f72f82b33d",
+        "right-closed.png": "ca00fdcfc89af5055e67145d7a76a1d601eb8eef9f67f0182353b2b72e1cb270",
+        "right-half.png": "abcbf310eaba25ed55270f553d5ec26dfaf6d988b3def784230f659bb3599e7d",
+        "right-open.png": "d60603598c95051f9b2ff3453d891dbaca5e07d2a0543c22ced0915cf05deac7",
+        "static.png": "8b19afb418ee7d6627e0d84ee1e087f359094d25e42e1bce850287fd6fd45143"
+      }
+    },
+    "heart-eyes-fit-p59": {
+      "schema": "rose-gentle-eyes-p59",
+      "version": 1,
+      "savedAt": "2026-09-07T00:17:59.091Z",
+      "canvas": [
+        1024,
+        1536
+      ],
+      "params": {
+        "scale": 145,
+        "width": 87,
+        "height": 78,
+        "gap": 101,
+        "x": 0,
+        "y": -5.5,
+        "blush": true
+      },
+      "eyeOrigin": {
+        "centerX": 512,
+        "centerY": 283.5,
+        "frameWidth": 47,
+        "frameHeight": 41
+      },
+      "assets": {
+        "doll-over.png": "2ad4983df79d13cb8a96330e1d72c6d2d0b379d21e4bbc0356bed87ca5bc90a0",
+        "doll-under.png": "e58a15f95b2921bef3191fca260222545e502b9596d05a59ea48b634177a6107",
+        "eye-source.png": "cb5180f2ad84e2b4606568b1bfbe5263b2a77ce38212dbcc7ba60db9d39426cf",
+        "gentle-blush.png": "6506c2da59c379d7e7c685dd7f02c385d58db149db3f97fbdff58c603aa3cf5c",
+        "left-closed.png": "3f3394048a9e78326be0e0f65f085d31296a44b04d1b69bbcf89276d012809de",
+        "left-half.png": "1d3f8e3af0f6f5822c6a385e73f25fdf47570a9ea29ab387d20beb15fd188be4",
+        "left-open.png": "6c65190f8ae79fd5c076ef40d3f15c17804da75b73bce60eff0d5c85715d366a",
+        "mouth.png": "a588b18afc583a6fd90958415fb8ab5bacb446229e33cca99c8be0f72f82b33d",
+        "right-closed.png": "9a97443bbf497908f6359d50ce41ed965ffb1fd554e5ce7ea4d02dd7a767b06f",
+        "right-half.png": "f3384e3ecd208edb825d4186aa8de795ab71a093db936e6c3fc571d8dbd8290a",
+        "right-open.png": "8d6226754fd3316dd6d79579a9da775a714d7574df6c6cdaa283917e8cbe7691",
+        "static.png": "8b19afb418ee7d6627e0d84ee1e087f359094d25e42e1bce850287fd6fd45143"
+      }
+    },
+    "original-face": {
+      "layout": {
+        "schema": "rose-face-layout",
+        "version": 1,
+        "canvas": [
+          1024,
+          1536
+        ],
+        "source": "face-a.png",
+        "savedAt": "2026-09-06T20:08:30.309Z",
+        "parts": {
+          "leftEye": {
+            "x": 465.5,
+            "y": 281,
+            "scale": 1,
+            "file": "assets/part-leftEye.png",
+            "sourceSha256": "d8dfcb0c9dc8059b005d6b118dce105b9ff00bb617128e750e614d588f256a97",
+            "anchor": "center"
+          },
+          "rightEye": {
+            "x": 558.5,
+            "y": 281,
+            "scale": 1,
+            "file": "assets/part-rightEye.png",
+            "sourceSha256": "2f264f93c438236624934bd8d8aa66a3b07b0a2496f9a69757ba507f33a52206",
+            "anchor": "center"
+          },
+          "nose": {
+            "x": 513,
+            "y": 313,
+            "scale": 1,
+            "file": "assets/part-nose.png",
+            "sourceSha256": "b0a30132c3db9e3043327d86ab31c77bc2d6ea0c06b13d33691fe2edf50f13d4",
+            "anchor": "center"
+          },
+          "mouth": {
+            "x": 512.5,
+            "y": 331,
+            "scale": 1,
+            "file": "assets/part-mouth.png",
+            "sourceSha256": "d6447dfd718cb278caa3c4b4c27a169b12abd81879e7214910208bcfd7bab1c9",
+            "anchor": "center"
+          }
+        },
+        "hair": {
+          "x": 512,
+          "y": 249,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/hair.png",
+          "anchor": "center",
+          "origin": {
+            "x": 512,
+            "y": 235,
+            "w": 294,
+            "h": 300
+          },
+          "sourceSha256": "9bf188e28b625c9a9bad550725ca953adb9ff704d50a4860ed6d350017aa4065"
+        },
+        "clip": {
+          "x": 606,
+          "y": 165.5,
+          "scale": 1,
+          "rotation": 0,
+          "file": "../fitted-doll-p16/assets/white-clip.png",
+          "anchor": "center",
+          "origin": {
+            "x": 606,
+            "y": 156.5,
+            "w": 112,
+            "h": 89
+          },
+          "parent": "hair",
+          "sourceSha256": "a36fdb6b1680fca74f28ae30b9e5be87cc0e3a65ad9fc7c53ac0c8c4cf7e170b"
+        }
+      },
+      "openFrame": "eyes-blink-p51/assets/face-original.png",
+      "sha256": "d889000c2450370c9c1ea838a711cea86a6aaa835f7334cdddb6809b7332aaf4",
+      "blink": "Existing original pixels compressed only within eye windows; original open frame and static features unchanged."
+    },
+    "pink-waist-p75": {
+      "schema": "rose-outfit-layout",
+      "version": 1,
+      "outfit": "pink-waist-p75",
+      "canvas": [
+        1024,
+        1536
+      ],
+      "savedAt": "2026-09-06T21:56:32.529Z",
+      "base": "assets/base-armless.png",
+      "parts": {
+        "dress": {
+          "x": 503.9,
+          "y": 654.9,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/dress.png",
+          "origin": {
+            "x": 511.5,
+            "y": 658.0
+          },
+          "bounds": [
+            286,
+            390,
+            737,
+            926
+          ],
+          "sha256": "c4f1186aa2c2a6153b5ccaf795aba031d7bfc2d1b9cd7970271257a29e07d73a"
+        },
+        "left": {
+          "x": 466,
+          "y": 1354,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/left.png",
+          "origin": {
+            "x": 466.0,
+            "y": 1354.0
+          },
+          "bounds": [
+            420,
+            1253,
+            512,
+            1455
+          ],
+          "sha256": "8d8e4dba474357fd6e075380e7cf32e275c989731010574cf748ccadf95f231f"
+        },
+        "right": {
+          "x": 550,
+          "y": 1356,
+          "scale": 1,
+          "rotation": 0,
+          "file": "assets/right.png",
+          "origin": {
+            "x": 550.0,
+            "y": 1356.0
+          },
+          "bounds": [
+            504,
+            1255,
+            596,
+            1457
+          ],
+          "sha256": "c9004941ee90a898219c141e60e74eb759383d873b0f34e9cd0df8b62c797554"
+        },
+        "choker": {
+          "x": 511.5,
+          "y": 382.6,
+          "scale": 1.05,
+          "rotation": 0,
+          "file": "assets/choker.png",
+          "origin": {
+            "x": 511.5,
+            "y": 375.0
+          },
+          "bounds": [
+            480,
+            364,
+            543,
+            386
+          ],
+          "sha256": "767e0e11dfd2f56359819bb7a77c618061e8eb39f853faeebdd62e4a413755b9"
+        },
+        "legband": {
+          "x": 553.8,
+          "y": 937.4,
+          "scale": 1.15,
+          "rotation": 0,
+          "file": "assets/legband.png",
+          "origin": {
+            "x": 560.0,
+            "y": 954.5
+          },
+          "bounds": [
+            520,
+            942,
+            600,
+            967
+          ],
+          "sha256": "cad8e357712bed3df8407e27b3c9a3b5249f7c2dca78c5f02f66c346a879aa8d"
+        },
+        "wristLeft": {
+          "x": 342,
+          "y": 699.5,
+          "scale": 1.04,
+          "rotation": 0,
+          "file": "assets/wristLeft.png",
+          "origin": {
+            "x": 342.0,
+            "y": 705.5
+          },
+          "bounds": [
+            319,
+            689,
+            365,
+            722
+          ],
+          "sha256": "559f3a63b0ef8496c1de22fd915133133238eafbc3f8954349389c6694252164"
+        },
+        "wristRight": {
+          "x": 665.3,
+          "y": 701.2,
+          "scale": 1.04,
+          "rotation": 0,
+          "file": "assets/wristRight.png",
+          "origin": {
+            "x": 681.0,
+            "y": 705.5
+          },
+          "bounds": [
+            658,
+            689,
+            704,
+            722
+          ],
+          "sha256": "8f80533154908290e9b9f9ed23d2a838a68055bc27cbde66f113495c844e4ce5"
+        }
+      }
+    }
+  },
+  "items": {
+    "outfit1-dress": {
+      "id": "outfit1-dress",
+      "name": "雏菊小白裙",
+      "pieces": [
+        {
+          "id": "outfit1-dress",
+          "file": "assets/outfit1-dress.png",
+          "anchor": [
+            223.5,
+            277.0
+          ],
+          "x": 510.5,
+          "y": 669,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "white-fit-p29/assets/dress.png"
+        }
+      ],
+      "base": {
+        "id": "outfit1-base",
+        "file": "assets/outfit1-base.png",
+        "anchor": [
+          118.5,
+          663.0
+        ],
+        "x": 510.5,
+        "y": 789.0,
+        "scale": 1,
+        "rotation": 0,
+        "width": 100,
+        "height": 100,
+        "z": 10,
+        "source": "white-fit-p29/assets/base-armless.png"
+      }
+    },
+    "outfit1-shoes": {
+      "id": "outfit1-shoes",
+      "name": "雏菊小白裙鞋袜",
+      "pieces": [
+        {
+          "id": "outfit1-left",
+          "file": "assets/outfit1-left.png",
+          "anchor": [
+            46.0,
+            106.0
+          ],
+          "x": 464,
+          "y": 1351,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "white-fit-p29/assets/left.png"
+        },
+        {
+          "id": "outfit1-right",
+          "file": "assets/outfit1-right.png",
+          "anchor": [
+            46.0,
+            106.0
+          ],
+          "x": 550,
+          "y": 1351,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "white-fit-p29/assets/right.png"
+        }
+      ]
+    },
+    "outfit1-accessory": {
+      "id": "outfit1-accessory",
+      "name": "雏菊小白裙发饰",
+      "pieces": [
+        {
+          "id": "outfit1-headband",
+          "file": "assets/outfit1-headband.png",
+          "anchor": [
+            56.0,
+            44.5
+          ],
+          "x": 606,
+          "y": 179.5,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 50,
+          "source": "white-fit-p29/assets/headband.png"
+        }
+      ]
+    },
+    "outfit2-dress": {
+      "id": "outfit2-dress",
+      "name": "黑白女仆裙",
+      "pieces": [
+        {
+          "id": "outfit2-dress",
+          "file": "assets/outfit2-dress.png",
+          "anchor": [
+            218.0,
+            249.0
+          ],
+          "x": 512.0,
+          "y": 636.0,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "outfit-arms-p28/maid/assets/dress.png"
+        },
+        {
+          "id": "outfit2-arms-front",
+          "file": "assets/outfit2-arms-front.png",
+          "anchor": [
+            223.5,
+            117.0
+          ],
+          "x": 510.5,
+          "y": 677.0,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 31,
+          "source": "outfit-arms-p28/maid/assets/arms-front.png"
+        }
+      ],
+      "base": {
+        "id": "outfit2-base",
+        "file": "assets/outfit2-base.png",
+        "anchor": [
+          223.5,
+          663.0
+        ],
+        "x": 510.5,
+        "y": 789.0,
+        "scale": 1,
+        "rotation": 0,
+        "width": 100,
+        "height": 100,
+        "z": 10,
+        "source": "outfit-arms-p28/maid/assets/base.png"
+      }
+    },
+    "outfit2-shoes": {
+      "id": "outfit2-shoes",
+      "name": "黑白女仆裙鞋袜",
+      "pieces": [
+        {
+          "id": "outfit2-left",
+          "file": "assets/outfit2-left.png",
+          "anchor": [
+            53.0,
+            228.0
+          ],
+          "x": 459.0,
+          "y": 1229.0,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "outfit-arms-p28/maid/assets/left.png"
+        },
+        {
+          "id": "outfit2-right",
+          "file": "assets/outfit2-right.png",
+          "anchor": [
+            50.0,
+            227.5
+          ],
+          "x": 561.0,
+          "y": 1229.5,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "outfit-arms-p28/maid/assets/right.png"
+        }
+      ]
+    },
+    "outfit2-accessory": {
+      "id": "outfit2-accessory",
+      "name": "黑白女仆裙发饰",
+      "pieces": [
+        {
+          "id": "outfit2-headband",
+          "file": "assets/outfit2-headband.png",
+          "anchor": [
+            141.0,
+            93.5
+          ],
+          "x": 512.0,
+          "y": 182.5,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 50,
+          "source": "outfit-arms-p28/maid/assets/headband.png"
+        }
+      ]
+    },
+    "outfit3-dress": {
+      "id": "outfit3-dress",
+      "name": "粉格兔兔睡衣",
+      "pieces": [
+        {
+          "id": "outfit3-dress",
+          "file": "assets/outfit3-dress.png",
+          "anchor": [
+            233.0,
+            244.0
+          ],
+          "x": 513,
+          "y": 629,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "pajamas-fit-p23/../pajamas-p22/assets/dress-arms.png"
+        }
+      ],
+      "base": {
+        "id": "outfit3-base",
+        "file": "assets/outfit3-base.png",
+        "anchor": [
+          118.5,
+          663.0
+        ],
+        "x": 510.5,
+        "y": 789.0,
+        "scale": 1,
+        "rotation": 0,
+        "width": 100,
+        "height": 100,
+        "z": 10,
+        "source": "pajamas-fit-p23/../pajamas-p22/assets/base-armless.png"
+      }
+    },
+    "outfit3-shoes": {
+      "id": "outfit3-shoes",
+      "name": "粉格兔兔睡衣鞋袜",
+      "pieces": [
+        {
+          "id": "outfit3-left",
+          "file": "assets/outfit3-left.png",
+          "anchor": [
+            45.0,
+            58.0
+          ],
+          "x": 464,
+          "y": 1397,
+          "scale": 1.07,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "pajamas-fit-p23/../pajamas-p22/assets/shoe-0.png"
+        },
+        {
+          "id": "outfit3-right",
+          "file": "assets/outfit3-right.png",
+          "anchor": [
+            46.0,
+            59.0
+          ],
+          "x": 554,
+          "y": 1398,
+          "scale": 1.06,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "pajamas-fit-p23/../pajamas-p22/assets/shoe-1.png"
+        }
+      ]
+    },
+    "outfit3-accessory": {
+      "id": "outfit3-accessory",
+      "name": "粉格兔兔睡衣发饰",
+      "pieces": [
+        {
+          "id": "outfit3-bow",
+          "file": "assets/outfit3-bow.png",
+          "anchor": [
+            36.5,
+            35.5
+          ],
+          "x": 616.5,
+          "y": 210.5,
+          "scale": 0.98,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 50,
+          "source": "pajamas-fit-p23/../pajamas-p22/assets/bow.png"
+        }
+      ]
+    },
+    "outfit4-dress": {
+      "id": "outfit4-dress",
+      "name": "草莓奶油裙",
+      "pieces": [
+        {
+          "id": "outfit4-dress",
+          "file": "assets/outfit4-dress.png",
+          "anchor": [
+            235.5,
+            244.0
+          ],
+          "x": 511.5,
+          "y": 632,
+          "scale": 1.02,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "strawberry-fit-p25/assets/dress.png"
+        }
+      ],
+      "base": {
+        "id": "outfit4-base",
+        "file": "assets/outfit4-base.png",
+        "anchor": [
+          118.5,
+          663.0
+        ],
+        "x": 510.5,
+        "y": 789.0,
+        "scale": 1,
+        "rotation": 0,
+        "width": 100,
+        "height": 100,
+        "z": 10,
+        "source": "strawberry-fit-p25/assets/base-armless.png"
+      }
+    },
+    "outfit4-shoes": {
+      "id": "outfit4-shoes",
+      "name": "草莓奶油裙鞋袜",
+      "pieces": [
+        {
+          "id": "outfit4-left",
+          "file": "assets/outfit4-left.png",
+          "anchor": [
+            61.5,
+            183.0
+          ],
+          "x": 451.5,
+          "y": 1271,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "strawberry-fit-p25/assets/left.png"
+        },
+        {
+          "id": "outfit4-right",
+          "file": "assets/outfit4-right.png",
+          "anchor": [
+            58.5,
+            183.0
+          ],
+          "x": 558.5,
+          "y": 1271,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "strawberry-fit-p25/assets/right.png"
+        }
+      ]
+    },
+    "outfit4-accessory": {
+      "id": "outfit4-accessory",
+      "name": "草莓奶油裙发饰",
+      "pieces": [
+        {
+          "id": "outfit4-bowLeft",
+          "file": "assets/outfit4-bowLeft.png",
+          "anchor": [
+            47.0,
+            63.5
+          ],
+          "x": 410,
+          "y": 210.5,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 50,
+          "source": "strawberry-fit-p25/assets/bowLeft.png"
+        },
+        {
+          "id": "outfit4-bowRight",
+          "file": "assets/outfit4-bowRight.png",
+          "anchor": [
+            47.0,
+            63.5
+          ],
+          "x": 622.9,
+          "y": 210.5,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 50,
+          "source": "strawberry-fit-p25/assets/bowRight.png"
+        }
+      ]
+    },
+    "outfit5-dress": {
+      "id": "outfit5-dress",
+      "name": "校园裙",
+      "pieces": [
+        {
+          "id": "outfit5-dress",
+          "file": "assets/outfit5-dress.png",
+          "anchor": [
+            223.5,
+            272.5
+          ],
+          "x": 510.5,
+          "y": 651.5,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "school-fit-p30/assets/dress.png"
+        }
+      ],
+      "base": {
+        "id": "outfit5-base",
+        "file": "assets/outfit5-base.png",
+        "anchor": [
+          118.5,
+          663.0
+        ],
+        "x": 510.5,
+        "y": 789.0,
+        "scale": 1,
+        "rotation": 0,
+        "width": 100,
+        "height": 100,
+        "z": 10,
+        "source": "school-fit-p30/assets/base-armless.png"
+      }
+    },
+    "outfit5-shoes": {
+      "id": "outfit5-shoes",
+      "name": "校园裙鞋袜",
+      "pieces": [
+        {
+          "id": "outfit5-left",
+          "file": "assets/outfit5-left.png",
+          "anchor": [
+            46.0,
+            90.5
+          ],
+          "x": 462,
+          "y": 1366.5,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "school-fit-p30/assets/left.png"
+        },
+        {
+          "id": "outfit5-right",
+          "file": "assets/outfit5-right.png",
+          "anchor": [
+            46.0,
+            90.5
+          ],
+          "x": 552,
+          "y": 1366.5,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "school-fit-p30/assets/right.png"
+        }
+      ]
+    },
+    "outfit5-accessory": {
+      "id": "outfit5-accessory",
+      "name": "校园裙发饰",
+      "pieces": [
+        {
+          "id": "outfit5-clipStar",
+          "file": "assets/outfit5-clipStar.png",
+          "anchor": [
+            29.5,
+            12.5
+          ],
+          "x": 593.3,
+          "y": 220.6,
+          "scale": 1,
+          "rotation": -39,
+          "width": 100,
+          "height": 100,
+          "z": 50,
+          "source": "school-fit-p30/assets/clipStar.png"
+        },
+        {
+          "id": "outfit5-clipBook",
+          "file": "assets/outfit5-clipBook.png",
+          "anchor": [
+            26.0,
+            13.0
+          ],
+          "x": 607.2,
+          "y": 238.4,
+          "scale": 0.98,
+          "rotation": -31,
+          "width": 100,
+          "height": 100,
+          "z": 50,
+          "source": "school-fit-p30/assets/clipBook.png"
+        }
+      ]
+    },
+    "outfit6-dress": {
+      "id": "outfit6-dress",
+      "name": "粉白蕾丝裙",
+      "pieces": [
+        {
+          "id": "outfit6-dress",
+          "file": "assets/outfit6-dress.png",
+          "anchor": [
+            225.5,
+            268.0
+          ],
+          "x": 503.9,
+          "y": 654.9,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "pink-waist-p75/assets/dress.png"
+        },
+        {
+          "id": "outfit6-choker",
+          "file": "assets/outfit6-choker.png",
+          "anchor": [
+            31.5,
+            11.0
+          ],
+          "x": 511.5,
+          "y": 382.6,
+          "scale": 1.05,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 32,
+          "source": "pink-waist-p38/assets/choker.png"
+        },
+        {
+          "id": "outfit6-legband",
+          "file": "assets/outfit6-legband.png",
+          "anchor": [
+            40.0,
+            12.5
+          ],
+          "x": 553.8,
+          "y": 937.4,
+          "scale": 1.15,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 32,
+          "source": "pink-waist-p38/assets/legband.png"
+        },
+        {
+          "id": "outfit6-wristLeft",
+          "file": "assets/outfit6-wristLeft.png",
+          "anchor": [
+            23.0,
+            16.5
+          ],
+          "x": 342,
+          "y": 699.5,
+          "scale": 1.04,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 32,
+          "source": "pink-waist-p38/assets/wristLeft.png"
+        },
+        {
+          "id": "outfit6-wristRight",
+          "file": "assets/outfit6-wristRight.png",
+          "anchor": [
+            23.0,
+            16.5
+          ],
+          "x": 665.3,
+          "y": 701.2,
+          "scale": 1.04,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 32,
+          "source": "pink-waist-p38/assets/wristRight.png"
+        }
+      ],
+      "base": {
+        "id": "outfit6-base",
+        "file": "assets/outfit6-base.png",
+        "anchor": [
+          118.5,
+          663.0
+        ],
+        "x": 510.5,
+        "y": 789.0,
+        "scale": 1,
+        "rotation": 0,
+        "width": 100,
+        "height": 100,
+        "z": 10,
+        "source": "pink-waist-p38/assets/base-armless.png"
+      }
+    },
+    "outfit6-shoes": {
+      "id": "outfit6-shoes",
+      "name": "粉白蕾丝裙鞋袜",
+      "pieces": [
+        {
+          "id": "outfit6-left",
+          "file": "assets/outfit6-left.png",
+          "anchor": [
+            46.0,
+            101.0
+          ],
+          "x": 466,
+          "y": 1354,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "pink-waist-p38/assets/left.png"
+        },
+        {
+          "id": "outfit6-right",
+          "file": "assets/outfit6-right.png",
+          "anchor": [
+            46.0,
+            101.0
+          ],
+          "x": 550,
+          "y": 1356,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "pink-waist-p38/assets/right.png"
+        }
+      ]
+    },
+    "outfit7-dress": {
+      "id": "outfit7-dress",
+      "name": "猫咪格纹裙",
+      "pieces": [
+        {
+          "id": "outfit7-dress",
+          "file": "assets/outfit7-dress.png",
+          "anchor": [
+            223.5,
+            275.5
+          ],
+          "x": 509.6,
+          "y": 665.5,
+          "scale": 1.02,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "cat-fit-p39/assets/dress.png"
+        }
+      ],
+      "base": {
+        "id": "outfit7-base",
+        "file": "assets/outfit7-base.png",
+        "anchor": [
+          118.5,
+          663.0
+        ],
+        "x": 510.5,
+        "y": 789.0,
+        "scale": 1,
+        "rotation": 0,
+        "width": 100,
+        "height": 100,
+        "z": 10,
+        "source": "cat-fit-p39/assets/base-armless.png"
+      }
+    },
+    "outfit7-shoes": {
+      "id": "outfit7-shoes",
+      "name": "猫咪格纹裙鞋袜",
+      "pieces": [
+        {
+          "id": "outfit7-left",
+          "file": "assets/outfit7-left.png",
+          "anchor": [
+            48.0,
+            103.5
+          ],
+          "x": 462,
+          "y": 1359.5,
+          "scale": 0.89,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "cat-fit-p39/assets/left.png"
+        },
+        {
+          "id": "outfit7-right",
+          "file": "assets/outfit7-right.png",
+          "anchor": [
+            48.0,
+            103.5
+          ],
+          "x": 554,
+          "y": 1357.5,
+          "scale": 0.88,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "cat-fit-p39/assets/right.png"
+        }
+      ]
+    },
+    "outfit7-accessory": {
+      "id": "outfit7-accessory",
+      "name": "猫咪格纹裙发饰",
+      "pieces": [
+        {
+          "id": "outfit7-headband",
+          "file": "assets/outfit7-headband.png",
+          "anchor": [
+            54.0,
+            59.0
+          ],
+          "x": 606,
+          "y": 199,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 50,
+          "source": "cat-fit-p39/assets/headband.png"
+        }
+      ]
+    },
+    "outfit8-dress": {
+      "id": "outfit8-dress",
+      "name": "草莓兔兔裙",
+      "pieces": [
+        {
+          "id": "outfit8-dress",
+          "file": "assets/outfit8-dress.png",
+          "anchor": [
+            223.5,
+            275.5
+          ],
+          "x": 510.5,
+          "y": 646.5,
+          "scale": 0.94,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "bunny-fit-p40/assets/dress.png"
+        }
+      ],
+      "base": {
+        "id": "outfit8-base",
+        "file": "assets/outfit8-base.png",
+        "anchor": [
+          118.5,
+          663.0
+        ],
+        "x": 510.5,
+        "y": 789.0,
+        "scale": 1,
+        "rotation": 0,
+        "width": 100,
+        "height": 100,
+        "z": 10,
+        "source": "bunny-fit-p40/assets/base-armless.png"
+      }
+    },
+    "outfit8-shoes": {
+      "id": "outfit8-shoes",
+      "name": "草莓兔兔裙鞋袜",
+      "pieces": [
+        {
+          "id": "outfit8-left",
+          "file": "assets/outfit8-left.png",
+          "anchor": [
+            45.5,
+            98.0
+          ],
+          "x": 463.5,
+          "y": 1359,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "bunny-fit-p40/assets/left.png"
+        },
+        {
+          "id": "outfit8-right",
+          "file": "assets/outfit8-right.png",
+          "anchor": [
+            45.5,
+            98.5
+          ],
+          "x": 553.5,
+          "y": 1358.5,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "bunny-fit-p40/assets/right.png"
+        }
+      ]
+    },
+    "outfit8-accessory": {
+      "id": "outfit8-accessory",
+      "name": "草莓兔兔裙发饰",
+      "pieces": [
+        {
+          "id": "outfit8-headband",
+          "file": "assets/outfit8-headband.png",
+          "anchor": [
+            55.5,
+            52.0
+          ],
+          "x": 605.5,
+          "y": 195,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 50,
+          "source": "bunny-fit-p40/assets/headband.png"
+        }
+      ]
+    },
+    "outfit9-dress": {
+      "id": "outfit9-dress",
+      "name": "粉色JK",
+      "pieces": [
+        {
+          "id": "outfit9-dress",
+          "file": "assets/outfit9-dress.png",
+          "anchor": [
+            197.5,
+            239.5
+          ],
+          "x": 510.5,
+          "y": 610.5,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "jk-fit-p43/assets/dress.png"
+        }
+      ],
+      "base": {
+        "id": "outfit9-base",
+        "file": "assets/outfit9-base.png",
+        "anchor": [
+          118.5,
+          663.0
+        ],
+        "x": 510.5,
+        "y": 789.0,
+        "scale": 1,
+        "rotation": 0,
+        "width": 100,
+        "height": 100,
+        "z": 10,
+        "source": "jk-fit-p43/assets/base-armless.png"
+      }
+    },
+    "outfit9-shoes": {
+      "id": "outfit9-shoes",
+      "name": "粉色JK鞋袜",
+      "pieces": [
+        {
+          "id": "outfit9-left",
+          "file": "assets/outfit9-left.png",
+          "anchor": [
+            49.0,
+            168.5
+          ],
+          "x": 457,
+          "y": 1289.5,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "jk-fit-p43/assets/left.png"
+        },
+        {
+          "id": "outfit9-right",
+          "file": "assets/outfit9-right.png",
+          "anchor": [
+            49.5,
+            168.5
+          ],
+          "x": 561.5,
+          "y": 1289.5,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "jk-fit-p43/assets/right.png"
+        }
+      ]
+    },
+    "outfit10-dress": {
+      "id": "outfit10-dress",
+      "name": "奶油粉玫瑰裙",
+      "pieces": [
+        {
+          "id": "outfit10-dress",
+          "file": "assets/outfit10-dress.png",
+          "anchor": [
+            237.5,
+            240.0
+          ],
+          "x": 510.9,
+          "y": 622.8,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "floral-fit-p44/assets/dress.png"
+        }
+      ],
+      "base": {
+        "id": "outfit10-base",
+        "file": "assets/outfit10-base.png",
+        "anchor": [
+          118.5,
+          663.0
+        ],
+        "x": 510.5,
+        "y": 789.0,
+        "scale": 1,
+        "rotation": 0,
+        "width": 100,
+        "height": 100,
+        "z": 10,
+        "source": "floral-fit-p44/assets/base-armless.png"
+      }
+    },
+    "outfit10-shoes": {
+      "id": "outfit10-shoes",
+      "name": "奶油粉玫瑰裙鞋袜",
+      "pieces": [
+        {
+          "id": "outfit10-left",
+          "file": "assets/outfit10-left.png",
+          "anchor": [
+            46.0,
+            88.5
+          ],
+          "x": 463,
+          "y": 1368.5,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "floral-fit-p44/assets/left.png"
+        },
+        {
+          "id": "outfit10-right",
+          "file": "assets/outfit10-right.png",
+          "anchor": [
+            46.5,
+            88.5
+          ],
+          "x": 551.5,
+          "y": 1368.5,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "floral-fit-p44/assets/right.png"
+        }
+      ]
+    },
+    "outfit10-accessory": {
+      "id": "outfit10-accessory",
+      "name": "奶油粉玫瑰裙发饰",
+      "pieces": [
+        {
+          "id": "outfit10-headband",
+          "file": "assets/outfit10-headband.png",
+          "anchor": [
+            47.0,
+            40.0
+          ],
+          "x": 610,
+          "y": 193,
+          "scale": 1,
+          "rotation": -26,
+          "width": 100,
+          "height": 100,
+          "z": 50,
+          "source": "floral-fit-p44/assets/headband.png"
+        }
+      ]
+    },
+    "outfit11-dress": {
+      "id": "outfit11-dress",
+      "name": "草莓花语裙",
+      "pieces": [
+        {
+          "id": "outfit11-dress",
+          "file": "assets/outfit11-dress.png",
+          "anchor": [
+            239.5,
+            248.0
+          ],
+          "x": 508.5,
+          "y": 637,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "berry-princess-fit-p50/assets/dress.png"
+        },
+        {
+          "id": "outfit11-choker",
+          "file": "assets/outfit11-choker.png",
+          "anchor": [
+            34.0,
+            10.0
+          ],
+          "x": 512,
+          "y": 381,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 32,
+          "source": "berry-princess-fit-p50/assets/choker.png"
+        }
+      ],
+      "base": {
+        "id": "outfit11-base",
+        "file": "assets/outfit11-base.png",
+        "anchor": [
+          118.5,
+          663.0
+        ],
+        "x": 510.5,
+        "y": 789.0,
+        "scale": 1,
+        "rotation": 0,
+        "width": 100,
+        "height": 100,
+        "z": 10,
+        "source": "berry-princess-fit-p50/assets/base-armless.png"
+      }
+    },
+    "outfit11-shoes": {
+      "id": "outfit11-shoes",
+      "name": "草莓花语裙鞋袜",
+      "pieces": [
+        {
+          "id": "outfit11-left",
+          "file": "assets/outfit11-left.png",
+          "anchor": [
+            60.5,
+            184.5
+          ],
+          "x": 461.5,
+          "y": 1263.5,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "berry-princess-fit-p50/assets/left.png",
+          "cover": {
+            "id": "outfit11-left-cover",
+            "file": "assets/outfit11-left-cover.png",
+            "anchor": [
+              65.5,
+              153.5
+            ],
+            "x": 461.5,
+            "y": 1263.5,
+            "scale": 1,
+            "rotation": 0,
+            "width": 100,
+            "height": 100,
+            "z": 0,
+            "source": "berry-princess-fit-p50/assets/left-cover.png"
+          }
+        },
+        {
+          "id": "outfit11-right",
+          "file": "assets/outfit11-right.png",
+          "anchor": [
+            60.0,
+            184.0
+          ],
+          "x": 556,
+          "y": 1261,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 30,
+          "source": "berry-princess-fit-p50/assets/right.png",
+          "cover": {
+            "id": "outfit11-right-cover",
+            "file": "assets/outfit11-right-cover.png",
+            "anchor": [
+              47.0,
+              153.0
+            ],
+            "x": 556,
+            "y": 1261,
+            "scale": 1,
+            "rotation": 0,
+            "width": 100,
+            "height": 100,
+            "z": 0,
+            "source": "berry-princess-fit-p50/assets/right-cover.png"
+          }
+        }
+      ]
+    },
+    "outfit11-accessory": {
+      "id": "outfit11-accessory",
+      "name": "草莓花语裙发饰",
+      "pieces": [
+        {
+          "id": "outfit11-bowLeft",
+          "file": "assets/outfit11-bowLeft.png",
+          "anchor": [
+            45.0,
+            53.0
+          ],
+          "x": 409,
+          "y": 217,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 50,
+          "source": "berry-princess-fit-p50/assets/bowLeft.png"
+        },
+        {
+          "id": "outfit11-bowRight",
+          "file": "assets/outfit11-bowRight.png",
+          "anchor": [
+            45.0,
+            53.0
+          ],
+          "x": 618.1,
+          "y": 217,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 50,
+          "source": "berry-princess-fit-p50/assets/bowRight.png"
+        }
+      ]
+    },
+    "retained-pink-headband": {
+      "id": "retained-pink-headband",
+      "name": "粉色蝴蝶结蕾丝发箍",
+      "pieces": [
+        {
+          "id": "retained-pink-headband",
+          "file": "assets/retained-pink-headband.png",
+          "anchor": [
+            147.0,
+            97.5
+          ],
+          "x": 512,
+          "y": 180.5,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 50,
+          "source": "lolita-fit-p27/assets/headband.png"
+        }
+      ]
+    },
+    "hair0": {
+      "id": "hair0",
+      "name": "初始双小辫",
+      "pieces": [
+        {
+          "id": "hair0-front",
+          "file": "assets/hair0-front.png",
+          "anchor": [
+            147.5,
+            150.5
+          ],
+          "x": 512.5,
+          "y": 249.5,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 40,
+          "source": "berry-princess-fit-p50/assets/hair.png"
+        }
+      ]
+    },
+    "hair1": {
+      "id": "hair1",
+      "name": "披散长卷发",
+      "pieces": [
+        {
+          "id": "hair1-rear",
+          "file": "assets/hair1-rear.png",
+          "anchor": [
+            414,
+            0
+          ],
+          "x": 512,
+          "y": 100,
+          "scale": 0.40425000000000005,
+          "rotation": 0,
+          "width": 100,
+          "height": 105,
+          "z": 0,
+          "source": "hair-loose-fit-p62/assets/hair-rear.png"
+        },
+        {
+          "id": "hair1-front",
+          "file": "assets/hair1-front.png",
+          "anchor": [
+            339,
+            0
+          ],
+          "x": 512,
+          "y": 100,
+          "scale": 0.40425000000000005,
+          "rotation": 0,
+          "width": 100,
+          "height": 105,
+          "z": 40,
+          "source": "hair-loose-fit-p62/assets/hair-front.png"
+        }
+      ]
+    },
+    "hair2": {
+      "id": "hair2",
+      "name": "耳侧细双马尾",
+      "pieces": [
+        {
+          "id": "hair2-rear",
+          "file": "assets/hair2-rear.png",
+          "anchor": [
+            324,
+            0
+          ],
+          "x": 511,
+          "y": 111.5,
+          "scale": 0.58,
+          "rotation": 0,
+          "width": 84,
+          "height": 83,
+          "z": 0,
+          "source": "hair-slim-twin-fit-p67/assets/hair-rear.png"
+        },
+        {
+          "id": "hair2-front",
+          "file": "assets/hair2-front.png",
+          "anchor": [
+            300,
+            0
+          ],
+          "x": 511,
+          "y": 111.5,
+          "scale": 0.58,
+          "rotation": 0,
+          "width": 84,
+          "height": 83,
+          "z": 40,
+          "source": "hair-slim-twin-fit-p67/assets/hair-front.png"
+        }
+      ]
+    },
+    "hair3": {
+      "id": "hair3",
+      "name": "披散短发",
+      "pieces": [
+        {
+          "id": "hair3-rear",
+          "file": "assets/hair3-rear.png",
+          "anchor": [
+            627,
+            245
+          ],
+          "x": 512,
+          "y": 107,
+          "scale": 0.4326,
+          "rotation": 0,
+          "width": 96,
+          "height": 100,
+          "z": 0,
+          "source": "hair-bob-fit-p64/assets/hair-rear.png"
+        },
+        {
+          "id": "hair3-front",
+          "file": "assets/hair3-front.png",
+          "anchor": [
+            319,
+            2
+          ],
+          "x": 512,
+          "y": 107,
+          "scale": 0.4326,
+          "rotation": 0,
+          "width": 96,
+          "height": 100,
+          "z": 40,
+          "source": "hair-bob-fit-p64/assets/hair-front.png"
+        }
+      ]
+    },
+    "hair4": {
+      "id": "hair4",
+      "name": "双麻花辫",
+      "pieces": [
+        {
+          "id": "hair4-rear",
+          "file": "assets/hair4-rear.png",
+          "anchor": [
+            627,
+            160
+          ],
+          "x": 512,
+          "y": 100,
+          "scale": 0.5616,
+          "rotation": 0,
+          "width": 98,
+          "height": 105,
+          "z": 0,
+          "source": "hair-braids-fit-p65/assets/hair-rear.png"
+        },
+        {
+          "id": "hair4-front",
+          "file": "assets/hair4-front.png",
+          "anchor": [
+            237,
+            0
+          ],
+          "x": 512,
+          "y": 100,
+          "scale": 0.5616,
+          "rotation": 0,
+          "width": 98,
+          "height": 105,
+          "z": 40,
+          "source": "hair-braids-fit-p65/assets/hair-front.png"
+        }
+      ]
+    },
+    "hair5": {
+      "id": "hair5",
+      "name": "低双小丸子",
+      "pieces": [
+        {
+          "id": "hair5-rear",
+          "file": "assets/hair5-rear.png",
+          "anchor": [
+            627,
+            235
+          ],
+          "x": 514.5,
+          "y": 105.5,
+          "scale": 0.37439999999999996,
+          "rotation": 0,
+          "width": 100,
+          "height": 104,
+          "z": 0,
+          "source": "hair-low-buns-fit-p66/assets/hair-rear.png"
+        },
+        {
+          "id": "hair5-front",
+          "file": "assets/hair5-front.png",
+          "anchor": [
+            348,
+            2
+          ],
+          "x": 514.5,
+          "y": 105.5,
+          "scale": 0.37439999999999996,
+          "rotation": 0,
+          "width": 100,
+          "height": 104,
+          "z": 40,
+          "source": "hair-low-buns-fit-p66/assets/hair-front.png"
+        }
+      ]
+    },
+    "hair6": {
+      "id": "hair6",
+      "name": "月牙双小揪揪",
+      "pieces": [
+        {
+          "id": "hair6-rear",
+          "file": "assets/hair6-rear.png",
+          "anchor": [
+            627,
+            225
+          ],
+          "x": 512,
+          "y": 103.5,
+          "scale": 0.43,
+          "rotation": 0,
+          "width": 96,
+          "height": 98,
+          "z": 0,
+          "source": "hair-crescent-fit-p69/assets/hair-rear.png"
+        },
+        {
+          "id": "hair6-front",
+          "file": "assets/hair6-front.png",
+          "anchor": [
+            430,
+            -1
+          ],
+          "x": 512,
+          "y": 103.5,
+          "scale": 0.43,
+          "rotation": 0,
+          "width": 96,
+          "height": 98,
+          "z": 40,
+          "source": "hair-crescent-fit-p69/assets/hair-front.png"
+        }
+      ]
+    },
+    "hair7": {
+      "id": "hair7",
+      "name": "公主半扎长卷发",
+      "pieces": [
+        {
+          "id": "hair7-rear",
+          "file": "assets/hair7-rear.png",
+          "anchor": [
+            487,
+            -1
+          ],
+          "x": 517,
+          "y": 100,
+          "scale": 0.44880000000000003,
+          "rotation": 0,
+          "width": 102,
+          "height": 100,
+          "z": 0,
+          "source": "hair-princess-fit-p71/assets/hair-rear.png"
+        },
+        {
+          "id": "hair7-front",
+          "file": "assets/hair7-front.png",
+          "anchor": [
+            417,
+            -1
+          ],
+          "x": 517,
+          "y": 100,
+          "scale": 0.44880000000000003,
+          "rotation": 0,
+          "width": 102,
+          "height": 100,
+          "z": 40,
+          "source": "hair-princess-fit-p71/assets/hair-front.png"
+        }
+      ]
+    },
+    "face0": {
+      "id": "face0",
+      "name": "星光玫瑰眼",
+      "pieces": [
+        {
+          "id": "face0-static",
+          "file": "assets/face0-static.png",
+          "anchor": [
+            64.0,
+            31.0
+          ],
+          "x": 512.0,
+          "y": 279.0,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 35,
+          "source": "eyes-blink-p51/assets/face-static.png",
+          "name": "眉毛与底妆"
+        },
+        {
+          "id": "face0-left",
+          "name": "左眼",
+          "frames": {
+            "open": {
+              "id": "face0-left-open",
+              "file": "assets/face0-left-open.png",
+              "anchor": [
+                23.5,
+                18.0
+              ],
+              "x": 465.5,
+              "y": 285.0,
+              "scale": 1,
+              "rotation": 0,
+              "width": 100,
+              "height": 100,
+              "z": 35,
+              "source": "wardrobe-p73/assets/face0-left-open-full.png"
+            },
+            "half": {
+              "id": "face0-left-half",
+              "file": "assets/face0-left-half.png",
+              "anchor": [
+                23.5,
+                10.5
+              ],
+              "x": 465.5,
+              "y": 292.5,
+              "scale": 1,
+              "rotation": 0,
+              "width": 100,
+              "height": 100,
+              "z": 35,
+              "source": "wardrobe-p73/assets/face0-left-half-full.png"
+            },
+            "closed": {
+              "id": "face0-left-closed",
+              "file": "assets/face0-left-closed.png",
+              "anchor": [
+                23.5,
+                5.5
+              ],
+              "x": 465.5,
+              "y": 297.5,
+              "scale": 1,
+              "rotation": 0,
+              "width": 100,
+              "height": 100,
+              "z": 35,
+              "source": "wardrobe-p73/assets/face0-left-closed-full.png"
+            }
+          },
+          "x": 0,
+          "y": 0,
+          "scale": 1,
+          "width": 100,
+          "height": 100,
+          "rotation": 0,
+          "z": 35
+        },
+        {
+          "id": "face0-right",
+          "name": "右眼",
+          "frames": {
+            "open": {
+              "id": "face0-right-open",
+              "file": "assets/face0-right-open.png",
+              "anchor": [
+                23.5,
+                18.0
+              ],
+              "x": 558.5,
+              "y": 285.0,
+              "scale": 1,
+              "rotation": 0,
+              "width": 100,
+              "height": 100,
+              "z": 35,
+              "source": "wardrobe-p73/assets/face0-right-open-full.png"
+            },
+            "half": {
+              "id": "face0-right-half",
+              "file": "assets/face0-right-half.png",
+              "anchor": [
+                23.5,
+                10.5
+              ],
+              "x": 558.5,
+              "y": 292.5,
+              "scale": 1,
+              "rotation": 0,
+              "width": 100,
+              "height": 100,
+              "z": 35,
+              "source": "wardrobe-p73/assets/face0-right-half-full.png"
+            },
+            "closed": {
+              "id": "face0-right-closed",
+              "file": "assets/face0-right-closed.png",
+              "anchor": [
+                23.5,
+                6.0
+              ],
+              "x": 558.5,
+              "y": 297.0,
+              "scale": 1,
+              "rotation": 0,
+              "width": 100,
+              "height": 100,
+              "z": 35,
+              "source": "wardrobe-p73/assets/face0-right-closed-full.png"
+            }
+          },
+          "x": 0,
+          "y": 0,
+          "scale": 1,
+          "width": 100,
+          "height": 100,
+          "rotation": 0,
+          "z": 35
+        },
+        {
+          "id": "face0-nose",
+          "name": "鼻子",
+          "file": "assets/face0-nose.png",
+          "x": 513.0,
+          "y": 313.0,
+          "anchor": [
+            2.0,
+            2.0
+          ],
+          "scale": 1,
+          "width": 100,
+          "height": 100,
+          "rotation": 0,
+          "z": 35
+        },
+        {
+          "id": "face0-mouth",
+          "name": "嘴巴",
+          "file": "assets/face0-mouth.png",
+          "x": 512.5,
+          "y": 331.0,
+          "anchor": [
+            8.5,
+            2.0
+          ],
+          "scale": 1,
+          "width": 100,
+          "height": 100,
+          "rotation": 0,
+          "z": 35
+        }
+      ]
+    },
+    "face1": {
+      "id": "face1",
+      "name": "软粉下垂眼",
+      "pieces": [
+        {
+          "id": "face1-static",
+          "file": "assets/face1-static.png",
+          "anchor": [
+            60.0,
+            31.0
+          ],
+          "x": 512.0,
+          "y": 279.0,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 35,
+          "source": "eyes-blink-p52/assets/face-static.png",
+          "name": "眉毛与底妆"
+        },
+        {
+          "id": "face1-left",
+          "name": "左眼",
+          "frames": {
+            "open": {
+              "id": "face1-left-open",
+              "file": "assets/face1-left-open.png",
+              "anchor": [
+                23.5,
+                20.0
+              ],
+              "x": 465.5,
+              "y": 283.0,
+              "scale": 1,
+              "rotation": 0,
+              "width": 100,
+              "height": 100,
+              "z": 35,
+              "source": "wardrobe-p73/assets/face1-left-open-full.png"
+            },
+            "half": {
+              "id": "face1-left-half",
+              "file": "assets/face1-left-half.png",
+              "anchor": [
+                23.5,
+                13.0
+              ],
+              "x": 465.5,
+              "y": 290.0,
+              "scale": 1,
+              "rotation": 0,
+              "width": 100,
+              "height": 100,
+              "z": 35,
+              "source": "wardrobe-p73/assets/face1-left-half-full.png"
+            },
+            "closed": {
+              "id": "face1-left-closed",
+              "file": "assets/face1-left-closed.png",
+              "anchor": [
+                23.5,
+                5.5
+              ],
+              "x": 465.5,
+              "y": 297.5,
+              "scale": 1,
+              "rotation": 0,
+              "width": 100,
+              "height": 100,
+              "z": 35,
+              "source": "wardrobe-p73/assets/face1-left-closed-full.png"
+            }
+          },
+          "x": 0,
+          "y": 0,
+          "scale": 1,
+          "width": 100,
+          "height": 100,
+          "rotation": 0,
+          "z": 35
+        },
+        {
+          "id": "face1-right",
+          "name": "右眼",
+          "frames": {
+            "open": {
+              "id": "face1-right-open",
+              "file": "assets/face1-right-open.png",
+              "anchor": [
+                23.5,
+                19.5
+              ],
+              "x": 558.5,
+              "y": 283.5,
+              "scale": 1,
+              "rotation": 0,
+              "width": 100,
+              "height": 100,
+              "z": 35,
+              "source": "wardrobe-p73/assets/face1-right-open-full.png"
+            },
+            "half": {
+              "id": "face1-right-half",
+              "file": "assets/face1-right-half.png",
+              "anchor": [
+                23.5,
+                12.5
+              ],
+              "x": 558.5,
+              "y": 290.5,
+              "scale": 1,
+              "rotation": 0,
+              "width": 100,
+              "height": 100,
+              "z": 35,
+              "source": "wardrobe-p73/assets/face1-right-half-full.png"
+            },
+            "closed": {
+              "id": "face1-right-closed",
+              "file": "assets/face1-right-closed.png",
+              "anchor": [
+                23.5,
+                5.5
+              ],
+              "x": 558.5,
+              "y": 297.5,
+              "scale": 1,
+              "rotation": 0,
+              "width": 100,
+              "height": 100,
+              "z": 35,
+              "source": "wardrobe-p73/assets/face1-right-closed-full.png"
+            }
+          },
+          "x": 0,
+          "y": 0,
+          "scale": 1,
+          "width": 100,
+          "height": 100,
+          "rotation": 0,
+          "z": 35
+        },
+        {
+          "id": "face1-nose",
+          "name": "鼻子",
+          "file": "assets/face1-nose.png",
+          "x": 513.0,
+          "y": 313.0,
+          "anchor": [
+            2.0,
+            2.0
+          ],
+          "scale": 1,
+          "width": 100,
+          "height": 100,
+          "rotation": 0,
+          "z": 35
+        },
+        {
+          "id": "face1-mouth",
+          "name": "嘴巴",
+          "file": "assets/face1-mouth.png",
+          "x": 512.5,
+          "y": 330.5,
+          "anchor": [
+            2.5,
+            2.5
+          ],
+          "scale": 1,
+          "width": 100,
+          "height": 100,
+          "rotation": 0,
+          "z": 35
+        }
+      ]
+    },
+    "face2": {
+      "id": "face2",
+      "name": "下垂温柔眼",
+      "pieces": [
+        {
+          "id": "face2-static",
+          "file": "assets/face2-static.png",
+          "anchor": [
+            58.0,
+            2.5
+          ],
+          "x": 512.0,
+          "y": 252.5,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 35,
+          "source": "eyes-fit-p58/assets/static.png",
+          "name": "眉毛与底妆"
+        },
+        {
+          "id": "face2-blush",
+          "file": "assets/face2-blush.png",
+          "anchor": [
+            65.0,
+            6.5
+          ],
+          "x": 512.0,
+          "y": 310.5,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 35,
+          "source": "eyes-fit-p58/assets/gentle-blush.png"
+        },
+        {
+          "id": "face2-left",
+          "name": "左眼",
+          "frames": {
+            "open": {
+              "id": "face2-left-open",
+              "file": "assets/face2-left-open.png",
+              "anchor": [
+                23.5,
+                9.5
+              ],
+              "x": 465.0,
+              "y": 283.5,
+              "scale": 1.45,
+              "rotation": 0,
+              "width": 73,
+              "height": 78,
+              "z": 35,
+              "source": "eyes-fit-p58/assets/left-open.png"
+            },
+            "half": {
+              "id": "face2-left-half",
+              "file": "assets/face2-left-half.png",
+              "anchor": [
+                23.5,
+                4.5
+              ],
+              "x": 465.0,
+              "y": 283.5,
+              "scale": 1.45,
+              "rotation": 0,
+              "width": 73,
+              "height": 78,
+              "z": 35,
+              "source": "eyes-fit-p58/assets/left-half.png"
+            },
+            "closed": {
+              "id": "face2-left-closed",
+              "file": "assets/face2-left-closed.png",
+              "anchor": [
+                23.5,
+                -1.0
+              ],
+              "x": 465.0,
+              "y": 283.5,
+              "scale": 1.45,
+              "rotation": 0,
+              "width": 73,
+              "height": 78,
+              "z": 35,
+              "source": "P78 original closed frame; tiny corner tail cleanup only"
+            }
+          },
+          "x": 0,
+          "y": 0,
+          "scale": 1,
+          "width": 100,
+          "height": 100,
+          "rotation": 0,
+          "z": 35
+        },
+        {
+          "id": "face2-right",
+          "name": "右眼",
+          "frames": {
+            "open": {
+              "id": "face2-right-open",
+              "file": "assets/face2-right-open.png",
+              "anchor": [
+                23.5,
+                10.5
+              ],
+              "x": 559.0,
+              "y": 283.5,
+              "scale": 1.45,
+              "rotation": 0,
+              "width": 73,
+              "height": 78,
+              "z": 35,
+              "source": "eyes-fit-p58/assets/right-open.png"
+            },
+            "half": {
+              "id": "face2-right-half",
+              "file": "assets/face2-right-half.png",
+              "anchor": [
+                23.5,
+                5.5
+              ],
+              "x": 559.0,
+              "y": 283.5,
+              "scale": 1.45,
+              "rotation": 0,
+              "width": 73,
+              "height": 78,
+              "z": 35,
+              "source": "eyes-fit-p58/assets/right-half.png"
+            },
+            "closed": {
+              "id": "face2-right-closed",
+              "file": "assets/face2-right-closed.png",
+              "anchor": [
+                23.5,
+                -1.0
+              ],
+              "x": 559.0,
+              "y": 283.5,
+              "scale": 1.45,
+              "rotation": 0,
+              "width": 73,
+              "height": 78,
+              "z": 35,
+              "source": "P78 original closed frame; tiny corner tail cleanup only"
+            }
+          },
+          "x": 0,
+          "y": 0,
+          "scale": 1,
+          "width": 100,
+          "height": 100,
+          "rotation": 0,
+          "z": 35
+        },
+        {
+          "id": "face2-nose",
+          "name": "鼻子",
+          "file": "assets/face2-nose.png",
+          "x": 513.0,
+          "y": 313.0,
+          "anchor": [
+            2.0,
+            2.0
+          ],
+          "scale": 1,
+          "width": 100,
+          "height": 100,
+          "rotation": 0,
+          "z": 35
+        },
+        {
+          "id": "face2-mouth",
+          "name": "嘴巴",
+          "file": "assets/face2-mouth.png",
+          "x": 512.5,
+          "y": 330.5,
+          "anchor": [
+            5.5,
+            1.5
+          ],
+          "scale": 1,
+          "width": 100,
+          "height": 100,
+          "rotation": 0,
+          "z": 35
+        }
+      ]
+    },
+    "face3": {
+      "id": "face3",
+      "name": "玫粉爱心眼",
+      "pieces": [
+        {
+          "id": "face3-static",
+          "file": "assets/face3-static.png",
+          "anchor": [
+            58.0,
+            2.5
+          ],
+          "x": 512.0,
+          "y": 252.5,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 35,
+          "source": "heart-eyes-fit-p59/assets/static.png",
+          "name": "眉毛与底妆"
+        },
+        {
+          "id": "face3-blush",
+          "file": "assets/face3-blush.png",
+          "anchor": [
+            65.0,
+            6.5
+          ],
+          "x": 512.0,
+          "y": 310.5,
+          "scale": 1,
+          "rotation": 0,
+          "width": 100,
+          "height": 100,
+          "z": 35,
+          "source": "heart-eyes-fit-p59/assets/gentle-blush.png"
+        },
+        {
+          "id": "face3-left",
+          "name": "左眼",
+          "frames": {
+            "open": {
+              "id": "face3-left-open",
+              "file": "assets/face3-left-open.png",
+              "anchor": [
+                23.5,
+                4.5
+              ],
+              "x": 461.5,
+              "y": 278.0,
+              "scale": 1.45,
+              "rotation": 0,
+              "width": 87,
+              "height": 78,
+              "z": 35,
+              "source": "heart-eyes-fit-p59/assets/left-open.png"
+            },
+            "half": {
+              "id": "face3-left-half",
+              "file": "assets/face3-left-half.png",
+              "anchor": [
+                23.5,
+                -0.5
+              ],
+              "x": 461.5,
+              "y": 278.0,
+              "scale": 1.45,
+              "rotation": 0,
+              "width": 87,
+              "height": 78,
+              "z": 35,
+              "source": "heart-eyes-fit-p59/assets/left-half.png"
+            },
+            "closed": {
+              "id": "face3-left-closed",
+              "file": "assets/face3-left-closed.png",
+              "anchor": [
+                23.5,
+                -7.5
+              ],
+              "x": 461.5,
+              "y": 278.0,
+              "scale": 1.45,
+              "rotation": 0,
+              "width": 87,
+              "height": 78,
+              "z": 35,
+              "source": "heart-eyes-fit-p59/assets/left-closed.png"
+            }
+          },
+          "x": 0,
+          "y": 0,
+          "scale": 1,
+          "width": 100,
+          "height": 100,
+          "rotation": 0,
+          "z": 35
+        },
+        {
+          "id": "face3-right",
+          "name": "右眼",
+          "frames": {
+            "open": {
+              "id": "face3-right-open",
+              "file": "assets/face3-right-open.png",
+              "anchor": [
+                23.5,
+                4.5
+              ],
+              "x": 562.5,
+              "y": 278.0,
+              "scale": 1.45,
+              "rotation": 0,
+              "width": 87,
+              "height": 78,
+              "z": 35,
+              "source": "heart-eyes-fit-p59/assets/right-open.png"
+            },
+            "half": {
+              "id": "face3-right-half",
+              "file": "assets/face3-right-half.png",
+              "anchor": [
+                23.5,
+                -0.5
+              ],
+              "x": 562.5,
+              "y": 278.0,
+              "scale": 1.45,
+              "rotation": 0,
+              "width": 87,
+              "height": 78,
+              "z": 35,
+              "source": "heart-eyes-fit-p59/assets/right-half.png"
+            },
+            "closed": {
+              "id": "face3-right-closed",
+              "file": "assets/face3-right-closed.png",
+              "anchor": [
+                23.5,
+                -7.5
+              ],
+              "x": 562.5,
+              "y": 278.0,
+              "scale": 1.45,
+              "rotation": 0,
+              "width": 87,
+              "height": 78,
+              "z": 35,
+              "source": "heart-eyes-fit-p59/assets/right-closed.png"
+            }
+          },
+          "x": 0,
+          "y": 0,
+          "scale": 1,
+          "width": 100,
+          "height": 100,
+          "rotation": 0,
+          "z": 35
+        },
+        {
+          "id": "face3-nose",
+          "name": "鼻子",
+          "file": "assets/face3-nose.png",
+          "x": 513.0,
+          "y": 313.0,
+          "anchor": [
+            2.0,
+            2.0
+          ],
+          "scale": 1,
+          "width": 100,
+          "height": 100,
+          "rotation": 0,
+          "z": 35
+        },
+        {
+          "id": "face3-mouth",
+          "name": "嘴巴",
+          "file": "assets/face3-mouth.png",
+          "x": 512.5,
+          "y": 330.5,
+          "anchor": [
+            5.5,
+            1.5
+          ],
+          "scale": 1,
+          "width": 100,
+          "height": 100,
+          "rotation": 0,
+          "z": 35
+        }
+      ]
+    },
+    "face-original": {
+      "id": "face-original",
+      "name": "原版棕色五官",
+      "pieces": [
+        {
+          "id": "face-original-static",
+          "file": "assets/face-original-static.png",
+          "x": 512.0,
+          "y": 281.0,
+          "anchor": [
+            65.0,
+            33.0
+          ],
+          "width": 100,
+          "height": 100,
+          "rotation": 0,
+          "scale": 1,
+          "z": 35,
+          "name": "眉毛与底妆"
+        },
+        {
+          "id": "face-original-left",
+          "name": "左眼",
+          "frames": {
+            "open": {
+              "id": "face-original-left-open",
+              "file": "assets/face-original-left-open.png",
+              "x": 465.5,
+              "y": 284.0,
+              "anchor": [
+                23.5,
+                20.0
+              ],
+              "width": 100,
+              "height": 100,
+              "rotation": 0,
+              "scale": 1,
+              "z": 35
+            },
+            "half": {
+              "id": "face-original-left-half",
+              "file": "assets/face-original-left-half.png",
+              "x": 466.0,
+              "y": 288.0,
+              "anchor": [
+                23.0,
+                10.0
+              ],
+              "width": 100,
+              "height": 100,
+              "rotation": 0,
+              "scale": 1,
+              "z": 35
+            },
+            "closed": {
+              "id": "face-original-left-closed",
+              "file": "assets/face-original-left-closed.png",
+              "x": 465.5,
+              "y": 292.5,
+              "anchor": [
+                23.5,
+                6.5
+              ],
+              "width": 100,
+              "height": 100,
+              "rotation": 0,
+              "scale": 1,
+              "z": 35,
+              "source": "P78 original closed frame; tiny corner tail cleanup only"
+            }
+          },
+          "x": 0,
+          "y": 0,
+          "scale": 1,
+          "width": 100,
+          "height": 100,
+          "rotation": 0,
+          "z": 35
+        },
+        {
+          "id": "face-original-right",
+          "name": "右眼",
+          "frames": {
+            "open": {
+              "id": "face-original-right-open",
+              "file": "assets/face-original-right-open.png",
+              "x": 558.5,
+              "y": 284.0,
+              "anchor": [
+                23.5,
+                20.0
+              ],
+              "width": 100,
+              "height": 100,
+              "rotation": 0,
+              "scale": 1,
+              "z": 35
+            },
+            "half": {
+              "id": "face-original-right-half",
+              "file": "assets/face-original-right-half.png",
+              "x": 558.0,
+              "y": 288.0,
+              "anchor": [
+                23.0,
+                10.0
+              ],
+              "width": 100,
+              "height": 100,
+              "rotation": 0,
+              "scale": 1,
+              "z": 35
+            },
+            "closed": {
+              "id": "face-original-right-closed",
+              "file": "assets/face-original-right-closed.png",
+              "x": 558.5,
+              "y": 292.5,
+              "anchor": [
+                23.5,
+                6.5
+              ],
+              "width": 100,
+              "height": 100,
+              "rotation": 0,
+              "scale": 1,
+              "z": 35,
+              "source": "P78 original closed frame; tiny corner tail cleanup only"
+            }
+          },
+          "x": 0,
+          "y": 0,
+          "scale": 1,
+          "width": 100,
+          "height": 100,
+          "rotation": 0,
+          "z": 35
+        },
+        {
+          "id": "face-original-nose",
+          "name": "鼻子",
+          "file": "assets/face-original-nose.png",
+          "x": 513.0,
+          "y": 313.0,
+          "anchor": [
+            2.0,
+            2.0
+          ],
+          "scale": 1,
+          "width": 100,
+          "height": 100,
+          "rotation": 0,
+          "z": 35
+        },
+        {
+          "id": "face-original-mouth",
+          "name": "嘴巴",
+          "file": "assets/face-original-mouth.png",
+          "x": 512.5,
+          "y": 331.0,
+          "anchor": [
+            8.5,
+            2.0
+          ],
+          "scale": 1,
+          "width": 100,
+          "height": 100,
+          "rotation": 0,
+          "z": 35
+        }
+      ]
+    }
+  },
+  "files": {
+    "assets/outfit0-dress.png": "394e05ed59ca2d56d3263ccf9b689316aa27137270b893a44094c323a33a61fd",
+    "assets/outfit0-left.png": "de1bca6e70a95090140e011dd4259a5c19301dfeb86905dcb2d1156e71034f55",
+    "assets/outfit0-right.png": "f69474f34b6efaf5c855cdce57fb4bdc96193550d5bde0723909280fbd49f3f7",
+    "assets/outfit0-clip.png": "2c63db88c21cc38a0c38a366fcef5b434de5b27be26cd9f7a9185da8bf53bdf7",
+    "assets/outfit0-base.png": "286cbf2076befbc9cbac0170e04056f114ea8d72caacf07e961844efc535201a",
+    "assets/outfit1-dress.png": "f286e4310e45bea0e4670ca5ca31a6a5b0332fb87e98aac3033930e5313fa34f",
+    "assets/outfit1-left.png": "52207f197eaec16726e10d8f362695403483dad4f3fea8a0f53959ce99834379",
+    "assets/outfit1-right.png": "744933530259493f2d5cd6f39a4daa5f171df3cdd4f57f84493775a38898cca2",
+    "assets/outfit1-headband.png": "bc68ba713df0e3e16ecab890bc03f0fa4f8021d9810787bf5477cbcc95261b50",
+    "assets/outfit1-base.png": "a66716c884fbf197223a4459c7a69e069b0c21874907f1881585abd5c85a4054",
+    "assets/outfit2-dress.png": "8193d335cb6886ae7a7d8c907caee139979671668275519995d2a962290f08e7",
+    "assets/outfit2-arms-front.png": "a1410d412ccd15f296d4e745f23cc80155330d0ef1bd93ede84e1722ef5e8d8f",
+    "assets/outfit2-left.png": "c1e1d9baa3bb6992c6b8fa57f2b921847e148936ebf4aba14036544c5d07617f",
+    "assets/outfit2-right.png": "24d1d43b24bb7225e0284902171162b3026adb48c875a97a44d62a2b295c5fba",
+    "assets/outfit2-headband.png": "f9f402843d8b0da94d9d7775c22962b188945a027319df987b67c063ec9536cd",
+    "assets/outfit2-base.png": "5ed8d6b5044961ccaf416fd2b0063b96ad4492fb64fdf14c99aeda68c1e1ebdf",
+    "assets/outfit3-dress.png": "d46dcc31b4d8e365a06afc44ef68d855b806b813d0c7512ff862c2d20b04c13a",
+    "assets/outfit3-left.png": "dad0c59bec888d734d600d65fe25608bbdca4fd829b9dd90118d93838b88cb2d",
+    "assets/outfit3-right.png": "61206f95e74428feb60ce4bb304e2cb12aae352c564456fbc7990a24169b95f0",
+    "assets/outfit3-bow.png": "513a848da29cb3d235fd1a2d784a13485f319d6b22d23c3af417ae379678ae17",
+    "assets/outfit3-base.png": "a66716c884fbf197223a4459c7a69e069b0c21874907f1881585abd5c85a4054",
+    "assets/outfit4-dress.png": "475147f385bbaee5d25b3e005c3eb85ad975d9f2a7507eb6d874b69b4045e8b3",
+    "assets/outfit4-left.png": "7cf7e8c810bf10d90fcb5927b8abb5f5c90fcd78255cb63d6be6c16676cb082c",
+    "assets/outfit4-right.png": "0cf08452b0639100ef124fc847d557339e3ac668d8c6852ac3369ef1a17cd3e6",
+    "assets/outfit4-bowLeft.png": "85278dc430a9a6e750609bb71862c024077469f4dea1f9625c7e5ba02bbdf227",
+    "assets/outfit4-bowRight.png": "6f38fa4414ff8b814d95acd49ac599818f42f65afd982b9ed792c05a64905854",
+    "assets/outfit4-base.png": "a66716c884fbf197223a4459c7a69e069b0c21874907f1881585abd5c85a4054",
+    "assets/outfit5-dress.png": "70fc460ef9f88df88f9bb30dd936458379465a0ecb6c11a2fc37189484d90b48",
+    "assets/outfit5-left.png": "d5668caaac402c2644226caf5a9fc4c9047fcf8f7ac576152ec52153b0dd9886",
+    "assets/outfit5-right.png": "7c38ea0fe1d407e4bcdf4615e63092991358b504be392a483da87cec63631cad",
+    "assets/outfit5-clipStar.png": "3190e1efd83a643e46ad4a3473c3c4dedb5e2022c90555b65f445aa03309f7d3",
+    "assets/outfit5-clipBook.png": "8dc1dfd31225b329614dc0214f596e3a0d514aee6c4848e6e6e369e7a1530397",
+    "assets/outfit5-base.png": "a66716c884fbf197223a4459c7a69e069b0c21874907f1881585abd5c85a4054",
+    "assets/outfit6-dress.png": "3102356427aabc4ceaaa3e4502a89aa9fb9d6b48521e1cd9beb52fb0f6776623",
+    "assets/outfit6-left.png": "6c81228ab5ba844d618f88170d7bec5ee0a9417c9eab02cb2fce1f2fa20a959d",
+    "assets/outfit6-right.png": "82dd6a0a250773392db0ceee6be11dfbb9bedb7aa03fca8246977039bed2e7d8",
+    "assets/outfit6-choker.png": "31644d5f8f7474f009d8fbe5a837d7d97cf48f2659d6884d5df19045300636b5",
+    "assets/outfit6-legband.png": "a304f44a61dc9783e62db6250075b9747fc182966a1830dfe884999563be6eaf",
+    "assets/outfit6-wristLeft.png": "d8eedb0623585b9d0d5ed36ad5a26148ee56ceeca7906494b82569c07eb3a812",
+    "assets/outfit6-wristRight.png": "5826352a8452f1d75515b8e630ecb71e35a9b099206b63b9044efb107e872fad",
+    "assets/outfit6-base.png": "a66716c884fbf197223a4459c7a69e069b0c21874907f1881585abd5c85a4054",
+    "assets/outfit7-dress.png": "20018132b7dc5e72c1b41a344b3c3b4dec375e27c037431ade2738932da3c179",
+    "assets/outfit7-left.png": "b8ba88fb07b5bdcd2555b2d32759e2fbf22439de3b60c0d2076623febab95738",
+    "assets/outfit7-right.png": "05ad5ee283897a3f20a7aa26df2ee65acadf7fe68598eb41f8c0025451a5e1ff",
+    "assets/outfit7-headband.png": "32934bceab5f05b1338ed0aeaf63970cea131324b79a44f4ead464c7184d0eac",
+    "assets/outfit7-base.png": "a66716c884fbf197223a4459c7a69e069b0c21874907f1881585abd5c85a4054",
+    "assets/outfit8-dress.png": "55a7eb2c87c9dff4b5b87faa3f0a40769b65b1ae61614ce58942d3acc1356f4c",
+    "assets/outfit8-left.png": "b43f917f3a125e05876e1c735692791c377510823089f11243f3e20e1cd2819a",
+    "assets/outfit8-right.png": "98d22e4d0432402ab7e6ec233cc1074ea51b0a65456b8b4a68229ab3371f79d8",
+    "assets/outfit8-headband.png": "242c0f319c2924908cfdac53eaadea9dd263ea4a22d9142fa6dee8206a7ad1f4",
+    "assets/outfit8-base.png": "a66716c884fbf197223a4459c7a69e069b0c21874907f1881585abd5c85a4054",
+    "assets/outfit9-dress.png": "e1bda2e15982971c39d7365985a3f7635072538943bf7a227ee761fd251565c7",
+    "assets/outfit9-left.png": "6f66db05ff8453a3e8b10ca60fcf0f11ebd554ca7b65b1e785eabf66e0ee960c",
+    "assets/outfit9-right.png": "f56642dea39a15c57b188c6855b5854d997ef255da22a6edb9415e7a57f568ba",
+    "assets/outfit9-base.png": "a66716c884fbf197223a4459c7a69e069b0c21874907f1881585abd5c85a4054",
+    "assets/outfit10-dress.png": "1b9f83cb9296f5fa069826f9da821ef2c9d6451120126bc8cb5130181d4f2d11",
+    "assets/outfit10-left.png": "694a865a990bc4d748dcc7b7645e42ef2e216a0719ae2f28609a0d313d2e4c9c",
+    "assets/outfit10-right.png": "38617cf242d8cae3b17ed15bc2712b7fd26162f835e453bfcc3824eb7c546c25",
+    "assets/outfit10-headband.png": "6f46de220dfe1e9948cfae420a0f96af6ac3cb25fa9f0890934e864f0a729b13",
+    "assets/outfit10-base.png": "a66716c884fbf197223a4459c7a69e069b0c21874907f1881585abd5c85a4054",
+    "assets/outfit11-dress.png": "278dee9eb83bf5bf0a2fd86e9d2d1edeb35761cc6e8a932521c9298bbfb3eb48",
+    "assets/outfit11-left.png": "1b8a2aa31155870256de395472bb1f070a3598645053e025923e438d97c8ba8a",
+    "assets/outfit11-right.png": "ea763d8495888c739cd94a93a9ec2effd4a3ca49ea29e250c93a1a2a93954f72",
+    "assets/outfit11-bowLeft.png": "895e137c859914ec60650ce44657b53a4bba23d2ed0589d832bebb54d4988545",
+    "assets/outfit11-bowRight.png": "3a27031ff1beb6c630c6d16fe05157956bc2212e5724736d88a71834285533c7",
+    "assets/outfit11-choker.png": "7b244fabede677297624673b2387ea9ed07232d82306baaaf175cbdbfbf535af",
+    "assets/outfit11-base.png": "a66716c884fbf197223a4459c7a69e069b0c21874907f1881585abd5c85a4054",
+    "assets/outfit11-left-cover.png": "796df9c2b143e37a4f91c51ea6c5fd9b85bb2c5ef913e757a5f3b37c2460fa0e",
+    "assets/outfit11-right-cover.png": "77b9e0bc637c06cd48990583f472b6761977c9ba156ebd4ef6d52d8c60f174ed",
+    "assets/retained-pink-headband.png": "b6b7466cac5072a7a6a31d71c3b3d8589d9f448132ee37a8c8eb26062e944da6",
+    "assets/hair0-front.png": "1eb44f05867abb8011925a9744321b4c24d5158218cf7a79685f07face33c989",
+    "assets/hair1-rear.png": "a4f3515d244900c33d019c7565baeea8e8b5d724f96f84b10e983e115976ea67",
+    "assets/hair1-front.png": "b5cef13a0106ced8cc352867fed107206b03120f7d36020ca50cc08d2c22a7c7",
+    "assets/hair2-rear.png": "0b6ab36f7625b0b7afdf03ce7b7d4ea85c93a61c8e01656d158c0b70f0cd1e56",
+    "assets/hair2-front.png": "85694412bb28670ed681263450c703457a9ae9100bc80af576982761ab692aaf",
+    "assets/hair3-rear.png": "c2153f77e11087fcb078ae38527fa83bef29791e3700e30cc87fec4405a66d0f",
+    "assets/hair3-front.png": "7a4bbc42ba627f84425536e443a7480dbefa29f8c304449c9755b974145e6b6d",
+    "assets/hair4-rear.png": "c2153f77e11087fcb078ae38527fa83bef29791e3700e30cc87fec4405a66d0f",
+    "assets/hair4-front.png": "d7bb0fe770153d367e6937490fd82871f72f77245c623c6e4c4bfa26334a97bf",
+    "assets/hair5-rear.png": "c2153f77e11087fcb078ae38527fa83bef29791e3700e30cc87fec4405a66d0f",
+    "assets/hair5-front.png": "2aa9cc56f0e60b15aec066d8139fc0e3e3720eb593a60e3eec62cce17ce9ddb2",
+    "assets/hair6-rear.png": "c2153f77e11087fcb078ae38527fa83bef29791e3700e30cc87fec4405a66d0f",
+    "assets/hair6-front.png": "d2b7a8d6bd952dd43b64e10010bd0421e79d2b4995d79033f6cecb681ecad079",
+    "assets/hair7-rear.png": "a564e32cf0a499b65338ab5e4d2fac39079ee1ef8e519ed331a6579f006d409b",
+    "assets/hair7-front.png": "2eff436c5424669cbcb0e5852a5c87429a3c416771c5e59cf16513a22d4db767",
+    "assets/face0-static.png": "bc9670fffc9afd2acac9b99d3ee0683ed41224a8937b16953df553a46125f4d2",
+    "assets/face0-left-open.png": "d6ad893b7ad97ed91180196888a82b62b97f9ae3dd4678b202ec4bead9754aae",
+    "assets/face0-left-half.png": "5e661413d91a671bf546de37aa8a007e50f09ef49cdc9703d9472607defad3a0",
+    "assets/face0-left-closed.png": "11932ce0746c6e2a8618a2c07986e95de979d1c6a5dac47b6a08c5f4c20fb1fc",
+    "assets/face0-right-open.png": "f527777e8770ead429f49a70fa168df13a4883d79fc4807933dcdfde32c8e27b",
+    "assets/face0-right-half.png": "011e430e1d492c16d23af31620d98e8e2bd5c7779268f7b4365d7f2c6a180595",
+    "assets/face0-right-closed.png": "27a20edc54e4f046ac78352c1fcf68d6aa33a9f16283500a2b3d8cbd498286be",
+    "assets/face1-static.png": "36f5909a6238c9afdfc371978be3baa4247ebe0925d686622bd9de8c51462383",
+    "assets/face1-left-open.png": "4cc52e01cb0e7b030e6e8dbdd6100cc75f85b6eab1cbeaa6a8028b3dae33bc8d",
+    "assets/face1-left-half.png": "920f3c1b20c4724b1d431ac106023b24ce954b0c2c1f8fa3f62340620382ae2e",
+    "assets/face1-left-closed.png": "e3966457e8d4e28377db8e2f684488d864f03cb3ee141156d4f50a51ff3c919f",
+    "assets/face1-right-open.png": "da83973e33e4693e6b9284fe9b68f02cc6fbc44b489d2d8b35520061fea7a4a7",
+    "assets/face1-right-half.png": "dbb6ddc86e3a70c5a2fe53dae33ec4a3a0d851b0c5ee39fdd89ec66dc3204074",
+    "assets/face1-right-closed.png": "846967c41efdd867653a286f5982b5465363757c66d6cdfa830466b720059bd4",
+    "assets/face2-static.png": "4ca325f531d6c235946da10e829e75d3f41e172fdd03712837969b4ac85c0afd",
+    "assets/face2-blush.png": "b46b1d8c494e6325151e4f9cca22f7ee7175fc7dac7674f74cd83efb5082eb10",
+    "assets/face2-left-open.png": "0d7716890eae8dfab7b39cacd81f190c8fe94d86719d115d7212c18ee4d79c02",
+    "assets/face2-left-half.png": "bd84a6af015ca3625b85d9e0ff3d319c0678e1b7f1b0c1e54074df74e80c1923",
+    "assets/face2-left-closed.png": "958f5c763ba9fea7db11e2c49a1421a71fdc0649ce4bc155f05d6553a07fe677",
+    "assets/face2-right-open.png": "2b3c8ea84b2ec68faf5d097a90f40cbf95ee5c6115093e99d7ce09b3b02e005f",
+    "assets/face2-right-half.png": "2c479a6f351bb2d3cdbaeee702513a112763a9e67f6bf946d84c6aff47613357",
+    "assets/face2-right-closed.png": "e550f3020104c3ae1add17ac7128117d55dabdd22bd97b007c922378f00528d9",
+    "assets/face3-static.png": "4ca325f531d6c235946da10e829e75d3f41e172fdd03712837969b4ac85c0afd",
+    "assets/face3-blush.png": "b46b1d8c494e6325151e4f9cca22f7ee7175fc7dac7674f74cd83efb5082eb10",
+    "assets/face3-left-open.png": "aeb5a97054a2f4fdabd7c409831803ba53ac40306f8320d65123235bda13053c",
+    "assets/face3-left-half.png": "d22bbb1aa2d46dd1fce9c1eeb5015435147af22bc73a910f84bc4a8c39450734",
+    "assets/face3-left-closed.png": "401c2d21aaad1d072285c20e07cd47c0dbe36d9ad10fc499a4b5950b91aff366",
+    "assets/face3-right-open.png": "e7877c4e0eca2f1cb81d762d6c09af8f1eb72791dc16c4d994af00609aed5b76",
+    "assets/face3-right-half.png": "2d31d0f2d9e070c5229b0c6d46ce6b55a6f1e27251a2a100ee72009e193729e8",
+    "assets/face3-right-closed.png": "283e7e4bc459fb2b125c93dfb8a22485a38c698bf6e192f1315a86358aea10fb",
+    "assets/face-original-left-open.png": "b2b445baeab7f7eab1dbe7f658c5f8dd56781550810de055252098b2c63f6b6c",
+    "assets/face-original-left-half.png": "06c21b11925dd31748c902b778a364fb94170f686d08ad2faa130b69523d6e6f",
+    "assets/face-original-left-closed.png": "62388859fab21820f18187c520b122162a6f684a9f510a5332ee326ee81edbe4",
+    "assets/face-original-right-open.png": "4bdcd7fe7364f9cc0f9edc125296ab576127f51dc029060df9b7bc1c040513b5",
+    "assets/face-original-right-half.png": "5f5436e77546e8e14e9c0bf16a8a4aca3dc1b16d4ee69fe299443f276ff5c5d5",
+    "assets/face-original-right-closed.png": "90a5ef22193d5d55b5c3591b48a1035fe97d0bbd19e46ca98c8ab4d21ea07f78",
+    "assets/face-original-static.png": "bd6d572635690c71c6e69a4f43dac7ce8c0ce0ed7eba7365524e9a699fcf132c",
+    "assets/face-original-nose.png": "b0a30132c3db9e3043327d86ab31c77bc2d6ea0c06b13d33691fe2edf50f13d4",
+    "assets/face-original-mouth.png": "d6447dfd718cb278caa3c4b4c27a169b12abd81879e7214910208bcfd7bab1c9",
+    "assets/face0-nose.png": "d7a3be67c6d404350744f6cb0419cd2b45fb524a1b523285f74c7f1b85d77f7d",
+    "assets/face0-mouth.png": "293777188ffc612c34a454f634be8736323800b1ad6ee658b5f0acb51b50fca2",
+    "assets/face1-nose.png": "816184479ca2e5fefe6cdb4ea62c54b56e8cf9dc581084f547c56985676a45dd",
+    "assets/face1-mouth.png": "16905200774e5065e3810f4f593433db6dd4fa95629379875624767b56bd1e4f",
+    "assets/face2-nose.png": "7cff275516edfbd38f0331711ef64bb0b6226c1b422c0e0843dad2d852ca019e",
+    "assets/face2-mouth.png": "a588b18afc583a6fd90958415fb8ab5bacb446229e33cca99c8be0f72f82b33d",
+    "assets/face3-nose.png": "7cff275516edfbd38f0331711ef64bb0b6226c1b422c0e0843dad2d852ca019e",
+    "assets/face3-mouth.png": "a588b18afc583a6fd90958415fb8ab5bacb446229e33cca99c8be0f72f82b33d"
+  }
+}
