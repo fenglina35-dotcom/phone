@@ -271,9 +271,9 @@ test('native recovery UI stays outside WebKit and carries the private 333 identi
   assert.match(rootView, /复制诊断给开发者/);
   assert.doesNotMatch(webView, /LocalPhoneWebView\.loadFailureHTML/);
 
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.334 \(334\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.336 \(336\)'/);
   assert.match(webView, /smallPhone\.webContentTerminationTimes\.v25\.build333/);
-  assert.match(bridge, /private static let build = "1\.0\.334 \(334\)"/);
+  assert.match(bridge, /private static let build = "1\.0\.336 \(336\)"/);
   assert.match(bridge, /case "diagnostics\.read"/);
   assert.match(bridge, /"bounded": true/);
   assert.match(bridge, /"maximumBytes": 256 \* 1_024/);

@@ -43,7 +43,7 @@ assert.match(app,/class="chat-emoji-mouth" d="M9\.2 16\.5h9\.6c0 3\.8-1\.9 5\.8-
 assert.match(glass,/\.chat-function-toggle>span\{position:relative;width:28px;height:28px;[^}]*border:1\.8px solid currentColor/,'plus control uses the smile control diameter and visual weight');
 assert.match(glass,/\.chat-function-toggle>span::before,\.chat-function-toggle>span::after\{[^}]*top:calc\(50% \+ \.75px\)/,'the chat composer plus cross is optically lowered inside its circle');
 assert.match(glass,/\.wx-chat-premium \.chatbg \.msgt\{display:none!important\}/,'per-message clock labels are hidden only by presentation');
-assert.match(app,/const ts=m\.time\?`<div class="msgt">\$\{hm\(m\.time\)\}<\/div>`:''/,'message timestamps remain in the data/render path for compatibility');
+assert.match(app,/const ts=\(typeof messageBeijingTimeHTML==='function'&&messageBeijingTimeHTML\(m\)\)\|\|\(m\.time\?`<div class="msgt">\$\{hm\(m\.time\)\}<\/div>`:''\)/,'default-off or unavailable Beijing clock preserves the legacy timestamp render path');
 assert.match(glass,/\.wx-chat-premium \.chatbg \.tstamp span\{[^}]*background:transparent!important;[^}]*box-shadow:none!important/,'center date and time text remains without a dark badge');
 
 assert.match(app,/class="off-nav-actions">\$\{replyTop\}/,'offline reply action lives in the upper-right navigation area');

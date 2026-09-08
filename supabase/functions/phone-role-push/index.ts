@@ -445,6 +445,8 @@ function roleMessageStyleInvalid(value: string, maxParts = 4) {
     || parts.some((part) => /^[\[【]/.test(part) && !/^[\[【](?:(?:图片|位置)[|｜][^\]】]+|来电[|｜](?:语音|视频)|送礼[|｜][^\]】]+|一起听[|｜][^\]】]+|放映邀请[|｜][^\]】]+|约会[|｜][^\]】]+|角色扮演[|｜][^\]】]+|你画我猜)[\]】]$/.test(part));
 }
 
+function privateBackgroundModelRefusal(value: unknown){const text=String(value||'').replace(/[\u2018\u2019]/g,"'").trim();if(!text)return false;const speaker=/(?:^|\n)\s*(?:(?:sorry|抱歉|对不起)[,，:： ]*)?(?:I (?:cannot|can't|am|was)|I'm|As an? (?:AI|artificial intelligence|language model)|My safety (?:guidelines|polic)|作为(?:一个|一名)?\s*(?:AI|人工智能|语言模型|大语言模型)|我是(?:一个|一名)?\s*(?:AI|人工智能|语言模型|大语言模型))/i.test(text);const identity=/\b(?:AI assistant|artificial intelligence|language model|programmed to be|safety guidelines|safety polic(?:y|ies))\b|(?:AI|人工智能|语言模型|大语言模型)(?:助手)?/i.test(text);const refusal=/\b(?:cannot|can't|unable to|prohibit|not allowed|cannot adopt|cannot fulfill)\b|(?:无法|不能|不允许|禁止|安全准则|安全政策)/i.test(text);return speaker&&identity&&refusal;}
+
 function roleModelOutputLeak(value: string) {
   const text = String(value || "").trim();
   if (!text) return false;
@@ -705,6 +707,13 @@ async function roleMessage(
           }
           const data = await response.json();
           const rawText = String(data?.choices?.[0]?.message?.content || "");
+          // Private opt-in only: a provider refusal is an error, not a persona message.
+          // Stop before raw output, retries, action execution, outbox persistence or APNs.
+          if (automation.privateBackgroundModelErrorGuard === true && (
+            privateBackgroundModelRefusal(rawText) ||
+            String(data?.choices?.[0]?.message?.refusal || "").trim() ||
+            /^(?:content[_ -]?filter|refusal)$/i.test(String(data?.choices?.[0]?.finish_reason || ""))
+          )) return { kind: "unavailable", body: "", reason: "private-model-refusal" };
           const text = unfilteredOutput ? rawText : rawText
             .replace(/<think>[\s\S]*?<\/think>/gi, "")
             .trim().replace(/^[“\"']|[”\"']$/g, "");
@@ -1796,7 +1805,8 @@ Deno.serve(async (request) => {
         ? 1
         : task.kind === "reply_handoff" ? 2
         : task.kind === "device_handoff" || task.kind === "app_followup" ? 3 : 5;
-      const shouldRetry = (decision.kind === "unavailable" || decision.kind === "message" && !backgroundDelivered) && Number(task.attempts || 0) < maxAttempts;
+      const terminalModelRefusal = decision.kind === "unavailable" && decision.reason === "private-model-refusal";
+      const shouldRetry = !terminalModelRefusal && (decision.kind === "unavailable" || decision.kind === "message" && !backgroundDelivered) && Number(task.attempts || 0) < maxAttempts;
       const taskUpdate = shouldRetry
         ? { status: "pending", due_at: new Date(Date.now() + 60_000).toISOString(), claimed_until: null, payload: { ...payload, delivery } }
         : decision.kind === "unavailable" || decision.kind === "message" && !backgroundDelivered

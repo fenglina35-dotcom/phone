@@ -65,8 +65,8 @@ test('door-lock overlay is private-only and bundled after the shared smart-home 
     fs.readFileSync(path.join(xcodeRoot,'PhoneWeb.bundle','private-smart-lock.css'),'utf8'),
     fs.readFileSync(path.join(nativeRoot,'Resources','Web','private-smart-lock.css'),'utf8')
   );
-  assert.match(privateIndex,/private-smart-lock\.css\?v=333/);
-  assert.match(privateIndex,/smart-home\.js[^\n]+\n<script src="private-smart-lock\.js\?v=333"/);
+  assert.match(privateIndex,/private-smart-lock\.css\?v=336/);
+  assert.match(privateIndex,/smart-home\.js[^\n]+\n<script src="private-smart-lock\.js\?v=336"/);
   assert.equal(read('小手机.html').includes('private-smart-lock'),false);
   assert.equal(read('app.js').includes('homekit.locks.snapshot'),false);
   assert.equal(read('smart-home.js').includes('homekit.lock.command'),false);
@@ -116,6 +116,10 @@ test('light and lock are independent pages and the existing light page remains u
   assert.match(page,/private-lock-state locked/);
   assert.match(page,/class="lock-button active"/);
   assert.match(page,/class="unlock-button /);
+  assert.match(page,/private-lock-action-icon/);
+  assert.match(page,/x="5" y="5" width="38" height="66"/);
+  assert.match(page,/x="35" y="51" width="24" height="20"/);
+  assert.match(page,/M41 51v-6a6 6 0 0 1 12 0v6/);
   assert.doesNotMatch(page,/入口/);
   assert.doesNotMatch(page,/卧室小灯/);
   assert.match(privateCss,/\.private-lock-state\.locked\{color:#ff5c64/);
@@ -146,8 +150,8 @@ test('delayed event copy distinguishes occurrence time from observation time',as
   const r=runtime(),api=r.context.__privateSmartLockTest;
   const known={eventId:'known-1',accessoryName:'Claude门',currentState:'unlocked',timing:'known',eventAt:'2026-09-08T04:10:00Z',observedAt:'2026-09-08T04:10:00Z'};
   const unknown={eventId:'unknown-1',accessoryName:'Claude门',currentState:'unlocked',timing:'unknown',observedAt:'2026-09-08T05:20:00Z'};
-  assert.match(api.eventKnownText(known),/原始 HomeKit 报告时间是/);
-  assert.match(api.eventKnownText(known),/回调时间不是独立门锁日志证明的物理操作瞬间/);
+  assert.match(api.eventKnownText(known),/原始状态时间是/);
+  assert.match(api.eventKnownText(known),/状态回读或回调时间，不是独立门锁日志证明的物理操作瞬间/);
   assert.match(api.eventKnownText(known),/默认视为用户本人开的门/);
   assert.match(api.eventKnownText(known),/不是 HomeKit 识别出的操作者身份/);
   assert.match(api.eventUnknownText(unknown),/实际解锁时间无法确认/);
@@ -158,11 +162,37 @@ test('delayed event copy distinguishes occurrence time from observation time',as
   assert.equal(r.calls.some(x=>x.action==='homekit.locks.events.ack'),true);
 });
 
-test('private release identity is iOS 333 while public web stays v1210',()=>{
+test('only unlock events notify the role while lock state stays readable',async()=>{
+  const r=runtime(),api=r.context.__privateSmartLockTest;
+  api.applySnapshot({ok:true,locks:[{accessoryId:'a',serviceId:'s',accessoryName:'Claude门',reachable:true,complete:true,currentState:'locked'}]});
+  const locked={eventId:'locked-1',accessoryName:'Claude门',currentState:'locked',timing:'known',eventAt:'2026-09-08T10:10:00Z',observedAt:'2026-09-08T10:10:00Z'};
+  assert.equal(await api.processEvent(locked),false);
+  assert.equal(r.queued(),'');
+  assert.equal(r.calls.some(x=>x.action==='homekit.locks.events.ack'&&x.payload.eventIds[0]==='locked-1'),true);
+  assert.match(r.context.smartHomeRolePrompt({id:'role-1'}),/当前由 HomeKit 刚回读的真实状态是“已锁”/);
+});
+
+test('a verified manual unlock notifies the role without turning a manual lock into a notification',async()=>{
+  const r=runtime(),api=r.context.__privateSmartLockTest;
+  api.applySnapshot({ok:true,locks:[{accessoryId:'a',serviceId:'s',accessoryName:'Claude门',reachable:true,complete:true,currentState:'locked'}]});
+  r.context.SmallPhoneNative.request=async(action,payload)=>{
+    if(action==='homekit.lock.command')return{ok:true,verified:true,verifiedAt:'2026-09-08T10:20:00Z',state:{accessoryId:'a',serviceId:'s',accessoryName:'Claude门',reachable:true,complete:true,currentState:payload.action==='unlock'?'unlocked':'locked'}};
+    return{ok:true};
+  };
+  await r.context.privateSmartLockControl('unlock');
+  assert.match(r.queued(),/由小手机真实回读为“已解锁”/);
+  const lockedRuntime=runtime(),lockedApi=lockedRuntime.context.__privateSmartLockTest;
+  lockedApi.applySnapshot({ok:true,locks:[{accessoryId:'a',serviceId:'s',accessoryName:'Claude门',reachable:true,complete:true,currentState:'unlocked'}]});
+  lockedRuntime.context.SmallPhoneNative.request=async(action,payload)=>action==='homekit.lock.command'?{ok:true,verified:true,verifiedAt:'2026-09-08T10:21:00Z',state:{accessoryId:'a',serviceId:'s',accessoryName:'Claude门',reachable:true,complete:true,currentState:payload.action==='lock'?'locked':'unlocked'}}:{ok:true};
+  await lockedRuntime.context.privateSmartLockControl('lock');
+  assert.equal(lockedRuntime.queued(),'');
+});
+
+test('private release identity is iOS 336 while public web stays v1211',()=>{
   const webView=fs.readFileSync(path.join(xcodeRoot,'LocalPhoneWebView.swift'),'utf8');
   const project=fs.readFileSync(path.join(nativeRoot,'XcodeProject','PhoneCompanionTest.xcodeproj','project.pbxproj'),'utf8');
-  assert.match(webView,/1\.0\.334 \(334\)/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 334/);
-  assert.match(project,/MARKETING_VERSION = 1\.0\.334/);
-  assert.match(read('app.js'),/__NORTH_SHELL_BUILD__!==\'1210\'/);
+  assert.match(webView,/1\.0\.336 \(336\)/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 336/);
+  assert.match(project,/MARKETING_VERSION = 1\.0\.336/);
+  assert.match(read('app.js'),/__NORTH_SHELL_BUILD__!==\'1211\'/);
 });

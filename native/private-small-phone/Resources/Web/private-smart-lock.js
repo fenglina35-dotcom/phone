@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 if(window.__SMALL_PHONE_PRIVATE__!==true||window.__NORTH_PRIVATE_SMART_LOCK__)return;
-window.__NORTH_PRIVATE_SMART_LOCK__='333-a100-lock-v2';
+window.__NORTH_PRIVATE_SMART_LOCK__='336-a100-lock-v3';
 
 var memory={locks:[],state:null,busy:false,error:'',lastEvent:null};
 var originalRender=window.renderWxSmartHome;
@@ -42,6 +42,8 @@ function shortTime(value){var d=new Date(value);if(!Number.isFinite(d.getTime())
 function selectedReady(){var s=memory.state;return !!(s&&s.reachable===true&&s.complete===true&&(s.currentState==='locked'||s.currentState==='unlocked'));}
 function lockDisplayName(){var c=config(),s=memory.state;return clean(c.displayName||s&&s.accessoryName||'家庭门锁',20);}
 function lockPageNav(title){return '<div class="wx-directory-head wx-smart-home-nav"><div class="wx-real-nav titled"><button onclick="back()">‹</button><b>'+html(title)+'</b><span></span></div></div>';}
+function actionLockIcon(open){return '<svg class="private-lock-action-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5.5" y="10.5" width="13" height="10" rx="2.5"></rect><path d="'+(open?'M8 10.5V7a4 4 0 0 1 7.5-2':'M8 10.5V7a4 4 0 0 1 8 0v3.5')+'"></path></svg>';}
+function doorStateIcon(state){var open=state==='unlocked';return '<div class="private-lock-door"><svg viewBox="0 0 64 80" aria-hidden="true"><rect class="door-outline" x="5" y="5" width="38" height="66" rx="2"></rect><circle class="door-knob" cx="35" cy="38" r="2.5"></circle><rect class="lock-body" x="35" y="51" width="24" height="20" rx="4"></rect><path class="lock-shackle" d="'+(open?'M41 51v-6a6 6 0 0 1 11-3':'M41 51v-6a6 6 0 0 1 12 0v6')+'"></path></svg></div>';}
 
 async function refresh(quiet){
   if(memory.busy||!nativeReady())return null;
@@ -72,8 +74,8 @@ function renderLock(){
   var battery=Number(s&&s.battery),batteryText=Number.isFinite(battery)?Math.max(0,Math.min(100,Math.round(battery)))+'%':'未提供';
   var event=memory.lastEvent,eventText='';
   if(event){eventText=event.timing==='known'?'HomeKit 状态回调：'+timeText(event.eventAt):'恢复时于 '+timeText(event.observedAt)+' 发现状态变化；实际发生时间无法确认';}
-  var controls=ready?'<div class="private-lock-actions"><button '+(disabled?'disabled':'')+' onclick="privateSmartLockControl(\'lock\')" class="lock-button '+(state==='locked'?'active':'')+'"><i></i>关锁</button><button '+(disabled?'disabled':'')+' onclick="privateSmartLockControl(\'unlock\')" class="unlock-button '+(state==='unlocked'?'active':'')+'"><i></i>Face ID 解锁</button></div>':'<button class="private-lock-connect" '+(memory.busy?'disabled':'')+' onclick="privateSmartLockRefresh()">读取苹果家庭门锁</button>';
-  return '<section class="wx-smart-home-panel private-lock-panel"><header><button class="private-lock-name" onclick="privateSmartLockRename()"><small>HomeKit 安全门锁</small><h2>'+html(name)+'</h2><em>轻触名称修改</em></button><span class="'+(ready?'online':'')+'">'+(ready?'在线':'未就绪')+'</span></header><div class="private-lock-state '+stateTone(state)+'"><div class="private-lock-door"><i></i><span></span></div><div class="private-lock-state-copy"><small>当前状态</small><b>'+html(stateLabel(state))+'</b><em>电量 '+html(batteryText)+'</em></div></div>'+controls+'<div class="private-lock-meta"><span>型号 '+html(s&&s.model||'未提供')+'</span><span>固件 '+html(s&&s.firmware||'未提供')+'</span></div>'+(eventText?'<p class="private-lock-event">'+html(eventText)+'</p>':'')+(memory.error?'<div class="wx-smart-home-error">'+html(memory.error)+'</div>':'')+'<p class="private-lock-safety">“开门”只解锁锁舌，不会把门物理推开。角色关锁后必须回读为“已锁”才算成功；解锁每次都需要你本人通过 Face ID。</p>'+(memory.locks.length>1?'<button class="private-lock-choose" onclick="privateSmartLockChoose()">更换门锁</button>':'')+'</section>';
+  var controls=ready?'<div class="private-lock-actions"><button '+(disabled?'disabled':'')+' onclick="privateSmartLockControl(\'lock\')" class="lock-button '+(state==='locked'?'active':'')+'">'+actionLockIcon(false)+'关锁</button><button '+(disabled?'disabled':'')+' onclick="privateSmartLockControl(\'unlock\')" class="unlock-button '+(state==='unlocked'?'active':'')+'">'+actionLockIcon(true)+'Face ID 解锁</button></div>':'<button class="private-lock-connect" '+(memory.busy?'disabled':'')+' onclick="privateSmartLockRefresh()">读取苹果家庭门锁</button>';
+  return '<section class="wx-smart-home-panel private-lock-panel"><header><button class="private-lock-name" onclick="privateSmartLockRename()"><small>HomeKit 安全门锁</small><h2>'+html(name)+'</h2><em>轻触名称修改</em></button><span class="'+(ready?'online':'')+'">'+(ready?'在线':'未就绪')+'</span></header><div class="private-lock-state '+stateTone(state)+'">'+doorStateIcon(state)+'<div class="private-lock-state-copy"><small>当前状态</small><b>'+html(stateLabel(state))+'</b><em>电量 '+html(batteryText)+'</em></div></div>'+controls+'<div class="private-lock-meta"><span>型号 '+html(s&&s.model||'未提供')+'</span><span>固件 '+html(s&&s.firmware||'未提供')+'</span></div>'+(eventText?'<p class="private-lock-event">'+html(eventText)+'</p>':'')+(memory.error?'<div class="wx-smart-home-error">'+html(memory.error)+'</div>':'')+'<p class="private-lock-safety">“开门”只解锁锁舌，不会把门物理推开。角色关锁后必须回读为“已锁”才算成功；角色发起解锁时仍需要你本人通过 Face ID。</p>'+(memory.locks.length>1?'<button class="private-lock-choose" onclick="privateSmartLockChoose()">更换门锁</button>':'')+'</section>';
 }
 
 function renderChooser(){
@@ -87,7 +89,8 @@ function rename(){if(typeof openModal!=='function')return;openModal('<h3>设置�
 
 function eventKnownText(event){
   var happened=timeText(event.eventAt),noticed=timeText(new Date().toISOString()),delay=Math.max(0,Date.now()-new Date(event.eventAt).getTime());
-  return '门锁「'+clean(event.accessoryName||'家庭门锁',40)+'」在 '+happened+' 由 HomeKit 报告为“'+stateLabel(event.currentState)+'”。本轮补同步发起时间是 '+noticed+'。'+(delay>=60000?'这是延迟补上的事件；原始 HomeKit 报告时间是 '+shortTime(event.eventAt)+'，当前时间只是补同步时间。':'这是刚收到的状态变化。')+'HomeKit 回调时间不是独立门锁日志证明的物理操作瞬间。'+(event.currentState==='unlocked'?'用户已经明确约定：没有相反证据时，默认视为用户本人开的门；这是用户指定的默认归因，不是 HomeKit 识别出的操作者身份。':'HomeKit 没有提供具体操作人的身份。');
+  var sourceText=event.source==='small_phone_manual'?'由小手机真实回读为':'由 HomeKit 报告为';
+  return '门锁「'+clean(event.accessoryName||'家庭门锁',40)+'」在 '+happened+' '+sourceText+'“'+stateLabel(event.currentState)+'”。本轮补同步发起时间是 '+noticed+'。'+(delay>=60000?'这是延迟补上的事件；原始状态时间是 '+shortTime(event.eventAt)+'，当前时间只是补同步时间。':'这是刚收到的状态变化。')+'这个时间是状态回读或回调时间，不是独立门锁日志证明的物理操作瞬间。'+(event.currentState==='unlocked'?'用户已经明确约定：没有相反证据时，默认视为用户本人开的门；这是用户指定的默认归因，不是 HomeKit 识别出的操作者身份。':'HomeKit 没有提供具体操作人的身份。');
 }
 function eventUnknownText(event){
   return '小手机在 '+timeText(event.observedAt)+' 恢复连接时发现门锁「'+clean(event.accessoryName||'家庭门锁',40)+'」已经变为“'+stateLabel(event.currentState)+'”。标准 HomeKit 当前状态没有给出这次变化实际发生的历史时间，因此实际'+(event.currentState==='unlocked'?'解锁':'关锁')+'时间无法确认；'+shortTime(event.observedAt)+' 只是恢复观察时间，不是实际发生时间。'+(event.currentState==='unlocked'?'用户已经明确约定：没有相反证据时，默认视为用户本人开的门；这是用户指定的默认归因，不是 HomeKit 识别出的操作者身份。':'HomeKit 没有提供具体操作人的身份。');
@@ -98,6 +101,9 @@ function seen(eventId){return config().processedEventIds.indexOf(eventId)>=0;}
 function markSeen(eventId){var c=config();if(c.processedEventIds.indexOf(eventId)<0)c.processedEventIds.push(eventId);c.processedEventIds=c.processedEventIds.slice(-100);persist();}
 async function processEvent(event){
   if(!event||!event.eventId||seen(event.eventId))return false;
+  if(event.currentState!=='unlocked'){
+    markSeen(event.eventId);await acknowledge(event.eventId);return false;
+  }
   memory.lastEvent=event;rerender();
   var role=roleForEvent();
   if(!role||typeof scheduleFeatureReply!=='function'||typeof featureEventNote!=='function')return false;
@@ -143,12 +149,12 @@ window.smartHomeRoleFinalize=async function(content,c,userText,replyFactory){
 };
 
 window.privateSmartLockRefresh=function(){return refresh(false).then(function(lock){if(lock&&typeof toast==='function')toast('已读取门锁真实状态');return drainEvents();});};
-window.privateSmartLockControl=async function(action){var result=await command(action,'manual');if(typeof toast==='function')toast(result.verified?(action==='lock'?'已回读确认门锁已锁':'Face ID 已通过，门锁已回读为解锁'):result.message);return result;};
+window.privateSmartLockControl=async function(action){var result=await command(action,'manual');if(result&&result.verified===true&&action==='unlock'&&result.state){var event=Object.assign({},result.state,{eventId:'small-phone-manual-unlock-'+Date.now(),currentState:'unlocked',timing:'known',source:'small_phone_manual',eventAt:result.verifiedAt||result.state.readAt||new Date().toISOString(),observedAt:new Date().toISOString()});await processEvent(event);}if(typeof toast==='function')toast(result.verified?(action==='lock'?'已回读确认门锁已锁':'Face ID 已通过，门锁已回读为解锁'):result.message);return result;};
 window.privateSmartLockChoose=choose;
 window.privateSmartLockRename=rename;
 window.privateSmartLockSaveName=function(){var input=document.getElementById&&document.getElementById('privateLockNameInput'),name=clean(input&&input.value||'',20);if(!name){if(typeof toast==='function')toast('请输入门锁名称');return;}config().displayName=name;persist();if(typeof closeModal==='function')closeModal();rerender();if(typeof toast==='function')toast('门锁名称已保存');};
 window.privateSmartLockChooseAt=function(index){var lock=memory.locks[Math.max(0,Math.floor(Number(index)||0))];if(!lock)return;remember(lock);memory.state=lock;memory.error=lock.reachable===true&&lock.complete===true?'':lock.reachable!==true?'门锁当前离线':'门锁真实状态读取不完整';if(typeof closeModal==='function')closeModal();rerender();if(typeof toast==='function')toast(memory.error||'门锁已选择并读取真实状态');};
-window.__privateSmartLockTest={applySnapshot:applySnapshot,processEvent:processEvent,lockDecision:lockDecision,eventKnownText:eventKnownText,eventUnknownText:eventUnknownText,renderChooser:renderChooser,renderLockPage:renderLockPage,lockDisplayName:lockDisplayName,memory:memory};
+window.__privateSmartLockTest={applySnapshot:applySnapshot,processEvent:processEvent,lockDecision:lockDecision,eventKnownText:eventKnownText,eventUnknownText:eventUnknownText,renderChooser:renderChooser,renderLockPage:renderLockPage,lockDisplayName:lockDisplayName,actionLockIcon:actionLockIcon,doorStateIcon:doorStateIcon,memory:memory};
 
 if(typeof window.addEventListener==='function'){
   window.addEventListener('small-phone-homekit-lock-event',function(event){processEvent(event&&event.detail);});
