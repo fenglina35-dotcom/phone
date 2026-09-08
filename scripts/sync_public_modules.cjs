@@ -1,0 +1,5 @@
+// Mechanical mirroring only: never replace private app.js with the public app.
+const fs=require('fs'),path=require('path');const root=path.resolve(__dirname,'..'),bundle='native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle';
+for(const name of ['public-north-policy.js','public-north-runtime.js','phone-shortcuts.js'])fs.copyFileSync(path.join(root,name),path.join(root,bundle,name));
+fs.copyFileSync(path.join(root,'public-north-policy.js'),path.join(root,'supabase/functions/_shared/public-north-policy.js'));
+for(const name of ['小手机.html',bundle+'/小手机.html',bundle+'/index.html']){let s=fs.readFileSync(path.join(root,name),'utf8');s=s.replace(/<script src="(?:public-north-policy|public-north-runtime|phone-shortcuts)\.js\?v=\d+"><\/script>\r?\n?/g,'');s=s.replace(/(<script src="cohab-theater\.js[^\n]+<\/script>)/,'$1\n<script src="public-north-policy.js?v=1213"></script>\n<script src="public-north-runtime.js?v=1213"></script>\n<script src="phone-shortcuts.js?v=1213"></script>');fs.writeFileSync(path.join(root,name),s);}

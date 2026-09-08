@@ -9,7 +9,7 @@ function renderPixelHome(){
   const i=pixelHomeIdentity();if(!i)return '<div class="nav"><button class="l" onclick="back()">‹</button><span class="t">先在情侣空间绑定角色</span></div>';
   const entry=pixelHomeEntry(i);if(!_pixelOutfitJobs.has(JSON.stringify([i.account,i.cid]))){_pixelOutfitAttempted.delete(JSON.stringify([i.account,i.cid]));entry.outfitAttempt='';entry.outfitError='';}
   const token=Array.from(crypto.getRandomValues(new Uint32Array(4)),n=>n.toString(16)).join('');_pixelHome={...i,token,revision:0};
-  return '<iframe id="pixel-home-frame" title="像素少女" allow="autoplay; fullscreen" style="position:absolute;inset:0;width:100%;height:100%;border:0;background:#eee3d5" src="games/pixel-home/index.html?v=1212&amp;session='+token+'"></iframe>';
+  return '<iframe id="pixel-home-frame" title="像素少女" allow="autoplay; fullscreen" style="position:absolute;inset:0;width:100%;height:100%;border:0;background:#eee3d5" src="games/pixel-home/index.html?v=1213&amp;session='+token+'"></iframe>';
 }
 function pixelHomeKeepFrame(){if(cur().p!=='pixelhome'){_pixelHome=null;return false;}if(document.getElementById('pixel-home-frame')&&pixelHomeValid(_pixelHome))return true;return false;}
 function pixelHomeReply(s,id,data,error){const f=document.getElementById('pixel-home-frame');if(!pixelHomeValid(s)||!f)return;f.contentWindow.postMessage({type:'pixel-home-response',token:s.token,id,data,error},location.protocol==='file:'?'*':location.origin);}
@@ -114,6 +114,10 @@ window.addEventListener('message',async event=>{
       const result=await pixelHomePlan(s,true,PixelHomePolicy.snapshot(m.data));data={actions:result.actions};
     }else if(m.method==='wardrobe-edit'){s.wardrobeEditing=m.data?.editing===true;data={ok:true};
     }else if(m.method==='morning'){data=await pixelHomeMorning(s,m.data?.day);
+    }else if(m.method==='restart'){
+      // A new document needs a new token/revision; never accept late saves from
+      // the failed iframe or reset the persistent game/wardrobe state.
+      pixelHomeReply(s,m.id,{ok:true});_pixelHome=null;f.remove();render();return;
     }else if(m.method==='exit'){pixelHomeReply(s,m.id,{ok:true});back();return;
     }else return;
     pixelHomeReply(s,m.id,data);

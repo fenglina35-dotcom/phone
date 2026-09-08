@@ -124,14 +124,14 @@ test('both private entry files and every iOS target carry build 333', () => {
   assert.equal(index, alias);
   assert.match(index, /private-runtime-diagnostics\.js\?v=333/);
   assert.match(overlay, /333-background-lane/);
-  assert.match(webView, /1\.0\.338 \(338\)/);
-  assert.match(bridge, /1\.0\.338 \(338\)/);
+  assert.match(webView, /1\.0\.339 \(339\)/);
+  assert.match(bridge, /1\.0\.339 \(339\)/);
   assert.equal(
-    (project.match(/CURRENT_PROJECT_VERSION = 338;/g) || []).length,
+    (project.match(/CURRENT_PROJECT_VERSION = 339;/g) || []).length,
     12
   );
   assert.equal(
-    (project.match(/MARKETING_VERSION = 1\.0\.338;/g) || []).length,
+    (project.match(/MARKETING_VERSION = 1\.0\.339;/g) || []).length,
     12
   );
 });

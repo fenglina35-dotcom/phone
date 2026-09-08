@@ -12,7 +12,7 @@ function valid(s,c,nested=false){
 
 function getAdjust(s,id,part=''){return {...blank(),...s.adjustments[contextKey(s,id)+(part?'/'+part:'')]};}
 function blink(t){const p=t%4300;return p<78?'half':p<173?'closed':p<248?'half':'open';}
-async function loadCatalog(){const {catalog,images:encoded}=window.PixelWardrobeData,images={};await Promise.all(Object.entries(encoded).map(async([f,url])=>{const im=new Image();im.src=url;await im.decode();images[f]=im;}));return{catalog,images};}
+async function loadCatalog(){return window.PixelHomeAssets.loadCatalog();}
 
 function anchor(id){return id.startsWith('hair')?[512,100]:id.startsWith('face')?[512,283.5]:id.includes('shoes')?[512,1300]:id.includes('dress')?[512,650]:[512,180];}
 function transform(g,v,a){g.translate(a[0]+v.x,a[1]+v.y);g.rotate(v.rotation*Math.PI/180);g.scale(v.scale*v.width/10000,v.scale*v.height/10000);g.translate(-a[0],-a[1]);}
@@ -25,11 +25,11 @@ function renderRaw(g,c,images,s,{frame='open',time=0,animate=false,only=null}={}
  const ids=only?[only]:[s.shoes,s.dress,s.face,s.hair,s.accessory].filter(Boolean);
  const all=ids.flatMap(id=>c.items[id].pieces.map(p=>({id,p}))).sort((a,b)=>a.p.z-b.p.z);
  g.save();const leg=only?1:bodyParams(s).legs/100,legWidth=only?1:bodyParams(s).legWidth/100;const pose=animate&&s.motion?poseAt(time):0;const head=()=>{g.translate(512,364);g.rotate(pose*.018);g.translate(-512,-364);};
- const draw=({id,p},cover=false)=>{if((leg!==1||legWidth!==1)&&(id===s.shoes||p.id.toLowerCase().includes('legband'))){const layer=new OffscreenCanvas(1024,1536),lg=layer.getContext('2d');lg.imageSmoothingEnabled=false;transform(lg,getAdjust(s,id),anchor(id));drawPiece(lg,cover?p.cover:p,images,frame,getAdjust(s,id,p.id));drawLegLayer(g,layer,leg,0,legWidth);return;}g.save();if(pose&&(id.startsWith('hair')||id.startsWith('face')||(id.includes('accessory')&&p.y<350)||id==='retained-pink-headband'))head();const a=getAdjust(s,id);transform(g,a,anchor(id));const pa=getAdjust(s,id,p.id);if(p.frames)pa.x+=(p.id.endsWith('-left')?-1:1)*a.gap/2;if(p.frames&&frame==='closed'){const ca=getAdjust(s,id,id+'-closed');transform(g,ca,anchor(id));pa.x+=(p.id.endsWith('-left')?-1:1)*ca.gap/2;}drawPiece(g,cover?p.cover:p,images,frame,pa,p.frames?getAdjust(s,id,p.id+'-'+frame):blank());g.restore();};
+ const draw=({id,p},cover=false)=>{if((leg!==1||legWidth!==1)&&(id===s.shoes||p.id.toLowerCase().includes('legband'))){const layer=window.PixelHomeAssets.createCanvas(1024,1536),lg=layer.getContext('2d');lg.imageSmoothingEnabled=false;transform(lg,getAdjust(s,id),anchor(id));drawPiece(lg,cover?p.cover:p,images,frame,getAdjust(s,id,p.id));drawLegLayer(g,layer,leg,0,legWidth);return;}g.save();if(pose&&(id.startsWith('hair')||id.startsWith('face')||(id.includes('accessory')&&p.y<350)||id==='retained-pink-headband'))head();const a=getAdjust(s,id);transform(g,a,anchor(id));const pa=getAdjust(s,id,p.id);if(p.frames)pa.x+=(p.id.endsWith('-left')?-1:1)*a.gap/2;if(p.frames&&frame==='closed'){const ca=getAdjust(s,id,id+'-closed');transform(g,ca,anchor(id));pa.x+=(p.id.endsWith('-left')?-1:1)*ca.gap/2;}drawPiece(g,cover?p.cover:p,images,frame,pa,p.frames?getAdjust(s,id,p.id+'-'+frame):blank());g.restore();};
  for(const v of all.filter(v=>v.p.z<10))draw(v);
  if(!only){
   const key=JSON.stringify([s.dress,s.shoes,getAdjust(s,s.shoes),...c.items[s.shoes].pieces.map(p=>getAdjust(s,s.shoes,p.id))]);let cache=bodyCache.get(images);
-  if(!cache||cache.key!==key){const b=c.items[s.dress].base,layer=new OffscreenCanvas(1024,1536),bg=layer.getContext('2d');bg.imageSmoothingEnabled=false;drawPiece(bg,b,images);
+  if(!cache||cache.key!==key){const b=c.items[s.dress].base,layer=window.PixelHomeAssets.createCanvas(1024,1536),bg=layer.getContext('2d');bg.imageSmoothingEnabled=false;drawPiece(bg,b,images);
    for(const p of c.items[s.shoes].pieces){if(!p.cover)continue;bg.save();bg.globalCompositeOperation='destination-out';transform(bg,getAdjust(s,s.shoes),anchor(s.shoes));drawPiece(bg,p.cover,images,frame,getAdjust(s,s.shoes,p.id));bg.restore();}
    cache={key,layer};bodyCache.set(images,cache);}
   if(pose){drawLegLayer(g,cache.layer,leg,368,legWidth);g.save();head();g.drawImage(cache.layer,0,0,1024,372,0,0,1024,372);g.restore();}else drawLegLayer(g,cache.layer,leg,0,legWidth);
@@ -48,7 +48,7 @@ function render(g,c,images,s,opts={}){
  let cache=spriteCache.get(images);const {savedOutfits,...visibleState}=s;const key=JSON.stringify(visibleState);
  if(!cache||cache.key!==key){cache={key,frames:new Map()};spriteCache.set(images,cache);}
  const pose=opts.animate&&s.motion?poseAt(opts.time||0):0,breath=opts.animate&&s.motion?breathAt(opts.time||0):0,k=(opts.frame||'open')+':'+pose+':'+breath;
- if(!cache.frames.has(k)){const layer=new OffscreenCanvas(1024,1536),ctx=layer.getContext('2d');ctx.imageSmoothingEnabled=false;renderRaw(ctx,c,images,s,opts);cache.frames.set(k,breath?breathLayer(layer,breath):layer);if(cache.frames.size>18)cache.frames.delete(cache.frames.keys().next().value);}
+ if(!cache.frames.has(k)){const layer=window.PixelHomeAssets.createCanvas(1024,1536),ctx=layer.getContext('2d');ctx.imageSmoothingEnabled=false;renderRaw(ctx,c,images,s,opts);cache.frames.set(k,breath?breathLayer(layer,breath):layer);if(cache.frames.size>18)cache.frames.delete(cache.frames.keys().next().value);}
  const bp=bodyParams(s),size=bp.size/100;g.save();g.translate(512,1450);g.scale(size,size);g.translate(-512,-1450+legOffset(s));g.drawImage(cache.frames.get(k),0,0);g.restore();
 }
 
@@ -59,7 +59,7 @@ function legWidthAt(y,width){return 1+(width-1)*Math.max(0,Math.min(1,(1310-y)/6
 function drawLegLayer(g,layer,k,start=0,width=1){
  g.drawImage(layer,0,start,1024,820-start,0,start,1024,820-start);
  let middle=layer;
- if(width!==1){middle=new OffscreenCanvas(1024,1536);const m=middle.getContext('2d');m.imageSmoothingEnabled=false;
+ if(width!==1){middle=window.PixelHomeAssets.createCanvas(1024,1536);const m=middle.getContext('2d');m.imageSmoothingEnabled=false;
   for(let y=820;y<1310;y++){const w=legWidthAt(y,width);for(const [left,axis] of [[0,460],[512,562]])m.drawImage(layer,left,y,512,1,axis+(left-axis)*w,y,512*w,1);}
  }
  g.drawImage(middle,0,820,1024,490,0,820,1024,490*k);
@@ -68,7 +68,7 @@ function drawLegLayer(g,layer,k,start=0,width=1){
 
 function breathAt(t){const seq=[0,0,1,2,3,4,3,2,1,0];return seq[Math.floor((t%4600)/460)];}
 function breathLayer(layer,n){
- const out=new OffscreenCanvas(1024,1536),g=out.getContext('2d');g.imageSmoothingEnabled=false;
+ const out=window.PixelHomeAssets.createCanvas(1024,1536),g=out.getContext('2d');g.imageSmoothingEnabled=false;
  g.drawImage(layer,0,0,1024,374,0,0,1024,374);
  for(let y=374;y<810;y++){const u=(y-374)/436,w=Math.sin(Math.PI*u)**2,spread=Math.round(n*1.7*w),sy=Math.max(374,y-Math.round(n*.65*w));g.drawImage(layer,0,sy,1024,1,-spread,y,1024+spread*2,1);}
  g.drawImage(layer,0,810,1024,726,0,810,1024,726);return out;

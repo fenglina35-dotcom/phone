@@ -1,4 +1,23 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import "../_shared/public-north-policy.js";
+
+// Server-owned project identity, never a client flag, controls public capability limits.
+function publicNorthCloud() {
+  return typeof Deno !== "undefined" && String(Deno.env.get("SUPABASE_URL") || "").includes("lkhlyfpssmrjkkzhuzag.supabase.co");
+}
+function publicNorthFacts(snapshot: Record<string, unknown>, config: Record<string, unknown>, kind = "") {
+  const policy = (globalThis as any).NorthPublicPolicy;
+  const permissions = (config.permissions || {}) as Record<string, unknown>;
+  if (["morningSleep", "emotionCare", "manualUnlock"].includes(kind)) return "";
+  const required: Record<string, string[]> = {eveningScreen:["screenTime"],criticalBattery:["battery"],absenceBattery:["battery","location"]};
+  if (kind && (!required[kind] || required[kind].some(key=>permissions[key]!==true))) return "";
+  const facts = policy.normalize({linked:true,snapshot});
+  if (kind === "eveningScreen" && (!facts.screen.available || !facts.screen.fresh)) return "";
+  if (["criticalBattery","absenceBattery"].includes(kind) && !facts.battery?.fresh) return "";
+  if(kind === "criticalBattery" && /charging|full|充电中|已充满/i.test(facts.battery?.state||""))return "";
+  const lead = permissions.battery === true && facts.battery ? `电量${Math.round(facts.battery.level*100)}%，${facts.battery.state}。` : "";
+  return lead + policy.prompt(facts,{roleAccess:true,permissions});
+}
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -1142,6 +1161,7 @@ function snapshotLocationPlace(config: Record<string, unknown>, location: Record
 }
 
 function snapshotAutomationFacts(snapshot: Record<string, unknown>, kind: string, config: Record<string, unknown>) {
+  if(publicNorthCloud())return publicNorthFacts(snapshot,config,kind);
   const health = (snapshot.health && typeof snapshot.health === "object" ? snapshot.health : {}) as Record<string, unknown>;
   const telemetry = (snapshot.deviceTelemetry && typeof snapshot.deviceTelemetry === "object" ? snapshot.deviceTelemetry : {}) as Record<string, unknown>;
   const battery = snapshot.battery && typeof snapshot.battery === "object"
@@ -1232,6 +1252,7 @@ function profileTemporarilySuspended(profile: Record<string, unknown> | null | u
 }
 
 function snapshotAmbientFacts(profile: Record<string, unknown>, snapshot: Record<string, unknown>) {
+  if(publicNorthCloud())return publicNorthFacts(snapshot,(profile.automation_config||{}) as Record<string,unknown>);
   const config = (profile.automation_config && typeof profile.automation_config === "object"
     ? profile.automation_config : {}) as Record<string, unknown>;
   const permissions = (config.permissions && typeof config.permissions === "object"
@@ -1279,12 +1300,13 @@ function snapshotAmbientFacts(profile: Record<string, unknown>, snapshot: Record
 }
 
 function automationCandidate(profile: Record<string, unknown>, snapshot: Record<string, unknown>) {
+  if(publicNorthCloud())snapshot={...snapshot,automationEvents:[]};
   const config = (profile.automation_config && typeof profile.automation_config === "object" ? profile.automation_config : {}) as Record<string, unknown>;
   const configUnlockEvents = Array.isArray(config.automationEvents)
     ? config.automationEvents as Array<Record<string, unknown>> : [];
   const snapshotUnlockEvents = Array.isArray(snapshot.automationEvents)
     ? snapshot.automationEvents as Array<Record<string, unknown>> : [];
-  if (configUnlockEvents.length) {
+  if (configUnlockEvents.length && !publicNorthCloud()) {
     const events = new Map<string, Record<string, unknown>>();
     for (const row of [...snapshotUnlockEvents, ...configUnlockEvents]) {
       const id = String(row?.id || "").trim();
@@ -1674,11 +1696,23 @@ Deno.serve(async (request) => {
   try {
     const input = await request.json().catch(() => ({}));
     const { url, client } = supabaseAdmin();
+    if(input?.action === "shortcut_deliver") {
+      const key=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
+      if(!key||request.headers.get("authorization")!==`Bearer ${key}`)return reply({error:"unauthorized"},401);
+      const job=(await client.from("phone_shortcut_jobs").select("*").eq("id",String(input.jobId||"")).eq("status","completed").maybeSingle()).data;
+      if(!job?.reply_text)return reply({error:"job-not-completed"},404);
+      const rule=(await client.from("phone_shortcut_rules").select("enabled,revision").eq("id",job.rule_id).maybeSingle()).data;
+      if(!rule?.enabled||rule.revision!==job.revision)return reply({error:"rule-revoked"},409);
+      const sent=await persistAndPush(client,url,{target:job.owner_id,role_id:job.role_id,role_name:job.role_name},job.reply_text,"shortcut",`shortcut:${job.id}`);
+      return reply({ok:true,notificationSent:sent});
+    }
     if (input?.action === "task_status") return backgroundTaskStatus(client, input);
     if (input?.action === "empathy_doll_probe" || input?.action === "empathy_doll_event") {
       return empathyDollRequest(request, client, input);
     }
     if (input?.action !== "dispatch_due") return reply({ error: "invalid-action" }, 400);
+    // Reuse the existing cloud heartbeat, not a browser timer; no model retry.
+    if(typeof EdgeRuntime!=="undefined")EdgeRuntime.waitUntil(fetch(url+"/functions/v1/phone-shortcuts",{method:"POST",headers:{"Content-Type":"application/json",Authorization:"Bearer "+(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"")},body:JSON.stringify({action:"dispatch"}),signal:AbortSignal.timeout(10000)}).catch(()=>{}));
     let backgroundSent = 0, automationSent = 0;
 
     const { data: taskRows, error: taskError } = await client.rpc("phone_role_background_claim_due", { p_limit: 20 });

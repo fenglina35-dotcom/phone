@@ -15,7 +15,7 @@ for(const path of paths){
 }
 
 const edge=fs.readFileSync('supabase/functions/phone-role-push/index.ts','utf8');
-const edgeJS=stripTypeScriptTypes(edge.slice(edge.indexOf('\n')+1,edge.indexOf('Deno.serve(')),{mode:'strip'});
+const edgeJS=stripTypeScriptTypes(edge.slice(0,edge.indexOf('Deno.serve(')).replace(/^import .*;\r?$/gm,''),{mode:'strip'});
 test('background blocks English before delivery in both modes while keeping translations and the time-off boundary',async()=>{
  for(const on of [false,true])for(const raw of ['Good night.','[内心|想你]\n[送礼|热茶|10|暖暖手]\nGood night.','<think>English only.</think>','Good night.\n晚安。']){
   let calls=0,request;

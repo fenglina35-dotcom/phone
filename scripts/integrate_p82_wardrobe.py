@@ -24,7 +24,8 @@ engine=(P/'wardrobe-p82/engine.mjs').read_text('utf-8')
 engine=re.sub(r'^export ', '',engine,flags=re.M)
 engine=engine.replace("const KEY='rose-wardrobe-p82.v1';", "const KEY='pixel-wardrobe:'+String(window.RoseWardrobeScope||new URLSearchParams(location.search).get('scope')||'unbound');")
 start=engine.index('async function loadCatalog(');end=engine.index('\nfunction anchor',start)
-engine=engine[:start]+"async function loadCatalog(){const {catalog,images:encoded}=window.PixelWardrobeData,images={};await Promise.all(Object.entries(encoded).map(async([f,url])=>{const im=new Image();im.src=url;await im.decode();images[f]=im;}));return{catalog,images};}\n"+engine[end:]
+engine=engine[:start]+"async function loadCatalog(){return window.PixelHomeAssets.loadCatalog();}\n"+engine[end:]
+engine=engine.replace('new OffscreenCanvas(1024,1536)', 'window.PixelHomeAssets.createCanvas(1024,1536)')
 engine=engine.replace('function fresh(c){return {','function fresh(c){if(window.PixelWardrobeData?.approved)return structuredClone(window.PixelWardrobeData.approved);return {')
 (W/'engine-source.js').write_text(engine,'utf-8')
 app=(P/'wardrobe-p82/app.js').read_text('utf-8');app=re.sub(r'^import[^\n]*\n','',app)
@@ -51,7 +52,7 @@ window.roseWardrobeReady=loadCatalog().then(({catalog,images})=>{
 });
 """
 (W/'host.js').write_text('(()=>{\n'+engine+'\n'+host+'\n})();','utf-8')
-html=(P/'wardrobe-p82/index.html').read_text('utf-8').replace('我的衣柜 · P82','我的衣柜 · v1204').replace('type="module" src="app.js"','src="app.js?v=1204"').replace('<script src="app.js?v=1204">','<script src="data.js?v=1204"></script><script src="app.js?v=1204">')
+html=(P/'wardrobe-p82/index.html').read_text('utf-8').replace('我的衣柜 · P82','我的衣柜 · v1204').replace('type="module" src="app.js"','src="app.js?v=1204"').replace('<script src="app.js?v=1204">','<script src="../assets.js?v=1204"></script><script src="app.js?v=1204">')
 (W/'index.html').write_text(html,'utf-8');shutil.copy2(P/'wardrobe-p82/style.css',W/'style.css')
 
 game=original('games/pixel-home/game.js');preview=(P/'game-p82.js').read_text('utf-8')
@@ -76,7 +77,7 @@ extras="""
 game=game.replace('  boot();',controls+extras+'  boot();')
 (G/'game.js').write_text(game,'utf-8')
 main=(P/'index.html').read_text('utf-8').replace('P82','v1204').replace('game-p82.js?v=p82-1','game.js?v=1204').replace('immersive-p82.css?v=p82-1','immersive.css?v=1204')
-main=main.replace('<script src="sound.js">','<script src="bridge.js?v=1204"></script><script src="assets.js?v=1204"></script><script src="wardrobe/data.js?v=1204"></script><script src="sound.js">')
+main=main.replace('<script src="sound.js">','<script src="bridge.js?v=1204"></script><script src="assets.js?v=1204"></script><script src="sound.js">')
 main=main.replace('<main class="phone"', '<button class="exit-home" id="exit-home" type="button" aria-label="返回游戏大厅">返回游戏大厅</button><section id="wardrobe-overlay" hidden><button id="wardrobe-close" aria-label="关闭衣柜">×</button><iframe id="wardrobe-frame" title="我的衣柜"></iframe></section><main class="phone"')
 (G/'index.html').write_text(main,'utf-8')
 css=(P/'immersive-p82.css').read_text('utf-8')+"\n#wardrobe-overlay{position:fixed;inset:0;z-index:150;background:#f3e9df}#wardrobe-overlay[hidden]{display:none}#wardrobe-frame{width:100%;height:100%;border:0}#wardrobe-close{position:absolute;right:6px;top:5px;z-index:2}#exit-home{position:fixed;top:max(8px,env(safe-area-inset-top));left:8px;z-index:40;font-size:11px;background:#fff5e4dd;color:#674538;border:1px solid #d6b891;border-radius:18px;padding:6px 10px}\n"

@@ -1,18 +1,21 @@
-const BUILD='1212';
-const HOTFIX='v1212-couple-watch-trigger-1';
-const SHELL_CACHE='north-shell-v1212-couple-watch-trigger-1';
+const BUILD='1213';
+const HOTFIX='v1213-couple-watch-trigger-1';
+const SHELL_CACHE='north-shell-v1213-couple-watch-trigger-1';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
 const GLASS_ICON_FILES=GLASS_ICON_PACKS.flatMap(pack=>GLASS_ICON_KEYS.map(key=>'./assets/app-icons/glass/'+pack+'/'+key+'.webp'));
 const CORE_FILES=[
+  {url:'./public-north-policy.js?v='+BUILD,kind:'publicNorthPolicy'},
+  {url:'./public-north-runtime.js?v='+BUILD,kind:'publicNorthRuntime'},
+  {url:'./phone-shortcuts.js?v='+BUILD,kind:'shortcuts'},
   {url:'./request-size-details.js?v='+BUILD,kind:'requestSize'},
   {url:'./cohab-model-diagnostics.js?v='+BUILD,kind:'cohabDiagnostics'},
   {url:'./小手机.html?v='+BUILD+'&r='+HOTFIX,kind:'html'},
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
   {url:'./app.js?v='+BUILD+'&r='+HOTFIX,kind:'app'},
   {url:'./cohab-theater.js?v='+BUILD+'&r=v1184-ios-web-crash-cohab-turn-keyboard-1',kind:'theater'},
-  {url:'./web-hotfix.js?v='+BUILD+'&r=v1212-couple-watch-trigger-1',kind:'hotfix'},
+  {url:'./web-hotfix.js?v='+BUILD+'&r=v1213-couple-watch-trigger-1',kind:'hotfix'},
   {url:'./ai-account.js?v='+BUILD,kind:'ai'},
   {url:'./couple-watch.js?v='+BUILD,kind:'watch'},
   {url:'./couple-watch-runtime.js?v='+BUILD,kind:'watchRuntime'}
@@ -64,6 +67,9 @@ async function fetchRetry(request,options,tries){
   throw last||new Error('network failed');
 }
 function validShellText(kind,text){
+  if(kind==='publicNorthPolicy')return text.includes('root.NorthPublicPolicy = Object.freeze');
+  if(kind==='publicNorthRuntime')return text.includes('window.NorthPublicRuntime=')&&text.includes('NorthPublicRuntime.install();');
+  if(kind==='shortcuts')return text.includes('window.PhoneShortcuts=')&&text.includes('phone-shortcuts');
   if(kind==='requestSize')return text.includes('window.requestSizeBreakdown=')&&text.includes('window.requestSizeDetailsHtml=');
   if(kind==='cohabDiagnostics')return text.includes('window.cohabModelDiagnosticOpen=')&&text.includes('const records=new Map()');
   if(kind==='watch')return text.includes('function localDay(at)')&&text.includes('function create(options)');
@@ -85,7 +91,7 @@ function validShellText(kind,text){
     &&text.includes('theaterRevealActorItems')
     &&!text.includes('cohabReplyCore=async');
   if(kind==='hotfix')return text.length>800
-    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1212-couple-watch-trigger-1'")
+    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1213-couple-watch-trigger-1'")
     &&text.includes('reconcileExpiredWxLogin')
     &&text.includes('withBaseImageCheck')
     &&text.includes('isStoredImgRef');
@@ -165,9 +171,12 @@ self.addEventListener('fetch',event=>{
   // The embedded game has its own document, never the phone shell fallback.
   if(/\/games\/pixel-home\//.test(url.pathname)){
     event.respondWith((async()=>{
-      const cache=await caches.open(SHELL_CACHE),key=new Request(url.origin+url.pathname),cached=await cache.match(key);
-      if(cached)return cached;
-      const response=await fetch(request);if(response.ok)await cache.put(key,response.clone());return response;
+      let cache;
+      const key=new Request(url.origin+url.pathname+url.search);
+      try{cache=await caches.open(SHELL_CACHE);const cached=await cache.match(key);if(cached)return cached;}catch(_){/* Storage is optional, including on low-space mobile browsers. */}
+      const response=await fetch(request);
+      if(response.ok&&cache){const save=cache.put(key,response.clone()).catch(()=>{});event.waitUntil(save);}
+      return response;
     })());return;
   }
 

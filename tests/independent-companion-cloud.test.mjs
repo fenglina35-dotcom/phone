@@ -10,10 +10,10 @@ const migration = read('supabase/migrations/202608200001_independent_companion_c
 
 test('companion, background push, and private account use the dedicated cloud', () => {
   assert.match(app, /const COMPANION_URL='https:\/\/qvuahlqimcfgeoetosnl\.supabase\.co'/);
-  assert.match(app, /fetchT\(COMPANION_URL\+'\/rest\/v1\/rpc\/'\+name/);
-  assert.match(app, /fetchT\(COMPANION_URL\+'\/functions\/v1\/phone-companion-push'/);
-  assert.match(app, /fetch\(COMPANION_URL\+'\/rest\/v1\/rpc\/phone_role_background_enqueue'/);
-  assert.match(app, /fetchT\(COMPANION_URL\+'\/functions\/v1\/phone-role-push'/);
+  assert.match(app, /fetchT\(companionCloudURL\(\)\+'\/rest\/v1\/rpc\/'\+name/);
+  assert.match(app, /fetchT\(companionCloudURL\(\)\+'\/functions\/v1\/phone-companion-push'/);
+  assert.match(app, /fetch\(companionCloudURL\(\)\+'\/rest\/v1\/rpc\/phone_role_background_enqueue'/);
+  assert.match(app, /fetchT\(companionCloudURL\(\)\+'\/functions\/v1\/phone-role-push'/);
   assert.match(bridge, /privateAccountBaseURL\s*=\s*"https:\/\/qvuahlqimcfgeoetosnl\.supabase\.co"/);
   assert.match(syncView, /https:\/\/qvuahlqimcfgeoetosnl\.supabase\.co/);
 });

@@ -260,7 +260,22 @@
   $('#save-warning').onclick=()=>{if(save())say('进度已经重新保存。');};
   new ResizeObserver(resize).observe(world);
   setInterval(()=>{if(!ready||document.hidden||!hostLive)return;advance();vitals();},15000);
-  async function boot(){try{await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src='wardrobe/host.js?v=1206';s.onload=resolve;s.onerror=reject;document.head.append(s);});await window.roseWardrobeReady;for(const [key,name] of Object.entries({bedroom:'bedroom.png',rooms:'rooms.png',props:'props.png',icons:'icons.png',longEspresso:'doll-long-espresso.png',sleepP80:'sleep-overlay-p80.png',sleepFootboard:'sleep-footboard-p77.png',toothbrush:'toothbrush-p07.png',cleanser:'cleanser-p07.png',teddy:'teddy-p07.png'})){ASSETS[key]=await window.PixelHomeAssets.load(name);}advance();resize();ready=true;$('#loading').remove();$('#today').textContent=new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long'}).toUpperCase()+' / LITTLE HOME';renderRooms();renderTray();vitals();decorate();renderDiary();if(!state.diary.length)log('小屋开门啦，第一套草莓奶油装准备好了。');raf=requestAnimationFrame(draw);say(state.sleeping?'正在休息，床边药水可护理；关灯也能恢复健康。':'小屋开门啦：戳脸、摸头，或去餐桌喂一口。',5500);}catch(error){$('#loading').textContent='素材暂时没打开，刷新页面再试一次。';console.error(error);}}
+  async function boot(){
+    try{
+      $('#loading').textContent='正在读取衣柜素材，首次打开需要一些时间…';
+      await window.PixelHomeAssets.loadScript('wardrobe/host.js?v=1213');
+      await window.roseWardrobeReady;
+      for(const [key,name] of Object.entries({bedroom:'bedroom.png',rooms:'rooms.png',props:'props.png',icons:'icons.png',longEspresso:'doll-long-espresso.png',sleepP80:'sleep-overlay-p80.png',sleepFootboard:'sleep-footboard-p77.png',toothbrush:'toothbrush-p07.png',cleanser:'cleanser-p07.png',teddy:'teddy-p07.png'})){
+        $('#loading').textContent='正在读取小屋素材…';ASSETS[key]=await window.PixelHomeAssets.load(name);
+      }
+      advance();resize();
+      $('#today').textContent=new Date().toLocaleDateString('en-GB',{day:'2-digit',month:'long'}).toUpperCase()+' / LITTLE HOME';
+      renderRooms();renderTray();vitals();decorate();renderDiary();
+      if(!state.diary.length)log('小屋开门啦，第一套草莓奶油装准备好了。');
+      ready=true;$('#loading').remove();raf=requestAnimationFrame(draw);
+      say(state.sleeping?'正在休息，床边药水可护理；关灯也能恢复健康。':'小屋开门啦：戳脸、摸头，或去餐桌喂一口。',5500);
+    }catch(error){ready=false;window.PixelHomeAssets.showFailure($('#loading'),error);console.error(error);}
+  }
   const bodyPanel=$('#body-panel');$('#body-toggle').onclick=()=>{bodyPanel.hidden=!bodyPanel.hidden;const bp={size:100,legs:85,legWidth:100,...window.RoseWardrobe?.getState().body};for(const k of ['size','legs','legWidth']){$('#room-'+k).value=bp[k];$('#room-'+k+'-value').textContent=bp[k]+'%';}};
   for(const k of ['size','legs','legWidth'])$('#room-'+k).oninput=e=>{window.RoseWardrobe?.setBody(k,Number(e.target.value));$('#room-'+k+'-value').textContent=e.target.value+'%';};
   $('#body-close').onclick=()=>bodyPanel.hidden=true;$('#body-save').onclick=()=>{say(window.RoseWardrobe?.saveBody()?'人物比例已保存。':'保存失败，请重试。');};
