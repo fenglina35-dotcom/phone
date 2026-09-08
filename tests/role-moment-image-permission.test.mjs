@@ -93,9 +93,9 @@ test('disabled permission stops image reuse and generation before posting', () =
 });
 
 test('autonomous Moments skip media planning while X and user-owned posts stay outside the gate', async () => {
-  let mediaCalls = 0, published;
+  let mediaCalls = 0, published; const owner={id:'role-1'};
   const context = vm.createContext({
-    Date, Object,
+    Date, Object, actId:()=> 'main', getC:()=>owner,
     cleanMomentText: text => text,
     cleanTweetText: text => text,
     roleMomentGenerate: async () => '自主文字朋友圈',
@@ -108,7 +108,7 @@ test('autonomous Moments skip media planning while X and user-owned posts stay o
     publishRoleTweet: () => true,
   });
   vm.runInContext(functionSource('publishRoleSocialAutonomous'), context);
-  assert.equal(await context.publishRoleSocialAutonomous({ id: 'role-1' }, 'moment', {}), true);
+  assert.equal(await context.publishRoleSocialAutonomous(owner, 'moment', {}), true);
   assert.equal(mediaCalls, 0);
   assert.deepEqual(Array.from(published.images), []);
   assert.deepEqual(Array.from(published.photoCards), []);

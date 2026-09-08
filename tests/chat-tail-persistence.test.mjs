@@ -52,8 +52,8 @@ test('the latest visible role reply has a compact synchronous recovery tail',()=
 test('each completed role turn is journaled and durably flushed before reply completion',()=>{
   const ai=functionSource('aiReply');
   assert.match(functionSource('pushMsg'),/msgs\(id\)\.push\(m\);if\(m\.role==='user'&&m\.type!=='sys'\)wechatTailJournalWrite\(id,actId\(\)\);save\(\)/,'the user message must reach the synchronous tail before the model request can start');
-  assert.match(ai,/replyHandoffPush\(_handoffTurn,msgs\(id\),vm\);wechatTailJournalWrite\(id,replyAccount\)/);
-  assert.match(ai,/replyHandoffPush\(_handoffTurn,msgs\(id\),msg\);wechatTailJournalWrite\(id,replyAccount\)/);
+  assert.match(ai,/replyHandoffPush\(_handoffTurn,msgs\(id\),vm\);lifeNoteCommitReply\([^;]+\);wechatTailJournalWrite\(id,replyAccount\)/);
+  assert.match(ai,/replyHandoffPush\(_handoffTurn,msgs\(id\),msg\);lifeNoteCommitReply\([^;]+\);wechatTailJournalWrite\(id,replyAccount\)/);
   const durable=ai.match(/if\(delivered\)\{\/\* 先把回复真正落盘[\s\S]*?roleBackgroundCancel\(id,\['reply_handoff'\]\);\}/)?.[0]||'';
   assert.ok(durable.indexOf('persistWechatMessagesNow()')>=0);
   assert.match(durable,/if\(_handoffSaved\)\{roleServerPushTouchActivity[\s\S]*?if\(_handoffTurn\)replyHandoffCancelRemote/,'failed persistence must not cancel server recovery');

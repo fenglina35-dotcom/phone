@@ -208,7 +208,7 @@ test('web client opt-in sends bounded memory and recent context', () => {
   assert.match(functionSource('roleServerPushMemoryContext'), /summaryList\(c,scope\)/);
   assert.match(functionSource('roleServerPushMemoryContext'), /aiMemoryDocs\(c\)/);
   assert.match(functionSource('roleServerPushMemoryContext'), /S\.worldbook/);
-  assert.match(functionSource('roleServerPushMemoryContext'), /lifeNotes\(\)/);
+  assert.match(functionSource('roleServerPushMemoryContext'), /lifeNotesForRole\(c\)/);
   assert.match(app, /关闭小手机后仍可主动联系/);
   assert.match(app, /会同步该角色的长期记忆、对话总结和最近聊天上下文/);
   assert.match(functionSource('roleServerPushToggle'), /phone_role_push_upsert_profile|roleServerPushSync/);
@@ -463,7 +463,7 @@ test('returned role messages are deduplicated and appended to the matching chat'
   assert.doesNotMatch(deliveryBlock,/cohabOnlineQuiet/,'cohabitation alone cannot block durable server text delivery');
   assert.match(pull, /roleServerPushSyncSoon\(c\.id\)/);
   assert.match(pull, /_rolePushId===row\.id/);
-  assert.match(pull, /if\(roleServerPushHandoffAlreadyVisible\(c,body,rowAt\)\)\{queueAck\(row,true\);continue;\}/,'a persisted fallback that exactly matches a visible foreground reply is consumed instead of appended');
+  assert.match(pull, /if\(!\(typeof modelOutputUnfiltered===\x27function\x27&&modelOutputUnfiltered\(\)\)&&roleServerPushHandoffAlreadyVisible\(c,body,rowAt\)\)\{queueAck\(row,true\);continue;\}/,'a persisted fallback that exactly matches a visible foreground reply is consumed instead of appended');
   assert.doesNotMatch(pull, /triggerKind[\s\S]{0,100}roleServerPushHandoffAlreadyVisible/,'replay protection must not depend on the server task label');
   assert.doesNotMatch(pull, /initiativeRecentlyRepeated\(c\.id,body/);
   assert.match(pull, /roleServerPushParts\(c,body\)/);

@@ -71,7 +71,7 @@ test('role model and role-WeChat login entries are moved to the requested pages'
 
 test('phone life notes can switch between automatic and manual-only recording without deleting history',()=>{
   const page=functionSource('spyLifeNoteSec');
-  assert.match(functionSource('lifeNoteOnUserMsg'),/!lifeNotesAutoOn\(\)/);
+  assert.match(functionSource('lifeNoteConsumeModelTags'),/!lifeNotesAutoOn\(\)/);
   assert.match(page,/角色自动记录/);
   assert.match(page,/lifeNoteTags\(n\)\.map/);
   assert.match(page,/class="sw \$\{lifeNotesAutoOn\(\)\?'on':''\}"/);

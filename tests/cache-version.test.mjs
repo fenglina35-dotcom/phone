@@ -40,9 +40,9 @@ assert.match(index, new RegExp(`小手机\\.html\\?v=${version}\\b`));
 assert.match(repair, new RegExp(`小手机\\.html\\?v=${version}\\b`));
 assert.match(privateHtml, new RegExp(`window\\.__NORTH_SHELL_BUILD__='${privateVersion}'`));
 assert.match(privateHtml, new RegExp(`app\\.js\\?v=${privateVersion}\\b`));
-assert.match(privateHtml, new RegExp(`ai-account\\.js\\?v=${privateVersion}\\b`));
-assert.match(privateHtml, new RegExp(`delivery\\.js\\?v=${privateVersion}\\b`));
-assert.match(privateHtml, new RegExp(`pet-game\\.js\\?v=${privateVersion}\\b`));
+assert.match(privateHtml, new RegExp(`ai-account\\.js\\?v=${version}\\b`));
+assert.match(privateHtml, new RegExp(`delivery\\.js\\?v=${version}\\b`));
+assert.match(privateHtml, new RegExp(`pet-game\\.js\\?v=${version}\\b`));
 assert.match(privateApp, new RegExp(`window\\.__NORTH_SHELL_BUILD__!==\\'${privateVersion}\\'`));
 
 console.log(`cache version tests passed (web v${version}, private v${privateVersion})`);

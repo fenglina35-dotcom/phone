@@ -592,6 +592,7 @@ async function roleMessage(
   const silenceMinutes = timeAware && lastUserAt ? Math.max(0, Math.floor((Date.now() - lastUserAt) / 60_000)) : 0;
   const userSleeping = /预计仍在休息|睡眠计时显示正在睡觉|现在必须保持安静，不能发消息/.test(recentContext);
   const repeatCandidates = [...recentBodies, ...roleRecentAssistantMessages(profile)];
+  const unfilteredOutput = automation.modelOutputUnfiltered === true;
   const turnBoundary = roleRecentTurnBoundary(profile);
   /* A scheduled check-in must not spend a model call merely to ask the model
      to stay quiet. A genuine foreground/background reply handoff is a
@@ -615,6 +616,7 @@ async function roleMessage(
     recent ? `你最近通过这条后台主动联系通道发过：\n${recent}` : "这条后台主动联系通道暂时没有近期消息。",
     timeAware && lastUserAt ? `距离同一角色最近一次真实互动约 ${silenceMinutes} 分钟。` : "不提供用户沉默时长。",
     `本次对话边界：${turnBoundary.text}`,
+    ordinaryProactive ? '从你自己最后已经说到的位置继续；不要只把已经问过的问题换个说法再问。仅沉默时长增加、手机仍满电或位置未变不算新的进展，也不证明用户在躲避你。可以分享新的想法、具体日常或自然换话题；没有新内容时按本轮静默规则决定。' : '',
   ];
   if (!timeAware) {
     prompt[4] = "时间感知已关闭：不知道当前日期、时间、星期、时段或间隔，不得推测。";
@@ -702,7 +704,8 @@ async function roleMessage(
             break;
           }
           const data = await response.json();
-          const text = String(data?.choices?.[0]?.message?.content || "")
+          const rawText = String(data?.choices?.[0]?.message?.content || "");
+          const text = unfilteredOutput ? rawText : rawText
             .replace(/<think>[\s\S]*?<\/think>/gi, "")
             .trim().replace(/^[“\"']|[”\"']$/g, "");
           if (!text) return manualUnlockEvent
@@ -712,6 +715,18 @@ async function roleMessage(
              scene narration as a private WeChat proactive message. Do not ask
              the model to rewrite it: scheduled contact stays silent, while an
              explicit task may retry later under its existing bounded policy. */
+          if (unfilteredOutput) {
+            // Text policy does not grant app-lock authority: only a valid structured
+            // decision may select a lock branch. Malformed output remains plain text.
+            if (appDecision) {
+              const decision = parseRoleAppDecision(text);
+              if (decision) return { kind: "message", body: decision.body,
+                failureBody: decision.failureBody, appAction: decision.action };
+              return { kind: "message", body: text, appAction: "remind" };
+            }
+            if (effectiveAllowSilent && /^[\[【]\s*(?:保持安静|不说话)\s*[\]】]$/.test(text.trim())) return { kind: "silent", body: "" };
+            return { kind: "message", body: text };
+          }
           if (roleModelOutputLeak(text)) {
             if (attempt === 0) {
               attemptMessages = [

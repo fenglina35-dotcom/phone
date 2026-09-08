@@ -59,15 +59,15 @@ assert.match(liveSandbox.prompt, /约会间隙拿出手机/);
 assert.match(liveSandbox.prompt, /手动分段总结/);
 assert.match(liveSandbox.prompt, /地点：江边/);
 
-assert.match(source, /v1206 · 像素少女照顾版/);
+assert.match(source, /v1209 · 消息与小事簿修复版/);
 assert.match(source, /function timeAwarenessPrompt\(who,kind\)/);
 assert.match(source, /23:20\u523023:49[\s\S]*\u7edd\u5bf9\u4e0d\u8981\u8bf4\u5341\u4e8c\u70b9\u4e86/);
 assert.match(source, /timeAwarenessPrompt\(S\.me\.name,'wechat'\)/);
 assert.match(source, /timeAwarenessPrompt\(S\.me\.name,'call'\)/);
 assert.match(source, /function offlineRoleGuard\(c\)/);
 assert.match(source, /function offlineRoleDrift\(t\)/);
-assert.match(source, /for\(let _ra=0;_ra<3&&offlineRoleDrift\(r\)/);
-assert.match(source, /if\(offlineRoleDrift\(r\)&&offlineUnsafeRoleDrift\(r\)\)r=''/);
+assert.match(source, /for\(let _ra=0;!_rawOutput&&_ra<3&&offlineRoleDrift\(r\)/);
+assert.match(source, /if\(!_rawOutput&&offlineRoleDrift\(r\)&&offlineUnsafeRoleDrift\(r\)\)r=''/);
 assert.match(source, /\u53cc\u65b9\u5747\u4e3a\u6210\u5e74\u4eba/);
 assert.match(source, /\u5f53\u524d\u4e92\u52a8\u6301\u7eed\u81ea\u613f/);
 assert.match(source, /\u4e0d\u5f97\u56e0\u4e3a\u4eb2\u5bc6\u7a0b\u5ea6\u6216\u79c1\u5bc6\u6c1b\u56f4\u65e0\u6545\u62d2\u7edd/);
@@ -662,6 +662,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=1206/);
+assert.match(html, /app\.js\?v=1209/);
 
 console.log("offline date tests passed");

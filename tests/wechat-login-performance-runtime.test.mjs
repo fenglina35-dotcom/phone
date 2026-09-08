@@ -63,7 +63,7 @@ test('login completion repairs operation-only output without turning a genuine v
   assert.match(app,/got=replyVisibleAssistantCount\(id,replyAccount\)>_wxLoginVisibleBefore/,'hidden tags cannot falsely acknowledge the completion as delivered');
   const reply=functionSource('aiReply');
   assert.match(reply,/if\(_wxLoginCompletion\)\{const before=content;content=wxLoginCompletionVisibleContent\(content\);if\(roleInterceptDiagnosticComparable\(before,false\)!==roleInterceptDiagnosticComparable\(content,false\)\)_replyAuditPartial=true;\}else content=routePhoneInspectionTags\(content,c,_userText\)/,'completion strips re-entry tags, records hidden content, and does not consume the old login request again');
-  assert.match(reply,/if\(!_wxLoginCompletion\)\{const _nativeInspectionQueued=maybeSpyIntent/,'completion cannot be swallowed by the native inspection interceptor before a bubble is stored');
+  assert.match(reply,/if\(!_rawOutput&&!_wxLoginCompletion\)\{const _nativeInspectionQueued=maybeSpyIntent/,'completion cannot be swallowed by the native inspection interceptor before a bubble is stored');
 });
 
 test('login completion uses the same reliable feature-event queue as remote-control completion',()=>{

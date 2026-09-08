@@ -128,7 +128,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v1206 · 像素少女照顾版'/);
+  assert.match(app, /const APP_VER='v1209 · 消息与小事簿修复版'/);
 });
 
 test('manual sync reads locally in the bundled app and keeps cloud fallback', () => {
@@ -289,7 +289,7 @@ test('all-data read cannot let the role speak before the same native session is 
   assert.doesNotMatch(functionSource('aiReply'), /if\(rolePhoneInspectionBlocksOrdinary\(id\)\)return/);
   assert.match(functionSource('aiReply'), /queueNativeInspection\(id,_lu,_phoneGuard\.focus/);
 
-  const callQueue = app.indexOf('const _nativeCallInspectionQueued=!_screenShareEvent&&!_inspectionCompletion&&!_videoVision&&maybeSpyIntent');
+  const callQueue = app.indexOf('const _nativeCallInspectionQueued=!_rawOutput&&!_screenShareEvent&&!_inspectionCompletion&&!_videoVision&&maybeSpyIntent');
   const callGuard = app.indexOf("guardUnverifiedRolePhoneReply(content,'')", callQueue);
   assert.ok(callQueue >= 0 && callGuard > callQueue);
   assert.match(app.slice(callQueue, callGuard), /if\(_nativeCallInspectionQueued\)/);

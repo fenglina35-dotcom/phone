@@ -282,7 +282,7 @@ assert.match(source, /hasNextSpoken&&voicePauseMs\(c\)>0/);
 assert.match(source, /await sleep\(voicePauseMs\(c\)\)/);
 assert.equal(context.ttsSentencePauseText("One. Two.", { pause: 1 }), "One. Two.");
 assert.doesNotMatch(context.ttsSentencePauseText("One. Two.", { pause: 2 }), /…/, "sentence pause must not be encoded as repeated ellipses");
-assert.match(source, /if\(video\)content=ensureVideoCallAction\(content,_callCueTag\)/);
+assert.match(source, /if\(!_rawOutput&&video\)content=ensureVideoCallAction\(content,_callCueTag\)/);
 assert.match(source, /function phReleaseSimSub\(callId,line\)/);
 assert.doesNotMatch(source, /preT=setTimeout|off<0/, "call subtitles must never race ahead from request time");
 assert.match(functionSource("phPhoneVoiceOffset"), /Math\.max\(0,Math\.min\(1200/, "saved negative offsets must be clamped to zero");

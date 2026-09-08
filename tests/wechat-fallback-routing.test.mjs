@@ -14,7 +14,7 @@ assert.match(source,/具体约会只能使用本轮已选中的一条相关记�
 assert.doesNotMatch(source,/_off\.memory\.map\(offMemText\)/);
 assert.match(source,/let content;try\{content=await wechatPrimaryReply\(\[\{role:'system',content:_sys\},\.\.\.hist,_pin\],_md,_routeState,c\)/);
 assert.match(source,/const _replyAudit=roleInterceptDiagnosticTurn\(c,'online',replyAccount,'线上微信'\)/);
-assert.match(source,/_md=\{routeIndex:_routeIndex,aux:c\.model==='aux',complete:true,roleInterceptAudit:_replyAudit,roleInterceptStage:'微信回复候选'\}/);
+assert.match(source,/_md=\{routeIndex:_routeIndex,aux:c\.model==='aux',complete:!_rawOutput,unfilteredOutput:_rawOutput,roleInterceptAudit:_replyAudit,roleInterceptStage:'微信回复候选'\}/);
 assert.match(source,/_repairMd=Object\.assign\(\{\},_md,\{aux:c\.model==='aux'\|\|wechatAuxConfigured\(_routeIndex\),roleInterceptStage:'微信纠正候选'\}\)/);
 assert.match(source,/if\(wechatRoleDrift\(content\)\)\{if\(!_routeState\.fallback\)\{/);
 assert.match(source,/roleInterceptDiagnosticTurnSelect\(_replyAudit,content\)/);

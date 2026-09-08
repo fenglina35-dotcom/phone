@@ -15,7 +15,7 @@ enum SmallPhoneDiagnosticsStore {
     )
     private static let maximumBytes = 256 * 1_024
     private static let maximumLines = 200
-    private static let build = "1.0.327 (327)"
+    private static let build = "1.0.333 (333)"
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -188,7 +188,7 @@ enum SmallPhoneRecoveryLaunchStore {
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
-    static let contractVersion = 35
+    static let contractVersion = 36
     static let roleCallActiveDefaultsKey =
         "smallPhone.roleCallActive.v1"
 
@@ -201,6 +201,13 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     var openDeviceManagement: (() -> Void)?
     private let nativeSpeech = NativeSpeechRecognitionController()
     private lazy var homeKitLights = HomeKitLightBridge.shared
+    private lazy var homeKitLocks: HomeKitLockBridge = {
+        let bridge = HomeKitLockBridge.shared
+        bridge.eventHandler = { [weak self] event in
+            self?.emitHomeKitLockEvent(event)
+        }
+        return bridge
+    }()
     private let storageQueue = DispatchQueue(
         label: "com.smallphone.private-storage",
         qos: .utility
@@ -325,6 +332,24 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         case "homekit.light.command":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             homeKitLights.command(arguments: arguments) { [weak self] result in
+                self?.reply(requestID: requestID, result: result)
+            }
+        case "homekit.locks.snapshot":
+            homeKitLocks.snapshot { [weak self] result in
+                self?.reply(requestID: requestID, result: result)
+            }
+        case "homekit.lock.command":
+            let arguments = payload["payload"] as? [String: Any] ?? [:]
+            homeKitLocks.command(arguments: arguments) { [weak self] result in
+                self?.reply(requestID: requestID, result: result)
+            }
+        case "homekit.locks.events":
+            homeKitLocks.events { [weak self] result in
+                self?.reply(requestID: requestID, result: result)
+            }
+        case "homekit.locks.events.ack":
+            let arguments = payload["payload"] as? [String: Any] ?? [:]
+            homeKitLocks.acknowledgeEvents(arguments: arguments) { [weak self] result in
                 self?.reply(requestID: requestID, result: result)
             }
         case "license.request":
@@ -2004,6 +2029,17 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             throw NSError(domain: NSOSStatusErrorDomain, code: Int(status))
         }
         return instanceID
+    }
+
+    private func emitHomeKitLockEvent(_ event: [String: Any]) {
+        guard JSONSerialization.isValidJSONObject(event),
+              let data = try? JSONSerialization.data(withJSONObject: event),
+              let json = String(data: data, encoding: .utf8) else {
+            return
+        }
+        webView?.evaluateJavaScript(
+            "window.dispatchEvent(new CustomEvent('small-phone-homekit-lock-event', { detail: \(json) }));"
+        )
     }
 
     func announceReady() {

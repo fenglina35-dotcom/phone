@@ -45,20 +45,20 @@ function functionSource(sourceText, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('v1189 private identifiers retain the performance chain while public stays v1184', () => {
+test('private identifiers advance to v1209 and iOS 333 while public stays v1209', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1206'/);
-  assert.match(index, /app\.js\?v=1206&r=v1206-couple-watch-1/);
-  assert.match(index, /private-runtime-diagnostics\.js\?v=327/);
-  assert.match(app, /APP_VER='v1206 · 像素少女照顾版'/);
-  assert.match(overlay, /327-role-nickname/);
-  assert.match(webview, /1\.0\.327 \(327\)/);
-  assert.match(bridge, /private static let build = "1\.0\.327 \(327\)"/);
-  assert.match(bridge, /static let contractVersion = 35/);
-  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 327;/g) || []).length, 12);
-  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.327;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1206 · 像素少女照顾版'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1206'/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1209'/);
+  assert.match(index, /app\.js\?v=1209&r=v1209-private-background-lane-1/);
+  assert.match(index, /private-runtime-diagnostics\.js\?v=333/);
+  assert.match(app, /APP_VER='v1209 · 私人消息门锁与后台稳态版'/);
+  assert.match(overlay, /333-background-lane/);
+  assert.match(webview, /1\.0\.333 \(333\)/);
+  assert.match(bridge, /private static let build = "1\.0\.333 \(333\)"/);
+  assert.match(bridge, /static let contractVersion = 36/);
+  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 333;/g) || []).length, 12);
+  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.333;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1209 · 消息与小事簿修复版'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1209'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
@@ -146,23 +146,25 @@ test('diagnostics identify the protected stage without collecting content', () =
   assert.doesNotMatch(overlay, /messageBody|chatContent|authorizationToken/);
 });
 
-test('current Mac guides identify private v1206, authorized web push and real-device limits', () => {
+test('current Mac guide advances to private v1209 and iOS 333 while the historical iOS 327 record remains historical', () => {
   const install = fs.readFileSync(
     path.join(project, '第三百二十七次安装_v1206_完整衣柜_请先读.md'),
     'utf8',
   );
   const mac = fs.readFileSync(path.join(project, '请在Mac编译前先读.md'), 'utf8');
   for (const guide of [install, mac]) {
-    assert.match(guide, /v1206/);
+    assert.match(guide, guide===install?/v1206/:/v1209/);
     assert.match(guide, /网页.*推送/);
-    assert.match(guide, /1\.0\.327 \(327\)/);
-    assert.match(guide, /原生桥.*35/);
     assert.match(guide, /不要先删除.*App/);
     assert.match(guide, /不要.*覆盖.*旧工程目录/);
     assert.match(guide, /Mac.*编译/);
     assert.match(guide, /真机|真实 iPhone/);
   }
-  assert.match(mac, /^# v1206 .*私人.*工程包/);
+  assert.match(mac, /1\.0\.333 \(333\)/);
+  assert.match(mac, /原生桥.*36/);
+  assert.match(install, /1\.0\.327 \(327\)/);
+  assert.match(install, /原生桥.*35/);
+  assert.match(mac, /^# v1209 .*私人.*源码候选/);
   assert.match(mac, /网页.*推送/);
   assert.match(install, /私人内置网页 v1206/);
   assert.match(install, /两边共有/);

@@ -77,6 +77,18 @@ test('web automatic sync never overwrites an existing legacy cloud backup before
 
 test('web and private bundle keep cloud mirror implementation identical', () => {
   const block = source => source.slice(source.indexOf("const PRIVATE_MIRROR_MODE="), source.indexOf('/* ---------- 存储用量 ---------- */'));
-  assert.ok(block(web).length > 5000);
-  assert.equal(block(privateWeb), block(web));
+  const publicBlock = block(web);
+  const privateBlock = block(privateWeb);
+  assert.ok(publicBlock.length > 5000);
+  assert.match(
+    privateBlock,
+    /setInterval\(\(\)=>northNativeBackgroundTask\('cloud-auto',cloudAutoTick\),600000\);setTimeout\(\(\)=>northNativeBackgroundTask\('cloud-auto',cloudAutoTick\),8000\)/,
+  );
+  assert.equal(
+    privateBlock.replace(
+      "setInterval(()=>northNativeBackgroundTask('cloud-auto',cloudAutoTick),600000);setTimeout(()=>northNativeBackgroundTask('cloud-auto',cloudAutoTick),8000);",
+      'setInterval(cloudAutoTick,600000);setTimeout(cloudAutoTick,8000);',
+    ),
+    publicBlock,
+  );
 });

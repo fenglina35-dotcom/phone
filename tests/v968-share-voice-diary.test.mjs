@@ -56,7 +56,7 @@ test('robotic share notices and missing translations are repaired once with the 
   assert.match(issue, /callOutputIssue\(content,c,video/);
   assert.match(issue, /Got it|got it/);
   const callAI = app.slice(app.indexOf('async function callAI('), app.indexOf('function callSystemPrompt', app.indexOf('async function callAI(')));
-  assert.match(callAI, /if\(_screenShareEvent\)\{let issue=callScreenShareEventIssue/);
+  assert.match(callAI, /if\(!_rawOutput&&_screenShareEvent\)\{let issue=callScreenShareEventIssue/);
   assert.match(callAI, /\{role:'user',content:sysNote\}/);
   assert.match(callAI, /共享状态回复只允许重试这一次/);
   assert.doesNotMatch(callAI, /for\(let[^\n]*callScreenShareEventIssue/);

@@ -3,9 +3,10 @@
   'use strict';
   if(window.__SMALL_PHONE_PRIVATE__!==true)return;
 
-  const OVERLAY_VERSION='327-role-nickname';
+  const OVERLAY_VERSION='333-background-lane';
   const lastEventAt=Object.create(null);
   let lastMeasuredSyncOp='',lastMeasuredSyncMs=0,lastMeasuredSyncAt=0;
+  let activeBackgroundTask='',activeBackgroundStartedAt=0,lastBackgroundTask='',lastBackgroundMs=0,lastBackgroundAt=0;
   const clock=()=>typeof performance!=='undefined'&&performance.now?performance.now():Date.now();
   const cleanFields=input=>{
     const out={},src=input&&typeof input==='object'?input:{};
@@ -51,6 +52,17 @@
   function recentSyncFields(){
     const age=lastMeasuredSyncAt?Math.max(0,Date.now()-lastMeasuredSyncAt):0;
     return age&&age<=30000?{lastOp:lastMeasuredSyncOp,lastOpMs:lastMeasuredSyncMs,lastOpAgeMs:age}:{lastOp:'',lastOpMs:0,lastOpAgeMs:0};
+  }
+  function recentBackgroundFields(){
+    try{
+      if(typeof window.__smallPhoneBackgroundTaskSnapshot==='function'){
+        const row=window.__smallPhoneBackgroundTaskSnapshot();
+        if(row&&typeof row==='object'){const task=String(row.task||'');return{task:task?safeRuntimeToken(task,'background'):'',taskMs:Math.max(0,Math.round(Number(row.taskMs)||0)),taskActive:row.taskActive===true};}
+      }
+    }catch(_){}
+    if(activeBackgroundTask)return{task:activeBackgroundTask,taskMs:Math.max(0,Math.round(clock()-activeBackgroundStartedAt)),taskActive:true};
+    const age=lastBackgroundAt?Math.max(0,Date.now()-lastBackgroundAt):0;
+    return age&&age<=30000?{task:lastBackgroundTask,taskMs:lastBackgroundMs,taskActive:false}:{task:'',taskMs:0,taskActive:false};
   }
 
   function cancelAutomaticBackupTimer(){
@@ -152,11 +164,26 @@
     return emit('phoneFriend.'+stage,payload,bulk||stage==='error'?0:60000,bulk?'bulk':stage);
   };
 
+  window.__smallPhoneBackgroundTaskTrace=function(input){
+    const row=input&&typeof input==='object'?input:{},stage=safeRuntimeToken(row.stage,'unknown'),task=safeRuntimeToken(row.task,'background'),page=currentPageName();
+    if(stage==='begin'){
+      activeBackgroundTask=task;activeBackgroundStartedAt=clock();
+      return emit('backgroundTask.begin',{page,task},60000,task);
+    }
+    if(stage==='end'){
+      const ms=Math.max(0,Math.round(Number(row.ms)||0)),status=safeRuntimeToken(row.status,'unknown');
+      activeBackgroundTask='';activeBackgroundStartedAt=0;lastBackgroundTask=task;lastBackgroundMs=ms;lastBackgroundAt=Date.now();
+      if(ms<250&&status==='ok')return false;
+      return emit('backgroundTask.end',{page,task,ms,status,error:row.error?safeRuntimeToken(row.error,'Error'):''},15000,task+'|'+status);
+    }
+    return false;
+  };
+
   if(typeof window.northNativePerformanceGuard==='function'){
     const originalGuard=window.northNativePerformanceGuard;
     window.northNativePerformanceGuard=function(reason,delay){
-      const text=String(reason||'event-loop').slice(0,80),recent=recentSyncFields(),page=currentPageName();
-      emit('performance.guard',{reason:text,holdMs:Math.round(Number(delay)||0),page,lastOp:recent.lastOp,lastOpMs:recent.lastOpMs,lastOpAgeMs:recent.lastOpAgeMs},15000,text.replace(/:[0-9]+$/,'')+'|'+page);
+      const text=String(reason||'event-loop').slice(0,80),recent=recentSyncFields(),background=recentBackgroundFields(),page=currentPageName();
+      emit('performance.guard',{reason:text,holdMs:Math.round(Number(delay)||0),page,lastOp:recent.lastOp,lastOpMs:recent.lastOpMs,task:background.task,taskMs:background.taskMs,taskActive:background.taskActive},15000,text.replace(/:[0-9]+$/,'')+'|'+page);
       return originalGuard.apply(this,arguments);
     };
   }

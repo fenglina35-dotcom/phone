@@ -88,7 +88,7 @@ assert.match(source,/hiddenThoughtTags=\[\.\.\.String\(line\|\|''\)\.matchAll[\s
 assert.match(source,/\[心情值\\\|[\s\S]{0,180}if\(adjMood\(id,parseInt\(mm\[1\],10\)\|\|0\)\)_replyAuditHandled=true;else _replyAuditPartial=true;/);
 assert.match(source,/if\(_replyAuditHandled\)got=true;\s*if\(got&&typeof roleBusyCaptureReply/);
 assert.match(source,/if\(_wxLoginCompletion\)\{const before=content;content=wxLoginCompletionVisibleContent\(content\);if\(roleInterceptDiagnosticComparable\(before,false\)!==roleInterceptDiagnosticComparable\(content,false\)\)_replyAuditPartial=true;\}/);
-assert.match(source,/const visibleLine=cleanWechatVisibleLine\(line,c\);if\(roleInterceptDiagnosticComparable\(line,false\)!==roleInterceptDiagnosticComparable\(visibleLine,false\)\)_replyAuditPartial=true;/);
+assert.match(source,/const visibleLine=_rawOutput\?line:cleanWechatVisibleLine\(line,c\);if\(roleInterceptDiagnosticComparable\(line,false\)!==roleInterceptDiagnosticComparable\(visibleLine,false\)\)_replyAuditPartial=true;/);
 assert.match(source,/function cohabReplyAuditFinish\(result,delivered,partial\)/);
 assert.match(source,/finally\{cohabReplyAuditFinish\(result,delivered/);
 assert.match(source,/finally\{if\(_cohabAuditResult\)cohabReplyAuditFinish\(_cohabAuditResult/);
@@ -370,7 +370,7 @@ async function runOnlineConsumer(raw,opt={}){
     ${source.slice(source.indexOf('const _replyHandoffClaims='),source.indexOf('const _roleBackgroundPending='))}
     this.exercise=async function(content){
       const id='a',c=role,replyAccount=${JSON.stringify(opt.account||'main')},replyToken=1,replyIntent=null,note='',_userText='',_deliveryActionMeta={},_explicitCallTurn=false;
-      const _initiativeNoImage=false,_initiativeNoLocation=false,_naturalOn=${opt.naturalOn===true},cap=20;
+      const _lifeNoteDraft=null,lifeNoteCommitReply=()=>{},_rawOutput=false,_initiativeNoImage=false,_initiativeNoLocation=false,_naturalOn=${opt.naturalOn===true},cap=20;
       let _replyAuditFinal='',_replyAuditPartial=false,_replyAuditHandled=false,_replyDeferredIncoming=[];
       const _handoffTurn=null;
       const _queueReplyIncoming=kind=>{runtime.incomingCalls=(runtime.incomingCalls||0)+1;const pending=Promise.resolve(runtime.opt.incomingResult!==false);_replyDeferredIncoming.push(pending);return pending;};

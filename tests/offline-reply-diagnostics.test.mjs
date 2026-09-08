@@ -92,7 +92,7 @@ test('the real common-life reply pipeline delivers the first genuine answer when
     roleInterceptDiagnosticTurnFailure:(_audit,error)=>{runtime.auditFinished++;return !!error;},
     offlineReplyFailureReason:error=>String(error&&error.message||error),
     offReplyItems:x=>x?[{id:'genuine',who:'ta',text:'我在。'}]:[],
-    cohabRoleChat:async()=>{runtime.calls++;if(runtime.failFirst||runtime.calls===2)throw new Error('network failed');return '【他抬眼看过来。】\n我在。';},
+    lifeNoteReplyDraft:()=>null,lifeNoteAttachReply:items=>items,cohabRoleChat:async()=>{runtime.calls++;if(runtime.failFirst||runtime.calls===2)throw new Error('network failed');return '【他抬眼看过来。】\n我在。';},
     offlineRepeatAudit:()=>({fails:['重复风险'],score:5}),cohabTimeEchoAudit:()=>({fails:[],score:0}),cohabRepeatRepairNote:()=>'',
     recentMealProgressIssue:()=>'',recentMealProgressRepairPrompt:()=>'',
     applyGrudgeTags:x=>x,offlineApplyMemoryTags:x=>({text:x}),
