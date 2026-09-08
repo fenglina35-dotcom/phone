@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1211 · 北京时间气泡版'/);
+  assert.match(app,/APP_VER='v1212 · 请求诊断与简洁时间版'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1211-cohab-keyboard-vinyl-1/);
-  assert.match(html,/sw\.js\?v=1211&r=v1211-couple-watch-trigger-1/);
+  assert.match(html,/north-sw-reloaded-1212-cohab-keyboard-vinyl-1/);
+  assert.match(html,/sw\.js\?v=1212&r=v1212-couple-watch-trigger-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{

@@ -20,6 +20,7 @@ function client(on,app=privateApp){
  const names=['privateBackgroundModelRefusal','roleServerPushUnsafeBody','roleServerPushCallKind','roleServerPushVisibleBody','roleServerPushParts'];
  const ctx={modelOutputUnfiltered:()=>on,wechatReasoningLeak:()=>false,modelUnfilteredLines:t=>t.split('\n'),roleServerPushActionTag:()=>false,modelUnfilteredThoughtTags:x=>x,modelUnfilteredMessages:t=>[{type:'text',content:t}]};
  vm.createContext(ctx);
+ vm.runInContext(app.slice(app.indexOf('function roleReplyEnglishOnly('),app.indexOf('function roleReplyAssertLanguage(')),ctx);
  for(const name of names){const line=app.split(/\r?\n/).find(x=>x.startsWith('function '+name+'('));if(line)vm.runInContext(line,ctx);}
  return ctx;
 }
@@ -35,11 +36,11 @@ for(const on of [false,true]){
   assert.deepEqual(Array.from(ctx.roleServerPushParts({msgMax:4},screenshot)),[]);
  });
 }
-test('web raw behavior is unchanged and does not enable the private server flag',async()=>{
+test('web also blocks English-only output without enabling private refusal policy',async()=>{
  assert(!web.includes('privateBackgroundModelErrorGuard'));assert(!web.includes('privateBackgroundModelRefusal'));
  const w=worker(screenshot,true,false);const out=await w.ctx.roleMessage(w.profile,[],'','',true,true);
- assert.equal(out.kind,'message');assert.equal(out.body,screenshot);assert.equal(w.calls(),1);
- assert.equal(client(true,web).roleServerPushVisibleBody(screenshot),screenshot);
+ assert.equal(out.kind,'unavailable');assert.equal(out.reason,'english-only-output');assert.equal(out.body,'');assert.equal(w.calls(),1);
+ assert.equal(client(true,web).roleServerPushVisibleBody(screenshot),'');
 });
 test('private guard preserves role boundaries, ordinary AI discussion, quotes and valid actions',async()=>{
  const w=worker('',true,true),detect=w.ctx.privateBackgroundModelRefusal;

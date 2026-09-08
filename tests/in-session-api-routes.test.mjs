@@ -29,7 +29,7 @@ for(const page of ['gameshub','gs','drawguess','mgroom','uc','wg']){
   assert.match(gamePages,new RegExp(`'${page}'`),`${page} must follow the game-hall model selection`);
 }
 
-const chatApiSource=functionSource('chatAPI');
+const chatApiSource=[functionSource('chatRequestDiagnostic'),functionSource('chatReadDiagnosticResponse'),functionSource('chatAPI')].join('\n');
 assert.match(chatApiSource,/if\(!opt\.independentRoleModel&&gameModelSessionPage\(\)\)opt\.aux=gameModelUseAux\(\)/);
 assert.match(chatApiSource,/else if\(!opt\.independentRoleModel&&chatRouteSessionPage\(\)&&!opt\.allowSessionModel\)opt\.aux=false/);
 assert.match(functionSource('chatRouteQuickOpen'),/新路线从下一次回复开始生效/);
@@ -69,7 +69,7 @@ vm.runInContext(functionSource('gameModelUseAux'),context);
 vm.runInContext(functionSource('chatModelIsTtsOnly'),context);
 vm.runInContext(functionSource('chatModelTypeError'),context);
 vm.runInContext(functionSource('chatModelAssertText'),context);
-vm.runInContext(functionSource('chatAPI'),context);
+vm.runInContext([functionSource('chatRequestDiagnostic'),functionSource('chatReadDiagnosticResponse'),functionSource('chatAPI')].join('\n'),context);
 await context.chatAPI([],{aux:true});
 assert.equal(calls[0].url,'https://primary.example/v1/chat/completions');
 assert.equal(calls[0].body.model,'primary-model','an in-session reply must use the currently selected primary route');

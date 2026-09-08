@@ -66,8 +66,8 @@ test('door-lock overlay is private-only and bundled after the shared smart-home 
     fs.readFileSync(path.join(xcodeRoot,'PhoneWeb.bundle','private-smart-lock.css'),'utf8'),
     fs.readFileSync(path.join(nativeRoot,'Resources','Web','private-smart-lock.css'),'utf8')
   );
-  assert.match(privateIndex,/private-smart-lock\.css\?v=337/);
-  assert.match(privateIndex,/smart-home\.js[^\n]+\n<script src="private-smart-lock\.js\?v=337"/);
+  assert.match(privateIndex,/private-smart-lock\.css\?v=338/);
+  assert.match(privateIndex,/smart-home\.js[^\n]+\n<script src="private-smart-lock\.js\?v=338"/);
   assert.equal(read('小手机.html').includes('private-smart-lock'),false);
   assert.equal(read('app.js').includes('homekit.locks.snapshot'),false);
   assert.equal(read('smart-home.js').includes('homekit.lock.command'),false);
@@ -211,11 +211,11 @@ test('a verified manual unlock notifies the role without turning a manual lock i
   assert.equal(lockedRuntime.queued(),'');
 });
 
-test('private release identity is iOS 337 while public web stays v1211',()=>{
+test('private release identity is iOS 338 while public web stays v1212',()=>{
   const webView=fs.readFileSync(path.join(xcodeRoot,'LocalPhoneWebView.swift'),'utf8');
   const project=fs.readFileSync(path.join(nativeRoot,'XcodeProject','PhoneCompanionTest.xcodeproj','project.pbxproj'),'utf8');
-  assert.match(webView,/1\.0\.337 \(337\)/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 337/);
-  assert.match(project,/MARKETING_VERSION = 1\.0\.337/);
-  assert.match(read('app.js'),/__NORTH_SHELL_BUILD__!==\'1211\'/);
+  assert.match(webView,/1\.0\.338 \(338\)/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 338/);
+  assert.match(project,/MARKETING_VERSION = 1\.0\.338/);
+  assert.match(read('app.js'),/__NORTH_SHELL_BUILD__!==\'1212\'/);
 });

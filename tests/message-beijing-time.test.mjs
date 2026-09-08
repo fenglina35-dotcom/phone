@@ -6,11 +6,11 @@ const code=fs.readFileSync(new URL('../message-beijing-time.js',import.meta.url)
 function load(settings={}){let saves=0,renders=0;const ctx={S:{settings},save:()=>saves++,render:()=>renders++};vm.createContext(ctx);vm.runInContext(code,ctx);return{ctx,counts:()=>[saves,renders]};}
 test('Beijing labels use recorded instants and fixed UTC+8 across midnight and DST dates',()=>{
  const {ctx}=load();
- for(const [time,label] of [['2026-09-08T15:59:59Z','2026-09-08 23:59:59 北京时间'],['2026-09-08T16:00:00Z','2026-09-09 00:00:00 北京时间'],['2026-03-08T10:00:00Z','2026-03-08 18:00:00 北京时间']]){
+ for(const [time,label] of [['2026-09-08T15:59:59Z','23:59:59'],['2026-09-08T16:00:00Z','00:00:00'],['2026-03-08T10:00:00Z','18:00:00']]){
   assert.equal(ctx.NorthMessageTime.label({time:Date.parse(time)}),label);
   assert.equal(ctx.NorthMessageTime.label({ts:String(Date.parse(time))}),label);
  }
- for(const time of [undefined,null,0,NaN,Infinity,-1,'bad',8640000000000000])assert.equal(ctx.NorthMessageTime.label({time}),'北京时间未知');
+ for(const time of [undefined,null,0,NaN,Infinity,-1,'bad',8640000000000000])assert.equal(ctx.NorthMessageTime.label({time}),'时间未知');
 });
 test('toggle defaults off, preserves all messages and persists only its own setting',()=>{
  const w=load({modelOutputUnfiltered:true}),m={role:'user',type:'text',time:1788883200000,content:'原文'},before=JSON.stringify(m);

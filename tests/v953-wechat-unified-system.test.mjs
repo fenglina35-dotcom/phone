@@ -6,11 +6,11 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-assert.match(source,/APP_VER='v1211 · 北京时间气泡版'/);
-assert.match(html,/__NORTH_SHELL_BUILD__='1211'/);
-assert.match(sw,/BUILD='1211'/);
-assert.equal((project.match(/CURRENT_PROJECT_VERSION = 337;/g)||[]).length,12);
-assert.equal((project.match(/MARKETING_VERSION = 1\.0\.337;/g)||[]).length,12);
+assert.match(source,/APP_VER='v1212 · 请求诊断与简洁时间版'/);
+assert.match(html,/__NORTH_SHELL_BUILD__='1212'/);
+assert.match(sw,/BUILD='1212'/);
+assert.equal((project.match(/CURRENT_PROJECT_VERSION = 338;/g)||[]).length,12);
+assert.equal((project.match(/MARKETING_VERSION = 1\.0\.338;/g)||[]).length,12);
 
 assert.match(source,/const WECHAT_UNIFIED_SYSTEM=true/);
 assert.match(source,/function wechatNaturalOn\(\)\{return WECHAT_UNIFIED_SYSTEM;\}/);

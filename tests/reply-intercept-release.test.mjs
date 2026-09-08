@@ -46,7 +46,8 @@ function makeHarness({lane='online',saveResult=true,rowKind='intercept'}={}){
     closeModal:()=>{closed++;},openChat:id=>{opened=id;},offRender:()=>{renders++;},render:()=>{renders++;}
   };
   vm.createContext(ctx);
-  vm.runInContext(`${block}\nthis.release=roleInterceptDiagnosticRelease;`,ctx);
+  const language=source.slice(source.indexOf('function roleReplyEnglishOnly('),source.indexOf('function roleReplyAssertLanguage('));
+  vm.runInContext(`${language}\n${block}\nthis.release=roleInterceptDiagnosticRelease;`,ctx);
   return {ctx,contact,rows,row:rows[key],online,offline,cohab,S,
     stats:()=>({confirms,saves,legacySaves,opened,closed,renders})};
 }

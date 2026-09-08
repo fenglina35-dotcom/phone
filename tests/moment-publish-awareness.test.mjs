@@ -144,7 +144,7 @@ test('a role remembers only user Moments visible to that role, including body an
 });
 
 test('all role-speaking routes use the character route without changing cohab route settings', () => {
-  assert.match(functionSource('aiReply'), /const _routeIndex=roleChatRouteIndex\(c\),_md=\{routeIndex:_routeIndex/);
+  assert.match(functionSource('aiReply'), /const _routeIndex=roleChatRouteIndex\(c\),_md=\{roleReplyLanguageGuard:true,routeIndex:_routeIndex/);
   assert.match(functionSource('callAI'), /routeIndex:roleChatRouteIndex\(c\)/);
   assert.match(functionSource('roleMomentGenerate'), /routeIndex:roleChatRouteIndex\(c\)/);
   assert.match(functionSource('wxLoginSession'), /routeIndex:roleChatRouteIndex\(c\)/);

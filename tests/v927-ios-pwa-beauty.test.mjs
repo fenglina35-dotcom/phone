@@ -8,10 +8,10 @@ const app = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const project = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj', import.meta.url), 'utf8');
 
 test('v1184 web keeps private 1.0.315 compatibility', () => {
-  assert.match(app, /APP_VER='v1211 · 北京时间气泡版'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='1211'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 337;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.337;/g) || []).length, 12);
+  assert.match(app, /APP_VER='v1212 · 请求诊断与简洁时间版'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='1212'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 338;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.338;/g) || []).length, 12);
 });
 
 test('first glass page reserves a non-shrinking line box for every app name', () => {

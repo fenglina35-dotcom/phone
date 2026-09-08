@@ -84,7 +84,7 @@ test('chat api can use a fixed saved route without changing the active WeChat ro
   };
   vm.runInNewContext([
     functionSource('chatModelIsTtsOnly'),functionSource('chatModelTypeError'),functionSource('chatModelAssertText'),
-    functionSource('chatAPI'),'globalThis.run=chatAPI;'
+    [functionSource('chatRequestDiagnostic'),functionSource('chatReadDiagnosticResponse'),functionSource('chatAPI')].join('\n'),'globalThis.run=chatAPI;'
   ].join('\n'),sandbox);
   await sandbox.run([],{routeIndex:1});
   await sandbox.run([],{routeIndex:1,aux:true});

@@ -445,6 +445,20 @@ function roleMessageStyleInvalid(value: string, maxParts = 4) {
     || parts.some((part) => /^[\[【]/.test(part) && !/^[\[【](?:(?:图片|位置)[|｜][^\]】]+|来电[|｜](?:语音|视频)|送礼[|｜][^\]】]+|一起听[|｜][^\]】]+|放映邀请[|｜][^\]】]+|约会[|｜][^\]】]+|角色扮演[|｜][^\]】]+|你画我猜)[\]】]$/.test(part));
 }
 
+function roleReplyEnglishOnly(value: unknown): boolean{
+  const pick=(node: unknown,depth: number): string=>{if(depth>6||node==null)return '';if(typeof node==='string')return node;if(Array.isArray(node))return node.map(x=>pick(x,depth+1)).join('\n');if(typeof node!=='object')return '';const item=node as Record<string,unknown>;return ['content','text','reply','message','answer','output','response','body','bubbles','messages','translation','trans'].filter(k=>item[k]!=null).map(k=>pick(item[k],depth+1)).join('\n');};
+  let text=typeof value==='string'?value:pick(value,0);
+  const json=String(text||'').trim().replace(/^\x60\x60\x60(?:json)?\s*/i,'').replace(/\s*\x60\x60\x60$/,'');
+  if(/^(?:\x7b|\[)/.test(json)){try{text=pick(JSON.parse(json),0);}catch(_){}}
+  text=String(text||'');
+  text=text.replace(/[\[【]\s*(?:内心|心情|心情值|小事簿|记住|记忆|闹钟|日程|来电|挂断|联网|发推|发朋友圈|锁定|解锁|禁言|解禁|限时|加时|记仇|消气|控制|改备注|换头像|共同生活状态|同居状态|共同生活位置|同居位置)\s*(?:[|｜:：][^\]】]*)?[\]】]/g,'');
+  text=text.replace(/[\[【]\s*([\u3400-\u9fff]{1,20})\s*[|｜:：]\s*([^\]】]*)[\]】]/g,(tag: string,name: string,body: string)=>/^(?:语音|翻译|中文翻译)$/.test(name)?body:'').replace(/(?:^|\n)\s*(?:翻译|中文翻译|中文|原文|英文)\s*[:：]\s*/g,'\n');
+  const outside=text.replace(/<(?:think|analysis|reasoning)>[\s\S]*?<\/(?:think|analysis|reasoning)>/gi,'');
+  text=outside.trim()?outside:text.replace(/<\/?(?:think|analysis|reasoning)>/gi,'');
+  return /[A-Za-z]/.test(text)&&!/[\u3400-\u9fff\uf900-\ufaff\u3040-\u30ff\uac00-\ud7af\u0370-\u052f\u0590-\u08ff\u0900-\u0fff]/.test(text);
+}
+function roleThoughtFormatPrompt(){return '\n\n# 心情标签格式检查\n如果本轮使用内心或心情标签，必须采用当前场景指定的名称，使用半角方括号与半角竖线，完整写成 [内心|简短想法] 或 [心情|简短想法]，单独一行。不要省略闭合括号，不要写成解释、引用、代码块或把标签混进聊天正文；想法内不要再嵌套括号或换行。标签是界面元数据，不是发给对方的话，不要在可见正文复述它，也不要把格式示例当作对白。需要回复时，标签之后另起一行写真实聊天正文；原有不使用标签或要求JSON的场景保持原协议。';}
+
 function privateBackgroundModelRefusal(value: unknown){const text=String(value||'').replace(/[\u2018\u2019]/g,"'").trim();if(!text)return false;const speaker=/(?:^|\n)\s*(?:(?:sorry|抱歉|对不起)[,，:： ]*)?(?:I (?:cannot|can't|am|was)|I'm|As an? (?:AI|artificial intelligence|language model)|My safety (?:guidelines|polic)|作为(?:一个|一名)?\s*(?:AI|人工智能|语言模型|大语言模型)|我是(?:一个|一名)?\s*(?:AI|人工智能|语言模型|大语言模型))/i.test(text);const identity=/\b(?:AI assistant|artificial intelligence|language model|programmed to be|safety guidelines|safety polic(?:y|ies))\b|(?:AI|人工智能|语言模型|大语言模型)(?:助手)?/i.test(text);const refusal=/\b(?:cannot|can't|unable to|prohibit|not allowed|cannot adopt|cannot fulfill)\b|(?:无法|不能|不允许|禁止|安全准则|安全政策)/i.test(text);return speaker&&identity&&refusal;}
 
 function roleModelOutputLeak(value: string) {
@@ -631,6 +645,7 @@ async function roleMessage(
       .replace(/(?:新增使用|使用时长)\s*\d+\s*分钟/g, "正在使用");
     prompt.push(`本次事件的真实数据：\n${safeEventContext.slice(0, 12000)}`);
   }
+  prompt.push(roleThoughtFormatPrompt());
   const promptText = prompt.filter(Boolean).join("\n");
   const baseMessages = [
     { role: "system", content: turnBoundary.pending ? "最近真实聊天仍停在一条尚未完成正常回复的用户消息。本次是正式随机主动联系，必须只输出 [保持安静]，不能抢答、补答或另开话题。" : "这是与上一轮分开的独立主动联系事件。最近真实聊天只用于理解已经发生的事实、关系、情绪和用户明确交代的去向，不是等待你继续作答的当前回合。可以自然关心交代过的事情后来怎么样，或开启符合本人生活的新话题，但禁止再次回答用户最后一句，禁止复述或改写角色已经给过的回答。" },
@@ -714,6 +729,8 @@ async function roleMessage(
             String(data?.choices?.[0]?.message?.refusal || "").trim() ||
             /^(?:content[_ -]?filter|refusal)$/i.test(String(data?.choices?.[0]?.finish_reason || ""))
           )) return { kind: "unavailable", body: "", reason: "private-model-refusal" };
+          const languageDecision = appDecision ? parseRoleAppDecision(rawText) : null;
+          if (roleReplyEnglishOnly(rawText) || languageDecision && (roleReplyEnglishOnly(languageDecision.body) || roleReplyEnglishOnly(languageDecision.failureBody))) return { kind: "unavailable", body: "", reason: "english-only-output" };
           const text = unfilteredOutput ? rawText : rawText
             .replace(/<think>[\s\S]*?<\/think>/gi, "")
             .trim().replace(/^[“\"']|[”\"']$/g, "");
@@ -1805,7 +1822,7 @@ Deno.serve(async (request) => {
         ? 1
         : task.kind === "reply_handoff" ? 2
         : task.kind === "device_handoff" || task.kind === "app_followup" ? 3 : 5;
-      const terminalModelRefusal = decision.kind === "unavailable" && decision.reason === "private-model-refusal";
+      const terminalModelRefusal = decision.kind === "unavailable" && ["private-model-refusal", "english-only-output"].includes(decision.reason || "");
       const shouldRetry = !terminalModelRefusal && (decision.kind === "unavailable" || decision.kind === "message" && !backgroundDelivered) && Number(task.attempts || 0) < maxAttempts;
       const taskUpdate = shouldRetry
         ? { status: "pending", due_at: new Date(Date.now() + 60_000).toISOString(), claimed_until: null, payload: { ...payload, delivery } }

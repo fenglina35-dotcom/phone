@@ -4,11 +4,11 @@ import fs from 'node:fs';
 import {execFileSync} from 'node:child_process';
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const b='native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/';
-test('v1211 keeps new lock and background scheduling code out of the website',()=>{
+test('v1212 keeps new lock and background scheduling code out of the website',()=>{
  const web=read('app.js'),html=read('小手机.html'),privateApp=read(b+'app.js');
  for(const marker of ['northNativeBackgroundTask','__smallPhoneBackgroundTaskSnapshot','private-smart-lock','homekit.lock.command']){assert(!web.includes(marker),marker);assert(!html.includes(marker),marker);}
  assert(privateApp.includes('northNativeBackgroundTask'));
- assert(read(b+'index.html').includes('private-smart-lock.js?v=337'));
+ assert(read(b+'index.html').includes('private-smart-lock.js?v=338'));
  assert(read(b+'private-smart-lock.js').includes('homekit.lock.command'));
  const old=execFileSync('git',['show','afe3b4cbf96a3e42f5f4d39a1f2c8a9dd971f5de:smart-home.js'],{encoding:'utf8'});
  assert.equal(read('smart-home.js').replace(/\r\n/g,'\n'),old.replace(/\r\n/g,'\n'),'public smart-home implementation must be unchanged');

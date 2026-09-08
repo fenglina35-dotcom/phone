@@ -11,7 +11,7 @@ const script=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/Ph
 test('private v1178 loads diagnostic parity between app core and theater extension',()=>{
   for(const file of ['index.html','小手机.html']){
     const html=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/'+file);
-    assert.match(html,/app\.js\?v=1211[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1211&r=v1178-private-intercept-parity-1"[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1211/);
+    assert.match(html,/app\.js\?v=1212[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1212&r=v1178-private-intercept-parity-1"[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1212/);
   }
   assert.doesNotMatch(read('小手机.html'),/private-reply-intercept\.js/);
 });
@@ -37,7 +37,7 @@ test('diagnostic capture excludes theater JSON and release is explicit and rollb
 async function captureTurn(candidates,shown){
   const values=new Map(),rows=[],role={id:'r1',name:'先生'};
   let index=0,modal='';
-  const ctx={console,sessionStorage:{getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)},
+  const ctx={chatRequestDiagnostic:()=>null,console,sessionStorage:{getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)},
     actId:()=> 'main',getC:()=>role,msgsForAccount:()=>rows,msgs:()=>rows,
     roleVisibleEnvelopeText:String,cleanRolePunct:String,renderContactSettings:()=>'',
     openModal:html=>{modal=html;},cohabSettingsPanel:()=>'',offAI:async()=>{},

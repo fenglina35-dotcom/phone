@@ -14,7 +14,7 @@ assert.doesNotMatch(block,/\b(?:localStorage|indexedDB)\b/);
 const values=new Map();
 let writes=0,account='main',modal='';
 const contacts=new Map([['a',{id:'a',name:'角色A'}],['b',{id:'b',name:'角色B'}]]);
-const context={
+const context={chatRequestDiagnostic:()=>null,
   sessionStorage:{getItem:key=>values.get(key)||null,setItem:(key,value)=>{writes++;values.set(key,String(value));}},
   actId:()=>account,
   getC:id=>contacts.get(id),
