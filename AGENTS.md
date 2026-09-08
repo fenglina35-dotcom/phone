@@ -25,3 +25,9 @@
 - If the first push fails, stop retrying and leave the commit ready for the user to push manually.
 - Report the resulting version or documentation revision after every push.
 
+## Core chat release gate after the v1209 incident
+
+- Before any code release, run `node scripts/check_chat_authorized_phone.cjs` with the bundled Playwright dependencies, in addition to scoped regressions and the full Node test suite. Do not replace `buildSystem` or `myActivity` with mocks. Verify both web and private entrypoints with existing phone permission, populated notes, output-mode toggles, visible replies, busy-state release, automatic inspection, and persistence reload.
+- A bug regression must fail on the affected old implementation before it can justify the fix. Syntax checks, source regex assertions, empty/default-state fixtures, and a high passing-test count do not establish core-chat safety.
+- Enumerate every consumer of changed shared logic and verify unrelated working paths. Preserve user data, model settings, role/account boundaries, private-native differences, and historical artifacts. Report unverified real-model, native-build, and real-device paths honestly; never promise absolute absence of bugs.
+

@@ -9,7 +9,7 @@ function renderPixelHome(){
   const i=pixelHomeIdentity();if(!i)return '<div class="nav"><button class="l" onclick="back()">‹</button><span class="t">先在情侣空间绑定角色</span></div>';
   const entry=pixelHomeEntry(i);if(!_pixelOutfitJobs.has(JSON.stringify([i.account,i.cid]))){_pixelOutfitAttempted.delete(JSON.stringify([i.account,i.cid]));entry.outfitAttempt='';entry.outfitError='';}
   const token=Array.from(crypto.getRandomValues(new Uint32Array(4)),n=>n.toString(16)).join('');_pixelHome={...i,token,revision:0};
-  return '<iframe id="pixel-home-frame" title="像素少女" allow="autoplay; fullscreen" style="position:absolute;inset:0;width:100%;height:100%;border:0;background:#eee3d5" src="games/pixel-home/index.html?v=1209&amp;session='+token+'"></iframe>';
+  return '<iframe id="pixel-home-frame" title="像素少女" allow="autoplay; fullscreen" style="position:absolute;inset:0;width:100%;height:100%;border:0;background:#eee3d5" src="games/pixel-home/index.html?v=1210&amp;session='+token+'"></iframe>';
 }
 function pixelHomeKeepFrame(){if(cur().p!=='pixelhome'){_pixelHome=null;return false;}if(document.getElementById('pixel-home-frame')&&pixelHomeValid(_pixelHome))return true;return false;}
 function pixelHomeReply(s,id,data,error){const f=document.getElementById('pixel-home-frame');if(!pixelHomeValid(s)||!f)return;f.contentWindow.postMessage({type:'pixel-home-response',token:s.token,id,data,error},location.protocol==='file:'?'*':location.origin);}

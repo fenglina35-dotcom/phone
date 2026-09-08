@@ -158,11 +158,11 @@ test('delayed event copy distinguishes occurrence time from observation time',as
   assert.equal(r.calls.some(x=>x.action==='homekit.locks.events.ack'),true);
 });
 
-test('private release identity is iOS 333 while public web stays v1209',()=>{
+test('private release identity is iOS 333 while public web stays v1210',()=>{
   const webView=fs.readFileSync(path.join(xcodeRoot,'LocalPhoneWebView.swift'),'utf8');
   const project=fs.readFileSync(path.join(nativeRoot,'XcodeProject','PhoneCompanionTest.xcodeproj','project.pbxproj'),'utf8');
-  assert.match(webView,/1\.0\.333 \(333\)/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 333/);
-  assert.match(project,/MARKETING_VERSION = 1\.0\.333/);
-  assert.match(read('app.js'),/__NORTH_SHELL_BUILD__!==\'1209\'/);
+  assert.match(webView,/1\.0\.334 \(334\)/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 334/);
+  assert.match(project,/MARKETING_VERSION = 1\.0\.334/);
+  assert.match(read('app.js'),/__NORTH_SHELL_BUILD__!==\'1210\'/);
 });
