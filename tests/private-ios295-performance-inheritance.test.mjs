@@ -45,18 +45,18 @@ function functionSource(sourceText, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('private identifiers advance to v1211 and iOS 336 while public stays v1211', () => {
+test('private identifiers advance to v1211 and iOS 337 while public stays v1211', () => {
   assert.equal(index, alias);
   assert.match(index, /window\.__NORTH_SHELL_BUILD__='1211'/);
-  assert.match(index, /app\.js\?v=1211&r=v1211-private-background-lane-1/);
+  assert.match(index, /app\.js\?v=1211&r=v1211-private-lock-tag-guard-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=333/);
   assert.match(app, /APP_VER='v1211 · 私人北京时间与后台消息版'/);
   assert.match(overlay, /333-background-lane/);
-  assert.match(webview, /1\.0\.336 \(336\)/);
-  assert.match(bridge, /private static let build = "1\.0\.336 \(336\)"/);
+  assert.match(webview, /1\.0\.337 \(337\)/);
+  assert.match(bridge, /private static let build = "1\.0\.337 \(337\)"/);
   assert.match(bridge, /static let contractVersion = 36/);
-  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 336;/g) || []).length, 12);
-  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.336;/g) || []).length, 12);
+  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 337;/g) || []).length, 12);
+  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.337;/g) || []).length, 12);
   assert.match(publicApp, /APP_VER='v1211 · 北京时间气泡版'/);
   assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1211'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
@@ -146,7 +146,7 @@ test('diagnostics identify the protected stage without collecting content', () =
   assert.doesNotMatch(overlay, /messageBody|chatContent|authorizationToken/);
 });
 
-test('current Mac guide advances to private v1211 and iOS 336 while the historical iOS 327 record remains historical', () => {
+test('current Mac guide advances to private v1211 and iOS 337 while the historical iOS 327 record remains historical', () => {
   const install = fs.readFileSync(
     path.join(project, '第三百二十七次安装_v1206_完整衣柜_请先读.md'),
     'utf8',
@@ -160,7 +160,7 @@ test('current Mac guide advances to private v1211 and iOS 336 while the historic
     assert.match(guide, /Mac.*编译/);
     assert.match(guide, /真机|真实 iPhone/);
   }
-  assert.match(mac, /1\.0\.336 \(336\)/);
+  assert.match(mac, /1\.0\.337 \(337\)/);
   assert.match(mac, /原生桥.*36/);
   assert.match(install, /1\.0\.327 \(327\)/);
   assert.match(install, /原生桥.*35/);

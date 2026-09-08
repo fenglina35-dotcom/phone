@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 if(window.__SMALL_PHONE_PRIVATE__!==true||window.__NORTH_PRIVATE_SMART_LOCK__)return;
-window.__NORTH_PRIVATE_SMART_LOCK__='336-a100-lock-v3';
+window.__NORTH_PRIVATE_SMART_LOCK__='337-a100-lock-v4';
 
 var memory={locks:[],state:null,busy:false,error:'',lastEvent:null};
 var originalRender=window.renderWxSmartHome;
@@ -117,6 +117,12 @@ async function drainEvents(){if(!nativeReady())return;try{var result=await Small
 
 function lockTags(content){return String(content||'').match(/[\[【]\s*智能家电\s*[|｜:：]\s*门锁\s*[|｜:：][^\]】]+[\]】]/g)||[];}
 function stripLockTags(content){return String(content||'').replace(/[\[【]\s*智能家电\s*[|｜:：]\s*门锁\s*[|｜:：][^\]】]+[\]】]/g,'').replace(/\n{3,}/g,'\n\n').trim();}
+window.privateSmartLockStripTags=stripLockTags;
+function cleanupStoredLockTags(){
+  var stores=S&&S.messages,changed=false;if(!stores||typeof stores!=='object')return false;
+  Object.keys(stores).forEach(function(key){var list=stores[key];if(!Array.isArray(list))return;var kept=[];list.forEach(function(message){if(message&&message.role==='assistant'&&message.type==='text'&&typeof message.content==='string'){var cleanContent=stripLockTags(message.content);if(cleanContent!==message.content){changed=true;if(!cleanContent)return;message.content=cleanContent;}}kept.push(message);});if(kept.length!==list.length)stores[key]=kept;});
+  if(changed)persist();return changed;
+}
 function lockDecision(content,c){
   var tags=lockTags(content);if(!tags.length)return null;
   if(!(c&&S&&S.couple&&S.couple.cid===c.id))return{valid:false,message:'当前角色没有绑定门锁控制权限'};
@@ -154,8 +160,9 @@ window.privateSmartLockChoose=choose;
 window.privateSmartLockRename=rename;
 window.privateSmartLockSaveName=function(){var input=document.getElementById&&document.getElementById('privateLockNameInput'),name=clean(input&&input.value||'',20);if(!name){if(typeof toast==='function')toast('请输入门锁名称');return;}config().displayName=name;persist();if(typeof closeModal==='function')closeModal();rerender();if(typeof toast==='function')toast('门锁名称已保存');};
 window.privateSmartLockChooseAt=function(index){var lock=memory.locks[Math.max(0,Math.floor(Number(index)||0))];if(!lock)return;remember(lock);memory.state=lock;memory.error=lock.reachable===true&&lock.complete===true?'':lock.reachable!==true?'门锁当前离线':'门锁真实状态读取不完整';if(typeof closeModal==='function')closeModal();rerender();if(typeof toast==='function')toast(memory.error||'门锁已选择并读取真实状态');};
-window.__privateSmartLockTest={applySnapshot:applySnapshot,processEvent:processEvent,lockDecision:lockDecision,eventKnownText:eventKnownText,eventUnknownText:eventUnknownText,renderChooser:renderChooser,renderLockPage:renderLockPage,lockDisplayName:lockDisplayName,actionLockIcon:actionLockIcon,doorStateIcon:doorStateIcon,memory:memory};
+window.__privateSmartLockTest={applySnapshot:applySnapshot,processEvent:processEvent,lockDecision:lockDecision,stripLockTags:stripLockTags,cleanupStoredLockTags:cleanupStoredLockTags,eventKnownText:eventKnownText,eventUnknownText:eventUnknownText,renderChooser:renderChooser,renderLockPage:renderLockPage,lockDisplayName:lockDisplayName,actionLockIcon:actionLockIcon,doorStateIcon:doorStateIcon,memory:memory};
 
+if(cleanupStoredLockTags())setTimeout(rerender,0);
 if(typeof window.addEventListener==='function'){
   window.addEventListener('small-phone-homekit-lock-event',function(event){processEvent(event&&event.detail);});
   window.addEventListener('small-phone-native-ready',function(){refresh(true).then(drainEvents);});

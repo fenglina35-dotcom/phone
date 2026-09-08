@@ -628,7 +628,7 @@ function modelOutputUnfilteredToggle(){S.settings.modelOutputUnfiltered=!modelOu
 function modelUnfilteredThoughtTags(text,c){return String(text||'').replace(/[\[【]\s*(?:内心|心情)\s*[|｜:：]\s*[^\]】]+[\]】]/g,tag=>{stripHiddenThoughtTags(tag,c);return '';});}
 function modelUnfilteredText(value){return String(value==null?'':value);}
 function modelUnfilteredLines(value){return String(value==null?'':value).split(/\r?\n/).filter(line=>line.trim());}
-function modelUnfilteredMessages(line,c){const raw=String(line==null?'':line);if(/^\s*[\[【]\s*(?:语音|转账|红包|位置|图片|文件|骰子)\s*[|｜:：]/.test(raw)){const parsed=lineToMsgs(normTag(raw.trim()),c);if(parsed&&parsed.length)return parsed;}return raw.trim()?[{role:'assistant',type:'text',content:raw}]:[];}
+function modelUnfilteredMessages(line,c){const source=String(line==null?'':line),raw=typeof privateSmartLockStripTags==='function'?privateSmartLockStripTags(source):source;if(/^\s*[\[【]\s*(?:语音|转账|红包|位置|图片|文件|骰子)\s*[|｜:：]/.test(raw)){const parsed=lineToMsgs(normTag(raw.trim()),c);if(parsed&&parsed.length)return parsed;}return raw.trim()?[{role:'assistant',type:'text',content:raw}]:[];}
 function modelUnfilteredOfflineItems(text){return modelUnfilteredLines(text).map(line=>{const action=line.match(/^\s*【([^【】]+)】\s*$/);return{id:uid(),who:action?'旁白':'ta',source:'ta',text:action?action[1]:line};});}
 function lifeNoteReadableText(n){return n&&(n.rolePerspective||n.source==='manual')?String(n.text||''):aboutMeNoteText(n&&n.text);}
 function lifeNotesForRole(c){return lifeNotes().filter(n=>n&&(!n.roleId||c&&n.roleId===c.id)&&(!n.accountId||n.accountId===memoryScopeKey()));}
@@ -11399,6 +11399,7 @@ function wechatInnerThoughtValue(value){const text=normalizeHiddenThoughtFormats
 function wechatInnerThoughtOnlyValue(value){const text=normalizeHiddenThoughtFormats(roleVisibleEnvelopeText(value)).trim(),m=text.match(/^[\[【]\s*内心\s*[|｜:：]\s*([^\]】]{1,160})[\]】]\s*$/);if(!m||wechatReasoningLeak(text))return'';return String(m[1]||'').replace(/\s+/g,' ').trim().slice(0,120);}
 function cleanWechatVisibleLine(line,cch){
   let t=stripHiddenThoughtTags(cleanRolePunct(line),cch).trim();
+  if(typeof privateSmartLockStripTags==='function')t=privateSmartLockStripTags(t);
   if(!t)return '';
   if(wxKnownTagLine(t))return t;
   const nr=wxNarrationNameRe(cch);

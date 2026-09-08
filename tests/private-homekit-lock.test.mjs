@@ -16,6 +16,7 @@ const privateSource=fs.readFileSync(path.join(nativeRoot,'Resources','Web','priv
 const bundledSource=fs.readFileSync(path.join(xcodeRoot,'PhoneWeb.bundle','private-smart-lock.js'),'utf8');
 const privateCss=fs.readFileSync(path.join(nativeRoot,'Resources','Web','private-smart-lock.css'),'utf8');
 const privateIndex=fs.readFileSync(path.join(xcodeRoot,'PhoneWeb.bundle','index.html'),'utf8');
+const privateApp=fs.readFileSync(path.join(xcodeRoot,'PhoneWeb.bundle','app.js'),'utf8');
 
 test('lock bridge discovers HomeKit locks and freshly reads current state',()=>{
   assert.match(swift,/HMServiceTypeLockMechanism/);
@@ -65,8 +66,8 @@ test('door-lock overlay is private-only and bundled after the shared smart-home 
     fs.readFileSync(path.join(xcodeRoot,'PhoneWeb.bundle','private-smart-lock.css'),'utf8'),
     fs.readFileSync(path.join(nativeRoot,'Resources','Web','private-smart-lock.css'),'utf8')
   );
-  assert.match(privateIndex,/private-smart-lock\.css\?v=336/);
-  assert.match(privateIndex,/smart-home\.js[^\n]+\n<script src="private-smart-lock\.js\?v=336"/);
+  assert.match(privateIndex,/private-smart-lock\.css\?v=337/);
+  assert.match(privateIndex,/smart-home\.js[^\n]+\n<script src="private-smart-lock\.js\?v=337"/);
   assert.equal(read('小手机.html').includes('private-smart-lock'),false);
   assert.equal(read('app.js').includes('homekit.locks.snapshot'),false);
   assert.equal(read('smart-home.js').includes('homekit.lock.command'),false);
@@ -75,7 +76,7 @@ test('door-lock overlay is private-only and bundled after the shared smart-home 
 function runtime(){
   const calls=[];let queued='',route={p:'wxsmarthome'};
   const context={console,Date,Promise,Math,JSON,String,Number,Array,Object,Set,RegExp,
-    S:{settings:{},couple:{cid:'role-1'},me:{name:'小北'}},
+    S:{settings:{},couple:{cid:'role-1'},me:{name:'小北'},messages:{}},
     document:{hidden:false,addEventListener(){}},
     setTimeout(){return 1;},setInterval(){return 1;},clearTimeout(){},
     save(){},cur(){return route;},render(){},toast(){},
@@ -146,6 +147,28 @@ test('role action parser does not turn ordinary keywords into a command',()=>{
   assert.equal(api.lockDecision('[智能家电|门锁|action=unlock]\n[智能家电|小灯|power=on]',{id:'role-1'}).valid,false);
 });
 
+test('door-lock action tags are removed again at the final visible-message boundary',()=>{
+  const r=runtime(),api=r.context.__privateSmartLockTest;
+  assert.equal(api.stripLockTags('[智能家电|门锁|action=unlock]'),'');
+  assert.equal(api.stripLockTags('门开了。\n[智能家电|门锁|action=unlock]\n进来。'),'门开了。\n\n进来。');
+  assert.match(privateApp,/function modelUnfilteredMessages\([^\n]+privateSmartLockStripTags/);
+  assert.match(privateApp,/function cleanWechatVisibleLine\([^\n]+\n\s*let t=[^\n]+\n\s*if\(typeof privateSmartLockStripTags===['"]function['"]\)t=privateSmartLockStripTags\(t\)/);
+});
+
+test('a private upgrade removes already stored assistant action-tag bubbles without touching user text',()=>{
+  const r=runtime(),api=r.context.__privateSmartLockTest;
+  r.context.S.messages.main=[
+    {role:'assistant',type:'text',content:'[智能家电|门锁|action=unlock]'},
+    {role:'assistant',type:'text',content:'门开了。\n[智能家电|门锁|action=unlock]'},
+    {role:'user',type:'text',content:'[智能家电|门锁|action=unlock]'}
+  ];
+  assert.equal(api.cleanupStoredLockTags(),true);
+  assert.deepEqual(JSON.parse(JSON.stringify(r.context.S.messages.main)),[
+    {role:'assistant',type:'text',content:'门开了。'},
+    {role:'user',type:'text',content:'[智能家电|门锁|action=unlock]'}
+  ]);
+});
+
 test('delayed event copy distinguishes occurrence time from observation time',async()=>{
   const r=runtime(),api=r.context.__privateSmartLockTest;
   const known={eventId:'known-1',accessoryName:'Claude门',currentState:'unlocked',timing:'known',eventAt:'2026-09-08T04:10:00Z',observedAt:'2026-09-08T04:10:00Z'};
@@ -188,11 +211,11 @@ test('a verified manual unlock notifies the role without turning a manual lock i
   assert.equal(lockedRuntime.queued(),'');
 });
 
-test('private release identity is iOS 336 while public web stays v1211',()=>{
+test('private release identity is iOS 337 while public web stays v1211',()=>{
   const webView=fs.readFileSync(path.join(xcodeRoot,'LocalPhoneWebView.swift'),'utf8');
   const project=fs.readFileSync(path.join(nativeRoot,'XcodeProject','PhoneCompanionTest.xcodeproj','project.pbxproj'),'utf8');
-  assert.match(webView,/1\.0\.336 \(336\)/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 336/);
-  assert.match(project,/MARKETING_VERSION = 1\.0\.336/);
+  assert.match(webView,/1\.0\.337 \(337\)/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 337/);
+  assert.match(project,/MARKETING_VERSION = 1\.0\.337/);
   assert.match(read('app.js'),/__NORTH_SHELL_BUILD__!==\'1211\'/);
 });
