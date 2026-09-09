@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='1217';</script>
+<script>window.__NORTH_SHELL_BUILD__='1220';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-1217-private-homekit-air-1';
+  var key='north-sw-reloaded-1220-private-wechat-persist-1';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=1217&r=v1217-private-homekit-air-1';
+  var url='sw.js?v=1220&r=v1220-private-combined-1';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -1431,7 +1431,7 @@ html.north-apple-remote-safe .music-chat-dock{margin-bottom:4px;scroll-margin-bo
 <script src="couple-watch.js?v=1216" onerror="__northBootFail('页面组件载入失败')"></script>
 <script src="request-diagnostics.js?v=1216"></script>
 <script src="message-beijing-time.js?v=1216"></script>
-<script src="app.js?v=1217&r=v1217-private-homekit-air-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=1220&r=v1220-private-combined-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
 <script src="private-reply-intercept.js?v=1216&r=v1178-private-intercept-parity-1" onerror="__northBootFail('私人回复拦截记录组件载入失败（安装包不完整）')"></script>
 <script src="cohab-theater.js?v=1216&r=v1184-ios-web-crash-cohab-turn-keyboard-1" onerror="__northBootFail('共同生活多人剧场组件载入失败（可能是网络或 404）')"></script>
 <script src="public-north-policy.js?v=1216"></script>
@@ -1441,7 +1441,7 @@ html.north-apple-remote-safe .music-chat-dock{margin-bottom:4px;scroll-margin-bo
 <script src="cohab-model-diagnostics.js?v=1216" onerror="__northBootFail('共同生活模型诊断组件载入失败')"></script>
 <script src="bead-studio.js?v=1216&r=v1184-pixel-puzzle-4" onerror="__northBootFail('像素拼拼乐组件载入失败（安装包不完整）')"></script>
 <script src="heart-quiz.js?v=1216" onerror="console.warn('心动审判预览组件载入失败')"></script>
-<script src="private-runtime-diagnostics.js?v=333" onerror="__northBootFail('私人 App 性能保护组件载入失败（安装包不完整）')"></script>
+<script src="private-runtime-diagnostics.js?v=334" onerror="__northBootFail('私人 App 性能保护组件载入失败（安装包不完整）')"></script>
 <script src="vendor/qr/qrcode.js?v=2.0.4"></script>
 <script src="vendor/qr/jsQR.js?v=1.4.0"></script>
 <script src="wechat-me.js?v=1216" onerror="__northBootFail('微信个人页组件载入失败（可能是网络或 404）')"></script>

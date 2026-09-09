@@ -3,7 +3,7 @@
   'use strict';
   if(window.__SMALL_PHONE_PRIVATE__!==true)return;
 
-  const OVERLAY_VERSION='333-background-lane';
+  const OVERLAY_VERSION='334-wechat-persist-lane';
   const lastEventAt=Object.create(null);
   let lastMeasuredSyncOp='',lastMeasuredSyncMs=0,lastMeasuredSyncAt=0;
   let activeBackgroundTask='',activeBackgroundStartedAt=0,lastBackgroundTask='',lastBackgroundMs=0,lastBackgroundAt=0;
@@ -177,6 +177,13 @@
       return emit('backgroundTask.end',{page,task,ms,status,error:row.error?safeRuntimeToken(row.error,'Error'):''},15000,task+'|'+status);
     }
     return false;
+  };
+
+  window.__smallPhoneWechatPersistTrace=function(input){
+    const row=input&&typeof input==='object'?input:{},stage=safeRuntimeToken(row.stage,'unknown'),fields={};
+    ['queued','passes','coalesced','blobChars','archiveMs','coreMs','ms'].forEach(key=>{const value=Number(row[key]);if(Number.isFinite(value))fields[key]=Math.max(0,Math.min(1000000000,Math.round(value)));});
+    if(row.error)fields.error=safeRuntimeToken(row.error,'Error');
+    return emit('wechatPersist.'+stage,fields,stage==='coalesced'?15000:0,stage);
   };
 
   if(typeof window.northNativePerformanceGuard==='function'){

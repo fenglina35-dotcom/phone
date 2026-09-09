@@ -63,17 +63,17 @@ function functionSource(source, name) {
 
 test('private performance candidate has a unique identity while public web stays v1216', () => {
   assert.equal(privateIndex, privateAlias);
-  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1217'/);
-  assert.match(privateIndex, /app\.js\?v=1217&r=v1217-private-homekit-air-1/);
-  assert.match(privateIndex, /private-runtime-diagnostics\.js\?v=333/);
-  assert.match(privateRepair, /index\.html\?repair=1&v=1217/);
-  assert.match(privateApp, /APP_VER='v1217 · 私人智能空调版'/);
-  assert.match(overlay, /333-background-lane/);
-  assert.match(webView, /1\.0\.342 \(342\)/);
-  assert.match(bridge, /private static let build = "1\.0\.342 \(342\)"/);
+  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1220'/);
+  assert.match(privateIndex, /app\.js\?v=1220&r=v1220-private-combined-1/);
+  assert.match(privateIndex, /private-runtime-diagnostics\.js\?v=334/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1220/);
+  assert.match(privateApp, /APP_VER='v1220 · 私人整合修复版'/);
+  assert.match(overlay, /334-wechat-persist-lane/);
+  assert.match(webView, /1\.0\.344 \(344\)/);
+  assert.match(bridge, /private static let build = "1\.0\.344 \(344\)"/);
   assert.match(bridge, /static let contractVersion = 37/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 342;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.342;/g) || []).length, 12);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 344;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.344;/g) || []).length, 12);
   assert.match(publicApp, /APP_VER='v1216 · 外卖店内搜索修复版'/);
   assert.doesNotMatch(publicApp, /function northNativeBackgroundTask\(name,run\)/);
 });
