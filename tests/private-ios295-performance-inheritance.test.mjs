@@ -45,18 +45,18 @@ function functionSource(sourceText, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('private identifiers advance to v1229 and iOS 351 while public stays v1229', () => {
+test('private identifiers advance to v1229 and iOS 352 while public stays v1229', () => {
   assert.equal(index, alias);
   assert.match(index, /window\.__NORTH_SHELL_BUILD__='1229'/);
   assert.match(index, /app\.js\?v=1229&r=v1229-private-combined-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=334/);
   assert.match(app, /APP_VER='v1229 · 私人语音修复与日常事件簿'/);
   assert.match(overlay, /334-wechat-persist-lane/);
-  assert.match(webview, /1\.0\.351 \(351\)/);
-  assert.match(bridge, /private static let build = "1\.0\.351 \(351\)"/);
+  assert.match(webview, /1\.0\.352 \(352\)/);
+  assert.match(bridge, /private static let build = "1\.0\.352 \(352\)"/);
   assert.match(bridge, /static let contractVersion = 37/);
-  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 351;/g) || []).length, 12);
-  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.351;/g) || []).length, 12);
+  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 352;/g) || []).length, 12);
+  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.352;/g) || []).length, 12);
   assert.match(publicApp, /APP_VER='v1229 · 语音修复与日常事件簿'/);
   assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1229'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
@@ -146,7 +146,7 @@ test('diagnostics identify the protected stage without collecting content', () =
   assert.doesNotMatch(overlay, /messageBody|chatContent|authorizationToken/);
 });
 
-test('packaged Mac guide advances to v1229 iOS 351', () => {
+test('packaged Mac guide advances to v1229 iOS 352', () => {
   const install = fs.readFileSync(
     path.join(project, '第三百二十七次安装_v1206_完整衣柜_请先读.md'),
     'utf8',
@@ -160,7 +160,7 @@ test('packaged Mac guide advances to v1229 iOS 351', () => {
     assert.match(guide, /Mac.*编译/);
     assert.match(guide, /真机|真实 iPhone/);
   }
-  assert.match(mac, /1\.0\.351 \(351\)/);
+  assert.match(mac, /1\.0\.352 \(352\)/);
   assert.match(mac, /原生桥.*37/);
   assert.match(install, /1\.0\.327 \(327\)/);
   assert.match(install, /原生桥.*35/);

@@ -36,6 +36,8 @@ struct CompanionSyncView: View {
     @State private var smallPhoneID = ""
     @State private var pairCode = ""
     @State private var reportFilterEnd = Date()
+    @State private var reportRefreshID = UUID().uuidString
+    @State private var usageDiagnosticCopied = false
 
     private let reportContext =
         DeviceActivityReport.Context("Total Activity")
@@ -83,6 +85,7 @@ struct CompanionSyncView: View {
                         reportContext,
                         filter: todayFilter
                     )
+                    .id(reportRefreshID)
                     .frame(height: 72)
                 }
                 .padding(.horizontal, 16)
@@ -215,6 +218,16 @@ struct CompanionSyncView: View {
                             "逐 App 数据",
                             value: service.reportStatusText
                         )
+                        Button("复制屏幕同步诊断") {
+                            UIPasteboard.general.string =
+                                service.usageReadDiagnosticText
+                            usageDiagnosticCopied = true
+                        }
+                        if usageDiagnosticCopied {
+                            Text("诊断已复制，不含 App 名称、使用明细或设备密钥")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
                         LabeledContent(
                             "快照上传",
                             value: service.uploadStatusText
@@ -363,6 +376,18 @@ struct CompanionSyncView: View {
                 )
             }
         }
+        .onReceive(NotificationCenter.default.publisher(
+            for: .companionUsageReportRefreshRequested
+        )) { notification in
+            // The service persists this request before notifying either report host.
+            // Refresh the visible report too: the root host can be covered by this sheet.
+            guard let requestID = notification.userInfo?["requestID"] as? String,
+                  let requestedAt = notification.userInfo?["requestedAt"] as? Date
+            else { return }
+            reportFilterEnd = requestedAt
+            reportRefreshID = requestID
+            usageDiagnosticCopied = false
+        }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active, service.isPaired else {
                 return
@@ -395,10 +420,6 @@ struct CompanionSyncView: View {
 
     @MainActor
     private func requestLiveUsageAndSynchronize() async {
-        let now = Date()
-        reportFilterEnd = now > reportFilterEnd
-            ? now
-            : reportFilterEnd.addingTimeInterval(1)
         await wellnessService.refresh()
         await service.synchronize(
             locationManager: locationManager,
@@ -484,6 +505,7 @@ final class CompanionSyncService: ObservableObject {
     static let shared = CompanionSyncService()
 
     private let usageReadTimeoutNanoseconds: UInt64 = 8_000_000_000
+    private var usageReadTask: Task<UsageReadOutcome, Never>?
     private let wellnessReadTimeoutNanoseconds: UInt64 = 12_000_000_000
     @Published private(set) var isPaired = false
     @Published private(set) var pairedTarget = ""
@@ -498,6 +520,7 @@ final class CompanionSyncService: ObservableObject {
     @Published private(set) var usageByExternalID: [String: Double] = [:]
     @Published private(set) var reportStatusText = "等待读取真实使用数据"
     @Published private(set) var reportGenerationText = "等待读取"
+    @Published private(set) var usageReadDiagnosticText = "尚未请求屏幕使用报告"
     @Published private(set) var dataAccessModeText = "正在检查"
     @Published private(set) var uploadStatusText = "等待上传"
     @Published private(set) var commandStatusText = "暂无命令"
@@ -1344,6 +1367,23 @@ final class CompanionSyncService: ObservableObject {
 
     @available(iOS 26.0, *)
     private func fetchTodayDirectUsageWithTimeout() async
+        -> UsageReadOutcome {
+        // A web inspection and a native upload can overlap. Share one bounded
+        // read rather than overwriting each other's App Group request IDs.
+        if let usageReadTask {
+            return await usageReadTask.value
+        }
+        let task = Task { @MainActor [weak self] in
+            guard let self else { return UsageReadOutcome.unavailable }
+            return await self.performTodayUsageReadWithTimeout()
+        }
+        usageReadTask = task
+        defer { usageReadTask = nil }
+        return await task.value
+    }
+
+    @available(iOS 26.0, *)
+    private func performTodayUsageReadWithTimeout() async
         -> UsageReadOutcome {
         let timeout = usageReadTimeoutNanoseconds
         let (stream, continuation) =
@@ -2196,16 +2236,15 @@ final class CompanionSyncService: ObservableObject {
         }
     }
 
-    /// Outside the EU, ordinary installations cannot receive
-    /// approvedWithDataAccess. The globally available Screen Time report
-    /// extension can still calculate tokenized totals after individual
-    /// authorization. It writes only the owner's selected usage summary into
-    /// this app's private App Group; poll for the matching request rather than
-    /// returning the old report that happens to be on disk.
+    /// Compatibility handoff for installations where the existing report's
+    /// App Group write is available. A visible report is NOT evidence that the
+    /// system permits exporting its data. Accept only this request's fresh
+    /// snapshot; otherwise report unavailability without invented usage.
     @available(iOS 26.0, *)
     private func fetchTodayExtensionUsage() async
         -> DeviceReportSnapshot? {
         guard let defaults = UserDefaults(suiteName: appGroupID) else {
+            recordUsageReadDiagnostic("shared-defaults-unavailable")
             return nil
         }
         let request = SharedUsageReportRequest(
@@ -2218,11 +2257,17 @@ final class CompanionSyncService: ObservableObject {
         }
         defaults.set(requestData, forKey: reportRequestKey)
         defaults.synchronize()
+        recordUsageReadDiagnostic("waiting", requestID: request.requestID)
         NotificationCenter.default.post(
             name: .companionUsageReportRefreshRequested,
-            object: nil
+            object: nil,
+            userInfo: [
+                "requestID": request.requestID,
+                "requestedAt": request.requestedAt
+            ]
         )
 
+        var snapshotState = "missing"
         for _ in 0..<28 {
             guard !Task.isCancelled else { return nil }
             defaults.synchronize()
@@ -2256,14 +2301,51 @@ final class CompanionSyncService: ObservableObject {
                 reportStatusText = shared.apps.isEmpty
                     ? "真实总时长已读取；逐 App 暂无记录"
                     : "真实屏幕与逐 App 数据已读取"
+                recordUsageReadDiagnostic("received", requestID: request.requestID)
                 return snapshot
+            }
+            if let data = defaults.data(forKey: reportSnapshotKey) {
+                if let shared = try? JSONDecoder().decode(
+                    SharedUsageReportSnapshot.self, from: data
+                ) {
+                    if shared.requestID != request.requestID {
+                        snapshotState = "request-mismatch"
+                    } else if shared.generatedAt < request.requestedAt {
+                        snapshotState = "stale"
+                    }
+                } else {
+                    snapshotState = "decode-failed"
+                }
             }
             try? await Task.sleep(nanoseconds: 250_000_000)
         }
         latestDirectUsageSnapshot = nil
         reportGenerationText = "报告扩展未回传"
-        reportStatusText = "请确认屏幕使用时间授权和报告扩展签名"
+        reportStatusText = "未收到本次报告；页面数字不代表已同步，可复制屏幕同步诊断"
+        recordUsageReadDiagnostic(snapshotState, requestID: request.requestID)
         return nil
+    }
+
+    private func recordUsageReadDiagnostic(
+        _ outcome: String, requestID: String = ""
+    ) {
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion")
+            as? String ?? "unknown"
+        let containerAvailable = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: appGroupID
+        ) != nil
+        let fields: [String: String] = [
+            "ios": UIDevice.current.systemVersion,
+            "build": build,
+            "authorization": String(describing: AuthorizationCenter.shared.authorizationStatus),
+            "appGroupContainer": containerAvailable ? "available" : "unavailable",
+            "request": String(requestID.prefix(8)),
+            "result": outcome
+        ]
+        usageReadDiagnosticText = fields.keys.sorted().map {
+            "\($0): \(fields[$0] ?? "")"
+        }.joined(separator: "\n")
+        SmallPhoneDiagnosticsStore.append("native.usageReport.read", fields: fields)
     }
 
     private var sharedDefaults: UserDefaults? {

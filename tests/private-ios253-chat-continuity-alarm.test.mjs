@@ -124,14 +124,14 @@ test('private entries carry diagnostics 334 and every iOS target carries build 3
   assert.equal(index, alias);
   assert.match(index, /private-runtime-diagnostics\.js\?v=334/);
   assert.match(overlay, /334-wechat-persist-lane/);
-  assert.match(webView, /1\.0\.351 \(351\)/);
-  assert.match(bridge, /1\.0\.351 \(351\)/);
+  assert.match(webView, /1\.0\.352 \(352\)/);
+  assert.match(bridge, /1\.0\.352 \(352\)/);
   assert.equal(
-    (project.match(/CURRENT_PROJECT_VERSION = 351;/g) || []).length,
+    (project.match(/CURRENT_PROJECT_VERSION = 352;/g) || []).length,
     12
   );
   assert.equal(
-    (project.match(/MARKETING_VERSION = 1\.0\.351;/g) || []).length,
+    (project.match(/MARKETING_VERSION = 1\.0\.352;/g) || []).length,
     12
   );
 });

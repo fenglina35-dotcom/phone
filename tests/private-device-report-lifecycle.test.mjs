@@ -91,7 +91,7 @@ test('status-bar theme does not force an avoidable first root transition', () =>
 });
 
 test('private build and bundled recovery page advance together', () => {
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.351 \(351\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.352 \(352\)'/);
   assert.match(webView, /smallPhone\.webContentTerminationTimes\.v25\.build333/);
   assert.match(privateApp, /APP_VER='v1229 · 私人语音修复与日常事件簿'/);
   assert.equal(privateAlias, privateIndex);
