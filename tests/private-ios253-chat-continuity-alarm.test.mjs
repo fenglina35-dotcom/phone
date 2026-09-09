@@ -120,18 +120,18 @@ test('private wardrobe exposes exact and overnight time ranges without removing 
   assert.match(app, /if\(named\.length\)return named/);
 });
 
-test('private entries carry diagnostics 334 and every iOS target carries build 344', () => {
+test('private entries carry diagnostics 334 and every iOS target carries build 345', () => {
   assert.equal(index, alias);
   assert.match(index, /private-runtime-diagnostics\.js\?v=334/);
   assert.match(overlay, /334-wechat-persist-lane/);
-  assert.match(webView, /1\.0\.344 \(344\)/);
-  assert.match(bridge, /1\.0\.344 \(344\)/);
+  assert.match(webView, /1\.0\.345 \(345\)/);
+  assert.match(bridge, /1\.0\.345 \(345\)/);
   assert.equal(
-    (project.match(/CURRENT_PROJECT_VERSION = 344;/g) || []).length,
+    (project.match(/CURRENT_PROJECT_VERSION = 345;/g) || []).length,
     12
   );
   assert.equal(
-    (project.match(/MARKETING_VERSION = 1\.0\.344;/g) || []).length,
+    (project.match(/MARKETING_VERSION = 1\.0\.345;/g) || []).length,
     12
   );
 });

@@ -475,7 +475,7 @@ final class HomeKitClimateBridge: NSObject, HMHomeManagerDelegate {
 
     private func controlCharacteristic(type: String, in target: ClimateTarget) -> HMCharacteristic? {
         if let direct = characteristic(type: type, in: target.service) { return direct }
-        for linked in target.service.linkedServices {
+        for linked in target.service.linkedServices ?? [] {
             if let candidate = characteristic(type: type, in: linked) { return candidate }
         }
         return nil

@@ -264,16 +264,16 @@ test('diagnostic append is fire-and-forget, bounded, rate-limited and not a time
   assert.match(appendLine, /isExcludedFromBackup = true/);
 });
 
-test('native recovery UI stays outside WebKit and carries the private 344 identity', () => {
+test('native recovery UI stays outside WebKit and carries the private 345 identity', () => {
   assert.match(rootView, /SmallPhoneDiagnosticsStore\.recentText\(limit: 80\)/);
   assert.match(rootView, /聊天、角色、图片、登录信息或密钥/);
   assert.match(rootView, /安全重新打开小手机/);
   assert.match(rootView, /复制诊断给开发者/);
   assert.doesNotMatch(webView, /LocalPhoneWebView\.loadFailureHTML/);
 
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.344 \(344\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.345 \(345\)'/);
   assert.match(webView, /smallPhone\.webContentTerminationTimes\.v25\.build333/);
-  assert.match(bridge, /private static let build = "1\.0\.344 \(344\)"/);
+  assert.match(bridge, /private static let build = "1\.0\.345 \(345\)"/);
   assert.match(bridge, /case "diagnostics\.read"/);
   assert.match(bridge, /"bounded": true/);
   assert.match(bridge, /"maximumBytes": 256 \* 1_024/);
