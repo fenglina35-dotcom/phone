@@ -1009,7 +1009,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.349 (349)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.350 (350)';
       window.__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__ = true;
       const privateDiagLast = new Map();
       window.__smallPhoneNativeDiag = (event, fields = {}, minGap = 10000) => {
@@ -1041,7 +1041,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
       };
       window.__smallPhoneNativeDiag(
         'native.bootstrap.ready',
-        { build: '1.0.349 (349)', autoBackupPaused: true },
+        { build: '1.0.350 (350)', autoBackupPaused: true },
         0
       );
       // Keep private-App background maintenance away from the WebContent main
