@@ -82,7 +82,6 @@ def validate(files):
         "northNativeBackgroundTask",
         "persistWechatDrain",
         "privatePhoneAccountCall",
-        "homekit.climate.command",
     ):
         assert key in app, key
     root_app = (ROOT / "app.js").read_text("utf-8").replace("\r\n", "\n")
@@ -100,6 +99,9 @@ def validate(files):
     bridge = text(files["PhoneCompanionTest/PhoneNativeBridge.swift"])
     assert 'private static let build = "1.0.350 (350)"' in bridge
     assert "static let contractVersion = 37" in bridge
+    air = text(files[BUNDLE + "private-smart-air.js"])
+    assert "homekit.climate.command" in air
+    assert 'case "homekit.climate.command"' in bridge
     for name in ("private-smart-air.js", "private-smart-air.css", "private-smart-lock.js", "private-smart-lock.css"):
         resource = ROOT / "native/private-small-phone/Resources/Web" / name
         assert text(files[BUNDLE + name]) == resource.read_text("utf-8").replace("\r\n", "\n"), name
