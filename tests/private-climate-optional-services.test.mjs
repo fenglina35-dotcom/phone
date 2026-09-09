@@ -16,11 +16,18 @@ test('direct control remains first; unavailable linked services fall through to 
 
 test('temperature control and capability metadata use linked HomeKit services',()=>{
  assert.match(source,/\("currentTemperature", controlCharacteristic\(type: HMCharacteristicTypeCurrentTemperature, in: target\)\)/);
- assert.match(source,/\("targetTemperature", controlCharacteristic\(type: HMCharacteristicTypeTargetTemperature, in: target\)\)/);
+ assert.match(source,/\("targetTemperature", thermostatTargetTemperature\)/);
  assert.match(source,/HMCharacteristicTypeCoolingThreshold/);
  assert.match(source,/HMCharacteristicTypeHeatingThreshold/);
  assert.match(source,/let targetTemperature = temperatureCharacteristic\(in: target\)/);
  assert.match(source,/let temperature = temperatureCharacteristic\(in: target, preferredMode:/);
+});
+test('heater-cooler temperature never prefers a generic target from another service',()=>{
+ const readBlock=source.slice(source.indexOf('let thermostatTargetTemperature'),source.indexOf('if let targetTemperature'));
+ const selectBlock=source.slice(source.indexOf('private func temperatureCharacteristic('),source.indexOf('private func cachedModeName('));
+ assert.match(readBlock,/target\.serviceKind == "thermostat"/);
+ assert.match(selectBlock,/target\.serviceKind == "heaterCooler"/);
+ assert(selectBlock.indexOf('target.serviceKind == "heaterCooler"')<selectBlock.indexOf('HMCharacteristicTypeTargetTemperature'));
 });
 test('mode choices come from HomeKit metadata and fan readback is exact enough to reject 99 as 100',()=>{
  assert.match(source,/metadata\?\.validValues/);

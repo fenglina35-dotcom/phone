@@ -160,10 +160,13 @@ final class HomeKitClimateBridge: NSObject, HMHomeManagerDelegate {
     private func readClimate(_ target: ClimateTarget, completion: @escaping ([String: Any]) -> Void) {
         var state = identityState(target)
         var errors: [[String: String]] = []
+        let thermostatTargetTemperature = target.serviceKind == "thermostat"
+            ? controlCharacteristic(type: HMCharacteristicTypeTargetTemperature, in: target)
+            : nil
         let readings: [(String, HMCharacteristic?)] = [
             ("activeRaw", characteristic(type: HMCharacteristicTypeActive, in: target.service)),
             ("currentTemperature", controlCharacteristic(type: HMCharacteristicTypeCurrentTemperature, in: target)),
-            ("targetTemperature", controlCharacteristic(type: HMCharacteristicTypeTargetTemperature, in: target)),
+            ("targetTemperature", thermostatTargetTemperature),
             ("coolingTargetTemperature", controlCharacteristic(type: HMCharacteristicTypeCoolingThreshold, in: target)),
             ("heatingTargetTemperature", controlCharacteristic(type: HMCharacteristicTypeHeatingThreshold, in: target)),
             ("currentLegacyRaw", characteristic(type: HMCharacteristicTypeCurrentHeatingCooling, in: target.service)),
@@ -503,18 +506,18 @@ final class HomeKitClimateBridge: NSObject, HMHomeManagerDelegate {
     }
 
     private func temperatureCharacteristic(in target: ClimateTarget, preferredMode: String? = nil) -> HMCharacteristic? {
-        if let directTarget = controlCharacteristic(type: HMCharacteristicTypeTargetTemperature, in: target) {
-            return directTarget
-        }
         let mode = preferredMode ?? cachedModeName(for: target)
-        if mode == "heat", let heating = controlCharacteristic(type: HMCharacteristicTypeHeatingThreshold, in: target) {
-            return heating
+        if target.serviceKind == "heaterCooler" {
+            if mode == "heat", let heating = controlCharacteristic(type: HMCharacteristicTypeHeatingThreshold, in: target) {
+                return heating
+            }
+            if mode == "cool", let cooling = controlCharacteristic(type: HMCharacteristicTypeCoolingThreshold, in: target) {
+                return cooling
+            }
+            return controlCharacteristic(type: HMCharacteristicTypeCoolingThreshold, in: target)
+                ?? controlCharacteristic(type: HMCharacteristicTypeHeatingThreshold, in: target)
         }
-        if mode == "cool", let cooling = controlCharacteristic(type: HMCharacteristicTypeCoolingThreshold, in: target) {
-            return cooling
-        }
-        return controlCharacteristic(type: HMCharacteristicTypeCoolingThreshold, in: target)
-            ?? controlCharacteristic(type: HMCharacteristicTypeHeatingThreshold, in: target)
+        return controlCharacteristic(type: HMCharacteristicTypeTargetTemperature, in: target)
     }
 
     private func cachedModeName(for target: ClimateTarget) -> String? {

@@ -101,6 +101,19 @@ test('temperature controls never invent a writable 25 degree fallback',()=>{
   assert.doesNotMatch(page,/>25℃</);
 });
 
+test('ACN1 heater-cooler uses its active mode threshold instead of an unrelated generic target',async()=>{
+  const r=runtime(),state={...climate,serviceKind:'heaterCooler',targetTemperature:25,coolingTargetTemperature:20,heatingTargetTemperature:28,mode:'cool'};
+  r.context.__privateSmartAirTest.applySnapshot({ok:true,climates:[state]});
+  r.setRoute({p:'wxsmarthome',device:'air'});
+  const page=r.context.renderWxSmartHome();
+  assert.match(page,/20℃/);
+  assert.doesNotMatch(page,/25(?:\.0)?℃/);
+  r.context.SmallPhoneNative.request=async(action,payload)=>{r.calls.push({action,payload});return{ok:true,verified:true,state:{...state,coolingTargetTemperature:payload.value,targetTemperature:payload.value}};};
+  await r.context.privateSmartAirTemperature(1);
+  assert.equal(r.calls.at(-1).payload.action,'temperature');
+  assert.equal(r.calls.at(-1).payload.value,21);
+});
+
 test('mode buttons only expose modes reported by HomeKit',()=>{
   const r=runtime(),api=r.context.__privateSmartAirTest;api.applySnapshot({ok:true,climates:[{...climate,supportedModes:['heat','cool']}]});r.setRoute({p:'wxsmarthome',device:'air'});const page=r.context.renderWxSmartHome();
   assert.match(page,/>制热</);assert.match(page,/>制冷</);assert.doesNotMatch(page,/>自动</);
