@@ -17,9 +17,9 @@ test('public web v1184 and private web v1189 remain compatible with native iOS 1
   assert.match(app, /sw\.js\?v=1223&r=v1223-couple-watch-trigger-1/);
   assert.match(shell, /north-shell-v1223-couple-watch-trigger-1/);
   assert.match(bundleInfo, /<string>1200<\/string>/);
-  assert.match(localWebView, /1\.0\.346 \(346\)/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 346;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.346;/g) || []).length, 12);
+  assert.match(localWebView, /1\.0\.347 \(347\)/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 347;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.347;/g) || []).length, 12);
 });
 
 test('native shared-media gain uses only public AVFoundation types', () => {
