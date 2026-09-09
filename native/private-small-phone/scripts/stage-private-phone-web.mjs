@@ -1,4 +1,4 @@
-import { cp, mkdir, readFile, rm, stat } from 'node:fs/promises';
+import { cp, mkdir, readFile, readdir, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { applyPrivatePhoneWebTransforms } from './private-phone-web-transform.mjs';
@@ -49,6 +49,17 @@ for (const relative of entries) {
 
 const bundledEntry = path.join(outputRoot, manifest.entry);
 await applyPrivatePhoneWebTransforms(outputRoot, manifest.entry);
+
+// Keep every private-only smart-home overlay in a clean staged bundle.
+const privateWebRoot = path.join(privateRoot, 'Resources', 'Web');
+for (const item of await readdir(privateWebRoot, { withFileTypes: true })) {
+  if (!item.isFile()) continue;
+  await cp(
+    path.join(privateWebRoot, item.name),
+    path.join(outputRoot, item.name),
+    { force: true }
+  );
+}
 
 // WKWebView uses an ASCII entry name so the main resource and its allowed
 // read directory are always resolved from exactly the same bundle path.

@@ -15,7 +15,7 @@ enum SmallPhoneDiagnosticsStore {
     )
     private static let maximumBytes = 256 * 1_024
     private static let maximumLines = 200
-    private static let build = "1.0.341 (341)"
+    private static let build = "1.0.342 (342)"
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -188,7 +188,7 @@ enum SmallPhoneRecoveryLaunchStore {
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
-    static let contractVersion = 36
+    static let contractVersion = 37
     static let roleCallActiveDefaultsKey =
         "smallPhone.roleCallActive.v1"
 
@@ -201,6 +201,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     var openDeviceManagement: (() -> Void)?
     private let nativeSpeech = NativeSpeechRecognitionController()
     private lazy var homeKitLights = HomeKitLightBridge.shared
+    private lazy var homeKitClimates = HomeKitClimateBridge.shared
     private lazy var homeKitLocks: HomeKitLockBridge = {
         let bridge = HomeKitLockBridge.shared
         bridge.eventHandler = { [weak self] event in
@@ -332,6 +333,15 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         case "homekit.light.command":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             homeKitLights.command(arguments: arguments) { [weak self] result in
+                self?.reply(requestID: requestID, result: result)
+            }
+        case "homekit.climates.snapshot":
+            homeKitClimates.snapshot { [weak self] result in
+                self?.reply(requestID: requestID, result: result)
+            }
+        case "homekit.climate.command":
+            let arguments = payload["payload"] as? [String: Any] ?? [:]
+            homeKitClimates.command(arguments: arguments) { [weak self] result in
                 self?.reply(requestID: requestID, result: result)
             }
         case "homekit.locks.snapshot":

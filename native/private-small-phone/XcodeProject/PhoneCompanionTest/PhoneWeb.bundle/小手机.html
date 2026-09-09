@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='1216';</script>
+<script>window.__NORTH_SHELL_BUILD__='1217';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-1216-private-cohab-keyboard-coordinate-1';
+  var key='north-sw-reloaded-1217-private-homekit-air-1';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=1216&r=v1216-couple-watch-1';
+  var url='sw.js?v=1217&r=v1217-private-homekit-air-1';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -1431,7 +1431,7 @@ html.north-apple-remote-safe .music-chat-dock{margin-bottom:4px;scroll-margin-bo
 <script src="couple-watch.js?v=1216" onerror="__northBootFail('页面组件载入失败')"></script>
 <script src="request-diagnostics.js?v=1216"></script>
 <script src="message-beijing-time.js?v=1216"></script>
-<script src="app.js?v=1216&r=v1216-private-lock-tag-guard-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=1217&r=v1217-private-homekit-air-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
 <script src="private-reply-intercept.js?v=1216&r=v1178-private-intercept-parity-1" onerror="__northBootFail('私人回复拦截记录组件载入失败（安装包不完整）')"></script>
 <script src="cohab-theater.js?v=1216&r=v1184-ios-web-crash-cohab-turn-keyboard-1" onerror="__northBootFail('共同生活多人剧场组件载入失败（可能是网络或 404）')"></script>
 <script src="public-north-policy.js?v=1216"></script>
@@ -1446,8 +1446,10 @@ html.north-apple-remote-safe .music-chat-dock{margin-bottom:4px;scroll-margin-bo
 <script src="vendor/qr/jsQR.js?v=1.4.0"></script>
 <script src="wechat-me.js?v=1216" onerror="__northBootFail('微信个人页组件载入失败（可能是网络或 404）')"></script>
 <link rel="stylesheet" href="private-smart-lock.css?v=339">
+<link rel="stylesheet" href="private-smart-air.css?v=342">
 <script src="smart-home.js?v=1216" onerror="__northBootFail('智能家电组件载入失败（可能是网络或 404）')"></script>
 <script src="private-smart-lock.js?v=339" onerror="__northBootFail('私人门锁组件载入失败（安装包不完整）')"></script>
+<script src="private-smart-air.js?v=342" onerror="__northBootFail('私人空调组件载入失败（安装包不完整）')"></script>
 <script src="delivery.js?v=1216" onerror="__northBootFail('真实外卖组件载入失败（可能是网络或 404）')"></script>
 <script src="commerce-ui.js?v=1216" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
 <script src="pet-game.js?v=1216" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>

@@ -80,7 +80,8 @@ function renderLock(){
 
 function renderChooser(){
   var state=memory.state&&memory.state.currentState,lockStatus=memory.busy?'正在读取':stateLabel(state||'unknown');
-  return lockPageNav('智能家电')+'<div class="scroll wx-smart-home-page private-smart-home-chooser"><section class="private-smart-home-choice-head"><small>MY HOME</small><h1>选择设备</h1><p>每件设备都有自己的控制页面</p></section><div class="private-smart-home-choices"><button class="light-card" onclick="go(\'wxsmarthome\',{device:\'light\'})"><i class="device-shape lamp"><span></span></i><span><b>卧室小灯</b><small>灯光控制</small></span><em>›</em></button><button class="door-card '+stateTone(state||'unknown')+'" onclick="go(\'wxsmarthome\',{device:\'lock\'})"><i class="device-shape door"><span></span></i><span><b>'+html(lockDisplayName())+'</b><small>'+html(lockStatus)+'</small></span><em>›</em></button></div></div>';
+  var airCard=typeof window.privateSmartAirChooserCard==='function'?window.privateSmartAirChooserCard():'';
+  return lockPageNav('智能家电')+'<div class="scroll wx-smart-home-page private-smart-home-chooser"><section class="private-smart-home-choice-head"><small>MY HOME</small><h1>选择设备</h1><p>每件设备都有自己的控制页面</p></section><div class="private-smart-home-choices"><button class="light-card" onclick="go(\'wxsmarthome\',{device:\'light\'})"><i class="device-shape lamp"><span></span></i><span><b>卧室小灯</b><small>灯光控制</small></span><em>›</em></button><button class="door-card '+stateTone(state||'unknown')+'" onclick="go(\'wxsmarthome\',{device:\'lock\'})"><i class="device-shape door"><span></span></i><span><b>'+html(lockDisplayName())+'</b><small>'+html(lockStatus)+'</small></span><em>›</em></button>'+airCard+'</div></div>';
 }
 function renderLockPage(){return lockPageNav('智能门锁')+'<div class="scroll wx-smart-home-page private-lock-page">'+renderLock()+'<p class="wx-smart-home-foot">私人版直接使用 iPhone 的家庭权限，不依赖电脑。</p></div>';}
 
