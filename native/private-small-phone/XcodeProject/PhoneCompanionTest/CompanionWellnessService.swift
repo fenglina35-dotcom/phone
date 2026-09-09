@@ -108,6 +108,9 @@ final class CompanionWellnessService: ObservableObject {
     }
 
     func deviceSnapshot() -> [String: Any] {
+        // A fresh snapshot must not stamp a cached battery value with a new time.
+        // UIDevice is lightweight; do not refresh HealthKit or usage here.
+        refreshBattery()
         var payload: [String: Any] = [
             "schema": 1,
             "batteryState": batteryStateText,

@@ -45,18 +45,18 @@ function functionSource(sourceText, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('private identifiers advance to v1213 and iOS 339 while public stays v1213', () => {
+test('private identifiers advance to v1213 and iOS 340 while public stays v1213', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1213'/);
-  assert.match(index, /app\.js\?v=1213&r=v1213-private-lock-tag-guard-1/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1214'/);
+  assert.match(index, /app\.js\?v=1214&r=v1213-private-lock-tag-guard-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=333/);
-  assert.match(app, /APP_VER='v1213 · 私人请求诊断与门锁更新版'/);
+  assert.match(app, /APP_VER='v1214 · 私人电量与睡眠刷新版'/);
   assert.match(overlay, /333-background-lane/);
-  assert.match(webview, /1\.0\.339 \(339\)/);
-  assert.match(bridge, /private static let build = "1\.0\.339 \(339\)"/);
+  assert.match(webview, /1\.0\.340 \(340\)/);
+  assert.match(bridge, /private static let build = "1\.0\.340 \(340\)"/);
   assert.match(bridge, /static let contractVersion = 36/);
-  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 339;/g) || []).length, 12);
-  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.339;/g) || []).length, 12);
+  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 340;/g) || []).length, 12);
+  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.340;/g) || []).length, 12);
   assert.match(publicApp, /APP_VER='v1213 · 请求诊断与简洁时间版'/);
   assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1213'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
@@ -146,7 +146,7 @@ test('diagnostics identify the protected stage without collecting content', () =
   assert.doesNotMatch(overlay, /messageBody|chatContent|authorizationToken/);
 });
 
-test('current Mac guide advances to private v1213 and iOS 339 while the historical iOS 327 record remains historical', () => {
+test('current Mac guide advances to private v1213 and iOS 340 while the historical iOS 327 record remains historical', () => {
   const install = fs.readFileSync(
     path.join(project, '第三百二十七次安装_v1206_完整衣柜_请先读.md'),
     'utf8',
@@ -160,11 +160,11 @@ test('current Mac guide advances to private v1213 and iOS 339 while the historic
     assert.match(guide, /Mac.*编译/);
     assert.match(guide, /真机|真实 iPhone/);
   }
-  assert.match(mac, /1\.0\.339 \(339\)/);
+  assert.match(mac, /1\.0\.340 \(340\)/);
   assert.match(mac, /原生桥.*36/);
   assert.match(install, /1\.0\.327 \(327\)/);
   assert.match(install, /原生桥.*35/);
-  assert.match(mac, /^# v1213 .*私人.*源码候选/);
+  assert.match(mac, /^# v1214 .*私人.*源码候选/);
   assert.match(mac, /网页.*推送/);
   assert.match(install, /私人内置网页 v1206/);
   assert.match(install, /两边共有/);

@@ -886,6 +886,7 @@ final class CompanionSyncService: ObservableObject {
         wellnessService: CompanionWellnessService
     ) async -> [String: Any] {
         let normalized = focus.lowercased()
+        let passiveHealthRefresh = focus == "伴生健康刷新"
         let wantsAll = ["全部", "所有", "完整", "一键"].contains {
             normalized.contains($0)
         }
@@ -895,9 +896,9 @@ final class CompanionSyncService: ObservableObject {
         let wantsLocation = wantsAll || ["定位", "位置"].contains {
             normalized.contains($0)
         }
-        let wantsHealth = wantsAll || [
+        let wantsHealth = (!passiveHealthRefresh || wellnessService.healthSyncEnabled) && (wantsAll || [
             "睡眠", "步数", "心率", "心跳", "心电", "ecg", "hrv", "健康"
-        ].contains { normalized.contains($0) }
+        ].contains { normalized.contains($0) })
 
         // The ordinary foreground status poll runs repeatedly while the web
         // UI is open. It must reuse cached authorization/data instead of
@@ -932,7 +933,7 @@ final class CompanionSyncService: ObservableObject {
         if wantsHealth {
             wellnessReadCompleted = await refreshWellnessWithTimeout(
                 wellnessService: wellnessService,
-                forceHealth: true
+                forceHealth: !passiveHealthRefresh
             )
         } else {
             wellnessReadCompleted = true
@@ -1002,7 +1003,7 @@ final class CompanionSyncService: ObservableObject {
         snapshot["capturedAt"] = iso8601(Date())
         snapshot["readSessionId"] = UUID().uuidString
         snapshot["requestedFocus"] = focus
-        if wantsHealth, !wellnessReadCompleted {
+        if wantsHealth, !wellnessReadCompleted, !passiveHealthRefresh {
             snapshot.removeValue(forKey: "health")
         }
         if let telemetry = snapshot["deviceTelemetry"] as? [String: Any],
@@ -1020,7 +1021,7 @@ final class CompanionSyncService: ObservableObject {
                 ? (report == nil ? "unavailable" : "success")
                 : "not-requested",
             "health": wantsHealth
-                ? (healthWasRead ? "success" : "unavailable")
+                ? (wellnessReadCompleted && healthWasRead ? "success" : "unavailable")
                 : "not-requested",
             "location": wantsLocation
                 ? (readErrors["location"] == nil
