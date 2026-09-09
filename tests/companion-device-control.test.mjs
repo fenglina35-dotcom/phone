@@ -128,7 +128,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v1223 · 聊天重新生成修复版'/);
+  assert.match(app, /const APP_VER='v1225 · 日常事件与控制修复版'/);
 });
 
 test('manual sync reads locally in the bundled app and keeps cloud fallback', () => {
@@ -572,7 +572,8 @@ test('role collective references resolve only the recently named external app gr
   assert.doesNotMatch(resolved.text, /哔哩哔哩/);
   context.rows.push({ role: 'user', content: '把全部已选 App 都锁上。' });
   const all = context.resolve(state, { id: 'role' }, '全部', '都锁好了。');
-  assert.equal(all.text, '全部内外 App');
+  // User wording alone must not broaden the role's previously selected group.
+  assert.equal(all.text, 'ChatGPT、DeepSeek、Gemini、豆包');
   assert.equal(all.scope, 'both');
 });
 

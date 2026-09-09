@@ -59,7 +59,7 @@ assert.match(liveSandbox.prompt, /约会间隙拿出手机/);
 assert.match(liveSandbox.prompt, /手动分段总结/);
 assert.match(liveSandbox.prompt, /地点：江边/);
 
-assert.match(source, /v1223 · 聊天重新生成修复版/);
+assert.match(source, /v1225 · 日常事件与控制修复版/);
 assert.match(source, /function timeAwarenessPrompt\(who,kind\)/);
 assert.match(source, /23:20\u523023:49[\s\S]*\u7edd\u5bf9\u4e0d\u8981\u8bf4\u5341\u4e8c\u70b9\u4e86/);
 assert.match(source, /timeAwarenessPrompt\(S\.me\.name,'wechat'\)/);
@@ -198,7 +198,7 @@ const repeatSandbox = {
   splitActions: (text) => [text],
 };
 vm.runInNewContext(
-  source.slice(visibleStart, visibleEnd) + "\n" + source.slice(repeatStart, repeatEnd) +
+  source.split(/\r?\n/).find(x=>x.startsWith('function offlineStripMoodTags(')) + '\n' + source.slice(visibleStart, visibleEnd) + "\n" + source.slice(repeatStart, repeatEnd) +
     ";const date={msgs:[" +
     "{who:'ta',text:'\\u6211\\u7ed9\\u4f60\\u7684\\u4efb\\u52a1\\u505a\\u5b8c\\u4e86\\u5417\\uff1f'}," +
     "{who:'ta',text:'\\u665a\\u996d\\u5403\\u8fc7\\u6ca1\\u6709\\uff1f'}" +
@@ -274,7 +274,7 @@ const revealSandbox = {
   esc: (text) => String(text).replaceAll("<", "&lt;"),
 };
 vm.runInNewContext(
-  source.slice(revealStart, revealEnd) +
+  source.split(/\r?\n/).find(x=>x.startsWith('function offlineStripMoodTags(')) + '\n' + source.slice(revealStart, revealEnd) +
     ";globalThis.narrTiming=offRevealTiming({who:'旁白',text:'一'.repeat(60)});" +
     "globalThis.talkTiming=offRevealTiming({who:'ta',text:'一'.repeat(60)});" +
     "globalThis.revealHtml=offRevealText({_reveal:true,_revealStep:50,text:'字幕渐显'});" +
@@ -662,6 +662,6 @@ assert.match(html, /\.rpstage\{/);
 assert.match(html, /\.rpnar\{/);
 assert.match(html, /\.rpmsg\.them \.rpbubble\{/);
 assert.match(html, /\.rpmsg\.me \.rpbubble\{/);
-assert.match(html, /app\.js\?v=1223/);
+assert.match(html, /app\.js\?v=1225/);
 
 console.log("offline date tests passed");

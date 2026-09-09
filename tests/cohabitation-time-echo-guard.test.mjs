@@ -21,7 +21,7 @@ vm.runInNewContext([
   'function roleVisibleEnvelopeText(value){return String(value||"");}',
   'function splitBubbles(value){return String(value||"").split(/\\n+/).filter(Boolean);}',
   'function splitActions(value){return [value];}',
-  functionSource('offNarrationText'),functionSource('offImplicitNarrationText'),
+  functionSource('offlineStripMoodTags'),functionSource('offNarrationText'),functionSource('offImplicitNarrationText'),
   functionSource('offResponsePart'),functionSource('offResponseParts'),
   functionSource('cohabTimeTopicInput'),functionSource('cohabNarrationReportsClock'),
   functionSource('cohabTimeEchoAudit'),

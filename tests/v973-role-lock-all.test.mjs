@@ -158,7 +158,7 @@ test('an incorrect internal-only model tag cannot downgrade a spoken all-lock or
   assert.match(apply,/changed=companionReads\.changed\|\|phonePwdChanged\|\|diaryPwdChanged\|\|allControlChanged/);
 });
 
-test('an explicit user all-control request upgrades a matching internal-only model action', () => {
+test('a user all-control request does not expand the role chosen internal-only action', () => {
   const context = vm.createContext({});
   vm.runInContext(`
     ${functionSource('companionAllExternalIntent')}
@@ -167,8 +167,8 @@ test('an explicit user all-control request upgrades a matching internal-only mod
     ${functionSource('companionRequestedAllControlAction')}
     this.detect=companionRequestedAllControlAction;
   `, context);
-  assert.equal(context.detect('好。\n[锁定|云程、音乐|仅内置]', '把所有软件全部锁定。'), 'lock');
-  assert.equal(context.detect('行。\n[解锁|云程、音乐|仅内置]', '解除全锁。'), 'unlock');
+  assert.equal(context.detect('好。\n[锁定|云程、音乐|仅内置]', '把所有软件全部锁定。'), '');
+  assert.equal(context.detect('行。\n[解锁|云程、音乐|仅内置]', '解除全锁。'), '');
   assert.equal(context.detect('我不想这么做。', '把所有软件全部锁定。'), '');
   assert.equal(context.detect('好。\n[解锁|云程、音乐|仅内置]', '把所有软件全部锁定。'), '');
   assert.equal(context.detect('好。\n[锁定|云程、音乐|仅内置]', '要不要把所有软件锁定？'), '');

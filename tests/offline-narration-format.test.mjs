@@ -36,7 +36,7 @@ const sandbox = {
 };
 
 vm.runInNewContext(
-  source.slice(visibleStart, visibleEnd) + '\n' + source.slice(parserStart, parserEnd) +
+  source.split(/\r?\n/).find(x=>x.startsWith('function offlineStripMoodTags(')) + '\n' + source.slice(visibleStart, visibleEnd) + '\n' + source.slice(parserStart, parserEnd) +
     ';globalThis.parse=offResponseParts;' +
     'globalThis.narration=offNarrationText;' +
     'globalThis.implicitNarration=offImplicitNarrationText;',

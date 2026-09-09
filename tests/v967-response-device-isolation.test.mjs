@@ -44,6 +44,7 @@ test('format-only role replies use the short repair path while unsafe drift stay
   });
   vm.runInContext([
     functionSource('roleVisibleEnvelopeText'),
+    functionSource('offlineStripMoodTags'),
     functionSource('offlineUnsafeRoleDrift'),
     functionSource('offlineRoleDrift'),
     functionSource('offlineRepairNote'),
@@ -53,6 +54,7 @@ test('format-only role replies use the short repair path while unsafe drift stay
   ].join('\n'), context);
   const role = { name: '阿屿' };
   assert.equal(context.unsafe('我在，慢慢说。'), false);
+  assert.equal(context.unsafe('[心情|不再提系统说明]\n【他走近】\n我在，慢慢说。'), false);
   assert.equal(context.drift('我在，慢慢说。'), true);
   assert.match(context.repair(role, '我在，慢慢说。'), /只输出两类正文/);
   assert.equal(context.unsafe('作为AI，我不能继续。'), true);

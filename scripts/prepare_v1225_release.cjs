@@ -1,0 +1,9 @@
+// Resolve the independently published v1224 identity; no functional AC edits.
+const fs=require('node:fs'),path=require('node:path'),root=path.resolve(__dirname,'..'),base='native/private-small-phone/XcodeProject/',bundle=base+'PhoneCompanionTest/PhoneWeb.bundle/';
+const edit=(p,fn)=>{const file=path.join(root,p),old=fs.readFileSync(file,'utf8'),next=fn(old);if(next!==old)fs.writeFileSync(file,next);};
+for(const p of ['app.js','小手机.html','index.html','repair.html','sw.js','web-hotfix.js',...['app.js','index.html','小手机.html','repair.html','web-hotfix.js'].map(x=>bundle+x)])edit(p,s=>s.split('\n').map(l=>l.includes('private-smart-air')?l.replace('private-smart-air.js?v=1223','private-smart-air.js?v=1224'):l.replaceAll('1224','1225')).join('\n'));
+for(const p of [base+'PhoneCompanionTest/LocalPhoneWebView.swift',base+'PhoneCompanionTest/PhoneNativeBridge.swift',base+'PhoneCompanionTest.xcodeproj/project.pbxproj'])edit(p,s=>s.replaceAll('1.0.347 (347)','1.0.348 (348)').replaceAll('CURRENT_PROJECT_VERSION = 347;','CURRENT_PROJECT_VERSION = 348;').replaceAll('MARKETING_VERSION = 1.0.347;','MARKETING_VERSION = 1.0.348;'));
+for(const n of fs.readdirSync(path.join(root,'tests'))){if(!n.endsWith('.test.mjs')||/^(north-public-|north-review-|public-north-)/.test(n))continue;edit('tests/'+n,s=>s.split('\n').map(l=>l.includes('private-smart-air')&&!l.includes('APP_VER')?l.replaceAll('v=1223','v=1224'):l.replaceAll('1224','1225').replace(/(?<!\d)347(?!\d)/g,'348')).join('\n'));}
+edit(base+'请在Mac编译前先读.md',s=>s.replaceAll('v1224','v1225').replaceAll('347','348'));
+edit(base+'安装_v1225_iOS348_请先读.md',s=>s.replaceAll('1224','1225').replaceAll('347','348'));
+edit('scripts/package_v1225.py',s=>s.replaceAll('1224','1225').replaceAll('347','348').replace('private-smart-air.js?v=1223','private-smart-air.js?v=1224'));
