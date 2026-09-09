@@ -378,9 +378,9 @@ test('manual unlock messages address the current partner instead of narrating he
   const second = fallback('用户亲自手动解锁了抖音，成功记录2026-08-27T11:00:00Z', [first]);
   assert.match(first, /你.*抖音|抖音.*你/);
   assert.notEqual(second, first, 'a later real unlock gets a different visible fallback if the model repeats');
-  assert.match(edge, /if \(manualUnlockEvent\) return \{ kind: "message", body: roleManualUnlockFallback\(eventContext, repeatCandidates\) \};/);
+  assert.match(edge, /if \(manualUnlockEvent\) return roleManualUnlockFailureResult\(eventContext, repeatCandidates\);/);
   assert.ok(
-    edge.indexOf('if (manualUnlockEvent) return { kind: "message", body: roleManualUnlockFallback(eventContext, repeatCandidates) };', edge.indexOf('const eventPerspectiveInvalid')) < edge.indexOf('attemptMessages = [', edge.indexOf('const eventPerspectiveInvalid')),
+    edge.indexOf('if (manualUnlockEvent) return roleManualUnlockFailureResult(eventContext, repeatCandidates);', edge.indexOf('const eventPerspectiveInvalid')) < edge.indexOf('attemptMessages = [', edge.indexOf('const eventPerspectiveInvalid')),
     'a new unlock must become a visible direct message before any paid rewrite'
   );
   assert.match(edge, /不得默认审问/);

@@ -534,6 +534,13 @@ function roleManualUnlockFallback(eventContext: string, recent: string[]) {
   return rows.find((row) => !prior.has(roleTextKey(row))) || rows[0];
 }
 
+function roleManualUnlockFailureResult(eventContext: string, recent: string[]) {
+  if (String(eventContext || "").includes("本次批量解锁")) {
+    return { kind: "unavailable" as const, body: "", reason: "batch-unlock-model-unavailable" };
+  }
+  return { kind: "message" as const, body: roleManualUnlockFallback(eventContext, recent) };
+}
+
 function profileModelBase(value: unknown) {
   try {
     const url = new URL(String(value || "").trim());
@@ -574,6 +581,7 @@ async function roleMessage(
   appDecision = false,
 ) {
   const manualUnlockEvent = String(eventInstruction || "").includes("亲自成功解锁App");
+  const batchManualUnlockEvent = manualUnlockEvent && !publicNorthCloud() && eventContext.includes("本次批量解锁");
   const replyHandoffEvent = /同一轮回复的服务器接管|直接回应payload里的最新用户消息/.test(String(eventInstruction || ""));
   /* A background handoff must always finish inside the two-minute claim lease.
      Without a hard deadline a slow OpenAI-compatible endpoint can leave the
@@ -621,7 +629,7 @@ async function roleMessage(
     model: Deno.env.get("ROLE_PUSH_MINIMAX_MODEL") || "MiniMax-M2.7",
   });
   if (!providers.length) return manualUnlockEvent
-    ? { kind: "message", body: roleManualUnlockFallback(eventContext, recentBodies) }
+    ? roleManualUnlockFailureResult(eventContext, recentBodies)
     : { kind: "unavailable", body: "", reason: "no-provider" };
   const clock = localClock(String(profile.timezone || "Asia/Shanghai"));
   const timeAware = profile.time_aware !== false;
@@ -644,8 +652,8 @@ async function roleMessage(
     return { kind: "message", body: Math.random() < 0.25 ? "[来电|视频]" : "[来电|语音]" };
   }
   const effectiveAllowSilent = allowSilent;
-  const messageMin = Math.max(1, Math.min(10, Number(profile.message_min) || 1));
-  const messageMax = Math.max(messageMin, Math.min(10, Number(profile.message_max) || 4));
+  const messageMin = batchManualUnlockEvent ? 1 : Math.max(1, Math.min(10, Number(profile.message_min) || 1));
+  const messageMax = batchManualUnlockEvent ? 1 : Math.max(messageMin, Math.min(10, Number(profile.message_max) || 4));
   const prompt = [
     `角色名：${String(profile.role_name || "角色").slice(0, 40)}`,
     `与用户关系：${String(profile.relation || "").slice(0, 80)}`,
@@ -679,6 +687,10 @@ async function roleMessage(
     { role: "user", content: promptText },
   ];
   if (eventInstruction) baseMessages[0].content = eventInstruction;
+  if (batchManualUnlockEvent) baseMessages.push({
+    role: "system",
+    content: "本轮是同一次批量解锁，只回应一次：用一句符合本人性格的自然短句回应整体解锁，不要逐个报 App 名字，不要重复历史单项解锁提醒，不要机械照抄事件说明。心情标签仍按规定单独输出。",
+  });
   if (manualUnlockEvent) {
     baseMessages.splice(1, 0, {
       role: "system",
@@ -742,7 +754,7 @@ async function roleMessage(
             } catch (_) {}
             console.warn("role-message-provider-failed", provider.name, response.status, failureCode);
             providerFailures.push(`${provider.name}:http-${response.status}:${failureCode}`);
-            if (manualUnlockEvent) return { kind: "message", body: roleManualUnlockFallback(eventContext, repeatCandidates) };
+            if (manualUnlockEvent) return roleManualUnlockFailureResult(eventContext, repeatCandidates);
             break;
           }
           const data = await response.json();
@@ -760,7 +772,7 @@ async function roleMessage(
             .replace(/<think>[\s\S]*?<\/think>/gi, "")
             .trim().replace(/^[“\"']|[”\"']$/g, "");
           if (!text) return manualUnlockEvent
-            ? { kind: "message", body: roleManualUnlockFallback(eventContext, repeatCandidates) }
+            ? roleManualUnlockFailureResult(eventContext, repeatCandidates)
             : { kind: "unavailable", body: "", reason: "empty-model-output" };
           /* Never send model deliberation, copied prompt text, or a cohabitation
              scene narration as a private WeChat proactive message. Do not ask
@@ -788,7 +800,7 @@ async function roleMessage(
               continue;
             }
             return manualUnlockEvent
-              ? { kind: "message", body: roleManualUnlockFallback(eventContext, repeatCandidates) }
+              ? roleManualUnlockFailureResult(eventContext, repeatCandidates)
               : ordinaryProactive
               ? { kind: "silent", body: "" }
               : { kind: "unavailable", body: "", reason: "unsafe-model-output" };
@@ -834,7 +846,7 @@ async function roleMessage(
             continue;
           }
           if (/^[\[【]\s*(?:保持安静|不说话)\s*[\]】]$/.test(text)) {
-            if (manualUnlockEvent) return { kind: "message", body: roleManualUnlockFallback(eventContext, repeatCandidates) };
+            if (manualUnlockEvent) return roleManualUnlockFailureResult(eventContext, repeatCandidates);
             if (effectiveAllowSilent) return { kind: "silent", body: "" };
             attemptMessages = [
               ...baseMessages,
@@ -859,7 +871,7 @@ async function roleMessage(
           // A manual-unlock event must remain visible, but an invalid first
           // result is repaired locally so it never spends a second model call.
           // Other repeated proactive events may still stay silent.
-          if (manualUnlockEvent) return { kind: "message", body: roleManualUnlockFallback(eventContext, repeatCandidates) };
+          if (manualUnlockEvent) return roleManualUnlockFailureResult(eventContext, repeatCandidates);
           if (reanswersCompleted && attempt === 0) {
             const boundary = roleStructuredConversationBoundary(profile);
             const answered = boundary?.assistantMessages?.join(" / ") || "（已回复）";
@@ -897,14 +909,14 @@ async function roleMessage(
         } catch (error) {
           console.warn("role-message-provider-error", provider.name, String(error?.message || error).slice(0, 160));
           providerFailures.push(`${provider.name}:${controller.signal.aborted ? "timeout" : "network-error"}`);
-          if (manualUnlockEvent) return { kind: "message", body: roleManualUnlockFallback(eventContext, repeatCandidates) };
+          if (manualUnlockEvent) return roleManualUnlockFailureResult(eventContext, repeatCandidates);
           break;
         } finally {
           clearTimeout(requestTimer);
         }
       }
     }
-    if (manualUnlockEvent) return { kind: "message", body: roleManualUnlockFallback(eventContext, repeatCandidates) };
+    if (manualUnlockEvent) return roleManualUnlockFailureResult(eventContext, repeatCandidates);
     return sawGeneratedCandidate && effectiveAllowSilent
       ? { kind: "silent", body: "" }
       : { kind: "unavailable", body: "", reason: providerFailures.join(",") || "empty-provider-response" };
@@ -1207,6 +1219,9 @@ function snapshotAutomationFacts(snapshot: Record<string, unknown>, kind: string
   if (kind === "manualUnlock") {
     const events = Array.isArray(snapshot.automationEvents) ? snapshot.automationEvents as Array<Record<string, unknown>> : [];
     const event = [...events].reverse().find((row) => row.kind === "manualUnlock" && row.explicit === true);
+    if (!publicNorthCloud() && event?.source === "native-management-batch") {
+      return `本次批量解锁：用户亲自手动解锁了本次批量解除的全部 App，成功记录${String(event.ts || "")}。这是同一次操作，只回应一次，用一句符合人设的自然短句回应整体解锁；不要逐个报 App 名字，不要展开旧解锁记录。不代表每日限额或其他锁定也已解除。`;
+    }
     return event ? `用户亲自手动解锁了${String(event.appName || "某个App")}，成功记录${String(event.ts || "")}` : "";
   }
   return "";

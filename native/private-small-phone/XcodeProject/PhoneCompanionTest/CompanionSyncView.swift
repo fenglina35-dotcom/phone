@@ -808,26 +808,50 @@ final class CompanionSyncService: ObservableObject {
         updateDataAccessMode()
     }
 
-    func recordExplicitManualUnlock(_ tokens: Set<ApplicationToken>) {
+    func recordExplicitManualUnlock(
+        _ tokens: Set<ApplicationToken>, batch: Bool = false
+    ) {
         guard !tokens.isEmpty else { return }
         let now = Date().timeIntervalSince1970 * 1_000
         var events = loadExplicitManualUnlockEvents()
+        var unlockedApps: [[String: String]] = []
         for token in tokens {
             guard let externalID = stableExternalID(for: token) else {
                 continue
             }
             rememberToken(token, forExternalID: externalID)
             let fallback = "App " + String(externalID.suffix(3))
+            unlockedApps.append([
+                "externalAppId": externalID,
+                "appName": appAliases[externalID] ?? fallback
+            ])
+        }
+        guard !unlockedApps.isEmpty else { return }
+        if batch {
+            // One explicit button action is one event, not one notification per app.
             events.append([
                 "id": UUID().uuidString,
                 "kind": "manualUnlock",
-                "externalAppId": externalID,
-                "appName": appAliases[externalID] ?? fallback,
+                "appName": "本次批量解除的全部 App",
+                "externalAppIds": unlockedApps.compactMap { $0["externalAppId"] }.sorted(),
+                "ts": now,
+                "explicit": true,
+                "source": "native-management-batch",
+                "delivered": false
+            ])
+        } else {
+          for app in unlockedApps {
+            events.append([
+                "id": UUID().uuidString,
+                "kind": "manualUnlock",
+                "externalAppId": app["externalAppId"] ?? "",
+                "appName": app["appName"] ?? "App",
                 "ts": now,
                 "explicit": true,
                 "source": "native-management",
                 "delivered": false
             ])
+          }
         }
         let cutoff = now - 24 * 60 * 60 * 1_000
         events = events.filter {
@@ -1072,6 +1096,7 @@ final class CompanionSyncService: ObservableObject {
         minutes: Int?,
         scope: String?,
         actor: String?,
+        by: String?,
         locationManager: LocationManager,
         wellnessService: CompanionWellnessService
     ) async throws -> [String: Any] {
@@ -1081,7 +1106,7 @@ final class CompanionSyncService: ObservableObject {
             minutes: minutes,
             scope: scope,
             actor: actor,
-            by: nil
+            by: by
         )
         let message = try await applyRemoteCommand(
             command,
@@ -1892,8 +1917,10 @@ final class CompanionSyncService: ObservableObject {
                 )
             }
             let previousRoleActors = shieldRoleActors()
-            if command.by == "role-app-watch" {
+            if command.by == "role-app-watch" || command.by == "role" {
                 rememberRoleShieldActor(command.actor, for: token)
+            } else if command.by == "owner" {
+                forgetRoleShieldActor(for: token)
             }
             let previousManualTokens =
                 manualLockStore.shield.applications ?? loadLockedTokens()

@@ -705,7 +705,7 @@ struct ContentView: View {
     private func unlockAllManuallyLockedApps() {
         clearRoleLockSources(for: lockedAppTokens)
         CompanionSyncService.shared.recordExplicitManualUnlock(
-            lockedAppTokens
+            lockedAppTokens, batch: true
         )
         lockedAppTokens.removeAll()
         lockStatusText = "已经解除全部手动锁定"

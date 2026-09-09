@@ -61,20 +61,20 @@ function functionSource(source, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('private performance candidate has a unique identity while public web stays v1215', () => {
+test('private performance candidate has a unique identity while public web stays v1216', () => {
   assert.equal(privateIndex, privateAlias);
-  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1215'/);
-  assert.match(privateIndex, /app\.js\?v=1215&r=v1215-private-lock-tag-guard-1/);
+  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1216'/);
+  assert.match(privateIndex, /app\.js\?v=1216&r=v1216-private-lock-tag-guard-1/);
   assert.match(privateIndex, /private-runtime-diagnostics\.js\?v=333/);
-  assert.match(privateRepair, /index\.html\?repair=1&v=1215/);
-  assert.match(privateApp, /APP_VER='v1215 · 私人外卖搜索修复版'/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1216/);
+  assert.match(privateApp, /APP_VER='v1216 · 私人外卖搜索修复版'/);
   assert.match(overlay, /333-background-lane/);
-  assert.match(webView, /1\.0\.340 \(340\)/);
-  assert.match(bridge, /private static let build = "1\.0\.340 \(340\)"/);
+  assert.match(webView, /1\.0\.341 \(341\)/);
+  assert.match(bridge, /private static let build = "1\.0\.341 \(341\)"/);
   assert.match(bridge, /static let contractVersion = 36/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 340;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.340;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1215 · 外卖店内搜索修复版'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 341;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.341;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1216 · 外卖店内搜索修复版'/);
   assert.doesNotMatch(publicApp, /function northNativeBackgroundTask\(name,run\)/);
 });
 
