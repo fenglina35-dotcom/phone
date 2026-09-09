@@ -45,20 +45,20 @@ function functionSource(sourceText, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('private identifiers advance to v1225 and iOS 348 while public stays v1225', () => {
+test('private identifiers advance to v1226 and iOS 349 while public stays v1226', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1225'/);
-  assert.match(index, /app\.js\?v=1225&r=v1225-private-combined-1/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1226'/);
+  assert.match(index, /app\.js\?v=1226&r=v1226-private-combined-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=334/);
-  assert.match(app, /APP_VER='v1225 · 私人日常事件与控制修复版'/);
+  assert.match(app, /APP_VER='v1226 · 私人明确语音请求修复版'/);
   assert.match(overlay, /334-wechat-persist-lane/);
-  assert.match(webview, /1\.0\.348 \(348\)/);
-  assert.match(bridge, /private static let build = "1\.0\.348 \(348\)"/);
+  assert.match(webview, /1\.0\.349 \(349\)/);
+  assert.match(bridge, /private static let build = "1\.0\.349 \(349\)"/);
   assert.match(bridge, /static let contractVersion = 37/);
-  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 348;/g) || []).length, 12);
-  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.348;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1225 · 日常事件与控制修复版'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1225'/);
+  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 349;/g) || []).length, 12);
+  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.349;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1226 · 明确语音请求修复版'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1226'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
@@ -146,7 +146,7 @@ test('diagnostics identify the protected stage without collecting content', () =
   assert.doesNotMatch(overlay, /messageBody|chatContent|authorizationToken/);
 });
 
-test('packaged Mac guide advances to v1225 iOS 348', () => {
+test('packaged Mac guide advances to v1226 iOS 349', () => {
   const install = fs.readFileSync(
     path.join(project, '第三百二十七次安装_v1206_完整衣柜_请先读.md'),
     'utf8',
@@ -160,11 +160,11 @@ test('packaged Mac guide advances to v1225 iOS 348', () => {
     assert.match(guide, /Mac.*编译/);
     assert.match(guide, /真机|真实 iPhone/);
   }
-  assert.match(mac, /1\.0\.348 \(348\)/);
+  assert.match(mac, /1\.0\.349 \(349\)/);
   assert.match(mac, /原生桥.*37/);
   assert.match(install, /1\.0\.327 \(327\)/);
   assert.match(install, /原生桥.*35/);
-  assert.match(mac, /^# v1225 .*私人.*源码候选/);
+  assert.match(mac, /^# v1226 .*私人.*源码候选/);
   assert.match(mac, /网页.*推送/);
   assert.match(install, /私人内置网页 v1206/);
   assert.match(install, /两边共有/);

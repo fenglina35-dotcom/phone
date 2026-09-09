@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import {execFileSync} from 'node:child_process';
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const b='native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/';
-test('v1225 keeps new lock and background scheduling code out of the website',()=>{
+test('v1226 keeps new lock and background scheduling code out of the website',()=>{
  const web=read('app.js'),html=read('小手机.html'),privateApp=read(b+'app.js');
  for(const marker of ['northNativeBackgroundTask','__smallPhoneBackgroundTaskSnapshot','private-smart-lock','homekit.lock.command']){assert(!web.includes(marker),marker);assert(!html.includes(marker),marker);}
  assert(privateApp.includes('northNativeBackgroundTask'));

@@ -174,9 +174,9 @@ test('private identity advances while public web stays unchanged',()=>{
   const privateApp=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js');
   const webView=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
   const project=read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
-  assert.match(privateApp,/APP_VER='v1225 · 私人日常事件与控制修复版'/);
-  assert.match(webView,/1\.0\.348 \(348\)/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 348;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.348;/g)||[]).length,12);
-  assert.match(read('app.js'),/APP_VER='v1225 · 日常事件与控制修复版'/);
+  assert.match(privateApp,/APP_VER='v1226 · 私人明确语音请求修复版'/);
+  assert.match(webView,/1\.0\.349 \(349\)/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 349;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.349;/g)||[]).length,12);
+  assert.match(read('app.js'),/APP_VER='v1226 · 明确语音请求修复版'/);
 });

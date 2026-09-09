@@ -211,11 +211,11 @@ test('a verified manual unlock notifies the role without turning a manual lock i
   assert.equal(lockedRuntime.queued(),'');
 });
 
-test('private release identity is iOS 348 while public web stays v1225',()=>{
+test('private release identity is iOS 349 while public web stays v1226',()=>{
   const webView=fs.readFileSync(path.join(xcodeRoot,'LocalPhoneWebView.swift'),'utf8');
   const project=fs.readFileSync(path.join(nativeRoot,'XcodeProject','PhoneCompanionTest.xcodeproj','project.pbxproj'),'utf8');
-  assert.match(webView,/1\.0\.348 \(348\)/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 348/);
-  assert.match(project,/MARKETING_VERSION = 1\.0\.348/);
-  assert.match(read('app.js'),/__NORTH_SHELL_BUILD__!==\'1225\'/);
+  assert.match(webView,/1\.0\.349 \(349\)/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 349/);
+  assert.match(project,/MARKETING_VERSION = 1\.0\.349/);
+  assert.match(read('app.js'),/__NORTH_SHELL_BUILD__!==\'1226\'/);
 });
