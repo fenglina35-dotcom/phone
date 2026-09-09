@@ -13,3 +13,19 @@ test('direct control remains first; unavailable linked services fall through to 
  assert.match(part,/characteristic\(type: type, in: linked\)/);
  assert.match(part,/return nil\s*\}/);
 });
+
+test('temperature control and capability metadata use linked HomeKit services',()=>{
+ assert.match(source,/\("currentTemperature", controlCharacteristic\(type: HMCharacteristicTypeCurrentTemperature, in: target\)\)/);
+ assert.match(source,/\("targetTemperature", controlCharacteristic\(type: HMCharacteristicTypeTargetTemperature, in: target\)\)/);
+ assert.match(source,/HMCharacteristicTypeCoolingThreshold/);
+ assert.match(source,/HMCharacteristicTypeHeatingThreshold/);
+ assert.match(source,/let targetTemperature = temperatureCharacteristic\(in: target\)/);
+ assert.match(source,/let temperature = temperatureCharacteristic\(in: target, preferredMode:/);
+});
+test('mode choices come from HomeKit metadata and fan readback is exact enough to reject 99 as 100',()=>{
+ assert.match(source,/metadata\?\.validValues/);
+ assert.match(source,/supportedModeNames/);
+ assert.doesNotMatch(source,/state\["supportedModes"\] = \["auto", "heat", "cool"\]/);
+ assert.doesNotMatch(source,/case "fanSpeed":[^]*?<= 1/);
+ assert.match(source,/ACN1-AIR/);
+});

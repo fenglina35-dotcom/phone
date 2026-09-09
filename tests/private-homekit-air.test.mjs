@@ -76,7 +76,7 @@ function runtime(){
   return{context,calls,setRoute(next){route=next;}};
 }
 
-const climate={accessoryId:'air-a',serviceId:'air-s',accessoryName:'空调',roomName:'卧室',reachable:true,complete:true,power:true,mode:'cool',currentTemperature:28,targetTemperature:25,minimumTemperature:16,maximumTemperature:30,temperatureStep:1,supportsFanSpeed:true,fanSpeed:60,minimumFanSpeed:0,maximumFanSpeed:100,fanSpeedStep:10,supportedModes:['auto','heat','cool'],manufacturer:'LENGCEOI.COM',model:'ACN1-AIR'};
+const climate={accessoryId:'air-a',serviceId:'air-s',accessoryName:'空调',roomName:'卧室',reachable:true,complete:true,power:true,mode:'cool',currentTemperature:28,targetTemperature:25,minimumTemperature:16,maximumTemperature:30,temperatureStep:1,supportsTemperature:true,supportsFanSpeed:true,fanSpeed:60,minimumFanSpeed:0,maximumFanSpeed:100,fanSpeedStep:10,supportedModes:['auto','heat','cool'],manufacturer:'LENGCEOI.COM',model:'ACN1-AIR'};
 
 test('air is a third independent page and leaves light and lock renderers intact',()=>{
   const r=runtime();r.context.__privateSmartAirTest.applySnapshot({ok:true,climates:[climate]});
@@ -92,6 +92,35 @@ test('air is a third independent page and leaves light and lock renderers intact
 test('fan controls disappear when HomeKit does not expose a writable fan speed',()=>{
   const r=runtime();r.context.__privateSmartAirTest.applySnapshot({ok:true,climates:[{...climate,supportsFanSpeed:false,fanSpeed:undefined}]});r.setRoute({p:'wxsmarthome',device:'air'});const page=r.context.renderWxSmartHome();
   assert.doesNotMatch(page,/>风速</);assert.doesNotMatch(page,/privateSmartAirFan/);
+});
+
+test('temperature controls never invent a writable 25 degree fallback',()=>{
+  const r=runtime();r.context.__privateSmartAirTest.applySnapshot({ok:true,climates:[{...climate,supportsTemperature:false,targetTemperature:undefined}]});r.setRoute({p:'wxsmarthome',device:'air'});const page=r.context.renderWxSmartHome();
+  assert.match(page,/目标温度未提供/);
+  assert.doesNotMatch(page,/privateSmartAirTemperature/);
+  assert.doesNotMatch(page,/>25℃</);
+});
+
+test('mode buttons only expose modes reported by HomeKit',()=>{
+  const r=runtime(),api=r.context.__privateSmartAirTest;api.applySnapshot({ok:true,climates:[{...climate,supportedModes:['heat','cool']}]});r.setRoute({p:'wxsmarthome',device:'air'});const page=r.context.renderWxSmartHome();
+  assert.match(page,/>制热</);assert.match(page,/>制冷</);assert.doesNotMatch(page,/>自动</);
+  assert.equal(api.airDecision('[智能家电|空调|mode=auto]',{id:'role-1'}).valid,false);
+});
+
+test('three-level fan decreases from 100 to the real 66 percent step',async()=>{
+  const r=runtime(),state={...climate,fanSpeed:100,fanSpeedStep:1,fanControlValues:[33,66,100]};
+  r.context.__privateSmartAirTest.applySnapshot({ok:true,climates:[state]});
+  r.context.SmallPhoneNative.request=async(action,payload)=>{r.calls.push({action,payload});return{ok:true,verified:true,state:{...state,fanSpeed:payload.value}};};
+  const result=await r.context.privateSmartAirFan(-1);
+  assert.equal(result.verified,true);
+  assert.equal(r.calls.at(-1).payload.action,'fan');
+  assert.equal(r.calls.at(-1).payload.value,66);
+});
+
+test('role context states the last read power mode temperature and fan without guessing',()=>{
+  const r=runtime();r.context.__privateSmartAirTest.applySnapshot({ok:true,climates:[{...climate,readAt:'2026-09-09T18:05:00Z'}]});
+  const prompt=r.context.smartHomeRolePrompt({id:'role-1'});
+  assert.match(prompt,/当前为开启/);assert.match(prompt,/模式为制冷/);assert.match(prompt,/设定温度25℃/);assert.match(prompt,/室内温度28℃/);assert.match(prompt,/风速60%/);assert.match(prompt,/最近读取时间/);
 });
 
 test('role may autonomously care, but ordinary hot or cold words never directly trigger native commands',()=>{

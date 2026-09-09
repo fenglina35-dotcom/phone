@@ -162,8 +162,10 @@ final class HomeKitClimateBridge: NSObject, HMHomeManagerDelegate {
         var errors: [[String: String]] = []
         let readings: [(String, HMCharacteristic?)] = [
             ("activeRaw", characteristic(type: HMCharacteristicTypeActive, in: target.service)),
-            ("currentTemperature", characteristic(type: HMCharacteristicTypeCurrentTemperature, in: target.service)),
-            ("targetTemperature", characteristic(type: HMCharacteristicTypeTargetTemperature, in: target.service)),
+            ("currentTemperature", controlCharacteristic(type: HMCharacteristicTypeCurrentTemperature, in: target)),
+            ("targetTemperature", controlCharacteristic(type: HMCharacteristicTypeTargetTemperature, in: target)),
+            ("coolingTargetTemperature", controlCharacteristic(type: HMCharacteristicTypeCoolingThreshold, in: target)),
+            ("heatingTargetTemperature", controlCharacteristic(type: HMCharacteristicTypeHeatingThreshold, in: target)),
             ("currentLegacyRaw", characteristic(type: HMCharacteristicTypeCurrentHeatingCooling, in: target.service)),
             ("targetLegacyRaw", characteristic(type: HMCharacteristicTypeTargetHeatingCooling, in: target.service)),
             ("currentModernRaw", characteristic(type: HMCharacteristicTypeCurrentHeaterCoolerState, in: target.service)),
@@ -171,7 +173,7 @@ final class HomeKitClimateBridge: NSObject, HMHomeManagerDelegate {
             ("fanSpeed", controlCharacteristic(type: HMCharacteristicTypeRotationSpeed, in: target))
         ]
 
-        if let targetTemperature = characteristic(type: HMCharacteristicTypeTargetTemperature, in: target.service) {
+        if let targetTemperature = temperatureCharacteristic(in: target) {
             state["minimumTemperature"] = targetTemperature.metadata?.minimumValue?.doubleValue ?? 16
             state["maximumTemperature"] = targetTemperature.metadata?.maximumValue?.doubleValue ?? 30
             state["temperatureStep"] = targetTemperature.metadata?.stepValue?.doubleValue ?? 1
@@ -184,6 +186,8 @@ final class HomeKitClimateBridge: NSObject, HMHomeManagerDelegate {
             state["maximumFanSpeed"] = fanSpeed.metadata?.maximumValue?.doubleValue ?? 100
             state["fanSpeedStep"] = fanSpeed.metadata?.stepValue?.doubleValue ?? 10
             state["supportsFanSpeed"] = fanSpeed.properties.contains(HMCharacteristicPropertyWritable)
+            let values = numericValidValues(fanSpeed)
+            if !values.isEmpty { state["fanControlValues"] = values }
         } else {
             state["supportsFanSpeed"] = false
         }
@@ -250,14 +254,22 @@ final class HomeKitClimateBridge: NSObject, HMHomeManagerDelegate {
             state["power"] = active == 1
             state["mode"] = active == 0 ? "off" : modernModeName(targetRaw)
             state["currentMode"] = modernCurrentModeName(Int(number(state["currentModernRaw"]) ?? 0))
-            state["supportedModes"] = ["auto", "heat", "cool"]
         } else {
             let targetRaw = Int(number(state["targetLegacyRaw"]) ?? 0)
             state["power"] = targetRaw != 0
             state["mode"] = legacyModeName(targetRaw)
             state["currentMode"] = legacyModeName(Int(number(state["currentLegacyRaw"]) ?? 0))
-            state["supportedModes"] = ["heat", "cool", "auto"]
         }
+        if state["targetTemperature"] == nil {
+            if state["mode"] as? String == "heat" {
+                state["targetTemperature"] = state["heatingTargetTemperature"]
+            } else if state["mode"] as? String == "cool" {
+                state["targetTemperature"] = state["coolingTargetTemperature"]
+            } else {
+                state["targetTemperature"] = state["coolingTargetTemperature"] ?? state["heatingTargetTemperature"]
+            }
+        }
+        state["supportedModes"] = supportedModeNames(for: target)
     }
 
     private enum CharacteristicReadResult {
@@ -315,6 +327,10 @@ final class HomeKitClimateBridge: NSObject, HMHomeManagerDelegate {
                 completion(failure("homekit_climate_invalid_mode", "空调模式不在可用范围内。"))
                 return
             }
+            guard modeName == "off" || supportedModeNames(for: target).contains(modeName) else {
+                completion(failure("homekit_climate_mode_unsupported", "这个空调没有提供这个模式。"))
+                return
+            }
             if target.serviceKind == "heaterCooler" {
                 guard let active = characteristic(type: HMCharacteristicTypeActive, in: target.service),
                       let mode = characteristic(type: HMCharacteristicTypeTargetHeaterCoolerState, in: target.service) else {
@@ -342,7 +358,7 @@ final class HomeKitClimateBridge: NSObject, HMHomeManagerDelegate {
 
         case "temperature":
             guard let value = number(arguments["value"]),
-                  let temperature = characteristic(type: HMCharacteristicTypeTargetTemperature, in: target.service) else {
+                  let temperature = temperatureCharacteristic(in: target, preferredMode: arguments["mode"] as? String) else {
                 completion(failure("homekit_climate_temperature_unsupported", "这个空调没有提供可控制的目标温度。"))
                 return
             }
@@ -462,7 +478,7 @@ final class HomeKitClimateBridge: NSObject, HMHomeManagerDelegate {
             case "targetTemperature":
                 return abs((number(state[key]) ?? -99) - value) <= 0.25
             case "fanSpeed":
-                return abs((number(state[key]) ?? -99) - value) <= 1
+                return abs((number(state[key]) ?? -99) - value) < 0.1
             default:
                 return false
             }
@@ -475,10 +491,73 @@ final class HomeKitClimateBridge: NSObject, HMHomeManagerDelegate {
 
     private func controlCharacteristic(type: String, in target: ClimateTarget) -> HMCharacteristic? {
         if let direct = characteristic(type: type, in: target.service) { return direct }
+        var checked = Set<UUID>([target.service.uniqueIdentifier])
         for linked in target.service.linkedServices ?? [] {
+            checked.insert(linked.uniqueIdentifier)
             if let candidate = characteristic(type: type, in: linked) { return candidate }
         }
+        for related in target.accessory.services where !checked.contains(related.uniqueIdentifier) {
+            if let candidate = characteristic(type: type, in: related) { return candidate }
+        }
         return nil
+    }
+
+    private func temperatureCharacteristic(in target: ClimateTarget, preferredMode: String? = nil) -> HMCharacteristic? {
+        if let directTarget = controlCharacteristic(type: HMCharacteristicTypeTargetTemperature, in: target) {
+            return directTarget
+        }
+        let mode = preferredMode ?? cachedModeName(for: target)
+        if mode == "heat", let heating = controlCharacteristic(type: HMCharacteristicTypeHeatingThreshold, in: target) {
+            return heating
+        }
+        if mode == "cool", let cooling = controlCharacteristic(type: HMCharacteristicTypeCoolingThreshold, in: target) {
+            return cooling
+        }
+        return controlCharacteristic(type: HMCharacteristicTypeCoolingThreshold, in: target)
+            ?? controlCharacteristic(type: HMCharacteristicTypeHeatingThreshold, in: target)
+    }
+
+    private func cachedModeName(for target: ClimateTarget) -> String? {
+        if target.serviceKind == "heaterCooler" {
+            let characteristic = controlCharacteristic(type: HMCharacteristicTypeTargetHeaterCoolerState, in: target)
+            guard let raw = number(characteristic?.value) else { return nil }
+            return modernModeName(Int(raw))
+        }
+        let characteristic = controlCharacteristic(type: HMCharacteristicTypeTargetHeatingCooling, in: target)
+        guard let raw = number(characteristic?.value) else { return nil }
+        return legacyModeName(Int(raw))
+    }
+
+    private func numericValidValues(_ characteristic: HMCharacteristic?) -> [Double] {
+        (characteristic?.metadata?.validValues ?? []).map { $0.doubleValue }
+    }
+
+    private func supportedModeNames(for target: ClimateTarget) -> [String] {
+        let type = target.serviceKind == "heaterCooler"
+            ? HMCharacteristicTypeTargetHeaterCoolerState
+            : HMCharacteristicTypeTargetHeatingCooling
+        let values = numericValidValues(controlCharacteristic(type: type, in: target)).map { Int($0) }
+        guard !values.isEmpty else {
+            // Some bridges omit valid-values metadata. Heat and cool are the only
+            // modes proven by the user's real device; never invent Auto support.
+            return ["heat", "cool"]
+        }
+        let names = values.compactMap { raw -> String? in
+            if target.serviceKind == "heaterCooler" {
+                return raw == 0 ? "auto" : raw == 1 ? "heat" : raw == 2 ? "cool" : nil
+            }
+            return raw == 1 ? "heat" : raw == 2 ? "cool" : raw == 3 ? "auto" : nil
+        }
+        let unique = names.reduce(into: [String]()) { result, name in
+            if !result.contains(name) { result.append(name) }
+        }
+        // The user's LENGCEOI ACN1-AIR exposes an Auto-looking value that does
+        // not execute on the real appliance. Keep the private UI/action list
+        // aligned with the modes verified on that exact device.
+        if target.accessory.model?.uppercased() == "ACN1-AIR" {
+            return unique.filter { $0 != "auto" }
+        }
+        return unique
     }
 
     private func modernModeName(_ raw: Int) -> String {
