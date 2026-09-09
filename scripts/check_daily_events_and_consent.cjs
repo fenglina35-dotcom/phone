@@ -37,7 +37,11 @@ try{for(const privateApp of [false,true]){
   },{channel,raw});
   assert(result.rows.some(x=>x.includes('吃过就好')),JSON.stringify(result));assert(!result.rows.join('').includes('心情|'));assert(!result.rows.join('').includes('事件簿|'));assert.equal(result.items.length,1,JSON.stringify(result));assert(!result.busy);assert.equal(result.calls,1,JSON.stringify(result));console.log(JSON.stringify({privateApp,channel,raw,wholeReplyDelivered:true,eventRecorded:true,moodHidden:true}));
  }
- await page.evaluate(()=>{_off=null;cohabRoot().enabled=false;_spyUnlock[testId]=true;getSpy(getC(testId)).granted=true;go('spy',{id:testId});spyOpen(testId,'events');});
+ await page.evaluate(()=>{_off=null;cohabRoot().enabled=false;_spyUnlock[testId]=true;getSpy(getC(testId)).granted=true;S.spy[testId]=S.spy[testId]||{time:Date.now()};_spyApp=null;go('spy',{id:testId});});
+ const eventTile=page.locator('[onclick]').filter({hasText:/^日常事件簿$/}).filter({has:page.locator('svg')});
+ const icons=await page.evaluate(()=>{const tiles=[...document.querySelectorAll('[onclick]')];const icon=key=>tiles.find(x=>(x.getAttribute('onclick')||'').includes(",\u0027"+key+"\u0027)"))?.querySelector('svg')?.outerHTML;return{events:icon('events'),grudge:icon('grudge')};});
+ assert(icons.events,'daily event ledger must render a line icon, not the old character fallback');assert.equal(icons.events,icons.grudge);
+ await eventTile.click();
  await page.getByRole('checkbox',{name:'自动记录日常事件'}).waitFor();assert(await page.getByRole('checkbox',{name:'自动记录日常事件'}).isChecked());
  await page.getByRole('spinbutton',{name:'事件记录上限'}).fill('80');await page.getByRole('spinbutton',{name:'事件记录上限'}).blur();
  await page.screenshot({path:path.join(root,'.qa',`daily-events-${privateApp?'private':'web'}.png`),fullPage:true});

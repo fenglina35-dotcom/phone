@@ -42,7 +42,7 @@ const context = vm.createContext({
   ttsRelayOn: (tts) => !!(tts && tts.relay),
   DEFAULT_TTS_VOICE: "male-qn-qingse",
 });
-for (const name of ["ttsStyleKind", "ttsCueKind", "ttsAutoCue", "ttsRequestedCue", "tts2p8Interjection", "tts2p8IsInterjectionCue", "ttsRelayInterjection", "ttsFishSoundLead", "ttsFishTags", "ttsFishEmphasis", "ttsFishPerformance", "ttsBracketPerformance", "voiceRate", "voicePitch", "voiceApiPitch", "voiceApiTuningOn", "voicePauseSeconds", "ttsSentencePauseText", "ttsVoiceProfile", "parseVoiceTagLine", "normVoiceLang", "ttsContentLang", "ttsLanguageBoost", "normVoiceAccent", "voiceEnglishPrompt", "applySystemVoice", "hasForeign", "voiceLangName", "explicitVoiceReplyRequest", "voiceReplyTagValid", "requestedVoiceNeedsFix", "voiceTagNeedsLangFix", "ttsVoiceAccessErrorText", "ttsRelayVoiceIds"]) {
+for (const name of ["roleReplyEnglishOnly", "ttsStyleKind", "ttsCueKind", "ttsAutoCue", "ttsRequestedCue", "tts2p8Interjection", "tts2p8IsInterjectionCue", "ttsRelayInterjection", "ttsFishSoundLead", "ttsFishTags", "ttsFishEmphasis", "ttsFishPerformance", "ttsBracketPerformance", "voiceRate", "voicePitch", "voiceApiPitch", "voiceApiTuningOn", "voicePauseSeconds", "ttsSentencePauseText", "ttsVoiceProfile", "parseVoiceTagLine", "normVoiceLang", "ttsContentLang", "ttsLanguageBoost", "normVoiceAccent", "voiceEnglishPrompt", "applySystemVoice", "hasForeign", "voiceLangName", "explicitVoiceReplyRequest", "voiceReplyTagValid", "requestedVoiceNeedsFix", "voiceTagNeedsLangFix", "ttsVoiceAccessErrorText", "ttsRelayVoiceIds"]) {
   vm.runInContext(functionSource(name), context);
 }
 vm.runInContext(functionSource("fishVoiceItems"), context);
