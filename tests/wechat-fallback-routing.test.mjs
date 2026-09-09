@@ -4,7 +4,7 @@ import vm from 'node:vm';
 
 const source=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const start=source.indexOf('function wechatAuxConfigured(');
-const end=source.indexOf('async function aiReply(id,note,replyToken,replyAccount,replyIntent)',start);
+const end=source.indexOf('async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)',start);
 const visibleStart=source.indexOf('function roleVisibleEnvelopeText(value)');
 const visibleEnd=source.indexOf('\n',visibleStart);
 assert.ok(start>=0&&end>start,'wechat fallback helpers must exist');

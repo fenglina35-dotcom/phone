@@ -28,7 +28,7 @@ const touch = functionSource("replyTouch");
 assert.match(source, /function replyVisibleAssistantCount\(id,aid\)/);
 assert.match(source, /function manualReplyRetryAllowed\(id,aid,token\)/);
 assert.match(manual, /before=replyVisibleAssistantCount\(id,aid\)/);
-assert.match(manual, /await aiReply\(id,_note,token,aid,'user'\)/);
+assert.match(manual, /await aiReply\(id,_note,token,aid,'user',\{reopenCompleted:true\}\)/);
 assert.match(manual, /inspectionPending=\(\)=>nativeInspectionPending\(_manualUser,id\)/);
 assert.match(manual, /replyVisibleAssistantCount\(id,aid\)===before&&manualReplyRetryAllowed/);
 assert.match(manual, /刚才没有形成任何用户能看到的微信消息/);

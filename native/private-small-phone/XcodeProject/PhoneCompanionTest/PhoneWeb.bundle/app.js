@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1221'){
+if(window.__NORTH_SHELL_BUILD__!=='1223'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -419,7 +419,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1221 · 私人整合修复版';
+const APP_VER='v1223 · 私人整合修复版';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1684,7 +1684,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1221&r=v1221-private-combined-1';
+  const url='sw.js?v=1223&r=v1223-private-combined-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -2586,7 +2586,7 @@ function cinemaAsrGuardSync(job,finished){const covered=finished?Math.max(0,Numb
 function cinemaAsrGuardPlayback(v){if(!v||!_cin.extracting||_cin.asrMode!=='watch')return false;const covered=Math.max(0,Number(_cin.asrCoveredUntil)||0),limit=covered>0?Math.max(0,covered-10):20,current=Math.max(0,Number(v.currentTime)||0);if(current<limit-.15)return false;if(v.paused&&!_cin.asrGuardPaused)return false;if(current>limit+.25)v.currentTime=limit;_cin.asrGuardPaused=true;v.pause();cinemaSetStatus('已暂停等字幕 · 当前可看到 '+cinemaFmt(covered||limit),'working');return true;}
 function cinemaAsrGuardRelease(resume){const v=$('#cinVideo'),held=_cin.asrGuardPaused;_cin.asrGuardPaused=false;if(resume&&held&&v)v.play().catch(()=>{});}
 async function cinemaRestoreStoredSubtitles(s,token){if(!s||s.kind!=='video')return;const manual=await cinGet(cinemaManualSubtitleKey(s));if(token!==_cin.token||cinemaSession()!==s)return;if(manual&&Array.isArray(manual.cues)&&manual.cues.length){const n=cinemaApplyCues(manual.cues,manual.name||'手动导入字幕','subtitle');cinemaSetStatus('已恢复手动字幕 · '+n+' 句','ready');return;}const job=await cinemaAsrLoadJob(s);if(token!==_cin.token||cinemaSession()!==s||!job)return;cinemaAsrTaskUpdate(s,job);cinemaAsrGuardSync(job,job.status==='done');const cues=cinemaAsrJobCues(job);if(cues.length){cinemaApplyCues(cues,job.status==='done'?'已保存的提取字幕':'未完成的提取字幕','extract');cinemaSetStatus(job.status==='done'?'已恢复 '+cues.length+' 句字幕':'已恢复部分字幕 · 可继续提取','ready');}}
-async function cinemaMp4Library(){if(globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function')return globalThis.NorthMP4Box;if(!_cinMp4Module)_cinMp4Module=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='./vendor/mp4box.all.js?v=1216&r=file-safe-1';script.async=true;script.dataset.northMp4box='1';script.onload=()=>globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function'?resolve(globalThis.NorthMP4Box):reject(new Error('字幕解析组件没有正常启动'));script.onerror=()=>reject(new Error('字幕解析组件加载失败，请重新打开小手机后再试'));document.head.appendChild(script);}).catch(e=>{_cinMp4Module=null;const stale=document.querySelector('script[data-north-mp4box="1"]');if(stale)stale.remove();throw e;});return _cinMp4Module;}
+async function cinemaMp4Library(){if(globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function')return globalThis.NorthMP4Box;if(!_cinMp4Module)_cinMp4Module=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='./vendor/mp4box.all.js?v=1223&r=file-safe-1';script.async=true;script.dataset.northMp4box='1';script.onload=()=>globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function'?resolve(globalThis.NorthMP4Box):reject(new Error('字幕解析组件没有正常启动'));script.onerror=()=>reject(new Error('字幕解析组件加载失败，请重新打开小手机后再试'));document.head.appendChild(script);}).catch(e=>{_cinMp4Module=null;const stale=document.querySelector('script[data-north-mp4box="1"]');if(stale)stale.remove();throw e;});return _cinMp4Module;}
 async function cinemaVideoCodecProbe(file){if(!file||typeof file.slice!=='function')return null;if(_cin.videoInfo)return _cin.videoInfo;try{const MP4Box=await cinemaMp4Library(),mp4=MP4Box.createFile(false);let info=null,parseError='';mp4.onReady=x=>{info=x;};mp4.onError=e=>{parseError=String(e||'');};const step=1024*1024;for(let offset=0,guard=0;offset<file.size&&guard++<256&&!info;){const end=Math.min(file.size,offset+step),ab=await file.slice(offset,end).arrayBuffer();ab.fileStart=offset;const next=Number(mp4.appendBuffer(ab));offset=Number.isFinite(next)&&next>end?Math.min(file.size,next):end;if(guard%8===0)await new Promise(resolve=>setTimeout(resolve,0));}if(!info)mp4.flush();if(!info)return _cin.videoInfo={parseError:parseError||'未读到 MP4 / MOV 媒体信息'};const video=(info.videoTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.video),audio=(info.audioTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.audio);return _cin.videoInfo={videoCodec:String(video&&video.codec||''),audioCodec:String(audio&&audio.codec||''),width:Number(video&&video.video&&video.video.width||video&&video.track_width||0),height:Number(video&&video.video&&video.video.height||video&&video.track_height||0)};}catch(e){return _cin.videoInfo={parseError:String(e&&e.message||e||'媒体信息读取失败')};}}
 function cinemaVideoErrorReason(code,info){const vc=String(info&&info.videoCodec||''),ac=String(info&&info.audioCodec||''),hevc=/^(?:hvc1|hev1|hevc|dvhe|dvh1)/i.test(vc),android=cinemaAndroidBrowser();if(android&&hevc)return '检测到视频编码 '+vc+'（HEVC / H.265）。苹果设备能够播放，并不代表当前安卓浏览器或手机具备同样的网页解码能力。';if(android&&code===3)return '安卓浏览器已经读到文件，但解码画面或声音失败。';if(android&&code===4)return '安卓浏览器不支持这个文件的容器、视频编码或音频编码。';if(code===3)return '浏览器已读到文件，但解码画面或声音失败。';if(code===4)return '当前浏览器不支持这个视频的容器或编码。';return '浏览器没有读到可播放的视频数据。';}
 function cinemaVideoRetryCompatible(info){const vc=String(info&&info.videoCodec||''),ac=String(info&&info.audioCodec||'');return /^(?:avc1|avc3)(?:\.|$)/i.test(vc)&&(!ac||/^(?:mp4a|aac)(?:\.|$)/i.test(ac));}
@@ -10081,13 +10081,17 @@ function replyHandoffTurn(id,aid,messageId,owner,outboxId){
   if(!source)return null;
   return {id:String(id),aid,messageId,source,owner,outboxId:String(outboxId||''),key:JSON.stringify([aid,String(id),messageId]),before:new Set(msgsForAccount(id,aid)||[]),claimed:false};
 }
-function replyHandoffBegin(id,note,token,aid,intent){
+function replyHandoffBegin(id,note,token,aid,intent,reopenCompleted){
   if(aid!=='main'||note&&(intent!=='user'||featureEventNoteActive(note)||initiativeNoteActive(note)))return null;
   const source=[...(msgsForAccount(id,aid)||[])].reverse().find(m=>m&&m.role==='user'&&m.type!=='sys'&&!m._call);
   if(!replyPendingUserText(id,aid)&&(note||!source||!source._replyHandoffCompleted))return null;
-  return replyHandoffTurn(id,aid,source&&source.id,'local','');
+  const turn=replyHandoffTurn(id,aid,source&&source.id,'local','');
+  // Explicit local regeneration may replace a removed answer, not admit an old cloud replay.
+  if(turn&&reopenCompleted===true&&intent==='user'&&replyPendingUserText(id,aid)&&source._replyHandoffCompleted){turn.reopenFrom=source._replyHandoffCompleted;source._replyHandoffRegenerated=true;if(typeof save==='function')save();}
+  return turn;
 }
-function replyHandoffQueuedSource(id,aid){if(aid!=='main'||!replyPendingUserText(id,aid))return '';const m=[...(msgsForAccount(id,aid)||[])].reverse().find(m=>m&&m.role==='user'&&m.type!=='sys'&&!m._call);return String(m&&m.id||'');}
+function replyHandoffCompleted(turn){return !!(turn&&turn.source._replyHandoffCompleted&&turn.source._replyHandoffCompleted!==turn.reopenFrom);}
+function replyHandoffQueuedSource(id,aid){if(aid!=='main'||!replyPendingUserText(id,aid))return '';const m=[...(msgsForAccount(id,aid)||[])].reverse().find(m=>m&&m.role==='user'&&m.type!=='sys'&&!m._call);if(m&&m._replyHandoffCompleted){m._replyHandoffRegenerated=true;if(typeof save==='function')save();return '';}return String(m&&m.id||'');}
 function replyHandoffQueuedDone(job){const turn=job&&job.handoffMessageId&&replyHandoffTurn(job.id,job.aid,job.handoffMessageId,'local','');return !!(turn&&turn.source._replyHandoffCompleted);}
 function replyHandoffIncoming(c,row){
   if(!c||!row||row.triggerKind!=='reply_handoff'||!row.replyToMessageId||String(row.replyToAccountId||'main')!=='main')return null;
@@ -10097,10 +10101,11 @@ function replyHandoffReserve(turn){turn.claimed=true;turn.done=new Promise(resol
 async function replyHandoffClaimLocal(turn){
   if(!turn)return true;
   const other=_replyHandoffClaims.get(turn.key);if(other&&other!==turn)await other.done;
-  if(turn.source._replyHandoffCompleted||_replyHandoffClaims.has(turn.key))return false;
+  if(replyHandoffCompleted(turn)||_replyHandoffClaims.has(turn.key))return false;
   replyHandoffReserve(turn);return true;
 }
 function replyHandoffClaimIncoming(turn){
+  if(turn&&turn.source._replyHandoffRegenerated)return 'completed';
   if(!turn)return 'legacy';if(_replyHandoffClaims.has(turn.key))return 'defer';
   const done=turn.source._replyHandoffCompleted;
   if(done&&(done.owner==='local'||done.outboxId!==turn.outboxId))return 'completed';
@@ -10109,7 +10114,7 @@ function replyHandoffClaimIncoming(turn){
 function replyHandoffMark(turn){if(!turn||!turn.claimed)return false;turn.source._replyHandoffCompleted={owner:turn.owner,outboxId:turn.outboxId,at:Date.now()};return true;}
 function replyHandoffPush(turn,list,...items){if(turn&&turn.claimed)items.forEach(m=>{if(m&&m.role==='assistant'){m._replyToUserId=turn.messageId;m._replyToAccountId=turn.aid;}});return list.push(...items);}
 function replyHandoffMarkLocal(turn){
-  if(!turn||!turn.claimed||turn.source._replyHandoffCompleted)return false;
+  if(!turn||!turn.claimed||replyHandoffCompleted(turn))return false;
   const visible=(msgsForAccount(turn.id,turn.aid)||[]).some(m=>m&&!turn.before.has(m)&&m._replyToUserId===turn.messageId&&m._replyToAccountId===turn.aid&&m.role==='assistant'&&m.type!=='sys'&&!m._call&&!m._serverProactive&&msgToText(m));
   return visible&&replyHandoffMark(turn);
 }
@@ -11518,7 +11523,7 @@ function wechatServiceGreeting(t){return /(?:有什么(?:我)?可以帮(?:助)?�
 function altFriendFirstContact(c,aid){if(!c||!aid||aid==='main')return false;const arr=msgsForAccount(c.id,aid);return !arr.some(m=>m&&m.role==='assistant'&&m.type!=='sys')&&arr.some(m=>m&&m.role==='user'&&m.type==='sys'&&/通过微信号添加了/.test(String(m.content||'')));}
 function altFriendOpeningFallback(c){return '刚加上就来找我，是有什么事吗？';}
 function wechatRoleDrift(t){t=roleVisibleEnvelopeText(t);return !t||wechatReasoningLeak(t)||isRefusal(t)||wechatServiceGreeting(t)||splitBubbles(t).some(isOOCLine);}
-async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount=replyAccount||actId();replyIntent=offlineReplyIntent(id,note,replyIntent);if(offlineReplyBlocked(replyIntent,id))return;if(replyToken==null&&!note)replyToken=replyEpoch(id,replyAccount);if(replyStale(id,replyToken,replyAccount))return;if(actId()!==replyAccount){deferAccountReply(id,note,replyToken,replyAccount);return;}const _rawOutput=typeof modelOutputUnfiltered==='function'&&modelOutputUnfiltered();const c=getC(id);if(!c||c.blocked||c.deleted)return;const _wxLoginCompletion=wxLoginCompletionFeature(note),_wxLoginVisibleBefore=_wxLoginCompletion?replyVisibleAssistantCount(id,replyAccount):0;/* 已删除的角色(找回箱里)绝不后台发消息 */
+async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions){replyAccount=replyAccount||actId();replyIntent=offlineReplyIntent(id,note,replyIntent);if(offlineReplyBlocked(replyIntent,id))return;if(replyToken==null&&!note)replyToken=replyEpoch(id,replyAccount);if(replyStale(id,replyToken,replyAccount))return;if(actId()!==replyAccount){deferAccountReply(id,note,replyToken,replyAccount);return;}const _rawOutput=typeof modelOutputUnfiltered==='function'&&modelOutputUnfiltered();const c=getC(id);if(!c||c.blocked||c.deleted)return;const _wxLoginCompletion=wxLoginCompletionFeature(note),_wxLoginVisibleBefore=_wxLoginCompletion?replyVisibleAssistantCount(id,replyAccount):0;/* 已删除的角色(找回箱里)绝不后台发消息 */
   replyNoVisibleReasonSet(id,replyAccount,replyToken,'');
   /* 伴生真实读取不能占住普通微信回复；只有发起读取的那条消息由下方精确 pending 键接管。 */
   if(cinemaRoleOccupied(id))return;/* 正在一起看剧或看书时，角色只在放映室回应 */
@@ -11528,7 +11533,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent){replyAccount
   // typing
   let typingEl,delivered=false;if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){
     typingEl=appendChatHTML(cb,`<div class="msg them" id="typing">${av(c.avatar,bubbleAvatarClass(c,false))}<div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`,{smooth:true});}}
-  const _handoffTurn=replyHandoffBegin(id,note,replyToken,replyAccount,replyIntent);if(_handoffTurn&&_handoffTurn.source._replyHandoffCompleted){if(typingEl&&typingEl.isConnected)typingEl.remove();return false;}
+  const _handoffTurn=replyHandoffBegin(id,note,replyToken,replyAccount,replyIntent,!!(replyOptions&&replyOptions.reopenCompleted));if(_handoffTurn&&replyHandoffCompleted(_handoffTurn)){if(typingEl&&typingEl.isConnected)typingEl.remove();replyNoVisibleReasonSet(id,replyAccount,replyToken,'这条消息已完成回复，本次没有请求模型');return false;}
   try{
     let _lu=null;{const _ms=msgs(id);for(let i=_ms.length-1;i>=0;i--){if(_ms[i].role==='user'&&_ms[i].type!=='sys'){_lu=_ms[i];break;}}}
     const _userText=(_lu&&msgToText(_lu))||'',_explicitCallTurn=!note&&explicitIncomingCallRequest(_userText),_naturalOn=wechatNaturalOn(),_autonomyNote=wechatNaturalAutonomyNoteActive(note),_manualUnlockNote=manualUnlockReplyActive(note),_altFirstContact=altFriendFirstContact(c,replyAccount),_altReportInfo=replyAccount==='main'?altAccountReportInfo(c,note):null,_foodReceiptInfo=replyAccount==='main'?foodReceiptEventInfo(note):null,_offEndInfo=replyAccount==='main'?offEndReplyEventInfo(note):null,_hlPlan=null;let _initiativeNoImage=initiativeBlocksImage(note),_initiativeNoLocation=initiativeBlocksLocation(note);
@@ -11969,7 +11974,7 @@ async function replyGenerationRun(id,aid){
   const running={id,aid,startedAt:Date.now(),cancelled:false};replyGenerationStore()[key]=running;replyGenerationRefresh(id,aid);
   // 判断最后一条真实对话是谁发的：若是他自己发的，这次「让ta回复」=继续多说，要明确告诉他别把自己的话当成对方说的
   let _note;{const _ms=msgs(id);for(let i=_ms.length-1;i>=0;i--){const mm=_ms[i];if(mm.type==='sys'||mm._call)continue;if(mm.role==='user')break;if(mm.role==='assistant'){_note='[系统：'+S.me.name+'这会儿还没开口、还没回你。请你接着自己刚才的话【再自然地多说几句】（补充、延续你上面说的，或换个角度再聊两句），不要重复已经说过的内容。注意：上面那几条都是【你自己】说的，不是'+S.me.name+'说的，千万别把自己说过的话当成ta说的去回应。]';break;}}}
-  let _manualUser=null;{const _ms=msgs(id);for(let i=_ms.length-1;i>=0;i--){if(_ms[i]&&_ms[i].role==='user'&&_ms[i].type!=='sys'){_manualUser=_ms[i];break;}}}const inspectionPending=()=>nativeInspectionPending(_manualUser,id),token=replyEpoch(id,aid),before=replyVisibleAssistantCount(id,aid);try{await aiReply(id,_note,token,aid,'user');if(replyVisibleAssistantCount(id,aid)===before&&inspectionPending())return true;/* 只有当前用户消息自己的真实读取可以接管本轮；其他伴生任务不能阻断普通回复。 */if(replyVisibleAssistantCount(id,aid)===before&&manualReplyRetryAllowed(id,aid,token)){await sleep(180);if(inspectionPending())return true;const retryNote=(_note?_note+'\n':'')+'[系统：刚才没有形成任何用户能看到的微信消息。现在必须真正发出1到3条自然的文字或语音，接住当前聊天；不能只输出心情、记忆、操作或控制标签，不能保持空白。]';await aiReply(id,retryNote,token,aid,'user');if(replyVisibleAssistantCount(id,aid)===before&&!inspectionPending()&&manualReplyRetryAllowed(id,aid,token)){const reason=replyNoVisibleReasonGet(id,aid,token)||'模型没有形成可显示的聊天内容';toast('模型未回复：'+reason+'。请检查当前模型或中转站后再试',6500);}}return true;}finally{replyNoVisibleReasonSet(id,aid,token,'');if(replyGenerationStore()[key]===running)delete replyGenerationStore()[key];replyGenerationRefresh(id,aid);replyGenerationDrain();}}
+  let _manualUser=null;{const _ms=msgs(id);for(let i=_ms.length-1;i>=0;i--){if(_ms[i]&&_ms[i].role==='user'&&_ms[i].type!=='sys'){_manualUser=_ms[i];break;}}}const inspectionPending=()=>nativeInspectionPending(_manualUser,id),token=replyEpoch(id,aid),before=replyVisibleAssistantCount(id,aid);try{await aiReply(id,_note,token,aid,'user',{reopenCompleted:true});if(replyVisibleAssistantCount(id,aid)===before&&inspectionPending())return true;/* 只有当前用户消息自己的真实读取可以接管本轮；其他伴生任务不能阻断普通回复。 */if(replyVisibleAssistantCount(id,aid)===before&&manualReplyRetryAllowed(id,aid,token)){await sleep(180);if(inspectionPending())return true;const retryNote=(_note?_note+'\n':'')+'[系统：刚才没有形成任何用户能看到的微信消息。现在必须真正发出1到3条自然的文字或语音，接住当前聊天；不能只输出心情、记忆、操作或控制标签，不能保持空白。]';await aiReply(id,retryNote,token,aid,'user',{reopenCompleted:true});if(replyVisibleAssistantCount(id,aid)===before&&!inspectionPending()&&manualReplyRetryAllowed(id,aid,token)){const reason=replyNoVisibleReasonGet(id,aid,token)||'模型没有形成可显示的聊天内容';toast('模型未回复：'+reason+'。请检查当前模型或中转站后再试',6500);}}return true;}finally{replyNoVisibleReasonSet(id,aid,token,'');if(replyGenerationStore()[key]===running)delete replyGenerationStore()[key];replyGenerationRefresh(id,aid);replyGenerationDrain();}}
 /* 提示音 + 通知 */
 const MESSAGE_NOTIFICATION_URL='assets/message-notification-user-v1.mp3';
 let _audio,_audioBornAt=0,_audioPulseAt=0,_audioWakeRequired=true,_audioWakeAt=0,_audioPrimeUrl='',_audioMediaPrimer=null,_messageMediaAudio=null,_ringMediaAudio=null,_callMediaAudio=null,_callMediaUrl='',_callMediaToken=0,_audioMicGranted=false,_audioMicCycling=null,_audioMicCycleStream=null,_audioMicCycleToken=0,_audioMicPermissionStatus=null;
@@ -12046,15 +12051,16 @@ function viewWechatMsgImage(cid,mid){const m=msgs(cid).find(x=>x.id===mid&&x.typ
 function deleteOwnMsg(cid,mid){const list=msgs(cid),i=list.findIndex(x=>x.id===mid&&x.role==='user'&&(x.type==='text'||x.type==='image'));if(i<0)return;const m=list[i],isImage=m.type==='image';m._deleted=true;list.splice(i,1);if(isImage)_visionTasks.delete(mid);saveNow();persistWechatMessagesNow().catch(()=>{});if(isImage)try{imgGC();}catch(_){}closeModal();render();toast(isImage?'图片已删除':'消息已删除');}
 function deleteRoleMsg(cid,mid){const list=msgs(cid),i=list.findIndex(x=>x.id===mid&&x.role==='assistant');if(i<0)return;list.splice(i,1);saveNow();persistWechatMessagesNow().catch(()=>{});closeModal();render();toast('角色消息已删除');}
 function regenMsg(cid,mid){const c=getC(cid);if(!c){closeModal();return;}if(c.blocked){toast('ta把你拉黑了');closeModal();return;}
+  if(replyGenerationBusy(cid,actId())){toast('上一轮回复还在处理中，请稍后重新生成');closeModal();return;}
   const list=msgs(cid);const i=list.findIndex(x=>x.id===mid);if(i<0){closeModal();return;}
   // 这条之后若有"你发的"新消息，就不能重新生成(只能重生成最新那轮)
   for(let j=i+1;j<list.length;j++){if(list[j].role==='user'&&list[j].type!=='sys'){toast('这条后面你又说话了，只能重新生成最新那一轮回复');return;}}
   // 找到他这一轮回复的起点：从这条往前，连续的"他的"消息的开头
   let start=i;while(start>0&&list[start-1].role==='assistant')start--;
   // 删掉从起点到末尾他的整段回复，重新让ta回应你上一条
-  list.splice(start);save();closeModal();
+  replyTouch(cid,actId());list.splice(start);save();closeModal();
   if(cur().p==='chat'&&cur().id===cid)render();
-  aiReply(cid);}
+  manualReply(cid);}
 function recallMsg(cid,mid){const list=msgs(cid);const i=list.findIndex(x=>x.id===mid);if(i<0)return;
   const me=list[i].role==='user';list.splice(i,1);
   list.splice(i,0,{role:me?'user':'assistant',type:'sys',content:(me?'你':'对方')+'撤回了一条消息',time:Date.now(),id:uid()});

@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 if(window.__SMALL_PHONE_PRIVATE__!==true||window.__NORTH_PRIVATE_SMART_AIR__)return;
-window.__NORTH_PRIVATE_SMART_AIR__='342-homekit-air-v1';
+window.__NORTH_PRIVATE_SMART_AIR__='1223-homekit-capabilities-v2';
 
 var memory={climates:[],state:null,busy:false,error:''};
 var originalRender=window.renderWxSmartHome;
