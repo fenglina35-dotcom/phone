@@ -441,6 +441,12 @@ function roleUserFactUnsupported(value: string, context: string) {
   return roleUserFactClaims(value).some((claim) => !roleFactGrounded(claim, context));
 }
 
+// Notification projection only: the outbox must retain mood metadata for client sync.
+// Strip before splitting, so punctuation inside a thought cannot become an alert.
+function roleNotificationBody(value: string) {
+  return String(value || "").replace(/[\[【]\s*(?:内心|心情|心情值)\s*[|｜:：][^\]】]*[\]】]/g, "").trim();
+}
+
 function roleNotificationPreview(value: string) {
   const text = String(value || "").trim();
   const call = text.match(/^[\[【]来电[|｜](语音|视频)[\]】]$/);
@@ -939,6 +945,12 @@ async function sendAPNs(
   outboxId: string,
   roleAvatarURL: string,
 ) {
+  const parts = roleMessageParts(roleNotificationBody(body), 10);
+  if (!parts.length) {
+    // No alert, sound, badge or invented fallback. Still keep the original outbox.
+    if (String(body || "").trim()) return { status: "suppressed-metadata", error: "", diagnostic: { stage: "notification-projection" } };
+    return { status: "failed-empty", error: "empty-notification" };
+  }
   const keyId = Deno.env.get("APNS_KEY_ID") || "";
   const teamId = Deno.env.get("APNS_TEAM_ID") || "";
   const privateKey = Deno.env.get("APNS_PRIVATE_KEY") || "";
@@ -952,8 +964,6 @@ async function sendAPNs(
     return { status: "failed-apns-jwt", error: pushException(error), diagnostic: { stage: "jwt" } };
   }
   const host = environment === "production" ? "https://api.push.apple.com" : "https://api.sandbox.push.apple.com";
-  const parts = roleMessageParts(body, 10);
-  if (!parts.length) return { status: "failed-empty", error: "empty-notification" };
   const acceptedIds: string[] = [];
   for (let index = 0; index < parts.length; index += 1) {
     const part = parts[index];
@@ -1483,6 +1493,7 @@ async function persistAndPush(
      That is successful idempotent delivery, not a reason to retry generation
      and leave the background task spinning in pending/claimed state. */
   if (row.push_status === "sent") return true;
+  if (row.push_status === "suppressed-metadata") return true;
   const link = (await client.from("phone_companion_links").select("apns_device_token,apns_environment").eq("target", profile.target).maybeSingle()).data;
   const push = await sendAPNs(String(link?.apns_device_token || ""), String(link?.apns_environment || "sandbox"), String(profile.role_id || ""), String(profile.role_name || "Role"), body, String(row.id), avatarURL(url, String(row.id), String(row.avatar_token || "")));
   await client.from("phone_role_push_outbox").update({
@@ -1490,7 +1501,7 @@ async function persistAndPush(
     push_error: push.error || null,
     push_diagnostic: push.diagnostic || {},
   }).eq("id", row.id);
-  return push.status === "sent";
+  return push.status === "sent" || push.status === "suppressed-metadata";
 }
 
 async function backgroundTaskStatus(
@@ -2200,7 +2211,7 @@ Deno.serve(async (request) => {
         status: String(outboxRow?.push_status || "duplicate"),
         error: "",
       };
-      if (outboxId && outboxRow?.push_status !== "sent") {
+      if (outboxId && outboxRow?.push_status !== "sent" && outboxRow?.push_status !== "suppressed-metadata") {
         const { data: link } = await client.from("phone_companion_links")
           .select("apns_device_token,apns_environment").eq("target", profile.target).maybeSingle();
         push = await sendAPNs(
