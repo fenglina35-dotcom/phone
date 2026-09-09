@@ -1378,8 +1378,10 @@ test('shop-internal search removes the brand and option words but keeps the exac
   assert.equal(requestedItemName('瑞幸咖啡 生椰拿铁 少少甜 少冰'), '生椰拿铁');
   assert.equal(requestedItemName('KFC 香辣鸡腿堡 不要辣'), '香辣鸡腿堡');
   assert.equal(requestedStoreItemName('杨姥姥家 营养鸡丝糊汤', '杨姥姥家'), '营养鸡丝糊汤');
+  assert.equal(requestedStoreItemName('李若桃 草莓白桃儿糯米酸奶奶昔', '李若桃'), '草莓桃儿白糯米酸奶奶昔');
   assert.equal(preferredExactProduct([{ name: '（招牌）营养鸡丝撒汤' }], '营养鸡丝撒汤')?.name, '（招牌）营养鸡丝撒汤');
   assert.equal(preferredExactProduct([{ name: '手工兰州牛肉拉面' }], '兰州牛肉面')?.name, '手工兰州牛肉拉面');
+  assert.equal(preferredExactProduct([{ name: '草莓桃儿白糯米酸奶奶昔', price: 24 }], '草莓白桃儿糯米酸奶奶昔')?.name, '草莓桃儿白糯米酸奶奶昔');
   assert.equal(preferredExactProduct([{ name: '冰吸生椰拿铁推荐装' }], '生椰拿铁'), null);
 });
 
@@ -1630,6 +1632,33 @@ test('an already open matching storefront is searched before any outer marketpla
   assert.equal(offers.length, 1);
   assert.equal(offers[0].name, '茉莉葡萄冰奶');
   assert.equal(offers[0].browserRef.shopUrl, active.url());
+});
+
+test('an open unknown-brand shop search replaces the merchant keyword with the exact live product title', async () => {
+  const browser = new TaobaoFlashBrowser();
+  const internalQueries = [];
+  const active = {
+    isClosed: () => false,
+    url: () => 'https://h5.ele.me/pages/ele-index-search?keyword=%E6%9D%8E%E8%8B%A5%E6%A1%83%28%E7%9B%B8%E5%9F%8E%E5%BA%97%29',
+    locator: () => ({ innerText: async () => '商家 李若桃（相城店） 热销 草莓桃儿白糯米酸奶奶昔 选规格' }),
+  };
+  browser.page = active;
+  browser.assertRiskCooldown = async () => {};
+  browser.knownRoute = async () => null;
+  browser.knownRoutesFor = async () => [];
+  browser.requireLogin = async () => {};
+  browser.riskCheck = async () => 0;
+  browser.repeatPurchase = async () => null;
+  browser.extractMenu = async () => [{ name: '草莓桃儿白糯米酸奶奶昔', price: 24, description: '草莓桃儿白糯米酸奶奶昔 ¥24', buttonIndex: 3 }];
+  browser.searchInsideShop = async (_page, itemName) => { internalQueries.push(itemName); return true; };
+  browser.rememberKnownRoute = async () => {};
+  browser.goto = async () => { throw new Error('outer search must not run'); };
+
+  const offers = await browser.search('李若桃 草莓白桃儿糯米酸奶奶昔', 3, { allowGlobalSearch: false, storeQuery: '李若桃' });
+
+  assert.deepEqual(internalQueries, ['草莓桃儿白糯米酸奶奶昔']);
+  assert.equal(offers.length, 1);
+  assert.equal(offers[0].name, '草莓桃儿白糯米酸奶奶昔');
 });
 
 test('an already open requested merchant uses the unique bought-order card and never searches the placeholder text', async () => {

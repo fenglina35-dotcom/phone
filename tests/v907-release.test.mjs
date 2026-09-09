@@ -13,8 +13,8 @@ const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest
 const nativeWeb = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web source keeps private 1.0.315 compatibility', () => {
-  assert.match(app, /APP_VER='v1213 · 请求诊断与简洁时间版'/);
-  assert.match(html, /app\.js\?v=1213/);
+  assert.match(app, /APP_VER='v1215 · 外卖店内搜索修复版'/);
+  assert.match(html, /app\.js\?v=1215/);
   assert.match(project, /CURRENT_PROJECT_VERSION = 340;/);
   assert.match(project, /MARKETING_VERSION = 1\.0\.340;/);
   assert.match(nativeWeb, /1\.0\.340 \(340\)/);

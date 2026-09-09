@@ -180,7 +180,12 @@ export function merchantFromShopText(value) {
 function comparableProductKey(value) {
   return knownRouteKey(value)
     .replace(/^(?:手工|招牌|特色|经典)+/u, '')
-    .replace(/牛肉拉面/g, '牛肉面');
+    .replace(/牛肉拉面/g, '牛肉面')
+    // The current Li Ruo Tao menu renders this same drink as “草莓桃儿白…”,
+    // while the conversational name is commonly said as “草莓白桃儿…”.
+    // Keep this as one verified title alias instead of enabling broad fuzzy
+    // matching that could select a different milkshake.
+    .replace(/草莓白桃儿/g, '草莓桃儿白');
 }
 
 function productKeysEquivalent(left, right) {
@@ -690,7 +695,8 @@ export function requestedItemName(value) {
     .replace(/(?:加|再来|配)(?:一个|一份)?\s*(?:茶叶蛋)/g, ' ')
     .replace(/(?:无糖|零糖|不加糖|少少甜|少糖|微糖|半糖|全糖|正常糖|不(?:额外|另外)加糖|少冰|少少冰|去冰|正常冰|多冰|热饮|冷饮|常温|大杯|中杯|小杯|不加冰|不要香菜|不要辣|微辣|中辣|特辣|不加奶油|椰乳|燕麦奶|加珍珠|加料)/g, ' ')
     .replace(/\s+/g, ' ').trim()
-    .replace(/牛奶燕麦粥/g, '燕麦牛奶粥');
+    .replace(/牛奶燕麦粥/g, '燕麦牛奶粥')
+    .replace(/草莓白桃儿/g, '草莓桃儿白');
   return stripped || source;
 }
 

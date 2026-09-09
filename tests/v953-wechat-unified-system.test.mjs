@@ -6,9 +6,9 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-assert.match(source,/APP_VER='v1213 · 请求诊断与简洁时间版'/);
-assert.match(html,/__NORTH_SHELL_BUILD__='1213'/);
-assert.match(sw,/BUILD='1213'/);
+assert.match(source,/APP_VER='v1215 · 外卖店内搜索修复版'/);
+assert.match(html,/__NORTH_SHELL_BUILD__='1215'/);
+assert.match(sw,/BUILD='1215'/);
 assert.equal((project.match(/CURRENT_PROJECT_VERSION = 340;/g)||[]).length,12);
 assert.equal((project.match(/MARKETING_VERSION = 1\.0\.340;/g)||[]).length,12);
 

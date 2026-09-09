@@ -48,7 +48,7 @@ test('private shell and bundled script use the same strict boot identity', () =>
   );
   const shellBuild = privateHTML.match(/window\.__NORTH_SHELL_BUILD__='(\d+)'/)?.[1];
   const scriptBuild = privateApp.match(/window\.__NORTH_SHELL_BUILD__!==\'(\d+)\'/)?.[1];
-  assert.equal(shellBuild, '1214');
+  assert.equal(shellBuild, '1215');
   assert.equal(scriptBuild, shellBuild);
   assert.match(privateHTML, new RegExp(`app\\.js\\?v=${shellBuild}\\b`));
 });
@@ -62,7 +62,7 @@ test('private boot repair link points to a bundled non-destructive recovery page
   );
   assert.match(privateHTML, /replace\(\/\[\^\/\]\*\$\/,'repair\.html'\)/);
   assert.match(privateRepair, /location\.replace\(target\(\)\)/);
-  assert.match(privateRepair, /index\.html\?repair=1&v=1214/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1215/);
   assert.doesNotMatch(privateRepair, /localStorage\.(?:clear|removeItem)/);
   assert.doesNotMatch(privateRepair, /indexedDB\.deleteDatabase/);
 });

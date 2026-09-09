@@ -13,14 +13,14 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1213 · 请求诊断与简洁时间版'/);
-  assert.match(app,/const url='sw\.js\?v=1213&r=v1213-couple-watch-trigger-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1213'/);
-  assert.match(html,/app\.js\?v=1213/);
-  assert.match(sw,/const BUILD='1213'/);
-  assert.match(sw,/north-shell-v1213-couple-watch-trigger-1/);
-  assert.match(index,/小手机\.html\?v=1213/);
-  assert.match(repair,/小手机\.html\?v=1213/);
+  assert.match(app,/APP_VER='v1215 · 外卖店内搜索修复版'/);
+  assert.match(app,/const url='sw\.js\?v=1215&r=v1215-couple-watch-trigger-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1215'/);
+  assert.match(html,/app\.js\?v=1215/);
+  assert.match(sw,/const BUILD='1215'/);
+  assert.match(sw,/north-shell-v1215-couple-watch-trigger-1/);
+  assert.match(index,/小手机\.html\?v=1215/);
+  assert.match(repair,/小手机\.html\?v=1215/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{

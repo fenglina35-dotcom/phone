@@ -75,6 +75,11 @@ function text(value,length=300){return String(value==null?'':value).trim().slice
   const unknownBrandSupplement=sandbox.parse('暖燕家的红豆桃胶呵护饮');
   assert.equal(unknownBrandSupplement?.merchant,'暖燕');
   assert.deepEqual(Array.from(unknownBrandSupplement?.items||[]),['红豆桃胶呵护饮']);
+  const liruotao=sandbox.parseExplicit('我想喝李若桃家的草莓白桃儿糯米酸奶奶昔，不加糖');
+  assert.equal(liruotao?.merchant,'李若桃','an unknown milkshake merchant must stay in the merchant field');
+  assert.deepEqual(Array.from(liruotao?.items||[]),['草莓白桃儿糯米酸奶奶昔'],'the exact user product wording must stay in the item field');
+  assert.deepEqual(Array.from(liruotao?.specs||[]),['不加糖']);
+  assert.equal(sandbox.query(sandbox.normalize(liruotao,'我想喝李若桃家的草莓白桃儿糯米酸奶奶昔，不加糖')),'用户明确；门店=李若桃；商品=草莓白桃儿糯米酸奶奶昔；规格=不加糖');
   assert.equal(sandbox.parseExplicit('我想看哥哥家的猫'),null,'a non-food possessive sentence must not start delivery');
   assert.equal(sandbox.parse('我想看哥哥家的猫'),null,'the contextual parser must keep ordinary chat out of delivery');
   assert.equal(sandbox.parse('你觉得之前买过的那个套餐好不好'),null,'retrospective discussion must not start delivery');

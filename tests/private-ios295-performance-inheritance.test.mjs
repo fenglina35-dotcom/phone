@@ -45,20 +45,20 @@ function functionSource(sourceText, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('private identifiers advance to v1213 and iOS 340 while public stays v1213', () => {
+test('private identifiers advance to v1215 and iOS 340 while public stays v1215', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1214'/);
-  assert.match(index, /app\.js\?v=1214&r=v1213-private-lock-tag-guard-1/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1215'/);
+  assert.match(index, /app\.js\?v=1215&r=v1215-private-lock-tag-guard-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=333/);
-  assert.match(app, /APP_VER='v1214 · 私人电量与睡眠刷新版'/);
+  assert.match(app, /APP_VER='v1215 · 私人外卖搜索修复版'/);
   assert.match(overlay, /333-background-lane/);
   assert.match(webview, /1\.0\.340 \(340\)/);
   assert.match(bridge, /private static let build = "1\.0\.340 \(340\)"/);
   assert.match(bridge, /static let contractVersion = 36/);
   assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 340;/g) || []).length, 12);
   assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.340;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1213 · 请求诊断与简洁时间版'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1213'/);
+  assert.match(publicApp, /APP_VER='v1215 · 外卖店内搜索修复版'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1215'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
