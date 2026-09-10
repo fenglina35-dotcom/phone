@@ -55,10 +55,11 @@ test('public North UI and privacy prompt disclose step count only', () => {
   assert.doesNotMatch(project, /NSHealthUpdateUsageDescription/);
 });
 
-test('public North build number is 8 for every target configuration', () => {
+test('public North build number is 11 for every target configuration', () => {
   const buildNumbers = [
     ...project.matchAll(/CURRENT_PROJECT_VERSION = (\d+);/g),
   ].map((match) => match[1]);
   assert.equal(buildNumbers.length, 10);
-  assert.deepEqual(new Set(buildNumbers), new Set(['8']));
+  assert.deepEqual(new Set(buildNumbers), new Set(['11']));
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.1;/g) || []).length, 10);
 });

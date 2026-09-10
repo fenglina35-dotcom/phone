@@ -10,18 +10,68 @@ import SwiftUI
 import UIKit
 import UserNotifications
 
-struct CompanionRootView: View {
-    var body: some View {
-        TabView {
-            ContentView()
-                .tabItem {
-                    Label("本机管理", systemImage: "hourglass")
-                }
+extension Notification.Name {
+    static let companionUsageReportRefreshRequested = Notification.Name(
+        "companion.usage-report-refresh-requested"
+    )
+}
 
-            CompanionSyncView()
-                .tabItem {
-                    Label("角色远程管理", systemImage: "person.2.badge.gearshape")
-                }
+private struct CompanionUsageReportSurface: View {
+    let filterEnd: Date
+
+    private let reportContext =
+        DeviceActivityReport.Context("Total Activity")
+
+    private var todayFilter: DeviceActivityFilter {
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: Date())
+        let end = min(
+            calendar.date(byAdding: .day, value: 1, to: start) ?? Date(),
+            max(start.addingTimeInterval(1), filterEnd)
+        )
+        return DeviceActivityFilter(
+            segment: .daily(during: DateInterval(start: start, end: end)),
+            users: .all,
+            devices: .init([.iPhone])
+        )
+    }
+
+    var body: some View {
+        DeviceActivityReport(reportContext, filter: todayFilter)
+            .frame(width: 2, height: 2)
+            .opacity(0.01)
+            .allowsHitTesting(false)
+    }
+}
+
+struct CompanionRootView: View {
+    @State private var usageReportFilterEnd = Date()
+
+    var body: some View {
+        ZStack {
+            TabView {
+                ContentView()
+                    .tabItem {
+                        Label("本机管理", systemImage: "hourglass")
+                    }
+
+                CompanionSyncView()
+                    .tabItem {
+                        Label("角色远程管理", systemImage: "person.2.badge.gearshape")
+                    }
+            }
+
+            CompanionUsageReportSurface(filterEnd: usageReportFilterEnd)
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for: .companionUsageReportRefreshRequested
+            )
+        ) { _ in
+            let now = Date()
+            usageReportFilterEnd = now > usageReportFilterEnd
+                ? now
+                : usageReportFilterEnd.addingTimeInterval(1)
         }
     }
 }
@@ -460,6 +510,21 @@ private struct DeviceReportSnapshot: Codable {
     }
 }
 
+private struct SharedUsageReportRequest: Codable {
+    let schema: Int
+    let requestID: String
+    let requestedAt: Date
+}
+
+private struct SharedUsageReportSnapshot: Codable {
+    let schema: Int
+    let requestID: String
+    let requestedAt: Date
+    let totalSeconds: Double
+    let generatedAt: Date
+    let apps: [DeviceReportAppUsage]
+}
+
 private struct SavedDailyLimitMirror: Codable {
     let token: ApplicationToken
     let minutes: Int
@@ -517,6 +582,8 @@ final class CompanionSyncService: ObservableObject {
     private let dailyLimitsKey = "limit.savedSettings"
     private let tokenKeyPrefix = "limit.token."
     private let lockedLimitTokensKey = "limit.lockedTokens"
+    private let reportRequestKey = "report.today.request.v3"
+    private let reportSnapshotKey = "report.today.snapshot.v3"
     private let savedTargetKey = "companion.sync.target.v1"
     private let savedDeviceIDKey = "companion.sync.device-id.v1"
     private let geocodeCacheKey = "companion.sync.geocode-cache.v1"
@@ -780,9 +847,9 @@ final class CompanionSyncService: ObservableObject {
             reportGenerationText = "等待读取"
             reportStatusText = "已获真实使用数据权限"
         case .approved:
-            dataAccessModeText = "分享兼容模式"
-            reportGenerationText = "兼容模式"
-            reportStatusText = "控制权限可用；真实逐 App 时长未授权"
+            dataAccessModeText = "隐私报告模式"
+            reportGenerationText = "等待读取"
+            reportStatusText = "控制权限可用；将通过系统报告读取真实时长"
         case .notDetermined:
             dataAccessModeText = "等待数据权限"
             reportGenerationText = "等待授权"
@@ -864,12 +931,12 @@ final class CompanionSyncService: ObservableObject {
         } catch {
             commandStatusText =
                 "命令处理失败：\(error.localizedDescription)"
-            return false
         }
 
         var report = latestDirectUsageSnapshot
         let automaticUsageRefreshDue =
-            dataAccessModeText == "个人直读模式" &&
+            ["个人直读模式", "隐私报告模式"]
+                .contains(dataAccessModeText) &&
             Date().timeIntervalSince(lastUsageRefreshDate ?? .distantPast) >= 60
         if refreshUsage || automaticUsageRefreshDue {
             lastUsageRefreshDate = Date()
@@ -937,6 +1004,7 @@ final class CompanionSyncService: ObservableObject {
             return false
         }
 
+        var commandFailed = false
         do {
             let appliedCount = try await processPendingCommandsSerialized(
                 secret: secret,
@@ -947,36 +1015,49 @@ final class CompanionSyncService: ObservableObject {
                 commandStatusText = "后台已执行并回执 \(appliedCount) 条命令"
             }
 
-            if appliedCount == 0 {
-                let snapshot = await makeSnapshot(
-                    locationManager: locationManager,
-                    report: latestDirectUsageSnapshot,
-                    wellnessService: wellnessService,
-                    resolvePlaceNames: false,
-                    controlOnly: true
-                )
-                let accepted: Bool = try await rpc(
-                    "phone_companion_push_snapshot",
-                    body: [
-                        "p_target": pairedTarget,
-                        "p_device_secret": secret,
-                        "p_snapshot": snapshot
-                    ]
-                )
-                guard accepted else { return false }
-            }
-            lastSyncDate = Date()
-            return true
         } catch {
             commandStatusText = "后台命令处理失败：\(error.localizedDescription)"
+            commandFailed = true
+        }
+
+        do {
+            let report = latestDirectUsageSnapshot
+                ?? loadCachedTodayExtensionUsage()
+            let snapshot = await makeSnapshot(
+                locationManager: locationManager,
+                report: report,
+                wellnessService: wellnessService,
+                resolvePlaceNames: false,
+                controlOnly: report == nil
+            )
+            let accepted: Bool = try await rpc(
+                "phone_companion_push_snapshot",
+                body: [
+                    "p_target": pairedTarget,
+                    "p_device_secret": secret,
+                    "p_snapshot": snapshot
+                ]
+            )
+            guard accepted else { return false }
+            lastSyncDate = Date()
+            return !commandFailed || report != nil
+        } catch {
+            if !commandFailed {
+                commandStatusText =
+                    "后台快照上传失败：\(error.localizedDescription)"
+            }
             return false
         }
     }
 
     @available(iOS 26.0, *)
     private func fetchTodayDirectUsage() async -> DeviceReportSnapshot? {
-        guard AuthorizationCenter.shared.authorizationStatus ==
-                .approvedWithDataAccess else {
+        let authorizationStatus =
+            AuthorizationCenter.shared.authorizationStatus
+        if authorizationStatus == .approved {
+            return await fetchTodayExtensionUsage()
+        }
+        guard authorizationStatus == .approvedWithDataAccess else {
             updateDataAccessMode()
             latestDirectUsageSnapshot = nil
             return nil
@@ -1092,6 +1173,97 @@ final class CompanionSyncService: ObservableObject {
                 "直读失败：\(error.localizedDescription)；控制功能仍可用"
             return nil
         }
+    }
+
+    @available(iOS 26.0, *)
+    private func fetchTodayExtensionUsage() async
+        -> DeviceReportSnapshot? {
+        guard let defaults = UserDefaults(suiteName: appGroupID) else {
+            return nil
+        }
+        let request = SharedUsageReportRequest(
+            schema: 3,
+            requestID: UUID().uuidString,
+            requestedAt: Date()
+        )
+        guard let requestData = try? JSONEncoder().encode(request) else {
+            return nil
+        }
+        defaults.set(requestData, forKey: reportRequestKey)
+        defaults.synchronize()
+        NotificationCenter.default.post(
+            name: .companionUsageReportRefreshRequested,
+            object: nil
+        )
+
+        for _ in 0..<28 {
+            guard !Task.isCancelled else { return nil }
+            defaults.synchronize()
+            if let data = defaults.data(forKey: reportSnapshotKey),
+               let shared = try? JSONDecoder().decode(
+                   SharedUsageReportSnapshot.self,
+                   from: data
+               ),
+               shared.requestID == request.requestID,
+               shared.generatedAt >= request.requestedAt {
+                let snapshot = normalizedExtensionSnapshot(shared)
+                latestDirectUsageSnapshot = snapshot
+                usageByExternalID = Dictionary(
+                    uniqueKeysWithValues: snapshot.apps.map {
+                        ($0.externalAppID, max(0, $0.usedSeconds))
+                    }
+                )
+                dataAccessModeText = "隐私报告模式"
+                reportGenerationText = DateFormatter.localizedString(
+                    from: shared.generatedAt,
+                    dateStyle: .none,
+                    timeStyle: .medium
+                )
+                reportStatusText = shared.apps.isEmpty
+                    ? "真实总时长已读取；逐 App 暂无记录"
+                    : "真实屏幕与逐 App 数据已读取"
+                return snapshot
+            }
+            try? await Task.sleep(nanoseconds: 250_000_000)
+        }
+        latestDirectUsageSnapshot = nil
+        reportGenerationText = "报告扩展未回传"
+        reportStatusText = "请确认屏幕使用时间授权和报告扩展签名"
+        return nil
+    }
+
+    private func loadCachedTodayExtensionUsage()
+        -> DeviceReportSnapshot? {
+        guard let data = sharedDefaults?.data(forKey: reportSnapshotKey),
+              let shared = try? JSONDecoder().decode(
+                  SharedUsageReportSnapshot.self,
+                  from: data
+              ),
+              Calendar.current.isDateInToday(shared.generatedAt),
+              !shared.requestID.isEmpty else {
+            return nil
+        }
+        let snapshot = normalizedExtensionSnapshot(shared)
+        latestDirectUsageSnapshot = snapshot
+        return snapshot
+    }
+
+    private func normalizedExtensionSnapshot(
+        _ shared: SharedUsageReportSnapshot
+    ) -> DeviceReportSnapshot {
+        DeviceReportSnapshot(
+            schema: shared.schema,
+            requestID: shared.requestID,
+            requestedAt: shared.requestedAt,
+            totalSeconds: max(0, shared.totalSeconds),
+            generatedAt: shared.generatedAt,
+            apps: shared.apps.map {
+                DeviceReportAppUsage(
+                    externalAppID: $0.externalAppID,
+                    usedSeconds: max(0, $0.usedSeconds)
+                )
+            }
+        )
     }
 
     private func makeSnapshot(
@@ -1211,12 +1383,18 @@ final class CompanionSyncService: ObservableObject {
                 0,
                 Date().timeIntervalSince(report.generatedAt)
             )
+            let usageRevision = Int64(
+                report.generatedAt.timeIntervalSince1970 * 1_000
+            )
             screenTime = [
                 "reportAvailable": true,
                 "reportFresh": reportAge < 180,
                 "schema": report.schema,
                 "requestID": report.requestID,
                 "requestedAt": iso8601(report.requestedAt),
+                "usageDay": usageDay(for: report.generatedAt),
+                "timeZone": TimeZone.current.identifier,
+                "usageRevision": usageRevision,
                 "totalSeconds": report.totalSeconds,
                 "generatedAt": iso8601(report.generatedAt),
                 "reportAppCount": report.apps.count,
@@ -1230,6 +1408,9 @@ final class CompanionSyncService: ObservableObject {
                 "schema": 4,
                 "requestID": "",
                 "requestedAt": "",
+                "usageDay": "",
+                "timeZone": TimeZone.current.identifier,
+                "usageRevision": 0,
                 "totalSeconds": 0,
                 "generatedAt": "",
                 "reportAppCount": 0,
@@ -1473,6 +1654,11 @@ final class CompanionSyncService: ObservableObject {
             return "真实 App 已解锁并由系统设置读回确认"
 
         case "limit":
+            guard await screenTimeControlAuthorizationSettled() else {
+                throw CompanionSyncError.message(
+                    screenTimeControlAuthorizationFailure(action: "设置限额")
+                )
+            }
             rememberShieldActor(command.actor)
             let minutes = min(
                 720,
@@ -1536,6 +1722,40 @@ final class CompanionSyncService: ObservableObject {
         return AuthorizationCenter.shared.authorizationStatus == .approved
     }
 
+    private func screenTimeControlAuthorizationSettled() async -> Bool {
+        if screenTimeControlIsAuthorized() { return true }
+        try? await Task.sleep(nanoseconds: 450_000_000)
+        return screenTimeControlIsAuthorized()
+    }
+
+    private func screenTimeControlAuthorizationFailure(
+        action: String
+    ) -> String {
+        let status = AuthorizationCenter.shared.authorizationStatus
+        if #available(iOS 26.0, *) {
+            switch status {
+            case .notDetermined:
+                return "屏幕使用时间尚未完成授权，请打开 North 授权后再\(action)"
+            case .denied:
+                return "屏幕使用时间授权已被拒绝或撤销，请重新授权后再\(action)"
+            case .approved, .approvedWithDataAccess:
+                return "屏幕使用时间授权状态刚发生变化，请稍后再\(action)"
+            @unknown default:
+                return "无法确认屏幕使用时间授权，请打开 North 核对后再\(action)"
+            }
+        }
+        switch status {
+        case .notDetermined:
+            return "屏幕使用时间尚未完成授权，请打开 North 授权后再\(action)"
+        case .denied:
+            return "屏幕使用时间授权已被拒绝或撤销，请重新授权后再\(action)"
+        case .approved:
+            return "屏幕使用时间授权状态刚发生变化，请稍后再\(action)"
+        default:
+            return "无法确认屏幕使用时间授权，请打开 North 核对后再\(action)"
+        }
+    }
+
     private func nextSnapshotSequence() -> Int64 {
         let previous = Int64(
             UserDefaults.standard.integer(forKey: snapshotSequenceKey)
@@ -1579,7 +1799,8 @@ final class CompanionSyncService: ObservableObject {
                 webDomains: [],
                 threshold: DateComponents(
                     minute: setting.minutes
-                )
+                ),
+                includesPastActivity: true
             )
 
             if let tokenData = try? JSONEncoder().encode(
@@ -1803,7 +2024,10 @@ final class CompanionSyncService: ObservableObject {
             .appendingPathComponent(functionName)
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.timeoutInterval = 30
+        // A background wake is capped at 25 seconds. Two bounded attempts fit
+        // inside that window and recover the transient timeout seen on mobile
+        // networks without claiming that an unacknowledged command succeeded.
+        request.timeoutInterval = 10
         request.setValue(
             publishableKey,
             forHTTPHeaderField: "apikey"
@@ -1820,24 +2044,102 @@ final class CompanionSyncService: ObservableObject {
             withJSONObject: body
         )
 
-        let (data, response) = try await URLSession.shared.data(
-            for: request
+        var lastError: Error?
+        for attempt in 0..<2 {
+            do {
+                let (data, response) = try await URLSession.shared.data(
+                    for: request
+                )
+                guard let http = response as? HTTPURLResponse else {
+                    throw CompanionSyncError.message("服务器没有返回 HTTP 状态")
+                }
+
+                guard 200..<300 ~= http.statusCode else {
+                    let error = CompanionSyncError.message(
+                        rpcErrorMessage(http: http, data: data)
+                    )
+                    if attempt == 0,
+                       isRetryableHTTPStatus(http.statusCode) {
+                        lastError = error
+                        try await Task.sleep(nanoseconds: 900_000_000)
+                        continue
+                    }
+                    throw error
+                }
+
+                do {
+                    return try JSONDecoder().decode(T.self, from: data)
+                } catch {
+                    throw CompanionSyncError.message(
+                        "服务器返回格式异常，本机已有数据未被覆盖"
+                    )
+                }
+            } catch {
+                if attempt == 0, isRetryableTransportError(error) {
+                    lastError = error
+                    try await Task.sleep(nanoseconds: 900_000_000)
+                    continue
+                }
+                throw error
+            }
+        }
+        throw lastError ?? CompanionSyncError.message(
+            "服务器暂时不可用，请稍后重试；本机已有数据未被覆盖"
         )
-        guard let http = response as? HTTPURLResponse else {
-            throw CompanionSyncError.message("服务器没有返回 HTTP 状态")
-        }
+    }
 
-        guard 200..<300 ~= http.statusCode else {
-            let object = try? JSONSerialization.jsonObject(
-                with: data
-            ) as? [String: Any]
-            let message = object?["message"] as? String
-                ?? String(data: data, encoding: .utf8)
-                ?? "HTTP \(http.statusCode)"
-            throw CompanionSyncError.message(message)
-        }
+    private func isRetryableHTTPStatus(_ status: Int) -> Bool {
+        [408, 429, 500, 502, 503, 504, 520, 521, 522, 523, 524]
+            .contains(status)
+    }
 
-        return try JSONDecoder().decode(T.self, from: data)
+    private func isRetryableTransportError(_ error: Error) -> Bool {
+        guard let urlError = error as? URLError else { return false }
+        return [
+            .timedOut,
+            .cannotFindHost,
+            .cannotConnectToHost,
+            .networkConnectionLost,
+            .dnsLookupFailed,
+            .notConnectedToInternet
+        ].contains(urlError.code)
+    }
+
+    private func rpcErrorMessage(
+        http: HTTPURLResponse,
+        data: Data
+    ) -> String {
+        let status = http.statusCode
+        let contentType = http.value(
+            forHTTPHeaderField: "Content-Type"
+        )?.lowercased() ?? ""
+        let raw = String(data: data, encoding: .utf8) ?? ""
+        let leading = raw
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        let isHTML = contentType.contains("text/html")
+            || leading.hasPrefix("<!doctype html")
+            || leading.hasPrefix("<html")
+            || leading.hasPrefix("<head")
+
+        if status == 522 {
+            return "服务器连接超时（522），请稍后重试；本机已有数据未被覆盖"
+        }
+        if isHTML {
+            return "服务器暂时不可用（HTTP \(status)），请稍后重试；本机已有数据未被覆盖"
+        }
+        if let object = try? JSONSerialization.jsonObject(
+            with: data
+        ) as? [String: Any],
+           let message = object["message"] as? String {
+            let clean = message
+                .replacingOccurrences(of: "\n", with: " ")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            if !clean.isEmpty {
+                return String(clean.prefix(240))
+            }
+        }
+        return raw.isEmpty ? "HTTP \(status)" : String(raw.prefix(240))
     }
 
     private func deviceID() -> String {
@@ -1878,6 +2180,15 @@ final class CompanionSyncService: ObservableObject {
 
     private func iso8601(_ date: Date) -> String {
         ISO8601DateFormatter().string(from: date)
+    }
+
+    private func usageDay(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = .current
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
     }
 
     private func setError(_ message: String) {
