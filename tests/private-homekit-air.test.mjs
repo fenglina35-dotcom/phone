@@ -48,7 +48,7 @@ test('air UI is private-only, mirrored byte-for-byte, and loaded after lock over
   assert.equal(airSource,airBundle);
   assert.equal(airCss,fs.readFileSync(path.join(xcodeRoot,'PhoneWeb.bundle','private-smart-air.css'),'utf8'));
   assert.match(privateIndex,/private-smart-air\.css\?v=342/);
-  assert.match(privateIndex,/private-smart-lock\.js\?v=339[^]*private-smart-air\.js\?v=1224/);
+  assert.match(privateIndex,/private-smart-lock\.js\?v=339[^]*private-smart-air\.js\?v=1230/);
   assert.match(lockSource,/privateSmartAirChooserCard/);
   const staging=read('native/private-small-phone/scripts/stage-private-phone-web.mjs');
   assert.match(staging,/path\.join\(privateRoot, 'Resources', 'Web'\)/);
@@ -114,6 +114,18 @@ test('ACN1 heater-cooler uses its active mode threshold instead of an unrelated 
   assert.equal(r.calls.at(-1).payload.value,21);
 });
 
+test('ACN1 temperature buttons and role actions use whole-degree steps',async()=>{
+  const r=runtime(),state={...climate,serviceKind:'heaterCooler',targetTemperature:25,coolingTargetTemperature:26,heatingTargetTemperature:25,temperatureStep:0.5,mode:'cool'};
+  r.context.__privateSmartAirTest.applySnapshot({ok:true,climates:[state]});
+  r.context.SmallPhoneNative.request=async(action,payload)=>{r.calls.push({action,payload});return{ok:true,verified:true,state:{...state,coolingTargetTemperature:payload.value,targetTemperature:payload.value}};};
+  await r.context.privateSmartAirTemperature(1);
+  assert.equal(r.calls.at(-1).payload.value,27);
+  assert.equal(r.context.__privateSmartAirTest.airDecision('[智能家电|空调|temperature=27.5]',{id:'role-1'}).valid,false);
+  assert.equal(r.context.__privateSmartAirTest.airDecision('[智能家电|空调|temperature=28]',{id:'role-1'}).valid,true);
+  assert.match(swift,/target\.accessory\.model\?\.uppercased\(\) == "ACN1-AIR"[\s\S]{0,160}return 1/);
+  assert.match(swift,/homekit_climate_temperature_step/);
+});
+
 test('mode buttons only expose modes reported by HomeKit',()=>{
   const r=runtime(),api=r.context.__privateSmartAirTest;api.applySnapshot({ok:true,climates:[{...climate,supportedModes:['heat','cool']}]});r.setRoute({p:'wxsmarthome',device:'air'});const page=r.context.renderWxSmartHome();
   assert.match(page,/>制热</);assert.match(page,/>制冷</);assert.doesNotMatch(page,/>自动</);
@@ -174,9 +186,9 @@ test('private identity advances while public web stays unchanged',()=>{
   const privateApp=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js');
   const webView=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
   const project=read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
-  assert.match(privateApp,/APP_VER='v1229 · 私人语音修复与日常事件簿'/);
-  assert.match(webView,/1\.0\.352 \(352\)/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 352;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.352;/g)||[]).length,12);
+  assert.match(privateApp,/APP_VER='v1230 · 私人空调整度步进与屏幕同步'/);
+  assert.match(webView,/1\.0\.353 \(353\)/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 353;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.353;/g)||[]).length,12);
   assert.match(read('app.js'),/APP_VER='v1229 · 语音修复与日常事件簿'/);
 });

@@ -179,7 +179,7 @@ final class HomeKitClimateBridge: NSObject, HMHomeManagerDelegate {
         if let targetTemperature = temperatureCharacteristic(in: target) {
             state["minimumTemperature"] = targetTemperature.metadata?.minimumValue?.doubleValue ?? 16
             state["maximumTemperature"] = targetTemperature.metadata?.maximumValue?.doubleValue ?? 30
-            state["temperatureStep"] = targetTemperature.metadata?.stepValue?.doubleValue ?? 1
+            state["temperatureStep"] = temperatureStep(for: targetTemperature, target: target)
             state["supportsTemperature"] = targetTemperature.properties.contains(HMCharacteristicPropertyWritable)
         } else {
             state["supportsTemperature"] = false
@@ -371,6 +371,12 @@ final class HomeKitClimateBridge: NSObject, HMHomeManagerDelegate {
                 completion(failure("homekit_climate_temperature_range", "目标温度超出这个空调允许的范围。"))
                 return
             }
+            let step = temperatureStep(for: temperature, target: target)
+            let stepUnits = (value - minimum) / step
+            guard abs(stepUnits - stepUnits.rounded()) <= 0.001 else {
+                completion(failure("homekit_climate_temperature_step", "这台空调只接受整度温度，请选择相邻的整数温度。"))
+                return
+            }
             writes.append(("targetTemperature", temperature, NSNumber(value: value)))
             expected["targetTemperature"] = value
 
@@ -518,6 +524,12 @@ final class HomeKitClimateBridge: NSObject, HMHomeManagerDelegate {
                 ?? controlCharacteristic(type: HMCharacteristicTypeHeatingThreshold, in: target)
         }
         return controlCharacteristic(type: HMCharacteristicTypeTargetTemperature, in: target)
+    }
+
+    private func temperatureStep(for characteristic: HMCharacteristic, target: ClimateTarget) -> Double {
+        if target.accessory.model?.uppercased() == "ACN1-AIR" { return 1 }
+        let reported = characteristic.metadata?.stepValue?.doubleValue ?? 1
+        return reported > 0 ? reported : 1
     }
 
     private func cachedModeName(for target: ClimateTarget) -> String? {

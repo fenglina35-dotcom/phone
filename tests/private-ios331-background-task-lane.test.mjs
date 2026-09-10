@@ -61,19 +61,19 @@ function functionSource(source, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('private performance candidate has a unique identity while public web stays v1229', () => {
+test('private performance candidate has a v1230 identity while public web stays v1229', () => {
   assert.equal(privateIndex, privateAlias);
-  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1229'/);
-  assert.match(privateIndex, /app\.js\?v=1229&r=v1229-private-combined-1/);
+  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1230'/);
+  assert.match(privateIndex, /app\.js\?v=1230&r=v1230-private-ac-whole-degree-1/);
   assert.match(privateIndex, /private-runtime-diagnostics\.js\?v=334/);
-  assert.match(privateRepair, /index\.html\?repair=1&v=1229/);
-  assert.match(privateApp, /APP_VER='v1229 · 私人语音修复与日常事件簿'/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1230/);
+  assert.match(privateApp, /APP_VER='v1230 · 私人空调整度步进与屏幕同步'/);
   assert.match(overlay, /334-wechat-persist-lane/);
-  assert.match(webView, /1\.0\.352 \(352\)/);
-  assert.match(bridge, /private static let build = "1\.0\.352 \(352\)"/);
+  assert.match(webView, /1\.0\.353 \(353\)/);
+  assert.match(bridge, /private static let build = "1\.0\.353 \(353\)"/);
   assert.match(bridge, /static let contractVersion = 37/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 352;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.352;/g) || []).length, 12);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 353;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.353;/g) || []).length, 12);
   assert.match(publicApp, /APP_VER='v1229 · 语音修复与日常事件簿'/);
   assert.doesNotMatch(publicApp, /function northNativeBackgroundTask\(name,run\)/);
 });

@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 const files=['app.js','native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js'];
-function extract(src,name){const start=src.search(new RegExp('^(?:async )?function '+name+'\\(','m'));assert(start>=0,name);const rest=src.slice(start),next=rest.slice(1).search(/\n(?:async )?function /);return next<0?rest:rest.slice(0,next+1);}
+function extract(src,name){src=src.replace(/\r\n/g,'\n');const start=src.search(new RegExp('^(?:async )?function '+name+'\\(','m'));assert(start>=0,name);const rest=src.slice(start),next=rest.slice(1).search(/\n(?:async )?function /);return next<0?rest:rest.slice(0,next+1);}
 function harness(src){const ctx=vm.createContext({VOICE_MAX_CHARS:300,ttsContentLang:c=>c.voice.lang,hasForeign:t=>/[a-z]/i.test(t),voiceLangName:()=> '英语',ttsRequestedCue:()=>'',ttsAutoCue:()=>'',splitBubbles:s=>String(s).split('\n'),wechatRoleDrift:s=>/AI assistant/.test(s),roleInterceptDiagnosticRemember:()=>{}});for(const n of ['roleReplyEnglishOnly','roleReplyAssertLanguage','parseVoiceTagLine','explicitVoiceReplyRequest','voiceReplyTagValid','forceRequestedVoiceReply','voiceTagNeedsLangFix','voiceReplyCanRepairCandidate','finalizeVoiceReply','chatResultText'])vm.runInContext(extract(src,n),ctx);return ctx;}
 const valid='[语音|Good night.|晚安。|语气:温柔]',c={voice:{lang:'en'}};
 for(const file of files){const src=fs.readFileSync(file,'utf8');
