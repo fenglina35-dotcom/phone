@@ -932,6 +932,18 @@ final class CompanionSyncService: ObservableObject {
         locationManager: LocationManager,
         wellnessService: CompanionWellnessService
     ) async -> [String: Any] {
+        // Foreground wake/poll requests only need live device telemetry.  The
+        // previous path rebuilt every FamilyControls token, limit and
+        // footprint on MainActor even though JavaScript preserves those
+        // fields for a control-only snapshot.  During a busy Screen Time
+        // service window that work could also stall the co-hosted WKWebView.
+        // Explicit owner/role reads use their named focus and still take the
+        // complete, verified path below.
+        if focus == "状态" {
+            return makePassiveStatusSnapshot(
+                wellnessService: wellnessService
+            )
+        }
         let normalized = focus.lowercased()
         let passiveHealthRefresh = focus == "伴生健康刷新"
         let wantsAll = ["全部", "所有", "完整", "一键"].contains {
@@ -1080,6 +1092,49 @@ final class CompanionSyncService: ObservableObject {
         // let the role speak before this same-session receipt exists.
         snapshot["readFinishedAt"] = iso8601(Date())
         snapshot["readComplete"] = true
+        return snapshot
+    }
+
+    private func makePassiveStatusSnapshot(
+        wellnessService: CompanionWellnessService
+    ) -> [String: Any] {
+        let now = Date()
+        let telemetry = wellnessService.deviceSnapshot()
+        let batteryWasRead = telemetry["batteryLevel"] != nil
+        var snapshot: [String: Any] = [
+            "schema": 2,
+            "snapshotSequence": nextSnapshotSequence(),
+            "controlOnly": true,
+            "deviceId": deviceID(),
+            "deviceName": UIDevice.current.name,
+            "generatedAt": iso8601(now),
+            "deviceTelemetry": telemetry,
+            "transport": "local-native",
+            "capturedAt": iso8601(now),
+            "readSessionId": UUID().uuidString,
+            "requestedFocus": "状态",
+            "readErrors": [String: String](),
+            "readOutcomes": [
+                "battery": batteryWasRead ? "success" : "unavailable",
+                "screenTime": "not-requested",
+                "health": "not-requested",
+                "location": "not-requested"
+            ],
+            "readFinishedAt": iso8601(Date()),
+            "readComplete": true
+        ]
+        let manualUnlockEvents = loadExplicitManualUnlockEvents()
+            .filter {
+                let ts = ($0["ts"] as? NSNumber)?.doubleValue
+                    ?? ($0["ts"] as? Double)
+                    ?? 0
+                return ts > 0 &&
+                    Date().timeIntervalSince1970 * 1_000 - ts <
+                    24 * 60 * 60 * 1_000
+            }
+        if !manualUnlockEvents.isEmpty {
+            snapshot["automationEvents"] = manualUnlockEvents
+        }
         return snapshot
     }
 

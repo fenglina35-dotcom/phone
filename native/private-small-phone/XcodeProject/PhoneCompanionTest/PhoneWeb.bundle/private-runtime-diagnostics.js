@@ -3,7 +3,7 @@
   'use strict';
   if(window.__SMALL_PHONE_PRIVATE__!==true)return;
 
-  const OVERLAY_VERSION='334-wechat-persist-lane';
+  const OVERLAY_VERSION='335-resume-status-lane';
   const lastEventAt=Object.create(null);
   let lastMeasuredSyncOp='',lastMeasuredSyncMs=0,lastMeasuredSyncAt=0;
   let activeBackgroundTask='',activeBackgroundStartedAt=0,lastBackgroundTask='',lastBackgroundMs=0,lastBackgroundAt=0;

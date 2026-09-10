@@ -11,14 +11,14 @@ function functionSource(name) {
   const start = source.indexOf(`function ${name}`);
   assert.ok(start >= 0, `missing ${name}`);
   const next = source.indexOf("\nfunction ", start + 9);
-  return source.slice(start, next < 0 ? source.length : next);
+  return source.slice(start, next < 0 ? source.length : next).replace(/\r/g, "");
 }
 
 function functionSourceFrom(text, name) {
   const start = text.indexOf(`function ${name}`);
   assert.ok(start >= 0, `missing ${name} in private bundle`);
   const next = text.indexOf("\nfunction ", start + 9);
-  return text.slice(start, next < 0 ? text.length : next);
+  return text.slice(start, next < 0 ? text.length : next).replace(/\r/g, "");
 }
 
 const context = vm.createContext({

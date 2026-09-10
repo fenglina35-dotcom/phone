@@ -58,21 +58,21 @@ function persistenceRuntime() {
   return { context, writes, releases, traces };
 }
 
-test('private identity advances to v1230 and iOS 353 while public remains v1229', () => {
-  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1230'/);
-  assert.match(privateApp, /APP_VER='v1230 · 私人空调整度步进与屏幕同步'/);
+test('private identity advances to v1232 and iOS 355 while public remains v1232', () => {
+  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1232'/);
+  assert.match(privateApp, /APP_VER='v1232 · 共同生活回复等待修复'/);
   for (const html of [privateIndex, privateAlias]) {
-    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1230'/);
-    assert.match(html, /app\.js\?v=1230&r=v1230-private-ac-whole-degree-1/);
-    assert.match(html, /private-runtime-diagnostics\.js\?v=334/);
+    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1232'/);
+    assert.match(html, /app\.js\?v=1232&r=v1232-cohab-request-timeout-1/);
+    assert.match(html, /private-runtime-diagnostics\.js\?v=335/);
   }
-  assert.match(privateRepair, /index\.html\?repair=1&v=1230/);
-  assert.match(swift, /1\.0\.353 \(353\)/);
-  assert.match(bridge, /private static let build = "1\.0\.353 \(353\)"/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 353;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.353;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1229 · 语音修复与日常事件簿'/);
-  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1229'/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1232/);
+  assert.match(swift, /1\.0\.355 \(355\)/);
+  assert.match(bridge, /private static let build = "1\.0\.355 \(355\)"/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 355;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.355;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1232 · 共同生活回复等待修复'/);
+  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1232'/);
   assert.doesNotMatch(publicApp, /persistWechatRequested|smallPhoneWechatPersistTrace/);
 });
 
@@ -119,7 +119,7 @@ test('an unchanged durable chat snapshot skips another full archive rewrite', as
 });
 
 test('diagnostics expose bounded persistence phase timing without message content', () => {
-  assert.match(diagnostics, /OVERLAY_VERSION='334-wechat-persist-lane'/);
+  assert.match(diagnostics, /OVERLAY_VERSION='335-resume-status-lane'/);
   assert.match(diagnostics, /window\.__smallPhoneWechatPersistTrace=function/);
   for (const field of ['queued', 'passes', 'coalesced', 'blobChars', 'archiveMs', 'coreMs', 'ms']) {
     assert.match(diagnostics, new RegExp(`'${field}'`));

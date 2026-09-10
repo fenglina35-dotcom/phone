@@ -15,7 +15,7 @@ enum SmallPhoneDiagnosticsStore {
     )
     private static let maximumBytes = 256 * 1_024
     private static let maximumLines = 200
-    private static let build = "1.0.353 (353)"
+    private static let build = "1.0.355 (355)"
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -715,12 +715,38 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         arguments: [String: Any]
     ) {
         let focus = (arguments["focus"] as? String) ?? "手机概览"
+        let focusKind: String
+        if focus == "状态" {
+            focusKind = "passive-status"
+        } else if focus == "控制状态" {
+            focusKind = "control-status"
+        } else if focus == "伴生健康刷新" {
+            focusKind = "panel-health"
+        } else if focus.contains("全部") || focus.contains("所有") {
+            focusKind = "full"
+        } else {
+            focusKind = "focused"
+        }
+        let startedAt = Date()
+        SmallPhoneDiagnosticsStore.append(
+            "native.deviceSnapshot.begin",
+            fields: ["focus": focusKind]
+        )
         Task { @MainActor [weak self] in
             guard let self else { return }
             let snapshot = await CompanionSyncService.shared.localSnapshot(
                 focus: focus,
                 locationManager: LocationManager.shared,
                 wellnessService: CompanionWellnessService.shared
+            )
+            SmallPhoneDiagnosticsStore.append(
+                "native.deviceSnapshot.end",
+                fields: [
+                    "focus": focusKind,
+                    "ms": Int(
+                        Date().timeIntervalSince(startedAt) * 1_000
+                    )
+                ]
             )
             self.reply(requestID: requestID, result: snapshot)
         }

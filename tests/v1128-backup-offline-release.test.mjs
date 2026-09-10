@@ -27,15 +27,15 @@ function functionSource(name){
 }
 
 test('v1178 has a unique visible identity across every public entry and cache layer',()=>{
-  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1229\'/);
-  assert.match(app,/APP_VER='v1229 · 语音修复与日常事件簿'/);
-  assert.match(shell,/__NORTH_SHELL_BUILD__='1229'/);
-  assert.match(shell,/app\.js\?v=1229&r=v1229-couple-watch-trigger-1/);
-  assert.match(index,/小手机\.html\?v=1229/);
-  assert.match(repair,/小手机\.html\?v=1229/);
-  assert.match(worker,/const BUILD='1229'/);
-  assert.match(worker,/north-shell-v1229-couple-watch-trigger-1/);
-  assert.match(hotfix,/sw\.js\?v=1229&r=v1229-couple-watch-trigger-1/);
+  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1232\'/);
+  assert.match(app,/APP_VER='v1232 · 共同生活回复等待修复'/);
+  assert.match(shell,/__NORTH_SHELL_BUILD__='1232'/);
+  assert.match(shell,/app\.js\?v=1232&r=v1232-cohab-request-timeout-1/);
+  assert.match(index,/小手机\.html\?v=1232/);
+  assert.match(repair,/小手机\.html\?v=1232/);
+  assert.match(worker,/const BUILD='1232'/);
+  assert.match(worker,/north-shell-v1232-cohab-request-timeout-1/);
+  assert.match(hotfix,/sw\.js\?v=1232&r=v1232-cohab-request-timeout-1/);
   for(const [name,source] of Object.entries({app,shell,index,repair,worker,hotfix})){
     assert.doesNotMatch(source,/v?1127/,`${name} must not reuse the prior web version`);
   }

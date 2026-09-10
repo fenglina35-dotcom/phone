@@ -144,11 +144,11 @@ function makeAutoBackupHarness() {
   return { context, calls, advance: ms => { now += ms; } };
 }
 
-test('private diagnostics 334 overlay owns the disable marker and cancels automatic scheduling', async () => {
+test('private diagnostics 335 overlay owns the disable marker and cancels automatic scheduling', async () => {
   const { context, calls } = makeAutoBackupHarness();
   assert.equal(
     context.__SMALL_PHONE_PRIVATE_RUNTIME__,
-    '334-wechat-persist-lane'
+    '335-resume-status-lane'
   );
   assert.equal(context.__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__, true);
   assert.equal(context.__testPrivateCloud.timer(), null);
@@ -271,9 +271,9 @@ test('native recovery UI stays outside WebKit and carries the private 353 identi
   assert.match(rootView, /复制诊断给开发者/);
   assert.doesNotMatch(webView, /LocalPhoneWebView\.loadFailureHTML/);
 
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.353 \(353\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.355 \(355\)'/);
   assert.match(webView, /smallPhone\.webContentTerminationTimes\.v25\.build333/);
-  assert.match(bridge, /private static let build = "1\.0\.353 \(353\)"/);
+  assert.match(bridge, /private static let build = "1\.0\.355 \(355\)"/);
   assert.match(bridge, /case "diagnostics\.read"/);
   assert.match(bridge, /"bounded": true/);
   assert.match(bridge, /"maximumBytes": 256 \* 1_024/);
