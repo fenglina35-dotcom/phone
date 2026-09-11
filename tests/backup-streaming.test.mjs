@@ -55,3 +55,16 @@ test('export preserves surrogate pairs at string chunk boundaries and handles ab
 test('partial media from a truncated backup is removed without changing existing stored images',async()=>{
  const env=setup();env.db.set('existing','preserve');env.c.fixture=new Blob(['{"settings":{},"img":'+JSON.stringify('data:image/png;base64,'+'C'.repeat(10000))+',"broken":']);env.c.apply=()=>{throw new Error('must not apply');};await vm.runInContext('readJsonFile(fixture,apply)',env.c);assert.deepEqual([...env.db],[['existing','preserve']]);assert.equal(vm.runInContext('_backupImportPins.size',env.c),0);
 });
+test('many short chat fields do not schedule a timer after every few records',async()=>{
+ const state={settings:{},messages:{x:Array.from({length:1000},(_,i)=>({id:'m'+i,role:'assistant',content:'聊天原文'.repeat(16),time:i,meta:{seen:true,account:'main'}}))}};
+ let waits=0;const env=setup(state,{setTimeout:fn=>{waits++;return setImmediate(fn);}});
+ await vm.runInContext('exportData()',env.c);
+ assert.ok(env.saved);assert.equal(await env.saved.text(),JSON.stringify(state));
+ assert.ok(waits<100,`${waits} timer waits for only 1000 messages: yielding must follow elapsed work, not short-field count`);
+});
+test('file import waits for the previous archive restoration before applying new state',async()=>{
+ let finishBoot,calls=0;const env=setup({}, {_bootImagesPromise:new Promise(r=>{finishBoot=r;})});env.c.fixture=new Blob(['{"settings":{}}']);env.c.apply=async()=>{calls++;};
+ const importing=vm.runInContext('readJsonFile(fixture,apply)',env.c);await new Promise(r=>setTimeout(r,30));
+ const earlyCalls=calls;finishBoot();await importing;
+ assert.equal(earlyCalls,0,'old boot restoration can overwrite an import that applies before it finishes');assert.equal(calls,1);
+});

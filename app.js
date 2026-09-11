@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1237'){
+if(window.__NORTH_SHELL_BUILD__!=='1238'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -395,7 +395,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1237 · 大备份分段读写';
+const APP_VER='v1238 · 备份等待与导入时序修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1732,7 +1732,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1237&r=v1237-backup-streaming-1';
+  const url='sw.js?v=1238&r=v1238-backup-work-budget-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -2636,7 +2636,7 @@ function cinemaAsrGuardSync(job,finished){const covered=finished?Math.max(0,Numb
 function cinemaAsrGuardPlayback(v){if(!v||!_cin.extracting||_cin.asrMode!=='watch')return false;const covered=Math.max(0,Number(_cin.asrCoveredUntil)||0),limit=covered>0?Math.max(0,covered-10):20,current=Math.max(0,Number(v.currentTime)||0);if(current<limit-.15)return false;if(v.paused&&!_cin.asrGuardPaused)return false;if(current>limit+.25)v.currentTime=limit;_cin.asrGuardPaused=true;v.pause();cinemaSetStatus('已暂停等字幕 · 当前可看到 '+cinemaFmt(covered||limit),'working');return true;}
 function cinemaAsrGuardRelease(resume){const v=$('#cinVideo'),held=_cin.asrGuardPaused;_cin.asrGuardPaused=false;if(resume&&held&&v)v.play().catch(()=>{});}
 async function cinemaRestoreStoredSubtitles(s,token){if(!s||s.kind!=='video')return;const manual=await cinGet(cinemaManualSubtitleKey(s));if(token!==_cin.token||cinemaSession()!==s)return;if(manual&&Array.isArray(manual.cues)&&manual.cues.length){const n=cinemaApplyCues(manual.cues,manual.name||'手动导入字幕','subtitle');cinemaSetStatus('已恢复手动字幕 · '+n+' 句','ready');return;}const job=await cinemaAsrLoadJob(s);if(token!==_cin.token||cinemaSession()!==s||!job)return;cinemaAsrTaskUpdate(s,job);cinemaAsrGuardSync(job,job.status==='done');const cues=cinemaAsrJobCues(job);if(cues.length){cinemaApplyCues(cues,job.status==='done'?'已保存的提取字幕':'未完成的提取字幕','extract');cinemaSetStatus(job.status==='done'?'已恢复 '+cues.length+' 句字幕':'已恢复部分字幕 · 可继续提取','ready');}}
-async function cinemaMp4Library(){if(globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function')return globalThis.NorthMP4Box;if(!_cinMp4Module)_cinMp4Module=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='./vendor/mp4box.all.js?v=1237&r=file-safe-1';script.async=true;script.dataset.northMp4box='1';script.onload=()=>globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function'?resolve(globalThis.NorthMP4Box):reject(new Error('字幕解析组件没有正常启动'));script.onerror=()=>reject(new Error('字幕解析组件加载失败，请重新打开小手机后再试'));document.head.appendChild(script);}).catch(e=>{_cinMp4Module=null;const stale=document.querySelector('script[data-north-mp4box="1"]');if(stale)stale.remove();throw e;});return _cinMp4Module;}
+async function cinemaMp4Library(){if(globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function')return globalThis.NorthMP4Box;if(!_cinMp4Module)_cinMp4Module=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='./vendor/mp4box.all.js?v=1238&r=file-safe-1';script.async=true;script.dataset.northMp4box='1';script.onload=()=>globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function'?resolve(globalThis.NorthMP4Box):reject(new Error('字幕解析组件没有正常启动'));script.onerror=()=>reject(new Error('字幕解析组件加载失败，请重新打开小手机后再试'));document.head.appendChild(script);}).catch(e=>{_cinMp4Module=null;const stale=document.querySelector('script[data-north-mp4box="1"]');if(stale)stale.remove();throw e;});return _cinMp4Module;}
 async function cinemaVideoCodecProbe(file){if(!file||typeof file.slice!=='function')return null;if(_cin.videoInfo)return _cin.videoInfo;try{const MP4Box=await cinemaMp4Library(),mp4=MP4Box.createFile(false);let info=null,parseError='';mp4.onReady=x=>{info=x;};mp4.onError=e=>{parseError=String(e||'');};const step=1024*1024;for(let offset=0,guard=0;offset<file.size&&guard++<256&&!info;){const end=Math.min(file.size,offset+step),ab=await file.slice(offset,end).arrayBuffer();ab.fileStart=offset;const next=Number(mp4.appendBuffer(ab));offset=Number.isFinite(next)&&next>end?Math.min(file.size,next):end;if(guard%8===0)await new Promise(resolve=>setTimeout(resolve,0));}if(!info)mp4.flush();if(!info)return _cin.videoInfo={parseError:parseError||'未读到 MP4 / MOV 媒体信息'};const video=(info.videoTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.video),audio=(info.audioTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.audio);return _cin.videoInfo={videoCodec:String(video&&video.codec||''),audioCodec:String(audio&&audio.codec||''),width:Number(video&&video.video&&video.video.width||video&&video.track_width||0),height:Number(video&&video.video&&video.video.height||video&&video.track_height||0)};}catch(e){return _cin.videoInfo={parseError:String(e&&e.message||e||'媒体信息读取失败')};}}
 function cinemaVideoErrorReason(code,info){const vc=String(info&&info.videoCodec||''),ac=String(info&&info.audioCodec||''),hevc=/^(?:hvc1|hev1|hevc|dvhe|dvh1)/i.test(vc),android=cinemaAndroidBrowser();if(android&&hevc)return '检测到视频编码 '+vc+'（HEVC / H.265）。苹果设备能够播放，并不代表当前安卓浏览器或手机具备同样的网页解码能力。';if(android&&code===3)return '安卓浏览器已经读到文件，但解码画面或声音失败。';if(android&&code===4)return '安卓浏览器不支持这个文件的容器、视频编码或音频编码。';if(code===3)return '浏览器已读到文件，但解码画面或声音失败。';if(code===4)return '当前浏览器不支持这个视频的容器或编码。';return '浏览器没有读到可播放的视频数据。';}
 function cinemaVideoRetryCompatible(info){const vc=String(info&&info.videoCodec||''),ac=String(info&&info.audioCodec||'');return /^(?:avc1|avc3)(?:\.|$)/i.test(vc)&&(!ac||/^(?:mp4a|aac)(?:\.|$)/i.test(ac));}
@@ -13328,11 +13328,12 @@ function openChat(id){const c=getC(id);if(!c){home();return;}if(c.blocked){toast
 function downloadBlob(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name||'North导出文件';a.style.display='none';document.body.appendChild(a);
   try{a.click();}finally{setTimeout(()=>{try{URL.revokeObjectURL(url);}catch(_){}try{if(a.parentNode)a.parentNode.removeChild(a);}catch(_){}},3000);}}
 // 文件备份按块读写；不要在这里展开整份媒体或拼接整个 JSON 字符串。
-async function backupJsonBlob(root,resolve){
-  const blocks=[],pending=[];let pendingSize=0,work=0;
-  const flush=()=>{if(pending.length){blocks.push(new Blob(pending));pending.length=0;pendingSize=0;}};
+async function backupJsonBlob(root,resolve,onProgress){
+  const blocks=[],pending=[];let pendingSize=0,work=0,writtenBytes=0,yieldedAt=Date.now();
+  const pause=async()=>{await new Promise(r=>setTimeout(r,0));yieldedAt=Date.now();};
+  const flush=()=>{if(pending.length){const block=new Blob(pending);blocks.push(block);writtenBytes+=block.size;pending.length=0;pendingSize=0;if(onProgress)onProgress('正在生成备份文件：'+(writtenBytes/1048576).toFixed(1)+' MB');}};
   const emit=s=>{pending.push(s);pendingSize+=s.length;if(pendingSize>=262144)flush();};
-  async function str(s){emit('"');for(let p=0;p<s.length;){let end=Math.min(p+65536,s.length);if(end<s.length&&s.charCodeAt(end-1)>=0xd800&&s.charCodeAt(end-1)<=0xdbff)end--;emit(JSON.stringify(s.slice(p,end)).slice(1,-1));p=end;if(++work%32===0)await new Promise(r=>setTimeout(r,0));}emit('"');}
+  async function str(s){emit('"');for(let p=0;p<s.length;){let end=Math.min(p+65536,s.length);if(end<s.length&&s.charCodeAt(end-1)>=0xd800&&s.charCodeAt(end-1)<=0xdbff)end--;emit(JSON.stringify(s.slice(p,end)).slice(1,-1));p=end;if(++work%32===0&&Date.now()-yieldedAt>=12)await pause();}emit('"');}
   const ancestors=new Set();
   async function value(v,path){
     if(resolve)v=await resolve(v,path);
@@ -13342,26 +13343,27 @@ async function backupJsonBlob(root,resolve){
     if(ancestors.has(v))throw new Error('备份包含循环引用，未生成不完整文件');
     ancestors.add(v);const array=Array.isArray(v);emit(array?'[':'{');let first=true;
     const keys=array?Array.from({length:v.length},(_,i)=>i):Object.keys(v);
-    for(const k of keys){const item=v[k];if(!array&&(item===undefined||typeof item==='function'))continue;if(!first)emit(',');first=false;if(!array){await str(k);emit(':');}await value(item,path.concat(k));if(++work%512===0)await new Promise(r=>setTimeout(r,0));}
+    for(const k of keys){const item=v[k];if(!array&&(item===undefined||typeof item==='function'))continue;if(!first)emit(',');first=false;if(!array){await str(k);emit(':');}await value(item,path.concat(k));if(++work%512===0&&Date.now()-yieldedAt>=12)await pause();}
     emit(array?']':'}');ancestors.delete(v);
   }
   await value(root,[]);flush();return new Blob(blocks,{type:'application/json'});
 }
-async function fullBackupFileBlob(){
-  if(_bootImagesPromise)await _bootImagesPromise;
+async function fullBackupFileBlob(onProgress){
+  if(onProgress)onProgress('正在等待原存档读取完成');if(_bootImagesPromise)await _bootImagesPromise;
+  if(onProgress)onProgress('正在整理存档结构');
   // 冻结容器结构，字符串共享；不经 stringify/parse 制造整份字符串副本。
-  const seen=new Map();let visited=0;
-  async function copy(v){if(!v||typeof v!=='object')return v;if(seen.has(v))return seen.get(v);const c=Array.isArray(v)?new Array(v.length):{};seen.set(v,c);for(const k of Object.keys(v)){Object.defineProperty(c,k,{value:await copy(v[k]),enumerable:true,writable:true,configurable:true});if(++visited%1024===0)await new Promise(r=>setTimeout(r,0));}return c;}
-  const state=await copy(S);seen.clear();let lastKey='',lastImage='';
+  const seen=new Map();let visited=0,yieldedAt=Date.now();
+  async function copy(v){if(!v||typeof v!=='object')return v;if(seen.has(v))return seen.get(v);const c=Array.isArray(v)?new Array(v.length):{};seen.set(v,c);for(const k of Object.keys(v)){Object.defineProperty(c,k,{value:await copy(v[k]),enumerable:true,writable:true,configurable:true});if(++visited%1024===0&&Date.now()-yieldedAt>=12){if(onProgress)onProgress('正在整理存档结构：'+visited+' 项');await new Promise(r=>setTimeout(r,0));yieldedAt=Date.now();}}return c;}
+  const state=await copy(S);seen.clear();let lastKey='',lastImage='',imageReads=0;
   return backupJsonBlob(state,async(v,path)=>{
-    if(typeof v==='string'&&v.indexOf('idb:')===0){const key=v.slice(4);if(key!==lastKey){const image=await imgGet(key);if(typeof image!=='string'||!image)throw new Error('有备份图片暂时无法读取，请重试；未生成缺图备份');lastKey=key;lastImage=image;}return lastImage;}
+    if(typeof v==='string'&&v.indexOf('idb:')===0){const key=v.slice(4);if(key!==lastKey){const image=await imgGet(key);if(typeof image!=='string'||!image)throw new Error('有备份图片暂时无法读取，请重试；未生成缺图备份');lastKey=key;lastImage=image;if(onProgress)onProgress('正在读取备份图片：'+(++imageReads)+' 次');}return lastImage;}
     if(v&&typeof v==='object'&&v.__idb){let key='';const p=state.me&&state.me.phoneFriend;
       if(path.length===1&&path[0]==='messages'&&v.__idb==='messages')key='__messages';
       if(path.join('.')==='me.phoneFriend.messages'&&v.__idb==='phoneFriendMessages')key='__pf_messages_'+(v.id||p.id||'main');
       if(path.join('.')==='me.phoneFriend.groupMessages'&&v.__idb==='phoneFriendGroupMessages')key='__pf_group_messages_'+(v.id||p.id||'main');
       if(key){const raw=await imgGet(key);if(typeof raw!=='string')throw new Error('聊天存档暂时无法读取，请重试');return JSON.parse(raw);}
     }return v;
-  });
+  },onProgress);
 }
 // 兼容旧 JSON/TXT：只保留一个输入窗口和一个字符串值，媒体在进入状态树前落盘。
 async function readBackupJson(file,onString,onProgress){
@@ -13391,11 +13393,12 @@ async function readBackupJson(file,onString,onProgress){
 }
 let _backupImportPins=new Set(),_fullBackupImportBusy=false;
 
-let _fullBackupExportBusy=false;
+let _fullBackupExportBusy=false,_fullBackupExportProgress='';
 async function exportData(){
-  if(_fullBackupExportBusy){toast('正在生成完整备份，请稍候');return;}
-  _fullBackupExportBusy=true;toast('正在生成完整备份，请保持页面开启');
-  try{const blob=await fullBackupFileBlob();
+  if(_fullBackupExportBusy){toast(_fullBackupExportProgress||'正在生成完整备份，请稍候');return;}
+  _fullBackupExportBusy=true;_fullBackupExportProgress='正在生成完整备份，请保持页面开启';toast(_fullBackupExportProgress);let progressAt=Date.now();
+  const progress=text=>{_fullBackupExportProgress=text;if(Date.now()-progressAt>=1500){progressAt=Date.now();toast(text+'，请保持页面开启');}};
+  try{const blob=await fullBackupFileBlob(progress);
     const name='North备份_'+new Date().toISOString().slice(0,10)+'.json',mode=await beautySaveFile(blob,name);
     if(mode==='cancelled')toast('已取消导出');else if(mode==='shared')toast('备份已生成，请在系统面板选择“存储到文件”');else toast('已导出');
   }catch(e){toast('完整备份生成失败：'+String(e&&e.message||e));}finally{_fullBackupExportBusy=false;}
@@ -13407,7 +13410,7 @@ async function readJsonFile(f,onData){
   try{const d=await readBackupJson(f,async s=>{if(!isBigImg(s))return s;let hash='';
       if(typeof crypto!=='undefined'&&crypto.subtle){const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));hash=s.length+':'+Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');if(hashes.has(hash))return 'idb:'+hashes.get(hash);}
       const key=prefix+(seq++);_backupImportPins.add(key);staged.add(key);await imgPut(key,s);if(hash)hashes.set(hash,key);return 'idb:'+key;
-    },(read,total)=>{if(Date.now()-progressAt>1500){progressAt=Date.now();toast('正在读取备份 '+Math.floor(read/Math.max(1,total)*100)+'%，请保持页面开启');}});applying=true;await onData(d);
+    },(read,total)=>{if(Date.now()-progressAt>1500){progressAt=Date.now();toast('正在读取备份 '+Math.floor(read/Math.max(1,total)*100)+'%，请保持页面开启');}});if(_bootImagesPromise){toast('正在等待原存档读取完成，再应用备份');await _bootImagesPromise;}if(typeof window!=='undefined'&&window.__northBootReady===false)throw new Error('原存档读取失败，未应用导入文件，请先重开页面');applying=true;await onData(d);
   }catch(e){toast('导入失败：'+String(e&&e.message||e));}
   finally{for(const key of staged){if(!applying)try{await imgDel(key);}catch(_){} _backupImportPins.delete(key);}hashes.clear();_fullBackupImportBusy=false;}
 }
