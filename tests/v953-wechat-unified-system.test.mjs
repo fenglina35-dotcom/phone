@@ -6,9 +6,9 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-assert.match(source,/APP_VER='v1233 · 完整备份保存与导入优化'/);
-assert.match(html,/__NORTH_SHELL_BUILD__='1233'/);
-assert.match(sw,/BUILD='1233'/);
+assert.match(source,/APP_VER='v1234 · 华为 Edge 备份下载修复'/);
+assert.match(html,/__NORTH_SHELL_BUILD__='1234'/);
+assert.match(sw,/BUILD='1234'/);
 assert.equal((project.match(/CURRENT_PROJECT_VERSION = 355;/g)||[]).length,12);
 assert.equal((project.match(/MARKETING_VERSION = 1\.0\.355;/g)||[]).length,12);
 

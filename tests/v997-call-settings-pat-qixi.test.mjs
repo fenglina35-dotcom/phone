@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1233 · 完整备份保存与导入优化'/);
+  assert.match(app,/APP_VER='v1234 · 华为 Edge 备份下载修复'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1233-cohab-keyboard-vinyl-1/);
-  assert.match(html,/sw\.js\?v=1233&r=v1233-full-backup-save-1/);
+  assert.match(html,/north-sw-reloaded-1234-cohab-keyboard-vinyl-1/);
+  assert.match(html,/sw\.js\?v=1234&r=v1234-huawei-edge-backup-download-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{

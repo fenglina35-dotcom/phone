@@ -13,15 +13,15 @@ test('v1184 web identity and cache markers are aligned', () => {
   const hotfix = read('web-hotfix.js');
   const index = read('index.html');
   const repair = read('repair.html');
-  assert.match(app, /__NORTH_SHELL_BUILD__!=='1233'/);
-  assert.match(app, /APP_VER='v1233 · 完整备份保存与导入优化'/);
-  assert.match(shell, /__NORTH_SHELL_BUILD__='1233'/);
-  assert.match(shell, /app\.js\?v=1233&r=v1233-full-backup-save-1/);
-  assert.match(sw, /const BUILD='1233'/);
+  assert.match(app, /__NORTH_SHELL_BUILD__!=='1234'/);
+  assert.match(app, /APP_VER='v1234 · 华为 Edge 备份下载修复'/);
+  assert.match(shell, /__NORTH_SHELL_BUILD__='1234'/);
+  assert.match(shell, /app\.js\?v=1234&r=v1234-huawei-edge-backup-download-1/);
+  assert.match(sw, /const BUILD='1234'/);
   assert.match(sw, /v1184-ios-web-crash-cohab-turn-keyboard-1/);
-  assert.match(hotfix, /v1233-full-backup-save-1/);
-  assert.match(index, /小手机\.html\?v=1233/);
-  assert.match(repair, /小手机\.html\?v=1233/);
+  assert.match(hotfix, /v1234-huawei-edge-backup-download-1/);
+  assert.match(index, /小手机\.html\?v=1234/);
+  assert.match(repair, /小手机\.html\?v=1234/);
 });
 
 test('v1184 publishes shared cohab memory and X comment controls', () => {
