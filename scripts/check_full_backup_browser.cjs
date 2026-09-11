@@ -14,7 +14,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
   await page.route('**/*',r=>new URL(r.request().url()).origin===origin?r.continue():r.abort());
   const entry=origin+(privateApp?'/native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html':'/小手机.html');
   await page.goto(entry+'?northPreview=black-home');await page.waitForFunction(()=>window.__northBootReady);
-  if(!privateApp){await page.evaluate(async()=>{await navigator.serviceWorker.register('sw.js?v=1238&r=backup-browser-test',{updateViaCache:'none'});await navigator.serviceWorker.ready;});await page.waitForFunction(()=>!!navigator.serviceWorker.controller,{timeout:60000});}
+  if(!privateApp){await page.evaluate(async()=>{await navigator.serviceWorker.register('sw.js?v=1239&r=backup-browser-test',{updateViaCache:'none'});await navigator.serviceWorker.ready;});await page.waitForFunction(()=>!!navigator.serviceWorker.controller,{timeout:60000});}
   await page.evaluate(()=>{S.me.locked=false;S.settings.backupFixture='中文、引号"和换行\n完整保留';S._backupImages=Array.from({length:16},(_,i)=>({img:'data:image/jpeg;base64,'+String(i).padStart(3,'0')+'A'.repeat(1024*1024)}));openSettings('data');});
   await page.waitForTimeout(150);await page.evaluate(()=>closeModal());
   const [download]=await Promise.all([page.waitForEvent('download',{timeout:60000}),page.locator('button[onclick="exportData()"]'+'').first().click()]);

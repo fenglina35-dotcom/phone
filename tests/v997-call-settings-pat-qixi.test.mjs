@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1238 · 备份等待与导入时序修复'/);
+  assert.match(app,/APP_VER='v1239 · 浏览器运行诊断'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1238-cohab-keyboard-vinyl-1/);
-  assert.match(html,/sw\.js\?v=1238&r=v1238-backup-work-budget-1/);
+  assert.match(html,/north-sw-reloaded-1239-cohab-keyboard-vinyl-1/);
+  assert.match(html,/sw\.js\?v=1239&r=v1239-browser-diagnostics-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{

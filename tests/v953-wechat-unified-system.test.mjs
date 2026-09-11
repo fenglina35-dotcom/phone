@@ -6,9 +6,9 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-assert.match(source,/APP_VER='v1238 · 备份等待与导入时序修复'/);
-assert.match(html,/__NORTH_SHELL_BUILD__='1238'/);
-assert.match(sw,/BUILD='1238'/);
+assert.match(source,/APP_VER='v1239 · 浏览器运行诊断'/);
+assert.match(html,/__NORTH_SHELL_BUILD__='1239'/);
+assert.match(sw,/BUILD='1239'/);
 assert.equal((project.match(/CURRENT_PROJECT_VERSION = 355;/g)||[]).length,12);
 assert.equal((project.match(/MARKETING_VERSION = 1\.0\.355;/g)||[]).length,12);
 

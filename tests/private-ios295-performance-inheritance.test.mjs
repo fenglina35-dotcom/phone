@@ -45,20 +45,20 @@ function functionSource(sourceText, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('private identifiers advance to v1238 and iOS 355 while public stays v1238', () => {
+test('private identifiers advance to v1239 and iOS 355 while public stays v1239', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1238'/);
-  assert.match(index, /app\.js\?v=1238&r=v1238-backup-work-budget-1/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1239'/);
+  assert.match(index, /app\.js\?v=1239&r=v1239-browser-diagnostics-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=335/);
-  assert.match(app, /APP_VER='v1238 · 备份等待与导入时序修复'/);
+  assert.match(app, /APP_VER='v1239 · 浏览器运行诊断'/);
   assert.match(overlay, /335-resume-status-lane/);
   assert.match(webview, /1\.0\.355 \(355\)/);
   assert.match(bridge, /private static let build = "1\.0\.355 \(355\)"/);
   assert.match(bridge, /static let contractVersion = 37/);
   assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 355;/g) || []).length, 12);
   assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.355;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1238 · 备份等待与导入时序修复'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1238'/);
+  assert.match(publicApp, /APP_VER='v1239 · 浏览器运行诊断'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1239'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
@@ -146,7 +146,7 @@ test('diagnostics identify the protected stage without collecting content', () =
   assert.doesNotMatch(overlay, /messageBody|chatContent|authorizationToken/);
 });
 
-test('Mac guide distinguishes v1238 source sync from the unchanged iOS355 package', () => {
+test('Mac guide distinguishes v1239 source sync from the unchanged iOS355 package', () => {
   const install = fs.readFileSync(
     path.join(project, '第三百二十七次安装_v1206_完整衣柜_请先读.md'),
     'utf8',
@@ -164,7 +164,7 @@ test('Mac guide distinguishes v1238 source sync from the unchanged iOS355 packag
   assert.match(mac, /原生桥.*37/);
   assert.match(install, /1\.0\.327 \(327\)/);
   assert.match(install, /原生桥.*35/);
-  assert.match(mac, /^# v1238 .*仅同步内置网页源码/);
+  assert.match(mac, /^# v1239 .*仅同步内置网页源码/);
   assert.match(mac, /网页.*推送/);
   assert.match(install, /私人内置网页 v1206/);
   assert.match(install, /两边共有/);
