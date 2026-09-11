@@ -140,7 +140,7 @@ test('browser compatibility fallbacks cover clipboard, notifications, DOM replac
   assert.match(app, /Notification\.requestPermission\(finish\)/);
   assert.match(app, /function replaceChildrenCompat\(el,node\)/);
   assert.match(app, /while\(el\.firstChild\)el\.removeChild\(el\.firstChild\)/);
-  assert.match(app, /const name='North备份_'[\s\S]*?await beautySaveFile\(blob,name\)/);
+  assert.match(app, /async function shareFullBackupExport\([\s\S]*?await navigator\.share\(/);
   assert.match(app, /musicPrepareReadyExport\(blob,[\s\S]*?new Date\(\)\.toISOString\(\)\.slice\(0,10\)/);
   assert.match(app, /function musicSaveReadyExport\(\)[\s\S]*?await beautySaveFile\(ready\.blob,ready\.name\)/);
   assert.match(app, /r\.onblocked=fail/);

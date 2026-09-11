@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1232'){
+if(window.__NORTH_SHELL_BUILD__!=='1233'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -419,7 +419,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1232 · 共同生活回复等待修复';
+const APP_VER='v1233 · 完整备份保存与导入优化';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -539,6 +539,26 @@ function persistWechatTrace(stage,fields){try{if(typeof window.__smallPhoneWecha
 function persistWechatSettle(upto,value,error){const keep=[];for(const row of _persistWechatWaiters){if(row.target<=upto){if(error)row.reject(error);else row.resolve(value);}else keep.push(row);}_persistWechatWaiters=keep;}
 function persistWechatDrain(){if(_persistWechatRunning)return;_persistWechatRunning=true;const started=persistWechatClock();let passes=0,coalesced=0,observed=_persistWechatCompleted,maxBlobChars=0,archiveMs=0,coreMs=0;persistWechatTrace('begin',{queued:Math.max(1,_persistWechatRequested-_persistWechatCompleted)});(async()=>{try{while(_persistWechatCompleted<_persistWechatRequested){const target=_persistWechatRequested;coalesced+=Math.max(0,target-observed-1);observed=target;passes++;let blob;try{blob=JSON.stringify(S.messages||{});}catch(_){blob='{}';}maxBlobChars=Math.max(maxBlobChars,blob.length);const stamp=messageArchiveStamp(S.messages),archiveStarted=persistWechatClock();if(blob.length>20000){if(!(_heavyReady.has('messages')&&_heavyStamp.messages===stamp&&_heavy.messages===blob))await writeMessageArchive(blob,stamp);}else await deleteMessageArchive();archiveMs+=Math.max(0,Math.round(persistWechatClock()-archiveStarted));if(target!==_persistWechatRequested)continue;const coreStarted=persistWechatClock(),saved=await saveNowAsync();coreMs+=Math.max(0,Math.round(persistWechatClock()-coreStarted));if(target!==_persistWechatRequested)continue;_persistWechatCompleted=target;persistWechatSettle(target,!!saved,null);}}catch(error){const failedThrough=_persistWechatRequested;_persistWechatCompleted=failedThrough;persistWechatSettle(failedThrough,false,error);persistWechatTrace('error',{passes,coalesced,blobChars:maxBlobChars,ms:Math.round(persistWechatClock()-started),error:String(error&&error.name||'Error')});}finally{_persistWechatRunning=false;persistWechatTrace('end',{passes,coalesced,blobChars:maxBlobChars,archiveMs,coreMs,ms:Math.round(persistWechatClock()-started)});if(_persistWechatCompleted<_persistWechatRequested)persistWechatDrain();}})();}
 function persistWechatMessagesNow(){const target=++_persistWechatRequested,promise=new Promise((resolve,reject)=>_persistWechatWaiters.push({target,resolve,reject}));if(_persistWechatRunning)persistWechatTrace('coalesced',{queued:Math.max(1,_persistWechatRequested-_persistWechatCompleted)});else persistWechatDrain();return promise;}
+async function primeImportedMessageStore(value,key,rk){let blob;try{blob=JSON.stringify(value||{});}catch(e){throw new Error('导入的聊天记录无法安全整理：'+String(e&&e.message||e));}if(blob.length<=20000){delete _heavy[rk];delete _heavyStamp[rk];_heavyReady.delete(rk);await imgDel(key);return false;}const stamp=messageArchiveStamp(value);_heavy[rk]=blob;_heavyReady.delete(rk);await imgPut(key,blob);if(_heavy[rk]!==blob)throw new Error('导入期间聊天记录又发生了变化，请重试');_heavyStamp[rk]=stamp;_heavyReady.add(rk);return true;}
+async function compactImportedImages(root){
+  const images=new Map(),seen=new WeakSet(),stack=[root];let scanned=0,count=0;
+  while(stack.length){const value=stack.pop();if(!value||typeof value!=='object'||seen.has(value))continue;seen.add(value);
+    for(const key of Object.keys(value)){const item=value[key];if(isBigImg(item)){let refs=images.get(item);if(!refs){refs=[];images.set(item,refs);}refs.push([value,key]);}else if(item&&typeof item==='object')stack.push(item);}
+    if(++scanned%128===0)await new Promise(resolve=>setTimeout(resolve,0));
+  }
+  const lazy=lazyStoredImagesOn();
+  for(const [image,refs] of images){const oldKey=_imgRev.get(image),cached=oldKey&&_imgCache[oldKey]===image;
+    await primeImageForSave(image);const key=_imgRev.get(image);
+    if(!key||!_imgReady.has(key))throw new Error('备份图片未能安全写入，请检查存储空间');
+    for(const [parent,field] of refs)if(parent[field]===image)parent[field]='idb:'+key;
+    images.delete(image);count++;
+    // Only release newly imported cache entries; persisted image data and active-page caches stay intact.
+    if(lazy&&!cached){delete _imgCache[key];_imgRev.delete(image);}
+    if(count%2===0)await new Promise(resolve=>setTimeout(resolve,0));
+  }
+  return count;
+}
+async function prepareImportedStateForSave(){await compactImportedImages(S);if(lazyStoredImagesOn())privateTrimImageMemoryCache();await primeImportedMessageStore(S.messages||{},'__messages','messages');const pf=S.me&&S.me.phoneFriend;if(pf){const messageKey=pfMsgStoreKey(),groupKey=pfGroupMsgStoreKey();await primeImportedMessageStore(pf.messages||{},messageKey,'pfMessages:'+messageKey);await primeImportedMessageStore(pf.groupMessages||{},groupKey,'pfGroupMessages:'+groupKey);}return true;}
 function wechatTailSafeRow(m){if(!m||typeof m!=='object')return null;let x;try{x=JSON.parse(JSON.stringify(m));}catch(_){return null;}['audio','src','img'].forEach(k=>{const v=x[k];if(typeof v==='string'&&v.length>1800&&/^(?:data:|blob:)/i.test(v)){delete x[k];if(k==='audio')x._audioExpired=true;}});return x;}
 function wechatTailJournalWrite(id,aid){try{const key=accountMessageKey(id,aid||actId()),arr=S.messages&&S.messages[key];if(!Array.isArray(arr)||!arr.length)return false;const rows=arr.slice(-18).map(wechatTailSafeRow).filter(Boolean);if(!rows.length)return false;const at=Math.max(Date.now(),(+S._persistedAt||0)+1);localStorage.setItem(WECHAT_TAIL_KEY,JSON.stringify({ver:1,at,key,rows}));return true;}catch(_){return false;}}
 function wechatTailJournalMerge(){try{const raw=localStorage.getItem(WECHAT_TAIL_KEY);if(!raw)return false;const j=JSON.parse(raw),persisted=+S._persistedAt||0;if(!j||j.ver!==1||!j.key||!Array.isArray(j.rows)||(+j.at||0)<=persisted)return false;S.messages=S.messages&&typeof S.messages==='object'?S.messages:{};const dst=Array.isArray(S.messages[j.key])?S.messages[j.key]:(S.messages[j.key]=[]),seen=new Set(dst.map(m=>m&&m.id).filter(Boolean));let added=false;for(const m of j.rows){if(!m||!m.id||seen.has(m.id))continue;dst.push(m);seen.add(m.id);added=true;}if(added)dst.sort((a,b)=>(+a.time||0)-(+b.time||0));return added;}catch(_){return false;}}
@@ -1706,7 +1726,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1232&r=v1232-cohab-request-timeout-1';
+  const url='sw.js?v=1233&r=v1233-full-backup-save-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -2608,7 +2628,7 @@ function cinemaAsrGuardSync(job,finished){const covered=finished?Math.max(0,Numb
 function cinemaAsrGuardPlayback(v){if(!v||!_cin.extracting||_cin.asrMode!=='watch')return false;const covered=Math.max(0,Number(_cin.asrCoveredUntil)||0),limit=covered>0?Math.max(0,covered-10):20,current=Math.max(0,Number(v.currentTime)||0);if(current<limit-.15)return false;if(v.paused&&!_cin.asrGuardPaused)return false;if(current>limit+.25)v.currentTime=limit;_cin.asrGuardPaused=true;v.pause();cinemaSetStatus('已暂停等字幕 · 当前可看到 '+cinemaFmt(covered||limit),'working');return true;}
 function cinemaAsrGuardRelease(resume){const v=$('#cinVideo'),held=_cin.asrGuardPaused;_cin.asrGuardPaused=false;if(resume&&held&&v)v.play().catch(()=>{});}
 async function cinemaRestoreStoredSubtitles(s,token){if(!s||s.kind!=='video')return;const manual=await cinGet(cinemaManualSubtitleKey(s));if(token!==_cin.token||cinemaSession()!==s)return;if(manual&&Array.isArray(manual.cues)&&manual.cues.length){const n=cinemaApplyCues(manual.cues,manual.name||'手动导入字幕','subtitle');cinemaSetStatus('已恢复手动字幕 · '+n+' 句','ready');return;}const job=await cinemaAsrLoadJob(s);if(token!==_cin.token||cinemaSession()!==s||!job)return;cinemaAsrTaskUpdate(s,job);cinemaAsrGuardSync(job,job.status==='done');const cues=cinemaAsrJobCues(job);if(cues.length){cinemaApplyCues(cues,job.status==='done'?'已保存的提取字幕':'未完成的提取字幕','extract');cinemaSetStatus(job.status==='done'?'已恢复 '+cues.length+' 句字幕':'已恢复部分字幕 · 可继续提取','ready');}}
-async function cinemaMp4Library(){if(globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function')return globalThis.NorthMP4Box;if(!_cinMp4Module)_cinMp4Module=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='./vendor/mp4box.all.js?v=1232&r=file-safe-1';script.async=true;script.dataset.northMp4box='1';script.onload=()=>globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function'?resolve(globalThis.NorthMP4Box):reject(new Error('字幕解析组件没有正常启动'));script.onerror=()=>reject(new Error('字幕解析组件加载失败，请重新打开小手机后再试'));document.head.appendChild(script);}).catch(e=>{_cinMp4Module=null;const stale=document.querySelector('script[data-north-mp4box="1"]');if(stale)stale.remove();throw e;});return _cinMp4Module;}
+async function cinemaMp4Library(){if(globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function')return globalThis.NorthMP4Box;if(!_cinMp4Module)_cinMp4Module=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='./vendor/mp4box.all.js?v=1233&r=file-safe-1';script.async=true;script.dataset.northMp4box='1';script.onload=()=>globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function'?resolve(globalThis.NorthMP4Box):reject(new Error('字幕解析组件没有正常启动'));script.onerror=()=>reject(new Error('字幕解析组件加载失败，请重新打开小手机后再试'));document.head.appendChild(script);}).catch(e=>{_cinMp4Module=null;const stale=document.querySelector('script[data-north-mp4box="1"]');if(stale)stale.remove();throw e;});return _cinMp4Module;}
 async function cinemaVideoCodecProbe(file){if(!file||typeof file.slice!=='function')return null;if(_cin.videoInfo)return _cin.videoInfo;try{const MP4Box=await cinemaMp4Library(),mp4=MP4Box.createFile(false);let info=null,parseError='';mp4.onReady=x=>{info=x;};mp4.onError=e=>{parseError=String(e||'');};const step=1024*1024;for(let offset=0,guard=0;offset<file.size&&guard++<256&&!info;){const end=Math.min(file.size,offset+step),ab=await file.slice(offset,end).arrayBuffer();ab.fileStart=offset;const next=Number(mp4.appendBuffer(ab));offset=Number.isFinite(next)&&next>end?Math.min(file.size,next):end;if(guard%8===0)await new Promise(resolve=>setTimeout(resolve,0));}if(!info)mp4.flush();if(!info)return _cin.videoInfo={parseError:parseError||'未读到 MP4 / MOV 媒体信息'};const video=(info.videoTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.video),audio=(info.audioTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.audio);return _cin.videoInfo={videoCodec:String(video&&video.codec||''),audioCodec:String(audio&&audio.codec||''),width:Number(video&&video.video&&video.video.width||video&&video.track_width||0),height:Number(video&&video.video&&video.video.height||video&&video.track_height||0)};}catch(e){return _cin.videoInfo={parseError:String(e&&e.message||e||'媒体信息读取失败')};}}
 function cinemaVideoErrorReason(code,info){const vc=String(info&&info.videoCodec||''),ac=String(info&&info.audioCodec||''),hevc=/^(?:hvc1|hev1|hevc|dvhe|dvh1)/i.test(vc),android=cinemaAndroidBrowser();if(android&&hevc)return '检测到视频编码 '+vc+'（HEVC / H.265）。苹果设备能够播放，并不代表当前安卓浏览器或手机具备同样的网页解码能力。';if(android&&code===3)return '安卓浏览器已经读到文件，但解码画面或声音失败。';if(android&&code===4)return '安卓浏览器不支持这个文件的容器、视频编码或音频编码。';if(code===3)return '浏览器已读到文件，但解码画面或声音失败。';if(code===4)return '当前浏览器不支持这个视频的容器或编码。';return '浏览器没有读到可播放的视频数据。';}
 function cinemaVideoRetryCompatible(info){const vc=String(info&&info.videoCodec||''),ac=String(info&&info.audioCodec||'');return /^(?:avc1|avc3)(?:\.|$)/i.test(vc)&&(!ac||/^(?:mp4a|aac)(?:\.|$)/i.test(ac));}
@@ -13153,7 +13173,7 @@ function openModal(html){
   if(m.querySelector('[data-idb-avatar],img[src^="idb:"],img[data-idb-src],[style*="idb:"]'))scheduleVisibleStoredImages(true);
 }
 function openCallModal(html){openModal(html);$('#modal').classList.add('call-modal');}
-function closeModal(){const m=$('#modal');if(!m)return false;m.classList.remove('show');m.classList.remove('wxmodal-light');m.classList.remove('wxmodal-green');m.classList.remove('call-modal');if(m._home&&m.parentNode!==m._home)m._home.appendChild(m);return true;}
+function closeModal(){const m=$('#modal');if(!m)return false;if(m.querySelector('[data-full-backup-ready]'))releaseFullBackupExport();m.classList.remove('show');m.classList.remove('wxmodal-light');m.classList.remove('wxmodal-green');m.classList.remove('call-modal');if(m._home&&m.parentNode!==m._home)m._home.appendChild(m);return true;}
 /* 自建确认弹窗：主屏幕Web应用里原生 confirm() 会被静默拦截(点了没反应)，所以全部走这个 */
 let _uiConfirmDone=null;
 function uiConfirm(msg,opt){opt=opt||{};if(_uiConfirmDone)_uiConfirmDone(false);return new Promise(res=>{let el=document.getElementById('cfm');
@@ -13171,10 +13191,25 @@ function openChat(id){const c=getC(id);if(!c){home();return;}if(c.blocked){toast
 /* ---------- 备份 ---------- */
 function downloadBlob(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name||'North导出文件';a.style.display='none';document.body.appendChild(a);
   try{a.click();}finally{setTimeout(()=>{try{URL.revokeObjectURL(url);}catch(_){}try{if(a.parentNode)a.parentNode.removeChild(a);}catch(_){}},3000);}}
-async function exportData(){const data=await fullBackupState();const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
-  const name='North备份_'+new Date().toISOString().slice(0,10)+'.json',mode=await beautySaveFile(blob,name);if(mode==='cancelled')toast('已取消导出');else if(mode==='shared')toast('备份已生成，请在系统面板选择“存储到文件”');else toast('已导出');}
+let _fullBackupExport=null,_fullBackupExportBusy=false;
+function releaseFullBackupExport(){const ready=_fullBackupExport;_fullBackupExport=null;if(ready)setTimeout(()=>URL.revokeObjectURL(ready.url),60000);}
+function showFullBackupExport(){const ready=_fullBackupExport;if(!ready)return;
+  openModal('<div data-full-backup-ready><h3>完整备份已生成</h3><p>'+esc(ready.name)+' · '+(ready.blob.size/1024/1024).toFixed(2)+' MB</p><p>请点下面的按钮保存。若下载没有开始，可以再次点击，或使用系统分享。请在浏览器下载记录或文件管理中确认文件。</p><a class="btn" href="'+esc(ready.url)+'" download="'+esc(ready.name)+'">下载备份文件</a>'+(ready.file?'<button class="btn g" onclick="shareFullBackupExport()">系统分享 / 保存</button>':'')+'<button class="btn g" onclick="closeModal()">关闭</button></div>');
+}
+async function shareFullBackupExport(){const ready=_fullBackupExport;if(!ready||!ready.file)return;try{await navigator.share({files:[ready.file],title:ready.name});toast('已交给系统，请确认保存结果');}catch(e){toast(e&&e.name==='AbortError'?'已取消，可重新保存':'系统分享未完成，请使用下载备份文件');}}
+async function exportData(){
+  if(_fullBackupExportBusy){toast('正在生成完整备份，请稍候');return;}
+  if(_fullBackupExport){showFullBackupExport();return;}
+  _fullBackupExportBusy=true;toast('正在生成完整备份，请保持页面开启');
+  try{await new Promise(resolve=>setTimeout(resolve,0));const data=await fullBackupState();
+    const blob=new Blob([JSON.stringify(data)],{type:'application/json'}),name='North备份_'+new Date().toISOString().slice(0,10)+'.json';
+    let file=null;if(typeof File==='function'&&typeof navigator.share==='function'&&typeof navigator.canShare==='function')try{const candidate=new File([blob],name,{type:blob.type});if(navigator.canShare({files:[candidate]}))file=candidate;}catch(_){}
+    _fullBackupExport={blob,name,file,url:URL.createObjectURL(blob)};showFullBackupExport();
+  }catch(e){releaseFullBackupExport();toast('完整备份生成失败：'+String(e&&e.message||e));}finally{_fullBackupExportBusy=false;}
+}
 function readJsonFile(f,onData){const r=new FileReader();r.onerror=()=>toast('文件读取失败，请重新选择');r.onload=async()=>{try{await onData(JSON.parse(r.result));}catch(e){toast((e&&e.message)||'文件读不了');}};r.readAsText(f);}
-function importData(){pickFile('.json',f=>readJsonFile(f,async d=>{if(d&&d.type==='north-beauty-pack'){const n=await applyBeautyPack(d);toast('已导入美化包（'+n+'项）');return;}if(!d||!d.settings)throw new Error('不是小手机备份或美化包');S=mergeStateData(d,{keepPhoneFriend:true});phoneFriendState();if(!await saveNowAsync())throw new Error('导入后保存失败，请检查浏览器存储权限');render();toast('完整备份已导入');}));}
+async function applyFullBackupData(d){if(!d||!d.settings)throw new Error('不是小手机备份或美化包');const previous=S;let committed=false;try{S=mergeStateData(d,{keepPhoneFriend:true});normalizeLoadedState();phoneFriendState();toast('正在安全整理完整备份，请保持页面开启');await prepareImportedStateForSave();const stagedAt=Date.now();S._persistedAt=stagedAt;const compactJson=northNativeTimedJSON(S,_imgReplacer,'backup-import'),stats=recoveryStateStats(S);if(recoveryStateMeaningful(stats)&&!await queueRecoverySnapshot(compactJson,stagedAt,true))throw new Error('导入后的安全恢复快照写入失败，请检查浏览器存储空间');if(!await saveNowAsync())throw new Error('导入后保存失败，请检查浏览器存储权限');committed=true;render();return true;}catch(e){if(!committed){S=previous;normalizeLoadedState();phoneFriendState();try{render();}catch(_){}}throw e;}}
+function importData(){pickFile('.json',f=>readJsonFile(f,async d=>{if(d&&d.type==='north-beauty-pack'){const n=await applyBeautyPack(d);toast('已导入美化包（'+n+'项）');return;}await applyFullBackupData(d);toast('完整备份已安全导入');}));}
 let _aiMemoryMovePreview=null,_aiMemoryZipLoading=null;
 function aiMemoryFileExt(name){const m=String(name||'').toLowerCase().match(/\.([a-z0-9]+)$/);return m?m[1]:'';}
 function aiMemoryDecodeEntities(v){const box=document.createElement('textarea');box.innerHTML=String(v||'');return box.value;}

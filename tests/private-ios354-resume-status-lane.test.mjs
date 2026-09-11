@@ -37,11 +37,11 @@ function pollHarness(){
   return {context,calls};
 }
 
-test('private candidate is v1232 and iOS 355 while public remains v1232',()=>{
-  assert.match(app,/APP_VER='v1232 · 共同生活回复等待修复'/);
+test('private candidate is v1233 and iOS 355 while public remains v1233',()=>{
+  assert.match(app,/APP_VER='v1233 · 完整备份保存与导入优化'/);
   for(const html of [index,alias]){
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1232'/);
-    assert.match(html,/app\.js\?v=1232&r=v1232-cohab-request-timeout-1/);
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1233'/);
+    assert.match(html,/app\.js\?v=1233&r=v1233-full-backup-save-1/);
     assert.match(html,/private-runtime-diagnostics\.js\?v=335/);
   }
   assert.match(diagnostics,/OVERLAY_VERSION='335-resume-status-lane'/);
@@ -49,7 +49,7 @@ test('private candidate is v1232 and iOS 355 while public remains v1232',()=>{
   assert.match(bridge,/private static let build = "1\.0\.355 \(355\)"/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 355;/g)||[]).length,12);
   assert.equal((project.match(/MARKETING_VERSION = 1\.0\.355;/g)||[]).length,12);
-  assert.match(publicApp,/APP_VER='v1232 · 共同生活回复等待修复'/);
+  assert.match(publicApp,/APP_VER='v1233 · 完整备份保存与导入优化'/);
 });
 
 test('ordinary foreground polling is lightweight while explicit control verification stays complete',async()=>{

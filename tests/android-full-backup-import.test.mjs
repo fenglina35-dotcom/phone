@@ -40,7 +40,7 @@ test('a large Android backup is split before its first core snapshot',async()=>{
     writeHeavyMessageArchive(){throw new Error('friend archive should already be primed');},
   });
   vm.runInContext(`let _imgRev=new Map(),_imgCache={},_imgReady=new Set(),_imgSeq=0,_heavy={},_heavyStamp={},_heavyReady=new Set();`,context);
-  for(const name of ['isBigImg','primeImageForSave','stateBigImages','primeStateImagesForSave','compactReadyStateImages','pfMsgStoreKey','pfGroupMsgStoreKey','messageArchiveStamp','primeImportedMessageStore','prepareImportedStateForSave','_imgReplacer'])vm.runInContext(functionSource(name),context);
+  for(const name of ['isBigImg','primeImageForSave','stateBigImages','primeStateImagesForSave','compactReadyStateImages','pfMsgStoreKey','pfGroupMsgStoreKey','messageArchiveStamp','primeImportedMessageStore',...(source.includes('async function compactImportedImages(')?['compactImportedImages']:[]),'prepareImportedStateForSave','_imgReplacer'])vm.runInContext(functionSource(name),context);
 
   await vm.runInContext('prepareImportedStateForSave()',context);
   const core=vm.runInContext('JSON.stringify(S,_imgReplacer)',context);
@@ -74,4 +74,34 @@ test('full-backup apply writes recovery before core and rolls memory back on sta
   context.prepareImportedStateForSave=async()=>{throw new Error('stage failed');};
   await assert.rejects(vm.runInContext(`applyFullBackupData({settings:{},marker:'broken'})`,context),/stage failed/);
   assert.equal(context.S.marker,'stable','a failed import must restore the previously active in-memory state');
+});
+
+
+test('import compacts each stored image without retaining the whole backup in the image cache',async()=>{
+  let peak=0,writes=0,yields=0;
+  const images=Array.from({length:36},(_,i)=>'data:image/jpeg;base64,'+String(i).padStart(3,'0')+'A'.repeat(256*1024));
+  const ctx=vm.createContext({S:{images:images.map(img=>({img,again:img}))},Date,JSON,Map,Set,WeakSet,Promise,
+    setTimeout:fn=>{yields++;return setTimeout(fn,0);},
+    imgPut:async()=>{writes++;peak=Math.max(peak,vm.runInContext('Object.keys(_imgCache).length',ctx));},
+    lazyStoredImagesOn:()=>true,privateTrimImageMemoryCache(){},
+    primeImportedMessageStore:async()=>{},pfMsgStoreKey:()=>'',pfGroupMsgStoreKey:()=>''});
+  vm.runInContext('let _imgRev=new Map(),_imgCache={},_imgReady=new Set(),_imgSeq=0;',ctx);
+  for(const name of ['isBigImg','primeImageForSave','stateBigImages','primeStateImagesForSave','compactReadyStateImages',...(source.includes('async function compactImportedImages(')?['compactImportedImages']:[]),'prepareImportedStateForSave'])vm.runInContext(functionSource(name),ctx);
+  await vm.runInContext('prepareImportedStateForSave()',ctx);
+  assert.equal(writes,36,'duplicate references share one stored image');
+  assert.ok(peak<=2,`retained ${peak} imported images in cache`);
+  assert.ok(yields>=18,'large imports must let input and rendering run between batches');
+  assert.ok(ctx.S.images.every(x=>x.img.startsWith('idb:')&&x.img===x.again));
+});
+
+test('a failed image write leaves its raw data intact and preserves existing visible cache entries',async()=>{
+ const first='data:image/png;base64,'+'A'.repeat(3000),second='data:image/png;base64,'+'B'.repeat(3000);
+ const ctx=vm.createContext({Date,Map,Set,WeakSet,Promise,setTimeout,isBigImg:v=>typeof v==='string'&&v.startsWith('data:image'),lazyStoredImagesOn:()=>true,
+ root:{first,second},imgPut:async(_key,v)=>{if(v===second)throw new Error('quota');}});
+ vm.runInContext('let _imgRev=new Map(),_imgCache={},_imgReady=new Set(),_imgSeq=0;',ctx);
+ ctx.first=first;vm.runInContext("_imgRev.set(first,'visible');_imgCache.visible=first;_imgReady.add('visible');",ctx);
+ for(const name of ['primeImageForSave','compactImportedImages'])vm.runInContext(functionSource(name),ctx);
+ await assert.rejects(vm.runInContext('compactImportedImages(root)',ctx),/quota/);
+ assert.equal(ctx.root.first,'idb:visible');assert.equal(ctx.root.second,second);
+ assert.equal(vm.runInContext('_imgCache.visible',ctx),first);
 });

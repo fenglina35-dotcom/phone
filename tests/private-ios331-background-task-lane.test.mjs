@@ -61,20 +61,20 @@ function functionSource(source, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('private performance candidate has a v1232 identity while public web stays v1232', () => {
+test('private performance candidate has a v1233 identity while public web stays v1233', () => {
   assert.equal(privateIndex, privateAlias);
-  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1232'/);
-  assert.match(privateIndex, /app\.js\?v=1232&r=v1232-cohab-request-timeout-1/);
+  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1233'/);
+  assert.match(privateIndex, /app\.js\?v=1233&r=v1233-full-backup-save-1/);
   assert.match(privateIndex, /private-runtime-diagnostics\.js\?v=335/);
-  assert.match(privateRepair, /index\.html\?repair=1&v=1232/);
-  assert.match(privateApp, /APP_VER='v1232 · 共同生活回复等待修复'/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1233/);
+  assert.match(privateApp, /APP_VER='v1233 · 完整备份保存与导入优化'/);
   assert.match(overlay, /335-resume-status-lane/);
   assert.match(webView, /1\.0\.355 \(355\)/);
   assert.match(bridge, /private static let build = "1\.0\.355 \(355\)"/);
   assert.match(bridge, /static let contractVersion = 37/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 355;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1\.0\.355;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1232 · 共同生活回复等待修复'/);
+  assert.match(publicApp, /APP_VER='v1233 · 完整备份保存与导入优化'/);
   assert.doesNotMatch(publicApp, /function northNativeBackgroundTask\(name,run\)/);
 });
 
