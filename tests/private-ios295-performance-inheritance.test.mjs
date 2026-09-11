@@ -45,20 +45,20 @@ function functionSource(sourceText, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('private identifiers advance to v1234 and iOS 355 while public stays v1234', () => {
+test('private identifiers advance to v1236 and iOS 355 while public stays v1236', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1234'/);
-  assert.match(index, /app\.js\?v=1234&r=v1234-huawei-edge-backup-download-1/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1236'/);
+  assert.match(index, /app\.js\?v=1236&r=v1236-backup-auto-download-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=335/);
-  assert.match(app, /APP_VER='v1234 · 华为 Edge 备份下载修复'/);
+  assert.match(app, /APP_VER='v1236 · 恢复完整备份自动下载'/);
   assert.match(overlay, /335-resume-status-lane/);
   assert.match(webview, /1\.0\.355 \(355\)/);
   assert.match(bridge, /private static let build = "1\.0\.355 \(355\)"/);
   assert.match(bridge, /static let contractVersion = 37/);
   assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 355;/g) || []).length, 12);
   assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.355;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1234 · 华为 Edge 备份下载修复'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1234'/);
+  assert.match(publicApp, /APP_VER='v1236 · 恢复完整备份自动下载'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1236'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
@@ -146,7 +146,7 @@ test('diagnostics identify the protected stage without collecting content', () =
   assert.doesNotMatch(overlay, /messageBody|chatContent|authorizationToken/);
 });
 
-test('Mac guide distinguishes v1234 source sync from the unchanged iOS355 package', () => {
+test('Mac guide distinguishes v1236 source sync from the unchanged iOS355 package', () => {
   const install = fs.readFileSync(
     path.join(project, '第三百二十七次安装_v1206_完整衣柜_请先读.md'),
     'utf8',
@@ -164,7 +164,7 @@ test('Mac guide distinguishes v1234 source sync from the unchanged iOS355 packag
   assert.match(mac, /原生桥.*37/);
   assert.match(install, /1\.0\.327 \(327\)/);
   assert.match(install, /原生桥.*35/);
-  assert.match(mac, /^# v1234 .*仅同步内置网页源码/);
+  assert.match(mac, /^# v1236 .*仅同步内置网页源码/);
   assert.match(mac, /网页.*推送/);
   assert.match(install, /私人内置网页 v1206/);
   assert.match(install, /两边共有/);

@@ -13,9 +13,9 @@ const reportApp = read('native/private-small-phone/XcodeProject/PhoneCompanionRe
 const reportScene = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/TotalActivityReport.swift');
 
 test('public web v1184 and private web v1189 remain compatible with native iOS 1.0.315', () => {
-  assert.match(app, /APP_VER='v1234 · 华为 Edge 备份下载修复'/);
-  assert.match(app, /sw\.js\?v=1234&r=v1234-huawei-edge-backup-download-1/);
-  assert.match(shell, /north-shell-v1234-huawei-edge-backup-download-1/);
+  assert.match(app, /APP_VER='v1236 · 恢复完整备份自动下载'/);
+  assert.match(app, /sw\.js\?v=1236&r=v1236-backup-auto-download-1/);
+  assert.match(shell, /north-shell-v1236-backup-auto-download-1/);
   assert.match(bundleInfo, /<string>1200<\/string>/);
   assert.match(localWebView, /1\.0\.355 \(355\)/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 355;/g) || []).length, 12);

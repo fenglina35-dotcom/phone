@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1234'){
+if(window.__NORTH_SHELL_BUILD__!=='1236'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -419,7 +419,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1234 · 华为 Edge 备份下载修复';
+const APP_VER='v1236 · 恢复完整备份自动下载';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1726,7 +1726,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1234&r=v1234-huawei-edge-backup-download-1';
+  const url='sw.js?v=1236&r=v1236-backup-auto-download-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -2628,7 +2628,7 @@ function cinemaAsrGuardSync(job,finished){const covered=finished?Math.max(0,Numb
 function cinemaAsrGuardPlayback(v){if(!v||!_cin.extracting||_cin.asrMode!=='watch')return false;const covered=Math.max(0,Number(_cin.asrCoveredUntil)||0),limit=covered>0?Math.max(0,covered-10):20,current=Math.max(0,Number(v.currentTime)||0);if(current<limit-.15)return false;if(v.paused&&!_cin.asrGuardPaused)return false;if(current>limit+.25)v.currentTime=limit;_cin.asrGuardPaused=true;v.pause();cinemaSetStatus('已暂停等字幕 · 当前可看到 '+cinemaFmt(covered||limit),'working');return true;}
 function cinemaAsrGuardRelease(resume){const v=$('#cinVideo'),held=_cin.asrGuardPaused;_cin.asrGuardPaused=false;if(resume&&held&&v)v.play().catch(()=>{});}
 async function cinemaRestoreStoredSubtitles(s,token){if(!s||s.kind!=='video')return;const manual=await cinGet(cinemaManualSubtitleKey(s));if(token!==_cin.token||cinemaSession()!==s)return;if(manual&&Array.isArray(manual.cues)&&manual.cues.length){const n=cinemaApplyCues(manual.cues,manual.name||'手动导入字幕','subtitle');cinemaSetStatus('已恢复手动字幕 · '+n+' 句','ready');return;}const job=await cinemaAsrLoadJob(s);if(token!==_cin.token||cinemaSession()!==s||!job)return;cinemaAsrTaskUpdate(s,job);cinemaAsrGuardSync(job,job.status==='done');const cues=cinemaAsrJobCues(job);if(cues.length){cinemaApplyCues(cues,job.status==='done'?'已保存的提取字幕':'未完成的提取字幕','extract');cinemaSetStatus(job.status==='done'?'已恢复 '+cues.length+' 句字幕':'已恢复部分字幕 · 可继续提取','ready');}}
-async function cinemaMp4Library(){if(globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function')return globalThis.NorthMP4Box;if(!_cinMp4Module)_cinMp4Module=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='./vendor/mp4box.all.js?v=1234&r=file-safe-1';script.async=true;script.dataset.northMp4box='1';script.onload=()=>globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function'?resolve(globalThis.NorthMP4Box):reject(new Error('字幕解析组件没有正常启动'));script.onerror=()=>reject(new Error('字幕解析组件加载失败，请重新打开小手机后再试'));document.head.appendChild(script);}).catch(e=>{_cinMp4Module=null;const stale=document.querySelector('script[data-north-mp4box="1"]');if(stale)stale.remove();throw e;});return _cinMp4Module;}
+async function cinemaMp4Library(){if(globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function')return globalThis.NorthMP4Box;if(!_cinMp4Module)_cinMp4Module=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='./vendor/mp4box.all.js?v=1236&r=file-safe-1';script.async=true;script.dataset.northMp4box='1';script.onload=()=>globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function'?resolve(globalThis.NorthMP4Box):reject(new Error('字幕解析组件没有正常启动'));script.onerror=()=>reject(new Error('字幕解析组件加载失败，请重新打开小手机后再试'));document.head.appendChild(script);}).catch(e=>{_cinMp4Module=null;const stale=document.querySelector('script[data-north-mp4box="1"]');if(stale)stale.remove();throw e;});return _cinMp4Module;}
 async function cinemaVideoCodecProbe(file){if(!file||typeof file.slice!=='function')return null;if(_cin.videoInfo)return _cin.videoInfo;try{const MP4Box=await cinemaMp4Library(),mp4=MP4Box.createFile(false);let info=null,parseError='';mp4.onReady=x=>{info=x;};mp4.onError=e=>{parseError=String(e||'');};const step=1024*1024;for(let offset=0,guard=0;offset<file.size&&guard++<256&&!info;){const end=Math.min(file.size,offset+step),ab=await file.slice(offset,end).arrayBuffer();ab.fileStart=offset;const next=Number(mp4.appendBuffer(ab));offset=Number.isFinite(next)&&next>end?Math.min(file.size,next):end;if(guard%8===0)await new Promise(resolve=>setTimeout(resolve,0));}if(!info)mp4.flush();if(!info)return _cin.videoInfo={parseError:parseError||'未读到 MP4 / MOV 媒体信息'};const video=(info.videoTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.video),audio=(info.audioTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.audio);return _cin.videoInfo={videoCodec:String(video&&video.codec||''),audioCodec:String(audio&&audio.codec||''),width:Number(video&&video.video&&video.video.width||video&&video.track_width||0),height:Number(video&&video.video&&video.video.height||video&&video.track_height||0)};}catch(e){return _cin.videoInfo={parseError:String(e&&e.message||e||'媒体信息读取失败')};}}
 function cinemaVideoErrorReason(code,info){const vc=String(info&&info.videoCodec||''),ac=String(info&&info.audioCodec||''),hevc=/^(?:hvc1|hev1|hevc|dvhe|dvh1)/i.test(vc),android=cinemaAndroidBrowser();if(android&&hevc)return '检测到视频编码 '+vc+'（HEVC / H.265）。苹果设备能够播放，并不代表当前安卓浏览器或手机具备同样的网页解码能力。';if(android&&code===3)return '安卓浏览器已经读到文件，但解码画面或声音失败。';if(android&&code===4)return '安卓浏览器不支持这个文件的容器、视频编码或音频编码。';if(code===3)return '浏览器已读到文件，但解码画面或声音失败。';if(code===4)return '当前浏览器不支持这个视频的容器或编码。';return '浏览器没有读到可播放的视频数据。';}
 function cinemaVideoRetryCompatible(info){const vc=String(info&&info.videoCodec||''),ac=String(info&&info.audioCodec||'');return /^(?:avc1|avc3)(?:\.|$)/i.test(vc)&&(!ac||/^(?:mp4a|aac)(?:\.|$)/i.test(ac));}
@@ -13191,24 +13191,14 @@ function openChat(id){const c=getC(id);if(!c){home();return;}if(c.blocked){toast
 /* ---------- 备份 ---------- */
 function downloadBlob(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name||'North导出文件';a.style.display='none';document.body.appendChild(a);
   try{a.click();}finally{setTimeout(()=>{try{URL.revokeObjectURL(url);}catch(_){}try{if(a.parentNode)a.parentNode.removeChild(a);}catch(_){}},3000);}}
-let _fullBackupExport=null,_fullBackupExportBusy=false;
-function releaseFullBackupExport(){const ready=_fullBackupExport;_fullBackupExport=null;if(ready)setTimeout(()=>{URL.revokeObjectURL(ready.url);URL.revokeObjectURL(ready.textUrl);},60000);}
-function showFullBackupPreparing(){openModal('<div data-full-backup-preparing><h3>正在生成完整备份</h3><p>正在整理聊天、图片和设置，请保持页面开启。文件较大时需要一点时间。</p><div class="hint">生成完成后会出现保存按钮。</div></div>');}
-function showFullBackupExport(){const ready=_fullBackupExport;if(!ready)return;
-  const share=ready.file?'<button class="btn" onclick="shareFullBackupExport()">华为 / Edge 系统保存</button>':'';
-  openModal('<div data-full-backup-ready><h3>完整备份已生成</h3><p>'+esc(ready.textName)+' · '+(ready.blob.size/1024/1024).toFixed(2)+' MB</p><p>华为或 Edge 请优先使用系统保存或 TXT 下载。TXT 内容仍是完整备份，可以直接从“导入”选择。</p>'+share+'<a class="btn" data-primary-backup-download href="'+esc(ready.textUrl)+'" download="'+esc(ready.textName)+'">华为 / Edge 下载 TXT</a><a class="btn g" href="'+esc(ready.url)+'" download="'+esc(ready.name)+'">JSON 普通下载备用</a><button class="btn g" onclick="closeModal()">关闭</button></div>');
-}
-async function shareFullBackupExport(){const ready=_fullBackupExport;if(!ready||!ready.file)return;try{await navigator.share({files:[ready.file],title:ready.name});toast('已交给系统，请确认保存结果');}catch(e){toast(e&&e.name==='AbortError'?'已取消，可重新保存':'系统分享未完成，请使用下载备份文件');}}
+let _fullBackupExportBusy=false;
 async function exportData(){
-  if(_fullBackupExportBusy){showFullBackupPreparing();return;}
-  if(_fullBackupExport){showFullBackupExport();return;}
-  _fullBackupExportBusy=true;showFullBackupPreparing();
-  try{await new Promise(resolve=>setTimeout(resolve,0));const data=await fullBackupState();
-    const blob=new Blob([JSON.stringify(data)],{type:'text/plain'}),name='North备份_'+new Date().toISOString().slice(0,10)+'.json',textName=name.replace(/\.json$/i,'.txt');
-    let file=null;if(typeof File==='function')try{const candidate=new File([blob],textName,{type:'text/plain'});if(typeof navigator.share==='function'&&typeof navigator.canShare==='function'&&navigator.canShare({files:[candidate]}))file=candidate;}catch(_){}
-    const textBlob=new Blob([blob],{type:'application/octet-stream'});
-    _fullBackupExport={blob,name,textName,file,url:URL.createObjectURL(blob),textUrl:URL.createObjectURL(textBlob)};showFullBackupExport();
-  }catch(e){releaseFullBackupExport();openModal('<div data-full-backup-error><h3>完整备份生成失败</h3><p>'+esc(String(e&&e.message||e))+'</p><button class="btn p" onclick="closeModal();exportData()">重新生成</button><button class="btn g" onclick="closeModal()">关闭</button></div>');}finally{_fullBackupExportBusy=false;}
+  if(_fullBackupExportBusy){toast('正在生成完整备份，请稍候');return;}
+  _fullBackupExportBusy=true;toast('正在生成完整备份，请保持页面开启');
+  try{const data=await fullBackupState(),blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    const name='North备份_'+new Date().toISOString().slice(0,10)+'.json',mode=await beautySaveFile(blob,name);
+    if(mode==='cancelled')toast('已取消导出');else if(mode==='shared')toast('备份已生成，请在系统面板选择“存储到文件”');else toast('已导出');
+  }catch(e){toast('完整备份生成失败：'+String(e&&e.message||e));}finally{_fullBackupExportBusy=false;}
 }
 function readJsonFile(f,onData){const r=new FileReader();r.onerror=()=>toast('文件读取失败，请重新选择');r.onload=async()=>{try{await onData(JSON.parse(r.result));}catch(e){toast((e&&e.message)||'文件读不了');}};r.readAsText(f);}
 async function applyFullBackupData(d){if(!d||!d.settings)throw new Error('不是小手机备份或美化包');const previous=S;let committed=false;try{S=mergeStateData(d,{keepPhoneFriend:true});normalizeLoadedState();phoneFriendState();toast('正在安全整理完整备份，请保持页面开启');await prepareImportedStateForSave();const stagedAt=Date.now();S._persistedAt=stagedAt;const compactJson=northNativeTimedJSON(S,_imgReplacer,'backup-import'),stats=recoveryStateStats(S);if(recoveryStateMeaningful(stats)&&!await queueRecoverySnapshot(compactJson,stagedAt,true))throw new Error('导入后的安全恢复快照写入失败，请检查浏览器存储空间');if(!await saveNowAsync())throw new Error('导入后保存失败，请检查浏览器存储权限');committed=true;render();return true;}catch(e){if(!committed){S=previous;normalizeLoadedState();phoneFriendState();try{render();}catch(_){}}throw e;}}

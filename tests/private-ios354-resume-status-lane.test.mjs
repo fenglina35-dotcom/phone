@@ -37,11 +37,11 @@ function pollHarness(){
   return {context,calls};
 }
 
-test('private candidate is v1234 and iOS 355 while public remains v1234',()=>{
-  assert.match(app,/APP_VER='v1234 · 华为 Edge 备份下载修复'/);
+test('private candidate is v1236 and iOS 355 while public remains v1236',()=>{
+  assert.match(app,/APP_VER='v1236 · 恢复完整备份自动下载'/);
   for(const html of [index,alias]){
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1234'/);
-    assert.match(html,/app\.js\?v=1234&r=v1234-huawei-edge-backup-download-1/);
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1236'/);
+    assert.match(html,/app\.js\?v=1236&r=v1236-backup-auto-download-1/);
     assert.match(html,/private-runtime-diagnostics\.js\?v=335/);
   }
   assert.match(diagnostics,/OVERLAY_VERSION='335-resume-status-lane'/);
@@ -49,7 +49,7 @@ test('private candidate is v1234 and iOS 355 while public remains v1234',()=>{
   assert.match(bridge,/private static let build = "1\.0\.355 \(355\)"/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 355;/g)||[]).length,12);
   assert.equal((project.match(/MARKETING_VERSION = 1\.0\.355;/g)||[]).length,12);
-  assert.match(publicApp,/APP_VER='v1234 · 华为 Edge 备份下载修复'/);
+  assert.match(publicApp,/APP_VER='v1236 · 恢复完整备份自动下载'/);
 });
 
 test('ordinary foreground polling is lightweight while explicit control verification stays complete',async()=>{

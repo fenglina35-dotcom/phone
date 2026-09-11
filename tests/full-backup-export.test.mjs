@@ -2,49 +2,59 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
+
 const src=readFileSync(new URL('../app.js',import.meta.url),'utf8');
-const start=src.includes('let _fullBackupExport')?src.indexOf('let _fullBackupExport'):src.indexOf('async function exportData(');
-const code=src.slice(start,src.indexOf('function readJsonFile(',start));
-function setup(prepare){
- const events=[],context=vm.createContext({Blob,Date,JSON,File,URL:{createObjectURL:()=> 'blob:fixture',revokeObjectURL:u=>events.push(['revoke',u])},
- fullBackupState:prepare,openModal:html=>events.push(['modal',html]),closeModal(){},toast:s=>events.push(['toast',s]),
- setTimeout,Promise,navigator:{},esc:s=>s,beautySaveFile:async()=>{events.push(['automatic-download']);return 'downloaded';}});
- vm.runInContext(code,context);return{context,events};
+const start=src.indexOf('let _fullBackupExport');
+const code=src.slice(start>=0?start:src.indexOf('async function exportData('),src.indexOf('function readJsonFile(',start));
+
+function setup(prepare,save){
+  const events=[];
+  const context=vm.createContext({
+    Blob,Date,JSON,Promise,setTimeout,File,
+    fullBackupState:prepare,
+    toast:s=>events.push(['toast',s]),
+    openModal:html=>events.push(['modal',html]),closeModal(){},esc:s=>s,navigator:{},
+    URL:{createObjectURL:()=> 'blob:fixture',revokeObjectURL:u=>events.push(['revoke',u])},
+    beautySaveFile:save||((blob,name)=>{events.push(['save',blob,name]);return Promise.resolve('downloaded');})
+  });
+  vm.runInContext(code,context);
+  return {context,events};
 }
-test('prepared full backup waits for an explicit save click and exposes a retryable download link',async()=>{
- const {context,events}=setup(async()=>({settings:{},messages:{x:[{content:'原文'}]}}));
- await vm.runInContext('exportData()',context);
- assert.ok(events.some(e=>e[0]==='modal'&&/download=/.test(e[1])&&/blob:fixture/.test(e[1])));
- assert.ok(!events.some(e=>e[0]==='automatic-download'));
- assert.ok(!events.some(e=>e[0]==='revoke'));
-});
-test('backup preparation failures are visible and a later attempt can succeed',async()=>{
- let fail=true;const {context,events}=setup(async()=>{if(fail)throw new Error('storage failed');return{settings:{}};});
- await vm.runInContext('exportData()',context);
- assert.ok(events.some(e=>e[0]==='modal'&&e[1].includes('storage failed')&&e[1].includes('重新生成')));
- fail=false;await vm.runInContext('exportData()',context);
- assert.ok(events.some(e=>e[0]==='modal'&&/download=/.test(e[1])));
+
+test('one complete-backup click immediately uses the proven JSON save path',async()=>{
+  const {context,events}=setup(async()=>({settings:{backupFixture:'原文'},messages:{x:[{content:'完整保留'}]}}));
+  await vm.runInContext('exportData()',context);
+  const saved=events.find(e=>e[0]==='save');
+  assert.ok(saved,'exportData must save automatically instead of requiring a second modal click');
+  assert.match(saved[2],/^North备份_\d{4}-\d{2}-\d{2}\.json$/);
+  assert.equal(saved[1].type,'application/json');
+  assert.deepEqual(JSON.parse(await saved[1].text()),{settings:{backupFixture:'原文'},messages:{x:[{content:'完整保留'}]}});
+  assert.ok(events.some(e=>e[0]==='toast'&&e[1]==='已导出'));
 });
 
-test('repeated export clicks share one preparation and sharing cancellation preserves the download',async()=>{
- let calls=0,finish;const {context,events}=setup(()=>{calls++;return new Promise(r=>finish=r);});
- context.navigator={canShare:()=>true,share:()=>Promise.reject(Object.assign(new Error('cancel'),{name:'AbortError'}))};
- const first=vm.runInContext('exportData()',context);await new Promise(r=>setTimeout(r,10));
- await vm.runInContext('exportData()',context);assert.equal(calls,1);finish({settings:{}});await first;
- const before=vm.runInContext('_fullBackupExport.url',context);
- await vm.runInContext('shareFullBackupExport()',context);assert.equal(vm.runInContext('_fullBackupExport.url',context),before);
-  assert.ok(events.some(e=>e[0]==='toast'&&e[1].includes('已取消')));
+test('repeated taps do not start two large backup preparations',async()=>{
+  let calls=0,finish;
+  const {context,events}=setup(()=>{calls++;return new Promise(resolve=>{finish=resolve;});});
+  const first=vm.runInContext('exportData()',context);
+  await new Promise(resolve=>setTimeout(resolve,10));
+  await vm.runInContext('exportData()',context);
+  assert.equal(calls,1);
+  assert.ok(events.some(e=>e[0]==='toast'&&e[1].includes('正在生成')));
+  finish({settings:{}});
+  await first;
+  assert.equal(events.filter(e=>e[0]==='save').length,1);
 });
 
-test('Huawei Edge gets an immediate preparing screen and an explicit TXT download route',async()=>{
-  assert.match(code,/正在生成完整备份/);
-  assert.match(code,/data-full-backup-preparing/);
-  assert.match(code,/data-primary-backup-download/);
-  assert.match(code,/application\/octet-stream/);
+test('backup failures are visible and a later click can retry',async()=>{
+  let fail=true;
+  const {context,events}=setup(async()=>{if(fail)throw new Error('storage failed');return{settings:{}};});
+  await vm.runInContext('exportData()',context);
+  assert.ok(events.some(e=>e[0]==='toast'&&e[1].includes('storage failed')));
+  fail=false;
+  await vm.runInContext('exportData()',context);
+  assert.equal(events.filter(e=>e[0]==='save').length,1);
 });
 
-test('Android file sharing uses a widely shareable text file that import accepts',()=>{
-  assert.match(code,/text\/plain/);
-  assert.match(code,/\.txt/);
+test('imports still accept the temporary TXT fallback files produced by v1234',()=>{
   assert.match(src,/pickFile\('\.json,\.txt,application\/json,text\/plain'/);
 });

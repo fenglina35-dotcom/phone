@@ -58,21 +58,21 @@ function persistenceRuntime() {
   return { context, writes, releases, traces };
 }
 
-test('private identity advances to v1234 and iOS 355 while public remains v1234', () => {
-  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1234'/);
-  assert.match(privateApp, /APP_VER='v1234 · 华为 Edge 备份下载修复'/);
+test('private identity advances to v1236 and iOS 355 while public remains v1236', () => {
+  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1236'/);
+  assert.match(privateApp, /APP_VER='v1236 · 恢复完整备份自动下载'/);
   for (const html of [privateIndex, privateAlias]) {
-    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1234'/);
-    assert.match(html, /app\.js\?v=1234&r=v1234-huawei-edge-backup-download-1/);
+    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1236'/);
+    assert.match(html, /app\.js\?v=1236&r=v1236-backup-auto-download-1/);
     assert.match(html, /private-runtime-diagnostics\.js\?v=335/);
   }
-  assert.match(privateRepair, /index\.html\?repair=1&v=1234/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1236/);
   assert.match(swift, /1\.0\.355 \(355\)/);
   assert.match(bridge, /private static let build = "1\.0\.355 \(355\)"/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 355;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1\.0\.355;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1234 · 华为 Edge 备份下载修复'/);
-  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1234'/);
+  assert.match(publicApp, /APP_VER='v1236 · 恢复完整备份自动下载'/);
+  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1236'/);
   assert.doesNotMatch(publicApp, /persistWechatRequested|smallPhoneWechatPersistTrace/);
 });
 

@@ -1,4 +1,4 @@
-// Core release gate: run actual prompt construction and reply delivery with phone permission.
+// Huawei Android Edge profile: one tap must start the complete JSON backup download.
 // Only the HTTP model is simulated; never replace buildSystem or myActivity.
 const {chromium}=require('playwright');
 const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
@@ -9,32 +9,24 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
  const browser=await chromium.launch({headless:true,executablePath:'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'});
  try{for(const privateApp of [true,false]){
   const browserContext=await browser.newContext({acceptDownloads:true,userAgent:'Mozilla/5.0 (Linux; Android 12; Huawei) AppleWebKit/537.36 Chrome/134.0.0.0 Mobile Safari/537.36 EdgA/134.0.0.0',viewport:{width:412,height:915}}),page=await browserContext.newPage(),errors=[];
-  await page.addInitScript(()=>{Object.defineProperty(navigator,'canShare',{configurable:true,value:data=>!!(data&&data.files&&data.files[0]&&data.files[0].type==='text/plain')});Object.defineProperty(navigator,'share',{configurable:true,value:async data=>{const file=data.files[0];window.__sharedBackup={name:file.name,type:file.type,text:await file.text()};}});});
   if(privateApp)await page.addInitScript(()=>{window.__SMALL_PHONE_PRIVATE__=true;window.SmallPhoneNative={request:async()=>({ok:false,error:'fixture-native-unavailable'})};});
   page.on('pageerror',e=>errors.push(e.message));
   await page.route('**/*',r=>new URL(r.request().url()).origin===origin?r.continue():r.abort());
   const entry=origin+(privateApp?'/native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html':'/小手机.html');
   await page.goto(entry+'?northPreview=black-home');await page.waitForFunction(()=>window.__northBootReady);
-  if(!privateApp){await page.evaluate(async()=>{await navigator.serviceWorker.register('sw.js?v=1234&r=backup-browser-test',{updateViaCache:'none'});await navigator.serviceWorker.ready;});await page.waitForFunction(()=>!!navigator.serviceWorker.controller,{timeout:60000});}
+  if(!privateApp){await page.evaluate(async()=>{await navigator.serviceWorker.register('sw.js?v=1236&r=backup-browser-test',{updateViaCache:'none'});await navigator.serviceWorker.ready;});await page.waitForFunction(()=>!!navigator.serviceWorker.controller,{timeout:60000});}
   await page.evaluate(()=>{S.me.locked=false;S.settings.backupFixture='中文、引号"和换行\n完整保留';S._backupImages=Array.from({length:16},(_,i)=>({img:'data:image/jpeg;base64,'+String(i).padStart(3,'0')+'A'.repeat(1024*1024)}));openSettings('data');});
   await page.waitForTimeout(150);await page.evaluate(()=>closeModal());
-  await page.locator('button[onclick="exportData()"]').first().click();
-  const link=page.locator('[data-primary-backup-download]');await link.waitFor({timeout:60000});
-  await page.locator('button[onclick="shareFullBackupExport()"]').click();await page.waitForFunction(()=>!!window.__sharedBackup);
-  const linked=await page.evaluate(async()=>({name:_fullBackupExport.textName,type:(await fetch(_fullBackupExport.textUrl)).headers.get('content-type'),text:await (await fetch(_fullBackupExport.textUrl)).text()}));assert.match(linked.type,/application\/octet-stream/);assert.match(linked.name,/\.txt$/);
-  const shared=await page.evaluate(()=>__sharedBackup);assert.match(shared.name,/\.txt$/);assert.equal(shared.type,'text/plain');assert.equal(shared.text,linked.text);
-  let data=JSON.parse(shared.text),downloaded=false;
-  if(privateApp){const [download]=await Promise.all([page.waitForEvent('download'),link.click()]);assert.equal(await download.failure(),null);data=JSON.parse(fs.readFileSync(await download.path(),'utf8'));downloaded=true;}
+  const [download]=await Promise.all([page.waitForEvent('download',{timeout:60000}),page.locator('button[onclick="exportData()"]'+'').first().click()]);
+  assert.equal(await download.failure(),null);
+  assert.match(download.suggestedFilename(),/^North备份_\d{4}-\d{2}-\d{2}\.json$/);
+  const data=JSON.parse(fs.readFileSync(await download.path(),'utf8'));
   assert.equal(data._backupImages.length,16);assert.equal(data.settings.backupFixture,'中文、引号"和换行\n完整保留');
-  const retryBytes=await page.evaluate(async()=>(await (await fetch(_fullBackupExport.textUrl)).blob()).size);assert.equal(retryBytes,new Blob([shared.text]).size);
-  await page.evaluate(()=>showFullBackupExport());
-  await page.locator('[data-full-backup-ready] button').filter({hasText:'关闭'}).click();
-  assert.equal(await page.evaluate(()=>_fullBackupExport),null);
   const result=await page.evaluate(async data=>{let ticks=0;const timer=setInterval(()=>ticks++,10),at=performance.now();try{await applyFullBackupData(data);return{ms:Math.round(performance.now()-at),ticks,compact:S._backupImages.every(x=>/^idb:/.test(x.img)),cacheChars:Object.values(_imgCache).reduce((n,v)=>n+(typeof v==='string'?v.length:0),0)};}finally{clearInterval(timer);}},data);
   assert(result.compact);assert(result.ticks>0);assert(result.cacheChars<8*1024*1024,JSON.stringify(result));
   await page.goto(entry);await page.waitForFunction(()=>window.__northBootReady);
   const restored=await page.evaluate(async()=>{const d=await fullBackupState();return{count:d._backupImages.length,first:d._backupImages[0].img,last:d._backupImages[15].img,setting:d.settings.backupFixture};});
   assert.equal(restored.first,data._backupImages[0].img);assert.equal(restored.last,data._backupImages[15].img);assert.equal(restored.setting,data.settings.backupFixture);
-  assert.deepEqual(errors,[]);console.log(JSON.stringify({privateApp,systemTextShare:true,directDownload:downloaded,reusableLink:true,importAndReload:true,...result,pageErrors:errors.length}));await browserContext.close();
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({privateApp,oneTapJsonDownload:true,importAndReload:true,...result,pageErrors:errors.length}));await browserContext.close();
  }}finally{await browser.close();server.close();}
 })().catch(e=>{console.error(e);server.close();process.exitCode=1;});
