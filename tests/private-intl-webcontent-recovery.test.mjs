@@ -160,6 +160,6 @@ test('terminated WebContent remounts once while active and thermally safe', () =
 });
 
 test('recovery suite is pinned to the private bundled app only', () => {
-  assert.match(app, /APP_VER='v1236 · 恢复完整备份自动下载';/);
+  assert.match(app, /APP_VER='v1237 · 大备份分段读写';/);
   assert.match(app, /function emergencyRestorePreview\(index\)/);
 });

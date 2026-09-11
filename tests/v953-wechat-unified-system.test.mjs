@@ -6,9 +6,9 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-assert.match(source,/APP_VER='v1236 · 恢复完整备份自动下载'/);
-assert.match(html,/__NORTH_SHELL_BUILD__='1236'/);
-assert.match(sw,/BUILD='1236'/);
+assert.match(source,/APP_VER='v1237 · 大备份分段读写'/);
+assert.match(html,/__NORTH_SHELL_BUILD__='1237'/);
+assert.match(sw,/BUILD='1237'/);
 assert.equal((project.match(/CURRENT_PROJECT_VERSION = 355;/g)||[]).length,12);
 assert.equal((project.match(/MARKETING_VERSION = 1\.0\.355;/g)||[]).length,12);
 

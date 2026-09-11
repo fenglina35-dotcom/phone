@@ -5,13 +5,13 @@ import {readFileSync} from 'node:fs';
 
 const src=readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const start=src.indexOf('let _fullBackupExport');
-const code=src.slice(start>=0?start:src.indexOf('async function exportData('),src.indexOf('function readJsonFile(',start));
+const code=src.slice(start>=0?start:src.indexOf('async function exportData('),src.indexOf('async function readJsonFile(',start));
 
 function setup(prepare,save){
   const events=[];
   const context=vm.createContext({
     Blob,Date,JSON,Promise,setTimeout,File,
-    fullBackupState:prepare,
+    fullBackupFileBlob:async()=>new Blob([JSON.stringify(await prepare())],{type:'application/json'}),
     toast:s=>events.push(['toast',s]),
     openModal:html=>events.push(['modal',html]),closeModal(){},esc:s=>s,navigator:{},
     URL:{createObjectURL:()=> 'blob:fixture',revokeObjectURL:u=>events.push(['revoke',u])},

@@ -13,9 +13,9 @@ const reportApp = read('native/private-small-phone/XcodeProject/PhoneCompanionRe
 const reportScene = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/TotalActivityReport.swift');
 
 test('public web v1184 and private web v1189 remain compatible with native iOS 1.0.315', () => {
-  assert.match(app, /APP_VER='v1236 · 恢复完整备份自动下载'/);
-  assert.match(app, /sw\.js\?v=1236&r=v1236-backup-auto-download-1/);
-  assert.match(shell, /north-shell-v1236-backup-auto-download-1/);
+  assert.match(app, /APP_VER='v1237 · 大备份分段读写'/);
+  assert.match(app, /sw\.js\?v=1237&r=v1237-backup-streaming-1/);
+  assert.match(shell, /north-shell-v1237-backup-streaming-1/);
   assert.match(bundleInfo, /<string>1200<\/string>/);
   assert.match(localWebView, /1\.0\.355 \(355\)/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 355;/g) || []).length, 12);

@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1236'){
+if(window.__NORTH_SHELL_BUILD__!=='1237'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -419,7 +419,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1236 · 恢复完整备份自动下载';
+const APP_VER='v1237 · 大备份分段读写';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -604,7 +604,7 @@ async function fullBackupState(){if(_bootImagesPromise)try{await _bootImagesProm
   const base3=c||S,refs=imageRefKeys(base3);if(refs.length){if(!c)c=JSON.parse(JSON.stringify(S));const stored=await imgMany(refs);_rehydrateWithCache(c,stored);}
   return c||S;}
 // 垃圾回收：只清理 IndexedDB 里已经没有任何存档引用的旧图；聊天库、恢复快照和本地视频等 __ 项永不在这里删除。
-function imgUsedKeys(){const used=new Set(imageRefKeys(S));(function w(o){if(!o||typeof o!=='object')return;for(const k in o){const v=o[k];if(isBigImg(v)){const key=_imgRev.get(v);if(key)used.add(key);}else if(v&&typeof v==='object')w(v);}})(S);return used;}
+function imgUsedKeys(){const used=new Set(imageRefKeys(S));for(const key of _backupImportPins)used.add(key);(function w(o){if(!o||typeof o!=='object')return;for(const k in o){const v=o[k];if(isBigImg(v)){const key=_imgRev.get(v);if(key)used.add(key);}else if(v&&typeof v==='object')w(v);}})(S);return used;}
 function imgGC(){_imgGCWrite=_imgGCWrite.catch(()=>{}).then(async()=>{const keys=await imgKeys(),used=imgUsedKeys();for(const key of keys){if(!key||key.indexOf('__')===0||used.has(key))continue;const du=_imgCache[key];delete _imgCache[key];if(du)_imgRev.delete(du);_imgReady.delete(key);await imgDel(key);}return true;});return _imgGCWrite;}
 function seed(){const s=defState();
   // 全新开局：不预设任何角色，玩家自己新建。第一次进来会弹「使用说明书」。
@@ -1726,7 +1726,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1236&r=v1236-backup-auto-download-1';
+  const url='sw.js?v=1237&r=v1237-backup-streaming-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -2628,7 +2628,7 @@ function cinemaAsrGuardSync(job,finished){const covered=finished?Math.max(0,Numb
 function cinemaAsrGuardPlayback(v){if(!v||!_cin.extracting||_cin.asrMode!=='watch')return false;const covered=Math.max(0,Number(_cin.asrCoveredUntil)||0),limit=covered>0?Math.max(0,covered-10):20,current=Math.max(0,Number(v.currentTime)||0);if(current<limit-.15)return false;if(v.paused&&!_cin.asrGuardPaused)return false;if(current>limit+.25)v.currentTime=limit;_cin.asrGuardPaused=true;v.pause();cinemaSetStatus('已暂停等字幕 · 当前可看到 '+cinemaFmt(covered||limit),'working');return true;}
 function cinemaAsrGuardRelease(resume){const v=$('#cinVideo'),held=_cin.asrGuardPaused;_cin.asrGuardPaused=false;if(resume&&held&&v)v.play().catch(()=>{});}
 async function cinemaRestoreStoredSubtitles(s,token){if(!s||s.kind!=='video')return;const manual=await cinGet(cinemaManualSubtitleKey(s));if(token!==_cin.token||cinemaSession()!==s)return;if(manual&&Array.isArray(manual.cues)&&manual.cues.length){const n=cinemaApplyCues(manual.cues,manual.name||'手动导入字幕','subtitle');cinemaSetStatus('已恢复手动字幕 · '+n+' 句','ready');return;}const job=await cinemaAsrLoadJob(s);if(token!==_cin.token||cinemaSession()!==s||!job)return;cinemaAsrTaskUpdate(s,job);cinemaAsrGuardSync(job,job.status==='done');const cues=cinemaAsrJobCues(job);if(cues.length){cinemaApplyCues(cues,job.status==='done'?'已保存的提取字幕':'未完成的提取字幕','extract');cinemaSetStatus(job.status==='done'?'已恢复 '+cues.length+' 句字幕':'已恢复部分字幕 · 可继续提取','ready');}}
-async function cinemaMp4Library(){if(globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function')return globalThis.NorthMP4Box;if(!_cinMp4Module)_cinMp4Module=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='./vendor/mp4box.all.js?v=1236&r=file-safe-1';script.async=true;script.dataset.northMp4box='1';script.onload=()=>globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function'?resolve(globalThis.NorthMP4Box):reject(new Error('字幕解析组件没有正常启动'));script.onerror=()=>reject(new Error('字幕解析组件加载失败，请重新打开小手机后再试'));document.head.appendChild(script);}).catch(e=>{_cinMp4Module=null;const stale=document.querySelector('script[data-north-mp4box="1"]');if(stale)stale.remove();throw e;});return _cinMp4Module;}
+async function cinemaMp4Library(){if(globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function')return globalThis.NorthMP4Box;if(!_cinMp4Module)_cinMp4Module=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='./vendor/mp4box.all.js?v=1237&r=file-safe-1';script.async=true;script.dataset.northMp4box='1';script.onload=()=>globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function'?resolve(globalThis.NorthMP4Box):reject(new Error('字幕解析组件没有正常启动'));script.onerror=()=>reject(new Error('字幕解析组件加载失败，请重新打开小手机后再试'));document.head.appendChild(script);}).catch(e=>{_cinMp4Module=null;const stale=document.querySelector('script[data-north-mp4box="1"]');if(stale)stale.remove();throw e;});return _cinMp4Module;}
 async function cinemaVideoCodecProbe(file){if(!file||typeof file.slice!=='function')return null;if(_cin.videoInfo)return _cin.videoInfo;try{const MP4Box=await cinemaMp4Library(),mp4=MP4Box.createFile(false);let info=null,parseError='';mp4.onReady=x=>{info=x;};mp4.onError=e=>{parseError=String(e||'');};const step=1024*1024;for(let offset=0,guard=0;offset<file.size&&guard++<256&&!info;){const end=Math.min(file.size,offset+step),ab=await file.slice(offset,end).arrayBuffer();ab.fileStart=offset;const next=Number(mp4.appendBuffer(ab));offset=Number.isFinite(next)&&next>end?Math.min(file.size,next):end;if(guard%8===0)await new Promise(resolve=>setTimeout(resolve,0));}if(!info)mp4.flush();if(!info)return _cin.videoInfo={parseError:parseError||'未读到 MP4 / MOV 媒体信息'};const video=(info.videoTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.video),audio=(info.audioTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.audio);return _cin.videoInfo={videoCodec:String(video&&video.codec||''),audioCodec:String(audio&&audio.codec||''),width:Number(video&&video.video&&video.video.width||video&&video.track_width||0),height:Number(video&&video.video&&video.video.height||video&&video.track_height||0)};}catch(e){return _cin.videoInfo={parseError:String(e&&e.message||e||'媒体信息读取失败')};}}
 function cinemaVideoErrorReason(code,info){const vc=String(info&&info.videoCodec||''),ac=String(info&&info.audioCodec||''),hevc=/^(?:hvc1|hev1|hevc|dvhe|dvh1)/i.test(vc),android=cinemaAndroidBrowser();if(android&&hevc)return '检测到视频编码 '+vc+'（HEVC / H.265）。苹果设备能够播放，并不代表当前安卓浏览器或手机具备同样的网页解码能力。';if(android&&code===3)return '安卓浏览器已经读到文件，但解码画面或声音失败。';if(android&&code===4)return '安卓浏览器不支持这个文件的容器、视频编码或音频编码。';if(code===3)return '浏览器已读到文件，但解码画面或声音失败。';if(code===4)return '当前浏览器不支持这个视频的容器或编码。';return '浏览器没有读到可播放的视频数据。';}
 function cinemaVideoRetryCompatible(info){const vc=String(info&&info.videoCodec||''),ac=String(info&&info.audioCodec||'');return /^(?:avc1|avc3)(?:\.|$)/i.test(vc)&&(!ac||/^(?:mp4a|aac)(?:\.|$)/i.test(ac));}
@@ -13173,7 +13173,7 @@ function openModal(html){
   if(m.querySelector('[data-idb-avatar],img[src^="idb:"],img[data-idb-src],[style*="idb:"]'))scheduleVisibleStoredImages(true);
 }
 function openCallModal(html){openModal(html);$('#modal').classList.add('call-modal');}
-function closeModal(){const m=$('#modal');if(!m)return false;if(m.querySelector('[data-full-backup-ready]'))releaseFullBackupExport();m.classList.remove('show');m.classList.remove('wxmodal-light');m.classList.remove('wxmodal-green');m.classList.remove('call-modal');if(m._home&&m.parentNode!==m._home)m._home.appendChild(m);return true;}
+function closeModal(){const m=$('#modal');if(!m)return false;m.classList.remove('show');m.classList.remove('wxmodal-light');m.classList.remove('wxmodal-green');m.classList.remove('call-modal');if(m._home&&m.parentNode!==m._home)m._home.appendChild(m);return true;}
 /* 自建确认弹窗：主屏幕Web应用里原生 confirm() 会被静默拦截(点了没反应)，所以全部走这个 */
 let _uiConfirmDone=null;
 function uiConfirm(msg,opt){opt=opt||{};if(_uiConfirmDone)_uiConfirmDone(false);return new Promise(res=>{let el=document.getElementById('cfm');
@@ -13191,16 +13191,91 @@ function openChat(id){const c=getC(id);if(!c){home();return;}if(c.blocked){toast
 /* ---------- 备份 ---------- */
 function downloadBlob(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name||'North导出文件';a.style.display='none';document.body.appendChild(a);
   try{a.click();}finally{setTimeout(()=>{try{URL.revokeObjectURL(url);}catch(_){}try{if(a.parentNode)a.parentNode.removeChild(a);}catch(_){}},3000);}}
+// 文件备份按块读写；不要在这里展开整份媒体或拼接整个 JSON 字符串。
+async function backupJsonBlob(root,resolve){
+  const blocks=[],pending=[];let pendingSize=0,work=0;
+  const flush=()=>{if(pending.length){blocks.push(new Blob(pending));pending.length=0;pendingSize=0;}};
+  const emit=s=>{pending.push(s);pendingSize+=s.length;if(pendingSize>=262144)flush();};
+  async function str(s){emit('"');for(let p=0;p<s.length;){let end=Math.min(p+65536,s.length);if(end<s.length&&s.charCodeAt(end-1)>=0xd800&&s.charCodeAt(end-1)<=0xdbff)end--;emit(JSON.stringify(s.slice(p,end)).slice(1,-1));p=end;if(++work%32===0)await new Promise(r=>setTimeout(r,0));}emit('"');}
+  const ancestors=new Set();
+  async function value(v,path){
+    if(resolve)v=await resolve(v,path);
+    if(v===null||v===undefined){emit('null');return;}
+    if(typeof v==='string'){await str(v);return;}
+    if(typeof v!=='object'){emit(JSON.stringify(v));return;}
+    if(ancestors.has(v))throw new Error('备份包含循环引用，未生成不完整文件');
+    ancestors.add(v);const array=Array.isArray(v);emit(array?'[':'{');let first=true;
+    const keys=array?Array.from({length:v.length},(_,i)=>i):Object.keys(v);
+    for(const k of keys){const item=v[k];if(!array&&(item===undefined||typeof item==='function'))continue;if(!first)emit(',');first=false;if(!array){await str(k);emit(':');}await value(item,path.concat(k));if(++work%512===0)await new Promise(r=>setTimeout(r,0));}
+    emit(array?']':'}');ancestors.delete(v);
+  }
+  await value(root,[]);flush();return new Blob(blocks,{type:'application/json'});
+}
+async function fullBackupFileBlob(){
+  if(_bootImagesPromise)await _bootImagesPromise;
+  // 冻结容器结构，字符串共享；不经 stringify/parse 制造整份字符串副本。
+  const seen=new Map();let visited=0;
+  async function copy(v){if(!v||typeof v!=='object')return v;if(seen.has(v))return seen.get(v);const c=Array.isArray(v)?new Array(v.length):{};seen.set(v,c);for(const k of Object.keys(v)){Object.defineProperty(c,k,{value:await copy(v[k]),enumerable:true,writable:true,configurable:true});if(++visited%1024===0)await new Promise(r=>setTimeout(r,0));}return c;}
+  const state=await copy(S);seen.clear();let lastKey='',lastImage='';
+  return backupJsonBlob(state,async(v,path)=>{
+    if(typeof v==='string'&&v.indexOf('idb:')===0){const key=v.slice(4);if(key!==lastKey){const image=await imgGet(key);if(typeof image!=='string'||!image)throw new Error('有备份图片暂时无法读取，请重试；未生成缺图备份');lastKey=key;lastImage=image;}return lastImage;}
+    if(v&&typeof v==='object'&&v.__idb){let key='';const p=state.me&&state.me.phoneFriend;
+      if(path.length===1&&path[0]==='messages'&&v.__idb==='messages')key='__messages';
+      if(path.join('.')==='me.phoneFriend.messages'&&v.__idb==='phoneFriendMessages')key='__pf_messages_'+(v.id||p.id||'main');
+      if(path.join('.')==='me.phoneFriend.groupMessages'&&v.__idb==='phoneFriendGroupMessages')key='__pf_group_messages_'+(v.id||p.id||'main');
+      if(key){const raw=await imgGet(key);if(typeof raw!=='string')throw new Error('聊天存档暂时无法读取，请重试');return JSON.parse(raw);}
+    }return v;
+  });
+}
+// 兼容旧 JSON/TXT：只保留一个输入窗口和一个字符串值，媒体在进入状态树前落盘。
+async function readBackupJson(file,onString,onProgress){
+  const decoder=new TextDecoder('utf-8',{fatal:true});let buf='',pos=0,offset=0,ended=false;
+  async function fill(){if(pos<buf.length)return true;if(ended)return false;const end=Math.min(offset+262144,file.size);let bytes;
+    const part=file.slice(offset,end);if(typeof part.arrayBuffer==='function')bytes=await part.arrayBuffer();else bytes=await new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(new Error('文件读取失败'));r.readAsArrayBuffer(part);});
+    offset=end;ended=offset>=file.size;buf=decoder.decode(bytes,{stream:!ended});pos=0;if(onProgress)onProgress(offset,file.size);await new Promise(r=>setTimeout(r,0));return buf.length>0||(!ended&&await fill());
+  }
+  async function peek(){return await fill()?buf[pos]:'';}
+  async function ws(){while(await fill()){const m=/[^\x20\t\r\n]/g;m.lastIndex=pos;const found=m.exec(buf);if(found){pos=found.index;return;}pos=buf.length;}}
+  function bad(){throw new Error('备份 JSON 不完整或格式错误，原存档未替换');}
+  async function string(){if(await peek()!=='"')bad();pos++;const parts=['"'];
+    while(await fill()){const re=/["\\\x00-\x1f]/g;re.lastIndex=pos;const found=re.exec(buf);if(!found){parts.push(buf.slice(pos));pos=buf.length;continue;}parts.push(buf.slice(pos,found.index));pos=found.index+1;
+      if(found[0]==='"'){parts.push('"');return JSON.parse(parts.join(''));}
+      if(found[0]!=='\\')bad();parts.push('\\');if(!await fill())bad();parts.push(buf[pos++]);
+    }bad();
+  }
+  async function value(depth){if(depth>256)throw new Error('备份数据嵌套过深，原存档未替换');await ws();const ch=await peek();
+    if(ch==='"'){const s=await string();return onString?await onString(s):s;}
+    if(ch==='{'||ch==='['){pos++;const array=ch==='[',out=array?[]:{},close=array?']':'}';await ws();if(await peek()===close){pos++;return out;}
+      while(true){let key;if(!array){await ws();key=await string();await ws();if(await peek()!==':')bad();pos++;}const v=await value(depth+1);if(array)out.push(v);else Object.defineProperty(out,key,{value:v,enumerable:true,writable:true,configurable:true});await ws();const sep=await peek();pos++;if(sep===close)return out;if(sep!==',')bad();}
+    }
+    const parts=[];while(await fill()){const re=/[\x20\t\r\n,\]}]/g;re.lastIndex=pos;const found=re.exec(buf);const end=found?found.index:buf.length;parts.push(buf.slice(pos,end));pos=end;if(found)break;}
+    const token=parts.join('');if(!/^(?:true|false|null|-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?)$/.test(token))bad();return JSON.parse(token);
+  }
+  const result=await value(0);await ws();if(await peek())bad();return result;
+}
+let _backupImportPins=new Set(),_fullBackupImportBusy=false;
+
 let _fullBackupExportBusy=false;
 async function exportData(){
   if(_fullBackupExportBusy){toast('正在生成完整备份，请稍候');return;}
   _fullBackupExportBusy=true;toast('正在生成完整备份，请保持页面开启');
-  try{const data=await fullBackupState(),blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  try{const blob=await fullBackupFileBlob();
     const name='North备份_'+new Date().toISOString().slice(0,10)+'.json',mode=await beautySaveFile(blob,name);
     if(mode==='cancelled')toast('已取消导出');else if(mode==='shared')toast('备份已生成，请在系统面板选择“存储到文件”');else toast('已导出');
   }catch(e){toast('完整备份生成失败：'+String(e&&e.message||e));}finally{_fullBackupExportBusy=false;}
 }
-function readJsonFile(f,onData){const r=new FileReader();r.onerror=()=>toast('文件读取失败，请重新选择');r.onload=async()=>{try{await onData(JSON.parse(r.result));}catch(e){toast((e&&e.message)||'文件读不了');}};r.readAsText(f);}
+async function readJsonFile(f,onData){
+  if(_fullBackupImportBusy){toast('正在导入，请保持页面开启');return;}_fullBackupImportBusy=true;
+  const staged=new Set(),hashes=new Map();let seq=0,applying=false,progressAt=Date.now();const prefix='backup_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2)+'_';
+  toast('正在分段读取备份，请保持页面开启');
+  try{const d=await readBackupJson(f,async s=>{if(!isBigImg(s))return s;let hash='';
+      if(typeof crypto!=='undefined'&&crypto.subtle){const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s));hash=s.length+':'+Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');if(hashes.has(hash))return 'idb:'+hashes.get(hash);}
+      const key=prefix+(seq++);_backupImportPins.add(key);staged.add(key);await imgPut(key,s);if(hash)hashes.set(hash,key);return 'idb:'+key;
+    },(read,total)=>{if(Date.now()-progressAt>1500){progressAt=Date.now();toast('正在读取备份 '+Math.floor(read/Math.max(1,total)*100)+'%，请保持页面开启');}});applying=true;await onData(d);
+  }catch(e){toast('导入失败：'+String(e&&e.message||e));}
+  finally{for(const key of staged){if(!applying)try{await imgDel(key);}catch(_){} _backupImportPins.delete(key);}hashes.clear();_fullBackupImportBusy=false;}
+}
+
 async function applyFullBackupData(d){if(!d||!d.settings)throw new Error('不是小手机备份或美化包');const previous=S;let committed=false;try{S=mergeStateData(d,{keepPhoneFriend:true});normalizeLoadedState();phoneFriendState();toast('正在安全整理完整备份，请保持页面开启');await prepareImportedStateForSave();const stagedAt=Date.now();S._persistedAt=stagedAt;const compactJson=northNativeTimedJSON(S,_imgReplacer,'backup-import'),stats=recoveryStateStats(S);if(recoveryStateMeaningful(stats)&&!await queueRecoverySnapshot(compactJson,stagedAt,true))throw new Error('导入后的安全恢复快照写入失败，请检查浏览器存储空间');if(!await saveNowAsync())throw new Error('导入后保存失败，请检查浏览器存储权限');committed=true;render();return true;}catch(e){if(!committed){S=previous;normalizeLoadedState();phoneFriendState();try{render();}catch(_){}}throw e;}}
 function importData(){pickFile('.json,.txt,application/json,text/plain',f=>readJsonFile(f,async d=>{if(d&&d.type==='north-beauty-pack'){const n=await applyBeautyPack(d);toast('已导入美化包（'+n+'项）');return;}await applyFullBackupData(d);toast('完整备份已安全导入');}));}
 let _aiMemoryMovePreview=null,_aiMemoryZipLoading=null;
