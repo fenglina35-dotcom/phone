@@ -3,7 +3,7 @@
   'use strict';
   if(window.__SMALL_PHONE_PRIVATE__!==true)return;
 
-  const OVERLAY_VERSION='335-resume-status-lane';
+  const OVERLAY_VERSION='336-daily-file-backup';
   const lastEventAt=Object.create(null);
   let lastMeasuredSyncOp='',lastMeasuredSyncMs=0,lastMeasuredSyncAt=0;
   let activeBackgroundTask='',activeBackgroundStartedAt=0,lastBackgroundTask='',lastBackgroundMs=0,lastBackgroundAt=0;
@@ -40,7 +40,7 @@
   }
 
   window.__SMALL_PHONE_PRIVATE_RUNTIME__=OVERLAY_VERSION;
-  window.__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__=true;
+  window.__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__=false;
 
   function currentPageName(){
     try{const page=typeof window.cur==='function'?window.cur():null;return String(page&&page.p||'unknown').slice(0,40);}catch(_){return'unknown';}
@@ -63,42 +63,6 @@
     if(activeBackgroundTask)return{task:activeBackgroundTask,taskMs:Math.max(0,Math.round(clock()-activeBackgroundStartedAt)),taskActive:true};
     const age=lastBackgroundAt?Math.max(0,Date.now()-lastBackgroundAt):0;
     return age&&age<=30000?{task:lastBackgroundTask,taskMs:lastBackgroundMs,taskActive:false}:{task:'',taskMs:0,taskActive:false};
-  }
-
-  function cancelAutomaticBackupTimer(){
-    try{
-      if(typeof _privatePhoneCloudTimer!=='undefined'&&_privatePhoneCloudTimer){
-        clearTimeout(_privatePhoneCloudTimer);
-        _privatePhoneCloudTimer=null;
-      }
-    }catch(_){}
-  }
-  cancelAutomaticBackupTimer();
-
-  if(typeof window.privatePhoneCloudSchedule==='function'){
-    window.privatePhoneCloudSchedule=function(){
-      cancelAutomaticBackupTimer();
-      return false;
-    };
-  }
-  if(typeof window.privatePhoneCloudAutoBackup==='function'){
-    window.privatePhoneCloudAutoBackup=async function(){
-      cancelAutomaticBackupTimer();
-      emit('cloud.auto.blocked',{paused:true},60000);
-      return false;
-    };
-  }
-
-  if(typeof window.privatePhoneCloudBackup==='function'){
-    const originalBackup=window.privatePhoneCloudBackup;
-    window.privatePhoneCloudBackup=function(firstBind,silent){
-      if(firstBind===true){
-        emit('cloud.first-bind-auto.blocked',{paused:true},60000);
-        if(typeof openModal==='function')openModal('<h3>手机号已绑定</h3><div class="hint" style="line-height:1.8">为排查私人 App 的间歇性卡顿和发热，自动全量云备份现已暂停。当前本机数据没有删除；需要备份时请手动点击下面按钮。</div><div class="btns"><button class="btn g" onclick="closeModal()">稍后</button><button class="btn p" onclick="closeModal();privatePhoneCloudBackup(false)">立即手动备份</button></div>');
-        return Promise.resolve(false);
-      }
-      return originalBackup.apply(this,arguments);
-    };
   }
 
   function wrapMeasured(name,options){
@@ -202,7 +166,7 @@
   window.privatePhoneDiagnosticsOpen=async function(){
     try{
       const result=await readDiagnostics(),text=String(result&&result.text||'暂时没有异常记录');
-      openModal('<h3>私人 App 卡顿诊断</h3><div class="hint" style="line-height:1.75">这里只记录耗时、温度状态、WebContent 终止和版本号，不记录聊天、图片、密钥或网址。自动全量云备份当前已暂停；手动备份和恢复仍可使用。</div><textarea id="privateRuntimeDiagnosticsText" readonly style="width:100%;height:220px;margin-top:12px;padding:10px;box-sizing:border-box;border:1px solid #555;border-radius:10px;background:#111;color:#eee;font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace"></textarea><div class="btns"><button class="btn g" onclick="privatePhoneDiagnosticsClear()">清空记录</button><button class="btn p" onclick="privatePhoneDiagnosticsCopy()">复制记录</button></div>');
+      openModal('<h3>私人 App 卡顿诊断</h3><div class="hint" style="line-height:1.75">这里只记录耗时、温度状态、WebContent 终止和版本号，不记录聊天、图片、密钥或网址。每日备份状态请查看授权与数据；手动备份和恢复仍可使用。</div><textarea id="privateRuntimeDiagnosticsText" readonly style="width:100%;height:220px;margin-top:12px;padding:10px;box-sizing:border-box;border:1px solid #555;border-radius:10px;background:#111;color:#eee;font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace"></textarea><div class="btns"><button class="btn g" onclick="privatePhoneDiagnosticsClear()">清空记录</button><button class="btn p" onclick="privatePhoneDiagnosticsCopy()">复制记录</button></div>');
       const box=document.getElementById('privateRuntimeDiagnosticsText');if(box)box.value=text;
     }catch(error){toast(String(error&&error.message||'诊断记录读取失败'));}
   };
@@ -261,11 +225,11 @@
   if(typeof window.privatePhoneAccountSection==='function'){
     const originalSection=window.privatePhoneAccountSection;
     window.privatePhoneAccountSection=function(){
-      return originalSection.apply(this,arguments)+'<div class="section" id="set_private_runtime_diagnostics"><div class="it"><span><b>私人 App 性能保护</b><small style="display:block;color:#8f9eb3;margin-top:4px">自动全量云备份已暂停；手动备份与恢复保留</small></span><span class="v">诊断已启用</span></div><div class="btns" style="padding:8px 14px 12px"><button class="btn g" onclick="privatePhoneDiagnosticsOpen()">查看卡顿诊断</button></div></div>';
+      return originalSection.apply(this,arguments)+'<div class="section" id="set_private_runtime_diagnostics"><div class="it"><span><b>私人 App 性能保护</b><small style="display:block;color:#8f9eb3;margin-top:4px">每日云备份改用原生分块文件上传；手动备份与恢复保留</small></span><span class="v">诊断已启用</span></div><div class="btns" style="padding:8px 14px 12px"><button class="btn g" onclick="privatePhoneDiagnosticsOpen()">查看卡顿诊断</button></div></div>';
     };
   }
 
-  emit('runtime.overlay.ready',{version:OVERLAY_VERSION,autoBackupPaused:true},0);
+  emit('runtime.overlay.ready',{version:OVERLAY_VERSION,autoBackupPaused:false},0);
   setTimeout(()=>consumeNativeRecoveryLaunch(0),0);
   try{
     if(typeof _bootImagesPromise!=='undefined'&&_bootImagesPromise&&typeof _bootImagesPromise.then==='function'){

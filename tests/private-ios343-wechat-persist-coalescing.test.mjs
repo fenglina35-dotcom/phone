@@ -58,19 +58,19 @@ function persistenceRuntime() {
   return { context, writes, releases, traces };
 }
 
-test('private identity advances to v1239 and iOS 355 while public remains v1239', () => {
-  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1239'/);
-  assert.match(privateApp, /APP_VER='v1239 · 浏览器运行诊断'/);
+test('private identity advances to v1240 and iOS 356 while public remains v1239', () => {
+  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1240'/);
+  assert.match(privateApp, /APP_VER='v1240 · 私人每日云备份'/);
   for (const html of [privateIndex, privateAlias]) {
-    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1239'/);
-    assert.match(html, /app\.js\?v=1239&r=v1239-browser-diagnostics-1/);
-    assert.match(html, /private-runtime-diagnostics\.js\?v=335/);
+    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1240'/);
+    assert.match(html, /app\.js\?v=1240&r=v1240-browser-diagnostics-1/);
+    assert.match(html, /private-runtime-diagnostics\.js\?v=336/);
   }
-  assert.match(privateRepair, /index\.html\?repair=1&v=1239/);
-  assert.match(swift, /1\.0\.355 \(355\)/);
-  assert.match(bridge, /private static let build = "1\.0\.355 \(355\)"/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 355;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.355;/g) || []).length, 12);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1240/);
+  assert.match(swift, /1\.0\.356 \(356\)/);
+  assert.match(bridge, /private static let build = "1\.0\.356 \(356\)"/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 356;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1\.0\.356;/g) || []).length, 12);
   assert.match(publicApp, /APP_VER='v1239 · 浏览器运行诊断'/);
   assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1239'/);
   assert.doesNotMatch(publicApp, /persistWechatRequested|smallPhoneWechatPersistTrace/);
@@ -119,7 +119,7 @@ test('an unchanged durable chat snapshot skips another full archive rewrite', as
 });
 
 test('diagnostics expose bounded persistence phase timing without message content', () => {
-  assert.match(diagnostics, /OVERLAY_VERSION='335-resume-status-lane'/);
+  assert.match(diagnostics, /OVERLAY_VERSION='336-daily-file-backup'/);
   assert.match(diagnostics, /window\.__smallPhoneWechatPersistTrace=function/);
   for (const field of ['queued', 'passes', 'coalesced', 'blobChars', 'archiveMs', 'coreMs', 'ms']) {
     assert.match(diagnostics, new RegExp(`'${field}'`));

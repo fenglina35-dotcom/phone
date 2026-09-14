@@ -15,7 +15,7 @@ enum SmallPhoneDiagnosticsStore {
     )
     private static let maximumBytes = 256 * 1_024
     private static let maximumLines = 200
-    private static let build = "1.0.355 (355)"
+    private static let build = "1.0.356 (356)"
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -188,7 +188,7 @@ enum SmallPhoneRecoveryLaunchStore {
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
-    static let contractVersion = 37
+    static let contractVersion = 38
     static let roleCallActiveDefaultsKey =
         "smallPhone.roleCallActive.v1"
 
@@ -369,6 +369,8 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
              "account.password.signin",
              "account.signout", "account.backup.info",
              "account.backup.upload", "account.backup.restore",
+             "account.backup.file.begin", "account.backup.file.chunk",
+             "account.backup.file.commit", "account.backup.file.abort",
              "companion.controller.claim":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             performPrivateAccountAction(
@@ -1653,6 +1655,59 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                         requestID: requestID,
                         result: self.privateBackupResult(response, includesPayload: false)
                     )
+                case "account.backup.file.begin":
+                    let session = try await self.validPrivateAccountSession()
+                    let size = (arguments["bytes"] as? NSNumber)?.int64Value ?? 0
+                    let captured = (arguments["capturedAt"] as? NSNumber)?.doubleValue ?? 0
+                    let token = try await PrivateBackupFileStore.shared.begin(
+                        owner: session.userID, size: size, capturedAt: captured,
+                        build: String((arguments["sourceBuild"] as? String ?? "").prefix(80)))
+                    SmallPhoneDiagnosticsStore.append("backup.file.begin", fields: ["bytes": size])
+                    self.reply(requestID: requestID, result: ["ok": true, "token": token])
+                case "account.backup.file.chunk":
+                    guard let session = self.loadPrivateAccountSession() else {
+                        throw NSError(domain: "PrivateBackup", code: 401)
+                    }
+                    let offset = (arguments["offset"] as? NSNumber)?.int64Value ?? -1
+                    try await PrivateBackupFileStore.shared.append(
+                        token: arguments["token"] as? String ?? "", owner: session.userID,
+                        offset: offset, base64: arguments["base64"] as? String ?? "")
+                    self.reply(requestID: requestID, result: ["ok": true])
+                case "account.backup.file.abort":
+                    await PrivateBackupFileStore.shared.remove(token: arguments["token"] as? String ?? "")
+                    self.reply(requestID: requestID, result: ["ok": true])
+                case "account.backup.file.commit":
+                    let token = arguments["token"] as? String ?? ""
+                    do {
+                        let session = try await self.validPrivateAccountSession()
+                        let file = try await PrivateBackupFileStore.shared.prepare(token: token, owner: session.userID)
+                        let began = Date()
+                        SmallPhoneDiagnosticsStore.append("backup.upload.begin", fields: ["bytes": file.bytes])
+                        var request = URLRequest(url: URL(string: Self.privateAccountBaseURL + "/rest/v1/rpc/save_private_phone_backup")!)
+                        request.httpMethod = "POST"
+                        request.timeoutInterval = 180
+                        request.setValue(Self.privateAccountAPIKey, forHTTPHeaderField: "apikey")
+                        request.setValue("Bearer " + session.accessToken, forHTTPHeaderField: "Authorization")
+                        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                        let config = URLSessionConfiguration.ephemeral
+                        config.timeoutIntervalForRequest = 180
+                        config.timeoutIntervalForResource = 600
+                        let uploader = URLSession(configuration: config)
+                        defer { uploader.invalidateAndCancel() }
+                        let (data, response) = try await uploader.upload(for: request, fromFile: file.url)
+                        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+                        let responseObject = try? JSONSerialization.jsonObject(with: data)
+                        let rows = responseObject as? [[String: Any]]
+                        let saved = status >= 200 && status < 300 && rows?.first?["saved"] as? Bool == true
+                        SmallPhoneDiagnosticsStore.append("backup.upload.end", fields: ["status": status, "saved": saved, "ms": Int(Date().timeIntervalSince(began) * 1000)])
+                        await PrivateBackupFileStore.shared.remove(token: token)
+                        self.reply(requestID: requestID, result: ["ok": saved, "saved": saved, "byteCount": file.bytes,
+                            "message": saved ? "云备份已保存" : "云备份未确认保存，请刷新云端时间；HTTP \(status)"])
+                    } catch {
+                        await PrivateBackupFileStore.shared.remove(token: token)
+                        SmallPhoneDiagnosticsStore.append("backup.upload.error", fields: ["code": (error as NSError).code])
+                        throw error
+                    }
                 case "account.backup.upload":
                     let session = try await self.validPrivateAccountSession()
                     guard let snapshot = arguments["snapshot"],
@@ -2437,5 +2492,64 @@ private final class NativeSpeechRecognitionController {
     private enum NativeSpeechError: Error {
         case unavailable
         case noAudioInput
+    }
+}
+
+// File work and incremental hashing run on a dedicated actor, never on the UI actor.
+private actor PrivateBackupFileStore {
+    static let shared = PrivateBackupFileStore()
+    struct Prepared: Sendable { let url: URL; let bytes: Int64 }
+    private struct Job {
+        let token: String; let owner: String; let url: URL; let handle: FileHandle
+        let size: Int64; let capturedAt: Double; let build: String
+        var written: Int64 = 0; var hash = SHA256(); var prepared = false
+    }
+    private var job: Job?
+    private func failure(_ message: String) -> NSError {
+        NSError(domain: "PrivateBackup", code: 400, userInfo: [NSLocalizedDescriptionKey: message])
+    }
+    func begin(owner: String, size: Int64, capturedAt: Double, build: String) throws -> String {
+        guard job == nil else { throw failure("原生备份仍在进行，请稍后刷新状态") }
+        guard size > 1, capturedAt.isFinite, capturedAt > 0 else { throw failure("备份大小或时间无效") }
+        let folder = FileManager.default.temporaryDirectory.appendingPathComponent("NorthPrivateBackupStaging", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        // Only our own staging files; a process restart makes old transfers unrecoverable.
+        for url in (try? FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? [] {
+            if url.lastPathComponent.hasPrefix("backup-") { try? FileManager.default.removeItem(at: url) }
+        }
+        let token = UUID().uuidString, url = folder.appendingPathComponent("backup-" + token + ".json")
+        guard FileManager.default.createFile(atPath: url.path, contents: nil) else { throw failure("无法创建备份临时文件") }
+        do {
+            let handle = try FileHandle(forWritingTo: url)
+            try handle.write(contentsOf: Data("{\"p_payload\":".utf8))
+            job = Job(token: token, owner: owner, url: url, handle: handle, size: size, capturedAt: capturedAt, build: build)
+            return token
+        } catch { try? FileManager.default.removeItem(at: url); throw error }
+    }
+    func append(token: String, owner: String, offset: Int64, base64: String) throws {
+        guard var current = job, current.token == token, current.owner == owner, !current.prepared,
+              offset == current.written, base64.utf8.count <= 350000,
+              let data = Data(base64Encoded: base64), !data.isEmpty, data.count <= 262144,
+              Int64(data.count) <= current.size - current.written else { throw failure("备份分块顺序或账号不匹配，未上传") }
+        try current.handle.write(contentsOf: data)
+        current.hash.update(data: data); current.written += Int64(data.count); job = current
+    }
+    func prepare(token: String, owner: String) throws -> Prepared {
+        guard var current = job, current.token == token, current.owner == owner,
+              current.written == current.size, !current.prepared else { throw failure("备份文件未完整接收，未上传") }
+        let checksum = current.hash.finalize().map { String(format: "%02x", $0) }.joined()
+        let formatter = ISO8601DateFormatter(); formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let meta: [String: Any] = ["p_captured_at": formatter.string(from: Date(timeIntervalSince1970: current.capturedAt / 1000)),
+            "p_source_build": current.build, "p_checksum": checksum, "p_byte_count": current.size]
+        let suffix = try JSONSerialization.data(withJSONObject: meta)
+        try current.handle.write(contentsOf: Data(",".utf8))
+        try current.handle.write(contentsOf: suffix.dropFirst())
+        try current.handle.synchronize(); try current.handle.close()
+        current.prepared = true; job = current
+        return Prepared(url: current.url, bytes: current.size)
+    }
+    func remove(token: String) {
+        guard let current = job, current.token == token else { return }
+        try? current.handle.close(); try? FileManager.default.removeItem(at: current.url); job = nil
     }
 }

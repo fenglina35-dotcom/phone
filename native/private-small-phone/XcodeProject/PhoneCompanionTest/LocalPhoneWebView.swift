@@ -1009,8 +1009,8 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.355 (355)';
-      window.__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__ = true;
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.356 (356)';
+      window.__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__ = false;
       const privateDiagLast = new Map();
       window.__smallPhoneNativeDiag = (event, fields = {}, minGap = 10000) => {
         const name = String(event || 'runtime.event').slice(0, 80);
@@ -1041,7 +1041,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
       };
       window.__smallPhoneNativeDiag(
         'native.bootstrap.ready',
-        { build: '1.0.355 (355)', autoBackupPaused: true },
+        { build: '1.0.356 (356)', autoBackupPaused: false },
         0
       );
       // Keep private-App background maintenance away from the WebContent main
@@ -1143,7 +1143,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
         request(action, payload = {}) {
           return new Promise((resolve, reject) => {
             const requestId = `native-${Date.now()}-${++sequence}`;
-            const timeoutMs = action === 'device.snapshot' ? 25000 : 60000;
+            const timeoutMs = action === 'device.snapshot' ? 25000 : action === 'account.backup.file.commit' ? 660000 : 60000;
             const timer = setTimeout(() => {
               if (!waiting.has(requestId)) return;
               waiting.delete(requestId);

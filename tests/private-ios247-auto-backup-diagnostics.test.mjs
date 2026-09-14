@@ -144,58 +144,21 @@ function makeAutoBackupHarness() {
   return { context, calls, advance: ms => { now += ms; } };
 }
 
-test('private diagnostics 335 overlay owns the disable marker and cancels automatic scheduling', async () => {
-  const { context, calls } = makeAutoBackupHarness();
-  assert.equal(
-    context.__SMALL_PHONE_PRIVATE_RUNTIME__,
-    '335-resume-status-lane'
-  );
-  assert.equal(context.__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__, true);
-  assert.equal(context.__testPrivateCloud.timer(), null);
-  assert.deepEqual(calls.cleared, [41]);
-
-  context.__testPrivateCloud.setTimer(73);
-  assert.equal(context.privatePhoneCloudSchedule(1000), false);
-  assert.equal(context.__testPrivateCloud.timer(), null);
-  assert.deepEqual(calls.cleared, [41, 73]);
-  assert.equal(calls.timers.length, 1, 'only the one-shot native recovery handoff is scheduled');
-
-  context.privatePhoneCloudMarkDirty(15_000);
-  assert.equal(context.__testPrivateCloud.dirty(), 15_000);
-  assert.equal(context.__testPrivateCloud.timer(), null);
-  assert.equal(calls.timers.length, 1);
-
-  context.__testPrivateCloud.setPersisted(18_000);
-  context.privatePhoneCloudWake();
-  assert.equal(context.__testPrivateCloud.dirty(), 18_000);
-  assert.equal(context.__testPrivateCloud.timer(), null);
-  assert.equal(calls.timers.length, 1);
-
-  assert.equal(await context.privatePhoneCloudAutoBackup(), false);
-  assert.equal(await context.privatePhoneCloudAutoBackup(), false);
-  assert.equal(calls.originalAuto, 0);
-  assert.equal(
-    calls.diagnostics.filter(row => row.event === 'cloud.auto.blocked').length,
-    1,
-    'repeated blocked callbacks inside the minimum gap emit only once'
-  );
+test('private diagnostics 336 releases the temporary automatic-backup pause', () => {
+  assert.match(overlay, /OVERLAY_VERSION='336-daily-file-backup'/);
+  assert.match(overlay, /__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__=false/);
+  assert.doesNotMatch(overlay, /cancelAutomaticBackupTimer/);
+  assert.doesNotMatch(overlay, /window\.privatePhoneCloudSchedule\s*=/);
+  assert.doesNotMatch(overlay, /window\.privatePhoneCloudAutoBackup\s*=/);
+  assert.doesNotMatch(overlay, /window\.privatePhoneCloudBackup\s*=/);
+  assert.match(overlay, /autoBackupPaused:false/);
 });
 
-test('empty first bind is blocked while explicit manual backup still reaches the original action', async () => {
-  const { context, calls } = makeAutoBackupHarness();
-  await context.privatePhoneAccountAfterLogin();
-  assert.deepEqual(calls.account, ['account.backup.info']);
-  assert.equal(calls.originalBackups.length, 0, 'empty cloud must not start a full backup');
-  assert.match(calls.modals.at(-1) || '', /自动全量云备份现已暂停/);
-  assert.match(calls.modals.at(-1) || '', /privatePhoneCloudBackup\(false\)/);
-
-  assert.equal(
-    await context.privatePhoneCloudBackup(false, false),
-    'manual-uploaded'
-  );
-  assert.equal(calls.originalBackups.length, 1);
-  assert.equal(calls.originalBackups[0].firstBind, false);
-  assert.equal(calls.originalBackups[0].silent, false);
+test('first bind still asks the account flow to back up after checking the cloud', () => {
+  const source = functionSource(app, 'privatePhoneAccountAfterLogin');
+  assert.match(source, /account\.backup\.info/);
+  assert.match(source, /privatePhoneCloudBackup\(true\)/);
+  assert.doesNotMatch(source, /__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__/);
 });
 
 test('manual backup and both restore actions remain free of the automatic-disable guard', () => {
@@ -212,11 +175,7 @@ test('manual backup and both restore actions remain free of the automatic-disabl
     overlay,
     /window\.privatePhoneCloudRestore(?:Open|Confirm)\s*=/
   );
-  assert.match(
-    overlay,
-    /return originalBackup\.apply\(this,arguments\)/,
-    'non-first-bind manual backup must pass through unchanged'
-  );
+  assert.doesNotMatch(overlay, /originalBackup\.apply\(this,arguments\)/);
 });
 
 test('diagnostic append is fire-and-forget, bounded, rate-limited and not a timer hot source', () => {
@@ -264,16 +223,16 @@ test('diagnostic append is fire-and-forget, bounded, rate-limited and not a time
   assert.match(appendLine, /isExcludedFromBackup = true/);
 });
 
-test('native recovery UI stays outside WebKit and carries the private 353 identity', () => {
+test('native recovery UI stays outside WebKit and carries the private 356 identity', () => {
   assert.match(rootView, /SmallPhoneDiagnosticsStore\.recentText\(limit: 80\)/);
   assert.match(rootView, /聊天、角色、图片、登录信息或密钥/);
   assert.match(rootView, /安全重新打开小手机/);
   assert.match(rootView, /复制诊断给开发者/);
   assert.doesNotMatch(webView, /LocalPhoneWebView\.loadFailureHTML/);
 
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.355 \(355\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.356 \(356\)'/);
   assert.match(webView, /smallPhone\.webContentTerminationTimes\.v25\.build333/);
-  assert.match(bridge, /private static let build = "1\.0\.355 \(355\)"/);
+  assert.match(bridge, /private static let build = "1\.0\.356 \(356\)"/);
   assert.match(bridge, /case "diagnostics\.read"/);
   assert.match(bridge, /"bounded": true/);
   assert.match(bridge, /"maximumBytes": 256 \* 1_024/);
