@@ -14,14 +14,14 @@ const backup=read(bundle+'private-cloud-backup.js');
 const privateApp=read(bundle+'app.js');
 const publicApp=read('app.js');
 
-test('private v1242 loads daily backup after the diagnostic overlay while public remains v1241',()=>{
+test('private v1242 loads daily backup after the diagnostic overlay while public remains v1244',()=>{
   for(const name of ['index.html','小手机.html']){
     const html=read(bundle+name);
     assert.match(html,/window\.__NORTH_SHELL_BUILD__='1242'/);
     assert.ok(html.indexOf('private-cloud-backup.js?v=1242')>html.indexOf('private-runtime-diagnostics.js?v=336'));
   }
   assert.match(privateApp,/APP_VER='v1242 · 私人大存档备份流畅修复'/);
-  assert.match(publicApp,/APP_VER='v1241 · 大存档备份流畅修复'/);
+  assert.match(publicApp,/APP_VER='v1244 · 导入后内存卡顿修复'/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 356;/g)||[]).length,12);
   assert.equal((project.match(/MARKETING_VERSION = 1\.0\.356;/g)||[]).length,12);
 });

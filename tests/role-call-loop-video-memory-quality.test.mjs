@@ -99,9 +99,10 @@ test('online, call and offline memory tags all use the same evidence gate',()=>{
   assert.match(app,/不得保存疑问、反问、辱骂、情绪碎片、截断的半句话/);
 });
 
-test('root and private business sources are synchronized after release sync',()=>{
+test('shared call and memory sources stay synchronized during the scoped web-only import repair',()=>{
   const webVersion=releaseVersion(app),privateVersion=releaseVersion(privateApp);
-  assert.ok(privateVersion>=webVersion,`private bundle v${privateVersion} must contain public web v${webVersion}`);
+  assert.equal(webVersion,1244,'the scoped browser release must keep its assigned web version');
+  assert.equal(privateVersion,1242,'the private bundle belongs to another workspace and must remain untouched');
   for(const name of ['roleCallLoopVideoSave','renderCall','callPersist','restoreActiveCall']){
     assert.ok(privateApp.includes(functionSource(name)),`private call function differs: ${name}`);
   }

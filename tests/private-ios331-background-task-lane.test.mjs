@@ -61,7 +61,7 @@ function functionSource(source, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('private performance candidate has a v1242 identity while public web stays v1241', () => {
+test('private performance candidate has a v1242 identity while public web stays v1244', () => {
   assert.equal(privateIndex, privateAlias);
   assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1242'/);
   assert.match(privateIndex, /app\.js\?v=1242&r=v1242-backup-streaming-1/);
@@ -74,7 +74,7 @@ test('private performance candidate has a v1242 identity while public web stays 
   assert.match(bridge, /static let contractVersion = 38/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 356;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1\.0\.356;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1241 · 大存档备份流畅修复'/);
+  assert.match(publicApp, /APP_VER='v1244 · 导入后内存卡顿修复'/);
   assert.doesNotMatch(publicApp, /function northNativeBackgroundTask\(name,run\)/);
 });
 

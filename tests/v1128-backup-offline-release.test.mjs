@@ -27,15 +27,15 @@ function functionSource(name){
 }
 
 test('v1178 has a unique visible identity across every public entry and cache layer',()=>{
-  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1241\'/);
-  assert.match(app,/APP_VER='v1241 · 大存档备份流畅修复'/);
-  assert.match(shell,/__NORTH_SHELL_BUILD__='1241'/);
-  assert.match(shell,/app\.js\?v=1241&r=v1241-backup-streaming-1/);
-  assert.match(index,/小手机\.html\?v=1241/);
-  assert.match(repair,/小手机\.html\?v=1241/);
-  assert.match(worker,/const BUILD='1241'/);
-  assert.match(worker,/north-shell-v1241-backup-streaming-1/);
-  assert.match(hotfix,/sw\.js\?v=1241&r=v1241-backup-streaming-1/);
+  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1244\'/);
+  assert.match(app,/APP_VER='v1244 · 导入后内存卡顿修复'/);
+  assert.match(shell,/__NORTH_SHELL_BUILD__='1244'/);
+  assert.match(shell,/app\.js\?v=1244&r=v1244-import-memory-release-1/);
+  assert.match(index,/小手机\.html\?v=1244/);
+  assert.match(repair,/小手机\.html\?v=1244/);
+  assert.match(worker,/const BUILD='1244'/);
+  assert.match(worker,/north-shell-v1244-import-memory-release-1/);
+  assert.match(hotfix,/sw\.js\?v=1244&r=v1244-import-memory-release-1/);
   for(const [name,source] of Object.entries({app,shell,index,repair,worker,hotfix})){
     assert.doesNotMatch(source,/v?1127/,`${name} must not reuse the prior web version`);
   }

@@ -50,6 +50,9 @@ test('a large Android backup is split before its first core snapshot',async()=>{
   assert.doesNotMatch(db.get('__messages'),/data:image/,'the chat archive itself must use stored-image references');
   assert.match(db.get('__messages'),/"img":"idb:/);
   assert.ok([...db.keys()].some(key=>/^i/.test(key)),'the imported image must exist before the compact core is allowed to save');
+  assert.equal(vm.runInContext(`typeof _heavy.messages`,context),'undefined','the imported main-chat JSON copy must be released after IndexedDB accepts it');
+  assert.equal(vm.runInContext(`typeof _heavy['pfMessages:__pf_messages_friend']`,context),'undefined','the imported phone-friend JSON copy must be released after IndexedDB accepts it');
+  assert.equal(vm.runInContext(`_heavyReady.has('messages')&&_heavyReady.has('pfMessages:__pf_messages_friend')`,context),true,'released archive strings must keep their confirmed stamps');
 });
 
 test('full-backup apply writes recovery before core and rolls memory back on staging failure',async()=>{

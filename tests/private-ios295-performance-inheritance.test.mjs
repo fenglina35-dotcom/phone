@@ -45,7 +45,7 @@ function functionSource(sourceText, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('private identifiers advance to v1242 and iOS 356 while public stays v1241', () => {
+test('private identifiers advance to v1242 and iOS 356 while public stays v1244', () => {
   assert.equal(index, alias);
   assert.match(index, /window\.__NORTH_SHELL_BUILD__='1242'/);
   assert.match(index, /app\.js\?v=1242&r=v1242-backup-streaming-1/);
@@ -57,8 +57,8 @@ test('private identifiers advance to v1242 and iOS 356 while public stays v1241'
   assert.match(bridge, /static let contractVersion = 38/);
   assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 356;/g) || []).length, 12);
   assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.356;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1241 · 大存档备份流畅修复'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1241'/);
+  assert.match(publicApp, /APP_VER='v1244 · 导入后内存卡顿修复'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1244'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 

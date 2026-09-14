@@ -58,7 +58,7 @@ function persistenceRuntime() {
   return { context, writes, releases, traces };
 }
 
-test('private identity advances to v1242 and iOS 356 while public remains v1241', () => {
+test('private identity advances to v1242 and iOS 356 while public remains v1244', () => {
   assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1242'/);
   assert.match(privateApp, /APP_VER='v1242 · 私人大存档备份流畅修复'/);
   for (const html of [privateIndex, privateAlias]) {
@@ -71,8 +71,8 @@ test('private identity advances to v1242 and iOS 356 while public remains v1241'
   assert.match(bridge, /private static let build = "1\.0\.356 \(356\)"/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 356;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1\.0\.356;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1241 · 大存档备份流畅修复'/);
-  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1241'/);
+  assert.match(publicApp, /APP_VER='v1244 · 导入后内存卡顿修复'/);
+  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1244'/);
   assert.doesNotMatch(publicApp, /persistWechatRequested|smallPhoneWechatPersistTrace/);
 });
 
