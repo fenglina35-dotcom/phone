@@ -62,6 +62,13 @@ test('many short chat fields do not schedule a timer after every few records',as
  assert.ok(env.saved);assert.equal(await env.saved.text(),JSON.stringify(state));
  assert.ok(waits<100,`${waits} timer waits for only 1000 messages: yielding must follow elapsed work, not short-field count`);
 });
+test('six-figure arrays stream without building a complete array-key table',async()=>{
+ const env=setup({settings:{},archive:null});
+ vm.runInContext("S.archive=new Proxy(new Array(116736),{ownKeys(){throw new Error('full array key table is forbidden');}});S.archive[0]={id:'first',text:'开头'};S.archive[116735]={id:'last',text:'结尾'};",env.c);
+ await vm.runInContext('exportData()',env.c);
+ assert.ok(env.saved,'the backup must not enumerate all array keys before it can yield: '+env.events.join(';'));
+ const data=JSON.parse(await env.saved.text());assert.equal(data.archive.length,116736);assert.equal(data.archive[0].id,'first');assert.equal(data.archive[116735].id,'last');
+});
 test('file import waits for the previous archive restoration before applying new state',async()=>{
  let finishBoot,calls=0;const env=setup({}, {_bootImagesPromise:new Promise(r=>{finishBoot=r;})});env.c.fixture=new Blob(['{"settings":{}}']);env.c.apply=async()=>{calls++;};
  const importing=vm.runInContext('readJsonFile(fixture,apply)',env.c);await new Promise(r=>setTimeout(r,30));

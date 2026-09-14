@@ -45,20 +45,20 @@ function functionSource(sourceText, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('private identifiers advance to v1240 and iOS 356 while public stays v1239', () => {
+test('private identifiers advance to v1242 and iOS 356 while public stays v1241', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1240'/);
-  assert.match(index, /app\.js\?v=1240&r=v1240-browser-diagnostics-1/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1242'/);
+  assert.match(index, /app\.js\?v=1242&r=v1242-backup-streaming-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=336/);
-  assert.match(app, /APP_VER='v1240 · 私人每日云备份'/);
+  assert.match(app, /APP_VER='v1242 · 私人大存档备份流畅修复'/);
   assert.match(overlay, /336-daily-file-backup/);
   assert.match(webview, /1\.0\.356 \(356\)/);
   assert.match(bridge, /private static let build = "1\.0\.356 \(356\)"/);
   assert.match(bridge, /static let contractVersion = 38/);
   assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 356;/g) || []).length, 12);
   assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.356;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1239 · 浏览器运行诊断'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1239'/);
+  assert.match(publicApp, /APP_VER='v1241 · 大存档备份流畅修复'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1241'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
@@ -146,7 +146,7 @@ test('diagnostics identify the protected stage without collecting content', () =
   assert.doesNotMatch(overlay, /messageBody|chatContent|authorizationToken/);
 });
 
-test('Mac guide identifies the current private v1240 iOS356 source', () => {
+test('Mac guide identifies the current private v1242 iOS356 source', () => {
   const install = fs.readFileSync(
     path.join(project, '第三百二十七次安装_v1206_完整衣柜_请先读.md'),
     'utf8',
@@ -164,7 +164,7 @@ test('Mac guide identifies the current private v1240 iOS356 source', () => {
   assert.match(mac, /原生桥.*38/);
   assert.match(install, /1\.0\.327 \(327\)/);
   assert.match(install, /原生桥.*35/);
-  assert.match(mac, /^# v1240 .*iOS356/);
+  assert.match(mac, /^# v1242 .*iOS356/);
   assert.match(mac, /网页.*推送/);
   assert.match(install, /私人内置网页 v1206/);
   assert.match(install, /两边共有/);

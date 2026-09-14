@@ -58,21 +58,21 @@ function persistenceRuntime() {
   return { context, writes, releases, traces };
 }
 
-test('private identity advances to v1240 and iOS 356 while public remains v1239', () => {
-  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1240'/);
-  assert.match(privateApp, /APP_VER='v1240 · 私人每日云备份'/);
+test('private identity advances to v1242 and iOS 356 while public remains v1241', () => {
+  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1242'/);
+  assert.match(privateApp, /APP_VER='v1242 · 私人大存档备份流畅修复'/);
   for (const html of [privateIndex, privateAlias]) {
-    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1240'/);
-    assert.match(html, /app\.js\?v=1240&r=v1240-browser-diagnostics-1/);
+    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1242'/);
+    assert.match(html, /app\.js\?v=1242&r=v1242-backup-streaming-1/);
     assert.match(html, /private-runtime-diagnostics\.js\?v=336/);
   }
-  assert.match(privateRepair, /index\.html\?repair=1&v=1240/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1242/);
   assert.match(swift, /1\.0\.356 \(356\)/);
   assert.match(bridge, /private static let build = "1\.0\.356 \(356\)"/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 356;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1\.0\.356;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1239 · 浏览器运行诊断'/);
-  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1239'/);
+  assert.match(publicApp, /APP_VER='v1241 · 大存档备份流畅修复'/);
+  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1241'/);
   assert.doesNotMatch(publicApp, /persistWechatRequested|smallPhoneWechatPersistTrace/);
 });
 
