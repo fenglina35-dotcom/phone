@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1245 · 共同生活旁白截断修复'/);
-  assert.match(app,/const url='sw\.js\?v=1245&r=v1245-offline-narration-truncation-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1245'/);
-  assert.match(html,/app\.js\?v=1245/);
-  assert.match(sw,/const BUILD='1245'/);
-  assert.match(sw,/north-shell-v1245-offline-narration-truncation-1/);
-  assert.match(index,/小手机\.html\?v=1245/);
-  assert.match(repair,/小手机\.html\?v=1245/);
+  assert.match(app,/APP_VER='v1247 · 共同生活回复长度独立可调'/);
+  assert.match(app,/const url='sw\.js\?v=1247&r=v1247-offline-reply-length-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1247'/);
+  assert.match(html,/app\.js\?v=1247/);
+  assert.match(sw,/const BUILD='1247'/);
+  assert.match(sw,/north-shell-v1247-offline-reply-length-1/);
+  assert.match(index,/小手机\.html\?v=1247/);
+  assert.match(repair,/小手机\.html\?v=1247/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{
   assert.match(privateBundle,/<string>1200<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.357;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 357;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.357 \(357\)'/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.358;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 358;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.358 \(358\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

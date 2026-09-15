@@ -45,20 +45,20 @@ function functionSource(sourceText, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('private identifiers advance to v1246 and iOS 357 while public stays v1245', () => {
+test('private identifiers advance to v1247 and iOS 358 while public stays v1247', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1246'/);
-  assert.match(index, /app\.js\?v=1246&r=v1246-offline-narration-truncation-1/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1247'/);
+  assert.match(index, /app\.js\?v=1247&r=v1247-offline-reply-length-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=336/);
-  assert.match(app, /APP_VER='v1246 · 共同生活旁白截断修复'/);
+  assert.match(app, /APP_VER='v1247 · 共同生活回复长度独立可调'/);
   assert.match(overlay, /336-daily-file-backup/);
-  assert.match(webview, /1\.0\.357 \(357\)/);
-  assert.match(bridge, /private static let build = "1\.0\.357 \(357\)"/);
+  assert.match(webview, /1\.0\.358 \(358\)/);
+  assert.match(bridge, /private static let build = "1\.0\.358 \(358\)"/);
   assert.match(bridge, /static let contractVersion = 38/);
-  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 357;/g) || []).length, 12);
-  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.357;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1245 · 共同生活旁白截断修复'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1245'/);
+  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 358;/g) || []).length, 12);
+  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.358;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1247 · 共同生活回复长度独立可调'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1247'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
@@ -146,7 +146,7 @@ test('diagnostics identify the protected stage without collecting content', () =
   assert.doesNotMatch(overlay, /messageBody|chatContent|authorizationToken/);
 });
 
-test('Mac guide identifies the current private v1246 iOS357 source', () => {
+test('Mac guide identifies the current private v1247 iOS358 source', () => {
   const install = fs.readFileSync(
     path.join(project, '第三百二十七次安装_v1206_完整衣柜_请先读.md'),
     'utf8',
@@ -160,11 +160,11 @@ test('Mac guide identifies the current private v1246 iOS357 source', () => {
     assert.match(guide, /Mac.*编译/);
     assert.match(guide, /真机|真实 iPhone/);
   }
-  assert.match(mac, /1\.0\.357 \(357\)/);
+  assert.match(mac, /1\.0\.358 \(358\)/);
   assert.match(mac, /原生桥.*38/);
   assert.match(install, /1\.0\.327 \(327\)/);
   assert.match(install, /原生桥.*35/);
-  assert.match(mac, /^# v1246 .*iOS357/);
+  assert.match(mac, /^# v1247 .*iOS358/);
   assert.match(mac, /网页.*推送/);
   assert.match(install, /私人内置网页 v1206/);
   assert.match(install, /两边共有/);

@@ -91,15 +91,15 @@ test('status-bar theme does not force an avoidable first root transition', () =>
 });
 
 test('private build and bundled recovery page advance together', () => {
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.357 \(357\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.358 \(358\)'/);
   assert.match(webView, /smallPhone\.webContentTerminationTimes\.v25\.build333/);
-  assert.match(privateApp, /APP_VER='v1246 · 共同生活旁白截断修复'/);
+  assert.match(privateApp, /APP_VER='v1247 · 共同生活回复长度独立可调'/);
   assert.equal(privateAlias, privateIndex);
-  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1246'/);
-  assert.match(privateIndex, /app\.js\?v=1246/);
+  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1247'/);
+  assert.match(privateIndex, /app\.js\?v=1247/);
   assert.match(privateIndex, /private-runtime-diagnostics\.js\?v=336/);
-  assert.match(privateRepair, /index\.html\?repair=1&v=1246/);
-  assert.match(privateApp, /__NORTH_SHELL_BUILD__!==\'1246\'/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1247/);
+  assert.match(privateApp, /__NORTH_SHELL_BUILD__!==\'1247\'/);
 });
 
 test('glass home widgets can be restored after an old-build over-install', () => {
