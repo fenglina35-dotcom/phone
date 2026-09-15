@@ -17,7 +17,7 @@ assert.match(source, /offlineRepeatRepairNote\(c,repeats\)[\s\S]{0,220}auditOpt\
 assert.match(source, /roleInterceptDiagnosticTurnSelect\(_offAudit,r\)/);
 assert.match(source, /finally\{[\s\S]{0,500}roleInterceptDiagnosticTurnFinish\(_offAudit,_offAuditFinal,\{delivered:_offAuditDelivered\|\|_offAuditActionHandled,partial:_offAuditPartial\}\)/);
 assert.doesNotMatch(source, /roleInterceptDiagnosticOnlyHandled\(_offAuditFinal\)/, 'single-date delivery must use actual action results instead of tag-shaped syntax');
-assert.match(source, /function offlineReplyBudget\(input\)[\s\S]*?700[\s\S]*?650[\s\S]*?600/);
+assert.match(source, /function offlineReplyBudget\(input,c\)[\s\S]*?700[\s\S]*?650[\s\S]*?600/);
 assert.match(source, /单次约会保留原规则：正常回复用主模型、纠错优先副模型/);
 
 console.log('offline date cost routing tests passed');
