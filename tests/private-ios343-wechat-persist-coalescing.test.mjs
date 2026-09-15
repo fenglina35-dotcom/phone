@@ -58,15 +58,15 @@ function persistenceRuntime() {
   return { context, writes, releases, traces };
 }
 
-test('private identity advances to v1243 and iOS 357 while public remains v1245', () => {
-  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1243'/);
-  assert.match(privateApp, /APP_VER='v1243 · 共同生活旁白截断修复'/);
+test('private identity advances to v1246 and iOS 357 while public remains v1245', () => {
+  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1246'/);
+  assert.match(privateApp, /APP_VER='v1246 · 共同生活旁白截断修复'/);
   for (const html of [privateIndex, privateAlias]) {
-    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1243'/);
-    assert.match(html, /app\.js\?v=1243&r=v1243-offline-narration-truncation-1/);
+    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1246'/);
+    assert.match(html, /app\.js\?v=1246&r=v1246-offline-narration-truncation-1/);
     assert.match(html, /private-runtime-diagnostics\.js\?v=336/);
   }
-  assert.match(privateRepair, /index\.html\?repair=1&v=1243/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1246/);
   assert.match(swift, /1\.0\.357 \(357\)/);
   assert.match(bridge, /private static let build = "1\.0\.357 \(357\)"/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 357;/g) || []).length, 12);

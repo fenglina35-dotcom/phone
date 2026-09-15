@@ -61,13 +61,13 @@ function functionSource(source, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('private performance candidate has a v1243 identity while public web stays v1245', () => {
+test('private performance candidate has a v1246 identity while public web stays v1245', () => {
   assert.equal(privateIndex, privateAlias);
-  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1243'/);
-  assert.match(privateIndex, /app\.js\?v=1243&r=v1243-offline-narration-truncation-1/);
+  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1246'/);
+  assert.match(privateIndex, /app\.js\?v=1246&r=v1246-offline-narration-truncation-1/);
   assert.match(privateIndex, /private-runtime-diagnostics\.js\?v=336/);
-  assert.match(privateRepair, /index\.html\?repair=1&v=1243/);
-  assert.match(privateApp, /APP_VER='v1243 · 共同生活旁白截断修复'/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1246/);
+  assert.match(privateApp, /APP_VER='v1246 · 共同生活旁白截断修复'/);
   assert.match(overlay, /336-daily-file-backup/);
   assert.match(webView, /1\.0\.357 \(357\)/);
   assert.match(bridge, /private static let build = "1\.0\.357 \(357\)"/);
