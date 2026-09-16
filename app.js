@@ -1117,8 +1117,10 @@ function fmtSize(b){return b<1024?b+'B':b<1048576?(b/1024).toFixed(1)+'KB':(b/10
 
 /* =================== API =================== */
 function apiRawErrorDetail(raw){let src=String(raw||'').replace(/\s+/g,' ').trim();if(!src)return'';try{const d=JSON.parse(src),e=d&&d.error;src=String(e&&(e.message||e.detail||e.code)||d&&(d.message||d.detail||d.code)||src);}catch(_){}src=src.replace(/\b(?:sk|key)-[A-Za-z0-9_.-]{8,}\b/gi,'[密钥已隐藏]').replace(/Bearer\s+[A-Za-z0-9._~+\/-]{8,}/gi,'Bearer [已隐藏]').replace(/\s+/g,' ').trim();return src.slice(0,220);}
+function imageModerationBlocked(raw){return /安全政策|内容政策|审核|不适合|不合规|违规|敏感|safety|content[_ ]?polic|moderat|blocked|violat|not allowed to generate|rejected/i.test(String(raw||''));}
 function apiErrorCN(status,raw){status=+status||0;const src=apiRawErrorDetail(raw);let tip='接口返回异常，请检查地址、密钥和模型名';
-  if(status===400)tip='请求格式或模型名不兼容；先确认模型名完全正确，再换兼容接口测试';
+  if(status===400&&imageModerationBlocked(src))tip='图片平台的内容审核拦下了这次请求，不是地址、密钥或模型名的问题；换个描述再试';
+  else if(status===400)tip='请求格式或模型名不兼容；先确认模型名完全正确，再换兼容接口测试';
   else if(status===401)tip='API Key 无效、过期或没有正确填写；重新复制密钥，注意不要带空格';
   else if(status===402)tip='账户余额或点数不足，需要充值后再试';
   else if(status===403)tip='密钥没有这个模型的权限，或平台限制了地区/IP；去平台控制台检查权限';
@@ -1291,7 +1293,7 @@ async function imageGenerateExternal(base,key,model,prompt,size,quality){const p
   if(res&&!res.ok&&res.status<500&&model==='gpt-image-2'&&/(model|not found|unsupported|does not exist)/.test(err)){out=await imagePostCompat(base,key,'/images/generations',{model:'gpt-4o-image',prompt:p,n:1,size:target},requestTimeout);res=out&&out.res;d=out&&out.d;err=imageRespErr(d).toLowerCase();}
   /* 上游只认方图时，竖图会一直 400：既有的降级重试只去掉画质等参数，尺寸始终没退过，所以救不回来。
      「测试出图」用的就是 1024x1024，它能过说明模型本身可用，只是这个竖尺寸没开通。 */
-  if(res&&!res.ok&&res.status===400&&target!=='1024x1024'){out=await imagePostCompat(base,key,'/images/generations',{model,prompt:p,n:1,size:'1024x1024'},requestTimeout);res=out&&out.res;d=out&&out.d;err=imageRespErr(d).toLowerCase();}
+  if(res&&!res.ok&&res.status===400&&target!=='1024x1024'&&!imageModerationBlocked(err)){out=await imagePostCompat(base,key,'/images/generations',{model,prompt:p,n:1,size:'1024x1024'},requestTimeout);res=out&&out.res;d=out&&out.d;err=imageRespErr(d).toLowerCase();}
   let url=res&&res.ok?imageResultURL(d):'';
   if(url)return {url,endpoint:'images-generations',model};
   if(opt.allowChatFallback!==false&&(!res||!res.ok&&imageShouldRetryChat(res.status,err))){out=await imagePostCompat(base,key,'/chat/completions',{model,messages:[{role:'user',content:p+'\n\n请直接生成一张图片并返回图片。必须保持画布尺寸 '+target+'（'+imageSizeRatio(target)+' 比例），不要改成方图。'}],max_tokens:1200},210000);res=out&&out.res;d=out&&out.d;url=res&&res.ok?imageResultURL(d):'';if(url)return {url,endpoint:'chat-completions',model};err=imageRespErr(d)||err;}

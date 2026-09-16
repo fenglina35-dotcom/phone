@@ -83,6 +83,20 @@ test('⑧ a portrait size rejected with 400 falls back to the square the test bu
   assert.match(app, /imageGenerateExternal\(base,key,model,prompt,'1024x1536','medium',\{references\}\)/, '实际生成用竖图');
   assert.match(app, /res\.status===400&&target!=='1024x1024'/, '400 时退回方图再试一次');
   assert.match(app, /size:'1024x1024'\},requestTimeout\)/);
+  // 审核拦截也是 400，但换个尺寸同样会被拦：不能白白多花一次生图调用，提示也不能说成模型名不对。
+  assert.match(app, /res\.status===400&&target!=='1024x1024'&&!imageModerationBlocked\(err\)/);
+  assert.match(app, /if\(status===400&&imageModerationBlocked\(src\)\)tip='图片平台的内容审核拦下了这次请求/);
+});
+
+test('⑨ a moderation refusal is named as such and never costs a second image call', () => {
+  const blocked = app.split('\n').find(l => l.startsWith('function imageModerationBlocked('));
+  assert.ok(blocked);
+  const fn = new Function(blocked + '\nreturn imageModerationBlocked;')();
+  assert.equal(fn('您的请求无法用于生成图像。该请求可能因安全政策被拦截，或不适合进行图像生成。'), true);
+  assert.equal(fn('Your request was rejected as a result of our safety system.'), true);
+  assert.equal(fn('content_policy_violation'), true);
+  assert.equal(fn('invalid size 1024x1536'), false, '尺寸问题不能被误判成审核');
+  assert.equal(fn('model not found'), false);
 });
 
 test('⑦ a native request cannot hang the backup forever', async () => {
