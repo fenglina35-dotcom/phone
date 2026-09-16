@@ -86,9 +86,21 @@ def validate(files: dict[str, bytes]) -> None:
     assert pbx.count(f"CURRENT_PROJECT_VERSION = {BUILD};") == 12
     assert pbx.count(f"MARKETING_VERSION = {MARKETING};") == 12
 
-    # The repair this package exists to deliver.
-    assert "const label=cohabActivityClean(spec.label)" in app, "missing schedule-sync cleaning fix"
-    assert "clearTimeout(_roleServerPushSoonTimers[key])" in app, "missing server-sync debounce"
+    # Repairs that must ride along in every package. Keep in step with
+    # tests/permanent-fix-guard.test.mjs; a package is never allowed to drop one.
+    for marker, label in [
+        ("const label=cohabActivityClean(spec.label)", "v1248 作息同步清洗后比较"),
+        ("clearTimeout(_roleServerPushSoonTimers[key])", "v1248 角色服务器同步去抖"),
+        ("else if(/^[（(【]/.test(raw)&&!/[）)】]$/.test(raw))", "v1246 截断旁白识别"),
+        ("open=!closed&&line.match", "v1246 原文输出路径截断旁白"),
+        ("function offlineReplyBudget(input,c)", "v1247 共同生活回复长度可调"),
+        ("s_cmax_offline", "v1247 独立回复长度设置项"),
+        ("backupJsonBlob", "大存档分段备份"),
+        ("pfSyncMaybeYield", "好友同步让出主线程"),
+    ]:
+        assert marker in app, f"package would drop a required repair: {label}"
+    assert app.count("northNativeBackgroundTask") >= 30, "private background-task wrappers missing"
+    assert "north-native-performance-guard" in app, "private performance guard missing"
 
     assert len([n for n in files if n.startswith(BUNDLE)]) >= 350, "private web bundle looks incomplete"
 
