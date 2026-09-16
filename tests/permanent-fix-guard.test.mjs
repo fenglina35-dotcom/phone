@@ -188,6 +188,20 @@ const PERMANENT_FIXES = [
     marker: "res.status===400&&target!=='1024x1024'",
     least: 1,
   },
+  {
+    release: 'v1253',
+    name: '语音语言锁：选了外语时混进来的中文绝不会被念出口',
+    scope: 'both',
+    marker: 'text=ttsDropOffLanguage(text,o);',
+    least: 1,
+  },
+  {
+    release: 'v1253',
+    name: '「模型原文输出」不再绕过通话发声的外语过滤',
+    scope: 'both',
+    marker: "(_rawOutput&&(!_vlang||_vlang==='zh'))?u.orig:pickSpoken(u.orig,_vlang)",
+    least: 1,
+  },
 ];
 
 const sources = { web: read(WEB), private: read(PRIVATE) };

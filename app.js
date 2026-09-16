@@ -1681,7 +1681,12 @@ async function _ttsOnce(t,vid,tts,opt){let r;const languageBoost=String(opt&&opt
   let detail='';try{const j=await r.clone().json();const d=j&&j.detail;detail=(d&&(d.status||d.message))||(typeof d==='string'?d:'')||(j&&j.message)||'';}catch(e){try{detail=(await r.text()||'').slice(0,80);}catch(_){}}
   return {err:r.status+(detail?(' · '+detail):'')};}
 // 语音自动重试：偶发的 401/429/网络抖动会让头一两条没声，最多3次都失败才弹提示。
-async function ttsArr(text,o,opt){opt=Object.assign({},opt||{});if(!opt.languageBoost)opt.languageBoost=ttsLanguageBoost(o);const tts=ttsCfg(o),raw=ttsCleanBase(text);if(!raw)return null;if([...raw].length>VOICE_MAX_CHARS){if(!opt.quiet)toast('语音超过'+VOICE_MAX_CHARS+'字，已改用文字');return null;}const t=ttsPerformanceText(text,o,tts,opt);if(!t)return null;if([...t].length>VOICE_MAX_CHARS){if(!opt.quiet)toast('语音超过'+VOICE_MAX_CHARS+'字，已改用文字');return null;}const v=o?getVoice(o):null;opt.voice=v;
+/* 语音语言锁：角色语音选了英/法/德/俄/韩时，正文里混进来的中文绝不能被念出口。这是合成前的最后一道，
+   因为并非每个调用方都会先走 pickSpoken（微信语音消息就是直接把正文交给 ttsArr 的）。只有同一段里确实存在
+   目标语言时才清理，清理后为空就原样返回，保证任何情况下都不会把一整句变成哑音。 */
+function ttsTidyOrphanPunct(s){return String(s||'').replace(/\s+/g,' ').replace(/\s+([,.;:!?])/g,'$1').replace(/([,;:])(?=[.!?])/g,'').replace(/,\s*,/g,',').replace(/^[\s,;:.!?]+/,'').trim();}
+function ttsDropOffLanguage(text,o){const lang=ttsContentLang(o);if(!['英','法','德','俄','韩'].includes(lang))return text;const s=String(text||'');if(!s||!hasForeign(s,lang))return text;const cleaned=ttsTidyOrphanPunct(hasCN(s)?s.replace(CJK_RE,' ').replace(CN_PUNCT_RE,' '):s);return cleaned&&hasForeign(cleaned,lang)?cleaned:text;}
+async function ttsArr(text,o,opt){opt=Object.assign({},opt||{});text=ttsDropOffLanguage(text,o);if(!opt.languageBoost)opt.languageBoost=ttsLanguageBoost(o);const tts=ttsCfg(o),raw=ttsCleanBase(text);if(!raw)return null;if([...raw].length>VOICE_MAX_CHARS){if(!opt.quiet)toast('语音超过'+VOICE_MAX_CHARS+'字，已改用文字');return null;}const t=ttsPerformanceText(text,o,tts,opt);if(!t)return null;if([...t].length>VOICE_MAX_CHARS){if(!opt.quiet)toast('语音超过'+VOICE_MAX_CHARS+'字，已改用文字');return null;}const v=o?getVoice(o):null;opt.voice=v;
   if(!ttsApiOn(o))return null;const vid=ttsRoleVoiceId(o,tts);
   if(ttsUseRelay(o)){
     const ids=ttsRelayVoiceIds(tts);let lastMsg='';
@@ -12828,7 +12833,7 @@ async function callAI(sysNote,opts){if(!_call)return;const _rawOutput=typeof mod
       const isTrans=/^[（(][^）)]*[）)]$/.test(p)&&hasCN(p);
       if(isTrans&&(!_rawOutput||units.length&&!units[units.length-1].trans)){if(units.length&&!units[units.length-1].trans)units[units.length-1].trans=p;/* 同一句原文只认第一条翻译，多余/重复的翻译行(不管半角全角)直接丢掉 */return;}
       units.push({orig:p,trans:''});});
-    let _prevP='',_prefetchP='',_prefetchInterjectionUsed=false;const _speechRows=units.map(u=>{const duplicate=!_rawOutput&&u.orig===_prefetchP;_prefetchP=u.orig;const isAction=video&&callIsActionLine(u.orig),spoken=(duplicate||isAction)?'':_rawOutput?u.orig:pickSpoken(u.orig,_vlang),interjection=!!(spoken&&!_prefetchInterjectionUsed);if(spoken)_prefetchInterjectionUsed=true;return{isAction,spoken,cue:_turnVoiceCue,interjection};});
+    let _prevP='',_prefetchP='',_prefetchInterjectionUsed=false;const _speechRows=units.map(u=>{const duplicate=!_rawOutput&&u.orig===_prefetchP;_prefetchP=u.orig;const isAction=video&&callIsActionLine(u.orig),spoken=(duplicate||isAction)?'':(_rawOutput&&(!_vlang||_vlang==='zh'))?u.orig:pickSpoken(u.orig,_vlang),interjection=!!(spoken&&!_prefetchInterjectionUsed);if(spoken)_prefetchInterjectionUsed=true;return{isAction,spoken,cue:_turnVoiceCue,interjection};});
     const _speechJobs=(_call.replyVoice&&!c.muted&&ttsApiOn(c)&&!voiceProgressiveOn())?callPrefetchSpeech(_speechRows,c,()=>!!(_call&&_call.session===sess&&_call.state==='active')):[];
     for(let _ui=0;_ui<units.length;_ui++){const u=units[_ui];if(!_call||_call.session!==sess||_callStateStale())return;
       if(!_rawOutput&&u.orig===_prevP)continue;/* 跳过和上一句完全相同的（防止发两遍） */
