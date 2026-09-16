@@ -901,8 +901,11 @@ test('a role-read usage snapshot remains authoritative across foreground and bac
     screenTimeSec: 7 * 3600 + 30 * 60,
     apps: [{ name: '抖音', usedSec: 3 * 3600 + 42 * 60 }, { name: '微信', usedSec: 55 * 60 }],
   };
-  const context = vm.createContext({ state, Intl, Date, Math, Number, Object, String, Array });
+  const context = vm.createContext({ state, Intl, Date, Math, Number, Object, String, Array, Map });
   vm.runInContext(`
+    // companionUsageDayAt 需要这张格式化器缓存才能按 usageTimeZone 折算日期；
+    // 缺了它会掉进 catch 退回宿主机时区，容器跑 UTC 时整个晚上都会误报。
+    const _companionUsageDayFormatters=new Map();
     function replyDedupNorm(v){return String(v||'').toLowerCase();}
     function companionRoleDataState(){return state;}
     ${functionSource('companionUsageDayAt')}
