@@ -377,6 +377,22 @@ function pfReceivePay(mid){const p=phoneFriendState();let found=null,kind='frien
   const pay=found&&pfMsgPayload(found);if(!found||!pay||found.received||!(pay.type==='transfer'||pay.type==='redpacket'))return;found.received=true;found.receivedBy=p.id;addBill('in',+pay.amount||0,'收到 '+name+' 的'+(pay.type==='redpacket'?'红包':'转账'));save();render();toast('已收款 +¥'+(+pay.amount||0).toFixed(2));
   if(!String(found.id||'').startsWith('local_'))pfRpc('phone_friend_mark_received',{p_phone_id:p.id,p_secret:p.secret,p_message_id:found.id},20000).then(()=>phoneFriendSync(true)).catch(e=>{toast((e&&e.message)||'领取回执同步失败');});}
 function pfSaveSticker(mid){const p=phoneFriendState();let found=null;Object.keys(p.messages||{}).some(id=>{found=pfMsgList(p.messages,id).find(x=>x.id===mid);return !!found;});if(!found)Object.keys(p.groupMessages||{}).some(gid=>{found=pfMsgList(p.groupMessages,gid).find(x=>x.id===mid);return !!found;});const pl=found&&pfMsgPayload(found);if(!pl||pl.type!=='sticker'||!pl.img){toast('这个表情收藏不了');return;}S.me.stickers=S.me.stickers||[];if(S.me.stickers.some(s=>s.img===pl.img)){toast('已经收藏过啦');return;}S.me.stickers.push({img:pl.img,meaning:pl.meaning||''});save();toast('已收藏到我的表情');}
+/* 点气泡弹出消息操作。真人好友的气泡以前没有任何点击入口，撤回只能靠时间戳旁边那颗小按钮，找不到就等于功能不存在；
+   气泡内的「收藏」「撤回」早就写着 event.stopPropagation()，本来就是按"外层有这层菜单"设计的，这里把缺的那一层补回来。 */
+function pfMsgMenu(mid,scope,key){
+  const p=phoneFriendState(),list=scope==='group'?pfMsgList(p.groupMessages,key):pfMsgList(p.messages,key),m=list.find(x=>x.id===mid);
+  if(!m||m.recalled)return;
+  const me=m.from===p.id,pl=pfMsgPayload(m),pending=String(mid||'').startsWith('local_');
+  const text=pl?(pl.type==='text'?String(pl.text||''):''):String(m.text||'');
+  const canSticker=!me&&pl&&pl.type==='sticker'&&pl.img;
+  openModal(`<h3>消息操作</h3>
+    ${text?`<button class="btn g" style="margin-bottom:8px" onclick="pfCopyMsgText('${mid}','${scope}','${key}')">复制文字</button>`:''}
+    ${canSticker?`<button class="btn g" style="margin-bottom:8px" onclick="closeModal();pfSaveSticker('${mid}')">收藏这个表情</button>`:''}
+    ${me?`<button class="btn d" style="margin-bottom:8px" onclick="closeModal();phoneFriendRecallMessage('${mid}','${scope}','${key}')">撤回这条消息</button>`:''}
+    ${me&&pending?`<div class="hint" style="margin:-4px 0 8px">这条还在发送，要等它同步到云端才能撤回。</div>`:''}
+    <button class="btn g" onclick="closeModal()">取消</button>`);
+}
+function pfCopyMsgText(mid,scope,key){const p=phoneFriendState(),list=scope==='group'?pfMsgList(p.groupMessages,key):pfMsgList(p.messages,key),m=list.find(x=>x.id===mid);if(!m)return;const pl=pfMsgPayload(m),text=pl?(pl.type==='text'?String(pl.text||''):''):String(m.text||'');if(!text){toast('这条没有可复制的文字');return;}closeModal();Promise.resolve(copyTextCompat(text)).then(ok=>toast(ok?'已复制':'复制失败，请长按手动选择'));}
 async function phoneFriendRecallMessage(mid,scope,gidOrId){const p=phoneFriendState();let found=null;if(scope==='group'){found=pfMsgList(p.groupMessages,gidOrId).find(x=>x.id===mid);}else{found=pfMsgList(p.messages,gidOrId).find(x=>x.id===mid);}
   if(!found||found.from!==p.id||found.recalled)return;if(String(mid||'').startsWith('local_')){toast('消息还在发送，稍后再撤回');return;}if(!await uiConfirm('撤回这条小手机消息？'))return;found.recalled=true;found.text='';save();render();
   pfRpc('phone_friend_recall_message',{p_phone_id:p.id,p_secret:p.secret,p_message_id:mid},25000).then(()=>phoneFriendSync(true)).catch(e=>toast(e.message||'云端撤回失败'));}
@@ -5818,7 +5834,7 @@ function renderPhoneFriendChat(id){const p=phoneFriendState();id=(''+id).toUpper
     const prev=i?arr[i-1]:null;body+=chatBoundaryHTML(prev,m);
     if(m.recalled){body+=pfRecalledRow();return;}
     const me=m.from===p.id,rs=me?pfReadStatus(m,'friend',id):'',rec=me?`<button type="button" class="pfrecall" aria-label="撤回这条消息" onclick="event.stopPropagation();phoneFriendRecallMessage('${m.id}','friend','${id}')">撤回</button>`:'';
-    body+=`<div class="msg ${me?'me':'them'}"><span>${me?av(S.me.avatar):pfAvatarHTML(f)}</span><div class="col">${pfBubblePart(m,me)}<div class="msgt">${rec}${rs?`<span style="margin-right:8px;color:#8d8d96">${rs}</span>`:''}${hm(m.time)}</div></div></div>`;
+    body+=`<div class="msg ${me?'me':'them'}"><span>${me?av(S.me.avatar):pfAvatarHTML(f)}</span><div class="col" onclick="pfMsgMenu('${m.id}','friend','${id}')">${pfBubblePart(m,me)}<div class="msgt">${rec}${rs?`<span style="margin-right:8px;color:#8d8d96">${rs}</span>`:''}${hm(m.time)}</div></div></div>`;
   });
   const gag=S.couple&&S.couple.gags&&S.couple.gags[pfGagKey(id)];
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(pfFriendDisplayName(f))}</span><span class="r" onclick="phoneFriendManage('${id}')">⋯</span></div>
@@ -5831,7 +5847,7 @@ function renderPhoneFriendGroup(gid){const g=pfGroupById(gid)||{name:'小手机�
     if(m.recalled){body+=pfRecalledRow();return;}
     const pl=pfMsgPayload(m);if(pl&&pl.type==='pat'){body+=pfPatRow(m);return;}
     const me=m.from===p.id,sid=me?'me':(''+m.from).toUpperCase(),bs=pfGroupBubbleCfg(gid,sid),ac=bs&&bs.avatar==='round'?'av-round':'',member=pfGroupMemberById(g,m.from),ff=phoneFriendById(m.from)||member,name=pfGroupMemberName(g,member||{phone_id:m.from}),rs=me?pfReadStatus(m,'group',gid):'',rec=me?`<button type="button" class="pfrecall" aria-label="撤回这条消息" onclick="event.stopPropagation();phoneFriendRecallMessage('${m.id}','group','${gid}')">撤回</button>`:'',at=me?'':`onpointerdown="pfAtStart(event,'${gid}','${m.from}')" onpointerup="pfGroupAvatarTap(event,'${gid}','${m.from}')" onpointercancel="pfAtEnd()" onpointerleave="pfAtEnd()" ondblclick="pfGroupAvatarDouble(event,'${gid}','${m.from}')" title="双击拍一拍，长按@"`;
-    body+=`<div class="msg ${me?'me':'them'}"><span ${at}>${me?av(S.me.avatar,ac):pfAvatarHTML(ff||{phone_id:m.from,display_name:name},ac)}</span><div class="col">${me?'':`<div style="font-size:11px;color:#888;margin:0 0 2px 4px">${esc(name||'成员')}</div>`}${pfBubblePart(m,me,bs)}<div class="msgt">${rec}${rs?`<span style="margin-right:8px;color:#8d8d96">${rs}</span>`:''}${hm(m.time)}</div></div></div>`;
+    body+=`<div class="msg ${me?'me':'them'}"><span ${at}>${me?av(S.me.avatar,ac):pfAvatarHTML(ff||{phone_id:m.from,display_name:name},ac)}</span><div class="col" onclick="pfMsgMenu('${m.id}','group','${gid}')">${me?'':`<div style="font-size:11px;color:#888;margin:0 0 2px 4px">${esc(name||'成员')}</div>`}${pfBubblePart(m,me,bs)}<div class="msgt">${rec}${rs?`<span style="margin-right:8px;color:#8d8d96">${rs}</span>`:''}${hm(m.time)}</div></div></div>`;
   });
   const gag=S.couple&&S.couple.gags&&S.couple.gags[pfgGagKey(gid)];
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(pfGroupDisplayName(g))}</span><span class="r" onclick="phoneFriendGroupManage('${gid}')">⋯</span></div>

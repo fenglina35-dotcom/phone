@@ -202,6 +202,13 @@ const PERMANENT_FIXES = [
     marker: "(_rawOutput&&(!_vlang||_vlang==='zh'))?u.orig:pickSpoken(u.orig,_vlang)",
     least: 1,
   },
+  {
+    release: 'v1253',
+    name: '真人好友点气泡弹出消息操作，撤回有可见入口',
+    scope: 'both',
+    marker: "onclick=\"pfMsgMenu('${m.id}'",
+    least: 2,
+  },
 ];
 
 const sources = { web: read(WEB), private: read(PRIVATE) };
