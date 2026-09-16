@@ -75,6 +75,16 @@ test('⑤ the notebook records everyday life yet still refuses fabrication and m
   assert.equal(ok('我答应她周末陪她去那家甜品店', '周末陪我去甜品店好不好', '我答应你，周末陪你去那家甜品店', '好，我答应你，周末陪你去那家甜品店。'), true, '真的答应了就该记下');
 });
 
+test('⑧ a portrait size rejected with 400 falls back to the square the test button proves works', () => {
+  // 「测试出图」用 1024x1024，实际生成用 1024x1536；既有的降级重试只去掉画质等参数，尺寸从不退让，
+  // 所以上游只开通方图时，测试永远成功、实际永远失败。
+  assert.match(app, /const t0=Date\.now\(\);/);
+  assert.match(app, /imageGenerateExternal\(base,key,model,'一只可爱的小猫[^']*','1024x1024'\)/, '测试出图用方图');
+  assert.match(app, /imageGenerateExternal\(base,key,model,prompt,'1024x1536','medium',\{references\}\)/, '实际生成用竖图');
+  assert.match(app, /res\.status===400&&target!=='1024x1024'/, '400 时退回方图再试一次');
+  assert.match(app, /size:'1024x1024'\},requestTimeout\)/);
+});
+
 test('⑦ a native request cannot hang the backup forever', async () => {
   const src = line('privatePhoneAccountCall');
   assert.match(src, /NATIVE_TIMEOUT/);

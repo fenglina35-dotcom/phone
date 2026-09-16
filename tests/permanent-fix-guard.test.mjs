@@ -181,6 +181,13 @@ const PERMANENT_FIXES = [
     marker: 'NATIVE_TIMEOUT',
     least: 1,
   },
+  {
+    release: 'v1251',
+    name: '上游只认方图时，竖图被拒后退回方图再试一次',
+    scope: 'web',
+    marker: "res.status===400&&target!=='1024x1024'",
+    least: 1,
+  },
 ];
 
 const sources = { web: read(WEB), private: read(PRIVATE) };

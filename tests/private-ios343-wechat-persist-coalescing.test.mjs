@@ -71,7 +71,7 @@ test('private identity advances to v1250 and iOS 360 while public remains v1250'
   assert.match(bridge, /private static let build = "1\.0\.360 \(360\)"/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 360;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.360;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1251 · 网页七项修复'/);
+  assert.match(publicApp, /APP_VER='v1251 · 网页八项修复'/);
   assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1251'/);
   assert.doesNotMatch(publicApp, /persistWechatRequested|smallPhoneWechatPersistTrace/);
 });

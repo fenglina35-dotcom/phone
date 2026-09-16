@@ -395,7 +395,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1251 · 网页七项修复';
+const APP_VER='v1251 · 网页八项修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1289,6 +1289,9 @@ async function imageGenerateExternal(base,key,model,prompt,size,quality){const p
   let out=await imagePostCompat(base,key,'/images/generations',rich,requestTimeout),res=out&&out.res,d=out&&out.d,err=imageRespErr(d).toLowerCase();
   if(res&&!res.ok&&res.status<500&&/(unknown|unsupported|invalid).{0,24}(quality|output|compression|response_format|size)|extra inputs are not permitted|not allowed/.test(err)){out=await imagePostCompat(base,key,'/images/generations',{model,prompt:p,n:1,size:target},requestTimeout);res=out&&out.res;d=out&&out.d;err=imageRespErr(d).toLowerCase();}
   if(res&&!res.ok&&res.status<500&&model==='gpt-image-2'&&/(model|not found|unsupported|does not exist)/.test(err)){out=await imagePostCompat(base,key,'/images/generations',{model:'gpt-4o-image',prompt:p,n:1,size:target},requestTimeout);res=out&&out.res;d=out&&out.d;err=imageRespErr(d).toLowerCase();}
+  /* 上游只认方图时，竖图会一直 400：既有的降级重试只去掉画质等参数，尺寸始终没退过，所以救不回来。
+     「测试出图」用的就是 1024x1024，它能过说明模型本身可用，只是这个竖尺寸没开通。 */
+  if(res&&!res.ok&&res.status===400&&target!=='1024x1024'){out=await imagePostCompat(base,key,'/images/generations',{model,prompt:p,n:1,size:'1024x1024'},requestTimeout);res=out&&out.res;d=out&&out.d;err=imageRespErr(d).toLowerCase();}
   let url=res&&res.ok?imageResultURL(d):'';
   if(url)return {url,endpoint:'images-generations',model};
   if(opt.allowChatFallback!==false&&(!res||!res.ok&&imageShouldRetryChat(res.status,err))){out=await imagePostCompat(base,key,'/chat/completions',{model,messages:[{role:'user',content:p+'\n\n请直接生成一张图片并返回图片。必须保持画布尺寸 '+target+'（'+imageSizeRatio(target)+' 比例），不要改成方图。'}],max_tokens:1200},210000);res=out&&out.res;d=out&&out.d;url=res&&res.ok?imageResultURL(d):'';if(url)return {url,endpoint:'chat-completions',model};err=imageRespErr(d)||err;}
@@ -1735,7 +1738,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1251&r=v1251-web-seven-fixes-1';
+  const url='sw.js?v=1251&r=v1251-web-eight-fixes-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}

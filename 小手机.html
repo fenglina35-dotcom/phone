@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-1251-web-seven-fixes-1';
+  var key='north-sw-reloaded-1251-web-eight-fixes-1';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=1251&r=v1251-web-seven-fixes-1';
+  var url='sw.js?v=1251&r=v1251-web-eight-fixes-1';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -1432,7 +1432,7 @@ html.north-apple-remote-safe .music-chat-dock{margin-bottom:4px;scroll-margin-bo
 <script src="couple-watch.js?v=1251" onerror="__northBootFail('页面组件载入失败')"></script>
 <script src="request-diagnostics.js?v=1251"></script>
 <script src="message-beijing-time.js?v=1251"></script>
-<script src="app.js?v=1251&r=v1251-web-seven-fixes-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=1251&r=v1251-web-eight-fixes-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
 <script src="cohab-theater.js?v=1251&r=v1184-ios-web-crash-cohab-turn-keyboard-1" onerror="__northBootFail('共同生活多人剧场组件载入失败（可能是网络或 404）')"></script>
 <script src="public-north-policy.js?v=1251"></script>
 <script src="public-north-runtime.js?v=1251"></script>
@@ -1442,7 +1442,7 @@ html.north-apple-remote-safe .music-chat-dock{margin-bottom:4px;scroll-margin-bo
 <script src="cohab-model-diagnostics.js?v=1251" onerror="__northBootFail('共同生活模型诊断组件载入失败')"></script>
 <script src="bead-studio.js?v=1251&r=v1184-pixel-puzzle-4" onerror="__northBootFail('像素拼拼乐组件载入失败（可能是网络或 404）')"></script>
 <script src="heart-quiz.js?v=1251" onerror="console.warn('心动审判预览组件载入失败')"></script>
-<script src="web-hotfix.js?v=1251&r=v1251-web-seven-fixes-1" onerror="__northBootFail('网页热修复组件载入失败（可能是网络或 404）')"></script>
+<script src="web-hotfix.js?v=1251&r=v1251-web-eight-fixes-1" onerror="__northBootFail('网页热修复组件载入失败（可能是网络或 404）')"></script>
 <script src="vendor/qr/qrcode.js?v=2.0.4"></script>
 <script src="vendor/qr/jsQR.js?v=1.4.0"></script>
 <script src="wechat-me.js?v=1251" onerror="__northBootFail('微信个人页组件载入失败（可能是网络或 404）')"></script>
