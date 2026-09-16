@@ -14,16 +14,16 @@ const backup=read(bundle+'private-cloud-backup.js');
 const privateApp=read(bundle+'app.js');
 const publicApp=read('app.js');
 
-test('private v1247 loads daily backup after the diagnostic overlay while public remains v1247',()=>{
+test('private v1248 loads daily backup after the diagnostic overlay while public remains v1248',()=>{
   for(const name of ['index.html','小手机.html']){
     const html=read(bundle+name);
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1247'/);
-    assert.ok(html.indexOf('private-cloud-backup.js?v=1247')>html.indexOf('private-runtime-diagnostics.js?v=336'));
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1248'/);
+    assert.ok(html.indexOf('private-cloud-backup.js?v=1248')>html.indexOf('private-runtime-diagnostics.js?v=336'));
   }
-  assert.match(privateApp,/APP_VER='v1247 · 共同生活回复长度独立可调'/);
-  assert.match(publicApp,/APP_VER='v1247 · 共同生活回复长度独立可调'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 358;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.358;/g)||[]).length,12);
+  assert.match(privateApp,/APP_VER='v1248 · 共同生活作息卡顿修复'/);
+  assert.match(publicApp,/APP_VER='v1248 · 共同生活作息卡顿修复'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 359;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.359;/g)||[]).length,12);
 });
 
 test('web backup sends bounded ordered chunks and records a day only after confirmed save',()=>{
