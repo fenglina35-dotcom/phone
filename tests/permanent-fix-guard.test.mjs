@@ -139,6 +139,48 @@ const PERMANENT_FIXES = [
     marker: 'roleReplyDropEnglishNarration',
     least: 2,
   },
+  {
+    release: 'v1251',
+    name: '存档里的图片引用在显示前先还原，表情包、壁纸、朋友圈都不再破图或发黑',
+    scope: 'web',
+    marker: 'storedImageDisplaySource(m.img)',
+    least: 2,
+  },
+  {
+    release: 'v1251',
+    name: '主屏与锁屏壁纸失效时不画无效地址，毛玻璃组件不会连带变黑',
+    scope: 'web',
+    marker: 'storedImageDisplaySource(S.me.homeBg)',
+    least: 1,
+  },
+  {
+    release: 'v1251',
+    name: '好友申请方向按来源区分，用户加的不会说成角色加的',
+    scope: 'web',
+    marker: '绝不能说成你申请加ta、或你终于等到ta通过',
+    least: 1,
+  },
+  {
+    release: 'v1251',
+    name: '陌生来电知道是自己拨出的，不再反问用户是谁',
+    scope: 'web',
+    marker: '绝对不要反问“你是谁”“你哪位”',
+    least: 1,
+  },
+  {
+    release: 'v1251',
+    name: '小本子由角色自行判断要记什么，日常喜好习惯都记得下',
+    scope: 'web',
+    marker: '记不记、记哪一条，完全由你自己判断',
+    least: 1,
+  },
+  {
+    release: 'v1251',
+    name: '原生请求有界，挂死不会让「正在备份」永远卡住',
+    scope: 'web',
+    marker: 'NATIVE_TIMEOUT',
+    least: 1,
+  },
 ];
 
 const sources = { web: read(WEB), private: read(PRIVATE) };
