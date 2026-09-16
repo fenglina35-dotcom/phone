@@ -15,9 +15,9 @@ const nativeWeb = read('native/private-small-phone/XcodeProject/PhoneCompanionTe
 test('v1184 web source keeps private 1.0.315 compatibility', () => {
   assert.match(app, /APP_VER='v1249 · 网页六项修复'/);
   assert.match(html, /app\.js\?v=1249/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 359;/);
-  assert.match(project, /MARKETING_VERSION = 1.0.359;/);
-  assert.match(nativeWeb, /1\.0\.359 \(359\)/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 360;/);
+  assert.match(project, /MARKETING_VERSION = 1.0.360;/);
+  assert.match(nativeWeb, /1\.0\.360 \(360\)/);
 });
 
 test('Apple compatibility alone moves call identity and mood updates live', () => {
