@@ -47,7 +47,11 @@ test('export hydrates stored media and all three archives without touching live 
  const state={settings:{},messages:{__idb:'messages'},me:{phoneFriend:{id:'f',messages:{__idb:'phoneFriendMessages'},groupMessages:{__idb:'phoneFriendGroupMessages'}}}},env=setup(state);
  env.db.set('pic','data:image/png;base64,hello');env.db.set('__messages',JSON.stringify({a:[{img:'idb:pic'}]}));env.db.set('__pf_messages_f','{"f":[{"text":"friend"}]}');env.db.set('__pf_group_messages_f','{"g":[{"text":"group"}]}');
  await vm.runInContext('exportData()',env.c);const d=JSON.parse(await env.saved.text());assert.equal(d.messages.a[0].img,env.db.get('pic'));assert.equal(d.me.phoneFriend.messages.f[0].text,'friend');assert.equal(d.me.phoneFriend.groupMessages.g[0].text,'group');assert.equal(state.messages.__idb,'messages');
- env.db.delete('pic');await vm.runInContext('exportData()',env.c);assert.ok(env.events.some(x=>x.includes('缺图')));
+ /* 坏图不再中止整份备份：照常导出、跳过读不出的图片，并如实告知跳过了几张。 */
+ env.db.delete('pic');await vm.runInContext('exportData()',env.c);assert.ok(env.saved,'坏图时仍然要产出备份文件');
+ const missing=JSON.parse(await env.saved.text());assert.equal(missing.messages.a[0].img,'','读不出的图片留空，其余内容照常');
+ assert.equal(missing.me.phoneFriend.messages.f[0].text,'friend');
+ assert.ok(env.events.some(x=>x.includes('张图片')),'必须告诉用户跳过了几张图片');
 });
 test('export preserves surrogate pairs at string chunk boundaries and handles absent values',async()=>{
  const s='A'.repeat(65535)+'😀汉字\\\"\n'+'B'.repeat(70000),state={settings:{s},items:[undefined,null,NaN],sparse:Array(3),omit:undefined};const env=setup(state);await vm.runInContext('exportData()',env.c);assert.equal(await env.saved.text(),JSON.stringify(state));

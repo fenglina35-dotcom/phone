@@ -25,7 +25,7 @@ function harness(file,{aux=true,relay=false}={}){
   const data=item=>({choices:[{message:{content:item.text||'正常回复'},finish_reason:item.reason||'stop'}]});
   context.fetchT=async(url,opt)=>{const item=await nextRequest(JSON.parse(opt.body).model);return {ok:true,json:()=>item.bodyPending?new Promise(()=>{}):Promise.resolve(data(item))};};
   context.aiRelay=async()=>({data:data(await nextRequest('relay'))});
-  const names=['offlineRequestError','offlineRequestTimeoutError','offlineForegroundRequest','offlineRequestVisibility','offlineReplyTransportRetryable','offlineReplyChatRequest','offlineReplyFailureReason','offlineKeepValidReplyOnRepairFailure','cohabRoleChat','joinAIContinuation','chatResultText','chatReadDiagnosticResponse'];
+  const names=['offlineRequestError','offlineRequestTimeoutError','offlineForegroundRequest','offlineRequestVisibility','offlineReplyTransportRetryable','offlineReplyChatRequest','offlineReplyFailureReason','offlineKeepValidReplyOnRepairFailure','cohabRoleChat','joinAIContinuation','roleReplyDropEnglishNarration','chatResultText','chatReadDiagnosticResponse'];
   vm.runInContext('const _offlineRequests=new Set(),_cohabActualModelRoute=new Map();'+names.map(name=>source.split('\n').find(l=>l.startsWith('function '+name+'(')||l.startsWith('async function '+name+'('))||'').join('\n'),context);
   const start=source.indexOf('async function chatAPI('),end=source.indexOf('\nfunction uniq(',start);
   vm.runInContext(source.slice(start,end),context);

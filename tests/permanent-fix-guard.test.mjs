@@ -22,7 +22,10 @@ const PRIVATE = PRIVATE_DIR + 'app.js';
 const count = (source, marker) => source.split(marker).length - 1;
 
 // scope: 'both' must hold in the web core and the private bundle; 'private' only
-// applies to the private bundle, where the native shell needs the extra guard.
+// applies to the private bundle, where the native shell needs the extra guard;
+// 'web' is a repair released to the browser ahead of the private bundle. When a
+// 'web' entry is later synced into the private bundle, move it to 'both' in the
+// same commit that syncs it.
 const PERMANENT_FIXES = [
   {
     release: 'v1248',
@@ -94,12 +97,54 @@ const PERMANENT_FIXES = [
     marker: 'pfSyncMaybeYield',
     least: 1,
   },
+  {
+    release: 'v1249',
+    name: '完整备份跳过读不出的图片，不再整份中止',
+    scope: 'web',
+    marker: '_fullBackupSkippedImages.add(key)',
+    least: 1,
+  },
+  {
+    release: 'v1249',
+    name: '定时查岗错过当天时点后仍会补跑一次',
+    scope: 'web',
+    marker: 'nowMin<toMin(sp.time)',
+    least: 1,
+  },
+  {
+    release: 'v1249',
+    name: '群聊撤回行能被角色感知，不再喂成空洞的[消息]',
+    scope: 'web',
+    marker: "m.type==='sys'?String(m.content||'')",
+    least: 1,
+  },
+  {
+    release: 'v1249',
+    name: '开始新约会前先归档没结束的上一场，记录不丢',
+    scope: 'web',
+    marker: 'offArchiveUnfinishedSession(o)',
+    least: 1,
+  },
+  {
+    release: 'v1249',
+    name: '共同生活期间角色不在身边时可以来电',
+    scope: 'web',
+    marker: 'roleOnlineProactiveBlocked(id)&&!(cohabRestricted&&opt.requestedByUser)',
+    least: 1,
+  },
+  {
+    release: 'v1249',
+    name: '整段英文旁白本地丢弃，不触发重新生成',
+    scope: 'web',
+    marker: 'roleReplyDropEnglishNarration',
+    least: 2,
+  },
 ];
 
 const sources = { web: read(WEB), private: read(PRIVATE) };
 
 for (const fix of PERMANENT_FIXES) {
-  const targets = fix.scope === 'private' ? ['private'] : ['web', 'private'];
+  const targets = fix.scope === 'both' ? ['web', 'private'] : [fix.scope];
   for (const target of targets) {
     test(`${target} keeps ${fix.release} — ${fix.name}`, () => {
       const found = count(sources[target], fix.marker);

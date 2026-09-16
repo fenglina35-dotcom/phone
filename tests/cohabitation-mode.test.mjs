@@ -115,7 +115,7 @@ test('online and face-to-face activity use a narrow shared status boundary',()=>
   assert.match(source,/共同生活页面里的动作与对白不会复制到微信/);
   assert.match(source,/微信消息也不会冒充面对面台词/);
   assert.match(source,/function offlineFocusActive\(\)\{if\(cohabSceneBlocksOnline\(\)\)return true/);
-  assert.match(source,/function incomingCall\(id,kind,opt\).*cohabRestricted&&!opt\.requestedByUser.*roleOnlineProactiveBlocked\(id\).*requestedByUser/s);
+  assert.match(source,/function incomingCall\(id,kind,opt\).*roleOnlineProactiveBlocked\(id\)&&!\(cohabRestricted&&opt\.requestedByUser\)/s);
   assert.match(source,/async function maybeProactive\(id\)\{if\(!isMain\(\)\|\|roleOnlineProactiveBlocked\(id\)/);
   assert.match(source,/function roleOnlineProactiveBlocked\(id\).*offlineWechatLiveState\(c\).*cohabOnlineQuiet\(id\).*offlineFocusActive\(\)/);
   assert.match(source,/伴生后台生成的普通文字消息仍可照常送到线上微信/);

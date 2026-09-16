@@ -5,7 +5,10 @@ import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 const files=['app.js','native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js'];
 function extract(src,name){src=src.replace(/\r\n/g,'\n');const start=src.search(new RegExp('^(?:async )?function '+name+'\\(','m'));assert(start>=0,name);const rest=src.slice(start),next=rest.slice(1).search(/\n(?:async )?function /);return next<0?rest:rest.slice(0,next+1);}
-function harness(src){const ctx=vm.createContext({VOICE_MAX_CHARS:300,ttsContentLang:c=>c.voice.lang,hasForeign:t=>/[a-z]/i.test(t),voiceLangName:()=> '英语',ttsRequestedCue:()=>'',ttsAutoCue:()=>'',splitBubbles:s=>String(s).split('\n'),wechatRoleDrift:s=>/AI assistant/.test(s),roleInterceptDiagnosticRemember:()=>{}});for(const n of ['roleReplyEnglishOnly','roleReplyAssertLanguage','parseVoiceTagLine','explicitVoiceReplyRequest','voiceReplyTagValid','forceRequestedVoiceReply','voiceTagNeedsLangFix','voiceReplyCanRepairCandidate','finalizeVoiceReply','chatResultText'])vm.runInContext(extract(src,n),ctx);return ctx;}
+function harness(src){const ctx=vm.createContext({VOICE_MAX_CHARS:300,ttsContentLang:c=>c.voice.lang,hasForeign:t=>/[a-z]/i.test(t),voiceLangName:()=> '英语',ttsRequestedCue:()=>'',ttsAutoCue:()=>'',splitBubbles:s=>String(s).split('\n'),wechatRoleDrift:s=>/AI assistant/.test(s),roleInterceptDiagnosticRemember:()=>{}});const names=['roleReplyEnglishOnly','roleReplyAssertLanguage','parseVoiceTagLine','explicitVoiceReplyRequest','voiceReplyTagValid','forceRequestedVoiceReply','voiceTagNeedsLangFix','voiceReplyCanRepairCandidate','finalizeVoiceReply','chatResultText'];
+ /* 整段英文旁白的本地丢弃目前只在网页核心，私人内置页尚未同步；同步后这里会恒为真。 */
+ if(/\nfunction roleReplyDropEnglishNarration\(/.test(src))names.splice(1,0,'roleReplyDropEnglishNarration');
+ for(const n of names)vm.runInContext(extract(src,n),ctx);return ctx;}
 const valid='[语音|Good night.|晚安。|语气:温柔]',c={voice:{lang:'en'}};
 for(const file of files){const src=fs.readFileSync(file,'utf8');
  test(file+' recognizes screenshot but does not mistake reports or negation for a request',()=>{const h=harness(src);for(const s of ['先生你发句语音','先生，你发句语音','哥哥给我来条语音','请用语音回复我'])assert(h.explicitVoiceReplyRequest(s),s);for(const s of ['先生你不要发语音','我刚才发的语音你听到了吗','他发过语音','我说先生你发过语音'])assert(!h.explicitVoiceReplyRequest(s),s);});

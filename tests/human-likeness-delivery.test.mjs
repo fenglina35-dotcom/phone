@@ -57,7 +57,8 @@ assert.match(giftFood, /g\.notified===false/, 'role-paid food reporting remains 
 assert.ok(giftFood.indexOf('scheduleReply(') < giftFood.indexOf('g.notified=true'), 'role-paid food is marked notified only after queuing');
 
 const spy = functionSource('checkSpyTime');
-assert.ok(spy.indexOf('await doSpyView') < spy.indexOf('_spyFired[c.id]=tag'), 'timed inspection is consumed only after it completes');
+assert.ok(spy.indexOf('await doSpyView') < spy.indexOf('_spyFired[c.id]=today'), 'timed inspection is consumed only after it completes');
+assert.ok(spy.indexOf('await doSpyView') < spy.indexOf('sp.timedDay=today'), '当天标记同样只在真正查完之后才落盘');
 
 const autoPost = functionSource('scanAutoPost');
 assert.doesNotMatch(autoPost, /pc\.m\+\+;pc\.last=.*doAutoMoment/, 'auto moments must not be counted before generation');

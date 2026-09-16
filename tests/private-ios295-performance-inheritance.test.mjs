@@ -57,8 +57,8 @@ test('private identifiers advance to v1248 and iOS 359 while public stays v1248'
   assert.match(bridge, /static let contractVersion = 38/);
   assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 359;/g) || []).length, 12);
   assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.359;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1248 · 共同生活作息卡顿修复'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1248'/);
+  assert.match(publicApp, /APP_VER='v1249 · 网页六项修复'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1249'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
