@@ -8,9 +8,9 @@ const pip=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/Ph
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
 test('v1184 web source keeps private 1.0.315 compatibility',()=>{
-  assert.match(app,/APP_VER='v1253 · 真人好友撤回入口与语音语言锁'/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 362;/);
-  assert.match(project,/MARKETING_VERSION = 1.0.362;/);
+  assert.match(app,/APP_VER='v1255 · 后台接力、语音与信件长度'/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 363;/);
+  assert.match(project,/MARKETING_VERSION = 1.0.363;/);
 });
 
 test('public music search needs no user login and reuses together-listen songs',()=>{

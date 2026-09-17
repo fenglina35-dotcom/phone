@@ -14,16 +14,16 @@ const backup=read(bundle+'private-cloud-backup.js');
 const privateApp=read(bundle+'app.js');
 const publicApp=read('app.js');
 
-test('private v1254 loads daily backup after the diagnostic overlay while public remains v1254',()=>{
+test('private v1256 loads daily backup after the diagnostic overlay while public remains v1256',()=>{
   for(const name of ['index.html','小手机.html']){
     const html=read(bundle+name);
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1254'/);
-    assert.ok(html.indexOf('private-cloud-backup.js?v=1254')>html.indexOf('private-runtime-diagnostics.js?v=336'));
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1256'/);
+    assert.ok(html.indexOf('private-cloud-backup.js?v=1256')>html.indexOf('private-runtime-diagnostics.js?v=336'));
   }
-  assert.match(privateApp,/APP_VER='v1254 · 私人同步网页十项修复'/);
-  assert.match(publicApp,/APP_VER='v1253 · 真人好友撤回入口与语音语言锁'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 362;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.362;/g)||[]).length,12);
+  assert.match(privateApp,/APP_VER='v1256 · 私人同步回复管线修复'/);
+  assert.match(publicApp,/APP_VER='v1255 · 后台接力、语音与信件长度'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 363;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.363;/g)||[]).length,12);
 });
 
 test('web backup sends bounded ordered chunks and records a day only after confirmed save',()=>{

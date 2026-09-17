@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1253 · 真人好友撤回入口与语音语言锁'/);
-  assert.match(app,/const url='sw\.js\?v=1253&r=v1253-web-two-fixes-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1253'/);
-  assert.match(html,/app\.js\?v=1253/);
-  assert.match(sw,/const BUILD='1253'/);
-  assert.match(sw,/north-shell-v1253-web-two-fixes-1/);
-  assert.match(index,/小手机\.html\?v=1253/);
-  assert.match(repair,/小手机\.html\?v=1253/);
+  assert.match(app,/APP_VER='v1255 · 后台接力、语音与信件长度'/);
+  assert.match(app,/const url='sw\.js\?v=1255&r=v1255-web-reply-pipeline-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1255'/);
+  assert.match(html,/app\.js\?v=1255/);
+  assert.match(sw,/const BUILD='1255'/);
+  assert.match(sw,/north-shell-v1255-web-reply-pipeline-1/);
+  assert.match(index,/小手机\.html\?v=1255/);
+  assert.match(repair,/小手机\.html\?v=1255/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{
   assert.match(privateBundle,/<string>1200<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.362;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 362;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.362 \(362\)'/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.363;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 363;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.363 \(363\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 
