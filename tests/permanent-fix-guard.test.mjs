@@ -244,6 +244,27 @@ const PERMANENT_FIXES = [
     marker: 'function modelOutputUnfiltered(){return true;}',
     least: 1,
   },
+  {
+    release: 'v1255',
+    name: '截断续写排在原文直通之前，回复长度设短也不会断在半句',
+    scope: 'both',
+    marker: "roleInterceptPurpose:'length-continuation'",
+    least: 1,
+  },
+  {
+    release: 'v1255',
+    name: '信件有自己的回复长度，不再写死 700／620',
+    scope: 'both',
+    marker: 'function letterReplyBudget(c)',
+    least: 1,
+  },
+  {
+    release: 'v1255',
+    name: '两边微信请求参数一致：私人版也走原文直通，不再各跑各的',
+    scope: 'both',
+    marker: 'complete:true,unfilteredOutput:_rawOutput',
+    least: 1,
+  },
 ];
 
 const sources = { web: read(WEB), private: read(PRIVATE) };
