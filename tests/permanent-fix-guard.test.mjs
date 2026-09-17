@@ -265,6 +265,34 @@ const PERMANENT_FIXES = [
     marker: 'complete:true,unfilteredOutput:_rawOutput',
     least: 1,
   },
+  {
+    release: 'v1257',
+    name: '指令解析器知道当前哪些 App 锁着，不会把陈述现状再解析成一次操作',
+    scope: 'both',
+    marker: 'companionControlLedgerForParser()',
+    least: 2,
+  },
+  {
+    release: 'v1257',
+    name: '威胁与未来时不再触发真锁真解：只认当下已成事实的说法',
+    scope: 'both',
+    marker: '条件或威胁',
+    least: 1,
+  },
+  {
+    release: 'v1257',
+    name: '外置 App 不重复下发同一个状态，角色不再反复锁已经锁着的',
+    scope: 'both',
+    marker: "opt.by==='role'&&companionExternalAlreadyInState(st,app,action)",
+    least: 1,
+  },
+  {
+    release: 'v1257',
+    name: '用户自己解锁时角色的话不再被收据式模板顶替',
+    scope: 'both',
+    marker: '这不是设备读数汇报',
+    least: 1,
+  },
 ];
 
 const sources = { web: read(WEB), private: read(PRIVATE) };

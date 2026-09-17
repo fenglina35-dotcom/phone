@@ -258,7 +258,9 @@ test('local manual unlock events stay visible without a rewrite or repeated mode
   const note = '本轮只允许提到这一次明确的手动解锁事件；用户本人亲自解锁了「抖音」';
   assert.equal(context.manualUnlockReplyNeedsRepair('c1', 'main', note, '她把抖音自己解锁了。', {}), 'perspective');
   assert.equal(context.manualUnlockReplyNeedsRepair('c1', 'main', note, '你解锁抖音了，我看到了。', {}), '');
-  assert.equal(context.manualUnlockReplyNeedsRepair('c1', 'main', note, '你解锁抖音了，我看到了。', { _manualUnlockReplyText: '你解锁抖音了，我看到了。' }), 'repeat');
+  /* 重复不再被模板顶替：兜底那句本身每次都一样，拿它去替一句重复的话反而更死板。
+     只有"压根没说出可显示的话"和"人称写错"才值得替换。 */
+  assert.equal(context.manualUnlockReplyNeedsRepair('c1', 'main', note, '你解锁抖音了，我看到了。', { _manualUnlockReplyText: '你解锁抖音了，我看到了。' }), '');
   assert.equal(context.manualUnlockReplyNeedsRepair('c1', 'main', '普通主动消息', '她刚下班。', {}), '');
   assert.equal(context.manualUnlockReplyNeedsRepair('c1', 'main', note, '[保持安静]', {}), 'silent');
   const contact = { id: 'c1' };
@@ -267,10 +269,12 @@ test('local manual unlock events stay visible without a rewrite or repeated mode
   assert.equal(contact._manualUnlockReplyApp, '抖音');
   const blocked = context.manualUnlockReplyGuard('c1', 'main', note, '她把抖音自己解锁了。', {});
   assert.equal(blocked.consumed, false);
-  assert.match(blocked.content, /你.*解锁.*抖音|抖音.*你.*解锁/);
+  assert.match(blocked.content, /抖音/);
+  assert.doesNotMatch(blocked.content, /我看到|收到了/, '兜底文案不能像收据');
   const repeated = context.manualUnlockReplyGuard('c1', 'main', note, '你解锁抖音了，我看到了。', { _manualUnlockReplyText: '你解锁抖音了，我看到了。' });
   assert.equal(repeated.consumed, false);
-  assert.notEqual(repeated.content, '你解锁抖音了，我看到了。');
+  assert.equal(repeated.content, '你解锁抖音了，我看到了。', '重复也要保留他自己的话');
+  assert.equal(repeated.fallback, false);
   const silent = context.manualUnlockReplyGuard('c1', 'main', note, '[保持安静]', {});
   assert.equal(silent.consumed, false);
   assert.ok(silent.content);
