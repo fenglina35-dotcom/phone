@@ -14,16 +14,16 @@ const backup=read(bundle+'private-cloud-backup.js');
 const privateApp=read(bundle+'app.js');
 const publicApp=read('app.js');
 
-test('private v1256 loads daily backup after the diagnostic overlay while public remains v1256',()=>{
+test('private v1258 loads daily backup after the diagnostic overlay while public remains v1258',()=>{
   for(const name of ['index.html','小手机.html']){
     const html=read(bundle+name);
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1256'/);
-    assert.ok(html.indexOf('private-cloud-backup.js?v=1256')>html.indexOf('private-runtime-diagnostics.js?v=336'));
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1258'/);
+    assert.ok(html.indexOf('private-cloud-backup.js?v=1258')>html.indexOf('private-runtime-diagnostics.js?v=336'));
   }
-  assert.match(privateApp,/APP_VER='v1256 · 私人同步回复管线修复'/);
-  assert.match(publicApp,/APP_VER='v1255 · 后台接力、语音与信件长度'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 363;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.363;/g)||[]).length,12);
+  assert.match(privateApp,/APP_VER='v1258 · 私人同步 App 管控修复'/);
+  assert.match(publicApp,/APP_VER='v1257 · App 管控交回角色'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 364;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.364;/g)||[]).length,12);
 });
 
 test('web backup sends bounded ordered chunks and records a day only after confirmed save',()=>{
