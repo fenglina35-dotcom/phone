@@ -68,7 +68,6 @@ for (const name of [
   "callCantoneseTranslationRequired",
   "callTranslationIssue",
   "callOutputIssue",
-  "callExplicitSelfHarmIntent",
   "callUnansweredMistake",
 ]) {
   vm.runInContext(functionSource(name), context);
@@ -103,8 +102,6 @@ assert.equal(context.callOutputIssue("North", { lang: "英" }, false, {}), "");
 assert.equal(context.callOutputIssue("I want you to stay right here with me.", { lang: "英" }, false, {}), "英语台词没有逐句普通话翻译");
 assert.equal(context.callOutputIssue("我好掛住你", { lang: "粤" }, false, {}), "粤语台词没有逐句普通话翻译");
 assert.equal(context.callOutputIssue("我好掛住你\n（我很想你。）", { lang: "粤" }, false, {}), "");
-assert.equal(context.callExplicitSelfHarmIntent("疼，轻一点"), false);
-assert.equal(context.callExplicitSelfHarmIntent("我真的想自杀"), true);
 assert.equal(context.callHasVideoAction("你好\n【凑近镜头笑】"), true);
 assert.equal(context.callHasVideoAction("你好\n[挂断]"), false);
 assert.equal(context.ensureVideoCallAction("你好", "laugh"), "你好\n【看着镜头轻轻笑了一下】");
@@ -116,7 +113,8 @@ assert.equal(context.callHasSpokenDialogue("【看着镜头】\nI'm here.\n（�
 assert.equal(context.callHasSpokenDialogue("【看着镜头】\n（我在。）", "英"), false);
 assert.equal(context.ensureVideoCallDialogue("【看着镜头】", "zh"), "【看着镜头】\n我在，刚才有点走神。");
 assert.equal(context.ensureVideoCallDialogue("【看着镜头】", "英"), "【看着镜头】\nI'm here. I got distracted for a moment.\n（我在，刚才有点走神。）");
-assert.match(source, /英文原文行不能夹中文称谓/);
+/* 「英文原文行不能夹中文称谓」原本只写在副模型重试的提示词里，随「通话防跳出角色」一起移除。
+   外语通话的语言要求由主提示词与 callTranslationIssue 继续保证，下面几条即是。 */
 assert.match(source, /中文翻译必须写“宝贝\/亲爱的”/);
 assert.match(source, /每一轮都必须至少说1句真正会被听见的台词，同时至少有1行动作/);
 assert.match(source, /语言纠正重试仍未提供逐句普通话翻译/);

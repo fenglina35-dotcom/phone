@@ -37,6 +37,7 @@ function functionSource(name) {
 
 const resultContext = vm.createContext({ chatAPI: async () => "unused", joinAIContinuation: (a, b) => a + b });
 vm.runInContext(`async ${functionSource("chatResultText")}`, resultContext);
+// rejectRefusal 本身仍是 chatResultText 支持的选项，只是通话不再使用它。
 await assert.rejects(
   () => resultContext.chatResultText([], { rejectRefusal: true }, { choices: [{ message: { content: "" }, finish_reason: "content_filter" }] }),
   (error) => error?.code === "model-refusal" && error?.modelRefusal === true,
@@ -46,32 +47,29 @@ assert.equal(
   "正常回复",
 );
 
-const auxContext = vm.createContext({
-  S: { settings: { chat: { base: "https://main.example", key: "main-key", model: "main" }, aux: { model: "aux" } } },
-  chatRequestRoute: () => null,
-});
-vm.runInContext(functionSource("callAuxConfigured"), auxContext);
-assert.equal(auxContext.callAuxConfigured(), true);
-auxContext.S.settings.chat.key = "";
-assert.equal(auxContext.callAuxConfigured(), false);
+// 「通话防跳出角色」按用户要求整个移除。它此前写作 !_rawOutput && callRoleGuardOn()，
+// 而模型原文输出升为全局默认后 _rawOutput 恒为真，这个开关早已恒为假、拨动无效，
+// 因此删除它是零行为变化的清理。随它一起走的还有本轮自动切副模型那条兜底路径。
+for (const gone of [
+  "callRoleGuard",
+  "callRoleGuardOn",
+  "_callGuardOn",
+  "_guardCallOutput",
+  "_switchCallToAux",
+  "_usedAuxFallback",
+  "callAuxConfigured",
+  "callRealSafetyError",
+  "callExplicitSelfHarmIntent",
+  "通话防跳出角色",
+]) assert.equal(app.includes(gone), false, `防跳出残留：${gone}`);
 
-const guardContext = vm.createContext({ S: { settings: {} } });
-vm.runInContext(functionSource("callRoleGuardOn"), guardContext);
-assert.equal(guardContext.callRoleGuardOn(), false);
-guardContext.S.settings.callRoleGuard = true;
-assert.equal(guardContext.callRoleGuardOn(), true);
+// 通话首次请求回到单一路径，拒绝时就地重答，不再切模型
+assert.match(app, /let content=await _callChat\(_initialCallMessages,_md\);/);
+assert.match(app, /\{for\(let _ra=0;_ra<2&&isRefusal\(content\);_ra\+\+\)/);
+// 外语通话缺翻译的纠正不再被防跳出挡住
+assert.match(app, /if\(!_rawOutput&&_langN&&content\)/);
 
-assert.match(app, /callRoleGuard:false/);
-assert.match(app, /rejectRefusal:_callGuardOn/);
-assert.match(app, /_auxAvailable=_callGuardOn&&!_md\.aux&&callAuxConfigured\(_md\.routeIndex\)/);
-assert.match(app, /const _switchCallToAux=async reason=>/);
-assert.match(app, /_activeCallMd=Object\.assign\(\{\},_md,\{aux:true,noRelay:true\}\)/);
-assert.match(app, /content=await _switchCallToAux\(e&&e\.modelRefusal\?'模型明确拒绝了本轮内容':'主模型请求失败'\)/);
-assert.match(app, /if\(!_callGuardOn\)content=await _callChat\(_initialCallMessages,_md\)/);
-assert.match(app, /if\(_callGuardOn\)content=await _guardCallOutput\(content\);else for\(let _ra=0;_ra<2&&isRefusal\(content\)/);
-assert.match(app, /if\(!_screenShareAutonomy&&!_screenShareAutonomyAnswer&&_callGuardOn\)/);
-assert.match(app, /callSystemNotice\('已切换副模型'\)/);
-assert.match(app, /callSystemNotice\('已切换主模型'\)/);
+// 通话系统提示条本身保留（角色手动切换主/副模型仍然可用）
 assert.match(app, /toast\(c\.model==='aux'\?'已切换副模型':'已切换主模型',3000\)/);
 assert.match(app, /toast\('副模型未配置',3000\)/);
 assert.match(app, /e\.callSystemText='回复未播放：'\+reason/);
@@ -83,12 +81,8 @@ assert.equal(blocked.callSystemText, '回复未播放：视频通话没有可播
 assert.match(app, /toast\(text,10000\)/);
 assert.match(app, /_callSystemNoticeTimer=setTimeout\([^\n]*,10000\)/);
 assert.doesNotMatch(app, /callSystemNotice\([^\n]*(?:callRouteModelName|主模型「|副模型「)/);
-assert.match(app, /_realSelfHarmTurn&&isCallRefusal\(candidate\)/);
-assert.match(app, /if\(_realSelfHarmTurn&&e&&e\.modelRefusal\)throw callRealSafetyError\(\)/);
 assert.match(app, /“停止”“停下”“不要继续”“不玩了”“退出扮演”/);
 assert.match(app, /who:systemText\?'system':'them'/);
-assert.match(app, /通话防跳出角色/);
-assert.match(app, /关闭：恢复旧通话模式，不自动切换副模型/);
 assert.match(html, /\.csline\.system\{/);
 
-console.log("call model fallback tests passed");
+console.log("call system notice tests passed");
