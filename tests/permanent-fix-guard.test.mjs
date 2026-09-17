@@ -209,6 +209,41 @@ const PERMANENT_FIXES = [
     marker: "onclick=\"pfMsgMenu('${m.id}'",
     least: 2,
   },
+  {
+    release: 'v1255',
+    name: '后台接力：本地已回过时同时取消服务器任务，不再每两分钟重调一次模型',
+    scope: 'both',
+    marker: "if(handoff)replyHandoffCancelRemote(handoff);else roleBackgroundCancel(c.id,['reply_handoff']);",
+    least: 1,
+  },
+  {
+    release: 'v1255',
+    name: '后台接力：消息送不进去时先停掉服务器那一侧，内容仍留着补送',
+    scope: 'both',
+    marker: 'roleServerPushHoldHandoff(c,handoffPeek(c,row))',
+    least: 1,
+  },
+  {
+    release: 'v1255',
+    name: '[保持安静] 是要执行的决定，推送路径不再当成一句话发出去',
+    scope: 'both',
+    marker: '(?:保持安静|不说话)\\s*[\\]】]\\s*(?=\\n|$)',
+    least: 1,
+  },
+  {
+    release: 'v1255',
+    name: '语音条只显示中文翻译，发声仍用外语原文',
+    scope: 'both',
+    marker: 'esc(m.trans||m.content)',
+    least: 1,
+  },
+  {
+    release: 'v1255',
+    name: '模型原文输出为全局默认，开关已移除',
+    scope: 'both',
+    marker: 'function modelOutputUnfiltered(){return true;}',
+    least: 1,
+  },
 ];
 
 const sources = { web: read(WEB), private: read(PRIVATE) };

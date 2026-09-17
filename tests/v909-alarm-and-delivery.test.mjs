@@ -27,7 +27,9 @@ test('role push acknowledgement follows durable local persistence', () => {
   const pull = functionSource('roleServerPushPull');
   assert.match(pull, /needsPersist&&\!\(await persistWechatMessagesNow\(\)\)/);
   assert.ok(pull.indexOf('await persistWechatMessagesNow()') < pull.indexOf("phone_role_push_ack"));
-  assert.match(pull, /roleServerPushDeliveryBlocked\(c\.id\)\)\{roleServerPushSyncSoon\(c\.id\);continue;\}/);
+  // 拦下不再等于放任：服务器上那条接力任务必须同时停掉，否则它每两分钟重跑一次、
+  // 每一次都重新调用模型。消息本体仍然不确认收件，等状态解除后照常补进聊天。
+  assert.match(pull, /roleServerPushDeliveryBlocked\(c\.id\)\)\{roleServerPushSyncSoon\(c\.id\);roleServerPushHoldHandoff\(c,handoffPeek\(c,row\)\);continue;\}/);
 });
 
 test('private iOS app synchronizes web alarms through AlarmKit while web fallback remains', () => {

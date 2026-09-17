@@ -14,7 +14,9 @@ test('v1253 keeps new lock and background scheduling code out of the website',()
  assert.equal(read('smart-home.js').replace(/\r\n/g,'\n'),old.replace(/\r\n/g,'\n'),'public smart-home implementation must be unchanged');
 });
 test('shared reply changes and game assets are retained by the private entry',()=>{
- for(const path of ['app.js',b+'app.js']){const s=read(path);for(const token of ['modelOutputUnfilteredToggle','lifeNoteReplyDraft','lifeNoteCommitReply','roleSocialIdentityPin','proactiveContinuationContext'])assert(s.includes(token),path+': '+token);}
+ for(const path of ['app.js',b+'app.js']){const s=read(path);for(const token of ['lifeNoteReplyDraft','lifeNoteCommitReply','roleSocialIdentityPin','proactiveContinuationContext'])assert(s.includes(token),path+': '+token);}
+ /* 模型原文输出已升为全局默认，开关按用户要求移除；两侧都不能再留下切换入口。 */
+ for(const path of ['app.js',b+'app.js'])assert(!read(path).includes('modelOutputUnfilteredToggle'),path+': 开关应已移除');
  for(const p of ['cohab-theater.js','pixel-home.js','pixel-home-policy.js','pixel-wardrobe-info.js'])assert.equal(read(p),read(b+p),p);
  assert.equal(read(b+'index.html'),read(b+'小手机.html'));
  assert.equal(read(b+'private-smart-lock.js'),read('native/private-small-phone/Resources/Web/private-smart-lock.js'));
