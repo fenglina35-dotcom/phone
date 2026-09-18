@@ -110,12 +110,8 @@
     return '为你推荐 · FOR YOU';
   }
 
-  window.renderDouyin=function(){
-    var body;
-    if(dyTab==='feed')body=dyFeedView();else if(dyTab==='search')body=dySearchView();else if(dyTab==='dm')body=dyDMList();else body=dyProfile();
-    var nav=dyTab==='feed'?'':'<div class="dynav"><span class="l" onclick="home()" style="cursor:pointer;font-size:26px">‹</span><span style="font-weight:800">'+(dyTab==='search'?'搜索发现':dyTab==='dm'?'消息':'个人主页')+'</span><span class="r" style="width:18px"></span></div>';
-    return nav+'<div class="dy-shell">'+body+'</div><div class="dytab">'+dytb('feed',svgIc('home',21),'首页')+dytb('search',svgIc('search',21),'发现')+'<div class="dycreate-wrap" onclick="dyCompose()"><div class="dycreate" aria-label="发布"></div></div>'+dytb('dm',svgIc('envelope',21),'消息')+dytb('me',svgIc('user',21),'我')+'</div>';
-  };
+  /* 拖音外壳（dy-shell、中间的发布键、“发现”标签）已整个搬回 app.js 的 renderDouyin，
+     这里再覆盖一遍会把编辑资料、主页访客、作品详情和底部评论区全部屏蔽掉。 */
 
   window.dyFeedView=function(){
     var list=_dyMode==='follow'?S.dy.feed.filter(function(v){return v.cid&&v.cid!=='me'&&S.dy.following.includes(v.cid);}):S.dy.feed;

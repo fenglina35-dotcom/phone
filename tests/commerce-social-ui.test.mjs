@@ -25,13 +25,19 @@ test('Meituan redesign preserves cart, checkout, gifting and orders', () => {
   }
 });
 
+/* 抖音外壳（dy-shell、中间的发布键、「发现」标签）已整个搬回 app.js 的 renderDouyin。
+   commerce-ui.js 再覆盖一遍，就会把编辑资料、主页访客、作品详情和底部评论区全部屏蔽掉，
+   和它当初覆盖 dyProfile 是同一个陷阱。 */
 test('Douyin redesign keeps feed actions and exposes a center publish control', () => {
-  assert.match(ui, /window\.renderDouyin=function/);
-  assert.match(ui, /dycreate-wrap/);
+  assert.doesNotMatch(ui, /window\.renderDouyin=function/, 'commerce-ui 不能再覆盖抖音外壳');
+  assert.match(app, /function renderDouyin\(\)\{dyInit\(\);/, '外壳实现在 app.js');
+  assert.match(app, /dycreate-wrap/, '中间的发布键随外壳一起搬过去');
+  assert.match(app, /dytb\('search',svgIc\('search',21\),'发现'\)/, '第二个标签叫「发现」');
   assert.match(ui, /window\.dyVideoCard=function/);
-  for (const handler of ['dyLike(', 'dyComments(', 'dyTapVideo(', 'dyFwd(', 'dyCompose()']) {
+  for (const handler of ['dyLike(', 'dyComments(', 'dyTapVideo(', 'dyFwd(']) {
     assert.ok(ui.includes(handler), `missing Douyin handler: ${handler}`);
   }
+  assert.ok(app.includes('dyCompose()'), 'missing Douyin handler: dyCompose()');
   assert.match(ui, /class="dy-home-back" onclick="dyBack\(\)" aria-label="返回上一页"/);
   assert.match(html, /\.dy-home-back\{/);
 });

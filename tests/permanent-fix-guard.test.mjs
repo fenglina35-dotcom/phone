@@ -321,6 +321,41 @@ const PERMANENT_FIXES = [
     marker: 'pruneSummaries(cc,null,{force:true})',
     least: 1,
   },
+  {
+    release: 'v1259',
+    name: '抖音「我」页不再被 commerce-ui 的外壳覆盖，四个新页面才看得见',
+    scope: 'both',
+    marker: 'function renderDouyin(){dyInit();',
+    least: 1,
+  },
+  {
+    release: 'v1259',
+    name: '抖音编辑资料页（封面／头像／资料完成度／逐项修改）',
+    scope: 'both',
+    marker: 'function dyEditView()',
+    least: 1,
+  },
+  {
+    release: 'v1259',
+    name: '抖音主页访客页（红点、回关、清空记录）',
+    scope: 'both',
+    marker: 'function dyVisitorsView()',
+    least: 1,
+  },
+  {
+    release: 'v1259',
+    name: '抖音作品详情页（漂浮弹幕、右侧操作栏、视频分析）',
+    scope: 'both',
+    marker: 'function dyWorkView()',
+    least: 1,
+  },
+  {
+    release: 'v1259',
+    name: '抖音评论区从屏幕下方弹出，可回复、可展开子回复',
+    scope: 'both',
+    marker: 'function dyCmSheet(v)',
+    least: 1,
+  },
 ];
 
 const sources = { web: read(WEB), private: read(PRIVATE) };
