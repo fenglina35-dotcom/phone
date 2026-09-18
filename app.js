@@ -5395,7 +5395,7 @@ function xSendDM(id){const d=S.x.dms.find(x=>x.id===id);const inp=$('#xdm_in');c
   d.msgs.push({from:'me',text:v,time:Date.now()});xlog(hm()+'回复了网友'+d.name+'的私信：「'+v.slice(0,18)+'」');save();render();xDMReply(d);}
 async function xDMReply(d){try{const c=d.cid?getC(d.cid):null;const sys=c?buildSystem(c):'你是X网友「'+d.name+'」，和'+S.me.name+'私信聊天，口语、简短、有个性。';
   const hist=d.msgs.slice(-10).map(m=>({role:m.from==='me'?'user':'assistant',content:m.text}));
-  const r=await chatAPI([{role:'system',content:sys},...hist],{max:200,aux:true});
+  const r=await dyAuxChat([{role:'system',content:sys},...hist],{max:200});
   d.msgs.push({from:'them',text:cleanReply(r),time:Date.now()});save();if(cur().p==='xdm')render();}catch(e){}}
 /* 我的主页 */
 function xProfile(){const p=S.x.profile;
@@ -5422,6 +5422,25 @@ function changeXCover(){pickFile('image/*',async f=>{S.x.profile.cover=await com
 /* ---------- 抖音 ---------- */
 const DY_GRADS=['linear-gradient(135deg,#fe2c55,#7c1f3a)','linear-gradient(135deg,#25f4ee,#0b6b67)','linear-gradient(135deg,#845ef7,#2b1a5e)','linear-gradient(135deg,#ff922b,#7a3d05)','linear-gradient(135deg,#20c997,#0a4d3a)','linear-gradient(135deg,#f06595,#5e1a3a)','linear-gradient(135deg,#4dabf7,#103a5e)','linear-gradient(135deg,#ffd43b,#7a6308)'];
 let dyTab='feed';let _dyMode='rec';let _dyNarr={};let _dyPaused={};let _dyFromWx=false;
+/* 抖音这一整片——刷新推荐、刷新私信、生成网友评论、私信回复、群聊接话、加群申请——
+   全部走副模型。副模型配错、模型名写错或额度用完时，微信主聊天和设置页的「测试主模型」
+   都一切正常，这里却全线失败；而且每一处都是 catch(e){} 静默吞掉，她看到的就是「点了没反应」。
+   这里统一两件事：副模型失败就自动回落主模型，都失败就把真实原因说出来。 */
+let _dyAuxNoticeAt=0;
+function dyModelReason(e){const t=String((e&&e.message)||e||'').replace(/\s+/g,' ').trim();return t.slice(0,90)||'原因不明';}
+function dyModelFail(what,e){toast(what+'失败：'+dyModelReason(e),9000);}
+function dyAuxNotice(e){const now=Date.now();if(now-_dyAuxNoticeAt<60000)return;_dyAuxNoticeAt=now;
+  toast('副模型没回应，这次改用主模型（'+dyModelReason(e)+'）',7000);}
+async function dyAuxChat(messages,opt){opt=Object.assign({},opt||{},{aux:true});
+  try{return await chatAPI(messages,opt);}
+  catch(e){/* 没配副模型的话刚才走的本来就是主模型，再试一遍没有意义 */
+    if(!wechatAuxConfigured(opt.routeIndex))throw e;
+    dyAuxNotice(e);return await chatAPI(messages,Object.assign({},opt,{aux:false}));}}
+async function dyAuxGen(messages,opt,parseFn,tries){tries=tries||2;let last=null;
+  for(let i=0;i<tries;i++){try{const r=await dyAuxChat(messages,opt);const out=parseFn(r);
+    if(out!=null&&(out.length===undefined||out.length>0))return out;
+    if(!last)last=new Error('模型有回应，但内容解析不出来');}catch(e){last=e;}}
+  throw last||new Error('模型没有返回内容');}
 function dyInit(){let changed=false;if(!S.dy||typeof S.dy!=='object'){S.dy={};changed=true;}const d=S.dy;['feed','liked','following','dms','history','mine','visitors','watched','updates','closeFriends','fans','acts','groups','applies'].forEach(k=>{if(!Array.isArray(d[k])){d[k]=[];changed=true;}});if(!d.users||typeof d.users!=='object'||Array.isArray(d.users)){d.users={};changed=true;}if(!d.profile||typeof d.profile!=='object'||Array.isArray(d.profile)){d.profile={};changed=true;}const defs={nick:'',avatar:null,bio:'',dyid:'',fans:0,likes:0,mutual:0,gender:'',age:'',birth:'',loc:'',level:'',cover:''};if(!d.profile.dyid)d.profile.dyid=String(Math.floor(5e10+Math.random()*4e10));Object.keys(defs).forEach(k=>{if(d.profile[k]===undefined){d.profile[k]=defs[k];changed=true;}});return changed;}
 function dyNick(){dyInit();return S.dy.profile.nick||S.me.name;}
 function dyAvatar(){dyInit();return S.dy.profile.avatar||S.me.avatar;}
@@ -5494,13 +5513,13 @@ function dyLike(id){const v=dyVid(id);if(!v)return;v.liked=!v.liked;
   const lv=S.dy.liked.find(x=>x.id===id);if(lv)lv.liked=v.liked;
   if(cur().p==='dy'&&dyTab==='feed')dyKeepScroll(save);else{save();render();}}
 async function dyGenFeed(topic,replace){aiLoad('正在加载视频…');
-  try{const arr=await aiGen([{role:'system',content:'你是抖音短视频内容生成器。生成5条不同的短视频信息，类型要杂（搞笑/萌宠/美食/风景/舞蹈/剧情/知识/情感都行）。只输出JSON数组，不要解释：[{"author":"博主昵称","handle":"@英文id","desc":"视频文案/标题(一句，可带#话题)","narration":"旁白：详细描写这条视频里到底是什么画面、发生了什么(2-4句，像在跟人讲这视频拍了啥)","music":"背景音乐名","emoji":"一个最能代表画面的emoji"}]'},{role:'user',content:topic?('围绕「'+topic+'」生成相关的短视频。'):'生成一批热门推荐短视频。'}],{max:1100,aux:true},parseArr);
+  try{const arr=await dyAuxGen([{role:'system',content:'你是抖音短视频内容生成器。生成5条不同的短视频信息，类型要杂（搞笑/萌宠/美食/风景/舞蹈/剧情/知识/情感都行）。只输出JSON数组，不要解释：[{"author":"博主昵称","handle":"@英文id","desc":"视频文案/标题(一句，可带#话题)","narration":"旁白：详细描写这条视频里到底是什么画面、发生了什么(2-4句，像在跟人讲这视频拍了啥)","music":"背景音乐名","emoji":"一个最能代表画面的emoji"}]'},{role:'user',content:topic?('围绕「'+topic+'」生成相关的短视频。'):'生成一批热门推荐短视频。'}],{max:1100},parseArr);
     if(!arr||!Array.isArray(arr)||!arr.length){toast('加载失败了，再点一次');return;}
     const vids=arr.map((o,i)=>({id:uid(),author:clean(o.author)||'用户'+(10+Math.floor(Math.random()*89)),handle:o.handle||'@user',avatar:'🎵',cid:null,desc:o.desc||'',narration:o.narration||'',music:o.music||'原创音乐',emoji:(o.emoji||'🎬').slice(0,2),grad:DY_GRADS[Math.floor(Math.random()*DY_GRADS.length)],lk:Math.floor(Math.random()*90000),comments:[],ts:Date.now()}));
     if(replace)S.dy.feed=vids;else S.dy.feed=S.dy.feed.concat(vids);
     if(S.dy.feed.length>40)S.dy.feed=S.dy.feed.slice(-40);
     save();if(cur().p==='dy')render();const f=$('#dyfeed');if(replace&&f)f.scrollTop=0;
-  }finally{aiDone();}}
+  }catch(e){dyModelFail('刷新推荐',e);}finally{aiDone();}}
 function dySearchView(){const h=S.dy.history||[];
   return `<div style="padding:12px 14px;background:#000"><div style="display:flex;gap:8px"><input id="dy_q" placeholder="搜你想看的视频…" style="flex:1;border:none;border-radius:18px;padding:9px 14px;background:#1c1c1e;color:#eee;outline:none" onkeydown="if(event.key==='Enter')dyDoSearch($('#dy_q').value)"><button class="dybtn" onclick="dyDoSearch($('#dy_q').value)">搜索</button></div></div>
     <div style="flex:1;overflow-y:auto;background:#000;padding:14px">
@@ -5525,17 +5544,17 @@ function doDyPost(){const desc=($('#dyc_desc').value||'').trim();const narr=($('
   S.dy.feed.unshift(v);S.dy.mine=S.dy.mine||[];S.dy.mine.unshift(v);save();closeModal();dyTab='feed';_dyMode='rec';render();const f=$('#dyfeed');if(f)f.scrollTop=0;toast('已发布 🎬');
   dyGenCommentsCore(v,{net:3,chars:2,mine:true}).then(()=>{if(cur().p==='dy')dyKeepScroll(()=>{});});}
 /* 评论 */
-async function dyCharReplyComment(v,c,t){try{const r=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:S.me.name+'在抖音视频"'+(v.desc||'')+'"下评论/@了你："'+t+'"，回ta一句（口语，别带方括号）。'}],{max:120,aux:true});
-  v.comments.push({name:c.remark||c.name,avatar:c.avatar,cid:c.id,text:cleanReply(r).slice(0,50),lk:0,d:dyToday()});save();dyCmRefresh(v);}catch(e){}}
+async function dyCharReplyComment(v,c,t){try{const r=await dyAuxChat([{role:'system',content:buildSystem(c)},{role:'user',content:S.me.name+'在抖音视频"'+(v.desc||'')+'"下评论/@了你："'+t+'"，回ta一句（口语，别带方括号）。'}],{max:120});
+  v.comments.push({name:c.remark||c.name,avatar:c.avatar,cid:c.id,text:cleanReply(r).slice(0,50),lk:0,d:dyToday()});save();dyCmRefresh(v);}catch(e){dyModelFail('角色回评论',e);}}
 function dyGenComments(id){const v=dyVid(id);if(!v)return;aiLoad('正在生成评论…');dyGenCommentsCore(v,{net:6,chars:2,mine:v.cid==='me'}).then(()=>dyCmRefresh(v)).finally(aiDone);}
 async function dyGenCommentsCore(v,opts){opts=opts||{};v.comments=v.comments||[];
-  try{const r=await chatAPI([{role:'system',content:'你是抖音评论区生成器。针对一条短视频生成'+(opts.net||5)+'条不同网友的简短评论（搞笑/共鸣/夸赞/玩梗/抬杠都行，符合抖音风格，'+(opts.mine?'这是个漂亮女生发的，可以有夸她好看、搭讪的':'')+'）。每行一条，格式：昵称:::评论内容。不要别的话。'},{role:'user',content:'视频文案："'+(v.desc||'')+'"，画面："'+(v.narration||'')+'"'}],{max:700,aux:true});
+  try{const r=await dyAuxChat([{role:'system',content:'你是抖音评论区生成器。针对一条短视频生成'+(opts.net||5)+'条不同网友的简短评论（搞笑/共鸣/夸赞/玩梗/抬杠都行，符合抖音风格，'+(opts.mine?'这是个漂亮女生发的，可以有夸她好看、搭讪的':'')+'）。每行一条，格式：昵称:::评论内容。不要别的话。'},{role:'user',content:'视频文案："'+(v.desc||'')+'"，画面："'+(v.narration||'')+'"'}],{max:700});
     (r||'').split('\n').map(l=>l.trim()).filter(Boolean).forEach(l=>{const p=l.replace(/^[\d.、\-\s]+/,'').split(/:::|：：：|\|\||：|:/);const nm=clean(p[0]);if(!nm||/^http/.test(nm))return;const tx=(p.slice(1).join('：')||p[0]||'').trim();if(tx)v.comments.push({name:nm,avatar:letterAv(nm),text:tx.slice(0,60),lk:Math.floor(Math.random()*30),d:dyToday(),loc:DY_LOCS[Math.floor(Math.random()*DY_LOCS.length)]});});save();dyCmRefresh(v);
-  }catch(e){}
+  }catch(e){dyModelFail('生成网友评论',e);}
   // 关注的角色（及恋人）也来评论
   let cs=S.contacts.filter(c=>!c.deleted&&!c.blocked&&S.dy.following.includes(c.id));
   if(opts.mine&&S.couple&&S.couple.cid){const lover=getC(S.couple.cid);if(lover&&!lover.blocked&&!cs.find(x=>x.id===lover.id))cs.unshift(lover);}
-  for(const c of cs.slice(0,opts.chars||2)){try{const rr=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'你在抖音刷到'+(opts.mine?S.me.name+'（你恋人）':'一个人')+'发的视频，文案："'+(v.desc||'')+'"，画面："'+(v.narration||'')+'"。以你的身份评论一句'+(opts.mine?'（可以宠溺/吃醋/占有欲，毕竟是你对象发的）':'')+'（口语，别带方括号）。'}],{max:120,aux:true});
+  for(const c of cs.slice(0,opts.chars||2)){try{const rr=await dyAuxChat([{role:'system',content:buildSystem(c)},{role:'user',content:'你在抖音刷到'+(opts.mine?S.me.name+'（你恋人）':'一个人')+'发的视频，文案："'+(v.desc||'')+'"，画面："'+(v.narration||'')+'"。以你的身份评论一句'+(opts.mine?'（可以宠溺/吃醋/占有欲，毕竟是你对象发的）':'')+'（口语，别带方括号）。'}],{max:120});
     v.comments.push({name:c.remark||c.name,avatar:c.avatar,cid:c.id,text:cleanReply(rr).slice(0,50),lk:0,d:dyToday()});save();dyCmRefresh(v);}catch(e){}}}
 /* 关注 */
 function dyFollowList(){const fl=S.dy.following.map(getC).filter(Boolean);
@@ -5547,22 +5566,22 @@ function dyAddFollow(){const cs=S.contacts.filter(c=>!c.deleted&&!S.dy.following
 function dyDoFollow(cid){if(!S.dy.following.includes(cid))S.dy.following.push(cid);save();closeModal();toast('已关注，去刷TA的视频吧');dyGenContactVideo(cid);}
 function dyUnfollow(cid){S.dy.following=S.dy.following.filter(x=>x!==cid);save();closeModal();render();}
 async function dyGenContactVideo(cid){const c=getC(cid);if(!c)return;if(!S.dy.following.includes(cid))S.dy.following.push(cid);closeModal();aiLoad('正在生成…');
-  try{const o=await aiGen([{role:'system',content:buildSystem(c)},{role:'user',content:'你在抖音发了一条短视频。只输出JSON：{"desc":"视频文案(一句，可带#话题)","narration":"旁白：这条视频里你拍了什么画面、在做什么(2-4句)","music":"配乐名","emoji":"代表画面的emoji"}'}],{max:400,aux:true},parseObj);
+  try{const o=await dyAuxGen([{role:'system',content:buildSystem(c)},{role:'user',content:'你在抖音发了一条短视频。只输出JSON：{"desc":"视频文案(一句，可带#话题)","narration":"旁白：这条视频里你拍了什么画面、在做什么(2-4句)","music":"配乐名","emoji":"代表画面的emoji"}'}],{max:400},parseObj);
     if(!o||!o.desc){toast('生成失败了，再点一次');return;}
     S.dy.feed.unshift({id:uid(),author:c.remark||c.name,handle:'@'+(c.name||'').replace(/\s/g,''),avatar:c.avatar,cid:cid,desc:o.desc||'',narration:o.narration||'',music:o.music||'原创音乐',emoji:(o.emoji||'🎬').slice(0,2),grad:DY_GRADS[Math.floor(Math.random()*DY_GRADS.length)],lk:Math.floor(Math.random()*5000),comments:[],ts:Date.now()});
     save();dyTab='feed';_dyMode='follow';if(cur().p==='dy')render();else go('dy');const f=$('#dyfeed');if(f)f.scrollTop=0;
-  }finally{aiDone();}}
+  }catch(e){dyModelFail('角色发作品',e);}finally{aiDone();}}
 /* 私信 */
 function dyDMPick(){const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){toast('先创建角色');return;}
   openModal(`<h3>私信谁</h3>${cs.map(c=>`<div class="section"><div class="it" onclick="openDyDM('${c.id}')">${esc(c.remark||c.name)}<span class="v">›</span></div></div>`).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
 function openDyDM(cid){const c=getC(cid);if(!c)return;closeModal();openDyDMName(c.remark||c.name,cid,c.avatar);}
 function openDyDMName(name,cid,avatar){let d=cid?S.dy.dms.find(x=>x.cid===cid):S.dy.dms.find(x=>!x.cid&&x.name===name);if(!d){d={id:uid(),cid:cid||null,name,avatar:avatar||'🎵',msgs:[]};S.dy.dms.unshift(d);save();}go('dydm',{id:d.id});}
 async function dyGenDMs(){aiLoad('正在刷新私信…');const recent=(S.dy.mine||[]).slice(0,3).map(v=>v.desc).filter(Boolean).join('；')||(S.dy.history||[]).slice(0,3).join('、');
-  try{const rows=await aiGen([{role:'system',content:'你生成抖音陌生网友私信。生成3条不同网友（看了'+S.me.name+'视频来的）发来的私信开场，要暧昧、会撩、夸她好看、想加微信想约她那种（目的是让她男朋友看到会吃醋），但别露骨下流。每行一条，格式：网友名:::私信内容。不要别的话。'},{role:'user',content:(recent?'她最近发的/搜的："'+recent+'"，可以结合。':'')+'生成撩人的私信开场。'}],{max:500,aux:true},(r)=>{const out=(r||'').split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const p=l.replace(/^[\d.、\-\s]+/,'').split(/:::|：：：|\|\||：|:/);const nm=clean(p[0]);if(!nm||/^http/.test(nm))return null;return {name:nm,text:(p.slice(1).join('：')||'在吗美女').trim().slice(0,80)};}).filter(Boolean);return out.length?out:null;});
+  try{const rows=await dyAuxGen([{role:'system',content:'你生成抖音陌生网友私信。生成3条不同网友（看了'+S.me.name+'视频来的）发来的私信开场，要暧昧、会撩、夸她好看、想加微信想约她那种（目的是让她男朋友看到会吃醋），但别露骨下流。每行一条，格式：网友名:::私信内容。不要别的话。'},{role:'user',content:(recent?'她最近发的/搜的："'+recent+'"，可以结合。':'')+'生成撩人的私信开场。'}],{max:500},(r)=>{const out=(r||'').split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const p=l.replace(/^[\d.、\-\s]+/,'').split(/:::|：：：|\|\||：|:/);const nm=clean(p[0]);if(!nm||/^http/.test(nm))return null;return {name:nm,text:(p.slice(1).join('：')||'在吗美女').trim().slice(0,80)};}).filter(Boolean);return out.length?out:null;});
     if(!rows){toast('刷新失败了，再试一次');return;}
     rows.forEach(x=>S.dy.dms.unshift({id:uid(),cid:null,name:x.name,avatar:letterAv(x.name),msgs:[{from:'them',text:x.text,time:Date.now()}]}));
     save();render();toast('有'+rows.length+'条新私信👀');
-  }finally{aiDone();}}
+  }catch(e){dyModelFail('刷新私信',e);}finally{aiDone();}}
 /* ===== 抖音群聊：建群、拉角色、公开群每天一位陌生人来申请、私密群只能邀请、管理员 ===== */
 let _dyGid='';let _dyGTab='聊天';let _dyGSel=[];let _dyGBusy={};
 function dyGroups(){dyInit();if(!Array.isArray(S.dy.groups))S.dy.groups=[];return S.dy.groups;}
@@ -5616,8 +5635,8 @@ async function dyApplyCheck(){const g=dyApplyDueGroup();if(!g||_dyGBusy.apply)re
     dyApplies().unshift(Object.assign({id:'da'+uid(),gid:g.id,ts:Date.now(),state:'pending'},person));save();
     if(cur().p==='dy')render();}catch(e){}finally{_dyGBusy.apply=false;}}
 async function dyApplyGenerate(g){
-  const r=await chatAPI([{role:'system',content:'你生成一个抖音用户，他想申请加入一个公开群聊。只输出四行，不要任何别的话：\n昵称：一个真实的抖音网名，可以带符号或 emoji，别太长\n人设：一句话 20-40 字，说清他是个什么样的人、说话什么风格，性格要有辨识度\n回答：群主设了入群问题，这是他的回答，一句话，符合他的人设\n关注：一个 1 到 400 之间的数字，表示他关注群主多少天了'},
-    {role:'user',content:'群名：「'+g.name+'」。群简介：'+(g.intro||'（没写）')+'。生成一个想进这个群的人。性格不要都是乖巧懂事的，可以有社恐、话痨、阴阳怪气、装熟、真诚、抬杠各种类型。'}],{max:220,aux:true});
+  const r=await dyAuxChat([{role:'system',content:'你生成一个抖音用户，他想申请加入一个公开群聊。只输出四行，不要任何别的话：\n昵称：一个真实的抖音网名，可以带符号或 emoji，别太长\n人设：一句话 20-40 字，说清他是个什么样的人、说话什么风格，性格要有辨识度\n回答：群主设了入群问题，这是他的回答，一句话，符合他的人设\n关注：一个 1 到 400 之间的数字，表示他关注群主多少天了'},
+    {role:'user',content:'群名：「'+g.name+'」。群简介：'+(g.intro||'（没写）')+'。生成一个想进这个群的人。性格不要都是乖巧懂事的，可以有社恐、话痨、阴阳怪气、装熟、真诚、抬杠各种类型。'}],{max:220});
   const txt=String(r||''),pick=k=>{const m=txt.match(new RegExp(k+'[:：]\\s*(.+)'));return m?m[1].trim():'';};
   const name=pick('昵称').slice(0,20),persona=pick('人设').slice(0,80),answer=pick('回答').slice(0,60),days=Math.max(1,Math.min(400,parseInt(pick('关注'),10)||1));
   if(!name)return null;
@@ -5696,11 +5715,11 @@ async function dyGroupReplyRun(gid,fromText){const g=dyGroup(gid);if(!g||g.aiOn=
   for(const m of [...atd,...rest].slice(0,want)){
     await sleep(700+Math.random()*900);
     const cur_=dyGroup(gid);if(!cur_)return;
-    try{const r=await chatAPI([{role:'system',content:dyGroupSpeakerPrompt(cur_,m)},{role:'user',content:'群里刚才说了这些：\n'+dyGroupTranscript(cur_,12)+'\n\n现在轮到你，说一句。'}],{max:160,aux:true});
+    try{const r=await dyAuxChat([{role:'system',content:dyGroupSpeakerPrompt(cur_,m)},{role:'user',content:'群里刚才说了这些：\n'+dyGroupTranscript(cur_,12)+'\n\n现在轮到你，说一句。'}],{max:160});
       const t=cleanReply(r).replace(/^[^：:]{1,12}[：:]\s*/,'').slice(0,120);if(!t)continue;
       dyGMsgs(cur_).push({id:uid(),k:m.k,text:t,time:Date.now()});
       if(!(_dySub==='group'&&_dyGid===gid))cur_.unread=(+cur_.unread||0)+1;
-      save();if(_dySub==='group'&&_dyGid===gid)render();}catch(e){}}}
+      save();if(_dySub==='group'&&_dyGid===gid)render();}catch(e){dyModelFail('群里的人接话',e);return;}}}
 /* ===== 群设置 ===== */
 function dyOpenGroupInfo(id){_dyGid=id;_dySub='ginfo';render();}
 function dyGRow(label,value,act,arrow){return `<div class="dyg-row"${act?` onclick="${act}"`:''}><span>${esc(label)}</span><b>${value||''}</b>${arrow===false?'':'<i>›</i>'}</div>`;}
@@ -5730,7 +5749,7 @@ function dyGroupInfoView(){const g=dyGroup(_dyGid);if(!g)return `<div class="dyv
           ${[['users','设置管理员',"dyGAdmins('"+g.id+"')"],['user','移除群成员',"dyGRemoveMember('"+g.id+"')"],['lock',g.open?'转为私密群':'转为公开群',"dyGOpenToggle('"+g.id+"')"],['file','加群管理',"dyOpenActs('群通知')"]].map(x=>`<div class="dyg-mg" onclick="${x[2]}">${svgIc(x[0],23,'#e6e6ea',1.8)}<span>${esc(x[1])}</span></div>`).join('')}
         </div></div>`:''}
       <div class="dyg-card">
-        ${dyGRow('群名称与头像',esc(g.name),`dyGRename('${g.id}')`)}
+        <div class="dyg-row"><span>群名称与头像</span><b onclick="dyGRename('${g.id}')">${esc(g.name)}</b><i class="dyg-avbtn" onclick="changeDyGroupAvatar('${g.id}')">${av(g.avatar||'\u{1F465}','sm')}</i><i onclick="dyGRename('${g.id}')">›</i></div>
         ${dyGRow('群简介',esc(g.intro||'还没写'),`dyGIntro('${g.id}')`)}
         ${dyGRow('群公告',esc(String(g.notice||'还没写').slice(0,18)),`dyGNotice('${g.id}')`)}
         ${dyGRow('我在本群的昵称',esc(g.myNick||S.me.name||''),`dyGMyNick('${g.id}')`)}
@@ -5792,6 +5811,7 @@ function dyGField(gid,key,title,ph,max){const g=dyGroup(gid);if(!g)return;
     <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="dyGFieldSave('${gid}','${key}',${max})">保存</button></div>`);}
 function dyGFieldSave(gid,key,max){const g=dyGroup(gid),el=$('#dyg_f');if(!g)return;
   g[key]=String(el?el.value:'').trim().slice(0,max||60);save();closeModal();render();toast('已保存');}
+function changeDyGroupAvatar(gid){const g=dyGroup(gid);if(!g)return;pickFile('image/*',async f=>{g.avatar=await compress(f,300,.8);save();render();toast('群头像已换 🎨');});}
 function dyGRename(gid){dyGField(gid,'name','群名称','给这个群起个名字',30);}
 function dyGIntro(gid){dyGField(gid,'intro','群简介','例如：禁男，禁二传，需16+',60);}
 function dyGNotice(gid){dyGField(gid,'notice','群公告','写点群里都要看到的话',200);}
@@ -5980,8 +6000,8 @@ async function dyDMReply(d){try{const hist=d.msgs.slice(-10).map(m=>({role:m.fro
   const c=d.cid?getC(d.cid):null;
   if(c)sys=buildSystem(c)+'\n\n# 场景\n现在在【抖音私信】里和'+S.me.name+'聊天，口语、简短自然，别带方括号动作。';
   else sys='你是抖音上的陌生网友/小博主「'+d.name+'」，因为看了'+S.me.name+'的视频来私信她，自来熟、会撩、想加她微信想约她，但不下流。口语、简短、有网感，别带方括号。';
-  const r=await chatAPI([{role:'system',content:sys},...hist],{max:200,aux:true});
-    d.msgs.push({from:'them',text:cleanReply(r),time:Date.now()});if(!(cur().p==='dydm'&&cur().id===d.id))d.unread=(+d.unread||0)+1;save();if(cur().p==='dydm')render();}catch(e){}}
+  const r=await dyAuxChat([{role:'system',content:sys},...hist],{max:200});
+    d.msgs.push({from:'them',text:cleanReply(r),time:Date.now()});if(!(cur().p==='dydm'&&cur().id===d.id))d.unread=(+d.unread||0)+1;save();if(cur().p==='dydm')render();}catch(e){dyModelFail('私信回复',e);}}
 /* 我的主页 */
 /* 抖音「我」页按真实抖音重做：封面＋头像行、四项数据、简介与标签、五个快捷入口、
    活动位、作品/日常/推荐/收藏/喜欢分栏、私密作品入口、九宫格。按钮以仿真为主，

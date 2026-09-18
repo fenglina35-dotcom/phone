@@ -367,3 +367,47 @@ test('every shell carries the styles for the group pages', () => {
     }
   }
 });
+
+/* 第五批（修）：抖音这一整片全部走副模型，而且每一处都是 catch(e){} 静默吞掉。
+   副模型配错时，微信主聊天和设置页的「测试主模型」都正常，这里却全线不动——
+   用户看到的就是「刷新私信、视频搜索、群聊、私信、评论全都失败，但模型测试没问题」。 */
+
+test('every Douyin model call falls back from the auxiliary model to the main one', () => {
+  const chat = source('dyAuxChat');
+  assert.match(chat, /aux:true/);
+  assert.match(chat, /if\(!wechatAuxConfigured\(opt\.routeIndex\)\)throw e/, '没配副模型时刚才走的就是主模型，不必再试');
+  assert.match(chat, /chatAPI\(messages,Object\.assign\(\{\},opt,\{aux:false\}\)\)/, '副模型失败要回落主模型');
+  assert.match(source('dyAuxGen'), /throw last/, '两次都不行要把原因抛出去，不能返回 null 了事');
+});
+
+test('no Douyin feature swallows a model failure in silence any more', () => {
+  for (const [what, marker] of [
+    ['刷新推荐', "dyModelFail('刷新推荐'"],
+    ['刷新私信', "dyModelFail('刷新私信'"],
+    ['生成网友评论', "dyModelFail('生成网友评论'"],
+    ['私信回复', "dyModelFail('私信回复'"],
+    ['角色回评论', "dyModelFail('角色回评论'"],
+    ['角色发作品', "dyModelFail('角色发作品'"],
+  ]) assert.ok(app.includes(marker), `「${what}」失败了还是不出声：缺少 ${marker}`);
+  assert.ok(app.includes("dyModelFail('群里的人接话'"), '群里没人说话时要讲出原因');
+  assert.match(source('dyModelFail'), /toast\(what\+'失败：'\+dyModelReason\(e\)/);
+});
+
+test('the Douyin section no longer calls the auxiliary model directly', () => {
+  const start = app.indexOf('function dyInit(){');
+  const end = app.indexOf('function dyGroupNoticeBody(');
+  assert.ok(start > 0 && end > start, '找不到抖音那一段');
+  const region = app.slice(start, end);
+  const leaks = [...region.matchAll(/aux:true/g)].map(m => region.slice(Math.max(0, m.index - 90), m.index + 10));
+  const offenders = leaks.filter(x => !x.includes('dyAuxChat') && !x.includes('function dyAuxChat'));
+  assert.deepEqual(offenders, [], '抖音里还有直接写 aux:true 的地方，它们不会回落主模型');
+});
+
+test('the group avatar can actually be changed', () => {
+  assert.match(source('changeDyGroupAvatar'), /pickFile\('image\/\*'/);
+  assert.match(source('changeDyGroupAvatar'), /g\.avatar=await compress/);
+  assert.match(source('dyGroupInfoView'), /changeDyGroupAvatar\(/, '群设置里要有换头像的入口');
+  for (const [name, css] of [['小手机.html', html], ['私人壳', shell], ['index.html', index]]) {
+    assert.ok(css.includes('.dyg-avbtn{'), `${name} 少了群头像按钮的样式`);
+  }
+});
