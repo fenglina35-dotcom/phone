@@ -503,6 +503,41 @@ const PERMANENT_FIXES = [
     marker: 'async function dyGroupReplyRun(gid,fromText)',
     least: 1,
   },
+  {
+    release: 'v1262',
+    name: '抖音全部走副模型，失败要回落主模型而不是静默',
+    scope: 'both',
+    marker: 'async function dyAuxChat(messages,opt)',
+    least: 1,
+  },
+  {
+    release: 'v1262',
+    name: '抖音作品是「正文＋旁白」的文字作品，不再是一个 emoji',
+    scope: 'both',
+    marker: 'function dyWorkCardHTML(v,opt)',
+    least: 1,
+  },
+  {
+    release: 'v1262',
+    name: '抖音朋友页，底部第二格从「发现」换成「朋友」',
+    scope: 'both',
+    marker: 'function dyFriendView()',
+    least: 1,
+  },
+  {
+    release: 'v1262',
+    name: '涨粉掉粉靠发作品挣，一天只结算一次',
+    scope: 'both',
+    marker: 'function dyGrowthTick()',
+    least: 1,
+  },
+  {
+    release: 'v1262',
+    name: '她评论之后一定有角色回她',
+    scope: 'both',
+    marker: 'function dyCommentResponder(v)',
+    least: 1,
+  },
 ];
 
 const sources = { web: read(WEB), private: read(PRIVATE) };

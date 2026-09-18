@@ -83,9 +83,13 @@ test('restored v950 shell keeps automatic Apple safe-area offsets disabled',()=>
   assert.match(html,/\.north-ios-home-safe \.dy-topbar\{[^}]*var\(--north-ios-home-safe-top\)/,'the runtime Douyin override must receive the safe-area rule');
   assert.match(html,/\.north-ios-home-safe \.dynav\{[^}]*var\(--north-ios-home-safe-top\)/);
   assert.match(app,/class="dynav dy-safe-nav"/);
-  assert.match(app,/class="dy-feed-back"/);
+  /* 首页信息流重做之后，顶栏是 .dyfd-top（朋友页是 .dyfr-top），两者都挂 dy-safe-nav2 拿刘海偏移。 */
+  assert.match(app,/class="dyfd-top dy-safe-nav2"/);
+  assert.match(app,/class="dyfr-top dy-safe-nav2"/);
+  assert.match(html,/html\.north-ios-home-safe \.dy-safe-nav2\{[^}]*var\(--north-ios-home-safe-top\)/);
+  assert.doesNotMatch(html,/\.dyfd-top\{[^}]*[^n-]height:56px/,'顶栏高度不能写死，否则刘海屏的 padding 会把内容挤扁');
   assert.match(html,/\.north-ios-home-safe \.dy-safe-nav\{[^}]*var\(--north-ios-home-safe-top\)/);
-  assert.match(html,/\.north-ios-home-safe \.dy-feed-back\{[^}]*var\(--north-ios-home-safe-top\)/);
+
   assert.match(app,/class="travel-app"/);
   assert.match(app,/class="travel-head"/);
   assert.match(html,/\.north-ios-home-safe \.travel-head\{[^}]*var\(--north-ios-home-safe-top\)/);

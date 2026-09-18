@@ -1308,6 +1308,39 @@ body{background:#000;padding:0;}
 .dyg-row>span{flex:0 0 auto;color:#f2f2f4;}
 .dyg-row>b{flex:1;min-width:0;text-align:right;font-weight:400;font-size:15px;color:#82828a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .dyg-row>i{flex:0 0 auto;font-style:normal;color:#5e5e66;font-size:18px;}
+/* ===== 抖音 · 文字作品 ===== */
+.dytx{padding:0 6px;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.55);}
+.dytx p{margin:0 0 15px;font-size:19px;line-height:1.72;word-break:break-word;}
+.dytx p:last-child{margin-bottom:0;}
+.dytx p b{color:#9ec6ff;font-weight:400;}
+.dytx.full p{font-size:17px;line-height:1.8;}
+.dytx-more{display:block;margin:18px auto 0;background:transparent;border:1px solid rgba(255,255,255,.5);border-radius:999px;padding:10px 26px;color:#fff;font-size:15px;}
+.dytx-empty{font-size:80px;text-align:center;filter:drop-shadow(0 10px 20px rgba(0,0,0,.6));}
+.dytx-thumb{position:absolute;inset:0;display:flex;align-items:center;padding:12px 10px;font-size:13px;line-height:1.55;color:#fff;text-shadow:0 1px 5px rgba(0,0,0,.7);overflow:hidden;}
+/* ===== 抖音 · 首页信息流 ===== */
+.dyfd-top{position:absolute;top:0;left:0;right:0;min-height:56px;box-sizing:border-box;z-index:8;display:flex;align-items:center;gap:12px;padding:0 14px;color:#fff;background:linear-gradient(to bottom,rgba(0,0,0,.45),transparent);}
+.dyfd-top i{font-style:normal;font-size:24px;line-height:1;display:flex;align-items:center;cursor:pointer;}
+.dyfd-tabs{flex:1;display:flex;justify-content:center;gap:26px;}
+.dyfd-tabs span{position:relative;font-size:17px;color:rgba(255,255,255,.62);padding:4px 2px;cursor:pointer;}
+.dyfd-tabs span.on{color:#fff;font-weight:700;}
+.dyfd-tabs span.on:after{content:'';position:absolute;left:50%;transform:translateX(-50%);bottom:-4px;width:18px;height:3px;border-radius:2px;background:#fff;}
+.dyfd-empty{position:relative;flex:1;display:flex;align-items:center;justify-content:center;text-align:center;line-height:2;padding:20px;background:#000;color:#8b8b93;}
+.dyfd-card{position:absolute;left:16px;right:78px;top:24%;bottom:32%;z-index:2;display:flex;flex-direction:column;justify-content:center;overflow:hidden;}
+.dyrail-plus{position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);width:18px;height:18px;border-radius:50%;background:#f5243d;color:#fff;font-size:13px;line-height:18px;text-align:center;}
+.dyfd-mutual{display:inline-block;margin-bottom:8px;border:1px solid rgba(255,255,255,.55);border-radius:4px;padding:2px 7px;font-size:11px;color:#fff;}
+.dyfd-who{display:flex;align-items:center;gap:7px;font-weight:800;font-size:16px;margin-bottom:7px;flex-wrap:wrap;cursor:pointer;}
+.dyfd-kind{font-style:normal;font-size:11px;font-weight:500;background:rgba(255,255,255,.2);border-radius:4px;padding:2px 6px;}
+.dyfd-ago{font-weight:400;font-size:12.5px;color:rgba(255,255,255,.7);}
+.dyfd-desc{font-size:14px;line-height:1.6;}
+.dyfd-desc b{color:#9ec6ff;font-weight:400;}
+/* ===== 抖音 · 朋友页 ===== */
+.dyfr-top{position:absolute;top:0;left:0;right:0;min-height:60px;box-sizing:border-box;z-index:8;display:flex;align-items:center;gap:12px;padding:0 14px;color:#fff;background:linear-gradient(to bottom,rgba(0,0,0,.45),transparent);}
+.dyfr-me{position:relative;flex:0 0 auto;}
+.dyfr-me .avatar{width:38px!important;height:38px!important;flex:0 0 38px!important;border-radius:50%!important;font-size:18px;}
+.dyfr-me b{position:absolute;right:-2px;bottom:-2px;width:17px;height:17px;border-radius:50%;background:#2dc26b;color:#fff;font-size:12px;line-height:16px;text-align:center;border:2px solid #000;font-weight:400;}
+.dyfr-title{flex:1;text-align:center;font-size:16px;background:rgba(255,255,255,.14);border-radius:999px;padding:8px 0;max-width:150px;margin:0 auto;}
+.dyfr-top i{position:relative;font-style:normal;display:flex;align-items:center;cursor:pointer;}
+.dyfr-badge{position:absolute;right:-7px;top:-5px;min-width:17px;height:17px;border-radius:9px;background:#f5243d;color:#fff;font-size:10px;font-weight:600;line-height:17px;text-align:center;padding:0 4px;}
 .dyg-avbtn{flex:0 0 auto;display:flex;align-items:center;}
 .dyg-avbtn .avatar{width:34px!important;height:34px!important;flex:0 0 34px!important;border-radius:50%!important;font-size:16px;}
 .dyg-sw{flex:0 0 auto;margin-left:auto;width:48px;height:28px;border-radius:14px;background:#3a3a41;position:relative;transition:.18s;}

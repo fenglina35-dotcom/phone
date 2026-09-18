@@ -113,30 +113,11 @@
   /* 拖音外壳（dy-shell、中间的发布键、“发现”标签）已整个搬回 app.js 的 renderDouyin，
      这里再覆盖一遍会把编辑资料、主页访客、作品详情和底部评论区全部屏蔽掉。 */
 
-  window.dyFeedView=function(){
-    var list=_dyMode==='follow'?S.dy.feed.filter(function(v){return v.cid&&v.cid!=='me'&&S.dy.following.includes(v.cid);}):S.dy.feed;
-    var top='<div class="dy-topbar"><span class="dy-live" onclick="toast(\'直播频道准备中\')"><b>●</b> LIVE</span><div class="dytopt"><span class="'+(_dyMode==='follow'?'on':'')+'" onclick="_dyMode=\'follow\';render()">关注</span><span class="'+(_dyMode==='rec'?'on':'')+'" onclick="_dyMode=\'rec\';render()">推荐</span></div><span class="dy-search-top" onclick="dyTab=\'search\';render()">'+svgIc('search',22,'#fff')+'</span></div>';
-    if(!list.length)return '<div style="position:relative;flex:1;background:#050507;color:#888;display:flex;align-items:center;justify-content:center;text-align:center;line-height:2;padding:20px">'+top+(_dyMode==='follow'?'关注的人还没发视频～<br>去「我的关注」添加角色的抖音<br><br><button class="dybtn out" onclick="dyFollowList()">我的关注</button>':'还没有视频<br><button class="dybtn" onclick="dyGenFeed(\'\',true)">刷新推荐</button>')+'</div>';
-    var more=_dyMode==='rec'?'<div class="dyvideo dy-refresh-card"><div><div class="ring">↻</div><button class="dybtn" onclick="dyGenFeed(\'\',false)">换一批推荐</button></div></div>':'';
-    return '<div class="dyfeed" id="dyfeed">'+top+list.map(window.dyVideoCard).join('')+more+'</div>';
-  };
-
-  window.dyVideoCard=function(v,i){
-    var liked=!!v.liked,lc=(v.lk||0)+(liked?1:0),grad=v.grad||DY_GRADS[i%DY_GRADS.length],paused=_dyPaused[v.id];
-    var isChar=v.cid&&v.cid!=='me',mine=v.cid==='me',fol=isChar&&S.dy.following.includes(v.cid);
-    return '<article class="dyvideo'+(paused?' paused':'')+'" data-dy-video-id="'+v.id+'"><div class="dybg" style="background-image:'+grad+'"></div><div class="dy-scene"><div class="dy-orbit"></div><div class="dyemoji">'+(v.emoji||'🎬')+'</div><div class="dy-scene-tag">'+dySceneTag(v)+'</div><div class="dy-playnote">轻触画面 · 查看视频内容</div></div><div class="dyplay">▶</div>'+
-      '<div onclick="dyTapVideo(\''+v.id+'\')" style="position:absolute;inset:0;z-index:2"></div><div class="dyrail"><div class="ra" onclick="dyVideoAuthor(\''+v.id+'\')" style="margin-bottom:5px"><div style="position:relative">'+av(v.avatar||'🎵','sm')+(isChar&&!fol?'<span style="position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);width:18px;height:18px;border-radius:50%;background:#fe2c55;color:#fff;font-size:13px;line-height:18px;text-align:center">+</span>':'')+'</div></div>'+
-      '<div class="ra" onclick="dyLike(\''+v.id+'\')"><span class="ic">'+svgIc('heart',27,liked?'#fe2c55':'#fff')+'</span>'+lc+'</div><div class="ra" onclick="dyComments(\''+v.id+'\')"><span class="ic">'+svgIc('chat',27,'#fff')+'</span>'+((v.comments||[]).length)+'</div><div class="ra" onclick="dyTapVideo(\''+v.id+'\')"><span class="ic">'+svgIc('book',26,'#fff')+'</span>内容</div><div class="ra" onclick="dyFwd(\''+v.id+'\')"><span class="ic">'+svgIc('forward',26,'#fff')+'</span>分享</div><div class="ra"><div class="dydisc">'+(v.emoji||'🎵')+'</div></div></div>'+
-      '<div class="dymeta"><div style="font-weight:800;font-size:16px;margin-bottom:6px;cursor:pointer" onclick="dyAuthorMenu(\''+v.id+'\')">@'+esc(mine?dyNick():(v.author||'用户'))+(isChar?'<span style="font-size:9px;background:#fe2c55;border-radius:5px;padding:2px 5px;margin-left:6px">角色</span>':mine?'<span style="font-size:9px;background:#555;border-radius:5px;padding:2px 5px;margin-left:6px">我</span>':'')+'</div><div style="font-size:13px;line-height:1.5">'+esc(v.desc||'')+'</div><div style="font-size:11px;color:#eee;margin-top:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">♫ '+esc(v.music||'原创音乐')+'　·　正在播放</div></div><div class="dy-progress"><i></i></div>'+
-      '<div class="dynarr" id="narr_'+v.id+'" onclick="dyTapVideo(\''+v.id+'\')" style="display:'+(_dyNarr[v.id]?'block':'none')+'"><div style="font-weight:800;color:#fff;margin-bottom:7px">视频内容</div>'+esc(v.narration||v.desc||'（这条还没有内容描写）')+'<div style="text-align:center;color:#777;margin-top:10px;font-size:11px">轻触收起</div></div></article>';
-  };
-
+  /* 首页信息流和作品卡片也搬回 app.js 了：作品从一个 emoji 改成了「正文＋旁白」的文字作品，
+     顶上只留「关注 / 推荐」，底部第二格从「发现」换成「朋友」。这里再覆盖一遍就全看不见了，
+     和它当初覆盖 dyProfile、renderDouyin 是同一个陷阱。 */
   /* 抖音「我」页已按真实抖音在 app.js 的 dyProfile 里重做；这里原本的覆盖会把它整个盖掉，
      和 private-reply-intercept.js 一样属于「改了核心却看不到效果」的陷阱，故移除。
      dyProfileSwitch 保留为兼容入口，旧的 onclick 不会报错。 */
   window.dyProfileSwitch=function(pane){if(typeof dyMeSetTab==='function')dyMeSetTab(pane==='liked'?'喜欢':'作品');};
-  var dyFeedViewWithHomeButton=window.dyFeedView;
-  window.dyFeedView=function(){
-    return dyFeedViewWithHomeButton.apply(this,arguments).replace('<div class="dy-topbar">','<div class="dy-topbar"><button class="dy-home-back" onclick="dyBack()" aria-label="返回上一页"><svg viewBox="0 0 24 24" width="22" height="22"><path d="m15 5-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>');
-  };
 })();

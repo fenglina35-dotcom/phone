@@ -411,3 +411,65 @@ test('the group avatar can actually be changed', () => {
     assert.ok(css.includes('.dyg-avbtn{'), `${name} 少了群头像按钮的样式`);
   }
 });
+
+/* 第六批：作品从一个 emoji 变成「正文＋旁白」的文字作品；首页顶上只留关注／推荐；
+   新增朋友页；评论条数随机、角色一定回她；涨粉掉粉靠发作品挣。 */
+
+test('a work is text now, with body paragraphs and a read-more button', () => {
+  const ctx = vm.createContext({});
+  vm.runInContext(['dyWorkBody', 'dyWorkParas', 'dyWorkLong'].map(source).join('\n') + ';globalThis.B=dyWorkBody;globalThis.P=dyWorkParas;globalThis.L=dyWorkLong;', ctx);
+  assert.deepEqual([...ctx.P({ body: '第一段\n\n第二段' })], ['第一段', '第二段']);
+  assert.equal(ctx.B({ narration: '旁白：夜里的江边' }), '夜里的江边', '没写正文就退回旁白，并去掉「旁白：」');
+  assert.equal(ctx.L({ body: '短' }), false);
+  assert.equal(ctx.L({ body: '字'.repeat(200) }), true);
+  assert.match(source('dyWorkCardHTML'), /阅读文章/);
+  assert.match(source('dyWorkThumbHTML'), /dytx-thumb/, '网格缩略图显示第一句话，不再是 emoji');
+  assert.match(app, /body:o\.body\|\|''/, '模型生成的作品也要带正文');
+  assert.match(app, /"body":"正文：/, '给模型的格式里要有正文这一项');
+});
+
+test('the feed keeps only 关注 and 推荐 on top, and 朋友 replaces 发现 below', () => {
+  const feed = source('dyFeedView');
+  assert.match(feed, /关注<\/span>/);
+  assert.match(feed, /推荐<\/span>/);
+  assert.doesNotMatch(feed, /LIVE|团购|商城|直播/, '顶上那一排杂的不要');
+  assert.match(feed, /onclick="dyBack\(\)"/, '返回键还在');
+  assert.match(app, /dytb\('friend',svgIc\('users',21\),'朋友'\)/);
+  assert.match(source('dyFriendView'), /限时日常/);
+  assert.match(source('dyFriendList'), /fol\.includes\(v\.cid\)/, '朋友页只看关注的人和自己');
+});
+
+test('a character always answers her comment, even when she names nobody', () => {
+  const ctx = vm.createContext({ S: { couple: {}, dy: { following: [] }, contacts: [] }, getC: id => ctx.S.contacts.find(c => c.id === id) || null, Math });
+  vm.runInContext(`${source('dyCommentResponder')};globalThis.f=dyCommentResponder;`, ctx);
+  assert.deepEqual([...ctx.f({})], [], '一个角色都没有就没人回');
+  ctx.S.contacts = [{ id: 'a', name: '甲' }, { id: 'b', name: '乙' }];
+  assert.equal(ctx.f({}).length, 1, '有角色就一定有人回');
+  ctx.S.couple = { cid: 'b' };
+  assert.equal(ctx.f({})[0].id, 'b', '有恋人就恋人回');
+  assert.equal(ctx.f({ cid: 'a' })[0].id, 'a', '在别人作品下评论，是作品主人回');
+  assert.match(source('dyCmSend'), /who\.forEach\(c=>dyCharReplyComment/);
+  assert.match(app, /net:3\+Math\.floor\(Math\.random\(\)\*6\)/, '网友评论条数随机');
+});
+
+test('fans are earned by posting and bleed away when she stops', () => {
+  const ctx = vm.createContext({ Math, Date, String });
+  vm.runInContext(['dyWorkBody', 'dyWorkReach'].map(source).join('\n') + ';globalThis.R=dyWorkReach;', ctx);
+  const small = ctx.R({ body: '短', desc: '' }), big = ctx.R({ body: '字'.repeat(400), desc: '很长的文案 #话题 #另一个' });
+  assert.ok(big > small * 3, '写得长、带话题的作品传得更远，努力要有回报');
+  const tick = source('dyGrowthTick');
+  assert.match(tick, /d\.growthDay===today\)return 0/, '一天只结算一次');
+  assert.match(tick, /Date\.now\(\)-\(\+v\.ts\|\|0\)<3\*864e5/, '看最近三天发过没有');
+  assert.match(tick, /-Math\.max\(1,Math\.round\(\(\+p\.fans\|\|0\)\*0\.012\)\)/, '不发就慢慢掉');
+  assert.match(source('dyWorkSettle'), /if\(v\.settled\)return 0/, '同一条作品只结算一次');
+  assert.match(app, /dyGrowthNotice\(\);\}/, '打开抖音时结算');
+  assert.match(app, /涨了 '\+gained\+' 个粉丝/, '发布的时候就看得到涨了多少');
+});
+
+test('every shell carries the styles for the text feed', () => {
+  for (const [name, css] of [['小手机.html', html], ['私人壳', shell], ['index.html', index]]) {
+    for (const cls of ['.dytx p{', '.dyfd-tabs{', '.dyfr-top{', '.dytx-thumb{']) {
+      assert.ok(css.includes(cls), `${name} 少了 ${cls}`);
+    }
+  }
+});

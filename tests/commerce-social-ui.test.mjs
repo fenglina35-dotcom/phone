@@ -32,14 +32,13 @@ test('Douyin redesign keeps feed actions and exposes a center publish control', 
   assert.doesNotMatch(ui, /window\.renderDouyin=function/, 'commerce-ui 不能再覆盖抖音外壳');
   assert.match(app, /function renderDouyin\(\)\{dyInit\(\);/, '外壳实现在 app.js');
   assert.match(app, /dycreate-wrap/, '中间的发布键随外壳一起搬过去');
-  assert.match(app, /dytb\('search',svgIc\('search',21\),'发现'\)/, '第二个标签叫「发现」');
-  assert.match(ui, /window\.dyVideoCard=function/);
-  for (const handler of ['dyLike(', 'dyComments(', 'dyTapVideo(', 'dyFwd(']) {
-    assert.ok(ui.includes(handler), `missing Douyin handler: ${handler}`);
+  assert.match(app, /dytb\('friend',svgIc\('users',21\),'朋友'\)/, '第二个标签是「朋友」');
+  assert.doesNotMatch(ui, /window\.dyFeedView=function/, 'commerce-ui 不能再覆盖首页信息流');
+  assert.doesNotMatch(ui, /window\.dyVideoCard=function/, '作品卡片也搬回 app.js 了');
+  for (const handler of ['dyLike(', 'dyComments(', 'dyTapVideo(', 'dyFwd(', 'dyCompose()']) {
+    assert.ok(app.includes(handler), `missing Douyin handler: ${handler}`);
   }
-  assert.ok(app.includes('dyCompose()'), 'missing Douyin handler: dyCompose()');
-  assert.match(ui, /class="dy-home-back" onclick="dyBack\(\)" aria-label="返回上一页"/);
-  assert.match(html, /\.dy-home-back\{/);
+  assert.match(app, /onclick="dyBack\(\)"/, '首页要有返回键');
 });
 
 /* 抖音「我」页已按真实抖音在 app.js 的 dyProfile 里重做。commerce-ui.js 原先用

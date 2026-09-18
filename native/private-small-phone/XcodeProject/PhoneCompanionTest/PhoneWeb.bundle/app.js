@@ -5429,7 +5429,7 @@ async function dyAuxGen(messages,opt,parseFn,tries){tries=tries||2;let last=null
 function dyInit(){let changed=false;if(!S.dy||typeof S.dy!=='object'){S.dy={};changed=true;}const d=S.dy;['feed','liked','following','dms','history','mine','visitors','watched','updates','closeFriends','fans','acts','groups','applies'].forEach(k=>{if(!Array.isArray(d[k])){d[k]=[];changed=true;}});if(!d.users||typeof d.users!=='object'||Array.isArray(d.users)){d.users={};changed=true;}if(!d.profile||typeof d.profile!=='object'||Array.isArray(d.profile)){d.profile={};changed=true;}const defs={nick:'',avatar:null,bio:'',dyid:'',fans:0,likes:0,mutual:0,gender:'',age:'',birth:'',loc:'',level:'',cover:''};if(!d.profile.dyid)d.profile.dyid=String(Math.floor(5e10+Math.random()*4e10));Object.keys(defs).forEach(k=>{if(d.profile[k]===undefined){d.profile[k]=defs[k];changed=true;}});return changed;}
 function dyNick(){dyInit();return S.dy.profile.nick||S.me.name;}
 function dyAvatar(){dyInit();return S.dy.profile.avatar||S.me.avatar;}
-function openDouyin(){_dyFromWx=false;if(dyInit())save(0);dyTab='feed';_dySub='';_dyWorkId='';_dyCmOpen=false;go('dy');if(!S.dy.feed.length)dyGenFeed('',true);dyApplyCheck();}
+function openDouyin(){_dyFromWx=false;if(dyInit())save(0);dyTab='feed';_dySub='';_dyWorkId='';_dyCmOpen=false;go('dy');if(!S.dy.feed.length)dyGenFeed('',true);dyApplyCheck();dyGrowthNotice();}
 function dyBack(){if(_dyCmOpen)return dyCmClose();if(_dySub)return dySubClose();if(_dyFromWx||cur().from==='wechat'){_dyFromWx=false;back();}else home();}
 function dyVid(id){return S.dy.feed.find(v=>v.id===id)||S.dy.liked.find(v=>v.id===id)||(S.dy.mine||[]).find(v=>v.id===id);}
 function dyModalOpen(){const m=$('#modal');return m&&m.classList.contains('show');}
@@ -5447,37 +5447,81 @@ function renderDouyin(){dyInit();
   if(_dySub==='group')return dyGroupView();
   if(_dySub==='ginfo')return dyGroupInfoView();
   let body;
-  if(dyTab==='feed')body=dyFeedView();else if(dyTab==='search')body=dySearchView();else if(dyTab==='dm')body=dyDMList();else body=dyProfile();
-  const nav=(dyTab==='feed'||dyTab==='me'||dyTab==='dm')?'':`<div class="dynav dy-safe-nav"><span class="l" onclick="dyBack()" style="cursor:pointer;font-size:26px">‹</span><span style="font-weight:800">搜索发现</span><span class="r" style="width:18px"></span></div>`;
-  return `${nav}<div class="dy-shell">${body}</div><div class="dytab">${dytb('feed',svgIc('home',21),'首页')}${dytb('search',svgIc('search',21),'发现')}<div class="dycreate-wrap" onclick="dyCompose()"><div class="dycreate" aria-label="发布"></div></div>${dytb('dm',svgIc('envelope',21),'消息')}${dytb('me',svgIc('user',21),'我')}</div>${dyCmLayer()}`;}
+  if(dyTab==='feed')body=dyFeedView();else if(dyTab==='friend')body=dyFriendView();else if(dyTab==='search')body=dySearchView();else if(dyTab==='dm')body=dyDMList();else body=dyProfile();
+  const nav=(dyTab==='feed'||dyTab==='friend'||dyTab==='me'||dyTab==='dm')?'':`<div class="dynav dy-safe-nav"><span class="l" onclick="dyBack()" style="cursor:pointer;font-size:26px">‹</span><span style="font-weight:800">搜索发现</span><span class="r" style="width:18px"></span></div>`;
+  return `${nav}<div class="dy-shell">${body}</div><div class="dytab">${dytb('feed',svgIc('home',21),'首页')}${dytb('friend',svgIc('users',21),'朋友')}<div class="dycreate-wrap" onclick="dyCompose()"><div class="dycreate" aria-label="发布"></div></div>${dytb('dm',svgIc('envelope',21),'消息')}${dytb('me',svgIc('user',21),'我')}</div>${dyCmLayer()}`;}
 function dytb(k,i,t){return `<div class="t ${dyTab===k?'on':''}" onclick="dyTab='${k}';render()"><div class="i">${i}</div>${t}</div>`;}
-function dyFeedView(){const list=_dyMode==='follow'?S.dy.feed.filter(v=>v.cid&&v.cid!=='me'&&S.dy.following.includes(v.cid)):S.dy.feed;
-  const top=`<div class="dy-feed-back" onclick="dyBack()">‹</div><div class="dytopt dy-safe-tabs"><span class="${_dyMode==='follow'?'on':''}" onclick="_dyMode='follow';render()">关注</span><span class="${_dyMode==='rec'?'on':''}" onclick="_dyMode='rec';render()">推荐</span></div>`;
-  if(!list.length){return `<div style="position:relative;flex:1;background:#000;color:#888;display:flex;align-items:center;justify-content:center;text-align:center;line-height:2;padding:20px">${top}${_dyMode==='follow'?'关注的人还没发视频～<br>去「我的关注」添加角色的抖音<br><br><button class="dybtn out" onclick="dyFollowList()">我的关注</button>':'还没有视频<br><button class="dybtn" onclick="dyGenFeed(\'\',true)">刷新推荐</button>'}</div>`;}
+/* ===== 抖音作品改成「文字作品」：正文＋旁白，比一个 emoji 有的看多了 ===== */
+function dyWorkBody(v){const t=String((v&&v.body)||'').trim();if(t)return t;
+  const n=String((v&&v.narration)||'').trim();return n?n.replace(/^旁白[：:]\s*/,''):'';}
+function dyWorkParas(v){return dyWorkBody(v).split(/\n{2,}/).map(x=>x.trim()).filter(Boolean);}
+function dyWorkLong(v){return dyWorkBody(v).length>150;}
+function dyWorkCardHTML(v,opt){opt=opt||{};const paras=dyWorkParas(v);
+  if(!paras.length)return `<div class="dytx-empty">${esc(v.emoji||'🎬')}</div>`;
+  const show=opt.full?paras:paras.slice(0,opt.lines||3);
+  return `<div class="dytx${opt.full?' full':''}">${show.map(p=>`<p>${dyHash(p)}</p>`).join('')}
+    ${!opt.full&&dyWorkLong(v)?`<button class="dytx-more" onclick="event.stopPropagation();dyOpenWork('${esc(v.id)}')">阅读文章</button>`:''}</div>`;}
+function dyWorkThumbHTML(v){const first=(dyWorkParas(v)[0]||'').slice(0,26);
+  return first?`<div class="dytx-thumb">${esc(first)}</div>`:`<div class="dyme-emo">${esc(v.emoji||'🎬')}</div>`;}
+/* ===== 首页信息流：顶上只留「关注 / 推荐」 ===== */
+function dyFeedList(){const all=S.dy.feed||[];
+  if(_dyMode==='follow')return all.filter(v=>v.cid&&v.cid!=='me'&&(S.dy.following||[]).includes(v.cid));
+  return all;}
+function dyFeedView(){const list=dyFeedList();
+  const top=`<div class="dyfd-top dy-safe-nav2"><i onclick="dyBack()">‹</i>
+    <div class="dyfd-tabs"><span class="${_dyMode==='follow'?'on':''}" onclick="_dyMode='follow';render()">关注</span><span class="${_dyMode==='rec'?'on':''}" onclick="_dyMode='rec';render()">推荐</span></div>
+    <i onclick="dyTab='search';render()">${svgIc('search',22,'#fff',2)}</i></div>`;
+  if(!list.length)return `<div class="dyfd-empty">${top}<div>${_dyMode==='follow'?'关注的人还没发作品～<br>去「我的关注」把角色加进来':'还没有内容～'}<br><br><button class="dybtn" onclick="${_dyMode==='follow'?'dyFollowList()':"dyGenFeed('',true)"}">${_dyMode==='follow'?'我的关注':'刷新推荐'}</button></div></div>`;
   const more=_dyMode==='rec'?`<div class="dyvideo" style="background:#000;color:#888;align-items:center;justify-content:center"><div style="text-align:center"><button class="dybtn" onclick="dyGenFeed('',false)">刷新更多</button></div></div>`:'';
   return `<div class="dyfeed" id="dyfeed" data-render-scroll-key="dy:${esc(dyTab)}:${esc(_dyMode)}">${top}${list.map(dyVideoCard).join('')}${more}</div>`;}
-function dyVideoCard(v,i){const liked=!!v.liked;const lc=(v.lk||0)+(liked?1:0);const grad=v.grad||DY_GRADS[i%DY_GRADS.length];const paused=_dyPaused[v.id];
-  const isChar=v.cid&&v.cid!=='me';const mine=v.cid==='me';const fol=isChar&&S.dy.following.includes(v.cid);
-  return `<div class="dyvideo${paused?' paused':''}" data-dy-video-id="${v.id}">
+function dyVideoCard(v,i){const liked=!!v.liked,lc=(v.lk||0)+(liked?1:0),starred=!!v.starred,sc=(v.st||0)+(starred?1:0);
+  const grad=v.grad||DY_GRADS[i%DY_GRADS.length],isChar=v.cid&&v.cid!=='me',mine=v.cid==='me',fol=isChar&&(S.dy.following||[]).includes(v.cid);
+  return `<div class="dyvideo" data-dy-video-id="${v.id}">
     <div class="dybg" style="background-image:${grad}"></div>
-    <div class="dyemoji">${v.emoji||'🎬'}</div>
-    <div class="dyplay">▶︎</div>
-    <div onclick="dyTapVideo('${v.id}')" style="position:absolute;inset:0;z-index:2"></div>
+    <div class="dyfd-card" onclick="dyOpenWork('${v.id}')">${dyWorkCardHTML(v,{lines:4})}</div>
     <div class="dyrail">
-      <div class="ra" onclick="dyVideoAuthor('${v.id}')" style="margin-bottom:4px"><div style="position:relative">${av(v.avatar||'🎵','sm')}${isChar&&!fol?'<span style="position:absolute;bottom:-7px;left:50%;transform:translateX(-50%);width:18px;height:18px;border-radius:50%;background:#fe2c55;color:#fff;font-size:13px;line-height:18px;text-align:center">+</span>':''}</div></div>
-      <div class="ra" onclick="dyLike('${v.id}')"><span class="ic">${svgIc('heart',26,liked?'#fe2c55':'#fff')}</span>${lc}</div>
-      <div class="ra" onclick="dyComments('${v.id}')"><span class="ic">${svgIc('chat',26,'#fff')}</span>${(v.comments||[]).length}</div>
-      <div class="ra" onclick="dyTapVideo('${v.id}')"><span class="ic">${svgIc('book',26,'#fff')}</span>简介</div>
-      <div class="ra" onclick="dyFwd('${v.id}')"><span class="ic">${svgIc('forward',26,'#fff')}</span>转发</div>
-      <div class="ra" style="margin-top:2px"><div class="dydisc">🎵</div></div>
+      <div class="ra" onclick="dyVideoAuthor('${v.id}')" style="margin-bottom:5px"><div style="position:relative">${av(mine?dyAvatar():(v.avatar||'🎵'),'sm')}${isChar&&!fol?'<span class="dyrail-plus">+</span>':''}</div></div>
+      <div class="ra" onclick="dyLike('${v.id}')"><span class="ic">${svgIc('heart',27,liked?'#f5243d':'#fff',0)}</span>${dyNum(lc)}</div>
+      <div class="ra" onclick="dyComments('${v.id}')"><span class="ic">${svgIc('chat',27,'#fff',2)}</span>${dyNum((v.comments||[]).length)}</div>
+      <div class="ra" onclick="dyStar('${v.id}')"><span class="ic">${svgIc('star',26,starred?'#f5c518':'#fff',2)}</span>${dyNum(sc)}</div>
+      <div class="ra" onclick="dyFwd('${v.id}')"><span class="ic">${svgIc('forward',26,'#fff',2)}</span>分享</div>
     </div>
     <div class="dymeta">
-      <div style="font-weight:700;font-size:16px;margin-bottom:5px;cursor:pointer" onclick="dyAuthorMenu('${v.id}')">@${esc(mine?dyNick():(v.author||'用户'))}${isChar?'<span style="font-size:11px;background:#fe2c55;border-radius:4px;padding:1px 5px;margin-left:6px">角色</span>':mine?'<span style="font-size:11px;background:#555;border-radius:4px;padding:1px 5px;margin-left:6px">我</span>':''} <span style="font-size:12px;opacity:.7">⌄</span></div>
-      <div style="font-size:14px;line-height:1.5">${esc(v.desc||'')}</div>
-      <div style="font-size:12px;color:#ddd;margin-top:6px">🎵 ${esc(v.music||'原创音乐')}</div>
+      ${isChar&&fol?'<span class="dyfd-mutual">互相关注</span>':''}
+      <div class="dyfd-who" onclick="dyAuthorMenu('${v.id}')">@${esc(mine?dyNick():(v.author||'用户'))}${dyWorkLong(v)?'<em class="dyfd-kind">文章</em>':''}<span class="dyfd-ago">· ${esc(dyTimeAgo(v.ts))}</span></div>
+      <div class="dyfd-desc">${dyHash(v.desc||'')}</div>
     </div>
-    <div class="dynarr" id="narr_${v.id}" onclick="dyTapVideo('${v.id}')" style="display:${_dyNarr[v.id]?'block':'none'}"><div style="font-weight:700;color:#fe2c55;margin-bottom:6px">📖 视频内容 · 旁白</div>${esc(v.narration||v.desc||'（这条还没有旁白描写）')}<div style="text-align:center;color:#777;margin-top:10px;font-size:12px">点这里收起</div></div></div>`;}
-// 不整页重渲染，避免竖向 feed 滚动位置被重置
+    <div class="dynarr" id="narr_${v.id}" onclick="dyTapVideo('${v.id}')" style="display:${_dyNarr[v.id]?'block':'none'}"><div style="font-weight:800;color:#fff;margin-bottom:7px">旁白</div>${esc(v.narration||'（这条还没有旁白）')}<div style="text-align:center;color:#777;margin-top:10px;font-size:11px">轻触收起</div></div>
+  </div>`;}
+/* ===== 朋友页 ===== */
+function dyFriendList(){const fol=(S.dy.following||[]);
+  return (S.dy.feed||[]).filter(v=>v.cid&&v.cid!=='me'&&fol.includes(v.cid)).concat((S.dy.mine||[]).filter(v=>!v.priv))
+    .sort((a,b)=>(b.ts||0)-(a.ts||0));}
+function dyFriendView(){const list=dyFriendList(),fol=(S.dy.following||[]).map(getC).filter(Boolean);
+  const top=`<div class="dyfr-top dy-safe-nav2"><div class="dyfr-me" onclick="dyCompose()">${av(dyAvatar(),'sm')}<b>＋</b></div>
+    <div class="dyfr-title" onclick="toast('限时日常还没做～')">限时日常 ▾</div>
+    <i onclick="dyOpenRel('朋友')">${svgIc('users',22,'#fff',2)}${fol.length?`<b class="dyfr-badge">${fol.length>99?'99+':fol.length}</b>`:''}</i></div>`;
+  if(!list.length)return `<div class="dyfd-empty">${top}<div>朋友还没发过作品～<br>关注几个角色，或者自己发一条。<br><br><button class="dybtn" onclick="dyCompose()">发一条</button></div></div>`;
+  return `<div class="dyfeed" id="dyfeed" data-render-scroll-key="dy:friend">${top}${list.map(dyVideoCard).join('')}</div>`;}
+/* ===== 涨粉掉粉：靠发作品挣，不发就慢慢掉 ===== */
+function dyGrowthDayKey(){const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
+function dyWorkReach(v){const body=dyWorkBody(v).length,desc=String(v.desc||'').length,tags=(String(v.desc||'').match(/#/g)||[]).length;
+  /* 写得越长、有文案、带话题的作品传得越远。随机只占一小部分，不然努力没有意义。 */
+  return Math.max(1,Math.round((body*0.35+desc*1.2+tags*18+12)*(0.75+Math.random()*0.6)));}
+function dyWorkSettle(v){if(v.settled)return 0;v.settled=true;
+  const reach=dyWorkReach(v);v.lk=(+v.lk||0)+Math.round(reach*(1.6+Math.random()*1.4));
+  v.st=(+v.st||0)+Math.round(reach*0.12);v.views=(+v.views||0)+Math.round(reach*(9+Math.random()*7));
+  const gain=Math.max(1,Math.round(reach*0.16));v.fansGain=gain;return gain;}
+function dyGrowthTick(){dyInit();const d=S.dy,today=dyGrowthDayKey();if(d.growthDay===today)return 0;
+  const first=!d.growthDay;d.growthDay=today;if(first){save();return 0;}
+  const p=d.profile,recent=(d.mine||[]).filter(v=>Date.now()-(+v.ts||0)<3*864e5);
+  let delta=0;
+  if(recent.length){delta=recent.reduce((n,v)=>n+Math.max(1,Math.round(dyWorkReach(v)*0.05)),0);}
+  else{/* 三天没发东西就开始掉粉，掉得比涨得慢 */delta=-Math.max(1,Math.round((+p.fans||0)*0.012));}
+  p.fans=Math.max(0,(+p.fans||0)+delta);
+  d.growthLast={at:Date.now(),delta};save();return delta;}
+function dyGrowthNotice(){const delta=dyGrowthTick();if(!delta)return;
+  toast(delta>0?('今天涨了 '+delta+' 个粉丝 🎉'):('今天掉了 '+Math.abs(delta)+' 个粉丝，发条作品吧'),6000);}
 function dyTapVideo(id){const el=document.getElementById('narr_'+id);if(!el)return;const show=el.style.display==='none';el.style.display=show?'block':'none';_dyNarr[id]=show;}
 function dyKeepScroll(fn){const f=$('#dyfeed');const st=f?f.scrollTop:0;fn();render();const g=$('#dyfeed');if(g)g.scrollTop=st;}
 function dyVideoAuthor(id){const v=dyVid(id);if(!v)return;if(!(v.cid&&v.cid!=='me'))return toast('这是网友视频，点名字可以私信TA');
@@ -5498,9 +5542,9 @@ function dyLike(id){const v=dyVid(id);if(!v)return;v.liked=!v.liked;
   const lv=S.dy.liked.find(x=>x.id===id);if(lv)lv.liked=v.liked;
   if(cur().p==='dy'&&dyTab==='feed')dyKeepScroll(save);else{save();render();}}
 async function dyGenFeed(topic,replace){aiLoad('正在加载视频…');
-  try{const arr=await dyAuxGen([{role:'system',content:'你是抖音短视频内容生成器。生成5条不同的短视频信息，类型要杂（搞笑/萌宠/美食/风景/舞蹈/剧情/知识/情感都行）。只输出JSON数组，不要解释：[{"author":"博主昵称","handle":"@英文id","desc":"视频文案/标题(一句，可带#话题)","narration":"旁白：详细描写这条视频里到底是什么画面、发生了什么(2-4句，像在跟人讲这视频拍了啥)","music":"背景音乐名","emoji":"一个最能代表画面的emoji"}]'},{role:'user',content:topic?('围绕「'+topic+'」生成相关的短视频。'):'生成一批热门推荐短视频。'}],{max:1100},parseArr);
+  try{const arr=await dyAuxGen([{role:'system',content:'你是抖音短视频内容生成器。生成5条不同的短视频信息，类型要杂（搞笑/萌宠/美食/风景/舞蹈/剧情/知识/情感都行）。只输出JSON数组，不要解释：[{"author":"博主昵称","handle":"@英文id","desc":"文案/标题(一句，可带#话题)","body":"正文：这条作品里写的话，2-4段，段与段之间空一行，要有内容有情绪","narration":"旁白：详细描写这条视频里到底是什么画面、发生了什么(2-4句，像在跟人讲这视频拍了啥)","music":"背景音乐名","emoji":"一个最能代表画面的emoji"}]'},{role:'user',content:topic?('围绕「'+topic+'」生成相关的短视频。'):'生成一批热门推荐短视频。'}],{max:1100},parseArr);
     if(!arr||!Array.isArray(arr)||!arr.length){toast('加载失败了，再点一次');return;}
-    const vids=arr.map((o,i)=>({id:uid(),author:clean(o.author)||'用户'+(10+Math.floor(Math.random()*89)),handle:o.handle||'@user',avatar:'🎵',cid:null,desc:o.desc||'',narration:o.narration||'',music:o.music||'原创音乐',emoji:(o.emoji||'🎬').slice(0,2),grad:DY_GRADS[Math.floor(Math.random()*DY_GRADS.length)],lk:Math.floor(Math.random()*90000),comments:[],ts:Date.now()}));
+    const vids=arr.map((o,i)=>({id:uid(),author:clean(o.author)||'用户'+(10+Math.floor(Math.random()*89)),handle:o.handle||'@user',avatar:'🎵',cid:null,desc:o.desc||'',body:o.body||'',narration:o.narration||'',music:o.music||'原创音乐',emoji:(o.emoji||'🎬').slice(0,2),grad:DY_GRADS[Math.floor(Math.random()*DY_GRADS.length)],lk:Math.floor(Math.random()*90000),comments:[],ts:Date.now()}));
     if(replace)S.dy.feed=vids;else S.dy.feed=S.dy.feed.concat(vids);
     if(S.dy.feed.length>40)S.dy.feed=S.dy.feed.slice(-40);
     save();if(cur().p==='dy')render();const f=$('#dyfeed');if(replace&&f)f.scrollTop=0;
@@ -5522,16 +5566,25 @@ function doDyFwd(cid){const v=window._fwDy;if(!v)return;pushMsg(cid,{role:'user'
 function dyCompose(){openModal(`<h3>发抖音</h3>
   <div class="field"><label>文案 / 标题</label><input id="dyc_desc" placeholder="记录此刻…可带 #话题"></div>
   <div class="field"><label>画面旁白（这条视频拍了啥）</label><textarea id="dyc_narr" rows="2" placeholder="比如：在江边跳了段舞，夕阳特别美"></textarea></div>
-  <div class="two"><div class="field"><label>封面 emoji</label><input id="dyc_emoji" value="🎬" maxlength="4"></div><div class="field"><label>配乐</label><input id="dyc_music" placeholder="原创音乐"></div></div>
+  <div class="field"><label>正文<small style="color:#888">会显示在作品上，可以空行分段</small></label><textarea id="dyc_body" rows="5" placeholder="想说的话写在这里…"></textarea></div>
+  <div class="two"><div class="field"><label>配乐</label><input id="dyc_music" placeholder="原创音乐"></div><div class="field"><label>小图标<small style="color:#888">列表里用</small></label><input id="dyc_emoji" value="📝" maxlength="4"></div></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="doDyPost()">发布</button></div>`);}
-function doDyPost(){const desc=($('#dyc_desc').value||'').trim();const narr=($('#dyc_narr').value||'').trim();if(!desc&&!narr){toast('写点东西吧');return;}
-  const v={id:uid(),author:dyNick(),handle:'@'+dyNick().replace(/\s/g,''),avatar:dyAvatar(),cid:'me',desc,narration:narr,music:($('#dyc_music').value||'').trim()||'原创音乐',emoji:(($('#dyc_emoji').value||'🎬').trim()||'🎬').slice(0,4),grad:DY_GRADS[Math.floor(Math.random()*DY_GRADS.length)],lk:Math.floor(Math.random()*60),st:0,comments:[],ts:Date.now(),date:dyToday()};
-  S.dy.feed.unshift(v);S.dy.mine=S.dy.mine||[];S.dy.mine.unshift(v);save();closeModal();dyTab='feed';_dyMode='rec';render();const f=$('#dyfeed');if(f)f.scrollTop=0;toast('已发布 🎬');
+function doDyPost(){const desc=($('#dyc_desc').value||'').trim();const narr=($('#dyc_narr').value||'').trim();const body=(($('#dyc_body')||{}).value||'').trim();if(!desc&&!narr&&!body){toast('写点东西吧');return;}
+  const v={id:uid(),author:dyNick(),handle:'@'+dyNick().replace(/\s/g,''),avatar:dyAvatar(),cid:'me',desc,narration:narr,body,music:($('#dyc_music').value||'').trim()||'原创音乐',emoji:(($('#dyc_emoji').value||'📝').trim()||'📝').slice(0,4),grad:DY_GRADS[Math.floor(Math.random()*DY_GRADS.length)],lk:Math.floor(Math.random()*60),st:0,comments:[],ts:Date.now(),date:dyToday()};
+  const gained=dyWorkSettle(v);S.dy.profile.fans=Math.max(0,(+S.dy.profile.fans||0)+gained);S.dy.profile.likes=(+S.dy.profile.likes||0)+(+v.lk||0);S.dy.feed.unshift(v);S.dy.mine=S.dy.mine||[];S.dy.mine.unshift(v);save();closeModal();dyTab='feed';_dyMode='rec';render();const f=$('#dyfeed');if(f)f.scrollTop=0;toast('已发布，涨了 '+gained+' 个粉丝 🎉',5000);
   dyGenCommentsCore(v,{net:3,chars:2,mine:true}).then(()=>{if(cur().p==='dy')dyKeepScroll(()=>{});});}
 /* 评论 */
+function dyCommentResponder(v){const alive=c=>c&&!c.deleted&&!c.blocked;
+  const lover=S.couple&&S.couple.cid?getC(S.couple.cid):null;
+  if(v&&v.cid&&v.cid!=='me'){const owner=getC(v.cid);if(alive(owner))return [owner];}
+  if(alive(lover))return [lover];
+  const fol=(S.dy.following||[]).map(getC).filter(alive);
+  if(fol.length)return [fol[Math.floor(Math.random()*fol.length)]];
+  const any=(S.contacts||[]).filter(alive);
+  return any.length?[any[0]]:[];}
 async function dyCharReplyComment(v,c,t){try{const r=await dyAuxChat([{role:'system',content:buildSystem(c)},{role:'user',content:S.me.name+'在抖音视频"'+(v.desc||'')+'"下评论/@了你："'+t+'"，回ta一句（口语，别带方括号）。'}],{max:120});
   v.comments.push({name:c.remark||c.name,avatar:c.avatar,cid:c.id,text:cleanReply(r).slice(0,50),lk:0,d:dyToday()});save();dyCmRefresh(v);}catch(e){dyModelFail('角色回评论',e);}}
-function dyGenComments(id){const v=dyVid(id);if(!v)return;aiLoad('正在生成评论…');dyGenCommentsCore(v,{net:6,chars:2,mine:v.cid==='me'}).then(()=>dyCmRefresh(v)).finally(aiDone);}
+function dyGenComments(id){const v=dyVid(id);if(!v)return;aiLoad('正在生成评论…');dyGenCommentsCore(v,{net:3+Math.floor(Math.random()*6),chars:1+Math.floor(Math.random()*2),mine:v.cid==='me'}).then(()=>dyCmRefresh(v)).finally(aiDone);}
 async function dyGenCommentsCore(v,opts){opts=opts||{};v.comments=v.comments||[];
   try{const r=await dyAuxChat([{role:'system',content:'你是抖音评论区生成器。针对一条短视频生成'+(opts.net||5)+'条不同网友的简短评论（搞笑/共鸣/夸赞/玩梗/抬杠都行，符合抖音风格，'+(opts.mine?'这是个漂亮女生发的，可以有夸她好看、搭讪的':'')+'）。每行一条，格式：昵称:::评论内容。不要别的话。'},{role:'user',content:'视频文案："'+(v.desc||'')+'"，画面："'+(v.narration||'')+'"'}],{max:700});
     (r||'').split('\n').map(l=>l.trim()).filter(Boolean).forEach(l=>{const p=l.replace(/^[\d.、\-\s]+/,'').split(/:::|：：：|\|\||：|:/);const nm=clean(p[0]);if(!nm||/^http/.test(nm))return;const tx=(p.slice(1).join('：')||p[0]||'').trim();if(tx)v.comments.push({name:nm,avatar:letterAv(nm),text:tx.slice(0,60),lk:Math.floor(Math.random()*30),d:dyToday(),loc:DY_LOCS[Math.floor(Math.random()*DY_LOCS.length)]});});save();dyCmRefresh(v);
@@ -5551,7 +5604,7 @@ function dyAddFollow(){const cs=S.contacts.filter(c=>!c.deleted&&!S.dy.following
 function dyDoFollow(cid){if(!S.dy.following.includes(cid))S.dy.following.push(cid);save();closeModal();toast('已关注，去刷TA的视频吧');dyGenContactVideo(cid);}
 function dyUnfollow(cid){S.dy.following=S.dy.following.filter(x=>x!==cid);save();closeModal();render();}
 async function dyGenContactVideo(cid){const c=getC(cid);if(!c)return;if(!S.dy.following.includes(cid))S.dy.following.push(cid);closeModal();aiLoad('正在生成…');
-  try{const o=await dyAuxGen([{role:'system',content:buildSystem(c)},{role:'user',content:'你在抖音发了一条短视频。只输出JSON：{"desc":"视频文案(一句，可带#话题)","narration":"旁白：这条视频里你拍了什么画面、在做什么(2-4句)","music":"配乐名","emoji":"代表画面的emoji"}'}],{max:400},parseObj);
+  try{const o=await dyAuxGen([{role:'system',content:buildSystem(c)},{role:'user',content:'你在抖音发了一条短视频。只输出JSON：{"desc":"文案(一句，可带#话题)","body":"正文：你在这条作品里写的话，2-3段，段与段之间空一行","narration":"旁白：这条视频里你拍了什么画面、在做什么(2-4句)","music":"配乐名","emoji":"代表画面的emoji"}'}],{max:400},parseObj);
     if(!o||!o.desc){toast('生成失败了，再点一次');return;}
     S.dy.feed.unshift({id:uid(),author:c.remark||c.name,handle:'@'+(c.name||'').replace(/\s/g,''),avatar:c.avatar,cid:cid,desc:o.desc||'',narration:o.narration||'',music:o.music||'原创音乐',emoji:(o.emoji||'🎬').slice(0,2),grad:DY_GRADS[Math.floor(Math.random()*DY_GRADS.length)],lk:Math.floor(Math.random()*5000),comments:[],ts:Date.now()});
     save();dyTab='feed';_dyMode='follow';if(cur().p==='dy')render();else go('dy');const f=$('#dyfeed');if(f)f.scrollTop=0;
@@ -6004,7 +6057,7 @@ function dyMeStat(v,label,act){return '<div class="dyme-stat"'+(act?' onclick="'
 function dyMeAction(icon,label,act){return '<div class="dyme-act"'+(act?' onclick="'+act+'"':'')+'>'+svgIc(icon,23,'#e9e9ec',1.7)+'<span>'+esc(label)+'</span></div>';}
 function dyProfile(){const p=S.dy.profile||{},mine=S.dy.mine||[],priv=dyPrivateRows();
   const rows=dyMeGridRows(),cover=storedImageDisplaySource(p.cover||(isImg(dyAvatar())?dyAvatar():'')||'');
-  const grid=rows.length?`<div class="dyme-grid">${rows.map((v,i)=>`<div class="dyme-cell" onclick="dyOpenWork('${v.id}')" style="background:${v.grad||DY_GRADS[i%DY_GRADS.length]}"><div class="dyme-emo">${v.emoji||'🎬'}</div>${v.top&&_dyMeTab==='作品'?'<span class="dyme-top">置顶</span>':''}<span class="dyme-play">${svgIc('heart',11,'#fff',2.4)} ${dyNum(v.lk||0)}</span></div>`).join('')}</div>`
+  const grid=rows.length?`<div class="dyme-grid">${rows.map((v,i)=>`<div class="dyme-cell" onclick="dyOpenWork('${v.id}')" style="background:${v.grad||DY_GRADS[i%DY_GRADS.length]}">${dyWorkThumbHTML(v)}${v.top&&_dyMeTab==='作品'?'<span class="dyme-top">置顶</span>':''}<span class="dyme-play">${svgIc('heart',11,'#fff',2.4)} ${dyNum(v.lk||0)}</span></div>`).join('')}</div>`
     :`<div class="dyme-empty">${_dyMeTab==='作品'?'还没发过作品～点下面的 ＋ 发一条':_dyMeTab==='收藏'?'还没收藏过作品～点开一条按右边的 ☆':'还没点过喜欢～'}</div>`;
   return `<div class="dyme" id="dyme">
     <div class="dyme-cover" style="${isImg(cover)?`background-image:url(${cover})`:''}">
@@ -6146,7 +6199,7 @@ function dyWorkView(){const v=dyVid(_dyWorkId);if(!v)return `<div class="dyvi"><
   return `<div class="dywk">
     <div class="dywk-stage">
       <div class="dywk-top dy-safe-nav2"><i onclick="dySubClose()">‹</i><i onclick="dyTab='search';_dySub='';render()">${svgIc('search',24,'#fff',2)}</i></div>
-      <div class="dywk-frame" style="background-image:${grad}" onclick="dyTapVideo('${v.id}')"><span>${esc(v.emoji||'🎬')}</span></div>
+      <div class="dywk-frame" style="background-image:${grad}" onclick="dyTapVideo('${v.id}')">${dyWorkCardHTML(v,{full:true})}</div>
       ${dyWorkDanmu(v)}${dyWorkRail(v)}
       <div class="dynarr" id="narr_${v.id}" onclick="dyTapVideo('${v.id}')" style="display:${_dyNarr[v.id]?'block':'none'}"><div style="font-weight:800;color:#fff;margin-bottom:7px">视频内容</div>${esc(v.narration||v.desc||'（这条还没有内容描写）')}<div style="text-align:center;color:#777;margin-top:10px;font-size:11px">轻触收起</div></div>
     </div>
@@ -6350,8 +6403,11 @@ function dyCmSend(id){const v=dyVid(id);if(!v)return;const inp=$('#dycm_in'),t=i
   const row={name:dyNick(),avatar:dyAvatar(),me:true,text:t.slice(0,300),lk:0,d:dyToday()};
   if(_dyCmReply>=0&&v.comments[_dyCmReply]){const host=v.comments[_dyCmReply];host.replies=host.replies||[];host.replies.push(row);_dyCmExpand[_dyCmReply]=true;}
   else v.comments.push(row);
-  save();const ats=S.contacts.filter(c=>!c.deleted&&!c.blocked&&t.includes(c.remark||c.name));
-  ats.slice(0,2).forEach(c=>dyCharReplyComment(v,c,t));
+  save();
+  /* 她评论了，角色一定要有人回她——被 @ 到的优先，没点名就让恋人或关注的角色来接。 */
+  const ats=S.contacts.filter(c=>!c.deleted&&!c.blocked&&t.includes(c.remark||c.name));
+  const who=ats.length?ats.slice(0,2):dyCommentResponder(v);
+  who.forEach(c=>dyCharReplyComment(v,c,t));
   _dyCmReply=-1;render();if(inp)inp.value='';}
 function dyToday(){const d=new Date();return (d.getMonth()+1)+'-'+d.getDate();}
 function dyPostComment(id){dyCmSend(id);}
