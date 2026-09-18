@@ -1182,8 +1182,12 @@ async function aiRelay(action,payload,timeoutMs){const url=aiCoreUrl();if(!url)t
   const d=await r.json().catch(()=>null);if(!r.ok||!d||d.ok===false){if(d&&typeof aiAccountApplyResult==='function')aiAccountApplyResult(d,action);const msg=(d&&d.error)||('HTTP '+r.status);const e=new Error(r.status===402||/no-balance/i.test(String(msg))?'AI点数不足，请去「AI账户」充值或让管理员加点':'内置AI失败：'+String(msg).slice(0,140));e.status=r.status;e.data=d||null;e.raw=String(msg);e.source='ai-core';e.ledger_id=d&&(d.ledger_id||d.ledgerId||d.request_id);e.charged=d&&d.charged;e.billed=d&&d.billed;throw e;}
   if(typeof aiAccountApplyResult==='function')aiAccountApplyResult(d,action);
   return d;}
-function joinAIContinuation(first,more){first=''+(first||'');more=''+(more||'');if(!first)return more.trim();if(!more)return first.trim();const a=first.replace(/\s+$/,''),b=more.replace(/^\s+/,'');let overlap=0,max=Math.min(60,a.length,b.length);for(let n=max;n>=2;n--){if(a.slice(-n)===b.slice(0,n)){overlap=n;break;}}return(a+b.slice(overlap)).trim();}
-async function chatResultText(messages,opt,data){const ch=data&&data.choices&&data.choices[0],reason=''+(ch&&ch.finish_reason||'');const rawText=String(ch&&ch.message&&ch.message.content||'');let text=rawText.trim();if(opt.roleReplyLanguageGuard&&!(opt.roleVoiceFormatRepair&&voiceReplyCanRepairCandidate(text,opt))){text=roleReplyDropEnglishNarration(text);roleReplyAssertLanguage(text,opt.roleInterceptAudit);}/* 续写必须排在原文直通之前：回复被长度上限截断时，原文同样需要补完，否则把线上/线下的回复长度设短一点，   回复就会随随便便断在半句。续写调用不记入候选，它是同一条回复的后半段，不是第二份候选。 */if(opt.complete&&text&&/length|max_tokens/i.test(reason)){const base=opt.unfilteredOutput?rawText:text,follow=await chatAPI([...messages,{role:'assistant',content:base},{role:'user',content:'[系统：你刚才因为输出长度上限，最后一句被截断了。请从断掉的位置直接接着写完，只补全没说完的内容；不要重头重复，不要解释原因。]'}],Object.assign({},opt,{complete:false,max:Math.max(400,Math.min(900,+opt.max||600)),roleInterceptAudit:null,roleInterceptPurpose:'length-continuation'}));return joinAIContinuation(base,follow);}if(opt.unfilteredOutput)return rawText;if(opt.rejectRefusal&&/content[_ -]?filter|refusal/i.test(reason)){const e=new Error('模型拒绝了本轮回复');e.code='model-refusal';e.modelRefusal=true;e.finishReason=reason;throw e;}return text;}
+/* 续写开头的那个空格是有意义的：英文靠它断词。以前一律 trim 掉，
+   "I've got" 接上 " you now" 会粘成 "gotyou"，念出来是一团乱码。
+   只在原本就有空格、没有用到重叠、并且两边都是拉丁字母时才补回来——
+   模型从词中间接着写（understan + ding）不会带前导空格，所以不会被拆开；中文本来就不需要。 */
+function joinAIContinuation(first,more){first=''+(first||'');more=''+(more||'');if(!first)return more.trim();if(!more)return first.trim();const a=first.replace(/\s+$/,''),hadGap=/^\s/.test(more),b=more.replace(/^\s+/,'');let overlap=0,max=Math.min(60,a.length,b.length);for(let n=max;n>=2;n--){if(a.slice(-n)===b.slice(0,n)){overlap=n;break;}}const cjk=/[\u3000-\u303f\u4e00-\u9fff\uff00-\uffef]/,tail=b.slice(overlap),glue=(!overlap&&hadGap&&!cjk.test(a.slice(-1))&&!cjk.test(tail.slice(0,1)))?' ':'';return(a+glue+tail).trim();}
+async function chatResultText(messages,opt,data){const ch=data&&data.choices&&data.choices[0],reason=''+(ch&&ch.finish_reason||'');const rawText=String(ch&&ch.message&&ch.message.content||'');let text=rawText.trim();if(opt.roleReplyLanguageGuard&&!(opt.roleVoiceFormatRepair&&voiceReplyCanRepairCandidate(text,opt))){text=roleReplyDropEnglishNarration(text);roleReplyAssertLanguage(text,opt.roleInterceptAudit);}/* 续写这一段不再跑「纯英文拦截」：它是同一条回复被截断的后半截，不是一条独立回复；前半截已经过了语言检查，中文就在里面，拿整段的标准去卡一个句子碎片，只会让外语通话在续写时整轮失败，弹出一句莫名其妙的提示。   续写必须排在原文直通之前：回复被长度上限截断时，原文同样需要补完，否则把线上/线下的回复长度设短一点，   回复就会随随便便断在半句。续写调用不记入候选，它是同一条回复的后半段，不是第二份候选。 */if(opt.complete&&text&&/length|max_tokens/i.test(reason)){const base=opt.unfilteredOutput?rawText:text,follow=await chatAPI([...messages,{role:'assistant',content:base},{role:'user',content:'[系统：你刚才因为输出长度上限，最后一句被截断了。请从断掉的位置直接接着写完，只补全没说完的内容；不要重头重复，不要解释原因。]'}],Object.assign({},opt,{complete:false,max:Math.max(400,Math.min(900,+opt.max||600)),roleInterceptAudit:null,roleReplyLanguageGuard:false,roleInterceptPurpose:'length-continuation'}));return joinAIContinuation(base,follow);}if(opt.unfilteredOutput)return rawText;if(opt.rejectRefusal&&/content[_ -]?filter|refusal/i.test(reason)){const e=new Error('模型拒绝了本轮回复');e.code='model-refusal';e.modelRefusal=true;e.finishReason=reason;throw e;}return text;}
 function chatRouteSessionPage(){try{return ['off','rp','gs','mgroom','uc','wg','dread','tale'].includes(cur().p);}catch(_){return false;}}
 function gameModelSessionPage(){try{return ['gameshub','gs','drawguess','heartquiz','beadstudio','mgroom','uc','wg'].includes(cur().p);}catch(_){return false;}}
 function gameModelUseAux(){return !!(S.settings&&S.settings.gameUseAux);}
@@ -3968,7 +3972,7 @@ const MANUAL_REPLY_SCENE_OPTIONS=[
 function manualReplyScenes(){S.settings=S.settings||{};let m=S.settings.manualReplyScenes;if(!m||typeof m!=='object'||Array.isArray(m)){const legacy=S.settings.manualReply!==false;m={wechat:legacy,games:legacy,roleplay:legacy,offline:legacy};S.settings.manualReplyScenes=m;}const fallback=S.settings.manualReply!==false;MANUAL_REPLY_SCENE_OPTIONS.forEach(x=>{if(typeof m[x.key]!=='boolean')m[x.key]=fallback;});S.settings.manualReply=!!m.wechat;return m;}
 function manualReplySceneOn(key){return manualReplyScenes()[key]===true;}
 function manualReplySceneToggle(key){const m=manualReplyScenes();if(!Object.prototype.hasOwnProperty.call(m,key))return;m[key]=!m[key];if(key==='wechat')S.settings.manualReply=m[key];save();render();}
-function chatMainCopy(x){x=x||{};return{base:String(x.base||''),key:String(x.key||''),model:String(x.model||''),temp:x.temp==null?0.8:x.temp,maxTokens:x.maxTokens==null?900:x.maxTokens,offlineMaxTokens:x.offlineMaxTokens==null?900:x.offlineMaxTokens,letterMaxTokens:x.letterMaxTokens==null?1200:x.letterMaxTokens};}
+function chatMainCopy(x){x=x||{};return{base:String(x.base||''),key:String(x.key||''),model:String(x.model||''),temp:x.temp==null?0.8:x.temp,maxTokens:x.maxTokens==null?900:x.maxTokens,offlineMaxTokens:x.offlineMaxTokens==null?900:x.offlineMaxTokens,letterMaxTokens:x.letterMaxTokens==null?1200:x.letterMaxTokens,callMaxTokens:x.callMaxTokens==null?0:x.callMaxTokens};}
 function chatAuxCopy(x){x=x||{};return{base:String(x.base||''),key:String(x.key||''),model:String(x.model||'')};}
 function chatRouteCopy(x,legacyAux){x=x||{};const ownAux=Object.prototype.hasOwnProperty.call(x,'aux');return Object.assign(chatMainCopy(x),{aux:chatAuxCopy(ownAux?x.aux:legacyAux)});}
 function chatRoutesInit(){S.settings=S.settings||{};const legacyAux=chatAuxCopy(S.settings.aux||{});let raw=S.settings.chatRoutes,first=!Array.isArray(raw)||!raw.length,rs=first?[chatRouteCopy(S.settings.chat||{},legacyAux)]:raw.slice(0,CHAT_ROUTE_NAMES.length).map(r=>chatRouteCopy(r,legacyAux));
@@ -3983,9 +3987,9 @@ function chatModelPairError(main,aux){return chatModelTypeError(main,'主聊天�
 function chatModelFormReady(){const main=$('#s_cmodel'),aux=$('#s_xmodel'),msg=chatModelPairError(main&&main.value,aux&&aux.value);if(!msg)return true;toast(msg,4200);const bad=chatModelIsTtsOnly(main&&main.value)?main:aux;if(bad){try{bad.focus();bad.select();}catch(_){}}return false;}
 function chatRouteSummary(r){r=chatRouteCopy(r);const main=r.model||(r.base?'已保存地址':'未填写'),aux=r.aux.model||'同主模型';return main+' · 辅：'+aux;}
 function chatRouteCaptureForm(){const rs=chatRoutesInit(),i=S.settings.chatRouteActive,val=id=>{const el=$('#'+id);return el?String(el.value||'').trim():'';};if(!$('#s_cbase'))return rs[i];
-  const c={base:val('s_cbase'),key:val('s_ckey'),model:val('s_cmodel'),temp:val('s_ctemp')||0.8,maxTokens:val('s_cmax')||900,offlineMaxTokens:val('s_cmax_offline')||900,letterMaxTokens:val('s_cmax_letter')||1200},aux=$('#s_xmodel')?{base:val('s_xbase'),key:val('s_xkey'),model:val('s_xmodel')}:rs[i].aux;rs[i]=chatRouteCopy(Object.assign({},c,{aux}));S.settings.chat=chatMainCopy(c);S.settings.aux=chatAuxCopy(aux);return rs[i];}
+  const c={base:val('s_cbase'),key:val('s_ckey'),model:val('s_cmodel'),temp:val('s_ctemp')||0.8,maxTokens:val('s_cmax')||900,offlineMaxTokens:val('s_cmax_offline')||900,letterMaxTokens:val('s_cmax_letter')||1200,callMaxTokens:val('s_cmax_call')||0},aux=$('#s_xmodel')?{base:val('s_xbase'),key:val('s_xkey'),model:val('s_xmodel')}:rs[i].aux;rs[i]=chatRouteCopy(Object.assign({},c,{aux}));S.settings.chat=chatMainCopy(c);S.settings.aux=chatAuxCopy(aux);return rs[i];}
 function chatRouteApply(r){r=chatRouteCopy(r);S.settings.chat=chatMainCopy(r);S.settings.aux=chatAuxCopy(r.aux);return r;}
-function chatRouteFillForm(r){r=chatRouteCopy(r);[['s_cbase','base'],['s_ckey','key'],['s_cmodel','model'],['s_ctemp','temp'],['s_cmax','maxTokens'],['s_cmax_offline','offlineMaxTokens'],['s_cmax_letter','letterMaxTokens']].forEach(x=>{const el=$('#'+x[0]);if(el)el.value=r[x[1]];});[['s_xbase','base'],['s_xkey','key'],['s_xmodel','model']].forEach(x=>{const el=$('#'+x[0]);if(el)el.value=r.aux[x[1]];});const out=$('#testC'),auxOut=$('#testX');if(out)out.textContent='';if(auxOut)auxOut.textContent='';}
+function chatRouteFillForm(r){r=chatRouteCopy(r);[['s_cbase','base'],['s_ckey','key'],['s_cmodel','model'],['s_ctemp','temp'],['s_cmax','maxTokens'],['s_cmax_offline','offlineMaxTokens'],['s_cmax_letter','letterMaxTokens'],['s_cmax_call','callMaxTokens']].forEach(x=>{const el=$('#'+x[0]);if(el)el.value=r[x[1]];});[['s_xbase','base'],['s_xkey','key'],['s_xmodel','model']].forEach(x=>{const el=$('#'+x[0]);if(el)el.value=r.aux[x[1]];});const out=$('#testC'),auxOut=$('#testX');if(out)out.textContent='';if(auxOut)auxOut.textContent='';}
 function chatRouteRefreshUI(){const rs=chatRoutesInit(),active=S.settings.chatRouteActive;try{document.querySelectorAll('[data-chat-route]').forEach((btn,i)=>{const on=i===active;btn.style.background=on?'#07c160':'#24242a';btn.style.borderColor=on?'#07c160':'rgba(255,255,255,.1)';btn.style.color=on?'#fff':'#ddd';const sm=btn.querySelector('small');if(sm)sm.textContent=chatRouteSummary(rs[i]);});}catch(_){}}
 function chatRouteSwitch(i){chatRoutesInit();if(!chatModelFormReady())return false;chatRouteCaptureForm();const rs=chatRoutesInit();i=Math.max(0,Math.min(rs.length-1,parseInt(i,10)||0));const routeErr=chatModelPairError(rs[i].model,rs[i].aux&&rs[i].aux.model);if(routeErr){toast(CHAT_ROUTE_NAMES[i]+'不能启用：'+routeErr,4200);return false;}S.settings.chatRouteActive=i;const r=chatRouteApply(rs[i]);chatRouteFillForm(r);save();chatRouteRefreshUI();toast('已切换到'+CHAT_ROUTE_NAMES[i]+'（主聊天＋辅助模型）');return true;}
 function chatRouteSaveCurrent(){if(!chatModelFormReady())return false;const r=chatRouteCaptureForm(),i=S.settings.chatRouteActive;save();chatRouteRefreshUI();toast('已保存 '+CHAT_ROUTE_NAMES[i]+' 的主聊天＋辅助模型 ✅');return r;}
@@ -4014,7 +4018,7 @@ function renderSettings(){const nativeBuild=privateNativeAppOn()?String(window._
     ${quickJumpBar([['聊天',"settingsJump(1,'set_chat')"],['辅助',"settingsJump(1,'set_aux')"],['联网',"settingsJump(1,'set_search')"],['识图',"settingsJump(1,'set_vision')"],['语音',"settingsJump(1,'set_tts')"],['AI真图',"settingsJump(1,'set_image')"]])}
     <div class="hint">聊天和识图可以用不同模型。地址已经预填好了，填上 Key 就能用。</div>
     <div class="section" id="set_chat"><div style="padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-weight:600;color:#07c160"><span>聊天模型</span><button type="button" class="minibtn" onclick="chatRouteSaveCurrent()" style="background:#07c160;color:#fff;border-color:#07c160">保存</button></div>
-      <div style="padding:0 14px 10px"><div style="font-size:12px;color:#aaa;margin-bottom:7px">API 路线 · 点击会先保存当前主聊天＋辅助模型，再一起回填目标路线</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px">${routes.map((r,i)=>`<button type="button" data-chat-route="${i}" onclick="chatRouteSwitch(${i})" style="min-width:0;border:1px solid ${i===routeActive?'#07c160':'rgba(255,255,255,.1)'};border-radius:8px;padding:8px 9px;background:${i===routeActive?'#07c160':'#24242a'};color:${i===routeActive?'#fff':'#ddd'};text-align:left;cursor:pointer"><b style="display:block;font-size:13px">${CHAT_ROUTE_NAMES[i]}</b><small style="display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.72">${esc(chatRouteSummary(r))}</small></button>`).join('')}</div><div style="font-size:11px;color:#777;line-height:1.5;margin-top:7px">每条路线同时保存主聊天的地址、Key、模型、随机度、线上聊天回复长度、共同生活/线下回复长度，以及辅助模型的地址、Key、模型。切换时两组设置一起切换。</div></div>
+      <div style="padding:0 14px 10px"><div style="font-size:12px;color:#aaa;margin-bottom:7px">API 路线 · 点击会先保存当前主聊天＋辅助模型，再一起回填目标路线</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px">${routes.map((r,i)=>`<button type="button" data-chat-route="${i}" onclick="chatRouteSwitch(${i})" style="min-width:0;border:1px solid ${i===routeActive?'#07c160':'rgba(255,255,255,.1)'};border-radius:8px;padding:8px 9px;background:${i===routeActive?'#07c160':'#24242a'};color:${i===routeActive?'#fff':'#ddd'};text-align:left;cursor:pointer"><b style="display:block;font-size:13px">${CHAT_ROUTE_NAMES[i]}</b><small style="display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.72">${esc(chatRouteSummary(r))}</small></button>`).join('')}</div><div style="font-size:11px;color:#777;line-height:1.5;margin-top:7px">每条路线同时保存主聊天的地址、Key、模型、随机度，线上聊天／共同生活线下／信件／通话四档回复长度，以及辅助模型的地址、Key、模型。切换时两组设置一起切换。</div></div>
       <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_cbase" value="${esc(a.base)}"></div>
       <div class="field" style="padding:0 14px"><label>API Key</label><input id="s_ckey" type="password" value="${esc(a.key)}" placeholder="sk-…"></div>
       <div class="field" style="padding:0 14px"><label>模型名</label><div style="display:flex;gap:6px"><input id="s_cmodel" value="${esc(a.model)}" style="flex:1"><button class="minibtn" onclick="fetchModels('s_cbase','s_ckey','s_cmodel')">拉取</button></div></div>
@@ -4022,6 +4026,9 @@ function renderSettings(){const nativeBuild=privateNativeAppOn()?String(window._
         <div class="field"><label>回复长度（线上聊天）</label><input id="s_cmax" type="number" value="${a.maxTokens}"></div></div>
       <div class="two" style="padding:0 14px 10px"><div class="field"><label>回复长度（共同生活/线下）</label><input id="s_cmax_offline" type="number" value="${a.offlineMaxTokens}"></div>
         <div class="field"><label>回复长度（信件）</label><input id="s_cmax_letter" type="number" value="${a.letterMaxTokens}"></div></div>
+      <div class="two" style="padding:0 14px 10px"><div class="field"><label>回复长度（通话）<small style="color:#888">留空＝跟线上聊天一样</small></label><input id="s_cmax_call" type="number" value="${a.callMaxTokens||''}" placeholder="${a.maxTokens}"></div>
+        <div class="field"><label>&nbsp;</label><button class="btn g" style="width:100%" onclick="testCallScale()">按通话规模测</button></div></div>
+      <div id="testCall" style="font-size:12px;text-align:center;min-height:14px;padding:0 14px 8px;line-height:1.6;white-space:pre-line"></div>
       <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="testMain()">测试主模型</button></div><div id="testC" style="font-size:12px;text-align:center;min-height:14px;padding-bottom:8px"></div>
     </div>
     <div class="section" id="set_aux"><div style="padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;font-weight:600;color:#6c5ce7"><span>辅助模型（省钱·给次要功能用）</span><button type="button" class="minibtn" onclick="chatRouteSaveCurrent()" style="background:#6c5ce7;color:#fff;border-color:#6c5ce7">保存</button></div>
@@ -4147,7 +4154,7 @@ function renderSettings(){const nativeBuild=privateNativeAppOn()?String(window._
 }
 function saveSettings(){if(!chatModelFormReady())return false;const g=id=>$('#'+id).value.trim();
   const routes=chatRoutesInit(),routeActive=S.settings.chatRouteActive;
-  S.settings.chat={base:g('s_cbase')||'https://vg.v1api.cc/v1',key:g('s_ckey'),model:g('s_cmodel')||'gpt-4o-mini',temp:$('#s_ctemp').value||0.8,maxTokens:$('#s_cmax').value||900,offlineMaxTokens:$('#s_cmax_offline').value||900,letterMaxTokens:$('#s_cmax_letter').value||1200};
+  S.settings.chat={base:g('s_cbase')||'https://vg.v1api.cc/v1',key:g('s_ckey'),model:g('s_cmodel')||'gpt-4o-mini',temp:$('#s_ctemp').value||0.8,maxTokens:$('#s_cmax').value||900,offlineMaxTokens:$('#s_cmax_offline').value||900,letterMaxTokens:$('#s_cmax_letter').value||1200,callMaxTokens:$('#s_cmax_call')?$('#s_cmax_call').value||0:(S.settings.chat&&S.settings.chat.callMaxTokens)||0};
   S.settings.aux={base:g('s_xbase'),key:g('s_xkey'),model:g('s_xmodel')};
   routes[routeActive]=chatRouteCopy(Object.assign({},S.settings.chat,{aux:S.settings.aux}));
   S.settings.search={mode:(S.settings.search&&S.settings.search.mode)||'jina',base:($('#s_sebase')?$('#s_sebase').value.trim():''),key:($('#s_sekey')?$('#s_sekey').value.trim():''),model:($('#s_semodel')?$('#s_semodel').value.trim():((S.settings.search||{}).model||''))};
@@ -4199,6 +4206,9 @@ async function testConn(){const o=$('#testOut');o.style.color='#999';o.textConte
   try{const r=await fetch(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model,messages:[{role:'user',content:'说"在"'}],max_tokens:5})});
     if(r.ok){o.style.color='#19a463';o.textContent='✅ 连接成功！';}else{o.style.color='#e85';o.textContent='❌ '+apiErrorCN(r.status,await r.text());}
   }catch(e){o.style.color='#e85';o.textContent='❌ '+apiCaughtCN(e);}}
+let _taskBusy=false;
+let _pageHiddenMark=0;
+if(typeof document!=='undefined')document.addEventListener('visibilitychange',()=>{if(document.hidden)_pageHiddenMark=Date.now();});
 function fetchT(url,opt,ms){const ac=new AbortController();const t=setTimeout(()=>ac.abort(),ms||25000);return fetch(url,Object.assign({},opt||{},{signal:ac.signal})).finally(()=>clearTimeout(t));}
 async function testModel(bId,kId,mId,outId,defM){const o=$('#'+outId);if(!o)return;o.style.color='#999';o.textContent='测试中…';
   const base=($('#'+bId).value.trim()||'').replace(/\/+$/,'');const key=$('#'+kId).value.trim();const model=$('#'+mId).value.trim()||defM;
@@ -4213,6 +4223,22 @@ async function testModel(bId,kId,mId,outId,defM){const o=$('#'+outId);if(!o)retu
   }catch(e){o.style.color='#e85';o.textContent='❌ '+target+'测试失败\n'+apiCaughtCN(e);}}
 function testMain(){testModel('s_cbase','s_ckey','s_cmodel','testC','gpt-4o-mini');}
 function testAux(){testModel('s_xbase','s_xkey','s_xmodel','testX','');}
+/* 「测试主模型」只发 82 字符、5 个 token、25 秒超时，通话发的是上万字符、上千 token、190 秒超时。
+   两者差两个数量级，所以测试通过完全不代表通话打得通。这一条按通话的真实规模发一次。 */
+function callScaleFiller(chars){const unit='这是一次按真实通话规模构造的连通性测试，用来把上下文占到通话那么大，好看清这条线路扛不扛得住。';const times=Math.max(1,Math.ceil(chars/unit.length));return unit.repeat(times).slice(0,chars);}
+async function testCallScale(){const o=$('#testCall');if(!o)return;
+  const base=(($('#s_cbase')||{value:''}).value||'').trim().replace(/\/+$/,''),key=(($('#s_ckey')||{value:''}).value||'').trim(),model=(($('#s_cmodel')||{value:''}).value||'').trim();
+  if(!base||!key||!model){o.style.color='#e85';o.textContent='先填地址、Key 和模型名';return;}
+  const max=Math.max(200,Math.min(8192,parseInt(($('#s_cmax_call')||{value:''}).value,10)||parseInt(($('#s_cmax')||{value:''}).value,10)||900)),chars=18000;
+  const body=JSON.stringify({model,temperature:0.8,max_tokens:max,messages:[{role:'system',content:callScaleFiller(chars)},{role:'user',content:'只回三个字：我在。'}]});
+  if(!await uiConfirm('这会按真实通话的大小真发一次请求：上下文约 '+chars+' 字符，回复上限 '+max+' token，最长等 190 秒。会真实消耗额度，继续吗？'))return;
+  o.style.color='#999';o.textContent='测试中…按通话规模发，最长要等 190 秒';
+  const started=Date.now(),secs=()=>((Date.now()-started)/1000).toFixed(1);
+  try{const r=await fetchT(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body},190000);
+    const raw=await r.text();
+    if(!r.ok){o.style.color='#e85';o.textContent='❌ 通话规模测试失败（'+secs()+' 秒）\n'+apiErrorCN(r.status,raw);return;}
+    o.style.color='#19a463';o.textContent='✅ 通话规模测试成功 · 用时 '+secs()+' 秒\n请求 '+body.length+' 字符 · 回复上限 '+max+' token · 返回 '+raw.length+' 字符';
+  }catch(e){o.style.color='#e85';o.textContent='❌ 通话规模测试失败（'+secs()+' 秒）\n'+apiCaughtCN(e)+'\n通话就是这个规模；上面那个「测试主模型」只发 82 字符，测不到这一层。';}}
 function saveTestedSearch(mode,seb,sek,sem){const old=S.settings.search||{},base=((seb&&seb.value.trim())||(mode==='jina'?'https://s.jina.ai':'')),key=(sek&&sek.value.trim())||'',model=(sem&&sem.value.trim())||old.model||'';S.settings.search={mode,base:base.replace(/\/+$/,''),key,model};S.settings.web=Object.assign({},S.settings.web||{},{enabled:true});save();}
 async function testSE(){const o=$('#testSE');if(!o)return;o.style.color='#999';o.textContent='测试中…';
   const mode=(S.settings.search||{}).mode||'jina';const seb=$('#s_sebase'),sek=$('#s_sekey'),sem=$('#s_semodel');
@@ -13080,11 +13106,40 @@ async function speakWait(text,c,opt){opt=opt||{};const v=c?getVoice(c):null;cons
 function callSend(){const inp=$('#callMsg');if(!inp)return;const t=inp.value.trim();if(!t||!_call)return;inp.value='';
   const um={role:'user',type:'text',content:t,time:Date.now(),id:uid(),_call:true,_ck:_call.kind,_cs:_call.session};msgs(_call.id).push(um);behaviorOnUserMsg(_call.id,um);lifeNoteOnUserMsg(_call.id,um);emotionOnUserMsg(_call.id,um);save();roleServerPushTouchSoon(_call.id,um.time);_call.sub={who:'me',text:t};updateCallSub();
   const autonomyAnswer=callScreenAutonomyUserAnswered(t);if(autonomyAnswer==='frame')return;if(!autonomyAnswer&&callOnUserSay(t))return;callAI();}
-function callFailureText(e){const status=+(e&&e.status||0),source=String(e&&e.source||''),detail=[e&&e.message,e&&e.raw,e&&e.data&&JSON.stringify(e.data)].filter(Boolean).join(' ').toLowerCase();
+/* 通话失败一次就把「网络连接中断」打到字幕上，而微信主模型失败会自动落副模型再发一次——
+   同样的抖动率，微信吞掉了，通话全甩给她看。这里给通话补上同一层兜底：
+   同路线先重发一次，仍不行再落副模型，都失败了才显示提示。
+   只重发传输层/限流/上游 5xx 这类「再试一次可能就好」的失败；余额、密钥、模型名、
+   内容拦截这些重发一百次也一样，直接抛出去。已经等了很久的超时也不重发，通话等不起。 */
+function callRetryableFailure(e){if(!e||e.code==='call-output-blocked'||e.modelRefusal)return false;
+  const status=+(e.status||0);
+  if([400,401,402,403,404,422].includes(status))return false;
+  if(status===408||status===409||status===429||status>=500)return true;
+  if(status)return false;
+  /* 没有 HTTP 状态码 = 连接压根没建起来或中途断了。判断只能看抛出来的英文原因，绝不能看中文提示：
+     那句提示自己就带着「不是付款或密钥错误」这种字样，拿正则去匹配会把它当成密钥问题而放弃重试。 */
+  const raw=String(e.transportRaw||'').toLowerCase();
+  if(!raw)return false;
+  if(/timeout|timed out|abort|超时/.test(raw)&&Math.max(0,+e.elapsedMs||0)>45000)return false;
+  return /fetch|network|load failed|cors|connection|socket|econn|stream|timeout|timed out|abort/.test(raw);}
+async function callChatWithRetry(messages,md,c){const auxReady=!md.aux&&wechatAuxConfigured(md.routeIndex);let firstError=null;
+  for(let attempt=0;attempt<2;attempt++){try{return await chatAPI(messages,md);}catch(e){if(!firstError)firstError=e;if(!callRetryableFailure(e))throw e;if(attempt===0)await sleep(500);}}
+  if(!auxReady)throw firstError;
+  try{const r=await chatAPI(messages,Object.assign({},md,{aux:true}));if(c)wechatModelRouteNotice(c,true,true);return r;}catch(_){throw firstError;}}
+/* 通话被长度上限截断时以前直接断在半句：微信的 complete 写死 true，通话写的是 !_rawOutput，
+   而「模型原文输出」全局常开之后 _rawOutput 永远是 true，续写就永远不会触发。 */
+function callReplyBudget(c){const route=chatMainCopy(chatRequestRoute(roleChatRouteIndex(c))||S.settings&&S.settings.chat||{}),own=Number(route.callMaxTokens)||0;
+  return Math.max(200,Math.min(8192,own>0?own:(Number(route.maxTokens)||900)));}
+/* 息屏或切到别的 App，正在飞的请求会被系统掐掉，报回来的是传输失败。
+   以前统一说成「网络连接中断」，其实跟网络没关系，这里把话说准。 */
+function callBackgroundInterrupted(e,mark,now){mark=mark==null?(typeof _pageHiddenMark==='number'?_pageHiddenMark:0):mark;now=now||Date.now();
+  const elapsed=Math.max(0,+(e&&e.elapsedMs)||0);return !!mark&&mark<=now&&mark>=now-elapsed-3000;}
+function callFailureText(e,hiddenMark){const status=+(e&&e.status||0),source=String(e&&e.source||''),detail=[e&&e.message,e&&e.raw,e&&e.data&&JSON.stringify(e.data)].filter(Boolean).join(' ').toLowerCase();
   if(/insufficient[_ -]?(quota|credit)|no[_ -]?balance|余额不足|点数不足|额度不足|credit balance|quota exceeded/.test(detail))return source==='ai-core'?'(AI 账户点数不足，请充值后再通话)':'(当前聊天接口账户余额不足，请到接口平台充值)';
   if(status===429||/rate.?limit|too many requests|请求过于频繁|达到.{0,6}(限额|上限)/.test(detail))return'(当前聊天接口请求过于频繁或达到平台限额，请稍后再试)';
   if(/model.?not.?found|unknown model|模型.{0,6}(不存在|无效)|endpoint.{0,6}not found/.test(detail)||status===404)return'(当前聊天模型或接口地址不存在，请检查聊天接口设置)';
   if(/timeout|timed out|abort|超时/.test(detail)||status===408||status===504)return'(连接超时，请再说一次)';
+  if(!status&&typeof callBackgroundInterrupted==='function'&&callBackgroundInterrupted(e,hiddenMark))return'(刚才小手机切到后台了，这句没送出去，再说一次就好)';
   if(e&&e.network||/network|failed to fetch|网络|连接中断|cors/.test(detail))return'(网络连接中断，请再说一次)';
   if(status===401||status===403||/unauthor|forbidden|invalid.{0,6}(key|token)|密钥.{0,6}(无效|错误)|授权失败/.test(detail))return source==='ai-core'?'(内置 AI 服务授权失效，请重新登录或联系管理员)':'(当前聊天接口密钥无效或没有该模型权限，请检查聊天接口设置)';
   if(status>=500||/upstream|service unavailable|bad gateway|服务.{0,6}(异常|拥堵)/.test(detail))return'(上游聊天服务暂时异常，请稍后再试)';
@@ -13125,7 +13180,7 @@ async function callAI(sysNote,opts){if(!_call)return;const _rawOutput=typeof mod
     cf+=callVisualHistoryPrompt(_videoVision?_videoVisionScene:'');
     cf+=callSpyRecentPrompt(c.id)+lifeNoteModelPrompt(c);
     const _callQuery=(sysNote||'')+'\n'+hist.slice(-6).map(x=>x.content||'').join('\n'),_callMemory=selectRelevantMemory(c,_callQuery,5),sys=buildSystem(c,{natural:wechatNaturalOn(),query:_callQuery,selectiveMemory:true,memoryItems:_callMemory.items})+memoryRetrievalPrompt(c,_callMemory)+cf;
-    const _md=Object.assign({diagnosticRoleId:c.id,diagnosticChannel:'call',roleReplyLanguageGuard:true,routeIndex:roleChatRouteIndex(c),aux:c.model==='aux',complete:!_rawOutput,unfilteredOutput:_rawOutput},_callOpts),_videoVisionTurn=sysNote||('[视频通话当前画面]\n'+_videoVisionScene);let _activeCallMd=_md;const _callChat=(messages,routeMd)=>{const rows=messages.slice();if(_videoVisionAutomatic){const last=rows[rows.length-1];if(last&&last.role==='user')rows[rows.length-1]={role:'user',content:String(last.content||'')+'\n\n'+_videoVisionTurn};else rows.push({role:'user',content:_videoVisionTurn});}return chatAPI(rows,routeMd||_activeCallMd);};
+    const _md=Object.assign({diagnosticRoleId:c.id,diagnosticChannel:'call',roleReplyLanguageGuard:true,routeIndex:roleChatRouteIndex(c),aux:c.model==='aux',complete:true,max:callReplyBudget(c),unfilteredOutput:_rawOutput},_callOpts),_videoVisionTurn=sysNote||('[视频通话当前画面]\n'+_videoVisionScene);let _activeCallMd=_md;const _callChat=(messages,routeMd)=>{const rows=messages.slice();if(_videoVisionAutomatic){const last=rows[rows.length-1];if(last&&last.role==='user')rows[rows.length-1]={role:'user',content:String(last.content||'')+'\n\n'+_videoVisionTurn};else rows.push({role:'user',content:_videoVisionTurn});}return callChatWithRetry(rows,routeMd||_activeCallMd,c);};
     const _ordinaryCallContinuity=!_videoVision&&!_screenShareEvent&&!_connectionEvent&&!_inspectionCompletion?roleReplyContinuityPin(c,Date.now()):'';
     const _initialCallMessages=_videoVisionAutomatic?[{role:'system',content:sys},{role:'system',content:personaPin(c)}]:[{role:'system',content:sys},...hist,{role:'system',content:personaPin(c)+_ordinaryCallContinuity}];
     if(_videoVision)callVideoVisionStatus('working');

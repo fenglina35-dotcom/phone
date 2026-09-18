@@ -391,6 +391,62 @@ const PERMANENT_FIXES = [
     marker: 'function dyAllGroups()',
     least: 1,
   },
+  {
+    release: 'v1260',
+    name: '通话掉一次连接自己重发，不再把「网络连接中断」甩给她',
+    scope: 'both',
+    marker: 'async function callChatWithRetry(messages,md,c)',
+    least: 1,
+  },
+  {
+    release: 'v1260',
+    name: '通话被长度上限截断时会补完，不再断在半句',
+    scope: 'both',
+    marker: "complete:true,max:callReplyBudget(c)",
+    least: 1,
+  },
+  {
+    release: 'v1260',
+    name: '通话有自己的回复长度，留空跟线上聊天一样',
+    scope: 'both',
+    marker: 'function callReplyBudget(c)',
+    least: 1,
+  },
+  {
+    release: 'v1260',
+    name: '切后台被掐断的请求说人话，不再赖网络',
+    scope: 'both',
+    marker: 'function callBackgroundInterrupted(e,mark,now)',
+    least: 1,
+  },
+  {
+    release: 'v1260',
+    name: '续写碎片不再跑整段的纯英文拦截',
+    scope: 'both',
+    marker: 'roleReplyLanguageGuard:false,roleInterceptPurpose',
+    least: 1,
+  },
+  {
+    release: 'v1260',
+    name: '英文续写不再把两个词粘成一个',
+    scope: 'both',
+    marker: 'hadGap=/^\\s/.test(more)',
+    least: 1,
+  },
+  {
+    release: 'v1260',
+    name: '设置页能按通话的真实规模测一次',
+    scope: 'both',
+    marker: 'async function testCallScale()',
+    least: 1,
+  },
+  {
+    release: 'v1260',
+    name: '_taskBusy 有声明，任务页不会没布置过就抛错',
+    scope: 'both',
+    marker: 'let _taskBusy=false;',
+    least: 1,
+  },
 ];
 
 const sources = { web: read(WEB), private: read(PRIVATE) };
