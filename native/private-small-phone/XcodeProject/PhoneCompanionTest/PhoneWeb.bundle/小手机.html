@@ -955,6 +955,60 @@ body{background:#000;padding:0;}
 .dynav{flex:0 0 48px;display:flex;align-items:center;justify-content:space-between;padding:0 13px;background:#08090b;color:#fff;border-bottom:.5px solid #202126;}
 .dy-feed-back{position:absolute;top:8px;left:10px;z-index:7;color:#fff;font-size:22px;cursor:pointer;text-shadow:0 1px 4px rgba(0,0,0,.6)}
 .dy-shell{flex:1;overflow:hidden;display:flex;flex-direction:column;position:relative;background:#000}.dyfeed{flex:1;overflow-y:auto;scroll-snap-type:y mandatory;background:#000;scrollbar-width:none}.dyfeed::-webkit-scrollbar{display:none}
+/* ===== 抖音「我」页（仿真布局） ===== */
+.dyme{flex:1;overflow-y:auto;background:#161617;color:#f2f2f4;-webkit-overflow-scrolling:touch;}
+.dyme-cover{position:relative;padding:12px 14px 18px;background:linear-gradient(180deg,#d9d9dc,#bdbdc2 62%,#9d9da4);background-size:cover;background-position:center;}
+.dyme-cover:after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.72),rgba(246,246,248,.62) 58%,rgba(22,22,23,.88));backdrop-filter:blur(18px);}
+.dyme-cover>*{position:relative;z-index:1;}
+.dyme-topbar{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.dyme-addfriend{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.58);border-radius:999px;padding:7px 13px;font-size:14px;font-weight:600;color:#111;}
+.dyme-tools{display:flex;gap:8px;}
+.dyme-tool{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.55);display:flex;align-items:center;justify-content:center;}
+.dyme-idrow{display:flex;align-items:flex-start;gap:14px;margin-top:22px;}
+.dyme-avwrap{position:relative;flex:0 0 auto;}
+.dyme-avwrap .avatar.lg{width:88px!important;height:88px!important;flex:0 0 88px!important;border-radius:50%!important;border:3px solid rgba(255,255,255,.85);overflow:hidden;font-size:40px;}
+.dyme-avplus{position:absolute;right:0;bottom:2px;width:27px;height:27px;border-radius:50%;background:#2ecc71;color:#fff;font-size:17px;line-height:25px;text-align:center;border:2px solid #fff;font-style:normal;}
+.dyme-idtext{flex:1;min-width:0;padding-top:6px;}
+.dyme-name{font-size:25px;font-weight:800;color:#141416;display:flex;align-items:center;gap:8px;letter-spacing:.2px;}
+.dyme-lv{font-style:normal;font-size:12px;font-weight:800;color:#fff;background:#f5243d;border-radius:999px;padding:2px 8px;}
+.dyme-dyid{margin-top:5px;font-size:14px;color:#4a4a50;display:flex;align-items:center;gap:5px;}
+.dyme-ai{margin-top:11px;display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,.5);border-radius:999px;padding:5px 12px 5px 5px;font-size:14.5px;font-weight:600;color:#17171a;}
+.dyme-ai .avatar{width:25px!important;height:25px!important;flex:0 0 25px!important;border-radius:50%!important;font-size:14px;}
+.dyme-ai b{font-weight:600;color:#5a5a60;}
+.dyme-body{padding:16px 16px 0;}
+.dyme-stats{display:flex;align-items:center;gap:20px;}
+.dyme-stat{display:flex;flex-direction:column;gap:2px;}
+.dyme-stat b{font-size:20px;font-weight:800;letter-spacing:.2px;}
+.dyme-stat span{font-size:13px;color:#8d8d95;}
+.dyme-edit{margin-left:auto;background:#2c2c2f;color:#f2f2f4;border:0;border-radius:8px;padding:9px 16px;font-size:14.5px;font-weight:600;}
+
+.dyme-at{color:#f4c430;font-weight:600;}
+.dyme-bio{margin-top:14px;font-size:15px;line-height:1.62;color:#e6e6ea;word-break:break-word;}
+.dyme-tags{margin-top:11px;display:flex;flex-wrap:wrap;gap:8px;}
+.dyme-tag{background:#252528;border-radius:6px;padding:5px 10px;font-size:13px;color:#c9c9cf;}
+.dyme-tag.dim{color:#8d8d95;}
+.dyme-acts{margin-top:18px;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;}
+.dyme-act{display:flex;flex-direction:column;align-items:center;gap:7px;font-size:12.5px;color:#d4d4da;}
+.dyme-promo{margin-top:18px;background:#1e1e21;border-radius:10px;padding:11px;display:flex;align-items:center;gap:11px;position:relative;}
+.dyme-promo-thumb{width:52px;height:52px;border-radius:7px;background:linear-gradient(135deg,#fff3b0,#ffd166);display:flex;align-items:center;justify-content:center;font-size:24px;flex:0 0 52px;}
+.dyme-promo-text{flex:1;min-width:0;}
+.dyme-promo-text b{display:block;font-size:15.5px;font-weight:700;}
+.dyme-promo-text span{display:block;margin-top:3px;font-size:12.5px;color:#8d8d95;}
+.dyme-promo-btn{background:#8c1220;color:#fff;border:0;border-radius:6px;padding:8px 13px;font-size:13.5px;font-weight:600;white-space:nowrap;}
+.dyme-promo-x{position:absolute;right:9px;top:7px;font-style:normal;font-size:13px;color:#7b7b82;}
+.dyme-tabs{margin:20px -16px 0;padding:0 16px;display:flex;gap:26px;border-bottom:.5px solid #242427;}
+.dyme-tabs span{position:relative;padding:9px 0 12px;font-size:16px;color:#85858c;}
+.dyme-tabs span.on{color:#f2f2f4;font-weight:700;}
+.dyme-tabs span.on:after{content:'';position:absolute;left:0;right:0;bottom:6px;height:3px;border-radius:2px;background:#f1c40f;}
+.dyme-private{margin:0 -16px;padding:14px 16px;display:flex;align-items:center;gap:9px;font-size:15px;border-bottom:.5px solid #242427;}
+.dyme-private b{margin-left:auto;font-weight:500;color:#8d8d95;}
+.dyme-private i{font-style:normal;color:#6d6d74;}
+.dyme-grid{margin:2px -16px 0;display:grid;grid-template-columns:repeat(3,1fr);gap:2px;}
+.dyme-cell{position:relative;aspect-ratio:3/4.1;background-size:200% 200%;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.dyme-emo{font-size:40px;filter:drop-shadow(0 6px 12px rgba(0,0,0,.5));}
+.dyme-top{position:absolute;left:6px;top:6px;background:#f1c40f;color:#2b2b00;font-size:11px;font-weight:800;border-radius:3px;padding:2px 6px;}
+.dyme-play{position:absolute;left:7px;bottom:6px;display:flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:#fff;text-shadow:0 1px 4px rgba(0,0,0,.85);}
+.dyme-empty{padding:46px 16px;text-align:center;color:#75757c;font-size:14px;}
 .dyvideo{position:relative;height:100%;min-height:100%;width:100%;scroll-snap-align:start;scroll-snap-stop:always;display:flex;align-items:flex-end;overflow:hidden;background:#060608;isolation:isolate;}
 .dybg{position:absolute;inset:-8%;background-size:260% 260%;animation:dyflow 10s ease infinite;filter:saturate(.8) brightness(.53);transform:scale(1.12);}
 @keyframes dyflow{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}

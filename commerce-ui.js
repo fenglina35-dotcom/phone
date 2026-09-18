@@ -135,19 +135,10 @@
       '<div class="dynarr" id="narr_'+v.id+'" onclick="dyTapVideo(\''+v.id+'\')" style="display:'+(_dyNarr[v.id]?'block':'none')+'"><div style="font-weight:800;color:#fff;margin-bottom:7px">视频内容</div>'+esc(v.narration||v.desc||'（这条还没有内容描写）')+'<div style="text-align:center;color:#777;margin-top:10px;font-size:11px">轻触收起</div></div></article>';
   };
 
-  var dyProfilePane='mine';
-  window.dyProfileSwitch=function(pane){dyProfilePane=pane==='liked'?'liked':'mine';render();};
-  window.dyProfile=function(){
-    var liked=S.dy.liked||[],mine=S.dy.mine||[],profile=S.dy.profile||{},following=(S.dy.following||[]).length;
-    var totalLikes=mine.reduce(function(sum,v){return sum+(+v.lk||0)+(v.liked?1:0);},0);
-    var fans=Number.isFinite(+profile.fans)?Math.max(0,+profile.fans):Math.max(0,Math.round(totalLikes*.18)+mine.length*23);
-    var handle=String(profile.handle||dyNick()||'north').replace(/^@/,'').replace(/\s+/g,'_').replace(/[^A-Za-z0-9_\u3400-\u9fff]/g,'').slice(0,24)||'north';
-    var active=dyProfilePane==='liked'?liked:mine;
-    var grid=active.length?'<div class="dy-profile-grid">'+active.map(function(v){return '<button class="dy-profile-tile" onclick="dyOpenLiked(\''+v.id+'\')" style="background:'+(v.grad||DY_GRADS[0])+'"><span class="media">'+(v.emoji||'🎬')+'</span><span class="dy-tile-likes">'+svgIc('heart',13,'#fff',2.2)+' '+((+v.lk||0)+(v.liked?1:0))+'</span></button>';}).join('')+'</div>':'<div class="dy-profile-empty">'+svgIc(dyProfilePane==='liked'?'heart':'video',34,'#85868c')+(dyProfilePane==='liked'?'还没有喜欢的视频<br><small>点赞过的作品会收藏在这里</small>':'还没有发布作品<br><small>点击上方「发布作品」记录生活</small>')+'</div>';
-    return '<div class="dy-profile-scroll"><div class="dy-profile-cover"></div><section class="dy-profile-card"><div class="dy-profile-head"><div class="dy-profile-avatar" onclick="changeDyAvatar()">'+av(dyAvatar(),'lg')+'<span class="camera">'+svgIc('camera',12,'#fff',2)+'</span></div><div class="dy-profile-actions"><button class="primary" onclick="dyCompose()">发布作品</button><button onclick="editDyProfile()">编辑资料</button></div></div>'+
-      '<div class="dy-profile-name">'+esc(dyNick())+'</div><div class="dy-profile-id">抖音号：'+esc(handle)+'</div><div class="dy-profile-bio">'+esc(profile.bio||'记录生活，也记录喜欢。')+'</div><div class="dy-profile-stats"><button class="dy-profile-stat" onclick="dyFollowList()"><b>'+following+'</b>关注</button><button class="dy-profile-stat"><b>'+fans+'</b>粉丝</button><button class="dy-profile-stat"><b>'+totalLikes+'</b>获赞</button></div></section>'+
-      '<div class="dy-profile-tabs"><button class="dy-profile-tab '+(dyProfilePane==='mine'?'on':'')+'" onclick="dyProfileSwitch(\'mine\')">'+svgIc('video',16,'currentColor')+' 作品 '+mine.length+'</button><button class="dy-profile-tab '+(dyProfilePane==='liked'?'on':'')+'" onclick="dyProfileSwitch(\'liked\')">'+svgIc('heart',16,'currentColor')+' 喜欢 '+liked.length+'</button></div>'+grid+'</div>';
-  };
+  /* 抖音「我」页已按真实抖音在 app.js 的 dyProfile 里重做；这里原本的覆盖会把它整个盖掉，
+     和 private-reply-intercept.js 一样属于「改了核心却看不到效果」的陷阱，故移除。
+     dyProfileSwitch 保留为兼容入口，旧的 onclick 不会报错。 */
+  window.dyProfileSwitch=function(pane){if(typeof dyMeSetTab==='function')dyMeSetTab(pane==='liked'?'喜欢':'作品');};
   var dyFeedViewWithHomeButton=window.dyFeedView;
   window.dyFeedView=function(){
     return dyFeedViewWithHomeButton.apply(this,arguments).replace('<div class="dy-topbar">','<div class="dy-topbar"><button class="dy-home-back" onclick="dyBack()" aria-label="返回上一页"><svg viewBox="0 0 24 24" width="22" height="22"><path d="m15 5-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>');
