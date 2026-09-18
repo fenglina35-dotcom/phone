@@ -5407,10 +5407,10 @@ function changeXCover(){pickFile('image/*',async f=>{S.x.profile.cover=await com
 /* ---------- 抖音 ---------- */
 const DY_GRADS=['linear-gradient(135deg,#fe2c55,#7c1f3a)','linear-gradient(135deg,#25f4ee,#0b6b67)','linear-gradient(135deg,#845ef7,#2b1a5e)','linear-gradient(135deg,#ff922b,#7a3d05)','linear-gradient(135deg,#20c997,#0a4d3a)','linear-gradient(135deg,#f06595,#5e1a3a)','linear-gradient(135deg,#4dabf7,#103a5e)','linear-gradient(135deg,#ffd43b,#7a6308)'];
 let dyTab='feed';let _dyMode='rec';let _dyNarr={};let _dyPaused={};let _dyFromWx=false;
-function dyInit(){let changed=false;if(!S.dy||typeof S.dy!=='object'){S.dy={};changed=true;}const d=S.dy;['feed','liked','following','dms','history','mine','visitors','watched','updates','closeFriends','fans','acts'].forEach(k=>{if(!Array.isArray(d[k])){d[k]=[];changed=true;}});if(!d.users||typeof d.users!=='object'||Array.isArray(d.users)){d.users={};changed=true;}if(!d.profile||typeof d.profile!=='object'||Array.isArray(d.profile)){d.profile={};changed=true;}const defs={nick:'',avatar:null,bio:'',dyid:'',fans:0,likes:0,mutual:0,gender:'',age:'',birth:'',loc:'',level:'',cover:''};if(!d.profile.dyid)d.profile.dyid=String(Math.floor(5e10+Math.random()*4e10));Object.keys(defs).forEach(k=>{if(d.profile[k]===undefined){d.profile[k]=defs[k];changed=true;}});return changed;}
+function dyInit(){let changed=false;if(!S.dy||typeof S.dy!=='object'){S.dy={};changed=true;}const d=S.dy;['feed','liked','following','dms','history','mine','visitors','watched','updates','closeFriends','fans','acts','groups','applies'].forEach(k=>{if(!Array.isArray(d[k])){d[k]=[];changed=true;}});if(!d.users||typeof d.users!=='object'||Array.isArray(d.users)){d.users={};changed=true;}if(!d.profile||typeof d.profile!=='object'||Array.isArray(d.profile)){d.profile={};changed=true;}const defs={nick:'',avatar:null,bio:'',dyid:'',fans:0,likes:0,mutual:0,gender:'',age:'',birth:'',loc:'',level:'',cover:''};if(!d.profile.dyid)d.profile.dyid=String(Math.floor(5e10+Math.random()*4e10));Object.keys(defs).forEach(k=>{if(d.profile[k]===undefined){d.profile[k]=defs[k];changed=true;}});return changed;}
 function dyNick(){dyInit();return S.dy.profile.nick||S.me.name;}
 function dyAvatar(){dyInit();return S.dy.profile.avatar||S.me.avatar;}
-function openDouyin(){_dyFromWx=false;if(dyInit())save(0);dyTab='feed';_dySub='';_dyWorkId='';_dyCmOpen=false;go('dy');if(!S.dy.feed.length)dyGenFeed('',true);}
+function openDouyin(){_dyFromWx=false;if(dyInit())save(0);dyTab='feed';_dySub='';_dyWorkId='';_dyCmOpen=false;go('dy');if(!S.dy.feed.length)dyGenFeed('',true);dyApplyCheck();}
 function dyBack(){if(_dyCmOpen)return dyCmClose();if(_dySub)return dySubClose();if(_dyFromWx||cur().from==='wechat'){_dyFromWx=false;back();}else home();}
 function dyVid(id){return S.dy.feed.find(v=>v.id===id)||S.dy.liked.find(v=>v.id===id)||(S.dy.mine||[]).find(v=>v.id===id);}
 function dyModalOpen(){const m=$('#modal');return m&&m.classList.contains('show');}
@@ -5425,6 +5425,8 @@ function renderDouyin(){dyInit();
   if(_dySub==='fans')return dyFansView();
   if(_dySub==='acts')return dyActsView();
   if(_dySub==='strangers')return dyStrangersView();
+  if(_dySub==='group')return dyGroupView();
+  if(_dySub==='ginfo')return dyGroupInfoView();
   let body;
   if(dyTab==='feed')body=dyFeedView();else if(dyTab==='search')body=dySearchView();else if(dyTab==='dm')body=dyDMList();else body=dyProfile();
   const nav=(dyTab==='feed'||dyTab==='me'||dyTab==='dm')?'':`<div class="dynav dy-safe-nav"><span class="l" onclick="dyBack()" style="cursor:pointer;font-size:26px">‹</span><span style="font-weight:800">搜索发现</span><span class="r" style="width:18px"></span></div>`;
@@ -5546,6 +5548,251 @@ async function dyGenDMs(){aiLoad('正在刷新私信…');const recent=(S.dy.min
     rows.forEach(x=>S.dy.dms.unshift({id:uid(),cid:null,name:x.name,avatar:letterAv(x.name),msgs:[{from:'them',text:x.text,time:Date.now()}]}));
     save();render();toast('有'+rows.length+'条新私信👀');
   }finally{aiDone();}}
+/* ===== 抖音群聊：建群、拉角色、公开群每天一位陌生人来申请、私密群只能邀请、管理员 ===== */
+let _dyGid='';let _dyGTab='聊天';let _dyGSel=[];let _dyGBusy={};
+function dyGroups(){dyInit();if(!Array.isArray(S.dy.groups))S.dy.groups=[];return S.dy.groups;}
+function dyGroup(id){return dyGroups().find(g=>g.id===id)||null;}
+function dyGNum(){return String(Math.floor(1e11+Math.random()*9e11));}
+function dyGMsgs(g){if(!Array.isArray(g.msgs))g.msgs=[];return g.msgs;}
+function dyGMemberList(g){if(!Array.isArray(g.members))g.members=[];return g.members;}
+function dyGFind(g,k){return dyGMemberList(g).find(m=>m.k===k)||null;}
+function dyGMemberName(m){if(!m)return '已退出的成员';if(m.k==='me')return S.me.name||'我';
+  if(m.cid){const c=getC(m.cid);if(c)return c.remark||c.name;}return m.name||'群成员';}
+function dyGMemberAvatar(m){if(!m)return '👤';if(m.k==='me')return dyAvatar();
+  if(m.cid){const c=getC(m.cid);if(c)return c.avatar;}return m.avatar||letterAv(m.name);}
+function dyGMemberPersona(m){if(!m)return '';if(m.cid){const c=getC(m.cid);return c?String(c.persona||''):'';}return String(m.persona||'');}
+function dyGRole(g,k){const m=dyGFind(g,k);return m?(m.role||'member'):'member';}
+function dyGCanManage(g,k){const r=dyGRole(g,k);return r==='owner'||r==='admin';}
+function dyGBadge(role){return role==='owner'?'<em class="dyg-badge owner">群主</em>':role==='admin'?'<em class="dyg-badge admin">管理员</em>':'';}
+function dyGCount(g){return dyGMemberList(g).length;}
+function dyGroupPreview(g){const rows=dyGMsgs(g),last=rows[rows.length-1];if(!last)return '群聊建好了，说句话吧～';
+  if(last.type==='sys')return String(last.text||'');
+  return dyGMemberName(dyGFind(g,last.k))+'：'+String(last.text||'').replace(/\s+/g,' ').slice(0,36);}
+/* ===== 建群 ===== */
+function dyGroupCreate(){const cs=(S.contacts||[]).filter(c=>c&&!c.deleted);if(!cs.length)return toast('先去微信建一个角色');
+  _dyGSel=[];openModal(dyGroupCreateHTML());}
+function dyGroupCreateHTML(){const cs=(S.contacts||[]).filter(c=>c&&!c.deleted);
+  return `<h3>建一个抖音群聊</h3><div class="hint">先把角色拉进来。公开群每天会有一位陌生人来申请加入，私密群只能你自己邀请。</div>
+  <div class="field"><label>群名称</label><input id="dyg_name" placeholder="例如：深夜弹吉他的人"></div>
+  <div class="field"><label>群简介<small style="color:#888">选填</small></label><input id="dyg_intro" placeholder="例如：禁男，禁二传，需16+"></div>
+  <div style="max-height:34vh;overflow:auto;margin-top:6px">${cs.map(c=>`<div class="row" onclick="dyGroupCreateToggle('${c.id}')" style="display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:.5px solid #eee"><span style="width:20px">${_dyGSel.includes(c.id)?'✅':'⬜️'}</span>${av(c.avatar,'sm')}<b style="flex:1;font-size:14px;font-weight:500">${esc(c.remark||c.name)}</b></div>`).join('')}</div>
+  <div class="btns" style="margin-top:10px"><button class="btn g" onclick="dyGroupCreateDone(false)">建私密群</button><button class="btn p" onclick="dyGroupCreateDone(true)">建公开群</button></div>
+  <button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`;}
+function dyGroupCreateToggle(cid){const i=_dyGSel.indexOf(cid);if(i<0)_dyGSel.push(cid);else _dyGSel.splice(i,1);
+  const name=($('#dyg_name')||{}).value||'',intro=($('#dyg_intro')||{}).value||'';
+  openModal(dyGroupCreateHTML());const n=$('#dyg_name'),t=$('#dyg_intro');if(n)n.value=name;if(t)t.value=intro;}
+function dyGroupCreateDone(open){const cs=_dyGSel.map(getC).filter(Boolean);if(!cs.length)return toast('至少拉一个角色进来');
+  const name=String((($('#dyg_name')||{}).value||'').trim())||((cs.map(c=>c.remark||c.name).slice(0,2).join('、'))+'的群'),intro=String((($('#dyg_intro')||{}).value||'').trim());
+  const g={id:'dg'+uid(),name:name.slice(0,30),avatar:'',gnum:dyGNum(),intro:intro.slice(0,60),notice:'',open:!!open,aiOn:true,mute:false,fold:false,top:false,myNick:'',lastApplyDay:'',
+    members:[{k:'me',role:'owner',joinedAt:Date.now()},...cs.map(c=>({k:'c:'+c.id,cid:c.id,role:'member',joinedAt:Date.now()}))],
+    msgs:[{id:uid(),type:'sys',text:'你创建了群聊「'+name.slice(0,30)+'」，'+cs.map(c=>c.remark||c.name).join('、')+' 加入了群聊',time:Date.now()}]};
+  dyGroups().unshift(g);_dyGSel=[];save();closeModal();dyOpenGroup(g.id);toast(open?'公开群建好了，等人来申请吧～':'私密群建好了');}
+/* ===== 每天一位陌生人来申请 ===== */
+function dyApplies(){dyInit();if(!Array.isArray(S.dy.applies))S.dy.applies=[];return S.dy.applies;}
+function dyApplyDayKey(){const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
+function dyApplyPending(gid){return dyApplies().filter(a=>a.state==='pending'&&(!gid||a.gid===gid));}
+function dyApplyRows(){const all=dyApplies().slice().sort((a,b)=>(b.ts||0)-(a.ts||0));
+  return _dyActOnly==='待审批'?all.filter(a=>a.state==='pending'):all;}
+function dyApplyUnseen(){return dyApplyPending().length;}
+function dyApplyDueGroup(){return dyGroups().find(g=>g.open&&g.lastApplyDay!==dyApplyDayKey())||null;}
+async function dyApplyCheck(){const g=dyApplyDueGroup();if(!g||_dyGBusy.apply)return;_dyGBusy.apply=true;
+  g.lastApplyDay=dyApplyDayKey();save();/* 先占住今天，失败也不要一天里反复调模型 */
+  try{const person=await dyApplyGenerate(g);if(!person)return;
+    dyApplies().unshift(Object.assign({id:'da'+uid(),gid:g.id,ts:Date.now(),state:'pending'},person));save();
+    if(cur().p==='dy')render();}catch(e){}finally{_dyGBusy.apply=false;}}
+async function dyApplyGenerate(g){
+  const r=await chatAPI([{role:'system',content:'你生成一个抖音用户，他想申请加入一个公开群聊。只输出四行，不要任何别的话：\n昵称：一个真实的抖音网名，可以带符号或 emoji，别太长\n人设：一句话 20-40 字，说清他是个什么样的人、说话什么风格，性格要有辨识度\n回答：群主设了入群问题，这是他的回答，一句话，符合他的人设\n关注：一个 1 到 400 之间的数字，表示他关注群主多少天了'},
+    {role:'user',content:'群名：「'+g.name+'」。群简介：'+(g.intro||'（没写）')+'。生成一个想进这个群的人。性格不要都是乖巧懂事的，可以有社恐、话痨、阴阳怪气、装熟、真诚、抬杠各种类型。'}],{max:220,aux:true});
+  const txt=String(r||''),pick=k=>{const m=txt.match(new RegExp(k+'[:：]\\s*(.+)'));return m?m[1].trim():'';};
+  const name=pick('昵称').slice(0,20),persona=pick('人设').slice(0,80),answer=pick('回答').slice(0,60),days=Math.max(1,Math.min(400,parseInt(pick('关注'),10)||1));
+  if(!name)return null;
+  return {k:'s'+uid(),name,avatar:letterAv(name),persona,answer,followDays:days};}
+function dyApplyPass(id){const a=dyApplies().find(x=>x.id===id);if(!a||a.state!=='pending')return;const g=dyGroup(a.gid);
+  if(!g){a.state='expired';save();render();return toast('这个群已经不在了');}
+  a.state='passed';dyGMemberList(g).push({k:a.k,name:a.name,avatar:a.avatar,persona:a.persona,role:'member',joinedAt:Date.now()});
+  dyGMsgs(g).push({id:uid(),type:'sys',text:a.name+' 通过申请加入了群聊，新成员可查看历史消息',time:Date.now()});
+  save();render();toast(a.name+' 进群了');}
+function dyApplyReject(id){const a=dyApplies().find(x=>x.id===id);if(!a)return;a.state='expired';save();render();toast('已忽略');}
+function dyApplyRow(a){const g=dyGroup(a.gid),pass=a.state==='passed',pend=a.state==='pending';
+  return `<div class="dygn-row"><div class="dygn-av">${av(a.avatar||letterAv(a.name),'sm')}</div>
+    <div class="dygn-main"><div class="dygn-name">${esc(a.name)}<em class="dygn-days">关注 ${a.followDays||1} 天</em></div>
+      ${a.answer?`<div class="dygn-ans">回答：${esc(a.answer)}</div>`:''}
+      <div class="dygn-say">申请加入「${esc(g?g.name:'已解散的群')}」</div>
+      ${a.persona?`<div class="dygn-persona">${esc(a.persona)}</div>`:''}</div>
+    ${pend?`<button class="dygn-pass" onclick="dyApplyPass('${a.id}')">通过</button><i class="dygn-x" onclick="dyApplyReject('${a.id}')">✕</i>`
+      :`<button class="dygn-done">${pass?'已通过':'已失效'}</button><i class="dygn-x" onclick="dyApplyForget('${a.id}')">✕</i>`}</div>`;}
+function dyApplyForget(id){S.dy.applies=dyApplies().filter(x=>x.id!==id);save();render();}
+function dyGroupNoticeBody(){const rows=dyApplyRows(),groups=dyGroups();
+  if(!groups.length)return `<div class="dyvi-empty">还没有群聊～<br><button class="dybtn" style="margin-top:12px" onclick="dyGroupCreate()">建一个抖音群聊</button></div>`;
+  if(!rows.length)return `<div class="dyvi-empty">${_dyActOnly==='待审批'?'没有待审批的申请':'还没有人申请加入～<br>公开群每天会有一位陌生人来敲门。'}</div>`;
+  return rows.map(dyApplyRow).join('');}
+/* ===== 群聊页 ===== */
+function dyOpenGroup(id){const g=dyGroup(id);if(!g)return;_dyGid=id;_dyGTab='聊天';_dySub='group';g.unread=0;save(0);render();}
+function dyGSetTab(t){_dyGTab=t;if(t==='设置'){_dySub='ginfo';}render();}
+function dyGroupMsgRow(g,m,prev){if(m.type==='sys')return `${dyGStamp(g,m,prev)}<div class="dyg-sys">${dyGSysHTML(m.text)}</div>`;
+  const mem=dyGFind(g,m.k),me=m.k==='me',role=dyGRole(g,m.k);
+  return `${dyGStamp(g,m,prev)}<div class="dyg-msg${me?' me':''}">${av(dyGMemberAvatar(mem),'sm')}
+    <div class="dyg-body"><div class="dyg-who">${esc(dyGMemberName(mem))}${dyGBadge(role)}</div>
+    <div class="dyg-b" onclick="dyGroupMsgMenu('${g.id}','${m.id}')">${esc(m.text)}</div></div></div>`;}
+function dyGStamp(g,m,prev){if(!m.time)return '';if(prev&&prev.time&&m.time-prev.time<5*60000)return '';
+  const t=new Date(m.time),hm=String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0'),day=dyListTime(m.time);
+  return '<div class="dyg-t">'+esc(day===hm?hm:day+' '+hm)+'</div>';}
+function dyGSysHTML(t){return esc(String(t||'')).replace(/^(\S{1,12})\s(邀请|通过申请)/,'<b>$1</b> $2').replace(/(邀请)\s(\S{1,12})/,'$1 <b>$2</b>');}
+function dyGroupQuickChips(){return [['🌟','晚上好'],['🤲','比心'],['@','群聊 AI'],['👍','赞'],['🌚','黑脸']];}
+function dyGroupView(){const g=dyGroup(_dyGid);if(!g)return `<div class="dyvi"><div class="dyvi-nav"><i onclick="dySubClose()">‹</i><b>群聊</b><span></span></div><div class="dyvi-empty">这个群已经不在了</div></div>`;
+  const rows=dyGMsgs(g),tabs=['聊天','公告','置顶','收藏','设置'];
+  const body=_dyGTab==='公告'?`<div class="dyg-pane">${g.notice?esc(g.notice):'群主还没写公告'}<div style="margin-top:12px"><button class="dybtn out" onclick="dyGNotice('${g.id}')">${g.notice?'改公告':'写一条公告'}</button></div></div>`
+    :_dyGTab==='置顶'?'<div class="dyg-pane">还没有置顶的消息～长按一条消息可以置顶</div>'
+    :_dyGTab==='收藏'?'<div class="dyg-pane">群收藏还没做～</div>'
+    :`<div class="dyg-box" data-render-scroll-key="dyg:${esc(g.id)}">${rows.length?rows.map((m,i)=>dyGroupMsgRow(g,m,rows[i-1])).join(''):'<div class="dyvi-empty">还没人说话～发一条，看看他们怎么接。</div>'}</div>`;
+  return `<div class="dyg">
+    <div class="dyg-nav dy-safe-nav2"><i onclick="dySubClose()">‹</i>${av(g.avatar||'👥','sm')}<b>${esc(g.name)} (${dyGCount(g)})</b><i onclick="dyOpenGroupInfo('${g.id}')">${svgIc('dots',20,'#f2f2f4',2)}</i></div>
+    <div class="dyg-tabs">${tabs.map(t=>`<span class="${_dyGTab===t?'on':''}" onclick="dyGSetTab('${t}')">${t}</span>`).join('')}</div>
+    ${body}
+    ${_dyGTab==='聊天'?`<div class="dydm-quick">${dyGroupQuickChips().map(c=>`<span onclick="dyGroupQuick('${g.id}','${esc(c[1])}')">${c[0]} ${esc(c[1])}</span>`).join('')}</div>
+    <div class="dydm-bar"><i onclick="dyGroupAt('${g.id}')">@</i><input id="dyg_in" placeholder="发消息…" onkeydown="if(event.key==='Enter')dyGroupSend('${g.id}')"><i onclick="toast('表情还没做～')">☺</i><i class="send" onclick="dyGroupSend('${g.id}')">${svgIc('forward',19,'#fff',2.2)}</i></div>`:''}
+  </div>`;}
+function dyGroupQuick(gid,t){const i=$('#dyg_in');if(i)i.value=t;dyGroupSend(gid);}
+function dyGroupAt(gid){const g=dyGroup(gid);if(!g)return;const ms=dyGMemberList(g).filter(m=>m.k!=='me');if(!ms.length)return toast('群里还没有别人');
+  openModal(`<h3>@ 谁</h3><div style="max-height:46vh;overflow:auto">${ms.map(m=>`<div class="row" onclick="dyGroupAtPick('${gid}','${esc(m.k)}')" style="display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:.5px solid #eee">${av(dyGMemberAvatar(m),'sm')}<b style="flex:1;font-size:14px;font-weight:500">${esc(dyGMemberName(m))}</b></div>`).join('')}</div><button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+function dyGroupAtPick(gid,k){const g=dyGroup(gid),m=g&&dyGFind(g,k);closeModal();if(!m)return;const i=$('#dyg_in');if(i){i.value=(i.value||'')+'@'+dyGMemberName(m)+' ';i.focus();}}
+function dyGroupSend(gid){const g=dyGroup(gid);if(!g)return;const inp=$('#dyg_in'),t=inp?String(inp.value||'').trim():'';if(!t)return;
+  dyGMsgs(g).push({id:uid(),k:'me',text:t.slice(0,300),time:Date.now()});save();if(inp)inp.value='';render();dyGroupReply(gid,t);}
+function dyGroupMsgMenu(gid,mid){const g=dyGroup(gid),m=g&&dyGMsgs(g).find(x=>x.id===mid);if(!m)return;
+  openModal(`<h3>这条消息</h3><div class="btns" style="flex-direction:column;gap:8px">
+    <button class="dybtn out" onclick="dyGroupMsgCopy('${gid}','${mid}')">复制</button>
+    <button class="btn d" onclick="dyGroupMsgDelete('${gid}','${mid}')">删除</button>
+    <button class="btn g" onclick="closeModal()">关闭</button></div>`);}
+function dyGroupMsgCopy(gid,mid){const g=dyGroup(gid),m=g&&dyGMsgs(g).find(x=>x.id===mid);closeModal();if(!m)return;copyTextCompat(m.text||'').then(()=>toast('已复制'));}
+function dyGroupMsgDelete(gid,mid){const g=dyGroup(gid);if(!g)return;g.msgs=dyGMsgs(g).filter(x=>x.id!==mid);save();closeModal();render();toast('已删除');}
+/* ===== 群里谁开口 ===== */
+function dyGroupTranscript(g,n){return dyGMsgs(g).slice(-n).map(m=>m.type==='sys'?('（'+String(m.text||'')+'）'):(dyGMemberName(dyGFind(g,m.k))+'：'+String(m.text||''))).join('\n');}
+function dyGroupSpeakerPrompt(g,m){const others=dyGMemberList(g).filter(x=>x.k!==m.k).map(x=>dyGMemberName(x)).join('、');
+  const scene='\n\n# 场景\n你在抖音群聊「'+g.name+'」里说话，群主是'+(S.me.name||'我')+'，群里还有：'+others+'。'+(g.intro?'群简介：'+g.intro+'。':'')
+    +'\n口语、简短，一句就够，像真的在群里接话。别复述别人的话，别带方括号动作，别自报家门，别说自己是AI。只输出你要说的那一句。';
+  if(m.cid){const c=getC(m.cid);if(c)return buildSystem(c)+scene;}
+  return '你是抖音用户「'+dyGMemberName(m)+'」。'+(dyGMemberPersona(m)||'一个普通网友。')+scene;}
+async function dyGroupReply(gid,fromText){if(_dyGBusy[gid])return;_dyGBusy[gid]=true;try{await dyGroupReplyRun(gid,fromText);}finally{delete _dyGBusy[gid];}}
+async function dyGroupReplyRun(gid,fromText){const g=dyGroup(gid);if(!g||g.aiOn===false)return;
+  const pool=dyGMemberList(g).filter(m=>m.k!=='me'&&!(m.cid&&(!getC(m.cid)||getC(m.cid).deleted)));if(!pool.length)return;
+  const atd=pool.filter(m=>fromText&&fromText.includes(dyGMemberName(m)));
+  const rest=pool.filter(m=>atd.indexOf(m)<0).sort(()=>Math.random()-.5);
+  const want=Math.max(1,Math.min(3,atd.length+1+Math.floor(Math.random()*2)));
+  for(const m of [...atd,...rest].slice(0,want)){
+    await sleep(700+Math.random()*900);
+    const cur_=dyGroup(gid);if(!cur_)return;
+    try{const r=await chatAPI([{role:'system',content:dyGroupSpeakerPrompt(cur_,m)},{role:'user',content:'群里刚才说了这些：\n'+dyGroupTranscript(cur_,12)+'\n\n现在轮到你，说一句。'}],{max:160,aux:true});
+      const t=cleanReply(r).replace(/^[^：:]{1,12}[：:]\s*/,'').slice(0,120);if(!t)continue;
+      dyGMsgs(cur_).push({id:uid(),k:m.k,text:t,time:Date.now()});
+      if(!(_dySub==='group'&&_dyGid===gid))cur_.unread=(+cur_.unread||0)+1;
+      save();if(_dySub==='group'&&_dyGid===gid)render();}catch(e){}}}
+/* ===== 群设置 ===== */
+function dyOpenGroupInfo(id){_dyGid=id;_dySub='ginfo';render();}
+function dyGRow(label,value,act,arrow){return `<div class="dyg-row"${act?` onclick="${act}"`:''}><span>${esc(label)}</span><b>${value||''}</b>${arrow===false?'':'<i>›</i>'}</div>`;}
+function dyGSwitch(label,on,act){return `<div class="dyg-row"><span>${esc(label)}</span><i class="dyg-sw${on?' on':''}" onclick="${act}"></i></div>`;}
+function dyGroupInfoView(){const g=dyGroup(_dyGid);if(!g)return `<div class="dyvi"><div class="dyvi-nav"><i onclick="dySubClose()">‹</i><b>聊天信息</b><span></span></div><div class="dyvi-empty">这个群已经不在了</div></div>`;
+  const ms=dyGMemberList(g),owner=dyGCanManage(g,'me');
+  return `<div class="dyvi" style="background:#0b0b0c">
+    <div class="dyvi-nav dy-safe-nav2"><i onclick="dyGInfoBack()">‹</i><b>聊天信息</b><em style="width:21px"></em></div>
+    <div class="dyvi-list" data-render-scroll-key="dyg:info:${esc(g.id)}">
+      <div class="dyg-card dyg-head">
+        <div class="dyg-head-top">${av(g.avatar||'👥','lg')}<div class="dyg-head-txt"><b>${esc(g.name)}</b><span onclick="dyGCopyNum('${g.id}')">群号码：${esc(g.gnum||'')} ⧉</span></div><i class="dyg-qr" onclick="toast('群二维码还没做～')">${svgIc('idcard',20,'#d4d4da',2)}</i></div>
+        <div class="dyg-head-acts"><span onclick="dyGShare('${g.id}')">${svgIc('forward',18,'#e6e6ea',2)} 分享群聊</span><em></em><span onclick="dyGRecruit('${g.id}')">${svgIc('image',18,'#e6e6ea',2)} 发作品招募</span></div>
+      </div>
+      <div class="dyg-card">
+        <div class="dyg-row" onclick="dyGMembersPage('${g.id}')"><span>群聊成员</span><b>${ms.length}/500</b><i>›</i></div>
+        <div class="dyg-mems">${ms.slice(0,3).map(m=>`<div class="dyg-mem">${av(dyGMemberAvatar(m),'sm')}<span>${esc(dyGMemberName(m))}</span></div>`).join('')}
+          <div class="dyg-mem" onclick="dyGInvite('${g.id}')"><div class="dyg-mem-btn">＋</div><span>邀请</span></div>
+          ${owner?`<div class="dyg-mem" onclick="dyGRemoveMember('${g.id}')"><div class="dyg-mem-btn">－</div><span>移除</span></div>`:''}</div>
+      </div>
+      <div class="dyg-card">
+        <div class="dyg-row"><span>群数据</span><b>${g.open?'公开群':'私密群'}</b><i></i></div>
+        <div class="dyg-stats"><div><b>${dyGCount(g)}</b><span>群成员</span></div><div><b>${dyApplies().filter(a=>a.gid===g.id&&a.state==='passed').length}</b><span>加群人数</span></div><div><b>${dyApplies().filter(a=>a.gid===g.id&&a.state==='expired').length}</b><span>被忽略</span></div></div>
+      </div>
+      ${owner?`<div class="dyg-card">
+        <div class="dyg-row"><span>群管理</span><b></b><i></i></div>
+        <div class="dyg-manage">
+          ${[['users','设置管理员',"dyGAdmins('"+g.id+"')"],['user','移除群成员',"dyGRemoveMember('"+g.id+"')"],['lock',g.open?'转为私密群':'转为公开群',"dyGOpenToggle('"+g.id+"')"],['file','加群管理',"dyOpenActs('群通知')"]].map(x=>`<div class="dyg-mg" onclick="${x[2]}">${svgIc(x[0],23,'#e6e6ea',1.8)}<span>${esc(x[1])}</span></div>`).join('')}
+        </div></div>`:''}
+      <div class="dyg-card">
+        ${dyGRow('群名称与头像',esc(g.name),`dyGRename('${g.id}')`)}
+        ${dyGRow('群简介',esc(g.intro||'还没写'),`dyGIntro('${g.id}')`)}
+        ${dyGRow('群公告',esc(String(g.notice||'还没写').slice(0,18)),`dyGNotice('${g.id}')`)}
+        ${dyGRow('我在本群的昵称',esc(g.myNick||S.me.name||''),`dyGMyNick('${g.id}')`)}
+      </div>
+      <div class="dyg-card">${dyGRow('群聊 AI',g.aiOn===false?'已关闭':'已开启',`dyGToggle('${g.id}','aiOn')`)}</div>
+      <div class="dyg-card">${dyGRow('查找聊天内容','',`dyGSearch('${g.id}')`)}</div>
+      <div class="dyg-card">
+        ${dyGSwitch('消息免打扰',!!g.mute,`dyGToggle('${g.id}','mute')`)}
+        ${dyGSwitch('折叠群聊',!!g.fold,`dyGToggle('${g.id}','fold')`)}
+        ${dyGSwitch('置顶聊天',!!g.top,`dyGToggle('${g.id}','top')`)}
+      </div>
+      <div class="dyg-card">
+        ${dyGRow('清空聊天记录','',`dyGClear('${g.id}')`)}
+      </div>
+      <div class="dyg-card dyg-danger" onclick="dyGDisband('${g.id}')"><span>解散群聊</span><i>⊖</i></div>
+      <div style="height:26px"></div>
+    </div></div>`;}
+function dyGInfoBack(){if(_dyGid&&dyGroup(_dyGid)){_dySub='group';_dyGTab='聊天';render();}else dySubClose();}
+function dyGCopyNum(gid){const g=dyGroup(gid);if(!g)return;copyTextCompat(g.gnum||'').then(()=>toast('群号码已复制'));}
+function dyGShare(gid){const g=dyGroup(gid);if(!g)return;const cs=(S.contacts||[]).filter(c=>!c.deleted);if(!cs.length)return toast('还没有角色可以分享');
+  openModal(`<h3>分享群聊</h3><div style="max-height:44vh;overflow:auto">${cs.map(c=>`<div class="row" onclick="dyGShareTo('${gid}','${c.id}')" style="display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:.5px solid #eee">${av(c.avatar,'sm')}<b style="flex:1;font-size:14px;font-weight:500">${esc(c.remark||c.name)}</b></div>`).join('')}</div><button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+function dyGShareTo(gid,cid){const g=dyGroup(gid),c=getC(cid);closeModal();if(!g||!c)return;
+  openDyDMName(c.remark||c.name,cid,c.avatar);const d=(S.dy.dms||[]).find(x=>x.cid===cid);
+  if(d){d.msgs.push({from:'me',text:'[群聊分享] '+g.name+'（'+dyGCount(g)+'人）',time:Date.now()});save();}toast('已分享');}
+function dyGRecruit(gid){const g=dyGroup(gid);if(!g)return;dyGMsgs(g).push({id:uid(),type:'sys',text:'群主发起了一次作品招募',time:Date.now()});save();render();toast('已在群里发起招募');}
+function dyGMembersPage(gid){const g=dyGroup(gid);if(!g)return;const ms=dyGMemberList(g);
+  openModal(`<h3>群聊成员（${ms.length}）</h3><div style="max-height:48vh;overflow:auto">${ms.map(m=>{const r=dyGRole(g,m.k);
+    return `<div class="row" style="display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:.5px solid #eee">${av(dyGMemberAvatar(m),'sm')}<span style="flex:1;min-width:0"><b style="display:block;font-size:14px">${esc(dyGMemberName(m))}</b><small style="color:#888">${r==='owner'?'群主':r==='admin'?'管理员':(m.cid?'角色':'网友')}${dyGMemberPersona(m)?' · '+esc(dyGMemberPersona(m).slice(0,22)):''}</small></span></div>`;}).join('')}</div>
+    <button class="btn g" style="margin-top:10px" onclick="closeModal()">关闭</button>`);}
+function dyGInvite(gid){const g=dyGroup(gid);if(!g)return;const inside=new Set(dyGMemberList(g).map(m=>m.k));
+  const cs=(S.contacts||[]).filter(c=>!c.deleted&&!inside.has('c:'+c.id));if(!cs.length)return toast('角色都已经在群里了');
+  openModal(`<h3>邀请进群</h3><div style="max-height:46vh;overflow:auto">${cs.map(c=>`<div class="row" onclick="dyGInviteDo('${gid}','${c.id}')" style="display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:.5px solid #eee">${av(c.avatar,'sm')}<b style="flex:1;font-size:14px;font-weight:500">${esc(c.remark||c.name)}</b></div>`).join('')}</div><button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+function dyGInviteDo(gid,cid){const g=dyGroup(gid),c=getC(cid);if(!g||!c)return;
+  dyGMemberList(g).push({k:'c:'+cid,cid,role:'member',joinedAt:Date.now()});
+  dyGMsgs(g).push({id:uid(),type:'sys',text:(S.me.name||'我')+' 邀请 '+(c.remark||c.name)+' 加入了群聊，新成员可查看历史消息',time:Date.now()});
+  save();closeModal();render();toast('已邀请进群');}
+function dyGRemoveMember(gid){const g=dyGroup(gid);if(!g||!dyGCanManage(g,'me'))return toast('只有群主和管理员可以移除成员');
+  const ms=dyGMemberList(g).filter(m=>m.k!=='me'&&dyGRole(g,m.k)!=='owner');if(!ms.length)return toast('群里没有可以移除的人');
+  openModal(`<h3>移除群成员</h3><div style="max-height:46vh;overflow:auto">${ms.map(m=>`<div class="row" onclick="dyGRemoveDo('${gid}','${esc(m.k)}')" style="display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:.5px solid #eee">${av(dyGMemberAvatar(m),'sm')}<b style="flex:1;font-size:14px;font-weight:500">${esc(dyGMemberName(m))}</b><span style="color:#fa5151;font-size:13px">移除</span></div>`).join('')}</div><button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+function dyGRemoveDo(gid,k){const g=dyGroup(gid),m=g&&dyGFind(g,k);if(!g||!m)return;const nm=dyGMemberName(m);
+  g.members=dyGMemberList(g).filter(x=>x.k!==k);
+  dyGMsgs(g).push({id:uid(),type:'sys',text:nm+' 被移出了群聊',time:Date.now()});
+  save();closeModal();render();toast('已移除 '+nm);}
+function dyGAdmins(gid){const g=dyGroup(gid);if(!g||dyGRole(g,'me')!=='owner')return toast('只有群主可以设置管理员');
+  const ms=dyGMemberList(g).filter(m=>m.k!=='me');if(!ms.length)return toast('群里还没有别人');
+  openModal(`<h3>设置管理员</h3><div class="hint">管理员可以移除成员、审批加群申请。</div><div style="max-height:44vh;overflow:auto">${ms.map(m=>{const isAdmin=dyGRole(g,m.k)==='admin';
+    return `<div class="row" onclick="dyGAdminToggle('${gid}','${esc(m.k)}')" style="display:flex;align-items:center;gap:10px;padding:9px 2px;border-bottom:.5px solid #eee">${av(dyGMemberAvatar(m),'sm')}<b style="flex:1;font-size:14px;font-weight:500">${esc(dyGMemberName(m))}</b><span style="font-size:13px;color:${isAdmin?'#f1c40f':'#888'}">${isAdmin?'管理员 · 点击取消':'设为管理员'}</span></div>`;}).join('')}</div>
+    <button class="btn g" style="margin-top:10px" onclick="closeModal()">关闭</button>`);}
+function dyGAdminToggle(gid,k){const g=dyGroup(gid),m=g&&dyGFind(g,k);if(!m)return;
+  m.role=m.role==='admin'?'member':'admin';
+  dyGMsgs(g).push({id:uid(),type:'sys',text:dyGMemberName(m)+(m.role==='admin'?' 被设为管理员':' 不再是管理员'),time:Date.now()});
+  save();closeModal();render();toast(m.role==='admin'?'已设为管理员':'已取消管理员');}
+function dyGOpenToggle(gid){const g=dyGroup(gid);if(!g)return;g.open=!g.open;if(g.open)g.lastApplyDay='';save();render();
+  toast(g.open?'已转为公开群，每天会有一位陌生人来申请':'已转为私密群，只能你自己邀请');}
+function dyGToggle(gid,key){const g=dyGroup(gid);if(!g)return;g[key]=key==='aiOn'?(g.aiOn===false):!g[key];save();render();
+  if(key==='aiOn')toast(g.aiOn===false?'群里的人不再自动说话':'群聊 AI 已开启');}
+function dyGField(gid,key,title,ph,max){const g=dyGroup(gid);if(!g)return;
+  openModal(`<h3>${esc(title)}</h3><div class="field"><textarea id="dyg_f" rows="${key==='name'||key==='myNick'?1:4}" placeholder="${esc(ph)}">${esc(String(g[key]||''))}</textarea></div>
+    <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="dyGFieldSave('${gid}','${key}',${max})">保存</button></div>`);}
+function dyGFieldSave(gid,key,max){const g=dyGroup(gid),el=$('#dyg_f');if(!g)return;
+  g[key]=String(el?el.value:'').trim().slice(0,max||60);save();closeModal();render();toast('已保存');}
+function dyGRename(gid){dyGField(gid,'name','群名称','给这个群起个名字',30);}
+function dyGIntro(gid){dyGField(gid,'intro','群简介','例如：禁男，禁二传，需16+',60);}
+function dyGNotice(gid){dyGField(gid,'notice','群公告','写点群里都要看到的话',200);}
+function dyGMyNick(gid){dyGField(gid,'myNick','我在本群的昵称','留空就用你的名字',20);}
+function dyGSearch(gid){const g=dyGroup(gid);if(!g)return;
+  openModal(`<h3>查找聊天内容</h3><div class="field"><input id="dyg_q" placeholder="搜群里说过的话"></div>
+    <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="dyGSearchRun('${gid}')">搜索</button></div>`);}
+function dyGSearchRun(gid){const g=dyGroup(gid),q=String((($('#dyg_q')||{}).value||'')).trim().toLowerCase();if(!g||!q)return toast('写点什么再搜');
+  const hits=dyGMsgs(g).filter(m=>String(m.text||'').toLowerCase().includes(q));
+  openModal(`<h3>找到 ${hits.length} 条</h3><div style="max-height:48vh;overflow:auto">${hits.length?hits.slice(-40).reverse().map(m=>`<div style="padding:9px 2px;border-bottom:.5px solid #eee"><b style="font-size:13px">${esc(m.type==='sys'?'群通知':dyGMemberName(dyGFind(g,m.k)))}</b><div style="font-size:13px;color:#555;margin-top:3px">${esc(m.text)}</div></div>`).join(''):'<div class="empty" style="padding:22px">没有找到</div>'}</div><button class="btn g" style="margin-top:10px" onclick="closeModal()">关闭</button>`);}
+async function dyGClear(gid){const g=dyGroup(gid);if(!g)return;if(!await uiConfirm('清空「'+g.name+'」的聊天记录？'))return;g.msgs=[];save();render();toast('已清空');}
+async function dyGDisband(gid){const g=dyGroup(gid);if(!g)return;
+  if(dyGRole(g,'me')!=='owner')return toast('只有群主可以解散群聊');
+  if(!await uiConfirm('解散「'+g.name+'」？群聊和里面的消息都会消失。',{danger:true}))return;
+  S.dy.groups=dyGroups().filter(x=>x.id!==gid);S.dy.applies=dyApplies().filter(a=>a.gid!==gid);
+  _dyGid='';_dySub='';save();render();toast('群聊已解散');}
 /* ===== 抖音消息页：粉丝、互动消息、群通知、私聊 ===== */
 let _dyActTab='赞与其他';let _dyActOnly='全部';
 function dyTimeAgo(ts){const d=Math.max(0,Date.now()-(+ts||0));
@@ -5625,7 +5872,6 @@ function dyActsView(){const tabs=['赞与其他','评论与弹幕','群通知'],
     <div class="dyvi-list" data-render-scroll-key="dy:acts:${esc(_dyActTab)}">${body}</div>
   </div>`;}
 function dyActSetOnly(v){_dyActOnly=v;render();}
-function dyGroupNoticeBody(){return '<div class="dyvi-empty">抖音群聊还没做～<br>下一步就做：建群、把角色拉进来、<br>每天会有一位陌生人来申请加入。</div>';}
 /* ===== 消息主页 ===== */
 function dyDMUnread(d){return Math.max(0,+((d||{}).unread)||0);}
 function dyDMPreview(d){const last=(d.msgs||[])[d.msgs.length-1];if(!last)return '打个招呼吧～';
@@ -5654,20 +5900,29 @@ function dyStrangersView(){const rows=dyStrangerRows();
     <div class="dyvi-tip">没有互关的人发来的私信都收在这里</div>
     <div class="dyvi-list" data-render-scroll-key="dy:strangers">${rows.length?rows.map(dyDMRow).join(''):'<div class="dyvi-empty">还没有陌生人来私信～</div>'}</div>
   </div>`;}
+function dyMsgNew(){openModal(`<h3>发起</h3><div class="btns" style="flex-direction:column;gap:8px">
+  <button class="dybtn out" onclick="closeModal();dyGroupCreate()">建一个群聊</button>
+  <button class="dybtn out" onclick="closeModal();dyDMPick()">给角色发私信</button>
+  <button class="btn g" onclick="closeModal()">取消</button></div>`);}
+function dyGroupRowsHTML(){return dyGroups().slice().sort((a,b)=>((b.top?1:0)-(a.top?1:0))||((dyGMsgs(b)[dyGMsgs(b).length-1]||{}).time||0)-((dyGMsgs(a)[dyGMsgs(a).length-1]||{}).time||0)).map(g=>{
+  const last=dyGMsgs(g)[dyGMsgs(g).length-1],un=Math.max(0,+g.unread||0);
+  return `<div class="dymsg-row" onclick="dyOpenGroup('${g.id}')">${av(g.avatar||'\u{1F465}','sm')}
+    <div class="dymsg-main"><div class="dymsg-top"><span class="dymsg-name">${esc(g.name)}</span><em class="dymsg-gtag">${g.open?'公开群':'私密群'}</em>${g.mute?`<i class="dymsg-mute">${svgIc('mute',14,'#6c6c74',2)}</i>`:''}<span class="dymsg-time">${esc(dyListTime(last&&last.time))}</span></div>
+    <div class="dymsg-sub"><span>${dyPreviewHTML(dyGroupPreview(g))}</span>${un&&!g.mute?`<b class="dymsg-un">${un>99?'99+':un}</b>`:un?'<b class="dymsg-dot"></b>':''}</div></div></div>`;}).join('');}
 function dyDMList(){dyInit();dyFanSync();dyActSync();
   const rows=dyDMRows(),me=dyAvatar(),fol=(S.dy.following||[]).map(getC).filter(Boolean).slice(0,6);
   const daily=`<div class="dymsg-ent"><div class="dymsg-ico daily" onclick="dyCompose()">${av(me,'sm')}<b class="dymsg-plus">＋</b></div><span>限时日常</span></div>`
     +fol.map(c=>`<div class="dymsg-ent" onclick="openDyDMName('${esc((c.remark||c.name).replace(/'/g,"\\'"))}','${c.id}','')"><div class="dymsg-ico plain">${av(c.avatar,'sm')}</div><span>${esc(c.remark||c.name)}</span></div>`).join('');
   return `<div class="dymsg">
-    <div class="dymsg-nav dy-safe-nav2"><i onclick="dyGenDMs()">${svgIc('refresh',22,'#f2f2f4',2)}</i><i onclick="dyDMPick()">${svgIc('edit',21,'#f2f2f4',2)}</i><b>消息</b><i onclick="dyOpenMeSearch()">${svgIc('search',22,'#f2f2f4',2)}</i><i onclick="dyDMPick()">${svgIc('chat',22,'#f2f2f4',2)}</i></div>
+    <div class="dymsg-nav dy-safe-nav2"><i onclick="dyGenDMs()">${svgIc('refresh',22,'#f2f2f4',2)}</i><i onclick="dyMsgNew()">${svgIc('edit',21,'#f2f2f4',2)}</i><b>消息</b><i onclick="dyOpenMeSearch()">${svgIc('search',22,'#f2f2f4',2)}</i><i onclick="dyDMPick()">${svgIc('chat',22,'#f2f2f4',2)}</i></div>
     <div class="dymsg-ents">
       ${dyMsgEntry('fans','粉丝',dyFanUnseen(),"dyOpenFans()",svgIc('users',26,'#fff',2))}
       ${dyMsgEntry('likes','赞与其他',dyActUnseen('赞与其他'),"dyOpenActs('赞与其他')",svgIc('heart',26,'#fff',0))}
       ${dyMsgEntry('cmts','评论弹幕',dyActUnseen('评论与弹幕'),"dyOpenActs('评论与弹幕')",svgIc('chat',26,'#fff',2))}
-      ${dyMsgEntry('grp','群通知',0,"dyOpenActs('群通知')",svgIc('check',26,'#fff',2.6))}
+      ${dyMsgEntry('grp','群通知',dyApplyUnseen(),"dyOpenActs('群通知')",svgIc('check',26,'#fff',2.6))}
       ${daily}
     </div>
-    <div class="dymsg-list" data-render-scroll-key="dy:dms">${rows.length?dyStrangerFolderRow()+rows.filter(d=>d.cid).map(dyDMRow).join(''):'<div class="dyvi-empty">还没有私信～<br>点右上角的 ✎ 找个角色聊聊。</div>'}</div>
+    <div class="dymsg-list" data-render-scroll-key="dy:dms">${(rows.length||dyGroups().length)?dyGroupRowsHTML()+dyStrangerFolderRow()+rows.filter(d=>d.cid).map(dyDMRow).join(''):'<div class="dyvi-empty">还没有私信～<br>点右上角的 ✎ 找个角色聊聊。</div>'}</div>
   </div>`;}
 /* ===== 和角色的私聊 ===== */
 function dySparkLine(d){const n=dyDMSpark(d);if(!n)return '';

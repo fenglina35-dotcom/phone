@@ -475,6 +475,34 @@ const PERMANENT_FIXES = [
     marker: 'function dyDMStamp(rows,mi)',
     least: 1,
   },
+  {
+    release: 'v1261',
+    name: '抖音群聊：建群、拉角色、群主与管理员',
+    scope: 'both',
+    marker: 'function dyGroupInfoView()',
+    least: 1,
+  },
+  {
+    release: 'v1261',
+    name: '公开群每天只来一位陌生人，且先占住当天再调模型',
+    scope: 'both',
+    marker: "g.lastApplyDay=dyApplyDayKey();save();",
+    least: 1,
+  },
+  {
+    release: 'v1261',
+    name: '进群的陌生人带着自己的人设说话',
+    scope: 'both',
+    marker: 'function dyGroupSpeakerPrompt(g,m)',
+    least: 1,
+  },
+  {
+    release: 'v1261',
+    name: '群聊一轮最多三个人开口，关掉群聊 AI 就没人自动说话',
+    scope: 'both',
+    marker: 'async function dyGroupReplyRun(gid,fromText)',
+    least: 1,
+  },
 ];
 
 const sources = { web: read(WEB), private: read(PRIVATE) };

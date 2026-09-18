@@ -1263,6 +1263,82 @@ body{background:#000;padding:0;}
 .dydm-bar i.send{width:34px;height:34px;border-radius:50%;background:#f5243d;justify-content:center;}
 .dydm-bar input{flex:1;min-width:0;background:#232327;border:0;border-radius:999px;padding:11px 15px;font-size:15px;color:#f0f0f3;outline:none;}
 .dydm-bar input::placeholder{color:#75757d;}
+/* ===== 抖音 · 群聊 ===== */
+.dymsg-gtag{font-style:normal;font-size:11px;color:#9a9aa2;background:#242429;border-radius:4px;padding:2px 6px;white-space:nowrap;}
+.dymsg-dot{flex:0 0 8px;width:8px;height:8px;border-radius:50%;background:#f5243d;}
+.dyg{flex:1;display:flex;flex-direction:column;background:#0e0e0f;color:#f2f2f4;overflow:hidden;}
+.dyg-nav{flex:0 0 auto;display:flex;align-items:center;gap:11px;padding:12px 14px;}
+.dyg-nav i{font-style:normal;font-size:24px;line-height:1;color:#f2f2f4;display:flex;align-items:center;}
+.dyg-nav .avatar{width:34px!important;height:34px!important;flex:0 0 34px!important;border-radius:50%!important;font-size:16px;}
+.dyg-nav b{flex:1;min-width:0;font-size:17px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dyg-tabs{flex:0 0 auto;display:flex;gap:9px;padding:2px 14px 10px;overflow-x:auto;scrollbar-width:none;}
+.dyg-tabs::-webkit-scrollbar{display:none;}
+.dyg-tabs span{flex:0 0 auto;background:transparent;border-radius:8px;padding:8px 15px;font-size:15px;color:#9a9aa2;white-space:nowrap;}
+.dyg-tabs span.on{background:#26262b;color:#f2f2f4;font-weight:600;}
+.dyg-box{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:6px 14px 8px;}
+.dyg-pane{flex:1;overflow-y:auto;padding:26px 18px;color:#8b8b93;font-size:15px;line-height:1.8;text-align:center;}
+.dyg-t{text-align:center;font-size:12px;color:#63636b;margin:14px 0 10px;}
+.dyg-sys{text-align:center;font-size:13px;color:#7e7e86;line-height:1.6;margin:8px 0;}
+.dyg-sys b{color:#f1c40f;font-weight:400;}
+.dyg-msg{display:flex;align-items:flex-start;gap:9px;margin-bottom:14px;}
+.dyg-msg.me{flex-direction:row-reverse;}
+.dyg-msg .avatar{width:38px!important;height:38px!important;flex:0 0 38px!important;border-radius:50%!important;font-size:18px;}
+.dyg-body{max-width:74%;min-width:0;}
+.dyg-msg.me .dyg-body{display:flex;flex-direction:column;align-items:flex-end;}
+.dyg-who{display:flex;align-items:center;gap:6px;font-size:13px;color:#8e8e96;margin-bottom:5px;}
+.dyg-badge{font-style:normal;font-size:11px;font-weight:700;border-radius:4px;padding:1px 6px;}
+.dyg-badge.owner{background:#7a1220;color:#ff8b9a;}
+.dyg-badge.admin{background:#3c3410;color:#f1c40f;}
+.dyg-b{background:#232327;border-radius:12px;padding:10px 13px;font-size:16px;line-height:1.5;color:#f0f0f3;word-break:break-word;white-space:pre-wrap;}
+.dyg-msg.me .dyg-b{background:#2a5cff;color:#fff;}
+/* 群设置 */
+.dyg-card{margin:10px 14px;background:#161619;border-radius:12px;overflow:hidden;}
+.dyg-head{padding:14px;}
+.dyg-head-top{display:flex;align-items:center;gap:13px;}
+.dyg-head-top .avatar.lg{width:62px!important;height:62px!important;flex:0 0 62px!important;border-radius:50%!important;font-size:28px;}
+.dyg-head-txt{flex:1;min-width:0;}
+.dyg-head-txt b{display:block;font-size:19px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dyg-head-txt span{display:block;margin-top:6px;font-size:14px;color:#82828a;}
+.dyg-qr{flex:0 0 auto;width:44px;height:44px;border-radius:50%;background:#232327;display:flex;align-items:center;justify-content:center;font-style:normal;}
+.dyg-head-acts{display:flex;align-items:center;margin-top:14px;padding-top:14px;border-top:.5px solid #232327;}
+.dyg-head-acts span{flex:1;display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;color:#e6e6ea;}
+.dyg-head-acts em{width:1px;height:20px;background:#2a2a30;}
+.dyg-row{display:flex;align-items:center;gap:12px;padding:15px 14px;font-size:16px;}
+.dyg-row+.dyg-row{border-top:.5px solid #202024;}
+.dyg-row>span{flex:0 0 auto;color:#f2f2f4;}
+.dyg-row>b{flex:1;min-width:0;text-align:right;font-weight:400;font-size:15px;color:#82828a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dyg-row>i{flex:0 0 auto;font-style:normal;color:#5e5e66;font-size:18px;}
+.dyg-sw{flex:0 0 auto;margin-left:auto;width:48px;height:28px;border-radius:14px;background:#3a3a41;position:relative;transition:.18s;}
+.dyg-sw:after{content:'';position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:.18s;}
+.dyg-sw.on{background:#2dc26b;}
+.dyg-sw.on:after{left:23px;}
+.dyg-mems{display:flex;gap:14px;padding:4px 14px 16px;overflow-x:auto;scrollbar-width:none;}
+.dyg-mems::-webkit-scrollbar{display:none;}
+.dyg-mem{flex:0 0 auto;width:58px;display:flex;flex-direction:column;align-items:center;gap:7px;}
+.dyg-mem .avatar{width:52px!important;height:52px!important;flex:0 0 52px!important;border-radius:50%!important;font-size:23px;}
+.dyg-mem>span{font-size:12px;color:#82828a;max-width:58px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dyg-mem-btn{width:52px;height:52px;border-radius:50%;background:#26262b;color:#9a9aa2;font-size:24px;display:flex;align-items:center;justify-content:center;}
+.dyg-stats{display:flex;padding:4px 14px 18px;}
+.dyg-stats>div{flex:1;text-align:center;border-right:1px solid #232327;}
+.dyg-stats>div:last-child{border-right:0;}
+.dyg-stats b{display:block;font-size:24px;font-weight:700;}
+.dyg-stats span{display:block;margin-top:6px;font-size:13px;color:#82828a;}
+.dyg-manage{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:4px 10px 18px;}
+.dyg-mg{display:flex;flex-direction:column;align-items:center;gap:9px;font-size:12.5px;color:#d4d4da;text-align:center;}
+.dyg-danger{display:flex;align-items:center;justify-content:space-between;padding:15px 14px;color:#fa5151;font-size:16px;}
+.dyg-danger i{font-style:normal;font-size:20px;}
+/* 群通知里的加群申请 */
+.dygn-row{display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-bottom:.5px solid #1a1a1e;}
+.dygn-av .avatar{width:50px!important;height:50px!important;flex:0 0 50px!important;border-radius:50%!important;font-size:22px;}
+.dygn-main{flex:1;min-width:0;}
+.dygn-name{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:600;flex-wrap:wrap;}
+.dygn-days{font-style:normal;font-size:11px;font-weight:500;color:#a9a9b1;background:#2a2a30;border-radius:4px;padding:2px 6px;}
+.dygn-ans{margin-top:6px;font-size:14.5px;color:#e0e0e6;line-height:1.5;}
+.dygn-say{margin-top:5px;font-size:14px;color:#82828a;line-height:1.5;}
+.dygn-persona{margin-top:5px;font-size:13px;color:#63636b;line-height:1.5;}
+.dygn-pass{flex:0 0 auto;background:#f5243d;color:#fff;border:0;border-radius:6px;padding:9px 20px;font-size:15px;font-weight:600;}
+.dygn-done{flex:0 0 auto;background:#2a2a30;color:#8b8b93;border:0;border-radius:6px;padding:9px 16px;font-size:15px;}
+.dygn-x{flex:0 0 auto;font-style:normal;color:#5e5e66;font-size:17px;padding:9px 2px 0 8px;}
 .dyvideo{position:relative;height:100%;min-height:100%;width:100%;scroll-snap-align:start;scroll-snap-stop:always;display:flex;align-items:flex-end;overflow:hidden;background:#060608;isolation:isolate;}
 .dybg{position:absolute;inset:-8%;background-size:260% 260%;animation:dyflow 10s ease infinite;filter:saturate(.8) brightness(.53);transform:scale(1.12);}
 @keyframes dyflow{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}

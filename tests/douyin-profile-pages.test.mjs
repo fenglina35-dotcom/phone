@@ -264,7 +264,7 @@ test('interaction rows are derived from real comments, never invented', () => {
   assert.doesNotMatch(sync, /chatAPI/, '互动消息不花模型调用');
   assert.match(source('dyActRows'), /tab==='评论与弹幕'/);
   assert.match(source('dyActsView'), /\['赞与其他','评论与弹幕','群通知'\]/);
-  assert.match(source('dyGroupNoticeBody'), /抖音群聊还没做/, '群聊是下一步，这里先说清楚');
+  assert.match(source('dyGroupNoticeBody'), /dyApplyRow/, '群通知那一栏现在装的是真实的加群申请');
 });
 
 test('the private chat shows the spark line and stamps time only after a gap', () => {
@@ -283,6 +283,86 @@ test('the private chat shows the spark line and stamps time only after a gap', (
 test('every shell carries the styles for the message pages', () => {
   for (const [name, css] of [['小手机.html', html], ['私人壳', shell], ['index.html', index]]) {
     for (const cls of ['.dymsg-ents{', '.dyfan-row{', '.dyact-row{', '.dydm-box{', '.dymsg-fold{']) {
+      assert.ok(css.includes(cls), `${name} 少了 ${cls}`);
+    }
+  }
+});
+
+/* 第四批：抖音群聊。建群、拉角色、公开群每天一位陌生人来申请、私密群只能邀请、管理员。 */
+
+test('a group is created with roles inside and an owner that is her', () => {
+  const src = source('dyGroupCreateDone');
+  assert.match(src, /k:'me',role:'owner'/, '建群的人就是群主');
+  assert.match(src, /cs\.map\(c=>\(\{k:'c:'\+c\.id,cid:c\.id,role:'member'/, '角色作为成员进群');
+  assert.match(src, /open:!!open/, '建群时就决定公开还是私密');
+  assert.match(src, /gnum:dyGNum\(\)/);
+  assert.match(source('dyGroupCreateHTML'), /公开群每天会有一位陌生人来申请加入，私密群只能你自己邀请/);
+});
+
+test('exactly one stranger knocks per day, and only on public groups', () => {
+  const due = source('dyApplyDueGroup');
+  assert.match(due, /g\.open&&g\.lastApplyDay!==dyApplyDayKey\(\)/, '只有公开群、而且今天还没来过人');
+  const check = source('dyApplyCheck');
+  assert.match(check, /g\.lastApplyDay=dyApplyDayKey\(\);save\(\);/, '先占住今天');
+  assert.ok(check.indexOf('lastApplyDay=dyApplyDayKey') < check.indexOf('dyApplyGenerate'),
+    '要在调模型之前就占住今天，否则失败会在一天里反复烧钱');
+  assert.match(check, /_dyGBusy\.apply/, '同时只跑一个');
+});
+
+test('the generated stranger carries a persona of their own', () => {
+  const gen = source('dyApplyGenerate');
+  assert.match(gen, /昵称/);
+  assert.match(gen, /人设/);
+  assert.match(gen, /回答/);
+  assert.match(gen, /关注/);
+  assert.match(gen, /性格不要都是乖巧懂事的/, '各种性格，不然每个都一样');
+  assert.match(gen, /if\(!name\)return null/, '没解析出名字就不硬造一个人');
+  assert.match(source('dyApplyPass'), /dyGMemberList\(g\)\.push/, '通过之后真的进群');
+  assert.match(source('dyApplyPass'), /persona:a\.persona/, '人设跟着进群，进去之后说话才是他自己');
+});
+
+test('strangers in the group speak with their own persona, roles with theirs', () => {
+  const p = source('dyGroupSpeakerPrompt');
+  assert.match(p, /if\(m\.cid\)\{const c=getC\(m\.cid\);if\(c\)return buildSystem\(c\)\+scene/, '角色用角色自己的人设');
+  assert.match(p, /dyGMemberPersona\(m\)/, '陌生人用他自己的人设');
+  assert.match(p, /别说自己是AI/);
+  const run = source('dyGroupReplyRun');
+  assert.match(run, /g\.aiOn===false\)return/, '关掉群聊 AI 就没人自动说话');
+  assert.match(run, /Math\.min\(3,/, '一轮最多三个人开口，不然一条消息烧一堆钱');
+  assert.match(run, /fromText\.includes\(dyGMemberName\(m\)\)/, '被 @ 到的先说');
+});
+
+test('only the owner can hand out admin, and admins can manage members', () => {
+  assert.match(source('dyGAdmins'), /dyGRole\(g,'me'\)!=='owner'\)return toast/, '只有群主能设管理员');
+  assert.match(source('dyGRemoveMember'), /dyGCanManage\(g,'me'\)/, '群主和管理员都能移除成员');
+  assert.match(source('dyGRemoveMember'), /dyGRole\(g,m\.k\)!=='owner'/, '群主不能被移除');
+  assert.match(source('dyGDisband'), /dyGRole\(g,'me'\)!=='owner'\)return toast/, '只有群主能解散');
+  const ctx = vm.createContext({});
+  vm.runInContext(`${source('dyGBadge')};globalThis.f=dyGBadge;`, ctx);
+  assert.match(ctx.f('owner'), /群主/);
+  assert.match(ctx.f('admin'), /管理员/);
+  assert.equal(ctx.f('member'), '', '普通成员不带牌子');
+});
+
+test('turning a group private stops the daily knocking, and back again restarts it', () => {
+  const src = source('dyGOpenToggle');
+  assert.match(src, /g\.open=!g\.open/);
+  assert.match(src, /if\(g\.open\)g\.lastApplyDay=''/, '转回公开要让今天重新可以来人');
+  assert.match(src, /私密群，只能你自己邀请/);
+});
+
+test('the group settings page carries everything the real one does', () => {
+  const src = source('dyGroupInfoView');
+  for (const label of ['群聊成员', '群数据', '群管理', '群名称与头像', '群简介', '群公告', '我在本群的昵称', '群聊 AI', '查找聊天内容', '消息免打扰', '折叠群聊', '置顶聊天', '清空聊天记录', '解散群聊']) {
+    assert.ok(src.includes(label), `群设置少了「${label}」`);
+  }
+  assert.match(src, /owner\?`<div class="dyg-card">\s*<div class="dyg-row"><span>群管理/, '群管理只给群主和管理员看');
+  assert.match(source('dyGroupView'), /\['聊天','公告','置顶','收藏','设置'\]/);
+});
+
+test('every shell carries the styles for the group pages', () => {
+  for (const [name, css] of [['小手机.html', html], ['私人壳', shell], ['index.html', index]]) {
+    for (const cls of ['.dyg-tabs{', '.dyg-badge.owner{', '.dyg-card{', '.dyg-sw{', '.dygn-row{']) {
       assert.ok(css.includes(cls), `${name} 少了 ${cls}`);
     }
   }
