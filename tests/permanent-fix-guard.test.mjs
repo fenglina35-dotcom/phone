@@ -573,6 +573,34 @@ const PERMANENT_FIXES = [
     marker: 'function dyFace(v,cls)',
     least: 1,
   },
+  {
+    release: 'v1266',
+    name: '她发的文件角色真的读得到正文',
+    scope: 'both',
+    marker: 'function chatFileContextBody(m)',
+    least: 1,
+  },
+  {
+    release: 'v1266',
+    name: '角色能写多行文件，正文不会散成聊天气泡',
+    scope: 'both',
+    marker: 'function roleFileExtract(content)',
+    least: 1,
+  },
+  {
+    release: 'v1266',
+    name: '文件卡点得开，能复制能保存',
+    scope: 'both',
+    marker: 'function chatFileOpen(cid,mid)',
+    least: 1,
+  },
+  {
+    release: 'v1266',
+    name: '骰子回到微信功能面板第二页',
+    scope: 'both',
+    marker: "chatFunctionItem('骰子','dice'",
+    least: 1,
+  },
 ];
 
 const sources = { web: read(WEB), private: read(PRIVATE) };

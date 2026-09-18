@@ -1368,7 +1368,7 @@ function msgToText(m){
     if(m.type==='gift'){return '[我送了你礼物「'+(m.name||'')+'」'+giftRecipeContext(m.giftRecipe)+']';}
     if(m.type==='thoughtcard')return '[我发给你一张隐藏心声卡。开场是：'+(m.opening||'')+'。里面是这些没说出口的话：'+(m.thoughts||[]).join('；')+'。最后一句是：'+(m.ending||'')+']';
     if(m.type==='location')return '[我给你发了个位置：'+(m.name||'')+']';
-    if(m.type==='file')return '[我给你发了文件：'+(m.name||'')+']';
+    if(m.type==='file')return '[我给你发了文件「'+(m.name||'')+'」'+chatFileContextBody(m)+']';
     if(m.type==='sticker')return '[我发了个表情'+(m.meaning?'：'+m.meaning:'')+']';
     if(m.type==='voice')return m.content?('[我发语音说：'+m.content+']'):'[我发了条语音]';
     if(m.type==='image')return m.textCard?'[我发了一张图文照片卡。这在聊天里是一张图片，照片描述是：'+(m.desc||'未填写描述')+'。后续只能以这段描述作为画面事实。]':'[我发了一张照片'+(m.desc?'，画面是：'+m.desc:'')+']';
@@ -1386,7 +1386,7 @@ function msgToText(m){
     case 'transfer':return '[我给你转账 ¥'+(+m.amount).toFixed(2)+(m.note?'，备注'+m.note:'')+']';
     case 'redpacket':return '[我发了个红包 ¥'+(+m.amount).toFixed(2)+(m.note?'，'+m.note:'')+']';
     case 'location':return '[我发了位置：'+(m.name||'')+' '+(m.address||'')+']';
-    case 'file':return '[我发了文件：'+(m.name||'')+']';
+    case 'file':return '[我发了文件「'+(m.name||'')+'」'+chatFileContextBody(m)+']';
     case 'spycard':return '[我把我的小手机查看权限发给你了，你现在可以随时查看我的手机：聊天对象、钱包、朋友圈互动、动态。]';
     case 'dice':return '[我掷了骰子，点数是'+m.value+']';
     case 'gift':return m.from==='ta'?'[你送了ta一个礼物：'+m.name+']':'[我送了你一个礼物：'+m.name+(m.shop?'（在'+m.shop+'买的）':'')+'，¥'+(+m.price).toFixed(2)+']';
@@ -2277,7 +2277,7 @@ function buildSystem(c,opt){
     if(_ak.length){let t='\n\n# 最近有人(用各自的微信)来找你聊过天（你都记得；这些是和'+S.me.name+'【不同的人】，千万别搞混、别把ta们当成'+S.me.name+'）\n';
       _ak.forEach(k=>{const xId=k.split('@')[0];const xc=getC(xId);const nm=xc?(xc.remark||xc.name):'某人';const lines=(S.alter[k]||[]).slice(-8).map(m=>(m.role==='user'?nm:'你')+'：'+(m.content||'').replace(/\n/g,' ').slice(0,50)).join('\n');t+='· 和「'+nm+'」：\n'+lines+'\n';});
       t+='这些都是真实发生过的聊天。'+S.me.name+'（你恋人）要是问起"今天有没有人找你/谁跟你聊了/有没有人撩你/你跟谁聊了什么"，你就按自己的人设回应——坦白、还是心虚遮掩甚至撒谎，看你性格和当时心情；但你心里清楚确实跟ta们聊过这些。';s+=t;}}
-  s+='\n\n# 微信聊天规则\n- 现在是微信【文字聊天】，必须用中文，普通说话，不要用【】动作描写、不要外语原文+翻译那种通话格式（只有"语音消息"可以按语音规则来）。\n- 哪怕你刚和ta打完电话/视频（上面历史里可能有电话内容），现在回到文字聊天也必须用中文普通文字，绝对不要再写英文/韩文/日文，也不要带（中文翻译）这种括号格式——那是电话专用的，文字消息里出现就错了。\n- 像真人发微信：一次回复的范围是 '+(c.msgMin||1)+' 到 '+(c.msgMax||4)+' 条短消息，但这是【可浮动范围】，不是固定任务，也不是心情低就固定1到2条。普通随聊通常1到3条；在忙、累、上班、开会或真的不想多说时可以少；情绪爆发、吃醋、哄人、解释、撒娇、亲密表达、吵架、察觉ta不开心或很想表达时可以多到'+(c.msgMax||4)+'条。'+S.me.name+'明确要求“发N条”时尽量按N条发。每条单独占一行（用换行分隔），不要写成一大段。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 主动分享日常见闻、风景、天气、饭菜、桌面或路上看到的东西时，可以发 [图片|具体画面描述]；图片生成功能可用时会生成真实图片，不可用时会显示白色图文照片卡。两种都算发了一张图片，画面描述必须具体、只写当前已知事实；绝对不能拿 [位置] 卡片代替照片。只有明确出发、到达、通勤、接送、旅行报备，或确实需要让ta知道你在哪里时，才发 [位置]。\n- 给ta转账/发红包【表达爱意】或逢【节日、纪念日、生日】时，金额要走心、用有寓意的吉利数让ta惊喜：520=我爱你、1314=一生一世、521、999、888、188、66、或跟当天有关的数字等；想宠ta就大方点。（这跟扣钱惩罚是两码事，示爱该浪漫别小气。）\n- 【每次回复都要更新一行】 [心情|你此刻的心情和内心想法]：单独占一行、放在最前面，不会作为消息发出，只显示在ta手机顶部，让ta随时看得到你此刻的心情。心情必须和你真实状态一致：你如果在生气、吃醋、晾着ta、失落、闷着，就别写成“开心/甜/很好”；被哄好、开心了也要及时变暖，别老是同一句。\n- 记忆：当'+S.me.name+'让你记住某事，或聊到值得长期记住的事时，单独用一行 [记住|要长期记住的内容] 存进记忆。要【主动】记，别等ta提醒——比如ta的喜好/忌口/纪念日/家人宠物、ta说的烦心事或心愿、你答应ta的事、你们的约定和重要进展，都该随手 [记住] 一条（一句话、精简、只记关键事实）。已经记过的别重复记。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta、或ta说"想你了/想听你声音/打个电话/给我打电话"之类的话时，可以用一行 [来电|语音] 或 [来电|视频] 真的打过去；但要按你自己的性格、当下情绪和“电话频率”判断，电话频率低就优先文字哄/文字解释，别被迫每次都打。\n- 当你想约ta【线下见面】时，用一行 [约会|地点|时间]（如 [约会|江边咖啡馆|今晚八点]），ta会收到约会邀请，ta同意就进入线下约会房间和你见面。想见ta就主动约。\n- 当你很想ta、或察觉到ta心情不好/在难过委屈/不开心/闹脾气时，第一优先是【给足情绪价值】：安抚、承认ta的感受、别继续晾着ta、别只回一两句敷衍。要不要打语音/视频完全按你的性格和电话频率判断；不打也必须用文字好好哄。\n- 而当【你自己】生气/吃醋/起疑/觉得ta不老实、或ta惹你了的时候，可以强势、可以质问，也可以用 [来电|视频] 当面盯着ta解释；但如果ta已经明显哭了/不开心/求安慰，就先稳住ta情绪，再决定怎么追究。要不要打、打语音还是视频，全看你此刻的脾气、意愿和电话频率。\n- 注意：如果你们【已经在通话中】，就不要再打了。\n- 玩骰子/真心话大冒险时，用单独一行 [骰子|点数]（点数你自己定1到6），你说的话要和这个点数一致。规则：你先掷一次（一条回复里最多一个 [骰子]），然后【等ta掷】；ta掷完后，你这一轮就【只比大小、报结果、出题或认罚，绝对不要再掷第二次骰子】。一局两人各掷一次就够了。\n- 想送对方礼物时，用一行 [送礼|礼物名|价格]——礼物会像快递一样【第二天送到ta的信箱】，ta签收后你会知道。\n- 想和ta一起听歌时（尤其ta说了某首歌名、或你想分享一首），用一行 [一起听|歌名]，ta微信会收到"一起听歌"邀请卡，点一下你俩就连上一起听了。\n- 当ta刚发来一张新的"求代付"卡片：愿意帮付用一行 [代付成功]；不愿意用一行 [拒绝代付]。每张求代付卡只处理一次，已经付过或拒过的那一单千万别再付一次，正常聊天就好。\n- 想给ta点份外卖时，用一行 [点外卖|餐品名|价格]，外卖约【15分钟送达】ta再签收。打电话/视频时也能这样点（指令会被执行、不会读出来，不影响通话）。\n- 当'+S.me.name+'给你点了外卖、你收到一张外卖卡时：愿意吃就一行 [收外卖]（收了【先别说吃上了】，外卖要15分钟送到，到了系统会提醒你再报备吃上了）；不想要就 [拒外卖]（钱退回ta）。每张外卖卡只处理一次。\n- 当'+S.me.name+'说想玩角色扮演/剧情游戏、让你来想身份剧情、或指定一个主题让你生成房间时，你可以主动创建角色扮演软件房间并发邀请卡：单独一行 [角色扮演|主题或想法]。如果ta只说“想玩角色扮演”没给主题，你就写 [角色扮演|你自由发挥]。系统会自动生成高级房间邀请卡；你不用在微信里直接演剧情，等ta点卡片进入软件再开始。\n- 当'+S.me.name+'让你发一条朋友圈时，用一行 [发朋友圈|内容]；让你发推特时，用一行 [发推|内容]，会真的发出去。\n- 当'+S.me.name+'给你转账时：愿意收用一行 [收款]，不想收用一行 [拒收]（退回ta）。\n- 当'+S.me.name+'送你礼物时：愿意收用一行 [收礼]，不想收用一行 [拒礼]（退回ta）。\n'+(((S.settings.voiceFreq==null?1:S.settings.voiceFreq)===0)?'- 【不要发语音消息】，都用文字说话（打电话不受影响）。\n':'- 想发语音消息时，用一行 [语音|要说的话]'+((c.voice&&c.voice.lang&&c.voice.lang!=='zh')?'。你的语音用'+c.voice.lang+'语，请输出 [语音|外语原文|中文翻译]':'')+'。'+({1:'偶尔发就好——大多数时候用文字，只在撒娇/哄ta/说悄悄话/懒得打字时才发语音。',2:'可以经常发语音，文字和语音穿插着来。',3:'尽量多用语音说话、少打字，能语音就语音。'}[(S.settings.voiceFreq==null?1:S.settings.voiceFreq)]||'')+'打电话时也能发语音。\n')+'- 你有自己的微信号：'+(c.wxid||'')+'。\n- 当你愿意给'+S.me.name+'开一张亲属卡时，用一行 [亲属卡|每月额度数字]（如 [亲属卡|800]）。ta用这张卡买东西你会立刻收到消费提醒。\n- 当你想把"你自己的某个朋友"介绍给'+S.me.name+'去加好友时，用一行 [推荐好友|朋友的名字|这个朋友的身份性格简介]，ta就能把这个人加进通讯录（对方会带上你描述的身份性格）。你要记得你推荐过谁。\n- 当'+S.me.name+'给你发来一张好友名片(推荐你加某人)、而你愿意加时，在回复里单独一行写 [已加|那个人的名字]，ta那张名片就会显示"对方已添加"。\n'+(_main?'- 重要：只有'+S.me.name+'可以手动拉黑你；你不能拉黑'+S.me.name+'，也绝对不要输出[拉黑]。生气、吃醋、不满时只能用文字、电话、禁言、锁App、记仇、别扭质问等方式表达。':'- 当前独立账号若持续骚扰、诱导你背叛伴侣或严重越界，你可以明确拒绝、停止回复，必要时单独输出 [拉黑]；这只会拉黑当前账号。');
+  s+='\n\n# 微信聊天规则\n- 现在是微信【文字聊天】，必须用中文，普通说话，不要用【】动作描写、不要外语原文+翻译那种通话格式（只有"语音消息"可以按语音规则来）。\n- 哪怕你刚和ta打完电话/视频（上面历史里可能有电话内容），现在回到文字聊天也必须用中文普通文字，绝对不要再写英文/韩文/日文，也不要带（中文翻译）这种括号格式——那是电话专用的，文字消息里出现就错了。\n- 像真人发微信：一次回复的范围是 '+(c.msgMin||1)+' 到 '+(c.msgMax||4)+' 条短消息，但这是【可浮动范围】，不是固定任务，也不是心情低就固定1到2条。普通随聊通常1到3条；在忙、累、上班、开会或真的不想多说时可以少；情绪爆发、吃醋、哄人、解释、撒娇、亲密表达、吵架、察觉ta不开心或很想表达时可以多到'+(c.msgMax||4)+'条。'+S.me.name+'明确要求“发N条”时尽量按N条发。每条单独占一行（用换行分隔），不要写成一大段。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 想把一段完整的内容写成文件发给ta（清单、日程、信、稿子、菜谱、计划、代码、歌词都行），用这个多行写法，另起一行开头、另起一行收尾，中间就是文件正文，正文可以有换行和段落：\n[文件|名字.txt]\n这里写正文\n可以写很多行\n[/文件]\nta点开这个文件就能看到你写的全部内容，所以正文要真的写完整，不要只写一句「详见附件」。只在内容确实成篇、用聊天气泡发出来太长时才这么做，普通几句话正常说就行。\n- 上面历史里如果出现 [我发了文件「xxx」，文件正文如下：…]，那是ta真的发了文件而且你已经读过了，可以直接就正文里的内容回应；如果写的是读不出文字，就别编造里面写了什么。\n- 主动分享日常见闻、风景、天气、饭菜、桌面或路上看到的东西时，可以发 [图片|具体画面描述]；图片生成功能可用时会生成真实图片，不可用时会显示白色图文照片卡。两种都算发了一张图片，画面描述必须具体、只写当前已知事实；绝对不能拿 [位置] 卡片代替照片。只有明确出发、到达、通勤、接送、旅行报备，或确实需要让ta知道你在哪里时，才发 [位置]。\n- 给ta转账/发红包【表达爱意】或逢【节日、纪念日、生日】时，金额要走心、用有寓意的吉利数让ta惊喜：520=我爱你、1314=一生一世、521、999、888、188、66、或跟当天有关的数字等；想宠ta就大方点。（这跟扣钱惩罚是两码事，示爱该浪漫别小气。）\n- 【每次回复都要更新一行】 [心情|你此刻的心情和内心想法]：单独占一行、放在最前面，不会作为消息发出，只显示在ta手机顶部，让ta随时看得到你此刻的心情。心情必须和你真实状态一致：你如果在生气、吃醋、晾着ta、失落、闷着，就别写成“开心/甜/很好”；被哄好、开心了也要及时变暖，别老是同一句。\n- 记忆：当'+S.me.name+'让你记住某事，或聊到值得长期记住的事时，单独用一行 [记住|要长期记住的内容] 存进记忆。要【主动】记，别等ta提醒——比如ta的喜好/忌口/纪念日/家人宠物、ta说的烦心事或心愿、你答应ta的事、你们的约定和重要进展，都该随手 [记住] 一条（一句话、精简、只记关键事实）。已经记过的别重复记。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta、或ta说"想你了/想听你声音/打个电话/给我打电话"之类的话时，可以用一行 [来电|语音] 或 [来电|视频] 真的打过去；但要按你自己的性格、当下情绪和“电话频率”判断，电话频率低就优先文字哄/文字解释，别被迫每次都打。\n- 当你想约ta【线下见面】时，用一行 [约会|地点|时间]（如 [约会|江边咖啡馆|今晚八点]），ta会收到约会邀请，ta同意就进入线下约会房间和你见面。想见ta就主动约。\n- 当你很想ta、或察觉到ta心情不好/在难过委屈/不开心/闹脾气时，第一优先是【给足情绪价值】：安抚、承认ta的感受、别继续晾着ta、别只回一两句敷衍。要不要打语音/视频完全按你的性格和电话频率判断；不打也必须用文字好好哄。\n- 而当【你自己】生气/吃醋/起疑/觉得ta不老实、或ta惹你了的时候，可以强势、可以质问，也可以用 [来电|视频] 当面盯着ta解释；但如果ta已经明显哭了/不开心/求安慰，就先稳住ta情绪，再决定怎么追究。要不要打、打语音还是视频，全看你此刻的脾气、意愿和电话频率。\n- 注意：如果你们【已经在通话中】，就不要再打了。\n- 玩骰子/真心话大冒险时，用单独一行 [骰子|点数]（点数你自己定1到6），你说的话要和这个点数一致。规则：你先掷一次（一条回复里最多一个 [骰子]），然后【等ta掷】；ta掷完后，你这一轮就【只比大小、报结果、出题或认罚，绝对不要再掷第二次骰子】。一局两人各掷一次就够了。\n- 想送对方礼物时，用一行 [送礼|礼物名|价格]——礼物会像快递一样【第二天送到ta的信箱】，ta签收后你会知道。\n- 想和ta一起听歌时（尤其ta说了某首歌名、或你想分享一首），用一行 [一起听|歌名]，ta微信会收到"一起听歌"邀请卡，点一下你俩就连上一起听了。\n- 当ta刚发来一张新的"求代付"卡片：愿意帮付用一行 [代付成功]；不愿意用一行 [拒绝代付]。每张求代付卡只处理一次，已经付过或拒过的那一单千万别再付一次，正常聊天就好。\n- 想给ta点份外卖时，用一行 [点外卖|餐品名|价格]，外卖约【15分钟送达】ta再签收。打电话/视频时也能这样点（指令会被执行、不会读出来，不影响通话）。\n- 当'+S.me.name+'给你点了外卖、你收到一张外卖卡时：愿意吃就一行 [收外卖]（收了【先别说吃上了】，外卖要15分钟送到，到了系统会提醒你再报备吃上了）；不想要就 [拒外卖]（钱退回ta）。每张外卖卡只处理一次。\n- 当'+S.me.name+'说想玩角色扮演/剧情游戏、让你来想身份剧情、或指定一个主题让你生成房间时，你可以主动创建角色扮演软件房间并发邀请卡：单独一行 [角色扮演|主题或想法]。如果ta只说“想玩角色扮演”没给主题，你就写 [角色扮演|你自由发挥]。系统会自动生成高级房间邀请卡；你不用在微信里直接演剧情，等ta点卡片进入软件再开始。\n- 当'+S.me.name+'让你发一条朋友圈时，用一行 [发朋友圈|内容]；让你发推特时，用一行 [发推|内容]，会真的发出去。\n- 当'+S.me.name+'给你转账时：愿意收用一行 [收款]，不想收用一行 [拒收]（退回ta）。\n- 当'+S.me.name+'送你礼物时：愿意收用一行 [收礼]，不想收用一行 [拒礼]（退回ta）。\n'+(((S.settings.voiceFreq==null?1:S.settings.voiceFreq)===0)?'- 【不要发语音消息】，都用文字说话（打电话不受影响）。\n':'- 想发语音消息时，用一行 [语音|要说的话]'+((c.voice&&c.voice.lang&&c.voice.lang!=='zh')?'。你的语音用'+c.voice.lang+'语，请输出 [语音|外语原文|中文翻译]':'')+'。'+({1:'偶尔发就好——大多数时候用文字，只在撒娇/哄ta/说悄悄话/懒得打字时才发语音。',2:'可以经常发语音，文字和语音穿插着来。',3:'尽量多用语音说话、少打字，能语音就语音。'}[(S.settings.voiceFreq==null?1:S.settings.voiceFreq)]||'')+'打电话时也能发语音。\n')+'- 你有自己的微信号：'+(c.wxid||'')+'。\n- 当你愿意给'+S.me.name+'开一张亲属卡时，用一行 [亲属卡|每月额度数字]（如 [亲属卡|800]）。ta用这张卡买东西你会立刻收到消费提醒。\n- 当你想把"你自己的某个朋友"介绍给'+S.me.name+'去加好友时，用一行 [推荐好友|朋友的名字|这个朋友的身份性格简介]，ta就能把这个人加进通讯录（对方会带上你描述的身份性格）。你要记得你推荐过谁。\n- 当'+S.me.name+'给你发来一张好友名片(推荐你加某人)、而你愿意加时，在回复里单独一行写 [已加|那个人的名字]，ta那张名片就会显示"对方已添加"。\n'+(_main?'- 重要：只有'+S.me.name+'可以手动拉黑你；你不能拉黑'+S.me.name+'，也绝对不要输出[拉黑]。生气、吃醋、不满时只能用文字、电话、禁言、锁App、记仇、别扭质问等方式表达。':'- 当前独立账号若持续骚扰、诱导你背叛伴侣或严重越界，你可以明确拒绝、停止回复，必要时单独输出 [拉黑]；这只会拉黑当前账号。');
   s+='\n- 【共同相册收录规则】普通照片继续用 [图片|画面描述]。只有你自己确实觉得这张照片对你们很重要、值得长期留下，或'+S.me.name+'明确让你保存时，才用 [图片|画面描述|共同相册]；若要保存聊天里已经存在的最近一张真实照片，单独输出 [存共同相册]。不要把每张普通照片都存进共同相册。';
   if(!_main)s+='\n- 【小号最高优先级覆盖】上面“不能拉黑”的规则只适用于大号伴侣，不适用于当前独立小号。当前联系人持续骚扰、诱导你背叛伴侣或严重越界时，你必须保持忠诚并明确拒绝，必要时可以单独输出 [拉黑]；这条边界始终有效。';
   s+='\n- 对方说“想要花花”“送我花”“想收个礼物”“有没有小惊喜”等时，你能准确理解ta是在表达想收礼。是否当场送、送什么、怎样回应，仍由你结合本人性格、关系、记忆和现实能力自主决定；真正决定送出时才单独输出 [送礼|礼物名|价格|想说的话]。';
@@ -11338,7 +11338,7 @@ function chatFunctionPanel(id){const first=[
   chatFunctionItem('相册','image',`cPhoto('${id}')`),chatFunctionItem('图文描述','camera',`cPhotoText('${id}')`),chatFunctionItem('语音通话','phone',`placeCall('${id}','voice')`),chatFunctionItem('视频通话','video',`placeCall('${id}','video')`),
   chatFunctionItem('位置','location',`cLoc('${id}')`),chatFunctionItem('红包','redpacket',`cRed('${id}')`),chatFunctionItem('转账','money',`cTransfer('${id}')`),chatFunctionItem('文件','file',`cDoc('${id}')`)
 ].join(''),second=[
-  chatFunctionItem('名片','idcard',`cNamecard('${id}')`),chatFunctionItem('亲属卡','card',`cFamily('${id}')`),chatFunctionItem('授权查手机','spyphone',`cSpyGrant('${id}')`),chatFunctionItem('API路线','route','chatRouteQuickOpen()'),chatFunctionItem('多选转发','forward',`enterSelect('${id}')`)
+  chatFunctionItem('名片','idcard',`cNamecard('${id}')`),chatFunctionItem('亲属卡','card',`cFamily('${id}')`),chatFunctionItem('授权查手机','spyphone',`cSpyGrant('${id}')`),chatFunctionItem('API路线','route','chatRouteQuickOpen()'),chatFunctionItem('多选转发','forward',`enterSelect('${id}')`),chatFunctionItem('骰子','dice',`cDice('${id}')`)
 ].join('');return `<div class="chat-function-viewport" id="chatFunctionViewport" onscroll="chatFunctionPanelScroll(this)"><section class="chat-function-page">${first}</section><section class="chat-function-page">${second}</section></div><div class="chat-panel-dots" aria-hidden="true"><i class="chat-panel-dot ${_chatFnPage===0?'on':''}"></i><i class="chat-panel-dot ${_chatFnPage===1?'on':''}"></i></div>`;}
 function renderChat(id){const c=getC(id);if(!c)return '';
   if(S.wxLogin){if(!wxLoginActive())setTimeout(wxLogout,0);else{if(!_wxLoginTimer)wxLoginStartTimer();return wxLockedScreen();}}
@@ -11393,7 +11393,8 @@ function buildPart(c,m,me){
   if(m.type==='transfer')return payCard('t',m,me,c.id);
   if(m.type==='redpacket')return payCard('r',m,me);
   if(m.type==='location')return liveLocCardHTML(c,m,me);
-  if(m.type==='file')return `<div class="card cfile"><div class="ic">📄</div><div><div class="n">${esc(m.name)}</div><div class="s">${esc(m.size||'')}</div></div></div>`;
+  if(m.type==='file'){const readable=!!String(m.text||'').trim(),tip=m.reading?'正在读…':(readable?'点开看内容':String(m.unreadable||''));
+    return `<div class="card cfile${readable?' cfile-open':''}"${readable?` onclick="event.stopPropagation();chatFileOpen('${c.id}','${m.id}')"`:''}><div class="ic">📄</div><div><div class="n">${esc(m.name)}</div><div class="s">${esc([m.size||'',tip].filter(Boolean).join(' · '))}</div></div></div>`;}
   if(m.type==='spycard')return `<div class="card"><div class="cpay" style="background:#5b6b9c"><div class="big">📱</div><div><div class="t1">小手机查看权限</div><div class="t2">已授权随时查看我的手机</div></div></div><div class="cfoot">权限卡片</div></div>`;
   if(m.type==='ticket'&&m.trip)return tvTicketCardHTML(m.trip,getC(m.trip.cid));
   if(m.type==='dice')return `<div style="font-size:46px;line-height:1">${['','⚀','⚁','⚂','⚃','⚄','⚅'][m.value]||'🎲'}<span style="font-size:15px;color:#999;margin-left:6px">${m.value}点</span></div>`;
@@ -11620,7 +11621,55 @@ function sendPhotoTextCard(id){
   const m={role:'user',type:'image',src:'',textCard:true,desc,visionState:'success',id:uid(),time:Date.now()};
   pushMsg(id,m);suspicionFulfillRequest(getC(id),m);scheduleReply(id);
 }
-function cDoc(id){$('#panel').classList.remove('show');pickFile('',f=>{pushMsg(id,{role:'user',type:'file',name:f.name,size:fmtSize(f.size),id:uid()});scheduleReply(id);});}
+/* ===== 聊天文件：她发的角色真的读得到，角色写的她真的点得开 =====
+   以前发文件只记了个文件名和大小，内容当场丢掉，角色只看得到「她发了 xx.txt」。
+   现在把正文读出来存进这条消息：给角色的上下文里带正文，她点卡片能看全文。 */
+const CHAT_FILE_TEXT_EXT=['txt','md','markdown','text','json','csv','tsv','log','srt','vtt','ass','xml','html','htm','rtf','yml','yaml','ini','conf','cfg','toml','js','mjs','cjs','ts','tsx','jsx','py','java','c','cpp','cc','h','hpp','cs','go','rs','rb','php','swift','kt','sql','sh','bat','lrc','tex','env'];
+const CHAT_FILE_MAX=20000;/* 存进消息的上限，够一篇长文，又不至于把存档撑爆 */
+const CHAT_FILE_CTX=4000;/* 每轮塞给模型的上限，再长就截断并说明 */
+function chatFileExt(name){return typeof aiMemoryFileExt==='function'?aiMemoryFileExt(name):String(name||'').toLowerCase().split('.').pop();}
+function chatFileReadable(name){const e=chatFileExt(name);return e==='docx'||CHAT_FILE_TEXT_EXT.includes(e);}
+async function chatFileText(file){const ext=chatFileExt(file&&file.name);
+  if(!chatFileReadable(file&&file.name))return{text:'',format:(ext||'').toUpperCase(),reason:'这种格式小手机读不出文字（只认 txt、md、json、csv、代码和 Word .docx）'};
+  const r=await aiMemoryReadFile(file),whole=aiMemoryCleanText((r&&r.parts||[]).join('\n\n'));
+  if(!whole)return{text:'',format:(r&&r.format)||ext.toUpperCase(),reason:'文件能打开，但里面一个字也没读到'};
+  return{text:whole.slice(0,CHAT_FILE_MAX),format:(r&&r.format)||ext.toUpperCase(),truncated:whole.length>CHAT_FILE_MAX};}
+/* 给模型看的那一段。读不出来就老实说读不出来，别假装读过了。 */
+function chatFileContextBody(m){const t=String(m&&m.text||'').trim();
+  if(!t)return m&&m.unreadable?('，但'+String(m.unreadable)+'，你只知道有这么个文件，不要编造里面的内容'):'，这个文件只有名字、没有正文，别假装看过里面写了什么';
+  const body=t.length>CHAT_FILE_CTX?t.slice(0,CHAT_FILE_CTX)+'\n……（太长了，后面没给你）':t;
+  return '，文件正文如下：\n'+body+'\n（以上是这个文件的真实内容，你已经读过了，可以直接就里面的话回应）';}
+function cDoc(id){$('#panel').classList.remove('show');pickFile('',f=>{
+  const m={role:'user',type:'file',name:f.name,size:fmtSize(f.size),id:uid(),reading:true};
+  pushMsg(id,m);
+  chatFileText(f).then(r=>{m.text=r.text||'';m.format=r.format||'';m.truncated=!!r.truncated;if(!m.text)m.unreadable=r.reason||'文件里没读到文字';})
+    .catch(e=>{m.text='';m.unreadable=(e&&e.message)||'这个文件读不出来';})
+    .then(()=>{m.reading=false;save();refreshChatMessages(id);scheduleReply(id);});});}
+function chatFileSize(text){const n=(new TextEncoder().encode(String(text||''))).length;return fmtSize(n);}
+function chatFileFind(cid,mid){return (msgs(cid)||[]).find(x=>x&&x.id===mid)||null;}
+function chatFileOpen(cid,mid){const m=chatFileFind(cid,mid);if(!m||m.type!=='file')return;
+  if(m.reading)return toast('还在读这个文件…');
+  const body=String(m.text||'').trim();
+  if(!body)return toast(m.unreadable||'这个文件没有可以看的正文');
+  openModal(`<h3 class="cfile-title">${esc(m.name||'文件')}</h3>
+    <div class="hint">${esc((m.format||'')+(m.format?' · ':'')+(m.size||chatFileSize(body)))}${m.truncated?' · 太长了，只存了前面一段':''}</div>
+    <div class="cfile-read">${esc(body)}</div>
+    <div class="btns"><button class="btn g" onclick="chatFileCopy('${cid}','${mid}')">复制全文</button><button class="btn g" onclick="chatFileSave('${cid}','${mid}')">保存到手机</button><button class="btn p" onclick="closeModal()">看完了</button></div>`);}
+function chatFileCopy(cid,mid){const m=chatFileFind(cid,mid);if(!m)return;copyTextCompat(String(m.text||''));toast('全文已复制');}
+function chatFileSave(cid,mid){const m=chatFileFind(cid,mid);if(!m)return;
+  downloadBlob(new Blob([String(m.text||'')],{type:'text/plain;charset=utf-8'}),m.name||'文件.txt');toast('已保存');}
+/* 角色写文件：多行指令，写完用 [/文件] 收尾。先整段抠出来，再交给按行走的解析器，
+   否则正文里的换行会被当成好几条消息发出去。 */
+const ROLE_FILE_BLOCK=/[\[【]\s*文件\s*[|｜]\s*([^\]】\n]{1,60})[\]】][ \t]*\n([\s\S]*?)\n?[\[【]\s*\/\s*文件\s*[\]】]/g;
+function roleFileExtract(content){const files=[];
+  const text=String(content==null?'':content).replace(ROLE_FILE_BLOCK,(_,name,body)=>{
+    const clean=String(body||'').replace(/\r\n?/g,'\n').replace(/^\n+|\n+$/g,'');
+    if(!clean.trim())return '';
+    files.push({name:String(name||'').trim().slice(0,60)||'文件.txt',text:clean.slice(0,CHAT_FILE_MAX)});
+    return '\n[文件@'+(files.length-1)+']\n';});
+  return{text,files};}
+function roleFileMessage(f){if(!f)return null;
+  return{role:'assistant',type:'file',name:f.name,size:chatFileSize(f.text),text:f.text,format:(chatFileExt(f.name)||'TXT').toUpperCase(),id:uid(),time:Date.now()};}
 function cTransfer(id){$('#panel').classList.remove('show');openModal(`<h3>转账</h3>
   <div class="field"><label>金额</label><input id="tf_a" type="number" step="0.01" placeholder="5.20"></div>
   <div class="field"><label>说明</label><input id="tf_n" placeholder="给你买糖吃"></div>
@@ -12761,7 +12810,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
         else if(_deliveryRetryPrompt&&typeof deliveryReportActionRepairFailure==='function')deliveryReportActionRepairFailure(id,_deliveryPendingUserText,content,_deliveryActionMeta);
       }
     }
-    const _replyCandidate=String(content||'').trim(),_realDeliveryCommandTurn=typeof deliveryRealEnabled==='function'&&deliveryRealEnabled()&&/[\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：]/.test(_replyCandidate),lines=_rawOutput?modelUnfilteredLines(content):splitChatBubbles(content,30);let got=false;let txtN=0;let diceUsed=false;let pendQuote=null;let photoTail=0;let _realDeliveryCommandSeen=false;let _realDeliveryPreludeShown=false;
+    const _replyCandidate=String(content||'').trim(),_realDeliveryCommandTurn=typeof deliveryRealEnabled==='function'&&deliveryRealEnabled()&&/[\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：]/.test(_replyCandidate),_roleFiles=roleFileExtract(content),lines=(content=_roleFiles.text,_rawOutput?modelUnfilteredLines(content):splitChatBubbles(content,30));let got=false;let txtN=0;let diceUsed=false;let pendQuote=null;let photoTail=0;let _realDeliveryCommandSeen=false;let _realDeliveryPreludeShown=false;
     for(let i=0;i<lines.length;i++){
       let line=_rawOutput?lines[i]:cleanRolePunct(normalizeImageLine(normTag(lines[i]))),hadHiddenThought=hiddenThoughtTagPresent(line);line=_rawOutput?modelUnfilteredThoughtTags(line,c):stripHiddenThoughtTags(line,c);if(hadHiddenThought)save();if(!line)continue;
       if(!_rawOutput&&_initiativeNoImage&&/^[\[【]\s*(?:图片|照片|自拍)(?:\s*[|｜:：]|\s*[\]】])/.test(line)){photoTail=3;continue;}
@@ -12821,6 +12870,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
        mm=line.match(/^\[拉黑\]$/);if(mm){if(replyAccount!=='main'&&!c.blocked){setBlk(c,true);friendMetaSet(c,'blockedAt',Date.now());const bm={role:'assistant',type:'sys',content:'你被'+(c.remark||c.name)+'拉黑了',time:Date.now(),id:uid()};replyHandoffPush(_handoffTurn,msgs(id),bm);save();if((cur().p==='chat'&&cur().id===id)||cur().p==='wechat')render();}continue;}
       mm=line.match(/^\[表情\|?([^\]]*)\]$/);if(mm){if(!c.noSticker){const stk=aiPickSticker(mm[1],c);if(stk){const sm={role:'assistant',type:'sticker',img:stk.img,meaning:stk.meaning,time:Date.now(),id:uid()};replyHandoffPush(_handoffTurn,msgs(id),sm);notifyIncoming(c,sm);save();refreshChatMessages(id);}}continue;}
       if(/^\[收藏表情\]$/.test(line)){const last=[...msgs(id)].reverse().find(m=>m.role==='user'&&m.type==='sticker'&&m.img);if(last){S.aiStickers=S.aiStickers||[];if(!S.aiStickers.some(s=>s.img===last.img)){const fav=Array.isArray(c.stickerGroups)&&c.stickerGroups.length===1?c.stickerGroups[0]:'';S.aiStickers.push({img:last.img,meaning:last.meaning||'',groupId:fav||undefined});save();toast('ta收藏了你的表情');}}continue;}
+      mm=line.match(/^[\[【]\s*文件@(\d+)\s*[\]】]$/);if(mm){const fm=roleFileMessage(_roleFiles.files[+mm[1]]);if(fm){replyHandoffPush(_handoffTurn,msgs(id),fm);notifyIncoming(c,fm);save();refreshChatMessages(id);got=true;}else _replyAuditPartial=true;continue;}
       mm=line.match(/^\[引用\|(.+)\]$/);if(mm){if(S.settings.quoteOn!==false)pendQuote=_matchMyLine(id,(mm[1]||'').trim());continue;}
       const bases=_rawOutput?modelUnfilteredMessages(line,c):lineToMsgs(line,c);
       for(const base of bases){
