@@ -21,7 +21,7 @@ test('private v1264 loads daily backup after the diagnostic overlay while public
     assert.ok(html.indexOf('private-cloud-backup.js?v=1264')>html.indexOf('private-runtime-diagnostics.js?v=336'));
   }
   assert.match(privateApp,/APP_VER='v1264 · 私人同步 抖音重做与通话重试'/);
-  assert.match(publicApp,/APP_VER='v1263 · 抖音暗玻璃底色'/);
+  assert.match(publicApp,/APP_VER='v1265 · 抖音独立主页与记忆'/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 365;/g)||[]).length,12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.365;/g)||[]).length,12);
 });

@@ -473,3 +473,90 @@ test('every shell carries the styles for the text feed', () => {
     }
   }
 });
+
+/* 第七批：每个人都有独立主页；私聊我这边也有头像、等回复时有三个点；
+   私聊和群聊各自能调上下文；抖音里发生的事进角色记忆；群成员页独立；
+   角色回评论必须 @ 到人；陌生人统一灰底小人；全部功能删掉点了没反应的。 */
+
+test('anybody in 抖音 has a profile page you can open', () => {
+  for (const f of ['dyUserView', 'dyPersonFind', 'dyOpenUser', 'dyGMembersView']) {
+    assert.ok(app.includes(`function ${f}(`), `${f} 缺失`);
+    assert.ok(priv.includes(`function ${f}(`), `私人版缺少 ${f}`);
+  }
+  assert.match(app, /if\(_dySub==='user'\)return dyUserView\(\);/, '主页要挂上路由');
+  assert.match(app, /if\(_dySub==='gmembers'\)return dyGMembersView\(\);/, '群成员页要独立成一页');
+  const find = source('dyPersonFind');
+  for (const kind of ['c:', 'n:', 'visitors', 'fans']) assert.ok(find.includes(kind), `dyPersonFind 认不出 ${kind}`);
+  assert.match(source('dyVideoAuthor'), /dyOpenUser\('c:'\+v\.cid\)/, '点作品作者进他主页');
+  assert.match(app, /class="dyfan-row" onclick="dyOpenUser/, '粉丝行点得进去');
+  assert.match(app, /class="dyrel-row" onclick="dyOpenUser/, '互关行点得进去');
+});
+
+test('the stats on a stranger page stay put instead of rerolling every render', () => {
+  const ctx = vm.createContext({});
+  vm.runInContext(`${source('dyKeyHash')};globalThis.H=dyKeyHash;`, ctx);
+  assert.equal(ctx.H('n:阿澈', 7), ctx.H('n:阿澈', 7), '同一个人同一个数，刷新不变');
+  assert.notEqual(ctx.H('n:阿澈', 999), ctx.H('n:小柚', 999), '不同的人不该一模一样');
+});
+
+test('my own avatar shows on my side of a 私信, and waiting shows three dots', () => {
+  assert.match(source('renderDyDM'), /m\.from==='me'\?av\(dyAvatar\(\),'sm'\):dyFace\(d\.avatar,'sm'\)/, '我这边也要有头像');
+  assert.match(source('renderDyDM'), /dyTypingShown\('dm:'\+id\)/, '私信里等回复要有三个点');
+  assert.match(source('dyGroupView'), /dyTypingShown\('g:'\+g\.id\)/, '群聊里也要有');
+  assert.match(app, /async function dyDMReply\(d\)\{try\{dyTypingOn\('dm:'\+d\.id\);/, '开始想回复就亮');
+  assert.match(app, /finally\{dyTypingOff\('dm:'\+d\.id\);\}\}/, '回完或失败都要灭，不能一直转');
+  for (const [name, css] of [['小手机.html', html], ['私人壳', shell], ['index.html', index]]) {
+    assert.ok(css.includes('.dydm-typing'), `${name} 少了三个点的样式`);
+  }
+});
+
+test('each 私聊 and 群聊 carries its own context length, and reply length follows 设置', () => {
+  const ctx = vm.createContext({ Number, Math, parseInt });
+  vm.runInContext(`${source('dyChatCtxRows')};globalThis.R=dyChatCtxRows;`, ctx);
+  assert.equal(ctx.R(null), 16, '没设过就是默认 16 条');
+  assert.equal(ctx.R({ ctx: 0 }), 16);
+  assert.equal(ctx.R({ ctx: 2 }), 4, '低于 4 条按 4 条算');
+  assert.equal(ctx.R({ ctx: 900 }), 60, '最多 60 条');
+  assert.equal(ctx.R({ ctx: 25 }), 25);
+  assert.match(app, /d\.msgs\.slice\(-dyChatCtxRows\(d\)\)/, '私信按这条设置取历史');
+  assert.match(app, /dyGroupTranscript\(cur_,dyChatCtxRows\(cur_\)\)/, '群聊也按这条设置取历史');
+  assert.match(source('dyReplyBudget'), /maxTokens/, '回复长度绑定设置里的线上聊天');
+  assert.match(app, /\{max:dyReplyBudget\(\)\}/, '私信回复长度跟着设置走');
+  for (const f of ['dyChatCtxEdit', 'dyChatCtxSave', 'dyChatCtxBox']) assert.ok(priv.includes(`function ${f}(`), `私人版缺少 ${f}`);
+});
+
+test('what happens on 抖音 reaches the character, the same way 共同生活 does', () => {
+  assert.ok(app.includes('function dyMemoryPrompt('), 'dyMemoryPrompt 缺失');
+  assert.ok(priv.includes('function dyMemoryPrompt('), '私人版缺少 dyMemoryPrompt');
+  assert.match(app, /cohabMemoryAfterPrompt\(c\);s\+=\(typeof dyMemoryPrompt==='function'\?dyMemoryPrompt\(c\):''\)/, '要挂在 buildSystem 里，跟共同生活记忆一起');
+  const mem = source('dyMemoryPrompt');
+  for (const part of ['私信', '群', '作品']) assert.ok(mem.includes(part), `记忆里少了${part}`);
+});
+
+test('a character answering a comment always @s the person first', () => {
+  assert.match(app, /async function dyCharReplyComment\(v,c,t,toName\)/, '要知道回的是谁');
+  assert.match(app, /'@'\+\(toName\|\|S\.me\.name\)\+' '\+said/, '回谁就先 @ 谁');
+  assert.match(app, /replace\(\/\^@\\S\+\\s\*\/,''\)/, '模型自己写的 @ 要去掉，免得 @ 两遍');
+});
+
+test('strangers all share one grey line-art face', () => {
+  const face = source('dyFace');
+  assert.match(face, /dyface/);
+  assert.match(face, /svgIc\('user'/);
+  for (const [name, src] of [['网页版', app], ['私人版', priv]]) {
+    assert.doesNotMatch(src.slice(src.indexOf('function dyInit(')), /letterAv/, `${name}的抖音这边不该再拿名字首字母凑头像`);
+  }
+  assert.match(source('dyGMemberAvatar'), /return m\.avatar\|\|'';\}/, '群成员没头像就走灰底小人');
+  assert.match(app, /return \{k:'s'\+uid\(\),name,avatar:'',/, '新生成的陌生人不自带头像');
+  for (const [name, css] of [['小手机.html', html], ['私人壳', shell], ['index.html', index]]) {
+    assert.ok(css.includes('.avatar.dyface'), `${name} 少了灰底小人的样式`);
+  }
+});
+
+test('全部功能 only lists things that actually do something', () => {
+  const all = source('dyAllGroups');
+  assert.doesNotMatch(all, /还没做/, '点了只会说「还没做」的，留着就是骗人');
+  assert.doesNotMatch(source('dyProfile'), /我的预约/, '我的预约换成了我的收藏');
+  const hits = [...all.matchAll(/"([a-zA-Z]+[^"]*)"\]/g)];
+  assert.ok(hits.length >= 8, '真能用的条目不该只剩几条');
+});

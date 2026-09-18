@@ -538,6 +538,41 @@ const PERMANENT_FIXES = [
     marker: 'function dyCommentResponder(v)',
     least: 1,
   },
+  {
+    release: 'v1265',
+    name: '抖音里每个人都有独立主页，群成员页也独立成一页',
+    scope: 'both',
+    marker: 'function dyUserView()',
+    least: 1,
+  },
+  {
+    release: 'v1265',
+    name: '私聊和群聊各自能调上下文条数',
+    scope: 'both',
+    marker: 'function dyChatCtxRows(box)',
+    least: 1,
+  },
+  {
+    release: 'v1265',
+    name: '抖音里发生的事进角色记忆，跟共同生活一样',
+    scope: 'both',
+    marker: 'function dyMemoryPrompt(c)',
+    least: 1,
+  },
+  {
+    release: 'v1265',
+    name: '等角色回消息时有三个点',
+    scope: 'both',
+    marker: 'function dyTypingHTML(face)',
+    least: 1,
+  },
+  {
+    release: 'v1265',
+    name: '陌生人统一用灰底线条小人头像',
+    scope: 'both',
+    marker: 'function dyFace(v,cls)',
+    least: 1,
+  },
 ];
 
 const sources = { web: read(WEB), private: read(PRIVATE) };

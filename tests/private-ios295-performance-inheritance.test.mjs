@@ -57,8 +57,8 @@ test('private identifiers advance to v1264 and iOS 365 while public stays v1264'
   assert.match(bridge, /static let contractVersion = 38/);
   assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 365;/g) || []).length, 12);
   assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.365;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1263 · 抖音暗玻璃底色'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1263'/);
+  assert.match(publicApp, /APP_VER='v1265 · 抖音独立主页与记忆'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1265'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
