@@ -67,11 +67,11 @@ test('Douyin repairs incomplete restored data every time it opens', () => {
   vm.runInContext(`${functionSource('dyInit')};globalThis.dyInit=dyInit;`, ctx);
   assert.equal(ctx.dyInit(), true);
   for (const key of ['feed', 'liked', 'following', 'dms', 'history', 'mine']) assert.ok(Array.isArray(ctx.S.dy[key]), key);
-  /* 「我」页按真实抖音重做后多了这些展示字段；dyid 每台机器随机生成一次，只校验形状。 */
+  /* 「我」页按真实抖音重做后多了这些展示字段；昵称/简介/性别/年龄一律留空由用户自己填，dyid 每台机器随机生成一次，只校验形状。 */
   const dyp = { ...ctx.S.dy.profile };
   assert.match(String(dyp.dyid), /^\d{11}$/, '抖音号应当自动生成 11 位');
   delete dyp.dyid;
-  assert.deepEqual(dyp, { nick: '', avatar: null, bio: '记录美好生活✨', fans: 0, likes: 0, mutual: 0, gender: '女', age: 20, level: '', cover: '' });
+  assert.deepEqual(dyp, { nick: '', avatar: null, bio: '', fans: 0, likes: 0, mutual: 0, gender: '', age: '', level: '', cover: '' });
   assert.deepEqual({ ...ctx.S.dy.users }, {});
   assert.equal(ctx.dyInit(), false, 'a repaired store must remain stable');
   assert.match(functionSource('openDouyin'), /if\(dyInit\(\)\)save\(0\)/);

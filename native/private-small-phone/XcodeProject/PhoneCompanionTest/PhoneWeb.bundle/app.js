@@ -5381,7 +5381,7 @@ function changeXCover(){pickFile('image/*',async f=>{S.x.profile.cover=await com
 /* ---------- 抖音 ---------- */
 const DY_GRADS=['linear-gradient(135deg,#fe2c55,#7c1f3a)','linear-gradient(135deg,#25f4ee,#0b6b67)','linear-gradient(135deg,#845ef7,#2b1a5e)','linear-gradient(135deg,#ff922b,#7a3d05)','linear-gradient(135deg,#20c997,#0a4d3a)','linear-gradient(135deg,#f06595,#5e1a3a)','linear-gradient(135deg,#4dabf7,#103a5e)','linear-gradient(135deg,#ffd43b,#7a6308)'];
 let dyTab='feed';let _dyMode='rec';let _dyNarr={};let _dyPaused={};let _dyFromWx=false;
-function dyInit(){let changed=false;if(!S.dy||typeof S.dy!=='object'){S.dy={};changed=true;}const d=S.dy;['feed','liked','following','dms','history','mine'].forEach(k=>{if(!Array.isArray(d[k])){d[k]=[];changed=true;}});if(!d.users||typeof d.users!=='object'||Array.isArray(d.users)){d.users={};changed=true;}if(!d.profile||typeof d.profile!=='object'||Array.isArray(d.profile)){d.profile={};changed=true;}const defs={nick:'',avatar:null,bio:'记录美好生活✨',dyid:'',fans:0,likes:0,mutual:0,gender:'女',age:20,level:'',cover:''};if(!d.profile.dyid)d.profile.dyid=String(Math.floor(5e10+Math.random()*4e10));Object.keys(defs).forEach(k=>{if(d.profile[k]===undefined){d.profile[k]=defs[k];changed=true;}});return changed;}
+function dyInit(){let changed=false;if(!S.dy||typeof S.dy!=='object'){S.dy={};changed=true;}const d=S.dy;['feed','liked','following','dms','history','mine'].forEach(k=>{if(!Array.isArray(d[k])){d[k]=[];changed=true;}});if(!d.users||typeof d.users!=='object'||Array.isArray(d.users)){d.users={};changed=true;}if(!d.profile||typeof d.profile!=='object'||Array.isArray(d.profile)){d.profile={};changed=true;}const defs={nick:'',avatar:null,bio:'',dyid:'',fans:0,likes:0,mutual:0,gender:'',age:'',level:'',cover:''};if(!d.profile.dyid)d.profile.dyid=String(Math.floor(5e10+Math.random()*4e10));Object.keys(defs).forEach(k=>{if(d.profile[k]===undefined){d.profile[k]=defs[k];changed=true;}});return changed;}
 function dyNick(){dyInit();return S.dy.profile.nick||S.me.name;}
 function dyAvatar(){dyInit();return S.dy.profile.avatar||S.me.avatar;}
 function openDouyin(){_dyFromWx=false;if(dyInit())save(0);dyTab='feed';go('dy');if(!S.dy.feed.length)dyGenFeed('',true);}
@@ -5557,7 +5557,7 @@ function dyMeStat(v,label){return '<div class="dyme-stat"><b>'+esc(v)+'</b><span
 function dyMeAction(icon,label){return '<div class="dyme-act">'+svgIc(icon,23,'#e9e9ec',1.7)+'<span>'+esc(label)+'</span></div>';}
 function dyProfile(){const p=S.dy.profile||{},mine=S.dy.mine||[],liked=S.dy.liked||[];
   const rows=dyMeGridRows(),cover=storedImageDisplaySource(p.cover||(isImg(dyAvatar())?dyAvatar():'')||'');
-  const grid=rows.length?`<div class="dyme-grid">${rows.map((v,i)=>`<div class="dyme-cell" onclick="dyOpenLiked('${v.id}')" style="background:${v.grad||DY_GRADS[i%DY_GRADS.length]}"><div class="dyme-emo">${v.emoji||'🎬'}</div>${i<3&&_dyMeTab==='作品'?'<span class="dyme-top">置顶</span>':''}<span class="dyme-play">${svgIc('heart',11,'#fff',2.4)} ${dyNum(v.lk||0)}</span></div>`).join('')}</div>`
+  const grid=rows.length?`<div class="dyme-grid">${rows.map((v,i)=>`<div class="dyme-cell" onclick="dyOpenLiked('${v.id}')" style="background:${v.grad||DY_GRADS[i%DY_GRADS.length]}"><div class="dyme-emo">${v.emoji||'🎬'}</div>${v.top&&_dyMeTab==='作品'?'<span class="dyme-top">置顶</span>':''}<span class="dyme-play">${svgIc('heart',11,'#fff',2.4)} ${dyNum(v.lk||0)}</span></div>`).join('')}</div>`
     :`<div class="dyme-empty">${_dyMeTab==='作品'?'还没发过作品～点下面的 ＋ 发一条':'这里还是空的'}</div>`;
   return `<div class="dyme" id="dyme">
     <div class="dyme-cover" style="${isImg(cover)?`background-image:url(${cover})`:''}">
@@ -5579,8 +5579,8 @@ function dyProfile(){const p=S.dy.profile||{},mine=S.dy.mine||[],liked=S.dy.like
         ${dyMeStat(dyNum(p.likes),'获赞')}${dyMeStat(dyNum(p.mutual),'互关')}${dyMeStat(dyNum((S.dy.following||[]).length),'关注')}${dyMeStat(dyNum(p.fans),'粉丝')}
         <button class="dyme-edit" onclick="editDyProfile()">编辑主页</button>
       </div>
-      <div class="dyme-bio">${String(p.bio||'').split('\n').map(l=>`<div>${esc(l).replace(/@[^\s，,。]{1,20}/g,m=>'<b class="dyme-at">'+m+'</b>')||'&nbsp;'}</div>`).join('')}</div>
-      <div class="dyme-tags"><span class="dyme-tag">${esc(p.gender||'女')} · ${esc(p.age||'20')}岁</span><span class="dyme-tag dim">＋ 添加所在地等标签</span></div>
+      <div class="dyme-bio${p.bio?'':' dim'}">${String(p.bio||'点「编辑主页」写点什么吧～').split('\n').map(l=>`<div>${esc(l).replace(/@[^\s，,。]{1,20}/g,m=>'<b class="dyme-at">'+m+'</b>')||'&nbsp;'}</div>`).join('')}</div>
+      <div class="dyme-tags">${(p.gender||p.age!==''&&p.age!=null)?`<span class="dyme-tag">${esc([p.gender,(p.age===''||p.age==null)?'':p.age+'岁'].filter(Boolean).join(' · '))}</span>`:''}<span class="dyme-tag dim">＋ 添加所在地等标签</span></div>
       <div class="dyme-acts">${dyMeAction('bag','我的订单')}${dyMeAction('clock','观看历史')}${dyMeAction('wallet','我的钱包')}${dyMeAction('bell','我的预约')}${dyMeAction('expand','全部功能')}</div>
       <div class="dyme-promo"><div class="dyme-promo-thumb">🎬</div><div class="dyme-promo-text"><b>参与今天的话题</b><span>一起参与话题吧</span></div><button class="dyme-promo-btn">● 去发布</button><i class="dyme-promo-x">✕</i></div>
       <div class="dyme-tabs">${dyMeTabs().map(t=>`<span class="${_dyMeTab===t?'on':''}" onclick="dyMeSetTab('${t}')">${t}${t==='作品'?' ▾':''}</span>`).join('')}</div>
@@ -5594,13 +5594,25 @@ function dyOpenLiked(id){const v=dyVid(id);if(!v)return;const isMineVid=v.cid===
     <div style="background:#f4f4f6;border-radius:10px;padding:10px;margin-top:10px;font-size:13px;line-height:1.7;color:#555"><b>📖 旁白：</b>${esc(v.narration||'（无）')}</div>
     <div class="btns" style="margin-top:12px;flex-wrap:wrap"><button class="dybtn out" onclick="closeModal();dyComments('${id}')">评论 ${(v.comments||[]).length}</button><button class="dybtn out" onclick="closeModal();dyFwd('${id}')">↗️ 转发给角色</button>${isMineVid?`<button class="btn d" onclick="dyDelVideo('${id}')">删除</button>`:`<button class="btn d" onclick="dyLike('${id}');closeModal()">取消点赞</button>`}<button class="btn g" onclick="closeModal()">关闭</button></div>`);}
 function changeDyAvatar(){pickFile('image/*',async f=>{S.dy.profile.avatar=await compress(f,300,.8);save();render();toast('头像已换 🎨');});}
+/* 编辑入口补全：昵称、简介（多行）、抖音号、性别年龄、等级牌、以及三项展示数据。
+   这些都是这个页面上唯一会出现"我的文字"的地方，全部由用户自己填，代码里不预置任何人的内容。 */
 function editDyProfile(){const p=S.dy.profile;openModal(`<h3>编辑抖音资料</h3>
-  <div class="field"><label>昵称</label><input id="dyp_n" value="${esc(p.nick||S.me.name)}"></div>
-  <div class="field"><label>简介</label><input id="dyp_b" value="${esc(p.bio||'')}"></div>
-  <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){S.dy.profile.nick=$('#dyp_n').value.trim();S.dy.profile.bio=$('#dyp_b').value.trim();save();closeModal();render();})()">保存</button></div>`);}
+  <div class="field"><label>昵称</label><input id="dyp_n" value="${esc(p.nick||'')}" placeholder="${esc(S.me.name||'昵称')}"></div>
+  <div class="field"><label>简介<small style="color:#888">可以换行</small></label><textarea id="dyp_b" rows="4" placeholder="介绍一下自己～">${esc(p.bio||'')}</textarea></div>
+  <div class="two"><div class="field"><label>抖音号</label><input id="dyp_id" value="${esc(p.dyid||'')}"></div>
+    <div class="field"><label>等级牌<small style="color:#888">留空不显示</small></label><input id="dyp_lv" value="${esc(p.level||'')}" placeholder="例如 15"></div></div>
+  <div class="two"><div class="field"><label>性别<small style="color:#888">留空不显示</small></label><input id="dyp_g" value="${esc(p.gender||'')}" placeholder="女／男／不填"></div>
+    <div class="field"><label>年龄<small style="color:#888">留空不显示</small></label><input id="dyp_a" type="number" value="${p.age===''||p.age==null?'':esc(String(p.age))}"></div></div>
+  <div class="two"><div class="field"><label>获赞</label><input id="dyp_lk" type="number" value="${+p.likes||0}"></div>
+    <div class="field"><label>粉丝</label><input id="dyp_fa" type="number" value="${+p.fans||0}"></div></div>
+  <div class="field"><label>互关</label><input id="dyp_mu" type="number" value="${+p.mutual||0}"></div>
+  <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="saveDyProfile()">保存</button></div>`);}
+function saveDyProfile(){const p=S.dy.profile,v=id=>{const el=$('#'+id);return el?String(el.value||'').trim():'';},n=id=>Math.max(0,parseInt(v(id),10)||0);
+  p.nick=v('dyp_n');p.bio=v('dyp_b');p.dyid=v('dyp_id');p.level=v('dyp_lv').slice(0,4);p.gender=v('dyp_g').slice(0,4);
+  const age=v('dyp_a');p.age=age===''?'':Math.max(0,Math.min(120,parseInt(age,10)||0));
+  p.likes=n('dyp_lk');p.fans=n('dyp_fa');p.mutual=n('dyp_mu');
+  save();closeModal();render();toast('资料已保存');}
 
-/* ---------- 任务便签（他给我布置每日任务）---------- */
-let _taskBusy=false;
 function taskRelationAllowed(c){return !!(c&&S.couple&&S.couple.cid===c.id&&!c.deleted);}
 function taskC(){const cc=S.couple&&getC(S.couple.cid);return cc&&!cc.deleted&&!cc.blocked&&!cc.taskOff&&taskRelationAllowed(cc)?cc:null;}
 function taskDailyCount(c){return Math.max(1,Math.min(8,+((c&&c.taskN)||3)));}
