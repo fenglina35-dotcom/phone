@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1264'){
+if(window.__NORTH_SHELL_BUILD__!=='1266'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -435,7 +435,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1264 · 私人同步 抖音重做与通话重试';
+const APP_VER='v1266 · 抖音的人与记忆、聊天文件';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1757,7 +1757,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1264&r=v1264-private-sync-1';
+  const url='sw.js?v=1266&r=v1266-private-sync-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -2659,7 +2659,7 @@ function cinemaAsrGuardSync(job,finished){const covered=finished?Math.max(0,Numb
 function cinemaAsrGuardPlayback(v){if(!v||!_cin.extracting||_cin.asrMode!=='watch')return false;const covered=Math.max(0,Number(_cin.asrCoveredUntil)||0),limit=covered>0?Math.max(0,covered-10):20,current=Math.max(0,Number(v.currentTime)||0);if(current<limit-.15)return false;if(v.paused&&!_cin.asrGuardPaused)return false;if(current>limit+.25)v.currentTime=limit;_cin.asrGuardPaused=true;v.pause();cinemaSetStatus('已暂停等字幕 · 当前可看到 '+cinemaFmt(covered||limit),'working');return true;}
 function cinemaAsrGuardRelease(resume){const v=$('#cinVideo'),held=_cin.asrGuardPaused;_cin.asrGuardPaused=false;if(resume&&held&&v)v.play().catch(()=>{});}
 async function cinemaRestoreStoredSubtitles(s,token){if(!s||s.kind!=='video')return;const manual=await cinGet(cinemaManualSubtitleKey(s));if(token!==_cin.token||cinemaSession()!==s)return;if(manual&&Array.isArray(manual.cues)&&manual.cues.length){const n=cinemaApplyCues(manual.cues,manual.name||'手动导入字幕','subtitle');cinemaSetStatus('已恢复手动字幕 · '+n+' 句','ready');return;}const job=await cinemaAsrLoadJob(s);if(token!==_cin.token||cinemaSession()!==s||!job)return;cinemaAsrTaskUpdate(s,job);cinemaAsrGuardSync(job,job.status==='done');const cues=cinemaAsrJobCues(job);if(cues.length){cinemaApplyCues(cues,job.status==='done'?'已保存的提取字幕':'未完成的提取字幕','extract');cinemaSetStatus(job.status==='done'?'已恢复 '+cues.length+' 句字幕':'已恢复部分字幕 · 可继续提取','ready');}}
-async function cinemaMp4Library(){if(globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function')return globalThis.NorthMP4Box;if(!_cinMp4Module)_cinMp4Module=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='./vendor/mp4box.all.js?v=1264&r=file-safe-1';script.async=true;script.dataset.northMp4box='1';script.onload=()=>globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function'?resolve(globalThis.NorthMP4Box):reject(new Error('字幕解析组件没有正常启动'));script.onerror=()=>reject(new Error('字幕解析组件加载失败，请重新打开小手机后再试'));document.head.appendChild(script);}).catch(e=>{_cinMp4Module=null;const stale=document.querySelector('script[data-north-mp4box="1"]');if(stale)stale.remove();throw e;});return _cinMp4Module;}
+async function cinemaMp4Library(){if(globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function')return globalThis.NorthMP4Box;if(!_cinMp4Module)_cinMp4Module=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='./vendor/mp4box.all.js?v=1266&r=file-safe-1';script.async=true;script.dataset.northMp4box='1';script.onload=()=>globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function'?resolve(globalThis.NorthMP4Box):reject(new Error('字幕解析组件没有正常启动'));script.onerror=()=>reject(new Error('字幕解析组件加载失败，请重新打开小手机后再试'));document.head.appendChild(script);}).catch(e=>{_cinMp4Module=null;const stale=document.querySelector('script[data-north-mp4box="1"]');if(stale)stale.remove();throw e;});return _cinMp4Module;}
 async function cinemaVideoCodecProbe(file){if(!file||typeof file.slice!=='function')return null;if(_cin.videoInfo)return _cin.videoInfo;try{const MP4Box=await cinemaMp4Library(),mp4=MP4Box.createFile(false);let info=null,parseError='';mp4.onReady=x=>{info=x;};mp4.onError=e=>{parseError=String(e||'');};const step=1024*1024;for(let offset=0,guard=0;offset<file.size&&guard++<256&&!info;){const end=Math.min(file.size,offset+step),ab=await file.slice(offset,end).arrayBuffer();ab.fileStart=offset;const next=Number(mp4.appendBuffer(ab));offset=Number.isFinite(next)&&next>end?Math.min(file.size,next):end;if(guard%8===0)await new Promise(resolve=>setTimeout(resolve,0));}if(!info)mp4.flush();if(!info)return _cin.videoInfo={parseError:parseError||'未读到 MP4 / MOV 媒体信息'};const video=(info.videoTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.video),audio=(info.audioTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.audio);return _cin.videoInfo={videoCodec:String(video&&video.codec||''),audioCodec:String(audio&&audio.codec||''),width:Number(video&&video.video&&video.video.width||video&&video.track_width||0),height:Number(video&&video.video&&video.video.height||video&&video.track_height||0)};}catch(e){return _cin.videoInfo={parseError:String(e&&e.message||e||'媒体信息读取失败')};}}
 function cinemaVideoErrorReason(code,info){const vc=String(info&&info.videoCodec||''),ac=String(info&&info.audioCodec||''),hevc=/^(?:hvc1|hev1|hevc|dvhe|dvh1)/i.test(vc),android=cinemaAndroidBrowser();if(android&&hevc)return '检测到视频编码 '+vc+'（HEVC / H.265）。苹果设备能够播放，并不代表当前安卓浏览器或手机具备同样的网页解码能力。';if(android&&code===3)return '安卓浏览器已经读到文件，但解码画面或声音失败。';if(android&&code===4)return '安卓浏览器不支持这个文件的容器、视频编码或音频编码。';if(code===3)return '浏览器已读到文件，但解码画面或声音失败。';if(code===4)return '当前浏览器不支持这个视频的容器或编码。';return '浏览器没有读到可播放的视频数据。';}
 function cinemaVideoRetryCompatible(info){const vc=String(info&&info.videoCodec||''),ac=String(info&&info.audioCodec||'');return /^(?:avc1|avc3)(?:\.|$)/i.test(vc)&&(!ac||/^(?:mp4a|aac)(?:\.|$)/i.test(ac));}
@@ -5495,7 +5495,7 @@ function dyVideoCard(v,i){const liked=!!v.liked,lc=(v.lk||0)+(liked?1:0),starred
     <div class="dybg" style="background-image:${grad}"></div>
     <div class="dyfd-card" onclick="dyOpenWork('${v.id}')">${dyWorkCardHTML(v,{lines:4})}</div>
     <div class="dyrail">
-      <div class="ra" onclick="dyVideoAuthor('${v.id}')" style="margin-bottom:5px"><div style="position:relative">${av(mine?dyAvatar():(v.avatar||'🎵'),'sm')}${isChar&&!fol?'<span class="dyrail-plus">+</span>':''}</div></div>
+      <div class="ra" onclick="dyVideoAuthor('${v.id}')" style="margin-bottom:5px"><div style="position:relative">${(mine?av(dyAvatar(),'sm'):dyFace(v.avatar,'sm'))}${isChar&&!fol?'<span class="dyrail-plus">+</span>':''}</div></div>
       <div class="ra" onclick="dyLike('${v.id}')"><span class="ic">${svgIc('heart',34,liked?'#f5243d':'#fff',0)}</span>${dyNum(lc)}</div>
       <div class="ra" onclick="dyComments('${v.id}')"><span class="ic">${svgIc('chat',33,'#fff',2)}</span>${dyNum((v.comments||[]).length)}</div>
       <div class="ra" onclick="dyStar('${v.id}')"><span class="ic">${svgIc('star',33,starred?'#f5c518':'#fff',2)}</span>${dyNum(sc)}</div>
@@ -5561,7 +5561,7 @@ function dyLike(id){const v=dyVid(id);if(!v)return;v.liked=!v.liked;
 async function dyGenFeed(topic,replace){aiLoad('正在加载视频…');
   try{const arr=await dyAuxGen([{role:'system',content:'你是抖音短视频内容生成器。生成5条不同的短视频信息，类型要杂（搞笑/萌宠/美食/风景/舞蹈/剧情/知识/情感都行）。只输出JSON数组，不要解释：[{"author":"博主昵称","handle":"@英文id","desc":"文案/标题(一句，可带#话题)","body":"正文：这条作品里写的话，2-4段，段与段之间空一行，要有内容有情绪","narration":"旁白：详细描写这条视频里到底是什么画面、发生了什么(2-4句，像在跟人讲这视频拍了啥)","music":"背景音乐名","emoji":"一个最能代表画面的emoji"}]'},{role:'user',content:topic?('围绕「'+topic+'」生成相关的短视频。'):'生成一批热门推荐短视频。'}],{max:1100},parseArr);
     if(!arr||!Array.isArray(arr)||!arr.length){toast('加载失败了，再点一次');return;}
-    const vids=arr.map((o,i)=>({id:uid(),author:clean(o.author)||'用户'+(10+Math.floor(Math.random()*89)),handle:o.handle||'@user',avatar:'🎵',cid:null,desc:o.desc||'',body:o.body||'',narration:o.narration||'',music:o.music||'原创音乐',emoji:(o.emoji||'🎬').slice(0,2),grad:DY_GRADS[Math.floor(Math.random()*DY_GRADS.length)],lk:Math.floor(Math.random()*90000),comments:[],ts:Date.now()}));
+    const vids=arr.map((o,i)=>({id:uid(),author:clean(o.author)||'用户'+(10+Math.floor(Math.random()*89)),handle:o.handle||'@user',avatar:'',cid:null,desc:o.desc||'',body:o.body||'',narration:o.narration||'',music:o.music||'原创音乐',emoji:(o.emoji||'🎬').slice(0,2),grad:DY_GRADS[Math.floor(Math.random()*DY_GRADS.length)],lk:Math.floor(Math.random()*90000),comments:[],ts:Date.now()}));
     if(replace)S.dy.feed=vids;else S.dy.feed=S.dy.feed.concat(vids);
     if(S.dy.feed.length>40)S.dy.feed=S.dy.feed.slice(-40);
     save();if(cur().p==='dy')render();const f=$('#dyfeed');if(replace&&f)f.scrollTop=0;
@@ -5632,7 +5632,7 @@ async function dyGenContactVideo(cid){const c=getC(cid);if(!c)return;if(!S.dy.fo
 function dyDMPick(){const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){toast('先创建角色');return;}
   openModal(`<h3>私信谁</h3>${cs.map(c=>`<div class="section"><div class="it" onclick="openDyDM('${c.id}')">${esc(c.remark||c.name)}<span class="v">›</span></div></div>`).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
 function openDyDM(cid){const c=getC(cid);if(!c)return;closeModal();openDyDMName(c.remark||c.name,cid,c.avatar);}
-function openDyDMName(name,cid,avatar){let d=cid?S.dy.dms.find(x=>x.cid===cid):S.dy.dms.find(x=>!x.cid&&x.name===name);if(!d){d={id:uid(),cid:cid||null,name,avatar:avatar||'🎵',msgs:[]};S.dy.dms.unshift(d);save();}go('dydm',{id:d.id});}
+function openDyDMName(name,cid,avatar){let d=cid?S.dy.dms.find(x=>x.cid===cid):S.dy.dms.find(x=>!x.cid&&x.name===name);if(!d){d={id:uid(),cid:cid||null,name,avatar:avatar||'',msgs:[]};S.dy.dms.unshift(d);save();}go('dydm',{id:d.id});}
 async function dyGenDMs(){aiLoad('正在刷新私信…');const recent=(S.dy.mine||[]).slice(0,3).map(v=>v.desc).filter(Boolean).join('；')||(S.dy.history||[]).slice(0,3).join('、');
   try{const rows=await dyAuxGen([{role:'system',content:'你生成抖音陌生网友私信。生成3条不同网友（看了'+S.me.name+'视频来的）发来的私信开场，要暧昧、会撩、夸她好看、想加微信想约她那种（目的是让她男朋友看到会吃醋），但别露骨下流。每行一条，格式：网友名:::私信内容。不要别的话。'},{role:'user',content:(recent?'她最近发的/搜的："'+recent+'"，可以结合。':'')+'生成撩人的私信开场。'}],{max:500},(r)=>{const out=(r||'').split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const p=l.replace(/^[\d.、\-\s]+/,'').split(/:::|：：：|\|\||：|:/);const nm=clean(p[0]);if(!nm||/^http/.test(nm))return null;return {name:nm,text:(p.slice(1).join('：')||'在吗美女').trim().slice(0,80)};}).filter(Boolean);return out.length?out:null;});
     if(!rows){toast('刷新失败了，再试一次');return;}
@@ -6313,11 +6313,11 @@ function dyOpenLiked(id){dyOpenWork(id);}
 function dyHash(t){return esc(String(t||'')).replace(/#[^\s#<]{1,20}/g,m=>'<b>'+m+'</b>');}
 function dyWorkDate(v){if(v.date)return v.date;if(!v.ts)return '';const d=new Date(v.ts);return (d.getMonth()+1)+'-'+d.getDate();}
 function dyWorkDanmu(v){const mine=v.cid==='me',cs=(v.comments||[]).slice(0,2);
-  const head=`<div class="dywk-dm">${av(mine?dyAvatar():(v.avatar||'🎵'),'sm')}<div class="dywk-dm-b"><span>${esc(mine?dyNick():(v.author||'用户'))}${dyWorkDate(v)?' · '+esc(dyWorkDate(v)):''}</span>${dyHash(v.desc||'')}</div></div>`;
+  const head=`<div class="dywk-dm">${(mine?av(dyAvatar(),'sm'):dyFace(v.avatar,'sm'))}<div class="dywk-dm-b"><span>${esc(mine?dyNick():(v.author||'用户'))}${dyWorkDate(v)?' · '+esc(dyWorkDate(v)):''}</span>${dyHash(v.desc||'')}</div></div>`;
   return `<div class="dywk-danmu" onclick="dyComments('${v.id}')">${head}${cs.map(cm=>`<div class="dywk-dm">${dyFace(cm.avatar,'sm')}<div class="dywk-dm-b"><span>${esc(cm.name)}：</span>${dyHash(cm.text)}</div></div>`).join('')}</div>`;}
 function dyWorkRail(v){const liked=!!v.liked,lc=(v.lk||0)+(liked?1:0),starred=!!v.starred,sc=(v.st||0)+(starred?1:0),mine=v.cid==='me';
   return `<div class="dywk-rail">
-    <div onclick="dyWorkAuthor('${v.id}')">${av(mine?dyAvatar():(v.avatar||'🎵'),'sm')}</div>
+    <div onclick="dyWorkAuthor('${v.id}')">${(mine?av(dyAvatar(),'sm'):dyFace(v.avatar,'sm'))}</div>
     <div class="dywk-r" onclick="dyLike('${v.id}')">${svgIc('heart',30,liked?'#f5243d':'#fff',0)}${dyNum(lc)}</div>
     <div class="dywk-r" onclick="dyComments('${v.id}')">${svgIc('chat',29,'#fff',2)}${dyNum((v.comments||[]).length)}</div>
     <div class="dywk-r" onclick="dyStar('${v.id}')">${svgIc('star',29,starred?'#f5c518':'#fff',2)}${dyNum(sc)}</div>

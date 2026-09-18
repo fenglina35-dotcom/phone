@@ -5510,7 +5510,7 @@ function dyVideoCard(v,i){const liked=!!v.liked,lc=(v.lk||0)+(liked?1:0),starred
     <div class="dybg" style="background-image:${grad}"></div>
     <div class="dyfd-card" onclick="dyOpenWork('${v.id}')">${dyWorkCardHTML(v,{lines:4})}</div>
     <div class="dyrail">
-      <div class="ra" onclick="dyVideoAuthor('${v.id}')" style="margin-bottom:5px"><div style="position:relative">${av(mine?dyAvatar():(v.avatar||'🎵'),'sm')}${isChar&&!fol?'<span class="dyrail-plus">+</span>':''}</div></div>
+      <div class="ra" onclick="dyVideoAuthor('${v.id}')" style="margin-bottom:5px"><div style="position:relative">${(mine?av(dyAvatar(),'sm'):dyFace(v.avatar,'sm'))}${isChar&&!fol?'<span class="dyrail-plus">+</span>':''}</div></div>
       <div class="ra" onclick="dyLike('${v.id}')"><span class="ic">${svgIc('heart',34,liked?'#f5243d':'#fff',0)}</span>${dyNum(lc)}</div>
       <div class="ra" onclick="dyComments('${v.id}')"><span class="ic">${svgIc('chat',33,'#fff',2)}</span>${dyNum((v.comments||[]).length)}</div>
       <div class="ra" onclick="dyStar('${v.id}')"><span class="ic">${svgIc('star',33,starred?'#f5c518':'#fff',2)}</span>${dyNum(sc)}</div>
@@ -5576,7 +5576,7 @@ function dyLike(id){const v=dyVid(id);if(!v)return;v.liked=!v.liked;
 async function dyGenFeed(topic,replace){aiLoad('正在加载视频…');
   try{const arr=await dyAuxGen([{role:'system',content:'你是抖音短视频内容生成器。生成5条不同的短视频信息，类型要杂（搞笑/萌宠/美食/风景/舞蹈/剧情/知识/情感都行）。只输出JSON数组，不要解释：[{"author":"博主昵称","handle":"@英文id","desc":"文案/标题(一句，可带#话题)","body":"正文：这条作品里写的话，2-4段，段与段之间空一行，要有内容有情绪","narration":"旁白：详细描写这条视频里到底是什么画面、发生了什么(2-4句，像在跟人讲这视频拍了啥)","music":"背景音乐名","emoji":"一个最能代表画面的emoji"}]'},{role:'user',content:topic?('围绕「'+topic+'」生成相关的短视频。'):'生成一批热门推荐短视频。'}],{max:1100},parseArr);
     if(!arr||!Array.isArray(arr)||!arr.length){toast('加载失败了，再点一次');return;}
-    const vids=arr.map((o,i)=>({id:uid(),author:clean(o.author)||'用户'+(10+Math.floor(Math.random()*89)),handle:o.handle||'@user',avatar:'🎵',cid:null,desc:o.desc||'',body:o.body||'',narration:o.narration||'',music:o.music||'原创音乐',emoji:(o.emoji||'🎬').slice(0,2),grad:DY_GRADS[Math.floor(Math.random()*DY_GRADS.length)],lk:Math.floor(Math.random()*90000),comments:[],ts:Date.now()}));
+    const vids=arr.map((o,i)=>({id:uid(),author:clean(o.author)||'用户'+(10+Math.floor(Math.random()*89)),handle:o.handle||'@user',avatar:'',cid:null,desc:o.desc||'',body:o.body||'',narration:o.narration||'',music:o.music||'原创音乐',emoji:(o.emoji||'🎬').slice(0,2),grad:DY_GRADS[Math.floor(Math.random()*DY_GRADS.length)],lk:Math.floor(Math.random()*90000),comments:[],ts:Date.now()}));
     if(replace)S.dy.feed=vids;else S.dy.feed=S.dy.feed.concat(vids);
     if(S.dy.feed.length>40)S.dy.feed=S.dy.feed.slice(-40);
     save();if(cur().p==='dy')render();const f=$('#dyfeed');if(replace&&f)f.scrollTop=0;
@@ -5647,7 +5647,7 @@ async function dyGenContactVideo(cid){const c=getC(cid);if(!c)return;if(!S.dy.fo
 function dyDMPick(){const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){toast('先创建角色');return;}
   openModal(`<h3>私信谁</h3>${cs.map(c=>`<div class="section"><div class="it" onclick="openDyDM('${c.id}')">${esc(c.remark||c.name)}<span class="v">›</span></div></div>`).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
 function openDyDM(cid){const c=getC(cid);if(!c)return;closeModal();openDyDMName(c.remark||c.name,cid,c.avatar);}
-function openDyDMName(name,cid,avatar){let d=cid?S.dy.dms.find(x=>x.cid===cid):S.dy.dms.find(x=>!x.cid&&x.name===name);if(!d){d={id:uid(),cid:cid||null,name,avatar:avatar||'🎵',msgs:[]};S.dy.dms.unshift(d);save();}go('dydm',{id:d.id});}
+function openDyDMName(name,cid,avatar){let d=cid?S.dy.dms.find(x=>x.cid===cid):S.dy.dms.find(x=>!x.cid&&x.name===name);if(!d){d={id:uid(),cid:cid||null,name,avatar:avatar||'',msgs:[]};S.dy.dms.unshift(d);save();}go('dydm',{id:d.id});}
 async function dyGenDMs(){aiLoad('正在刷新私信…');const recent=(S.dy.mine||[]).slice(0,3).map(v=>v.desc).filter(Boolean).join('；')||(S.dy.history||[]).slice(0,3).join('、');
   try{const rows=await dyAuxGen([{role:'system',content:'你生成抖音陌生网友私信。生成3条不同网友（看了'+S.me.name+'视频来的）发来的私信开场，要暧昧、会撩、夸她好看、想加微信想约她那种（目的是让她男朋友看到会吃醋），但别露骨下流。每行一条，格式：网友名:::私信内容。不要别的话。'},{role:'user',content:(recent?'她最近发的/搜的："'+recent+'"，可以结合。':'')+'生成撩人的私信开场。'}],{max:500},(r)=>{const out=(r||'').split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const p=l.replace(/^[\d.、\-\s]+/,'').split(/:::|：：：|\|\||：|:/);const nm=clean(p[0]);if(!nm||/^http/.test(nm))return null;return {name:nm,text:(p.slice(1).join('：')||'在吗美女').trim().slice(0,80)};}).filter(Boolean);return out.length?out:null;});
     if(!rows){toast('刷新失败了，再试一次');return;}
@@ -6328,11 +6328,11 @@ function dyOpenLiked(id){dyOpenWork(id);}
 function dyHash(t){return esc(String(t||'')).replace(/#[^\s#<]{1,20}/g,m=>'<b>'+m+'</b>');}
 function dyWorkDate(v){if(v.date)return v.date;if(!v.ts)return '';const d=new Date(v.ts);return (d.getMonth()+1)+'-'+d.getDate();}
 function dyWorkDanmu(v){const mine=v.cid==='me',cs=(v.comments||[]).slice(0,2);
-  const head=`<div class="dywk-dm">${av(mine?dyAvatar():(v.avatar||'🎵'),'sm')}<div class="dywk-dm-b"><span>${esc(mine?dyNick():(v.author||'用户'))}${dyWorkDate(v)?' · '+esc(dyWorkDate(v)):''}</span>${dyHash(v.desc||'')}</div></div>`;
+  const head=`<div class="dywk-dm">${(mine?av(dyAvatar(),'sm'):dyFace(v.avatar,'sm'))}<div class="dywk-dm-b"><span>${esc(mine?dyNick():(v.author||'用户'))}${dyWorkDate(v)?' · '+esc(dyWorkDate(v)):''}</span>${dyHash(v.desc||'')}</div></div>`;
   return `<div class="dywk-danmu" onclick="dyComments('${v.id}')">${head}${cs.map(cm=>`<div class="dywk-dm">${dyFace(cm.avatar,'sm')}<div class="dywk-dm-b"><span>${esc(cm.name)}：</span>${dyHash(cm.text)}</div></div>`).join('')}</div>`;}
 function dyWorkRail(v){const liked=!!v.liked,lc=(v.lk||0)+(liked?1:0),starred=!!v.starred,sc=(v.st||0)+(starred?1:0),mine=v.cid==='me';
   return `<div class="dywk-rail">
-    <div onclick="dyWorkAuthor('${v.id}')">${av(mine?dyAvatar():(v.avatar||'🎵'),'sm')}</div>
+    <div onclick="dyWorkAuthor('${v.id}')">${(mine?av(dyAvatar(),'sm'):dyFace(v.avatar,'sm'))}</div>
     <div class="dywk-r" onclick="dyLike('${v.id}')">${svgIc('heart',30,liked?'#f5243d':'#fff',0)}${dyNum(lc)}</div>
     <div class="dywk-r" onclick="dyComments('${v.id}')">${svgIc('chat',29,'#fff',2)}${dyNum((v.comments||[]).length)}</div>
     <div class="dywk-r" onclick="dyStar('${v.id}')">${svgIc('star',29,starred?'#f5c518':'#fff',2)}${dyNum(sc)}</div>
