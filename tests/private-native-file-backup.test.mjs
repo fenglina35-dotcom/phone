@@ -14,16 +14,16 @@ const backup=read(bundle+'private-cloud-backup.js');
 const privateApp=read(bundle+'app.js');
 const publicApp=read('app.js');
 
-test('private v1266 loads daily backup after the diagnostic overlay while public remains v1266',()=>{
+test('private v1267 loads daily backup after the diagnostic overlay while public remains v1267',()=>{
   for(const name of ['index.html','小手机.html']){
     const html=read(bundle+name);
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1266'/);
-    assert.ok(html.indexOf('private-cloud-backup.js?v=1266')>html.indexOf('private-runtime-diagnostics.js?v=336'));
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1267'/);
+    assert.ok(html.indexOf('private-cloud-backup.js?v=1267')>html.indexOf('private-runtime-diagnostics.js?v=336'));
   }
-  assert.match(privateApp,/APP_VER='v1266 · 抖音的人与记忆、聊天文件'/);
-  assert.match(publicApp,/APP_VER='v1266 · 聊天文件与骰子'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 366;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.366;/g)||[]).length,12);
+  assert.match(privateApp,/APP_VER='v1267 · 抖音简介与主页入口'/);
+  assert.match(publicApp,/APP_VER='v1267 · 抖音简介与主页入口'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 367;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.367;/g)||[]).length,12);
 });
 
 test('web backup sends bounded ordered chunks and records a day only after confirmed save',()=>{

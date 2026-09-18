@@ -13,15 +13,15 @@ test('v1184 web identity and cache markers are aligned', () => {
   const hotfix = read('web-hotfix.js');
   const index = read('index.html');
   const repair = read('repair.html');
-  assert.match(app, /__NORTH_SHELL_BUILD__!=='1266'/);
-  assert.match(app, /APP_VER='v1266 · 聊天文件与骰子'/);
-  assert.match(shell, /__NORTH_SHELL_BUILD__='1266'/);
-  assert.match(shell, /app\.js\?v=1266&r=v1266-web-chat-file-1/);
-  assert.match(sw, /const BUILD='1266'/);
+  assert.match(app, /__NORTH_SHELL_BUILD__!=='1267'/);
+  assert.match(app, /APP_VER='v1267 · 抖音简介与主页入口'/);
+  assert.match(shell, /__NORTH_SHELL_BUILD__='1267'/);
+  assert.match(shell, /app\.js\?v=1267&r=v1267-web-dy-bio-1/);
+  assert.match(sw, /const BUILD='1267'/);
   assert.match(sw, /v1184-ios-web-crash-cohab-turn-keyboard-1/);
-  assert.match(hotfix, /v1266-web-chat-file-1/);
-  assert.match(index, /小手机\.html\?v=1266/);
-  assert.match(repair, /小手机\.html\?v=1266/);
+  assert.match(hotfix, /v1267-web-dy-bio-1/);
+  assert.match(index, /小手机\.html\?v=1267/);
+  assert.match(repair, /小手机\.html\?v=1267/);
 });
 
 test('v1184 publishes shared cohab memory and X comment controls', () => {

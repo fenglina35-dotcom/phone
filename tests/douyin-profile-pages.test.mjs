@@ -483,7 +483,7 @@ test('anybody in 抖音 has a profile page you can open', () => {
     assert.ok(app.includes(`function ${f}(`), `${f} 缺失`);
     assert.ok(priv.includes(`function ${f}(`), `私人版缺少 ${f}`);
   }
-  assert.match(app, /if\(_dySub==='user'\)return dyUserView\(\);/, '主页要挂上路由');
+  assert.match(app, /else if\(c\.p==='dyuser'\)html=dyUserView\(\);/, '主页要挂上路由');
   assert.match(app, /if\(_dySub==='gmembers'\)return dyGMembersView\(\);/, '群成员页要独立成一页');
   const find = source('dyPersonFind');
   for (const kind of ['c:', 'n:', 'visitors', 'fans']) assert.ok(find.includes(kind), `dyPersonFind 认不出 ${kind}`);
@@ -559,4 +559,48 @@ test('全部功能 only lists things that actually do something', () => {
   assert.doesNotMatch(source('dyProfile'), /我的预约/, '我的预约换成了我的收藏');
   const hits = [...all.matchAll(/"([a-zA-Z]+[^"]*)"\]/g)];
   assert.ok(hits.length >= 8, '真能用的条目不该只剩几条');
+});
+
+/* 第八批：抖音简介是简介，不是人设；点头像进主页不能只有群聊一条路。 */
+
+test('a profile bio is a bio, never the whole persona', () => {
+  const view = source('dyUserView');
+  assert.doesNotMatch(view, /esc\(p\.persona\)/, '主页上不许直接把人设当简介');
+  assert.match(view, /dyPersonBio\(p\)/, '简介要走单独存的那一份');
+  assert.match(view, /这个人还没写简介/, '没写就留个占位，别拿人设顶上');
+  for (const f of ['dyPersonBio', 'dyPersonBioSet', 'dyUserBioEdit', 'dyUserBioSave', 'dyUserBioGen']) {
+    assert.ok(app.includes(`function ${f}(`) || app.includes(`async function ${f}(`), `${f} 缺失`);
+    assert.ok(priv.includes(`function ${f}(`) || priv.includes(`async function ${f}(`), `私人版缺少 ${f}`);
+  }
+  assert.doesNotMatch(source('dyRelPeople'), /bio:String\(c\.persona/, '互关列表那一行也不许是人设');
+  assert.match(source('dyRelPeople'), /bio:dyPersonBio\(/);
+  assert.doesNotMatch(app, /dyGMemberPersona\(m\)\.slice\(0,22\)/, '群成员管理列表同样不露人设');
+  assert.match(source('dyUserMenu'), /dyUserBioEdit\(\)/, '菜单里要能改简介');
+  assert.match(source('dyUserMenu'), /dyUserBioGen\(\)/, '也要能让 TA 自己写');
+  const gen = source('dyUserBioGen');
+  assert.match(gen, /不超过 25 个字/, '简介要短');
+  assert.match(gen, /不要写你的人设/, '明确不让模型把人设当简介写');
+});
+
+test('a profile opens from anywhere, not only from a group chat', () => {
+  assert.ok(app.includes('function dyUserKey('), 'dyUserKey 缺失');
+  assert.match(app, /else if\(c\.p==='dyuser'\)html=dyUserView\(\);/, '主页要有自己的路由');
+  assert.doesNotMatch(app, /if\(_dySub==='user'\)return dyUserView\(\);/, '旧的子状态入口要去掉，免得两条路');
+  const open = source('dyOpenUser');
+  assert.match(open, /go\('dyuser',\{key:p\.k\}\)/, '要真的换页，而不是只改 _dySub');
+  assert.match(open, /cur\(\)\.p==='dyuser'/, '已经在主页上就原地刷新，不叠页');
+  for (const f of ['dyDMKey', 'dyOpenDMUser', 'dyUserBack']) {
+    assert.ok(app.includes(`function ${f}(`), `${f} 缺失`);
+    assert.ok(priv.includes(`function ${f}(`), `私人版缺少 ${f}`);
+  }
+  const dm = source('renderDyDM');
+  assert.match(dm, /class="dydm-who" onclick="dyOpenDMUser/, '私聊页头点得进主页');
+  assert.equal((dm.match(/dyOpenDMUser/g) || []).length >= 3, true, '页头、名字、气泡旁的头像都要能点');
+  assert.match(source('dyDMRow'), /dymsg-face" onclick="event\.stopPropagation\(\);dyOpenDMUser/, '消息列表点头像看主页、点整行进聊天');
+  assert.match(source('dyUserBack'), /back\(\)/, '返回要回到来的那一页');
+  assert.match(source('openDyDMName'), /cur\(\)\.p==='dydm'&&cur\(\)\.id===d\.id/, '已经在这个聊天里就别再压一层');
+  for (const [name, css] of [['小手机.html', html], ['私人壳', shell], ['index.html', index]]) {
+    assert.ok(css.includes('.dydm-who{'), `${name} 少了可点头像的样式`);
+    assert.ok(css.includes('.dyus-nobio{'), `${name} 少了空简介占位的样式`);
+  }
 });
