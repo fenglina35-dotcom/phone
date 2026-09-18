@@ -14,16 +14,16 @@ const backup=read(bundle+'private-cloud-backup.js');
 const privateApp=read(bundle+'app.js');
 const publicApp=read('app.js');
 
-test('private v1258 loads daily backup after the diagnostic overlay while public remains v1258',()=>{
+test('private v1264 loads daily backup after the diagnostic overlay while public remains v1264',()=>{
   for(const name of ['index.html','小手机.html']){
     const html=read(bundle+name);
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1258'/);
-    assert.ok(html.indexOf('private-cloud-backup.js?v=1258')>html.indexOf('private-runtime-diagnostics.js?v=336'));
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1264'/);
+    assert.ok(html.indexOf('private-cloud-backup.js?v=1264')>html.indexOf('private-runtime-diagnostics.js?v=336'));
   }
-  assert.match(privateApp,/APP_VER='v1258 · 私人同步 App 管控修复'/);
-  assert.match(publicApp,/APP_VER='v1262 · 抖音文字作品与朋友页'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 364;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.364;/g)||[]).length,12);
+  assert.match(privateApp,/APP_VER='v1264 · 私人同步 抖音重做与通话重试'/);
+  assert.match(publicApp,/APP_VER='v1263 · 抖音暗玻璃底色'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 365;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.365;/g)||[]).length,12);
 });
 
 test('web backup sends bounded ordered chunks and records a day only after confirmed save',()=>{

@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1258'){
+if(window.__NORTH_SHELL_BUILD__!=='1264'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -435,7 +435,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1258 · 私人同步 App 管控修复';
+const APP_VER='v1264 · 私人同步 抖音重做与通话重试';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1757,7 +1757,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1258&r=v1258-private-sync-1';
+  const url='sw.js?v=1264&r=v1264-private-sync-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -2659,7 +2659,7 @@ function cinemaAsrGuardSync(job,finished){const covered=finished?Math.max(0,Numb
 function cinemaAsrGuardPlayback(v){if(!v||!_cin.extracting||_cin.asrMode!=='watch')return false;const covered=Math.max(0,Number(_cin.asrCoveredUntil)||0),limit=covered>0?Math.max(0,covered-10):20,current=Math.max(0,Number(v.currentTime)||0);if(current<limit-.15)return false;if(v.paused&&!_cin.asrGuardPaused)return false;if(current>limit+.25)v.currentTime=limit;_cin.asrGuardPaused=true;v.pause();cinemaSetStatus('已暂停等字幕 · 当前可看到 '+cinemaFmt(covered||limit),'working');return true;}
 function cinemaAsrGuardRelease(resume){const v=$('#cinVideo'),held=_cin.asrGuardPaused;_cin.asrGuardPaused=false;if(resume&&held&&v)v.play().catch(()=>{});}
 async function cinemaRestoreStoredSubtitles(s,token){if(!s||s.kind!=='video')return;const manual=await cinGet(cinemaManualSubtitleKey(s));if(token!==_cin.token||cinemaSession()!==s)return;if(manual&&Array.isArray(manual.cues)&&manual.cues.length){const n=cinemaApplyCues(manual.cues,manual.name||'手动导入字幕','subtitle');cinemaSetStatus('已恢复手动字幕 · '+n+' 句','ready');return;}const job=await cinemaAsrLoadJob(s);if(token!==_cin.token||cinemaSession()!==s||!job)return;cinemaAsrTaskUpdate(s,job);cinemaAsrGuardSync(job,job.status==='done');const cues=cinemaAsrJobCues(job);if(cues.length){cinemaApplyCues(cues,job.status==='done'?'已保存的提取字幕':'未完成的提取字幕','extract');cinemaSetStatus(job.status==='done'?'已恢复 '+cues.length+' 句字幕':'已恢复部分字幕 · 可继续提取','ready');}}
-async function cinemaMp4Library(){if(globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function')return globalThis.NorthMP4Box;if(!_cinMp4Module)_cinMp4Module=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='./vendor/mp4box.all.js?v=1258&r=file-safe-1';script.async=true;script.dataset.northMp4box='1';script.onload=()=>globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function'?resolve(globalThis.NorthMP4Box):reject(new Error('字幕解析组件没有正常启动'));script.onerror=()=>reject(new Error('字幕解析组件加载失败，请重新打开小手机后再试'));document.head.appendChild(script);}).catch(e=>{_cinMp4Module=null;const stale=document.querySelector('script[data-north-mp4box="1"]');if(stale)stale.remove();throw e;});return _cinMp4Module;}
+async function cinemaMp4Library(){if(globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function')return globalThis.NorthMP4Box;if(!_cinMp4Module)_cinMp4Module=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='./vendor/mp4box.all.js?v=1264&r=file-safe-1';script.async=true;script.dataset.northMp4box='1';script.onload=()=>globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function'?resolve(globalThis.NorthMP4Box):reject(new Error('字幕解析组件没有正常启动'));script.onerror=()=>reject(new Error('字幕解析组件加载失败，请重新打开小手机后再试'));document.head.appendChild(script);}).catch(e=>{_cinMp4Module=null;const stale=document.querySelector('script[data-north-mp4box="1"]');if(stale)stale.remove();throw e;});return _cinMp4Module;}
 async function cinemaVideoCodecProbe(file){if(!file||typeof file.slice!=='function')return null;if(_cin.videoInfo)return _cin.videoInfo;try{const MP4Box=await cinemaMp4Library(),mp4=MP4Box.createFile(false);let info=null,parseError='';mp4.onReady=x=>{info=x;};mp4.onError=e=>{parseError=String(e||'');};const step=1024*1024;for(let offset=0,guard=0;offset<file.size&&guard++<256&&!info;){const end=Math.min(file.size,offset+step),ab=await file.slice(offset,end).arrayBuffer();ab.fileStart=offset;const next=Number(mp4.appendBuffer(ab));offset=Number.isFinite(next)&&next>end?Math.min(file.size,next):end;if(guard%8===0)await new Promise(resolve=>setTimeout(resolve,0));}if(!info)mp4.flush();if(!info)return _cin.videoInfo={parseError:parseError||'未读到 MP4 / MOV 媒体信息'};const video=(info.videoTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.video),audio=(info.audioTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.audio);return _cin.videoInfo={videoCodec:String(video&&video.codec||''),audioCodec:String(audio&&audio.codec||''),width:Number(video&&video.video&&video.video.width||video&&video.track_width||0),height:Number(video&&video.video&&video.video.height||video&&video.track_height||0)};}catch(e){return _cin.videoInfo={parseError:String(e&&e.message||e||'媒体信息读取失败')};}}
 function cinemaVideoErrorReason(code,info){const vc=String(info&&info.videoCodec||''),ac=String(info&&info.audioCodec||''),hevc=/^(?:hvc1|hev1|hevc|dvhe|dvh1)/i.test(vc),android=cinemaAndroidBrowser();if(android&&hevc)return '检测到视频编码 '+vc+'（HEVC / H.265）。苹果设备能够播放，并不代表当前安卓浏览器或手机具备同样的网页解码能力。';if(android&&code===3)return '安卓浏览器已经读到文件，但解码画面或声音失败。';if(android&&code===4)return '安卓浏览器不支持这个文件的容器、视频编码或音频编码。';if(code===3)return '浏览器已读到文件，但解码画面或声音失败。';if(code===4)return '当前浏览器不支持这个视频的容器或编码。';return '浏览器没有读到可播放的视频数据。';}
 function cinemaVideoRetryCompatible(info){const vc=String(info&&info.videoCodec||''),ac=String(info&&info.audioCodec||'');return /^(?:avc1|avc3)(?:\.|$)/i.test(vc)&&(!ac||/^(?:mp4a|aac)(?:\.|$)/i.test(ac));}
@@ -5405,7 +5405,8 @@ function editXProfile(){const p=S.x.profile,tone=xNetCommentTone(),custom=xNetCo
 function changeXCover(){pickFile('image/*',async f=>{S.x.profile.cover=await compressBackground(f);save();render();toast('背景已换');});}
 
 /* ---------- 抖音 ---------- */
-const DY_GRADS=['linear-gradient(135deg,#fe2c55,#7c1f3a)','linear-gradient(135deg,#25f4ee,#0b6b67)','linear-gradient(135deg,#845ef7,#2b1a5e)','linear-gradient(135deg,#ff922b,#7a3d05)','linear-gradient(135deg,#20c997,#0a4d3a)','linear-gradient(135deg,#f06595,#5e1a3a)','linear-gradient(135deg,#4dabf7,#103a5e)','linear-gradient(135deg,#ffd43b,#7a6308)'];
+/* 刷抖音的底色：暗玻璃，不再是几块饱和的糖果色——白字压在上面才看得清，也不扎眼。 */
+const DY_GRADS=['linear-gradient(150deg,#2b2f3a,#12141a 55%,#0a0b0f)','linear-gradient(150deg,#26333a,#101a1e 55%,#080c0e)','linear-gradient(150deg,#2f2a3c,#161226 55%,#0b0910)','linear-gradient(150deg,#3a2f2a,#1e1512 55%,#0f0a08)','linear-gradient(150deg,#233330,#0f1c19 55%,#070e0c)','linear-gradient(150deg,#382b34,#1c141a 55%,#0e090c)','linear-gradient(150deg,#26303c,#111820 55%,#080c10)','linear-gradient(150deg,#35332a,#1a1913 55%,#0d0c09)'];
 let dyTab='feed';let _dyMode='rec';let _dyNarr={};let _dyPaused={};let _dyFromWx=false;
 /* 抖音这一整片——刷新推荐、刷新私信、生成网友评论、私信回复、群聊接话、加群申请——
    全部走副模型。副模型配错、模型名写错或额度用完时，微信主聊天和设置页的「测试主模型」
@@ -5481,10 +5482,10 @@ function dyVideoCard(v,i){const liked=!!v.liked,lc=(v.lk||0)+(liked?1:0),starred
     <div class="dyfd-card" onclick="dyOpenWork('${v.id}')">${dyWorkCardHTML(v,{lines:4})}</div>
     <div class="dyrail">
       <div class="ra" onclick="dyVideoAuthor('${v.id}')" style="margin-bottom:5px"><div style="position:relative">${av(mine?dyAvatar():(v.avatar||'🎵'),'sm')}${isChar&&!fol?'<span class="dyrail-plus">+</span>':''}</div></div>
-      <div class="ra" onclick="dyLike('${v.id}')"><span class="ic">${svgIc('heart',27,liked?'#f5243d':'#fff',0)}</span>${dyNum(lc)}</div>
-      <div class="ra" onclick="dyComments('${v.id}')"><span class="ic">${svgIc('chat',27,'#fff',2)}</span>${dyNum((v.comments||[]).length)}</div>
-      <div class="ra" onclick="dyStar('${v.id}')"><span class="ic">${svgIc('star',26,starred?'#f5c518':'#fff',2)}</span>${dyNum(sc)}</div>
-      <div class="ra" onclick="dyFwd('${v.id}')"><span class="ic">${svgIc('forward',26,'#fff',2)}</span>分享</div>
+      <div class="ra" onclick="dyLike('${v.id}')"><span class="ic">${svgIc('heart',34,liked?'#f5243d':'#fff',0)}</span>${dyNum(lc)}</div>
+      <div class="ra" onclick="dyComments('${v.id}')"><span class="ic">${svgIc('chat',33,'#fff',2)}</span>${dyNum((v.comments||[]).length)}</div>
+      <div class="ra" onclick="dyStar('${v.id}')"><span class="ic">${svgIc('star',33,starred?'#f5c518':'#fff',2)}</span>${dyNum(sc)}</div>
+      <div class="ra" onclick="dyFwd('${v.id}')"><span class="ic">${svgIc('forward',32,'#fff',2)}</span>分享</div>
     </div>
     <div class="dymeta">
       ${isChar&&fol?'<span class="dyfd-mutual">互相关注</span>':''}

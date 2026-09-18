@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1262 · 抖音文字作品与朋友页'/);
-  assert.match(app,/const url='sw\.js\?v=1262&r=v1262-web-douyin-text-feed-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1262'/);
-  assert.match(html,/app\.js\?v=1262/);
-  assert.match(sw,/const BUILD='1262'/);
-  assert.match(sw,/north-shell-v1262-web-douyin-text-feed-1/);
-  assert.match(index,/小手机\.html\?v=1262/);
-  assert.match(repair,/小手机\.html\?v=1262/);
+  assert.match(app,/APP_VER='v1263 · 抖音暗玻璃底色'/);
+  assert.match(app,/const url='sw\.js\?v=1263&r=v1263-web-douyin-glass-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1263'/);
+  assert.match(html,/app\.js\?v=1263/);
+  assert.match(sw,/const BUILD='1263'/);
+  assert.match(sw,/north-shell-v1263-web-douyin-glass-1/);
+  assert.match(index,/小手机\.html\?v=1263/);
+  assert.match(repair,/小手机\.html\?v=1263/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{
   assert.match(privateBundle,/<string>1200<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.364;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 364;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.364 \(364\)'/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.365;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 365;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.365 \(365\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 
