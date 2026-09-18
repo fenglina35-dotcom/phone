@@ -356,6 +356,41 @@ const PERMANENT_FIXES = [
     marker: 'function dyCmSheet(v)',
     least: 1,
   },
+  {
+    release: 'v1259',
+    name: '抖音「我」页不留死按钮：互关／关注／粉丝列表页',
+    scope: 'both',
+    marker: 'function dyRelView()',
+    least: 1,
+  },
+  {
+    release: 'v1259',
+    name: '抖音观看历史（看过就记一笔，可筛可清）',
+    scope: 'both',
+    marker: 'function dyHistoryView()',
+    least: 1,
+  },
+  {
+    release: 'v1259',
+    name: '抖音主页搜索：先搜自己的主页，再给全网入口',
+    scope: 'both',
+    marker: 'function dyMeSearchView()',
+    least: 1,
+  },
+  {
+    release: 'v1259',
+    name: '抖音求更新页（近 7 天催更／催开播）',
+    scope: 'both',
+    marker: 'function dyUpdateView()',
+    least: 1,
+  },
+  {
+    release: 'v1259',
+    name: '抖音全部功能九宫格，次要入口全部有去处',
+    scope: 'both',
+    marker: 'function dyAllGroups()',
+    least: 1,
+  },
 ];
 
 const sources = { web: read(WEB), private: read(PRIVATE) };

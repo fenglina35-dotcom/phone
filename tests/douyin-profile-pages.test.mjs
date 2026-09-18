@@ -99,3 +99,102 @@ test('every shell carries the styles for the four pages', () => {
     }
   }
 });
+
+/* 第二批：把「我」页上原先按下去毫无反应的地方全部接上。真实抖音里没有一个按钮
+   是点了没反应的，所以这里一个纯装饰都不留——最差也给一句提示。 */
+
+test('nothing on the profile page is a dead button any more', () => {
+  const src = source('dyProfile');
+  for (const [what, call] of [
+    ['添加好友', 'dyFollowList()'],
+    ['求更新箭头', 'dyOpenUpdate()'],
+    ['主页访客', 'dyOpenVisitors()'],
+    ['主页搜索', 'dyOpenMeSearch()'],
+    ['全部功能', 'dyAllFeatures()'],
+    ['抖音号复制', 'dyCopyDyid()'],
+    ['创作 AI 作品', 'dyCompose()'],
+    ['互关', "dyOpenRel('互关')"],
+    ['关注', "dyOpenRel('关注')"],
+    ['粉丝', "dyOpenRel('粉丝指数')"],
+    ['我的订单', 'dyGoOrders()'],
+    ['观看历史', 'dyOpenHistory()'],
+    ['我的钱包', 'dyGoWallet()'],
+    ['私密作品', 'dyPrivateWorks()'],
+    ['作品排序', 'dyWorkSortMenu()'],
+  ]) {
+    assert.ok(src.includes(call), `「${what}」还是点不动：缺少 ${call}`);
+  }
+  assert.match(src, /S\.dy\.hidePromo=true/, '「参与今天的话题」的 ✕ 要真的关得掉');
+  assert.match(source('dyMeTabs'), /\['作品','收藏','喜欢'\]/, '永远空着的「日常」「推荐」要去掉');
+  assert.match(source('dyMeGridRows'), /v\.starred/, '「收藏」要按真的收藏过滤，不能拿点赞充数');
+  assert.match(source('dyMeGridRows'), /filter\(v=>!v\.priv\)/, '私密作品不进主页网格');
+});
+
+test('the relation list reads her own world and never fabricates people', () => {
+  const src = source('dyRelPeople');
+  assert.match(src, /S\.contacts\|\|\[\]/, '朋友来自角色');
+  assert.match(src, /S\.dy\.visitors\|\|\[\]/, '网友来自访客池');
+  assert.doesNotMatch(src, /chatAPI/, '列表不该花一次模型调用');
+  assert.match(source('dyRelTabs'), /'互关','关注','粉丝指数','朋友'/);
+  const view = source('dyRelView');
+  assert.match(view, /搜索用户备注或名字/);
+  assert.match(view, /\$\{rows\.length\} 人/);
+  assert.match(source('dyRelRow'), /密友/);
+});
+
+test('the spark counter comes from real consecutive chat days', () => {
+  const ctx = vm.createContext({ msgs: () => ctx.rows, rows: [] });
+  vm.runInContext(`${source('dySparkDays')};globalThis.f=dySparkDays;`, ctx);
+  assert.equal(ctx.f('x'), 0, '没聊过就没有火花');
+  const now = Date.now();
+  ctx.rows = [{ time: now }, { time: now - 86400000 }, { time: now - 2 * 86400000 }];
+  assert.equal(ctx.f('x'), 3);
+  ctx.rows = [{ time: now }, { time: now - 3 * 86400000 }];
+  assert.equal(ctx.f('x'), 1, '断了就从头算');
+});
+
+test('watch history records what she opened and can be cleared', () => {
+  assert.match(source('dyOpenWork'), /dyWatchRecord\(v\)/, '点开作品要记一笔');
+  assert.match(source('dySubClose'), /dyWatchFinish\(_dyWorkId\)/, '离开作品页就算看完');
+  const rec = source('dyWatchRecord');
+  assert.match(rec, /d\.watched\.unshift/);
+  assert.match(rec, /slice\(0,120\)/, '历史有上限，不会无限涨');
+  assert.match(source('dyHistoryView'), /\['用户','视频','影视综','直播'\]/);
+  assert.match(source('dyHistRows'), /_dyHistOnly==='未看完'/);
+  assert.match(source('dyHistClear'), /uiConfirm/, '清空要先问一句');
+});
+
+test('profile search looks inside her own page before the whole network', () => {
+  const src = source('dyMeSearchResults');
+  assert.match(src, /我的作品/);
+  assert.match(src, /在全网搜/);
+  assert.match(source('dyMeSearchView'), /搜索主页或全网内容/);
+  assert.match(source('dyMeSearchRun'), /S\.dy\.history\.unshift\(q\)/, '搜过的词进历史');
+});
+
+test('the update-request page counts only the last seven days', () => {
+  assert.match(source('dyUpdateRows'), /7\*864e5/);
+  const view = source('dyUpdateView');
+  assert.match(view, /近 7 天收到/);
+  assert.match(view, /上次发布作品/);
+  assert.match(view, /发布作品/);
+  assert.match(view, /去直播/);
+  assert.doesNotMatch(source('dyUpdateSync'), /chatAPI/, '求更新列表也不花模型调用');
+});
+
+test('the all-features sheet routes everything somewhere real', () => {
+  const src = source('dyAllGroups');
+  for (const label of ['发布作品', '私密作品', '主页访客', '求更新', '观看历史', '我的订单', '我的钱包', '编辑资料', '隐私设置']) {
+    assert.ok(src.includes(label), `全部功能里少了「${label}」`);
+  }
+  assert.match(source('dyGoOrders'), /typeof openOrders==='function'/, '订单跳到已有的淘宝订单页');
+  assert.match(source('dyGoWallet'), /typeof openWallet==='function'/, '钱包跳到已有的钱包');
+});
+
+test('every shell carries the styles for the second batch too', () => {
+  for (const [name, css] of [['小手机.html', html], ['私人壳', shell], ['index.html', index]]) {
+    for (const cls of ['.dyrel-row{', '.dyh-tabs{', '.dys-box{', '.dyu-foot{', '.dyall{']) {
+      assert.ok(css.includes(cls), `${name} 少了 ${cls}`);
+    }
+  }
+});
