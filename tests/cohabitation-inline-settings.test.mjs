@@ -31,7 +31,7 @@ test('common-life settings are persisted per home with backward-compatible defau
   vm.createContext(sandbox);
   vm.runInContext(`${functionSource('cohabSettings')};globalThis.read=cohabSettings`,sandbox);
   const first={},second={};
-  assert.deepEqual({...sandbox.read(first)},{contextLimit:42,summaryRounds:6,summaryMemoryLimit:8,summaryMode:'split',replyModel:'role',replyApiRoute:'follow',summaryModel:'aux',summaryApiRoute:'reply'});
+  assert.deepEqual({...sandbox.read(first)},{contextLimit:42,summaryRounds:6,summaryMemoryLimit:8,memoryCap:200,summaryMode:'split',replyModel:'role',replyApiRoute:'follow',summaryModel:'aux',summaryApiRoute:'reply'});
   first.settings.contextLimit=77;
   first.settings.summaryRounds=0;
   first.settings.summaryMemoryLimit=18;
@@ -40,7 +40,7 @@ test('common-life settings are persisted per home with backward-compatible defau
   first.settings.replyApiRoute='2';
   first.settings.summaryModel='reply';
   first.settings.summaryApiRoute='follow';
-  assert.deepEqual({...sandbox.read(first)},{contextLimit:77,summaryRounds:0,summaryMemoryLimit:18,summaryMode:'single',replyModel:'main',replyApiRoute:'2',summaryModel:'reply',summaryApiRoute:'follow'});
+  assert.deepEqual({...sandbox.read(first)},{contextLimit:77,summaryRounds:0,summaryMemoryLimit:18,memoryCap:200,summaryMode:'single',replyModel:'main',replyApiRoute:'2',summaryModel:'reply',summaryApiRoute:'follow'});
   assert.equal(sandbox.read(second).contextLimit,42,'another role home must keep its own defaults');
 });
 

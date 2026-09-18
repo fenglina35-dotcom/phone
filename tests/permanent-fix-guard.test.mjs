@@ -293,6 +293,34 @@ const PERMANENT_FIXES = [
     marker: '这不是设备读数汇报',
     least: 1,
   },
+  {
+    release: 'v1259',
+    name: '共同生活关闭后，一起生活过的记忆仍然记得',
+    scope: 'both',
+    marker: 'function cohabMemoryAfterPrompt(c)',
+    least: 1,
+  },
+  {
+    release: 'v1259',
+    name: '共同生活记忆上限可调，0 表示不限',
+    scope: 'both',
+    marker: 'cohabMemoryPrune(d,cohabMemoryCap(d))',
+    least: 1,
+  },
+  {
+    release: 'v1259',
+    name: '主动清理低星，5 星永远保留',
+    scope: 'both',
+    marker: 'function memoryPruneLowStars(rows,maxStar)',
+    least: 1,
+  },
+  {
+    release: 'v1259',
+    name: '微信记忆清理按钮不再空转（自动清理关着也能手动清）',
+    scope: 'both',
+    marker: 'pruneSummaries(cc,null,{force:true})',
+    least: 1,
+  },
 ];
 
 const sources = { web: read(WEB), private: read(PRIVATE) };
