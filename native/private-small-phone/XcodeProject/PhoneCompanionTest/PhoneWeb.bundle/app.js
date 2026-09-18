@@ -5587,6 +5587,7 @@ function dyProfile(){const p=S.dy.profile||{},mine=S.dy.mine||[],priv=dyPrivateR
     </div>
   </div>`;}
 function changeDyAvatar(){pickFile('image/*',async f=>{S.dy.profile.avatar=await compress(f,300,.8);save();render();toast('头像已换 🎨');});}
+function editDyProfile(){_dySub='edit';_dyCmOpen=false;render();}
 let _dySub='';let _dyWorkId='';let _dyCmOpen=false;let _dyCmTab='评论';let _dyCmFull=false;let _dyCmReply=-1;let _dyCmExpand={};
 function dySubClose(){if(_dyCmOpen)return dyCmClose();if(_dySub==='work'&&_dyWorkId)dyWatchFinish(_dyWorkId);_dySub='';_dyWorkId='';render();}
 function dyCmLayer(){if(!_dyCmOpen)return '';const v=dyVid(_dyWorkId);if(!v)return '';return dyCmSheet(v);}

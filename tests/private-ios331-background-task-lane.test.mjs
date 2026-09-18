@@ -74,7 +74,7 @@ test('private performance candidate has a v1258 identity while public web stays 
   assert.match(bridge, /static let contractVersion = 38/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 364;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.364;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1257 · App 管控交回角色'/);
+  assert.match(publicApp, /APP_VER='v1259 · 抖音「我」页仿真'/);
   assert.doesNotMatch(publicApp, /function northNativeBackgroundTask\(name,run\)/);
 });
 

@@ -198,3 +198,33 @@ test('every shell carries the styles for the second batch too', () => {
     }
   }
 });
+
+/* 这一条是被一个真实的疏漏逼出来的：我在重做编辑资料页时删掉了旧的 editDyProfile，
+   却忘了重新定义，「编辑主页」按下去只会抛 ReferenceError——截图看不出来，1900 多条测试
+   也没拦住，只有真的点一下才会暴露。所以这里把 app.js 里每一个 onclick 调用的函数名
+   都对着实际定义验一遍，不再只盯着抖音那一段。 */
+test('every onclick in app.js resolves to a function that exists', () => {
+  const ui = readFileSync(new URL('../commerce-ui.js', import.meta.url), 'utf8');
+  const pixel = readFileSync(new URL('../pixel-home.js', import.meta.url), 'utf8');
+  const pet = readFileSync(new URL('../pet-game.js', import.meta.url), 'utf8');
+  const defined = new Set();
+  for (const src of [app, ui, pixel, pet]) {
+    for (const m of src.matchAll(/^(?:async )?function ([A-Za-z_$][\w$]*)\(/gm)) defined.add(m[1]);
+    for (const m of src.matchAll(/window\.([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?function/g)) defined.add(m[1]);
+    for (const m of src.matchAll(/^(?:const|let|var) ([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:function|\(|[A-Za-z_$][\w$]*\s*=>)/gm)) defined.add(m[1]);
+  }
+  /* 语言关键字和内建对象不是「函数没定义」。 */
+  for (const w of ['Math', 'String', 'Number', 'Date', 'JSON', 'Array', 'Object', 'Boolean', 'parseInt', 'parseFloat', 'isNaN', 'if', 'for', 'while', 'switch', 'return', 'typeof', 'new', 'function', 'setTimeout', 'confirm', 'alert', 'encodeURIComponent', 'decodeURIComponent']) defined.add(w);
+  const missing = new Map();
+  for (const m of app.matchAll(/onclick="([^"]*)"/g)) {
+    for (const call of m[1].matchAll(/(?<![.\w$])([A-Za-z_$][\w$]*)\s*\(/g)) {
+      if (defined.has(call[1]) || call[1].startsWith('_')) continue;
+      if (!missing.has(call[1])) missing.set(call[1], app.slice(0, m.index).split('\n').length);
+    }
+  }
+  assert.deepEqual(
+    [...missing].map(([name, line]) => `${name} (app.js:${line})`),
+    [],
+    '这些 onclick 指向了不存在的函数，点下去只会报错',
+  );
+});
