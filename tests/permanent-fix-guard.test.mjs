@@ -447,6 +447,34 @@ const PERMANENT_FIXES = [
     marker: 'let _taskBusy=false;',
     least: 1,
   },
+  {
+    release: 'v1261',
+    name: '抖音消息页：五个圆入口＋陌生人文件夹',
+    scope: 'both',
+    marker: 'function dyStrangerFolderRow()',
+    least: 1,
+  },
+  {
+    release: 'v1261',
+    name: '抖音粉丝页（谁什么时候关注了你，可回关）',
+    scope: 'both',
+    marker: 'function dyFansView()',
+    least: 1,
+  },
+  {
+    release: 'v1261',
+    name: '抖音互动消息（赞与其他／评论与弹幕／群通知）',
+    scope: 'both',
+    marker: 'function dyActsView()',
+    least: 1,
+  },
+  {
+    release: 'v1261',
+    name: '抖音私聊页：火花、已读、快捷回复、时间只在间隔后标一次',
+    scope: 'both',
+    marker: 'function dyDMStamp(rows,mi)',
+    least: 1,
+  },
 ];
 
 const sources = { web: read(WEB), private: read(PRIVATE) };

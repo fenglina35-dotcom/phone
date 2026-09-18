@@ -228,3 +228,62 @@ test('every onclick in app.js resolves to a function that exists', () => {
     '这些 onclick 指向了不存在的函数，点下去只会报错',
   );
 });
+
+/* 第三批：抖音消息页。粉丝、赞与评论、群通知、陌生人消息、和角色的私聊。 */
+
+test('the message page carries the five circular entries and folds strangers away', () => {
+  const src = source('dyDMList');
+  for (const label of ['粉丝', '赞与其他', '评论弹幕', '群通知', '限时日常']) {
+    assert.ok(src.includes(label), `消息页少了「${label}」入口`);
+  }
+  assert.match(src, /dyStrangerFolderRow\(\)\+rows\.filter\(d=>d\.cid\)/, '陌生人收进文件夹，主列表只留角色');
+  assert.match(source('dyStrangersView'), /没有互关的人发来的私信都收在这里/);
+  const render = app.slice(app.indexOf('function renderDouyin()'), app.indexOf('function dyCmLayer()'));
+  assert.match(render, /dyTab==='dm'\)\?''/, '消息页自己有标题栏，外壳那条要去掉，否则两个「消息」叠在一起');
+});
+
+test('unread counts come from messages that actually arrived while she was away', () => {
+  assert.match(app, /if\(!\(cur\(\)\.p==='dydm'&&cur\(\)\.id===d\.id\)\)d\.unread=\(\+d\.unread\|\|0\)\+1/, '对方发来的私信要算未读');
+  assert.match(source('renderDyDM'), /if\(d\.unread\)\{d\.unread=0/, '打开会话就清零');
+  assert.match(source('dyStrangerUnread'), /reduce/, '文件夹上的数字是里面所有人加起来的');
+});
+
+test('the fan list is built from her own world and says when each one followed', () => {
+  const sync = source('dyFanSync');
+  assert.match(sync, /d\.following\|\|\[\]/);
+  assert.match(sync, /d\.visitors\|\|\[\]/);
+  assert.doesNotMatch(sync, /chatAPI/, '粉丝列表不花模型调用');
+  assert.match(source('dyFanRow'), /关注了你/);
+  assert.match(source('dyFanRow'), /相互关注|回关/);
+});
+
+test('interaction rows are derived from real comments, never invented', () => {
+  const sync = source('dyActSync');
+  assert.match(sync, /dyActWorks\(\)\.forEach/, '只看她自己的作品');
+  assert.match(sync, /v\.comments\|\|\[\]/);
+  assert.doesNotMatch(sync, /chatAPI/, '互动消息不花模型调用');
+  assert.match(source('dyActRows'), /tab==='评论与弹幕'/);
+  assert.match(source('dyActsView'), /\['赞与其他','评论与弹幕','群通知'\]/);
+  assert.match(source('dyGroupNoticeBody'), /抖音群聊还没做/, '群聊是下一步，这里先说清楚');
+});
+
+test('the private chat shows the spark line and stamps time only after a gap', () => {
+  const ctx = vm.createContext({ esc: s => String(s), dyListTime: () => '18:25' });
+  vm.runInContext(`${source('dyDMStamp')};globalThis.f=dyDMStamp;`, ctx);
+  const t = 1700000000000;
+  const rows = [{ time: t }, { time: t + 60000 }, { time: t + 40 * 60000 }];
+  assert.notEqual(ctx.f(rows, 0), '', '第一条要有时间');
+  assert.equal(ctx.f(rows, 1), '', '一分钟后的那条不再重复标');
+  assert.notEqual(ctx.f(rows, 2), '', '隔了 40 分钟要重新标');
+  assert.match(source('dySparkLine'), /续火花/);
+  assert.match(source('renderDyDM'), /发消息或按住说话/);
+  assert.match(source('renderDyDM'), /已读/);
+});
+
+test('every shell carries the styles for the message pages', () => {
+  for (const [name, css] of [['小手机.html', html], ['私人壳', shell], ['index.html', index]]) {
+    for (const cls of ['.dymsg-ents{', '.dyfan-row{', '.dyact-row{', '.dydm-box{', '.dymsg-fold{']) {
+      assert.ok(css.includes(cls), `${name} 少了 ${cls}`);
+    }
+  }
+});

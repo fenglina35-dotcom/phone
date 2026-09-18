@@ -1182,6 +1182,88 @@ body{background:#000;padding:0;}
 .dyall-t{margin-top:12px;font-size:13px;color:#888;}
 .dyall{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px;}
 .dyall-i{display:flex;flex-direction:column;align-items:center;gap:7px;padding:10px 2px;border-radius:10px;background:rgba(127,127,140,.14);font-size:12px;text-align:center;}
+/* ===== 抖音 · 消息主页 ===== */
+.dymsg{flex:1;display:flex;flex-direction:column;background:#0e0e0f;color:#f2f2f4;overflow:hidden;}
+.dymsg-nav{flex:0 0 auto;display:flex;align-items:center;gap:16px;padding:13px 16px 10px;}
+.dymsg-nav i{font-style:normal;display:flex;align-items:center;}
+.dymsg-nav b{flex:1;text-align:center;font-size:19px;font-weight:700;}
+.dymsg-ents{flex:0 0 auto;display:flex;gap:14px;padding:12px 16px 16px;overflow-x:auto;scrollbar-width:none;border-bottom:7px solid #000;}
+.dymsg-ents::-webkit-scrollbar{display:none;}
+.dymsg-ent{flex:0 0 auto;width:64px;display:flex;flex-direction:column;align-items:center;gap:8px;}
+.dymsg-ent>span{font-size:13px;color:#c4c4cb;max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dymsg-ico{position:relative;width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+.dymsg-ico.fans{background:#2d7ff9;}.dymsg-ico.likes{background:#f5243d;}.dymsg-ico.cmts{background:#3ab6f0;}.dymsg-ico.grp{background:#2dc26b;}
+.dymsg-ico.daily,.dymsg-ico.plain{background:#232327;}
+.dymsg-ico .avatar{width:60px!important;height:60px!important;flex:0 0 60px!important;border-radius:50%!important;font-size:26px;}
+.dymsg-plus{position:absolute;right:-1px;bottom:-1px;width:22px;height:22px;border-radius:50%;background:#2dc26b;color:#fff;font-size:15px;line-height:20px;text-align:center;border:2px solid #0e0e0f;font-style:normal;font-weight:400;}
+.dymsg-badge{position:absolute;right:-4px;top:-3px;min-width:20px;height:20px;border-radius:10px;background:#f5243d;color:#fff;font-size:12px;font-weight:600;line-height:20px;text-align:center;padding:0 6px;border:2px solid #0e0e0f;}
+.dymsg-list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.dymsg-row{display:flex;align-items:center;gap:13px;padding:13px 16px;}
+.dymsg-row .avatar{width:54px!important;height:54px!important;flex:0 0 54px!important;border-radius:50%!important;font-size:24px;}
+.dymsg-main{flex:1;min-width:0;}
+.dymsg-top{display:flex;align-items:center;gap:8px;}
+.dymsg-name{font-size:17px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dymsg-spark{font-style:normal;font-size:12px;font-weight:600;color:#ff7a3d;background:#2a1d17;border-radius:4px;padding:2px 6px;white-space:nowrap;}
+.dymsg-mute{font-style:normal;display:flex;align-items:center;}
+.dymsg-time{margin-left:auto;font-size:13px;color:#7a7a82;white-space:nowrap;}
+.dymsg-sub{margin-top:5px;display:flex;align-items:center;gap:8px;}
+.dymsg-sub>span{flex:1;min-width:0;font-size:14.5px;color:#82828a;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dymsg-un{flex:0 0 auto;min-width:19px;height:19px;border-radius:10px;background:#f5243d;color:#fff;font-size:12px;font-weight:600;line-height:19px;text-align:center;padding:0 5px;}
+.dymsg-hl{color:#f5243d;font-weight:400;}
+.dymsg-fold{position:relative;flex:0 0 54px;width:54px;height:54px;}
+.dymsg-fold .avatar{width:54px!important;height:54px!important;flex:0 0 54px!important;border-radius:50%!important;font-size:24px;}
+.dymsg-fold i{position:absolute;right:-2px;bottom:-2px;min-width:20px;height:20px;border-radius:10px;background:#2a2a30;color:#c4c4cb;font-size:11px;font-style:normal;line-height:20px;text-align:center;padding:0 5px;border:2px solid #0e0e0f;}
+/* ===== 抖音 · 粉丝 ===== */
+.dyfan-count{font-style:normal;font-size:13px;color:#c4c4cb;background:#2a2a30;border-radius:999px;padding:3px 10px;}
+.dyfan-row{display:flex;align-items:center;gap:12px;padding:12px 16px;}
+.dyfan-row .avatar{width:56px!important;height:56px!important;flex:0 0 56px!important;border-radius:50%!important;font-size:24px;}
+.dyfan-main{flex:1;min-width:0;}
+.dyfan-name{font-size:17px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dyfan-sub{margin-top:5px;font-size:14px;color:#7e7e86;}
+/* ===== 抖音 · 互动消息 ===== */
+.dyact-tabs{flex:0 0 auto;display:flex;gap:30px;padding:2px 20px 0;justify-content:space-between;}
+.dyact-tabs span{position:relative;font-size:16px;color:#85858c;padding:8px 0 12px;white-space:nowrap;}
+.dyact-tabs span.on{color:#f2f2f4;font-weight:700;}
+.dyact-tabs span.on:after{content:'';position:absolute;left:0;right:0;bottom:6px;height:3px;border-radius:2px;background:#f1c40f;}
+.dyact-tabs span b{position:absolute;right:-24px;top:2px;min-width:18px;height:18px;border-radius:9px;background:#f5243d;color:#fff;font-size:11px;font-weight:600;line-height:18px;text-align:center;padding:0 5px;}
+.dyact-multi{margin-left:auto;font-weight:400;font-size:14px;color:#c4c4cb;align-self:center;}
+.dyact-row{display:flex;align-items:center;gap:11px;padding:13px 16px;}
+.dyact-av{position:relative;flex:0 0 auto;}
+.dyact-av .avatar{width:54px!important;height:54px!important;flex:0 0 54px!important;border-radius:50%!important;font-size:24px;}
+.dyact-badge{position:absolute;right:-2px;bottom:-2px;width:23px;height:23px;border-radius:50%;background:#f5243d;display:flex;align-items:center;justify-content:center;border:2px solid #0e0e0f;font-style:normal;}
+.dyact-badge.rec{background:#2dc26b;}
+.dyact-main{flex:1;min-width:0;}
+.dyact-name{display:flex;align-items:center;gap:6px;font-size:16px;font-weight:600;}
+.dyact-tag{font-style:normal;font-size:11px;font-weight:500;color:#a9a9b1;background:#2a2a30;border-radius:4px;padding:2px 6px;}
+.dyact-say{margin-top:5px;font-size:14.5px;color:#83838b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dyact-say b{color:#4f8cff;font-weight:400;}
+.dyact-say span{color:#63636b;margin-left:6px;}
+.dyact-thumb{flex:0 0 auto;width:48px;height:62px;border-radius:5px;background:#232327;display:flex;align-items:center;justify-content:center;font-size:22px;}
+/* ===== 抖音 · 私聊 ===== */
+.dydm{flex:1;display:flex;flex-direction:column;background:#0e0e0f;color:#f2f2f4;overflow:hidden;}
+.dydm-nav{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:.5px solid #1c1c20;}
+.dydm-nav i{font-style:normal;font-size:24px;line-height:1;color:#f2f2f4;display:flex;align-items:center;}
+.dydm-nav .avatar{width:32px!important;height:32px!important;flex:0 0 32px!important;border-radius:50%!important;font-size:15px;}
+.dydm-nav b{flex:1;min-width:0;font-size:17px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dydm-box{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 14px 6px;}
+.dydm-spark{margin:0 auto 14px;max-width:92%;text-align:center;font-size:13px;color:#7e7e86;line-height:1.6;}
+.dydm-spark em{font-style:normal;color:#f1c40f;margin-left:6px;}
+.dydm-msg{margin-bottom:14px;}
+.dydm-t{text-align:center;font-size:12px;color:#63636b;margin-bottom:8px;}
+.dydm-line{display:flex;align-items:flex-end;gap:9px;}
+.dydm-msg.me .dydm-line{flex-direction:row-reverse;}
+.dydm-line .avatar{width:38px!important;height:38px!important;flex:0 0 38px!important;border-radius:50%!important;font-size:18px;}
+.dydm-b{max-width:70%;background:#232327;border-radius:14px;padding:10px 13px;font-size:16px;line-height:1.5;color:#f0f0f3;word-break:break-word;white-space:pre-wrap;}
+.dydm-msg.me .dydm-b{background:#2a5cff;color:#fff;}
+.dydm-read{font-size:12px;color:#63636b;padding-bottom:3px;}
+.dydm-quick{flex:0 0 auto;display:flex;gap:9px;padding:8px 14px;overflow-x:auto;scrollbar-width:none;}
+.dydm-quick::-webkit-scrollbar{display:none;}
+.dydm-quick span{flex:0 0 auto;background:#232327;border-radius:8px;padding:9px 14px;font-size:14px;color:#d4d4da;white-space:nowrap;}
+.dydm-bar{flex:0 0 auto;display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:.5px solid #1c1c20;}
+.dydm-bar i{flex:0 0 auto;font-style:normal;font-size:20px;color:#c8c8d0;display:flex;align-items:center;}
+.dydm-bar i.send{width:34px;height:34px;border-radius:50%;background:#f5243d;justify-content:center;}
+.dydm-bar input{flex:1;min-width:0;background:#232327;border:0;border-radius:999px;padding:11px 15px;font-size:15px;color:#f0f0f3;outline:none;}
+.dydm-bar input::placeholder{color:#75757d;}
 .dyvideo{position:relative;height:100%;min-height:100%;width:100%;scroll-snap-align:start;scroll-snap-stop:always;display:flex;align-items:flex-end;overflow:hidden;background:#060608;isolation:isolate;}
 .dybg{position:absolute;inset:-8%;background-size:260% 260%;animation:dyflow 10s ease infinite;filter:saturate(.8) brightness(.53);transform:scale(1.12);}
 @keyframes dyflow{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
