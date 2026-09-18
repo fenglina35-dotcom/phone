@@ -27,15 +27,15 @@ function functionSource(name){
 }
 
 test('v1178 has a unique visible identity across every public entry and cache layer',()=>{
-  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1260\'/);
-  assert.match(app,/APP_VER='v1260 · 通话掉线自动重试'/);
-  assert.match(shell,/__NORTH_SHELL_BUILD__='1260'/);
-  assert.match(shell,/app\.js\?v=1260&r=v1260-web-call-retry-1/);
-  assert.match(index,/小手机\.html\?v=1260/);
-  assert.match(repair,/小手机\.html\?v=1260/);
-  assert.match(worker,/const BUILD='1260'/);
-  assert.match(worker,/north-shell-v1260-web-call-retry-1/);
-  assert.match(hotfix,/sw\.js\?v=1260&r=v1260-web-call-retry-1/);
+  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1261\'/);
+  assert.match(app,/APP_VER='v1261 · 抖音消息与群聊'/);
+  assert.match(shell,/__NORTH_SHELL_BUILD__='1261'/);
+  assert.match(shell,/app\.js\?v=1261&r=v1261-web-douyin-message-1/);
+  assert.match(index,/小手机\.html\?v=1261/);
+  assert.match(repair,/小手机\.html\?v=1261/);
+  assert.match(worker,/const BUILD='1261'/);
+  assert.match(worker,/north-shell-v1261-web-douyin-message-1/);
+  assert.match(hotfix,/sw\.js\?v=1261&r=v1261-web-douyin-message-1/);
   for(const [name,source] of Object.entries({app,shell,index,repair,worker,hotfix})){
     assert.doesNotMatch(source,/v?1127/,`${name} must not reuse the prior web version`);
   }

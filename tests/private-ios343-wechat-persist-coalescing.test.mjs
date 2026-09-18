@@ -58,7 +58,7 @@ function persistenceRuntime() {
   return { context, writes, releases, traces };
 }
 
-test('private identity advances to v1258 and iOS 364 while public remains v1260', () => {
+test('private identity advances to v1258 and iOS 364 while public remains v1261', () => {
   assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1258'/);
   assert.match(privateApp, /APP_VER='v1258 · 私人同步 App 管控修复'/);
   for (const html of [privateIndex, privateAlias]) {
@@ -71,8 +71,8 @@ test('private identity advances to v1258 and iOS 364 while public remains v1260'
   assert.match(bridge, /private static let build = "1\.0\.364 \(364\)"/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 364;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.364;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1260 · 通话掉线自动重试'/);
-  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1260'/);
+  assert.match(publicApp, /APP_VER='v1261 · 抖音消息与群聊'/);
+  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1261'/);
   assert.doesNotMatch(publicApp, /persistWechatRequested|smallPhoneWechatPersistTrace/);
 });
 

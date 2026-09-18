@@ -13,9 +13,9 @@ const reportApp = read('native/private-small-phone/XcodeProject/PhoneCompanionRe
 const reportScene = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/TotalActivityReport.swift');
 
 test('public web v1184 and private web v1189 remain compatible with native iOS 1.0.315', () => {
-  assert.match(app, /APP_VER='v1260 · 通话掉线自动重试'/);
-  assert.match(app, /sw\.js\?v=1260&r=v1260-web-call-retry-1/);
-  assert.match(shell, /north-shell-v1260-web-call-retry-1/);
+  assert.match(app, /APP_VER='v1261 · 抖音消息与群聊'/);
+  assert.match(app, /sw\.js\?v=1261&r=v1261-web-douyin-message-1/);
+  assert.match(shell, /north-shell-v1261-web-douyin-message-1/);
   assert.match(bundleInfo, /<string>1200<\/string>/);
   assert.match(localWebView, /1\.0\.364 \(364\)/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 364;/g) || []).length, 12);
