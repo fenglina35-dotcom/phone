@@ -156,7 +156,8 @@ test('the spark only grows when both of them wrote that day, and never resets', 
   assert.equal(ctx.tick(d), 1, '隔很久没聊只会定格，永远不清零');
   d.msgs.push({ from: 'me', text: '回来了', time: now }, { from: 'them', text: '嗯', time: now });
   assert.equal(ctx.tick(d), 2, '回来接着往上长');
-  assert.match(source('dySparkLine'), /定格|还没续|已经续上/, '提示语要说清今天续没续上');
+  assert.match(source('dySparkBadge'), /🔥/, '火花挂在顶部名字旁边');
+  assert.match(source('dySparkTip'), /还没续|已经续上/, '点一下要说清今天续没续上');
 });
 
 test('watch history records what she opened and can be cleared', () => {
@@ -273,7 +274,7 @@ test('interaction rows are derived from real comments, never invented', () => {
   assert.match(source('dyGroupNoticeBody'), /dyApplyRow/, '群通知那一栏现在装的是真实的加群申请');
 });
 
-test('the private chat shows the spark line and stamps time only after a gap', () => {
+test('the private chat stamps time only after a gap, and the spark sits in the header', () => {
   const ctx = vm.createContext({ esc: s => String(s), dyListTime: () => '18:25' });
   vm.runInContext(`${source('dyDMStamp')};globalThis.f=dyDMStamp;`, ctx);
   const t = 1700000000000;
@@ -281,8 +282,7 @@ test('the private chat shows the spark line and stamps time only after a gap', (
   assert.notEqual(ctx.f(rows, 0), '', '第一条要有时间');
   assert.equal(ctx.f(rows, 1), '', '一分钟后的那条不再重复标');
   assert.notEqual(ctx.f(rows, 2), '', '隔了 40 分钟要重新标');
-  assert.match(source('dySparkLine'), /续火花/);
-  assert.match(source('renderDyDM'), /发消息或按住说话/);
+  assert.match(source('renderDyDM'), /dySparkBadge\(d\)/, '火花挂在顶部标题栏，不再占聊天区第一行');
   assert.match(source('renderDyDM'), /已读/);
 });
 
@@ -726,4 +726,122 @@ test('a 抖音 DM answers in up to four bubbles, like WeChat', () => {
   assert.deepEqual([...ctx.B('')], []);
   assert.match(source('dyDMBubbleRule'), /1 到 4 条/);
   assert.match(app, /if\(i\)await sleep\(420\+Math\.random\(\)\*680\)/, '一条条冒出来，不要糊成一坨');
+});
+
+/* 第十批：气泡一条条出、@ 多人必须拆开、提示音、火花挪顶部、
+   输入框复用微信的表情与语音、转账红包能抢、发作品重做。 */
+
+test('an admin can send up to four bubbles, everyone else exactly one', () => {
+  const ctx = vm.createContext({ String, Math });
+  vm.runInContext(['dyGBubbleMax', 'dyGBubbleRule', 'dyGSplitAt', 'dyGBubbles'].map(source).join('\n')
+    + ';globalThis.dyGRole=(g,k)=>g.roles[k]||"member";globalThis.MAX=dyGBubbleMax;globalThis.RULE=dyGBubbleRule;globalThis.SPLIT=dyGSplitAt;globalThis.B=dyGBubbles;', ctx);
+  const g = { roles: { a: 'admin', o: 'owner', m: 'member' } };
+  assert.equal(ctx.MAX(g, { k: 'a' }), 4);
+  assert.equal(ctx.MAX(g, { k: 'o' }), 4);
+  assert.equal(ctx.MAX(g, { k: 'm' }), 1, '配角刷屏就吵了');
+  assert.equal(ctx.B(g, { k: 'a' }, '一\n二\n三').length, 3);
+  assert.equal(ctx.B(g, { k: 'a' }, 'a\nb\nc\nd\ne').length, 4, '管理员也封顶四条');
+  assert.equal(ctx.B(g, { k: 'm' }, 'a\nb\nc').length, 1);
+  assert.match(ctx.RULE(g, { k: 'a' }), /一条消息只 @ 一个人/);
+  assert.match(ctx.RULE(g, { k: 'm' }), /只说一句/);
+});
+
+test('one bubble never @s two people at once', () => {
+  const ctx = vm.createContext({ String });
+  vm.runInContext(source('dyGSplitAt') + ';globalThis.S=dyGSplitAt;', ctx);
+  const two = ctx.S('@妈咪 阿姨抱歉当着您的面发脾气。@North 还要我倒数？');
+  assert.equal(two.length, 2, '截图里那种一个框 @ 两个人的必须拆开');
+  assert.ok(two[0].startsWith('@妈咪'));
+  assert.ok(two[1].startsWith('@North'));
+  assert.equal(ctx.S('@North 在吗').length, 1, '只 @ 一个人不用拆');
+  assert.equal(ctx.S('大家早').length, 1);
+  assert.equal(ctx.S('').length, 0);
+  assert.match(app, /if\(bi\)await sleep\(380\+Math\.random\(\)\*620\)/, '群里也要一条条冒出来');
+});
+
+test('an incoming message chimes, softly, and can be switched off', () => {
+  const ding = source('dyDing');
+  assert.match(ding, /createOscillator/, '现合成，不带音频文件');
+  assert.match(ding, /now-_dyDingAt<380/, '连着几条只响一次，不然像敲木鱼');
+  assert.match(ding, /catch\(_\)\{\}/, '出不了声也不能让别的功能挂掉');
+  assert.match(source('dyDingOn'), /S\.settings\.dyDing===false/, '默认开着，关了才不响');
+  assert.match(app, /dyGMsgs\(g\)\.push\(\{id:uid\(\),k:m\.k,text:t\.slice\(0,300\),time:Date\.now\(\)\}\);dyDing\(\)/, '群里别人说话要响');
+  assert.match(app, /live\.msgs\.push\(\{from:'them',text:parts\[i\],time:Date\.now\(\)\}\);dyDing\(\)/, '私信收到要响');
+  assert.match(app, /抖音消息提示音/, '设置里要能关');
+});
+
+test('the spark rides in the header next to the name', () => {
+  assert.match(source('renderDyDM'), /dySparkBadge\(d\)/);
+  assert.match(source('dySparkBadge'), /🔥/);
+  assert.ok(!app.includes('function dySparkLine('), '聊天区里那条撤掉了');
+  for (const [name, css] of [['小手机.html', html], ['私人壳', shell], ['index.html', index]]) {
+    assert.ok(css.includes('.dydm-spark-badge{'), `${name} 少了火花的样式`);
+  }
+});
+
+test('the 抖音 composer borrows WeChat stickers and the voice trick', () => {
+  for (const f of ['dyEmojiPanelHTML', 'dyVoiceToggle', 'dySendSticker', 'dyMsgBodyHTML', 'dyMsgPlain']) {
+    assert.ok(app.includes(`function ${f}(`), `${f} 缺失`);
+    assert.ok(priv.includes(`function ${f}(`), `私人版缺少 ${f}`);
+  }
+  assert.match(source('dyEmojiPanelHTML'), /S\.me\.stickers/, '表情包跟微信共用一份');
+  assert.match(source('dyEmojiPanelHTML'), /EMOJIS\.map/, '表情用的也是同一份');
+  assert.match(source('renderDyDM'), /svgIc\('smile'/, '笑脸换成线条图标，不是 emoji');
+  assert.doesNotMatch(source('renderDyDM'), /表情还没做/, '别再弹「还没做」');
+  assert.match(app, /kind:'voice'/, '打字发出来能变成语音条');
+  const plain = source('dyMsgPlain');
+  assert.match(plain, /\[语音：/);
+  assert.match(plain, /\[表情/);
+  assert.match(plain, /\[转账 ¥/);
+  assert.match(plain, /\[红包 ¥/);
+  assert.match(source('dyGroupTranscript'), /dyMsgPlain\(m\)/, '群聊上下文也要说清发的是什么');
+});
+
+test('money moves through the WeChat ledger, and a group packet can be grabbed', () => {
+  const send = source('dyMoneySend');
+  assert.match(send, /addBill\('out'/, '走微信那套账本');
+  assert.ok(!/S\.me\.balance=\+\( \(\+S\.me\.balance\|\|0\)-a \)/.test(send), 'addBill 自己会动余额，不能再扣一次');
+  assert.match(send, /a>\(\+S\.me\.balance\|\|0\)\)return toast/, '余额不够不给发');
+  assert.match(send, /if\(!red&&!target\)return toast/, '群里转账必须指定转给谁');
+  const grab = source('dyRedGrabRun');
+  assert.match(grab, /dyGreed\(m\)/, '谁抢得快看性格');
+  assert.match(grab, /r\.left<=0\)return/, '抢光了就停');
+  assert.match(source('dyGreed'), /爱钱\|贪\|财迷/, '小财迷手最快');
+  assert.match(source('dyRedGrabMe'), /addBill\('in',take/, '她自己抢到的要进账');
+  for (const [name, css] of [['小手机.html', html], ['私人壳', shell], ['index.html', index]]) {
+    assert.ok(css.includes('.dymo{'), `${name} 少了红包转账卡片的样式`);
+    assert.ok(css.includes('.dyvo{'), `${name} 少了语音条的样式`);
+  }
+});
+
+test('publishing is text-card or a real photo, and nobody pretends to see what they cannot', () => {
+  const compose = source('dyCompose');
+  assert.match(compose, /文字/);
+  assert.match(compose, /拍摄/);
+  assert.match(compose, /从相册选/);
+  assert.doesNotMatch(compose, /直播/, '直播先不做，也不放一个点不动的按钮');
+  assert.match(source('dyPostImage'), /setAttribute\('capture','environment'\)/, '拍摄要真的调摄像头');
+  assert.match(source('dyPostTextForm'), /卡片颜色/);
+  assert.match(source('dyPostTextForm'), /文字颜色/);
+  assert.match(source('dyPostPublishForm'), /dyAtCandidates\(\)/, '发布页能 @ 人');
+  assert.match(source('dyPostPublish'), /visionConfigured\(\)/, '配了视觉模型才去看图');
+  assert.match(source('dyPostVision'), /visionAPI\(/, '真的调视觉模型看图');
+  const scene = source('dyWorkSceneText');
+  assert.match(scene, /不要编造图里有什么/, '看不见就不许编');
+  assert.ok(app.includes('function dyWorkDescEdit('), '看不见时她能自己补一句');
+  assert.match(source('dyPostAfter'), /fans<dyAtFanThreshold\(\)/, '被 @ 的人粉丝多才会有粉丝来捧场');
+  assert.match(source('dyAtFansShow'), /猜这两个人什么关系/, '粉丝要来猜关系');
+  assert.match(source('dyWorkCardHTML'), /v\.img/, '照片作品要画照片');
+  assert.match(source('dyWorkThumbHTML'), /dyimg-thumb/, '网格里也是照片');
+  assert.match(source('dyWorkCardHTML'), /v\.cardFg/, '文字卡片按她选的字色画');
+  assert.ok(!app.includes('function doDyPost('), '旧的发布流程要清掉');
+});
+
+test('nothing that the 抖音 pages call went missing', () => {
+  /* 这一轮我整块替换代码时误删过 dyDMStamp、dyDMKey 这些，是爬虫先抓到的。
+     这条测试直接扫：抖音这一片 onclick 里叫到的函数，必须都真的存在。 */
+  const dy = app.slice(app.indexOf('function dyInit('));
+  const called = new Set([...dy.matchAll(/onclick="(?:event\.stopPropagation\(\);)?([a-zA-Z_$][\w$]*)\(/g)].map(m => m[1]));
+  const missing = [...called].filter(n => !new RegExp(`(?:^|\\n)(?:async )?function ${n}\\(`).test(app) && !/^(toast|render|save|back|go|closeModal|openModal|alert|\$)$/.test(n));
+  assert.deepEqual(missing, [], '这些函数被点到但根本不存在：' + missing.join(', '));
 });
