@@ -142,15 +142,21 @@ test('the relation list reads her own world and never fabricates people', () => 
   assert.match(source('dyRelRow'), /密友/);
 });
 
-test('the spark counter comes from real consecutive chat days', () => {
-  const ctx = vm.createContext({ msgs: () => ctx.rows, rows: [] });
-  vm.runInContext(`${source('dySparkDays')};globalThis.f=dySparkDays;`, ctx);
-  assert.equal(ctx.f('x'), 0, '没聊过就没有火花');
+test('the spark only grows when both of them wrote that day, and never resets', () => {
+  const ctx = vm.createContext({ Date, save() {} });
+  vm.runInContext(['dySparkState', 'dySparkDayKey', 'dySparkBothToday', 'dySparkTick'].map(source).join('\n') + ';globalThis.tick=dySparkTick;globalThis.key=dySparkDayKey;', ctx);
   const now = Date.now();
-  ctx.rows = [{ time: now }, { time: now - 86400000 }, { time: now - 2 * 86400000 }];
-  assert.equal(ctx.f('x'), 3);
-  ctx.rows = [{ time: now }, { time: now - 3 * 86400000 }];
-  assert.equal(ctx.f('x'), 1, '断了就从头算');
+  const d = { id: 'd1', cid: 'c0', msgs: [{ from: 'me', text: '在吗', time: now }] };
+  assert.equal(ctx.tick(d), 0, '只有我发了，不算续上');
+  d.msgs.push({ from: 'them', text: '在', time: now });
+  assert.equal(ctx.tick(d), 1, '双方都发了才 +1');
+  assert.equal(ctx.tick(d), 1, '一天最多涨一次');
+  d.spark.day = '2020-1-1';
+  d.msgs = [{ from: 'me', text: '很久以前', time: now - 40 * 86400000 }];
+  assert.equal(ctx.tick(d), 1, '隔很久没聊只会定格，永远不清零');
+  d.msgs.push({ from: 'me', text: '回来了', time: now }, { from: 'them', text: '嗯', time: now });
+  assert.equal(ctx.tick(d), 2, '回来接着往上长');
+  assert.match(source('dySparkLine'), /定格|还没续|已经续上/, '提示语要说清今天续没续上');
 });
 
 test('watch history records what she opened and can be cleared', () => {
@@ -243,7 +249,7 @@ test('the message page carries the five circular entries and folds strangers awa
 });
 
 test('unread counts come from messages that actually arrived while she was away', () => {
-  assert.match(app, /if\(!\(cur\(\)\.p==='dydm'&&cur\(\)\.id===d\.id\)\)d\.unread=\(\+d\.unread\|\|0\)\+1/, '对方发来的私信要算未读');
+  assert.match(app, /live\.unread=\(\+live\.unread\|\|0\)\+1/, '对方发来的私信要算未读');
   assert.match(source('renderDyDM'), /if\(d\.unread\)\{d\.unread=0/, '打开会话就清零');
   assert.match(source('dyStrangerUnread'), /reduce/, '文件夹上的数字是里面所有人加起来的');
 });
@@ -323,13 +329,14 @@ test('the generated stranger carries a persona of their own', () => {
 
 test('strangers in the group speak with their own persona, roles with theirs', () => {
   const p = source('dyGroupSpeakerPrompt');
-  assert.match(p, /if\(m\.cid\)\{const c=getC\(m\.cid\);if\(c\)return buildSystem\(c\)\+scene/, '角色用角色自己的人设');
+  assert.match(p, /buildSystem\(c\)\+dyGSceneBrief\(g,m\)/, '角色用角色自己的人设');
   assert.match(p, /dyGMemberPersona\(m\)/, '陌生人用他自己的人设');
-  assert.match(p, /别说自己是AI/);
+  assert.match(source('dyGSceneBrief'), /别说自己是AI/);
   const run = source('dyGroupReplyRun');
-  assert.match(run, /g\.aiOn===false\)return/, '关掉群聊 AI 就没人自动说话');
-  assert.match(run, /Math\.min\(3,/, '一轮最多三个人开口，不然一条消息烧一堆钱');
-  assert.match(run, /fromText\.includes\(dyGMemberName\(m\)\)/, '被 @ 到的先说');
+  assert.match(run, /g0\.aiOn===false\)return/, '关掉群聊 AI 就没人自动说话');
+  assert.match(run, /dyGCast\(g0,fromText,forceKeys\)/, '谁开口交给出场机制决定');
+  assert.match(source('dyGCast'), /dyGMaxSpeak\(g\)/, '一轮的人数上限是可以设置的');
+  assert.match(source('dyGCast'), /indexOf\(dyGMemberName\(m\)\)>=0/, '被点名的一定开口');
 });
 
 test('only the owner can hand out admin, and admins can manage members', () => {
@@ -519,7 +526,7 @@ test('each 私聊 and 群聊 carries its own context length, and reply length fo
   assert.equal(ctx.R({ ctx: 900 }), 60, '最多 60 条');
   assert.equal(ctx.R({ ctx: 25 }), 25);
   assert.match(app, /d\.msgs\.slice\(-dyChatCtxRows\(d\)\)/, '私信按这条设置取历史');
-  assert.match(app, /dyGroupTranscript\(cur_,dyChatCtxRows\(cur_\)\)/, '群聊也按这条设置取历史');
+  assert.match(app, /dyGroupTranscript\(g,dyChatCtxRows\(g\)\)/, '群聊也按这条设置取历史');
   assert.match(source('dyReplyBudget'), /maxTokens/, '回复长度绑定设置里的线上聊天');
   assert.match(app, /\{max:dyReplyBudget\(\)\}/, '私信回复长度跟着设置走');
   for (const f of ['dyChatCtxEdit', 'dyChatCtxSave', 'dyChatCtxBox']) assert.ok(priv.includes(`function ${f}(`), `私人版缺少 ${f}`);
@@ -603,4 +610,120 @@ test('a profile opens from anywhere, not only from a group chat', () => {
     assert.ok(css.includes('.dydm-who{'), `${name} 少了可点头像的样式`);
     assert.ok(css.includes('.dyus-nobio{'), `${name} 少了空简介占位的样式`);
   }
+});
+
+/* 第九批：红点进页面就全清；群聊按性格出场（主角＋配角）；管理员能禁言踢人，
+   规矩由代码硬卡；她被禁言只能私信求解；IP 和性别跟人设走且可手动改。 */
+
+test('a red dot clears the moment she opens the page, not one row at a time', () => {
+  assert.match(source('dyOpenFans'), /dyMarkAllSeen\('fans',dyFanRows\(\)\)/, '粉丝进页面就全清');
+  assert.match(source('dyOpenVisitors'), /dyMarkAllSeen\('vis',S\.dy\.visitors\|\|\[\]\)/, '访客进页面就全清');
+  assert.match(source('dyActSeeTab'), /if\(tab==='群通知'\)dyMarkAllSeen\('apply',dyApplies\(\)\)/, '群通知也一样');
+  assert.match(source('dyApplyUnseen'), /filter\(a=>!a\.seen\)/, '群通知的红点按看没看过算，待审批的仍然留在列表里');
+  assert.match(source('dyFanRow'), /dyWasFresh\('fans',x\.k\)/, '清掉之后这一趟还看得见哪几条是新的');
+  const mark = source('dyMarkAllSeen');
+  assert.match(mark, /x\.seen=true/);
+  assert.match(mark, /_dyFreshMark\[kind\]=fresh/);
+});
+
+test('who speaks in a group is decided by personality, and the room can stay quiet', () => {
+  const cast = source('dyGCast');
+  assert.match(cast, /m\.k===lover/, '恋人是主角，每次都开口');
+  assert.match(cast, /!r\.hard&&!r\.soft&&r\.sc<62\)continue/, '分不够就不说话，群里可以冷场');
+  assert.match(cast, /adminN>=maxAdm&&!r\.hard/, '管理员一轮最多几个是可以设置的');
+  assert.match(cast, /dyGMuteLeft\(g,k\)>0/, '被禁言的人不参与出场');
+  assert.match(cast, /Math\.random\(\)<\.5\?0:1/, '恋人第一第二都可能，不要每次都排第一');
+  const ctx = vm.createContext({ Math, String });
+  vm.runInContext(['dyGGuessTalk'].map(source).join('\n') + `;const DY_TALKY=${app.match(/const DY_TALKY=(\[[\s\S]*?\]\];)/)[1]};globalThis.T=dyGGuessTalk;`, ctx);
+  assert.ok(ctx.T('很活泼的社牛，话痨') >= 80, '活泼的人话痨度要高');
+  assert.ok(ctx.T('内向安静，话少') <= 30, '内向的人话痨度要低');
+  assert.equal(ctx.T('什么都没写'), 55, '没写就给个中间值');
+  assert.match(source('dyGCareHit'), /text\.indexOf\(w\)>=0/, '踩中在意的词');
+  assert.match(source('dyGroupReply'), /round<2/, '被 @ 之后最多再接一轮，不能没完没了');
+});
+
+test('strangers share one call while characters each get their own', () => {
+  const run = source('dyGroupReplyRun');
+  assert.match(run, /if\(m\.cid\)\{/, '角色单独调用，带完整人设');
+  assert.match(run, /if\(!crowdLines\)\{/, '网友合并成一次调用');
+  assert.match(run, /第一个网友开口时才生成/, '要等前面角色说完再生成，网友才能接住他们的话');
+  assert.match(source('dyGCrowdPrompt'), /一人一行/);
+  const ctx = vm.createContext({ String, cleanReply: v => String(v || '').trim() });
+  vm.runInContext(source('dyGCrowdParse') + ';globalThis.P=dyGCrowdParse;', ctx);
+  const crowd = [{ k: 's1', name: '甲' }, { k: 's2', name: '乙' }];
+  vm.runInContext('globalThis.dyGMemberName=m=>m&&m.name||"";', ctx);
+  const got = ctx.P(crowd, '甲：我来啦\n乙：好饿');
+  assert.equal(got.s1, '我来啦');
+  assert.equal(got.s2, '好饿');
+});
+
+test('an admin can mute and kick, but never an admin or the owner', () => {
+  const deny = source('dyGCmdDeny');
+  assert.match(deny, /if\(!dyGCanManage\(g,actorKey\)\)return '不是管理员'/, '普通成员的指令不算数');
+  assert.match(deny, /tRole==='owner'\)return '不能踢群主'/);
+  assert.match(deny, /tRole==='admin'\)return '不能踢管理员'/);
+  assert.match(deny, /actorM\.cid===cid\)\)return '只有恋人能禁言群主'/, '只有恋人能禁言她');
+  assert.match(source('dyGRunCommands'), /DY_GCMD_RE/, '指令从话里抠出来，不显示给她看');
+  assert.match(app, /const DY_GCMD_RE=.*禁言\|解禁\|踢出\|移出\|拉回\|请回/, '四种指令都认');
+  for (const f of ['dyGMuteLeft', 'dyGCmdApply', 'dyGKicked', 'dyGMuteMember', 'dyGKickedList', 'dyGCastEdit', 'dyGMemberTune']) {
+    assert.ok(app.includes(`function ${f}(`), `${f} 缺失`);
+    assert.ok(priv.includes(`function ${f}(`), `私人版缺少 ${f}`);
+  }
+  const brief = source('dyGRoleBrief');
+  assert.match(brief, /不能踢群主/, '要把规矩告诉他，否则他会去踢管理员然后被驳回');
+  assert.match(brief, /只有你能禁言/, '恋人要知道自己有这个特权');
+});
+
+test('when she is muted the box is locked and only he can let her out', () => {
+  assert.match(source('dyGroupView'), /dyGMeMuted\(g\)\?dyGMutedBarHTML\(g\)/, '被禁言就把输入框换掉');
+  const bar = source('dyGMutedBarHTML');
+  assert.match(bar, /还剩/, '要写还剩多久');
+  assert.match(bar, /自己解不开/, '要说清她自己解不开');
+  assert.match(bar, /dyGMutedBeg/, '给她一个直接去私信他的入口');
+  assert.match(source('dyDMMutePrompt'), /\[解禁\|/, '私信里他能放她出来');
+  assert.match(source('dyDMMutePrompt'), /完全按你的性格来/, '放不放由角色自己决定');
+  assert.match(source('dyDMRunUnmute'), /dyGCmdApply\(g,by\.k,'unmute'/, '私信里的解禁要真的解开群里的禁言');
+  assert.match(app, /dyDMBubbles\(dyDMRunUnmute\(d\.cid,cleanReply\(r\)\)\)/, '私信回复要先过一遍解禁指令');
+  for (const [name, css] of [['小手机.html', html], ['私人壳', shell], ['index.html', index]]) {
+    assert.ok(css.includes('.dyg-muted{'), `${name} 少了禁言条的样式`);
+    assert.ok(css.includes('.dyg-at{'), `${name} 少了 @ 高亮的样式`);
+  }
+});
+
+test('the group wakes itself up after a long silence, within a daily budget', () => {
+  const idle = source('dyGroupIdleChat');
+  assert.match(idle, /g\.idleCount\|\|0\)>=dyGIdleMax\(g\)/, '一天有次数上限，不会一直烧');
+  assert.match(idle, /dyGIdleHours\(g\)\*3600000/, '冷场多久才自己聊，是可以设置的');
+  assert.match(idle, /if\(!last\)return/, '一句话都没有的新群先不自己聊');
+  assert.match(source('dyOpenGroup'), /dyGroupIdleChat\(id\)/, '打开群的时候检查一次');
+  assert.match(source('dyGCastSave'), /g\.maxSpeak=/, '这些都能在群设置里改');
+});
+
+test('an IP badge follows the persona, falls back to stable random, and can be edited', () => {
+  const ip = source('dyPersonIP');
+  assert.match(ip, /if\(rec&&rec\.ip\)return/, '手动改过就以手动的为准');
+  assert.match(ip, /charHomeCity\(c\)/, '角色先看人设里写的城市');
+  assert.match(ip, /dyKeyHash\(dyPersonKey\(p\)\+'\|ip2'\)/, '没写就按这个人固定一个，不会一刷一变');
+  const ctx = vm.createContext({ String });
+  vm.runInContext(`const DY_CITY_PROV=${app.match(/const DY_CITY_PROV=(\[[\s\S]*?\]\];)/)[1]}\nconst DY_PROVS=${app.match(/const DY_PROVS=(\[[^\]]*\];)/)[1]}\n${source('dyProvinceOfCity')};globalThis.P=dyProvinceOfCity;`, ctx);
+  assert.equal(ctx.P('杭州'), '浙江');
+  assert.equal(ctx.P('苏州'), '江苏');
+  assert.equal(ctx.P('成都'), '四川');
+  assert.equal(ctx.P('北京'), '北京');
+  assert.equal(ctx.P(''), '');
+  assert.doesNotMatch(source('dyUserView'), /'江苏','浙江','上海','广东','北京','四川'/, '不能再是写死的六个省轮着来');
+  assert.match(source('dyUserView'), /dyPersonIP\(p\)/);
+  assert.match(source('dyUserView'), /dyPersonGender\(p\)/);
+  assert.match(source('dyUserMenu'), /dyUserIPEdit\(\)/, '菜单里能改 IP 和性别');
+});
+
+test('a 抖音 DM answers in up to four bubbles, like WeChat', () => {
+  const ctx = vm.createContext({ String, cleanReply: v => String(v || '').trim() });
+  vm.runInContext(source('dyDMBubbles') + ';globalThis.B=dyDMBubbles;', ctx);
+  assert.equal(ctx.B('在的\n刚看到\n你怎么了').length, 3);
+  assert.equal(ctx.B('a\nb\nc\nd\ne\nf').length, 4, '最多四条');
+  assert.deepEqual([...ctx.B('就一句话')], ['就一句话']);
+  assert.deepEqual([...ctx.B('')], []);
+  assert.match(source('dyDMBubbleRule'), /1 到 4 条/);
+  assert.match(app, /if\(i\)await sleep\(420\+Math\.random\(\)\*680\)/, '一条条冒出来，不要糊成一坨');
 });

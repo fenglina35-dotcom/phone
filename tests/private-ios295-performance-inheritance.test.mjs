@@ -45,20 +45,20 @@ function functionSource(sourceText, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('private identifiers advance to v1267 and iOS 367 while public stays v1267', () => {
+test('private identifiers advance to v1268 and iOS 368 while public stays v1268', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1267'/);
-  assert.match(index, /app\.js\?v=1267&r=v1267-private-sync-1/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1268'/);
+  assert.match(index, /app\.js\?v=1268&r=v1268-private-sync-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=336/);
-  assert.match(app, /APP_VER='v1267 · 抖音简介与主页入口'/);
+  assert.match(app, /APP_VER='v1268 · 抖音群聊与火花'/);
   assert.match(overlay, /336-daily-file-backup/);
-  assert.match(webview, /1\.0\.367 \(367\)/);
-  assert.match(bridge, /private static let build = "1\.0\.367 \(367\)"/);
+  assert.match(webview, /1\.0\.368 \(368\)/);
+  assert.match(bridge, /private static let build = "1\.0\.368 \(368\)"/);
   assert.match(bridge, /static let contractVersion = 38/);
-  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 367;/g) || []).length, 12);
-  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.367;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1267 · 抖音简介与主页入口'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1267'/);
+  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 368;/g) || []).length, 12);
+  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.368;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1268 · 抖音群聊与火花'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1268'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
@@ -146,7 +146,7 @@ test('diagnostics identify the protected stage without collecting content', () =
   assert.doesNotMatch(overlay, /messageBody|chatContent|authorizationToken/);
 });
 
-test('Mac guide identifies the current private v1267 iOS367 source', () => {
+test('Mac guide identifies the current private v1268 iOS368 source', () => {
   const install = fs.readFileSync(
     path.join(project, '第三百二十七次安装_v1206_完整衣柜_请先读.md'),
     'utf8',
@@ -160,11 +160,11 @@ test('Mac guide identifies the current private v1267 iOS367 source', () => {
     assert.match(guide, /Mac.*编译/);
     assert.match(guide, /真机|真实 iPhone/);
   }
-  assert.match(mac, /1\.0\.367 \(367\)/);
+  assert.match(mac, /1\.0\.368 \(368\)/);
   assert.match(mac, /原生桥.*38/);
   assert.match(install, /1\.0\.327 \(327\)/);
   assert.match(install, /原生桥.*35/);
-  assert.match(mac, /^# v1267 .*iOS367/);
+  assert.match(mac, /^# v1268 .*iOS368/);
   assert.match(mac, /网页.*推送/);
   assert.match(install, /私人内置网页 v1206/);
   assert.match(install, /两边共有/);
