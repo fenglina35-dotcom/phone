@@ -845,3 +845,41 @@ test('nothing that the 抖音 pages call went missing', () => {
   const missing = [...called].filter(n => !new RegExp(`(?:^|\\n)(?:async )?function ${n}\\(`).test(app) && !/^(toast|render|save|back|go|closeModal|openModal|alert|\$)$/.test(n));
   assert.deepEqual(missing, [], '这些函数被点到但根本不存在：' + missing.join(', '));
 });
+
+/* 第十一批：群聊不再被弹回顶部；被踢出去的人不能再说话；发作品能选真的音乐。 */
+
+test('the group chat keeps its scroll instead of jumping to the top', () => {
+  const t = source('renderScrollTarget');
+  assert.match(t, /sub==='group'\)return\{id:'\.dyg-box',stick:true\}/, '群聊要有自己的滚动目标，而且贴着底部');
+  assert.match(t, /c\.p==='dy'/, '抖音这一页要按子页面分开看');
+  assert.match(t, /dy:\['dyfeed',0\]/, '信息流原来那个不能动');
+  assert.match(source('dyGroupView'), /class="dyg-box"/, '群聊那块得有这个 class');
+  assert.match(app, /data-render-scroll-key="dyg:\$\{esc\(g\.id\)\}"/, '每个群各记各的位置');
+});
+
+test('someone kicked mid-round cannot get another word in', () => {
+  const run = source('dyGroupReplyRun');
+  assert.match(run, /if\(!dyGFind\(g,m\.k\)\)continue/, '出场名单是开头排好的，踢完要在循环里再拦一道');
+  const i = run.indexOf('if(!dyGFind(g,m.k))continue');
+  const j = run.indexOf('dyAuxChat');
+  assert.ok(i >= 0 && i < j, '这一拦必须在调模型之前，不然钱都花了');
+  assert.match(source('dyGCast'), /dyGMemberList\(g\)\.filter/, '排名单本来就只从现有成员里挑');
+});
+
+test('a work can carry a song she really has, and tapping it plays that song', () => {
+  for (const f of ['dyMusicLib', 'dyPostMusicPick', 'dyPostMusicSet', 'dyWorkMusicHTML', 'dyWorkMusicPlay']) {
+    assert.ok(app.includes(`function ${f}(`), `${f} 缺失`);
+    assert.ok(priv.includes(`function ${f}(`), `私人版缺少 ${f}`);
+  }
+  assert.match(source('dyMusicLib'), /S\.music&&S\.music\.songs/, '读的是真的音乐库');
+  assert.match(source('dyPostMusicPick'), /音乐库里还没有歌/, '库是空的要说清楚');
+  assert.match(source('dyPostMusicPick'), /不配音乐/, '选过了要能取消');
+  assert.match(source('dyWorkMusicPlay'), /musicPlay\(s\.id\)/, '点了真的放这首歌');
+  assert.match(source('dyWorkMusicPlay'), /已经不在音乐库里了/, '歌被删了要说清楚，不能装作放了');
+  assert.match(source('dyPostPublish'), /songId:p\.songId\|\|''/, '发布时要把歌带上');
+  assert.match(source('dyPostPublishForm'), /dyPostMusicPick\(\)/, '发布页要有选音乐的入口');
+  assert.match(source('dyWorkView'), /dyWorkMusicHTML\(v\)/, '作品页上要显示出来');
+  for (const [name, css] of [['小手机.html', html], ['私人壳', shell], ['index.html', index]]) {
+    assert.ok(css.includes('.dymu{'), `${name} 少了配乐那一条的样式`);
+  }
+});

@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1269'){
+if(window.__NORTH_SHELL_BUILD__!=='1270'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -435,7 +435,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1269 · 抖音发作品与输入栏';
+const APP_VER='v1270 · 抖音群聊滚动与配乐';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1757,7 +1757,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1269&r=v1269-private-sync-1';
+  const url='sw.js?v=1270&r=v1270-private-sync-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -2320,7 +2320,10 @@ function back(){const leaving=cur();if(leaving&&leaving.p==='wxscan'&&window.wxS
 function home(){if(window.wxScanStop)window.wxScanStop();window._wxReturnToDiscover=false;stack=[{p:'home'}];render();}
 function cur(){return stack[stack.length-1];}
 function renderPageKey(c){if(!c)return'';if(c.p==='chat')return'chat:'+c.id;if(c.p==='pfchat')return'pfchat:'+c.id;if(c.p==='pfgroup')return'pfgroup:'+c.gid;if(c.p==='group')return'group:'+c.id;if(c.p==='mgroom')return'mgroom:'+c.id;if(c.p==='hischat')return'hischat:'+c.id+':'+c.fid;if(c.p==='dydm')return'dydm:'+c.id;return c.p;}
-function renderScrollTarget(c){if(!c)return null;if(c.p==='hischat'&&c.fid==='__me')return{id:'hisselflog',stick:true};const map={settings:['settingsscroll',0],couple:['couplescroll',0],wxmoment:['wxMomentScroll',0],wxalbum:['.wxalbum-page',0],wxfavorites:['.wxfav-page',0],spy:['spyAppScroll',0],x:['xscroll',0],dy:['dyfeed',0],wxnearby:['wxNearbyScroll',0],chat:['chatbg',1],pfchat:['pfchatbg',1],pfgroup:['pfgroupbg',1],group:['chatbg',1],mgroom:['mgrbg',1],alter:['alterbg',1],tale:['talebox',1],dread:['dreadbox',1],xdm:['xdmbox',1],dydm:['dydmbox',1],shopcs:['csbox',1],off:['offbg',1],rp:['rpbg',1],jail:['jailbox',1],gs:['gsbg',1],hischat:['hischatlog',1],phonesms:['smsbody',1],calllog:['cllog',0]};const x=map[c.p];return x?{id:x[0],stick:!!x[1]}:null;}
+function renderScrollTarget(c){if(!c)return null;if(c.p==='hischat'&&c.fid==='__me')return{id:'hisselflog',stick:true};const map={settings:['settingsscroll',0],couple:['couplescroll',0],wxmoment:['wxMomentScroll',0],wxalbum:['.wxalbum-page',0],wxfavorites:['.wxfav-page',0],spy:['spyAppScroll',0],x:['xscroll',0],dy:['dyfeed',0],wxnearby:['wxNearbyScroll',0],chat:['chatbg',1],pfchat:['pfchatbg',1],pfgroup:['pfgroupbg',1],group:['chatbg',1],mgroom:['mgrbg',1],alter:['alterbg',1],tale:['talebox',1],dread:['dreadbox',1],xdm:['xdmbox',1],dydm:['dydmbox',1],shopcs:['csbox',1],off:['offbg',1],rp:['rpbg',1],jail:['jailbox',1],gs:['gsbg',1],hischat:['hischatlog',1],phonesms:['smsbody',1],calllog:['cllog',0]};if(c.p==='dy'){const sub=typeof _dySub==='string'?_dySub:'';
+    if(sub==='group')return{id:'.dyg-box',stick:true};/* 群聊要贴着底部，跟微信一样 */
+    if(sub==='work')return{id:'.dywk-box',stick:false};}
+  const x=map[c.p];return x?{id:x[0],stick:!!x[1]}:null;}
 function nearBottom(el){return !el||Math.max(0,el.scrollHeight-el.scrollTop-el.clientHeight)<80;}
 function chatPinBottom(cb){if(!cb)return;const pin=()=>{if(!cb.isConnected)return;cb.scrollTop=Math.max(0,cb.scrollHeight-cb.clientHeight);};pin();requestAnimationFrame(pin);}
 function appendChatHTML(cb,html,opt){if(!cb||!html)return null;opt=opt||{};const stick=nearBottom(cb),typing=opt.replaceTyping?cb.querySelector('#typing'):null;let node=null;
@@ -2660,7 +2663,7 @@ function cinemaAsrGuardSync(job,finished){const covered=finished?Math.max(0,Numb
 function cinemaAsrGuardPlayback(v){if(!v||!_cin.extracting||_cin.asrMode!=='watch')return false;const covered=Math.max(0,Number(_cin.asrCoveredUntil)||0),limit=covered>0?Math.max(0,covered-10):20,current=Math.max(0,Number(v.currentTime)||0);if(current<limit-.15)return false;if(v.paused&&!_cin.asrGuardPaused)return false;if(current>limit+.25)v.currentTime=limit;_cin.asrGuardPaused=true;v.pause();cinemaSetStatus('已暂停等字幕 · 当前可看到 '+cinemaFmt(covered||limit),'working');return true;}
 function cinemaAsrGuardRelease(resume){const v=$('#cinVideo'),held=_cin.asrGuardPaused;_cin.asrGuardPaused=false;if(resume&&held&&v)v.play().catch(()=>{});}
 async function cinemaRestoreStoredSubtitles(s,token){if(!s||s.kind!=='video')return;const manual=await cinGet(cinemaManualSubtitleKey(s));if(token!==_cin.token||cinemaSession()!==s)return;if(manual&&Array.isArray(manual.cues)&&manual.cues.length){const n=cinemaApplyCues(manual.cues,manual.name||'手动导入字幕','subtitle');cinemaSetStatus('已恢复手动字幕 · '+n+' 句','ready');return;}const job=await cinemaAsrLoadJob(s);if(token!==_cin.token||cinemaSession()!==s||!job)return;cinemaAsrTaskUpdate(s,job);cinemaAsrGuardSync(job,job.status==='done');const cues=cinemaAsrJobCues(job);if(cues.length){cinemaApplyCues(cues,job.status==='done'?'已保存的提取字幕':'未完成的提取字幕','extract');cinemaSetStatus(job.status==='done'?'已恢复 '+cues.length+' 句字幕':'已恢复部分字幕 · 可继续提取','ready');}}
-async function cinemaMp4Library(){if(globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function')return globalThis.NorthMP4Box;if(!_cinMp4Module)_cinMp4Module=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='./vendor/mp4box.all.js?v=1269&r=file-safe-1';script.async=true;script.dataset.northMp4box='1';script.onload=()=>globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function'?resolve(globalThis.NorthMP4Box):reject(new Error('字幕解析组件没有正常启动'));script.onerror=()=>reject(new Error('字幕解析组件加载失败，请重新打开小手机后再试'));document.head.appendChild(script);}).catch(e=>{_cinMp4Module=null;const stale=document.querySelector('script[data-north-mp4box="1"]');if(stale)stale.remove();throw e;});return _cinMp4Module;}
+async function cinemaMp4Library(){if(globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function')return globalThis.NorthMP4Box;if(!_cinMp4Module)_cinMp4Module=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='./vendor/mp4box.all.js?v=1270&r=file-safe-1';script.async=true;script.dataset.northMp4box='1';script.onload=()=>globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function'?resolve(globalThis.NorthMP4Box):reject(new Error('字幕解析组件没有正常启动'));script.onerror=()=>reject(new Error('字幕解析组件加载失败，请重新打开小手机后再试'));document.head.appendChild(script);}).catch(e=>{_cinMp4Module=null;const stale=document.querySelector('script[data-north-mp4box="1"]');if(stale)stale.remove();throw e;});return _cinMp4Module;}
 async function cinemaVideoCodecProbe(file){if(!file||typeof file.slice!=='function')return null;if(_cin.videoInfo)return _cin.videoInfo;try{const MP4Box=await cinemaMp4Library(),mp4=MP4Box.createFile(false);let info=null,parseError='';mp4.onReady=x=>{info=x;};mp4.onError=e=>{parseError=String(e||'');};const step=1024*1024;for(let offset=0,guard=0;offset<file.size&&guard++<256&&!info;){const end=Math.min(file.size,offset+step),ab=await file.slice(offset,end).arrayBuffer();ab.fileStart=offset;const next=Number(mp4.appendBuffer(ab));offset=Number.isFinite(next)&&next>end?Math.min(file.size,next):end;if(guard%8===0)await new Promise(resolve=>setTimeout(resolve,0));}if(!info)mp4.flush();if(!info)return _cin.videoInfo={parseError:parseError||'未读到 MP4 / MOV 媒体信息'};const video=(info.videoTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.video),audio=(info.audioTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.audio);return _cin.videoInfo={videoCodec:String(video&&video.codec||''),audioCodec:String(audio&&audio.codec||''),width:Number(video&&video.video&&video.video.width||video&&video.track_width||0),height:Number(video&&video.video&&video.video.height||video&&video.track_height||0)};}catch(e){return _cin.videoInfo={parseError:String(e&&e.message||e||'媒体信息读取失败')};}}
 function cinemaVideoErrorReason(code,info){const vc=String(info&&info.videoCodec||''),ac=String(info&&info.audioCodec||''),hevc=/^(?:hvc1|hev1|hevc|dvhe|dvh1)/i.test(vc),android=cinemaAndroidBrowser();if(android&&hevc)return '检测到视频编码 '+vc+'（HEVC / H.265）。苹果设备能够播放，并不代表当前安卓浏览器或手机具备同样的网页解码能力。';if(android&&code===3)return '安卓浏览器已经读到文件，但解码画面或声音失败。';if(android&&code===4)return '安卓浏览器不支持这个文件的容器、视频编码或音频编码。';if(code===3)return '浏览器已读到文件，但解码画面或声音失败。';if(code===4)return '当前浏览器不支持这个视频的容器或编码。';return '浏览器没有读到可播放的视频数据。';}
 function cinemaVideoRetryCompatible(info){const vc=String(info&&info.videoCodec||''),ac=String(info&&info.audioCodec||'');return /^(?:avc1|avc3)(?:\.|$)/i.test(vc)&&(!ac||/^(?:mp4a|aac)(?:\.|$)/i.test(ac));}
@@ -5633,6 +5636,7 @@ function dyPostPublishForm(){const p=_dyPost;if(!p)return;
     <div class="field"><textarea id="dyp_desc" rows="3" maxlength="300" placeholder="添加作品描述…可以带 #话题">${esc(p.desc||'')}</textarea></div>
     <div class="field"><label>@ 朋友<small style="color:#888">被 @ 的人粉丝多的话，他的粉丝会来看热闹</small></label>
       <div class="dyat">${people.length?people.map(x=>`<i class="${(p.at||[]).includes(x.k)?'on':''}" onclick="dyPostAt('${esc(x.k)}')">@${esc(x.name)}</i>`).join(''):'<span style="color:#777;font-size:12px">还没有可以 @ 的人</span>'}</div></div>
+    <div class="field"><label>配乐</label><div class="dyat"><i class="${p.songId?'on':''}" onclick="dyPostMusicPick()">${p.music?'♪ '+esc(p.music):'♪ 从音乐库选一首'}</i></div></div>
     ${visionConfigured()?'':'<div class="hint" style="color:#e0a54a">你还没配视觉模型，角色看不见这张图。发布后可以自己补一句画面描述，他们就按那句来评论。</div>'}
     <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="dyPostPublish()">发作品</button></div>`);}
 function dyAtCandidates(){dyInit();const out=[],seen=new Set();
@@ -5642,12 +5646,38 @@ function dyAtCandidates(){dyInit();const out=[],seen=new Set();
   return out.slice(0,12);}
 function dyPostAt(k){const p=_dyPost;if(!p)return;const el=$('#dyp_desc');if(el)p.desc=el.value;
   p.at=p.at||[];const i=p.at.indexOf(k);if(i<0)p.at.push(k);else p.at.splice(i,1);dyPostPublishForm();}
+/* 发作品可以配一首你音乐库里真有的歌——不是填一行字，是真的从库里挑，
+   作品页上点那张唱片就能放出来。 */
+function dyMusicLib(){try{if(typeof musicInit==='function')musicInit();}catch(_){}
+  return (S.music&&S.music.songs||[]).filter(s=>s&&s.id);}
+function dyPostMusicPick(){const el=$('#dyp_desc');if(el&&_dyPost)_dyPost.desc=el.value;
+  const songs=dyMusicLib();
+  if(!songs.length)return toast('音乐库里还没有歌～先去音乐里添加');
+  openModal(`<h3>选音乐</h3><div class="hint">从你的音乐库里挑一首，作品页上点唱片就能放。</div>
+    <div style="max-height:46vh;overflow:auto">
+      ${_dyPost&&_dyPost.songId?`<div class="row dymu-row" onclick="dyPostMusicSet('')"><b style="flex:1;font-size:14px">不配音乐</b><span style="color:#888;font-size:13px">取消</span></div>`:''}
+      ${songs.map(s=>`<div class="row dymu-row" onclick="dyPostMusicSet('${esc(s.id)}')"><b style="flex:1;font-size:14px;font-weight:500">${esc(s.title||'未命名')}</b><span style="color:#888;font-size:12px">${esc(s.artist||'')}</span></div>`).join('')}
+    </div><button class="btn g" style="margin-top:8px" onclick="dyPostPublishForm()">返回</button>`);}
+function dyPostMusicSet(sid){if(!_dyPost)return;
+  const s=sid?dyMusicLib().find(x=>x.id===sid):null;
+  _dyPost.songId=s?s.id:'';_dyPost.music=s?((s.title||'未命名')+(s.artist?' · '+s.artist:'')):'';
+  dyPostPublishForm();}
+/* 作品页底下那条「♪ 歌名」，点了真的放这首歌 */
+function dyWorkMusicHTML(v){if(!v||!v.music)return '';
+  return `<div class="dymu" onclick="event.stopPropagation();dyWorkMusicPlay('${esc(v.id)}')"><i>♪</i><span>${esc(v.music)}</span></div>`;}
+function dyWorkMusicPlay(id){const v=dyVid(id);if(!v)return;
+  if(!v.songId)return toast('这首歌只是标注，库里没有对应的歌');
+  const s=dyMusicLib().find(x=>x.id===v.songId);
+  if(!s)return toast('这首歌已经不在音乐库里了');
+  if(typeof musicPlay==='function'){musicPlay(s.id);toast('正在放：'+(s.title||'这首歌'));}
+  else toast('放不了，音乐模块没就绪');}
 function dyPostPublish(){const p=_dyPost;if(!p)return;
   const el=$('#dyp_desc');if(el)p.desc=String(el.value||'').trim();
   dyInit();const id=uid(),at=(p.at||[]).slice();
   const v={id,cid:'me',author:dyNick(),avatar:dyAvatar(),desc:p.desc||'',body:p.kind==='text'?p.card:'',
     narration:'',lk:0,st:0,ts:Date.now(),comments:[],at,
     grad:p.kind==='text'?DY_CARD_BG[p.bg][1]:'',cardFg:p.kind==='text'?DY_CARD_FG[p.fg][1]:'',
+    music:p.music||'',songId:p.songId||'',
     img:p.kind==='img'?p.src:'',imgDesc:'',visionState:p.kind==='img'?(visionConfigured()?'pending':'off'):''};
   S.dy.mine.unshift(v);S.dy.feed.unshift(v);save();closeModal();_dyPost=null;
   dyTab='me';_dySub='';render();
@@ -6135,6 +6165,7 @@ async function dyGroupReplyRun(gid,fromText,forceKeys){const g0=dyGroup(gid);if(
   for(const m of cast){
     await sleep(700+Math.random()*900);
     const g=dyGroup(gid);if(!g)return said;
+    if(!dyGFind(g,m.k))continue;/* 这一轮里已经被踢出去了，就不能再说话 */
     if(dyGMuteLeft(g,m.k)>0)continue;/* 这一轮里被别人禁言了，就闭嘴 */
     dyTypingOn('g:'+gid);
     try{
@@ -7064,6 +7095,7 @@ function dyWorkView(){const v=dyVid(_dyWorkId);if(!v)return `<div class="dyvi"><
       <div class="dywk-frame" style="background-image:${grad}" onclick="dyTapVideo('${v.id}')">${dyWorkCardHTML(v,{full:true})}</div>
       ${dyWorkDanmu(v)}${dyWorkRail(v)}
       <div class="dynarr" id="narr_${v.id}" onclick="dyTapVideo('${v.id}')" style="display:${_dyNarr[v.id]?'block':'none'}"><div style="font-weight:800;color:#fff;margin-bottom:7px">视频内容</div>${esc(v.narration||v.desc||'（这条还没有内容描写）')}<div style="text-align:center;color:#777;margin-top:10px;font-size:11px">轻触收起</div></div>
+      ${dyWorkMusicHTML(v)}
     </div>
     <div class="dywk-bar">${mine?`<span>▶ ${dyNum(dyWorkViews(v))}浏览</span><button class="an" onclick="dyWorkAnalyze('${v.id}')">${svgIc('disk',17,'#f2f2f4',2)}视频分析 ⌃</button><span class="pub">公开</span>`:`<span>▶ ${dyNum(dyWorkViews(v))}浏览</span><button class="an" onclick="dyFwd('${v.id}')">${svgIc('forward',17,'#f2f2f4',2)}转发给角色</button><span class="pub">@${esc(v.author||'用户')}</span>`}</div>
   </div>`;}

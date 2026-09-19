@@ -58,21 +58,21 @@ function persistenceRuntime() {
   return { context, writes, releases, traces };
 }
 
-test('private identity advances to v1269 and iOS 369 while public remains v1269', () => {
-  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1269'/);
-  assert.match(privateApp, /APP_VER='v1269 · 抖音发作品与输入栏'/);
+test('private identity advances to v1270 and iOS 370 while public remains v1270', () => {
+  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1270'/);
+  assert.match(privateApp, /APP_VER='v1270 · 抖音群聊滚动与配乐'/);
   for (const html of [privateIndex, privateAlias]) {
-    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1269'/);
-    assert.match(html, /app\.js\?v=1269&r=v1269-private-sync-1/);
+    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1270'/);
+    assert.match(html, /app\.js\?v=1270&r=v1270-private-sync-1/);
     assert.match(html, /private-runtime-diagnostics\.js\?v=336/);
   }
-  assert.match(privateRepair, /index\.html\?repair=1&v=1269/);
-  assert.match(swift, /1\.0\.369 \(369\)/);
-  assert.match(bridge, /private static let build = "1\.0\.369 \(369\)"/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 369;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.369;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1269 · 抖音发作品与输入栏'/);
-  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1269'/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1270/);
+  assert.match(swift, /1\.0\.370 \(370\)/);
+  assert.match(bridge, /private static let build = "1\.0\.370 \(370\)"/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 370;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.370;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1270 · 抖音群聊滚动与配乐'/);
+  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1270'/);
   assert.doesNotMatch(publicApp, /persistWechatRequested|smallPhoneWechatPersistTrace/);
 });
 
