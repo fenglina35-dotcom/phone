@@ -15,9 +15,9 @@ const privateApp=read('native/private-small-phone/XcodeProject/PhoneCompanionTes
 test('web theater can advance independently while the private artifact stays untouched',()=>{
   assert.notEqual(bundleTheater,theater);
   assert.doesNotMatch(bundleTheater,/guest2|ct_wechat_enabled/);
-  assert.match(webHtml,/app\.js\?v=1271[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1271&r=v1271-web-cohab-guests-1"/);
+  assert.match(webHtml,/app\.js\?v=1272[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1272&r=v1272-web-cohab-guests-1"/);
   for(const html of [privateHtml,privateAlias])assert.match(html,/app\.js\?v=1270[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1270[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1270&r=v1184-ios-web-crash-cohab-turn-keyboard-1"/);
-  assert.match(read('sw.js'),/cohab-theater\.js\?v='\+BUILD\+'\&r=v1271-web-cohab-guests-1',kind:'theater'/);
+  assert.match(read('sw.js'),/cohab-theater\.js\?v='\+BUILD\+'\&r=v1272-web-cohab-guests-1',kind:'theater'/);
 });
 
 test('cast storage has two distinct WeChat guest slots and one temporary-extra slot',()=>{

@@ -52,13 +52,14 @@ test('web pixel girl reads the small catalog and individual images, never the em
   assert.match(webBranch,/location\.protocol===['"]file:['"][\s\S]*loadScript\(['"]wardrobe\/data\.js/);
 });
 
-test('Apple home-screen web app paints a solid status lane without changing shell height',()=>{
+test('Apple home-screen web app colors the system status lane without covering unlocked pages',()=>{
   const apply=functionSource(app,'applyAppleHomeCompat');
   const sync=functionSource(app,'webStatusBarThemeSync');
   assert.match(apply,/north-ios-standalone-status/);
   assert.match(sync,/appleHomeCompatBrowserEnvironment\(\)[\s\S]*black/);
-  assert.match(html,/html\.north-ios-standalone-status::before\{/);
-  assert.match(html,/pointer-events:none/);
+  assert.match(html,/html\.north-ios-standalone-status\{background-color:var\(--north-shell-status-color,#000\)\}/);
+  assert.doesNotMatch(html,/north-ios-standalone-status::before/);
+  assert.doesNotMatch(html,/north-ios-standalone-status[^}]*position:fixed/);
   assert.doesNotMatch(html,/north-ios-standalone-status[^}]*height:100dvh/);
 });
 

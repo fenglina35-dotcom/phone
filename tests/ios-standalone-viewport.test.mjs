@@ -28,6 +28,12 @@ test('full-screen shell is capped to the current available viewport',()=>{
   assert.match(html,/\.page\{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;\}/);
 });
 
+test('Apple standalone status paint never covers the unlocked app viewport',()=>{
+  assert.match(html,/html\.north-ios-standalone-status\{background-color:var\(--north-shell-status-color,#000\)\}/);
+  assert.doesNotMatch(html,/north-ios-standalone-status::before/,'the status color must not be a fixed layer above every unlocked page');
+  assert.doesNotMatch(html,/north-ios-standalone-status[^}]*position:fixed/,'WebKit already reserves the status bar when viewport-fit=cover is absent');
+});
+
 test('chat content scrolls inside the shell while the composer keeps its row',()=>{
   assert.match(html,/\.chatbg\{flex:1;overflow-y:auto;/);
   assert.match(html,/\.inputbar\{flex:0 0 auto;/);

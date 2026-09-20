@@ -42,6 +42,6 @@ const server=http.createServer((req,res)=>{
     await page.waitForFunction(()=>document.body.innerText.includes('酒店订单详情'));
     const detail=await page.locator('#modal').innerText();assert(detail.includes('订单金额'));assert(detail.includes('预订人'));assert(detail.includes('礼遇'));assert.deepEqual(errors,[]);
     console.log(JSON.stringify({version:await page.evaluate(()=>APP_VER),hotel:data.hotel.hotelName,card:{width:box.width,height:box.height},detail:true,participant:true,unrelated:false,spy:true,remote:true,pageErrors:errors}));
-    fs.mkdirSync(path.join(root,'artifacts'),{recursive:true});await page.screenshot({path:path.join(root,'artifacts','v1271-hotel-browser.png'),fullPage:true});
+    fs.mkdirSync(path.join(root,'artifacts'),{recursive:true});await page.screenshot({path:path.join(root,'artifacts','v1272-hotel-browser.png'),fullPage:true});
   }finally{await browser.close();server.close();}
 })().catch(error=>{console.error(error);server.close();process.exitCode=1;});

@@ -792,11 +792,11 @@ const PERMANENT_FIXES = [
     least: 1,
   },
   {
-    release: 'v1271',
-    name: 'iOS 主屏网页用纯色状态栏遮住系统模糊带且不挤压布局',
+    release: 'v1272',
+    name: 'iOS 主屏网页同步状态栏颜色且不覆盖解锁后的页面',
     scope: 'web',
     file: '小手机.html',
-    marker: 'html.north-ios-standalone-status::before',
+    marker: 'html.north-ios-standalone-status{background-color:var(--north-shell-status-color,#000)}',
     least: 1,
   },
   {
