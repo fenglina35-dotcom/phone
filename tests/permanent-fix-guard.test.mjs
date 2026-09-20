@@ -814,6 +814,30 @@ const PERMANENT_FIXES = [
     marker: 'function tvHotelBook(i)',
     least: 1,
   },
+  {
+    release: 'v1274',
+    name: '温馨小家移动端使用隔离材质预热，正式材质不参与整屋启动预绘制',
+    scope: 'private',
+    file: PRIVATE_DIR + 'games/cozy-home/app.mjs',
+    marker: 'const warmDraw=()=>{const warmMaps=new Map(),materialClones=new Map(),objectSwaps=[]',
+    least: 1,
+  },
+  {
+    release: 'v1274',
+    name: '温馨小家进入前释放预热几何和镜面缓冲',
+    scope: 'private',
+    file: PRIVATE_DIR + 'games/cozy-home/app.mjs',
+    marker: 'mirrors.releaseGPU();const geometries=new Set()',
+    least: 1,
+  },
+  {
+    release: 'v1274',
+    name: '温馨小家女性角色静止姿态仍执行固定手臂旋转',
+    scope: 'private',
+    file: PRIVATE_DIR + 'games/cozy-home/female-avatar001.mjs',
+    marker: 'proceduralDeltas=',
+    least: 1,
+  },
 ];
 
 const sources = { web: read(WEB), private: read(PRIVATE) };
@@ -852,4 +876,11 @@ test('the private bundle and web core stay in lockstep on shared repairs', () =>
       `共有修复「${fix.name}」只存在于其中一侧，两边必须同步`,
     );
   }
+});
+
+test('the private cozy bundle rejects the two mobile material regressions', () => {
+  const app = read(PRIVATE_DIR + 'games/cozy-home/app.mjs');
+  const female = read(PRIVATE_DIR + 'games/cozy-home/female-avatar001.mjs');
+  assert.doesNotMatch(app, /renderer\.setSize\(96,96,false\)/, '不得恢复用真实房间资源做 96×96 整屋预绘制');
+  assert.doesNotMatch(female, /if\(Math\.abs\(amount\)<1e-7\)return/, '不得在静止时跳过女性角色站姿');
 });

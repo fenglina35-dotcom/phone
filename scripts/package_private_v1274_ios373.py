@@ -1,4 +1,4 @@
-"""Create the private v1273 / iOS 372 Mac-source overlay package.
+"""Create the private v1274 / iOS 373 Mac-source overlay package.
 
 Unlike the earlier packaging scripts, every file is read from the committed tree
 (``git cat-file`` against HEAD) instead of the working directory. The v1235/iOS356
@@ -23,12 +23,12 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "native/private-small-phone/XcodeProject/"
 BUNDLE = "PhoneCompanionTest/PhoneWeb.bundle/"
-PREFIX = "SmallPhone_v1273_iOS372_Private/"
-OUTPUT = ROOT.parent / "SmallPhone_v1273_iOS372_MacSource.zip"
+PREFIX = "SmallPhone_v1274_iOS373_Private/"
+OUTPUT = ROOT.parent / "SmallPhone_v1274_iOS373_MacSource.zip"
 
-WEB_VERSION = "1273"
-MARKETING = "1.0.372"
-BUILD = "372"
+WEB_VERSION = "1274"
+MARKETING = "1.0.373"
+BUILD = "373"
 BRIDGE = "38"
 
 
@@ -233,16 +233,19 @@ def main() -> None:
     assert b"diagnosticCopyPending" in files[BUNDLE + "private-runtime-diagnostics.js"]
     assert b"CozyHomeSchemeHandler" in files["PhoneCompanionTest/LocalPhoneWebView.swift"]
     cozy_files = [n for n in files if n.startswith(BUNDLE + "games/cozy-home/")]
-    assert len(cozy_files) == 1252, "complete house resource set is missing"
+    assert len(cozy_files) == 1253, "complete house resource set is missing"
     cozy_app = text(files[BUNDLE + "games/cozy-home/app.mjs"])
     cozy_player = text(files[BUNDLE + "games/cozy-home/house-player036.mjs"])
     cozy_female = text(files[BUNDLE + "games/cozy-home/female-avatar001.mjs"])
-    assert "revision:51" in cozy_app, "house revision 51 missing"
-    assert "await renderer.compileAsync(scene,camera)" in cozy_app, "mobile room shader warmup missing"
+    assert "revision:52" in cozy_app, "house revision 52 missing"
+    assert "const warmDraw=()=>{const warmMaps=new Map(),materialClones=new Map(),objectSwaps=[]" in cozy_app, "isolated mobile shader warmup missing"
+    assert "mirrors.releaseGPU();const geometries=new Set()" in cozy_app, "warm geometry and mirror release missing"
+    assert "renderer.setSize(96,96,false)" not in cozy_app, "package restored the unsafe real-room preload"
     assert "const visualYaw=!postureMotion" in cozy_player, "first-person body/head resampling missing"
     assert "camera.position.addScaledVector(viewForward,.045)" in cozy_player, "eye camera forward offset missing"
     assert "procedural(0)" in cozy_female, "female procedural reset path missing"
-    files["SOURCE_STATE.json"] = json.dumps({"sourceCommit":text(git("rev-parse","HEAD")).strip(),"upstreamBaseline":"9e7938ad","houseSource":"9627be7","privateWeb":"v1273","privateIOS":"1.0.372 (372)","bridge":38,"macBuildVerified":False,"realIPhoneVerified":False,"kind":"Mac-source-not-IPA","preserved":["all-public-v1272-features","all-private-v1270-features","cozy-private-native-bridge","diagnostic-copy-freshness","native-probe-lifecycle","house051-complete-assets","first-person-head-tracking","mobile-shader-warmup"]},ensure_ascii=False,indent=2).encode("utf-8")
+    assert "if(Math.abs(amount)<1e-7)return" not in cozy_female, "standing pose T-pose regression returned"
+    files["SOURCE_STATE.json"] = json.dumps({"sourceCommit":text(git("rev-parse","HEAD")).strip(),"upstreamBaseline":"9e7938ad","houseSource":"df56e66a4f24efed42e4c37ef7d1908deb95df03","privateWeb":"v1274","privateIOS":"1.0.373 (373)","bridge":38,"macBuildVerified":False,"realIPhoneVerified":False,"kind":"Mac-source-not-IPA","preserved":["all-public-v1272-features","all-private-v1270-features","cozy-private-native-bridge","diagnostic-copy-freshness","native-probe-lifecycle","house052-complete-assets","first-person-head-tracking","isolated-mobile-shader-warmup","warm-gpu-resource-release","female-standing-pose"]},ensure_ascii=False,indent=2).encode("utf-8")
     files["SHA256SUMS.json"] = json.dumps({name:sha256(body).hexdigest() for name,body in sorted(files.items())},ensure_ascii=False,indent=2).encode("utf-8")
 
     assert not OUTPUT.exists(), "refusing to overwrite an existing package"
@@ -256,7 +259,7 @@ def main() -> None:
         for name in names:
             assert archive.read(name) == files[name[len(PREFIX):]], f"round-trip mismatch: {name}"
 
-    with TemporaryDirectory(prefix="private1273-verify-") as folder:
+    with TemporaryDirectory(prefix="private1274-verify-") as folder:
         with ZipFile(OUTPUT) as archive:
             assert archive.testzip() is None
             archive.extractall(folder)

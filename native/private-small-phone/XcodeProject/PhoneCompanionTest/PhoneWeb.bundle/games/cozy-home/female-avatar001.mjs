@@ -34,12 +34,11 @@ export async function createFemaleAvatar(){
    }pos.needsUpdate=true;c.mesh.geometry.computeBoundingSphere();
   }
  }
+ const proceduralDeltas=[['J_Bip_L_UpperArm',-.12,-1.30],['J_Bip_R_UpperArm',-.12,1.30],['J_Bip_L_LowerArm',-.9,-1.40],['J_Bip_R_LowerArm',-.9,1.40],['J_Bip_L_Hand',-.9,-1.4],['J_Bip_R_Hand',-.9,1.4],['J_Bip_L_UpperLeg',-1.48,0],['J_Bip_R_UpperLeg',-1.48,0],['J_Bip_L_LowerLeg',-.03,0],['J_Bip_R_LowerLeg',-.03,0],['J_Bip_L_Foot',0,0],['J_Bip_R_Foot',0,0]],proceduralEuler=new T.Euler(),proceduralWorld=new T.Quaternion(),proceduralParent=new T.Quaternion();
  function procedural(amount){for(const[n,b]of Object.entries(bones)){b.quaternion.copy(rest[n].q);b.position.copy(rest[n].p)}model.updateMatrixWorld(true);
-  // Walk/lie clips start from the unmodified rest rig. Avoid constructing and
-  // discarding a quaternion/Euler pair for every limb on every walking frame.
-  if(Math.abs(amount)<1e-7)return;
-  const deltas={J_Bip_L_UpperArm:[-amount*.12,0,-1.30],J_Bip_R_UpperArm:[-amount*.12,0,1.30],J_Bip_L_LowerArm:[-amount*.9,0,-1.40],J_Bip_R_LowerArm:[-amount*.9,0,1.40],J_Bip_L_Hand:[-amount*.9,0,-1.4],J_Bip_R_Hand:[-amount*.9,0,1.4],J_Bip_L_UpperLeg:[-amount*1.48,0,0],J_Bip_R_UpperLeg:[-amount*1.48,0,0],J_Bip_L_LowerLeg:[-amount*.03,0,0],J_Bip_R_LowerLeg:[-amount*.03,0,0],J_Bip_L_Foot:[0,0,0],J_Bip_R_Foot:[0,0,0]};
-  for(const[n,e]of Object.entries(deltas)){const b=bones[n];if(!b)continue;const q=new T.Quaternion().setFromEuler(new T.Euler(...e)).multiply(rest[n].world);b.quaternion.copy(b.parent.getWorldQuaternion(new T.Quaternion()).invert().multiply(q));b.updateWorldMatrix(false,true)}
+  // Reuse scratch transforms without skipping the authored standing-arm pose:
+  // amount=0 still needs the fixed Z rotations below to avoid a T-pose.
+  for(const[n,xScale,z]of proceduralDeltas){const b=bones[n];if(!b)continue;proceduralWorld.setFromEuler(proceduralEuler.set(amount*xScale,0,z)).multiply(rest[n].world);b.parent.getWorldQuaternion(proceduralParent).invert();b.quaternion.copy(proceduralParent.multiply(proceduralWorld));b.updateWorldMatrix(false,true)}
   const hip=bones.J_Bip_C_Hips;if(hip)hip.position.y-=amount*.38;model.updateMatrixWorld(true);
  }
 

@@ -201,36 +201,38 @@ async function boot(){
  }});
  await stage('正在准备第一帧画面…');
  camera.position.set(10.7,1.42,6.5);scene.updateMatrixWorld(true);
+ // On iPhone, never draw the six rooms with their real materials during boot.
+ // Doing so keeps every HD texture, geometry buffer and mirror target resident
+ // at once; WebKit then degrades live materials to black/white under GPU pressure.
  if(!mobile)await renderer.compileAsync(scene,camera);mobileRendering.update(player,.13,false,false);
  await stage('正在接入罗兰与动作…');character=await installHouseCharacter({scene,house,world,renderer,camera,player,roomControls,livingInteractions,getPlayerPosture:()=>({seated,eyeY})});
  await stage('正在接入你的角色与实时镜面…');femalePlayer=await installFemalePlayer({scene,camera,world,player,house,getState:()=>({seated,posture,mode,editing:!!editor?.active})});mirrors=installHouseMirrors(scene,house,{mobile:matchMedia('(pointer:coarse)').matches,world});
  if(mobile){
-  // Prepare the real room resources behind the loading card at a tiny canvas.
-  // The scene has already been reduced to a bounded mobile budget, and keeping
-  // these uploads avoids the visible one-off hitch at bedroom/bath/office doors.
-  // No scene material or texture reference is replaced during this pass.
-  await stage('正在准备房间光影…');const savedPosition=camera.position.clone(),savedQuaternion=camera.quaternion.clone(),savedAspect=camera.aspect;
-  renderer.setPixelRatio(1);renderer.setSize(96,96,false);camera.aspect=1;camera.updateProjectionMatrix();
+  // Compile room shader variants with isolated one-pixel stand-ins. Formal
+  // scene materials are restored before every warm draw finishes, so Safari
+  // cannot cache a stand-in against a character, floor or furniture material.
+  await stage('正在准备房间光影…');const savedPosition=camera.position.clone(),savedQuaternion=camera.quaternion.clone();
+  const warmDraw=()=>{const warmMaps=new Map(),materialClones=new Map(),objectSwaps=[],warmTexture=source=>{const key=source.colorSpace||'';if(warmMaps.has(key))return warmMaps.get(key);const t=new T.DataTexture(new Uint8Array([255,255,255,255]),1,1,T.RGBAFormat);t.colorSpace=source.colorSpace;t.needsUpdate=true;warmMaps.set(key,t);return t;};
+   const cloneMaterial=source=>{if(materialClones.has(source))return materialClones.get(source);const clone=source.clone();clone.onBeforeCompile=source.onBeforeCompile;clone.customProgramCacheKey=source.customProgramCacheKey;for(const key of Object.keys(clone)){const texture=clone[key];if(texture?.isTexture&&key!=='envMap')clone[key]=warmTexture(texture);}materialClones.set(source,clone);return clone;};
+   scene.traverse(o=>{if(!o.material||o.userData.liveMirror)return;objectSwaps.push([o,o.material]);o.material=Array.isArray(o.material)?o.material.map(cloneMaterial):cloneMaterial(o.material);});
+   try{renderer.render(scene,camera);}finally{for(const [o,material]of objectSwaps)o.material=material;mobileWarmResources.push(...materialClones.values(),...warmMaps.values());}
+  };
   for(const name of ['living','kitchen','bed_vanity','bath_basin','office_work','cell_front']){
    const [x,y,z,yaw,pitch]=viewpoints[name],warm={x,y,z};mobileRendering.update(warm,.13,false,false);surfaceLights.refresh();
    const focus=new T.Vector3(x,y+1.05,z),offset=new T.Vector3(0,.42,2.1).applyEuler(new T.Euler(pitch*.65,yaw,0,'YXZ'));camera.position.copy(focus).add(offset);camera.lookAt(focus);scene.updateMatrixWorld(true);await renderer.compileAsync(scene,camera);
-   renderer.shadowMap.needsUpdate=true;renderer.render(scene,camera);await stage('正在准备房间光影…');
+   if(name==='bed_vanity'||name==='bath_basin')warmDraw();
   }
-  // Keep the indexed geometry buffers prepared behind the loading card. They
-  // are now about 2.45M vertices after static indexing; disposing them here
-  // forced Safari to re-upload each room while the player crossed a doorway,
-  // producing the remaining one-off 100-330ms hitch. Texture pixels are still
-  // loaded at the controlled 96px warm viewport rather than during movement.
-  // Keep the four already allocated 768px mirror targets. Releasing them here
-  // saved only a bounded mobile allocation but recreated it on the first vanity
-  // or bathroom view, which was visible as the last small turn/movement hitch.
+  // Keep the compiled programs but release warm geometry and mirror buffers.
+  // CPU input smoothing and allocation reductions remain active; stability
+  // takes priority over keeping all rooms resident on a phone GPU.
+  mirrors.releaseGPU();const geometries=new Set();scene.traverse(o=>{if(o.geometry)geometries.add(o.geometry);});geometries.forEach(geometry=>geometry.dispose());
   const warmSet=new Set(mobileWarmResources);let warmResourceLeaks=0;scene.traverse(o=>{for(const material of Array.isArray(o.material)?o.material:o.material?[o.material]:[]){if(warmSet.has(material))warmResourceLeaks++;for(const value of Object.values(material))if(warmSet.has(value))warmResourceLeaks++;}});budget.warmResourceLeaks=warmResourceLeaks;if(warmResourceLeaks)throw new Error('临时预热材质没有完全退出正式场景');
-  camera.position.copy(savedPosition);camera.quaternion.copy(savedQuaternion);camera.aspect=savedAspect;camera.updateProjectionMatrix();resize();mobileRendering.update(player,.13,false,false);surfaceLights.refresh();
+  camera.position.copy(savedPosition);camera.quaternion.copy(savedQuaternion);mobileRendering.update(player,.13,false,false);surfaceLights.refresh();
  }
  renderer.render(scene,camera);budget.firstFrameMs=Math.round(performance.now()-bootAt);bootComplete();
  editor.setActive(false);$('start').disabled=false;$('start').innerHTML='进入小家 <span>→</span>';setMode('walk');requestAnimationFrame(render);
  // Test/export entry points. Presentation controls don't bypass collision during normal walking.
- window.cozy={ready:true,revision:51,sharedImageStats,femalePlayer,mirrors,touchLook,frameTiming,budget,mobileRendering,life,windowPictures,roomControls,livingInteractions,lighting,L,world,player,house,camera,scene,renderer,editor,
+ window.cozy={ready:true,revision:52,sharedImageStats,femalePlayer,mirrors,touchLook,frameTiming,budget,mobileRendering,life,windowPictures,roomControls,livingInteractions,lighting,L,world,player,house,camera,scene,renderer,editor,
   state:()=>({lighting:lighting.state(),mode,seated,posture,started,player:{...player},frames,peopleMode,fridgeOpen:house.kitchenMechanisms019.fridgeDoors.some(g=>g.userData.mechanism018.open),drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles}),
   start:()=>{$('start').click()},officeOverview,setMode,setPeople,viewpoints,
   useSeat:id=>{if(seated)return notice('请先起身');const r=house.playerSeat(id);if(r.seat){lastStand={...player};seated=true;posture=r.posture;postureEye=r.eye;Object.assign(player,r.seat);}notice(r.message);},
