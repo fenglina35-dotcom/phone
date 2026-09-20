@@ -54,4 +54,5 @@ test('native bridge streams one account-bound backup file and confirms the RPC r
   assert.match(bridge,/status >= 200 && status < 300 && rows\?\.first\?\["saved"\] as\? Bool == true/);
   assert.match(bridge,/await PrivateBackupFileStore\.shared\.remove\(token: token\)/);
   assert.match(webView,/action === 'account\.backup\.file\.commit' \? 660000 : 60000/);
+  assert.match(backup,/account\.backup\.file\.commit',\{token\},720000/);
 });

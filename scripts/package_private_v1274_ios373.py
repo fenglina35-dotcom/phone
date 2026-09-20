@@ -18,6 +18,7 @@ from pathlib import Path, PurePosixPath
 from zipfile import ZIP_DEFLATED, ZipFile
 from tempfile import TemporaryDirectory
 import json
+import re
 import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -90,6 +91,7 @@ def validate(files: dict[str, bytes]) -> None:
     pbx = text(files["PhoneCompanionTest.xcodeproj/project.pbxproj"])
     bridge = text(files["PhoneCompanionTest/PhoneNativeBridge.swift"])
     web_view = text(files["PhoneCompanionTest/LocalPhoneWebView.swift"])
+    backup = text(files[BUNDLE + "private-cloud-backup.js"])
 
     assert index == alias, "index.html and 小手机.html must stay identical"
     assert f"window.__NORTH_SHELL_BUILD__='{WEB_VERSION}'" in index
@@ -100,6 +102,17 @@ def validate(files: dict[str, bytes]) -> None:
     assert f"{MARKETING} ({BUILD})" in web_view
     assert pbx.count(f"CURRENT_PROJECT_VERSION = {BUILD};") == 12
     assert pbx.count(f"MARKETING_VERSION = {MARKETING};") == 12
+    assert f"private-cloud-backup.js?v={WEB_VERSION}" in index, "private backup component is not loaded"
+    for action in ("begin", "chunk", "commit", "abort"):
+        assert f"account.backup.file.{action}" in backup, f"private backup action missing: {action}"
+        assert f'"account.backup.file.{action}"' in bridge, f"native backup action missing: {action}"
+    assert "const CHUNK=192*1024" in backup, "private backup fell back to an oversized whole-object bridge"
+    assert "account.backup.file.commit',{token},720000" in backup, "web backup timeout is shorter than native upload"
+    assert "private actor PrivateBackupFileStore" in bridge
+    assert "uploader.upload(for: request, fromFile: file.url)" in bridge
+    assert "action === 'account.backup.file.commit' ? 660000 : 60000" in web_view
+    assert "isa = PBXFileSystemSynchronizedRootGroup;" in pbx and "path = PhoneCompanionTest;" in pbx
+    assert not re.search(r"membershipExceptions = \([^)]*private-cloud-backup\.js", pbx, re.S), "private backup component was excluded from the Xcode target"
 
     # Repairs that must ride along in every package. Keep in step with
     # tests/permanent-fix-guard.test.mjs; a package is never allowed to drop one.

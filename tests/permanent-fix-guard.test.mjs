@@ -868,6 +868,30 @@ test('the private bundle still ships its performance protection component', () =
   assert.match(index, /private-runtime-diagnostics\.js\?v=\d+/, '私人入口没有引用性能保护组件');
 });
 
+test('every private release keeps the complete streamed daily cloud-backup chain', () => {
+  const index = read(PRIVATE_DIR + 'index.html');
+  const alias = read(PRIVATE_DIR + '小手机.html');
+  const backupPath = PRIVATE_DIR + 'private-cloud-backup.js';
+  const backup = read(backupPath);
+  const bridge = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift');
+  const webView = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
+  const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
+
+  assert.equal(index, alias, '私人两个入口必须一起携带云备份组件');
+  assert.match(index, /private-cloud-backup\.js\?v=\d+/, '私人入口漏掉每日云备份组件');
+  for (const action of ['begin', 'chunk', 'commit', 'abort']) {
+    assert.match(backup, new RegExp(`account\\.backup\\.file\\.${action}`), `网页分片备份漏掉 ${action}`);
+    assert.match(bridge, new RegExp(`account\\.backup\\.file\\.${action}`), `原生桥漏掉 ${action}`);
+  }
+  assert.match(backup, /const CHUNK=192\*1024/, '私人备份不得退回整份大对象跨桥传输');
+  assert.match(backup, /account\.backup\.file\.commit',\{token\},720000/, '网页成功确认必须等得过原生上传时限');
+  assert.match(bridge, /private actor PrivateBackupFileStore/, '原生临时备份文件存储缺失');
+  assert.match(bridge, /uploader\.upload\(for: request, fromFile: file\.url\)/, '原生端必须从文件流式上传');
+  assert.match(webView, /action === 'account\.backup\.file\.commit' \? 660000 : 60000/, 'WKWebView 桥不得提前中断云端提交');
+  assert.match(project, /isa = PBXFileSystemSynchronizedRootGroup;[\s\S]*?path = PhoneCompanionTest;/, '主 App 资源目录没有纳入 Xcode 文件夹同步');
+  assert.doesNotMatch(project, /membershipExceptions = \([^)]*private-cloud-backup\.js/, '私人云备份组件被排除出 Xcode Target');
+});
+
 test('the private bundle and web core stay in lockstep on shared repairs', () => {
   for (const fix of PERMANENT_FIXES.filter(x => x.scope === 'both')) {
     assert.equal(

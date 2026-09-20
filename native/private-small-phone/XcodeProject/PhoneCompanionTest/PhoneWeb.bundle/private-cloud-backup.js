@@ -10,11 +10,11 @@
  function write(v){localStorage.setItem(key(),JSON.stringify(v));}
  function trace(stage,fields){phase=stage;try{if(root.NorthBrowserDiagnostics)NorthBrowserDiagnostics.mark('private-backup-'+stage);if(root.__smallPhoneNativeDiag)root.__smallPhoneNativeDiag('backup.'+stage,fields||{},0);}catch(_){} }
  function note(text,silent){if(!silent)toast(text);}
- async function call(action,payload){const r=await privatePhoneAccountCall(action,payload);if(!r||r.ok!==true)throw new Error(r&&r.message||r&&r.error||'私人备份步骤未完成');return r;}
+ async function call(action,payload,timeoutMs){const r=await privatePhoneAccountCall(action,payload,timeoutMs);if(!r||r.ok!==true)throw new Error(r&&r.message||r&&r.error||'私人备份步骤未完成');return r;}
  async function transfer(blob,meta,onProgress){
   let token='';try{const begun=await call('account.backup.file.begin',{bytes:blob.size,capturedAt:meta.capturedAt,sourceBuild:meta.sourceBuild});token=begun.token;
    for(let offset=0;offset<blob.size;offset+=CHUNK){const bytes=new Uint8Array(await blob.slice(offset,offset+CHUNK).arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode.apply(null,bytes.subarray(i,i+8192));await call('account.backup.file.chunk',{token,offset,base64:btoa(binary)});if(onProgress)onProgress(Math.min(offset+bytes.length,blob.size),blob.size);}
-   trace('upload');const result=await call('account.backup.file.commit',{token});token='';return result;
+   trace('upload',{bytes:blob.size});const result=await call('account.backup.file.commit',{token},720000);token='';return result;
   }finally{if(token)try{await privatePhoneAccountCall('account.backup.file.abort',{token});}catch(_){} }
  }
  async function backup(firstBind,silent){
