@@ -17,7 +17,12 @@ test('shared reply changes and game assets are retained by the private entry',()
  for(const path of ['app.js',b+'app.js']){const s=read(path);for(const token of ['lifeNoteReplyDraft','lifeNoteCommitReply','roleSocialIdentityPin','proactiveContinuationContext'])assert(s.includes(token),path+': '+token);}
  /* 模型原文输出已升为全局默认，开关按用户要求移除；两侧都不能再留下切换入口。 */
  for(const path of ['app.js',b+'app.js'])assert(!read(path).includes('modelOutputUnfilteredToggle'),path+': 开关应已移除');
- for(const p of ['cohab-theater.js','pixel-home.js','pixel-home-policy.js','pixel-wardrobe-info.js'])assert.equal(read(p),read(b+p),p);
+ for(const p of ['pixel-home.js','pixel-home-policy.js','pixel-wardrobe-info.js'])assert.equal(read(p),read(b+p),p);
+ const webCohab=read('cohab-theater.js'),privateCohab=read(b+'cohab-theater.js');
+ assert(webCohab.includes('ct_wechat_enabled'),'website keeps the optional WeChat guest switch');
+ assert(webCohab.includes("guest2"),'website supports a second independent WeChat guest');
+ assert(!privateCohab.includes('ct_wechat_enabled'),'private bundle is intentionally untouched by this website-only release');
+ assert(!privateCohab.includes("guest2"),'private bundle is intentionally untouched by this website-only release');
  assert.equal(read(b+'index.html'),read(b+'小手机.html'));
  assert.equal(read(b+'private-smart-lock.js'),read('native/private-small-phone/Resources/Web/private-smart-lock.js'));
  assert.equal(read(b+'private-smart-lock.css'),read('native/private-small-phone/Resources/Web/private-smart-lock.css'));

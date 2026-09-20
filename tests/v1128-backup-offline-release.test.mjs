@@ -27,15 +27,15 @@ function functionSource(name){
 }
 
 test('v1178 has a unique visible identity across every public entry and cache layer',()=>{
-  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1270\'/);
-  assert.match(app,/APP_VER='v1270 · 抖音群聊滚动与配乐'/);
-  assert.match(shell,/__NORTH_SHELL_BUILD__='1270'/);
-  assert.match(shell,/app\.js\?v=1270&r=v1270-web-dy-scroll-1/);
-  assert.match(index,/小手机\.html\?v=1270/);
-  assert.match(repair,/小手机\.html\?v=1270/);
-  assert.match(worker,/const BUILD='1270'/);
-  assert.match(worker,/north-shell-v1270-web-dy-scroll-1/);
-  assert.match(hotfix,/sw\.js\?v=1270&r=v1270-web-dy-scroll-1/);
+  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1271\'/);
+  assert.match(app,/APP_VER='v1271 · 网页兼容与社交互动修复'/);
+  assert.match(shell,/__NORTH_SHELL_BUILD__='1271'/);
+  assert.match(shell,/app\.js\?v=1271&r=v1271-web-compat-social-1/);
+  assert.match(index,/小手机\.html\?v=1271/);
+  assert.match(repair,/小手机\.html\?v=1271/);
+  assert.match(worker,/const BUILD='1271'/);
+  assert.match(worker,/north-shell-v1271-web-compat-social-1/);
+  assert.match(hotfix,/sw\.js\?v=1271&r=v1271-web-compat-social-1/);
   for(const [name,source] of Object.entries({app,shell,index,repair,worker,hotfix})){
     assert.doesNotMatch(source,/v?1127/,`${name} must not reuse the prior web version`);
   }

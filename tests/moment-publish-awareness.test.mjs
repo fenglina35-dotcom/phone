@@ -26,12 +26,12 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('publishing a Moment shows the real role comment immediately and sends the post body', async () => {
-  const role = { id: 'role-a', name: '先生', remark: '先生', model: 'main', chatRouteIndex: 2 };
+test('publishing a Moment gives the lover a real like and comment and sends the post body', async () => {
+  const role = { id: 'role-a', name: '先生', remark: '先生', relation: '恋人', model: 'main', chatRouteIndex: 2 };
   const post = { id: 'post-1', authorId: 'me', text: '今天终于把小猫接回家了。', images: [], photoCards: [{ desc: '小猫趴在新的软垫上' }], likes: [], comments: [], acct: 'main', time: Date.now() };
   const renders = [];
   const context = vm.createContext({
-    S: { me: { name: 'North' }, contacts: [role], messages: {}, moments: [post] },
+    S: { me: { name: 'North' }, contacts: [role], messages: {}, moments: [post], couple: { cid: role.id } },
     Date, String, Array, Object, Promise,
     momentVisibleTo: () => true,
     recordVisit: () => {},
@@ -45,33 +45,40 @@ test('publishing a Moment shows the real role comment immediately and sends the 
     replyDedupNorm: text => String(text || '').replace(/\s|[，。！？、,.!?]/g, ''),
     replyBigramScore: (a, b) => a === b ? 1 : 0,
     roleChatRouteIndex: c => c.chatRouteIndex,
+    uid: () => 'comment-1',
+    momentRunRoleExchange: async () => {},
     save: () => { context.saves = (context.saves || 0) + 1; },
     cur: () => ({ p: 'wxmoment' }),
     wxTab: 'chat',
     momentRenderKeepScroll: id => renders.push(id),
   });
   vm.runInContext(functionSource('momentRoleCommentRepeated'), context);
+  vm.runInContext(functionSource('momentContactIsLover'), context);
+  vm.runInContext(functionSource('momentEnsureRoleLike'), context);
+  vm.runInContext(functionSource('momentReactionText'), context);
+  vm.runInContext(functionSource('momentRequestRoleReaction'), context);
   vm.runInContext(functionSource('reactToMyMoment'), context);
   await context.reactToMyMoment(post);
+  assert.deepEqual(post.likes, ['先生']);
   assert.equal(post.comments.length, 1);
   assert.equal(post.comments[0].text, '它看起来已经把这里当家了。');
-  assert.deepEqual(renders, ['post-1'], 'the live Moments page must refresh as soon as the role comment is stored');
+  assert.ok(renders.length >= 1, 'the live Moments page must refresh as soon as the role comment is stored');
   assert.equal(context.options.routeIndex, 2);
   assert.match(context.request[1].content, /今天终于把小猫接回家了/);
   assert.match(context.request[1].content, /小猫趴在新的软垫上/);
-  assert.match(context.request[1].content, /不是评论区回复/);
+  assert.match(context.request[1].content, /必须点赞，也必须留下/);
 });
 
 test('multi-role Moment reactions keep each real persona output and retry one duplicate once', async () => {
   const roles = [
-    { id: 'role-a', name: '先生', remark: '先生', persona: '冷静克制', model: 'main', chatRouteIndex: 1 },
+    { id: 'role-a', name: '先生', remark: '先生', relation: '恋人', persona: '冷静克制', model: 'main', chatRouteIndex: 1 },
     { id: 'role-b', name: '哥哥', remark: '哥哥', persona: '温柔活泼', model: 'main', chatRouteIndex: 3 },
   ];
   const post = { id: 'post-multi', authorId: 'me', text: '先生就是个小气鬼', images: [], photoCards: [], likes: [], comments: [], acct: 'main', time: Date.now() };
   const calls = [];
   const outputs = ['小气鬼现在就在书房坐着，有本事当面说。', '小气鬼现在就在书房坐着，有本事当面说。', '谁欺负你了，哥哥先听你告状。'];
   const context = vm.createContext({
-    S: { me: { name: 'North' }, contacts: roles, messages: {}, moments: [post] },
+    S: { me: { name: 'North' }, contacts: roles, messages: {}, moments: [post], couple: { cid: 'role-a' } },
     Date, String, Array, Object, Promise, Math, Set,
     momentVisibleTo: () => true,
     recordVisit: () => {},
@@ -85,12 +92,18 @@ test('multi-role Moment reactions keep each real persona output and retry one du
     replyDedupNorm: text => String(text || '').replace(/\s|[，。！？、,.!?]/g, ''),
     replyBigramScore: (a, b) => a === b ? 1 : 0,
     roleChatRouteIndex: role => role.chatRouteIndex,
+    uid: (() => { let n = 0; return () => `comment-${++n}`; })(),
+    momentRunRoleExchange: async () => {},
     save: () => {},
     cur: () => ({ p: 'home' }),
     wxTab: 'chat',
     momentRenderKeepScroll: () => {},
   });
   vm.runInContext(functionSource('momentRoleCommentRepeated'), context);
+  vm.runInContext(functionSource('momentContactIsLover'), context);
+  vm.runInContext(functionSource('momentEnsureRoleLike'), context);
+  vm.runInContext(functionSource('momentReactionText'), context);
+  vm.runInContext(functionSource('momentRequestRoleReaction'), context);
   vm.runInContext(functionSource('reactToMyMoment'), context);
   await context.reactToMyMoment(post);
   assert.deepEqual(post.comments.map(comment => comment.text), [
@@ -102,8 +115,8 @@ test('multi-role Moment reactions keep each real persona output and retry one du
   assert.match(calls[1].messages[0].content, /角色=哥哥;人设=温柔活泼/);
   assert.equal(calls[1].options.routeIndex, 3);
   assert.match(calls[1].messages[1].content, /先生：小气鬼现在就在书房坐着/);
-  assert.match(calls[1].messages[1].content, /不能复述、套用或只改几个字模仿/);
-  assert.match(calls[2].messages.at(-1).content, /与其他角色已有评论重复/);
+  assert.match(calls[1].messages[1].content, /不能复述或模仿这些评论/);
+  assert.match(calls[2].messages.at(-1).content, /明显不同的短评/);
 });
 
 test('gag bars are red, emoji-free, and lead back to the bound role chat', () => {

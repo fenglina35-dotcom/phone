@@ -190,5 +190,5 @@ test('private identity advances while public web stays unchanged',()=>{
   assert.match(webView,/1\.0\.370 \(370\)/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 370;/g)||[]).length,12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.370;/g)||[]).length,12);
-  assert.match(read('app.js'),/APP_VER='v1270 · 抖音群聊滚动与配乐'/);
+  assert.match(read('app.js'),/APP_VER='v1271 · 网页兼容与社交互动修复'/);
 });

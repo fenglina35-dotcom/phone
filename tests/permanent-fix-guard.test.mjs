@@ -755,6 +755,65 @@ const PERMANENT_FIXES = [
     marker: 'function dyWorkMusicPlay(id)',
     least: 1,
   },
+  {
+    release: 'v1271',
+    name: '云程护照头像兼容 IndexedDB 图片引用',
+    scope: 'web',
+    marker: 'function tvPassportPhoto(v)',
+    least: 1,
+  },
+  {
+    release: 'v1271',
+    name: '查手机小事簿改用页内编辑器，移动浏览器不会拦截按钮',
+    scope: 'web',
+    marker: 'function spyLifeNoteEditor(i)',
+    least: 1,
+  },
+  {
+    release: 'v1271',
+    name: '朋友圈情侣必点赞并请求真实评论，失败可见重试',
+    scope: 'web',
+    marker: 'function momentRetryRequiredReactions(pid)',
+    least: 1,
+  },
+  {
+    release: 'v1271',
+    name: '朋友圈角色可按兴趣互相艾特，最多两回合',
+    scope: 'web',
+    marker: 'function momentRunRoleExchange(p)',
+    least: 1,
+  },
+  {
+    release: 'v1271',
+    name: '像素少女网页端按小目录分图加载，不再解析整份内嵌大脚本',
+    scope: 'web',
+    file: 'games/pixel-home/assets.js',
+    marker: "fetch(new URL('wardrobe/catalog.json',base).href",
+    least: 1,
+  },
+  {
+    release: 'v1271',
+    name: 'iOS 主屏网页用纯色状态栏遮住系统模糊带且不挤压布局',
+    scope: 'web',
+    file: '小手机.html',
+    marker: 'html.north-ios-standalone-status::before',
+    least: 1,
+  },
+  {
+    release: 'v1271',
+    name: '多人剧场支持两名微信来客且关闭开关时不强制加入',
+    scope: 'web',
+    file: 'cohab-theater.js',
+    marker: 'ct_wechat_enabled',
+    least: 1,
+  },
+  {
+    release: 'v1271',
+    name: '云程酒店支持网页预订、紧凑聊天卡与角色知情边界',
+    scope: 'web',
+    marker: 'function tvHotelBook(i)',
+    least: 1,
+  },
 ];
 
 const sources = { web: read(WEB), private: read(PRIVATE) };
@@ -763,7 +822,8 @@ for (const fix of PERMANENT_FIXES) {
   const targets = fix.scope === 'both' ? ['web', 'private'] : [fix.scope];
   for (const target of targets) {
     test(`${target} keeps ${fix.release} — ${fix.name}`, () => {
-      const found = count(sources[target], fix.marker);
+      const source = fix.file ? read(fix.file) : sources[target];
+      const found = count(source, fix.marker);
       assert.ok(
         found >= fix.least,
         `${target} 源码缺少 ${fix.release} 的修复「${fix.name}」：\n` +

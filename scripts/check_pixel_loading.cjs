@@ -9,7 +9,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
  try{for(const privateApp of [false,true]){
   const page=await browser.newPage({viewport:{width:390,height:844},serviceWorkers:'block'}),errors=[];page.on('pageerror',e=>{errors.push(e.message);console.error('PAGE',e.message);});let fail=true;
   await page.addInitScript(()=>{window.OffscreenCanvas=undefined;HTMLImageElement.prototype.decode=undefined;});
-  await page.route('**/*',r=>{const u=new URL(r.request().url());if(u.origin!==origin)return r.abort();if(fail&&r.request().frame().parentFrame()&&u.pathname.endsWith('/wardrobe/data.js'))return r.abort();return r.continue();});
+  await page.route('**/*',r=>{const u=new URL(r.request().url());if(u.origin!==origin)return r.abort();const failedCatalog=privateApp?u.pathname.endsWith('/wardrobe/data.js'):u.pathname.endsWith('/wardrobe/catalog.json');if(fail&&r.request().frame().parentFrame()&&failedCatalog)return r.abort();return r.continue();});
   await page.goto(origin+(privateApp?'/native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html':'/小手机.html')+'?northPreview=black-home');await page.waitForFunction(()=>window.__northBootReady);
   await page.evaluate(()=>{
    S.me.locked=false;S.couple={cid:S.contacts[0].id};
@@ -19,7 +19,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
   });
   console.log('opened',privateApp);const f=page.frameLocator('#pixel-home-frame');
   try{await f.getByRole('button',{name:'重新加载游戏'}).waitFor({timeout:45000});}catch(e){console.error('FRAME',await f.locator('body').innerText({timeout:2000}).catch(()=>page.locator('body').innerText()));throw e;}
-  assert.match(await f.locator('#loading').innerText(),/wardrobe\/data.js/);
+  assert.match(await f.locator('#loading').innerText(),privateApp?/wardrobe\/data.js/:/(?:衣柜目录下载失败|Failed to fetch)/);
   // A failed iframe may already have sent saves (for example on pagehide).
   await page.evaluate(()=>{_pixelHome.revision=50;});
   fail=false;await f.getByRole('button',{name:'重新加载游戏'}).click();await f.locator('#loading').waitFor({state:'detached',timeout:60000});

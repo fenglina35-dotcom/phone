@@ -9,15 +9,18 @@ function harness(){
   let serial=0;
   const host={id:'host',name:'先生',remark:'先生',relation:'恋人',gender:'男',summaries:[]};
   const guest={id:'guest',name:'小雨',remark:'小雨',persona:'安静的朋友',summaries:[]};
+  const guest2={id:'guest2-contact',name:'阿澈',remark:'阿澈',persona:'活泼的朋友',summaries:[]};
   const home={msgs:[],notices:[],summaries:[],msgSeq:0,startedAt:1,phaseAt:1,phase:'home'};
   const wechat={guest:[]};
   const inputs={
+    ct_wechat_enabled:{checked:true},
     ct_host_rel:{value:'恋人'},ct_guest_id:{value:'guest'},ct_guest_me:{value:'宝贝的妈妈'},ct_guest_host:{value:'主角的丈母娘'},
+    ct_guest2_id:{value:''},ct_guest2_me:{value:'朋友'},ct_guest2_host:{value:'朋友'},
     ct_support_bubbles:{value:'2'},
     ct_me_color:{value:'#224466'},ct_host_color:{value:'#332211'},ct_guest_color:{value:'#55386f'},
     ct_extra_name:{value:''},ct_extra_persona:{value:''},ct_extra_me:{value:''},ct_extra_host:{value:''},ct_extra_color:{value:'#6b4f2e'},
   };
-  const S={me:{name:'我'},contacts:[host,guest],cohabitation:{cid:'host',homes:{host:home}},settings:{timeAware:true}};
+  const S={me:{name:'我'},contacts:[host,guest,guest2],cohabitation:{cid:'host',homes:{host:home}},settings:{timeAware:true}};
   const baseData=()=>home;
   const basePush=(d,m)=>{m.cohabSeq=++d.msgSeq;d.msgs.push(m);return m;};
   const noop=()=>{};
@@ -32,7 +35,7 @@ function harness(){
     offAI:async()=>{hostCalls.push({before:home.msgs.map(x=>x.who),system:context.cohabSystem(host,home,'')});if(context.emitHost!==false)context.cohabPushMessage(home,{id:`host-${serial+1}`,who:'ta',source:'ta',text:'主角先认真回答这一句话',time:Date.now()});},offSay:noop,offReply:noop,renderCohab:()=>'<div class="offstage"><div class="cohab-meta"></div></div>',offlineMsgContent:m=>m.text,
     offlineSceneTimelineRows:()=>[],roleInteractionRows:()=>[],roleReplyGapFact:()=>null,roleReplyTimelinePin:()=>'',roleReplyContinuityPin:()=>'',
     roleReplyCrossChannelHandoffPrompt:()=>'',roleServerPushRecentContext:()=>'',roleDiaryRecentFacts:()=>'',
-    getC:id=>id==='host'?host:id==='guest'?guest:null,uid:()=>`id${++serial}`,save:noop,saveNowAsync:async()=>true,
+    getC:id=>id==='host'?host:id==='guest'?guest:id==='guest2-contact'?guest2:null,uid:()=>`id${++serial}`,save:noop,saveNowAsync:async()=>true,
     cohabPushNotice:(d,text,opt)=>d.notices.push({text,...opt}),cohabSceneActive:()=>false,render:noop,openOfflineMenu:noop,toast:text=>toasts.push(String(text)),closeModal:noop,
     summaryList:c=>c.summaries,pruneSummaries:noop,ymd:()=> '2026-09-04',perspRule:()=>'',roleChatRouteIndex:()=>0,
     msgs:id=>wechat[id]||(wechat[id]=[]),msgToText:m=>m&&m.content||'',persistWechatMessagesNow:async()=>true,notifyIncoming:noop,refreshChatMessages:noop,
@@ -47,8 +50,32 @@ function harness(){
   context.offSummaryUserCall=()=> '用户';context.esc=x=>String(x??'');context.offRevealText=m=>String(m&&m.text||'');context.cohabSettingsPanel=()=>'<div class="cohab-settings-wrap"><details class="cohab-settings"><summary>共同生活设置</summary></details><button type="button" class="cohab-debug-reply">让TA回</button></div>';context.window=context;
   context.topSummaries=()=>[];
   vm.runInNewContext(source,context,{filename:'cohab-theater.js'});
-  return{context,home,host,guest,wechat,inputs,actorCalls,hostCalls,toasts};
+  return{context,home,host,guest,guest2,wechat,inputs,actorCalls,hostCalls,toasts};
 }
+
+test('unchecked WeChat guests allow a temporary-only cast without silently adding a contact',()=>{
+  const {context,home,inputs}=harness();
+  inputs.ct_wechat_enabled.checked=false;
+  inputs.ct_extra_name.value='周医生';
+  inputs.ct_extra_persona.value='冷静专业';
+  context.cohabTheaterSave('host');
+  assert.equal(!!home.theater.guest,false);
+  assert.equal(!!home.theater.guest2,false);
+  assert.equal(home.theater.extra.name,'周医生');
+});
+
+test('two selected WeChat guests remain independent and both join a manual away round',async()=>{
+  const {context,home,inputs,actorCalls}=harness();
+  inputs.ct_guest2_id.value='guest2-contact';
+  context.cohabTheaterSave('host');
+  await context.cohabTheaterToggle('host');
+  assert.equal(home.theater.guest.contactId,'guest');
+  assert.equal(home.theater.guest2.contactId,'guest2-contact');
+  context.cohabTheaterPresence('host','me',false);
+  await context.offReply();
+  assert.deepEqual(Array.from(home.msgs,x=>x.who),['guest','guest2','ta']);
+  assert.equal(actorCalls.length,2);
+});
 
 test('pending cast starts observing only when theater is enabled',async()=>{
   const {context,home,guest}=harness();

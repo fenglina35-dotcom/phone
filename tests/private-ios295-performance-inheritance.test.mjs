@@ -45,7 +45,7 @@ function functionSource(sourceText, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('private identifiers advance to v1270 and iOS 370 while public stays v1270', () => {
+test('private identifiers remain v1270 and iOS 370 while public advances independently', () => {
   assert.equal(index, alias);
   assert.match(index, /window\.__NORTH_SHELL_BUILD__='1270'/);
   assert.match(index, /app\.js\?v=1270&r=v1270-private-sync-1/);
@@ -57,8 +57,8 @@ test('private identifiers advance to v1270 and iOS 370 while public stays v1270'
   assert.match(bridge, /static let contractVersion = 38/);
   assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 370;/g) || []).length, 12);
   assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.370;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1270 · 抖音群聊滚动与配乐'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1270'/);
+  assert.match(publicApp, /APP_VER='v1271 · 网页兼容与社交互动修复'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1271'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 

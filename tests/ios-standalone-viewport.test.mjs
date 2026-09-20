@@ -55,7 +55,8 @@ test('restored v950 shell keeps automatic Apple safe-area offsets disabled',()=>
   assert.doesNotMatch(functionSource('applyAppleHomeCompat'),/north-ios-pwa-shell/);
   assert.match(functionSource('applyAppleHomeCompat'),/classList\.remove\('north-ios-home-safe'\)/);
   assert.match(functionSource('applyAppleHomeCompat'),/classList\.remove\('north-apple-remote-safe'\)/);
-  assert.match(functionSource('applyAppleHomeCompat'),/return false/);
+  assert.match(functionSource('applyAppleHomeCompat'),/north-ios-standalone-status/);
+  assert.match(functionSource('applyAppleHomeCompat'),/return on/);
   assert.doesNotMatch(html,/html\.north-ios-pwa-shell \.phone/);
   assert.match(html,/html\.north-ios-home-safe\{--north-ios-home-safe-top:max\(env\(safe-area-inset-top,0px\),47px\);--north-ios-home-safe-bottom:0px\}/);
   assert.doesNotMatch(html,/html\.north-ios-home-safe[^}]*height:100dvh/,'the opt-in must not replace the stable 100% shell with a second viewport model');

@@ -35,15 +35,25 @@ window.PixelHomeAssets=(()=>{
     }finally{delete window.PixelHomeLocalImage;scripts.delete(new URL('asset-data/'+name+'.js',base).href);}
   }
   async function loadCatalog(){
-    if(!window.PixelWardrobeData)await loadScript('wardrobe/data.js?v=1206');
-    const data=window.PixelWardrobeData;
-    if(!data?.catalog||!data.images)throw new Error('衣柜数据未能读取');
-    const entries=Object.entries(data.images),images={};let cursor=0;
+    let catalog,entries;
+    if(location.protocol==='file:'){
+      if(!window.PixelWardrobeData)await loadScript('wardrobe/data.js?v=1206');
+      const data=window.PixelWardrobeData;
+      if(!data?.catalog||!data.images)throw new Error('衣柜数据未能读取');
+      catalog=data.catalog;entries=Object.entries(data.images);
+    }else{
+      const response=await fetch(new URL('wardrobe/catalog.json',base).href,{cache:'no-cache'});
+      if(!response.ok)throw new Error('衣柜目录下载失败：'+response.status);
+      catalog=await response.json();
+      if(!catalog?.items||!catalog.files)throw new Error('衣柜目录内容不完整');
+      entries=Object.keys(catalog.files).map(name=>[name,new URL('wardrobe/'+name,base).href]);
+    }
+    const images={};let cursor=0;
     // Bound concurrent image decodes to avoid a large startup memory spike.
     await Promise.all(Array.from({length:3},async()=>{
       while(cursor<entries.length){const [name,url]=entries[cursor++];images[name]=await loadImage(url,name);}
     }));
-    return{catalog:data.catalog,images};
+    return{catalog,images};
   }
   function createCanvas(width,height){
     if(typeof OffscreenCanvas==='function'){try{const canvas=new OffscreenCanvas(width,height);if(canvas.getContext('2d'))return canvas;}catch(_){}}

@@ -144,7 +144,7 @@ test('public web browser chrome follows every shell theme while native staging s
   assert.match(sync,/root\.style\.setProperty\('--north-shell-status-color',color\)/);
   assert.match(sync,/meta\.remove\(\)/);
   assert.match(sync,/document\.head\.appendChild\(meta\)/);
-  assert.match(sync,/apple\.setAttribute\('content','default'\)/);
+  assert.match(sync,/apple\.setAttribute\('content',appleHomeCompatBrowserEnvironment\(\)\?'black':'default'\)/);
   for(const [theme,color] of Object.entries({black:'#000',pink:'#ffeaf3',blue:'#eaf4ff',gray:'#e6e8ec',white:'#fff'})){
     assert.match(css,new RegExp(`north-shell-${theme}[^}]+background-color:${color.replace('#','\\#')}!important`));
   }

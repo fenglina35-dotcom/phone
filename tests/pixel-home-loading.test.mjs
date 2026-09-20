@@ -32,7 +32,8 @@ test('broken and stalled images reject with resource name rather than hang',asyn
 test('wardrobe image decoding has a bounded concurrency and canvas fallback',async()=>{
   let active=0,peak=0;
   class Image {naturalWidth=20;set src(value){active++;peak=Math.max(peak,active);setTimeout(()=>{active--;this.onload?.();},1);}}
-  const context={window:{PixelWardrobeData:{catalog:{version:1},images:Object.fromEntries(Array.from({length:15},(_,i)=>[String(i),'data:image/png;base64,test']))}},Image,URL,location:{protocol:'https:',href:'https://phone.test/games/pixel-home/'},document:{currentScript:{src:'https://phone.test/games/pixel-home/assets.js'},createElement:()=>({getContext:()=>({})})},setTimeout,clearTimeout};
+  const files=Object.fromEntries(Array.from({length:15},(_,i)=>[String(i)+'.png',{width:20,height:20}]));
+  const context={window:{},Image,URL,fetch:async()=>({ok:true,json:async()=>({items:[],files})}),location:{protocol:'https:',href:'https://phone.test/games/pixel-home/'},document:{currentScript:{src:'https://phone.test/games/pixel-home/assets.js'},createElement:()=>({getContext:()=>({})})},setTimeout,clearTimeout};
   vm.runInNewContext(fs.readFileSync(new URL('games/pixel-home/assets.js',root),'utf8'),context);
   assert.equal(Object.keys((await context.window.PixelHomeAssets.loadCatalog()).images).length,15);assert.equal(peak,3);
   const canvas=context.window.PixelHomeAssets.createCanvas(1024,1536);assert.equal(canvas.width,1024);assert.equal(canvas.height,1536);
