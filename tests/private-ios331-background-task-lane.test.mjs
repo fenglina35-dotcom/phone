@@ -61,19 +61,19 @@ function functionSource(source, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('private performance candidate keeps v1278 while public web advances independently', () => {
+test('private performance candidate keeps v1279 while public web advances independently', () => {
   assert.equal(privateIndex, privateAlias);
-  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1278'/);
-  assert.match(privateIndex, /app\.js\?v=1278&r=v1278-private-backup-storage-1/);
+  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1279'/);
+  assert.match(privateIndex, /app\.js\?v=1279&r=v1279-private-backup-storage-1/);
   assert.match(privateIndex, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(privateRepair, /index\.html\?repair=1&v=1278/);
-  assert.match(privateApp, /APP_VER='v1278 · 私人云备份分块存储修复'/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1279/);
+  assert.match(privateApp, /APP_VER='v1279 · 私人云备份提交超时修复'/);
   assert.match(overlay, /336-daily-file-backup/);
-  assert.match(webView, /1\.0\.377 \(377\)/);
-  assert.match(bridge, /private static let build = "1\.0\.377 \(377\)"/);
-  assert.match(bridge, /static let contractVersion = 40/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 377;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.377;/g) || []).length, 12);
+  assert.match(webView, /1\.0\.378 \(378\)/);
+  assert.match(bridge, /private static let build = "1\.0\.378 \(378\)"/);
+  assert.match(bridge, /static let contractVersion = 41/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 378;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.378;/g) || []).length, 12);
   assert.match(publicApp, /APP_VER='v1280 · 智能家居额度保护模式'/);
   assert.doesNotMatch(publicApp, /function northNativeBackgroundTask\(name,run\)/);
 });

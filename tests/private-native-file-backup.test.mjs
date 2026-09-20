@@ -14,16 +14,16 @@ const backup=read(bundle+'private-cloud-backup.js');
 const privateApp=read(bundle+'app.js');
 const publicApp=read('app.js');
 
-test('private v1278 loads daily backup after the diagnostic overlay while public advances independently',()=>{
+test('private v1279 loads daily backup after the diagnostic overlay while public advances independently',()=>{
   for(const name of ['index.html','小手机.html']){
     const html=read(bundle+name);
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1278'/);
-    assert.ok(html.indexOf('private-cloud-backup.js?v=1278')>html.indexOf('private-runtime-diagnostics.js?v=339'));
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1279'/);
+    assert.ok(html.indexOf('private-cloud-backup.js?v=1279')>html.indexOf('private-runtime-diagnostics.js?v=339'));
   }
-  assert.match(privateApp,/APP_VER='v1278 · 私人云备份分块存储修复'/);
+  assert.match(privateApp,/APP_VER='v1279 · 私人云备份提交超时修复'/);
   assert.match(publicApp,/APP_VER='v1280 · 智能家居额度保护模式'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 377;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.377;/g)||[]).length,12);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 378;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.378;/g)||[]).length,12);
 });
 
 test('web backup sends bounded ordered chunks and records a day only after confirmed save',()=>{
@@ -42,7 +42,7 @@ test('web backup sends bounded ordered chunks and records a day only after confi
 
 test('native bridge persists account-bound backup chunks and confirms a small manifest',()=>{
   for(const action of ['begin','chunk','commit','abort'])assert.match(bridge,new RegExp(`account\\.backup\\.file\\.${action}`));
-  assert.match(bridge,/static let contractVersion = 40/);
+  assert.match(bridge,/static let contractVersion = 41/);
   assert.match(bridge,/private actor PrivateBackupFileStore/);
   assert.match(bridge,/offset == current\.written/);
   assert.match(bridge,/current\.owner == owner/);
@@ -67,6 +67,6 @@ test('native bridge persists account-bound backup chunks and confirms a small ma
   assert.match(bridge,/config\.timeoutIntervalForResource = 600/);
   assert.match(bridge,/row\?\["saved"\] as\? Bool == true/);
   assert.match(bridge,/await PrivateBackupFileStore\.shared\.remove\(token: token\)/);
-  assert.match(webView,/action === 'account\.backup\.file\.commit' \? 660000 : 60000/);
-  assert.match(backup,/account\.backup\.file\.commit',\{token\},720000/);
+  assert.match(webView,/action === 'account\.backup\.file\.commit' \? 1800000 : 60000/);
+  assert.match(backup,/account\.backup\.file\.commit',\{token\},1920000/);
 });

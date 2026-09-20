@@ -37,7 +37,7 @@ test('temperature and optional fan speed require writable fresh readback',()=>{
 });
 
 test('private native contract exposes climate snapshot and command without changing public web',()=>{
-  assert.match(bridge,/static let contractVersion = 40/);
+  assert.match(bridge,/static let contractVersion = 41/);
   assert.match(bridge,/case "homekit\.climates\.snapshot"/);
   assert.match(bridge,/case "homekit\.climate\.command"/);
   assert.equal(read('app.js').includes('homekit.climates.snapshot'),false);
@@ -48,7 +48,7 @@ test('air UI is private-only, mirrored byte-for-byte, and loaded after lock over
   assert.equal(airSource,airBundle);
   assert.equal(airCss,fs.readFileSync(path.join(xcodeRoot,'PhoneWeb.bundle','private-smart-air.css'),'utf8'));
   assert.match(privateIndex,/private-smart-air\.css\?v=342/);
-  assert.match(privateIndex,/private-smart-lock\.js\?v=339[^]*private-smart-air\.js\?v=1278/);
+  assert.match(privateIndex,/private-smart-lock\.js\?v=339[^]*private-smart-air\.js\?v=1279/);
   assert.match(lockSource,/privateSmartAirChooserCard/);
   const staging=read('native/private-small-phone/scripts/stage-private-phone-web.mjs');
   assert.match(staging,/path\.join\(privateRoot, 'Resources', 'Web'\)/);
@@ -186,9 +186,9 @@ test('private identity advances while public web stays unchanged',()=>{
   const privateApp=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js');
   const webView=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
   const project=read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
-  assert.match(privateApp,/APP_VER='v1278 · 私人云备份分块存储修复'/);
-  assert.match(webView,/1\.0\.377 \(377\)/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 377;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.377;/g)||[]).length,12);
+  assert.match(privateApp,/APP_VER='v1279 · 私人云备份提交超时修复'/);
+  assert.match(webView,/1\.0\.378 \(378\)/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 378;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.378;/g)||[]).length,12);
   assert.match(read('app.js'),/APP_VER='v1280 · 智能家居额度保护模式'/);
 });

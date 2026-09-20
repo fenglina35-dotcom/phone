@@ -920,7 +920,7 @@ test('every private release keeps the complete streamed daily cloud-backup chain
     assert.match(bridge, new RegExp(`account\\.backup\\.file\\.${action}`), `原生桥漏掉 ${action}`);
   }
   assert.match(backup, /const CHUNK=192\*1024/, '私人备份不得退回整份大对象跨桥传输');
-  assert.match(backup, /account\.backup\.file\.commit',\{token\},720000/, '网页成功确认必须等得过原生上传时限');
+  assert.match(backup, /account\.backup\.file\.commit',\{token\},1920000/, '网页成功确认必须覆盖完整原生分块上传时限');
   assert.match(bridge, /private actor PrivateBackupFileStore/, '原生临时备份文件存储缺失');
   assert.match(bridge, /privateBackupChunkBytes = 4 \* 1_024 \* 1_024/, '原生端必须把云备份切成安全大小的对象存储分块');
   assert.match(bridge, /\/storage\/v1\/object\//, '私人云备份不得退回整份 jsonb 数据库写入');
@@ -929,7 +929,7 @@ test('every private release keeps the complete streamed daily cloud-backup chain
   assert.match(bridge, /actualChecksum == expectedChecksum/, '恢复前必须校验整份备份散列');
   assert.match(backup, /正在上传私人云备份/, '私人备份必须向用户显示真实云端上传百分比');
   assert.match(bridge, /backup_upload_timeout/, '原生上传超时不得伪装成账号认证超时');
-  assert.match(webView, /action === 'account\.backup\.file\.commit' \? 660000 : 60000/, 'WKWebView 桥不得提前中断云端提交');
+  assert.match(webView, /action === 'account\.backup\.file\.commit' \? 1800000 : 60000/, 'WKWebView 桥不得提前中断完整分块上传');
   assert.match(project, /isa = PBXFileSystemSynchronizedRootGroup;[\s\S]*?path = PhoneCompanionTest;/, '主 App 资源目录没有纳入 Xcode 文件夹同步');
   assert.doesNotMatch(project, /membershipExceptions = \([^)]*private-cloud-backup\.js/, '私人云备份组件被排除出 Xcode Target');
 });

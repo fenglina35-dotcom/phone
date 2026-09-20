@@ -17,7 +17,10 @@
   let token='';try{const begun=await call('account.backup.file.begin',{bytes:blob.size,capturedAt:meta.capturedAt,sourceBuild:meta.sourceBuild});token=begun.token;
    for(let offset=0;offset<blob.size;offset+=CHUNK){const bytes=new Uint8Array(await blob.slice(offset,offset+CHUNK).arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode.apply(null,bytes.subarray(i,i+8192));await call('account.backup.file.chunk',{token,offset,base64:btoa(binary)});if(onProgress)onProgress(Math.min(offset+bytes.length,blob.size),blob.size);}
    trace('upload',{bytes:blob.size});let settled=false,result=null,failure=null;
-   const committing=call('account.backup.file.commit',{token},720000).then(value=>{result=value;settled=true;},error=>{failure=error;settled=true;});
+   // A large archive is uploaded as multiple 4 MiB objects in sequence.  The
+   // native bridge owns the network timeouts for each object; this outer wait
+   // must cover the complete multi-object upload rather than one request.
+   const committing=call('account.backup.file.commit',{token},1920000).then(value=>{result=value;settled=true;},error=>{failure=error;settled=true;});
    while(!settled){await Promise.race([committing,wait(900)]);if(settled)break;try{const p=await privatePhoneAccountCall('account.backup.file.progress',{token},10000);if(p&&p.ok===true&&onUploadProgress)onUploadProgress(+p.sentBytes||0,+p.expectedBytes||0);}catch(_){}}
    await committing;if(failure)throw failure;token='';return result;
   }finally{if(token)try{await privatePhoneAccountCall('account.backup.file.abort',{token});}catch(_){} }
