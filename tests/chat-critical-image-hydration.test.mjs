@@ -27,19 +27,23 @@ function functionSource(name, text = source) {
   throw new Error(`unterminated ${name}`);
 }
 
-for (const name of ['phoneFriendAvatar','privateTrimImageMemoryCache','storedImageDisplaySource','routeCriticalStoredImageKeys','hydrateRouteCriticalStoredImages']) {
+for (const name of ['phoneFriendAvatar','privateTrimImageMemoryCache','storedImageDisplaySource','storedImageElementSource','roleMomentCover','roleMomentCard','renderRoleMoments','routeCriticalStoredImageKeys','hydrateRouteCriticalStoredImages']) {
   assert.ok(bundle.includes(functionSource(name)), `private bundle image repair differs: ${name}`);
 }
 assert.match(functionSource('renderChat'), /storedImageDisplaySource\(c\.chatBg\)/, 'chat renders must reuse an already hydrated background instead of flashing an idb URL');
 assert.match(functionSource('renderChat', bundle), /storedImageDisplaySource\(c\.chatBg\)/, 'private chat renders must keep the same critical image hydration contract even when unrelated header behavior releases later');
 assert.match(functionSource('phoneFriendAvatar'), /storedImageDisplaySource/, 'real-friend avatars must reuse hydrated image data across renders');
 assert.match(functionSource('privateTrimImageMemoryCache'), /routeCriticalStoredImageKeys/, 'active chat and friend images must be protected from generic memory trimming');
+assert.match(functionSource('roleMomentCard'), /storedImageElementSource\(img\)/, 'stored role-moment thumbnails must leave a recoverable image node');
+assert.match(functionSource('renderRoleMoments'), /storedImageElementSource\(cover\)/, 'stored role-moment covers must leave a recoverable image node instead of a permanent gray block');
 
 const context = vm.createContext({
   _imgCache: {bg: 'data:image/jpeg;base64,BG', friend: 'data:image/jpeg;base64,FRIEND'},
+  isImg: value => /^(https?:|data:|blob:)/i.test(String(value || '')),
   isStoredImgRef: value => /^idb:/.test(String(value || '')),
   cur: () => ({p: 'chat', id: 'role'}),
-  getC: () => ({chatBg: 'idb:bg', avatar: 'idb:role'}),
+  getC: () => ({chatBg: 'idb:bg', avatar: 'idb:role', momentCover: 'idb:cover'}),
+  roleMomentCover: contact => contact.momentCover || '',
   phoneFriendState: () => ({friends: [{id: 'friend-1', avatar: 'idb:friend'}]}),
   phoneFriendById: id => id === 'friend-1' ? {id, avatar: 'idb:friend'} : null,
   pfGroupById: () => ({members: []}),
@@ -47,14 +51,36 @@ const context = vm.createContext({
 });
 vm.runInContext([
   functionSource('storedImageDisplaySource'),
+  functionSource('storedImageElementSource'),
   functionSource('routeCriticalStoredImageKeys'),
-  'globalThis.display=storedImageDisplaySource;globalThis.keys=routeCriticalStoredImageKeys;',
+  'globalThis.display=storedImageDisplaySource;globalThis.elementSource=storedImageElementSource;globalThis.keys=routeCriticalStoredImageKeys;',
 ].join('\n'), context);
 
 assert.equal(context.display('idb:bg'), 'data:image/jpeg;base64,BG', 'cached chat backgrounds must be available in the same paint');
 assert.equal(context.display('idb:missing'), 'idb:missing', 'a missing image reference must stay recoverable for asynchronous hydration');
+assert.equal(context.elementSource('idb:missing'), 'idb:missing', 'a missing stored image must still render an image node for asynchronous hydration');
 assert.deepEqual(Array.from(context.keys({p: 'chat', id: 'role'})), ['bg', 'role']);
+assert.deepEqual(Array.from(context.keys({p: 'roleMoments', id: 'role'})), ['cover', 'role'], 'the open role Moments cover must bypass the generic four-image queue');
 assert.deepEqual(Array.from(context.keys({p: 'wechat'})), ['friend']);
+
+const roleRenderContext = vm.createContext({
+  _imgCache: {},
+  isImg: value => /^(https?:|data:|blob:)/i.test(String(value || '')),
+  isStoredImgRef: value => /^idb:/.test(String(value || '')),
+  getC: () => ({id: 'role', name: '角色', avatar: '🙂', signature: '', momentCover: 'idb:cover'}),
+  contactRoleMoments: () => [],
+  esc: value => String(value || ''),
+  av: () => '<div class="avatar"></div>',
+});
+vm.runInContext([
+  functionSource('storedImageDisplaySource'),
+  functionSource('storedImageElementSource'),
+  functionSource('roleMomentCover'),
+  functionSource('renderRoleMoments'),
+  'globalThis.renderRole=renderRoleMoments;',
+].join('\n'), roleRenderContext);
+assert.match(roleRenderContext.renderRole('role'), /<img src="idb:cover" alt="朋友圈封面">/,
+  'after a reload clears the memory cache, the persisted role cover must remain discoverable instead of becoming a gray span');
 
 const hydrated = {nodes: 0, trimKeys: [], reads: []};
 const hydrateContext = vm.createContext({

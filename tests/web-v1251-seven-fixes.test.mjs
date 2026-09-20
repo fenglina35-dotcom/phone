@@ -19,8 +19,8 @@ test('①②⑥ every stored-image surface resolves the idb reference before pai
   assert.match(app, /\$\{isImg\(bg\)\?'background-image:url\('\+bg\+'\);':''\}/);
   assert.match(app, /storedImageDisplaySource\(S\.me\.homeBg\)/, '主屏壁纸');
   assert.match(app, /isImg\(storedImageDisplaySource\(photo\)\)/, '主屏自定义照片组件');
-  assert.match(app, /isImg\(storedImageDisplaySource\(img\)\)/, '朋友圈动态配图');
-  assert.match(app, /isImg\(storedImageDisplaySource\(cover\)\)/, '朋友圈封面');
+  assert.match(app, /imgSrc=storedImageElementSource\(img\)/, '朋友圈动态配图');
+  assert.match(app, /coverSrc=storedImageElementSource\(cover\)/, '朋友圈封面');
   // 不能再出现"直接把状态里的图片塞进 src"的写法
   assert.match(app, /isImg\(storedImageDisplaySource\(m\.img\)\)/, '群聊表情包');
   assert.doesNotMatch(app, /stickermsg"><img src="\$\{m\.img\}">/, '不能再有不做还原就直接渲染的表情包');
