@@ -14,16 +14,16 @@ const backup=read(bundle+'private-cloud-backup.js');
 const privateApp=read(bundle+'app.js');
 const publicApp=read('app.js');
 
-test('private v1279 loads daily backup after the diagnostic overlay while public advances independently',()=>{
+test('private v1281 loads daily backup after the diagnostic overlay while public advances independently',()=>{
   for(const name of ['index.html','小手机.html']){
     const html=read(bundle+name);
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1279'/);
-    assert.ok(html.indexOf('private-cloud-backup.js?v=1279')>html.indexOf('private-runtime-diagnostics.js?v=339'));
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1281'/);
+    assert.ok(html.indexOf('private-cloud-backup.js?v=1281')>html.indexOf('private-runtime-diagnostics.js?v=339'));
   }
-  assert.match(privateApp,/APP_VER='v1279 · 私人云备份提交超时修复'/);
+  assert.match(privateApp,/APP_VER='v1281 · 私人通话格式清理修复'/);
   assert.match(publicApp,/APP_VER='v1280 · 智能家居额度保护模式'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 378;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.378;/g)||[]).length,12);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 379;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.379;/g)||[]).length,12);
 });
 
 test('web backup sends bounded ordered chunks and records a day only after confirmed save',()=>{

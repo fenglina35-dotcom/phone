@@ -44,8 +44,10 @@ test('call log mutations restore the old viewport after layout settles', () => {
   assert.match(keep, /scrollHeight-el\.clientHeight-bottom/);
 });
 
-test('private bundle receives the same call log state fix', () => {
-  for (const name of ['renderScrollTarget', 'renderCallLog', 'clToggle', 'clKeep']) {
+test('private bundle retains shared call log state while its native-only output sanitizer stays isolated', () => {
+  for (const name of ['renderScrollTarget', 'clToggle', 'clKeep']) {
     assert.equal(functionSource(name, bundled).replace(/\r\n/g, '\n'), functionSource(name).replace(/\r\n/g, '\n'), `${name} must match the private bundle`);
   }
+  assert.match(functionSource('renderCallLog', bundled), /m\._call&&!m\._callTranslationOf/);
+  assert.doesNotMatch(functionSource('renderCallLog'), /callStoredLineParts/);
 });
