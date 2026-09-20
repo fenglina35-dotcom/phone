@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {crossingDoor,centeredAtDoor} from './actor-door-route.mjs?build=035';
+const d={room:'office',center:[10,10],closedYaw:0,angle:0,y:0,width:1.2};
+assert.equal(crossingDoor({x:9.6,z:9,y:0},[{x:11,z:9,y:0}],[d]),null,'Walking alongside door must not open it');
+assert.equal(crossingDoor({x:12,z:9,y:0},[{x:12,z:11,y:0}],[d]),null,'Crossing wall plane outside doorway is not passage');
+const result=crossingDoor({x:10.3,z:9,y:0},[{x:10.1,z:11,y:0}],[d]);
+assert.equal(result.door,d);assert.equal(result.approach.x,10);assert.equal(result.approach.z,9.05);
+assert(centeredAtDoor(result.approach,d));assert(!centeredAtDoor({x:10.35,y:0,z:9.05},d));
+assert.equal(crossingDoor({x:10,z:9,y:-3.15},[{x:10,z:11,y:-3.15}],[d]),null);
+assert.equal(crossingDoor({x:10,z:9,y:0},[{x:10,z:11,y:0}],[{...d,angle:1.57}]),null);
+const rotated={...d,closedYaw:-Math.PI/2};
+assert(centeredAtDoor(crossingDoor({x:9,y:0,z:10},[{x:11,y:0,z:10}],[rotated]).approach,rotated));
+console.log('PASS: pass-by ignored, actual doorway crossing detected, central approach enforced on both door orientations and floors');

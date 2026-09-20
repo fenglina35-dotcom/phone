@@ -51,11 +51,11 @@ test('hotel privacy exposes participant orders and phone-inspection orders at di
   assert.match(functionSource('spyFocusData'),/travelHotelDiscoveryLine/);
 });
 
-test('hotel cards become role-readable chat context without entering private iOS source',()=>{
+test('hotel cards become role-readable chat context in the current private superset',()=>{
   assert.match(functionSource('msgToText'),/case 'hotel'/);
   assert.match(functionSource('buildPart'),/m\.type==='hotel'/);
   assert.match(functionSource('buildSystem'),/你参与的云程酒店订单/);
-  assert.doesNotMatch(privateApp,/function tvHotelBook\(/);
+  assert.match(privateApp,/function tvHotelBook\(/);
 });
 
 test('user hotel booking persists one paid order and only notifies a participating role',()=>{

@@ -14,16 +14,16 @@ const backup=read(bundle+'private-cloud-backup.js');
 const privateApp=read(bundle+'app.js');
 const publicApp=read('app.js');
 
-test('private v1270 loads daily backup after the diagnostic overlay while public advances independently',()=>{
+test('private v1273 loads daily backup after the diagnostic overlay while public advances independently',()=>{
   for(const name of ['index.html','小手机.html']){
     const html=read(bundle+name);
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1270'/);
-    assert.ok(html.indexOf('private-cloud-backup.js?v=1270')>html.indexOf('private-runtime-diagnostics.js?v=336'));
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1273'/);
+    assert.ok(html.indexOf('private-cloud-backup.js?v=1273')>html.indexOf('private-runtime-diagnostics.js?v=339'));
   }
-  assert.match(privateApp,/APP_VER='v1270 · 抖音群聊滚动与配乐'/);
+  assert.match(privateApp,/APP_VER='v1273 · 私人版温馨小家与流畅度整合'/);
   assert.match(publicApp,/APP_VER='v1272 · iOS网页顶部布局修复'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 370;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.370;/g)||[]).length,12);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 372;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.372;/g)||[]).length,12);
 });
 
 test('web backup sends bounded ordered chunks and records a day only after confirmed save',()=>{

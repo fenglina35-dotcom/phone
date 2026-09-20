@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import {execFileSync} from 'node:child_process';
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const b='native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/';
-test('v1270 keeps new lock and background scheduling code out of the website',()=>{
+test('v1273 keeps new lock and background scheduling code out of the website',()=>{
  const web=read('app.js'),html=read('小手机.html'),privateApp=read(b+'app.js');
  for(const marker of ['northNativeBackgroundTask','__smallPhoneBackgroundTaskSnapshot','private-smart-lock','homekit.lock.command']){assert(!web.includes(marker),marker);assert(!html.includes(marker),marker);}
  assert(privateApp.includes('northNativeBackgroundTask'));
@@ -21,8 +21,9 @@ test('shared reply changes and game assets are retained by the private entry',()
  const webCohab=read('cohab-theater.js'),privateCohab=read(b+'cohab-theater.js');
  assert(webCohab.includes('ct_wechat_enabled'),'website keeps the optional WeChat guest switch');
  assert(webCohab.includes("guest2"),'website supports a second independent WeChat guest');
- assert(!privateCohab.includes('ct_wechat_enabled'),'private bundle is intentionally untouched by this website-only release');
- assert(!privateCohab.includes("guest2"),'private bundle is intentionally untouched by this website-only release');
+ assert(privateCohab.includes('ct_wechat_enabled'),'private bundle must retain the current optional WeChat guest switch');
+ assert(privateCohab.includes("guest2"),'private bundle must retain the second independent WeChat guest');
+ assert.equal(privateCohab,webCohab,'the private v1273 superset must carry the current shared theater source');
  assert.equal(read(b+'index.html'),read(b+'小手机.html'));
  assert.equal(read(b+'private-smart-lock.js'),read('native/private-small-phone/Resources/Web/private-smart-lock.js'));
  assert.equal(read(b+'private-smart-lock.css'),read('native/private-small-phone/Resources/Web/private-smart-lock.css'));

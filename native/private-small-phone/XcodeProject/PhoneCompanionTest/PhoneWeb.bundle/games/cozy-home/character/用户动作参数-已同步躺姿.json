@@ -1,0 +1,308 @@
+{
+  "version": 1,
+  "asset": "roland-expressions-actions-v012.glb",
+  "clips": {
+    "Walk": {
+      "spine": {
+        "x": 0,
+        "y": 0,
+        "z": 0,
+        "height": 0
+      },
+      "chest": {
+        "x": 2,
+        "y": 0,
+        "z": 0,
+        "height": 0
+      },
+      "head": {
+        "x": 4,
+        "y": 0,
+        "z": 0,
+        "height": 0
+      },
+      "armL": {
+        "x": -9,
+        "y": 0,
+        "z": 0,
+        "height": 0
+      },
+      "hipL": {
+        "x": 5,
+        "y": 0,
+        "z": 0,
+        "height": 0
+      },
+      "armR": {
+        "x": -18,
+        "y": 0,
+        "z": 0,
+        "height": 0
+      },
+      "hipR": {
+        "x": 4,
+        "y": 0,
+        "z": 0,
+        "height": 0
+      }
+    },
+    "OpenDoor": {
+      "chest": {
+        "x": -3,
+        "y": 0,
+        "z": 0,
+        "height": 0
+      },
+      "hipL": {
+        "x": 12,
+        "y": 0,
+        "z": 0,
+        "height": 0
+      },
+      "kneeL": {
+        "x": -20,
+        "y": 0,
+        "z": 0,
+        "height": 0
+      },
+      "hipR": {
+        "x": 9,
+        "y": 0,
+        "z": 0,
+        "height": 0
+      },
+      "kneeR": {
+        "x": -17,
+        "y": 0,
+        "z": 0,
+        "height": 0
+      },
+      "ankleR": {
+        "x": 6,
+        "y": 0,
+        "z": 0,
+        "height": 0
+      },
+      "ankleL": {
+        "x": 4,
+        "y": 0,
+        "z": 0,
+        "height": 0
+      },
+      "armL": {
+        "x": -43,
+        "y": -65,
+        "z": -45,
+        "height": 0
+      },
+      "thumbL": {
+        "x": 9,
+        "y": 7,
+        "z": -1,
+        "height": 0
+      },
+      "thumbR": {
+        "x": 7,
+        "y": 48,
+        "z": 7,
+        "height": 0
+      },
+      "armR": {
+        "x": -5,
+        "y": 15,
+        "z": 5,
+        "height": 0
+      },
+      "head": {
+        "x": -8,
+        "y": 0,
+        "z": 0,
+        "height": 0
+      }
+    },
+    "LieDown": {
+      "thumb2L": {
+        "x": -12,
+        "y": -80,
+        "z": -2,
+        "height": 0
+      },
+      "kneeL": {
+        "x": 3,
+        "y": 18,
+        "z": -3,
+        "height": 0
+      },
+      "kneeR": {
+        "x": 2,
+        "y": -19,
+        "z": -6,
+        "height": 0
+      },
+      "elbowL": {
+        "x": 0,
+        "y": 0,
+        "z": -7,
+        "height": 0
+      },
+      "wristL": {
+        "x": -2,
+        "y": 0,
+        "z": 1,
+        "height": 0
+      },
+      "thumbL": {
+        "x": 32,
+        "y": -3,
+        "z": 27,
+        "height": 0
+      },
+      "thumb3L": {
+        "x": -33,
+        "y": 0,
+        "z": 0,
+        "height": 0
+      },
+      "thumb2R": {
+        "x": 1,
+        "y": 23,
+        "z": -31,
+        "height": 0
+      },
+      "elbowR": {
+        "x": 10,
+        "y": 0,
+        "z": 7,
+        "height": 0
+      },
+      "wristR": {
+        "x": -11,
+        "y": -25,
+        "z": 11,
+        "height": 0
+      },
+      "thumbR": {
+        "x": 18,
+        "y": -23,
+        "z": -19,
+        "height": 0
+      },
+      "thumb3R": {
+        "x": -35,
+        "y": 3,
+        "z": 10,
+        "height": 0
+      },
+      "f_pinkyR": {
+        "x": 2,
+        "y": 0,
+        "z": 18,
+        "height": 0
+      },
+      "ankleR": {
+        "x": -17,
+        "y": -5,
+        "z": 15,
+        "height": 0
+      },
+      "ankleL": {
+        "x": -21,
+        "y": -7,
+        "z": 0,
+        "height": 0
+      }
+    },
+    "LieIdle": {
+      "thumb2L": {
+        "x": -12,
+        "y": -80,
+        "z": -2,
+        "height": 0
+      },
+      "kneeL": {
+        "x": 3,
+        "y": 18,
+        "z": -3,
+        "height": 0
+      },
+      "kneeR": {
+        "x": 2,
+        "y": -19,
+        "z": -6,
+        "height": 0
+      },
+      "elbowL": {
+        "x": 0,
+        "y": 0,
+        "z": -7,
+        "height": 0
+      },
+      "wristL": {
+        "x": -2,
+        "y": 0,
+        "z": 1,
+        "height": 0
+      },
+      "thumbL": {
+        "x": 32,
+        "y": -3,
+        "z": 27,
+        "height": 0
+      },
+      "thumb3L": {
+        "x": -33,
+        "y": 0,
+        "z": 0,
+        "height": 0
+      },
+      "thumb2R": {
+        "x": 1,
+        "y": 23,
+        "z": -31,
+        "height": 0
+      },
+      "elbowR": {
+        "x": 10,
+        "y": 0,
+        "z": 7,
+        "height": 0
+      },
+      "wristR": {
+        "x": -11,
+        "y": -25,
+        "z": 11,
+        "height": 0
+      },
+      "thumbR": {
+        "x": 18,
+        "y": -23,
+        "z": -19,
+        "height": 0
+      },
+      "thumb3R": {
+        "x": -35,
+        "y": 3,
+        "z": 10,
+        "height": 0
+      },
+      "f_pinkyR": {
+        "x": 2,
+        "y": 0,
+        "z": 18,
+        "height": 0
+      },
+      "ankleR": {
+        "x": -17,
+        "y": -5,
+        "z": 15,
+        "height": 0
+      },
+      "ankleL": {
+        "x": -21,
+        "y": -7,
+        "z": 0,
+        "height": 0
+      }
+    }
+  }
+}

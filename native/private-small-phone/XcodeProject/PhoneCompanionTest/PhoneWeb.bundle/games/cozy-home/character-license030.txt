@@ -1,0 +1,23 @@
+男主头部编辑样板 030
+
+基础模型：pixiv / VRoid Studio beta HairSample_Male（CC0）。
+官方许可说明（明确列出 HairSample_Male）：
+https://vroid.pixiv.help/hc/en-us/articles/4402614652569-Do-VRoid-Studio-s-sample-models-come-with-conditions-of-use
+本次使用的 beta 0.14.0 VRM 导出镜像：
+https://opengameart.org/content/vroid-studio-cc0-models
+https://opengameart.org/sites/default/files/hairsample_male.zip
+
+此样板是修改后的 CC0 基础头部，不是从 VRChat 或 MiSide 游戏中提取的模型。
+保留原面部 position morph targets 和骨骼；移除未展示身体与未使用纹理，合并同材质头发绘制。
+增加有界的几何变形、参数保存/导入/导出。头发使用柔和 toon 材质，脸部使用原手绘色彩贴图与染色的 unlit 材质，当前脸部不响应现场灯光。
+现阶段表情使用变形后的中性法线，未制作专门的表情法线修正。
+默认保留基础模型原刘海与头发几何；上提仅为用户可选滑杆，不等于参考图定制发型。
+参考角色图片由用户提供，仅用于本私人项目对照，不因基础模型 CC0 而改变该图片的权利归属。
+
+可选第二头模：Sakurada Fumiriya / pixiv，CC0。
+官方许可：https://vroid.pixiv.help/hc/en-us/articles/360014788554-Sakurada-Fumiriya
+VRM 导出镜像：https://opengameart.org/sites/default/files/sakurada_fumiriya.zip
+保留原头发与面部形态；各头模独立保存参数。四种脸型预设是在选定头模上的轮廓变形，不是四个不同授权模型。
+
+目前只交付头部捏脸与表情样板；没有替换房间里的模型或给原 AI 西装身体绑定骨骼。
+捏脸参数文件是本工作台的 JSON，不是 VRoid 的 .vroid 工程，也不是最终游戏角色导出。

@@ -394,8 +394,22 @@ struct LocalPhoneWebView: UIViewRepresentable {
         ) {
             guard didLoadPhone, !recoveryNoticeActive else { return }
             pendingResponsivenessProbe?.cancel()
+            let expectedUptime = ProcessInfo.processInfo.systemUptime + delay
+            let lifecycleToken = responsivenessProbeToken
             let work = DispatchWorkItem { [weak self] in
-                self?.runResponsivenessProbe()
+                guard let self,
+                      self.responsivenessProbeToken == lifecycleToken,
+                      UIApplication.shared.applicationState == .active else { return }
+                let mainQueueLagMs = max(0, Int(
+                    (ProcessInfo.processInfo.systemUptime - expectedUptime) * 1_000
+                ))
+                if mainQueueLagMs >= 650 {
+                    SmallPhoneDiagnosticsStore.append(
+                        "native.responsiveness.mainQueueLate",
+                        fields: ["ms": mainQueueLagMs, "coordinatorID": self.coordinatorID]
+                    )
+                }
+                self.runResponsivenessProbe()
             }
             pendingResponsivenessProbe = work
             DispatchQueue.main.asyncAfter(
@@ -411,6 +425,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
                   let webView = bridge.webView else { return }
             responsivenessProbeToken += 1
             let token = responsivenessProbeToken
+            let probeStartedUptime = ProcessInfo.processInfo.systemUptime
             pendingResponsivenessTimeout?.cancel()
             let timeout = DispatchWorkItem { [weak self] in
                 guard let self,
@@ -420,6 +435,17 @@ struct LocalPhoneWebView: UIViewRepresentable {
                       UIApplication.shared.applicationState == .active else {
                     return
                 }
+                // A delayed main-queue timeout is not evidence that JavaScript
+                // itself spent this whole interval executing. Record both clocks.
+                let elapsedMs = max(0, Int(
+                    (ProcessInfo.processInfo.systemUptime - probeStartedUptime) * 1_000
+                ))
+                SmallPhoneDiagnosticsStore.append(
+                    "native.responsiveness.probeTimeout",
+                    fields: ["elapsedMs": elapsedMs,
+                             "timeoutQueueLagMs": max(0, elapsedMs - 6_000),
+                             "coordinatorID": self.coordinatorID]
+                )
                 self.offerNativeRecovery(
                     reason: "小手机页面已连续 6 秒没有响应。私人 App 已停止自动重载；你可以继续等待它自行恢复，或在手机降温后安全重开。",
                     event: "native.responsiveness.timeout"
@@ -439,6 +465,16 @@ struct LocalPhoneWebView: UIViewRepresentable {
                     }
                     self.pendingResponsivenessTimeout?.cancel()
                     self.pendingResponsivenessTimeout = nil
+                    let elapsedMs = max(0, Int(
+                        (ProcessInfo.processInfo.systemUptime - probeStartedUptime) * 1_000
+                    ))
+                    if elapsedMs >= 650 {
+                        SmallPhoneDiagnosticsStore.append(
+                            "native.responsiveness.probeSlow",
+                            fields: ["elapsedMs": elapsedMs, "failed": error != nil,
+                                     "coordinatorID": self.coordinatorID]
+                        )
+                    }
                     if error != nil {
                         self.didLoadPhone = false
                         self.offerNativeRecovery(
@@ -652,7 +688,9 @@ struct LocalPhoneWebView: UIViewRepresentable {
                 decisionHandler(.cancel)
                 return
             }
-            if url.isFileURL || url.scheme == "about" {
+            if url.scheme == "cozy-home", url.host == "app", navigationAction.targetFrame?.isMainFrame == false {
+                decisionHandler(.allow)
+            } else if url.isFileURL || url.scheme == "about" {
                 decisionHandler(.allow)
             } else if navigationAction.targetFrame?.isMainFrame == false,
                       url.scheme == "https",
@@ -869,6 +907,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
+        configuration.setURLSchemeHandler(CozyHomeSchemeHandler(), forURLScheme: "cozy-home")
         configuration.websiteDataStore = .default()
         configuration.allowsInlineMediaPlayback = true
         configuration.mediaTypesRequiringUserActionForPlayback = []
@@ -1009,7 +1048,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
     private static let bridgeBootstrap = """
     (() => {
       window.__SMALL_PHONE_PRIVATE__ = true;
-      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.370 (370)';
+      window.__SMALL_PHONE_PRIVATE_BUILD__ = '1.0.372 (372)';
       window.__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__ = false;
       const privateDiagLast = new Map();
       window.__smallPhoneNativeDiag = (event, fields = {}, minGap = 10000) => {
@@ -1041,7 +1080,7 @@ struct LocalPhoneWebView: UIViewRepresentable {
       };
       window.__smallPhoneNativeDiag(
         'native.bootstrap.ready',
-        { build: '1.0.370 (370)', autoBackupPaused: false },
+        { build: '1.0.372 (372)', autoBackupPaused: false },
         0
       );
       // Keep private-App background maintenance away from the WebContent main
@@ -1346,4 +1385,27 @@ struct LocalPhoneWebView: UIViewRepresentable {
       });
     })();
     """
+}
+
+
+// Only packaged resources; never proxy network requests or expose user files.
+final class CozyHomeSchemeHandler: NSObject, WKURLSchemeHandler {
+    func webView(_ webView: WKWebView, start task: WKURLSchemeTask) {
+        guard let url = task.request.url, url.scheme == "cozy-home", url.host == "app",
+              let bundle = Bundle.main.url(forResource: "PhoneWeb", withExtension: "bundle") else {
+            task.didFailWithError(URLError(.badURL)); return
+        }
+        let root = bundle.appendingPathComponent("games/cozy-home", isDirectory: true).standardizedFileURL.resolvingSymlinksInPath()
+        let relative = String(url.path.drop(while: { $0 == "/" }))
+        let file = root.appendingPathComponent(relative).standardizedFileURL.resolvingSymlinksInPath()
+        guard file.path.hasPrefix(root.path + "/"), let data = try? Data(contentsOf: file, options: .mappedIfSafe) else {
+            task.didFailWithError(URLError(.fileDoesNotExist)); return
+        }
+        let mime = ["html":"text/html", "mjs":"text/javascript", "js":"text/javascript", "css":"text/css", "json":"application/json", "png":"image/png", "jpg":"image/jpeg", "jpeg":"image/jpeg", "webp":"image/webp", "svg":"image/svg+xml", "glb":"model/gltf-binary", "wasm":"application/wasm", "ttf":"font/ttf", "webmanifest":"application/manifest+json", "txt":"text/plain"][file.pathExtension.lowercased()] ?? "application/octet-stream"
+        guard let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: ["Content-Type":mime, "Content-Length":String(data.count), "Access-Control-Allow-Origin":"*", "Cache-Control":"no-cache"]) else {
+            task.didFailWithError(URLError(.badServerResponse)); return
+        }
+        task.didReceive(response); task.didReceive(data); task.didFinish()
+    }
+    func webView(_ webView: WKWebView, stop task: WKURLSchemeTask) {}
 }
