@@ -852,6 +852,28 @@ const PERMANENT_FIXES = [
     marker: 'function offMemoryRestoreScroll(top)',
     least: 1,
   },
+  {
+    release: 'v1275/v1276',
+    name: '已有网页云备份继续按周期更新并保持私人镜像只读',
+    scope: 'both',
+    marker: 'await cloudBackup({current,onProgress:',
+    least: 1,
+  },
+  {
+    release: 'v1275/v1276',
+    name: '网页手动云备份显示持续进度并阻止重复点击',
+    scope: 'both',
+    marker: 'function cloudSyncProgress(text,kind,busy)',
+    least: 1,
+  },
+  {
+    release: 'v1276',
+    name: '私人手机号备份成功后不再重复生成整份网页镜像',
+    scope: 'private',
+    file: PRIVATE_DIR + 'private-cloud-backup.js',
+    marker: '手机号私人备份和网页镜像是两个入口',
+    least: 1,
+  },
 ];
 
 const sources = { web: read(WEB), private: read(PRIVATE) };

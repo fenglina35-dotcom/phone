@@ -5,7 +5,7 @@ const app = fs.readFileSync(new URL("../app.js", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../小手机.html", import.meta.url), "utf8");
 const sw = fs.readFileSync(new URL("../sw.js", import.meta.url), "utf8");
 
-assert.match(app, /APP_VER='v1274 · 线上记忆引用与线下列表修复'/);
+assert.match(app, /APP_VER='v1275 · 网页云备份更新与进度修复'/);
 assert.match(app, /function northUpdateAvailable\(build\)/);
 assert.match(app, /发现新版本 v\$\{esc\(build\)\}/);
 assert.match(app, /不需要退出或划掉小手机/);
@@ -14,8 +14,8 @@ assert.match(app, /setInterval\(\(\)=>reg\.update\(\)\.catch\(\(\)=>\{\}\),15\*6
 assert.match(app, /postMessage\(\{type:'north-version-query'\}\)/);
 assert.match(sw, /client\.postMessage\(\{type:'north-update-ready',build:BUILD\}\)/);
 assert.match(sw, /event\.data\.type!==['"]north-version-query['"]/);
-assert.match(html, /window\.__NORTH_SHELL_BUILD__='1274'/);
-assert.match(html, /sw\.js\?v=1274&r=v1274-web-memory-scroll-1/);
-assert.match(html, /web-hotfix\.js\?v=1274&r=v1274-web-memory-scroll-1/);
+assert.match(html, /window\.__NORTH_SHELL_BUILD__='1275'/);
+assert.match(html, /sw\.js\?v=1275&r=v1275-web-cloud-sync-1/);
+assert.match(html, /web-hotfix\.js\?v=1275&r=v1275-web-cloud-sync-1/);
 
 console.log("update prompt tests passed");

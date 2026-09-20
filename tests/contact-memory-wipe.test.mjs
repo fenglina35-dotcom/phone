@@ -24,7 +24,7 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-assert.match(source, /APP_VER='v1274 · 线上记忆引用与线下列表修复'/);
+assert.match(source, /APP_VER='v1275 · 网页云备份更新与进度修复'/);
 assert.match(source, /_lifeNotesClearedAt/);
 assert.match(source, /clearContactMemoryData\(c,id\);render\(\);toast\('正在清除本机大聊天库和后台旧上下文/);
 assert.match(source, /await persistWechatMessagesNow\(\)/);

@@ -14,7 +14,7 @@ test('private primary snapshots carry source, monotonic revision, and capture ti
 
 test('web mirror refuses to push over a private primary record', () => {
   assert.match(web, /当前云ID由私人版本主设备管理；网页仅作镜像，不能反向覆盖私人数据/);
-  assert.match(web, /const current=await cloudFetchRow\(\)\.catch\(\(\)=>null\);if\(current\)return/);
+  assert.match(web, /const current=await cloudFetchRow\(\),mirrored=await privatePrimaryMirrorCheck\(\{silent:true,row:current\}\);if\(mirrored\)return/);
   assert.match(web, /method='PATCH'/);
   assert.match(web, /updated_at=eq\./);
   assert.match(web, /云端修订已变化，本次没有覆盖/);
@@ -71,8 +71,9 @@ test('web pull accepts both private mirrors and original web backups without ove
   assert.doesNotMatch(web, /云端仍是旧网页备份，请先在私人 App 点“一键同步到网页版”/);
 });
 
-test('web automatic sync never overwrites an existing legacy cloud backup before manual reading', () => {
-  assert.match(web, /const current=await cloudFetchRow\(\)\.catch\(\(\)=>null\);if\(current\)return;cloudBackup\(\)\.catch/);
+test('web automatic sync updates an existing legacy cloud backup while keeping private mirrors protected', () => {
+  assert.match(web, /await cloudBackup\(\{current,onProgress:/);
+  assert.doesNotMatch(web, /if\(current\)return;cloudBackup/);
 });
 
 test('web and private bundle keep cloud mirror implementation identical', () => {
