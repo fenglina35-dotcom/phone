@@ -47,6 +47,7 @@ assert.match(source,/m\.role==='assistant'&&m\.type==='voice'/);
 assert.match(source,/保存并重新生成/);
 assert.match(source,/开心：https:\/\/example\.com\/happy\.jpg/);
 assert.match(source,/data-sticker-group/);
-assert.match(source,/_hasMovedMemory=isMain\(\)&&aiMemoryDocs\(c\)/);
+assert.match(source,/_memLimits=onlineMemoryRecallLimits\(\)/);
+assert.match(source,/selectRelevantMemory\(c,_memQuery,_memLimits\.total,_memLimits\)/);
 
 console.log('voice, imported memory, and sticker folder tests passed');

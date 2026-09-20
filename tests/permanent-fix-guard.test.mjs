@@ -814,6 +814,20 @@ const PERMANENT_FIXES = [
     marker: 'function tvHotelBook(i)',
     least: 1,
   },
+  {
+    release: 'v1274',
+    name: '线上微信长期记忆与对话总结按话题分别限量引用',
+    scope: 'web',
+    marker: 'function onlineMemoryRecallLimits()',
+    least: 1,
+  },
+  {
+    release: 'v1274',
+    name: '线下记忆逐条删除后保持原浏览位置',
+    scope: 'web',
+    marker: 'function offMemoryRestoreScroll(top)',
+    least: 1,
+  },
 ];
 
 const sources = { web: read(WEB), private: read(PRIVATE) };
