@@ -14,16 +14,16 @@ const backup=read(bundle+'private-cloud-backup.js');
 const privateApp=read(bundle+'app.js');
 const publicApp=read('app.js');
 
-test('private v1274 loads daily backup after the diagnostic overlay while public advances independently',()=>{
+test('private v1275 loads daily backup after the diagnostic overlay while public advances independently',()=>{
   for(const name of ['index.html','小手机.html']){
     const html=read(bundle+name);
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1274'/);
-    assert.ok(html.indexOf('private-cloud-backup.js?v=1274')>html.indexOf('private-runtime-diagnostics.js?v=339'));
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1275'/);
+    assert.ok(html.indexOf('private-cloud-backup.js?v=1275')>html.indexOf('private-runtime-diagnostics.js?v=339'));
   }
-  assert.match(privateApp,/APP_VER='v1274 · 私人版温馨小家材质稳定修复'/);
-  assert.match(publicApp,/APP_VER='v1272 · iOS网页顶部布局修复'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 373;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.373;/g)||[]).length,12);
+  assert.match(privateApp,/APP_VER='v1275 · 私人版云备份与记忆设置修复'/);
+  assert.match(publicApp,/APP_VER='v1274 · 线上记忆引用与线下列表修复'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 374;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.374;/g)||[]).length,12);
 });
 
 test('web backup sends bounded ordered chunks and records a day only after confirmed save',()=>{

@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 if(window.__NORTH_COHAB_THEATER__)return;
-window.__NORTH_COHAB_THEATER__='v1272-web-cohab-guests-1';
+window.__NORTH_COHAB_THEATER__='v1274-web-cohab-guests-1';
 
 const _guestSummaryBusy=new Set();
 const _guestWechatBusy=new Set();

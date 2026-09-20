@@ -838,6 +838,20 @@ const PERMANENT_FIXES = [
     marker: 'proceduralDeltas=',
     least: 1,
   },
+  {
+    release: 'v1274',
+    name: '线上长期记忆与对话总结按独立上限和每轮合计上限引用',
+    scope: 'both',
+    marker: 'function onlineMemoryRecallLimits()',
+    least: 1,
+  },
+  {
+    release: 'v1274',
+    name: '线下记忆删除后恢复原来的列表滚动位置',
+    scope: 'both',
+    marker: 'function offMemoryRestoreScroll(top)',
+    least: 1,
+  },
 ];
 
 const sources = { web: read(WEB), private: read(PRIVATE) };
