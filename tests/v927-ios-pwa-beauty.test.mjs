@@ -10,8 +10,8 @@ const project = fs.readFileSync(new URL('../native/private-small-phone/XcodeProj
 test('v1184 web keeps private 1.0.315 compatibility', () => {
   assert.match(app, /APP_VER='v1275 · 网页云备份更新与进度修复'/);
   assert.match(html, /__NORTH_SHELL_BUILD__='1275'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 376;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.376;/g) || []).length, 12);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 377;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.377;/g) || []).length, 12);
 });
 
 test('first glass page reserves a non-shrinking line box for every app name', () => {

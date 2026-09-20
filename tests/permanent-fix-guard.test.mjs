@@ -853,21 +853,21 @@ const PERMANENT_FIXES = [
     least: 1,
   },
   {
-    release: 'v1275/v1277',
+    release: 'v1275/v1278',
     name: '已有网页云备份继续按周期更新并保持私人镜像只读',
     scope: 'both',
     marker: 'await cloudBackup({current,onProgress:',
     least: 1,
   },
   {
-    release: 'v1275/v1277',
+    release: 'v1275/v1278',
     name: '网页手动云备份显示持续进度并阻止重复点击',
     scope: 'both',
     marker: 'function cloudSyncProgress(text,kind,busy)',
     least: 1,
   },
   {
-    release: 'v1277',
+    release: 'v1278',
     name: '私人手机号备份成功后不再重复生成整份网页镜像',
     scope: 'private',
     file: PRIVATE_DIR + 'private-cloud-backup.js',
@@ -922,7 +922,11 @@ test('every private release keeps the complete streamed daily cloud-backup chain
   assert.match(backup, /const CHUNK=192\*1024/, '私人备份不得退回整份大对象跨桥传输');
   assert.match(backup, /account\.backup\.file\.commit',\{token\},720000/, '网页成功确认必须等得过原生上传时限');
   assert.match(bridge, /private actor PrivateBackupFileStore/, '原生临时备份文件存储缺失');
-  assert.match(bridge, /uploader\.upload\([\s\S]*?fromFile: file\.url,[\s\S]*?delegate: progressDelegate[\s\S]*?\)/, '原生端必须从文件流式上传并保留真实进度');
+  assert.match(bridge, /privateBackupChunkBytes = 4 \* 1_024 \* 1_024/, '原生端必须把云备份切成安全大小的对象存储分块');
+  assert.match(bridge, /\/storage\/v1\/object\//, '私人云备份不得退回整份 jsonb 数据库写入');
+  assert.match(bridge, /save_private_phone_backup_manifest/, '全部分块上传后必须提交小型原子清单');
+  assert.match(bridge, /restorePrivateBackupFile/, '对象存储备份必须保留完整恢复路径');
+  assert.match(bridge, /actualChecksum == expectedChecksum/, '恢复前必须校验整份备份散列');
   assert.match(backup, /正在上传私人云备份/, '私人备份必须向用户显示真实云端上传百分比');
   assert.match(bridge, /backup_upload_timeout/, '原生上传超时不得伪装成账号认证超时');
   assert.match(webView, /action === 'account\.backup\.file\.commit' \? 660000 : 60000/, 'WKWebView 桥不得提前中断云端提交');
