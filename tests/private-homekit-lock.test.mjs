@@ -56,7 +56,7 @@ test('events preserve known event time and never invent a time during reconcilia
 
 test('native bridge preserves lock snapshot, command, event drain, and ack on contract 38',()=>{
   for(const action of ['homekit.locks.snapshot','homekit.lock.command','homekit.locks.events','homekit.locks.events.ack'])assert.match(bridge,new RegExp(action.replaceAll('.','\\.')));
-  assert.match(bridge,/static let contractVersion = 38/);
+  assert.match(bridge,/static let contractVersion = 39/);
   assert.match(bridge,/small-phone-homekit-lock-event/);
 });
 
@@ -211,11 +211,11 @@ test('a verified manual unlock notifies the role without turning a manual lock i
   assert.equal(lockedRuntime.queued(),'');
 });
 
-test('private release identity is iOS 375 while public web advances independently',()=>{
+test('private release identity is iOS 376 while public web advances independently',()=>{
   const webView=fs.readFileSync(path.join(xcodeRoot,'LocalPhoneWebView.swift'),'utf8');
   const project=fs.readFileSync(path.join(nativeRoot,'XcodeProject','PhoneCompanionTest.xcodeproj','project.pbxproj'),'utf8');
-  assert.match(webView,/1\.0\.375 \(375\)/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 375/);
-  assert.match(project,/MARKETING_VERSION = 1.0.375/);
+  assert.match(webView,/1\.0\.376 \(376\)/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 376/);
+  assert.match(project,/MARKETING_VERSION = 1.0.376/);
   assert.match(read('app.js'),/__NORTH_SHELL_BUILD__!==\'1275\'/);
 });

@@ -13,9 +13,9 @@ const project = read('../native/private-small-phone/XcodeProject/PhoneCompanionT
 test('v929 web and private versions are aligned', () => {
   assert.match(app, /APP_VER='v1275 · 网页云备份更新与进度修复'/);
   assert.match(html, /__NORTH_SHELL_BUILD__='1275'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 375;/);
-  assert.match(project, /MARKETING_VERSION = 1.0.375;/);
-  assert.match(bridge, /contractVersion = 38/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 376;/);
+  assert.match(project, /MARKETING_VERSION = 1.0.376;/);
+  assert.match(bridge, /contractVersion = 39/);
 });
 
 test('screen observation continues only after the role explicitly chooses it', () => {

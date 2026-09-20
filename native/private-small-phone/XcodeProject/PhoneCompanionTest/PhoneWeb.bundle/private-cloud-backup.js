@@ -12,10 +12,14 @@
  function trace(stage,fields){phase=stage;repaint();try{if(root.NorthBrowserDiagnostics)NorthBrowserDiagnostics.mark('private-backup-'+stage);if(root.__smallPhoneNativeDiag)root.__smallPhoneNativeDiag('backup.'+stage,fields||{},0);}catch(_){} }
  function note(text,silent){detail=String(text||'');repaint();if(!silent)toast(detail,5000);}
  async function call(action,payload,timeoutMs){const r=await privatePhoneAccountCall(action,payload,timeoutMs);if(!r||r.ok!==true)throw new Error(r&&r.message||r&&r.error||'私人备份步骤未完成');return r;}
- async function transfer(blob,meta,onProgress){
+ function wait(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
+ async function transfer(blob,meta,onProgress,onUploadProgress){
   let token='';try{const begun=await call('account.backup.file.begin',{bytes:blob.size,capturedAt:meta.capturedAt,sourceBuild:meta.sourceBuild});token=begun.token;
    for(let offset=0;offset<blob.size;offset+=CHUNK){const bytes=new Uint8Array(await blob.slice(offset,offset+CHUNK).arrayBuffer());let binary='';for(let i=0;i<bytes.length;i+=8192)binary+=String.fromCharCode.apply(null,bytes.subarray(i,i+8192));await call('account.backup.file.chunk',{token,offset,base64:btoa(binary)});if(onProgress)onProgress(Math.min(offset+bytes.length,blob.size),blob.size);}
-   trace('upload',{bytes:blob.size});const result=await call('account.backup.file.commit',{token},720000);token='';return result;
+   trace('upload',{bytes:blob.size});let settled=false,result=null,failure=null;
+   const committing=call('account.backup.file.commit',{token},720000).then(value=>{result=value;settled=true;},error=>{failure=error;settled=true;});
+   while(!settled){await Promise.race([committing,wait(900)]);if(settled)break;try{const p=await privatePhoneAccountCall('account.backup.file.progress',{token},10000);if(p&&p.ok===true&&onUploadProgress)onUploadProgress(+p.sentBytes||0,+p.expectedBytes||0);}catch(_){}}
+   await committing;if(failure)throw failure;token='';return result;
   }finally{if(token)try{await privatePhoneAccountCall('account.backup.file.abort',{token});}catch(_){} }
  }
  async function backup(firstBind,silent){
@@ -34,7 +38,7 @@
    const capturedAt=Date.now();trace('prepare');let progressAt=0;
    const blob=await fullBackupFileBlob(text=>{if(Date.now()-progressAt>2000){progressAt=Date.now();note(text,silent);}});
    if(owner!==_privatePhoneAccount.userId||!_privatePhoneAccount.loggedIn)throw new Error('账号已变化，未上传');
-   trace('transfer');const result=await transfer(blob,{capturedAt,sourceBuild:String(root.__SMALL_PHONE_PRIVATE_BUILD__||APP_VER)},(done,total)=>{if(done===total){note('备份文件已交给原生端，正在上传云端，请保持 App 在前台',silent);}else if(Date.now()-progressAt>2000){progressAt=Date.now();note('正在交给原生备份 '+Math.floor(done/total*100)+'%，完成后上传云端',silent);}});
+   trace('transfer');let lastUploadPercent=-1;const result=await transfer(blob,{capturedAt,sourceBuild:String(root.__SMALL_PHONE_PRIVATE_BUILD__||APP_VER)},(done,total)=>{if(done===total){note('备份文件已交给原生端，正在连接云端，请保持 App 在前台',silent);}else if(Date.now()-progressAt>2000){progressAt=Date.now();note('正在交给原生备份 '+Math.floor(done/total*100)+'%，完成后上传云端',silent);}},(sent,total)=>{if(total<=0)return;const percent=Math.max(0,Math.min(100,Math.floor(sent/total*100)));if(percent===lastUploadPercent)return;lastUploadPercent=percent;note(percent>=100?'云端已接收 100%，正在确认保存，请保持 App 在前台':'正在上传私人云备份 '+percent+'%，请保持 App 在前台',silent);});
    if(!result.saved)throw new Error('云端已有更新的备份，本次没有覆盖');
    uploaded=true;if(owner!==_privatePhoneAccount.userId||!_privatePhoneAccount.loggedIn)throw new Error('原账号已备份，当前账号已变化，未更新当前账号标记');write({allowed:true,lastDay:day(),lastSuccess:Date.now(),capturedAt});_privatePhoneCloudDirtyAt=0;trace('success');
    // 手机号私人备份和网页镜像是两个入口。这里确认一份账号备份后立即结束，避免再次生成并上传整份大存档。

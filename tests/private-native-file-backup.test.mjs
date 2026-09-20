@@ -14,16 +14,16 @@ const backup=read(bundle+'private-cloud-backup.js');
 const privateApp=read(bundle+'app.js');
 const publicApp=read('app.js');
 
-test('private v1276 loads daily backup after the diagnostic overlay while public advances independently',()=>{
+test('private v1277 loads daily backup after the diagnostic overlay while public advances independently',()=>{
   for(const name of ['index.html','小手机.html']){
     const html=read(bundle+name);
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1276'/);
-    assert.ok(html.indexOf('private-cloud-backup.js?v=1276')>html.indexOf('private-runtime-diagnostics.js?v=339'));
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1277'/);
+    assert.ok(html.indexOf('private-cloud-backup.js?v=1277')>html.indexOf('private-runtime-diagnostics.js?v=339'));
   }
-  assert.match(privateApp,/APP_VER='v1276 · 私人云备份提速与网页同步修复'/);
+  assert.match(privateApp,/APP_VER='v1277 · 私人云备份真实进度与超时辨识修复'/);
   assert.match(publicApp,/APP_VER='v1275 · 网页云备份更新与进度修复'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 375;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.375;/g)||[]).length,12);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 376;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.376;/g)||[]).length,12);
 });
 
 test('web backup sends bounded ordered chunks and records a day only after confirmed save',()=>{
@@ -42,13 +42,17 @@ test('web backup sends bounded ordered chunks and records a day only after confi
 
 test('native bridge streams one account-bound backup file and confirms the RPC result',()=>{
   for(const action of ['begin','chunk','commit','abort'])assert.match(bridge,new RegExp(`account\\.backup\\.file\\.${action}`));
-  assert.match(bridge,/static let contractVersion = 38/);
+  assert.match(bridge,/static let contractVersion = 39/);
   assert.match(bridge,/private actor PrivateBackupFileStore/);
   assert.match(bridge,/offset == current\.written/);
   assert.match(bridge,/current\.owner == owner/);
   assert.match(bridge,/data\.count <= 262144/);
   assert.match(bridge,/current\.written == current\.size/);
-  assert.match(bridge,/uploader\.upload\(for: request, fromFile: file\.url\)/);
+  assert.match(bridge,/PrivateBackupUploadProgressDelegate/);
+  assert.match(bridge,/account\.backup\.file\.progress/);
+  assert.match(bridge,/fromFile: file\.url/);
+  assert.match(bridge,/backup_upload_timeout/);
+  assert.match(backup,/正在上传私人云备份/);
   assert.match(bridge,/config\.timeoutIntervalForRequest = 180/);
   assert.match(bridge,/config\.timeoutIntervalForResource = 600/);
   assert.match(bridge,/status >= 200 && status < 300 && rows\?\.first\?\["saved"\] as\? Bool == true/);

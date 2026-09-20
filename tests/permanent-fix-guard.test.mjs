@@ -853,21 +853,21 @@ const PERMANENT_FIXES = [
     least: 1,
   },
   {
-    release: 'v1275/v1276',
+    release: 'v1275/v1277',
     name: '已有网页云备份继续按周期更新并保持私人镜像只读',
     scope: 'both',
     marker: 'await cloudBackup({current,onProgress:',
     least: 1,
   },
   {
-    release: 'v1275/v1276',
+    release: 'v1275/v1277',
     name: '网页手动云备份显示持续进度并阻止重复点击',
     scope: 'both',
     marker: 'function cloudSyncProgress(text,kind,busy)',
     least: 1,
   },
   {
-    release: 'v1276',
+    release: 'v1277',
     name: '私人手机号备份成功后不再重复生成整份网页镜像',
     scope: 'private',
     file: PRIVATE_DIR + 'private-cloud-backup.js',
@@ -915,14 +915,16 @@ test('every private release keeps the complete streamed daily cloud-backup chain
 
   assert.equal(index, alias, '私人两个入口必须一起携带云备份组件');
   assert.match(index, /private-cloud-backup\.js\?v=\d+/, '私人入口漏掉每日云备份组件');
-  for (const action of ['begin', 'chunk', 'commit', 'abort']) {
+  for (const action of ['begin', 'chunk', 'commit', 'progress', 'abort']) {
     assert.match(backup, new RegExp(`account\\.backup\\.file\\.${action}`), `网页分片备份漏掉 ${action}`);
     assert.match(bridge, new RegExp(`account\\.backup\\.file\\.${action}`), `原生桥漏掉 ${action}`);
   }
   assert.match(backup, /const CHUNK=192\*1024/, '私人备份不得退回整份大对象跨桥传输');
   assert.match(backup, /account\.backup\.file\.commit',\{token\},720000/, '网页成功确认必须等得过原生上传时限');
   assert.match(bridge, /private actor PrivateBackupFileStore/, '原生临时备份文件存储缺失');
-  assert.match(bridge, /uploader\.upload\(for: request, fromFile: file\.url\)/, '原生端必须从文件流式上传');
+  assert.match(bridge, /uploader\.upload\([\s\S]*?fromFile: file\.url,[\s\S]*?delegate: progressDelegate[\s\S]*?\)/, '原生端必须从文件流式上传并保留真实进度');
+  assert.match(backup, /正在上传私人云备份/, '私人备份必须向用户显示真实云端上传百分比');
+  assert.match(bridge, /backup_upload_timeout/, '原生上传超时不得伪装成账号认证超时');
   assert.match(webView, /action === 'account\.backup\.file\.commit' \? 660000 : 60000/, 'WKWebView 桥不得提前中断云端提交');
   assert.match(project, /isa = PBXFileSystemSynchronizedRootGroup;[\s\S]*?path = PhoneCompanionTest;/, '主 App 资源目录没有纳入 Xcode 文件夹同步');
   assert.doesNotMatch(project, /membershipExceptions = \([^)]*private-cloud-backup\.js/, '私人云备份组件被排除出 Xcode Target');

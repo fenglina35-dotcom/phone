@@ -15,7 +15,7 @@ enum SmallPhoneDiagnosticsStore {
     )
     private static let maximumBytes = 256 * 1_024
     private static let maximumLines = 200
-    private static let build = "1.0.375 (375)"
+    private static let build = "1.0.376 (376)"
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -188,7 +188,7 @@ enum SmallPhoneRecoveryLaunchStore {
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
-    static let contractVersion = 38
+    static let contractVersion = 39
     static let roleCallActiveDefaultsKey =
         "smallPhone.roleCallActive.v1"
 
@@ -370,7 +370,8 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
              "account.signout", "account.backup.info",
              "account.backup.upload", "account.backup.restore",
              "account.backup.file.begin", "account.backup.file.chunk",
-             "account.backup.file.commit", "account.backup.file.abort",
+             "account.backup.file.commit", "account.backup.file.progress",
+             "account.backup.file.abort",
              "companion.controller.claim":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             performPrivateAccountAction(
@@ -1676,8 +1677,23 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                 case "account.backup.file.abort":
                     await PrivateBackupFileStore.shared.remove(token: arguments["token"] as? String ?? "")
                     self.reply(requestID: requestID, result: ["ok": true])
+                case "account.backup.file.progress":
+                    guard let session = self.loadPrivateAccountSession() else {
+                        throw NSError(domain: "PrivateBackup", code: 401)
+                    }
+                    let progress = try await PrivateBackupFileStore.shared.progress(
+                        token: arguments["token"] as? String ?? "",
+                        owner: session.userID
+                    )
+                    self.reply(requestID: requestID, result: [
+                        "ok": true,
+                        "phase": progress.phase,
+                        "sentBytes": progress.sentBytes,
+                        "expectedBytes": progress.expectedBytes
+                    ])
                 case "account.backup.file.commit":
                     let token = arguments["token"] as? String ?? ""
+                    var uploadStarted = false
                     do {
                         let session = try await self.validPrivateAccountSession()
                         let file = try await PrivateBackupFileStore.shared.prepare(token: token, owner: session.userID)
@@ -1694,7 +1710,24 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                         config.timeoutIntervalForResource = 600
                         let uploader = URLSession(configuration: config)
                         defer { uploader.invalidateAndCancel() }
-                        let (data, response) = try await uploader.upload(for: request, fromFile: file.url)
+                        let uploadOwner = session.userID
+                        let progressDelegate = PrivateBackupUploadProgressDelegate {
+                            sentBytes, expectedBytes in
+                            Task {
+                                await PrivateBackupFileStore.shared.updateUploadProgress(
+                                    token: token,
+                                    owner: uploadOwner,
+                                    sentBytes: sentBytes,
+                                    expectedBytes: expectedBytes
+                                )
+                            }
+                        }
+                        uploadStarted = true
+                        let (data, response) = try await uploader.upload(
+                            for: request,
+                            fromFile: file.url,
+                            delegate: progressDelegate
+                        )
                         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
                         let responseObject = try? JSONSerialization.jsonObject(with: data)
                         let rows = responseObject as? [[String: Any]]
@@ -1705,7 +1738,22 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                             "message": saved ? "云备份已保存" : "云备份未确认保存，请刷新云端时间；HTTP \(status)"])
                     } catch {
                         await PrivateBackupFileStore.shared.remove(token: token)
-                        SmallPhoneDiagnosticsStore.append("backup.upload.error", fields: ["code": (error as NSError).code])
+                        let nativeError = error as NSError
+                        SmallPhoneDiagnosticsStore.append("backup.upload.error", fields: [
+                            "code": nativeError.code,
+                            "domain": nativeError.domain,
+                            "phase": uploadStarted ? "upload" : "authentication"
+                        ])
+                        if uploadStarted,
+                           nativeError.domain == NSURLErrorDomain,
+                           nativeError.code == URLError.timedOut.rawValue {
+                            self.reply(requestID: requestID, result: [
+                                "ok": false,
+                                "code": "backup_upload_timeout",
+                                "message": "备份上传或云端保存超过 10 分钟仍未完成；旧云备份已保留，请等云端恢复后重试"
+                            ])
+                            return
+                        }
                         throw error
                     }
                 case "account.backup.upload":
@@ -2499,10 +2547,16 @@ private final class NativeSpeechRecognitionController {
 private actor PrivateBackupFileStore {
     static let shared = PrivateBackupFileStore()
     struct Prepared: Sendable { let url: URL; let bytes: Int64 }
+    struct Progress: Sendable {
+        let phase: String
+        let sentBytes: Int64
+        let expectedBytes: Int64
+    }
     private struct Job {
         let token: String; let owner: String; let url: URL; let handle: FileHandle
         let size: Int64; let capturedAt: Double; let build: String
         var written: Int64 = 0; var hash = SHA256(); var prepared = false
+        var uploadSent: Int64 = 0; var uploadExpected: Int64 = 0
     }
     private var job: Job?
     private func failure(_ message: String) -> NSError {
@@ -2548,8 +2602,53 @@ private actor PrivateBackupFileStore {
         current.prepared = true; job = current
         return Prepared(url: current.url, bytes: current.size)
     }
+    func updateUploadProgress(
+        token: String,
+        owner: String,
+        sentBytes: Int64,
+        expectedBytes: Int64
+    ) {
+        guard var current = job,
+              current.token == token,
+              current.owner == owner,
+              current.prepared else { return }
+        current.uploadSent = max(current.uploadSent, sentBytes)
+        current.uploadExpected = max(current.uploadExpected, expectedBytes)
+        job = current
+    }
+    func progress(token: String, owner: String) throws -> Progress {
+        guard let current = job,
+              current.token == token,
+              current.owner == owner else {
+            throw failure("备份上传任务已经结束或不存在")
+        }
+        return Progress(
+            phase: current.prepared ? "upload" : "transfer",
+            sentBytes: current.uploadSent,
+            expectedBytes: current.uploadExpected
+        )
+    }
     func remove(token: String) {
         guard let current = job, current.token == token else { return }
         try? current.handle.close(); try? FileManager.default.removeItem(at: current.url); job = nil
+    }
+}
+
+private final class PrivateBackupUploadProgressDelegate: NSObject,
+    URLSessionTaskDelegate, @unchecked Sendable {
+    private let onProgress: @Sendable (Int64, Int64) -> Void
+
+    init(onProgress: @escaping @Sendable (Int64, Int64) -> Void) {
+        self.onProgress = onProgress
+    }
+
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        didSendBodyData bytesSent: Int64,
+        totalBytesSent: Int64,
+        totalBytesExpectedToSend: Int64
+    ) {
+        onProgress(totalBytesSent, totalBytesExpectedToSend)
     }
 }
