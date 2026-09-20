@@ -40,14 +40,18 @@ assert.match(privateApp,/^function smartHomeRoleAvailable/m,'private role availa
 assert.match(privateApp,/typeof smartHomeRoleAvailable!==['"]function['"]/,'missing optional smart-home code must never block ordinary role replies');
 assert.match(privateApp,/smartHomeRoleFinalize\(content,c,_userText/,'private chat replies must wait for verified device state');
 assert.match(privateApp,/smartHomeRoleFinalize\(content,c,\(_luc/,'private calls must wait for verified device state');
-assert.equal(privateFeature.replace(/\r\n/g,'\n'),feature.replace(/\r\n/g,'\n'),'private package must embed the complete public smart-home runtime');
+assert.match(feature,/WEB_LINKED_KEY='north_smart_home_linked_v1',WEB_QUOTA_GUARD=true/,'public relay must persist only a confirmed paired marker and enable quota guard mode');
+assert.doesNotMatch(feature,/WEB_PAGE_POLL_MS|WEB_IDLE_POLL_MS|scheduleWebPoll/,'public relay must not run automatic status polling');
+assert.match(feature,/if\(privateMode\(\)\)setInterval/,'the public source must retain the existing native HomeKit refresh branch');
+assert.match(privateFeature,/window\.wxSmartHomeRoleExecute=execute/,'the existing private bundle must retain native role execution while the web-only relay poll changes');
 
 assert.match(feature,/response\.status===202/,'web must poll the same pending job');
 assert.match(feature,/result\.verified!==true/,'unverified control results must be rejected');
 assert.match(feature,/requestKey:requestKey\(\)/,'each real action must have an idempotency key');
 assert.match(feature,/window\.wxSmartHomeRoleExecute=execute/);
-assert.match(feature,/连接 Windows 助手/,'fresh web users must see the Windows pairing panel instead of the old preview');
-assert.match(feature,/生成十位配对码/,'pairing must be available from the standalone page');
+assert.match(feature,/网页配对暂时关闭/,'fresh web users must see the emergency quota protection state');
+assert.match(feature,/恢复已有配对/,'existing paired users must have an explicit one-time recovery action');
+assert.doesNotMatch(feature,/call\('pairing_begin'/,'new web pairing must not spend Edge invocations during quota protection');
 assert.doesNotMatch(feature,/wifi.*password|password.*wifi/i,'web source must not collect a Wi-Fi password');
 
 assert.match(edge,/new Set\(\["power","brightness","color","hue","saturation","warmth"\]\)/);
@@ -63,7 +67,7 @@ assert.match(worker,/\.\/smart-home\.js\?v='\+BUILD/,'offline cache must include
 const runtime={
   window:{},S:{settings:{}},COMPANION_URL:'https://example.invalid',COMPANION_KEY:'public-test-key',
   uid:()=> 'test-id',crypto:{getRandomValues:value=>value.fill(7),randomUUID:()=> '00000000-0000-4000-8000-000000000000'},
-  localStorage:{getItem:()=>'',setItem:()=>{}},setTimeout:()=>0,setInterval:()=>0,clearTimeout:()=>{},
+  localStorage:{getItem:()=>'',setItem:()=>{},removeItem:()=>{}},setTimeout:()=>0,setInterval:()=>0,clearTimeout:()=>{},
   esc:value=>String(value),save:()=>{},render:()=>{},cur:()=>({p:'wxsmarthome'}),toast:()=>{},openModal:()=>{},closeModal:()=>{},
   confirm:()=>false,document:{getElementById:()=>null},fetch:async()=>{throw new Error('test must not call cloud');},AbortController:globalThis.AbortController,
   Number,Math,String,Object,Array,Promise,Error,RegExp,JSON,Date,Set,console
@@ -71,8 +75,9 @@ const runtime={
 runtime.window=runtime;
 vm.runInNewContext(feature,runtime);
 const freshPage=runtime.renderWxSmartHome();
-assert.match(freshPage,/连接电脑助手/,'an unpaired browser must render the real pairing page');
-assert.match(freshPage,/生成十位配对码/);
+assert.match(freshPage,/网页配对暂时关闭/,'an unpaired browser must render quota protection instead of creating a pairing');
+assert.match(freshPage,/恢复已有配对/);
+assert.doesNotMatch(freshPage,/生成十位配对码/);
 assert.doesNotMatch(freshPage,/角色控制待接入|预览/,'the retired private preview must not be rendered on public web');
 assert.doesNotMatch(freshPage,/HomeKit|苹果家庭/,'ordinary web users must not be offered the private native HomeKit route');
 
@@ -88,7 +93,7 @@ const privateRuntime={...runtime,window:null,S:{settings:{}},__SMALL_PHONE_PRIVA
   }}
 };
 privateRuntime.window=privateRuntime;
-vm.runInNewContext(feature,privateRuntime);
+vm.runInNewContext(privateFeature,privateRuntime);
 const privateFresh=privateRuntime.renderWxSmartHome();
 assert.match(privateFresh,/允许访问苹果家庭/,'a fresh private App must ask for native Home permission');
 assert.match(privateFresh,/不需要连接电脑/);

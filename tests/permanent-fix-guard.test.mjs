@@ -853,14 +853,14 @@ const PERMANENT_FIXES = [
     least: 1,
   },
   {
-    release: 'v1275/v1278',
+    release: 'v1280/v1278',
     name: '已有网页云备份继续按周期更新并保持私人镜像只读',
     scope: 'both',
     marker: 'await cloudBackup({current,onProgress:',
     least: 1,
   },
   {
-    release: 'v1275/v1278',
+    release: 'v1280/v1278',
     name: '网页手动云备份显示持续进度并阻止重复点击',
     scope: 'both',
     marker: 'function cloudSyncProgress(text,kind,busy)',

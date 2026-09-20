@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {execFileSync} from 'node:child_process';
 const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const b='native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/';
 test('v1274 keeps new lock and background scheduling code out of the website',()=>{
@@ -10,8 +9,10 @@ test('v1274 keeps new lock and background scheduling code out of the website',()
  assert(privateApp.includes('northNativeBackgroundTask'));
  assert(read(b+'index.html').includes('private-smart-lock.js?v=339'));
  assert(read(b+'private-smart-lock.js').includes('homekit.lock.command'));
- const old=execFileSync('git',['show','afe3b4cbf96a3e42f5f4d39a1f2c8a9dd971f5de:smart-home.js'],{encoding:'utf8'});
- assert.equal(read('smart-home.js').replace(/\r\n/g,'\n'),old.replace(/\r\n/g,'\n'),'public smart-home implementation must be unchanged');
+ const smartHome=read('smart-home.js');
+ assert(smartHome.includes('WEB_QUOTA_GUARD=true'),'website relay must use the zero-automatic-call quota guard');
+ assert(!/WEB_PAGE_POLL_MS|WEB_IDLE_POLL_MS|scheduleWebPoll/.test(smartHome),'website relay must not retain automatic polling');
+ for(const marker of ['private-smart-lock','homekit.lock.command'])assert(!smartHome.includes(marker),'public smart-home must exclude '+marker);
 });
 test('shared reply changes and game assets are retained by the private entry',()=>{
  for(const path of ['app.js',b+'app.js']){const s=read(path);for(const token of ['lifeNoteReplyDraft','lifeNoteCommitReply','roleSocialIdentityPin','proactiveContinuationContext'])assert(s.includes(token),path+': '+token);}

@@ -26,13 +26,19 @@ test('private iOS declares HomeKit permission and exposes the direct native brid
   assert.match(native,/case "homekit\.light\.command"/);
 });
 
-test('shared smart-home page selects HomeKit only inside the private shell',()=>{
-  assert.equal(privateWeb.replace(/\r\n/g,'\n'),web.replace(/\r\n/g,'\n'));
+test('web quota guard stays separate while the private shell retains direct HomeKit control',()=>{
+  assert.match(web,/WEB_QUOTA_GUARD=true/);
+  assert.doesNotMatch(web,/WEB_PAGE_POLL_MS|WEB_IDLE_POLL_MS|scheduleWebPoll/);
+  assert.doesNotMatch(privateWeb,/WEB_QUOTA_GUARD|WEB_LINKED_KEY/);
+  assert.match(privateWeb,/window\.wxSmartHomeRoleExecute=execute/);
+  assert.match(privateWeb,/SmallPhoneNative\.request\('homekit\.lights\.snapshot'/);
+  assert.match(privateWeb,/SmallPhoneNative\.request\('homekit\.light\.command'/);
   assert.match(web,/function privateMode\(\)/);
   assert.match(web,/window\.__SMALL_PHONE_PRIVATE__===true/);
   assert.match(web,/SmallPhoneNative\.request\('homekit\.lights\.snapshot'/);
   assert.match(web,/SmallPhoneNative\.request\('homekit\.light\.command'/);
   assert.match(web,/允许访问苹果家庭/);
   assert.match(web,/不需要连接电脑/);
-  assert.match(web,/else\{panel='<div class="wx-smart-home-pair-copy"><p>网页版通过 Windows/);
+  assert.match(web,/网页配对暂时关闭/);
+  assert.match(web,/恢复已有配对/);
 });
