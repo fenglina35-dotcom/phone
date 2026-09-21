@@ -24,7 +24,7 @@ test('shared reply changes and game assets are retained by the private entry',()
  assert(webCohab.includes("guest2"),'website supports a second independent WeChat guest');
  assert(privateCohab.includes('ct_wechat_enabled'),'private bundle must retain the current optional WeChat guest switch');
  assert(privateCohab.includes("guest2"),'private bundle must retain the second independent WeChat guest');
- assert.equal(privateCohab,webCohab,'the private v1281 superset must carry the current shared theater source');
+ assert.equal(privateCohab,webCohab,'the private v1283 superset must carry the current shared theater source');
  assert.equal(read(b+'index.html'),read(b+'小手机.html'));
  assert.equal(read(b+'private-smart-lock.js'),read('native/private-small-phone/Resources/Web/private-smart-lock.js'));
  assert.equal(read(b+'private-smart-lock.css'),read('native/private-small-phone/Resources/Web/private-smart-lock.css'));

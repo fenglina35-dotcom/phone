@@ -28,6 +28,20 @@ const count = (source, marker) => source.split(marker).length - 1;
 // same commit that syncs it.
 const PERMANENT_FIXES = [
   {
+    release: 'v1282/v1283',
+    name: '朋友圈封面 IDB 冷缓存保留图片节点并重新取图',
+    scope: 'both',
+    marker: 'function storedImageElementSource(v)',
+    least: 1,
+  },
+  {
+    release: 'v1282/v1283',
+    name: '应用处理内部协议在前台原文、普通输出和后台回拉三处隐藏',
+    scope: 'both',
+    marker: '应用处理\\s*[|｜]\\s*(?:提醒|锁定)',
+    least: 3,
+  },
+  {
     release: 'v1248',
     name: '共同生活作息同步：清洗后再比较，上班时段不再每 15 秒空转',
     scope: 'both',

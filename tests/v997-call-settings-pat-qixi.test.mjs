@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1280 · 智能家居额度保护模式'/);
+  assert.match(app,/APP_VER='v1282 · 内部标记隐藏与朋友圈封面修复'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1280-smart-home-quota-guard-1/);
-  assert.match(html,/sw\.js\?v=1280&r=v1280-smart-home-quota-guard-1/);
+  assert.match(html,/north-sw-reloaded-1282-app-decision-visibility-1/);
+  assert.match(html,/sw\.js\?v=1282&r=v1282-app-decision-visibility-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{

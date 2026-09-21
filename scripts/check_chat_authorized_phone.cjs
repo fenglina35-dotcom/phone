@@ -31,6 +31,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
      {text:'OTHER_ROLE_SECRET',roleId:'another-role',accountId:'main',rolePerspective:true,ts:Date.now()},
      {text:'OTHER_ACCOUNT_SECRET',roleId:role.id,accountId:'other-account',rolePerspective:true,ts:Date.now()}
     ]:[];
+    fixtureRaw='[内心|想听你说话]\n我在，慢慢说。'+(populated?'\n[应用处理|提醒]':'');
     const before=JSON.stringify(S.me.lifeNotes),sys=buildSystem(role),activity=myActivity(role.id);
     S.messages[testId]=[{id:uid(),role:'user',type:'text',content:'先生N',time:Date.now()}];testCalls.length=0;
     await aiReply(testId);

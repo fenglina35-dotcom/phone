@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1280 · 智能家居额度保护模式'/);
-  assert.match(app,/const url='sw\.js\?v=1280&r=v1280-smart-home-quota-guard-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1280'/);
-  assert.match(html,/app\.js\?v=1280/);
-  assert.match(sw,/const BUILD='1280'/);
-  assert.match(sw,/north-shell-v1280-smart-home-quota-guard-1/);
-  assert.match(index,/小手机\.html\?v=1280/);
-  assert.match(repair,/小手机\.html\?v=1280/);
+  assert.match(app,/APP_VER='v1282 · 内部标记隐藏与朋友圈封面修复'/);
+  assert.match(app,/const url='sw\.js\?v=1282&r=v1282-app-decision-visibility-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1282'/);
+  assert.match(html,/app\.js\?v=1282/);
+  assert.match(sw,/const BUILD='1282'/);
+  assert.match(sw,/north-shell-v1282-app-decision-visibility-1/);
+  assert.match(index,/小手机\.html\?v=1282/);
+  assert.match(repair,/小手机\.html\?v=1282/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{
   assert.match(privateBundle,/<string>1200<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.379;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 379;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.379 \(379\)'/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.380;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 380;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.380 \(380\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

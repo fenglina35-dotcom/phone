@@ -45,20 +45,20 @@ function functionSource(sourceText, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('private identifiers remain v1281 and iOS 379 while public advances independently', () => {
+test('private identifiers remain v1283 and iOS 380 while public advances independently', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1281'/);
-  assert.match(index, /app\.js\?v=1281&r=v1281-private-call-output-1/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1283'/);
+  assert.match(index, /app\.js\?v=1283&r=v1283-private-app-decision-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(app, /APP_VER='v1281 · 私人通话格式清理修复'/);
+  assert.match(app, /APP_VER='v1283 · 私人内部标记与朋友圈封面修复'/);
   assert.match(overlay, /336-daily-file-backup/);
-  assert.match(webview, /1\.0\.379 \(379\)/);
-  assert.match(bridge, /private static let build = "1\.0\.379 \(379\)"/);
+  assert.match(webview, /1\.0\.380 \(380\)/);
+  assert.match(bridge, /private static let build = "1\.0\.380 \(380\)"/);
   assert.match(bridge, /static let contractVersion = 41/);
-  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 379;/g) || []).length, 12);
-  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.379;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1280 · 智能家居额度保护模式'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1280'/);
+  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 380;/g) || []).length, 12);
+  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.380;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1282 · 内部标记隐藏与朋友圈封面修复'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1282'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
@@ -146,7 +146,7 @@ test('diagnostics identify the protected stage without collecting content', () =
   assert.doesNotMatch(overlay, /messageBody|chatContent|authorizationToken/);
 });
 
-test('Mac guide identifies the current private v1281 iOS379 source', () => {
+test('Mac guide identifies the current private v1283 iOS380 source', () => {
   const install = fs.readFileSync(
     path.join(project, '第三百二十七次安装_v1206_完整衣柜_请先读.md'),
     'utf8',
@@ -160,11 +160,11 @@ test('Mac guide identifies the current private v1281 iOS379 source', () => {
     assert.match(guide, /Mac.*编译/);
     assert.match(guide, /真机|真实 iPhone/);
   }
-  assert.match(mac, /1\.0\.379 \(379\)/);
+  assert.match(mac, /1\.0\.380 \(380\)/);
   assert.match(mac, /原生桥.*38/);
   assert.match(install, /1\.0\.327 \(327\)/);
   assert.match(install, /原生桥.*35/);
-  assert.match(mac, /^# v1281 .*iOS379/);
+  assert.match(mac, /^# v1283 .*iOS380/);
   assert.match(mac, /网页.*推送/);
   assert.match(install, /私人内置网页 v1206/);
   assert.match(install, /两边共有/);

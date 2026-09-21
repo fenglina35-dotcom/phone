@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1281'){
+if(window.__NORTH_SHELL_BUILD__!=='1283'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -435,7 +435,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1281 · 私人通话格式清理修复';
+const APP_VER='v1283 · 私人内部标记与朋友圈封面修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -689,7 +689,7 @@ function roleThoughtFormatPrompt(){return '\n\n# 心情标签格式检查\n如�
 /* 模型原文输出已升为全局默认行为，设置里的开关已移除。函数保留并恒为真，让既有的分支继续成立；
    注意：“执行角色的决定/保住格式”那一类过滤（如 [保持安静]、外语通话的语言锁）不再挂在这个判断后面。 */
 function modelOutputUnfiltered(){return true;}
-function modelUnfilteredThoughtTags(text,c){return String(text||'').replace(/[\[【]\s*(?:内心|心情)\s*[|｜:：]\s*[^\]】]+[\]】]/g,tag=>{stripHiddenThoughtTags(tag,c);return '';});}
+function modelUnfilteredThoughtTags(text,c){return String(text||'').replace(/[\[【]\s*应用处理\s*[|｜]\s*(?:提醒|锁定)\s*[\]】]/g,'').replace(/[\[【]\s*(?:内心|心情)\s*[|｜:：]\s*[^\]】]+[\]】]/g,tag=>{stripHiddenThoughtTags(tag,c);return '';});}
 function modelUnfilteredText(value){return String(value==null?'':value);}
 function modelUnfilteredLines(value){return String(value==null?'':value).split(/\r?\n/).filter(line=>line.trim());}
 function modelUnfilteredMessages(line,c){const source=String(line==null?'':line),raw=typeof privateSmartLockStripTags==='function'?privateSmartLockStripTags(source):source;if(/^\s*[\[【]\s*(?:语音|转账|红包|位置|图片|文件|骰子)\s*[|｜:：]/.test(raw)){const parsed=lineToMsgs(normTag(raw.trim()),c);if(parsed&&parsed.length)return parsed;}return raw.trim()?[{role:'assistant',type:'text',content:raw}]:[];}
@@ -1767,7 +1767,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1281&r=v1281-private-call-output-1';
+  const url='sw.js?v=1283&r=v1283-private-app-decision-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -12068,7 +12068,7 @@ async function roleServerPushSyncEnabled(){const now=Date.now();if(now-_roleServ
 function roleServerPushCallKind(body){if(roleServerPushUnsafeBody(body))return'';const m=String(body||'').match(/[\[【]来电[|｜](语音|视频)[\]】]/);return m?m[1]==='视频'?'video':'voice':'';}
 /* [保持安静]／[不说话] 是提示词教给角色的“这次我没什么想说的”，是要执行的决定。
    服务器推送这条路以前从不认它，于是角色决定沉默反而被当成一句话推给用户。 */
-function roleServerPushVisibleBody(body){if(roleServerPushUnsafeBody(body))return'';return String(body||'').replace(/[\[【]来电[|｜](?:语音|视频)[\]】]/g,'').replace(/(^|\n)\s*[\[【]\s*(?:保持安静|不说话)\s*[\]】]\s*(?=\n|$)/g,'$1').trim();}
+function roleServerPushVisibleBody(body){if(roleServerPushUnsafeBody(body))return'';return String(body||'').replace(/[\[【]\s*应用处理\s*[|｜]\s*(?:提醒|锁定)\s*[\]】]/g,'').replace(/[\[【]来电[|｜](?:语音|视频)[\]】]/g,'').replace(/(^|\n)\s*[\[【]\s*(?:保持安静|不说话)\s*[\]】]\s*(?=\n|$)/g,'$1').trim();}
 function roleServerPushNormalizeBody(c,body){const name=String(c&&(c.remark||c.name)||'').trim(),namePattern=name?name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'):'';return String(body||'').split(/\r?\n/).map(raw=>{let line=String(raw||'').trim();/* 旧服务器曾把 recent_context 的“日期 时间 角色名：”误抄进正文；先去掉整段转录头，剩余的图片/位置标签才能按真实消息解析。 */line=line.replace(/^\[?(?:\d{4}年\d{1,2}月\d{1,2}日|\d{4}[\/-]\d{1,2}[\/-]\d{1,2})[ T\s]+\d{1,2}:\d{2}(?::\d{2})?\]?\s*[^：:\n]{1,48}[：:]\s*/,'');if(namePattern)line=line.replace(new RegExp('^'+namePattern+'[：:]\\s*'),'');return line;}).filter(Boolean).join('\n').trim();}
 function privateBackgroundModelRefusal(value){const text=String(value||'').replace(/[\u2018\u2019]/g,"'").trim();if(!text)return false;const speaker=/(?:^|\n)\s*(?:(?:sorry|抱歉|对不起)[,，:： ]*)?(?:I (?:cannot|can't|am|was)|I'm|As an? (?:AI|artificial intelligence|language model)|My safety (?:guidelines|polic)|作为(?:一个|一名)?\s*(?:AI|人工智能|语言模型|大语言模型)|我是(?:一个|一名)?\s*(?:AI|人工智能|语言模型|大语言模型))/i.test(text);const identity=/\b(?:AI assistant|artificial intelligence|language model|programmed to be|safety guidelines|safety polic(?:y|ies))\b|(?:AI|人工智能|语言模型|大语言模型)(?:助手)?/i.test(text);const refusal=/\b(?:cannot|can't|unable to|prohibit|not allowed|cannot adopt|cannot fulfill)\b|(?:无法|不能|不允许|禁止|安全准则|安全政策)/i.test(text);return speaker&&identity&&refusal;}
 function roleServerPushUnsafeBody(body){return roleReplyEnglishOnly(body)||privateBackgroundModelRefusal(body)||!(typeof modelOutputUnfiltered==='function'&&modelOutputUnfiltered())&&wechatReasoningLeak(body);}
@@ -13328,7 +13328,7 @@ function normTag(line){let t=(line||'').replace(/[［｛]/g,'[').replace(/[］�
 function setNaturalInnerThought(c,value){if(!c||!wechatNaturalOn())return false;rememberValidInnerThought(c);const text=naturalInnerThoughtText(value);if(!text)return false;c.innerThought=text;c.innerThoughtAt=Date.now();c.innerThoughtMissingAt=0;rememberValidInnerThought(c);return true;}
 function normalizeHiddenThoughtFormats(value){return String(value||'').replace(/(^|\n)\s*[\[【]\s*(内心|心情(?!值))\s*[\]】]\s*([^\n\]】]{1,160}?)[\]】]?\s*(?=\n|$)/g,(m,lead,kind,text)=>lead+'['+kind+'|'+String(text||'').trim()+']').replace(/[\[【]\s*内心\s*(?:[|｜:：]\s*)?([^\[\]【】]{1,160})[\]】]/g,(m,text)=>'[内心|'+String(text||'').replace(/\s+/g,' ').trim()+']');}
 function hiddenThoughtTagPresent(line){return /[\[【]\s*(?:内心|心情(?!值))\s*(?:[|｜:：]\s*)?[^\]】]*[\]】]/.test(normalizeHiddenThoughtFormats(line));}
-function stripHiddenThoughtTags(line,c){return normalizeHiddenThoughtFormats(line).replace(/[\[【]\s*(内心|心情(?!值))\s*(?:[|｜:：]\s*)?([^\]】]*)\s*[\]】]/g,(m,kind,value)=>{value=String(value||'').trim();if(c&&kind==='内心')setNaturalInnerThought(c,value);else if(c&&kind==='心情'&&!wechatNaturalOn()&&value){const mood=honestMoodText(c,value);c.mood=typeof moodInnerMonologue==='function'?moodInnerMonologue(c,mood):mood;}return '';}).replace(/[ \t]{2,}/g,' ').trim();}
+function stripHiddenThoughtTags(line,c){return normalizeHiddenThoughtFormats(line).replace(/[\[【]\s*应用处理\s*[|｜]\s*(?:提醒|锁定)\s*[\]】]/g,'').replace(/[\[【]\s*(内心|心情(?!值))\s*(?:[|｜:：]\s*)?([^\]】]*)\s*[\]】]/g,(m,kind,value)=>{value=String(value||'').trim();if(c&&kind==='内心')setNaturalInnerThought(c,value);else if(c&&kind==='心情'&&!wechatNaturalOn()&&value){const mood=honestMoodText(c,value);c.mood=typeof moodInnerMonologue==='function'?moodInnerMonologue(c,mood):mood;}return '';}).replace(/[ \t]{2,}/g,' ').trim();}
 const LEAKRE=new RegExp('^\\[('+TAGWORDS+')(\\||\\]|$)');
 const CONTROL_TAG_RE=new RegExp('[\\[【]\\s*(?:'+TAGWORDS+')(?:\\s*[\\|｜:：][^\\]】]*)?\\s*[\\]】]','g');
 function stripCallControlTags(line,c,id,keepActions){let t=normTag(line);
