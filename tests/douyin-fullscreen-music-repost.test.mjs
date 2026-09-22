@@ -93,6 +93,36 @@ test('爱心挂在 body 上，所以 render() 重画也不会被抹掉', () => {
   for (const s of shells) assert.match(s, /\.dyheart\{position:fixed;z-index:9999/);
 });
 
+/* ===== 点亮就是实心 ===== */
+test('svgIc 永远 fill="none"，所以需要一个填色版本', () => {
+  assert.match(app, /return '<svg viewBox="0 0 24 24"[^\n]*fill="none"/, 'svgIc 还是描边版，前提没变');
+  for (const s of [app, priv]) {
+    assert.match(s, /function svgIcFill\(name,size,color,sw\)/);
+    assert.match(s, /function dyIc\(name,size,on,onColor,offColor,sw\)\{return on\?svgIcFill\(name,size,onColor,sw\):svgIc\(name,size,offColor,sw\);\}/);
+  }
+});
+test('点上去是实心，没点还是线条', () => {
+  const ctx = { ICONS: { heart: '<path d="M1 1"/>' } };
+  vm.createContext(ctx);
+  vm.runInContext([source('svgIc'), source('svgIcFill'), source('dyIc')].join('\n'), ctx);
+  assert.match(vm.runInContext("dyIc('heart',30,true,'#f5243d','#fff')", ctx), /fill="#f5243d"/);
+  assert.match(vm.runInContext("dyIc('heart',30,false,'#f5243d','#fff')", ctx), /fill="none"/);
+});
+test('首页、作品详情、评论区三处的爱心和星星都换成了 dyIc', () => {
+  for (const s of [app, priv]) {
+    assert.match(s, /onclick="dyLike\('\$\{v\.id\}'\)"><span class="ic">\$\{dyIc\('heart',34,liked,'#f5243d','#fff'\)\}/);
+    assert.match(s, /onclick="dyStar\('\$\{v\.id\}'\)"><span class="ic">\$\{dyIc\('star',33,starred,'#f5c518','#fff',2\)\}/);
+    assert.match(s, /dywk-r" onclick="dyLike\('\$\{v\.id\}'\)">\$\{dyIc\('heart',30,liked,'#f5243d','#fff'\)\}/);
+    assert.match(s, /dywk-r" onclick="dyStar\('\$\{v\.id\}'\)">\$\{dyIc\('star',29,starred,'#f5c518','#fff',2\)\}/);
+    assert.match(s, /dyCmLike\('\$\{v\.id\}',\$\{ci\}\)">\$\{dyIc\('heart',19,cm\.liked,'#f5243d','#7b7b83',1\.8\)\}/);
+    assert.equal(/svgIc\('heart',(?:34|30|19),/.test(s), false, '还有抖音的爱心没换成 dyIc');
+    assert.equal(/svgIc\('star',(?:33|29),/.test(s), false, '还有抖音的星星没换成 dyIc');
+  }
+});
+test('双击蹦出来的那颗也走同一个填色函数，不再两套写法', () => {
+  assert.match(source('dyHeartBurst'), /d\.innerHTML=svgIcFill\('heart',98,'#f5243d',1\.2\);/);
+});
+
 /* ===== @ 写进描述 ===== */
 test('@ 朋友插在光标处，写进作品描述里，不是底下一排小标签', () => {
   assert.match(source('dyPostAt'), /dyPostInsertDesc\('@'\+q\.name\+' '\)/);

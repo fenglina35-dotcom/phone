@@ -3748,6 +3748,12 @@ const ICONS={
 };
 function svgIc(name,size,color,sw){const p=ICONS[name];if(!p)return '';size=size||22;
   return '<svg viewBox="0 0 24 24" width="'+size+'" height="'+size+'" fill="none" stroke="'+(color||'currentColor')+'" stroke-width="'+(sw||1.9)+'" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle">'+p+'</svg>';}
+/* svgIc 写死了 fill="none"，所以「点亮」的爱心、「收藏」的星星都只是描了个边。
+   点上去就该是实心的，所以这里出一个填色版本。 */
+function svgIcFill(name,size,color,sw){const p=ICONS[name];if(!p)return '';size=size||22;color=color||'currentColor';
+  return '<svg viewBox="0 0 24 24" width="'+size+'" height="'+size+'" fill="'+color+'" stroke="'+color+'" stroke-width="'+(sw==null?1.4:sw)+'" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle">'+p+'</svg>';}
+/* 点上了就实心，没点就还是原来的线条 */
+function dyIc(name,size,on,onColor,offColor,sw){return on?svgIcFill(name,size,onColor,sw):svgIc(name,size,offColor,sw);}
 const HOMEAPPS=[['wechat','💬','微信'],['phoneapp','☎','电话'],['settings','⚙️','设置'],['aiaccount','AI','AI账户'],['worldbook','📖','世界书'],['browser','🌐','浏览器'],['moments','🌸','朋友圈'],['spy','🔍','查他手机'],['shop','🛒','购物'],['calendar','📅','日历'],['x','𝕏','X'],['douyin','🎵','抖音'],['food','🍔','外卖'],['couple','💞','情侣空间'],['tasks','📋','任务便签'],['games','🎮','游戏大厅'],['mail','','信箱'],['offline','🌹','线下约会'],['music','🎵','音乐'],['cinema','','放映室'],['roleplay','','角色扮演'],['tale','🕯️','规则怪谈'],['dread','🩸','惊悚抉择'],['travel','✈','云程'],['contacts','👤','通讯录'],['me','🐱','我']];
 function appIconEditor(){S.me.appIcons=S.me.appIcons||{};
   openModal(`<h3>App 图标</h3><div class="hint">给主屏图标换成你喜欢的图片，留空恢复默认。</div>
@@ -5540,9 +5546,9 @@ function dyVideoCard(v,i){const liked=!!v.liked,lc=(v.lk||0)+(liked?1:0),starred
     <div class="dyfd-card${photo?' photo':''}" onclick="event.stopPropagation();dyOpenWork('${v.id}')">${dyWorkCardHTML(v,{lines:4,full:!!photo})}</div>
     <div class="dyrail">
       <div class="ra" onclick="dyVideoAuthor('${v.id}')" style="margin-bottom:5px"><div style="position:relative">${(mine?av(dyAvatar(),'sm'):dyFace(v.avatar,'sm'))}${isChar&&!fol?'<span class="dyrail-plus">+</span>':''}</div></div>
-      <div class="ra" onclick="dyLike('${v.id}')"><span class="ic">${svgIc('heart',34,liked?'#f5243d':'#fff',0)}</span>${dyNum(lc)}</div>
+      <div class="ra" onclick="dyLike('${v.id}')"><span class="ic">${dyIc('heart',34,liked,'#f5243d','#fff')}</span>${dyNum(lc)}</div>
       <div class="ra" onclick="dyComments('${v.id}')"><span class="ic">${svgIc('chat',33,'#fff',2)}</span>${dyNum((v.comments||[]).length)}</div>
-      <div class="ra" onclick="dyStar('${v.id}')"><span class="ic">${svgIc('star',33,starred?'#f5c518':'#fff',2)}</span>${dyNum(sc)}</div>
+      <div class="ra" onclick="dyStar('${v.id}')"><span class="ic">${dyIc('star',33,starred,'#f5c518','#fff',2)}</span>${dyNum(sc)}</div>
       <div class="ra" onclick="dyFwd('${v.id}')"><span class="ic">${svgIc('forward',32,'#fff',2)}</span>分享</div>
     </div>
     <div class="dymeta">
@@ -5894,8 +5900,7 @@ function dyHeartBurst(ev){try{
   const d=document.createElement('div');d.className='dyheart';
   d.style.left=x+'px';d.style.top=y+'px';
   d.style.setProperty('--dyrot',(Math.random()*44-22)+'deg');
-  /* svgIc 一律 fill="none"，放到 98 那么大就成了一个空心描边。双击蹦出来的这颗要是实心的。 */
-  d.innerHTML='<svg viewBox="0 0 24 24" width="98" height="98" fill="#f5243d" stroke="#ff5b73" stroke-width="1.2" stroke-linejoin="round">'+ICONS.heart+'</svg>';
+  d.innerHTML=svgIcFill('heart',98,'#f5243d',1.2);
   document.body.appendChild(d);
   setTimeout(()=>{try{d.remove();}catch(_){}},1000);
 }catch(_){}}
@@ -7397,9 +7402,9 @@ function dyWorkDanmu(v){const mine=v.cid==='me',cs=(v.comments||[]).slice(0,2);
 function dyWorkRail(v){const liked=!!v.liked,lc=(v.lk||0)+(liked?1:0),starred=!!v.starred,sc=(v.st||0)+(starred?1:0),mine=v.cid==='me';
   return `<div class="dywk-rail">
     <div onclick="dyWorkAuthor('${v.id}')">${(mine?av(dyAvatar(),'sm'):dyFace(v.avatar,'sm'))}</div>
-    <div class="dywk-r" onclick="dyLike('${v.id}')">${svgIc('heart',30,liked?'#f5243d':'#fff',0)}${dyNum(lc)}</div>
+    <div class="dywk-r" onclick="dyLike('${v.id}')">${dyIc('heart',30,liked,'#f5243d','#fff')}${dyNum(lc)}</div>
     <div class="dywk-r" onclick="dyComments('${v.id}')">${svgIc('chat',29,'#fff',2)}${dyNum((v.comments||[]).length)}</div>
-    <div class="dywk-r" onclick="dyStar('${v.id}')">${svgIc('star',29,starred?'#f5c518':'#fff',2)}${dyNum(sc)}</div>
+    <div class="dywk-r" onclick="dyStar('${v.id}')">${dyIc('star',29,starred,'#f5c518','#fff',2)}${dyNum(sc)}</div>
     <div class="dywk-r" onclick="dyWorkMore('${v.id}')"><em>···</em>更多</div>
     <div class="dywk-r"><span class="dywk-same">${esc(v.emoji||'🎬')}</span>拍同款</div>
   </div>`;}
@@ -7454,7 +7459,7 @@ function dyCmRow(v,cm,ci){const reps=cm.replies||[],open=!!_dyCmExpand[ci],autho
       <div class="dycm-meta">${dyCmMeta(cm)}<span class="a" onclick="dyCmReplyTo(${ci})">回复</span>${cm.me?`<span class="a" onclick="dyCmDelete('${v.id}',${ci})">删除</span>`:''}</div>
       ${sub}
     </div>
-    <div class="dycm-like${cm.liked?' on':''}" onclick="dyCmLike('${v.id}',${ci})">${svgIc('heart',19,cm.liked?'#f5243d':'#7b7b83',1.8)}${cm.lk||0}</div>
+    <div class="dycm-like${cm.liked?' on':''}" onclick="dyCmLike('${v.id}',${ci})">${dyIc('heart',19,cm.liked,'#f5243d','#7b7b83',1.8)}${cm.lk||0}</div>
   </div>`;}
 function dyCmCaptionRow(v){const mine=v.cid==='me';return `<div class="dycm-row">${mine?av(dyAvatar(),'sm'):dyFace(v.avatar,'sm')}<div class="dycm-main"><div class="dycm-name">${esc(mine?dyNick():(v.author||'用户'))}<em class="dycm-author">作者</em></div><div class="dycm-text">${dyHash(v.desc||'')}</div><div class="dycm-meta">${esc(dyWorkDate(v))}</div></div></div>`;}
 function dyCmFanRows(v,kind){const names=[];const push=(n,a)=>{if(n&&!names.some(x=>x[0]===n))names.push([n,a]);};
