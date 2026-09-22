@@ -102,6 +102,64 @@ test('爱心挂在 body 上，所以 render() 重画也不会被抹掉', () => {
   for (const s of shells) assert.match(s, /\.dyheart\{position:fixed;z-index:9999/);
 });
 
+/* ===== 首页和作品详情共用一条右边栏 ===== */
+test('首页那条旧的 .dyrail 撤了，改用和作品详情同一条', () => {
+  const card = source('dyVideoCard');
+  assert.match(card, /\$\{dyRailHTML\(v\)\}/);
+  assert.equal(/class="dyrail"/.test(card), false, '首页还留着旧的那条边栏，位置就对不上了');
+  assert.match(source('dyWorkRail'), /return dyRailHTML\(v\);/, '作品详情也必须走同一个函数，不然两边迟早又走偏');
+});
+test('边栏是：头像、爱心、评论、收藏、更多、拍同款', () => {
+  const fn = source('dyRailHTML');
+  const order = ['dyVideoAuthor', 'dyLike', 'dyComments', 'dyStar', 'dyWorkMore', 'dyWorkSame'];
+  let at = -1;
+  for (const name of order) {
+    const i = fn.indexOf(name);
+    assert.ok(i > at, `${name} 不在边栏里，或者顺序不对`);
+    at = i;
+  }
+  assert.match(fn, /拍同款/);
+});
+test('边栏每个按钮都拦住冒泡，不然点爱心会被当成一次轻触', () => {
+  const fn = source('dyRailHTML');
+  assert.match(fn, /const stop='event\.stopPropagation\(\);';/, 'stop 被掏空了，等于没拦');
+  const stops = (fn.match(/\$\{stop\}/g) || []).length;
+  assert.equal(stops, 6, `六个按钮都要拦，现在只有 ${stops} 个`);
+  assert.match(source('dyVideoCard'), /class="dyfd-who" onclick="event\.stopPropagation\(\);dyAuthorMenu/);
+  assert.match(source('dyVideoCard'), /id="narr_\$\{v\.id\}" onclick="event\.stopPropagation\(\);dyTapVideo/);
+});
+test('拍同款是个真按钮，会带着这条的配乐去发作品', () => {
+  for (const x of [app, priv]) assert.match(x, /function dyWorkSame\(id\)/);
+  const fn = source('dyWorkSame');
+  assert.match(fn, /const s=dyMusicSongOf\(v\);/);
+  assert.match(fn, /songId:s\?s\.id:''/);
+  assert.match(fn, /dyPostOpen\('camera'\)/);
+});
+
+/* ===== 首页双击是点赞，不是跳页 ===== */
+test('首页那张铺满全屏的图，轻触点开作品、双击点赞', () => {
+  const card = source('dyVideoCard');
+  assert.match(card, /class="dyfd-card\$\{photo\?' photo':''\}" onclick="event\.stopPropagation\(\);dyCardTap\('\$\{v\.id\}',event,1\)"/);
+  assert.equal(/dyfd-card[^>]*onclick="event\.stopPropagation\(\);dyOpenWork/.test(card), false,
+    '卡片又直接 dyOpenWork 了——图铺满全屏以后它盖住整块屏幕，双击点赞会被它抢走');
+  assert.match(source('dyCardTap'), /function dyCardTap\(id,ev,openOnSingle\)/);
+  assert.match(source('dyCardTap'), /if\(openOnSingle\)dyOpenWork\(id\);else dyTapVideo\(id\);/);
+});
+test('双击仍然只走点赞那一条路，不会顺手打开作品', () => {
+  const ctx = { Date, setTimeout, clearTimeout, opened: 0, liked: 0, narr: 0 };
+  ctx.dyVid = () => ({ id: 'a', liked: false });
+  ctx.dyLike = () => { ctx.liked++; };
+  ctx.dyOpenWork = () => { ctx.opened++; };
+  ctx.dyTapVideo = () => { ctx.narr++; };
+  ctx.dyHeartBurst = () => {};
+  vm.createContext(ctx);
+  vm.runInContext(["let _dyTapAt=0,_dyTapId='',_dyTapTimer=0;", source('dyCardTap'), source('dyDoubleLike')].join('\n'), ctx);
+  vm.runInContext("dyCardTap('a',{},1);dyCardTap('a',{},1);", ctx);
+  assert.equal(ctx.liked, 1, '双击应该点赞');
+  assert.equal(ctx.opened, 0, '双击不该把作品也打开——她就是被这个带走的');
+  assert.equal(ctx.narr, 0);
+});
+
 /* ===== 点亮就是实心 ===== */
 test('svgIc 永远 fill="none"，所以需要一个填色版本', () => {
   assert.match(app, /return '<svg viewBox="0 0 24 24"[^\n]*fill="none"/, 'svgIc 还是描边版，前提没变');
@@ -117,12 +175,10 @@ test('点上去是实心，没点还是线条', () => {
   assert.match(vm.runInContext("dyIc('heart',30,true,'#f5243d','#fff')", ctx), /fill="#f5243d"/);
   assert.match(vm.runInContext("dyIc('heart',30,false,'#f5243d','#fff')", ctx), /fill="none"/);
 });
-test('首页、作品详情、评论区三处的爱心和星星都换成了 dyIc', () => {
+test('边栏和评论区的爱心、星星都换成了 dyIc', () => {
   for (const s of [app, priv]) {
-    assert.match(s, /onclick="dyLike\('\$\{v\.id\}'\)"><span class="ic">\$\{dyIc\('heart',34,liked,'#f5243d','#fff'\)\}/);
-    assert.match(s, /onclick="dyStar\('\$\{v\.id\}'\)"><span class="ic">\$\{dyIc\('star',33,starred,'#f5c518','#fff',2\)\}/);
-    assert.match(s, /dywk-r" onclick="dyLike\('\$\{v\.id\}'\)">\$\{dyIc\('heart',30,liked,'#f5243d','#fff'\)\}/);
-    assert.match(s, /dywk-r" onclick="dyStar\('\$\{v\.id\}'\)">\$\{dyIc\('star',29,starred,'#f5c518','#fff',2\)\}/);
+    assert.match(s, /dyLike\('\$\{v\.id\}'\)">\$\{dyIc\('heart',30,liked,'#f5243d','#fff'\)\}/);
+    assert.match(s, /dyStar\('\$\{v\.id\}'\)">\$\{dyIc\('star',29,starred,'#f5c518','#fff',2\)\}/);
     assert.match(s, /dyCmLike\('\$\{v\.id\}',\$\{ci\}\)">\$\{dyIc\('heart',19,cm\.liked,'#f5243d','#7b7b83',1\.8\)\}/);
     assert.equal(/svgIc\('heart',(?:34|30|19),/.test(s), false, '还有抖音的爱心没换成 dyIc');
     assert.equal(/svgIc\('star',(?:33|29),/.test(s), false, '还有抖音的星星没换成 dyIc');
@@ -143,10 +199,9 @@ test('评论那个按钮是实心白气泡，中间三个点是真的洞', () =>
   assert.equal(/M8\.1 9\.4a1\.6 1\.6[\s\S]*M12 9\.4a1\.6 1\.6[\s\S]*M15\.9 9\.4a1\.6 1\.6/.test(fn), true, '三个点要在 evenodd 那条里');
   assert.equal(fn.includes('stroke'), false, '这个图标不描边，全靠填色');
 });
-test('两处评论按钮都换成了 dyCmIcon，没有漏网的描边版', () => {
+test('评论按钮换成了 dyCmIcon，没有漏网的描边版', () => {
   for (const x of [app, priv]) {
-    assert.match(x, /onclick="dyComments\('\$\{v\.id\}'\)"><span class="ic">\$\{dyCmIcon\(33\)\}/);
-    assert.match(x, /dywk-r" onclick="dyComments\('\$\{v\.id\}'\)">\$\{dyCmIcon\(29\)\}/);
+    assert.match(x, /dyComments\('\$\{v\.id\}'\)">\$\{dyCmIcon\(29\)\}/);
     assert.equal(/svgIc\('chat',(?:33|29),/.test(x), false, '还有抖音的评论按钮是描边版');
   }
 });

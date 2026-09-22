@@ -71,7 +71,9 @@ test('visitors come from her own world, never from invented names', () => {
 test('the work page floats danmu over the video and keeps the rail', () => {
   const src = app.slice(app.indexOf('function dyWorkView()'), app.indexOf('/* ===== 抖音评论区'));
   assert.match(src, /\$\{dyWorkDanmu\(v\)\}\$\{dyWorkRail\(v\)\}/);
-  const rail = app.slice(app.indexOf('function dyWorkRail('), app.indexOf('function dyStar('));
+  /* 右边栏现在是首页和作品详情共用的 dyRailHTML，dyWorkRail 只是转调一下 */
+  assert.match(app.slice(app.indexOf('function dyWorkRail('), app.indexOf('function dyWorkSame(')), /return dyRailHTML\(v\);/);
+  const rail = app.slice(app.indexOf('function dyRailHTML('), app.indexOf('function dyWorkRail('));
   for (const call of ['dyLike(', 'dyComments(', 'dyStar(', 'dyWorkMore(']) {
     assert.ok(rail.includes(call), `右侧操作栏少了 ${call}`);
   }

@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1291'){
+if(window.__NORTH_SHELL_BUILD__!=='1293'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -435,7 +435,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1291 · 抖音图片铺满整屏（私人）';
+const APP_VER='v1293 · 抖音边栏统一与双击点赞（私人）';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1767,7 +1767,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1291&r=v1291-private-dy-cover-1';
+  const url='sw.js?v=1293&r=v1293-private-dy-rail-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -5544,21 +5544,15 @@ function dyVideoCard(v,i){const liked=!!v.liked,lc=(v.lk||0)+(liked?1:0),starred
   const photo=v&&v.img?storedImageDisplaySource(v.img):'';
   return `<div class="dyvideo" data-dy-video-id="${v.id}" onclick="dyCardTap('${v.id}',event)">
     ${photo?'<div class="dybg dybg-photo"></div>':`<div class="dybg" style="background-image:${grad}"></div>`}
-    <div class="dyfd-card${photo?' photo':''}" onclick="event.stopPropagation();dyOpenWork('${v.id}')">${dyWorkCardHTML(v,{lines:4,full:!!photo})}</div>
-    <div class="dyrail">
-      <div class="ra" onclick="dyVideoAuthor('${v.id}')" style="margin-bottom:5px"><div style="position:relative">${(mine?av(dyAvatar(),'sm'):dyFace(v.avatar,'sm'))}${isChar&&!fol?'<span class="dyrail-plus">+</span>':''}</div></div>
-      <div class="ra" onclick="dyLike('${v.id}')"><span class="ic">${dyIc('heart',34,liked,'#f5243d','#fff')}</span>${dyNum(lc)}</div>
-      <div class="ra" onclick="dyComments('${v.id}')"><span class="ic">${dyCmIcon(33)}</span>${dyNum((v.comments||[]).length)}</div>
-      <div class="ra" onclick="dyStar('${v.id}')"><span class="ic">${dyIc('star',33,starred,'#f5c518','#fff',2)}</span>${dyNum(sc)}</div>
-      <div class="ra" onclick="dyFwd('${v.id}')"><span class="ic">${svgIc('forward',32,'#fff',2)}</span>分享</div>
-    </div>
+    <div class="dyfd-card${photo?' photo':''}" onclick="event.stopPropagation();dyCardTap('${v.id}',event,1)">${dyWorkCardHTML(v,{lines:4,full:!!photo})}</div>
+    ${dyRailHTML(v)}
     <div class="dymeta">
       ${isChar&&fol?'<span class="dyfd-mutual">互相关注</span>':''}
-      <div class="dyfd-who" onclick="dyAuthorMenu('${v.id}')">@${esc(mine?dyNick():(v.author||'用户'))}${dyWorkLong(v)?'<em class="dyfd-kind">文章</em>':''}<span class="dyfd-ago">· ${esc(dyTimeAgo(v.ts))}</span></div>
+      <div class="dyfd-who" onclick="event.stopPropagation();dyAuthorMenu('${v.id}')">@${esc(mine?dyNick():(v.author||'用户'))}${dyWorkLong(v)?'<em class="dyfd-kind">文章</em>':''}<span class="dyfd-ago">· ${esc(dyTimeAgo(v.ts))}</span></div>
       <div class="dyfd-desc">${dyHash(v.desc||'')}</div>
       ${dyWorkMusicHTML(v)}
     </div>
-    <div class="dynarr" id="narr_${v.id}" onclick="dyTapVideo('${v.id}')" style="display:${_dyNarr[v.id]?'block':'none'}"><div style="font-weight:800;color:#fff;margin-bottom:7px">旁白</div>${esc(v.narration||'（这条还没有旁白）')}<div style="text-align:center;color:#777;margin-top:10px;font-size:11px">轻触收起</div></div>
+    <div class="dynarr" id="narr_${v.id}" onclick="event.stopPropagation();dyTapVideo('${v.id}')" style="display:${_dyNarr[v.id]?'block':'none'}"><div style="font-weight:800;color:#fff;margin-bottom:7px">旁白</div>${esc(v.narration||'（这条还没有旁白）')}<div style="text-align:center;color:#777;margin-top:10px;font-size:11px">轻触收起</div></div>
   </div>`;}
 /* ===== 朋友页 ===== */
 function dyFriendList(){const fol=(S.dy.following||[]);
@@ -5887,10 +5881,13 @@ try{document.addEventListener('pointerdown',()=>{_dyGestured=true;},{capture:tru
   setInterval(dyMusicSoon,1100);}catch(_){}
 /* ===== 双击点赞：屏幕上蹦一颗爱心，跟真抖音一样 ===== */
 let _dyTapAt=0,_dyTapId='',_dyTapTimer=0;
-function dyCardTap(id,ev){const now=Date.now();
+/* openOnSingle：首页那张铺满全屏的图，轻触一下是点开作品，双击才是点赞。
+   图改成铺满以后这张卡盖住了整块屏幕，它原来直接 dyOpenWork，
+   所以她在首页双击想点赞，结果被带进了作品详情页。 */
+function dyCardTap(id,ev,openOnSingle){const now=Date.now();
   if(_dyTapId===id&&now-_dyTapAt<300){clearTimeout(_dyTapTimer);_dyTapAt=0;_dyTapId='';return dyDoubleLike(id,ev);}
   _dyTapAt=now;_dyTapId=id;clearTimeout(_dyTapTimer);
-  _dyTapTimer=setTimeout(()=>{_dyTapAt=0;_dyTapId='';dyTapVideo(id);},300);}
+  _dyTapTimer=setTimeout(()=>{_dyTapAt=0;_dyTapId='';if(openOnSingle)dyOpenWork(id);else dyTapVideo(id);},300);}
 function dyDoubleLike(id,ev){const v=dyVid(id);if(!v)return;
   dyHeartBurst(ev);
   if(!v.liked)dyLike(id);/* 真抖音双击只点亮，再双击不会取消 */}
@@ -7400,15 +7397,29 @@ function dyWorkDate(v){if(v.date)return v.date;if(!v.ts)return '';const d=new Da
 function dyWorkDanmu(v){const mine=v.cid==='me',cs=(v.comments||[]).slice(0,2);
   const head=`<div class="dywk-dm">${(mine?av(dyAvatar(),'sm'):dyFace(v.avatar,'sm'))}<div class="dywk-dm-b"><span>${esc(mine?dyNick():(v.author||'用户'))}${dyWorkDate(v)?' · '+esc(dyWorkDate(v)):''}</span>${dyHash(v.desc||'')}</div></div>`;
   return `<div class="dywk-danmu" onclick="dyComments('${v.id}')">${head}${cs.map(cm=>`<div class="dywk-dm">${dyFace(cm.avatar,'sm')}<div class="dywk-dm-b"><span>${esc(cm.name)}：</span>${dyHash(cm.text)}</div></div>`).join('')}</div>`;}
-function dyWorkRail(v){const liked=!!v.liked,lc=(v.lk||0)+(liked?1:0),starred=!!v.starred,sc=(v.st||0)+(starred?1:0),mine=v.cid==='me';
+/* 首页和作品详情用的是同一条右边栏——她要的就是「位置一模一样」。
+   两边各写一份，迟早又走偏，所以合成一个函数。
+   每个按钮都要 stopPropagation：整块屏幕挂着双击点赞，不拦住的话点个爱心
+   也会顺手被当成一次「轻触」。 */
+function dyRailHTML(v){const liked=!!v.liked,lc=(v.lk||0)+(liked?1:0),starred=!!v.starred,sc=(v.st||0)+(starred?1:0);
+  const mine=v.cid==='me',isChar=v.cid&&v.cid!=='me',fol=isChar&&(S.dy.following||[]).includes(v.cid);
+  const same=v.img?`<img src="${storedImageDisplaySource(v.img)}" alt="">`:esc(v.emoji||'🎬');
+  const stop='event.stopPropagation();';
   return `<div class="dywk-rail">
-    <div onclick="dyWorkAuthor('${v.id}')">${(mine?av(dyAvatar(),'sm'):dyFace(v.avatar,'sm'))}</div>
-    <div class="dywk-r" onclick="dyLike('${v.id}')">${dyIc('heart',30,liked,'#f5243d','#fff')}${dyNum(lc)}</div>
-    <div class="dywk-r" onclick="dyComments('${v.id}')">${dyCmIcon(29)}${dyNum((v.comments||[]).length)}</div>
-    <div class="dywk-r" onclick="dyStar('${v.id}')">${dyIc('star',29,starred,'#f5c518','#fff',2)}${dyNum(sc)}</div>
-    <div class="dywk-r" onclick="dyWorkMore('${v.id}')"><em>···</em>更多</div>
-    <div class="dywk-r"><span class="dywk-same">${esc(v.emoji||'🎬')}</span>拍同款</div>
+    <div class="dywk-av" onclick="${stop}dyVideoAuthor('${v.id}')"><span class="dywk-avwrap">${(mine?av(dyAvatar(),'sm'):dyFace(v.avatar,'sm'))}${isChar&&!fol?'<span class="dyrail-plus">+</span>':''}</span></div>
+    <div class="dywk-r" onclick="${stop}dyLike('${v.id}')">${dyIc('heart',30,liked,'#f5243d','#fff')}${dyNum(lc)}</div>
+    <div class="dywk-r" onclick="${stop}dyComments('${v.id}')">${dyCmIcon(29)}${dyNum((v.comments||[]).length)}</div>
+    <div class="dywk-r" onclick="${stop}dyStar('${v.id}')">${dyIc('star',29,starred,'#f5c518','#fff',2)}${dyNum(sc)}</div>
+    <div class="dywk-r" onclick="${stop}dyWorkMore('${v.id}')"><em>···</em>更多</div>
+    <div class="dywk-r" onclick="${stop}dyWorkSame('${v.id}')"><span class="dywk-same">${same}</span>拍同款</div>
   </div>`;}
+function dyWorkRail(v){return dyRailHTML(v);}
+/* 拍同款：把这条的配乐带上，直接去发自己的一条 */
+function dyWorkSame(id){const v=dyVid(id);if(!v)return;
+  const s=dyMusicSongOf(v);
+  _dyPost={kind:'img',src:'',desc:'',at:[],songId:s?s.id:'',music:s?((s.title||'未命名')+(s.artist?' · '+s.artist:'')):''};
+  dyPostOpen('camera');
+  toast(s?('配乐带上了：'+(s.title||'这首歌')):'挑张照片，发一条同款');}
 function dyStar(id){const v=dyVid(id);if(!v)return;v.starred=!v.starred;save();render();toast(v.starred?'已收藏 ⭐':'已取消收藏');}
 function dyWorkAuthor(id){const v=dyVid(id);if(!v)return;if(v.cid&&v.cid!=='me')return dyVisitorOpenChar(v.cid);_dySub='';dyTab='me';render();}
 function dyWorkMore(id){const v=dyVid(id);if(!v)return;const mine=v.cid==='me';
