@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='1271';</script>
+<script>window.__NORTH_SHELL_BUILD__='1284';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-1271-web-dy-publish-1';
+  var key='north-sw-reloaded-1284-web-dy-publish-1';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=1271&r=v1271-web-dy-publish-1';
+  var url='sw.js?v=1284&r=v1284-web-dy-publish-1';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -1698,6 +1698,9 @@ body{min-height:0}
 html,body,.phone,.screen{background-color:#000}
 /* 全屏外壳只跟随当前可用视口；禁止用物理屏幕高度拉长页面，聊天等页面由内部滚动区承载内容。 */
 html,body,.phone,.screen{height:100%;min-height:0;max-height:100%;overflow:hidden}
+/* iOS 主屏幕 Web App 在非边到边视口下已经由 WebKit 留出系统状态栏。
+   这里只同步根背景色；绝不能再用 fixed 伪元素覆盖网页视口，否则第一行页面内容会被黑层挡住。 */
+html.north-ios-standalone-status{background-color:var(--north-shell-status-color,#000)}
 /* v882：Apple 主屏幕模式保留 v877 已验证的 100% 外壳，不再用 100dvh 二次缩短页面。
    部分已安装主屏幕 WebApp 会把 env() 回报为 0，因此手动适配模式提供可点击的保守下限。 */
 html.north-ios-home-safe{--north-ios-home-safe-top:max(env(safe-area-inset-top,0px),47px);--north-ios-home-safe-bottom:0px}
@@ -1839,7 +1842,7 @@ html.north-apple-remote-safe .music-chat-dock{margin-bottom:4px;scroll-margin-bo
 .wx-real-nav{height:54px;flex:0 0 54px;display:grid;grid-template-columns:64px 1fr 64px;align-items:center;padding:0 8px;background:#111;border-bottom:.5px solid transparent;box-sizing:border-box;position:relative;z-index:5}.wx-real-nav button,.wx-real-nav span{border:0;background:transparent;color:#e9e9e9;font:500 27px/1 -apple-system,BlinkMacSystemFont,"SF Pro Text",sans-serif;cursor:pointer}.wx-real-nav button:first-child{text-align:left;font-size:39px;font-weight:260;line-height:.7}.wx-real-nav button:last-child{text-align:right;font-size:18px;letter-spacing:-1.5px}.wx-real-nav.titled{border-bottom-color:#2b2b2d}.wx-real-nav.titled b{text-align:center;font-size:17px;font-weight:600}.wx-real-scroll{min-height:0;flex:1;overflow:auto;background:#111;-webkit-overflow-scrolling:touch}
 .wx-profile-hero{width:100%;display:flex;align-items:flex-start;gap:17px;padding:34px 22px 30px;border:0;background:#111;color:#ededed;text-align:left;cursor:pointer}.wx-profile-hero .avatar.lg{width:78px;height:78px;flex:0 0 78px;border-radius:7px}.wx-profile-copy{min-width:0;display:flex;flex-direction:column;gap:5px;padding-top:1px}.wx-profile-copy b{font-size:22px;line-height:1.25;font-weight:650}.wx-profile-copy b i{display:inline-flex;width:19px;height:19px;margin-left:4px;align-items:center;justify-content:center;border-radius:50%;color:#fff;font-style:normal;vertical-align:2px}.wx-profile-copy b i svg{display:block;width:13px;height:13px;overflow:visible}.wx-profile-copy b i.female{background:#f4879a}.wx-profile-copy b i.male{background:#5da7df}.wx-profile-copy small{max-width:250px;color:#8d8d92;font-size:15px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .wx-profile-block{border-top:.5px solid #29292b;border-bottom:.5px solid #29292b;margin-bottom:8px;background:#19191b}.wx-profile-row{width:100%;min-height:78px;display:flex;align-items:center;gap:13px;padding:15px 20px;border:0;background:#19191b;color:#ededed;text-align:left;cursor:pointer}.wx-profile-row:active,.wx-info-group button:active,.wx-role-moment-card:active{background:#222225}.wx-profile-row>b,.wx-profile-row>span>b{font-size:17px;font-weight:500}.wx-profile-row>em{margin-left:auto;color:#68686d;font-size:28px;font-weight:300;font-style:normal}.wx-profile-data>span{display:flex;flex-direction:column;gap:5px}.wx-profile-data small{color:#77777c;font-size:12px}.wx-profile-moments{min-height:96px}.wx-profile-thumbs{margin-left:auto;display:flex;gap:4px;align-items:center}.wx-profile-thumbs i{width:58px;height:58px;display:flex;align-items:center;justify-content:center;overflow:hidden;background:#2b2b2e;color:#a5a5aa;font-size:10px;font-style:normal;text-align:center;line-height:1.25}.wx-profile-thumbs i.text span{display:-webkit-box;padding:5px;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;word-break:break-all}.wx-profile-thumbs img{width:100%;height:100%;object-fit:cover}.wx-profile-thumbs small{color:#77777c;font-size:13px}
-.wx-chat-details-scroll{padding-top:28px;background:#111}.wx-chat-members{min-height:182px;display:flex;align-items:flex-start;gap:28px;padding:18px 27px 25px;border-top:.5px solid #29292b;border-bottom:.5px solid #29292b;background:#19191b}.wx-chat-members button{width:76px;display:flex;flex-direction:column;align-items:center;gap:8px;border:0;background:transparent;color:#aaa;cursor:pointer}.wx-chat-members .avatar.lg{width:64px!important;height:64px!important;min-width:64px;flex:0 0 64px!important;border-radius:8px;overflow:hidden}.wx-chat-members .avatar.lg img{width:100%;height:100%;object-fit:cover}.wx-chat-members small{max-width:84px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}.wx-chat-members button.add i{width:64px;height:64px;display:flex;align-items:center;justify-content:center;border:1px dashed #5c5c61;border-radius:8px;color:#777;font-size:38px;font-weight:200;font-style:normal}.wx-chat-details .wx-info-group{margin-top:9px}.moment-reply-status{display:block;margin-top:4px;color:#777;font-size:11px}.moment-reply-retry{display:block;margin-top:5px;padding:0;border:0;background:transparent;color:#d991ae;font-size:11px;text-align:left;cursor:pointer}
+.wx-chat-details-scroll{padding-top:28px;background:#111}.wx-chat-members{min-height:182px;display:flex;align-items:flex-start;gap:28px;padding:18px 27px 25px;border-top:.5px solid #29292b;border-bottom:.5px solid #29292b;background:#19191b}.wx-chat-members button{width:76px;display:flex;flex-direction:column;align-items:center;gap:8px;border:0;background:transparent;color:#aaa;cursor:pointer}.wx-chat-members .avatar.lg{width:64px!important;height:64px!important;min-width:64px;flex:0 0 64px!important;border-radius:8px;overflow:hidden}.wx-chat-members .avatar.lg img{width:100%;height:100%;object-fit:cover}.wx-chat-members small{max-width:84px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}.wx-chat-members button.add i{width:64px;height:64px;display:flex;align-items:center;justify-content:center;border:1px dashed #5c5c61;border-radius:8px;color:#777;font-size:38px;font-weight:200;font-style:normal}.wx-chat-details .wx-info-group{margin-top:9px}.moment-reply-status{display:block;margin-top:4px;color:#777;font-size:11px}.moment-reply-retry,.moment-role-retry{display:block;margin-top:5px;padding:0;border:0;background:transparent;color:#d991ae;font-size:11px;text-align:left;cursor:pointer}
 .wx-profile-actions{margin-top:10px;border-top:.5px solid #29292b;border-bottom:.5px solid #29292b;background:#19191b}.wx-profile-actions button{width:100%;height:69px;display:flex;align-items:center;justify-content:center;gap:10px;border:0;border-bottom:.5px solid #29292b;background:transparent;color:#8190ab;font-size:18px;cursor:pointer}.wx-profile-actions button:last-child{border-bottom:0}.wx-profile-actions span{width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center}.wx-profile-actions svg{fill:none;stroke:currentColor}
 .wx-info-scroll{padding:14px 0 28px;background:#111}.wx-info-label{padding:18px 20px 8px;color:#77777c;font-size:14px}.wx-info-group{margin-bottom:13px;border-top:.5px solid #29292b;border-bottom:.5px solid #29292b;background:#19191b}.wx-info-group button{width:100%;min-height:62px;display:flex;align-items:center;gap:10px;padding:0 20px;border:0;border-bottom:.5px solid #29292b;background:transparent;color:#ededed;text-align:left;font-size:17px;cursor:pointer}.wx-info-group button:last-child{border-bottom:0}.wx-info-group button>span{min-width:0;flex:1}.wx-info-group button>em{max-width:62%;color:#85858a;font-size:16px;font-style:normal;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wx-info-group.danger button{justify-content:center;color:#fa5151}.contact-setting-list{padding-top:14px}.contact-setting-list .wx-info-group{margin-bottom:14px}.wx-switch{width:51px;height:31px;flex:0 0 51px;border-radius:16px;background:#38383e;position:relative}.wx-switch:after{content:"";position:absolute;left:2px;top:2px;width:27px;height:27px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.36);transition:.18s}.wx-switch.on{background:#07c160}.wx-switch.on:after{transform:translateX(20px)}.wx-feature-title{padding:12px 18px 7px;color:#8b8b91;font-size:13px}.wx-contact-photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.wx-contact-photo-grid button{aspect-ratio:1;border:0;padding:0;background:#29292c;overflow:hidden;cursor:pointer}.wx-contact-photo-grid img{width:100%;height:100%;object-fit:cover}.wx-contact-photo-grid .empty{grid-column:1/-1}.wx-moment-detail .tx{font-size:16px;line-height:1.65;white-space:pre-wrap;margin-bottom:12px}.wx-moment-detail small{display:block;margin-top:10px;color:#888}.wx-moment-detail p{margin:7px 0 0;padding:7px 9px;border-radius:7px;background:#26262a;font-size:13px}
 .wx-role-moments{overflow:auto;background:#111}.wx-role-cover{height:344px;flex:0 0 344px;position:relative;overflow:visible;background:linear-gradient(145deg,#747276,#343438);cursor:pointer}.wx-role-cover>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.wx-role-cover>.shade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.2),rgba(0,0,0,.04) 55%,rgba(0,0,0,.52))}.wx-role-cover>button{position:absolute;left:11px;top:17px;z-index:2;border:0;background:transparent;color:#fff;font-size:42px;font-weight:250;text-shadow:0 1px 4px rgba(0,0,0,.55);cursor:pointer}.wx-role-cover .identity{position:absolute;right:18px;bottom:-43px;z-index:2;display:flex;align-items:flex-end;gap:12px}.wx-role-cover .identity b{margin-bottom:29px;color:#fff;font-size:20px;text-shadow:0 2px 5px rgba(0,0,0,.65)}.wx-role-cover .avatar.lg{width:78px!important;height:78px!important;min-width:78px;min-height:78px;flex:0 0 78px!important;aspect-ratio:1/1;border:2px solid #111;border-radius:8px;overflow:hidden}.wx-role-cover .avatar.lg img{width:100%;height:100%;object-fit:cover;object-position:center}.wx-role-bio{min-height:82px;padding:47px 20px 16px;color:#77777c;text-align:right;font-size:14px}.wx-role-feed{border-top:.5px solid #29292b}.wx-role-moment-card{width:100%;min-height:117px;display:flex;align-items:center;gap:13px;padding:17px 20px;border:0;border-bottom:.5px solid #29292b;background:#151517;color:#ededed;text-align:left;cursor:pointer;position:relative}.wx-role-moment-card>strong{width:42px;color:#f1f1f1;font-size:19px}.wx-role-moment-card .copy{min-width:0;flex:1;display:flex;flex-direction:column;gap:7px}.wx-role-moment-card .copy b{color:#878da3;font-size:16px}.wx-role-moment-card .copy small{display:-webkit-box;color:#a2a2a7;font-size:14px;line-height:1.45;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.wx-role-moment-card .copy i{color:#77777c;font-size:12px;font-style:normal}.wx-role-moment-card>img{width:76px;height:76px;flex:0 0 76px;object-fit:cover;background:#2a2a2d}.wx-role-moment-card>em{color:#66666b;font-size:28px;font-style:normal}.wx-role-feed-end{padding:29px 0 38px;color:#646469;text-align:center;font-size:13px}
@@ -1995,9 +1998,9 @@ html.north-apple-remote-safe .music-chat-dock{margin-bottom:4px;scroll-margin-bo
 .dywc-foot b{display:block;font-size:13px;font-weight:500;color:#f0f0f3;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
 .dywc-foot small{display:block;margin-top:3px;font-size:11px;color:#7c7c86;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
 </style>
-<link rel="stylesheet" href="glass-theme.css?v=1271&r=music-disc-color-1">
-<link rel="stylesheet" href="wechat-me.css?v=1271">
-<link rel="stylesheet" href="pet-game.css?v=1271">
+<link rel="stylesheet" href="glass-theme.css?v=1284&r=music-disc-color-1">
+<link rel="stylesheet" href="wechat-me.css?v=1284">
+<link rel="stylesheet" href="pet-game.css?v=1284">
 <link rel="stylesheet" href="wedding-game.css?v=wedding-dual-17">
 </head>
 <body>
@@ -2051,36 +2054,36 @@ html.north-apple-remote-safe .music-chat-dock{margin-bottom:4px;scroll-margin-bo
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail(window.__northBootStarted?'本机存档读取超过 60 秒，请重新加载；仍不会删除聊天、角色或主题':'关键页面文件加载超过 60 秒，请检查网络后重新加载');},60000);
 })();
 </script>
-<script src="browser-diagnostics.js?v=1271"></script>
-<script src="license-gate.js?v=1271" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="couple-watch.js?v=1271" onerror="__northBootFail('页面组件载入失败')"></script>
-<script src="request-diagnostics.js?v=1271"></script>
-<script src="message-beijing-time.js?v=1271"></script>
-<script src="app.js?v=1271&r=v1271-web-dy-publish-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="cohab-theater.js?v=1271&r=v1184-ios-web-crash-cohab-turn-keyboard-1" onerror="__northBootFail('共同生活多人剧场组件载入失败（可能是网络或 404）')"></script>
-<script src="public-north-policy.js?v=1271"></script>
-<script src="public-north-runtime.js?v=1271"></script>
-<script src="phone-shortcuts.js?v=1271"></script>
-<script src="daily-event-ledger.js?v=1271" onerror="console.warn('日常事件簿组件未加载，聊天仍可使用')"></script>
-<script src="request-size-details.js?v=1271" onerror="__northBootFail('请求规模详情组件载入失败')"></script>
-<script src="cohab-model-diagnostics.js?v=1271" onerror="__northBootFail('共同生活模型诊断组件载入失败')"></script>
-<script src="bead-studio.js?v=1271&r=v1184-pixel-puzzle-4" onerror="__northBootFail('像素拼拼乐组件载入失败（可能是网络或 404）')"></script>
-<script src="heart-quiz.js?v=1271" onerror="console.warn('心动审判预览组件载入失败')"></script>
-<script src="web-hotfix.js?v=1271&r=v1271-web-dy-publish-1" onerror="__northBootFail('网页热修复组件载入失败（可能是网络或 404）')"></script>
+<script src="browser-diagnostics.js?v=1284"></script>
+<script src="license-gate.js?v=1284" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="couple-watch.js?v=1284" onerror="__northBootFail('页面组件载入失败')"></script>
+<script src="request-diagnostics.js?v=1284"></script>
+<script src="message-beijing-time.js?v=1284"></script>
+<script src="app.js?v=1284&r=v1284-web-dy-publish-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="cohab-theater.js?v=1284&r=v1274-web-cohab-guests-1" onerror="__northBootFail('共同生活多人剧场组件载入失败（可能是网络或 404）')"></script>
+<script src="public-north-policy.js?v=1284"></script>
+<script src="public-north-runtime.js?v=1284"></script>
+<script src="phone-shortcuts.js?v=1284"></script>
+<script src="daily-event-ledger.js?v=1284" onerror="console.warn('日常事件簿组件未加载，聊天仍可使用')"></script>
+<script src="request-size-details.js?v=1284" onerror="__northBootFail('请求规模详情组件载入失败')"></script>
+<script src="cohab-model-diagnostics.js?v=1284" onerror="__northBootFail('共同生活模型诊断组件载入失败')"></script>
+<script src="bead-studio.js?v=1284&r=v1184-pixel-puzzle-4" onerror="__northBootFail('像素拼拼乐组件载入失败（可能是网络或 404）')"></script>
+<script src="heart-quiz.js?v=1284" onerror="console.warn('心动审判预览组件载入失败')"></script>
+<script src="web-hotfix.js?v=1284&r=v1284-web-dy-publish-1" onerror="__northBootFail('网页热修复组件载入失败（可能是网络或 404）')"></script>
 <script src="vendor/qr/qrcode.js?v=2.0.4"></script>
 <script src="vendor/qr/jsQR.js?v=1.4.0"></script>
-<script src="wechat-me.js?v=1271" onerror="__northBootFail('微信个人页组件载入失败（可能是网络或 404）')"></script>
-<script src="smart-home.js?v=1271" onerror="__northBootFail('智能家电组件载入失败（可能是网络或 404）')"></script>
-<script src="delivery.js?v=1271" onerror="__northBootFail('真实外卖组件载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=1271" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="pet-game.js?v=1271" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
-<script src="pixel-home-policy.js?v=1271"></script>
-<script src="pixel-wardrobe-info.js?v=1271"></script>
-<script src="pixel-home.js?v=1271"></script>
-<script src="gift-effects.js?v=1271" onerror="console.warn('礼物粒子特效载入失败')"></script>
-<script src="thought-card-effects.js?v=1271" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
-<script src="ai-account.js?v=1271"></script>
+<script src="wechat-me.js?v=1284" onerror="__northBootFail('微信个人页组件载入失败（可能是网络或 404）')"></script>
+<script src="smart-home.js?v=1284" onerror="__northBootFail('智能家电组件载入失败（可能是网络或 404）')"></script>
+<script src="delivery.js?v=1284" onerror="__northBootFail('真实外卖组件载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=1284" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="pet-game.js?v=1284" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
+<script src="pixel-home-policy.js?v=1284"></script>
+<script src="pixel-wardrobe-info.js?v=1284"></script>
+<script src="pixel-home.js?v=1284"></script>
+<script src="gift-effects.js?v=1284" onerror="console.warn('礼物粒子特效载入失败')"></script>
+<script src="thought-card-effects.js?v=1284" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
+<script src="ai-account.js?v=1284"></script>
 <script src="wedding-game.js?v=wedding-dual-17" onerror="console.warn('现代婚礼预览载入失败')"></script>
-<script src="couple-watch-runtime.js?v=1271" onerror="__northBootFail('页面组件载入失败')"></script>
+<script src="couple-watch-runtime.js?v=1284" onerror="__northBootFail('页面组件载入失败')"></script>
 </body>
 </html>

@@ -170,9 +170,31 @@
       const box=document.getElementById('privateRuntimeDiagnosticsText');if(box)box.value=text;
     }catch(error){toast(String(error&&error.message||'诊断记录读取失败'));}
   };
+  let diagnosticCopyPending=false;
   window.privatePhoneDiagnosticsCopy=async function(){
     const box=document.getElementById('privateRuntimeDiagnosticsText');if(!box)return;
-    try{if(navigator.clipboard&&navigator.clipboard.writeText)await navigator.clipboard.writeText(box.value);else{box.focus();box.select();document.execCommand('copy');}toast('诊断记录已复制');}catch(_){box.focus();box.select();toast('已选中诊断记录，请点复制');}
+    if(diagnosticCopyPending)return;
+    diagnosticCopyPending=true;
+    let timeout;
+    try{
+      // The textarea is a snapshot, not a live log. Refresh on every explicit
+      // copy; waiting with this window open must not keep copying old events.
+      let result;
+      try{
+        result=await Promise.race([readDiagnostics(),new Promise((_,reject)=>{
+          timeout=setTimeout(()=>reject(new Error('diagnostics-read-timeout')),5000);
+        })]);
+        if(!result||typeof result.text!=='string')throw new Error('invalid-diagnostics');
+      }catch(_){toast('最新诊断读取失败，未复制旧记录；请稍后重试');return;}
+      finally{clearTimeout(timeout);}
+      if(document.getElementById('privateRuntimeDiagnosticsText')!==box)return;
+      box.value=result.text||'暂时没有异常记录';
+      try{
+        if(navigator.clipboard&&navigator.clipboard.writeText)await navigator.clipboard.writeText(box.value);
+        else{box.focus();box.select();if(!document.execCommand('copy'))throw new Error('copy-denied');}
+        toast('最新诊断记录已复制');
+      }catch(_){box.focus();box.select();toast('已选中最新诊断记录，请手动复制');}
+    }finally{diagnosticCopyPending=false;}
   };
   window.privatePhoneDiagnosticsClear=async function(){
     try{await window.SmallPhoneNative.request('diagnostics.clear');const box=document.getElementById('privateRuntimeDiagnosticsText');if(box)box.value='诊断记录已清空';toast('诊断记录已清空');}catch(_){toast('诊断记录清空失败');}

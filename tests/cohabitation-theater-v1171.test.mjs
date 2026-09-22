@@ -12,35 +12,39 @@ const privateHtml=read('native/private-small-phone/XcodeProject/PhoneCompanionTe
 const privateAlias=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/小手机.html');
 const privateApp=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js');
 
-test('v1178 shared theater asset is byte-identical and loaded after app core',()=>{
+test('private v1285 inherits the current web theater without dropping its private shell',()=>{
   assert.equal(bundleTheater,theater);
-  assert.match(webHtml,/app\.js\?v=1271[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1271&r=v1184-ios-web-crash-cohab-turn-keyboard-1"/);
-  for(const html of [privateHtml,privateAlias])assert.match(html,/app\.js\?v=1271[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1271[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1271&r=v1184-ios-web-crash-cohab-turn-keyboard-1"/);
-  assert.match(read('sw.js'),/cohab-theater\.js\?v='\+BUILD\+'\&r=v1184-ios-web-crash-cohab-turn-keyboard-1',kind:'theater'/);
+  assert.match(bundleTheater,/guest2|ct_wechat_enabled/);
+  assert.match(webHtml,/app\.js\?v=1284[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1284&r=v1274-web-cohab-guests-1"/);
+  for(const html of [privateHtml,privateAlias])assert.match(html,/app\.js\?v=1285[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1285[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1285&r=v1274-web-cohab-guests-1"/);
+  assert.match(read('sw.js'),/cohab-theater\.js\?v='\+BUILD\+'\&r=v1274-web-cohab-guests-1',kind:'theater'/);
 });
 
-test('cast storage has exactly one host guest slot and one temporary-extra slot',()=>{
-  assert.match(theater,/t\.guest&&\(!t\.guest\.contactId/);
+test('cast storage has two distinct WeChat guest slots and one temporary-extra slot',()=>{
+  assert.match(theater,/\['guest','guest2'\]/);
+  assert.match(theater,/theaterGuestEntry\(t,kind\)/);
   assert.match(theater,/if\(t\.extra\)\{/);
   assert.doesNotMatch(theater,/guests\s*=|extras\s*=/);
   assert.match(theater,/filter\(x=>x&&!x\.deleted&&!x\.blocked&&x\.id!==id\)/);
-  assert.match(theater,/最多一名微信来客和一名临时路人/);
+  assert.match(theater,/最多两名微信来客和一名临时路人/);
+  assert.match(theater,/ct_wechat_enabled/);
 });
 
 test('temporary presence is separate from permanent dismissal and reuses the original manual reply button',()=>{
   assert.match(theater,/t\.presence=\{\}/);
   assert.match(theater,/function cohabTheaterPresence\(/);
-  assert.match(theater,/暂时离场会保留人物、关系与历史，不触发微信退场总结/);
+  assert.match(theater,/暂时离场保留人物/);
   assert.match(theater,/offReply=function\(\).*cohabTheaterContinue/s);
-  assert.match(theater,/每名在场配角各说一轮、主角最后说一轮，然后立即停止/);
+  assert.match(theater,/for\(const kind of kinds\)/);
+  assert.match(theater,/主角只生成自己的一轮，完成后立即停止/);
   assert.doesNotMatch(theater,/onclick="cohabTheaterContinue\('/);
   assert.match(theater,/点上方原有“让TA回”/);
-  assert.match(theater,/if\(leave==='guest'\|\|leave==='extra'\)cohabTheaterPresence/);
+  assert.match(theater,/if\(theaterGuestKind\(leave\)\|\|leave==='extra'\)cohabTheaterPresence/);
 });
 
 test('speaker identity survives repair, rendering, timeline and memory context',()=>{
-  assert.match(theater,/\['me','ta','guest','extra','旁白','日期'\]/);
-  assert.match(theater,/row\.who==='guest'\)row\.actorType='guest'/);
+  assert.match(theater,/\['me','ta','guest','guest2','extra','旁白','日期'\]/);
+  assert.match(theater,/theaterGuestKind\(row\.who\)\)row\.actorType=row\.who/);
   assert.match(theater,/displayNameSnapshot/);
   assert.match(theater,/speaker=actor==='me'\?'user':actor==='host'\?'assistant':'event'/);
   assert.match(theater,/每个署名都是独立人物，不能把来客台词归给主角/);
@@ -65,16 +69,16 @@ test('every theater bubble and actor action shows only the saved remark',()=>{
 });
 
 test('disabled theater preserves only historical support attribution',()=>{
-  assert.match(theater,/castHistory=messages\.some\(m=>\/\^\(guest\|extra\)\$\/\.test\(theaterActorKind\(m\)\)\)/);
+  assert.match(theater,/castHistory=messages\.some\(m=>\/\^\(guest\|guest2\|extra\)\$\/\.test\(theaterActorKind\(m\)\)\)/);
   assert.match(theater,/if\(!t\.enabled&&!castHistory\)return baseRenderCohab\(id\)/);
-  assert.match(theater,/keepCastName=active\|\|kind==='guest'\|\|kind==='extra'/);
+  assert.match(theater,/keepCastName=active\|\|theaterGuestKind\(kind\)\|\|kind==='extra'/);
   assert.match(theater,/label=active\?theaterBubbleLabel\(who\):''/);
 });
 
 test('host and support use separate generations in selected addressee order',()=>{
   assert.match(theater,/const baseOffAI=offAI/);
   assert.doesNotMatch(theater,/baseCohabReplyCore|cohabReplyCore=async/);
-  assert.match(theater,/supportFirst=kind&&\(target==='guest'\|\|target==='extra'\)/);
+  assert.match(theater,/supportFirst=kind&&\(theaterGuestKind\(target\)\|\|target==='extra'\)/);
   assert.match(theater,/addressTo:t\.addressTo,addressNameSnapshot:theaterAudienceName\(o,t\.addressTo\)/);
   assert.match(theater,/const turn=theaterTurnTarget\(d,t,note\),target=turn\.target/);
   assert.match(theater,/_theaterTurnTargets\.set\(id,target\)/);
@@ -111,7 +115,8 @@ test('compact addressee pill sits right of manual reply and shows only the curre
 test('a cast member configured while disabled is only pending and cannot absorb two-person history',()=>{
   assert.match(theater,/joinedSeq:t\.enabled\?\(\+d\.msgSeq\|\|0\)\+1:0,joinedAt/);
   assert.match(theater,/if\(!g\.joinedSeq\|\|!g\.joinedAt\)\{save\(\)/);
-  assert.match(theater,/if\(t\.guest&&!t\.guest\.joinedSeq\)\{/);
+  assert.match(theater,/for\(const \[index,kind\] of \['guest','guest2'\]\.entries\(\)\)/);
+  assert.match(theater,/if\(g&&!g\.joinedSeq\)\{/);
   assert.match(theater,/if\(!t\.enabled&&!castHistory\)return baseRenderCohab\(id\)/);
   assert.match(theater,/if\(!t\.enabled\)return baseOffSay\(e\)/);
 });
@@ -139,13 +144,13 @@ test('guest exit sends exactly one genuine memory-grounded WeChat message',()=>{
   assert.doesNotMatch(theater,/content:\s*['"](?:我回来了|我都记得)/);
 });
 
-test('private artifact identity advances independently to v1271 and iOS 1.0.370 (370)',()=>{
-  assert.match(privateApp,/const APP_VER='v1271 · 抖音发作品三页与卡片'/);
-  assert.match(privateHtml,/private-runtime-diagnostics\.js\?v=336/);
-  assert.match(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),/1\.0\.370 \(370\)/);
+test('private artifact identity advances independently to v1285 and iOS 1.0.380 (380)',()=>{
+  assert.match(privateApp,/const APP_VER='v1285 · 抖音发作品三页与卡片（私人）'/);
+  assert.match(privateHtml,/private-runtime-diagnostics\.js\?v=339/);
+  assert.match(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),/1\.0\.380 \(380\)/);
   const project=read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
-  assert.ok((project.match(/CURRENT_PROJECT_VERSION = 370;/g)||[]).length>=12);
-  assert.ok((project.match(/MARKETING_VERSION = 1.0.370;/g)||[]).length>=12);
+  assert.ok((project.match(/CURRENT_PROJECT_VERSION = 380;/g)||[]).length>=12);
+  assert.ok((project.match(/MARKETING_VERSION = 1.0.380;/g)||[]).length>=12);
 });
 
 test('v1170 private friend-entry fix remains present in the v1184 private superset',()=>{

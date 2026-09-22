@@ -28,6 +28,20 @@ const count = (source, marker) => source.split(marker).length - 1;
 // same commit that syncs it.
 const PERMANENT_FIXES = [
   {
+    release: 'v1282/v1283',
+    name: '朋友圈封面 IDB 冷缓存保留图片节点并重新取图',
+    scope: 'both',
+    marker: 'function storedImageElementSource(v)',
+    least: 1,
+  },
+  {
+    release: 'v1282/v1283',
+    name: '应用处理内部协议在前台原文、普通输出和后台回拉三处隐藏',
+    scope: 'both',
+    marker: '应用处理\\s*[|｜]\\s*(?:提醒|锁定)',
+    least: 3,
+  },
+  {
     release: 'v1248',
     name: '共同生活作息同步：清洗后再比较，上班时段不再每 15 秒空转',
     scope: 'both',
@@ -757,34 +771,153 @@ const PERMANENT_FIXES = [
   },
   {
     release: 'v1271',
+    name: '云程护照头像兼容 IndexedDB 图片引用',
+    scope: 'web',
+    marker: 'function tvPassportPhoto(v)',
+    least: 1,
+  },
+  {
+    release: 'v1271',
+    name: '查手机小事簿改用页内编辑器，移动浏览器不会拦截按钮',
+    scope: 'web',
+    marker: 'function spyLifeNoteEditor(i)',
+    least: 1,
+  },
+  {
+    release: 'v1271',
+    name: '朋友圈情侣必点赞并请求真实评论，失败可见重试',
+    scope: 'web',
+    marker: 'function momentRetryRequiredReactions(pid)',
+    least: 1,
+  },
+  {
+    release: 'v1271',
+    name: '朋友圈角色可按兴趣互相艾特，最多两回合',
+    scope: 'web',
+    marker: 'function momentRunRoleExchange(p)',
+    least: 1,
+  },
+  {
+    release: 'v1271',
+    name: '像素少女网页端按小目录分图加载，不再解析整份内嵌大脚本',
+    scope: 'web',
+    file: 'games/pixel-home/assets.js',
+    marker: "fetch(new URL('wardrobe/catalog.json',base).href",
+    least: 1,
+  },
+  {
+    release: 'v1272',
+    name: 'iOS 主屏网页同步状态栏颜色且不覆盖解锁后的页面',
+    scope: 'web',
+    file: '小手机.html',
+    marker: 'html.north-ios-standalone-status{background-color:var(--north-shell-status-color,#000)}',
+    least: 1,
+  },
+  {
+    release: 'v1271',
+    name: '多人剧场支持两名微信来客且关闭开关时不强制加入',
+    scope: 'web',
+    file: 'cohab-theater.js',
+    marker: 'ct_wechat_enabled',
+    least: 1,
+  },
+  {
+    release: 'v1271',
+    name: '云程酒店支持网页预订、紧凑聊天卡与角色知情边界',
+    scope: 'web',
+    marker: 'function tvHotelBook(i)',
+    least: 1,
+  },
+  {
+    release: 'v1274',
+    name: '温馨小家移动端使用隔离材质预热，正式材质不参与整屋启动预绘制',
+    scope: 'private',
+    file: PRIVATE_DIR + 'games/cozy-home/app.mjs',
+    marker: 'const warmDraw=()=>{const warmMaps=new Map(),materialClones=new Map(),objectSwaps=[]',
+    least: 1,
+  },
+  {
+    release: 'v1274',
+    name: '温馨小家进入前释放预热几何和镜面缓冲',
+    scope: 'private',
+    file: PRIVATE_DIR + 'games/cozy-home/app.mjs',
+    marker: 'mirrors.releaseGPU();const geometries=new Set()',
+    least: 1,
+  },
+  {
+    release: 'v1274',
+    name: '温馨小家女性角色静止姿态仍执行固定手臂旋转',
+    scope: 'private',
+    file: PRIVATE_DIR + 'games/cozy-home/female-avatar001.mjs',
+    marker: 'proceduralDeltas=',
+    least: 1,
+  },
+  {
+    release: 'v1274',
+    name: '线上长期记忆与对话总结按独立上限和每轮合计上限引用',
+    scope: 'both',
+    marker: 'function onlineMemoryRecallLimits()',
+    least: 1,
+  },
+  {
+    release: 'v1274',
+    name: '线下记忆删除后恢复原来的列表滚动位置',
+    scope: 'both',
+    marker: 'function offMemoryRestoreScroll(top)',
+    least: 1,
+  },
+  {
+    release: 'v1280/v1278',
+    name: '已有网页云备份继续按周期更新并保持私人镜像只读',
+    scope: 'both',
+    marker: 'await cloudBackup({current,onProgress:',
+    least: 1,
+  },
+  {
+    release: 'v1280/v1278',
+    name: '网页手动云备份显示持续进度并阻止重复点击',
+    scope: 'both',
+    marker: 'function cloudSyncProgress(text,kind,busy)',
+    least: 1,
+  },
+  {
+    release: 'v1278',
+    name: '私人手机号备份成功后不再重复生成整份网页镜像',
+    scope: 'private',
+    file: PRIVATE_DIR + 'private-cloud-backup.js',
+    marker: '手机号私人备份和网页镜像是两个入口',
+    least: 1,
+  },
+  {
+    release: 'v1284/v1285',
     name: '抖音转账红包用微信那张卡',
     scope: 'both',
     marker: 'function dyTransferCopy(m,me)',
     least: 1,
   },
   {
-    release: 'v1271',
+    release: 'v1284/v1285',
     name: '[收款][拒收] 被执行掉，不当文字显示',
     scope: 'both',
     marker: 'function dyRunPayCommands(rows,text)',
     least: 1,
   },
   {
-    release: 'v1271',
+    release: 'v1284/v1285',
     name: '相册 input 挂进 DOM，否则 iOS 点不动',
     scope: 'both',
     marker: 'document.body.appendChild(i);window._dyPickEl=i;',
     least: 1,
   },
   {
-    release: 'v1271',
+    release: 'v1284/v1285',
     name: '发作品是三个真页面',
     scope: 'both',
     marker: 'function dyPostCameraPage()',
     least: 1,
   },
   {
-    release: 'v1271',
+    release: 'v1284/v1285',
     name: '作品能转发到抖音私信和群聊',
     scope: 'both',
     marker: 'function dyFwdTo(scope,id)',
@@ -798,7 +931,8 @@ for (const fix of PERMANENT_FIXES) {
   const targets = fix.scope === 'both' ? ['web', 'private'] : [fix.scope];
   for (const target of targets) {
     test(`${target} keeps ${fix.release} — ${fix.name}`, () => {
-      const found = count(sources[target], fix.marker);
+      const source = fix.file ? read(fix.file) : sources[target];
+      const found = count(source, fix.marker);
       assert.ok(
         found >= fix.least,
         `${target} 源码缺少 ${fix.release} 的修复「${fix.name}」：\n` +
@@ -819,6 +953,36 @@ test('the private bundle still ships its performance protection component', () =
   assert.match(index, /private-runtime-diagnostics\.js\?v=\d+/, '私人入口没有引用性能保护组件');
 });
 
+test('every private release keeps the complete streamed daily cloud-backup chain', () => {
+  const index = read(PRIVATE_DIR + 'index.html');
+  const alias = read(PRIVATE_DIR + '小手机.html');
+  const backupPath = PRIVATE_DIR + 'private-cloud-backup.js';
+  const backup = read(backupPath);
+  const bridge = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift');
+  const webView = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
+  const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
+
+  assert.equal(index, alias, '私人两个入口必须一起携带云备份组件');
+  assert.match(index, /private-cloud-backup\.js\?v=\d+/, '私人入口漏掉每日云备份组件');
+  for (const action of ['begin', 'chunk', 'commit', 'progress', 'abort']) {
+    assert.match(backup, new RegExp(`account\\.backup\\.file\\.${action}`), `网页分片备份漏掉 ${action}`);
+    assert.match(bridge, new RegExp(`account\\.backup\\.file\\.${action}`), `原生桥漏掉 ${action}`);
+  }
+  assert.match(backup, /const CHUNK=192\*1024/, '私人备份不得退回整份大对象跨桥传输');
+  assert.match(backup, /account\.backup\.file\.commit',\{token\},1920000/, '网页成功确认必须覆盖完整原生分块上传时限');
+  assert.match(bridge, /private actor PrivateBackupFileStore/, '原生临时备份文件存储缺失');
+  assert.match(bridge, /privateBackupChunkBytes = 4 \* 1_024 \* 1_024/, '原生端必须把云备份切成安全大小的对象存储分块');
+  assert.match(bridge, /\/storage\/v1\/object\//, '私人云备份不得退回整份 jsonb 数据库写入');
+  assert.match(bridge, /save_private_phone_backup_manifest/, '全部分块上传后必须提交小型原子清单');
+  assert.match(bridge, /restorePrivateBackupFile/, '对象存储备份必须保留完整恢复路径');
+  assert.match(bridge, /actualChecksum == expectedChecksum/, '恢复前必须校验整份备份散列');
+  assert.match(backup, /正在上传私人云备份/, '私人备份必须向用户显示真实云端上传百分比');
+  assert.match(bridge, /backup_upload_timeout/, '原生上传超时不得伪装成账号认证超时');
+  assert.match(webView, /action === 'account\.backup\.file\.commit' \? 1800000 : 60000/, 'WKWebView 桥不得提前中断完整分块上传');
+  assert.match(project, /isa = PBXFileSystemSynchronizedRootGroup;[\s\S]*?path = PhoneCompanionTest;/, '主 App 资源目录没有纳入 Xcode 文件夹同步');
+  assert.doesNotMatch(project, /membershipExceptions = \([^)]*private-cloud-backup\.js/, '私人云备份组件被排除出 Xcode Target');
+});
+
 test('the private bundle and web core stay in lockstep on shared repairs', () => {
   for (const fix of PERMANENT_FIXES.filter(x => x.scope === 'both')) {
     assert.equal(
@@ -827,4 +991,11 @@ test('the private bundle and web core stay in lockstep on shared repairs', () =>
       `共有修复「${fix.name}」只存在于其中一侧，两边必须同步`,
     );
   }
+});
+
+test('the private cozy bundle rejects the two mobile material regressions', () => {
+  const app = read(PRIVATE_DIR + 'games/cozy-home/app.mjs');
+  const female = read(PRIVATE_DIR + 'games/cozy-home/female-avatar001.mjs');
+  assert.doesNotMatch(app, /renderer\.setSize\(96,96,false\)/, '不得恢复用真实房间资源做 96×96 整屋预绘制');
+  assert.doesNotMatch(female, /if\(Math\.abs\(amount\)<1e-7\)return/, '不得在静止时跳过女性角色站姿');
 });

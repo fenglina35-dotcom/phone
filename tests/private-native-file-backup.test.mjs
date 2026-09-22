@@ -14,16 +14,16 @@ const backup=read(bundle+'private-cloud-backup.js');
 const privateApp=read(bundle+'app.js');
 const publicApp=read('app.js');
 
-test('private v1271 loads daily backup after the diagnostic overlay while public remains v1271',()=>{
+test('private v1285 loads daily backup after the diagnostic overlay while public advances independently',()=>{
   for(const name of ['index.html','小手机.html']){
     const html=read(bundle+name);
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1271'/);
-    assert.ok(html.indexOf('private-cloud-backup.js?v=1271')>html.indexOf('private-runtime-diagnostics.js?v=336'));
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1285'/);
+    assert.ok(html.indexOf('private-cloud-backup.js?v=1285')>html.indexOf('private-runtime-diagnostics.js?v=339'));
   }
-  assert.match(privateApp,/APP_VER='v1271 · 抖音发作品三页与卡片'/);
-  assert.match(publicApp,/APP_VER='v1271 · 抖音发作品三页与卡片'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 370;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.370;/g)||[]).length,12);
+  assert.match(privateApp,/APP_VER='v1285 · 抖音发作品三页与卡片（私人）'/);
+  assert.match(publicApp,/APP_VER='v1284 · 抖音发作品三页与卡片'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 380;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.380;/g)||[]).length,12);
 });
 
 test('web backup sends bounded ordered chunks and records a day only after confirmed save',()=>{
@@ -40,18 +40,33 @@ test('web backup sends bounded ordered chunks and records a day only after confi
   assert.match(backup,/Date\.now\(\)-_privatePhoneLastInteractionAt<90000/);
 });
 
-test('native bridge streams one account-bound backup file and confirms the RPC result',()=>{
+test('native bridge persists account-bound backup chunks and confirms a small manifest',()=>{
   for(const action of ['begin','chunk','commit','abort'])assert.match(bridge,new RegExp(`account\\.backup\\.file\\.${action}`));
-  assert.match(bridge,/static let contractVersion = 38/);
+  assert.match(bridge,/static let contractVersion = 41/);
   assert.match(bridge,/private actor PrivateBackupFileStore/);
   assert.match(bridge,/offset == current\.written/);
   assert.match(bridge,/current\.owner == owner/);
   assert.match(bridge,/data\.count <= 262144/);
   assert.match(bridge,/current\.written == current\.size/);
-  assert.match(bridge,/uploader\.upload\(for: request, fromFile: file\.url\)/);
+  assert.match(bridge,/privateBackupChunkBytes = 4 \* 1_024 \* 1_024/);
+  assert.match(bridge,/PrivateBackupUploadProgressDelegate/);
+  assert.match(bridge,/account\.backup\.file\.progress/);
+  assert.match(bridge,/\/storage\/v1\/object\//);
+  assert.match(bridge,/from: part/);
+  assert.match(bridge,/save_private_phone_backup_manifest/);
+  assert.match(bridge,/private_phone_backup_files/);
+  assert.match(bridge,/restorePrivateBackupFile/);
+  assert.match(bridge,/actualChecksum == expectedChecksum/);
+  assert.doesNotMatch(bridge,/Data\("\{\\"p_payload\\":"\.utf8\)/);
+  assert.match(bridge,/backup_upload_timeout/);
+  assert.match(bridge,/backup_storage_failed/);
+  assert.match(bridge,/nativeError\.domain == "PrivateBackupStorage"/);
+  assert.match(bridge,/nativeError\.domain == "PrivateBackupManifest"/);
+  assert.match(backup,/正在上传私人云备份/);
   assert.match(bridge,/config\.timeoutIntervalForRequest = 180/);
   assert.match(bridge,/config\.timeoutIntervalForResource = 600/);
-  assert.match(bridge,/status >= 200 && status < 300 && rows\?\.first\?\["saved"\] as\? Bool == true/);
+  assert.match(bridge,/row\?\["saved"\] as\? Bool == true/);
   assert.match(bridge,/await PrivateBackupFileStore\.shared\.remove\(token: token\)/);
-  assert.match(webView,/action === 'account\.backup\.file\.commit' \? 660000 : 60000/);
+  assert.match(webView,/action === 'account\.backup\.file\.commit' \? 1800000 : 60000/);
+  assert.match(backup,/account\.backup\.file\.commit',\{token\},1920000/);
 });

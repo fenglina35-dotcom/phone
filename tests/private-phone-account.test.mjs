@@ -15,6 +15,10 @@ const controllerMigration = fs.readFileSync(
   new URL('../supabase/migrations/202608110002_private_phone_companion_controller.sql', import.meta.url),
   'utf8'
 );
+const fileBackupMigration = fs.readFileSync(
+  new URL('../supabase/migrations/202609210001_private_phone_backup_files.sql', import.meta.url),
+  'utf8'
+);
 
 test('phone account UI is private-app only and preserves local data before a choice', () => {
   assert.match(app, /window\.__SMALL_PHONE_PRIVATE__===true/);
@@ -71,6 +75,18 @@ test('cloud backup table is auth-owned and rejects stale snapshot overwrite', ()
   assert.match(migration, /where private_phone_backups\.captured_at <= excluded\.captured_at/i);
   assert.match(migration, /references auth\.users\(id\) on delete cascade/i);
   assert.doesNotMatch(migration, /^\s*phone(?:_number)?\s+/im);
+});
+
+test('large private backups use owner-only object chunks and an atomic manifest', () => {
+  assert.match(fileBackupMigration, /'private-phone-backups'/);
+  assert.match(fileBackupMigration, /file_size_limit[\s\S]*6291456/i);
+  assert.match(fileBackupMigration, /owner_id = \(select auth\.uid\(\)::text\)/i);
+  assert.match(fileBackupMigration, /\(storage\.foldername\(name\)\)\[1\] = \(select auth\.uid\(\)::text\)/i);
+  assert.match(fileBackupMigration, /create table if not exists public\.private_phone_backup_files/i);
+  assert.match(fileBackupMigration, /create or replace function public\.save_private_phone_backup_manifest/i);
+  assert.match(fileBackupMigration, /where private_phone_backup_files\.captured_at <= excluded\.captured_at/i);
+  assert.match(fileBackupMigration, /previous_storage_prefix/i);
+  assert.doesNotMatch(fileBackupMigration, /drop table public\.private_phone_backups/i);
 });
 
 test('private phone account can claim the sole companion controller without unpairing the device', () => {

@@ -444,7 +444,7 @@ function roleUserFactUnsupported(value: string, context: string) {
 // Notification projection only: the outbox must retain mood metadata for client sync.
 // Strip before splitting, so punctuation inside a thought cannot become an alert.
 function roleNotificationBody(value: string) {
-  return String(value || "").replace(/[\[【]\s*(?:内心|心情|心情值)\s*[|｜:：][^\]】]*[\]】]/g, "").trim();
+  return String(value || "").replace(/[\[【]\s*应用处理\s*[|｜]\s*(?:提醒|锁定)\s*[\]】]/g,'').replace(/[\[【]\s*(?:内心|心情|心情值)\s*[|｜:：][^\]】]*[\]】]/g, "").trim();
 }
 
 function roleNotificationPreview(value: string) {
@@ -1496,6 +1496,10 @@ async function persistAndPush(
   client: ReturnType<typeof createClient>, url: string, profile: Record<string, unknown>,
   body: string, triggerKind: string, dedupe: string,
 ) {
+  // App-decision protocol is never chat content, even when a model puts it last.
+  // Keep mood metadata in the outbox; APNs strips it separately.
+  body = String(body || "").replace(/[\[【]\s*应用处理\s*[|｜]\s*(?:提醒|锁定)\s*[\]】]/g,'').trim();
+  if (!body) return true;
   const { data: outbox, error } = await client.from("phone_role_push_outbox").upsert({
     target: profile.target, role_id: profile.role_id, role_name: profile.role_name || "Role",
     body, trigger_kind: triggerKind, dedupe_key: dedupe,

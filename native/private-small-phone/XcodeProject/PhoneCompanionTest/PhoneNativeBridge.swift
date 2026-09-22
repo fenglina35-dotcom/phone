@@ -15,7 +15,7 @@ enum SmallPhoneDiagnosticsStore {
     )
     private static let maximumBytes = 256 * 1_024
     private static let maximumLines = 200
-    private static let build = "1.0.370 (370)"
+    private static let build = "1.0.380 (380)"
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -188,7 +188,7 @@ enum SmallPhoneRecoveryLaunchStore {
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
-    static let contractVersion = 38
+    static let contractVersion = 41
     static let roleCallActiveDefaultsKey =
         "smallPhone.roleCallActive.v1"
 
@@ -370,7 +370,8 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
              "account.signout", "account.backup.info",
              "account.backup.upload", "account.backup.restore",
              "account.backup.file.begin", "account.backup.file.chunk",
-             "account.backup.file.commit", "account.backup.file.abort",
+             "account.backup.file.commit", "account.backup.file.progress",
+             "account.backup.file.abort",
              "companion.controller.claim":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             performPrivateAccountAction(
@@ -1550,6 +1551,8 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         "https://qvuahlqimcfgeoetosnl.supabase.co"
     private static let privateAccountAPIKey =
         "sb_publishable_Q2j6uyn2_cFA3RdHHnG7sw_b7vqXaz0"
+    private static let privateBackupBucket = "private-phone-backups"
+    private static let privateBackupChunkBytes = 4 * 1_024 * 1_024
     private static let privateAccountKeychainService =
         "com.qianyi.smallphone.private.account.v1"
     private static let privateControllerKeychainService =
@@ -1644,6 +1647,19 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                     )
                 case "account.backup.info":
                     let session = try await self.validPrivateAccountSession()
+                    if let fileRow = try await self.privateBackupFileMetadata(
+                        session: session
+                    ) {
+                        self.reply(
+                            requestID: requestID,
+                            result: [
+                                "ok": true,
+                                "found": true,
+                                "backup": fileRow
+                            ]
+                        )
+                        return
+                    }
                     let response = try await self.privateAccountJSONRequest(
                         path: "/rest/v1/private_phone_backups" +
                             "?select=revision,captured_at,uploaded_at,source_build,checksum,byte_count" +
@@ -1676,36 +1692,214 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                 case "account.backup.file.abort":
                     await PrivateBackupFileStore.shared.remove(token: arguments["token"] as? String ?? "")
                     self.reply(requestID: requestID, result: ["ok": true])
+                case "account.backup.file.progress":
+                    guard let session = self.loadPrivateAccountSession() else {
+                        throw NSError(domain: "PrivateBackup", code: 401)
+                    }
+                    let progress = try await PrivateBackupFileStore.shared.progress(
+                        token: arguments["token"] as? String ?? "",
+                        owner: session.userID
+                    )
+                    self.reply(requestID: requestID, result: [
+                        "ok": true,
+                        "phase": progress.phase,
+                        "sentBytes": progress.sentBytes,
+                        "expectedBytes": progress.expectedBytes
+                    ])
                 case "account.backup.file.commit":
                     let token = arguments["token"] as? String ?? ""
+                    var uploadStarted = false
+                    var uploadedPrefix = ""
+                    var uploadedPartCount = 0
                     do {
                         let session = try await self.validPrivateAccountSession()
                         let file = try await PrivateBackupFileStore.shared.prepare(token: token, owner: session.userID)
                         let began = Date()
                         SmallPhoneDiagnosticsStore.append("backup.upload.begin", fields: ["bytes": file.bytes])
-                        var request = URLRequest(url: URL(string: Self.privateAccountBaseURL + "/rest/v1/rpc/save_private_phone_backup")!)
-                        request.httpMethod = "POST"
-                        request.timeoutInterval = 180
-                        request.setValue(Self.privateAccountAPIKey, forHTTPHeaderField: "apikey")
-                        request.setValue("Bearer " + session.accessToken, forHTTPHeaderField: "Authorization")
-                        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                        let chunkSize = Self.privateBackupChunkBytes
+                        let partCount = Int(
+                            (file.bytes + Int64(chunkSize) - 1) /
+                                Int64(chunkSize)
+                        )
+                        let backupID = UUID().uuidString.lowercased()
+                        uploadedPrefix = session.userID + "/" + backupID
                         let config = URLSessionConfiguration.ephemeral
                         config.timeoutIntervalForRequest = 180
                         config.timeoutIntervalForResource = 600
                         let uploader = URLSession(configuration: config)
                         defer { uploader.invalidateAndCancel() }
-                        let (data, response) = try await uploader.upload(for: request, fromFile: file.url)
-                        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
-                        let responseObject = try? JSONSerialization.jsonObject(with: data)
-                        let rows = responseObject as? [[String: Any]]
-                        let saved = status >= 200 && status < 300 && rows?.first?["saved"] as? Bool == true
-                        SmallPhoneDiagnosticsStore.append("backup.upload.end", fields: ["status": status, "saved": saved, "ms": Int(Date().timeIntervalSince(began) * 1000)])
+                        let uploadOwner = session.userID
+                        uploadStarted = true
+                        for partIndex in 0..<partCount {
+                            let offset = Int64(partIndex * chunkSize)
+                            let part = try await PrivateBackupFileStore.shared.readPart(
+                                token: token,
+                                owner: uploadOwner,
+                                offset: offset,
+                                maximumBytes: chunkSize
+                            )
+                            let objectName = self.privateBackupObjectName(
+                                prefix: uploadedPrefix,
+                                partIndex: partIndex
+                            )
+                            var request = URLRequest(
+                                url: self.privateBackupStorageURL(
+                                    objectName: objectName
+                                )
+                            )
+                            request.httpMethod = "POST"
+                            request.timeoutInterval = 180
+                            request.setValue(
+                                Self.privateAccountAPIKey,
+                                forHTTPHeaderField: "apikey"
+                            )
+                            request.setValue(
+                                "Bearer " + session.accessToken,
+                                forHTTPHeaderField: "Authorization"
+                            )
+                            request.setValue(
+                                "application/octet-stream",
+                                forHTTPHeaderField: "Content-Type"
+                            )
+                            request.setValue("false", forHTTPHeaderField: "x-upsert")
+                            let progressDelegate = PrivateBackupUploadProgressDelegate {
+                                sentBytes, _ in
+                                Task {
+                                    await PrivateBackupFileStore.shared.updateUploadProgress(
+                                        token: token,
+                                        owner: uploadOwner,
+                                        sentBytes: min(
+                                            file.bytes,
+                                            offset + sentBytes
+                                        ),
+                                        expectedBytes: file.bytes
+                                    )
+                                }
+                            }
+                            let (responseData, response) = try await uploader.upload(
+                                for: request,
+                                from: part,
+                                delegate: progressDelegate
+                            )
+                            let status =
+                                (response as? HTTPURLResponse)?.statusCode ?? 0
+                            guard status >= 200, status < 300 else {
+                                let detail = String(
+                                    data: responseData,
+                                    encoding: .utf8
+                                ) ?? ""
+                                throw NSError(
+                                    domain: "PrivateBackupStorage",
+                                    code: status,
+                                    userInfo: [
+                                        NSLocalizedDescriptionKey:
+                                            "备份分块 \(partIndex + 1)/\(partCount) 保存失败" +
+                                            (detail.isEmpty ? "" : "：" + String(detail.prefix(160)))
+                                    ]
+                                )
+                            }
+                            uploadedPartCount = partIndex + 1
+                        }
+                        let formatter = ISO8601DateFormatter()
+                        formatter.formatOptions = [
+                            .withInternetDateTime,
+                            .withFractionalSeconds
+                        ]
+                        let manifestResponse = try await self.privateAccountJSONRequest(
+                            path: "/rest/v1/rpc/save_private_phone_backup_manifest",
+                            method: "POST",
+                            body: [
+                                "p_captured_at": formatter.string(
+                                    from: Date(
+                                        timeIntervalSince1970:
+                                            file.capturedAt / 1_000
+                                    )
+                                ),
+                                "p_source_build": file.build,
+                                "p_checksum": file.checksum,
+                                "p_byte_count": file.bytes,
+                                "p_storage_prefix": uploadedPrefix,
+                                "p_part_count": partCount,
+                                "p_chunk_size": chunkSize
+                            ],
+                            bearer: session.accessToken
+                        )
+                        let rows = manifestResponse.body as? [[String: Any]]
+                        let row = rows?.first
+                        let saved = manifestResponse.status >= 200 &&
+                            manifestResponse.status < 300 &&
+                            row?["saved"] as? Bool == true
+                        guard saved else {
+                            throw NSError(
+                                domain: "PrivateBackupManifest",
+                                code: manifestResponse.status,
+                                userInfo: [
+                                    NSLocalizedDescriptionKey:
+                                        "备份文件已上传，但云端索引未确认保存"
+                                ]
+                            )
+                        }
+                        SmallPhoneDiagnosticsStore.append("backup.upload.end", fields: ["status": manifestResponse.status, "saved": true, "parts": partCount, "ms": Int(Date().timeIntervalSince(began) * 1000)])
                         await PrivateBackupFileStore.shared.remove(token: token)
-                        self.reply(requestID: requestID, result: ["ok": saved, "saved": saved, "byteCount": file.bytes,
-                            "message": saved ? "云备份已保存" : "云备份未确认保存，请刷新云端时间；HTTP \(status)"])
+                        self.reply(requestID: requestID, result: [
+                            "ok": true,
+                            "saved": true,
+                            "byteCount": file.bytes,
+                            "message": "云备份已保存"
+                        ])
+                        let previousPrefix = row?["previous_storage_prefix"] as? String ?? ""
+                        let previousParts = (row?["previous_part_count"] as? NSNumber)?.intValue ?? 0
+                        if !previousPrefix.isEmpty,
+                           previousPrefix != uploadedPrefix,
+                           previousParts > 0 {
+                            Task { [weak self] in
+                                await self?.deletePrivateBackupParts(
+                                    prefix: previousPrefix,
+                                    partCount: previousParts,
+                                    session: session
+                                )
+                            }
+                        }
                     } catch {
                         await PrivateBackupFileStore.shared.remove(token: token)
-                        SmallPhoneDiagnosticsStore.append("backup.upload.error", fields: ["code": (error as NSError).code])
+                        if !uploadedPrefix.isEmpty, uploadedPartCount > 0 {
+                            let cleanupSession = self.loadPrivateAccountSession()
+                            let cleanupPrefix = uploadedPrefix
+                            let cleanupPartCount = uploadedPartCount
+                            Task { [weak self] in
+                                guard let self, let cleanupSession else { return }
+                                await self.deletePrivateBackupParts(
+                                    prefix: cleanupPrefix,
+                                    partCount: cleanupPartCount,
+                                    session: cleanupSession
+                                )
+                            }
+                        }
+                        let nativeError = error as NSError
+                        SmallPhoneDiagnosticsStore.append("backup.upload.error", fields: [
+                            "code": nativeError.code,
+                            "domain": nativeError.domain,
+                            "phase": uploadStarted ? "upload" : "authentication"
+                        ])
+                        if uploadStarted,
+                           nativeError.domain == NSURLErrorDomain,
+                           nativeError.code == URLError.timedOut.rawValue {
+                            self.reply(requestID: requestID, result: [
+                                "ok": false,
+                                "code": "backup_upload_timeout",
+                                "message": "备份上传或云端保存超过 10 分钟仍未完成；旧云备份已保留，请等云端恢复后重试"
+                            ])
+                            return
+                        }
+                        if nativeError.domain == "PrivateBackupStorage" ||
+                           nativeError.domain == "PrivateBackupManifest" {
+                            self.reply(requestID: requestID, result: [
+                                "ok": false,
+                                "code": "backup_storage_failed",
+                                "message": nativeError.localizedDescription + "；旧云备份已保留"
+                            ])
+                            return
+                        }
                         throw error
                     }
                 case "account.backup.upload":
@@ -1754,6 +1948,16 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                     self.reply(requestID: requestID, result: result)
                 case "account.backup.restore":
                     let session = try await self.validPrivateAccountSession()
+                    if let fileRow = try await self.privateBackupFileMetadata(
+                        session: session
+                    ) {
+                        let restored = try await self.restorePrivateBackupFile(
+                            metadata: fileRow,
+                            session: session
+                        )
+                        self.reply(requestID: requestID, result: restored)
+                        return
+                    }
                     let response = try await self.privateAccountJSONRequest(
                         path: "/rest/v1/private_phone_backups" +
                             "?select=revision,captured_at,uploaded_at,source_build,checksum,byte_count,payload" +
@@ -1933,6 +2137,192 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     private struct PrivateAccountHTTPResponse {
         let status: Int
         let body: Any?
+    }
+
+    private func privateBackupFileMetadata(
+        session: PrivateAccountSession
+    ) async throws -> [String: Any]? {
+        let response = try await privateAccountJSONRequest(
+            path: "/rest/v1/private_phone_backup_files" +
+                "?select=revision,captured_at,uploaded_at,source_build,checksum,byte_count,storage_prefix,part_count,chunk_size" +
+                "&order=captured_at.desc&limit=1",
+            method: "GET",
+            bearer: session.accessToken
+        )
+        // Old servers do not have the file manifest table yet.  Keeping this
+        // fallback lets the shipped App restore the untouched legacy jsonb row
+        // until the migration is deployed.
+        if response.status == 404 { return nil }
+        guard response.status >= 200, response.status < 300 else {
+            throw NSError(
+                domain: "PrivateBackupManifest",
+                code: response.status,
+                userInfo: [
+                    NSLocalizedDescriptionKey:
+                        "云备份索引暂时无法读取；旧备份仍保留"
+                ]
+            )
+        }
+        return (response.body as? [[String: Any]])?.first
+    }
+
+    private func privateBackupObjectName(
+        prefix: String,
+        partIndex: Int
+    ) -> String {
+        prefix + "/part-" + String(format: "%05d", partIndex) + ".bin"
+    }
+
+    private func privateBackupStorageURL(objectName: String) -> URL {
+        let allowed = CharacterSet.urlPathAllowed.subtracting(
+            CharacterSet(charactersIn: "?#")
+        )
+        let encoded = objectName
+            .split(separator: "/", omittingEmptySubsequences: true)
+            .map {
+                String($0).addingPercentEncoding(
+                    withAllowedCharacters: allowed
+                ) ?? String($0)
+            }
+            .joined(separator: "/")
+        return URL(
+            string: Self.privateAccountBaseURL +
+                "/storage/v1/object/" +
+                Self.privateBackupBucket + "/" + encoded
+        )!
+    }
+
+    private func privateBackupStorageRequest(
+        objectName: String,
+        method: String,
+        session: PrivateAccountSession
+    ) -> URLRequest {
+        var request = URLRequest(
+            url: privateBackupStorageURL(objectName: objectName)
+        )
+        request.httpMethod = method
+        request.timeoutInterval = 120
+        request.setValue(
+            Self.privateAccountAPIKey,
+            forHTTPHeaderField: "apikey"
+        )
+        request.setValue(
+            "Bearer " + session.accessToken,
+            forHTTPHeaderField: "Authorization"
+        )
+        return request
+    }
+
+    private func restorePrivateBackupFile(
+        metadata: [String: Any],
+        session: PrivateAccountSession
+    ) async throws -> [String: Any] {
+        let prefix = metadata["storage_prefix"] as? String ?? ""
+        let partCount = (metadata["part_count"] as? NSNumber)?.intValue ?? 0
+        let byteCount = (metadata["byte_count"] as? NSNumber)?.int64Value ?? 0
+        let expectedChecksum = metadata["checksum"] as? String ?? ""
+        guard prefix.hasPrefix(session.userID + "/"),
+              !prefix.contains(".."),
+              partCount > 0,
+              partCount <= 256,
+              byteCount > 0,
+              expectedChecksum.range(
+                of: "^[0-9a-f]{64}$",
+                options: .regularExpression
+              ) != nil else {
+            throw NSError(
+                domain: "PrivateBackupRestore",
+                code: 400,
+                userInfo: [
+                    NSLocalizedDescriptionKey: "云备份索引不完整，未改动本机数据"
+                ]
+            )
+        }
+        var archive = Data()
+        if byteCount <= Int64(Int.max) {
+            archive.reserveCapacity(Int(byteCount))
+        }
+        for partIndex in 0..<partCount {
+            let objectName = privateBackupObjectName(
+                prefix: prefix,
+                partIndex: partIndex
+            )
+            let request = privateBackupStorageRequest(
+                objectName: objectName,
+                method: "GET",
+                session: session
+            )
+            let (part, response) = try await URLSession.shared.data(for: request)
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            guard status >= 200, status < 300, !part.isEmpty else {
+                throw NSError(
+                    domain: "PrivateBackupRestore",
+                    code: status,
+                    userInfo: [
+                        NSLocalizedDescriptionKey:
+                            "云备份第 \(partIndex + 1)/\(partCount) 段读取失败；旧备份仍保留"
+                    ]
+                )
+            }
+            archive.append(part)
+            guard Int64(archive.count) <= byteCount else {
+                throw NSError(
+                    domain: "PrivateBackupRestore",
+                    code: 422,
+                    userInfo: [
+                        NSLocalizedDescriptionKey: "云备份长度校验失败，未改动本机数据"
+                    ]
+                )
+            }
+        }
+        guard Int64(archive.count) == byteCount else {
+            throw NSError(
+                domain: "PrivateBackupRestore",
+                code: 422,
+                userInfo: [
+                    NSLocalizedDescriptionKey: "云备份内容不完整，未改动本机数据"
+                ]
+            )
+        }
+        let actualChecksum = SHA256.hash(data: archive)
+            .map { String(format: "%02x", $0) }
+            .joined()
+        guard actualChecksum == expectedChecksum,
+              let payload = try? JSONSerialization.jsonObject(with: archive),
+              payload is [String: Any] else {
+            throw NSError(
+                domain: "PrivateBackupRestore",
+                code: 422,
+                userInfo: [
+                    NSLocalizedDescriptionKey: "云备份校验失败，未改动本机数据"
+                ]
+            )
+        }
+        var row = metadata
+        row["payload"] = payload
+        return ["ok": true, "found": true, "backup": row]
+    }
+
+    private func deletePrivateBackupParts(
+        prefix: String,
+        partCount: Int,
+        session: PrivateAccountSession
+    ) async {
+        guard prefix.hasPrefix(session.userID + "/"),
+              !prefix.contains(".."),
+              partCount > 0,
+              partCount <= 256 else { return }
+        for partIndex in 0..<partCount {
+            let request = privateBackupStorageRequest(
+                objectName: privateBackupObjectName(
+                    prefix: prefix,
+                    partIndex: partIndex
+                ),
+                method: "DELETE",
+                session: session
+            )
+            _ = try? await URLSession.shared.data(for: request)
+        }
     }
 
     private func privateAccountJSONRequest(
@@ -2498,11 +2888,23 @@ private final class NativeSpeechRecognitionController {
 // File work and incremental hashing run on a dedicated actor, never on the UI actor.
 private actor PrivateBackupFileStore {
     static let shared = PrivateBackupFileStore()
-    struct Prepared: Sendable { let url: URL; let bytes: Int64 }
+    struct Prepared: Sendable {
+        let url: URL
+        let bytes: Int64
+        let capturedAt: Double
+        let build: String
+        let checksum: String
+    }
+    struct Progress: Sendable {
+        let phase: String
+        let sentBytes: Int64
+        let expectedBytes: Int64
+    }
     private struct Job {
         let token: String; let owner: String; let url: URL; let handle: FileHandle
         let size: Int64; let capturedAt: Double; let build: String
         var written: Int64 = 0; var hash = SHA256(); var prepared = false
+        var uploadSent: Int64 = 0; var uploadExpected: Int64 = 0
     }
     private var job: Job?
     private func failure(_ message: String) -> NSError {
@@ -2521,7 +2923,6 @@ private actor PrivateBackupFileStore {
         guard FileManager.default.createFile(atPath: url.path, contents: nil) else { throw failure("无法创建备份临时文件") }
         do {
             let handle = try FileHandle(forWritingTo: url)
-            try handle.write(contentsOf: Data("{\"p_payload\":".utf8))
             job = Job(token: token, owner: owner, url: url, handle: handle, size: size, capturedAt: capturedAt, build: build)
             return token
         } catch { try? FileManager.default.removeItem(at: url); throw error }
@@ -2538,18 +2939,89 @@ private actor PrivateBackupFileStore {
         guard var current = job, current.token == token, current.owner == owner,
               current.written == current.size, !current.prepared else { throw failure("备份文件未完整接收，未上传") }
         let checksum = current.hash.finalize().map { String(format: "%02x", $0) }.joined()
-        let formatter = ISO8601DateFormatter(); formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        let meta: [String: Any] = ["p_captured_at": formatter.string(from: Date(timeIntervalSince1970: current.capturedAt / 1000)),
-            "p_source_build": current.build, "p_checksum": checksum, "p_byte_count": current.size]
-        let suffix = try JSONSerialization.data(withJSONObject: meta)
-        try current.handle.write(contentsOf: Data(",".utf8))
-        try current.handle.write(contentsOf: suffix.dropFirst())
         try current.handle.synchronize(); try current.handle.close()
         current.prepared = true; job = current
-        return Prepared(url: current.url, bytes: current.size)
+        return Prepared(
+            url: current.url,
+            bytes: current.size,
+            capturedAt: current.capturedAt,
+            build: current.build,
+            checksum: checksum
+        )
+    }
+    func readPart(
+        token: String,
+        owner: String,
+        offset: Int64,
+        maximumBytes: Int
+    ) throws -> Data {
+        guard let current = job,
+              current.token == token,
+              current.owner == owner,
+              current.prepared,
+              offset >= 0,
+              offset < current.size,
+              maximumBytes > 0 else {
+            throw failure("备份分块读取状态无效")
+        }
+        let handle = try FileHandle(forReadingFrom: current.url)
+        defer { try? handle.close() }
+        try handle.seek(toOffset: UInt64(offset))
+        let remaining = current.size - offset
+        let requested = min(Int64(maximumBytes), remaining)
+        guard let data = try handle.read(upToCount: Int(requested)),
+              Int64(data.count) == requested else {
+            throw failure("备份分块读取不完整")
+        }
+        return data
+    }
+    func updateUploadProgress(
+        token: String,
+        owner: String,
+        sentBytes: Int64,
+        expectedBytes: Int64
+    ) {
+        guard var current = job,
+              current.token == token,
+              current.owner == owner,
+              current.prepared else { return }
+        current.uploadSent = max(current.uploadSent, sentBytes)
+        current.uploadExpected = max(current.uploadExpected, expectedBytes)
+        job = current
+    }
+    func progress(token: String, owner: String) throws -> Progress {
+        guard let current = job,
+              current.token == token,
+              current.owner == owner else {
+            throw failure("备份上传任务已经结束或不存在")
+        }
+        return Progress(
+            phase: current.prepared ? "upload" : "transfer",
+            sentBytes: current.uploadSent,
+            expectedBytes: current.uploadExpected
+        )
     }
     func remove(token: String) {
         guard let current = job, current.token == token else { return }
         try? current.handle.close(); try? FileManager.default.removeItem(at: current.url); job = nil
+    }
+}
+
+private final class PrivateBackupUploadProgressDelegate: NSObject,
+    URLSessionTaskDelegate, @unchecked Sendable {
+    private let onProgress: @Sendable (Int64, Int64) -> Void
+
+    init(onProgress: @escaping @Sendable (Int64, Int64) -> Void) {
+        self.onProgress = onProgress
+    }
+
+    func urlSession(
+        _ session: URLSession,
+        task: URLSessionTask,
+        didSendBodyData bytesSent: Int64,
+        totalBytesSent: Int64,
+        totalBytesExpectedToSend: Int64
+    ) {
+        onProgress(totalBytesSent, totalBytesExpectedToSend)
     }
 }

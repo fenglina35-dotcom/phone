@@ -1,0 +1,1 @@
+{"name": "温馨小家", "short_name": "温馨小家", "start_url": "./", "scope": "./", "display": "standalone", "orientation": "landscape", "background_color": "#eee4d6", "theme_color": "#a87983", "icons": [{"src": "icon.png", "sizes": "180x180", "type": "image/png"}]}

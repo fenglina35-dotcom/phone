@@ -52,4 +52,9 @@ ask whether a past fix is still included.
   checkout. The user experienced a fixed bug returning, and a diff of committed history
   showed nothing, because the fix had never been in that history. Assume any repair that is
   not committed and not guarded by a test will be lost.
+- Private cloud backup is part of that permanent inheritance. Every private release must
+  keep `private-cloud-backup.js`, both private HTML entry references, the native
+  `account.backup.file.begin/chunk/commit/abort` handlers, file-backed upload, Xcode target
+  membership, and an outer web timeout that does not expire before the native commit.
+  `tests/permanent-fix-guard.test.mjs` must block the release if any layer is missing.
 

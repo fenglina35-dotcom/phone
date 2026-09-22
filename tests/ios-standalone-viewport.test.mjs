@@ -28,6 +28,12 @@ test('full-screen shell is capped to the current available viewport',()=>{
   assert.match(html,/\.page\{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;\}/);
 });
 
+test('Apple standalone status paint never covers the unlocked app viewport',()=>{
+  assert.match(html,/html\.north-ios-standalone-status\{background-color:var\(--north-shell-status-color,#000\)\}/);
+  assert.doesNotMatch(html,/north-ios-standalone-status::before/,'the status color must not be a fixed layer above every unlocked page');
+  assert.doesNotMatch(html,/north-ios-standalone-status[^}]*position:fixed/,'WebKit already reserves the status bar when viewport-fit=cover is absent');
+});
+
 test('chat content scrolls inside the shell while the composer keeps its row',()=>{
   assert.match(html,/\.chatbg\{flex:1;overflow-y:auto;/);
   assert.match(html,/\.inputbar\{flex:0 0 auto;/);
@@ -55,7 +61,8 @@ test('restored v950 shell keeps automatic Apple safe-area offsets disabled',()=>
   assert.doesNotMatch(functionSource('applyAppleHomeCompat'),/north-ios-pwa-shell/);
   assert.match(functionSource('applyAppleHomeCompat'),/classList\.remove\('north-ios-home-safe'\)/);
   assert.match(functionSource('applyAppleHomeCompat'),/classList\.remove\('north-apple-remote-safe'\)/);
-  assert.match(functionSource('applyAppleHomeCompat'),/return false/);
+  assert.match(functionSource('applyAppleHomeCompat'),/north-ios-standalone-status/);
+  assert.match(functionSource('applyAppleHomeCompat'),/return on/);
   assert.doesNotMatch(html,/html\.north-ios-pwa-shell \.phone/);
   assert.match(html,/html\.north-ios-home-safe\{--north-ios-home-safe-top:max\(env\(safe-area-inset-top,0px\),47px\);--north-ios-home-safe-bottom:0px\}/);
   assert.doesNotMatch(html,/html\.north-ios-home-safe[^}]*height:100dvh/,'the opt-in must not replace the stable 100% shell with a second viewport model');

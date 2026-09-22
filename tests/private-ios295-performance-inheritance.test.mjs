@@ -45,20 +45,20 @@ function functionSource(sourceText, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('private identifiers advance to v1271 and iOS 370 while public stays v1271', () => {
+test('private identifiers remain v1285 and iOS 380 while public advances independently', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1271'/);
-  assert.match(index, /app\.js\?v=1271&r=v1271-private-sync-1/);
-  assert.match(index, /private-runtime-diagnostics\.js\?v=336/);
-  assert.match(app, /APP_VER='v1271 · 抖音发作品三页与卡片'/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1285'/);
+  assert.match(index, /app\.js\?v=1285&r=v1285-private-dy-publish-1/);
+  assert.match(index, /private-runtime-diagnostics\.js\?v=339/);
+  assert.match(app, /APP_VER='v1285 · 抖音发作品三页与卡片（私人）'/);
   assert.match(overlay, /336-daily-file-backup/);
-  assert.match(webview, /1\.0\.370 \(370\)/);
-  assert.match(bridge, /private static let build = "1\.0\.370 \(370\)"/);
-  assert.match(bridge, /static let contractVersion = 38/);
-  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 370;/g) || []).length, 12);
-  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.370;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1271 · 抖音发作品三页与卡片'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1271'/);
+  assert.match(webview, /1\.0\.380 \(380\)/);
+  assert.match(bridge, /private static let build = "1\.0\.380 \(380\)"/);
+  assert.match(bridge, /static let contractVersion = 41/);
+  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 380;/g) || []).length, 12);
+  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.380;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1284 · 抖音发作品三页与卡片'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1284'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
@@ -146,7 +146,7 @@ test('diagnostics identify the protected stage without collecting content', () =
   assert.doesNotMatch(overlay, /messageBody|chatContent|authorizationToken/);
 });
 
-test('Mac guide identifies the current private v1271 iOS370 source', () => {
+test('Mac guide identifies the current private v1285 iOS380 source', () => {
   const install = fs.readFileSync(
     path.join(project, '第三百二十七次安装_v1206_完整衣柜_请先读.md'),
     'utf8',
@@ -160,11 +160,11 @@ test('Mac guide identifies the current private v1271 iOS370 source', () => {
     assert.match(guide, /Mac.*编译/);
     assert.match(guide, /真机|真实 iPhone/);
   }
-  assert.match(mac, /1\.0\.370 \(370\)/);
+  assert.match(mac, /1\.0\.380 \(380\)/);
   assert.match(mac, /原生桥.*38/);
   assert.match(install, /1\.0\.327 \(327\)/);
   assert.match(install, /原生桥.*35/);
-  assert.match(mac, /^# v1271 .*iOS370/);
+  assert.match(mac, /^# v1285 .*iOS380/);
   assert.match(mac, /网页.*推送/);
   assert.match(install, /私人内置网页 v1206/);
   assert.match(install, /两边共有/);

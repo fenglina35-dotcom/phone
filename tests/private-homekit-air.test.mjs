@@ -37,7 +37,7 @@ test('temperature and optional fan speed require writable fresh readback',()=>{
 });
 
 test('private native contract exposes climate snapshot and command without changing public web',()=>{
-  assert.match(bridge,/static let contractVersion = 38/);
+  assert.match(bridge,/static let contractVersion = 41/);
   assert.match(bridge,/case "homekit\.climates\.snapshot"/);
   assert.match(bridge,/case "homekit\.climate\.command"/);
   assert.equal(read('app.js').includes('homekit.climates.snapshot'),false);
@@ -48,7 +48,7 @@ test('air UI is private-only, mirrored byte-for-byte, and loaded after lock over
   assert.equal(airSource,airBundle);
   assert.equal(airCss,fs.readFileSync(path.join(xcodeRoot,'PhoneWeb.bundle','private-smart-air.css'),'utf8'));
   assert.match(privateIndex,/private-smart-air\.css\?v=342/);
-  assert.match(privateIndex,/private-smart-lock\.js\?v=339[^]*private-smart-air\.js\?v=1271/);
+  assert.match(privateIndex,/private-smart-lock\.js\?v=339[^]*private-smart-air\.js\?v=1285/);
   assert.match(lockSource,/privateSmartAirChooserCard/);
   const staging=read('native/private-small-phone/scripts/stage-private-phone-web.mjs');
   assert.match(staging,/path\.join\(privateRoot, 'Resources', 'Web'\)/);
@@ -186,9 +186,9 @@ test('private identity advances while public web stays unchanged',()=>{
   const privateApp=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js');
   const webView=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
   const project=read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
-  assert.match(privateApp,/APP_VER='v1271 · 抖音发作品三页与卡片'/);
-  assert.match(webView,/1\.0\.370 \(370\)/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 370;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.370;/g)||[]).length,12);
-  assert.match(read('app.js'),/APP_VER='v1271 · 抖音发作品三页与卡片'/);
+  assert.match(privateApp,/APP_VER='v1285 · 抖音发作品三页与卡片（私人）'/);
+  assert.match(webView,/1\.0\.380 \(380\)/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 380;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.380;/g)||[]).length,12);
+  assert.match(read('app.js'),/APP_VER='v1284 · 抖音发作品三页与卡片'/);
 });

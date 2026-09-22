@@ -18,7 +18,7 @@ test('remote viewing reuses real stored records',()=>{
 test('remote viewing opens real apps and stores only viewed facts',()=>{
   assert.match(app,/function remoteControlViewFact\(a,c\)/);
   assert.match(app,/function remoteControlPlanningSnapshot\(c\)/);
-  assert.match(app,/if\(app==='travel'\)\{tvInit\(\);_tvTab='trips'/);
+  assert.match(app,/if\(app==='travel'\)\{tvInit\(\);_tvTab=\/酒店\|住宿\|订房\/\.test/);
   assert.match(app,/if\(app==='shop'\)\{remoteControlSetPage\('shop'\)/);
   assert.match(app,/openOrders\(\)/);
   assert.match(app,/if\(app==='food'\)\{remoteControlSetPage\('food'\)/);

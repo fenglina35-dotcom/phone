@@ -61,7 +61,7 @@ test('Moments offer real photos and described photo cards as separate choices',(
   assert.match(app,/id="mm_card_desc"[\s\S]*?这是图文照片卡，不会调用生图模型/);
   assert.match(app,/function doPostMoment\(\)[\s\S]*?photoCards:cardDesc\?\[\{desc:cardDesc\.slice\(0,500\)\}\]:\[\]/);
   assert.match(app,/function momentHTML\(p\)[\s\S]*?momentPhotoCards\(p\.photoCards\)\.map\(momentPhotoCardHTML\)/);
-  assert.match(app,/function reactToMyMoment\(p\)[\s\S]*?图文照片卡，照片描述是/,'roles receive the user-authored visual fact');
+  assert.match(app,/function momentRequestRoleReaction\(p,c,lover\)[\s\S]*?图文照片卡，照片描述是/,'roles receive the user-authored visual fact');
 });
 
 test('role Moments use configured generation and only fall back to cards when generation is unavailable',()=>{
