@@ -522,10 +522,14 @@ test('my own avatar shows on my side of a 私信, and waiting shows three dots',
 });
 
 test('each 私聊 and 群聊 carries its own context length, and reply length follows 设置', () => {
-  const ctx = vm.createContext({ Number, Math, parseInt });
-  vm.runInContext(`${source('dyChatCtxRows')};globalThis.R=dyChatCtxRows;`, ctx);
-  assert.equal(ctx.R(null), 16, '没设过就是默认 16 条');
-  assert.equal(ctx.R({ ctx: 0 }), 16);
+  /* 单独给某个会话设过就按它的；没设过就跟随设置里那个「带几个回合」 */
+  const ctx = vm.createContext({ Number, Math, parseInt, S: { settings: { hist: 12 } } });
+  vm.runInContext(`${source('phCtxRows')};${source('dyChatCtxRows')};globalThis.R=dyChatCtxRows;`, ctx);
+  assert.equal(ctx.R(null), 24, '没单独设过就跟随全局（12 回合 → 24 条）');
+  assert.equal(ctx.R({ ctx: 0 }), 24);
+  ctx.S.settings.hist = 4;
+  assert.equal(ctx.R(null), 8, '全局调小，这里跟着小');
+  ctx.S.settings.hist = 12;
   assert.equal(ctx.R({ ctx: 2 }), 4, '低于 4 条按 4 条算');
   assert.equal(ctx.R({ ctx: 900 }), 60, '最多 60 条');
   assert.equal(ctx.R({ ctx: 25 }), 25);

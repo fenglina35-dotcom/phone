@@ -2069,8 +2069,16 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
 .imsg-bar.typing .imsg-send{display:flex;}
 .imsg-bar.typing .imsg-wave{display:none;}
 /* 短信里的图片 */
-.imsg-b.pic{padding:0!important;background:linear-gradient(140deg,rgba(255,255,255,.66),rgba(255,255,255,.2) 26%,rgba(255,255,255,.1) 54%,rgba(255,255,255,.2) 80%,rgba(255,255,255,.44));}
+/* 图片就是原模原样的那张图：不剪气泡轮廓、不描边、不加圆角、不长尾巴。
+   她说「发送图片一定是原模原样的图片发送出去，不要有任何的气泡包边」。 */
+.imsg-row .imsg-b.pic{padding:0!important;background:none!important;clip-path:none!important;box-shadow:none!important;}
+.imsg-row .imsg-b.pic:before{display:none!important;}
 .imsg-b.pic>i{display:block;line-height:0;}
+/* 角色正在输入：和微信那三个小点同一套动画 */
+.imsg-b.typing>i{display:flex;align-items:center;gap:3px;min-height:20px;}
+.imsg-b.typing>i span{display:inline-block;width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.72);animation:bk 1.2s infinite;}
+.imsg-b.typing>i span:nth-child(2){animation-delay:.2s;}
+.imsg-b.typing>i span:nth-child(3){animation-delay:.4s;}
 .imsg-b.pic img{display:block;max-width:100%;width:186px;border-radius:0;}
 /* ===== 按钮和输入框照同一套：父元素是那条描边，:before 缩 1px 是里面的玻璃 ===== */
 .imsg-rb,.imsg-name,.imsg-plus,.imsg-send,.imsg-field{position:relative;}
@@ -2082,20 +2090,24 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
 .imsg-send:before{background:#0a84ff;}
 /* ===== 换过背景之后：能透出背景的玻璃 ===== */
 .imsg.hasbg .imsg-rb,.imsg.hasbg .imsg-name,.imsg.hasbg .imsg-plus,.imsg.hasbg .imsg-send,.imsg.hasbg .imsg-field{border:0;background:linear-gradient(140deg,rgba(255,255,255,.62),rgba(255,255,255,.16) 26%,rgba(255,255,255,.07) 54%,rgba(255,255,255,.13) 80%,rgba(255,255,255,.42));-webkit-backdrop-filter:brightness(1.62) saturate(1.75);backdrop-filter:brightness(1.62) saturate(1.75);box-shadow:0 5px 16px rgba(0,0,0,.24);}
-.imsg.hasbg .imsg-rb:before,.imsg.hasbg .imsg-name:before,.imsg.hasbg .imsg-plus:before{background:linear-gradient(142deg,rgba(255,255,255,.3),rgba(255,255,255,.15) 46%,rgba(255,255,255,.22));-webkit-backdrop-filter:blur(3.6px) saturate(1.06) brightness(1.02);backdrop-filter:blur(3.6px) saturate(1.06) brightness(1.02);box-shadow:inset 0 -8px 13px -10px rgba(0,0,0,.34);}
-.imsg.hasbg .imsg-field:before{background:linear-gradient(142deg,rgba(255,255,255,.26),rgba(255,255,255,.12) 46%,rgba(255,255,255,.18));-webkit-backdrop-filter:blur(3.6px) saturate(1.06) brightness(1.02);backdrop-filter:blur(3.6px) saturate(1.06) brightness(1.02);}
-.imsg.hasbg .imsg-send:before{background:linear-gradient(142deg,rgba(10,132,255,.72),rgba(10,132,255,.56) 52%,rgba(10,132,255,.68));-webkit-backdrop-filter:blur(3px) saturate(1.5) brightness(1.04);backdrop-filter:blur(3px) saturate(1.5) brightness(1.04);}
+.imsg.hasbg .imsg-rb:before,.imsg.hasbg .imsg-name:before,.imsg.hasbg .imsg-plus:before{background:linear-gradient(142deg,rgba(255,255,255,.3),rgba(255,255,255,.15) 46%,rgba(255,255,255,.22));-webkit-backdrop-filter:blur(9px) saturate(1.08) brightness(1.02);backdrop-filter:blur(9px) saturate(1.08) brightness(1.02);box-shadow:inset 0 -8px 13px -10px rgba(0,0,0,.34);}
+.imsg.hasbg .imsg-field:before{background:linear-gradient(142deg,rgba(255,255,255,.16),rgba(0,0,0,.14) 46%,rgba(0,0,0,.1));-webkit-backdrop-filter:blur(9px) saturate(1.08) brightness(1.02);backdrop-filter:blur(9px) saturate(1.08) brightness(1.02);}
+.imsg.hasbg .imsg-send:before{background:linear-gradient(142deg,rgba(10,132,255,.72),rgba(10,132,255,.56) 52%,rgba(10,132,255,.68));-webkit-backdrop-filter:blur(8px) saturate(1.45) brightness(1.04);backdrop-filter:blur(8px) saturate(1.45) brightness(1.04);}
 .imsg.hasbg .imsg-row.them .imsg-b{background:linear-gradient(140deg,rgba(255,255,255,.66),rgba(255,255,255,.2) 24%,rgba(255,255,255,.09) 52%,rgba(255,255,255,.17) 78%,rgba(255,255,255,.46));-webkit-backdrop-filter:brightness(1.62) saturate(1.75);backdrop-filter:brightness(1.62) saturate(1.75);}
-.imsg.hasbg .imsg-row.them .imsg-b:before{background:linear-gradient(142deg,rgba(255,255,255,.38),rgba(255,255,255,.22) 44%,rgba(255,255,255,.3));-webkit-backdrop-filter:blur(3.6px) saturate(1.06) brightness(1.02);backdrop-filter:blur(3.6px) saturate(1.06) brightness(1.02);box-shadow:inset 0 -10px 15px -11px rgba(0,0,0,.34);}
+.imsg.hasbg .imsg-row.them .imsg-b:before{background:linear-gradient(142deg,rgba(255,255,255,.38),rgba(255,255,255,.22) 44%,rgba(255,255,255,.3));-webkit-backdrop-filter:blur(9px) saturate(1.08) brightness(1.02);backdrop-filter:blur(9px) saturate(1.08) brightness(1.02);box-shadow:inset 0 -10px 15px -11px rgba(0,0,0,.34);}
 .imsg.hasbg .imsg-row.me .imsg-b{background:linear-gradient(140deg,rgba(255,255,255,.6),rgba(255,255,255,.18) 24%,rgba(255,255,255,.08) 52%,rgba(255,255,255,.16) 78%,rgba(255,255,255,.42));-webkit-backdrop-filter:brightness(1.62) saturate(1.75);backdrop-filter:brightness(1.62) saturate(1.75);}
-.imsg.hasbg .imsg-row.me .imsg-b:before{background:linear-gradient(142deg,rgba(10,132,255,.66),rgba(10,132,255,.5) 50%,rgba(10,132,255,.62));-webkit-backdrop-filter:blur(3px) saturate(1.5) brightness(1.04);backdrop-filter:blur(3px) saturate(1.5) brightness(1.04);box-shadow:inset 0 -10px 15px -11px rgba(0,0,0,.3);}
-.imsg.hasbg .imsg-b.pic:before{background:transparent;}
+.imsg.hasbg .imsg-row.me .imsg-b:before{background:linear-gradient(142deg,rgba(10,132,255,.66),rgba(10,132,255,.5) 50%,rgba(10,132,255,.62));-webkit-backdrop-filter:blur(8px) saturate(1.45) brightness(1.04);backdrop-filter:blur(8px) saturate(1.45) brightness(1.04);box-shadow:inset 0 -10px 15px -11px rgba(0,0,0,.3);}
 /* 背景亮的时候白字会糊在背景里，给气泡里的字垫一层很淡的阴影；
    玻璃该透还是透，只是字始终读得清。 */
 .imsg.hasbg .imsg-b>i{text-shadow:0 1px 3px rgba(0,0,0,.45);}
 .imsg.hasbg .imsg-b.pic>i{text-shadow:none;}
 .imsg.hasbg .imsg-kind,.imsg.hasbg .imsg-date{color:rgba(255,255,255,.72);text-shadow:0 1px 6px rgba(0,0,0,.5);}
-.imsg.hasbg .imsg-field textarea::placeholder{color:rgba(255,255,255,.66);}
+/* 输入框那圈白描边压得太重，字和小话筒都看不清了——它单独调轻一档，
+   里面再压一点点暗，字和话筒才浮得出来。 */
+.imsg.hasbg .imsg-field{background:linear-gradient(140deg,rgba(255,255,255,.34),rgba(255,255,255,.1) 28%,rgba(255,255,255,.05) 56%,rgba(255,255,255,.08) 80%,rgba(255,255,255,.22))!important;-webkit-backdrop-filter:brightness(1.24) saturate(1.4);backdrop-filter:brightness(1.24) saturate(1.4);}
+.imsg.hasbg .imsg-field textarea{color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5);}
+.imsg.hasbg .imsg-field textarea::placeholder{color:rgba(255,255,255,.82);}
+.imsg.hasbg .imsg-wave{opacity:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6));}
 .imsg.hasbg .smslinebar{background:transparent;}
 /* ===== 图片作品全屏：图整张铺满屏幕，背后垫一张自己的模糊放大版 ===== */
 /* 图铺满整屏，多出来的裁掉——她挑的就是这个：一条分界线都不要。

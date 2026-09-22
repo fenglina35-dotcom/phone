@@ -106,7 +106,9 @@ const polishContext = vm.createContext({
 vm.runInContext(functionSource("phSpoofSmsPolish"), polishContext);
 assert.equal(polishContext.phSpoofSmsPolish("睡了吗。", {}, "seed", "open"), "换一个更有钩子的开场。");
 assert.equal(polishContext.phSpoofSmsPolish("睡没睡？", {}, "seed", "open"), "换一个更有钩子的开场。");
-assert.match(source, /phSmsArr\(num,num\)\.slice\(-24\)/);
+/* 上下文条数不再写死：跟随设置里那个「带几个回合」（phCtxRows） */
+assert.match(source, /phSmsArr\(num,num\)\.slice\(-phCtxRows\(\)\)/);
+assert.doesNotMatch(source, /phSmsArr\(num,num\)\.slice\(-\d+\)/);
 assert.doesNotMatch(source, /meN>=7&&!action/);
 
 console.log("phone spoof guard tests passed");

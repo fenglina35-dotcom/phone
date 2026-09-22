@@ -70,14 +70,39 @@ test('换过背景才挂 hasbg，全屏铺满', () => {
 });
 
 /* ===== 液态玻璃 ===== */
-test('玻璃是「透过去看得见背景」，不是磨砂糊成一片', () => {
+test('玻璃糊一点，但不能糊成一片磨砂', () => {
+  /* 两头都踩过：26px 是磨砂、背景全没了；3.6px 又太高清，她说「不用这么高清地
+     透过整个背景，稍微改的模糊一点点就行」。现在卡在中间这一段。 */
   for (const s of shells) {
     const rules = s.match(/\.imsg\.hasbg [^{]*\{[^}]*backdrop-filter:blur\((\d*\.?\d+)px\)[^}]*\}/g) || [];
     assert.ok(rules.length >= 3, '玻璃规则太少，正则可能失效了');
     for (const r of rules) {
       const px = parseFloat(r.match(/backdrop-filter:blur\((\d*\.?\d+)px\)/)[1]);
-      assert.ok(px <= 6, `模糊 ${px}px 太重了，她要的是隔着一杯水看得见背景：${r.slice(0, 50)}`);
+      assert.ok(px >= 7, `模糊 ${px}px 太清楚了，背景一眼看到底：${r.slice(0, 50)}`);
+      assert.ok(px <= 14, `模糊 ${px}px 又回到磨砂了：${r.slice(0, 50)}`);
     }
+  }
+});
+test('输入框那圈单独调轻，字和小话筒浮得出来', () => {
+  for (const s of shells) {
+    const rim = s.match(/\.imsg\.hasbg \.imsg-rb,[^{]*\.imsg\.hasbg \.imsg-field\{[^}]*\}/)[0];
+    const strong = parseFloat(rim.match(/linear-gradient\(140deg,rgba\(255,255,255,(\.\d+)\)/)[1]);
+    const field = s.match(/\.imsg\.hasbg \.imsg-field\{background:linear-gradient\(140deg,rgba\(255,255,255,(\.\d+)\)[^}]*!important/);
+    assert.ok(field, '输入框没有单独那条调轻的规则');
+    const light = parseFloat(field[1]);
+    assert.ok(light < strong, `输入框那圈(${light})必须比别处(${strong})轻，不然把字和话筒都压没了`);
+    assert.match(s, /\.imsg\.hasbg \.imsg-field textarea::placeholder\{color:rgba\(255,255,255,\.8\d\);\}/, 'placeholder 要提亮');
+    assert.match(s, /\.imsg\.hasbg \.imsg-wave\{opacity:1;filter:drop-shadow/, '小话筒要提亮、加投影才看得清');
+  }
+});
+test('发出去的图片就是原图，没有任何气泡包边', () => {
+  for (const s of shells) {
+    const pic = s.match(/\.imsg-row \.imsg-b\.pic\{[^}]*\}/)[0];
+    assert.match(pic, /clip-path:none!important/, '不能再按气泡轮廓剪，也就没有尾巴');
+    assert.match(pic, /background:none!important/, '不能有描边');
+    assert.match(pic, /box-shadow:none!important/);
+    assert.match(s, /\.imsg-row \.imsg-b\.pic:before\{display:none!important;\}/, '里面那层玻璃也要撤掉');
+    assert.match(s, /\.imsg-b\.pic img\{[^}]*border-radius:0/, '原模原样就不该有圆角');
   }
 });
 test('高光是沿着轮廓描的一条细线，不是有宽度的包边', () => {
@@ -212,6 +237,113 @@ test('空格不算字，发完了那个键要收回去', () => {
   for (const x of [app, priv]) assert.match(x, /ta\.value='';phSmsTyping\(\);/, '发完要把那个键收回去');
 });
 
+/* ===== 正在输入 ===== */
+test('角色在短信里也有「正在输入」的三个小点', () => {
+  const ctx = { render: () => { ctx.drew = (ctx.drew || 0) + 1; }, phDigits: n => String(n), _phSmsTyping: {} };
+  ctx.cur = () => ({ p: 'phonesms', num: '138', sk: '138' });
+  vm.createContext(ctx);
+  vm.runInContext([source('phSmsTypingKey'), source('phSmsTypingSet'), source('phSmsTypingOn')].join('\n'), ctx);
+  assert.equal(vm.runInContext("phSmsTypingOn('138','138')", ctx), false);
+  vm.runInContext("phSmsTypingSet('138','138',true)", ctx);
+  assert.equal(vm.runInContext("phSmsTypingOn('138','138')", ctx), true);
+  assert.equal(vm.runInContext("phSmsTypingOn('138','138:alias:9')", ctx), false, '别的线不该跟着亮');
+  assert.ok(ctx.drew >= 1, '开关要顺手重画一次，不然点不出来');
+  vm.runInContext("phSmsTypingSet('138','138',false)", ctx);
+  assert.equal(vm.runInContext("phSmsTypingOn('138','138')", ctx), false);
+  /* 两套气泡都得画得出来 */
+  assert.match(source('renderPhoneIMsg'), /phSmsTypingOn\(num,sk\)\?`<div class="imsg-row them"><div class="imsg-b typing">/);
+  assert.match(source('renderPhoneSMS'), /phSmsTypingOn\(num,sk\)\?'<div class="smsmsg them"><div class="smsbubble typing">/);
+  for (const s of shells) assert.match(s, /\.imsg-b\.typing>i span\{[^}]*animation:bk 1\.2s infinite/, '和微信那三个点同一套动画');
+  /* 回复过程中必须收得回去，不能永远挂着 */
+  const fn = source('phRoleSmsReply');
+  assert.match(fn, /phSmsTypingSet\(num,sk,true\)/);
+  assert.match(fn, /finally\{phSmsTypingSet\(num,sk,false\);\}/, '出错也要收回去');
+});
+
+/* ===== 短信一次能发几条 ===== */
+test('短信条数用通讯录里那两个设置，和微信同一个', () => {
+  const ctx = {};
+  vm.createContext(ctx);
+  vm.runInContext(source('phSmsBubbleRange'), ctx);
+  const range = c => JSON.parse(vm.runInContext(`JSON.stringify(phSmsBubbleRange(${c}))`, ctx));
+  assert.deepEqual(range('{msgMin:2,msgMax:5}'), { min: 2, max: 5 });
+  assert.deepEqual(range('{}'), { min: 1, max: 4 }, '没设过就用微信的默认');
+  assert.deepEqual(range('{msgMin:7,msgMax:3}'), { min: 7, max: 7 }, '最多不能小于最少');
+  assert.deepEqual(range('{msgMin:0,msgMax:99}'), { min: 1, max: 10 }, '得夹住');
+  assert.match(source('phRoleSmsReply'), /const range=phSmsBubbleRange\(c\),rows=phCtxRows\(\)/);
+  assert.match(source('phRoleSmsReply'), /一次回复可以发 '\+range\.min\+' 到 '\+range\.max\+' 条短信/, '也要告诉模型');
+  assert.match(source('phRoleSmsReply'), /let parts=phSmsBubbles\(r,range\.max\);/, '拆气泡时上限必须真的用这个设置，不能又写死成一条');
+});
+test('一段回复按换行拆成好几条，脏标签洗掉、超出的丢掉', () => {
+  const ctx = {
+    splitChatBubbles: (t, max) => String(t).split('\n').map(x => x.trim()).filter(Boolean).slice(0, max),
+    cleanReply: t => String(t), phCleanSmsText: t => String(t).replace(/\[心情[^\]]*\]/g, '').trim(),
+  };
+  vm.createContext(ctx);
+  vm.runInContext(source('phSmsBubbles'), ctx);
+  const bubbles = (t, max) => JSON.parse(vm.runInContext(`JSON.stringify(phSmsBubbles(${JSON.stringify(t)},${max}))`, ctx));
+  assert.deepEqual(bubbles('在等你\n外面下雨了[心情|想她]\n\n记得带伞\n多余的一条', 3), ['在等你', '外面下雨了', '记得带伞'],
+    '空行要丢、标签要洗、超出上限要截断');
+  assert.deepEqual(bubbles('', 4), []);
+  assert.deepEqual(bubbles('[心情|只有标签]', 3), [], '洗完什么都不剩就一条都别发');
+});
+test('几条气泡是一条一条出来的，不是一次糊上去', async () => {
+  const ctx = { got: [], setTimeout, Promise, Math };
+  ctx.phReceiveSms = (num, text, c, sk) => ctx.got.push([num, text, sk]);
+  vm.createContext(ctx);
+  vm.runInContext(source('phDeliverSmsBubbles'), ctx);
+  const t0 = Date.now();
+  await vm.runInContext("phDeliverSmsBubbles('138','138',['一','二','三'],{})", ctx);
+  assert.deepEqual(ctx.got.map(x => x[1]), ['一', '二', '三'], '顺序不能乱');
+  assert.deepEqual(ctx.got[0], ['138', '一', '138']);
+  assert.ok(Date.now() - t0 >= 1200, '中间要有停顿，不然三条同时蹦出来');
+});
+
+/* ===== 上下文和回复长度跟随全局 ===== */
+test('上下文统一跟随设置里那个「带几个回合」', () => {
+  const ctx = { S: { settings: { hist: 12 } } };
+  vm.createContext(ctx);
+  vm.runInContext(source('phCtxRows'), ctx);
+  assert.equal(vm.runInContext('phCtxRows()', ctx), 24, '12 回合 → 24 条');
+  ctx.S.settings.hist = 40;
+  assert.equal(vm.runInContext('phCtxRows()', ctx), 80);
+  ctx.S.settings.hist = 2;
+  assert.equal(vm.runInContext('phCtxRows()', ctx), 8, '再小也得留点');
+  ctx.S.settings.hist = 100;
+  assert.equal(vm.runInContext('phCtxRows()', ctx), 160);
+  ctx.S.settings = {};
+  assert.equal(vm.runInContext('phCtxRows()', ctx), 24, '没设过就按默认 12 回合');
+});
+test('短信、陌生短信、X 私信都不再写死条数', () => {
+  for (const x of [app, priv]) {
+    assert.equal(/phSmsArr\(num,sk\)\.slice\(-20\)/.test(x), false, '角色短信还写死 20 条');
+    assert.equal(/phSmsArr\(num,num\)\.slice\(-10\)/.test(x), false, '陌生短信还写死 10 条');
+    assert.equal(/phSmsArr\(num,num\)\.slice\(-24\)/.test(x), false, '伪装短信还写死 24 条');
+    assert.equal(/d\.msgs\.slice\(-10\)/.test(x), false, 'X 私信还写死 10 条');
+    assert.match(x, /phSmsArr\(num,sk\)\.slice\(-rows\)/);
+    assert.match(x, /d\.msgs\.slice\(-phCtxRows\(\)\)/, 'X 私信要跟随全局');
+  }
+});
+test('抖音私信：单独设过就按它的，没设过跟随全局', () => {
+  const ctx = { S: { settings: { hist: 12 } } };
+  vm.createContext(ctx);
+  vm.runInContext([source('phCtxRows'), source('dyChatCtxRows')].join('\n'), ctx);
+  assert.equal(vm.runInContext('dyChatCtxRows({})', ctx), 24, '没单独设过 → 跟随全局的 24');
+  assert.equal(vm.runInContext('dyChatCtxRows({ctx:8})', ctx), 8, '单独设过就听它的');
+  ctx.S.settings.hist = 100;
+  assert.equal(vm.runInContext('dyChatCtxRows({})', ctx), 60, '抖音自己那条上限还在');
+});
+test('回复长度也跟随设置里的「回复长度（线上聊天）」', () => {
+  for (const x of [app, priv]) {
+    assert.equal(/\{max:240,temp:\.8\}/.test(x), false, '角色短信还写死 240');
+    assert.equal(/dyAuxChat\(\[\{role:'system',content:sys\},\.\.\.hist\],\{max:200\}\)/.test(x), false, 'X 私信还写死 200');
+    assert.match(x, /\.\.\.hist\],\{max:dyReplyBudget\(\)\}\)/, 'X 私信要跟着路线上的回复长度走');
+  }
+  /* 微信本来就不写死 max，短信现在也一样 */
+  assert.equal(/max:\d+,temp:\.8\}\);\n  r=String\(r\|\|''\)/.test(app), false);
+  assert.match(source('phRoleSmsReply'), /\}\],\{temp:\.8\}\)/, '短信不再自己定长度');
+});
+
 /* ===== ＋ 就是相册 ===== */
 test('＋ 点一下直接开相册，不再弹菜单', () => {
   assert.match(source('renderPhoneIMsg'), /class="imsg-plus" onclick="phSmsPic\('\$\{esc\(num\)\}','\$\{esc\(sk\)\}'\)"/);
@@ -274,7 +406,7 @@ test('[换背景] 这个标签不会被当成正文发出来', () => {
   const fn = source('phRoleSmsReply');
   assert.match(fn, /const wantBg=\/\[\\\[【\]\\s\*换背景\\s\*\[\\\]】\]\/\.test\(r\)/, '先认出来');
   assert.match(fn, /r=r\.replace\(\/\[\\\[【\]\\s\*换背景\\s\*\[\\\]】\]\/g,' '\)/, '再从正文里抹掉');
-  assert.match(fn, /if\(wantBg&&!phRoleSetSmsBg\(num,sk\)\)/, '没找到图要有话说，不能默默没反应');
+  assert.match(fn, /if\(wantBg&&!phRoleSetSmsBg\(num,sk\)&&!parts\.length\)parts=\['我没找到你说的那张照片/, '没找到图又没话说时，得吭一声');
   assert.match(fn, /就在回复最后【单独一行】写 \[换背景\]/, '得告诉模型有这么一条');
   assert.match(fn, /m\.img\?'\[图片\]':m\.text/, '记录里要让模型看见她发过图');
 });
