@@ -14,8 +14,8 @@ const privateApp=read('native/private-small-phone/XcodeProject/PhoneCompanionTes
 
 test('v1178 shared theater asset is byte-identical and loaded after app core',()=>{
   assert.equal(bundleTheater,theater);
-  assert.match(webHtml,/app\.js\?v=1270[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1270&r=v1184-ios-web-crash-cohab-turn-keyboard-1"/);
-  for(const html of [privateHtml,privateAlias])assert.match(html,/app\.js\?v=1270[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1270[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1270&r=v1184-ios-web-crash-cohab-turn-keyboard-1"/);
+  assert.match(webHtml,/app\.js\?v=1271[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1271&r=v1184-ios-web-crash-cohab-turn-keyboard-1"/);
+  for(const html of [privateHtml,privateAlias])assert.match(html,/app\.js\?v=1271[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1271[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1271&r=v1184-ios-web-crash-cohab-turn-keyboard-1"/);
   assert.match(read('sw.js'),/cohab-theater\.js\?v='\+BUILD\+'\&r=v1184-ios-web-crash-cohab-turn-keyboard-1',kind:'theater'/);
 });
 
@@ -139,8 +139,8 @@ test('guest exit sends exactly one genuine memory-grounded WeChat message',()=>{
   assert.doesNotMatch(theater,/content:\s*['"](?:我回来了|我都记得)/);
 });
 
-test('private artifact identity advances independently to v1270 and iOS 1.0.370 (370)',()=>{
-  assert.match(privateApp,/const APP_VER='v1270 · 抖音群聊滚动与配乐'/);
+test('private artifact identity advances independently to v1271 and iOS 1.0.370 (370)',()=>{
+  assert.match(privateApp,/const APP_VER='v1271 · 抖音发作品三页与卡片'/);
   assert.match(privateHtml,/private-runtime-diagnostics\.js\?v=336/);
   assert.match(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),/1\.0\.370 \(370\)/);
   const project=read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');

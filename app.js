@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1270'){
+if(window.__NORTH_SHELL_BUILD__!=='1271'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -411,7 +411,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1270 · 抖音群聊滚动与配乐';
+const APP_VER='v1271 · 抖音发作品三页与卡片';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1765,7 +1765,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1270&r=v1270-web-dy-scroll-1';
+  const url='sw.js?v=1271&r=v1271-web-dy-publish-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -2458,6 +2458,7 @@ function render(){
   else if(c.p==='tasks')html=renderTasks();
   else if(c.p==='dydm')html=renderDyDM(c.id);
   else if(c.p==='dyuser')html=dyUserView();
+  else if(c.p==='dypost')html=renderDyPost();
   else if(c.p==='momentDetail')html='';
   const _wxGlassPages=['wechat','wxmoment','wxlive','wxnearby','wxprofile','wxqr','wxscan','wxservices','wxsmarthome','wxwallet','wxchange','wxbank','wxfamily','wxbills','wxsupport','wxfavorites','wxalbum','wxemoji','wxsettings','wxaccounts','wxsteps','chat','transferDetail','chatDetails','contactInfo','friendInfo','contactSettings','roleMoments','roleMomentDetail','roleFeatures','roleImageStudio','newfriends','wxonlychat','wxgroups','wxlabels','wxgroupcreate','contactEdit','wxsearch','pffriends','pfchat','pfgroup','group'];
   const _isWxPage=_wxGlassPages.includes(c.p);
@@ -2673,7 +2674,7 @@ function cinemaAsrGuardSync(job,finished){const covered=finished?Math.max(0,Numb
 function cinemaAsrGuardPlayback(v){if(!v||!_cin.extracting||_cin.asrMode!=='watch')return false;const covered=Math.max(0,Number(_cin.asrCoveredUntil)||0),limit=covered>0?Math.max(0,covered-10):20,current=Math.max(0,Number(v.currentTime)||0);if(current<limit-.15)return false;if(v.paused&&!_cin.asrGuardPaused)return false;if(current>limit+.25)v.currentTime=limit;_cin.asrGuardPaused=true;v.pause();cinemaSetStatus('已暂停等字幕 · 当前可看到 '+cinemaFmt(covered||limit),'working');return true;}
 function cinemaAsrGuardRelease(resume){const v=$('#cinVideo'),held=_cin.asrGuardPaused;_cin.asrGuardPaused=false;if(resume&&held&&v)v.play().catch(()=>{});}
 async function cinemaRestoreStoredSubtitles(s,token){if(!s||s.kind!=='video')return;const manual=await cinGet(cinemaManualSubtitleKey(s));if(token!==_cin.token||cinemaSession()!==s)return;if(manual&&Array.isArray(manual.cues)&&manual.cues.length){const n=cinemaApplyCues(manual.cues,manual.name||'手动导入字幕','subtitle');cinemaSetStatus('已恢复手动字幕 · '+n+' 句','ready');return;}const job=await cinemaAsrLoadJob(s);if(token!==_cin.token||cinemaSession()!==s||!job)return;cinemaAsrTaskUpdate(s,job);cinemaAsrGuardSync(job,job.status==='done');const cues=cinemaAsrJobCues(job);if(cues.length){cinemaApplyCues(cues,job.status==='done'?'已保存的提取字幕':'未完成的提取字幕','extract');cinemaSetStatus(job.status==='done'?'已恢复 '+cues.length+' 句字幕':'已恢复部分字幕 · 可继续提取','ready');}}
-async function cinemaMp4Library(){if(globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function')return globalThis.NorthMP4Box;if(!_cinMp4Module)_cinMp4Module=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='./vendor/mp4box.all.js?v=1270&r=file-safe-1';script.async=true;script.dataset.northMp4box='1';script.onload=()=>globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function'?resolve(globalThis.NorthMP4Box):reject(new Error('字幕解析组件没有正常启动'));script.onerror=()=>reject(new Error('字幕解析组件加载失败，请重新打开小手机后再试'));document.head.appendChild(script);}).catch(e=>{_cinMp4Module=null;const stale=document.querySelector('script[data-north-mp4box="1"]');if(stale)stale.remove();throw e;});return _cinMp4Module;}
+async function cinemaMp4Library(){if(globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function')return globalThis.NorthMP4Box;if(!_cinMp4Module)_cinMp4Module=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src='./vendor/mp4box.all.js?v=1271&r=file-safe-1';script.async=true;script.dataset.northMp4box='1';script.onload=()=>globalThis.NorthMP4Box&&typeof globalThis.NorthMP4Box.createFile==='function'?resolve(globalThis.NorthMP4Box):reject(new Error('字幕解析组件没有正常启动'));script.onerror=()=>reject(new Error('字幕解析组件加载失败，请重新打开小手机后再试'));document.head.appendChild(script);}).catch(e=>{_cinMp4Module=null;const stale=document.querySelector('script[data-north-mp4box="1"]');if(stale)stale.remove();throw e;});return _cinMp4Module;}
 async function cinemaVideoCodecProbe(file){if(!file||typeof file.slice!=='function')return null;if(_cin.videoInfo)return _cin.videoInfo;try{const MP4Box=await cinemaMp4Library(),mp4=MP4Box.createFile(false);let info=null,parseError='';mp4.onReady=x=>{info=x;};mp4.onError=e=>{parseError=String(e||'');};const step=1024*1024;for(let offset=0,guard=0;offset<file.size&&guard++<256&&!info;){const end=Math.min(file.size,offset+step),ab=await file.slice(offset,end).arrayBuffer();ab.fileStart=offset;const next=Number(mp4.appendBuffer(ab));offset=Number.isFinite(next)&&next>end?Math.min(file.size,next):end;if(guard%8===0)await new Promise(resolve=>setTimeout(resolve,0));}if(!info)mp4.flush();if(!info)return _cin.videoInfo={parseError:parseError||'未读到 MP4 / MOV 媒体信息'};const video=(info.videoTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.video),audio=(info.audioTracks||[])[0]||(info.tracks||[]).find(x=>x&&x.audio);return _cin.videoInfo={videoCodec:String(video&&video.codec||''),audioCodec:String(audio&&audio.codec||''),width:Number(video&&video.video&&video.video.width||video&&video.track_width||0),height:Number(video&&video.video&&video.video.height||video&&video.track_height||0)};}catch(e){return _cin.videoInfo={parseError:String(e&&e.message||e||'媒体信息读取失败')};}}
 function cinemaVideoErrorReason(code,info){const vc=String(info&&info.videoCodec||''),ac=String(info&&info.audioCodec||''),hevc=/^(?:hvc1|hev1|hevc|dvhe|dvh1)/i.test(vc),android=cinemaAndroidBrowser();if(android&&hevc)return '检测到视频编码 '+vc+'（HEVC / H.265）。苹果设备能够播放，并不代表当前安卓浏览器或手机具备同样的网页解码能力。';if(android&&code===3)return '安卓浏览器已经读到文件，但解码画面或声音失败。';if(android&&code===4)return '安卓浏览器不支持这个文件的容器、视频编码或音频编码。';if(code===3)return '浏览器已读到文件，但解码画面或声音失败。';if(code===4)return '当前浏览器不支持这个视频的容器或编码。';return '浏览器没有读到可播放的视频数据。';}
 function cinemaVideoRetryCompatible(info){const vc=String(info&&info.videoCodec||''),ac=String(info&&info.audioCodec||'');return /^(?:avc1|avc3)(?:\.|$)/i.test(vc)&&(!ac||/^(?:mp4a|aac)(?:\.|$)/i.test(ac));}
@@ -5596,87 +5597,202 @@ function dySearchView(){const h=S.dy.history||[];
 function dyDoSearch(q){q=(q||'').trim();if(!q)return;S.dy.history=S.dy.history||[];S.dy.history=S.dy.history.filter(x=>x!==q);S.dy.history.unshift(q);if(S.dy.history.length>20)S.dy.history=S.dy.history.slice(0,20);save();dyTab='feed';_dyMode='rec';dyGenFeed(q,true);}
 async function dyClearHistory(){if(!await uiConfirm('清空全部搜索记录？'))return;S.dy.history=[];save();render();toast('已清空搜索记录');}
 function dyDelHistory(i){S.dy.history.splice(i,1);save();render();}
-function dyFwd(id){const v=dyVid(id);if(!v)return;const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){toast('先创建角色');return;}
-  window._fwDy=v;if(cs.length===1)return doDyFwd(cs[0].id);
-  openModal(`<h3>把视频转发给</h3>${cs.map(c=>`<div class="section"><div class="it" onclick="doDyFwd('${c.id}')">${esc(c.remark||c.name)}<span class="v">›</span></div></div>`).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+/* 作品卡片：抖音私信、群聊里转发用，跟微信里那张抖音卡长一个样。 */
+function dyWorkCardMsg(v){return {kind:'work',wid:v.id,author:v.cid==='me'?dyNick():(v.author||'用户'),
+  desc:v.desc||'',body:String(v.body||'').slice(0,60),img:v.img||'',grad:v.grad||'',emoji:v.emoji||'',
+  music:v.music||'',mine:v.cid==='me',text:'[作品]'};}
+function dyWorkCardHTML2(m){const cover=m.img
+  ?`<img src="${storedImageDisplaySource(m.img)}" alt="">`
+  :`<div class="dywc-txt" style="background:${esc(m.grad||DY_GRADS[0])}">${esc(String(m.body||m.desc||'').slice(0,34))||esc(m.emoji||'🎬')}</div>`;
+  return `<div class="dywc"><div class="dywc-top">${cover}<span class="dywc-tag">🎵 抖音</span></div>
+    <div class="dywc-foot"><b>${esc(m.desc||m.body||'一条作品')}</b><small>@${esc(m.author||'')}${m.music?(' · ♪ '+esc(m.music)):''}</small></div></div>`;}
+function dyOpenWorkCard(wid){const v=dyVid(wid);if(!v)return toast('这条作品已经不在了');
+  dyTab='me';_dySub='work';_dyWorkId=wid;_dyCmOpen=false;
+  try{while(cur().p!=='dy'&&stack.length>1)back();}catch(_){}
+  render();}
+/* 转发：微信、抖音私信、抖音群聊都能选 */
+function dyFwd(id){const v=dyVid(id);if(!v)return;window._fwDy=v;
+  openModal(`<h3>转发这条作品</h3><div class="btns" style="flex-direction:column;gap:8px">
+    <button class="dybtn out" onclick="closeModal();dyFwdPick('wx')">转发到微信</button>
+    <button class="dybtn out" onclick="closeModal();dyFwdPick('dm')">转发到抖音私信</button>
+    <button class="dybtn out" onclick="closeModal();dyFwdPick('g')">转发到抖音群聊</button>
+    <button class="btn g" onclick="closeModal()">取消</button></div>`);}
+function dyFwdPick(where){const v=window._fwDy;if(!v)return;
+  if(where==='wx'){const cs=(S.contacts||[]).filter(c=>c&&!c.deleted);
+    if(!cs.length)return toast('先创建角色');
+    if(cs.length===1)return doDyFwd(cs[0].id);
+    return openModal(`<h3>转发给</h3><div style="max-height:46vh;overflow:auto">${cs.map(c=>`<div class="row dymu-row" onclick="doDyFwd('${c.id}')"><b style="flex:1;font-size:14px">${esc(c.remark||c.name)}</b><span style="color:#888">›</span></div>`).join('')}</div><button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+  if(where==='dm'){const ds=(S.dy.dms||[]);
+    if(!ds.length)return toast('还没有私信，先去找个人聊');
+    return openModal(`<h3>转发到私信</h3><div style="max-height:46vh;overflow:auto">${ds.map(d=>`<div class="row dymu-row" onclick="dyFwdTo('d','${d.id}')"><b style="flex:1;font-size:14px">${esc(d.name)}</b><span style="color:#888">›</span></div>`).join('')}</div><button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+  const gs=dyGroups();
+  if(!gs.length)return toast('还没有群聊');
+  openModal(`<h3>转发到群聊</h3><div style="max-height:46vh;overflow:auto">${gs.map(g=>`<div class="row dymu-row" onclick="dyFwdTo('g','${g.id}')"><b style="flex:1;font-size:14px">${esc(g.name)}</b><span style="color:#888">${dyGCount(g)} 人</span></div>`).join('')}</div><button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+function dyFwdTo(scope,id){const v=window._fwDy;if(!v)return;
+  const card=dyWorkCardMsg(v);
+  if(scope==='g'){const g=dyGroup(id);if(!g)return;
+    if(dyGMeMuted(g))return toast('你被禁言了，发不出去');
+    dyGMsgs(g).push(Object.assign({id:uid(),k:'me',time:Date.now()},card));
+    save();closeModal();toast('已转发到群聊');dyOpenGroup(id);
+    dyGroupReply(id,'[转发了一条抖音作品：'+(v.desc||v.body||'').slice(0,40)+']');return;}
+  const d=(S.dy.dms||[]).find(x=>x.id===id);if(!d)return;
+  d.msgs.push(Object.assign({from:'me',time:Date.now(),id:uid()},card));
+  dySparkTick(d);save();closeModal();toast('已转发到私信');go('dydm',{id:d.id});dyDMReply(d);}
 function doDyFwd(cid){const v=window._fwDy;if(!v)return;pushMsg(cid,{role:'user',type:'dycard',author:v.cid==='me'?dyNick():v.author,desc:v.desc,narration:v.narration,emoji:v.emoji,mine:v.cid==='me',id:uid()});closeModal();toast('已转发到微信');scheduleReply(cid);}
 /* 发抖音 */
 /* ===== 发作品：文字卡片 / 拍摄或相册 =====
    图是真的存下来的，角色评论前会先真的看一眼（走设置里的视觉模型）；
    没配视觉模型就让她自己写一句画面，绝不让模型假装看过。 */
+let _dyPostTab='camera',_dyPostStage='make';
 const DY_CARD_BG=[['夜','linear-gradient(160deg,#2b2f3a,#12141a 60%,#0a0b0f)'],['暮','linear-gradient(160deg,#4a3b46,#241c26 60%,#120e14)'],
   ['海','linear-gradient(160deg,#25404e,#12232c 60%,#0a1319)'],['林','linear-gradient(160deg,#2c4034,#16241b 60%,#0b120e)'],
   ['砂','linear-gradient(160deg,#4a4038,#26201b 60%,#14100d)'],['霞','linear-gradient(160deg,#4e3340,#2a1a24 60%,#150d12)'],
   ['雪','linear-gradient(160deg,#e9ecf1,#c9d0da 60%,#aeb7c4)'],['纸','linear-gradient(160deg,#f5efe4,#e3dac9 60%,#cdc2ad)']];
 const DY_CARD_FG=[['白','#f4f4f6'],['米','#efe6d6'],['橙','#ff9f68'],['粉','#ff9db8'],['青','#8fd6cf'],['墨','#20222a']];
 let _dyPost=null;
-function dyCompose(){_dyPost=null;
-  openModal(`<h3>发作品</h3><div class="hint">跟真实抖音一样，先选怎么发。</div>
-    <div class="btns" style="flex-direction:column;gap:8px">
-      <button class="dybtn out" onclick="dyPostText()">文字</button>
-      <button class="dybtn out" onclick="dyPostShoot()">拍摄</button>
-      <button class="dybtn out" onclick="dyPostAlbum()">从相册选</button>
-      <button class="btn g" onclick="closeModal()">取消</button></div>`);}
-function dyPostText(){_dyPost={kind:'text',bg:0,fg:0,card:''};dyPostTextForm();}
-function dyPostTextForm(){const p=_dyPost;if(!p)return;
-  openModal(`<h3>写文字</h3>
-    <div class="dypv" style="background:${DY_CARD_BG[p.bg][1]};color:${DY_CARD_FG[p.fg][1]}"><span id="dypv_t">${esc(p.card||'分享你的想法')}</span></div>
-    <div class="field"><textarea id="dyp_card" rows="4" maxlength="200" placeholder="分享你的想法" oninput="dyPostCardLive(this.value)">${esc(p.card||'')}</textarea></div>
-    <div class="field"><label>卡片颜色</label><div class="dysw">${DY_CARD_BG.map((b,i)=>`<i class="${i===p.bg?'on':''}" style="background:${b[1]}" onclick="dyPostPick('bg',${i})" title="${b[0]}"></i>`).join('')}</div></div>
-    <div class="field"><label>文字颜色</label><div class="dysw">${DY_CARD_FG.map((f,i)=>`<i class="${i===p.fg?'on':''}" style="background:${f[1]}" onclick="dyPostPick('fg',${i})" title="${f[0]}"></i>`).join('')}</div></div>
-    <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="dyPostNext()">下一步</button></div>`);}
+function dyCompose(){_dyPost=null;_dyPostTab='camera';_dyPostStage='make';dyPostOpen('camera');}
+function dyPostOpen(tab){_dyPost=_dyPost&&_dyPost.kind?_dyPost:{kind:'text',bg:0,fg:0,card:'',desc:'',at:[],songId:'',music:''};
+  _dyPostTab=tab||'camera';_dyPostStage='make';
+  try{closeModal();}catch(_){}
+  if(cur().p==='dypost')return render();
+  go('dypost',{});}
+function dyPostClose(){_dyPost=null;_dyPostStage='make';back();}
+function dyPostSetTab(t){const el=$('#dyp_card');if(el&&_dyPost)_dyPost.card=el.value;
+  _dyPostTab=t;if(t==='text'&&_dyPost)_dyPost.kind='text';render();}
+function renderDyPost(){const p=_dyPost||{};
+  if(_dyPostStage==='publish')return dyPostPublishPage();
+  return _dyPostTab==='text'?dyPostTextPage():dyPostCameraPage();}
+/* —— 相机页 —— */
+function dyPostCameraPage(){const p=_dyPost||{};
+  return `<div class="dypg">
+    <div class="dypg-top dy-safe-nav2">
+      <i onclick="dyPostClose()">✕</i>
+      <span class="dypg-music" onclick="dyPostMusicPick()">♫ ${p.music?esc(p.music):'选择音乐'}</span>
+      <em></em>
+    </div>
+    <div class="dypg-stage">${p.kind==='img'&&p.src
+      ?`<img class="dypg-shot" src="${storedImageDisplaySource(p.src)}" alt="">`
+      :`<div class="dypg-hint">${svgIc('camera',46,'#4a4a52',1.6)}<span>点下面的白圈拍一张<br>或者从相册里选</span></div>`}</div>
+    <div class="dypg-shutter">
+      <span class="dypg-side" onclick="dyPostAlbum()">${svgIc('image',26,'#f2f2f4',1.8)}<small>相册</small></span>
+      <button class="dypg-snap" onclick="dyPostShoot()"><i></i></button>
+      <span class="dypg-side ${p.kind==='img'&&p.src?'on':''}" onclick="dyPostNext()">${svgIc('forward',26,p.kind==='img'&&p.src?'#fe2c55':'#4a4a52',2)}<small>下一步</small></span>
+    </div>
+    <div class="dypg-tabs dy-safe-bar"><span onclick="dyPostSetTab('text')">文字</span><span class="on">相机</span></div>
+  </div>`;}
+/* —— 写文字页 —— */
+function dyPostTextPage(){const p=_dyPost||{};
+  return `<div class="dypg">
+    <div class="dypg-top dy-safe-nav2">
+      <i onclick="dyPostClose()">‹</i>
+      <span class="dypg-title">写文字</span>
+      <em class="dypg-next ${String(p.card||'').trim()?'on':''}" onclick="dyPostNext()">下一步</em>
+    </div>
+    <div class="dypg-card" style="background:${DY_CARD_BG[p.bg||0][1]};color:${DY_CARD_FG[p.fg||0][1]}">
+      <b class="dypg-quote">“</b>
+      <textarea id="dyp_card" maxlength="200" placeholder="分享你的想法" oninput="dyPostCardLive(this.value)" style="color:${DY_CARD_FG[p.fg||0][1]}">${esc(p.card||'')}</textarea>
+    </div>
+    <div class="dypg-pal">
+      <div class="dysw">${DY_CARD_BG.map((b,i)=>`<i class="${i===(p.bg||0)?'on':''}" style="background:${b[1]}" onclick="dyPostPick('bg',${i})"></i>`).join('')}</div>
+      <div class="dysw sm">${DY_CARD_FG.map((f,i)=>`<i class="${i===(p.fg||0)?'on':''}" style="background:${f[1]}" onclick="dyPostPick('fg',${i})"></i>`).join('')}</div>
+    </div>
+    <div class="dypg-tool"><span onclick="dyPostMusicPick()">♫</span><span onclick="dyPostPutTag('#')">#</span><span onclick="dyPostPutTag('@')">@</span>
+      <em>${String(p.card||'').length}/200</em></div>
+    <div class="dypg-tabs dy-safe-bar"><span class="on">文字</span><span onclick="dyPostSetTab('camera')">相机</span></div>
+  </div>`;}
+function dyPostPutTag(ch){const el=$('#dyp_card');if(!el)return;el.value=(el.value||'')+ch;if(_dyPost)_dyPost.card=el.value;el.focus();}
+/* —— 发布页 —— */
+function dyPostPublishPage(){const p=_dyPost||{};const people=dyAtCandidates();
+  const cover=p.kind==='img'&&p.src
+    ?`<img src="${storedImageDisplaySource(p.src)}" alt="">`
+    :`<div class="dypub-card" style="background:${DY_CARD_BG[p.bg||0][1]};color:${DY_CARD_FG[p.fg||0][1]}"><span>${esc(String(p.card||'').slice(0,60))}</span></div>`;
+  return `<div class="dypg pub">
+    <div class="dypg-top dy-safe-nav2"><i onclick="dyPostBack()">‹</i><span class="dypg-title"></span><em class="dypg-next on" onclick="dyPostPreview()">预览</em></div>
+    <div class="dypub-body">
+      <div class="dypub-cover">${cover}</div>
+      <textarea id="dyp_title" maxlength="30" rows="1" placeholder="添加标题" oninput="dyPostFieldLive()">${esc(p.title||'')}</textarea>
+      <textarea id="dyp_desc" maxlength="300" rows="4" placeholder="添加作品描述…" oninput="dyPostFieldLive()">${esc(p.desc||'')}</textarea>
+      <div class="dypub-chips">
+        <i onclick="dyPostPutDesc('#')"># 话题</i>
+        <i onclick="dyPostAtSheet()">@ 朋友</i>
+        <i class="${p.songId?'on':''}" onclick="dyPostMusicPick()">♫ ${p.music?esc(p.music):'选择音乐'}</i>
+      </div>
+      ${(p.at||[]).length?`<div class="dyat">${(p.at||[]).map(k=>{const q=dyPersonFind(k);return `<i class="on" onclick="dyPostAt('${esc(k)}')">@${esc(q?q.name:k)} ✕</i>`;}).join('')}</div>`:''}
+      ${visionConfigured()||p.kind!=='img'?'':'<div class="hint" style="color:#e0a54a">你还没配视觉模型，角色看不见这张图。发布后可以在作品的「··· 更多」里自己补一句画面描述。</div>'}
+      <div style="height:20px"></div>
+    </div>
+    <div class="dypub-bar dy-safe-bar"><span onclick="dyPostBack()">${svgIc('forward',20,'#c8c8d0',2)}<small>返回</small></span>
+      <button class="dypub-go" onclick="dyPostPublish()">发作品</button></div>
+  </div>`;}
+function dyPostFieldLive(){const p=_dyPost;if(!p)return;
+  const t=$('#dyp_title'),d=$('#dyp_desc');
+  if(t)p.title=t.value;if(d)p.desc=d.value;}
+function dyPostPutDesc(ch){const el=$('#dyp_desc');if(!el)return;el.value=(el.value||'')+ch;dyPostFieldLive();el.focus();}
+function dyPostBack(){dyPostFieldLive();_dyPostStage='make';render();}
+function dyPostPreview(){const p=_dyPost;if(!p)return;dyPostFieldLive();
+  toast(p.kind==='img'?'这就是发出去的样子':'卡片就是这个颜色，发出去一模一样');}
+function dyPostAtSheet(){dyPostFieldLive();const people=dyAtCandidates();
+  if(!people.length)return toast('还没有可以 @ 的人');
+  const p=_dyPost||{};
+  openModal(`<h3>@ 朋友</h3><div class="hint">被 @ 的人粉丝多的话，他的粉丝会来评论区看热闹。</div>
+    <div class="dyat" style="padding-top:4px">${people.map(x=>`<i class="${(p.at||[]).includes(x.k)?'on':''}" onclick="dyPostAt('${esc(x.k)}')">@${esc(x.name)}</i>`).join('')}</div>
+    <button class="btn g" style="margin-top:10px" onclick="closeModal()">好了</button>`);}
+function dyPostText(){_dyPost={kind:'text',bg:0,fg:0,card:'',desc:'',at:[],songId:'',music:''};dyPostOpen('text');}
 function dyPostCardLive(v){const p=_dyPost;if(!p)return;p.card=String(v||'');const el=$('#dypv_t');if(el)el.textContent=p.card||'分享你的想法';}
-function dyPostPick(what,i){const p=_dyPost;if(!p)return;const el=$('#dyp_card');if(el)p.card=el.value;p[what]=i;dyPostTextForm();}
+function dyPostPick(what,i){const p=_dyPost;if(!p)return;const el=$('#dyp_card');if(el)p.card=el.value;p[what]=i;render();}
 function dyPostShoot(){dyPostImage(true);}
 function dyPostAlbum(){dyPostImage(false);}
-function dyPostImage(shoot){const i=document.createElement('input');i.type='file';i.accept='image/*';
+function dyPostHasContent(p){return p&&(p.kind==='img'?!!p.src:!!String(p.card||'').trim());}
+function dyPostImage(shoot){
+  try{if(window._dyPickEl)window._dyPickEl.remove();}catch(_){}
+  const i=document.createElement('input');i.type='file';i.accept='image/*';
   if(shoot)i.setAttribute('capture','environment');/* 手机上直接调后置摄像头拍 */
-  i.onchange=async()=>{const f=i.files&&i.files[0];if(!f)return;
+  i.style.cssText='position:fixed;left:-9999px;top:0;opacity:0;width:1px;height:1px';
+  i.onchange=async()=>{const f=i.files&&i.files[0];
+    setTimeout(()=>{try{i.remove();}catch(_){}},500);
+    if(!f)return;
     toast('正在处理照片…');
     let src=null;try{src=await compress(f,1400,.78);}catch(_){}
     if(!src){try{src=await readAsDataURL(f);}catch(_){toast('图片读不出来，再试一次');return;}}
-    _dyPost={kind:'img',src,desc:''};dyPostNext();};
-  i.click();}
+    const keep=_dyPost&&_dyPost.kind==='img'?_dyPost:null;
+    _dyPost={kind:'img',src,desc:(keep&&keep.desc)||'',at:(keep&&keep.at)||[],songId:(keep&&keep.songId)||'',music:(keep&&keep.music)||''};
+    dyPostNext();};
+  document.body.appendChild(i);window._dyPickEl=i;i.click();}
 function dyPostNext(){const p=_dyPost;if(!p)return;
   if(p.kind==='text'){const el=$('#dyp_card');if(el)p.card=el.value;
     if(!String(p.card||'').trim())return toast('写点什么吧');}
-  dyPostPublishForm();}
-function dyPostPublishForm(){const p=_dyPost;if(!p)return;
-  const preview=p.kind==='img'
-    ?`<div class="dypv img"><img src="${storedImageDisplaySource(p.src)}"></div>`
-    :`<div class="dypv" style="background:${DY_CARD_BG[p.bg][1]};color:${DY_CARD_FG[p.fg][1]}"><span>${esc(p.card)}</span></div>`;
-  const people=dyAtCandidates();
-  openModal(`<h3>发布</h3>
-    ${preview}
-    <div class="field"><textarea id="dyp_desc" rows="3" maxlength="300" placeholder="添加作品描述…可以带 #话题">${esc(p.desc||'')}</textarea></div>
-    <div class="field"><label>@ 朋友<small style="color:#888">被 @ 的人粉丝多的话，他的粉丝会来看热闹</small></label>
-      <div class="dyat">${people.length?people.map(x=>`<i class="${(p.at||[]).includes(x.k)?'on':''}" onclick="dyPostAt('${esc(x.k)}')">@${esc(x.name)}</i>`).join(''):'<span style="color:#777;font-size:12px">还没有可以 @ 的人</span>'}</div></div>
-    <div class="field"><label>配乐</label><div class="dyat"><i class="${p.songId?'on':''}" onclick="dyPostMusicPick()">${p.music?'♪ '+esc(p.music):'♪ 从音乐库选一首'}</i></div></div>
-    ${visionConfigured()?'':'<div class="hint" style="color:#e0a54a">你还没配视觉模型，角色看不见这张图。发布后可以自己补一句画面描述，他们就按那句来评论。</div>'}
-    <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="dyPostPublish()">发作品</button></div>`);}
+  if(p.kind==='img'&&!p.src)return toast('先拍一张，或者从相册选一张');
+  _dyPostStage='publish';
+  if(cur().p==='dypost')return render();
+  dyPostOpen(p.kind==='img'?'camera':'text');}
+function dyPostPublishForm(){_dyPostStage='publish';if(cur().p==='dypost')return render();dyPostOpen(_dyPost&&_dyPost.kind==='img'?'camera':'text');}
 function dyAtCandidates(){dyInit();const out=[],seen=new Set();
   (S.contacts||[]).filter(c=>c&&!c.deleted).forEach(c=>{const k='c:'+c.id;if(seen.has(k))return;seen.add(k);
     out.push({k,name:c.remark||c.name});});
   (S.dy.fans||[]).forEach(x=>{if(!x||x.cid||seen.has(x.k))return;seen.add(x.k);out.push({k:x.k,name:x.name});});
   return out.slice(0,12);}
-function dyPostAt(k){const p=_dyPost;if(!p)return;const el=$('#dyp_desc');if(el)p.desc=el.value;
-  p.at=p.at||[];const i=p.at.indexOf(k);if(i<0)p.at.push(k);else p.at.splice(i,1);dyPostPublishForm();}
+function dyPostAt(k){const p=_dyPost;if(!p)return;
+  if(typeof dyPostFieldLive==='function')dyPostFieldLive();
+  p.at=p.at||[];const i=p.at.indexOf(k);if(i<0)p.at.push(k);else p.at.splice(i,1);
+  const open=$('#modal')&&$('#modal').classList.contains('show');
+  render();if(open)dyPostAtSheet();}
 /* 发作品可以配一首你音乐库里真有的歌——不是填一行字，是真的从库里挑，
    作品页上点那张唱片就能放出来。 */
 function dyMusicLib(){try{if(typeof musicInit==='function')musicInit();}catch(_){}
   return (S.music&&S.music.songs||[]).filter(s=>s&&s.id);}
-function dyPostMusicPick(){const el=$('#dyp_desc');if(el&&_dyPost)_dyPost.desc=el.value;
+function dyPostMusicPick(){if(typeof dyPostFieldLive==='function')dyPostFieldLive();
+  {const el=$('#dyp_card');if(el&&_dyPost)_dyPost.card=el.value;}
   const songs=dyMusicLib();
   if(!songs.length)return toast('音乐库里还没有歌～先去音乐里添加');
   openModal(`<h3>选音乐</h3><div class="hint">从你的音乐库里挑一首，作品页上点唱片就能放。</div>
     <div style="max-height:46vh;overflow:auto">
       ${_dyPost&&_dyPost.songId?`<div class="row dymu-row" onclick="dyPostMusicSet('')"><b style="flex:1;font-size:14px">不配音乐</b><span style="color:#888;font-size:13px">取消</span></div>`:''}
       ${songs.map(s=>`<div class="row dymu-row" onclick="dyPostMusicSet('${esc(s.id)}')"><b style="flex:1;font-size:14px;font-weight:500">${esc(s.title||'未命名')}</b><span style="color:#888;font-size:12px">${esc(s.artist||'')}</span></div>`).join('')}
-    </div><button class="btn g" style="margin-top:8px" onclick="dyPostPublishForm()">返回</button>`);}
-function dyPostMusicSet(sid){if(!_dyPost)return;
+    </div><button class="btn g" style="margin-top:8px" onclick="closeModal()">返回</button>`);}
+function dyPostMusicSet(sid){if(!_dyPost)return;closeModal();
   const s=sid?dyMusicLib().find(x=>x.id===sid):null;
   _dyPost.songId=s?s.id:'';_dyPost.music=s?((s.title||'未命名')+(s.artist?' · '+s.artist:'')):'';
-  dyPostPublishForm();}
+  render();toast(s?('配乐：'+_dyPost.music):'已取消配乐');}
 /* 作品页底下那条「♪ 歌名」，点了真的放这首歌 */
 function dyWorkMusicHTML(v){if(!v||!v.music)return '';
   return `<div class="dymu" onclick="event.stopPropagation();dyWorkMusicPlay('${esc(v.id)}')"><i>♪</i><span>${esc(v.music)}</span></div>`;}
@@ -5687,14 +5803,17 @@ function dyWorkMusicPlay(id){const v=dyVid(id);if(!v)return;
   if(typeof musicPlay==='function'){musicPlay(s.id);toast('正在放：'+(s.title||'这首歌'));}
   else toast('放不了，音乐模块没就绪');}
 function dyPostPublish(){const p=_dyPost;if(!p)return;
-  const el=$('#dyp_desc');if(el)p.desc=String(el.value||'').trim();
+  if(typeof dyPostFieldLive==='function')dyPostFieldLive();
+  p.desc=String(p.desc||'').trim();p.title=String(p.title||'').trim();
+  if(!dyPostHasContent(p))return toast(p.kind==='img'?'还没有照片':'写点什么吧');
   dyInit();const id=uid(),at=(p.at||[]).slice();
-  const v={id,cid:'me',author:dyNick(),avatar:dyAvatar(),desc:p.desc||'',body:p.kind==='text'?p.card:'',
+  const v={id,cid:'me',author:dyNick(),avatar:dyAvatar(),desc:[p.title,p.desc].filter(Boolean).join(' ').trim()||'',body:p.kind==='text'?p.card:'',title:p.title||'',
     narration:'',lk:0,st:0,ts:Date.now(),comments:[],at,
     grad:p.kind==='text'?DY_CARD_BG[p.bg][1]:'',cardFg:p.kind==='text'?DY_CARD_FG[p.fg][1]:'',
     music:p.music||'',songId:p.songId||'',
     img:p.kind==='img'?p.src:'',imgDesc:'',visionState:p.kind==='img'?(visionConfigured()?'pending':'off'):''};
-  S.dy.mine.unshift(v);S.dy.feed.unshift(v);save();closeModal();_dyPost=null;
+  S.dy.mine.unshift(v);S.dy.feed.unshift(v);save();closeModal();_dyPost=null;_dyPostStage='make';
+  try{while(cur().p==='dypost')back();}catch(_){}
   dyTab='me';_dySub='';render();
   const gained=typeof dyWorkSettle==='function'?dyWorkSettle(v):0;
   toast(gained?('发布成功，涨了 '+gained+' 个粉丝'):'发布成功');
@@ -5893,7 +6012,7 @@ function dyGroupMsgRow(g,m,prev){if(m.type==='sys')return `${dyGStamp(g,m,prev)}
   const open=me?'':` onclick="dyOpenUser('${esc(m.k)}')"`;
   return `${dyGStamp(g,m,prev)}<div class="dyg-msg${me?' me':''}"><span${open}>${me?av(dyAvatar(),'sm'):dyFace(dyGMemberAvatar(mem),'sm')}</span>
     <div class="dyg-body"><div class="dyg-who"${open}>${esc(dyGMemberName(mem))}${dyGBadge(role)}${dyGMuteLeft(g,m.k)>0?'<em class="dyg-badge muted">禁言中</em>':''}</div>
-    ${m.kind?`<div class="dyg-b plain" onclick="dyGroupMsgMenu('${g.id}','${m.id}')">${dyMsgBodyHTML(m,'g',g.id)}</div>`:`<div class="dyg-b" onclick="dyGroupMsgMenu('${g.id}','${m.id}')">${dyGAtHTML(g,m.text)}</div>`}</div></div>`;}
+    ${m.kind?`<div class="dyg-b${m.kind==='red'||m.kind==='transfer'?' bare':' plain'}" onclick="dyGroupMsgMenu('${g.id}','${m.id}')">${dyMsgBodyHTML(m,'g',g.id)}</div>`:`<div class="dyg-b" onclick="dyGroupMsgMenu('${g.id}','${m.id}')">${dyGAtHTML(g,m.text)}</div>`}</div></div>`;}
 function dyGStamp(g,m,prev){if(!m.time)return '';if(prev&&prev.time&&m.time-prev.time<5*60000)return '';
   const t=new Date(m.time),hm=String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0'),day=dyListTime(m.time);
   return '<div class="dyg-t">'+esc(day===hm?hm:day+' '+hm)+'</div>';}
@@ -6761,12 +6880,14 @@ function dySendSticker(scope,id,i){const s=(S.me.stickers||[])[i];if(!s)return;
 /* 消息体：表情包画图，语音画一条可点开看文字的语音条 */
 function dyVoiceSeconds(text){return Math.max(1,Math.min(60,Math.round(String(text||'').length/3)+1));}
 function dyMsgBodyHTML(m,scope,id){
+  if(m&&m.kind==='work')return dyWorkCardHTML2(m);
   if(m&&(m.kind==='red'||m.kind==='transfer'))return dyMoneyCardHTML(scope,id,m);
   if(m&&m.kind==='sticker')return `<div class="dycp-msg">${stickerImageHTML(m.img)}</div>`;
   if(m&&m.kind==='voice'){const sec=dyVoiceSeconds(m.text);
     return `<div class="dyvo" onclick="event.stopPropagation();toast(${jq(String(m.text||''))})"><i></i><span>${sec}″</span></div>`;}
   return '';}
 function dyMsgPlain(m){if(!m)return '';
+  if(m.kind==='work')return '[转发了一条抖音作品，作者@'+(m.author||'')+'，文案：'+(m.desc||m.body||'')+']';
   if(m.kind==='transfer')return '[转账 ¥'+(+m.amount||0).toFixed(2)+(m.toName?('，转给'+m.toName):'')+(m.note?'，'+m.note:'')+']';
   if(m.kind==='red')return '[红包 ¥'+(+m.amount||0).toFixed(2)+(m.count>1?('，'+m.count+'个，手快的抢'):'')+(m.note?'，'+m.note:'')+']';
   if(m.kind==='sticker')return '[表情'+(m.meaning?'：'+m.meaning:'')+']';
@@ -6861,13 +6982,44 @@ function dyRedGrabMe(gid,mid){const g=dyGroup(gid),r=g&&dyGMsgs(g).find(x=>x&&x.
   addBill('in',take,'抢到抖音群红包');
   dyGSys(g,(S.me.name||'我')+' 领取了红包 ¥'+take.toFixed(2));
   save();closeModal();render();toast('抢到 ¥'+take.toFixed(2));}
-function dyMoneyCardHTML(scope,id,m){
-  if(m.kind==='transfer')return `<div class="dymo ${m.from==='me'||m.k==='me'?'me':''}"><b>¥${(+m.amount||0).toFixed(2)}</b><span>${esc(m.toName?('转给 '+m.toName):'转账')}${m.note?' · '+esc(m.note):''}</span></div>`;
-  if(m.kind==='red'){const act=scope==='g'?("dyRedOpen('"+id+"','"+m.id+"')"):"toast('红包已经收下啦')";
-    return `<div class="dymo red" onclick="event.stopPropagation();${act}"><b>¥${(+m.amount||0).toFixed(2)}</b><span>${esc(m.note||'恭喜发财')}${m.count?(' · '+m.count+'个'+(m.left>0?('，还剩'+m.left):'，已抢光')):''}</span></div>`;}
+/* 卡片直接用微信那一套 markup 和样式（wx-transfer-card / cpay），
+   只有点击行为换成抖音自己的——我上一版自己画了个蓝方块，长得完全不像。 */
+function dyMoneyCardHTML(scope,id,m){const me=(m.from==='me'||m.k==='me');
+  if(m.kind==='transfer'){const st=transferState(m),copy=dyTransferCopy(m,me),amount=(+m.amount||0).toFixed(2);
+    const click=`event.stopPropagation();dyMoneyOpen('${scope}','${id}','${m.id||''}')`;
+    return `<div class="wx-transfer-card ${me?'outgoing':'incoming'} state-${st}" role="button" tabindex="0" onclick="${click}"><div class="wx-transfer-main"><span class="wx-transfer-glyph">${transferGlyph(st)}</span><span class="wx-transfer-copy"><b>¥${amount}</b><em>${esc(copy)}</em></span></div><div class="wx-transfer-foot">${esc(m.toName?('转给 '+m.toName):'转账')}</div></div>`;}
+  if(m.kind==='red'){const done=dyRedDone(m),cls='cpay '+(done?'done':'r'),ic=svgIc('redpacket',30,'#fff');
+    const t1=done?'已领取':esc(m.note||'恭喜发财');
+    const t2=done?('¥'+(+m.amount||0).toFixed(2)):(m.count>1?('抢红包 · 还剩 '+Math.max(0,+m.left||0)+' 个'):'领取红包');
+    const click=`event.stopPropagation();dyMoneyOpen('${scope}','${id}','${m.id||''}')`;
+    return `<div class="card" onclick="${click}"><div class="${cls}"><div class="big">${ic}</div><div><div class="t1">${t1}</div><div class="t2">${t2}</div></div></div><div class="cfoot">${m.count>1?'抖音群红包':'抖音红包'}</div></div>`;}
   return '';}
-/* 点头像就进那个人的主页——真实抖音到处都是这样，所以每一个露头像的地方都要通。
-   私信里的人可能是角色（c:<id>），也可能是个没有角色的网友（n:<名字>）。 */
+function dyTransferCopy(m,me){const st=transferState(m);
+  if(st==='received')return me?'已被接收':'已收款';
+  if(st==='refunded')return me?'已被退还':'已退还';
+  return me?'你发起了一笔转账':'请收款';}
+function dyRedDone(m){if(!m)return false;
+  if(m.count>1)return (m.taken||[]).some(t=>t&&t.k==='me');
+  return !!m.received;}
+function dyMoneyFind(scope,id,mid){if(scope==='g'){const g=dyGroup(id);return g?(dyGMsgs(g).find(x=>x&&x.id===mid)||null):null;}
+  const d=(S.dy.dms||[]).find(x=>x.id===id);return d?((d.msgs||[]).find(x=>x&&x.id===mid)||null):null;}
+function dyMoneyOpen(scope,id,mid){const m=dyMoneyFind(scope,id,mid);if(!m)return;
+  if(m.kind==='red'&&m.count>1)return dyRedOpen(id,mid);
+  const me=(m.from==='me'||m.k==='me');
+  if(m.kind==='red'){
+    if(me)return toast(m.received?'对方已经领取了':'等对方领取');
+    if(m.received)return toast('这个红包你已经收下了');
+    m.received=true;addBill('in',+m.amount||0,'抖音收到红包');save();render();return toast('收下 ¥'+(+m.amount||0).toFixed(2));}
+  const st=transferState(m);
+  if(me)return toast(st==='received'?'对方已收款':st==='refunded'?'对方退还了这笔转账':'等对方收款');
+  if(st!=='pending')return toast(st==='received'?'你已经收过了':'这笔你退还了');
+  openModal(`<h3>收到一笔转账</h3><div class="hint">¥${(+m.amount||0).toFixed(2)}${m.note?' · '+esc(m.note):''}</div>
+    <div class="btns"><button class="btn g" onclick="dyMoneyAct('${scope}','${id}','${mid}','refuse')">退还</button><button class="btn p" onclick="dyMoneyAct('${scope}','${id}','${mid}','take')">收下</button></div>`);}
+function dyMoneyAct(scope,id,mid,act){const m=dyMoneyFind(scope,id,mid);if(!m)return;
+  const amount=+m.amount||0;
+  if(act==='take'){m.received=true;m.payState='received';addBill('in',amount,'抖音收到转账');toast('已收下 ¥'+amount.toFixed(2));}
+  else{m.declined=true;m.payState='refunded';toast('已退还');}
+  save();closeModal();render();}
 function dyDMKey(d){return d?(d.cid?'c:'+d.cid:'n:'+String(d.name||'')):'';}
 function dyOpenDMUser(id){const d=(S.dy.dms||[]).find(x=>x.id===id);if(!d)return;dyOpenUser(dyDMKey(d));}
 function dyDMQuick(){return ['在吗','刚看到你的作品','想你了','晚安'];}
@@ -6884,7 +7036,7 @@ function renderDyDM(id){const d=(S.dy.dms||[]).find(x=>x.id===id);if(!d)return '
   return `<div class="dydm">
     <div class="dydm-nav dy-safe-nav2"><i onclick="back()">‹</i><span class="dydm-who" onclick="dyOpenDMUser('${id}')">${dyFace(d.avatar,'sm')}</span><b class="dydm-who" onclick="dyOpenDMUser('${id}')">${esc(d.name)}</b>${dySparkBadge(d)}${d.cid?`<i onclick="placeCall('${d.cid}','voice')">${svgIc('phonecall',21,'#f2f2f4',2)}</i>`:''}<i onclick="dyDMMenu('${id}')">···</i></div>
     <div class="dydm-box" id="dydmbox" data-render-scroll-key="dydm:${esc(id)}">
-      ${rows.length?rows.map((m,mi)=>`<div class="dydm-msg${m.from==='me'?' me':''}">${dyDMStamp(rows,mi)}<div class="dydm-line"><span class="dydm-who" onclick="${m.from==='me'?`dyTab='me';_dySub='';render()`:`dyOpenDMUser('${id}')`}">${m.from==='me'?av(dyAvatar(),'sm'):dyFace(d.avatar,'sm')}</span>${m.kind?`<div class="dydm-b plain" onclick="dyDelDMMsg('${id}',${mi})">${dyMsgBodyHTML(m,'d',id)}</div>`:`<div class="dydm-b" onclick="dyDelDMMsg('${id}',${mi})">${esc(m.text)}</div>`}${m.from==='me'?'<span class="dydm-read">已读</span>':''}</div></div>`).join(''):'<div class="dyvi-empty">还没说过话～发条消息打个招呼吧。</div>'}
+      ${rows.length?rows.map((m,mi)=>`<div class="dydm-msg${m.from==='me'?' me':''}">${dyDMStamp(rows,mi)}<div class="dydm-line"><span class="dydm-who" onclick="${m.from==='me'?`dyTab='me';_dySub='';render()`:`dyOpenDMUser('${id}')`}">${m.from==='me'?av(dyAvatar(),'sm'):dyFace(d.avatar,'sm')}</span>${m.kind?`<div class="dydm-b${m.kind==='red'||m.kind==='transfer'?' bare':' plain'}" onclick="dyDelDMMsg('${id}',${mi})">${dyMsgBodyHTML(m,'d',id)}</div>`:`<div class="dydm-b" onclick="dyDelDMMsg('${id}',${mi})">${esc(m.text)}</div>`}${m.from==='me'?'<span class="dydm-read">已读</span>':''}</div></div>`).join(''):'<div class="dyvi-empty">还没说过话～发条消息打个招呼吧。</div>'}
       ${dyTypingShown('dm:'+id)?dyTypingHTML(dyFace(d.avatar,'sm')):''}
     </div>
     <div class="dydm-quick">${dyDMQuick().map(t=>`<span onclick="dyDMQuickSend('${id}','${esc(t)}')">${esc(t)}</span>`).join('')}</div>
@@ -6926,13 +7078,35 @@ function dyDMRunUnmute(cid,text){text=String(text||'');if(!cid)return text;
         const r=dyGCmdApply(g,by.k,'unmute',who||(S.me.name||'我'));
         if(r&&r.ok){save();toast('他把你放出来了');return '';}}}
     return '';});}
+/* 角色回的 [收款] [拒收] 这类指令以前原样当文字显示出来了。
+   跟微信一样：抠出来执行掉，不让它出现在气泡里。 */
+const DY_PAY_RE=/[\[【]\s*(收款|收下|领取|收红包|拒收|退还|退回)\s*[\]】]/g;
+function dyPayLast(rows,fromMe){for(let i=rows.length-1;i>=0;i--){const m=rows[i];
+  if(!m||(m.kind!=='transfer'&&m.kind!=='red'))continue;
+  const me=(m.from==='me'||m.k==='me');if(me!==!!fromMe)continue;
+  if(transferState(m)!=='pending'||m.received||m.declined)continue;
+  return m;}
+  return null;}
+function dyRunPayCommands(rows,text){text=String(text||'');let did=0;
+  const out=text.replace(DY_PAY_RE,(_,verb)=>{
+    const take=/收款|收下|领取|收红包/.test(verb);
+    const m=dyPayLast(rows,true);if(!m)return '';
+    if(take){m.received=true;m.payState='received';}
+    else{m.declined=true;m.payState='refunded';addBill('in',+m.amount||0,'抖音对方退还的'+(m.kind==='red'?'红包':'转账'));}
+    did++;return '';});
+  return {text:out.replace(/\s{2,}/g,' ').trim(),did};}
+function dyPayRule(rows){const m=dyPayLast(rows,true);if(!m)return '';
+  return '\n\n她刚给你发了一个'+(m.kind==='red'?'红包':'转账')+'，¥'+(+m.amount||0).toFixed(2)+(m.note?('，写着「'+m.note+'」'):'')
+    +'。收不收由你自己决定：想收就在你那句话里带上 [收款]，不想要就带上 [拒收]，指令本身不会显示出来，别把方括号写进正文里。';}
 async function dyDMReply(d){try{dyTypingOn('dm:'+d.id);const hist=d.msgs.slice(-dyChatCtxRows(d)).map(m=>({role:m.from==='me'?'user':'assistant',content:dyMsgPlain(m)}));let sys;
   const c=d.cid?getC(d.cid):null;
   if(c)sys=buildSystem(c)+'\n\n# 场景\n现在在【抖音私信】里和'+S.me.name+'聊天，口语、简短自然，别带方括号动作。'+dyDMMutePrompt(d.cid);
   else sys='你是抖音上的陌生网友/小博主「'+d.name+'」，因为看了'+S.me.name+'的视频来私信她，自来熟、会撩、想加她微信想约她，但不下流。口语、简短、有网感，别带方括号。';
-  sys+=dyDMBubbleRule();
+  sys+=dyDMBubbleRule()+dyPayRule(d.msgs||[]);
   const r=await dyAuxChat([{role:'system',content:sys},...hist],{max:dyReplyBudget()});
-    const parts=dyDMBubbles(dyDMRunUnmute(d.cid,cleanReply(r)));if(!parts.length)return;
+    const paid=dyRunPayCommands(d.msgs||[],dyDMRunUnmute(d.cid,cleanReply(r)));
+    if(paid.did){save();if(cur().p==='dydm')render();}
+    const parts=dyDMBubbles(paid.text);if(!parts.length)return;
     for(let i=0;i<parts.length;i++){
       if(i)await sleep(420+Math.random()*680);/* 一条条冒出来，不要糊成一坨 */
       const live=(S.dy.dms||[]).find(x=>x.id===d.id);if(!live)return;

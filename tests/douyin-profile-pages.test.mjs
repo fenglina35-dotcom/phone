@@ -683,7 +683,7 @@ test('when she is muted the box is locked and only he can let her out', () => {
   assert.match(source('dyDMMutePrompt'), /\[解禁\|/, '私信里他能放她出来');
   assert.match(source('dyDMMutePrompt'), /完全按你的性格来/, '放不放由角色自己决定');
   assert.match(source('dyDMRunUnmute'), /dyGCmdApply\(g,by\.k,'unmute'/, '私信里的解禁要真的解开群里的禁言');
-  assert.match(app, /dyDMBubbles\(dyDMRunUnmute\(d\.cid,cleanReply\(r\)\)\)/, '私信回复要先过一遍解禁指令');
+  assert.match(app, /dyRunPayCommands\(d\.msgs\|\|\[\],dyDMRunUnmute\(d\.cid,cleanReply\(r\)\)\)/, '私信回复要先过一遍解禁和收款指令');
   for (const [name, css] of [['小手机.html', html], ['私人壳', shell], ['index.html', index]]) {
     assert.ok(css.includes('.dyg-muted{'), `${name} 少了禁言条的样式`);
     assert.ok(css.includes('.dyg-at{'), `${name} 少了 @ 高亮的样式`);
@@ -815,15 +815,21 @@ test('money moves through the WeChat ledger, and a group packet can be grabbed',
 });
 
 test('publishing is text-card or a real photo, and nobody pretends to see what they cannot', () => {
-  const compose = source('dyCompose');
-  assert.match(compose, /文字/);
-  assert.match(compose, /拍摄/);
-  assert.match(compose, /从相册选/);
-  assert.doesNotMatch(compose, /直播/, '直播先不做，也不放一个点不动的按钮');
+  const cam = source('dyPostCameraPage');
+  assert.match(cam, />文字</, '底下只有文字和相机');
+  assert.match(cam, />相机</);
+  assert.doesNotMatch(cam, /直播/, '直播先不做，也不放一个点不动的按钮');
+  assert.match(cam, /dyPostAlbum\(\)/, '相册要点得动');
+  assert.match(cam, /dypg-snap/, '要有快门');
+  assert.match(source('dyCompose'), /dyPostOpen\('camera'\)/, '发作品直接进相机页，不再弹窗');
   assert.match(source('dyPostImage'), /setAttribute\('capture','environment'\)/, '拍摄要真的调摄像头');
-  assert.match(source('dyPostTextForm'), /卡片颜色/);
-  assert.match(source('dyPostTextForm'), /文字颜色/);
-  assert.match(source('dyPostPublishForm'), /dyAtCandidates\(\)/, '发布页能 @ 人');
+  assert.match(source('dyPostTextPage'), /dypg-quote/, '写文字页要有那个大引号');
+  assert.match(source('dyPostTextPage'), /dyPostPick\('bg'/, '能选卡片颜色');
+  assert.match(source('dyPostTextPage'), /dyPostPick\('fg'/, '能选文字颜色');
+  assert.match(source('dyPostPublishPage'), /添加标题/);
+  assert.match(source('dyPostPublishPage'), /添加作品描述/);
+  assert.match(source('dyPostPublishPage'), /dyPostAtSheet\(\)/, '发布页能 @ 人');
+  assert.match(app, /else if\(c\.p==='dypost'\)html=renderDyPost\(\);/, '发作品是真页面，不是弹窗');
   assert.match(source('dyPostPublish'), /visionConfigured\(\)/, '配了视觉模型才去看图');
   assert.match(source('dyPostVision'), /visionAPI\(/, '真的调视觉模型看图');
   const scene = source('dyWorkSceneText');
@@ -877,9 +883,95 @@ test('a work can carry a song she really has, and tapping it plays that song', (
   assert.match(source('dyWorkMusicPlay'), /musicPlay\(s\.id\)/, '点了真的放这首歌');
   assert.match(source('dyWorkMusicPlay'), /已经不在音乐库里了/, '歌被删了要说清楚，不能装作放了');
   assert.match(source('dyPostPublish'), /songId:p\.songId\|\|''/, '发布时要把歌带上');
-  assert.match(source('dyPostPublishForm'), /dyPostMusicPick\(\)/, '发布页要有选音乐的入口');
+  assert.match(source('dyPostPublishPage'), /dyPostMusicPick\(\)/, '发布页要有选音乐的入口');
+  assert.match(source('dyPostCameraPage'), /dyPostMusicPick\(\)/, '相机页顶上也要有，跟真抖音一样');
   assert.match(source('dyWorkView'), /dyWorkMusicHTML\(v\)/, '作品页上要显示出来');
   for (const [name, css] of [['小手机.html', html], ['私人壳', shell], ['index.html', index]]) {
     assert.ok(css.includes('.dymu{'), `${name} 少了配乐那一条的样式`);
+  }
+});
+
+/* 第十二批：卡片复用微信的、[收款] 不再当文字显示、相册选得动、
+   发作品是三个真页面、作品能转发到抖音。 */
+
+test('the money cards are the WeChat ones, not a hand-drawn blue block', () => {
+  const card = source('dyMoneyCardHTML');
+  assert.match(card, /wx-transfer-card/, '转账卡直接用微信那张');
+  assert.match(card, /wx-transfer-glyph/);
+  assert.match(card, /cpay/, '红包卡也是微信那张');
+  assert.match(card, /cfoot/);
+  assert.doesNotMatch(card, /class="dymo/, '我自画的那个蓝方块要去掉');
+  assert.match(card, /transferState\(m\)/, '状态判断复用微信的');
+  assert.match(app, /m\.kind==='red'\|\|m\.kind==='transfer'\?' bare'/, '卡片自带底色，外面不能再套一层气泡');
+  assert.match(source('dyMoneyAct'), /addBill\('in',amount/, '收下的钱要进账');
+  for (const [name, css] of [['小手机.html', html], ['私人壳', shell], ['index.html', index]]) {
+    assert.ok(css.includes('.dydm-b.bare'), `${name} 少了不套气泡的样式`);
+  }
+});
+
+test('[收款] and [拒收] are executed, never printed as text', () => {
+  const ctx = vm.createContext({ String, transferState: m => (m && (m.received ? 'received' : m.declined ? 'refunded' : 'pending')), addBill() {} });
+  vm.runInContext(`const DY_PAY_RE=${app.match(/const DY_PAY_RE=(\/.*?\/g);/)[1]};\n`
+    + ['dyPayLast', 'dyRunPayCommands'].map(source).join('\n') + ';globalThis.R=dyRunPayCommands;', ctx);
+  const rows = [{ from: 'me', kind: 'transfer', id: 'p1', amount: 2 }];
+  const got = ctx.R(rows, '[收款] 两块钱？');
+  assert.equal(got.text, '两块钱？', '指令不能留在气泡里');
+  assert.equal(got.did, 1);
+  assert.equal(rows[0].received, true, '要真的收下');
+  const rows2 = [{ from: 'me', kind: 'red', id: 'p2', amount: 3 }];
+  assert.equal(ctx.R(rows2, '不要[拒收]').did, 1);
+  assert.equal(rows2[0].declined, true);
+  assert.equal(ctx.R([], '[收款]').did, 0, '没有待收的就不乱动');
+  assert.match(source('dyPayRule'), /\[收款\]/, '提示词里要教他怎么收');
+  assert.match(source('dyPayRule'), /\[拒收\]/);
+  assert.match(app, /dyRunPayCommands\(d\.msgs/, '私信回复要走这一步');
+});
+
+test('the album picker is attached to the page, or iOS ignores the click', () => {
+  const pick = source('dyPostImage');
+  assert.match(pick, /document\.body\.appendChild\(i\)/, '不挂进 DOM 的话 iOS 上点了没反应');
+  assert.match(pick, /capture','environment'/, '拍摄要真的调摄像头');
+  assert.match(pick, /i\.remove\(\)/, '用完要收拾干净');
+  assert.match(source('pickFile'), /document\.body\.appendChild\(i\)/, '项目里现成那个本来就是这么做的');
+});
+
+test('publishing is three real pages, shaped like the screenshots she sent', () => {
+  for (const f of ['renderDyPost', 'dyPostCameraPage', 'dyPostTextPage', 'dyPostPublishPage', 'dyPostOpen', 'dyPostClose']) {
+    assert.ok(app.includes(`function ${f}(`), `${f} 缺失`);
+    assert.ok(priv.includes(`function ${f}(`), `私人版缺少 ${f}`);
+  }
+  assert.match(app, /else if\(c\.p==='dypost'\)html=renderDyPost\(\);/, '要有自己的路由，不是弹窗');
+  const cam = source('dyPostCameraPage');
+  assert.match(cam, /选择音乐/, '相机页顶上是「♫ 选择音乐」，跟参考图一样');
+  assert.match(cam, /dypg-snap/, '中间一个大快门');
+  assert.match(cam, /dyPostAlbum\(\)/, '左边进相册');
+  const txt = source('dyPostTextPage');
+  assert.match(txt, /dypg-quote/, '写文字页那个大引号');
+  assert.match(txt, /下一步/, '右上角「下一步」');
+  const pub = source('dyPostPublishPage');
+  assert.match(pub, /dypub-cover/, '发布页顶上是封面');
+  assert.match(pub, /# 话题/);
+  assert.match(pub, /@ 朋友/);
+  assert.match(pub, /发作品/);
+  for (const [name, css] of [['小手机.html', html], ['私人壳', shell], ['index.html', index]]) {
+    for (const cls of ['.dypg{', '.dypg-snap{', '.dypg-card{', '.dypub-go{']) {
+      assert.ok(css.includes(cls), `${name} 少了 ${cls}`);
+    }
+  }
+});
+
+test('a work forwards into 抖音 DMs and groups, on a WeChat-looking card', () => {
+  const fwd = source('dyFwd');
+  assert.match(fwd, /转发到微信/);
+  assert.match(fwd, /转发到抖音私信/);
+  assert.match(fwd, /转发到抖音群聊/);
+  const to = source('dyFwdTo');
+  assert.match(to, /dyGMsgs\(g\)\.push/, '群聊收得到');
+  assert.match(to, /d\.msgs\.push/, '私信收得到');
+  assert.match(to, /dyGMeMuted\(g\)/, '被禁言就发不出去');
+  assert.match(source('dyWorkCardHTML2'), /dywc-tag/, '卡片上要有抖音标');
+  assert.match(source('dyMsgPlain'), /转发了一条抖音作品/, '上下文里要说清楚转的是什么');
+  for (const [name, css] of [['小手机.html', html], ['私人壳', shell], ['index.html', index]]) {
+    assert.ok(css.includes('.dywc{'), `${name} 少了作品卡的样式`);
   }
 });
