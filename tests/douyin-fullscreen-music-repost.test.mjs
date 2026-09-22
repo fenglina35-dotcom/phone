@@ -123,6 +123,25 @@ test('双击蹦出来的那颗也走同一个填色函数，不再两套写法',
   assert.match(source('dyHeartBurst'), /d\.innerHTML=svgIcFill\('heart',98,'#f5243d',1\.2\);/);
 });
 
+test('评论那个按钮是实心白气泡，中间三个点是真的洞', () => {
+  for (const x of [app, priv]) assert.match(x, /function dyCmIcon\(size,color\)/);
+  const fn = source('dyCmIcon');
+  assert.match(fn, /fill-rule="evenodd"/, '没有 evenodd 就挖不出洞，三个点会被填满');
+  assert.match(fn, /clip-rule="evenodd"/);
+  /* 小尾巴必须是另一条 path：塞进 evenodd 那条里，重叠的部分会被当成洞挖掉 */
+  const paths = fn.match(/<path/g) || [];
+  assert.equal(paths.length, 2, '应该是两条 path：尾巴一条、气泡带洞一条');
+  assert.equal(/M8\.1 9\.4a1\.6 1\.6[\s\S]*M12 9\.4a1\.6 1\.6[\s\S]*M15\.9 9\.4a1\.6 1\.6/.test(fn), true, '三个点要在 evenodd 那条里');
+  assert.equal(fn.includes('stroke'), false, '这个图标不描边，全靠填色');
+});
+test('两处评论按钮都换成了 dyCmIcon，没有漏网的描边版', () => {
+  for (const x of [app, priv]) {
+    assert.match(x, /onclick="dyComments\('\$\{v\.id\}'\)"><span class="ic">\$\{dyCmIcon\(33\)\}/);
+    assert.match(x, /dywk-r" onclick="dyComments\('\$\{v\.id\}'\)">\$\{dyCmIcon\(29\)\}/);
+    assert.equal(/svgIc\('chat',(?:33|29),/.test(x), false, '还有抖音的评论按钮是描边版');
+  }
+});
+
 /* ===== @ 写进描述 ===== */
 test('@ 朋友插在光标处，写进作品描述里，不是底下一排小标签', () => {
   assert.match(source('dyPostAt'), /dyPostInsertDesc\('@'\+q\.name\+' '\)/);

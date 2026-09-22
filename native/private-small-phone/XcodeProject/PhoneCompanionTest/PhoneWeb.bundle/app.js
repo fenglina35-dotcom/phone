@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1287'){
+if(window.__NORTH_SHELL_BUILD__!=='1289'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -435,7 +435,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1287 · 抖音全屏作品与配乐（私人）';
+const APP_VER='v1289 · 抖音实心图标（私人）';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1767,7 +1767,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1287&r=v1287-private-dy-fullscreen-1';
+  const url='sw.js?v=1289&r=v1289-private-dy-solid-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -3748,6 +3748,17 @@ function svgIc(name,size,color,sw){const p=ICONS[name];if(!p)return '';size=size
    点上去就该是实心的，所以这里出一个填色版本。 */
 function svgIcFill(name,size,color,sw){const p=ICONS[name];if(!p)return '';size=size||22;color=color||'currentColor';
   return '<svg viewBox="0 0 24 24" width="'+size+'" height="'+size+'" fill="'+color+'" stroke="'+color+'" stroke-width="'+(sw==null?1.4:sw)+'" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle">'+p+'</svg>';}
+/* 抖音那个评论按钮是一整块实心白气泡，中间三个点是镂空的洞——不是描一圈边。
+   洞要靠 fill-rule="evenodd"，svgIc 做不出来，所以单独写一个。
+   小尾巴是另一条 path：跟气泡同色会自然合成一块，放进 evenodd 里反而会被挖掉。 */
+function dyCmIcon(size,color){size=size||30;color=color||'#fff';
+  return '<svg viewBox="0 0 24 24" width="'+size+'" height="'+size+'" style="vertical-align:middle">'
+    +'<path fill="'+color+'" d="M8.2 17.6 5.9 21.7c-.35.62.32 1.3.93.93l5.3-3.2z"/>'
+    +'<path fill="'+color+'" fill-rule="evenodd" clip-rule="evenodd" d="'
+    +'M12 2.6a9.6 8.4 0 1 0 0 16.8 9.6 8.4 0 1 0 0-16.8Z'
+    +'M8.1 9.4a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 1 0 0-3.2Z'
+    +'M12 9.4a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 1 0 0-3.2Z'
+    +'M15.9 9.4a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 1 0 0-3.2Z"/></svg>';}
 /* 点上了就实心，没点就还是原来的线条 */
 function dyIc(name,size,on,onColor,offColor,sw){return on?svgIcFill(name,size,onColor,sw):svgIc(name,size,offColor,sw);}
 const HOMEAPPS=[['wechat','💬','微信'],['phoneapp','☎','电话'],['settings','⚙️','设置'],['aiaccount','AI','AI账户'],['worldbook','📖','世界书'],['browser','🌐','浏览器'],['moments','🌸','朋友圈'],['spy','🔍','查他手机'],['shop','🛒','购物'],['calendar','📅','日历'],['x','𝕏','X'],['douyin','🎵','抖音'],['food','🍔','外卖'],['couple','💞','情侣空间'],['tasks','📋','任务便签'],['games','🎮','游戏大厅'],['mail','','信箱'],['offline','🌹','线下约会'],['music','🎵','音乐'],['cinema','','放映室'],['roleplay','','角色扮演'],['tale','🕯️','规则怪谈'],['dread','🩸','惊悚抉择'],['travel','✈','云程'],['contacts','👤','通讯录'],['me','🐱','我']];
@@ -5537,7 +5548,7 @@ function dyVideoCard(v,i){const liked=!!v.liked,lc=(v.lk||0)+(liked?1:0),starred
     <div class="dyrail">
       <div class="ra" onclick="dyVideoAuthor('${v.id}')" style="margin-bottom:5px"><div style="position:relative">${(mine?av(dyAvatar(),'sm'):dyFace(v.avatar,'sm'))}${isChar&&!fol?'<span class="dyrail-plus">+</span>':''}</div></div>
       <div class="ra" onclick="dyLike('${v.id}')"><span class="ic">${dyIc('heart',34,liked,'#f5243d','#fff')}</span>${dyNum(lc)}</div>
-      <div class="ra" onclick="dyComments('${v.id}')"><span class="ic">${svgIc('chat',33,'#fff',2)}</span>${dyNum((v.comments||[]).length)}</div>
+      <div class="ra" onclick="dyComments('${v.id}')"><span class="ic">${dyCmIcon(33)}</span>${dyNum((v.comments||[]).length)}</div>
       <div class="ra" onclick="dyStar('${v.id}')"><span class="ic">${dyIc('star',33,starred,'#f5c518','#fff',2)}</span>${dyNum(sc)}</div>
       <div class="ra" onclick="dyFwd('${v.id}')"><span class="ic">${svgIc('forward',32,'#fff',2)}</span>分享</div>
     </div>
@@ -7393,7 +7404,7 @@ function dyWorkRail(v){const liked=!!v.liked,lc=(v.lk||0)+(liked?1:0),starred=!!
   return `<div class="dywk-rail">
     <div onclick="dyWorkAuthor('${v.id}')">${(mine?av(dyAvatar(),'sm'):dyFace(v.avatar,'sm'))}</div>
     <div class="dywk-r" onclick="dyLike('${v.id}')">${dyIc('heart',30,liked,'#f5243d','#fff')}${dyNum(lc)}</div>
-    <div class="dywk-r" onclick="dyComments('${v.id}')">${svgIc('chat',29,'#fff',2)}${dyNum((v.comments||[]).length)}</div>
+    <div class="dywk-r" onclick="dyComments('${v.id}')">${dyCmIcon(29)}${dyNum((v.comments||[]).length)}</div>
     <div class="dywk-r" onclick="dyStar('${v.id}')">${dyIc('star',29,starred,'#f5c518','#fff',2)}${dyNum(sc)}</div>
     <div class="dywk-r" onclick="dyWorkMore('${v.id}')"><em>···</em>更多</div>
     <div class="dywk-r"><span class="dywk-same">${esc(v.emoji||'🎬')}</span>拍同款</div>
