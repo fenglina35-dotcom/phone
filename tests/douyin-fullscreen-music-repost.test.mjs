@@ -24,7 +24,7 @@ const both = (name, why) => test(`${name} · ${why}（网页和私人两端一�
 });
 
 /* ===== 图片作品全屏 ===== */
-test('图片作品在首页是全屏的，背后垫自己的模糊放大版', () => {
+test('图片作品在首页铺满整屏，多出来的裁掉', () => {
   const card = source('dyVideoCard');
   assert.match(card, /const photo=v&&v\.img\?storedImageDisplaySource\(v\.img\):''/);
   assert.match(card, /dybg dybg-photo/);
@@ -32,14 +32,23 @@ test('图片作品在首页是全屏的，背后垫自己的模糊放大版', ()
   assert.match(card, /dyWorkCardHTML\(v,\{lines:4,full:!!photo\}\)/);
   for (const s of shells) {
     assert.match(s, /\.dyfd-card\.photo\{left:0;right:0;top:0;bottom:0;\}/);
-    assert.match(s, /\.dyfd-card\.photo \.dyimg img\{[^}]*object-fit:contain/);
-    assert.match(s, /\.dybg\.dybg-photo\{[^}]*filter:blur\(32px\)/);
+    assert.match(s, /\.dyfd-card\.photo \.dyimg img\{[^}]*object-fit:cover/);
   }
 });
-test('作品详情页的图也是整张铺开、不裁切', () => {
+test('铺满之后不再垫那张模糊的自己——两种画面撞出来的就是她看到的那条线', () => {
+  const card = source('dyVideoCard');
+  assert.equal(/dybg-photo" style="background-image:url/.test(card), false, '还在给垫图设背景，那条线就还会有机会出现');
+  assert.equal(/dywk-frame\$\{v\.img\?' photo':''\}" style="background-image/.test(source('dyWorkView')), false, '作品详情页还在垫图');
+  for (const s of shells) {
+    assert.match(s, /\.dybg\.dybg-photo\{background:#000;background-image:none;[^}]*filter:none/);
+    assert.match(s, /\.dywk-frame\.photo\{top:0;transform:none;height:100%;background:#000/);
+    assert.equal(/\.dywk-frame\.photo:before/.test(s), false, '作品详情页那层 backdrop-filter 该撤掉了');
+  }
+});
+test('作品详情页的图也是铺满', () => {
   const view = source('dyWorkView');
   assert.match(view, /dywk-frame\$\{v\.img\?' photo':''\}/);
-  for (const s of shells) assert.match(s, /\.dywk-frame\.photo \.dyimg img\{[^}]*object-fit:contain/);
+  for (const s of shells) assert.match(s, /\.dywk-frame\.photo \.dyimg img\{[^}]*object-fit:cover/);
 });
 
 /* ===== 配乐 ===== */

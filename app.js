@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1288'){
+if(window.__NORTH_SHELL_BUILD__!=='1290'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -411,7 +411,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1288 · 抖音实心图标';
+const APP_VER='v1290 · 抖音图片铺满整屏';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1773,7 +1773,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1288&r=v1288-web-dy-solid-1';
+  const url='sw.js?v=1290&r=v1290-web-dy-cover-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -5553,7 +5553,7 @@ function dyVideoCard(v,i){const liked=!!v.liked,lc=(v.lk||0)+(liked?1:0),starred
   const grad=v.grad||DY_GRADS[i%DY_GRADS.length],isChar=v.cid&&v.cid!=='me',mine=v.cid==='me',fol=isChar&&(S.dy.following||[]).includes(v.cid);
   const photo=v&&v.img?storedImageDisplaySource(v.img):'';
   return `<div class="dyvideo" data-dy-video-id="${v.id}" onclick="dyCardTap('${v.id}',event)">
-    ${photo?`<div class="dybg dybg-photo" style="background-image:url(${photo})"></div>`:`<div class="dybg" style="background-image:${grad}"></div>`}
+    ${photo?'<div class="dybg dybg-photo"></div>':`<div class="dybg" style="background-image:${grad}"></div>`}
     <div class="dyfd-card${photo?' photo':''}" onclick="event.stopPropagation();dyOpenWork('${v.id}')">${dyWorkCardHTML(v,{lines:4,full:!!photo})}</div>
     <div class="dyrail">
       <div class="ra" onclick="dyVideoAuthor('${v.id}')" style="margin-bottom:5px"><div style="position:relative">${(mine?av(dyAvatar(),'sm'):dyFace(v.avatar,'sm'))}${isChar&&!fol?'<span class="dyrail-plus">+</span>':''}</div></div>
@@ -7440,7 +7440,7 @@ function dyWorkView(){const v=dyVid(dyWorkCurId());if(!v)return `<div class="dyv
   return `<div class="dywk">
     <div class="dywk-stage">
       <div class="dywk-top dy-safe-nav2"><i onclick="dySubClose()">‹</i><i onclick="dyTab='search';_dySub='';render()">${svgIc('search',24,'#fff',2)}</i></div>
-      <div class="dywk-frame${v.img?' photo':''}" style="background-image:${v.img?`url(${storedImageDisplaySource(v.img)})`:grad}" onclick="dyCardTap('${v.id}',event)">${dyWorkCardHTML(v,{full:true})}</div>
+      <div class="dywk-frame${v.img?' photo':''}"${v.img?'':` style="background-image:${grad}"`} onclick="dyCardTap('${v.id}',event)">${dyWorkCardHTML(v,{full:true})}</div>
       ${dyWorkDanmu(v)}${dyWorkRail(v)}
       <div class="dynarr" id="narr_${v.id}" onclick="dyTapVideo('${v.id}')" style="display:${_dyNarr[v.id]?'block':'none'}"><div style="font-weight:800;color:#fff;margin-bottom:7px">视频内容</div>${esc(v.narration||v.desc||'（这条还没有内容描写）')}<div style="text-align:center;color:#777;margin-top:10px;font-size:11px">轻触收起</div></div>
     </div>
