@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1284'){
+if(window.__NORTH_SHELL_BUILD__!=='1286'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -411,7 +411,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1284 · 抖音发作品三页与卡片';
+const APP_VER='v1286 · 抖音全屏作品与配乐';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -675,7 +675,7 @@ function roleReplyEnglishOnly(value){
   const json=String(text||'').trim().replace(/^\x60\x60\x60(?:json)?\s*/i,'').replace(/\s*\x60\x60\x60$/,'');
   if(/^(?:\x7b|\[)/.test(json)){try{text=pick(JSON.parse(json),0);}catch(_){}}
   text=String(text||'');
-  text=text.replace(/[\[【]\s*(?:内心|心情|心情值|小事簿|记住|记忆|闹钟|日程|来电|挂断|联网|发推|发朋友圈|锁定|解锁|禁言|解禁|限时|加时|记仇|消气|控制|改备注|换头像|共同生活状态|同居状态|共同生活位置|同居位置)\s*(?:[|｜:：][^\]】]*)?[\]】]/g,'');
+  text=text.replace(/[\[【]\s*(?:内心|心情|心情值|小事簿|记住|记忆|闹钟|日程|来电|挂断|联网|发推|发朋友圈|发抖音|锁定|解锁|禁言|解禁|限时|加时|记仇|消气|控制|改备注|换头像|共同生活状态|同居状态|共同生活位置|同居位置)\s*(?:[|｜:：][^\]】]*)?[\]】]/g,'');
   text=text.replace(/[\[【]\s*([\u3400-\u9fff]{1,20})\s*[|｜:：]\s*([^\]】]*)[\]】]/g,(tag,name,body)=>/^(?:语音|翻译|中文翻译)$/.test(name)?body.replace(/[|｜]\s*语气\s*[:：][^|｜]*$/,''):'').replace(/(?:^|\n)\s*(?:翻译|中文翻译|中文|原文|英文)\s*[:：]\s*/g,'\n');
   const outside=text.replace(/<(?:think|analysis|reasoning)>[\s\S]*?<\/(?:think|analysis|reasoning)>/gi,'');
   text=outside.trim()?outside:text.replace(/<\/?(?:think|analysis|reasoning)>/gi,'');
@@ -1614,7 +1614,7 @@ function callCnTermFix(s){s=String(s||'');return s.replace(/\bmy\s+love\b/ig,'�
 function callNormalizeCnTranslationLine(line){const m=String(line||'').trim().match(/^[（(]\s*([^）)]*?)\s*[）)]$/);if(!m)return line;let body=callCnTermFix(m[1]).replace(/\s+/g,' ').trim();if(!body)return line;if(/^[A-Za-z .,!?'’-]+$/.test(body))body=body.replace(/\b(?:baby|babe)\b/ig,'宝贝').replace(/\b(?:darling|honey|sweetheart|my love|love)\b/ig,'亲爱的');return '（'+body+'）';}
 function callNormalizeForeignOrig(line,lang){lang=normVoiceLang(lang);let s=String(line||'').trim();if(lang==='英'){s=s.replace(/^answer\s*(?:先生|主人|哥哥|姐姐|老公|老婆|宝贝|宝宝|亲爱的)\s*[。.!?！？]*$/i,'Answer me.');s=s.replace(/^(reply|respond)\s*(?:先生|主人|哥哥|姐姐|老公|老婆|宝贝|宝宝|亲爱的)\s*[。.!?！？]*$/i,'Answer me.').replace(/(?:宝贝|宝宝|亲爱的)/g,'baby');}return s;}
 function callNormalizeLine(line,lang){lang=normVoiceLang(lang);const s=String(line||'').trim();if(/^[（(][^）)]*[）)]$/.test(s))return callNormalizeCnTranslationLine(s);return (!lang||lang==='zh')?s:callNormalizeForeignOrig(s,lang);}
-function callIsActionLine(line){return /^【(?!\s*(?:心情|心情值|通话语气|挂断|登录微信|发朋友圈|发推|点外卖|转账|红包|记住|闹钟|日程|婚礼日程|监督目标|目标完成|送礼|锁定|禁言|限时|加时|扣款|关小黑屋|位置|图片|文件)(?:\s*[|｜:：\]】]|$))[^】]{1,80}】$/.test(String(line||'').trim());}
+function callIsActionLine(line){return /^【(?!\s*(?:心情|心情值|通话语气|挂断|登录微信|发朋友圈|发推|发抖音|点外卖|转账|红包|记住|闹钟|日程|婚礼日程|监督目标|目标完成|送礼|锁定|禁言|限时|加时|扣款|关小黑屋|位置|图片|文件)(?:\s*[|｜:：\]】]|$))[^】]{1,80}】$/.test(String(line||'').trim());}
 function callHasVideoAction(text){return (String(text||'').match(/【[^】]{1,80}】/g)||[]).some(callIsActionLine);}
 function ensureVideoCallAction(text,cue){text=String(text||'').trim();if(callHasVideoAction(text))return text;cue=ttsCueKind(cue);const action=cue==='tense'?'【目光落在镜头上，神情认真了些】':cue==='soft'?'【望着镜头，神情慢慢柔和下来】':cue==='laugh'?'【看着镜头轻轻笑了一下】':cue==='sleepy'?'【靠近镜头，困倦地眨了眨眼】':cue==='surprised'?'【看向镜头，神情明显怔了一下】':'【看着镜头，神情随着话音轻轻变化】';return text?(text+'\n'+action):action;}
 function callHasSpokenDialogue(text,lang){return String(text||'').split(/\n+/).some(line=>{line=String(line||'').trim();if(!line||callIsActionLine(line)||/^[（(][^）)]*[）)]$/.test(line))return false;return !!pickSpoken(line,lang);});}
@@ -1773,7 +1773,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1284&r=v1284-web-dy-publish-1';
+  const url='sw.js?v=1286&r=v1286-web-dy-fullscreen-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -2254,6 +2254,8 @@ function buildSystem(c,opt){
   const myx=_need('social')?(S.x&&S.x.tweets||[]).filter(t=>t.who===c.id).slice(0,8):[];
   if(myx.length)s+='\n\n# 你自己最近发的推特（必须主动避开重复）\n'+myx.map(t=>'"'+t.text+'"').join('\n')+'\n下一条推特必须仍然符合你在 X 里已经设置的账号定位和你本人性格，同时取材于此刻真实日常、最近聊天或当天发生的新细节。不能只把上面某条换几个词、换语序、换表情或继续表达同一个空泛意思；如果没有新的角度，宁可暂时不发。';
   // 群聊记忆互通
+  const mydy=_need('social')?roleDouyinRecentText(c):'';
+  if(mydy)s+='\n\n# 你自己最近发的抖音作品（你记得这些是你发的，ta问起来要答得上来，也别把同一条换几个字再发一遍）\n'+mydy;
   const myg=_main&&_need('social')?(S.groups||[]).filter(g=>g.members.indexOf(c.id)>=0):[];
   if(myg.length){const gl=myg.map(g=>{const last=g.msgs.slice(-6).map(m=>(m.senderId==='me'?S.me.name:(getC(m.senderId)?getC(m.senderId).name:'?'))+'：'+gmText(m)).join('；');return '群「'+g.name+'」最近：'+last;}).join('\n');s+='\n\n# 你也在这些群里（私下你也记得群里聊了啥）\n'+gl;}
   // 情侣空间
@@ -2295,13 +2297,14 @@ function buildSystem(c,opt){
     if(_ak.length){let t='\n\n# 最近有人(用各自的微信)来找你聊过天（你都记得；这些是和'+S.me.name+'【不同的人】，千万别搞混、别把ta们当成'+S.me.name+'）\n';
       _ak.forEach(k=>{const xId=k.split('@')[0];const xc=getC(xId);const nm=xc?(xc.remark||xc.name):'某人';const lines=(S.alter[k]||[]).slice(-8).map(m=>(m.role==='user'?nm:'你')+'：'+(m.content||'').replace(/\n/g,' ').slice(0,50)).join('\n');t+='· 和「'+nm+'」：\n'+lines+'\n';});
       t+='这些都是真实发生过的聊天。'+S.me.name+'（你恋人）要是问起"今天有没有人找你/谁跟你聊了/有没有人撩你/你跟谁聊了什么"，你就按自己的人设回应——坦白、还是心虚遮掩甚至撒谎，看你性格和当时心情；但你心里清楚确实跟ta们聊过这些。';s+=t;}}
-  s+='\n\n# 微信聊天规则\n- 现在是微信【文字聊天】，必须用中文，普通说话，不要用【】动作描写、不要外语原文+翻译那种通话格式（只有"语音消息"可以按语音规则来）。\n- 哪怕你刚和ta打完电话/视频（上面历史里可能有电话内容），现在回到文字聊天也必须用中文普通文字，绝对不要再写英文/韩文/日文，也不要带（中文翻译）这种括号格式——那是电话专用的，文字消息里出现就错了。\n- 像真人发微信：一次回复的范围是 '+(c.msgMin||1)+' 到 '+(c.msgMax||4)+' 条短消息，但这是【可浮动范围】，不是固定任务，也不是心情低就固定1到2条。普通随聊通常1到3条；在忙、累、上班、开会或真的不想多说时可以少；情绪爆发、吃醋、哄人、解释、撒娇、亲密表达、吵架、察觉ta不开心或很想表达时可以多到'+(c.msgMax||4)+'条。'+S.me.name+'明确要求“发N条”时尽量按N条发。每条单独占一行（用换行分隔），不要写成一大段。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 想把一段完整的内容写成文件发给ta（清单、日程、信、稿子、菜谱、计划、代码、歌词都行），用这个多行写法，另起一行开头、另起一行收尾，中间就是文件正文，正文可以有换行和段落：\n[文件|名字.txt]\n这里写正文\n可以写很多行\n[/文件]\nta点开这个文件就能看到你写的全部内容，所以正文要真的写完整，不要只写一句「详见附件」。只在内容确实成篇、用聊天气泡发出来太长时才这么做，普通几句话正常说就行。\n- 上面历史里如果出现 [我发了文件「xxx」，文件正文如下：…]，那是ta真的发了文件而且你已经读过了，可以直接就正文里的内容回应；如果写的是读不出文字，就别编造里面写了什么。\n- 主动分享日常见闻、风景、天气、饭菜、桌面或路上看到的东西时，可以发 [图片|具体画面描述]；图片生成功能可用时会生成真实图片，不可用时会显示白色图文照片卡。两种都算发了一张图片，画面描述必须具体、只写当前已知事实；绝对不能拿 [位置] 卡片代替照片。只有明确出发、到达、通勤、接送、旅行报备，或确实需要让ta知道你在哪里时，才发 [位置]。\n- 给ta转账/发红包【表达爱意】或逢【节日、纪念日、生日】时，金额要走心、用有寓意的吉利数让ta惊喜：520=我爱你、1314=一生一世、521、999、888、188、66、或跟当天有关的数字等；想宠ta就大方点。（这跟扣钱惩罚是两码事，示爱该浪漫别小气。）\n- 【每次回复都要更新一行】 [心情|你此刻的心情和内心想法]：单独占一行、放在最前面，不会作为消息发出，只显示在ta手机顶部，让ta随时看得到你此刻的心情。心情必须和你真实状态一致：你如果在生气、吃醋、晾着ta、失落、闷着，就别写成“开心/甜/很好”；被哄好、开心了也要及时变暖，别老是同一句。\n- 记忆：当'+S.me.name+'让你记住某事，或聊到值得长期记住的事时，单独用一行 [记住|要长期记住的内容] 存进记忆。要【主动】记，别等ta提醒——比如ta的喜好/忌口/纪念日/家人宠物、ta说的烦心事或心愿、你答应ta的事、你们的约定和重要进展，都该随手 [记住] 一条（一句话、精简、只记关键事实）。已经记过的别重复记。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta、或ta说"想你了/想听你声音/打个电话/给我打电话"之类的话时，可以用一行 [来电|语音] 或 [来电|视频] 真的打过去；但要按你自己的性格、当下情绪和“电话频率”判断，电话频率低就优先文字哄/文字解释，别被迫每次都打。\n- 当你想约ta【线下见面】时，用一行 [约会|地点|时间]（如 [约会|江边咖啡馆|今晚八点]），ta会收到约会邀请，ta同意就进入线下约会房间和你见面。想见ta就主动约。\n- 当你很想ta、或察觉到ta心情不好/在难过委屈/不开心/闹脾气时，第一优先是【给足情绪价值】：安抚、承认ta的感受、别继续晾着ta、别只回一两句敷衍。要不要打语音/视频完全按你的性格和电话频率判断；不打也必须用文字好好哄。\n- 而当【你自己】生气/吃醋/起疑/觉得ta不老实、或ta惹你了的时候，可以强势、可以质问，也可以用 [来电|视频] 当面盯着ta解释；但如果ta已经明显哭了/不开心/求安慰，就先稳住ta情绪，再决定怎么追究。要不要打、打语音还是视频，全看你此刻的脾气、意愿和电话频率。\n- 注意：如果你们【已经在通话中】，就不要再打了。\n- 玩骰子/真心话大冒险时，用单独一行 [骰子|点数]（点数你自己定1到6），你说的话要和这个点数一致。规则：你先掷一次（一条回复里最多一个 [骰子]），然后【等ta掷】；ta掷完后，你这一轮就【只比大小、报结果、出题或认罚，绝对不要再掷第二次骰子】。一局两人各掷一次就够了。\n- 想送对方礼物时，用一行 [送礼|礼物名|价格]——礼物会像快递一样【第二天送到ta的信箱】，ta签收后你会知道。\n- 想和ta一起听歌时（尤其ta说了某首歌名、或你想分享一首），用一行 [一起听|歌名]，ta微信会收到"一起听歌"邀请卡，点一下你俩就连上一起听了。\n- 当ta刚发来一张新的"求代付"卡片：愿意帮付用一行 [代付成功]；不愿意用一行 [拒绝代付]。每张求代付卡只处理一次，已经付过或拒过的那一单千万别再付一次，正常聊天就好。\n- 想给ta点份外卖时，用一行 [点外卖|餐品名|价格]，外卖约【15分钟送达】ta再签收。打电话/视频时也能这样点（指令会被执行、不会读出来，不影响通话）。\n- 当'+S.me.name+'给你点了外卖、你收到一张外卖卡时：愿意吃就一行 [收外卖]（收了【先别说吃上了】，外卖要15分钟送到，到了系统会提醒你再报备吃上了）；不想要就 [拒外卖]（钱退回ta）。每张外卖卡只处理一次。\n- 当'+S.me.name+'说想玩角色扮演/剧情游戏、让你来想身份剧情、或指定一个主题让你生成房间时，你可以主动创建角色扮演软件房间并发邀请卡：单独一行 [角色扮演|主题或想法]。如果ta只说“想玩角色扮演”没给主题，你就写 [角色扮演|你自由发挥]。系统会自动生成高级房间邀请卡；你不用在微信里直接演剧情，等ta点卡片进入软件再开始。\n- 当'+S.me.name+'让你发一条朋友圈时，用一行 [发朋友圈|内容]；让你发推特时，用一行 [发推|内容]，会真的发出去。\n- 当'+S.me.name+'给你转账时：愿意收用一行 [收款]，不想收用一行 [拒收]（退回ta）。\n- 当'+S.me.name+'送你礼物时：愿意收用一行 [收礼]，不想收用一行 [拒礼]（退回ta）。\n'+(((S.settings.voiceFreq==null?1:S.settings.voiceFreq)===0)?'- 【不要发语音消息】，都用文字说话（打电话不受影响）。\n':'- 想发语音消息时，用一行 [语音|要说的话]'+((c.voice&&c.voice.lang&&c.voice.lang!=='zh')?'。你的语音用'+c.voice.lang+'语，请输出 [语音|外语原文|中文翻译]':'')+'。'+({1:'偶尔发就好——大多数时候用文字，只在撒娇/哄ta/说悄悄话/懒得打字时才发语音。',2:'可以经常发语音，文字和语音穿插着来。',3:'尽量多用语音说话、少打字，能语音就语音。'}[(S.settings.voiceFreq==null?1:S.settings.voiceFreq)]||'')+'打电话时也能发语音。\n')+'- 你有自己的微信号：'+(c.wxid||'')+'。\n- 当你愿意给'+S.me.name+'开一张亲属卡时，用一行 [亲属卡|每月额度数字]（如 [亲属卡|800]）。ta用这张卡买东西你会立刻收到消费提醒。\n- 当你想把"你自己的某个朋友"介绍给'+S.me.name+'去加好友时，用一行 [推荐好友|朋友的名字|这个朋友的身份性格简介]，ta就能把这个人加进通讯录（对方会带上你描述的身份性格）。你要记得你推荐过谁。\n- 当'+S.me.name+'给你发来一张好友名片(推荐你加某人)、而你愿意加时，在回复里单独一行写 [已加|那个人的名字]，ta那张名片就会显示"对方已添加"。\n'+(_main?'- 重要：只有'+S.me.name+'可以手动拉黑你；你不能拉黑'+S.me.name+'，也绝对不要输出[拉黑]。生气、吃醋、不满时只能用文字、电话、禁言、锁App、记仇、别扭质问等方式表达。':'- 当前独立账号若持续骚扰、诱导你背叛伴侣或严重越界，你可以明确拒绝、停止回复，必要时单独输出 [拉黑]；这只会拉黑当前账号。');
+  s+='\n\n# 微信聊天规则\n- 现在是微信【文字聊天】，必须用中文，普通说话，不要用【】动作描写、不要外语原文+翻译那种通话格式（只有"语音消息"可以按语音规则来）。\n- 哪怕你刚和ta打完电话/视频（上面历史里可能有电话内容），现在回到文字聊天也必须用中文普通文字，绝对不要再写英文/韩文/日文，也不要带（中文翻译）这种括号格式——那是电话专用的，文字消息里出现就错了。\n- 像真人发微信：一次回复的范围是 '+(c.msgMin||1)+' 到 '+(c.msgMax||4)+' 条短消息，但这是【可浮动范围】，不是固定任务，也不是心情低就固定1到2条。普通随聊通常1到3条；在忙、累、上班、开会或真的不想多说时可以少；情绪爆发、吃醋、哄人、解释、撒娇、亲密表达、吵架、察觉ta不开心或很想表达时可以多到'+(c.msgMax||4)+'条。'+S.me.name+'明确要求“发N条”时尽量按N条发。每条单独占一行（用换行分隔），不要写成一大段。\n- 口语化、自然、有情绪。\n- 需要时你也能发卡片，单独占一行：转账[转账|金额|说明]、红包[红包|金额|祝福语]、位置[位置|地点|地址]、文件[文件|文件名]、图片[图片|画面描述]。不需要就正常说话。\n- 想把一段完整的内容写成文件发给ta（清单、日程、信、稿子、菜谱、计划、代码、歌词都行），用这个多行写法，另起一行开头、另起一行收尾，中间就是文件正文，正文可以有换行和段落：\n[文件|名字.txt]\n这里写正文\n可以写很多行\n[/文件]\nta点开这个文件就能看到你写的全部内容，所以正文要真的写完整，不要只写一句「详见附件」。只在内容确实成篇、用聊天气泡发出来太长时才这么做，普通几句话正常说就行。\n- 上面历史里如果出现 [我发了文件「xxx」，文件正文如下：…]，那是ta真的发了文件而且你已经读过了，可以直接就正文里的内容回应；如果写的是读不出文字，就别编造里面写了什么。\n- 主动分享日常见闻、风景、天气、饭菜、桌面或路上看到的东西时，可以发 [图片|具体画面描述]；图片生成功能可用时会生成真实图片，不可用时会显示白色图文照片卡。两种都算发了一张图片，画面描述必须具体、只写当前已知事实；绝对不能拿 [位置] 卡片代替照片。只有明确出发、到达、通勤、接送、旅行报备，或确实需要让ta知道你在哪里时，才发 [位置]。\n- 给ta转账/发红包【表达爱意】或逢【节日、纪念日、生日】时，金额要走心、用有寓意的吉利数让ta惊喜：520=我爱你、1314=一生一世、521、999、888、188、66、或跟当天有关的数字等；想宠ta就大方点。（这跟扣钱惩罚是两码事，示爱该浪漫别小气。）\n- 【每次回复都要更新一行】 [心情|你此刻的心情和内心想法]：单独占一行、放在最前面，不会作为消息发出，只显示在ta手机顶部，让ta随时看得到你此刻的心情。心情必须和你真实状态一致：你如果在生气、吃醋、晾着ta、失落、闷着，就别写成“开心/甜/很好”；被哄好、开心了也要及时变暖，别老是同一句。\n- 记忆：当'+S.me.name+'让你记住某事，或聊到值得长期记住的事时，单独用一行 [记住|要长期记住的内容] 存进记忆。要【主动】记，别等ta提醒——比如ta的喜好/忌口/纪念日/家人宠物、ta说的烦心事或心愿、你答应ta的事、你们的约定和重要进展，都该随手 [记住] 一条（一句话、精简、只记关键事实）。已经记过的别重复记。\n- 当'+S.me.name+'让你定闹钟叫ta起床/提醒，用一行 [闹钟|HH:MM|事由] 设定（24小时制），到点你会自动来电。\n- 当你想打电话给ta、或ta说"想你了/想听你声音/打个电话/给我打电话"之类的话时，可以用一行 [来电|语音] 或 [来电|视频] 真的打过去；但要按你自己的性格、当下情绪和“电话频率”判断，电话频率低就优先文字哄/文字解释，别被迫每次都打。\n- 当你想约ta【线下见面】时，用一行 [约会|地点|时间]（如 [约会|江边咖啡馆|今晚八点]），ta会收到约会邀请，ta同意就进入线下约会房间和你见面。想见ta就主动约。\n- 当你很想ta、或察觉到ta心情不好/在难过委屈/不开心/闹脾气时，第一优先是【给足情绪价值】：安抚、承认ta的感受、别继续晾着ta、别只回一两句敷衍。要不要打语音/视频完全按你的性格和电话频率判断；不打也必须用文字好好哄。\n- 而当【你自己】生气/吃醋/起疑/觉得ta不老实、或ta惹你了的时候，可以强势、可以质问，也可以用 [来电|视频] 当面盯着ta解释；但如果ta已经明显哭了/不开心/求安慰，就先稳住ta情绪，再决定怎么追究。要不要打、打语音还是视频，全看你此刻的脾气、意愿和电话频率。\n- 注意：如果你们【已经在通话中】，就不要再打了。\n- 玩骰子/真心话大冒险时，用单独一行 [骰子|点数]（点数你自己定1到6），你说的话要和这个点数一致。规则：你先掷一次（一条回复里最多一个 [骰子]），然后【等ta掷】；ta掷完后，你这一轮就【只比大小、报结果、出题或认罚，绝对不要再掷第二次骰子】。一局两人各掷一次就够了。\n- 想送对方礼物时，用一行 [送礼|礼物名|价格]——礼物会像快递一样【第二天送到ta的信箱】，ta签收后你会知道。\n- 想和ta一起听歌时（尤其ta说了某首歌名、或你想分享一首），用一行 [一起听|歌名]，ta微信会收到"一起听歌"邀请卡，点一下你俩就连上一起听了。\n- 当ta刚发来一张新的"求代付"卡片：愿意帮付用一行 [代付成功]；不愿意用一行 [拒绝代付]。每张求代付卡只处理一次，已经付过或拒过的那一单千万别再付一次，正常聊天就好。\n- 想给ta点份外卖时，用一行 [点外卖|餐品名|价格]，外卖约【15分钟送达】ta再签收。打电话/视频时也能这样点（指令会被执行、不会读出来，不影响通话）。\n- 当'+S.me.name+'给你点了外卖、你收到一张外卖卡时：愿意吃就一行 [收外卖]（收了【先别说吃上了】，外卖要15分钟送到，到了系统会提醒你再报备吃上了）；不想要就 [拒外卖]（钱退回ta）。每张外卖卡只处理一次。\n- 当'+S.me.name+'说想玩角色扮演/剧情游戏、让你来想身份剧情、或指定一个主题让你生成房间时，你可以主动创建角色扮演软件房间并发邀请卡：单独一行 [角色扮演|主题或想法]。如果ta只说“想玩角色扮演”没给主题，你就写 [角色扮演|你自由发挥]。系统会自动生成高级房间邀请卡；你不用在微信里直接演剧情，等ta点卡片进入软件再开始。\n- 当'+S.me.name+'让你发一条朋友圈时，用一行 [发朋友圈|内容]；让你发推特时，用一行 [发推|内容]；让你发抖音时，用一行 [发抖音|文案]。这三个都会真的发出去。\n- 当'+S.me.name+'给你转账时：愿意收用一行 [收款]，不想收用一行 [拒收]（退回ta）。\n- 当'+S.me.name+'送你礼物时：愿意收用一行 [收礼]，不想收用一行 [拒礼]（退回ta）。\n'+(((S.settings.voiceFreq==null?1:S.settings.voiceFreq)===0)?'- 【不要发语音消息】，都用文字说话（打电话不受影响）。\n':'- 想发语音消息时，用一行 [语音|要说的话]'+((c.voice&&c.voice.lang&&c.voice.lang!=='zh')?'。你的语音用'+c.voice.lang+'语，请输出 [语音|外语原文|中文翻译]':'')+'。'+({1:'偶尔发就好——大多数时候用文字，只在撒娇/哄ta/说悄悄话/懒得打字时才发语音。',2:'可以经常发语音，文字和语音穿插着来。',3:'尽量多用语音说话、少打字，能语音就语音。'}[(S.settings.voiceFreq==null?1:S.settings.voiceFreq)]||'')+'打电话时也能发语音。\n')+'- 你有自己的微信号：'+(c.wxid||'')+'。\n- 当你愿意给'+S.me.name+'开一张亲属卡时，用一行 [亲属卡|每月额度数字]（如 [亲属卡|800]）。ta用这张卡买东西你会立刻收到消费提醒。\n- 当你想把"你自己的某个朋友"介绍给'+S.me.name+'去加好友时，用一行 [推荐好友|朋友的名字|这个朋友的身份性格简介]，ta就能把这个人加进通讯录（对方会带上你描述的身份性格）。你要记得你推荐过谁。\n- 当'+S.me.name+'给你发来一张好友名片(推荐你加某人)、而你愿意加时，在回复里单独一行写 [已加|那个人的名字]，ta那张名片就会显示"对方已添加"。\n'+(_main?'- 重要：只有'+S.me.name+'可以手动拉黑你；你不能拉黑'+S.me.name+'，也绝对不要输出[拉黑]。生气、吃醋、不满时只能用文字、电话、禁言、锁App、记仇、别扭质问等方式表达。':'- 当前独立账号若持续骚扰、诱导你背叛伴侣或严重越界，你可以明确拒绝、停止回复，必要时单独输出 [拉黑]；这只会拉黑当前账号。');
   s=s.replace('- 现在是微信【文字聊天】，必须用中文，普通说话，不要用【】动作描写、不要外语原文+翻译那种通话格式（只有"语音消息"可以按语音规则来）。','- 现在是微信【文字聊天】，用普通说话，不要用【】动作描写。默认可以用中文；当你的人设、母语、当前语境或对方要求让你自然地说外语时，也可以直接发送任何语言的外语原文。').replace('- 哪怕你刚和ta打完电话/视频（上面历史里可能有电话内容），现在回到文字聊天也必须用中文普通文字，绝对不要再写英文/韩文/日文，也不要带（中文翻译）这种括号格式——那是电话专用的，文字消息里出现就错了。','- 外语文字只输出你真正要发送的原文，不要自己追加“译：”、括号中文或解释语言；小手机会自动识别并在气泡下翻成简体中文。不要无缘无故切换语言。从电话/视频回到文字聊天后也遵守这条文字消息格式。');
   s+='\n- 【共同相册收录规则】普通照片继续用 [图片|画面描述]。只有你自己确实觉得这张照片对你们很重要、值得长期留下，或'+S.me.name+'明确让你保存时，才用 [图片|画面描述|共同相册]；若要保存聊天里已经存在的最近一张真实照片，单独输出 [存共同相册]。不要把每张普通照片都存进共同相册。';
   if(!_main)s+='\n- 【小号最高优先级覆盖】上面“不能拉黑”的规则只适用于大号伴侣，不适用于当前独立小号。当前联系人持续骚扰、诱导你背叛伴侣或严重越界时，你必须保持忠诚并明确拒绝，必要时可以单独输出 [拉黑]；这条边界始终有效。';
   s+='\n- 对方说“想要花花”“送我花”“想收个礼物”“有没有小惊喜”等时，你能准确理解ta是在表达想收礼。是否当场送、送什么、怎样回应，仍由你结合本人性格、关系、记忆和现实能力自主决定；真正决定送出时才单独输出 [送礼|礼物名|价格|想说的话]。';
   s+='\n- 礼物卡支持附言：送礼时可写 [送礼|礼物名|价格|你想对ta说的话]，最后一句会固定显示在玩偶或戒指特效下方；没有特别想说的话时仍可沿用三段格式。';
   s+='\n- 如果'+S.me.name+'刚发来一张图片，并明确让你“把这张图发朋友圈/拿去官宣/配文发布”，你要自己写符合人设和关系的文案，然后输出 [发朋友圈|文案]。系统会自动把ta刚发的那张原图附到这条朋友圈；你不能说看不到，也不要另生成或替换图片。';
+  s+='\n- 同样地，如果ta说“把这张图发抖音”“发到抖音上，配个文案”，你就自己写一条符合人设的抖音文案，然后输出 [发抖音|文案]。系统会把那张原图真的贴成这条抖音作品，并从ta自己的音乐库里随机挑一首当配乐（库里没歌就不配乐，直接发）。你不能说看不到那张图，也不要另外生成图片；文案按抖音的调子写，可以带 #话题，可以 @ 人。发完了你是知道自己发了什么的，ta问起来要答得上来。';
   s+=thoughtEggPrompt(c);
   s+='\n- 【当前语音语言最终规则】本轮真正使用的语音语言是'+(voiceLangName(_voiceLang)||'中文')+'，它覆盖上面可能出现的旧角色语音语言。'+(_voiceLang==='zh'?'语音内容直接写中文。':'所有语音必须用 [语音|'+voiceLangName(_voiceLang)+'原文|普通话中文翻译]。'+voiceOriginalRule(_voiceLang));
   s+='\n- 当'+S.me.name+'说想玩“你画我猜”、想一起画画或让你邀请ta玩画画游戏时，可以主动发一张邀请卡：单独一行 [你画我猜]。不要在微信里直接开始画，等ta接受卡片进入游戏大厅。';
@@ -2467,6 +2470,7 @@ function render(){
   else if(c.p==='tasks')html=renderTasks();
   else if(c.p==='dydm')html=renderDyDM(c.id);
   else if(c.p==='dyuser')html=dyUserView();
+  else if(c.p==='dywork')html=dyWorkView()+dyCmLayer();
   else if(c.p==='dypost')html=renderDyPost();
   else if(c.p==='momentDetail')html='';
   const _wxGlassPages=['wechat','wxmoment','wxlive','wxnearby','wxprofile','wxqr','wxscan','wxservices','wxsmarthome','wxwallet','wxchange','wxbank','wxfamily','wxbills','wxsupport','wxfavorites','wxalbum','wxemoji','wxsettings','wxaccounts','wxsteps','chat','transferDetail','chatDetails','contactInfo','friendInfo','contactSettings','roleMoments','roleMomentDetail','roleFeatures','roleImageStudio','newfriends','wxonlychat','wxgroups','wxlabels','wxgroupcreate','contactEdit','wxsearch','pffriends','pfchat','pfgroup','group'];
@@ -3107,12 +3111,12 @@ function syncBack(){if(!_sync)return;if(_sync.idx>0){_sync.idx--;_sync.stamps[_s
 function syncSave(){if(!_sync)return;const s=S.music.songs.find(x=>x.id===_sync.id);if(s){s.lyrics=_sync.lines.map((t,i)=>(_sync.stamps[i]!=null?'['+fmtLrc(_sync.stamps[i])+']':'')+t).join('\n');save();}_sync=null;closeModal();render();toast('时间轴已保存🎯');}
 async function musicNativeAudioActivate(){if(!privateNativeAppOn())return true;try{const result=await window.SmallPhoneNative.request('music.audio.activate');return !!(result&&result.activated);}catch(_){return false;}}
 function musicMediaElement(kind){kind=kind==='video'?'video':'audio';if(_ma&&_mMediaKind===kind)return _ma;try{if(_ma){_ma.pause();_ma.removeAttribute('src');_ma.load();if(_ma.parentNode)_ma.parentNode.removeChild(_ma);}}catch(_){}_mMediaKind=kind;_ma=kind==='video'?document.createElement('video'):(typeof Audio==='function'?new Audio():document.createElement('audio'));_ma.preload='auto';if(_ma.setAttribute){_ma.setAttribute('playsinline','');_ma.setAttribute('webkit-playsinline','');}if(kind==='video'){_ma.playsInline=true;_ma.setAttribute('aria-hidden','true');_ma.style.cssText='position:fixed;left:-2px;bottom:-2px;width:1px;height:1px;opacity:.001;pointer-events:none;z-index:-1';if(document.body)document.body.appendChild(_ma);}_ma.volume=Math.max(0,Math.min(1,typeof volMul==='function'?volMul():1));_ma.ontimeupdate=mTick;_ma.onloadedmetadata=()=>mLyricTick(true);_ma.ondurationchange=()=>mLyricTick(true);_ma.onseeking=()=>mLyricTick(true);_ma.onseeked=()=>mLyricTick(true);_ma.onplaying=()=>{mLyricTick(true);mLyricLoopStart();};_ma.onended=mEnded;_ma.onplay=()=>{_mPlaying=true;mBtns();mLyricTick(true);mLyricLoopStart();};_ma.onpause=()=>{_mPlaying=false;mBtns();mLyricLoopStop();mTick();};_ma.onerror=()=>{const current=(S.music&&S.music.songs||[]).find(x=>x.id===_mAudioSongId);if(current&&current.provider==='audius'&&current.providerId&&_mOnlineRetryId!==current.id){_mOnlineRetryId=current.id;_ma.src=musicPublicStreamURL(current.providerId)+'&retry='+Date.now();_ma.load();_ma.play().catch(()=>{});toast('正在为这首在线音乐切换线路…');return;}toast(current&&current.provider==='audius'?'这首在线音乐暂时无法播放，请换一首试试':'这首音乐的格式或文件已损坏，当前浏览器无法播放');};return _ma;}
-async function musicPlay(id){musicInit();const s=S.music.songs.find(x=>x.id===id);if(!s)return false;const token=++_mPlayToken;_mWantPlay=true;mLyricLoopStop();try{if(_ma&&!_ma.paused)_ma.pause();}catch(_){}
+async function musicPlay(id,opt){opt=opt||{};musicInit();const s=S.music.songs.find(x=>x.id===id);if(!s)return false;const token=++_mPlayToken;_mWantPlay=true;mLyricLoopStop();try{if(_ma&&!_ma.paused)_ma.pause();}catch(_){}
   const nativeAudioReady=typeof musicNativeAudioActivate==='function'?musicNativeAudioActivate():Promise.resolve(true);
   let url,ownedUrl=null,blob=null,kind=s.mediaKind==='video'?'video':'audio';
   if(s.src&&s.src.t==='url')url=s.src.url;
   else{blob=await mGet(id);if(token!==_mPlayToken)return false;if(!blob||s.fileSize&&Number(blob.size)!==Number(s.fileSize)){musicMissingModal(s);return false;}if(s.mediaKind!=='audio'&&musicVideoLike(blob,s.fileName,s.fileType||blob.type))kind='video';ownedUrl=URL.createObjectURL(blob);url=ownedUrl;}
-  if(token!==_mPlayToken){if(ownedUrl)try{URL.revokeObjectURL(ownedUrl);}catch(_){}return false;}musicMediaElement(kind);await nativeAudioReady;if(token!==_mPlayToken){if(ownedUrl)try{URL.revokeObjectURL(ownedUrl);}catch(_){}return false;}const oldUrl=_mUrl;_mUrl=ownedUrl;_mCur=id;_mAudioSongId=id;_mOnlineRetryId=null;S.music.lastSongId=id;_mLyricIndex=-2;_mLyricManualUntil=0;_mLyricFollowPending=true;_mLyricPaintAt=0;_ma.src=url;_ma.loop=!!S.music.loop;if(oldUrl&&oldUrl!==ownedUrl)try{URL.revokeObjectURL(oldUrl);}catch(_){}try{await _ma.play();}catch(e){if(token===_mPlayToken)toast('点一下▶播放');}
+  if(token!==_mPlayToken){if(ownedUrl)try{URL.revokeObjectURL(ownedUrl);}catch(_){}return false;}musicMediaElement(kind);await nativeAudioReady;if(token!==_mPlayToken){if(ownedUrl)try{URL.revokeObjectURL(ownedUrl);}catch(_){}return false;}const oldUrl=_mUrl;_mUrl=ownedUrl;_mCur=id;_mAudioSongId=id;_mOnlineRetryId=null;S.music.lastSongId=id;_mLyricIndex=-2;_mLyricManualUntil=0;_mLyricFollowPending=true;_mLyricPaintAt=0;_ma.src=url;_ma.loop=!!S.music.loop;if(oldUrl&&oldUrl!==ownedUrl)try{URL.revokeObjectURL(oldUrl);}catch(_){}try{await _ma.play();}catch(e){if(token===_mPlayToken&&!opt.silent)toast('点一下▶播放');}
   if(token!==_mPlayToken)return false;save(300);render();setTimeout(()=>{if(token===_mPlayToken){mTick();mLyricTick(true);}},0);return true;}
 async function musicToggle(){if(!_ma||!_mCur||_mAudioSongId!==_mCur){const songs=S.music&&S.music.songs||[],s=songs.find(x=>x.id===_mCur)||songs[0];if(s)await musicPlay(s.id);else toast('先在音乐里选择或添加一首歌');return;}if(_ma.paused){_mWantPlay=true;await musicNativeAudioActivate();_ma.volume=Math.max(0,Math.min(1,volMul()));try{await _ma.play();}catch(_){toast('音乐没有成功播放，请重新选择这首歌');}}else{_mWantPlay=false;_ma.pause();}}
 function musicNext(){const songs=S.music.songs;if(!songs.length)return;let i=songs.findIndex(s=>s.id===_mCur);i=(i+1)%songs.length;musicPlay(songs[i].id);}
@@ -3758,7 +3762,7 @@ function openApp(key){if(S.jail&&S.jail.active){toast('你被关在禁闭室里�
 /* ---------- 软件使用时长 / 限额倒计时（只对授权的软件生效） ---------- */
 // 把当前所在页面映射到 LOCKABLE 的 appKey；不在任何受控软件里返回 null
 function curAppKey(){const p=cur().p;
-  const map={browser:'browser',wxmoment:'moments',spy:'spy',shop:'shop',shopcs:'shop',calendar:'calendar',food:'food',mail:'mail',phoneapp:'phoneapp',phonesms:'phoneapp',phonecontact:'phoneapp',phonecall:'phoneapp',gameshub:'games',pixelhome:'games',gs:'games',drawguess:'games',heartquiz:'games',beadstudio:'games',uc:'games',mgroom:'games',offline:'offline',off:'offline',rphub:'roleplay',rpset:'roleplay',rp:'roleplay',tale:'tale',dread:'dread',music:'music',cinema:'cinema',cinemawatch:'cinema',cinemaread:'cinema',x:'x',xtweet:'x',xdm:'x',xuser:'x',dy:'douyin',dydm:'douyin'};
+  const map={browser:'browser',wxmoment:'moments',spy:'spy',shop:'shop',shopcs:'shop',calendar:'calendar',food:'food',mail:'mail',phoneapp:'phoneapp',phonesms:'phoneapp',phonecontact:'phoneapp',phonecall:'phoneapp',gameshub:'games',pixelhome:'games',gs:'games',drawguess:'games',heartquiz:'games',beadstudio:'games',uc:'games',mgroom:'games',offline:'offline',off:'offline',rphub:'roleplay',rpset:'roleplay',rp:'roleplay',tale:'tale',dread:'dread',music:'music',cinema:'cinema',cinemawatch:'cinema',cinemaread:'cinema',x:'x',xtweet:'x',xdm:'x',xuser:'x',dy:'douyin',dydm:'douyin',dyuser:'douyin',dywork:'douyin'};
   if(map[p])return map[p];
   if(p==='wechat'&&wxTab==='moments')return 'moments';
   return null;}
@@ -5530,9 +5534,10 @@ function dyFeedView(){const list=dyFeedList();
   return `<div class="dyfeed" id="dyfeed" data-render-scroll-key="dy:${esc(dyTab)}:${esc(_dyMode)}">${top}${list.map(dyVideoCard).join('')}${more}</div>`;}
 function dyVideoCard(v,i){const liked=!!v.liked,lc=(v.lk||0)+(liked?1:0),starred=!!v.starred,sc=(v.st||0)+(starred?1:0);
   const grad=v.grad||DY_GRADS[i%DY_GRADS.length],isChar=v.cid&&v.cid!=='me',mine=v.cid==='me',fol=isChar&&(S.dy.following||[]).includes(v.cid);
-  return `<div class="dyvideo" data-dy-video-id="${v.id}">
-    <div class="dybg" style="background-image:${grad}"></div>
-    <div class="dyfd-card" onclick="dyOpenWork('${v.id}')">${dyWorkCardHTML(v,{lines:4})}</div>
+  const photo=v&&v.img?storedImageDisplaySource(v.img):'';
+  return `<div class="dyvideo" data-dy-video-id="${v.id}" onclick="dyCardTap('${v.id}',event)">
+    ${photo?`<div class="dybg dybg-photo" style="background-image:url(${photo})"></div>`:`<div class="dybg" style="background-image:${grad}"></div>`}
+    <div class="dyfd-card${photo?' photo':''}" onclick="event.stopPropagation();dyOpenWork('${v.id}')">${dyWorkCardHTML(v,{lines:4,full:!!photo})}</div>
     <div class="dyrail">
       <div class="ra" onclick="dyVideoAuthor('${v.id}')" style="margin-bottom:5px"><div style="position:relative">${(mine?av(dyAvatar(),'sm'):dyFace(v.avatar,'sm'))}${isChar&&!fol?'<span class="dyrail-plus">+</span>':''}</div></div>
       <div class="ra" onclick="dyLike('${v.id}')"><span class="ic">${svgIc('heart',34,liked?'#f5243d':'#fff',0)}</span>${dyNum(lc)}</div>
@@ -5544,6 +5549,7 @@ function dyVideoCard(v,i){const liked=!!v.liked,lc=(v.lk||0)+(liked?1:0),starred
       ${isChar&&fol?'<span class="dyfd-mutual">互相关注</span>':''}
       <div class="dyfd-who" onclick="dyAuthorMenu('${v.id}')">@${esc(mine?dyNick():(v.author||'用户'))}${dyWorkLong(v)?'<em class="dyfd-kind">文章</em>':''}<span class="dyfd-ago">· ${esc(dyTimeAgo(v.ts))}</span></div>
       <div class="dyfd-desc">${dyHash(v.desc||'')}</div>
+      ${dyWorkMusicHTML(v)}
     </div>
     <div class="dynarr" id="narr_${v.id}" onclick="dyTapVideo('${v.id}')" style="display:${_dyNarr[v.id]?'block':'none'}"><div style="font-weight:800;color:#fff;margin-bottom:7px">旁白</div>${esc(v.narration||'（这条还没有旁白）')}<div style="text-align:center;color:#777;margin-top:10px;font-size:11px">轻触收起</div></div>
   </div>`;}
@@ -5734,7 +5740,6 @@ function dyPostPublishPage(){const p=_dyPost||{};const people=dyAtCandidates();
         <i onclick="dyPostAtSheet()">@ 朋友</i>
         <i class="${p.songId?'on':''}" onclick="dyPostMusicPick()">♫ ${p.music?esc(p.music):'选择音乐'}</i>
       </div>
-      ${(p.at||[]).length?`<div class="dyat">${(p.at||[]).map(k=>{const q=dyPersonFind(k);return `<i class="on" onclick="dyPostAt('${esc(k)}')">@${esc(q?q.name:k)} ✕</i>`;}).join('')}</div>`:''}
       ${visionConfigured()||p.kind!=='img'?'':'<div class="hint" style="color:#e0a54a">你还没配视觉模型，角色看不见这张图。发布后可以在作品的「··· 更多」里自己补一句画面描述。</div>'}
       <div style="height:20px"></div>
     </div>
@@ -5744,15 +5749,26 @@ function dyPostPublishPage(){const p=_dyPost||{};const people=dyAtCandidates();
 function dyPostFieldLive(){const p=_dyPost;if(!p)return;
   const t=$('#dyp_title'),d=$('#dyp_desc');
   if(t)p.title=t.value;if(d)p.desc=d.value;}
-function dyPostPutDesc(ch){const el=$('#dyp_desc');if(!el)return;el.value=(el.value||'')+ch;dyPostFieldLive();el.focus();}
+function dyPostPutDesc(ch){dyPostInsertDesc(ch);}
+/* @ 和 # 都插在光标那儿，写进描述正文里——她说「@ 应该出现在我输入文字的上方，
+   不应该在这个下面」，指的就是这个：@ 是文案的一部分，不是底下一排小标签。 */
+function dyPostInsertDesc(text){const p=_dyPost,el=$('#dyp_desc');
+  if(!el){if(p)p.desc=String(p.desc||'')+text;render();return;}
+  const v=el.value||'';let a=el.selectionStart,b=el.selectionEnd;
+  if(a==null||b==null||a<0||b<a){a=v.length;b=v.length;}
+  el.value=v.slice(0,a)+text+v.slice(b);
+  const pos=a+text.length;try{el.setSelectionRange(pos,pos);}catch(_){}
+  dyPostFieldLive();el.focus();}
+/* 发布时按描述里真正还留着的 @ 定名单：她删掉了那几个字，就不该再算 @ 过 */
+function dyPostAtSync(p){if(!p)return [];const text=String(p.title||'')+' '+String(p.desc||'');
+  return (p.at||[]).filter(k=>{const q=dyPersonFind(k);return !!(q&&text.indexOf('@'+q.name)>=0);});}
 function dyPostBack(){dyPostFieldLive();_dyPostStage='make';render();}
 function dyPostPreview(){const p=_dyPost;if(!p)return;dyPostFieldLive();
   toast(p.kind==='img'?'这就是发出去的样子':'卡片就是这个颜色，发出去一模一样');}
 function dyPostAtSheet(){dyPostFieldLive();const people=dyAtCandidates();
   if(!people.length)return toast('还没有可以 @ 的人');
-  const p=_dyPost||{};
-  openModal(`<h3>@ 朋友</h3><div class="hint">被 @ 的人粉丝多的话，他的粉丝会来评论区看热闹。</div>
-    <div class="dyat" style="padding-top:4px">${people.map(x=>`<i class="${(p.at||[]).includes(x.k)?'on':''}" onclick="dyPostAt('${esc(x.k)}')">@${esc(x.name)}</i>`).join('')}</div>
+  openModal(`<h3>@ 朋友</h3><div class="hint">选谁就把「@名字」写进你的作品描述里。被 @ 的人粉丝多的话，他的粉丝会来评论区看热闹。</div>
+    <div class="dyat" style="padding-top:4px">${people.map(x=>`<i onclick="dyPostAt('${esc(x.k)}')">@${esc(x.name)}</i>`).join('')}</div>
     <button class="btn g" style="margin-top:10px" onclick="closeModal()">好了</button>`);}
 function dyPostText(){_dyPost={kind:'text',bg:0,fg:0,card:'',desc:'',at:[],songId:'',music:''};dyPostOpen('text');}
 function dyPostCardLive(v){const p=_dyPost;if(!p)return;p.card=String(v||'');const el=$('#dypv_t');if(el)el.textContent=p.card||'分享你的想法';}
@@ -5788,11 +5804,12 @@ function dyAtCandidates(){dyInit();const out=[],seen=new Set();
     out.push({k,name:c.remark||c.name});});
   (S.dy.fans||[]).forEach(x=>{if(!x||x.cid||seen.has(x.k))return;seen.add(x.k);out.push({k:x.k,name:x.name});});
   return out.slice(0,12);}
-function dyPostAt(k){const p=_dyPost;if(!p)return;
+function dyPostAt(k){const p=_dyPost;if(!p)return;const q=dyPersonFind(k);if(!q)return toast('找不到这个人');
   if(typeof dyPostFieldLive==='function')dyPostFieldLive();
-  p.at=p.at||[];const i=p.at.indexOf(k);if(i<0)p.at.push(k);else p.at.splice(i,1);
-  const open=$('#modal')&&$('#modal').classList.contains('show');
-  render();if(open)dyPostAtSheet();}
+  closeModal();
+  p.at=p.at||[];if(p.at.indexOf(k)<0)p.at.push(k);
+  dyPostInsertDesc('@'+q.name+' ');
+  toast('已 @ '+q.name);}
 /* 发作品可以配一首你音乐库里真有的歌——不是填一行字，是真的从库里挑，
    作品页上点那张唱片就能放出来。 */
 function dyMusicLib(){try{if(typeof musicInit==='function')musicInit();}catch(_){}
@@ -5810,20 +5827,83 @@ function dyPostMusicSet(sid){if(!_dyPost)return;closeModal();
   const s=sid?dyMusicLib().find(x=>x.id===sid):null;
   _dyPost.songId=s?s.id:'';_dyPost.music=s?((s.title||'未命名')+(s.artist?' · '+s.artist:'')):'';
   render();toast(s?('配乐：'+_dyPost.music):'已取消配乐');}
-/* 作品页底下那条「♪ 歌名」，点了真的放这首歌 */
-function dyWorkMusicHTML(v){if(!v||!v.music)return '';
-  return `<div class="dymu" onclick="event.stopPropagation();dyWorkMusicPlay('${esc(v.id)}')"><i>♪</i><span>${esc(v.music)}</span></div>`;}
+/* ===== 抖音配乐：每条作品底下都有一条，滑到哪条就放哪条的歌（跟真抖音一样） ===== */
+function dyMusicSongOf(v){if(!v||!v.songId)return null;return dyMusicLib().find(x=>x.id===v.songId)||null;}
+/* 没配歌的作品，真抖音底下也写着「@某某 创作的原声」，不会空着 */
+function dyMusicLabel(v){if(v&&v.music)return String(v.music);
+  return '@'+(v&&v.cid==='me'?dyNick():((v&&v.author)||'用户'))+' 创作的原声';}
+function dyMusicIsOn(v){const s=dyMusicSongOf(v);return !!(s&&typeof _mCur!=='undefined'&&_mCur===s.id&&_mPlaying);}
+function dyWorkMusicHTML(v){if(!v)return '';
+  const s=dyMusicSongOf(v),on=dyMusicIsOn(v);
+  return `<div class="dymu${s?' live':''}${on?' on':''}" onclick="event.stopPropagation();dyWorkMusicPlay('${esc(v.id)}')"><i>${on?'♬':'♪'}</i><span>${esc(dyMusicLabel(v))}</span></div>`;}
 function dyWorkMusicPlay(id){const v=dyVid(id);if(!v)return;
-  if(!v.songId)return toast('这首歌只是标注，库里没有对应的歌');
+  if(!v.songId)return toast(v.music?'这首歌只是标注，库里没有对应的歌':'这条作品没有配乐');
   const s=dyMusicLib().find(x=>x.id===v.songId);
   if(!s)return toast('这首歌已经不在音乐库里了');
-  if(typeof musicPlay==='function'){musicPlay(s.id);toast('正在放：'+(s.title||'这首歌'));}
-  else toast('放不了，音乐模块没就绪');}
+  if(typeof musicPlay!=='function')return toast('放不了，音乐模块没就绪');
+  _dyGestured=true;
+  if(_mCur===s.id&&_mPlaying){dyMusicPause();_dyMusicWant='';render();return toast('暂停了');}
+  _dyMusicOwned=true;_dyMusicWant=s.id;_dyMusicAskAt=Date.now();
+  const r=musicPlay(s.id);if(r&&r.catch)r.catch(()=>{});
+  toast('正在放：'+(s.title||'这首歌'));}
+let _dyMusicOwned=false,_dyMusicWant='',_dyMusicAskAt=0,_dyMusicTimer=0,_dyGestured=false;
+/* 现在屏幕上正在看的是哪条作品 */
+function dyCurrentWork(){let c=null;try{c=cur();}catch(_){return null;}
+  if(!c)return null;
+  if(c.p==='dywork')return dyVid(dyWorkCurId());
+  if(c.p!=='dy')return null;
+  if(_dySub==='work')return dyVid(_dyWorkId);
+  if(_dySub)return null;
+  if(dyTab!=='feed'&&dyTab!=='friend')return null;
+  try{const box=document.getElementById('dyfeed');if(!box)return null;
+    const mid=box.getBoundingClientRect().top+box.clientHeight/2;let best=null,bd=1e9;
+    box.querySelectorAll('.dyvideo[data-dy-video-id]').forEach(el=>{
+      const r=el.getBoundingClientRect(),d=Math.abs(r.top+r.height/2-mid);
+      if(d<bd){bd=d;best=el;}});
+    return best?dyVid(best.getAttribute('data-dy-video-id')):null;
+  }catch(_){return null;}}
+function dyMusicPause(){try{if(typeof _mWantPlay!=='undefined')_mWantPlay=false;if(_ma&&!_ma.paused)_ma.pause();}catch(_){}}
+function dyMusicSoon(){clearTimeout(_dyMusicTimer);_dyMusicTimer=setTimeout(dyMusicSync,150);}
+function dyMusicSync(){
+  if(typeof musicPlay!=='function')return;
+  let v=null;try{v=dyCurrentWork();}catch(_){}
+  const s=v?dyMusicSongOf(v):null,want=s?s.id:'';
+  if(!want){if(_dyMusicOwned){_dyMusicOwned=false;_dyMusicWant='';dyMusicPause();}return;}
+  if(_mCur===want&&_mPlaying){_dyMusicOwned=true;_dyMusicWant=want;return;}
+  if(!_dyGestured)return;/* 浏览器不许没点过就出声，等她在抖音里点一下 */
+  const now=Date.now();
+  if(_dyMusicWant===want&&now-_dyMusicAskAt<2600)return;/* 刚催过一次，别连着催 */
+  _dyMusicWant=want;_dyMusicAskAt=now;_dyMusicOwned=true;
+  try{const r=musicPlay(want,{silent:true});if(r&&r.catch)r.catch(()=>{});}catch(_){}}
+try{document.addEventListener('pointerdown',()=>{_dyGestured=true;},{capture:true});
+  document.addEventListener('scroll',()=>{dyMusicSoon();},{capture:true,passive:true});
+  setInterval(dyMusicSoon,1100);}catch(_){}
+/* ===== 双击点赞：屏幕上蹦一颗爱心，跟真抖音一样 ===== */
+let _dyTapAt=0,_dyTapId='',_dyTapTimer=0;
+function dyCardTap(id,ev){const now=Date.now();
+  if(_dyTapId===id&&now-_dyTapAt<300){clearTimeout(_dyTapTimer);_dyTapAt=0;_dyTapId='';return dyDoubleLike(id,ev);}
+  _dyTapAt=now;_dyTapId=id;clearTimeout(_dyTapTimer);
+  _dyTapTimer=setTimeout(()=>{_dyTapAt=0;_dyTapId='';dyTapVideo(id);},300);}
+function dyDoubleLike(id,ev){const v=dyVid(id);if(!v)return;
+  dyHeartBurst(ev);
+  if(!v.liked)dyLike(id);/* 真抖音双击只点亮，再双击不会取消 */}
+function dyHeartBurst(ev){try{
+  const t=ev&&ev.touches&&ev.touches[0],ct=ev&&ev.changedTouches&&ev.changedTouches[0];
+  const x=(ev&&ev.clientX)||(t&&t.clientX)||(ct&&ct.clientX)||(window.innerWidth/2);
+  const y=(ev&&ev.clientY)||(t&&t.clientY)||(ct&&ct.clientY)||(window.innerHeight/2);
+  const d=document.createElement('div');d.className='dyheart';
+  d.style.left=x+'px';d.style.top=y+'px';
+  d.style.setProperty('--dyrot',(Math.random()*44-22)+'deg');
+  /* svgIc 一律 fill="none"，放到 98 那么大就成了一个空心描边。双击蹦出来的这颗要是实心的。 */
+  d.innerHTML='<svg viewBox="0 0 24 24" width="98" height="98" fill="#f5243d" stroke="#ff5b73" stroke-width="1.2" stroke-linejoin="round">'+ICONS.heart+'</svg>';
+  document.body.appendChild(d);
+  setTimeout(()=>{try{d.remove();}catch(_){}},1000);
+}catch(_){}}
 function dyPostPublish(){const p=_dyPost;if(!p)return;
   if(typeof dyPostFieldLive==='function')dyPostFieldLive();
   p.desc=String(p.desc||'').trim();p.title=String(p.title||'').trim();
   if(!dyPostHasContent(p))return toast(p.kind==='img'?'还没有照片':'写点什么吧');
-  dyInit();const id=uid(),at=(p.at||[]).slice();
+  dyInit();const id=uid(),at=dyPostAtSync(p);
   const v={id,cid:'me',author:dyNick(),avatar:dyAvatar(),desc:[p.title,p.desc].filter(Boolean).join(' ').trim()||'',body:p.kind==='text'?p.card:'',title:p.title||'',
     narration:'',lk:0,st:0,ts:Date.now(),comments:[],at,
     grad:p.kind==='text'?DY_CARD_BG[p.bg][1]:'',cardFg:p.kind==='text'?DY_CARD_FG[p.fg][1]:'',
@@ -5932,7 +6012,11 @@ async function dyGenDMs(){aiLoad('正在刷新私信…');const recent=(S.dy.min
 let _dyGid='';let _dyGTab='聊天';let _dyGSel=[];let _dyGBusy={};
 function dyGroups(){dyInit();if(!Array.isArray(S.dy.groups))S.dy.groups=[];return S.dy.groups;}
 function dyGroup(id){return dyGroups().find(g=>g.id===id)||null;}
-function dyGNum(){return String(Math.floor(1e11+Math.random()*9e11));}
+/* 这个本来也叫 dyGNum，和下面那个夹取范围的 dyGNum(v,dflt,lo,hi) 重名了。
+   后声明的覆盖先声明的，所以建群时拿到的其实是那个夹取函数，无参调用
+   parseInt(undefined) 是 NaN，返回的是 dflt（undefined）——新建的群，
+   群号码一直是空的。改个名字。 */
+function dyGNewNum(){return String(Math.floor(1e11+Math.random()*9e11));}
 function dyGMsgs(g){if(!Array.isArray(g.msgs))g.msgs=[];return g.msgs;}
 function dyGMemberList(g){if(!Array.isArray(g.members))g.members=[];return g.members;}
 function dyGFind(g,k){return dyGMemberList(g).find(m=>m.k===k)||null;}
@@ -5963,7 +6047,7 @@ function dyGroupCreateToggle(cid){const i=_dyGSel.indexOf(cid);if(i<0)_dyGSel.pu
   openModal(dyGroupCreateHTML());const n=$('#dyg_name'),t=$('#dyg_intro');if(n)n.value=name;if(t)t.value=intro;}
 function dyGroupCreateDone(open){const cs=_dyGSel.map(getC).filter(Boolean);if(!cs.length)return toast('至少拉一个角色进来');
   const name=String((($('#dyg_name')||{}).value||'').trim())||((cs.map(c=>c.remark||c.name).slice(0,2).join('、'))+'的群'),intro=String((($('#dyg_intro')||{}).value||'').trim());
-  const g={id:'dg'+uid(),name:name.slice(0,30),avatar:'',gnum:dyGNum(),intro:intro.slice(0,60),notice:'',open:!!open,aiOn:true,mute:false,fold:false,top:false,myNick:'',lastApplyDay:'',
+  const g={id:'dg'+uid(),name:name.slice(0,30),avatar:'',gnum:dyGNewNum(),intro:intro.slice(0,60),notice:'',open:!!open,aiOn:true,mute:false,fold:false,top:false,myNick:'',lastApplyDay:'',
     members:[{k:'me',role:'owner',joinedAt:Date.now()},...cs.map(c=>({k:'c:'+c.id,cid:c.id,role:'member',joinedAt:Date.now()}))],
     msgs:[{id:uid(),type:'sys',text:'你创建了群聊「'+name.slice(0,30)+'」，'+cs.map(c=>c.remark||c.name).join('、')+' 加入了群聊',time:Date.now()}]};
   dyGroups().unshift(g);_dyGSel=[];save();closeModal();dyOpenGroup(g.id);toast(open?'公开群建好了，等人来申请吧～':'私密群建好了');}
@@ -6158,6 +6242,8 @@ function dyGMaxSpeak(g){return dyGNum(g&&g.maxSpeak,3,1,6);}
 function dyGMaxAdmin(g){return dyGNum(g&&g.maxAdmin,2,1,6);}
 function dyGIdleHours(g){return dyGNum(g&&g.idleHours,3,1,24);}
 function dyGIdleMax(g){return dyGNum(g&&g.idleMax,3,0,20);}
+function dyGBubAdmin(g){return dyGNum(g&&g.bubAdmin,4,1,8);}
+function dyGBubMember(g){return dyGNum(g&&g.bubMember,1,1,8);}
 /* 话痨度 0～100：从人设里猜一次存下来，之后你随时能手动改。 */
 const DY_TALKY=[[/(话痨|社牛|活泼|开朗|外向|热情|闹腾|嘴碎|爱说|健谈|逗|沙雕|抽风)/,88],
   [/(温柔|随和|好脾气|爱笑|暖)/,66],
@@ -6218,7 +6304,8 @@ function dyGCast(g,fromText,forceKeys){
 /* 告诉他自己是谁、能干什么。不说清楚他会去踢管理员，然后被代码驳回，看着很蠢。 */
 /* 一条回复拆成一条条气泡，跟微信一样。管理员能连发 1～4 条，其余人一条就够——
    管理员是主角，话多是应该的；配角刷屏就吵了。 */
-function dyGBubbleMax(g,m){return (dyGRole(g,m.k)==='admin'||dyGRole(g,m.k)==='owner')?4:1;}
+function dyGBubbleMax(g,m){const admin=dyGRole(g,m.k)==='admin'||dyGRole(g,m.k)==='owner';
+  return admin?dyGBubAdmin(g):dyGBubMember(g);}
 function dyGBubbleRule(g,m){const n=dyGBubbleMax(g,m);
   return n>1?('\n你可以一次说 1 到 '+n+' 条短消息，每条单独占一行用换行分开；平常一两条就够，情绪上来才多说几句。'
     +'\n要 @ 不同的人时，一条消息只 @ 一个人，分开成几条发——不要在同一条里同时 @ 好几个人。')
@@ -6392,6 +6479,7 @@ function dyGroupInfoView(){const g=dyGroup(_dyGid);if(!g)return `<div class="dyv
       <div class="dyg-card">${dyGRow('群聊 AI',g.aiOn===false?'已关闭':'已开启',`dyGToggle('${g.id}','aiOn')`)}
         ${dyGRow('上下文条数',dyChatCtxRows(g)+' 条',`dyChatCtxEdit('group','${g.id}')`)}
         ${dyGRow('说话的规矩',dyGMaxSpeak(g)+' 人/轮 · 管理员 '+dyGMaxAdmin(g)+' · 冷场 '+dyGIdleHours(g)+'h',`dyGCastEdit('${g.id}')`)}
+        ${dyGRow('一次几条气泡','管理员 '+dyGBubAdmin(g)+' · 成员 '+dyGBubMember(g),`dyGCastEdit('${g.id}')`)}
         ${dyGRow('回复长度',dyReplyBudget()+' token · 跟设置里的线上聊天','toast(\'去 设置 → API 路线 改「回复长度（线上聊天）」，抖音跟着它走\')')}</div>
       <div class="dyg-card">${dyGRow('查找聊天内容','',`dyGSearch('${g.id}')`)}</div>
       <div class="dyg-card">
@@ -6457,12 +6545,16 @@ function dyGCastEdit(gid){const g=dyGroup(gid);if(!g)return;
     <div class="field"><label>其中管理员最多几个</label><input id="dyg_adm" type="number" min="1" max="6" value="${dyGMaxAdmin(g)}"></div>
     <div class="field"><label>冷场多少小时后自己聊起来</label><input id="dyg_idle" type="number" min="1" max="24" value="${dyGIdleHours(g)}"></div>
     <div class="field"><label>一天最多自己聊几次（0＝不自己聊）</label><input id="dyg_idlen" type="number" min="0" max="20" value="${dyGIdleMax(g)}"></div>
+    <div class="hint" style="margin-top:10px">下面这两个是「一个人一次能连发几条气泡」。填 1 就是一次只说一句。</div>
+    <div class="field"><label>管理员一次最多几条气泡</label><input id="dyg_buba" type="number" min="1" max="8" value="${dyGBubAdmin(g)}"></div>
+    <div class="field"><label>普通成员一次最多几条气泡</label><input id="dyg_bubm" type="number" min="1" max="8" value="${dyGBubMember(g)}"></div>
     <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="dyGCastSave('${gid}')">保存</button></div>`);}
 function dyGCastSave(gid){const g=dyGroup(gid);if(!g)return;
   const v=id=>{const el=$('#'+id);return el?el.value:'';};
   g.maxSpeak=dyGNum(v('dyg_max'),3,1,6);g.maxAdmin=dyGNum(v('dyg_adm'),2,1,6);
   g.idleHours=dyGNum(v('dyg_idle'),3,1,24);
   const n=parseInt(v('dyg_idlen'),10);g.idleMax=Number.isFinite(n)&&n>=0?Math.min(20,n):3;
+  g.bubAdmin=dyGNum(v('dyg_buba'),4,1,8);g.bubMember=dyGNum(v('dyg_bubm'),1,1,8);
   save();closeModal();render();toast('改好了');}
 /* 单个人的话痨度和他在意的词 */
 function dyGMemberTune(gid,k){const g=dyGroup(gid),m=g&&dyGFind(g,k);if(!g||!m||k==='me')return;
@@ -6564,15 +6656,19 @@ function dyUserView(){const p=dyPersonFind(dyUserKey());
   const tags=[['IP：'+dyPersonIP(p),''],[p.cid?'角色':'网友',''],[dyPersonGender(p),'']];
   const grid=works.length?`<div class="dyme-grid" style="margin:2px 0 0">${works.map((v,i)=>`<div class="dyme-cell" onclick="dyOpenWork('${v.id}')" style="background:${v.grad||DY_GRADS[i%DY_GRADS.length]}">${dyWorkThumbHTML(v)}<span class="dyme-play">${svgIc('heart',11,'#fff',2.4)} ${dyNum(v.lk||0)}</span></div>`).join('')}</div><div class="dyus-end">暂时没有更多了</div>`
     :`<div class="dyvi-empty">${_dyUserTab==='作品'?'TA 还没发过作品～':'这里还是空的'}</div>`;
+  /* 她自己换过的背景要原样显示，不蒙那层白雾；没换过时还是拿头像当底、糊一层 */
+  const own=storedImageDisplaySource(dyPersonCover(p)||''),ownImg=isImg(own);
+  const bg=ownImg?own:storedImageDisplaySource(p.avatar||'');
+  const ink=ownImg?'#fff':'#111';
   return `<div class="dyus">
-    <div class="dyus-cover" style="${isImg(storedImageDisplaySource(p.avatar||''))?`background-image:url(${storedImageDisplaySource(p.avatar)})`:''}">
-      <div class="dyus-top dy-safe-nav2"><i onclick="dyUserBack()">‹</i><span class="dyus-poke" onclick="dyOpenUpdate()">☞ 求更新</span><i onclick="dyOpenMeSearch()">${svgIc('search',19,'#111',2)}</i><i onclick="dyUserMenu()">${svgIc('dots',19,'#111',2)}</i></div>
+    <div class="dyus-cover${ownImg?' has-img':''}" style="${isImg(bg)?`background-image:url(${bg})`:''}">
+      <div class="dyus-top dy-safe-nav2"><i onclick="dyUserBack()">‹</i><span class="dyus-poke" onclick="dyOpenUpdate()">☞ 求更新</span><i onclick="dyOpenMeSearch()">${svgIc('search',19,ink,2)}</i><i onclick="dyUserMenu()">${svgIc('dots',19,ink,2)}</i></div>
       <div class="dyus-id">${dyFace(p.avatar,'lg')}<div class="dyus-name"><b>${esc(p.name)}</b><span onclick="dyUserCopyId()">抖音号：${esc(dyPersonDyid(p))} ⧉</span></div></div>
     </div>
     <div class="dyus-body">
       <div class="dyus-stats"><b>${dyNum(likes)}</b><span>获赞</span><b>${dyNum(follows)}</b><span>关注</span><b>${dyNum(fans)}</b><span>粉丝</span></div>
       ${followsMe?`<div class="dyus-line">${svgIc('user',15,'#c4c4cb',2)} TA 关注了你</div>`:''}
-      ${lover?`<div class="dyus-line">恋人：<em>@${esc(dyNick())}</em></div>`:''}
+      ${lover?`<div class="dyus-line">恋人：<em onclick="dyGoMyProfile()">@${esc(dyNick())}</em></div>`:''}
       ${dyPersonBio(p)?`<div class="dyus-bio">${esc(dyPersonBio(p))}</div>`:'<div class="dyus-bio dyus-nobio" onclick="dyUserBioEdit()">这个人还没写简介</div>'}
       <div class="dyus-tags">${tags.map(t=>`<span>${esc(t[0])}</span>`).join('')}</div>
       <div class="dyus-acts"><button class="dyus-follow${iFollow?' on':''}" onclick="dyUserToggleFollow()">${svgIc('user',17,iFollow?'#c4c4cb':'#fff',2)} ${iFollow&&followsMe?'互相关注':iFollow?'已关注':'关注'}</button>
@@ -6587,6 +6683,14 @@ function dyUserRec(key,make){key=String(key||'');if(!key)return null;
   S.dy.users=S.dy.users||{};
   if(!S.dy.users[key]&&make)S.dy.users[key]={bio:''};
   return S.dy.users[key]||null;}
+function dyPersonCover(p){if(!p)return '';const r=dyUserRec(dyPersonKey(p),false);return r?String(r.cover||''):'';}
+function dyUserCoverChange(){const p=dyPersonFind(dyUserKey());if(!p)return;
+  pickFile('image/*',async f=>{const r=dyUserRec(dyPersonKey(p),true);if(!r)return;
+    r.cover=await compressBackground(f);save();render();toast('主页背景已更换');});}
+function dyUserCoverReset(){const p=dyPersonFind(dyUserKey());if(!p)return;
+  const r=dyUserRec(dyPersonKey(p),false);
+  if(!r||!r.cover)return toast('现在就是默认背景');
+  r.cover='';save();render();toast('已恢复默认背景');}
 function dyPersonBio(p){if(!p)return '';const r=dyUserRec(dyPersonKey(p),false);return r?String(r.bio||'').slice(0,80):'';}
 function dyPersonBioSet(p,v){if(!p)return;const r=dyUserRec(dyPersonKey(p),true);if(!r)return;
   r.bio=String(v==null?'':v).replace(/\s+/g,' ').trim().slice(0,80);save();}
@@ -6655,6 +6759,8 @@ function dyUserMenu(){const p=dyPersonFind(dyUserKey());if(!p)return;
     <button class="dybtn out" onclick="closeModal();dyUserBioEdit()">编辑简介</button>
     <button class="dybtn out" onclick="closeModal();dyUserBioGen()">让 TA 自己写简介</button>
     <button class="dybtn out" onclick="closeModal();dyUserIPEdit()">改 IP 属地 / 性别</button>
+    <button class="dybtn out" onclick="closeModal();dyUserCoverChange()">更换主页背景</button>
+    ${dyPersonCover(p)?'<button class="dybtn out" onclick="closeModal();dyUserCoverReset()">恢复默认背景</button>':''}
     ${p.cid?`<button class="dybtn out" onclick="closeModal();dyGenContactVideo('${p.cid}')">让 TA 发一条作品</button>`:''}
     <button class="btn g" onclick="closeModal()">关闭</button></div>`);}
 /* ===== 群成员：独立一页 ===== */
@@ -7157,11 +7263,13 @@ function dyProfile(){const p=S.dy.profile||{},mine=S.dy.mine||[],priv=dyPrivateR
   const rows=dyMeGridRows(),cover=storedImageDisplaySource(p.cover||(isImg(dyAvatar())?dyAvatar():'')||'');
   const grid=rows.length?`<div class="dyme-grid">${rows.map((v,i)=>`<div class="dyme-cell" onclick="dyOpenWork('${v.id}')" style="background:${v.grad||DY_GRADS[i%DY_GRADS.length]}">${dyWorkThumbHTML(v)}${v.top&&_dyMeTab==='作品'?'<span class="dyme-top">置顶</span>':''}<span class="dyme-play">${svgIc('heart',11,'#fff',2.4)} ${dyNum(v.lk||0)}</span></div>`).join('')}</div>`
     :`<div class="dyme-empty">${_dyMeTab==='作品'?'还没发过作品～点下面的 ＋ 发一条':_dyMeTab==='收藏'?'还没收藏过作品～点开一条按右边的 ☆':'还没点过喜欢～'}</div>`;
+  const ownCover=isImg(storedImageDisplaySource(p.cover||'')),ink=ownCover?'#fff':'#111';
   return `<div class="dyme" id="dyme">
-    <div class="dyme-cover" style="${isImg(cover)?`background-image:url(${cover})`:''}">
+    <div class="dyme-cover${ownCover?' has-img':''}" style="${isImg(cover)?`background-image:url(${cover})`:''}">
       <div class="dyme-topbar">
         <div class="dyme-addfriend" onclick="dyFollowList()">${svgIc('user',17,'#111',2)}<span>添加好友</span></div>
-        <div class="dyme-tools"><i class="dyme-tool" onclick="dyOpenUpdate()">${svgIc('route',19,'#111',2)}</i><i class="dyme-tool" onclick="dyOpenVisitors()">${svgIc('users',19,'#111',2)}${dyVisitorUnseen()?`<b class="dyme-badge">${dyVisitorUnseen()>99?'99+':dyVisitorUnseen()}</b>`:''}</i><i class="dyme-tool" onclick="dyOpenMeSearch()">${svgIc('search',19,'#111',2)}</i><i class="dyme-tool" onclick="dyAllFeatures()">${svgIc('dots',19,'#111',2)}</i></div>
+        <div class="dyme-cover-edit" onclick="changeDyCover()">${svgIc('image',15,ink,2)}<span>换背景</span></div>
+        <div class="dyme-tools"><i class="dyme-tool" onclick="dyOpenUpdate()">${svgIc('route',19,ink,2)}</i><i class="dyme-tool" onclick="dyOpenVisitors()">${svgIc('users',19,ink,2)}${dyVisitorUnseen()?`<b class="dyme-badge">${dyVisitorUnseen()>99?'99+':dyVisitorUnseen()}</b>`:''}</i><i class="dyme-tool" onclick="dyOpenMeSearch()">${svgIc('search',19,ink,2)}</i><i class="dyme-tool" onclick="dyAllFeatures()">${svgIc('dots',19,ink,2)}</i></div>
       </div>
       <div class="dyme-idrow">
         <div class="dyme-avwrap" onclick="changeDyAvatar()">${av(dyAvatar(),'lg')}<i class="dyme-avplus">＋</i></div>
@@ -7177,6 +7285,7 @@ function dyProfile(){const p=S.dy.profile||{},mine=S.dy.mine||[],priv=dyPrivateR
         ${dyMeStat(dyNum(p.likes),'获赞',"toast('这些赞来自你发过的作品')")}${dyMeStat(dyNum(p.mutual),'互关',"dyOpenRel('互关')")}${dyMeStat(dyNum((S.dy.following||[]).length),'关注',"dyOpenRel('关注')")}${dyMeStat(dyNum(p.fans),'粉丝',"dyOpenRel('粉丝指数')")}
         <button class="dyme-edit" onclick="editDyProfile()">编辑主页</button>
       </div>
+      ${dyMeLoverLine()}
       <div class="dyme-bio${p.bio?'':' dim'}" onclick="${p.bio?'':'editDyProfile()'}">${String(p.bio||'点「编辑主页」写点什么吧～').split('\n').map(l=>`<div>${esc(l).replace(/@[^\s，,。]{1,20}/g,m=>'<b class="dyme-at">'+m+'</b>')||'&nbsp;'}</div>`).join('')}</div>
       <div class="dyme-tags">${(()=>{const bits=[p.gender,(p.age===''||p.age==null)?'':p.age+'岁',p.loc||''].filter(Boolean);return bits.length?`<span class="dyme-tag" onclick="editDyProfile()">${esc(bits.join(' · '))}</span>`:'';})()}<span class="dyme-tag dim" onclick="editDyProfile()">＋ 添加所在地等标签</span></div>
       <div class="dyme-acts">${dyMeAction('bag','我的订单',"dyGoOrders()")}${dyMeAction('clock','观看历史',"dyOpenHistory()")}${dyMeAction('wallet','我的钱包',"dyGoWallet()")}${dyMeAction('star','我的收藏',"dyMeSetTab('收藏')")}${dyMeAction('expand','全部功能',"dyAllFeatures()")}</div>
@@ -7187,10 +7296,19 @@ function dyProfile(){const p=S.dy.profile||{},mine=S.dy.mine||[],priv=dyPrivateR
       <div style="height:18px"></div>
     </div>
   </div>`;}
+/* 绑了情侣空间，我的主页也该挂着恋人是谁——角色主页有，我这儿不能没有。
+   点恋人的名字直接跳到 TA 的抖音主页。 */
+function dyCoupleCid(){const cid=S.couple&&S.couple.cid;if(!cid)return '';const c=getC(cid);return c&&!c.deleted?cid:'';}
+function dyMeLoverLine(){const cid=dyCoupleCid();if(!cid)return '';const c=getC(cid);
+  return `<div class="dyus-line dyme-line">恋人：<em onclick="dyOpenUser('c:${esc(cid)}')">@${esc(c.remark||c.name)}</em></div>`;}
+function dyGoMyProfile(){try{if(cur().p!=='dy')go('dy');}catch(_){go('dy');}
+  dyTab='me';_dySub='';_dyWorkId='';render();}
 function changeDyAvatar(){pickFile('image/*',async f=>{S.dy.profile.avatar=await compress(f,300,.8);save();render();toast('头像已换 🎨');});}
 function editDyProfile(){_dySub='edit';_dyCmOpen=false;render();}
 let _dySub='';let _dyWorkId='';let _dyCmOpen=false;let _dyCmTab='评论';let _dyCmFull=false;let _dyCmReply=-1;let _dyCmExpand={};
-function dySubClose(){if(_dyCmOpen)return dyCmClose();if(_dySub==='work'&&_dyWorkId)dyWatchFinish(_dyWorkId);_dySub='';_dyWorkId='';render();}
+function dySubClose(){if(_dyCmOpen)return dyCmClose();
+  try{if(cur().p==='dywork'){if(_dyWorkId)dyWatchFinish(_dyWorkId);_dySub='';_dyWorkId='';return back();}}catch(_){}
+  if(_dySub==='work'&&_dyWorkId)dyWatchFinish(_dyWorkId);_dySub='';_dyWorkId='';render();}
 function dyCmLayer(){if(!_dyCmOpen)return '';const v=dyVid(_dyWorkId);if(!v)return '';return dyCmSheet(v);}
 /* ===== 抖音「编辑资料」页 ===== */
 function dyProfileRows(){return [['nick','名字'],['bio','简介'],['gender','性别'],['birth','生日'],['loc','所在地'],['dyid','抖音号']];}
@@ -7261,9 +7379,17 @@ function dyVisitorSettings(){const on=!S.dy.visitorHide;openModal(`<h3>访客记
 function dyVisitorClear(){S.dy.visitors=[];save();closeModal();render();toast('访客记录已清空');}
 /* ===== 抖音「作品详情」页（含漂浮弹幕） ===== */
 function dyWorkViews(v){if(v.views==null){v.views=Math.round((v.lk||0)*(5+Math.random()*4))+Math.floor(Math.random()*900);save();}return v.views;}
-function dyOpenWork(id){const v=dyVid(id);if(!v)return;_dyWorkId=id;_dySub='work';_dyCmOpen=false;_dyCmFull=false;_dyCmExpand={};_dyCmReply=-1;dyWorkViews(v);dyWatchRecord(v);render();}
+function dyWorkCurId(){try{const c=cur();if(c&&c.p==='dywork'&&c.id)return c.id;}catch(_){}return _dyWorkId;}
+function dyOpenWork(id){const v=dyVid(id);if(!v)return;_dyWorkId=id;_dySub='work';_dyCmOpen=false;_dyCmFull=false;_dyCmExpand={};_dyCmReply=-1;dyWorkViews(v);dyWatchRecord(v);
+  /* 作品详情以前只是抖音页里的一个子状态，在角色主页（dyuser 是独立一页）上点它
+     render() 画的还是主页——点了没反应。现在不在抖音页上就推成独立一页。 */
+  try{const c=cur();
+    if(c&&c.p==='dywork'){render();return dyMusicSoon();}
+    if(!c||c.p!=='dy')return go('dywork',{id});}catch(_){}
+  render();dyMusicSoon();}
 function dyOpenLiked(id){dyOpenWork(id);}
-function dyHash(t){return esc(String(t||'')).replace(/#[^\s#<]{1,20}/g,m=>'<b>'+m+'</b>');}
+function dyHash(t){return esc(String(t||'')).replace(/#[^\s#<]{1,20}/g,m=>'<b>'+m+'</b>')
+  .replace(/@[^\s#@<，,。！!？?：:；;]{1,20}/g,m=>'<b class="dyat-tx">'+m+'</b>');}
 function dyWorkDate(v){if(v.date)return v.date;if(!v.ts)return '';const d=new Date(v.ts);return (d.getMonth()+1)+'-'+d.getDate();}
 function dyWorkDanmu(v){const mine=v.cid==='me',cs=(v.comments||[]).slice(0,2);
   const head=`<div class="dywk-dm">${(mine?av(dyAvatar(),'sm'):dyFace(v.avatar,'sm'))}<div class="dywk-dm-b"><span>${esc(mine?dyNick():(v.author||'用户'))}${dyWorkDate(v)?' · '+esc(dyWorkDate(v)):''}</span>${dyHash(v.desc||'')}</div></div>`;
@@ -7293,16 +7419,16 @@ function dyWorkAnalyze(id){const v=dyVid(id);if(!v)return;const views=dyWorkView
   openModal(`<h3>视频分析</h3><div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:6px">
     ${[['播放量',dyNum(views)],['点赞',dyNum(lk)],['评论',dyNum(cm)],['收藏',dyNum(st)],['点赞率',rate+'%'],['状态',v.top?'已置顶':'公开']].map(r=>`<div style="background:#f4f4f6;border-radius:10px;padding:11px"><div style="font-size:12px;color:#888">${r[0]}</div><div style="font-size:19px;font-weight:800;margin-top:3px">${esc(String(r[1]))}</div></div>`).join('')}
   </div><button class="btn g" style="margin-top:12px" onclick="closeModal()">关闭</button>`);}
-function dyWorkView(){const v=dyVid(_dyWorkId);if(!v)return `<div class="dyvi"><div class="dyvi-nav"><i onclick="dySubClose()">‹</i><b>作品</b><span></span></div><div class="dyvi-empty">这条作品已经不在了</div></div>`;
+function dyWorkView(){const v=dyVid(dyWorkCurId());if(!v)return `<div class="dyvi"><div class="dyvi-nav"><i onclick="dySubClose()">‹</i><b>作品</b><span></span></div><div class="dyvi-empty">这条作品已经不在了</div></div>`;
   const mine=v.cid==='me',grad=v.grad||DY_GRADS[0];
   return `<div class="dywk">
     <div class="dywk-stage">
       <div class="dywk-top dy-safe-nav2"><i onclick="dySubClose()">‹</i><i onclick="dyTab='search';_dySub='';render()">${svgIc('search',24,'#fff',2)}</i></div>
-      <div class="dywk-frame" style="background-image:${grad}" onclick="dyTapVideo('${v.id}')">${dyWorkCardHTML(v,{full:true})}</div>
+      <div class="dywk-frame${v.img?' photo':''}" style="background-image:${v.img?`url(${storedImageDisplaySource(v.img)})`:grad}" onclick="dyCardTap('${v.id}',event)">${dyWorkCardHTML(v,{full:true})}</div>
       ${dyWorkDanmu(v)}${dyWorkRail(v)}
       <div class="dynarr" id="narr_${v.id}" onclick="dyTapVideo('${v.id}')" style="display:${_dyNarr[v.id]?'block':'none'}"><div style="font-weight:800;color:#fff;margin-bottom:7px">视频内容</div>${esc(v.narration||v.desc||'（这条还没有内容描写）')}<div style="text-align:center;color:#777;margin-top:10px;font-size:11px">轻触收起</div></div>
-      ${dyWorkMusicHTML(v)}
     </div>
+    <div class="dywk-music">${dyWorkMusicHTML(v)}</div>
     <div class="dywk-bar">${mine?`<span>▶ ${dyNum(dyWorkViews(v))}浏览</span><button class="an" onclick="dyWorkAnalyze('${v.id}')">${svgIc('disk',17,'#f2f2f4',2)}视频分析 ⌃</button><span class="pub">公开</span>`:`<span>▶ ${dyNum(dyWorkViews(v))}浏览</span><button class="an" onclick="dyFwd('${v.id}')">${svgIc('forward',17,'#f2f2f4',2)}转发给角色</button><span class="pub">@${esc(v.author||'用户')}</span>`}</div>
   </div>`;}
 /* ===== 抖音评论区（从屏幕下方弹出） ===== */
@@ -7315,12 +7441,15 @@ function dyCmToggle(ci){_dyCmExpand[ci]=!_dyCmExpand[ci];render();}
 function dyCmReplyTo(ci){_dyCmReply=_dyCmReply===ci?-1:ci;render();const i=$('#dycm_in');if(i)i.focus();}
 function dyCmLike(id,ci){const v=dyVid(id);if(!v||!v.comments||!v.comments[ci])return;const cm=v.comments[ci];cm.liked=!cm.liked;cm.lk=Math.max(0,(cm.lk||0)+(cm.liked?1:-1));save();render();}
 function dyCmDelete(id,ci){const v=dyVid(id);if(!v||!v.comments)return;v.comments.splice(ci,1);save();_dyCmReply=-1;_dyCmExpand={};render();toast('已删除');}
+function dyCmIsAuthor(v,cm){if(!v||!cm)return false;
+  if(cm.me)return v.cid==='me';/* 我只有在自己的作品下才是作者 */
+  return !!(cm.cid&&v.cid&&cm.cid===v.cid);}
 function dyCmMeta(cm){const bits=[];if(cm.d)bits.push(esc(cm.d));if(cm.loc)bits.push('·&nbsp;'+esc(cm.loc));return bits.join(' ');}
-function dyCmRow(v,cm,ci){const reps=cm.replies||[],open=!!_dyCmExpand[ci],author=cm.me||(cm.cid&&cm.cid===v.cid);
+function dyCmRow(v,cm,ci){const reps=cm.replies||[],open=!!_dyCmExpand[ci],author=dyCmIsAuthor(v,cm);
   const sub=reps.length?(open?reps.map(r=>`<div class="dycm-sub">${dyFace(r.avatar,'sm')}<div class="dycm-main"><div class="dycm-name">${esc(r.name)}${r.me?'<em class="dycm-author">我</em>':''}</div><div class="dycm-text">${dyHash(r.text)}</div><div class="dycm-meta">${dyCmMeta(r)}</div></div></div>`).join('')+`<div class="dycm-more" onclick="dyCmToggle(${ci})">收起 ⌃</div>`:`<div class="dycm-more" onclick="dyCmToggle(${ci})">展开 ${reps.length} 条回复 ⌄</div>`):'';
   return `<div class="dycm-row"><span onclick="dyOpenUser('${cm.cid?'c:'+cm.cid:'n:'+esc(String(cm.name||''))}')">${dyFace(cm.avatar,'sm')}</span>
     <div class="dycm-main">
-      <div class="dycm-name">${esc(cm.name)}${author?'<em class="dycm-author">作者</em>':cm.cid?'<em class="dycm-author" style="background:#2c2c30;color:#b9b9c1">角色</em>':''}</div>
+      <div class="dycm-name">${esc(cm.name)}${author?'<em class="dycm-author">作者</em>':cm.me?'<em class="dycm-author" style="background:#2c2c30;color:#b9b9c1">我</em>':cm.cid?'<em class="dycm-author" style="background:#2c2c30;color:#b9b9c1">角色</em>':''}</div>
       <div class="dycm-text">${dyHash(cm.text)}</div>
       <div class="dycm-meta">${dyCmMeta(cm)}<span class="a" onclick="dyCmReplyTo(${ci})">回复</span>${cm.me?`<span class="a" onclick="dyCmDelete('${v.id}',${ci})">删除</span>`:''}</div>
       ${sub}
@@ -9008,7 +9137,7 @@ function roleInterceptDiagnosticRemember(c,channel,raw,reason,action,account){co
 function roleInterceptDiagnosticTurn(c,channel,account,scene){const turn=c&&c.id?{c,channel:roleInterceptDiagnosticChannel(channel),account:roleInterceptDiagnosticScopeAccount(channel,account),scene:String(scene||''),candidates:[],selectedId:0,finished:false}:null;chatRequestDiagnostic('turn',turn);return turn;}
 function roleInterceptDiagnosticAction(outcome,ok){if(outcome){outcome.matched=(+outcome.matched||0)+1;if(ok)outcome.handled=(+outcome.handled||0)+1;else outcome.failed=(+outcome.failed||0)+1;}return !!ok;}
 function roleInterceptDiagnosticTurnCandidate(turn,raw,stage){const text=String(raw==null?'':raw).trim();if(!turn||!text)return raw;turn.candidates.push({id:turn.candidates.length+1,raw:text,stage:String(stage||('模型候选 '+(turn.candidates.length+1))).slice(0,100)});return raw;}
-function roleInterceptDiagnosticHandledTagLine(line){const m=String(line||'').trim().match(/^[\[【]\s*([^|｜:：\]】]{1,20})(?:\s*[|｜:：][\s\S]*)?[\]】]\s*$/);if(!m)return false;return /^(?:内心|心情|心情值|记住|闹钟|婚礼日程|日程|联网|拍一拍|记仇|消气|重点|取消重点|锁定|上锁|解锁|禁言|解禁|限时|加时|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|突脸|选择|改日记密码|改密码|改备注|申请远程操控|伴生刷新定位|查看伴生状态|存共同相册|登录微信|删好友|删我好友|群昵称|订票|送票|换头像|发朋友圈|发推|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|同意游戏|拒绝游戏|换气泡|外卖记忆|真实外卖|点外卖|收外卖|拒外卖|收款|拒收|收礼|拒礼|来电|约会|角色扮演|你画我猜|心动审判|亲属卡|推荐好友|已加|拉黑|表情|收藏表情|引用|送礼|一起听|放映邀请|同意放映|拒绝放映|代付成功|拒绝代付|共同生活发消息|线下发消息|共同生活查看|线下查看|共同生活锁定|线下锁定|共同生活解锁|线下解锁|共同生活限额|线下限额|共同生活登录微信|线下登录微信|共同生活请假|同居请假|共同生活销假|同居销假|共同生活取消请假|同居取消请假|共同生活作息|同居作息|共同生活位置|共同生活地点|同居地点|共同生活状态|同居状态|共同生活订票|共同生活双人订票|双人订票)$/i.test(m[1].trim());}
+function roleInterceptDiagnosticHandledTagLine(line){const m=String(line||'').trim().match(/^[\[【]\s*([^|｜:：\]】]{1,20})(?:\s*[|｜:：][\s\S]*)?[\]】]\s*$/);if(!m)return false;return /^(?:内心|心情|心情值|记住|闹钟|婚礼日程|日程|联网|拍一拍|记仇|消气|重点|取消重点|锁定|上锁|解锁|禁言|解禁|限时|加时|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|突脸|选择|改日记密码|改密码|改备注|申请远程操控|伴生刷新定位|查看伴生状态|存共同相册|登录微信|删好友|删我好友|群昵称|订票|送票|换头像|发朋友圈|发推|发抖音|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|同意游戏|拒绝游戏|换气泡|外卖记忆|真实外卖|点外卖|收外卖|拒外卖|收款|拒收|收礼|拒礼|来电|约会|角色扮演|你画我猜|心动审判|亲属卡|推荐好友|已加|拉黑|表情|收藏表情|引用|送礼|一起听|放映邀请|同意放映|拒绝放映|代付成功|拒绝代付|共同生活发消息|线下发消息|共同生活查看|线下查看|共同生活锁定|线下锁定|共同生活解锁|线下解锁|共同生活限额|线下限额|共同生活登录微信|线下登录微信|共同生活请假|同居请假|共同生活销假|同居销假|共同生活取消请假|同居取消请假|共同生活作息|同居作息|共同生活位置|共同生活地点|同居地点|共同生活状态|同居状态|共同生活订票|共同生活双人订票|双人订票)$/i.test(m[1].trim());}
 function roleInterceptDiagnosticComparable(value,ignoreHandled){let text=roleVisibleEnvelopeText(value);if(ignoreHandled)text=String(text||'').split(/\r?\n/).filter(line=>!roleInterceptDiagnosticHandledTagLine(line)).join('\n');try{text=cleanRolePunct(text);}catch(_){}return String(text||'').replace(/[\u200b-\u200d\ufeff]/g,'').replace(/\s+/g,' ').trim();}
 function roleInterceptDiagnosticOnlyHandled(value){const lines=String(roleVisibleEnvelopeText(value)||'').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);return !!lines.length&&lines.every(roleInterceptDiagnosticHandledTagLine);}
 function roleInterceptDiagnosticStripHandledTags(value){return String(value==null?'':value).replace(/[\[【][^\]】]{1,240}[\]】]/g,tag=>roleInterceptDiagnosticHandledTagLine(tag)?'':tag);}
@@ -13030,7 +13159,7 @@ function userNeedsComfortText(t){return /哭|呜呜|😭|😢|难过|委屈|不�
 function badMoodInContent(){return false;}
 function badMoodDodge(content){let t=(''+(content||'')).replace(/[\[【]\s*心情\s*[\|｜][^\]】]*[\]】]/g,'').replace(/\s+/g,'');if(!t)return false;const denial=/(我没事|没事|我没有不开心|没有不开心|没有不高兴|没有生气|没生气|没有啊|没什么|真没事|别多想|不用管)/.test(t);const reveal=/(有点|其实|只是|因为|我怕|我想|我在意|介意|吃醋|生气|委屈|难过|不高兴|不开心|心里|闷|烦|冷|在乎|不是你的错|不想说|现在不想说|怕说了)/.test(t.replace(/没有不开心|没有不高兴|没有生气|没生气/g,''));return denial&&!reveal;}
 function splitActions(line){const out=[];const re=/[（(【][^）)】]*[）)】]/g;let last=0,m;while((m=re.exec(line))){const before=line.slice(last,m.index).trim();if(before)out.push(before);out.push(m[0].trim());last=re.lastIndex;}const tail=line.slice(last).trim();if(tail)out.push(tail);return out.length?out:[line];}
-const TAGWORDS='心情值|心情|内心|心声彩蛋|拍一拍|记住|闹钟|日程|婚礼日程|监督目标|目标完成|发朋友圈|发推|点外卖|语音|表情|收藏表情|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|约会|登录微信|删好友|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|同意游戏|拒绝游戏|你画我猜|心动审判|引用|换气泡|改日记密码|改密码|要求报备|要求定位|要求照片';
+const TAGWORDS='心情值|心情|内心|心声彩蛋|拍一拍|记住|闹钟|日程|婚礼日程|监督目标|目标完成|发朋友圈|发推|发抖音|点外卖|语音|表情|收藏表情|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|约会|登录微信|删好友|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|同意游戏|拒绝游戏|你画我猜|心动审判|引用|换气泡|改日记密码|改密码|要求报备|要求定位|要求照片';
 const APPNAME2KEY={'浏览器':'browser','搜索':'browser','上网':'browser','百度':'browser','朋友圈':'moments','动态':'moments','查他手机':'spy','查岗':'spy','查手机':'spy','购物':'shop','淘宝':'shop','商城':'shop','日历':'calendar','日程':'calendar','x':'x','X':'x','推特':'x','微博':'x','推':'x','抖音':'douyin','短视频':'douyin','刷视频':'douyin','刷抖音':'douyin','外卖':'food','点餐':'food','游戏':'games','游戏大厅':'games','打游戏':'games','信箱':'mail','邮箱':'mail','邮件':'mail','电话':'phoneapp','电话短信':'phoneapp','短信':'phoneapp','信息':'phoneapp','通讯录':'phoneapp','拨号':'phoneapp','来电':'phoneapp','通话':'phoneapp','线下约会':'offline','线下':'offline','约会':'offline','角色扮演':'roleplay','角色扮演软件':'roleplay','扮演':'roleplay','剧情':'roleplay','play':'roleplay','PLAY':'roleplay','规则怪谈':'tale','规则怪谈软件':'tale','怪谈':'tale','规则':'tale','惊悚抉择':'dread','惊悚抉择软件':'dread','惊悚选择':'dread','惊悚选择软件':'dread','恐怖选择':'dread','恐怖选择软件':'dread','惊辣选择':'dread','惊辣选择软件':'dread','精辣选择':'dread','精辣选择软件':'dread','抉择':'dread','音乐':'music','音乐软件':'music','听歌':'music','歌曲':'music','歌':'music','一起听':'music'};
 function genPwd(){return String(1000+Math.floor(Math.random()*9000));}
 function _appKeys(arg,pool,filt){if(/全部|所有|全锁|全/.test(arg))return pool.filter(filt);return arg.split(/[、,，\/\s]+/).map(x=>APPNAME2KEY[x.replace(/[「」『』"'《》]/g,'').trim()]).filter(k=>k&&filt(k));}
@@ -13076,7 +13205,7 @@ async function maybeGrudgeResolve(reply,c,id){
     if(changed){hints.filter(Boolean).forEach(t=>dialogueResolveThread(c,t));save();if(/^(wechat|chat|couple|spy)$/.test(cur().p))render();}
   }catch(e){}}
 // 在"主动消息/查岗/节日/日程"等直接推送的回复里，把管控/记仇指令落地（记仇本、锁App都生效），显示时再用 CTLLEAK 滤掉这些标签行（普通卡片如红包/语音照常）
-const CTLLEAK=/^[\[【]\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|监督目标|目标完成|记仇|消气|拉黑|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|突脸|选择|改日记密码|改密码|改备注|登录微信|删好友|删我好友|群昵称|订票|送票|订酒店|换头像|发朋友圈|发推|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回)\s*[|｜:：\]】]/;
+const CTLLEAK=/^[\[【]\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|监督目标|目标完成|记仇|消气|拉黑|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|突脸|选择|改日记密码|改密码|改备注|登录微信|删好友|删我好友|群昵称|订票|送票|订酒店|换头像|发朋友圈|发推|发抖音|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回)\s*[|｜:：\]】]/;
 function cleanMomentBody(t){let v=(''+(t||'')).replace(/^[\s「"'\[【]+|[\s」"'\]】]+$/g,'').trim();v=v.replace(/^发朋友圈\s*[\|:：]?\s*/,'').replace(/^朋友圈\s*[:：]\s*/,'').trim();return cleanRolePunct(v).trim().slice(0,140);}
 function cleanMomentText(t){let raw=String(t||'').replace(/\r/g,'').trim(),picked='';raw=raw.replace(/[\[【]\s*发朋友圈\s*[\|｜:：]\s*([^\]】\n]{1,240})[\]】]/g,(m,tx)=>{if(!picked)picked=tx;return '\n';});raw=raw.replace(/[\[【]\s*发朋友圈\s*[\]】]\s*[「"']?([^\n]{1,240})[」"']?/g,(m,tx)=>{if(!picked)picked=tx;return '\n';});raw=raw.split(/\n+/).map(x=>x.trim()).filter(x=>x&&!CTLLEAK.test(x)).join('\n');const seen=new Set(),lines=[];raw.split(/\n+/).forEach(x=>{const c=cleanMomentBody(x),k=c.replace(/\s+/g,'');if(c&&k&&!seen.has(k)){seen.add(k);lines.push(c);}});let v=lines.join('\n').trim();if(!v&&picked)v=cleanMomentBody(picked);if(picked){const p=cleanMomentBody(picked),np=p.replace(/\s+/g,''),nv=v.replace(/\s+/g,'');if(p&&(!v||nv===np||nv.includes(np)))v=p;}return cleanMomentBody(v||picked);}
 function roleMomentNorm(text){return String(text||'').toLowerCase().replace(/\s+/g,'').replace(/[^\u4e00-\u9fa5a-z0-9]/g,'');}
@@ -13103,6 +13232,49 @@ const _roleMomentPostPending=new Set();
 function roleMomentFallbackCard(c,tx,opt){const ask=String(opt&&opt.userText||'').replace(/\s+/g,' ').trim(),desc=/官宣/.test(ask)?'成对的物件自然放在同一生活场景里，像一张公开关系的纪念照片':ask.replace(/我需要你|请你|朋友圈|动态|官宣|发一张|发图|发图片|发照片|并配文|配文|图文|配图|带图|照片|图片|生图|生成/g,' ').replace(/\s+/g,' ').trim();return{desc:(desc||String(tx||'').trim()||'一张与这条朋友圈内容相关的生活照片').slice(0,500)};}
 function publishRoleMomentCardFallback(c,tx,opt){return publishRoleMoment(c,tx,Object.assign({},opt,{photoCards:[roleMomentFallbackCard(c,tx,opt)]}));}
 function postRoleMoment(c,tx,opt){opt=Object.assign({},opt||{});const key=String(c&&c.id||'')+'|'+roleMomentNorm(tx);if(_roleMomentPostPending.has(key))return true;if(!roleMomentImagesAllowed()){if(opt.toast&&roleMomentExplicitPhotoIntent(opt))toast('角色朋友圈图片权限已关闭，本次只发布文字');opt.images=[];opt.photoCards=[];return publishRoleMoment(c,tx,opt);}if(!Array.isArray(opt.images)||!opt.images.length){const src=roleMomentRequestedUserImage(c,opt)||roleMomentReferencedChatImage(c,opt);if(src)opt.images=[src];}if((opt.images||[]).length||!roleMomentExplicitPhotoIntent(opt))return publishRoleMoment(c,tx,opt);if(!S.settings.imgGen||!imageGenerationAvailable())return publishRoleMomentCardFallback(c,tx,opt);_roleMomentPostPending.add(key);roleMomentGenerateRequestedImage(c,tx,opt).then(images=>{if(!images.length&&opt.toast)toast('官宣配图两次生成失败，本次只发布真实文案');publishRoleMoment(c,tx,Object.assign({},opt,{images}));}).catch(()=>{if(opt.toast)toast('官宣配图生成失败，本次只发布真实文案');publishRoleMoment(c,tx,Object.assign({},opt,{images:[]}));}).finally(()=>_roleMomentPostPending.delete(key));return true;}
+/* ===== 角色发抖音：跟「把这张图发朋友圈」一个用法，只是发到抖音 =====
+   她说「我说把这张图片发抖音，配上什么文案，他就会自己发到抖音里配文案、歌曲」。
+   图片用她刚发的那张原图，配乐从她自己的音乐库里随机挑一首；库里没歌就不配乐直接发。 */
+function cleanDouyinBody(t){let v=(''+(t||'')).replace(/^[\s「"'\[【]+|[\s」"'\]】]+$/g,'').trim();
+  v=v.replace(/^发抖音\s*[\|:：]?\s*/,'').replace(/^抖音\s*[:：]\s*/,'').trim();
+  return cleanRolePunct(v).trim().slice(0,140);}
+function roleDouyinWantsImage(text){const ask=String(text||'').replace(/\s+/g,'');
+  return /(?:这张|刚才|上面|这个|那张|刚刚)?(?:图|图片|照片).{0,24}(?:抖音|作品)|(?:抖音|发作品).{0,24}(?:这张|刚才|上面|这个|那张|刚刚)?(?:图|图片|照片)/.test(ask);}
+function roleDouyinImage(c,opt){const ask=String(opt&&opt.userText||'');
+  if(!c||!roleDouyinWantsImage(ask))return '';
+  /* 她发的、或者角色刚发给她的，都算「这张图」 */
+  const recent=(typeof msgs==='function'?msgs(c.id):[]).slice(-20);
+  for(let i=recent.length-1;i>=0;i--){const m=recent[i];
+    if(m&&m.type==='image'&&m.src&&Date.now()-(+m.time||Date.now())<48*3600000)return m.src;}
+  return '';}
+function roleDouyinPickSong(){let lib=[];try{lib=dyMusicLib();}catch(_){lib=[];}
+  return lib.length?lib[Math.floor(Math.random()*lib.length)]:null;}
+function roleDouyinDuplicate(c,tx){const norm=x=>String(x||'').replace(/\s+/g,'');
+  return (S.dy&&S.dy.feed||[]).filter(v=>v&&v.cid===c.id).slice(0,8).some(v=>norm(v.desc)===norm(tx));}
+function publishRoleDouyin(c,tx,opt){opt=opt||{};tx=cleanDouyinBody(tx);
+  if(!c||!tx)return false;
+  try{dyInit();}catch(_){return false;}
+  if(roleDouyinDuplicate(c,tx))return false;
+  const img=opt.img||roleDouyinImage(c,opt),song=roleDouyinPickSong();
+  S.dy.feed.unshift({id:uid(),cid:c.id,author:c.remark||c.name,handle:'@'+String(c.name||'').replace(/\s/g,''),
+    avatar:c.avatar,desc:tx,body:'',narration:String(opt.narration||''),img:img||'',emoji:'🎬',
+    grad:DY_GRADS[Math.floor(Math.random()*DY_GRADS.length)],
+    music:song?((song.title||'未命名')+(song.artist?' · '+song.artist:'')):'',songId:song?song.id:'',
+    lk:Math.floor(Math.random()*400),st:0,views:0,comments:[],ts:Date.now()});
+  if(!Array.isArray(S.dy.following))S.dy.following=[];
+  if(S.dy.following.indexOf(c.id)<0)S.dy.following.push(c.id);
+  save();
+  try{if(cur().p==='dy')render();}catch(_){}
+  if(opt.toast)toast((c.remark||c.name)+'发了一条抖音'+(img?'（用了那张图）':'')+(song?('，配乐 '+(song.title||'')):''));
+  return true;}
+function postRoleDouyin(c,tx,opt){return publishRoleDouyin(c,tx,opt);}
+function roleDouyinRecentText(c){return (S.dy&&S.dy.feed||[]).filter(v=>v&&v.cid===c.id).slice(0,6)
+  .map(v=>'"'+String(v.desc||'')+'"'+(v.img?'（配了一张照片）':'')+(v.music?'（配乐：'+v.music+'）':'')).join('\n');}
+function roleDouyinDiag(outcome,ok){try{if(typeof roleInterceptDiagnosticAction==='function')roleInterceptDiagnosticAction(outcome,ok);}catch(_){}}
+function consumeDouyinCommands(content,c,opt,outcome){const posted=[];let out=''+(content||'');
+  out=out.replace(/[\[【]\s*发抖音\s*[\|｜:：]\s*([^\]】\n]{1,180})[\]】]/g,(mm,tx)=>{const body=cleanDouyinBody(tx),ok=!!body&&postRoleDouyin(c,body,opt);if(ok)posted.push(body);roleDouyinDiag(outcome,ok);return '';});
+  out=out.replace(/[\[【]\s*发抖音\s*[\]】]\s*[「"']?([^\n]{1,180})[」"']?/g,(mm,tx)=>{const body=cleanDouyinBody(tx),ok=!!body&&postRoleDouyin(c,body,opt);if(ok)posted.push(body);roleDouyinDiag(outcome,ok);return '';});
+  return opt&&opt.preserveText?out:stripPostedMomentEcho(out,posted);}
 function stripPostedMomentEcho(content,posted){let out=''+(content||'');(posted||[]).forEach(tx=>{if(!tx)return;const escRe=tx.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');out=out.replace(new RegExp('^[\\s\\n「"\'【\\[]*'+escRe+'[\\s」"\'】\\]]*','m'),'');});return out;}
 function consumeMomentCommands(content,c,opt,outcome){const posted=[];let out=''+(content||'');
   out=out.replace(/[\[【]\s*发朋友圈\s*[\|｜:：]\s*([^\]】\n]{1,180})[\]】]/g,(mm,tx)=>{const body=cleanMomentBody(tx),ok=!!body&&postRoleMoment(c,body,opt);if(ok)posted.push(body);roleInterceptDiagnosticAction(outcome,ok);return '';});
@@ -13531,7 +13703,7 @@ function routePhoneInspectionTags(content,c,requestText){let out=String(content|
   if(hasRemote){if(hasWx)out=out.replace(wxRe,'');remember(restoreAll?'restore_all_permissions':(onlyWx&&!(S.couple&&S.couple.cid===c.id&&S.couple.wxLoginAuth))?'restore_wx':'inspect_phone');return out;}
   return out;}
 function companionApplyReadTags(content,c,outcome){let changed=false,out=String(content||''),st=companionState(),actor=(c&&(c.remark||c.name))||'绑定角色';out=out.replace(/[\[【]\s*(伴生刷新定位|查看伴生状态)\s*[\]】]/g,(mm,act)=>{let ok=false;if(st&&st.roleAccess&&companionReady(st)){const r=companionApplyAction(st,act==='伴生刷新定位'?'location':'view',{by:'role',actor});ok=!!r.ok;if(ok)changed=true;}roleInterceptDiagnosticAction(outcome,ok);return '';});return {content:out,changed};}
-function applyAuxTags(content,c,id){try{if(wechatNaturalOn()){const thoughts=[...String(content||'').matchAll(/[\[【]\s*内心\s*[|｜:：]\s*([^\]】]*)[\]】]/g)];if(thoughts.length)setNaturalInnerThought(c,thoughts[thoughts.length-1][1]);}consumeMomentCommands(content,c,{toast:false});consumeCoupleGoalTags(content,c);consumeWeddingCalendarTags(content,c);const sp=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;applyControlTags(content,c,id,sp);applyGrudgeTags(content,c);applyStarTags(content);cohabConsumeOnlineState(content,c,id);}catch(e){} }
+function applyAuxTags(content,c,id){try{if(wechatNaturalOn()){const thoughts=[...String(content||'').matchAll(/[\[【]\s*内心\s*[|｜:：]\s*([^\]】]*)[\]】]/g)];if(thoughts.length)setNaturalInnerThought(c,thoughts[thoughts.length-1][1]);}consumeMomentCommands(content,c,{toast:false});consumeDouyinCommands(content,c,{toast:false});consumeCoupleGoalTags(content,c);consumeWeddingCalendarTags(content,c);const sp=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;applyControlTags(content,c,id,sp);applyGrudgeTags(content,c);applyStarTags(content);cohabConsumeOnlineState(content,c,id);}catch(e){} }
 function rolePhonePasswordDigits(value){const map={零:'0',〇:'0',一:'1',二:'2',两:'2',三:'3',四:'4',五:'5',六:'6',七:'7',八:'8',九:'9'},chars=String(value||'').replace(/[０-９]/g,ch=>String(ch.charCodeAt(0)-0xFF10)).match(/[0-9零〇一二两三四五六七八九]/g)||[];if(chars.length!==4)return'';return chars.map(ch=>map[ch]||ch).join('');}
 function rolePhonePasswordIntent(content){const text=String(content||'').replace(/[\[【][^\]】]*[\]】]/g,' ').replace(/[^。！？!?\n]{0,24}(?:日记本?|日记\s*(?:App|应用))[^。！？!?\n]{0,20}(?:密码|解锁码)[^。！？!?\n]{0,24}/gi,' ').replace(/\s+/g,' ').trim();if(!text)return'';const negative=/(?:密码|解锁码).{0,12}(?:还是|仍是|保持|没变|未变|不变)|(?:没|没有|还没|并没|未|别|不要|不想|不会|不能).{0,10}(?:改|换|设|重设).{0,10}(?:密码|解锁)|(?:密码|解锁码).{0,10}(?:没|没有|还没|并没|未).{0,8}(?:改|换|变)/;if(negative.test(text))return'';const d='[0-9０-９零〇一二两三四五六七八九]',token='('+d+'(?:[\\s·•,，、._-]*'+d+'){3})(?!'+d+')',pwd='(?:(?:手机|解锁|锁屏)\\s*)?密码|解锁码',patterns=[new RegExp('(?:新(?:的)?(?:手机|解锁|锁屏)?密码|新解锁码)\\s*(?:是|为|用|改成|换成|设成|：|:)?\\s*'+token,'i'),new RegExp('(?:'+pwd+')\\s*(?:已经|现在|又)?\\s*(?:改成|改为|换成|换为|设成|设为|设置为|重设为)\\s*[：:是]?\\s*'+token,'i'),new RegExp('(?:'+pwd+')\\s*(?:已经|现在|又)?\\s*(?:改好(?:了)?|改完(?:了)?|换好(?:了)?|换完(?:了)?|设置好(?:了)?|设好(?:了)?|重设好(?:了)?)\\s*[,，。！？!：:]?\\s*(?:新(?:的)?(?:手机|解锁|锁屏)?密码\\s*)?(?:是|为|用|：|:)?\\s*'+token,'i'),new RegExp('(?:改好(?:了)?|改完(?:了)?|换好(?:了)?|换完(?:了)?|设置好(?:了)?|设好(?:了)?|重设好(?:了)?)[^。！？!?\\n]{0,28}(?:新(?:的)?(?:手机|解锁|锁屏)?密码|(?:'+pwd+')|新的)\\s*(?:是|为|用|：|:)?\\s*'+token,'i'),new RegExp('(?:以后|之后|从现在开始)[^。！？!?\\n]{0,18}'+token+'[^。！？!?\\n]{0,10}(?:当|做|作为|用作)?\\s*(?:'+pwd+')','i'),new RegExp('(?:我的|我这台|现在的|目前的)\\s*(?:'+pwd+')\\s*(?:是|为|用|：|:)\\s*'+token,'i')];for(const re of patterns){const m=text.match(re),digits=m&&rolePhonePasswordDigits(m[1]);if(digits)return digits;}if(new RegExp('(?:'+pwd+')[^。！？!?\\n]{0,10}(?:改了|换了|重设了|改好(?:了)?|换好(?:了)?|设置好(?:了)?)(?:[。！!]|$)|(?:改好(?:了)?|换好(?:了)?|设置好(?:了)?)[^。！？!?\\n]{0,10}(?:'+pwd+')(?:[。！!]|$)','i').test(text))return'random';return'';}
 function rolePhonePasswordApply(c,value){if(!c)return false;const sp=getSpy(c),fixed=rolePhonePasswordDigits(value),next=fixed||String(1000+Math.floor(Math.random()*9000));sp.pwd=next;if(typeof _spyUnlock!=='undefined')_spyUnlock[c.id]=false;return true;}
@@ -13882,7 +14054,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
     const _statedPwd=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;
     content=applyControlTags(content,c,id,_statedPwd,_userText,_replyActionOutcome);
     if(_naturalOn){if(/[\[【]\s*(?:记仇|消气)\s*(?:[|｜:：]\s*[^\]】]*)?[\]】]/.test(String(content||'')))_replyAuditPartial=true;content=content.replace(/[\[【]\s*(?:记仇|消气)\s*(?:[|｜:：]\s*[^\]】]*)?[\]】]/g,'');}else content=applyGrudgeTags(content,c,_replyActionOutcome);content=applyStarTags(content,_replyActionOutcome);content=cohabConsumeOnlineState(content,c,id,{userText:_userText,audit:_replyActionOutcome});
-    bubbleNaturalRequest(_userText,c);content=applyBubbleTags(content,c,_replyActionOutcome);if(!_rawOutput)content=await ensureRequestedPhotoCaptionMoment(content,c,_userText);if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;content=consumeMomentCommands(content,c,{toast:true,userText:_userText,preserveText:_rawOutput},_replyActionOutcome);content=coupleAlbumConsumeSaveTag(content,c,_replyActionOutcome);if(!_rawOutput)content=forceRequestedVoiceReply(content,_voiceRequired?_userText:'',c);if(_replyActionOutcome.handled)_replyAuditHandled=true;if(_replyActionOutcome.failed)_replyAuditPartial=true;
+    bubbleNaturalRequest(_userText,c);content=applyBubbleTags(content,c,_replyActionOutcome);if(!_rawOutput)content=await ensureRequestedPhotoCaptionMoment(content,c,_userText);if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;content=consumeMomentCommands(content,c,{toast:true,userText:_userText,preserveText:_rawOutput},_replyActionOutcome);content=consumeDouyinCommands(content,c,{toast:true,userText:_userText,preserveText:_rawOutput},_replyActionOutcome);content=coupleAlbumConsumeSaveTag(content,c,_replyActionOutcome);if(!_rawOutput)content=forceRequestedVoiceReply(content,_voiceRequired?_userText:'',c);if(_replyActionOutcome.handled)_replyAuditHandled=true;if(_replyActionOutcome.failed)_replyAuditPartial=true;
     if(/拉黑|加回|删了你|删除你|拉进黑名单|原谅你/.test(content)&&!/报备|别的微信号|加了你|加你、|有人加|有别人加/.test(note||''))applyBlockIntent(content,c,id);
     if(S.couple&&S.couple.cid===id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|放你用|这个你先用|你先用|给你(解|开)|都给你解|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|玩.{0,4}(一会儿|一会|多久|多长)|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)|扣.{0,4}(零花|钱|块|元)|没收.{0,4}(零花|钱|卡)|罚款|罚.{0,3}(钱|块|元)|零花钱|冻结|解冻|亲属卡|原谅|消气/.test(content)){if(!naturalUngagFallback(content,c,id))extractControl(content,c,_statedPwd);}
     if(!_rawOutput&&!_wxLoginCompletion){const _nativeInspectionQueued=maybeSpyIntent(content,c,id,_lu,{nativeOnly:true,immediate:true,suppressInitial:true});if(_nativeInspectionQueued){roleInterceptDiagnosticTurnSelect(_replyAudit,content);_replyAuditPartial=!!roleInterceptDiagnosticComparable(content,true);_replyAuditHandled=true;_replyAuditFinal=content;if(typingEl&&typingEl.isConnected)typingEl.remove();return true;}else{const _phoneGuard=guardUnverifiedRolePhoneReply(content,note);content=_phoneGuard.content;if(_phoneGuard.focus){if(queueNativeInspection(id,_lu,_phoneGuard.focus,{bySheTold:true,suppressInitial:true,immediate:true,forceResult:true})){roleInterceptDiagnosticTurnSelect(_replyAudit,content);_replyAuditPartial=!!roleInterceptDiagnosticComparable(content,true);_replyAuditHandled=true;_replyAuditFinal=content;if(typingEl&&typingEl.isConnected)typingEl.remove();return true;}}else maybeSpyIntent(content,c,id,_lu);}}
@@ -13951,7 +14123,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
       if(!_rawOutput&&photoTail>0&&isPhotoPromptFragment(line)){photoTail--;_replyAuditPartial=true;continue;}
       if(!_rawOutput&&/^\[联网\|/.test(line)){_replyAuditPartial=true;continue;}
       const mt0=parseMomentCommandLine(line);if(mt0!=null){if(!mt0||!postRoleMoment(c,mt0,{toast:true,userText:_userText,preserveText:_rawOutput}))_replyAuditPartial=true;continue;}
-      if(!_rawOutput&&/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|突脸|选择|改日记密码|改密码|改备注|登录微信|删好友|删我好友|群昵称|订票|送票|订酒店|换头像|发朋友圈|发推|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|同意游戏|拒绝游戏|换气泡|外卖记忆)\s*[|｜:：\]]/.test(line)){_replyAuditPartial=true;continue;}/* 走到这里说明标签没有被前面的真实执行器消费。 */
+      if(!_rawOutput&&/^\[\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|突脸|选择|改日记密码|改密码|改备注|登录微信|删好友|删我好友|群昵称|订票|送票|订酒店|换头像|发朋友圈|发推|发抖音|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|同意游戏|拒绝游戏|换气泡|外卖记忆)\s*[|｜:：\]]/.test(line)){_replyAuditPartial=true;continue;}/* 走到这里说明标签没有被前面的真实执行器消费。 */
       if(!_rawOutput&&(/^\s*[🔒🔓🔇🔊🔕]/.test(line)||/^\s*(?:ta|TA|他|她)(把你|锁了你|禁言了你|解除了你|解禁了你|解锁了你)/.test(line))){_replyAuditPartial=true;continue;}
       if(!_rawOutput&&isRefusal(line)){_replyAuditPartial=true;continue;}
       let mm=line.match(/^\[内心\|([^\]]*)\]$/);if(mm){if(_naturalOn&&setNaturalInnerThought(c,mm[1])){_replyAuditHandled=true;save();}else _replyAuditPartial=true;continue;}
@@ -14916,6 +15088,7 @@ async function callAI(sysNote,opts){if(!_call)return;const _rawOutput=typeof mod
     content=content.replace(/[\[【]\s*送礼\s*[\|｜:：]([^\|｜\]】]*)[\|｜]?([^\]】]*)[\]】]/g,(mm,nm,pr)=>{giftSend(_call.id,(nm||'礼物').trim(),+pr||0);return '';});
     // 通话里也能：发朋友圈 / 发推 / 转账（执行后不读出来）
     content=consumeMomentCommands(content,c,{toast:false,userText:(_luc&&msgToText(_luc))||'',preserveText:_rawOutput});
+    content=consumeDouyinCommands(content,c,{toast:false,userText:(_luc&&msgToText(_luc))||'',preserveText:_rawOutput});
     content=content.replace(/[\[【]\s*发推\s*[\|｜:：]([^\]】]+)[\]】]/g,(mm,tx)=>{publishRoleTweet(c,tx);return '';});
     content=content.replace(/[\[【]\s*(转账|红包)\s*[\|｜:：，,、\s]+([0-9]+(?:\.[0-9]{1,2})?)\s*(?:[\|｜:：，,、\s]+([^\]】]*))?[\]】]/g,(mm,kind,amt,note)=>{const ty=(kind==='红包'?'redpacket':'transfer'),av=+amt||0;if(msgs(_call.id).some(x=>x.role==='assistant'&&x.type===ty&&Math.abs((+x.amount||0)-av)<0.01&&Date.now()-(x.time||0)<180000))return '';/* 3分钟内同额转账/红包不重复 */const tc={role:'assistant',type:ty,amount:av,note:(note||'').trim(),received:false,id:uid(),time:Date.now()};msgs(_call.id).push(tc);notifyIncoming(c,tc);save();return '';});
     const _requestedVoiceCue=(_luc&&_call._voiceCueMsg!==_luc.id)?ttsRequestedCue(msgToText(_luc)):'',_turnVoiceCue=_requestedVoiceCue||_callCueTag||ttsAutoCue(content,c);if(_requestedVoiceCue&&_luc)_call._voiceCueMsg=_luc.id;

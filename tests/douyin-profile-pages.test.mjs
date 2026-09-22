@@ -301,7 +301,7 @@ test('a group is created with roles inside and an owner that is her', () => {
   assert.match(src, /k:'me',role:'owner'/, '建群的人就是群主');
   assert.match(src, /cs\.map\(c=>\(\{k:'c:'\+c\.id,cid:c\.id,role:'member'/, '角色作为成员进群');
   assert.match(src, /open:!!open/, '建群时就决定公开还是私密');
-  assert.match(src, /gnum:dyGNum\(\)/);
+  assert.match(src, /gnum:dyGNewNum\(\)/);
   assert.match(source('dyGroupCreateHTML'), /公开群每天会有一位陌生人来申请加入，私密群只能你自己邀请/);
 });
 
@@ -733,12 +733,15 @@ test('a 抖音 DM answers in up to four bubbles, like WeChat', () => {
 
 test('an admin can send up to four bubbles, everyone else exactly one', () => {
   const ctx = vm.createContext({ String, Math });
-  vm.runInContext(['dyGBubbleMax', 'dyGBubbleRule', 'dyGSplitAt', 'dyGBubbles'].map(source).join('\n')
+  vm.runInContext(['dyGNum', 'dyGBubAdmin', 'dyGBubMember', 'dyGBubbleMax', 'dyGBubbleRule', 'dyGSplitAt', 'dyGBubbles'].map(source).join('\n')
     + ';globalThis.dyGRole=(g,k)=>g.roles[k]||"member";globalThis.MAX=dyGBubbleMax;globalThis.RULE=dyGBubbleRule;globalThis.SPLIT=dyGSplitAt;globalThis.B=dyGBubbles;', ctx);
   const g = { roles: { a: 'admin', o: 'owner', m: 'member' } };
   assert.equal(ctx.MAX(g, { k: 'a' }), 4);
   assert.equal(ctx.MAX(g, { k: 'o' }), 4);
   assert.equal(ctx.MAX(g, { k: 'm' }), 1, '配角刷屏就吵了');
+  /* 现在这两个数每个群自己调，默认还是 4 / 1 */
+  assert.equal(ctx.MAX({ roles: g.roles, bubAdmin: 2, bubMember: 3 }, { k: 'a' }), 2);
+  assert.equal(ctx.MAX({ roles: g.roles, bubAdmin: 2, bubMember: 3 }, { k: 'm' }), 3);
   assert.equal(ctx.B(g, { k: 'a' }, '一\n二\n三').length, 3);
   assert.equal(ctx.B(g, { k: 'a' }, 'a\nb\nc\nd\ne').length, 4, '管理员也封顶四条');
   assert.equal(ctx.B(g, { k: 'm' }, 'a\nb\nc').length, 1);

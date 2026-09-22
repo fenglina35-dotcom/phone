@@ -93,7 +93,7 @@ test('deleting one offline memory restores the modal scroll position',async()=>{
   assert.equal(sheet.scrollTop,1000,'restoration clamps to the new shorter list');
 });
 
-test('private v1285 inherits the complete web v1274 memory controls and scroll repair',()=>{
+test('private v1287 inherits the complete web v1274 memory controls and scroll repair',()=>{
   for(const name of ['onlineMemoryRecallLimits','onlineMemoryRecallSet','selectRelevantMemory','offMemoryScrollTop','offMemoryRestoreScroll','offDelMemory']){
     assert.equal(functionSourceFrom(privateSource,name).replace(/\r\n/g,'\n'),functionSource(name).replace(/\r\n/g,'\n'),`${name} must stay identical in web and private bundles`);
   }

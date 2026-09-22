@@ -923,6 +923,55 @@ const PERMANENT_FIXES = [
     marker: 'function dyFwdTo(scope,id)',
     least: 1,
   },
+  {
+    release: 'v1286/v1287',
+    name: '配乐条在 stage 外面，不会跑到左上角',
+    scope: 'both',
+    marker: '<div class="dywk-music">${dyWorkMusicHTML(v)}</div>',
+    least: 1,
+  },
+  {
+    release: 'v1286/v1287',
+    name: '滑到哪条放哪条，没点过屏幕不硬出声',
+    scope: 'both',
+    marker: 'if(!_dyGestured)return;',
+    least: 1,
+  },
+  {
+    release: 'v1286/v1287',
+    name: '@ 写进作品描述，发布时按文字里还剩下的定名单',
+    scope: 'both',
+    marker: 'function dyPostAtSync(p)',
+    least: 1,
+  },
+  {
+    release: 'v1286/v1287',
+    name: '角色能把图真的发到抖音',
+    scope: 'both',
+    marker: 'function publishRoleDouyin(c,tx,opt)',
+    least: 1,
+  },
+  {
+    release: 'v1286/v1287',
+    name: '作品详情是独立一页，角色主页点得开',
+    scope: 'both',
+    marker: "else if(c.p==='dywork')html=dyWorkView()+dyCmLayer();",
+    least: 1,
+  },
+  {
+    release: 'v1286/v1287',
+    name: '建群的号码函数不再和夹取范围的 dyGNum 重名',
+    scope: 'both',
+    marker: 'function dyGNewNum()',
+    least: 1,
+  },
+  {
+    release: 'v1286/v1287',
+    name: '不是作者就不挂作者牌',
+    scope: 'both',
+    marker: 'function dyCmIsAuthor(v,cm)',
+    least: 1,
+  },
 ];
 
 const sources = { web: read(WEB), private: read(PRIVATE) };

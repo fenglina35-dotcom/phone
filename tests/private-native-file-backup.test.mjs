@@ -14,14 +14,14 @@ const backup=read(bundle+'private-cloud-backup.js');
 const privateApp=read(bundle+'app.js');
 const publicApp=read('app.js');
 
-test('private v1285 loads daily backup after the diagnostic overlay while public advances independently',()=>{
+test('private v1287 loads daily backup after the diagnostic overlay while public advances independently',()=>{
   for(const name of ['index.html','小手机.html']){
     const html=read(bundle+name);
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1285'/);
-    assert.ok(html.indexOf('private-cloud-backup.js?v=1285')>html.indexOf('private-runtime-diagnostics.js?v=339'));
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1287'/);
+    assert.ok(html.indexOf('private-cloud-backup.js?v=1287')>html.indexOf('private-runtime-diagnostics.js?v=339'));
   }
-  assert.match(privateApp,/APP_VER='v1285 · 抖音发作品三页与卡片（私人）'/);
-  assert.match(publicApp,/APP_VER='v1284 · 抖音发作品三页与卡片'/);
+  assert.match(privateApp,/APP_VER='v1287 · 抖音全屏作品与配乐（私人）'/);
+  assert.match(publicApp,/APP_VER='v1286 · 抖音全屏作品与配乐'/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 380;/g)||[]).length,12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.380;/g)||[]).length,12);
 });
