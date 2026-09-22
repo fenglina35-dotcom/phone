@@ -128,6 +128,16 @@ test('边栏每个按钮都拦住冒泡，不然点爱心会被当成一次轻�
   assert.match(source('dyVideoCard'), /class="dyfd-who" onclick="event\.stopPropagation\(\);dyAuthorMenu/);
   assert.match(source('dyVideoCard'), /id="narr_\$\{v\.id\}" onclick="event\.stopPropagation\(\);dyTapVideo/);
 });
+test('头像外面那层必须 block，写成 inline-block 会带出基线把边栏撑高 3px', () => {
+  for (const x of shells) {
+    assert.match(x, /\.dywk-avwrap\{position:relative;display:block;line-height:0;\}/);
+    assert.equal(/\.dywk-avwrap\{[^}]*inline-block/.test(x), false, '作品详情那页本来一个像素都不该动');
+  }
+});
+test('首页边栏抬高一点，头像落在和「点进去」同一个高度', () => {
+  for (const x of shells) assert.match(x, /\.dyvideo \.dywk-rail\{bottom:41px;\}/);
+});
+
 test('拍同款是个真按钮，会带着这条的配乐去发作品', () => {
   for (const x of [app, priv]) assert.match(x, /function dyWorkSame\(id\)/);
   const fn = source('dyWorkSame');
