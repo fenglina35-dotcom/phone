@@ -217,5 +217,5 @@ test('private release identity is iOS 380 while public web advances independentl
   assert.match(webView,/1\.0\.380 \(380\)/);
   assert.match(project,/CURRENT_PROJECT_VERSION = 380/);
   assert.match(project,/MARKETING_VERSION = 1.0.380/);
-  assert.match(read('app.js'),/__NORTH_SHELL_BUILD__!==\'1292\'/);
+  assert.match(read('app.js'),/__NORTH_SHELL_BUILD__!==\'1294\'/);
 });
