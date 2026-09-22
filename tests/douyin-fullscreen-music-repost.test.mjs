@@ -59,8 +59,15 @@ test('每条作品底下都有一条配乐，没配乐的写「创作的原声�
 });
 test('详情页的配乐条在 .dywk-music 里，而且在 stage 外面——否则会跑到左上角', () => {
   const view = source('dyWorkView');
-  assert.match(view, /<\/div>\n\s*<div class="dywk-music">\$\{dyWorkMusicHTML\(v\)\}<\/div>\n\s*<div class="dywk-bar">/);
-  assert.equal(/dywk-stage[\s\S]*dywk-music[\s\S]*<\/div>\n\s*<div class="dywk-bar"/.test(view), true);
+  assert.match(view, /<div class="dywk-music">\$\{dyWorkMusicHTML\(v\)\}<\/div>\n\s*<div class="dywk-bar">/);
+  /* 边栏也挪出 stage 了：stage 的 overflow:hidden 会把最底下那格剪掉。
+     所以 ${dyWorkRail(v)} 必须排在 stage 的收尾 </div> 之后。 */
+  assert.match(view, /<\/div>\n\s*\$\{dyWorkRail\(v\)\}\n\s*<div class="dywk-music">/,
+    '边栏还留在 stage 里的话，最底下那格会被剪掉');
+  const stageOpen = view.indexOf('<div class="dywk-stage">');
+  const railAt = view.indexOf('${dyWorkRail(v)}');
+  const musicAt = view.indexOf('<div class="dywk-music">');
+  assert.ok(stageOpen >= 0 && stageOpen < railAt && railAt < musicAt);
   for (const s of shells) assert.match(s, /\.dywk-music\{flex:0 0 auto/);
 });
 test('滑到哪条放哪条：没配乐就停，没点过屏幕不硬出声', () => {
@@ -109,9 +116,9 @@ test('首页那条旧的 .dyrail 撤了，改用和作品详情同一条', () =>
   assert.equal(/class="dyrail"/.test(card), false, '首页还留着旧的那条边栏，位置就对不上了');
   assert.match(source('dyWorkRail'), /return dyRailHTML\(v\);/, '作品详情也必须走同一个函数，不然两边迟早又走偏');
 });
-test('边栏是：头像、爱心、评论、收藏、更多、拍同款', () => {
+test('边栏是：头像、爱心、评论、收藏、转发、拍同款——照她给的真抖音截图', () => {
   const fn = source('dyRailHTML');
-  const order = ['dyVideoAuthor', 'dyLike', 'dyComments', 'dyStar', 'dyWorkMore', 'dyWorkSame'];
+  const order = ['dyVideoAuthor', 'dyLike', 'dyComments', 'dyStar', 'dyFwd', 'dyWorkSame'];
   let at = -1;
   for (const name of order) {
     const i = fn.indexOf(name);
@@ -119,6 +126,28 @@ test('边栏是：头像、爱心、评论、收藏、更多、拍同款', () =>
     at = i;
   }
   assert.match(fn, /拍同款/);
+  assert.match(fn, /svgIcFill\('forward',29,'#fff',1\.1\)/, '转发那个箭头要实心白');
+  assert.equal(/<em>···<\/em>更多/.test(fn), false, '「更多」已经并进转发那张单子了');
+});
+test('「更多」里的事情一样没少，都在转发那张单子的下半截', () => {
+  const fn = source('dyFwd');
+  for (const k of ['转发到微信', '转发到抖音私信', '转发到抖音群聊', '生成网友评论', 'dyWorkTopToggle', 'dyTogglePrivate', 'dyWorkDelete', 'dyWorkDescEdit']) {
+    assert.ok(fn.includes(k), `转发单子里少了 ${k}`);
+  }
+  assert.match(source('dyWorkMore'), /return dyFwd\(id\);/, '别处还叫得到 dyWorkMore');
+});
+test('转发出去一次，数字跟着加一', () => {
+  const ctx = { S: { dy: { feed: [{ id: 'w1', fw: 0 }], mine: [] } }, save: () => {} };
+  vm.createContext(ctx);
+  vm.runInContext(source('dyFwdCount'), ctx);
+  const v = ctx.S.dy.feed[0];
+  ctx.v = v;
+  vm.runInContext('dyFwdCount(v);dyFwdCount(v);', ctx);
+  assert.equal(v.fw, 2);
+  for (const x of [app, priv]) {
+    assert.match(x, /const card=dyWorkCardMsg\(v\);dyFwdCount\(v\);/);
+    assert.match(x, /id:uid\(\)\}\);dyFwdCount\(v\);closeModal\(\);toast\('已转发到微信'\)/);
+  }
 });
 test('边栏每个按钮都拦住冒泡，不然点爱心会被当成一次轻触', () => {
   const fn = source('dyRailHTML');
@@ -134,8 +163,20 @@ test('头像外面那层必须 block，写成 inline-block 会带出基线把边
     assert.equal(/\.dywk-avwrap\{[^}]*inline-block/.test(x), false, '作品详情那页本来一个像素都不该动');
   }
 });
-test('首页边栏抬高一点，头像落在和「点进去」同一个高度', () => {
-  for (const x of shells) assert.match(x, /\.dyvideo \.dywk-rail\{bottom:41px;\}/);
+test('边栏高度照她给的真抖音截图，而且跟着屏幕走不写死 px', () => {
+  for (const x of shells) {
+    assert.match(x, /\.dywk\{position:relative;\}/, '边栏要能挂在 .dywk 上');
+    /* 她那张图：每格中心差 8.2% 屏高，最底下那格落在 86.2%。
+       写死 px 的话，她那台 393×852 和调试用的 420×910 会差两个百分点。 */
+    assert.match(x, /\.dywk-rail\{position:absolute;right:10px;bottom:clamp\(10px,calc\(13\.8vh - 44px\),200px\);[^}]*gap:clamp\(12px,calc\(8\.2vh - 48\.5px\),44px\);/);
+    /* 首页底下压着 53px 的标签栏，同样的落点要再减掉它 */
+    assert.match(x, /\.dyvideo \.dywk-rail\{bottom:clamp\(10px,calc\(13\.8vh - 97px\),200px\);\}/);
+    assert.equal(/\.dywk-rail\{[^}]*gap:\d+(\.\d+)?px/.test(x), false, 'gap 写死 px 就会换个手机跑偏');
+  }
+});
+test('首页那一排不再有黑气泡垫在图标底下', () => {
+  assert.equal(/class="ic"/.test(source('dyRailHTML')), false, '那层深色圆底早就该没了');
+  assert.equal(/class="dyrail"/.test(source('dyVideoCard')), false);
 });
 
 test('拍同款是个真按钮，会带着这条的配乐去发作品', () => {

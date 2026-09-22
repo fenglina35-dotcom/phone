@@ -1061,7 +1061,15 @@ body{background:#000;padding:0;}
 .dywk-top i{font-style:normal;color:#fff;font-size:27px;line-height:1;text-shadow:0 1px 5px rgba(0,0,0,.6);display:flex;align-items:center;}
 .dywk-frame{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);height:60%;background-size:260% 260%;animation:dyflow 12s ease infinite;display:flex;align-items:center;justify-content:center;}
 .dywk-frame span{font-size:78px;filter:drop-shadow(0 12px 22px rgba(0,0,0,.6));}
-.dywk-rail{position:absolute;right:10px;bottom:20px;display:flex;flex-direction:column;align-items:center;gap:16px;z-index:5;}
+/* 间距照她给的真抖音截图量出来的：她那张图里每格中心差整屏高度的 8.2%。
+   作品详情那页边栏挂在 .dywk 上（不是 .dywk-stage），不然 overflow:hidden 会把
+   最底下那格剪掉——两页都得按整个屏幕算高度，不是按各自那块画面算。 */
+.dywk{position:relative;}
+/* 高度照她给的真抖音截图量出来的：每格中心差整屏高度的 8.2%，最底下那格
+   落在 86.2%。所以写成跟屏幕走的 vh，换个尺寸的手机也对得上——
+   写死 px 的话，她那台 393×852 和我调试用的 420×910 会差两个百分点。
+   每行高 48.5、最底下那格 44，就是下面两个减数的来历。clamp 兜个底。 */
+.dywk-rail{position:absolute;right:10px;bottom:clamp(10px,calc(13.8vh - 44px),200px);display:flex;flex-direction:column;align-items:center;gap:clamp(12px,calc(8.2vh - 48.5px),44px);z-index:5;}
 .dywk-rail .avatar{width:48px!important;height:48px!important;flex:0 0 48px!important;border-radius:50%!important;border:2px solid #fff;font-size:22px;}
 .dywk-r{display:flex;flex-direction:column;align-items:center;gap:4px;color:#fff;font-size:13px;font-weight:600;text-shadow:0 1px 4px rgba(0,0,0,.55);}
 .dywk-r em{font-style:normal;font-size:25px;line-height:.8;letter-spacing:1px;}
@@ -1074,7 +1082,8 @@ body{background:#000;padding:0;}
 .dywk-avwrap{position:relative;display:block;line-height:0;}
 /* 首页画面比作品详情高 44px（底下那排标签没占走音乐条那一块），
    所以边栏得再往上抬一点，头像才落在和「点进去」同一个高度上。 */
-.dyvideo .dywk-rail{bottom:41px;}
+/* 首页底下还压着一条 53px 的标签栏，所以同样的落点要再减掉它 */
+.dyvideo .dywk-rail{bottom:clamp(10px,calc(13.8vh - 97px),200px);}
 .dyvideo .dymeta{padding-right:82px;}
 .dywk-danmu{position:absolute;left:12px;right:76px;bottom:20px;display:flex;flex-direction:column;gap:9px;z-index:4;}
 .dywk-dm{display:flex;align-items:flex-start;gap:8px;animation:dydm 6.5s ease-in-out infinite;}

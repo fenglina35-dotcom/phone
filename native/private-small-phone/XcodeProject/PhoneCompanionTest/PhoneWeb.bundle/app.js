@@ -5635,11 +5635,17 @@ function dyOpenWorkCard(wid){const v=dyVid(wid);if(!v)return toast('这条作品
   try{while(cur().p!=='dy'&&stack.length>1)back();}catch(_){}
   render();}
 /* 转发：微信、抖音私信、抖音群聊都能选 */
-function dyFwd(id){const v=dyVid(id);if(!v)return;window._fwDy=v;
+/* 右边栏第五格照她给的真抖音截图换回「转发」，原来「···更多」里的事情
+   全挪进这张单子的下半截——转发在上、这条作品的操作在下，一样都没少。 */
+function dyFwd(id){const v=dyVid(id);if(!v)return;window._fwDy=v;const mine=v.cid==='me';
   openModal(`<h3>转发这条作品</h3><div class="btns" style="flex-direction:column;gap:8px">
     <button class="dybtn out" onclick="closeModal();dyFwdPick('wx')">转发到微信</button>
     <button class="dybtn out" onclick="closeModal();dyFwdPick('dm')">转发到抖音私信</button>
     <button class="dybtn out" onclick="closeModal();dyFwdPick('g')">转发到抖音群聊</button>
+    <div class="hint" style="margin:6px 0 0;text-align:left">这条作品</div>
+    <button class="dybtn out" onclick="closeModal();dyGenComments('${id}')">✨ 生成网友评论</button>
+    ${v.img?`<button class="dybtn out" onclick="closeModal();dyWorkDescEdit('${id}')">${v.imgDesc?'改画面描述':'补一句画面描述'}</button>`:''}
+    ${mine?`<button class="dybtn out" onclick="closeModal();dyWorkTopToggle('${id}')">${v.top?'取消置顶':'置顶作品'}</button><button class="dybtn out" onclick="dyTogglePrivate('${id}')">${v.priv?'取消私密':'设为私密 🔒'}</button><button class="btn d" onclick="dyWorkDelete('${id}')">删除作品</button>`:`<button class="dybtn out" onclick="closeModal();dyTapVideo('${id}')">📖 看画面描写</button>`}
     <button class="btn g" onclick="closeModal()">取消</button></div>`);}
 function dyFwdPick(where){const v=window._fwDy;if(!v)return;
   if(where==='wx'){const cs=(S.contacts||[]).filter(c=>c&&!c.deleted);
@@ -5652,8 +5658,11 @@ function dyFwdPick(where){const v=window._fwDy;if(!v)return;
   const gs=dyGroups();
   if(!gs.length)return toast('还没有群聊');
   openModal(`<h3>转发到群聊</h3><div style="max-height:46vh;overflow:auto">${gs.map(g=>`<div class="row dymu-row" onclick="dyFwdTo('g','${g.id}')"><b style="flex:1;font-size:14px">${esc(g.name)}</b><span style="color:#888">${dyGCount(g)} 人</span></div>`).join('')}</div><button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
+function dyFwdCount(v){if(!v)return;v.fw=(+v.fw||0)+1;
+  const f=(S.dy.feed||[]).find(x=>x.id===v.id);if(f&&f!==v)f.fw=v.fw;
+  const m=(S.dy.mine||[]).find(x=>x.id===v.id);if(m&&m!==v)m.fw=v.fw;save();}
 function dyFwdTo(scope,id){const v=window._fwDy;if(!v)return;
-  const card=dyWorkCardMsg(v);
+  const card=dyWorkCardMsg(v);dyFwdCount(v);
   if(scope==='g'){const g=dyGroup(id);if(!g)return;
     if(dyGMeMuted(g))return toast('你被禁言了，发不出去');
     dyGMsgs(g).push(Object.assign({id:uid(),k:'me',time:Date.now()},card));
@@ -5662,7 +5671,7 @@ function dyFwdTo(scope,id){const v=window._fwDy;if(!v)return;
   const d=(S.dy.dms||[]).find(x=>x.id===id);if(!d)return;
   d.msgs.push(Object.assign({from:'me',time:Date.now(),id:uid()},card));
   dySparkTick(d);save();closeModal();toast('已转发到私信');go('dydm',{id:d.id});dyDMReply(d);}
-function doDyFwd(cid){const v=window._fwDy;if(!v)return;pushMsg(cid,{role:'user',type:'dycard',author:v.cid==='me'?dyNick():v.author,desc:v.desc,narration:v.narration,emoji:v.emoji,mine:v.cid==='me',id:uid()});closeModal();toast('已转发到微信');scheduleReply(cid);}
+function doDyFwd(cid){const v=window._fwDy;if(!v)return;pushMsg(cid,{role:'user',type:'dycard',author:v.cid==='me'?dyNick():v.author,desc:v.desc,narration:v.narration,emoji:v.emoji,mine:v.cid==='me',id:uid()});dyFwdCount(v);closeModal();toast('已转发到微信');scheduleReply(cid);}
 /* 发抖音 */
 /* ===== 发作品：文字卡片 / 拍摄或相册 =====
    图是真的存下来的，角色评论前会先真的看一眼（走设置里的视觉模型）；
@@ -7410,7 +7419,7 @@ function dyRailHTML(v){const liked=!!v.liked,lc=(v.lk||0)+(liked?1:0),starred=!!
     <div class="dywk-r" onclick="${stop}dyLike('${v.id}')">${dyIc('heart',30,liked,'#f5243d','#fff')}${dyNum(lc)}</div>
     <div class="dywk-r" onclick="${stop}dyComments('${v.id}')">${dyCmIcon(29)}${dyNum((v.comments||[]).length)}</div>
     <div class="dywk-r" onclick="${stop}dyStar('${v.id}')">${dyIc('star',29,starred,'#f5c518','#fff',2)}${dyNum(sc)}</div>
-    <div class="dywk-r" onclick="${stop}dyWorkMore('${v.id}')"><em>···</em>更多</div>
+    <div class="dywk-r" onclick="${stop}dyFwd('${v.id}')">${svgIcFill('forward',29,'#fff',1.1)}${dyNum(v.fw||0)}</div>
     <div class="dywk-r" onclick="${stop}dyWorkSame('${v.id}')"><span class="dywk-same">${same}</span>拍同款</div>
   </div>`;}
 function dyWorkRail(v){return dyRailHTML(v);}
@@ -7422,13 +7431,8 @@ function dyWorkSame(id){const v=dyVid(id);if(!v)return;
   toast(s?('配乐带上了：'+(s.title||'这首歌')):'挑张照片，发一条同款');}
 function dyStar(id){const v=dyVid(id);if(!v)return;v.starred=!v.starred;save();render();toast(v.starred?'已收藏 ⭐':'已取消收藏');}
 function dyWorkAuthor(id){const v=dyVid(id);if(!v)return;if(v.cid&&v.cid!=='me')return dyVisitorOpenChar(v.cid);_dySub='';dyTab='me';render();}
-function dyWorkMore(id){const v=dyVid(id);if(!v)return;const mine=v.cid==='me';
-  openModal(`<h3>更多</h3><div class="btns" style="flex-direction:column;gap:8px">
-    <button class="dybtn out" onclick="closeModal();dyFwd('${id}')">↗️ 转发给角色</button>
-    <button class="dybtn out" onclick="closeModal();dyGenComments('${id}')">✨ 生成网友评论</button>
-    ${v.img?`<button class="dybtn out" onclick="closeModal();dyWorkDescEdit('${id}')">${v.imgDesc?'改画面描述':'补一句画面描述'}</button>`:''}
-    ${mine?`<button class="dybtn out" onclick="closeModal();dyWorkTopToggle('${id}')">${v.top?'取消置顶':'置顶作品'}</button><button class="dybtn out" onclick="dyTogglePrivate('${id}')">${v.priv?'取消私密':'设为私密 🔒'}</button><button class="btn d" onclick="dyWorkDelete('${id}')">删除作品</button>`:`<button class="dybtn out" onclick="closeModal();dyTapVideo('${id}')">📖 看画面描写</button>`}
-    <button class="btn g" onclick="closeModal()">关闭</button></div>`);}
+/* 「更多」并进转发那张单子了，这里留个别名，别处还叫得到 */
+function dyWorkMore(id){return dyFwd(id);}
 async function dyWorkDelete(id){closeModal();if(!await uiConfirm('删除这条作品？'))return;S.dy.feed=S.dy.feed.filter(v=>v.id!==id);S.dy.liked=S.dy.liked.filter(v=>v.id!==id);S.dy.mine=(S.dy.mine||[]).filter(v=>v.id!==id);save();_dySub='';_dyWorkId='';_dyCmOpen=false;render();toast('已删除');}
 function dyWorkTopToggle(id){const v=dyVid(id);if(!v)return;v.top=!v.top;save();render();toast(v.top?'已置顶':'已取消置顶');}
 function dyWorkAnalyze(id){const v=dyVid(id);if(!v)return;const views=dyWorkViews(v),lk=(v.lk||0)+(v.liked?1:0),cm=(v.comments||[]).length,st=(v.st||0)+(v.starred?1:0);
@@ -7442,9 +7446,10 @@ function dyWorkView(){const v=dyVid(dyWorkCurId());if(!v)return `<div class="dyv
     <div class="dywk-stage">
       <div class="dywk-top dy-safe-nav2"><i onclick="dySubClose()">‹</i><i onclick="dyTab='search';_dySub='';render()">${svgIc('search',24,'#fff',2)}</i></div>
       <div class="dywk-frame${v.img?' photo':''}"${v.img?'':` style="background-image:${grad}"`} onclick="dyCardTap('${v.id}',event)">${dyWorkCardHTML(v,{full:true})}</div>
-      ${dyWorkDanmu(v)}${dyWorkRail(v)}
+      ${dyWorkDanmu(v)}
       <div class="dynarr" id="narr_${v.id}" onclick="dyTapVideo('${v.id}')" style="display:${_dyNarr[v.id]?'block':'none'}"><div style="font-weight:800;color:#fff;margin-bottom:7px">视频内容</div>${esc(v.narration||v.desc||'（这条还没有内容描写）')}<div style="text-align:center;color:#777;margin-top:10px;font-size:11px">轻触收起</div></div>
     </div>
+    ${dyWorkRail(v)}
     <div class="dywk-music">${dyWorkMusicHTML(v)}</div>
     <div class="dywk-bar">${mine?`<span>▶ ${dyNum(dyWorkViews(v))}浏览</span><button class="an" onclick="dyWorkAnalyze('${v.id}')">${svgIc('disk',17,'#f2f2f4',2)}视频分析 ⌃</button><span class="pub">公开</span>`:`<span>▶ ${dyNum(dyWorkViews(v))}浏览</span><button class="an" onclick="dyFwd('${v.id}')">${svgIc('forward',17,'#f2f2f4',2)}转发给角色</button><span class="pub">@${esc(v.author||'用户')}</span>`}</div>
   </div>`;}
