@@ -2039,14 +2039,15 @@ html.north-ios-home-safe .imsg-head{padding-top:calc(10px + var(--north-ios-home
 .imsg-date{text-align:center;color:#8e8e93;font-size:12.5px;margin:6px 0 12px;}
 .imsg-row{display:flex;margin:3px 0;}
 .imsg-row.me{justify-content:flex-end;}
-.imsg-b{position:relative;max-width:74%;padding:8px 14px;border-radius:19px;font-size:16.5px;line-height:1.36;word-break:break-word;cursor:pointer;background:#26262a;color:#fff;}
-.imsg-row.me .imsg-b{background:#0a84ff;}
-/* 气泡尖角：伸出去一小块，用 mask 咬掉外侧，颜色跟气泡走 */
-.imsg-b:after{content:'';position:absolute;bottom:0;width:14px;height:17px;background:inherit;-webkit-backdrop-filter:inherit;backdrop-filter:inherit;}
-.imsg-row.them .imsg-b:after{left:-7px;clip-path:path("M14 0 L14 17 L2.5 17 C8 14.5 11 9.5 11 0 Z");}
-.imsg-row.me .imsg-b:after{right:-7px;clip-path:path("M0 0 L0 17 L11.5 17 C6 14.5 3 9.5 3 0 Z");}
-.imsg-bar{flex:0 0 auto;display:flex;align-items:flex-end;gap:9px;padding:8px 12px 12px;}
-html.north-ios-home-safe .imsg-bar{padding-bottom:calc(12px + var(--north-ios-home-safe-bottom));}
+/* 气泡连同小尾巴是「一整块」剪出来的（clip-path 多边形），不是身子加一条
+   贴上去的尾巴。上一版尾巴是独立元素、自己又做了一遍毛玻璃，跟身子重叠的
+   地方糊了两遍，换背景图之后那道拼接缝一眼就看得见。现在整块只有一层背景、
+   一层 backdrop-filter，没有缝。 */
+.imsg-b{position:relative;max-width:74%;font-size:16.5px;line-height:1.36;word-break:break-word;cursor:pointer;background:#26262a;color:#fff;}
+.imsg-row.them .imsg-b{padding:8px 14px 8px 23px;clip-path:polygon(9px 18px,9.61px 13.34px,11.41px 9px,14.27px 5.27px,18px 2.41px,22.34px .61px,27px 0,calc(100% - 18px) 0,calc(100% - 13.34px) .61px,calc(100% - 9px) 2.41px,calc(100% - 5.27px) 5.27px,calc(100% - 2.41px) 9px,calc(100% - .61px) 13.34px,100% 18px,100% calc(100% - 18px),calc(100% - .61px) calc(100% - 13.34px),calc(100% - 2.41px) calc(100% - 9px),calc(100% - 5.27px) calc(100% - 5.27px),calc(100% - 9px) calc(100% - 2.41px),calc(100% - 13.34px) calc(100% - .61px),calc(100% - 18px) 100%,12px 100%,4.95px calc(100% - .6px),.8px calc(100% - 1.2px),2.6px calc(100% - 5px),5.58px calc(100% - 9px),9px calc(100% - 15px));}
+.imsg-row.me .imsg-b{padding:8px 23px 8px 14px;background:#0a84ff;clip-path:polygon(calc(100% - 9px) 18px,calc(100% - 9px) calc(100% - 15px),calc(100% - 5.58px) calc(100% - 9px),calc(100% - 2.6px) calc(100% - 5px),calc(100% - .8px) calc(100% - 1.2px),calc(100% - 4.95px) calc(100% - .6px),calc(100% - 12px) 100%,18px 100%,13.34px calc(100% - .61px),9px calc(100% - 2.41px),5.27px calc(100% - 5.27px),2.41px calc(100% - 9px),.61px calc(100% - 13.34px),0 calc(100% - 18px),0 18px,.61px 13.34px,2.41px 9px,5.27px 5.27px,9px 2.41px,13.34px .61px,18px 0,calc(100% - 27px) 0,calc(100% - 22.34px) .61px,calc(100% - 18px) 2.41px,calc(100% - 14.27px) 5.27px,calc(100% - 11.41px) 9px,calc(100% - 9.61px) 13.34px);}
+.imsg-bar{flex:0 0 auto;display:flex;align-items:flex-end;gap:9px;padding:8px 12px 24px;}
+html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-home-safe-bottom));}
 .imsg-plus{flex:0 0 auto;width:38px;height:38px;border-radius:50%;border:0;background:rgba(120,120,128,.24);color:#fff;font-size:21px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;}
 .imsg-field{flex:1;min-width:0;display:flex;align-items:flex-end;gap:8px;padding:7px 12px;border-radius:20px;background:rgba(120,120,128,.18);border:1px solid rgba(255,255,255,.12);}
 .imsg-field textarea{flex:1;min-width:0;background:transparent;border:0;outline:none;resize:none;color:#fff;font-size:16px;line-height:1.35;max-height:96px;padding:0;font-family:inherit;}
@@ -2057,11 +2058,29 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(12px + var(--north-ios-ho
 .imsg-bar.typing .imsg-send{display:flex;}
 .imsg-bar.typing .imsg-wave{display:none;}
 /* ===== 换过背景之后：全部改成能透出背景的毛玻璃 ===== */
-.imsg.hasbg .imsg-rb,.imsg.hasbg .imsg-name,.imsg.hasbg .imsg-plus{background:rgba(255,255,255,.16);-webkit-backdrop-filter:blur(26px) saturate(1.7);backdrop-filter:blur(26px) saturate(1.7);border:1px solid rgba(255,255,255,.2);box-shadow:0 2px 14px rgba(0,0,0,.18);}
-.imsg.hasbg .imsg-field{background:rgba(255,255,255,.14);-webkit-backdrop-filter:blur(26px) saturate(1.7);backdrop-filter:blur(26px) saturate(1.7);border:1px solid rgba(255,255,255,.22);}
-.imsg.hasbg .imsg-row.them .imsg-b{background:rgba(255,255,255,.22);-webkit-backdrop-filter:blur(24px) saturate(1.8);backdrop-filter:blur(24px) saturate(1.8);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);}
-.imsg.hasbg .imsg-row.me .imsg-b{background:rgba(10,132,255,.72);-webkit-backdrop-filter:blur(20px) saturate(1.5);backdrop-filter:blur(20px) saturate(1.5);}
-.imsg.hasbg .imsg-send{background:rgba(10,132,255,.8);-webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px);}
+ /* ===== 换过背景之后的玻璃 =====
+   她说「不应该是全部包边，应该有高光变化，有虚有实」「不是直接降低透明度，
+   是像隔着一杯水去看背景」。所以：
+   一、模糊量压到很小（3px），背景是「透过去看得见」的，不是磨砂糊成一片；
+   二、白边不再是 1px 整圈 border，改成两条方向相反的 inset 高光——左上那条
+       实（.72），右下那条虚（.2），中间靠一条 140° 的斜向反光过渡；
+   三、:before 那层只糊上半截（mask 渐变），亮度和饱和度都更高一点，
+       等于玻璃上半部分把光折得更亮，看着才有厚度、有「被玻璃拉过」的感觉。 */
+.imsg.hasbg .imsg-rb,.imsg.hasbg .imsg-name,.imsg.hasbg .imsg-plus,.imsg.hasbg .imsg-field{position:relative;overflow:hidden;border:0;background:linear-gradient(140deg,rgba(255,255,255,.34),rgba(255,255,255,.08) 26%,rgba(255,255,255,.03) 56%,rgba(255,255,255,.07) 82%,rgba(255,255,255,.2));-webkit-backdrop-filter:blur(3px) saturate(1.5) brightness(1.12);backdrop-filter:blur(3px) saturate(1.5) brightness(1.12);box-shadow:inset 1.4px 1.4px 0 rgba(255,255,255,.72),inset -1.2px -1.2px 0 rgba(255,255,255,.2),inset 0 0 22px rgba(255,255,255,.1),inset 0 -10px 16px -9px rgba(0,0,0,.34),0 6px 20px rgba(0,0,0,.26);}
+/* 玻璃的边缘折射：真玻璃是「中间看得清、贴边被拉亮拉弯」的，光都挤在弧面上。
+   这一层用 mask-composite 只留最外圈 5px（content-box 那块挖掉），在这一圈上
+   再做一遍更亮、更锐、对比更高的 backdrop-filter——背景走到边上会被拽亮、拽歪，
+   就是她说的「有些被玻璃拉长放大」。上面叠的 140° 渐变让这圈高光有虚有实：
+   左上那段实，转到右下就淡下去，不是一圈死白线。 */
+.imsg.hasbg .imsg-rb:before,.imsg.hasbg .imsg-name:before,.imsg.hasbg .imsg-plus:before,.imsg.hasbg .imsg-field:before,.imsg.hasbg .imsg-send:before,.imsg.hasbg .imsg-b:before{content:'';position:absolute;inset:0;pointer-events:none;box-sizing:border-box;padding:6px;border-radius:inherit;background:linear-gradient(140deg,rgba(255,255,255,.44),rgba(255,255,255,.06) 28%,rgba(255,255,255,0) 54%,rgba(255,255,255,.04) 78%,rgba(255,255,255,.26));-webkit-backdrop-filter:blur(.3px) brightness(1.24) saturate(1.42) contrast(1.07);backdrop-filter:blur(.3px) brightness(1.24) saturate(1.42) contrast(1.07);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;}
+.imsg.hasbg .imsg-b:before{border-radius:18px;}
+/* 蓝气泡和发送键本来就有颜色，这圈再加饱和会冲成荧光青，单独调轻 */
+.imsg.hasbg .imsg-row.me .imsg-b:before,.imsg.hasbg .imsg-send:before{-webkit-backdrop-filter:blur(.3px) brightness(1.18) saturate(1.04) contrast(1.05);backdrop-filter:blur(.3px) brightness(1.18) saturate(1.04) contrast(1.05);}
+.imsg.hasbg .imsg-field{overflow:visible;}
+.imsg.hasbg .imsg-field:before{border-radius:20px;overflow:hidden;}
+.imsg.hasbg .imsg-row.them .imsg-b{background:linear-gradient(142deg,rgba(255,255,255,.52),rgba(255,255,255,.2) 9%,rgba(255,255,255,.13) 46%,rgba(255,255,255,.16) 84%,rgba(255,255,255,.34)),radial-gradient(130% 80% at 18% 4%,rgba(255,255,255,.16),transparent 60%);-webkit-backdrop-filter:blur(4px) saturate(1.2) brightness(1.08);backdrop-filter:blur(4px) saturate(1.2) brightness(1.08);}
+.imsg.hasbg .imsg-row.me .imsg-b{background:linear-gradient(142deg,rgba(255,255,255,.4),rgba(10,132,255,.5) 12%,rgba(10,132,255,.42) 52%,rgba(10,132,255,.5) 86%,rgba(255,255,255,.26));-webkit-backdrop-filter:blur(3px) saturate(2) brightness(1.1);backdrop-filter:blur(3px) saturate(2) brightness(1.1);}
+.imsg.hasbg .imsg-send{background:linear-gradient(140deg,rgba(255,255,255,.4),rgba(10,132,255,.62) 16%,rgba(10,132,255,.56) 80%,rgba(255,255,255,.3));-webkit-backdrop-filter:blur(3px) saturate(2) brightness(1.1);backdrop-filter:blur(3px) saturate(2) brightness(1.1);box-shadow:inset 1.4px 1.4px 0 rgba(255,255,255,.6),inset -1.2px -1.2px 0 rgba(255,255,255,.18),0 6px 18px rgba(0,0,0,.28);}
 .imsg.hasbg .imsg-kind,.imsg.hasbg .imsg-date{color:rgba(255,255,255,.72);text-shadow:0 1px 6px rgba(0,0,0,.5);}
 .imsg.hasbg .imsg-field textarea::placeholder{color:rgba(255,255,255,.66);}
 .imsg.hasbg .smslinebar{background:transparent;}

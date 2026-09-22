@@ -67,12 +67,45 @@ test('换过背景才挂 hasbg，全屏铺满', () => {
 });
 
 /* ===== 液态玻璃 ===== */
-test('换了背景：按钮、输入框、对方气泡全是能透出背景的毛玻璃', () => {
+test('玻璃是「透过去看得见背景」，不是磨砂糊成一片', () => {
   for (const s of shells) {
-    assert.match(s, /\.imsg\.hasbg \.imsg-rb,\.imsg\.hasbg \.imsg-name,\.imsg\.hasbg \.imsg-plus\{[^}]*backdrop-filter:blur\(26px\)/);
-    assert.match(s, /\.imsg\.hasbg \.imsg-field\{[^}]*backdrop-filter:blur\(26px\)/);
-    assert.match(s, /\.imsg\.hasbg \.imsg-row\.them \.imsg-b\{[^}]*backdrop-filter:blur\(24px\)/);
-    assert.match(s, /\.imsg\.hasbg \.imsg-row\.me \.imsg-b\{background:rgba\(10,132,255,\.72\)/);
+    const rules = s.match(/\.imsg\.hasbg [^{]*\{[^}]*backdrop-filter:blur\((\d*\.?\d+)px\)[^}]*\}/g) || [];
+    assert.ok(rules.length >= 3, '玻璃规则太少，正则可能失效了');
+    for (const r of rules) {
+      const px = parseFloat(r.match(/backdrop-filter:blur\((\d*\.?\d+)px\)/)[1]);
+      assert.ok(px <= 6, `模糊 ${px}px 太重了，她要的是隔着一杯水看得见背景：${r.slice(0, 50)}`);
+    }
+  }
+});
+test('白边不是整圈包边，是左上实、右下虚的两道高光', () => {
+  for (const s of shells) {
+    const glass = s.match(/\.imsg\.hasbg \.imsg-rb,[^{]*\{[^}]*\}/)[0];
+    assert.match(glass, /border:0/, '整圈 1px 白边要撤掉');
+    assert.match(glass, /inset 1\.4px 1\.4px 0 rgba\(255,255,255,\.72\)/, '左上那道要实');
+    assert.match(glass, /inset -1\.2px -1\.2px 0 rgba\(255,255,255,\.2\)/, '右下那道要虚');
+    assert.equal(/border:1px solid rgba\(255,255,255/.test(glass), false, '又变回整圈包边了');
+  }
+});
+test('贴边那一圈单独折射：真玻璃的光都挤在弧面上', () => {
+  /* 她要的「像隔着一杯水」「有些被玻璃拉长放大」——中间看得清，贴边被拽亮拽歪。
+     这一圈用 mask-composite 把 content-box 那块挖掉，只留最外面一条。 */
+  for (const s of shells) {
+    const ring = s.match(/\.imsg\.hasbg \.imsg-rb:before,[^{]*\.imsg\.hasbg \.imsg-b:before\{[^}]*\}/);
+    assert.ok(ring, '找不到贴边折射那一层');
+    const r = ring[0];
+    assert.match(r, /box-sizing:border-box;padding:(\d+(?:\.\d+)?)px/, '得靠 padding 定这一圈的厚度');
+    assert.match(r, /mask:linear-gradient\(#000 0 0\) content-box,linear-gradient\(#000 0 0\)/, '两层 mask 才挖得出一个圈');
+    assert.match(r, /mask-composite:exclude/, '没有 exclude 就不是圈，是整块');
+    assert.match(r, /-webkit-mask-composite:xor/, '老 Safari 只认 -webkit- 的 xor');
+    const px = parseFloat(r.match(/backdrop-filter:blur\((\d*\.?\d+)px\)/)[1]);
+    assert.ok(px < 1, `贴边这圈要比中间更锐，现在是 ${px}px`);
+    assert.match(r, /brightness\(1\.(?:1|2|3)\d?\)/, '贴边要比中间亮一点，才有折射的样子');
+    assert.match(r, /background:linear-gradient\(140deg/, '这一圈的高光自己也要有虚有实，不是一圈均匀的白');
+  }
+});
+test('蓝气泡和发送键那一圈单独调轻，不然冲成荧光青', () => {
+  for (const s of shells) {
+    assert.match(s, /\.imsg\.hasbg \.imsg-row\.me \.imsg-b:before,\.imsg\.hasbg \.imsg-send:before\{[^}]*saturate\(1\.0\d\)/);
   }
 });
 test('头像不做毛玻璃——她特地说了「除了角色的头像」', () => {
@@ -88,11 +121,25 @@ test('背景图再亮，顶上和底下也压了一层淡渐变，按钮不会�
     assert.match(s, /\.imsg>\*\{position:relative;z-index:1;\}/, '内容要压在那层渐变上面');
   }
 });
-test('气泡的小尖角是画出来的，不是方块', () => {
+test('气泡连同尾巴是一整块剪出来的，不是贴上去的第二块', () => {
   for (const s of shells) {
-    assert.match(s, /\.imsg-row\.them \.imsg-b:after\{left:-7px;clip-path:path\(/);
-    assert.match(s, /\.imsg-row\.me \.imsg-b:after\{right:-7px;clip-path:path\(/);
-    assert.match(s, /\.imsg-b:after\{[^}]*background:inherit/, '尖角的颜色要跟着气泡走');
+    /* 尾巴曾经是独立的 :after，自己又做一遍毛玻璃，重叠处糊两遍 → 换背景就看见拼接缝 */
+    assert.equal(/\.imsg-b:after\{/.test(s), false, '尾巴又变回贴上去的独立元素了，换背景会有缝');
+    assert.match(s, /\.imsg-row\.them \.imsg-b\{padding:8px 14px 8px 23px;clip-path:polygon\(/);
+    assert.match(s, /\.imsg-row\.me \.imsg-b\{padding:8px 23px 8px 14px;[^}]*clip-path:polygon\(/);
+    assert.equal(/\.imsg-b\{[^}]*border-radius/.test(s), false, 'border-radius 会和 clip-path 打架，形状要么缺要么不是并集');
+  }
+});
+test('一整块只有一层背景、一层 backdrop-filter', () => {
+  for (const s of shells) {
+    const them = s.match(/\.imsg\.hasbg \.imsg-row\.them \.imsg-b\{[^}]*\}/)[0];
+    assert.equal((them.match(/backdrop-filter/g) || []).length, 2, '只该有 -webkit- 和标准各一条');
+  }
+});
+test('输入栏往上挪了一点', () => {
+  for (const s of shells) {
+    assert.match(s, /\.imsg-bar\{[^}]*padding:8px 12px 24px;/);
+    assert.match(s, /html\.north-ios-home-safe \.imsg-bar\{padding-bottom:calc\(24px \+ var\(--north-ios-home-safe-bottom\)\);\}/);
   }
 });
 
