@@ -253,6 +253,46 @@ test('角色记得自己在抖音发过什么', () => {
   assert.match(priv, /# 你自己最近发的抖音作品/);
   assert.match(source('roleDouyinRecentText'), /配了一张照片/);
 });
+test('她怎么说都能把图带上——不只是「图/图片/照片」这三个字', () => {
+  const ctx = {};
+  vm.createContext(ctx);
+  vm.runInContext([
+    "const DY_PIC_WORD=" + app.match(/const DY_PIC_WORD=[^\n]+/)[0].replace('const DY_PIC_WORD=', ''),
+    "const DY_POST_WORD=" + app.match(/const DY_POST_WORD=[^\n]+/)[0].replace('const DY_POST_WORD=', ''),
+    source('roleDouyinWantsImage'),
+  ].join('\n'), ctx);
+  const yes = ['把这张图片发抖音，配上文案', '把这个发抖音吧，配个文案', '这张发抖音',
+    '发条抖音，就用刚刚那张', '帮我把刚才那张图发个抖音', '把上面那张照片发抖音', '用这张图发条作品'];
+  for (const say of yes) assert.equal(vm.runInContext(`roleDouyinWantsImage(${JSON.stringify(say)})`, ctx), true, `这句该带图：${say}`);
+  const no = ['发个抖音', '拿去发抖音', '今天好累'];
+  for (const say of no) assert.equal(vm.runInContext(`roleDouyinWantsImage(${JSON.stringify(say)})`, ctx), false, `这句没点名图，不该走点名那条路：${say}`);
+});
+test('没点名但刚发完图就让发抖音，也要带上——只认半小时内、往回几条', () => {
+  const fn = source('roleDouyinImage');
+  assert.match(fn, /if\(roleDouyinWantsImage\(ask\)\)return roleDouyinRecentImage\(c,48\*3600000,24\);/);
+  assert.match(fn, /if\(DY_POST_WORD\.test\(ask\)\)return roleDouyinRecentImage\(c,30\*60000,6\);/);
+});
+test('翻聊天记录找图：只要有 src 的真图，太旧或翻太远就不要', () => {
+  const now = Date.now();
+  const mk = rows => ({ msgs: () => rows });
+  const ctx = { Date };
+  vm.createContext(ctx);
+  vm.runInContext(source('roleDouyinRecentImage'), ctx);
+  const call = (rows, age, back) => {
+    ctx.msgs = () => rows;
+    return vm.runInContext(`roleDouyinRecentImage({id:'c1'},${age},${back})`, ctx);
+  };
+  assert.equal(call([{ type: 'image', src: 'A', time: now }], 1800000, 6), 'A');
+  assert.equal(call([{ type: 'image', src: 'A', time: now - 3 * 3600000 }], 1800000, 6), '', '太旧的不该拿');
+  assert.equal(call([{ type: 'image', src: '', textCard: true, time: now }], 1800000, 6), '', '图文卡没有真图');
+  /* 图文卡要跳过去接着找，不能停在它那儿当成「找到了一张空图」 */
+  assert.equal(call([{ type: 'image', src: 'B', time: now }, { type: 'image', src: '', textCard: true, time: now }], 1800000, 6), 'B', '碰到图文卡要继续往前翻');
+  const far = [{ type: 'image', src: 'A', time: now }];
+  for (let i = 0; i < 9; i++) far.push({ type: 'text', text: '第' + i + '句', time: now });
+  assert.equal(call(far, 1800000, 6), '', '中间隔了九句话就不算「刚刚那张」了');
+  assert.equal(call(far, 1800000, 24), 'A', '她点名了就往回翻远一点');
+});
+
 test('曲库是空的就不配乐，直接发', () => {
   const ctx = { dyMusicLib: () => [] };
   vm.createContext(ctx);

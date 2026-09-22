@@ -13137,14 +13137,29 @@ function postRoleMoment(c,tx,opt){opt=Object.assign({},opt||{});const key=String
 function cleanDouyinBody(t){let v=(''+(t||'')).replace(/^[\s「"'\[【]+|[\s」"'\]】]+$/g,'').trim();
   v=v.replace(/^发抖音\s*[\|:：]?\s*/,'').replace(/^抖音\s*[:：]\s*/,'').trim();
   return cleanRolePunct(v).trim().slice(0,140);}
+/* 第一版只认「图／图片／照片」这三个字，她说「把这个发抖音吧」「拿去发抖音」
+   「这张发抖音」一律不带图，发出来就是个空的电影场记板——她实测撞上的就是这个。
+   现在两条路：
+   一、她话里点名了（图/照片/这张/刚刚/上面…），往回翻 20 条、48 小时都认；
+   二、没点名但她让发抖音，而聊天里刚刚就有一张图——现实里她就是发完图紧接着
+       说这句话，所以只往回翻几条、半小时内的，宁可不带也不乱带。 */
+const DY_PIC_WORD=/(?:图|图片|照片|相片|截图|这张|那张|这个|那个|刚才|刚刚|上面|上边|方才)/;
+const DY_POST_WORD=/(?:抖音|作品|短视频)/;
 function roleDouyinWantsImage(text){const ask=String(text||'').replace(/\s+/g,'');
-  return /(?:这张|刚才|上面|这个|那张|刚刚)?(?:图|图片|照片).{0,24}(?:抖音|作品)|(?:抖音|发作品).{0,24}(?:这张|刚才|上面|这个|那张|刚刚)?(?:图|图片|照片)/.test(ask);}
-function roleDouyinImage(c,opt){const ask=String(opt&&opt.userText||'');
-  if(!c||!roleDouyinWantsImage(ask))return '';
-  /* 她发的、或者角色刚发给她的，都算「这张图」 */
-  const recent=(typeof msgs==='function'?msgs(c.id):[]).slice(-20);
-  for(let i=recent.length-1;i>=0;i--){const m=recent[i];
-    if(m&&m.type==='image'&&m.src&&Date.now()-(+m.time||Date.now())<48*3600000)return m.src;}
+  if(!ask||!DY_POST_WORD.test(ask))return false;
+  return DY_PIC_WORD.test(ask);}
+function roleDouyinRecentImage(c,maxAgeMs,maxBack){
+  const recent=(typeof msgs==='function'?msgs(c.id):[]).slice(-24);
+  let back=0;
+  for(let i=recent.length-1;i>=0;i--){const m=recent[i];if(!m)continue;
+    /* 她发的、或者角色刚发给她的，都算「这张图」；没有 src 的图文卡不算 */
+    if(m.type==='image'&&m.src&&Date.now()-(+m.time||Date.now())<maxAgeMs)return m.src;
+    if(++back>maxBack)break;}
+  return '';}
+function roleDouyinImage(c,opt){if(!c)return '';
+  const ask=String(opt&&opt.userText||'').replace(/\s+/g,'');
+  if(roleDouyinWantsImage(ask))return roleDouyinRecentImage(c,48*3600000,24);
+  if(DY_POST_WORD.test(ask))return roleDouyinRecentImage(c,30*60000,6);
   return '';}
 function roleDouyinPickSong(){let lib=[];try{lib=dyMusicLib();}catch(_){lib=[];}
   return lib.length?lib[Math.floor(Math.random()*lib.length)]:null;}
