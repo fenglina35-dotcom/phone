@@ -2039,13 +2039,24 @@ html.north-ios-home-safe .imsg-head{padding-top:calc(10px + var(--north-ios-home
 .imsg-date{text-align:center;color:#8e8e93;font-size:12.5px;margin:6px 0 12px;}
 .imsg-row{display:flex;margin:3px 0;}
 .imsg-row.me{justify-content:flex-end;}
-/* 气泡连同小尾巴是「一整块」剪出来的（clip-path 多边形），不是身子加一条
-   贴上去的尾巴。上一版尾巴是独立元素、自己又做了一遍毛玻璃，跟身子重叠的
-   地方糊了两遍，换背景图之后那道拼接缝一眼就看得见。现在整块只有一层背景、
-   一层 backdrop-filter，没有缝。 */
-.imsg-b{position:relative;max-width:74%;font-size:16.5px;line-height:1.36;word-break:break-word;cursor:pointer;background:#26262a;color:#fff;}
-.imsg-row.them .imsg-b{padding:8px 14px 8px 23px;clip-path:polygon(9px 18px,9.61px 13.34px,11.41px 9px,14.27px 5.27px,18px 2.41px,22.34px .61px,27px 0,calc(100% - 18px) 0,calc(100% - 13.34px) .61px,calc(100% - 9px) 2.41px,calc(100% - 5.27px) 5.27px,calc(100% - 2.41px) 9px,calc(100% - .61px) 13.34px,100% 18px,100% calc(100% - 18px),calc(100% - .61px) calc(100% - 13.34px),calc(100% - 2.41px) calc(100% - 9px),calc(100% - 5.27px) calc(100% - 5.27px),calc(100% - 9px) calc(100% - 2.41px),calc(100% - 13.34px) calc(100% - .61px),calc(100% - 18px) 100%,12px 100%,4.95px calc(100% - .6px),.8px calc(100% - 1.2px),2.6px calc(100% - 5px),5.58px calc(100% - 9px),9px calc(100% - 15px));}
-.imsg-row.me .imsg-b{padding:8px 23px 8px 14px;background:#0a84ff;clip-path:polygon(calc(100% - 9px) 18px,calc(100% - 9px) calc(100% - 15px),calc(100% - 5.58px) calc(100% - 9px),calc(100% - 2.6px) calc(100% - 5px),calc(100% - .8px) calc(100% - 1.2px),calc(100% - 4.95px) calc(100% - .6px),calc(100% - 12px) 100%,18px 100%,13.34px calc(100% - .61px),9px calc(100% - 2.41px),5.27px calc(100% - 5.27px),2.41px calc(100% - 9px),.61px calc(100% - 13.34px),0 calc(100% - 18px),0 18px,.61px 13.34px,2.41px 9px,5.27px 5.27px,9px 2.41px,13.34px .61px,18px 0,calc(100% - 27px) 0,calc(100% - 22.34px) .61px,calc(100% - 18px) 2.41px,calc(100% - 14.27px) 5.27px,calc(100% - 11.41px) 9px,calc(100% - 9.61px) 13.34px);}
+/* ===== 气泡＝两层：外面那层只露出 1.15px，就是那条高光 =====
+   上一版拿 mask 挖了个 6px 的圈来做折射，圈的内沿是一道有宽度的台阶，
+   她一眼就看出来「为什么会有这种很明显的分界线包边」。现在换个做法：
+   父元素按外轮廓剪，:before 按同一条轮廓往里缩 1.15px 剪，父元素的底色
+   就只从那 1.15px 的缝里露出来——高光是真的沿着轮廓描的，连小尾巴都描得上，
+   而且只有一条线的宽度，没有带宽就没有分界线。
+   高光的颜色不写死白色：.hasbg 时父元素自己带 backdrop-filter，把背景图的
+   颜色提亮吸上来，所以背景是暖的高光就偏暖、是蓝的就偏蓝；上面再叠一条
+   140° 的渐变让它有虚有实。没换背景的时候这条渐变照样在，所以也有高光。
+   尾巴也照她说的改瘦了：伸出 5.8px、高 10px（上一版 8.2px / 15px）。 */
+.imsg-b{position:relative;max-width:74%;font-size:16.5px;line-height:1.36;word-break:break-word;cursor:pointer;color:#fff;background:linear-gradient(140deg,rgba(255,255,255,.72),rgba(255,255,255,.26) 24%,rgba(255,255,255,.12) 52%,rgba(255,255,255,.22) 78%,rgba(255,255,255,.5));}
+.imsg-b>i{font-style:normal;position:relative;z-index:1;display:block;}
+.imsg-b:before{content:'';position:absolute;inset:0;pointer-events:none;background:#26262a;}
+.imsg-row.me .imsg-b:before{background:#0a84ff;}
+.imsg-row.them .imsg-b{padding:8px 14px 8px 21px;clip-path:polygon(7px 18px,7.61px 13.34px,9.41px 9px,12.27px 5.27px,16px 2.41px,20.34px .61px,25px 0px,calc(100% - 18px) 0px,calc(100% - 13.34px) .61px,calc(100% - 9px) 2.41px,calc(100% - 5.27px) 5.27px,calc(100% - 2.41px) 9px,calc(100% - .61px) 13.34px,100% 18px,100% calc(100% - 18px),calc(100% - .61px) calc(100% - 13.34px),calc(100% - 2.41px) calc(100% - 9px),calc(100% - 5.27px) calc(100% - 5.27px),calc(100% - 9px) calc(100% - 2.41px),calc(100% - 13.34px) calc(100% - .61px),calc(100% - 18px) 100%,9px 100%,4.2px calc(100% - .5px),1.2px calc(100% - 1.5px),2.6px calc(100% - 4.2px),4.6px calc(100% - 6.6px),7px calc(100% - 10px));}
+.imsg-row.them .imsg-b:before{clip-path:polygon(8.15px 18.08px,8.73px 13.64px,10.42px 9.58px,13.09px 6.09px,16.58px 3.42px,20.64px 1.73px,25.08px 1.15px,calc(100% - 18.08px) 1.15px,calc(100% - 13.64px) 1.73px,calc(100% - 9.58px) 3.42px,calc(100% - 6.09px) 6.09px,calc(100% - 3.42px) 9.58px,calc(100% - 1.73px) 13.64px,calc(100% - 1.15px) 18.08px,calc(100% - 1.15px) calc(100% - 18.08px),calc(100% - 1.73px) calc(100% - 13.64px),calc(100% - 3.42px) calc(100% - 9.58px),calc(100% - 6.09px) calc(100% - 6.09px),calc(100% - 9.58px) calc(100% - 3.42px),calc(100% - 13.64px) calc(100% - 1.73px),calc(100% - 18.08px) calc(100% - 1.15px),9.06px calc(100% - 1.15px),4.44px calc(100% - 1.63px),2.84px calc(100% - 2.17px),3.56px calc(100% - 3.56px),5.51px calc(100% - 5.9px),8.15px calc(100% - 9.64px));}
+.imsg-row.me .imsg-b{padding:8px 21px 8px 14px;clip-path:polygon(calc(100% - 7px) 18px,calc(100% - 7.61px) 13.34px,calc(100% - 9.41px) 9px,calc(100% - 12.27px) 5.27px,calc(100% - 16px) 2.41px,calc(100% - 20.34px) .61px,calc(100% - 25px) 0px,18px 0px,13.34px .61px,9px 2.41px,5.27px 5.27px,2.41px 9px,.61px 13.34px,0px 18px,0px calc(100% - 18px),.61px calc(100% - 13.34px),2.41px calc(100% - 9px),5.27px calc(100% - 5.27px),9px calc(100% - 2.41px),13.34px calc(100% - .61px),18px 100%,calc(100% - 9px) 100%,calc(100% - 4.2px) calc(100% - .5px),calc(100% - 1.2px) calc(100% - 1.5px),calc(100% - 2.6px) calc(100% - 4.2px),calc(100% - 4.6px) calc(100% - 6.6px),calc(100% - 7px) calc(100% - 10px));}
+.imsg-row.me .imsg-b:before{clip-path:polygon(calc(100% - 8.15px) 18.08px,calc(100% - 8.73px) 13.64px,calc(100% - 10.42px) 9.58px,calc(100% - 13.09px) 6.09px,calc(100% - 16.58px) 3.42px,calc(100% - 20.64px) 1.73px,calc(100% - 25.08px) 1.15px,18.08px 1.15px,13.64px 1.73px,9.58px 3.42px,6.09px 6.09px,3.42px 9.58px,1.73px 13.64px,1.15px 18.08px,1.15px calc(100% - 18.08px),1.73px calc(100% - 13.64px),3.42px calc(100% - 9.58px),6.09px calc(100% - 6.09px),9.58px calc(100% - 3.42px),13.64px calc(100% - 1.73px),18.08px calc(100% - 1.15px),calc(100% - 9.06px) calc(100% - 1.15px),calc(100% - 4.44px) calc(100% - 1.63px),calc(100% - 2.84px) calc(100% - 2.17px),calc(100% - 3.56px) calc(100% - 3.56px),calc(100% - 5.51px) calc(100% - 5.9px),calc(100% - 8.15px) calc(100% - 9.64px));}
 .imsg-bar{flex:0 0 auto;display:flex;align-items:flex-end;gap:9px;padding:8px 12px 24px;}
 html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-home-safe-bottom));}
 .imsg-plus{flex:0 0 auto;width:38px;height:38px;border-radius:50%;border:0;background:rgba(120,120,128,.24);color:#fff;font-size:21px;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;}
@@ -2057,30 +2068,32 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
 .imsg-send{display:none;flex:0 0 auto;width:38px;height:38px;border-radius:50%;border:0;background:#0a84ff;color:#fff;font-size:19px;font-weight:800;line-height:1;align-items:center;justify-content:center;cursor:pointer;}
 .imsg-bar.typing .imsg-send{display:flex;}
 .imsg-bar.typing .imsg-wave{display:none;}
-/* ===== 换过背景之后：全部改成能透出背景的毛玻璃 ===== */
- /* ===== 换过背景之后的玻璃 =====
-   她说「不应该是全部包边，应该有高光变化，有虚有实」「不是直接降低透明度，
-   是像隔着一杯水去看背景」。所以：
-   一、模糊量压到很小（3px），背景是「透过去看得见」的，不是磨砂糊成一片；
-   二、白边不再是 1px 整圈 border，改成两条方向相反的 inset 高光——左上那条
-       实（.72），右下那条虚（.2），中间靠一条 140° 的斜向反光过渡；
-   三、:before 那层只糊上半截（mask 渐变），亮度和饱和度都更高一点，
-       等于玻璃上半部分把光折得更亮，看着才有厚度、有「被玻璃拉过」的感觉。 */
-.imsg.hasbg .imsg-rb,.imsg.hasbg .imsg-name,.imsg.hasbg .imsg-plus,.imsg.hasbg .imsg-field{position:relative;overflow:hidden;border:0;background:linear-gradient(140deg,rgba(255,255,255,.34),rgba(255,255,255,.08) 26%,rgba(255,255,255,.03) 56%,rgba(255,255,255,.07) 82%,rgba(255,255,255,.2));-webkit-backdrop-filter:blur(3px) saturate(1.5) brightness(1.12);backdrop-filter:blur(3px) saturate(1.5) brightness(1.12);box-shadow:inset 1.4px 1.4px 0 rgba(255,255,255,.72),inset -1.2px -1.2px 0 rgba(255,255,255,.2),inset 0 0 22px rgba(255,255,255,.1),inset 0 -10px 16px -9px rgba(0,0,0,.34),0 6px 20px rgba(0,0,0,.26);}
-/* 玻璃的边缘折射：真玻璃是「中间看得清、贴边被拉亮拉弯」的，光都挤在弧面上。
-   这一层用 mask-composite 只留最外圈 5px（content-box 那块挖掉），在这一圈上
-   再做一遍更亮、更锐、对比更高的 backdrop-filter——背景走到边上会被拽亮、拽歪，
-   就是她说的「有些被玻璃拉长放大」。上面叠的 140° 渐变让这圈高光有虚有实：
-   左上那段实，转到右下就淡下去，不是一圈死白线。 */
-.imsg.hasbg .imsg-rb:before,.imsg.hasbg .imsg-name:before,.imsg.hasbg .imsg-plus:before,.imsg.hasbg .imsg-field:before,.imsg.hasbg .imsg-send:before,.imsg.hasbg .imsg-b:before{content:'';position:absolute;inset:0;pointer-events:none;box-sizing:border-box;padding:6px;border-radius:inherit;background:linear-gradient(140deg,rgba(255,255,255,.44),rgba(255,255,255,.06) 28%,rgba(255,255,255,0) 54%,rgba(255,255,255,.04) 78%,rgba(255,255,255,.26));-webkit-backdrop-filter:blur(.3px) brightness(1.24) saturate(1.42) contrast(1.07);backdrop-filter:blur(.3px) brightness(1.24) saturate(1.42) contrast(1.07);-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;}
-.imsg.hasbg .imsg-b:before{border-radius:18px;}
-/* 蓝气泡和发送键本来就有颜色，这圈再加饱和会冲成荧光青，单独调轻 */
-.imsg.hasbg .imsg-row.me .imsg-b:before,.imsg.hasbg .imsg-send:before{-webkit-backdrop-filter:blur(.3px) brightness(1.18) saturate(1.04) contrast(1.05);backdrop-filter:blur(.3px) brightness(1.18) saturate(1.04) contrast(1.05);}
-.imsg.hasbg .imsg-field{overflow:visible;}
-.imsg.hasbg .imsg-field:before{border-radius:20px;overflow:hidden;}
-.imsg.hasbg .imsg-row.them .imsg-b{background:linear-gradient(142deg,rgba(255,255,255,.52),rgba(255,255,255,.2) 9%,rgba(255,255,255,.13) 46%,rgba(255,255,255,.16) 84%,rgba(255,255,255,.34)),radial-gradient(130% 80% at 18% 4%,rgba(255,255,255,.16),transparent 60%);-webkit-backdrop-filter:blur(4px) saturate(1.2) brightness(1.08);backdrop-filter:blur(4px) saturate(1.2) brightness(1.08);}
-.imsg.hasbg .imsg-row.me .imsg-b{background:linear-gradient(142deg,rgba(255,255,255,.4),rgba(10,132,255,.5) 12%,rgba(10,132,255,.42) 52%,rgba(10,132,255,.5) 86%,rgba(255,255,255,.26));-webkit-backdrop-filter:blur(3px) saturate(2) brightness(1.1);backdrop-filter:blur(3px) saturate(2) brightness(1.1);}
-.imsg.hasbg .imsg-send{background:linear-gradient(140deg,rgba(255,255,255,.4),rgba(10,132,255,.62) 16%,rgba(10,132,255,.56) 80%,rgba(255,255,255,.3));-webkit-backdrop-filter:blur(3px) saturate(2) brightness(1.1);backdrop-filter:blur(3px) saturate(2) brightness(1.1);box-shadow:inset 1.4px 1.4px 0 rgba(255,255,255,.6),inset -1.2px -1.2px 0 rgba(255,255,255,.18),0 6px 18px rgba(0,0,0,.28);}
+/* 短信里的图片 */
+.imsg-b.pic{padding:0!important;background:linear-gradient(140deg,rgba(255,255,255,.66),rgba(255,255,255,.2) 26%,rgba(255,255,255,.1) 54%,rgba(255,255,255,.2) 80%,rgba(255,255,255,.44));}
+.imsg-b.pic>i{display:block;line-height:0;}
+.imsg-b.pic img{display:block;max-width:100%;width:186px;border-radius:0;}
+/* ===== 按钮和输入框照同一套：父元素是那条描边，:before 缩 1px 是里面的玻璃 ===== */
+.imsg-rb,.imsg-name,.imsg-plus,.imsg-send,.imsg-field{position:relative;}
+.imsg-rb>i,.imsg-name>i,.imsg-plus>i,.imsg-send>i{font-style:normal;position:relative;z-index:1;display:flex;align-items:center;justify-content:center;line-height:1;}
+.imsg-field>*{position:relative;z-index:1;}
+.imsg-rb:before,.imsg-name:before,.imsg-plus:before,.imsg-send:before,.imsg-field:before{content:'';position:absolute;inset:1px;border-radius:inherit;pointer-events:none;background:inherit;}
+.imsg-rb:before,.imsg-name:before,.imsg-plus:before{background:rgba(120,120,128,.24);}
+.imsg-field:before{background:rgba(120,120,128,.18);}
+.imsg-send:before{background:#0a84ff;}
+/* ===== 换过背景之后：能透出背景的玻璃 ===== */
+.imsg.hasbg .imsg-rb,.imsg.hasbg .imsg-name,.imsg.hasbg .imsg-plus,.imsg.hasbg .imsg-send,.imsg.hasbg .imsg-field{border:0;background:linear-gradient(140deg,rgba(255,255,255,.62),rgba(255,255,255,.16) 26%,rgba(255,255,255,.07) 54%,rgba(255,255,255,.13) 80%,rgba(255,255,255,.42));-webkit-backdrop-filter:brightness(1.62) saturate(1.75);backdrop-filter:brightness(1.62) saturate(1.75);box-shadow:0 5px 16px rgba(0,0,0,.24);}
+.imsg.hasbg .imsg-rb:before,.imsg.hasbg .imsg-name:before,.imsg.hasbg .imsg-plus:before{background:linear-gradient(142deg,rgba(255,255,255,.3),rgba(255,255,255,.15) 46%,rgba(255,255,255,.22));-webkit-backdrop-filter:blur(3.6px) saturate(1.06) brightness(1.02);backdrop-filter:blur(3.6px) saturate(1.06) brightness(1.02);box-shadow:inset 0 -8px 13px -10px rgba(0,0,0,.34);}
+.imsg.hasbg .imsg-field:before{background:linear-gradient(142deg,rgba(255,255,255,.26),rgba(255,255,255,.12) 46%,rgba(255,255,255,.18));-webkit-backdrop-filter:blur(3.6px) saturate(1.06) brightness(1.02);backdrop-filter:blur(3.6px) saturate(1.06) brightness(1.02);}
+.imsg.hasbg .imsg-send:before{background:linear-gradient(142deg,rgba(10,132,255,.72),rgba(10,132,255,.56) 52%,rgba(10,132,255,.68));-webkit-backdrop-filter:blur(3px) saturate(1.5) brightness(1.04);backdrop-filter:blur(3px) saturate(1.5) brightness(1.04);}
+.imsg.hasbg .imsg-row.them .imsg-b{background:linear-gradient(140deg,rgba(255,255,255,.66),rgba(255,255,255,.2) 24%,rgba(255,255,255,.09) 52%,rgba(255,255,255,.17) 78%,rgba(255,255,255,.46));-webkit-backdrop-filter:brightness(1.62) saturate(1.75);backdrop-filter:brightness(1.62) saturate(1.75);}
+.imsg.hasbg .imsg-row.them .imsg-b:before{background:linear-gradient(142deg,rgba(255,255,255,.38),rgba(255,255,255,.22) 44%,rgba(255,255,255,.3));-webkit-backdrop-filter:blur(3.6px) saturate(1.06) brightness(1.02);backdrop-filter:blur(3.6px) saturate(1.06) brightness(1.02);box-shadow:inset 0 -10px 15px -11px rgba(0,0,0,.34);}
+.imsg.hasbg .imsg-row.me .imsg-b{background:linear-gradient(140deg,rgba(255,255,255,.6),rgba(255,255,255,.18) 24%,rgba(255,255,255,.08) 52%,rgba(255,255,255,.16) 78%,rgba(255,255,255,.42));-webkit-backdrop-filter:brightness(1.62) saturate(1.75);backdrop-filter:brightness(1.62) saturate(1.75);}
+.imsg.hasbg .imsg-row.me .imsg-b:before{background:linear-gradient(142deg,rgba(10,132,255,.66),rgba(10,132,255,.5) 50%,rgba(10,132,255,.62));-webkit-backdrop-filter:blur(3px) saturate(1.5) brightness(1.04);backdrop-filter:blur(3px) saturate(1.5) brightness(1.04);box-shadow:inset 0 -10px 15px -11px rgba(0,0,0,.3);}
+.imsg.hasbg .imsg-b.pic:before{background:transparent;}
+/* 背景亮的时候白字会糊在背景里，给气泡里的字垫一层很淡的阴影；
+   玻璃该透还是透，只是字始终读得清。 */
+.imsg.hasbg .imsg-b>i{text-shadow:0 1px 3px rgba(0,0,0,.45);}
+.imsg.hasbg .imsg-b.pic>i{text-shadow:none;}
 .imsg.hasbg .imsg-kind,.imsg.hasbg .imsg-date{color:rgba(255,255,255,.72);text-shadow:0 1px 6px rgba(0,0,0,.5);}
 .imsg.hasbg .imsg-field textarea::placeholder{color:rgba(255,255,255,.66);}
 .imsg.hasbg .smslinebar{background:transparent;}
