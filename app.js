@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1300'){
+if(window.__NORTH_SHELL_BUILD__!=='1302'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -416,7 +416,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1300 · 磨砂＋细高光、共同生活状态、背景画质';
+const APP_VER='v1302 · 抖音发作品修复、文字特效、隐形墨水刮开';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1786,7 +1786,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1300&r=v1300-web-imsg-7';
+  const url='sw.js?v=1302&r=v1302-web-imsg-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -5670,7 +5670,10 @@ function dyFwd(id){const v=dyVid(id);if(!v)return;window._fwDy=v;const mine=v.ci
     <div class="hint" style="margin:6px 0 0;text-align:left">这条作品</div>
     <button class="dybtn out" onclick="closeModal();dyGenComments('${id}')">✨ 生成网友评论</button>
     ${v.img?`<button class="dybtn out" onclick="closeModal();dyWorkDescEdit('${id}')">${v.imgDesc?'改画面描述':'补一句画面描述'}</button>`:''}
-    ${mine?`<button class="dybtn out" onclick="closeModal();dyWorkTopToggle('${id}')">${v.top?'取消置顶':'置顶作品'}</button><button class="dybtn out" onclick="dyTogglePrivate('${id}')">${v.priv?'取消私密':'设为私密 🔒'}</button><button class="btn d" onclick="dyWorkDelete('${id}')">删除作品</button>`:`<button class="dybtn out" onclick="closeModal();dyTapVideo('${id}')">📖 看画面描写</button>`}
+    ${mine?`<button class="dybtn out" onclick="closeModal();dyWorkTopToggle('${id}')">${v.top?'取消置顶':'置顶作品'}</button><button class="dybtn out" onclick="dyTogglePrivate('${id}')">${v.priv?'取消私密':'设为私密 🔒'}</button>`:`<button class="dybtn out" onclick="closeModal();dyTapVideo('${id}')">📖 看画面描写</button>`}
+    ${/* 她说「我无法删除他的作品」——原来删除只给自己的作品留了入口。
+         这是她的手机，刷到谁的都该能从自己这儿删掉。 */''}
+    <button class="btn d" onclick="${mine?`dyWorkDelete('${id}')`:`closeModal();dyDelVideo('${id}')`}">删除作品</button>
     <button class="btn g" onclick="closeModal()">取消</button></div>`);}
 function dyFwdPick(where){const v=window._fwDy;if(!v)return;
   if(where==='wx'){const cs=(S.contacts||[]).filter(c=>c&&!c.deleted);
@@ -5849,6 +5852,9 @@ function dyPostAt(k){const p=_dyPost;if(!p)return;const q=dyPersonFind(k);if(!q)
    作品页上点那张唱片就能放出来。 */
 function dyMusicLib(){try{if(typeof musicInit==='function')musicInit();}catch(_){}
   return (S.music&&S.music.songs||[]).filter(s=>s&&s.id);}
+/* 没封面的歌就用歌名第一个字顶上，别留一个空框 */
+function dyMusicCoverHTML(s,cls){const src=s&&s.cover?storedImageDisplaySource(s.cover):'';
+  return `<i class="dymu-cover${cls?' '+cls:''}"${src?` style="background-image:url(${src})"`:''}>${src?'':esc(Array.from((s&&s.title)||'音')[0]||'音')}</i>`;}
 function dyPostMusicPick(){if(typeof dyPostFieldLive==='function')dyPostFieldLive();
   {const el=$('#dyp_card');if(el&&_dyPost)_dyPost.card=el.value;}
   const songs=dyMusicLib();
@@ -5856,7 +5862,9 @@ function dyPostMusicPick(){if(typeof dyPostFieldLive==='function')dyPostFieldLiv
   openModal(`<h3>选音乐</h3><div class="hint">从你的音乐库里挑一首，作品页上点唱片就能放。</div>
     <div style="max-height:46vh;overflow:auto">
       ${_dyPost&&_dyPost.songId?`<div class="row dymu-row" onclick="dyPostMusicSet('')"><b style="flex:1;font-size:14px">不配音乐</b><span style="color:#888;font-size:13px">取消</span></div>`:''}
-      ${songs.map(s=>`<div class="row dymu-row" onclick="dyPostMusicSet('${esc(s.id)}')"><b style="flex:1;font-size:14px;font-weight:500">${esc(s.title||'未命名')}</b><span style="color:#888;font-size:12px">${esc(s.artist||'')}</span></div>`).join('')}
+      ${/* 她说「选择的音乐图片也没有加载出来」——这张单子原来只有歌名和歌手，
+           根本没画封面。歌本身是有 cover 的，音乐页早就在用。 */''}
+      ${songs.map(s=>`<div class="row dymu-row" onclick="dyPostMusicSet('${esc(s.id)}')">${dyMusicCoverHTML(s)}<b style="flex:1;font-size:14px;font-weight:500">${esc(s.title||'未命名')}</b><span style="color:#888;font-size:12px">${esc(s.artist||'')}</span></div>`).join('')}
     </div><button class="btn g" style="margin-top:8px" onclick="closeModal()">返回</button>`);}
 function dyPostMusicSet(sid){if(!_dyPost)return;closeModal();
   const s=sid?dyMusicLib().find(x=>x.id===sid):null;
@@ -5870,7 +5878,8 @@ function dyMusicLabel(v){if(v&&v.music)return String(v.music);
 function dyMusicIsOn(v){const s=dyMusicSongOf(v);return !!(s&&typeof _mCur!=='undefined'&&_mCur===s.id&&_mPlaying);}
 function dyWorkMusicHTML(v){if(!v)return '';
   const s=dyMusicSongOf(v),on=dyMusicIsOn(v);
-  return `<div class="dymu${s?' live':''}${on?' on':''}" onclick="event.stopPropagation();dyWorkMusicPlay('${esc(v.id)}')"><i>${on?'♬':'♪'}</i><span>${esc(dyMusicLabel(v))}</span></div>`;}
+  /* 配了库里真有的歌就把封面贴出来，没配就还是那个小音符 */
+  return `<div class="dymu${s?' live':''}${on?' on':''}" onclick="event.stopPropagation();dyWorkMusicPlay('${esc(v.id)}')">${s?dyMusicCoverHTML(s,'sm'):`<i>${on?'♬':'♪'}</i>`}<span>${esc(dyMusicLabel(v))}</span></div>`;}
 function dyWorkMusicPlay(id){const v=dyVid(id);if(!v)return;
   if(!v.songId)return toast(v.music?'这首歌只是标注，库里没有对应的歌':'这条作品没有配乐');
   const s=dyMusicLib().find(x=>x.id===v.songId);
@@ -9653,7 +9662,7 @@ async function rpCreateInviteFromAI(id,theme){const c=getC(id);if(!c)return null
   if(d.active)return rpPushInviteMsg(id,'assistant');
   const recent=msgs(id).slice(-12).map(m=>{const t=msgToText(m);return t?((m.role==='user'?S.me.name:(c.remark||c.name))+'：'+t.replace(/\n/g,' ').slice(0,70)):'';}).filter(Boolean).join('\n');
   const wbInvite=worldbookPrompt(theme+'\n'+recent+'\n'+((c.persona||'')+traitDesc(c)),c.id,'角色扮演房间生成','roleplay');
-  let spec=null;try{spec=await aiGen([{role:'system',content:'你就是「'+(c.remark||c.name)+'」本人，正在给恋人'+S.me.name+'设计一局手机「角色扮演」软件里的独立剧情房间。只输出JSON，不要解释。要求：高级、有代入感、适合两人互动；身份和剧情是本局临时设定，不改微信真实关系；暧昧可以有氛围但不要露骨。JSON格式：{"title":"剧情标题8-16字","plot":"剧情背景80-180字","scene":"开场场景60-140字","myRole":"'+S.me.name+'本局身份","hisRole":"你的本局身份","myPersona":"'+S.me.name+'临时设定40-100字","hisPersona":"你的临时设定40-120字","daypart":"清晨/上午/中午/下午/傍晚/晚上/深夜","opening":["旁白或你的第一句台词，2到4条"]}'+wbInvite},{role:'user',content:'恋人想玩角色扮演。主题/要求：'+theme+'\n你的人设底色：'+((c.persona||'')+traitDesc(c)).replace(/\s+/g,' ').slice(0,600)+'\n最近聊天：\n'+(recent||'（暂无）')}],{max:1300,temp:.86},parseObj,2);}catch(_){}
+  let spec=null;try{spec=await aiGen([{role:'system',content:'你就是「'+(c.remark||c.name)+'」本人，正在给恋人'+S.me.name+'设计一局手机「角色扮演」软件里的独立剧情房间。只输出JSON，不要解释。要求：高级、有代入感、适合两人互动；身份和剧情是本局临时设定，不改微信真实关系；暧昧可以有氛围但不要露骨。JSON格式：{"title":"剧情标题8-16字","plot":"剧情背景80-180字","scene":"开场场景60-140字","myRole":"'+S.me.name+'本局身份","hisRole":"你的本局身份","myPersona":"'+S.me.name+'临时设定40-100字","hisPersona":"你的临时设定40-120字","daypart":"清晨/上午/中午/下午/傍晚/晚上/深夜","opening":["旁白或你的第一句台词，2到4条"]}'+wbInvite},{role:'user',content:'恋人想玩角色扮演。主题/要求：'+theme+'\n你的人设底色：'+((c.persona||'')+traitDesc(c)).replace(/\s+/g,' ').slice(0,600)+'\n最近聊天：\n'+(recent||'（暂无）')}],{max:1302,temp:.86},parseObj,2);}catch(_){}
   const now=new Date(),hh=('0'+now.getHours()).slice(-2),mm=('0'+now.getMinutes()).slice(-2),part=DAYPARTS.indexOf(spec&&spec.daypart)>=0?spec.daypart:dayPartNow();
   d.title=rpClip(spec&&spec.title,28)||rpClip(theme,18)||'临时剧情房间';
   d.plot=rpClip(spec&&spec.plot,420)||('由'+(c.remark||c.name)+'为'+S.me.name+'临时设计的一局角色扮演，主题是「'+theme+'」。');
@@ -10535,10 +10544,10 @@ function phSimMuteToggle(){const c=phState().simCall;if(!c)return;c.muted=!c.mut
 function phPhoneVoiceOffset(){return Math.max(0,Math.min(1200,+((S.settings&&S.settings.phoneVoiceOffset)||0)));}
 function callPaceRate(){return Math.max(.8,Math.min(2,+((S.settings&&S.settings.callPace)||1)));}
 function callPaceMs(ms,min){return Math.max(min==null?0:min,Math.round((+ms||0)/callPaceRate()));}
-function phReleaseSimSub(callId,line){const now=phState().simCall;if(!now||now.id!==callId||!now.sub||now.sub.text!==line||!now.sub.hold)return;now.sub.hold=false;now.sub.time=Date.now();save(100);setTimeout(()=>{try{const c=phState().simCall;if(c&&c.id===callId&&c.sub&&c.sub.text===line&&!c.sub.hold){c.sub=null;save(300);if(cur().p==='phonecall')render();}}catch(_){}},Math.max(900,Math.min(3600,1300+[...String(line||'')].length*45)));}
+function phReleaseSimSub(callId,line){const now=phState().simCall;if(!now||now.id!==callId||!now.sub||now.sub.text!==line||!now.sub.hold)return;now.sub.hold=false;now.sub.time=Date.now();save(100);setTimeout(()=>{try{const c=phState().simCall;if(c&&c.id===callId&&c.sub&&c.sub.text===line&&!c.sub.hold){c.sub=null;save(300);if(cur().p==='phonecall')render();}}catch(_){}},Math.max(900,Math.min(3600,1302+[...String(line||'')].length*45)));}
 function phSimCanSpeak(role){const c=phState().simCall;return !!(ttsApiOn(role)&&c&&!c.muted&&c.meta&&(c.meta.aliasToRole||c.meta.blockedOutreach)&&!c.meta.spoof&&role&&role.id&&getC(role.id)&&(!role.blocked||c.meta.blockedOutreach));}
 async function phSimSpeak(text,role,opt){opt=opt||{};if(!phSimCanSpeak(role))return false;const spoken=phCallSpokenText(text,role);if(!spoken)return false;try{await speakWait(spoken,role,{cue:ttsAutoCue(spoken,role),prepared:opt.prepared,onAudioStart:opt.onAudioStart});return true;}catch(_){return false;}}
-function phSimLine(c,from,text){if(!c)return;from=from||'them';const tx=String(text||'').slice(0,260),ts=Date.now(),ttl=Math.max(1800,Math.min(5600,1300+[...tx].length*95));c.lines=Array.isArray(c.lines)?c.lines:[];c.lines.push({from,text:tx,time:ts});if(c.lines.length>80)c.lines=c.lines.slice(-80);c.sub={from,text:tx,time:ts,ttl,hold:from==='me'};if(from==='me')return;setTimeout(()=>{try{const now=phState().simCall;if(now&&now.id===c.id&&now.sub&&now.sub.time===ts&&!now.sub.hold){now.sub=null;save(300);if(cur().p==='phonecall')render();}}catch(_){}},ttl);}
+function phSimLine(c,from,text){if(!c)return;from=from||'them';const tx=String(text||'').slice(0,260),ts=Date.now(),ttl=Math.max(1800,Math.min(5600,1302+[...tx].length*95));c.lines=Array.isArray(c.lines)?c.lines:[];c.lines.push({from,text:tx,time:ts});if(c.lines.length>80)c.lines=c.lines.slice(-80);c.sub={from,text:tx,time:ts,ttl,hold:from==='me'};if(from==='me')return;setTimeout(()=>{try{const now=phState().simCall;if(now&&now.id===c.id&&now.sub&&now.sub.time===ts&&!now.sub.hold){now.sub=null;save(300);if(cur().p==='phonecall')render();}}catch(_){}},ttl);}
 async function phSimRoleSay(callId,text,role){const units=phCallUnits(text,role);if(!units.length)return;const canPrefetch=phSimCanSpeak(role)&&ttsApiOn(role)&&!voiceProgressiveOn(),speechRows=units.map(u=>({spoken:phCallSpokenText(u.orig,role),cue:ttsAutoCue(u.orig,role),interjection:false})),speechJobs=canPrefetch?callPrefetchSpeech(speechRows,role,()=>{const now=phState().simCall;return !!(now&&now.id===callId&&now.state==='active');}):[];
   for(let i=0;i<units.length;i++){const u=units[i],c=phState().simCall;if(!c||c.id!==callId||c.state!=='active')return;const line=u.orig+(u.trans?'\n'+u.trans:''),canSpeak=phSimCanSpeak(role);let shown=false;const show=()=>{const now=phState().simCall;if(!now||now.id!==callId||now.state!=='active'||shown)return;shown=true;phSimLine(now,'them',line);if(canSpeak&&now.sub&&now.sub.text===line)now.sub.hold=true;save();if(cur().p==='phonecall')render();},off=phPhoneVoiceOffset();
     if(canSpeak){if(c.sub&&!c.sub.hold){c.sub=null;save();if(cur().p==='phonecall')render();}await phSimSpeak(line,role,{prepared:speechJobs[i],onAudioStart:()=>{if(off)setTimeout(show,off);else show();}});if(!shown)show();}
@@ -13842,16 +13851,27 @@ function roleDouyinRecentImage(c,maxAgeMs,maxBack){
 function roleDouyinImage(c,opt){if(!c)return '';
   const ask=String(opt&&opt.userText||'').replace(/\s+/g,'');
   if(roleDouyinWantsImage(ask))return roleDouyinRecentImage(c,48*3600000,24);
-  if(DY_POST_WORD.test(ask))return roleDouyinRecentImage(c,30*60000,6);
+  /* 没点名那一档原来只认半小时、往回六条，她隔了四十分钟再说「发个抖音」就不带图了，
+     发出来是个空的场记板。放宽到三小时、往回十二条——真抖音里也是「刚拍的那张」。 */
+  if(DY_POST_WORD.test(ask))return roleDouyinRecentImage(c,3*3600000,12);
   return '';}
 function roleDouyinPickSong(){let lib=[];try{lib=dyMusicLib();}catch(_){lib=[];}
   return lib.length?lib[Math.floor(Math.random()*lib.length)]:null;}
 function roleDouyinDuplicate(c,tx){const norm=x=>String(x||'').replace(/\s+/g,'');
   return (S.dy&&S.dy.feed||[]).filter(v=>v&&v.cid===c.id).slice(0,8).some(v=>norm(v.desc)===norm(tx));}
+/* 她说「第一次发送成功了，后面几次都没发送」。原因之一就是这个去重：
+   模型第二次写了一模一样的文案，publishRoleDouyin 直接 return false，
+   【一句话都不说、什么都不发生】。现在重复的自动加一句她看得懂的区分，
+   实在还重复就照发——她明确要求发的东西，绝不能悄悄吞掉。 */
+function roleDouyinDedupeText(c,tx){if(!roleDouyinDuplicate(c,tx))return tx;
+  const n=(S.dy&&S.dy.feed||[]).filter(v=>v&&v.cid===c.id).length+1;
+  const alt=String(tx||'').slice(0,132)+'（'+n+'）';
+  return roleDouyinDuplicate(c,alt)?String(tx||'')+' '+hm(Date.now()):alt;}
 function publishRoleDouyin(c,tx,opt){opt=opt||{};tx=cleanDouyinBody(tx);
   if(!c||!tx)return false;
   try{dyInit();}catch(_){return false;}
-  if(roleDouyinDuplicate(c,tx))return false;
+  tx=cleanDouyinBody(roleDouyinDedupeText(c,tx));
+  if(!tx)return false;
   const img=opt.img||roleDouyinImage(c,opt),song=roleDouyinPickSong();
   S.dy.feed.unshift({id:uid(),cid:c.id,author:c.remark||c.name,handle:'@'+String(c.name||'').replace(/\s/g,''),
     avatar:c.avatar,desc:tx,body:'',narration:String(opt.narration||''),img:img||'',emoji:'🎬',
@@ -13865,12 +13885,52 @@ function publishRoleDouyin(c,tx,opt){opt=opt||{};tx=cleanDouyinBody(tx);
   if(opt.toast)toast((c.remark||c.name)+'发了一条抖音'+(img?'（用了那张图）':'')+(song?('，配乐 '+(song.title||'')):''));
   return true;}
 function postRoleDouyin(c,tx,opt){return publishRoleDouyin(c,tx,opt);}
+/* 她说「我抖音让他发了好几次，他都不发」。除了标签匹配不上、被去重吞掉，
+   还有一种：模型这一轮压根没写 [发抖音|…]，于是什么都没发生，她也不知道为什么。
+   朋友圈那边早就有这个兜底（ensureRequestedPhotoCaptionMoment），抖音一直没有。
+   现在只要她这句话是明确在让他发抖音，而回复里没有标签，就照人设生成一条补上。 */
+const DY_ASK_RE=/(?:发|拍|更新|上传|传|po)[^。！？!?\n]{0,12}(?:抖音|作品|短视频)|(?:抖音|作品|短视频)[^。！？!?\n]{0,8}(?:发|拍|更新|上传|传|po)(?:一?(?:条|个|下|张))?/;
+function roleDouyinAskIntent(text){const ask=String(text||'').replace(/\s+/g,'');
+  if(!ask||!DY_POST_WORD.test(ask))return false;
+  if(/(?:别|不要|不用|先不|暂时不|不想)[^。！？!?]{0,6}(?:发|拍|更新|上传)/.test(ask))return false;
+  return DY_ASK_RE.test(ask);}
+function roleDouyinCommandText(t){return DY_TAG_RE.test(String(t||''))||/[\[【]\s*发抖音\s*[\]】]/.test(String(t||''));}
+async function roleDouyinGenerate(c,opt){opt=opt||{};
+  const base='以你自己的身份写一条抖音作品的文案。必须符合你的人设、关系状态和今天的真实生活；'
+    +'抖音的调子，一两句，可以带 #话题，可以 @ 人，不要标题、不要解释、不要方括号。\n\n# 今天的真实生活\n'
+    +(typeof roleTweetLifeContext==='function'?roleTweetLifeContext(c):'')
+    +'\n\n# 最近已经发过的抖音\n'+roleDouyinRecentText(c)
+    +'\n新的这条不要复述上面任何一条，也不要只换几个近义词，换一个今天不同的具体事件或角度。'
+    +(opt.userText?('\n\n'+(S.me&&S.me.name||'她')+'刚刚说：「'+String(opt.userText).slice(0,120)+'」，这条要贴着她这句话来写。'):'');
+  for(let attempt=0;attempt<2;attempt++){
+    try{const raw=await chatAPI([{role:'system',content:buildSystem(c)+(typeof roleSocialIdentityPin==='function'?roleSocialIdentityPin(c):'')},
+      {role:'user',content:base+(attempt?'\n\n上一版和最近发过的太像了，换个角度再写一次。':'')}],
+      {independentRoleModel:true,routeIndex:(typeof roleChatRouteIndex==='function'?roleChatRouteIndex(c):0),
+       aux:c.model==='aux',max:200,temp:.8,complete:true});
+      const text=cleanDouyinBody(cleanReply(raw));
+      if(text&&!roleDouyinDuplicate(c,text))return text;
+      if(text&&attempt)return text;/* 还是像就照发，总好过她要了半天什么都没有 */
+    }catch(_){}}
+  return '';}
+async function ensureRequestedDouyin(content,c,userText){
+  if(!c||!roleDouyinAskIntent(userText))return content;
+  const out=String(content||'');
+  if(roleDouyinCommandText(out))return out;
+  const text=await roleDouyinGenerate(c,{userText});
+  return text?(out+(out?'\n':'')+'[发抖音|'+text+']'):out;}
 function roleDouyinRecentText(c){return (S.dy&&S.dy.feed||[]).filter(v=>v&&v.cid===c.id).slice(0,6)
   .map(v=>'"'+String(v.desc||'')+'"'+(v.img?'（配了一张照片）':'')+(v.music?'（配乐：'+v.music+'）':'')).join('\n');}
 function roleDouyinDiag(outcome,ok){try{if(typeof roleInterceptDiagnosticAction==='function')roleInterceptDiagnosticAction(outcome,ok);}catch(_){}}
+/* 这条正则之前是 [^\]】\n]{1,180}：
+   ① 文案里只要有一个【】，就在里面那个 】 断掉，发出去半句；
+   ② 文案超过 180 字，整条标签匹配不上，于是【什么都没发生】——她看到的就是「他不发」。
+   现在按行贪婪匹配到这一行最后一个收尾括号，长度放到 300。 */
+const DY_TAG_RE=/[\[【]\s*发抖音\s*[\|｜:：]\s*([^\n]{1,300})[\]】]/g;
+const DY_TAG_BARE_RE=/[\[【]\s*发抖音\s*[\]】]\s*[「"']?([^\n]{1,300}?)[」"']?$/gm;
 function consumeDouyinCommands(content,c,opt,outcome){const posted=[];let out=''+(content||'');
-  out=out.replace(/[\[【]\s*发抖音\s*[\|｜:：]\s*([^\]】\n]{1,180})[\]】]/g,(mm,tx)=>{const body=cleanDouyinBody(tx),ok=!!body&&postRoleDouyin(c,body,opt);if(ok)posted.push(body);roleDouyinDiag(outcome,ok);return '';});
-  out=out.replace(/[\[【]\s*发抖音\s*[\]】]\s*[「"']?([^\n]{1,180})[」"']?/g,(mm,tx)=>{const body=cleanDouyinBody(tx),ok=!!body&&postRoleDouyin(c,body,opt);if(ok)posted.push(body);roleDouyinDiag(outcome,ok);return '';});
+  const take=(mm,tx)=>{const body=cleanDouyinBody(tx),ok=!!body&&postRoleDouyin(c,body,opt);if(ok)posted.push(body);roleDouyinDiag(outcome,ok);return '';};
+  out=out.replace(DY_TAG_RE,take);
+  out=out.replace(DY_TAG_BARE_RE,take);
   return opt&&opt.preserveText?out:stripPostedMomentEcho(out,posted);}
 function stripPostedMomentEcho(content,posted){let out=''+(content||'');(posted||[]).forEach(tx=>{if(!tx)return;const escRe=tx.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');out=out.replace(new RegExp('^[\\s\\n「"\'【\\[]*'+escRe+'[\\s」"\'】\\]]*','m'),'');});return out;}
 function consumeMomentCommands(content,c,opt,outcome){const posted=[];let out=''+(content||'');
@@ -14138,7 +14198,7 @@ async function remoteControlPrepareVisibleDelete(a){if(!remoteControlActive()||!
   else if(a.op==='delete_x')el=document.querySelector('[data-x-tweet-id="'+a.targetId+'"]');
   else if(a.op==='delete_wechat_contact')el=Array.from(document.querySelectorAll('.list .row')).find(x=>String(x.textContent||'').includes(a.targetName||''));
   if(el){try{el.scrollIntoView({behavior:'smooth',block:'center'});}catch(_){el.scrollIntoView();}await sleep(600);const layer=$('#remoteControlLayer');if(layer){const er=el.getBoundingClientRect(),lr=layer.getBoundingClientRect();remoteControlPointer(er.left-lr.left+Math.min(er.width*.72,Math.max(30,er.width-24)),er.top-lr.top+Math.min(er.height*.55,Math.max(20,er.height/2)));}el.style.outline='2px solid #fa5151';el.style.outlineOffset='3px';el.style.transition='outline-color .2s';}
-  await sleep(1300);return true;}
+  await sleep(1302);return true;}
 async function remoteControlShowVisibleDeleteResult(a){if(!remoteControlActive())return;
   if(a.op==='delete_x_dm'){xTab='dm';remoteControlSetPage('x');}
   else if(a.op==='delete_douyin_dm'){dyTab='dm';remoteControlSetPage('dy');}
@@ -14651,7 +14711,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
     const _statedPwd=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;
     content=applyControlTags(content,c,id,_statedPwd,_userText,_replyActionOutcome);
     if(_naturalOn){if(/[\[【]\s*(?:记仇|消气)\s*(?:[|｜:：]\s*[^\]】]*)?[\]】]/.test(String(content||'')))_replyAuditPartial=true;content=content.replace(/[\[【]\s*(?:记仇|消气)\s*(?:[|｜:：]\s*[^\]】]*)?[\]】]/g,'');}else content=applyGrudgeTags(content,c,_replyActionOutcome);content=applyStarTags(content,_replyActionOutcome);content=cohabConsumeOnlineState(content,c,id,{userText:_userText,audit:_replyActionOutcome});
-    bubbleNaturalRequest(_userText,c);content=applyBubbleTags(content,c,_replyActionOutcome);if(!_rawOutput)content=await ensureRequestedPhotoCaptionMoment(content,c,_userText);if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;content=consumeMomentCommands(content,c,{toast:true,userText:_userText,preserveText:_rawOutput},_replyActionOutcome);content=consumeDouyinCommands(content,c,{toast:true,userText:_userText,preserveText:_rawOutput},_replyActionOutcome);content=coupleAlbumConsumeSaveTag(content,c,_replyActionOutcome);if(!_rawOutput)content=forceRequestedVoiceReply(content,_voiceRequired?_userText:'',c);if(_replyActionOutcome.handled)_replyAuditHandled=true;if(_replyActionOutcome.failed)_replyAuditPartial=true;
+    bubbleNaturalRequest(_userText,c);content=applyBubbleTags(content,c,_replyActionOutcome);if(!_rawOutput)content=await ensureRequestedPhotoCaptionMoment(content,c,_userText);if(!_rawOutput)content=await ensureRequestedDouyin(content,c,_userText);if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;content=consumeMomentCommands(content,c,{toast:true,userText:_userText,preserveText:_rawOutput},_replyActionOutcome);content=consumeDouyinCommands(content,c,{toast:true,userText:_userText,preserveText:_rawOutput},_replyActionOutcome);content=coupleAlbumConsumeSaveTag(content,c,_replyActionOutcome);if(!_rawOutput)content=forceRequestedVoiceReply(content,_voiceRequired?_userText:'',c);if(_replyActionOutcome.handled)_replyAuditHandled=true;if(_replyActionOutcome.failed)_replyAuditPartial=true;
     if(/拉黑|加回|删了你|删除你|拉进黑名单|原谅你/.test(content)&&!/报备|别的微信号|加了你|加你、|有人加|有别人加/.test(note||''))applyBlockIntent(content,c,id);
     if(S.couple&&S.couple.cid===id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|放你用|这个你先用|你先用|给你(解|开)|都给你解|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|玩.{0,4}(一会儿|一会|多久|多长)|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)|扣.{0,4}(零花|钱|块|元)|没收.{0,4}(零花|钱|卡)|罚款|罚.{0,3}(钱|块|元)|零花钱|冻结|解冻|亲属卡|原谅|消气/.test(content)){if(!naturalUngagFallback(content,c,id))extractControl(content,c,_statedPwd);}
     if(!_rawOutput&&!_wxLoginCompletion){const _nativeInspectionQueued=maybeSpyIntent(content,c,id,_lu,{nativeOnly:true,immediate:true,suppressInitial:true});if(_nativeInspectionQueued){roleInterceptDiagnosticTurnSelect(_replyAudit,content);_replyAuditPartial=!!roleInterceptDiagnosticComparable(content,true);_replyAuditHandled=true;_replyAuditFinal=content;if(typingEl&&typingEl.isConnected)typingEl.remove();return true;}else{const _phoneGuard=guardUnverifiedRolePhoneReply(content,note);content=_phoneGuard.content;if(_phoneGuard.focus){if(queueNativeInspection(id,_lu,_phoneGuard.focus,{bySheTold:true,suppressInitial:true,immediate:true,forceResult:true})){roleInterceptDiagnosticTurnSelect(_replyAudit,content);_replyAuditPartial=!!roleInterceptDiagnosticComparable(content,true);_replyAuditHandled=true;_replyAuditFinal=content;if(typingEl&&typingEl.isConnected)typingEl.remove();return true;}}else maybeSpyIntent(content,c,id,_lu);}}
@@ -15454,7 +15514,7 @@ function callOnUserSay(t,meta){if(!_call)return false;_call.lastUserTs=Date.now(
   if(screenShareSpeechVisionOn()&&callScreenShareOn()){callVideoVisionAnalyze('voice',t,meta);return true;}
   if(callVideoVisionAsked(t)&&callVideoVisionCanAnalyze('voice')){callVideoVisionAnalyze('voice',t,meta);return true;}
   callNativeScreenVisionComplete(String(meta&&meta.screenFrameToken||''));
-  if(callStoryIntent(t)){_call.lull=true;if(!_call.sleepStartedAt)_call.sleepStartedAt=Date.now();callPersist();callAI('[系统：'+S.me.name+'想让你讲个睡前故事、连麦陪ta睡。请你【放轻声音、放慢节奏】，认真讲一个完整、温暖治愈的睡前小故事（中等偏长、可以分几小段娓娓道来，像真的在哄ta入睡），别敷衍三两句就完。讲的中间偶尔轻声哄ta（乖、闭上眼睛、有我在），讲完轻声跟ta道晚安。]',{max:1300});return true;}
+  if(callStoryIntent(t)){_call.lull=true;if(!_call.sleepStartedAt)_call.sleepStartedAt=Date.now();callPersist();callAI('[系统：'+S.me.name+'想让你讲个睡前故事、连麦陪ta睡。请你【放轻声音、放慢节奏】，认真讲一个完整、温暖治愈的睡前小故事（中等偏长、可以分几小段娓娓道来，像真的在哄ta入睡），别敷衍三两句就完。讲的中间偶尔轻声哄ta（乖、闭上眼睛、有我在），讲完轻声跟ta道晚安。]',{max:1302});return true;}
   if(callSleepIntent(t)){_call.lull=true;if(callSleepStartIntent(t)&&!_call.sleepStartedAt)_call.sleepStartedAt=Date.now();callPersist();callAI('[系统：'+S.me.name+'困了、想在通话里睡着。你温柔放轻声音哄ta睡：柔声说几句晚安情话让ta安心闭眼，节奏放慢。接下来ta可能就不出声睡着了——你别催ta别吵ta，安静陪着就好，偶尔很轻地说一句"睡吧，有我呢"。]');return true;}
   if(callAfkIntent(t)){_call.afkUntil=Date.now()+12*60000;}// 暂离豁免12分钟
   return false;}

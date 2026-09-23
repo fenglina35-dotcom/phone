@@ -318,10 +318,15 @@ test('她怎么说都能把图带上——不只是「图/图片/照片」这三
   const no = ['发个抖音', '拿去发抖音', '今天好累'];
   for (const say of no) assert.equal(vm.runInContext(`roleDouyinWantsImage(${JSON.stringify(say)})`, ctx), false, `这句没点名图，不该走点名那条路：${say}`);
 });
-test('没点名但刚发完图就让发抖音，也要带上——只认半小时内、往回几条', () => {
+test('没点名但前面发过图，让发抖音也要带上——放宽到三小时、往回十二条', () => {
+  /* 原来这一档卡在半小时、往回六条。她隔了四十分钟再说一句「发个抖音」，
+     图就带不上了，发出来是个空的场记板——她实测撞上的就是这个。 */
   const fn = source('roleDouyinImage');
   assert.match(fn, /if\(roleDouyinWantsImage\(ask\)\)return roleDouyinRecentImage\(c,48\*3600000,24\);/);
-  assert.match(fn, /if\(DY_POST_WORD\.test\(ask\)\)return roleDouyinRecentImage\(c,30\*60000,6\);/);
+  const m = fn.match(/if\(DY_POST_WORD\.test\(ask\)\)return roleDouyinRecentImage\(c,(\d+)\*3600000,(\d+)\);/);
+  assert.ok(m, '没点名那一档不见了');
+  assert.ok(+m[1] >= 3, `只往回看 ${m[1]} 小时太短了，她隔一会儿再说就带不上图`);
+  assert.ok(+m[2] >= 12, `只往回翻 ${m[2]} 条太少了`);
 });
 test('翻聊天记录找图：只要有 src 的真图，太旧或翻太远就不要', () => {
   const now = Date.now();

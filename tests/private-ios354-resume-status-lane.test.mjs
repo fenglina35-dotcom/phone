@@ -37,19 +37,19 @@ function pollHarness(){
   return {context,calls};
 }
 
-test('private candidate is v1301 and iOS 384 while public advances independently',()=>{
-  assert.match(app,/APP_VER='v1301 · 磨砂＋细高光、共同生活状态、背景画质（私人）'/);
+test('private candidate is v1303 and iOS 385 while public advances independently',()=>{
+  assert.match(app,/APP_VER='v1303 · 抖音发作品修复、文字特效、隐形墨水刮开（私人）'/);
   for(const html of [index,alias]){
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1301'/);
-    assert.match(html,/app\.js\?v=1301&r=v1301-private-imsg-7/);
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1303'/);
+    assert.match(html,/app\.js\?v=1303&r=v1303-private-imsg-1/);
     assert.match(html,/private-runtime-diagnostics\.js\?v=339/);
   }
   assert.match(diagnostics,/OVERLAY_VERSION='336-daily-file-backup'/);
-  assert.match(webView,/1\.0\.384 \(384\)/);
-  assert.match(bridge,/private static let build = "1\.0\.384 \(384\)"/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 384;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.384;/g)||[]).length,12);
-  assert.match(publicApp,/APP_VER='v1300 · 磨砂＋细高光、共同生活状态、背景画质'/);
+  assert.match(webView,/1\.0\.385 \(385\)/);
+  assert.match(bridge,/private static let build = "1\.0\.385 \(385\)"/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 385;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.385;/g)||[]).length,12);
+  assert.match(publicApp,/APP_VER='v1302 · 抖音发作品修复、文字特效、隐形墨水刮开'/);
 });
 
 test('ordinary foreground polling is lightweight while explicit control verification stays complete',async()=>{
