@@ -30,12 +30,12 @@ test('v1178 has a unique visible identity across every public entry and cache la
   assert.match(app,/__NORTH_SHELL_BUILD__!==\'1300\'/);
   assert.match(app,/APP_VER='v1300 · 磨砂＋细高光、共同生活状态、背景画质'/);
   assert.match(shell,/__NORTH_SHELL_BUILD__='1300'/);
-  assert.match(shell,/app\.js\?v=1300&r=v1300-web-imsg-5/);
+  assert.match(shell,/app\.js\?v=1300&r=v1300-web-imsg-6/);
   assert.match(index,/小手机\.html\?v=1300/);
   assert.match(repair,/小手机\.html\?v=1300/);
   assert.match(worker,/const BUILD='1300'/);
-  assert.match(worker,/north-shell-v1300-web-imsg-5/);
-  assert.match(hotfix,/sw\.js\?v=1300&r=v1300-web-imsg-5/);
+  assert.match(worker,/north-shell-v1300-web-imsg-6/);
+  assert.match(hotfix,/sw\.js\?v=1300&r=v1300-web-imsg-6/);
   for(const [name,source] of Object.entries({app,shell,index,repair,worker,hotfix})){
     assert.doesNotMatch(source,/v?1127/,`${name} must not reuse the prior web version`);
   }

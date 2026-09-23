@@ -63,7 +63,7 @@ test('private identity remains v1301 and iOS 384 while public advances independe
   assert.match(privateApp, /APP_VER='v1301 · 磨砂＋细高光、共同生活状态、背景画质（私人）'/);
   for (const html of [privateIndex, privateAlias]) {
     assert.match(html, /window\.__NORTH_SHELL_BUILD__='1301'/);
-    assert.match(html, /app\.js\?v=1301&r=v1301-private-imsg-5/);
+    assert.match(html, /app\.js\?v=1301&r=v1301-private-imsg-6/);
     assert.match(html, /private-runtime-diagnostics\.js\?v=339/);
   }
   assert.match(privateRepair, /index\.html\?repair=1&v=1301/);

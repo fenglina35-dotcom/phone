@@ -16,10 +16,10 @@ test('v1184 web identity and cache markers are aligned', () => {
   assert.match(app, /__NORTH_SHELL_BUILD__!=='1300'/);
   assert.match(app, /APP_VER='v1300 · 磨砂＋细高光、共同生活状态、背景画质'/);
   assert.match(shell, /__NORTH_SHELL_BUILD__='1300'/);
-  assert.match(shell, /app\.js\?v=1300&r=v1300-web-imsg-5/);
+  assert.match(shell, /app\.js\?v=1300&r=v1300-web-imsg-6/);
   assert.match(sw, /const BUILD='1300'/);
-  assert.match(sw, /v1300-web-imsg-5/);
-  assert.match(hotfix, /v1300-web-imsg-5/);
+  assert.match(sw, /v1300-web-imsg-6/);
+  assert.match(hotfix, /v1300-web-imsg-6/);
   assert.match(index, /小手机\.html\?v=1300/);
   assert.match(repair, /小手机\.html\?v=1300/);
 });

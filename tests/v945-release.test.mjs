@@ -14,11 +14,11 @@ const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTes
 
 test('v1184 web files use one cache-busting build number',()=>{
   assert.match(app,/APP_VER='v1300 · 磨砂＋细高光、共同生活状态、背景画质'/);
-  assert.match(app,/const url='sw\.js\?v=1300&r=v1300-web-imsg-5'/);
+  assert.match(app,/const url='sw\.js\?v=1300&r=v1300-web-imsg-6'/);
   assert.match(html,/__NORTH_SHELL_BUILD__='1300'/);
   assert.match(html,/app\.js\?v=1300/);
   assert.match(sw,/const BUILD='1300'/);
-  assert.match(sw,/north-shell-v1300-web-imsg-5/);
+  assert.match(sw,/north-shell-v1300-web-imsg-6/);
   assert.match(index,/小手机\.html\?v=1300/);
   assert.match(repair,/小手机\.html\?v=1300/);
 });

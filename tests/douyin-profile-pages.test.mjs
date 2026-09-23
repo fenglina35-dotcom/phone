@@ -913,7 +913,13 @@ test('the money cards are the WeChat ones, not a hand-drawn blue block', () => {
   assert.match(card, /cfoot/);
   assert.doesNotMatch(card, /class="dymo/, '我自画的那个蓝方块要去掉');
   assert.match(card, /transferState\(m\)/, '状态判断复用微信的');
-  assert.match(app, /m\.kind==='red'\|\|m\.kind==='transfer'\?' bare'/, '卡片自带底色，外面不能再套一层气泡');
+  /* 卡片自带底色，外面不能再套一层气泡；表情包也一样——她说「抖音发的表情包，
+     也不要有气泡包边」，和短信发图一个待遇。 */
+  assert.match(app, /m\.kind==='red'\|\|m\.kind==='transfer'\|\|m\.kind==='sticker'\?' bare'/);
+  assert.equal((app.match(/m\.kind==='sticker'\?' bare'/g) || []).length, 2, '私信和群聊两边都要去掉包边');
+  for (const [name, css] of [['小手机.html', html], ['私人壳', shell], ['index.html', index]]) {
+    assert.match(css, /\.dycp-msg img\{[^}]*border-radius:0/, `${name} 的表情包还带着圆角，不是原模原样`);
+  }
   assert.match(source('dyMoneyAct'), /addBill\('in',amount/, '收下的钱要进账');
   for (const [name, css] of [['小手机.html', html], ['私人壳', shell], ['index.html', index]]) {
     assert.ok(css.includes('.dydm-b.bare'), `${name} 少了不套气泡的样式`);
