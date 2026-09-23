@@ -2079,6 +2079,95 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
 .imsg-b.typing>i span{display:inline-block;width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.72);animation:bk 1.2s infinite;}
 .imsg-b.typing>i span:nth-child(2){animation-delay:.2s;}
 .imsg-b.typing>i span:nth-child(3){animation-delay:.4s;}
+/* ===== 文字特效 =====
+   照 iMessage 的「文字效果」：选中的字单独变成动的，发出去之后每 3 秒循环一次。
+   动作都压在这 3 秒的前 1 秒出头，剩下的时间静止——所以看着是「隔几秒动一下」。
+   整段一起动的（放大／缩小）挂在 .imfx 上；一个字一个字错开动的挂在里面的
+   .imfxc 上，靠 --i 排延迟。 */
+.imfx{display:inline-block;}
+.imfxc{display:inline-block;will-change:transform;}
+.imfx-b{font-weight:800;}
+.imfx-i{font-style:italic;}
+.imfx-u{text-decoration:underline;text-underline-offset:2px;}
+.imfx-s{text-decoration:line-through;}
+.imfx-u.imfx-s{text-decoration:underline line-through;}
+.imfx.imfx-big{animation:imfx-big 3s infinite;}
+.imfx.imfx-small{animation:imfx-small 3s infinite;}
+.imfx-shake .imfxc{animation:imfx-shake 3s infinite;animation-delay:calc(var(--i)*.05s);}
+.imfx-nod .imfxc{animation:imfx-nod 3s infinite;animation-delay:calc(var(--i)*.07s);}
+.imfx-wave .imfxc{animation:imfx-wave 3s infinite;animation-delay:calc(var(--i)*.09s);}
+.imfx-bloom .imfxc{animation:imfx-bloom 3s infinite;animation-delay:calc(var(--i)*.08s);}
+.imfx-jitter .imfxc{animation:imfx-jitter 3s infinite;animation-delay:calc(var(--i)*.03s);}
+@keyframes imfx-big{0%,30%,100%{transform:scale(1)}6%{transform:scale(1.85)}14%{transform:scale(.9)}21%{transform:scale(1.1)}}
+@keyframes imfx-small{0%,30%,100%{transform:scale(1)}7%{transform:scale(.4)}16%{transform:scale(1.1)}23%{transform:scale(.97)}}
+@keyframes imfx-shake{0%,28%,100%{transform:rotate(0)}5%{transform:rotate(-10deg)}11%{transform:rotate(10deg)}17%{transform:rotate(-6deg)}23%{transform:rotate(3deg)}}
+@keyframes imfx-nod{0%,26%,100%{transform:translateY(0) rotate(0)}8%{transform:translateY(-.2em) rotate(-9deg)}17%{transform:translateY(.1em) rotate(7deg)}}
+@keyframes imfx-wave{0%,24%,100%{transform:translateY(0)}8%{transform:translateY(-.36em)}16%{transform:translateY(.13em)}}
+@keyframes imfx-bloom{0%{transform:scale(0) rotate(-45deg);opacity:0;filter:blur(3px)}9%{transform:scale(1.3) rotate(8deg);opacity:1;filter:blur(0)}16%,100%{transform:scale(1) rotate(0);opacity:1;filter:blur(0)}}
+@keyframes imfx-jitter{0%,32%,100%{transform:translate(0,0)}4%{transform:translate(-1.6px,1px)}9%{transform:translate(1.6px,-1px)}14%{transform:translate(-1px,-1.6px)}19%{transform:translate(1px,1.6px)}25%{transform:translate(-.8px,.6px)}}
+/* ===== 气泡特效：发出去的那一下 ===== */
+.imbfx-slam{animation:imbfx-slam .85s cubic-bezier(.2,1.1,.3,1) 1;}
+.imbfx-loud{animation:imbfx-loud 1s cubic-bezier(.2,1.1,.3,1) 1;}
+.imbfx-gentle{animation:imbfx-gentle 1s cubic-bezier(.2,1.1,.3,1) 1;}
+@keyframes imbfx-slam{0%{transform:scale(3);opacity:0}24%{transform:scale(.85);opacity:1}38%{transform:scale(1.08)}52%{transform:scale(.96)}68%{transform:scale(1.03)}100%{transform:scale(1)}}
+@keyframes imbfx-loud{0%{transform:scale(.35);opacity:.25}32%{transform:scale(1.5);opacity:1}52%{transform:scale(.93)}68%{transform:scale(1.07)}100%{transform:scale(1)}}
+@keyframes imbfx-gentle{0%{transform:scale(1.7);opacity:.25}55%{transform:scale(.55);opacity:1}78%{transform:scale(1.05)}100%{transform:scale(1)}}
+/* 隐形墨水：一层会动的噪点盖着，点一下才看得见 */
+.imsg-b.iminv>i{visibility:hidden;}
+.imsg-b.iminv.shown>i{visibility:visible;}
+.imsg-b.iminv:after{content:'';position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  background-image:radial-gradient(rgba(255,255,255,.95) .6px,transparent .7px),radial-gradient(rgba(255,255,255,.7) .5px,transparent .6px);
+  background-size:4px 4px,7px 7px;background-position:0 0,2px 3px;animation:iminv 1.1s steps(6) infinite;}
+.imsg-b.iminv.shown:after{display:none;}
+@keyframes iminv{0%{background-position:0 0,2px 3px}100%{background-position:4px 7px,9px 10px}}
+/* 重播 */
+.imsg-fxrp{display:block;margin:3px 2px 0;font-size:11.5px;color:rgba(255,255,255,.52);cursor:pointer;line-height:1;}
+.imsg-row.me .imsg-fxrp{text-align:right;}
+.imsg.hasbg .imsg-fxrp{color:rgba(255,255,255,.75);text-shadow:0 1px 3px rgba(0,0,0,.5);}
+.imsg-col{display:flex;flex-direction:column;max-width:74%;min-width:0;}
+.imsg-row.me .imsg-col{align-items:flex-end;}
+.imsg-col .imsg-b{max-width:100%;}
+/* ===== 屏幕特效 ===== */
+.imsfx{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:9;}
+.imsfx i{position:absolute;display:block;}
+.imsfx-echo i{color:#fff;font-size:13px;background:#0a84ff;border-radius:14px;padding:5px 10px;white-space:nowrap;
+  animation:imsfx-echo 2.4s ease-out forwards;}
+@keyframes imsfx-echo{0%{transform:translate(-50%,-50%) scale(.2);opacity:0}12%{opacity:1}100%{transform:translate(-50%,calc(-50% + 120vh)) scale(1);opacity:0}}
+.imsfx-balloons i{width:26px;height:34px;border-radius:50% 50% 46% 46%;animation:imsfx-rise 2.8s ease-in forwards;}
+.imsfx-balloons i:after{content:'';position:absolute;left:50%;top:100%;width:1px;height:22px;background:rgba(255,255,255,.5);}
+@keyframes imsfx-rise{0%{transform:translateY(110vh) rotate(0);opacity:0}10%{opacity:1}100%{transform:translateY(-40vh) rotate(14deg);opacity:.9}}
+.imsfx-confetti i{width:7px;height:12px;border-radius:2px;animation:imsfx-fall 2.6s linear forwards;}
+@keyframes imsfx-fall{0%{transform:translateY(-14vh) rotate(0);opacity:0}8%{opacity:1}100%{transform:translateY(112vh) rotate(760deg);opacity:.9}}
+.imsfx-love i{font-size:26px;animation:imsfx-love 2.4s ease-out forwards;}
+@keyframes imsfx-love{0%{transform:translate(-50%,-50%) scale(.2);opacity:0}25%{opacity:1}100%{transform:translate(-50%,-50%) scale(7);opacity:0}}
+.imsfx-fireworks i{width:6px;height:6px;border-radius:50%;animation:imsfx-fw 1.6s ease-out forwards;}
+@keyframes imsfx-fw{0%{transform:translate(0,0) scale(1);opacity:1}100%{transform:translate(var(--x),var(--y)) scale(.2);opacity:0}}
+.imsfx-lasers i{height:2px;left:-40%;width:180%;transform-origin:50% 50%;animation:imsfx-laser 1.9s ease-in-out forwards;}
+@keyframes imsfx-laser{0%{transform:rotate(var(--r)) scaleX(0);opacity:0}18%{transform:rotate(var(--r)) scaleX(1);opacity:1}100%{transform:rotate(calc(var(--r) + 26deg)) scaleX(1);opacity:0}}
+.imsfx-star i{width:3px;height:3px;border-radius:50%;background:#fff;box-shadow:0 0 12px 4px rgba(255,255,255,.85);animation:imsfx-star 1.8s ease-in forwards;}
+.imsfx-star i:after{content:'';position:absolute;right:3px;top:1px;width:90px;height:1.5px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.85));}
+@keyframes imsfx-star{0%{transform:translate(0,0);opacity:0}15%{opacity:1}100%{transform:translate(-90vw,70vh);opacity:0}}
+.imsfx-spotlight{background:radial-gradient(circle at var(--sx) var(--sy),transparent 0,transparent 92px,rgba(0,0,0,.82) 210px);animation:imsfx-spot 2.2s ease-out forwards;}
+@keyframes imsfx-spot{0%{opacity:0}18%{opacity:1}75%{opacity:1}100%{opacity:0}}
+/* ===== 特效面板 ===== */
+.imfx-sheet{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px;}
+.imfx-sheet button{border:0;border-radius:14px;padding:13px 8px;font-size:16px;font-weight:600;background:rgba(120,120,128,.24);color:#fff;cursor:pointer;}
+.imfx-sheet button.on{background:#0a84ff;}
+.imfx-style{display:flex;gap:9px;margin-top:4px;}
+.imfx-style button{flex:1;border:0;border-radius:12px;padding:10px 0;font-size:17px;background:rgba(120,120,128,.24);color:#fff;cursor:pointer;}
+.imfx-style button.on{background:#0a84ff;}
+.imfx-demo{margin:12px 0 2px;padding:14px 10px;border-radius:14px;background:rgba(120,120,128,.18);text-align:center;font-size:19px;color:#fff;min-height:28px;overflow:hidden;}
+.imfx-tabs{display:flex;gap:6px;background:rgba(120,120,128,.24);border-radius:999px;padding:3px;margin:2px 0 4px;}
+.imfx-tabs button{flex:1;border:0;border-radius:999px;padding:8px 0;font-size:15px;font-weight:600;background:transparent;color:#aeaeb2;cursor:pointer;}
+.imfx-tabs button.on{background:rgba(255,255,255,.22);color:#fff;}
+/* 输入框上面那条：让她发之前就看见效果 */
+.imsg-fxbar{flex:0 0 auto;display:flex;align-items:center;gap:8px;margin:0 12px 6px;padding:7px 11px;border-radius:14px;background:rgba(120,120,128,.24);color:#fff;font-size:15px;}
+.imsg.hasbg .imsg-fxbar{background:rgba(120,120,128,.2);-webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px);}
+.imsg-fxbar b{flex:1;min-width:0;font-weight:400;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.imsg-fxbar small{flex:0 0 auto;color:#8e8e93;font-size:12px;}
+.imsg-fxbar button{flex:0 0 auto;border:0;background:transparent;color:#8e8e93;font-size:18px;line-height:1;cursor:pointer;padding:0 2px;}
+.imsg-aa{flex:0 0 auto;width:38px;height:38px;border-radius:50%;border:0;background:rgba(120,120,128,.24);color:#fff;font-size:15px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+.imsg-aa.on{background:#0a84ff;}
 .imsg-b.pic img{display:block;max-width:100%;width:186px;border-radius:0;}
 /* ===== 按钮和输入框照同一套：父元素是那条描边，:before 缩 1px 是里面的玻璃 ===== */
 .imsg-rb,.imsg-name,.imsg-plus,.imsg-send,.imsg-field{position:relative;}
@@ -2090,11 +2179,11 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
 .imsg-send:before{background:#0a84ff;}
 /* ===== 换过背景之后：能透出背景的玻璃 ===== */
 .imsg.hasbg .imsg-rb,.imsg.hasbg .imsg-name,.imsg.hasbg .imsg-plus,.imsg.hasbg .imsg-send,.imsg.hasbg .imsg-field{border:0;background:linear-gradient(140deg,rgba(255,255,255,.62),rgba(255,255,255,.16) 26%,rgba(255,255,255,.07) 54%,rgba(255,255,255,.13) 80%,rgba(255,255,255,.42));-webkit-backdrop-filter:brightness(1.62) saturate(1.75);backdrop-filter:brightness(1.62) saturate(1.75);box-shadow:0 5px 16px rgba(0,0,0,.24);}
-.imsg.hasbg .imsg-rb:before,.imsg.hasbg .imsg-name:before,.imsg.hasbg .imsg-plus:before{background:linear-gradient(142deg,rgba(255,255,255,.3),rgba(255,255,255,.15) 46%,rgba(255,255,255,.22));-webkit-backdrop-filter:blur(9px) saturate(1.08) brightness(1.02);backdrop-filter:blur(9px) saturate(1.08) brightness(1.02);box-shadow:inset 0 -8px 13px -10px rgba(0,0,0,.34);}
-.imsg.hasbg .imsg-field:before{background:linear-gradient(142deg,rgba(255,255,255,.16),rgba(0,0,0,.14) 46%,rgba(0,0,0,.1));-webkit-backdrop-filter:blur(9px) saturate(1.08) brightness(1.02);backdrop-filter:blur(9px) saturate(1.08) brightness(1.02);}
+.imsg.hasbg .imsg-rb:before,.imsg.hasbg .imsg-name:before,.imsg.hasbg .imsg-plus:before{background:transparent;-webkit-backdrop-filter:blur(9px) saturate(1.08) brightness(1.02);backdrop-filter:blur(9px) saturate(1.08) brightness(1.02);box-shadow:inset 0 -8px 13px -10px rgba(0,0,0,.34);}
+.imsg.hasbg .imsg-field:before{background:transparent;-webkit-backdrop-filter:blur(9px) saturate(1.08) brightness(1.02);backdrop-filter:blur(9px) saturate(1.08) brightness(1.02);}
 .imsg.hasbg .imsg-send:before{background:linear-gradient(142deg,rgba(10,132,255,.72),rgba(10,132,255,.56) 52%,rgba(10,132,255,.68));-webkit-backdrop-filter:blur(8px) saturate(1.45) brightness(1.04);backdrop-filter:blur(8px) saturate(1.45) brightness(1.04);}
 .imsg.hasbg .imsg-row.them .imsg-b{background:linear-gradient(140deg,rgba(255,255,255,.66),rgba(255,255,255,.2) 24%,rgba(255,255,255,.09) 52%,rgba(255,255,255,.17) 78%,rgba(255,255,255,.46));-webkit-backdrop-filter:brightness(1.62) saturate(1.75);backdrop-filter:brightness(1.62) saturate(1.75);}
-.imsg.hasbg .imsg-row.them .imsg-b:before{background:linear-gradient(142deg,rgba(255,255,255,.38),rgba(255,255,255,.22) 44%,rgba(255,255,255,.3));-webkit-backdrop-filter:blur(9px) saturate(1.08) brightness(1.02);backdrop-filter:blur(9px) saturate(1.08) brightness(1.02);box-shadow:inset 0 -10px 15px -11px rgba(0,0,0,.34);}
+.imsg.hasbg .imsg-row.them .imsg-b:before{background:transparent;-webkit-backdrop-filter:blur(9px) saturate(1.08) brightness(1.02);backdrop-filter:blur(9px) saturate(1.08) brightness(1.02);box-shadow:inset 0 -10px 15px -11px rgba(0,0,0,.34);}
 .imsg.hasbg .imsg-row.me .imsg-b{background:linear-gradient(140deg,rgba(255,255,255,.6),rgba(255,255,255,.18) 24%,rgba(255,255,255,.08) 52%,rgba(255,255,255,.16) 78%,rgba(255,255,255,.42));-webkit-backdrop-filter:brightness(1.62) saturate(1.75);backdrop-filter:brightness(1.62) saturate(1.75);}
 .imsg.hasbg .imsg-row.me .imsg-b:before{background:linear-gradient(142deg,rgba(10,132,255,.66),rgba(10,132,255,.5) 50%,rgba(10,132,255,.62));-webkit-backdrop-filter:blur(8px) saturate(1.45) brightness(1.04);backdrop-filter:blur(8px) saturate(1.45) brightness(1.04);box-shadow:inset 0 -10px 15px -11px rgba(0,0,0,.3);}
 /* 背景亮的时候白字会糊在背景里，给气泡里的字垫一层很淡的阴影；

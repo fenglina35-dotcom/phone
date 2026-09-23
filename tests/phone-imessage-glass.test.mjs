@@ -218,7 +218,7 @@ test('输入框有字才冒出蓝色发送键', () => {
   }
   const fn = source('phSmsTyping');
   assert.match(fn, /bar\.classList\.toggle\('typing',!!String\(ta\.value\|\|''\)\.trim\(\)\)/);
-  assert.match(source('renderPhoneIMsg'), /oninput="phSmsTyping\(\)"/);
+  assert.match(source('renderPhoneIMsg'), /oninput="phSmsTyping\(\);phFxSync\(\)"/);
 });
 test('空格不算字，发完了那个键要收回去', () => {
   const ctx = { cls: new Set() };
@@ -249,6 +249,137 @@ test('主号／匿名号的切换不出现在聊天页，拨号键盘那页本�
   /* 陌生号那条老线只在匿名线程里显示，本来就是对的，别动 */
   assert.match(source('renderPhoneSMS'), /roleChat&&alias\?phLineSwitchHTML\(\):''/);
   for (const s of shells) assert.equal(/\.imsg\.hasbg \.smslinebar/.test(s), false, '跟着撤掉的样式又回来了');
+});
+
+/* ===== 白雾去掉，只留磨砂＋高光 ===== */
+test('气泡和按钮里面不再蒙一层白雾，只有磨砂', () => {
+  /* 她说「里面那种白色的雾感我不想要，要磨砂的质感，高光保留」 */
+  for (const s of shells) {
+    for (const sel of [
+      '\\.imsg\\.hasbg \\.imsg-row\\.them \\.imsg-b:before',
+      '\\.imsg\\.hasbg \\.imsg-rb:before',
+      '\\.imsg\\.hasbg \\.imsg-field:before',
+    ]) {
+      const hit = s.match(new RegExp(sel + '[^{]*\\{[^}]*\\}'));
+      assert.ok(hit, '找不到规则：' + sel);
+      const rule = hit[0];
+      assert.match(rule, /background:transparent/, '里面那层不能再垫白色：' + rule.slice(0, 60));
+      assert.match(rule, /backdrop-filter:blur\(9px\)/, '磨砂还得在');
+      assert.equal(/background:linear-gradient\([^)]*rgba\(255,255,255/.test(rule), false, '白雾又回来了');
+    }
+    /* 高光（描边）不许跟着一起删 */
+    assert.match(s, /\.imsg\.hasbg \.imsg-rb,[^{]*\{[^}]*backdrop-filter:brightness\(1\.62\) saturate\(1\.75\)/);
+  }
+});
+
+/* ===== 文字特效 ===== */
+test('效果是按字存的，连着一样的合成一段', () => {
+  const ctx = { PH_FX_ALL: ['big', 'small', 'shake', 'nod', 'wave', 'bloom', 'jitter', 'b', 'i', 'u', 's'] };
+  vm.createContext(ctx);
+  vm.runInContext([source('phFxSig'), source('phFxRuns')].join('\n'), ctx);
+  const runs = (t, ch) => JSON.parse(vm.runInContext(`JSON.stringify(phFxRuns(${JSON.stringify(t)},${JSON.stringify(ch)}))`, ctx));
+  assert.deepEqual(runs('好想你呀', [{ wave: 1 }, { wave: 1 }, { wave: 1 }, { bloom: 1, b: 1 }]),
+    [{ t: '好想你', e: ['wave'] }, { t: '呀', e: ['bloom', 'b'] }], '连着的合成一段，换了效果就断开');
+  assert.deepEqual(runs('abc', null), [{ t: 'abc', e: [] }], '一个效果都没有就是一整段');
+  assert.deepEqual(runs('', []), []);
+  assert.deepEqual(runs('ab', [null, { big: 1 }]), [{ t: 'a', e: [] }, { t: 'b', e: ['big'] }]);
+});
+test('她改字的时候，效果跟着那几个字走', () => {
+  const ctx = { _phFx: { ch: [{ big: 1 }, { big: 1 }, null], prev: '你好吗' } };
+  ctx.$ = () => ({ value: ctx.val, selectionStart: 0, selectionEnd: 0 });
+  ctx.phFxSelSync = () => {};
+  vm.createContext(ctx);
+  vm.runInContext(source('phFxSync'), ctx);
+  ctx.val = '嗯你好吗';                       /* 前面插了一个字 */
+  vm.runInContext('phFxSync()', ctx);
+  assert.deepEqual(JSON.parse(JSON.stringify(ctx._phFx.ch)), [null, { big: 1 }, { big: 1 }, null], '效果要跟着往后挪');
+  ctx.val = '嗯好吗';                          /* 把「你」删了 */
+  vm.runInContext('phFxSync()', ctx);
+  assert.deepEqual(JSON.parse(JSON.stringify(ctx._phFx.ch)), [null, { big: 1 }, null], '删掉那个字，它的效果也跟着没');
+});
+test('动的字一个一个错开，整段动的不拆字', () => {
+  const ctx = { esc: t => String(t), PH_FX_ALL: ['big', 'wave', 'b'], PH_FX_PERCHAR: ['shake', 'nod', 'wave', 'bloom', 'jitter'] };
+  vm.createContext(ctx);
+  vm.runInContext(source('phFxRunHTML'), ctx);
+  const html = o => vm.runInContext(`phFxRunHTML(${o})`, ctx);
+  assert.equal(html("{t:'abc',e:[]}"), 'abc', '没效果就别包标签');
+  const wave = html("{t:'好想你',e:['wave']}");
+  assert.match(wave, /class="imfx imfx-wave"/);
+  assert.match(wave, /<b class="imfxc" style="--i:0">好<\/b><b class="imfxc" style="--i:1">想<\/b>/, '一个字一个字排延迟');
+  const big = html("{t:'爱你',e:['big']}");
+  assert.match(big, /class="imfx imfx-big">爱你</, '放大是整段一起，不拆字');
+  assert.equal(/imfxc/.test(big), false);
+  assert.equal(html("{t:'x',e:['drop database']}"), 'x', '不认识的效果名直接丢掉，不能往 class 里塞');
+});
+test('每个效果 3 秒一个循环，动作都压在前面一段', () => {
+  for (const s of shells) {
+    for (const k of ['big', 'small', 'shake', 'nod', 'wave', 'bloom', 'jitter']) {
+      assert.match(s, new RegExp(`@keyframes imfx-${k}\\{`), `少了 ${k} 的动画`);
+      assert.match(s, new RegExp(`animation:imfx-${k} 3s infinite`), `${k} 不是 3 秒循环`);
+    }
+    assert.match(s, /\.imfx-wave \.imfxc\{[^}]*animation-delay:calc\(var\(--i\)\*/, '一个字一个字要错开');
+  }
+});
+test('发出去的效果存进这条消息，正文还是干净的', () => {
+  const fn = source('phSendSms');
+  assert.match(fn, /const _fxRuns=phFxRuns\(text,\(_phFx\.ch\|\|\[\]\)\.slice\(0,text\.length\)\)/, '按当前这段字重新算一遍');
+  assert.match(fn, /if\(_fxOn\)_m\.fx=_fxRuns;if\(_bfx\)_m\.bfx=_bfx;if\(_sfx\)_m\.sfx=_sfx;/);
+  assert.match(fn, /phFxReset\(\)/, '发完要把待发的效果清掉，不然下一条还带着');
+  assert.match(fn, /phMirrorSMS\(num,'me',text\)/, '同步进微信的还是干净正文，不带标签');
+  assert.match(source('openPhoneSMS'), /phFxReset\(\)/, '换一条线也要清掉，不能串到别人那条');
+});
+test('带效果的那条底下有重播，普通的没有', () => {
+  const ctx = {};
+  vm.createContext(ctx);
+  vm.runInContext(source('phMsgHasFx'), ctx);
+  const has = o => vm.runInContext(`!!phMsgHasFx(${o})`, ctx);
+  assert.equal(has("{text:'在'}"), false);
+  assert.equal(has("{text:'在',fx:[{t:'在',e:[]}]}"), false, '只是分了段但没效果，不该有重播');
+  assert.equal(has("{text:'在',fx:[{t:'在',e:['big']}]}"), true);
+  assert.equal(has("{text:'在',bfx:'slam'}"), true);
+  assert.equal(has("{text:'在',sfx:'echo'}"), true);
+  assert.match(source('renderPhoneIMsg'), /fx\?`<span class="imsg-fxrp" onclick="phFxReplay\(/);
+});
+
+/* ===== 带效果发送 ===== */
+test('长按发送键才弹「带效果发送」，短按就是直接发', () => {
+  assert.match(source('phFxHoldStart'), /setTimeout\(\(\)=>\{_phFxHold=0;phFxSendHold\(num,sk\);\},420\)/);
+  assert.match(source('phFxHoldStop'), /clearTimeout\(_phFxHold\)/);
+  assert.match(source('renderPhoneIMsg'), /onpointerdown="phFxHoldStart\(/);
+  assert.match(source('renderPhoneIMsg'), /onpointerup="phFxHoldStop\(\)" onpointerleave="phFxHoldStop\(\)"/, '手指挪开要取消，不然误弹');
+  for (const x of [app, priv]) {
+    assert.match(x, /const PH_FX_BUBBLE=\[\['slam','震撼'\],\['loud','放大'\],\['gentle','缩小'\],\['invisible','隐形墨水'\]\]/);
+    assert.match(x, /const PH_FX_SCREEN=\[\['echo','回声'\][\s\S]{0,180}\['star','流星'\]\]/);
+  }
+});
+test('八个屏幕特效都真的画得出东西来', () => {
+  const fn = source('phScreenFx');
+  /* 只查名字在不在是不够的——把分支短路掉（if(0&&kind==='echo')）名字照样在。
+     所以连 if/else if 的写法一起卡死，再由浏览器实测数一遍真的生成了多少元素。 */
+  assert.ok(fn.includes("if(kind==='echo'){"), 'echo 的分支被改坏了');
+  for (const k of ['balloons', 'confetti', 'love', 'fireworks', 'lasers', 'star', 'spotlight'])
+    assert.ok(fn.includes(`else if(kind==='${k}'){`), `${k} 没有真的实现，只是个名字`);
+  /* 聚光灯是整块渐变、不放小元素，所以是 7 不是 8 */
+  assert.ok((fn.match(/add\(/g) || []).length >= 7, '至少每种都得真的往里放东西');
+  assert.match(fn, /stage\.querySelectorAll\('\.imsfx'\)\.forEach\(x=>x\.remove\(\)\)/, '连着发两条不能叠一堆');
+  assert.match(fn, /setTimeout\(\(\)=>\{if\(box\.parentNode\)box\.remove\(\);\}/, '放完要收掉，不能一直挂在那儿');
+  for (const s of shells) for (const k of ['echo', 'balloons', 'confetti', 'love', 'fireworks', 'lasers', 'star', 'spotlight'])
+    assert.match(s, new RegExp(`\\.imsfx-${k}`), `外壳里少了 ${k} 的样式`);
+});
+test('隐形墨水盖着，点一下才看得见', () => {
+  for (const s of shells) {
+    assert.match(s, /\.imsg-b\.iminv>i\{visibility:hidden;\}/);
+    assert.match(s, /\.imsg-b\.iminv\.shown>i\{visibility:visible;\}/);
+    assert.match(s, /\.imsg-b\.iminv:after\{[^}]*animation:iminv/, '要有会动的噪点盖着');
+  }
+  assert.match(source('renderPhoneIMsg'), /inv\?`phInvToggle\('\$\{m\.id\}'\)`/, '这条的点击要换成揭开，不是弹菜单');
+  assert.match(source('phInvToggle'), /classList\.toggle\('shown'\)/);
+});
+test('加效果那一下重绘，输入框里的字不能被冲掉', () => {
+  /* 第一版就是这么丢的：加完效果 render() 一次，textarea 是空的，字没了 */
+  const fn = source('renderPhoneIMsg');
+  assert.match(fn, /\$\{esc\(_phFx\.prev\|\|''\)\}<\/textarea>/, '正在打的字要带进标签里');
+  assert.match(fn, /<div class="imsg-bar\$\{String\(_phFx\.prev\|\|''\)\.trim\(\)\?' typing':''\}"/, '发送键的状态也要跟着算');
 });
 
 /* ===== 正在输入 ===== */
