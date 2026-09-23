@@ -1,6 +1,8 @@
-# v1294 网页 信息页照 iMessage 重做；私人 v1295 / iOS 1.0.381 (381) 已打包
+# v1296 网页 信息页照 iMessage 重做；私人 v1297 / iOS 1.0.382 (382) 已打包
 
-2026-09-23：网页 v1292 → **v1294 已推上线**，HOTFIX／SHELL_CACHE 为 `v1294-web-imsg-1`；私人内置源码 v1293 → v1295，私人 iOS 380 → **1.0.381 (381)**，原生桥仍为 41（这一轮没动原生协议）。覆盖包 `SmallPhone_v1295_iOS381_MacSource.zip` 由 `scripts/package_private_v1295_ios381.py` 从提交里读文件生成。
+2026-09-23：网页 v1292 → v1294（已上线）→ **v1296**，HOTFIX／SHELL_CACHE 为 `v1296-web-imsg-2`；私人内置源码 v1293 → v1295 → **v1297**，私人 iOS 380 → 381 → **1.0.382 (382)**，原生桥仍为 41（这两轮都没动原生协议）。覆盖包 `SmallPhone_v1297_iOS382_MacSource.zip` 由 `scripts/package_private_v1297_ios382.py` 从提交里读文件生成。
+
+**v1296 只改了一处**：她实测截图说「主号／匿名号这条要隐藏，不能放在键盘上面，原来外面就有这个」。iMessage 那版信息页里我给所有角色联系人都挂了一条 `.smslinebar`（切主号／匿名号），压在输入框正上方；旧的 `.smschat` 其实只在匿名线程里才显示它，是我这边多挂了。整条撤掉，`roleChat` 这个只为它服务的变量也一起删。切换入口本身没丢——拨号键盘那页（`phKeypadHTML`）本来就有一个，`phAliasModal` 也在。测试里加了一条：聊天页不许再出现 `smslinebar`／`phLineSwitchHTML`，但拨号键盘那页必须留着。
 
 这一条记的是同一件事的三轮返工——信息页照 iMessage 重做，中间她看图提了三轮意见，下面按轮次写。
 

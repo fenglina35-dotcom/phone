@@ -1,4 +1,4 @@
-"""Create the private v1295 / iOS 381 Mac-source overlay package.
+"""Create the private v1297 / iOS 382 Mac-source overlay package.
 
 Unlike the earlier packaging scripts, every file is read from the committed tree
 (``git cat-file`` against HEAD) instead of the working directory. The v1235/iOS356
@@ -24,12 +24,12 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "native/private-small-phone/XcodeProject/"
 BUNDLE = "PhoneCompanionTest/PhoneWeb.bundle/"
-PREFIX = "SmallPhone_v1295_iOS381_Private/"
-OUTPUT = ROOT.parent / "SmallPhone_v1295_iOS381_MacSource.zip"
+PREFIX = "SmallPhone_v1297_iOS382_Private/"
+OUTPUT = ROOT.parent / "SmallPhone_v1297_iOS382_MacSource.zip"
 
-WEB_VERSION = "1295"
-MARKETING = "1.0.381"
-BUILD = "381"
+WEB_VERSION = "1297"
+MARKETING = "1.0.382"
+BUILD = "382"
 BRIDGE = "41"
 
 
@@ -246,6 +246,7 @@ def validate(files: dict[str, bytes]) -> None:
         ("function phDeliverSmsBubbles(num,sk,list,c)", "v1294 短信一条条出"),
         ("function phSmsTypingSet(num,sk,on)", "v1294 短信正在输入的三个点"),
         ("function phSmsTyping()", "v1294 有字才出现蓝色发送键"),
+        ("const bg=phSmsBg(num),name=phName(num);", "v1296 主号／匿名号那条不压在输入框上面"),
         ("d.msgs.slice(-phCtxRows())", "v1294 X 私信跟随全局上下文"),
         ("Number.isFinite(n)&&n>0?n:Math.min(60,phCtxRows())", "v1294 抖音私信没单独设就跟随全局"),
         ("function storedImageElementSource(v)", "role cover cache-miss hydration"),
@@ -293,7 +294,7 @@ def main() -> None:
     assert "camera.position.addScaledVector(viewForward,.045)" in cozy_player, "eye camera forward offset missing"
     assert "procedural(0)" in cozy_female, "female procedural reset path missing"
     assert "if(Math.abs(amount)<1e-7)return" not in cozy_female, "standing pose T-pose regression returned"
-    files["SOURCE_STATE.json"] = json.dumps({"sourceCommit":text(git("rev-parse","HEAD")).strip(),"upstreamBaseline":"bd6a30014c2f87cb4f8553a8015f5fe90cd5068d","houseSource":"df56e66a4f24efed42e4c37ef7d1908deb95df03","privateWeb":"v1295","privateIOS":"1.0.381 (381)","bridge":41,"macBuildVerified":False,"realIPhoneVerified":False,"kind":"Mac-source-not-IPA","preserved":["all-public-v1294-features","role-moment-idb-cover-rehydration","internal-app-decision-hidden-at-all-delivery-boundaries","all-private-v1281-features","private-backup-4mib-object-chunks","private-backup-small-manifest-commit","private-backup-checksum-restore","private-backup-legacy-fallback","private-backup-single-upload-progress","web-cloud-existing-row-update","web-cloud-persistent-progress","private-backup-commit-timeout-1920s","private-call-smart-home-tag-sanitizer","private-call-inline-translation-deduplication","online-memory-recall-controls","offline-memory-scroll-restore","cozy-private-native-bridge","diagnostic-copy-freshness","native-probe-lifecycle","house052-complete-assets","first-person-head-tracking","isolated-mobile-shader-warmup","warm-gpu-resource-release","female-standing-pose","imessage-sms-page","per-contact-sms-background","traced-hairline-glass","thin-bubble-tail","bare-photo-messages","sms-typing-dots","sms-multi-bubble","global-context-everywhere","role-sets-chat-background"]},ensure_ascii=False,indent=2).encode("utf-8")
+    files["SOURCE_STATE.json"] = json.dumps({"sourceCommit":text(git("rev-parse","HEAD")).strip(),"upstreamBaseline":"bd6a30014c2f87cb4f8553a8015f5fe90cd5068d","houseSource":"df56e66a4f24efed42e4c37ef7d1908deb95df03","privateWeb":"v1297","privateIOS":"1.0.382 (382)","bridge":41,"macBuildVerified":False,"realIPhoneVerified":False,"kind":"Mac-source-not-IPA","preserved":["all-public-v1296-features","role-moment-idb-cover-rehydration","internal-app-decision-hidden-at-all-delivery-boundaries","all-private-v1281-features","private-backup-4mib-object-chunks","private-backup-small-manifest-commit","private-backup-checksum-restore","private-backup-legacy-fallback","private-backup-single-upload-progress","web-cloud-existing-row-update","web-cloud-persistent-progress","private-backup-commit-timeout-1920s","private-call-smart-home-tag-sanitizer","private-call-inline-translation-deduplication","online-memory-recall-controls","offline-memory-scroll-restore","cozy-private-native-bridge","diagnostic-copy-freshness","native-probe-lifecycle","house052-complete-assets","first-person-head-tracking","isolated-mobile-shader-warmup","warm-gpu-resource-release","female-standing-pose","imessage-sms-page","per-contact-sms-background","traced-hairline-glass","thin-bubble-tail","bare-photo-messages","sms-typing-dots","sms-multi-bubble","global-context-everywhere","role-sets-chat-background"]},ensure_ascii=False,indent=2).encode("utf-8")
     files["SHA256SUMS.json"] = json.dumps({name:sha256(body).hexdigest() for name,body in sorted(files.items())},ensure_ascii=False,indent=2).encode("utf-8")
 
     assert not OUTPUT.exists(), "refusing to overwrite an existing package"
@@ -307,7 +308,7 @@ def main() -> None:
         for name in names:
             assert archive.read(name) == files[name[len(PREFIX):]], f"round-trip mismatch: {name}"
 
-    with TemporaryDirectory(prefix="private1295-verify-") as folder:
+    with TemporaryDirectory(prefix="private1297-verify-") as folder:
         with ZipFile(OUTPUT) as archive:
             assert archive.testzip() is None
             archive.extractall(folder)

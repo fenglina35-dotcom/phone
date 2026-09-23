@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1294'){
+if(window.__NORTH_SHELL_BUILD__!=='1296'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -411,7 +411,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1294 · 信息页照 iMessage 重做';
+const APP_VER='v1296 · 信息页照 iMessage 重做';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1773,7 +1773,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1294&r=v1294-web-imsg-1';
+  const url='sw.js?v=1296&r=v1296-web-imsg-2';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -10641,7 +10641,7 @@ function phImsgDate(t){const d=new Date(t||Date.now()),n=new Date();
   const same=d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate();
   return (same?'今天':(d.getMonth()+1)+'月'+d.getDate()+'日')+' '+hm(t);}
 function renderPhoneIMsg(num,sk,arr,x){
-  const bg=phSmsBg(num),name=phName(num),roleChat=x&&x.kind==='role';
+  const bg=phSmsBg(num),name=phName(num);
   const rows=arr.map(m=>{const pic=m.img?storedImageDisplaySource(m.img):'';
     return `<div class="imsg-row ${m.from==='me'?'me':'them'}"><div class="imsg-b${pic?' pic':''}" onclick="phSmsMenu('${esc(num)}','${m.id}','${esc(sk)}')"><i>${pic?`<img src="${pic}" alt="">`:esc(m.text)}</i></div></div>`;}).join('');
   return `<div class="imsg${bg?' hasbg':''}" style="${bg?`background-image:url(${storedImageDisplaySource(bg)})`:''}">
@@ -10656,7 +10656,6 @@ function renderPhoneIMsg(num,sk,arr,x){
       ${rows}
       ${phSmsTypingOn(num,sk)?`<div class="imsg-row them"><div class="imsg-b typing"><i><span></span><span></span><span></span></i></div></div>`:''}
     </div>
-    ${roleChat?`<div class="smslinebar">${phLineSwitchHTML()}</div>`:''}
     <div class="imsg-bar">
       <button class="imsg-plus" onclick="phSmsPic('${esc(num)}','${esc(sk)}')"><i>＋</i></button>
       <div class="imsg-field"><textarea id="smsin" rows="1" placeholder="iMessage信息" oninput="phSmsTyping()" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();phSendSms('${esc(num)}','${esc(sk)}')}"></textarea><i class="imsg-wave">${svgIc('mic',17,'#8e8e93',2)}</i></div>

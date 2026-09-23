@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1294 · 信息页照 iMessage 重做'/);
-  assert.match(app,/const url='sw\.js\?v=1294&r=v1294-web-imsg-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1294'/);
-  assert.match(html,/app\.js\?v=1294/);
-  assert.match(sw,/const BUILD='1294'/);
-  assert.match(sw,/north-shell-v1294-web-imsg-1/);
-  assert.match(index,/小手机\.html\?v=1294/);
-  assert.match(repair,/小手机\.html\?v=1294/);
+  assert.match(app,/APP_VER='v1296 · 信息页照 iMessage 重做'/);
+  assert.match(app,/const url='sw\.js\?v=1296&r=v1296-web-imsg-2'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1296'/);
+  assert.match(html,/app\.js\?v=1296/);
+  assert.match(sw,/const BUILD='1296'/);
+  assert.match(sw,/north-shell-v1296-web-imsg-2/);
+  assert.match(index,/小手机\.html\?v=1296/);
+  assert.match(repair,/小手机\.html\?v=1296/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{
   assert.match(privateBundle,/<string>1200<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.381;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 381;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.381 \(381\)'/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.382;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 382;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.382 \(382\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

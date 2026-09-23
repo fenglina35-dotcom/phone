@@ -237,6 +237,20 @@ test('空格不算字，发完了那个键要收回去', () => {
   for (const x of [app, priv]) assert.match(x, /ta\.value='';phSmsTyping\(\);/, '发完要把那个键收回去');
 });
 
+/* ===== 主号／匿名号那条不压在键盘上面 ===== */
+test('主号／匿名号的切换不出现在聊天页，拨号键盘那页本来就有', () => {
+  const fn = source('renderPhoneIMsg');
+  assert.equal(/smslinebar/.test(fn), false, '那条又压回输入框上面了');
+  assert.equal(/phLineSwitchHTML/.test(fn), false);
+  assert.equal(/roleChat/.test(fn), false, 'roleChat 只为那条服务，跟着一起撤掉');
+  /* 但入口本身不能没了：拨号键盘那页还得有 */
+  assert.match(source('phKeypadHTML'), /\$\{phLineSwitchHTML\(\)\}/, '拨号键盘那页的切换不能一起删掉');
+  for (const x of [app, priv]) assert.match(x, /function phLineSwitchHTML\(\)/);
+  /* 陌生号那条老线只在匿名线程里显示，本来就是对的，别动 */
+  assert.match(source('renderPhoneSMS'), /roleChat&&alias\?phLineSwitchHTML\(\):''/);
+  for (const s of shells) assert.equal(/\.imsg\.hasbg \.smslinebar/.test(s), false, '跟着撤掉的样式又回来了');
+});
+
 /* ===== 正在输入 ===== */
 test('角色在短信里也有「正在输入」的三个小点', () => {
   const ctx = { render: () => { ctx.drew = (ctx.drew || 0) + 1; }, phDigits: n => String(n), _phSmsTyping: {} };
