@@ -15,7 +15,7 @@ assert.match(app, /postMessage\(\{type:'north-version-query'\}\)/);
 assert.match(sw, /client\.postMessage\(\{type:'north-update-ready',build:BUILD\}\)/);
 assert.match(sw, /event\.data\.type!==['"]north-version-query['"]/);
 assert.match(html, /window\.__NORTH_SHELL_BUILD__='1298'/);
-assert.match(html, /sw\.js\?v=1298&r=v1298-web-imsg-3/);
-assert.match(html, /web-hotfix\.js\?v=1298&r=v1298-web-imsg-3/);
+assert.match(html, /sw\.js\?v=1298&r=v1298-web-imsg-4/);
+assert.match(html, /web-hotfix\.js\?v=1298&r=v1298-web-imsg-4/);
 
 console.log("update prompt tests passed");

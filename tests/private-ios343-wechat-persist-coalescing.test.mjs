@@ -63,7 +63,7 @@ test('private identity remains v1299 and iOS 383 while public advances independe
   assert.match(privateApp, /APP_VER='v1299 · 信息页照 iMessage 重做（私人）'/);
   for (const html of [privateIndex, privateAlias]) {
     assert.match(html, /window\.__NORTH_SHELL_BUILD__='1299'/);
-    assert.match(html, /app\.js\?v=1299&r=v1299-private-imsg-3/);
+    assert.match(html, /app\.js\?v=1299&r=v1299-private-imsg-4/);
     assert.match(html, /private-runtime-diagnostics\.js\?v=339/);
   }
   assert.match(privateRepair, /index\.html\?repair=1&v=1299/);

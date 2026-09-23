@@ -64,7 +64,7 @@ function functionSource(source, name) {
 test('private performance candidate keeps v1299 while public web advances independently', () => {
   assert.equal(privateIndex, privateAlias);
   assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1299'/);
-  assert.match(privateIndex, /app\.js\?v=1299&r=v1299-private-imsg-3/);
+  assert.match(privateIndex, /app\.js\?v=1299&r=v1299-private-imsg-4/);
   assert.match(privateIndex, /private-runtime-diagnostics\.js\?v=339/);
   assert.match(privateRepair, /index\.html\?repair=1&v=1299/);
   assert.match(privateApp, /APP_VER='v1299 · 信息页照 iMessage 重做（私人）'/);

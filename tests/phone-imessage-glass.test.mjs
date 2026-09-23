@@ -55,7 +55,7 @@ test('背景图一人一张，按号码存', () => {
 });
 test('手动换背景只在联系人页里', () => {
   assert.match(source('renderPhoneContact'), /phSmsBgPick\('\$\{esc\(num\)\}'\)/, '联系人页要有「聊天背景」这一行');
-  assert.match(source('phSmsBgPick'), /compressBackground\(f\)/);
+  assert.match(source('phSmsBgPick'), /compressChatBackground\(f\)/, '聊天背景是贴着整块屏幕看的，得走专门那档，不能跟普通背景一样压');
   assert.match(source('phSmsBgPick'), /toast\('这张图读不出来，换一张'\)/, '读不出来要说一声，不能默默存个空的');
   for (const x of [app, priv]) {
     assert.equal(/function phSmsPlus\(/.test(x), false, '＋ 现在直接开相册，那个菜单撤了');
@@ -84,12 +84,15 @@ test('玻璃糊一点，但不能糊成一片磨砂', () => {
   }
 });
 test('输入框那圈单独调轻，字和小话筒浮得出来', () => {
+  /* 她说「输入框两边白色的晕染太多，上面的字都看不清，那个小话筒也看不清」。
+     输入框那一圈的白和提亮都要比别处轻。 */
+  const top = r => parseFloat(r.match(/linear-gradient\(140deg,rgba\(255,255,255,(\.\d+)\)/)[1]);
+  const up = r => parseFloat(r.match(/backdrop-filter:brightness\((1\.\d+)\)/)[1]);
   for (const s of shells) {
-    const rim = s.match(/\.imsg\.hasbg \.imsg-rb,[^{]*\.imsg\.hasbg \.imsg-field\{[^}]*\}/)[0];
-    const strong = parseFloat(rim.match(/backdrop-filter:brightness\((1\.\d+)\)/)[1]);
-    const field = s.match(/\.imsg\.hasbg \.imsg-field\{background:transparent!important;[^}]*backdrop-filter:brightness\((1\.\d+)\)/);
-    assert.ok(field, '输入框没有单独那条调轻的规则');
-    assert.ok(parseFloat(field[1]) < strong, `输入框那圈(${field[1]})必须比别处(${strong})轻，不然把字和话筒都压没了`);
+    const btn = s.match(/\.imsg\.hasbg \.imsg-rb:before,[^{]*\{[^}]*\}/)[0];
+    const field = s.match(/\.imsg\.hasbg \.imsg-field:before\{[^}]*\}/)[0];
+    assert.ok(top(field) < top(btn), `输入框那圈的白(${top(field)})必须比别处(${top(btn)})淡，不然把字都压没了`);
+    assert.ok(up(field) < up(btn), `输入框那圈的提亮(${up(field)})也要比别处(${up(btn)})轻`);
     assert.match(s, /\.imsg\.hasbg \.imsg-field textarea::placeholder\{color:rgba\(255,255,255,\.8\d\);\}/, 'placeholder 要提亮');
     assert.match(s, /\.imsg\.hasbg \.imsg-wave\{opacity:1;filter:drop-shadow/, '小话筒要提亮、加投影才看得清');
   }
@@ -105,46 +108,57 @@ test('发出去的图片就是原图，没有任何气泡包边', () => {
   }
 });
 test('高光是沿着轮廓描的一条细线，不是有宽度的包边', () => {
-  /* 她看到上一版说「为什么会有这种很明显的分界线包边」。那时候是拿 mask 挖了个
-     6px 的圈，圈的内沿就是一道台阶。现在父元素按外轮廓剪、:before 按同一条
-     轮廓往里缩剪，父元素的底色只从那条缝里露出来——缝多宽，高光就多细。 */
+  /* 她看到最早那一版说「为什么会有这种很明显的分界线包边」。那时候是拿 mask 挖了个
+     6px 的圈，圈的内沿就是一道台阶。现在描边层被剪成一个真正的「环」：同一条轮廓
+     正着走一圈、再往里缩 0.75px 倒着走一圈，nonzero 规则下中间就是个洞。
+     环有多宽，高光就有多细，而且中间是透空的，底下磨砂的身子露得干干净净。 */
   for (const s of shells) {
-    assert.equal(/mask-composite:exclude/.test(s), false, '又用回挖圈那一套了，圈的内沿会变成分界线');
     for (const who of ['them', 'me']) {
-      const out = s.match(new RegExp(`\\.imsg-row\\.${who} \\.imsg-b\\{[^}]*clip-path:polygon\\(([^)]*(?:\\)[^)]*)*?)\\);`));
-      const inn = s.match(new RegExp(`\\.imsg-row\\.${who} \\.imsg-b:before\\{clip-path:polygon\\(([^)]*(?:\\)[^)]*)*?)\\);`));
-      assert.ok(out && inn, `${who} 少了外轮廓或内轮廓`);
-      const n = t => t.split(',').length;
-      assert.equal(n(out[1]), n(inn[1]), '内外轮廓点数要一一对应，不然缩进来的形状是歪的');
-      /* 第一个点：外轮廓在 7px，内轮廓应该正好缩进 1.15px 左右 */
-      const f = t => parseFloat(t.split(',')[0].match(/([\d.]+)px/)[1]);
-      const d = Math.abs(f(inn[1]) - f(out[1]));
-      assert.ok(d > 0.6 && d < 2, `描边应该只有一条细线的宽度，现在是 ${d}px`);
+      const out = s.match(new RegExp(`\\.imsg-row\\.${who} \\.imsg-b\\{[^}]*clip-path:polygon\\(([^;]*)\\);`));
+      const ring = s.match(new RegExp(`\\.imsg-row\\.${who} \\.imsg-b:before\\{clip-path:polygon\\(([^;]*)\\);`));
+      assert.ok(out && ring, `${who} 少了外轮廓或者描边环`);
+      const no = out[1].split(',').length, nr = ring[1].split(',').length;
+      assert.equal(nr, no * 2 + 2, `环应该是外圈 ${no} 点＋内圈 ${no} 点＋两个接缝点，现在 ${nr} 个`);
+      const pts = ring[1].split(',');
+      /* 外圈第一个点和内圈第一个点隔多远，高光就有多细 */
+      const f = t => parseFloat(t.trim().match(/([\d.]+)px/)[1]);
+      const d = Math.abs(f(pts[no + 1]) - f(pts[0]));
+      assert.ok(d > 0.6 && d < 1.3, `描边应该只有一条细线的宽度，现在是 ${d}px`);
+      /* 接缝那两条桥要完全重合，不然环上会豁一个口子 */
+      assert.equal(pts[no].trim(), pts[0].trim(), '外圈没有回到起点，环会豁口');
+      assert.equal(pts[nr - 1].trim(), pts[no + 1].trim(), '内圈没有回到起点，环会豁口');
     }
+    /* 按钮是圆角矩形，用 padding + 遮罩挖空，一样是环；但只许挖一条细线 */
+    const btn = s.match(/\.imsg-rb:before,[^{]*\.imsg-field:before\{[^}]*\}/)[0];
+    assert.match(btn, /mask-composite:exclude/, '按钮那圈也要挖空，中间不能糊着白');
+    const pad = parseFloat(btn.match(/padding:(\.?\d*\.?\d+)px/)[1]);
+    assert.ok(pad > 0 && pad <= 1.2, `按钮的描边 ${pad}px，她要的是细的`);
   }
 });
 test('高光跟着背景变颜色，不是只有白色', () => {
-  /* 描边那层自己带 backdrop-filter：把背景提亮、提饱和吸上来，所以背景暖它就暖、
-     背景蓝它就蓝。上面再叠一条 140° 渐变让它有虚有实。 */
+  /* 描边那一层自己带 brightness + saturate：把底下的背景提亮、提饱和吸上来，
+     背景暖它就暖、背景蓝它就蓝，再叠一条 140° 的白渐变让它有虚有实。
+     这一层已经被剪成一条细环了，所以提亮只落在那一条上，糊不出白雾。 */
+  const rims = s => [
+    /\.imsg\.hasbg \.imsg-rb:before,[^{]*\{[^}]*\}/,
+    /\.imsg\.hasbg \.imsg-row\.them \.imsg-b:before\{[^}]*\}/,
+    /\.imsg\.hasbg \.imsg-row\.me \.imsg-b:before\{[^}]*\}/,
+  ].map(re => { const m = s.match(re); assert.ok(m, '找不到描边层：' + re); return m[0]; });
   for (const s of shells) {
-    const rim = s.match(/\.imsg\.hasbg \.imsg-rb,[^{]*\.imsg\.hasbg \.imsg-field\{[^}]*\}/)[0];
-    assert.match(rim, /backdrop-filter:brightness\(1\.\d+\) saturate\(1\.\d+\)/, '描边要靠 brightness+saturate 把背景的颜色吸上来');
-    assert.equal(/backdrop-filter:[^;]*blur/.test(rim), false, '描边那层不能糊，糊了就吸不到颜色了');
-    /* 描边一点白都不许画：它铺满整块形状，里面那层的 blur 会把白摊成一片雾 */
-    assert.match(rim, /background:transparent/, '描边层再画白色，里面就又会糊出白雾');
-    for (const who of ['them', 'me']) {
-      const b = s.match(new RegExp(`\\.imsg\\.hasbg \\.imsg-row\\.${who} \\.imsg-b\\{[^}]*\\}`))[0];
-      assert.match(b, /backdrop-filter:brightness\(1\.\d+\) saturate\(1\.\d+\)/, `${who} 的描边也要跟着背景走`);
+    for (const rim of rims(s)) {
+      assert.match(rim, /backdrop-filter:brightness\(1\.\d+\) saturate\(1\.\d+\)/, '描边要把背景的颜色吸上来：' + rim.slice(0, 60));
+      assert.equal(/backdrop-filter:[^;]*blur/.test(rim), false, '描边那层不能糊，糊了就吸不到颜色了');
+      assert.match(rim, /background:linear-gradient\(140deg,rgba\(255,255,255/, '白渐变也要在，高光才有虚有实');
     }
   }
 });
 test('没换背景的时候也有高光，不能什么都没有', () => {
   for (const s of shells) {
-    const base = s.match(/\n\.imsg-b\{[^}]*\}/)[0];
-    assert.match(base, /background:linear-gradient\(140deg,rgba\(255,255,255,\.\d+\)/, '基础样式里就该有那条高光渐变');
-    const btn = s.match(/\n\.imsg-rb\{[^}]*\}/);
-    assert.ok(btn, '找不到返回键的基础样式');
-    assert.match(s, /\.imsg-rb:before,\.imsg-name:before,\.imsg-plus:before,\.imsg-send:before,\.imsg-field:before\{[^}]*inset:1px/, '按钮也是两层，里面那层缩 1px');
+    const rim = s.match(/\n\.imsg-b:before\{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient\(140deg,rgba\(255,255,255,\.\d+\)[^}]*\}/);
+    assert.ok(rim, '基础样式里气泡就该有那条高光渐变');
+    assert.match(s, /\.imsg-rb:before,\.imsg-name:before,\.imsg-plus:before,\.imsg-send:before,\.imsg-field:before\{[^}]*background:linear-gradient\(140deg,rgba\(255,255,255/, '按钮基础样式里也要有');
+    /* 身子那一层也要磨砂，不然没换背景时点开还是一块死色 */
+    assert.match(s, /\n\.imsg-b\{[^}]*backdrop-filter:blur\(\d+px\)/, '没换背景时气泡也得是磨砂的');
   }
 });
 test('小尾巴改瘦了：伸得短、也矮', () => {
@@ -253,26 +267,24 @@ test('主号／匿名号的切换不出现在聊天页，拨号键盘那页本�
 
 /* ===== 白雾去掉，只留磨砂＋高光 ===== */
 test('气泡和按钮里面不再蒙一层白雾，只有磨砂', () => {
-  /* 她说「里面那种白色的雾感我不想要，要磨砂的质感，高光保留」 */
+  /* 她说「里面那种白色的雾感我不想要，要磨砂的质感，高光保留」。
+     白雾只会在「白铺满了整块形状」的时候出现——所以规矩是：
+     白只许画在描边层，而描边层一定是个被挖空的环；身子那一层一点白都不许画。 */
+  const body = s => [
+    /\n\.imsg-b\{[^}]*\}/,
+    /\.imsg\.hasbg \.imsg-row\.them \.imsg-b\{[^}]*\}/,
+    /\.imsg\.hasbg \.imsg-row\.me \.imsg-b\{[^}]*\}/,
+    /\.imsg\.hasbg \.imsg-rb,[^{]*\.imsg\.hasbg \.imsg-field\{[^}]*\}/,
+    /\.imsg\.hasbg \.imsg-field\{background:[^}]*\}/,
+  ].map(re => { const m = s.match(re); assert.ok(m, '找不到身子那一层：' + re); return m[0]; });
   for (const s of shells) {
-    for (const sel of [
-      '\\.imsg\\.hasbg \\.imsg-row\\.them \\.imsg-b:before',
-      '\\.imsg\\.hasbg \\.imsg-rb:before',
-      '\\.imsg\\.hasbg \\.imsg-field:before',
-    ]) {
-      const hit = s.match(new RegExp(sel + '[^{]*\\{[^}]*\\}'));
-      assert.ok(hit, '找不到规则：' + sel);
-      const rule = hit[0];
-      assert.match(rule, /background:transparent/, '里面那层不能再垫白色：' + rule.slice(0, 60));
-      assert.match(rule, /backdrop-filter:blur\(9px\)/, '磨砂还得在');
-      assert.equal(/background:linear-gradient\([^)]*rgba\(255,255,255/.test(rule), false, '白雾又回来了');
+    for (const rule of body(s)) {
+      assert.equal(/rgba\(255,255,255/.test(rule.replace(/box-shadow:[^;}]*/g, '')), false,
+        '身子那一层画白了，整块就会蒙一层雾：' + rule.slice(0, 70));
+      assert.match(rule, /backdrop-filter:blur\(\d+(?:\.\d+)?px\)/, '磨砂还得在：' + rule.slice(0, 70));
     }
-    /* 高光（描边）不许跟着一起删 */
-    assert.match(s, /\.imsg\.hasbg \.imsg-rb,[^{]*\{[^}]*backdrop-filter:brightness\(1\.62\) saturate\(1\.75\)/);
   }
 });
-
-/* ===== 文字特效 ===== */
 test('效果是按字存的，连着一样的合成一段', () => {
   const ctx = { PH_FX_ALL: ['big', 'small', 'shake', 'nod', 'wave', 'bloom', 'jitter', 'b', 'i', 'u', 's'] };
   vm.createContext(ctx);
@@ -382,21 +394,25 @@ test('加效果那一下重绘，输入框里的字不能被冲掉', () => {
   assert.match(fn, /<div class="imsg-bar\$\{String\(_phFx\.prev\|\|''\)\.trim\(\)\?' typing':''\}"/, '发送键的状态也要跟着算');
 });
 
-test('白雾的根在描边层：它画白，里面那层就会把白糊开', () => {
-  /* 第一版只把里面那层改成 transparent，她说「还是有明显的白雾，我没有看到任何变化」。
-     根因是描边层（父元素）的白渐变铺满了整块形状，里面那层的 backdrop-filter
-     会把它一起糊开、摊成一片雾。所以换过背景时父元素一点白都不能画：
-     高光全靠 brightness/saturate 把背景自己提亮，里面那层再用一组反向的把它抵消回去。 */
+test('白雾的根在描边层：白必须被剪成一个环，不能铺满整块', () => {
+  /* 踩过两次。第一次只把里面那层改成 transparent，她说「还是有明显的白雾，
+     我没有看到任何变化」——因为白是描边层画的，铺满整块，里面那层的 blur
+     又把它糊开了。第二次干脆一点白都不画，她说「你现在是完全是透明的状态」。
+     真正的解法是：白照画，但描边层被剪成一条环，中间是洞；而且它压在磨砂上面，
+     不在磨砂下面，所以谁都糊不到它。 */
   for (const s of shells) {
-    for (const sel of ['\\.imsg\\.hasbg \\.imsg-rb,', '\\.imsg\\.hasbg \\.imsg-row\\.them \\.imsg-b\\{', '\\.imsg\\.hasbg \\.imsg-row\\.me \\.imsg-b\\{']) {
-      const rule = s.match(new RegExp(sel + '[^{]*\\{?[^}]*\\}'))[0];
-      assert.equal(/background:linear-gradient\([^)]*rgba\(255,255,255/.test(rule), false,
-        '描边层又画白了，里面会糊出白雾：' + rule.slice(0, 60));
+    for (const who of ['them', 'me']) {
+      const rim = s.match(new RegExp(`\\.imsg-row\\.${who} \\.imsg-b:before\\{clip-path:polygon`));
+      assert.ok(rim, `${who} 的描边层没有被剪成环，白会铺满整块`);
     }
-    /* 里面那层要把描边那份提亮抵消掉，不然整块会偏亮 */
-    const up = parseFloat(s.match(/\.imsg\.hasbg \.imsg-rb,[^{]*\{[^}]*backdrop-filter:brightness\((1\.\d+)\)/)[1]);
-    const down = parseFloat(s.match(/\.imsg\.hasbg \.imsg-row\.them \.imsg-b:before\{[^}]*backdrop-filter:blur\(9px\) brightness\((\.\d+)\)/)[1]);
-    assert.ok(Math.abs(up * down - 1) < 0.1, `提亮和抵消要互相抵掉，现在是 ${up}×${down}=${(up * down).toFixed(2)}`);
+    /* 磨砂在身子上（父元素），描边在 :before（子元素），子元素永远画在父元素上面 */
+    assert.match(s, /\n\.imsg-b\{[^}]*backdrop-filter:blur\(\d+px\)[^}]*\}/, '磨砂要在身子那一层');
+    assert.match(s, /\n\.imsg-b:before\{content:'';position:absolute;inset:0;/, '描边层要盖在身子上面');
+    /* 描边层自己不许再糊，一糊就会把白摊开 */
+    for (const rule of s.match(/\.imsg[^{}]*:before\{[^}]*\}/g) || []) {
+      if (!/rgba\(255,255,255/.test(rule)) continue;
+      assert.equal(/backdrop-filter:[^;]*blur/.test(rule), false, '描边层不能糊：' + rule.slice(0, 70));
+    }
   }
 });
 test('爆发：每个字往外蹦，方向按序号算死，不是随机', () => {
@@ -557,7 +573,7 @@ test('＋ 里面收着照片和文字效果，下面那排没多按钮', () => {
   assert.match(menu, /class="btn imblue"/, '主按钮跟气泡同一个蓝');
   const fn = source('phSmsPic');
   assert.match(fn, /pickFile\('image\/\*'/, '得真的调相册');
-  assert.match(fn, /compress\(f,900,\.74\)/);
+  assert.match(fn, /compress\(f,1400,\.82\)/, '发出去就是原图，压到 900 一眼糊');
   assert.match(fn, /phSendSmsImage\(num,sk,src,\{hold:true\}\)/);
   assert.match(fn, /toast\('这张图读不出来，换一张'\)/, '读不出来要说一声');
 });

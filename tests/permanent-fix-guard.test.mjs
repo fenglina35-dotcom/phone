@@ -1031,7 +1031,7 @@ const PERMANENT_FIXES = [
   },
   {
     release: 'v1294/v1295',
-    name: '网页外壳：高光是沿着轮廓描的一条细线（内轮廓缩 1.15px）',
+    name: '网页外壳：高光是剪成一个环描出来的细线（往里缩 0.75px）',
     scope: 'web',
     file: '小手机.html',
     marker: '.imsg-row.them .imsg-b:before{clip-path:polygon(',
@@ -1042,7 +1042,7 @@ const PERMANENT_FIXES = [
     name: '网页外壳：高光跟着背景变颜色，不是只有白',
     scope: 'web',
     file: '小手机.html',
-    marker: 'backdrop-filter:brightness(1.62) saturate(1.75)',
+    marker: 'backdrop-filter:brightness(1.72) saturate(1.68)',
     least: 2,
   },
   {
@@ -1055,7 +1055,7 @@ const PERMANENT_FIXES = [
   },
   {
     release: 'v1294/v1295',
-    name: '私人外壳：高光是沿着轮廓描的一条细线（内轮廓缩 1.15px）',
+    name: '私人外壳：高光是剪成一个环描出来的细线（往里缩 0.75px）',
     scope: 'web',
     file: 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/小手机.html',
     marker: '.imsg-row.them .imsg-b:before{clip-path:polygon(',
@@ -1066,7 +1066,7 @@ const PERMANENT_FIXES = [
     name: '私人外壳：高光跟着背景变颜色，不是只有白',
     scope: 'web',
     file: 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/小手机.html',
-    marker: 'backdrop-filter:brightness(1.62) saturate(1.75)',
+    marker: 'backdrop-filter:brightness(1.72) saturate(1.68)',
     least: 2,
   },
   {
@@ -1079,7 +1079,7 @@ const PERMANENT_FIXES = [
   },
   {
     release: 'v1294/v1295',
-    name: '私人入口：高光是沿着轮廓描的一条细线（内轮廓缩 1.15px）',
+    name: '私人入口：高光是剪成一个环描出来的细线（往里缩 0.75px）',
     scope: 'web',
     file: 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html',
     marker: '.imsg-row.them .imsg-b:before{clip-path:polygon(',
@@ -1090,7 +1090,7 @@ const PERMANENT_FIXES = [
     name: '私人入口：高光跟着背景变颜色，不是只有白',
     scope: 'web',
     file: 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html',
-    marker: 'backdrop-filter:brightness(1.62) saturate(1.75)',
+    marker: 'backdrop-filter:brightness(1.72) saturate(1.68)',
     least: 2,
   },
   {

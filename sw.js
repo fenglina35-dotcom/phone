@@ -1,6 +1,6 @@
 const BUILD='1298';
-const HOTFIX='v1298-web-imsg-3';
-const SHELL_CACHE='north-shell-v1298-web-imsg-3';
+const HOTFIX='v1298-web-imsg-4';
+const SHELL_CACHE='north-shell-v1298-web-imsg-4';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
@@ -15,7 +15,7 @@ const CORE_FILES=[
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
   {url:'./app.js?v='+BUILD+'&r='+HOTFIX,kind:'app'},
   {url:'./cohab-theater.js?v='+BUILD+'&r=v1274-web-cohab-guests-1',kind:'theater'},
-  {url:'./web-hotfix.js?v='+BUILD+'&r=v1298-web-imsg-3',kind:'hotfix'},
+  {url:'./web-hotfix.js?v='+BUILD+'&r=v1298-web-imsg-4',kind:'hotfix'},
   {url:'./ai-account.js?v='+BUILD,kind:'ai'},
   {url:'./couple-watch.js?v='+BUILD,kind:'watch'},
   {url:'./couple-watch-runtime.js?v='+BUILD,kind:'watchRuntime'}
@@ -93,7 +93,7 @@ function validShellText(kind,text){
     &&text.includes('theaterRevealActorItems')
     &&!text.includes('cohabReplyCore=async');
   if(kind==='hotfix')return text.length>800
-    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1298-web-imsg-3'")
+    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1298-web-imsg-4'")
     &&text.includes('reconcileExpiredWxLogin')
     &&text.includes('withBaseImageCheck')
     &&text.includes('isStoredImgRef');

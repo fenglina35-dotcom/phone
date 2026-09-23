@@ -14,8 +14,8 @@ const reportScene = read('native/private-small-phone/XcodeProject/PhoneCompanion
 
 test('public web v1184 and private web v1189 remain compatible with native iOS 1.0.315', () => {
   assert.match(app, /APP_VER='v1298 · 信息页照 iMessage 重做'/);
-  assert.match(app, /sw\.js\?v=1298&r=v1298-web-imsg-3/);
-  assert.match(shell, /north-shell-v1298-web-imsg-3/);
+  assert.match(app, /sw\.js\?v=1298&r=v1298-web-imsg-4/);
+  assert.match(shell, /north-shell-v1298-web-imsg-4/);
   assert.match(bundleInfo, /<string>1200<\/string>/);
   assert.match(localWebView, /1\.0\.383 \(383\)/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 383;/g) || []).length, 12);

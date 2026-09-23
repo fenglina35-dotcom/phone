@@ -48,7 +48,7 @@ function functionSource(sourceText, name) {
 test('private identifiers remain v1299 and iOS 383 while public advances independently', () => {
   assert.equal(index, alias);
   assert.match(index, /window\.__NORTH_SHELL_BUILD__='1299'/);
-  assert.match(index, /app\.js\?v=1299&r=v1299-private-imsg-3/);
+  assert.match(index, /app\.js\?v=1299&r=v1299-private-imsg-4/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=339/);
   assert.match(app, /APP_VER='v1299 · 信息页照 iMessage 重做（私人）'/);
   assert.match(overlay, /336-daily-file-backup/);
