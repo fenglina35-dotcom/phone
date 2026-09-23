@@ -14,16 +14,16 @@ const backup=read(bundle+'private-cloud-backup.js');
 const privateApp=read(bundle+'app.js');
 const publicApp=read('app.js');
 
-test('private v1299 loads daily backup after the diagnostic overlay while public advances independently',()=>{
+test('private v1301 loads daily backup after the diagnostic overlay while public advances independently',()=>{
   for(const name of ['index.html','小手机.html']){
     const html=read(bundle+name);
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1299'/);
-    assert.ok(html.indexOf('private-cloud-backup.js?v=1299')>html.indexOf('private-runtime-diagnostics.js?v=339'));
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1301'/);
+    assert.ok(html.indexOf('private-cloud-backup.js?v=1301')>html.indexOf('private-runtime-diagnostics.js?v=339'));
   }
-  assert.match(privateApp,/APP_VER='v1299 · 信息页照 iMessage 重做（私人）'/);
-  assert.match(publicApp,/APP_VER='v1298 · 信息页照 iMessage 重做'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 383;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.383;/g)||[]).length,12);
+  assert.match(privateApp,/APP_VER='v1301 · 磨砂＋细高光、共同生活状态、背景画质（私人）'/);
+  assert.match(publicApp,/APP_VER='v1300 · 磨砂＋细高光、共同生活状态、背景画质'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 384;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.384;/g)||[]).length,12);
 });
 
 test('web backup sends bounded ordered chunks and records a day only after confirmed save',()=>{
