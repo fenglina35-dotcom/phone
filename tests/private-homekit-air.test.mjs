@@ -187,8 +187,8 @@ test('private identity advances while public web stays unchanged',()=>{
   const webView=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
   const project=read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
   assert.match(privateApp,/APP_VER='v1295 · 信息页照 iMessage 重做（私人）'/);
-  assert.match(webView,/1\.0\.380 \(380\)/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 380;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.380;/g)||[]).length,12);
+  assert.match(webView,/1\.0\.381 \(381\)/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 381;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.381;/g)||[]).length,12);
   assert.match(read('app.js'),/APP_VER='v1294 · 信息页照 iMessage 重做'/);
 });

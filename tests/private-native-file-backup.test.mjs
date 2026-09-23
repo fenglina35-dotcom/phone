@@ -22,8 +22,8 @@ test('private v1295 loads daily backup after the diagnostic overlay while public
   }
   assert.match(privateApp,/APP_VER='v1295 · 信息页照 iMessage 重做（私人）'/);
   assert.match(publicApp,/APP_VER='v1294 · 信息页照 iMessage 重做'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 380;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.380;/g)||[]).length,12);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 381;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.381;/g)||[]).length,12);
 });
 
 test('web backup sends bounded ordered chunks and records a day only after confirmed save',()=>{

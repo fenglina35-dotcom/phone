@@ -144,13 +144,13 @@ test('guest exit sends exactly one genuine memory-grounded WeChat message',()=>{
   assert.doesNotMatch(theater,/content:\s*['"](?:我回来了|我都记得)/);
 });
 
-test('private artifact identity advances independently to v1295 and iOS 1.0.380 (380)',()=>{
+test('private artifact identity advances independently to v1295 and iOS 1.0.381 (381)',()=>{
   assert.match(privateApp,/const APP_VER='v1295 · 信息页照 iMessage 重做（私人）'/);
   assert.match(privateHtml,/private-runtime-diagnostics\.js\?v=339/);
-  assert.match(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),/1\.0\.380 \(380\)/);
+  assert.match(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),/1\.0\.381 \(381\)/);
   const project=read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
-  assert.ok((project.match(/CURRENT_PROJECT_VERSION = 380;/g)||[]).length>=12);
-  assert.ok((project.match(/MARKETING_VERSION = 1.0.380;/g)||[]).length>=12);
+  assert.ok((project.match(/CURRENT_PROJECT_VERSION = 381;/g)||[]).length>=12);
+  assert.ok((project.match(/MARKETING_VERSION = 1.0.381;/g)||[]).length>=12);
 });
 
 test('v1170 private friend-entry fix remains present in the v1184 private superset',()=>{

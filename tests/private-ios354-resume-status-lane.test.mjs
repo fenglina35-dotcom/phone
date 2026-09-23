@@ -37,7 +37,7 @@ function pollHarness(){
   return {context,calls};
 }
 
-test('private candidate is v1295 and iOS 380 while public advances independently',()=>{
+test('private candidate is v1295 and iOS 381 while public advances independently',()=>{
   assert.match(app,/APP_VER='v1295 · 信息页照 iMessage 重做（私人）'/);
   for(const html of [index,alias]){
     assert.match(html,/window\.__NORTH_SHELL_BUILD__='1295'/);
@@ -45,10 +45,10 @@ test('private candidate is v1295 and iOS 380 while public advances independently
     assert.match(html,/private-runtime-diagnostics\.js\?v=339/);
   }
   assert.match(diagnostics,/OVERLAY_VERSION='336-daily-file-backup'/);
-  assert.match(webView,/1\.0\.380 \(380\)/);
-  assert.match(bridge,/private static let build = "1\.0\.380 \(380\)"/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 380;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.380;/g)||[]).length,12);
+  assert.match(webView,/1\.0\.381 \(381\)/);
+  assert.match(bridge,/private static let build = "1\.0\.381 \(381\)"/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 381;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.381;/g)||[]).length,12);
   assert.match(publicApp,/APP_VER='v1294 · 信息页照 iMessage 重做'/);
 });
 

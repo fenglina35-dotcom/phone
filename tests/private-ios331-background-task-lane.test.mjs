@@ -69,11 +69,11 @@ test('private performance candidate keeps v1295 while public web advances indepe
   assert.match(privateRepair, /index\.html\?repair=1&v=1295/);
   assert.match(privateApp, /APP_VER='v1295 · 信息页照 iMessage 重做（私人）'/);
   assert.match(overlay, /336-daily-file-backup/);
-  assert.match(webView, /1\.0\.380 \(380\)/);
-  assert.match(bridge, /private static let build = "1\.0\.380 \(380\)"/);
+  assert.match(webView, /1\.0\.381 \(381\)/);
+  assert.match(bridge, /private static let build = "1\.0\.381 \(381\)"/);
   assert.match(bridge, /static let contractVersion = 41/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 380;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.380;/g) || []).length, 12);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 381;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.381;/g) || []).length, 12);
   assert.match(publicApp, /APP_VER='v1294 · 信息页照 iMessage 重做'/);
   assert.doesNotMatch(publicApp, /function northNativeBackgroundTask\(name,run\)/);
 });
