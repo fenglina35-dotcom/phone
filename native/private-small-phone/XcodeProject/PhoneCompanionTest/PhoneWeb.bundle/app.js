@@ -10502,11 +10502,11 @@ async function phDeliverSmsBubbles(num,sk,list,c){for(let i=0;i<list.length;i++)
    三、带效果的那条底下有「重播」，点一下重新放一遍。
    效果是按【字】存的：_phFx.ch 和输入框里的文字一一对应，她改字的时候按差分挪一下，
    发出去时再把连着的相同效果合成一段一段的 runs 存进这条消息。 */
-const PH_FX_TEXT=[['big','放大'],['small','缩小'],['shake','摇晃'],['nod','点头'],['wave','波纹'],['bloom','绽放'],['jitter','抖动']];
+const PH_FX_TEXT=[['big','放大'],['small','缩小'],['shake','摇晃'],['nod','点头'],['wave','波纹'],['bloom','绽放'],['jitter','抖动'],['burst','爆发']];
 const PH_FX_STYLE=[['b','B'],['i','I'],['u','U'],['s','S']];
 const PH_FX_BUBBLE=[['slam','震撼'],['loud','放大'],['gentle','缩小'],['invisible','隐形墨水']];
 const PH_FX_SCREEN=[['echo','回声'],['spotlight','聚光灯'],['balloons','气球'],['confetti','五彩纸屑'],['love','爱心'],['lasers','激光'],['fireworks','烟花'],['star','流星']];
-const PH_FX_PERCHAR=['shake','nod','wave','bloom','jitter'];
+const PH_FX_PERCHAR=['shake','nod','wave','bloom','jitter','burst'];
 const PH_FX_ALL=PH_FX_TEXT.map(x=>x[0]).concat(PH_FX_STYLE.map(x=>x[0]));
 let _phFx={ch:[],prev:'',bfx:'',sfx:''};
 let _phFxSel={s:0,e:0};
@@ -10534,7 +10534,14 @@ function phFxRunsPlain(runs){return (runs||[]).map(r=>r&&r.t||'').join('');}
 function phFxRunHTML(r){const e=Array.isArray(r&&r.e)?r.e.filter(k=>PH_FX_ALL.includes(k)):[];
   if(!e.length)return esc(r&&r.t||'');
   const per=e.some(k=>PH_FX_PERCHAR.includes(k)),cls=e.map(k=>'imfx-'+k).join(' ');
-  const inner=per?Array.from(String(r.t||'')).map((c,i)=>`<b class="imfxc" style="--i:${i}">${esc(c)}</b>`).join(''):esc(r.t||'');
+  /* 爆发要给每个字一个往外蹦的方向：按序号算死，不用随机——同一条消息
+     每次重播、换台设备看到的都一样 */
+  const burst=e.includes('burst');
+  const inner=per?Array.from(String(r.t||'')).map((c,i)=>{
+    let v='';
+    if(burst){const a=(i*137.5+41)*Math.PI/180,d=34+((i*29)%22);
+      v=`;--dx:${(Math.cos(a)*d).toFixed(0)}px;--dy:${(Math.sin(a)*d-14).toFixed(0)}px;--dr:${((i%2?1:-1)*(18+(i*13)%22)).toFixed(0)}deg`;}
+    return `<b class="imfxc" style="--i:${i}${v}">${esc(c)}</b>`;}).join(''):esc(r.t||'');
   return `<em class="imfx ${cls}">${inner}</em>`;}
 function phFxBodyHTML(m){const runs=m&&m.fx;
   if(!Array.isArray(runs)||!runs.length)return esc(m&&m.text||'');
@@ -10565,7 +10572,7 @@ function phFxTextModal(){const ta=$('#smsin');if(!ta)return;const text=String(ta
   <div class="imfx-style">${PH_FX_STYLE.map(x=>`<button class="${on[x[0]]?'on':''}" style="${x[0]==='b'?'font-weight:800':x[0]==='i'?'font-style:italic':x[0]==='u'?'text-decoration:underline':'text-decoration:line-through'}" onclick="phFxToggle('${x[0]}')">${x[1]}</button>`).join('')}</div>
   <div class="imfx-sheet">${PH_FX_TEXT.map(x=>`<button class="${on[x[0]]?'on':''}" onclick="phFxToggle('${x[0]}')">${x[1]}</button>`).join('')}</div>
   <button class="btn g" style="margin-top:10px" onclick="phFxClearSel()">清掉这几个字的效果</button>
-  <button class="btn p" style="margin-top:8px" onclick="closeModal();render()">好了</button>`);}
+  <button class="btn imblue" style="margin-top:8px" onclick="closeModal();render()">好了</button>`);}
 /* ===== 带效果发送（长按发送键） ===== */
 let _phFxHold=0;
 function phFxHoldStart(num,sk){clearTimeout(_phFxHold);_phFxHold=setTimeout(()=>{_phFxHold=0;phFxSendHold(num,sk);},420);}
@@ -10580,7 +10587,7 @@ function phFxSendModal(num,sk){_phFxNum=num;_phFxSk=sk;
   <div class="hint">${_phFxTab==='screen'?'整屏放一次，对方打开也会看到':'这条气泡飞出来的方式'}</div>
   <div class="imfx-sheet">${list.map(x=>`<button class="${cur===x[0]?'on':''}" onclick="phFxPick('${_phFxTab}','${x[0]}')">${x[1]}</button>`).join('')}</div>
   <button class="btn g" style="margin-top:10px" onclick="phFxPick('${_phFxTab}','')">不要这个效果</button>
-  <button class="btn p" style="margin-top:8px" onclick="closeModal();phSendSms('${esc(num)}','${esc(sk)}')">发送</button>
+  <button class="btn imblue" style="margin-top:8px" onclick="closeModal();phSendSms('${esc(num)}','${esc(sk)}')">发送</button>
   <button class="btn g" style="margin-top:8px" onclick="closeModal();render()">先不发</button>`);}
 function phFxPick(tab,k){if(tab==='screen')_phFx.sfx=k;else _phFx.bfx=k;phFxSendModal(_phFxNum,_phFxSk);}
 function phFxDrop(){_phFx.bfx='';_phFx.sfx='';_phFx.ch=[];render();}
@@ -10601,10 +10608,10 @@ function phFxReplay(num,mid,sk){const arr=phSmsArr(num,sk),m=arr.find(x=>x&&x.id
   phFxPlay(m,box);}
 function phInvToggle(mid){const node=$('#smsbody')&&$('#smsbody').querySelector(`.imsg-b[data-mid="${mid}"]`);
   if(node&&node.classList.contains('iminv'))node.classList.toggle('shown');}
-function phScreenFx(kind,m){const stage=document.querySelector('.imsg');if(!stage)return;
+function phScreenFx(kind,m){const stage=document.querySelector('.screen')||document.querySelector('.imsg');if(!stage)return;
   stage.querySelectorAll('.imsfx').forEach(x=>x.remove());
   const box=document.createElement('div');box.className='imsfx imsfx-'+kind;
-  const W=stage.clientWidth||393,H=stage.clientHeight||852,rnd=(a,b)=>a+Math.random()*(b-a);
+  const rnd=(a,b)=>a+Math.random()*(b-a);
   const add=(css,html)=>{const i=document.createElement('i');i.style.cssText=css;if(html!=null)i.innerHTML=html;box.appendChild(i);};
   if(kind==='echo'){const t=esc(String(m&&phFxRunsPlain(m.fx)||m&&m.text||'').slice(0,12))||'…';
     for(let n=0;n<26;n++)add(`left:${rnd(8,92)}%;top:${rnd(-30,10)}%;animation-delay:${(n*.055).toFixed(2)}s;transform-origin:50% 50%;font-size:${rnd(11,20).toFixed(0)}px`,t);}
@@ -10662,8 +10669,7 @@ function renderPhoneIMsg(num,sk,arr,x){
     </div>
     ${phFxBarHTML()}
     <div class="imsg-bar${String(_phFx.prev||'').trim()?' typing':''}">
-      <button class="imsg-plus" onclick="phSmsPic('${esc(num)}','${esc(sk)}')"><i>＋</i></button>
-      <button class="imsg-aa${phFxHas()?' on':''}" onclick="phFxOpenText()" aria-label="文字效果"><i>Aa</i></button>
+      <button class="imsg-plus${phFxHas()?' on':''}" onclick="phSmsPlusMenu('${esc(num)}','${esc(sk)}')"><i>＋</i></button>
       <div class="imsg-field"><textarea id="smsin" rows="1" placeholder="iMessage信息" oninput="phSmsTyping();phFxSync()" onselect="phFxSelSync()" onkeyup="phFxSelSync()" onclick="phFxSelSync()" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();phSendSms('${esc(num)}','${esc(sk)}')}">${esc(_phFx.prev||'')}</textarea><i class="imsg-wave">${svgIc('mic',17,'#8e8e93',2)}</i></div>
       <button class="imsg-send" onclick="phSendSms('${esc(num)}','${esc(sk)}')" oncontextmenu="event.preventDefault();phFxSendHold('${esc(num)}','${esc(sk)}');return false" onpointerdown="phFxHoldStart('${esc(num)}','${esc(sk)}')" onpointerup="phFxHoldStop()" onpointerleave="phFxHoldStop()"><i>↑</i></button>
     </div>
@@ -10673,6 +10679,14 @@ function renderPhoneIMsg(num,sk,arr,x){
 /* ＋ 发图：先把图发出去，真的识一遍图，看清了再让角色回。
    不识图的话角色只知道「她发了张照片」，根本不知道里面是什么——她实测就问到了这点。
    识图用的和微信发图完全同一条线路、同一段提示词。 */
+/* 她说「不要改变下面的布局，把功能放在 ＋ 号里」——所以 ＋ 收着照片和文字效果两件事 */
+function phSmsPlusMenu(num,sk){phFxSync();
+  const sel=_phFxSel,text=String(_phFx.prev||''),piece=text.slice(sel.s,sel.e);
+  openModal(`<h3>${esc(phName(num))}</h3>
+  <button class="btn imblue" onclick="closeModal();phSmsPic('${esc(num)}','${esc(sk)}')">照片</button>
+  <button class="btn imblue" style="margin-top:8px" onclick="closeModal();phFxOpenText()">文字效果${piece?'（'+esc(piece.slice(0,8))+(piece.length>8?'…':'')+'）':text?'（整条）':''}</button>
+  ${phFxHas()?`<button class="btn g" style="margin-top:8px" onclick="closeModal();phFxDrop()">清掉这条的效果</button>`:''}
+  <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function phSmsPic(num,sk){pickFile('image/*',async f=>{
   let src='';try{src=await compress(f,900,.74);}catch(_){}
   if(!src){toast('这张图读不出来，换一张');return;}
@@ -10772,7 +10786,7 @@ async function phAutoSmsReply(num,userText){const x=phFind(num);if(x&&x.kind==='
 function phSmsNotify(num,text,c){const title=(c&&(c.remark||c.name))||phName(num)||phFmt(num),body=String(text||'').replace(/\s+/g,' ').slice(0,80),target={type:'phonesms',id:num};lockNotify(title,body,{avatar:c&&c.avatar,icon:c&&c.avatar?'':'message',target});appNotify(title,body,{tag:'sms-'+phNorm(num),data:{type:'open',target:'phonesms',id:num}});if(lockVisible()||_call)return;const b=$('#msgBanner');if(!b)return;b.innerHTML=`${c&&c.avatar?av(c.avatar,'sm'):`<div class="avatar sm" style="background:#151518;border:1px solid #34343a">${svgIc('message',19,'#d7d7dc',1.55)}</div>`}<div style="flex:1;min-width:0"><div class="bn">${esc(title)}</div><div class="bm">${esc(body)}</div></div>`;b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';openPhoneSMS(num);};clearTimeout(_bannerT);_bannerT=setTimeout(()=>{b.className='msgbanner';},4800);}
 function phReceiveSms(num,text,c,sk){if(phState().blocked[phNorm(num)])return;num=phDigits(num);sk=sk||num;text=phCleanSmsText(text).slice(0,240);if(!text)return;const viewing=cur().p==='phonesms'&&cur().num===num&&(cur().sk||num)===sk,arr=phSmsArr(num,sk);arr.push({id:uid(),from:'them',text,time:Date.now(),read:viewing});if(arr.length>300)arr.splice(0,arr.length-300);phMirrorSMS(num,'them',text);save();phSound('sms');if(!viewing)phSmsNotify(num,text,c);if(viewing)render();}
 function phSmsMenu(num,mid,sk){const m=phSmsArr(num,sk).find(x=>x&&x.id===mid),bad=m&&m.img&&m.visionState!=='success';
-  openModal(`<h3>短信操作</h3>${m&&m.img&&m.imgDesc?`<div class="hint" style="text-align:left">ta看到的画面：${esc(m.imgDesc)}</div>`:''}<div class="btns">${bad?`<button class="btn p" onclick="phSmsRetryVision('${esc(num)}','${mid}','${esc(sk||'')}')">重新看这张图</button>`:''}<button class="btn d" onclick="phDeleteSms('${esc(num)}','${mid}','${esc(sk||'')}')">删除这条</button><button class="btn g" onclick="closeModal()">取消</button></div>`);}
+  openModal(`<h3>短信操作</h3>${m&&m.img&&m.imgDesc?`<div class="hint" style="text-align:left">ta看到的画面：${esc(m.imgDesc)}</div>`:''}<div class="btns">${bad?`<button class="btn imblue" onclick="phSmsRetryVision('${esc(num)}','${mid}','${esc(sk||'')}')">重新看这张图</button>`:''}<button class="btn d" onclick="phDeleteSms('${esc(num)}','${mid}','${esc(sk||'')}')">删除这条</button><button class="btn g" onclick="closeModal()">取消</button></div>`);}
 function phDeleteSms(num,mid,sk){const a=phSmsArr(num,sk),i=a.findIndex(m=>m.id===mid);if(i>=0)a.splice(i,1);save();closeModal();render();}
 function phClearHiddenCallMemory(){const p=phState();p.trash=[];(p.voicemail||[]).forEach(clearVoiceAudio);p.voicemail=[];_phAliasFollowups={};Object.keys(p.aliasThreads||{}).forEach(k=>{const t=p.aliasThreads[k]||{};if(t.kind==='call'||t.kind==='spoofCall'||t.kind==='phonecall')delete p.aliasThreads[k];});(S.contacts||[]).forEach(c=>{delete c.phoneSpoofHistory;delete c.phoneAliasCallHistory;});if(S.spy)Object.keys(S.spy).forEach(id=>{const sp=S.spy[id];if(sp&&Array.isArray(sp.calls))sp.calls=sp.calls.filter(x=>x&&x.type==='短信');});}
 function phClearHiddenSmsMemory(){const p=phState();_phAliasFollowups={};Object.keys(p.aliasThreads||{}).forEach(k=>{const t=p.aliasThreads[k]||{};if(t.kind==='sms'||t.kind==='spoofSms'||t.kind==='spoofCall'||t.asStranger)delete p.aliasThreads[k];});(S.contacts||[]).forEach(c=>{delete c.phoneSpoofSmsHistory;delete c.phoneAliasHistory;});if(S.spy)Object.keys(S.spy).forEach(id=>{const sp=S.spy[id];if(sp&&Array.isArray(sp.calls))sp.calls=sp.calls.filter(x=>x&&x.type!=='短信');});}

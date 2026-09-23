@@ -2098,12 +2098,17 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
 .imfx-wave .imfxc{animation:imfx-wave 3s infinite;animation-delay:calc(var(--i)*.09s);}
 .imfx-bloom .imfxc{animation:imfx-bloom 3s infinite;animation-delay:calc(var(--i)*.08s);}
 .imfx-jitter .imfxc{animation:imfx-jitter 3s infinite;animation-delay:calc(var(--i)*.03s);}
+.imfx-burst .imfxc{animation:imfx-burst 3s infinite;animation-delay:calc(var(--i)*.04s);}
 @keyframes imfx-big{0%,30%,100%{transform:scale(1)}6%{transform:scale(1.85)}14%{transform:scale(.9)}21%{transform:scale(1.1)}}
 @keyframes imfx-small{0%,30%,100%{transform:scale(1)}7%{transform:scale(.4)}16%{transform:scale(1.1)}23%{transform:scale(.97)}}
 @keyframes imfx-shake{0%,28%,100%{transform:rotate(0)}5%{transform:rotate(-10deg)}11%{transform:rotate(10deg)}17%{transform:rotate(-6deg)}23%{transform:rotate(3deg)}}
 @keyframes imfx-nod{0%,26%,100%{transform:translateY(0) rotate(0)}8%{transform:translateY(-.2em) rotate(-9deg)}17%{transform:translateY(.1em) rotate(7deg)}}
 @keyframes imfx-wave{0%,24%,100%{transform:translateY(0)}8%{transform:translateY(-.36em)}16%{transform:translateY(.13em)}}
 @keyframes imfx-bloom{0%{transform:scale(0) rotate(-45deg);opacity:0;filter:blur(3px)}9%{transform:scale(1.3) rotate(8deg);opacity:1;filter:blur(0)}16%,100%{transform:scale(1) rotate(0);opacity:1;filter:blur(0)}}
+@keyframes imfx-burst{0%,34%,100%{transform:translate(0,0) scale(1) rotate(0);opacity:1}
+  7%{transform:translate(var(--dx),var(--dy)) scale(1.7) rotate(var(--dr));opacity:.9}
+  16%{transform:translate(calc(var(--dx)*.35),calc(var(--dy)*.35)) scale(.82) rotate(calc(var(--dr)*-.4));opacity:1}
+  25%{transform:translate(0,0) scale(1.08) rotate(0)}}
 @keyframes imfx-jitter{0%,32%,100%{transform:translate(0,0)}4%{transform:translate(-1.6px,1px)}9%{transform:translate(1.6px,-1px)}14%{transform:translate(-1px,-1.6px)}19%{transform:translate(1px,1.6px)}25%{transform:translate(-.8px,.6px)}}
 /* ===== 气泡特效：发出去的那一下 ===== */
 .imbfx-slam{animation:imbfx-slam .85s cubic-bezier(.2,1.1,.3,1) 1;}
@@ -2128,7 +2133,9 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
 .imsg-row.me .imsg-col{align-items:flex-end;}
 .imsg-col .imsg-b{max-width:100%;}
 /* ===== 屏幕特效 ===== */
-.imsfx{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:9;}
+/* 整屏特效挂在 .screen 上，盖满整个手机屏幕（状态栏那块也盖住），
+   不是只盖聊天那一块——她说「全屏气泡一定是在全屏上面的，不是在一个位置」 */
+.imsfx{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:2200;}
 .imsfx i{position:absolute;display:block;}
 .imsfx-echo i{color:#fff;font-size:13px;background:#0a84ff;border-radius:14px;padding:5px 10px;white-space:nowrap;
   animation:imsfx-echo 2.4s ease-out forwards;}
@@ -2160,6 +2167,8 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
 .imfx-tabs{display:flex;gap:6px;background:rgba(120,120,128,.24);border-radius:999px;padding:3px;margin:2px 0 4px;}
 .imfx-tabs button{flex:1;border:0;border-radius:999px;padding:8px 0;font-size:15px;font-weight:600;background:transparent;color:#aeaeb2;cursor:pointer;}
 .imfx-tabs button.on{background:rgba(255,255,255,.22);color:#fff;}
+/* 信息这一片的弹窗主按钮跟气泡同一个蓝，不用全局那个粉 */
+.btn.imblue{background:#0a84ff!important;color:#fff!important;}
 /* 输入框上面那条：让她发之前就看见效果 */
 .imsg-fxbar{flex:0 0 auto;display:flex;align-items:center;gap:8px;margin:0 12px 6px;padding:7px 11px;border-radius:14px;background:rgba(120,120,128,.24);color:#fff;font-size:15px;}
 .imsg.hasbg .imsg-fxbar{background:rgba(120,120,128,.2);-webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px);}
@@ -2178,14 +2187,14 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
 .imsg-field:before{background:rgba(120,120,128,.18);}
 .imsg-send:before{background:#0a84ff;}
 /* ===== 换过背景之后：能透出背景的玻璃 ===== */
-.imsg.hasbg .imsg-rb,.imsg.hasbg .imsg-name,.imsg.hasbg .imsg-plus,.imsg.hasbg .imsg-send,.imsg.hasbg .imsg-field{border:0;background:linear-gradient(140deg,rgba(255,255,255,.62),rgba(255,255,255,.16) 26%,rgba(255,255,255,.07) 54%,rgba(255,255,255,.13) 80%,rgba(255,255,255,.42));-webkit-backdrop-filter:brightness(1.62) saturate(1.75);backdrop-filter:brightness(1.62) saturate(1.75);box-shadow:0 5px 16px rgba(0,0,0,.24);}
-.imsg.hasbg .imsg-rb:before,.imsg.hasbg .imsg-name:before,.imsg.hasbg .imsg-plus:before{background:transparent;-webkit-backdrop-filter:blur(9px) saturate(1.08) brightness(1.02);backdrop-filter:blur(9px) saturate(1.08) brightness(1.02);box-shadow:inset 0 -8px 13px -10px rgba(0,0,0,.34);}
-.imsg.hasbg .imsg-field:before{background:transparent;-webkit-backdrop-filter:blur(9px) saturate(1.08) brightness(1.02);backdrop-filter:blur(9px) saturate(1.08) brightness(1.02);}
-.imsg.hasbg .imsg-send:before{background:linear-gradient(142deg,rgba(10,132,255,.72),rgba(10,132,255,.56) 52%,rgba(10,132,255,.68));-webkit-backdrop-filter:blur(8px) saturate(1.45) brightness(1.04);backdrop-filter:blur(8px) saturate(1.45) brightness(1.04);}
-.imsg.hasbg .imsg-row.them .imsg-b{background:linear-gradient(140deg,rgba(255,255,255,.66),rgba(255,255,255,.2) 24%,rgba(255,255,255,.09) 52%,rgba(255,255,255,.17) 78%,rgba(255,255,255,.46));-webkit-backdrop-filter:brightness(1.62) saturate(1.75);backdrop-filter:brightness(1.62) saturate(1.75);}
-.imsg.hasbg .imsg-row.them .imsg-b:before{background:transparent;-webkit-backdrop-filter:blur(9px) saturate(1.08) brightness(1.02);backdrop-filter:blur(9px) saturate(1.08) brightness(1.02);box-shadow:inset 0 -10px 15px -11px rgba(0,0,0,.34);}
-.imsg.hasbg .imsg-row.me .imsg-b{background:linear-gradient(140deg,rgba(255,255,255,.6),rgba(255,255,255,.18) 24%,rgba(255,255,255,.08) 52%,rgba(255,255,255,.16) 78%,rgba(255,255,255,.42));-webkit-backdrop-filter:brightness(1.62) saturate(1.75);backdrop-filter:brightness(1.62) saturate(1.75);}
-.imsg.hasbg .imsg-row.me .imsg-b:before{background:linear-gradient(142deg,rgba(10,132,255,.66),rgba(10,132,255,.5) 50%,rgba(10,132,255,.62));-webkit-backdrop-filter:blur(8px) saturate(1.45) brightness(1.04);backdrop-filter:blur(8px) saturate(1.45) brightness(1.04);box-shadow:inset 0 -10px 15px -11px rgba(0,0,0,.3);}
+.imsg.hasbg .imsg-rb,.imsg.hasbg .imsg-name,.imsg.hasbg .imsg-plus,.imsg.hasbg .imsg-send,.imsg.hasbg .imsg-field{border:0;background:transparent;-webkit-backdrop-filter:brightness(1.62) saturate(1.75);backdrop-filter:brightness(1.62) saturate(1.75);box-shadow:0 5px 16px rgba(0,0,0,.24);}
+.imsg.hasbg .imsg-rb:before,.imsg.hasbg .imsg-name:before,.imsg.hasbg .imsg-plus:before{background:transparent;-webkit-backdrop-filter:blur(9px) brightness(.617) saturate(.571);backdrop-filter:blur(9px) brightness(.617) saturate(.571);box-shadow:inset 0 -8px 13px -10px rgba(0,0,0,.34);}
+.imsg.hasbg .imsg-field:before{background:transparent;-webkit-backdrop-filter:blur(9px) brightness(.77) saturate(.69);backdrop-filter:blur(9px) brightness(.77) saturate(.69);}
+.imsg.hasbg .imsg-send:before{background:linear-gradient(142deg,rgba(10,132,255,.72),rgba(10,132,255,.56) 52%,rgba(10,132,255,.68));-webkit-backdrop-filter:blur(8px) brightness(.62) saturate(.6);backdrop-filter:blur(8px) brightness(.62) saturate(.6);}
+.imsg.hasbg .imsg-row.them .imsg-b{background:transparent;-webkit-backdrop-filter:brightness(1.62) saturate(1.75);backdrop-filter:brightness(1.62) saturate(1.75);}
+.imsg.hasbg .imsg-row.them .imsg-b:before{background:transparent;-webkit-backdrop-filter:blur(9px) brightness(.617) saturate(.571);backdrop-filter:blur(9px) brightness(.617) saturate(.571);box-shadow:inset 0 -10px 15px -11px rgba(0,0,0,.34);}
+.imsg.hasbg .imsg-row.me .imsg-b{background:transparent;-webkit-backdrop-filter:brightness(1.62) saturate(1.75);backdrop-filter:brightness(1.62) saturate(1.75);}
+.imsg.hasbg .imsg-row.me .imsg-b:before{background:linear-gradient(142deg,rgba(10,132,255,.66),rgba(10,132,255,.5) 50%,rgba(10,132,255,.62));-webkit-backdrop-filter:blur(8px) brightness(.62) saturate(.6);backdrop-filter:blur(8px) brightness(.62) saturate(.6);box-shadow:inset 0 -10px 15px -11px rgba(0,0,0,.3);}
 /* 背景亮的时候白字会糊在背景里，给气泡里的字垫一层很淡的阴影；
    玻璃该透还是透，只是字始终读得清。 */
 .imsg.hasbg .imsg-b>i{text-shadow:0 1px 3px rgba(0,0,0,.45);}
@@ -2193,7 +2202,7 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
 .imsg.hasbg .imsg-kind,.imsg.hasbg .imsg-date{color:rgba(255,255,255,.72);text-shadow:0 1px 6px rgba(0,0,0,.5);}
 /* 输入框那圈白描边压得太重，字和小话筒都看不清了——它单独调轻一档，
    里面再压一点点暗，字和话筒才浮得出来。 */
-.imsg.hasbg .imsg-field{background:linear-gradient(140deg,rgba(255,255,255,.34),rgba(255,255,255,.1) 28%,rgba(255,255,255,.05) 56%,rgba(255,255,255,.08) 80%,rgba(255,255,255,.22))!important;-webkit-backdrop-filter:brightness(1.24) saturate(1.4);backdrop-filter:brightness(1.24) saturate(1.4);}
+.imsg.hasbg .imsg-field{background:transparent!important;-webkit-backdrop-filter:brightness(1.3) saturate(1.45);backdrop-filter:brightness(1.3) saturate(1.45);}
 .imsg.hasbg .imsg-field textarea{color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.5);}
 .imsg.hasbg .imsg-field textarea::placeholder{color:rgba(255,255,255,.82);}
 .imsg.hasbg .imsg-wave{opacity:1;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6));}

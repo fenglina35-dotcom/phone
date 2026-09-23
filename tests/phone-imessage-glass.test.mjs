@@ -86,11 +86,10 @@ test('玻璃糊一点，但不能糊成一片磨砂', () => {
 test('输入框那圈单独调轻，字和小话筒浮得出来', () => {
   for (const s of shells) {
     const rim = s.match(/\.imsg\.hasbg \.imsg-rb,[^{]*\.imsg\.hasbg \.imsg-field\{[^}]*\}/)[0];
-    const strong = parseFloat(rim.match(/linear-gradient\(140deg,rgba\(255,255,255,(\.\d+)\)/)[1]);
-    const field = s.match(/\.imsg\.hasbg \.imsg-field\{background:linear-gradient\(140deg,rgba\(255,255,255,(\.\d+)\)[^}]*!important/);
+    const strong = parseFloat(rim.match(/backdrop-filter:brightness\((1\.\d+)\)/)[1]);
+    const field = s.match(/\.imsg\.hasbg \.imsg-field\{background:transparent!important;[^}]*backdrop-filter:brightness\((1\.\d+)\)/);
     assert.ok(field, '输入框没有单独那条调轻的规则');
-    const light = parseFloat(field[1]);
-    assert.ok(light < strong, `输入框那圈(${light})必须比别处(${strong})轻，不然把字和话筒都压没了`);
+    assert.ok(parseFloat(field[1]) < strong, `输入框那圈(${field[1]})必须比别处(${strong})轻，不然把字和话筒都压没了`);
     assert.match(s, /\.imsg\.hasbg \.imsg-field textarea::placeholder\{color:rgba\(255,255,255,\.8\d\);\}/, 'placeholder 要提亮');
     assert.match(s, /\.imsg\.hasbg \.imsg-wave\{opacity:1;filter:drop-shadow/, '小话筒要提亮、加投影才看得清');
   }
@@ -131,7 +130,8 @@ test('高光跟着背景变颜色，不是只有白色', () => {
     const rim = s.match(/\.imsg\.hasbg \.imsg-rb,[^{]*\.imsg\.hasbg \.imsg-field\{[^}]*\}/)[0];
     assert.match(rim, /backdrop-filter:brightness\(1\.\d+\) saturate\(1\.\d+\)/, '描边要靠 brightness+saturate 把背景的颜色吸上来');
     assert.equal(/backdrop-filter:[^;]*blur/.test(rim), false, '描边那层不能糊，糊了就吸不到颜色了');
-    assert.match(rim, /background:linear-gradient\(140deg/, '白色那层渐变还要在，高光才有虚有实');
+    /* 描边一点白都不许画：它铺满整块形状，里面那层的 blur 会把白摊成一片雾 */
+    assert.match(rim, /background:transparent/, '描边层再画白色，里面就又会糊出白雾');
     for (const who of ['them', 'me']) {
       const b = s.match(new RegExp(`\\.imsg\\.hasbg \\.imsg-row\\.${who} \\.imsg-b\\{[^}]*\\}`))[0];
       assert.match(b, /backdrop-filter:brightness\(1\.\d+\) saturate\(1\.\d+\)/, `${who} 的描边也要跟着背景走`);
@@ -382,6 +382,61 @@ test('加效果那一下重绘，输入框里的字不能被冲掉', () => {
   assert.match(fn, /<div class="imsg-bar\$\{String\(_phFx\.prev\|\|''\)\.trim\(\)\?' typing':''\}"/, '发送键的状态也要跟着算');
 });
 
+test('白雾的根在描边层：它画白，里面那层就会把白糊开', () => {
+  /* 第一版只把里面那层改成 transparent，她说「还是有明显的白雾，我没有看到任何变化」。
+     根因是描边层（父元素）的白渐变铺满了整块形状，里面那层的 backdrop-filter
+     会把它一起糊开、摊成一片雾。所以换过背景时父元素一点白都不能画：
+     高光全靠 brightness/saturate 把背景自己提亮，里面那层再用一组反向的把它抵消回去。 */
+  for (const s of shells) {
+    for (const sel of ['\\.imsg\\.hasbg \\.imsg-rb,', '\\.imsg\\.hasbg \\.imsg-row\\.them \\.imsg-b\\{', '\\.imsg\\.hasbg \\.imsg-row\\.me \\.imsg-b\\{']) {
+      const rule = s.match(new RegExp(sel + '[^{]*\\{?[^}]*\\}'))[0];
+      assert.equal(/background:linear-gradient\([^)]*rgba\(255,255,255/.test(rule), false,
+        '描边层又画白了，里面会糊出白雾：' + rule.slice(0, 60));
+    }
+    /* 里面那层要把描边那份提亮抵消掉，不然整块会偏亮 */
+    const up = parseFloat(s.match(/\.imsg\.hasbg \.imsg-rb,[^{]*\{[^}]*backdrop-filter:brightness\((1\.\d+)\)/)[1]);
+    const down = parseFloat(s.match(/\.imsg\.hasbg \.imsg-row\.them \.imsg-b:before\{[^}]*backdrop-filter:blur\(9px\) brightness\((\.\d+)\)/)[1]);
+    assert.ok(Math.abs(up * down - 1) < 0.1, `提亮和抵消要互相抵掉，现在是 ${up}×${down}=${(up * down).toFixed(2)}`);
+  }
+});
+test('爆发：每个字往外蹦，方向按序号算死，不是随机', () => {
+  const ctx = { esc: t => String(t), PH_FX_ALL: ['burst', 'big'], PH_FX_PERCHAR: ['burst'], Math };
+  vm.createContext(ctx);
+  vm.runInContext(source('phFxRunHTML'), ctx);
+  const a = vm.runInContext("phFxRunHTML({t:'爆发啦',e:['burst']})", ctx);
+  const b = vm.runInContext("phFxRunHTML({t:'爆发啦',e:['burst']})", ctx);
+  assert.equal(a, b, '同一条消息每次重播、换台设备看到的都得一样，不能用随机');
+  assert.match(a, /--dx:-?\d+px;--dy:-?\d+px;--dr:-?\d+deg/, '每个字要有自己的方向');
+  const dxs = [...a.matchAll(/--dx:(-?\d+)px/g)].map(m => m[1]);
+  assert.equal(dxs.length, 3);
+  assert.ok(new Set(dxs).size > 1, '三个字不能往同一个方向蹦');
+  assert.equal(/--dx/.test(vm.runInContext("phFxRunHTML({t:'爱你',e:['big']})", ctx)), false, '只有爆发才需要方向');
+  for (const s of shells) {
+    assert.match(s, /@keyframes imfx-burst\{/);
+    assert.match(s, /\.imfx-burst \.imfxc\{animation:imfx-burst 3s infinite/);
+  }
+  for (const x of [app, priv]) {
+    assert.match(x, /\['burst','爆发'\]\]/, '面板里要有「爆发」这一项');
+    assert.match(x, /PH_FX_PERCHAR=\['shake','nod','wave','bloom','jitter','burst'\]/, '爆发是一个字一个字动的');
+  }
+});
+test('整屏特效盖满整个手机屏，不是只盖聊天那一块', () => {
+  /* 她说「全屏气泡一定是在全屏上面的，不是在一个位置」 */
+  assert.match(source('phScreenFx'), /document\.querySelector\('\.screen'\)\|\|document\.querySelector\('\.imsg'\)/,
+    '要挂在手机屏那一层，.imsg 只是聊天那一块');
+  for (const s of shells) {
+    assert.match(s, /\.imsfx\{position:absolute;inset:0;[^}]*z-index:2200/, '层级要压在聊天内容上面');
+    assert.match(s, /\.screen\{position:relative;/, '手机屏得是定位祖先，不然 inset:0 贴错地方');
+  }
+});
+test('信息这一片的弹窗不用粉按钮，跟气泡同一个蓝', () => {
+  for (const s of shells) assert.match(s, /\.btn\.imblue\{background:#0a84ff!important/);
+  for (const fn of ['phFxTextModal', 'phFxSendModal', 'phSmsPlusMenu', 'phSmsMenu']) {
+    const src = source(fn);
+    assert.equal(/class="btn p"/.test(src), false, `${fn} 里还有粉按钮`);
+  }
+});
+
 /* ===== 正在输入 ===== */
 test('角色在短信里也有「正在输入」的三个小点', () => {
   const ctx = { render: () => { ctx.drew = (ctx.drew || 0) + 1; }, phDigits: n => String(n), _phSmsTyping: {} };
@@ -490,8 +545,16 @@ test('回复长度也跟随设置里的「回复长度（线上聊天）」', ()
 });
 
 /* ===== ＋ 就是相册 ===== */
-test('＋ 点一下直接开相册，不再弹菜单', () => {
-  assert.match(source('renderPhoneIMsg'), /class="imsg-plus" onclick="phSmsPic\('\$\{esc\(num\)\}','\$\{esc\(sk\)\}'\)"/);
+test('＋ 里面收着照片和文字效果，下面那排没多按钮', () => {
+  /* 她说「不要改变下面的布局，把功能放在 ＋ 号里」——Aa 那个按钮撤掉了 */
+  const r = source('renderPhoneIMsg');
+  assert.match(r, /class="imsg-plus\$\{phFxHas\(\)\?' on':''\}" onclick="phSmsPlusMenu\(/);
+  assert.equal(/imsg-aa/.test(r), false, '下面那排又多出一个按钮了');
+  const menu = source('phSmsPlusMenu');
+  assert.match(menu, /onclick="closeModal\(\);phSmsPic\(/, '照片要在里面');
+  assert.match(menu, /onclick="closeModal\(\);phFxOpenText\(\)"/, '文字效果也要在里面');
+  assert.equal(/btn p"/.test(menu), false, '不要粉按钮');
+  assert.match(menu, /class="btn imblue"/, '主按钮跟气泡同一个蓝');
   const fn = source('phSmsPic');
   assert.match(fn, /pickFile\('image\/\*'/, '得真的调相册');
   assert.match(fn, /compress\(f,900,\.74\)/);
@@ -569,7 +632,7 @@ test('没识出来的那张能重新看一次', () => {
   const fn = source('phSmsRetryVision');
   assert.match(fn, /m\.visionState='pending';m\.imgDesc='';/);
   assert.match(fn, /phSmsVision\(m,null\)/);
-  assert.match(source('phSmsMenu'), /bad\?`<button class="btn p" onclick="phSmsRetryVision\(/, '菜单里要有重试的入口');
+  assert.match(source('phSmsMenu'), /bad\?`<button class="btn imblue" onclick="phSmsRetryVision\(/, '菜单里要有重试的入口');
   assert.match(source('phSmsMenu'), /ta看到的画面：\$\{esc\(m\.imgDesc\)\}/, '顺手让她看得到 ta 看见了什么');
 });
 
