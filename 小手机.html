@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='1304';</script>
+<script>window.__NORTH_SHELL_BUILD__='1306';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-1304-web-imsg-1';
+  var key='north-sw-reloaded-1306-web-imsg-1';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=1304&r=v1304-web-imsg-1';
+  var url='sw.js?v=1306&r=v1306-web-imsg-1';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -2105,8 +2105,16 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
 .imfx-wave .imfxc{animation:imfx-wave 3s infinite;animation-delay:calc(var(--i)*.09s);}
 .imfx-bloom .imfxc{animation:imfx-bloom 3s infinite;animation-delay:calc(var(--i)*.08s);}
 .imfx-jitter .imfxc{animation:imfx-jitter 3.4s infinite;animation-delay:calc(var(--i)*.028s);}
-/* 爆发是 8 秒一轮：蹦出去就没了，整整五秒看不见，然后才飞回来 */
-.imfx-burst .imfxc{animation:imfx-burst 8s infinite;animation-delay:calc(var(--i)*.045s);}
+/* 爆发不再是气泡里的循环动画了。气泡自己带 clip-path（那个小尾巴就是剪出来的），
+   放在气泡里的字一飞出气泡边缘就被整块裁掉——截下来气泡是空的，
+   她说的「蹦出去」其实一次都没真正看见过。
+   现在爆发的时候把这几个字原样复制一份贴到屏幕层上飞（.imburst，不受气泡裁剪），
+   原来那几个字先藏起来，五秒之后再弹回来。 */
+.imfx-burst.away .imfxc{visibility:hidden;}
+.imfx-burst.back .imfxc{animation:imburst-back .52s cubic-bezier(.2,1.55,.35,1) both;
+  animation-delay:calc(var(--i)*.045s);}
+@keyframes imburst-back{0%{opacity:0;transform:scale(.6)}
+  46%{opacity:1;transform:scale(1.16)}72%{transform:scale(.95)}100%{opacity:1;transform:scale(1)}}
 /* 放大：撑到最大之后要「撑住」一会儿才缩回去（18%～52%，约 1.4 秒） */
 @keyframes imfx-big{0%,4%{transform:scale(1)}13%{transform:scale(1.95)}
   18%,52%{transform:scale(1.78)}62%{transform:scale(.9)}70%{transform:scale(1.07)}78%,100%{transform:scale(1)}}
@@ -2120,13 +2128,22 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
   15%{transform:translateY(.14em)}22%{transform:translateY(-.06em)}}
 @keyframes imfx-wave{0%,24%,100%{transform:translateY(0)}8%{transform:translateY(-.36em)}16%{transform:translateY(.13em)}}
 @keyframes imfx-bloom{0%{transform:scale(0) rotate(-45deg);opacity:0;filter:blur(3px)}9%{transform:scale(1.3) rotate(8deg);opacity:1;filter:blur(0)}16%,100%{transform:scale(1) rotate(0);opacity:1;filter:blur(0)}}
-/* 爆发：拆开蹦出去、直接消失，在外面待满五秒（10%～72.5% 的 8 秒 = 5.0 秒）才飞回来 */
-@keyframes imfx-burst{0%,3%{transform:translate(0,0) scale(1) rotate(0);opacity:1}
-  10%{transform:translate(var(--dx),var(--dy)) scale(1.95) rotate(var(--dr));opacity:0}
-  72.5%{transform:translate(var(--dx),var(--dy)) scale(1.95) rotate(var(--dr));opacity:0}
-  82%{transform:translate(0,0) scale(1.14) rotate(0);opacity:1}
-  89%{transform:translate(0,0) scale(.95) rotate(0);opacity:1}
-  95%,100%{transform:translate(0,0) scale(1) rotate(0);opacity:1}}
+/* 爆发：抛出去 → 摔第一下（斜的） → 弹起来 → 摔第二下（已经转成倒着的） →
+   再颠一下 → 滑出去没了。她说「像摔了两下，第一下是斜的第二下就可能是倒着的」。
+   --fy 是落点（往下多少像素），--h2/--h3 是两次弹起的高度，转的角度一路往上加，
+   所以第二下落地时正好翻过去接近倒着。 */
+.imburst{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:2300;}
+.imburst b{position:absolute;display:block;white-space:pre;transform-origin:50% 50%;
+  font-style:normal;will-change:transform,opacity;animation:imburst-fly linear forwards;}
+@keyframes imburst-fly{
+  0%{transform:translate(0,0) scale(1) rotate(0);opacity:1}
+  15%{transform:translate(calc(var(--bx) * .36),calc(var(--fy) - var(--h1))) scale(1.5) rotate(calc(var(--r1) * .42));opacity:1}
+  29%{transform:translate(calc(var(--bx) * .6),var(--fy)) scale(1.3) rotate(var(--r1));opacity:1}
+  41%{transform:translate(calc(var(--bx) * .76),calc(var(--fy) - var(--h2))) scale(1.2) rotate(calc(var(--r1) + 96deg));opacity:1}
+  54%{transform:translate(calc(var(--bx) * .89),var(--fy)) scale(1.1) rotate(calc(var(--r1) + 188deg));opacity:1}
+  63%{transform:translate(calc(var(--bx) * .96),calc(var(--fy) - var(--h3))) scale(1.05) rotate(calc(var(--r1) + 226deg));opacity:1}
+  76%{transform:translate(var(--bx),var(--fy)) scale(1) rotate(calc(var(--r1) + 254deg));opacity:1}
+  100%{transform:translate(calc(var(--bx) * 1.07),var(--fy)) scale(.84) rotate(calc(var(--r1) + 272deg));opacity:0}}
 /* 抖动：她说「抖动的久一点、厉害一点，不是幅度是频率」——
    所以幅度一点没加，是把步数堆密（26 步）、时间从 0.75 秒拉到 2 秒。 */
 @keyframes imfx-jitter{0%,62%,100%{transform:translate(0,0)}
@@ -2207,6 +2224,35 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
 .imsg-b.iminv.shown>i{filter:none;opacity:1;}
 .iminv-cv{position:absolute;inset:0;width:100%;height:100%;z-index:3;border-radius:inherit;cursor:grab;
   transition:opacity .4s ease;touch-action:none;}
+/* ===== 短信里的语音条 =====
+   她说「短信里也做可以让角色发语音的功能，发的语音也是带有翻译的，如果是外语的话，
+   就是跟微信的一样，气泡的话不跟微信一样，和现在这个短信一样就行」。
+   所以能力照搬微信（同一套 TTS、同一套外语原文＋中文翻译），
+   但外观一律走 .imsg-b 这套磨砂＋细高光的短信气泡，不带微信的绿皮。 */
+/* 语音条底下那行转文字比气泡宽，.imsg-col 是 flex 列、默认 stretch，
+   气泡就会被撑得和文字一样宽，看着空一大块。让它按自己的内容收住。 */
+.imsg-b.imsgv{cursor:pointer;align-self:flex-start;}
+.imsg-row.me .imsg-b.imsgv{align-self:flex-end;}
+.imsg-b.imsgv>i{display:inline-flex;align-items:center;gap:10px;}
+.imsgv-wave{height:17px;display:inline-flex;align-items:center;gap:3px;flex:0 0 auto;}
+.imsgv-wave i{width:3px;height:7px;border-radius:3px;background:currentColor;opacity:.72;
+  transform-origin:center;animation:imsgv-idle 1.35s ease-in-out infinite;}
+.imsgv-wave i:nth-child(2){height:13px;animation-delay:.12s}
+.imsgv-wave i:nth-child(3){height:9px;animation-delay:.24s}
+.imsgv-wave i:nth-child(4){height:15px;animation-delay:.36s}
+.imsg-b.imsgv.playing .imsgv-wave i{animation:imsgv-live .42s ease-in-out infinite;}
+.imsg-b.imsgv.loading .imsgv-wave i{animation:imsgv-live .72s ease-in-out infinite;opacity:.9;}
+.imsgv-dur{font-size:12.5px;opacity:.72;flex:0 0 auto;}
+@keyframes imsgv-idle{0%,100%{transform:scaleY(.82)}50%{transform:scaleY(1.12)}}
+@keyframes imsgv-live{0%,100%{transform:scaleY(.5)}50%{transform:scaleY(1.5)}}
+/* 转文字那一条：原文一行，外语的话底下再跟一行「译」 */
+.imsg-vtext{margin:4px 2px 0;padding:7px 11px;border-radius:12px;font-size:13px;line-height:1.5;
+  color:rgba(255,255,255,.88);background:rgba(120,120,128,.26);cursor:pointer;
+  -webkit-backdrop-filter:blur(12px) saturate(1.2);backdrop-filter:blur(12px) saturate(1.2);}
+.imsg-row.me .imsg-vtext{text-align:right;}
+.imsg-vtext .tr{display:block;margin-top:3px;color:rgba(255,255,255,.6);font-size:12.5px;}
+.imsg-vtext .tr:before{content:'译 ';opacity:.7;}
+.imsg.hasbg .imsg-vtext{background:rgba(0,0,0,.3);}
 /* 重播 */
 .imsg-fxrp{display:block;margin:3px 2px 0;font-size:11.5px;color:rgba(255,255,255,.52);cursor:pointer;line-height:1;}
 .imsg-row.me .imsg-fxrp{text-align:right;}
@@ -2226,29 +2272,25 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
 /* ── 回声：满屏都是这条气泡，一圈一圈绕着飞，顺逆交替；里面那层反着转，字始终是正的 ── */
 /* 外层绕圈、内层反着转（字始终是正的）。两层用一模一样的 linear 和关键帧位置，
    差一点点就会「字跟着歪」，所以时间函数不许改成 ease。 */
-/* 她说「回声的转动方向不对，就是顺时针转动，但不是像那种漩涡一样的」。
-   两处都改了：① 去掉顺逆交替，全部顺时针；② 一出场就在自己那一圈上，
-   半径从头到尾不变，所以是绕圈，不是从中心螺旋着甩出去。 */
-.imsfx-echo i{left:50%;top:47%;width:0;height:0;transform-origin:0 0;
-  animation:imsfx-orbit-cw linear forwards;}
+/* ── 回声：照真机重做 ──
+   她说「回声效果还是不对，你能不能参考一下真实的短信」。真机的 Echo 不转圈：
+   这条气泡复制出几十份，【从原来那条气泡的位置】炸出去铺满整屏，停一会儿，
+   再一起收回那条气泡里消失。所以这里不再有绕圈、也不再有半径，
+   只有「从原点飞到各自的落点，停住，再回原点」。 */
+.imsfx-echo i{left:var(--ox);top:var(--oy);width:0;height:0;
+  animation:imsfx-echo cubic-bezier(.16,.86,.3,1) forwards;}
 .imsfx-echo i>b{position:absolute;left:0;top:0;display:block;transform:translate(-50%,-50%);
   padding:7px 14px;border-radius:17px;white-space:nowrap;font-size:14.5px;font-weight:600;color:#fff;
-  background:linear-gradient(140deg,#5aade0ff,#0a6ff0);box-shadow:0 7px 20px rgba(10,110,240,.5),inset 0 1px rgba(255,255,255,.45);
-  animation:imsfx-unspin-cw linear forwards;}
+  background:linear-gradient(140deg,#5aade0ff,#0a6ff0);box-shadow:0 7px 20px rgba(10,110,240,.5),inset 0 1px rgba(255,255,255,.45);}
 .imsfx-echo i.alt>b{background:linear-gradient(140deg,#9d8bff,#5a3fe0);box-shadow:0 7px 20px rgba(110,80,240,.5),inset 0 1px rgba(255,255,255,.45);}
-/* 半径全程都是 --r（不再从 0 开始），只有透明度和一点点缩放在进出场时变，
-   所以看着是一圈一圈地绕，没有漩涡。里层反着转的角度必须和外层一一对应，
-   差一点字就会跟着歪，所以两组关键帧的百分比和度数是成对写死的。 */
-@keyframes imsfx-orbit-cw{
-  0%{opacity:0;transform:rotate(var(--a)) translateX(var(--r)) scale(calc(var(--sc) * .74))}
-  9%{opacity:var(--op);transform:rotate(calc(var(--a) + 34deg)) translateX(var(--r)) scale(var(--sc))}
-  88%{opacity:var(--op);transform:rotate(calc(var(--a) + 632deg)) translateX(var(--r)) scale(var(--sc))}
-  100%{opacity:0;transform:rotate(calc(var(--a) + 680deg)) translateX(var(--r)) scale(calc(var(--sc) * .86))}}
-@keyframes imsfx-unspin-cw{
-  0%{transform:translate(-50%,-50%) rotate(calc(0deg - var(--a)))}
-  9%{transform:translate(-50%,-50%) rotate(calc(-34deg - var(--a)))}
-  88%{transform:translate(-50%,-50%) rotate(calc(-632deg - var(--a)))}
-  100%{transform:translate(-50%,-50%) rotate(calc(-680deg - var(--a)))}}
+/* 副本本身不需要再反着转了——它跟着气泡一起微微倾斜才像真的飞出去，
+   所以 <b> 只负责把自己摆正在原点上，一个动画都不挂。 */
+@keyframes imsfx-echo{
+  0%{opacity:0;transform:translate(0,0) scale(.18) rotate(0)}
+  7%{opacity:1}
+  40%{opacity:1;transform:translate(var(--x),var(--y)) scale(var(--sc)) rotate(var(--rot))}
+  72%{opacity:1;transform:translate(var(--x),var(--y)) scale(var(--sc)) rotate(var(--rot))}
+  100%{opacity:0;transform:translate(0,0) scale(.14) rotate(0)}}
 
 /* ── 气球：有高光、有结、绳子会摆，边升边左右晃 ── */
 .imsfx-balloons i{bottom:-64px;width:var(--w);height:var(--h);animation:imsfx-rise ease-in-out forwards;}
@@ -2310,7 +2352,8 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
 .imsfx-love i.up{bottom:-40px;animation:imsfx-heart linear forwards;will-change:transform;}
 .imsfx-love i.up>b{animation:imsfx-hgrow linear forwards;animation-duration:inherit;}
 .imsfx-love i.up>b>u{animation:imsfx-hsway ease-in-out infinite alternate;animation-duration:var(--swd);}
-.imsfx-love i.beat{left:50%;top:56%;opacity:0;animation:imsfx-beat 1.7s linear forwards;}
+/* 她说「爱心那个最大的不要了，改成满屏的小爱心升上去就可以」——
+   中间那三颗心跳大爱心整个去掉了，只留满屏往上飘的小爱心。 */
 /* transform 只写在 0% 和 100%，中间那两帧只动透明度——所以上升是一条直线，
    匀速到底，中途没有任何一个「停下来」的点。 */
 @keyframes imsfx-heart{0%{transform:translateY(0);opacity:0}
@@ -2318,12 +2361,11 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
   100%{transform:translateY(calc(0px - var(--rise)));opacity:0}}
 @keyframes imsfx-hgrow{0%{transform:scale(.36)}56%{transform:scale(1.04)}100%{transform:scale(.8)}}
 @keyframes imsfx-hsway{0%{transform:translateX(calc(0px - var(--sway)))}100%{transform:translateX(var(--sway))}}
-@keyframes imsfx-beat{0%{transform:translate(-50%,-50%) scale(.2);opacity:0}
-  14%{transform:translate(-50%,-50%) scale(1.06);opacity:.92}
-  24%{transform:translate(-50%,-50%) scale(.92);opacity:.86}
-  100%{transform:translate(-50%,-50%) scale(3.1);opacity:0}}
+
 
 /* ── 烟花：先升空拖尾，炸开的碎片走抛物线（横向匀速＋纵向重力），带闪光和余烬 ── */
+/* 她说「烟花我也想让屏幕暗下来」——和流星同一套做法，整层自己淡入一层夜色 */
+.imsfx-fireworks{animation:imsfx-night 6.6s ease-in-out forwards;}
 /* 她说「烟花我想要的是那种从屏幕底部升上去，然后炸开的那种」。
    原来也写了升空，但飞多高是按 100vh 算的——网页版的手机只占窗口一小块，
    炮弹一出手就冲到窗口外面去了，整个上升过程根本看不见。
@@ -2497,9 +2539,9 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
 /* 作品文案里的 @ 也要挑出来 */
 .dyat-tx{color:#9ec6ff;font-weight:400;}
 </style>
-<link rel="stylesheet" href="glass-theme.css?v=1304&r=music-disc-color-1">
-<link rel="stylesheet" href="wechat-me.css?v=1304">
-<link rel="stylesheet" href="pet-game.css?v=1304">
+<link rel="stylesheet" href="glass-theme.css?v=1306&r=music-disc-color-1">
+<link rel="stylesheet" href="wechat-me.css?v=1306">
+<link rel="stylesheet" href="pet-game.css?v=1306">
 <link rel="stylesheet" href="wedding-game.css?v=wedding-dual-17">
 </head>
 <body>
@@ -2553,36 +2595,36 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail(window.__northBootStarted?'本机存档读取超过 60 秒，请重新加载；仍不会删除聊天、角色或主题':'关键页面文件加载超过 60 秒，请检查网络后重新加载');},60000);
 })();
 </script>
-<script src="browser-diagnostics.js?v=1304"></script>
-<script src="license-gate.js?v=1304" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="couple-watch.js?v=1304" onerror="__northBootFail('页面组件载入失败')"></script>
-<script src="request-diagnostics.js?v=1304"></script>
-<script src="message-beijing-time.js?v=1304"></script>
-<script src="app.js?v=1304&r=v1304-web-imsg-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="cohab-theater.js?v=1304&r=v1274-web-cohab-guests-1" onerror="__northBootFail('共同生活多人剧场组件载入失败（可能是网络或 404）')"></script>
-<script src="public-north-policy.js?v=1304"></script>
-<script src="public-north-runtime.js?v=1304"></script>
-<script src="phone-shortcuts.js?v=1304"></script>
-<script src="daily-event-ledger.js?v=1304" onerror="console.warn('日常事件簿组件未加载，聊天仍可使用')"></script>
-<script src="request-size-details.js?v=1304" onerror="__northBootFail('请求规模详情组件载入失败')"></script>
-<script src="cohab-model-diagnostics.js?v=1304" onerror="__northBootFail('共同生活模型诊断组件载入失败')"></script>
-<script src="bead-studio.js?v=1304&r=v1184-pixel-puzzle-4" onerror="__northBootFail('像素拼拼乐组件载入失败（可能是网络或 404）')"></script>
-<script src="heart-quiz.js?v=1304" onerror="console.warn('心动审判预览组件载入失败')"></script>
-<script src="web-hotfix.js?v=1304&r=v1304-web-imsg-1" onerror="__northBootFail('网页热修复组件载入失败（可能是网络或 404）')"></script>
+<script src="browser-diagnostics.js?v=1306"></script>
+<script src="license-gate.js?v=1306" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="couple-watch.js?v=1306" onerror="__northBootFail('页面组件载入失败')"></script>
+<script src="request-diagnostics.js?v=1306"></script>
+<script src="message-beijing-time.js?v=1306"></script>
+<script src="app.js?v=1306&r=v1306-web-imsg-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="cohab-theater.js?v=1306&r=v1274-web-cohab-guests-1" onerror="__northBootFail('共同生活多人剧场组件载入失败（可能是网络或 404）')"></script>
+<script src="public-north-policy.js?v=1306"></script>
+<script src="public-north-runtime.js?v=1306"></script>
+<script src="phone-shortcuts.js?v=1306"></script>
+<script src="daily-event-ledger.js?v=1306" onerror="console.warn('日常事件簿组件未加载，聊天仍可使用')"></script>
+<script src="request-size-details.js?v=1306" onerror="__northBootFail('请求规模详情组件载入失败')"></script>
+<script src="cohab-model-diagnostics.js?v=1306" onerror="__northBootFail('共同生活模型诊断组件载入失败')"></script>
+<script src="bead-studio.js?v=1306&r=v1184-pixel-puzzle-4" onerror="__northBootFail('像素拼拼乐组件载入失败（可能是网络或 404）')"></script>
+<script src="heart-quiz.js?v=1306" onerror="console.warn('心动审判预览组件载入失败')"></script>
+<script src="web-hotfix.js?v=1306&r=v1306-web-imsg-1" onerror="__northBootFail('网页热修复组件载入失败（可能是网络或 404）')"></script>
 <script src="vendor/qr/qrcode.js?v=2.0.4"></script>
 <script src="vendor/qr/jsQR.js?v=1.4.0"></script>
-<script src="wechat-me.js?v=1304" onerror="__northBootFail('微信个人页组件载入失败（可能是网络或 404）')"></script>
-<script src="smart-home.js?v=1304" onerror="__northBootFail('智能家电组件载入失败（可能是网络或 404）')"></script>
-<script src="delivery.js?v=1304" onerror="__northBootFail('真实外卖组件载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=1304" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="pet-game.js?v=1304" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
-<script src="pixel-home-policy.js?v=1304"></script>
-<script src="pixel-wardrobe-info.js?v=1304"></script>
-<script src="pixel-home.js?v=1304"></script>
-<script src="gift-effects.js?v=1304" onerror="console.warn('礼物粒子特效载入失败')"></script>
-<script src="thought-card-effects.js?v=1304" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
-<script src="ai-account.js?v=1304"></script>
+<script src="wechat-me.js?v=1306" onerror="__northBootFail('微信个人页组件载入失败（可能是网络或 404）')"></script>
+<script src="smart-home.js?v=1306" onerror="__northBootFail('智能家电组件载入失败（可能是网络或 404）')"></script>
+<script src="delivery.js?v=1306" onerror="__northBootFail('真实外卖组件载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=1306" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="pet-game.js?v=1306" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
+<script src="pixel-home-policy.js?v=1306"></script>
+<script src="pixel-wardrobe-info.js?v=1306"></script>
+<script src="pixel-home.js?v=1306"></script>
+<script src="gift-effects.js?v=1306" onerror="console.warn('礼物粒子特效载入失败')"></script>
+<script src="thought-card-effects.js?v=1306" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
+<script src="ai-account.js?v=1306"></script>
 <script src="wedding-game.js?v=wedding-dual-17" onerror="console.warn('现代婚礼预览载入失败')"></script>
-<script src="couple-watch-runtime.js?v=1304" onerror="__northBootFail('页面组件载入失败')"></script>
+<script src="couple-watch-runtime.js?v=1306" onerror="__northBootFail('页面组件载入失败')"></script>
 </body>
 </html>

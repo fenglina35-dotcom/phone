@@ -45,20 +45,20 @@ function functionSource(sourceText, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('private identifiers remain v1305 and iOS 386 while public advances independently', () => {
+test('private identifiers remain v1307 and iOS 387 while public advances independently', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1305'/);
-  assert.match(index, /app\.js\?v=1305&r=v1305-private-imsg-1/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1307'/);
+  assert.match(index, /app\.js\?v=1307&r=v1307-private-imsg-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(app, /APP_VER='v1305 · 特效返工：爆发、摇晃点头、撑气泡、烟花升空（私人）'/);
+  assert.match(app, /APP_VER='v1307 · 短信语音带翻译、爆发摔两下、回声照真机重做（私人）'/);
   assert.match(overlay, /336-daily-file-backup/);
-  assert.match(webview, /1\.0\.386 \(386\)/);
-  assert.match(bridge, /private static let build = "1\.0\.386 \(386\)"/);
+  assert.match(webview, /1\.0\.387 \(387\)/);
+  assert.match(bridge, /private static let build = "1\.0\.387 \(387\)"/);
   assert.match(bridge, /static let contractVersion = 41/);
-  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 386;/g) || []).length, 12);
-  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.386;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1304 · 特效返工：爆发、摇晃点头、撑气泡、烟花升空'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1304'/);
+  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 387;/g) || []).length, 12);
+  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.387;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1306 · 短信语音带翻译、爆发摔两下、回声照真机重做'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1306'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
@@ -146,7 +146,7 @@ test('diagnostics identify the protected stage without collecting content', () =
   assert.doesNotMatch(overlay, /messageBody|chatContent|authorizationToken/);
 });
 
-test('Mac guide identifies the current private v1305 iOS386 source', () => {
+test('Mac guide identifies the current private v1307 iOS387 source', () => {
   const install = fs.readFileSync(
     path.join(project, '第三百二十七次安装_v1206_完整衣柜_请先读.md'),
     'utf8',
@@ -160,11 +160,11 @@ test('Mac guide identifies the current private v1305 iOS386 source', () => {
     assert.match(guide, /Mac.*编译/);
     assert.match(guide, /真机|真实 iPhone/);
   }
-  assert.match(mac, /1\.0\.386 \(386\)/);
+  assert.match(mac, /1\.0\.387 \(387\)/);
   assert.match(mac, /原生桥.*38/);
   assert.match(install, /1\.0\.327 \(327\)/);
   assert.match(install, /原生桥.*35/);
-  assert.match(mac, /^# v1305 .*iOS386/);
+  assert.match(mac, /^# v1307 .*iOS387/);
   assert.match(mac, /网页.*推送/);
   assert.match(install, /私人内置网页 v1206/);
   assert.match(install, /两边共有/);

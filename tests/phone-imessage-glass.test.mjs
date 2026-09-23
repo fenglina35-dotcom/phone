@@ -326,7 +326,7 @@ test('动的字一个一个错开，整段动的不拆字', () => {
 test('每个效果循环一次的长短是按她的要求定的', () => {
   /* 放大缩小要「持续久一点才缩回去」所以放到 4.2 秒，抖动要「久一点」放到 3.4 秒，
      爆发要在外面待满五秒所以是 8 秒，其余照旧 3 秒。 */
-  const want = { big: '4.2s', small: '4.2s', shake: '3s', nod: '3s', wave: '3s', bloom: '3s', jitter: '3.4s', burst: '8s' };
+  const want = { big: '4.2s', small: '4.2s', shake: '3s', nod: '3s', wave: '3s', bloom: '3s', jitter: '3.4s' };
   for (const s of shells) {
     for (const [k, dur] of Object.entries(want)) {
       assert.match(s, new RegExp(`@keyframes imfx-${k}\\{`), `少了 ${k} 的动画`);
@@ -487,13 +487,15 @@ test('文字效果能单个字单个字地挑', () => {
   vm.runInContext('phFxOpenText()', open);
   assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(_phFxPick)', open)), [1],
     '她选中了「爱」，打开面板就该只有「爱」是选中的，不能整段全选');
-  /* 什么都没选中的时候才默认全选 */
+  /* 她说「选文字效果默认不全选蓝色，让我自己去点，要不然文字多的话还得一个个取消」：
+     没划选区的时候打开就是一个都不选，想整条都加自己点「全选」。 */
   open._phFxSel = { s: 0, e: 0 };
   open.$ = () => ({ value: '我爱你', selectionStart: 0, selectionEnd: 0 });
   open._phFxPick = [];
   vm.runInContext('phFxOpenText()', open);
-  assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(_phFxPick)', open)), [0, 1, 2],
-    '没选中任何字的时候才默认整段');
+  assert.deepEqual(JSON.parse(vm.runInContext('JSON.stringify(_phFxPick)', open)), [],
+    '没划选区就一个字都不选，不能默认整段全选中');
+  assert.match(source('phFxTextModal'), /phFxPickAll\(\)/, '得留一个「全选」按钮给她');
   /* 点一下不能翻两次：pointerdown 已经处理过的，补发的 click 要跳过 */
   assert.match(source('phFxPickDown'), /_phFxPickDone=1/);
   assert.match(source('phFxPickTap'), /if\(_phFxPickDone\)\{_phFxPickDone=0;return;\}/);
@@ -519,33 +521,33 @@ test('回声改成满屏气泡互相交替绕圈', () => {
   /* 她说「那个满屏飘字的效果，是那种我之前给你发的所有气泡，互相交替绕圈，
      意思是那个回声要改一下」 */
   const fn = source('phScreenFx');
-  assert.match(fn, /alt\?'alt':''/, '只分颜色，不分转向');
-  assert.equal(/'ccw'/.test(fn), false, '她说「回声的转动方向不对，就是顺时针转动」——不许再有逆时针');
-  assert.match(fn, /rings=\[[\d,]+\]/, '要分好几圈，才铺得满');
-  const rings = JSON.parse(fn.match(/rings=(\[[\d,]+\])/)[1]);
-  assert.ok(rings.length >= 4 && Math.max(...rings) >= 200, `最外圈才 ${Math.max(...rings)}px，铺不满一屏`);
+  /* 她说「回声效果还是不对，你能不能参考一下真实的短信」。真机的 Echo 不转圈：
+     副本从【这条气泡自己的位置】炸出去铺满整屏，停一会儿，再收回气泡里消失。 */
+  assert.equal(/'ccw'/.test(fn), false, '逆时针那套该删干净了');
+  assert.equal(/rings=\[/.test(fn), false, '还在按圈铺，说明又绕回去了');
+  assert.match(fn, /document\.querySelector\(`\.imsg-b\[data-mid="\$\{m\.id\}"\]`\)[\s\S]{0,260}--ox/,
+    '出发点必须是这条气泡自己的位置');
+  assert.match(fn, /const a=n\*2\.399963/, '落点用黄金角铺开，才既均匀又不成行');
+  assert.match(fn, /ox=Math\.max\(8,Math\.min\(92,\(r\.left\+r\.width\/2-SR\.left\)\/SW\*100\)\)/,
+    '原点要按这条气泡的真实位置算，不能写死在屏幕中间');
+  assert.match(fn, /oy=Math\.max\(8,Math\.min\(92,\(r\.top\+r\.height\/2-SR\.top\)\/SH\*100\)\)/);
+  assert.match(fn, /--x:\$\{px\.toFixed\(0\)\}px;--y:\$\{py\.toFixed\(0\)\}px/, '每一份要有自己的落点');
   for (const s of shells) {
-    for (const k of ['imsfx-orbit-cw', 'imsfx-unspin-cw'])
-      assert.match(s, new RegExp(`@keyframes ${k}\\{`), '少了 ' + k);
-    for (const k of ['imsfx-orbit-ccw', 'imsfx-unspin-ccw'])
-      assert.equal(new RegExp(`@keyframes ${k}\\{`).test(s), false, '逆时针那套该删干净了：' + k);
-    /* 「但不是像那种漩涡一样的」：半径从头到尾都是 --r，不许从 0 长出去 */
-    const orb = s.match(/@keyframes imsfx-orbit-cw\{[\s\S]*?\n@keyframes/)[0];
-    assert.equal(/translateX\(0\)/.test(orb), false, '又从中心螺旋着甩出去了，她说不要漩涡');
-    assert.equal(/translateX\(calc\(var\(--r\) \+/.test(orb), false, '结尾还在往外飘，也是漩涡');
-    assert.equal((orb.match(/translateX\(var\(--r\)\)/g) || []).length, 4, '四个关键帧的半径都得是 --r');
-    /* 顺时针 = 角度一路加，不许有减 */
-    assert.equal(/var\(--a\) -/.test(orb), false, '出现了往回转的角度，那就不是顺时针了');
+    for (const k of ['imsfx-orbit-cw', 'imsfx-unspin-cw', 'imsfx-orbit-ccw', 'imsfx-unspin-ccw'])
+      assert.equal(new RegExp(`@keyframes ${k}\\{`).test(s), false, '绕圈那套该删干净了：' + k);
+    assert.match(s, /@keyframes imsfx-echo\{/, '少了回声本身的关键帧');
+    /* 从原点出发、停住、再回原点：首尾都是 translate(0,0)，中间两帧停在落点上 */
+    const e = s.match(/@keyframes imsfx-echo\{[\s\S]*?\n  100%\{[^}]*\}\}/)[0];
+    assert.equal((e.match(/translate\(0,0\)/g) || []).length, 2, '要从气泡出发、再收回气泡里');
+    assert.equal((e.match(/translate\(var\(--x\),var\(--y\)\)/g) || []).length, 2, '中间要在落点上停一会儿');
+    assert.equal(/var\(--r\)/.test(e), false, '还在按半径走，说明又绕回圈里去了');
+    assert.match(s, /\.imsfx-echo i\{left:var\(--ox\);top:var\(--oy\)/, '每一份的原点就是那条气泡');
+    assert.equal(/\.imsfx-echo i>b\{[^}]*animation:/.test(s), false, '不绕圈就不需要里层反着转了');
     assert.equal(/\.imsfx i\{[^}]*font-style:normal/.test(s), true,
       '粒子是 <i>，不复位的话回声气泡里的字会被浏览器弄成斜体');
-    /* 外圈转多少，内圈就要反着转多少，字才是正的；两边必须用同一个 linear */
-    const outer = s.match(/@keyframes imsfx-orbit-cw\{[\s\S]*?\n@keyframes/)[0];
-    const inner = s.match(/@keyframes imsfx-unspin-cw\{[\s\S]*?\n@keyframes/)[0];
-    const deg = t => [...t.matchAll(/([-\d]+)deg/g)].map(m => Math.abs(+m[1])).filter(Boolean);
-    assert.deepEqual(deg(outer).sort((a, b) => a - b), deg(inner).sort((a, b) => a - b),
-      '内外圈的角度对不上，字会跟着歪');
-    assert.match(s, /\.imsfx-echo i\{[^}]*animation:imsfx-orbit-cw linear/, '必须是 linear，换成 ease 两层就不同步了');
-    assert.match(s, /\.imsfx-echo i>b\{[^}]*animation:imsfx-unspin-cw linear/);
+    /* 飞出去要有「甩出去再稳住」的手感，所以整段挂一条 cubic-bezier；
+       中间那两帧是同一个落点，所以停的那一下是真的停住，不是慢慢挪。 */
+    assert.match(s, /\.imsfx-echo i\{[^}]*animation:imsfx-echo cubic-bezier/, '回声少了自己的时间函数');
   }
 });
 test('八个屏幕特效都重做过，不是几个色块', () => {
@@ -563,6 +565,17 @@ test('八个屏幕特效都重做过，不是几个色块', () => {
   assert.match(layers, /\{n:40,r0:82/, '外圈');
   assert.match(layers, /\{n:20,r0:34/, '内圈');
   assert.match(fn, /--tail:/, '碎片要带尾巴');
+  /* 她说「烟花再多一两个」 */
+  const shells2 = +fn.match(/for\(let b=0;b<(\d+);b\+\+\)\{/)[1];
+  assert.ok(shells2 >= 6, `只有 ${shells2} 朵，她说再多一两个（原来 4 朵）`);
+  /* 她说「爱心那个最大的不要了，改成满屏的小爱心升上去」 */
+  assert.equal(/'beat'/.test(fn), false, '又把最大的那几颗爱心放回来了');
+  const hearts = +fn.match(/for\(let n=0;n<(\d+);n\+\+\)add\(`left:\$\{rnd\(3,97\)/)[1];
+  assert.ok(hearts >= 34, `小爱心才 ${hearts} 颗，铺不满一屏（原来 18 颗）`);
+  /* 她说「流星不要一开始就固定在屏幕里，他是从屏幕最外面下来的，显得有些死板」：
+     起点要么在右边框外（left>100%），要么在顶边上面（top<0） */
+  assert.match(fn, /const lf=side\?rnd\(10[0-9],\d+\):rnd\([\d.]+,\d+\),tp=side\?rnd\(-\d+,\d+\):rnd\(-\d+,-\d+\);/,
+    '流星起点又跑回屏幕里了');
   assert.match(fn, /const SR=stage\.getBoundingClientRect\(\),SH=/, '要量这块屏幕的真实高度，不能拿 vh 当屏幕');
   assert.match(fn, /--rise:\$\{\(SH\*\(1-cy\/100\)\)\.toFixed\(0\)\}px/, '炮弹从最底下升到 cy 那个高度');
   assert.equal(/--to:/.test(fn), false, '旧的 vh 升空参数该删了');
@@ -591,6 +604,13 @@ test('八个屏幕特效都重做过，不是几个色块', () => {
     /* 她说「流星也可以多一点，然后让屏幕变暗一点流星变亮可以更好看」 */
     assert.match(s, /@keyframes imsfx-night\{/, '少了把屏幕压暗的那一层');
     assert.match(s, /\.imsfx-star\{animation:imsfx-night/, '压暗要挂在整层上，才盖得住整屏');
+    /* 她又说「烟花我也想让屏幕暗下来，绽放可以再放的久一点点，烟花再多一两个」 */
+    assert.match(s, /\.imsfx-fireworks\{animation:imsfx-night ([\d.]+)s/, '放烟花的时候屏幕也要暗下来');
+    const fwLife = +s.match(/\.imsfx-fireworks\{animation:imsfx-night ([\d.]+)s/)[1];
+    assert.ok(fwLife >= 6, `整场才 ${fwLife} 秒，她要「再放久一点点」`);
+    /* 她说「爱心那个最大的不要了，改成满屏的小爱心升上去就可以」 */
+    assert.equal(/\.imsfx-love i\.beat\{/.test(s), false, '中间那几颗最大的爱心该删干净了');
+    assert.equal(/@keyframes imsfx-beat\{/.test(s), false, '大爱心的关键帧也该删干净');
     assert.match(s, /\.imsfx-star i\.shoot>b:after\{[^}]*linear-gradient/, '流星少了拖尾');
     /* 气球：高光、结、会摆的绳子 */
     assert.match(s, /\.imsfx-balloons i>b\{[^}]*radial-gradient/, '气球少了高光');
@@ -687,7 +707,8 @@ test('角色也能发效果，他想发就发', () => {
   assert.match(recv, /phFxParseTags\(phCleanSmsText\(text\)\)/);
   assert.match(recv, /if\(tag\.fx\)m\.fx=tag\.fx;if\(tag\.bfx\)m\.bfx=tag\.bfx;if\(tag\.sfx\)m\.sfx=tag\.sfx;/);
   assert.match(recv, /if\(phMsgHasFx\(m\)\)setTimeout\(\(\)=>phFxPlay\(m,\$\('#smsbody'\)\)/, '收到就该放，不用她点重播');
-  assert.match(recv, /phMirrorSMS\(num,'them',text\)/, '同步进微信的还是干净正文');
+  assert.match(recv, /phMirrorSMS\(num,'them',m\.voice\?\(m\.text\+\(m\.trans\?'（'\+m\.trans\+'）':''\)\):text\)/,
+    '同步进微信的还是干净正文；语音就把说的话和翻译带过去');
 });
 test('加效果那一下重绘，输入框里的字不能被冲掉', () => {
   /* 第一版就是这么丢的：加完效果 render() 一次，textarea 是空的，字没了 */
@@ -718,27 +739,40 @@ test('白雾的根在描边层：白必须被剪成一个环，不能铺满整�
   }
 });
 test('爆发：每个字往外蹦，方向按序号算死，不是随机', () => {
-  const ctx = { esc: t => String(t), PH_FX_ALL: ['burst', 'big'], PH_FX_PERCHAR: ['burst'], Math };
-  vm.createContext(ctx);
-  vm.runInContext(source('phFxRunHTML'), ctx);
-  const a = vm.runInContext("phFxRunHTML({t:'爆发啦',e:['burst']})", ctx);
-  const b = vm.runInContext("phFxRunHTML({t:'爆发啦',e:['burst']})", ctx);
-  assert.equal(a, b, '同一条消息每次重播、换台设备看到的都得一样，不能用随机');
-  assert.match(a, /--dx:-?\d+px;--dy:-?\d+px;--dr:-?\d+deg/, '每个字要有自己的方向');
-  const dxs = [...a.matchAll(/--dx:(-?\d+)px/g)].map(m => m[1]);
-  assert.equal(dxs.length, 3);
-  assert.ok(new Set(dxs).size > 1, '三个字不能往同一个方向蹦');
-  assert.equal(/--dx/.test(vm.runInContext("phFxRunHTML({t:'爱你',e:['big']})", ctx)), false, '只有爆发才需要方向');
+  const fn = source('phBurstPlay');
+  /* 方向按序号算死，同一条消息每次重播、换台设备看到的都一样——不能用随机 */
+  assert.equal(/Math\.random/.test(fn), false, '爆发不能用随机，重播就不一样了');
+  assert.match(fn, /const dir=i%2\?1:-1,bx=dir\*\(96\+\(\(i\*37\)%74\)\)/, '一左一右按序号分开，不能全往一边蹦');
+  assert.match(fn, /stage=document\.querySelector\('\.screen'\)/, '要贴到屏幕层上，不是气泡里');
+  assert.match(fn, /em\.classList\.add\('away'\)/, '飞的时候原来那几个字要藏起来');
+  assert.match(fn, /b\.textContent=ch\.textContent/, '副本是照原字复制的');
+  assert.match(fn, /font-size:\$\{cs\.fontSize\};font-weight:\$\{cs\.fontWeight\};font-family:\$\{cs\.fontFamily\}/,
+    '字体要照抄原来那几个字，不然飞出去就变样了');
+  assert.match(fn, /PH_BURST_GONE/, '消失多久要用那个常量，别在函数里又写一个数');
+  for (const x of [app, priv])
+    assert.match(x, /const PH_BURST_FLY=2300,PH_BURST_GONE=5000;/, '摔完要整整五秒才回来');
+  assert.match(source('phFxPlay'), /phBurstPlay\(node\)/, '放效果的时候要真的放爆发');
   for (const s of shells) {
-    assert.match(s, /@keyframes imfx-burst\{/);
-    assert.match(s, /\.imfx-burst \.imfxc\{animation:imfx-burst 8s infinite/);
-    /* 她说「爆发之后字是蹦出去的，那些字都拆开蹦出去了也就是会消失，过 5 秒才会回来」：
-       10% 蹦出去就 opacity:0，一直不见到 72.5%，8 秒 × 62.5% = 整整 5.0 秒 */
-    const bu = s.match(/@keyframes imfx-burst\{[\s\S]*?\n  95%,100%[^}]*\}\}/)[0];
-    const gone = [...bu.matchAll(/(\d[\d.]*)%\{[^}]*opacity:0\}/g)].map(m => +m[1]);
-    assert.equal(gone.length, 2, '要有「蹦出去就消失」和「一直不见」两个关键帧');
-    const secs = 8 * (gone[1] - gone[0]) / 100;
-    assert.ok(secs >= 4.7 && secs <= 5.4, `消失了 ${secs.toFixed(1)} 秒，她要的是 5 秒`);
+    /* 气泡自己带 clip-path（小尾巴是剪出来的），放在气泡里的字一飞出边缘就被整块裁掉，
+       所以「蹦出去」这件事在气泡里根本做不到——实测截图里气泡是空的。
+       现在爆发的字是复制一份贴到屏幕层（.imburst）上飞的。 */
+    assert.equal(/animation:imfx-burst/.test(s), false,
+      '爆发又挂回气泡里了，会被气泡的 clip-path 裁掉，等于看不见');
+    assert.match(s, /\.imburst\{position:absolute;inset:0;/, '少了屏幕层');
+    assert.match(s, /\.imfx-burst\.away \.imfxc\{visibility:hidden;\}/, '飞的时候原来那几个字要藏起来');
+    assert.match(s, /@keyframes imburst-back\{/, '飞完要弹回来');
+    /* 她说「会在屏幕上蹦两下消失，就是像摔了两下，第一下是斜的第二下就可能是倒着的」：
+       落点 --fy 要在关键帧里出现两次（两次触地），而且角度一路往上加，
+       第二下落地时转过 180° 上下，正好是倒着的。 */
+    const fly = s.match(/@keyframes imburst-fly\{[\s\S]*?\n  100%[^}]*\}\}/)[0];
+    const lands = [...fly.matchAll(/,var\(--fy\)\) scale/g)].length;
+    assert.equal(lands, 4, `贴着地面的关键帧 ${lands} 个——该是「摔两下 + 落定 + 滑出去」正好四个`);
+    /* 两次真的弹起来：第一下摔完抬到 --h2，第二下摔完抬到 --h3，一次比一次低 */
+    const seq = fly.replace(/\s+/g, '');
+    assert.match(seq, /var\(--fy\)\)scale\(1\.3\)[\s\S]*var\(--h2\)[\s\S]*var\(--fy\)\)scale\(1\.1\)[\s\S]*var\(--h3\)[\s\S]*var\(--fy\)\)scale\(1\)/,
+      '摔—弹—摔—弹—落定这个顺序被打乱了');
+    assert.match(fly, /rotate\(calc\(var\(--r1\) \+ 188deg\)\)/, '第二下落地要翻到接近倒着');
+    assert.match(fly, /var\(--h1\)[\s\S]*var\(--h2\)[\s\S]*var\(--h3\)/, '三次弹起的高度要一次比一次低');
   }
   for (const x of [app, priv]) {
     assert.match(x, /\['burst','爆发'\]\]/, '面板里要有「爆发」这一项');
@@ -939,7 +973,8 @@ test('识出来的画面进上下文，没识出来就老实只写 [图片]', ()
   /* 三条短信线的记录里都要用它 */
   for (const x of [app, priv]) {
     assert.equal(/m\.img\?'\[图片\]':m\.text/.test(x), false, '还有地方只丢一句 [图片]');
-    assert.equal((x.match(/m\.img\?phSmsImgLine\(m\):m\.text/g) || []).length, 3,
+    assert.equal((x.match(/m\.img\?phSmsImgLine\(m\):m\.text/g) || []).length +
+      (x.match(/\+phSmsLineText\(m\)/g) || []).length, 3,
       '角色短信、陌生短信、伪装短信三条线都得带上描述');
   }
   assert.match(source('phRoleSmsReply'), /那段描述是系统真的看过这张图之后写下来的/, '也要告诉模型这段是真看过的');
@@ -989,7 +1024,8 @@ test('[换背景] 这个标签不会被当成正文发出来', () => {
   assert.match(fn, /r=r\.replace\(\/\[\\\[【\]\\s\*换背景\\s\*\[\\\]】\]\/g,' '\)/, '再从正文里抹掉');
   assert.match(fn, /if\(wantBg&&!phRoleSetSmsBg\(num,sk\)&&!parts\.length\)parts=\['我没找到你说的那张照片/, '没找到图又没话说时，得吭一声');
   assert.match(fn, /就在回复最后【单独一行】写 \[换背景\]/, '得告诉模型有这么一条');
-  assert.match(fn, /m\.img\?phSmsImgLine\(m\):m\.text/, '记录里要让模型看见她发过什么图');
+  assert.match(fn, /phSmsLineText\(m\)/, '记录里要让模型看见她发过什么图、发过什么语音');
+  assert.match(source('phSmsLineText'), /m\.img\?phSmsImgLine\(m\)/, '图还是写成 [图片：描述]');
 });
 test('微信里角色也能把她发的照片换成聊天背景', () => {
   for (const x of [app, priv]) {

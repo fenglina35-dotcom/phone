@@ -37,19 +37,19 @@ function pollHarness(){
   return {context,calls};
 }
 
-test('private candidate is v1305 and iOS 386 while public advances independently',()=>{
-  assert.match(app,/APP_VER='v1305 · 特效返工：爆发、摇晃点头、撑气泡、烟花升空（私人）'/);
+test('private candidate is v1307 and iOS 387 while public advances independently',()=>{
+  assert.match(app,/APP_VER='v1307 · 短信语音带翻译、爆发摔两下、回声照真机重做（私人）'/);
   for(const html of [index,alias]){
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1305'/);
-    assert.match(html,/app\.js\?v=1305&r=v1305-private-imsg-1/);
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1307'/);
+    assert.match(html,/app\.js\?v=1307&r=v1307-private-imsg-1/);
     assert.match(html,/private-runtime-diagnostics\.js\?v=339/);
   }
   assert.match(diagnostics,/OVERLAY_VERSION='336-daily-file-backup'/);
-  assert.match(webView,/1\.0\.386 \(386\)/);
-  assert.match(bridge,/private static let build = "1\.0\.386 \(386\)"/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 386;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.386;/g)||[]).length,12);
-  assert.match(publicApp,/APP_VER='v1304 · 特效返工：爆发、摇晃点头、撑气泡、烟花升空'/);
+  assert.match(webView,/1\.0\.387 \(387\)/);
+  assert.match(bridge,/private static let build = "1\.0\.387 \(387\)"/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 387;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.387;/g)||[]).length,12);
+  assert.match(publicApp,/APP_VER='v1306 · 短信语音带翻译、爆发摔两下、回声照真机重做'/);
 });
 
 test('ordinary foreground polling is lightweight while explicit control verification stays complete',async()=>{

@@ -58,21 +58,21 @@ function persistenceRuntime() {
   return { context, writes, releases, traces };
 }
 
-test('private identity remains v1305 and iOS 386 while public advances independently', () => {
-  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1305'/);
-  assert.match(privateApp, /APP_VER='v1305 · 特效返工：爆发、摇晃点头、撑气泡、烟花升空（私人）'/);
+test('private identity remains v1307 and iOS 387 while public advances independently', () => {
+  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1307'/);
+  assert.match(privateApp, /APP_VER='v1307 · 短信语音带翻译、爆发摔两下、回声照真机重做（私人）'/);
   for (const html of [privateIndex, privateAlias]) {
-    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1305'/);
-    assert.match(html, /app\.js\?v=1305&r=v1305-private-imsg-1/);
+    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1307'/);
+    assert.match(html, /app\.js\?v=1307&r=v1307-private-imsg-1/);
     assert.match(html, /private-runtime-diagnostics\.js\?v=339/);
   }
-  assert.match(privateRepair, /index\.html\?repair=1&v=1305/);
-  assert.match(swift, /1\.0\.386 \(386\)/);
-  assert.match(bridge, /private static let build = "1\.0\.386 \(386\)"/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 386;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.386;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1304 · 特效返工：爆发、摇晃点头、撑气泡、烟花升空'/);
-  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1304'/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1307/);
+  assert.match(swift, /1\.0\.387 \(387\)/);
+  assert.match(bridge, /private static let build = "1\.0\.387 \(387\)"/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 387;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.387;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1306 · 短信语音带翻译、爆发摔两下、回声照真机重做'/);
+  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1306'/);
   assert.doesNotMatch(publicApp, /persistWechatRequested|smallPhoneWechatPersistTrace/);
 });
 

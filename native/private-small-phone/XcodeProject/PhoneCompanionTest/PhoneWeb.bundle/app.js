@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1305'){
+if(window.__NORTH_SHELL_BUILD__!=='1307'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -440,7 +440,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1305 · 特效返工：爆发、摇晃点头、撑气泡、烟花升空（私人）';
+const APP_VER='v1307 · 短信语音带翻译、爆发摔两下、回声照真机重做（私人）';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1780,7 +1780,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1305&r=v1305-private-imsg-1';
+  const url='sw.js?v=1307&r=v1307-private-imsg-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -10327,7 +10327,7 @@ function phRecentsHTML(){const p=phState();let rows=phFilterRows((p.recents||[])
 function phContactsHTML(){const rows=phFilterRows(phAllContacts()).sort((a,b)=>(a.name||'').localeCompare(b.name||''));return `${rows.map(x=>`<div class="phrow" onclick="go('phonecontact',{num:'${esc(x.num)}'})">${phAvatar(x.num,'sm')}<div class="phmain"><div class="phname">${esc(x.name)}</div><div class="phsub">${esc(phFmt(x.num))} · ${esc(phRegion(x.num))}${x.blocked?' · 已屏蔽':''}</div></div><div class="phright">›</div></div>`).join('')||'<div class="empty">暂无联系人</div>'}`;}
 function phFavHTML(){const p=phState(),rows=(p.favorites||[]).map(n=>phFind(n)||{num:n,name:phFmt(n)});return rows.length?rows.map(x=>`<div class="phrow" onclick="go('phonecontact',{num:'${esc(x.num)}'})">${phAvatar(x.num,'sm')}<div class="phmain"><div class="phname">${esc(x.name)}</div><div class="phsub">${esc(phFmt(x.num))}</div></div><div class="phright">›</div></div>`).join(''):'<div class="empty">还没有收藏联系人</div>';}
 function phKeypadHTML(){const p=phState(),keys=[['1',''],['2','ABC'],['3','DEF'],['4','GHI'],['5','JKL'],['6','MNO'],['7','PQRS'],['8','TUV'],['9','WXYZ'],['*',''],['0','+'],['#','']];return `<div class="phkeypadpane">${phLineSwitchHTML()}<div class="phnum">${esc(phFmt(p.keypad||''))}</div><div class="phkeys">${keys.map(k=>`<button class="phkey" onclick="phKey('${k[0]}')">${k[0]}<small>${k[1]}</small></button>`).join('')}</div><div class="phdialrow"><span></span><button class="phcallbtn" onclick="phCall(phState().keypad)">${svgIc('phonecall',34,'#fff')}</button><button class="phdelbtn" onclick="phBackspace()" aria-label="退格"><span></span></button></div></div>`;}
-function phSmsListHTML(){const p=phState(),keys=Object.keys(p.sms||{}).filter(n=>(p.sms[n]||[]).length).sort((a,b)=>((p.sms[b].slice(-1)[0]||{}).time||0)-((p.sms[a].slice(-1)[0]||{}).time||0));return `${keys.length?keys.map(k=>{const a=p.sms[k],m=a[a.length-1],un=a.filter(x=>x.from==='them'&&!x.read).length,num=phSmsDisplayNum(k),alias=phSmsIsAliasKey(k),aliasNum=phSmsAliasNumFromKey(k),title=alias?'匿名号 · '+phName(num):phName(num),sub=alias?('从 '+phFmt(aliasNum)+' 发给 '+phName(num)+' · '+(m.text||'')):(m.text||'');return `<div class="phrow" onclick="openPhoneSMS('${esc(num)}','${esc(k)}')"><span style="width:8px;color:#0a84ff">${un?'●':''}</span>${alias?phDefaultAvatar('sm'):phAvatar(num,'sm')}<div class="phmain"><div class="phname">${esc(title)}</div><div class="phsub">${esc(sub)}</div></div><div class="phright">${phWhen(m.time)} ›</div></div>`;}).join(''):'<div class="empty">还没有短信</div>'}`;}
+function phSmsListHTML(){const p=phState(),keys=Object.keys(p.sms||{}).filter(n=>(p.sms[n]||[]).length).sort((a,b)=>((p.sms[b].slice(-1)[0]||{}).time||0)-((p.sms[a].slice(-1)[0]||{}).time||0));return `${keys.length?keys.map(k=>{const a=p.sms[k],m=a[a.length-1],un=a.filter(x=>x.from==='them'&&!x.read).length,num=phSmsDisplayNum(k),alias=phSmsIsAliasKey(k),aliasNum=phSmsAliasNumFromKey(k),title=alias?'匿名号 · '+phName(num):phName(num),sub=alias?('从 '+phFmt(aliasNum)+' 发给 '+phName(num)+' · '+(m.text||'')):(m.voice?('[语音] '+(m.text||'')):(m.text||''));return `<div class="phrow" onclick="openPhoneSMS('${esc(num)}','${esc(k)}')"><span style="width:8px;color:#0a84ff">${un?'●':''}</span>${alias?phDefaultAvatar('sm'):phAvatar(num,'sm')}<div class="phmain"><div class="phname">${esc(title)}</div><div class="phsub">${esc(sub)}</div></div><div class="phright">${phWhen(m.time)} ›</div></div>`;}).join(''):'<div class="empty">还没有短信</div>'}`;}
 function phVoicemailHTML(){const p=phState(),rows=phFilterRows((p.voicemail||[]).slice().reverse());return rows.length?rows.map(v=>`<div class="phrow ${v.read?'':'phmiss'}" onclick="phPlayVM('${v.id}')">${phAvatar(v.num,'sm')}<div class="phmain"><div class="phname">${esc(phName(v.num))}</div><div class="phsub" style="white-space:pre-line">${esc(v.text||'未接来电语音留言')} · ${phWhen(v.time)}</div></div><div class="phright">${v.dur||12}s</div></div>`).join(''):'<div class="empty">没有语音留言</div>';}
 function phUnreadCount(){const p=phState();let n=0;Object.values(p.sms||{}).forEach(a=>a.forEach(m=>{if(m.from==='them'&&!m.read)n++;}));return n;}
 function phKey(k){audioUnlock();phSound('key',k);const p=phState();if(k==='0'&&!p.keypad)p.keypad='+';else p.keypad=(p.keypad||'')+k;save();render();}
@@ -10564,14 +10564,8 @@ function phFxRunsPlain(runs){return (runs||[]).map(r=>r&&r.t||'').join('');}
 function phFxRunHTML(r){const e=Array.isArray(r&&r.e)?r.e.filter(k=>PH_FX_ALL.includes(k)):[];
   if(!e.length)return esc(r&&r.t||'');
   const per=e.some(k=>PH_FX_PERCHAR.includes(k)),cls=e.map(k=>'imfx-'+k).join(' ');
-  /* 爆发要给每个字一个往外蹦的方向：按序号算死，不用随机——同一条消息
-     每次重播、换台设备看到的都一样 */
-  const burst=e.includes('burst');
-  const inner=per?Array.from(String(r.t||'')).map((c,i)=>{
-    let v='';
-    if(burst){const a=(i*137.5+41)*Math.PI/180,d=48+((i*29)%30);
-      v=`;--dx:${(Math.cos(a)*d).toFixed(0)}px;--dy:${(Math.sin(a)*d-14).toFixed(0)}px;--dr:${((i%2?1:-1)*(18+(i*13)%22)).toFixed(0)}deg`;}
-    return `<b class="imfxc" style="--i:${i}${v}">${esc(c)}</b>`;}).join(''):esc(r.t||'');
+  const inner=per?Array.from(String(r.t||'')).map((c,i)=>
+    `<b class="imfxc" style="--i:${i}">${esc(c)}</b>`).join(''):esc(r.t||'');
   return `<em class="imfx ${cls}">${inner}</em>`;}
 function phFxBodyHTML(m){const runs=m&&m.fx;
   if(!Array.isArray(runs)||!runs.length)return esc(m&&m.text||'');
@@ -10584,6 +10578,16 @@ function phMsgHasFx(m){return !!(m&&(m.bfx||m.sfx||(Array.isArray(m.fx)&&m.fx.so
 const PH_FX_TAG=/[\[【]\s*(气泡效果|屏幕效果|字效|文字效果)\s*[|｜:：]\s*([^\]】]+)[\]】]/g;
 function phFxKeyByName(list,name){name=String(name||'').trim();
   const hit=list.find(x=>x[1]===name||x[0]===name);return hit?hit[0]:'';}
+/* 短信里的语音：能力和微信那套完全一样（同一个 TTS、同一套外语原文＋中文翻译），
+   只有外观走短信自己的气泡。只发给真角色那条线——陌生号和伪装号一旦开口就露馅了。 */
+function phSmsVoiceHelp(c){
+  if((S.settings.voiceFreq==null?1:S.settings.voiceFreq)===0)return'';
+  const lang=typeof ttsContentLang==='function'?ttsContentLang(c):'zh',
+    name=typeof voiceLangName==='function'?voiceLangName(lang):'';
+  return '\n你也可以在短信里发语音条，单独占一行写 [语音|要说的话]'
+    +(lang&&lang!=='zh'&&name?('。你的语音是'+name+'，所以必须写成 [语音|'+name+'原文|中文翻译]，第二栏是真正的译文，不能省'):'')
+    +'。语音最多'+VOICE_MAX_CHARS+'字、别超过'+VOICE_MAX_SECONDS+'秒；想加语气就写在最后，例如 [语音|好啦我不气了|语气:温柔]。'
+    +'别每条都发语音，撒娇、哄人、懒得打字、说悄悄话的时候发才自然。';}
 function phFxTagHelp(){return '\n你也可以给这条短信加效果（想加才加，别每条都加，平常说话就正常发）：'
   +'\n- 整条气泡飞出来的方式，单独一行写 [气泡效果|震撼]，可选：'+PH_FX_BUBBLE.map(x=>x[1]).join('／')
   +'\n- 整屏放一次的效果，单独一行写 [屏幕效果|烟花]，可选：'+PH_FX_SCREEN.map(x=>x[1]).join('／')
@@ -10616,9 +10620,10 @@ function phFxPickSet(list){_phFxPick=[...new Set(list.filter(i=>i>=0))].sort((x,
 function phFxOpenText(){const ta=$('#smsin');if(!ta)return;
   phFxSync();const text=String(ta.value||'');
   if(!text.length){toast('先打几个字，再挑要变的那几个');return;}
-  let{s:a,e:b}=_phFxSel;
-  if(!(b>a&&b<=text.length)){a=0;b=text.length;}
-  const pick=[];for(let i=a;i<b;i++)pick.push(i);
+  /* 她说「选文字效果默认不全选蓝色，让我自己去点，要不然文字多的话还得一个个取消」——
+     所以除非她在输入框里真的划了一段，否则打开就是一个都不选，想全选点上面那个按钮。 */
+  const{s:a,e:b}=_phFxSel,pick=[];
+  if(b>a&&b<=text.length)for(let i=a;i<b;i++)pick.push(i);
   phFxPickSet(pick);phFxTextModal();}
 /* 指针那条线已经把这一下处理掉了，后面补发的 click 就别再翻一次 */
 let _phFxPickDone=0;
@@ -10658,7 +10663,7 @@ function phFxTextModal(){const ta=$('#smsin');if(!ta)return;const text=String(ta
   n=chars.length,all=_phFxPick.length>=n&&n>0;
   let at=0;const cells=chars.map(c=>{const i=at;at+=c.length;
     return `<b data-i="${i}" class="${_phFxPick.indexOf(i)>=0?'on':''}${ch[i]?' has':''}" onpointerdown="phFxPickDown(${i})" onpointerenter="phFxPickOver(${i})" onclick="phFxPickTap(${i})">${c===' '?'&nbsp;':esc(c)}</b>`;}).join('');
-  openModal(`<h3>文字效果</h3><div class="hint">点一下选中那个字，按住往旁边拖能连选；选好了再挑下面的效果</div>
+  openModal(`<h3>文字效果</h3><div class="hint">默认一个字都不选，点一下选中那个字，按住往旁边拖能连选；想整条都加就点下面的「全选」</div>
   <div class="imfx-pick" onpointerup="phFxPickUp()" onpointercancel="phFxPickUp()" onpointerleave="phFxPickUp()">${cells}</div>
   <button class="minibtn" style="margin:0 0 8px" onclick="phFxPickAll()">${all?'一个都不选':'全选'}</button>
   <div class="hint" style="margin-top:0">发出去是这样：</div>
@@ -10714,6 +10719,43 @@ function phFxSwell(node){if(!node||!node.classList)return;
   node.style.setProperty('--sw',sw.toFixed(3));node.classList.add('imb-swell');}
 function phFxSwellAll(){const box=$('#smsbody');if(!box)return;
   box.querySelectorAll('.imsg-b').forEach(phFxSwell);}
+/* ===== 爆发：把字贴到屏幕层上飞 =====
+   气泡带 clip-path（小尾巴是剪出来的），字一飞出气泡边缘就被整块裁掉——
+   所以「蹦出去」这件事在气泡里根本做不到。这里把那几个字原样复制一份
+   钉到屏幕层上飞，原来那几个先藏起来；摔两下、消失、满五秒之后再弹回来。 */
+const PH_BURST_FLY=2300,PH_BURST_GONE=5000;
+function phBurstPlay(node){if(!node)return;
+  const stage=document.querySelector('.screen');if(!stage)return;
+  const ems=node.querySelectorAll('.imfx-burst');if(!ems.length)return;
+  const sr=stage.getBoundingClientRect();
+  stage.querySelectorAll('.imburst').forEach(x=>x.remove());
+  const box=document.createElement('div');box.className='imburst';
+  let k=0,any=false;
+  ems.forEach(em=>{
+    em.classList.remove('back');em.classList.add('away');
+    em.querySelectorAll('.imfxc').forEach(ch=>{
+      const r=ch.getBoundingClientRect();if(!r.width&&!r.height)return;
+      const cs=getComputedStyle(ch),i=k++;any=true;
+      /* 方向按序号算死，同一条消息每次重播、换台设备看到的都一样 */
+      const dir=i%2?1:-1,bx=dir*(96+((i*37)%74)),
+        fy=104+((i*53)%96),h1=58+((i*23)%44),h2=30+((i*17)%22),h3=11+((i*11)%9),
+        r1=dir*(22+((i*29)%26));
+      const b=document.createElement('b');
+      b.textContent=ch.textContent;
+      b.style.cssText=`left:${(r.left-sr.left).toFixed(1)}px;top:${(r.top-sr.top).toFixed(1)}px;`
+        +`font-size:${cs.fontSize};font-weight:${cs.fontWeight};font-family:${cs.fontFamily};`
+        +`color:${cs.color};line-height:${cs.lineHeight};`
+        +`--bx:${bx}px;--fy:${fy}px;--h1:${h1}px;--h2:${h2}px;--h3:${h3}px;--r1:${r1}deg;`
+        +`animation-duration:${PH_BURST_FLY}ms;animation-delay:${(i*55)}ms`;
+      box.appendChild(b);});});
+  if(!any)return;
+  stage.appendChild(box);
+  const gone=PH_BURST_FLY+k*55;
+  setTimeout(()=>{if(box.parentNode)box.remove();},gone+120);
+  /* 整整五秒一个字都看不见，然后才弹回来——她要的就是这个节奏 */
+  setTimeout(()=>{ems.forEach(em=>{if(!em.isConnected)return;
+    em.classList.remove('away');em.classList.add('back');
+    setTimeout(()=>{if(em.isConnected)em.classList.remove('back');},900);});},gone+PH_BURST_GONE);}
 function phFxPlay(m,box){if(!m)return;
   const node=box&&box.querySelector(`.imsg-b[data-mid="${m.id}"]`);
   if(node&&m.bfx){if(m.bfx==='invisible'){node.classList.add('iminv');phInvReset(node);}
@@ -10724,6 +10766,7 @@ function phFxPlay(m,box){if(!m)return;
         node.classList.remove('imbfx-slam','imbfx-loud','imbfx-gentle');
         node.removeEventListener('animationend',off);phFxSwell(node);},false);}}
   if(node)phFxSwell(node);
+  if(node&&node.querySelector('.imfx-burst'))phBurstPlay(node);
   if(m.sfx)phScreenFx(m.sfx,m);}
 function phFxReplay(num,mid,sk){const arr=phSmsArr(num,sk),m=arr.find(x=>x&&x.id===mid),box=$('#smsbody');if(!m)return;
   const node=box&&box.querySelector(`.imsg-b[data-mid="${mid}"]`);
@@ -10825,19 +10868,34 @@ function phScreenFx(kind,m){const stage=document.querySelector('.screen')||docum
   const SR=stage.getBoundingClientRect(),SH=Math.max(320,SR.height||640),SW=Math.max(240,SR.width||390);
   let life=2800;
   if(kind==='echo'){
-    /* 她要的是「所有气泡互相交替绕圈」：满屏都是这条气泡，一圈一圈地绕，
-       顺时针逆时针交替；里面那层反着转，所以字始终是正的。
-       先「啪」地弹到各自那一圈上，再慢慢绕——不然前一秒全挤在中间。 */
+    /* 照真机的 Echo 来：这条气泡复制出几十份，【从它自己的位置】炸出去铺满整屏，
+       停一会儿，再一起收回那条气泡里消失。不绕圈、不旋涡。
+       落点用低差异的黄金角铺开，所以铺得均匀又不像网格。 */
     const t=esc(String(m&&phFxRunsPlain(m.fx)||m&&m.text||'').slice(0,10))||'…';
-    const rings=[64,116,168,222,272];
-    for(let n=0;n<30;n++){
-      const alt=n%2===1,ring=n%rings.length,
-        a=((n*61)+(ring*37))%360,dur=(3.4+ring*.42).toFixed(2),
-        sc=(1.02-ring*.08).toFixed(2),op=(.96-ring*.1).toFixed(2),
-        d=(n*.043).toFixed(2);
-      add(`--a:${a}deg;--r:${rings[ring]}px;--sc:${sc};--op:${op};opacity:0;animation-duration:${dur}s;animation-delay:${d}s`,
-        `<b style="animation-duration:${dur}s;animation-delay:${d}s">${t}</b>`,alt?'alt':'');}
-    life=5200;}
+    let ox=50,oy=52;
+    try{const node=m&&m.id&&document.querySelector(`.imsg-b[data-mid="${m.id}"]`);
+      if(node){const r=node.getBoundingClientRect();
+        ox=Math.max(8,Math.min(92,(r.left+r.width/2-SR.left)/SW*100));
+        oy=Math.max(8,Math.min(92,(r.top+r.height/2-SR.top)/SH*100));}}catch(_){}
+    box.style.setProperty('--ox',ox.toFixed(1)+'%');
+    box.style.setProperty('--oy',oy.toFixed(1)+'%');
+    const N=38,cx=SW*ox/100,cy=SH*oy/100;
+    for(let n=0;n<N;n++){
+      const a=n*2.399963,             /* 黄金角，铺得开又不成行 */
+        rad=Math.sqrt((n+.6)/N),
+        /* 落点是先在【整块屏幕】上铺开，再换算成「从这条气泡出发要飞多远」。
+           要是直接以气泡为中心撒点，气泡靠边的时候有一半会飞到屏幕外面，
+           另外半边空着——实拍图里就是这样，左半屏一个都没有。 */
+        tx=SW*.5+Math.cos(a)*rad*(SW*.52)+rnd(-12,12),
+        ty=SH*.46+Math.sin(a)*rad*(SH*.44)+rnd(-14,14),
+        px=tx-cx,py=ty-cy,
+        sc=(1.06-rad*.42).toFixed(2),rot=rnd(-13,13).toFixed(0),
+        dur=(2.9+rad*1.5).toFixed(2),d=(n*.035).toFixed(2);
+      add(`--x:${px.toFixed(0)}px;--y:${py.toFixed(0)}px;--sc:${sc};--rot:${rot}deg;`
+        +`opacity:0;animation-duration:${dur}s;animation-delay:${d}s`,
+        `<b></b>`,n%2?'alt':'');
+      box.lastChild.firstChild.innerHTML=t;}
+    life=6000;}
   else if(kind==='balloons'){
     const cols=['#ff5f8f','#ffd36b','#6ec8ff','#b58cff','#7ee2a8','#ff9f6b'];
     for(let n=0;n<15;n++){const c=cols[n%cols.length],w=(21+rnd(0,15))|0;
@@ -10855,19 +10913,20 @@ function phScreenFx(kind,m){const stage=document.querySelector('.screen')||docum
   else if(kind==='love'){
     /* 心是 CSS 画的，不是 ❤ 这个字——放到一百多像素还是干干净净，不会糊成马赛克 */
     /* i 匀速升、b 慢慢长大、u 左右摇——三个节奏分开，所以中途不会「停一下」 */
-    for(let n=0;n<18;n++)add(`left:${rnd(10,90).toFixed(1)}%;--sz:${rnd(16,36).toFixed(0)}px;`
+    /* 她说「爱心那个最大的不要了，改成满屏的小爱心升上去就可以」：
+       中间那三颗心跳大爱心去掉，小爱心从 18 颗加到 40 颗铺满整屏。 */
+    for(let n=0;n<40;n++)add(`left:${rnd(3,97).toFixed(1)}%;--sz:${rnd(13,30).toFixed(0)}px;`
       +`--sway:${rnd(9,26).toFixed(0)}px;--swd:${rnd(.9,1.7).toFixed(2)}s;--rise:${(SH+110).toFixed(0)}px;`
-      +`animation-duration:${rnd(2.6,3.9).toFixed(2)}s;animation-delay:${rnd(0,1.3).toFixed(2)}s`,'<b><u></u></b>','up');
-    for(let n=0;n<3;n++)add(`left:50%;top:56%;--sz:${(58+n*34)}px;animation-delay:${(n*.26).toFixed(2)}s`,'<b><u></u></b>','beat');
+      +`animation-duration:${rnd(2.6,4.2).toFixed(2)}s;animation-delay:${rnd(0,1.8).toFixed(2)}s`,'<b><u></u></b>','up');
     life=4200;}
   else if(kind==='fireworks'){
     /* 她说「我要看到那种绽放的很漂亮的五彩的烟花」。所以每一朵都是五彩的：
        颜色按角度绕色相环走一圈，外层一大圈、内层一小圈套着开（双层绽放），
        每个碎片背后还拖一小截指回中心的尾巴，炸开那一瞬间再推出一圈彩环。 */
     const hue=(a)=>`hsl(${((a%360)+360)%360},96%,${62}%)`;
-    for(let b=0;b<4;b++){
+    for(let b=0;b<6;b++){
       /* 四朵分开放在四个角落，别全挤在一块 */
-      const cx=30+(b%2)*26+rnd(-5,9),cy=15+Math.floor(b/2)*24+rnd(-4,10),d=b*.62,
+      const cx=28+(b%3)*17+rnd(-5,9),cy=13+Math.floor(b/3)*26+rnd(-4,12),d=b*.66,
         h0=rnd(0,360),span=pick([300,360,150,210]),/* 有的朵整圈五彩，有的朵只在一段色相里渐变 */
         c=hue(h0),c2=hue(h0+span*.5);
       /* 先从屏幕最底下升空：一条带尾巴的小点，升到 cy% 那个高度 */
@@ -10888,7 +10947,7 @@ function phScreenFx(kind,m){const stage=document.querySelector('.screen')||docum
             +`--tail:${rnd(layer.t[0],layer.t[1]).toFixed(0)}px;--ta:${(ang*180/Math.PI+180).toFixed(0)}deg;`
             +`animation-delay:${(d+1.03+rnd(0,.05)).toFixed(2)}s;`
             +`animation-duration:${rnd(layer.dur[0],layer.dur[1]).toFixed(2)}s`,'<b></b>','spark');}}}
-    life=4800;}
+    life=6600;}
   else if(kind==='lasers'){
     const cols=['#ff2d55','#0a84ff','#30d158','#ffd60a','#bf5af2','#64d2ff'];
     for(let n=0;n<11;n++){const c=cols[n%cols.length];
@@ -10900,9 +10959,13 @@ function phScreenFx(kind,m){const stage=document.querySelector('.screen')||docum
     /* 她要「流星多一点、屏幕暗一点、流星亮一点」：数量 8→20，背景那层暗色在 CSS 里 */
     for(let n=0;n<64;n++)add(`left:${rnd(0,100).toFixed(1)}%;top:${rnd(0,90).toFixed(1)}%;`
       +`--sz:${rnd(1.2,3.1).toFixed(1)}px;animation-duration:${rnd(1.4,2.8).toFixed(2)}s;animation-delay:${rnd(0,1.6).toFixed(2)}s`,null,'twinkle');
-    for(let n=0;n<20;n++)add(`left:${rnd(44,124).toFixed(1)}%;top:${rnd(-16,42).toFixed(1)}%;`
-      +`--len:${rnd(80,175).toFixed(0)}px;--dx:${(-SW*rnd(.72,1.18)).toFixed(0)}px;--dy:${(SH*rnd(.42,.82)).toFixed(0)}px;`
-      +`animation-delay:${(n*.17).toFixed(2)}s;animation-duration:${rnd(1.5,2.3).toFixed(2)}s`,'<b></b>','shoot');
+    /* 她说「流星不要一开始就固定在屏幕里，他是从屏幕最外面下来的，显得有些死板」：
+       起点一律放到屏幕外面——要么在右边框外，要么在顶边上面——再划进来。 */
+    for(let n=0;n<20;n++){const side=n%2===0;
+      const lf=side?rnd(103,152):rnd(34,126),tp=side?rnd(-22,34):rnd(-46,-8);
+      add(`left:${lf.toFixed(1)}%;top:${tp.toFixed(1)}%;`
+        +`--len:${rnd(80,175).toFixed(0)}px;--dx:${(-SW*rnd(.78,1.32)).toFixed(0)}px;--dy:${(SH*rnd(.5,.95)).toFixed(0)}px;`
+        +`animation-delay:${(n*.17).toFixed(2)}s;animation-duration:${rnd(1.6,2.4).toFixed(2)}s`,'<b></b>','shoot');}
     life=4200;}
   else if(kind==='spotlight'){
     /* 光要打在这条消息上，不是随便找个地方暗下来 */
@@ -10944,6 +11007,18 @@ function renderPhoneIMsg(num,sk,arr,x){
   const rows=arr.map(m=>{const pic=m.img?storedImageDisplaySource(m.img):'',fx=phMsgHasFx(m),
       inv=m.bfx==='invisible'?' iminv':'',
       tap=`phSmsMenu('${esc(num)}','${m.id}','${esc(sk)}')`;
+    if(m.voice){
+      /* 语音条：气泡还是短信这一套（磨砂＋细高光），只是里面换成波形和秒数。
+         点气泡＝播放，点下面那行转文字＝短信操作菜单（删除等）。 */
+      const dur=Math.min(VOICE_MAX_SECONDS,m.dur||voiceEstimatedSeconds(m.text||'')),
+        loading=typeof voiceTtsPending==='function'&&voiceTtsPending(m);
+      return `<div class="imsg-row ${m.from==='me'?'me':'them'}"><div class="imsg-col">`
+        +`<div class="imsg-b imsgv${loading?' loading':''}${m._playWhenReady?' queued':''}" data-mid="${m.id}" data-vid="${m.id}"`
+        +` aria-busy="${loading?'true':'false'}" onclick="phVoiceTap('${esc(num)}','${m.id}','${esc(sk)}')">`
+        +`<i><span class="imsgv-wave"><i></i><i></i><i></i><i></i></span><span class="imsgv-dur">${dur}″</span></i></div>`
+        +(m.showText?`<div class="imsg-vtext" onclick="${tap}">${esc(m.text||'')}`
+          +(m.trans?`<span class="tr">${esc(m.trans)}</span>`:'')+`</div>`:'')
+        +`</div></div>`;}
     return `<div class="imsg-row ${m.from==='me'?'me':'them'}"><div class="imsg-col"><div class="imsg-b${pic?' pic':''}${inv}" data-mid="${m.id}" onclick="${tap}">`
       +`<i>${pic?`<img src="${pic}" alt="">`:phFxBodyHTML(m)}</i></div>`
       +(fx?`<span class="imsg-fxrp" onclick="phFxReplay('${esc(num)}','${m.id}','${esc(sk)}')">↺ 重播</span>`:'')
@@ -11054,7 +11129,7 @@ function phSendSms(num,sk){const ta=$('#smsin'),text=(ta&&ta.value||'').trim();i
 async function phRoleSmsReply(id,num,userText,sk){const c=getC(id);if(!c||c.blocked||phState().blocked[phNorm(num)])return;sk=sk||num;
   const range=phSmsBubbleRange(c),rows=phCtxRows();
   phSmsTypingSet(num,sk,true);
-  try{const arr=phSmsArr(num,sk).slice(-rows).map(m=>(m.from==='me'?S.me.name:(c.remark||c.name))+'：'+(m.img?phSmsImgLine(m):m.text)).join('\n'),wx=msgs(id).filter(m=>!m._call).slice(-Math.max(6,Math.round(rows*.6))).map(m=>msgToText(m)).filter(Boolean).join('\n');const sys=buildSystem(c)+'\n\n# 当前场景：手机短信\n你正在和'+S.me.name+'发短信，不是微信。短信和微信是同一个人、同一段关系，要记得最近微信里的情绪和话题，但短信回复要像真实短信一样短一点、自然口语。\n一次回复可以发 '+range.min+' 到 '+range.max+' 条短信，这是【可浮动范围】不是固定任务：随口应一句就一条，情绪多、想解释、想哄人时才多发几条。每条【单独占一行】，用换行分开，不要写成一大段。\n只输出短信正文，不要方括号指令，不要输出[心情]、[心情值]、[语气]等隐藏标签。\n她发来的照片在记录里写成 [图片：画面描述]，那段描述是系统真的看过这张图之后写下来的，你可以直接当成你亲眼看到的画面来回应。如果只写着 [图片] 没有描述，说明这次没看清，就别编造里面有什么，可以问她。如果她让你把某张照片换成你们短信的聊天背景（比如「把这张换成背景」「拿这张当背景」），就在回复最后【单独一行】写 [换背景]，系统会真的替她换上去；她没提这件事就不要写这个标签。'+phFxTagHelp();let r=await chatAPI([{role:'system',content:sys},{role:'user',content:'最近微信上下文：\n'+(wx||'（无）')+'\n\n短信记录：\n'+arr+'\n\n'+S.me.name+'刚发来：'+userText}],{temp:.8});
+  try{const arr=phSmsArr(num,sk).slice(-rows).map(m=>(m.from==='me'?S.me.name:(c.remark||c.name))+'：'+phSmsLineText(m)).join('\n'),wx=msgs(id).filter(m=>!m._call).slice(-Math.max(6,Math.round(rows*.6))).map(m=>msgToText(m)).filter(Boolean).join('\n');const sys=buildSystem(c)+'\n\n# 当前场景：手机短信\n你正在和'+S.me.name+'发短信，不是微信。短信和微信是同一个人、同一段关系，要记得最近微信里的情绪和话题，但短信回复要像真实短信一样短一点、自然口语。\n一次回复可以发 '+range.min+' 到 '+range.max+' 条短信，这是【可浮动范围】不是固定任务：随口应一句就一条，情绪多、想解释、想哄人时才多发几条。每条【单独占一行】，用换行分开，不要写成一大段。\n只输出短信正文，不要方括号指令，不要输出[心情]、[心情值]、[语气]等隐藏标签。\n她发来的照片在记录里写成 [图片：画面描述]，那段描述是系统真的看过这张图之后写下来的，你可以直接当成你亲眼看到的画面来回应。如果只写着 [图片] 没有描述，说明这次没看清，就别编造里面有什么，可以问她。如果她让你把某张照片换成你们短信的聊天背景（比如「把这张换成背景」「拿这张当背景」），就在回复最后【单独一行】写 [换背景]，系统会真的替她换上去；她没提这件事就不要写这个标签。'+phSmsVoiceHelp(c)+phFxTagHelp();let r=await chatAPI([{role:'system',content:sys},{role:'user',content:'最近微信上下文：\n'+(wx||'（无）')+'\n\n短信记录：\n'+arr+'\n\n'+S.me.name+'刚发来：'+userText}],{temp:.8});
   r=String(r||'');const wantBg=/[\[【]\s*换背景\s*[\]】]/.test(r);r=r.replace(/[\[【]\s*换背景\s*[\]】]/g,' ');
   let parts=phSmsBubbles(r,range.max);
   if(wantBg&&!phRoleSetSmsBg(num,sk)&&!parts.length)parts=['我没找到你说的那张照片，你再发我一次？'];
@@ -11077,16 +11152,47 @@ function phRandomSmsText(num,pf,now){pf=pf||phStrangerProfile(num);now=now||Date
 async function phAutoSmsReply(num,userText){const x=phFind(num);if(x&&x.kind==='role')return;if(phState().blocked[phNorm(num)])return;const pf=phStrangerProfile(num),arr=phSmsArr(num,num).slice(-phCtxRows()).map(m=>(m.from==='me'?S.me.name:pf.name)+'：'+(m.img?phSmsImgLine(m):m.text)).join('\n');let r='';try{const sys='你在小手机里模拟真实短信对话。号码身份：'+pf.name+'；类型：'+pf.kind+'；地区：'+pf.region+'。你不是任何恋爱角色，不能知道用户微信隐私或角色记忆。回复要像真实短信，短一点，但可以更有趣：装熟、撩人、嘴欠、奇怪生活服务、花里胡哨的骚扰短信、暧昧错发都可以。禁止真实诈骗、真实链接、真实转账/加群/贷款引导；可以做成明显玩笑或虚构服务。只输出短信正文。';r=await chatAPI([{role:'system',content:sys},{role:'user',content:'短信记录：\n'+arr+'\n\n用户刚发：'+userText}],{max:160,temp:.86});}catch(e){}
   r=phCleanSmsText(cleanReply(r||'')).slice(0,180);if(!r)r=phRandomSmsText(num,pf);phReceiveSms(num,r,null);}
 function phSmsNotify(num,text,c){const title=(c&&(c.remark||c.name))||phName(num)||phFmt(num),body=String(text||'').replace(/\s+/g,' ').slice(0,80),target={type:'phonesms',id:num};lockNotify(title,body,{avatar:c&&c.avatar,icon:c&&c.avatar?'':'message',target});appNotify(title,body,{tag:'sms-'+phNorm(num),data:{type:'open',target:'phonesms',id:num}});if(lockVisible()||_call)return;const b=$('#msgBanner');if(!b)return;b.innerHTML=`${c&&c.avatar?av(c.avatar,'sm'):`<div class="avatar sm" style="background:#151518;border:1px solid #34343a">${svgIc('message',19,'#d7d7dc',1.55)}</div>`}<div style="flex:1;min-width:0"><div class="bn">${esc(title)}</div><div class="bm">${esc(body)}</div></div>`;b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';openPhoneSMS(num);};clearTimeout(_bannerT);_bannerT=setTimeout(()=>{b.className='msgbanner';},4800);}
+/* 语音条在上下文和列表预览里怎么写：把原文和译文都带上，
+   不然下一轮角色就不知道自己刚才用语音说了什么 */
+function phSmsVoiceLine(m){const t=String((m&&m.text)||'');
+  return '[语音]'+t+(m&&m.trans?'（中文：'+m.trans+'）':'');}
+function phSmsLineText(m){return m&&m.voice?phSmsVoiceLine(m):(m&&m.img?phSmsImgLine(m):(m&&m.text)||'');}
 function phReceiveSms(num,text,c,sk){if(phState().blocked[phNorm(num)])return;num=phDigits(num);sk=sk||num;
-  const tag=phFxParseTags(phCleanSmsText(text));text=tag.text.slice(0,240);if(!text)return;
+  /* 只有真角色那条线认语音标签：陌生号那边压根没拿到这个用法 */
+  const vt=c&&typeof parseVoiceTagLine==='function'?parseVoiceTagLine(phCleanSmsText(text)):null;
+  const tag=vt?null:phFxParseTags(phCleanSmsText(text));
+  if(!vt){text=tag.text.slice(0,240);if(!text)return;}
   const viewing=cur().p==='phonesms'&&cur().num===num&&(cur().sk||num)===sk,arr=phSmsArr(num,sk);
   const m={id:uid(),from:'them',text,time:Date.now(),read:viewing};
-  if(tag.fx)m.fx=tag.fx;if(tag.bfx)m.bfx=tag.bfx;if(tag.sfx)m.sfx=tag.sfx;
+  if(vt){
+    const say=[...String(vt.text||'')].slice(0,VOICE_MAX_CHARS).join('').trim();
+    if(!say)return;
+    /* 复用微信那一套：type/role/content 都按微信语音消息的形状存，
+       warmVoiceMsg、speakMsg、refreshVoiceBubble 就能原样拿来用 */
+    m.voice=1;m.type='voice';m.role='assistant';m.content=say;m.text=say;
+    m.trans=String(vt.trans||'').trim();
+    if(vt.cue)m.voiceCue=vt.cue;
+    m.dur=voiceEstimatedSeconds(say);
+    m.showText=false;
+  }
+  else{if(tag.fx)m.fx=tag.fx;if(tag.bfx)m.bfx=tag.bfx;if(tag.sfx)m.sfx=tag.sfx;}
   arr.push(m);if(arr.length>300)arr.splice(0,arr.length-300);
   /* 镜像进微信的还是干净正文，标签和效果都不带过去 */
-  phMirrorSMS(num,'them',text);save();phSound('sms');
-  if(!viewing)phSmsNotify(num,text,c);
+  phMirrorSMS(num,'them',m.voice?(m.text+(m.trans?'（'+m.trans+'）':'')):text);save();phSound('sms');
+  if(m.voice&&c&&ttsApiOn(c)){m._ttsLoading=true;scheduleVoiceWarm(m,c,voiceProgressiveOn());}
+  if(!viewing)phSmsNotify(num,m.voice?'给你发来一条语音':text,c);
   if(viewing){render();if(phMsgHasFx(m))setTimeout(()=>phFxPlay(m,$('#smsbody')),140);}}
+/* 点一下语音条就放；放过一次就把文字（和外语的中文翻译）留在下面 */
+function phVoiceTap(num,mid,sk){const arr=phSmsArr(num,sk),m=arr.find(x=>x&&x.id===mid);if(!m||!m.voice)return;
+  const x=phFind(num),c=x&&x.kind==='role'?getC(x.id):null;
+  try{audioUnlock();}catch(_){}
+  if(typeof voiceTtsPending==='function'&&voiceTtsPending(m)){m._playWhenReady=true;refreshVoiceBubble(m);warmVoiceMsg(m,c);return;}
+  speakMsg(m,c);
+  const el=document.querySelector(`.imsg-b[data-mid="${mid}"]`);
+  if(el){el.classList.add('playing');
+    setTimeout(()=>{const e2=document.querySelector(`.imsg-b[data-mid="${mid}"]`);if(e2)e2.classList.remove('playing');},
+      Math.min(9000,(m.dur||3)*1000+600));}
+  if(!m.showText){m.showText=true;save();render();}}
 function phSmsMenu(num,mid,sk){const m=phSmsArr(num,sk).find(x=>x&&x.id===mid),bad=m&&m.img&&m.visionState!=='success';
   openModal(`<h3>短信操作</h3>${m&&m.img&&m.imgDesc?`<div class="hint" style="text-align:left">ta看到的画面：${esc(m.imgDesc)}</div>`:''}<div class="btns">${bad?`<button class="btn imblue" onclick="phSmsRetryVision('${esc(num)}','${mid}','${esc(sk||'')}')">重新看这张图</button>`:''}<button class="btn d" onclick="phDeleteSms('${esc(num)}','${mid}','${esc(sk||'')}')">删除这条</button><button class="btn g" onclick="closeModal()">取消</button></div>`);}
 function phDeleteSms(num,mid,sk){const a=phSmsArr(num,sk),i=a.findIndex(m=>m.id===mid);if(i>=0)a.splice(i,1);save();closeModal();render();}
