@@ -238,7 +238,7 @@ def validate(files: dict[str, bytes]) -> None:
         ("function phImsgOn(num,sk)", "v1294 信息页照 iMessage 重做"),
         ("function phSmsBgMap()", "v1294 聊天背景一人一张"),
         ("function phSmsPic(num,sk)", "v1294 ＋ 点一下开相册"),
-        ("function phSendSmsImage(num,sk,src)", "v1294 短信能发图片"),
+        ("function phSendSmsImage(num,sk,src,opt)", "v1294 短信能发图片"),
         ("function phRoleSetSmsBg(num,sk)", "v1294 角色把照片换成短信背景"),
         ("c.chatBg=last.src;save();", "v1294 角色把照片换成微信背景"),
         ("function phCtxRows()", "v1294 上下文统一跟随全局"),
