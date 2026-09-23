@@ -48,7 +48,7 @@ function functionSource(sourceText, name) {
 test('private identifiers remain v1301 and iOS 384 while public advances independently', () => {
   assert.equal(index, alias);
   assert.match(index, /window\.__NORTH_SHELL_BUILD__='1301'/);
-  assert.match(index, /app\.js\?v=1301&r=v1301-private-imsg-6/);
+  assert.match(index, /app\.js\?v=1301&r=v1301-private-imsg-7/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=339/);
   assert.match(app, /APP_VER='v1301 · 磨砂＋细高光、共同生活状态、背景画质（私人）'/);
   assert.match(overlay, /336-daily-file-backup/);

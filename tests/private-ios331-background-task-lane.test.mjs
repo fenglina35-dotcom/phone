@@ -64,7 +64,7 @@ function functionSource(source, name) {
 test('private performance candidate keeps v1301 while public web advances independently', () => {
   assert.equal(privateIndex, privateAlias);
   assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1301'/);
-  assert.match(privateIndex, /app\.js\?v=1301&r=v1301-private-imsg-6/);
+  assert.match(privateIndex, /app\.js\?v=1301&r=v1301-private-imsg-7/);
   assert.match(privateIndex, /private-runtime-diagnostics\.js\?v=339/);
   assert.match(privateRepair, /index\.html\?repair=1&v=1301/);
   assert.match(privateApp, /APP_VER='v1301 · 磨砂＋细高光、共同生活状态、背景画质（私人）'/);

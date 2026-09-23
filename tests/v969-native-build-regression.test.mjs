@@ -14,8 +14,8 @@ const reportScene = read('native/private-small-phone/XcodeProject/PhoneCompanion
 
 test('public web v1184 and private web v1189 remain compatible with native iOS 1.0.315', () => {
   assert.match(app, /APP_VER='v1300 · 磨砂＋细高光、共同生活状态、背景画质'/);
-  assert.match(app, /sw\.js\?v=1300&r=v1300-web-imsg-6/);
-  assert.match(shell, /north-shell-v1300-web-imsg-6/);
+  assert.match(app, /sw\.js\?v=1300&r=v1300-web-imsg-7/);
+  assert.match(shell, /north-shell-v1300-web-imsg-7/);
   assert.match(bundleInfo, /<string>1200<\/string>/);
   assert.match(localWebView, /1\.0\.384 \(384\)/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 384;/g) || []).length, 12);

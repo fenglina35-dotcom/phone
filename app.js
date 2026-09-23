@@ -1786,7 +1786,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1300&r=v1300-web-imsg-6';
+  const url='sw.js?v=1300&r=v1300-web-imsg-7';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -10945,21 +10945,34 @@ function phScreenFx(kind,m){const stage=document.querySelector('.screen')||docum
     for(let n=0;n<3;n++)add(`left:50%;top:56%;--sz:${(58+n*34)}px;animation-delay:${(n*.26).toFixed(2)}s`,'<b></b>','beat');
     life=4200;}
   else if(kind==='fireworks'){
+    /* 她说「我要看到那种绽放的很漂亮的五彩的烟花」。所以每一朵都是五彩的：
+       颜色按角度绕色相环走一圈，外层一大圈、内层一小圈套着开（双层绽放），
+       每个碎片背后还拖一小截指回中心的尾巴，炸开那一瞬间再推出一圈彩环。 */
+    const hue=(a)=>`hsl(${((a%360)+360)%360},96%,${62}%)`;
     for(let b=0;b<4;b++){
-      const cx=rnd(16,84),cy=rnd(16,52),d=b*.52,c=pick(WARM.slice(0,5)),c2=pick(WARM);
+      /* 四朵分开放在四个角落，别全挤在一块 */
+      const cx=20+(b%2)*40+rnd(-6,12),cy=15+Math.floor(b/2)*24+rnd(-4,10),d=b*.54,
+        h0=rnd(0,360),span=pick([300,360,150,210]),/* 有的朵整圈五彩，有的朵只在一段色相里渐变 */
+        c=hue(h0),c2=hue(h0+span*.5);
       /* 先升空：一条带尾巴的小点 */
       add(`left:${cx.toFixed(1)}%;--to:${cy.toFixed(1)}vh;--c:${c};animation-delay:${d.toFixed(2)}s`,null,'shell');
-      /* 炸开那一下的闪光 */
-      add(`left:${cx.toFixed(1)}%;top:${cy.toFixed(1)}%;--c:${c};animation-delay:${(d+.62).toFixed(2)}s`,null,'flash');
-      /* 碎片：横向匀速 + 纵向重力，所以是抛物线不是直线。
-         半径和时长都各不相同，散出来才是一蓬，不是一个规规矩矩的圈。 */
-      for(let n=0;n<34;n++){const ang=(n/34)*Math.PI*2+rnd(-.14,.14),
-          r=rnd(44,164)*(n%5===0?.6:1);
-        add(`left:${cx.toFixed(1)}%;top:${cy.toFixed(1)}%;--x:${(Math.cos(ang)*r).toFixed(0)}px;`
-          +`--y:${(Math.sin(ang)*r*.78).toFixed(0)}px;--g:${rnd(52,128).toFixed(0)}px;`
-          +`--c:${n%4===0?c2:c};--sz:${rnd(2,4.6).toFixed(1)}px;animation-delay:${(d+.62+rnd(0,.06)).toFixed(2)}s;`
-          +`animation-duration:${rnd(1.1,2).toFixed(2)}s`,'<b></b>','spark');}}
-    life=4600;}
+      /* 炸开那一下：白芯闪光 + 往外推的彩环 */
+      add(`left:${cx.toFixed(1)}%;top:${cy.toFixed(1)}%;--c:${c};--c2:${c2};animation-delay:${(d+.62).toFixed(2)}s`,null,'flash');
+      add(`left:${cx.toFixed(1)}%;top:${cy.toFixed(1)}%;--c:${c};--c2:${c2};--rd:${rnd(210,310).toFixed(0)}px;`
+        +`animation-delay:${(d+.62).toFixed(2)}s`,null,'ring');
+      /* 外层一大圈 + 内层一小圈；碎片横向匀速、纵向重力，所以是抛物线不是直线 */
+      for(const layer of [{n:40,r0:82,r1:168,sz:[2.2,4.4],dur:[1.3,2.05],g:[62,136],t:[10,22]},
+                          {n:20,r0:34,r1:78,sz:[1.6,3.2],dur:[.9,1.4],g:[34,78],t:[6,13]}]){
+        for(let n=0;n<layer.n;n++){
+          const t=n/layer.n,ang=t*Math.PI*2+rnd(-.09,.09),r=rnd(layer.r0,layer.r1),
+            x=Math.cos(ang)*r,y=Math.sin(ang)*r*.8;
+          add(`left:${cx.toFixed(1)}%;top:${cy.toFixed(1)}%;--x:${x.toFixed(0)}px;--y:${y.toFixed(0)}px;`
+            +`--g:${rnd(layer.g[0],layer.g[1]).toFixed(0)}px;--c:${hue(h0+t*span)};`
+            +`--sz:${rnd(layer.sz[0],layer.sz[1]).toFixed(1)}px;`
+            +`--tail:${rnd(layer.t[0],layer.t[1]).toFixed(0)}px;--ta:${(ang*180/Math.PI+180).toFixed(0)}deg;`
+            +`animation-delay:${(d+.62+rnd(0,.05)).toFixed(2)}s;`
+            +`animation-duration:${rnd(layer.dur[0],layer.dur[1]).toFixed(2)}s`,'<b></b>','spark');}}}
+    life=4800;}
   else if(kind==='lasers'){
     const cols=['#ff2d55','#0a84ff','#30d158','#ffd60a','#bf5af2','#64d2ff'];
     for(let n=0;n<11;n++){const c=cols[n%cols.length];

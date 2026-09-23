@@ -488,6 +488,14 @@ test('八个屏幕特效都重做过，不是几个色块', () => {
   assert.match(fn, /const rnd=\(a,b\)=>\{_s=\(_s\*1664525/, '要用按消息 id 算死的伪随机');
   assert.match(fn, /m&&m\.id&&document\.querySelector\(`\.imsg-b\[data-mid="\$\{m\.id\}"\]`\)/,
     '聚光灯要打在这条消息上，不是随便找个地方暗下来');
+  /* 她说「我要看到那种绽放的很漂亮的五彩的烟花」：颜色要按角度绕色相环走 */
+  assert.match(fn, /const hue=\(a\)=>`hsl\(/, '烟花的颜色要按色相算，不是从几个固定色里挑');
+  assert.match(fn, /--c:\$\{hue\(h0\+t\*span\)\}/, '同一朵里每个碎片的颜色要跟着角度变，才是五彩的');
+  const layers = fn.match(/for\(const layer of \[([\s\S]*?)\]\)\{/)[1];
+  assert.equal((layers.match(/\{n:\d+/g) || []).length, 2, '要外圈一大圈、内圈一小圈套着开，只剩一圈就不「绽放」了');
+  assert.match(layers, /\{n:40,r0:82/, '外圈');
+  assert.match(layers, /\{n:20,r0:34/, '内圈');
+  assert.match(fn, /--tail:/, '碎片要带尾巴');
   for (const s of shells) {
     /* 烟花：碎片要走抛物线（外层匀速、内层重力），不是直线 */
     assert.match(s, /@keyframes imsfx-gravity\{/, '烟花碎片少了重力');
@@ -502,13 +510,42 @@ test('八个屏幕特效都重做过，不是几个色块', () => {
     /* 纸屑：三种形状、三轴翻滚 */
     for (const k of ['bar', 'dot', 'ribbon']) assert.match(s, new RegExp(`\\.imsfx-confetti i\\.${k}\\{`), '纸屑少了 ' + k);
     assert.match(s, /@keyframes imsfx-fall\{[\s\S]*?rotateX\(var\(--tilt\)\)/, '纸屑要三轴翻滚，不然像贴纸');
-    /* 爱心用 CSS 画，不是 ❤ 这个字——放大了不会糊成马赛克 */
-    assert.match(s, /\.imsfx-love i>b\{[^}]*rotate\(-45deg\)/, '心要用 CSS 画');
-    assert.equal(/\.imsfx-love i\{[^}]*font-size:var\(--sz\)/.test(s), false, '别再用字形了，放大就是马赛克');
+    /* 爱心：一条 SVG 路径做遮罩，一整块。两个圆加一个方块那种拼法她一眼看出接缝，
+       说「爱心分界线明显拼接，不合格」——所以不许再回去拼。 */
+    assert.match(s, /\.imsfx-love i>b\{[\s\S]*?-webkit-mask:url\("data:image\/svg\+xml/,
+      '心要用一条 SVG 路径做遮罩；-webkit- 那条不能少，少了 iOS 上整颗心会变成一个方块');
+    assert.match(s, /\.imsfx-love i>b\{[\s\S]*?[^-]mask:url\("data:image\/svg\+xml/, '不带前缀的那条也要有');
+    assert.equal(/\.imsfx-love i>b:before/.test(s), false, '又回去拿两个圆一个方块拼了，接缝会露出来');
+    assert.equal(/\.imsfx-love i\{[^}]*font-size:var\(--sz\)/.test(s), false, '也别用 ❤ 这个字形，放大就是马赛克');
+    /* 烟花要五彩、要绽放：彩环、碎片尾巴、双层 */
+    assert.match(s, /\.imsfx-fireworks i\.ring\{[\s\S]*?width:var\(--rd\)/, '炸开要推出一圈彩环');
+    assert.match(s, /@keyframes imsfx-ring\{[\s\S]*?scale\(\.06\)/, '环要从很小长到最大');
+    assert.equal(/--rs:/.test(s), false, '环不许再拿小圆去 scale 放大，边框和投影会糊成色块');
+    assert.match(s, /\.imsfx-fireworks i\.spark>b:after\{[\s\S]*?rotate\(var\(--ta\)\)/, '碎片背后要拖一小截尾巴');
+    /* 气球的线：右边框压在中心线上，从结那儿垂下来 */
+    assert.match(s, /\.imsfx-balloons i>u\{[\s\S]*?border-right:1px/, '线要靠右边框画，左边框会离中心线差一截');
+    assert.match(s, /\.imsfx-balloons i>u\{[\s\S]*?margin-left:-15px/, '元素右边缘要正好压在气球中心线上');
+    assert.match(s, /\.imsfx-balloons i>u\{[\s\S]*?transform-origin:100% 0/, '摆动的支点在结上');
     /* 激光有光晕，聚光灯有暖光圈和浮尘 */
     assert.match(s, /\.imsfx-lasers i\{[^}]*box-shadow:0 0 12px 2px var\(--c\),0 0 34px 6px var\(--c\)/, '激光少了光晕');
     assert.match(s, /\.imsfx-spotlight i\.halo\{/, '聚光灯少了暖光圈');
     assert.match(s, /\.imsfx-spotlight i\.dust\{/, '聚光灯少了浮尘');
+  }
+});
+test('加了效果，字体不许变', () => {
+  /* 她说「我发现选有特效的字体会变，保留原来的字体不要变，只加效果不变字体」。
+     效果是拿 <em> 和 <b> 包出来的，浏览器默认就是斜体和加粗，之前没复位。 */
+  for (const s of shells) {
+    const base = s.match(/\n\.imfx\{[^}]*\}/)[0], per = s.match(/\n\.imfxc\{[^}]*\}/)[0];
+    for (const [name, rule] of [['.imfx', base], ['.imfxc', per]]) {
+      assert.match(rule, /font-style:inherit/, `${name} 没把 <em> 的斜体复位`);
+      assert.match(rule, /font-weight:inherit/, `${name} 没把 <b> 的加粗复位`);
+      assert.match(rule, /font-family:inherit/, `${name} 字族也要跟着正文`);
+    }
+    /* B/I/U/S 是她自己点的，那四个还得管用——它们写在后面，优先级压得住 */
+    assert.ok(s.indexOf('.imfx-b{font-weight:800;}') > s.indexOf('.imfx{display:inline-block;font-style:inherit'),
+      'B 那条要写在复位后面，不然点了加粗也没用');
+    assert.match(s, /\.imfx-i\{font-style:italic;\}/);
   }
 });
 test('角色也能发效果，他想发就发', () => {
