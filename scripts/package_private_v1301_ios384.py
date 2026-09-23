@@ -267,7 +267,7 @@ def validate(files: dict[str, bytes]) -> None:
         ("function phFxRuns(text,ch)", "v1300 效果按字存、连着的合成一段"),
         ("function phFxSync()", "v1300 改字时效果跟着那几个字走"),
         ("function phFxSendHold(", "v1300 长按发送键带效果发送"),
-        ("function phScreenFx(kind)", "v1300 整屏特效"),
+        ("function phScreenFx(kind,m)", "v1300 整屏特效"),
         ("function phSmsPlusMenu(", "v1300 文字效果收进 ＋ 里"),
         ("function storedImageElementSource(v)", "role cover cache-miss hydration"),
         ("应用处理\\s*[|｜]", "internal app decision visibility"),
