@@ -2,8 +2,8 @@
 
 当前私人内置源码为 v1297，私人 iOS 升为 **1.0.382 (382)**，原生桥仍为 41（这一轮没动原生协议，只是内置页改了）。网页同源为 v1296。**这一轮真的打包了**：`SmallPhone_v1297_iOS382_MacSource.zip`，由 `scripts/package_private_v1297_ios382.py` 从提交里读文件生成（不读工作目录，避免把没提交的改动混进包里）。
 
-本次打包结果：**1650 个文件、154 MB**，源提交 `d65dacf`，zip 自身 sha256 为
-`bcb06b237f55cb0440ce6d7a478e860842bffed9fba8d07e98b7257a8447348e`。
+本次打包结果：**1650 个文件、154 MB**，源提交 `16a47dc`，zip 自身 sha256 为
+`5bdd23f578bc677bd8b50ea38c22beff7610f51c2e8bc3ac4d8b2257d6fe9ffe`。
 注意 zip 里每个条目带的是打包当时的时间戳，所以**重新打一次包、zip 的整体哈希会变**，
 但包内每个文件的内容是固定的——包里的 `SHA256SUMS.json` 逐个文件记了哈希，用它核对才准。
 换一台机器要拿到同一份包：拉到这个提交，直接跑 `python3 scripts/package_private_v1295_ios381.py`，
