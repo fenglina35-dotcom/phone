@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1303'){
+if(window.__NORTH_SHELL_BUILD__!=='1305'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -440,7 +440,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1303 · 抖音发作品修复、文字特效、隐形墨水刮开（私人）';
+const APP_VER='v1305 · 特效返工：爆发、摇晃点头、撑气泡、烟花升空（私人）';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1780,7 +1780,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1303&r=v1303-private-imsg-1';
+  const url='sw.js?v=1305&r=v1305-private-imsg-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -2519,6 +2519,7 @@ function render(){
   if(c.p==='home')homeRestorePage();
   if(c.p==='roleImageStudio')setTimeout(()=>roleImageStudioWarm(c.id),0);
   if(c.p==='phonesms'&&typeof phInvMountAll==='function')requestAnimationFrame(phInvMountAll);/* 隐形墨水的沙子要重新盖上 */
+  if(c.p==='phonesms'&&typeof phFxSwellAll==='function')requestAnimationFrame(phFxSwellAll);/* 被字撑大的气泡要重新量 */
   const _imageRouteKey=renderPageKey(c),_imageRouteChanged=_imageRouteKey!==_visibleImageRouteKey;_visibleImageRouteKey=_imageRouteKey;
   scheduleVisibleStoredImages(_imageRouteChanged,true);
   if(_renderStarted)northNativePerformanceSample('render-'+c.p,(typeof performance!=='undefined'&&performance.now?performance.now():Date.now())-_renderStarted);
@@ -10568,7 +10569,7 @@ function phFxRunHTML(r){const e=Array.isArray(r&&r.e)?r.e.filter(k=>PH_FX_ALL.in
   const burst=e.includes('burst');
   const inner=per?Array.from(String(r.t||'')).map((c,i)=>{
     let v='';
-    if(burst){const a=(i*137.5+41)*Math.PI/180,d=34+((i*29)%22);
+    if(burst){const a=(i*137.5+41)*Math.PI/180,d=48+((i*29)%30);
       v=`;--dx:${(Math.cos(a)*d).toFixed(0)}px;--dy:${(Math.sin(a)*d-14).toFixed(0)}px;--dr:${((i%2?1:-1)*(18+(i*13)%22)).toFixed(0)}deg`;}
     return `<b class="imfxc" style="--i:${i}${v}">${esc(c)}</b>`;}).join(''):esc(r.t||'');
   return `<em class="imfx ${cls}">${inner}</em>`;}
@@ -10690,14 +10691,44 @@ function phFxBarHTML(){if(!phFxHas())return '';
     tags=[_phFx.bfx?phFxName(PH_FX_BUBBLE,_phFx.bfx):'',_phFx.sfx?phFxName(PH_FX_SCREEN,_phFx.sfx):''].filter(Boolean).join(' · ');
   return `<div class="imsg-fxbar"><b>${runs.map(phFxRunHTML).join('')||'（还没打字）'}</b>${tags?`<small>${esc(tags)}</small>`:''}<button onclick="phFxDrop()" aria-label="清掉效果">×</button></div>`;}
 /* ===== 放效果 ===== */
+/* ===== 字撑大了，气泡跟着鼓一下 =====
+   她说「字体放大一般气泡就会不够用了，所以气泡也可以跟着像被里面的字撑了一样，
+   就跟一个皮球被撑大了一点，然后缩回去了……如果是比较小的就不会，缩小是同样的道理」。
+   所以撑多少不是拍脑袋定的，是量出来的：放大的那几个字放大之后多要多少像素，
+   气泡就跟着宽多少像素。多要的不到 8px（比如一整条长消息里只有一个字在放大），
+   气泡就一动不动——「如果是比较小的就不会」。 */
+const PH_FX_SWELL={big:1.95,small:.36};
+function phFxSwell(node){if(!node||!node.classList)return;
+  node.classList.remove('imb-swell');node.style.removeProperty('--sw');
+  const em=node.querySelector('.imfx-big,.imfx-small');if(!em)return;
+  const peak=em.classList.contains('imfx-big')?PH_FX_SWELL.big:PH_FX_SWELL.small;
+  const w=em.getBoundingClientRect().width,bw=node.getBoundingClientRect().width;
+  if(!w||!bw)return;
+  const grow=w*(peak-1);                       /* 这几个字多要（或少要）多少像素 */
+  /* 两个条件都要满足才撑：多要的像素得够多（>=8px），而且得占到气泡宽度的一成二。
+     长句子的气泡本来就有富余，里头一个字放大它照样装得下——那就一动不动，
+     这就是她说的「如果是比较小的就不会」。 */
+  if(Math.abs(grow)<8||Math.abs(grow)/bw<.12)return;
+  const sw=Math.max(.9,Math.min(1.16,(bw+grow)/bw));
+  if(Math.abs(sw-1)<.012)return;
+  node.style.setProperty('--sw',sw.toFixed(3));node.classList.add('imb-swell');}
+function phFxSwellAll(){const box=$('#smsbody');if(!box)return;
+  box.querySelectorAll('.imsg-b').forEach(phFxSwell);}
 function phFxPlay(m,box){if(!m)return;
   const node=box&&box.querySelector(`.imsg-b[data-mid="${m.id}"]`);
   if(node&&m.bfx){if(m.bfx==='invisible'){node.classList.add('iminv');phInvReset(node);}
-    else{node.classList.remove('imbfx-slam','imbfx-loud','imbfx-gentle');void node.offsetWidth;node.classList.add('imbfx-'+m.bfx);}}
+    else{node.classList.remove('imbfx-slam','imbfx-loud','imbfx-gentle');void node.offsetWidth;node.classList.add('imbfx-'+m.bfx);
+      /* 一次性动画和「鼓气泡」抢的是同一个 animation 属性，放完就得把类摘掉，
+         不然这条气泡以后永远鼓不起来 */
+      node.addEventListener('animationend',function off(e){if(e.target!==node)return;
+        node.classList.remove('imbfx-slam','imbfx-loud','imbfx-gentle');
+        node.removeEventListener('animationend',off);phFxSwell(node);},false);}}
+  if(node)phFxSwell(node);
   if(m.sfx)phScreenFx(m.sfx,m);}
 function phFxReplay(num,mid,sk){const arr=phSmsArr(num,sk),m=arr.find(x=>x&&x.id===mid),box=$('#smsbody');if(!m)return;
   const node=box&&box.querySelector(`.imsg-b[data-mid="${mid}"]`);
-  if(node){node.querySelectorAll('.imfx,.imfxc').forEach(el=>{const a=el.style.animation;el.style.animation='none';void el.offsetWidth;el.style.animation=a||'';});}
+  if(node){node.classList.remove('imb-swell');
+    node.querySelectorAll('.imfx,.imfxc').forEach(el=>{const a=el.style.animation;el.style.animation='none';void el.offsetWidth;el.style.animation=a||'';});}
   phFxPlay(m,box);}
 /* ===== 隐形墨水：用手指一点点划开 =====
    盖在气泡上的是一块 canvas：每帧重画一层会闪的沙粒（位置按种子算死，
@@ -10788,6 +10819,10 @@ function phScreenFx(kind,m){const stage=document.querySelector('.screen')||docum
   const pick=arr=>arr[Math.floor(rnd(0,arr.length))%arr.length];
   const add=(css,html,cls)=>{const i=document.createElement('i');i.style.cssText=css;if(cls)i.className=cls;if(html!=null)i.innerHTML=html;box.appendChild(i);return i;};
   const WARM=['#ff5f8f','#ffd36b','#6ec8ff','#b58cff','#7ee2a8','#ffffff'];
+  /* 飘多远、升多高都按这块屏幕的真实高度算。原来写的是 vh——那是【窗口】的高度，
+     网页版的手机只占窗口的一小块，按 vh 算的话气球烟花一出手就飞到框外面去了，
+     升空的过程一眼都看不见。她说烟花要「从屏幕底部升上去然后炸开」，就得按这个算。 */
+  const SR=stage.getBoundingClientRect(),SH=Math.max(320,SR.height||640),SW=Math.max(240,SR.width||390);
   let life=2800;
   if(kind==='echo'){
     /* 她要的是「所有气泡互相交替绕圈」：满屏都是这条气泡，一圈一圈地绕，
@@ -10796,31 +10831,34 @@ function phScreenFx(kind,m){const stage=document.querySelector('.screen')||docum
     const t=esc(String(m&&phFxRunsPlain(m.fx)||m&&m.text||'').slice(0,10))||'…';
     const rings=[64,116,168,222,272];
     for(let n=0;n<30;n++){
-      const cw=n%2===0,ring=n%rings.length,
+      const alt=n%2===1,ring=n%rings.length,
         a=((n*61)+(ring*37))%360,dur=(3.4+ring*.42).toFixed(2),
         sc=(1.02-ring*.08).toFixed(2),op=(.96-ring*.1).toFixed(2),
         d=(n*.043).toFixed(2);
       add(`--a:${a}deg;--r:${rings[ring]}px;--sc:${sc};--op:${op};opacity:0;animation-duration:${dur}s;animation-delay:${d}s`,
-        `<b style="animation-duration:${dur}s;animation-delay:${d}s">${t}</b>`,cw?'cw':'ccw');}
+        `<b style="animation-duration:${dur}s;animation-delay:${d}s">${t}</b>`,alt?'alt':'');}
     life=5200;}
   else if(kind==='balloons'){
     const cols=['#ff5f8f','#ffd36b','#6ec8ff','#b58cff','#7ee2a8','#ff9f6b'];
     for(let n=0;n<15;n++){const c=cols[n%cols.length],w=(21+rnd(0,15))|0;
-      add(`left:${rnd(2,92).toFixed(1)}%;--w:${w}px;--h:${(w*1.28)|0}px;--c:${c};--sway:${rnd(12,34).toFixed(0)}px;`
+      add(`left:${rnd(2,92).toFixed(1)}%;--w:${w}px;--h:${(w*1.28)|0}px;--c:${c};--sway:${rnd(12,34).toFixed(0)}px;--rise:${(SH+160).toFixed(0)}px;`
         +`animation-duration:${rnd(3.1,4.4).toFixed(2)}s;animation-delay:${rnd(0,1).toFixed(2)}s`,
         `<b></b><u></u>`);}
     life=4600;}
   else if(kind==='confetti'){
+    /* 下落和扇动是两层，各转各的：外层匀速落（不会变速），里层扇（不会被压成线） */
     for(let n=0;n<78;n++){const c=WARM[n%WARM.length],shape=n%5===0?'ribbon':n%3===0?'dot':'bar';
-      add(`left:${rnd(-4,104).toFixed(1)}%;--c:${c};--spin:${(rnd(-3,3)*360).toFixed(0)}deg;`
-        +`--tilt:${rnd(-1,1)*540|0}deg;--drift:${rnd(-70,70).toFixed(0)}px;`
-        +`animation-duration:${rnd(2.4,3.9).toFixed(2)}s;animation-delay:${rnd(0,.9).toFixed(2)}s`,null,shape);}
+      add(`left:${rnd(-4,104).toFixed(1)}%;--c:${c};--drop:${(SH+90).toFixed(0)}px;`
+        +`--drift:${rnd(-70,70).toFixed(0)}px;--fl:${rnd(.62,1.35).toFixed(2)}s;`
+        +`animation-duration:${rnd(2.4,3.9).toFixed(2)}s;animation-delay:${rnd(0,.9).toFixed(2)}s`,'<b></b>',shape);}
     life=4200;}
   else if(kind==='love'){
     /* 心是 CSS 画的，不是 ❤ 这个字——放到一百多像素还是干干净净，不会糊成马赛克 */
-    for(let n=0;n<18;n++)add(`left:${rnd(10,90).toFixed(1)}%;--sz:${rnd(14,34).toFixed(0)}px;`
-      +`--sway:${rnd(-46,46).toFixed(0)}px;animation-duration:${rnd(2.6,3.9).toFixed(2)}s;animation-delay:${rnd(0,1.3).toFixed(2)}s`,'<b></b>','up');
-    for(let n=0;n<3;n++)add(`left:50%;top:56%;--sz:${(58+n*34)}px;animation-delay:${(n*.26).toFixed(2)}s`,'<b></b>','beat');
+    /* i 匀速升、b 慢慢长大、u 左右摇——三个节奏分开，所以中途不会「停一下」 */
+    for(let n=0;n<18;n++)add(`left:${rnd(10,90).toFixed(1)}%;--sz:${rnd(16,36).toFixed(0)}px;`
+      +`--sway:${rnd(9,26).toFixed(0)}px;--swd:${rnd(.9,1.7).toFixed(2)}s;--rise:${(SH+110).toFixed(0)}px;`
+      +`animation-duration:${rnd(2.6,3.9).toFixed(2)}s;animation-delay:${rnd(0,1.3).toFixed(2)}s`,'<b><u></u></b>','up');
+    for(let n=0;n<3;n++)add(`left:50%;top:56%;--sz:${(58+n*34)}px;animation-delay:${(n*.26).toFixed(2)}s`,'<b><u></u></b>','beat');
     life=4200;}
   else if(kind==='fireworks'){
     /* 她说「我要看到那种绽放的很漂亮的五彩的烟花」。所以每一朵都是五彩的：
@@ -10829,15 +10867,15 @@ function phScreenFx(kind,m){const stage=document.querySelector('.screen')||docum
     const hue=(a)=>`hsl(${((a%360)+360)%360},96%,${62}%)`;
     for(let b=0;b<4;b++){
       /* 四朵分开放在四个角落，别全挤在一块 */
-      const cx=20+(b%2)*40+rnd(-6,12),cy=15+Math.floor(b/2)*24+rnd(-4,10),d=b*.54,
+      const cx=30+(b%2)*26+rnd(-5,9),cy=15+Math.floor(b/2)*24+rnd(-4,10),d=b*.62,
         h0=rnd(0,360),span=pick([300,360,150,210]),/* 有的朵整圈五彩，有的朵只在一段色相里渐变 */
         c=hue(h0),c2=hue(h0+span*.5);
-      /* 先升空：一条带尾巴的小点 */
-      add(`left:${cx.toFixed(1)}%;--to:${cy.toFixed(1)}vh;--c:${c};animation-delay:${d.toFixed(2)}s`,null,'shell');
+      /* 先从屏幕最底下升空：一条带尾巴的小点，升到 cy% 那个高度 */
+      add(`left:${cx.toFixed(1)}%;--rise:${(SH*(1-cy/100)).toFixed(0)}px;--c:${c};animation-delay:${d.toFixed(2)}s`,null,'shell');
       /* 炸开那一下：白芯闪光 + 往外推的彩环 */
-      add(`left:${cx.toFixed(1)}%;top:${cy.toFixed(1)}%;--c:${c};--c2:${c2};animation-delay:${(d+.62).toFixed(2)}s`,null,'flash');
+      add(`left:${cx.toFixed(1)}%;top:${cy.toFixed(1)}%;--c:${c};--c2:${c2};animation-delay:${(d+1.03).toFixed(2)}s`,null,'flash');
       add(`left:${cx.toFixed(1)}%;top:${cy.toFixed(1)}%;--c:${c};--c2:${c2};--rd:${rnd(210,310).toFixed(0)}px;`
-        +`animation-delay:${(d+.62).toFixed(2)}s`,null,'ring');
+        +`animation-delay:${(d+1.03).toFixed(2)}s`,null,'ring');
       /* 外层一大圈 + 内层一小圈；碎片横向匀速、纵向重力，所以是抛物线不是直线 */
       for(const layer of [{n:40,r0:82,r1:168,sz:[2.2,4.4],dur:[1.3,2.05],g:[62,136],t:[10,22]},
                           {n:20,r0:34,r1:78,sz:[1.6,3.2],dur:[.9,1.4],g:[34,78],t:[6,13]}]){
@@ -10848,7 +10886,7 @@ function phScreenFx(kind,m){const stage=document.querySelector('.screen')||docum
             +`--g:${rnd(layer.g[0],layer.g[1]).toFixed(0)}px;--c:${hue(h0+t*span)};`
             +`--sz:${rnd(layer.sz[0],layer.sz[1]).toFixed(1)}px;`
             +`--tail:${rnd(layer.t[0],layer.t[1]).toFixed(0)}px;--ta:${(ang*180/Math.PI+180).toFixed(0)}deg;`
-            +`animation-delay:${(d+.62+rnd(0,.05)).toFixed(2)}s;`
+            +`animation-delay:${(d+1.03+rnd(0,.05)).toFixed(2)}s;`
             +`animation-duration:${rnd(layer.dur[0],layer.dur[1]).toFixed(2)}s`,'<b></b>','spark');}}}
     life=4800;}
   else if(kind==='lasers'){
@@ -10859,11 +10897,12 @@ function phScreenFx(kind,m){const stage=document.querySelector('.screen')||docum
     life=3200;}
   else if(kind==='star'){
     /* 会眨的小星星铺一层，再让几颗流星划过去 */
-    for(let n=0;n<46;n++)add(`left:${rnd(0,100).toFixed(1)}%;top:${rnd(0,86).toFixed(1)}%;`
-      +`--sz:${rnd(1.2,2.8).toFixed(1)}px;animation-duration:${rnd(1.4,2.8).toFixed(2)}s;animation-delay:${rnd(0,1.6).toFixed(2)}s`,null,'twinkle');
-    for(let n=0;n<8;n++)add(`left:${rnd(46,116).toFixed(1)}%;top:${rnd(-12,40).toFixed(1)}%;`
-      +`--len:${rnd(70,150).toFixed(0)}px;--dx:${rnd(-98,-62).toFixed(0)}vw;--dy:${rnd(42,78).toFixed(0)}vh;`
-      +`animation-delay:${(n*.28).toFixed(2)}s;animation-duration:${rnd(1.5,2.2).toFixed(2)}s`,'<b></b>','shoot');
+    /* 她要「流星多一点、屏幕暗一点、流星亮一点」：数量 8→20，背景那层暗色在 CSS 里 */
+    for(let n=0;n<64;n++)add(`left:${rnd(0,100).toFixed(1)}%;top:${rnd(0,90).toFixed(1)}%;`
+      +`--sz:${rnd(1.2,3.1).toFixed(1)}px;animation-duration:${rnd(1.4,2.8).toFixed(2)}s;animation-delay:${rnd(0,1.6).toFixed(2)}s`,null,'twinkle');
+    for(let n=0;n<20;n++)add(`left:${rnd(44,124).toFixed(1)}%;top:${rnd(-16,42).toFixed(1)}%;`
+      +`--len:${rnd(80,175).toFixed(0)}px;--dx:${(-SW*rnd(.72,1.18)).toFixed(0)}px;--dy:${(SH*rnd(.42,.82)).toFixed(0)}px;`
+      +`animation-delay:${(n*.17).toFixed(2)}s;animation-duration:${rnd(1.5,2.3).toFixed(2)}s`,'<b></b>','shoot');
     life=4200;}
   else if(kind==='spotlight'){
     /* 光要打在这条消息上，不是随便找个地方暗下来 */

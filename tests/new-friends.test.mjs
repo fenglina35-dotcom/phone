@@ -25,7 +25,7 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-assert.match(source, /APP_VER='v1302 · 抖音发作品修复、文字特效、隐形墨水刮开'/);
+assert.match(source, /APP_VER='v1304 · 特效返工：爆发、摇晃点头、撑气泡、烟花升空'/);
 assert.match(source, /friendDiscovery:\{enabled:false,freq:180,max:2/);
 assert.match(source, /else if\(c\.p==='newfriends'\)html=renderNewFriends\(\)/);
 assert.match(source, /好友申请与最近添加/);

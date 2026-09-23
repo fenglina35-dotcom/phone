@@ -58,21 +58,21 @@ function persistenceRuntime() {
   return { context, writes, releases, traces };
 }
 
-test('private identity remains v1303 and iOS 385 while public advances independently', () => {
-  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1303'/);
-  assert.match(privateApp, /APP_VER='v1303 · 抖音发作品修复、文字特效、隐形墨水刮开（私人）'/);
+test('private identity remains v1305 and iOS 386 while public advances independently', () => {
+  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1305'/);
+  assert.match(privateApp, /APP_VER='v1305 · 特效返工：爆发、摇晃点头、撑气泡、烟花升空（私人）'/);
   for (const html of [privateIndex, privateAlias]) {
-    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1303'/);
-    assert.match(html, /app\.js\?v=1303&r=v1303-private-imsg-1/);
+    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1305'/);
+    assert.match(html, /app\.js\?v=1305&r=v1305-private-imsg-1/);
     assert.match(html, /private-runtime-diagnostics\.js\?v=339/);
   }
-  assert.match(privateRepair, /index\.html\?repair=1&v=1303/);
-  assert.match(swift, /1\.0\.385 \(385\)/);
-  assert.match(bridge, /private static let build = "1\.0\.385 \(385\)"/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 385;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.385;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1302 · 抖音发作品修复、文字特效、隐形墨水刮开'/);
-  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1302'/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1305/);
+  assert.match(swift, /1\.0\.386 \(386\)/);
+  assert.match(bridge, /private static let build = "1\.0\.386 \(386\)"/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 386;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.386;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1304 · 特效返工：爆发、摇晃点头、撑气泡、烟花升空'/);
+  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1304'/);
   assert.doesNotMatch(publicApp, /persistWechatRequested|smallPhoneWechatPersistTrace/);
 });
 

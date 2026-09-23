@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='1302';</script>
+<script>window.__NORTH_SHELL_BUILD__='1304';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-1302-web-imsg-1';
+  var key='north-sw-reloaded-1304-web-imsg-1';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=1302&r=v1302-web-imsg-1';
+  var url='sw.js?v=1304&r=v1304-web-imsg-1';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -2098,29 +2098,104 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
 .imfx-u{text-decoration:underline;text-underline-offset:2px;}
 .imfx-s{text-decoration:line-through;}
 .imfx-u.imfx-s{text-decoration:underline line-through;}
-.imfx.imfx-big{animation:imfx-big 3s infinite;}
-.imfx.imfx-small{animation:imfx-small 3s infinite;}
+.imfx.imfx-big{animation:imfx-big 4.2s infinite;}
+.imfx.imfx-small{animation:imfx-small 4.2s infinite;}
 .imfx-shake .imfxc{animation:imfx-shake 3s infinite;animation-delay:calc(var(--i)*.05s);}
 .imfx-nod .imfxc{animation:imfx-nod 3s infinite;animation-delay:calc(var(--i)*.07s);}
 .imfx-wave .imfxc{animation:imfx-wave 3s infinite;animation-delay:calc(var(--i)*.09s);}
 .imfx-bloom .imfxc{animation:imfx-bloom 3s infinite;animation-delay:calc(var(--i)*.08s);}
-.imfx-jitter .imfxc{animation:imfx-jitter 3s infinite;animation-delay:calc(var(--i)*.03s);}
-.imfx-burst .imfxc{animation:imfx-burst 3s infinite;animation-delay:calc(var(--i)*.04s);}
-@keyframes imfx-big{0%,30%,100%{transform:scale(1)}6%{transform:scale(1.85)}14%{transform:scale(.9)}21%{transform:scale(1.1)}}
-@keyframes imfx-small{0%,30%,100%{transform:scale(1)}7%{transform:scale(.4)}16%{transform:scale(1.1)}23%{transform:scale(.97)}}
-@keyframes imfx-shake{0%,28%,100%{transform:rotate(0)}5%{transform:rotate(-10deg)}11%{transform:rotate(10deg)}17%{transform:rotate(-6deg)}23%{transform:rotate(3deg)}}
-@keyframes imfx-nod{0%,26%,100%{transform:translateY(0) rotate(0)}8%{transform:translateY(-.2em) rotate(-9deg)}17%{transform:translateY(.1em) rotate(7deg)}}
+.imfx-jitter .imfxc{animation:imfx-jitter 3.4s infinite;animation-delay:calc(var(--i)*.028s);}
+/* 爆发是 8 秒一轮：蹦出去就没了，整整五秒看不见，然后才飞回来 */
+.imfx-burst .imfxc{animation:imfx-burst 8s infinite;animation-delay:calc(var(--i)*.045s);}
+/* 放大：撑到最大之后要「撑住」一会儿才缩回去（18%～52%，约 1.4 秒） */
+@keyframes imfx-big{0%,4%{transform:scale(1)}13%{transform:scale(1.95)}
+  18%,52%{transform:scale(1.78)}62%{transform:scale(.9)}70%{transform:scale(1.07)}78%,100%{transform:scale(1)}}
+@keyframes imfx-small{0%,4%{transform:scale(1)}13%{transform:scale(.36)}
+  18%,52%{transform:scale(.44)}62%{transform:scale(1.12)}70%{transform:scale(.95)}78%,100%{transform:scale(1)}}
+/* 摇晃是左右摇，不是歪着转——她说「摇晃的话是左右摇晃，不是上下」 */
+@keyframes imfx-shake{0%,30%,100%{transform:translateX(0)}5%{transform:translateX(-.3em)}
+  10%{transform:translateX(.3em)}15%{transform:translateX(-.21em)}20%{transform:translateX(.15em)}25%{transform:translateX(-.07em)}}
+/* 点头是上下点，不带一点倾斜——她说「点头是上下摇晃不是字体倾斜」 */
+@keyframes imfx-nod{0%,28%,100%{transform:translateY(0)}7%{transform:translateY(-.3em)}
+  15%{transform:translateY(.14em)}22%{transform:translateY(-.06em)}}
 @keyframes imfx-wave{0%,24%,100%{transform:translateY(0)}8%{transform:translateY(-.36em)}16%{transform:translateY(.13em)}}
 @keyframes imfx-bloom{0%{transform:scale(0) rotate(-45deg);opacity:0;filter:blur(3px)}9%{transform:scale(1.3) rotate(8deg);opacity:1;filter:blur(0)}16%,100%{transform:scale(1) rotate(0);opacity:1;filter:blur(0)}}
-@keyframes imfx-burst{0%,34%,100%{transform:translate(0,0) scale(1) rotate(0);opacity:1}
-  7%{transform:translate(var(--dx),var(--dy)) scale(1.7) rotate(var(--dr));opacity:.9}
-  16%{transform:translate(calc(var(--dx)*.35),calc(var(--dy)*.35)) scale(.82) rotate(calc(var(--dr)*-.4));opacity:1}
-  25%{transform:translate(0,0) scale(1.08) rotate(0)}}
-@keyframes imfx-jitter{0%,32%,100%{transform:translate(0,0)}4%{transform:translate(-1.6px,1px)}9%{transform:translate(1.6px,-1px)}14%{transform:translate(-1px,-1.6px)}19%{transform:translate(1px,1.6px)}25%{transform:translate(-.8px,.6px)}}
-/* ===== 气泡特效：发出去的那一下 ===== */
-.imbfx-slam{animation:imbfx-slam .85s cubic-bezier(.2,1.1,.3,1) 1;}
-.imbfx-loud{animation:imbfx-loud 1s cubic-bezier(.2,1.1,.3,1) 1;}
-.imbfx-gentle{animation:imbfx-gentle 1s cubic-bezier(.2,1.1,.3,1) 1;}
+/* 爆发：拆开蹦出去、直接消失，在外面待满五秒（10%～72.5% 的 8 秒 = 5.0 秒）才飞回来 */
+@keyframes imfx-burst{0%,3%{transform:translate(0,0) scale(1) rotate(0);opacity:1}
+  10%{transform:translate(var(--dx),var(--dy)) scale(1.95) rotate(var(--dr));opacity:0}
+  72.5%{transform:translate(var(--dx),var(--dy)) scale(1.95) rotate(var(--dr));opacity:0}
+  82%{transform:translate(0,0) scale(1.14) rotate(0);opacity:1}
+  89%{transform:translate(0,0) scale(.95) rotate(0);opacity:1}
+  95%,100%{transform:translate(0,0) scale(1) rotate(0);opacity:1}}
+/* 抖动：她说「抖动的久一点、厉害一点，不是幅度是频率」——
+   所以幅度一点没加，是把步数堆密（26 步）、时间从 0.75 秒拉到 2 秒。 */
+@keyframes imfx-jitter{0%,62%,100%{transform:translate(0,0)}
+  1.5%{transform:translate(-1.6px,1.0px)}
+  2.66%{transform:translate(1.6px,-1.0px)}
+  3.82%{transform:translate(-1.1px,-1.6px)}
+  4.98%{transform:translate(1.1px,1.6px)}
+  6.14%{transform:translate(-1.6px,-0.6px)}
+  7.3%{transform:translate(1.5px,0.9px)}
+  8.46%{transform:translate(-0.9px,1.5px)}
+  9.62%{transform:translate(1.3px,-1.4px)}
+  10.78%{transform:translate(-1.6px,1.0px)}
+  11.94%{transform:translate(1.6px,-1.0px)}
+  13.1%{transform:translate(-1.1px,-1.6px)}
+  14.26%{transform:translate(1.1px,1.6px)}
+  15.41%{transform:translate(-1.6px,-0.6px)}
+  16.57%{transform:translate(1.5px,0.9px)}
+  17.73%{transform:translate(-0.9px,1.5px)}
+  18.89%{transform:translate(1.3px,-1.4px)}
+  20.05%{transform:translate(-1.6px,1.0px)}
+  21.21%{transform:translate(1.6px,-1.0px)}
+  22.37%{transform:translate(-1.1px,-1.6px)}
+  23.53%{transform:translate(1.1px,1.6px)}
+  24.69%{transform:translate(-1.6px,-0.6px)}
+  25.85%{transform:translate(1.5px,0.9px)}
+  27.01%{transform:translate(-0.9px,1.5px)}
+  28.17%{transform:translate(1.3px,-1.4px)}
+  29.33%{transform:translate(-1.6px,1.0px)}
+  30.49%{transform:translate(1.6px,-1.0px)}
+  31.65%{transform:translate(-1.1px,-1.6px)}
+  32.81%{transform:translate(1.1px,1.6px)}
+  33.97%{transform:translate(-1.6px,-0.6px)}
+  35.13%{transform:translate(1.5px,0.9px)}
+  36.29%{transform:translate(-0.9px,1.5px)}
+  37.45%{transform:translate(1.3px,-1.4px)}
+  38.61%{transform:translate(-1.6px,1.0px)}
+  39.77%{transform:translate(1.6px,-1.0px)}
+  40.93%{transform:translate(-1.1px,-1.6px)}
+  42.09%{transform:translate(1.1px,1.6px)}
+  43.24%{transform:translate(-1.6px,-0.6px)}
+  44.4%{transform:translate(1.5px,0.9px)}
+  45.56%{transform:translate(-0.9px,1.5px)}
+  46.72%{transform:translate(1.3px,-1.4px)}
+  47.88%{transform:translate(-1.6px,1.0px)}
+  49.04%{transform:translate(1.6px,-1.0px)}
+  50.2%{transform:translate(-1.1px,-1.6px)}
+  51.36%{transform:translate(1.1px,1.6px)}
+  52.52%{transform:translate(-1.6px,-0.6px)}
+  53.68%{transform:translate(1.5px,0.9px)}
+  54.84%{transform:translate(-0.9px,1.5px)}
+  56.0%{transform:translate(1.3px,-1.4px)}}
+/* ===== 气泡特效 ===== */
+/* 字被放大之后气泡一般就不够用了，她要气泡「像一个皮球被撑大了一点，然后缩回去」。
+   撑多少是 phFxSwell 按真实宽度量出来的，写在 --sw 里；撑不动（不到 8px）就不撑，
+   「如果是比较小的就不会」。关键帧的百分比和 imfx-big 一模一样，所以字和气泡是一起鼓的。 */
+.imsg-b.imb-swell{animation:imb-swell 4.2s infinite;}
+.imsg-row.me .imsg-b.imb-swell{transform-origin:100% 50%;}
+.imsg-row.them .imsg-b.imb-swell{transform-origin:0 50%;}
+@keyframes imb-swell{0%,4%{transform:scale(1)}13%{transform:scale(var(--sw))}
+  18%,52%{transform:scale(calc(1 + (var(--sw) - 1)*.88))}
+  62%{transform:scale(calc(1 - (var(--sw) - 1)*.2))}
+  70%{transform:scale(calc(1 + (var(--sw) - 1)*.12))}
+  78%,100%{transform:scale(1)}}
+/* 发出去那一下的一次性动画。和上面鼓气泡的是同一个 animation 属性，
+   所以选择器权重要一样、而且必须写在后面，它才压得住；放完 JS 会把类摘掉，
+   气泡再接着鼓。 */
+.imsg-b.imbfx-slam{animation:imbfx-slam .85s cubic-bezier(.2,1.1,.3,1) 1;}
+.imsg-b.imbfx-loud{animation:imbfx-loud 1s cubic-bezier(.2,1.1,.3,1) 1;}
+.imsg-b.imbfx-gentle{animation:imbfx-gentle 1s cubic-bezier(.2,1.1,.3,1) 1;}
 @keyframes imbfx-slam{0%{transform:scale(3);opacity:0}24%{transform:scale(.85);opacity:1}38%{transform:scale(1.08)}52%{transform:scale(.96)}68%{transform:scale(1.03)}100%{transform:scale(1)}}
 @keyframes imbfx-loud{0%{transform:scale(.35);opacity:.25}32%{transform:scale(1.5);opacity:1}52%{transform:scale(.93)}68%{transform:scale(1.07)}100%{transform:scale(1)}}
 @keyframes imbfx-gentle{0%{transform:scale(1.7);opacity:.25}55%{transform:scale(.55);opacity:1}78%{transform:scale(1.05)}100%{transform:scale(1)}}
@@ -2143,42 +2218,40 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
 /* 整屏特效挂在 .screen 上，盖满整个手机屏幕（状态栏那块也盖住），
    不是只盖聊天那一块——她说「全屏气泡一定是在全屏上面的，不是在一个位置」 */
 .imsfx{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:2200;}
-.imsfx i{position:absolute;display:block;}
+/* 粒子都是 <i>，浏览器默认就把里面的字弄成斜体——回声那些气泡里的字
+   就是这么被带歪的（和上一轮「选有特效的字体会变」是同一个毛病）。
+   这里一次性复位，谁也别想再偷偷改字形。 */
+.imsfx i{position:absolute;display:block;font-style:normal;}
 
 /* ── 回声：满屏都是这条气泡，一圈一圈绕着飞，顺逆交替；里面那层反着转，字始终是正的 ── */
 /* 外层绕圈、内层反着转（字始终是正的）。两层用一模一样的 linear 和关键帧位置，
    差一点点就会「字跟着歪」，所以时间函数不许改成 ease。 */
+/* 她说「回声的转动方向不对，就是顺时针转动，但不是像那种漩涡一样的」。
+   两处都改了：① 去掉顺逆交替，全部顺时针；② 一出场就在自己那一圈上，
+   半径从头到尾不变，所以是绕圈，不是从中心螺旋着甩出去。 */
 .imsfx-echo i{left:50%;top:47%;width:0;height:0;transform-origin:0 0;
   animation:imsfx-orbit-cw linear forwards;}
-.imsfx-echo i.ccw{animation-name:imsfx-orbit-ccw;}
 .imsfx-echo i>b{position:absolute;left:0;top:0;display:block;transform:translate(-50%,-50%);
   padding:7px 14px;border-radius:17px;white-space:nowrap;font-size:14.5px;font-weight:600;color:#fff;
   background:linear-gradient(140deg,#5aade0ff,#0a6ff0);box-shadow:0 7px 20px rgba(10,110,240,.5),inset 0 1px rgba(255,255,255,.45);
   animation:imsfx-unspin-cw linear forwards;}
-.imsfx-echo i.ccw>b{animation-name:imsfx-unspin-ccw;background:linear-gradient(140deg,#9d8bff,#5a3fe0);box-shadow:0 7px 20px rgba(110,80,240,.5),inset 0 1px rgba(255,255,255,.45);}
+.imsfx-echo i.alt>b{background:linear-gradient(140deg,#9d8bff,#5a3fe0);box-shadow:0 7px 20px rgba(110,80,240,.5),inset 0 1px rgba(255,255,255,.45);}
+/* 半径全程都是 --r（不再从 0 开始），只有透明度和一点点缩放在进出场时变，
+   所以看着是一圈一圈地绕，没有漩涡。里层反着转的角度必须和外层一一对应，
+   差一点字就会跟着歪，所以两组关键帧的百分比和度数是成对写死的。 */
 @keyframes imsfx-orbit-cw{
-  0%{opacity:0;transform:rotate(var(--a)) translateX(0) scale(.25)}
-  11%{opacity:var(--op);transform:rotate(calc(var(--a) + 62deg)) translateX(var(--r)) scale(var(--sc))}
-  86%{opacity:var(--op);transform:rotate(calc(var(--a) + 482deg)) translateX(var(--r)) scale(var(--sc))}
-  100%{opacity:0;transform:rotate(calc(var(--a) + 560deg)) translateX(calc(var(--r) + 30px)) scale(calc(var(--sc) * .82))}}
-@keyframes imsfx-orbit-ccw{
-  0%{opacity:0;transform:rotate(var(--a)) translateX(0) scale(.25)}
-  11%{opacity:var(--op);transform:rotate(calc(var(--a) - 62deg)) translateX(var(--r)) scale(var(--sc))}
-  86%{opacity:var(--op);transform:rotate(calc(var(--a) - 482deg)) translateX(var(--r)) scale(var(--sc))}
-  100%{opacity:0;transform:rotate(calc(var(--a) - 560deg)) translateX(calc(var(--r) + 30px)) scale(calc(var(--sc) * .82))}}
+  0%{opacity:0;transform:rotate(var(--a)) translateX(var(--r)) scale(calc(var(--sc) * .74))}
+  9%{opacity:var(--op);transform:rotate(calc(var(--a) + 34deg)) translateX(var(--r)) scale(var(--sc))}
+  88%{opacity:var(--op);transform:rotate(calc(var(--a) + 632deg)) translateX(var(--r)) scale(var(--sc))}
+  100%{opacity:0;transform:rotate(calc(var(--a) + 680deg)) translateX(var(--r)) scale(calc(var(--sc) * .86))}}
 @keyframes imsfx-unspin-cw{
   0%{transform:translate(-50%,-50%) rotate(calc(0deg - var(--a)))}
-  11%{transform:translate(-50%,-50%) rotate(calc(-62deg - var(--a)))}
-  86%{transform:translate(-50%,-50%) rotate(calc(-482deg - var(--a)))}
-  100%{transform:translate(-50%,-50%) rotate(calc(-560deg - var(--a)))}}
-@keyframes imsfx-unspin-ccw{
-  0%{transform:translate(-50%,-50%) rotate(calc(0deg - var(--a)))}
-  11%{transform:translate(-50%,-50%) rotate(calc(62deg - var(--a)))}
-  86%{transform:translate(-50%,-50%) rotate(calc(482deg - var(--a)))}
-  100%{transform:translate(-50%,-50%) rotate(calc(560deg - var(--a)))}}
+  9%{transform:translate(-50%,-50%) rotate(calc(-34deg - var(--a)))}
+  88%{transform:translate(-50%,-50%) rotate(calc(-632deg - var(--a)))}
+  100%{transform:translate(-50%,-50%) rotate(calc(-680deg - var(--a)))}}
 
 /* ── 气球：有高光、有结、绳子会摆，边升边左右晃 ── */
-.imsfx-balloons i{bottom:-20vh;width:var(--w);height:var(--h);animation:imsfx-rise ease-in-out forwards;}
+.imsfx-balloons i{bottom:-64px;width:var(--w);height:var(--h);animation:imsfx-rise ease-in-out forwards;}
 .imsfx-balloons i>b{position:absolute;inset:0;border-radius:50% 50% 47% 47%/54% 54% 46% 46%;
   background:radial-gradient(circle at 32% 26%,rgba(255,255,255,.85),rgba(255,255,255,0) 42%),
     radial-gradient(circle at 62% 74%,rgba(0,0,0,.24),rgba(0,0,0,0) 56%),var(--c);
@@ -2191,44 +2264,75 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
 .imsfx-balloons i>u{position:absolute;left:50%;top:calc(100% + 5px);width:15px;height:34px;margin-left:-15px;
   border-right:1px solid rgba(255,255,255,.46);border-bottom-right-radius:18px;transform-origin:100% 0;
   animation:imsfx-string 1.7s ease-in-out infinite alternate;}
+/* 飞多高按屏幕真实高度算（--rise），不用 vh：网页版的手机只占窗口的一小块，
+   按 vh 算会一下子飞到窗口外面去，整个过程一眼都看不见。 */
 @keyframes imsfx-rise{0%{transform:translate(0,0) rotate(-4deg);opacity:0}
-  9%{opacity:1}50%{transform:translate(var(--sway),-62vh) rotate(5deg)}
-  100%{transform:translate(0,-128vh) rotate(-3deg);opacity:.92}}
+  9%{opacity:1}50%{transform:translate(var(--sway),calc(0px - var(--rise) * .48)) rotate(5deg)}
+  100%{transform:translate(0,calc(0px - var(--rise))) rotate(-3deg);opacity:.92}}
 @keyframes imsfx-string{0%{transform:rotate(-7deg)}100%{transform:rotate(7deg)}}
 
-/* ── 五彩纸屑：长条／圆片／丝带三种，三轴翻滚，落速各不相同 ── */
-.imsfx-confetti i{top:-8vh;background:var(--c);animation:imsfx-fall linear forwards;}
+/* ── 五彩纸屑 ──
+   她说「五彩纸屑飘下来的时候会卡顿两下」。原来一张纸同时绕 X 轴和 Y 轴翻，
+   又没有 perspective，转到侧面就被压成一条 0.1px 的线——量下来有将近三分之一
+   的时间是扁的，看着就是「卡一下、又卡一下」。
+   现在拆成两层：外层只管匀速往下落（linear，一路不变速），里层自己扇动，
+   最扁也留 .26，任何时候都看得见。 */
+.imsfx-confetti i{top:-40px;animation:imsfx-fall linear forwards;will-change:transform;}
+.imsfx-confetti i>b{display:block;width:100%;height:100%;border-radius:inherit;background:var(--c);
+  animation:imsfx-flutter linear infinite;animation-duration:var(--fl);}
 .imsfx-confetti i.bar{width:7px;height:13px;border-radius:2px;}
 .imsfx-confetti i.dot{width:8px;height:8px;border-radius:50%;}
-.imsfx-confetti i.ribbon{width:5px;height:22px;border-radius:3px;
-  background:linear-gradient(180deg,var(--c),rgba(255,255,255,.75),var(--c));}
-@keyframes imsfx-fall{0%{transform:translate(0,0) rotate(0) rotateX(0) rotateY(0);opacity:0}
-  7%{opacity:1}
-  100%{transform:translate(var(--drift),118vh) rotate(var(--spin)) rotateX(var(--tilt)) rotateY(var(--spin));opacity:.85}}
+.imsfx-confetti i.ribbon{width:5px;height:22px;border-radius:3px;}
+.imsfx-confetti i.ribbon>b{background:linear-gradient(180deg,var(--c),rgba(255,255,255,.75),var(--c));}
+@keyframes imsfx-fall{0%{transform:translate(0,0);opacity:0}
+  6%{opacity:1}
+  100%{transform:translate(var(--drift),var(--drop));opacity:.9}}
+@keyframes imsfx-flutter{0%{transform:rotate(0) scaleX(1)}
+  25%{transform:rotate(90deg) scaleX(.26)}
+  50%{transform:rotate(180deg) scaleX(1)}
+  75%{transform:rotate(270deg) scaleX(.26)}
+  100%{transform:rotate(360deg) scaleX(1)}}
 
 /* ── 爱心：大小不一往上飘，带光晕；中间还有一次心跳式的爆开 ── */
 .imsfx-love i{width:var(--sz);height:var(--sz);}
 /* 两个圆加一个方块拼出来的心，三块各有各的渐变，接缝一眼就看得见（她说「分界线明显拼接」）。
    现在整颗心是一条 SVG 路径做的遮罩，底下铺一层渐变——一整块，没有缝，放多大都干净。 */
-.imsfx-love i>b{position:absolute;inset:0;
+/* 她说「爱心也是不自然的那种升上去也会一卡一卡的」。原来整段飞行是一条
+   ease-out 的关键帧——ease-out 是「每一段都减速到停」，量出来 55% 那一帧
+   速度只剩 0.25px，下一帧又蹿到 14px，那就是她看见的卡顿。
+   现在拆成三层，三种节奏各走各的：外层 i 匀速上升（linear，全程一个速度，
+   不可能再停），中层 b 管从小长到大，里层 u 管左右摇。 */
+.imsfx-love i>b{display:block;width:100%;height:100%;}
+.imsfx-love i>b>u{display:block;width:100%;height:100%;
   background:linear-gradient(152deg,#ffb3c6 4%,#ff5d80 34%,#ff2d55 62%,#dd0a3c);
   -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E") center/contain no-repeat;
-  filter:drop-shadow(0 2px 14px rgba(255,54,96,.78));}
-.imsfx-love i.up{bottom:6%;animation:imsfx-heart ease-out forwards;}
-.imsfx-love i.beat{left:50%;top:56%;opacity:0;animation:imsfx-beat 1.7s cubic-bezier(.2,1.1,.3,1) forwards;}
-@keyframes imsfx-heart{0%{transform:translate(-50%,0) scale(.3);opacity:0}
-  12%{opacity:1}55%{transform:translate(calc(-50% + var(--sway)),-46vh) scale(1.08)}
-  100%{transform:translate(-50%,-96vh) scale(.72);opacity:0}}
+  filter:drop-shadow(0 2px 12px rgba(255,54,96,.72));}
+.imsfx-love i.up{bottom:-40px;animation:imsfx-heart linear forwards;will-change:transform;}
+.imsfx-love i.up>b{animation:imsfx-hgrow linear forwards;animation-duration:inherit;}
+.imsfx-love i.up>b>u{animation:imsfx-hsway ease-in-out infinite alternate;animation-duration:var(--swd);}
+.imsfx-love i.beat{left:50%;top:56%;opacity:0;animation:imsfx-beat 1.7s linear forwards;}
+/* transform 只写在 0% 和 100%，中间那两帧只动透明度——所以上升是一条直线，
+   匀速到底，中途没有任何一个「停下来」的点。 */
+@keyframes imsfx-heart{0%{transform:translateY(0);opacity:0}
+  8%{opacity:1}84%{opacity:1}
+  100%{transform:translateY(calc(0px - var(--rise)));opacity:0}}
+@keyframes imsfx-hgrow{0%{transform:scale(.36)}56%{transform:scale(1.04)}100%{transform:scale(.8)}}
+@keyframes imsfx-hsway{0%{transform:translateX(calc(0px - var(--sway)))}100%{transform:translateX(var(--sway))}}
 @keyframes imsfx-beat{0%{transform:translate(-50%,-50%) scale(.2);opacity:0}
-  18%{transform:translate(-50%,-50%) scale(1.12);opacity:.92}
-  34%{transform:translate(-50%,-50%) scale(.94);opacity:.85}
+  14%{transform:translate(-50%,-50%) scale(1.06);opacity:.92}
+  24%{transform:translate(-50%,-50%) scale(.92);opacity:.86}
   100%{transform:translate(-50%,-50%) scale(3.1);opacity:0}}
 
 /* ── 烟花：先升空拖尾，炸开的碎片走抛物线（横向匀速＋纵向重力），带闪光和余烬 ── */
-.imsfx-fireworks i.shell{bottom:0;width:2.6px;height:2.6px;margin-left:-1.3px;border-radius:50%;background:#fff;
-  box-shadow:0 0 6px 1px var(--c);animation:imsfx-shell .64s cubic-bezier(.16,.7,.4,1) forwards;}
-.imsfx-fireworks i.shell:after{content:'';position:absolute;left:50%;top:2px;width:1.5px;height:34px;margin-left:-.75px;
-  background:linear-gradient(180deg,var(--c),transparent);opacity:.7;}
+/* 她说「烟花我想要的是那种从屏幕底部升上去，然后炸开的那种」。
+   原来也写了升空，但飞多高是按 100vh 算的——网页版的手机只占窗口一小块，
+   炮弹一出手就冲到窗口外面去了，整个上升过程根本看不见。
+   现在升多高按屏幕的真实高度（--rise，像素）算，时间也从 0.64 秒放慢到
+   1.05 秒，尾巴拉长到 62px，升的这一路是看得清清楚楚的。 */
+.imsfx-fireworks i.shell{bottom:0;opacity:0;width:3px;height:3px;margin-left:-1.5px;border-radius:50%;background:#fff;
+  box-shadow:0 0 9px 2px var(--c);animation:imsfx-shell 1.05s cubic-bezier(.12,.62,.36,1) forwards;}
+.imsfx-fireworks i.shell:after{content:'';position:absolute;left:50%;top:2px;width:1.8px;height:62px;margin-left:-.9px;
+  background:linear-gradient(180deg,var(--c),transparent);opacity:.85;}
 .imsfx-fireworks i.flash{width:9px;height:9px;margin:-4.5px 0 0 -4.5px;border-radius:50%;background:#fff;
   box-shadow:0 0 11px 2px #fff,0 0 24px 5px var(--c);opacity:0;animation:imsfx-flash .3s ease-out forwards;}
 /* 炸开那一瞬间往外推的一圈彩环，这一下最出「绽放」的感觉 */
@@ -2238,7 +2342,7 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
   margin:calc(var(--rd) / -2) 0 0 calc(var(--rd) / -2);border-radius:50%;opacity:0;
   border:2px solid var(--c);box-shadow:0 0 14px 1px var(--c);
   animation:imsfx-ring .9s cubic-bezier(.1,.72,.28,1) forwards;}
-.imsfx-fireworks i.spark{width:0;height:0;animation:imsfx-spark cubic-bezier(.12,.72,.32,1) forwards;}
+.imsfx-fireworks i.spark{width:0;height:0;opacity:0;animation:imsfx-spark cubic-bezier(.12,.72,.32,1) forwards;}
 .imsfx-fireworks i.spark>b{position:absolute;left:0;top:0;width:var(--sz);height:var(--sz);
   margin:calc(var(--sz) / -2) 0 0 calc(var(--sz) / -2);border-radius:50%;background:#fff;
   box-shadow:0 0 10px 2px var(--c),0 0 20px 5px var(--c);animation:imsfx-gravity cubic-bezier(.36,0,.78,.62) forwards;
@@ -2247,7 +2351,7 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
 .imsfx-fireworks i.spark>b:after{content:'';position:absolute;left:50%;top:50%;width:var(--tail);height:1.4px;
   margin-top:-.7px;transform-origin:0 50%;transform:rotate(var(--ta));border-radius:2px;
   background:linear-gradient(90deg,var(--c),transparent);opacity:.75;}
-@keyframes imsfx-shell{0%{transform:translateY(0);opacity:1}92%{opacity:1}100%{transform:translateY(calc(var(--to) - 100vh));opacity:0}}
+@keyframes imsfx-shell{0%{transform:translateY(0);opacity:0}6%{opacity:1}88%{opacity:1}100%{transform:translateY(calc(0px - var(--rise)));opacity:0}}
 /* 环要等张开了一点才亮起来，不然刚炸开那一瞬间它还是个小圆点，
    和白芯闪光叠在一起就变成一颗「球」，不像绽放 */
 @keyframes imsfx-ring{0%{opacity:0;transform:scale(.06)}26%{opacity:.9;transform:scale(.42)}100%{opacity:0;transform:scale(1)}}
@@ -2266,17 +2370,23 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
   22%{opacity:.55}28%{opacity:1}
   100%{transform:rotate(var(--r1)) scaleX(1);opacity:0;filter:brightness(1)}}
 
-/* ── 流星：有头有尾，配一片会眨的小星星 ── */
+/* ── 流星 ──
+   她说「流星也可以多一点，然后让屏幕变暗一点流星变亮可以更好看」。
+   屏幕压暗是整块 .imsfx-star 自己的背景在淡入淡出（不遮挡别的，
+   因为这一层本来就是 pointer-events:none），流星的头和尾都加亮了一档。 */
+.imsfx-star{animation:imsfx-night 4.2s ease-in-out forwards;}
+@keyframes imsfx-night{0%{background:rgba(3,7,22,0)}15%{background:rgba(3,7,22,.62)}
+  76%{background:rgba(3,7,22,.62)}100%{background:rgba(3,7,22,0)}}
 .imsfx-star i.twinkle{width:var(--sz);height:var(--sz);border-radius:50%;background:#fff;
-  box-shadow:0 0 6px 1px rgba(255,255,255,.9);animation:imsfx-twinkle ease-in-out infinite;}
+  box-shadow:0 0 8px 2px rgba(255,255,255,.95);animation:imsfx-twinkle ease-in-out infinite;}
 .imsfx-star i.shoot{width:0;height:0;animation:imsfx-shoot cubic-bezier(.3,.1,.55,1) forwards;}
-.imsfx-star i.shoot>b{position:absolute;left:0;top:0;width:3px;height:3px;margin:-1.5px 0 0 -1.5px;
-  border-radius:50%;background:#fff;box-shadow:0 0 14px 5px rgba(190,225,255,.9);}
-.imsfx-star i.shoot>b:after{content:'';position:absolute;left:2px;top:.6px;width:var(--len);height:1.6px;
+.imsfx-star i.shoot>b{position:absolute;left:0;top:0;width:4.4px;height:4.4px;margin:-2.2px 0 0 -2.2px;
+  border-radius:50%;background:#fff;box-shadow:0 0 10px 3px #fff,0 0 28px 10px rgba(180,220,255,.95);}
+.imsfx-star i.shoot>b:after{content:'';position:absolute;left:2px;top:1.1px;width:var(--len);height:2.2px;
   transform-origin:0 50%;transform:rotate(-36deg);border-radius:2px;
-  background:linear-gradient(90deg,rgba(255,255,255,.95),rgba(160,205,255,.35) 46%,transparent);}
-@keyframes imsfx-twinkle{0%,100%{opacity:.18;transform:scale(.7)}50%{opacity:1;transform:scale(1.25)}}
-@keyframes imsfx-shoot{0%{transform:translate(0,0);opacity:0}12%{opacity:1}78%{opacity:1}
+  background:linear-gradient(90deg,#fff,rgba(190,228,255,.62) 40%,transparent);}
+@keyframes imsfx-twinkle{0%,100%{opacity:.2;transform:scale(.7)}50%{opacity:1;transform:scale(1.3)}}
+@keyframes imsfx-shoot{0%{transform:translate(0,0);opacity:0}10%{opacity:1}80%{opacity:1}
   100%{transform:translate(var(--dx),var(--dy));opacity:0}}
 
 /* ── 聚光灯：先扫一下再定住，光柱里有浮尘 ── */
@@ -2387,9 +2497,9 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
 /* 作品文案里的 @ 也要挑出来 */
 .dyat-tx{color:#9ec6ff;font-weight:400;}
 </style>
-<link rel="stylesheet" href="glass-theme.css?v=1302&r=music-disc-color-1">
-<link rel="stylesheet" href="wechat-me.css?v=1302">
-<link rel="stylesheet" href="pet-game.css?v=1302">
+<link rel="stylesheet" href="glass-theme.css?v=1304&r=music-disc-color-1">
+<link rel="stylesheet" href="wechat-me.css?v=1304">
+<link rel="stylesheet" href="pet-game.css?v=1304">
 <link rel="stylesheet" href="wedding-game.css?v=wedding-dual-17">
 </head>
 <body>
@@ -2443,36 +2553,36 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail(window.__northBootStarted?'本机存档读取超过 60 秒，请重新加载；仍不会删除聊天、角色或主题':'关键页面文件加载超过 60 秒，请检查网络后重新加载');},60000);
 })();
 </script>
-<script src="browser-diagnostics.js?v=1302"></script>
-<script src="license-gate.js?v=1302" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="couple-watch.js?v=1302" onerror="__northBootFail('页面组件载入失败')"></script>
-<script src="request-diagnostics.js?v=1302"></script>
-<script src="message-beijing-time.js?v=1302"></script>
-<script src="app.js?v=1302&r=v1302-web-imsg-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="cohab-theater.js?v=1302&r=v1274-web-cohab-guests-1" onerror="__northBootFail('共同生活多人剧场组件载入失败（可能是网络或 404）')"></script>
-<script src="public-north-policy.js?v=1302"></script>
-<script src="public-north-runtime.js?v=1302"></script>
-<script src="phone-shortcuts.js?v=1302"></script>
-<script src="daily-event-ledger.js?v=1302" onerror="console.warn('日常事件簿组件未加载，聊天仍可使用')"></script>
-<script src="request-size-details.js?v=1302" onerror="__northBootFail('请求规模详情组件载入失败')"></script>
-<script src="cohab-model-diagnostics.js?v=1302" onerror="__northBootFail('共同生活模型诊断组件载入失败')"></script>
-<script src="bead-studio.js?v=1302&r=v1184-pixel-puzzle-4" onerror="__northBootFail('像素拼拼乐组件载入失败（可能是网络或 404）')"></script>
-<script src="heart-quiz.js?v=1302" onerror="console.warn('心动审判预览组件载入失败')"></script>
-<script src="web-hotfix.js?v=1302&r=v1302-web-imsg-1" onerror="__northBootFail('网页热修复组件载入失败（可能是网络或 404）')"></script>
+<script src="browser-diagnostics.js?v=1304"></script>
+<script src="license-gate.js?v=1304" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="couple-watch.js?v=1304" onerror="__northBootFail('页面组件载入失败')"></script>
+<script src="request-diagnostics.js?v=1304"></script>
+<script src="message-beijing-time.js?v=1304"></script>
+<script src="app.js?v=1304&r=v1304-web-imsg-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="cohab-theater.js?v=1304&r=v1274-web-cohab-guests-1" onerror="__northBootFail('共同生活多人剧场组件载入失败（可能是网络或 404）')"></script>
+<script src="public-north-policy.js?v=1304"></script>
+<script src="public-north-runtime.js?v=1304"></script>
+<script src="phone-shortcuts.js?v=1304"></script>
+<script src="daily-event-ledger.js?v=1304" onerror="console.warn('日常事件簿组件未加载，聊天仍可使用')"></script>
+<script src="request-size-details.js?v=1304" onerror="__northBootFail('请求规模详情组件载入失败')"></script>
+<script src="cohab-model-diagnostics.js?v=1304" onerror="__northBootFail('共同生活模型诊断组件载入失败')"></script>
+<script src="bead-studio.js?v=1304&r=v1184-pixel-puzzle-4" onerror="__northBootFail('像素拼拼乐组件载入失败（可能是网络或 404）')"></script>
+<script src="heart-quiz.js?v=1304" onerror="console.warn('心动审判预览组件载入失败')"></script>
+<script src="web-hotfix.js?v=1304&r=v1304-web-imsg-1" onerror="__northBootFail('网页热修复组件载入失败（可能是网络或 404）')"></script>
 <script src="vendor/qr/qrcode.js?v=2.0.4"></script>
 <script src="vendor/qr/jsQR.js?v=1.4.0"></script>
-<script src="wechat-me.js?v=1302" onerror="__northBootFail('微信个人页组件载入失败（可能是网络或 404）')"></script>
-<script src="smart-home.js?v=1302" onerror="__northBootFail('智能家电组件载入失败（可能是网络或 404）')"></script>
-<script src="delivery.js?v=1302" onerror="__northBootFail('真实外卖组件载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=1302" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="pet-game.js?v=1302" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
-<script src="pixel-home-policy.js?v=1302"></script>
-<script src="pixel-wardrobe-info.js?v=1302"></script>
-<script src="pixel-home.js?v=1302"></script>
-<script src="gift-effects.js?v=1302" onerror="console.warn('礼物粒子特效载入失败')"></script>
-<script src="thought-card-effects.js?v=1302" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
-<script src="ai-account.js?v=1302"></script>
+<script src="wechat-me.js?v=1304" onerror="__northBootFail('微信个人页组件载入失败（可能是网络或 404）')"></script>
+<script src="smart-home.js?v=1304" onerror="__northBootFail('智能家电组件载入失败（可能是网络或 404）')"></script>
+<script src="delivery.js?v=1304" onerror="__northBootFail('真实外卖组件载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=1304" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="pet-game.js?v=1304" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
+<script src="pixel-home-policy.js?v=1304"></script>
+<script src="pixel-wardrobe-info.js?v=1304"></script>
+<script src="pixel-home.js?v=1304"></script>
+<script src="gift-effects.js?v=1304" onerror="console.warn('礼物粒子特效载入失败')"></script>
+<script src="thought-card-effects.js?v=1304" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
+<script src="ai-account.js?v=1304"></script>
 <script src="wedding-game.js?v=wedding-dual-17" onerror="console.warn('现代婚礼预览载入失败')"></script>
-<script src="couple-watch-runtime.js?v=1302" onerror="__northBootFail('页面组件载入失败')"></script>
+<script src="couple-watch-runtime.js?v=1304" onerror="__northBootFail('页面组件载入失败')"></script>
 </body>
 </html>

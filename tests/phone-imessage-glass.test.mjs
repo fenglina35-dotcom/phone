@@ -323,14 +323,69 @@ test('动的字一个一个错开，整段动的不拆字', () => {
   assert.equal(/imfxc/.test(big), false);
   assert.equal(html("{t:'x',e:['drop database']}"), 'x', '不认识的效果名直接丢掉，不能往 class 里塞');
 });
-test('每个效果 3 秒一个循环，动作都压在前面一段', () => {
+test('每个效果循环一次的长短是按她的要求定的', () => {
+  /* 放大缩小要「持续久一点才缩回去」所以放到 4.2 秒，抖动要「久一点」放到 3.4 秒，
+     爆发要在外面待满五秒所以是 8 秒，其余照旧 3 秒。 */
+  const want = { big: '4.2s', small: '4.2s', shake: '3s', nod: '3s', wave: '3s', bloom: '3s', jitter: '3.4s', burst: '8s' };
   for (const s of shells) {
-    for (const k of ['big', 'small', 'shake', 'nod', 'wave', 'bloom', 'jitter']) {
+    for (const [k, dur] of Object.entries(want)) {
       assert.match(s, new RegExp(`@keyframes imfx-${k}\\{`), `少了 ${k} 的动画`);
-      assert.match(s, new RegExp(`animation:imfx-${k} 3s infinite`), `${k} 不是 3 秒循环`);
+      assert.match(s, new RegExp(`animation:imfx-${k} ${dur.replace('.', '\\.')} infinite`), `${k} 应该是 ${dur} 一轮`);
     }
     assert.match(s, /\.imfx-wave \.imfxc\{[^}]*animation-delay:calc\(var\(--i\)\*/, '一个字一个字要错开');
   }
+});
+test('摇晃只左右、点头只上下，一点倾斜都不许有', () => {
+  /* 她说「摇晃的话是左右摇晃，不是上下」「点头是上下摇晃不是字体倾斜」 */
+  for (const s of shells) {
+    const shake = s.match(/@keyframes imfx-shake\{[\s\S]*?\}\n/)[0];
+    const nod = s.match(/@keyframes imfx-nod\{[\s\S]*?\}\n/)[0];
+    assert.equal(/rotate\(/.test(shake), false, '摇晃又歪了，她要的是左右平移');
+    assert.equal(/rotate\(/.test(nod), false, '点头又歪了，她说「不是字体倾斜」');
+    assert.equal(/translateY/.test(shake), false, '摇晃不许上下动');
+    assert.equal(/translateX/.test(nod), false, '点头不许左右动');
+    assert.match(shake, /translateX\(-?\.\d+em\)/, '摇晃得真的左右挪');
+    assert.match(nod, /translateY\(-?\.\d+em\)/, '点头得真的上下挪');
+  }
+});
+test('抖动是频率变高，不是幅度变大', () => {
+  /* 她说「抖动的话可以抖动的久一点、厉害一点，不是幅度是频率」 */
+  for (const s of shells) {
+    const jit = s.match(/@keyframes imfx-jitter\{[\s\S]*?\n  \d[\d.]*%\{transform:translate\([-\d.]+px,[-\d.]+px\)\}\}/)[0];
+    const steps = [...jit.matchAll(/(\d[\d.]*)%\{transform:translate\((-?[\d.]+)px/g)];
+    assert.ok(steps.length >= 40, `只有 ${steps.length} 步，频率提不上去（老版只有 5 步）`);
+    const amp = Math.max(...steps.map(m => Math.abs(+m[2])));
+    assert.ok(amp <= 2, `幅度涨到 ${amp}px 了，她明说「不是幅度」`);
+    const span = +steps[steps.length - 1][1] - +steps[0][1];
+    const perStep = 3.4 * span / 100 / (steps.length - 1);
+    assert.ok(perStep <= 0.05, `每步 ${(perStep * 1000).toFixed(0)}ms 太慢，抖不「厉害」`);
+  }
+});
+test('字撑不开气泡才撑，撑开了气泡跟着鼓', () => {
+  /* 她说「字体放大一般气泡就会不够用了，所以气泡也可以跟着像被里面的字撑了一样，
+     就跟一个皮球被撑大了一点，然后缩回去了……如果是比较小的就不会」 */
+  const fn = source('phFxSwell');
+  assert.match(fn, /const grow=w\*\(peak-1\)/, '撑多少要按真实宽度量，不能拍脑袋写死');
+  assert.match(fn, /if\(Math\.abs\(grow\)<8\|\|Math\.abs\(grow\)\/bw<\.12\)return;/,
+    '「比较小的就不会」：既要够多个像素，也要占到气泡宽度的一成二');
+  assert.match(fn, /Math\.max\(\.9,Math\.min\(1\.16,/, '只能鼓「一点」，不许鼓成球');
+  assert.match(fn, /node\.classList\.add\('imb-swell'\)/);
+  assert.match(source('phFxPlay'), /if\(node\)phFxSwell\(node\)/, '放效果的时候要量一次');
+  assert.match(source('render'), /requestAnimationFrame\(phFxSwellAll\)/, '重绘之后要重新量');
+  for (const s of shells) {
+    /* 气泡和字必须是同一个节拍，差一点就不像「被里面的字撑大」了 */
+    assert.match(s, /\.imsg-b\.imb-swell\{animation:imb-swell 4\.2s infinite;\}/);
+    const swell = s.match(/@keyframes imb-swell\{[\s\S]*?\n  78%,100%\{transform:scale\(1\)\}\}/)[0];
+    const big = s.match(/@keyframes imfx-big\{[\s\S]*?\n  18%,52%[\s\S]*?78%,100%\{transform:scale\(1\)\}\}/)[0];
+    const pct = t => [...t.matchAll(/(\d[\d.]*)%/g)].map(m => m[1]).join(',');
+    assert.equal(pct(swell), pct(big), '气泡和字的关键帧位置对不上，鼓的时机就错开了');
+    /* 一次性的发送动画和鼓气泡抢同一个 animation，必须同权重且写在后面才压得住 */
+    assert.match(s, /\.imsg-b\.imbfx-slam\{animation:imbfx-slam/);
+    assert.ok(s.indexOf('.imsg-b.imbfx-slam{') > s.indexOf('@keyframes imb-swell{'),
+      '一次性动画要写在鼓气泡后面，不然发出去那一下会被盖掉');
+  }
+  assert.match(source('phFxPlay'), /node\.classList\.remove\('imbfx-slam','imbfx-loud','imbfx-gentle'\);\n\s*node\.removeEventListener/,
+    '一次性动画放完要把类摘掉，不然这条气泡以后永远鼓不起来');
 });
 test('发出去的效果存进这条消息，正文还是干净的', () => {
   const fn = source('phSendSms');
@@ -464,13 +519,25 @@ test('回声改成满屏气泡互相交替绕圈', () => {
   /* 她说「那个满屏飘字的效果，是那种我之前给你发的所有气泡，互相交替绕圈，
      意思是那个回声要改一下」 */
   const fn = source('phScreenFx');
-  assert.match(fn, /cw\?'cw':'ccw'/, '一顺一逆交替');
+  assert.match(fn, /alt\?'alt':''/, '只分颜色，不分转向');
+  assert.equal(/'ccw'/.test(fn), false, '她说「回声的转动方向不对，就是顺时针转动」——不许再有逆时针');
   assert.match(fn, /rings=\[[\d,]+\]/, '要分好几圈，才铺得满');
   const rings = JSON.parse(fn.match(/rings=(\[[\d,]+\])/)[1]);
   assert.ok(rings.length >= 4 && Math.max(...rings) >= 200, `最外圈才 ${Math.max(...rings)}px，铺不满一屏`);
   for (const s of shells) {
-    for (const k of ['imsfx-orbit-cw', 'imsfx-orbit-ccw', 'imsfx-unspin-cw', 'imsfx-unspin-ccw'])
+    for (const k of ['imsfx-orbit-cw', 'imsfx-unspin-cw'])
       assert.match(s, new RegExp(`@keyframes ${k}\\{`), '少了 ' + k);
+    for (const k of ['imsfx-orbit-ccw', 'imsfx-unspin-ccw'])
+      assert.equal(new RegExp(`@keyframes ${k}\\{`).test(s), false, '逆时针那套该删干净了：' + k);
+    /* 「但不是像那种漩涡一样的」：半径从头到尾都是 --r，不许从 0 长出去 */
+    const orb = s.match(/@keyframes imsfx-orbit-cw\{[\s\S]*?\n@keyframes/)[0];
+    assert.equal(/translateX\(0\)/.test(orb), false, '又从中心螺旋着甩出去了，她说不要漩涡');
+    assert.equal(/translateX\(calc\(var\(--r\) \+/.test(orb), false, '结尾还在往外飘，也是漩涡');
+    assert.equal((orb.match(/translateX\(var\(--r\)\)/g) || []).length, 4, '四个关键帧的半径都得是 --r');
+    /* 顺时针 = 角度一路加，不许有减 */
+    assert.equal(/var\(--a\) -/.test(orb), false, '出现了往回转的角度，那就不是顺时针了');
+    assert.equal(/\.imsfx i\{[^}]*font-style:normal/.test(s), true,
+      '粒子是 <i>，不复位的话回声气泡里的字会被浏览器弄成斜体');
     /* 外圈转多少，内圈就要反着转多少，字才是正的；两边必须用同一个 linear */
     const outer = s.match(/@keyframes imsfx-orbit-cw\{[\s\S]*?\n@keyframes/)[0];
     const inner = s.match(/@keyframes imsfx-unspin-cw\{[\s\S]*?\n@keyframes/)[0];
@@ -496,26 +563,64 @@ test('八个屏幕特效都重做过，不是几个色块', () => {
   assert.match(layers, /\{n:40,r0:82/, '外圈');
   assert.match(layers, /\{n:20,r0:34/, '内圈');
   assert.match(fn, /--tail:/, '碎片要带尾巴');
+  assert.match(fn, /const SR=stage\.getBoundingClientRect\(\),SH=/, '要量这块屏幕的真实高度，不能拿 vh 当屏幕');
+  assert.match(fn, /--rise:\$\{\(SH\*\(1-cy\/100\)\)\.toFixed\(0\)\}px/, '炮弹从最底下升到 cy 那个高度');
+  assert.equal(/--to:/.test(fn), false, '旧的 vh 升空参数该删了');
+  /* 炸开要等炮弹升到位：升空 1.05 秒，炸开的延迟得比它晚 */
+  const burstAt = +fn.match(/animation-delay:\$\{\(d\+([\d.]+)\)\.toFixed\(2\)\}s`,null,'flash'/)[1];
+  assert.ok(burstAt >= 1.0, `炮弹还没升到顶（1.05 秒）就在 ${burstAt} 秒炸了`);
   for (const s of shells) {
     /* 烟花：碎片要走抛物线（外层匀速、内层重力），不是直线 */
     assert.match(s, /@keyframes imsfx-gravity\{/, '烟花碎片少了重力');
     assert.match(s, /\.imsfx-fireworks i\.shell\{/, '少了升空那一下');
     assert.match(s, /\.imsfx-fireworks i\.flash\{/, '少了炸开那一下的闪光');
+    /* 她说「烟花我想要的是那种从屏幕底部升上去，然后炸开的那种」。
+       升多高必须按屏幕真实高度（--rise）算——写 100vh 的话，网页版的手机
+       只占窗口一小块，炮弹一出手就冲出框外，整个上升过程一眼都看不见。 */
+    const shell = s.match(/@keyframes imsfx-shell\{[\s\S]*?100%\{[^}]*\}\}/)[0];
+    assert.equal(/vh/.test(shell), false, '升空又按 vh 算了，会直接飞出屏幕');
+    assert.match(shell, /translateY\(calc\(0px - var\(--rise\)\)\)/, '要按 --rise 这个真实像素升');
+    assert.match(s, /\.imsfx-fireworks i\.shell\{bottom:0;opacity:0;/,
+      '没发射的炮弹会亮在屏幕最底下：animation-delay 期间走的是元素本身的样式');
+    /* 这是原来烟花最要命的一处：240 片碎片在炸开之前就全亮着，
+       六十片叠在同一个点，就是一团发光的球杵在半空，把升空整个盖住了。 */
+    assert.match(s, /\.imsfx-fireworks i\.spark\{width:0;height:0;opacity:0;/,
+      '碎片在炸开之前必须是看不见的，不然升空全被那团光盖住');
     /* 流星：有拖尾，还要有一层会眨的小星星 */
     assert.match(s, /\.imsfx-star i\.twinkle\{[^}]*animation:imsfx-twinkle/, '少了会眨的小星星');
+    /* 她说「流星也可以多一点，然后让屏幕变暗一点流星变亮可以更好看」 */
+    assert.match(s, /@keyframes imsfx-night\{/, '少了把屏幕压暗的那一层');
+    assert.match(s, /\.imsfx-star\{animation:imsfx-night/, '压暗要挂在整层上，才盖得住整屏');
     assert.match(s, /\.imsfx-star i\.shoot>b:after\{[^}]*linear-gradient/, '流星少了拖尾');
     /* 气球：高光、结、会摆的绳子 */
     assert.match(s, /\.imsfx-balloons i>b\{[^}]*radial-gradient/, '气球少了高光');
     assert.match(s, /@keyframes imsfx-string\{/, '气球绳子不会摆');
     /* 纸屑：三种形状、三轴翻滚 */
     for (const k of ['bar', 'dot', 'ribbon']) assert.match(s, new RegExp(`\\.imsfx-confetti i\\.${k}\\{`), '纸屑少了 ' + k);
-    assert.match(s, /@keyframes imsfx-fall\{[\s\S]*?rotateX\(var\(--tilt\)\)/, '纸屑要三轴翻滚，不然像贴纸');
+    /* 她说「五彩纸屑飘下来的时候会卡顿两下」：原来一张纸同时绕 X、Y 轴翻又没有
+       perspective，转到侧面就被压成一条线，看着就是卡顿。现在下落和扇动分两层，
+       下落是纯 linear 的直线（不许再掺旋转），扇动最扁也留 .26。 */
+    const fall = s.match(/@keyframes imsfx-fall\{[\s\S]*?\n  100%[^}]*\}\}/)[0];
+    assert.equal(/rotate/.test(fall), false, '下落这一层不许再带旋转，一带就会被转成一条线');
+    assert.match(fall, /translate\(var\(--drift\),var\(--drop\)\)/, '落距要按屏幕真实高度算');
+    assert.match(s, /\.imsfx-confetti i>b\{[^}]*animation:imsfx-flutter linear infinite/, '扇动是里层自己的事');
+    const flut = s.match(/@keyframes imsfx-flutter\{[\s\S]*?\n  100%[^}]*\}\}/)[0];
+    const flat = [...flut.matchAll(/scaleX\(([\d.]+)\)/g)].map(m => +m[1]);
+    assert.ok(Math.min(...flat) >= 0.2, `扇到最扁只剩 ${Math.min(...flat)}，又要被压成线了`);
     /* 爱心：一条 SVG 路径做遮罩，一整块。两个圆加一个方块那种拼法她一眼看出接缝，
        说「爱心分界线明显拼接，不合格」——所以不许再回去拼。 */
-    assert.match(s, /\.imsfx-love i>b\{[\s\S]*?-webkit-mask:url\("data:image\/svg\+xml/,
+    assert.match(s, /\.imsfx-love i>b>u\{[\s\S]*?-webkit-mask:url\("data:image\/svg\+xml/,
       '心要用一条 SVG 路径做遮罩；-webkit- 那条不能少，少了 iOS 上整颗心会变成一个方块');
-    assert.match(s, /\.imsfx-love i>b\{[\s\S]*?[^-]mask:url\("data:image\/svg\+xml/, '不带前缀的那条也要有');
+    assert.match(s, /\.imsfx-love i>b>u\{[\s\S]*?[^-]mask:url\("data:image\/svg\+xml/, '不带前缀的那条也要有');
     assert.equal(/\.imsfx-love i>b:before/.test(s), false, '又回去拿两个圆一个方块拼了，接缝会露出来');
+    /* 她说「爱心升上去也会一卡一卡的」：ease-out 会让每一段都减速到停。
+       上升这一层必须是 linear，而且关键帧里只有首尾两个 transform，中间只动透明度，
+       这样整段就是一条匀速直线，中途没有任何一个停顿点。 */
+    assert.match(s, /\.imsfx-love i\.up\{[^}]*animation:imsfx-heart linear forwards/,
+      '上升那层又变回 ease 了，中途会停一下');
+    const rise = s.match(/@keyframes imsfx-heart\{[\s\S]*?\n  100%[^}]*\}\}/)[0];
+    assert.equal((rise.match(/transform:/g) || []).length, 2, '上升只许在首尾写 transform，中间写了就会变速');
+    assert.equal(/vh/.test(rise), false, '别再用 vh，网页版会一下子飘出框外');
     assert.equal(/\.imsfx-love i\{[^}]*font-size:var\(--sz\)/.test(s), false, '也别用 ❤ 这个字形，放大就是马赛克');
     /* 烟花要五彩、要绽放：彩环、碎片尾巴、双层 */
     assert.match(s, /\.imsfx-fireworks i\.ring\{[\s\S]*?width:var\(--rd\)/, '炸开要推出一圈彩环');
@@ -626,7 +731,14 @@ test('爆发：每个字往外蹦，方向按序号算死，不是随机', () =>
   assert.equal(/--dx/.test(vm.runInContext("phFxRunHTML({t:'爱你',e:['big']})", ctx)), false, '只有爆发才需要方向');
   for (const s of shells) {
     assert.match(s, /@keyframes imfx-burst\{/);
-    assert.match(s, /\.imfx-burst \.imfxc\{animation:imfx-burst 3s infinite/);
+    assert.match(s, /\.imfx-burst \.imfxc\{animation:imfx-burst 8s infinite/);
+    /* 她说「爆发之后字是蹦出去的，那些字都拆开蹦出去了也就是会消失，过 5 秒才会回来」：
+       10% 蹦出去就 opacity:0，一直不见到 72.5%，8 秒 × 62.5% = 整整 5.0 秒 */
+    const bu = s.match(/@keyframes imfx-burst\{[\s\S]*?\n  95%,100%[^}]*\}\}/)[0];
+    const gone = [...bu.matchAll(/(\d[\d.]*)%\{[^}]*opacity:0\}/g)].map(m => +m[1]);
+    assert.equal(gone.length, 2, '要有「蹦出去就消失」和「一直不见」两个关键帧');
+    const secs = 8 * (gone[1] - gone[0]) / 100;
+    assert.ok(secs >= 4.7 && secs <= 5.4, `消失了 ${secs.toFixed(1)} 秒，她要的是 5 秒`);
   }
   for (const x of [app, priv]) {
     assert.match(x, /\['burst','爆发'\]\]/, '面板里要有「爆发」这一项');

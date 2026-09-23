@@ -160,6 +160,6 @@ test('terminated WebContent remounts once while active and thermally safe', () =
 });
 
 test('recovery suite is pinned to the private bundled app only', () => {
-  assert.match(app, /APP_VER='v1303 · 抖音发作品修复、文字特效、隐形墨水刮开（私人）';/);
+  assert.match(app, /APP_VER='v1305 · 特效返工：爆发、摇晃点头、撑气泡、烟花升空（私人）';/);
   assert.match(app, /function emergencyRestorePreview\(index\)/);
 });
