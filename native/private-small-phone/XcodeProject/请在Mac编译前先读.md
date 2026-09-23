@@ -1,6 +1,6 @@
-# v1297 私人同步 信息页照 iMessage 重做 iOS382
+# v1299 私人同步 信息页照 iMessage 重做 iOS383
 
-当前私人内置源码为 v1297，私人 iOS 升为 **1.0.382 (382)**，原生桥仍为 41（这一轮没动原生协议，只是内置页改了）。网页同源为 v1296。**这一轮真的打包了**：`SmallPhone_v1297_iOS382_MacSource.zip`，由 `scripts/package_private_v1297_ios382.py` 从提交里读文件生成（不读工作目录，避免把没提交的改动混进包里）。
+当前私人内置源码为 v1299，私人 iOS 升为 **1.0.383 (383)**，原生桥仍为 41（这一轮没动原生协议，只是内置页改了）。网页同源为 v1298。**这一轮真的打包了**：`SmallPhone_v1299_iOS383_MacSource.zip`，由 `scripts/package_private_v1299_ios383.py` 从提交里读文件生成（不读工作目录，避免把没提交的改动混进包里）。
 
 本次打包结果：**1650 个文件、154 MB**，源提交 `16a47dc`，zip 自身 sha256 为
 `5bdd23f578bc677bd8b50ea38c22beff7610f51c2e8bc3ac4d8b2257d6fe9ffe`。

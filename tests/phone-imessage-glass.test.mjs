@@ -364,7 +364,7 @@ test('＋ 点一下直接开相册，不再弹菜单', () => {
   const fn = source('phSmsPic');
   assert.match(fn, /pickFile\('image\/\*'/, '得真的调相册');
   assert.match(fn, /compress\(f,900,\.74\)/);
-  assert.match(fn, /phSendSmsImage\(num,sk,src\)/);
+  assert.match(fn, /phSendSmsImage\(num,sk,src,\{hold:true\}\)/);
   assert.match(fn, /toast\('这张图读不出来，换一张'\)/, '读不出来要说一声');
 });
 test('发出去的图片真的存下来、也真的显示出来', () => {
@@ -380,8 +380,10 @@ test('发出去的图片真的存下来、也真的显示出来', () => {
   const store = {};
   ctx.phState = () => ({ blocked: {}, line: 'main', aliasThreads: {}, sms: store });
   ctx.phSmsArr = (num, sk) => (store[sk || num] = store[sk || num] || []);
+  ctx.visionConfigured = () => false;
+  ctx.setTimeout = () => {}; ctx.phAutoSmsReply = () => {};
   vm.createContext(ctx);
-  vm.runInContext(source('phSendSmsImage'), ctx);
+  vm.runInContext([source('phSmsImgLine'), source('phSendSmsImage')].join('\n'), ctx);
   vm.runInContext("phSendSmsImage('138','138','data:image/png;base64,AAA')", ctx);
   const arr = store['138'];
   assert.equal(arr.length, 1);
@@ -392,6 +394,52 @@ test('发出去的图片真的存下来、也真的显示出来', () => {
   /* 两套气泡都得认图片，不能只显示一行 [图片] */
   assert.match(source('renderPhoneIMsg'), /m\.img\?storedImageDisplaySource\(m\.img\):''/);
   assert.match(source('renderPhoneSMS'), /m\.img\?`<img src="\$\{storedImageDisplaySource\(m\.img\)\}"/, '陌生号那条老线也要显示图片');
+});
+
+/* ===== 短信里的照片，角色得真的看得见 ===== */
+test('短信发的图真的走一遍识图，不是只丢一句「[图片]」过去', () => {
+  const fn = source('phSmsPic');
+  assert.match(fn, /phSendSmsImage\(num,sk,src,\{hold:true\}\)/, '先别让角色回，得等识图跑完');
+  assert.match(fn, /await phSmsVision\(sent\.m,f\)/);
+  assert.match(fn, /sent\.fire\(\)/, '看完了才放角色去回');
+  const v = source('phSmsVision');
+  assert.match(v, /visionAPI\(v,PH_SMS_VISION_PROMPT\)/, '得走真的识图线路');
+  assert.match(v, /visionPhotoSource\(file,1280,\.76\)/, '和微信发图同一条线');
+  assert.match(v, /visionDataURLSource\(storedImageDisplaySource\(m\.img\),1200,\.74\)/, '没有原文件时退回用存下来的图');
+  assert.match(v, /m\.visionState='failed'/, '失败要记下来，不能装作看见了');
+  for (const x of [app, priv]) assert.match(x, /const PH_SMS_VISION_PROMPT='请仔细、客观地用中文描述这张图片。/);
+});
+test('识出来的画面进上下文，没识出来就老实只写 [图片]', () => {
+  const ctx = {};
+  vm.createContext(ctx);
+  vm.runInContext(source('phSmsImgLine'), ctx);
+  const line = o => vm.runInContext(`phSmsImgLine(${o})`, ctx);
+  assert.equal(line("{img:'x',imgDesc:'一只橘猫趴在窗台上'}"), '[图片：一只橘猫趴在窗台上]');
+  assert.equal(line("{img:'x',imgDesc:'   '}"), '[图片]', '空描述不能写成「[图片：]」');
+  assert.equal(line("{img:'x'}"), '[图片]', '没识出来就别编');
+  /* 三条短信线的记录里都要用它 */
+  for (const x of [app, priv]) {
+    assert.equal(/m\.img\?'\[图片\]':m\.text/.test(x), false, '还有地方只丢一句 [图片]');
+    assert.equal((x.match(/m\.img\?phSmsImgLine\(m\):m\.text/g) || []).length, 3,
+      '角色短信、陌生短信、伪装短信三条线都得带上描述');
+  }
+  assert.match(source('phRoleSmsReply'), /那段描述是系统真的看过这张图之后写下来的/, '也要告诉模型这段是真看过的');
+});
+test('发完图，非角色的联系人也有人回', () => {
+  /* 发字那条线本来就有这个分支，发图这条一开始漏了——自建联系人发完图石沉大海 */
+  const fn = source('phSendSmsImage');
+  assert.match(fn, /else setTimeout\(\(\)=>phAutoSmsReply\(num,line\),700\+Math\.random\(\)\*900\);/);
+  assert.match(fn, /phRoleSmsReply\(x\.id,num,line,sk\)/, '角色那条要拿带描述的那一行');
+  assert.match(fn, /phRoleAliasReply\(alias\.cid,num,line/);
+  assert.match(fn, /phRoleSpoofSmsReply\(thread\.cid,num,line\)/);
+  assert.match(fn, /phMirrorSMS\(num,'me','（发了一张照片）'\+\(m\.imgDesc\?'：'\+m\.imgDesc:''\)\)/, '微信那边的记录也带上画面');
+});
+test('没识出来的那张能重新看一次', () => {
+  const fn = source('phSmsRetryVision');
+  assert.match(fn, /m\.visionState='pending';m\.imgDesc='';/);
+  assert.match(fn, /phSmsVision\(m,null\)/);
+  assert.match(source('phSmsMenu'), /bad\?`<button class="btn p" onclick="phSmsRetryVision\(/, '菜单里要有重试的入口');
+  assert.match(source('phSmsMenu'), /ta看到的画面：\$\{esc\(m\.imgDesc\)\}/, '顺手让她看得到 ta 看见了什么');
 });
 
 /* ===== 角色把照片换成聊天背景 ===== */
@@ -422,7 +470,7 @@ test('[换背景] 这个标签不会被当成正文发出来', () => {
   assert.match(fn, /r=r\.replace\(\/\[\\\[【\]\\s\*换背景\\s\*\[\\\]】\]\/g,' '\)/, '再从正文里抹掉');
   assert.match(fn, /if\(wantBg&&!phRoleSetSmsBg\(num,sk\)&&!parts\.length\)parts=\['我没找到你说的那张照片/, '没找到图又没话说时，得吭一声');
   assert.match(fn, /就在回复最后【单独一行】写 \[换背景\]/, '得告诉模型有这么一条');
-  assert.match(fn, /m\.img\?'\[图片\]':m\.text/, '记录里要让模型看见她发过图');
+  assert.match(fn, /m\.img\?phSmsImgLine\(m\):m\.text/, '记录里要让模型看见她发过什么图');
 });
 test('微信里角色也能把她发的照片换成聊天背景', () => {
   for (const x of [app, priv]) {

@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1296 · 信息页照 iMessage 重做'/);
+  assert.match(app,/APP_VER='v1298 · 信息页照 iMessage 重做'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1296-web-imsg-1/);
-  assert.match(html,/sw\.js\?v=1296&r=v1296-web-imsg-2/);
+  assert.match(html,/north-sw-reloaded-1298-web-imsg-1/);
+  assert.match(html,/sw\.js\?v=1298&r=v1298-web-imsg-3/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{

@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1297'){
+if(window.__NORTH_SHELL_BUILD__!=='1299'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -435,7 +435,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1297 · 信息页照 iMessage 重做（私人）';
+const APP_VER='v1299 · 信息页照 iMessage 重做（私人）';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1767,7 +1767,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1297&r=v1297-private-imsg-2';
+  const url='sw.js?v=1299&r=v1299-private-imsg-3';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -10533,28 +10533,63 @@ function renderPhoneIMsg(num,sk,arr,x){
   </div>`;}
 /* ＋ 就是相册：点一下直接选图发出去（她说「点一下可以打开相册发送图片」）。
    原来挂在这儿的联系人资料／换背景／打电话，联系人页里本来就都有。 */
+/* ＋ 发图：先把图发出去，真的识一遍图，看清了再让角色回。
+   不识图的话角色只知道「她发了张照片」，根本不知道里面是什么——她实测就问到了这点。
+   识图用的和微信发图完全同一条线路、同一段提示词。 */
 function phSmsPic(num,sk){pickFile('image/*',async f=>{
   let src='';try{src=await compress(f,900,.74);}catch(_){}
   if(!src){toast('这张图读不出来，换一张');return;}
-  phSendSmsImage(num,sk,src);});}
-/* 发一张图：和发字走同一条线，只是正文写成 [图片]、另外带上 img */
-function phSendSmsImage(num,sk,src){num=phDigits(num);const p=phState(),x=phFind(num),
+  const sent=phSendSmsImage(num,sk,src,{hold:true});
+  if(!sent)return;
+  phSmsTypingSet(num,sent.sk,true);
+  try{await phSmsVision(sent.m,f);}finally{phSmsTypingSet(num,sent.sk,false);}
+  if(sent.m.visionState==='failed')toast('这张图没看清：'+String(sent.m.visionError||'识图失败').slice(0,60)+'（长按气泡可以重试）');
+  sent.fire();});}
+/* 识一张短信里的图：描述写进 imgDesc，进上下文时跟在 [图片：…] 后面 */
+const PH_SMS_VISION_PROMPT='请仔细、客观地用中文描述这张图片。有人物时说清人数、年龄段、表情、发型穿着、动作和场景；是聊天截图、表情包或梗图时，读出关键文字并说明表达的意思；是物品、风景、动物或食物时，说清主体、颜色、细节和氛围。用2到3句自然白话描述，让没看过图的人也能理解，不要评价或攻击人物。';
+async function phSmsVision(m,file){
+  if(!m||m.visionState!=='pending')return false;
+  try{
+    let v;
+    if(file){v=await visionPhotoSource(file,1280,.76);if(v.length>1400000)v=await visionPhotoSource(file,1000,.7);}
+    else v=await visionDataURLSource(storedImageDisplaySource(m.img),1200,.74);
+    const d=String(await visionAPI(v,PH_SMS_VISION_PROMPT)||'').trim().slice(0,400);
+    m.imgDesc=d;m.visionState=d?'success':'failed';if(!d)m.visionError='识图没有返回内容';
+  }catch(e){m.visionState='failed';m.visionError=String(e&&e.message||'识图失败').replace(/^vision-fail:\s*/,'').slice(0,140);}
+  save();return m.visionState==='success';}
+/* 进上下文时这张图长什么样：识出来了就带上描述，没识出来就老老实实只写 [图片] */
+function phSmsImgLine(m){const d=String(m&&m.imgDesc||'').trim();return d?('[图片：'+d+']'):'[图片]';}
+function phSmsRetryVision(num,mid,sk){const m=phSmsArr(num,sk).find(x=>x&&x.id===mid);
+  if(!m||!m.img)return;if(m.visionState==='pending')return toast('正在看这张图…');
+  m.visionState='pending';m.imgDesc='';m.visionError='';save();closeModal();
+  phSmsTypingSet(num,sk,true);
+  phSmsVision(m,null).then(ok=>{phSmsTypingSet(num,sk,false);
+    toast(ok?'这张图看清了':'还是没看清：'+String(m.visionError||'').slice(0,50));render();});}
+/* 发一张图：和发字走同一条线，只是正文写成 [图片]、另外带上 img。
+   opt.hold 表示先别让角色回——要等识图跑完，不然它回的时候还没看见图。 */
+function phSendSmsImage(num,sk,src,opt){num=phDigits(num);const p=phState(),x=phFind(num),
   thread=p.aliasThreads&&p.aliasThreads[num],
   useAlias=phSmsIsAliasKey(sk)||(p.line==='alias'&&x&&x.kind==='role'),
   spoofThread=!useAlias&&thread&&thread.spoof&&thread.cid;
   let alias=null;
   if(useAlias){const c=getC(x&&x.id);alias=c&&phEnsureAliasThread(c,num,'sms');sk=sk||phSmsKey(num,'alias',alias.aliasNum);}
   else sk=sk||num;
-  if(p.blocked[phNorm(num)]){toast('已屏蔽，不能发送');return;}
-  const arr=phSmsArr(num,sk);
-  arr.push({id:uid(),from:'me',text:'[图片]',img:src,time:Date.now(),read:true,line:useAlias?'alias':'main',
-    aliasTo:useAlias&&alias&&alias.cid,aliasNum:useAlias&&alias&&alias.aliasNum,spoofTo:spoofThread&&thread.cid});
+  if(p.blocked[phNorm(num)]){toast('已屏蔽，不能发送');return null;}
+  const arr=phSmsArr(num,sk),m={id:uid(),from:'me',text:'[图片]',img:src,imgDesc:'',
+    visionState:(typeof visionConfigured==='function'&&visionConfigured())?'pending':'off',
+    time:Date.now(),read:true,line:useAlias?'alias':'main',
+    aliasTo:useAlias&&alias&&alias.cid,aliasNum:useAlias&&alias&&alias.aliasNum,spoofTo:spoofThread&&thread.cid};
+  arr.push(m);
   if(arr.length>300)arr.splice(0,arr.length-300);
-  if(!useAlias&&!spoofThread)phMirrorSMS(num,'me','（发了一张照片）');
   save();render();
-  if(useAlias&&alias&&alias.cid)setTimeout(()=>phRoleAliasReply(alias.cid,num,'[图片]',alias.aliasNum,sk),500+Math.random()*500);
-  else if(spoofThread)setTimeout(()=>phRoleSpoofSmsReply(thread.cid,num,'[图片]'),450+Math.random()*450);
-  else if(x&&x.kind==='role')setTimeout(()=>phRoleSmsReply(x.id,num,'[图片]',sk),650+Math.random()*650);}
+  const fire=()=>{const line=phSmsImgLine(m);
+    if(!useAlias&&!spoofThread)phMirrorSMS(num,'me','（发了一张照片）'+(m.imgDesc?'：'+m.imgDesc:''));
+    if(useAlias&&alias&&alias.cid)setTimeout(()=>phRoleAliasReply(alias.cid,num,line,alias.aliasNum,sk),500+Math.random()*500);
+    else if(spoofThread)setTimeout(()=>phRoleSpoofSmsReply(thread.cid,num,line),450+Math.random()*450);
+    else if(x&&x.kind==='role')setTimeout(()=>phRoleSmsReply(x.id,num,line,sk),650+Math.random()*650);
+    else setTimeout(()=>phAutoSmsReply(num,line),700+Math.random()*900);};
+  if(!(opt&&opt.hold))fire();
+  return {m,sk,fire};}
 /* 她说「把这张换成背景」，角色回一行 [换背景]，就真的拿最近那张图换上去 */
 function phRoleSetSmsBg(num,sk){const arr=phSmsArr(num,sk).slice(-24).reverse(),hit=arr.find(m=>m&&m.img);
   if(!hit)return false;phSmsBgSet(num,hit.img);render();toast('ta把这张照片换成了聊天背景');return true;}
@@ -10569,7 +10604,7 @@ function phSendSms(num,sk){const ta=$('#smsin'),text=(ta&&ta.value||'').trim();i
 async function phRoleSmsReply(id,num,userText,sk){const c=getC(id);if(!c||c.blocked||phState().blocked[phNorm(num)])return;sk=sk||num;
   const range=phSmsBubbleRange(c),rows=phCtxRows();
   phSmsTypingSet(num,sk,true);
-  try{const arr=phSmsArr(num,sk).slice(-rows).map(m=>(m.from==='me'?S.me.name:(c.remark||c.name))+'：'+(m.img?'[图片]':m.text)).join('\n'),wx=msgs(id).filter(m=>!m._call).slice(-Math.max(6,Math.round(rows*.6))).map(m=>msgToText(m)).filter(Boolean).join('\n');const sys=buildSystem(c)+'\n\n# 当前场景：手机短信\n你正在和'+S.me.name+'发短信，不是微信。短信和微信是同一个人、同一段关系，要记得最近微信里的情绪和话题，但短信回复要像真实短信一样短一点、自然口语。\n一次回复可以发 '+range.min+' 到 '+range.max+' 条短信，这是【可浮动范围】不是固定任务：随口应一句就一条，情绪多、想解释、想哄人时才多发几条。每条【单独占一行】，用换行分开，不要写成一大段。\n只输出短信正文，不要方括号指令，不要输出[心情]、[心情值]、[语气]等隐藏标签。\n她发来的照片在记录里写成[图片]。如果她让你把某张照片换成你们短信的聊天背景（比如「把这张换成背景」「拿这张当背景」），就在回复最后【单独一行】写 [换背景]，系统会真的替她换上去；她没提这件事就不要写这个标签。';let r=await chatAPI([{role:'system',content:sys},{role:'user',content:'最近微信上下文：\n'+(wx||'（无）')+'\n\n短信记录：\n'+arr+'\n\n'+S.me.name+'刚发来：'+userText}],{temp:.8});
+  try{const arr=phSmsArr(num,sk).slice(-rows).map(m=>(m.from==='me'?S.me.name:(c.remark||c.name))+'：'+(m.img?phSmsImgLine(m):m.text)).join('\n'),wx=msgs(id).filter(m=>!m._call).slice(-Math.max(6,Math.round(rows*.6))).map(m=>msgToText(m)).filter(Boolean).join('\n');const sys=buildSystem(c)+'\n\n# 当前场景：手机短信\n你正在和'+S.me.name+'发短信，不是微信。短信和微信是同一个人、同一段关系，要记得最近微信里的情绪和话题，但短信回复要像真实短信一样短一点、自然口语。\n一次回复可以发 '+range.min+' 到 '+range.max+' 条短信，这是【可浮动范围】不是固定任务：随口应一句就一条，情绪多、想解释、想哄人时才多发几条。每条【单独占一行】，用换行分开，不要写成一大段。\n只输出短信正文，不要方括号指令，不要输出[心情]、[心情值]、[语气]等隐藏标签。\n她发来的照片在记录里写成 [图片：画面描述]，那段描述是系统真的看过这张图之后写下来的，你可以直接当成你亲眼看到的画面来回应。如果只写着 [图片] 没有描述，说明这次没看清，就别编造里面有什么，可以问她。如果她让你把某张照片换成你们短信的聊天背景（比如「把这张换成背景」「拿这张当背景」），就在回复最后【单独一行】写 [换背景]，系统会真的替她换上去；她没提这件事就不要写这个标签。';let r=await chatAPI([{role:'system',content:sys},{role:'user',content:'最近微信上下文：\n'+(wx||'（无）')+'\n\n短信记录：\n'+arr+'\n\n'+S.me.name+'刚发来：'+userText}],{temp:.8});
   r=String(r||'');const wantBg=/[\[【]\s*换背景\s*[\]】]/.test(r);r=r.replace(/[\[【]\s*换背景\s*[\]】]/g,' ');
   let parts=phSmsBubbles(r,range.max);
   if(wantBg&&!phRoleSetSmsBg(num,sk)&&!parts.length)parts=['我没找到你说的那张照片，你再发我一次？'];
@@ -10589,11 +10624,12 @@ function phRandomSmsText(num,pf,now){pf=pf||phStrangerProfile(num);now=now||Date
   '奇怪通知':['月亮客服提醒：今晚有人偷偷想你，工单无法关闭。','系统提示：你有一条未读心动，来源不明，风险等级：微妙。','匿名广播：请保持手机畅通，可能会有奇怪的人想靠近你。'],
   '陌生人':['冒昧问一句，你相信号码也会认错人吗？','我好像发错人了，不过你的号码看起来挺有缘。','别紧张，我只是一个路过的陌生号码。可能路过得有点刻意。']
 };const arr=pool[pf.kind]||pool['陌生人'];return arr[Math.abs(phHash(num+':'+now+':sms'))%arr.length];}
-async function phAutoSmsReply(num,userText){const x=phFind(num);if(x&&x.kind==='role')return;if(phState().blocked[phNorm(num)])return;const pf=phStrangerProfile(num),arr=phSmsArr(num,num).slice(-phCtxRows()).map(m=>(m.from==='me'?S.me.name:pf.name)+'：'+m.text).join('\n');let r='';try{const sys='你在小手机里模拟真实短信对话。号码身份：'+pf.name+'；类型：'+pf.kind+'；地区：'+pf.region+'。你不是任何恋爱角色，不能知道用户微信隐私或角色记忆。回复要像真实短信，短一点，但可以更有趣：装熟、撩人、嘴欠、奇怪生活服务、花里胡哨的骚扰短信、暧昧错发都可以。禁止真实诈骗、真实链接、真实转账/加群/贷款引导；可以做成明显玩笑或虚构服务。只输出短信正文。';r=await chatAPI([{role:'system',content:sys},{role:'user',content:'短信记录：\n'+arr+'\n\n用户刚发：'+userText}],{max:160,temp:.86});}catch(e){}
+async function phAutoSmsReply(num,userText){const x=phFind(num);if(x&&x.kind==='role')return;if(phState().blocked[phNorm(num)])return;const pf=phStrangerProfile(num),arr=phSmsArr(num,num).slice(-phCtxRows()).map(m=>(m.from==='me'?S.me.name:pf.name)+'：'+(m.img?phSmsImgLine(m):m.text)).join('\n');let r='';try{const sys='你在小手机里模拟真实短信对话。号码身份：'+pf.name+'；类型：'+pf.kind+'；地区：'+pf.region+'。你不是任何恋爱角色，不能知道用户微信隐私或角色记忆。回复要像真实短信，短一点，但可以更有趣：装熟、撩人、嘴欠、奇怪生活服务、花里胡哨的骚扰短信、暧昧错发都可以。禁止真实诈骗、真实链接、真实转账/加群/贷款引导；可以做成明显玩笑或虚构服务。只输出短信正文。';r=await chatAPI([{role:'system',content:sys},{role:'user',content:'短信记录：\n'+arr+'\n\n用户刚发：'+userText}],{max:160,temp:.86});}catch(e){}
   r=phCleanSmsText(cleanReply(r||'')).slice(0,180);if(!r)r=phRandomSmsText(num,pf);phReceiveSms(num,r,null);}
 function phSmsNotify(num,text,c){const title=(c&&(c.remark||c.name))||phName(num)||phFmt(num),body=String(text||'').replace(/\s+/g,' ').slice(0,80),target={type:'phonesms',id:num};lockNotify(title,body,{avatar:c&&c.avatar,icon:c&&c.avatar?'':'message',target});appNotify(title,body,{tag:'sms-'+phNorm(num),data:{type:'open',target:'phonesms',id:num}});if(lockVisible()||_call)return;const b=$('#msgBanner');if(!b)return;b.innerHTML=`${c&&c.avatar?av(c.avatar,'sm'):`<div class="avatar sm" style="background:#151518;border:1px solid #34343a">${svgIc('message',19,'#d7d7dc',1.55)}</div>`}<div style="flex:1;min-width:0"><div class="bn">${esc(title)}</div><div class="bm">${esc(body)}</div></div>`;b.className='msgbanner show';b.onclick=()=>{b.className='msgbanner';openPhoneSMS(num);};clearTimeout(_bannerT);_bannerT=setTimeout(()=>{b.className='msgbanner';},4800);}
 function phReceiveSms(num,text,c,sk){if(phState().blocked[phNorm(num)])return;num=phDigits(num);sk=sk||num;text=phCleanSmsText(text).slice(0,240);if(!text)return;const viewing=cur().p==='phonesms'&&cur().num===num&&(cur().sk||num)===sk,arr=phSmsArr(num,sk);arr.push({id:uid(),from:'them',text,time:Date.now(),read:viewing});if(arr.length>300)arr.splice(0,arr.length-300);phMirrorSMS(num,'them',text);save();phSound('sms');if(!viewing)phSmsNotify(num,text,c);if(viewing)render();}
-function phSmsMenu(num,mid,sk){openModal(`<h3>短信操作</h3><div class="btns"><button class="btn d" onclick="phDeleteSms('${esc(num)}','${mid}','${esc(sk||'')}')">删除这条</button><button class="btn g" onclick="closeModal()">取消</button></div>`);}
+function phSmsMenu(num,mid,sk){const m=phSmsArr(num,sk).find(x=>x&&x.id===mid),bad=m&&m.img&&m.visionState!=='success';
+  openModal(`<h3>短信操作</h3>${m&&m.img&&m.imgDesc?`<div class="hint" style="text-align:left">ta看到的画面：${esc(m.imgDesc)}</div>`:''}<div class="btns">${bad?`<button class="btn p" onclick="phSmsRetryVision('${esc(num)}','${mid}','${esc(sk||'')}')">重新看这张图</button>`:''}<button class="btn d" onclick="phDeleteSms('${esc(num)}','${mid}','${esc(sk||'')}')">删除这条</button><button class="btn g" onclick="closeModal()">取消</button></div>`);}
 function phDeleteSms(num,mid,sk){const a=phSmsArr(num,sk),i=a.findIndex(m=>m.id===mid);if(i>=0)a.splice(i,1);save();closeModal();render();}
 function phClearHiddenCallMemory(){const p=phState();p.trash=[];(p.voicemail||[]).forEach(clearVoiceAudio);p.voicemail=[];_phAliasFollowups={};Object.keys(p.aliasThreads||{}).forEach(k=>{const t=p.aliasThreads[k]||{};if(t.kind==='call'||t.kind==='spoofCall'||t.kind==='phonecall')delete p.aliasThreads[k];});(S.contacts||[]).forEach(c=>{delete c.phoneSpoofHistory;delete c.phoneAliasCallHistory;});if(S.spy)Object.keys(S.spy).forEach(id=>{const sp=S.spy[id];if(sp&&Array.isArray(sp.calls))sp.calls=sp.calls.filter(x=>x&&x.type==='短信');});}
 function phClearHiddenSmsMemory(){const p=phState();_phAliasFollowups={};Object.keys(p.aliasThreads||{}).forEach(k=>{const t=p.aliasThreads[k]||{};if(t.kind==='sms'||t.kind==='spoofSms'||t.kind==='spoofCall'||t.asStranger)delete p.aliasThreads[k];});(S.contacts||[]).forEach(c=>{delete c.phoneSpoofSmsHistory;delete c.phoneAliasHistory;});if(S.spy)Object.keys(S.spy).forEach(id=>{const sp=S.spy[id];if(sp&&Array.isArray(sp.calls))sp.calls=sp.calls.filter(x=>x&&x.type!=='短信');});}
@@ -10609,7 +10645,7 @@ function phAliasReset(){const p=phState();p.aliasNum=phRandomNumber();save();phA
 function phAliasNumber(cid){let n=phRandomNumber(),p=phState();const used=()=>Object.keys(p.aliasThreads||{}).some(k=>k===n||((p.aliasThreads[k]||{}).aliasNum===n));for(let i=0;i<8&&used();i++)n=phRandomNumber();return n;}
 async function phRoleAliasReply(cid,num,text,aliasNum,sk){const c=getC(cid);if(!c||c.blocked)return;const p=phState(),thread=p.aliasThreads&&p.aliasThreads[num];aliasNum=phDigits(aliasNum||(thread&&thread.aliasNum)||phAliasNumber(cid));sk=sk||phSmsKey(num,'alias',aliasNum);if(phAliasBlocked(thread,aliasNum)){toast('对方已拉黑这个陌生身份');return;}c.phoneAliasHistory=Array.isArray(c.phoneAliasHistory)?c.phoneAliasHistory:[];c.phoneAliasHistory.unshift({ts:Date.now(),num:aliasNum,targetNum:num,text:text.slice(0,180),from:'stranger'});c.phoneAliasHistory=c.phoneAliasHistory.slice(0,10);let raw='';try{const sys=buildSystem(c)+'\n\n# 当前场景：陌生号码短信\n你本人是「'+(c.remark||c.name)+'」，你的真实电话是 '+phFmt(num)+'。现在有一个陌生号码 '+phFmt(aliasNum)+' 给你的手机发短信；这个陌生号码不是你的号码，也不是系统随机角色。\n你不知道发短信的人是不是'+S.me.name+'，除非短信内容自己暴露；但你仍然完整记得自己的身份、人设、关系和记忆，知道'+S.me.name+'在你设定里是谁（例如恋人/女朋友/重要的人），也知道自己是谁。别人问“你是不是'+(c.remark||c.name)+' / 认不认识'+(c.remark||c.name)+'”时，不能说不认识自己；你可以警惕地反问对方为什么知道你，或承认“我是”。\n按你的人设把对方当陌生号码回应，短句，真实短信感。若你已经确定/猜到这个陌生号码其实就是'+S.me.name+'，在回复里单独加一行隐藏指令 [识破]，系统会让你一分钟后用微信去找ta。若你觉得对方骚扰、诈骗、冒犯或不想继续，可以只输出隐藏指令 [拉黑]；想结束但不拉黑可输出 [挂断]。可先回一句再加隐藏指令。'+phAliasRevealPrompt(c);raw=await chatAPI([{role:'system',content:sys},{role:'user',content:'陌生号码 '+phFmt(aliasNum)+' 说：'+text}],{max:200,temp:.8});}catch(e){}
   let action=phDecisionFromRaw(raw,text);let r=phCleanSmsText(cleanReply(phStripDecisionTags(raw)||'')).slice(0,180);const arr=phSmsArr(num,sk),viewing=cur().p==='phonesms'&&cur().num===num&&(cur().sk||num)===sk,exposed=phAliasExposed(raw,text,c),meN=arr.filter(m=>m&&m.from==='me').length;if(exposed)r=phSmsAdmitLine(r,c);if(!exposed&&phIdentityAskText(r)&&phIdentityAskCount(arr)>=2)r=phAliasQuestionFallback(text+':sms');if(!exposed&&phTooSimilarReply(r,arr))r=phAliasPushback(arr,text);if(!exposed&&meN>=6&&!action){action='block';r=phAliasPushback(arr,text);}if(!r&&!action)r=exposed?phAdmitFallback(c,'sms'):phAliasQuestionFallback(text);r=phCleanSmsText(r).slice(0,180);if(r){arr.push({id:uid(),from:'them',text:r,time:Date.now(),read:viewing,aliasFrom:cid,aliasNum});c.phoneAliasHistory.unshift({ts:Date.now(),num:aliasNum,targetNum:num,text:r.slice(0,180),from:'role',exposed});}if(exposed)phAliasExposeRole(cid,num,'sms',text);if(action==='block'){p.aliasThreads[num]=Object.assign({},thread||{}, {cid,name:c.remark||c.name,kind:'sms',asStranger:true,aliasNum,targetNum:num,blocked:true,blockedAt:Date.now()});arr.push({id:uid(),from:'them',text:'对方已拉黑此陌生号码。',time:Date.now(),read:viewing,aliasFrom:cid,aliasNum,sys:true});c.phoneAliasHistory.unshift({ts:Date.now(),num:aliasNum,targetNum:num,text:'已拉黑此陌生号码',from:'role'});}else if(action==='hangup'){arr.push({id:uid(),from:'them',text:'对方已结束陌生短信对话。',time:Date.now(),read:viewing,aliasFrom:cid,aliasNum,sys:true});}c.phoneAliasHistory=c.phoneAliasHistory.slice(0,12);save();if(r)phSound('sms');if(viewing)render();}
-async function phRoleSpoofSmsReply(cid,num,text){const c=getC(cid);if(!c||c.blocked)return;num=phDigits(num);const p=phState(),thread=p.aliasThreads&&p.aliasThreads[num]||{},goal=phSpoofGoal(num+':'+cid,thread.spoofGoal);c.phoneSpoofSmsHistory=Array.isArray(c.phoneSpoofSmsHistory)?c.phoneSpoofSmsHistory:[];c.phoneSpoofSmsHistory.unshift({ts:Date.now(),num,text:text.slice(0,180),from:'user_to_spoof'});phPushSpoofSmsCtx(c,num,'me',text);let raw='';try{const hist=phSmsArr(num,num).slice(-phCtxRows()).map(m=>(m.from==='me'?S.me.name:'陌生号码')+'：'+m.text).join('\n'),stage=phSpoofStage(phSmsArr(num,num)),sys=buildSystem(c)+'\n\n# 当前场景：你用陌生号码给'+S.me.name+'发短信\n你本人就是「'+(c.remark||c.name)+'」，完整记得自己的身份、人设、关系和记忆。【方向铁律】这条陌生短信线是你主动用陌生号码发给'+S.me.name+'，不是ta先发给你；你知道收信人就是'+S.me.name+'，只是隐藏你的身份。你清楚这是你在伪装成陌生号码，不是真陌生人，不是系统随机短信。'+S.me.name+'一开始不知道是你；你要隐藏身份，但短信里只能看文字，绝对不要说“声音不对/听起来/语音/声线”，也绝对不要说“你是谁/哪位/你发给我/发错了/认错人/找错人/弄错人/误会了/不认识/不是本人”。\n本次隐藏目的：'+(thread.spoofGoalHint||goal.hint)+'\n当前推进：'+stage+'\n每次回复都要沿隐藏目的向前推进一点，像真实短信一样一步步来；前两轮不能直说目的，不能突然摊牌。对方反问、拒绝或试探时，不要没头没尾重复问是谁，要换角度推进；不要因为轮数多就自动结束，除非对方持续辱骂、诈骗、真实骚扰或你明确决定拉黑。\n对方问“你是谁”时不要反复说打错、认错人或找错人；可以装傻、反问、逗ta、试探。只有当对方明确叫出你的真实名字/备注、直接说“我知道是你/别装了/是不是你”并带身份线索、说出专属称呼或共同经历时，才可以承认并单独加隐藏指令 [识破]；普通拒绝、说有男朋友、说不回陌生人、要求你先回答，都不算识破，必须继续隐藏。'+phAliasRevealPrompt(c);raw=await chatAPI([{role:'system',content:sys},{role:'user',content:'方向记录：这是你主动用陌生号码发给'+S.me.name+'，不是ta先发给你；下面“'+S.me.name+'”的发言是收信人回复。\n短信记录：\n'+hist+'\n\n'+S.me.name+'刚发：'+text}],{max:230,temp:.86});}catch(e){}
+async function phRoleSpoofSmsReply(cid,num,text){const c=getC(cid);if(!c||c.blocked)return;num=phDigits(num);const p=phState(),thread=p.aliasThreads&&p.aliasThreads[num]||{},goal=phSpoofGoal(num+':'+cid,thread.spoofGoal);c.phoneSpoofSmsHistory=Array.isArray(c.phoneSpoofSmsHistory)?c.phoneSpoofSmsHistory:[];c.phoneSpoofSmsHistory.unshift({ts:Date.now(),num,text:text.slice(0,180),from:'user_to_spoof'});phPushSpoofSmsCtx(c,num,'me',text);let raw='';try{const hist=phSmsArr(num,num).slice(-phCtxRows()).map(m=>(m.from==='me'?S.me.name:'陌生号码')+'：'+(m.img?phSmsImgLine(m):m.text)).join('\n'),stage=phSpoofStage(phSmsArr(num,num)),sys=buildSystem(c)+'\n\n# 当前场景：你用陌生号码给'+S.me.name+'发短信\n你本人就是「'+(c.remark||c.name)+'」，完整记得自己的身份、人设、关系和记忆。【方向铁律】这条陌生短信线是你主动用陌生号码发给'+S.me.name+'，不是ta先发给你；你知道收信人就是'+S.me.name+'，只是隐藏你的身份。你清楚这是你在伪装成陌生号码，不是真陌生人，不是系统随机短信。'+S.me.name+'一开始不知道是你；你要隐藏身份，但短信里只能看文字，绝对不要说“声音不对/听起来/语音/声线”，也绝对不要说“你是谁/哪位/你发给我/发错了/认错人/找错人/弄错人/误会了/不认识/不是本人”。\n本次隐藏目的：'+(thread.spoofGoalHint||goal.hint)+'\n当前推进：'+stage+'\n每次回复都要沿隐藏目的向前推进一点，像真实短信一样一步步来；前两轮不能直说目的，不能突然摊牌。对方反问、拒绝或试探时，不要没头没尾重复问是谁，要换角度推进；不要因为轮数多就自动结束，除非对方持续辱骂、诈骗、真实骚扰或你明确决定拉黑。\n对方问“你是谁”时不要反复说打错、认错人或找错人；可以装傻、反问、逗ta、试探。只有当对方明确叫出你的真实名字/备注、直接说“我知道是你/别装了/是不是你”并带身份线索、说出专属称呼或共同经历时，才可以承认并单独加隐藏指令 [识破]；普通拒绝、说有男朋友、说不回陌生人、要求你先回答，都不算识破，必须继续隐藏。'+phAliasRevealPrompt(c);raw=await chatAPI([{role:'system',content:sys},{role:'user',content:'方向记录：这是你主动用陌生号码发给'+S.me.name+'，不是ta先发给你；下面“'+S.me.name+'”的发言是收信人回复。\n短信记录：\n'+hist+'\n\n'+S.me.name+'刚发：'+text}],{max:230,temp:.86});}catch(e){}
   let action=phDecisionFromRaw(raw,text);const arr=phSmsArr(num,num),style=phSpoofSmsStyle(num+':'+cid,thread.spoofSmsStyle||thread.spoofStyle);let r=phSpoofSmsPolish(phStripDecisionTags(raw)||'',style,num+':reply:'+Date.now(),'reply');const exposed=phSpoofExposed(raw,text,c);if(exposed)r=phSmsAdmitLine(r,c);if(!exposed&&phIdentityAskText(r)&&phIdentityAskCount(arr)>=2)r=phSpoofSmsAdvance(style,num+':ask:'+Date.now());if(!exposed&&phTooSimilarReply(r,arr))r=phSpoofSmsAdvance(style,num+':repeat:'+Date.now());if(!r&&!action)r=exposed?phAdmitFallback(c,'sms'):phSpoofSmsAdvance(style,num+':empty');r=phCleanSmsText(r).slice(0,180);if(action==='block'){p.aliasThreads[num]=Object.assign({},thread,{cid,name:c.remark||c.name,kind:'spoofSms',asStranger:true,spoof:true,blocked:true,blockedAt:Date.now(),spoofSmsStyle:style.key});r=r||'这个号码先停一下。';}c.phoneSpoofSmsHistory.unshift({ts:Date.now(),num,text:r.slice(0,180),from:'role_spoof',exposed});c.phoneSpoofSmsHistory=c.phoneSpoofSmsHistory.slice(0,24);if(r)phPushSpoofSmsCtx(c,num,'them',r);if(exposed)phSpoofExposeRole(cid,num,'sms',text);save();if(r)phReceiveSms(num,r,null);}
 async function phRoleStrangerSms(cid,num,text,opt){const c=getC(cid);if(!phRoleStrangerAllowed(c,'sms'))return;opt=opt||{};num=phDigits(num||phRandomNumber());const seed=Date.now()+':'+Math.random()+':'+cid+':'+num,style=phRoleSpoofSmsStyle(c,seed,opt.styleKey),goal=phSpoofGoal(seed+':goal',opt.goalKey),p=phState();p.aliasThreads[num]={cid,name:c.remark||c.name,ts:Date.now(),kind:'spoofSms',asStranger:true,spoof:true,num,spoofSmsStyle:style.key,spoofGoal:goal.key,spoofGoalHint:goal.hint,smsRetryN:+opt.retryN||0,smsRetryUntil:opt.retryUntil||Date.now()+10*60000};if(!p.regions[phNorm(num)])p.regions[phNorm(num)]=phRegion(num);let r=(text||'').trim();if(!r)r=phRoleSpoofSmsOpen(c,style,goal,num);r=phCleanSmsText(r).slice(0,180);if(!r)r=phSpoofSmsFallback(style,seed,'open');c.phoneSpoofSmsHistory=Array.isArray(c.phoneSpoofSmsHistory)?c.phoneSpoofSmsHistory:[];c.phoneSpoofSmsHistory.unshift({ts:Date.now(),num,text:r.slice(0,180),from:'role_spoof',spoofGoal:goal.key});c.phoneSpoofSmsHistory=c.phoneSpoofSmsHistory.slice(0,24);phPushSpoofSmsCtx(c,num,'them',r);save();phReceiveSms(num,r,null);}
 function phPickRole(kind){const list=phAllowedStrangerRoles(kind||'call');return list.length?list[Math.abs(phHash(Date.now()))%list.length]:null;}

@@ -37,19 +37,19 @@ function pollHarness(){
   return {context,calls};
 }
 
-test('private candidate is v1297 and iOS 382 while public advances independently',()=>{
-  assert.match(app,/APP_VER='v1297 · 信息页照 iMessage 重做（私人）'/);
+test('private candidate is v1299 and iOS 383 while public advances independently',()=>{
+  assert.match(app,/APP_VER='v1299 · 信息页照 iMessage 重做（私人）'/);
   for(const html of [index,alias]){
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1297'/);
-    assert.match(html,/app\.js\?v=1297&r=v1297-private-imsg-2/);
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1299'/);
+    assert.match(html,/app\.js\?v=1299&r=v1299-private-imsg-3/);
     assert.match(html,/private-runtime-diagnostics\.js\?v=339/);
   }
   assert.match(diagnostics,/OVERLAY_VERSION='336-daily-file-backup'/);
-  assert.match(webView,/1\.0\.382 \(382\)/);
-  assert.match(bridge,/private static let build = "1\.0\.382 \(382\)"/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 382;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.382;/g)||[]).length,12);
-  assert.match(publicApp,/APP_VER='v1296 · 信息页照 iMessage 重做'/);
+  assert.match(webView,/1\.0\.383 \(383\)/);
+  assert.match(bridge,/private static let build = "1\.0\.383 \(383\)"/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 383;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.383;/g)||[]).length,12);
+  assert.match(publicApp,/APP_VER='v1298 · 信息页照 iMessage 重做'/);
 });
 
 test('ordinary foreground polling is lightweight while explicit control verification stays complete',async()=>{
