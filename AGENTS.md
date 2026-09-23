@@ -11,6 +11,20 @@
 - If the same Bug remains unresolved after two implementation attempts, stop editing, reassess the diagnosis and rollback risk, and choose a materially different plan before continuing.
 - `PROJECT_RULES.md` contains historical task notes. If it conflicts with the current maintenance documents or the latest user instruction, treat the current maintenance documents and latest instruction as authoritative.
 
+## Liquid glass (frosted body + one fine highlight ring)
+
+- Before touching the glass look of bubbles, buttons, or input fields, read
+  `docs/maintenance/液态玻璃_磨砂加细高光_做法.md`. It is the recipe the user signed off on
+  ("这次做的高光美化非常好，是我想要的效果"). Do not re-derive it; three rounds of rework
+  are already recorded there, including the two approaches she rejected.
+- The one rule that caused all of that rework: **any white painted across the whole shape,
+  sitting beneath a `backdrop-filter` layer, becomes a milky wash.** The rim must be a true
+  ring (clipped, or masked out) and must sit above the blur, never below it.
+- Bubble ring geometry is generated, not hand-written. Change the constants in
+  `scripts/glass_ring_polygon.py`, rerun it, and paste the four `clip-path` values into all
+  three shells. `python3 scripts/glass_ring_polygon.py --check` verifies the shipped CSS
+  matches the script; `tests/glass-ring-recipe.test.mjs` runs that check in the suite.
+
 ## Core rule
 
 - Stability is the first priority. Keep changes narrowly scoped and do not alter unrelated systems.
