@@ -742,7 +742,12 @@ test('爆发：每个字往外蹦，方向按序号算死，不是随机', () =>
   const fn = source('phBurstPlay');
   /* 方向按序号算死，同一条消息每次重播、换台设备看到的都一样——不能用随机 */
   assert.equal(/Math\.random/.test(fn), false, '爆发不能用随机，重播就不一样了');
-  assert.match(fn, /const dir=i%2\?1:-1,bx=dir\*\(96\+\(\(i\*37\)%74\)\)/, '一左一右按序号分开，不能全往一边蹦');
+  assert.match(fn, /const dir=i%2\?1:-1,bx=dir\*\((\d+)\+\(\(i\*37\)%(\d+)\)\)/, '一左一右按序号分开，不能全往一边蹦');
+  /* 她说「不要爆发的太远，稍微离得近一点、范围小一点，但是弹没问题」 */
+  const [, bx0, bxSpan] = fn.match(/bx=dir\*\((\d+)\+\(\(i\*37\)%(\d+)\)\)/);
+  assert.ok(+bx0 + +bxSpan <= 95, `最远能蹦到 ${+bx0 + +bxSpan}px，她嫌太远了`);
+  const [, fy0, fySpan] = fn.match(/fy=(\d+)\+\(\(i\*53\)%(\d+)\)/);
+  assert.ok(+fy0 + +fySpan <= 115, `最低能掉到 ${+fy0 + +fySpan}px，离气泡太远了`);
   assert.match(fn, /stage=document\.querySelector\('\.screen'\)/, '要贴到屏幕层上，不是气泡里');
   assert.match(fn, /em\.classList\.add\('away'\)/, '飞的时候原来那几个字要藏起来');
   assert.match(fn, /b\.textContent=ch\.textContent/, '副本是照原字复制的');

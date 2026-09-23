@@ -59,7 +59,7 @@
   window.addEventListener('pageshow',reconcileExpiredWxLogin,{passive:true});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)reconcileExpiredWxLogin();});
   if('serviceWorker'in navigator&&location.protocol!=='file:'){
-    const workerUrl='sw.js?v=1307&r=v1307-private-imsg-1';
+    const workerUrl='sw.js?v=1309&r=v1309-private-imsg-1';
     navigator.serviceWorker.register(workerUrl,{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
   }
   setTimeout(()=>{
@@ -70,5 +70,5 @@
     }
   },0);
 
-  window.__NORTH_WEB_HOTFIX__='v1307-private-imsg-1';
+  window.__NORTH_WEB_HOTFIX__='v1309-private-imsg-1';
 })();
