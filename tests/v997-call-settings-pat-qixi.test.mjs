@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1308 · 真人好友表情包修复、禁言后来微信、爆发收小'/);
+  assert.match(app,/APP_VER='v1310 · 每日一封信、地图跟资料、通话中文动作、不许预演'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1308-web-imsg-1/);
-  assert.match(html,/sw\.js\?v=1308&r=v1308-web-imsg-1/);
+  assert.match(html,/north-sw-reloaded-1310-web-imsg-1/);
+  assert.match(html,/sw\.js\?v=1310&r=v1310-web-imsg-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{

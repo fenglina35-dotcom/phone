@@ -14,16 +14,16 @@ const backup=read(bundle+'private-cloud-backup.js');
 const privateApp=read(bundle+'app.js');
 const publicApp=read('app.js');
 
-test('private v1309 loads daily backup after the diagnostic overlay while public advances independently',()=>{
+test('private v1311 loads daily backup after the diagnostic overlay while public advances independently',()=>{
   for(const name of ['index.html','小手机.html']){
     const html=read(bundle+name);
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1309'/);
-    assert.ok(html.indexOf('private-cloud-backup.js?v=1309')>html.indexOf('private-runtime-diagnostics.js?v=339'));
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1311'/);
+    assert.ok(html.indexOf('private-cloud-backup.js?v=1311')>html.indexOf('private-runtime-diagnostics.js?v=339'));
   }
-  assert.match(privateApp,/APP_VER='v1309 · 真人好友表情包修复、禁言后来微信、爆发收小（私人）'/);
-  assert.match(publicApp,/APP_VER='v1308 · 真人好友表情包修复、禁言后来微信、爆发收小'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 388;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.388;/g)||[]).length,12);
+  assert.match(privateApp,/APP_VER='v1311 · 每日一封信、地图跟资料、通话中文动作、不许预演（私人）'/);
+  assert.match(publicApp,/APP_VER='v1310 · 每日一封信、地图跟资料、通话中文动作、不许预演'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 389;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.389;/g)||[]).length,12);
 });
 
 test('web backup sends bounded ordered chunks and records a day only after confirmed save',()=>{

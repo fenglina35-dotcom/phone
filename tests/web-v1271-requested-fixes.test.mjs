@@ -71,7 +71,10 @@ test('user moments guarantee a lover like plus real comment and cap role reply e
   assert.match(app,/function momentRunRoleExchange\(/);
   assert.match(app,/Math\.min\(2,/);
   assert.match(app,/replyToName/);
-  assert.match(functionSource(app,'momentCommentLine'),/@/);
+  /* 她说「朋友圈艾特 @ 的那个要去掉，不要那个标志了」——改成微信自己的写法「回复」。
+     原来这里盯的就是那个 @，现在反过来盯它别再回来。 */
+  assert.equal(/@/.test(functionSource(app,'momentCommentLine')),false,'@ 那个标志又回来了');
+  assert.match(functionSource(app,'momentCommentLine'),/<span class="cmt-re">回复<\/span>/,'回复别人的评论要写「回复某某」');
 });
 
 test('multiplayer theater offers two independent WeChat guest slots and never forces an unchecked guest',()=>{

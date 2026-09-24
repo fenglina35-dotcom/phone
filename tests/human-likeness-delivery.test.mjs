@@ -67,7 +67,7 @@ assert.match(functionSource('doAutoMoment'), /publishRoleSocialAutonomous\(c,'mo
 assert.match(functionSource('doAutoTweet'), /publishRoleSocialAutonomous\(c,'x'/, 'automatic tweets wait for the autonomous media pipeline and report only successful publishing');
 
 const mail = functionSource('scanMail');
-assert.match(mail, /genLetter\(c\.id\)\)\.then\(ok=>\{if\(!ok\)return;pc\.n\+\+/, 'daily letters are counted only after successful generation');
+assert.match(mail, /const prevLast=pc\.last;pc\.n\+\+;pc\.last=Date\.now\(\);save\(0\);/, '每日信件要先占坑再写：写成了才留着，没写成把坑退回去');
 assert.match(functionSource('genLetter'), /return true/, 'letter generation reports successful delivery');
 
 console.log('human-likeness delivery tests passed');

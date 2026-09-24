@@ -58,21 +58,21 @@ function persistenceRuntime() {
   return { context, writes, releases, traces };
 }
 
-test('private identity remains v1309 and iOS 388 while public advances independently', () => {
-  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1309'/);
-  assert.match(privateApp, /APP_VER='v1309 · 真人好友表情包修复、禁言后来微信、爆发收小（私人）'/);
+test('private identity remains v1311 and iOS 389 while public advances independently', () => {
+  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1311'/);
+  assert.match(privateApp, /APP_VER='v1311 · 每日一封信、地图跟资料、通话中文动作、不许预演（私人）'/);
   for (const html of [privateIndex, privateAlias]) {
-    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1309'/);
-    assert.match(html, /app\.js\?v=1309&r=v1309-private-imsg-1/);
+    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1311'/);
+    assert.match(html, /app\.js\?v=1311&r=v1311-private-imsg-1/);
     assert.match(html, /private-runtime-diagnostics\.js\?v=339/);
   }
-  assert.match(privateRepair, /index\.html\?repair=1&v=1309/);
-  assert.match(swift, /1\.0\.388 \(388\)/);
-  assert.match(bridge, /private static let build = "1\.0\.388 \(388\)"/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 388;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.388;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1308 · 真人好友表情包修复、禁言后来微信、爆发收小'/);
-  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1308'/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1311/);
+  assert.match(swift, /1\.0\.389 \(389\)/);
+  assert.match(bridge, /private static let build = "1\.0\.389 \(389\)"/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 389;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.389;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1310 · 每日一封信、地图跟资料、通话中文动作、不许预演'/);
+  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1310'/);
   assert.doesNotMatch(publicApp, /persistWechatRequested|smallPhoneWechatPersistTrace/);
 });
 

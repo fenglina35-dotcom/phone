@@ -89,6 +89,6 @@ test('private diagnostics expose only stage timing and counts', () => {
 });
 
 test('v1178 public candidate adds only the shared theater layer, not the private friend repair', () => {
-  assert.match(publicSource, /APP_VER='v1308 · 真人好友表情包修复、禁言后来微信、爆发收小'/);
+  assert.match(publicSource, /APP_VER='v1310 · 每日一封信、地图跟资料、通话中文动作、不许预演'/);
   assert.doesNotMatch(publicSource, /function pfEnsureForSync/);
 });
