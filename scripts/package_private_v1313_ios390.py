@@ -246,7 +246,7 @@ def validate(files: dict[str, bytes]) -> None:
         ("function phDeliverSmsBubbles(num,sk,list,c)", "v1294 短信一条条出"),
         ("function phSmsTypingSet(num,sk,on)", "v1294 短信正在输入的三个点"),
         ("function phSmsTyping()", "v1294 有字才出现蓝色发送键"),
-        ("const bg=phSmsBg(num),name=phName(num);", "v1296 主号／匿名号那条不压在输入框上面"),
+        ("const bg=phSmsBg(num),name=phName(num),sel=phSmsSelOn(sk);", "v1296 主号／匿名号那条不压在输入框上面（v1313 起这行还带多选开关）"),
         ("async function phSmsVision(m,file)", "v1298 短信里的照片真的识图"),
         ("function phSmsImgLine(m)", "v1298 识出来的画面进上下文"),
         ("function phSmsRetryVision(num,mid,sk)", "v1298 没识出来的能重试"),
