@@ -118,7 +118,7 @@ test('外观里能改五种颜色，也能换背景，而且不压画质', () =>
     assert.match(grab(x, 'renderOff'), /offAppearance\('\$\{id\}'\)/, '单次约会的 meta 里要有入口');
     assert.match(x, /<button type="button" onclick="offAppearance\('\$\{id\}'\)">外观<\/button>/, '共同生活里也要有入口');
     assert.match(grab(x, 'renderOff'), /const _st=offStageAttrs\(c\);/);
-    assert.match(x, /class="offstage cohab-stage\$\{_st\.cls\}" style="\$\{_st\.style\}"/, '共同生活也套同一套外观');
+    assert.match(x, /class="offstage cohab-stage\$\{_st\.cls\}\$\{_manualReply\?' cohab-has-reply':''\}" style="\$\{_st\.style\}"/, '共同生活也套同一套外观');
   }
 });
 

@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1316 · 全新手机第一次打开就套上默认美化'/);
+  assert.match(app,/APP_VER='v1318 · 共同生活能改外观、能多选删除，让TA回真的点得动'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1316-web-imsg-1/);
-  assert.match(html,/sw\.js\?v=1316&r=v1316-web-imsg-1/);
+  assert.match(html,/north-sw-reloaded-1318-web-imsg-1/);
+  assert.match(html,/sw\.js\?v=1318&r=v1318-web-imsg-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{

@@ -89,6 +89,6 @@ test('private diagnostics expose only stage timing and counts', () => {
 });
 
 test('v1178 public candidate adds only the shared theater layer, not the private friend repair', () => {
-  assert.match(publicSource, /APP_VER='v1316 · 全新手机第一次打开就套上默认美化'/);
+  assert.match(publicSource, /APP_VER='v1318 · 共同生活能改外观、能多选删除，让TA回真的点得动'/);
   assert.doesNotMatch(publicSource, /function pfEnsureForSync/);
 });
