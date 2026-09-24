@@ -232,7 +232,7 @@ test('输入框有字才冒出蓝色发送键', () => {
   }
   const fn = source('phSmsTyping');
   assert.match(fn, /bar\.classList\.toggle\('typing',!!String\(ta\.value\|\|''\)\.trim\(\)\)/);
-  assert.match(source('renderPhoneIMsg'), /oninput="phSmsTyping\(\);phFxSync\(\)"/);
+  assert.match(source('phSmsComposerHTML'), /oninput="phSmsTyping\(\);phFxSync\(\)"/);
 });
 test('空格不算字，发完了那个键要收回去', () => {
   const ctx = { cls: new Set() };
@@ -405,15 +405,15 @@ test('带效果的那条底下有重播，普通的没有', () => {
   assert.equal(has("{text:'在',fx:[{t:'在',e:['big']}]}"), true);
   assert.equal(has("{text:'在',bfx:'slam'}"), true);
   assert.equal(has("{text:'在',sfx:'echo'}"), true);
-  assert.match(source('renderPhoneIMsg'), /fx\?`<span class="imsg-fxrp" onclick="phFxReplay\(/);
+  assert.match(source('renderPhoneIMsg'), /fx&&!sel\?`<span class="imsg-fxrp" onclick="phFxReplay\(/, '多选的时候别再挂重播');
 });
 
 /* ===== 带效果发送 ===== */
 test('长按发送键才弹「带效果发送」，短按就是直接发', () => {
   assert.match(source('phFxHoldStart'), /setTimeout\(\(\)=>\{_phFxHold=0;phFxSendHold\(num,sk\);\},420\)/);
   assert.match(source('phFxHoldStop'), /clearTimeout\(_phFxHold\)/);
-  assert.match(source('renderPhoneIMsg'), /onpointerdown="phFxHoldStart\(/);
-  assert.match(source('renderPhoneIMsg'), /onpointerup="phFxHoldStop\(\)" onpointerleave="phFxHoldStop\(\)"/, '手指挪开要取消，不然误弹');
+  assert.match(source('phSmsComposerHTML'), /onpointerdown="phFxHoldStart\(/);
+  assert.match(source('phSmsComposerHTML'), /onpointerup="phFxHoldStop\(\)" onpointerleave="phFxHoldStop\(\)"/, '手指挪开要取消，不然误弹');
   for (const x of [app, priv]) {
     assert.match(x, /const PH_FX_BUBBLE=\[\['slam','震撼'\],\['loud','放大'\],\['gentle','缩小'\],\['invisible','隐形墨水'\]\]/);
     assert.match(x, /const PH_FX_SCREEN=\[\['echo','回声'\][\s\S]{0,180}\['star','流星'\]\]/);
@@ -712,7 +712,7 @@ test('角色也能发效果，他想发就发', () => {
 });
 test('加效果那一下重绘，输入框里的字不能被冲掉', () => {
   /* 第一版就是这么丢的：加完效果 render() 一次，textarea 是空的，字没了 */
-  const fn = source('renderPhoneIMsg');
+  const fn = source('phSmsComposerHTML');
   assert.match(fn, /\$\{esc\(_phFx\.prev\|\|''\)\}<\/textarea>/, '正在打的字要带进标签里');
   assert.match(fn, /<div class="imsg-bar\$\{String\(_phFx\.prev\|\|''\)\.trim\(\)\?' typing':''\}"/, '发送键的状态也要跟着算');
 });
@@ -911,7 +911,7 @@ test('回复长度也跟随设置里的「回复长度（线上聊天）」', ()
 /* ===== ＋ 就是相册 ===== */
 test('＋ 里面收着照片和文字效果，下面那排没多按钮', () => {
   /* 她说「不要改变下面的布局，把功能放在 ＋ 号里」——Aa 那个按钮撤掉了 */
-  const r = source('renderPhoneIMsg');
+  const r = source('phSmsComposerHTML');
   assert.match(r, /class="imsg-plus\$\{phFxHas\(\)\?' on':''\}" onclick="phSmsPlusMenu\(/);
   assert.equal(/imsg-aa/.test(r), false, '下面那排又多出一个按钮了');
   const menu = source('phSmsPlusMenu');

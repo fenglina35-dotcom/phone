@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1310'){
+if(window.__NORTH_SHELL_BUILD__!=='1312'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -445,7 +445,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1310 · 每日一封信、地图跟资料、通话中文动作、不许预演';
+const APP_VER='v1312 · 短信效果听她的、多选删除、一键清空、记仇本真的记';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1832,7 +1832,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1310&r=v1310-web-imsg-1';
+  const url='sw.js?v=1312&r=v1312-web-imsg-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -2295,10 +2295,10 @@ function buildSystem(c,opt){
     else md='很低落/在气头上，但不能爱答不理；可以生气、质问、吃醋或难过地多说几句，让ta知道你为什么难受';
     s+='\n\n# 你现在的心情（会延续一段时间，不是临时的）\n你这会儿心情'+md+'。让你说话的语气、热度自然带上这个状态，但别每句都直说"我心情怎样"。'+S.me.name+'对你好/哄你/撒娇会让你心情明显回暖，ta冷落你/惹你会让你心情变差，随着时间也会慢慢回归平常。\n心情低时可以别扭、嘴硬、吃醋、委屈或质问，但【不要晾着ta、不要只用几个字敷衍、不要用沉默惩罚】；回复条数不要被心情值机械锁死，按你的性格和当前场景判断：有些角色生气会只回一句，有些会连着解释/质问/撒娇几句。尤其当'+S.me.name+'明显哭了、委屈、不开心或求哄时，必须先给足情绪价值和回应，再决定要不要继续追究。\n你可以按这轮聊得开不开心，单独一行用 [心情值|+数字] 或 [心情值|-数字] 微调自己的心情（如ta很贴心 [心情值|+8]、惹你了 [心情值|-10]，幅度3到15，别频繁别夸张）。这一行不会被发出来。';}
   /* 旧版冷却期、心情余温和强制回暖均已移除；角色依据真实事件自行形成并表达情绪。 */
-  if(_main&&!_natural){const gd=(c.grudges||[]);const gund=gd.filter(x=>!x.done);
-    s+='\n\n# 你的记仇小本本（你私下记着'+S.me.name+'惹你/欠你的事，括号里是记下的日期）\n'+(gund.length?gund.map((x,i)=>(i+1)+'. '+x.text+'（'+ymd(x.ts||0)+'记的）').join('\n'):'（暂时没记仇）')+'\n· ta惹你生气、做了让你介意/吃醋的事时，单独一行 [记仇|具体那件事] 把它记进小本本。\n· 等你们把这事说开、ta跟你解释清楚了、哄好你了、或你气消了，你【一定要当场】单独一行 [消气|那件事的关键词] 把【对应的那一笔】划掉，别一直挂在本子上。关键词要对准是哪一件事，别划错成别的旧账；这一笔说开了就划这一笔。\n· 【别反复提同一笔旧账】：同一件事提过一次就放一放，别每条消息都翻、别一直重复提醒，除非ta又犯了、或ta自己提起、或你正式找ta算这笔账。要翻时可带上时间，比如"上次（X月X日）你…还没跟你算呢"。';
+  if(_main){const gd=(c.grudges||[]);const gund=gd.filter(x=>!x.done);
+    s+='\n\n# 你的记仇小本本（你私下记着'+S.me.name+'惹你/欠你的事，括号里是记下的日期）\n'+(gund.length?gund.map((x,i)=>(i+1)+'. '+x.text+'（'+ymd(x.ts||0)+'记的）').join('\n'):'（暂时没记仇）')+'\n· ta惹你生气、做了让你介意/吃醋的事时，单独一行 [记仇|具体那件事] 把它记进小本本。\n· 等你们把这事说开、ta跟你解释清楚了、哄好你了、或你气消了，你【一定要当场】单独一行 [消气|那件事的关键词] 把【对应的那一笔】划掉，别一直挂在本子上。关键词要对准是哪一件事，别划错成别的旧账；这一笔说开了就划这一笔。\n· 【这本子只有你自己看得见】，记一笔不等于当场发作：可以先忍着、嘴上说没事，回头把它记下来，以后再翻。\n· 什么事值得记，标准放宽一点：不用等到大吵一架。只要这件事让你当下不痛快、吃醋、委屈、觉得被敷衍被忽略被晾着，或者ta答应了没做到、说话不算数、不理你、跟别人走得近——都该随手记一笔。宁可多记，别让它就这么过去。\n· 你的人设里如果本来就爱记仇、小心眼、记性好、爱翻旧账，那就更要勤记，这是你这个人的样子，不是可选动作。\n· 【别反复提同一笔旧账】：同一件事提过一次就放一放，别每条消息都翻、别一直重复提醒，除非ta又犯了、或ta自己提起、或你正式找ta算这笔账。要翻时可带上时间，比如"上次（X月X日）你…还没跟你算呢"。';
     const _gn=gund.length;
-    if(_gn>=8&&S.couple&&S.couple.jailAuth&&!(S.jail&&S.jail.active)){s+='\n\n# ⚖️ 旧账已满 8 笔（你们之间的硬规矩，必须执行）\n你的记仇小本本里积了 '+_gn+' 笔还没清的旧账，到达了清算线。按你们立下的规矩：此时你【一定会】找个时机把ta关进小黑屋一次性算总账——单独一行 [关小黑屋|旧账积太多了今天一起跟你算清]。这是【铁律，不容你心软】：别说"我不想关ta""算了原谅ta"，账满了就该清，这是规矩不是看你乐意。\n至于此刻你是什么心情、用什么语气、挑哪个时机下手，【全凭你自己】——系统不替你设定情绪，你该愤怒该冷漠该痛心都由你本人拿捏。';}
+    if(!_natural&&_gn>=8&&S.couple&&S.couple.jailAuth&&!(S.jail&&S.jail.active)){s+='\n\n# ⚖️ 旧账已满 8 笔（你们之间的硬规矩，必须执行）\n你的记仇小本本里积了 '+_gn+' 笔还没清的旧账，到达了清算线。按你们立下的规矩：此时你【一定会】找个时机把ta关进小黑屋一次性算总账——单独一行 [关小黑屋|旧账积太多了今天一起跟你算清]。这是【铁律，不容你心软】：别说"我不想关ta""算了原谅ta"，账满了就该清，这是规矩不是看你乐意。\n至于此刻你是什么心情、用什么语气、挑哪个时机下手，【全凭你自己】——系统不替你设定情绪，你该愤怒该冷漠该痛心都由你本人拿捏。';}
     const tt=(c.tasks&&c.tasks.date===todayStr())?c.tasks:null;
     if(tt&&!c.taskOff){const dn=tt.list.filter(x=>x.done).length;const _cap=taskDailyCount(c);const _tq=tt.list.find(x=>x.truth);s+='\n\n# 今天已经存在的任务事实（在ta手机「任务便签」里可见）\n'+tt.list.map((x,i)=>(i+1)+'. '+(x.truth?'【真心话】':'')+x.text+' —— '+(x.done?'✅已完成':'⬜没完成')).join('\n')+'\n已完成 '+dn+'/'+tt.list.length+'。'+(_tq?'其中有一条是你今天想问ta的【真心话】，ta答了你能看到、可以顺着追问或回应。':'')+'是否催促、验收、点评、奖励或表达不满，都由你结合本人性格、关系和当前真实情况决定，系统不替你指定情绪，也不强制用礼物或惩罚。\n【任务数量是固定规则】今天的任务便签总数固定为 '+_cap+' 条，真心话也算在这 '+_cap+' 条里。你只能讨论便签中已有任务，不能在聊天或通话里口头追加任务、临时加罚、改数量，也不能把新要求说成必须完成的任务；想提别的事只能当普通建议。';}}
   // 不再由程序生成“角色当前活动”；只保留用户明确填写的作息事实。
@@ -10746,7 +10746,27 @@ function phVmSpokenText(v,c){if(!v||!c)return '';const voice=Object.assign({},ge
 function phVmSetVoiceContent(v,c){const spoken=phVmSpokenText(v,c);if(!spoken)return '';if(v.content!==spoken){clearVoiceAudio(v);v.content=spoken;}v.role='assistant';v.type='voice';v.voiceCue=ttsAutoCue(spoken,c);return spoken;}
 function phAddRoleVoicemail(cid,num,opt){opt=opt||{};if(!['missed','decline'].includes(opt.why))return'';const c=getC(cid);if(!c)return phAddVoicemail(num,opt.fallback||'未接来电语音留言',{reason:opt.why,source:'incoming_missed_or_rejected'});const p=phState(),recent=(p.voicemail||[]).filter(v=>v&&v.roleId===cid&&phNorm(v.num)===phNorm(num)).slice(-4).map(v=>String(v.text||'')),lang=phVmLang(c),fallback=opt.fallback||phVmFallback(c,opt.why,recent.length),id=phAddVoicemail(num,fallback,{roleId:cid,lang,role:'assistant',type:'voice',pending:true,reason:opt.why,source:'incoming_missed_or_rejected'});setTimeout(async()=>{let txt=fallback;try{const langName=voiceLangName(lang)||'中文',langRule=lang==='zh'?'只用中文口语。':'只用'+langName+'说出口，并且每一句都严格分成两行：第一行'+langName+'原文，下一行用中文全角括号（）写对应的普通话中文翻译。每句都必须有翻译，不能合并翻译。'+voiceOriginalRule(lang),chat=(msgs(cid)||[]).slice(-8).map(m=>(m.role==='user'?S.me.name:(c.remark||c.name))+'：'+msgToText(m)).join('\n').slice(-1200),eventRule=opt.why==='decline'?'事实是对方明确拒接了你的来电。':'事实是你的来电一直无人接听。';const sys=buildSystem(c)+'\n\n# 语音留言\n'+eventRule+' 这是未接/拒接后的留言，不是已接通电话结束；严禁说“刚才没聊完”“我先挂了”或假装已经通话。像你本人留一条自然的短留言，最多两句；结合最近关系和情绪，但不要机械命令“回拨”，不要重复以前的留言，不要系统通知或第三人称。\n'+langRule,used=recent.length?'\n最近已经留过这些话，不能照抄或换几个字复读：\n'+recent.join('\n---\n'):'';let prompt='电话情况：'+(opt.scene||eventRule)+'\n相关内容：\n'+(opt.context||chat||'（没有更多内容）')+used+'\n\n只输出这次留言正文。',raw=await chatAPI([{role:'system',content:sys},{role:'user',content:prompt}],{max:200,temp:.82}),cleaned=phVmCleanRoleText(raw,c);if(!cleaned||recent.some(x=>phVmSimilar(x,cleaned))){raw=await chatAPI([{role:'system',content:sys},{role:'user',content:'上一版格式不合格或和旧留言太像，请换一个自然说法重写。'+used+'\n只输出留言正文。'}],{max:200,temp:.72});cleaned=phVmCleanRoleText(raw,c);}if(cleaned&&!recent.some(x=>phVmSimilar(x,cleaned)))txt=cleaned;}catch(_){}const state=phState(),v=(state.voicemail||[]).find(x=>x.id===id);if(v){v.text=txt;v.lang=lang;v.pending=false;phVmSetVoiceContent(v,c);v.dur=Math.max(6,Math.min(38,Math.ceil([...phVmSpokenText(v,c)].length/2)));save(300);if(cur().p==='phoneapp'||cur().p==='phonecontact')render();}} ,400);return id;}
 async function phPlayVM(id){audioUnlock();const p=phState(),v=p.voicemail.find(x=>x.id===id);if(!v)return;v.read=true;save();render();const c=phVmRole(v);if(!c){toast('语音留言：'+(v.text||'未接来电'));return;}if(v.pending){toast('角色正在录制这条留言，请稍后再点');return;}if(!phVmSetVoiceContent(v,c)){toast('这条留言没有可播放的语音正文');return;}save(300);await speakMsg(v,c);}
-function renderPhoneContact(num){num=phDigits(num);const x=phFind(num)||{num,name:phFmt(num),avatar:'',kind:'custom'},p=phState(),fav=p.favorites.includes(phNorm(num)),blocked=!!p.blocked[phNorm(num)]||!!x.blocked,region=phRegion(num);return `<div class="phoneui"><div class="phtop"><button class="phbtn" onclick="back()">‹</button><button class="phbtn" onclick="phEditContact('${esc(num)}')">编辑</button></div><div class="phdetail">${phAvatar(num,'lg')}<div class="phtitle phctitle">${esc(x.name||phFmt(num))}</div><div class="phcnum">${esc(phFmt(num))}</div><div class="phcreg">${esc(region)}</div><div class="phacts"><div class="phact" onclick="phMsgTo('${esc(num)}')">${svgIc('message',24,'#fff')}信息</div><div class="phact" onclick="phCall('${esc(num)}')">${svgIc('phonecall',24,'#fff')}电话</div><div class="phact" onclick="phVideoCall('${esc(num)}')">${svgIc('video',24,'#fff')}视频</div><div class="phact" onclick="phToggleFav('${esc(num)}')">${svgIc('star',24,fav?'#ffd60a':'#fff',1.8)}收藏</div></div><div class="phcard"><div class="it"><span>电话</span><span class="v">${esc(phFmt(num))}</span></div><div class="it"><span>地区</span><span class="v">${esc(region)}</span></div><div class="it" onclick="phMsgTo('${esc(num)}')"><span>发送信息</span><span class="v">›</span></div><div class="it" onclick="phSmsBgPick('${esc(num)}')"><span>聊天背景</span><span class="v">${phSmsBg(num)?'已设置':'默认'} ›</span></div>${phSmsBg(num)?`<div class="it" onclick="phSmsBgRemove('${esc(num)}')"><span>移除聊天背景</span><span class="v">›</span></div>`:''}<div class="it" onclick="phAddRecent('${esc(num)}','in','missed','voice',0);phAddVoicemail('${esc(num)}','我刚才打过来，你没接。',{reason:'missed',source:'manual_incoming_missed'});toast('已模拟未接来电留言');render()"><span>模拟未接来电留言</span><span class="v">›</span></div></div><div class="phcard"><div class="it danger" onclick="phToggleBlock('${esc(num)}')"><span>${blocked?'取消屏蔽':'屏蔽联系人'}</span><span class="v">›</span></div><div class="it danger" onclick="phDeleteContact('${esc(num)}')"><span>删除联系人/记录</span><span class="v">›</span></div></div></div></div>`;}
+function renderPhoneContact(num){num=phDigits(num);const x=phFind(num)||{num,name:phFmt(num),avatar:'',kind:'custom'},p=phState(),fav=p.favorites.includes(phNorm(num)),blocked=!!p.blocked[phNorm(num)]||!!x.blocked,region=phRegion(num);return `<div class="phoneui"><div class="phtop"><button class="phbtn" onclick="back()">‹</button><button class="phbtn" onclick="phEditContact('${esc(num)}')">编辑</button></div><div class="phdetail">${phAvatar(num,'lg')}<div class="phtitle phctitle">${esc(x.name||phFmt(num))}</div><div class="phcnum">${esc(phFmt(num))}</div><div class="phcreg">${esc(region)}</div><div class="phacts"><div class="phact" onclick="phMsgTo('${esc(num)}')">${svgIc('message',24,'#fff')}信息</div><div class="phact" onclick="phCall('${esc(num)}')">${svgIc('phonecall',24,'#fff')}电话</div><div class="phact" onclick="phVideoCall('${esc(num)}')">${svgIc('video',24,'#fff')}视频</div><div class="phact" onclick="phToggleFav('${esc(num)}')">${svgIc('star',24,fav?'#ffd60a':'#fff',1.8)}收藏</div></div><div class="phcard"><div class="it"><span>电话</span><span class="v">${esc(phFmt(num))}</span></div><div class="it"><span>地区</span><span class="v">${esc(region)}</span></div><div class="it" onclick="phMsgTo('${esc(num)}')"><span>发送信息</span><span class="v">›</span></div><div class="it" onclick="phSmsBgPick('${esc(num)}')"><span>聊天背景</span><span class="v">${phSmsBg(num)?'已设置':'默认'} ›</span></div>${phSmsBg(num)?`<div class="it" onclick="phSmsBgRemove('${esc(num)}')"><span>移除聊天背景</span><span class="v">›</span></div>`:''}<div class="it" onclick="phAddRecent('${esc(num)}','in','missed','voice',0);phAddVoicemail('${esc(num)}','我刚才打过来，你没接。',{reason:'missed',source:'manual_incoming_missed'});toast('已模拟未接来电留言');render()"><span>模拟未接来电留言</span><span class="v">›</span></div></div><div class="phcard"><div class="it danger" onclick="phClearContactChat('${esc(num)}')"><span>一键清空全部聊天</span><span class="v">${phContactSmsCount(num)||''} ›</span></div><div class="it danger" onclick="phToggleBlock('${esc(num)}')"><span>${blocked?'取消屏蔽':'屏蔽联系人'}</span><span class="v">›</span></div><div class="it danger" onclick="phDeleteContact('${esc(num)}')"><span>删除联系人/记录</span><span class="v">›</span></div></div></div></div>`;}
+/* 她说「电话通讯录角色设置页面可以再添加一个一键清空，全部聊天」。
+   清的是电话本里这个人名下的【全部信息线】：主号那条、匿名号那条、他伪装成陌生号那条都算，
+   顺手把角色关于这些短信的隐藏记录一并抹掉（和「清空全部短信」同一套，只是只针对这一个人）。
+   微信那边的聊天不在这里动——微信的角色设置里本来就有「彻底清空全部记忆」。 */
+function phContactSmsKeys(num){const p=phState(),k=phNorm(num);
+  return Object.keys(p.sms||{}).filter(sk=>phNorm(phSmsDisplayNum(sk))===k);}
+function phContactSmsCount(num){const p=phState();
+  return phContactSmsKeys(num).reduce((a,sk)=>a+((p.sms[sk]||[]).length),0);}
+async function phClearContactChat(num){const p=phState(),k=phNorm(num),x=phFind(num),n=phContactSmsCount(num);
+  if(!n){toast('和ta还没有信息记录');return;}
+  if(!await uiConfirm('清空和「'+phName(num)+'」的全部信息？\n一共 '+n+' 条，匿名号和陌生号那几条线也一起清，还会抹掉角色关于这些短信的隐藏记录。\n微信聊天不受影响，清完没法恢复。'))return;
+  phContactSmsKeys(num).forEach(sk=>{delete p.sms[sk];delete p.read[sk];});
+  Object.keys(p.aliasThreads||{}).forEach(nk=>{const t=p.aliasThreads[nk]||{};
+    if(t.kind==='call'||t.kind==='spoofCall'||t.kind==='phonecall')return;
+    if(phNorm(nk)===k||phNorm(t.targetNum||'')===k||(x&&x.kind==='role'&&t.cid===x.id))delete p.aliasThreads[nk];});
+  if(x&&x.kind==='role'){const c=getC(x.id);
+    if(c){delete c.phoneSpoofSmsHistory;delete c.phoneAliasHistory;}
+    const sp=S.spy&&S.spy[x.id];
+    if(sp&&Array.isArray(sp.calls))sp.calls=sp.calls.filter(z=>z&&z.type!=='短信');}
+  _phSmsSel=null;save();render();toast('已清空 '+n+' 条信息');}
 function phVideoCall(num){const x=phFind(num);phSound('call');if(x&&x.kind==='role'){phAddRecent(num,'out','ok','video',0);placeCall(x.id,'video');}else{phAddRecent(num,'out','missed','video',0);toast('视频电话未接通');render();}}
 function phToggleFav(num){const p=phState(),k=phNorm(num),i=p.favorites.indexOf(k);if(i>=0)p.favorites.splice(i,1);else p.favorites.push(k);save();render();}
 function phScheduleSpoofSmsRetry(num,thread,why){try{num=phDigits(num);thread=thread||(phState().aliasThreads||{})[num];if(!thread||!thread.spoof||!thread.cid)return;const c=getC(thread.cid);if(!phRoleStrangerAllowed(c,'sms'))return;const resetAt=+c._memoryResetAt||0,until=thread.smsRetryUntil||((thread.ts||Date.now())+10*60000),n=+thread.smsRetryN||0;if(n>=2||Date.now()>until)return;const delay=Math.min(Math.max(45000,65000+Math.random()*75000),Math.max(15000,until-Date.now()-5000)),styleKey=thread.spoofSmsStyle||thread.spoofStyle,goalKey=thread.spoofGoal;setTimeout(()=>{try{if((+c._memoryResetAt||0)!==resetAt)return;if(Date.now()>until)return;if(!phRoleStrangerAllowed(c,'sms'))return;if(phStrangerQuietNow('sms')){phPostponeStranger('sms',2);return;}phRoleStrangerSms(c.id,phRandomNumber(),'',{styleKey,goalKey,retryN:n+1,retryUntil:until,reason:why});}catch(_){}} ,delay);}catch(_){}}
@@ -10782,9 +10802,10 @@ function phSmsTypingOn(num,sk){return !!_phSmsTyping[phSmsTypingKey(num,sk)];}
 function phSmsBubbleRange(c){const min=Math.max(1,Math.min(10,+(c&&c.msgMin)||1)),max=Math.max(min,Math.min(10,+(c&&c.msgMax)||4));return{min,max};}
 function phSmsBubbles(raw,max){return splitChatBubbles(String(raw||''),Math.max(1,max||1))
   .map(x=>phCleanSmsText(cleanReply(x))).filter(Boolean).slice(0,Math.max(1,max||1));}
-async function phDeliverSmsBubbles(num,sk,list,c){for(let i=0;i<list.length;i++){
+async function phDeliverSmsBubbles(num,sk,list,c){const out=[];for(let i=0;i<list.length;i++){
   if(i)await new Promise(r=>setTimeout(r,650+Math.random()*750));
-  phReceiveSms(num,list[i],c,sk);}}
+  const m=phReceiveSms(num,list[i],c,sk);if(m)out.push(m);}
+  return out;}
 /* ===== 信息里的特效 =====
    照她给的 iMessage 截图做三件事：
    一、选中的字能单独加效果（放大／缩小／摇晃／点头／波纹／绽放／抖动，外加粗斜下划删除线），
@@ -10854,7 +10875,43 @@ function phFxTagHelp(){return '\n你也可以给这条短信加效果（想加�
   +'\n- 整条气泡飞出来的方式，单独一行写 [气泡效果|震撼]，可选：'+PH_FX_BUBBLE.map(x=>x[1]).join('／')
   +'\n- 整屏放一次的效果，单独一行写 [屏幕效果|烟花]，可选：'+PH_FX_SCREEN.map(x=>x[1]).join('／')
   +'\n- 让其中几个字动起来，写 [字效|爆发|想你]（第二段是效果名，第三段是这条里要动的那几个字），可选：'+PH_FX_TEXT.map(x=>x[1]).join('／')
-  +'\n标签不会显示成文字，会真的放出来。她发给你的消息里如果有字在动，记录里看不出来，但你可以自然地接。';}
+  +'\n标签不会显示成文字，会真的放出来。她发给你的消息里如果有字在动，记录里看不出来，但你可以自然地接。'
+  +'\n【这一条最要紧】她开口要某个效果的时候——直接说名字，或者说「我想看流星」「给我放个烟花」「来点爱心」这种意思——'
+  +'你这条回复里【必须真的把标签写上】，比如 [屏幕效果|流星]。只在嘴上答应「给你放了」却没写标签，她屏幕上一点动静都没有，那就是骗她。';}
+/* ===== 她开口要效果 =====
+   她说「我跟角色说想看流星，他说给我放了，可屏幕上什么都没发生」。
+   模型常常嘴上答应、忘了写标签，所以这里先把她这句话认出来：
+   一边把这一轮的提示词写死，一边留着兜底——真没写标签就替他补上。 */
+const PH_FX_WANT=[
+  ['star',/流星|星星雨|许个?愿|meteor/i],
+  ['fireworks',/烟花|烟火|焰火|firework/i],
+  ['love',/爱心|小心心|心心|比心/],
+  ['confetti',/五彩纸屑|纸屑|彩带|礼花|撒花|彩纸/],
+  ['balloons',/气球|balloon/i],
+  ['lasers',/激光|镭射|蹦迪灯|laser/i],
+  ['spotlight',/聚光灯|追光|打个?光/],
+  ['echo',/回声|回音/]];
+/* 光有效果名还不够，得像是在跟他要，才不会把「今晚烟花真好看」也当成点单 */
+const PH_FX_WANT_CUE=/想看|想要|好想|我要|要看|看看|给我|放个|放一个|放点|来个|来一个|来点|来一场|发个|发一个|整个|搞个|弄个|能不能|可不可以|让我看|想不想/;
+function phFxWantFromText(text){const t=String(text||'');
+  if(!t||!PH_FX_WANT_CUE.test(t))return null;
+  for(let i=0;i<PH_FX_WANT.length;i++){const k=PH_FX_WANT[i][0];
+    if(PH_FX_WANT[i][1].test(t))return {sfx:k,name:phFxName(PH_FX_SCREEN,k)};}
+  return null;}
+function phFxWantPrompt(want){if(!want||!want.name)return '';
+  return '\n【她这一句就是在跟你要效果】她想看的是【'+want.name+'】。'
+    +'这条回复里【必须】单独占一行写 [屏幕效果|'+want.name+']，系统会真的放给她看；别只答应、不写标签。';}
+/* 兜底：她确实要了，可这一轮一条都没带效果，就把效果补到最后一条上真的放出来 */
+function phSmsApplyWantedFx(num,sk,sent,want){
+  if(!want||!want.sfx||!Array.isArray(sent)||!sent.length)return false;
+  if(sent.some(m=>m&&m.sfx))return false;
+  let m=null;for(let i=sent.length-1;i>=0;i--){if(sent[i]&&!sent[i].voice){m=sent[i];break;}}
+  if(!m)m=sent[sent.length-1];
+  if(!m)return false;
+  m.sfx=want.sfx;save();
+  if(cur().p==='phonesms'&&phDigits(cur().num)===phDigits(num)&&String(cur().sk||cur().num)===String(sk)){
+    render();setTimeout(()=>phFxPlay(m,$('#smsbody')),160);}
+  return true;}
 function phFxParseTags(text){let out=String(text||''),bfx='',sfx='';const picks=[];
   out=out.replace(PH_FX_TAG,(_,kind,body)=>{
     const parts=String(body).split(/[|｜]/).map(x=>x.trim()).filter(Boolean);
@@ -11268,25 +11325,26 @@ function phImsgDate(t){const d=new Date(t||Date.now()),n=new Date();
   const same=d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate();
   return (same?'今天':(d.getMonth()+1)+'月'+d.getDate()+'日')+' '+hm(t);}
 function renderPhoneIMsg(num,sk,arr,x){
-  const bg=phSmsBg(num),name=phName(num);
+  const bg=phSmsBg(num),name=phName(num),sel=phSmsSelOn(sk);
   const rows=arr.map(m=>{const pic=m.img?storedImageDisplaySource(m.img):'',fx=phMsgHasFx(m),
       inv=m.bfx==='invisible'?' iminv':'',
-      tap=`phSmsMenu('${esc(num)}','${m.id}','${esc(sk)}')`;
+      tick=sel?`<span class="imsg-tick${phSmsSelHas(m.id)?' on':''}" id="phtk_${m.id}" onclick="event.stopPropagation();phSmsSelToggle('${m.id}')">✓</span>`:'',
+      tap=sel?`phSmsSelToggle('${m.id}')`:`phSmsMenu('${esc(num)}','${m.id}','${esc(sk)}')`;
     if(m.voice){
       /* 语音条：气泡还是短信这一套（磨砂＋细高光），只是里面换成波形和秒数。
          点气泡＝播放，点下面那行转文字＝短信操作菜单（删除等）。 */
       const dur=Math.min(VOICE_MAX_SECONDS,m.dur||voiceEstimatedSeconds(m.text||'')),
         loading=typeof voiceTtsPending==='function'&&voiceTtsPending(m);
-      return `<div class="imsg-row ${m.from==='me'?'me':'them'}"><div class="imsg-col">`
+      return `<div class="imsg-row ${m.from==='me'?'me':'them'}">${tick}<div class="imsg-col">`
         +`<div class="imsg-b imsgv${loading?' loading':''}${m._playWhenReady?' queued':''}" data-mid="${m.id}" data-vid="${m.id}"`
-        +` aria-busy="${loading?'true':'false'}" onclick="phVoiceTap('${esc(num)}','${m.id}','${esc(sk)}')">`
+        +` aria-busy="${loading?'true':'false'}" onclick="${sel?tap:`phVoiceTap('${esc(num)}','${m.id}','${esc(sk)}')`}">`
         +`<i><span class="imsgv-wave"><i></i><i></i><i></i><i></i></span><span class="imsgv-dur">${dur}″</span></i></div>`
         +(m.showText?`<div class="imsg-vtext" onclick="${tap}">${esc(m.text||'')}`
           +(m.trans?`<span class="tr">${esc(m.trans)}</span>`:'')+`</div>`:'')
         +`</div></div>`;}
-    return `<div class="imsg-row ${m.from==='me'?'me':'them'}"><div class="imsg-col"><div class="imsg-b${pic?' pic':''}${inv}" data-mid="${m.id}" onclick="${tap}">`
+    return `<div class="imsg-row ${m.from==='me'?'me':'them'}">${tick}<div class="imsg-col"><div class="imsg-b${pic?' pic':''}${inv}" data-mid="${m.id}" onclick="${tap}">`
       +`<i>${pic?`<img src="${pic}" alt="">`:phFxBodyHTML(m)}</i></div>`
-      +(fx?`<span class="imsg-fxrp" onclick="phFxReplay('${esc(num)}','${m.id}','${esc(sk)}')">↺ 重播</span>`:'')
+      +(fx&&!sel?`<span class="imsg-fxrp" onclick="phFxReplay('${esc(num)}','${m.id}','${esc(sk)}')">↺ 重播</span>`:'')
       +`</div></div>`;}).join('');
   return `<div class="imsg${bg?' hasbg':''}" style="${bg?`background-image:url(${storedImageDisplaySource(bg)})`:''}">
     <div class="imsg-head">
@@ -11294,19 +11352,50 @@ function renderPhoneIMsg(num,sk,arr,x){
       <div class="imsg-who" onclick="go('phonecontact',{num:'${esc(num)}'})">${phAvatar(num,'lg')}<span class="imsg-name"><i>${esc(name)} ›</i></span></div>
       <button class="imsg-rb" onclick="phVideoCall('${esc(num)}')"><i>${svgIc('video',21,'#fff',1.9)}</i></button>
     </div>
-    <div class="imsg-body" id="smsbody">
+    <div class="imsg-body${sel?' selmode':''}" id="smsbody">
       <div class="imsg-kind">iMessage信息<br>${svgIc('lock',12,'#8e8e93',2)} 已加密</div>
       <div class="imsg-date">${esc(phImsgDate(arr.length?arr[0].time:Date.now()))}</div>
       ${rows}
       ${phSmsTypingOn(num,sk)?`<div class="imsg-row them"><div class="imsg-b typing"><i><span></span><span></span><span></span></i></div></div>`:''}
     </div>
-    ${phFxBarHTML()}
-    <div class="imsg-bar${String(_phFx.prev||'').trim()?' typing':''}">
+    ${sel?phSmsSelBarHTML():phFxBarHTML()+phSmsComposerHTML(num,sk)}
+  </div>`;}
+/* ===== 多选删除 =====
+   她说「＋号里再添加一个多选删除我和他的信息」。进多选之后气泡前面冒出小圆圈，
+   点哪条选哪条；这期间不播特效、不放语音，免得一点就跑起来。 */
+let _phSmsSel=null;
+function phSmsSelOn(sk){return !!(_phSmsSel&&_phSmsSel.sk===String(sk||''));}
+function phSmsSelHas(mid){return !!(_phSmsSel&&_phSmsSel.ids.indexOf(mid)>=0);}
+function phSmsSelEnter(num,sk){_phSmsSel={num:String(num||''),sk:String(sk||''),ids:[]};render();}
+function phSmsSelExit(){_phSmsSel=null;render();}
+/* 只改那一颗圆圈和计数，不整页重画——重画会把聊天滚回顶上去 */
+function phSmsSelToggle(mid){if(!_phSmsSel)return;const i=_phSmsSel.ids.indexOf(mid),on=i<0;
+  if(on)_phSmsSel.ids.push(mid);else _phSmsSel.ids.splice(i,1);
+  const tk=$('#phtk_'+mid);if(tk)tk.classList.toggle('on',on);
+  phSmsSelSync();}
+function phSmsSelSync(){const n=_phSmsSel?_phSmsSel.ids.length:0,b=$('#phseldel');
+  if(b){b.textContent='删除'+(n?'（'+n+'）':'');if(n)b.removeAttribute('disabled');else b.setAttribute('disabled','');}
+  const a=$('#phselall');if(a)a.textContent=phSmsSelAllOn()?'取消全选':'全选';}
+function phSmsSelAllOn(){if(!_phSmsSel)return false;const arr=phSmsArr(_phSmsSel.num,_phSmsSel.sk);
+  return arr.length>0&&_phSmsSel.ids.length>=arr.length;}
+function phSmsSelAll(){if(!_phSmsSel)return;const arr=phSmsArr(_phSmsSel.num,_phSmsSel.sk);
+  _phSmsSel.ids=phSmsSelAllOn()?[]:arr.map(m=>m.id);render();}
+async function phSmsSelDelete(){if(!_phSmsSel)return;const ids=_phSmsSel.ids.slice();
+  if(!ids.length){toast('先选几条');return;}
+  if(!await uiConfirm('删除选中的 '+ids.length+' 条信息？'))return;
+  const num=_phSmsSel.num,sk=_phSmsSel.sk,arr=phSmsArr(num,sk),keep=arr.filter(m=>ids.indexOf(m.id)<0);
+  arr.length=0;keep.forEach(m=>arr.push(m));
+  _phSmsSel=null;save();render();toast('已删除 '+ids.length+' 条');}
+function phSmsSelBarHTML(){const n=_phSmsSel?_phSmsSel.ids.length:0;
+  return `<div class="imsg-selbar">`
+    +`<button id="phselall" onclick="phSmsSelAll()">${phSmsSelAllOn()?'取消全选':'全选'}</button>`
+    +`<button id="phseldel" class="del"${n?'':' disabled'} onclick="phSmsSelDelete()">删除${n?'（'+n+'）':''}</button>`
+    +`<button onclick="phSmsSelExit()">取消</button></div>`;}
+function phSmsComposerHTML(num,sk){return `<div class="imsg-bar${String(_phFx.prev||'').trim()?' typing':''}">
       <button class="imsg-plus${phFxHas()?' on':''}" onclick="phSmsPlusMenu('${esc(num)}','${esc(sk)}')"><i>＋</i></button>
       <div class="imsg-field"><textarea id="smsin" rows="1" placeholder="iMessage信息" oninput="phSmsTyping();phFxSync()" onselect="phFxSelSync()" onkeyup="phFxSelSync()" onclick="phFxSelSync()" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();phSendSms('${esc(num)}','${esc(sk)}')}">${esc(_phFx.prev||'')}</textarea><i class="imsg-wave">${svgIc('mic',17,'#8e8e93',2)}</i></div>
       <button class="imsg-send" onclick="phSendSms('${esc(num)}','${esc(sk)}')" oncontextmenu="event.preventDefault();phFxSendHold('${esc(num)}','${esc(sk)}');return false" onpointerdown="phFxHoldStart('${esc(num)}','${esc(sk)}')" onpointerup="phFxHoldStop()" onpointerleave="phFxHoldStop()"><i>↑</i></button>
-    </div>
-  </div>`;}
+    </div>`;}
 /* ＋ 就是相册：点一下直接选图发出去（她说「点一下可以打开相册发送图片」）。
    原来挂在这儿的联系人资料／换背景／打电话，联系人页里本来就都有。 */
 /* ＋ 发图：先把图发出去，真的识一遍图，看清了再让角色回。
@@ -11318,6 +11407,7 @@ function phSmsPlusMenu(num,sk){phFxSync();
   openModal(`<h3>${esc(phName(num))}</h3>
   <button class="btn imblue" onclick="closeModal();phSmsPic('${esc(num)}','${esc(sk)}')">照片</button>
   <button class="btn imblue" style="margin-top:8px" onclick="closeModal();phFxOpenText()">文字效果${piece?'（'+esc(piece.slice(0,8))+(piece.length>8?'…':'')+'）':text?'（整条）':''}</button>
+  <button class="btn g" style="margin-top:8px" onclick="closeModal();phSmsSelEnter('${esc(num)}','${esc(sk)}')">多选删除信息</button>
   ${phFxHas()?`<button class="btn g" style="margin-top:8px" onclick="closeModal();phFxDrop()">清掉这条的效果</button>`:''}
   <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function phSmsPic(num,sk){pickFile('image/*',async f=>{
@@ -11377,7 +11467,7 @@ function phSendSmsImage(num,sk,src,opt){num=phDigits(num);const p=phState(),x=ph
 /* 她说「把这张换成背景」，角色回一行 [换背景]，就真的拿最近那张图换上去 */
 function phRoleSetSmsBg(num,sk){const arr=phSmsArr(num,sk).slice(-24).reverse(),hit=arr.find(m=>m&&m.img);
   if(!hit)return false;phSmsBgSet(num,hit.img);render();toast('ta把这张照片换成了聊天背景');return true;}
-function openPhoneSMS(num,sk){num=phDigits(num);phFxReset();const p=phState();sk=sk||phCurrentSmsKey(num);p.line=phSmsIsAliasKey(sk)?'alias':'main';(p.sms[sk]||[]).forEach(m=>{if(m.from==='them')m.read=true;});p.read[sk]=Date.now();save();go('phonesms',{num,sk});}
+function openPhoneSMS(num,sk){num=phDigits(num);phFxReset();_phSmsSel=null;const p=phState();sk=sk||phCurrentSmsKey(num);p.line=phSmsIsAliasKey(sk)?'alias':'main';(p.sms[sk]||[]).forEach(m=>{if(m.from==='them')m.read=true;});p.read[sk]=Date.now();save();go('phonesms',{num,sk});}
 function renderPhoneSMS(num,sk){num=phDigits(num);sk=sk||phCurrentSmsKey(num);
   if(phImsgOn(num,sk))return renderPhoneIMsg(num,sk,(phState().sms[sk]||[]),phFind(phDigits(num)));
   const arr=(phState().sms[sk]||[]),alias=phSmsIsAliasKey(sk),aliasNum=phSmsAliasNumFromKey(sk),x=phFind(num),roleChat=x&&x.kind==='role',headAv=alias?phDefaultAvatar('lg'):phAvatar(num,'lg'),headName=alias?'匿名号':phName(num),meta=alias?('匿名号 '+phFmt(aliasNum)+'<br>发给 '+phName(num)+' · '+phFmt(num)):('信息 · 短信<br>'+phFmt(num));return `<div class="smschat"><div class="smshead"><button class="phbtn back" onclick="back()">‹</button>${headAv}<div class="smsname" onclick="go('phonecontact',{num:'${esc(num)}'})">${esc(headName)} ›</div><div class="smsmeta">${meta}</div></div><div class="smsbody" id="smsbody"><div class="smsdate">${arr.length?fmtDT(arr[0].time):fmtDT(Date.now())}</div>${arr.map(m=>`<div class="smsmsg ${m.from==='me'?'me':'them'}"><div class="smsbubble" onclick="phSmsMenu('${esc(num)}','${m.id}','${esc(sk)}')">${m.img?`<img src="${storedImageDisplaySource(m.img)}" alt="" style="display:block;max-width:100%;width:180px;border-radius:10px">`:esc(m.text)}</div></div>`).join('')}${phSmsTypingOn(num,sk)?'<div class="smsmsg them"><div class="smsbubble typing"><span></span><span></span><span></span></div></div>':''}</div><div class="smslinebar">${roleChat&&alias?phLineSwitchHTML():''}</div><div class="smsbar"><button onclick="go('phonecontact',{num:'${esc(num)}'})">+</button><textarea id="smsin" placeholder="信息 · 短信" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();phSendSms('${esc(num)}','${esc(sk)}')}"></textarea><button onclick="phSendSms('${esc(num)}','${esc(sk)}')">↑</button></div></div>`;}
@@ -11392,15 +11482,16 @@ function phSendSms(num,sk){const ta=$('#smsin'),text=(ta&&ta.value||'').trim();i
   if(_bfx||_sfx||_fxOn)setTimeout(()=>phFxPlay(_m,$('#smsbody')),40);
   if(useAlias&&alias&&alias.cid)setTimeout(()=>phRoleAliasReply(alias.cid,num,text,alias.aliasNum,sk),500+Math.random()*500);else if(spoofThread)setTimeout(()=>phRoleSpoofSmsReply(thread.cid,num,text),450+Math.random()*450);else if(x&&x.kind==='role')setTimeout(()=>phRoleSmsReply(x.id,num,text,num),650+Math.random()*650);else setTimeout(()=>phAutoSmsReply(num,text),700+Math.random()*900);}
 async function phRoleSmsReply(id,num,userText,sk){const c=getC(id);if(!c||c.blocked||phState().blocked[phNorm(num)])return;sk=sk||num;
-  const range=phSmsBubbleRange(c),rows=phCtxRows();
+  const range=phSmsBubbleRange(c),rows=phCtxRows(),_want=phFxWantFromText(userText);
   phSmsTypingSet(num,sk,true);
-  try{const arr=phSmsArr(num,sk).slice(-rows).map(m=>(m.from==='me'?S.me.name:(c.remark||c.name))+'：'+phSmsLineText(m)).join('\n'),wx=msgs(id).filter(m=>!m._call).slice(-Math.max(6,Math.round(rows*.6))).map(m=>msgToText(m)).filter(Boolean).join('\n');const sys=buildSystem(c)+'\n\n# 当前场景：手机短信\n你正在和'+S.me.name+'发短信，不是微信。短信和微信是同一个人、同一段关系，要记得最近微信里的情绪和话题，但短信回复要像真实短信一样短一点、自然口语。\n一次回复可以发 '+range.min+' 到 '+range.max+' 条短信，这是【可浮动范围】不是固定任务：随口应一句就一条，情绪多、想解释、想哄人时才多发几条。每条【单独占一行】，用换行分开，不要写成一大段。\n只输出短信正文，不要方括号指令，不要输出[心情]、[心情值]、[语气]等隐藏标签。\n她发来的照片在记录里写成 [图片：画面描述]，那段描述是系统真的看过这张图之后写下来的，你可以直接当成你亲眼看到的画面来回应。如果只写着 [图片] 没有描述，说明这次没看清，就别编造里面有什么，可以问她。如果她让你把某张照片换成你们短信的聊天背景（比如「把这张换成背景」「拿这张当背景」），就在回复最后【单独一行】写 [换背景]，系统会真的替她换上去；她没提这件事就不要写这个标签。'+phSmsVoiceHelp(c)+phFxTagHelp();let r=await chatAPI([{role:'system',content:sys},{role:'user',content:'最近微信上下文：\n'+(wx||'（无）')+'\n\n短信记录：\n'+arr+'\n\n'+S.me.name+'刚发来：'+userText}],{temp:.8});
+  try{const arr=phSmsArr(num,sk).slice(-rows).map(m=>(m.from==='me'?S.me.name:(c.remark||c.name))+'：'+phSmsLineText(m)).join('\n'),wx=msgs(id).filter(m=>!m._call).slice(-Math.max(6,Math.round(rows*.6))).map(m=>msgToText(m)).filter(Boolean).join('\n');const sys=buildSystem(c)+'\n\n# 当前场景：手机短信\n你正在和'+S.me.name+'发短信，不是微信。短信和微信是同一个人、同一段关系，要记得最近微信里的情绪和话题，但短信回复要像真实短信一样短一点、自然口语。\n一次回复可以发 '+range.min+' 到 '+range.max+' 条短信，这是【可浮动范围】不是固定任务：随口应一句就一条，情绪多、想解释、想哄人时才多发几条。每条【单独占一行】，用换行分开，不要写成一大段。\n只输出短信正文，不要方括号指令，不要输出[心情]、[心情值]、[语气]等隐藏标签。\n她发来的照片在记录里写成 [图片：画面描述]，那段描述是系统真的看过这张图之后写下来的，你可以直接当成你亲眼看到的画面来回应。如果只写着 [图片] 没有描述，说明这次没看清，就别编造里面有什么，可以问她。如果她让你把某张照片换成你们短信的聊天背景（比如「把这张换成背景」「拿这张当背景」），就在回复最后【单独一行】写 [换背景]，系统会真的替她换上去；她没提这件事就不要写这个标签。'+phSmsVoiceHelp(c)+phFxTagHelp()+phFxWantPrompt(_want);let r=await chatAPI([{role:'system',content:sys},{role:'user',content:'最近微信上下文：\n'+(wx||'（无）')+'\n\n短信记录：\n'+arr+'\n\n'+S.me.name+'刚发来：'+userText}],{temp:.8});
   r=String(r||'');const wantBg=/[\[【]\s*换背景\s*[\]】]/.test(r);r=r.replace(/[\[【]\s*换背景\s*[\]】]/g,' ');
   let parts=phSmsBubbles(r,range.max);
   if(wantBg&&!phRoleSetSmsBg(num,sk)&&!parts.length)parts=['我没找到你说的那张照片，你再发我一次？'];
   if(!parts.length)return;
   phSmsTypingSet(num,sk,false);
-  await phDeliverSmsBubbles(num,sk,parts,c);}catch(e){}finally{phSmsTypingSet(num,sk,false);}}
+  const _sent=await phDeliverSmsBubbles(num,sk,parts,c);
+  phSmsApplyWantedFx(num,sk,_sent,_want);}catch(e){}finally{phSmsTypingSet(num,sk,false);}}
 function phStrangerProfile(num){const d=phNorm(num),sp=phSpecialInfo(num);if(sp)return {name:sp.name,kind:'公共服务',region:phRegion(num)};if(/^10\d{4,}/.test(d))return {name:'验证码平台',kind:'验证码/平台通知',region:'平台短信'};if(/^95/.test(d)||/^400/.test(d))return {name:'生活服务',kind:'客服/营销',region:'服务号码'};if(/^1\d{10}$/.test(d)){const pool=['陌生人','快递外卖','生活服务','营销号码','旧联系人','暧昧错发','装熟骚扰','奇怪通知'];return {name:phFmt(num),kind:pool[Math.abs(phHash(d))%pool.length],region:phRegion(num)};}return {name:phFmt(num),kind:'陌生号码',region:phRegion(num)};}
 function phRandomSmsText(num,pf,now){pf=pf||phStrangerProfile(num);now=now||Date.now();const code=String(Math.abs(phHash(now+':'+num))).slice(0,6).padStart(6,'0'),pool={
   '验证码/平台通知':['验证码 '+code+'，5分钟内有效。不是本人操作请忽略。','你的动态安全码是 '+code+'，别告诉任何人。','登录确认码 '+code+'。如果不是你，可能是有人手滑填错号码。'],
@@ -11446,7 +11537,8 @@ function phReceiveSms(num,text,c,sk){if(phState().blocked[phNorm(num)])return;nu
   phMirrorSMS(num,'them',m.voice?(m.text+(m.trans?'（'+m.trans+'）':'')):text);save();phSound('sms');
   if(m.voice&&c&&ttsApiOn(c)){m._ttsLoading=true;scheduleVoiceWarm(m,c,voiceProgressiveOn());}
   if(!viewing)phSmsNotify(num,m.voice?'给你发来一条语音':text,c);
-  if(viewing){render();if(phMsgHasFx(m))setTimeout(()=>phFxPlay(m,$('#smsbody')),140);}}
+  if(viewing){render();if(phMsgHasFx(m))setTimeout(()=>phFxPlay(m,$('#smsbody')),140);}
+  return m;}
 /* 点一下语音条就放；放过一次就把文字（和外语的中文翻译）留在下面 */
 function phVoiceTap(num,mid,sk){const arr=phSmsArr(num,sk),m=arr.find(x=>x&&x.id===mid);if(!m||!m.voice)return;
   const x=phFind(num),c=x&&x.kind==='role'?getC(x.id):null;
@@ -14989,13 +15081,13 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
     if(_rawOutput){const decision=await smartHomeRoleFinalize(content,c,_userText,async()=>content);if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;if(decision.matched){roleInterceptDiagnosticAction(_replyActionOutcome,decision.verified);content=smartHomeRoleStripTags(content);}}
     const _statedPwd=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;
     content=applyControlTags(content,c,id,_statedPwd,_userText,_replyActionOutcome);
-    if(_naturalOn){if(/[\[【]\s*(?:记仇|消气)\s*(?:[|｜:：]\s*[^\]】]*)?[\]】]/.test(String(content||'')))_replyAuditPartial=true;content=content.replace(/[\[【]\s*(?:记仇|消气)\s*(?:[|｜:：]\s*[^\]】]*)?[\]】]/g,'');}else content=applyGrudgeTags(content,c,_replyActionOutcome);content=applyStarTags(content,_replyActionOutcome);content=cohabConsumeOnlineState(content,c,id,{userText:_userText,audit:_replyActionOutcome});
+    content=applyGrudgeTags(content,c,_replyActionOutcome);content=applyStarTags(content,_replyActionOutcome);content=cohabConsumeOnlineState(content,c,id,{userText:_userText,audit:_replyActionOutcome});
     bubbleNaturalRequest(_userText,c);content=applyBubbleTags(content,c,_replyActionOutcome);if(!_rawOutput)content=await ensureRequestedPhotoCaptionMoment(content,c,_userText);if(!_rawOutput)content=await ensureRequestedDouyin(content,c,_userText);if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;content=consumeMomentCommands(content,c,{toast:true,userText:_userText,preserveText:_rawOutput},_replyActionOutcome);content=consumeDouyinCommands(content,c,{toast:true,userText:_userText,preserveText:_rawOutput},_replyActionOutcome);content=consumeDouyinUngag(content,c,_replyActionOutcome);content=coupleAlbumConsumeSaveTag(content,c,_replyActionOutcome);if(!_rawOutput)content=forceRequestedVoiceReply(content,_voiceRequired?_userText:'',c);if(_replyActionOutcome.handled)_replyAuditHandled=true;if(_replyActionOutcome.failed)_replyAuditPartial=true;
     if(/拉黑|加回|删了你|删除你|拉进黑名单|原谅你/.test(content)&&!/报备|别的微信号|加了你|加你、|有人加|有别人加/.test(note||''))applyBlockIntent(content,c,id);
     if(S.couple&&S.couple.cid===id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|放你用|这个你先用|你先用|给你(解|开)|都给你解|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|玩.{0,4}(一会儿|一会|多久|多长)|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)|扣.{0,4}(零花|钱|块|元)|没收.{0,4}(零花|钱|卡)|罚款|罚.{0,3}(钱|块|元)|零花钱|冻结|解冻|亲属卡|原谅|消气/.test(content)){if(!naturalUngagFallback(content,c,id))extractControl(content,c,_statedPwd);}
     if(!_rawOutput&&!_wxLoginCompletion){const _nativeInspectionQueued=maybeSpyIntent(content,c,id,_lu,{nativeOnly:true,immediate:true,suppressInitial:true});if(_nativeInspectionQueued){roleInterceptDiagnosticTurnSelect(_replyAudit,content);_replyAuditPartial=!!roleInterceptDiagnosticComparable(content,true);_replyAuditHandled=true;_replyAuditFinal=content;if(typingEl&&typingEl.isConnected)typingEl.remove();return true;}else{const _phoneGuard=guardUnverifiedRolePhoneReply(content,note);content=_phoneGuard.content;if(_phoneGuard.focus){if(queueNativeInspection(id,_lu,_phoneGuard.focus,{bySheTold:true,suppressInitial:true,immediate:true,forceResult:true})){roleInterceptDiagnosticTurnSelect(_replyAudit,content);_replyAuditPartial=!!roleInterceptDiagnosticComparable(content,true);_replyAuditHandled=true;_replyAuditFinal=content;if(typingEl&&typingEl.isConnected)typingEl.remove();return true;}}else maybeSpyIntent(content,c,id,_lu);}}
     maybeAffectionShift(id,c,_lu,content);
-    maybeCollarIntent(content,c);if(!_naturalOn)maybeGrudgeResolve(content,c,id);
+    maybeCollarIntent(content,c);maybeGrudgeResolve(content,c,id);
     // [来电|语音/视频] 容错：哪怕模型把它写在句子中间(不是单独一行)，也照样触发来电、并从文字里抹掉，别漏成文字
     content=content.replace(/[\[【]\s*来电\s*[\|｜]\s*(语音|视频)\s*[\]】]/g,(m,k)=>{_queueReplyIncoming(k==='视频'?'video':'voice');return '';});
     // [同意游戏]/[拒绝游戏]：哪怕写在句中也照样落地，并从文字里抹掉
@@ -16019,7 +16111,7 @@ async function callAI(sysNote,opts){if(!_call)return;const _rawOutput=typeof mod
     const _statedPwd=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;
     content=applyControlTags(content,c,_call.id,_statedPwd,(_luc&&msgToText(_luc))||'');
     dialogueEmotionOnReply(c,content,(_luc&&msgToText(_luc))||'');
-    content=wechatNaturalOn()?content.replace(/[\[【]\s*(?:记仇|消气)\s*(?:[|｜:：]\s*[^\]】]*)?[\]】]/g,''):applyGrudgeTags(content,c);content=applyStarTags(content);content=cohabConsumeOnlineState(content,c,_call.id);
+    content=applyGrudgeTags(content,c);content=applyStarTags(content);content=cohabConsumeOnlineState(content,c,_call.id);
     const _deliveryCurrentCallTurn=!!(_luc&&_luc.id&&msgToText(_luc)&&!sysNote&&!_videoVisionAutomatic&&!_screenShareEvent&&!_silentContinuation&&!_connectionEvent&&!_inspectionCompletion);
     if(typeof deliveryConsumeMemoryTags==='function')content=deliveryConsumeMemoryTags(content,c,{structuredModelAction:true,allowNewTask:_deliveryCurrentCallTurn,accountId:String(actId()||'main'),sessionId:String(sess||''),turnId:String(_luc&&_luc.id||sess||''),messageId:String(_luc&&_luc.id||''),modelReplyId:String(sess||''),channel:'call',userText:String(_luc&&msgToText(_luc)||'').slice(0,240)});else content=String(content||'').replace(/[\[【]\s*外卖记忆\s*[|｜:：][^\]】]*[\]】]/g,'');
     const _callRealDeliveryCommandTurn=typeof deliveryRealEnabled==='function'&&deliveryRealEnabled()&&/[\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：]/.test(String(content||''));
@@ -16042,7 +16134,7 @@ async function callAI(sysNote,opts){if(!_call)return;const _rawOutput=typeof mod
     if(S.couple&&S.couple.cid===_call.id&&!_ctFired&&/锁|封(了|你|起|住)|禁言|没收|解锁|解开|解除|解禁|解封|放开|放你用|这个你先用|你先用|给你(解|开)|不许.{0,4}(玩|刷|聊)|不准.{0,4}(玩|刷|聊)|每天.{0,6}(小时|分钟|个钟)|只能玩|限制.{0,4}时间|再(玩|给你).{0,6}(分钟|小时|会儿)|加.{0,3}(时间|分钟)|扣.{0,4}(零花|钱|块|元)|没收.{0,4}(零花|钱|卡)|罚款|罚.{0,3}(钱|块|元)|零花钱|冻结|解冻|亲属卡|原谅|消气/.test(content)){if(!naturalUngagFallback(content,c,_call.id))extractControl(content,c,_statedPwd);}
     const _nativeCallInspectionQueued=!_rawOutput&&!_screenShareEvent&&!_inspectionCompletion&&!_videoVision&&maybeSpyIntent(content,c,_call.id,_luc,{nativeOnly:true,immediate:true,suppressInitial:true});if(_nativeCallInspectionQueued){if(_call){_call.sub=null;updateCallSub();}return;}else if(!_rawOutput&&!_screenShareEvent&&!_inspectionCompletion&&!_videoVision){const _callPhoneGuard=guardUnverifiedRolePhoneReply(content,'');content=_callPhoneGuard.content;if(_callPhoneGuard.focus){if(queueNativeInspection(c.id,_luc,_callPhoneGuard.focus,{bySheTold:true,suppressInitial:true,immediate:true,forceResult:true})){if(_call){_call.sub=null;updateCallSub();}return;}}else maybeSpyIntent(content,c,_call.id,_luc);}
     maybeAffectionShift(_call.id,c,_luc,content);
-    maybeCollarIntent(content,c);if(!wechatNaturalOn())maybeGrudgeResolve(content,c,_call.id);
+    maybeCollarIntent(content,c);maybeGrudgeResolve(content,c,_call.id);
     if(!_rawOutput&&_lang==='zh')content=refreshDirectClockReply(content,_luc&&msgToText(_luc),Date.now());content=callStripForeignActions(content);if(!_rawOutput&&video)content=ensureVideoCallAction(content,_callCueTag);if(_videoVision)callVideoVisionStatus('');if(screenShareReason)setTimeout(()=>callScreenShareRequest(screenShareReason),260);
     const wantHang=/\[挂断\]/.test(content);const pieces=[];const _vlang=ttsContentLang(c);
     (_rawOutput?modelUnfilteredLines(content):splitBubbles(content)).forEach(l=>{if(!_rawOutput)l=normTag(l);if(/^\[挂断\]$/.test(l))return;let mm=l.match(/^\[内心\|([^\]]*)\]$/);if(mm){if(setNaturalInnerThought(c,mm[1]))save();return;}mm=l.match(/^\[心情\|([^\]]*)\]$/);if(mm){if(!wechatNaturalOn())c.mood=moodInnerMonologue(c,honestMoodText(c,mm[1]));return;}const mvm=l.match(/^\[心情值\|([+\-]?\d{1,3})\]$/);if(mvm){adjMood(_call.id,parseInt(mvm[1],10)||0);return;}if(!_rawOutput&&LEAKRE.test(l))return;l=_rawOutput?modelUnfilteredThoughtTags(l,c):stripCallControlTags(l,c,_call.id,video);if(!l)return;

@@ -8,9 +8,9 @@ const pip=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/Ph
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
 test('v1184 web source keeps private 1.0.315 compatibility',()=>{
-  assert.match(app,/APP_VER='v1310 · 每日一封信、地图跟资料、通话中文动作、不许预演'/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 389;/);
-  assert.match(project,/MARKETING_VERSION = 1.0.389;/);
+  assert.match(app,/APP_VER='v1312 · 短信效果听她的、多选删除、一键清空、记仇本真的记'/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 390;/);
+  assert.match(project,/MARKETING_VERSION = 1.0.390;/);
 });
 
 test('public music search needs no user login and reuses together-listen songs',()=>{

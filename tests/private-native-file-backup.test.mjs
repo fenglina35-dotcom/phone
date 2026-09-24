@@ -14,16 +14,16 @@ const backup=read(bundle+'private-cloud-backup.js');
 const privateApp=read(bundle+'app.js');
 const publicApp=read('app.js');
 
-test('private v1311 loads daily backup after the diagnostic overlay while public advances independently',()=>{
+test('private v1313 loads daily backup after the diagnostic overlay while public advances independently',()=>{
   for(const name of ['index.html','小手机.html']){
     const html=read(bundle+name);
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1311'/);
-    assert.ok(html.indexOf('private-cloud-backup.js?v=1311')>html.indexOf('private-runtime-diagnostics.js?v=339'));
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1313'/);
+    assert.ok(html.indexOf('private-cloud-backup.js?v=1313')>html.indexOf('private-runtime-diagnostics.js?v=339'));
   }
-  assert.match(privateApp,/APP_VER='v1311 · 每日一封信、地图跟资料、通话中文动作、不许预演（私人）'/);
-  assert.match(publicApp,/APP_VER='v1310 · 每日一封信、地图跟资料、通话中文动作、不许预演'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 389;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.389;/g)||[]).length,12);
+  assert.match(privateApp,/APP_VER='v1313 · 短信效果听她的、多选删除、一键清空、记仇本真的记（私人）'/);
+  assert.match(publicApp,/APP_VER='v1312 · 短信效果听她的、多选删除、一键清空、记仇本真的记'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 390;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.390;/g)||[]).length,12);
 });
 
 test('web backup sends bounded ordered chunks and records a day only after confirmed save',()=>{

@@ -45,20 +45,20 @@ function functionSource(sourceText, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('private identifiers remain v1311 and iOS 389 while public advances independently', () => {
+test('private identifiers remain v1313 and iOS 390 while public advances independently', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1311'/);
-  assert.match(index, /app\.js\?v=1311&r=v1311-private-imsg-1/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1313'/);
+  assert.match(index, /app\.js\?v=1313&r=v1313-private-imsg-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(app, /APP_VER='v1311 · 每日一封信、地图跟资料、通话中文动作、不许预演（私人）'/);
+  assert.match(app, /APP_VER='v1313 · 短信效果听她的、多选删除、一键清空、记仇本真的记（私人）'/);
   assert.match(overlay, /336-daily-file-backup/);
-  assert.match(webview, /1\.0\.389 \(389\)/);
-  assert.match(bridge, /private static let build = "1\.0\.389 \(389\)"/);
+  assert.match(webview, /1\.0\.390 \(390\)/);
+  assert.match(bridge, /private static let build = "1\.0\.390 \(390\)"/);
   assert.match(bridge, /static let contractVersion = 41/);
-  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 389;/g) || []).length, 12);
-  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.389;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1310 · 每日一封信、地图跟资料、通话中文动作、不许预演'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1310'/);
+  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 390;/g) || []).length, 12);
+  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.390;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1312 · 短信效果听她的、多选删除、一键清空、记仇本真的记'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1312'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
@@ -146,7 +146,7 @@ test('diagnostics identify the protected stage without collecting content', () =
   assert.doesNotMatch(overlay, /messageBody|chatContent|authorizationToken/);
 });
 
-test('Mac guide identifies the current private v1311 iOS389 source', () => {
+test('Mac guide identifies the current private v1313 iOS390 source', () => {
   const install = fs.readFileSync(
     path.join(project, '第三百二十七次安装_v1206_完整衣柜_请先读.md'),
     'utf8',
@@ -160,11 +160,11 @@ test('Mac guide identifies the current private v1311 iOS389 source', () => {
     assert.match(guide, /Mac.*编译/);
     assert.match(guide, /真机|真实 iPhone/);
   }
-  assert.match(mac, /1\.0\.389 \(389\)/);
+  assert.match(mac, /1\.0\.390 \(390\)/);
   assert.match(mac, /原生桥.*38/);
   assert.match(install, /1\.0\.327 \(327\)/);
   assert.match(install, /原生桥.*35/);
-  assert.match(mac, /^# v1311 .*iOS389/);
+  assert.match(mac, /^# v1313 .*iOS390/);
   assert.match(mac, /网页.*推送/);
   assert.match(install, /私人内置网页 v1206/);
   assert.match(install, /两边共有/);
