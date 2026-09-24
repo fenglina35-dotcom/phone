@@ -42,8 +42,9 @@ test('main-screen vinyl color survives cleanup and beauty export/import', async 
   const hits = app.match(/homeVinylColor/g) || [];
   assert.ok(hits.length >= 10, `expected persistence coverage, got ${hits.length}`);
   assert.match(app, /\['widgets'[^\n]*'homeVinylColor'[^\n]*全部主屏\/微信外观/);
-  assert.match(app, /me:pickObj\(me,\[[^\n]*'homeVinylColor'/);
-  assert.match(app, /beautyAssign\(S\.me,pack\.me,\[[^\n]*'homeVinylColor'/);
+  assert.match(app, /const BEAUTY_ME_KEYS=\[[^\n]*'homeVinylColor'/);
+  assert.match(app, /me:pickObj\(me,BEAUTY_ME_KEYS\)/);
+  assert.match(app, /beautyAssign\(S\.me,pack\.me,BEAUTY_ME_KEYS\)/);
 });
 
 test('Android-compatible vinyl swatches save and repaint without a page render', async () => {

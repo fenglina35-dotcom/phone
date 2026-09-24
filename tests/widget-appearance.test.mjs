@@ -29,8 +29,13 @@ test('widget text and desktop cat colors are independent', () => {
 });
 
 test('widget appearance survives beauty export, import, and data clearing', () => {
+  const keys = app.match(/const BEAUTY_ME_KEYS=\[([^\]]+)\]/s)?.[1] || '';
+  assert.ok(keys, 'BEAUTY_ME_KEYS must exist');
+  // 导出、导入和「清空数据时留住美化」都走这一份名单
+  assert.match(app, /me:pickObj\(me,BEAUTY_ME_KEYS\)/);
+  assert.match(app, /beautyAssign\(S\.me,pack\.me,BEAUTY_ME_KEYS\)/);
+  assert.match(app, /mergeBeautyPack\(beauty\)/);
   for (const key of ['wColor', 'wCardColor', 'wOpacity', 'petColor', 'wPic', 'homeAvMe', 'homeAvTa']) {
-    const hits = app.match(new RegExp(`'${key}'`, 'g')) || [];
-    assert.ok(hits.length >= 3, `${key} must be preserved by all beauty paths`);
+    assert.match(keys, new RegExp(`'${key}'`), `${key} must ride the shared beauty key list`);
   }
 });

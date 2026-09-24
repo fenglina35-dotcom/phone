@@ -64,6 +64,7 @@ const context = vm.createContext({
 for (const name of ["beautyClone", "beautyAssign", "beautyLayoutSnapshot", "beautyLayoutRestore", "beautyFind", "mergeBeautyPack", "primeBeautyPackImages", "applyBeautyPack"]) {
   vm.runInContext(functionSource(name), context);
 }
+vm.runInContext(source.match(/const BEAUTY_ME_KEYS=\[[^;]+;/)[0], context);
 vm.runInContext(source.match(/const BEAUTY_LAYOUT_KEYS=\[[^;]+;/)[0], context);
 
 const originalLayout = JSON.parse(JSON.stringify({

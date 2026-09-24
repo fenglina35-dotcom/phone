@@ -8,10 +8,10 @@ const app = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const project = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj', import.meta.url), 'utf8');
 
 test('v1184 web keeps private 1.0.315 compatibility', () => {
-  assert.match(app, /APP_VER='v1314 · 线下玻璃两套主题、真人好友转账与发送键、微信换背景'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='1314'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 391;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.391;/g) || []).length, 12);
+  assert.match(app, /APP_VER='v1316 · 全新手机第一次打开就套上默认美化'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='1316'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 392;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.392;/g) || []).length, 12);
 });
 
 test('first glass page reserves a non-shrinking line box for every app name', () => {
@@ -34,14 +34,16 @@ test('restored v950 web shell drops automatic safe-area and bottom-bar paint rep
 });
 
 test('beauty packs never overwrite page, widget, or Dock placement', () => {
-  const exported = app.match(/me:pickObj\(me,\[([^\]]+)\]\),/s)?.[1] || '';
-  const imported = app.match(/beautyAssign\(S\.me,pack\.me,\[([^\]]+)\]\)/s)?.[1] || '';
+  // 导出和导入现在共用同一份名单，所以查名单本身，外加两头都真的在用它
+  const keys = app.match(/const BEAUTY_ME_KEYS=\[([^\]]+)\]/s)?.[1] || '';
+  assert.ok(keys, 'BEAUTY_ME_KEYS must exist');
+  assert.match(app, /me:pickObj\(me,BEAUTY_ME_KEYS\)/);
+  assert.match(app, /beautyAssign\(S\.me,pack\.me,BEAUTY_ME_KEYS\)/);
   for (const key of ['widgets', 'appLayout', 'homeLayout', 'appDock', 'homeReferenceAppSlots']) {
-    assert.doesNotMatch(exported, new RegExp(`['"]${key}['"]`));
-    assert.doesNotMatch(imported, new RegExp(`['"]${key}['"]`));
+    assert.doesNotMatch(keys, new RegExp(`['"]${key}['"]`));
   }
-  assert.match(exported, /'homeBg'/);
-  assert.match(imported, /'appIcons'/);
+  assert.match(keys, /'homeBg'/);
+  assert.match(keys, /'appIcons'/);
 });
 
 test('native paging stays responsive while long-press dragging remains available', () => {

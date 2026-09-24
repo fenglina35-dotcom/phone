@@ -89,6 +89,6 @@ test('private diagnostics expose only stage timing and counts', () => {
 });
 
 test('v1178 public candidate adds only the shared theater layer, not the private friend repair', () => {
-  assert.match(publicSource, /APP_VER='v1314 · 线下玻璃两套主题、真人好友转账与发送键、微信换背景'/);
+  assert.match(publicSource, /APP_VER='v1316 · 全新手机第一次打开就套上默认美化'/);
   assert.doesNotMatch(publicSource, /function pfEnsureForSync/);
 });

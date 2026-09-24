@@ -1100,6 +1100,27 @@ const PERMANENT_FIXES = [
     marker: `\${photo?'<div class="dybg dybg-photo"></div>':\`<div class="dybg" style="background-image:\${grad}"></div>\`}`,
     least: 1,
   },
+  {
+    release: 'v1316/v1317',
+    name: '全新手机第一次打开套上内置默认美化，已有美化的人一点都不碰',
+    scope: 'both',
+    marker: 'defaultBeautyApplyOnFirstRun().catch(()=>{})',
+    least: 1,
+  },
+  {
+    release: 'v1316/v1317',
+    name: '默认美化只认真正空白的手机，手机自己填的电量心率和空相册不算美化',
+    scope: 'both',
+    marker: 'beautyCustomPart(k,me[k]),beautyCustomPart(k,def[k])',
+    least: 1,
+  },
+  {
+    release: 'v1316/v1317',
+    name: '美化字段收成一份 BEAUTY_ME_KEYS，导出导入和留住美化共用',
+    scope: 'both',
+    marker: 'beautyAssign(S.me,pack.me,BEAUTY_ME_KEYS)',
+    least: 1,
+  },
 ];
 
 const sources = { web: read(WEB), private: read(PRIVATE) };

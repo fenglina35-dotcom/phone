@@ -1,3 +1,72 @@
+# v1316 / v1317 · 全新手机第一次打开就套上默认美化
+
+她把自己那份导出的美化包交过来，要求：**第一次打开小手机的人看到的就是这一套，但绝对不能覆盖别人已经弄好的美化。**
+
+## 包本身
+
+`assets/default-beauty-pack.js`（web 和私人 App 各一份，逐字节相同，3.1 MB），
+由 `scripts/make_default_beauty_pack.py` 从一份导出的 `north-beauty-pack` 生成，**不要手改**；
+以后她想换默认样子，重新跑一次这个脚本就行。
+
+内容是 `window.__NORTH_DEFAULT_BEAUTY__={…}`，只有 `me` 一块：壁纸、锁屏、通话背景、
+26 个 App 图标、图标色调、组件外观和照片、第二页、微信主题、时钟/胶片/挂件/猫的颜色。
+
+**故意没带的**：真人好友备注、手机号归属地、角色头像、联系人、群、音乐背景、`beautyArchive`。
+那些是具体某个人的数据，不是美化——尤其 `phoneapp.regions` 的 key 是一串真手机号，
+`phoneFriend.remarks` 是她朋友的昵称，这种东西不能跟着默认包发给每一个陌生人。
+`status` / `place` 这种「当时的状态」也去掉了，默认包不该替新人决定。
+测试里有一条专门扫 `\b1[3-9]\d{9}\b`，真手机号混进去就红。
+
+## 什么时候才套
+
+`defaultBeautyApplyOnFirstRun()` 挂在 `bootImages()` 之后（`window.__northBootReady=true` 的下一句），
+`.catch(()=>{})` 兜着，不会拖慢开机、也不会把启动链拉红。
+
+`defaultBeautyBlank()` 要同时满足：
+
+1. 这台机器本来就**没有存档**（`load()` 走了 `seed()` → `_bootFreshInstall`），或者上次开机留了重试待办；
+2. 没有角色、没有群、没有一条聊天记录；
+3. `BEAUTY_ME_KEYS` 里**每一项都还是出厂值**；
+4. 真人好友气泡没设过、音乐背景没换过；
+5. 不是 `?northPreview=` 预览，也没套过（`_defaultBeautyV1`）。
+
+套完写 `localStorage` 的 `north_default_beauty_v1` 和存档里的 `_defaultBeautyV1`，不会有第二次。
+**不空白的人直接记标记、连包都不下载**（浏览器里量过：这种人对 `default-beauty-pack.js` 的请求数是 0）。
+下载失败留 `_defaultBeautyPending`，下次开机再试一次，不会把「失败」记成「已经套过了」。
+
+## 真浏览器里翻的车：手机自己填的东西被当成了美化
+
+第一版在单元测试里全绿，**真浏览器里却一次都没套上**。量出来是开机后 `S.me` 里自己就多了三样：
+`homeDashboard={battery:88,heartRate:72}`、`homeSecondPage={photos:[]}`、`_glassAppearanceSchema=3`。
+这些是手机自己填的，不是谁弄的美化，但逐字段比对把它们算成「动过了」。
+
+修法是 `beautyCustomPart(k,v)`：比对前先把**空值、空数组**和这两类噪音剥掉——
+`DEFAULT_BEAUTY_SKIP_KEYS=['_glassAppearanceSchema']`（只是结构版本号）、
+`DEFAULT_BEAUTY_AUTO_FIELDS={homeDashboard:['battery','heartRate']}`。
+真放了照片（`homeDashboard.photo`、`homeSecondPage.portrait`、非空的 `photos`）照样算美化。
+**教训还是那一条：这种「什么时候不该动手」的判断，单元测试的假状态永远比真机干净，必须去真浏览器量一遍。**
+
+## 顺手收掉的重复
+
+美化字段原来在 `beautyPackFrom`（导出）和 `mergeBeautyPack`（导入）里各写了一份一模一样的 28 个 key，
+现在收成一个 `BEAUTY_ME_KEYS`，导出、导入、「清空所有数据时留住美化」和这次的空白判断全走它，
+不会再出现某个字段只在一头存在。三条原来盯着那两份名单的测试改成盯这一份常量加两处调用点。
+
+## 3MB 怎么不拖累所有人
+
+- **不预载、不进 Service Worker 缓存**（`tests/default-beauty-pack.test.mjs` 会卡住这一点）。
+- 只有真要用的时候，用 `<script src="assets/default-beauty-pack.js?p=1">` 按需取一次。
+  **不能用 `fetch`**：私人 App 走 `file://`，`fetch` 会被 CORS 挡死，script 标签不会。
+
+## 核验
+
+- 全套测试 **2499 通过 / 1 条已知环境失败**（还是 September 5 那条）。
+- 新增 `tests/default-beauty-pack.test.mjs` 11 条；**24 条变异全部变红**
+  （含「手机自己填的东西又被当成美化」「包里混进真手机号」「Service Worker 预缓存了 3MB」
+  「改用 fetch」「私人那份漂移」）。
+- 真浏览器三种人各跑一遍：全新的人套上了、壁纸真的画出来了、包只下载 1 次；
+  同一台机器再开一次不再下载也不再套；已经有自己壁纸的人一点没被碰、请求数 0。
+
 # v1314 / v1315 / iOS391 · 线下玻璃两套主题、真人好友转账与发送键、微信换背景
 
 **打包了**：`SmallPhone_v1315_iOS391_MacSource.zip`，1650 个文件、160 MB，

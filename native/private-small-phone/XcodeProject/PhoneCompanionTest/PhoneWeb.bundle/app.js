@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1315'){
+if(window.__NORTH_SHELL_BUILD__!=='1317'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -519,7 +519,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1315 · 线下玻璃两套主题、真人好友转账与发送键、微信换背景（私人）';
+const APP_VER='v1317 · 全新手机第一次打开就套上默认美化（私人）';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -563,6 +563,7 @@ hist:12, histUnit:'rounds', timeAware:true, timeZone:'', memoryFreq:1, onlineMem
   _rolePushReceipts:[]
 };}
 const CORE_IDB_KEY='__core_state',RECOVERY_IDB_KEY='__recovery_state',RECOVERY_HISTORY_IDB_KEY='__recovery_history_state',CORE_INLINE_LIMIT=3.5*1024*1024;
+let _bootFreshInstall=false;
 let _coreBootRef=null,_coreOverflowMode=false,_coreMirrorWrite=Promise.resolve(true),_coreQueuedSave=null,_coreLogicalBytes=0,_coreSavePending=false,_coreFailureAt=0,_appBootFinished=false,_recoverySnapshotAt=0,_recoverySnapshotWrite=Promise.resolve(true),_androidOrphanCoreProbe=false;
 let S=load();
 function normalizeLoadedState(){try{S.me=S.me||{};S.me.uiMaterial='glass';if(!['line','blue','pink','gray','black'].includes(S.me.appIconPack))S.me.appIconPack='black';if(S.me.appIconPack!=='line')S.me.theme='';if(typeof S.me.locked!=='boolean')S.me.locked=true;if(!Array.isArray(S.me.lockNotes))S.me.lockNotes=[];}catch(_){}
@@ -710,6 +711,7 @@ function seed(){const s=defState();
   // 全新开局：不预设任何角色，玩家自己新建。第一次进来会弹「使用说明书」。
   s.contacts=[];
   s._fresh=true;
+  _bootFreshInstall=true;
   return s;
 }
 function previewSeed(mode){const s=defState(),now=Date.now(),parts=String(mode||'black-home').split('-'),pack=['black','blue','pink','gray'].includes(parts[0])?parts[0]:'black',art=(title,a,b)=>'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 720"><defs><linearGradient id="g" x2="1" y2="1"><stop stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient><filter id="f"><feGaussianBlur stdDeviation="18"/></filter></defs><rect width="720" height="720" fill="url(#g)"/><circle cx="130" cy="135" r="120" fill="rgba(255,255,255,.18)" filter="url(#f)"/><circle cx="590" cy="550" r="165" fill="rgba(0,0,0,.14)" filter="url(#f)"/><path d="M90 540c150-190 350-220 540-80" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="10"/><text x="360" y="350" text-anchor="middle" fill="white" font-size="54" font-family="serif" letter-spacing="8">${title}</text></svg>`),portrait='data:image/svg+xml;charset=utf-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 420"><defs><linearGradient id="g" x2="1" y2="1"><stop stop-color="#f5f5f5"/><stop offset="1" stop-color="#777"/></linearGradient></defs><rect width="360" height="420" fill="#151515"/><circle cx="180" cy="135" r="76" fill="url(#g)"/><path d="M55 420c8-126 54-198 125-198s117 72 125 198" fill="url(#g)"/><path d="M105 126c15-84 135-102 157-13-45-34-101-38-157 13Z" fill="#181818"/><text x="180" y="390" text-anchor="middle" fill="#fff" font-size="20" font-family="sans-serif" letter-spacing="4">PRIVATE PHOTO</text></svg>'),cover=art('NIGHT WALK','#56505d','#17171c'),photo1=art('SUNDAY','#8e776b','#363038'),photo2=art('COFFEE','#b39a83','#4d3c38'),photo3=art('CITY LIGHTS','#455366','#171b26');s._fresh=false;s.me.uiMaterial='glass';s.me.appIconPack=pack;s.me.locked=!String(mode).includes('lock');s.me.wxTheme=String(mode).includes('day')?'white':'';s.me.name='我';s.me.avatar=portrait;s.me.homeClockColor=pack==='pink'?'#ffd7e5':pack==='blue'?'#dce9ff':pack==='gray'?'#f5f5f5':'#ffffff';s.me.homeDashboard={battery:68,heartRate:72,photo:portrait};s.me.homeSweetie={me:portrait,ta:portrait,meName:'Sweetie',taName:'Cutie',line:'♡ 想你，也想和你认真生活'};s.me.widgets=['dashboard','vinyl','sweetie'];s.settings.homeClock=true;s.contacts=[
@@ -1876,7 +1878,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1315&r=v1315-private-imsg-1';
+  const url='sw.js?v=1317&r=v1317-private-imsg-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -16890,10 +16892,11 @@ async function emergencyRestoreSafeMergeConfirm(){
 }
 async function emergencyRestoreConfirm(){const c=_recoveryCandidate;if(!c)return;if(!await uiConfirm('确认恢复这份本机存档吗？\n\n系统会先保存恢复前快照；完成后请先检查聊天和组件，再手动建立备份。'))return;closeModal();toast('正在保存恢复前快照…');let before=null,beforeJSON='',reverted=false,snapshotSaved=false,stateMutated=false;try{before=await recoveryRollbackState();beforeJSON=JSON.stringify(before);await imgPutIDBWithRetry(PRIVATE_LOCAL_RECOVERY_ROLLBACK_KEY,{ver:1,savedAt:Date.now(),json:beforeJSON});const verified=await imgGetIDB(PRIVATE_LOCAL_RECOVERY_ROLLBACK_KEY);if(!verified||verified.json!==beforeJSON)throw new Error('恢复前完整快照校验失败，当前数据没有改变');snapshotSaved=true;before=null;toast('正在合并长聊天并恢复…');const raw=await recoveryReadCandidateRaw(c),restored=await recoveryHydrateCandidate(raw);S=mergeStateData(restored);stateMutated=true;normalizeLoadedState();_coreBootRef=null;_coreOverflowMode=false;_coreLogicalBytes=0;initAccounts();syncBlocks();phoneFriendState();if(!await recoveryPersistStateNow())throw new Error('恢复后写入失败，请检查浏览器存储权限');_recoveryCandidate=null;_recoveryCandidates=[];_recoveryMergePlan=null;stack=[];home();setTimeout(()=>toast('已恢复；请先核对，设置里可撤回上次本机恢复'),120);}catch(e){if(stateMutated&&snapshotSaved&&beforeJSON){try{const rollback=before||JSON.parse(beforeJSON);S=mergeStateData(rollback);normalizeLoadedState();initAccounts();syncBlocks();phoneFriendState();reverted=await recoveryPersistStateNow();stack=[];home();}catch(_){reverted=false;}}const detail=!stateMutated?'当前状态没有改变。':reverted?'已自动回到恢复前状态。':'恢复前快照仍保存在本机，请停止操作并联系开发者处理。';openModal('<h3>恢复没有完成</h3><div class="hint">'+esc((e&&e.message)||'存档写入失败')+'<br><br>'+detail+'</div><button class="btn g" style="margin-top:12px" onclick="closeModal()">关闭</button>');}}
 async function emergencyRestoreRollback(){let rec=null;try{rec=await imgGetIDB(PRIVATE_LOCAL_RECOVERY_ROLLBACK_KEY);}catch(_){}if(!rec||!rec.json){toast('还没有可撤回的本机恢复快照');return;}if(!await uiConfirm('撤回到上次本机候选恢复之前的数据？'))return;let current=null,stateMutated=false;try{current=await recoveryRollbackState();const raw=JSON.parse(rec.json);if(!raw||!raw.settings)throw new Error('恢复前快照不完整');const restored=await recoveryHydrateCandidate(raw,{mergeArchive:false});S=mergeStateData(restored);stateMutated=true;normalizeLoadedState();initAccounts();syncBlocks();phoneFriendState();if(!await recoveryPersistStateNow())throw new Error('撤回后写入失败');closeModal();_recoveryCandidate=null;_recoveryCandidates=[];_recoveryMergePlan=null;stack=[];home();setTimeout(()=>toast('已撤回到上次本机恢复之前'),120);}catch(e){if(stateMutated&&current){try{S=mergeStateData(current);normalizeLoadedState();initAccounts();syncBlocks();phoneFriendState();await recoveryPersistStateNow();render();}catch(_){}}toast('撤回失败：'+String(e&&e.message||e));}}
+const BEAUTY_ME_KEYS=['avatar','theme','wxTheme','uiMaterial','appIconPack','homeClockColor','homeDashboard','homeSweetie','homeSecondPage','glassWidgetAppearances','homeVinylColor','_glassAppearanceSchema','homeBg','lockBg','callBg','momentCover','appIcons','appIconTone','appTextTone','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa'];
 function pickObj(src,keys){const o={};src=src||{};keys.forEach(k=>{if(src[k]!=null)o[k]=src[k];});return o;}
 function beautyPackFrom(data){data=data||S;const me=data.me||{},pf=me.phoneFriend||{},pa=data.phoneapp||{},music=data.music||{};
   return {type:'north-beauty-pack',ver:1,appVer:APP_VER,exportedAt:new Date().toISOString(),
-    me:pickObj(me,['avatar','theme','wxTheme','uiMaterial','appIconPack','homeClockColor','homeDashboard','homeSweetie','homeSecondPage','glassWidgetAppearances','homeVinylColor','_glassAppearanceSchema','homeBg','lockBg','callBg','momentCover','appIcons','appIconTone','appTextTone','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa']),
+    me:pickObj(me,BEAUTY_ME_KEYS),
     phoneFriend:pickObj(pf,['bubbleStyle','groupBubbleStyles','groupMemberStyles','remarks','groupRemarks']),
     phoneapp:{roleAvatars:pa.roleAvatars||{},regions:pa.regions||{}},
     music:pickObj(music,['bg','cover','theme','layout','widgets']),
@@ -16912,7 +16915,7 @@ function beautyLayoutSnapshot(me){me=me||{};const out={};BEAUTY_LAYOUT_KEYS.forE
 function beautyLayoutRestore(me,snapshot){me=me||{};snapshot=snapshot||{};BEAUTY_LAYOUT_KEYS.forEach(k=>{const row=snapshot[k];if(!row)return;if(row.has)me[k]=beautyClone(row.value);else delete me[k];});}
 function beautyFind(rows,src){rows=rows||[];let hit=rows.find(x=>x&&src&&x.id===src.id);if(hit)return hit;const names=[src&&src.name,src&&src.remark].filter(Boolean),matches=rows.filter(x=>x&&names.some(n=>n===x.name||n===x.remark));return matches.length===1?matches[0]:null;}
 function mergeBeautyPack(pack){if(!pack||pack.type!=='north-beauty-pack'||!pack.me)throw new Error('不是有效的小手机美化包');let n=0;S.me=S.me||{};
-  n+=beautyAssign(S.me,pack.me,['avatar','theme','wxTheme','uiMaterial','appIconPack','homeClockColor','homeDashboard','homeSweetie','homeSecondPage','glassWidgetAppearances','homeVinylColor','_glassAppearanceSchema','homeBg','lockBg','callBg','momentCover','appIcons','appIconTone','appTextTone','status','place','wColor','wCardColor','wOpacity','petColor','wPic','homeAvMe','homeAvTa']);
+  n+=beautyAssign(S.me,pack.me,BEAUTY_ME_KEYS);
   const pf=phoneFriendState();n+=beautyAssign(pf,pack.phoneFriend,['bubbleStyle','groupBubbleStyles','groupMemberStyles','remarks','groupRemarks']);
   const pa=phState();n+=beautyAssign(pa,pack.phoneapp,['roleAvatars','regions']);S.music=S.music||{};n+=beautyAssign(S.music,pack.music,['bg','cover','theme','layout','widgets']);
   (pack.contacts||[]).forEach(src=>{const dst=beautyFind(S.contacts,src);if(dst)n+=beautyAssign(dst,src,['avatar','chatBg','bubbleStyle']);});
@@ -16920,6 +16923,55 @@ function mergeBeautyPack(pack){if(!pack||pack.type!=='north-beauty-pack'||!pack.
   if(pack.beautyArchive!=null){S.beautyArchive=beautyClone(pack.beautyArchive);n++;}return n;}
 async function primeBeautyPackImages(pack){const found=new Set();(function walk(v){if(isBigImg(v)){found.add(v);return;}if(!v||typeof v!=='object')return;Object.keys(v).forEach(k=>walk(v[k]));})(pack);for(const img of found)await primeImageForSave(img);return found.size;}
 async function applyBeautyPack(pack){const layout=beautyLayoutSnapshot(S.me);await primeBeautyPackImages(pack);const n=mergeBeautyPack(pack);beautyLayoutRestore(S.me,layout);if(!await saveNowAsync())throw new Error('美化图片保存失败，请检查浏览器存储权限');try{renderLockScreen(true);}catch(_){}render();return n;}
+/* 内置默认美化：第一次打开、而且一处都没自己弄过的手机，才套上那一套；别人的美化一律不碰 */
+const DEFAULT_BEAUTY_SRC='assets/default-beauty-pack.js?p=1',DEFAULT_BEAUTY_MARK='north_default_beauty_v1';
+function defaultBeautyMarked(){try{return localStorage.getItem(DEFAULT_BEAUTY_MARK)==='1';}catch(_){return false;}}
+function defaultBeautyMark(){try{localStorage.setItem(DEFAULT_BEAUTY_MARK,'1');}catch(_){}}
+function beautyValueEmpty(v){return v==null||v===''||(typeof v==='object'&&!Object.keys(v).length);}
+function beautyValueSame(a,b){if(beautyValueEmpty(a)&&beautyValueEmpty(b))return true;try{return JSON.stringify(a)===JSON.stringify(b);}catch(_){return false;}}
+/* 手机自己开机就会填的东西，不算「谁弄过的美化」：组件里的电量心率、还空着的第二页相册、结构版本号 */
+const DEFAULT_BEAUTY_SKIP_KEYS=['_glassAppearanceSchema'],DEFAULT_BEAUTY_AUTO_FIELDS={homeDashboard:['battery','heartRate']};
+function beautyCustomPart(k,v){
+  if(DEFAULT_BEAUTY_SKIP_KEYS.indexOf(k)>=0)return '';
+  if(!v||typeof v!=='object')return v;
+  const auto=DEFAULT_BEAUTY_AUTO_FIELDS[k]||[],o={};
+  Object.keys(v).forEach(x=>{const val=v[x];
+    if(auto.indexOf(x)>=0)return;
+    if(val==null||val===''||(Array.isArray(val)&&!val.length))return;
+    o[x]=val;});
+  return o;}
+// 「空白手机」＝这台机器上本来就没有存档，而且角色、聊天、美化全是出厂的样子
+function defaultBeautyBlank(){
+  if(NORTH_PREVIEW)return false;
+  // 只认第一次开机；那次要是没下载下来，留个待办，下次开机再试一次
+  if(!_bootFreshInstall&&!S._defaultBeautyPending)return false;
+  if(S._defaultBeautyV1)return false;
+  if((S.contacts||[]).length||(S.groups||[]).length)return false;
+  const msgs=S.messages||{};
+  if(Object.keys(msgs).some(k=>k!=='__idb'&&Array.isArray(msgs[k])&&msgs[k].length))return false;
+  const me=S.me||{},def=defState().me;
+  if(BEAUTY_ME_KEYS.some(k=>!beautyValueSame(beautyCustomPart(k,me[k]),beautyCustomPart(k,def[k]))))return false;
+  const pf=me.phoneFriend||{};
+  if(!beautyValueEmpty(pf.bubbleStyle)||!beautyValueEmpty(pf.groupBubbleStyles))return false;
+  return beautyValueEmpty((S.music||{}).bg);
+}
+// 3MB 的图片只有真正要用的时候才下载，所以用 script 标签按需取（file:// 的私人 App 也能取到）
+function defaultBeautyLoad(){
+  if(typeof window==='undefined')return Promise.reject(new Error('没有窗口环境'));
+  if(window.__NORTH_DEFAULT_BEAUTY__)return Promise.resolve(window.__NORTH_DEFAULT_BEAUTY__);
+  return new Promise((res,rej)=>{const s=document.createElement('script');s.src=DEFAULT_BEAUTY_SRC;s.async=true;
+    s.onload=()=>{s.remove();const p=window.__NORTH_DEFAULT_BEAUTY__;p?res(p):rej(new Error('默认美化包是空的'));};
+    s.onerror=()=>{s.remove();rej(new Error('默认美化包没能下载'));};
+    document.head.appendChild(s);});
+}
+async function defaultBeautyApplyOnFirstRun(){
+  if(defaultBeautyMarked())return false;
+  if(!defaultBeautyBlank()){defaultBeautyMark();delete S._defaultBeautyPending;return false;}
+  let pack;try{pack=await defaultBeautyLoad();}catch(_){S._defaultBeautyPending=1;save(0);return false;}
+  if(!defaultBeautyBlank())return false;// 下载这几秒里人家自己动过手，就让开
+  try{await applyBeautyPack(pack);}catch(_){S._defaultBeautyPending=1;save(0);return false;}
+  defaultBeautyMark();S._defaultBeautyV1=1;delete S._defaultBeautyPending;save(0);return true;
+}
 function importBeautyData(){pickFile('.json',f=>readJsonFile(f,async d=>{const n=await applyBeautyPack(d);toast('已导入美化包（'+n+'项），原桌面排位已保留');}));}
 function cacheMediaSize(v){v=''+(v||'');if(!v)return 0;if(/^idb-audio:/i.test(v)){try{return ((_imgCache&&_imgCache['__audio_'+v.slice(10)])||'').length||0;}catch(_){return 0;}}return /^(data:image\/|data:audio\/|idb:)/i.test(v)?v.length:0;}
 function mergeCacheStat(a,b){a.n+=(b&&b.n)||0;a.bytes+=(b&&b.bytes)||0;return a;}
@@ -17160,7 +17212,7 @@ function northViewportDiagnosticSnapshot(){const root=getComputedStyle(document.
 function northViewportDiagnosticStart(force=false){if((!NORTH_VIEWPORT_DIAG&&!force)||document.getElementById('northViewportDiagnostic'))return;const panel=document.createElement('section'),head=document.createElement('div'),copy=document.createElement('button'),close=document.createElement('button'),pre=document.createElement('pre');panel.id='northViewportDiagnostic';panel.style.cssText='position:fixed;z-index:2147483647;left:8px;right:8px;top:8px;max-height:52vh;display:flex;flex-direction:column;border:1px solid rgba(255,255,255,.35);border-radius:12px;background:rgba(5,7,11,.94);color:#f5f5f7;box-shadow:0 8px 32px rgba(0,0,0,.5);font:11px/1.42 ui-monospace,SFMono-Regular,Menlo,monospace;overflow:hidden';head.style.cssText='display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.15)';head.append('Viewport / Safe Area 诊断');copy.textContent='复制';close.textContent='收起';[copy,close].forEach(btn=>btn.style.cssText='margin-left:auto;border:1px solid rgba(255,255,255,.25);border-radius:8px;background:#252830;color:#fff;padding:5px 9px;font:12px sans-serif');close.style.marginLeft='0';pre.style.cssText='margin:0;padding:9px 10px;overflow:auto;white-space:pre-wrap;word-break:break-all;user-select:text;-webkit-user-select:text';head.append(copy,close);panel.append(head,pre);document.body.appendChild(panel);let raw='',timer=0;const paint=()=>{clearTimeout(timer);timer=setTimeout(()=>{raw=JSON.stringify(northViewportDiagnosticSnapshot(),null,2);pre.textContent=raw;},50);};copy.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(raw);copy.textContent='已复制';}catch(_){const ta=document.createElement('textarea');ta.value=raw;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();copy.textContent='已复制';}setTimeout(()=>copy.textContent='复制',1200);});close.addEventListener('click',()=>{pre.hidden=!pre.hidden;close.textContent=pre.hidden?'展开':'收起';});window.__northViewportDiagnosticSnapshot=northViewportDiagnosticSnapshot;window.addEventListener('resize',paint,{passive:true});window.addEventListener('orientationchange',paint,{passive:true});if(window.visualViewport){visualViewport.addEventListener('resize',paint,{passive:true});visualViewport.addEventListener('scroll',paint,{passive:true});}paint();}
 function finishAppBoot(){if(_appBootFinished)return;_appBootFinished=true;try{S.me=S.me||{};S.me.locked=NORTH_PREVIEW?NORTH_PREVIEW_PARAMS.includes('lock'):true;northNativePerformanceWatchStart();sleepAutoEndOnOpen();initLockGestures();if(repairInterruptedMomentReplies())save(0);render();roleBusyResumeAll();window.__northBootReady=true;if(NORTH_VIEWPORT_DIAG)setTimeout(northViewportDiagnosticStart,0);if(NORTH_PREVIEW){previewRoute();return;}restoreActiveCall();routeHash();initBattery();audioProbeMicPermission();requestPersistentStorage();privateResumeSyncSoon();if(S._summaryRepairPendingV848){delete S._summaryRepairPendingV848;save(0);}}catch(e){window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'启动失败');else throw e;}}
 if(!_coreBootRef&&!_androidOrphanCoreProbe)finishAppBoot();else if(!NORTH_ANDROID&&_coreBootRef){try{S.me=S.me||{};S.me.locked=true;render();}catch(_){const host=document.getElementById('app');if(host)host.innerHTML='';}}else if(typeof window.__northBootProgress==='function')window.__northBootProgress(_androidOrphanCoreProbe?'正在检查安卓浏览器中的原核心存档…':'正在读取安卓大容量核心存档，完成前不会显示空数据…');
-_bootImagesPromise=bootImages().then(()=>{if(!_appBootFinished)finishAppBoot();else refreshHydratedUI();window.__northBootReady=true;if(!privateNativeAppOn())setTimeout(()=>{try{const savedAt=Date.now(),json=JSON.stringify(S,_imgReplacer);queueRecoverySnapshot(json,savedAt);}catch(_){}},30000);}).catch(e=>{window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'存档数据载入失败');});/* 大容量核心、聊天和图片从 IndexedDB 回填好后再渲染 */
+_bootImagesPromise=bootImages().then(()=>{if(!_appBootFinished)finishAppBoot();else refreshHydratedUI();window.__northBootReady=true;defaultBeautyApplyOnFirstRun().catch(()=>{});if(!privateNativeAppOn())setTimeout(()=>{try{const savedAt=Date.now(),json=JSON.stringify(S,_imgReplacer);queueRecoverySnapshot(json,savedAt);}catch(_){}},30000);}).catch(e=>{window.__northBootReady=false;if(typeof window.__northBootFail==='function')window.__northBootFail((e&&e.message)||'存档数据载入失败');});/* 大容量核心、聊天和图片从 IndexedDB 回填好后再渲染 */
 if(!NORTH_PREVIEW){setTimeout(()=>{if(_appBootFinished)northNativeBackgroundTask('companion-snapshot',()=>companionPollSnapshot(false));},3200);
 setTimeout(()=>{if(_appBootFinished)northNativeBackgroundTask('role-push-wake',roleServerPushWakePull);},3600);
 setInterval(()=>{if(_appBootFinished)northNativeBackgroundTask('companion-snapshot',()=>companionPollSnapshot(false));},8000);
