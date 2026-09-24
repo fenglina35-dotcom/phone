@@ -9143,22 +9143,31 @@ let _off=null;
    她说过「换聊天背景不要压画质」。 */
 const OFF_THEME_DEF={me:'#0a84ff',meInk:'#ffffff',them:'#26262a',themInk:'#ffffff',nar:'#c9c2b6'};
 function offColorOk(v,def){v=String(v||'').trim();return /^#[0-9a-fA-F]{6}$/.test(v)?v.toLowerCase():def;}
-function offTheme(c){if(!c)return Object.assign({bg:''},OFF_THEME_DEF);
+function offTheme(c){if(!c)return Object.assign({bg:'',skin:'glass'},OFF_THEME_DEF);
   const t=c.offTheme&&typeof c.offTheme==='object'&&!Array.isArray(c.offTheme)?c.offTheme:(c.offTheme={});
   t.bg=typeof t.bg==='string'?t.bg:'';
+  /* 她说「这两个主题都要保留，没改之前的也要保留」——所以旧的那套黑色文学风原样留着，随时切回去 */
+  t.skin=t.skin==='classic'?'classic':'glass';
   for(const k in OFF_THEME_DEF)t[k]=offColorOk(t[k],OFF_THEME_DEF[k]);
   return t;}
-function offStageAttrs(c){const t=offTheme(c),bg=t.bg?storedImageDisplaySource(t.bg):'';
-  return {cls:bg?' hasbg':'',
+function offStageAttrs(c){const t=offTheme(c),classic=t.skin==='classic',bg=(!classic&&t.bg)?storedImageDisplaySource(t.bg):'';
+  return {cls:(classic?' off-classic':'')+(bg?' hasbg':''),
     style:`--offc-me:${t.me};--offc-me-ink:${t.meInk};--offc-them:${t.them};--offc-them-ink:${t.themInk};--offc-nar:${t.nar};`
       +(bg?`background-image:url(${bg});`:'')};}
+function offSkinSet(id,skin){const c=getC(id);if(!c)return;
+  offTheme(c).skin=skin==='classic'?'classic':'glass';save();closeModal();render();
+  setTimeout(()=>offAppearance(id),60);}
 function offFieldHTML(placeholder){return `<div class="off-field"><textarea id="off_in" rows="1" placeholder="${esc(placeholder)}" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();offSay();}"></textarea></div>`;}
 function offAppearance(id){const c=getC(id);if(!c)return;const t=offTheme(c);
   const row=(k,label,hint)=>`<div class="field"><label>${label}${hint?`<small style="display:block;color:#888">${hint}</small>`:''}</label>`
     +`<div class="avline"><input type="color" value="${t[k]}" oninput="offThemeSet('${id}','${k}',this.value)" style="width:56px;height:34px;padding:0;border:1px solid #38383a;border-radius:8px;background:#2c2c2e">`
     +`<span style="color:#8a8a8f;font-size:12px">${t[k]}</span></div></div>`;
+  const glass=t.skin!=='classic';
+  const chip=(k,label,note)=>`<button type="button" class="minibtn" style="flex:1;margin:0;padding:9px 6px;background:${t.skin===k?'#0a84ff':'#2c2c2e'};color:${t.skin===k?'#fff':'#bbb'}" onclick="offSkinSet('${id}','${k}')">${label}<small style="display:block;opacity:.75;font-weight:400">${note}</small></button>`;
   openModal(`<h3>线下外观</h3>
-   <div class="hint">和信息页同一套玻璃：气泡是磨砂的，边上那条高光会跟着背景的颜色走。颜色改完立刻就能看见。</div>
+   <div class="field"><label>主题</label><div style="display:flex;gap:8px;padding-top:6px">
+     ${chip('glass','玻璃','磨砂＋细高光')}${chip('classic','原来的','黑色文学风')}</div></div>
+   ${glass?`<div class="hint">和信息页同一套玻璃：气泡是磨砂的，边上那条高光会跟着背景的颜色走。颜色改完立刻就能看见。</div>
    <div class="field"><label>聊天背景<small style="display:block;color:#888">按原图质量存（2600px），不会压糊</small></label>
      <div class="avline"><button class="btn imblue" style="flex:1" onclick="offBgPick('${id}')">选图片</button>
      ${t.bg?`<button class="btn g" style="flex:1;margin-left:8px" onclick="offBgClear('${id}')">恢复默认</button>`:''}</div></div>
@@ -9166,8 +9175,9 @@ function offAppearance(id){const c=getC(id);if(!c)return;const t=offTheme(c);
    ${row('meInk','我的字')}
    ${row('them','ta的气泡')}
    ${row('themInk','ta的字')}
-   ${row('nar','旁白的字','就是中间那些动作描写')}
-   <div class="btns"><button class="btn g" onclick="offThemeReset('${id}')">全部恢复默认</button><button class="btn p" onclick="closeModal()">好了</button></div>`);}
+   ${row('nar','旁白的字','就是中间那些动作描写')}`
+   :`<div class="hint">「原来的」就是改之前那一套，样子是固定的：黑底、方一点的气泡、宋体旁白。背景和配色只对「玻璃」生效，切回玻璃就能接着调。</div>`}
+   <div class="btns"><button class="btn g" onclick="offThemeReset('${id}')">配色恢复默认</button><button class="btn p" onclick="closeModal()">好了</button></div>`);}
 function offThemeSet(id,key,val){const c=getC(id);if(!c||!(key in OFF_THEME_DEF))return;
   const t=offTheme(c);t[key]=offColorOk(val,OFF_THEME_DEF[key]);save();
   /* 不重画整页：直接改舞台上那个变量，弹窗不会被关掉，她能一边调一边看 */

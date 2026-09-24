@@ -53,7 +53,11 @@ assert.match(glass,/\.wx-chat-premium \.chatbg \.tstamp span\{[^}]*background:tr
 assert.match(app,/class="off-nav-actions">\$\{replyTop\}/,'offline reply action lives in the upper-right navigation area');
 assert.match(app,/class="off-reply-top"/);
 assert.doesNotMatch(app,/class="offactions"/,'the easy-to-mistap full-width reply strip is removed');
-assert.match(html,/\.off-reply-top\{height:27px/,'upper-right reply action stays compact');
+/* v1314 起它也是玻璃的（她说「让他回那个按钮颜色应该也是液态玻璃的，偏灰的那种」），
+   高度照旧 27px，别又被撑大。 */
+assert.match(html,/\.off-reply-top\{position:relative;height:27px/,'upper-right reply action stays compact');
+assert.match(html,/\.off-reply-top\{[^}]*background:rgba\(120,122,132,\.34\)[^}]*backdrop-filter:blur\(14px\)/,'偏灰的磨砂玻璃');
+assert.match(html,/\.off-reply-top:before\{[^}]*mask-composite:exclude/,'那圈细高光是挖空的环');
 
 assert.match(glass,/\.wx-premium>\.wx-main-nav \.wx-main-title\{[^}]*font-size:18px/,'WeChat main title is reduced one visual step');
 assert.match(glass,/\.wx-main-nav \.wx-main-add\{display:grid;place-items:center;line-height:0\}/,'the WeChat header plus is centered inside its tap target');

@@ -259,3 +259,73 @@ test('功能面板排在输入框后面（也就是键盘那个位置）', () =>
     assert.doesNotMatch(chat, /<\/div>\n\s*\$\{pfPanelHTML\(id\)\}\n\s*\$\{gag\?/, '别又排回聊天记录和输入框中间');
   }
 });
+
+/* ===== 六、她看完第一版之后提的四件事 ===== */
+
+test('圆角改成 5° 采样，不再有看得出来的平切面', () => {
+  const gen = readFileSync(new URL('../scripts/glass_ring_polygon.py', import.meta.url), 'utf8');
+  assert.match(gen, /^STEP = 5\.0/m, '她说「气泡最左边前端有点缺一块儿的感觉」——15° 的平切面在 18px 圆角上看得出来');
+  assert.match(gen, /def _steps\(\):[\s\S]{0,240}?n = int\(round\(90\.0 \/ STEP\)\)[\s\S]{0,40}?return range\(n \+ 1\)/, '取点数必须从 STEP 算出来，不能写死');
+  assert.doesNotMatch(gen, /for k in range\(7\)/, '别又退回 7 个点');
+  for (const s of shells) {
+    /* 外圈点数 = 三个圆角 × 19 + 尾巴那 6 个 = 63 */
+    const out = s.match(/\.offmsg\.them \.offbubble\{[^}]*clip-path:polygon\(([^)]*(?:\([^)]*\)[^)]*)*)\);\}/);
+    assert.ok(out, '找不到线下 them 的轮廓');
+    const pts = out[1].split(/,(?![^(]*\))/).length;
+    assert.equal(pts, 63, `外圈点数应该是 63，现在是 ${pts}`);
+  }
+});
+
+test('线下顶栏的昵称按整条栏居中，不被右边按钮挤偏', () => {
+  for (const s of shells) {
+    assert.match(s, /\.off-date-nav\{position:relative;/);
+    assert.match(s, /\.off-date-nav>\.t\{position:absolute!important;left:50%!important;top:50%!important;transform:translate\(-50%,-50%\)!important;/);
+    assert.match(s, /\.off-date-nav>\.t\{[^}]*pointer-events:none/, '标题盖在上面就别挡住按钮');
+    assert.doesNotMatch(s, /\.off-date-nav>\.t\{position:static!important/);
+  }
+});
+
+test('「让TA回」是偏灰的磨砂玻璃，原来那套主题里还是老样子', () => {
+  for (const s of shells) {
+    assert.match(s, /\.off-reply-top\{position:relative;height:27px;[^}]*border:0;[^}]*background:rgba\(120,122,132,\.34\);[^}]*backdrop-filter:blur\(14px\) saturate\(1\.32\)/);
+    assert.match(s, /\.off-reply-top:before\{[^}]*mask-composite:exclude[^}]*brightness\(1\.5\) saturate\(1\.4\)/);
+    assert.match(s, /\.offstage\.off-classic \.off-reply-top\{[^}]*linear-gradient\(145deg,rgba\(70,64,55,\.72\)/, '切回原来的主题，这颗按钮也要变回去');
+    assert.match(s, /\.offstage\.off-classic \.off-reply-top:before\{display:none!important;\}/);
+  }
+});
+
+test('两套主题都留着，切换存在角色身上', () => {
+  for (const x of both) {
+    assert.match(x, /t\.skin=t\.skin==='classic'\?'classic':'glass';/);
+    assert.match(x, /function offSkinSet\(id,skin\)/);
+    assert.match(grab(x, 'offStageAttrs'), /classic=t\.skin==='classic'/);
+    assert.match(grab(x, 'offStageAttrs'), /cls:\(classic\?' off-classic':''\)\+\(bg\?' hasbg':''\)/);
+    assert.match(grab(x, 'offStageAttrs'), /bg=\(!classic&&t\.bg\)\?storedImageDisplaySource\(t\.bg\):''/, '原来那套本来就没有背景图');
+    assert.match(x, /offSkinSet\('\$\{id\}','\$\{k\}'\)/, '外观里要能点');
+  }
+  for (const s of shells) {
+    /* 原来那套的关键几条：方一点的气泡、没有玻璃、没有那圈高光 */
+    assert.match(s, /\.offstage\.off-classic \.offmsg \.offbubble\{clip-path:none!important;border-radius:5px!important;/);
+    assert.match(s, /\.offstage\.off-classic \.offmsg \.offbubble:before\{display:none!important;\}/);
+    assert.match(s, /\.offstage\.off-classic \.offmsg\.me \.offbubble\{background:#d2c9ba!important;color:#181614!important;/);
+    assert.match(s, /\.offstage\.off-classic \.offscroll\{background:#050505!important;\}/);
+    assert.match(s, /\.offstage\.off-classic:before\{display:none!important;\}/, '压暗那一层也不要');
+  }
+});
+
+test('主题只认这两个，别的都退回玻璃', () => {
+  const ctx = { save: () => {} };
+  vm.createContext(ctx);
+  vm.runInContext(source('offColorOk') + '\n' + app.match(/const OFF_THEME_DEF=\{[^\n]*\}/)[0] + '\n' + source('offTheme'), ctx);
+  const skin = v => { ctx.c = { offTheme: { skin: v } }; return vm.runInContext('offTheme(c).skin', ctx); };
+  assert.equal(skin('classic'), 'classic');
+  assert.equal(skin('glass'), 'glass');
+  assert.equal(skin('neon'), 'glass');
+  assert.equal(skin(undefined), 'glass', '没设过就是新的玻璃');
+});
+
+test('小手机群聊的功能面板也排在输入框后面', () => {
+  for (const x of both) {
+    assert.match(grab(x, 'renderPhoneFriendGroup'), /'pfgpanel'\)\}\n\s*\$\{pfGroupPanelHTML\(gid\)\}`;\}/);
+  }
+});

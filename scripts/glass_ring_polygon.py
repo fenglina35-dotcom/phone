@@ -28,19 +28,27 @@ R = 18.0        # 圆角
 TW = 7.0        # 尾巴那一条的宽度（气泡身子的左边缘就在这儿）
 TH = 10.0       # 尾巴高
 INSET = 0.75    # 描边有多细。她说过「描边的高光弄得细一点」，0.75 是她认可的那一版
+STEP = 5.0      # 圆角每隔几度取一个点。原来是 15°，四个平切面在 18px 的圆角上看得出来——
+                # 她说「气泡最左边前端有点缺一块儿的感觉」。5° 的最大偏差只有 0.017px，是真的圆了
 W, H = 200.0, 40.0   # 只是算偏移用的名义尺寸，真实宽高由 calc(100% - n) 顶掉
 
 # 轮廓：每个点带着「从哪条边量」的标记（L/R、T/B），换算回 calc(100% - n) 才不会错
 def _arc(mx, my, pts):
     return [(x, y, mx, my) for x, y in pts]
 
+
+def _steps():
+    """0° 到 90°，每隔 STEP 一个点（首尾都要，所以是闭区间）。"""
+    n = int(round(90.0 / STEP))
+    return range(n + 1)
+
 P = []
 # 左上圆角：从左边 (TW,R) 转到 (TW+R,0)
-P += _arc('L', 'T', [(TW + R - R * math.cos(math.radians(k * 15)), R - R * math.sin(math.radians(k * 15))) for k in range(7)])
+P += _arc('L', 'T', [(TW + R - R * math.cos(math.radians(k * STEP)), R - R * math.sin(math.radians(k * STEP))) for k in _steps()])
 # 右上圆角：从 (W-R,0) 转到 (W,R)
-P += _arc('R', 'T', [(R - R * math.sin(math.radians(k * 15)), R - R * math.cos(math.radians(k * 15))) for k in range(7)])
+P += _arc('R', 'T', [(R - R * math.sin(math.radians(k * STEP)), R - R * math.cos(math.radians(k * STEP))) for k in _steps()])
 # 右下圆角：从 (W,H-R) 转到 (W-R,H)
-P += _arc('R', 'B', [(R - R * math.cos(math.radians(k * 15)), R - R * math.sin(math.radians(k * 15))) for k in range(7)])
+P += _arc('R', 'B', [(R - R * math.cos(math.radians(k * STEP)), R - R * math.sin(math.radians(k * STEP))) for k in _steps()])
 # 左下：先到尾巴根，再是尾巴，最后回到左边
 P += _arc('L', 'B', [(TW + 2, 0), (4.2, .5), (1.2, 1.5), (2.6, 4.2), (4.6, 6.6), (TW, TH)])
 
