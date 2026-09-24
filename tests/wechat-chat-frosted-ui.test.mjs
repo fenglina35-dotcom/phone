@@ -20,7 +20,11 @@ assert.match(app,/chatPanelToggle\('fn'\)/,'plus opens the function page');
 assert.match(app,/function groupComposerHTML\(scope,id,inputId,placeholder,sendAction,panelId\)[\s\S]*chat-voice-toggle[\s\S]*chat-emoji-toggle[\s\S]*chat-function-toggle/,'all group composers reuse the role chat voice, emoji, and plus icon set');
 assert.match(app,/groupComposerHTML\('pfgroup',gid,'pfg_input'/,'real small-phone groups use the shared composer');
 assert.match(app,/groupComposerHTML\('group',id,'ginput'/,'role groups use the shared composer');
-assert.match(app,/if\(c\.p==='group'\|\|c\.p==='pfgroup'\)afterGroupComposer\(c\)/,'group composers bind text input and enter-to-send after rendering');
+/* v1314 起真人好友 1v1 也走这条：她说「真人小手机下面输入之后没有发送键」，
+   根子就是 pfchat 从来没被绑上 input 监听，.has-text 永远加不上。 */
+assert.match(app,/if\(c\.p==='group'\|\|c\.p==='pfgroup'\|\|c\.p==='pfchat'\)afterGroupComposer\(c\)/,'group and phone-friend composers bind text input and enter-to-send after rendering');
+assert.match(app,/const id=c\.p==='pfgroup'\?'pfg_input':c\.p==='pfchat'\?'pf_input':'ginput'/,'pfchat must bind its own textarea');
+assert.match(app,/else if\(c\.p==='pfchat'\)sendPhoneFriend\(c\.id\)/,'enter sends in the phone-friend chat too');
 assert.match(app,/chatFunctionItem\('多选转发'/,'only existing small-phone actions are exposed');
 assert.match(glass,/\.chat-function-page\{[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/,'both function pages share the same evenly spread four-column layout');
 assert.doesNotMatch(glass,/\.chat-function-page:nth-child\(2\)/,'the second function page is not compressed into a separate narrow group');

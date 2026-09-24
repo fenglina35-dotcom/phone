@@ -138,6 +138,11 @@ RULES = [
     ('.imsg-row.them .imsg-b:before{clip-path:', lambda: ring(False)),
     ('.imsg-row.me .imsg-b{padding:8px 21px 8px 14px;clip-path:', lambda: outline(True)),
     ('.imsg-row.me .imsg-b:before{clip-path:', lambda: ring(True)),
+    # 线下约会的气泡走同一套轮廓和环（v1314 起），所以连小尾巴都和信息页一模一样
+    ('.offmsg.them .offbubble{padding:9px 15px 9px 22px;background:var(--offc-them);color:var(--offc-them-ink);clip-path:', lambda: outline(False)),
+    ('.offmsg.them .offbubble:before{clip-path:', lambda: ring(False)),
+    ('.offmsg.me .offbubble{padding:9px 22px 9px 15px;background:var(--offc-me);color:var(--offc-me-ink);clip-path:', lambda: outline(True)),
+    ('.offmsg.me .offbubble:before{clip-path:', lambda: ring(True)),
 ]
 
 

@@ -1034,10 +1034,16 @@ test('[换背景] 这个标签不会被当成正文发出来', () => {
 });
 test('微信里角色也能把她发的照片换成聊天背景', () => {
   for (const x of [app, priv]) {
-    assert.match(x, /if\(\/\^\[\\\[【\]\\s\*换背景\\s\*\[\\\]】\]\$\/\.test\(line\)\)\{/, '微信回复里要认这一行');
-    assert.match(x, /reverse\(\)\.find\(m=>m&&m\.role==='user'&&m\.type==='image'&&m\.src\)/, '要找她最近发的那张真照片');
+    assert.match(x, /换背景\\s\*\(\?:\[\|｜:：\]\[\^\\\]】\]\*\)\?\[\\\]】\]\$\/\.test\(line\)\)\{/, '微信回复里要认这一行');
+    assert.match(x, /wechatApplyBgRequest\(c,id\)/, '真的把背景换上去');
     assert.match(x, /c\.chatBg=last\.src;save\(\);/);
-    assert.match(x, /就【单独一行】写 \[换背景\]/, '系统提示里要写清楚');
+    /* 她说「口头跟他说没有用，他自己说换上了其实没换」：这句说明原来被写在
+       表情包那个 if 里面（if(!c.noSticker&&stkFreq>0)），关掉表情包就等于没有。
+       现在必须是独立一条，谁都关不掉。 */
+    assert.match(x, /s\+='\\n- 聊天背景：'\+S\.me\.name\+'让你把某张照片换成你们的聊天背景/, '说明要单独发，不能挂在表情包那个 if 里');
+    assert.match(x, /只在嘴上说「换好了」是没有用的/, '得把「光说没用」写死');
+    assert.match(x, /function wechatBgRequest\(text\)/, '要能认出她在要换背景');
+    assert.match(x, /if\(_wantBg&&!_bgApplied\)wechatApplyBgRequest\(c,id\);/, '他忘了写标签也要兜底换上');
     assert.match(x, /const TAGWORDS='心情值\|心情\|内心\|换背景\|/, '不写进标签表会被当成漏掉的指令');
   }
   /* 网页版还有一张「已处理标签」表，私人版没有这个函数 */
