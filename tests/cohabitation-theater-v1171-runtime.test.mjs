@@ -47,7 +47,7 @@ function harness(){
   }
   context.offlinePendingStart=rows=>{let first=-1;for(let i=rows.length-1;i>=0;i--){const m=rows[i]||{},kind=m.who==='me'||m.actorType==='me'?'me':m.who==='ta'||m.actorType==='host'||m.who==='guest'||m.who==='extra'||/^(guest|extra)$/.test(m.actorType||'')?'assistant':'';if(kind==='assistant')return first;if(kind==='me')first=i;}return first;};
   context._off={id:'host',mode:'cohab',busy:false};context._offSel=null;context.emitHost=true;context.offCurrentInput=()=> '用户本轮';context.offRevealTiming=()=>({step:0,total:0});context.cohabAdvance=()=>home;context.cohabTogetherScene=()=>true;
-  context.offStageAttrs=()=>({cls:'',style:''});context.offSummaryUserCall=()=> '用户';context.esc=x=>String(x??'');context.offRevealText=m=>String(m&&m.text||'');context.cohabSettingsPanel=()=>'<div class="cohab-settings-wrap"><details class="cohab-settings"><summary>共同生活设置</summary></details><button type="button" class="cohab-debug-reply">让TA回</button></div>';context.window=context;
+  context.offStageAttrs=()=>({cls:'',style:''});context.offWindowRows=(id,rows)=>({rows:rows||[],hidden:0,more:''});context.offSummaryUserCall=()=> '用户';context.esc=x=>String(x??'');context.offRevealText=m=>String(m&&m.text||'');context.cohabSettingsPanel=()=>'<div class="cohab-settings-wrap"><details class="cohab-settings"><summary>共同生活设置</summary></details><button type="button" class="cohab-debug-reply">让TA回</button></div>';context.window=context;
   context.topSummaries=()=>[];
   vm.runInNewContext(source,context,{filename:'cohab-theater.js'});
   return{context,home,host,guest,guest2,wechat,inputs,actorCalls,hostCalls,toasts};

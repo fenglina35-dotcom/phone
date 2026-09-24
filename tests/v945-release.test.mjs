@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1318 · 共同生活能改外观、能多选删除，让TA回真的点得动'/);
-  assert.match(app,/const url='sw\.js\?v=1318&r=v1318-web-imsg-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1318'/);
-  assert.match(html,/app\.js\?v=1318/);
-  assert.match(sw,/const BUILD='1318'/);
-  assert.match(sw,/north-shell-v1318-web-imsg-1/);
-  assert.match(index,/小手机\.html\?v=1318/);
-  assert.match(repair,/小手机\.html\?v=1318/);
+  assert.match(app,/APP_VER='v1320 · 共同生活只画最近300条、气泡改磨砂、我的气泡回浅黄'/);
+  assert.match(app,/const url='sw\.js\?v=1320&r=v1320-web-imsg-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1320'/);
+  assert.match(html,/app\.js\?v=1320/);
+  assert.match(sw,/const BUILD='1320'/);
+  assert.match(sw,/north-shell-v1320-web-imsg-1/);
+  assert.match(index,/小手机\.html\?v=1320/);
+  assert.match(repair,/小手机\.html\?v=1320/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{
   assert.match(privateBundle,/<string>1200<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.393;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 393;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.393 \(393\)'/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.394;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 394;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.394 \(394\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

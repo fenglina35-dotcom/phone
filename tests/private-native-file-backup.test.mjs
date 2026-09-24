@@ -14,16 +14,16 @@ const backup=read(bundle+'private-cloud-backup.js');
 const privateApp=read(bundle+'app.js');
 const publicApp=read('app.js');
 
-test('private v1319 loads daily backup after the diagnostic overlay while public advances independently',()=>{
+test('private v1321 loads daily backup after the diagnostic overlay while public advances independently',()=>{
   for(const name of ['index.html','小手机.html']){
     const html=read(bundle+name);
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1319'/);
-    assert.ok(html.indexOf('private-cloud-backup.js?v=1319')>html.indexOf('private-runtime-diagnostics.js?v=339'));
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1321'/);
+    assert.ok(html.indexOf('private-cloud-backup.js?v=1321')>html.indexOf('private-runtime-diagnostics.js?v=339'));
   }
-  assert.match(privateApp,/APP_VER='v1319 · 共同生活能改外观、能多选删除，让TA回真的点得动（私人）'/);
-  assert.match(publicApp,/APP_VER='v1318 · 共同生活能改外观、能多选删除，让TA回真的点得动'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 393;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.393;/g)||[]).length,12);
+  assert.match(privateApp,/APP_VER='v1321 · 共同生活只画最近300条、气泡改磨砂、我的气泡回浅黄（私人）'/);
+  assert.match(publicApp,/APP_VER='v1320 · 共同生活只画最近300条、气泡改磨砂、我的气泡回浅黄'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 394;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.394;/g)||[]).length,12);
 });
 
 test('web backup sends bounded ordered chunks and records a day only after confirmed save',()=>{

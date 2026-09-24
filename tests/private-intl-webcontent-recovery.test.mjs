@@ -160,6 +160,6 @@ test('terminated WebContent remounts once while active and thermally safe', () =
 });
 
 test('recovery suite is pinned to the private bundled app only', () => {
-  assert.match(app, /APP_VER='v1319 · 共同生活能改外观、能多选删除，让TA回真的点得动（私人）';/);
+  assert.match(app, /APP_VER='v1321 · 共同生活只画最近300条、气泡改磨砂、我的气泡回浅黄（私人）';/);
   assert.match(app, /function emergencyRestorePreview\(index\)/);
 });

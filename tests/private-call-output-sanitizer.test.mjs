@@ -65,11 +65,11 @@ test('stored private call rows display one original and one translation without 
   assert.match(render,/callStoredLineParts\(m,c\)/);
 });
 
-test('private call boundary hides every smart-home protocol while public v1318 stays unchanged',()=>{
+test('private call boundary hides every smart-home protocol while public v1320 stays unchanged',()=>{
   const c=runtime(),raw='先处理。\n[智能家电|门锁|action=unlock]\n[智能家电|空调|temperature=24]\n[智能家电|小灯|power=on]';
   assert.equal(c.smartHomeRoleStripTags(raw),'先处理。');
   assert.match(privateApp,/content=_rawOutput\?smartHomeRoleStripTags\(content\):_callSmartHomeFinal\.content/);
-  assert.match(publicApp,/APP_VER='v1318 · 共同生活能改外观、能多选删除，让TA回真的点得动'/);
+  assert.match(publicApp,/APP_VER='v1320 · 共同生活只画最近300条、气泡改磨砂、我的气泡回浅黄'/);
 });
 
 test('successful private cloud-backup timeout fix remains a release blocker',()=>{

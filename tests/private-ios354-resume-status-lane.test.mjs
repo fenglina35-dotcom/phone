@@ -37,19 +37,19 @@ function pollHarness(){
   return {context,calls};
 }
 
-test('private candidate is v1319 and iOS 393 while public advances independently',()=>{
-  assert.match(app,/APP_VER='v1319 · 共同生活能改外观、能多选删除，让TA回真的点得动（私人）'/);
+test('private candidate is v1321 and iOS 394 while public advances independently',()=>{
+  assert.match(app,/APP_VER='v1321 · 共同生活只画最近300条、气泡改磨砂、我的气泡回浅黄（私人）'/);
   for(const html of [index,alias]){
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1319'/);
-    assert.match(html,/app\.js\?v=1319&r=v1319-private-imsg-1/);
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1321'/);
+    assert.match(html,/app\.js\?v=1321&r=v1321-private-imsg-1/);
     assert.match(html,/private-runtime-diagnostics\.js\?v=339/);
   }
   assert.match(diagnostics,/OVERLAY_VERSION='336-daily-file-backup'/);
-  assert.match(webView,/1\.0\.393 \(393\)/);
-  assert.match(bridge,/private static let build = "1\.0\.393 \(393\)"/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 393;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.393;/g)||[]).length,12);
-  assert.match(publicApp,/APP_VER='v1318 · 共同生活能改外观、能多选删除，让TA回真的点得动'/);
+  assert.match(webView,/1\.0\.394 \(394\)/);
+  assert.match(bridge,/private static let build = "1\.0\.394 \(394\)"/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 394;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.394;/g)||[]).length,12);
+  assert.match(publicApp,/APP_VER='v1320 · 共同生活只画最近300条、气泡改磨砂、我的气泡回浅黄'/);
 });
 
 test('ordinary foreground polling is lightweight while explicit control verification stays complete',async()=>{

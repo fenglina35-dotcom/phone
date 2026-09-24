@@ -20,7 +20,7 @@ assert.match(app,/chatPanelToggle\('fn'\)/,'plus opens the function page');
 assert.match(app,/function groupComposerHTML\(scope,id,inputId,placeholder,sendAction,panelId\)[\s\S]*chat-voice-toggle[\s\S]*chat-emoji-toggle[\s\S]*chat-function-toggle/,'all group composers reuse the role chat voice, emoji, and plus icon set');
 assert.match(app,/groupComposerHTML\('pfgroup',gid,'pfg_input'/,'real small-phone groups use the shared composer');
 assert.match(app,/groupComposerHTML\('group',id,'ginput'/,'role groups use the shared composer');
-/* v1318 起真人好友 1v1 也走这条：她说「真人小手机下面输入之后没有发送键」，
+/* v1320 起真人好友 1v1 也走这条：她说「真人小手机下面输入之后没有发送键」，
    根子就是 pfchat 从来没被绑上 input 监听，.has-text 永远加不上。 */
 assert.match(app,/if\(c\.p==='group'\|\|c\.p==='pfgroup'\|\|c\.p==='pfchat'\)afterGroupComposer\(c\)/,'group and phone-friend composers bind text input and enter-to-send after rendering');
 assert.match(app,/const id=c\.p==='pfgroup'\?'pfg_input':c\.p==='pfchat'\?'pf_input':'ginput'/,'pfchat must bind its own textarea');
@@ -53,7 +53,7 @@ assert.match(glass,/\.wx-chat-premium \.chatbg \.tstamp span\{[^}]*background:tr
 assert.match(app,/class="off-nav-actions">\$\{replyTop\}/,'offline reply action lives in the upper-right navigation area');
 assert.match(app,/class="off-reply-top"/);
 assert.doesNotMatch(app,/class="offactions"/,'the easy-to-mistap full-width reply strip is removed');
-/* v1318 起它也是玻璃的（她说「让他回那个按钮颜色应该也是液态玻璃的，偏灰的那种」），
+/* v1320 起它也是玻璃的（她说「让他回那个按钮颜色应该也是液态玻璃的，偏灰的那种」），
    高度照旧 27px，别又被撑大。 */
 assert.match(html,/\.off-reply-top\{position:relative;height:27px/,'upper-right reply action stays compact');
 assert.match(html,/\.off-reply-top\{[^}]*background:rgba\(120,122,132,\.34\)[^}]*backdrop-filter:blur\(14px\)/,'偏灰的磨砂玻璃');

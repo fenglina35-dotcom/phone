@@ -110,7 +110,8 @@ test('线下的颜色全部走变量，默认是蓝／深灰', () => {
 
 test('外观里能改五种颜色，也能换背景，而且不压画质', () => {
   for (const x of both) {
-    assert.match(x, /const OFF_THEME_DEF=\{me:'#0a84ff',meInk:'#ffffff',them:'#26262a',themInk:'#ffffff',nar:'#c9c2b6'\}/);
+    assert.match(x, /const OFF_THEME_DEF=\{me:'#d2c9ba',meInk:'#181614',them:'#26262a',themInk:'#ffffff',nar:'#c9c2b6'\}/, '我的气泡默认是浅黄，不是那个蓝');
+    assert.match(x, /const OFF_THEME_OLD_ME='#0a84ff';/);
     assert.match(x, /function offAppearance\(id\)/);
     assert.match(x, /function offThemeSet\(id,key,val\)/);
     assert.match(x, /function offBgPick\(id\)/);
@@ -316,7 +317,7 @@ test('两套主题都留着，切换存在角色身上', () => {
 test('主题只认这两个，别的都退回玻璃', () => {
   const ctx = { save: () => {} };
   vm.createContext(ctx);
-  vm.runInContext(source('offColorOk') + '\n' + app.match(/const OFF_THEME_DEF=\{[^\n]*\}/)[0] + '\n' + source('offTheme'), ctx);
+  vm.runInContext(source('offColorOk') + '\n' + app.match(/const OFF_THEME_DEF=\{[^\n]*\}/)[0] + '\n' + app.match(/const OFF_THEME_OLD_ME='[^']*';/)[0] + '\n' + source('offTheme'), ctx);
   const skin = v => { ctx.c = { offTheme: { skin: v } }; return vm.runInContext('offTheme(c).skin', ctx); };
   assert.equal(skin('classic'), 'classic');
   assert.equal(skin('glass'), 'glass');
