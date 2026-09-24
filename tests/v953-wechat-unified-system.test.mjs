@@ -6,11 +6,11 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-assert.match(source,/APP_VER='v1312 · 短信效果听她的、多选删除、一键清空、记仇本真的记'/);
-assert.match(html,/__NORTH_SHELL_BUILD__='1312'/);
-assert.match(sw,/BUILD='1312'/);
-assert.equal((project.match(/CURRENT_PROJECT_VERSION = 390;/g)||[]).length,12);
-assert.equal((project.match(/MARKETING_VERSION = 1.0.390;/g)||[]).length,12);
+assert.match(source,/APP_VER='v1314 · 线下玻璃两套主题、真人好友转账与发送键、微信换背景'/);
+assert.match(html,/__NORTH_SHELL_BUILD__='1314'/);
+assert.match(sw,/BUILD='1314'/);
+assert.equal((project.match(/CURRENT_PROJECT_VERSION = 391;/g)||[]).length,12);
+assert.equal((project.match(/MARKETING_VERSION = 1.0.391;/g)||[]).length,12);
 
 assert.match(source,/const WECHAT_UNIFIED_SYSTEM=true/);
 assert.match(source,/function wechatNaturalOn\(\)\{return WECHAT_UNIFIED_SYSTEM;\}/);

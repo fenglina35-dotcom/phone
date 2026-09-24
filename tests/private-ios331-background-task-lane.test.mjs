@@ -61,20 +61,20 @@ function functionSource(source, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('private performance candidate keeps v1313 while public web advances independently', () => {
+test('private performance candidate keeps v1315 while public web advances independently', () => {
   assert.equal(privateIndex, privateAlias);
-  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1313'/);
-  assert.match(privateIndex, /app\.js\?v=1313&r=v1313-private-imsg-1/);
+  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1315'/);
+  assert.match(privateIndex, /app\.js\?v=1315&r=v1315-private-imsg-1/);
   assert.match(privateIndex, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(privateRepair, /index\.html\?repair=1&v=1313/);
-  assert.match(privateApp, /APP_VER='v1313 · 短信效果听她的、多选删除、一键清空、记仇本真的记（私人）'/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1315/);
+  assert.match(privateApp, /APP_VER='v1315 · 线下玻璃两套主题、真人好友转账与发送键、微信换背景（私人）'/);
   assert.match(overlay, /336-daily-file-backup/);
-  assert.match(webView, /1\.0\.390 \(390\)/);
-  assert.match(bridge, /private static let build = "1\.0\.390 \(390\)"/);
+  assert.match(webView, /1\.0\.391 \(391\)/);
+  assert.match(bridge, /private static let build = "1\.0\.391 \(391\)"/);
   assert.match(bridge, /static let contractVersion = 41/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 390;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.390;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1312 · 短信效果听她的、多选删除、一键清空、记仇本真的记'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 391;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.391;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1314 · 线下玻璃两套主题、真人好友转账与发送键、微信换背景'/);
   assert.doesNotMatch(publicApp, /function northNativeBackgroundTask\(name,run\)/);
 });
 

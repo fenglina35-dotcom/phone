@@ -160,6 +160,6 @@ test('terminated WebContent remounts once while active and thermally safe', () =
 });
 
 test('recovery suite is pinned to the private bundled app only', () => {
-  assert.match(app, /APP_VER='v1313 · 短信效果听她的、多选删除、一键清空、记仇本真的记（私人）';/);
+  assert.match(app, /APP_VER='v1315 · 线下玻璃两套主题、真人好友转账与发送键、微信换背景（私人）';/);
   assert.match(app, /function emergencyRestorePreview\(index\)/);
 });

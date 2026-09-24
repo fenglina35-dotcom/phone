@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1312 · 短信效果听她的、多选删除、一键清空、记仇本真的记'/);
-  assert.match(app,/const url='sw\.js\?v=1312&r=v1312-web-imsg-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1312'/);
-  assert.match(html,/app\.js\?v=1312/);
-  assert.match(sw,/const BUILD='1312'/);
-  assert.match(sw,/north-shell-v1312-web-imsg-1/);
-  assert.match(index,/小手机\.html\?v=1312/);
-  assert.match(repair,/小手机\.html\?v=1312/);
+  assert.match(app,/APP_VER='v1314 · 线下玻璃两套主题、真人好友转账与发送键、微信换背景'/);
+  assert.match(app,/const url='sw\.js\?v=1314&r=v1314-web-imsg-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1314'/);
+  assert.match(html,/app\.js\?v=1314/);
+  assert.match(sw,/const BUILD='1314'/);
+  assert.match(sw,/north-shell-v1314-web-imsg-1/);
+  assert.match(index,/小手机\.html\?v=1314/);
+  assert.match(repair,/小手机\.html\?v=1314/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{
   assert.match(privateBundle,/<string>1200<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.390;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 390;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.390 \(390\)'/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.391;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 391;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.391 \(391\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

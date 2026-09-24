@@ -58,21 +58,21 @@ function persistenceRuntime() {
   return { context, writes, releases, traces };
 }
 
-test('private identity remains v1313 and iOS 390 while public advances independently', () => {
-  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1313'/);
-  assert.match(privateApp, /APP_VER='v1313 · 短信效果听她的、多选删除、一键清空、记仇本真的记（私人）'/);
+test('private identity remains v1315 and iOS 391 while public advances independently', () => {
+  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1315'/);
+  assert.match(privateApp, /APP_VER='v1315 · 线下玻璃两套主题、真人好友转账与发送键、微信换背景（私人）'/);
   for (const html of [privateIndex, privateAlias]) {
-    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1313'/);
-    assert.match(html, /app\.js\?v=1313&r=v1313-private-imsg-1/);
+    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1315'/);
+    assert.match(html, /app\.js\?v=1315&r=v1315-private-imsg-1/);
     assert.match(html, /private-runtime-diagnostics\.js\?v=339/);
   }
-  assert.match(privateRepair, /index\.html\?repair=1&v=1313/);
-  assert.match(swift, /1\.0\.390 \(390\)/);
-  assert.match(bridge, /private static let build = "1\.0\.390 \(390\)"/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 390;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.390;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1312 · 短信效果听她的、多选删除、一键清空、记仇本真的记'/);
-  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1312'/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1315/);
+  assert.match(swift, /1\.0\.391 \(391\)/);
+  assert.match(bridge, /private static let build = "1\.0\.391 \(391\)"/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 391;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.391;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1314 · 线下玻璃两套主题、真人好友转账与发送键、微信换背景'/);
+  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1314'/);
   assert.doesNotMatch(publicApp, /persistWechatRequested|smallPhoneWechatPersistTrace/);
 });
 
