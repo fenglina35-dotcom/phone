@@ -329,3 +329,31 @@ test('小手机群聊的功能面板也排在输入框后面', () => {
     assert.match(grab(x, 'renderPhoneFriendGroup'), /'pfgpanel'\)\}\n\s*\$\{pfGroupPanelHTML\(gid\)\}`;\}/);
   }
 });
+
+/* ===== 七、共同生活：壁纸铺满、那几条实心的也改玻璃 ===== */
+
+test('壁纸按 cover 铺满全屏 —— .cohab-stage 的 background 简写会把它冲掉', () => {
+  for (const sh of shells) {
+    assert.match(sh, /\.offstage\.hasbg\{background-size:cover;background-position:center;background-repeat:no-repeat;\}/);
+    /* 这条必须排在 .cohab-stage 后面，否则又被简写覆盖回去 */
+    assert.ok(sh.indexOf('.offstage.hasbg{background-size:cover') > sh.indexOf('.cohab-stage{background:radial-gradient'),
+      '.offstage.hasbg 要排在 .cohab-stage 后面才压得住');
+    assert.match(sh, /\.offstage\.cohab-stage\.hasbg\{background-color:transparent;\}/);
+  }
+});
+
+test('共同生活那几条实心的，换了壁纸之后都变磨砂', () => {
+  for (const sh of shells) {
+    for (const sel of ['\\.cohab-meta', '\\.cohab-settings', '\\.cohab-status-chip', '\\.cohab-debug-reply',
+                       '\\.cohab-away-panel', '\\.cohab-return-banner', '\\.cohab-memory-open', '\\.cohab-settings-grid label']) {
+      const re = new RegExp('\\.offstage\\.hasbg:not\\(\\.off-classic\\) ' + sel + '\\{[^}]*backdrop-filter:blur');
+      assert.match(sh, re, sel + ' 还是实心的');
+    }
+    /* 状态那颗和让TA回还要有那圈挖空的细高光 */
+    assert.match(sh, /\.offstage\.hasbg:not\(\.off-classic\) \.cohab-status-chip\{position:relative;border:0;/);
+    assert.match(sh, /\.offstage\.hasbg:not\(\.off-classic\) \.cohab-status-chip:before\{[^}]*mask-composite:exclude/);
+    assert.match(sh, /\.offstage\.hasbg:not\(\.off-classic\) \.cohab-debug-reply:before\{[^}]*mask-composite:exclude/);
+    /* 原来那套主题一个都不许被带上 */
+    assert.doesNotMatch(sh, /\.offstage\.off-classic[^{]*\.cohab-settings\{[^}]*backdrop-filter:blur/);
+  }
+});
