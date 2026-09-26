@@ -379,8 +379,8 @@ const unavailableCall = schedulerContext({callProb: 100, callSucceeds: false});
 assert.equal(unavailableCall.calls.called, 1, 'the configured call path may attempt once');
 assert.equal(unavailableCall.calls.queued, 1, 'if the real call cannot start, the role must still send its ordinary proactive message');
 
-assert.match(source, /id="s_callprob"[\s\S]*?min="0" max="100"/, 'settings must expose the configured 0-100 proactive call chance');
-assert.match(functionSource('saveSettings'), /S\.settings\.callProb=Math\.max\(0,Math\.min\(100,/, 'saving settings must preserve and clamp the call chance');
+assert.match(source, /id="c_callprob"[\s\S]*?min="0" max="100"/, 'settings must expose the configured 0-100 proactive call chance');
+assert.match(functionSource('saveContactAutonomy'), /c\.callProb=Math\.max\(0,Math\.min\(100,/, 'saving the selected role must preserve and clamp its call chance');
 assert.doesNotMatch(functionSource('saveSettings'), /delete S\.settings\.callProb/, 'saving unrelated settings must not delete the configured call chance');
 assert.match(functionSource('roleServerAutomationConfig'), /proactiveCallChance:roleOnlineProactiveBlocked\(c\.id\)\?0:effCallProb\(c\)/, 'background automation must receive the same chance but zero it while calls are blocked');
 

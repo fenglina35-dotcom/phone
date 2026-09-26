@@ -5,7 +5,7 @@ const app = fs.readFileSync(new URL("../app.js", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../小手机.html", import.meta.url), "utf8");
 const sw = fs.readFileSync(new URL("../sw.js", import.meta.url), "utf8");
 
-assert.match(app, /APP_VER='v1320 · 共同生活只画最近300条、气泡改磨砂、我的气泡回浅黄'/);
+assert.match(app, /APP_VER='v1322 · 气泡即时配色与角色偏好、情侣任务和收款回执'/);
 assert.match(app, /function northUpdateAvailable\(build\)/);
 assert.match(app, /发现新版本 v\$\{esc\(build\)\}/);
 assert.match(app, /不需要退出或划掉小手机/);
@@ -14,8 +14,8 @@ assert.match(app, /setInterval\(\(\)=>reg\.update\(\)\.catch\(\(\)=>\{\}\),15\*6
 assert.match(app, /postMessage\(\{type:'north-version-query'\}\)/);
 assert.match(sw, /client\.postMessage\(\{type:'north-update-ready',build:BUILD\}\)/);
 assert.match(sw, /event\.data\.type!==['"]north-version-query['"]/);
-assert.match(html, /window\.__NORTH_SHELL_BUILD__='1320'/);
-assert.match(html, /sw\.js\?v=1320&r=v1320-web-imsg-1/);
-assert.match(html, /web-hotfix\.js\?v=1320&r=v1320-web-imsg-1/);
+assert.match(html, /window\.__NORTH_SHELL_BUILD__='1322'/);
+assert.match(html, /sw\.js\?v=1322&r=v1322-web-imsg-1/);
+assert.match(html, /web-hotfix\.js\?v=1322&r=v1322-web-imsg-1/);
 
 console.log("update prompt tests passed");

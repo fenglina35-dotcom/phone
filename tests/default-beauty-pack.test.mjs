@@ -3,15 +3,15 @@ import test from "node:test";
 import fs from "node:fs";
 import vm from "node:vm";
 
-const app = fs.readFileSync(new URL("../app.js", import.meta.url), "utf8");
+const app = fs.readFileSync(new URL("../app.js", import.meta.url), "utf8").replace(/\r\n/g, "\n");
 const privateApp = fs.readFileSync(new URL(
   "../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js",
-  import.meta.url), "utf8");
-const sw = fs.readFileSync(new URL("../sw.js", import.meta.url), "utf8");
-const packWeb = fs.readFileSync(new URL("../assets/default-beauty-pack.js", import.meta.url), "utf8");
+  import.meta.url), "utf8").replace(/\r\n/g, "\n");
+const sw = fs.readFileSync(new URL("../sw.js", import.meta.url), "utf8").replace(/\r\n/g, "\n");
+const packWeb = fs.readFileSync(new URL("../assets/default-beauty-pack.js", import.meta.url), "utf8").replace(/\r\n/g, "\n");
 const packPrivate = fs.readFileSync(new URL(
   "../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/default-beauty-pack.js",
-  import.meta.url), "utf8");
+  import.meta.url), "utf8").replace(/\r\n/g, "\n");
 
 function functionSource(source, name) {
   // 名字后面必须跟着左括号，否则 defaultBeautyMark 会命中 defaultBeautyMarked

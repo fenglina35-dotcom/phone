@@ -57,7 +57,7 @@ test('a changed WeChat snapshot exposes only new lines instead of replaying ever
   const delta=context.novel(role,changed);
   assert.match(delta,/真正的新消息/);
   assert.doesNotMatch(delta,/旧问题|已经解释过/);
-  assert.match(functionSource('doSpyViewCore'),/factBody=priorInspection&&inspectionFact\.key==='wechat'/);
+  assert.match(functionSource('doSpyViewCore'),/factBody=inspectionFact\.localRecords\?inspectionNovel:priorInspection&&inspectionFact\.key==='wechat'/);
   assert.match(bundled,/function rolePhoneInspectionNovelText/);
   assert.match(bundled,/novel=rolePhoneInspectionNovelText\(c,fact\)/);
   assert.match(bundled,/inspectionNovel=opts\.intent\?rolePhoneInspectionNovelText\(c,inspectionFact\):''/);

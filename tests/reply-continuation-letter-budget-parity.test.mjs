@@ -68,14 +68,14 @@ test('信件有自己的回复长度，不再写死 700／620', () => {
     assert.doesNotMatch(src, /\{max:620,temp:\.86\}/, `${label}: 按心情的信不能再写死`);
     assert.match(src, /\{max:letterReplyBudget\(c\),temp:\.85\}/, `${label}: 普通信按设置`);
     assert.match(src, /\{max:letterReplyBudget\(c\),temp:\.86\}/, `${label}: 按心情的信按设置`);
-    assert.match(src, /letterMaxTokens:x\.letterMaxTokens==null\?1200:x\.letterMaxTokens/, `${label}: 路线里要存得下`);
+    assert.match(src, /letterMaxTokens:x\.letterMaxTokens==null\?4096:x\.letterMaxTokens/, `${label}: 路线里要存得下`);
     assert.match(src, /id="s_cmax_letter"/, `${label}: 设置页要有这一格`);
     assert.match(src, /\['s_cmax_letter','letterMaxTokens'\]/, `${label}: 切路线要回填`);
   }
   const ctx = { Number, Math, String, S: { settings: { chat: {} } }, chatRequestRoute: () => null, roleChatRouteIndex: () => 0 };
   vm.runInNewContext([one(web, 'chatMainCopy'), one(web, 'letterReplyBudget')].join('\n') + '\nglobalThis.b=letterReplyBudget;', ctx);
   const c = { id: 'a' };
-  assert.equal(ctx.b(c), 1200, '没设过用默认');
+  assert.equal(ctx.b(c), 4096, '没设过用默认');
   ctx.S.settings.chat = { letterMaxTokens: 3000 };
   assert.equal(ctx.b(c), 3000, '设了就听设置的');
   ctx.S.settings.chat = { letterMaxTokens: 99999 };

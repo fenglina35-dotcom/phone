@@ -142,7 +142,7 @@ test('the call has its own reply-length slot that falls back to the online one',
   assert.equal(ctx.callReplyBudget(null), 456, '填了就用自己的');
   ctx.S.settings.chat.callMaxTokens = 99999;
   assert.equal(ctx.callReplyBudget(null), 8192, '有上限');
-  assert.match(app, /callMaxTokens:x\.callMaxTokens==null\?0:x\.callMaxTokens/, '默认 0 表示跟线上一样，老用户的行为不变');
+  assert.match(app, /callMaxTokens:x\.callMaxTokens==null\?4096:x\.callMaxTokens/, '默认 4096，显式 0 仍跟随线上');
   assert.match(app, /回复长度（通话）/, '设置页要有这一格');
 });
 

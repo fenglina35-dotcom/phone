@@ -27,7 +27,7 @@ test('做法和生成脚本都还在', () => {
 });
 
 test('三个壳子里的 clip-path 就是脚本生成的那四条', () => {
-  const out = execFileSync('python3', [script, '--check'], { cwd: root, encoding: 'utf8' });
+  const out = execFileSync(process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3'), [script, '--check'], { cwd: root, encoding: 'utf8', env: { ...process.env, PYTHONIOENCODING: 'utf-8' } });
   assert.match(out, /都是这个脚本生成的/, out);
 });
 

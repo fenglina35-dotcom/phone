@@ -14,13 +14,13 @@ const project=fs.readFileSync(path.join(root,'native/private-small-phone/XcodePr
 const native=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift'),'utf8');
 
 test('v1184 web keeps private 1.0.315 compatibility',()=>{
-  assert.match(app,/APP_VER='v1320 · 共同生活只画最近300条、气泡改磨砂、我的气泡回浅黄'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1320'/);
-  assert.match(sw,/BUILD='1320'/);
+  assert.match(app,/APP_VER='v1322 · 气泡即时配色与角色偏好、情侣任务和收款回执'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1322'/);
+  assert.match(sw,/BUILD='1322'/);
   assert.match(plist,/<string>1200<\/string>/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 394;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.394;/g)||[]).length,12);
-  assert.match(native,/1\.0\.394 \(394\)/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 395;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.395;/g)||[]).length,12);
+  assert.match(native,/1\.0\.395 \(395\)/);
 });
 
 test('normal taps and paging stay native until a real long press drag begins',()=>{

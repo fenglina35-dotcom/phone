@@ -24,7 +24,7 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-assert.match(source, /APP_VER='v1320 · 共同生活只画最近300条、气泡改磨砂、我的气泡回浅黄'/);
+assert.match(source, /APP_VER='v1322 · 气泡即时配色与角色偏好、情侣任务和收款回执'/);
 assert.match(source, /_lifeNotesClearedAt/);
 assert.match(source, /clearContactMemoryData\(c,id\);render\(\);toast\('正在清除本机大聊天库和后台旧上下文/);
 assert.match(source, /await persistWechatMessagesNow\(\)/);

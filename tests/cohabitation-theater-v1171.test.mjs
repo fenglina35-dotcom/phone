@@ -12,11 +12,11 @@ const privateHtml=read('native/private-small-phone/XcodeProject/PhoneCompanionTe
 const privateAlias=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/小手机.html');
 const privateApp=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js');
 
-test('private v1321 inherits the current web theater without dropping its private shell',()=>{
+test('private v1323 inherits the current web theater without dropping its private shell',()=>{
   assert.equal(bundleTheater,theater);
   assert.match(bundleTheater,/guest2|ct_wechat_enabled/);
-  assert.match(webHtml,/app\.js\?v=1320[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1320&r=v1274-web-cohab-guests-1"/);
-  for(const html of [privateHtml,privateAlias])assert.match(html,/app\.js\?v=1321[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1321[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1321&r=v1274-web-cohab-guests-1"/);
+  assert.match(webHtml,/app\.js\?v=1322[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1322&r=v1274-web-cohab-guests-1"/);
+  for(const html of [privateHtml,privateAlias])assert.match(html,/app\.js\?v=1323[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1323[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1323&r=v1274-web-cohab-guests-1"/);
   assert.match(read('sw.js'),/cohab-theater\.js\?v='\+BUILD\+'\&r=v1274-web-cohab-guests-1',kind:'theater'/);
 });
 
@@ -144,13 +144,13 @@ test('guest exit sends exactly one genuine memory-grounded WeChat message',()=>{
   assert.doesNotMatch(theater,/content:\s*['"](?:我回来了|我都记得)/);
 });
 
-test('private artifact identity advances independently to v1321 and iOS 1.0.394 (394)',()=>{
-  assert.match(privateApp,/const APP_VER='v1321 · 共同生活只画最近300条、气泡改磨砂、我的气泡回浅黄（私人）'/);
+test('private artifact identity advances independently to v1323 and iOS 1.0.395 (395)',()=>{
+  assert.match(privateApp,/const APP_VER='v1323 · 气泡即时配色与角色偏好、情侣任务和收款回执'/);
   assert.match(privateHtml,/private-runtime-diagnostics\.js\?v=339/);
-  assert.match(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),/1\.0\.394 \(394\)/);
+  assert.match(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),/1\.0\.395 \(395\)/);
   const project=read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
-  assert.ok((project.match(/CURRENT_PROJECT_VERSION = 394;/g)||[]).length>=12);
-  assert.ok((project.match(/MARKETING_VERSION = 1.0.394;/g)||[]).length>=12);
+  assert.ok((project.match(/CURRENT_PROJECT_VERSION = 395;/g)||[]).length>=12);
+  assert.ok((project.match(/MARKETING_VERSION = 1.0.395;/g)||[]).length>=12);
 });
 
 test('v1170 private friend-entry fix remains present in the v1184 private superset',()=>{

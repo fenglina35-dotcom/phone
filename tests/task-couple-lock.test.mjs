@@ -8,7 +8,10 @@ function fn(name){const start=source.indexOf(`function ${name}`),brace=source.in
 const contacts=[{id:'bound',relation:'情侣'},{id:'other',relation:'情侣'}];
 const context=vm.createContext({S:{couple:{cid:'bound'},contacts},getC:id=>contacts.find(c=>c.id===id)});
 vm.runInContext(fn('taskRelationAllowed'),context);
+vm.runInContext(fn('coupleTasksEnabled'),context);
 vm.runInContext(fn('taskC'),context);
+assert.equal(context.taskC(),null,'tasks default to off');
+context.S.couple.tasksEnabled=true;
 assert.equal(context.taskRelationAllowed(contacts[0]),true);
 assert.equal(context.taskRelationAllowed(contacts[1]),false,'another romance-labelled role must never assign tasks');
 assert.equal(context.taskC().id,'bound');

@@ -82,7 +82,7 @@ test('incoming receive and refund create one linked user receipt and one genuine
     const rows=[transfer],replies=[];
     const context=vm.createContext({
       S:{me:{name:'North'}},
-      /* v1320 起真人好友的转账也走这条路，cid 前面会带 'pf:'；角色这边照旧 */
+      /* v1322 起真人好友的转账也走这条路，cid 前面会带 'pf:'；角色这边照旧 */
       PF_CID_PREFIX:'pf:',
       pfTransferDetailAction:()=>{throw new Error('角色转账不该走到真人好友那条分支');},
       transferMessageFind:(cid,mid)=>cid==='c1'&&mid==='t1'?{cid,m:transfer}:null,

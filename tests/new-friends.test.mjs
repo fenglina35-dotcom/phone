@@ -25,7 +25,7 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-assert.match(source, /APP_VER='v1320 · 共同生活只画最近300条、气泡改磨砂、我的气泡回浅黄'/);
+assert.match(source, /APP_VER='v1322 · 气泡即时配色与角色偏好、情侣任务和收款回执'/);
 assert.match(source, /friendDiscovery:\{enabled:false,freq:180,max:2/);
 assert.match(source, /else if\(c\.p==='newfriends'\)html=renderNewFriends\(\)/);
 assert.match(source, /好友申请与最近添加/);
