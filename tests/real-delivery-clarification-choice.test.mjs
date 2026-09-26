@@ -416,7 +416,9 @@ test('chat wiring tries same-task and direct approval fallbacks before hidden mo
 });
 
 test('full-width Chinese delivery actions are normalized before execution',()=>{
-  assert.match(app,/replace\(\/\^【\\s\*\(真实外卖\|点外卖\)[\s\S]*?'\[\$1\|\$2\]'\)/);
+  assert.match(app,/function deliveryStructuredActionTags\(value\)/);
+  assert.match(app,/function deliveryIsolateStructuredActions\(value\)/);
+  assert.match(app,/function normTag\(line\)\{let t=deliveryActionSource\(line\)\.trim\(\),actions=deliveryStructuredActionTags\(t\)/);
   assert.match(app,/const _realDeliveryTag=\/\^\[\\\[【\][\s\S]*?真实外卖\|点外卖/);
 });
 

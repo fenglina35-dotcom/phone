@@ -27,6 +27,8 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  { release: "v1326/v1327", scope: "both", least: 1, name: "外卖动作支持商品名内部嵌套中文方括号", marker: "function deliveryStructuredActionTags(value)" },
+  { release: "v1326/v1327", scope: "both", least: 1, name: "未完整消费的外卖控制标签绝不显示成角色气泡", marker: "任何未完整消费的外卖控制标签都必须静默拦截" },
   {release:"v1324/v1325",scope:"both",least:1,name:"聊天与主动的电话频率直接入口",marker:"function roleCallPreferenceOpen(id)"},
   { release: "v1324/v1325", scope: "both", least: 1, name: "逐条查手机已读账本", marker: "function rolePhoneLocalRead(" },
   { release: "v1324/v1325", scope: "both", least: 1, name: "送达后才消费查手机记录", marker: "function rolePhoneLocalCommit(" },

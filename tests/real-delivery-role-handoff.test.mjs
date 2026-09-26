@@ -72,7 +72,7 @@ assert.match(delivery,/始终保留自己的判断和意愿/,'the role may accep
 assert.match(app,/_realDeliveryCommandSeen=false/,'the parser must track the command boundary');
 assert.match(app,/_realDeliveryPreludeShown=false/,'the parser must limit a structured order turn to one visible opening line');
 assert.match(app,/typeof deliveryRolePreludeAllowed==='function'&&deliveryRolePreludeAllowed\(line\)/,'only a safe current-model prelude may be shown before automation');
-assert.match(app,/replace\(\/\(\[\^\\r\\n\]\)\(\[\\\[【\]/,'an acknowledgement and embedded action tag must be split before bubble parsing');
+assert.match(app,/content=deliveryIsolateStructuredActions\(content\)/,'an acknowledgement and embedded action tag must be split before bubble parsing');
 assert.match(delivery,/不能使用系统固定话术/,'the opening line must never be manufactured from canned system text');
 assert.doesNotMatch(delivery,/setInterval\(function\(\)\{pollOrders/,'background timers must not navigate the delivery browser');
 assert.doesNotMatch(delivery,/visibilitychange[^\n]*pollOrders|addEventListener\('online'[^\n]*pollOrders|setTimeout\(function\(\)\{pollOrders/,'refresh, foreground and network events must not poll the marketplace');
@@ -83,7 +83,7 @@ for(const marker of ['roleRequestIntent','roleRequest','realSearch','createOrder
   assert.match(bundledDelivery,new RegExp('function '+marker+'\\b'),`private delivery handoff function missing: ${marker}`);
 }
 assert.match(delivery,/function recoverScopedDeliveryIdentity/,'the friend web entry must recover an isolated delivery identity mismatch');
-for(const marker of ['_realDeliveryCommandSeen=false','_realDeliveryPreludeShown=false','deliveryRolePreludeAllowed(line)',"content=String(content||'').replace(/([^\\r\\n])"]){
+for(const marker of ['_realDeliveryCommandSeen=false','_realDeliveryPreludeShown=false','deliveryRolePreludeAllowed(line)','content=deliveryIsolateStructuredActions(content)']){
   assert.ok(bundledApp.includes(marker),`private app delivery handoff marker missing: ${marker}`);
 }
 for(const fn of ['roleRequestIntent','roleRequest','realSearch','createOrder','requestRoleClarification'])assert.match(delivery,new RegExp('function '+fn+'\\b'),'the P0 authorization boundary must cover '+fn);

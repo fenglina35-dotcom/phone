@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1325'){
+if(window.__NORTH_SHELL_BUILD__!=='1327'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -521,7 +521,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1325 · 电话频率入口与手机显示修复';
+const APP_VER='v1327 · 外卖嵌套商品名解析修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1880,7 +1880,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1325&r=v1325-private-imsg-1';
+  const url='sw.js?v=1327&r=v1327-private-delivery-tag-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -14905,7 +14905,11 @@ async function extractControl(reply,c,statedPwd){
     if(d.unfreezeCard&&S.couple.cardFrozen){S.couple.cardFrozen=false;changed=true;}}
   if(d.forgive){emotionAfterForgive(c);changed=true;}
   if(changed){save();if(cur().p==='wechat'||cur().p==='home'||cur().p==='couple'||cur().p==='chat')render();}}
-function normTag(line){let t=(line||'').replace(/[［｛]/g,'[').replace(/[］｝]/g,']').replace(/^【\s*(真实外卖|点外卖)\s*[|｜:：]\s*([^】]*)】$/i,'[$1|$2]').replace(/｜/g,'|').replace(/\[\s+/,'[').replace(/\s+\]/,']').trim();
+ function deliveryActionSource(value){return String(value||'').replace(/[［｛]/g,'[').replace(/[］｝]/g,']');}
+ function deliveryStructuredActionTags(value){const source=deliveryActionSource(value),out=[];for(let i=0;i<source.length;i++){const open=source[i];if(open!=='['&&open!=='【')continue;const head=source.slice(i).match(/^[\[【]\s*(真实外卖|点外卖)\s*[|｜:：]/i);if(!head)continue;const close=open==='【'?'】':']';let depth=0,end=-1;for(let j=i;j<source.length;j++){const ch=source[j];if(ch==='\r'||ch==='\n')break;if(ch===open)depth++;else if(ch===close&&--depth===0){end=j;break;}}if(end<0)continue;const raw=source.slice(i,end+1),body=raw.slice(head[0].length,-1).trim();out.push({start:i,end:end+1,kind:head[1],body:body,normalized:'['+head[1]+'|'+body+']'});i=end;}return out;}
+ function deliveryIsolateStructuredActions(value){const source=deliveryActionSource(value),tags=deliveryStructuredActionTags(source);if(!tags.length)return source;let out='',cursor=0;tags.forEach(tag=>{out+=source.slice(cursor,tag.start);if(out&&!/[\r\n]$/.test(out))out+='\n';out+=tag.normalized;if(tag.end<source.length&&!/^[\r\n]/.test(source.slice(tag.end)))out+='\n';cursor=tag.end;});return out+source.slice(cursor);}
+ function deliveryReplaceStructuredActions(value,replacer){const source=deliveryActionSource(value),tags=deliveryStructuredActionTags(source);if(!tags.length)return source;let out='',cursor=0;tags.forEach(tag=>{out+=source.slice(cursor,tag.start)+String(replacer(tag)||'');cursor=tag.end;});return out+source.slice(cursor);}
+ function normTag(line){let t=deliveryActionSource(line).trim(),actions=deliveryStructuredActionTags(t);if(actions.length===1&&actions[0].start===0&&actions[0].end===t.length)t=actions[0].normalized;t=t.replace(/｜/g,'|').replace(/\[\s+/,'[').replace(/\s+\]/,']').trim();
   t=t.replace(new RegExp('^\\[\\s*('+TAGWORDS+')\\s*[|:：，,、\\s]+','i'),'[$1|');
   return t;}
 function setNaturalInnerThought(c,value){if(!c||!wechatNaturalOn())return false;rememberValidInnerThought(c);const text=naturalInnerThoughtText(value);if(!text)return false;c.innerThought=text;c.innerThoughtAt=Date.now();c.innerThoughtMissingAt=0;rememberValidInnerThought(c);return true;}
@@ -15201,7 +15205,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
     const _deliveryPendingUserText=deliveryPendingUserTurnText(id,replyAccount,_userText),_deliveryCurrentUserTurn=!!(_lu&&_lu.id&&_deliveryPendingUserText&&replyPendingUserText(id,replyAccount)),_deliveryActionMeta={structuredModelAction:true,allowNewTask:_deliveryCurrentUserTurn,accountId:String(replyAccount||''),sessionId:String(accountMessageKey(id,replyAccount)||''),turnId:String(_lu&&_lu.id||replyToken||''),messageId:String(_lu&&_lu.id||''),modelReplyId:String(replyToken||''),channel:'chat',userText:_deliveryPendingUserText};
     if(typeof deliveryConsumeMemoryTags==='function')content=deliveryConsumeMemoryTags(content,c,_deliveryActionMeta);else content=String(content||'').replace(/[\[【]\s*外卖记忆\s*[|｜:：][^\]】]*[\]】]/g,'');
     if(typeof deliveryCaptureClarificationCandidates==='function')deliveryCaptureClarificationCandidates(id,content,_deliveryActionMeta);
-    content=String(content||'').replace(/([^\r\n])([\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：][^\]】]*[\]】])/g,'$1\n$2').replace(/([\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：][^\]】]*[\]】])([^\r\n])/g,'$1\n$2');
+    content=deliveryIsolateStructuredActions(content);
     let _deliveryActionFallbackHandled=false;if(_deliveryCurrentUserTurn&&!/[\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：]/.test(content)&&typeof deliveryTryClarificationFallback==='function'&&typeof deliveryRolePreludeAllowed==='function'&&String(content||'').split(/\r?\n/).some(x=>deliveryRolePreludeAllowed(x))){const _fallbackRun=deliveryTryClarificationFallback(id,_deliveryPendingUserText,_deliveryActionMeta);_deliveryActionFallbackHandled=!!_fallbackRun;if(_fallbackRun&&typeof _fallbackRun.catch==='function')_fallbackRun.catch(()=>{});}
     if(!_rawOutput&&_deliveryCurrentUserTurn&&!_deliveryActionFallbackHandled&&!/[\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：]/.test(content)&&typeof deliveryTryExplicitApprovalFallback==='function'){const _directRun=deliveryTryExplicitApprovalFallback(id,_deliveryPendingUserText,content,_deliveryActionMeta);_deliveryActionFallbackHandled=!!_directRun;if(_directRun&&typeof _directRun.catch==='function')_directRun.catch(()=>{});}
     if(!_rawOutput&&_deliveryCurrentUserTurn&&!_deliveryActionFallbackHandled&&!/[\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：]/.test(content)&&typeof deliveryMissingActionRepairPrompt==='function'){
@@ -15210,17 +15214,17 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
         let _deliveryRepair='';
         try{_deliveryRepair=await chatAPI([{role:'system',content:_stableSys},...hist,{role:'assistant',content:String(content||'')},{role:'user',content:_deliveryRepairPrompt},_pin],Object.assign({},_md,{roleInterceptAudit:null,roleInterceptPurpose:'delivery-action'}));}catch(_){}
         if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;
-        let _deliveryRepairActions=String(_deliveryRepair||'').match(/[\[【]\s*真实外卖\s*[|｜:：]\s*[^\]】]+[\]】]/g)||[];
+        let _deliveryRepairActions=deliveryStructuredActionTags(_deliveryRepair).filter(x=>x.kind==='真实外卖');
         let _deliveryRetryPrompt='';
         if(_deliveryRepairActions.length!==1&&typeof deliveryMissingActionRetryPrompt==='function')_deliveryRetryPrompt=deliveryMissingActionRetryPrompt(id,_deliveryPendingUserText,content,_deliveryRepair,_deliveryActionMeta);
         if(_deliveryRepairActions.length!==1&&_deliveryRetryPrompt){
           let _deliveryStrictRepair='';
           try{_deliveryStrictRepair=await chatAPI([{role:'system',content:_stableSys},...hist,{role:'assistant',content:String(content||'')},{role:'assistant',content:String(_deliveryRepair||'[没有生成有效外卖动作]')},{role:'user',content:_deliveryRetryPrompt},_pin],Object.assign({},_md,{roleInterceptAudit:null,roleInterceptPurpose:'delivery-action-retry'}));}catch(_){}
           if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;
-          const _deliveryStrictRepairActions=String(_deliveryStrictRepair||'').match(/[\[【]\s*真实外卖\s*[|｜:：]\s*[^\]】]+[\]】]/g)||[];
+          const _deliveryStrictRepairActions=deliveryStructuredActionTags(_deliveryStrictRepair).filter(x=>x.kind==='真实外卖');
           if(_deliveryStrictRepairActions.length===1)_deliveryRepairActions=_deliveryStrictRepairActions;
         }
-        if(_deliveryRepairActions.length===1){const _deliveryRepairBody=(_deliveryRepairActions[0].match(/[\[【]\s*真实外卖\s*[|｜:：]\s*([^\]】]+)[\]】]/)||[])[1];if(_deliveryRepairBody){content=String(content||'').trim()+'\n[真实外卖|'+_deliveryRepairBody.trim()+']';_deliveryActionFallbackHandled=true;}}
+        if(_deliveryRepairActions.length===1){const _deliveryRepairBody=_deliveryRepairActions[0].body;if(_deliveryRepairBody){content=String(content||'').trim()+'\n[真实外卖|'+_deliveryRepairBody.trim()+']';_deliveryActionFallbackHandled=true;}}
         else if(_deliveryRetryPrompt&&typeof deliveryReportActionRepairFailure==='function')deliveryReportActionRepairFailure(id,_deliveryPendingUserText,content,_deliveryActionMeta);
       }
     }
@@ -15252,7 +15256,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
       const _realDeliveryTag=/^[\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：]/.test(line);
       if(!_rawOutput&&_realDeliveryCommandTurn&&!_realDeliveryTag){const _safeDeliveryPrelude=!_realDeliveryCommandSeen&&!_realDeliveryPreludeShown&&typeof deliveryRolePreludeAllowed==='function'&&deliveryRolePreludeAllowed(line);if(!_safeDeliveryPrelude)continue;_realDeliveryPreludeShown=true;}/* 只保留当前真实模型在动作前生成的一句角色开场白；其余中途文字仍隐藏。 */
       got=true;
-      mm=line.match(/^\[真实外卖\|([^\]]*)\]$/);if(mm){_realDeliveryCommandSeen=true;if(typeof deliveryHandleRoleRequest==='function')deliveryHandleRoleRequest(id,(mm[1]||'').trim(),_deliveryActionMeta);continue;}
+      mm=line.match(/^\[真实外卖\|([^\]]*)\]$/);if(mm){_realDeliveryCommandSeen=true;if(typeof deliveryHandleRoleRequest==='function')deliveryHandleRoleRequest(id,(mm[1]||'').trim(),_deliveryActionMeta);continue;}if(_realDeliveryTag){_replyAuditPartial=true;continue;}/* 任何未完整消费的外卖控制标签都必须静默拦截，绝不能变成角色聊天气泡。 */
       mm=line.match(/^\[点外卖\|([^|\]]*)\|?([^\]]*)\]$/);if(mm){if(typeof deliveryRealEnabled==='function'&&deliveryRealEnabled()){_realDeliveryCommandSeen=true;if(typeof deliveryHandleRoleRequest==='function')deliveryHandleRoleRequest(id,(mm[1]||'').trim(),_deliveryActionMeta);continue;}const nowF=Date.now();if(msgs(id).some(x=>x.type==='food'&&x.from==='ta'&&nowF-(x.time||0)<1200000))continue;/* 20分钟内已点过就不重复 */const fc={role:'assistant',type:'food',name:mm[1]||'外卖',price:+mm[2]||0,shop:'',from:'ta',received:false,declined:false,deliverAt:nowF+900000,arrived:false,id:uid(),time:nowF};replyHandoffPush(_handoffTurn,msgs(id),fc);notifyIncoming(c,fc);save();refreshChatMessages(id);continue;}
       mm=line.match(/^\[送礼\|([^|\]]*)(?:\|([^|\]]*))?(?:\|([^\]]*))?\]$/);if(mm){giftSend(id,(mm[1]||'礼物').trim(),+mm[2]||0,mm[3]||'');continue;}
       mm=line.match(/^\[一起听\|([^\]]*)\]$/);if(mm){const ti=(mm[1]||'').trim();const mc={role:'assistant',type:'musicinvite',title:ti||'一首歌',artist:'',from:'ta',time:Date.now(),id:uid()};replyHandoffPush(_handoffTurn,msgs(id),mc);notifyIncoming(c,mc);save();refreshChatMessages(id);continue;}
@@ -16195,8 +16199,7 @@ async function callAI(sysNote,opts){if(!_call)return;const _rawOutput=typeof mod
     if(typeof deliveryConsumeMemoryTags==='function')content=deliveryConsumeMemoryTags(content,c,{structuredModelAction:true,allowNewTask:_deliveryCurrentCallTurn,accountId:String(actId()||'main'),sessionId:String(sess||''),turnId:String(_luc&&_luc.id||sess||''),messageId:String(_luc&&_luc.id||''),modelReplyId:String(sess||''),channel:'call',userText:String(_luc&&msgToText(_luc)||'').slice(0,240)});else content=String(content||'').replace(/[\[【]\s*外卖记忆\s*[|｜:：][^\]】]*[\]】]/g,'');
     const _callRealDeliveryCommandTurn=typeof deliveryRealEnabled==='function'&&deliveryRealEnabled()&&/[\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：]/.test(String(content||''));
     const _callDeliveryPrelude=_callRealDeliveryCommandTurn&&typeof deliveryRolePreludeAllowed==='function'?splitChatBubbles(content,30).map(x=>cleanRolePunct(normalizeImageLine(normTag(x)))).find(x=>deliveryRolePreludeAllowed(x))||'':'';
-    content=content.replace(/[\[【]\s*真实外卖\s*[\|｜:：]([^\]】]*)[\]】]/g,(mm,q)=>{if(typeof deliveryHandleRoleRequest==='function')deliveryHandleRoleRequest(_call.id,(q||'').trim(),{structuredModelAction:true,allowNewTask:_deliveryCurrentCallTurn,accountId:String(actId()||'main'),sessionId:String(sess||''),turnId:String(_luc&&_luc.id||sess||''),messageId:String(_luc&&_luc.id||''),modelReplyId:String(sess||''),channel:'call',userText:String(_luc&&msgToText(_luc)||'').slice(0,240)});return '';});
-    content=content.replace(/[\[【]\s*点外卖\s*[\|｜:：]([^\|｜\]】]*)[\|｜]?([^\]】]*)[\]】]/g,(mm,nm,pr)=>{nm=(nm||'外卖').trim();if(typeof deliveryRealEnabled==='function'&&deliveryRealEnabled()){if(typeof deliveryHandleRoleRequest==='function')deliveryHandleRoleRequest(_call.id,nm,{structuredModelAction:true,allowNewTask:_deliveryCurrentCallTurn,accountId:String(actId()||'main'),sessionId:String(sess||''),turnId:String(_luc&&_luc.id||sess||''),messageId:String(_luc&&_luc.id||''),modelReplyId:String(sess||''),channel:'call',userText:String(_luc&&msgToText(_luc)||'').slice(0,240)});return '';}const now=Date.now();if(msgs(_call.id).some(x=>x.type==='food'&&x.from==='ta'&&now-(x.time||0)<1200000))return '';/* 20分钟内已经点过外卖就不再点(不管菜名)，防止一通电话重复点 */const fc={role:'assistant',type:'food',name:nm,price:+pr||0,shop:'',from:'ta',received:false,declined:false,deliverAt:now+900000,arrived:false,id:uid(),time:now};msgs(_call.id).push(fc);notifyIncoming(c,fc);save();return '';});
+    content=deliveryReplaceStructuredActions(content,tag=>{const actionMeta={structuredModelAction:true,allowNewTask:_deliveryCurrentCallTurn,accountId:String(actId()||'main'),sessionId:String(sess||''),turnId:String(_luc&&_luc.id||sess||''),messageId:String(_luc&&_luc.id||''),modelReplyId:String(sess||''),channel:'call',userText:String(_luc&&msgToText(_luc)||'').slice(0,240)};if(tag.kind==='真实外卖'){if(typeof deliveryHandleRoleRequest==='function')deliveryHandleRoleRequest(_call.id,tag.body.trim(),actionMeta);return '';}const legacy=tag.body.split('|'),nm=(legacy.shift()||'外卖').trim(),pr=legacy.join('|');if(typeof deliveryRealEnabled==='function'&&deliveryRealEnabled()){if(typeof deliveryHandleRoleRequest==='function')deliveryHandleRoleRequest(_call.id,nm,actionMeta);return '';}const now=Date.now();if(msgs(_call.id).some(x=>x.type==='food'&&x.from==='ta'&&now-(x.time||0)<1200000))return '';/* 20分钟内已经点过外卖就不再点(不管菜名)，防止一通电话重复点 */const fc={role:'assistant',type:'food',name:nm,price:+pr||0,shop:'',from:'ta',received:false,declined:false,deliverAt:now+900000,arrived:false,id:uid(),time:now};msgs(_call.id).push(fc);notifyIncoming(c,fc);save();return '';});
     if(!_rawOutput&&_callRealDeliveryCommandTurn)content=_callDeliveryPrelude;/* 通话同样只读出当前模型的一句角色开场白，不读动作标签或过程猜测。 */
     // 通话里口头让ta定闹钟 / 记东西 / 记日程，也能真的落地
     content=content.replace(/[\[【]\s*记住\s*[\|｜:：]([^\]】]+)[\]】]/g,(mm,tx)=>{const mv=roleMemoryPerspectiveText(c,tx),mr=rememberFromConversation(c,tx,(_luc&&msgToText(_luc))||'',content,{rolePerspective:true});if(mr!=='none'&&mr!=='quota'){save();if(mr==='added'||mr==='replaced')toast((mr==='replaced'?'已更新记忆：':'已记住：')+mv.slice(0,12));else if(mr==='conflict')toast('发现新旧信息不同，下轮会先向你确认');}return '';});
