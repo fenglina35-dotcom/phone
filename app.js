@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1326'){
+if(window.__NORTH_SHELL_BUILD__!=='1328'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -497,7 +497,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1326 · 外卖嵌套商品名解析修复';
+const APP_VER='v1328 · 屏保上滑手势与回弹修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1886,7 +1886,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1326&r=v1326-web-delivery-tag-1';
+  const url='sw.js?v=1328&r=v1328-web-delivery-tag-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -1952,11 +1952,12 @@ function lockResumeFromAway(){_lockAwayAt=0;return false;}
 function lockQuickTorch(e){try{e.stopPropagation();}catch(_){}toast('手电筒已点亮');}
 function lockQuickCamera(e){try{e.stopPropagation();}catch(_){}lockOpen();setTimeout(()=>openApp('moments'),80);}
 let _lockTouch=null;
+function lockGestureReset(){const ls=$('#lockScreen');if(ls){ls.classList.remove('dragging');ls.style.transform='';}}
 function initLockGestures(){if(window._lockGesturesInit)return;window._lockGesturesInit=1;
   const begin=(target,x,y)=>{const ls=$('#lockScreen'),locked=ls&&ls.classList.contains('show');if(locked&&ls.contains(target)){_lockTouch={mode:'unlock',x,y,t:Date.now()};return;}if(!locked&&cur().p==='home'&&y<132)_lockTouch={mode:'lock',x,y,t:Date.now()};};
-  const move=(x,y,e)=>{if(!_lockTouch)return;const dy=y-_lockTouch.y,dx=Math.abs(x-_lockTouch.x);if(dx>70){_lockTouch=null;return;}if(_lockTouch.mode==='unlock'&&dy<-26){try{e.preventDefault();}catch(_){}const ls=$('#lockScreen');if(ls)ls.style.transform='translateY('+Math.max(-90,dy*.45)+'px)';}else if(_lockTouch.mode==='lock'&&dy>18){try{e.preventDefault();}catch(_){} }};
-  const end=(x,y)=>{if(!_lockTouch)return;const dy=y-_lockTouch.y,dt=Date.now()-_lockTouch.t,mode=_lockTouch.mode;_lockTouch=null;const ls=$('#lockScreen');if(ls)ls.style.transform='';if(mode==='unlock'&&(dy<-58||(dy<-35&&dt<260)))lockOpen();else if(mode==='lock'&&(dy>62||(dy>40&&dt<280)))lockShow(true);};
-  const cancel=()=>{_lockTouch=null;const ls=$('#lockScreen');if(ls)ls.style.transform='';};
+  const move=(x,y,e)=>{if(!_lockTouch)return;const dy=y-_lockTouch.y,dx=Math.abs(x-_lockTouch.x);if(dx>70){_lockTouch=null;lockGestureReset();return;}if(_lockTouch.mode==='unlock'&&dy<-26){try{e.preventDefault();}catch(_){}const ls=$('#lockScreen');if(ls){ls.classList.add('dragging');ls.style.transform='translateY('+Math.max(-90,dy*.45)+'px)';}}else if(_lockTouch.mode==='lock'&&dy>18){try{e.preventDefault();}catch(_){} }};
+  const end=(x,y)=>{if(!_lockTouch)return;const dy=y-_lockTouch.y,dt=Date.now()-_lockTouch.t,mode=_lockTouch.mode;_lockTouch=null;lockGestureReset();if(mode==='unlock'&&(dy<-58||(dy<-35&&dt<260)))lockOpen();else if(mode==='lock'&&(dy>62||(dy>40&&dt<280)))lockShow(true);};
+  const cancel=()=>{_lockTouch=null;lockGestureReset();};
   if('PointerEvent'in window){
     document.addEventListener('pointerdown',e=>begin(e.target,e.clientX,e.clientY), {passive:true});
     document.addEventListener('pointermove',e=>move(e.clientX,e.clientY,e), {passive:false});

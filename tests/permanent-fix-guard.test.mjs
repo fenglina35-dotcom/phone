@@ -27,6 +27,7 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"v1328/v1329",scope:"both",least:1,name:"屏保手势中断清理拖动状态",marker:"function lockGestureReset()"},
   { release: "v1326/v1327", scope: "both", least: 1, name: "外卖动作支持商品名内部嵌套中文方括号", marker: "function deliveryStructuredActionTags(value)" },
   { release: "v1326/v1327", scope: "both", least: 1, name: "未完整消费的外卖控制标签绝不显示成角色气泡", marker: "任何未完整消费的外卖控制标签都必须静默拦截" },
   {release:"v1324/v1325",scope:"both",least:1,name:"聊天与主动的电话频率直接入口",marker:"function roleCallPreferenceOpen(id)"},
@@ -1242,3 +1243,5 @@ test('the private cozy bundle rejects the two mobile material regressions', () =
   assert.doesNotMatch(app, /renderer\.setSize\(96,96,false\)/, '不得恢复用真实房间资源做 96×96 整屋预绘制');
   assert.doesNotMatch(female, /if\(Math\.abs\(amount\)<1e-7\)return/, '不得在静止时跳过女性角色站姿');
 });
+
+test('lock screen keeps touch ownership in every shipped shell',()=>{for(const p of ['小手机.html',PRIVATE_DIR+'index.html',PRIVATE_DIR+'小手机.html']){const s=read(p);assert.match(s,/\.lockscreen\{touch-action:none;overscroll-behavior:none;/);assert.match(s,/\.lockscreen\.dragging\{transition:none;\}/);}});
