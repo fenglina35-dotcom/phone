@@ -43,14 +43,14 @@ test('offline textarea grows from one line to three lines and then scrolls inter
 });
 
 test('offline textarea uses a normal caret line height instead of a 42px caret',()=>{
-  /* 左右那 14px 是 v1322 把输入框改成药丸形之后加的；上下的 10/9 和 line-height:21px
+  /* 左右那 14px 是 v1324 把输入框改成药丸形之后加的；上下的 10/9 和 line-height:21px
      才是当初为光标修的那几个值，仍然一个都不许动。 */
   assert.match(shell,/\.offinput #off_in\{[^}]*max-height:90px!important[^}]*padding:10px 14px 9px!important[^}]*line-height:21px!important[^}]*font-size:16px!important/);
   assert.doesNotMatch(shell,/\.offinput #off_in\{[^}]*line-height:42px/);
 });
 
 test('ordinary offline date and common life share a first-render autosize listener',()=>{
-  /* v1322 起两处输入框都走同一个 offFieldHTML()，所以 textarea 只写了一次、被用了两次 */
+  /* v1324 起两处输入框都走同一个 offFieldHTML()，所以 textarea 只写了一次、被用了两次 */
   assert.equal((web.match(/<textarea id="off_in"/g)||[]).length,1);
   assert.equal((web.match(/\$\{offFieldHTML\('/g)||[]).length,2);
   assert.match(functionSource(web,'offFieldHTML'),/<div class="off-field"><textarea id="off_in"/);

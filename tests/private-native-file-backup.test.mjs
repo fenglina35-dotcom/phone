@@ -14,16 +14,16 @@ const backup=read(bundle+'private-cloud-backup.js');
 const privateApp=read(bundle+'app.js');
 const publicApp=read('app.js');
 
-test('private v1323 loads daily backup after the diagnostic overlay while public advances independently',()=>{
+test('private v1325 loads daily backup after the diagnostic overlay while public advances independently',()=>{
   for(const name of ['index.html','小手机.html']){
     const html=read(bundle+name);
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1323'/);
-    assert.ok(html.indexOf('private-cloud-backup.js?v=1323')>html.indexOf('private-runtime-diagnostics.js?v=339'));
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1325'/);
+    assert.ok(html.indexOf('private-cloud-backup.js?v=1325')>html.indexOf('private-runtime-diagnostics.js?v=339'));
   }
-  assert.match(privateApp,/APP_VER='v1323 · 气泡即时配色与角色偏好、情侣任务和收款回执'/);
-  assert.match(publicApp,/APP_VER='v1322 · 气泡即时配色与角色偏好、情侣任务和收款回执'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 395;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.395;/g)||[]).length,12);
+  assert.match(privateApp,/APP_VER='v1325 · 电话频率入口与手机显示修复'/);
+  assert.match(publicApp,/APP_VER='v1324 · 电话频率入口与手机显示修复'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 396;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.396;/g)||[]).length,12);
 });
 
 test('web backup sends bounded ordered chunks and records a day only after confirmed save',()=>{
