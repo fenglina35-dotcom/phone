@@ -14,16 +14,16 @@ const backup=read(bundle+'private-cloud-backup.js');
 const privateApp=read(bundle+'app.js');
 const publicApp=read('app.js');
 
-test('private v1329 loads daily backup after the diagnostic overlay while public advances independently',()=>{
+test('private v1331 loads daily backup after the diagnostic overlay while public advances independently',()=>{
   for(const name of ['index.html','小手机.html']){
     const html=read(bundle+name);
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1329'/);
-    assert.ok(html.indexOf('private-cloud-backup.js?v=1329')>html.indexOf('private-runtime-diagnostics.js?v=339'));
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1331'/);
+    assert.ok(html.indexOf('private-cloud-backup.js?v=1331')>html.indexOf('private-runtime-diagnostics.js?v=339'));
   }
-  assert.match(privateApp,/APP_VER='v1329 · 屏保上滑手势与回弹修复'/);
-  assert.match(publicApp,/APP_VER='v1328 · 屏保上滑手势与回弹修复'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 398;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.398;/g)||[]).length,12);
+  assert.match(privateApp,/APP_VER='v1331 · 外卖上下文与偏好记忆修复'/);
+  assert.match(publicApp,/APP_VER='v1330 · 外卖上下文与偏好记忆修复'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 399;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.399;/g)||[]).length,12);
 });
 
 test('web backup sends bounded ordered chunks and records a day only after confirmed save',()=>{

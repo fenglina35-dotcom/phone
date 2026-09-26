@@ -73,16 +73,25 @@ window.deliveryConsumeMemoryTags('[外卖记忆|喜欢；门店=不存在咖啡�
 window.deliveryConsumeMemoryTags('[外卖记忆|喜欢；门店=这家]',role,{...meta({turnId:'turn-5',messageId:'message-5'}),structuredModelAction:false});
 assert.equal(S.food.real.learnedMemories.length,beforeOrdinary,'keywords, hallucinated values, and non-model calls must not learn');
 
+window.deliveryConsumeMemoryTags('记住了。',role,meta({turnId:'turn-natural-1',messageId:'message-natural-1',userText:'我喜欢生椰拿铁'}));
+assert.ok(S.food.real.learnedMemories.some(x=>x.attitude==='like'&&x.item==='生椰拿铁'),'an explicit durable preference must be learned even when the model omits the optional hidden tag');
+window.deliveryConsumeMemoryTags('知道了。',role,meta({turnId:'turn-natural-2',messageId:'message-natural-2',userText:'以后KFC默认四件套'}));
+assert.ok(S.food.real.learnedMemories.some(x=>x.attitude==='default'&&x.merchant==='肯德基'&&x.item==='四件套'),'a natural default KFC preference must be persisted without requiring machine-like wording');
+const beforeOneOff=S.food.real.learnedMemories.length;
+window.deliveryConsumeMemoryTags('你想吃什么。',role,meta({turnId:'turn-natural-3',messageId:'message-natural-3',userText:'我想吃KFC'}));
+assert.equal(S.food.real.learnedMemories.length,beforeOneOff,'a one-off KFC craving must not be mistaken for a durable preference');
+
+const beforeAvoid=S.food.real.learnedMemories.length;
 consume('[外卖记忆|忌口；规格=微辣]',{turnId:'turn-6',messageId:'message-6',userText:'以后别给我点辣的'});
-assert.equal(S.food.real.learnedMemories.length,beforeOrdinary,'a safety restriction must not be inferred from a non-matching spec name');
+assert.equal(S.food.real.learnedMemories.length,beforeAvoid,'a safety restriction must not be inferred from a non-matching spec name');
 consume('[外卖记忆|忌口；规格=微辣]',{turnId:'turn-7',messageId:'message-7',userText:'以后不要微辣'});
 assert.equal(S.food.real.learnedMemories.at(-1).attitude,'avoid','an explicit safety restriction should be stored separately');
 
-window.deliveryConsumeMemoryTags('[外卖记忆|喜欢；商品=生椰拿铁]',role,meta({accountId:'alt',turnId:'turn-alt',messageId:'message-alt',userText:'我喜欢生椰拿铁'}));
+window.deliveryConsumeMemoryTags('[外卖记忆|喜欢；商品=冰摇柠檬茶]',role,meta({accountId:'alt',turnId:'turn-alt',messageId:'message-alt',userText:'我喜欢冰摇柠檬茶'}));
 assert.equal(S.food.real.learnedMemories.filter(x=>x.accountId==='alt').length,1,'learned preferences must be account scoped');
 const prompt=window.deliveryRolePrompt(role);
 assert.match(prompt,/喜欢「兰州牛肉面\(合景店\) \/ 手工兰州牛肉拉面」/,'the current role/account prompt should receive learned soft preferences');
-assert.doesNotMatch(prompt,/生椰拿铁/,'another account preference must not leak into the current account prompt');
+assert.doesNotMatch(prompt,/冰摇柠檬茶/,'another account preference must not leak into the current account prompt');
 assert.match(prompt,/不能授权、创建、恢复或重启任何订单/,'memory actions must be explicitly separated from order authorization');
 assert.match(prompt,/普通的“饿了”“没吃饭”“想吃东西”不是偏好/,'ordinary meal keywords must not be treated as preferences');
 assert.match(prompt,/高成功率池为五类：奶茶、咖啡、麦当劳、KFC、粥/,'autonomous role ordering must prefer only the categories that completed the main training pass');

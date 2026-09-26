@@ -302,6 +302,61 @@ test('a broad meal request reaches role decision but not a parser-invented merch
   assert.match(ctx.deliveryMissingActionRepairPrompt('role-1',meta.userText,'没问题，交给我。',meta),/唯一授权/);
 });
 
+test('a brand-only KFC request asks naturally without exposing an internal reliability error',async()=>{
+  const {ctx,searches,meta}=makeRuntime('我想吃KFC');
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  delete ctx.S.food.real.roleAttempts['role-1'];
+  ctx.S.food.real.roleTasks={};
+  meta.userText='我想吃KFC';
+  await ctx.deliveryHandleRoleRequest('role-1','KFC',meta);
+  assert.equal(searches.length,0);
+  assert.equal(Object.keys(ctx.S.food.real.roleTasks).length,0);
+  assert.equal(ctx.S.food.real.lastRoleNotice,null,'a model formatting mistake must not become a technical toast for the user');
+  assert.match(ctx.deliveryRolePrompt({id:'role-1',name:'先生'}),/“想吃KFC\/肯德基”只有品牌、没有具体商品/);
+});
+
+test('随便点 inherits the immediately preceding KFC choice and starts the live four-piece storefront route',async()=>{
+  const {ctx,searches,merchants,meta}=makeRuntime('随便点');
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  delete ctx.S.food.real.roleAttempts['role-1'];
+  ctx.S.food.real.roleTasks={};
+  const rows=ctx.msgs('role-1');
+  rows.splice(rows.length-1,0,{id:'user-kfc',role:'user',type:'text',content:'我想吃KFC',time:Date.now()-300});
+  meta.userText='随便点';
+  assert.match(ctx.deliveryContextualKfcAction({id:'role-1'},meta.userText)?.query||'',/门店=肯德基/);
+  await ctx.deliveryHandleRoleRequest('role-1','KFC',meta);
+  assert.deepEqual(merchants,['肯德基']);
+  assert.deepEqual(searches,[{taskId:'delivery_id-1',items:['吃堡堡4件套']}]);
+  const task=Object.values(ctx.S.food.real.roleTasks)[0];
+  assert.equal(task.autonomous,true);
+  assert.match(task.query,/门店=肯德基；商品=吃堡堡4件套/);
+});
+
+test('四件套 as the next KFC answer cannot lose the merchant or stall at the storefront',async()=>{
+  const {ctx,searches,merchants,meta}=makeRuntime('就四件套');
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  delete ctx.S.food.real.roleAttempts['role-1'];
+  ctx.S.food.real.roleTasks={};
+  const rows=ctx.msgs('role-1');
+  rows.splice(rows.length-1,0,{id:'user-kfc',role:'user',type:'text',content:'我想吃KFC',time:Date.now()-300});
+  meta.userText='就四件套';
+  assert.match(ctx.deliveryContextualKfcAction({id:'role-1'},meta.userText)?.query||'',/门店=肯德基/);
+  await ctx.deliveryHandleRoleRequest('role-1','四件套',meta);
+  assert.deepEqual(merchants,['肯德基']);
+  assert.deepEqual(searches,[{taskId:'delivery_id-1',items:['吃堡堡4件套']}]);
+});
+
+test('the exact live KFC title with a decorative bracket prefix remains executable',async()=>{
+  const {ctx,searches,merchants,meta}=makeRuntime('今天忙得没吃饭');
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  delete ctx.S.food.real.roleAttempts['role-1'];
+  ctx.S.food.real.roleTasks={};
+  meta.userText='今天忙得没吃饭';
+  await ctx.deliveryHandleRoleRequest('role-1','主动关心；门店=肯德基；商品=【夜宵专享】吃堡堡4件套',meta);
+  assert.deepEqual(merchants,['肯德基']);
+  assert.deepEqual(searches,[{taskId:'delivery_id-1',items:['【夜宵专享】吃堡堡4件套']}]);
+});
+
 test('an accepted merchant-free fruit-tea request becomes a committed action repair',()=>{
   const request='给我点一杯果茶，随便点一杯，不加糖就行';
   const {ctx,meta}=makeRuntime(request);

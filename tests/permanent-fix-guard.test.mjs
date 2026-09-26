@@ -18,6 +18,8 @@ const read = name => fs.readFileSync(new URL('../' + name, import.meta.url), 'ut
 const WEB = 'app.js';
 const PRIVATE_DIR = 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/';
 const PRIVATE = PRIVATE_DIR + 'app.js';
+const DELIVERY = 'delivery.js';
+const PRIVATE_DELIVERY = PRIVATE_DIR + 'delivery.js';
 
 const count = (source, marker) => source.split(marker).length - 1;
 
@@ -1236,6 +1238,21 @@ test('the private bundle and web core stay in lockstep on shared repairs', () =>
     );
   }
 });
+
+const DELIVERY_FIXES = [
+  { name: '明确长期外卖偏好不依赖模型隐藏标签也会保存', marker: 'function explicitMemoryFromUserText(' },
+  { name: '随便点或四件套会继承最近一轮肯德基上下文', marker: 'function contextualKfcAction(' },
+  { name: '只说肯德基品牌时不再暴露内部结构错误', marker: 'function brandOnlyDeliveryRequest(' },
+];
+
+for (const fix of DELIVERY_FIXES) {
+  test(`web and private keep v1330/v1331 delivery repair — ${fix.name}`, () => {
+    const web = read(DELIVERY);
+    const privateSource = read(PRIVATE_DELIVERY);
+    assert.ok(count(web, fix.marker) >= 1, `网页外卖缺少永久修复：${fix.name}`);
+    assert.ok(count(privateSource, fix.marker) >= 1, `私人外卖缺少永久修复：${fix.name}`);
+  });
+}
 
 test('the private cozy bundle rejects the two mobile material regressions', () => {
   const app = read(PRIVATE_DIR + 'games/cozy-home/app.mjs');
