@@ -29,6 +29,8 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"v1336/v1337",scope:"both",least:1,name:"外置语音测试仅使用填写的接口快照",marker:"{externalConfig,tries:1,languageBoost:'auto'}"},
+  {release:"v1336/v1337",scope:"both",least:1,name:"内置关闭拒绝生成请求",marker:"内置语音已关闭，未发送生成请求"},
   {release:"v1328/v1329",scope:"both",least:1,name:"屏保手势中断清理拖动状态",marker:"function lockGestureReset()"},
   { release: "v1326/v1327", scope: "both", least: 1, name: "外卖动作支持商品名内部嵌套中文方括号", marker: "function deliveryStructuredActionTags(value)" },
   { release: "v1326/v1327", scope: "both", least: 1, name: "未完整消费的外卖控制标签绝不显示成角色气泡", marker: "任何未完整消费的外卖控制标签都必须静默拦截" },

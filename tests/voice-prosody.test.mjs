@@ -259,7 +259,7 @@ assert.match(functionSource("previewVoice"), /await speak\(samp,c\)/, "voice pre
 assert.match(functionSource("previewVoice"), /finally\{c\.voice=tmp;\}/, "voice preview must restore the saved role voice after playback setup");
 assert.match(functionSource("playBuf"), /if\(_audio\.state!==\x27running\x27\)return false/, "buffer playback must not report success while the mobile audio context is still suspended");
 assert.match(functionSource("testTTS"), /const played=await playBuf\(buf\)/, "external voice test must report actual playback instead of only successful generation");
-assert.match(functionSource("testTTS"), /relay:!!\(saved&&saved\.relay\)/, "voice test must exercise the currently active internal route even when an external route is also configured");
+assert.match(functionSource("testTTS"), /externalConfig,tries:1/, "external test must use only its form snapshot, never the active internal route");
 assert.match(source, /API音色使用上面的语速和音调/);
 assert.match(source, /voiceProgressive:false/);
 assert.match(source, /语音逐句生成/);

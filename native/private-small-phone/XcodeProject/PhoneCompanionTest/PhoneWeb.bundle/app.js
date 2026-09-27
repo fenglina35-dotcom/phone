@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1335'){
+if(window.__NORTH_SHELL_BUILD__!=='1337'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -521,7 +521,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1335 · 客服功能目录与设置入口';
+const APP_VER='v1337 · 外置语音测试隔离与内置关闭拦截';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1271,8 +1271,9 @@ function sttConfigured(){return sttRelayOn()||sttExternalOn();}
 function sttRelaySecondsPerPoint(){const n=Number(typeof _aiAcct!=='undefined'&&_aiAcct&&_aiAcct.pricing&&_aiAcct.pricing.asr_seconds_per_point);return Number.isFinite(n)&&n>0?Math.round(n):15;}
 function aiUserId(){let id='';try{id=localStorage.getItem('yibei_ai_uid')||'';}catch(_){}if(!id){id='ph_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,10);try{localStorage.setItem('yibei_ai_uid',id);}catch(_){}}return id;}
 function aiUserSecret(){let s='';try{s=localStorage.getItem('yibei_ai_secret')||'';}catch(_){}if(!s){s='sec_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);try{localStorage.setItem('yibei_ai_secret',s);}catch(_){}}return s;}
-async function aiRelay(action,payload,timeoutMs){const url=aiCoreUrl();if(!url)throw new Error('还没配置内置AI后台');
+async function aiRelay(action,payload,timeoutMs){const voiceConfig=S.settings&&S.settings.tts;if(action==='tts'&&!(voiceConfig&&voiceConfig.relay&&voiceConfig.enabled!==false))throw new Error('内置语音已关闭，未发送生成请求');if(action==='external_tts'&&!String(payload&&payload.key||'').trim())throw new Error('外置语音缺少 API Key，未发送请求');const url=aiCoreUrl();if(!url)throw new Error('还没配置内置AI后台');
   await licenseSyncAiIdentity();
+  if(action==='tts'&&!((S.settings.tts||{}).relay&&(S.settings.tts||{}).enabled!==false))throw new Error('内置语音已关闭，未发送生成请求');
   const uid=aiUserId(),sec=aiUserSecret(),relayKey=aiCoreKey(url);
   const requestTimeout=action==='image'?360000:Math.max(10000,Math.min(190000,+timeoutMs||190000));let r;try{r=await fetchT(url,{method:'POST',headers:{'Content-Type':'application/json','apikey':relayKey,'Authorization':'Bearer '+relayKey,'x-phone-user':uid,'x-phone-secret':sec},body:JSON.stringify(Object.assign({action,user_id:uid,client_secret:sec},payload||{}))},requestTimeout);}catch(e){throw new Error(apiCaughtCN(e));}
   const d=await r.json().catch(()=>null);if(!r.ok||!d||d.ok===false){if(d&&typeof aiAccountApplyResult==='function')aiAccountApplyResult(d,action);const msg=(d&&d.error)||('HTTP '+r.status);const e=new Error(r.status===402||/no-balance/i.test(String(msg))?'AI点数不足，请去「AI账户」充值或让管理员加点':'内置AI失败：'+String(msg).slice(0,140));e.status=r.status;e.data=d||null;e.raw=String(msg);e.source='ai-core';e.ledger_id=d&&(d.ledger_id||d.ledgerId||d.request_id);e.charged=d&&d.charged;e.billed=d&&d.billed;throw e;}
@@ -1821,9 +1822,9 @@ async function _ttsOnce(t,vid,tts,opt){let r;const languageBoost=String(opt&&opt
    目标语言时才清理，清理后为空就原样返回，保证任何情况下都不会把一整句变成哑音。 */
 function ttsTidyOrphanPunct(s){return String(s||'').replace(/\s+/g,' ').replace(/\s+([,.;:!?])/g,'$1').replace(/([,;:])(?=[.!?])/g,'').replace(/,\s*,/g,',').replace(/^[\s,;:.!?]+/,'').trim();}
 function ttsDropOffLanguage(text,o){const lang=ttsContentLang(o);if(!['英','法','德','俄','韩'].includes(lang))return text;const s=String(text||'');if(!s||!hasForeign(s,lang))return text;const cleaned=ttsTidyOrphanPunct(hasCN(s)?s.replace(CJK_RE,' ').replace(CN_PUNCT_RE,' '):s);return cleaned&&hasForeign(cleaned,lang)?cleaned:text;}
-async function ttsArr(text,o,opt){opt=Object.assign({},opt||{});text=ttsDropOffLanguage(text,o);if(!opt.languageBoost)opt.languageBoost=ttsLanguageBoost(o);const tts=ttsCfg(o),raw=ttsCleanBase(text);if(!raw)return null;if([...raw].length>VOICE_MAX_CHARS){if(!opt.quiet)toast('语音超过'+VOICE_MAX_CHARS+'字，已改用文字');return null;}const t=ttsPerformanceText(text,o,tts,opt);if(!t)return null;if([...t].length>VOICE_MAX_CHARS){if(!opt.quiet)toast('语音超过'+VOICE_MAX_CHARS+'字，已改用文字');return null;}const v=o?getVoice(o):null;opt.voice=v;
-  if(!ttsApiOn(o))return null;const vid=ttsRoleVoiceId(o,tts);
-  if(ttsUseRelay(o)){
+async function ttsArr(text,o,opt){opt=Object.assign({},opt||{});text=ttsDropOffLanguage(text,o);if(!opt.languageBoost)opt.languageBoost=ttsLanguageBoost(o);const tts=opt.externalConfig?Object.assign({},opt.externalConfig,{relay:false,enabled:true}):ttsCfg(o),raw=ttsCleanBase(text);if(!raw)return null;if([...raw].length>VOICE_MAX_CHARS){if(!opt.quiet)toast('语音超过'+VOICE_MAX_CHARS+'字，已改用文字');return null;}const t=ttsPerformanceText(text,o,tts,opt);if(!t)return null;if([...t].length>VOICE_MAX_CHARS){if(!opt.quiet)toast('语音超过'+VOICE_MAX_CHARS+'字，已改用文字');return null;}const v=o?getVoice(o):null;opt.voice=v;
+  if(!ttsEnabled(tts)||(!ttsRelayOn(tts)&&!ttsExternalOn(tts)))return null;const vid=ttsRoleVoiceId(o,tts);
+  if(ttsRelayOn(tts)){
     const ids=ttsRelayVoiceIds(tts);let lastMsg='';
     for(let i=0;i<ids.length;i++){try{const res=await _ttsOnce(t,ids[i],tts,opt);if(res&&res.buf)return res.buf;lastMsg=(res&&res.err)||'无音频';if(!ttsVoiceAccessErrorText(lastMsg))break;}catch(e){lastMsg=String((e&&e.message)||'网络').replace(/^内置AI失败：/,'');const refunded=await ttsRefundError(e,'tts-client-error');if((ttsVoiceAccessErrorText(lastMsg)||refunded)&&typeof aiAccountRefresh==='function')setTimeout(()=>aiAccountRefresh(true,true),700);if(!opt.quiet)toast('语音API错误 '+lastMsg+(ttsVoiceAccessErrorText(lastMsg)?'（未扣AI点数，请重新选择当前账户的音色）':refunded?'（已退回本次AI点数）':''));return null;}}
     if(!opt.quiet)toast('语音API错误 '+(lastMsg||'无音频'));return null;
@@ -1880,7 +1881,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1335&r=v1335-private-support-directory-1';
+  const url='sw.js?v=1337&r=v1337-private-tts-test-isolation-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -4212,7 +4213,7 @@ function renderSettings(){const nativeBuild=privateNativeAppOn()?String(window._
       <div style="padding:0 14px 4px;font-size:12px;color:#9aa">海螺常用音色（点一下填入"默认音色"）：</div>
       <div style="padding:0 14px 8px">${[['male-qn-qingse','青涩青年'],['male-qn-jingying','精英青年'],['male-qn-badao','霸道青年'],['presenter_male','男主持'],['audiobook_male_1','有声书男'],['female-shaonv','少女'],['female-yujie','御姐'],['presenter_female','女主持']].map(v=>`<span onclick="pickVoice('${v[0]}')" style="display:inline-block;margin:0 5px 5px 0;padding:4px 10px;background:#2c2c2e;border-radius:13px;font-size:12px;color:#cdd;cursor:pointer">${v[1]}</span>`).join('')}</div>
       <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="pullVoices()">拉取我的全部音色（含克隆）</button></div>
-      <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="testTTS()">测试语音（会响一声）</button></div><div id="testT" style="font-size:12px;text-align:center;min-height:14px;padding-bottom:6px"></div>
+      <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="testTTS()">测试外置语音（仅使用填写的接口）</button></div><div id="testT" style="font-size:12px;text-align:center;min-height:14px;padding-bottom:6px"></div>
       <div style="padding:6px 14px;font-weight:600;color:#7bd38d;font-size:13px">语音转文字（让角色听懂你录的语音·可选）</div>
       <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_sbase" value="${esc((S.settings.stt||{}).base||'')}" placeholder="https://…/v1（留空用手机识别）"></div>
       <div class="two" style="padding:0 14px 2px"><div class="field"><label>API Key</label><input id="s_skey" type="password" value="${esc((S.settings.stt||{}).key||'')}"></div><div class="field"><label>模型</label><div style="display:flex;gap:6px"><input id="s_smodel" value="${esc((S.settings.stt||{}).model||'')}" placeholder="whisper-1" style="flex:1;min-width:0"><button class="minibtn" onclick="fetchModels('s_sbase','s_skey','s_smodel')">拉取</button></div></div></div>
@@ -4414,16 +4415,17 @@ async function testImg(){const o=$('#testImgO');if(!o)return;o.style.color='#999
     o.style.color='#19a463';o.innerHTML='✅ 出图成功（'+sec+'秒，'+esc(out.endpoint||'image')+'）这个模型能用 👍'+(typeof url==='string'&&url.indexOf('http')===0?'　<a href="'+esc(url)+'" target="_blank" style="color:#54a0ff">点开看</a>':'');
   }catch(e){o.style.color='#e85';o.textContent='❌ '+apiCaughtCN(e);}}
 async function testSTT(){const o=$('#testS');if(!o)return;const base=((($('#s_sbase')||{}).value)||'').trim().replace(/\/+$/,''),key=((($('#s_skey')||{}).value)||'').trim(),model=((($('#s_smodel')||{}).value)||'').trim()||'whisper-1',lang=sttLangCode(((($('#s_slang')||{}).value)||'zh-CN')),saved=S.settings.stt||{};if(!base||!key){o.style.color='#e85';o.textContent='先填语音转文字接口地址和 API Key';return;}if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||typeof MediaRecorder==='undefined'){o.style.color='#e85';o.textContent='当前浏览器不能录音，请用 Safari/Chrome 并允许麦克风权限';return;}let stream=null;try{o.style.color='#d7a8bf';o.textContent='🎙️ 正在录音，请说一句话（5秒）…';stream=await navigator.mediaDevices.getUserMedia({audio:true});const types=['audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus'],type=types.find(t=>!MediaRecorder.isTypeSupported||MediaRecorder.isTypeSupported(t))||'',chunks=[],mr=type?new MediaRecorder(stream,{mimeType:type}):new MediaRecorder(stream),stopped=new Promise((resolve,reject)=>{mr.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};mr.onstop=resolve;mr.onerror=e=>reject((e&&e.error)||new Error('录音失败'));});mr.start(250);await new Promise(resolve=>setTimeout(resolve,5000));mr.stop();await stopped;stream.getTracks().forEach(t=>t.stop());stream=null;const blob=new Blob(chunks,{type:mr.mimeType||type||'audio/webm'});if(!blob.size)throw new Error('没有录到声音，请检查麦克风权限');o.textContent='录音完成，正在让模型识别并检查时间轴…';S.settings.stt={base,key,model,lang};const j=await sttRequest(blob,{timestamps:true,lang}),text=String(j&&j.text||'').replace(/\s+/g,' ').trim(),rows=Array.isArray(j&&j.segments)?j.segments:Array.isArray(j&&j.chunks)?j.chunks:[],timed=rows.some(x=>{const ts=x&&x.timestamp||x&&x.timestamps||[],a=Number(x&&x.start!=null?x.start:ts[0]),b=Number(x&&x.end!=null?x.end:ts[1]);return Number.isFinite(a)&&Number.isFinite(b)&&b>a;});if(!text&&!rows.length)throw new Error('接口已响应，但没有识别到文字；请对着麦克风清楚说一句再试');save(0);if(timed){o.style.color='#19a463';o.textContent='✅ 测试成功：能识别语音，也能返回影片字幕时间轴。识别到“'+(text||String(rows[0]&&rows[0].text||'').trim()).slice(0,36)+'”';}else{o.style.color='#d99b38';o.textContent='⚠️ 能识别语音，但这个模型没有返回分段时间轴：微信语音可用，影片“一键提取字幕”不可用。识别到“'+text.slice(0,36)+'”';}}catch(e){S.settings.stt=saved;o.style.color='#e85';o.textContent='❌ '+((e&&e.message)||apiCaughtCN(e)||'测试失败').slice(0,180);}finally{if(stream)stream.getTracks().forEach(t=>t.stop());}}
-async function testTTS(){audioUnlock();/* 在点击手势里同步解锁音频(iOS必须如此),否则第二次测试时上下文已挂起、网络回来再播就没声 */
-  const o=$('#testT');if(!o)return;o.style.color='#999';o.textContent='测试中…（成功会响一声）';
-  const provider=($('#s_tprovider')?$('#s_tprovider').value.trim():'');const base=$('#s_tbase').value.trim().replace(/\/+$/,'');const key=$('#s_tkey').value.trim();const model=$('#s_tmodel').value.trim();const voice=$('#s_tvoice').value.trim();const group=($('#s_tgroup')?$('#s_tgroup').value.trim():'');
-  const saved=S.settings.tts;if(!((saved&&saved.relay&&aiCoreUrl())||(base&&key))){o.style.color='#e85';o.textContent='先填语音地址和Key，或去AI账户打开“内置语音”';return;}
-  S.settings.tts={provider,base,key,model,voice,group,enabled:true,relay:!!(saved&&saved.relay),relayLang:(saved&&saved.relayLang)||''};
-  try{initAudio();const ab=await ttsArr('喵～ 测试成功啦',{voice:{engine:'api',ttsVoice:voice}});
-    if(ab){const buf=await decodeBuf(ab);if(buf){audioUnlock();const played=await playBuf(buf);o.style.color=played?'#19a463':'#d99b38';o.textContent=played?'✅ 语音生成成功（已播放）':'⚠️ 接口已生成语音，但本次播放被手机系统拦住了，请再点一次测试';}else{o.style.color='#d99b38';o.textContent='⚠️ 接口通了并拿到数据，但音频格式暂时无法播放';}}
-    else{o.style.color='#e85';o.textContent='❌ 没拿到语音，检查地址/Key/音色（海螺还要GroupId）';}
-  }catch(e){o.style.color='#e85';o.textContent='❌ '+e.message;}
-  S.settings.tts=saved;}
+async function testTTS(){
+  const o=$('#testT');if(!o)return;
+  const value=id=>String(($('#'+id)||{}).value||'').trim(),provider=value('s_tprovider'),base=value('s_tbase').replace(/\/+$/,''),key=value('s_tkey'),model=value('s_tmodel'),voice=value('s_tvoice'),group=value('s_tgroup');
+  if(!base||!key){o.style.color='#e85';o.textContent='请先填写外置语音接口地址和 API Key；此测试不会调用内置语音';return;}
+  const externalConfig={provider,base,key,model,voice,group};
+  audioUnlock();o.style.color='#999';o.textContent='正在测试填写的外置语音接口…';
+  try{initAudio();const ab=await ttsArr('喵～ 测试成功啦',{voice:{engine:'api',ttsVoice:voice}},{externalConfig,tries:1,languageBoost:'auto'});
+    if(ab){const buf=await decodeBuf(ab);if(buf){audioUnlock();const played=await playBuf(buf);o.style.color=played?'#19a463':'#d99b38';o.textContent=played?'✅ 外置语音生成成功（已播放）':'⚠️ 外置接口已生成语音，但本次播放被手机系统拦住了，请再点一次测试';}else{o.style.color='#d99b38';o.textContent='⚠️ 外置接口返回数据，但音频格式暂时无法播放';}}
+    else{o.style.color='#e85';o.textContent='❌ 外置接口未返回语音，请检查地址、Key 和音色；未使用内置语音';}
+  }catch(e){o.style.color='#e85';o.textContent='❌ 外置语音测试失败：'+e.message;}
+}
 // 拉取海螺账号下的可用音色（系统音色 + 你克隆的），点一下填入「默认音色」
 let _voiceList=[],_voiceQ='';
 const VOICE_PRESETS=[

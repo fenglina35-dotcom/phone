@@ -37,11 +37,11 @@ function pollHarness(){
   return {context,calls};
 }
 
-test('private candidate is v1335 and iOS 399 while public advances independently',()=>{
-  assert.match(app,/APP_VER='v1335 · 客服功能目录与设置入口'/);
+test('private candidate is v1337 and iOS 399 while public advances independently',()=>{
+  assert.match(app,/APP_VER='v1337 · 外置语音测试隔离与内置关闭拦截'/);
   for(const html of [index,alias]){
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1335'/);
-    assert.match(html,/app\.js\?v=1335&r=v1335-private-support-directory-1/);
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1337'/);
+    assert.match(html,/app\.js\?v=1337&r=v1337-private-tts-test-isolation-1/);
     assert.match(html,/private-runtime-diagnostics\.js\?v=339/);
   }
   assert.match(diagnostics,/OVERLAY_VERSION='336-daily-file-backup'/);
@@ -49,7 +49,7 @@ test('private candidate is v1335 and iOS 399 while public advances independently
   assert.match(bridge,/private static let build = "1\.0\.400 \(400\)"/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 400;/g)||[]).length,12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.400;/g)||[]).length,12);
-  assert.match(publicApp,/APP_VER='v1334 · 客服功能目录与设置入口'/);
+  assert.match(publicApp,/APP_VER='v1336 · 外置语音测试隔离与内置关闭拦截'/);
 });
 
 test('ordinary foreground polling is lightweight while explicit control verification stays complete',async()=>{

@@ -28,7 +28,7 @@ assert.match(source, /角色使用的外置语音路线/);
 assert.match(source, /跟随当前默认路线/);
 assert.match(source, /ttsRouteVoices/);
 assert.match(source, /ttsApiOn\(c\).*callPrefetchSpeech/);
-assert.match(functionSource('ttsArr'), /const tts=ttsCfg\(o\)/);
+assert.match(functionSource('ttsArr'), /const tts=opt\.externalConfig[\s\S]*?:ttsCfg\(o\)/);
 assert.match(functionSource('ttsArr'), /const vid=ttsRoleVoiceId\(o,tts\)/);
 assert.match(functionSource('warmVoiceMsg'), /ttsApiOn\(o\)/);
 assert.match(functionSource('textToVoiceInfo'), /ttsCfg\(c\)/);

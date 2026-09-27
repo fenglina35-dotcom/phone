@@ -13,14 +13,14 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1334 · 客服功能目录与设置入口'/);
-  assert.match(app,/const url='sw\.js\?v=1334&r=v1334-web-support-directory-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1334'/);
-  assert.match(html,/app\.js\?v=1334/);
-  assert.match(sw,/const BUILD='1334'/);
-  assert.match(sw,/north-shell-v1334-web-support-directory-1/);
-  assert.match(index,/小手机\.html\?v=1334/);
-  assert.match(repair,/小手机\.html\?v=1334/);
+  assert.match(app,/APP_VER='v1336 · 外置语音测试隔离与内置关闭拦截'/);
+  assert.match(app,/const url='sw\.js\?v=1336&r=v1336-web-tts-test-isolation-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1336'/);
+  assert.match(html,/app\.js\?v=1336/);
+  assert.match(sw,/const BUILD='1336'/);
+  assert.match(sw,/north-shell-v1336-web-tts-test-isolation-1/);
+  assert.match(index,/小手机\.html\?v=1336/);
+  assert.match(repair,/小手机\.html\?v=1336/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{

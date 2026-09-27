@@ -96,11 +96,11 @@ function renderAIAccount(){const ac=aiCoreInit();const id=aiUserId();S.settings.
     </div>
     <div class="section">
       <div style="padding:12px 14px;font-weight:600;color:#a5b4fc">语音音色</div>
-      <div class="hint" style="padding:0 14px 8px">这里只管理和测试内置语音。系统免费音色和尚未绑定的克隆音色，所有账户都可以拉取使用；已经绑定的克隆音色只对绑定账户显示。外置语音的地址、Key、模型和音色不会在这里被改动。</div>
+      <div class="hint" style="padding:0 14px 8px">这里只管理和测试内置语音；关闭后不能生成或测试，开启后测试按语音规则扣点。系统免费音色和尚未绑定的克隆音色，所有账户都可以拉取使用；已经绑定的克隆音色只对绑定账户显示。外置语音的地址、Key、模型和音色不会在这里被改动。</div>
       <div class="it"><span>可用公共音色<br><small style="color:#888">包含系统音色与未绑定克隆</small></span><span class="v"><button class="minibtn" onclick="aiPullVoices()">拉取音色</button></span></div>
       ${aiPrivateVoiceRows()}
       <div class="it"><span>当前内置音色<small>${esc(voice)}</small></span><span class="v">${aiVoiceRelayOn()?'角色正在使用内置':'角色当前仍使用外置'}</span></div>
-      <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="aiClearVoice()">清空内置音色</button><button class="btn p" ${_aiVoiceTestBusy?'disabled':''} onclick="aiTestVoice()">${_aiVoiceTestBusy?'生成中…':'测试内置语音'}</button></div>
+      <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="aiClearVoice()">清空内置音色</button><button class="btn p" ${_aiVoiceTestBusy||!aiVoiceRelayOn()?'disabled':''} onclick="aiTestVoice()">${_aiVoiceTestBusy?'生成中…':'测试内置语音'}</button></div>
       ${_aiVoiceTestBusy||_aiVoiceTestStatus?`<div class="hint" style="padding:0 14px 10px;color:${_aiVoiceTestBusy?'#ffb7d2':'#9aa0aa'}">${_aiVoiceTestBusy?'<span class="spin" style="display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.25);border-top-color:#ff8fab;border-radius:50%;animation:aispin .8s linear infinite;vertical-align:-2px;margin-right:6px"></span>':''}${esc(_aiVoiceTestStatus||'语音生成中，请稍等，不要重复点击')}</div>`:''}
     </div>
     <div class="section">
@@ -156,7 +156,7 @@ function aiShowVoicePicker(){const q=(_aiVoiceQ||'').toLowerCase(),curVoice=aiIn
 function aiPickVoice(id){S.settings.tts=S.settings.tts||{};S.settings.tts.relayVoice=id;save();closeModal();toast('已设为内置默认音色；外置音色没有改变');if(cur().p==='aiaccount')render();}
 function aiClearVoice(){S.settings.tts=S.settings.tts||{};S.settings.tts.relayVoice='';save();toast('已清空内置音色；外置音色没有改变');render();}
 function aiVoiceTestText(){const lang=((S.settings.tts||{}).relayLang||'zh');return {zh:'我在测试这条语音的花销和声音效果。','粤':'我而家試緊呢把聲嘅效果同埋收費。','英':'Hi, I am testing the cost and sound of this voice.','日':'こんにちは、この音声の費用と聞こえ方をテストしています。','韩':'안녕하세요, 이 음성의 비용과 소리를 테스트하고 있어요.','法':'Bonjour, je teste le coût et le rendu de cette voix.','德':'Hallo, ich teste die Kosten und den Klang dieser Stimme.','俄':'Привет, я проверяю стоимость и звучание этого голоса.'}[lang]||'我在测试这条语音的花销和声音效果。';}
-async function aiTestVoice(){const text=aiVoiceTestText();
+async function aiTestVoice(){if(!aiVoiceRelayOn()||(S.settings.tts||{}).enabled===false){_aiVoiceTestStatus='内置语音已关闭，未发送生成请求';toast(_aiVoiceTestStatus);if(cur().p==='aiaccount')aiRenderStable();return;}const text=aiVoiceTestText();
   if(_aiVoiceTestBusy){toast('语音还在生成中，请稍等');return;}
   _aiVoiceTestBusy=true;_aiVoiceTestStatus='正在单独测试内置语音；不会改动外置配置';if(cur().p==='aiaccount')aiRenderStable();
   try{initAudio();
