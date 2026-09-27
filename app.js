@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1330'){
+if(window.__NORTH_SHELL_BUILD__!=='1332'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -497,7 +497,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1330 · 外卖上下文与偏好记忆修复';
+const APP_VER='v1332 · 邀请码网络兼容与原后台登记';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1886,7 +1886,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1330&r=v1330-web-delivery-context-1';
+  const url='sw.js?v=1332&r=v1332-web-license-relay-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -8350,6 +8350,7 @@ function licenseMarkUnlocked(){try{localStorage.setItem('yibei_unlocked',String(
 function licenseFinishGate(){licenseMarkUnlocked();const g=document.getElementById('gate');if(g)g.remove();render();setTimeout(maybeFirstRun,400);}
 function licenseEvictedNotice(result){const a=result&&result.session&&result.session.evicted;if(a&&a.length)toast('已恢复，并退出最早的'+(appleHomeCompatNative()?'授权设备：':'浏览器：')+a.join('、'));}
 async function licensePostActivationSetup(){
+  try{await pfEnsure(true);}catch(_){}
   let aiSyncFailed=false;
   try{await licenseSyncAiIdentity(true);}catch(_){aiSyncFailed=true;}
   try{await licenseSyncPhoneFriendIdentity(true);}catch(_){}
@@ -8370,7 +8371,6 @@ function showGate(){if(gateOK())return;let el=document.getElementById('gate');
     if(!window.NorthLicense){err.textContent='授权组件没有加载，请刷新页面';return;}
     setBusy(true,'正在核销邀请码…');btn.textContent='验证中…';
     try{
-      try{await pfEnsure(true);}catch(_){}
       await NorthLicense.activate(v);licenseMarkUnlocked();licenseFinishGate();licensePostActivationSetup();
     }catch(e){err.textContent=(e&&e.message)||'邀请码验证失败';inp.value='';inp.focus();}
     finally{setBusy(false,'');btn.textContent='使用邀请码进入';}};

@@ -1262,3 +1262,11 @@ test('the private cozy bundle rejects the two mobile material regressions', () =
 });
 
 test('lock screen keeps touch ownership in every shipped shell',()=>{for(const p of ['小手机.html',PRIVATE_DIR+'index.html',PRIVATE_DIR+'小手机.html']){const s=read(p);assert.match(s,/\.lockscreen\{touch-action:none;overscroll-behavior:none;/);assert.match(s,/\.lockscreen\.dragging\{transition:none;\}/);}});
+
+test('authorization relay preserves the original backend identity in both shipped runtimes',()=>{
+ for(const p of ['license-gate.js',PRIVATE_DIR+'license-gate.js']){
+  const s=read(p);assert.ok(s.includes('function browserLicenseBase(endpoint)'));
+  assert.ok(s.includes('https://license.smallphoneapp.com'));assert.ok(s.includes("endpoint.id === 'license-failover'"));
+  assert.ok(s.includes('https://lovbzibismsjqvjujilz.supabase.co'));
+ }
+});

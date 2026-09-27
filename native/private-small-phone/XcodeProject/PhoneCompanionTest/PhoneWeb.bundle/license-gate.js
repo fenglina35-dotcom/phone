@@ -205,6 +205,13 @@
       && /(?:这台手机没有可恢复的授权|没有读到手机通行密钥)/.test(String(error.message || '')));
   }
 
+  // This is a transport for the SAME license backend, never another database.
+  function browserLicenseBase(endpoint) {
+    return endpoint.id === 'license-failover'
+      && endpoint.baseUrl.replace(/\/+$/, '') === 'https://lovbzibismsjqvjujilz.supabase.co'
+      ? 'https://license.smallphoneapp.com' : endpoint.baseUrl.replace(/\/+$/, '');
+  }
+
   async function requestEndpoint(endpoint, action, body, timeoutMs) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs || 25000);
@@ -220,13 +227,15 @@
           timeoutMs: timeoutMs || 25000,
         });
       } else {
-        response = await fetch(endpoint.baseUrl.replace(/\/+$/, '') + '/functions/v1/phone-license', {
+        const base = browserLicenseBase(endpoint);
+        const headers = { 'Content-Type': 'application/json' };
+        if (base === endpoint.baseUrl.replace(/\/+$/, '')) {
+          headers.apikey = endpoint.apiKey;
+          headers.Authorization = 'Bearer ' + endpoint.apiKey;
+        }
+        response = await fetch(base + '/functions/v1/phone-license', {
           method: 'POST',
-          headers: {
-            apikey: endpoint.apiKey,
-            Authorization: 'Bearer ' + endpoint.apiKey,
-            'Content-Type': 'application/json',
-          },
+          headers: headers,
           body: JSON.stringify(Object.assign({ action: action }, body || {})),
           signal: controller.signal,
         });

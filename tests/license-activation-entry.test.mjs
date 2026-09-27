@@ -25,6 +25,7 @@ const calls = [];
 const notices = [];
 const context = {
   appleHomeCompatNative: () => true,
+  pfEnsure: async () => { calls.push('friend-register'); },
   licenseSyncAiIdentity: async () => { calls.push('ai'); throw new Error('sync unavailable'); },
   licenseSyncPhoneFriendIdentity: async () => { calls.push('friend'); },
   NorthLicense: { bindPasskey: async () => { calls.push('passkey'); } },
@@ -34,6 +35,6 @@ vm.createContext(context);
 vm.runInContext(source.slice(helperStart, helperEnd), context);
 await context.licensePostActivationSetup();
 
-assert.deepEqual(calls, ['ai', 'friend', 'passkey']);
+assert.deepEqual(calls, ['friend-register', 'ai', 'friend', 'passkey']);
 assert.ok(notices.some((message) => message.includes('不影响使用')));
 console.log('license activation entry tests passed');

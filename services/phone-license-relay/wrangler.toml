@@ -1,0 +1,8 @@
+name = "north-license-connectivity"
+main = "worker.mjs"
+compatibility_date = "2026-09-01"
+workers_dev = true
+routes = [{ pattern = "license.smallphoneapp.com", custom_domain = true }]
+
+[observability]
+enabled = true
