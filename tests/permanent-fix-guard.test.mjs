@@ -1270,3 +1270,14 @@ test('authorization relay preserves the original backend identity in both shippe
   assert.ok(s.includes('https://lovbzibismsjqvjujilz.supabase.co'));
  }
 });
+
+test('support retains the local sticker answer and searchable feature paths in both runtimes',()=>{
+ for(const p of ['wechat-me.js',PRIVATE_DIR+'wechat-me.js']){
+  const s=read(p);assert.ok(s.includes('function wxSupportCatalogHTML()'));
+  assert.ok(s.includes('function wxSupportFilter(value)'));
+  assert.ok(s.includes('聊天与媒体 → 角色的表情包'));
+  assert.ok(s.includes('动态表情开发中'));
+  assert.ok(s.includes('聊天偏好 → 电话频率'));
+  assert.ok(s.includes('甜蜜日常 → 布置任务'));
+ }
+});

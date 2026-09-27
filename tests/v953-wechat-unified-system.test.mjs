@@ -6,9 +6,9 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-assert.match(source,/APP_VER='v1332 · 邀请码网络兼容与原后台登记'/);
-assert.match(html,/__NORTH_SHELL_BUILD__='1332'/);
-assert.match(sw,/BUILD='1332'/);
+assert.match(source,/APP_VER='v1334 · 客服功能目录与设置入口'/);
+assert.match(html,/__NORTH_SHELL_BUILD__='1334'/);
+assert.match(sw,/BUILD='1334'/);
 assert.equal((project.match(/CURRENT_PROJECT_VERSION = 400;/g)||[]).length,12);
 assert.equal((project.match(/MARKETING_VERSION = 1.0.400;/g)||[]).length,12);
 

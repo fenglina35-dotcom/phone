@@ -61,20 +61,20 @@ function functionSource(source, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('private performance candidate keeps v1333 while public web advances independently', () => {
+test('private performance candidate keeps v1335 while public web advances independently', () => {
   assert.equal(privateIndex, privateAlias);
-  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1333'/);
-  assert.match(privateIndex, /app\.js\?v=1333&r=v1333-private-license-relay-1/);
+  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1335'/);
+  assert.match(privateIndex, /app\.js\?v=1335&r=v1335-private-support-directory-1/);
   assert.match(privateIndex, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(privateRepair, /index\.html\?repair=1&v=1333/);
-  assert.match(privateApp, /APP_VER='v1333 · 邀请码网络兼容与原后台登记'/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1335/);
+  assert.match(privateApp, /APP_VER='v1335 · 客服功能目录与设置入口'/);
   assert.match(overlay, /336-daily-file-backup/);
   assert.match(webView, /1\.0\.400 \(400\)/);
   assert.match(bridge, /private static let build = "1\.0\.400 \(400\)"/);
   assert.match(bridge, /static let contractVersion = 41/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 400;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.400;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1332 · 邀请码网络兼容与原后台登记'/);
+  assert.match(publicApp, /APP_VER='v1334 · 客服功能目录与设置入口'/);
   assert.doesNotMatch(publicApp, /function northNativeBackgroundTask\(name,run\)/);
 });
 

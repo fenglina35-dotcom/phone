@@ -14,14 +14,14 @@ const backup=read(bundle+'private-cloud-backup.js');
 const privateApp=read(bundle+'app.js');
 const publicApp=read('app.js');
 
-test('private v1333 loads daily backup after the diagnostic overlay while public advances independently',()=>{
+test('private v1335 loads daily backup after the diagnostic overlay while public advances independently',()=>{
   for(const name of ['index.html','小手机.html']){
     const html=read(bundle+name);
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1333'/);
-    assert.ok(html.indexOf('private-cloud-backup.js?v=1333')>html.indexOf('private-runtime-diagnostics.js?v=339'));
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1335'/);
+    assert.ok(html.indexOf('private-cloud-backup.js?v=1335')>html.indexOf('private-runtime-diagnostics.js?v=339'));
   }
-  assert.match(privateApp,/APP_VER='v1333 · 邀请码网络兼容与原后台登记'/);
-  assert.match(publicApp,/APP_VER='v1332 · 邀请码网络兼容与原后台登记'/);
+  assert.match(privateApp,/APP_VER='v1335 · 客服功能目录与设置入口'/);
+  assert.match(publicApp,/APP_VER='v1334 · 客服功能目录与设置入口'/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 400;/g)||[]).length,12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.400;/g)||[]).length,12);
 });
