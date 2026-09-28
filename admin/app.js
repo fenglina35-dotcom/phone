@@ -753,8 +753,9 @@ window.openOwnerPairing = async () => {
     const data = await api('admin_owner_pair_create');
     const code = String(data.pair_code || '');
     const expires = data.expires_at ? fmtDateTime(data.expires_at) : '10 分钟后';
-    const link = new URL('../admin-owner/index.html?release=639', location.href);
-    link.hash = `bind=${encodeURIComponent(code)}`;
+    const link = new URL('../admin-owner/index.html', location.href);
+    link.searchParams.set('release', '640');
+    link.searchParams.set('bind', code);
     openSheet(`<h2>新设备直接进入链接</h2>
       <p>把下面的链接发到新手机并打开，会自动绑定、自动进入；链接只能使用一次，有效至 ${esc(expires)}。</p>
       <textarea id="ownerPairLink" readonly style="width:100%;min-height:112px;resize:none;font-size:14px;line-height:1.5">${esc(link.href)}</textarea>
@@ -777,11 +778,14 @@ window.copyOwnerPairLink = async () => {
 };
 
 function ownerPairCodeFromLink() {
-  if (PORTAL_MODE !== 'owner' || !location.hash) return '';
-  const params = new URLSearchParams(location.hash.slice(1));
-  const code = String(params.get('bind') || '').trim().toUpperCase().replace(/[\s-]+/g, '');
+  if (PORTAL_MODE !== 'owner') return '';
+  const query = new URLSearchParams(location.search);
+  const fragment = new URLSearchParams(location.hash.slice(1));
+  const code = String(query.get('bind') || fragment.get('bind') || '').trim().toUpperCase().replace(/[\s-]+/g, '');
   if (!code) return '';
-  history.replaceState(null, '', location.pathname + location.search);
+  query.delete('bind');
+  const cleanedQuery = query.toString();
+  history.replaceState(null, '', location.pathname + (cleanedQuery ? `?${cleanedQuery}` : ''));
   return code;
 }
 
@@ -800,7 +804,7 @@ async function enableNotifications() {
   try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') throw new Error('没有获得通知权限');
-    const registration = await navigator.serviceWorker.register(PORTAL_MODE === 'owner' ? '../admin-owner/sw.js?v=639' : './sw.js?v=639', {scope:'./'});
+    const registration = await navigator.serviceWorker.register(PORTAL_MODE === 'owner' ? '../admin-owner/sw.js?v=640' : './sw.js?v=640', {scope:'./'});
     await navigator.serviceWorker.ready;
     const config = await api('admin_config');
     if (!config.vapid_public_key) throw new Error('后台通知密钥尚未配置');
@@ -918,7 +922,7 @@ async function restoreSavedLogin() {
 }
 
 setAuthMode(PORTAL_MODE);
-if ('serviceWorker' in navigator) navigator.serviceWorker.register(PORTAL_MODE === 'owner' ? '../admin-owner/sw.js?v=639' : './sw.js?v=639', {scope:'./'}).catch(() => {});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register(PORTAL_MODE === 'owner' ? '../admin-owner/sw.js?v=640' : './sw.js?v=640', {scope:'./'}).catch(() => {});
 const ownerPairLinkCode = ownerPairCodeFromLink();
 if (token) restoreSavedLogin();
 else if (ownerPairLinkCode) login(ownerPairLinkCode);

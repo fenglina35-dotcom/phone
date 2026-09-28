@@ -27,10 +27,13 @@ assert.match(app, /PORTAL_MODE === 'owner' \? 'north_owner_access' : 'north_staf
 assert.match(app, /PORTAL_MODE === 'staff' && ownerAccess/);
 assert.match(app, /admin_owner_pair_create/);
 assert.match(app, /admin_owner_pair_claim/);
-assert.match(app, /new URL\('\.\.\/admin-owner\/index\.html\?release=639'/);
-assert.match(app, /link\.hash = `bind=\$\{encodeURIComponent\(code\)\}`/);
+assert.match(app, /new URL\('\.\.\/admin-owner\/index\.html'/);
+assert.match(app, /link\.searchParams\.set\('release', '640'\)/);
+assert.match(app, /link\.searchParams\.set\('bind', code\)/);
 assert.match(app, /function ownerPairCodeFromLink\(\)/);
-assert.match(app, /history\.replaceState\(null, '', location\.pathname \+ location\.search\)/);
+assert.match(app, /query\.get\('bind'\) \|\| fragment\.get\('bind'\)/);
+assert.match(app, /query\.delete\('bind'\)/);
+assert.match(app, /history\.replaceState\(null, '', location\.pathname/);
 assert.match(app, /else if \(ownerPairLinkCode\) login\(ownerPairLinkCode\)/);
 assert.match(app, /OWNER_PAIR_API_URL = 'https:\/\/lkhlyfpssmrjkkzhuzag\.supabase\.co\/functions\/v1\/phone-license'/);
 assert.match(app, /action === 'admin_owner_pair_create' \|\| action === 'admin_owner_pair_claim'/);
