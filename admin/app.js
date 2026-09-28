@@ -3,8 +3,28 @@ const OWNER_PAIR_API_URL = 'https://lkhlyfpssmrjkkzhuzag.supabase.co/functions/v
 const PORTAL_MODE = document.documentElement.dataset.adminPortal === 'owner' ? 'owner' : 'staff';
 const TOKEN_KEY = PORTAL_MODE === 'owner' ? 'north_owner_access' : 'north_staff_access';
 const LEGACY_TOKEN_KEY = 'north_admin_access';
+const OWNER_COOKIE_KEY = 'north_owner_access';
 
-let token = localStorage.getItem(TOKEN_KEY) || (PORTAL_MODE === 'owner' ? localStorage.getItem(LEGACY_TOKEN_KEY) || '' : '');
+function readOwnerCookie() {
+  if (PORTAL_MODE !== 'owner') return '';
+  const prefix = `${OWNER_COOKIE_KEY}=`;
+  const row = document.cookie.split(';').map((part) => part.trim()).find((part) => part.startsWith(prefix));
+  if (!row) return '';
+  try { return decodeURIComponent(row.slice(prefix.length)); } catch (_) { return ''; }
+}
+
+function writeOwnerCookie(value) {
+  if (PORTAL_MODE !== 'owner') return;
+  const encoded = encodeURIComponent(String(value || ''));
+  document.cookie = `${OWNER_COOKIE_KEY}=${encoded}; Path=/phone/admin-owner/; Max-Age=31536000; Secure; SameSite=Strict`;
+}
+
+function clearOwnerCookie() {
+  if (PORTAL_MODE !== 'owner') return;
+  document.cookie = `${OWNER_COOKIE_KEY}=; Path=/phone/admin-owner/; Max-Age=0; Secure; SameSite=Strict`;
+}
+
+let token = localStorage.getItem(TOKEN_KEY) || (PORTAL_MODE === 'owner' ? readOwnerCookie() || localStorage.getItem(LEGACY_TOKEN_KEY) || '' : '');
 let authMode = PORTAL_MODE;
 let adminAccessRole = '';
 let canManageOrders = false;
@@ -732,7 +752,10 @@ async function login(suppliedValue = '') {
       result = await api('admin_auth');
     }
     localStorage.setItem(TOKEN_KEY, token);
-    if (PORTAL_MODE === 'owner') localStorage.removeItem(LEGACY_TOKEN_KEY);
+    if (PORTAL_MODE === 'owner') {
+      writeOwnerCookie(token);
+      localStorage.removeItem(LEGACY_TOKEN_KEY);
+    }
     showWorkspace(result);
   } catch (error) {
     if (Number(error?.status || 0) === 401) {
@@ -754,7 +777,7 @@ window.openOwnerPairing = async () => {
     const code = String(data.pair_code || '');
     const expires = data.expires_at ? fmtDateTime(data.expires_at) : '10 分钟后';
     const link = new URL('../admin-owner/index.html', location.href);
-    link.searchParams.set('release', '640');
+    link.searchParams.set('release', '641');
     link.searchParams.set('bind', code);
     openSheet(`<h2>新设备直接进入链接</h2>
       <p>把下面的链接发到新手机并打开，会自动绑定、自动进入；链接只能使用一次，有效至 ${esc(expires)}。</p>
@@ -804,7 +827,7 @@ async function enableNotifications() {
   try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') throw new Error('没有获得通知权限');
-    const registration = await navigator.serviceWorker.register(PORTAL_MODE === 'owner' ? '../admin-owner/sw.js?v=640' : './sw.js?v=640', {scope:'./'});
+    const registration = await navigator.serviceWorker.register(PORTAL_MODE === 'owner' ? '../admin-owner/sw.js?v=641' : './sw.js?v=641', {scope:'./'});
     await navigator.serviceWorker.ready;
     const config = await api('admin_config');
     if (!config.vapid_public_key) throw new Error('后台通知密钥尚未配置');
@@ -886,6 +909,7 @@ $('deleteAllBtn')?.addEventListener('click', openDeleteAllOrders);
 $('logoutBtn').addEventListener('click', () => {
   token = '';
   localStorage.removeItem(TOKEN_KEY);
+  clearOwnerCookie();
   showAuth();
 });
 $('modal').addEventListener('click', (event) => { if (event.target === $('modal')) closeSheet(); });
@@ -904,6 +928,7 @@ async function restoreSavedLogin() {
       const result = await api('admin_auth');
       if (PORTAL_MODE === 'owner') {
         localStorage.setItem(TOKEN_KEY, token);
+        writeOwnerCookie(token);
         localStorage.removeItem(LEGACY_TOKEN_KEY);
       }
       showWorkspace(result);
@@ -917,12 +942,13 @@ async function restoreSavedLogin() {
   if (Number(lastError?.status || 0) === 401) {
     token = '';
     localStorage.removeItem(TOKEN_KEY);
+    clearOwnerCookie();
   }
   showAuth(loginErrorText(lastError));
 }
 
 setAuthMode(PORTAL_MODE);
-if ('serviceWorker' in navigator) navigator.serviceWorker.register(PORTAL_MODE === 'owner' ? '../admin-owner/sw.js?v=640' : './sw.js?v=640', {scope:'./'}).catch(() => {});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register(PORTAL_MODE === 'owner' ? '../admin-owner/sw.js?v=641' : './sw.js?v=641', {scope:'./'}).catch(() => {});
 const ownerPairLinkCode = ownerPairCodeFromLink();
 if (token) restoreSavedLogin();
 else if (ownerPairLinkCode) login(ownerPairLinkCode);

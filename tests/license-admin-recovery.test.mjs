@@ -56,7 +56,7 @@ assert.match(adminHtml, /其他管理员/);
 assert.doesNotMatch(adminHtml, /主管理员总后台/);
 assert.match(ownerHtml, /主管理员总后台/);
 assert.doesNotMatch(ownerHtml, /其他管理员入口/);
-assert.match(adminHtml, /app\.js\?v=640/);
-assert.match(ownerHtml, /\.\.\/admin\/app\.js\?v=640/);
+assert.match(adminHtml, /app\.js\?v=641/);
+assert.match(ownerHtml, /\.\.\/admin\/app\.js\?v=641/);
 
 console.log('license admin recovery tests passed');

@@ -24,11 +24,17 @@ assert.match(owner, /ownerPairBtn/);
 assert.doesNotMatch(owner, /其他管理员入口/);
 
 assert.match(app, /PORTAL_MODE === 'owner' \? 'north_owner_access' : 'north_staff_access'/);
+assert.match(app, /function readOwnerCookie\(\)/);
+assert.match(app, /function writeOwnerCookie\(value\)/);
+assert.match(app, /Path=\/phone\/admin-owner\/; Max-Age=31536000; Secure; SameSite=Strict/);
+assert.match(app, /readOwnerCookie\(\) \|\| localStorage\.getItem\(LEGACY_TOKEN_KEY\)/);
+assert.match(app, /writeOwnerCookie\(token\)/);
+assert.match(app, /clearOwnerCookie\(\)/);
 assert.match(app, /PORTAL_MODE === 'staff' && ownerAccess/);
 assert.match(app, /admin_owner_pair_create/);
 assert.match(app, /admin_owner_pair_claim/);
 assert.match(app, /new URL\('\.\.\/admin-owner\/index\.html'/);
-assert.match(app, /link\.searchParams\.set\('release', '640'\)/);
+assert.match(app, /link\.searchParams\.set\('release', '641'\)/);
 assert.match(app, /link\.searchParams\.set\('bind', code\)/);
 assert.match(app, /function ownerPairCodeFromLink\(\)/);
 assert.match(app, /query\.get\('bind'\) \|\| fragment\.get\('bind'\)/);

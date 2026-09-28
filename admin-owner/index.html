@@ -45,7 +45,7 @@
       <p id="authHint">这是主管理员专用地址。已绑定的设备会直接进入；新设备只需输入一次由已登录设备生成的临时绑定码，不使用邀请码或长期口令。</p>
       <label class="field"><span id="adminTokenLabel">一次性设备绑定码</span><input id="adminToken" type="text" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="20" placeholder="在已登录设备中生成"></label>
       <button class="btn primary" style="width:100%" id="loginBtn">绑定并进入总后台</button>
-      <div class="install-tip">建议添加到手机主屏幕。iPhone：Safari 分享按钮 → 添加到主屏幕。</div>
+      <div class="install-tip">建议先在浏览器进入总后台，再添加到手机主屏幕。iPhone 会把当前登录状态一并带入。</div>
     </section>
 
     <section id="workspace" class="hidden">
@@ -91,6 +91,6 @@
 
   <div id="modal" class="modal hidden"><div class="sheet" id="sheet"></div></div>
   <div id="viewer" class="viewer hidden"><button class="icon" id="closeViewer" aria-label="关闭">×</button><img id="viewerImg" alt="付款截图大图"></div>
-  <script src="../admin/app.js?v=640"></script>
+  <script src="../admin/app.js?v=641"></script>
 </body>
 </html>
