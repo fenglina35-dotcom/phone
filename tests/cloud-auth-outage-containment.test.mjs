@@ -22,10 +22,11 @@ test('temporary refresh failures preserve the private phone Keychain session', (
 
 test('only explicit terminal license codes may clear a browser session', () => {
   assert.match(license, /const permanentCodes = new Set/);
-  assert.match(license, /'license-session-invalid'/);
   assert.match(license, /'license-admin-blocked'/);
+  assert.doesNotMatch(license, /'license-session-invalid'/);
   assert.match(license, /out\.permanent = !!\(payload && payload\.permanent\) && permanentCodes\.has\(out\.code\)/);
-  assert.match(app, /e&&e\.server&&e\.permanent===true/);
+  assert.match(app, /e&&e\.server&&e\.code==='license-admin-blocked'/);
+  assert.doesNotMatch(app, /e&&e\.server&&e\.permanent===true/);
 });
 
 test('automatic authorization checks back off silently during an outage', () => {

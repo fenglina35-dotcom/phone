@@ -23,10 +23,12 @@ assert.match(gate, /out\.code = String\(payload && payload\.code/);
 assert.match(gate, /const permanentCodes = new Set\(/);
 assert.match(gate, /out\.permanent = !!\(payload && payload\.permanent\) && permanentCodes\.has\(out\.code\)/);
 assert.match(gate, /license-admin-blocked/);
-assert.match(gate, /license-not-found/);
+assert.doesNotMatch(gate, /'license-session-invalid',[\s\S]*?'license-admin-blocked'/);
+assert.doesNotMatch(gate, /'license-not-found'/);
 assert.doesNotMatch(gate, /async function restoreLocalIdentity/);
 
-assert.match(app, /e&&e\.server&&e\.permanent===true/);
+assert.match(app, /e&&e\.server&&e\.code==='license-admin-blocked'/);
+assert.doesNotMatch(app, /e&&e\.server&&e\.permanent===true/);
 assert.doesNotMatch(app, /e&&e\.server&&e\.status===400/);
 assert.match(app, /_licenseCheckFailures=0,_licenseCheckNextAt=0/);
 assert.match(app, /Math\.min\(30\*60000,60000\*Math\.pow\(2,_licenseCheckFailures-1\)\)/);

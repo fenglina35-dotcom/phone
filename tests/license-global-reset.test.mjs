@@ -13,6 +13,8 @@ const migration = fs.readFileSync(
 
 assert.match(app, /const SHARE_EPOCH=4;/);
 assert.match(edge, /LICENSE_EPOCH'\) \|\| 4/);
+assert.doesNotMatch(edge, /Number\(data\.epoch\) !== LICENSE_EPOCH/);
+assert.match(app, /普通网页更新不得用它让现有授权退出/);
 assert.match(migration, /where epoch < 4/);
 assert.match(migration, /update public\.phone_license_sessions/);
 assert.match(migration, /update public\.phone_license_bootstraps/);

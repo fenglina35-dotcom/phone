@@ -17,7 +17,6 @@ const ORDER_SERVICE_KEY = Deno.env.get('PHONE_SERVICE_ROLE_KEY') || SERVICE_KEY;
 const RP_ID = Deno.env.get('LICENSE_RP_ID') || 'fenglina35-dotcom.github.io';
 const RP_NAME = 'North 小手机';
 const PROOF_BUCKET = 'phone-ai-payment-proofs';
-const MAX_SESSIONS = 3;
 const TRANSFER_CREATE_COOLDOWN_MS = 30 * 1000;
 const TRANSFER_CREATE_HOURLY_LIMIT = 10;
 const TRANSFER_REDEEM_WINDOW_MS = 10 * 60 * 1000;
@@ -25,7 +24,7 @@ const TRANSFER_REDEEM_FAILURE_LIMIT = 8;
 const TRANSFER_ATTEMPT_RETENTION_MS = 24 * 60 * 60 * 1000;
 const RECOVERY_CREATE_DAILY_LIMIT = 5;
 const RECOVERY_VALID_MS = 365 * 24 * 60 * 60 * 1000;
-// 大刷新时与 app.js 的 SHARE_EPOCH 一起递增并重新部署，旧通行密钥将无法恢复。
+// 数据结构版本；普通发布不得用它注销现有授权。
 const LICENSE_EPOCH = Number(Deno.env.get('LICENSE_EPOCH') || 4);
 const ALLOWED_ORIGINS = new Set([
   'https://fenglina35-dotcom.github.io',
@@ -560,7 +559,6 @@ async function activeLicense(licenseId: string) {
     if (blockAction) throw new LicenseHttpError('手机授权已被管理员移出', 403, 'license-admin-blocked', true);
     throw new LicenseHttpError('手机授权正在等待管理员恢复', 409, 'license-awaiting-admin-restore');
   }
-  if (Number(data.epoch) !== LICENSE_EPOCH) throw new LicenseHttpError('手机授权需要管理员恢复', 409, 'license-epoch-mismatch');
   return data;
 }
 
@@ -570,13 +568,23 @@ async function sessionAuth(tokenValue: unknown) {
   const tokenHash = await sha256Hex(token);
   const { data, error } = await supabase
     .from('phone_license_sessions')
-    .select('id,license_id,label,created_at,last_seen_at')
+    .select('id,license_id,label,created_at,last_seen_at,revoked_at')
     .eq('token_hash', tokenHash)
-    .is('revoked_at', null)
     .maybeSingle();
   if (error) throw temporaryLicenseError();
-  if (!data) throw new LicenseHttpError('本浏览器授权已失效', 401, 'license-session-invalid', true);
+  if (!data) throw new LicenseHttpError('本浏览器授权记录暂时无法恢复', 409, 'license-session-missing');
   await activeLicense(data.license_id);
+  // Older releases automatically revoked the oldest session after three
+  // browsers. That policy caused valid users to be thrown back to the invite
+  // page. A still-active license restores those historical sessions; an admin
+  // block is checked above and remains the only server-side forced exit.
+  if (data.revoked_at) {
+    const { error: restoreError } = await supabase
+      .from('phone_license_sessions')
+      .update({ revoked_at: null, last_seen_at: new Date().toISOString() })
+      .eq('id', data.id);
+    if (restoreError) throw temporaryLicenseError();
+  }
   return { ...data, token };
 }
 
@@ -622,15 +630,6 @@ async function createSession(licenseId: string, req: Request, labelValue: unknow
     .is('revoked_at', null)
     .order('created_at', { ascending: false });
   if (listError) throw new Error('检查浏览器名额失败');
-  const overflow = (sessions || []).slice(MAX_SESSIONS);
-  if (overflow.length) {
-    const ids = overflow.map((row) => row.id);
-    await supabase
-      .from('phone_license_sessions')
-      .update({ revoked_at: new Date().toISOString() })
-      .in('id', ids)
-      .is('revoked_at', null);
-  }
   await supabase
     .from('phone_licenses')
     .update({ updated_at: new Date().toISOString(), last_seen_at: new Date().toISOString() })
@@ -639,8 +638,8 @@ async function createSession(licenseId: string, req: Request, labelValue: unknow
     token,
     licenseId,
     sessionId: inserted.id,
-    activeCount: Math.min((sessions || []).length, MAX_SESSIONS),
-    evicted: overflow.map((row) => cleanText(row.label, 80)),
+    activeCount: (sessions || []).length,
+    evicted: [],
   };
 }
 

@@ -71,8 +71,8 @@ test('private identity remains v1341 and iOS 399 while public advances independe
   assert.match(bridge, /private static let build = "1\.0\.400 \(400\)"/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 400;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.400;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1340 · 外置语音独立通道修复'/);
-  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1340'/);
+  assert.match(publicApp, /APP_VER='v1342 · 邀请码永久授权修复'/);
+  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1342'/);
   assert.doesNotMatch(publicApp, /persistWechatRequested|smallPhoneWechatPersistTrace/);
 });
 

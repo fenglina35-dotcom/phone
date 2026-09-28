@@ -35,7 +35,9 @@
   }
 
   function isManaged() {
-    try { return localStorage.getItem(MANAGED_KEY) === String(config.epoch); } catch (_) { return false; }
+    // A saved cloud session is the durable grant. App/web version markers must
+    // never turn a valid grant back into a one-time invite prompt.
+    return !!session();
   }
 
   function isPrivateApp() {
@@ -261,10 +263,7 @@
       out.endpointId = endpoint.id;
       out.code = String(payload && payload.code || '');
       const permanentCodes = new Set([
-        'license-session-invalid',
         'license-admin-blocked',
-        'license-not-found',
-        'license-local-identity-invalid',
       ]);
       // API gateways may emit a bare or synthetic 401 during an outage. Only
       // a signed license response with one of our explicit terminal codes may
