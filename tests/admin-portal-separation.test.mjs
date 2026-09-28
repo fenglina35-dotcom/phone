@@ -4,6 +4,7 @@ import fs from 'node:fs';
 const read = (path) => fs.readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const staff = read('admin/index.html');
 const owner = read('admin-owner/index.html');
+const rootServiceWorker = read('sw.js');
 const app = read('admin/app.js');
 const backend = read('supabase/functions/phone-license/index.ts');
 const relay = read('services/phone-license-relay/worker.mjs');
@@ -16,6 +17,7 @@ assert.doesNotMatch(staff, /主管理员总后台/);
 assert.doesNotMatch(staff, /ownerPairBtn/);
 
 assert.match(owner, /data-admin-portal="owner"/);
+assert.match(rootServiceWorker, /\/\\\/admin\(\?:-owner\)\?\(\?:\\\/\|\$\)\//, 'root service worker must bypass both admin portal paths');
 assert.match(owner, /主管理员总后台/);
 assert.match(owner, /一次性设备绑定码/);
 assert.match(owner, /ownerPairBtn/);

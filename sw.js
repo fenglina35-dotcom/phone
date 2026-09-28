@@ -1,6 +1,6 @@
 const BUILD='1340';
 const HOTFIX='v1340-web-external-tts-relay-1';
-const SHELL_CACHE='north-shell-v1340-web-external-tts-relay-1';
+const SHELL_CACHE='north-shell-v1340-web-admin-route-2';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
@@ -195,6 +195,10 @@ self.addEventListener('fetch',event=>{
   // public documents. They must
   // never be replaced by the cached small-phone application shell.
   if(request.mode==='navigate'&&/\/north-(?:support|privacy|role-controller)\.html$/.test(url.pathname))return;
+
+  // The owner and staff admin portals have their own application shells and
+  // service workers. Never replace either portal with the cached phone shell.
+  if(request.mode==='navigate'&&/\/admin(?:-owner)?(?:\/|$)/.test(url.pathname))return;
 
   // Recovery and launcher pages must bypass the application shell cache.
   // Otherwise the old worker serves the broken app shell again and the
