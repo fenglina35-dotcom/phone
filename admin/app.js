@@ -34,6 +34,8 @@ let workspaceView = 'orders';
 let orders = [];
 let licenseUsers = [];
 let licenseTotal = 0;
+let licenseHasLoaded = false;
+let licenseLoadFailed = false;
 let licensePage = 1;
 const licensePageSize = 50;
 let licenseQuery = '';
@@ -74,13 +76,12 @@ const operatorLabel = (value) => {
 };
 
 async function requestApi(action, payload) {
-  const attempts = action === 'admin_license_users' ? 2 : 1;
-  const apiUrl = action === 'admin_owner_pair_create' || action === 'admin_owner_pair_claim'
-    ? OWNER_PAIR_API_URL
-    : ADMIN_API_URL;
-  for (let attempt = 0; attempt < attempts; attempt++) {
+  const ownerPairAction = action === 'admin_owner_pair_create' || action === 'admin_owner_pair_claim';
+  const apiUrls = ownerPairAction ? [OWNER_PAIR_API_URL] : [ADMIN_API_URL, OWNER_PAIR_API_URL];
+  let lastError = null;
+  for (const apiUrl of apiUrls) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 30000);
+    const timer = setTimeout(() => controller.abort(), 15000);
     try {
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -99,13 +100,12 @@ async function requestApi(action, payload) {
       }
       return data;
     } catch (error) {
-      const transient = error.name === 'AbortError' || !error.status || error.status >= 500;
-      if (!transient || attempt + 1 >= attempts) throw error;
-      await new Promise((resolve) => setTimeout(resolve, 700));
+      lastError = error;
     } finally {
       clearTimeout(timer);
     }
   }
+  throw lastError || new Error('连接不上服务器');
 }
 
 async function api(action, payload = {}) {
@@ -293,10 +293,15 @@ function renderLicenseUsers() {
 
 function renderLicensePager() {
   const totalPages = Math.max(1, Math.ceil(licenseTotal / licensePageSize));
-  $('licenseCount').textContent = licenseTotal;
-  $('licenseResultText').textContent = licenseTotal
-    ? `新授权项目 ${licenseTotal.toLocaleString()} 人 · 本页 ${licenseUsers.length} 人`
-    : '新授权项目 0 人';
+  if (!licenseHasLoaded) {
+    $('licenseCount').textContent = licenseLoadFailed ? '!' : '…';
+    $('licenseResultText').textContent = licenseLoadFailed ? '用户授权读取失败，请点“刷新”重试' : '正在读取用户授权，当前不是 0 人';
+  } else {
+    $('licenseCount').textContent = licenseTotal;
+    $('licenseResultText').textContent = licenseTotal
+      ? `新授权项目 ${licenseTotal.toLocaleString()} 人 · 本页 ${licenseUsers.length} 人`
+      : '新授权项目 0 人';
+  }
   $('licensePageText').textContent = `第 ${licensePage.toLocaleString()} / ${totalPages.toLocaleString()} 页`;
   $('licensePrevBtn').disabled = licensePage <= 1 || loadingLicenses;
   $('licenseNextBtn').disabled = licensePage >= totalPages || loadingLicenses;
@@ -308,6 +313,7 @@ async function loadLicenseUsers(showLoading) {
     return;
   }
   loadingLicenses = true;
+  licenseLoadFailed = false;
   licenseReloadQueued = false;
   const requestedPage = licensePage;
   const requestedQuery = licenseQuery;
@@ -331,6 +337,7 @@ async function loadLicenseUsers(showLoading) {
       return;
     }
     licenseTotal = Math.max(0, Number(data.total || 0));
+    licenseHasLoaded = true;
     const totalPages = Math.max(1, Math.ceil(licenseTotal / licensePageSize));
     if (licensePage > totalPages) {
       licensePage = totalPages;
@@ -345,6 +352,7 @@ async function loadLicenseUsers(showLoading) {
     if (error.status === 401 || /admin-unauthorized/i.test(error.message)) {
       handleAuthFailure();
     } else {
+      if (!licenseHasLoaded) licenseLoadFailed = true;
       setStatus('用户授权读取失败：' + error.message);
       if (showLoading) $('licenseUsers').innerHTML = '<div class="empty">暂时无法读取用户记录</div>';
     }
@@ -777,7 +785,7 @@ window.openOwnerPairing = async () => {
     const code = String(data.pair_code || '');
     const expires = data.expires_at ? fmtDateTime(data.expires_at) : '10 分钟后';
     const link = new URL('../admin-owner/index.html', location.href);
-    link.searchParams.set('release', '641');
+    link.searchParams.set('release', '642');
     link.searchParams.set('bind', code);
     openSheet(`<h2>新设备直接进入链接</h2>
       <p>把下面的链接发到新手机并打开，会自动绑定、自动进入；链接只能使用一次，有效至 ${esc(expires)}。</p>
@@ -827,7 +835,7 @@ async function enableNotifications() {
   try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') throw new Error('没有获得通知权限');
-    const registration = await navigator.serviceWorker.register(PORTAL_MODE === 'owner' ? '../admin-owner/sw.js?v=641' : './sw.js?v=641', {scope:'./'});
+    const registration = await navigator.serviceWorker.register(PORTAL_MODE === 'owner' ? '../admin-owner/sw.js?v=642' : './sw.js?v=642', {scope:'./'});
     await navigator.serviceWorker.ready;
     const config = await api('admin_config');
     if (!config.vapid_public_key) throw new Error('后台通知密钥尚未配置');
@@ -948,7 +956,7 @@ async function restoreSavedLogin() {
 }
 
 setAuthMode(PORTAL_MODE);
-if ('serviceWorker' in navigator) navigator.serviceWorker.register(PORTAL_MODE === 'owner' ? '../admin-owner/sw.js?v=641' : './sw.js?v=641', {scope:'./'}).catch(() => {});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register(PORTAL_MODE === 'owner' ? '../admin-owner/sw.js?v=642' : './sw.js?v=642', {scope:'./'}).catch(() => {});
 const ownerPairLinkCode = ownerPairCodeFromLink();
 if (token) restoreSavedLogin();
 else if (ownerPairLinkCode) login(ownerPairLinkCode);
