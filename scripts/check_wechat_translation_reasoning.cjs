@@ -1,0 +1,20 @@
+// Actual web/private entry regression. Model HTTP is isolated; reply parsing and delivery are real.
+const {chromium}=require('playwright');
+const fs=require('node:fs'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict');
+const root=path.resolve(__dirname,'..');
+const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeURIComponent(new URL(req.url,'http://localhost').pathname).replace(/^\/+/,''));if(!file.startsWith(root+path.sep)||!fs.existsSync(file)||!fs.statSync(file).isFile()){res.writeHead(404);return res.end();}res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css'}[path.extname(file)]||'application/octet-stream')+'; charset=utf-8');res.end(fs.readFileSync(file));});
+const leaked='<think>\nStorm is saying that the app actually locked this time and is asking me to try again.\nSo the context is: I tried several times and it kept failing.\nLet me think about what to do.';
+(async()=>{
+ await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin=`http://127.0.0.1:${server.address().port}`;
+ const browser=await chromium.launch({headless:true,executablePath:'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'});
+ try{for(const privateApp of [false,true]){
+  const page=await browser.newPage({viewport:{width:390,height:844}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  if(privateApp)await page.addInitScript(()=>{window.__SMALL_PHONE_PRIVATE__=true;window.SmallPhoneNative={request:async()=>({ok:false,error:'fixture-native-unavailable'})};});
+  await page.route('**/*',r=>new URL(r.request().url()).origin===origin?r.continue():r.abort());
+  await page.goto(origin+(privateApp?'/native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html':'/小手机.html')+'?northPreview=black-home');await page.waitForFunction(()=>window.__northBootReady);
+  const reasoning=await page.evaluate(async leaked=>{S.me.locked=false;S.me.active='main';S.settings.modelOutputUnfiltered=true;S.settings.replyDelay=0;S.settings.chat={base:'https://fixture.invalid/v1',key:'fixture',model:'fixture',maxTokens:4096,temp:.7};aiCoreOn=()=>false;const c=S.contacts[0];c.proactive={enabled:false};S.messages[c.id]=[{id:uid(),role:'user',type:'text',content:'你再试试',time:Date.now()}];let calls=0;fetchT=async()=>({ok:true,json:async()=>({choices:[{message:{content:++calls===1?leaked:'我知道了，我再试一次。'},finish_reason:'stop'}]})});await aiReply(c.id);return{calls,rows:msgs(c.id).filter(m=>m.role==='assistant').map(m=>String(m.content||''))};},leaked);
+  assert.equal(reasoning.calls,2,JSON.stringify({privateApp,reasoning}));assert.deepEqual(reasoning.rows,['我知道了，我再试一次。']);assert(!reasoning.rows.join('\n').includes('<think>'));
+  if(!privateApp){const translation=await page.evaluate(async()=>{const c=S.contacts[0],rows=[{id:'translation-1',role:'assistant',type:'text',content:'First message.'},{id:'translation-2',role:'assistant',type:'text',content:'Second message.'},{id:'translation-3',role:'assistant',type:'text',content:'Third message.'}];S.messages[c.id]=rows;const original=chatAPI;let active=0,maxActive=0,calls=0,first=true;chatAPI=async()=>{calls++;active++;maxActive=Math.max(maxActive,active);await sleep(20);active--;if(first){first=false;const error=new Error('HTTP 429');error.status=429;throw error;}return'翻译成功';};try{await Promise.all(rows.map(m=>translateRoleTextMessage(c.id,m.id)));return{calls,maxActive,states:rows.map(m=>({state:m._textTransState,text:m.textTrans}))};}finally{chatAPI=original;}});assert.equal(translation.maxActive,1);assert.equal(translation.calls,4);assert(translation.states.every(x=>x.state==='done'&&x.text==='翻译成功'),JSON.stringify(translation));}
+  assert.deepEqual(errors,[]);console.log(JSON.stringify({privateApp,reasoningBlocked:true,translationQueued:privateApp?null:true}));await page.close();
+ }}finally{await browser.close();await new Promise(r=>server.close(r));}
+})().catch(e=>{console.error(e);server.close();process.exitCode=1;});

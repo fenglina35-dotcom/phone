@@ -29,6 +29,8 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"v1338/v1339",scope:"both",least:1,name:"思考标签与未闭合思考流不得进入微信气泡",marker:"function wechatStripReasoningEnvelope(value)"},
+  {release:"v1338",scope:"web",least:1,name:"多条英文自动翻译串行并对临时失败有限重试",marker:"let _roleTextTranslationQueue=Promise.resolve()"},
   {release:"v1336/v1337",scope:"both",least:1,name:"外置语音测试仅使用填写的接口快照",marker:"{externalConfig,tries:1,languageBoost:'auto'}"},
   {release:"v1336/v1337",scope:"both",least:1,name:"内置关闭拒绝生成请求",marker:"内置语音已关闭，未发送生成请求"},
   {release:"v1328/v1329",scope:"both",least:1,name:"屏保手势中断清理拖动状态",marker:"function lockGestureReset()"},

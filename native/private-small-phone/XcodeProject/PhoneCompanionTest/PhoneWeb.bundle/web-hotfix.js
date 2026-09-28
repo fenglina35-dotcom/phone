@@ -59,7 +59,7 @@
   window.addEventListener('pageshow',reconcileExpiredWxLogin,{passive:true});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)reconcileExpiredWxLogin();});
   if('serviceWorker'in navigator&&location.protocol!=='file:'){
-    const workerUrl='sw.js?v=1337&r=v1337-private-tts-test-isolation-1';
+    const workerUrl='sw.js?v=1339&r=v1339-private-translation-reasoning-1';
     navigator.serviceWorker.register(workerUrl,{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
   }
   setTimeout(()=>{
@@ -70,5 +70,5 @@
     }
   },0);
 
-  window.__NORTH_WEB_HOTFIX__='v1337-private-tts-test-isolation-1';
+  window.__NORTH_WEB_HOTFIX__='v1339-private-translation-reasoning-1';
 })();

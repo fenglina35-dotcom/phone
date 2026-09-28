@@ -56,7 +56,7 @@ test('generation policy permits natural foreign text but forbids model-written i
 });
 
 test('translation uses the role route, low temperature, a bounded request, and no role interception audit',()=>{
-  const fn=functionSource('translateRoleTextMessage');
+  const fn=functionSource('translateRoleTextMessage')+'\n'+functionSource('roleTextTranslationRun');
   assert.match(fn,/roleChatRouteIndex\(c\)/);
   assert.match(fn,/aux:true/);
   assert.match(fn,/temp:\.1/);
