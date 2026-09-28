@@ -39,11 +39,11 @@ test('automatic authorization checks back off silently during an outage', () => 
   assert.doesNotMatch(check, /toast\('授权检查暂时未连通/);
 });
 
-test('the last successful private voice list remains visible without weakening server ownership', () => {
+test('the last successful private voice list remains owned by the AI account page', () => {
   assert.match(account, /function aiCachedPrivateVoices/);
   assert.match(account, /function aiRememberPrivateVoices/);
   assert.match(account, /function aiCachedVoiceList/);
   assert.match(account, /云端暂时不可用，显示上次成功读取的音色/);
-  assert.match(app, /typeof aiCachedVoiceList==='function'/);
-  assert.match(app, /云端暂时不可用，显示上次成功读取的音色/);
+  assert.doesNotMatch(app, /typeof aiCachedVoiceList==='function'/);
+  assert.match(app, /正在拉取外置账号音色/);
 });

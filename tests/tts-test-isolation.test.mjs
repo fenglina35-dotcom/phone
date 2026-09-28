@@ -22,7 +22,13 @@ for(const base of bases){
   const f=fixture(base,false);let identities=0;f.c.licenseSyncAiIdentity=async()=>{identities++;throw Error('identity reached');};
   vm.runInContext(extract(f.app,'aiRelay'),f.c);
   await assert.rejects(f.c.aiRelay('tts',{text:'hello'}),/内置语音.*关闭/);assert.equal(identities,0);
-  await assert.rejects(f.c.aiRelay('external_tts',{text:'hello',key:'   '}),/外置.*Key/);assert.equal(identities,0);
+ });
+ test(base+'Supabase quota 402 is not mislabeled as the user\'s AI point balance',async()=>{
+  const f=fixture(base,true);f.c.licenseSyncAiIdentity=async()=>{};f.c.aiUserId=()=> 'existing-user';f.c.aiUserSecret=()=> 'fixture-secret';f.c.aiCoreKey=()=> 'fixture-public-key';
+  f.c.fetchT=async()=>({ok:false,status:402,json:async()=>({ok:false,error:'exceed_edge_functions_invocations_quota'})});
+  vm.runInContext(extract(f.app,'aiRelay'),f.c);
+  await assert.rejects(f.c.aiRelay('tts',{text:'hello'}),/后台免费调用额度已用完/);
+  await assert.rejects(f.c.aiRelay('tts',{text:'hello'}),error=>!/AI点数不足/.test(error.message));
  });
  test(base+'existing internal users retain their voice, charged result and refund access',async()=>{
   for(const enabled of [true,undefined]){

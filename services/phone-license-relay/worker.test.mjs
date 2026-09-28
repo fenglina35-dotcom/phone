@@ -96,3 +96,56 @@ test('failed activation is never retried by the relay',async()=>{
  const result=await handle(post({action:'activate',inviteCode:'YB2-FIXTURE'}));
  assert.equal(result.status,502);assert.equal((await result.json()).permanent,false);assert.equal(calls,1);
 });
+
+const externalURL='https://license.smallphoneapp.com/functions/v1/external-tts';
+const externalPost=(body,origin='https://fenglina35-dotcom.github.io')=>new Request(externalURL,{method:'POST',headers:{'Content-Type':'application/json',Origin:origin},body:JSON.stringify(body)});
+test('Fish external TTS uses the caller key and free model without any phone account or point fields',async()=>{
+ const calls=[];const audio=new Uint8Array([1,2,3,4]);
+ const handle=createHandler(async(url,init)=>{calls.push({url,init});return new Response(audio,{status:200,headers:{'Content-Type':'audio/mpeg'}});});
+ const response=await handle(externalPost({provider:'fish',key:'fish-user-key',model:'s2.1-pro-free',voice_id:'fish-voice',text:'测试'}));
+ assert.equal(response.status,200);assert.equal(response.headers.get('Access-Control-Allow-Origin'),'https://fenglina35-dotcom.github.io');
+ assert.equal(calls.length,1);assert.equal(calls[0].url,'https://api.fish.audio/v1/tts');
+ assert.equal(calls[0].init.headers.Authorization,'Bearer fish-user-key');assert.equal(calls[0].init.headers.model,'s2.1-pro-free');
+ assert.deepEqual(JSON.parse(calls[0].init.body),{text:'测试',reference_id:'fish-voice',format:'mp3',normalize:true});
+ assert.doesNotMatch(calls[0].init.body,/user_id|client_secret|points|balance/);
+});
+test('MiniMax external TTS preserves GroupId and voice controls without using the internal route',async()=>{
+ let call;const handle=createHandler(async(url,init)=>{call={url,init};return Response.json({base_resp:{status_code:0},data:{audio:'00ff'}});});
+ const response=await handle(externalPost({provider:'minimax',base:'https://api.minimax.io',key:'mini-user-key',model:'speech-02-turbo',group:'group-1',voice_id:'male-qn-qingse',text:'你好',language_boost:'Chinese',voice_setting:{speed:1.2,vol:1.1,pitch:2,emotion:'happy'}}));
+ assert.equal(response.status,200);assert.equal(call.url,'https://api.minimax.io/v1/t2a_v2?GroupId=group-1');
+ const body=JSON.parse(call.init.body);assert.equal(body.model,'speech-02-turbo');assert.equal(body.voice_setting.voice_id,'male-qn-qingse');assert.equal(body.voice_setting.speed,1.2);assert.equal(call.init.headers.Authorization,'Bearer mini-user-key');
+});
+test('Mossland synthesis and all three voice-list routes stay on fixed provider hosts',async()=>{
+ const calls=[];const handle=createHandler(async(url,init)=>{calls.push({url,init});return Response.json({data:[]});});
+ await handle(externalPost({provider:'mossland',key:'moss-user-key',model:'moss-tts',voice_id:'moss-voice',text:'你好'}));
+ for(const provider of ['fish','mossland','minimax'])await handle(externalPost({provider,operation:'list_voices',key:'user-key',group:'g'}));
+ assert.deepEqual(calls.map(x=>x.url),[
+  'https://api.mosi.cn/v1/audio/speech',
+  'https://api.fish.audio/model?self=true&page_size=100',
+  'https://api.mosi.cn/v1/audio/voices?limit=200',
+  'https://api.minimaxi.com/v1/get_voice?GroupId=g',
+ ]);
+ assert.equal(calls[0].init.headers.Authorization,'Bearer moss-user-key');
+});
+test('ElevenLabs and Hume use only their fixed official hosts and caller-owned keys',async()=>{
+ const calls=[];const handle=createHandler(async(url,init)=>{calls.push({url,init});return new Response(new Uint8Array([1]),{headers:{'Content-Type':'audio/mpeg'}});});
+ await handle(externalPost({provider:'elevenlabs',key:'eleven-user-key',model:'eleven_v3',voice_id:'voice/a b',text:'hello'}));
+ await handle(externalPost({provider:'hume',key:'hume-user-key',model:'octave-2',voice_id:'hume-voice',text:'hello'}));
+ assert.equal(calls[0].url,'https://api.elevenlabs.io/v1/text-to-speech/voice%2Fa%20b');assert.equal(calls[0].init.headers['xi-api-key'],'eleven-user-key');
+ assert.equal(calls[1].url,'https://api.hume.ai/v0/tts/file');assert.equal(calls[1].init.headers['X-Hume-Api-Key'],'hume-user-key');
+ assert.equal(JSON.parse(calls[1].init.body).version,'2');
+});
+test('external TTS rejects arbitrary providers, foreign origins, oversized text and redirects',async()=>{
+ let calls=0;const handle=createHandler(async()=>{calls++;return new Response(null,{status:302,headers:{Location:'https://evil.example'}});});
+ assert.equal((await handle(externalPost({provider:'other',key:'k',text:'x'}))).status,400);
+ assert.equal((await handle(externalPost({provider:'minimax',base:'https://evil.example',key:'k',voice_id:'v',text:'x'}))).status,400);
+ assert.equal((await handle(externalPost({provider:'fish',key:'k',text:'x'},'https://evil.example'))).status,403);
+ assert.equal((await handle(externalPost({provider:'fish',key:'k',text:'x'.repeat(301)}))).status,400);
+ const redirected=await handle(externalPost({provider:'fish',key:'k',text:'x'}));assert.equal(redirected.status,502);assert.equal((await redirected.json()).code,'upstream-redirect-rejected');
+ assert.equal(calls,1);
+});
+test('private file-origin preflight is accepted without opening arbitrary browser origins',async()=>{
+ let calls=0;const handle=createHandler(async()=>{calls++;return Response.json({});});
+ const response=await handle(new Request(externalURL,{method:'OPTIONS',headers:{Origin:'null'}}));
+ assert.equal(response.status,204);assert.equal(response.headers.get('Access-Control-Allow-Origin'),'null');assert.equal(calls,0);
+});

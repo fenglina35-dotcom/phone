@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1339'){
+if(window.__NORTH_SHELL_BUILD__!=='1341'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -28,6 +28,7 @@ const GATE_KEY='sb_publishable_uKytf2Tc_FmLv15SkkJyCQ_VU8IRSt2';
 const LICENSE_FAILOVER_URL='https://lovbzibismsjqvjujilz.supabase.co';
 const LICENSE_FAILOVER_KEY='sb_publishable_HxLFoFQXKcG2wVhVRYM1fQ_MQCkbYop';
 const AI_BACKEND_URL=LICENSE_FAILOVER_URL+'/functions/v1/phone-ai';
+const EXTERNAL_TTS_RELAY_URL='https://license.smallphoneapp.com/functions/v1/external-tts';
 /* 独立云：只承载手机号、真实 iPhone 伴生同步和后台通知，不混入授权、AI 或好友数据。 */
 const COMPANION_URL='https://qvuahlqimcfgeoetosnl.supabase.co';
 const COMPANION_KEY='sb_publishable_Q2j6uyn2_cFA3RdHHnG7sw_b7vqXaz0';
@@ -521,7 +522,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1339 · 英文翻译排队与思考内容拦截';
+const APP_VER='v1341 · 私人外置语音独立通道修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1271,12 +1272,12 @@ function sttConfigured(){return sttRelayOn()||sttExternalOn();}
 function sttRelaySecondsPerPoint(){const n=Number(typeof _aiAcct!=='undefined'&&_aiAcct&&_aiAcct.pricing&&_aiAcct.pricing.asr_seconds_per_point);return Number.isFinite(n)&&n>0?Math.round(n):15;}
 function aiUserId(){let id='';try{id=localStorage.getItem('yibei_ai_uid')||'';}catch(_){}if(!id){id='ph_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,10);try{localStorage.setItem('yibei_ai_uid',id);}catch(_){}}return id;}
 function aiUserSecret(){let s='';try{s=localStorage.getItem('yibei_ai_secret')||'';}catch(_){}if(!s){s='sec_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);try{localStorage.setItem('yibei_ai_secret',s);}catch(_){}}return s;}
-async function aiRelay(action,payload,timeoutMs){const voiceConfig=S.settings&&S.settings.tts;if(action==='tts'&&!(voiceConfig&&voiceConfig.relay&&voiceConfig.enabled!==false))throw new Error('内置语音已关闭，未发送生成请求');if(action==='external_tts'&&!String(payload&&payload.key||'').trim())throw new Error('外置语音缺少 API Key，未发送请求');const url=aiCoreUrl();if(!url)throw new Error('还没配置内置AI后台');
+async function aiRelay(action,payload,timeoutMs){const voiceConfig=S.settings&&S.settings.tts;if(action==='tts'&&!(voiceConfig&&voiceConfig.relay&&voiceConfig.enabled!==false))throw new Error('内置语音已关闭，未发送生成请求');const url=aiCoreUrl();if(!url)throw new Error('还没配置内置AI后台');
   await licenseSyncAiIdentity();
   if(action==='tts'&&!((S.settings.tts||{}).relay&&(S.settings.tts||{}).enabled!==false))throw new Error('内置语音已关闭，未发送生成请求');
   const uid=aiUserId(),sec=aiUserSecret(),relayKey=aiCoreKey(url);
   const requestTimeout=action==='image'?360000:Math.max(10000,Math.min(190000,+timeoutMs||190000));let r;try{r=await fetchT(url,{method:'POST',headers:{'Content-Type':'application/json','apikey':relayKey,'Authorization':'Bearer '+relayKey,'x-phone-user':uid,'x-phone-secret':sec},body:JSON.stringify(Object.assign({action,user_id:uid,client_secret:sec},payload||{}))},requestTimeout);}catch(e){throw new Error(apiCaughtCN(e));}
-  const d=await r.json().catch(()=>null);if(!r.ok||!d||d.ok===false){if(d&&typeof aiAccountApplyResult==='function')aiAccountApplyResult(d,action);const msg=(d&&d.error)||('HTTP '+r.status);const e=new Error(r.status===402||/no-balance/i.test(String(msg))?'AI点数不足，请去「AI账户」充值或让管理员加点':'内置AI失败：'+String(msg).slice(0,140));e.status=r.status;e.data=d||null;e.raw=String(msg);e.source='ai-core';e.ledger_id=d&&(d.ledger_id||d.ledgerId||d.request_id);e.charged=d&&d.charged;e.billed=d&&d.billed;throw e;}
+  const d=await r.json().catch(()=>null);if(!r.ok||!d||d.ok===false){if(d&&typeof aiAccountApplyResult==='function')aiAccountApplyResult(d,action);const msg=(d&&d.error)||d&&d.message||('HTTP '+r.status),quota=/exceed_edge_functions_invocations_quota/i.test(String(msg));const e=new Error(quota?'内置AI后台免费调用额度已用完，暂时不可用':(r.status===402||/no-balance/i.test(String(msg))?'AI点数不足，请去「AI账户」充值或让管理员加点':'内置AI失败：'+String(msg).slice(0,140)));e.status=r.status;e.data=d||null;e.raw=String(msg);e.source='ai-core';e.ledger_id=d&&(d.ledger_id||d.ledgerId||d.request_id);e.charged=d&&d.charged;e.billed=d&&d.billed;throw e;}
   if(typeof aiAccountApplyResult==='function')aiAccountApplyResult(d,action);
   return d;}
 /* 续写开头的那个空格是有意义的：英文靠它断词。以前一律 trim 掉，
@@ -1793,20 +1794,16 @@ async function ttsRefundError(e,reason){const id=ttsLedgerFromError(e);if(!id||e
 function ttsVoiceAccessErrorText(s){return /tts-private-voice-not-owned|tts-voice-not-accessible|invalid-voice-id|voice_id|voice id|access to this voice|don't have access|permission|forbidden|unauthorized|401|403|404/i.test(String(s||''));}
 function ttsRelayVoiceIds(tts){const selected=String(tts&&(tts.relayVoice||(typeof aiInternalVoiceId==='function'?aiInternalVoiceId():tts.voice))||'').trim();return[selected||DEFAULT_TTS_VOICE];}
 async function audioPlayableUrl(audio){if(!audio)return '';const s=String(audio).trim();if(/^idb-audio:/i.test(s)){return (await imgGet('__audio_'+s.slice(10)))||'';}return s;}
+async function externalTtsRelay(tts,body,timeoutMs){const payload=Object.assign({provider:ttsProviderKind(tts),operation:'synthesize',base:String(tts&&tts.base||''),key:String(tts&&tts.key||''),model:String(tts&&tts.model||''),group:String(tts&&tts.group||'')},body||{});if(!payload.key)throw new Error('外置语音缺少 API Key');let r;try{r=await fetchT(EXTERNAL_TTS_RELAY_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)},timeoutMs||190000);}catch(e){throw new Error('外置语音转发连接失败：'+apiCaughtCN(e));}if(!r.ok){let detail='';try{const raw=await r.clone().text();try{const d=JSON.parse(raw);detail=String(d&&((d.error&&d.error.message)||d.error||d.message||d.code)||'');}catch(_){detail=String(raw||'');}}catch(_){}const e=new Error('外置语音平台 HTTP '+r.status+(detail?'：'+detail.slice(0,180):''));e.status=r.status;e.source='external-tts';throw e;}return r;}
 async function _ttsOnce(t,vid,tts,opt){let r;const languageBoost=String(opt&&opt.languageBoost||'auto'),provider=ttsProviderKind(tts);
   if(ttsEnabled(tts)&&ttsRelayOn(tts)){let d,ledger='';try{const cue=ttsCueKind(opt&&opt.cue)||ttsAutoCue(t,null),setting=ttsVoiceProfile(t,opt,tts,opt&&opt.voice);if(cue==='tense')setting.emotion='angry';else if(cue==='soft')setting.emotion='sad';else if(cue==='laugh')setting.emotion='happy';else if(cue==='surprised')setting.emotion='surprised';else if(cue==='fearful')setting.emotion='fearful';else if(cue==='disgusted')setting.emotion='disgusted';d=await aiRelay('tts',{text:t,voice_id:vid||DEFAULT_TTS_VOICE,model:'speech-02-turbo',language_boost:languageBoost,voice_setting:setting});const data=d&&d.data;ledger=d&&(d.ledger_id||d.ledgerId||d.request_id);const audio=data&&(data.audio||data.audio_file||data.audio_url);const ab=await audioDataToBuf(audio);if(!ab){await ttsRefundLedger(ledger,'tts-no-audio');return {err:'内置AI无音频'};}return {buf:ttsLedgerSet(ab,ledger)};}catch(e){if(ledger){await ttsRefundLedger(ledger,'tts-audio-fetch-failed');try{e._ttsRefunded=true;}catch(_){};}else await ttsRefundError(e,'tts-relay-error');throw e;}}
   if(provider==='mossland'){
-    if(aiCoreUrl()){try{const d=await aiRelay('external_tts',{provider:'mossland',base:tts.base,key:tts.key,model:tts.model||'moss-tts',voice_id:vid,text:t});const data=d&&d.data,audio=data&&(data.audio||data.audio_file||data.audio_url||data.url),ab=await audioDataToBuf(audio);if(ab)return {buf:ab};return {err:'Mossland中转无音频'};}catch(e){if(!/unknown-action/i.test(String((e&&e.message)||e)))return {err:String((e&&e.message)||e).replace(/^内置AI失败：/,'')};}}
-    const base=tts.base.replace(/\/+$/,''),url=/\/audio\/speech$/i.test(base)?base:(/\/v1$/i.test(base)?base+'/audio/speech':base+'/v1/audio/speech');r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tts.key},body:JSON.stringify({model:tts.model||'moss-tts',input:t,voice_id:vid,response_format:'mp3',delivery_method:'audio'})});if(r.ok){const type=String(r.headers.get('Content-Type')||'');if(/json/i.test(type)){const j=await r.json(),audio=j&&(j.audio||j.audio_file||j.audio_url||j.url),ab=await audioDataToBuf(audio);return ab?{buf:ab}:{err:'Mossland无音频'};}return {buf:await r.arrayBuffer()};}}
-  else if(provider==='fish'){const hd={'Authorization':'Bearer '+tts.key,'Content-Type':'application/json'};if(tts.model)hd['model']=tts.model;/* speech-1.6 / s1 等主干模型，选填 */
-    if(aiCoreUrl()){try{const d=await aiRelay('external_tts',{provider:'fish',base:tts.base,key:tts.key,model:tts.model||'s2.1-pro-free',voice_id:vid,text:t});const data=d&&d.data;const audio=data&&(data.audio||data.audio_file||data.audio_url);const ab=await audioDataToBuf(audio);if(ab)return {buf:ab};return {err:'Fish中转无音频'};}catch(e){if(!/unknown-action/i.test(String((e&&e.message)||e)))return {err:String((e&&e.message)||e).replace(/^内置AI失败：/,'')};}}
-    r=await fetch('https://api.fish.audio/v1/tts',{method:'POST',headers:hd,body:JSON.stringify({text:t,reference_id:vid||undefined,format:'mp3',normalize:true})});}
-  else if(provider==='elevenlabs')r=await fetch('https://api.elevenlabs.io/v1/text-to-speech/'+vid,{method:'POST',headers:{'xi-api-key':tts.key,'Content-Type':'application/json'},body:JSON.stringify({text:t,model_id:tts.model||'eleven_multilingual_v2'})});
-  else if(provider==='hume'){const url=tts.base.replace(/\/+$/,'')+'/v0/tts/file',version=/octave-1/i.test(tts.model||'')?'1':'2';
-    r=await fetch(url,{method:'POST',headers:{'X-Hume-Api-Key':tts.key,'Content-Type':'application/json'},body:JSON.stringify({utterances:[{text:t,voice:{id:vid}}],format:{type:'mp3'},num_generations:1,split_utterances:false,version})});}
+    r=await externalTtsRelay(tts,{voice_id:vid,text:t});if(r.ok){const type=String(r.headers.get('Content-Type')||'');if(/json/i.test(type)){const j=await r.json(),audio=j&&(j.audio||j.audio_file||j.audio_url||j.url),ab=await audioDataToBuf(audio);return ab?{buf:ab}:{err:'Mossland无音频'};}return {buf:await r.arrayBuffer()};}}
+  else if(provider==='fish')r=await externalTtsRelay(tts,{voice_id:vid,text:t});
+  else if(provider==='elevenlabs')r=await externalTtsRelay(tts,{voice_id:vid,text:t});
+  else if(provider==='hume')r=await externalTtsRelay(tts,{voice_id:vid,text:t});
   else if(provider==='minimax'){const gid=(tts.group||'').trim(),vp=ttsVoiceProfile(t,opt,tts,opt&&opt.voice);
-    const url=tts.base.replace(/\/+$/,'')+'/v1/t2a_v2'+(gid?('?GroupId='+encodeURIComponent(gid)):'');
-    r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+tts.key},body:JSON.stringify({model:tts.model||'speech-02-turbo',text:t,stream:false,language_boost:languageBoost,voice_setting:{voice_id:vid||'male-qn-qingse',speed:vp.speed,vol:vp.vol,pitch:vp.pitch,emotion:vp.emotion},audio_setting:{sample_rate:32000,bitrate:128000,format:'mp3',channel:1}})});
+    r=await externalTtsRelay(tts,{group:gid,voice_id:vid||'male-qn-qingse',text:t,language_boost:languageBoost,voice_setting:{speed:vp.speed,vol:vp.vol,pitch:vp.pitch,emotion:vp.emotion}});
     if(r.ok){const j=await r.json();const audio=j&&j.data&&(j.data.audio||j.data.audio_file||j.data.audio_url);
       const ab=await audioDataToBuf(audio);if(ab)return {buf:ab};
       return {err:(j&&j.base_resp&&j.base_resp.status_msg)||'无音频'};}
@@ -1832,7 +1829,7 @@ async function ttsArr(text,o,opt){opt=Object.assign({},opt||{});text=ttsDropOffL
   let lastErr='',tries=Math.max(1,Math.min(3,+opt.tries||3));
   for(let i=0;i<tries;i++){if(i>0)await new Promise(r=>setTimeout(r,i*600));
     try{const res=await _ttsOnce(t,vid,tts,opt);if(res&&res.buf)return res.buf;lastErr=(res&&res.err)||'无音频';}catch(e){lastErr=(e&&e.message)||'网络';}}
-  if(!opt.quiet)toast('语音API错误 '+lastErr+(tries>1?'（已自动重试）':''));return null;}
+  if(opt.throwExternalError&&lastErr)throw new Error(lastErr);if(!opt.quiet)toast('语音API错误 '+lastErr+(tries>1?'（已自动重试）':''));return null;}
 async function decodeBuf(ab){if(!ab)return null;try{initAudio();if(!_audio)return null;return await _audio.decodeAudioData(ab.slice(0));}catch(e){return null;}}
 async function speak(text,o){const v=o?getVoice(o):null;
   if(ttsApiOn(o)){initAudio();const ab=await ttsArr(text,o);const buf=await decodeBuf(ab);if(buf)return await playBuf(buf);if(ab)await ttsRefundAudio(ab,'tts-decode-failed');return false;}
@@ -1881,7 +1878,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1339&r=v1339-private-translation-reasoning-1';
+  const url='sw.js?v=1341&r=v1341-private-external-tts-relay-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -4421,7 +4418,7 @@ async function testTTS(){
   if(!base||!key){o.style.color='#e85';o.textContent='请先填写外置语音接口地址和 API Key；此测试不会调用内置语音';return;}
   const externalConfig={provider,base,key,model,voice,group};
   audioUnlock();o.style.color='#999';o.textContent='正在测试填写的外置语音接口…';
-  try{initAudio();const ab=await ttsArr('喵～ 测试成功啦',{voice:{engine:'api',ttsVoice:voice}},{externalConfig,tries:1,languageBoost:'auto'});
+  try{initAudio();const testOptions={externalConfig,tries:1,languageBoost:'auto'};testOptions.throwExternalError=true;const ab=await ttsArr('喵～ 测试成功啦',{voice:{engine:'api',ttsVoice:voice}},testOptions);
     if(ab){const buf=await decodeBuf(ab);if(buf){audioUnlock();const played=await playBuf(buf);o.style.color=played?'#19a463':'#d99b38';o.textContent=played?'✅ 外置语音生成成功（已播放）':'⚠️ 外置接口已生成语音，但本次播放被手机系统拦住了，请再点一次测试';}else{o.style.color='#d99b38';o.textContent='⚠️ 外置接口返回数据，但音频格式暂时无法播放';}}
     else{o.style.color='#e85';o.textContent='❌ 外置接口未返回语音，请检查地址、Key 和音色；未使用内置语音';}
   }catch(e){o.style.color='#e85';o.textContent='❌ 外置语音测试失败：'+e.message;}
@@ -4438,24 +4435,16 @@ function mergeVoicePresets(list){const out=Array.isArray(list)?list.slice():[],s
 function fishVoiceItems(d){const raw=Array.isArray(d)?d:(Array.isArray(d&&d.items)?d.items:(Array.isArray(d&&d.results)?d.results:(Array.isArray(d&&d.data)?d.data:(Array.isArray(d&&d.models)?d.models:[]))));
   return raw.map(v=>{const id=v&&String(v.id||v._id||v.reference_id||v.model_id||'').trim(),name=v&&String(v.title||v.name||v.display_name||v.description||id||'Fish 音色').trim();return id?{id,name,clone:true}:null;}).filter(Boolean);}
 async function pullVoices(){const base=($('#s_tbase')?$('#s_tbase').value.trim().replace(/\/+$/,''):'');const key=($('#s_tkey')?$('#s_tkey').value.trim():'');
-  toast('正在拉取音色…');
-  try{if(ttsUseRelay()){const d=await aiRelay('tts_voices',{});_voiceList=mergeVoicePresets((d&&d.voices)||[]);if(typeof aiRememberVoiceList==='function')aiRememberVoiceList(_voiceList);_voiceQ='';showVoicePicker();return;}
-    if(!key){toast('先填上面的 API Key，或打开 AI账户里的“使用内置AI”');return;}
-    const provider=ttsProviderKind({provider:($('#s_tprovider')?$('#s_tprovider').value:''),base});
-    if(provider==='mossland'){let rows=[];if(aiCoreUrl()){const d=await aiRelay('external_tts',{provider:'mossland',operation:'list_voices',base,key});rows=d&&d.data&&d.data.voices||[];}else{let root=base.replace(/\/+$/,'').replace(/\/audio\/(?:speech|voices)$/i,'');if(!/\/v1$/i.test(root))root+='/v1';const endpoint=root+'/audio/voices?limit=200',r=await fetch(endpoint,{headers:{'Authorization':'Bearer '+key}}),d=await r.json().catch(()=>null);if(!r.ok)throw new Error((d&&d.error&&d.error.message)||('HTTP '+r.status));rows=(d&&d.data)||[];}_voiceList=rows.map(v=>({id:String(v&&v.id||''),name:String(v&&v.name||v&&v.id||'Mossland 音色'),clone:true})).filter(v=>v.id);_voiceQ='';if(!_voiceList.length){toast('Mossland账号里没有可用音色');return;}showVoicePicker();return;}
-    if(/fish\.?audio/i.test(base)){const r=await fetch(base+'/model?self=true&page_size=100',{method:'GET',headers:{'Authorization':'Bearer '+key}});
-      let d=null;try{d=await r.json();}catch(_){}
-      if(!r.ok){toast('Fish拉取失败：'+(d&&(d.message||d.error)||r.status));return;}
-      _voiceList=fishVoiceItems(d);_voiceQ='';if(!_voiceList.length){toast('Fish账号里没拉到音色，先确认克隆已完成');return;}showVoicePicker();return;}
-    if(!/minimax/i.test(base)){toast('当前只支持 Fish 或海螺拉取音色');return;}
-    const group=($('#s_tgroup')?$('#s_tgroup').value.trim():'');
-    const url=base+'/v1/get_voice'+(group?('?GroupId='+encodeURIComponent(group)):'');
-    const r=await fetch(url,{method:'POST',headers:{'Authorization':'Bearer '+key,'Content-Type':'application/json'},body:JSON.stringify({voice_type:'all'})});
-    const d=await r.json();if(!d||(d.base_resp&&d.base_resp.status_code!==0)){toast('拉取失败：'+((d&&d.base_resp&&d.base_resp.status_msg)||r.status));return;}
-    const clones=(d.voice_cloning||[]).map(v=>({id:v.voice_id,name:v.voice_name||'我的克隆',clone:true}));
-    const sys=(d.system_voice||[]).map(v=>({id:v.voice_id,name:v.voice_name||v.voice_id}));
-    _voiceList=mergeVoicePresets(clones.concat(sys));_voiceQ='';showVoicePicker();
-  }catch(e){if(ttsUseRelay()&&typeof aiCachedVoiceList==='function'){const cached=aiCachedVoiceList();if(cached.length){_voiceList=mergeVoicePresets(cached);_voiceQ='';toast('云端暂时不可用，显示上次成功读取的音色');showVoicePicker();return;}}toast('拉取失败，检查地址/Key/网络');}}
+  toast('正在拉取外置账号音色…');
+  try{if(!base||!key){toast('请先填写外置语音接口地址和 API Key');return;}
+    const provider=ttsProviderKind({provider:($('#s_tprovider')?$('#s_tprovider').value:''),base}),group=($('#s_tgroup')?$('#s_tgroup').value.trim():''),cfg={provider,base,key,model:($('#s_tmodel')?$('#s_tmodel').value.trim():''),group};
+    if(!['mossland','fish','minimax'].includes(provider)){toast('当前支持拉取 MiniMax 海螺、Mossland 或 Fish 音色');return;}
+    const r=await externalTtsRelay(cfg,{operation:'list_voices'}),d=await r.json().catch(()=>null);
+    if(provider==='mossland'){const rows=(d&&d.data)||[];_voiceList=rows.map(v=>({id:String(v&&v.id||''),name:String(v&&v.name||v&&v.id||'Mossland 音色'),clone:true})).filter(v=>v.id);if(!_voiceList.length){toast('Mossland账号里没有可用音色');return;}}
+    else if(provider==='fish'){_voiceList=fishVoiceItems(d);if(!_voiceList.length){toast('Fish账号里没拉到音色，先确认克隆已完成');return;}}
+    else{if(!d||(d.base_resp&&d.base_resp.status_code!==0))throw new Error((d&&d.base_resp&&d.base_resp.status_msg)||'海螺没有返回音色');const clones=(d.voice_cloning||[]).map(v=>({id:v.voice_id,name:v.voice_name||'我的克隆',clone:true})),sys=(d.system_voice||[]).map(v=>({id:v.voice_id,name:v.voice_name||v.voice_id}));_voiceList=mergeVoicePresets(clones.concat(sys));}
+    _voiceQ='';showVoicePicker();
+  }catch(e){toast('拉取失败：'+String((e&&e.message)||e||'检查地址、Key 和网络').slice(0,180));}}
 function showVoicePicker(){const q=(_voiceQ||'').toLowerCase();
   const list=_voiceList.filter(v=>!q||(''+v.id).toLowerCase().indexOf(q)>=0||(''+v.name).toLowerCase().indexOf(q)>=0);
   openModal(`<h3>选个音色（共${_voiceList.length}个）</h3>

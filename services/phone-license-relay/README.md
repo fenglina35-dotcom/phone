@@ -1,5 +1,11 @@
 # 免费授权代理（正式代理已部署）
 
+## 外置语音固定厂商通道（v1340 发布候选）
+
+`POST /functions/v1/external-tts` 为 MiniMax 海螺、Fish、Mossland、ElevenLabs、Hume 提供固定官方主机转发，供小手机外置语音绕过已耗尽免费调用额度的 Supabase `phone-ai`。它只使用用户提交的厂商 Key，不读取小手机 AI 账号或点数，不扣点，不缓存，不重试，源代码不记录正文。通用兼容语音仍由客户端直连用户填写的地址，不接入公开代理。
+
+当前本地候选已通过 Worker 18/18、全仓 Node 2634/2634，以及网页/私人内置页的语音隔离和授权状态核心聊天回归；线上部署和五个厂商的无效占位 Key 到达验证尚未完成，完成后再补部署版本与结果。
+
 当前：OPPO 真机已由用户截图确认 GET /health 返回 ok:true。2026-09-28 原 Supabase Edge Function 超额后，备用 phone-license v32 已改为连接原授权数据库，Cloudflare 活跃版本 4ad6de14 已切换至该备用函数；线上 GET /health 连续 5 次返回 200，空 session_check 返回原业务 400。网页 v1338、私人内置源码 v1339 已接入备用入口。
 
 - 固定上游是 lkhlyfpssmrjkkzhuzag 项目的备用 phone-license；该函数通过 PHONE_SUPABASE_URL 和 PHONE_SERVICE_ROLE_KEY 连接原 lovbzibismsjqvjujilz 授权数据库。原邀请码、licenseId、sessionId、管理员 phone_license_admin_page 数据来源保持一致，没有建立新用户数据库。

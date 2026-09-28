@@ -27,15 +27,15 @@ function functionSource(name){
 }
 
 test('v1178 has a unique visible identity across every public entry and cache layer',()=>{
-  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1338\'/);
-  assert.match(app,/APP_VER='v1338 · 英文翻译排队与思考内容拦截'/);
-  assert.match(shell,/__NORTH_SHELL_BUILD__='1338'/);
-  assert.match(shell,/app\.js\?v=1338&r=v1338-web-translation-reasoning-1/);
-  assert.match(index,/小手机\.html\?v=1338/);
-  assert.match(repair,/小手机\.html\?v=1338/);
-  assert.match(worker,/const BUILD='1338'/);
-  assert.match(worker,/north-shell-v1338-web-translation-reasoning-1/);
-  assert.match(hotfix,/sw\.js\?v=1338&r=v1338-web-translation-reasoning-1/);
+  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1340\'/);
+  assert.match(app,/APP_VER='v1340 · 外置语音独立通道修复'/);
+  assert.match(shell,/__NORTH_SHELL_BUILD__='1340'/);
+  assert.match(shell,/app\.js\?v=1340&r=v1340-web-external-tts-relay-1/);
+  assert.match(index,/小手机\.html\?v=1340/);
+  assert.match(repair,/小手机\.html\?v=1340/);
+  assert.match(worker,/const BUILD='1340'/);
+  assert.match(worker,/north-shell-v1340-web-external-tts-relay-1/);
+  assert.match(hotfix,/sw\.js\?v=1340&r=v1340-web-external-tts-relay-1/);
   for(const [name,source] of Object.entries({app,shell,index,repair,worker,hotfix})){
     assert.doesNotMatch(source,/v?1127/,`${name} must not reuse the prior web version`);
   }

@@ -1,11 +1,15 @@
-// Fixed-backend authorization transport. No storage, logging, cache, or retry.
+// Fixed-backend authorization transport plus fixed-host external TTS transport.
+// No storage, logging, cache, account lookup, billing, or retry.
 const UPSTREAM = 'https://lkhlyfpssmrjkkzhuzag.supabase.co/functions/v1/phone-license';
 const APP_ORIGIN = 'https://fenglina35-dotcom.github.io';
+const EXTERNAL_TTS_PATH = '/functions/v1/external-tts';
 const ACTIONS = new Set(['activate','legacy_activate','register_options','register_verify',
   'restore_options','restore_verify','session_check','session_list','session_revoke',
   'ai_identity_sync','phone_friend_identity_sync']);
 const MAX_BODY = 65536;
-async function boundedBody(request) {
+const MAX_TTS_BODY = 16384;
+const TTS_PROVIDERS = new Set(['minimax','fish','mossland','elevenlabs','hume']);
+async function boundedBody(request, maxBody = MAX_BODY) {
   const reader = request.body?.getReader();
   if (!reader) return '';
   const chunks = []; let size = 0;
@@ -14,13 +18,86 @@ async function boundedBody(request) {
       const {done, value} = await reader.read();
       if (done) break;
       size += value.byteLength;
-      if (size > MAX_BODY) { await reader.cancel(); return null; }
+      if (size > maxBody) { await reader.cancel(); return null; }
       chunks.push(value);
     }
   } finally { reader.releaseLock(); }
   const bytes = new Uint8Array(size); let offset = 0;
   for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
   return new TextDecoder().decode(bytes);
+}
+
+function cleanText(value, max) {
+  return String(value || '').trim().slice(0, max);
+}
+
+function externalTtsRequest(input) {
+  const provider = cleanText(input?.provider, 32).toLowerCase();
+  const operation = cleanText(input?.operation || 'synthesize', 32).toLowerCase();
+  const key = cleanText(input?.key, 1024);
+  const model = cleanText(input?.model, 160);
+  const voice = cleanText(input?.voice_id, 240);
+  const text = cleanText(input?.text, 1200);
+  const group = cleanText(input?.group, 240);
+  const configuredBase = cleanText(input?.base, 300).replace(/\/+$/, '');
+  if (!TTS_PROVIDERS.has(provider)) throw new Error('provider-not-allowed');
+  if (!['synthesize','list_voices'].includes(operation)) throw new Error('operation-not-allowed');
+  if (!key) throw new Error('missing-api-key');
+  if (operation === 'synthesize' && (!text || [...text].length > 300)) throw new Error('invalid-text');
+  if (operation === 'synthesize' && !voice && provider !== 'fish') throw new Error('missing-voice');
+
+  if (provider === 'fish') {
+    const url = operation === 'list_voices'
+      ? 'https://api.fish.audio/model?self=true&page_size=100'
+      : 'https://api.fish.audio/v1/tts';
+    return {url, init:{
+      method:operation === 'list_voices' ? 'GET' : 'POST',
+      headers:{Authorization:'Bearer '+key, ...(operation === 'synthesize' ? {'Content-Type':'application/json', model:model || 's2.1-pro-free'} : {})},
+      ...(operation === 'synthesize' ? {body:JSON.stringify({text, ...(voice ? {reference_id:voice} : {}), format:'mp3', normalize:true})} : {}),
+    }};
+  }
+  if (provider === 'mossland') {
+    const url = operation === 'list_voices'
+      ? 'https://api.mosi.cn/v1/audio/voices?limit=200'
+      : 'https://api.mosi.cn/v1/audio/speech';
+    return {url, init:{
+      method:operation === 'list_voices' ? 'GET' : 'POST',
+      headers:{Authorization:'Bearer '+key, ...(operation === 'synthesize' ? {'Content-Type':'application/json'} : {})},
+      ...(operation === 'synthesize' ? {body:JSON.stringify({model:model || 'moss-tts', input:text, voice_id:voice, response_format:'mp3', delivery_method:'audio'})} : {}),
+    }};
+  }
+  if (provider === 'elevenlabs') {
+    if (operation !== 'synthesize') throw new Error('operation-not-supported');
+    return {url:'https://api.elevenlabs.io/v1/text-to-speech/'+encodeURIComponent(voice), init:{
+      method:'POST', headers:{'xi-api-key':key, 'Content-Type':'application/json'},
+      body:JSON.stringify({text, model_id:model || 'eleven_multilingual_v2'}),
+    }};
+  }
+  if (provider === 'hume') {
+    if (operation !== 'synthesize') throw new Error('operation-not-supported');
+    return {url:'https://api.hume.ai/v0/tts/file', init:{
+      method:'POST', headers:{'X-Hume-Api-Key':key, 'Content-Type':'application/json'},
+      body:JSON.stringify({utterances:[{text,voice:{id:voice}}],format:{type:'mp3'},num_generations:1,split_utterances:false,version:/octave-1/i.test(model)?'1':'2'}),
+    }};
+  }
+  let minimaxBase = 'https://api.minimaxi.com';
+  if (configuredBase) {
+    let parsed;
+    try { parsed = new URL(configuredBase); } catch (_) { throw new Error('invalid-minimax-base'); }
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.port || !['api.minimax.io','api.minimaxi.com'].includes(parsed.hostname) || (parsed.pathname && parsed.pathname !== '/')) throw new Error('invalid-minimax-base');
+    minimaxBase = parsed.origin;
+  }
+  const suffix = operation === 'list_voices' ? '/v1/get_voice' : '/v1/t2a_v2';
+  const url = minimaxBase+suffix+(group ? '?GroupId='+encodeURIComponent(group) : '');
+  return {url, init:{
+    method:'POST',
+    headers:{Authorization:'Bearer '+key, 'Content-Type':'application/json'},
+    body:JSON.stringify(operation === 'list_voices' ? {voice_type:'all'} : {
+      model:model || 'speech-02-turbo', text, stream:false, language_boost:cleanText(input?.language_boost || 'auto', 32),
+      voice_setting:{voice_id:voice, speed:Number(input?.voice_setting?.speed) || 1, vol:Number(input?.voice_setting?.vol) || 1, pitch:Number(input?.voice_setting?.pitch) || 0, emotion:cleanText(input?.voice_setting?.emotion, 32)},
+      audio_setting:{sample_rate:32000, bitrate:128000, format:'mp3', channel:1},
+    }),
+  }};
 }
 
 export function createHandler(fetchUpstream = (...args) => fetch(...args), timeoutMs = 20000) {
@@ -33,10 +110,36 @@ export function createHandler(fetchUpstream = (...args) => fetch(...args), timeo
       'X-Content-Type-Options': 'nosniff',
       'Vary': 'Origin',
     };
-    if (origin === APP_ORIGIN) headers['Access-Control-Allow-Origin'] = APP_ORIGIN;
+    if (origin === APP_ORIGIN || origin === 'null') headers['Access-Control-Allow-Origin'] = origin;
     const reply = (status, body) => new Response(JSON.stringify(body), {status, headers});
-    if (origin && origin !== APP_ORIGIN) return reply(403, {ok:false, code:'origin-not-allowed'});
+    if (origin && origin !== APP_ORIGIN && origin !== 'null') return reply(403, {ok:false, code:'origin-not-allowed'});
     const health = url.pathname === '/health';
+    const externalTts = url.pathname === EXTERNAL_TTS_PATH;
+    if (externalTts) {
+      if (url.search) return reply(400, {ok:false, code:'query-not-accepted'});
+      if (request.method === 'OPTIONS') return new Response(null, {status:204, headers:{...headers, 'Access-Control-Allow-Methods':'POST, OPTIONS', 'Access-Control-Allow-Headers':'content-type'}});
+      if (request.method !== 'POST') return reply(405, {ok:false, code:'method-not-allowed'});
+      if (!/^application\/json(?:;|$)/i.test(request.headers.get('Content-Type') || '')) return reply(415, {ok:false, code:'json-required'});
+      if (Number(request.headers.get('Content-Length')) > MAX_TTS_BODY) return reply(413, {ok:false, code:'body-too-large'});
+      let target;
+      try {
+        const raw = await boundedBody(request, MAX_TTS_BODY);
+        if (raw === null) return reply(413, {ok:false, code:'body-too-large'});
+        target = externalTtsRequest(JSON.parse(raw));
+      } catch (error) {
+        return reply(400, {ok:false, code:String(error?.message || 'invalid-request')});
+      }
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), Math.max(timeoutMs, 190000));
+      try {
+        const upstream = await fetchUpstream(target.url, {...target.init, signal:controller.signal, redirect:'manual'});
+        if (upstream.status >= 300 && upstream.status < 400) return reply(502, {ok:false, code:'upstream-redirect-rejected'});
+        const outHeaders = {...headers, 'Content-Type':upstream.headers.get('Content-Type') || 'application/octet-stream'};
+        return new Response(upstream.body, {status:upstream.status, headers:outHeaders});
+      } catch (_) {
+        return reply(502, {ok:false, code:controller.signal.aborted ? 'upstream-timeout' : 'upstream-unreachable'});
+      } finally { clearTimeout(timer); }
+    }
     if (!health && url.pathname !== '/functions/v1/phone-license') return reply(404, {ok:false, code:'not-found'});
     if (url.search) return reply(400, {ok:false, code:'query-not-accepted'});
     if (request.method === 'OPTIONS') {

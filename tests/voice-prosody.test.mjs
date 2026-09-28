@@ -4,6 +4,7 @@ import vm from "node:vm";
 
 const source = fs.readFileSync(new URL("../app.js", import.meta.url), "utf8");
 const backend = fs.readFileSync(new URL("../supabase/functions/phone-ai/index.ts", import.meta.url), "utf8");
+const relay = fs.readFileSync(new URL("../services/phone-license-relay/worker.mjs", import.meta.url), "utf8");
 
 function functionSource(name) {
   const start = source.indexOf(`function ${name}`);
@@ -184,7 +185,8 @@ assert.match(source, /const ids=ttsRelayVoiceIds\(tts\)/);
 assert.doesNotMatch(source, /ttsRelayVoiceIds\(v&&v\.ttsVoice,tts\)/);
 assert.doesNotMatch(source, /ttsRelayOn\(t\)&&!ttsExternalOn\(t\)/);
 assert.match(source, /function ttsUseRelay\(o\)\{const t=ttsCfg\(o\);return !!\(ttsEnabled\(t\)&&ttsRelayOn\(t\)\);\}/);
-assert.match(source, /try\{if\(ttsUseRelay\(\)\)\{const d=await aiRelay\('tts_voices'/);
+assert.match(functionSource("pullVoices"), /externalTtsRelay\(cfg,\{operation:'list_voices'\}\)/);
+assert.doesNotMatch(functionSource("pullVoices"), /aiRelay\('tts_voices'/, "settings voice picker must never borrow the internal account route");
 assert.match(backend, /model = "speech-02-turbo"/);
 assert.match(backend, /language_boost: safeTTSLanguageBoost\(languageBoost\)/);
 assert.match(backend, /"Chinese,Yue"/);
@@ -217,7 +219,7 @@ route.base = "";
 route.key = "";
 assert.equal(routeContext.ttsUseRelay(), true, "relay must remain active after external credentials are cleared");
 
-assert.match(source, /model:tts\.model\|\|'speech-02-turbo'/);
+assert.match(relay, /model:model \|\| 'speech-02-turbo'/);
 assert.match(source, /'https:\/\/api\.elevenlabs\.io','eleven_v3'/);
 assert.match(source, /id="v_accent"/);
 assert.match(source, /option value="法"[^>]*>法语<\/option>/);
@@ -230,10 +232,11 @@ assert.match(source, /accent:\$\('#v_accent'\)\.value/);
 assert.match(source, /applySystemVoice\(u,v\)/);
 assert.match(source, /'https:\/\/api\.fish\.audio','s2\.1-pro-free'/);
 assert.match(source, /'https:\/\/api\.hume\.ai','octave-2'/);
-assert.match(source, /'X-Hume-Api-Key':tts\.key/);
+assert.match(relay, /'X-Hume-Api-Key':key/);
 assert.match(source, /function ttsFishTags/);
 assert.match(source, /function ttsFishPerformance/);
-assert.match(source, /aiRelay\('external_tts',\{provider:'fish'/);
+assert.match(source, /EXTERNAL_TTS_RELAY_URL='https:\/\/license\.smallphoneapp\.com\/functions\/v1\/external-tts'/);
+assert.match(functionSource("_ttsOnce"), /provider==='fish'\)r=await externalTtsRelay/);
 assert.match(source, /stripCallControlTags\(l,c,_call\.id,video\)/);
 assert.match(source, /if\(!keepActions\)t=t\.replace\(\/【\[\^】\]\*】\/g,''\)/);
 assert.match(source, /const VOICE_AUDIO_TTL_MS=24\*60\*60\*1000/);
@@ -241,7 +244,7 @@ assert.match(source, /function voiceAudioExpired/);
 assert.match(source, /m\.audioTs=Date\.now\(\)/);
 assert.match(source, /if\(voiceAudioExpired\(m\)\)clearVoiceAudio\(m\)/);
 assert.match(source, /function fishVoiceItems/);
-assert.match(source, /base\+'\/model\?self=true&page_size=100'/);
+assert.match(relay, /https:\/\/api\.fish\.audio\/model\?self=true&page_size=100/);
 assert.deepEqual(JSON.parse(JSON.stringify(context.fishVoiceItems({ items: [{ _id: "fish-voice-id", title: "我的克隆" }] }))), [
   { id: "fish-voice-id", name: "我的克隆", clone: true },
 ]);

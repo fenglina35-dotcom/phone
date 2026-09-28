@@ -12,11 +12,11 @@ const privateHtml=read('native/private-small-phone/XcodeProject/PhoneCompanionTe
 const privateAlias=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/小手机.html');
 const privateApp=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js');
 
-test('private v1339 inherits the current web theater without dropping its private shell',()=>{
+test('private v1341 inherits the current web theater without dropping its private shell',()=>{
   assert.equal(bundleTheater,theater);
   assert.match(bundleTheater,/guest2|ct_wechat_enabled/);
-  assert.match(webHtml,/app\.js\?v=1338[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1338&r=v1274-web-cohab-guests-1"/);
-  for(const html of [privateHtml,privateAlias])assert.match(html,/app\.js\?v=1339[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1339[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1339&r=v1274-web-cohab-guests-1"/);
+  assert.match(webHtml,/app\.js\?v=1340[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1340&r=v1274-web-cohab-guests-1"/);
+  for(const html of [privateHtml,privateAlias])assert.match(html,/app\.js\?v=1341[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1341[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1341&r=v1274-web-cohab-guests-1"/);
   assert.match(read('sw.js'),/cohab-theater\.js\?v='\+BUILD\+'\&r=v1274-web-cohab-guests-1',kind:'theater'/);
 });
 
@@ -144,8 +144,8 @@ test('guest exit sends exactly one genuine memory-grounded WeChat message',()=>{
   assert.doesNotMatch(theater,/content:\s*['"](?:我回来了|我都记得)/);
 });
 
-test('private artifact identity advances independently to v1339 and iOS 1.0.400 (399)',()=>{
-  assert.match(privateApp,/const APP_VER='v1339 · 英文翻译排队与思考内容拦截'/);
+test('private artifact identity advances independently to v1341 and iOS 1.0.400 (399)',()=>{
+  assert.match(privateApp,/const APP_VER='v1341 · 私人外置语音独立通道修复'/);
   assert.match(privateHtml,/private-runtime-diagnostics\.js\?v=339/);
   assert.match(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),/1\.0\.400 \(400\)/);
   const project=read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');

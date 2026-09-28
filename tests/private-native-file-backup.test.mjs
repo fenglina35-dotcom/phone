@@ -14,14 +14,14 @@ const backup=read(bundle+'private-cloud-backup.js');
 const privateApp=read(bundle+'app.js');
 const publicApp=read('app.js');
 
-test('private v1339 loads daily backup after the diagnostic overlay while public advances independently',()=>{
+test('private v1341 loads daily backup after the diagnostic overlay while public advances independently',()=>{
   for(const name of ['index.html','小手机.html']){
     const html=read(bundle+name);
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1339'/);
-    assert.ok(html.indexOf('private-cloud-backup.js?v=1339')>html.indexOf('private-runtime-diagnostics.js?v=339'));
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1341'/);
+    assert.ok(html.indexOf('private-cloud-backup.js?v=1341')>html.indexOf('private-runtime-diagnostics.js?v=339'));
   }
-  assert.match(privateApp,/APP_VER='v1339 · 英文翻译排队与思考内容拦截'/);
-  assert.match(publicApp,/APP_VER='v1338 · 英文翻译排队与思考内容拦截'/);
+  assert.match(privateApp,/APP_VER='v1341 · 私人外置语音独立通道修复'/);
+  assert.match(publicApp,/APP_VER='v1340 · 外置语音独立通道修复'/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 400;/g)||[]).length,12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.400;/g)||[]).length,12);
 });
