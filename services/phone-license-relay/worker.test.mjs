@@ -82,9 +82,23 @@ test('passkey actions preserve browser origin and original challenge response',a
   assert.equal((await handle(post({action}))).status,200);
  }
 });
-test('rejects admin actions, arbitrary proxy destinations, malformed and oversized bodies',async()=>{
+test('admin actions use the same fixed backend and forward only the explicit admin credential',async()=>{
+ const seen=[];const handle=createHandler(async(url,init)=>{seen.push({url,init});return Response.json({ok:true,role:'owner'});});
+ for(const action of ['admin_auth','admin_license_users','admin_invite_generate','admin_orders','admin_review','admin_config','admin_subscribe']) {
+  const response=await handle(post({action},{'x-admin-token':'fixture-admin','Authorization':'Bearer private','Cookie':'private=1'}));
+  assert.equal(response.status,200);assert.equal((await response.json()).ok,true);
+ }
+ assert.equal(seen.length,7);
+ for(const call of seen){
+  assert.equal(call.url,'https://lkhlyfpssmrjkkzhuzag.supabase.co/functions/v1/phone-license');
+  assert.equal(call.init.headers['x-admin-token'],'fixture-admin');
+  assert.equal(call.init.headers.Authorization,undefined);assert.equal(call.init.headers.Cookie,undefined);
+ }
+});
+test('rejects missing admin credentials, arbitrary actions, proxy destinations, malformed and oversized bodies',async()=>{
  let calls=0;const handle=createHandler(async()=>{calls++;return expected();});
- for(const action of ['admin_auth','admin_license_users','admin_invite_generate','anything']) assert.equal((await handle(post({action}))).status,403);
+ for(const action of ['admin_auth','admin_license_users','admin_invite_generate']) assert.equal((await handle(post({action}))).status,401);
+ assert.equal((await handle(post({action:'anything'}))).status,403);
  assert.equal((await handle(new Request(activationURL+'?upstream=https://other.example',{method:'POST'}))).status,400);
  assert.equal((await handle(post({action:'activate',padding:'x'.repeat(65536)}))).status,413);
  assert.equal((await handle(new Request(activationURL,{method:'POST',body:'not-json',headers:{'Content-Type':'application/json'}}))).status,400);

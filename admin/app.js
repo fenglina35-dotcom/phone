@@ -1,10 +1,8 @@
-const ORDER_API_URL = 'https://lovbzibismsjqvjujilz.supabase.co/functions/v1/phone-ai';
-const ORDER_PUBLIC_KEY = 'sb_publishable_HxLFoFQXKcG2wVhVRYM1fQ_MQCkbYop';
-const LICENSE_API_URL = 'https://lovbzibismsjqvjujilz.supabase.co/functions/v1/phone-license';
-const LICENSE_PUBLIC_KEY = 'sb_publishable_HxLFoFQXKcG2wVhVRYM1fQ_MQCkbYop';
+const ADMIN_API_URL = 'https://license.smallphoneapp.com/functions/v1/phone-license';
 const TOKEN_KEY = 'north_admin_access';
 
 let token = localStorage.getItem(TOKEN_KEY) || '';
+let authMode = 'owner';
 let adminAccessRole = '';
 let canManageOrders = false;
 let canManageLicenses = false;
@@ -52,20 +50,16 @@ const operatorLabel = (value) => {
   return numbered ? `管理员${Number(numbered[1])}` : '旧记录';
 };
 
-const isLicenseAction = (action) => action === 'admin_auth' || action.startsWith('admin_invite_') || action.startsWith('admin_license_');
-
-async function requestApi(action, payload, apiUrl, publicKey) {
+async function requestApi(action, payload) {
   const attempts = action === 'admin_license_users' ? 2 : 1;
   for (let attempt = 0; attempt < attempts; attempt++) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 30000);
     try {
-      const response = await fetch(apiUrl, {
+      const response = await fetch(ADMIN_API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          apikey: publicKey,
-          Authorization: 'Bearer ' + publicKey,
           'x-admin-token': token,
         },
         body: JSON.stringify({action, ...payload}),
@@ -89,26 +83,17 @@ async function requestApi(action, payload, apiUrl, publicKey) {
 }
 
 async function api(action, payload = {}) {
+  const result = await requestApi(action, payload);
   if (action === 'admin_auth') {
-    const [licenseResult, orderResult] = await Promise.allSettled([
-      requestApi(action, payload, LICENSE_API_URL, LICENSE_PUBLIC_KEY),
-      requestApi(action, payload, ORDER_API_URL, ORDER_PUBLIC_KEY),
-    ]);
-    const licenseAccess = licenseResult.status === 'fulfilled';
-    const orderAccess = orderResult.status === 'fulfilled' && orderResult.value.role === 'owner';
-    if (!licenseAccess && !orderAccess) {
-      throw licenseResult.status === 'rejected' ? licenseResult.reason : orderResult.reason;
-    }
+    const ownerAccess = result.role === 'owner';
     return {
       ok: true,
-      role: licenseAccess && orderAccess ? 'unified' : orderAccess ? 'owner' : 'license',
-      can_orders: orderAccess,
-      can_licenses: licenseAccess,
+      role: ownerAccess ? 'owner' : 'license',
+      can_orders: ownerAccess,
+      can_licenses: true,
     };
   }
-  return isLicenseAction(action)
-    ? requestApi(action, payload, LICENSE_API_URL, LICENSE_PUBLIC_KEY)
-    : requestApi(action, payload, ORDER_API_URL, ORDER_PUBLIC_KEY);
+  return result;
 }
 
 function setStatus(text) {
@@ -123,10 +108,33 @@ function showAuth(message = '') {
   $('workspace').classList.add('hidden');
   $('auth').classList.remove('hidden');
   $('adminToken').value = token;
+  const defaultLabel = authMode === 'owner' ? '进入总后台' : '进入管理员后台';
   if (message) {
     $('loginBtn').textContent = message;
-    setTimeout(() => $('loginBtn').textContent = '进入核对台', 1800);
-  }
+    setTimeout(() => $('loginBtn').textContent = defaultLabel, 1800);
+  } else $('loginBtn').textContent = defaultLabel;
+}
+
+function setAuthMode(mode) {
+  authMode = mode === 'staff' ? 'staff' : 'owner';
+  $('ownerModeBtn').classList.toggle('on', authMode === 'owner');
+  $('staffModeBtn').classList.toggle('on', authMode === 'staff');
+  $('adminTokenLabel').textContent = authMode === 'owner' ? '主管理员口令' : '管理员码';
+  $('authHint').textContent = authMode === 'owner'
+    ? '这是你自己使用的总后台。首次在本设备验证主管理员口令，成功后本设备会自动进入，不使用邀请码。'
+    : '其他管理员输入各自的管理员码。授权管理员只能管理邀请码和用户授权，不能查看付款资料。';
+  $('loginBtn').textContent = authMode === 'owner' ? '进入总后台' : '进入管理员后台';
+}
+
+function loginErrorText(error) {
+  const status = Number(error?.status || 0);
+  if (status === 401) return '管理员凭证无效';
+  if (status === 402) return '云端调用额度已耗尽';
+  if (status === 403) return error?.message || '当前管理员权限不足';
+  if (error?.name === 'AbortError') return '服务器响应超时';
+  if (!status) return '连接不上服务器';
+  if (status >= 500) return '服务器暂时异常';
+  return error?.message || `进入失败（HTTP ${status}）`;
 }
 
 function showWorkspace(access) {
@@ -697,10 +705,12 @@ async function login() {
     const result = await api('admin_auth');
     localStorage.setItem(TOKEN_KEY, token);
     showWorkspace(result);
-  } catch (_) {
-    token = '';
-    localStorage.removeItem(TOKEN_KEY);
-    showAuth('授权码无效');
+  } catch (error) {
+    if (Number(error?.status || 0) === 401) {
+      token = '';
+      localStorage.removeItem(TOKEN_KEY);
+    }
+    showAuth(loginErrorText(error));
   } finally {
     $('loginBtn').disabled = false;
   }
@@ -721,7 +731,7 @@ async function enableNotifications() {
   try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') throw new Error('没有获得通知权限');
-    const registration = await navigator.serviceWorker.register('./sw.js?v=636', {scope:'./'});
+    const registration = await navigator.serviceWorker.register('./sw.js?v=637', {scope:'./'});
     await navigator.serviceWorker.ready;
     const config = await api('admin_config');
     if (!config.vapid_public_key) throw new Error('后台通知密钥尚未配置');
@@ -756,6 +766,8 @@ $('installBtn').addEventListener('click', async () => {
   }
 });
 $('loginBtn').addEventListener('click', login);
+$('ownerModeBtn').addEventListener('click', () => setAuthMode('owner'));
+$('staffModeBtn').addEventListener('click', () => setAuthMode('staff'));
 $('adminToken').addEventListener('keydown', (event) => { if (event.key === 'Enter') login(); });
 $('refreshBtn').addEventListener('click', () => {
   if (workspaceView === 'licenses') loadLicenseUsers(true);
@@ -812,18 +824,26 @@ document.querySelectorAll('.tab[data-scope]').forEach((button) => button.addEven
 }));
 
 async function restoreSavedLogin() {
+  let lastError = null;
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
       const result = await api('admin_auth');
       showWorkspace(result);
       return;
-    } catch (_) {
+    } catch (error) {
+      lastError = error;
+      if (Number(error?.status || 0) === 401) break;
       if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 900));
     }
   }
-  showAuth('请重新进入');
+  if (Number(lastError?.status || 0) === 401) {
+    token = '';
+    localStorage.removeItem(TOKEN_KEY);
+  }
+  showAuth(loginErrorText(lastError));
 }
 
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js?v=636', {scope:'./'}).catch(() => {});
+setAuthMode('owner');
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js?v=637', {scope:'./'}).catch(() => {});
 if (token) restoreSavedLogin();
 else showAuth();

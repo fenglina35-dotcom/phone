@@ -4,18 +4,18 @@
 
 `POST /functions/v1/external-tts` 为 MiniMax 海螺、Fish、Mossland、ElevenLabs、Hume 提供固定官方主机转发，供小手机外置语音绕过已耗尽免费调用额度的 Supabase `phone-ai`。它只使用用户提交的厂商 Key，不读取小手机 AI 账号或点数，不扣点，不缓存，不重试，源代码不记录正文。通用兼容语音仍由客户端直连用户填写的地址，不接入公开代理。
 
-生产版本 `0e4fab66` 已部署。Worker 18/18、全仓 Node 2634/2634，以及网页/私人内置页的语音隔离和授权状态核心聊天回归通过。线上无效占位 Key 已分别到达 Fish、MiniMax 两个官方域名、Mossland、ElevenLabs、Hume，并返回各厂商自己的鉴权错误；这只证明独立通道与固定上游生效，不代表真实 Key 已成功生成音频。功能提交 `5a465303564a63cd7702b375dd3f3dff02b8ec27` 的 Pages 工作流 `36392947531` 成功，四个线上核心资源与本地逐文件一致。
+生产版本 `9981d623` 已部署，继续包含此前的固定外置语音通道。Worker 19/19、全仓 Node 2634/2634，以及网页/私人内置页的语音隔离和授权状态核心聊天回归通过。线上无效占位 Key 已分别到达 Fish、MiniMax 两个官方域名、Mossland、ElevenLabs、Hume，并返回各厂商自己的鉴权错误；这只证明独立通道与固定上游生效，不代表真实 Key 已成功生成音频。功能提交 `5a465303564a63cd7702b375dd3f3dff02b8ec27` 的 Pages 工作流 `36392947531` 成功，四个线上核心资源与本地逐文件一致。
 
-当前：OPPO 真机已由用户截图确认 GET /health 返回 ok:true。2026-09-28 原 Supabase Edge Function 超额后，备用 phone-license v32 已改为连接原授权数据库，Cloudflare 活跃版本 4ad6de14 已切换至该备用函数；线上 GET /health 连续 5 次返回 200，空 session_check 返回原业务 400。网页 v1338、私人内置源码 v1339 已接入备用入口。
+当前：OPPO 真机已由用户截图确认 GET /health 返回 ok:true。2026-09-28 原 Supabase Edge Function 超额后，备用 phone-license v33 已连接原授权数据库并恢复固定管理员动作；Cloudflare 活跃版本 `9981d623` 已切换至该备用函数。线上 GET /health 返回 200；官方网页 Origin 的预检允许 `content-type, x-admin-token`；管理员无凭证返回 401 `admin-token-required`，伪凭证返回 401 `admin-unauthorized`，任意未允许动作返回 403，空普通 session_check 仍返回原业务 400。网页 v1338、私人内置源码 v1339 已接入备用入口；管理员前端版本 v637 随本次提交发布。
 
 - 固定上游是 lkhlyfpssmrjkkzhuzag 项目的备用 phone-license；该函数通过 PHONE_SUPABASE_URL 和 PHONE_SERVICE_ROLE_KEY 连接原 lovbzibismsjqvjujilz 授权数据库。原邀请码、licenseId、sessionId、管理员 phone_license_admin_page 数据来源保持一致，没有建立新用户数据库。
-- 仅允许既有普通用户授权动作；拒绝所有 admin 动作、任意上游、查询参数、非 JSON 和大于 64 KiB 的请求。保留原业务响应、设备标签与 UA，只转发所需头，不转发 Cookie 或管理员凭证；无缓存、无自动重试、代码不记录请求正文。
+- 普通用户动作继续使用固定白名单；管理员只允许 `ADMIN_ACTIONS` 中的固定动作，并且必须显式提供 `x-admin-token`。管理员凭证只转发给固定备用 phone-license，普通用户动作绝不会携带管理员凭证。仍拒绝任意上游、查询参数、非 JSON 和大于 64 KiB 的请求；保留原业务响应、设备标签与 UA，不转发 Cookie；无缓存、无自动重试、代码不记录请求正文。
 - 网页仅在原 license-failover 项目使用此传输；其他项目和私人 file 原生桥保持原地址。通行密钥 Origin/RP 保持正式网页域名。
 - 进入前不再等待可选真人好友注册网络；进入成功后继续原注册及身份同步。管理员封禁仍由原服务器决定，临时网络错误不能被当作撤销授权。
-- 本地代理专项 12/12、全仓 2599/2599；旧 84d63859 代码在阻断 Supabase 场景及可选服务卡住场景明确失败，新代码通过。实际网页/私人内置入口的模拟授权、一次核销、刷新后会话保留通过；两端核心聊天回归通过。
-- 线上空会话 POST 返回原后台 HTTP400 / license-request-failed / permanent:false；官方 Origin CORS 正常；管理员动作 HTTP403 / action-not-allowed。没有使用任何真实邀请码，真实首次激活后管理员列表的那一条记录仍待实际用户验收。
+- 本地代理专项 19/19、本次管理员与授权专项 26/26、全仓 2634/2634；旧 84d63859 代码在阻断 Supabase 场景及可选服务卡住场景明确失败，新代码通过。实际网页/私人内置入口的模拟授权、一次核销、刷新后会话保留通过；两端核心聊天回归通过。
+- 线上空会话 POST 返回原后台 HTTP400 / license-request-failed / permanent:false；官方 Origin CORS 正常；无凭证和伪凭证均被 401 拒绝，未允许动作被 403 拒绝。没有使用任何真实邀请码或真实管理员凭证，真实管理员登录、真实首次激活后管理员列表登记仍待实际用户验收。
 - 套餐保持 Free，复用现有域名，无新增付费。控制台默认 Workers Logs 保持开启；源代码不打印敏感数据。
-- 回退：服务可回退控制台版本 546dd57f（仅健康检查），但客户端不可在真实激活提交后自动换路重试。回退客户端须发新版本并保留原会话、存档及后台记录。
+- 回退：服务可回退控制台版本 `0e4fab66`（不含管理员动作恢复）或 `546dd57f`（仅健康检查），但客户端不可在真实激活提交后自动换路重试。回退客户端须发新版本并保留原会话、存档及后台记录。
 
 ## 首阶段记录（历史，不代表当前尚未部署）
 

@@ -1,7 +1,7 @@
 {
-  "name": "North 付款核对",
-  "short_name": "付款核对",
-  "description": "小手机 AI 账户付款截图与到账审核",
+  "name": "North 管理后台",
+  "short_name": "管理后台",
+  "description": "小手机付款核对、邀请码与用户授权管理",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

@@ -1,5 +1,5 @@
-const CACHE = 'north-admin-v636';
-const SHELL = ['./', './index.html', './app.js?v=636', './manifest.webmanifest', '../icon.png'];
+const CACHE = 'north-admin-v637';
+const SHELL = ['./', './index.html', './app.js?v=637', './manifest.webmanifest', '../icon.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()));

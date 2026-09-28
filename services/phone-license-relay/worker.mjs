@@ -6,6 +6,10 @@ const EXTERNAL_TTS_PATH = '/functions/v1/external-tts';
 const ACTIONS = new Set(['activate','legacy_activate','register_options','register_verify',
   'restore_options','restore_verify','session_check','session_list','session_revoke',
   'ai_identity_sync','phone_friend_identity_sync']);
+const ADMIN_ACTIONS = new Set(['admin_auth','admin_invite_generate','admin_invite_list',
+  'admin_license_users','admin_license_block','admin_license_unblock','admin_license_restore_all',
+  'admin_orders','admin_assign_private_voice','admin_review','admin_delete_order','admin_delete_orders',
+  'admin_config','admin_subscribe']);
 const MAX_BODY = 65536;
 const MAX_TTS_BODY = 16384;
 const TTS_PROVIDERS = new Set(['minimax','fish','mossland','elevenlabs','hume']);
@@ -143,10 +147,11 @@ export function createHandler(fetchUpstream = (input, init) => fetch(input, init
     if (!health && url.pathname !== '/functions/v1/phone-license') return reply(404, {ok:false, code:'not-found'});
     if (url.search) return reply(400, {ok:false, code:'query-not-accepted'});
     if (request.method === 'OPTIONS') {
-      return new Response(null, {status:204, headers:{...headers, 'Access-Control-Allow-Methods':health ? 'GET, OPTIONS' : 'POST, OPTIONS', 'Access-Control-Allow-Headers':'content-type'}});
+      return new Response(null, {status:204, headers:{...headers, 'Access-Control-Allow-Methods':health ? 'GET, OPTIONS' : 'POST, OPTIONS', 'Access-Control-Allow-Headers':'content-type, x-admin-token'}});
     }
     if (request.method !== (health ? 'GET' : 'POST')) return reply(405, {ok:false, code:'method-not-allowed'});
     let payload = JSON.stringify({action:'session_check', sessionToken:''});
+    let adminToken = '';
     if (!health) {
       if (!/^application\/json(?:;|$)/i.test(request.headers.get('Content-Type') || '')) return reply(415, {ok:false, code:'json-required'});
       if (Number(request.headers.get('Content-Length')) > MAX_BODY) return reply(413, {ok:false, code:'body-too-large'});
@@ -154,16 +159,20 @@ export function createHandler(fetchUpstream = (input, init) => fetch(input, init
         payload = await boundedBody(request);
         if (payload === null) return reply(413, {ok:false, code:'body-too-large'});
         const input = JSON.parse(payload);
-        if (!input || !ACTIONS.has(input.action)) return reply(403, {ok:false, code:'action-not-allowed'});
+        if (!input || (!ACTIONS.has(input.action) && !ADMIN_ACTIONS.has(input.action))) return reply(403, {ok:false, code:'action-not-allowed'});
+        if (ADMIN_ACTIONS.has(input.action)) {
+          adminToken = cleanText(request.headers.get('x-admin-token'), 240);
+          if (!adminToken) return reply(401, {ok:false, code:'admin-token-required', error:'请输入管理员凭证'});
+        }
       } catch (_) { return reply(400, {ok:false, code:'invalid-json'}); }
     }
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      // Preserve the original body and device label. Forward only required headers, never admin credentials.
+      // Preserve the original body and device label. Admin credentials are forwarded only for the fixed admin allowlist.
       const upstream = await fetchUpstream(UPSTREAM, {
         method:'POST',
-        headers:{'Content-Type':'application/json', Origin:APP_ORIGIN, ...(!health ? {'User-Agent':request.headers.get('User-Agent') || ''} : {})},
+        headers:{'Content-Type':'application/json', Origin:APP_ORIGIN, ...(!health ? {'User-Agent':request.headers.get('User-Agent') || ''} : {}), ...(adminToken ? {'x-admin-token':adminToken} : {})},
         body:payload,
         signal:controller.signal,
         redirect:'manual',

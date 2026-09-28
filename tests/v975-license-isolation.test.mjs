@@ -59,8 +59,8 @@ test('legacy invitation routing remains available for existing users', () => {
 });
 
 test('license administration and invitation generation are hosted by phone-license', () => {
-  assert.match(adminApp, /LICENSE_API_URL = 'https:\/\/lovbzibismsjqvjujilz\.supabase\.co\/functions\/v1\/phone-license'/);
-  assert.match(adminApp, /isLicenseAction/);
+  assert.match(adminApp, /ADMIN_API_URL = 'https:\/\/license\.smallphoneapp\.com\/functions\/v1\/phone-license'/);
+  assert.doesNotMatch(adminApp, /lovbzibismsjqvjujilz\.supabase\.co/);
   assert.match(adminHtml, /id="licenseGenerateBtn"/);
   assert.match(adminHtml, /id="licenseListInvitesBtn"/);
   assert.match(backend, /action === 'admin_invite_generate'/);
@@ -72,10 +72,13 @@ test('license administration and invitation generation are hosted by phone-licen
   assert.match(backend, /action === 'admin_license_restore_all'/);
   assert.match(backend, /`YB2-\$\{suffix\}`/);
   assert.match(backend, /LICENSE_ADMIN_TOKENS/);
+  assert.match(backend, /UNIFIED_ADMIN_TOKENS/);
+  assert.match(backend, /ADMIN_ACCESS_TOKEN/);
+  assert.match(backend, /action === 'admin_orders'/);
   assert.match(orderBackend, /UNIFIED_ADMIN_TOKENS/);
-  assert.match(adminApp, /Promise\.allSettled/);
-  assert.match(adminApp, /can_orders: orderAccess/);
-  assert.match(adminApp, /can_licenses: licenseAccess/);
+  assert.doesNotMatch(adminApp, /Promise\.allSettled/);
+  assert.match(adminApp, /can_orders: ownerAccess/);
+  assert.match(adminApp, /can_licenses: true/);
   assert.match(adminApp, /if \(canManageLicenses\) openLicenseView\(\)/);
   assert.match(adminApp, /orderSyncPaused = true/);
   assert.match(adminHtml, /不代表旧项目历史总人数/);

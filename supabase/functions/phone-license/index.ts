@@ -10,6 +10,7 @@ const SUPABASE_URL = Deno.env.get('PHONE_SUPABASE_URL') || Deno.env.get('SUPABAS
 const SERVICE_KEY = Deno.env.get('PHONE_SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
 const RP_ID = Deno.env.get('LICENSE_RP_ID') || 'fenglina35-dotcom.github.io';
 const RP_NAME = 'North 小手机';
+const PROOF_BUCKET = 'phone-ai-payment-proofs';
 const MAX_SESSIONS = 3;
 const TRANSFER_CREATE_COOLDOWN_MS = 30 * 1000;
 const TRANSFER_CREATE_HOURLY_LIMIT = 10;
@@ -30,6 +31,8 @@ const ALLOWED_ORIGINS = new Set([
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
+let minimaxVoiceCache: JsonMap[] = [];
+let minimaxVoiceCacheAt = 0;
 
 type JsonMap = Record<string, unknown>;
 
@@ -76,10 +79,26 @@ function secureEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-type LicenseAdminIdentity = { role: 'license'; operatorId: string };
+type LicenseAdminIdentity = { role: 'owner' | 'license'; operatorId: string };
 
 function requireLicenseAdmin(req: Request, body: JsonMap): LicenseAdminIdentity {
   const supplied = cleanText(req.headers.get('x-admin-token') || body.admin_token, 240);
+  const ownerToken = String(Deno.env.get('ADMIN_ACCESS_TOKEN') || '').trim();
+  if (ownerToken && secureEqual(supplied, ownerToken)) {
+    return { role: 'owner', operatorId: 'owner' };
+  }
+  const unifiedTokens = String(Deno.env.get('UNIFIED_ADMIN_TOKENS') || '')
+    .split(/[\n,;]+/)
+    .map((token) => token.trim())
+    .filter(Boolean);
+  const unifiedIndex = unifiedTokens.findIndex((token) => secureEqual(supplied, token));
+  if (unifiedIndex >= 0) {
+    const labelled = supplied.match(/^ADMIN-(\d{2})-/i);
+    return {
+      role: 'owner',
+      operatorId: labelled ? `unified-${labelled[1]}` : `unified-${unifiedIndex + 1}`,
+    };
+  }
   const tokens = String(Deno.env.get('LICENSE_ADMIN_TOKENS') || '')
     .split(/[\n,;]+/)
     .map((token) => token.trim())
@@ -88,6 +107,12 @@ function requireLicenseAdmin(req: Request, body: JsonMap): LicenseAdminIdentity 
   if (tokenIndex < 0) throw new LicenseHttpError('后台授权码无效', 401, 'admin-unauthorized', true);
   const labelled = supplied.match(/^ADMIN-(\d{2})-/i);
   return { role: 'license', operatorId: labelled ? `admin-${labelled[1]}` : `license-${tokenIndex + 1}` };
+}
+
+function requireOwnerAdmin(req: Request, body: JsonMap): LicenseAdminIdentity {
+  const identity = requireLicenseAdmin(req, body);
+  if (identity.role !== 'owner') throw new LicenseHttpError('主管理员权限不足', 403, 'owner-required', true);
+  return identity;
 }
 
 async function adminLicenseUsers(req: Request, body: JsonMap): Promise<JsonMap> {
@@ -187,6 +212,223 @@ async function adminInviteList(req: Request, body: JsonMap): Promise<JsonMap> {
     .limit(limit);
   if (error) throw error;
   return { ok: true, invites: Array.isArray(data) ? data : [], total: Math.max(0, Number(count || 0)), limit };
+}
+
+function validPrivateVoiceId(value: unknown): string {
+  const voiceId = cleanText(value, 256);
+  return /^[A-Za-z][A-Za-z0-9_-]{6,254}[A-Za-z0-9]$/.test(voiceId) ? voiceId : '';
+}
+
+function publicPrivateVoice(row: JsonMap): JsonMap {
+  return {
+    id: row.id,
+    voice_id: row.voice_id,
+    display_name: row.display_name,
+    purchase_id: row.purchase_id || null,
+    created_at: row.created_at,
+  };
+}
+
+async function minimaxVoices(force = false): Promise<JsonMap[]> {
+  if (!force && minimaxVoiceCache.length && Date.now() - minimaxVoiceCacheAt < 5 * 60 * 1000) {
+    return minimaxVoiceCache.slice();
+  }
+  const base = String(Deno.env.get('MINIMAX_BASE_URL') || 'https://api.minimaxi.com').replace(/\/+$/, '');
+  const key = String(Deno.env.get('MINIMAX_API_KEY') || '');
+  const groupId = String(Deno.env.get('MINIMAX_GROUP_ID') || '');
+  if (!key) throw new LicenseHttpError('克隆音色服务尚未配置', 503, 'voice-service-unavailable', false);
+  const url = base + '/v1/get_voice' + (groupId ? ('?GroupId=' + encodeURIComponent(groupId)) : '');
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+    body: JSON.stringify({ voice_type: 'all' }),
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok || (data?.base_resp && data.base_resp.status_code !== 0)) {
+    throw new LicenseHttpError('克隆音色服务暂时不可用', 502, 'voice-service-unavailable', false);
+  }
+  const clones = (Array.isArray(data?.voice_cloning) ? data.voice_cloning : []).map((voice: JsonMap) => ({
+    id: cleanText(voice.voice_id, 256),
+    name: cleanText(voice.voice_name || voice.voice_id || '我的克隆', 120),
+    clone: true,
+  })).filter((voice: JsonMap) => voice.id);
+  const system = (Array.isArray(data?.system_voice) ? data.system_voice : []).map((voice: JsonMap) => ({
+    id: cleanText(voice.voice_id, 256),
+    name: cleanText(voice.voice_name || voice.voice_id || '系统音色', 120),
+    clone: false,
+  })).filter((voice: JsonMap) => voice.id);
+  minimaxVoiceCache = clones.concat(system);
+  minimaxVoiceCacheAt = Date.now();
+  return minimaxVoiceCache.slice();
+}
+
+async function adminOrders(req: Request, body: JsonMap): Promise<JsonMap> {
+  requireOwnerAdmin(req, body);
+  const scope = cleanText(body.scope || 'pending', 16);
+  let query = supabase
+    .from('phone_ai_purchases')
+    .select('id,user_id,plan_id,provider,amount_cny,points,status,review_status,payer_hint,claimed_paid_at,proof_path,review_submitted_at,reviewed_at,review_note,external_order_id,created_at,paid_at')
+    .neq('review_status', 'unsubmitted')
+    .order('review_submitted_at', { ascending: false, nullsFirst: false })
+    .limit(100);
+  if (scope === 'pending') query = query.eq('status', 'pending').eq('review_status', 'submitted');
+  const { data: rows, error } = await query;
+  if (error) throw error;
+  const purchases = Array.isArray(rows) ? rows : [];
+  const userIds = [...new Set(purchases.map((row: JsonMap) => cleanText(row.user_id, 80)).filter(Boolean))];
+  const balances = new Map<string, number>();
+  if (userIds.length) {
+    const { data: accounts, error: accountError } = await supabase.from('phone_ai_accounts').select('user_id,points').in('user_id', userIds);
+    if (accountError) throw accountError;
+    (accounts || []).forEach((account: JsonMap) => balances.set(cleanText(account.user_id, 80), Number(account.points || 0)));
+  }
+  const purchaseIds = purchases.map((row: JsonMap) => cleanText(row.id, 80)).filter(Boolean);
+  const voicesByPurchase = new Map<string, JsonMap>();
+  if (purchaseIds.length) {
+    const { data: voices, error: voiceError } = await supabase
+      .from('phone_ai_private_voices')
+      .select('id,user_id,purchase_id,voice_id,display_name,status,created_at')
+      .in('purchase_id', purchaseIds);
+    if (voiceError) throw voiceError;
+    (voices || []).forEach((voice: JsonMap) => {
+      const purchaseId = cleanText(voice.purchase_id, 80);
+      if (purchaseId) voicesByPurchase.set(purchaseId, publicPrivateVoice(voice));
+    });
+  }
+  const orders = await Promise.all(purchases.map(async (row: JsonMap) => {
+    let proofUrl = '';
+    if (row.proof_path) {
+      const { data } = await supabase.storage.from(PROOF_BUCKET).createSignedUrl(String(row.proof_path), 600);
+      proofUrl = data?.signedUrl || '';
+    }
+    return {
+      ...row,
+      account_points: balances.get(cleanText(row.user_id, 80)) || 0,
+      private_voice: voicesByPurchase.get(cleanText(row.id, 80)) || null,
+      proof_url: proofUrl,
+    };
+  }));
+  const { count, error: countError } = await supabase
+    .from('phone_ai_purchases')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'pending')
+    .eq('review_status', 'submitted');
+  if (countError) throw countError;
+  return { ok: true, orders, pending_count: count || 0 };
+}
+
+async function adminAssignPrivateVoice(req: Request, body: JsonMap): Promise<JsonMap> {
+  requireOwnerAdmin(req, body);
+  const purchaseId = cleanText(body.purchase_id, 80);
+  const voiceId = validPrivateVoiceId(body.voice_id);
+  const displayName = cleanText(body.display_name, 60);
+  if (!/^[0-9a-f-]{36}$/i.test(purchaseId)) throw new LicenseHttpError('订单编号无效', 400, 'invalid-purchase-id', true);
+  if (!voiceId) throw new LicenseHttpError('克隆音色编号无效', 400, 'invalid-private-voice-id', true);
+  if (!displayName) throw new LicenseHttpError('请填写用户看到的音色名称', 400, 'private-voice-name-required', true);
+  const { data: purchase, error: purchaseError } = await supabase
+    .from('phone_ai_purchases')
+    .select('id,user_id,plan_id,points,status,review_status')
+    .eq('id', purchaseId)
+    .maybeSingle();
+  if (purchaseError) throw purchaseError;
+  if (!purchase) throw new LicenseHttpError('订单不存在', 404, 'purchase-not-found', true);
+  if (purchase.plan_id !== 'svc_clone_1990' || Number(purchase.points) !== 0) throw new LicenseHttpError('该订单不是克隆音色服务', 409, 'purchase-is-not-voice-clone-service', true);
+  if (purchase.status !== 'paid' || purchase.review_status !== 'approved') throw new LicenseHttpError('请先确认克隆音色订单已到账', 409, 'voice-clone-payment-not-approved', true);
+  const available = await minimaxVoices(true);
+  if (!available.find((voice) => voice.clone === true && voice.id === voiceId)) throw new LicenseHttpError('海螺账户中没有这个克隆音色', 404, 'private-voice-not-found-in-minimax-account', true);
+  const { data: assigned, error } = await supabase
+    .from('phone_ai_private_voices')
+    .upsert({
+      user_id: purchase.user_id,
+      purchase_id: purchase.id,
+      voice_id: voiceId,
+      display_name: displayName,
+      status: 'active',
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'purchase_id' })
+    .select('id,voice_id,display_name,purchase_id,created_at')
+    .single();
+  if (error?.code === '23505') throw new LicenseHttpError('这个克隆音色已经属于另一位用户', 409, 'private-voice-already-belongs-to-another-customer', true);
+  if (error) throw error;
+  return { ok: true, private_voice: publicPrivateVoice(assigned as JsonMap) };
+}
+
+async function adminReview(req: Request, body: JsonMap): Promise<JsonMap> {
+  requireOwnerAdmin(req, body);
+  const purchaseId = cleanText(body.purchase_id, 80);
+  const decision = cleanText(body.decision, 16);
+  if (!/^[0-9a-f-]{36}$/i.test(purchaseId)) throw new LicenseHttpError('订单编号无效', 400, 'invalid-purchase-id', true);
+  if (decision === 'approve') {
+    const paymentRef = cleanText(body.payment_ref, 120);
+    if (paymentRef.length < 4) throw new LicenseHttpError('请填写到账凭据', 400, 'payment-reference-required', true);
+    const { data: balance, error } = await supabase.rpc('phone_ai_confirm_purchase', { p_purchase_id: purchaseId, p_payment_ref: paymentRef });
+    if (error) throw error;
+    return { ok: true, balance };
+  }
+  if (decision === 'reject') {
+    const note = cleanText(body.review_note || 'payment not found', 300);
+    const { data: rejected, error } = await supabase
+      .from('phone_ai_purchases')
+      .update({ status: 'cancelled', review_status: 'rejected', reviewed_at: new Date().toISOString(), review_note: note })
+      .eq('id', purchaseId)
+      .eq('status', 'pending')
+      .eq('review_status', 'submitted')
+      .select('id')
+      .maybeSingle();
+    if (error) throw error;
+    if (!rejected) throw new LicenseHttpError('该订单当前不能驳回', 409, 'purchase-not-reviewable', true);
+    return { ok: true };
+  }
+  throw new LicenseHttpError('审核决定无效', 400, 'invalid-review-decision', true);
+}
+
+async function adminDeleteOrder(req: Request, body: JsonMap): Promise<JsonMap> {
+  requireOwnerAdmin(req, body);
+  const purchaseId = cleanText(body.purchase_id, 80);
+  if (!/^[0-9a-f-]{36}$/i.test(purchaseId)) throw new LicenseHttpError('订单编号无效', 400, 'invalid-purchase-id', true);
+  const { data: purchase, error: findError } = await supabase.from('phone_ai_purchases').select('id,proof_path').eq('id', purchaseId).maybeSingle();
+  if (findError) throw findError;
+  if (!purchase) throw new LicenseHttpError('订单不存在', 404, 'purchase-not-found', true);
+  const { error } = await supabase.from('phone_ai_purchases').delete().eq('id', purchaseId);
+  if (error) throw error;
+  if (purchase.proof_path) await supabase.storage.from(PROOF_BUCKET).remove([purchase.proof_path]).catch(() => null);
+  return { ok: true };
+}
+
+async function adminDeleteOrders(req: Request, body: JsonMap): Promise<JsonMap> {
+  requireOwnerAdmin(req, body);
+  const scope = cleanText(body.scope || 'pending', 16);
+  let query = supabase.from('phone_ai_purchases').select('id,proof_path').neq('review_status', 'unsubmitted').limit(300);
+  if (scope === 'pending') query = query.eq('status', 'pending').eq('review_status', 'submitted');
+  const { data: rows, error: findError } = await query;
+  if (findError) throw findError;
+  const purchases = Array.isArray(rows) ? rows : [];
+  const ids = purchases.map((row: JsonMap) => cleanText(row.id, 80)).filter(Boolean);
+  const proofPaths = purchases.map((row: JsonMap) => cleanText(row.proof_path, 500)).filter(Boolean);
+  if (!ids.length) return { ok: true, deleted: 0 };
+  const { error } = await supabase.from('phone_ai_purchases').delete().in('id', ids);
+  if (error) throw error;
+  if (proofPaths.length) await supabase.storage.from(PROOF_BUCKET).remove(proofPaths).catch(() => null);
+  return { ok: true, deleted: ids.length };
+}
+
+async function adminSubscribe(req: Request, body: JsonMap): Promise<JsonMap> {
+  requireOwnerAdmin(req, body);
+  const subscription = body.subscription && typeof body.subscription === 'object' ? body.subscription as JsonMap : {};
+  const keys = subscription.keys && typeof subscription.keys === 'object' ? subscription.keys as JsonMap : {};
+  const endpoint = cleanText(subscription.endpoint, 1000);
+  const p256dh = cleanText(keys.p256dh, 300);
+  const auth = cleanText(keys.auth, 300);
+  if (!endpoint.startsWith('https://') || !p256dh || !auth) throw new LicenseHttpError('通知订阅信息无效', 400, 'invalid-push-subscription', true);
+  const { error } = await supabase.from('phone_ai_admin_push').upsert({
+    endpoint,
+    p256dh,
+    auth,
+    user_agent: cleanText(body.user_agent, 300),
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'endpoint' });
+  if (error) throw error;
+  return { ok: true };
 }
 
 function reply(req: Request, body: JsonMap, status = 200): Response {
@@ -957,6 +1199,20 @@ Deno.serve(async (req) => {
     else if (action === 'admin_license_block') result = await adminLicenseBlock(req, body);
     else if (action === 'admin_license_unblock') result = await adminLicenseUnblock(req, body);
     else if (action === 'admin_license_restore_all') result = await adminLicenseRestoreAll(req, body);
+    else if (action === 'admin_orders') result = await adminOrders(req, body);
+    else if (action === 'admin_assign_private_voice') result = await adminAssignPrivateVoice(req, body);
+    else if (action === 'admin_review') result = await adminReview(req, body);
+    else if (action === 'admin_delete_order') result = await adminDeleteOrder(req, body);
+    else if (action === 'admin_delete_orders') result = await adminDeleteOrders(req, body);
+    else if (action === 'admin_config') {
+      requireOwnerAdmin(req, body);
+      result = {
+        ok: true,
+        vapid_public_key: String(Deno.env.get('VAPID_PUBLIC_KEY') || ''),
+        push_enabled: !!Deno.env.get('VAPID_PUBLIC_KEY'),
+      };
+    }
+    else if (action === 'admin_subscribe') result = await adminSubscribe(req, body);
     else if (action === 'activate') result = await activateInvite(req, body);
     else if (action === 'legacy_activate') result = await activateLegacy(req, body);
     else if (action === 'register_options') result = await registrationOptions(req, body);

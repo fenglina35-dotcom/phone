@@ -20,6 +20,7 @@
     .icon,.btn{border:1px solid var(--line);background:#1b1c20;color:var(--text);border-radius:8px;min-height:42px;padding:0 14px}.icon{width:42px;padding:0;font-size:20px}
     .btn.primary{background:var(--pink);border-color:var(--pink);color:#171014;font-weight:700}.btn.approve{background:var(--green);border-color:var(--green);color:#07150e;font-weight:700}.btn.danger{color:#ffadb2;border-color:#65343a}
     .auth{max-width:440px;margin:14vh auto 0}.auth h2{font-size:28px;margin:0 0 8px}.auth p{color:var(--muted);line-height:1.7;margin:0 0 20px}
+    .auth-modes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:18px 0 12px}.auth-mode{border:1px solid var(--line);background:#17181c;color:var(--muted);border-radius:8px;min-height:44px;padding:0 10px}.auth-mode.on{border-color:var(--pink);color:var(--text);background:#2a2025}
     .field{display:block;margin:12px 0}.field span{display:block;color:#b8bbc2;font-size:13px;margin-bottom:7px}.field input,.field textarea{width:100%;border:1px solid var(--line);background:#17181c;color:var(--text);border-radius:8px;padding:12px;outline:0}.field input:focus,.field textarea:focus{border-color:#8b6675}.field textarea{min-height:90px;resize:vertical}
     .tabs{display:flex;gap:8px;padding:14px 0 12px}.tab{border:0;background:transparent;color:var(--muted);padding:9px 12px;border-bottom:2px solid transparent}.tab.on{color:var(--text);border-color:var(--pink)}
     .count{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:#3a2930;color:#ffc3d8;font-size:11px;margin-left:5px}
@@ -40,10 +41,14 @@
 <body>
   <main class="shell">
     <section id="auth" class="auth">
-      <h2>管理员核对</h2>
-      <p>输入管理员授权码后，可以核对付款，也可以按小手机 ID 管理用户授权。</p>
-      <label class="field"><span>管理员授权码</span><input id="adminToken" type="password" autocomplete="current-password" placeholder="仅保存在这台设备"></label>
-      <button class="btn primary" style="width:100%" id="loginBtn">进入核对台</button>
+      <h2>管理员入口</h2>
+      <div class="auth-modes">
+        <button class="auth-mode on" id="ownerModeBtn" type="button">主管理员总后台</button>
+        <button class="auth-mode" id="staffModeBtn" type="button">其他管理员</button>
+      </div>
+      <p id="authHint">这是你自己使用的总后台。首次在本设备验证主管理员口令，成功后本设备会自动进入，不使用邀请码。</p>
+      <label class="field"><span id="adminTokenLabel">主管理员口令</span><input id="adminToken" type="password" autocomplete="current-password" placeholder="仅保存在这台设备"></label>
+      <button class="btn primary" style="width:100%" id="loginBtn">进入总后台</button>
       <div class="install-tip">建议添加到手机主屏幕。iPhone：Safari 分享按钮 → 添加到主屏幕。</div>
     </section>
 
@@ -89,6 +94,6 @@
 
   <div id="modal" class="modal hidden"><div class="sheet" id="sheet"></div></div>
   <div id="viewer" class="viewer hidden"><button class="icon" id="closeViewer" aria-label="关闭">×</button><img id="viewerImg" alt="付款截图大图"></div>
-  <script src="./app.js?v=636"></script>
+  <script src="./app.js?v=637"></script>
 </body>
 </html>
