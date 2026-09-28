@@ -3,6 +3,8 @@ import fs from 'node:fs';
 
 const read = (path) => fs.readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const migration = read('supabase/migrations/202607250001_license_invite_attribution.sql');
+const licenseBackend = read('supabase/functions/phone-license/index.ts');
+const inviteListBlock = licenseBackend.match(/async function adminInviteList[\s\S]*?\n}\n/)?.[0] || '';
 const adminApp = read('admin/app.js');
 const adminHtml = read('admin/index.html');
 const adminWorker = read('admin/sw.js');
@@ -29,5 +31,8 @@ assert.match(adminApp, /user\.invite_code_hint \|\| '旧记录未保存'/);
 assert.match(adminHtml, /app\.js\?v=643/);
 assert.match(adminApp, /sw\.js\?v=643/g);
 assert.match(adminWorker, /north-admin-v643/);
+assert.match(inviteListBlock, /\.select\('code,note', \{ count: 'exact' \}\)/);
+assert.doesNotMatch(inviteListBlock, /\.select\('code,note,created_at'/);
+assert.doesNotMatch(inviteListBlock, /\.order\('created_at'/);
 
 console.log('license admin invite search tests passed');

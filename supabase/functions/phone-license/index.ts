@@ -246,11 +246,10 @@ async function adminInviteList(req: Request, body: JsonMap): Promise<JsonMap> {
   const limit = Math.min(500, Math.max(1, Math.trunc(Number(body.limit || 200))));
   const { data, error, count } = await supabase
     .from('invites')
-    .select('code,note,created_at', { count: 'exact' })
+    .select('code,note', { count: 'exact' })
     .eq('active', true)
     .eq('reusable', false)
     .is('used_at', null)
-    .order('created_at', { ascending: false })
     .order('code', { ascending: true })
     .limit(limit);
   if (error) throw error;
