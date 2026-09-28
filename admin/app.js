@@ -715,8 +715,8 @@ window.deleteAllOrders = async () => {
   }
 };
 
-async function login() {
-  const supplied = $('adminToken').value.trim();
+async function login(suppliedValue = '') {
+  const supplied = String(suppliedValue || $('adminToken').value || '').trim();
   if (!supplied) return;
   $('loginBtn').disabled = true;
   $('loginBtn').textContent = PORTAL_MODE === 'owner' ? '正在绑定…' : '正在验证…';
@@ -753,10 +753,13 @@ window.openOwnerPairing = async () => {
     const data = await api('admin_owner_pair_create');
     const code = String(data.pair_code || '');
     const expires = data.expires_at ? fmtDateTime(data.expires_at) : '10 分钟后';
-    openSheet(`<h2>新设备绑定码</h2>
-      <p>请在新手机打开主管理员专用链接，输入下面的绑定码。只能使用一次，有效至 ${esc(expires)}。</p>
-      <textarea id="ownerPairCode" readonly style="width:100%;min-height:76px;resize:none;font-size:24px;text-align:center;letter-spacing:3px">${esc(code)}</textarea>
-      <div class="sheet-actions"><button class="btn" onclick="closeSheet()">完成</button><button class="btn approve" onclick="copyOwnerPairCode()">复制绑定码</button></div>`);
+    const link = new URL('../admin-owner/index.html?release=639', location.href);
+    link.hash = `bind=${encodeURIComponent(code)}`;
+    openSheet(`<h2>新设备直接进入链接</h2>
+      <p>把下面的链接发到新手机并打开，会自动绑定、自动进入；链接只能使用一次，有效至 ${esc(expires)}。</p>
+      <textarea id="ownerPairLink" readonly style="width:100%;min-height:112px;resize:none;font-size:14px;line-height:1.5">${esc(link.href)}</textarea>
+      <p>如果聊天软件不能打开链接，也可以手动输入一次性绑定码：<b style="color:var(--text);letter-spacing:2px">${esc(code)}</b></p>
+      <div class="sheet-actions"><button class="btn" onclick="closeSheet()">完成</button><button class="btn approve" onclick="copyOwnerPairLink()">复制直接进入链接</button></div>`);
   } catch (error) {
     openSheet(`<h2>生成失败</h2><p>${esc(error.message)}</p><div class="sheet-actions"><button class="btn" onclick="closeSheet()">关闭</button></div>`);
   } finally {
@@ -764,14 +767,23 @@ window.openOwnerPairing = async () => {
   }
 };
 
-window.copyOwnerPairCode = async () => {
-  const field = $('ownerPairCode');
+window.copyOwnerPairLink = async () => {
+  const field = $('ownerPairLink');
   const value = String(field?.value || '');
   if (!value) return;
   try { await navigator.clipboard.writeText(value); }
   catch (_) { field.select(); document.execCommand('copy'); }
-  alert('已复制一次性绑定码');
+  alert('已复制新设备直接进入链接');
 };
+
+function ownerPairCodeFromLink() {
+  if (PORTAL_MODE !== 'owner' || !location.hash) return '';
+  const params = new URLSearchParams(location.hash.slice(1));
+  const code = String(params.get('bind') || '').trim().toUpperCase().replace(/[\s-]+/g, '');
+  if (!code) return '';
+  history.replaceState(null, '', location.pathname + location.search);
+  return code;
+}
 
 function urlBase64ToBytes(value) {
   const padding = '='.repeat((4 - value.length % 4) % 4);
@@ -788,7 +800,7 @@ async function enableNotifications() {
   try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') throw new Error('没有获得通知权限');
-    const registration = await navigator.serviceWorker.register(PORTAL_MODE === 'owner' ? '../admin-owner/sw.js?v=638' : './sw.js?v=638', {scope:'./'});
+    const registration = await navigator.serviceWorker.register(PORTAL_MODE === 'owner' ? '../admin-owner/sw.js?v=639' : './sw.js?v=639', {scope:'./'});
     await navigator.serviceWorker.ready;
     const config = await api('admin_config');
     if (!config.vapid_public_key) throw new Error('后台通知密钥尚未配置');
@@ -822,7 +834,7 @@ $('installBtn').addEventListener('click', async () => {
     alert('iPhone 请点 Safari 分享按钮，再选“添加到主屏幕”。');
   }
 });
-$('loginBtn')?.addEventListener('click', login);
+$('loginBtn')?.addEventListener('click', () => login());
 $('ownerModeBtn')?.addEventListener('click', () => setAuthMode('owner'));
 $('staffModeBtn')?.addEventListener('click', () => setAuthMode('staff'));
 $('adminToken').addEventListener('keydown', (event) => { if (event.key === 'Enter') login(); });
@@ -906,6 +918,8 @@ async function restoreSavedLogin() {
 }
 
 setAuthMode(PORTAL_MODE);
-if ('serviceWorker' in navigator) navigator.serviceWorker.register(PORTAL_MODE === 'owner' ? '../admin-owner/sw.js?v=638' : './sw.js?v=638', {scope:'./'}).catch(() => {});
+if ('serviceWorker' in navigator) navigator.serviceWorker.register(PORTAL_MODE === 'owner' ? '../admin-owner/sw.js?v=639' : './sw.js?v=639', {scope:'./'}).catch(() => {});
+const ownerPairLinkCode = ownerPairCodeFromLink();
 if (token) restoreSavedLogin();
+else if (ownerPairLinkCode) login(ownerPairLinkCode);
 else showAuth();
