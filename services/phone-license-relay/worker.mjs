@@ -100,7 +100,7 @@ function externalTtsRequest(input) {
   }};
 }
 
-export function createHandler(fetchUpstream = (...args) => fetch(...args), timeoutMs = 20000) {
+export function createHandler(fetchUpstream = (input, init) => fetch(input, init), timeoutMs = 20000) {
   return async function handle(request) {
     const url = new URL(request.url);
     const origin = request.headers.get('Origin');
