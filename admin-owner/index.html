@@ -1,13 +1,13 @@
 <!doctype html>
-<html lang="zh-CN" data-admin-portal="staff">
+<html lang="zh-CN" data-admin-portal="owner">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#101114">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="授权管理员">
-  <title>North 授权管理员</title>
+  <meta name="apple-mobile-web-app-title" content="North 总后台">
+  <title>North 主管理员总后台</title>
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="../icon.png">
   <style>
@@ -41,18 +41,19 @@
 <body>
   <main class="shell">
     <section id="auth" class="auth">
-      <h2>其他管理员入口</h2>
-      <p id="authHint">请输入分配给你的管理员码。这里不能进入付款和主管理功能。</p>
-      <label class="field"><span id="adminTokenLabel">管理员码</span><input id="adminToken" type="password" autocomplete="current-password" placeholder="仅保存在这台设备"></label>
-      <button class="btn primary" style="width:100%" id="loginBtn">进入管理员后台</button>
+      <h2>主管理员总后台</h2>
+      <p id="authHint">这是主管理员专用地址。已绑定的设备会直接进入；新设备只需输入一次由已登录设备生成的临时绑定码，不使用邀请码或长期口令。</p>
+      <label class="field"><span id="adminTokenLabel">一次性设备绑定码</span><input id="adminToken" type="text" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" maxlength="20" placeholder="在已登录设备中生成"></label>
+      <button class="btn primary" style="width:100%" id="loginBtn">绑定并进入总后台</button>
       <div class="install-tip">建议添加到手机主屏幕。iPhone：Safari 分享按钮 → 添加到主屏幕。</div>
     </section>
 
     <section id="workspace" class="hidden">
       <header>
-        <div><h1>North 授权管理员</h1><div class="sub">邀请码与用户授权</div></div>
+        <div><h1>North 管理后台</h1><div class="sub">付款核对与用户授权</div></div>
         <div class="tools">
           <button class="btn" id="installBtn">安装</button>
+          <button class="btn" id="ownerPairBtn" data-owner-only>绑定新设备</button>
           <button class="btn" id="notifyBtn" data-owner-only>通知</button>
           <button class="icon" id="refreshBtn" title="刷新" aria-label="刷新">↻</button>
         </div>
@@ -90,6 +91,6 @@
 
   <div id="modal" class="modal hidden"><div class="sheet" id="sheet"></div></div>
   <div id="viewer" class="viewer hidden"><button class="icon" id="closeViewer" aria-label="关闭">×</button><img id="viewerImg" alt="付款截图大图"></div>
-  <script src="./app.js?v=638"></script>
+  <script src="../admin/app.js?v=638"></script>
 </body>
 </html>

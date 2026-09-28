@@ -1,11 +1,11 @@
-const CACHE = 'north-admin-v638';
-const SHELL = ['./', './index.html', './app.js?v=638', './manifest.webmanifest', '../icon.png'];
+const CACHE = 'north-admin-owner-v638';
+const SHELL = ['./', './index.html', '../admin/app.js?v=638', './manifest.webmanifest', '../icon.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', (event) => {
-  event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)))).then(() => self.clients.claim()));
+  event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE && key.startsWith('north-admin-owner-')).map((key) => caches.delete(key)))).then(() => self.clients.claim()));
 });
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
@@ -22,7 +22,7 @@ self.addEventListener('push', (event) => {
   try { data = event.data ? event.data.json() : {}; } catch (_) {}
   const title = data.title || '新的付款核对申请';
   const options = {
-    body: data.body || '点开管理员核对台查看',
+    body: data.body || '点开主管理员总后台查看',
     icon: '../icon.png',
     badge: '../icon.png',
     tag: data.purchase_id ? 'order-' + data.purchase_id : 'north-payment',

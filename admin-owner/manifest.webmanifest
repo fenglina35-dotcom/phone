@@ -1,7 +1,7 @@
 {
-  "name": "North 授权管理员",
-  "short_name": "授权管理",
-  "description": "小手机邀请码与用户授权管理",
+  "name": "North 主管理员总后台",
+  "short_name": "总后台",
+  "description": "小手机付款核对、邀请码与用户授权总后台",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

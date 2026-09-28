@@ -7,6 +7,7 @@ const migration = fs.readFileSync(new URL('../supabase/migrations/202607230004_l
 const app = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const adminApp = fs.readFileSync(new URL('../admin/app.js', import.meta.url), 'utf8');
 const adminHtml = fs.readFileSync(new URL('../admin/index.html', import.meta.url), 'utf8');
+const ownerHtml = fs.readFileSync(new URL('../admin-owner/index.html', import.meta.url), 'utf8');
 
 assert.match(migration, /add column if not exists kind text not null default 'transfer'/);
 assert.match(migration, /add column if not exists phone_friend_id text/);
@@ -51,8 +52,11 @@ assert.match(adminApp, /async function restoreSavedLogin\(\)/);
 assert.match(adminApp, /loginErrorText/);
 assert.match(adminApp, /status === 402/);
 assert.match(adminApp, /连接不上服务器/);
-assert.match(adminHtml, /主管理员总后台/);
 assert.match(adminHtml, /其他管理员/);
-assert.match(adminHtml, /app\.js\?v=637/);
+assert.doesNotMatch(adminHtml, /主管理员总后台/);
+assert.match(ownerHtml, /主管理员总后台/);
+assert.doesNotMatch(ownerHtml, /其他管理员入口/);
+assert.match(adminHtml, /app\.js\?v=638/);
+assert.match(ownerHtml, /\.\.\/admin\/app\.js\?v=638/);
 
 console.log('license admin recovery tests passed');

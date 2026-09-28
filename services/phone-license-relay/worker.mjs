@@ -7,9 +7,11 @@ const ACTIONS = new Set(['activate','legacy_activate','register_options','regist
   'restore_options','restore_verify','session_check','session_list','session_revoke',
   'ai_identity_sync','phone_friend_identity_sync']);
 const ADMIN_ACTIONS = new Set(['admin_auth','admin_invite_generate','admin_invite_list',
+  'admin_owner_pair_create',
   'admin_license_users','admin_license_block','admin_license_unblock','admin_license_restore_all',
   'admin_orders','admin_assign_private_voice','admin_review','admin_delete_order','admin_delete_orders',
   'admin_config','admin_subscribe']);
+const ADMIN_PUBLIC_ACTIONS = new Set(['admin_owner_pair_claim']);
 const MAX_BODY = 65536;
 const MAX_TTS_BODY = 16384;
 const TTS_PROVIDERS = new Set(['minimax','fish','mossland','elevenlabs','hume']);
@@ -159,7 +161,7 @@ export function createHandler(fetchUpstream = (input, init) => fetch(input, init
         payload = await boundedBody(request);
         if (payload === null) return reply(413, {ok:false, code:'body-too-large'});
         const input = JSON.parse(payload);
-        if (!input || (!ACTIONS.has(input.action) && !ADMIN_ACTIONS.has(input.action))) return reply(403, {ok:false, code:'action-not-allowed'});
+        if (!input || (!ACTIONS.has(input.action) && !ADMIN_ACTIONS.has(input.action) && !ADMIN_PUBLIC_ACTIONS.has(input.action))) return reply(403, {ok:false, code:'action-not-allowed'});
         if (ADMIN_ACTIONS.has(input.action)) {
           adminToken = cleanText(request.headers.get('x-admin-token'), 240);
           if (!adminToken) return reply(401, {ok:false, code:'admin-token-required', error:'请输入管理员凭证'});

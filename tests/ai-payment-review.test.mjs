@@ -9,6 +9,7 @@ const account = read('ai-account.js');
 const backend = read('supabase/functions/phone-ai/index.ts');
 const sql = read('supabase_ai_payment_review_v535.sql');
 const adminHtml = read('admin/index.html');
+const ownerHtml = read('admin-owner/index.html');
 const adminApp = read('admin/app.js');
 const adminSw = read('admin/sw.js');
 const manifest = JSON.parse(read('admin/manifest.webmanifest'));
@@ -55,7 +56,8 @@ assert.match(app, /if\(!id\|\|!ttsUseRelay\(\)\)return/);
 assert.match(adminHtml, /adminToken/);
 assert.match(adminHtml, /deleteAllBtn/);
 assert.match(adminHtml, /清空订单/);
-assert.match(adminHtml, /app\.js\?v=637/);
+assert.match(adminHtml, /app\.js\?v=638/);
+assert.match(ownerHtml, /\.\.\/admin\/app\.js\?v=638/);
 assert.match(adminApp, /确认到账并加点/);
 assert.match(adminApp, /admin_auth/);
 assert.match(adminApp, /admin_orders/);
@@ -67,14 +69,14 @@ assert.match(adminApp, /删除记录/);
 assert.match(adminApp, /toggleOrderFold/);
 assert.match(adminApp, /payment_ref:paymentRef/);
 assert.match(adminApp, /setTimeout\(async \(\) =>[\s\S]*15000\)/);
-assert.match(adminSw, /north-admin-v637/);
+assert.match(adminSw, /north-admin-v638/);
 assert.match(adminSw, /self\.addEventListener\('push'/);
 assert.match(adminSw, /showNotification/);
 assert.match(adminSw, /url\.origin !== self\.location\.origin/);
 assert.equal(manifest.display, 'standalone');
 assert.equal(manifest.scope, './');
 
-for (const file of ['admin/index.html', 'admin/app.js', 'admin/sw.js', 'admin/manifest.webmanifest', 'ai-account.js', 'app.js']) {
+for (const file of ['admin/index.html', 'admin-owner/index.html', 'admin/app.js', 'admin/sw.js', 'admin/manifest.webmanifest', 'ai-account.js', 'app.js']) {
   assert.doesNotMatch(read(file), /ADMIN_ACCESS_TOKEN\s*[:=]\s*['"][^'"]+/);
 }
 

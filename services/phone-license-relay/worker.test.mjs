@@ -84,16 +84,23 @@ test('passkey actions preserve browser origin and original challenge response',a
 });
 test('admin actions use the same fixed backend and forward only the explicit admin credential',async()=>{
  const seen=[];const handle=createHandler(async(url,init)=>{seen.push({url,init});return Response.json({ok:true,role:'owner'});});
- for(const action of ['admin_auth','admin_license_users','admin_invite_generate','admin_orders','admin_review','admin_config','admin_subscribe']) {
+ for(const action of ['admin_auth','admin_owner_pair_create','admin_license_users','admin_invite_generate','admin_orders','admin_review','admin_config','admin_subscribe']) {
   const response=await handle(post({action},{'x-admin-token':'fixture-admin','Authorization':'Bearer private','Cookie':'private=1'}));
   assert.equal(response.status,200);assert.equal((await response.json()).ok,true);
  }
- assert.equal(seen.length,7);
+ assert.equal(seen.length,8);
  for(const call of seen){
   assert.equal(call.url,'https://lkhlyfpssmrjkkzhuzag.supabase.co/functions/v1/phone-license');
   assert.equal(call.init.headers['x-admin-token'],'fixture-admin');
   assert.equal(call.init.headers.Authorization,undefined);assert.equal(call.init.headers.Cookie,undefined);
  }
+});
+test('one-time owner device claim is the only admin action allowed without a long-lived admin credential',async()=>{
+ let call;const handle=createHandler(async(url,init)=>{call={url,init};return Response.json({ok:true,admin_token:'fixture-owner'});});
+ const response=await handle(post({action:'admin_owner_pair_claim',pair_code:'23456789ABCD'}));
+ assert.equal(response.status,200);assert.equal((await response.json()).admin_token,'fixture-owner');
+ assert.equal(call.url,'https://lkhlyfpssmrjkkzhuzag.supabase.co/functions/v1/phone-license');
+ assert.equal(call.init.headers['x-admin-token'],undefined);
 });
 test('rejects missing admin credentials, arbitrary actions, proxy destinations, malformed and oversized bodies',async()=>{
  let calls=0;const handle=createHandler(async()=>{calls++;return expected();});

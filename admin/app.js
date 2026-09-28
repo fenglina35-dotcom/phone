@@ -1,8 +1,11 @@
 const ADMIN_API_URL = 'https://license.smallphoneapp.com/functions/v1/phone-license';
-const TOKEN_KEY = 'north_admin_access';
+const OWNER_PAIR_API_URL = 'https://lkhlyfpssmrjkkzhuzag.supabase.co/functions/v1/phone-license';
+const PORTAL_MODE = document.documentElement.dataset.adminPortal === 'owner' ? 'owner' : 'staff';
+const TOKEN_KEY = PORTAL_MODE === 'owner' ? 'north_owner_access' : 'north_staff_access';
+const LEGACY_TOKEN_KEY = 'north_admin_access';
 
-let token = localStorage.getItem(TOKEN_KEY) || '';
-let authMode = 'owner';
+let token = localStorage.getItem(TOKEN_KEY) || (PORTAL_MODE === 'owner' ? localStorage.getItem(LEGACY_TOKEN_KEY) || '' : '');
+let authMode = PORTAL_MODE;
 let adminAccessRole = '';
 let canManageOrders = false;
 let canManageLicenses = false;
@@ -52,15 +55,18 @@ const operatorLabel = (value) => {
 
 async function requestApi(action, payload) {
   const attempts = action === 'admin_license_users' ? 2 : 1;
+  const apiUrl = action === 'admin_owner_pair_create' || action === 'admin_owner_pair_claim'
+    ? OWNER_PAIR_API_URL
+    : ADMIN_API_URL;
   for (let attempt = 0; attempt < attempts; attempt++) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 30000);
     try {
-      const response = await fetch(ADMIN_API_URL, {
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-admin-token': token,
+          ...(token ? {'x-admin-token': token} : {}),
         },
         body: JSON.stringify({action, ...payload}),
         signal: controller.signal,
@@ -86,6 +92,16 @@ async function api(action, payload = {}) {
   const result = await requestApi(action, payload);
   if (action === 'admin_auth') {
     const ownerAccess = result.role === 'owner';
+    if (PORTAL_MODE === 'owner' && !ownerAccess) {
+      const error = new Error('这不是主管理员凭证');
+      error.status = 403;
+      throw error;
+    }
+    if (PORTAL_MODE === 'staff' && ownerAccess) {
+      const error = new Error('主管理员请使用总后台专用链接');
+      error.status = 403;
+      throw error;
+    }
     return {
       ok: true,
       role: ownerAccess ? 'owner' : 'license',
@@ -107,23 +123,27 @@ function showAuth(message = '') {
   canManageLicenses = false;
   $('workspace').classList.add('hidden');
   $('auth').classList.remove('hidden');
-  $('adminToken').value = token;
-  const defaultLabel = authMode === 'owner' ? '进入总后台' : '进入管理员后台';
+  if ($('adminToken')) $('adminToken').value = token;
+  const defaultLabel = PORTAL_MODE === 'owner' ? '绑定并进入总后台' : '进入管理员后台';
   if (message) {
-    $('loginBtn').textContent = message;
-    setTimeout(() => $('loginBtn').textContent = defaultLabel, 1800);
-  } else $('loginBtn').textContent = defaultLabel;
+    if ($('loginBtn')) {
+      $('loginBtn').textContent = message;
+      setTimeout(() => $('loginBtn').textContent = defaultLabel, 1800);
+    }
+  } else if ($('loginBtn')) $('loginBtn').textContent = defaultLabel;
 }
 
 function setAuthMode(mode) {
-  authMode = mode === 'staff' ? 'staff' : 'owner';
-  $('ownerModeBtn').classList.toggle('on', authMode === 'owner');
-  $('staffModeBtn').classList.toggle('on', authMode === 'staff');
-  $('adminTokenLabel').textContent = authMode === 'owner' ? '主管理员口令' : '管理员码';
-  $('authHint').textContent = authMode === 'owner'
-    ? '这是你自己使用的总后台。首次在本设备验证主管理员口令，成功后本设备会自动进入，不使用邀请码。'
-    : '其他管理员输入各自的管理员码。授权管理员只能管理邀请码和用户授权，不能查看付款资料。';
-  $('loginBtn').textContent = authMode === 'owner' ? '进入总后台' : '进入管理员后台';
+  authMode = PORTAL_MODE;
+  $('ownerModeBtn')?.classList.toggle('on', authMode === 'owner');
+  $('staffModeBtn')?.classList.toggle('on', authMode === 'staff');
+  if ($('adminTokenLabel')) $('adminTokenLabel').textContent = PORTAL_MODE === 'owner' ? '一次性设备绑定码' : '管理员码';
+  if ($('authHint')) {
+    $('authHint').textContent = PORTAL_MODE === 'owner'
+      ? '这是主管理员专用地址。已绑定的设备会直接进入；新设备只需输入一次由已登录设备生成的临时绑定码，不使用邀请码或长期口令。'
+      : '请输入分配给你的管理员码。这里不能进入付款和主管理功能。';
+  }
+  if ($('loginBtn')) $('loginBtn').textContent = PORTAL_MODE === 'owner' ? '绑定并进入总后台' : '进入管理员后台';
 }
 
 function loginErrorText(error) {
@@ -698,12 +718,21 @@ window.deleteAllOrders = async () => {
 async function login() {
   const supplied = $('adminToken').value.trim();
   if (!supplied) return;
-  token = supplied;
   $('loginBtn').disabled = true;
-  $('loginBtn').textContent = '正在验证…';
+  $('loginBtn').textContent = PORTAL_MODE === 'owner' ? '正在绑定…' : '正在验证…';
   try {
-    const result = await api('admin_auth');
+    let result;
+    if (PORTAL_MODE === 'owner') {
+      const claimed = await requestApi('admin_owner_pair_claim', {pair_code:supplied});
+      token = String(claimed.admin_token || '');
+      if (!token) throw new Error('设备绑定失败');
+      result = await api('admin_auth');
+    } else {
+      token = supplied;
+      result = await api('admin_auth');
+    }
     localStorage.setItem(TOKEN_KEY, token);
+    if (PORTAL_MODE === 'owner') localStorage.removeItem(LEGACY_TOKEN_KEY);
     showWorkspace(result);
   } catch (error) {
     if (Number(error?.status || 0) === 401) {
@@ -715,6 +744,34 @@ async function login() {
     $('loginBtn').disabled = false;
   }
 }
+
+window.openOwnerPairing = async () => {
+  if (PORTAL_MODE !== 'owner' || !canManageOrders || actionBusy) return;
+  actionBusy = true;
+  openSheet('<h2>绑定新的主管理员设备</h2><div class="empty"><div class="spinner"></div>正在生成一次性绑定码</div>');
+  try {
+    const data = await api('admin_owner_pair_create');
+    const code = String(data.pair_code || '');
+    const expires = data.expires_at ? fmtDateTime(data.expires_at) : '10 分钟后';
+    openSheet(`<h2>新设备绑定码</h2>
+      <p>请在新手机打开主管理员专用链接，输入下面的绑定码。只能使用一次，有效至 ${esc(expires)}。</p>
+      <textarea id="ownerPairCode" readonly style="width:100%;min-height:76px;resize:none;font-size:24px;text-align:center;letter-spacing:3px">${esc(code)}</textarea>
+      <div class="sheet-actions"><button class="btn" onclick="closeSheet()">完成</button><button class="btn approve" onclick="copyOwnerPairCode()">复制绑定码</button></div>`);
+  } catch (error) {
+    openSheet(`<h2>生成失败</h2><p>${esc(error.message)}</p><div class="sheet-actions"><button class="btn" onclick="closeSheet()">关闭</button></div>`);
+  } finally {
+    actionBusy = false;
+  }
+};
+
+window.copyOwnerPairCode = async () => {
+  const field = $('ownerPairCode');
+  const value = String(field?.value || '');
+  if (!value) return;
+  try { await navigator.clipboard.writeText(value); }
+  catch (_) { field.select(); document.execCommand('copy'); }
+  alert('已复制一次性绑定码');
+};
 
 function urlBase64ToBytes(value) {
   const padding = '='.repeat((4 - value.length % 4) % 4);
@@ -731,7 +788,7 @@ async function enableNotifications() {
   try {
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') throw new Error('没有获得通知权限');
-    const registration = await navigator.serviceWorker.register('./sw.js?v=637', {scope:'./'});
+    const registration = await navigator.serviceWorker.register(PORTAL_MODE === 'owner' ? '../admin-owner/sw.js?v=638' : './sw.js?v=638', {scope:'./'});
     await navigator.serviceWorker.ready;
     const config = await api('admin_config');
     if (!config.vapid_public_key) throw new Error('后台通知密钥尚未配置');
@@ -765,9 +822,9 @@ $('installBtn').addEventListener('click', async () => {
     alert('iPhone 请点 Safari 分享按钮，再选“添加到主屏幕”。');
   }
 });
-$('loginBtn').addEventListener('click', login);
-$('ownerModeBtn').addEventListener('click', () => setAuthMode('owner'));
-$('staffModeBtn').addEventListener('click', () => setAuthMode('staff'));
+$('loginBtn')?.addEventListener('click', login);
+$('ownerModeBtn')?.addEventListener('click', () => setAuthMode('owner'));
+$('staffModeBtn')?.addEventListener('click', () => setAuthMode('staff'));
 $('adminToken').addEventListener('keydown', (event) => { if (event.key === 'Enter') login(); });
 $('refreshBtn').addEventListener('click', () => {
   if (workspaceView === 'licenses') loadLicenseUsers(true);
@@ -808,6 +865,7 @@ $('licenseNextBtn').addEventListener('click', () => {
 });
 $('licenseTab').addEventListener('click', openLicenseView);
 $('notifyBtn').addEventListener('click', enableNotifications);
+$('ownerPairBtn')?.addEventListener('click', openOwnerPairing);
 $('deleteAllBtn')?.addEventListener('click', openDeleteAllOrders);
 $('logoutBtn').addEventListener('click', () => {
   token = '';
@@ -828,6 +886,10 @@ async function restoreSavedLogin() {
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
       const result = await api('admin_auth');
+      if (PORTAL_MODE === 'owner') {
+        localStorage.setItem(TOKEN_KEY, token);
+        localStorage.removeItem(LEGACY_TOKEN_KEY);
+      }
       showWorkspace(result);
       return;
     } catch (error) {
@@ -843,7 +905,7 @@ async function restoreSavedLogin() {
   showAuth(loginErrorText(lastError));
 }
 
-setAuthMode('owner');
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js?v=637', {scope:'./'}).catch(() => {});
+setAuthMode(PORTAL_MODE);
+if ('serviceWorker' in navigator) navigator.serviceWorker.register(PORTAL_MODE === 'owner' ? '../admin-owner/sw.js?v=638' : './sw.js?v=638', {scope:'./'}).catch(() => {});
 if (token) restoreSavedLogin();
 else showAuth();

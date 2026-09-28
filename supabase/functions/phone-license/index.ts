@@ -118,10 +118,44 @@ function requireLicenseAdmin(req: Request, body: JsonMap): LicenseAdminIdentity 
   return { role: 'license', operatorId: labelled ? `admin-${labelled[1]}` : `license-${tokenIndex + 1}` };
 }
 
+function ownerPairCode(): string {
+  const alphabet = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const bytes = crypto.getRandomValues(new Uint8Array(12));
+  return Array.from(bytes, (byte) => alphabet[byte % alphabet.length]).join('');
+}
+
 function requireOwnerAdmin(req: Request, body: JsonMap): LicenseAdminIdentity {
   const identity = requireLicenseAdmin(req, body);
   if (identity.role !== 'owner') throw new LicenseHttpError('主管理员权限不足', 403, 'owner-required', true);
   return identity;
+}
+
+async function adminOwnerPairCreate(req: Request, body: JsonMap): Promise<JsonMap> {
+  requireOwnerAdmin(req, body);
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+  await supabase.from('phone_admin_owner_pairings').delete().lt('expires_at', new Date().toISOString());
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const code = ownerPairCode();
+    const codeHash = await sha256Hex(`phone-admin-owner-pair:${code}`);
+    const { error } = await supabase.from('phone_admin_owner_pairings').insert({ code_hash: codeHash, expires_at: expiresAt });
+    if (!error) return { ok: true, pair_code: code, expires_at: expiresAt };
+    if (String(error.code || '') !== '23505') throw error;
+  }
+  throw new LicenseHttpError('临时绑定码生成失败，请重试', 503, 'owner-pair-create-failed', false);
+}
+
+async function adminOwnerPairClaim(body: JsonMap): Promise<JsonMap> {
+  const code = cleanText(body.pair_code, 40).toUpperCase().replace(/[\s-]+/g, '');
+  if (!/^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{12}$/.test(code)) {
+    throw new LicenseHttpError('一次性绑定码无效', 401, 'owner-pair-invalid', true);
+  }
+  const codeHash = await sha256Hex(`phone-admin-owner-pair:${code}`);
+  const { data, error } = await supabase.rpc('phone_admin_owner_pair_claim', { p_code_hash: codeHash });
+  if (error) throw error;
+  if (data !== true) throw new LicenseHttpError('一次性绑定码无效、已使用或已过期', 401, 'owner-pair-invalid', true);
+  const ownerToken = String(Deno.env.get('ADMIN_ACCESS_TOKEN') || '').trim();
+  if (!ownerToken) throw new LicenseHttpError('主管理员入口尚未配置', 503, 'owner-not-configured', false);
+  return { ok: true, admin_token: ownerToken };
 }
 
 async function adminLicenseUsers(req: Request, body: JsonMap): Promise<JsonMap> {
@@ -1202,6 +1236,8 @@ Deno.serve(async (req) => {
       const identity = requireLicenseAdmin(req, body);
       result = { ok: true, role: identity.role };
     }
+    else if (action === 'admin_owner_pair_create') result = await adminOwnerPairCreate(req, body);
+    else if (action === 'admin_owner_pair_claim') result = await adminOwnerPairClaim(body);
     else if (action === 'admin_invite_generate') result = await adminInviteGenerate(req, body);
     else if (action === 'admin_invite_list') result = await adminInviteList(req, body);
     else if (action === 'admin_license_users') result = await adminLicenseUsers(req, body);
