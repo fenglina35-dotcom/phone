@@ -34,7 +34,7 @@ assert.match(app, /PORTAL_MODE === 'staff' && ownerAccess/);
 assert.match(app, /admin_owner_pair_create/);
 assert.match(app, /admin_owner_pair_claim/);
 assert.match(app, /new URL\('\.\.\/admin-owner\/index\.html'/);
-assert.match(app, /link\.searchParams\.set\('release', '642'\)/);
+assert.match(app, /link\.searchParams\.set\('release', '643'\)/);
 assert.match(app, /const apiUrls = ownerPairAction \? \[OWNER_PAIR_API_URL\] : \[ADMIN_API_URL, OWNER_PAIR_API_URL\]/);
 assert.match(app, /正在读取用户授权，当前不是 0 人/);
 assert.match(app, /用户授权读取失败，请点“刷新”重试/);
