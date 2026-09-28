@@ -1,5 +1,5 @@
 // Fixed-backend authorization transport. No storage, logging, cache, or retry.
-const UPSTREAM = 'https://lovbzibismsjqvjujilz.supabase.co/functions/v1/phone-license';
+const UPSTREAM = 'https://lkhlyfpssmrjkkzhuzag.supabase.co/functions/v1/phone-license';
 const APP_ORIGIN = 'https://fenglina35-dotcom.github.io';
 const ACTIONS = new Set(['activate','legacy_activate','register_options','register_verify',
   'restore_options','restore_verify','session_check','session_list','session_revoke',

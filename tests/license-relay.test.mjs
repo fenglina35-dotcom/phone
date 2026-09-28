@@ -25,7 +25,7 @@ for(const path of paths){
    return handle(new Request(url,{...init,headers:{...init.headers,Origin:'https://fenglina35-dotcom.github.io','User-Agent':'Android OPPO fixture'}}));
   });
   await gate.activate('YB2-FIXTURE');assert.equal(gate.session().licenseId,'same-admin-license');assert.equal(gate.session().endpointId,'license-failover');
-  await gate.check();assert.equal(calls.length,2);assert.ok(upstream.every(u=>u==='https://lovbzibismsjqvjujilz.supabase.co/functions/v1/phone-license'));
+  await gate.check();assert.equal(calls.length,2);assert.ok(upstream.every(u=>u==='https://lkhlyfpssmrjkkzhuzag.supabase.co/functions/v1/phone-license'));
  });
  test(path+': lost activation response is not retried and no fabricated session is saved',async()=>{
   let calls=0;const gate=load(path,async()=>{calls++;throw new TypeError('reset');});

@@ -9,7 +9,7 @@ test('probe only forwards a fixed empty session check once; never forwards clien
  const handle=createHandler(async(url,init)=>{calls.push({url,init});return expected();});
  const response=await handle(new Request(base,{headers:{Origin:'https://fenglina35-dotcom.github.io',Authorization:'Bearer fixture-secret',Cookie:'private=fixture'}}));
  assert.equal(response.status,200);assert.equal((await response.json()).code,'license-backend-reachable');
- assert.equal(calls.length,1);assert.equal(calls[0].url,'https://lovbzibismsjqvjujilz.supabase.co/functions/v1/phone-license');
+ assert.equal(calls.length,1);assert.equal(calls[0].url,'https://lkhlyfpssmrjkkzhuzag.supabase.co/functions/v1/phone-license');
  assert.deepEqual(JSON.parse(calls[0].init.body),{action:'session_check',sessionToken:''});
  assert.deepEqual(calls[0].init.headers,{'Content-Type':'application/json',Origin:'https://fenglina35-dotcom.github.io'});
  assert.equal(calls[0].init.redirect,'manual');assert.equal(response.headers.get('cache-control'),'no-store');
@@ -61,7 +61,7 @@ test('activation preserves the original backend identity, device label, user age
  const original={ok:true,session:{token:'fixture-session',licenseId:'original-license',sessionId:'original-session'},extra:{unchanged:true}};
  const input={action:'activate',inviteCode:'YB2-FIXTURE',deviceLabel:'安卓手机 · OPPO'};let calls=0;
  const handle=createHandler(async(url,init)=>{
-  calls++;assert.equal(url,'https://lovbzibismsjqvjujilz.supabase.co/functions/v1/phone-license');
+  calls++;assert.equal(url,'https://lkhlyfpssmrjkkzhuzag.supabase.co/functions/v1/phone-license');
   assert.deepEqual(JSON.parse(init.body),input);assert.equal(init.headers['User-Agent'],'OPPO fixture UA');
   assert.deepEqual(Object.keys(init.headers).sort(),['Content-Type','Origin','User-Agent']);
   return Response.json(original);

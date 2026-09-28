@@ -1,8 +1,8 @@
 # 免费授权代理（正式代理已部署）
 
-当前：OPPO 真机已由用户截图确认 GET /health 返回 ok:true。2026-09-27 继续部署正式 POST /functions/v1/phone-license，Cloudflare 活跃版本 5603dbcc。网页 v1332、私人内置 v1333、iOS400 接入代码已准备。
+当前：OPPO 真机已由用户截图确认 GET /health 返回 ok:true。2026-09-28 原 Supabase Edge Function 超额后，备用 phone-license v32 已改为连接原授权数据库，Cloudflare 活跃版本 4ad6de14 已切换至该备用函数；线上 GET /health 连续 5 次返回 200，空 session_check 返回原业务 400。网页 v1338、私人内置源码 v1339 已接入备用入口。
 
-- 固定上游是原 lovbzibismsjqvjujilz 项目的 phone-license。原邀请码、licenseId、sessionId、管理员 phone_license_admin_page 数据来源保持一致，没有建立新用户数据库。
+- 固定上游是 lkhlyfpssmrjkkzhuzag 项目的备用 phone-license；该函数通过 PHONE_SUPABASE_URL 和 PHONE_SERVICE_ROLE_KEY 连接原 lovbzibismsjqvjujilz 授权数据库。原邀请码、licenseId、sessionId、管理员 phone_license_admin_page 数据来源保持一致，没有建立新用户数据库。
 - 仅允许既有普通用户授权动作；拒绝所有 admin 动作、任意上游、查询参数、非 JSON 和大于 64 KiB 的请求。保留原业务响应、设备标签与 UA，只转发所需头，不转发 Cookie 或管理员凭证；无缓存、无自动重试、代码不记录请求正文。
 - 网页仅在原 license-failover 项目使用此传输；其他项目和私人 file 原生桥保持原地址。通行密钥 Origin/RP 保持正式网页域名。
 - 进入前不再等待可选真人好友注册网络；进入成功后继续原注册及身份同步。管理员封禁仍由原服务器决定，临时网络错误不能被当作撤销授权。
@@ -35,4 +35,4 @@ Worker：north-license-connectivity；默认地址：https://north-license-conne
 
 正式接入注意：保持原 license-failover 后台身份和数据库；激活响应丢失时不能盲目重试核销；通行密钥 RP 与网页 origin 保持原值；网页/私人兼容和既有授权回归通过后再发布。
 
-管理员登记是用户明确要求：supabase/functions/phone-license/index.ts 的 activateInvite 调用 redeem_invite_license；管理员 adminLicenseUsers 调用 phone_license_admin_page，读取同一套 phone_licenses。正式代理必须仍固定转发到原项目 lovbzibismsjqvjujilz 的 phone-license，保留原始业务响应和设备信息，不另建邀请码或用户数据库。当前仅验证这条代码链，尚未通过真实激活在管理员页面验收，不能写成已完成真实登记测试。
+管理员登记是用户明确要求：supabase/functions/phone-license/index.ts 的 activateInvite 调用 redeem_invite_license；管理员 adminLicenseUsers 调用 phone_license_admin_page，读取同一套 phone_licenses。正式代理固定转发到 lkhlyfpssmrjkkzhuzag 的备用 phone-license，备用函数必须使用原项目 lovbzibismsjqvjujilz 的 PHONE_SUPABASE_URL 与 PHONE_SERVICE_ROLE_KEY，保留原始业务响应和设备信息，不另建邀请码或用户数据库。当前已核对两项备用函数密钥的 SHA-256 指纹均指向原项目，尚未使用真实新邀请码完成管理员页面登记验收，不能写成已完成真实登记测试。
