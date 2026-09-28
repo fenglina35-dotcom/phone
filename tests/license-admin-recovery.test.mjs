@@ -15,6 +15,10 @@ assert.match(licenseBackend, /\['transfer_create', 'transfer_redeem', 'recovery_
 assert.match(licenseBackend, /biometric-required/);
 assert.match(licenseBackend, /Deno\.env\.get\('ADMIN_ACCESS_TOKEN'\)/);
 assert.match(licenseBackend, /Deno\.env\.get\('UNIFIED_ADMIN_TOKENS'\)/);
+assert.match(licenseBackend, /const SUPABASE_URL = Deno\.env\.get\('SUPABASE_URL'\) \|\| ''/);
+assert.doesNotMatch(licenseBackend, /const SUPABASE_URL = Deno\.env\.get\('PHONE_SUPABASE_URL'\)/);
+assert.match(licenseBackend, /const orderSupabase = createClient\(ORDER_SUPABASE_URL, ORDER_SERVICE_KEY/);
+assert.match(licenseBackend, /let query = orderSupabase[\s\S]*\.from\('phone_ai_purchases'\)/);
 assert.match(licenseBackend, /function requireOwnerAdmin/);
 assert.match(licenseBackend, /action === 'admin_orders'/);
 assert.match(licenseBackend, /action === 'phone_friend_identity_sync'/);

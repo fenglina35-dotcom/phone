@@ -6,8 +6,14 @@ import {
 } from '@simplewebauthn/server';
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = Deno.env.get('PHONE_SUPABASE_URL') || Deno.env.get('SUPABASE_URL') || '';
-const SERVICE_KEY = Deno.env.get('PHONE_SERVICE_ROLE_KEY') || Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+// License and invitation data live in this failover project's own database.
+// The legacy project can be quota-restricted, so it must never be allowed to
+// take the license path down with it. Only payment administration keeps using
+// the optional legacy database connection below.
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL') || '';
+const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+const ORDER_SUPABASE_URL = Deno.env.get('PHONE_SUPABASE_URL') || SUPABASE_URL;
+const ORDER_SERVICE_KEY = Deno.env.get('PHONE_SERVICE_ROLE_KEY') || SERVICE_KEY;
 const RP_ID = Deno.env.get('LICENSE_RP_ID') || 'fenglina35-dotcom.github.io';
 const RP_NAME = 'North 小手机';
 const PROOF_BUCKET = 'phone-ai-payment-proofs';
@@ -29,6 +35,9 @@ const ALLOWED_ORIGINS = new Set([
   'http://127.0.0.1:5173',
 ]);
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
+  auth: { persistSession: false, autoRefreshToken: false },
+});
+const orderSupabase = createClient(ORDER_SUPABASE_URL, ORDER_SERVICE_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 let minimaxVoiceCache: JsonMap[] = [];
@@ -265,7 +274,7 @@ async function minimaxVoices(force = false): Promise<JsonMap[]> {
 async function adminOrders(req: Request, body: JsonMap): Promise<JsonMap> {
   requireOwnerAdmin(req, body);
   const scope = cleanText(body.scope || 'pending', 16);
-  let query = supabase
+  let query = orderSupabase
     .from('phone_ai_purchases')
     .select('id,user_id,plan_id,provider,amount_cny,points,status,review_status,payer_hint,claimed_paid_at,proof_path,review_submitted_at,reviewed_at,review_note,external_order_id,created_at,paid_at')
     .neq('review_status', 'unsubmitted')
@@ -278,14 +287,14 @@ async function adminOrders(req: Request, body: JsonMap): Promise<JsonMap> {
   const userIds = [...new Set(purchases.map((row: JsonMap) => cleanText(row.user_id, 80)).filter(Boolean))];
   const balances = new Map<string, number>();
   if (userIds.length) {
-    const { data: accounts, error: accountError } = await supabase.from('phone_ai_accounts').select('user_id,points').in('user_id', userIds);
+    const { data: accounts, error: accountError } = await orderSupabase.from('phone_ai_accounts').select('user_id,points').in('user_id', userIds);
     if (accountError) throw accountError;
     (accounts || []).forEach((account: JsonMap) => balances.set(cleanText(account.user_id, 80), Number(account.points || 0)));
   }
   const purchaseIds = purchases.map((row: JsonMap) => cleanText(row.id, 80)).filter(Boolean);
   const voicesByPurchase = new Map<string, JsonMap>();
   if (purchaseIds.length) {
-    const { data: voices, error: voiceError } = await supabase
+    const { data: voices, error: voiceError } = await orderSupabase
       .from('phone_ai_private_voices')
       .select('id,user_id,purchase_id,voice_id,display_name,status,created_at')
       .in('purchase_id', purchaseIds);
@@ -298,7 +307,7 @@ async function adminOrders(req: Request, body: JsonMap): Promise<JsonMap> {
   const orders = await Promise.all(purchases.map(async (row: JsonMap) => {
     let proofUrl = '';
     if (row.proof_path) {
-      const { data } = await supabase.storage.from(PROOF_BUCKET).createSignedUrl(String(row.proof_path), 600);
+      const { data } = await orderSupabase.storage.from(PROOF_BUCKET).createSignedUrl(String(row.proof_path), 600);
       proofUrl = data?.signedUrl || '';
     }
     return {
@@ -308,7 +317,7 @@ async function adminOrders(req: Request, body: JsonMap): Promise<JsonMap> {
       proof_url: proofUrl,
     };
   }));
-  const { count, error: countError } = await supabase
+  const { count, error: countError } = await orderSupabase
     .from('phone_ai_purchases')
     .select('id', { count: 'exact', head: true })
     .eq('status', 'pending')
@@ -325,7 +334,7 @@ async function adminAssignPrivateVoice(req: Request, body: JsonMap): Promise<Jso
   if (!/^[0-9a-f-]{36}$/i.test(purchaseId)) throw new LicenseHttpError('订单编号无效', 400, 'invalid-purchase-id', true);
   if (!voiceId) throw new LicenseHttpError('克隆音色编号无效', 400, 'invalid-private-voice-id', true);
   if (!displayName) throw new LicenseHttpError('请填写用户看到的音色名称', 400, 'private-voice-name-required', true);
-  const { data: purchase, error: purchaseError } = await supabase
+  const { data: purchase, error: purchaseError } = await orderSupabase
     .from('phone_ai_purchases')
     .select('id,user_id,plan_id,points,status,review_status')
     .eq('id', purchaseId)
@@ -336,7 +345,7 @@ async function adminAssignPrivateVoice(req: Request, body: JsonMap): Promise<Jso
   if (purchase.status !== 'paid' || purchase.review_status !== 'approved') throw new LicenseHttpError('请先确认克隆音色订单已到账', 409, 'voice-clone-payment-not-approved', true);
   const available = await minimaxVoices(true);
   if (!available.find((voice) => voice.clone === true && voice.id === voiceId)) throw new LicenseHttpError('海螺账户中没有这个克隆音色', 404, 'private-voice-not-found-in-minimax-account', true);
-  const { data: assigned, error } = await supabase
+  const { data: assigned, error } = await orderSupabase
     .from('phone_ai_private_voices')
     .upsert({
       user_id: purchase.user_id,
@@ -361,13 +370,13 @@ async function adminReview(req: Request, body: JsonMap): Promise<JsonMap> {
   if (decision === 'approve') {
     const paymentRef = cleanText(body.payment_ref, 120);
     if (paymentRef.length < 4) throw new LicenseHttpError('请填写到账凭据', 400, 'payment-reference-required', true);
-    const { data: balance, error } = await supabase.rpc('phone_ai_confirm_purchase', { p_purchase_id: purchaseId, p_payment_ref: paymentRef });
+    const { data: balance, error } = await orderSupabase.rpc('phone_ai_confirm_purchase', { p_purchase_id: purchaseId, p_payment_ref: paymentRef });
     if (error) throw error;
     return { ok: true, balance };
   }
   if (decision === 'reject') {
     const note = cleanText(body.review_note || 'payment not found', 300);
-    const { data: rejected, error } = await supabase
+    const { data: rejected, error } = await orderSupabase
       .from('phone_ai_purchases')
       .update({ status: 'cancelled', review_status: 'rejected', reviewed_at: new Date().toISOString(), review_note: note })
       .eq('id', purchaseId)
@@ -386,19 +395,19 @@ async function adminDeleteOrder(req: Request, body: JsonMap): Promise<JsonMap> {
   requireOwnerAdmin(req, body);
   const purchaseId = cleanText(body.purchase_id, 80);
   if (!/^[0-9a-f-]{36}$/i.test(purchaseId)) throw new LicenseHttpError('订单编号无效', 400, 'invalid-purchase-id', true);
-  const { data: purchase, error: findError } = await supabase.from('phone_ai_purchases').select('id,proof_path').eq('id', purchaseId).maybeSingle();
+  const { data: purchase, error: findError } = await orderSupabase.from('phone_ai_purchases').select('id,proof_path').eq('id', purchaseId).maybeSingle();
   if (findError) throw findError;
   if (!purchase) throw new LicenseHttpError('订单不存在', 404, 'purchase-not-found', true);
-  const { error } = await supabase.from('phone_ai_purchases').delete().eq('id', purchaseId);
+  const { error } = await orderSupabase.from('phone_ai_purchases').delete().eq('id', purchaseId);
   if (error) throw error;
-  if (purchase.proof_path) await supabase.storage.from(PROOF_BUCKET).remove([purchase.proof_path]).catch(() => null);
+  if (purchase.proof_path) await orderSupabase.storage.from(PROOF_BUCKET).remove([purchase.proof_path]).catch(() => null);
   return { ok: true };
 }
 
 async function adminDeleteOrders(req: Request, body: JsonMap): Promise<JsonMap> {
   requireOwnerAdmin(req, body);
   const scope = cleanText(body.scope || 'pending', 16);
-  let query = supabase.from('phone_ai_purchases').select('id,proof_path').neq('review_status', 'unsubmitted').limit(300);
+  let query = orderSupabase.from('phone_ai_purchases').select('id,proof_path').neq('review_status', 'unsubmitted').limit(300);
   if (scope === 'pending') query = query.eq('status', 'pending').eq('review_status', 'submitted');
   const { data: rows, error: findError } = await query;
   if (findError) throw findError;
@@ -406,9 +415,9 @@ async function adminDeleteOrders(req: Request, body: JsonMap): Promise<JsonMap> 
   const ids = purchases.map((row: JsonMap) => cleanText(row.id, 80)).filter(Boolean);
   const proofPaths = purchases.map((row: JsonMap) => cleanText(row.proof_path, 500)).filter(Boolean);
   if (!ids.length) return { ok: true, deleted: 0 };
-  const { error } = await supabase.from('phone_ai_purchases').delete().in('id', ids);
+  const { error } = await orderSupabase.from('phone_ai_purchases').delete().in('id', ids);
   if (error) throw error;
-  if (proofPaths.length) await supabase.storage.from(PROOF_BUCKET).remove(proofPaths).catch(() => null);
+  if (proofPaths.length) await orderSupabase.storage.from(PROOF_BUCKET).remove(proofPaths).catch(() => null);
   return { ok: true, deleted: ids.length };
 }
 
@@ -420,7 +429,7 @@ async function adminSubscribe(req: Request, body: JsonMap): Promise<JsonMap> {
   const p256dh = cleanText(keys.p256dh, 300);
   const auth = cleanText(keys.auth, 300);
   if (!endpoint.startsWith('https://') || !p256dh || !auth) throw new LicenseHttpError('通知订阅信息无效', 400, 'invalid-push-subscription', true);
-  const { error } = await supabase.from('phone_ai_admin_push').upsert({
+  const { error } = await orderSupabase.from('phone_ai_admin_push').upsert({
     endpoint,
     p256dh,
     auth,
