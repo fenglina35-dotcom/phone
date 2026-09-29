@@ -30,16 +30,14 @@ const count = (source, marker) => source.split(marker).length - 1;
 // same commit that syncs it.
 const PERMANENT_FIXES = [
   {release:"v1350/v1355",scope:"both",least:1,name:"指令里的 App 名对不上时调用一次模型对应到已授权 App 再执行",marker:"async function controlResolveUnknownApps(list,c,id,pwd)"},
-  {release:"v1350/v1355",scope:"both",least:1,name:"App 未授权或对不上时留事实提示，绝不静默失败",marker:"但这个 App 没有授权给ta，没有执行"},
+  {release:"v1350/v1355",scope:"both",least:1,name:"锁定/解锁成功只弹一下系统提示，不写进聊天、不带表情",marker:"toast((c.remark||c.name)+notices.join('，'),2600);"},
   {release:"v1350/v1355",scope:"both",least:1,name:"放映室、云程等 App 名称都能解析，锁定指令不再静默失败",marker:"return APPNAME2KEY[n]||Object.keys(LOCKABLE).find(k=>LOCKABLE[k]===n);"},
-  {release:"v1350/v1355",scope:"both",least:1,name:"嘴上说已锁却没执行时留下事实提示",marker:"嘴上说了「'+claims.join(' ').slice(0,60)+'」，但实际没有执行"},
   {release:"v1353（Mac 线 v1343–v1352）",scope:"private",least:1,name:"小K表情随回复同步并在首条可见气泡时点亮",marker:"robotFaceFirstVisible(_robotFaceTurn,_robotFaceResult.emotion,replyAccount)"},
   {release:"v1353（Mac 线 v1343–v1352）",scope:"private",least:1,name:"小K独立语音接管回复并取消人为气泡等待",marker:"if(id&&typeof RobotVoice!=='undefined'&&RobotVoice.roleActive(id))return 0;"},
   {release:"v1353（Mac 线 v1343–v1352）",scope:"private",least:1,name:"小K语音输入复用用户发言后续流程",marker:"function wechatContinueUserText(id,t,opt)"},
   {release:"v1353（Mac 线 v1343–v1352）",scope:"private",least:1,file:PRIVATE_DIR+"index.html",name:"私人入口加载小K组件",marker:'<script src="private-robot-voice.js?v='},
   {release:"v1348/v1349",scope:"both",least:1,name:"管控说和做分开：说的话不执行，只执行指令标签",marker:"【说和做分开·最高优先级】你说的话永远不会锁或解锁任何东西"},
   {release:"v1348/v1349",scope:"both",least:1,name:"像已完成却没写指令时只回头问角色一次，只执行它回的指令",marker:"async function controlClaimConfirm(reply,c,id,opt)"},
-  {release:"v1348/v1349",scope:"both",least:1,name:"真实执行的锁/解锁在聊天里留系统提示",marker:"真实执行过的管控在聊天里留一行系统提示"},
   {release:"v1344",scope:"both",least:1,name:"原文模式整行控制标签去空白后执行，[收款]不再显示成文字",marker:"原文模式也要执行控制指令"},
   {release:"v1346",scope:"both",least:1,name:"角色当时没处理的旧转账之后不会突然被收款",marker:"function transferMarkRoleSeen(list)"},
   {release:"v1344",scope:"both",least:1,name:"角色[联网]在原文模式下也真的执行",marker:"// 联网：这是执行角色的决定，不是输出过滤"},

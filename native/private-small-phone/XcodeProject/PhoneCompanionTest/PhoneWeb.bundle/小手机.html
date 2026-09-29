@@ -33,7 +33,7 @@
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=1355&r=v1355-private-app-name-fix-1';
+  var url='sw.js?v=1355&r=v1355-private-lock-toast-1';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -2743,7 +2743,7 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
 <script src="couple-watch.js?v=1355" onerror="__northBootFail('页面组件载入失败')"></script>
 <script src="request-diagnostics.js?v=1355"></script>
 <script src="message-beijing-time.js?v=1355"></script>
-<script src="app.js?v=1355&r=v1355-private-app-name-fix-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="app.js?v=1355&r=v1355-private-lock-toast-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
 <script src="private-reply-intercept.js?v=1355&r=v1178-private-intercept-parity-1" onerror="__northBootFail('私人回复拦截记录组件载入失败（安装包不完整）')"></script>
 <script src="cohab-theater.js?v=1355&r=v1274-web-cohab-guests-1" onerror="__northBootFail('共同生活多人剧场组件载入失败（可能是网络或 404）')"></script>
 <script src="public-north-policy.js?v=1355"></script>

@@ -13,12 +13,12 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1350 · 放映室云程锁定修复'/);
-  assert.match(app,/const url='sw\.js\?v=1350&r=v1350-web-app-name-fix-1'/);
+  assert.match(app,/APP_VER='v1350 · 锁定提示改为弹窗'/);
+  assert.match(app,/const url='sw\.js\?v=1350&r=v1350-web-lock-toast-1'/);
   assert.match(html,/__NORTH_SHELL_BUILD__='1350'/);
   assert.match(html,/app\.js\?v=1350/);
   assert.match(sw,/const BUILD='1350'/);
-  assert.match(sw,/north-shell-v1350-web-app-name-fix-1/);
+  assert.match(sw,/north-shell-v1350-web-lock-toast-1/);
   assert.match(index,/小手机\.html\?v=1350/);
   assert.match(repair,/小手机\.html\?v=1350/);
 });

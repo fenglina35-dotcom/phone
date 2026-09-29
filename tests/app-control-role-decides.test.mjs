@@ -113,3 +113,16 @@ test('every lockable app name resolves, including 放映室 and 云程', () => {
     assert.deepEqual(Array.from(ctx._appKeys('放映室、云程', Object.keys(ctx.LOCKABLE), k => k === 'cinema')), ['cinema'], `${label}: 未授权的 App 仍被过滤`);
   }
 });
+
+// v1350 用户要求：提示不要进聊天、不要表情；只有真的锁上或解锁时弹一下就消失，其他情况什么都不显示。
+test('control notices are a transient toast, only for real lock/unlock, never a chat line', () => {
+  for (const [label, src] of BUILDS) {
+    const body = one(src, 'applyControlTags') + '\n' + src.split('\n').slice(src.split('\n').indexOf(one(src, 'applyControlTags')) + 1).join('\n').split('\nlet _ctFired=')[0];
+    assert.match(body, /\/\^\(\?:锁定\|上锁\|解锁\)\$\/\.test\(act\)\)notices\.push\(/, `${label}: 只有锁定/解锁才有提示`);
+    assert.ok(body.includes("toast((c.remark||c.name)+notices.join('，'),2600);"), `${label}: 用弹出提示`);
+    assert.doesNotMatch(body, /msgs\(id\)\.push\(\{role:'user',type:'sys'/, `${label}: 不得写进聊天`);
+    assert.ok(!src.includes('controlFactNotice'), `${label}: 失败/未授权不再留提示`);
+    assert.doesNotMatch(one(src, 'controlClaimConfirm'), /type:'sys'/, `${label}: 嘴上说了但没执行不再留提示`);
+    assert.ok(!src.includes("content:'🔐 '"), `${label}: 不带表情`);
+  }
+});

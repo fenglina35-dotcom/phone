@@ -128,7 +128,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v1350 · 放映室云程锁定修复'/);
+  assert.match(app, /const APP_VER='v1350 · 锁定提示改为弹窗'/);
 });
 
 test('manual sync reads locally in the bundled app and keeps cloud fallback', () => {
@@ -762,7 +762,7 @@ test('v1350: a spoken single-app unlock only executes after the role confirms it
   assert.equal(await context.confirm('行，抖音给你解开了。', role, 'r', { ask: ask('[解锁|抖音]') }), true);
   assert.deepEqual(Array.from(applied), ['[解锁|抖音]']);
   assert.equal(await context.confirm('行，抖音给你解开了。', role, 'r', { ask: ask('[不执行]') }), false);
-  assert.match(context.rows.at(-1).content, /嘴上说了「行，抖音给你解开了。」，但实际没有执行/, 'an unexecuted claim leaves a visible fact line');
+  assert.equal(context.rows.length, 0, 'a declined claim leaves nothing in the chat');
   for (const text of ['抖音解锁失败了。', '等你写完作业再把抖音解开。', '要我把抖音解开吗？'])
     assert.equal(await context.confirm(text, role, 'r', { ask: ask('[解锁|抖音]') }), false);
   assert.equal(asked, 2, 'failures, conditions and questions never cost a confirmation call');

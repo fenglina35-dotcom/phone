@@ -41,7 +41,7 @@ test('private candidate is v1355 and iOS 399 while public advances independently
   assert.match(app,/APP_VER='v1355 · 小K合并与放映室锁定修复'/);
   for(const html of [index,alias]){
     assert.match(html,/window\.__NORTH_SHELL_BUILD__='1355'/);
-    assert.match(html,/app\.js\?v=1355&r=v1355-private-app-name-fix-1/);
+    assert.match(html,/app\.js\?v=1355&r=v1355-private-lock-toast-1/);
     assert.match(html,/private-runtime-diagnostics\.js\?v=339/);
   }
   assert.match(diagnostics,/OVERLAY_VERSION='336-daily-file-backup'/);
@@ -49,7 +49,7 @@ test('private candidate is v1355 and iOS 399 while public advances independently
   assert.match(bridge,/private static let build = "1\.0\.420 \(420\)"/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 420;/g)||[]).length,12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.420;/g)||[]).length,12);
-  assert.match(publicApp,/APP_VER='v1350 · 放映室云程锁定修复'/);
+  assert.match(publicApp,/APP_VER='v1350 · 锁定提示改为弹窗'/);
 });
 
 test('ordinary foreground polling is lightweight while explicit control verification stays complete',async()=>{

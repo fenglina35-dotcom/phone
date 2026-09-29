@@ -5,7 +5,7 @@ const app = fs.readFileSync(new URL("../app.js", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../小手机.html", import.meta.url), "utf8");
 const sw = fs.readFileSync(new URL("../sw.js", import.meta.url), "utf8");
 
-assert.match(app, /APP_VER='v1350 · 放映室云程锁定修复'/);
+assert.match(app, /APP_VER='v1350 · 锁定提示改为弹窗'/);
 assert.match(app, /function northUpdateAvailable\(build\)/);
 assert.match(app, /发现新版本 v\$\{esc\(build\)\}/);
 assert.match(app, /不需要退出或划掉小手机/);
@@ -15,7 +15,7 @@ assert.match(app, /postMessage\(\{type:'north-version-query'\}\)/);
 assert.match(sw, /client\.postMessage\(\{type:'north-update-ready',build:BUILD\}\)/);
 assert.match(sw, /event\.data\.type!==['"]north-version-query['"]/);
 assert.match(html, /window\.__NORTH_SHELL_BUILD__='1350'/);
-assert.match(html, /sw\.js\?v=1350&r=v1350-web-app-name-fix-1/);
-assert.match(html, /web-hotfix\.js\?v=1350&r=v1350-web-app-name-fix-1/);
+assert.match(html, /sw\.js\?v=1350&r=v1350-web-lock-toast-1/);
+assert.match(html, /web-hotfix\.js\?v=1350&r=v1350-web-lock-toast-1/);
 
 console.log("update prompt tests passed");
