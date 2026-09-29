@@ -37,6 +37,14 @@ function cleanText(value, max) {
   return String(value || '').trim().slice(0, max);
 }
 
+// MiniMax rejects an empty or unknown emotion with "invalid params: voice_setting emotion".
+// Neutral lines carry no emotion, so the field must be left out instead of sent as "".
+const MINIMAX_EMOTIONS = new Set(['happy','sad','angry','fearful','disgusted','surprised','calm']);
+function minimaxEmotion(value) {
+  const emotion = cleanText(value, 32).toLowerCase();
+  return MINIMAX_EMOTIONS.has(emotion) ? {emotion} : {};
+}
+
 function externalTtsRequest(input) {
   const provider = cleanText(input?.provider, 32).toLowerCase();
   const operation = cleanText(input?.operation || 'synthesize', 32).toLowerCase();
@@ -100,7 +108,7 @@ function externalTtsRequest(input) {
     headers:{Authorization:'Bearer '+key, 'Content-Type':'application/json'},
     body:JSON.stringify(operation === 'list_voices' ? {voice_type:'all'} : {
       model:model || 'speech-02-turbo', text, stream:false, language_boost:cleanText(input?.language_boost || 'auto', 32),
-      voice_setting:{voice_id:voice, speed:Number(input?.voice_setting?.speed) || 1, vol:Number(input?.voice_setting?.vol) || 1, pitch:Number(input?.voice_setting?.pitch) || 0, emotion:cleanText(input?.voice_setting?.emotion, 32)},
+      voice_setting:{voice_id:voice, speed:Number(input?.voice_setting?.speed) || 1, vol:Number(input?.voice_setting?.vol) || 1, pitch:Number(input?.voice_setting?.pitch) || 0, ...minimaxEmotion(input?.voice_setting?.emotion)},
       audio_setting:{sample_rate:32000, bitrate:128000, format:'mp3', channel:1},
     }),
   }};

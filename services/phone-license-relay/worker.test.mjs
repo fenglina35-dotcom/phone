@@ -170,3 +170,13 @@ test('private file-origin preflight is accepted without opening arbitrary browse
  const response=await handle(new Request(externalURL,{method:'OPTIONS',headers:{Origin:'null'}}));
  assert.equal(response.status,204);assert.equal(response.headers.get('Access-Control-Allow-Origin'),'null');assert.equal(calls,0);
 });
+test('MiniMax external TTS omits an empty or unknown emotion instead of sending an invalid voice_setting',async()=>{
+ const bodies=[];const handle=createHandler(async(url,init)=>{bodies.push(JSON.parse(init.body));return Response.json({base_resp:{status_code:0},data:{audio:'00ff'}});});
+ await handle(externalPost({provider:'minimax',key:'k',model:'speech-2.8-turbo',voice_id:'male-qn-qingse',text:'你好',voice_setting:{speed:1,vol:1,pitch:0}}));
+ await handle(externalPost({provider:'minimax',key:'k',model:'speech-2.8-hd',voice_id:'male-qn-qingse',text:'你好',voice_setting:{emotion:''}}));
+ await handle(externalPost({provider:'minimax',key:'k',model:'speech-02-hd',voice_id:'male-qn-qingse',text:'你好',voice_setting:{emotion:'soft'}}));
+ await handle(externalPost({provider:'minimax',key:'k',model:'speech-02-hd',voice_id:'male-qn-qingse',text:'你好',voice_setting:{emotion:'Sad'}}));
+ assert.equal(bodies.length,4);
+ for(const body of bodies.slice(0,3))assert.equal('emotion' in body.voice_setting,false);
+ assert.equal(bodies[3].voice_setting.emotion,'sad');
+});
