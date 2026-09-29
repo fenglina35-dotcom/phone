@@ -1,0 +1,402 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Character action intent",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "x",
+        "z"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "type": {
+          "const": "walk_to"
+        },
+        "x": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 26
+        },
+        "z": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 18
+        },
+        "y": {
+          "enum": [
+            0,
+            -3.15
+          ]
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "target"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "type": {
+          "const": "sit"
+        },
+        "target": {
+          "enum": [
+            "sofa",
+            "tub",
+            "dining_a",
+            "dining_b",
+            "toilet",
+            "boss_chair",
+            "work_chair",
+            "bed_chair"
+          ]
+        },
+        "slot": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "type": {
+          "enum": [
+            "sleep",
+            "get_up"
+          ]
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "target"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "type": {
+          "const": "open_door"
+        },
+        "target": {
+          "enum": [
+            "bedroom",
+            "bath",
+            "office",
+            "stairs",
+            "cell"
+          ]
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "name"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "type": {
+          "const": "expression"
+        },
+        "name": {
+          "enum": [
+            "Happy",
+            "Sad",
+            "Angry",
+            "Tired",
+            "Neutral"
+          ]
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "active"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "type": {
+          "const": "talk"
+        },
+        "active": {
+          "type": "boolean"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "target"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "type": {
+          "const": "go_room"
+        },
+        "target": {
+          "enum": [
+            "living",
+            "kitchen",
+            "bedroom",
+            "bath",
+            "office",
+            "hall",
+            "basement",
+            "cell"
+          ]
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "target",
+        "on"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "type": {
+          "const": "control"
+        },
+        "target": {
+          "type": "string"
+        },
+        "on": {
+          "type": "boolean"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "target",
+        "open"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "type": {
+          "const": "set_door"
+        },
+        "target": {
+          "enum": [
+            "bedroom",
+            "bath",
+            "office",
+            "stairs",
+            "cell"
+          ]
+        },
+        "open": {
+          "type": "boolean"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "active"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "type": {
+          "const": "roam"
+        },
+        "active": {
+          "type": "boolean"
+        }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "text"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "type": {
+          "const": "speak"
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 180
+        },
+        "spokenText": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 720,
+          "description": "按角色选择的语言朗读，独立于中文字幕"
+        },
+        "language": {
+          "type": "string",
+          "maxLength": 30
+        }
+      }
+    },
+    {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "const": "follow"
+        },
+        "active": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "const": "escort"
+        },
+        "target": {
+          "enum": [
+            "living",
+            "kitchen",
+            "bedroom",
+            "bath",
+            "office",
+            "hall",
+            "basement",
+            "cell"
+          ]
+        }
+      },
+      "required": [
+        "type",
+        "target"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "const": "release"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "const": "stop_follow"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "const": "come_to_player"
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}

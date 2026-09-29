@@ -1,0 +1,9 @@
+Misaka Mikoto Blender 3D model
+Author: Studio MEAT39 Mark Use Blender00 / @Mark-Use-blender
+Source: https://sketchfab.com/3d-models/misaka-mikoto-blender-3d-model-37bc209d8ba1436e8e9c5858f129ac95
+License shown on source download page: Creative Commons Attribution 4.0
+https://creativecommons.org/licenses/by/4.0/
+Downloaded 2026-09-14. Source ZIP retained separately.
+Changes: exported from original Blender file preserving 56 facial morphs; converted material nodes; added independent face parameter preview and animation retargeting.
+The source model's character/IP rights are not transferred by this attribution notice.
+Preview is separate from the existing male model and house integration.

@@ -1,0 +1,262 @@
+/* Private iOS runtime overlay. This file is intentionally not part of the public web build. */
+(function(){
+  'use strict';
+  if(window.__SMALL_PHONE_PRIVATE__!==true)return;
+
+  const OVERLAY_VERSION='336-daily-file-backup';
+  const lastEventAt=Object.create(null);
+  let lastMeasuredSyncOp='',lastMeasuredSyncMs=0,lastMeasuredSyncAt=0;
+  let activeBackgroundTask='',activeBackgroundStartedAt=0,lastBackgroundTask='',lastBackgroundMs=0,lastBackgroundAt=0;
+  const clock=()=>typeof performance!=='undefined'&&performance.now?performance.now():Date.now();
+  const cleanFields=input=>{
+    const out={},src=input&&typeof input==='object'?input:{};
+    Object.keys(src).slice(0,8).forEach(key=>{
+      const value=src[key];
+      if(typeof value==='boolean'||typeof value==='number')out[String(key).slice(0,40)]=value;
+      else if(typeof value==='string')out[String(key).slice(0,40)]=value.slice(0,120);
+    });
+    return out;
+  };
+  function emit(event,fields,minGap,throttleKey){
+    event=String(event||'runtime.event').slice(0,80);
+    const bucket=event+'|'+String(throttleKey||'').slice(0,120);
+    const now=Date.now(),gap=Math.max(0,Number(minGap==null?10000:minGap)||0);
+    if(gap&&now-(lastEventAt[bucket]||0)<gap)return false;
+    lastEventAt[bucket]=now;
+    const payload={event,at:now,fields:cleanFields(fields)};
+    try{
+      if(typeof window.__smallPhoneNativeDiag==='function'){
+        const nativeThrottleKey=String(throttleKey||'').slice(0,120);
+        window.__smallPhoneNativeDiag(event,payload.fields,nativeThrottleKey?0:gap,nativeThrottleKey);
+        return true;
+      }
+      const handler=window.webkit&&window.webkit.messageHandlers&&window.webkit.messageHandlers.smallPhoneNative;
+      if(handler&&typeof handler.postMessage==='function'){
+        handler.postMessage({action:'diagnostics.append',payload});
+        return true;
+      }
+    }catch(_){}
+    return false;
+  }
+
+  window.__SMALL_PHONE_PRIVATE_RUNTIME__=OVERLAY_VERSION;
+  window.__SMALL_PHONE_DISABLE_AUTO_FULL_BACKUP__=false;
+
+  function currentPageName(){
+    try{const page=typeof window.cur==='function'?window.cur():null;return String(page&&page.p||'unknown').slice(0,40);}catch(_){return'unknown';}
+  }
+  function safeRuntimeToken(value,fallback){
+    const text=String(value||'');
+    return /^[A-Za-z][A-Za-z0-9_-]{0,39}$/.test(text)?text:String(fallback||'unknown');
+  }
+  function recentSyncFields(){
+    const age=lastMeasuredSyncAt?Math.max(0,Date.now()-lastMeasuredSyncAt):0;
+    return age&&age<=30000?{lastOp:lastMeasuredSyncOp,lastOpMs:lastMeasuredSyncMs,lastOpAgeMs:age}:{lastOp:'',lastOpMs:0,lastOpAgeMs:0};
+  }
+  function recentBackgroundFields(){
+    try{
+      if(typeof window.__smallPhoneBackgroundTaskSnapshot==='function'){
+        const row=window.__smallPhoneBackgroundTaskSnapshot();
+        if(row&&typeof row==='object'){const task=String(row.task||'');return{task:task?safeRuntimeToken(task,'background'):'',taskMs:Math.max(0,Math.round(Number(row.taskMs)||0)),taskActive:row.taskActive===true};}
+      }
+    }catch(_){}
+    if(activeBackgroundTask)return{task:activeBackgroundTask,taskMs:Math.max(0,Math.round(clock()-activeBackgroundStartedAt)),taskActive:true};
+    const age=lastBackgroundAt?Math.max(0,Date.now()-lastBackgroundAt):0;
+    return age&&age<=30000?{task:lastBackgroundTask,taskMs:lastBackgroundMs,taskActive:false}:{task:'',taskMs:0,taskActive:false};
+  }
+
+  function wrapMeasured(name,options){
+    options=options||{};
+    const original=window[name];
+    if(typeof original!=='function'||original.__smallPhoneMeasured)return false;
+    const threshold=Math.max(0,Number(options.threshold)||0),span=options.span===true;
+    function measured(){
+      const started=clock(),args=arguments;
+      const meta=typeof options.meta==='function'?cleanFields(options.meta(args)):{};
+      if(span)emit(name+'.begin',meta,0);
+      const finish=(status,error)=>{
+        const elapsed=Math.max(0,Math.round(clock()-started));
+        const fields=Object.assign({},meta,{ms:elapsed,status});
+        if(error)fields.error=String(error&&error.name||'Error').slice(0,40);
+        if(span)emit(name+'.end',fields,0);
+        else if(elapsed>=threshold)emit('slow.'+name,fields,15000);
+      };
+      let result,syncElapsed=0;
+      try{result=original.apply(this,args);}catch(error){syncElapsed=Math.max(0,Math.round(clock()-started));finish('throw',error);throw error;}
+      syncElapsed=Math.max(0,Math.round(clock()-started));
+      if(syncElapsed>=120){lastMeasuredSyncOp=name;lastMeasuredSyncMs=syncElapsed;lastMeasuredSyncAt=Date.now();}
+      if(result&&typeof result.then==='function'){
+        if(syncElapsed>=120)emit('slow.'+name+'.sync',Object.assign({},meta,{ms:syncElapsed,status:'returned-promise'}),15000);
+        return Promise.resolve(result).then(value=>{finish('ok');return value;},error=>{finish('reject',error);throw error;});
+      }
+      finish('ok');
+      return result;
+    }
+    measured.__smallPhoneMeasured=true;
+    measured.__smallPhoneOriginal=original;
+    window[name]=measured;
+    return true;
+  }
+
+  wrapMeasured('render',{threshold:120});
+  wrapMeasured('saveNow',{threshold:120});
+  wrapMeasured('persistWechatMessagesNow',{threshold:800});
+  wrapMeasured('phoneFriendSync',{threshold:800});
+  wrapMeasured('companionPollSnapshot',{threshold:800});
+  wrapMeasured('licenseCheckSession',{span:true,meta:args=>({page:currentPageName(),source:safeRuntimeToken(args[0]&&args[0].source,'direct')})});
+  wrapMeasured('licenseSyncManagedIdentities',{span:true,meta:args=>({page:currentPageName(),source:safeRuntimeToken(args[0]&&args[0].source,'direct')})});
+  wrapMeasured('privateNativeCoreGet',{threshold:800});
+  wrapMeasured('privateNativeCorePut',{threshold:800});
+  wrapMeasured('fullBackupState',{span:true});
+  wrapMeasured('privatePhoneCloudBackup',{span:true,meta:args=>({firstBind:args[0]===true,silent:args[1]===true})});
+
+  window.__smallPhoneLicenseIdentityTrace=function(input){
+    const row=input&&typeof input==='object'?input:{},event=String(row.event||'');
+    if(!['license.identityAutoSkipped','license.identityAutoScheduled','license.identityAutoStarted'].includes(event))return false;
+    const fields={page:currentPageName(),source:safeRuntimeToken(row.source,'unknown'),reason:safeRuntimeToken(row.reason,'unknown')};
+    ['aiNeeded','phoneFriendNeeded'].forEach(key=>{if(typeof row[key]==='boolean')fields[key]=row[key];});
+    if(Number.isFinite(Number(row.delayMs)))fields.delayMs=Math.max(0,Math.min(600000,Math.round(Number(row.delayMs))));
+    return emit(event,fields,event==='license.identityAutoSkipped'?300000:0,event+'|'+fields.reason);
+  };
+
+  window.__smallPhonePhoneFriendSyncTrace=function(fields){
+    fields=fields&&typeof fields==='object'?fields:{};
+    const stage=safeRuntimeToken(fields.stage,'unknown'),bulk=fields.bulk===true,payload={page:currentPageName()};
+    ['forceProfile','forceFull','profileDeferred','bulk','full','changed','hadError'].forEach(key=>{if(typeof fields[key]==='boolean')payload[key]=fields[key];});
+    ['ms','messages','groupMessages','bodyChars','friendInserted','groupInserted','friendBuckets','groupBuckets','scanned','acked','rendered','hidden'].forEach(key=>{const value=Number(fields[key]);if(Number.isFinite(value))payload[key]=Math.max(0,Math.min(1000000000,Math.round(value)));});
+    if(fields.error)payload.error=safeRuntimeToken(fields.error,'Error').slice(0,40);
+    return emit('phoneFriend.'+stage,payload,bulk||stage==='error'?0:60000,bulk?'bulk':stage);
+  };
+
+  window.__smallPhoneBackgroundTaskTrace=function(input){
+    const row=input&&typeof input==='object'?input:{},stage=safeRuntimeToken(row.stage,'unknown'),task=safeRuntimeToken(row.task,'background'),page=currentPageName();
+    if(stage==='begin'){
+      activeBackgroundTask=task;activeBackgroundStartedAt=clock();
+      return emit('backgroundTask.begin',{page,task},60000,task);
+    }
+    if(stage==='end'){
+      const ms=Math.max(0,Math.round(Number(row.ms)||0)),status=safeRuntimeToken(row.status,'unknown');
+      activeBackgroundTask='';activeBackgroundStartedAt=0;lastBackgroundTask=task;lastBackgroundMs=ms;lastBackgroundAt=Date.now();
+      if(ms<250&&status==='ok')return false;
+      return emit('backgroundTask.end',{page,task,ms,status,error:row.error?safeRuntimeToken(row.error,'Error'):''},15000,task+'|'+status);
+    }
+    return false;
+  };
+
+  window.__smallPhoneWechatPersistTrace=function(input){
+    const row=input&&typeof input==='object'?input:{},stage=safeRuntimeToken(row.stage,'unknown'),fields={};
+    ['queued','passes','coalesced','blobChars','archiveMs','coreMs','ms'].forEach(key=>{const value=Number(row[key]);if(Number.isFinite(value))fields[key]=Math.max(0,Math.min(1000000000,Math.round(value)));});
+    if(row.error)fields.error=safeRuntimeToken(row.error,'Error');
+    return emit('wechatPersist.'+stage,fields,stage==='coalesced'?15000:0,stage);
+  };
+
+  if(typeof window.northNativePerformanceGuard==='function'){
+    const originalGuard=window.northNativePerformanceGuard;
+    window.northNativePerformanceGuard=function(reason,delay){
+      const text=String(reason||'event-loop').slice(0,80),recent=recentSyncFields(),background=recentBackgroundFields(),page=currentPageName();
+      emit('performance.guard',{reason:text,holdMs:Math.round(Number(delay)||0),page,lastOp:recent.lastOp,lastOpMs:recent.lastOpMs,task:background.task,taskMs:background.taskMs,taskActive:background.taskActive},15000,text.replace(/:[0-9]+$/,'')+'|'+page);
+      return originalGuard.apply(this,arguments);
+    };
+  }
+
+  async function readDiagnostics(){
+    if(!window.SmallPhoneNative||typeof window.SmallPhoneNative.request!=='function')throw new Error('原生诊断桥不可用');
+    return window.SmallPhoneNative.request('diagnostics.read');
+  }
+  window.privatePhoneDiagnosticsOpen=async function(){
+    try{
+      const result=await readDiagnostics(),text=String(result&&result.text||'暂时没有异常记录');
+      openModal('<h3>私人 App 卡顿诊断</h3><div class="hint" style="line-height:1.75">这里只记录耗时、温度状态、WebContent 终止和版本号，不记录聊天、图片、密钥或网址。每日备份状态请查看授权与数据；手动备份和恢复仍可使用。</div><textarea id="privateRuntimeDiagnosticsText" readonly style="width:100%;height:220px;margin-top:12px;padding:10px;box-sizing:border-box;border:1px solid #555;border-radius:10px;background:#111;color:#eee;font:11px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace"></textarea><div class="btns"><button class="btn g" onclick="privatePhoneDiagnosticsClear()">清空记录</button><button class="btn p" onclick="privatePhoneDiagnosticsCopy()">复制记录</button></div>');
+      const box=document.getElementById('privateRuntimeDiagnosticsText');if(box)box.value=text;
+    }catch(error){toast(String(error&&error.message||'诊断记录读取失败'));}
+  };
+  let diagnosticCopyPending=false;
+  window.privatePhoneDiagnosticsCopy=async function(){
+    const box=document.getElementById('privateRuntimeDiagnosticsText');if(!box)return;
+    if(diagnosticCopyPending)return;
+    diagnosticCopyPending=true;
+    let timeout;
+    try{
+      // The textarea is a snapshot, not a live log. Refresh on every explicit
+      // copy; waiting with this window open must not keep copying old events.
+      let result;
+      try{
+        result=await Promise.race([readDiagnostics(),new Promise((_,reject)=>{
+          timeout=setTimeout(()=>reject(new Error('diagnostics-read-timeout')),5000);
+        })]);
+        if(!result||typeof result.text!=='string')throw new Error('invalid-diagnostics');
+      }catch(_){toast('最新诊断读取失败，未复制旧记录；请稍后重试');return;}
+      finally{clearTimeout(timeout);}
+      if(document.getElementById('privateRuntimeDiagnosticsText')!==box)return;
+      box.value=result.text||'暂时没有异常记录';
+      try{
+        if(navigator.clipboard&&navigator.clipboard.writeText)await navigator.clipboard.writeText(box.value);
+        else{box.focus();box.select();if(!document.execCommand('copy'))throw new Error('copy-denied');}
+        toast('最新诊断记录已复制');
+      }catch(_){box.focus();box.select();toast('已选中最新诊断记录，请手动复制');}
+    }finally{diagnosticCopyPending=false;}
+  };
+  window.privatePhoneDiagnosticsClear=async function(){
+    try{await window.SmallPhoneNative.request('diagnostics.clear');const box=document.getElementById('privateRuntimeDiagnosticsText');if(box)box.value='诊断记录已清空';toast('诊断记录已清空');}catch(_){toast('诊断记录清空失败');}
+  };
+
+  async function openRequestedRecoveryScanner(){
+    const modal=document.getElementById('modal');
+    let modalWasShown=false,observer=null;
+    if(modal){
+      modal.style.setProperty('z-index','12000','important');
+      observer=new MutationObserver(()=>{
+        if(modal.classList.contains('show'))modalWasShown=true;
+        if(modalWasShown&&!modal.classList.contains('show')){
+          modal.style.removeProperty('z-index');
+          observer.disconnect();
+        }
+      });
+      observer.observe(modal,{attributes:true,attributeFilter:['class']});
+    }
+    emit('recovery.scanner.open',{nativeRequest:true},0);
+    try{
+      await Promise.resolve(window.emergencyRestoreAll());
+      await window.SmallPhoneNative.request('recovery.launch.ack');
+    }catch(error){
+      emit('recovery.scanner.failed',{error:String(error&&error.name||'Error').slice(0,40)},0);
+      if(modal){
+        modal.style.removeProperty('z-index');
+        if(observer)observer.disconnect();
+      }
+    }
+  }
+
+  async function consumeNativeRecoveryLaunch(attempt){
+    attempt=Math.max(0,Number(attempt)||0);
+    if(!window.__northBootReady||
+       !window.SmallPhoneNative||
+       typeof window.SmallPhoneNative.request!=='function'||
+       typeof window.emergencyRestoreAll!=='function'){
+      if(attempt<80)setTimeout(()=>consumeNativeRecoveryLaunch(attempt+1),250);
+      return;
+    }
+    try{
+      const result=await window.SmallPhoneNative.request('recovery.launch.peek');
+      if(result&&result.requested===true)await openRequestedRecoveryScanner();
+    }catch(error){
+      emit('recovery.launch.consume.failed',{error:String(error&&error.name||'Error').slice(0,40)},0);
+    }
+  }
+
+  if(typeof window.privatePhoneAccountSection==='function'){
+    const originalSection=window.privatePhoneAccountSection;
+    window.privatePhoneAccountSection=function(){
+      return originalSection.apply(this,arguments)+'<div class="section" id="set_private_runtime_diagnostics"><div class="it"><span><b>私人 App 性能保护</b><small style="display:block;color:#8f9eb3;margin-top:4px">每日云备份改用原生分块文件上传；手动备份与恢复保留</small></span><span class="v">诊断已启用</span></div><div class="btns" style="padding:8px 14px 12px"><button class="btn g" onclick="privatePhoneDiagnosticsOpen()">查看卡顿诊断</button></div></div>';
+    };
+  }
+
+  emit('runtime.overlay.ready',{version:OVERLAY_VERSION,autoBackupPaused:false},0);
+  setTimeout(()=>consumeNativeRecoveryLaunch(0),0);
+  try{
+    if(typeof _bootImagesPromise!=='undefined'&&_bootImagesPromise&&typeof _bootImagesPromise.then==='function'){
+      const started=clock();emit('boot.images.wait.begin',{},0);
+      _bootImagesPromise.then(()=>emit('boot.images.wait.end',{ms:Math.max(0,Math.round(clock()-started)),status:'ok'},0),error=>emit('boot.images.wait.end',{ms:Math.max(0,Math.round(clock()-started)),status:'reject',error:String(error&&error.name||'Error').slice(0,40)},0));
+    }
+  }catch(_){}
+})();

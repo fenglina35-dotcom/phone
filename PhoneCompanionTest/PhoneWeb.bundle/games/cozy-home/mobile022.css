@@ -1,0 +1,15 @@
+#mobileMenu{display:none}
+@media(pointer:coarse){
+ header{padding:8px max(14px,env(safe-area-inset-right)) 0 max(14px,env(safe-area-inset-left));height:62px}
+ header h1 small,header .eyebrow{display:none}header h1{font-size:16px;margin:10px 0}
+ #mobileMenu{display:block;position:absolute;right:max(14px,env(safe-area-inset-right));top:max(8px,env(safe-area-inset-top));height:44px;min-width:70px;padding:0 16px;border:1px solid #fff;border-radius:22px;background:#fff8eef0;color:#69554b;pointer-events:auto;z-index:21}
+ header nav{display:none;position:absolute;right:max(14px,env(safe-area-inset-right));top:60px;max-height:calc(100dvh - 132px);overflow:auto;width:330px;max-width:calc(100vw - 60px);padding:12px;background:#fff8eef5;border-radius:16px;box-shadow:0 8px 32px #382c3430;z-index:20}
+ header.menu-open nav{display:flex}header nav button,header nav select{min-height:44px;font-size:12px}header nav select{max-width:100%;width:100%}
+ #room{top:52px;left:max(14px,env(safe-area-inset-left))}#roomName{font-size:13px}#floorName{font-size:10px}
+ #intro{z-index:30;padding:8px max(20px,env(safe-area-inset-left))}#intro .welcome{max-height:calc(100dvh - 24px);overflow:auto;padding:18px 24px;width:min(500px,100%)}
+ #intro h2{font-size:20px!important}#intro .controls-copy{font-size:11px;line-height:1.6}#intro small{font-size:10px;line-height:1.4}#intro p{margin:5px 0;font-size:12px}#start{min-height:44px}
+ #joystick{left:max(24px,env(safe-area-inset-left));bottom:max(20px,env(safe-area-inset-bottom));width:116px;height:116px}
+ #interact{right:max(24px,env(safe-area-inset-right));bottom:max(28px,env(safe-area-inset-bottom));min-height:48px;max-width:46vw;font-size:14px}
+ #hint{bottom:7px;font-size:10px}#notice{bottom:82px;max-width:60%;font-size:12px}
+ #layoutEditor{top:62px!important;max-height:calc(100dvh - 92px)!important;right:max(12px,env(safe-area-inset-right))!important}
+}

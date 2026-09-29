@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {chineseSubtitle,dialogueText,DEMO_ZH,DEMO_EN} from './dialogue-text.mjs';
+assert.deepEqual(dialogueText(DEMO_ZH,'en-US'),{displayText:DEMO_ZH,spokenText:DEMO_EN,language:'en-US'});
+assert.deepEqual(dialogueText('今晚一起看电影吧。','zh-CN'),{displayText:'今晚一起看电影吧。',spokenText:'今晚一起看电影吧。',language:'zh-CN'});
+assert.deepEqual(dialogueText({displayText:'晚安。',spokenText:'Good night.',language:'en-GB'}),{displayText:'晚安。',spokenText:'Good night.',language:'en-GB'});
+assert.throws(()=>dialogueText('今晚一起看电影吧。','en-US'),/缺少/);
+for(const value of ['Good night.','你好 hello','こんにちは','안녕하세요','Привет','',null])assert.throws(()=>chineseSubtitle(value));
+assert.equal(chineseSubtitle('晚上8点，见面吧！'),'晚上8点，见面吧！');
+assert.throws(()=>dialogueText({displayText:'Good night.',spokenText:'Good night.',language:'en-US'}),/中文/);
+assert.throws(()=>dialogueText({displayText:'晚安。',spokenText:'',language:'en-US'}),/语音/);
+console.log('PASS: Chinese-only display, independent English speech, paired demo, missing-translation guard, mixed-language rejection');

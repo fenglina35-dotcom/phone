@@ -1,0 +1,371 @@
+{
+  "face": {
+    "format": "cozy-female-misaka001",
+    "version": 1,
+    "model": "misaka001",
+    "savedAt": "2026-09-14T16:24:45.758Z",
+    "parameters": {
+      "headHeight": 0.01,
+      "headWidth": 0.01,
+      "headDepth": -0.01,
+      "faceWidth": -0.07,
+      "jawWidth": 0,
+      "chin": -0.0075,
+      "cheeks": 0.0045,
+      "profile": -0.02,
+      "browHeight": -0.003,
+      "browSlope": -0.006,
+      "browThickness": -0.13,
+      "eyeLower": 0.002,
+      "eyeRotation": -12,
+      "eyeHeight": -0.0005,
+      "eyeWidth": 0.09,
+      "eyeOpen": -0.06,
+      "eyeSlope": 0,
+      "eyeSpace": -0.001,
+      "irisSize": -0.03,
+      "irisX": 0,
+      "irisY": 0.0015,
+      "nose": -0.003,
+      "noseHeight": 0,
+      "smileLip": 0.5,
+      "mouthHeight": 0.008,
+      "mouthWidth": -0.12,
+      "mouthFullness": 0.2,
+      "hairLength": 0.0145,
+      "bangLength": -0.0035,
+      "hairVolume": -0.0345,
+      "bodyHeight": -0.06,
+      "neckLength": 0.0155,
+      "bodyDepth": -0.16,
+      "waistCurve": 0.1,
+      "waistDepth": -0.08,
+      "bodyWidth": -0.02,
+      "iris": "#71284f",
+      "hair": "#a75a39",
+      "tint": false
+    }
+  },
+  "motion": {
+    "format": "cozy-female-motion001",
+    "version": 1,
+    "model": "misaka001",
+    "savedAt": "2026-09-14T16:14:07.686Z",
+    "motions": {
+      "Idle": {
+        "speed": 1,
+        "root": [
+          0,
+          0,
+          0
+        ],
+        "joints": {},
+        "skirtFrontHeight": 0,
+        "skirtFrontLength": 0
+      },
+      "Walk": {
+        "speed": 1,
+        "root": [
+          -0.055,
+          -0.005,
+          0
+        ],
+        "joints": {
+          "J_Bip_R_Thumb1": [
+            -32,
+            -4,
+            -28
+          ],
+          "J_Bip_L_Thumb1": [
+            -8,
+            -27,
+            10
+          ],
+          "J_Bip_L_Hand": [
+            12,
+            15,
+            0
+          ],
+          "J_Bip_R_Hand": [
+            8,
+            36,
+            0
+          ],
+          "J_Bip_L_Shoulder": [
+            -8,
+            -17,
+            22
+          ],
+          "J_Bip_R_Shoulder": [
+            -6,
+            -12,
+            -12
+          ],
+          "J_Bip_L_LowerLeg": [
+            1,
+            17,
+            0
+          ],
+          "J_Bip_R_LowerLeg": [
+            -1,
+            -29,
+            0
+          ],
+          "J_Bip_L_UpperLeg": [
+            0,
+            0,
+            0
+          ],
+          "J_Bip_C_Hips": [
+            0,
+            0,
+            0
+          ]
+        },
+        "skirtFrontHeight": 0,
+        "skirtFrontLength": 0
+      },
+      "OpenDoor": {
+        "speed": 1,
+        "root": [
+          0.02,
+          0,
+          0
+        ],
+        "joints": {
+          "J_Bip_C_Head": [
+            14,
+            0,
+            1
+          ],
+          "J_Bip_L_Shoulder": [
+            13,
+            12,
+            -9
+          ],
+          "J_Bip_L_LowerArm": [
+            9,
+            -81,
+            8
+          ],
+          "J_Bip_L_UpperArm": [
+            0,
+            -8,
+            -6
+          ],
+          "J_Bip_R_Shoulder": [
+            0,
+            0,
+            -12
+          ],
+          "J_Bip_L_Foot": [
+            0,
+            0,
+            0
+          ],
+          "J_Bip_L_ToeBase": [
+            0,
+            -1,
+            1
+          ],
+          "J_Bip_L_LowerLeg": [
+            0,
+            16,
+            0
+          ],
+          "J_Bip_R_LowerLeg": [
+            0,
+            -14,
+            0
+          ]
+        },
+        "skirtFrontHeight": 0,
+        "skirtFrontLength": 0
+      },
+      "SitDown": {
+        "speed": 1,
+        "root": [
+          0,
+          0.05,
+          0
+        ],
+        "joints": {
+          "J_Bip_R_LowerArm": [
+            -34,
+            -71,
+            -3
+          ],
+          "J_Bip_R_Hand": [
+            15,
+            0,
+            0
+          ],
+          "J_Bip_R_Index1": [
+            -7,
+            0,
+            0
+          ],
+          "J_Bip_R_Thumb1": [
+            -3,
+            -23,
+            -21
+          ],
+          "J_Bip_L_UpperArm": [
+            2,
+            0,
+            0
+          ],
+          "J_Bip_L_LowerArm": [
+            -37,
+            71,
+            2
+          ],
+          "J_Bip_L_Hand": [
+            17,
+            4,
+            -3
+          ],
+          "J_Bip_L_Thumb1": [
+            0,
+            7,
+            22
+          ]
+        },
+        "skirtFrontHeight": -0.016,
+        "skirtFrontLength": -0.108
+      },
+      "SitIdle": {
+        "speed": 1,
+        "root": [
+          0,
+          0.05,
+          0
+        ],
+        "joints": {
+          "J_Bip_R_LowerArm": [
+            -30,
+            -66,
+            -1
+          ],
+          "J_Bip_R_Hand": [
+            15,
+            0,
+            0
+          ],
+          "J_Bip_R_Index1": [
+            -7,
+            0,
+            0
+          ],
+          "J_Bip_R_Thumb1": [
+            -3,
+            -23,
+            -21
+          ],
+          "J_Bip_L_UpperArm": [
+            2,
+            -9,
+            0
+          ],
+          "J_Bip_L_LowerArm": [
+            -37,
+            71,
+            2
+          ],
+          "J_Bip_L_Hand": [
+            17,
+            4,
+            -3
+          ],
+          "J_Bip_L_Thumb1": [
+            0,
+            7,
+            22
+          ],
+          "J_Bip_R_UpperArm": [
+            0,
+            5,
+            0
+          ]
+        },
+        "skirtFrontHeight": -0.016,
+        "skirtFrontLength": -0.108
+      },
+      "StandUp": {
+        "speed": 1,
+        "root": [
+          0,
+          0,
+          0
+        ],
+        "joints": {},
+        "skirtFrontHeight": 0,
+        "skirtFrontLength": 0
+      },
+      "LieDown": {
+        "speed": 1,
+        "root": [
+          0,
+          0,
+          0
+        ],
+        "joints": {},
+        "skirtFrontHeight": 0,
+        "skirtFrontLength": 0
+      },
+      "LieIdle": {
+        "speed": 1,
+        "root": [
+          0,
+          0,
+          0
+        ],
+        "joints": {
+          "J_Bip_R_LowerLeg": [
+            -1,
+            -29,
+            0
+          ],
+          "J_Bip_L_UpperLeg": [
+            0,
+            4,
+            -10
+          ],
+          "J_Bip_R_UpperLeg": [
+            0,
+            0,
+            9
+          ],
+          "J_Bip_L_Foot": [
+            19,
+            32,
+            -17
+          ],
+          "J_Bip_R_Foot": [
+            29,
+            -29,
+            23
+          ],
+          "J_Bip_L_LowerLeg": [
+            0,
+            23,
+            0
+          ]
+        },
+        "skirtFrontHeight": 0,
+        "skirtFrontLength": 0
+      },
+      "GetUp": {
+        "speed": 1,
+        "root": [
+          0,
+          0,
+          0
+        ],
+        "joints": {},
+        "skirtFrontHeight": 0,
+        "skirtFrontLength": 0
+      }
+    }
+  }
+}

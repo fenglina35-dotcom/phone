@@ -1,0 +1,11 @@
+import {createCompanion} from './actor-companion.mjs';
+import assert from 'node:assert/strict';
+let ob={state:'idle',position:{x:0,y:0,z:0}},pair=null,calls=[],cancelled=0;
+const c=createCompanion({player:{x:3,y:0,z:0},observe:()=>ob,command:a=>{calls.push(a);return {ok:true};},nav:{route:(a,b)=>[b],valid:()=>true},world:{room:()=> 'living'},gate:{setLocked(){}},locations:{},emit(){},cancelNavigation(){cancelled++;if(ob.state==='walking')ob={...ob,state:'idle'};},pairing:()=>pair});
+c.accept({type:'follow'});pair={shared:true,playerKey:'bed:0',target:{id:'bed',slot:1,key:'bed:1',bed:true}};c.update(1);assert.equal(calls.at(-1).type,'sleep');assert.equal(calls.at(-1).slot,1);
+ob={...ob,state:'sleeping',seat:{key:'bed:1'}};c.update(1);assert.equal(c.state().phase,'together');const count=calls.length;c.update(1);assert.equal(calls.length,count);
+pair=null;c.update(1);assert.equal(calls.at(-1).type,'get_up');
+ob={...ob,state:'idle',seat:null};pair={shared:true,playerKey:'tub:0',target:null};const before=calls.length;c.update(1);assert.equal(calls.length,before);assert.equal(c.state().phase,'waiting_for_seat');
+pair={shared:false,playerKey:'toilet:0',target:null};c.update(1);assert.notEqual(calls.at(-1).type,'sit');
+ob={...ob,state:'walking'};const previous=cancelled;pair={shared:true,playerKey:'sofa:0',target:{id:'sofa',slot:1,key:'sofa:1'}};c.update(1);assert(cancelled>previous);c.update(1);assert.equal(calls.at(-1).target,'sofa');
+c.accept({type:'stop_follow'});const stopped=calls.length;c.update(10);assert.equal(calls.length,stopped);assert.equal(c.state().mode,'off');console.log('PASS follow pairing, no repeat requests, get-up resumption, occupied/single exclusion, retarget cancellation and stop');
