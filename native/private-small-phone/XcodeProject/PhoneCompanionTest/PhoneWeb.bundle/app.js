@@ -1489,8 +1489,8 @@ function msgToText(m){
     case 'weblink':return '[我转发给你一条联网搜到的资料：'+m.title+'——'+((m.snippet||'').slice(0,120))+']';
     case 'text':{const q=quoteContextText(m,'text');return q?(q+(m.content||'')):(m.content||'');}
     case 'image':return m.textCard?'[我发了一张图文照片卡。这在聊天里是一张图片；请把我亲自填写的照片描述当作画面事实来理解并自然回应。照片描述：'+(m.desc||'未填写描述')+'。不要说没有收到图片，也不要添加描述里不存在的视觉细节。]':m.desc?'[我发了一张照片。你已经看到了真实画面，画面是：'+m.desc+'。请直接结合画面回应，绝对不要说图片没收到、没显示或识图失败。]':m.visionState==='pending'?'[我刚发了一张照片，画面仍在载入；先等待识图完成，不要抢先回复，也不要说没收到图片。]':'[我发了一张照片，图片已经送达，但这一张的画面解析失败。不要谎称图片没收到或没显示，也不要反复让我重发；若当前还有文字消息，先回应文字。]';
-    case 'transfer':return '[我给你转账 ¥'+(+m.amount).toFixed(2)+(m.note?'，备注'+m.note:'')+']';
-    case 'redpacket':return '[我发了个红包 ¥'+(+m.amount).toFixed(2)+(m.note?'，'+m.note:'')+']';
+    case 'transfer':return '[我给你转账 ¥'+(+m.amount).toFixed(2)+(m.note?'，备注'+m.note:'')+(m._roleSeenAt&&transferState(m)==='pending'?'（这笔你之前看到时没有收，一直放着；除非我再提起，不要突然收款或拿它说事）':'')+']';
+    case 'redpacket':return '[我发了个红包 ¥'+(+m.amount).toFixed(2)+(m.note?'，'+m.note:'')+(m._roleSeenAt&&transferState(m)==='pending'?'（这笔你之前看到时没有收，一直放着；除非我再提起，不要突然收款或拿它说事）':'')+']';
     case 'location':return '[我发了位置：'+(m.name||'')+' '+(m.address||'')+']';
     case 'file':return '[我发了文件「'+(m.name||'')+'」'+chatFileContextBody(m)+']';
     case 'spycard':return '[我把我的小手机查看权限发给你了，你现在可以随时查看我的手机：聊天对象、钱包、朋友圈互动、动态。]';
@@ -13809,7 +13809,11 @@ function receivePay(mid){let found;for(const id in S.messages){const rows=Array.
   msgs(found.id).push({role:'user',type:'sys',content:'你领取了'+(found.m.type==='redpacket'?'红包':'转账'),time:Date.now()});
   save();render();toast('已收款 +¥'+(+found.m.amount).toFixed(2)+' ❤️');}
 function lastTransferAmt(id){const m=[...msgs(id)].reverse().find(x=>x.role==='user'&&x.type==='transfer');return m?+m.amount:0;}
-function markTransfer(id,mode){const m=[...msgs(id)].reverse().find(x=>x.role==='user'&&!x._transferReceipt&&(x.type==='transfer'||x.type==='redpacket')&&transferState(x)==='pending');if(m){const now=Date.now();m.transferAt=+m.transferAt||+m.time||now;if(mode==='reject'){m.declined=true;m.refunded=true;m.payState='refunded';m.refundedAt=now;if(m.type==='transfer')transferReceiptEnsure(id,m,'assistant','refund',now);}else{m.received=true;m.payState='received';m.receivedAt=now;if(m.type==='transfer')transferReceiptEnsure(id,m,'assistant','receive',now);}}return m||null;}
+/* 角色只在转账后的第一次回复里决定收或退；那次没处理就标记为已看过，之后不许突然收款，除非用户本轮自己再提起。 */
+function transferPendingUserItems(id){return (msgs(id)||[]).filter(x=>x&&x.role==='user'&&!x._transferReceipt&&(x.type==='transfer'||x.type==='redpacket')&&transferState(x)==='pending'&&!x._roleSeenAt);}
+function transferMarkRoleSeen(list){const now=Date.now();let changed=false;(list||[]).forEach(m=>{if(m&&transferState(m)==='pending'&&!m._roleSeenAt){m._roleSeenAt=now;changed=true;}});if(changed)save();}
+function transferUserReminded(text){return /转账|收款|收下|收钱|红包|钱|退回|退给|退还/.test(String(text||''));}
+function markTransfer(id,mode,opt){const m=[...msgs(id)].reverse().find(x=>x.role==='user'&&!x._transferReceipt&&(x.type==='transfer'||x.type==='redpacket')&&transferState(x)==='pending');if(m&&m._roleSeenAt&&opt&&!(!opt.proactive&&transferUserReminded(opt.userText)))return null;if(m){const now=Date.now();m.transferAt=+m.transferAt||+m.time||now;if(mode==='reject'){m.declined=true;m.refunded=true;m.payState='refunded';m.refundedAt=now;if(m.type==='transfer')transferReceiptEnsure(id,m,'assistant','refund',now);}else{m.received=true;m.payState='received';m.receivedAt=now;if(m.type==='transfer')transferReceiptEnsure(id,m,'assistant','receive',now);}}return m||null;}
 function markPay(id,mode){const m=[...msgs(id)].reverse().find(x=>x.role==='user'&&x.type==='paycard'&&!x._paid&&!x._rejected);if(m){if(mode==='reject')m._rejected=true;else m._paid=true;}return m||null;}
 
 function chatComposerReflow(ta){if(!ta)return;const min=36,max=84,oldScroll=ta.scrollTop||0;ta.style.height='auto';const full=Math.max(min,ta.scrollHeight||min);ta.style.height=Math.min(full,max)+'px';ta.style.overflowY=full>max?'auto':'hidden';ta.scrollTop=full>max?oldScroll:0;}
@@ -15078,6 +15082,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
   const _handoffTurn=replyHandoffBegin(id,note,replyToken,replyAccount,replyIntent,!!(replyOptions&&replyOptions.reopenCompleted));if(_handoffTurn&&replyHandoffCompleted(_handoffTurn)){if(typingEl&&typingEl.isConnected)typingEl.remove();replyNoVisibleReasonSet(id,replyAccount,replyToken,'这条消息已完成回复，本次没有请求模型');return false;}
   try{
     let _lu=null;{const _ms=msgs(id);for(let i=_ms.length-1;i>=0;i--){if(_ms[i].role==='user'&&_ms[i].type!=='sys'){_lu=_ms[i];break;}}}
+    const _transferPendingAtStart=transferPendingUserItems(id);
     const _userText=(_lu&&msgToText(_lu))||'',_explicitCallTurn=!note&&explicitIncomingCallRequest(_userText),_naturalOn=wechatNaturalOn(),_autonomyNote=wechatNaturalAutonomyNoteActive(note),_manualUnlockNote=manualUnlockReplyActive(note),_altFirstContact=altFriendFirstContact(c,replyAccount),_altReportInfo=replyAccount==='main'?altAccountReportInfo(c,note):null,_foodReceiptInfo=replyAccount==='main'?foodReceiptEventInfo(note):null,_offEndInfo=replyAccount==='main'?offEndReplyEventInfo(note):null,_hlPlan=null;let _initiativeNoImage=initiativeBlocksImage(note),_initiativeNoLocation=initiativeBlocksLocation(note);
     const _nativeUserInspectionQueued=!note&&(nativeInspectionPending(_lu,id)||companionChargingConfirmationSchedule(c,_lu)||maybeSpyIntent('',c,id,_lu,{nativeOnly:true,immediate:true,suppressInitial:true}));if(_nativeUserInspectionQueued){if(typingEl&&typingEl.isConnected)typingEl.remove();return true;}
     const _memQuery=[note||_userText,...msgs(id).slice(-4).map(msgToText).filter(Boolean)].join('\n'),_memLimits=onlineMemoryRecallLimits(),_memCtx=selectRelevantMemory(c,_memQuery,_memLimits.total,_memLimits);
@@ -15269,8 +15274,8 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
       mm=line.match(/^\[拒绝代付\|?([0-9.]*)\|?([^\]]*)\]$/);if(mm){const pend=markPay(id,'reject');if(!pend)continue;const pc={role:'assistant',type:'payreject',price:pend.price||+mm[1]||0,name:pend.name||mm[2]||'',id:uid(),time:Date.now()};replyHandoffPush(_handoffTurn,msgs(id),pc);notifyIncoming(c,pc);save();refreshChatMessages(id);continue;}
       if(/^\[\s*收外卖\s*\]$/.test(line)){const pf=markFood(id,'accept');if(pf.length){const nm=pf.map(x=>'「'+x.name+'」').join('、');replyHandoffPush(_handoffTurn,msgs(id),{role:'user',type:'sys',content:'🛵 '+(c.remark||c.name)+'收下了外卖'+nm+(pf.length>1?'（共'+pf.length+'份）':'')+'，配送中（约15分钟送达）',time:Date.now(),id:uid()});adjMood(id,5);save();refreshChatMessages(id);}continue;}
       if(/^\[\s*拒外卖\s*\]$/.test(line)){const pf=markFood(id,'reject');if(pf.length){const tot=pf.reduce((s,x)=>s+(+x.price||0),0);addBill('in',tot,'外卖退款：'+pf.map(x=>x.name).join('、'));const nm=pf.map(x=>'「'+x.name+'」').join('、');replyHandoffPush(_handoffTurn,msgs(id),{role:'user',type:'sys',content:'❌ '+(c.remark||c.name)+'拒收了外卖'+nm+'，¥'+tot.toFixed(2)+' 已原路退回钱包',time:Date.now(),id:uid()});adjMood(id,-6);save();refreshChatMessages(id);}continue;}
-      mm=line.match(/^\[收款\|?([0-9.]*)\]$/);if(mm){const t=markTransfer(id,'collect');if(t){save();refreshChatMessages(id);}continue;}
-      mm=line.match(/^\[拒收\|?([0-9.]*)\]$/);if(mm){const t=markTransfer(id,'reject');if(t){const amt=+t.amount;if(!t._walletRefunded){t._walletRefunded=true;addBill('in',amt,(c.remark||c.name)+'退回的'+(t.type==='redpacket'?'红包':'转账'));}save();refreshChatMessages(id);}continue;}
+      mm=line.match(/^\[收款\|?([0-9.]*)\]$/);if(mm){const t=markTransfer(id,'collect',{userText:_userText,proactive:!!note});if(t){save();refreshChatMessages(id);}continue;}
+      mm=line.match(/^\[拒收\|?([0-9.]*)\]$/);if(mm){const t=markTransfer(id,'reject',{userText:_userText,proactive:!!note});if(t){const amt=+t.amount;if(!t._walletRefunded){t._walletRefunded=true;addBill('in',amt,(c.remark||c.name)+'退回的'+(t.type==='redpacket'?'红包':'转账'));}save();refreshChatMessages(id);}continue;}
       mm=line.match(/^\[收礼\]$/);if(mm){const g=lastGift(id);if(g){g.received=true;const mg={role:'assistant',type:'sys',content:'对方收下了你的礼物：'+g.name,time:Date.now(),id:uid()};replyHandoffPush(_handoffTurn,msgs(id),mg);}save();refreshChatMessages(id);continue;}
       mm=line.match(/^\[拒礼\]$/);if(mm){const g=lastGift(id);if(g){g.declined=true;addBill('in',+g.price,(c.remark||c.name)+'退回的礼物');const mg={role:'assistant',type:'sys',content:'对方拒收了礼物，'+(+g.price).toFixed(2)+'元已退回',time:Date.now(),id:uid()};replyHandoffPush(_handoffTurn,msgs(id),mg);}save();refreshChatMessages(id);continue;}
       mm=line.match(/^\[来电\|(语音|视频)\]$/);if(mm){const k=mm[1]==='视频'?'video':'voice';setTimeout(()=>incomingCall(c.id,k,{requestedByUser:_explicitCallTurn,source:'current-model-turn'}),600);continue;}
@@ -15312,6 +15317,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
           else if(cur().p==='wechat')render();}}
       }
     if(got&&typeof roleBusyCaptureReply==='function')roleBusyCaptureReply(c,_replyCandidate,replyAccount);
+    if(got)transferMarkRoleSeen(_transferPendingAtStart);
     if(typingEl&&typingEl.isConnected)typingEl.remove();
     if(_wantBg&&!_bgApplied)wechatApplyBgRequest(c,id);
     if(_hlPlan&&got){hlRecord(c,_hlPlan,content);save();}

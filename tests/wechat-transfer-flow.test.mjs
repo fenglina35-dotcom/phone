@@ -177,6 +177,22 @@ test('outgoing receive and refund create the matching assistant-side receipt wit
   assert.equal(refunded.rows.length,2);
 });
 
+test('v1346: a transfer the role already replied past is not collected later unless the user brings it up',()=>{
+  const original={id:'old1',role:'user',type:'transfer',amount:5201314,time:100};
+  const rows=[original];let saves=0;
+  const context=vm.createContext({msgs:()=>rows,uid:()=>`r${rows.length}`,save:()=>{saves++;}});
+  vm.runInContext(['transferState','transferCardCopy','transferReceiptEnsure','transferPendingUserItems','transferMarkRoleSeen','transferUserReminded','markTransfer'].map(functionSource).join('\n'),context);
+  const pending=context.transferPendingUserItems('c1');
+  assert.equal(pending.length,1);
+  context.transferMarkRoleSeen(pending);
+  assert.ok(original._roleSeenAt,'the first reply that ignores the transfer marks it as seen');
+  assert.equal(context.markTransfer('c1','collect',{userText:'',proactive:true}),null,'a later proactive message must not suddenly collect it');
+  assert.equal(context.markTransfer('c1','collect',{userText:'晚安',proactive:false}),null,'an unrelated later turn must not collect it');
+  assert.equal(context.transferState(original),'pending');
+  assert.equal(context.markTransfer('c1','collect',{userText:'你快收下转账呀',proactive:false}),original,'the user bringing it up again still allows collection');
+  assert.equal(context.transferState(original),'received');
+});
+
 test('legacy duplicate collection and rejection cards stay hidden',()=>{
   const bubble=functionSource('bubbleRow');
   const actionStart=app.indexOf("mm=line.match(/^\\[收款");

@@ -30,6 +30,7 @@ const count = (source, marker) => source.split(marker).length - 1;
 // same commit that syncs it.
 const PERMANENT_FIXES = [
   {release:"v1344",scope:"both",least:1,name:"原文模式整行控制标签去空白后执行，[收款]不再显示成文字",marker:"原文模式也要执行控制指令"},
+  {release:"v1346",scope:"both",least:1,name:"角色当时没处理的旧转账之后不会突然被收款",marker:"function transferMarkRoleSeen(list)"},
   {release:"v1344",scope:"both",least:1,name:"角色[联网]在原文模式下也真的执行",marker:"// 联网：这是执行角色的决定，不是输出过滤"},
   {release:"v1344",scope:"both",least:1,name:"联网结果由角色以可点开卡片分享",marker:"function webShareCardMsg(q,raw)"},
   {release:"v1344",scope:"both",least:3,name:"代付卡片商品名完整换行显示",marker:"class=\"wx-pay-card-name\""},
