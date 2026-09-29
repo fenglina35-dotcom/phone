@@ -50,19 +50,12 @@ test('ordinary online chat keeps the real iPhone control protocol and exact all-
   assert.match(app, /companionRolePrompt=function\(c,opt\)\{return companionFeatureAvailable\(\)\?companionRolePromptPrivateCore\(c,opt\):'';\}/);
 });
 
-test('a definite natural claim to lock every app is recovered without depending on a model parser', () => {
-  const sent = [];
-  const context = vm.createContext({ sent });
+test('all-app wording detection stays precise (used only to resolve targets, never to execute speech)', () => {
+  const context = vm.createContext({});
   vm.runInContext(`
-    const state={linked:true,roleAccess:true,permissions:{appControl:true},apps:[{id:'a'},{id:'b'}]};
-    function companionState(){return state;}
-    function companionReady(st){return !!st.linked;}
-    function companionDispatchRoleAll(action,opt){sent.push({action,actor:opt.actor});return true;}
     ${functionSource('companionAllControlClauseAction')}
     ${functionSource('companionNaturalAllControlAction')}
-    ${functionSource('companionRecoverNaturalAllControl')}
     this.detect=companionNaturalAllControlAction;
-    this.recover=companionRecoverNaturalAllControl;
   `, context);
   assert.equal(context.detect('我已经把你的所有软件都锁上了。'), 'lock');
   assert.equal(context.detect('全部 App 都给你解开了。'), 'unlock');
@@ -82,8 +75,8 @@ test('a definite natural claim to lock every app is recovered without depending 
   assert.equal(context.detect('All of them.\n（全部。）\nBut "good for one day" does not earn back everything.\n（但“乖了一天”换不回全部。）\nPick three. I will unlock three for you tonight.\n（选三个。今晚给你解开三个。）'), '');
   assert.equal(context.detect('我不会全部解开，只给你解开三个。'), '');
   assert.equal(context.detect('全部不解开。'), '');
-  assert.equal(context.recover('我把你的软件全部锁掉了。', { name: '北', remark: '先生' }), true);
-  assert.deepEqual(JSON.parse(JSON.stringify(sent)), [{ action: 'lock', actor: '先生' }]);
+  // v1348：说的话不再直接执行全部锁定；只有 [锁定|全部内外 App|内外同时] 这类指令会。
+  assert.doesNotMatch(app, /function companionRecoverNaturalAllControl\(/);
 });
 
 test('all-app companion commands dispatch every selected real iPhone app and every authorized internal app', () => {
@@ -135,7 +128,7 @@ test('all-app companion commands dispatch every selected real iPhone app and eve
   assert.match(functionSource('companionNativeCommandRun'), /SmallPhoneNative\.request\('device\.command',command\)/);
 });
 
-test('an incorrect internal-only model tag cannot downgrade a spoken all-lock or all-unlock', () => {
+test('v1348: speech never upgrades or triggers an all-lock; only an all-app tag does', () => {
   const context = vm.createContext({});
   vm.runInContext(`
     ${functionSource('companionAllExternalIntent')}
@@ -148,10 +141,13 @@ test('an incorrect internal-only model tag cannot downgrade a spoken all-lock or
   `, context);
   const wrongLock='我已经把全部软件锁好了。\n[锁定|云程、放映室、音乐、惊悚抉择、规则怪谈、角色扮演|仅内置]';
   const wrongUnlock='解除全锁了。\n[解锁|云程、放映室、音乐、惊悚抉择、规则怪谈、角色扮演|仅内置]';
-  assert.equal(context.detect(wrongLock),'lock');
-  assert.equal(context.detect(wrongUnlock),'unlock');
-  assert.doesNotMatch(context.strip(wrongLock,'lock'),/\[锁定\|/);
-  assert.doesNotMatch(context.strip(wrongUnlock,'unlock'),/\[解锁\|/);
+  assert.equal(context.detect(wrongLock),'','the tag decides: a partial tag stays partial');
+  assert.equal(context.detect(wrongUnlock),'');
+  assert.equal(context.detect('好吧。最后一个了。\n再多要一个，先生把刚解的全锁回去。'),'','a spoken threat must never lock everything');
+  assert.equal(context.detect('我已经把全部软件锁好了。'),'','speech alone never executes');
+  assert.equal(context.detect('好。\n[锁定|全部内外 App|内外同时]'),'lock');
+  assert.equal(context.detect('好。\n[解锁|全部内外 App|内外同时]'),'unlock');
+  assert.doesNotMatch(context.strip('[锁定|全部内外 App|内外同时]','lock'),/\[锁定\|/);
   const apply=functionSource('applyControlTags');
   assert.ok(apply.indexOf('companionRequestedAllControlAction(content,requestText)') < apply.indexOf("content.replace(/[\\[【]\\s*(锁定|上锁|解锁"));
   assert.match(apply,/companionDispatchRoleAll\(allControlAction/);
@@ -196,17 +192,16 @@ test('a negative mention of all never upgrades a partial target to all external 
   assert.notEqual(resolved.text, '全部内外 App');
 });
 
-test('control extraction uses deterministic all-app recovery first and retries parser failures once', () => {
-  const extract = functionSource('extractControl');
-  assert.ok(extract.indexOf('companionRecoverNaturalAllControl(reply,c)') < extract.indexOf('chatAPI('));
-  assert.match(extract, /attempt<2/);
-  assert.match(extract, /aux:attempt===0/);
+test('web and private share the same tag-only control contract', () => {
+  const confirm = functionSource('controlClaimConfirm');
+  assert.match(confirm, /applyControlTags\(tags\.join/);
   assert.equal(normalized(functionSource('companionRoleControlOnlyPrompt', bundled)), normalized(functionSource('companionRoleControlOnlyPrompt')));
   assert.equal(normalized(functionSource('companionAllControlClauseAction', bundled)), normalized(functionSource('companionAllControlClauseAction')));
   assert.equal(normalized(functionSource('companionNaturalAllControlAction', bundled)), normalized(functionSource('companionNaturalAllControlAction')));
   assert.equal(normalized(functionSource('companionRequestedAllControlAction', bundled)), normalized(functionSource('companionRequestedAllControlAction')));
   assert.equal(normalized(functionSource('companionDispatchRoleAll', bundled)), normalized(functionSource('companionDispatchRoleAll')));
-  assert.equal(normalized(functionSource('extractControl', bundled)), normalized(extract));
+  assert.equal(normalized(functionSource('controlClaimConfirm', bundled)), normalized(confirm));
+  assert.equal(normalized(functionSource('controlClaimCandidates', bundled)), normalized(functionSource('controlClaimCandidates')));
 });
 
 test('companion controls resolve a stable app id even after polling reorders the array', () => {

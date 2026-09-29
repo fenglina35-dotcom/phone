@@ -128,7 +128,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v1346 · 聊天卡片与记忆修复'/);
+  assert.match(app, /const APP_VER='v1348 · 管控说和做分开'/);
 });
 
 test('manual sync reads locally in the bundled app and keeps cloud fallback', () => {
@@ -743,35 +743,28 @@ test('an indirect unlock inherits one recent app but refuses an ambiguous group'
   assert.equal(context.resolve(state, { id: 'role' }, '给你解一个', '先放你用。').resolved, false);
 });
 
-test('a definite single-app natural unlock is recovered before the auxiliary model parser', () => {
-  const context = vm.createContext({});
+test('v1348: a spoken single-app unlock only executes after the role confirms it with a tag', async () => {
+  const applied = [];
+  const context = vm.createContext({ applied });
   vm.runInContext(`
-    const sent=[];
-    const state={linked:true,roleAccess:true,permissions:{appControl:true},apps:[{id:'ios.douyin',name:'抖音'}]};
-    function companionState(){return state;}
-    function companionReady(){return true;}
-    function companionResolveRoleActionTarget(){return {text:'抖音',scope:'external',resolved:true};}
-    function companionRoleScopeForText(){return 'external';}
-    function companionDispatchRoleByText(action,target){sent.push({action,target});return true;}
-    ${functionSource('companionMentionedExternalTargets')}
-    ${functionSource('companionNaturalTargetedUnlockTarget')}
-    ${functionSource('companionRecoverNaturalTargetedUnlock')}
-    this.recover=companionRecoverNaturalTargetedUnlock;
-    this.sent=sent;
+    const S={couple:{cid:'r'}};let _ctFired=false;
+    function applyControlTags(text){applied.push(text);_ctFired=/\\[解锁\\|抖音\\]/.test(text);return '';}
+    function companionControlLedgerForParser(){return '';}
+    ${app.split('\n').find(l => l.startsWith('const CONTROL_CLAIM_WORD='))}
+    ${functionSource('controlClaimCandidates')}
+    ${functionSource('controlClaimConfirm')}
+    this.confirm=controlClaimConfirm;
   `, context);
-  assert.equal(context.recover('行，抖音给你解开了。', { name: '角色' }), true);
-  assert.deepEqual(Array.from(context.sent, x => `${x.action}:${x.target}`), ['unlock:抖音']);
-  assert.equal(context.recover('抖音解锁失败了。', { name: '角色' }), false);
-  assert.equal(context.recover('等你写完作业再把抖音解开。', { name: '角色' }), false);
-  assert.equal(context.recover('要我把抖音解开吗？', { name: '角色' }), false);
-  assert.equal(context.sent.length, 1);
-  const recover = functionSource('companionRecoverNaturalTargetedUnlock');
-  const extract = functionSource('extractControl');
-  assert.match(recover, /companionNaturalTargetedUnlockTarget/);
-  assert.match(recover, /companionDispatchRoleByText\('unlock'/);
-  assert.match(extract, /companionRecoverNaturalTargetedUnlock\(reply,c\)/);
-  assert.match(functionSource('companionNaturalTargetedUnlockTarget'), /给你开了/);
-  assert.match(functionSource('companionNaturalTargetedUnlockTarget'), /失败/);
+  const role = { id: 'r', name: '角色' };
+  let asked = 0;
+  const ask = answer => async () => { asked += 1; return answer; };
+  assert.equal(await context.confirm('行，抖音给你解开了。', role, 'r', { ask: ask('[解锁|抖音]') }), true);
+  assert.deepEqual(Array.from(applied), ['[解锁|抖音]']);
+  assert.equal(await context.confirm('行，抖音给你解开了。', role, 'r', { ask: ask('[不执行]') }), false);
+  for (const text of ['抖音解锁失败了。', '等你写完作业再把抖音解开。', '要我把抖音解开吗？'])
+    assert.equal(await context.confirm(text, role, 'r', { ask: ask('[解锁|抖音]') }), false);
+  assert.equal(asked, 2, 'failures, conditions and questions never cost a confirmation call');
+  assert.equal(applied.length, 1);
 });
 
 test('queued companion commands request APNs wake without treating push as the receipt', () => {
@@ -831,18 +824,18 @@ test('a synced external-only app is routed to the real iPhone without silent dua
   assert.equal(context.pick(state, '抖音'), 'both');
 });
 
-test('role parser routes explicit and natural external controls through the companion dispatcher', () => {
+test('role control tags route external controls through the companion dispatcher; speech never does', () => {
   const tags = functionSource('applyControlTags');
-  const natural = functionSource('extractControl');
+  const confirm = functionSource('controlClaimConfirm');
   const bound = functionSource('companionDispatchBound');
   assert.match(tags, /companionDispatchRoleByText\('lock'/);
   assert.match(tags, /companionDispatchRoleByText\('limit'/);
   assert.match(tags, /companionDispatchRoleByText\('unlock'/);
-  assert.match(natural, /externalNames=dual&&\(deviceState\.permissions\.appControl\|\|deviceState\.permissions\.limits\)/);
-  assert.match(natural, /companionDispatchRoleByText\('limit'/);
-  assert.match(natural, /companionRoleScopeForText\(deviceState/);
-  assert.match(natural, /collectiveTarget/);
-  assert.match(natural, /companionResolveRoleActionTarget/);
+  assert.match(tags, /companionResolveRoleActionTarget/);
+  // v1348：说的话不再被解析执行；像已完成却没写指令时只回头问角色，执行的仍是它回出来的指令标签。
+  assert.doesNotMatch(app, /async function extractControl\(/);
+  assert.match(confirm, /applyControlTags\(tags\.join/);
+  assert.doesNotMatch(confirm, /companionDispatchRole/);
   const prompt = functionSource('companionRolePrompt');
   assert.match(prompt, /回看最近一组明确提到的 App/);
   assert.match(prompt, /按自己的性格自然发挥/);

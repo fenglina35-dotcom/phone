@@ -22,7 +22,7 @@ const BUILDS = [['web', read(WEB)], ['private', read(PRIVATE)]];
 
 test('解析器拿得到当前锁定状态', () => {
   for (const [label, src] of BUILDS) {
-    assert.match(src, /availableNames\.join\('、'\)\+companionControlLedgerForParser\(\)/, `${label}: 台账要接进提示词`);
+    assert.ok(one(src, 'controlClaimConfirm').includes('companionControlLedgerForParser()'), `${label}: 台账要接进确认提示词`);
     const ctx = {
       String, Object, Array,
       LOCKABLE: { game: '游戏', video: '视频' },
@@ -42,13 +42,25 @@ test('解析器拿得到当前锁定状态', () => {
   }
 });
 
-test('提示词明确不认威胁、未来时、陈述现状和空操作', () => {
+// v1348：用户改为「说和做分开」——说的话永远不执行，只有指令标签执行。
+// 嘴上像已经做了却没写指令时，本地先排除威胁/条件/将来/疑问/否定，剩下的才回头问角色本人一次。
+test('威胁、条件、将来、疑问和否定不会触发确认，更不会真锁真解', () => {
   for (const [label, src] of BUILDS) {
-    for (const phrase of [
-      '条件或威胁', '再不睡就把X锁掉', '未来或延后', '明天给你解开',
-      '只是在陈述现状', '抖音还锁着呢', '目标已经是那个状态',
-      '只有"已经给你锁了""现在就给你解开"这种当下已成事实的说法才填进数组',
-    ]) assert.ok(src.includes(phrase), `${label}: 提示词缺少「${phrase}」`);
+    const ctx = {};
+    vm.runInNewContext(src.split('\n').find(l => l.startsWith('const CONTROL_CLAIM_WORD=')) + '\n' + one(src, 'controlClaimCandidates') + '\nglobalThis.f=controlClaimCandidates;', ctx);
+    for (const text of [
+      '再多要一个，先生把刚解的全锁回去。', '再不睡就把抖音锁掉。', '你敢再刷我就锁了。', '明天给你解开。',
+      '等你写完作业再把抖音解开。', '要我把抖音解开吗？', '想得美，不会给你解开的。', '抖音还没解。', '好吧。最后一个了。',
+    ]) assert.deepEqual(Array.from(ctx.f(text)), [], `${label}: 「${text}」不应触发确认`);
+    for (const text of ['行，抖音给你解开了。', '我已经把游戏锁上了。', '都给你解了。'])
+      assert.equal(ctx.f(text).length, 1, `${label}: 「${text}」应回头确认`);
+    assert.ok(src.includes('【说和做分开·最高优先级】你说的话永远不会锁或解锁任何东西'), `${label}: 角色提示词缺少说和做分开`);
+    assert.ok(!src.includes('你一说\\"解开了\\"就会被当成真实动作'), `${label}: 不得再教角色靠说话触发`);
+    assert.ok(!src.includes('function extractControl('), `${label}: 不得恢复从说话里猜的解析器`);
+    assert.ok(!src.includes('function naturalUngagFallback('), `${label}: 不得恢复从说话里猜的解禁`);
+    const confirm = one(src, 'controlClaimConfirm');
+    assert.match(confirm, /只输出 \[不执行\]/);
+    assert.match(confirm, /applyControlTags\(tags\.join\('\\n'\)/, `${label}: 只执行角色确认时回出来的指令`);
   }
 });
 

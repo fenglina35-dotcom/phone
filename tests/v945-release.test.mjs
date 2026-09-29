@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1346 · 聊天卡片与记忆修复'/);
-  assert.match(app,/const url='sw\.js\?v=1346&r=v1346-web-stale-transfer-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1346'/);
-  assert.match(html,/app\.js\?v=1346/);
-  assert.match(sw,/const BUILD='1346'/);
-  assert.match(sw,/north-shell-v1346-web-stale-transfer-1/);
-  assert.match(index,/小手机\.html\?v=1346/);
-  assert.match(repair,/小手机\.html\?v=1346/);
+  assert.match(app,/APP_VER='v1348 · 管控说和做分开'/);
+  assert.match(app,/const url='sw\.js\?v=1348&r=v1348-web-control-contract-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1348'/);
+  assert.match(html,/app\.js\?v=1348/);
+  assert.match(sw,/const BUILD='1348'/);
+  assert.match(sw,/north-shell-v1348-web-control-contract-1/);
+  assert.match(index,/小手机\.html\?v=1348/);
+  assert.match(repair,/小手机\.html\?v=1348/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{
   assert.match(privateBundle,/<string>1200<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.400;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 400;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.400 \(400\)'/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.401;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 401;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.401 \(401\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

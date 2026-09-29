@@ -29,6 +29,9 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"v1348/v1349",scope:"both",least:1,name:"管控说和做分开：说的话不执行，只执行指令标签",marker:"【说和做分开·最高优先级】你说的话永远不会锁或解锁任何东西"},
+  {release:"v1348/v1349",scope:"both",least:1,name:"像已完成却没写指令时只回头问角色一次，只执行它回的指令",marker:"async function controlClaimConfirm(reply,c,id,opt)"},
+  {release:"v1348/v1349",scope:"both",least:1,name:"真实执行的锁/解锁在聊天里留系统提示",marker:"真实执行过的管控在聊天里留一行系统提示"},
   {release:"v1344",scope:"both",least:1,name:"原文模式整行控制标签去空白后执行，[收款]不再显示成文字",marker:"原文模式也要执行控制指令"},
   {release:"v1346",scope:"both",least:1,name:"角色当时没处理的旧转账之后不会突然被收款",marker:"function transferMarkRoleSeen(list)"},
   {release:"v1344",scope:"both",least:1,name:"角色[联网]在原文模式下也真的执行",marker:"// 联网：这是执行角色的决定，不是输出过滤"},
@@ -313,9 +316,9 @@ const PERMANENT_FIXES = [
   },
   {
     release: 'v1257',
-    name: '威胁与未来时不再触发真锁真解：只认当下已成事实的说法',
+    name: '威胁与未来时不再触发真锁真解（v1348 起：说的话一律不执行，只有指令；像已完成的说法只回头确认）',
     scope: 'both',
-    marker: '条件或威胁',
+    marker: 'function controlClaimCandidates(reply)',
     least: 1,
   },
   {

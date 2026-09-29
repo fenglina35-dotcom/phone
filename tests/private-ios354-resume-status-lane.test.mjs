@@ -37,19 +37,19 @@ function pollHarness(){
   return {context,calls};
 }
 
-test('private candidate is v1341 and iOS 399 while public advances independently',()=>{
-  assert.match(app,/APP_VER='v1341 · 私人外置语音独立通道修复'/);
+test('private candidate is v1349 and iOS 399 while public advances independently',()=>{
+  assert.match(app,/APP_VER='v1349 · 私人管控说和做分开与聊天修复'/);
   for(const html of [index,alias]){
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1341'/);
-    assert.match(html,/app\.js\?v=1341&r=v1341-private-external-tts-relay-1/);
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1349'/);
+    assert.match(html,/app\.js\?v=1349&r=v1349-private-control-contract-1/);
     assert.match(html,/private-runtime-diagnostics\.js\?v=339/);
   }
   assert.match(diagnostics,/OVERLAY_VERSION='336-daily-file-backup'/);
-  assert.match(webView,/1\.0\.400 \(400\)/);
-  assert.match(bridge,/private static let build = "1\.0\.400 \(400\)"/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 400;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.400;/g)||[]).length,12);
-  assert.match(publicApp,/APP_VER='v1346 · 聊天卡片与记忆修复'/);
+  assert.match(webView,/1\.0\.401 \(401\)/);
+  assert.match(bridge,/private static let build = "1\.0\.401 \(401\)"/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 401;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.401;/g)||[]).length,12);
+  assert.match(publicApp,/APP_VER='v1348 · 管控说和做分开'/);
 });
 
 test('ordinary foreground polling is lightweight while explicit control verification stays complete',async()=>{
