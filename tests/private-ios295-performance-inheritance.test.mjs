@@ -45,20 +45,20 @@ function functionSource(sourceText, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('private identifiers remain v1353 and iOS 399 while public advances independently', () => {
+test('private identifiers remain v1355 and iOS 399 while public advances independently', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1353'/);
-  assert.match(index, /app\.js\?v=1353&r=v1353-private-robot-merge-1/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1355'/);
+  assert.match(index, /app\.js\?v=1355&r=v1355-private-app-name-fix-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(app, /APP_VER='v1353 · 小K合并管控与聊天修复'/);
+  assert.match(app, /APP_VER='v1355 · 小K合并与放映室锁定修复'/);
   assert.match(overlay, /336-daily-file-backup/);
   assert.match(webview, /1\.0\.420 \(420\)/);
   assert.match(bridge, /private static let build = "1\.0\.420 \(420\)"/);
   assert.match(bridge, /static let contractVersion = 42/);
   assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 420;/g) || []).length, 12);
   assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.420;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1348 · 管控说和做分开'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1348'/);
+  assert.match(publicApp, /APP_VER='v1350 · 放映室云程锁定修复'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1350'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
@@ -146,7 +146,7 @@ test('diagnostics identify the protected stage without collecting content', () =
   assert.doesNotMatch(overlay, /messageBody|chatContent|authorizationToken/);
 });
 
-test('Mac guide identifies the current private v1353 iOS420 source', () => {
+test('Mac guide identifies the current private v1355 iOS420 source', () => {
   const install = fs.readFileSync(
     path.join(project, '第三百二十七次安装_v1206_完整衣柜_请先读.md'),
     'utf8',
@@ -164,7 +164,7 @@ test('Mac guide identifies the current private v1353 iOS420 source', () => {
   assert.match(mac, /原生桥.*38/);
   assert.match(install, /1\.0\.327 \(327\)/);
   assert.match(install, /原生桥.*35/);
-  assert.match(mac, /^# v1353 .*iOS420/);
+  assert.match(mac, /^# v1355 .*iOS420/);
   assert.match(mac, /网页.*推送/);
   assert.match(install, /私人内置网页 v1206/);
   assert.match(install, /两边共有/);

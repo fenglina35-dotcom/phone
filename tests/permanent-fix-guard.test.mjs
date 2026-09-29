@@ -29,6 +29,10 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"v1350/v1355",scope:"both",least:1,name:"指令里的 App 名对不上时调用一次模型对应到已授权 App 再执行",marker:"async function controlResolveUnknownApps(list,c,id,pwd)"},
+  {release:"v1350/v1355",scope:"both",least:1,name:"App 未授权或对不上时留事实提示，绝不静默失败",marker:"但这个 App 没有授权给ta，没有执行"},
+  {release:"v1350/v1355",scope:"both",least:1,name:"放映室、云程等 App 名称都能解析，锁定指令不再静默失败",marker:"return APPNAME2KEY[n]||Object.keys(LOCKABLE).find(k=>LOCKABLE[k]===n);"},
+  {release:"v1350/v1355",scope:"both",least:1,name:"嘴上说已锁却没执行时留下事实提示",marker:"嘴上说了「'+claims.join(' ').slice(0,60)+'」，但实际没有执行"},
   {release:"v1353（Mac 线 v1343–v1352）",scope:"private",least:1,name:"小K表情随回复同步并在首条可见气泡时点亮",marker:"robotFaceFirstVisible(_robotFaceTurn,_robotFaceResult.emotion,replyAccount)"},
   {release:"v1353（Mac 线 v1343–v1352）",scope:"private",least:1,name:"小K独立语音接管回复并取消人为气泡等待",marker:"if(id&&typeof RobotVoice!=='undefined'&&RobotVoice.roleActive(id))return 0;"},
   {release:"v1353（Mac 线 v1343–v1352）",scope:"private",least:1,name:"小K语音输入复用用户发言后续流程",marker:"function wechatContinueUserText(id,t,opt)"},

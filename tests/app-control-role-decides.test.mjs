@@ -102,3 +102,14 @@ test('用户自己解锁时，角色的话不再被模板顶替', () => {
     assert.doesNotMatch(src, /这次我收到了/, `${label}: 收据式文案要去掉`);
   }
 });
+
+// v1350：放映室、云程不在别名表里，[锁定|放映室] 一直静默失败，角色却说“锁了”。
+test('every lockable app name resolves, including 放映室 and 云程', () => {
+  for (const [label, src] of BUILDS) {
+    const ctx = {};
+    vm.runInNewContext(src.match(/const LOCKABLE=\{[^}]*\};/)[0].replace('const LOCKABLE=', 'globalThis.LOCKABLE=') + ';' + src.match(/const APPNAME2KEY=\{[^}]*\};/)[0].replace('const APPNAME2KEY=', 'globalThis.APPNAME2KEY=') + ';' + one(src, '_appKeys').replace('function _appKeys', 'globalThis._appKeys=function'), ctx);
+    for (const [key, name] of Object.entries(ctx.LOCKABLE))
+      assert.deepEqual(Array.from(ctx._appKeys(name, Object.keys(ctx.LOCKABLE), () => true)), [key], `${label}: ${name} 必须能解析成 ${key}`);
+    assert.deepEqual(Array.from(ctx._appKeys('放映室、云程', Object.keys(ctx.LOCKABLE), k => k === 'cinema')), ['cinema'], `${label}: 未授权的 App 仍被过滤`);
+  }
+});

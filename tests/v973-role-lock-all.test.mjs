@@ -75,7 +75,7 @@ test('all-app wording detection stays precise (used only to resolve targets, nev
   assert.equal(context.detect('All of them.\n（全部。）\nBut "good for one day" does not earn back everything.\n（但“乖了一天”换不回全部。）\nPick three. I will unlock three for you tonight.\n（选三个。今晚给你解开三个。）'), '');
   assert.equal(context.detect('我不会全部解开，只给你解开三个。'), '');
   assert.equal(context.detect('全部不解开。'), '');
-  // v1348：说的话不再直接执行全部锁定；只有 [锁定|全部内外 App|内外同时] 这类指令会。
+  // v1350：说的话不再直接执行全部锁定；只有 [锁定|全部内外 App|内外同时] 这类指令会。
   assert.doesNotMatch(app, /function companionRecoverNaturalAllControl\(/);
 });
 
@@ -128,7 +128,7 @@ test('all-app companion commands dispatch every selected real iPhone app and eve
   assert.match(functionSource('companionNativeCommandRun'), /SmallPhoneNative\.request\('device\.command',command\)/);
 });
 
-test('v1348: speech never upgrades or triggers an all-lock; only an all-app tag does', () => {
+test('v1350: speech never upgrades or triggers an all-lock; only an all-app tag does', () => {
   const context = vm.createContext({});
   vm.runInContext(`
     ${functionSource('companionAllExternalIntent')}

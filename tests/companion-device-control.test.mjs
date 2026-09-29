@@ -128,7 +128,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v1348 · 管控说和做分开'/);
+  assert.match(app, /const APP_VER='v1350 · 放映室云程锁定修复'/);
 });
 
 test('manual sync reads locally in the bundled app and keeps cloud fallback', () => {
@@ -743,11 +743,12 @@ test('an indirect unlock inherits one recent app but refuses an ambiguous group'
   assert.equal(context.resolve(state, { id: 'role' }, '给你解一个', '先放你用。').resolved, false);
 });
 
-test('v1348: a spoken single-app unlock only executes after the role confirms it with a tag', async () => {
+test('v1350: a spoken single-app unlock only executes after the role confirms it with a tag', async () => {
   const applied = [];
   const context = vm.createContext({ applied });
   vm.runInContext(`
-    const S={couple:{cid:'r'}};let _ctFired=false;
+    const S={couple:{cid:'r'}};let _ctFired=false;const rows=[];this.rows=rows;
+    function msgs(){return rows;}function uid(){return 'n'+rows.length;}function save(){}function cur(){return {p:'home'};}
     function applyControlTags(text){applied.push(text);_ctFired=/\\[解锁\\|抖音\\]/.test(text);return '';}
     function companionControlLedgerForParser(){return '';}
     ${app.split('\n').find(l => l.startsWith('const CONTROL_CLAIM_WORD='))}
@@ -761,6 +762,7 @@ test('v1348: a spoken single-app unlock only executes after the role confirms it
   assert.equal(await context.confirm('行，抖音给你解开了。', role, 'r', { ask: ask('[解锁|抖音]') }), true);
   assert.deepEqual(Array.from(applied), ['[解锁|抖音]']);
   assert.equal(await context.confirm('行，抖音给你解开了。', role, 'r', { ask: ask('[不执行]') }), false);
+  assert.match(context.rows.at(-1).content, /嘴上说了「行，抖音给你解开了。」，但实际没有执行/, 'an unexecuted claim leaves a visible fact line');
   for (const text of ['抖音解锁失败了。', '等你写完作业再把抖音解开。', '要我把抖音解开吗？'])
     assert.equal(await context.confirm(text, role, 'r', { ask: ask('[解锁|抖音]') }), false);
   assert.equal(asked, 2, 'failures, conditions and questions never cost a confirmation call');
@@ -832,7 +834,7 @@ test('role control tags route external controls through the companion dispatcher
   assert.match(tags, /companionDispatchRoleByText\('limit'/);
   assert.match(tags, /companionDispatchRoleByText\('unlock'/);
   assert.match(tags, /companionResolveRoleActionTarget/);
-  // v1348：说的话不再被解析执行；像已完成却没写指令时只回头问角色，执行的仍是它回出来的指令标签。
+  // v1350：说的话不再被解析执行；像已完成却没写指令时只回头问角色，执行的仍是它回出来的指令标签。
   assert.doesNotMatch(app, /async function extractControl\(/);
   assert.match(confirm, /applyControlTags\(tags\.join/);
   assert.doesNotMatch(confirm, /companionDispatchRole/);
