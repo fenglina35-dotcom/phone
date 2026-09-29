@@ -185,7 +185,7 @@ def validate(files: dict[str, bytes]) -> None:
         ("function modelOutputUnfiltered(){return true;}", "v1255 原文输出全局默认"),
         ("wechatReasoningLeak==='function'&&wechatReasoningLeak(t))||isRefusal(t)", "v1255 线下推理泄漏检查"),
         ("companionControlLedgerForParser()", "v1257 解析器知道当前锁定状态"),
-        ("条件或威胁", "v1257 威胁不触发真锁"),
+        ("function controlClaimCandidates(reply)", "v1257 威胁不触发真锁（v1348 起说的话一律不执行）"),
         ("opt.by==='role'&&companionExternalAlreadyInState(st,app,action)", "v1257 外置不重复下发"),
         ("这不是设备读数汇报", "v1257 手动解锁改为关系事件"),
         ("async function callChatWithRetry(messages,md,c)", "v1260 通话掉线自动重发"),
