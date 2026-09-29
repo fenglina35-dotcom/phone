@@ -29,6 +29,13 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"v1344",scope:"both",least:1,name:"原文模式整行控制标签去空白后执行，[收款]不再显示成文字",marker:"原文模式也要执行控制指令"},
+  {release:"v1344",scope:"both",least:1,name:"角色[联网]在原文模式下也真的执行",marker:"// 联网：这是执行角色的决定，不是输出过滤"},
+  {release:"v1344",scope:"both",least:1,name:"联网结果由角色以可点开卡片分享",marker:"function webShareCardMsg(q,raw)"},
+  {release:"v1344",scope:"both",least:3,name:"代付卡片商品名完整换行显示",marker:"class=\"wx-pay-card-name\""},
+  {release:"v1344",scope:"both",least:1,name:"删除正在查看的私信会话退回列表而不是黑屏",marker:"正在看的会话被删后留在原页会渲染成空白黑屏"},
+  {release:"v1344",scope:"web",least:1,file:"小手机.html",name:"网页白色主题表情格为白底",marker:".wxlight .estk .s{background:#fff;"},
+  {release:"v1344",scope:"web",least:1,file:PRIVATE_DIR+"index.html",name:"私人白色主题表情格为白底",marker:".wxlight .estk .s{background:#fff;"},
   {release:"v1338/v1339",scope:"both",least:1,name:"思考标签与未闭合思考流不得进入微信气泡",marker:"function wechatStripReasoningEnvelope(value)"},
   {release:"v1338",scope:"web",least:1,name:"多条英文自动翻译串行并对临时失败有限重试",marker:"let _roleTextTranslationQueue=Promise.resolve()"},
   {release:"v1336/v1337",scope:"both",least:1,name:"外置语音测试仅使用填写的接口快照",marker:"{externalConfig,tries:1,languageBoost:'auto'}"},
@@ -1247,7 +1254,16 @@ const DELIVERY_FIXES = [
   { name: '明确长期外卖偏好不依赖模型隐藏标签也会保存', marker: 'function explicitMemoryFromUserText(' },
   { name: '随便点或四件套会继承最近一轮肯德基上下文', marker: 'function contextualKfcAction(' },
   { name: '只说肯德基品牌时不再暴露内部结构错误', marker: 'function brandOnlyDeliveryRequest(' },
+  { name: 'v1344 外卖偏好必须是用户本轮亲口态度且是食物', marker: 'function memoryAttitudeGrounded(' },
 ];
+
+test('web and private keep v1344 daily event ledger turn-wide evidence matching', () => {
+  for (const p of ['daily-event-ledger.js', PRIVATE_DIR + 'daily-event-ledger.js']) {
+    const s = read(p);
+    assert.ok(s.includes('function turnMessages(c,userText,channel)'), `${p} 缺少本轮连发消息证据比对`);
+    assert.ok(s.includes('function evidenceSource(list,evidence)'), `${p} 缺少宽松标点证据比对`);
+  }
+});
 
 for (const fix of DELIVERY_FIXES) {
   test(`web and private keep v1330/v1331 delivery repair — ${fix.name}`, () => {

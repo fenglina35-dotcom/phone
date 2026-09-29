@@ -20,6 +20,21 @@ test('records only evidenced user fact after visible delivery, no duplicate on e
  assert.equal(x.lifeNoteReplyDraft('[事件簿|新|已发生|你吃过饭|用户吃过饭了。]',x.c,'你猜','wechat'),null);
  assert.equal(a.strip('好。[事件簿|新|已发生|我吃过饭了|用户吃过饭了。]'),'好。');
 });
+test('v1344: evidence may come from any user message of the current burst and tolerates punctuation width',()=>{
+ const x=setup(),a=x.DailyEventLedger;x.dailyEventLedgerSet('a','enabled',true);
+ x.rows.push({role:'assistant',content:'在呢',time:at-5000},{role:'user',content:'今天中午去健身房练腿了',time:at-2000},{role:'user',content:'好累啊',time:at});
+ a.commit(a.draft('[事件簿|新|已发生|今天中午去健身房练腿了|用户中午去健身房练了腿。]',x.c,'好累啊','wechat'),'辛苦了。');
+ assert.equal(a.state(x.c).items.length,1,'an earlier message of the same burst is valid evidence');
+ assert.equal(a.state(x.c).items[0].reportedAt,at-2000,'the report time is the message that contains the evidence');
+ x.rows.push({role:'assistant',content:'辛苦了',time:at+1000},{role:'user',content:'晚上吃了火锅！',time:at+2000});
+ a.commit(a.draft('[事件簿|新|已发生|晚上吃了火锅!|用户晚上吃了火锅。]',x.c,'晚上吃了火锅！','wechat'),'好。');
+ assert.equal(a.state(x.c).items.length,2,'half-width punctuation in the quoted evidence must not drop the record');
+ assert.equal(a.draft('[事件簿|新|已发生|今天中午去健身房练腿了|重复旧证据。]',x.c,'晚上吃了火锅！','wechat'),null,'a message before the last role reply is not this turn');
+ assert.equal(a.draft('[事件簿|新|已发生|我今天去了医院|用户去了医院。]',x.c,'晚上吃了火锅！','wechat'),null,'fabricated evidence is still rejected');
+ x.rows.push({role:'assistant',content:'嗯',time:at+3000},{role:'user',content:'今天要不要去健身呢？',time:at+4000},{role:'user',content:'好纠结',time:at+5000});
+ a.commit(a.draft('[事件簿|新|已发生|今天要不要去健身呢|用户今天去健身。]',x.c,'好纠结','wechat'),'嗯。');
+ assert.equal(a.state(x.c).items.find(v=>v.summary==='用户今天去健身。').status,'待确认','a question in the evidence message keeps the event unconfirmed');
+});
 test('pending questions and future plans never upgraded to completed by a substring',()=>{
  const x=setup(),a=x.DailyEventLedger;x.dailyEventLedgerSet('a','enabled',true);
  for(const user of ['我没有吃过晚饭','我吃过晚饭了吗？','如果我吃过晚饭就出去']){

@@ -115,6 +115,17 @@ assert.match(prompt,/当天页面没有对应项时必须如实澄清或失败/,
 assert.match(delivery,/var autonomous=broadDeliveryChoiceGranted\(current\)/,'only the current real-model turn may grant broad autonomous choice');
 assert.doesNotMatch(delivery,/autonomous=broadDeliveryChoiceGranted\(joined\)/,'an older broad-choice message must not authorize a later turn');
 
+// v1344: 实际出现过的乱记——非食物整句、以及用户本轮没有表达该态度的模型标签。
+const beforeNoise=S.food.real.learnedMemories.length;
+window.deliveryConsumeMemoryTags('嗯。',role,meta({turnId:'turn-noise-1',messageId:'message-noise-1',userText:'好想出国啊，先生，我不喜欢呆在中国了，离苏州最近的是不是韩国'}));
+consume('好。\n[外卖记忆|不喜欢；门店=这家；商品=这个]',{turnId:'turn-noise-2',messageId:'message-noise-2',userText:'我想喝燕麦牛奶粥'});
+consume('好。\n[外卖记忆|不喜欢；商品=这个]',{turnId:'turn-noise-3',messageId:'message-noise-3',userText:'我都吃完丢了怎么拍下次先生早点说'});
+assert.equal(S.food.real.learnedMemories.length,beforeNoise,'non-food sentences and attitudes the user never expressed must not become delivery preferences');
+consume('好。\n[外卖记忆|不喜欢；门店=这家；商品=这个]',{turnId:'turn-noise-4',messageId:'message-noise-4',userText:'这家拉面不好吃'});
+assert.ok(S.food.real.learnedMemories.some(x=>x.attitude==='dislike'&&x.item==='手工兰州牛肉拉面'),'a real dislike of the recent real order must still be learned');
+window.deliveryConsumeMemoryTags('好。',role,meta({turnId:'turn-noise-5',messageId:'message-noise-5',userText:'喜欢喝牛奶燕麦粥!'}));
+assert.ok(S.food.real.learnedMemories.some(x=>x.attitude==='like'&&x.item==='牛奶燕麦粥'),'a natural food like is stored without the leading verb');
+
 const learnedId=S.food.real.learnedMemories.find(x=>x.accountId==='main'&&x.attitude==='like').id;
 window.deliveryForgetLearnedMemory(learnedId);
 assert.ok(!S.food.real.learnedMemories.some(x=>x.id===learnedId),'the user must be able to delete a learned preference in delivery settings');

@@ -41,6 +41,15 @@ function sourceTime(c,userText,channel){
  const hits=rows.slice(-80).filter(m=>m&&(m.role==='user'||m.who==='me'||m.source==='me')&&String(userText||'').includes(String(m.content||m.text||'').trim())&&String(m.content||m.text||'').trim().length>0);
  return hits.reduce((ts,m)=>Math.max(ts,Number(m.time)||0),0);
 }
+// 同一轮里用户常连发几条，模型引用哪一条都算本轮原话；比对时忽略空白和中英文标点差异。
+const loose=v=>String(v||'').replace(/[\s，,。.！!？?、；;：:"“”'‘’~～…—\-]+/g,'');
+function turnMessages(c,userText,channel){
+ const base=String(userText||'').trim();if(channel!=='wechat')return base?[base]:[];
+ const rows=msgs(c.id)||[],tail=[];
+ for(let i=rows.length-1;i>=0&&tail.length<12;i--){const m=rows[i];if(!m)continue;if(m.role==='assistant')break;if(m.role!=='user'||m.type==='sys')continue;const t=String(typeof msgToText==='function'?msgToText(m):(m.content||'')).trim();if(t)tail.unshift(t);}
+ if(base&&!tail.some(t=>t===base))tail.push(base);return tail;
+}
+function evidenceSource(list,evidence){const key=loose(evidence);if(key.length<3)return '';return list.find(t=>String(t).includes(evidence))||list.find(t=>loose(t).includes(key))||'';}
 function selected(c){
  const s=state(c);if(!s||s.enabled!==true)return [];
  const query=msgs(c.id).slice(-40).filter(m=>m.role==='user').slice(-2).map(m=>m.content||'').join('');
@@ -55,18 +64,19 @@ function prompt(c){
 }
 function draft(text,c,userText,channel){
  const s=state(c);if(!s||s.enabled!==true||!String(userText||'').trim())return null;
- const candidates=[];let m;
+ const candidates=[],turn=turnMessages(c,userText,channel);let m;
  const re=tagPattern();while((m=re.exec(String(text||'')))&&candidates.length<3){
   const parts=m[1].split(/[|｜]/).map(x=>x.trim());if(parts.length!==4)continue;
   let [id,status,evidence,summary]=parts;
-  if(!STATES.includes(status)||evidence.length<3||evidence.length>240||summary.length<4||summary.length>100||!String(userText).includes(evidence))continue;
+  const source=evidenceSource(turn,evidence);
+  if(!STATES.includes(status)||evidence.length<3||evidence.length>240||summary.length<4||summary.length>100||!source)continue;
   if(/[\[\]【】]|忽略.*(?:指令|规则)|系统提示/.test(summary))continue;
   // A substring without its surrounding question/negation is insufficient proof.
-  if(['已发生','已解决'].includes(status)&&/[?？]|(?:还没|没有|并未|尚未|没能|未完成|打算|准备|计划|要是|如果|假如|可能|也许)/.test(userText))status='待确认';
+  if(['已发生','已解决'].includes(status)&&/[?？]|(?:还没|没有|并未|尚未|没能|未完成|打算|准备|计划|要是|如果|假如|可能|也许)/.test(source))status='待确认';
   if(id!=='新'&&!selected(c).some(x=>x.id===id))continue;
-  candidates.push({id,status,evidence,summary:clean(summary)});
+  candidates.push({id,status,evidence,summary:clean(summary),sourceTime:sourceTime(c,source,channel)});
  }
- return candidates.length?{owner:c,scope:scope(),state:s,revision:s.revision||0,reset:c._memoryResetAt||0,sourceTime:sourceTime(c,userText,channel),channel,candidates,done:false}:null;
+ return candidates.length?{owner:c,scope:scope(),state:s,revision:s.revision||0,reset:c._memoryResetAt||0,sourceTime:sourceTime(c,turn.join('\n'),channel),channel,candidates,done:false}:null;
 }
 function commit(d,text){
  if(!d||d.done||!String(text||'').trim())return;
@@ -74,9 +84,9 @@ function commit(d,text){
  if(getC(c.id)!==c||scope()!==d.scope||s!==d.state||s.enabled!==true||(s.revision||0)!==d.revision||(c._memoryResetAt||0)!==d.reset)return;
  const now=Date.now();
  for(const item of d.candidates){
-  const date=eventDay(item.evidence,d.sourceTime);
-  let old=item.id==='新'?s.items.find(x=>x.evidence===item.evidence&&x.reportedAt===d.sourceTime):s.items.find(x=>x.id===item.id);
-  const value={id:old?old.id:uid(),status:item.status,summary:item.summary,evidence:clean(item.evidence,240),eventDate:date,reportedAt:d.sourceTime||null,recordedAt:old?old.recordedAt:now,updatedAt:now,channel:d.channel};
+  const reported=item.sourceTime||d.sourceTime,date=eventDay(item.evidence,reported);
+  let old=item.id==='新'?s.items.find(x=>x.evidence===item.evidence&&x.reportedAt===reported):s.items.find(x=>x.id===item.id);
+  const value={id:old?old.id:uid(),status:item.status,summary:item.summary,evidence:clean(item.evidence,240),eventDate:date,reportedAt:reported||null,recordedAt:old?old.recordedAt:now,updatedAt:now,channel:d.channel};
   if(old){if(item.status==='已解决'&&!date)value.eventDate=old.eventDate||'';value.previous={summary:old.summary,status:old.status,eventDate:old.eventDate||'',updatedAt:old.updatedAt};Object.assign(old,value);}else s.items.push(value);
  }
  // Bounded store; prefer retaining unresolved matters, then the most recent.
