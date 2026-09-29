@@ -15,7 +15,7 @@ enum SmallPhoneDiagnosticsStore {
     )
     private static let maximumBytes = 256 * 1_024
     private static let maximumLines = 200
-    private static let build = "1.0.400 (400)"
+    private static let build = "1.0.419 (419)"
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -188,7 +188,7 @@ enum SmallPhoneRecoveryLaunchStore {
 @MainActor
 final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     static let handlerName = "smallPhoneNative"
-    static let contractVersion = 41
+    static let contractVersion = 42
     static let roleCallActiveDefaultsKey =
         "smallPhone.roleCallActive.v1"
 
@@ -200,6 +200,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
     }
     var openDeviceManagement: (() -> Void)?
     private let nativeSpeech = NativeSpeechRecognitionController()
+    private let robotSpeech = RobotFileSpeechRecognizer()
     private lazy var homeKitLights = HomeKitLightBridge.shared
     private lazy var homeKitClimates = HomeKitClimateBridge.shared
     private lazy var homeKitLocks: HomeKitLockBridge = {
@@ -379,6 +380,14 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                 action: action,
                 arguments: arguments
             )
+        case "robot.speech.transcribe":
+            let arguments = payload["payload"] as? [String: Any] ?? [:]
+            robotSpeech.transcribe(arguments["audio"] as? String ?? "") { [weak self] result in
+                switch result {
+                case .success(let text): self?.reply(requestID: requestID, result: ["text": text])
+                case .failure(let error): self?.reply(requestID: requestID, error: error.localizedDescription)
+                }
+            }
         case "speech.start":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             performSpeechStart(requestID: requestID, arguments: arguments)
@@ -2554,6 +2563,72 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         webView?.evaluateJavaScript(
             "window.__smallPhoneNativeReply && window.__smallPhoneNativeReply(\(json));"
         )
+    }
+}
+
+@MainActor
+// Remote K recordings only. Never starts AVAudioEngine or the iPhone microphone.
+private final class RobotFileSpeechRecognizer {
+    private var jobID = UUID()
+    private var task: SFSpeechRecognitionTask?
+    private var recognizer: SFSpeechRecognizer?
+    private var completion: ((Result<String, Error>) -> Void)?
+    private var file: URL?
+    private var timeout: DispatchWorkItem?
+
+    private func failure(_ text: String) -> NSError {
+        NSError(domain: "RobotSpeech", code: 1, userInfo: [NSLocalizedDescriptionKey: text])
+    }
+    func transcribe(_ base64: String, completion: @escaping (Result<String, Error>) -> Void) {
+        guard self.completion == nil else { completion(.failure(failure("上一段小 K 语音仍在识别"))); return }
+        guard base64.count <= 1_280_060, let data = Data(base64Encoded: base64), data.count >= 44,
+              data.count <= 960_044, String(data: data.prefix(4), encoding: .ascii) == "RIFF",
+              String(data: data.subdata(in: 8..<12), encoding: .ascii) == "WAVE" else {
+            completion(.failure(failure("小 K 上传的录音不是有效 WAV 文件"))); return
+        }
+        self.completion = completion
+        let job = UUID(); self.jobID = job
+        let deadline = DispatchWorkItem { [weak self] in
+            guard let self = self, self.jobID == job else { return }
+            self.finish(.failure(self.failure("中文语音识别等待超过 50 秒")))
+        }
+        timeout = deadline
+        DispatchQueue.main.asyncAfter(deadline: .now() + 50, execute: deadline)
+        SFSpeechRecognizer.requestAuthorization { status in
+            DispatchQueue.main.async { [weak self] in
+                guard let self = self, self.completion != nil, self.jobID == job else { return }
+                guard status == .authorized else {
+                    self.finish(.failure(self.failure("小手机没有获得语音识别权限"))); return
+                }
+                guard let recognizer = SFSpeechRecognizer(locale: Locale(identifier: "zh-CN")), recognizer.isAvailable else {
+                    self.finish(.failure(self.failure("系统中文语音识别当前不可用"))); return
+                }
+                do {
+                    let url = FileManager.default.temporaryDirectory.appendingPathComponent("k-speech-\(UUID().uuidString).wav")
+                    self.file = url
+                    try data.write(to: url, options: [.atomic, .completeFileProtection])
+                    let request = SFSpeechURLRecognitionRequest(url: url)
+                    request.shouldReportPartialResults = false
+                    self.recognizer = recognizer
+                    self.task = recognizer.recognitionTask(with: request) { [weak self] result, error in
+                        DispatchQueue.main.async {
+                            guard let self = self, self.completion != nil, self.jobID == job else { return }
+                            if let result = result, result.isFinal {
+                                let text = result.bestTranscription.formattedString.trimmingCharacters(in: .whitespacesAndNewlines)
+                                self.finish(text.isEmpty ? .failure(self.failure("中文语音识别没有返回文字")) : .success(text))
+                            } else if let error = error { self.finish(.failure(error)) }
+                        }
+                    }
+                } catch { self.finish(.failure(error)) }
+            }
+        }
+    }
+    private func finish(_ result: Result<String, Error>) {
+        guard let done = completion else { return }
+        completion = nil; timeout?.cancel(); timeout = nil
+        task?.cancel(); task = nil; recognizer = nil
+        if let file = file { try? FileManager.default.removeItem(at: file) }
+        file = nil; done(result)
     }
 }
 

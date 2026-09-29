@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1341'){
+if(window.__NORTH_SHELL_BUILD__!=='1352'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -522,7 +522,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.isManaged())return !!NorthLicense.session();
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1341 · 私人外置语音独立通道修复';
+const APP_VER='v1352 · 私人小K独立语音加速';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1878,7 +1878,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1341&r=v1341-private-external-tts-relay-1';
+  const url='sw.js?v=1352&r=v1352-private-robot-face-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -1992,7 +1992,7 @@ function blobB64(blob){return new Promise(res=>{const r=new FileReader();r.onloa
 async function sttRecordedWav(blob,durationSeconds){if(!blob||!blob.size)throw new Error('没有录到声音，请检查麦克风权限');if(/audio\/wav/i.test(String(blob.type||'')))return blob;let audio=null;try{audio=await decodeBuf(await blob.arrayBuffer());}catch(_){}if(!audio)throw new Error('当前手机录音格式无法读取，请关闭页面后重新打开再试');const end=Math.min(audio.duration,Math.max(.2,Number(durationSeconds)||audio.duration));const wav=await cinemaAudioChunkWav(audio,0,end,16000);if(!wav||!wav.size)throw new Error('录音转换失败，请重新录一次');return wav;}
 function sttUploadName(blob,name){name=String(name||'').trim();if(name)return name.replace(/[^\w.\-\u4e00-\u9fff]/g,'_').slice(-120);const type=String(blob&&blob.type||'').toLowerCase(),ext=/mp4|m4v/.test(type)?'mp4':/mpeg|mp3/.test(type)?'mp3':/wav/.test(type)?'wav':/ogg/.test(type)?'ogg':'webm';return 'audio.'+ext;}
 function sttRequestId(){let id='';try{id=crypto.randomUUID();}catch(_){id=Date.now().toString(36)+'_'+Math.random().toString(36).slice(2);}return'asr_'+id;}
-async function sttRequest(blob,opt){opt=opt||{};const a=sttCfg(),name=sttUploadName(blob,opt.name),rawLang=opt.lang||a.lang,language=sttApiLang(rawLang);if(sttRelayOn()){if(!['cinema_subtitles','diagnostic'].includes(opt.purpose))throw new Error('内置语音识别只用于影院提取字幕');const duration=Number(opt.durationSeconds||0);if(!Number.isFinite(duration)||duration<=0||duration>301)throw new Error('内置语音识别需要有效的音频时长');const audio=await blobB64(blob),requestId=String(opt.requestId||sttRequestId()).replace(/[^A-Za-z0-9_.:-]/g,'_').slice(0,100),d=await aiRelay('asr',{audio,filename:name,language:sttRelayLang(rawLang),timestamps:!!opt.timestamps,duration_seconds:duration,request_id:requestId,purpose:opt.purpose,job_id:opt.jobId||'',chunk_index:Number.isFinite(Number(opt.chunkIndex))?Number(opt.chunkIndex):-1});return d&&d.data||{};}if(!a.base||!a.key)throw new Error('请先在 AI账户开启内置语音识别，或在设置 → 语音转文字里填写外置接口');const fd=new FormData();fd.append('file',blob,name);fd.append('model',a.model||'whisper-1');fd.append('language',language);if(opt.timestamps){fd.append('response_format','verbose_json');fd.append('timestamp_granularities[]','segment');}
+async function sttRequest(blob,opt){opt=opt||{};const a=sttCfg(),name=sttUploadName(blob,opt.name),rawLang=opt.lang||a.lang,language=sttApiLang(rawLang);if(sttRelayOn()){if(!['cinema_subtitles','diagnostic'].includes(opt.purpose))throw new Error('内置语音识别只用于影院提取字幕');const duration=Number(opt.durationSeconds||0);if(!Number.isFinite(duration)||duration<=0||duration>301)throw new Error('内置语音识别需要有效的音频时长');const audio=await blobB64(blob),requestId=String(opt.requestId||sttRequestId()).replace(/[^A-Za-z0-9_.:-]/g,'_').slice(0,100),d=await aiRelay('asr',{audio,filename:name,language:sttRelayLang(rawLang),timestamps:!!opt.timestamps,duration_seconds:duration,request_id:requestId,purpose:opt.purpose,job_id:opt.jobId||'',chunk_index:Number.isFinite(Number(opt.chunkIndex))?Number(opt.chunkIndex):-1});return d&&d.data||{};}if(!a.base||!a.key)throw new Error('请先在 AI账户开启内置语音识别，或在设置 → 语音转文字里填写外置接口');const fd=new FormData();fd.append('file',blob,name);fd.append('model',a.model||'whisper-1');fd.append('language',language);if(opt.purpose==='robot_voice'&&opt.prompt)fd.append('prompt',String(opt.prompt).slice(0,224));if(opt.timestamps){fd.append('response_format','verbose_json');fd.append('timestamp_granularities[]','segment');}
   const r=await fetch(a.base.replace(/\/+$/,'')+'/audio/transcriptions',{method:'POST',headers:{'Authorization':'Bearer '+a.key},body:fd});let j={};try{j=await r.json();}catch(_){try{j={error:{message:(await r.text()).slice(0,180)}};}catch(__){}}if(!r.ok)throw new Error((j&&j.error&&j.error.message)||j.message||('语音转写接口错误 '+r.status));return j;}
 async function sttTranscribe(blob,opt){const j=await sttRequest(blob,opt);return (j.text||'').trim();}
 function sttTimedRows(j,offset){offset=Number.isFinite(+offset)?+offset:0;const rows=Array.isArray(j&&j.segments)?j.segments:Array.isArray(j&&j.chunks)?j.chunks:[];return rows.map(x=>{const ts=x.timestamp||x.timestamps||[],start=Number(x.start!=null?x.start:ts[0]),end=Number(x.end!=null?x.end:ts[1]),text=String(x.text||'').replace(/\s+/g,' ').trim();return {start:start+offset,end:end+offset,text,source:'extract'};}).filter(x=>Number.isFinite(x.start)&&Number.isFinite(x.end)&&x.end>x.start&&x.text);}
@@ -2498,6 +2498,7 @@ function render(){
   else if(c.p==='wxscan')html=renderWxScan();
   else if(c.p==='wxservices')html=renderWxServices();
   else if(c.p==='wxsmarthome')html=renderWxSmartHome();
+  else if(c.p==='robotFace'&&typeof renderRobotFace==='function')html=renderRobotFace();
   else if(c.p==='wxwallet')html=renderWxWallet();
   else if(c.p==='wxchange')html=renderWxChange();
   else if(c.p==='wxbank')html=renderWxBank();
@@ -8328,7 +8329,6 @@ function licenseMarkUnlocked(){try{localStorage.setItem('yibei_unlocked',String(
 function licenseFinishGate(){licenseMarkUnlocked();const g=document.getElementById('gate');if(g)g.remove();render();setTimeout(maybeFirstRun,400);}
 function licenseEvictedNotice(result){const a=result&&result.session&&result.session.evicted;if(a&&a.length)toast('已恢复，并退出最早的'+(appleHomeCompatNative()?'授权设备：':'浏览器：')+a.join('、'));}
 async function licensePostActivationSetup(){
-  try{await pfEnsure(true);}catch(_){}
   let aiSyncFailed=false;
   try{await licenseSyncAiIdentity(true);}catch(_){aiSyncFailed=true;}
   try{await licenseSyncPhoneFriendIdentity(true);}catch(_){}
@@ -8349,6 +8349,7 @@ function showGate(){if(gateOK())return;let el=document.getElementById('gate');
     if(!window.NorthLicense){err.textContent='授权组件没有加载，请刷新页面';return;}
     setBusy(true,'正在核销邀请码…');btn.textContent='验证中…';
     try{
+      try{await pfEnsure(true);}catch(_){}
       await NorthLicense.activate(v);licenseMarkUnlocked();licenseFinishGate();licensePostActivationSetup();
     }catch(e){err.textContent=(e&&e.message)||'邀请码验证失败';inp.value='';inp.focus();}
     finally{setBusy(false,'');btn.textContent='使用邀请码进入';}};
@@ -13689,7 +13690,7 @@ function buildPart(c,m,me){
     return `<div class="card"><div class="cpay" style="background:#e8527f"><div class="big">💳</div><div><div class="t1">亲属卡 · 每月¥${(+m.quota).toFixed(0)}</div><div class="t2">${bnd?'已绑定，用ta的额度消费':(m.declined?'你拒绝了':'邀请你绑定亲属卡')}</div></div></div><div class="cfoot">亲属卡邀请</div></div>${(!bnd&&!m.declined)?`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#07c160;color:#fff" onclick="event.stopPropagation();acceptFamily('${m.id}')">接受</button><button class="minibtn" onclick="event.stopPropagation();declineFamily('${m.id}')">拒绝</button></div>`:''}`;}
   if(m.type==='familybuy'){return `<div class="card"><div class="cpay" style="background:#e8527f"><div class="big">🛍️</div><div><div class="t1">亲属卡消费 ¥${(+m.price).toFixed(2)}</div><div class="t2">${esc(m.name)}</div></div></div><div class="cfoot">本月已用 ¥${(+m.used).toFixed(0)}/${(+m.quota).toFixed(0)}</div></div>`;}
   if(m.type==='namecard'){const his=m.dir==='his';
-    return `<div class="card" style="width:240px;background:#13361f;border:1px solid #2a7a48;overflow:hidden">
+    return `<div class="card" style="width:240px;background:#13371f;border:1px solid #2a7a48;overflow:hidden">
       <div style="padding:11px;display:flex;gap:10px;align-items:center">${av(his?'🙂':(m.avatar||'🙂'),'sm')}<div style="min-width:0;flex:1"><div style="font-weight:600;color:#eafff0">${esc(m.cname)}</div><div style="font-size:12px;color:#8fcaa6">微信号：${esc(m.wxid||'')}</div></div><div style="font-size:20px">👤</div></div>
       <div style="padding:7px 11px;background:rgba(255,255,255,.05);color:#9fd9b4;font-size:12px">${esc(m.persona||'')||'个人名片'}</div>
       ${his?(m.added?'<div style="padding:8px;text-align:center;color:#2bd66a;font-size:13px;font-weight:600">已添加到通讯录</div>':(m.declined?'<div style="padding:8px;text-align:center;color:#c97a7a;font-size:12px">你拒绝了这个推荐</div>':`<div style="display:flex;border-top:1px solid #2a7a48"><div style="flex:1;padding:9px;text-align:center;background:#07c160;color:#fff;font-weight:600;cursor:pointer" onclick="event.stopPropagation();addHisCard('${m.id}')">同意添加</div><div style="flex:1;padding:9px;text-align:center;color:#9fd9b4;cursor:pointer;border-left:1px solid #2a7a48" onclick="event.stopPropagation();declineHisCard('${m.id}')">拒绝</div></div>`)):(m._accepted?'<div style="padding:6px;text-align:center;color:#2bd66a;font-size:12px">✅ 对方已添加</div>':'<div style="padding:6px;text-align:center;color:#6fae86;font-size:11px">推荐给ta的名片 · 等ta添加</div>')}</div>`;}
@@ -13837,9 +13838,11 @@ function sendText(id){if(wxLoginActive()){toast('微信被ta登录中，你暂�
   const q=(S.settings.quoteOn!==false&&_quoting&&_quoting.id===id)?{text:_quoting.text,who:_quoting.who}:null;_quoting=null;
   if(_voiceMode)pushMsg(id,{role:'user',type:'voice',content:t,dur:Math.max(1,Math.round(t.length/3)),id:uid(),quote:q});
   else pushMsg(id,{role:'user',type:'text',content:t,quote:q});
+  wechatContinueUserText(id,t);}
+function wechatContinueUserText(id,t,opt){const c=getC(id);
   if(typeof window.weddingHandleInviteRequest==='function'&&window.weddingHandleInviteRequest(c,t))return;
   maybeFollowup(id,t);// 检测ta提到的将来要做的事，之后主动来关心
-  const remarkDiscovery=hisRemarkDiscoveryNote(c);if(remarkDiscovery)scheduleReply(id,remarkDiscovery);else if(!companionGoodMorningSchedule(c,t)&&!companionEmotionCareSchedule(c,t))scheduleReply(id);}
+  const remarkDiscovery=hisRemarkDiscoveryNote(c);if(remarkDiscovery)scheduleReply(id,remarkDiscovery);else if(!companionGoodMorningSchedule(c,t)&&!companionEmotionCareSchedule(c,t)){if(opt&&opt.robotVoice&&manualReplySceneOn('wechat'))manualReply(id);else scheduleReply(id);}}
 /* ===== 聊天引用 ===== */
 let _quoting=null,_lpT=null,_lpFired=false;
 function quoteTextOf(m){return (m&&(m.type==='text'||m.type==='voice'))?(m.content||'').trim():'';}
@@ -14987,8 +14990,7 @@ function wechatNarrationLeakLine(line,cch){let t=stripHiddenThoughtTags(cleanRol
 function wechatNarrationLeak(text,cch){return splitBubbles(roleVisibleEnvelopeText(text)).some(line=>wechatNarrationLeakLine(line,cch));}
 function wechatNarrationFiltered(text,cch){return splitBubbles(roleVisibleEnvelopeText(text)).filter(line=>!wechatNarrationLeakLine(line,cch)).join('\n');}
 function wechatHasDirectVisibleLine(text){return splitBubbles(roleVisibleEnvelopeText(text)).some(line=>{const t=stripHiddenThoughtTags(cleanRolePunct(line)).trim();return !!t&&!wxKnownTagLine(t)&&!isOOCLine(t);});}
-function wechatStripReasoningEnvelope(value){let text=String(value==null?'':value).trim();text=text.replace(/<(think|analysis|reasoning)\b[^>]*>[\s\S]*?<\/\1\s*>/gi,'').trim();const open=text.search(/<(?:think|analysis|reasoning)\b[^>]*>/i);if(open>=0)text=text.slice(0,open);return text.replace(/<\/(?:think|analysis|reasoning)\s*>/gi,'').trim();}
-function wechatReasoningLeak(value){const raw=String(value==null?'':value).trim(),visible=roleVisibleEnvelopeText(raw).trim(),text=visible||raw;if(!text)return false;if(/<\/?(?:think|analysis|reasoning)\b|[<＜]\s*(?:指令解析|思考过程|推理过程|分析过程)\s*[>＞]|\b(?:I need to carefully analyze|The user's last message|But the instruction says|The key instruction|looking at the chat log|I must stay quiet|system prompt|developer message|chain[ -]of[ -]thought|assistant analysis)\b|(?:本次对话边界|\[对话边界\]|正式随机主动联系必须保持安静|用户(?:最后|最近)一条(?:微信|共同生活|电话)?消息(?:仍在等待正常回复|尚未得到角色回复)|只供内部思考，?绝不能照抄|不要解释(?:本次|上述)?规则)/i.test(text))return true;let score=0;if(/(?:^|\n)\s*(?:用户输入|当前输入|用户当前输入)\s*[:：]/m.test(text))score++;if(/(?:^|\n)\s*(?:结合上下文|上下文分析|对话分析)\s*[:：]?/m.test(text))score++;if(/(?:^|\n)\s*(?:分析|推理|思考|指令解析|任务分析|回复策略)\s*[:：]/m.test(text))score++;if(/(?:系统提示|开发者消息|提示词|指令要求|模型应当|作为(?:AI|助手|角色模型))/i.test(text))score++;const englishSignals=text.match(/(?:^|\n)\s*(?:so the context is|let me think about|actually,? looking at the context|this is funny because|wait,? but i already said|(?:the user|[A-Z][\w-]*) is saying that)\b/gim)||[];if(englishSignals.length>=2)return true;if(englishSignals.length)score++;if(/\b(?:asking me to|I should react in character|I need to respond|should I (?:be|say|reply)|the situation is ironic|the lock seems to have taken effect)\b/i.test(text))score++;return score>=2;}
+function wechatReasoningLeak(value){const raw=String(value==null?'':value).trim(),visible=roleVisibleEnvelopeText(raw).trim(),text=visible||raw;if(!text)return false;if(/<\/?(?:think|analysis)\b|[<＜]\s*(?:指令解析|思考过程|推理过程|分析过程)\s*[>＞]|\b(?:I need to carefully analyze|The user's last message|But the instruction says|The key instruction|looking at the chat log|I must stay quiet|system prompt|developer message|chain[ -]of[ -]thought|assistant analysis)\b|(?:本次对话边界|\[对话边界\]|正式随机主动联系必须保持安静|用户(?:最后|最近)一条(?:微信|共同生活|电话)?消息(?:仍在等待正常回复|尚未得到角色回复)|只供内部思考，?绝不能照抄|不要解释(?:本次|上述)?规则)/i.test(text))return true;let score=0;if(/(?:^|\n)\s*(?:用户输入|当前输入|用户当前输入)\s*[:：]/m.test(text))score++;if(/(?:^|\n)\s*(?:结合上下文|上下文分析|对话分析)\s*[:：]?/m.test(text))score++;if(/(?:^|\n)\s*(?:分析|推理|思考|指令解析|任务分析|回复策略)\s*[:：]/m.test(text))score++;if(/(?:系统提示|开发者消息|提示词|指令要求|模型应当|作为(?:AI|助手|角色模型))/i.test(text))score++;return score>=2;}
 function wechatInnerThoughtValue(value){const text=normalizeHiddenThoughtFormats(roleVisibleEnvelopeText(value));let found='';for(const m of text.matchAll(/[\[【]\s*内心\s*[|｜:：]\s*([^\]】]*)[\]】]/g)){const v=naturalInnerThoughtText(m[1]);if(v)found=v;}return found;}
 function wechatInnerThoughtOnlyValue(value){const text=normalizeHiddenThoughtFormats(roleVisibleEnvelopeText(value)).trim(),m=text.match(/^[\[【]\s*内心\s*[|｜:：]\s*([^\]】]{1,160})[\]】]\s*$/);if(!m||wechatReasoningLeak(text))return'';return String(m[1]||'').replace(/\s+/g,' ').trim().slice(0,120);}
 function cleanWechatVisibleLine(line,cch){
@@ -15075,6 +15077,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
     typingEl=appendChatHTML(cb,`<div class="msg them" id="typing">${av(c.avatar,bubbleAvatarClass(c,false))}<div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`,{smooth:true});}}
   const _handoffTurn=replyHandoffBegin(id,note,replyToken,replyAccount,replyIntent,!!(replyOptions&&replyOptions.reopenCompleted));if(_handoffTurn&&replyHandoffCompleted(_handoffTurn)){if(typingEl&&typingEl.isConnected)typingEl.remove();replyNoVisibleReasonSet(id,replyAccount,replyToken,'这条消息已完成回复，本次没有请求模型');return false;}
   try{
+    const _robotFaceTurn=typeof robotFacePrepareTurn==='function'?await robotFacePrepareTurn(c,replyAccount,replyToken):null;
     let _lu=null;{const _ms=msgs(id);for(let i=_ms.length-1;i>=0;i--){if(_ms[i].role==='user'&&_ms[i].type!=='sys'){_lu=_ms[i];break;}}}
     const _userText=(_lu&&msgToText(_lu))||'',_explicitCallTurn=!note&&explicitIncomingCallRequest(_userText),_naturalOn=wechatNaturalOn(),_autonomyNote=wechatNaturalAutonomyNoteActive(note),_manualUnlockNote=manualUnlockReplyActive(note),_altFirstContact=altFriendFirstContact(c,replyAccount),_altReportInfo=replyAccount==='main'?altAccountReportInfo(c,note):null,_foodReceiptInfo=replyAccount==='main'?foodReceiptEventInfo(note):null,_offEndInfo=replyAccount==='main'?offEndReplyEventInfo(note):null,_hlPlan=null;let _initiativeNoImage=initiativeBlocksImage(note),_initiativeNoLocation=initiativeBlocksLocation(note);
     const _nativeUserInspectionQueued=!note&&(nativeInspectionPending(_lu,id)||companionChargingConfirmationSchedule(c,_lu)||maybeSpyIntent('',c,id,_lu,{nativeOnly:true,immediate:true,suppressInitial:true}));if(_nativeUserInspectionQueued){if(typingEl&&typingEl.isConnected)typingEl.remove();return true;}
@@ -15083,7 +15086,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
     if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;
     if(_webAutoQuery){S._lastWebSearch={q:_webAutoQuery,time:Date.now(),ok:!webSearchFailed(_webAutoResult),source:(S.settings.search||{}).mode||'jina'};save();toast(webSearchFailed(_webAutoResult)?'🌐 联网查询失败，将如实说明':'🌐 已查到实时资料');}
     const _webPrompt=_webAutoQuery?'\n\n# 本轮程序已主动联网（必须使用）\n搜索词：'+_webAutoQuery+'\n搜索结果：\n'+_webAutoResult+'\n先依据这些资料直接回答当前问题；资料失败或没有明确答案就如实说没查到，绝不能凭印象编造实时天气、温度、新闻、价格或赛况。不要输出[联网]标记。':'';
-    const _voiceRequired=!note&&explicitVoiceReplyRequest(_userText),_voiceTurnPrompt=_voiceRequired?'\n\n# 本轮必须发语音\n'+S.me.name+'这一轮明确要求你发语音。回复正文必须合并成一条 [语音|要说的话]，不能只发普通文字，也不要在语音标签外重复一遍。严格满足ta提出的长度和内容要求，但语音最多'+VOICE_MAX_CHARS+'字。若角色语音语言不是中文，必须用 [语音|对应外语原文|中文翻译]。这条明确请求优先于“平时不主动发语音”的频率设置。':'';
+    const _voiceRequired=!note&&explicitVoiceReplyRequest(_userText),_voiceTurnPrompt=(_robotFaceTurn?robotFacePrompt(_robotFaceTurn):'')+(_voiceRequired?'\n\n# 本轮必须发语音\n'+S.me.name+'这一轮明确要求你发语音。回复正文必须合并成一条 [语音|要说的话]，不能只发普通文字，也不要在语音标签外重复一遍。严格满足ta提出的长度和内容要求，但语音最多'+VOICE_MAX_CHARS+'字。若角色语音语言不是中文，必须用 [语音|对应外语原文|中文翻译]。这条明确请求优先于“平时不主动发语音”的频率设置。':'');
     const _recentVision=[...lastRounds(msgs(id),Math.max(3,+S.settings.hist||12))].reverse().find(m=>m&&m.role==='user'&&m.type==='image'&&m.desc),_visionGuard=_recentVision?'\n\n# 本轮图片事实（必须遵守）\n'+(_recentVision.textCard?'对方发来一张图文照片卡，这在聊天里是一张图片。对方亲自填写的照片描述是：'+_recentVision.desc+'\n只能把这段描述当作画面事实来理解并自然回应，不能添加描述里不存在的视觉细节。':'对方发来的图片已经成功显示，你确实看到了。识图得到的真实画面是：'+_recentVision.desc+'\n直接针对画面自然回应；禁止说图片没收到、没显示、看不到或识图失败，禁止让对方重发。'):'';
     const _giftIntent='',_giftTurnPrompt='',_thoughtIntent=!note&&thoughtEggRequestIntent(_userText),_thoughtTurnPrompt=_thoughtIntent?thoughtEggRequestPrompt(_userText):'',_relIntent=null,_baseOpt=_memCtx?{selectiveMemory:true,memoryItems:_memCtx.items}:{},_usageTruth=replyAccount==='main'?rolePhoneAuthoritativeUsageContext(c):'',_tail=lifeNoteModelPrompt(c)+(_memCtx?memoryRetrievalPrompt(c,_memCtx):'')+_webPrompt+_visionGuard+_voiceTurnPrompt+_thoughtTurnPrompt+_usageTruth,_sys=buildSystem(c,Object.assign({},_baseOpt,{natural:_naturalOn,query:_memQuery}))+_tail,_stableSys=_naturalOn?buildSystem(c,Object.assign({},_baseOpt,{natural:true,allModules:true,query:_memQuery}))+_tail:_sys;
     const _historySource=roleReplyOnlineHistorySource(c,lastRounds(msgs(id),S.settings.hist||12),Date.now()),hist=chatHistoryWithDateBoundaries(_historySource,m=>{
@@ -15098,8 +15101,6 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
     if(replyStale(id,replyToken,replyAccount)){if(typingEl&&typingEl.isConnected)typingEl.remove();return;}
     if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;
     if(initiativeNoteActive(note)&&!initiativeReplyFresh(c,note)){if(typingEl&&typingEl.isConnected)typingEl.remove();return false;}
-    const _reasoningOriginal=String(content||''),_reasoningVisible=wechatStripReasoningEnvelope(_reasoningOriginal);if(_reasoningVisible&&_reasoningVisible!==_reasoningOriginal.trim()&&!wechatReasoningLeak(_reasoningVisible))content=_reasoningVisible;
-    if(wechatReasoningLeak(content)){let fix='';try{fix=await chatAPI([{role:'system',content:_stableSys},...hist,{role:'assistant',content},{role:'user',content:'[微信输出纠正：上一版泄露了内部分析、指令解析或推理过程。重新生成同一轮真实回复，只输出角色直接发给对方的微信正文和允许的功能标签；禁止分析步骤、用户输入复述、规则解释、第三人称旁白及任何思维链。不要新增事实。]'},_pin],_repairMd);}catch(_){}if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;fix=wechatStripReasoningEnvelope(fix);content=fix&&!wechatReasoningLeak(fix)&&!wechatRoleDrift(fix)?fix:'';}
     if(!_rawOutput){
     if(_recentVision&&roleImageFailureText(content)){const fix=await chatAPI([{role:'system',content:_sys},...hist,{role:'assistant',content},{role:'user',content:'[系统纠正：图片已经成功显示，你也拿到了上面明确的画面描述。刚才说“没收到/没显示/识图失败”是错误的。请只按真实画面重新自然回应，不要提接口、识图、上传或让对方重发。]'},_pin],_md);if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;if(fix&&!roleImageFailureText(fix))content=fix;}
     if(memoryResetReplyNeedsRepair(c,_userText,content)){let fix='';try{fix=await chatAPI([{role:'system',content:_sys},...hist,{role:'assistant',content},{role:'user',content:'[系统最终纠正：你的旧记忆已经彻底清除。刚才声称记得清除前的具体事情属于编造。只能使用上面当前聊天里清除后真实出现过的内容；如果那里没有答案，就以角色本人的口吻诚实说以前具体的事想不起来了，请对方重新告诉你。不能猜原话、动作、承诺或事件，也不要提系统和清除功能。请重写这一轮。]'},_pin],_repairMd);}catch(_){}if(fix&&!memoryResetReplyNeedsRepair(c,_userText,fix))content=fix;else content='以前具体发生过什么，我现在想不起来了。你愿意的话，可以重新告诉我。';}
@@ -15112,6 +15113,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
     if(wq&&_localPersonalQuery){const fix=await chatAPI([{role:'system',content:_stableSys},...hist,{role:'assistant',content},{role:'user',content:'[系统纠正：对方问的是你自己微信、手机、好友或消息里真实发生的事，不是互联网问题。绝对不要联网，也不要输出[联网]。请只依据当前聊天记录、刚发生的小号联系与报备上下文，用你本人语气直接回答；有记录就承认并说清态度，没有记录才诚实说没有。]'},_pin],_repairMd);if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;if(fix&&!/\[联网\|/.test(fix))content=fix;else content=String(content||'').replace(/\[联网\|[^\]]*\]/g,'').trim();}
     else if(wq&&S.settings.web&&S.settings.web.enabled){const r=_webAutoResult||await webSearch(wq[1]);
       content=await chatAPI([{role:'system',content:_sys},...hist,{role:'system',content:'联网搜索"'+wq[1]+'"的结果：\n'+r+'\n请用中文据此自然回答，不要再输出[联网]标记。'},_pin],_md);if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;}
+    if(wechatReasoningLeak(content)){let fix='';try{fix=await chatAPI([{role:'system',content:_stableSys},...hist,{role:'assistant',content},{role:'user',content:'[微信输出纠正：上一版泄露了内部分析、指令解析或推理过程。重新生成同一轮真实回复，只输出角色直接发给对方的微信正文和允许的功能标签；禁止分析步骤、用户输入复述、规则解释、第三人称旁白及任何思维链。不要新增事实。]'},_pin],_repairMd);}catch(_){}if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;content=fix&&!wechatReasoningLeak(fix)&&!wechatRoleDrift(fix)?fix:'';}
     if(wechatRoleDrift(content)&&!_routeState.fallback){const fix=await wechatRoleRepair([{role:'system',content:_stableSys},...hist,{role:'assistant',content:content},{role:'user',content:'[系统：你刚才跳出角色、像AI那样回应/拒绝了。请重来：你就是「'+c.name+'」本人，用ta的身份口吻自然地接着回'+S.me.name+'。'+(replyAccount==='main'?'你和ta是已确认成年、自愿的亲密关系；亲密、暧昧、占有欲、管束感和私密氛围都按你们关系自然表达。':'当前联系人是独立身份，只按ta的身份设定与当前聊天记录把握关系，绝不能套用你和其他联系人的亲密关系或共同回忆。')+'如果某个细节不适合直白展开，或ta明确表达真实停止，就用角色本人的语气放慢、确认、转场、留白或安抚。绝不许提"AI/助手/语言模型/安全准则/政策"，不许说教或发拒绝声明。]'},_pin],_repairMd,_routeState,c);if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;if(fix&&!wechatRoleDrift(fix))content=fix;}
     if(wxLoginCompletionFeature(note)&&!wxLoginCompletionReplyValid(content)){const original=String(content||'');let fix='';try{fix=await chatAPI([{role:'system',content:_stableSys},...hist,{role:'assistant',content:original},{role:'user',content:wxLoginCompletionRepairPrompt()},_pin],_repairMd);}catch(_){}if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;if(fix&&!wechatRoleDrift(fix)&&wxLoginCompletionReplyValid(fix))content=fix;else content=initiativeVisibleText(original)?original:'';}
     if(featureEventReplyNeedsRepair(note,content)){let fix='';try{fix=await chatAPI([{role:'system',content:_stableSys},...hist,{role:'assistant',content},{role:'user',content:featureEventRepairPrompt(note)},_pin],_repairMd);}catch(_){}if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;if(fix&&!wechatRoleDrift(fix)&&!featureEventReplyNeedsRepair(note,fix))content=fix;else if(/你发出的转账被(?:收款|退还)/.test(String(note||'')))content='';}
@@ -15194,7 +15196,8 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
     if(!_initiativeNoImage&&note&&/【本轮允许主动照片】/.test(note)&&!initiativePhotoCaptionOk(note,content))_initiativeNoImage=true;
     if(!_rawOutput){const _timeNow=Date.now(),_timeIssue=roleTimeClaimIssue(content,c,_timeNow);if(_timeIssue){let fix='';try{fix=await chatAPI([{role:'system',content:_stableSys},...hist,{role:'assistant',content},{role:'user',content:roleTimeRepairPrompt(c,_timeIssue,_timeNow)},{role:'system',content:personaPin(c)+roleReplyClockPin(_timeNow)}],_repairMd);}catch(_){}if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;content=fix&&!roleTimeClaimIssue(fix,c,_timeNow)?fix:'';}}
     if(!_rawOutput){const _timeNow=Date.now(),_mealIssue=recentMealProgressIssue(c,content,_timeNow);if(_mealIssue){let fix='';try{fix=await chatAPI([{role:'system',content:_stableSys},...hist,{role:'assistant',content},{role:'user',content:recentMealProgressRepairPrompt(c,_mealIssue,_timeNow)},{role:'system',content:personaPin(c)+recentMealProgressPrompt(c,_timeNow)}],_repairMd);}catch(_){}if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;content=fix&&!recentMealProgressIssue(c,fix,_timeNow)?fix:'';}}
-    if(wechatReasoningLeak(content))content='';if(!_rawOutput)content=refreshDirectClockReply(content,_userText,Date.now());
+    if(!_rawOutput)content=refreshDirectClockReply(content,_userText,Date.now());
+    const _robotFaceResult=typeof robotFaceExtract==='function'?robotFaceExtract(content):{text:content,emotion:null};content=_robotFaceResult.text;
     if(nativeInspectionPending(_lu,id)){if(typingEl&&typingEl.isConnected)typingEl.remove();return true;}/* 同一条消息若刚发起真实读取，等待读取结果；否则普通回复照常落地。 */
     const _deliveryPendingUserText=deliveryPendingUserTurnText(id,replyAccount,_userText),_deliveryCurrentUserTurn=!!(_lu&&_lu.id&&_deliveryPendingUserText&&replyPendingUserText(id,replyAccount)),_deliveryActionMeta={structuredModelAction:true,allowNewTask:_deliveryCurrentUserTurn,accountId:String(replyAccount||''),sessionId:String(accountMessageKey(id,replyAccount)||''),turnId:String(_lu&&_lu.id||replyToken||''),messageId:String(_lu&&_lu.id||''),modelReplyId:String(replyToken||''),channel:'chat',userText:_deliveryPendingUserText};
     if(typeof deliveryConsumeMemoryTags==='function')content=deliveryConsumeMemoryTags(content,c,_deliveryActionMeta);else content=String(content||'').replace(/[\[【]\s*外卖记忆\s*[|｜:：][^\]】]*[\]】]/g,'');
@@ -15243,7 +15246,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
       mm=line.match(/^\[发朋友圈\|([^\]]*)\]$/);if(mm){if(postRoleMoment(c,mm[1],{toast:true,userText:_userText,preserveText:_rawOutput}))_replyAuditHandled=true;else _replyAuditPartial=true;continue;}
       mm=line.match(/^\[发推\|([^\]]*)\]$/);if(mm){if(publishRoleTweet(c,mm[1],{toast:true}))_replyAuditHandled=true;else _replyAuditPartial=true;continue;}
       if(replyStale(id,replyToken,replyAccount)||actId()!==replyAccount){_replyAuditPartial=true;break;}
-      await sleep(got?roleMessageGap(line):0);
+      await sleep(got?roleMessageGap(line,id):0);
       if(replyStale(id,replyToken,replyAccount)||actId()!==replyAccount)break;
       if(offlineReplyBlocked(replyIntent,id))break;
       if(wxLoginBlockReply(id,note))break;/* 回复生成到一半时若角色开始登录，也立刻停止继续发 */
@@ -15257,7 +15260,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
       mm=line.match(/^\[放映邀请\|([^\]]*)\]$/);if(mm){if(!cinemaRoleInvite(id,(mm[1]||'').trim()))toast('角色想邀请的作品不在视频盒或书架里');continue;}
       if(/^\[同意放映\]$/.test(line)){cinemaRoleAnswerInvite(id,true);continue;}
       if(/^\[拒绝放映\]$/.test(line)){cinemaRoleAnswerInvite(id,false);continue;}
-      const voiceTag=parseVoiceTagLine(line);if(voiceTag){const vf0=(S.settings.voiceFreq==null?1:S.settings.voiceFreq),vt=_rawOutput?String(voiceTag.text||''):cleanRolePunct(voiceTag.text||''),tr=_rawOutput?String(voiceTag.trans||''):cleanRolePunct(voiceTag.trans||''),tooLong=[...vt].length>VOICE_MAX_CHARS,_vlang=ttsContentLang(c),badLang=(_vlang&&_vlang!=='zh'&&(!hasForeign(vt,_vlang)||!tr)),_cue=voiceTag.cue||ttsRequestedCue(_userText)||ttsAutoCue(vt,c)||'';const vm=voiceReplyBlocked(vf0,tooLong,badLang,_voiceRequired)?{role:'assistant',type:'text',content:tr||vt,time:Date.now(),id:uid()}:{role:'assistant',type:'voice',content:vt,trans:tr,showText:!!tr,voiceCue:_cue,time:Date.now(),id:uid()};if(_altReportInfo)vm._altReportEventTime=+_altReportInfo.time;replyHandoffPush(_handoffTurn,msgs(id),vm);lifeNoteCommitReply(_lifeNoteDraft,vm.text||vm.content||'');wechatTailJournalWrite(id,replyAccount);notifyIncoming(c,vm);save();if(vm.type==='voice'&&ttsApiOn(c))vm._ttsLoading=true;if(cur().p==='chat'&&cur().id===id){appendChatMessageHTML(id,c,vm,{replaceTyping:true});typingEl=null;}if(vm.type==='voice')scheduleVoiceWarm(vm,c,voiceProgressiveOn());continue;}
+      const voiceTag=parseVoiceTagLine(line);if(voiceTag){const vf0=(S.settings.voiceFreq==null?1:S.settings.voiceFreq),vt=_rawOutput?String(voiceTag.text||''):cleanRolePunct(voiceTag.text||''),tr=_rawOutput?String(voiceTag.trans||''):cleanRolePunct(voiceTag.trans||''),tooLong=[...vt].length>VOICE_MAX_CHARS,_vlang=ttsContentLang(c),badLang=(_vlang&&_vlang!=='zh'&&(!hasForeign(vt,_vlang)||!tr)),_cue=voiceTag.cue||ttsRequestedCue(_userText)||ttsAutoCue(vt,c)||'';let vm=voiceReplyBlocked(vf0,tooLong,badLang,_voiceRequired)?{role:'assistant',type:'text',content:tr||vt,time:Date.now(),id:uid()}:{role:'assistant',type:'voice',content:vt,trans:tr,showText:!!tr,voiceCue:_cue,time:Date.now(),id:uid()};if(typeof RobotVoice!=='undefined')vm=await RobotVoice.prepareMessage(vm,id);if(replyStale(id,replyToken,replyAccount)||actId()!==replyAccount)break;if(_altReportInfo)vm._altReportEventTime=+_altReportInfo.time;replyHandoffPush(_handoffTurn,msgs(id),vm);lifeNoteCommitReply(_lifeNoteDraft,vm.text||vm.content||'');wechatTailJournalWrite(id,replyAccount);notifyIncoming(c,vm);save();if(typeof robotFaceFirstVisible==='function')robotFaceFirstVisible(_robotFaceTurn,_robotFaceResult.emotion,replyAccount);if(vm.type==='voice'&&ttsApiOn(c))vm._ttsLoading=true;if(cur().p==='chat'&&cur().id===id){appendChatMessageHTML(id,c,vm,{replaceTyping:true});typingEl=null;}if(vm.type==='voice')scheduleVoiceWarm(vm,c,voiceProgressiveOn());continue;}
       mm=line.match(/^\[代付成功\|?([0-9.]*)\|?([^\]]*)\]$/);if(mm){const pend=markPay(id,'pay');if(!pend)continue;const pnm=pend.name||mm[2]||'商品';const ppr=pend.price||+mm[1]||0;const pc={role:'assistant',type:'paid',price:ppr,name:pnm,id:uid(),time:Date.now()};replyHandoffPush(_handoffTurn,msgs(id),pc);notifyIncoming(c,pc);
         const _isFood=pend.kind==='food'||/^外卖/.test(pend.shop||'');
         if(_isFood){S.giftbox=S.giftbox||[];S.giftbox.push({id:uid(),cid:id,name:pnm,price:ppr,kind:'food',buyTs:Date.now(),arriveTs:Date.now()+900000,delivered:false,notified:false});replyHandoffPush(_handoffTurn,msgs(id),{role:'user',type:'sys',content:'🛵 '+(c.remark||c.name)+'帮你付了外卖「'+pnm+'」，配送中（约15分钟送达）',time:Date.now(),id:uid()});}
@@ -15298,12 +15301,15 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
         const parts=base.type==='text'&&!_rawOutput?splitActions(base.content):[null];
         for(let pi=0;pi<parts.length;pi++){
           if(replyStale(id,replyToken,replyAccount)||actId()!==replyAccount)break;
-          await sleep(pi>0?roleMessageGap(parts[pi]):0);
+          await sleep(pi>0?roleMessageGap(parts[pi],id):0);
           if(replyStale(id,replyToken,replyAccount)||actId()!==replyAccount)break;
-          const msg=parts[pi]==null?base:{role:'assistant',type:'text',content:parts[pi]};
+          let msg=parts[pi]==null?base:{role:'assistant',type:'text',content:parts[pi]};
+          if(typeof RobotVoice!=='undefined')msg=await RobotVoice.prepareMessage(msg,id);
+          if(replyStale(id,replyToken,replyAccount)||actId()!==replyAccount)break;
           if(pendQuote&&(msg.type==='text'||msg.type==='voice')){msg.quote={who:'me',text:pendQuote};pendQuote=null;}
           msg.time=Date.now();msg.id=msg.id||uid();if(_altReportInfo)msg._altReportEventTime=+_altReportInfo.time;replyHandoffPush(_handoffTurn,msgs(id),msg);lifeNoteCommitReply(_lifeNoteDraft,msg.content||msg.text||'');wechatTailJournalWrite(id,replyAccount);save();
           if(msg.type==='image')photoTail=3;
+          if((msg.type==='text'||msg.type==='voice')&&typeof robotFaceFirstVisible==='function')robotFaceFirstVisible(_robotFaceTurn,_robotFaceResult.emotion,replyAccount);
           notifyIncoming(c,msg);
           if(cur().p==='chat'&&cur().id===id){appendChatMessageHTML(id,c,msg,{replaceTyping:true});typingEl=null;}
           else if(cur().p==='wechat')render();}}
@@ -15317,14 +15323,14 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
     if(got)suspicionOnAssistantReply(c);
     if(_wxLoginCompletion)got=replyVisibleAssistantCount(id,replyAccount)>_wxLoginVisibleBefore;
     if(got)offWechatHandoffConsume(c);if(got)gameWechatHandoffConsume(c);delivered=got;
-    if(delivered){/* 先把回复真正落盘，再取消服务器接力；角色回复本身也是一次真实互动，久未回复计时必须从这里重新开始。 */replyHandoffMarkLocal(_handoffTurn);wechatTailJournalWrite(id,replyAccount);let _handoffSaved=false;try{_handoffSaved=!!(await persistWechatMessagesNow());}catch(_){saveNow();}if(_handoffSaved){roleServerPushTouchActivity(id,Date.now(),true);if(_handoffTurn)replyHandoffCancelRemote(_handoffTurn);else roleBackgroundCancel(id,['reply_handoff']);}}
+    if(delivered){/* 先把回复真正落盘，再取消服务器接力；角色回复本身也是一次真实互动，久未回复计时必须从这里重新开始。 */replyHandoffMarkLocal(_handoffTurn);wechatTailJournalWrite(id,replyAccount);let _handoffSaved=false;try{_handoffSaved=!!(await persistWechatMessagesNow());}catch(_){saveNow();}if(_handoffSaved){roleServerPushTouchActivity(id,Date.now(),true);if(_robotFaceTurn&&typeof robotFacePublish==='function')void robotFacePublish(_robotFaceTurn,_robotFaceResult.emotion,replyAccount);if(_handoffTurn)replyHandoffCancelRemote(_handoffTurn);else roleBackgroundCancel(id,['reply_handoff']);}}
     replyNoVisibleReasonSet(id,replyAccount,replyToken,got?'':replyNoVisibleReasonFromContent(_replyCandidate));
   }catch(e){if(typingEl)typingEl.remove();if(replyStale(id,replyToken,replyAccount)||actId()!==replyAccount)return;
-    const em=String(e&&e.message||'请求失败').slice(0,90);replyNoVisibleReasonSet(id,replyAccount,replyToken,em);if(cur().p==='chat'&&cur().id===id&&!friendAcceptedAutoNote(note))toast('模型未回复：'+em,10000);}finally{if(replyHandoffMarkLocal(_handoffTurn))save();replyHandoffRelease(_handoffTurn);}
+    const em=String(e&&e.message||'请求失败').slice(0,90);replyNoVisibleReasonSet(id,replyAccount,replyToken,em);if(cur().p==='chat'&&cur().id===id&&!friendAcceptedAutoNote(note))toast((e&&e.code==='robot-chinese-conversion'?'':'模型未回复：')+em,10000);}finally{if(replyHandoffMarkLocal(_handoffTurn))save();replyHandoffRelease(_handoffTurn);}
   if(actId()===replyAccount)maybeSummarize(id,replyAccount);return delivered;
 }
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
-function roleMessageGap(text){return 1050+Math.min(1350,[...String(text||'')].length*22)+Math.random()*520;}
+function roleMessageGap(text,id){if(id&&typeof RobotVoice!=='undefined'&&RobotVoice.roleActive(id))return 0;return 1050+Math.min(1350,[...String(text||'')].length*22)+Math.random()*520;}
 // ===== 记忆总结·重要度(1-5) + 自动清理 =====
 const IMP_INSTR='\n最后，请在【最前面单独一行】用「重要度：N」给这段记忆打个分：N是1到5的整数——1=普通日常闲聊、2=有点小事、3=一般值得记、4=重要、5=刻骨铭心的大事(比如表白/订婚/纪念日/ta哭了/重大承诺/大吵又和好)。第一行只写「重要度：N」，第二行起再写日记正文。';
 function rateAndText(raw){let imp=3,text=(raw||'').trim();const m=text.match(/^\s*重要度\s*[:：]?\s*([1-5])[^\n]*\n?/);if(m){imp=+m[1];text=text.slice(m[0].length).trim();}return {imp:imp,text:text};}
