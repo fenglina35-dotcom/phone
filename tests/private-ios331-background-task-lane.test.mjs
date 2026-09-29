@@ -61,19 +61,19 @@ function functionSource(source, name) {
   throw new Error(`unterminated ${name}`);
 }
 
-test('private performance candidate keeps v1349 while public web advances independently', () => {
+test('private performance candidate keeps v1353 while public web advances independently', () => {
   assert.equal(privateIndex, privateAlias);
-  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1349'/);
-  assert.match(privateIndex, /app\.js\?v=1349&r=v1349-private-control-contract-1/);
+  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1353'/);
+  assert.match(privateIndex, /app\.js\?v=1353&r=v1353-private-robot-merge-1/);
   assert.match(privateIndex, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(privateRepair, /index\.html\?repair=1&v=1349/);
-  assert.match(privateApp, /APP_VER='v1349 · 私人管控说和做分开与聊天修复'/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1353/);
+  assert.match(privateApp, /APP_VER='v1353 · 小K合并管控与聊天修复'/);
   assert.match(overlay, /336-daily-file-backup/);
-  assert.match(webView, /1\.0\.401 \(401\)/);
-  assert.match(bridge, /private static let build = "1\.0\.401 \(401\)"/);
-  assert.match(bridge, /static let contractVersion = 41/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 401;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.401;/g) || []).length, 12);
+  assert.match(webView, /1\.0\.420 \(420\)/);
+  assert.match(bridge, /private static let build = "1\.0\.420 \(420\)"/);
+  assert.match(bridge, /static let contractVersion = 42/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 420;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.420;/g) || []).length, 12);
   assert.match(publicApp, /APP_VER='v1348 · 管控说和做分开'/);
   assert.doesNotMatch(publicApp, /function northNativeBackgroundTask\(name,run\)/);
 });

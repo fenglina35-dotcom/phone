@@ -63,9 +63,9 @@ async function command(action,source){
   try{
     var result=await SmallPhoneNative.request('homekit.lock.command',{accessoryId:String(lock.accessoryId),serviceId:String(lock.serviceId),action:action,source:source||'manual'});
     if(result&&result.state){memory.state=result.state;var i=memory.locks.findIndex(function(x){return x.accessoryId===result.state.accessoryId&&x.serviceId===result.state.serviceId;});if(i>=0)memory.locks[i]=result.state;}
-    if(!result||result.ok!==true||result.verified!==true||!result.state)return{ok:false,verified:false,message:clean(result&&result.message||'HomeKit 没有确认门锁真实状态',220),state:result&&result.state};
+    if(!result||result.ok!==true||result.verified!==true||!result.state)return{ok:false,verified:false,message:clean(result&&result.message||'HomeKit 没有确认门锁真实状态',220),state:result&&result.state,code:clean(result&&result.code||'',80)};
     memory.error='';return result;
-  }catch(error){return{ok:false,verified:false,message:clean(error&&error.message||error,220)||'门锁操作失败'};}
+  }catch(error){return{ok:false,verified:false,code:clean(error&&error.code||'',80),message:clean(error&&error.message||error,220)||'门锁操作失败'};}
   finally{memory.busy=false;rerender();}
 }
 

@@ -14,16 +14,16 @@ const backup=read(bundle+'private-cloud-backup.js');
 const privateApp=read(bundle+'app.js');
 const publicApp=read('app.js');
 
-test('private v1349 loads daily backup after the diagnostic overlay while public advances independently',()=>{
+test('private v1353 loads daily backup after the diagnostic overlay while public advances independently',()=>{
   for(const name of ['index.html','小手机.html']){
     const html=read(bundle+name);
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1349'/);
-    assert.ok(html.indexOf('private-cloud-backup.js?v=1349')>html.indexOf('private-runtime-diagnostics.js?v=339'));
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1353'/);
+    assert.ok(html.indexOf('private-cloud-backup.js?v=1353')>html.indexOf('private-runtime-diagnostics.js?v=339'));
   }
-  assert.match(privateApp,/APP_VER='v1349 · 私人管控说和做分开与聊天修复'/);
+  assert.match(privateApp,/APP_VER='v1353 · 小K合并管控与聊天修复'/);
   assert.match(publicApp,/APP_VER='v1348 · 管控说和做分开'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 401;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.401;/g)||[]).length,12);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 420;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.420;/g)||[]).length,12);
 });
 
 test('web backup sends bounded ordered chunks and records a day only after confirmed save',()=>{
@@ -42,7 +42,7 @@ test('web backup sends bounded ordered chunks and records a day only after confi
 
 test('native bridge persists account-bound backup chunks and confirms a small manifest',()=>{
   for(const action of ['begin','chunk','commit','abort'])assert.match(bridge,new RegExp(`account\\.backup\\.file\\.${action}`));
-  assert.match(bridge,/static let contractVersion = 41/);
+  assert.match(bridge,/static let contractVersion = 42/);
   assert.match(bridge,/private actor PrivateBackupFileStore/);
   assert.match(bridge,/offset == current\.written/);
   assert.match(bridge,/current\.owner == owner/);

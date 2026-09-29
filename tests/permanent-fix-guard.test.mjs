@@ -29,6 +29,10 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"v1353（Mac 线 v1343–v1352）",scope:"private",least:1,name:"小K表情随回复同步并在首条可见气泡时点亮",marker:"robotFaceFirstVisible(_robotFaceTurn,_robotFaceResult.emotion,replyAccount)"},
+  {release:"v1353（Mac 线 v1343–v1352）",scope:"private",least:1,name:"小K独立语音接管回复并取消人为气泡等待",marker:"if(id&&typeof RobotVoice!=='undefined'&&RobotVoice.roleActive(id))return 0;"},
+  {release:"v1353（Mac 线 v1343–v1352）",scope:"private",least:1,name:"小K语音输入复用用户发言后续流程",marker:"function wechatContinueUserText(id,t,opt)"},
+  {release:"v1353（Mac 线 v1343–v1352）",scope:"private",least:1,file:PRIVATE_DIR+"index.html",name:"私人入口加载小K组件",marker:'<script src="private-robot-voice.js?v='},
   {release:"v1348/v1349",scope:"both",least:1,name:"管控说和做分开：说的话不执行，只执行指令标签",marker:"【说和做分开·最高优先级】你说的话永远不会锁或解锁任何东西"},
   {release:"v1348/v1349",scope:"both",least:1,name:"像已完成却没写指令时只回头问角色一次，只执行它回的指令",marker:"async function controlClaimConfirm(reply,c,id,opt)"},
   {release:"v1348/v1349",scope:"both",least:1,name:"真实执行的锁/解锁在聊天里留系统提示",marker:"真实执行过的管控在聊天里留一行系统提示"},
@@ -1204,6 +1208,16 @@ for (const fix of PERMANENT_FIXES) {
     });
   }
 }
+
+test('v1353 private bundle keeps every robot K component and native speech bridge 42', () => {
+  for (const f of ['robot-face-protocol.js','private-robot-face.js','private-robot-voice.js','private-device-history.js','private-cloud-usage.js','assets/k-default-face.png','assets/k-faces/miss.gif']) {
+    assert.ok(fs.existsSync(new URL('../' + PRIVATE_DIR + f, import.meta.url)), '小K组件缺失：' + f);
+  }
+  const bridge = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift');
+  assert.match(bridge, /case "robot\.speech\.transcribe":/);
+  assert.match(bridge, /private final class RobotFileSpeechRecognizer/);
+  assert.match(bridge, /static let contractVersion = 42/);
+});
 
 test('the private bundle still ships its performance protection component', () => {
   const index = read(PRIVATE_DIR + 'index.html');

@@ -58,19 +58,19 @@ function persistenceRuntime() {
   return { context, writes, releases, traces };
 }
 
-test('private identity remains v1349 and iOS 399 while public advances independently', () => {
-  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1349'/);
-  assert.match(privateApp, /APP_VER='v1349 · 私人管控说和做分开与聊天修复'/);
+test('private identity remains v1353 and iOS 399 while public advances independently', () => {
+  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1353'/);
+  assert.match(privateApp, /APP_VER='v1353 · 小K合并管控与聊天修复'/);
   for (const html of [privateIndex, privateAlias]) {
-    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1349'/);
-    assert.match(html, /app\.js\?v=1349&r=v1349-private-control-contract-1/);
+    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1353'/);
+    assert.match(html, /app\.js\?v=1353&r=v1353-private-robot-merge-1/);
     assert.match(html, /private-runtime-diagnostics\.js\?v=339/);
   }
-  assert.match(privateRepair, /index\.html\?repair=1&v=1349/);
-  assert.match(swift, /1\.0\.401 \(401\)/);
-  assert.match(bridge, /private static let build = "1\.0\.401 \(401\)"/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 401;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.401;/g) || []).length, 12);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1353/);
+  assert.match(swift, /1\.0\.420 \(420\)/);
+  assert.match(bridge, /private static let build = "1\.0\.420 \(420\)"/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 420;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.420;/g) || []).length, 12);
   assert.match(publicApp, /APP_VER='v1348 · 管控说和做分开'/);
   assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1348'/);
   assert.doesNotMatch(publicApp, /persistWechatRequested|smallPhoneWechatPersistTrace/);
