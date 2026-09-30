@@ -14,12 +14,12 @@ test('v1184 web identity and cache markers are aligned', () => {
   const index = read('index.html');
   const repair = read('repair.html');
   assert.match(app, /__NORTH_SHELL_BUILD__!=='1352'/);
-  assert.match(app, /APP_VER='v1352 · 查手机与发文件修复'/);
+  assert.match(app, /APP_VER='v1352 · 查手机发文件与约会时间修复'/);
   assert.match(shell, /__NORTH_SHELL_BUILD__='1352'/);
-  assert.match(shell, /app\.js\?v=1352&r=v1352-web-file-spy-fix-1/);
+  assert.match(shell, /app\.js\?v=1352&r=v1352-web-offline-time-1/);
   assert.match(sw, /const BUILD='1352'/);
-  assert.match(sw, /v1352-web-file-spy-fix-1/);
-  assert.match(hotfix, /v1352-web-file-spy-fix-1/);
+  assert.match(sw, /v1352-web-offline-time-1/);
+  assert.match(hotfix, /v1352-web-offline-time-1/);
   assert.match(index, /小手机\.html\?v=1352/);
   assert.match(repair, /小手机\.html\?v=1352/);
 });

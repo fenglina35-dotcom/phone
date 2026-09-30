@@ -48,16 +48,16 @@ function functionSource(sourceText, name) {
 test('private identifiers remain v1355 and iOS 399 while public advances independently', () => {
   assert.equal(index, alias);
   assert.match(index, /window\.__NORTH_SHELL_BUILD__='1357'/);
-  assert.match(index, /app\.js\?v=1357&r=v1357-private-file-spy-fix-1/);
+  assert.match(index, /app\.js\?v=1357&r=v1357-private-offline-time-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(app, /APP_VER='v1357 · 查手机与发文件修复'/);
+  assert.match(app, /APP_VER='v1357 · 查手机发文件与约会时间修复'/);
   assert.match(overlay, /336-daily-file-backup/);
   assert.match(webview, /1\.0\.422 \(422\)/);
   assert.match(bridge, /private static let build = "1\.0\.422 \(422\)"/);
   assert.match(bridge, /static let contractVersion = 42/);
   assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 422;/g) || []).length, 12);
   assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.422;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1352 · 查手机与发文件修复'/);
+  assert.match(publicApp, /APP_VER='v1352 · 查手机发文件与约会时间修复'/);
   assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1352'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });

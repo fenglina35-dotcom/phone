@@ -9,7 +9,9 @@
   const date=new Date(at+28800000),pad=n=>String(n).padStart(2,'0');
   return pad(date.getUTCHours())+':'+pad(date.getUTCMinutes())+':'+pad(date.getUTCSeconds());
  }
- function html(message){if(!enabled()||!message||message.type==='sys'||message._silent)return '';return '<div class="msgt beijing-message-time" style="display:block!important;visibility:visible!important;opacity:1!important;font-size:10px;line-height:1.5;margin-top:4px;height:15px;position:relative" aria-label="消息实际记录北京时间"><span style="position:absolute;'+(message.role==='user'?'right':'left')+':0;white-space:nowrap">'+label(message)+'</span></div>';}
+ /* 微信气泡用 role，线下约会、共同生活、角色扮演用 who==='me'；认错一边时间会贴左边往外伸，被屏幕切掉。 */
+ function mine(message){return message.role==='user'||message.who==='me';}
+ function html(message){if(!enabled()||!message||message.type==='sys'||message._silent)return '';return '<div class="msgt beijing-message-time" style="display:block!important;visibility:visible!important;opacity:1!important;font-size:10px;line-height:1.5;margin-top:4px;height:15px;position:relative" aria-label="消息实际记录北京时间"><span style="position:absolute;'+(mine(message)?'right':'left')+':0;white-space:nowrap">'+label(message)+'</span></div>';}
  function toggle(){if(typeof S==='undefined')return;S.settings=S.settings||{};S.settings.beijingMessageTimes=!enabled();save();render();}
  function setting(){return '<div class="it"><span>每条气泡显示北京时间<br><small style="color:#888">你和对方每条消息下仅显示时分秒（北京时间 UTC+8），不使用模型时间。关闭恢复原样；没有时间的旧记录显示未知。时间准确性取决于原记录设备或服务器的时钟。</small></span><span id="beijingMessageTimesToggle" class="sw '+(enabled()?'on':'')+'" role="switch" aria-checked="'+enabled()+'" onclick="messageBeijingTimeToggle()"></span></div>';}
  root.messageBeijingTimeHTML=html;root.messageBeijingTimeToggle=toggle;root.messageBeijingTimeSettingHTML=setting;

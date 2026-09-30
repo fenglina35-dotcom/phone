@@ -145,7 +145,7 @@ test('guest exit sends exactly one genuine memory-grounded WeChat message',()=>{
 });
 
 test('private artifact identity advances independently to v1355 and iOS 1.0.400 (399)',()=>{
-  assert.match(privateApp,/const APP_VER='v1357 · 查手机与发文件修复'/);
+  assert.match(privateApp,/const APP_VER='v1357 · 查手机发文件与约会时间修复'/);
   assert.match(privateHtml,/private-runtime-diagnostics\.js\?v=339/);
   assert.match(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),/1\.0\.422 \(422\)/);
   const project=read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');

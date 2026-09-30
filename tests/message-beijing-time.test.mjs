@@ -30,3 +30,11 @@ test('private time module is byte-identical and each shell loads it before the c
   const html=fs.readFileSync(new URL(file,import.meta.url),'utf8');assert(html.includes('message-beijing-time.js?'));assert(html.indexOf('message-beijing-time.js?')<html.indexOf('<script src="app.js?'));
  }
 });
+// v1352：线下约会、共同生活、角色扮演里“我”的消息用 who==='me'，时间曾贴左边往右伸出屏幕，被切成「18:2」。
+test('my own messages in offline date, cohab and roleplay anchor the time on the right',()=>{
+ const w=load({beijingMessageTimes:true}),at=1788883200000;
+ assert.match(w.ctx.messageBeijingTimeHTML({who:'me',text:'回家了还穿什么外套',time:at}),/position:absolute;right:0/);
+ assert.match(w.ctx.messageBeijingTimeHTML({role:'user',type:'text',time:at}),/position:absolute;right:0/);
+ assert.match(w.ctx.messageBeijingTimeHTML({who:'ta',text:'嗯',time:at}),/position:absolute;left:0/);
+ assert.match(w.ctx.messageBeijingTimeHTML({role:'assistant',type:'text',time:at}),/position:absolute;left:0/);
+});

@@ -64,17 +64,17 @@ function functionSource(source, name) {
 test('private performance candidate keeps v1355 while public web advances independently', () => {
   assert.equal(privateIndex, privateAlias);
   assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1357'/);
-  assert.match(privateIndex, /app\.js\?v=1357&r=v1357-private-file-spy-fix-1/);
+  assert.match(privateIndex, /app\.js\?v=1357&r=v1357-private-offline-time-1/);
   assert.match(privateIndex, /private-runtime-diagnostics\.js\?v=339/);
   assert.match(privateRepair, /index\.html\?repair=1&v=1357/);
-  assert.match(privateApp, /APP_VER='v1357 · 查手机与发文件修复'/);
+  assert.match(privateApp, /APP_VER='v1357 · 查手机发文件与约会时间修复'/);
   assert.match(overlay, /336-daily-file-backup/);
   assert.match(webView, /1\.0\.422 \(422\)/);
   assert.match(bridge, /private static let build = "1\.0\.422 \(422\)"/);
   assert.match(bridge, /static let contractVersion = 42/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 422;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.422;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1352 · 查手机与发文件修复'/);
+  assert.match(publicApp, /APP_VER='v1352 · 查手机发文件与约会时间修复'/);
   assert.doesNotMatch(publicApp, /function northNativeBackgroundTask\(name,run\)/);
 });
 
