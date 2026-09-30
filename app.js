@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1366'){
+if(window.__NORTH_SHELL_BUILD__!=='1368'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -539,7 +539,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1366 · 共同生活点一下';
+const APP_VER='v1368 · 群聊点名先回';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1927,7 +1927,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1366&r=v1366-web-cohab-tap-1';
+  const url='sw.js?v=1368&r=v1368-web-group-order-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -8729,8 +8729,10 @@ function groupRoleCares(c,text){const persona=String(c&&c.persona||'')+' '+Strin
 function groupReplyPlan(g,members,fromText,rand){rand=rand||Math.random;const cap=Math.max(1,+g.msgMax||2),lo=Math.max(1,Math.min(cap,+g.msgMin||1)),coupleId=S.couple&&S.couple.cid,text=String(fromText||''),plan=[];
   const pick=(c,forced)=>{const temper=groupRoleTemper(c),cares=groupRoleCares(c,text),chance=forced?1:Math.min(.97,(temper==='lively'?.9:temper==='quiet'?.3:.62)+(cares?.35:0));if(rand()>=chance)return null;
     let n=lo+Math.floor(rand()*(cap-lo+1));if(temper==='quiet')n=cares?Math.min(2,cap):1;else if(temper==='lively')n=Math.min(cap+1,n+(cares?1:0));else if(cares)n=Math.min(cap,n+1);return{c,cap:Math.max(1,n),temper,cares};};
-  const couple=members.find(c=>c.id===coupleId),mentioned=members.filter(c=>c!==couple&&text&&text.includes(c.name)),rest=members.filter(c=>c!==couple&&mentioned.indexOf(c)<0).sort(()=>rand()-.5);
-  if(couple)plan.push(pick(couple,true));mentioned.forEach(c=>plan.push(pick(c,true)));
+  /* 被点名 / @ 的人先回（按在这句话里出现的先后），然后才是情侣角色；没点名就情侣角色先回。名字、备注、群昵称都算点名。 */
+  const where=c=>{if(!text)return -1;const names=[c.name,c.remark,typeof gnm==='function'?gnm(g,c.id):''].filter(n=>n&&String(n).trim().length);let at=-1;names.forEach(n=>{const i=text.indexOf(String(n).trim());if(i>=0&&(at<0||i<at))at=i;});return at;};
+  const couple=members.find(c=>c.id===coupleId),mentioned=members.filter(c=>where(c)>=0).sort((a,b)=>where(a)-where(b)),rest=members.filter(c=>c!==couple&&mentioned.indexOf(c)<0).sort(()=>rand()-.5);
+  mentioned.forEach(c=>plan.push(pick(c,true)));if(couple&&mentioned.indexOf(couple)<0)plan.push(pick(couple,true));
   /* 其余人里活跃的、被戳中话题的往前排；社恐的排后面，常常不开口。 */
   const others=rest.map(c=>pick(c,false)).filter(Boolean).sort((a,b)=>(b.cares-a.cares)||((b.temper==='lively')-(a.temper==='lively'))||((a.temper==='quiet')-(b.temper==='quiet')));
   /* 情侣角色不在群里、也没人被点名时，至少留一个人接话，不让整群冷场。 */
@@ -8762,7 +8764,9 @@ function gBatchPrompt(g,batch,recent){const me=S.me.name;
     +gContext(g,{id:'__batch__'},recent);}
 async function groupBatchReplyItems(g,batch,recent,why){const out=new Map();if(!batch.length)return out;
   const sys=gBatchPrompt(g,batch,recent),turn='[轮到这几个人在群里说话了：'+batch.map(e=>gnm(g,e.c.id)).join('、')+'。按上面的格式，给每个人各写一段。]';
-  let raw='';try{raw=roleVisibleEnvelopeText(await chatAPI([{role:'system',content:sys},{role:'user',content:turn}],{max:Math.min(1400,260+batch.length*220),complete:true}));}catch(e){why.push((e&&e.message)||'请求失败');return out;}
+  /* 合并调用用这一批里第一个人自己的路线（和他单独调用、私聊一致），不再用全局当前路线 */
+  const route=typeof roleChatRouteIndex==='function'?roleChatRouteIndex(batch[0].c):null;
+  let raw='';try{raw=roleVisibleEnvelopeText(await chatAPI([{role:'system',content:sys},{role:'user',content:turn}],Object.assign({max:Math.min(1400,260+batch.length*220),complete:true},route!=null?{routeIndex:route,independentRoleModel:true}:{})));}catch(e){why.push((e&&e.message)||'请求失败');out.failed=true;return out;}
   const sections=new Map();let curId=null;const lines=String(raw||'').split(/\r?\n/);
   const find=name=>{name=String(name||'').trim();const hit=batch.find(e=>gBatchNames(g,e.c).includes(name));return hit?hit.c.id:null;};
   lines.forEach(l=>{const h=l.trim().match(/^[【\[]\s*([^\]】|｜]{1,24})\s*[】\]]\s*[:：]?\s*$/);const hid=h&&find(h[1]);if(hid){curId=hid;if(!sections.has(hid))sections.set(hid,[]);return;}if(h&&!/^(?:引用|不说话|不回|沉默|潜水|红包|转账|禁言|解禁|踢出|群昵称)/.test(h[1].trim())){curId=null;return;}/* 这轮没轮到的人写的段落，不能算到上一个人头上 */
@@ -8789,6 +8793,9 @@ async function aiGroupReplyRun(id,fromText){const g=S.groups.find(x=>x.id===id);
       const batch=plan.slice(i).filter(e=>!handled.has(e.c.id)&&!gCallSolo(g,e.c.id)&&g.members.includes(e.c.id)&&!gmMutedUntil('role',id,e.c.id));batch.forEach(e=>handled.add(e.c.id));
       groupTypingSet(g,c.id);let got;try{got=await groupBatchReplyItems(g,batch,recent,why);}finally{groupTypingSet(g,null);}
       if(g.msgs.length!==before&&cur().p==='group'&&cur().id===id)render();
+      if(got.failed){/* 合并那一次请求失败了：别让这几个人都不说话，退回每人单独调用 */
+        for(const e of batch){if(!g.members.includes(e.c.id)||gmMutedUntil('role',id,e.c.id))continue;groupTypingSet(g,e.c.id);let items;try{items=await groupRoleReplyItems(g,e.c,g.msgs.slice(-14),e.cap,{temper:e.temper,cares:e.cares,first:e.c.id===(S.couple&&S.couple.cid),why,route:typeof roleChatRouteIndex==='function'?roleChatRouteIndex(e.c):null});}finally{groupTypingSet(g,null);}if(items.length){spoke++;await gEmitRoleItems(g,e.c,items);}}
+        continue;}
       let firstRole=true;for(const e of batch){const items=got.get(e.c.id)||[];if(!items.length)continue;if(!firstRole){groupTypingSet(g,e.c.id);await sleep(700+Math.random()*900);groupTypingSet(g,null);}firstRole=false;spoke++;await gEmitRoleItems(g,e.c,items);}
     }catch(e){why.push((e&&e.message)||'群回复出错');}}
   /* 一个人都没回、又不是大家选择沉默：把原因说出来，别只闪一下三个点就没了 */
