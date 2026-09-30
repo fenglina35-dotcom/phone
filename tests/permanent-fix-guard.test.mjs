@@ -29,6 +29,9 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"v1352/v1357",scope:"both",least:1,name:"角色照抄文件上下文或漏写 [/文件] 仍按文件收下",marker:"const ROLE_FILE_ECHO="},
+  {release:"v1352/v1357",scope:"both",least:1,name:"角色自己发过的文件在历史里用它自己的文件写法",marker:"if(m&&m.role==='assistant'&&m.type==='file')return roleFileHistoryText(m);"},
+  {release:"v1352/v1357",scope:"both",least:1,name:"查手机额度 4000、不夹 system、失败显示原因",marker:"toast('生成失败：'+(_spyWhy||'原因未知')"},
   {release:"v1351/v1356",scope:"both",least:1,name:"共同生活后角色主动发微信，从共同生活最新一轮接着说",marker:"【本轮是从'+where+'回到微信后你主动发的第一条（最高优先级）】"},
   {release:"v1351/v1356",scope:"both",least:1,name:"后台主动消息也带共同生活交接提醒",marker:"const handoffPin=roleReplyCrossChannelHandoffPrompt(c,Date.now());if(handoffPin)lines.push(handoffPin.trim());"},
   {release:"v1351/v1356",scope:"both",least:1,name:"真红包：点开是「開」，领完变灰并留「你领取了…的红包」",marker:"function rpOpen("},

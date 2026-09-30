@@ -50,7 +50,7 @@ test('the file body reaches the character, and an unreadable file never gets fak
 
 test('a character can write a real multi-line file, and the body never leaks as chat bubbles', () => {
   const ctx = vm.createContext({ String });
-  vm.runInContext('const CHAT_FILE_MAX=20000;\nconst ROLE_FILE_BLOCK=' + app.match(/const ROLE_FILE_BLOCK=(\/.*?\/g);/)[1] + ';\n' + source('roleFileExtract') + ';globalThis.E=roleFileExtract;', ctx);
+  vm.runInContext('const CHAT_FILE_MAX=20000;\n' + app.split('\n').filter(l => /^const ROLE_FILE_(?:BLOCK|ECHO|OPEN)=/.test(l)).join('\n') + '\n' + source('roleFileExtract') + ';globalThis.E=roleFileExtract;', ctx);
   const out = ctx.E('给你写好了。\n[文件|周末安排.txt]\n六点起\n\n七点出门\n[/文件]\n看看行不行');
   assert.equal(out.files.length, 1);
   assert.equal(out.files[0].name, '周末安排.txt');
