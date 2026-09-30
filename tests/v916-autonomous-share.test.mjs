@@ -13,8 +13,8 @@ const project = read('../native/private-small-phone/XcodeProject/PhoneCompanionT
 test('v929 web and private versions are aligned', () => {
   assert.match(app, /APP_VER='v1368 · 群聊点名先回'/);
   assert.match(html, /__NORTH_SHELL_BUILD__='1368'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 424;/);
-  assert.match(project, /MARKETING_VERSION = 1.0.424;/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 425;/);
+  assert.match(project, /MARKETING_VERSION = 1.0.425;/);
   assert.match(bridge, /contractVersion = 42/);
 });
 

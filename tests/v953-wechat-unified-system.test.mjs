@@ -9,8 +9,8 @@ const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProjec
 assert.match(source,/APP_VER='v1368 · 群聊点名先回'/);
 assert.match(html,/__NORTH_SHELL_BUILD__='1368'/);
 assert.match(sw,/BUILD='1368'/);
-assert.equal((project.match(/CURRENT_PROJECT_VERSION = 424;/g)||[]).length,12);
-assert.equal((project.match(/MARKETING_VERSION = 1.0.424;/g)||[]).length,12);
+assert.equal((project.match(/CURRENT_PROJECT_VERSION = 425;/g)||[]).length,12);
+assert.equal((project.match(/MARKETING_VERSION = 1.0.425;/g)||[]).length,12);
 
 assert.match(source,/const WECHAT_UNIFIED_SYSTEM=true/);
 assert.match(source,/function wechatNaturalOn\(\)\{return WECHAT_UNIFIED_SYSTEM;\}/);

@@ -25,9 +25,9 @@ test('v1184 web files use one cache-busting build number',()=>{
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{
   assert.match(privateBundle,/<string>1200<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.424;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 424;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.424 \(424\)'/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.425;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 425;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.425 \(425\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 
