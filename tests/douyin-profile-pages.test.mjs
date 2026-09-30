@@ -652,7 +652,8 @@ test('who speaks in a group is decided by personality, and the room can stay qui
 
 test('strangers share one call while characters each get their own', () => {
   const run = source('dyGroupReplyRun');
-  assert.match(run, /if\(m\.cid\)\{/, '角色单独调用，带完整人设');
+  assert.match(run, /if\(dyGCallSolo\(g,m\)\)\{/, '单独调用的人带完整人设（v1364 起每个人可以在「模型调用」里改）');
+  assert.match(source('dyGCallSolo'), /return !!\(m&&m\.cid\);\}$/, '没设置过时仍是角色单独、网友合并');
   assert.match(run, /if\(!crowdLines\)\{/, '网友合并成一次调用');
   assert.match(run, /第一个网友开口时才生成/, '要等前面角色说完再生成，网友才能接住他们的话');
   assert.match(source('dyGCrowdPrompt'), /一人一行/);

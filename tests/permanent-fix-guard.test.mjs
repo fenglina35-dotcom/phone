@@ -29,6 +29,8 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"v1364",scope:"web",least:1,file:"小手机.html",name:"引用框不把对方气泡撑宽",marker:".msg.them>.col>.bubble{align-self:flex-start}"},
+  {release:"v1364",scope:"web",least:1,name:"抖音群每个人可选单独/合并调用",marker:"function dyGCallSolo(g,m)"},
   {release:"v1362",scope:"both",least:1,name:"角色群单独/合并调用，单独的走角色自己的路线",marker:"function gCallSolo(g,cid)"},
   {release:"v1362",scope:"both",least:1,name:"合并调用按【名字】拆回每个人",marker:"async function groupBatchReplyItems(g,batch,recent,why)"},
   {release:"v1362",scope:"both",least:1,name:"角色禁言我后私聊发微信，能用[群解禁]放我出来",marker:"function applyGroupUnmuteTag(content,c)"},

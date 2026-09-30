@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1362'){
+if(window.__NORTH_SHELL_BUILD__!=='1364'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -539,7 +539,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1362 · 群聊调用';
+const APP_VER='v1364 · 气泡与抖音调用';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1927,7 +1927,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1362&r=v1362-web-group-calls-1';
+  const url='sw.js?v=1364&r=v1364-web-bubble-dycalls-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -6638,8 +6638,8 @@ function dyGroupSpeakerPrompt(g,m){
 /* 网友合并成一次调用：他们本来就是氛围组，一次生成出来的几句话互相衔接得更自然，
    而且一轮能省下好几次调用——以后开好几个群，这个差距很明显。 */
 function dyGCrowdPrompt(g,crowd){
-  const roster=crowd.map(m=>'· '+dyGMemberName(m)+'：'+(dyGMemberPersona(m)||'一个普通网友')+'（'+(dyGRole(g,m.k)==='admin'?'管理员':'普通成员')+'）').join('\n');
-  return '你在给一个抖音群聊写群众演员的台词。群名「'+g.name+'」，群主是'+(S.me.name||'我')+'。'
+  const roster=crowd.map(m=>'· '+dyGMemberName(m)+'：'+(dyGMemberPersona(m).replace(/\s+/g,' ').slice(0,600)||'一个普通网友')+'（'+(dyGRole(g,m.k)==='admin'?'管理员':'普通成员')+'）').join('\n');
+  return '你在给一个抖音群聊写这一轮几个人的台词。群名「'+g.name+'」，群主是'+(S.me.name||'我')+'。'
     +(g.intro?'群简介：'+g.intro+'。':'')
     +'\n\n这一轮要说话的人（严格按这个顺序，一人一行）：\n'+roster
     +'\n\n要求：每行格式是「名字：这个人说的话」，一人只写一行，一两句就够。一条里最多 @ 一个人。'
@@ -6651,7 +6651,7 @@ function dyGCrowdParse(crowd,raw){const out={};
     const t=line.replace(/^[\d.、\-\s]*/,'').trim();if(!t)return;
     const m=t.match(/^([^：:]{1,20})[：:]\s*(.+)$/);if(!m)return;
     const who=m[1].trim(),said=m[2].trim();
-    const hit=crowd.find(x=>dyGMemberName(x)===who)||crowd.find(x=>dyGMemberName(x).indexOf(who)>=0);
+    const hit=crowd.find(x=>dyGMemberName(x)===who)||crowd.find(x=>{const c=x.cid&&typeof getC==='function'?getC(x.cid):null;return !!c&&(c.name===who||c.remark===who);})||crowd.find(x=>dyGMemberName(x).indexOf(who)>=0);/* 合并进来的角色，模型可能写本名也可能写备注 */
     if(hit&&said&&!out[hit.k])out[hit.k]=said.slice(0,160);});
   return out;}
 function dyGAtKeys(g,text){const out=[];String(text||'').replace(/@\s*([^\s，,。！!？?：:@]{1,16})/g,(_,n)=>{
@@ -6691,6 +6691,13 @@ async function dyGroupReply(gid,fromText){if(_dyGBusy[gid])return;_dyGBusy[gid]=
       if(!force.length)break;
       text=said.map(x=>x.text).join(' ');}}
   finally{delete _dyGBusy[gid];}}
+/* 抖音群：每个人可以单独调用模型（完整人设、一个人一次请求），也可以合并进一次请求（几个人一起写，快、省）。
+   默认角色单独、网友合并，和以前一样。 */
+function dyGCallSolo(g,m){const map=g&&g.callSolo;if(map&&typeof map==='object'&&m&&Object.prototype.hasOwnProperty.call(map,m.k))return !!map[m.k];return !!(m&&m.cid);}
+function dyGCallSummary(g){const ms=dyGMemberList(g).filter(m=>m.k!=='me'),n=ms.filter(m=>dyGCallSolo(g,m)).length;return n+'人单独 · '+(ms.length-n)+'人合并';}
+function dyGCallSetup(gid){const g=dyGroup(gid);if(!g)return;const ms=dyGMemberList(g).filter(m=>m.k!=='me');
+  openModal(`<h3>模型调用</h3><div class="hint">单独：这个人自己一次请求，完整人设，最像本人。合并：几个人一次请求一起写，快、省调用。</div><div class="section">${ms.map(m=>{const solo=dyGCallSolo(g,m);return `<div class="it"><span style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">${dyFace(dyGMemberAvatar(m),'sm')}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(dyGMemberName(m))}${m.cid?'<small style="color:#888;margin-left:6px">角色</small>':''}</span></span><button type="button" class="minibtn dyg-call-chip" style="background:${solo?'#fe2c55':'#2c2c2e'};color:${solo?'#fff':'#ccc'};min-width:56px" onclick="dyGCallToggle('${gid}','${m.k}',this)">${solo?'单独':'合并'}</button></div>`;}).join('')||'<div class="hint" style="padding:10px">群里还没有别人</div>'}</div><button class="btn g" style="margin-top:10px" onclick="closeModal();render()">完成</button>`);}
+function dyGCallToggle(gid,k,el){const g=dyGroup(gid);if(!g)return;const m=dyGFind(g,k);if(!m)return;g.callSolo=g.callSolo&&typeof g.callSolo==='object'?g.callSolo:{};g.callSolo[k]=!dyGCallSolo(g,m);save();if(el){const on=g.callSolo[k];el.textContent=on?'单独':'合并';el.style.background=on?'#fe2c55':'#2c2c2e';el.style.color=on?'#fff':'#ccc';}}
 async function dyGroupReplyRun(gid,fromText,forceKeys){const g0=dyGroup(gid);if(!g0||g0.aiOn===false)return [];
   const cast=dyGCast(g0,fromText,forceKeys);if(!cast.length)return [];
   const said=[];let crowdLines=null;
@@ -6702,13 +6709,13 @@ async function dyGroupReplyRun(gid,fromText,forceKeys){const g0=dyGroup(gid);if(
     dyTypingOn('g:'+gid);
     try{
       let line='';
-      if(m.cid){
+      if(dyGCallSolo(g,m)){
         const r=await dyAuxChat([{role:'system',content:dyGroupSpeakerPrompt(g,m)},
           {role:'user',content:'群里刚才说了这些：\n'+dyGroupTranscript(g,dyChatCtxRows(g))+'\n\n现在轮到你，说一句。'}],{max:dyReplyBudget()});
         line=cleanReply(r).replace(/^[^：:]{1,12}[：:]\s*/,'');
       }else{
         if(!crowdLines){/* 第一个网友开口时才生成，这样他们能接住前面角色说的话 */
-          const crowd=cast.filter(x=>!x.cid&&dyGMuteLeft(g,x.k)<=0);
+          const crowd=cast.filter(x=>!dyGCallSolo(g,x)&&dyGFind(g,x.k)&&dyGMuteLeft(g,x.k)<=0);
           const r=await dyAuxChat([{role:'system',content:dyGCrowdPrompt(g,crowd)},
             {role:'user',content:'群里刚才说了这些：\n'+dyGroupTranscript(g,dyChatCtxRows(g))+'\n\n按上面的名单和顺序，每人写一行。'}],{max:Math.max(240,dyReplyBudget())});
           crowdLines=dyGCrowdParse(crowd,r);}
@@ -6770,6 +6777,7 @@ function dyGroupInfoView(){const g=dyGroup(_dyGid);if(!g)return `<div class="dyv
         ${dyGRow('群公告',esc(String(g.notice||'还没写').slice(0,18)),`dyGNotice('${g.id}')`)}
         ${dyGRow('我在本群的昵称',esc(g.myNick||S.me.name||''),`dyGMyNick('${g.id}')`)}
       </div>
+      <div class="dyg-card">${dyGRow('模型调用',dyGCallSummary(g),`dyGCallSetup('${g.id}')`)}</div>
       <div class="dyg-card">${dyGRow('群聊 AI',g.aiOn===false?'已关闭':'已开启',`dyGToggle('${g.id}','aiOn')`)}
         ${dyGRow('上下文条数',dyChatCtxRows(g)+' 条',`dyChatCtxEdit('group','${g.id}')`)}
         ${dyGRow('说话的规矩',dyGMaxSpeak(g)+' 人/轮 · 管理员 '+dyGMaxAdmin(g)+' · 冷场 '+dyGIdleHours(g)+'h',`dyGCastEdit('${g.id}')`)}
