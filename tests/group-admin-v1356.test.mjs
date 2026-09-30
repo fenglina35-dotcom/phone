@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-// v1356 群管理：群主设最多 3 个管理员；管理员可禁言、踢普通成员，不能动群主和别的管理员；
+// v1356 群管理：群主设最多 3 个管理员；管理员可禁言、踢除群主以外的任何人（v1358 起包括别的管理员）；
 // 角色群里只有和我是情侣关系的管理员角色可以禁言我（不能踢我）。真人群只认群主发的管理员名单。
 const app = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const fn = name => {
@@ -29,7 +29,8 @@ test('role groups: admins manage members, only the couple admin may mute the own
   const ctx = load({ S: { couple: { cid: 'couple' }, groups: [g] } });
   assert.equal(ctx.can('role', 'g1', 'helper', 'shy', 'mute'), true);
   assert.equal(ctx.can('role', 'g1', 'helper', 'shy', 'kick'), true);
-  assert.equal(ctx.can('role', 'g1', 'helper', 'couple', 'mute'), false, 'admins cannot touch other admins');
+  assert.equal(ctx.can('role', 'g1', 'helper', 'couple', 'mute'), true, 'admins can mute other admins too (v1358)');
+  assert.equal(ctx.can('role', 'g1', 'helper', 'couple', 'kick'), true, 'admins can kick anyone except the owner (v1358)');
   assert.equal(ctx.can('role', 'g1', 'helper', 'me', 'mute'), false, 'a non-couple admin cannot mute the owner');
   assert.equal(ctx.can('role', 'g1', 'couple', 'me', 'mute'), true, 'the couple admin may mute the owner');
   assert.equal(ctx.can('role', 'g1', 'couple', 'me', 'kick'), false, 'nobody kicks the owner');

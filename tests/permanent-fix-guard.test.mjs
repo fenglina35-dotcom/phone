@@ -29,7 +29,11 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
-  {release:"v1356",scope:"web",least:1,name:"群管理：管理员不能动群主和别的管理员，只有情侣管理员能禁言群主",marker:"function gmCanActOn(kind,id,actor,target,action)"},
+  {release:"v1358",scope:"web",least:1,name:"群聊长按引用",marker:"function gqPressStart(gid,mid)"},
+  {release:"v1358",scope:"web",least:1,name:"群红包按个数拼手气，钱加起来刚好等于总额",marker:"function rpSplitCents(total,count,rand)"},
+  {release:"v1358",scope:"web",least:1,name:"真人群红包靠隐藏 rp_grab 排序，确认后才进零钱",marker:"if(pfIsRpGrabTransport(kept)){pfAbsorbRpGrab(gid,from,kept);return false;}"},
+  {release:"v1358",scope:"web",least:1,name:"群转账指定收款人，别人不能收",marker:"if(pay.payTo&&String(pay.payTo).toUpperCase()!==String(p.id||'').toUpperCase())"},
+  {release:"v1356",scope:"web",least:1,name:"群管理：管理员能管除群主外的任何人，只有情侣管理员能禁言群主",marker:"function gmCanActOn(kind,id,actor,target,action)"},
   {release:"v1356",scope:"web",least:1,name:"真人群只认群主发的管理员名单",marker:"function pfAbsorbGroupManage(gid,from,kept)"},
   {release:"v1356",scope:"web",least:1,name:"被禁言时发不出群消息",marker:"if(gmMutedUntil('role',id,'me')){toast('你已被禁言')"},
   {release:"v1354",scope:"web",least:1,name:"群聊加号面板在输入框下方",marker:"#gpanel,#pfgpanel{order:2;flex:0 0 auto;}",file:"小手机.html"},
