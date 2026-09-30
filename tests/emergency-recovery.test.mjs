@@ -80,7 +80,7 @@ test('automatic safety snapshot rejects an out-of-order older write',async()=>{
 test('v914 shell and service worker are aligned',()=>{
   const html=readFileSync(join(root,'小手机.html'),'utf8');
   const sw=readFileSync(join(root,'sw.js'),'utf8');
-  assert.match(app,/APP_VER='v1352 · 查手机发文件与约会时间修复'/);
+  assert.match(app,/APP_VER='v1352 · 主屏样式不再丢失'/);
   assert.match(html,/app\.js\?v=1352/);
   assert.match(sw,/BUILD='1352'/);
 });

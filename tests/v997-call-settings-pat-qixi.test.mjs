@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1352 · 查手机发文件与约会时间修复'/);
+  assert.match(app,/APP_VER='v1352 · 主屏样式不再丢失'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
   assert.match(html,/north-sw-reloaded-1352-web-external-tts-relay-1/);
-  assert.match(html,/sw\.js\?v=1352&r=v1352-web-offline-time-1/);
+  assert.match(html,/sw\.js\?v=1352&r=v1352-web-css-cache-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{

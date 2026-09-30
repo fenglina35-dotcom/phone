@@ -6,7 +6,7 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-assert.match(source,/APP_VER='v1352 · 查手机发文件与约会时间修复'/);
+assert.match(source,/APP_VER='v1352 · 主屏样式不再丢失'/);
 assert.match(html,/__NORTH_SHELL_BUILD__='1352'/);
 assert.match(sw,/BUILD='1352'/);
 assert.equal((project.match(/CURRENT_PROJECT_VERSION = 422;/g)||[]).length,12);

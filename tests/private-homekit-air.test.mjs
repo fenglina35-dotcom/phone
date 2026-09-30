@@ -190,5 +190,5 @@ test('private identity advances while public web stays unchanged',()=>{
   assert.match(webView,/1\.0\.422 \(422\)/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 422;/g)||[]).length,12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.422;/g)||[]).length,12);
-  assert.match(read('app.js'),/APP_VER='v1352 · 查手机发文件与约会时间修复'/);
+  assert.match(read('app.js'),/APP_VER='v1352 · 主屏样式不再丢失'/);
 });

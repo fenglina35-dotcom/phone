@@ -1,6 +1,6 @@
 const BUILD='1352';
-const HOTFIX='v1352-web-offline-time-1';
-const SHELL_CACHE='north-shell-v1352-web-offline-time-1';
+const HOTFIX='v1352-web-css-cache-1';
+const SHELL_CACHE='north-shell-v1352-web-css-cache-1';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
@@ -15,7 +15,7 @@ const CORE_FILES=[
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
   {url:'./app.js?v='+BUILD+'&r='+HOTFIX,kind:'app'},
   {url:'./cohab-theater.js?v='+BUILD+'&r=v1274-web-cohab-guests-1',kind:'theater'},
-  {url:'./web-hotfix.js?v='+BUILD+'&r=v1352-web-offline-time-1',kind:'hotfix'},
+  {url:'./web-hotfix.js?v='+BUILD+'&r=v1352-web-css-cache-1',kind:'hotfix'},
   {url:'./ai-account.js?v='+BUILD,kind:'ai'},
   {url:'./couple-watch.js?v='+BUILD,kind:'watch'},
   {url:'./couple-watch-runtime.js?v='+BUILD,kind:'watchRuntime'}
@@ -40,6 +40,9 @@ const OPTIONAL_FILES=[
   './thought-card-effects.js?v='+BUILD,
   './pet-game.js?v='+BUILD,
   './pet-game.css?v='+BUILD,
+  /* 主屏组件、音乐光盘和图片裁剪都靠它；以前每次打开都走网络，网络一抖就整页失去样式。 */
+  './glass-theme.css?v='+BUILD+'&r=music-disc-color-1',
+  './wedding-game.css?v=wedding-dual-17',
   './wechat-me.css?v='+BUILD,
   './wechat-me.js?v='+BUILD,
   './smart-home.js?v='+BUILD,
@@ -93,7 +96,7 @@ function validShellText(kind,text){
     &&text.includes('theaterRevealActorItems')
     &&!text.includes('cohabReplyCore=async');
   if(kind==='hotfix')return text.length>800
-    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1352-web-offline-time-1'")
+    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1352-web-css-cache-1'")
     &&text.includes('reconcileExpiredWxLogin')
     &&text.includes('withBaseImageCheck')
     &&text.includes('isStoredImgRef');

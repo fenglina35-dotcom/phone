@@ -13,12 +13,12 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1352 · 查手机发文件与约会时间修复'/);
-  assert.match(app,/const url='sw\.js\?v=1352&r=v1352-web-offline-time-1'/);
+  assert.match(app,/APP_VER='v1352 · 主屏样式不再丢失'/);
+  assert.match(app,/const url='sw\.js\?v=1352&r=v1352-web-css-cache-1'/);
   assert.match(html,/__NORTH_SHELL_BUILD__='1352'/);
   assert.match(html,/app\.js\?v=1352/);
   assert.match(sw,/const BUILD='1352'/);
-  assert.match(sw,/north-shell-v1352-web-offline-time-1/);
+  assert.match(sw,/north-shell-v1352-web-css-cache-1/);
   assert.match(index,/小手机\.html\?v=1352/);
   assert.match(repair,/小手机\.html\?v=1352/);
 });
