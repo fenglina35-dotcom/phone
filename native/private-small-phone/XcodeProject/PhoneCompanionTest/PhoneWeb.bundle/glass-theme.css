@@ -666,3 +666,29 @@ html.north-real-preview .wx-contacts>.wx-alpha-rail{top:150px}
 .wxlight .wx-rpd-amt{color:#c9a15f}
 .wxlight .wx-rpd-tip{color:#576b95}
 .wxlight .wx-rpd-state{color:#8a8a8a}
+/* 群红包：发红包页（个数 + 总金额 + 拼手气）、领取详情（谁抢了多少、手气最佳）、群转账选择收款方 */
+.wx-grps-type{align-self:flex-start;display:inline-flex;align-items:center;gap:5px;margin:0 0 12px 2px;padding:4px 2px;border:0;background:transparent;color:#d9a55a;font:inherit;font-size:15px;cursor:pointer}
+.wx-grps-type i{width:0;height:0;border-left:4.5px solid transparent;border-right:4.5px solid transparent;border-top:5.5px solid currentColor;margin-top:1px}
+.wx-grps .wx-rps-row{margin-bottom:0}.wx-grps .wx-rps-row+.wx-rps-row,.wx-grps .wx-grps-hint+.wx-rps-row{margin-top:12px}
+.wx-grps-unit{flex:0 0 auto;font-style:normal;color:#d1d1d1;font-size:17px}
+.wx-grps-hint{padding:8px 16px 0;color:#888;font-size:13px}
+.wx-grps-lab{display:inline-flex;align-items:center;gap:6px}
+.wx-grps-pin{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:4px;background:#e9a23b;color:#fff;font-style:normal;font-size:11.5px;font-weight:600;line-height:1;flex:0 0 18px}
+.wx-rpd-from .wx-grps-pin{margin-left:2px}
+.wx-grpd{overflow-y:auto;height:calc(100dvh - 58px);min-height:0;padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+.wx-grpd-tip{display:flex;align-items:center;justify-content:center;gap:3px;width:max-content;margin:12px auto 0;color:#e8c28a!important}.wx-grpd-tip i{font-style:normal;font-size:17px;line-height:1}
+.wx-grpd-reply{display:flex;align-items:center;gap:6px;margin:22px auto 0;padding:9px 18px;border:.5px solid rgba(232,194,138,.45);border-radius:6px;background:transparent;color:#e8c28a;font:inherit;font-size:14px;cursor:pointer}
+.wx-grpd-list{margin-top:34px;text-align:left;background:#191919;border-top:8px solid #111}
+.wx-grpd-sum{padding:14px 16px 12px;color:#8d8d92;font-size:14px;border-bottom:.5px solid rgba(255,255,255,.07)}
+.wx-grpd-row{display:flex;align-items:center;gap:12px;min-height:68px;padding:0 16px;position:relative}
+.wx-grpd-row+.wx-grpd-row:before{content:"";position:absolute;left:68px;right:0;top:0;height:.5px;background:rgba(255,255,255,.07)}
+.wx-grpd-av .avatar{width:42px!important;height:42px!important;min-width:42px;border-radius:5px!important;font-size:22px!important}
+.wx-grpd-who{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}.wx-grpd-who b{font-weight:400;font-size:16px;color:#d9d9d9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wx-grpd-who small{font-size:13px;color:#77777c}
+.wx-grpd-amt{display:flex;flex-direction:column;align-items:flex-end;gap:4px}.wx-grpd-amt b{font-weight:400;font-size:16px;color:#d9d9d9;font-variant-numeric:tabular-nums}
+.wx-grpd-amt em{display:inline-flex;align-items:center;gap:3px;font-style:normal;font-size:12px;color:#e0a73c}.wx-grpd-amt em svg{width:13px;height:10px;fill:currentColor}
+.wx-grpd-foot{padding:18px 16px;text-align:center;color:#77777c;font-size:13px}
+.wx-rp-late{height:98px}
+.wxlight .wx-grps-unit{color:#191919}.wxlight .wx-grps-hint{color:#9b9b9b}.wxlight .wx-grps-type{color:#c7883a}
+.wxlight .wx-grpd-list{background:#fff;border-top-color:#ededed}.wxlight .wx-grpd-sum{color:#8a8a8a;border-bottom-color:rgba(0,0,0,.07)}
+.wxlight .wx-grpd-row+.wx-grpd-row:before{background:rgba(0,0,0,.07)}.wxlight .wx-grpd-who b,.wxlight .wx-grpd-amt b{color:#191919}.wxlight .wx-grpd-who small{color:#9b9b9b}
+.wxlight .wx-grpd-tip{color:#c9a15f!important}.wxlight .wx-grpd-reply{color:#c9a15f;border-color:rgba(201,161,95,.55)}.wxlight .wx-grpd-foot{color:#9b9b9b}
