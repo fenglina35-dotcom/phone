@@ -19,6 +19,8 @@ function functionSource(name){
   throw new Error(`unterminated ${name}`);
 }
 
+const silentRe=source.split('\n').find(l=>l.startsWith('const GROUP_SILENT_RE='))+'\n';
+
 test('each AI group role gets one genuine-model retry after an empty result',async()=>{
   let calls=0;
   const context=vm.createContext({
@@ -29,7 +31,7 @@ test('each AI group role gets one genuine-model retry after an empty result',asy
     gParseReply:content=>content?[{type:'text',content}]:[],
     String
   });
-  vm.runInContext(`${functionSource('groupRoleReplyNickname')}${functionSource('groupRoleReplyItems')}this.run=groupRoleReplyItems;`,context);
+  vm.runInContext(`${silentRe}${functionSource('groupRoleTurnText')}${functionSource('groupRoleReplyNickname')}${functionSource('groupRoleReplyItems')}this.run=groupRoleReplyItems;`,context);
   const items=await context.run({nicks:{}},{id:'c1'},[],2);
   assert.equal(calls,2);
   assert.equal(items.length,1);
@@ -45,7 +47,7 @@ test('group reply failure stays silent instead of manufacturing a role message',
     chatAPI:async()=>{calls++;throw new Error('route unavailable');},
     gParseReply:()=>[],String
   });
-  vm.runInContext(`${functionSource('groupRoleReplyNickname')}${functionSource('groupRoleReplyItems')}this.run=groupRoleReplyItems;`,context);
+  vm.runInContext(`${silentRe}${functionSource('groupRoleTurnText')}${functionSource('groupRoleReplyNickname')}${functionSource('groupRoleReplyItems')}this.run=groupRoleReplyItems;`,context);
   assert.deepEqual(Array.from(await context.run({nicks:{}},{id:'c1'},[],2)),[]);
   assert.equal(calls,2);
 });
@@ -56,5 +58,5 @@ test('group reply turns are serialized per group without disabling selected resp
   assert.match(queue,/_aiGroupReplyQueues\.get\(id\)/);
   assert.match(queue,/previous\.catch\(\(\)=>\{\}\)\.then\(\(\)=>aiGroupReplyRun\(id,fromText\)\)\.catch\(\(\)=>\{\}\)/);
   assert.match(run,/const allowed=\(g\.responders&&g\.responders\.length\)\?g\.responders:g\.members/);
-  assert.match(run,/await groupRoleReplyItems\(g,c,recent,pcap\)/);
+  assert.match(run,/await groupRoleReplyItems\(g,c,recent,pcap,\{temper,cares,first:/);
 });

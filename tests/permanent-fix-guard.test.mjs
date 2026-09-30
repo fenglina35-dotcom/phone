@@ -29,6 +29,10 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"v1354",scope:"web",least:1,name:"群聊加号面板在输入框下方",marker:"#gpanel,#pfgpanel{order:2;flex:0 0 auto;}",file:"小手机.html"},
+  {release:"v1354",scope:"web",least:1,name:"群聊情侣角色先回、按性格和话题决定说不说",marker:"function groupReplyPlan(g,members,fromText,rand)"},
+  {release:"v1354",scope:"web",least:1,name:"群二维码只认自己发出且未过期的令牌",marker:"function pfGroupQrProcess(rows)"},
+  {release:"v1354",scope:"web",least:1,name:"群聊气泡小箭头对准头像中间",marker:".msg.them.gnamed>.avatar",file:"小手机.html"},
   {release:"v1352",scope:"web",least:1,name:"主屏样式表离线缓存，下载失败自动重试一次",marker:"window.__northCssRetry=function(link)",file:"小手机.html"},
   {release:"v1352/v1357",scope:"both",least:1,name:"线下约会等场景里我的消息时间贴右边，不被屏幕切掉",marker:"function mine(message){return message.role==='user'||message.who==='me';}",file:"message-beijing-time.js"},
   {release:"v1352/v1357",scope:"both",least:1,name:"角色照抄文件上下文或漏写 [/文件] 仍按文件收下",marker:"const ROLE_FILE_ECHO="},
