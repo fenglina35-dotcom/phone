@@ -13,14 +13,14 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1364 · 气泡与抖音调用'/);
-  assert.match(app,/const url='sw\.js\?v=1364&r=v1364-web-bubble-dycalls-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1364'/);
-  assert.match(html,/app\.js\?v=1364/);
-  assert.match(sw,/const BUILD='1364'/);
-  assert.match(sw,/north-shell-v1364-web-bubble-dycalls-1/);
-  assert.match(index,/小手机\.html\?v=1364/);
-  assert.match(repair,/小手机\.html\?v=1364/);
+  assert.match(app,/APP_VER='v1366 · 共同生活点一下'/);
+  assert.match(app,/const url='sw\.js\?v=1366&r=v1366-web-cohab-tap-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1366'/);
+  assert.match(html,/app\.js\?v=1366/);
+  assert.match(sw,/const BUILD='1366'/);
+  assert.match(sw,/north-shell-v1366-web-cohab-tap-1/);
+  assert.match(index,/小手机\.html\?v=1366/);
+  assert.match(repair,/小手机\.html\?v=1366/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{

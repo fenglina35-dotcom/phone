@@ -21,7 +21,7 @@ test('private v1355 loads daily backup after the diagnostic overlay while public
     assert.ok(html.indexOf('private-cloud-backup.js?v=1365')>html.indexOf('private-runtime-diagnostics.js?v=339'));
   }
   assert.match(privateApp,/APP_VER='v1365 · 气泡与抖音调用'/);
-  assert.match(publicApp,/APP_VER='v1364 · 气泡与抖音调用'/);
+  assert.match(publicApp,/APP_VER='v1366 · 共同生活点一下'/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 424;/g)||[]).length,12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.424;/g)||[]).length,12);
 });
