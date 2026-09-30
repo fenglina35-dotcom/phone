@@ -30,8 +30,9 @@ window.NorthPublicRuntime=(()=>{
    if(!['phone_role_push_history','phone_role_push_status'].includes(name)&&!(id?st.backgroundConsent[id]:Object.values(st.backgroundConsent).some(Boolean)))return false;
   }
   const p=profile(),body={...args,p_target:p.target,p_owner_secret:p.ownerSecret};
-  const r=await fetchT(config.url+'/rest/v1/rpc/'+name,{method:'POST',headers:{apikey:config.key,'Content-Type':'application/json'},body:JSON.stringify(body)},25000);
-  const raw=await r.text();let data;try{data=JSON.parse(raw);}catch(_){throw Error('公开 North 返回格式异常');}
+  /* iPhone Safari 网络一抖就只给一句「Load failed」：先自动重试一次，还不行就说清楚是连不上服务器 */
+  let r,raw;for(let attempt=0;;attempt++){try{r=await fetchT(config.url+'/rest/v1/rpc/'+name,{method:'POST',headers:{apikey:config.key,'Content-Type':'application/json'},body:JSON.stringify(body)},25000);raw=await r.text();break;}
+   catch(e){const net=/load failed|failed to fetch|networkerror|network|abort|timeout/i.test(String(e&&(e.name+' '+e.message)||e));if(!net)throw e;if(attempt>=1)throw Error('连不上配对服务器（网络中断或被拦截）。换个网络、关掉 VPN/广告拦截再试一次');await new Promise(res=>setTimeout(res,1200));}}let data;try{data=JSON.parse(raw);}catch(_){throw Error('公开 North 返回格式异常');}
   if(!r.ok)throw Error(String(data?.message||data?.error||'公开 North 请求失败').slice(0,180));return data;
  }
  function apply(st,data){

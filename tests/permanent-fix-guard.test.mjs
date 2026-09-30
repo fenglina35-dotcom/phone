@@ -29,6 +29,9 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"v1362",scope:"web",least:1,name:"角色群单独/合并调用，单独的走角色自己的路线",marker:"function gCallSolo(g,cid)"},
+  {release:"v1362",scope:"web",least:1,name:"合并调用按【名字】拆回每个人",marker:"async function groupBatchReplyItems(g,batch,recent,why)"},
+  {release:"v1362",scope:"web",least:1,name:"角色禁言我后私聊发微信，能用[群解禁]放我出来",marker:"function applyGroupUnmuteTag(content,c)"},
   {release:"v1360",scope:"web",least:1,name:"群聊角色一个都没回时把原因提示出来",marker:"if(!spoke&&why.length){"},
   {release:"v1360",scope:"web",least:1,name:"角色收下群转账后再开口",marker:"'，'+nm+'已经收下了）'"},
   {release:"v1358",scope:"web",least:1,name:"群聊长按引用",marker:"function gqPressStart(gid,mid)"},

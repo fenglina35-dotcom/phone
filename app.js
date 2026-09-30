@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1360'){
+if(window.__NORTH_SHELL_BUILD__!=='1362'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -539,7 +539,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1360 · 群回复';
+const APP_VER='v1362 · 群聊调用';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1927,7 +1927,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1360&r=v1360-web-group-reply-1';
+  const url='sw.js?v=1362&r=v1362-web-group-calls-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -8606,7 +8606,9 @@ function gRpRoleGrabs(gid,mid){const g=S.groups.find(x=>x.id===gid),m=g&&g.msgs.
   /* 我发的红包：大家抢完再一起开口（谁抢得多、谁手慢），角色自己发的红包本来就在说话，不再多催一轮 */
   if(m.senderId==='me')setTimeout(()=>{const g2=S.groups.find(x=>x.id===gid),m2=g2&&g2.msgs.find(x=>x.id===mid);if(!m2)return;const st=gRpState(m2),who=st.grabs.map(x=>gnm(g2,x.who)+'抢到'+(+x.amount).toFixed(2)+'元').join('、');aiGroupReply(gid,'（'+S.me.name+'发了红包'+(who?'，'+who:'，还没人抢')+'）');},t+900);}
 // 角色在群里发的红包：按群人数自动拆成拼手气
-function gRpPrepareRole(g,it){const others=g.members.length;let n=Math.max(1,Math.min(others,6));const cents=Math.round((+it.amount||0)*100);if(cents<1){it.amount=0.01;}n=Math.max(1,Math.min(n,Math.max(1,cents)));it.count=n;it.lucky=true;it.splits=rpSplitCents(+it.amount||0.01,n);it.grabs=[];}
+function gRpPrepareRole(g,it){const others=g.members.length;let n=it.count>=1?Math.min(it.count,GRP_MAX_COUNT):Math.max(1,Math.min(others,6));const cents=Math.round((+it.amount||0)*100);if(cents<1){it.amount=0.01;}n=Math.max(1,Math.min(n,Math.max(1,cents)));it.count=n;it.lucky=true;it.splits=rpSplitCents(+it.amount||0.01,n);it.grabs=[];}
+// 角色转给别的角色：对方几秒后收下
+function gRoleTransferAccept(gid,mid){setTimeout(()=>{const g=S.groups.find(x=>x.id===gid),m=g&&g.msgs.find(x=>x.id===mid);if(!m||m.received||!g.members.includes(m.to))return;m.received=true;m.receivedAt=Date.now();save();if(cur().p==='group'&&cur().id===gid)render();},2000+Math.random()*4000);}
 function gRpDuration(ms){const s=Math.max(1,Math.round(ms/1000));return s<60?s+'秒':s<3600?Math.round(s/60)+'分钟':Math.round(s/3600)+'小时';}
 function groupRpSendOpen(id,kind){kind=kind==='pf'?'pf':'role';const p=$(kind==='pf'?'#pfgpanel':'#gpanel');if(p)p.classList.remove('show');_paySend={kind:'gred',scope:kind==='pf'?'pfg':'group',id:String(id),amount:'',count:'',note:'',lucky:true};go('grpSend',{id:String(id),kind});}
 function groupRpSendState(id,kind){const scope=kind==='pf'?'pfg':'group';if(!_paySend||_paySend.kind!=='gred'||_paySend.id!==String(id)||_paySend.scope!==scope)_paySend={kind:'gred',scope,id:String(id),amount:'',count:'',note:'',lucky:true};return _paySend;}
@@ -8672,7 +8674,7 @@ function gContext(g,c,recent){const others=g.members.filter(x=>x!==c.id&&getC(x)
    +'- 群记录里用（）括起来的是群里发生的事，不是谁说的话。看到「撤回了一条消息」时，你只知道有人撤回了，看不到原内容，绝对不要编造被撤回的是什么；可以像真人那样好奇、追问、调侃或干脆不理，看你心情，不必每次都提。\n'
    +'- 【你引用谁、就是在对谁说话】：如果你 [引用] 的是【另一个群友】说的话，那你这句就是【冲着那个群友】说的——按你和ta的关系来（怼ta、附和ta、阴阳怪气、跟ta争风吃醋抢'+S.me.name+'都行），【不是】在对'+S.me.name+'说话，别把对群友说的话说得像在哄'+S.me.name+'。只有当你引用'+S.me.name+'、或者没引用谁时，才是在跟'+S.me.name+'说话。\n'
    +'- 像真人发微信，每条短消息单独占一行，条数按轮到你时的提示来；可以只回一条，话不投机也可以就接一句，别凑数、别每个人都发一样多。\n'
-   +'- 想发红包/转账（讨好'+S.me.name+'或跟群友斗富）就单独一行 [红包|金额|祝福语] 或 [转账|金额|说明]，金额自己定、别滥发。\n'
+   +'- 红包、转账你想发就发（哄'+S.me.name+'、庆祝、赔罪、跟群友斗富、起哄都行，看你心情和性格）：单独一行 [红包|金额|祝福语|个数]（个数不写就按群里人数拼手气，大家来抢），或 [转账|金额|说明|给谁]（给谁不写就是转给'+S.me.name+'，也可以写群友的名字）。金额自己定。\n'
    +'- 口语、自然、有情绪，符合你的人设和心情值。';
   if(g.notice)s+='\n# 群公告（群里每个人都看过，说话要照着公告来）\n'+String(g.notice).slice(0,500);
   {const admins=(g.admins||[]).filter(x=>getC(x)),mutes=typeof gmMutes==='function'?gmMutes('role',g.id):{},muted=Object.keys(mutes).map(k=>gnm(g,k)+'（还剩'+gmMinutesText(mutes[k])+'）');
@@ -8681,11 +8683,16 @@ function gContext(g,c,recent){const others=g.members.filter(x=>x!==c.id&&getC(x)
   {let relTxt=(g.rels&&g.rels.length)?g.rels.map(relToText).join('\n'):'';if(g.relations)relTxt+=(relTxt?'\n':'')+g.relations;if(relTxt)s+='\n# 群里的人物关系（必读，严格按这些关系来理解谁跟谁、谁对谁是什么态度）\n'+relTxt;}
   s+='\n# 最近群聊记录（带序号，引用时用这个号）\n'+(recent.length?recent.map((m,i)=>'['+(i+1)+'] '+(m.type==='sys'?'（'+gmText(m)+'）':gName(m,g)+'：'+(m.q&&m.q.text?'（引用 '+m.q.who+'：「'+String(m.q.text).slice(0,40)+'」）':'')+gmText(m))).join('\n'):'（还没人说话）');
   return s;}
+// 角色在群里发的红包/转账：说明后面可以再跟 |个数（红包）或 |给谁（转账）
+function gPayExtras(it,g){const parts=String(it.note||'').split(/[|｜]/).map(x=>x.trim());if(parts.length<2||!g)return it;const last=parts[parts.length-1];
+  if(it.type==='redpacket'){const n=parseInt(last.replace(/个$/,''),10);if(/^\d{1,3}个?$/.test(last)&&n>=1){it.count=Math.min(n,GRP_MAX_COUNT);it.note=parts.slice(0,-1).join(' ');}return it;}
+  const nm=last.replace(/^[@＠]/,''),me=[S.me.name,'我','你','群主'].includes(nm),hit=me?'me':(g.members||[]).find(id=>{const c=getC(id);return c&&[gnm(g,id),c.name,c.remark].filter(Boolean).includes(nm);});
+  if(hit){it.to=hit;it.note=parts.slice(0,-1).join(' ');}return it;}
 // 把群回复解析成「一条条」的消息项（文字气泡 + 红包/转账卡片），文字条数封顶
 function gParseReply(content,cap,recent,g){const out=[];let txt=0;let pq=null;
   splitBubbles(content).forEach(l=>{l=normTag(l);if(!l)return;
     let qm=l.match(/^\[\s*引用\s*[|｜:：]?\s*(\d{1,2})\s*\]$/);if(qm){const rm=recent&&recent[+qm[1]-1];if(rm)pq={who:gName(rm,g),text:(gmText(rm)||'').slice(0,80)};return;}
-    const pay=parsePayCardLine(l);if(pay){out.push({type:pay.type,amount:pay.amount,note:pay.note,received:false});return;}
+    const pay=parsePayCardLine(l);if(pay){out.push(gPayExtras({type:pay.type,amount:pay.amount,note:pay.note,received:false},g));return;}
     let m=l.match(/^\[\s*转账\s*\|\s*([0-9.]+)\s*\|?\s*([^\]]*)\]$/);if(m){out.push({type:'transfer',amount:+m[1]||0,note:(m[2]||'').trim(),received:false});return;}
     m=l.match(/^\[\s*红包\s*\|\s*([0-9.]+)\s*\|?\s*([^\]]*)\]$/);if(m){out.push({type:'redpacket',amount:+m[1]||0,note:(m[2]||'').trim(),received:false});return;}
     if(LEAKRE.test(l))return;// 别把别的指令标签当消息发出来
@@ -8704,7 +8711,7 @@ function groupRoleTurnText(pcap,opt){opt=opt||{};const n=Math.max(1,+pcap||1),ra
   const mood=opt.first?'你是'+S.me.name+'最亲近的人，这句话你第一个接，按你们的关系自然回ta。':opt.temper==='quiet'?'你性格话少、慢热，群里很多时候只看不说：只在想说的时候说一句短的；实在不想接就只输出 [不说话]。':opt.temper==='lively'?'你爱说话、爱凑热闹，可以多接几句、接群友的梗、起哄。':'按你平时在群里的样子，想接就接。';
   const topic=opt.cares?'这句话正好说到你在意的事，可以多说一点。':'';
   return '[轮到你在群里说话了。看看上面大家（包括其他群友互相）说了啥，自然接话——回'+S.me.name+'、或接群友的话拌嘴起哄都行。'+mood+topic+'要专门回应某条就用 [引用|序号]，别@人、别跟别人说一样的话。最多回 '+range+' 条短消息。]';}
-async function groupRoleReplyItems(g,c,recent,pcap,opt){opt=opt||{};const sys=buildSystem(c)+gContext(g,c,recent),turn=groupRoleTurnText(pcap,opt);let previous='';for(let attempt=0;attempt<2;attempt++){try{const request=[{role:'system',content:sys},{role:'user',content:turn}];if(attempt){if(previous)request.push({role:'assistant',content:previous.slice(0,1200)});request.push({role:'user',content:'[上一版没有形成可发送的群聊消息。请仍由你本人根据当前群聊上下文重新回复一次，只输出1到'+Math.max(1,+pcap||1)+'条自然短消息；不要解释失败，不要输出空白或系统提示。]'});}let content=roleVisibleEnvelopeText(await chatAPI(request,{max:380,complete:true}));previous=String(content||'');content=groupRoleReplyNickname(content,g,c);if(typeof groupRoleAdminTags==='function')content=groupRoleAdminTags(g,c,content);const items=gParseReply(content.replace(GROUP_SILENT_RE,''),pcap,recent,g);if(items.length)return items;/* 自己选择不开口：安静就是回答，不再追问一遍。 */if(!opt.first&&GROUP_SILENT_RE.test(content))return[];if(opt.why&&!GROUP_SILENT_RE.test(content))opt.why.push(previous.trim()?'回复里没有能发出来的内容（'+previous.trim().replace(/\s+/g,' ').slice(0,40)+'）':'模型返回了空内容');}catch(e){if(opt.why)opt.why.push((e&&e.message)||String(e||'请求失败'));}}return[];}
+async function groupRoleReplyItems(g,c,recent,pcap,opt){opt=opt||{};const sys=buildSystem(c)+gContext(g,c,recent),turn=groupRoleTurnText(pcap,opt);let previous='';for(let attempt=0;attempt<2;attempt++){try{const request=[{role:'system',content:sys},{role:'user',content:turn}];if(attempt){if(previous)request.push({role:'assistant',content:previous.slice(0,1200)});request.push({role:'user',content:'[上一版没有形成可发送的群聊消息。请仍由你本人根据当前群聊上下文重新回复一次，只输出1到'+Math.max(1,+pcap||1)+'条自然短消息；不要解释失败，不要输出空白或系统提示。]'});}let content=roleVisibleEnvelopeText(await chatAPI(request,Object.assign({max:380,complete:true},opt.route!=null?{routeIndex:opt.route,independentRoleModel:true}:{})));previous=String(content||'');content=groupRoleReplyNickname(content,g,c);if(typeof groupRoleAdminTags==='function')content=groupRoleAdminTags(g,c,content);const items=gParseReply(content.replace(GROUP_SILENT_RE,''),pcap,recent,g);if(items.length)return items;/* 自己选择不开口：安静就是回答，不再追问一遍。 */if(!opt.first&&GROUP_SILENT_RE.test(content))return[];if(opt.why&&!GROUP_SILENT_RE.test(content))opt.why.push(previous.trim()?'回复里没有能发出来的内容（'+previous.trim().replace(/\s+/g,' ').slice(0,40)+'）':'模型返回了空内容');}catch(e){if(opt.why)opt.why.push((e&&e.message)||String(e||'请求失败'));}}return[];}
 /* 群聊像真群：情侣空间绑定的那位先开口；其他人按性格（社恐话少、活跃话多）和这句话是否戳中ta在意的事，决定说不说、说几句。 */
 const GROUP_QUIET_RE=/社恐|内向|沉默寡言|寡言|话少|少言|不爱说话|高冷|冷淡|慢热|腼腆|害羞|闷葫芦|惜字如金/;
 const GROUP_LIVELY_RE=/话痨|活泼|开朗|外向|热情|健谈|爱说话|吵闹|闹腾|自来熟|社牛|嘴碎|碎碎念|八卦|爱凑热闹|咋咋呼呼/;
@@ -8724,24 +8731,57 @@ function groupReplyPlan(g,members,fromText,rand){rand=rand||Math.random;const ca
 const _groupTyping={};
 function groupTypingHTML(g,cid){const c=getC(cid);if(!c)return'';return `<div class="msg them group-typing${g.hideNames?'':' gnamed'}" id="gtyping">${av(c.avatar,groupBubbleAvatarClass(g,cid))}<div class="col">${g.hideNames?'':`<div class="gname">${esc(gnm(g,cid))}</div>`}<div class="bubble typing"><span></span><span></span><span></span></div></div></div>`;}
 function groupTypingSet(g,cid){if(cid)_groupTyping[g.id]=cid;else delete _groupTyping[g.id];if(cur().p!=='group'||cur().id!==g.id)return;const cb=$('#chatbg');if(!cb)return;const old=$('#gtyping');if(old)old.remove();if(!cid)return;const stick=nearBottom(cb);cb.insertAdjacentHTML('beforeend',groupTypingHTML(g,cid));if(stick)cb.scrollTop=cb.scrollHeight;}
+/* 把一个角色这一轮的几条消息依次发进群里 */
+async function gEmitRoleItems(g,c,items){const id=g.id;let first=true;
+  for(const it of items){
+    if(!first)await sleep(420+Math.random()*560);first=false;
+    it.senderId=c.id;it.role='assistant';it.time=Date.now();it.id=uid();if(it.type==='redpacket')gRpPrepareRole(g,it);if(it.type==='transfer'&&(!it.to||it.to===c.id))it.to='me';g.msgs.push(it);save();if(it.type==='redpacket')gRpRoleGrabs(g.id,it.id);if(it.type==='transfer'&&it.to!=='me')gRoleTransferAccept(g.id,it.id);
+    if(S.settings.sound&&!c.muted&&!g.muted)playMessageDing();// 每条角色群消息都使用用户指定的提示音；群免打扰时不响
+    if(cur().p==='group'&&cur().id===id){const cb=$('#chatbg');if(cb){const stick=nearBottom(cb);cb.insertAdjacentHTML('beforeend',gbubble(g,it));if(stick)cb.scrollTop=cb.scrollHeight;}}
+  }
+  gNotify(g,c);}
+/* ===== 角色群：单独调用 / 合并调用 =====
+   单独调用：每个角色一次请求，完整人设，走角色自己设置的路线（和私聊一样）。
+   合并调用：这一轮里所有「合并」的角色一次请求一起写，快很多，用当前选中的路线。默认情侣角色单独、其他人合并。 */
+function gCallSolo(g,cid){const m=g&&g.callSolo;if(m&&typeof m==='object'&&Object.prototype.hasOwnProperty.call(m,cid))return !!m[cid];return !!(S.couple&&S.couple.cid===cid);}
+function gCallSoloToggle(gid,cid,el){const g=S.groups.find(x=>x.id===gid);if(!g)return;g.callSolo=g.callSolo&&typeof g.callSolo==='object'?g.callSolo:{};g.callSolo[cid]=!gCallSolo(g,cid);save();if(el){el.classList.toggle('on',g.callSolo[cid]);el.textContent=g.callSolo[cid]?'单独':'合并';}}
+function gBatchNames(g,c){return [gnm(g,c.id),c.name,c.remark].filter(Boolean).map(String);}
+function gBatchPrompt(g,batch,recent){const me=S.me.name;
+  const people=batch.map(e=>{const c=e.c,admin=(g.admins||[]).includes(c.id),mood=e.temper==='quiet'?'话少慢热，很多时候只看不说，不想接就 [不说话]':e.temper==='lively'?'爱说话爱凑热闹，可以多接几句':'按平时在群里的样子';
+    return '## '+gnm(g,c.id)+(c.name!==gnm(g,c.id)?'（本名'+c.name+'）':'')+'\n人设：'+String(c.persona||c.desc||'（没写人设，按名字和群里的表现自然来）').replace(/\s+/g,' ').slice(0,700)+'\n这轮：'+mood+(e.cares?'；这句话说到ta在意的事，可以多说点':'')+'；最多 '+Math.max(1,+e.cap||1)+' 条'+(admin?'\n'+gnm(g,c.id)+'是管理员，可以在自己那段里单独一行写 [禁言|名字|分钟] [解禁|名字] [踢出|名字]（不能动群主'+me+'）':'');}).join('\n\n');
+  return '你同时扮演下面这几个角色，在群里轮流说话。每个人都要按自己的人设和说话方式来，不能串味、不能说一样的话，也不要每个人都只对着'+me+'说。\n\n'+people
+    +'\n\n# 输出格式（严格遵守）\n按顺序给每个人写一段，每段第一行单独写【名字】，下面是这个人要发的消息，每条一行。某个人这轮不想说话，那段就只写 [不说话]。\n例子：\n【'+gnm(g,batch[0].c.id)+'】\n[引用|3]\n第一条\n第二条\n'+(batch[1]?'【'+gnm(g,batch[1].c.id)+'】\n[不说话]\n':'')
+    +gContext(g,{id:'__batch__'},recent);}
+async function groupBatchReplyItems(g,batch,recent,why){const out=new Map();if(!batch.length)return out;
+  const sys=gBatchPrompt(g,batch,recent),turn='[轮到这几个人在群里说话了：'+batch.map(e=>gnm(g,e.c.id)).join('、')+'。按上面的格式，给每个人各写一段。]';
+  let raw='';try{raw=roleVisibleEnvelopeText(await chatAPI([{role:'system',content:sys},{role:'user',content:turn}],{max:Math.min(1400,260+batch.length*220),complete:true}));}catch(e){why.push((e&&e.message)||'请求失败');return out;}
+  const sections=new Map();let curId=null;const lines=String(raw||'').split(/\r?\n/);
+  const find=name=>{name=String(name||'').trim();const hit=batch.find(e=>gBatchNames(g,e.c).includes(name));return hit?hit.c.id:null;};
+  lines.forEach(l=>{const h=l.trim().match(/^[【\[]\s*([^\]】|｜]{1,24})\s*[】\]]\s*[:：]?\s*$/);const hid=h&&find(h[1]);if(hid){curId=hid;if(!sections.has(hid))sections.set(hid,[]);return;}if(h&&!/^(?:引用|不说话|不回|沉默|潜水|红包|转账|禁言|解禁|踢出|群昵称)/.test(h[1].trim())){curId=null;return;}/* 这轮没轮到的人写的段落，不能算到上一个人头上 */
+    const pre=l.trim().match(/^([^:：\s]{1,24})\s*[:：]\s*(.+)$/),pid=pre&&find(pre[1]);if(pid){curId=pid;if(!sections.has(pid))sections.set(pid,[]);sections.get(pid).push(pre[2]);return;}
+    if(curId)sections.get(curId).push(l);});
+  if(!sections.size&&batch.length===1&&String(raw||'').trim())sections.set(batch[0].c.id,lines);
+  for(const e of batch){let content=(sections.get(e.c.id)||[]).join('\n').trim();if(!content)continue;content=groupRoleReplyNickname(content,g,e.c);if(typeof groupRoleAdminTags==='function')content=groupRoleAdminTags(g,e.c,content);if(GROUP_SILENT_RE.test(content)&&!content.replace(GROUP_SILENT_RE,'').trim())continue;
+    const items=gParseReply(content.replace(GROUP_SILENT_RE,''),Math.max(1,+e.cap||1),recent,g);if(items.length)out.set(e.c.id,items);}
+  if(!out.size&&String(raw||'').trim()&&!GROUP_SILENT_RE.test(raw))why.push('合并调用的回复没有按格式分给每个人（'+String(raw).replace(/\s+/g,' ').slice(0,40)+'）');
+  return out;}
 async function aiGroupReplyRun(id,fromText){const g=S.groups.find(x=>x.id===id);if(!g)return;
   const allowed=(g.responders&&g.responders.length)?g.responders:g.members;
   const mutes=gmMutes('role',id),members=allowed.map(x=>getC(x)).filter(c=>c&&!c.deleted&&!c.blocked&&g.members.includes(c.id)&&!mutes[c.id]);if(!members.length)return;/* 被禁言、被踢出的角色这轮不说话 */
-  const plan=groupReplyPlan(g,members,fromText),why=[];let spoke=0;
-  for(const {c,cap:pcap,temper,cares} of plan){await sleep((temper==='quiet'?900:450)+Math.random()*750);
-    if(!g.members.includes(c.id)||gmMutedUntil('role',id,c.id))continue;/* 这一轮里刚被管理员禁言或踢出的，不再开口 */
+  const plan=groupReplyPlan(g,members,fromText),why=[],handled=new Set();let spoke=0;
+  for(let i=0;i<plan.length;i++){const entry=plan[i],{c,temper,cares}=entry,pcap=entry.cap;if(handled.has(c.id))continue;await sleep((temper==='quiet'?900:450)+Math.random()*750);
+    if(!g.members.includes(c.id)||gmMutedUntil('role',id,c.id)){handled.add(c.id);continue;}/* 这一轮里刚被管理员禁言或踢出的，不再开口 */
     try{const recent=g.msgs.slice(-14),before=g.msgs.length;
-      groupTypingSet(g,c.id);let items;try{items=await groupRoleReplyItems(g,c,recent,pcap,{temper,cares,first:c.id===(S.couple&&S.couple.cid),why});}finally{groupTypingSet(g,null);}
-      if(g.msgs.length!==before&&cur().p==='group'&&cur().id===id)render();/* 管理员动了手（禁言/踢人），系统提示和输入框状态立刻刷新 */
-      if(!items.length)continue;// 模型选择不开口，或两次都没有有效内容时保持安静，不伪造角色回复
-      spoke++;let first=true;
-      for(const it of items){
-        if(!first)await sleep(420+Math.random()*560);first=false;
-        it.senderId=c.id;it.role='assistant';it.time=Date.now();it.id=uid();if(it.type==='redpacket')gRpPrepareRole(g,it);if(it.type==='transfer')it.to='me';g.msgs.push(it);save();if(it.type==='redpacket')gRpRoleGrabs(g.id,it.id);
-        if(S.settings.sound&&!c.muted&&!g.muted)playMessageDing();// 每条角色群消息都使用用户指定的提示音；群免打扰时不响
-        if(cur().p==='group'&&cur().id===id){const cb=$('#chatbg');if(cb){const stick=nearBottom(cb);cb.insertAdjacentHTML('beforeend',gbubble(g,it));if(stick)cb.scrollTop=cb.scrollHeight;}}
-      }
-      gNotify(g,c);
+      if(gCallSolo(g,c.id)){handled.add(c.id);/* 单独调用：完整人设，走这个角色自己设置的路线 */
+        groupTypingSet(g,c.id);let items;try{items=await groupRoleReplyItems(g,c,recent,pcap,{temper,cares,first:c.id===(S.couple&&S.couple.cid),why,route:typeof roleChatRouteIndex==='function'?roleChatRouteIndex(c):null});}finally{groupTypingSet(g,null);}
+        if(g.msgs.length!==before&&cur().p==='group'&&cur().id===id)render();/* 管理员动了手（禁言/踢人），系统提示和输入框状态立刻刷新 */
+        if(!items.length)continue;// 模型选择不开口，或两次都没有有效内容时保持安静，不伪造角色回复
+        spoke++;await gEmitRoleItems(g,c,items);continue;}
+      /* 合并调用：从这里往后所有「合并」的角色一次请求一起写，按原来的先后顺序一个个发出来 */
+      const batch=plan.slice(i).filter(e=>!handled.has(e.c.id)&&!gCallSolo(g,e.c.id)&&g.members.includes(e.c.id)&&!gmMutedUntil('role',id,e.c.id));batch.forEach(e=>handled.add(e.c.id));
+      groupTypingSet(g,c.id);let got;try{got=await groupBatchReplyItems(g,batch,recent,why);}finally{groupTypingSet(g,null);}
+      if(g.msgs.length!==before&&cur().p==='group'&&cur().id===id)render();
+      let firstRole=true;for(const e of batch){const items=got.get(e.c.id)||[];if(!items.length)continue;if(!firstRole){groupTypingSet(g,e.c.id);await sleep(700+Math.random()*900);groupTypingSet(g,null);}firstRole=false;spoke++;await gEmitRoleItems(g,e.c,items);}
     }catch(e){why.push((e&&e.message)||'群回复出错');}}
   /* 一个人都没回、又不是大家选择沉默：把原因说出来，别只闪一下三个点就没了 */
   if(!spoke&&why.length){g.replyFail={at:Date.now(),why:why[why.length-1]};save();toast('群里没人回上：'+String(why[why.length-1]).slice(0,80),5200);}else if(spoke&&g.replyFail){delete g.replyFail;save();}}
@@ -8826,7 +8866,16 @@ function gmSetAdmins(kind,id,list){list=[...new Set(list)].filter(Boolean).slice
   const g=gmGroup(kind,id);if(!g)return false;const before=g.admins||[];g.admins=list;list.filter(k=>!before.includes(k)).forEach(k=>gmSys(kind,id,gmMemberName(kind,id,k)+' 成为了群管理员'));before.filter(k=>!list.includes(k)).forEach(k=>gmSys(kind,id,gmMemberName(kind,id,k)+' 不再是群管理员'));save();return true;}
 function gmMute(kind,id,actor,target,minutes){if(!gmCanActOn(kind,id,actor,target,'mute'))return false;const until=minutes>0?Date.now()+Math.min(43200,minutes)*60000:0,mutes=gmMutes(kind,id);if(until)mutes[target]=until;else delete mutes[target];
   if(kind==='pf'){save();sendPhoneFriendGroupBody(id,pfPack({type:'group_mute',target,until}),{silent:true});return true;}
-  gmSys(kind,id,until?gmMemberName(kind,id,target)+' 被 '+gmMemberName(kind,id,actor)+' 禁言 '+gmMinutesText(until):gmMemberName(kind,id,target)+' 被 '+gmMemberName(kind,id,actor)+' 解除禁言');save();return true;}
+  gmSys(kind,id,until?gmMemberName(kind,id,target)+' 被 '+gmMemberName(kind,id,actor)+' 禁言 '+gmMinutesText(until):gmMemberName(kind,id,target)+' 被 '+gmMemberName(kind,id,actor)+' 解除禁言');
+  const g=gmGroup(kind,id);if(g){g.muteBy=g.muteBy||{};if(until)g.muteBy[target]=actor;else delete g.muteBy[target];}
+  if(target==='me'&&until&&actor!=='me'&&getC(actor))gmMuteDM(id,actor);save();return true;}
+/* 角色在群里禁言了我：过一会儿私下发微信来，说什么按群里刚发生的事和他自己的性格来；私聊里他知道这件事，能用 [群解禁] 放我出来 */
+function gmMuteDM(gid,cid){setTimeout(()=>{const g=S.groups.find(x=>x.id===gid),c=getC(cid);if(!g||!c||c.blocked||c.deleted)return;const until=gmMutedUntil('role',gid,'me');if(!until||(g.muteBy&&g.muteBy.me)!==cid)return;
+  const lines=g.msgs.slice(-12).map(m=>m.type==='sys'?'（'+gmText(m)+'）':gnm(g,m.senderId)+'：'+gmText(m)).join('\n');
+  scheduleFeatureReply(cid,featureEventNote('你在群里禁言了'+S.me.name,'你刚在群聊「'+groupDisplayName(g)+'」里把'+S.me.name+'禁言了，还剩'+gmMinutesText(until)+'。群里最近发生的事：\n'+lines+'\n现在你私下单独给ta发微信。想说什么都行——为什么禁言ta、得意、吃醋、逗ta、心疼、警告、让ta求你，完全按你的性格、心情和你们的关系来，别像系统通知。要放ta出来，就在回复里单独一行写 [群解禁]，这一行不会显示出来。'),200);},6000+Math.random()*10000);}
+function wxGroupMutedByRole(cid){for(const g of S.groups||[]){const until=gmMutedUntil('role',g.id,'me');if(until&&g.muteBy&&g.muteBy.me===cid)return {g,until};}return null;}
+function wxGroupMutePrompt(c){const hit=c&&wxGroupMutedByRole(c.id);if(!hit)return '';return '\n\n# 群里的事\n你在群聊「'+groupDisplayName(hit.g)+'」里把'+S.me.name+'禁言了，还剩'+gmMinutesText(hit.until)+'。ta现在在群里说不了话。放不放ta出来按你的性格和心情来；真要放，就在回复里单独一行写 [群解禁]，这一行不会显示出来。';}
+function applyGroupUnmuteTag(content,c){const re=/^\s*[\[【]\s*群解禁\s*[\]】]\s*$/m;if(!c||!re.test(String(content||'')))return content;const hit=wxGroupMutedByRole(c.id);if(hit&&gmMute('role',hit.g.id,c.id,'me',0))toast((c.remark||c.name)+'把你在「'+groupDisplayName(hit.g)+'」的禁言解除了');return String(content).replace(new RegExp(re.source,'gm'),'').replace(/\n{3,}/g,'\n\n').trim();}
 async function gmKick(kind,id,actor,target){if(!gmCanActOn(kind,id,actor,target,'kick'))return false;
   if(kind==='pf'){const p=phoneFriendState();if(gmIsOwner(kind,id)){try{const ok=await pfRpc('phone_friend_group_remove_member',{p_owner_id:p.id,p_secret:p.secret,p_group_id:id,p_member_id:target},25000);if(ok===true){const g=pfGroupById(id);if(g){g.members=(g.members||[]).filter(x=>pfKeyOf(x)!==target);g.member_count=g.members.length;}save();return true;}}catch(_){}return false;}
     sendPhoneFriendGroupBody(id,pfPack({type:'group_kick_request',target}),{silent:true});return 'requested';}
@@ -8860,6 +8909,7 @@ function renderGroupSettingsPage(id){const g=S.groups.find(x=>x.id===id);if(!g)r
   return `<div class="gmanage-page"><div class="gpick-nav"><button type="button" class="gpick-cancel gmanage-back" onclick="back()" aria-label="返回">‹</button><b>角色设置</b><button type="button" class="gpick-done on" onclick="gsettingsSave('${id}')">完成</button></div><div class="gmanage-scroll gsettings">
   <div class="gmanage-list"><div class="gmanage-row"><span class="gmanage-name">群头像</span>${g.avatar?av(g.avatar,'sm'):'<div class="avatar sm" style="background:#7c6cc0">👥</div>'}<button type="button" class="gmanage-link" onclick="gAvatar('${id}')">从相册选</button></div></div>
   <h3 class="gmanage-title small">谁会回复（都不选 = 全部都回）</h3><div class="gmanage-list gsettings-chips">${g.members.map(cid=>{const c=getC(cid);return c?`<button type="button" class="gsettings-chip${resp.indexOf(cid)>=0?' on':''}" onclick="gToggleResp('${id}','${cid}',this)">${esc(gnm(g,cid))}</button>`:'';}).join('')}</div>
+  <h3 class="gmanage-title small">模型调用（单独 = 走角色自己的路线、完整人设；合并 = 几个人一次请求，更快）</h3><div class="gmanage-list">${g.members.map(cid=>{const c=getC(cid);if(!c)return '';const solo=gCallSolo(g,cid);return `<div class="gmanage-row"><span class="gpick-av">${av(c.avatar)}</span><span class="gmanage-name">${esc(gnm(g,cid))}</span><button type="button" class="gsettings-chip gcall-chip${solo?' on':''}" onclick="gCallSoloToggle('${id}','${cid}',this)">${solo?'单独':'合并'}</button></div>`;}).join('')}</div>
   <h3 class="gmanage-title small">每人每轮回复条数</h3><div class="gmanage-list"><div class="gmanage-row"><span class="gmanage-name">最少</span><input id="g_min" type="number" min="1" value="${g.msgMin||1}"></div><div class="gmanage-row"><span class="gmanage-name">最多</span><input id="g_max" type="number" min="1" value="${g.msgMax||2}"></div></div>
   <div class="gmanage-list gmanage-more"><button type="button" class="gmanage-row" onclick="groupRels('${id}')"><span class="gmanage-name">群关系网<small>结构化设置谁和谁是什么关系</small></span><span class="ginfo-chev">›</span></button><button type="button" class="gmanage-row" onclick="groupBubbleList('${id}')"><span class="gmanage-name">群聊气泡美化<small>每个人单独设置</small></span><span class="ginfo-chev">›</span></button></div>
   <h3 class="gmanage-title small">补充关系（自由文字，选填）</h3><div class="gmanage-list"><textarea id="g_rel" rows="3" class="gsettings-text" placeholder="例如：两个人是死对头，都喜欢同一个人。">${esc(g.relations||'')}</textarea></div>
@@ -15748,7 +15798,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
     const _webPrompt=_webAutoQuery?'\n\n# 本轮程序已主动联网（必须使用）\n搜索词：'+_webAutoQuery+'\n搜索结果：\n'+_webAutoResult+'\n先依据这些资料直接回答当前问题；资料失败或没有明确答案就如实说没查到，绝不能凭印象编造实时天气、温度、新闻、价格或赛况。不要输出[联网]标记。':'';let _webShare=_webAutoQuery?webShareCardMsg(_webAutoQuery,_webAutoResult):null;
     const _voiceRequired=!note&&explicitVoiceReplyRequest(_userText),_voiceTurnPrompt=_voiceRequired?'\n\n# 本轮必须发语音\n'+S.me.name+'这一轮明确要求你发语音。回复正文必须合并成一条 [语音|要说的话]，不能只发普通文字，也不要在语音标签外重复一遍。严格满足ta提出的长度和内容要求，但语音最多'+VOICE_MAX_CHARS+'字。若角色语音语言不是中文，必须用 [语音|对应外语原文|中文翻译]。这条明确请求优先于“平时不主动发语音”的频率设置。':'';
     const _recentVision=[...lastRounds(msgs(id),Math.max(3,+S.settings.hist||12))].reverse().find(m=>m&&m.role==='user'&&m.type==='image'&&m.desc),_visionGuard=_recentVision?'\n\n# 本轮图片事实（必须遵守）\n'+(_recentVision.textCard?'对方发来一张图文照片卡，这在聊天里是一张图片。对方亲自填写的照片描述是：'+_recentVision.desc+'\n只能把这段描述当作画面事实来理解并自然回应，不能添加描述里不存在的视觉细节。':'对方发来的图片已经成功显示，你确实看到了。识图得到的真实画面是：'+_recentVision.desc+'\n直接针对画面自然回应；禁止说图片没收到、没显示、看不到或识图失败，禁止让对方重发。'):'';
-    const _giftIntent='',_giftTurnPrompt='',_thoughtIntent=!note&&thoughtEggRequestIntent(_userText),_thoughtTurnPrompt=_thoughtIntent?thoughtEggRequestPrompt(_userText):'',_relIntent=null,_baseOpt=_memCtx?{selectiveMemory:true,memoryItems:_memCtx.items}:{},_usageTruth=replyAccount==='main'?rolePhoneAuthoritativeUsageContext(c):'',_tail=lifeNoteModelPrompt(c)+(_memCtx?memoryRetrievalPrompt(c,_memCtx):'')+_webPrompt+_visionGuard+_voiceTurnPrompt+_thoughtTurnPrompt+_usageTruth,_sys=buildSystem(c,Object.assign({},_baseOpt,{natural:_naturalOn,query:_memQuery}))+_tail,_stableSys=_naturalOn?buildSystem(c,Object.assign({},_baseOpt,{natural:true,allModules:true,query:_memQuery}))+_tail:_sys;
+    const _giftIntent='',_giftTurnPrompt='',_thoughtIntent=!note&&thoughtEggRequestIntent(_userText),_thoughtTurnPrompt=_thoughtIntent?thoughtEggRequestPrompt(_userText):'',_relIntent=null,_baseOpt=_memCtx?{selectiveMemory:true,memoryItems:_memCtx.items}:{},_usageTruth=replyAccount==='main'?rolePhoneAuthoritativeUsageContext(c):'',_tail=lifeNoteModelPrompt(c)+(_memCtx?memoryRetrievalPrompt(c,_memCtx):'')+_webPrompt+_visionGuard+_voiceTurnPrompt+_thoughtTurnPrompt+_usageTruth+wxGroupMutePrompt(c),_sys=buildSystem(c,Object.assign({},_baseOpt,{natural:_naturalOn,query:_memQuery}))+_tail,_stableSys=_naturalOn?buildSystem(c,Object.assign({},_baseOpt,{natural:true,allModules:true,query:_memQuery}))+_tail:_sys;
     const _historySource=roleReplyOnlineHistorySource(c,lastRounds(msgs(id),S.settings.hist||12),Date.now()),hist=chatHistoryWithDateBoundaries(_historySource,m=>{
       if(m._call){const cn=callToCN(m.content!=null?m.content:msgToText(m));return cn?{role:_naturalOn&&m.type==='sys'?'system':m.role,content:cn}:null;}
       return {role:(_naturalOn&&m.type==='sys')||m._transferReceipt?'system':m.role,content:msgToText(m)};}).filter(x=>x&&x.content!=null);
@@ -15820,7 +15870,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
     if(_wxLoginCompletion){const before=content;content=wxLoginCompletionVisibleContent(content);if(roleInterceptDiagnosticComparable(before,false)!==roleInterceptDiagnosticComparable(content,false))_replyAuditPartial=true;}else content=routePhoneInspectionTags(content,c,_userText);
     if(_rawOutput){const decision=await smartHomeRoleFinalize(content,c,_userText,async()=>content);if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;if(decision.matched){roleInterceptDiagnosticAction(_replyActionOutcome,decision.verified);content=smartHomeRoleStripTags(content);}}
     const _statedPwd=(content.match(/(?:密码|password|密碼)\D{0,8}(\d{4})/i)||[])[1]||null;
-    content=applyControlTags(content,c,id,_statedPwd,_userText,_replyActionOutcome);
+    content=applyControlTags(content,c,id,_statedPwd,_userText,_replyActionOutcome);content=applyGroupUnmuteTag(content,c);
     content=applyGrudgeTags(content,c,_replyActionOutcome);content=applyStarTags(content,_replyActionOutcome);content=cohabConsumeOnlineState(content,c,id,{userText:_userText,audit:_replyActionOutcome});
     bubbleNaturalRequest(_userText,c);content=applyBubbleTags(content,c,_replyActionOutcome);if(!_rawOutput)content=await ensureRequestedPhotoCaptionMoment(content,c,_userText);if(!_rawOutput)content=await ensureRequestedDouyin(content,c,_userText);if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl))return;content=consumeMomentCommands(content,c,{toast:true,userText:_userText,preserveText:_rawOutput},_replyActionOutcome);content=consumeDouyinCommands(content,c,{toast:true,userText:_userText,preserveText:_rawOutput},_replyActionOutcome);content=consumeDouyinUngag(content,c,_replyActionOutcome);content=coupleAlbumConsumeSaveTag(content,c,_replyActionOutcome);if(!_rawOutput)content=forceRequestedVoiceReply(content,_voiceRequired?_userText:'',c);if(_replyActionOutcome.handled)_replyAuditHandled=true;if(_replyActionOutcome.failed)_replyAuditPartial=true;
     if(/拉黑|加回|删了你|删除你|拉进黑名单|原谅你/.test(content)&&!/报备|别的微信号|加了你|加你、|有人加|有别人加/.test(note||''))applyBlockIntent(content,c,id);
