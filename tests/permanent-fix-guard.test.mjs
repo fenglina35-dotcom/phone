@@ -29,6 +29,9 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"v1356",scope:"web",least:1,name:"群管理：管理员不能动群主和别的管理员，只有情侣管理员能禁言群主",marker:"function gmCanActOn(kind,id,actor,target,action)"},
+  {release:"v1356",scope:"web",least:1,name:"真人群只认群主发的管理员名单",marker:"function pfAbsorbGroupManage(gid,from,kept)"},
+  {release:"v1356",scope:"web",least:1,name:"被禁言时发不出群消息",marker:"if(gmMutedUntil('role',id,'me')){toast('你已被禁言')"},
   {release:"v1354",scope:"web",least:1,name:"群聊加号面板在输入框下方",marker:"#gpanel,#pfgpanel{order:2;flex:0 0 auto;}",file:"小手机.html"},
   {release:"v1354",scope:"web",least:1,name:"群聊情侣角色先回、按性格和话题决定说不说",marker:"function groupReplyPlan(g,members,fromText,rand)"},
   {release:"v1354",scope:"web",least:1,name:"群二维码只认自己发出且未过期的令牌",marker:"function pfGroupQrProcess(rows)"},

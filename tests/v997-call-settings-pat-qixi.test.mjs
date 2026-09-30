@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1354 · 群聊改版'/);
+  assert.match(app,/APP_VER='v1356 · 群管理'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1354-web-external-tts-relay-1/);
-  assert.match(html,/sw\.js\?v=1354&r=v1354-web-group-wechat-1/);
+  assert.match(html,/north-sw-reloaded-1356-web-external-tts-relay-1/);
+  assert.match(html,/sw\.js\?v=1356&r=v1356-web-group-admin-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{

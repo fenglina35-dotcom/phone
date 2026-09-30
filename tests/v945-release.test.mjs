@@ -13,14 +13,14 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1354 · 群聊改版'/);
-  assert.match(app,/const url='sw\.js\?v=1354&r=v1354-web-group-wechat-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1354'/);
-  assert.match(html,/app\.js\?v=1354/);
-  assert.match(sw,/const BUILD='1354'/);
-  assert.match(sw,/north-shell-v1354-web-group-wechat-1/);
-  assert.match(index,/小手机\.html\?v=1354/);
-  assert.match(repair,/小手机\.html\?v=1354/);
+  assert.match(app,/APP_VER='v1356 · 群管理'/);
+  assert.match(app,/const url='sw\.js\?v=1356&r=v1356-web-group-admin-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1356'/);
+  assert.match(html,/app\.js\?v=1356/);
+  assert.match(sw,/const BUILD='1356'/);
+  assert.match(sw,/north-shell-v1356-web-group-admin-1/);
+  assert.match(index,/小手机\.html\?v=1356/);
+  assert.match(repair,/小手机\.html\?v=1356/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{
