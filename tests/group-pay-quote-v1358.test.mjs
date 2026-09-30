@@ -94,3 +94,11 @@ test('real-person lucky packets: every phone orders the hidden grabs the same wa
   assert.match(fn('pfStoreGroupMessage'), /if\(pfIsRpGrabTransport\(kept\)\)\{pfAbsorbRpGrab\(gid,from,kept\);return false;\}/);
   assert.match(fn('phoneFriendGroupTransferModal'), /if\(type==='redpacket'\)\{groupRpSendOpen\(gid,'pf'\);return;\}/);
 });
+
+test('v1360: roles speak after they take the money, and a silent failure is reported instead of swallowed', () => {
+  assert.match(fn('paySendSubmit'), /m2\.received=true;m2\.receivedAt=Date\.now\(\);save\(\);[^]*?aiGroupReply\(gid,'（'\+S\.me\.name\+'在群里转账给了'\+nm\+'，'\+nm\+'已经收下了）'\);\},/);
+  assert.match(fn('gRpRoleGrabs'), /if\(m\.senderId==='me'\)setTimeout\(\(\)=>\{[^]*aiGroupReply\(gid,/);
+  assert.ok(!/gRpRoleGrabs\(g\.id,m\.id\);aiGroupReply\(g\.id,''\);/.test(app), 'no reply before anyone has grabbed');
+  assert.match(fn('groupRoleReplyItems'), /catch\(e\)\{if\(opt\.why\)opt\.why\.push\(/);
+  assert.match(fn('aiGroupReplyRun'), /if\(!spoke&&why\.length\)\{[^]*?toast\('群里没人回上：'/);
+});

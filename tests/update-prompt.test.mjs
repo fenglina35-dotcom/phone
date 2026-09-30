@@ -5,7 +5,7 @@ const app = fs.readFileSync(new URL("../app.js", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../小手机.html", import.meta.url), "utf8");
 const sw = fs.readFileSync(new URL("../sw.js", import.meta.url), "utf8");
 
-assert.match(app, /APP_VER='v1358 · 群红包'/);
+assert.match(app, /APP_VER='v1360 · 群回复'/);
 assert.match(app, /function northUpdateAvailable\(build\)/);
 assert.match(app, /发现新版本 v\$\{esc\(build\)\}/);
 assert.match(app, /不需要退出或划掉小手机/);
@@ -14,8 +14,8 @@ assert.match(app, /setInterval\(\(\)=>reg\.update\(\)\.catch\(\(\)=>\{\}\),15\*6
 assert.match(app, /postMessage\(\{type:'north-version-query'\}\)/);
 assert.match(sw, /client\.postMessage\(\{type:'north-update-ready',build:BUILD\}\)/);
 assert.match(sw, /event\.data\.type!==['"]north-version-query['"]/);
-assert.match(html, /window\.__NORTH_SHELL_BUILD__='1358'/);
-assert.match(html, /sw\.js\?v=1358&r=v1358-web-group-pay-1/);
-assert.match(html, /web-hotfix\.js\?v=1358&r=v1358-web-group-pay-1/);
+assert.match(html, /window\.__NORTH_SHELL_BUILD__='1360'/);
+assert.match(html, /sw\.js\?v=1360&r=v1360-web-group-reply-1/);
+assert.match(html, /web-hotfix\.js\?v=1360&r=v1360-web-group-reply-1/);
 
 console.log("update prompt tests passed");

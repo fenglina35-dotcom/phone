@@ -29,6 +29,8 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"v1360",scope:"web",least:1,name:"群聊角色一个都没回时把原因提示出来",marker:"if(!spoke&&why.length){"},
+  {release:"v1360",scope:"web",least:1,name:"角色收下群转账后再开口",marker:"'，'+nm+'已经收下了）'"},
   {release:"v1358",scope:"web",least:1,name:"群聊长按引用",marker:"function gqPressStart(gid,mid)"},
   {release:"v1358",scope:"web",least:1,name:"群红包按个数拼手气，钱加起来刚好等于总额",marker:"function rpSplitCents(total,count,rand)"},
   {release:"v1358",scope:"web",least:1,name:"真人群红包靠隐藏 rp_grab 排序，确认后才进零钱",marker:"if(pfIsRpGrabTransport(kept)){pfAbsorbRpGrab(gid,from,kept);return false;}"},
