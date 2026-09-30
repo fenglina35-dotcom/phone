@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1350 · 锁定提示改为弹窗'/);
-  assert.match(app,/const url='sw\.js\?v=1350&r=v1350-web-lock-toast-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1350'/);
-  assert.match(html,/app\.js\?v=1350/);
-  assert.match(sw,/const BUILD='1350'/);
-  assert.match(sw,/north-shell-v1350-web-lock-toast-1/);
-  assert.match(index,/小手机\.html\?v=1350/);
-  assert.match(repair,/小手机\.html\?v=1350/);
+  assert.match(app,/APP_VER='v1351 · 真红包转账与吃饭进度'/);
+  assert.match(app,/const url='sw\.js\?v=1351&r=v1351-web-red-packet-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1351'/);
+  assert.match(html,/app\.js\?v=1351/);
+  assert.match(sw,/const BUILD='1351'/);
+  assert.match(sw,/north-shell-v1351-web-red-packet-1/);
+  assert.match(index,/小手机\.html\?v=1351/);
+  assert.match(repair,/小手机\.html\?v=1351/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{
   assert.match(privateBundle,/<string>1200<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.421;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 421;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.421 \(421\)'/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.422;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 422;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.422 \(422\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

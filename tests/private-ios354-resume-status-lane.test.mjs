@@ -38,18 +38,18 @@ function pollHarness(){
 }
 
 test('private candidate is v1355 and iOS 399 while public advances independently',()=>{
-  assert.match(app,/APP_VER='v1355 · 小K合并与放映室锁定修复'/);
+  assert.match(app,/APP_VER='v1356 · 真红包转账与吃饭进度'/);
   for(const html of [index,alias]){
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1355'/);
-    assert.match(html,/app\.js\?v=1355&r=v1355-private-lock-toast-1/);
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1356'/);
+    assert.match(html,/app\.js\?v=1356&r=v1356-private-red-packet-1/);
     assert.match(html,/private-runtime-diagnostics\.js\?v=339/);
   }
   assert.match(diagnostics,/OVERLAY_VERSION='336-daily-file-backup'/);
-  assert.match(webView,/1\.0\.421 \(421\)/);
-  assert.match(bridge,/private static let build = "1\.0\.421 \(421\)"/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 421;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.421;/g)||[]).length,12);
-  assert.match(publicApp,/APP_VER='v1350 · 锁定提示改为弹窗'/);
+  assert.match(webView,/1\.0\.422 \(422\)/);
+  assert.match(bridge,/private static let build = "1\.0\.422 \(422\)"/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 422;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.422;/g)||[]).length,12);
+  assert.match(publicApp,/APP_VER='v1351 · 真红包转账与吃饭进度'/);
 });
 
 test('ordinary foreground polling is lightweight while explicit control verification stays complete',async()=>{

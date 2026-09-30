@@ -206,7 +206,7 @@ test('finished cards dim without losing black and white theme support',()=>{
   const actionSource=functionSource('transferDetailAction');
   assert.match(css,/\.wx-transfer-card\.state-received/);
   assert.match(css,/\.wx-transfer-card\.state-refunded/);
-  assert.match(css,/\.wx-transfer-main\{min-height:68px/);
+  assert.match(css,/\.wx-transfer-main\{min-height:60px;padding:12px 13px 6px/);
   assert.match(css,/\.wx-transfer-detail-icon\{width:56px;height:56px/);
   assert.match(css,/\.wx-transfer-detail\{height:calc\(100vh - 58px\);min-height:calc\(100vh - 58px\)/);
   assert.match(css,/\.page:has\(>\.wx-transfer-detail-nav\)\{display:flex;flex-direction:column\}/);

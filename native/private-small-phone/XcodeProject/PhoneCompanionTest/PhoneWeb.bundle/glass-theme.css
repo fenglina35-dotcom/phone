@@ -528,8 +528,141 @@ html.north-real-preview .wx-contacts>.wx-alpha-rail{top:150px}
 .wx-nearby-page{padding-bottom:28px}.wx-nearby-hero{margin:10px 12px;padding:17px 16px;border:1px solid rgba(77,156,255,.18);border-radius:16px;background:linear-gradient(135deg,rgba(61,111,190,.2),rgba(39,39,43,.5));display:flex;align-items:center;gap:14px}.wxlight .wx-nearby-hero{background:linear-gradient(135deg,#eef5ff,#fff)}.wx-nearby-hero>i{width:42px;height:42px;border-radius:14px;background:rgba(75,156,255,.14);color:#4b9cff;display:grid;place-items:center}.wx-nearby-hero svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.6}.wx-nearby-hero>span{flex:1}.wx-nearby-hero b{display:block;font-size:17px}.wx-nearby-hero small{display:block;margin-top:5px;color:var(--dir-sub);font-size:10px}.wx-nearby-list{margin-top:10px;background:var(--dir-row)}.wx-nearby-card{min-height:78px;padding:10px 14px;border-bottom:.5px solid var(--dir-line);display:flex;align-items:center;gap:12px;box-sizing:border-box}.wx-nearby-avatar{width:48px;height:48px;flex:0 0 48px;border-radius:9px;background:linear-gradient(145deg,#777b82,#41444a);display:grid;place-items:center;overflow:hidden;box-shadow:inset 0 1px rgba(255,255,255,.16)}.wxlight .wx-nearby-avatar{background:linear-gradient(145deg,#d6d8dc,#a9adb4)}.wx-nearby-avatar svg{width:41px;height:41px;fill:#c9ccd1;stroke:#c9ccd1;stroke-width:1.7}.wxlight .wx-nearby-avatar svg{fill:#f0f1f3;stroke:#f0f1f3}.wx-nearby-copy{flex:1;min-width:0}.wx-nearby-copy b{display:block;font-size:15px;font-weight:550}.wx-nearby-copy span{display:block;margin-top:4px;color:#4b9cff;font-size:10px}.wx-nearby-copy p{margin:4px 0 0;color:var(--dir-sub);font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.wx-nearby-card>button{min-width:58px;height:31px;padding:0 10px;border:0;border-radius:7px;background:#07c160;color:#fff;font-size:12px}.wx-nearby-card>button:disabled{background:#343439;color:#8a8a90}.wxlight .wx-nearby-card>button:disabled{background:#e5e5e8;color:#999}.wx-nearby-card.accepted>button{border:1px solid var(--dir-line);background:transparent;color:var(--dir-sub)}.wx-nearby-foot{margin:20px 28px 0;color:var(--dir-sub);font-size:10px;line-height:1.65;text-align:center}.wx-stranger-avatar{background:linear-gradient(145deg,#777b82,#41444a)!important;box-shadow:inset 0 1px rgba(255,255,255,.16)!important}.wxlight .wx-stranger-avatar{background:linear-gradient(145deg,#d6d8dc,#a9adb4)!important}.wx-stranger-avatar svg{stroke:#f0f1f3!important}
 
 /* WeChat transfer cards and the independent receipt/refund page. */
-.wx-transfer-card{--wx-transfer-bg:#e99332;position:relative;width:min(246px,calc(100vw - 96px));border-radius:7px;overflow:visible;color:#fff;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.13);outline:0;transform:translateZ(0);-webkit-tap-highlight-color:transparent}.wx-transfer-card:active{filter:brightness(.96)}.wx-transfer-main{min-height:68px;padding:10px 13px 8px;display:flex;align-items:center;gap:11px;border-radius:7px 7px 0 0;background:var(--wx-transfer-bg);box-sizing:border-box}.wx-transfer-glyph{width:40px;height:40px;flex:0 0 40px;color:rgba(255,255,255,.94)}.wx-transfer-glyph svg,.wx-transfer-detail-icon svg{width:100%;height:100%;display:block;fill:none;stroke:currentColor;stroke-width:3.1;stroke-linecap:round;stroke-linejoin:round}.wx-transfer-copy{min-width:0;display:block}.wx-transfer-copy b,.wx-transfer-copy em{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.wx-transfer-copy b{font-size:18px;line-height:1.1;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:.01em}.wx-transfer-copy em{margin-top:3px;font-size:14px;line-height:1.18;font-style:normal;font-weight:400}.wx-transfer-foot{height:24px;padding:6px 13px 0;border-top:1px solid rgba(255,255,255,.17);border-radius:0 0 7px 7px;background:var(--wx-transfer-bg);box-sizing:border-box;color:rgba(255,255,255,.68);font-size:10px;line-height:1}.msg.them .wx-transfer-card:before,.msg.me .wx-transfer-card:after{content:"";position:absolute;top:13px;width:0;height:0;border-top:6px solid transparent;border-bottom:6px solid transparent;z-index:1}.msg.them .wx-transfer-card:before{left:-7px;border-right:8px solid var(--wx-transfer-bg)}.msg.me .wx-transfer-card:after{right:-7px;border-left:8px solid var(--wx-transfer-bg)}.wx-transfer-card.state-received,.wx-transfer-card.state-refunded{--wx-transfer-bg:#9b692b}.wx-transfer-card.state-received .wx-transfer-main,.wx-transfer-card.state-refunded .wx-transfer-main,.wx-transfer-card.state-received .wx-transfer-foot,.wx-transfer-card.state-refunded .wx-transfer-foot{color:rgba(255,255,255,.53)}.wx-transfer-card.state-received .wx-transfer-glyph,.wx-transfer-card.state-refunded .wx-transfer-glyph{color:rgba(255,255,255,.48)}.wx-transfer-card.state-received .wx-transfer-foot,.wx-transfer-card.state-refunded .wx-transfer-foot{border-top-color:rgba(255,255,255,.09)}
+.wx-transfer-card{--wx-transfer-bg:#e99332;position:relative;width:min(246px,calc(100vw - 96px));border-radius:7px;overflow:visible;color:#fff;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.13);outline:0;transform:translateZ(0);-webkit-tap-highlight-color:transparent}.wx-transfer-card:active{filter:brightness(.96)}.wx-transfer-main{min-height:60px;padding:12px 13px 6px;display:flex;align-items:center;gap:11px;border-radius:7px 7px 0 0;background:var(--wx-transfer-bg);box-sizing:border-box}.wx-transfer-glyph{width:40px;height:40px;flex:0 0 40px;color:rgba(255,255,255,.94)}.wx-transfer-glyph svg,.wx-transfer-detail-icon svg{width:100%;height:100%;display:block;fill:none;stroke:currentColor;stroke-width:3.1;stroke-linecap:round;stroke-linejoin:round}.wx-transfer-copy{min-width:0;display:block}.wx-transfer-copy b,.wx-transfer-copy em{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.wx-transfer-copy b{font-size:18px;line-height:1.1;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:.01em}.wx-transfer-copy em{margin-top:3px;font-size:14px;line-height:1.18;font-style:normal;font-weight:400}.wx-transfer-foot{height:24px;padding:6px 13px 0;border-top:1px solid rgba(255,255,255,.17);border-radius:0 0 7px 7px;background:var(--wx-transfer-bg);box-sizing:border-box;color:rgba(255,255,255,.68);font-size:10px;line-height:1}.msg.them .wx-transfer-card:before,.msg.me .wx-transfer-card:after{content:"";position:absolute;top:13px;width:0;height:0;border-top:6px solid transparent;border-bottom:6px solid transparent;z-index:1}.msg.them .wx-transfer-card:before{left:-7px;border-right:8px solid var(--wx-transfer-bg)}.msg.me .wx-transfer-card:after{right:-7px;border-left:8px solid var(--wx-transfer-bg)}.wx-transfer-card.state-received,.wx-transfer-card.state-refunded{--wx-transfer-bg:#9b692b}.wx-transfer-card.state-received .wx-transfer-main,.wx-transfer-card.state-refunded .wx-transfer-main,.wx-transfer-card.state-received .wx-transfer-foot,.wx-transfer-card.state-refunded .wx-transfer-foot{color:rgba(255,255,255,.53)}.wx-transfer-card.state-received .wx-transfer-glyph,.wx-transfer-card.state-refunded .wx-transfer-glyph{color:rgba(255,255,255,.48)}.wx-transfer-card.state-received .wx-transfer-foot,.wx-transfer-card.state-refunded .wx-transfer-foot{border-top-color:rgba(255,255,255,.09)}
 .wx-transfer-detail-nav{height:58px!important;background:#181818!important;border-bottom-color:transparent!important}.wx-transfer-detail-nav .l{color:#d7d7db!important;font-size:38px!important;font-weight:200!important}.wx-transfer-detail{height:calc(100dvh - 58px);min-height:calc(100dvh - 58px);display:flex;flex-direction:column;background:#181818;color:#f2f2f3;box-sizing:border-box;overflow-y:auto;-webkit-overflow-scrolling:touch}.wx-transfer-detail-hero{padding:108px 24px 0;text-align:center}.wx-transfer-detail-icon{width:56px;height:56px;margin:0 auto 28px;color:#14aaf5}.wx-transfer-detail.state-received .wx-transfer-detail-icon{color:#14aaf5}.wx-transfer-detail.state-refunded .wx-transfer-detail-icon{color:#dda900}.wx-transfer-detail-hero p{margin:0;color:#cfcfd3;font-size:19px;line-height:1.3}.wx-transfer-detail-hero h1{margin:29px 0 0;color:#f1f1f2;font-size:54px;line-height:1;font-weight:500;letter-spacing:-.025em;font-variant-numeric:tabular-nums}.wx-transfer-detail-meta{margin:72px 28px 0;padding:24px 0 20px;border-top:1px solid #2b2b2d}.wx-transfer-detail-meta>div{display:grid;grid-template-columns:92px minmax(0,1fr);gap:12px;padding:5px 0}.wx-transfer-detail-meta dt,.wx-transfer-detail-meta dd{margin:0;font-size:15px;line-height:1.42}.wx-transfer-detail-meta dt{color:#85858b}.wx-transfer-detail-meta dd{color:#d8d8dc;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.wx-transfer-actions{margin-top:auto;padding:30px 30px max(34px,env(safe-area-inset-bottom));text-align:center}.wx-transfer-actions>button{width:min(100%,270px);height:54px;border:0;border-radius:7px;background:#07c160;color:#fff;font-size:18px;font-weight:500;appearance:none;-webkit-appearance:none}.wx-transfer-actions>button:active{background:#06ad56}.wx-transfer-actions p{margin:24px 0 0;color:#77777c;font-size:14px;line-height:1.45}.wx-transfer-actions p button{padding:0;border:0;background:transparent;color:#8a8d9d;font:inherit;appearance:none;-webkit-appearance:none}.wx-transfer-actions.passive{padding-bottom:max(44px,env(safe-area-inset-bottom))}.wx-transfer-detail-empty{margin:auto;color:#85858b;font-size:14px}
 .wxlight .wx-transfer-detail-nav{background:#f7f7f7!important;border-bottom-color:#e4e4e6!important}.wxlight .wx-transfer-detail-nav .l{color:#3a3a3c!important}.wxlight .wx-transfer-detail{background:#f7f7f7;color:#111}.wxlight .wx-transfer-detail-hero p{color:#3d3d40}.wxlight .wx-transfer-detail-hero h1{color:#111}.wxlight .wx-transfer-detail-meta{border-top-color:#dfdfe2}.wxlight .wx-transfer-detail-meta dt{color:#8b8b91}.wxlight .wx-transfer-detail-meta dd{color:#303034}.wxlight .wx-transfer-actions p{color:#9a9a9f}.wxlight .wx-transfer-actions p button{color:#73778b}@media(max-height:680px){.wx-transfer-detail-hero{padding-top:58px}.wx-transfer-detail-icon{margin-bottom:18px}.wx-transfer-detail-hero h1{margin-top:19px;font-size:46px}.wx-transfer-detail-meta{margin-top:42px}.wx-transfer-actions{padding-top:18px}}
 .wx-transfer-detail{height:calc(100vh - 58px);min-height:calc(100vh - 58px)}
 .page:has(>.wx-transfer-detail-nav){display:flex;flex-direction:column}.page:has(>.wx-transfer-detail-nav)>.wx-transfer-detail-nav{flex:0 0 58px}.page:has(>.wx-transfer-detail-nav)>.wx-transfer-detail{flex:1 1 auto;height:auto;min-height:0}
+
+/* ===== 真实红包与转账（深色微信；颜色是从她给的五张截图里逐点取的） ===== */
+.wx-rp-card{--wx-rp-bg:#d59148;position:relative;width:min(246px,calc(100vw - 96px));border-radius:7px;color:#ffecda;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.13);outline:0;transform:translateZ(0);-webkit-tap-highlight-color:transparent;text-align:left}
+.wx-rp-card:active{filter:brightness(.95)}
+.wx-rp-main{min-height:60px;padding:12px 14px 6px;display:flex;align-items:center;gap:12px;border-radius:7px 7px 0 0;background:var(--wx-rp-bg);box-sizing:border-box}
+.wx-rp-env{width:34px;height:43px;flex:0 0 34px;display:block}
+.wx-rp-env svg{width:100%;height:100%;display:block}
+.wx-rp-copy{min-width:0;display:block}
+.wx-rp-copy b,.wx-rp-copy em{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wx-rp-copy b{font-size:16px;line-height:1.28;font-weight:400;color:#ffecda}
+.wx-rp-copy em{margin-top:2px;font-size:13px;line-height:1.2;font-style:normal;color:#fbd9b3}
+.wx-rp-foot{height:25px;padding:6px 14px 0;border-radius:0 0 7px 7px;background:var(--wx-rp-bg);box-sizing:border-box;color:#fbcc98;font-size:10.5px;line-height:1.2}
+.wx-rp-card.incoming:before,.wx-rp-card.outgoing:after{content:"";position:absolute;top:13px;width:0;height:0;border-top:6px solid transparent;border-bottom:6px solid transparent;z-index:1}
+.wx-rp-card.incoming:before{left:-7px;border-right:8px solid var(--wx-rp-bg)}
+.wx-rp-card.outgoing:after{right:-7px;border-left:8px solid var(--wx-rp-bg)}
+.wx-rp-card.opened{--wx-rp-bg:#a57137}
+.wx-rp-card.opened .wx-rp-copy b{color:#c7a172}
+.wx-rp-card.opened .wx-rp-copy em{color:#caa173}
+.wx-rp-card.opened .wx-rp-foot{color:#cb9f72}
+.wx-rp-sys span{display:inline-flex;align-items:center;color:#8b8b8f}
+.wx-rp-sys .wx-rp-sysicon{margin-right:6px}
+.wx-rp-sysicon{position:relative;width:12px;height:15px;flex:0 0 12px;border-radius:2px;background:#e3584a}
+.wx-rp-sysicon:after{content:"";position:absolute;left:50%;top:4px;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:#f7d78b}
+.wx-rp-sys b{font-weight:400;color:#eca85f}
+/* 開红包那一层 */
+.wx-rp-overlay{position:absolute;inset:0;z-index:950;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,.74);animation:wxRpFade .18s ease-out}
+.wx-rp-sheet{position:relative;width:min(80vw,312px);height:min(64vh,510px);border-radius:11px;overflow:hidden;background:#e1604b;box-shadow:0 12px 40px rgba(0,0,0,.45);animation:wxRpPop .28s cubic-bezier(.2,.9,.3,1.18)}
+.wx-rp-top{position:absolute;left:0;right:0;top:0;height:80%;padding:110px 22px 0;box-sizing:border-box;background:#d65b49;border-radius:0 0 50% 50%/0 0 8% 8%;box-shadow:0 2px 4px rgba(0,0,0,.16);text-align:center;z-index:1}
+.wx-rp-from{display:flex;align-items:center;justify-content:center;gap:7px;color:#ffe5bc;font-size:17px;font-weight:500;line-height:1.3}
+.wx-rp-from span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wx-rp-av,.wx-rp-from .avatar,.wx-rpd-from .avatar{width:24px!important;height:24px!important;min-width:24px;border-radius:4px!important;font-size:13px!important;flex:0 0 24px}
+.wx-rp-wish{margin-top:22px;color:#ffe5bc;font-size:24px;line-height:1.35;font-weight:500;word-break:break-all;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.wx-rp-open{position:absolute;left:50%;top:80%;z-index:2;width:98px;height:98px;margin:-49px 0 0 -49px;padding:0;border:0;border-radius:50%;background:#e6cea0;color:#4e4445;font:400 40px/98px "Songti SC","STSong","Noto Serif SC",serif;box-shadow:0 3px 7px rgba(0,0,0,.2);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.wx-rp-open:active{filter:brightness(.97)}
+.wx-rp-open.spinning{animation:wxRpSpin .76s linear infinite}
+.wx-rp-more{position:absolute;left:0;right:0;bottom:22px;z-index:2;padding:6px 0;border:0;background:transparent;color:#fee6b6;font-size:14px;line-height:1.2;cursor:pointer}
+.wx-rp-more i{font-style:normal;margin-left:6px}
+.wx-rp-close{width:42px;height:42px;margin-top:26px;padding:0;border:1.5px solid #d4b483;border-radius:50%;background:transparent;color:#d4b483;cursor:pointer}
+.wx-rp-close svg{width:20px;height:20px;display:block;margin:auto;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+@keyframes wxRpFade{from{opacity:0}to{opacity:1}}
+@keyframes wxRpPop{from{transform:scale(.86);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes wxRpSpin{from{transform:perspective(420px) rotateY(0)}to{transform:perspective(420px) rotateY(360deg)}}
+/* 领取详情 */
+.wx-rpd-nav{height:58px!important;background:#d65b49!important;border-bottom-color:transparent!important}
+.wx-rpd-nav .l{color:#ffe5bc!important;font-size:38px!important;font-weight:200!important}
+.wx-rpd{min-height:calc(100dvh - 58px);background:#111;color:#d1d1d1;box-sizing:border-box;text-align:center}
+.wx-rpd-head{height:64px;background:#d65b49;border-radius:0 0 50% 50%/0 0 100% 100%}
+.wx-rpd-from{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:34px}
+.wx-rpd-from b{color:#d9d9d9;font-size:18px;font-weight:500}
+.wx-rpd-wish{margin:10px 32px 0;color:#888;font-size:14px;line-height:1.5}
+.wx-rpd-amt{margin-top:30px;color:#e8c28a}
+.wx-rpd-amt b{font-size:52px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.wx-rpd-amt span{margin-left:4px;font-size:15px}
+.wx-rpd-tip{margin-top:12px;color:#7d90a9;font-size:14px}
+.wx-rpd-state{margin:36px 32px 0;color:#9a9a9e;font-size:15px;line-height:1.6}
+/* 发红包页、转账页共用的顶栏 */
+.wx-pay-nav{height:58px!important;background:#111!important;border-bottom-color:transparent!important}
+.wx-pay-nav .l{color:#cfcfcf!important;font-size:38px!important;font-weight:200!important}
+.wx-pay-nav .t{color:#cfcfcf!important;font-size:17px!important;font-weight:500!important}
+/* 发红包页 */
+.wx-rps{height:calc(100dvh - 58px);display:flex;flex-direction:column;padding:12px 16px 0;background:#111;color:#d1d1d1;box-sizing:border-box;overflow-y:auto}
+.wx-rps-row{display:flex;align-items:center;gap:12px;min-height:55px;margin-bottom:12px;padding:0 16px;border-radius:6px;background:#191919;box-sizing:border-box}
+.wx-rps-row>span{flex:0 0 auto;color:#d1d1d1;font-size:17px}
+.wx-rps-row input{flex:1;min-width:0;height:44px;padding:0;border:0;outline:0;background:transparent;color:#d9d9d9;font-size:17px;text-align:right;caret-color:#ff6146}
+.wx-rps-row input::placeholder{color:#57575a}
+.wx-rps-row.wish{min-height:63px}
+.wx-rps-row.wish input{text-align:left}
+.wx-rps-row.wish input::placeholder{color:#5e5e5e}
+.wx-rps-emoji{width:28px;height:28px;flex:0 0 28px;color:#8c8c8c}
+.wx-rps-emoji svg{width:100%;height:100%;display:block;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round}
+.wx-rps-row.cover{min-height:63px;justify-content:space-between;cursor:pointer}
+.wx-rps-chev{color:#8c8c8c;font-style:normal;font-size:24px;line-height:1}
+.wx-rps-total{margin-top:62px;display:flex;align-items:baseline;justify-content:center;gap:10px;color:#cfcfcf;font-variant-numeric:tabular-nums}
+.wx-rps-total span{font-size:34px;font-weight:700}
+.wx-rps-total b{font-size:54px;font-weight:600;letter-spacing:.01em}
+.wx-rps-go{display:block;width:182px;height:46px;margin:24px auto 0;border:0;border-radius:6px;background:#ff6146;color:#fff;font-size:17px;font-weight:500;cursor:pointer}
+.wx-rps-go.off{opacity:.5;cursor:default}
+.wx-rps-foot{margin-top:auto;padding:28px 0 calc(22px + env(safe-area-inset-bottom));text-align:center;color:#888;font-size:13px}
+/* 转账页 */
+.wx-tfs{height:calc(100dvh - 58px);display:flex;flex-direction:column;background:#111;color:#d1d1d1;box-sizing:border-box}
+.wx-tfs-to{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 32px 26px}
+.wx-tfs-to>div{min-width:0}
+.wx-tfs-to b{display:block;color:#cfcfcf;font-size:17px;font-weight:500;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wx-tfs-to small{display:block;margin-top:5px;color:#888;font-size:14px;letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wx-tfs-av,.wx-tfs-to .avatar{width:44px!important;height:44px!important;min-width:44px;border-radius:6px!important;flex:0 0 44px}
+.wx-tfs-panel{flex:1;min-height:0;padding:26px 32px 0;border-radius:14px 14px 0 0;background:#191919}
+.wx-tfs-label{color:#d1d1d1;font-size:15px}
+.wx-tfs-amt{display:flex;align-items:center;height:78px;margin-top:8px;border-bottom:1px solid #2a2a2a}
+.wx-tfs-amt .yen{margin-right:14px;color:#d1d1d1;font-size:36px;font-weight:700}
+.wx-tfs-amt .num{color:#e6e6e6;font-size:44px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.wx-tfs-amt .caret{width:2.5px;height:50px;margin-left:4px;background:#07c160;animation:wxTfCaret 1.06s steps(1) infinite}
+@keyframes wxTfCaret{50%{opacity:0}}
+.wx-tfs-note{margin-top:20px;padding:0;border:0;background:transparent;color:#7d90a9;font-size:15px;cursor:pointer;text-align:left}
+.wx-tfs-note u{margin-left:10px;text-decoration:none;color:#7d90a9}
+.wx-tfs-keys{display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(4,47px);gap:8px;padding:8px 8px calc(10px + env(safe-area-inset-bottom));background:#1e1e1e;border-top:1px solid #262626}
+.wx-tfs-keys button{padding:0;border:0;border-radius:5px;background:#2c2c2c;color:#d5d5d5;font-size:24px;font-weight:500;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.wx-tfs-keys button:active{background:#3a3a3a}
+.wx-tfs-keys .go{grid-column:4;grid-row:2/5;background:#07c160;color:#fff;font-size:18px}
+.wx-tfs-keys .go:active{background:#06ad56}
+.wx-tfs-keys .go.off{opacity:.5;cursor:default}
+.wx-tfs-keys .zero{grid-column:1/3}
+.wx-tfs-keys .del svg{width:28px;height:21px;display:block;margin:auto;fill:#d5d5d5;stroke:#2c2c2c;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+/* 白天模式：发红包页、转账页、领取详情页跟着微信切成浅色 */
+.wxlight .wx-pay-nav{background:#ededed!important}
+.wxlight .wx-pay-nav .l,.wxlight .wx-pay-nav .t{color:#191919!important}
+.wxlight .wx-rps{background:#ededed;color:#191919}
+.wxlight .wx-rps-row{background:#fff}
+.wxlight .wx-rps-row>span{color:#191919}
+.wxlight .wx-rps-row input{color:#191919}
+.wxlight .wx-rps-row input::placeholder,.wxlight .wx-rps-row.wish input::placeholder{color:#b2b2b2}
+.wxlight .wx-rps-emoji,.wxlight .wx-rps-chev{color:#b2b2b2}
+.wxlight .wx-rps-total{color:#191919}
+.wxlight .wx-rps-foot{color:#9b9b9b}
+.wxlight .wx-tfs{background:#ededed;color:#191919}
+.wxlight .wx-tfs-to b{color:#191919}
+.wxlight .wx-tfs-to small{color:#8a8a8a}
+.wxlight .wx-tfs-panel{background:#fff}
+.wxlight .wx-tfs-label,.wxlight .wx-tfs-amt .yen{color:#191919}
+.wxlight .wx-tfs-amt .num{color:#111}
+.wxlight .wx-tfs-amt{border-bottom-color:#e5e5e5}
+.wxlight .wx-tfs-note,.wxlight .wx-tfs-note u{color:#576b95}
+.wxlight .wx-tfs-keys{background:#f6f6f6;border-top-color:#e6e6e6}
+.wxlight .wx-tfs-keys button{background:#fff;color:#111}
+.wxlight .wx-tfs-keys button:active{background:#e3e3e3}
+.wxlight .wx-tfs-keys .del svg{fill:#111;stroke:#fff}
+.wxlight .wx-tfs-keys .go{background:#07c160;color:#fff}
+.wxlight .wx-tfs-keys .go:active{background:#06ad56}
+.wxlight .wx-rpd{background:#fff;color:#191919}
+.wxlight .wx-rpd-from b{color:#191919}
+.wxlight .wx-rpd-wish{color:#8a8a8a}
+.wxlight .wx-rpd-amt{color:#c9a15f}
+.wxlight .wx-rpd-tip{color:#576b95}
+.wxlight .wx-rpd-state{color:#8a8a8a}

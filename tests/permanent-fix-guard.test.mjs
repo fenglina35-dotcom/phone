@@ -29,6 +29,13 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"v1351/v1356",scope:"both",least:1,name:"共同生活后角色主动发微信，从共同生活最新一轮接着说",marker:"【本轮是从'+where+'回到微信后你主动发的第一条（最高优先级）】"},
+  {release:"v1351/v1356",scope:"both",least:1,name:"后台主动消息也带共同生活交接提醒",marker:"const handoffPin=roleReplyCrossChannelHandoffPrompt(c,Date.now());if(handoffPin)lines.push(handoffPin.trim());"},
+  {release:"v1351/v1356",scope:"both",least:1,name:"真红包：点开是「開」，领完变灰并留「你领取了…的红包」",marker:"function rpOpen("},
+  {release:"v1351/v1356",scope:"both",least:1,name:"红包卡片标题固定「恭喜发财，大吉大利」，祝福语写在下一行",marker:"<b>${RP_DEFAULT_NOTE}</b>${line?`<em>${esc(line)}</em>`:''}"},
+  {release:"v1351/v1356",scope:"both",least:1,name:"转账卡片显示备注",marker:"line=st==='pending'?(memo||copy):(memo?copy+' · '+memo:copy)"},
+  {release:"v1351/v1356",scope:"both",least:1,name:"「我吃过饭了/吃过了/吃饱了/我吃了」都算吃完，角色不再回头问吃饭了没有",marker:"|吃过(?:饭|早饭|早餐|午饭|晚饭|晚餐|午餐|夜宵|东西)?(?:了|啦|咯|喽)|吃饱(?:饱)?(?:了|啦|咯)|"},
+  {release:"v1351/v1356",scope:"both",least:1,name:"后台主动消息上下文超长时先让最早的聊天让位，状态和提醒保住",marker:"return top.concat(kept,tail).join('\\n').slice(-8000);"},
   {release:"v1350/v1355",scope:"both",least:1,name:"指令里的 App 名对不上时调用一次模型对应到已授权 App 再执行",marker:"async function controlResolveUnknownApps(list,c,id,pwd)"},
   {release:"v1350/v1355",scope:"both",least:1,name:"锁定/解锁成功只弹一下系统提示，不写进聊天、不带表情",marker:"toast((c.remark||c.name)+notices.join('，'),2600);"},
   {release:"v1350/v1355",scope:"both",least:1,name:"放映室、云程等 App 名称都能解析，锁定指令不再静默失败",marker:"return APPNAME2KEY[n]||Object.keys(LOCKABLE).find(k=>LOCKABLE[k]===n);"},

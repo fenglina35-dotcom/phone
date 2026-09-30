@@ -400,7 +400,7 @@ function roleMealProgressInvalid(value: string, recentContext: string) {
   const started = !finished && /最近关心事项进度[\s\S]{0,420}用户已经明确准备去吃、正在吃或刚开始吃/.test(context);
   if (!finished && !started) return false;
   const text = roleVisibleMessageText(value).replace(/\s+/g, "");
-  const baseline = /(?:吃|用)(?:饭|早饭|早餐|午饭|晚饭)(?:了)?(?:吗|没|没有)|(?:吃了没|吃过了吗|有没有吃(?:饭|早饭|早餐|午饭|晚饭)?)|(?:面|面条|粥|东西)(?:吃|喝)(?:了)?(?:吗|没|没有)/.test(text);
+  const baseline = /(?:吃|用)过?(?:饭|早饭|早餐|午饭|晚饭)(?:了)?(?:吗|么|没|没有)|(?:吃了没|吃过了吗|吃过了没|吃了吗|吃过没|有没有吃(?:饭|早饭|早餐|午饭|晚饭)?)|(?:面|面条|粥|东西)(?:吃|喝)(?:了)?(?:吗|没|没有)/.test(text);
   const asksFinished = /(?:吃好|吃完)(?:了)?(?:吗|没|没有)|(?:面|面条|粥)(?:吃|喝)(?:好|完)(?:了)?(?:吗|没|没有)/.test(text);
   return finished ? baseline || asksFinished : baseline;
 }
