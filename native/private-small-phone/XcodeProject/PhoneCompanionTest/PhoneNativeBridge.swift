@@ -15,7 +15,7 @@ enum SmallPhoneDiagnosticsStore {
     )
     private static let maximumBytes = 256 * 1_024
     private static let maximumLines = 200
-    private static let build = "1.0.427 (427)"
+    private static let build = "1.0.428 (428)"
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -550,6 +550,10 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             performStorageUsage(requestID: requestID)
         case "storage.clearWebCache":
             performClearWebCache(requestID: requestID)
+        case "storage.clearTemp":
+            let arguments = payload["payload"] as? [String: Any] ?? [:]
+            let olderThan = max(600, (arguments["olderThan"] as? NSNumber)?.doubleValue ?? 3600)
+            performClearTemp(requestID: requestID, olderThan: olderThan)
         case "storage.get", "storage.get.chunk", "storage.get.release",
              "storage.put", "storage.delete":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
@@ -1311,6 +1315,52 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             "tempBytes": nativeFolderBytes(FileManager.default.temporaryDirectory),
             "containerBytes": nativeFolderBytes(home)
         ]
+    }
+
+    /// Deletes files in tmp that have not changed for `olderThan` seconds
+    /// (media playback and upload copies the system leaves behind). Files
+    /// still being written are newer than the cutoff and are kept.
+    private func performClearTemp(requestID: String, olderThan: TimeInterval) {
+        DispatchQueue.global(qos: .utility).async {
+            let freed = Self.nativeClearTemporaryFiles(olderThan: olderThan)
+            Task { @MainActor [weak self] in
+                self?.reply(requestID: requestID, result: ["freedBytes": freed])
+            }
+        }
+    }
+
+    nonisolated private static func nativeClearTemporaryFiles(olderThan: TimeInterval) -> Int64 {
+        let fileManager = FileManager.default
+        let cutoff = Date().addingTimeInterval(-olderThan)
+        let keys: [URLResourceKey] = [
+            .isRegularFileKey,
+            .contentModificationDateKey,
+            .totalFileAllocatedSizeKey,
+            .fileAllocatedSizeKey
+        ]
+        guard let enumerator = fileManager.enumerator(
+            at: fileManager.temporaryDirectory,
+            includingPropertiesForKeys: keys,
+            options: [],
+            errorHandler: { _, _ in true }
+        ) else { return 0 }
+        var freed: Int64 = 0
+        while let file = enumerator.nextObject() as? URL {
+            // A backup upload manages (and cleans) its own staging folder.
+            if file.path.contains("/NorthPrivateBackupStaging/") { continue }
+            guard let values = try? file.resourceValues(forKeys: Set(keys)),
+                  values.isRegularFile == true,
+                  let modified = values.contentModificationDate,
+                  modified < cutoff else { continue }
+            let size = Int64(values.totalFileAllocatedSize ?? values.fileAllocatedSize ?? 0)
+            do {
+                try fileManager.removeItem(at: file)
+                freed += size
+            } catch {
+                continue
+            }
+        }
+        return freed
     }
 
     /// Clears only WebKit HTTP caches. IndexedDB, localStorage and the native
