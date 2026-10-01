@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1372'){
+if(window.__NORTH_SHELL_BUILD__!=='1374'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -539,7 +539,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1372 · 关系网用本名';
+const APP_VER='v1374 · 关系网各自视角';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1927,7 +1927,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1372&r=v1372-web-relation-real-names-1';
+  const url='sw.js?v=1374&r=v1374-web-relation-views-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -13515,10 +13515,10 @@ function relBrief(k){const p=relPerson(k);if(p){return [p.age?p.age+'岁':'',p.g
 function relFeelText(n){n=+n;return n>=85?'非常亲':n>=65?'亲近':n>=45?'一般':n>=25?'偏冷淡':'疏远';}
 function relLinkOf(a,b){a=relKeyLive(a);b=relKeyLive(b);return relInit().links.find(l=>(l.a===a&&l.b===b)||(l.a===b&&l.b===a))||null;}
 /* 从 key 的角度看一条关系：other 是谁、other 是我的什么、我是 other 的什么、我对 ta / ta 对我的好感 */
-function relView(l,k){const mine=l.a===k;return {l,other:mine?l.b:l.a,otherIsMy:mine?l.ab:l.ba,iAmTheir:mine?l.ba:l.ab,myFeel:mine?l.fa:l.fb,theirFeel:mine?l.fb:l.fa,side:mine?'a':'b'};}
+function relView(l,k){const mine=l.a===k;return {l,other:mine?l.b:l.a,otherIsMy:mine?l.ab:l.ba,iAmTheir:mine?l.ba:l.ab,myFeel:mine?l.fa:l.fb,theirFeel:mine?l.fb:l.fa,myView:(mine?l.va:l.vb)||'',side:mine?'a':'b'};}
 function relLinksOf(k){k=relKeyLive(k);return relInit().links.filter(l=>(l.a===k||l.b===k)&&relExists(l.a)&&relExists(l.b)).map(l=>relView(l,k));}
-function relCleanLink(l){l.fa=Math.max(0,Math.min(100,Math.round(+l.fa||0)));l.fb=Math.max(0,Math.min(100,Math.round(+l.fb||0)));l.story=Array.isArray(l.story)?l.story:[];l.log=Array.isArray(l.log)?l.log.slice(-40):[];return l;}
-function relNewLink(a,b,o){const r=relInit();a=relKeyLive(a);b=relKeyLive(b);if(!a||!b||a===b)return null;let l=relLinkOf(a,b);if(l)return l;l=relCleanLink(Object.assign({id:'rl_'+uid(),a,b,ab:'',ba:'',fa:50,fb:50,conflict:false,how:'',story:[],locked:false,origin:'user',pending:false,log:[],createdAt:Date.now()},o||{}));r.links.push(l);return l;}
+function relCleanLink(l){l.fa=Math.max(0,Math.min(100,Math.round(+l.fa||0)));l.fb=Math.max(0,Math.min(100,Math.round(+l.fb||0)));l.story=Array.isArray(l.story)?l.story:[];l.va=String(l.va||'').slice(0,200);l.vb=String(l.vb||'').slice(0,200);l.log=Array.isArray(l.log)?l.log.slice(-40):[];return l;}
+function relNewLink(a,b,o){const r=relInit();a=relKeyLive(a);b=relKeyLive(b);if(!a||!b||a===b)return null;let l=relLinkOf(a,b);if(l)return l;l=relCleanLink(Object.assign({id:'rl_'+uid(),a,b,ab:'',ba:'',fa:50,fb:50,conflict:false,how:'',story:[],va:'',vb:'',locked:false,origin:'user',pending:false,log:[],createdAt:Date.now()},o||{}));r.links.push(l);return l;}
 /* 人物卡转正：被推荐进微信后，关系全部转到新联系人身上 */
 function relPromote(pid,cid,by){const p=relPerson(pid);if(!p||!cid)return;p.cid=cid;p.promotedAt=Date.now();if(by)p.introducedBy=by;relInit().links.forEach(l=>{if(l.a===pid)l.a=cid;if(l.b===pid)l.b=cid;});}
 /* ---- 给角色看的关系块 ---- */
@@ -13531,8 +13531,9 @@ function relPromptFor(c,focus,opt){if(!c||!c.id)return '';opt=opt||{};const view
     let s='· '+name+(brief?'（'+brief+'）':'')+'：是你的'+(v.otherIsMy||'熟人')+'；你是ta的'+(v.iAmTheir||'熟人')+'。你对ta '+v.myFeel+'/100（'+relFeelText(v.myFeel)+'），ta对你 '+v.theirFeel+'/100（'+relFeelText(v.theirFeel)+'）'+(v.l.conflict?'，你们之间有矛盾':'')+'。';
     if(p&&p.status==='已故')s+='ta已经去世了'+(p.statusNote?'（'+p.statusNote+'）':'')+'，提起ta要符合这一点。';else if(p&&p.status==='失联')s+='你们已经失联'+(p.statusNote?'（'+p.statusNote+'）':'')+'。';else if(p&&p.status==='没有微信')s+='ta没有微信'+(p.statusNote?'（'+p.statusNote+'）':'')+'。';
     if(day)s+='【'+day+'，你记得，可以自然提一句】';
-    if(v.l.how)s+='来历：'+v.l.how+'。';
-    const st=(v.l.story||[]).filter(x=>x&&x.text).slice(-4).map(x=>(x.t?x.t+'：':'')+x.text);if(st.length)s+='过往：'+st.join('；')+'。';
+    if(v.l.how)s+='来历（你们俩都知道的事实）：'+v.l.how+'。';
+    const st=(v.l.story||[]).filter(x=>x&&x.text).slice(-4).map(x=>(x.t?x.t+'：':'')+x.text);if(st.length)s+='过往（发生过的事，你们俩都知道）：'+st.join('；')+'。';
+    if(v.myView)s+='你心里怎么看ta、怎么看这些事：'+v.myView+'（这是你自己的想法，ta不一定知道，也不一定这么想）。';
     if(p&&p.persona)s+='ta的为人：'+String(p.persona).replace(/\s+/g,' ').slice(0,120)+'。';
     if(p&&p.myRel)s+='ta也是'+me+'的'+p.myRel+'。';
     if(oc&&!oc.deleted){const intro=(relPerson(o)||relInit().people.find(x=>x.cid===o)||{}).introducedBy;s+='ta现在在'+me+'的微信通讯录里（备注「'+(oc.remark||oc.name)+'」）'+(intro===c.id?'，是你把ta的名片推荐给'+me+'的':intro&&getC(intro)?'，是'+relPromptName(intro)+'推荐给'+me+'的':'')+'——在'+me+'手机里看到ta，就是这个人，不是'+me+'的亲戚或陌生人。';}
@@ -13541,6 +13542,7 @@ function relPromptFor(c,focus,opt){if(!c||!c.id)return '';opt=opt||{};const view
   const anyUnlocked=views.some(v=>!v.l.locked),canRec=views.filter(v=>relRecommendable(relPerson(v.other))).map(v=>relPromptName(v.other));
   return '\n\n# 你的人际关系（确定的事实，任何场合都记得，别弄错谁是谁、谁是谁的谁）\n你的家人朋友：'+roster+'。'
     +(scored.length?'\n'+scored.map(detail).join('\n'):'')
+    +'\n- 来历和过往是用名字写的客观经过，里面的名字是谁就是谁，按你自己的身份去理解（写的是你做的事，就是你做的）；「心里怎么看」才是你自己的视角。'
     +'\n- 平时不用主动提他们；聊到了、遇到了、到了他们的日子，再自然带上。说起或见到他们时，态度按好感来：好感低就冷淡、话少，好感高就亲热。'
     +(anyUnlocked?'\n- 关系会变：只有真的发生了让你和某人关系变化的事（吵架、和好、被感动、被伤到），才单独一行写 [关系|名字|+5|原因] 或 [关系|名字|-5|原因]，每次最多±'+REL_FEEL_STEP+'，别频繁用，这行不会显示出来。':'')
     +(canRec.length?'\n- 你可以把这些人的微信名片推荐给'+me+'：'+canRec.join('、')+'。想推荐时单独一行写 [推荐好友|名字|一句介绍]，名字要一样。已故、失联、没有微信的人不能推荐。':'');}
@@ -13561,8 +13563,8 @@ async function relAfterScene(cid,rows,where){const c=getC(cid);if(!c)return;cons
 /* ---- 我推荐名片给角色、角色加了：角色自己建立关系（默认开，待我确认） ---- */
 async function relAutoLink(roleId,otherId,how){const r=relInit();if(r.autoLink===false)return null;const c=getC(roleId),o=getC(otherId);if(!c||!o||relLinkOf(roleId,otherId))return null;
   const l=relNewLink(roleId,otherId,{ab:'朋友',ba:'朋友',fa:50,fb:50,how:how||(S.me.name+'推荐认识的'),origin:'role',pending:true});if(!l)return null;save();
-  try{const raw=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'[你刚通过'+S.me.name+'推荐的名片加了「'+(o.name||o.remark)+'」'+(o.remark&&o.name&&o.remark!==o.name?'（'+S.me.name+'给ta的备注是「'+o.remark+'」）':'')+(o.persona?'（ta的介绍：'+String(o.persona).slice(0,160)+'）':'')+'。按你自己的判断给你们定个关系，只输出一行 JSON：{"ta是你的":"","你是ta的":"","你对ta好感":0-100,"ta对你好感":0-100,"来历":""}]'}],{max:160,aux:true});
-    const m=String(raw||'').match(/\{[\s\S]*\}/);if(m){const j=JSON.parse(m[0]);if(j['ta是你的'])l.ab=String(j['ta是你的']).slice(0,20);if(j['你是ta的'])l.ba=String(j['你是ta的']).slice(0,20);if(Number.isFinite(+j['你对ta好感']))l.fa=+j['你对ta好感'];if(Number.isFinite(+j['ta对你好感']))l.fb=+j['ta对你好感'];if(j['来历'])l.how=String(j['来历']).slice(0,80);relCleanLink(l);save();}}catch(_){}
+  try{const raw=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'[你刚通过'+S.me.name+'推荐的名片加了「'+(o.name||o.remark)+'」'+(o.remark&&o.name&&o.remark!==o.name?'（'+S.me.name+'给ta的备注是「'+o.remark+'」）':'')+(o.persona?'（ta的介绍：'+String(o.persona).slice(0,160)+'）':'')+'。按你自己的判断给你们定个关系，只输出一行 JSON：{"ta是你的":"","你是ta的":"","你对ta好感":0-100,"ta对你好感":0-100,"来历":"","你心里怎么看ta":""}。来历只写客观经过，用名字写（'+relPromptName(roleId)+'、'+(o.name||o.remark)+'、'+S.me.name+'），不要用我、你、他；心里怎么看用你自己的口吻]'}],{max:160,aux:true});
+    const m=String(raw||'').match(/\{[\s\S]*\}/);if(m){const j=JSON.parse(m[0]);if(j['ta是你的'])l.ab=String(j['ta是你的']).slice(0,20);if(j['你是ta的'])l.ba=String(j['你是ta的']).slice(0,20);if(Number.isFinite(+j['你对ta好感']))l.fa=+j['你对ta好感'];if(Number.isFinite(+j['ta对你好感']))l.fb=+j['ta对你好感'];if(j['来历'])l.how=String(j['来历']).slice(0,80);if(j['你心里怎么看ta'])l[relView(l,roleId).side==='a'?'va':'vb']=String(j['你心里怎么看ta']).slice(0,200);relCleanLink(l);save();}}catch(_){}
   return l;}
 /* ---- 他的微信好友列表：关系网里的人刷新时出现 ---- */
 function relHisFriends(cid,d){let ch=false;relLinksOf(cid).forEach(v=>{const name=relPromptName(v.other),title=v.otherIsMy||'熟人',gone=!!relStatus(v.other);
@@ -13610,8 +13612,10 @@ function renderRelEdit(){const e=_relEdit;if(!e)return renderRelNet({});const op
     <h3 class="gmanage-title small">关系称谓（两边分开写）</h3><div class="relnet-chips">${REL_TEMPLATES.map((t,i)=>`<button type="button" onclick="relEditTpl(${i})">${esc(t[0])} / ${esc(t[1])}</button>`).join('')}</div>
     <div class="gmanage-list"><label class="relnet-field"><span>${esc(bn)} 是 ${esc(an)} 的</span><input id="rel_ab" maxlength="20" value="${esc(e.ab)}" placeholder="例如：亲妹妹" oninput="_relEdit.ab=this.value"></label><label class="relnet-field"><span>${esc(an)} 是 ${esc(bn)} 的</span><input id="rel_ba" maxlength="20" value="${esc(e.ba)}" placeholder="例如：哥哥" oninput="_relEdit.ba=this.value"></label></div>
     <h3 class="gmanage-title small">感情深度（0 疏远 – 100 非常亲）</h3><div class="gmanage-list">${feel('a',e.fa)}${feel('b',e.fb)}<div class="gmanage-row"><span class="gmanage-name">有矛盾<small>感情不好、有心结</small></span><button type="button" class="gsettings-chip${e.conflict?' on':''}" onclick="_relEdit.conflict=!_relEdit.conflict;this.classList.toggle('on',_relEdit.conflict)">${e.conflict?'有':'没有'}</button></div><div class="gmanage-row"><span class="gmanage-name">常驻<small>每次聊天都带上这段关系的详细资料</small></span><button type="button" class="gsettings-chip${e.pinned?' on':''}" onclick="_relEdit.pinned=!_relEdit.pinned;this.classList.toggle('on',_relEdit.pinned);this.textContent=_relEdit.pinned?'常驻':'不常驻'">${e.pinned?'常驻':'不常驻'}</button></div><div class="gmanage-row"><span class="gmanage-name">锁定好感<small>锁定后角色不会自己调</small></span><button type="button" class="gsettings-chip${e.locked?' on':''}" onclick="_relEdit.locked=!_relEdit.locked;this.classList.toggle('on',_relEdit.locked);this.textContent=_relEdit.locked?'锁定':'不锁'">${e.locked?'锁定':'不锁'}</button></div></div>
-    <h3 class="gmanage-title small">来历</h3><div class="gmanage-list"><textarea class="gsettings-text" rows="2" maxlength="120" placeholder="例如：从小一起长大 / North 介绍认识的" oninput="_relEdit.how=this.value">${esc(e.how)}</textarea></div>
-    <h3 class="gmanage-title small">过往经历</h3><div class="gmanage-list">${(e.story||[]).map((s,i)=>`<div class="relnet-story"><input maxlength="20" placeholder="时间" value="${esc(s.t||'')}" oninput="_relEdit.story[${i}].t=this.value"><textarea rows="2" maxlength="200" placeholder="发生了什么" oninput="_relEdit.story[${i}].text=this.value">${esc(s.text||'')}</textarea><button type="button" aria-label="删除这条" onclick="_relEdit.story.splice(${i},1);render()">×</button></div>`).join('')}<button type="button" class="relnet-link" onclick="_relEdit.story.push({t:'',text:''});render()">＋ 添加一段经历</button></div>
+    <h3 class="gmanage-title small">来历（两个人都知道）</h3><div class="gmanage-list"><textarea class="gsettings-text" rows="2" maxlength="120" placeholder="用名字写，别用我/他，例如：${esc(bn)}和${esc(an)}从小一起长大" oninput="_relEdit.how=this.value">${esc(e.how)}</textarea></div>
+    <h3 class="gmanage-title small">过往经历</h3><div class="gmanage-list">${(e.story||[]).map((s,i)=>`<div class="relnet-story"><input maxlength="20" placeholder="时间" value="${esc(s.t||'')}" oninput="_relEdit.story[${i}].t=this.value"><textarea rows="2" maxlength="200" placeholder="用名字写发生了什么" oninput="_relEdit.story[${i}].text=this.value">${esc(s.text||'')}</textarea><button type="button" aria-label="删除这条" onclick="_relEdit.story.splice(${i},1);render()">×</button></div>`).join('')}<button type="button" class="relnet-link" onclick="_relEdit.story.push({t:'',text:''});render()">＋ 添加一段经历</button></div>
+    <h3 class="gmanage-title small">各自心里怎么看（只有自己知道）</h3><div class="gmanage-list"><label class="relnet-field relnet-view"><span>${esc(an)} 心里</span><textarea rows="2" maxlength="200" placeholder="${esc(an)}自己的想法，${esc(bn)}看不到" oninput="_relEdit.va=this.value">${esc(e.va||'')}</textarea></label><label class="relnet-field relnet-view"><span>${esc(bn)} 心里</span><textarea rows="2" maxlength="200" placeholder="${esc(bn)}自己的想法，${esc(an)}看不到" oninput="_relEdit.vb=this.value">${esc(e.vb||'')}</textarea></label></div>
+    <p class="relnet-note">来历和过往两个人看到的是同一句话，所以要用名字写，比如「陆沉抢了克劳德的前女友」；各自的感受、误会、秘密写在「心里怎么看」，只给那个人自己看。</p>
     ${(e.log||[]).length?`<h3 class="gmanage-title small">好感变化记录</h3><div class="gmanage-list">${e.log.slice().reverse().slice(0,12).map(x=>`<div class="relnet-log"><b>${esc(relName(x.side==='a'?e.a:e.b))} ${x.from}→${x.to}</b><small>${esc(x.why||'')}${x.src==='scene'?' · 线下之后':''} · ${esc(new Date(x.t).toLocaleDateString())}</small></div>`).join('')}</div>`:''}
     <p class="relnet-note">关系网要和人设对得上：比如人设写了「独生子」，就别给他加兄弟姐妹，不然他会糊涂。</p>
     ${e.id?`<button type="button" class="relnet-del" onclick="relEditDelete()">删除这条关系</button>`:''}</div></div>`;}
@@ -13622,7 +13626,7 @@ function relEditFeel(side,v){if(!_relEdit)return;_relEdit[side==='a'?'fa':'fb']=
 function relEditSave(){const e=_relEdit;if(!e)return;if(!e.a||!e.b){toast('选好两个人');return;}if(e.a===e.b){toast('要选两个不同的人');return;}if(!String(e.ab||'').trim()||!String(e.ba||'').trim()){toast('两边的称谓都要写');return;}
   const r=relInit(),dup=relLinkOf(e.a,e.b);if(dup&&dup.id!==e.id){toast('这两个人已经有一条关系了，去改那一条');return;}
   {const ta=relTitleTaken(e.a,e.ab,e.id),tb=relTitleTaken(e.b,e.ba,e.id);if(ta){toast(relName(e.a)+'已经有一个'+e.ab+'了（'+relName(ta.other)+'），保存不成功',3200);return;}if(tb){toast(relName(e.b)+'已经有一个'+e.ba+'了（'+relName(tb.other)+'），保存不成功',3200);return;}}
-  e.story=(e.story||[]).filter(s=>s&&String(s.text||'').trim()).map(s=>({t:String(s.t||'').trim().slice(0,20),text:String(s.text||'').trim().slice(0,200)}));e.ab=String(e.ab).trim().slice(0,20);e.ba=String(e.ba).trim().slice(0,20);e.how=String(e.how||'').trim().slice(0,120);e.pending=false;
+  e.story=(e.story||[]).filter(s=>s&&String(s.text||'').trim()).map(s=>({t:String(s.t||'').trim().slice(0,20),text:String(s.text||'').trim().slice(0,200)}));e.ab=String(e.ab).trim().slice(0,20);e.ba=String(e.ba).trim().slice(0,20);e.how=String(e.how||'').trim().slice(0,120);e.va=String(e.va||'').trim().slice(0,200);e.vb=String(e.vb||'').trim().slice(0,200);e.pending=false;
   const old=e.id&&r.links.find(x=>x.id===e.id);if(old){['fa','fb'].forEach(k=>{if(+old[k]!==+e[k])e.log=(e.log||[]).concat([{t:Date.now(),who:'me',side:k==='fa'?'a':'b',from:+old[k],to:+e[k],why:'你手动调整',src:'me'}]).slice(-40);});Object.assign(old,relCleanLink(e));}
   else{e.id='rl_'+uid();e.createdAt=Date.now();r.links.push(relCleanLink(e));}
   save();_relEdit=null;back();toast('关系已保存，两个人都知道了');}

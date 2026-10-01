@@ -34,6 +34,7 @@ const PERMANENT_FIXES = [
   {release:"v1370",scope:"web",least:1,name:"关系网：他登录我的微信认得关系网里的人",marker:"relLoginTag(cid,x.id)"},
   {release:"v1370",scope:"web",least:1,name:"关系网：线下约会也带关系",marker:"/* 线下约会也认得他的家人朋友 */"},
   {release:"v1372",scope:"web",least:1,name:"关系网：给角色看本名，备注只是附注",marker:"function relPromptName(k){if(k==='me')return S.me.name||'她';"},
+  {release:"v1374",scope:"web",least:1,name:"关系网：各自心里怎么看只给自己看",marker:"if(v.myView)s+='你心里怎么看ta、怎么看这些事：'"},
   {release:"v1368",scope:"both",least:1,name:"群聊点名的人先回，然后情侣角色",marker:"mentioned.forEach(c=>plan.push(pick(c,true)));if(couple&&mentioned.indexOf(couple)<0)plan.push(pick(couple,true));"},
   {release:"v1368",scope:"both",least:1,name:"合并调用走角色路线，失败退回单独调用",marker:"if(got.failed){"},
   {release:"v1366",scope:"both",least:1,name:"共同生活点一下出一句",marker:"function cohabTapWait(id,item,timing)"},

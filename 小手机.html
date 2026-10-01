@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='1372';</script>
+<script>window.__NORTH_SHELL_BUILD__='1374';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-1372-web-external-tts-relay-1';
+  var key='north-sw-reloaded-1374-web-external-tts-relay-1';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=1372&r=v1372-web-relation-real-names-1';
+  var url='sw.js?v=1374&r=v1374-web-relation-views-1';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -303,7 +303,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .relnet-del{display:block;width:calc(100% - 32px);margin:22px 16px 0;padding:12px 0;border:0;border-radius:8px;background:var(--gi-card);color:#fa5151;font:inherit;font-size:16px;cursor:pointer}
 .relnet-note{margin:14px 18px 0;color:var(--gi-sub);font-size:12px;line-height:1.7}
 .relnet-field{display:flex;align-items:center;gap:12px;min-height:52px;padding:0 16px;position:relative}.relnet-field+.relnet-field:before{content:"";position:absolute;left:16px;right:0;top:0;height:.5px;background:var(--gi-line)}
-.relnet-field>span{flex:0 0 auto;max-width:48%;color:var(--gi-text);font-size:15px}.relnet-field input,.relnet-field select{flex:1;min-width:0;border:0;background:transparent;color:var(--gi-text);font:inherit;font-size:15px;text-align:right;outline:none;appearance:none;-webkit-appearance:none}.relnet-field select{direction:rtl}.relnet-field input::placeholder{color:var(--gi-sub)}
+.relnet-field>span{flex:0 0 auto;max-width:48%;color:var(--gi-text);font-size:15px}.relnet-field input,.relnet-field select{flex:1;min-width:0;border:0;background:transparent;color:var(--gi-text);font:inherit;font-size:15px;text-align:right;outline:none;appearance:none;-webkit-appearance:none}.relnet-field select{direction:rtl}.relnet-field.relnet-view{flex-direction:column;align-items:stretch;gap:6px;padding:12px 16px}.relnet-field.relnet-view>span{max-width:none;font-size:14px;color:var(--gi-sub)}.relnet-view textarea{width:100%;box-sizing:border-box;border:0;border-radius:10px;padding:8px 10px;background:var(--gi-field);color:var(--gi-text);font:inherit;font-size:15px;line-height:1.45;resize:none;outline:none}.relnet-view textarea::placeholder{color:var(--gi-sub)}.relnet-field input::placeholder{color:var(--gi-sub)}
 .relnet-link{display:block;width:100%;padding:12px 16px;border:0;border-top:.5px solid var(--gi-line);background:none;color:var(--gi-green);font:inherit;font-size:14px;text-align:left;cursor:pointer}
 .relnet-chips{display:flex;flex-wrap:wrap;gap:8px;padding:0 16px 10px}.relnet-chips button{border:.5px solid var(--gi-line);border-radius:14px;padding:5px 11px;background:var(--gi-card);color:var(--gi-text);font:inherit;font-size:13px;cursor:pointer}
 .relnet-slider{display:block;padding:12px 16px 10px;position:relative}.relnet-slider+.relnet-slider:before,.relnet-slider+.gmanage-row:before{content:"";position:absolute;left:16px;right:0;top:0;height:.5px;background:var(--gi-line)}.relnet-slider>span{display:flex;justify-content:space-between;font-size:15px;color:var(--gi-text)}.relnet-slider>span b{font-weight:500;color:#e2557c;font-size:14px}.relnet-slider input{width:100%;margin:10px 0 0;accent-color:#e2557c}
@@ -2822,9 +2822,9 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
 .dyat-tx{color:#9ec6ff;font-weight:400;}
 </style>
 <script>/* 样式表偶尔在打开瞬间下载失败，页面会失去主屏组件样式；失败时自动换地址再载一次，不用退出重进。 */window.__northCssRetry=function(link){try{if(!link||link.dataset.retried)return;link.dataset.retried='1';var next=document.createElement('link');next.rel='stylesheet';next.href=link.href+(link.href.indexOf('?')<0?'?':'&')+'retry='+Date.now();next.dataset.retried='1';link.parentNode.insertBefore(next,link.nextSibling);}catch(_){}};</script>
-<link rel="stylesheet" href="glass-theme.css?v=1372&r=music-disc-color-1" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="wechat-me.css?v=1372" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="pet-game.css?v=1372" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="glass-theme.css?v=1374&r=music-disc-color-1" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="wechat-me.css?v=1374" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="pet-game.css?v=1374" onerror="__northCssRetry(this)">
 <link rel="stylesheet" href="wedding-game.css?v=wedding-dual-17" onerror="__northCssRetry(this)">
 </head>
 <body>
@@ -2878,36 +2878,36 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail(window.__northBootStarted?'本机存档读取超过 60 秒，请重新加载；仍不会删除聊天、角色或主题':'关键页面文件加载超过 60 秒，请检查网络后重新加载');},60000);
 })();
 </script>
-<script src="browser-diagnostics.js?v=1372"></script>
-<script src="license-gate.js?v=1372" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="couple-watch.js?v=1372" onerror="__northBootFail('页面组件载入失败')"></script>
-<script src="request-diagnostics.js?v=1372"></script>
-<script src="message-beijing-time.js?v=1372&r=offline-me-1"></script>
-<script src="app.js?v=1372&r=v1372-web-relation-real-names-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="cohab-theater.js?v=1372&r=v1274-web-cohab-guests-1" onerror="__northBootFail('共同生活多人剧场组件载入失败（可能是网络或 404）')"></script>
-<script src="public-north-policy.js?v=1372"></script>
-<script src="public-north-runtime.js?v=1372"></script>
-<script src="phone-shortcuts.js?v=1372"></script>
-<script src="daily-event-ledger.js?v=1372" onerror="console.warn('日常事件簿组件未加载，聊天仍可使用')"></script>
-<script src="request-size-details.js?v=1372" onerror="__northBootFail('请求规模详情组件载入失败')"></script>
-<script src="cohab-model-diagnostics.js?v=1372" onerror="__northBootFail('共同生活模型诊断组件载入失败')"></script>
-<script src="bead-studio.js?v=1372&r=v1184-pixel-puzzle-4" onerror="__northBootFail('像素拼拼乐组件载入失败（可能是网络或 404）')"></script>
-<script src="heart-quiz.js?v=1372" onerror="console.warn('心动审判预览组件载入失败')"></script>
-<script src="web-hotfix.js?v=1372&r=v1372-web-relation-real-names-1" onerror="__northBootFail('网页热修复组件载入失败（可能是网络或 404）')"></script>
+<script src="browser-diagnostics.js?v=1374"></script>
+<script src="license-gate.js?v=1374" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="couple-watch.js?v=1374" onerror="__northBootFail('页面组件载入失败')"></script>
+<script src="request-diagnostics.js?v=1374"></script>
+<script src="message-beijing-time.js?v=1374&r=offline-me-1"></script>
+<script src="app.js?v=1374&r=v1374-web-relation-views-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="cohab-theater.js?v=1374&r=v1274-web-cohab-guests-1" onerror="__northBootFail('共同生活多人剧场组件载入失败（可能是网络或 404）')"></script>
+<script src="public-north-policy.js?v=1374"></script>
+<script src="public-north-runtime.js?v=1374"></script>
+<script src="phone-shortcuts.js?v=1374"></script>
+<script src="daily-event-ledger.js?v=1374" onerror="console.warn('日常事件簿组件未加载，聊天仍可使用')"></script>
+<script src="request-size-details.js?v=1374" onerror="__northBootFail('请求规模详情组件载入失败')"></script>
+<script src="cohab-model-diagnostics.js?v=1374" onerror="__northBootFail('共同生活模型诊断组件载入失败')"></script>
+<script src="bead-studio.js?v=1374&r=v1184-pixel-puzzle-4" onerror="__northBootFail('像素拼拼乐组件载入失败（可能是网络或 404）')"></script>
+<script src="heart-quiz.js?v=1374" onerror="console.warn('心动审判预览组件载入失败')"></script>
+<script src="web-hotfix.js?v=1374&r=v1374-web-relation-views-1" onerror="__northBootFail('网页热修复组件载入失败（可能是网络或 404）')"></script>
 <script src="vendor/qr/qrcode.js?v=2.0.4"></script>
 <script src="vendor/qr/jsQR.js?v=1.4.0"></script>
-<script src="wechat-me.js?v=1372" onerror="__northBootFail('微信个人页组件载入失败（可能是网络或 404）')"></script>
-<script src="smart-home.js?v=1372" onerror="__northBootFail('智能家电组件载入失败（可能是网络或 404）')"></script>
-<script src="delivery.js?v=1372" onerror="__northBootFail('真实外卖组件载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=1372" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="pet-game.js?v=1372" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
-<script src="pixel-home-policy.js?v=1372"></script>
-<script src="pixel-wardrobe-info.js?v=1372"></script>
-<script src="pixel-home.js?v=1372"></script>
-<script src="gift-effects.js?v=1372" onerror="console.warn('礼物粒子特效载入失败')"></script>
-<script src="thought-card-effects.js?v=1372" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
-<script src="ai-account.js?v=1372"></script>
+<script src="wechat-me.js?v=1374" onerror="__northBootFail('微信个人页组件载入失败（可能是网络或 404）')"></script>
+<script src="smart-home.js?v=1374" onerror="__northBootFail('智能家电组件载入失败（可能是网络或 404）')"></script>
+<script src="delivery.js?v=1374" onerror="__northBootFail('真实外卖组件载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=1374" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="pet-game.js?v=1374" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
+<script src="pixel-home-policy.js?v=1374"></script>
+<script src="pixel-wardrobe-info.js?v=1374"></script>
+<script src="pixel-home.js?v=1374"></script>
+<script src="gift-effects.js?v=1374" onerror="console.warn('礼物粒子特效载入失败')"></script>
+<script src="thought-card-effects.js?v=1374" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
+<script src="ai-account.js?v=1374"></script>
 <script src="wedding-game.js?v=wedding-dual-17" onerror="console.warn('现代婚礼预览载入失败')"></script>
-<script src="couple-watch-runtime.js?v=1372" onerror="__northBootFail('页面组件载入失败')"></script>
+<script src="couple-watch-runtime.js?v=1374" onerror="__northBootFail('页面组件载入失败')"></script>
 </body>
 </html>

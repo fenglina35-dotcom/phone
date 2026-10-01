@@ -39,7 +39,7 @@ test('both sides know who the other is, with their own titles and feelings', () 
   assert.doesNotMatch(quiet, /· 沈清秋/, 'details only when relevant');
   const his = api.relPromptFor(S.contacts[0], '你妈最近还好吗');
   assert.match(his, /· 沈清秋（52岁，女，退休教师）：是你的妈妈；你是ta的儿子。你对ta 70\/100（亲近），ta对你 85\/100（非常亲）/);
-  assert.match(his, /过往：高中：偷偷买了画板/);
+  assert.match(his, /过往（发生过的事，你们俩都知道）：高中：偷偷买了画板/);
   assert.match(his, /ta不在North的微信里/);
   assert.match(his, /你可以把这些人的微信名片推荐给North：沈清秋。想推荐时单独一行写 \[推荐好友\|名字\|一句介绍\]/, 'he can recommend people from his network');
   assert.match(his, /平时不用主动提他们/);
@@ -66,6 +66,25 @@ test('v1372: roles see real names, my remark is only a note; pages show remark p
   assert.equal(api.relFindByName(S.contacts[0], '哥哥').other, 'c4', 'tags written with my remark still find him');
   assert.equal(api.relFindByName(S.contacts[0], '陆沉').other, 'c4');
   assert.match(app, /list\.push\(\{k:c\.id,name:relLabel\(c\.id\),kind:'微信里的人'\}\)/);
+});
+
+test('v1374: shared origin is written with names, each side has a private view the other never sees', () => {
+  const { api, S } = load();
+  S.contacts.push({ id: 'c4', name: '陆沉', remark: '哥哥' });
+  api.relNewLink('c1', 'c4', { ab: '死对头', ba: '情敌', how: '陆沉抢了克劳德的前女友', va: '他到现在都没道歉，我不会原谅', vb: '当年是误会，我也后悔' });
+  const a = api.relPromptFor(S.contacts[0], '陆沉'), b = api.relPromptFor(S.contacts[2], '克劳德');
+  for (const p of [a, b]) {
+    assert.match(p, /来历（你们俩都知道的事实）：陆沉抢了克劳德的前女友。/);
+    assert.match(p, /来历和过往是用名字写的客观经过/);
+  }
+  assert.match(a, /你心里怎么看ta、怎么看这些事：他到现在都没道歉，我不会原谅（这是你自己的想法，ta不一定知道/);
+  assert.doesNotMatch(a, /我也后悔/, 'his side never sees the other view');
+  assert.match(b, /你心里怎么看ta、怎么看这些事：当年是误会，我也后悔/);
+  assert.doesNotMatch(b, /不会原谅/);
+  assert.doesNotMatch(api.relAmongText(['c1', 'c4']), /不会原谅|我也后悔/, 'shared group/theater text carries no private view');
+  assert.match(grab(app, 'relAutoLink'), /"你心里怎么看ta":""\}。来历只写客观经过，用名字写/);
+  assert.match(grab(app, 'renderRelEdit'), /oninput="_relEdit\.va=this\.value"[^]*oninput="_relEdit\.vb=this\.value"/);
+  assert.match(grab(app, 'relEditSave'), /e\.va=String\(e\.va\|\|''\)\.trim\(\)\.slice\(0,200\)/);
 });
 
 test('details: at most the chosen number, present and pinned people and birthdays count; the gone cannot be recommended', () => {
