@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1391'){
+if(window.__NORTH_SHELL_BUILD__!=='1399'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -563,7 +563,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1391 · 清理语音和临时文件';
+const APP_VER='v1399 · 拉黑后追回';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1922,7 +1922,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1391&r=v1391-private-storage-cleanup-1';
+  const url='sw.js?v=1399&r=v1399-private-pursuit-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -14027,7 +14027,7 @@ function friendReqText(raw,fb){let lines=splitBubbles(cleanReply(raw)).map(x=>cl
 function openFriendRequests(){go('newfriends');}
 function friendRequestTime(r){return +(r.decidedAt||r.visibleAt||r.time)||Date.now();}
 function friendRequestStatus(r){return r.status==='accepted'?'已同意':r.status==='rejected'?'已拒绝':'等待处理';}
-function friendRequestCard(r){const c=getC(r.contactId);if(!c)return'';const pending=r.status==='pending',status=friendRequestStatus(r),click=pending?`onclick="editContact('${c.id}')"`:(!c.deleted?`onclick="openChat('${c.id}')"`:'');return `<article class="nf-card ${r.status}" ${click}><div class="nf-avatar">${pending?wxNearbyAvatar():av(c.avatar||'🙂','sm')}</div><div class="nf-copy"><div class="nf-line"><b>${esc(c.remark||c.name)}</b><time>${esc(factStamp(friendRequestTime(r)))}</time></div><div class="nf-source"><span>${esc(r.source||'好友申请')}</span>${r.kind==='readd'?'<em>再次申请</em>':r.kind==='surprise'?'<em>今日邂逅</em>':'<em>新角色</em>'}</div><p>${esc(friendReqText(r.msg,'想认识你，可以通过一下吗？'))}</p>${r.intent?`<small>来意 · ${esc(r.intent)}</small>`:''}</div><div class="nf-action">${pending?`<button class="accept" onclick="event.stopPropagation();acceptFriend('${r.id}')">同意</button><button class="reject" onclick="event.stopPropagation();ignoreFriend('${r.id}')">拒绝</button>`:`<span class="${r.status}">${status}</span>`}</div></article>`;}
+function friendRequestCard(r){const c=getC(r.contactId);if(!c)return'';const pending=r.status==='pending',status=friendRequestStatus(r),click=pending?`onclick="editContact('${c.id}')"`:(!c.deleted?`onclick="openChat('${c.id}')"`:'');return `<article class="nf-card ${r.status}" ${click}><div class="nf-avatar">${av(c.avatar||'🙂','sm')}</div><div class="nf-copy"><div class="nf-line"><b>${esc(c.remark||c.name)}</b><time>${esc(factStamp(friendRequestTime(r)))}</time></div><div class="nf-source"><span>${esc(r.source||'好友申请')}</span>${r.kind==='readd'?'<em>再次申请</em>':r.kind==='surprise'?'<em>今日邂逅</em>':'<em>新角色</em>'}</div><p>${esc(friendReqText(r.msg,'想认识你，可以通过一下吗？'))}</p>${r.intent?`<small>来意 · ${esc(r.intent)}</small>`:''}</div><div class="nf-action">${pending?`<button class="accept" onclick="event.stopPropagation();acceptFriend('${r.id}')">同意</button><button class="reject" onclick="event.stopPropagation();ignoreFriend('${r.id}')">拒绝</button>`:`<span class="${r.status}">${status}</span>`}</div></article>`;}
 let _nfSearch='';
 function nfSearchInput(v){_nfSearch=v;const box=$('#nf-results');if(box)box.innerHTML=nfResultsHTML();}
 function nfSearchNorm(v){return String(v||'').trim().toLowerCase().replace(/[\s\-()（）]/g,'');}

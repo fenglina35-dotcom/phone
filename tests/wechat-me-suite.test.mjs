@@ -127,7 +127,8 @@ assert.match(glass,/\.wx-chat-premium>\.manual-reply-row[^}]*background:transpar
 assert.match(glass,/\.wx-chat-premium>\.chat-glass-mood/);
 
 assert.match(app,/function wxNearbyFallbackPeople\(seed\)[\s\S]*骚扰/);
-assert.match(app,/pending\?wxNearbyAvatar\(\):av/);
+// v1398: pending requests show the role's own avatar instead of the grey placeholder
+assert.ok(app.includes("<div class=\"nf-avatar\">${av(c.avatar||'🙂','sm')}</div>"));
 assert.match(app,/search\.items[\s\S]*wxNearbyAvatar\(\)/);
 assert.match(app,/incoming\.map[\s\S]*wxNearbyAvatar\(\)/);
 
