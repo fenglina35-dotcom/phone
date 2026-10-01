@@ -15,7 +15,7 @@ enum SmallPhoneDiagnosticsStore {
     )
     private static let maximumBytes = 256 * 1_024
     private static let maximumLines = 200
-    private static let build = "1.0.426 (426)"
+    private static let build = "1.0.427 (427)"
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -546,6 +546,10 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             }
         case "storage.status":
             performStorageStatus(requestID: requestID)
+        case "storage.usage":
+            performStorageUsage(requestID: requestID)
+        case "storage.clearWebCache":
+            performClearWebCache(requestID: requestID)
         case "storage.get", "storage.get.chunk", "storage.get.release",
              "storage.put", "storage.delete":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
@@ -1262,6 +1266,69 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                 "protected": true
             ]
         )
+    }
+
+    /// Folder sizes inside the app container, measured off the main thread.
+    /// Only file metadata is read; no file content is loaded.
+    private func performStorageUsage(requestID: String) {
+        DispatchQueue.global(qos: .utility).async {
+            let result = Self.nativeContainerUsage()
+            Task { @MainActor [weak self] in
+                self?.reply(requestID: requestID, result: result)
+            }
+        }
+    }
+
+    nonisolated private static func nativeFolderBytes(_ url: URL) -> Int64 {
+        let keys: [URLResourceKey] = [
+            .isRegularFileKey,
+            .totalFileAllocatedSizeKey,
+            .fileAllocatedSizeKey
+        ]
+        guard let enumerator = FileManager.default.enumerator(
+            at: url,
+            includingPropertiesForKeys: keys,
+            options: [],
+            errorHandler: { _, _ in true }
+        ) else { return 0 }
+        var total: Int64 = 0
+        while let file = enumerator.nextObject() as? URL {
+            guard let values = try? file.resourceValues(forKeys: Set(keys)),
+                  values.isRegularFile == true else { continue }
+            total += Int64(values.totalFileAllocatedSize ?? values.fileAllocatedSize ?? 0)
+        }
+        return total
+    }
+
+    nonisolated private static func nativeContainerUsage() -> [String: Any] {
+        let home = URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
+        let library = home.appendingPathComponent("Library", isDirectory: true)
+        return [
+            "webkitBytes": nativeFolderBytes(library.appendingPathComponent("WebKit", isDirectory: true)),
+            "cachesBytes": nativeFolderBytes(library.appendingPathComponent("Caches", isDirectory: true)),
+            "supportBytes": nativeFolderBytes(library.appendingPathComponent("Application Support", isDirectory: true)),
+            "documentsBytes": nativeFolderBytes(home.appendingPathComponent("Documents", isDirectory: true)),
+            "tempBytes": nativeFolderBytes(FileManager.default.temporaryDirectory),
+            "containerBytes": nativeFolderBytes(home)
+        ]
+    }
+
+    /// Clears only WebKit HTTP caches. IndexedDB, localStorage and the native
+    /// archive (chats, pictures, music, videos) are never touched.
+    private func performClearWebCache(requestID: String) {
+        let types: Set<String> = [
+            WKWebsiteDataTypeDiskCache,
+            WKWebsiteDataTypeMemoryCache,
+            WKWebsiteDataTypeFetchCache
+        ]
+        WKWebsiteDataStore.default().removeData(
+            ofTypes: types,
+            modifiedSince: Date(timeIntervalSince1970: 0)
+        ) {
+            Task { @MainActor [weak self] in
+                self?.reply(requestID: requestID, result: ["cleared": true])
+            }
+        }
     }
 
     nonisolated private func nativeStorageDataWithRecovery(

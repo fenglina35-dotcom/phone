@@ -112,11 +112,15 @@ test('private storage details avoid cloning every large IndexedDB value', () => 
   assert.match(app, /function privateAppStorageBreakdown\(\)/);
   assert.match(app, /safePrivate\?await privateAppStorageBreakdown\(\):await appStorageBreakdown\(\)/);
   assert.match(app, /不会逐张载入图片/);
-  assert.match(app, /WebKit 媒体与数据库/);
+  assert.match(app, /'图片 · 聊天 · 语音',rest,/);
   const start=app.indexOf('function privateAppStorageBreakdown()');
   const end=app.indexOf('function storageSizeLabel(',start);
   const privatePath=app.slice(start,end);
-  assert.doesNotMatch(privatePath,/scanIDBStoreBytes|openCursor|imgAll/);
+  // v1388: images, chats and voice stay unread (keys are only counted); music and cinema are file-backed Blobs, so only their sizes are read.
+  assert.doesNotMatch(privatePath,/scanIDBStoreBytes\(imgDB|openCursor|imgAll/);
+  assert.match(privatePath,/countIDBKeys\(imgDB,'img',/);
+  assert.match(app,/function countIDBKeys\(openDB,storeName,classify\)\{[^\n]*openKeyCursor\(\)/);
+  assert.match(privatePath,/window\.SmallPhoneNative\.request\('storage\.usage'\)/);
 });
 
 test('mobile image memory cache is bounded without deleting stored media', () => {
