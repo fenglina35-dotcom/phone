@@ -23,7 +23,12 @@ for (const [label, path] of [['web', '../app.js'], ['private', '../native/privat
   });
 
   test(label + ': answering or replying ends the pursuit; the role remembers why and what he did', () => {
-    assert.match(app, /function pursuitGap\(\)\{return 8000\+Math\.floor\(Math\.random\(\)\*12001\);\}/, '8–20 seconds');
+    // v1400: 8–18s plus a 1s sweep keeps every wait under 20s; the next step is decided while waiting
+    assert.match(app, /function pursuitGap\(\)\{return 8000\+Math\.floor\(Math\.random\(\)\*10001\);\}/);
+    assert.match(app, /setInterval\(pursuitSweep,1000\);/);
+    assert.match(grab('pursuitStep'), /const plan=_pursuitPlans\.get\(c\.id\);_pursuitPlans\.delete\(c\.id\);let d=plan&&plan\.result;const opts=pursuitOptions\(c\);if\(!d\|\|!opts\.includes\(d\.act\)\)d=pursuitQuickPick\(c\);/, 'never waits for the model at the due time');
+    assert.match(grab('pursuitSweep'), /^function pursuitSweep\(\)\{try\{phClearStaleSimCall\(\);\}catch\(_\)\{\}/, 'a call stuck from before does not block forever');
+    assert.match(grab('phClearStaleSimCall'), /c\.state==='incoming'&&age>45000/);
     assert.match(grab('pursuitCallAnswered'), /pursuitEnd\(c,'answered'\)/);
     assert.match(grab('pursuitOnUserSms'), /pursuitEnd\(c,'replied'\)/);
     assert.match(grab('pursuitPrompt'), /拉黑前你们最后的对话（她就是因为这些把你拉黑的）/);
