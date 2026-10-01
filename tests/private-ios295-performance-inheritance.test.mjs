@@ -57,8 +57,8 @@ test('private identifiers remain v1355 and iOS 399 while public advances indepen
   assert.match(bridge, /static let contractVersion = 42/);
   assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 425;/g) || []).length, 12);
   assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.425;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1374 · 关系网各自视角'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1374'/);
+  assert.match(publicApp, /APP_VER='v1376 · 名片与剧场对谁说'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1376'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 

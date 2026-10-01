@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='1374';</script>
+<script>window.__NORTH_SHELL_BUILD__='1376';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-1374-web-external-tts-relay-1';
+  var key='north-sw-reloaded-1376-web-external-tts-relay-1';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=1374&r=v1374-web-relation-views-1';
+  var url='sw.js?v=1376&r=v1376-web-namecard-theater-target-1';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -147,6 +147,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .imgpending,.imgfail{width:150px;height:100px;display:flex;align-items:center;justify-content:center;background:#2c2c2e;color:#9aa;font-size:12px;text-align:center;padding:6px;box-sizing:border-box;line-height:1.5;}
 .imgpending .dots{display:inline-flex;gap:3px;margin-right:6px}.imgpending .dots span{width:5px;height:5px;border-radius:50%;background:#8a8;animation:idot 1s infinite}.imgpending .dots span:nth-child(2){animation-delay:.2s}.imgpending .dots span:nth-child(3){animation-delay:.4s}@keyframes idot{0%,60%,100%{opacity:.3}30%{opacity:1}}
 .card{width:215px;border-radius:9px;overflow:hidden;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.1);}
+.card.wxcard{width:240px;border-radius:6px;background:#2c2c2c;box-shadow:none;cursor:default;overflow:visible;position:relative}.card.wxcard:before{content:"";position:absolute;top:15px;width:0;height:0;border:6px solid transparent}.msg.me .card.wxcard:before{right:-11px;border-left-color:#2c2c2c}.msg.them .card.wxcard:before{left:-11px;border-right-color:#2c2c2c}.wxcard-acts{border-radius:0 0 6px 6px;overflow:hidden}.wxcard-top{display:flex;align-items:center;gap:12px;padding:14px 14px 12px}.wxcard-top .avatar{width:44px;height:44px;flex:0 0 44px;border-radius:5px;font-size:24px}.wxcard-main{min-width:0;flex:1}.wxcard-name{color:#e6e6e6;font-size:17px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.wxcard-sub{color:#8a8a8a;font-size:12px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.wxcard-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 14px;padding:7px 0 8px;border-top:.5px solid rgba(255,255,255,.1);color:#8a8a8a;font-size:12px}.wxcard-state{font-size:12px;color:#8a8a8a}.wxcard-state.ok{color:#07c160}.wxcard-acts{display:flex;border-top:.5px solid rgba(255,255,255,.1)}.wxcard-acts button{flex:1;padding:9px 0;border:0;background:transparent;color:#b5b5b5;font:inherit;font-size:14px;cursor:pointer}.wxcard-acts button.ok{color:#07c160;font-weight:600}.wxcard-acts button+button{border-left:.5px solid rgba(255,255,255,.1)}
+.wxlight .card.wxcard{background:#fff}.wxlight .msg.me .card.wxcard:before{border-left-color:#fff}.wxlight .msg.them .card.wxcard:before{border-right-color:#fff}.wxlight .wxcard-name{color:#111}.wxlight .wxcard-sub,.wxlight .wxcard-foot,.wxlight .wxcard-state{color:#a3a3a3}.wxlight .wxcard-state.ok{color:#07c160}.wxlight .wxcard-foot,.wxlight .wxcard-acts{border-color:rgba(0,0,0,.08)}.wxlight .wxcard-acts button{color:#555}.wxlight .wxcard-acts button.ok{color:#07c160}.wxlight .wxcard-acts button+button{border-left-color:rgba(0,0,0,.08)}
 .cpay{padding:13px 14px;display:flex;align-items:center;gap:11px;color:#fff;}
 .cpay.t{background:#f7a23b;}.cpay.r{background:#fa5151;}.cpay.done{background:#d9b48a;}
 .cpay .big{width:34px;height:34px;display:flex;align-items:center;justify-content:center;}.cpay .big svg{display:block;}.cpay .t1{font-size:16px;font-weight:600;}.cpay .t2{font-size:11px;opacity:.9;margin-top:2px;}
@@ -1794,6 +1796,9 @@ body{background:#000;padding:0;}
 .offstage:not(.hasbg):not(.off-classic) .cohab-debug-reply{border:0;background:rgba(120,122,132,.34);color:#ecebe7;box-shadow:none;-webkit-backdrop-filter:blur(14px) saturate(1.32);backdrop-filter:blur(14px) saturate(1.32);}
 .offstage:not(.hasbg):not(.off-classic) .cohab-debug-reply:before{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;padding:.8px;box-sizing:border-box;background:linear-gradient(140deg,rgba(255,255,255,.62),rgba(255,255,255,.2) 30%,rgba(255,255,255,.08) 54%,rgba(255,255,255,.24) 78%,rgba(255,255,255,.52));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;-webkit-backdrop-filter:brightness(1.5) saturate(1.4);backdrop-filter:brightness(1.5) saturate(1.4)}
 .offstage.hasbg:not(.off-classic) .cohab-debug-reply:before{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;padding:.8px;box-sizing:border-box;background:linear-gradient(140deg,rgba(255,255,255,.62),rgba(255,255,255,.2) 30%,rgba(255,255,255,.08) 54%,rgba(255,255,255,.24) 78%,rgba(255,255,255,.52));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;-webkit-backdrop-filter:brightness(1.5) saturate(1.4);backdrop-filter:brightness(1.5) saturate(1.4)}
+/* 多人剧场「对谁说」跟旁边「让TA回」一样透明磨砂 */
+.offstage:not(.off-classic) .cohab-theater-target{border-radius:999px}.offstage:not(.off-classic) .cohab-theater-target select{border:0;background:rgba(120,122,132,.34);color:#ecebe7;box-shadow:none;-webkit-backdrop-filter:blur(14px) saturate(1.32);backdrop-filter:blur(14px) saturate(1.32)}.offstage:not(.off-classic) .cohab-theater-target select option{background:#2a2a2e;color:#ecebe7}
+.offstage:not(.off-classic) .cohab-theater-target:before{content:'';position:absolute;inset:0;z-index:1;border-radius:inherit;pointer-events:none;padding:.8px;box-sizing:border-box;background:linear-gradient(140deg,rgba(255,255,255,.62),rgba(255,255,255,.2) 30%,rgba(255,255,255,.08) 54%,rgba(255,255,255,.24) 78%,rgba(255,255,255,.52));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude}
 .offstage.hasbg:not(.off-classic) .cohab-away-panel{border:0;background:rgba(24,24,27,.36);-webkit-backdrop-filter:blur(16px) saturate(1.3);backdrop-filter:blur(16px) saturate(1.3);color:rgba(255,255,255,.86);}
 .offstage.hasbg:not(.off-classic) .cohab-return-banner{border-color:rgba(255,255,255,.16);background:rgba(28,26,24,.36);-webkit-backdrop-filter:blur(16px) saturate(1.3);backdrop-filter:blur(16px) saturate(1.3);}
 .offstage.hasbg:not(.off-classic) .cohab-memory-open{border-color:rgba(255,255,255,.14);background:rgba(58,60,70,.34);color:#e8e5df;-webkit-backdrop-filter:blur(12px) saturate(1.25);backdrop-filter:blur(12px) saturate(1.25);}
@@ -2822,9 +2827,9 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
 .dyat-tx{color:#9ec6ff;font-weight:400;}
 </style>
 <script>/* 样式表偶尔在打开瞬间下载失败，页面会失去主屏组件样式；失败时自动换地址再载一次，不用退出重进。 */window.__northCssRetry=function(link){try{if(!link||link.dataset.retried)return;link.dataset.retried='1';var next=document.createElement('link');next.rel='stylesheet';next.href=link.href+(link.href.indexOf('?')<0?'?':'&')+'retry='+Date.now();next.dataset.retried='1';link.parentNode.insertBefore(next,link.nextSibling);}catch(_){}};</script>
-<link rel="stylesheet" href="glass-theme.css?v=1374&r=music-disc-color-1" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="wechat-me.css?v=1374" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="pet-game.css?v=1374" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="glass-theme.css?v=1376&r=music-disc-color-1" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="wechat-me.css?v=1376" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="pet-game.css?v=1376" onerror="__northCssRetry(this)">
 <link rel="stylesheet" href="wedding-game.css?v=wedding-dual-17" onerror="__northCssRetry(this)">
 </head>
 <body>
@@ -2878,36 +2883,36 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail(window.__northBootStarted?'本机存档读取超过 60 秒，请重新加载；仍不会删除聊天、角色或主题':'关键页面文件加载超过 60 秒，请检查网络后重新加载');},60000);
 })();
 </script>
-<script src="browser-diagnostics.js?v=1374"></script>
-<script src="license-gate.js?v=1374" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="couple-watch.js?v=1374" onerror="__northBootFail('页面组件载入失败')"></script>
-<script src="request-diagnostics.js?v=1374"></script>
-<script src="message-beijing-time.js?v=1374&r=offline-me-1"></script>
-<script src="app.js?v=1374&r=v1374-web-relation-views-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="cohab-theater.js?v=1374&r=v1274-web-cohab-guests-1" onerror="__northBootFail('共同生活多人剧场组件载入失败（可能是网络或 404）')"></script>
-<script src="public-north-policy.js?v=1374"></script>
-<script src="public-north-runtime.js?v=1374"></script>
-<script src="phone-shortcuts.js?v=1374"></script>
-<script src="daily-event-ledger.js?v=1374" onerror="console.warn('日常事件簿组件未加载，聊天仍可使用')"></script>
-<script src="request-size-details.js?v=1374" onerror="__northBootFail('请求规模详情组件载入失败')"></script>
-<script src="cohab-model-diagnostics.js?v=1374" onerror="__northBootFail('共同生活模型诊断组件载入失败')"></script>
-<script src="bead-studio.js?v=1374&r=v1184-pixel-puzzle-4" onerror="__northBootFail('像素拼拼乐组件载入失败（可能是网络或 404）')"></script>
-<script src="heart-quiz.js?v=1374" onerror="console.warn('心动审判预览组件载入失败')"></script>
-<script src="web-hotfix.js?v=1374&r=v1374-web-relation-views-1" onerror="__northBootFail('网页热修复组件载入失败（可能是网络或 404）')"></script>
+<script src="browser-diagnostics.js?v=1376"></script>
+<script src="license-gate.js?v=1376" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="couple-watch.js?v=1376" onerror="__northBootFail('页面组件载入失败')"></script>
+<script src="request-diagnostics.js?v=1376"></script>
+<script src="message-beijing-time.js?v=1376&r=offline-me-1"></script>
+<script src="app.js?v=1376&r=v1376-web-namecard-theater-target-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="cohab-theater.js?v=1376&r=v1274-web-cohab-guests-1" onerror="__northBootFail('共同生活多人剧场组件载入失败（可能是网络或 404）')"></script>
+<script src="public-north-policy.js?v=1376"></script>
+<script src="public-north-runtime.js?v=1376"></script>
+<script src="phone-shortcuts.js?v=1376"></script>
+<script src="daily-event-ledger.js?v=1376" onerror="console.warn('日常事件簿组件未加载，聊天仍可使用')"></script>
+<script src="request-size-details.js?v=1376" onerror="__northBootFail('请求规模详情组件载入失败')"></script>
+<script src="cohab-model-diagnostics.js?v=1376" onerror="__northBootFail('共同生活模型诊断组件载入失败')"></script>
+<script src="bead-studio.js?v=1376&r=v1184-pixel-puzzle-4" onerror="__northBootFail('像素拼拼乐组件载入失败（可能是网络或 404）')"></script>
+<script src="heart-quiz.js?v=1376" onerror="console.warn('心动审判预览组件载入失败')"></script>
+<script src="web-hotfix.js?v=1376&r=v1376-web-namecard-theater-target-1" onerror="__northBootFail('网页热修复组件载入失败（可能是网络或 404）')"></script>
 <script src="vendor/qr/qrcode.js?v=2.0.4"></script>
 <script src="vendor/qr/jsQR.js?v=1.4.0"></script>
-<script src="wechat-me.js?v=1374" onerror="__northBootFail('微信个人页组件载入失败（可能是网络或 404）')"></script>
-<script src="smart-home.js?v=1374" onerror="__northBootFail('智能家电组件载入失败（可能是网络或 404）')"></script>
-<script src="delivery.js?v=1374" onerror="__northBootFail('真实外卖组件载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=1374" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="pet-game.js?v=1374" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
-<script src="pixel-home-policy.js?v=1374"></script>
-<script src="pixel-wardrobe-info.js?v=1374"></script>
-<script src="pixel-home.js?v=1374"></script>
-<script src="gift-effects.js?v=1374" onerror="console.warn('礼物粒子特效载入失败')"></script>
-<script src="thought-card-effects.js?v=1374" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
-<script src="ai-account.js?v=1374"></script>
+<script src="wechat-me.js?v=1376" onerror="__northBootFail('微信个人页组件载入失败（可能是网络或 404）')"></script>
+<script src="smart-home.js?v=1376" onerror="__northBootFail('智能家电组件载入失败（可能是网络或 404）')"></script>
+<script src="delivery.js?v=1376" onerror="__northBootFail('真实外卖组件载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=1376" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="pet-game.js?v=1376" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
+<script src="pixel-home-policy.js?v=1376"></script>
+<script src="pixel-wardrobe-info.js?v=1376"></script>
+<script src="pixel-home.js?v=1376"></script>
+<script src="gift-effects.js?v=1376" onerror="console.warn('礼物粒子特效载入失败')"></script>
+<script src="thought-card-effects.js?v=1376" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
+<script src="ai-account.js?v=1376"></script>
 <script src="wedding-game.js?v=wedding-dual-17" onerror="console.warn('现代婚礼预览载入失败')"></script>
-<script src="couple-watch-runtime.js?v=1374" onerror="__northBootFail('页面组件载入失败')"></script>
+<script src="couple-watch-runtime.js?v=1376" onerror="__northBootFail('页面组件载入失败')"></script>
 </body>
 </html>

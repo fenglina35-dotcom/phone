@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1374'){
+if(window.__NORTH_SHELL_BUILD__!=='1376'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -539,7 +539,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1374 · 关系网各自视角';
+const APP_VER='v1376 · 名片与剧场对谁说';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1927,7 +1927,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1374&r=v1374-web-relation-views-1';
+  const url='sw.js?v=1376&r=v1376-web-namecard-theater-target-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -14464,11 +14464,9 @@ function buildPart(c,m,me){
   if(m.type==='familycard'){const bnd=m.bound;
     return `<div class="card"><div class="cpay" style="background:#e8527f"><div class="big">💳</div><div><div class="t1">亲属卡 · 每月¥${(+m.quota).toFixed(0)}</div><div class="t2">${bnd?'已绑定，用ta的额度消费':(m.declined?'你拒绝了':'邀请你绑定亲属卡')}</div></div></div><div class="cfoot">亲属卡邀请</div></div>${(!bnd&&!m.declined)?`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#07c160;color:#fff" onclick="event.stopPropagation();acceptFamily('${m.id}')">接受</button><button class="minibtn" onclick="event.stopPropagation();declineFamily('${m.id}')">拒绝</button></div>`:''}`;}
   if(m.type==='familybuy'){return `<div class="card"><div class="cpay" style="background:#e8527f"><div class="big">🛍️</div><div><div class="t1">亲属卡消费 ¥${(+m.price).toFixed(2)}</div><div class="t2">${esc(m.name)}</div></div></div><div class="cfoot">本月已用 ¥${(+m.used).toFixed(0)}/${(+m.quota).toFixed(0)}</div></div>`;}
-  if(m.type==='namecard'){const his=m.dir==='his';
-    return `<div class="card" style="width:240px;background:#13361f;border:1px solid #2a7a48;overflow:hidden">
-      <div style="padding:11px;display:flex;gap:10px;align-items:center">${av(his?(m.avatar||'🙂'):(m.avatar||'🙂'),'sm')}<div style="min-width:0;flex:1"><div style="font-weight:600;color:#eafff0">${esc(m.cname)}</div><div style="font-size:12px;color:#8fcaa6">微信号：${esc(m.wxid||'')}</div></div><div style="font-size:20px">👤</div></div>
-      <div style="padding:7px 11px;background:rgba(255,255,255,.05);color:#9fd9b4;font-size:12px">${esc(m.persona||'')||'个人名片'}</div>
-      ${his?(m.added?'<div style="padding:8px;text-align:center;color:#2bd66a;font-size:13px;font-weight:600">已添加到通讯录</div>':(m.declined?'<div style="padding:8px;text-align:center;color:#c97a7a;font-size:12px">你拒绝了这个推荐</div>':`<div style="display:flex;border-top:1px solid #2a7a48"><div style="flex:1;padding:9px;text-align:center;background:#07c160;color:#fff;font-weight:600;cursor:pointer" onclick="event.stopPropagation();addHisCard('${m.id}')">同意添加</div><div style="flex:1;padding:9px;text-align:center;color:#9fd9b4;cursor:pointer;border-left:1px solid #2a7a48" onclick="event.stopPropagation();declineHisCard('${m.id}')">拒绝</div></div>`)):(m._accepted?'<div style="padding:6px;text-align:center;color:#2bd66a;font-size:12px">✅ 对方已添加</div>':'<div style="padding:6px;text-align:center;color:#6fae86;font-size:11px">推荐给ta的名片 · 等ta添加</div>')}</div>`;}
+  if(m.type==='namecard'){const his=m.dir==='his';/* 跟真实微信一样的简约名片：深色主题深灰、白色主题白色 */
+    const foot=his?(m.added?'<span class="wxcard-state ok">已添加到通讯录</span>':(m.declined?'<span class="wxcard-state">你拒绝了这个推荐</span>':'')):(m._accepted?'<span class="wxcard-state ok">对方已添加</span>':'<span class="wxcard-state">等ta添加</span>');
+    return `<div class="card wxcard"><div class="wxcard-top">${av(m.avatar||'🙂','sm')}<div class="wxcard-main"><div class="wxcard-name">${esc(m.cname)}</div>${m.persona?`<div class="wxcard-sub">${esc(m.persona)}</div>`:''}</div></div><div class="wxcard-foot"><span>个人名片</span>${foot}</div>${his&&!m.added&&!m.declined?`<div class="wxcard-acts"><button type="button" class="ok" onclick="event.stopPropagation();addHisCard('${m.id}')">同意添加</button><button type="button" onclick="event.stopPropagation();declineHisCard('${m.id}')">拒绝</button></div>`:''}</div>`;}
   if(m.type==='weblink'&&m.webShare)return webShareCardHTML(m);
   if(m.type==='weblink'){return `<div class="card" style="width:240px;background:#13233a;border:1px solid #2a4a72" onclick="event.stopPropagation();viewWeblink('${m.id}')"><div style="padding:11px"><div style="color:#71767b;font-size:11px;margin-bottom:4px">🌐 网页/搜索结果</div><div style="color:#cfe3ff;font-size:13px;font-weight:700">${esc(m.title)}</div><div style="color:#9fb6d4;font-size:12px;margin-top:4px;line-height:1.5">${esc((m.snippet||'').slice(0,90))}${(m.snippet||'').length>90?'…':''}</div></div><div class="cfoot" style="background:rgba(255,255,255,.05);color:#7db3ff">点击查看全文</div></div>`;}
   if(m.type==='dateinvite'){const done=m.accepted||m.declined;return `<div class="card" style="width:240px;background:#3a1622;border:1px solid #b34a6a"><div style="padding:12px"><div style="color:#ff9ec4;font-size:11px;margin-bottom:4px">${svgIc('heart',12,'#ff9ec4')} 线下约会邀请</div><div style="color:#ffd6e6;font-size:14px;font-weight:600">约你见面</div><div style="color:#e8a8bd;font-size:13px;margin-top:5px">🕐 ${esc(m.when||'看你时间')}<br>📍 ${esc(m.loc||'老地方')}</div></div><div class="cfoot" style="color:#c98">${m.accepted?'你答应啦💗':m.declined?'你拒绝了':'ta在等你答应'}</div></div>${done?'':`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#07c160;color:#fff" onclick="event.stopPropagation();acceptDate('${m.id}')">同意，去赴约</button><button class="minibtn" onclick="event.stopPropagation();declineDate('${m.id}')">改天</button></div>`}`;}

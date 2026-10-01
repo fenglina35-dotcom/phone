@@ -14,9 +14,9 @@ const project=fs.readFileSync(path.join(root,'native/private-small-phone/XcodePr
 const native=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift'),'utf8');
 
 test('v1184 web keeps private 1.0.315 compatibility',()=>{
-  assert.match(app,/APP_VER='v1374 · 关系网各自视角'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1374'/);
-  assert.match(sw,/BUILD='1374'/);
+  assert.match(app,/APP_VER='v1376 · 名片与剧场对谁说'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1376'/);
+  assert.match(sw,/BUILD='1376'/);
   assert.match(plist,/<string>1200<\/string>/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 425;/g)||[]).length,12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.425;/g)||[]).length,12);
