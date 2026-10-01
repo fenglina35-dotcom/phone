@@ -511,7 +511,7 @@ test('the stats on a stranger page stay put instead of rerolling every render', 
 });
 
 test('my own avatar shows on my side of a 私信, and waiting shows three dots', () => {
-  assert.match(source('renderDyDM'), /m\.from==='me'\?av\(dyAvatar\(\),'sm'\):dyFace\(d\.avatar,'sm'\)/, '我这边也要有头像');
+  assert.match(source('renderDyDM'), /m\.from==='me'\?av\(dyAvatar\(\),'sm'\):dyFace\(dyRA\(d\.cid,d\.avatar\),'sm'\)/, '我这边也要有头像');
   assert.match(source('renderDyDM'), /dyTypingShown\('dm:'\+id\)/, '私信里等回复要有三个点');
   assert.match(source('dyGroupView'), /dyTypingShown\('g:'\+g\.id\)/, '群聊里也要有');
   assert.match(app, /async function dyDMReply\(d\)\{try\{dyTypingOn\('dm:'\+d\.id\);/, '开始想回复就亮');

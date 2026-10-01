@@ -37,6 +37,7 @@ const PERMANENT_FIXES = [
   {release:"v1374",scope:"web",least:1,name:"关系网：各自心里怎么看只给自己看",marker:"if(v.myView)s+='你心里怎么看ta、怎么看这些事：'"},
   {release:"v1376",scope:"web",least:1,name:"多人剧场：先打字再选对谁说，以选的人为准",marker:"/* 先打字、再选对谁说、再点让TA回：以点回复时选的人为准 */",file:"cohab-theater.js"},
   {release:"v1378",scope:"web",least:1,name:"他微信里不会有两个妈妈（同义称呼、人物卡转好友）",marker:"const mine=x=>x.relKey&&relKeyLive(x.relKey)===v.other;"},
+  {release:"v1392",scope:"both",least:1,name:"角色抖音头像可以单独换",marker:"function dyRA(cid,fallback){"},
   {release:"v1390",scope:"both",least:1,name:"删掉的消息留下的语音能清掉（只删没人引用的）",marker:"async function audioOrphanGC(){"},
   {release:"v1388",scope:"both",least:1,name:"私人 App 存储明细不逐张读图片",marker:"countIDBKeys(imgDB,'img',"},
   {release:"v1386",scope:"both",least:1,name:"名片加来的人记得自己的生日",marker:"function relSelfText(k){"},

@@ -86,10 +86,10 @@ test('web-only login expires at the visible deadline even while AI processing is
 });
 
 test('the web shell and service worker require the hotfix while private files stay outside its entry path',()=>{
-  assert.match(shell,/web-hotfix\.js\?v=1390&r=v1390-web-storage-cleanup-1/);
-  assert.match(hotfix,/sw\.js\?v=1390&r=v1390-web-storage-cleanup-1/);
+  assert.match(shell,/web-hotfix\.js\?v=1392&r=v1392-web-douyin-role-avatar-1/);
+  assert.match(hotfix,/sw\.js\?v=1392&r=v1392-web-douyin-role-avatar-1/);
   assert.match(worker,/kind:'hotfix'/);
-  assert.match(worker,/north-shell-v1390-web-storage-cleanup-1/);
+  assert.match(worker,/north-shell-v1392-web-douyin-role-avatar-1/);
   assert.doesNotMatch(source,/__NORTH_WEB_HOTFIX__/);
   assert.doesNotMatch(privateApp,/__NORTH_WEB_HOTFIX__/,'the private runtime does not embed the web-only repair');
   assert.doesNotMatch(privateShell,/web-hotfix\.js/,'the private package does not load the web-only repair');
