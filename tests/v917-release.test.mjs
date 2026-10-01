@@ -15,9 +15,9 @@ test('v1184 web source keeps private 1.0.315 compatibility', () => {
   assert.match(html, /__NORTH_SHELL_BUILD__='1380'/);
   assert.match(sw, /const BUILD='1380'/);
   assert.doesNotMatch(project, /CURRENT_PROJECT_VERSION = 40;|MARKETING_VERSION = 1\.0\.40;/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 425;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.425;/g) || []).length, 12);
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.425 \(425\)'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 426;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.426;/g) || []).length, 12);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.426 \(426\)'/);
 });
 
 test('AI account first screen carries the approved visible red notice', () => {

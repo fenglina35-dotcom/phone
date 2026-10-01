@@ -38,17 +38,17 @@ function pollHarness(){
 }
 
 test('private candidate is v1355 and iOS 399 while public advances independently',()=>{
-  assert.match(app,/APP_VER='v1369 · 共同生活点一下与群聊点名'/);
+  assert.match(app,/APP_VER='v1381 · 关系网与名片资料页'/);
   for(const html of [index,alias]){
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1369'/);
-    assert.match(html,/app\.js\?v=1369&r=v1369-private-cohab-tap-1/);
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1381'/);
+    assert.match(html,/app\.js\?v=1381&r=v1381-private-relation-network-1/);
     assert.match(html,/private-runtime-diagnostics\.js\?v=339/);
   }
   assert.match(diagnostics,/OVERLAY_VERSION='336-daily-file-backup'/);
-  assert.match(webView,/1\.0\.425 \(425\)/);
-  assert.match(bridge,/private static let build = "1\.0\.425 \(425\)"/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 425;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.425;/g)||[]).length,12);
+  assert.match(webView,/1\.0\.426 \(426\)/);
+  assert.match(bridge,/private static let build = "1\.0\.426 \(426\)"/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 426;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.426;/g)||[]).length,12);
   assert.match(publicApp,/APP_VER='v1380 · 剧场配角与家人设定'/);
 });
 

@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='1369';</script>
+<script>window.__NORTH_SHELL_BUILD__='1381';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-1369-private-external-tts-relay-1';
+  var key='north-sw-reloaded-1381-private-external-tts-relay-1';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=1369&r=v1369-private-cohab-tap-1';
+  var url='sw.js?v=1381&r=v1381-private-relation-network-1';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -147,6 +147,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .imgpending,.imgfail{width:150px;height:100px;display:flex;align-items:center;justify-content:center;background:#2c2c2e;color:#9aa;font-size:12px;text-align:center;padding:6px;box-sizing:border-box;line-height:1.5;}
 .imgpending .dots{display:inline-flex;gap:3px;margin-right:6px}.imgpending .dots span{width:5px;height:5px;border-radius:50%;background:#8a8;animation:idot 1s infinite}.imgpending .dots span:nth-child(2){animation-delay:.2s}.imgpending .dots span:nth-child(3){animation-delay:.4s}@keyframes idot{0%,60%,100%{opacity:.3}30%{opacity:1}}
 .card{width:215px;border-radius:9px;overflow:hidden;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.1);}
+.card.wxcard{width:240px;border-radius:6px;background:#2c2c2c;box-shadow:none;cursor:default;overflow:visible;position:relative}.card.wxcard:before{content:"";position:absolute;top:15px;width:0;height:0;border:6px solid transparent}.msg.me .card.wxcard:before{right:-11px;border-left-color:#2c2c2c}.msg.them .card.wxcard:before{left:-11px;border-right-color:#2c2c2c}.wxcard-acts{border-radius:0 0 6px 6px;overflow:hidden}.wxcard-top{display:flex;align-items:center;gap:12px;padding:14px 14px 12px}.wxcard-top .avatar{width:44px;height:44px;flex:0 0 44px;border-radius:5px;font-size:24px}.wxcard-main{min-width:0;flex:1}.wxcard-name{color:#e6e6e6;font-size:17px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.wxcard-sub{color:#8a8a8a;font-size:12px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.wxcard-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 14px;padding:7px 0 8px;border-top:.5px solid rgba(255,255,255,.1);color:#8a8a8a;font-size:12px}.wxcard-state{font-size:12px;color:#8a8a8a}.wxcard-state.ok{color:#07c160}.wxcard-acts{display:flex;border-top:.5px solid rgba(255,255,255,.1)}.wxcard-acts button{flex:1;padding:9px 0;border:0;background:transparent;color:#b5b5b5;font:inherit;font-size:14px;cursor:pointer}.wxcard-acts button.ok{color:#07c160;font-weight:600}.wxcard-acts button+button{border-left:.5px solid rgba(255,255,255,.1)}
+.card.wxcard{cursor:pointer}.card.wxcard:active{filter:brightness(1.12)}
+.hcard-page{position:absolute;inset:0;overflow:auto;background:#111;color:#e6e6e6;--hc-sec:#191919;--hc-line:rgba(255,255,255,.08);--hc-sub:#8a8a8a}.hcard-nav{display:flex;justify-content:space-between;align-items:center;height:52px;padding:calc(env(safe-area-inset-top) + 4px) 8px 0;background:var(--hc-sec)}.hcard-nav button{border:0;background:transparent;color:inherit;font-size:30px;line-height:1;padding:4px 12px;cursor:pointer}.hcard-nav .hcard-more{font-size:20px;letter-spacing:1px}.hcard-head{display:flex;gap:18px;align-items:flex-start;padding:18px 20px 28px;background:var(--hc-sec)}.hcard-head .avatar{width:64px;height:64px;flex:0 0 64px;border-radius:7px;font-size:34px}.hcard-head>div{min-width:0;padding-top:4px}.hcard-head b{display:flex;align-items:center;gap:6px;font-size:24px;font-weight:500;word-break:break-all}.hcard-head small{display:block;margin-top:6px;color:var(--hc-sub);font-size:13px}.hcard-sex{display:inline-flex;flex:0 0 auto;width:24px;height:24px;margin-left:4px}.hcard-sex svg{width:100%;height:100%}.hcard-sex.f svg{fill:#f37e8a}.hcard-sex.m svg{fill:#5fa8f5}.hcard-sec{margin-top:10px;background:var(--hc-sec);border-top:.5px solid var(--hc-line);border-bottom:.5px solid var(--hc-line)}.hcard-sec:first-of-type{margin-top:0}.hcard-row{display:flex;gap:16px;padding:14px 20px;font-size:15px}.hcard-row+.hcard-row{border-top:.5px solid var(--hc-line)}.hcard-row span{flex:0 0 72px;color:var(--hc-sub)}.hcard-row em{font-style:normal;min-width:0;word-break:break-all}.hcard-btn{display:block;width:100%;padding:17px 0;border:0;background:transparent;color:#7d90a9;font:inherit;font-size:17px;font-weight:600;text-align:center;cursor:pointer}.hcard-btn.off{color:var(--hc-sub);font-weight:400;cursor:default}.hcard-empty{padding:60px 20px;text-align:center;color:var(--hc-sub)}
+.wxlight .hcard-page{background:#ededed;color:#111;--hc-sec:#fff;--hc-line:rgba(0,0,0,.08);--hc-sub:#888}.wxlight .hcard-btn{color:#576b95}
+.wxlight .card.wxcard{background:#fff}.wxlight .msg.me .card.wxcard:before{border-left-color:#fff}.wxlight .msg.them .card.wxcard:before{border-right-color:#fff}.wxlight .wxcard-name{color:#111}.wxlight .wxcard-sub,.wxlight .wxcard-foot,.wxlight .wxcard-state{color:#a3a3a3}.wxlight .wxcard-state.ok{color:#07c160}.wxlight .wxcard-foot,.wxlight .wxcard-acts{border-color:rgba(0,0,0,.08)}.wxlight .wxcard-acts button{color:#555}.wxlight .wxcard-acts button.ok{color:#07c160}.wxlight .wxcard-acts button+button{border-left-color:rgba(0,0,0,.08)}
 .cpay{padding:13px 14px;display:flex;align-items:center;gap:11px;color:#fff;}
 .cpay.t{background:#f7a23b;}.cpay.r{background:#fa5151;}.cpay.done{background:#d9b48a;}
 .cpay .big{width:34px;height:34px;display:flex;align-items:center;justify-content:center;}.cpay .big svg{display:block;}.cpay .t1{font-size:16px;font-weight:600;}.cpay .t2{font-size:11px;opacity:.9;margin-top:2px;}
@@ -286,6 +291,30 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .gsettings-chip{border:1px solid var(--gi-line);border-radius:16px;padding:6px 14px;background:var(--gi-field);color:var(--gi-text);font:inherit;font-size:14px;cursor:pointer}
 .gsettings-chip.on{background:var(--gi-green);border-color:var(--gi-green);color:#fff}
 .gsettings-text{display:block;width:100%;box-sizing:border-box;border:0;padding:12px 16px;background:transparent;color:var(--gi-text);font:inherit;font-size:15px;resize:vertical;outline:none}
+/* 关系网 */
+.relnet-page .gmanage-scroll{padding-bottom:calc(30px + env(safe-area-inset-bottom,0px))}
+.relnet-row{display:flex;align-items:center;gap:12px;width:100%;min-height:72px;padding:10px 14px 10px 16px;box-sizing:border-box;border:0;background:none;color:var(--gi-text);font:inherit;text-align:left;cursor:pointer;position:relative}
+.relnet-row+.relnet-row:before{content:"";position:absolute;left:72px;right:0;top:0;height:.5px;background:var(--gi-line)}
+.relnet-av,.relnet-pair{flex:0 0 auto}.relnet-av .avatar,.relnet-pair .avatar{width:44px!important;height:44px!important;min-width:44px;max-width:44px;flex:0 0 44px;aspect-ratio:1/1;border-radius:6px!important;font-size:20px!important;overflow:hidden}.relnet-av .avatar img,.relnet-pair .avatar img{width:100%!important;height:100%!important;object-fit:cover}
+.relnet-tag.pin{background:rgba(7,193,96,.14);color:#07c160}.relnet-tag.gone{background:rgba(160,160,168,.18);color:var(--gi-sub)}
+.relnet-pair{display:flex;flex:0 0 auto}.relnet-pair .avatar{width:34px!important;height:34px!important;min-width:34px;max-width:34px;flex:0 0 34px}.relnet-pair{gap:4px;width:72px}.relnet-pair .avatar+.avatar{margin-left:0}
+.relnet-face{display:flex!important;align-items:center;justify-content:center;background:linear-gradient(145deg,#6c7a96,#4a5468)!important;color:#fff;font-weight:600}
+.relnet-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}.relnet-main b{font-weight:500;font-size:16px;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.relnet-main small{font-size:13px;color:var(--gi-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.relnet-tag{font-style:normal;font-size:11px;padding:1px 6px;border-radius:4px;background:rgba(250,157,59,.16);color:#f0a046}.relnet-tag.lock{background:rgba(120,140,170,.16);color:var(--gi-sub)}
+.relnet-feel{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--gi-sub)}.relnet-feel i{position:relative;width:46px;height:4px;border-radius:2px;background:var(--gi-field);overflow:hidden}.relnet-feel i:after{content:"";position:absolute;inset:0 auto 0 0;width:var(--w);background:#e2557c;border-radius:2px}.relnet-feel i.b:after{background:#7d90a9}.relnet-feel u{text-decoration:none}.relnet-feel s{text-decoration:none;color:#fa5151}
+.relnet-chev{font-style:normal;color:var(--gi-sub);font-size:20px}
+.relnet-hero{display:flex;align-items:center;gap:14px;padding:18px 16px;cursor:pointer}.relnet-hero .avatar{width:58px!important;height:58px!important;min-width:58px;border-radius:8px!important;font-size:26px!important}.relnet-hero b{display:block;font-size:19px;font-weight:600}.relnet-hero small{display:block;margin-top:4px;color:var(--gi-sub);font-size:13px}
+.relnet-add{display:block;width:calc(100% - 32px);margin:12px 16px 0;padding:12px 0;border:0;border-radius:8px;background:var(--gi-card);color:var(--gi-green);font:inherit;font-size:16px;cursor:pointer}
+.relnet-del{display:block;width:calc(100% - 32px);margin:22px 16px 0;padding:12px 0;border:0;border-radius:8px;background:var(--gi-card);color:#fa5151;font:inherit;font-size:16px;cursor:pointer}
+.relnet-note{margin:14px 18px 0;color:var(--gi-sub);font-size:12px;line-height:1.7}
+.relnet-field{display:flex;align-items:center;gap:12px;min-height:52px;padding:0 16px;position:relative}.relnet-field+.relnet-field:before{content:"";position:absolute;left:16px;right:0;top:0;height:.5px;background:var(--gi-line)}
+.relnet-field>span{flex:0 0 auto;max-width:48%;color:var(--gi-text);font-size:15px}.relnet-field input,.relnet-field select{flex:1;min-width:0;border:0;background:transparent;color:var(--gi-text);font:inherit;font-size:15px;text-align:right;outline:none;appearance:none;-webkit-appearance:none}.relnet-field select{direction:rtl}.relnet-field.relnet-view{flex-direction:column;align-items:stretch;gap:6px;padding:12px 16px}.relnet-field.relnet-view>span{max-width:none;font-size:14px;color:var(--gi-sub)}.relnet-view textarea{width:100%;box-sizing:border-box;border:0;border-radius:10px;padding:8px 10px;background:var(--gi-field);color:var(--gi-text);font:inherit;font-size:15px;line-height:1.45;resize:none;outline:none}.relnet-view textarea::placeholder{color:var(--gi-sub)}.relnet-field input::placeholder{color:var(--gi-sub)}
+.relnet-link{display:block;width:100%;padding:12px 16px;border:0;border-top:.5px solid var(--gi-line);background:none;color:var(--gi-green);font:inherit;font-size:14px;text-align:left;cursor:pointer}
+.relnet-chips{display:flex;flex-wrap:wrap;gap:8px;padding:0 16px 10px}.relnet-chips button{border:.5px solid var(--gi-line);border-radius:14px;padding:5px 11px;background:var(--gi-card);color:var(--gi-text);font:inherit;font-size:13px;cursor:pointer}
+.relnet-slider{display:block;padding:12px 16px 10px;position:relative}.relnet-slider+.relnet-slider:before,.relnet-slider+.gmanage-row:before{content:"";position:absolute;left:16px;right:0;top:0;height:.5px;background:var(--gi-line)}.relnet-slider>span{display:flex;justify-content:space-between;font-size:15px;color:var(--gi-text)}.relnet-slider>span b{font-weight:500;color:#e2557c;font-size:14px}.relnet-slider input{width:100%;margin:10px 0 0;accent-color:#e2557c}
+.relnet-story{display:flex;gap:8px;align-items:flex-start;padding:10px 12px 10px 16px;position:relative}.relnet-story+.relnet-story:before{content:"";position:absolute;left:16px;right:0;top:0;height:.5px;background:var(--gi-line)}.relnet-story input{width:76px;flex:0 0 76px;border:0;border-radius:6px;padding:8px;background:var(--gi-field);color:var(--gi-text);font:inherit;font-size:13px;outline:none}.relnet-story textarea{flex:1;min-width:0;border:0;border-radius:6px;padding:8px;background:var(--gi-field);color:var(--gi-text);font:inherit;font-size:14px;resize:vertical;outline:none}.relnet-story button{border:0;background:none;color:var(--gi-sub);font-size:20px;padding:4px 6px;cursor:pointer}
+.relnet-pending{margin:12px 16px 0;padding:10px 12px;border-radius:8px;background:rgba(250,157,59,.12);color:#f0a046;font-size:13px;line-height:1.6}
+.relnet-log{padding:10px 16px;position:relative}.relnet-log+.relnet-log:before{content:"";position:absolute;left:16px;right:0;top:0;height:.5px;background:var(--gi-line)}.relnet-log b{display:block;font-weight:500;font-size:14px}.relnet-log small{color:var(--gi-sub);font-size:12px}
 .group-muted-bar{justify-content:center;align-items:center;min-height:56px;color:#8d8d92;font-size:14px}
 .ginfo-hits{max-height:48vh;overflow:auto}
 .ginfo-hit{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:baseline;padding:9px 2px;border-bottom:.5px solid rgba(128,128,128,.2);font-size:13px}
@@ -1769,6 +1798,9 @@ body{background:#000;padding:0;}
 .offstage:not(.hasbg):not(.off-classic) .cohab-debug-reply{border:0;background:rgba(120,122,132,.34);color:#ecebe7;box-shadow:none;-webkit-backdrop-filter:blur(14px) saturate(1.32);backdrop-filter:blur(14px) saturate(1.32);}
 .offstage:not(.hasbg):not(.off-classic) .cohab-debug-reply:before{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;padding:.8px;box-sizing:border-box;background:linear-gradient(140deg,rgba(255,255,255,.62),rgba(255,255,255,.2) 30%,rgba(255,255,255,.08) 54%,rgba(255,255,255,.24) 78%,rgba(255,255,255,.52));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;-webkit-backdrop-filter:brightness(1.5) saturate(1.4);backdrop-filter:brightness(1.5) saturate(1.4)}
 .offstage.hasbg:not(.off-classic) .cohab-debug-reply:before{content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;padding:.8px;box-sizing:border-box;background:linear-gradient(140deg,rgba(255,255,255,.62),rgba(255,255,255,.2) 30%,rgba(255,255,255,.08) 54%,rgba(255,255,255,.24) 78%,rgba(255,255,255,.52));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;-webkit-backdrop-filter:brightness(1.5) saturate(1.4);backdrop-filter:brightness(1.5) saturate(1.4)}
+/* 多人剧场「对谁说」跟旁边「让TA回」一样透明磨砂 */
+.offstage:not(.off-classic) .cohab-theater-target{border-radius:999px}.offstage:not(.off-classic) .cohab-theater-target select{border:0;background:rgba(120,122,132,.34);color:#ecebe7;box-shadow:none;-webkit-backdrop-filter:blur(14px) saturate(1.32);backdrop-filter:blur(14px) saturate(1.32)}.offstage:not(.off-classic) .cohab-theater-target select option{background:#2a2a2e;color:#ecebe7}
+.offstage:not(.off-classic) .cohab-theater-target:before{content:'';position:absolute;inset:0;z-index:1;border-radius:inherit;pointer-events:none;padding:.8px;box-sizing:border-box;background:linear-gradient(140deg,rgba(255,255,255,.62),rgba(255,255,255,.2) 30%,rgba(255,255,255,.08) 54%,rgba(255,255,255,.24) 78%,rgba(255,255,255,.52));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude}
 .offstage.hasbg:not(.off-classic) .cohab-away-panel{border:0;background:rgba(24,24,27,.36);-webkit-backdrop-filter:blur(16px) saturate(1.3);backdrop-filter:blur(16px) saturate(1.3);color:rgba(255,255,255,.86);}
 .offstage.hasbg:not(.off-classic) .cohab-return-banner{border-color:rgba(255,255,255,.16);background:rgba(28,26,24,.36);-webkit-backdrop-filter:blur(16px) saturate(1.3);backdrop-filter:blur(16px) saturate(1.3);}
 .offstage.hasbg:not(.off-classic) .cohab-memory-open{border-color:rgba(255,255,255,.14);background:rgba(58,60,70,.34);color:#e8e5df;-webkit-backdrop-filter:blur(12px) saturate(1.25);backdrop-filter:blur(12px) saturate(1.25);}
@@ -2797,9 +2829,9 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
 /* 作品文案里的 @ 也要挑出来 */
 .dyat-tx{color:#9ec6ff;font-weight:400;}
 </style>
-<link rel="stylesheet" href="glass-theme.css?v=1369&r=music-disc-color-1">
-<link rel="stylesheet" href="wechat-me.css?v=1369">
-<link rel="stylesheet" href="pet-game.css?v=1369">
+<link rel="stylesheet" href="glass-theme.css?v=1381&r=music-disc-color-1">
+<link rel="stylesheet" href="wechat-me.css?v=1381">
+<link rel="stylesheet" href="pet-game.css?v=1381">
 <link rel="stylesheet" href="wedding-game.css?v=wedding-dual-17">
 </head>
 <body>
@@ -2853,48 +2885,48 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail(window.__northBootStarted?'本机存档读取超过 60 秒，请重新加载；仍不会删除聊天、角色或主题':'关键页面文件加载超过 60 秒，请检查网络后重新加载');},60000);
 })();
 </script>
-<script src="browser-diagnostics.js?v=1369"></script>
-<script src="license-gate.js?v=1369" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="couple-watch.js?v=1369" onerror="__northBootFail('页面组件载入失败')"></script>
-<script src="request-diagnostics.js?v=1369"></script>
-<script src="message-beijing-time.js?v=1369&r=offline-me-1"></script>
-<script src="app.js?v=1369&r=v1369-private-cohab-tap-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="private-reply-intercept.js?v=1369&r=v1178-private-intercept-parity-1" onerror="__northBootFail('私人回复拦截记录组件载入失败（安装包不完整）')"></script>
-<script src="cohab-theater.js?v=1369&r=v1274-web-cohab-guests-1" onerror="__northBootFail('共同生活多人剧场组件载入失败（可能是网络或 404）')"></script>
-<script src="public-north-policy.js?v=1369"></script>
-<script src="public-north-runtime.js?v=1369"></script>
-<script src="phone-shortcuts.js?v=1369"></script>
-<script src="daily-event-ledger.js?v=1369" onerror="console.warn('日常事件簿组件未加载，聊天仍可使用')"></script>
-<script src="request-size-details.js?v=1369" onerror="__northBootFail('请求规模详情组件载入失败')"></script>
-<script src="cohab-model-diagnostics.js?v=1369" onerror="__northBootFail('共同生活模型诊断组件载入失败')"></script>
-<script src="bead-studio.js?v=1369&r=v1184-pixel-puzzle-4" onerror="__northBootFail('像素拼拼乐组件载入失败（安装包不完整）')"></script>
-<script src="heart-quiz.js?v=1369" onerror="console.warn('心动审判预览组件载入失败')"></script>
+<script src="browser-diagnostics.js?v=1381"></script>
+<script src="license-gate.js?v=1381" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="couple-watch.js?v=1381" onerror="__northBootFail('页面组件载入失败')"></script>
+<script src="request-diagnostics.js?v=1381"></script>
+<script src="message-beijing-time.js?v=1381&r=offline-me-1"></script>
+<script src="app.js?v=1381&r=v1381-private-relation-network-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="private-reply-intercept.js?v=1381&r=v1178-private-intercept-parity-1" onerror="__northBootFail('私人回复拦截记录组件载入失败（安装包不完整）')"></script>
+<script src="cohab-theater.js?v=1381&r=v1274-web-cohab-guests-1" onerror="__northBootFail('共同生活多人剧场组件载入失败（可能是网络或 404）')"></script>
+<script src="public-north-policy.js?v=1381"></script>
+<script src="public-north-runtime.js?v=1381"></script>
+<script src="phone-shortcuts.js?v=1381"></script>
+<script src="daily-event-ledger.js?v=1381" onerror="console.warn('日常事件簿组件未加载，聊天仍可使用')"></script>
+<script src="request-size-details.js?v=1381" onerror="__northBootFail('请求规模详情组件载入失败')"></script>
+<script src="cohab-model-diagnostics.js?v=1381" onerror="__northBootFail('共同生活模型诊断组件载入失败')"></script>
+<script src="bead-studio.js?v=1381&r=v1184-pixel-puzzle-4" onerror="__northBootFail('像素拼拼乐组件载入失败（安装包不完整）')"></script>
+<script src="heart-quiz.js?v=1381" onerror="console.warn('心动审判预览组件载入失败')"></script>
 <script src="private-runtime-diagnostics.js?v=339" onerror="__northBootFail('私人 App 性能保护组件载入失败（安装包不完整）')"></script>
 <script src="vendor/qr/qrcode.js?v=2.0.4"></script>
 <script src="vendor/qr/jsQR.js?v=1.4.0"></script>
-<script src="wechat-me.js?v=1369" onerror="__northBootFail('微信个人页组件载入失败（可能是网络或 404）')"></script>
+<script src="wechat-me.js?v=1381" onerror="__northBootFail('微信个人页组件载入失败（可能是网络或 404）')"></script>
 <link rel="stylesheet" href="private-smart-lock.css?v=339">
 <link rel="stylesheet" href="private-smart-air.css?v=342">
-<script src="smart-home.js?v=1369" onerror="__northBootFail('智能家电组件载入失败（可能是网络或 404）')"></script>
+<script src="smart-home.js?v=1381" onerror="__northBootFail('智能家电组件载入失败（可能是网络或 404）')"></script>
 <script src="private-smart-lock.js?v=339" onerror="__northBootFail('私人门锁组件载入失败（安装包不完整）')"></script>
-<script src="private-smart-air.js?v=1369" onerror="__northBootFail('私人空调组件载入失败（安装包不完整）')"></script>
-<script src="delivery.js?v=1369" onerror="__northBootFail('真实外卖组件载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=1369" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="pet-game.js?v=1369" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
-<script src="pixel-home-policy.js?v=1369"></script>
-<script src="pixel-wardrobe-info.js?v=1369"></script>
-<script src="pixel-home.js?v=1369"></script>
-<script src="gift-effects.js?v=1369" onerror="console.warn('礼物粒子特效载入失败')"></script>
-<script src="thought-card-effects.js?v=1369" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
-<script src="ai-account.js?v=1369"></script>
+<script src="private-smart-air.js?v=1381" onerror="__northBootFail('私人空调组件载入失败（安装包不完整）')"></script>
+<script src="delivery.js?v=1381" onerror="__northBootFail('真实外卖组件载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=1381" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="pet-game.js?v=1381" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
+<script src="pixel-home-policy.js?v=1381"></script>
+<script src="pixel-wardrobe-info.js?v=1381"></script>
+<script src="pixel-home.js?v=1381"></script>
+<script src="gift-effects.js?v=1381" onerror="console.warn('礼物粒子特效载入失败')"></script>
+<script src="thought-card-effects.js?v=1381" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
+<script src="ai-account.js?v=1381"></script>
 <script src="wedding-game.js?v=wedding-dual-17" onerror="console.warn('现代婚礼预览载入失败')"></script>
-<script src="couple-watch-runtime.js?v=1369" onerror="__northBootFail('页面组件载入失败')"></script>
-<script src="private-cloud-backup.js?v=1369" onerror="__northBootFail('私人云备份组件载入失败')"></script>
-<script src="robot-face-protocol.js?v=1369"></script>
-<script src="private-cloud-usage.js?v=1369"></script>
-<script src="private-device-history.js?v=1369"></script>
-<script src="private-robot-face.js?v=1369"></script>
-<script src="private-robot-voice.js?v=1369"></script>
-<script src="cozy-home.js?v=1369" onerror="__northBootFail('私人小家桥接组件载入失败（安装包不完整）')"></script>
+<script src="couple-watch-runtime.js?v=1381" onerror="__northBootFail('页面组件载入失败')"></script>
+<script src="private-cloud-backup.js?v=1381" onerror="__northBootFail('私人云备份组件载入失败')"></script>
+<script src="robot-face-protocol.js?v=1381"></script>
+<script src="private-cloud-usage.js?v=1381"></script>
+<script src="private-device-history.js?v=1381"></script>
+<script src="private-robot-face.js?v=1381"></script>
+<script src="private-robot-voice.js?v=1381"></script>
+<script src="cozy-home.js?v=1381" onerror="__northBootFail('私人小家桥接组件载入失败（安装包不完整）')"></script>
 </body>
 </html>
