@@ -268,7 +268,7 @@ def validate(files: dict[str, bytes]) -> None:
         ("function dyTypingHTML(face)", "v1265 等回复时三个点"),
         ("function dyFace(v,cls)", "v1265 陌生人统一灰底小人"),
         ("'@'+(toName||S.me.name)+' '+said", "v1265 角色回评论先 @ 人"),
-        ("m.from==='me'?av(dyAvatar(),'sm'):dyFace(d.avatar,'sm')", "v1265 私信我这边也有头像"),
+        ("m.from==='me'?av(dyAvatar(),'sm'):dyFace(dyRA(d.cid,d.avatar),'sm')", "v1265 私信我这边也有头像"),
         ("function chatFileText(file)", "v1266 她发的文件真的读得到"),
         ("function chatFileContextBody(m)", "v1266 文件正文进上下文"),
         ("function roleFileExtract(content)", "v1266 角色能写多行文件"),
