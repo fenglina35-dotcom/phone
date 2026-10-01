@@ -21,13 +21,14 @@ function wxMeHomeIcon(kind){const icons={
   favorite:`<svg viewBox="0 0 32 32" aria-hidden="true"><path class="cube-blue" d="m16 3.7 10.8 6.1L16 16 5.2 9.8 16 3.7Z"/><path class="cube-red" d="M26.8 9.8v12.4L16 28.3V16l10.8-6.2Z"/><path class="cube-yellow" d="M16 28.3 5.2 22.2V9.8L16 16v12.3Z"/></svg>`,
   moments:`<svg viewBox="0 0 32 32" aria-hidden="true"><rect x="3.5" y="5.5" width="25" height="20.5" rx="1.2"/><path d="m5.8 23.5 7-8 4.9 4.6 3.2-3 5.4 6.4"/><circle cx="21.8" cy="11.3" r="2.1"/></svg>`,
   emoji:`<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="12.2"/><circle cx="11.4" cy="12.8" r="1.15"/><circle cx="20.6" cy="12.8" r="1.15"/><path d="M9.8 18.3c1.4 3 3.5 4.5 6.2 4.5s4.8-1.5 6.2-4.5"/></svg>`,
+  relnet:`<svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="8.6" r="3.6"/><circle cx="7.4" cy="23" r="3.6"/><circle cx="24.6" cy="23" r="3.6"/><path d="M14.2 11.8 9.3 19.9M17.8 11.8l4.9 8.1M11 23h10"/></svg>`,
   settings:`<svg viewBox="0 0 32 32" aria-hidden="true"><path d="m12.7 4.2.8-2.1h5l.8 2.1 2.1.9 2.1-.9 3.5 3.5-.9 2.1.9 2.1 2.1.8v5l-2.1.8-.9 2.1.9 2.1-3.5 3.5-2.1-.9-2.1.9-.8 2.1h-5l-.8-2.1-2.1-.9-2.1.9-3.5-3.5.9-2.1-.9-2.1-2.1-.8v-5l2.1-.8.9-2.1-.9-2.1 3.5-3.5 2.1.9 2.1-.9Z"/><circle cx="16" cy="15.2" r="4.8"/></svg>`};return icons[kind]||'';}
 function wxMeQrIcon(){return `<svg viewBox="0 0 28 28" aria-hidden="true"><path d="M3.5 3.5h8v8h-8zM6.1 6.1h2.8v2.8H6.1zM16.5 3.5h8v8h-8zM19.1 6.1h2.8v2.8h-2.8zM3.5 16.5h8v8h-8zM6.1 19.1h2.8v2.8H6.1zM16.4 16.4h3.1v3.1h-3.1zM21.5 16.4h3v3M16.4 21.5h3v3M22 22h2.5v2.5M13.7 13.7h2.2M20.6 13.7h3.9M13.7 20.6v3.9"/></svg>`;}
 function wxMeHomeRow(kind,title,action){return `<button type="button" class="wxme-home-row wxme-home-${kind}" onclick="${action}"><i>${wxMeHomeIcon(kind)}</i><span>${esc(title)}</span><em aria-hidden="true">›</em></button>`;}
 function wxMe1037(){F();return `<div class="wxme-home">
   <button class="wxme-profile-card" onclick="go('wxprofile')">${av(S.me.avatar,'lg')}<span><b>${esc(S.me.name)}${collarBadge()}</b><small>微信号：${esc(S.me.wxid||'未设置')}</small></span><i onclick="event.stopPropagation();go('wxqr')" aria-label="我的二维码">${wxMeQrIcon()}</i><em aria-hidden="true">›</em></button>
   <section>${wxMeHomeRow('service','服务',"go('wxservices')")}</section>
-  <section>${wxMeHomeRow('favorite','收藏',"go('wxfavorites')")}${wxMeHomeRow('moments','朋友圈',"go('wxalbum')")}${wxMeHomeRow('emoji','表情',"go('wxemoji')")}</section>
+  <section>${wxMeHomeRow('favorite','收藏',"go('wxfavorites')")}${wxMeHomeRow('moments','朋友圈',"go('wxalbum')")}${wxMeHomeRow('emoji','表情',"go('wxemoji')")}${wxMeHomeRow('relnet','关系网',"relOpen('')")}</section>
   <section>${wxMeHomeRow('settings','设置',"go('wxsettings')")}</section>
   </div>`;}
 

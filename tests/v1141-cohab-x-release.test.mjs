@@ -13,15 +13,15 @@ test('v1184 web identity and cache markers are aligned', () => {
   const hotfix = read('web-hotfix.js');
   const index = read('index.html');
   const repair = read('repair.html');
-  assert.match(app, /__NORTH_SHELL_BUILD__!=='1368'/);
-  assert.match(app, /APP_VER='v1368 · 群聊点名先回'/);
-  assert.match(shell, /__NORTH_SHELL_BUILD__='1368'/);
-  assert.match(shell, /app\.js\?v=1368&r=v1368-web-group-order-1/);
-  assert.match(sw, /const BUILD='1368'/);
-  assert.match(sw, /v1368-web-group-order-1/);
-  assert.match(hotfix, /v1368-web-group-order-1/);
-  assert.match(index, /小手机\.html\?v=1368/);
-  assert.match(repair, /小手机\.html\?v=1368/);
+  assert.match(app, /__NORTH_SHELL_BUILD__!=='1370'/);
+  assert.match(app, /APP_VER='v1370 · 关系网'/);
+  assert.match(shell, /__NORTH_SHELL_BUILD__='1370'/);
+  assert.match(shell, /app\.js\?v=1370&r=v1370-web-relation-network-1/);
+  assert.match(sw, /const BUILD='1370'/);
+  assert.match(sw, /v1370-web-relation-network-1/);
+  assert.match(hotfix, /v1370-web-relation-network-1/);
+  assert.match(index, /小手机\.html\?v=1370/);
+  assert.match(repair, /小手机\.html\?v=1370/);
 });
 
 test('v1184 publishes shared cohab memory and X comment controls', () => {

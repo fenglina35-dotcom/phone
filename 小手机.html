@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='1368';</script>
+<script>window.__NORTH_SHELL_BUILD__='1370';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -29,11 +29,11 @@
 /* 主屏幕 WebApp 主动检查最新 SW；缓存接管不能打断当前页面。 */
 (function(){
   if(!('serviceWorker' in navigator)||location.protocol==='file:')return;
-  var key='north-sw-reloaded-1368-web-external-tts-relay-1';
+  var key='north-sw-reloaded-1370-web-external-tts-relay-1';
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=1368&r=v1368-web-group-order-1';
+  var url='sw.js?v=1370&r=v1370-web-relation-network-1';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -286,6 +286,30 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .gsettings-chip{border:1px solid var(--gi-line);border-radius:16px;padding:6px 14px;background:var(--gi-field);color:var(--gi-text);font:inherit;font-size:14px;cursor:pointer}
 .gsettings-chip.on{background:var(--gi-green);border-color:var(--gi-green);color:#fff}
 .gsettings-text{display:block;width:100%;box-sizing:border-box;border:0;padding:12px 16px;background:transparent;color:var(--gi-text);font:inherit;font-size:15px;resize:vertical;outline:none}
+/* 关系网 */
+.relnet-page .gmanage-scroll{padding-bottom:calc(30px + env(safe-area-inset-bottom,0px))}
+.relnet-row{display:flex;align-items:center;gap:12px;width:100%;min-height:72px;padding:10px 14px 10px 16px;box-sizing:border-box;border:0;background:none;color:var(--gi-text);font:inherit;text-align:left;cursor:pointer;position:relative}
+.relnet-row+.relnet-row:before{content:"";position:absolute;left:72px;right:0;top:0;height:.5px;background:var(--gi-line)}
+.relnet-av,.relnet-pair{flex:0 0 auto}.relnet-av .avatar,.relnet-pair .avatar{width:44px!important;height:44px!important;min-width:44px;max-width:44px;flex:0 0 44px;aspect-ratio:1/1;border-radius:6px!important;font-size:20px!important;overflow:hidden}.relnet-av .avatar img,.relnet-pair .avatar img{width:100%!important;height:100%!important;object-fit:cover}
+.relnet-tag.pin{background:rgba(7,193,96,.14);color:#07c160}.relnet-tag.gone{background:rgba(160,160,168,.18);color:var(--gi-sub)}
+.relnet-pair{display:flex;flex:0 0 auto}.relnet-pair .avatar{width:34px!important;height:34px!important;min-width:34px;max-width:34px;flex:0 0 34px}.relnet-pair{gap:4px;width:72px}.relnet-pair .avatar+.avatar{margin-left:0}
+.relnet-face{display:flex!important;align-items:center;justify-content:center;background:linear-gradient(145deg,#6c7a96,#4a5468)!important;color:#fff;font-weight:600}
+.relnet-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}.relnet-main b{font-weight:500;font-size:16px;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.relnet-main small{font-size:13px;color:var(--gi-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.relnet-tag{font-style:normal;font-size:11px;padding:1px 6px;border-radius:4px;background:rgba(250,157,59,.16);color:#f0a046}.relnet-tag.lock{background:rgba(120,140,170,.16);color:var(--gi-sub)}
+.relnet-feel{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--gi-sub)}.relnet-feel i{position:relative;width:46px;height:4px;border-radius:2px;background:var(--gi-field);overflow:hidden}.relnet-feel i:after{content:"";position:absolute;inset:0 auto 0 0;width:var(--w);background:#e2557c;border-radius:2px}.relnet-feel i.b:after{background:#7d90a9}.relnet-feel u{text-decoration:none}.relnet-feel s{text-decoration:none;color:#fa5151}
+.relnet-chev{font-style:normal;color:var(--gi-sub);font-size:20px}
+.relnet-hero{display:flex;align-items:center;gap:14px;padding:18px 16px;cursor:pointer}.relnet-hero .avatar{width:58px!important;height:58px!important;min-width:58px;border-radius:8px!important;font-size:26px!important}.relnet-hero b{display:block;font-size:19px;font-weight:600}.relnet-hero small{display:block;margin-top:4px;color:var(--gi-sub);font-size:13px}
+.relnet-add{display:block;width:calc(100% - 32px);margin:12px 16px 0;padding:12px 0;border:0;border-radius:8px;background:var(--gi-card);color:var(--gi-green);font:inherit;font-size:16px;cursor:pointer}
+.relnet-del{display:block;width:calc(100% - 32px);margin:22px 16px 0;padding:12px 0;border:0;border-radius:8px;background:var(--gi-card);color:#fa5151;font:inherit;font-size:16px;cursor:pointer}
+.relnet-note{margin:14px 18px 0;color:var(--gi-sub);font-size:12px;line-height:1.7}
+.relnet-field{display:flex;align-items:center;gap:12px;min-height:52px;padding:0 16px;position:relative}.relnet-field+.relnet-field:before{content:"";position:absolute;left:16px;right:0;top:0;height:.5px;background:var(--gi-line)}
+.relnet-field>span{flex:0 0 auto;max-width:48%;color:var(--gi-text);font-size:15px}.relnet-field input,.relnet-field select{flex:1;min-width:0;border:0;background:transparent;color:var(--gi-text);font:inherit;font-size:15px;text-align:right;outline:none;appearance:none;-webkit-appearance:none}.relnet-field select{direction:rtl}.relnet-field input::placeholder{color:var(--gi-sub)}
+.relnet-link{display:block;width:100%;padding:12px 16px;border:0;border-top:.5px solid var(--gi-line);background:none;color:var(--gi-green);font:inherit;font-size:14px;text-align:left;cursor:pointer}
+.relnet-chips{display:flex;flex-wrap:wrap;gap:8px;padding:0 16px 10px}.relnet-chips button{border:.5px solid var(--gi-line);border-radius:14px;padding:5px 11px;background:var(--gi-card);color:var(--gi-text);font:inherit;font-size:13px;cursor:pointer}
+.relnet-slider{display:block;padding:12px 16px 10px;position:relative}.relnet-slider+.relnet-slider:before,.relnet-slider+.gmanage-row:before{content:"";position:absolute;left:16px;right:0;top:0;height:.5px;background:var(--gi-line)}.relnet-slider>span{display:flex;justify-content:space-between;font-size:15px;color:var(--gi-text)}.relnet-slider>span b{font-weight:500;color:#e2557c;font-size:14px}.relnet-slider input{width:100%;margin:10px 0 0;accent-color:#e2557c}
+.relnet-story{display:flex;gap:8px;align-items:flex-start;padding:10px 12px 10px 16px;position:relative}.relnet-story+.relnet-story:before{content:"";position:absolute;left:16px;right:0;top:0;height:.5px;background:var(--gi-line)}.relnet-story input{width:76px;flex:0 0 76px;border:0;border-radius:6px;padding:8px;background:var(--gi-field);color:var(--gi-text);font:inherit;font-size:13px;outline:none}.relnet-story textarea{flex:1;min-width:0;border:0;border-radius:6px;padding:8px;background:var(--gi-field);color:var(--gi-text);font:inherit;font-size:14px;resize:vertical;outline:none}.relnet-story button{border:0;background:none;color:var(--gi-sub);font-size:20px;padding:4px 6px;cursor:pointer}
+.relnet-pending{margin:12px 16px 0;padding:10px 12px;border-radius:8px;background:rgba(250,157,59,.12);color:#f0a046;font-size:13px;line-height:1.6}
+.relnet-log{padding:10px 16px;position:relative}.relnet-log+.relnet-log:before{content:"";position:absolute;left:16px;right:0;top:0;height:.5px;background:var(--gi-line)}.relnet-log b{display:block;font-weight:500;font-size:14px}.relnet-log small{color:var(--gi-sub);font-size:12px}
 .group-muted-bar{justify-content:center;align-items:center;min-height:56px;color:#8d8d92;font-size:14px}
 .ginfo-hits{max-height:48vh;overflow:auto}
 .ginfo-hit{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:baseline;padding:9px 2px;border-bottom:.5px solid rgba(128,128,128,.2);font-size:13px}
@@ -2798,9 +2822,9 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
 .dyat-tx{color:#9ec6ff;font-weight:400;}
 </style>
 <script>/* 样式表偶尔在打开瞬间下载失败，页面会失去主屏组件样式；失败时自动换地址再载一次，不用退出重进。 */window.__northCssRetry=function(link){try{if(!link||link.dataset.retried)return;link.dataset.retried='1';var next=document.createElement('link');next.rel='stylesheet';next.href=link.href+(link.href.indexOf('?')<0?'?':'&')+'retry='+Date.now();next.dataset.retried='1';link.parentNode.insertBefore(next,link.nextSibling);}catch(_){}};</script>
-<link rel="stylesheet" href="glass-theme.css?v=1368&r=music-disc-color-1" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="wechat-me.css?v=1368" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="pet-game.css?v=1368" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="glass-theme.css?v=1370&r=music-disc-color-1" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="wechat-me.css?v=1370" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="pet-game.css?v=1370" onerror="__northCssRetry(this)">
 <link rel="stylesheet" href="wedding-game.css?v=wedding-dual-17" onerror="__northCssRetry(this)">
 </head>
 <body>
@@ -2854,36 +2878,36 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail(window.__northBootStarted?'本机存档读取超过 60 秒，请重新加载；仍不会删除聊天、角色或主题':'关键页面文件加载超过 60 秒，请检查网络后重新加载');},60000);
 })();
 </script>
-<script src="browser-diagnostics.js?v=1368"></script>
-<script src="license-gate.js?v=1368" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="couple-watch.js?v=1368" onerror="__northBootFail('页面组件载入失败')"></script>
-<script src="request-diagnostics.js?v=1368"></script>
-<script src="message-beijing-time.js?v=1368&r=offline-me-1"></script>
-<script src="app.js?v=1368&r=v1368-web-group-order-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="cohab-theater.js?v=1368&r=v1274-web-cohab-guests-1" onerror="__northBootFail('共同生活多人剧场组件载入失败（可能是网络或 404）')"></script>
-<script src="public-north-policy.js?v=1368"></script>
-<script src="public-north-runtime.js?v=1368"></script>
-<script src="phone-shortcuts.js?v=1368"></script>
-<script src="daily-event-ledger.js?v=1368" onerror="console.warn('日常事件簿组件未加载，聊天仍可使用')"></script>
-<script src="request-size-details.js?v=1368" onerror="__northBootFail('请求规模详情组件载入失败')"></script>
-<script src="cohab-model-diagnostics.js?v=1368" onerror="__northBootFail('共同生活模型诊断组件载入失败')"></script>
-<script src="bead-studio.js?v=1368&r=v1184-pixel-puzzle-4" onerror="__northBootFail('像素拼拼乐组件载入失败（可能是网络或 404）')"></script>
-<script src="heart-quiz.js?v=1368" onerror="console.warn('心动审判预览组件载入失败')"></script>
-<script src="web-hotfix.js?v=1368&r=v1368-web-group-order-1" onerror="__northBootFail('网页热修复组件载入失败（可能是网络或 404）')"></script>
+<script src="browser-diagnostics.js?v=1370"></script>
+<script src="license-gate.js?v=1370" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="couple-watch.js?v=1370" onerror="__northBootFail('页面组件载入失败')"></script>
+<script src="request-diagnostics.js?v=1370"></script>
+<script src="message-beijing-time.js?v=1370&r=offline-me-1"></script>
+<script src="app.js?v=1370&r=v1370-web-relation-network-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="cohab-theater.js?v=1370&r=v1274-web-cohab-guests-1" onerror="__northBootFail('共同生活多人剧场组件载入失败（可能是网络或 404）')"></script>
+<script src="public-north-policy.js?v=1370"></script>
+<script src="public-north-runtime.js?v=1370"></script>
+<script src="phone-shortcuts.js?v=1370"></script>
+<script src="daily-event-ledger.js?v=1370" onerror="console.warn('日常事件簿组件未加载，聊天仍可使用')"></script>
+<script src="request-size-details.js?v=1370" onerror="__northBootFail('请求规模详情组件载入失败')"></script>
+<script src="cohab-model-diagnostics.js?v=1370" onerror="__northBootFail('共同生活模型诊断组件载入失败')"></script>
+<script src="bead-studio.js?v=1370&r=v1184-pixel-puzzle-4" onerror="__northBootFail('像素拼拼乐组件载入失败（可能是网络或 404）')"></script>
+<script src="heart-quiz.js?v=1370" onerror="console.warn('心动审判预览组件载入失败')"></script>
+<script src="web-hotfix.js?v=1370&r=v1370-web-relation-network-1" onerror="__northBootFail('网页热修复组件载入失败（可能是网络或 404）')"></script>
 <script src="vendor/qr/qrcode.js?v=2.0.4"></script>
 <script src="vendor/qr/jsQR.js?v=1.4.0"></script>
-<script src="wechat-me.js?v=1368" onerror="__northBootFail('微信个人页组件载入失败（可能是网络或 404）')"></script>
-<script src="smart-home.js?v=1368" onerror="__northBootFail('智能家电组件载入失败（可能是网络或 404）')"></script>
-<script src="delivery.js?v=1368" onerror="__northBootFail('真实外卖组件载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=1368" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
-<script src="pet-game.js?v=1368" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
-<script src="pixel-home-policy.js?v=1368"></script>
-<script src="pixel-wardrobe-info.js?v=1368"></script>
-<script src="pixel-home.js?v=1368"></script>
-<script src="gift-effects.js?v=1368" onerror="console.warn('礼物粒子特效载入失败')"></script>
-<script src="thought-card-effects.js?v=1368" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
-<script src="ai-account.js?v=1368"></script>
+<script src="wechat-me.js?v=1370" onerror="__northBootFail('微信个人页组件载入失败（可能是网络或 404）')"></script>
+<script src="smart-home.js?v=1370" onerror="__northBootFail('智能家电组件载入失败（可能是网络或 404）')"></script>
+<script src="delivery.js?v=1370" onerror="__northBootFail('真实外卖组件载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=1370" onerror="__northBootFail('商城界面组件载入失败（可能是网络或 404）')"></script>
+<script src="pet-game.js?v=1370" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
+<script src="pixel-home-policy.js?v=1370"></script>
+<script src="pixel-wardrobe-info.js?v=1370"></script>
+<script src="pixel-home.js?v=1370"></script>
+<script src="gift-effects.js?v=1370" onerror="console.warn('礼物粒子特效载入失败')"></script>
+<script src="thought-card-effects.js?v=1370" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
+<script src="ai-account.js?v=1370"></script>
 <script src="wedding-game.js?v=wedding-dual-17" onerror="console.warn('现代婚礼预览载入失败')"></script>
-<script src="couple-watch-runtime.js?v=1368" onerror="__northBootFail('页面组件载入失败')"></script>
+<script src="couple-watch-runtime.js?v=1370" onerror="__northBootFail('页面组件载入失败')"></script>
 </body>
 </html>
