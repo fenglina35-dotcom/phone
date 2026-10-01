@@ -22,11 +22,11 @@ const grab = (src, name) => {
   }
 };
 const line = p => app.split('\n').find(l => l.startsWith(p)) || '';
-const CORE = ['relInit', 'relStatus', 'relRecommendable', 'relTitleTaken', 'relNameTaken', 'relDayHit', 'relDayNote', 'relLoginTag', 'relPerson', 'relKeyLive', 'relExists', 'relName', 'relPromptName', 'relLabel', 'relRealName', 'relBrief', 'relFeelText', 'relLinkOf', 'relView', 'relLinksOf', 'relCleanLink', 'relNewLink', 'relPromote', 'relPromptFor', 'relAmongText', 'relFindByName', 'relAdjust', 'relConsumeTags'];
+const CORE = ['relInit', 'relStatus', 'relRecommendable', 'relTitleTaken', 'relNameTaken', 'relDayHit', 'relDayNote', 'relLoginTag', 'relPerson', 'relKeyLive', 'relExists', 'relName', 'relPromptName', 'relLabel', 'relRealName', 'relBrief', 'relFeelText', 'relLinkOf', 'relView', 'relLinksOf', 'relCleanLink', 'relNewLink', 'relPromote', 'relPromptFor', 'relAmongText', 'relFindByName', 'relAdjust', 'relConsumeTags', 'relKinGroup', 'relAvatarSrc', 'relHisFriends'];
 const load = () => {
   const contacts = [{ id: 'c1', name: '克劳德', remark: '先生', gender: '男' }, { id: 'c2', name: '小助手' }];
   const ctx = { S: { me: { name: 'North' }, contacts }, getC: id => contacts.find(c => c.id === id) || null, uid: (() => { let n = 0; return () => 'u' + (++n); })(), save: () => {}, Date, Math, JSON, Object, Array, String, Number, Set };
-  vm.runInNewContext([line('const REL_FEEL_STEP='), line('const REL_STATUS='), line('const REL_MULTI_RE='), ...CORE.map(n => grab(app, n)), 'globalThis.api={' + CORE.join(',') + '};'].join('\n'), ctx);
+  vm.runInNewContext([line('const REL_FEEL_STEP='), line('const REL_KIN='), line('const REL_STATUS='), line('const REL_MULTI_RE='), ...CORE.map(n => grab(app, n)), 'globalThis.api={' + CORE.join(',') + '};'].join('\n'), ctx);
   return ctx;
 };
 
@@ -85,6 +85,20 @@ test('v1374: shared origin is written with names, each side has a private view t
   assert.match(grab(app, 'relAutoLink'), /"你心里怎么看ta":""\}。来历只写客观经过，用名字写/);
   assert.match(grab(app, 'renderRelEdit'), /oninput="_relEdit\.va=this\.value"[^]*oninput="_relEdit\.vb=this\.value"/);
   assert.match(grab(app, 'relEditSave'), /e\.va=String\(e\.va\|\|''\)\.trim\(\)\.slice\(0,200\)/);
+});
+
+test('v1378: one mom in his friend list even when titles differ or the card became a contact', () => {
+  const { api, S } = load();
+  const d = { friends: [{ id: 'h1', name: '妈妈', relation: '家人', msgs: [{ r: 'ta', c: '吃饭没', t: 1 }] }, { id: 'h2', name: '老妈', relation: '微信好友', msgs: [{ r: 'ta', c: '早点睡', t: 2 }] }, { id: 'h3', name: '阿哲', relation: '哥们', msgs: [] }] };
+  api.relInit().people.push({ id: 'np_m', name: '罗兰', gender: '女' });
+  api.relNewLink('c1', 'np_m', { ab: '母亲', ba: '儿子' });
+  api.relHisFriends('c1', d);
+  assert.deepEqual(d.friends.map(f => f.name + '/' + f.relation + '/' + f.msgs.length), ['罗兰/母亲/2', '阿哲/哥们/0']);
+  d.friends.push({ id: 'h9', name: '妈妈', relation: '妈妈', relKey: 'np_m', msgs: [] });
+  S.contacts.push({ id: 'c_rl', name: '罗兰', remark: '妈妈' });
+  api.relPromote('np_m', 'c_rl', 'c1');
+  api.relHisFriends('c1', d);
+  assert.deepEqual(d.friends.map(f => f.name + '/' + f.relKey), ['罗兰/c_rl', '阿哲/undefined'], 'the entry kept under the old card id merges into the contact');
 });
 
 test('details: at most the chosen number, present and pinned people and birthdays count; the gone cannot be recommended', () => {
@@ -175,7 +189,7 @@ test('wired everywhere: prompts, tags, cards, his friend list, offline end, page
   assert.match(grab(app, 'cohabSystem'), /s\+=relPromptFor\(c,/);
   assert.match(app, /if\(rp&&!relRecommendable\(rp\)&&!rp\.cid\)\{_replyAuditPartial=true;continue;\}/);
   assert.match(grab(app, 'relHisFriends'), /x\.name===title\|\|x\.name===title\.replace\(\/\^亲\/,''\)/, 'the default 妈妈 friend is replaced, not duplicated');
-  assert.match(grab(app, 'relHisFriends'), /if\(x!==f&&!x\.relKey&&f\.alias\.includes\(x\.name\)\)/, 'a 妈妈 chat synced from his phone later merges into her');
+  assert.match(grab(app, 'relHisFriends'), /if\(x!==f&&\(mine\(x\)\|\|\(!x\.relKey&&\(f\.alias\.includes\(x\.name\)\|\|sameKin\(x\)\)\)\)\)/, 'a 妈妈 chat synced from his phone later merges into her');
   assert.match(grab(app, 'hisSeed'), /Array\.isArray\(x\.alias\)&&x\.alias\.includes\(w\.who\)/);
   assert.match(me, /wxMeHomeRow\('relnet','关系网',"relOpen\(''\)"\)/);
   assert.match(html, /\.relnet-row\{/);

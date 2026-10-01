@@ -12,7 +12,8 @@ test('name cards look like WeChat: dark grey in the dark theme, white in the lig
   const body = app.slice(i, app.indexOf("if(m.type==='weblink'&&m.webShare)", i));
   assert.match(body, /class="card wxcard"/);
   assert.match(body, /<span>个人名片<\/span>/);
-  assert.match(body, /addHisCard\('\$\{m\.id\}'\)/, 'his recommended card can still be accepted');
+  assert.match(body, /onclick="event\.stopPropagation\(\);go\('hiscard',\{mid:'\$\{m\.id\}'\}\)"/, 'v1378: tapping opens the card page');
+  assert.doesNotMatch(body, /addHisCard|declineHisCard/, 'v1378: no accept/decline buttons on the bubble');
   assert.doesNotMatch(body, /#13361f/, 'the old green card is gone');
   assert.match(html, /\.card\.wxcard\{width:240px;border-radius:6px;background:#2c2c2c/);
   assert.match(html, /\.wxlight \.card\.wxcard\{background:#fff\}/);
@@ -26,4 +27,12 @@ test('changing who I talk to before tapping reply retargets the pending lines', 
 test('guest lines wait for a tap like the host, and the target pill is frosted glass', () => {
   assert.match(theater, /if\(i<list\.length-1&&typeof cohabTapOn==='function'&&cohabTapOn\(d\)\)cohabTapWait\(id,item,timing\)\.then\(resolve\)/);
   assert.match(html, /\.offstage:not\(\.off-classic\) \.cohab-theater-target select\{border:0;background:rgba\(120,122,132,\.34\)/);
+});
+
+test('v1378: his recommended card opens its own page with 添加到通讯录 and 来源', () => {
+  const page = app.slice(app.indexOf('function renderHisCard('), app.indexOf('function hisCardMore('));
+  assert.match(page, /onclick="addHisCard\('\$\{m\.id\}'\)">添加到通讯录<\/button>/);
+  assert.match(page, /'来自'\+esc\(from\|\|'好友'\)\+'分享的名片'/);
+  assert.match(page, /onclick="go\('chat',\{id:'\$\{added\.id\}'\}\)">发消息<\/button>/);
+  assert.ok(app.includes("else if(c.p==='hiscard')html=renderHisCard(c);"));
 });

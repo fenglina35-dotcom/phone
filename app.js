@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1376'){
+if(window.__NORTH_SHELL_BUILD__!=='1378'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -539,7 +539,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1376 · 名片与剧场对谁说';
+const APP_VER='v1378 · 名片资料页';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1927,7 +1927,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1376&r=v1376-web-namecard-theater-target-1';
+  const url='sw.js?v=1378&r=v1378-web-card-page-one-mom-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -2585,6 +2585,7 @@ function render(){
   else if(c.p==='relnet')html=renderRelNet(c);
   else if(c.p==='reledit')html=renderRelEdit();
   else if(c.p==='relperson')html=renderRelPerson(c);
+  else if(c.p==='hiscard')html=renderHisCard(c);
   else if(c.p==='gqr')html=renderGroupQrPage(c.kind,c.id);
   else if(c.p==='gsearch')html=renderGroupSearchPage(c.kind,c.id);
   else if(c.p==='couple')html=renderCouple();
@@ -2649,7 +2650,7 @@ function render(){
   const _wxG='';
   const _setG=glassThemeOn()&&c.p==='settings'?' settings-glass':'';
   const _wxLightBase=['wechat','chat','chatDetails','contactInfo','friendInfo','contactSettings','roleMoments','roleMomentDetail','roleFeatures'].includes(c.p)||c.p==='roleImageStudio'||c.p==='transferDetail'||c.p==='grpSend'||c.p==='rpSend'||c.p==='tfSend'||c.p==='rpDetail';
-  const _wxLightDirectory=['wxmoment','wxlive','wxnearby','wxprofile','wxqr','wxscan','wxservices','wxsmarthome','wxwallet','wxchange','wxbank','wxfamily','wxbills','wxsupport','wxfavorites','wxalbum','wxemoji','wxsettings','wxaccounts','wxsteps','newfriends','wxonlychat','wxgroups','wxlabels','wxgroupcreate','contactEdit','pffriends','pfchat','pfgroup','group','ginfo','gpick','gqr','gsearch','gmanage','gsettings','relnet','reledit','relperson'].includes(c.p);
+  const _wxLightDirectory=['wxmoment','wxlive','wxnearby','wxprofile','wxqr','wxscan','wxservices','wxsmarthome','wxwallet','wxchange','wxbank','wxfamily','wxbills','wxsupport','wxfavorites','wxalbum','wxemoji','wxsettings','wxaccounts','wxsteps','newfriends','wxonlychat','wxgroups','wxlabels','wxgroupcreate','contactEdit','hiscard','pffriends','pfchat','pfgroup','group','ginfo','gpick','gqr','gsearch','gmanage','gsettings','relnet','reledit','relperson'].includes(c.p);
   const _wxL=(S.me.wxTheme==='white'&&(_wxLightBase||_wxLightDirectory))?' wxlight':'';
   const _wxStandalonePremium=['wxprofile','wxqr','wxscan','wxservices','wxsmarthome','wxwallet','wxchange','wxbank','wxfamily','wxbills','wxsupport','wxfavorites','wxalbum','wxemoji','wxsettings','wxaccounts','wxsteps'].includes(c.p);
   const _wxP=(c.p==='wechat'||_wxStandalonePremium)?' wx-premium':['chat','pfchat','pfgroup','group'].includes(c.p)?' wx-chat-premium':'';
@@ -13567,14 +13568,19 @@ async function relAutoLink(roleId,otherId,how){const r=relInit();if(r.autoLink==
     const m=String(raw||'').match(/\{[\s\S]*\}/);if(m){const j=JSON.parse(m[0]);if(j['ta是你的'])l.ab=String(j['ta是你的']).slice(0,20);if(j['你是ta的'])l.ba=String(j['你是ta的']).slice(0,20);if(Number.isFinite(+j['你对ta好感']))l.fa=+j['你对ta好感'];if(Number.isFinite(+j['ta对你好感']))l.fb=+j['ta对你好感'];if(j['来历'])l.how=String(j['来历']).slice(0,80);if(j['你心里怎么看ta'])l[relView(l,roleId).side==='a'?'va':'vb']=String(j['你心里怎么看ta']).slice(0,200);relCleanLink(l);save();}}catch(_){}
   return l;}
 /* ---- 他的微信好友列表：关系网里的人刷新时出现 ---- */
-function relHisFriends(cid,d){let ch=false;relLinksOf(cid).forEach(v=>{const name=relPromptName(v.other),title=v.otherIsMy||'熟人',gone=!!relStatus(v.other);
-  let f=d.friends.find(x=>x.relKey===v.other)||d.friends.find(x=>x.name===name||x.name===relName(v.other))||d.friends.find(x=>!x.relKey&&(x.name===title||x.name===title.replace(/^亲/,'')));/* 默认的「妈妈」好友被关系网里的妈妈顶替，不会有两个妈妈 */
-  if(gone){if(f&&f.relKey===v.other&&!(f.msgs&&f.msgs.length)){d.friends.splice(d.friends.indexOf(f),1);ch=true;}return;}/* 已故、失联、没有微信的人不在他的好友列表里 */
+/* 家人称呼的同义词：他手机里叫「妈妈」「老妈」「母亲」的都是同一个人 */
+const REL_KIN=[['妈妈','妈','老妈','母亲','亲妈','妈咪','老娘','娘','mom','Mom'],['爸爸','爸','老爸','父亲','亲爸','爹','老爹','dad','Dad'],['爷爷','祖父'],['奶奶','祖母'],['外公','姥爷'],['外婆','姥姥'],['哥哥','哥','亲哥','亲哥哥','老哥'],['姐姐','姐','亲姐','亲姐姐','老姐'],['弟弟','弟','亲弟','亲弟弟'],['妹妹','妹','亲妹','亲妹妹','小妹妹','小妹']];
+function relKinGroup(title){title=String(title||'').trim();return title?REL_KIN.find(g=>g.includes(title)||g.includes(title.replace(/^[亲老]/,'')))||null:null;}
+function relHisFriends(cid,d){let ch=false;relLinksOf(cid).forEach(v=>{const name=relPromptName(v.other),title=v.otherIsMy||'熟人',gone=!!relStatus(v.other),kin=relKinGroup(title);
+  const mine=x=>x.relKey&&relKeyLive(x.relKey)===v.other;/* 人物卡后来加成了微信好友，旧的那条也认得 */
+  const sameKin=x=>!x.relKey&&(x.name===title||x.name===title.replace(/^亲/,'')||(kin&&(kin.includes(x.name)||kin.includes(String(x.relation||'').trim()))));
+  let f=d.friends.find(mine)||d.friends.find(x=>x.name===name||x.name===relName(v.other))||d.friends.find(sameKin);/* 默认的「妈妈」好友、查手机同步来的「老妈」被关系网里的妈妈顶替，不会有两个妈妈 */
+  if(gone){if(f&&mine(f)&&!(f.msgs&&f.msgs.length)){d.friends.splice(d.friends.indexOf(f),1);ch=true;}return;}/* 已故、失联、没有微信的人不在他的好友列表里 */
   const persona=(relPerson(v.other)&&relPerson(v.other).persona||'').slice(0,100)+'（你们感情 '+v.myFeel+'/100，'+relFeelText(v.myFeel)+(v.l.conflict?'，有矛盾':'')+'，聊天语气照这个来）';
   if(!f){d.friends.push({id:'hf'+Math.random().toString(36).slice(2,8),name,relation:title,avatar:relAvatarSrc(v.other),persona,relKey:v.other,msgs:[]});ch=true;}
   else if(f.relKey!==v.other||f.name!==name||f.relation!==title||f.persona!==persona){f.relKey=v.other;f.name=name;f.relation=title;f.persona=persona;if(!f.avatar)f.avatar=relAvatarSrc(v.other);ch=true;}
-  f=d.friends.find(x=>x.relKey===v.other);if(f){f.alias=Array.from(new Set((f.alias||[]).concat([title,title.replace(/^亲/,'')].filter(Boolean))));
-    for(let i=d.friends.length-1;i>=0;i--){const x=d.friends[i];if(x!==f&&!x.relKey&&f.alias.includes(x.name)){if(!(f.msgs&&f.msgs.length)&&x.msgs&&x.msgs.length)f.msgs=x.msgs;d.friends.splice(i,1);ch=true;}}}});return ch;}/* 查他手机里同步过来的「妈妈」聊天并进这个人，不会再冒出第二个妈妈 */
+  f=d.friends.find(x=>x.relKey===v.other);if(f){f.alias=Array.from(new Set((f.alias||[]).concat([title,title.replace(/^亲/,'')],kin||[]).filter(Boolean)));
+    for(let i=d.friends.length-1;i>=0;i--){const x=d.friends[i];if(x!==f&&(mine(x)||(!x.relKey&&(f.alias.includes(x.name)||sameKin(x))))){if(!(f.msgs&&f.msgs.length)&&x.msgs&&x.msgs.length)f.msgs=x.msgs;else if(x.msgs&&x.msgs.length&&f.msgs!==x.msgs)f.msgs=f.msgs.concat(x.msgs).sort((p,q)=>(+p.t||0)-(+q.t||0));if(!f.avatar&&x.avatar)f.avatar=x.avatar;d.friends.splice(i,1);ch=true;}}}});return ch;}/* 重复的那条并进来，聊天记录不丢 */
 function relAvatarSrc(k){const p=relPerson(k);if(p)return p.avatar||'';const c=getC(k);return c&&c.avatar||'';}
 /* 他登录我的微信时，通讯录里是他关系网里的人，要标出来 */
 function relLoginTag(viewer,k){const l=relLinkOf(viewer,k);if(!l)return '';const v=relView(l,relKeyLive(viewer)),p=relInit().people.find(x=>x.cid===k);return '｜这是你的'+(v.otherIsMy||'熟人')+(p&&p.introducedBy===viewer?'（你推荐给'+(S.me.name||'她')+'的）':'');}
@@ -14466,7 +14472,7 @@ function buildPart(c,m,me){
   if(m.type==='familybuy'){return `<div class="card"><div class="cpay" style="background:#e8527f"><div class="big">🛍️</div><div><div class="t1">亲属卡消费 ¥${(+m.price).toFixed(2)}</div><div class="t2">${esc(m.name)}</div></div></div><div class="cfoot">本月已用 ¥${(+m.used).toFixed(0)}/${(+m.quota).toFixed(0)}</div></div>`;}
   if(m.type==='namecard'){const his=m.dir==='his';/* 跟真实微信一样的简约名片：深色主题深灰、白色主题白色 */
     const foot=his?(m.added?'<span class="wxcard-state ok">已添加到通讯录</span>':(m.declined?'<span class="wxcard-state">你拒绝了这个推荐</span>':'')):(m._accepted?'<span class="wxcard-state ok">对方已添加</span>':'<span class="wxcard-state">等ta添加</span>');
-    return `<div class="card wxcard"><div class="wxcard-top">${av(m.avatar||'🙂','sm')}<div class="wxcard-main"><div class="wxcard-name">${esc(m.cname)}</div>${m.persona?`<div class="wxcard-sub">${esc(m.persona)}</div>`:''}</div></div><div class="wxcard-foot"><span>个人名片</span>${foot}</div>${his&&!m.added&&!m.declined?`<div class="wxcard-acts"><button type="button" class="ok" onclick="event.stopPropagation();addHisCard('${m.id}')">同意添加</button><button type="button" onclick="event.stopPropagation();declineHisCard('${m.id}')">拒绝</button></div>`:''}</div>`;}
+    return `<div class="card wxcard" onclick="event.stopPropagation();go('hiscard',{mid:'${m.id}'})"><div class="wxcard-top">${av(m.avatar||'🙂','sm')}<div class="wxcard-main"><div class="wxcard-name">${esc(m.cname)}</div>${m.persona?`<div class="wxcard-sub">${esc(m.persona)}</div>`:''}</div></div><div class="wxcard-foot"><span>个人名片</span>${foot}</div></div>`;}
   if(m.type==='weblink'&&m.webShare)return webShareCardHTML(m);
   if(m.type==='weblink'){return `<div class="card" style="width:240px;background:#13233a;border:1px solid #2a4a72" onclick="event.stopPropagation();viewWeblink('${m.id}')"><div style="padding:11px"><div style="color:#71767b;font-size:11px;margin-bottom:4px">🌐 网页/搜索结果</div><div style="color:#cfe3ff;font-size:13px;font-weight:700">${esc(m.title)}</div><div style="color:#9fb6d4;font-size:12px;margin-top:4px;line-height:1.5">${esc((m.snippet||'').slice(0,90))}${(m.snippet||'').length>90?'…':''}</div></div><div class="cfoot" style="background:rgba(255,255,255,.05);color:#7db3ff">点击查看全文</div></div>`;}
   if(m.type==='dateinvite'){const done=m.accepted||m.declined;return `<div class="card" style="width:240px;background:#3a1622;border:1px solid #b34a6a"><div style="padding:12px"><div style="color:#ff9ec4;font-size:11px;margin-bottom:4px">${svgIc('heart',12,'#ff9ec4')} 线下约会邀请</div><div style="color:#ffd6e6;font-size:14px;font-weight:600">约你见面</div><div style="color:#e8a8bd;font-size:13px;margin-top:5px">🕐 ${esc(m.when||'看你时间')}<br>📍 ${esc(m.loc||'老地方')}</div></div><div class="cfoot" style="color:#c98">${m.accepted?'你答应啦💗':m.declined?'你拒绝了':'ta在等你答应'}</div></div>${done?'':`<div style="display:flex;gap:6px;margin-top:4px"><button class="minibtn" style="background:#07c160;color:#fff" onclick="event.stopPropagation();acceptDate('${m.id}')">同意，去赴约</button><button class="minibtn" onclick="event.stopPropagation();declineDate('${m.id}')">改天</button></div>`}`;}
@@ -14894,6 +14900,17 @@ function addHisCard(mid){let m,owner;for(const k in S.messages){const x=S.messag
   msgs(nc.id).push({role:'user',type:'sys',content:'✅ 你添加了 '+m.cname+' 为好友'+(oc?'（'+(oc.remark||oc.name)+'推荐的）':'')+'，开始聊天吧',time:Date.now(),id:uid()});
   save();render();toast('已添加 '+m.cname+' 到通讯录✅');
   scheduleReply(nc.id,'[系统：'+S.me.name+'通过'+(oc?(oc.remark||oc.name)+'的推荐':'名片')+'把你加为好友。你是「'+m.cname+'」'+(rvv?'，是'+(oc.remark||oc.name)+'的'+(rvv.iAmTheir||'熟人')+'（'+(oc.remark||oc.name)+'是你的'+(rvv.otherIsMy||'熟人')+'），是'+(oc.remark||oc.name)+'把你的名片推给'+S.me.name+'的':(m.persona?'（'+m.persona+'）':''))+'，按这个身份性格，主动跟ta打个招呼、自我介绍一下。]');}
+/* 点开名片：跟真实微信一样的独立资料页，在这里添加到通讯录 */
+function hisCardFind(mid){for(const k in S.messages){const x=(S.messages[k]||[]).find(y=>y&&y.id===mid);if(x)return {m:x,owner:getC(String(k).split('#')[0])};}return {};}
+function renderHisCard(c){const {m,owner}=hisCardFind(c.mid);if(!m)return `<div class="hcard-page"><div class="hcard-nav"><button type="button" onclick="back()" aria-label="返回">‹</button></div><div class="hcard-empty">名片已失效</div></div>`;
+  const his=m.dir==='his',rp=m.personId&&relPerson(m.personId),added=his?(m.added&&m.newId&&getC(m.newId)):(m.refId&&getC(m.refId)),g=rp&&rp.gender||(added&&added.gender),from=owner?(owner.remark||owner.name):'';
+  const sex=g==='女'?'<i class="hcard-sex f">♀</i>':g==='男'?'<i class="hcard-sex m">♂</i>':'';
+  const btn=added?`<button type="button" class="hcard-btn" onclick="go('chat',{id:'${added.id}'})">发消息</button>`:his?(m.declined?`<div class="hcard-btn off">你没有添加</div>`:`<button type="button" class="hcard-btn" onclick="addHisCard('${m.id}')">添加到通讯录</button>`):`<div class="hcard-btn off">${m._accepted?'对方已添加':'等对方添加'}</div>`;
+  return `<div class="hcard-page"><div class="hcard-nav"><button type="button" onclick="back()" aria-label="返回">‹</button>${his&&!added&&!m.declined?`<button type="button" class="hcard-more" onclick="hisCardMore('${m.id}')" aria-label="更多">···</button>`:''}</div>
+    <div class="hcard-head">${av(m.avatar||(added&&added.avatar)||'🙂','')}<div><b>${esc(m.cname)}${sex}</b>${m.wxid?`<small>微信号：${esc(m.wxid)}</small>`:''}</div></div>
+    <div class="hcard-sec">${m.persona?`<div class="hcard-row"><span>个性签名</span><em>${esc(m.persona)}</em></div>`:''}<div class="hcard-row"><span>来源</span><em>${his?'来自'+esc(from||'好友')+'分享的名片':'你分享给'+esc(from||'好友')+'的名片'}</em></div></div>
+    <div class="hcard-sec">${btn}</div></div>`;}
+async function hisCardMore(mid){if(await uiConfirm('不添加这个人？推荐的人会知道你没加。',{yes:'不添加',no:'再想想'})){declineHisCard(mid);render();}}
 function declineHisCard(mid){let m,owner;for(const k in S.messages){const x=S.messages[k].find(y=>y.id===mid);if(x){m=x;owner=k;break;}}if(!m||m.added||m.declined)return;
   m.declined=true;save();if(cur().p==='chat')render();toast('已拒绝，没有加进通讯录');
   const oc=getC((owner||'').split('#')[0]);

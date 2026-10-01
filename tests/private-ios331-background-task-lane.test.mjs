@@ -74,7 +74,7 @@ test('private performance candidate keeps v1355 while public web advances indepe
   assert.match(bridge, /static let contractVersion = 42/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 425;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.425;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1376 · 名片与剧场对谁说'/);
+  assert.match(publicApp, /APP_VER='v1378 · 名片资料页'/);
   assert.doesNotMatch(publicApp, /function northNativeBackgroundTask\(name,run\)/);
 });
 

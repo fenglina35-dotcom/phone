@@ -13,14 +13,14 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1376 · 名片与剧场对谁说'/);
-  assert.match(app,/const url='sw\.js\?v=1376&r=v1376-web-namecard-theater-target-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1376'/);
-  assert.match(html,/app\.js\?v=1376/);
-  assert.match(sw,/const BUILD='1376'/);
-  assert.match(sw,/north-shell-v1376-web-namecard-theater-target-1/);
-  assert.match(index,/小手机\.html\?v=1376/);
-  assert.match(repair,/小手机\.html\?v=1376/);
+  assert.match(app,/APP_VER='v1378 · 名片资料页'/);
+  assert.match(app,/const url='sw\.js\?v=1378&r=v1378-web-card-page-one-mom-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1378'/);
+  assert.match(html,/app\.js\?v=1378/);
+  assert.match(sw,/const BUILD='1378'/);
+  assert.match(sw,/north-shell-v1378-web-card-page-one-mom-1/);
+  assert.match(index,/小手机\.html\?v=1378/);
+  assert.match(repair,/小手机\.html\?v=1378/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{
