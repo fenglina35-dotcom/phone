@@ -37,6 +37,7 @@ const PERMANENT_FIXES = [
   {release:"v1374",scope:"web",least:1,name:"关系网：各自心里怎么看只给自己看",marker:"if(v.myView)s+='你心里怎么看ta、怎么看这些事：'"},
   {release:"v1376",scope:"web",least:1,name:"多人剧场：先打字再选对谁说，以选的人为准",marker:"/* 先打字、再选对谁说、再点让TA回：以点回复时选的人为准 */",file:"cohab-theater.js"},
   {release:"v1378",scope:"web",least:1,name:"他微信里不会有两个妈妈（同义称呼、人物卡转好友）",marker:"const mine=x=>x.relKey&&relKeyLive(x.relKey)===v.other;"},
+  {release:"v1386",scope:"both",least:1,name:"名片加来的人记得自己的生日",marker:"function relSelfText(k){"},
   {release:"v1384",scope:"both",least:1,name:"红包打开函数不再和角色扮演同名（角色扮演点开不提示红包找不到）",marker:"function redpOpen(scope,key,mid){"},
   {release:"v1380",scope:"both",least:1,name:"剧场配角坏掉的JSON按气泡抠出来",marker:"function theaterLooseBubbles(source){",file:"cohab-theater.js"},
   {release:"v1380",scope:"web",least:1,name:"他手机里家人聊天照关系网来",marker:"(typeof relFriendSys==='function'?relFriendSys(cid,f):'')"},

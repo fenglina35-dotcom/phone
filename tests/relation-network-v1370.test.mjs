@@ -22,7 +22,7 @@ const grab = (src, name) => {
   }
 };
 const line = p => app.split('\n').find(l => l.startsWith(p)) || '';
-const CORE = ['relInit', 'relStatus', 'relRecommendable', 'relTitleTaken', 'relNameTaken', 'relDayHit', 'relDayNote', 'relLoginTag', 'relPerson', 'relKeyLive', 'relExists', 'relName', 'relPromptName', 'relLabel', 'relRealName', 'relBrief', 'relFeelText', 'relLinkOf', 'relView', 'relLinksOf', 'relCleanLink', 'relNewLink', 'relPromote', 'relPromptFor', 'relAmongText', 'relFindByName', 'relAdjust', 'relConsumeTags', 'relKinGroup', 'relAvatarSrc', 'relHisFriends', 'relPersonOf', 'relPersonaOf', 'relDatesText', 'relSpyNote', 'relFriendSys'];
+const CORE = ['relInit', 'relStatus', 'relRecommendable', 'relTitleTaken', 'relNameTaken', 'relDayHit', 'relDayNote', 'relLoginTag', 'relPerson', 'relKeyLive', 'relExists', 'relName', 'relPromptName', 'relLabel', 'relRealName', 'relBrief', 'relFeelText', 'relLinkOf', 'relView', 'relLinksOf', 'relCleanLink', 'relNewLink', 'relPromote', 'relPromptFor', 'relAmongText', 'relFindByName', 'relAdjust', 'relConsumeTags', 'relKinGroup', 'relAvatarSrc', 'relHisFriends', 'relPersonOf', 'relPersonaOf', 'relDatesText', 'relSpyNote', 'relFriendSys', 'relSelfText'];
 const load = () => {
   const contacts = [{ id: 'c1', name: '克劳德', remark: '先生', gender: '男' }, { id: 'c2', name: '小助手' }];
   const ctx = { S: { me: { name: 'North' }, contacts }, getC: id => contacts.find(c => c.id === id) || null, uid: (() => { let n = 0; return () => 'u' + (++n); })(), save: () => {}, Date, Math, JSON, Object, Array, String, Number, Set };
@@ -216,4 +216,15 @@ test('v1380: birthdays and death days are given exactly; his phone and his mom f
   assert.match(spy, /爸爸沈国华（已故，不会再有新的聊天）[^]*忌日是11月3日/);
   assert.match(app, /\(typeof relFriendSys==='function'\?relFriendSys\(cid,f\):''\)/);
   assert.match(app, /inote\+\(typeof relSpyNote==='function'\?relSpyNote\(id\):''\)/);
+});
+
+test('v1386: someone added from a card remembers their own birthday; the card stays editable', () => {
+  const { api, S } = load();
+  api.relInit().people.push({ id: 'np_k', name: 'Kaiing921.', birthday: '10-3' });
+  api.relNewLink('c1', 'np_k', { ab: '表妹', ba: '表哥' });
+  S.contacts.push({ id: 'c_k', name: 'Kaiing921.' });
+  api.relPromote('np_k', 'c_k', 'c1');
+  assert.match(api.relPromptFor(S.contacts[2], '你生日是哪天'), /^\n\n# 你自己\n你的生日是10月3日（这是你自己的日子，记准/);
+  assert.equal(api.relSelfText('c1'), '', 'roles without a person card get nothing extra');
+  assert.match(app, /\$\{esc\(relName\(key\)\)\}的资料卡<\/b><small>生日、纪念日、为人，ta自己会记得/);
 });
