@@ -27,15 +27,15 @@ function functionSource(name){
 }
 
 test('v1178 has a unique visible identity across every public entry and cache layer',()=>{
-  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1370\'/);
-  assert.match(app,/APP_VER='v1370 · 关系网'/);
-  assert.match(shell,/__NORTH_SHELL_BUILD__='1370'/);
-  assert.match(shell,/app\.js\?v=1370&r=v1370-web-relation-network-1/);
-  assert.match(index,/小手机\.html\?v=1370/);
-  assert.match(repair,/小手机\.html\?v=1370/);
-  assert.match(worker,/const BUILD='1370'/);
-  assert.match(worker,/north-shell-v1370-web-relation-network-1/);
-  assert.match(hotfix,/sw\.js\?v=1370&r=v1370-web-relation-network-1/);
+  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1372\'/);
+  assert.match(app,/APP_VER='v1372 · 关系网用本名'/);
+  assert.match(shell,/__NORTH_SHELL_BUILD__='1372'/);
+  assert.match(shell,/app\.js\?v=1372&r=v1372-web-relation-real-names-1/);
+  assert.match(index,/小手机\.html\?v=1372/);
+  assert.match(repair,/小手机\.html\?v=1372/);
+  assert.match(worker,/const BUILD='1372'/);
+  assert.match(worker,/north-shell-v1372-web-relation-real-names-1/);
+  assert.match(hotfix,/sw\.js\?v=1372&r=v1372-web-relation-real-names-1/);
   for(const [name,source] of Object.entries({app,shell,index,repair,worker,hotfix})){
     assert.doesNotMatch(source,/v?1127/,`${name} must not reuse the prior web version`);
   }

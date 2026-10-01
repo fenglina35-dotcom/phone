@@ -22,7 +22,7 @@ const grab = (src, name) => {
   }
 };
 const line = p => app.split('\n').find(l => l.startsWith(p)) || '';
-const CORE = ['relInit', 'relStatus', 'relRecommendable', 'relTitleTaken', 'relNameTaken', 'relDayHit', 'relDayNote', 'relLoginTag', 'relPerson', 'relKeyLive', 'relExists', 'relName', 'relRealName', 'relBrief', 'relFeelText', 'relLinkOf', 'relView', 'relLinksOf', 'relCleanLink', 'relNewLink', 'relPromote', 'relPromptFor', 'relAmongText', 'relFindByName', 'relAdjust', 'relConsumeTags'];
+const CORE = ['relInit', 'relStatus', 'relRecommendable', 'relTitleTaken', 'relNameTaken', 'relDayHit', 'relDayNote', 'relLoginTag', 'relPerson', 'relKeyLive', 'relExists', 'relName', 'relPromptName', 'relLabel', 'relRealName', 'relBrief', 'relFeelText', 'relLinkOf', 'relView', 'relLinksOf', 'relCleanLink', 'relNewLink', 'relPromote', 'relPromptFor', 'relAmongText', 'relFindByName', 'relAdjust', 'relConsumeTags'];
 const load = () => {
   const contacts = [{ id: 'c1', name: '克劳德', remark: '先生', gender: '男' }, { id: 'c2', name: '小助手' }];
   const ctx = { S: { me: { name: 'North' }, contacts }, getC: id => contacts.find(c => c.id === id) || null, uid: (() => { let n = 0; return () => 'u' + (++n); })(), save: () => {}, Date, Math, JSON, Object, Array, String, Number, Set };
@@ -46,9 +46,26 @@ test('both sides know who the other is, with their own titles and feelings', () 
   S.contacts.push({ id: 'c3', name: '沈清秋' });
   api.relPromote('np_mom', 'c3', 'c1');
   const mom = api.relPromptFor(S.contacts[2], '我儿子');
-  assert.match(mom, /· 先生（本名克劳德）（男）：是你的儿子；你是ta的妈妈。你对ta 85\/100/, 'the promoted contact knows she is his mom');
+  assert.match(mom, /· 克劳德（男）：是你的儿子；你是ta的妈妈。你对ta 85\/100[^]*ta现在在North的微信通讯录里（备注「先生」）/, 'the promoted contact knows she is his mom');
   assert.equal(api.relLoginTag('c1', 'c3'), '｜这是你的妈妈（你推荐给North的）', 'when he logs into my WeChat he recognises her');
   assert.match(api.relPromptFor(S.contacts[0], '沈清秋'), /ta现在在North的微信通讯录里（备注「沈清秋」），是你把ta的名片推荐给North的——在North手机里看到ta，就是这个人，不是North的亲戚或陌生人/);
+});
+
+test('v1372: roles see real names, my remark is only a note; pages show remark plus real name', () => {
+  const { api, S } = load();
+  S.contacts.push({ id: 'c4', name: '陆沉', remark: '哥哥' });
+  api.relNewLink('c1', 'c4', { ab: '死对头', ba: '情敌', fa: 20, fb: 15 });
+  const p = api.relPromptFor(S.contacts[0], '陆沉最近怎么样');
+  assert.match(p, /你的家人朋友：死对头陆沉。/);
+  assert.match(p, /· 陆沉：是你的死对头；你是ta的情敌。[^]*（备注「哥哥」）/, 'the remark is said to be only my remark');
+  assert.doesNotMatch(p, /死对头哥哥|· 哥哥/, 'my remark is never used as his name');
+  assert.match(api.relPromptFor(S.contacts[2], ''), /你的家人朋友：情敌克劳德。/);
+  assert.equal(api.relAmongText(['c1', 'c4']).split('：')[0], '克劳德 和 陆沉');
+  assert.equal(api.relLabel('c4'), '哥哥（陆沉）');
+  assert.equal(api.relLabel('c2'), '小助手');
+  assert.equal(api.relFindByName(S.contacts[0], '哥哥').other, 'c4', 'tags written with my remark still find him');
+  assert.equal(api.relFindByName(S.contacts[0], '陆沉').other, 'c4');
+  assert.match(app, /list\.push\(\{k:c\.id,name:relLabel\(c\.id\),kind:'微信里的人'\}\)/);
 });
 
 test('details: at most the chosen number, present and pinned people and birthdays count; the gone cannot be recommended', () => {
@@ -114,7 +131,7 @@ test('roles adjust feelings with a hidden tag, capped per step and per day, neve
 test('relations among the people present are spelled out for groups and the theater', () => {
   const { api } = load();
   api.relNewLink('c1', 'c2', { ab: '助理', ba: '老板', fa: 55, fb: 60 });
-  assert.match(api.relAmongText(['c1', 'c2']), /先生 和 小助手：小助手是先生的助理，先生是小助手的老板；好感 55 \/ 60/);
+  assert.match(api.relAmongText(['c1', 'c2']), /克劳德 和 小助手：小助手是克劳德的助理，克劳德是小助手的老板；好感 55 \/ 60/);
   assert.match(grab(app, 'gContext'), /const net=typeof relAmongText==='function'\?relAmongText\(g\.members\):''/);
   assert.match(theater, /\(g\.relationToHost\|\|theaterRelTitle\(g,c\)\|\|'未特别设置'\)/, 'theater falls back to the network when the guest relation is blank');
   assert.match(theater, /\(entry\.relationToHost\|\|\(isGuest&&theaterRelTitle\(entry,host\)\)\|\|'未特别设置'\)/);

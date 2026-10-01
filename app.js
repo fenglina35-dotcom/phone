@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1370'){
+if(window.__NORTH_SHELL_BUILD__!=='1372'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -539,7 +539,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1370 · 关系网';
+const APP_VER='v1372 · 关系网用本名';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1927,7 +1927,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1370&r=v1370-web-relation-network-1';
+  const url='sw.js?v=1372&r=v1372-web-relation-real-names-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -8762,7 +8762,7 @@ function gCallSoloToggle(gid,cid,el){const g=S.groups.find(x=>x.id===gid);if(!g)
 function gBatchNames(g,c){return [gnm(g,c.id),c.name,c.remark].filter(Boolean).map(String);}
 function gBatchPrompt(g,batch,recent){const me=S.me.name;
   const people=batch.map(e=>{const c=e.c,admin=(g.admins||[]).includes(c.id),mood=e.temper==='quiet'?'话少慢热，很多时候只看不说，不想接就 [不说话]':e.temper==='lively'?'爱说话爱凑热闹，可以多接几句':'按平时在群里的样子';
-    const fam=typeof relLinksOf==='function'?relLinksOf(c.id).slice(0,12).map(v=>(v.otherIsMy||'熟人')+relName(v.other)+(relStatus(v.other)?'（'+relStatus(v.other)+'）':'')).join('、'):'';
+    const fam=typeof relLinksOf==='function'?relLinksOf(c.id).slice(0,12).map(v=>(v.otherIsMy||'熟人')+relPromptName(v.other)+(relStatus(v.other)?'（'+relStatus(v.other)+'）':'')).join('、'):'';
     return '## '+gnm(g,c.id)+(c.name!==gnm(g,c.id)?'（本名'+c.name+'）':'')+(fam?'\n家人朋友：'+fam:'')+'\n人设：'+String(c.persona||c.desc||'（没写人设，按名字和群里的表现自然来）').replace(/\s+/g,' ').slice(0,700)+'\n这轮：'+mood+(e.cares?'；这句话说到ta在意的事，可以多说点':'')+'；最多 '+Math.max(1,+e.cap||1)+' 条'+(admin?'\n'+gnm(g,c.id)+'是管理员，可以在自己那段里单独一行写 [禁言|名字|分钟] [解禁|名字] [踢出|名字]（不能动群主'+me+'）':'');}).join('\n\n');
   return '你同时扮演下面这几个角色，在群里轮流说话。每个人都要按自己的人设和说话方式来，不能串味、不能说一样的话，也不要每个人都只对着'+me+'说。\n\n'+people
     +'\n\n# 输出格式（严格遵守）\n按顺序给每个人写一段，每段第一行单独写【名字】，下面是这个人要发的消息，每条一行。某个人这轮不想说话，那段就只写 [不说话]。\n例子：\n【'+gnm(g,batch[0].c.id)+'】\n[引用|3]\n第一条\n第二条\n'+(batch[1]?'【'+gnm(g,batch[1].c.id)+'】\n[不说话]\n':'')
@@ -13506,6 +13506,9 @@ function relPerson(id){return relInit().people.find(p=>p.id===id)||null;}
 function relKeyLive(k){const p=relPerson(k);return p&&p.cid&&getC(p.cid)?p.cid:k;}
 function relExists(k){if(k==='me')return true;if(String(k).indexOf('np_')===0)return !!relPerson(k);const c=getC(k);return !!(c&&!c.deleted);}
 function relName(k){if(k==='me')return S.me.name||'我';const p=relPerson(k);if(p)return p.name||'未命名';const c=getC(k);return c?(c.remark||c.name||'?'):'?';}
+/* 给角色看的名字用本名（备注是North自己起的，比如备注「哥哥」不代表真是哥哥）；页面上显示「备注（本名）」 */
+function relPromptName(k){if(k==='me')return S.me.name||'她';const p=relPerson(k);if(p)return p.name||'未命名';const c=getC(k);return c?(c.name||c.remark||'?'):'?';}
+function relLabel(k){const n=relName(k),c=!relPerson(k)&&k!=='me'&&getC(k);return c&&c.name&&c.remark&&c.remark!==c.name?n+'（'+c.name+'）':n;}
 function relRealName(k){const p=relPerson(k);if(p)return p.name||'';const c=getC(k);return c?(c.name||''):'';}
 function relAvatar(k,cls){if(k==='me')return av(S.me.avatar,cls);const p=relPerson(k);if(p)return p.avatar?av(p.avatar,cls):`<div class="avatar ${cls||''} relnet-face">${esc((p.name||'?').slice(-1))}</div>`;const c=getC(k);return av(c&&c.avatar,cls);}
 function relBrief(k){const p=relPerson(k);if(p){return [p.age?p.age+'岁':'',p.gender||'',p.identity||'',p.status?p.status+(p.statusNote?'·'+p.statusNote:''):''].filter(Boolean).join('，');}const c=getC(k);if(!c)return'';return [c.age?c.age+'岁':'',c.gender==='女'||c.gender==='男'?c.gender:'',c.job||''].filter(Boolean).join('，');}
@@ -13523,28 +13526,28 @@ function relPromptFor(c,focus,opt){if(!c||!c.id)return '';opt=opt||{};const view
   /* 名单每次都带（很短，保证谁都认识）；详细资料只带：这次提到的人、在场的人、常驻的人、今天明天有生日纪念日的人，最多 cap 个 */
   const hitOf=v=>{const n=relName(v.other),r=relRealName(v.other),t=String(v.otherIsMy||'').replace(/^亲/,''),dup=/^(.)\1$/.test(t)?t[0]:'';return (text&&(text.includes(n)||(r&&text.includes(r))))?3:(text&&t&&(text.includes(t)||(dup&&text.includes('你'+dup))))?2:0;};/* 「你妈」「你妹」也算提到 */
   const scored=views.map(v=>({v,s:hitOf(v)*1000+(present.has(v.other)?900:0)+(v.l.pinned?500:0)+(relDayNote(v.other)?800:0)})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s||(+b.v.myFeel)-(+a.v.myFeel)).slice(0,cap).map(x=>x.v);
-  const roster=views.slice().sort((x,y)=>(+!!y.l.pinned)-(+!!x.l.pinned)||(+y.myFeel)-(+x.myFeel)).slice(0,30).map(v=>(v.otherIsMy||'熟人')+relName(v.other)+(relStatus(v.other)?'（'+relStatus(v.other)+'）':'')).join('、')+(views.length>30?'等'+views.length+'人':'');
-  const detail=v=>{const o=v.other,name=relName(o),real=relRealName(o),brief=relBrief(o),p=relPerson(o)||relInit().people.find(x=>x.cid===o),oc=getC(o),day=relDayNote(o);
-    let s='· '+name+(real&&real!==name?'（本名'+real+'）':'')+(brief?'（'+brief+'）':'')+'：是你的'+(v.otherIsMy||'熟人')+'；你是ta的'+(v.iAmTheir||'熟人')+'。你对ta '+v.myFeel+'/100（'+relFeelText(v.myFeel)+'），ta对你 '+v.theirFeel+'/100（'+relFeelText(v.theirFeel)+'）'+(v.l.conflict?'，你们之间有矛盾':'')+'。';
+  const roster=views.slice().sort((x,y)=>(+!!y.l.pinned)-(+!!x.l.pinned)||(+y.myFeel)-(+x.myFeel)).slice(0,30).map(v=>(v.otherIsMy||'熟人')+relPromptName(v.other)+(relStatus(v.other)?'（'+relStatus(v.other)+'）':'')).join('、')+(views.length>30?'等'+views.length+'人':'');
+  const detail=v=>{const o=v.other,name=relPromptName(o),brief=relBrief(o),p=relPerson(o)||relInit().people.find(x=>x.cid===o),oc=getC(o),day=relDayNote(o);
+    let s='· '+name+(brief?'（'+brief+'）':'')+'：是你的'+(v.otherIsMy||'熟人')+'；你是ta的'+(v.iAmTheir||'熟人')+'。你对ta '+v.myFeel+'/100（'+relFeelText(v.myFeel)+'），ta对你 '+v.theirFeel+'/100（'+relFeelText(v.theirFeel)+'）'+(v.l.conflict?'，你们之间有矛盾':'')+'。';
     if(p&&p.status==='已故')s+='ta已经去世了'+(p.statusNote?'（'+p.statusNote+'）':'')+'，提起ta要符合这一点。';else if(p&&p.status==='失联')s+='你们已经失联'+(p.statusNote?'（'+p.statusNote+'）':'')+'。';else if(p&&p.status==='没有微信')s+='ta没有微信'+(p.statusNote?'（'+p.statusNote+'）':'')+'。';
     if(day)s+='【'+day+'，你记得，可以自然提一句】';
     if(v.l.how)s+='来历：'+v.l.how+'。';
     const st=(v.l.story||[]).filter(x=>x&&x.text).slice(-4).map(x=>(x.t?x.t+'：':'')+x.text);if(st.length)s+='过往：'+st.join('；')+'。';
     if(p&&p.persona)s+='ta的为人：'+String(p.persona).replace(/\s+/g,' ').slice(0,120)+'。';
     if(p&&p.myRel)s+='ta也是'+me+'的'+p.myRel+'。';
-    if(oc&&!oc.deleted){const intro=(relPerson(o)||relInit().people.find(x=>x.cid===o)||{}).introducedBy;s+='ta现在在'+me+'的微信通讯录里（备注「'+(oc.remark||oc.name)+'」）'+(intro===c.id?'，是你把ta的名片推荐给'+me+'的':intro&&getC(intro)?'，是'+relName(intro)+'推荐给'+me+'的':'')+'——在'+me+'手机里看到ta，就是这个人，不是'+me+'的亲戚或陌生人。';}
+    if(oc&&!oc.deleted){const intro=(relPerson(o)||relInit().people.find(x=>x.cid===o)||{}).introducedBy;s+='ta现在在'+me+'的微信通讯录里（备注「'+(oc.remark||oc.name)+'」）'+(intro===c.id?'，是你把ta的名片推荐给'+me+'的':intro&&getC(intro)?'，是'+relPromptName(intro)+'推荐给'+me+'的':'')+'——在'+me+'手机里看到ta，就是这个人，不是'+me+'的亲戚或陌生人。';}
     else if(p&&!p.status)s+='ta不在'+me+'的微信里。';
     if(v.l.pending)s+='（这条是你自己刚建立的，'+me+'还没确认）';return s;};
-  const anyUnlocked=views.some(v=>!v.l.locked),canRec=views.filter(v=>relRecommendable(relPerson(v.other))).map(v=>relName(v.other));
+  const anyUnlocked=views.some(v=>!v.l.locked),canRec=views.filter(v=>relRecommendable(relPerson(v.other))).map(v=>relPromptName(v.other));
   return '\n\n# 你的人际关系（确定的事实，任何场合都记得，别弄错谁是谁、谁是谁的谁）\n你的家人朋友：'+roster+'。'
     +(scored.length?'\n'+scored.map(detail).join('\n'):'')
     +'\n- 平时不用主动提他们；聊到了、遇到了、到了他们的日子，再自然带上。说起或见到他们时，态度按好感来：好感低就冷淡、话少，好感高就亲热。'
     +(anyUnlocked?'\n- 关系会变：只有真的发生了让你和某人关系变化的事（吵架、和好、被感动、被伤到），才单独一行写 [关系|名字|+5|原因] 或 [关系|名字|-5|原因]，每次最多±'+REL_FEEL_STEP+'，别频繁用，这行不会显示出来。':'')
     +(canRec.length?'\n- 你可以把这些人的微信名片推荐给'+me+'：'+canRec.join('、')+'。想推荐时单独一行写 [推荐好友|名字|一句介绍]，名字要一样。已故、失联、没有微信的人不能推荐。':'');}
 /* 在场的几个人之间的关系（线下剧场、群聊用） */
-function relAmongText(keys){keys=[...new Set((keys||[]).map(relKeyLive))].filter(relExists);const out=[];for(let i=0;i<keys.length;i++)for(let j=i+1;j<keys.length;j++){const l=relLinkOf(keys[i],keys[j]);if(!l)continue;const v=relView(l,keys[i]);out.push(relName(keys[i])+' 和 '+relName(keys[j])+'：'+relName(keys[j])+'是'+relName(keys[i])+'的'+(v.otherIsMy||'熟人')+'，'+relName(keys[i])+'是'+relName(keys[j])+'的'+(v.iAmTheir||'熟人')+'；好感 '+v.myFeel+' / '+v.theirFeel+(l.conflict?'，有矛盾':'')+(l.how?'；来历：'+l.how:'')+((l.story||[]).length?'；过往：'+(l.story||[]).slice(-3).map(x=>(x.t?x.t+'：':'')+x.text).join('；'):''));}return out.join('\n');}
+function relAmongText(keys){keys=[...new Set((keys||[]).map(relKeyLive))].filter(relExists);const out=[];for(let i=0;i<keys.length;i++)for(let j=i+1;j<keys.length;j++){const l=relLinkOf(keys[i],keys[j]);if(!l)continue;const v=relView(l,keys[i]);out.push(relPromptName(keys[i])+' 和 '+relPromptName(keys[j])+'：'+relPromptName(keys[j])+'是'+relPromptName(keys[i])+'的'+(v.otherIsMy||'熟人')+'，'+relPromptName(keys[i])+'是'+relPromptName(keys[j])+'的'+(v.iAmTheir||'熟人')+'；好感 '+v.myFeel+' / '+v.theirFeel+(l.conflict?'，有矛盾':'')+(l.how?'；来历：'+l.how:'')+((l.story||[]).length?'；过往：'+(l.story||[]).slice(-3).map(x=>(x.t?x.t+'：':'')+x.text).join('；'):''));}return out.join('\n');}
 /* ---- 角色自己调好感：[关系|名字|+5|原因] ---- */
-function relFindByName(c,name){name=String(name||'').trim().replace(/^[@＠]/,'');if(!name)return null;return relLinksOf(c.id).find(v=>[relName(v.other),relRealName(v.other)].filter(Boolean).includes(name))||relLinksOf(c.id).find(v=>relName(v.other).includes(name)||name.includes(relName(v.other)))||null;}
+function relFindByName(c,name){name=String(name||'').trim().replace(/^[@＠]/,'');if(!name)return null;return relLinksOf(c.id).find(v=>[relName(v.other),relRealName(v.other)].filter(Boolean).includes(name))||relLinksOf(c.id).find(v=>[relName(v.other),relRealName(v.other)].some(n=>n&&(n.includes(name)||name.includes(n))))||null;}
 function relAdjust(c,name,delta,why,src){const v=relFindByName(c,name);if(!v||v.l.locked)return false;const day=new Date().toDateString(),l=v.l;l.dayUse=l.dayUse&&l.dayUse.day===day?l.dayUse:{day,a:0,b:0};
   let d=Math.max(-REL_FEEL_STEP,Math.min(REL_FEEL_STEP,Math.round(+delta||0)));const used=l.dayUse[v.side]||0;if(Math.abs(used+d)>REL_DAY_CAP)d=Math.sign(d)*Math.max(0,REL_DAY_CAP-Math.abs(used));if(!d)return false;/* 一天里一边最多变动 20 */
   const k=v.side==='a'?'fa':'fb',before=l[k];l[k]=Math.max(0,Math.min(100,before+d));l.dayUse[v.side]=used+d;l.log=(l.log||[]).concat([{t:Date.now(),who:c.id,side:v.side,from:before,to:l[k],why:String(why||'').slice(0,60),src:src||'chat'}]).slice(-40);save();return true;}
@@ -13553,17 +13556,17 @@ function relConsumeTags(text,c){if(!c||!text)return text;const re=/^\s*[\[【]\s
 /* 一场线下/剧场结束后，角色回头看看和在场或被提到的人关系有没有变化 */
 async function relAfterScene(cid,rows,where){const c=getC(cid);if(!c)return;const views=relLinksOf(cid).filter(v=>!v.l.locked);if(!views.length)return;const text=(rows||[]).map(m=>String((m&&(m.text||m.content))||'')).join('\n').slice(-6000);
   const touched=views.filter(v=>[relName(v.other),relRealName(v.other)].some(n=>n&&text.includes(n)));if(!touched.length)return;
-  try{const raw=await chatAPI([{role:'system',content:buildSystem(c)+'\n\n# 刚刚结束的'+(where||'线下见面')+'（节选）\n'+text.slice(-3500)},{role:'user',content:'[这场'+(where||'线下见面')+'刚结束。只看你和这些人：'+touched.map(v=>relName(v.other)).join('、')+'。这次发生的事有没有真的让你对谁的感情变了？有就每人单独一行写 [关系|名字|+n|原因] 或 [关系|名字|-n|原因]（n 最多 '+REL_FEEL_STEP+'），没变化就只输出 无。不要写别的。]'}],{max:200,aux:true});
+  try{const raw=await chatAPI([{role:'system',content:buildSystem(c)+'\n\n# 刚刚结束的'+(where||'线下见面')+'（节选）\n'+text.slice(-3500)},{role:'user',content:'[这场'+(where||'线下见面')+'刚结束。只看你和这些人：'+touched.map(v=>relPromptName(v.other)).join('、')+'。这次发生的事有没有真的让你对谁的感情变了？有就每人单独一行写 [关系|名字|+n|原因] 或 [关系|名字|-n|原因]（n 最多 '+REL_FEEL_STEP+'），没变化就只输出 无。不要写别的。]'}],{max:200,aux:true});
     relConsumeTags(String(raw||''),c);}catch(_){}}
 /* ---- 我推荐名片给角色、角色加了：角色自己建立关系（默认开，待我确认） ---- */
 async function relAutoLink(roleId,otherId,how){const r=relInit();if(r.autoLink===false)return null;const c=getC(roleId),o=getC(otherId);if(!c||!o||relLinkOf(roleId,otherId))return null;
   const l=relNewLink(roleId,otherId,{ab:'朋友',ba:'朋友',fa:50,fb:50,how:how||(S.me.name+'推荐认识的'),origin:'role',pending:true});if(!l)return null;save();
-  try{const raw=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'[你刚通过'+S.me.name+'推荐的名片加了「'+(o.remark||o.name)+'」'+(o.persona?'（ta的介绍：'+String(o.persona).slice(0,160)+'）':'')+'。按你自己的判断给你们定个关系，只输出一行 JSON：{"ta是你的":"","你是ta的":"","你对ta好感":0-100,"ta对你好感":0-100,"来历":""}]'}],{max:160,aux:true});
+  try{const raw=await chatAPI([{role:'system',content:buildSystem(c)},{role:'user',content:'[你刚通过'+S.me.name+'推荐的名片加了「'+(o.name||o.remark)+'」'+(o.remark&&o.name&&o.remark!==o.name?'（'+S.me.name+'给ta的备注是「'+o.remark+'」）':'')+(o.persona?'（ta的介绍：'+String(o.persona).slice(0,160)+'）':'')+'。按你自己的判断给你们定个关系，只输出一行 JSON：{"ta是你的":"","你是ta的":"","你对ta好感":0-100,"ta对你好感":0-100,"来历":""}]'}],{max:160,aux:true});
     const m=String(raw||'').match(/\{[\s\S]*\}/);if(m){const j=JSON.parse(m[0]);if(j['ta是你的'])l.ab=String(j['ta是你的']).slice(0,20);if(j['你是ta的'])l.ba=String(j['你是ta的']).slice(0,20);if(Number.isFinite(+j['你对ta好感']))l.fa=+j['你对ta好感'];if(Number.isFinite(+j['ta对你好感']))l.fb=+j['ta对你好感'];if(j['来历'])l.how=String(j['来历']).slice(0,80);relCleanLink(l);save();}}catch(_){}
   return l;}
 /* ---- 他的微信好友列表：关系网里的人刷新时出现 ---- */
-function relHisFriends(cid,d){let ch=false;relLinksOf(cid).forEach(v=>{const name=relName(v.other),title=v.otherIsMy||'熟人',gone=!!relStatus(v.other);
-  let f=d.friends.find(x=>x.relKey===v.other)||d.friends.find(x=>x.name===name)||d.friends.find(x=>!x.relKey&&(x.name===title||x.name===title.replace(/^亲/,'')));/* 默认的「妈妈」好友被关系网里的妈妈顶替，不会有两个妈妈 */
+function relHisFriends(cid,d){let ch=false;relLinksOf(cid).forEach(v=>{const name=relPromptName(v.other),title=v.otherIsMy||'熟人',gone=!!relStatus(v.other);
+  let f=d.friends.find(x=>x.relKey===v.other)||d.friends.find(x=>x.name===name||x.name===relName(v.other))||d.friends.find(x=>!x.relKey&&(x.name===title||x.name===title.replace(/^亲/,'')));/* 默认的「妈妈」好友被关系网里的妈妈顶替，不会有两个妈妈 */
   if(gone){if(f&&f.relKey===v.other&&!(f.msgs&&f.msgs.length)){d.friends.splice(d.friends.indexOf(f),1);ch=true;}return;}/* 已故、失联、没有微信的人不在他的好友列表里 */
   const persona=(relPerson(v.other)&&relPerson(v.other).persona||'').slice(0,100)+'（你们感情 '+v.myFeel+'/100，'+relFeelText(v.myFeel)+(v.l.conflict?'，有矛盾':'')+'，聊天语气照这个来）';
   if(!f){d.friends.push({id:'hf'+Math.random().toString(36).slice(2,8),name,relation:title,avatar:relAvatarSrc(v.other),persona,relKey:v.other,msgs:[]});ch=true;}
@@ -13576,10 +13579,10 @@ function relLoginTag(viewer,k){const l=relLinkOf(viewer,k);if(!l)return '';const
 /* ===== 页面 ===== */
 let _relEdit=null;
 function relOpen(key){go('relnet',key?{key}:{});}
-function relRowHTML(v){const o=v.other;return `<button type="button" class="relnet-row" onclick="relEditOpen('${v.l.id}')"><span class="relnet-av">${relAvatar(o,'')}</span><span class="relnet-main"><b>${esc(relName(o))}${v.l.pending?'<em class="relnet-tag">待确认</em>':''}${v.l.pinned?'<em class="relnet-tag pin">常驻</em>':''}${v.l.locked?'<em class="relnet-tag lock">锁定</em>':''}${relStatus(o)?'<em class="relnet-tag gone">'+esc(relStatus(o))+'</em>':''}</b><small>${esc(relName(o))}是TA的${esc(v.otherIsMy||'？')} · TA是${esc(relName(o))}的${esc(v.iAmTheir||'？')}</small><span class="relnet-feel"><u>TA</u><i style="--w:${v.myFeel}%"></i><u>${v.myFeel}</u><u>对方</u><i class="b" style="--w:${v.theirFeel}%"></i><u>${v.theirFeel}</u>${v.l.conflict?'<s>有矛盾</s>':''}</span></span><em class="relnet-chev">›</em></button>`;}
+function relRowHTML(v){const o=v.other;return `<button type="button" class="relnet-row" onclick="relEditOpen('${v.l.id}')"><span class="relnet-av">${relAvatar(o,'')}</span><span class="relnet-main"><b>${esc(relLabel(o))}${v.l.pending?'<em class="relnet-tag">待确认</em>':''}${v.l.pinned?'<em class="relnet-tag pin">常驻</em>':''}${v.l.locked?'<em class="relnet-tag lock">锁定</em>':''}${relStatus(o)?'<em class="relnet-tag gone">'+esc(relStatus(o))+'</em>':''}</b><small>${esc(relName(o))}是TA的${esc(v.otherIsMy||'？')} · TA是${esc(relName(o))}的${esc(v.iAmTheir||'？')}</small><span class="relnet-feel"><u>TA</u><i style="--w:${v.myFeel}%"></i><u>${v.myFeel}</u><u>对方</u><i class="b" style="--w:${v.theirFeel}%"></i><u>${v.theirFeel}</u>${v.l.conflict?'<s>有矛盾</s>':''}</span></span><em class="relnet-chev">›</em></button>`;}
 function renderRelNet(c){const r=relInit(),key=c.key&&relExists(c.key)?relKeyLive(c.key):'';
   if(key){const views=relLinksOf(key);return `<div class="gmanage-page relnet-page"><div class="gpick-nav"><button type="button" class="gpick-cancel gmanage-back" onclick="back()" aria-label="返回">‹</button><b>${esc(relName(key))}的人际关系</b><span></span></div><div class="gmanage-scroll">
-    <div class="relnet-hero">${relAvatar(key,'')}<span><b>${esc(relName(key))}</b><small>${esc(relBrief(key)||'')}</small></span></div>
+    <div class="relnet-hero">${relAvatar(key,'')}<span><b>${esc(relLabel(key))}</b><small>${esc(relBrief(key)||'')}</small></span></div>
     ${getC(key)?`<div class="gmanage-list"><button type="button" class="relnet-row relnet-me" onclick="relMeEdit('${key}')"><span class="relnet-av">${av(S.me.avatar,'')}</span><span class="relnet-main"><b>${esc(S.me.name||'我')}（你）<em class="relnet-tag lock">固定</em></b><small>你是TA的${esc(getC(key).relation||'（还没写）')} · 就是资料里的关系，不能推荐、不能删除</small></span><em class="relnet-chev">›</em></button></div>`:''}
     <div class="gmanage-list">${views.length?views.map(relRowHTML).join(''):'<div class="gpick-empty">还没有关系。可以把微信里的人、或者捏一个人物和TA连起来</div>'}</div>
     <button type="button" class="relnet-add" onclick="relEditOpen('','${key}')">＋ 添加关系</button>
@@ -13588,7 +13591,7 @@ function renderRelNet(c){const r=relInit(),key=c.key&&relExists(c.key)?relKeyLiv
   return `<div class="gmanage-page relnet-page"><div class="gpick-nav"><button type="button" class="gpick-cancel gmanage-back" onclick="back()" aria-label="返回">‹</button><b>关系网</b><span></span></div><div class="gmanage-scroll">
     <h3 class="gmanage-title small">人物卡（不在微信里的人）</h3><div class="gmanage-list">${people.map(p=>`<button type="button" class="relnet-row" onclick="go('relperson',{id:'${p.id}'})"><span class="relnet-av">${relAvatar(p.id,'')}</span><span class="relnet-main"><b>${esc(p.name||'未命名')}</b><small>${esc([relBrief(p.id),p.myRel?'和我：'+p.myRel:''].filter(Boolean).join(' · ')||'还没写资料')}</small></span><em class="relnet-chev">›</em></button>`).join('')||'<div class="gpick-empty">比如TA的妈妈、亲妹妹、上司，或者你的家人</div>'}</div>
     <button type="button" class="relnet-add" onclick="go('relperson',{})">＋ 新建人物</button>
-    <h3 class="gmanage-title small">所有关系</h3><div class="gmanage-list">${r.links.filter(l=>relExists(l.a)&&relExists(l.b)).map(l=>`<button type="button" class="relnet-row" onclick="relEditOpen('${l.id}')"><span class="relnet-pair">${relAvatar(l.a,'')}${relAvatar(l.b,'')}</span><span class="relnet-main"><b>${esc(relName(l.a))} ⇄ ${esc(relName(l.b))}${l.pending?'<em class="relnet-tag">待确认</em>':''}</b><small>${esc(relName(l.b))}是${esc(relName(l.a))}的${esc(l.ab||'？')} · 好感 ${l.fa} / ${l.fb}${l.conflict?' · 有矛盾':''}</small></span><em class="relnet-chev">›</em></button>`).join('')||'<div class="gpick-empty">还没有关系</div>'}</div>
+    <h3 class="gmanage-title small">所有关系</h3><div class="gmanage-list">${r.links.filter(l=>relExists(l.a)&&relExists(l.b)).map(l=>`<button type="button" class="relnet-row" onclick="relEditOpen('${l.id}')"><span class="relnet-pair">${relAvatar(l.a,'')}${relAvatar(l.b,'')}</span><span class="relnet-main"><b>${esc(relLabel(l.a))} ⇄ ${esc(relLabel(l.b))}${l.pending?'<em class="relnet-tag">待确认</em>':''}</b><small>${esc(relName(l.b))}是${esc(relName(l.a))}的${esc(l.ab||'？')} · 好感 ${l.fa} / ${l.fb}${l.conflict?' · 有矛盾':''}</small></span><em class="relnet-chev">›</em></button>`).join('')||'<div class="gpick-empty">还没有关系</div>'}</div>
     <button type="button" class="relnet-add" onclick="relEditOpen('','')">＋ 新建关系</button>
     <div class="gmanage-list"><label class="relnet-slider"><span>聊天时最多带几个人的详细资料<b id="relcap_t">${r.detailCap} 个</b></span><input type="range" min="1" max="10" value="${r.detailCap}" oninput="relCapSet(this.value)"></label><p class="relnet-note" style="margin:0;padding:0 16px 12px">名单（谁是谁）每次都带；好感、来历、过往只带这次提到的人、在场的人、标了常驻的人，以及今天明天过生日或纪念日的人。</p></div>
     <div class="gmanage-list"><div class="gmanage-row"><span class="gmanage-name">推荐名片后自动建立关系<small>角色加了你推荐的人，会自己定关系，再由你确认</small></span><button type="button" class="gsettings-chip${r.autoLink!==false?' on':''}" onclick="relAutoToggle(this)">${r.autoLink!==false?'开':'关'}</button></div></div></div></div>`;}
@@ -13596,7 +13599,7 @@ function relMeEdit(cid){const c=getC(cid);if(!c)return;openModal(`<h3>你和${es
 function relMeSave(cid){const c=getC(cid),i=$('#relme_in');if(!c||!i)return;c.relation=String(i.value||'').trim().slice(0,20);save();closeModal();render();toast('已保存');}
 function relCapSet(v){const r=relInit();r.detailCap=Math.max(1,Math.min(10,Math.round(+v||6)));save();const t=$('#relcap_t');if(t)t.textContent=r.detailCap+' 个';}
 function relAutoToggle(el){const r=relInit();r.autoLink=r.autoLink===false;save();if(el){el.classList.toggle('on',r.autoLink);el.textContent=r.autoLink?'开':'关';}}
-function relCandidates(exclude){const list=[];(S.contacts||[]).filter(c=>c&&!c.deleted&&c.id!==exclude).forEach(c=>list.push({k:c.id,name:c.remark||c.name,kind:'微信里的人'}));relInit().people.filter(p=>!p.cid&&p.id!==exclude).forEach(p=>list.push({k:p.id,name:p.name||'未命名',kind:'人物卡'}));return list;}
+function relCandidates(exclude){const list=[];(S.contacts||[]).filter(c=>c&&!c.deleted&&c.id!==exclude).forEach(c=>list.push({k:c.id,name:relLabel(c.id),kind:'微信里的人'}));relInit().people.filter(p=>!p.cid&&p.id!==exclude).forEach(p=>list.push({k:p.id,name:p.name||'未命名',kind:'人物卡'}));return list;}
 function relEditOpen(id,a){const l=id?relInit().links.find(x=>x.id===id):null;_relEdit=l?JSON.parse(JSON.stringify(l)):{id:'',a:a||'',b:'',ab:'',ba:'',fa:50,fb:50,conflict:false,how:'',story:[],locked:false,origin:'user',pending:false,log:[]};go('reledit',{id:id||''});}
 const REL_TEMPLATES=[['妈妈','孩子'],['爸爸','孩子'],['亲妹妹','哥哥'],['亲姐姐','弟弟'],['亲哥哥','妹妹'],['小姑子','嫂子'],['好朋友','好朋友'],['发小','发小'],['同事','同事'],['上司','下属'],['前任','前任'],['死对头','死对头']];
 function renderRelEdit(){const e=_relEdit;if(!e)return renderRelNet({});const opts=(sel,ex)=>`<option value="">选择一个人…</option>${['微信里的人','人物卡'].map(g=>{const xs=relCandidates(ex).filter(x=>x.kind===g);return xs.length?`<optgroup label="${g}">${xs.map(x=>`<option value="${x.k}"${x.k===sel?' selected':''}>${esc(x.name)}</option>`).join('')}</optgroup>`:'';}).join('')}`;
