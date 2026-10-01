@@ -22,7 +22,7 @@ const grab = (src, name) => {
   }
 };
 const line = p => app.split('\n').find(l => l.startsWith(p)) || '';
-const CORE = ['relInit', 'relStatus', 'relRecommendable', 'relTitleTaken', 'relNameTaken', 'relDayHit', 'relDayNote', 'relLoginTag', 'relPerson', 'relKeyLive', 'relExists', 'relName', 'relPromptName', 'relLabel', 'relRealName', 'relBrief', 'relFeelText', 'relLinkOf', 'relView', 'relLinksOf', 'relCleanLink', 'relNewLink', 'relPromote', 'relPromptFor', 'relAmongText', 'relFindByName', 'relAdjust', 'relConsumeTags', 'relKinGroup', 'relAvatarSrc', 'relHisFriends'];
+const CORE = ['relInit', 'relStatus', 'relRecommendable', 'relTitleTaken', 'relNameTaken', 'relDayHit', 'relDayNote', 'relLoginTag', 'relPerson', 'relKeyLive', 'relExists', 'relName', 'relPromptName', 'relLabel', 'relRealName', 'relBrief', 'relFeelText', 'relLinkOf', 'relView', 'relLinksOf', 'relCleanLink', 'relNewLink', 'relPromote', 'relPromptFor', 'relAmongText', 'relFindByName', 'relAdjust', 'relConsumeTags', 'relKinGroup', 'relAvatarSrc', 'relHisFriends', 'relPersonOf', 'relPersonaOf', 'relDatesText', 'relSpyNote', 'relFriendSys'];
 const load = () => {
   const contacts = [{ id: 'c1', name: '克劳德', remark: '先生', gender: '男' }, { id: 'c2', name: '小助手' }];
   const ctx = { S: { me: { name: 'North' }, contacts }, getC: id => contacts.find(c => c.id === id) || null, uid: (() => { let n = 0; return () => 'u' + (++n); })(), save: () => {}, Date, Math, JSON, Object, Array, String, Number, Set };
@@ -196,4 +196,24 @@ test('wired everywhere: prompts, tags, cards, his friend list, offline end, page
   for (const p of ["c.p==='relnet')html=renderRelNet(c)", "c.p==='reledit')html=renderRelEdit()", "c.p==='relperson')html=renderRelPerson(c)"]) assert.ok(app.includes(p), p);
   assert.match(app, /\|关系';/);
   assert.match(grab(app, 'relInit'), /if\(r\.autoLink!==false\)r\.autoLink=true;/, 'auto relation on by default');
+});
+
+test('v1380: birthdays and death days are given exactly; his phone and his mom follow the network', () => {
+  const { api, S } = load();
+  api.relInit().people.push({ id: 'np_mom', name: '罗拉', persona: '苛刻、嘴上从不服软', birthday: '5-14' }, { id: 'np_dad', name: '沈国华', status: '已故', memorial: '11-3' });
+  api.relNewLink('c1', 'np_mom', { ab: '母亲', ba: '儿子', fa: 30, fb: 45, conflict: true });
+  api.relNewLink('c1', 'np_dad', { ab: '爸爸', ba: '儿子' });
+  const p = api.relPromptFor(S.contacts[0], '你爸的忌日是哪天？你妈生日呢');
+  assert.match(p, /ta的忌日是11月3日（记准，别说错）/);
+  assert.match(p, /ta的生日是5月14日/, '「你妈」counts as mentioning 母亲');
+  assert.match(p, /上面没写的就说记不太清，不要编一个日期/);
+  S.contacts.push({ id: 'c_rl', name: '罗拉', remark: '妈妈' });
+  api.relPromote('np_mom', 'c_rl', 'c1');
+  const mom = api.relFriendSys('c1', { relKey: 'c_rl' });
+  assert.match(mom, /你是克劳德的母亲[^]*你对克劳德的好感 45\/100[^]*关系不好[^]*你的为人：苛刻、嘴上从不服软[^]*爸爸沈国华（已故）/);
+  const spy = api.relSpyNote('c1');
+  assert.match(spy, /母亲罗拉：你对ta 30\/100[^]*你们有矛盾；ta的为人：苛刻/);
+  assert.match(spy, /爸爸沈国华（已故，不会再有新的聊天）[^]*忌日是11月3日/);
+  assert.match(app, /\(typeof relFriendSys==='function'\?relFriendSys\(cid,f\):''\)/);
+  assert.match(app, /inote\+\(typeof relSpyNote==='function'\?relSpyNote\(id\):''\)/);
 });

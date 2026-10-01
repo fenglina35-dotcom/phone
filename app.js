@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1378'){
+if(window.__NORTH_SHELL_BUILD__!=='1380'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -539,7 +539,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1378 · 名片资料页';
+const APP_VER='v1380 · 剧场配角与家人设定';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1927,7 +1927,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1378&r=v1378-web-card-page-one-mom-1';
+  const url='sw.js?v=1380&r=v1380-web-theater-guest-facts-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -4907,7 +4907,7 @@ async function spyRefresh(id){if(_spyBusy){toast('正在刷新，别急~');retur
     const wn=whereNow(c);const tnote='现在是'+hm()+'。'+(wn?'按你的作息，你此刻应该：'+wn+'。location 必须符合这个时间点，别老是在公司/开会——上班才在单位，午休在吃饭，下班后到处跑、晚上回家。':'');
     const prev=S.spy[id];const pnote=prev?('\n上次偷看时你手机里的状态：地点「'+(prev.location||'')+'」；日记「'+(prev.diary||'')+'」；'+(prev.friends&&prev.friends.length?'最近加的人「'+prev.friends.join('、')+'」。':'')+'\n这次在上次基础上自然往前推进、有连续性，别整个推翻重来。'):'';
     const intro=(c._gotFromMe||[]).filter(Boolean);const inote=intro.length?('\n你微信里有'+S.me.name+'介绍你加的这些好友：'+intro.join('、')+'，wechat 里【一定要包含】你和其中一两个人的真实聊天（who 用ta们的名字），再加一两个别的人。'):'';
-    const prompt=tnote+pnote+inote+'\n你来扮演'+(c.remark||c.name)+'，根据你们最近的聊天、你的人设和此刻作息，生成此刻"你自己手机里"的真实私密内容，要具体、有生活气息、像真手机，能和聊天呼应，可带点没告诉对方的小心思。\n注意：微信里【不要】生成你和'+S.me.name+'的对话（那个系统会自动显示你们真实的聊天）；wechat 只写你和【别人】的聊天。只输出 JSON，不要解释：\n{'
+    const prompt=tnote+pnote+inote+(typeof relSpyNote==='function'?relSpyNote(id):'')+'\n你来扮演'+(c.remark||c.name)+'，根据你们最近的聊天、你的人设和此刻作息，生成此刻"你自己手机里"的真实私密内容，要具体、有生活气息、像真手机，能和聊天呼应，可带点没告诉对方的小心思。\n注意：微信里【不要】生成你和'+S.me.name+'的对话（那个系统会自动显示你们真实的聊天）；wechat 只写你和【别人】的聊天。只输出 JSON，不要解释：\n{'
       +'"location":"你此刻在哪(符合上面时间作息)",'
       +'"mood":"你此刻的心情/状态，一句",'
       +'"balance":你钱包当前的余额总数(一个合理的数字，符合你身份),'
@@ -13427,7 +13427,7 @@ function hisFriendReplyFallback(c,f){const rel=String(f&&f.relation||''),seed=St
 function hisFriendReplyText(raw){return cleanReply(raw).replace(/\s*\n+\s*/g,' ').trim().slice(0,500);}
 async function aiHisFriendReply(cid,fid){const key=hisFriendReplyKey(cid,fid),st=_hisReplyState[key]||(_hisReplyState[key]={version:1,doneVersion:0,running:false});if(st.running)return;st.running=true;
   try{while(true){const version=st.version,c=getC(cid),d=hisWxData(cid),f=(d.friends||[]).find(x=>x.id===fid);if(!c||!f)break;const hist=(f.msgs||[]).slice(-12).map(m=>({role:m.r==='me'?'user':'assistant',content:m.c}));
-      const sys='【你的身份】你是「'+f.name+'」，是「'+c.name+'」的'+(f.relation||'微信好友')+'。'+(f.persona?'你（'+f.name+'）的性格：'+f.persona+'。':'')+
+      const sys='【你的身份】你是「'+f.name+'」，是「'+c.name+'」的'+(f.relation||'微信好友')+'。'+(f.persona?'你（'+f.name+'）的性格：'+f.persona+'。':'')+(typeof relFriendSys==='function'?relFriendSys(cid,f):'')+
         '\n现在「'+c.name+'」在微信上找你聊天（其实是别人登录了'+c.name+'的号在冒充他，但你并不知道、你以为就是'+c.name+'本人）。对方（'+c.name+'）说的话是发给你的，你要【回应】他、而不是模仿他。'+
         '\n【铁律·身份不许串】你【从头到尾只是「'+f.name+'」本人】，第一人称"我"指的就是「'+f.name+'」。无论对方说什么、哪怕问"你是谁"，你都只能以「'+f.name+'」的身份回答（比如"我是你妹妹呀""我是老张啊"）。【绝对不许把自己说成「'+c.name+'」、不许冒充'+c.name+'、不许替'+c.name+'说话】。'+
         '\n按你和「'+c.name+'」的关系，自然、口语、简短地回（1~2句），像真人发微信。';
@@ -13525,17 +13525,17 @@ function relPromote(pid,cid,by){const p=relPerson(pid);if(!p||!cid)return;p.cid=
 /* ---- 给角色看的关系块 ---- */
 function relPromptFor(c,focus,opt){if(!c||!c.id)return '';opt=opt||{};const views=relLinksOf(c.id);if(!views.length)return '';const me=S.me.name||'她',text=String(focus||''),cap=relInit().detailCap,present=new Set((opt.present||[]).map(relKeyLive));
   /* 名单每次都带（很短，保证谁都认识）；详细资料只带：这次提到的人、在场的人、常驻的人、今天明天有生日纪念日的人，最多 cap 个 */
-  const hitOf=v=>{const n=relName(v.other),r=relRealName(v.other),t=String(v.otherIsMy||'').replace(/^亲/,''),dup=/^(.)\1$/.test(t)?t[0]:'';return (text&&(text.includes(n)||(r&&text.includes(r))))?3:(text&&t&&(text.includes(t)||(dup&&text.includes('你'+dup))))?2:0;};/* 「你妈」「你妹」也算提到 */
+  const hitOf=v=>{const n=relName(v.other),r=relRealName(v.other),t=String(v.otherIsMy||'').replace(/^亲/,''),dup=/^(.)\1$/.test(t)?t[0]:'';const kin=relKinGroup(t)||[];return (text&&(text.includes(n)||(r&&text.includes(r))))?3:(text&&t&&(text.includes(t)||(dup&&text.includes('你'+dup))||kin.some(k=>k.length>1?text.includes(k):/^[一-鿿]$/.test(k)&&(text.includes('你'+k)||text.includes('他'+k)||text.includes('她'+k)))))?2:0;};/* 「你妈」「老妈」也算提到「母亲」 *//* 「你妈」「你妹」也算提到 */
   const scored=views.map(v=>({v,s:hitOf(v)*1000+(present.has(v.other)?900:0)+(v.l.pinned?500:0)+(relDayNote(v.other)?800:0)})).filter(x=>x.s>0).sort((a,b)=>b.s-a.s||(+b.v.myFeel)-(+a.v.myFeel)).slice(0,cap).map(x=>x.v);
   const roster=views.slice().sort((x,y)=>(+!!y.l.pinned)-(+!!x.l.pinned)||(+y.myFeel)-(+x.myFeel)).slice(0,30).map(v=>(v.otherIsMy||'熟人')+relPromptName(v.other)+(relStatus(v.other)?'（'+relStatus(v.other)+'）':'')).join('、')+(views.length>30?'等'+views.length+'人':'');
   const detail=v=>{const o=v.other,name=relPromptName(o),brief=relBrief(o),p=relPerson(o)||relInit().people.find(x=>x.cid===o),oc=getC(o),day=relDayNote(o);
     let s='· '+name+(brief?'（'+brief+'）':'')+'：是你的'+(v.otherIsMy||'熟人')+'；你是ta的'+(v.iAmTheir||'熟人')+'。你对ta '+v.myFeel+'/100（'+relFeelText(v.myFeel)+'），ta对你 '+v.theirFeel+'/100（'+relFeelText(v.theirFeel)+'）'+(v.l.conflict?'，你们之间有矛盾':'')+'。';
     if(p&&p.status==='已故')s+='ta已经去世了'+(p.statusNote?'（'+p.statusNote+'）':'')+'，提起ta要符合这一点。';else if(p&&p.status==='失联')s+='你们已经失联'+(p.statusNote?'（'+p.statusNote+'）':'')+'。';else if(p&&p.status==='没有微信')s+='ta没有微信'+(p.statusNote?'（'+p.statusNote+'）':'')+'。';
-    if(day)s+='【'+day+'，你记得，可以自然提一句】';
+    {const dt=relDatesText(o);if(dt)s+='ta的'+dt+'（记准，别说错）。';}if(day)s+='【'+day+'，你记得，可以自然提一句】';
     if(v.l.how)s+='来历（你们俩都知道的事实）：'+v.l.how+'。';
     const st=(v.l.story||[]).filter(x=>x&&x.text).slice(-4).map(x=>(x.t?x.t+'：':'')+x.text);if(st.length)s+='过往（发生过的事，你们俩都知道）：'+st.join('；')+'。';
     if(v.myView)s+='你心里怎么看ta、怎么看这些事：'+v.myView+'（这是你自己的想法，ta不一定知道，也不一定这么想）。';
-    if(p&&p.persona)s+='ta的为人：'+String(p.persona).replace(/\s+/g,' ').slice(0,120)+'。';
+    {const per=relPersonaOf(o);if(per)s+='ta的为人：'+per.slice(0,120)+'。';}
     if(p&&p.myRel)s+='ta也是'+me+'的'+p.myRel+'。';
     if(oc&&!oc.deleted){const intro=(relPerson(o)||relInit().people.find(x=>x.cid===o)||{}).introducedBy;s+='ta现在在'+me+'的微信通讯录里（备注「'+(oc.remark||oc.name)+'」）'+(intro===c.id?'，是你把ta的名片推荐给'+me+'的':intro&&getC(intro)?'，是'+relPromptName(intro)+'推荐给'+me+'的':'')+'——在'+me+'手机里看到ta，就是这个人，不是'+me+'的亲戚或陌生人。';}
     else if(p&&!p.status)s+='ta不在'+me+'的微信里。';
@@ -13544,6 +13544,7 @@ function relPromptFor(c,focus,opt){if(!c||!c.id)return '';opt=opt||{};const view
   return '\n\n# 你的人际关系（确定的事实，任何场合都记得，别弄错谁是谁、谁是谁的谁）\n你的家人朋友：'+roster+'。'
     +(scored.length?'\n'+scored.map(detail).join('\n'):'')
     +'\n- 来历和过往是用名字写的客观经过，里面的名字是谁就是谁，按你自己的身份去理解（写的是你做的事，就是你做的）；「心里怎么看」才是你自己的视角。'
+    +'\n- 生日、忌日这些日子只按上面写的说；上面没写的就说记不太清，不要编一个日期。'
     +'\n- 平时不用主动提他们；聊到了、遇到了、到了他们的日子，再自然带上。说起或见到他们时，态度按好感来：好感低就冷淡、话少，好感高就亲热。'
     +(anyUnlocked?'\n- 关系会变：只有真的发生了让你和某人关系变化的事（吵架、和好、被感动、被伤到），才单独一行写 [关系|名字|+5|原因] 或 [关系|名字|-5|原因]，每次最多±'+REL_FEEL_STEP+'，别频繁用，这行不会显示出来。':'')
     +(canRec.length?'\n- 你可以把这些人的微信名片推荐给'+me+'：'+canRec.join('、')+'。想推荐时单独一行写 [推荐好友|名字|一句介绍]，名字要一样。已故、失联、没有微信的人不能推荐。':'');}
@@ -13576,7 +13577,7 @@ function relHisFriends(cid,d){let ch=false;relLinksOf(cid).forEach(v=>{const nam
   const sameKin=x=>!x.relKey&&(x.name===title||x.name===title.replace(/^亲/,'')||(kin&&(kin.includes(x.name)||kin.includes(String(x.relation||'').trim()))));
   let f=d.friends.find(mine)||d.friends.find(x=>x.name===name||x.name===relName(v.other))||d.friends.find(sameKin);/* 默认的「妈妈」好友、查手机同步来的「老妈」被关系网里的妈妈顶替，不会有两个妈妈 */
   if(gone){if(f&&mine(f)&&!(f.msgs&&f.msgs.length)){d.friends.splice(d.friends.indexOf(f),1);ch=true;}return;}/* 已故、失联、没有微信的人不在他的好友列表里 */
-  const persona=(relPerson(v.other)&&relPerson(v.other).persona||'').slice(0,100)+'（你们感情 '+v.myFeel+'/100，'+relFeelText(v.myFeel)+(v.l.conflict?'，有矛盾':'')+'，聊天语气照这个来）';
+  const persona=relPersonaOf(v.other).slice(0,100)+'（你们感情 '+v.myFeel+'/100，'+relFeelText(v.myFeel)+(v.l.conflict?'，有矛盾':'')+'，聊天语气照这个来）';
   if(!f){d.friends.push({id:'hf'+Math.random().toString(36).slice(2,8),name,relation:title,avatar:relAvatarSrc(v.other),persona,relKey:v.other,msgs:[]});ch=true;}
   else if(f.relKey!==v.other||f.name!==name||f.relation!==title||f.persona!==persona){f.relKey=v.other;f.name=name;f.relation=title;f.persona=persona;if(!f.avatar)f.avatar=relAvatarSrc(v.other);ch=true;}
   f=d.friends.find(x=>x.relKey===v.other);if(f){f.alias=Array.from(new Set((f.alias||[]).concat([title,title.replace(/^亲/,'')],kin||[]).filter(Boolean)));
@@ -13584,6 +13585,16 @@ function relHisFriends(cid,d){let ch=false;relLinksOf(cid).forEach(v=>{const nam
 function relAvatarSrc(k){const p=relPerson(k);if(p)return p.avatar||'';const c=getC(k);return c&&c.avatar||'';}
 /* 他登录我的微信时，通讯录里是他关系网里的人，要标出来 */
 function relLoginTag(viewer,k){const l=relLinkOf(viewer,k);if(!l)return '';const v=relView(l,relKeyLive(viewer)),p=relInit().people.find(x=>x.cid===k);return '｜这是你的'+(v.otherIsMy||'熟人')+(p&&p.introducedBy===viewer?'（你推荐给'+(S.me.name||'她')+'的）':'');}
+/* 人物的为人、生日忌日：人物卡加成微信好友后也从人物卡里取 */
+function relPersonOf(k){return relPerson(k)||relInit().people.find(x=>x.cid===k)||null;}
+function relPersonaOf(k){const p=relPersonOf(k),c=getC(k);return String((p&&p.persona)||(c&&c.persona)||'').replace(/\s+/g,' ').slice(0,160);}
+function relDatesText(k){const p=relPersonOf(k);if(!p)return '';const md=v=>{const m=String(v||'').match(/^(\d{1,2})-(\d{1,2})$/);return m?(+m[1])+'月'+(+m[2])+'日':'';},out=[];if(md(p.birthday))out.push('生日是'+md(p.birthday));if(md(p.memorial))out.push((p.status==='已故'?'忌日是':'纪念日是')+md(p.memorial));return out.join('，');}
+/* 查他手机：生成的聊天要照关系网来（谁去世了、关系好不好、对方什么性格） */
+function relSpyNote(cid){const views=relLinksOf(cid);if(!views.length)return '';return '\n\n# 你的家人朋友（关系网里定好的事实，手机里的内容必须照这个来）\n'+views.slice(0,20).map(v=>{const st=relStatus(v.other),per=relPersonaOf(v.other),dt=relDatesText(v.other);return '- '+(v.otherIsMy||'熟人')+relPromptName(v.other)+(st?'（'+st+(st==='已故'?'，不会再有新的聊天':'，微信上联系不上')+'）':'')+'：你对ta '+v.myFeel+'/100（'+relFeelText(v.myFeel)+'），ta对你 '+v.theirFeel+'/100'+(v.l.conflict?'，你们有矛盾':'')+(per?'；ta的为人：'+per:'')+(dt?'；'+dt:'');}).join('\n')+'\nwechat 里和这些人的聊天，who 就用上面的名字；语气和内容要符合好感和为人（关系不好就冷淡、话少、有火药味，不会突然很亲热）；已故的人不会有新的对话，别人提起ta也要对得上。';}
+/* 登录他的微信和关系网里的人聊天：对方知道自己是谁、对他什么态度 */
+function relFriendSys(cid,f){if(!f||!f.relKey)return '';const k=relKeyLive(f.relKey),c=getC(cid),l=relLinkOf(cid,k);if(!c||!l)return '';const v=relView(l,k),per=relPersonaOf(k),dt=relDatesText(k),st=(l.story||[]).filter(x=>x&&x.text).slice(-4).map(x=>(x.t?x.t+'：':'')+x.text);
+  const fam=relLinksOf(cid).filter(x=>x.other!==k).slice(0,12).map(x=>(x.otherIsMy||'熟人')+relPromptName(x.other)+(relStatus(x.other)?'（'+relStatus(x.other)+'）':'')).join('、');
+  return '\n【关系网里定好的事实，必须照着来】你是'+c.name+'的'+(v.iAmTheir||'熟人')+'，'+c.name+'是你的'+(v.otherIsMy||'熟人')+'。你对'+c.name+'的好感 '+v.myFeel+'/100（'+relFeelText(v.myFeel)+'）'+(l.conflict?'，你们之间有矛盾、关系不好':'')+'。'+(per?'你的为人：'+per+'。':'')+(dt?'你的'+dt+'。':'')+(l.how?'来历：'+l.how+'。':'')+(st.length?'过往：'+st.join('；')+'。':'')+(v.myView?'你心里的想法：'+v.myView+'。':'')+(fam?c.name+'的家人朋友：'+fam+'（已故的人不在了，说话要对得上）。':'')+'说话的语气、热不热情都按上面的好感和为人来，关系不好就别突然很亲热。';}
 /* ===== 页面 ===== */
 let _relEdit=null;
 function relOpen(key){go('relnet',key?{key}:{});}
@@ -14904,7 +14915,7 @@ function addHisCard(mid){let m,owner;for(const k in S.messages){const x=S.messag
 function hisCardFind(mid){for(const k in S.messages){const x=(S.messages[k]||[]).find(y=>y&&y.id===mid);if(x)return {m:x,owner:getC(String(k).split('#')[0])};}return {};}
 function renderHisCard(c){const {m,owner}=hisCardFind(c.mid);if(!m)return `<div class="hcard-page"><div class="hcard-nav"><button type="button" onclick="back()" aria-label="返回">‹</button></div><div class="hcard-empty">名片已失效</div></div>`;
   const his=m.dir==='his',rp=m.personId&&relPerson(m.personId),added=his?(m.added&&m.newId&&getC(m.newId)):(m.refId&&getC(m.refId)),g=rp&&rp.gender||(added&&added.gender),from=owner?(owner.remark||owner.name):'';
-  const sex=g==='女'?'<i class="hcard-sex f">♀</i>':g==='男'?'<i class="hcard-sex m">♂</i>':'';
+  const sex=g==='女'||g==='男'?`<i class="hcard-sex ${g==='女'?'f':'m'}" aria-label="${g}"><svg viewBox="0 0 24 24" width="24" height="24"><circle cx="12" cy="7.2" r="4.6"/><path d="M3.6 22c0-5.1 3.8-8.6 8.4-8.6s8.4 3.5 8.4 8.6z"/>${g==='女'?'<path d="M9.2 15.6l2.8 1.6 2.8-1.6v3.2l-2.8-1.6-2.8 1.6z" fill="#fff"/>':''}</svg></i>`:'';
   const btn=added?`<button type="button" class="hcard-btn" onclick="go('chat',{id:'${added.id}'})">发消息</button>`:his?(m.declined?`<div class="hcard-btn off">你没有添加</div>`:`<button type="button" class="hcard-btn" onclick="addHisCard('${m.id}')">添加到通讯录</button>`):`<div class="hcard-btn off">${m._accepted?'对方已添加':'等对方添加'}</div>`;
   return `<div class="hcard-page"><div class="hcard-nav"><button type="button" onclick="back()" aria-label="返回">‹</button>${his&&!added&&!m.declined?`<button type="button" class="hcard-more" onclick="hisCardMore('${m.id}')" aria-label="更多">···</button>`:''}</div>
     <div class="hcard-head">${av(m.avatar||(added&&added.avatar)||'🙂','')}<div><b>${esc(m.cname)}${sex}</b>${m.wxid?`<small>微信号：${esc(m.wxid)}</small>`:''}</div></div>

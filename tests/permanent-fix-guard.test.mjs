@@ -37,6 +37,8 @@ const PERMANENT_FIXES = [
   {release:"v1374",scope:"web",least:1,name:"关系网：各自心里怎么看只给自己看",marker:"if(v.myView)s+='你心里怎么看ta、怎么看这些事：'"},
   {release:"v1376",scope:"web",least:1,name:"多人剧场：先打字再选对谁说，以选的人为准",marker:"/* 先打字、再选对谁说、再点让TA回：以点回复时选的人为准 */",file:"cohab-theater.js"},
   {release:"v1378",scope:"web",least:1,name:"他微信里不会有两个妈妈（同义称呼、人物卡转好友）",marker:"const mine=x=>x.relKey&&relKeyLive(x.relKey)===v.other;"},
+  {release:"v1380",scope:"both",least:1,name:"剧场配角坏掉的JSON按气泡抠出来",marker:"function theaterLooseBubbles(source){",file:"cohab-theater.js"},
+  {release:"v1380",scope:"web",least:1,name:"他手机里家人聊天照关系网来",marker:"(typeof relFriendSys==='function'?relFriendSys(cid,f):'')"},
   {release:"v1368",scope:"both",least:1,name:"群聊点名的人先回，然后情侣角色",marker:"mentioned.forEach(c=>plan.push(pick(c,true)));if(couple&&mentioned.indexOf(couple)<0)plan.push(pick(couple,true));"},
   {release:"v1368",scope:"both",least:1,name:"合并调用走角色路线，失败退回单独调用",marker:"if(got.failed){"},
   {release:"v1366",scope:"both",least:1,name:"共同生活点一下出一句",marker:"function cohabTapWait(id,item,timing)"},
