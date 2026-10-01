@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1382'){
+if(window.__NORTH_SHELL_BUILD__!=='1384'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -488,9 +488,9 @@ function pfBubblePart(m,me,bstyle){if(m&&m.recalled)return `<div class="bubble r
   if(p.type==='image')return `<div class="imagemsg" onclick="event.stopPropagation();${p.img?`viewImg('${p.img||''}')`:''}">${isImg(p.img)?`<img src="${p.img}">`:(p.cleaned?'[图片缓存已清理]':'[图片]')}</div>`;
   if(p.type==='transfer'&&m&&m.to){const view=pfTransferView(m);
     if(view)return payCard('t',view,pfMsgIsMine(m),PF_CID_PREFIX+pfMsgFriendId(m));}
-  if(p.type==='redpacket'&&pfRpLucky(p)){const st=pfRpState(m,p);return rpCardHTML({me,opened:me?st.done:!!(st.mine||st.done),note:p.note,status:st.mine&&!me?'已领取':st.done?'已被领完':'',click:`rpOpen('pf','','${m.id}')`});}
+  if(p.type==='redpacket'&&pfRpLucky(p)){const st=pfRpState(m,p);return rpCardHTML({me,opened:me?st.done:!!(st.mine||st.done),note:p.note,status:st.mine&&!me?'已领取':st.done?'已被领完':'',click:`redpOpen('pf','','${m.id}')`});}
   if(p.type==='redpacket'){const done=!!m.received,byMe=String(m.receivedBy||'').toUpperCase()===String(phoneFriendState().id||'').toUpperCase(),grp=!m.to,status=done?(me?(grp?'已被领完':'已被领取'):(byMe||!grp?'已领取':'已被领完')):'';
-    return rpCardHTML({me,opened:done,note:p.note,status,click:`rpOpen('pf','','${m.id}')`});}
+    return rpCardHTML({me,opened:done,note:p.note,status,click:`redpOpen('pf','','${m.id}')`});}
   if(p.type==='transfer'){const done=!!m.received;return groupTransferCardHTML(pfGroupTransferOpts(m,p,me,done));}
   return bubbleSingleHTML(pfMsgPreview(m),'',bstyle,me);}
 function pfPatName(id,fallback){const p=phoneFriendState();id=(''+(id||'')).toUpperCase();if(id&&id===p.id)return '你';return (id&&pfNameById(id))||fallback||'成员';}
@@ -539,7 +539,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1382 · 名片头像对齐';
+const APP_VER='v1384 · 角色扮演能点开';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1927,7 +1927,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1382&r=v1382-web-card-avatar-1';
+  const url='sw.js?v=1384&r=v1384-web-roleplay-open-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -8578,7 +8578,7 @@ function gbubble(g,m){const me=m.senderId==='me';if(m.type==='sys')return rpSysI
   const q=groupQuoteBar(m.q);
   let inner;
   if(m.type==='redpacket'){const st=gRpState(m),opened=me?st.done:!!(st.mine||st.done);
-    inner=rpCardHTML({me,opened,note:m.note,status:st.mine&&!me?'已领取':st.done?'已被领完':'',click:`rpOpen('group','${g.id}','${m.id}')`});
+    inner=rpCardHTML({me,opened,note:m.note,status:st.mine&&!me?'已领取':st.done?'已被领完':'',click:`redpOpen('group','${g.id}','${m.id}')`});
   }else if(m.type==='transfer'){const got=m.received,forMe=!me&&(!m.to||m.to==='me'),toName=m.to&&m.to!=='me'?gnm(g,m.to):'';
     inner=groupTransferCardHTML({me,received:got,amount:m.amount,note:m.note,toName:forMe?'':toName,click:forMe&&!got?`gGrab('${g.id}','${m.id}')`:''});
   }else if(m.type==='sticker')inner=`<div class="stickermsg">${isImg(storedImageDisplaySource(m.img))?`<img src="${storedImageDisplaySource(m.img)}">`:''}${m.meaning?`<div class="stkm">${esc(m.meaning)}</div>`:''}</div>`;
@@ -14577,7 +14577,7 @@ function transferDetailGlyph(state){if(state!=='pending')return transferGlyph(st
 function payCard(kind,m,me,cid){const done=m.received;
   if(kind==='t'){const st=transferState(m),copy=transferCardCopy(m,me),memo=String(m.note||'').trim(),line=st==='pending'?(memo||copy):(memo?copy+' · '+memo:copy),amount=(+m.amount||0).toFixed(2),click=`event.stopPropagation();openTransferDetail('${cid||''}','${m.id}')`;return `<div class="wx-transfer-card ${me?'outgoing':'incoming'} state-${st}" role="button" tabindex="0" aria-label="转账 ¥${amount}，${copy}" onclick="${click}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${click}}"><div class="wx-transfer-main"><span class="wx-transfer-glyph">${transferGlyph(st)}</span><span class="wx-transfer-copy"><b>¥${amount}</b><em>${esc(line)}</em></span></div><div class="wx-transfer-foot">转账</div></div>`;}
   const refunded=!!(m.refunded||m.declined),opened=done||refunded,status=refunded?(me?'已被退还':'已退还'):done?(me?'已被领取':'已领取'):'';
-  return rpCardHTML({me,opened,note:m.note,status,click:`rpOpen('role','${cid||''}','${m.id}')`});}
+  return rpCardHTML({me,opened,note:m.note,status,click:`redpOpen('role','${cid||''}','${m.id}')`});}
 function transferMessageFind(cid,mid){
   if(String(cid||'').indexOf(PF_CID_PREFIX)===0){const hit=pfTransferFind(String(cid).slice(PF_CID_PREFIX.length),mid);
     const view=hit&&pfTransferView(hit.m);return view?{cid:PF_CID_PREFIX+hit.fid,m:view}:null;}
@@ -14632,7 +14632,8 @@ function rpResolve(scope,key,mid){
 function rpOverlayClose(){const el=document.getElementById('wxRpOverlay');if(el)el.remove();}
 function rpOverlayHost(){return document.querySelector('.screen')||document.body;}
 // 点红包：别人发给我的、还没领 → 弹開红包那一层；自己发的或已经领过的 → 直接看领取详情
-function rpOpen(scope,key,mid){const r=rpResolve(scope,key,mid);if(!r){toast('这个红包找不到了');return;}
+/* 红包和角色扮演以前都叫 rpOpen，后面的红包把角色扮演的覆盖了，点角色扮演会提示「这个红包找不到了」 */
+function redpOpen(scope,key,mid){const r=rpResolve(scope,key,mid);if(!r){toast('这个红包找不到了');return;}
   const multi=scope==='group'||!!r.lucky;
   if(multi?(r.received||(r.me&&r.done)):(r.me||r.received||r.refunded)){rpDetailOpen(scope,r.key,mid);return;}/* 群红包自己发的也能抢一个，和微信一样 */
   const late=multi&&(r.done||(r.st&&r.st.late));

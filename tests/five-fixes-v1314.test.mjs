@@ -163,7 +163,7 @@ test('真人好友的 1v1 转账用角色那张卡，点开是同一个详情页
     assert.match(grab(x, 'transferDetailAction'), /return pfTransferDetailAction\(String\(cid\)\.slice\(PF_CID_PREFIX\.length\),mid,action\)/);
     assert.match(x, /function pfTransferDetailAction\(fid,mid,action\)/);
     /* 红包（私聊和群）换成真红包卡片，点开走「開」；群里的转账仍是一人收的老卡片 */
-    assert.match(x, /if\(p\.type==='redpacket'\)\{[\s\S]{0,400}return rpCardHTML\(\{me,opened:done,note:p\.note,status,click:`rpOpen\('pf','','\$\{m\.id\}'\)`\}\);\}/);
+    assert.match(x, /if\(p\.type==='redpacket'\)\{[\s\S]{0,400}return rpCardHTML\(\{me,opened:done,note:p\.note,status,click:`redpOpen\('pf','','\$\{m\.id\}'\)`\}\);\}/);
     assert.match(x, /if\(p\.type==='transfer'\)\{const done=!!m\.received;return groupTransferCardHTML\(/);
   }
 });
