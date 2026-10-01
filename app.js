@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1392'){
+if(window.__NORTH_SHELL_BUILD__!=='1394'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -539,7 +539,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1392 · 角色抖音头像';
+const APP_VER='v1394 · 抖音头像放进菜单';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1928,7 +1928,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1392&r=v1392-web-douyin-role-avatar-1';
+  const url='sw.js?v=1394&r=v1394-web-douyin-avatar-menu-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -6957,7 +6957,6 @@ function dyUserBack(){try{if(cur().p==='dyuser')return back();}catch(_){}dySubCl
 function dyUserDM(){const p=dyPersonFind(dyUserKey());if(!p)return;
   try{if(cur().p==='dyuser')back();}catch(_){}
   _dySub='';openDyDMName(p.name,p.cid||null,p.avatar||'');}
-function dyRoleAvatarMenu(cid){const c=getC(cid);if(!c)return;openModal(`<h3>${esc(c.remark||c.name)}的抖音头像</h3><div class="hint">只换抖音里的头像，微信头像不变。${c.dyAvatar?'现在用的是单独设置的抖音头像。':'现在跟微信头像一样。'}</div><div class="btns" style="flex-direction:column;gap:8px"><button class="btn p" onclick="closeModal();dyRoleAvatarPick('${cid}')">从相册选一张</button>${c.dyAvatar?`<button class="btn g" onclick="closeModal();dyRoleAvatarReset('${cid}')">恢复用微信头像</button>`:''}<button class="btn g" onclick="closeModal()">取消</button></div>`);}
 function dyRoleAvatarPick(cid){pickFile('image/*',async f=>{const c=getC(cid);if(!c)return;try{c.dyAvatar=await compress(f,300,.8);save();render();toast('抖音头像已换 🎨');}catch(_){toast('这张图片读不了，换一张试试');}});}
 function dyRoleAvatarReset(cid){const c=getC(cid);if(!c)return;delete c.dyAvatar;save();render();toast('已恢复用微信头像');}
 function dyUserView(){const p=dyPersonFind(dyUserKey());
@@ -6976,7 +6975,7 @@ function dyUserView(){const p=dyPersonFind(dyUserKey());
   return `<div class="dyus">
     <div class="dyus-cover${ownImg?' has-img':''}" style="${isImg(bg)?`background-image:url(${bg})`:''}">
       <div class="dyus-top dy-safe-nav2"><i onclick="dyUserBack()">‹</i><span class="dyus-poke" onclick="dyOpenUpdate()">☞ 求更新</span><i onclick="dyOpenMeSearch()">${svgIc('search',19,ink,2)}</i><i onclick="dyUserMenu()">${svgIc('dots',19,ink,2)}</i></div>
-      <div class="dyus-id">${p.cid&&getC(p.cid)?`<span class="dyus-avedit" onclick="dyRoleAvatarMenu('${p.cid}')">${dyFace(dyRA(p.cid,p.avatar),'lg')}<i>换</i></span>`:dyFace(dyRA(p.cid,p.avatar),'lg')}<div class="dyus-name"><b>${esc(p.name)}</b><span onclick="dyUserCopyId()">抖音号：${esc(dyPersonDyid(p))} ⧉</span></div></div>
+      <div class="dyus-id">${dyFace(dyRA(p.cid,p.avatar),'lg')}<div class="dyus-name"><b>${esc(p.name)}</b><span onclick="dyUserCopyId()">抖音号：${esc(dyPersonDyid(p))} ⧉</span></div></div>
     </div>
     <div class="dyus-body">
       <div class="dyus-stats"><b>${dyNum(likes)}</b><span>获赞</span><b>${dyNum(follows)}</b><span>关注</span><b>${dyNum(fans)}</b><span>粉丝</span></div>
@@ -7074,6 +7073,7 @@ function dyUserMenu(){const p=dyPersonFind(dyUserKey());if(!p)return;
     <button class="dybtn out" onclick="closeModal();dyUserIPEdit()">改 IP 属地 / 性别</button>
     <button class="dybtn out" onclick="closeModal();dyUserCoverChange()">更换主页背景</button>
     ${dyPersonCover(p)?'<button class="dybtn out" onclick="closeModal();dyUserCoverReset()">恢复默认背景</button>':''}
+    ${p.cid&&getC(p.cid)?`<button class="dybtn out" onclick="closeModal();dyRoleAvatarPick('${p.cid}')">更换抖音头像（微信头像不变）</button>${getC(p.cid).dyAvatar?`<button class="dybtn out" onclick="closeModal();dyRoleAvatarReset('${p.cid}')">恢复用微信头像</button>`:''}`:''}
     ${p.cid?`<button class="dybtn out" onclick="closeModal();dyGenContactVideo('${p.cid}')">让 TA 发一条作品</button>`:''}
     <button class="btn g" onclick="closeModal()">关闭</button></div>`);}
 /* ===== 群成员：独立一页 ===== */

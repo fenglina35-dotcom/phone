@@ -18,7 +18,11 @@ for (const [label, path] of [['web', '../app.js'], ['private', '../native/privat
     for (const k of ['v', 'cm', 'd', 'x']) assert.ok(app.includes(`dyFace(dyRA(${k}.cid,${k}.avatar),'sm')`), k);
     assert.doesNotMatch(app, /dyFace\((?:v|cm|d|x)\.avatar,'sm'\)/);
     assert.match(app, /if\(c\)return c\.dyAvatar\|\|c\.avatar;\}return m\.avatar\|\|'';\}/, 'douyin group members');
-    assert.match(app, /onclick="dyRoleAvatarMenu\('\$\{p\.cid\}'\)"/);
+    // v1394: the option lives in the top-right ··· menu, not on the avatar
+    assert.doesNotMatch(app, /dyRoleAvatarMenu|dyus-avedit/);
+    const menu = app.slice(app.indexOf('function dyUserMenu('), app.indexOf('/* ===== 群成员：独立一页 ===== */'));
+    assert.match(menu, /onclick="closeModal\(\);dyRoleAvatarPick\('\$\{p\.cid\}'\)">更换抖音头像（微信头像不变）/);
+    assert.match(menu, /getC\(p\.cid\)\.dyAvatar\?`<button class="dybtn out" onclick="closeModal\(\);dyRoleAvatarReset\('\$\{p\.cid\}'\)">恢复用微信头像/);
     assert.match(app, /function dyRoleAvatarPick\(cid\)\{pickFile\('image\/\*',async f=>\{const c=getC\(cid\);if\(!c\)return;try\{c\.dyAvatar=await compress\(f,300,\.8\);/);
     assert.match(app, /function dyRoleAvatarReset\(cid\)\{const c=getC\(cid\);if\(!c\)return;delete c\.dyAvatar;/);
   });
