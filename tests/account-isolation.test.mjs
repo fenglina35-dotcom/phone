@@ -44,7 +44,7 @@ assert.match(source, /content:'你被'\+\(c\.remark\|\|c\.name\)\+'拉黑了'/);
 assert.match(source, /function extremeLoveOn\(\)\{return false;\}/);
 assert.match(source, /s\+=_main\?memoryResetPrompt\(c\):''/);
 assert.match(source, /s\+=_main\?friendOriginPrompt\(c\):''/);
-assert.match(source, /s\+=_main\?friendReaddPrompt\(c\):''/);
+assert.match(source, /s\+=_main\?friendReaddPrompt\(c\)\+\(typeof pursuitPromptRecent==='function'\?pursuitPromptRecent\(c\):''\):''/);
 assert.match(source, /const _wechatLive=_main\?wechatLiveScene\(c\):null/);
 assert.match(source, /_offlineLive=_wechatLive&&_wechatLive\.kind==='offline'\?_wechatLive\.data:null/);
 assert.match(source, /_cohabLive=_wechatLive&&_wechatLive\.kind==='cohab'\?_wechatLive\.data:null/);

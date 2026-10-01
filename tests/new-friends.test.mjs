@@ -25,7 +25,7 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-assert.match(source, /APP_VER='v1394 · 抖音头像放进菜单'/);
+assert.match(source, /APP_VER='v1396 · 拉黑后追回'/);
 assert.match(source, /friendDiscovery:\{enabled:false,freq:180,max:2/);
 assert.match(source, /else if\(c\.p==='newfriends'\)html=renderNewFriends\(\)/);
 assert.match(source, /好友申请与最近添加/);
@@ -47,7 +47,7 @@ assert.match(html, /\.nf-page/);
 assert.match(html, /\.nf-card/);
 assert.match(html, /\.nf-entry-icon/);
 assert.doesNotMatch(source, /每一次认识，都有来意/);
-assert.match(source, /content:wasReadd\?'你重新通过了'\+c\.name\+'的好友申请':'你刚刚通过了'\+c\.name\+'的好友申请'/);
+assert.match(source, /content:opt\.forced\?\(c\.remark\|\|c\.name\)\+'远程操控了你的手机，自己通过了好友申请':wasReadd\?'你重新通过了'\+c\.name\+'的好友申请':'你刚刚通过了'\+c\.name\+'的好友申请'/);
 assert.match(functionSource("acceptFriend"), /initialFriendInnerThought\(c,\{kind:r\.kind,readd:wasReadd,at:now\}\)/);
 assert.match(functionSource("wxNearbyContact"), /initialFriendInnerThought\(c,\{kind:'nearby',at:now\}\)/);
 assert.match(source, /if\(r\.kind==='created'&&!coupleHasActiveRole\(\)\)S\.couple=coupleDefaultState\(c\.id\)/);

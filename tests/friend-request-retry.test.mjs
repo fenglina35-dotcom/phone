@@ -13,8 +13,10 @@ assert.match(source, /function friendRetryAfterIgnore\(c,attempt,now\)/);
 assert.match(source, /function friendRequestSweep\(\)/);
 assert.match(source, /setInterval\(friendRequestSweep,5000\)/);
 assert.doesNotMatch(source, /setInterval\(friendRequestSweep,1000\)/);
-assert.match(source, /if\(isLover\(c\)\)\{friendRetryReset\(c\)/);
-assert.match(source, /function rejectFriendRequestRecord\(rid\)[\s\S]*?friendRetryAfterIgnore\(c,r\.attempt,Date\.now\(\)\)/);
+// v1396: lovers no longer get a fixed 3-request timer on block; the pursuit decides when to reapply
+assert.doesNotMatch(source, /if\(isLover\(c\)\)\{friendRetryReset\(c\)/);
+assert.match(source, /if\(c\.blocked\)\{const now=Date\.now\(\);friendMetaSet\(c,'blockedAt',now\);if\(isMain\(\)\)pursuitStart\(c,now\);/);
+assert.match(source, /function rejectFriendRequestRecord\(rid\)[\s\S]*?if\(pursuitActive\(c\)\)\{[\s\S]*?\}else if\(friendMainBlocked\(c\)\)friendRetryAfterIgnore\(c,r\.attempt,Date\.now\(\)\)/);
 assert.match(source, /if\(\(\+st\.attempt\|\|0\)>=3\)return/);
 assert.doesNotMatch(source, /8000\+Math\.random\(\)\*9000/);
 
@@ -69,7 +71,7 @@ assert.equal(sweepSandbox.S.contacts[0]._friendReqRetry.nextAt, 0);
 assert.equal(sweepSaveCalls, 1);
 assert.match(source, /async function createFriendRequest\(id\)\{const c=getC\(id\);if\(!friendMainBlocked\(c\)\)return/);
 assert.match(source, /function rejectFriendRequestRecord\(rid\)[\s\S]*?if\(r\.kind==='readd'&&c\)\{[\s\S]*?if\(friendMainBlocked\(c\)\)friendRetryAfterIgnore/);
-assert.match(source, /function acceptFriend\(rid\)[\s\S]*?friendMainUnblock\(c\)/);
+assert.match(source, /function acceptFriend\(rid,opt\)[\s\S]*?friendMainUnblock\(c\)/);
 
 const accountSandbox = {
   active: "alt_1",

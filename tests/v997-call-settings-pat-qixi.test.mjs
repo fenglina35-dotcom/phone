@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1394 · 抖音头像放进菜单'/);
+  assert.match(app,/APP_VER='v1396 · 拉黑后追回'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1394-web-external-tts-relay-1/);
-  assert.match(html,/sw\.js\?v=1394&r=v1394-web-douyin-avatar-menu-1/);
+  assert.match(html,/north-sw-reloaded-1396-web-external-tts-relay-1/);
+  assert.match(html,/sw\.js\?v=1396&r=v1396-web-block-pursuit-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{

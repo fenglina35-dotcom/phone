@@ -67,13 +67,14 @@ assert.match(functionSource('initiativeMaybeSend'), /callChance=effCallProb\(c\)
 assert.match(functionSource('initiativeMaybeSend'), /roleOnlineProactiveBlocked/, 'the restored call chance must not bypass live scene and call guards');
 assert.match(source, /function blockedPhoneStart\(c,now\)[\s\S]*?dueAt:t\+20000[\s\S]*?max:3/);
 assert.match(source, /function blockedPhoneRetry\(call,why\)[\s\S]*?Date\.now\(\)\+20000/);
-assert.match(source, /if\(isMain\(\)\)blockedPhoneStart\(c,now\)/);
+// v1396: blocking starts the role's own pursuit (calls are one of its choices) instead of the fixed 3-call chase
+assert.match(source, /if\(isMain\(\)\)pursuitStart\(c,now\)/);
 assert.match(source, /blockedOutreach:true,attempt,maxAttempts/);
 
 assert.match(source, /function friendRejectRemember\(c,r\)/);
 assert.match(source, /function friendReqUnique\(c,text,attempt\)/);
 assert.match(source, /if\(r\.kind==='readd'&&c\)\{friendRejectRemember\(c,r\)/);
-assert.match(source, /s\+=_main\?friendReaddPrompt\(c\):''/);
+assert.match(source, /s\+=_main\?friendReaddPrompt\(c\)\+\(typeof pursuitPromptRecent==='function'\?pursuitPromptRecent\(c\):''\):''/);
 assert.match(source, /friendReaddReplyNeedsRepair\(c,_userText,content\)/);
 
 assert.doesNotMatch(source, /function checkFollowups\(\)\{if\(wechatNaturalOn\(\)/);
