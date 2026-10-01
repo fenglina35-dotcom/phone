@@ -11,9 +11,9 @@ const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest
 const webView = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web source keeps private 1.0.315 compatibility', () => {
-  assert.match(app, /APP_VER='v1380 · 剧场配角与家人设定'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='1380'/);
-  assert.match(sw, /const BUILD='1380'/);
+  assert.match(app, /APP_VER='v1382 · 名片头像对齐'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='1382'/);
+  assert.match(sw, /const BUILD='1382'/);
   assert.doesNotMatch(project, /CURRENT_PROJECT_VERSION = 40;|MARKETING_VERSION = 1\.0\.40;/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 426;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.426;/g) || []).length, 12);

@@ -8,7 +8,7 @@ const pip=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/Ph
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
 test('v1184 web source keeps private 1.0.315 compatibility',()=>{
-  assert.match(app,/APP_VER='v1380 · 剧场配角与家人设定'/);
+  assert.match(app,/APP_VER='v1382 · 名片头像对齐'/);
   assert.match(project,/CURRENT_PROJECT_VERSION = 426;/);
   assert.match(project,/MARKETING_VERSION = 1.0.426;/);
 });

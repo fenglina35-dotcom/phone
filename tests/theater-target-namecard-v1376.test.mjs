@@ -36,3 +36,8 @@ test('v1378: his recommended card opens its own page with 添加到通讯录 and
   assert.match(page, /onclick="go\('chat',\{id:'\$\{added\.id\}'\}\)">发消息<\/button>/);
   assert.ok(app.includes("else if(c.p==='hiscard')html=renderHisCard(c);"));
 });
+
+test('v1382: the card page avatar is not pushed down (no gradient strip on top)', () => {
+  assert.match(html, /\.hcard-head>div:not\(\.avatar\)\{min-width:0;padding-top:4px\}\.hcard-head \.avatar\{padding:0;overflow:hidden\}/);
+  assert.doesNotMatch(html, /\.hcard-head>div\{min-width:0;padding-top:4px\}/);
+});
