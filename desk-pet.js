@@ -457,7 +457,7 @@ function renderDeskPetPage(){css();const p=ensureCfg(),r=role(),col=DP_COLORS[p.
   seg=(k,l)=>`<button class="${p.size===k?'on':''}" onclick="deskPetSize('${k}')">${l}</button>`;
   return `<div class="nav ios-settings-nav"><span class="l" onclick="back()">‹</span><span class="t">桌面宠物</span><span class="r"></span></div><div class="scroll ios-settings dp-page">
   <div class="dp-hero"><div class="dp-root breathe" data-eyes="open" style="width:${VB_W*6}px;height:${VB_H*6}px;--dp-c:${col[0]};--dp-d:${col[1]};--dp-l:${col[2]}"><div class="dp-flip">${spriteSVG()}</div><i class="dp-shadow"></i></div>
-   <b>${escH(petName())}</b><small>屏幕里的虚拟小机器人，和实体的小 K 是分开的</small></div>
+   <b>${escH(petName())}</b></div>
   <div class="dp-group"><div class="dp-row"><span>开启桌面宠物</span><span class="sw ${p.on&&r?'on':''}" style="flex-shrink:0" onclick="deskPetToggle()"></span></div></div>
   <div class="dp-group">
    <div class="dp-row"><span>名字</span><input id="dp_name" maxlength="10" value="${escH(petName())}" placeholder="${DP_DEFAULT_NAME}" onchange="deskPetRename(this.value)"></div>

@@ -124,14 +124,14 @@ test('private entries carry diagnostics 336 and every iOS target carries build 3
   assert.equal(index, alias);
   assert.match(index, /private-runtime-diagnostics\.js\?v=339/);
   assert.match(overlay, /336-daily-file-backup/);
-  assert.match(webView, /1\.0\.431 \(431\)/);
-  assert.match(bridge, /1\.0\.431 \(431\)/);
+  assert.match(webView, /1\.0\.432 \(432\)/);
+  assert.match(bridge, /1\.0\.432 \(432\)/);
   assert.equal(
-    (project.match(/CURRENT_PROJECT_VERSION = 431;/g) || []).length,
+    (project.match(/CURRENT_PROJECT_VERSION = 432;/g) || []).length,
     12
   );
   assert.equal(
-    (project.match(/MARKETING_VERSION = 1.0.431;/g) || []).length,
+    (project.match(/MARKETING_VERSION = 1.0.432;/g) || []).length,
     12
   );
 });

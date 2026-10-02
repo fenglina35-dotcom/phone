@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1407'){
+if(window.__NORTH_SHELL_BUILD__!=='1409'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -563,7 +563,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1407 · 桌面宠物';
+const APP_VER='v1409 · 节日心意';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1930,7 +1930,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1407&r=v1407-private-desk-pet-1';
+  const url='sw.js?v=1409&r=v1409-private-holiday-care-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -2440,7 +2440,7 @@ function buildSystem(c,opt){
   if(_main){const homePrompt=smartHomeRolePrompt(c);if(homePrompt)s+=homePrompt;}
   s=s.replace('- 注意：如果你们【已经在通话中】，就不要再打了。','- 注意：只有系统明确告诉你当前正在通话、或当前就是通话界面，才算已经在通话中；历史里有电话记录不代表现在还在打。上一通结束后，如果ta说打电话/打视频，你要重新用 [来电|语音] 或 [来电|视频]，不要说已经在打了。');
   if(S.settings.timeAware)s+='\n\n# 时间感知补充\n当前时间事实已经写在上面；请把它自然融进语气里，不要反复机械报时。';
-  const _tod=todayStr(),_hol=holidayOf(_tod);if(_hol)s+='\n\n# 节日\n今天是'+_hol+(_natural?'。这只是日期事实，不规定你必须祝福、发红包或表现特定情绪。':'，可以应景祝福。');
+  const _tod=todayStr(),_hol=holidayOf(_tod),_coupleRole=_main&&S.couple&&S.couple.cid===c.id,_soon=_coupleRole?holidayUpcoming(3):[];if(_hol)s+='\n\n# 节日\n今天是'+_hol+(_coupleRole?'。你是'+S.me.name+'的恋人，记得这个日子，聊天时自然地带上节日的心意。':_natural?'。这只是日期事实，不规定你必须祝福、发红包或表现特定情绪。':'，可以应景祝福。');if(_soon.length)s+='\n\n# 快到的节日\n'+_soon.map(x=>(x.inDays===1?'明天':x.inDays===2?'后天':x.inDays+'天后')+'（'+x.date+'）是'+x.name).join('；')+'。你心里记着，可以提前惦记、想想要怎么陪'+S.me.name+'过；当天会主动去祝福。';
   if(isLover(c)){const _ev=S.calendar.filter(e=>e.date>=_tod).slice(0,5);s+='\n\n# 日历能力\n你可以在需要时用一行 [日程|YYYY-MM-DD|事项] 帮'+S.me.name+'记普通日程。只有当你和'+S.me.name+'在对话里明确共同约定了某年某月某日举行婚礼、而且你本人接受这项约定时，才可以单独输出 [婚礼日程|YYYY-MM-DD|HH:MM]，把结婚日期写入日历；若只约定日期没有时间，使用 19:00。随口讨论、假设、试探或单方面提议不能登记。登记后不要立即发送婚礼卡片，到了约定日期和时间才由你主动发来可点击的婚礼形式选择卡。';if(_ev.length)s+='\n\n# '+S.me.name+'的日程\n'+_ev.map(e=>e.date+' '+(e.time?e.time+' ':'')+e.title+(e.type==='period'?'(姨妈期)':e.type==='wedding'?'(约定婚礼)':'')).join('；');const _pf=periodFactsText();if(_pf)s+='\n\n# '+S.me.name+'的经期记录\n'+_pf+'。这些是ta亲自记录的生活事实：只记录开始时，你知道本次仍在进行；补上结束日期后，你知道已经结束以及实际持续天数。你可以结合人设照顾和回应，但不要诊断、吓唬或把预计日期说成一定会发生。只有临近预计日期的专门提醒事件到来时才主动提醒一次，普通聊天不要反复提。';}
   // 久未回复感知
   const lu=[...msgs(c.id)].reverse().find(m=>m.role==='user');
@@ -2476,7 +2476,7 @@ function buildSystem(c,opt){
   s+='\n- 情绪被追问时：如果你的心情条/内心已经是不开心、吃醋、低落、生气、委屈、冷淡，'+S.me.name+'问“怎么了/是不是不开心/别冷着我/为什么这样”等，你可以嘴硬、可以慢慢说，但不能一直只回“没事/没有/没有不开心”。第一次可以压着，第二次以后要露出一点真实原因或在意点，或者明确说“我现在不想说/怕说了你难受/不是你的错但我有点闷”，让ta能继续哄你、慢慢挖出来。';
   if(!c.noSticker&&(S.settings.stkFreq==null?2:S.settings.stkFreq)>0){const _sf=(S.settings.stkFreq==null?2:S.settings.stkFreq);const _fw={1:'偶尔发、别频繁',2:'合适的时候自然地发',3:'心情上来就发、比较爱发'}[_sf];
     s+='\n- 表情包：你也能像真人一样发表情包。想发时【单独一行】写 [表情|此刻心情或含义]（如 [表情|开心]、[表情|害羞]、[表情|生气]、[表情|求抱抱]、[表情|无语]），系统会从你的表情库挑一张贴合的发出去。根据你当下心情自然地发（'+_fw+'），别每句都发、别硬发。\n- 如果你喜欢'+S.me.name+'刚发给你的某张表情，可以【单独一行】写 [收藏表情]，把ta那张存进你自己的表情库，以后你也能发它。';}
-  s+='\n- 聊天背景：'+S.me.name+'让你把某张照片换成你们的聊天背景时（「把这张换成背景」「拿这张当背景」「帮我换个背景」都算），你必须在回复里【单独一行】写 [换背景]，系统才会真的替ta换上去。【只在嘴上说「换好了」是没有用的】，ta那边一点变化都不会有，等于骗ta。换的是你们聊天记录里真出现过的照片（ta发的、你发的都行），所以记录里一张照片都没有的时候，就老实说让ta先发一张，别硬写这个标签。ta没提这件事的时候绝对不要写。';
+  s+='\n- 聊天背景：'+S.me.name+'让你把某张照片换成你们的聊天背景时（「把这张换成背景」「拿这张当背景」「帮我换个背景」都算），你必须在回复里【单独一行】写 [换背景]，系统才会真的替ta换上去。【只在嘴上说「换好了」是没有用的】，ta那边一点变化都不会有，等于骗ta。换的是你们聊天记录里真出现过的照片（ta发的、你发的都行），所以记录里一张照片都没有的时候，就老实说让ta先发一张，别硬写这个标签。ta没提这件事的时候绝对不要写；ta只是发了照片、没用文字明确说「换背景」，那就只是给你看照片，绝对不是让你换背景。';
   if(S.settings.imgGen&&imageGenerationAvailable())s+='\n- 发真实照片：当'+S.me.name+'让你发照片/自拍，或你自己想给ta看点什么（你的样子、正在做的事、看到的风景等）时，就【单独一行】写 [图片|尽量具体的画面描述]，系统会真的生成一张照片发给ta。\n  · 先结合最近几句对话提取主体、颜色、款式和构图；“对/是/重新发/再拍”是在确认或重试前面的要求，不能把前面的关键词丢掉。\n  · 如果ta说“小猫/猫/狗/宠物/物品/食物/桌面/房间/窗外/文件/礼物”等，就只拍那个主体；ta没明确要求你入镜，你就不要入镜。\n  · 如果ta说“我想看你/看看你/自拍/拍你自己”，图片必须是当前角色本人、符合你的性别和人设，不允许换成随机人物。\n  · 如果ta让你穿衣服或戴可穿戴物品给ta看，就写成你实际穿戴后的照片；只有ta明确说物品本身、摘下来或单独拍物品时，才只拍物品。构图按ta说的来，没指定就自然选择。\n  · ta问“你在干嘛/忙什么”时，优先拍你眼前正在做的事、桌面、工具或手边环境。\n  · 照片地点、背景和光线要跟当前真实时间、此刻活动及聊天内容对得上；照片像当前角色本人用手机随手拍，不像第三人摆拍。\n  · '+roleImageStudioRoleLine(c)+'想发就发，别一次发一堆。';
   else s+='\n- 发图文照片：当前没有可用的图片生成模型。想发照片时仍可【单独一行】写 [图片|具体画面描述]，系统会发出一张白色图文照片卡；它在聊天里算图片，但不是生成的像素照片。描述要具体、符合当前时间与聊天事实，只写你确实知道的画面，不得捏造陌生人物、地点或描述外细节，也不要谎称已经生成了真实照片。';
   s+=rolePhotoFrequencyPrompt(c);
@@ -5306,7 +5306,14 @@ function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMo
 function coupleDays(startDate,now){const m=(''+(startDate||'')).match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!m)return 0;
   const d=new Date(now||Date.now()),start=Date.UTC(+m[1],+m[2]-1,+m[3]),today=Date.UTC(d.getFullYear(),d.getMonth(),d.getDate());
   return Math.max(1,Math.floor((today-start)/86400000)+1);}
-function holidayOf(dateStr){const md=dateStr.slice(5);return HOLIDAYS[md]||'';}
+/* 农历节日每年公历日期不同，按年列出（2025–2028） */
+const LUNAR_FESTIVALS={'2025-01-28':'除夕','2025-01-29':'春节','2025-02-12':'元宵节','2025-05-31':'端午节','2025-08-29':'七夕','2025-10-06':'中秋节','2026-02-16':'除夕','2026-02-17':'春节','2026-03-03':'元宵节','2026-06-19':'端午节','2026-08-19':'七夕','2026-09-25':'中秋节','2027-02-05':'除夕','2027-02-06':'春节','2027-02-20':'元宵节','2027-06-09':'端午节','2027-08-08':'七夕','2027-09-15':'中秋节','2028-01-25':'除夕','2028-01-26':'春节','2028-02-09':'元宵节','2028-05-28':'端午节','2028-08-26':'七夕','2028-10-03':'中秋节'};
+function holidayOf(dateStr){const md=String(dateStr||'').slice(5);return LUNAR_FESTIVALS[dateStr]||HOLIDAYS[md]||'';}
+/* 情侣角色在这些日子一定会送心意（礼物 / 红包 / 转账），其余节日只保证祝福 */
+function holidayCareImportant(name){return /情人节|520|七夕|春节|除夕|中秋|圣诞|生日/.test(String(name||''));}
+/* 什么时候来祝福：除夕、平安夜、跨年等晚上；重要节日和生日如果她零点还醒着就零点祝福；其余早上 7:30 以后 */
+function holidayCareWindow(name,now){const h=now.getHours()+now.getMinutes()/60,n=String(name||'');if(/跨年/.test(n))return h>=21;if(/除夕|平安夜/.test(n))return h>=18;if(holidayCareImportant(n)||/元旦/.test(n))return h<1.5||h>=7.5;return h>=7.5;}
+function holidayUpcoming(days){const out=[],t=new Date();for(let i=1;i<=(days||3);i++){const d=new Date(t.getFullYear(),t.getMonth(),t.getDate()+i),k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'),h=holidayOf(k);if(h)out.push({date:k,name:h,inDays:i});}return out;}
 /* ---------- 每日心情表 ---------- */
 const MOOD_EMOJIS=['😊','🥰','😌','😐','😔','😣','😡','😭','😴','🤒'];
 function moodToday(who){pruneDailyMood();const t=todayStr();return (S.mood||[]).find(m=>m.date===t&&m.who===who);}
@@ -5376,10 +5383,10 @@ function periodForecastReminder(c,est){if(!c||c.blocked||roleOnlineProactiveBloc
 function checkCalendar(){if(typeof weddingCalendarTick==='function')(S.calendar||[]).filter(e=>e&&e.type==='wedding').forEach(e=>weddingCalendarTick(e));if(offlineFocusActive())return;if(pruneDailyMood())save();if(!S._calFired)S._calFired={};const F=S._calFired;const today=todayStr(),now=new Date(),h=now.getHours(),nowTime=String(h).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0'),coupleCid=S.couple&&S.couple.cid||'',coupleRole=coupleCid&&getC(coupleCid);if(coupleRole&&!coupleRole.blocked)coupleGoalStore().forEach(g=>{const key=coupleGoalKey(g,today);if(coupleGoalActive(g,today)&&!coupleGoalDone(g,today)&&String(g.time||'20:00')<=nowTime&&F[key]!==today)calendarDeliver(key,today,()=>coupleGoalReminder(coupleRole,g,today));});if(h<9)return;
   const hol=holidayOf(today);
   S.contacts.forEach(c=>{if(c.deleted||c.blocked)return;
-    if(hol&&F['hol_'+c.id]!==today&&c.id!==coupleCid)calendarDeliver('hol_'+c.id,today,()=>holidayGreet(c.id,hol));
+    /* 过节只有情侣角色会主动来祝福，其他角色不打扰（v1408） */
   });
   S.calendar.forEach(e=>{if(e.type!=='wedding'&&e.date===today&&e.contactId&&F[e.id]!==today){const c=getC(e.contactId);if(c&&!c.blocked)calendarDeliver(e.id,today,()=>remindEvent(e.contactId,e));}});
-  if(coupleCid){const c=getC(coupleCid);if(c&&!c.blocked){if(hol&&F['gift_hol_'+coupleCid]!==today)calendarDeliver('gift_hol_'+coupleCid,today,()=>occasionGift(coupleCid,hol,today));const md=today.slice(5);(S.couple.anniversaries||[]).forEach((a,i)=>{if(a.date.slice(5)===md&&F['anniv_'+i]!==today)calendarDeliver('anniv_'+i,today,()=>occasionGift(coupleCid,'你们的纪念日「'+a.title+'」',today));});const est=periodEstimate(),until=est?calDayDiff(est.date,today):NaN,pkey=est?'period_forecast_'+coupleCid+'_'+est.date:'';if(est&&until>=0&&until<=3&&!F[pkey])calendarDeliver(pkey,today,()=>periodForecastReminder(c,est));}}
+  if(coupleCid){const c=getC(coupleCid);if(c&&!c.blocked){if(hol&&F['gift_hol_'+coupleCid]!==today&&holidayCareWindow(hol,now))calendarDeliver('gift_hol_'+coupleCid,today,()=>holidayCare(coupleCid,hol,today));const md=today.slice(5);(S.couple.anniversaries||[]).forEach((a,i)=>{if(a.date.slice(5)===md&&F['anniv_'+i]!==today&&holidayCareWindow(/生日/.test(a.title)?'生日':'纪念日',now))calendarDeliver('anniv_'+i,today,()=>/生日/.test(a.title)?holidayCare(coupleCid,a.title,today,{birthday:true}):occasionGift(coupleCid,'你们的纪念日「'+a.title+'」',today));});const est=periodEstimate(),until=est?calDayDiff(est.date,today):NaN,pkey=est?'period_forecast_'+coupleCid+'_'+est.date:'';if(est&&until>=0&&until<=3&&!F[pkey])calendarDeliver(pkey,today,()=>periodForecastReminder(c,est));}}
   // 恋人每天在心情表里主动记一条（下午后、且今天还没记）
   if(S.couple&&S.couple.cid&&h>=14&&F['mood_'+S.couple.cid]!==today&&!(S.mood||[]).some(m=>m.date===today&&m.who===S.couple.cid))calendarDeliver('mood_'+S.couple.cid,today,()=>recordTaMood(S.couple.cid));}
 setInterval(()=>northNativeBackgroundTask('calendar',checkCalendar),60000);setTimeout(()=>northNativeBackgroundTask('calendar',checkCalendar),4000);
@@ -5389,6 +5396,14 @@ async function holidayGreet(id,hol){if(roleOnlineProactiveBlocked(id))return fal
   applyAuxTags(content,c,id);content=typeof deskPetConsume==='function'?deskPetConsume(content,c):content;content=cohabConsumeOnlineState(content,c,id);splitBubbles(content).forEach(l=>{const _lt=(''+l).trim();const _mv=_lt.match(/^\[心情值\|([+\-]?\d{1,3})\]$/);if(_mv){adjMood(id,parseInt(_mv[1],10)||0);return;}const _mo=_lt.match(/^\[心情\|([^\]]*)\]$/);if(_mo){c.mood=moodInnerMonologue(c,honestMoodText(c,_mo[1]));return;}if(/^\[(联网|记住|闹钟|来电)\|/.test(l)||CTLLEAK.test(_lt))return;lineToMsgs(l,c).forEach(mm=>{if(!mm)return;mm.time=Date.now();msgs(id).push(mm);notifyIncoming(c,mm);sent++;});});if(!sent)return false;save();if(cur().p==='chat'&&cur().id===id)refreshChatMessages(id);else if(cur().p==='wechat')render();return true;
 }catch(e){return false;}}
 function occasionGift(id,occasion,date){if(roleOnlineProactiveBlocked(id))return Promise.resolve(false);const c=getC(id);if(!c||c.blocked)return Promise.resolve(false);return new Promise(resolve=>{let settled=false;const done=ok=>{if(settled)return;settled=true;resolve(!!ok);};const note='[重要日期自主决策｜真实事实：今天是'+date+'，也是已经登记的「'+occasion+'」。你知道这个日期，但系统不替你决定情绪或行动。请结合基础人设、世界书、关系、相关记忆和对方喜好，自主决定是否联系、是否准备礼物或邀请一起做某件事。真正想送礼时使用 [送礼|礼物名|价格|附言]；也可以选其他已知功能、只说自然的话，或输出 [保持安静]。不要提系统或规则，不要把日期说错。]';const queued=scheduleReply(id,note,done);if(!queued)done(false);});}
+/* 节日心意：情侣角色记得这个日子，一定主动来祝福；重要节日一定送礼物 / 红包 / 转账（v1408） */
+function holidayCare(id,name,date,opt){opt=opt||{};if(roleOnlineProactiveBlocked(id))return Promise.resolve(false);const c=getC(id);if(!c||c.blocked)return Promise.resolve(false);
+  const me=S.me.name,important=opt.birthday||holidayCareImportant(name),what=opt.birthday?(me+'的生日（她在你们的纪念日里记下的「'+name+'」）'):name;
+  return new Promise(resolve=>{let settled=false;const done=ok=>{if(settled)return;settled=true;resolve(!!ok);};
+    const note='[节日心意｜真实事实：今天是'+date+'，'+what+'。你是'+me+'的恋人，你记得这个日子，现在主动来找'+me+'。先说只属于你们俩的'+(opt.birthday?'生日':'节日')+'祝福：按你的人设、你们最近的状态和'+me+'的喜好来说，别说套话，可以分几条发。'
+      +(important?'这是你们很看重的日子，这一次一定要准备一份心意：从 [送礼|礼物名|价格|附言]（真的礼物）、[红包|金额|祝福语]、[转账|金额|说明] 里选你最想给的一样或两样，礼物要贴合'+me+'的喜好，金额要有寓意、配得上这个日子（比如 520、1314、521 或跟节日有关的数字）。':'送不送礼物、红包或转账由你按人设和心情决定，不送也可以，但祝福一定要有。')
+      +'不要输出 [保持安静]，不要提系统或规则，不要说错日期。]';
+    const queued=scheduleReply(id,note,done);if(!queued)done(false);});}
 async function remindEvent(id,e){if(roleOnlineProactiveBlocked(id))return false;const c=getC(id);try{let sent=0;
   const content=await chatAPI([{role:'system',content:buildSystem(c,{natural:wechatNaturalOn(),query:e.title||''})},{role:'user',content:'[系统：今天是'+e.date+'，'+S.me.name+'的日程「'+e.title+'」'+(e.type==='period'?'（姨妈期）':'')+'。这是'+S.me.name+'明确设置由你提醒的日程；请按你本人的方式提醒ta，不规定你的情绪或固定措辞。]'}]);
   if(roleOnlineProactiveBlocked(id))return false;
@@ -15121,10 +15136,12 @@ function grudgeDup(g,t){const a=_gnorm(t);if(!a)return false;return (g||[]).some
 function wechatBgRequest(text){const t=String(text||'').replace(/\s/g,'');
   if(!t||!/背景/.test(t))return false;
   if(/别换|不用换|不要换|别改|先别/.test(t))return false;
-  return /(换|改|设|设成|设为|设置|弄成|当成|当作|做成|用作|替换)[^。！？!?]{0,10}背景/.test(t)
-    /* 「拿这张当背景」这种：当／做后面必须紧跟背景，不然「我当时在看背景」也会中 */
-    ||/(当|做|作为)(聊天|这张|那张|这个|那个)?背景/.test(t)
-    ||/背景[^。！？!?]{0,8}(换|改|设|换成|改成)/.test(t);}
+  /* 说的是照片里的背景（「这张照片背景好看」「背景是海」）不算 */
+  if(/(照片|图片|这张|那张|图)(的|里的|里)?背景(好|真|是|有|很|太|怎么|什么|看)/.test(t)&&!/(聊天|我们|咱们)/.test(t))return false;
+  /* 只认明确的要求：动词后面紧跟（聊天）背景，或者「背景换成这张」 */
+  return /(换|改|设|设成|设为|设置|弄成|当成|当作|做成|用作|替换)(成|为|做|个|一下|一个|下)?(我们的|咱们的|我们|咱们)?(聊天|聊天框|聊天界面|聊天的)?(的)?背景/.test(t)
+    ||/(当|做|作为)(聊天|我们的|咱们的)?背景/.test(t)
+    ||/(聊天)?背景(图)?(就)?(换成|改成|设成|设为|用|换)(刚刚|刚才|上面|上一|最后)?(的)?(这|那|它)/.test(t);}
 function wechatBgSourceMsg(id){
   return [...msgs(id)].slice(-40).reverse().find(m=>m&&m.type==='image'&&m.src)||null;}
 function wechatApplyBgRequest(c,id){const last=wechatBgSourceMsg(id);
@@ -16200,6 +16217,8 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
       /* 桌面宠物：[桌宠|动作] 只让屏幕里的小机器人照做，不发成消息 */
       if(/^[\[【]\s*桌宠\s*[|｜:：][^\]】]*[\]】]$/.test(line)){if(typeof deskPetConsume==='function')deskPetConsume(line,c);continue;}
       if(/^[\[【]\s*换背景\s*(?:[|｜:：][^\]】]*)?[\]】]$/.test(line)){
+        /* 只有她这一轮明确说了要换背景才换；只是发了张照片、角色自己理解成换背景的，不换 */
+        if(!_wantBg)continue;
         if(wechatApplyBgRequest(c,id))_bgApplied=true;else _replyAuditPartial=true;continue;}
       if(/^\[收藏表情\]$/.test(line)){const last=[...msgs(id)].reverse().find(m=>m.role==='user'&&m.type==='sticker'&&m.img);if(last){S.aiStickers=S.aiStickers||[];if(!S.aiStickers.some(s=>s.img===last.img)){const fav=Array.isArray(c.stickerGroups)&&c.stickerGroups.length===1?c.stickerGroups[0]:'';S.aiStickers.push({img:last.img,meaning:last.meaning||'',groupId:fav||undefined});save();toast('ta收藏了你的表情');}}continue;}
       mm=line.match(/^[\[【]\s*文件@(\d+)\s*[\]】]$/);if(mm){const fm=roleFileMessage(_roleFiles.files[+mm[1]]);if(fm){replyHandoffPush(_handoffTurn,msgs(id),fm);notifyIncoming(c,fm);save();refreshChatMessages(id);got=true;}else _replyAuditPartial=true;continue;}
