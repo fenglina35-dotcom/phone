@@ -2296,6 +2296,7 @@ function buildSystem(c,opt){
   s+=_main?friendOriginPrompt(c):'';
   s+=_main?friendReaddPrompt(c)+(typeof pursuitPromptRecent==='function'?pursuitPromptRecent(c):''):'';
   if(_main&&typeof deskPetPrompt==='function')s+=deskPetPrompt(c);
+  if(_main&&typeof roleReadPrompt==='function')s+=roleReadPrompt(c);
   s+=_main?altReportMemoryPrompt(c):'';
   if(_main&&S.couple&&S.couple.cid===c.id)s+=coupleAlbumPrompt(c);
   if(_main&&typeof pixelHomeRoleContext==='function')s+=pixelHomeRoleContext(c);
@@ -8245,7 +8246,7 @@ function renderPhoneFriendChat(id){const started=pfSyncClock(),p=phoneFriendStat
   let body=hidden?`<button class="btn g" style="width:calc(100% - 32px);margin:12px 16px" onclick="phoneFriendChatShowEarlier('${id}')">查看更早消息（还有 ${hidden} 条）</button>`:'';arr.forEach((m,i)=>{
     const prev=i?arr[i-1]:null;body+=chatBoundaryHTML(prev,m);
     if(m.recalled){body+=pfRecalledRow();return;}
-    const me=m.from===p.id,rs=me&&!m._transferReceipt?pfReadStatus(m,'friend',id):'',rec=me&&!m._transferReceipt?`<button type="button" class="pfrecall" aria-label="撤回这条消息" onclick="event.stopPropagation();phoneFriendRecallMessage('${m.id}','friend','${id}')">撤回</button>`:'';
+    const me=m.from===p.id,rs=me&&!m._transferReceipt?pfReadStatus(m,'friend',id):(!me&&readReceiptOn()&&m===pfLastIncoming(arr,p.id)?(pfReadIds(m).indexOf(p.id)>=0?'已读':'未读'):''),rec=me&&!m._transferReceipt?`<button type="button" class="pfrecall" aria-label="撤回这条消息" onclick="event.stopPropagation();phoneFriendRecallMessage('${m.id}','friend','${id}')">撤回</button>`:'';
     body+=`<div class="msg ${me?'me':'them'}"><span>${me?av(S.me.avatar):pfAvatarHTML(f)}</span><div class="col" onclick="pfMsgMenu('${m.id}','friend','${id}')">${pfBubblePart(m,me)}<div class="msgt">${rec}${hm(m.time)}</div>${rs?`<div class="msgread-line">${rs}</div>`:''}</div></div>`+pfRpSysLine(m,'friend',id);
   });
   const gag=S.couple&&S.couple.gags&&S.couple.gags[pfGagKey(id)];pfSyncTrace('chatRender.end',{messages:all.length,rendered:arr.length,hidden,ms:Math.max(0,Math.round(pfSyncClock()-started))});
@@ -14418,8 +14419,15 @@ function roleReadCounted(m){return !!m&&!m._silent&&!m._call&&m.type!=='sys';}
 function roleLastUserMsg(id){const a=msgs(id);for(let i=a.length-1;i>=0;i--){const m=a[i];if(!roleReadCounted(m))continue;if(m.role==='user')return m;}return null;}
 function roleMsgRead(id,m){if(!m)return false;if(m.readAt)return true;const a=msgs(id),i=a.indexOf(m);return i>=0&&a.slice(i+1).some(x=>roleReadCounted(x)&&x.role==='assistant');}
 function roleReadLabelHTML(c,m){if(!readReceiptOn()||!c||!m||m.role!=='user'||!roleReadCounted(m))return '';const last=roleLastUserMsg(c.id);return `<div class="msgread msgread-line" data-read-for="${m.id}"${last&&last.id===m.id?'':' style="display:none"'}>${roleMsgRead(c.id,m)?'已读':'未读'}</div>`;}
-function roleReadRefresh(id){const cb=$('#chatbg');if(!cb)return;const last=roleLastUserMsg(id),on=readReceiptOn();cb.querySelectorAll('.msgread').forEach(el=>{const mine=on&&last&&el.dataset.readFor===last.id;el.style.display=mine?'':'none';if(mine)el.textContent=roleMsgRead(id,last)?'已读':'未读';});}
+function roleLastRoleMsg(id){const a=msgs(id);for(let i=a.length-1;i>=0;i--){const m=a[i];if(!roleReadCounted(m))continue;if(m.role==='assistant')return m;}return null;}
+/* 他发来的最后一条消息旁边显示你读没读：你打开聊天看到了就变成已读 */
+function roleSeenLabelHTML(c,m){if(!readReceiptOn()||!c||!m||m.role!=='assistant'||!roleReadCounted(m))return '';const last=roleLastRoleMsg(c.id);return `<div class="msgread msgread-line" data-seen-for="${m.id}"${last&&last.id===m.id?'':' style="display:none"'}>${m.seenAt?'已读':'未读'}</div>`;}
+function roleReadRefresh(id){const cb=$('#chatbg');if(!cb)return;const last=roleLastUserMsg(id),lastRole=roleLastRoleMsg(id),on=readReceiptOn();cb.querySelectorAll('.msgread').forEach(el=>{if(el.dataset.seenFor){const mine=on&&lastRole&&el.dataset.seenFor===lastRole.id;el.style.display=mine?'':'none';if(mine)el.textContent=lastRole.seenAt?'已读':'未读';return;}const mine=on&&last&&el.dataset.readFor===last.id;el.style.display=mine?'':'none';if(mine)el.textContent=roleMsgRead(id,last)?'已读':'未读';});}
+function roleSeenTick(){if(document.hidden||typeof cur!=='function')return;const k=cur();if(!k||k.p!=='chat'||!k.id)return;const a=msgs(k.id),now=Date.now();let ch=false;for(let i=a.length-1;i>=0;i--){const m=a[i];if(!roleReadCounted(m)||m.role!=='assistant')continue;if(m.seenAt)break;if(!m._seenPending){m._seenPending=now;continue;}if(now-m._seenPending>=700){m.seenAt=now;delete m._seenPending;ch=true;}}if(ch)save(1500);roleReadRefresh(k.id);}
+setInterval(roleSeenTick,500);
 /* 角色开始回你（出现正在输入）那一刻算他读了 */
+function pfLastIncoming(arr,pid){if(!Array.isArray(arr))return null;for(let i=arr.length-1;i>=0;i--){const x=arr[i];if(x&&x.from!==pid&&!x.recalled&&!x._transferReceipt)return x;}return null;}
+function roleReadPrompt(c){if(!readReceiptOn()||!c)return '';const a=msgs(c.id);let last=null;for(let i=a.length-1;i>=0;i--){if(roleReadCounted(a[i])){last=a[i];break;}}if(!last||last.role!=='assistant'||!last.seenAt)return '';const min=Math.floor((Date.now()-last.seenAt)/60000);if(min<2)return '';return '\n\n# 已读\n微信开着已读：你发的最后一条消息，'+S.me.name+'在'+(min<60?min+'分钟':Math.floor(min/60)+'小时')+'前已经读了，但还没回你。你知道这件事，可以按人设自然地在意或不在意，别每次都提。';}
 function roleMarkRead(id){const a=msgs(id),now=Date.now();let ch=false;for(let i=a.length-1;i>=0;i--){const m=a[i];if(!roleReadCounted(m))continue;if(m.role!=='user')continue;if(m.readAt)break;m.readAt=now;ch=true;}if(ch){save(800);if(cur().p==='chat'&&cur().id===id)roleReadRefresh(id);}return ch;}
 function bubbleRow(c,m){
   const me=m.role==='user';
@@ -14432,7 +14440,7 @@ function bubbleRow(c,m){
   const tick=selecting?`<span id="tk_${m.id}" style="align-self:center;font-size:20px;color:${_sel.ids.includes(m.id)?'#07c160':'#555'}">${_sel.ids.includes(m.id)?'☑':'⚪'}</span>`:'';
   const ts=(typeof messageBeijingTimeHTML==='function'&&messageBeijingTimeHTML(m))||(m.time?`<div class="msgt">${hm(m.time)}</div>`:'');
   /* 聊天页的时间行（.msgt）在新版微信样式里是隐藏的，所以已读单独占一小行 */
-  const readLine=me?roleReadLabelHTML(c,m):'';
+  const readLine=me?roleReadLabelHTML(c,m):roleSeenLabelHTML(c,m);
   const longPressable=!selecting&&(m.type==='text'||m.type==='voice'||m.type==='image');
   const lp=longPressable?` onmousedown="qPressStart('${c.id}','${m.id}')" onmouseup="qPressEnd()" onmouseleave="qPressEnd()" ontouchstart="qPressStart('${c.id}','${m.id}')" ontouchend="qPressEnd()" ontouchmove="qPressEnd()"`:'';
   return `<div class="msg ${me?'me':'them'}${msgEnterClass(m)}">${tick}<span ${avatarTap}>${av(me?S.me.avatar:c.avatar,bubbleAvatarClass(c,me))}</span><div class="col" ${h}${lp}>${inner}${ts}${readLine}</div></div>`;}

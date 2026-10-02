@@ -14,10 +14,14 @@ for(const [label,p,h] of [['web','app.js','小手机.html'],['private',P+'app.js
   });
   test(`${label}: the role marks her messages read when he starts replying, shown on a line the premium theme does not hide`,()=>{
     assert.match(s,/roleMarkRead\(id\);\n  \/\/ typing/);
-    assert.match(s,/const readLine=me\?roleReadLabelHTML\(c,m\):'';/);assert.match(s,/\$\{inner\}\$\{ts\}\$\{readLine\}<\/div>/);
+    assert.match(s,/\$\{inner\}\$\{ts\}\$\{readLine\}<\/div>/);
     assert.match(s,/class="msgread msgread-line" data-read-for=/);
     assert.match(s,/\$\{rs\?`<div class="msgread-line">\$\{rs\}<\/div>`:''\}/);
     assert.doesNotMatch(s,/\$\{rs\?`<span style="margin-right:8px;color:#8d8d96">/,'真人好友的已读不能再塞进被隐藏的时间行');
-    assert.match(html,/\.msgread-line\{font-size:11px/);
+    assert.match(html,/\.msgread-line\{position:absolute;bottom:1px;right:calc\(100% \+ 6px\)/);assert.match(html,/\.msg\.them \.msgread-line\{right:auto;left:calc\(100% \+ 6px\)\}/);
+    assert.match(s,/const readLine=me\?roleReadLabelHTML\(c,m\):roleSeenLabelHTML\(c,m\);/,'他发来的消息旁边也显示你读没读');
+    assert.match(s,/setInterval\(roleSeenTick,500\);/);
+    assert.match(s,/m===pfLastIncoming\(arr,p\.id\)/,'真人好友发来的最后一条也显示你读没读');
+    assert.match(s,/if\(_main&&typeof roleReadPrompt==='function'\)s\+=roleReadPrompt\(c\);/,'角色知道你已读没回');
   });
 }
