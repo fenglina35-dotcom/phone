@@ -39,3 +39,12 @@ test('role-to-role ping-pong and @-spam are capped',()=>{
   assert.match(s,/ROLE_CALL_MAX=2,ROLE_CALL_WINDOW=120000/);
   assert.match(s,/recentSent\(gid\)\.length<MAX_CALLED_PER_MIN/);
 });
+
+test('v1416: role bubbles look like any member, late-synced history is not treated as new, muted means quiet, avatar reaches late joiners',()=>{
+  const s=read('pf-group-role.js');
+  assert.match(s,/_roleView:true/);assert.match(s,/pfMentionsMe=function\(m\)\{if\(m&&m\._roleView\)return false;/);
+  assert.match(s,/if\(\(\+m\.time\|\|0\)<session\.openedAt-15000\)\{if\(!info\.called\|\|\(\+m\.time\|\|0\)<=lastOwnSay\(gid,c,all\)\)continue;info\.missed=true;\}/);
+  assert.match(s,/const since=Math\.max\(\+s\.groupRoleSeen\[gid\]\|\|Date\.now\(\),lastOwnSay\(gid,c,all\)\);/);
+  assert.match(s,/function quietByRule\(gid\)/);assert.match(s,/if\(quietByRule\(gid\)\)\{pending\[gid\]=\[\];return;\}/);
+  assert.match(s,/if\(!session\.avatarSent\[gid\]\)\{session\.avatarSent\[gid\]=true;/);
+});

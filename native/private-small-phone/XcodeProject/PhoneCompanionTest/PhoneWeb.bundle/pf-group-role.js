@@ -42,13 +42,15 @@ function pfRoleRow(m,pl,gid,g){if(!pl)return '';
   if(pl.type===ROLE_LEAVE)return `<div class="tstamp"><span>「${escT(pl.name||'成员')}」退出了群聊</span></div>`;
   const role=pl.type===ROLE_SAY?pl:(pl.role&&pl.role.rid?pl.role:null);if(!role)return '';
   const name=role.name||(profile(role.rid)||{}).name||'成员',showName=!(typeof pfGroupPref==='function'&&pfGroupPref(gid).hideNames);
-  const bubble=pl.type===ROLE_SAY?pfBubblePart(Object.assign({},m,{text:String(pl.text||''),body:String(pl.text||'')}),false,null):pfBubblePart(m,false,null);
+  if(pl.type===ROLE_SAY&&pl.avatar)rememberProfile(pl,m.from);
+  /* 和其他群成员的气泡完全一样：不加「@到我」的高亮框 */
+  const bubble=pl.type===ROLE_SAY?pfBubblePart(Object.assign({},m,{text:String(pl.text||''),body:String(pl.text||''),_roleView:true}),false,null):pfBubblePart(Object.assign({},m,{_roleView:true}),false,null);
   return `<div class="msg them${showName?' gnamed':''}"><span onclick="pfRoleAt('${escT(gid)}',${JSON.stringify(name).replace(/"/g,'&quot;')})" title="点一下@ta">${rowAvatar(role.rid,name)}</span><div class="col">${showName?`<div class="gname">${escT(name)}</div>`:''}${bubble}<div class="msgt">${typeof hm==='function'?hm(m.time):''}</div></div></div>`;}
 function pfRoleAt(gid,name){const ta=document.getElementById('pfg_input');if(!ta)return;const t='@'+name+' ';if(!ta.value.includes(t))ta.value=t+ta.value;ta.focus();try{ta.setSelectionRange(ta.value.length,ta.value.length);}catch(_){}}
 
 /* 消息列表预览、@我提醒也认角色发的消息 */
 if(typeof pfMsgPreview==='function'){const orig=pfMsgPreview;pfMsgPreview=function(m){const pl=typeof pfMsgPayload==='function'&&pfMsgPayload(m);if(pl&&pl.type===ROLE_SAY)return (pl.name?pl.name+'：':'')+String(pl.text||'');if(pl&&pl.type===ROLE_JOIN)return '「'+(pl.name||'成员')+'」加入了群聊';if(pl&&pl.type===ROLE_LEAVE)return '「'+(pl.name||'成员')+'」退出了群聊';return orig.apply(this,arguments);};}
-if(typeof pfMentionsMe==='function'){const orig=pfMentionsMe;pfMentionsMe=function(m){const pl=typeof pfMsgPayload==='function'&&pfMsgPayload(m);if(pl&&pl.type===ROLE_SAY){if(pl.rid&&String(pl.rid).toUpperCase().startsWith(mine()+':'))return false;return String(pl.text||'').includes('@'+meName());}return orig.apply(this,arguments);};}
+if(typeof pfMentionsMe==='function'){const orig=pfMentionsMe;pfMentionsMe=function(m){if(m&&m._roleView)return false;const pl=typeof pfMsgPayload==='function'&&pfMsgPayload(m);if(pl&&pl.type===ROLE_SAY){if(pl.rid&&String(pl.rid).toUpperCase().startsWith(mine()+':'))return false;return String(pl.text||'').includes('@'+meName());}return orig.apply(this,arguments);};}
 
 /* ---------- 「聊天信息」里的入口 ---------- */
 function pfRoleInfoRow(gid){const c=roleOf(gid);return typeof ginfoRow==='function'?`<section class="ginfo-group">${ginfoRow('带角色进群',c?escT(roleName(c)):'未带',`pfRoleBringOpen('${escT(gid)}')`)}</section>`:'';}
@@ -61,27 +63,32 @@ async function pfRoleBringPick(gid,cid){if(typeof closeModal==='function')closeM
 /* ---------- 判断：谁在说话、有没有叫他 ---------- */
 function msgInfo(m,c,g){const p=phoneFriendState(),pl=typeof pfMsgPayload==='function'?pfMsgPayload(m):null;if(pl&&(pl.type===ROLE_JOIN||pl.type===ROLE_LEAVE)){if(pl.type===ROLE_JOIN)rememberProfile(pl,m.from);return null;}
   let who,name,text;
-  if(pl&&pl.type===ROLE_SAY){if(String(pl.rid||'').toUpperCase()===myRid(c.id).toUpperCase())return{self:true};who='role';name=pl.name||'成员';text=String(pl.text||'');}
+  if(pl&&pl.type===ROLE_SAY){if(pl.avatar)rememberProfile(pl,m.from);if(String(pl.rid||'').toUpperCase()===myRid(c.id).toUpperCase())return{self:true};who='role';name=pl.name||'成员';text=String(pl.text||'');}
   else{const me=String(m.from||'').toUpperCase()===String(p.id||'').toUpperCase();if(me&&pl&&pl.role&&String(pl.role.rid||'').toUpperCase()===myRid(c.id).toUpperCase())return{self:true};who=me?'her':'human';name=me?meName():(typeof pfGroupMemberName==='function'?pfGroupMemberName(g,(typeof pfGroupMemberById==='function'&&pfGroupMemberById(g,m.from))||{phone_id:m.from}):'成员');text=typeof pfMsgPreview==='function'?String(pfMsgPreview(m)||''):String(m.text||'');}
   const rn=roleName(c),called=text.includes('@'+rn)||text.includes(rn)||(who==='her'&&((c.remark&&text.includes(c.remark))||SWEET_RE.test(text)));
   const aboutHer=who!=='her'&&(text.includes('@'+meName())||text.includes(meName()));
   return{who,name,text,called,aboutHer,time:+m.time||Date.now()};}
 
 /* ---------- 引擎：只在主人开着这个群时运行 ---------- */
-const session={gid:null,seen:new Set()},pending={},timers={},busy={},sentAt={},roleCalls={};
+const session={gid:null,seen:new Set(),openedAt:0,avatarSent:{}},pending={},timers={},busy={},sentAt={},roleCalls={};
 function onThisGroup(gid){return !document.hidden&&typeof cur==='function'&&cur()&&cur().p==='pfgroup'&&cur().gid===gid;}
 function tick(){if(document.hidden||typeof cur!=='function')return;const k=cur();if(!k||k.p!=='pfgroup'){session.gid=null;return;}const gid=k.gid,c=roleOf(gid);if(!c){session.gid=null;return;}
   const g=typeof pfGroupById==='function'?pfGroupById(gid):null,all=pfGroupMessages(gid),s=st();
-  if(session.gid!==gid){/* 刚打开群：之前的消息都算看过；下线期间有人叫他或@他，现在补一句 */session.gid=gid;session.seen=new Set(all.map(m=>m.id));const since=+s.groupRoleSeen[gid]||Date.now();
+  if(session.gid!==gid){/* 刚打开群：之前的消息都算看过；下线期间有人叫他或@他，现在补一句 */session.gid=gid;session.openedAt=Date.now();session.avatarSent[gid]=false;session.seen=new Set(all.map(m=>m.id));const since=Math.max(+s.groupRoleSeen[gid]||Date.now(),lastOwnSay(gid,c,all));
     const missed=all.filter(m=>(+m.time||0)>since&&!String(m.id).startsWith('local_')).map(m=>msgInfo(m,c,g)).filter(x=>x&&!x.self&&x.called);
     s.groupRoleSeen[gid]=Date.now();if(missed.length){pending[gid]=missed.slice(-3).map(x=>Object.assign(x,{missed:true}));schedule(gid,1500);}return;}
-  let got=false,called=false;for(const m of all){if(!m||session.seen.has(m.id)||String(m.id).startsWith('local_'))continue;session.seen.add(m.id);const info=msgInfo(m,c,g);if(!info||info.self)continue;(pending[gid]=pending[gid]||[]).push(info);got=true;if(info.called)called=true;}
+  let got=false,called=false;for(const m of all){if(!m||session.seen.has(m.id)||String(m.id).startsWith('local_'))continue;session.seen.add(m.id);const info=msgInfo(m,c,g);if(!info||info.self)continue;
+    /* 打开群之后才同步下来的旧消息：只有点他名字、而且他之后还没说过话的，才算漏看补一句；其余不当新消息 */
+    if((+m.time||0)<session.openedAt-15000){if(!info.called||(+m.time||0)<=lastOwnSay(gid,c,all))continue;info.missed=true;}
+    (pending[gid]=pending[gid]||[]).push(info);got=true;if(info.called)called=true;}
   s.groupRoleSeen[gid]=Date.now();
   if(got)schedule(gid,called?MENTION_DEBOUNCE_MS:DEBOUNCE_MS);}
+function lastOwnSay(gid,c,all){const rid=myRid(c.id).toUpperCase();let t=0;for(const m of all||pfGroupMessages(gid)){const pl=typeof pfMsgPayload==='function'&&pfMsgPayload(m);if(pl&&((pl.type===ROLE_SAY&&String(pl.rid||'').toUpperCase()===rid)||(pl.role&&String(pl.role.rid||'').toUpperCase()===rid)))t=Math.max(t,+m.time||0);}return t;}
 function schedule(gid,ms){clearTimeout(timers[gid]);timers[gid]=setTimeout(()=>decide(gid),ms);}
 function temper(c){return typeof groupRoleTemper==='function'?groupRoleTemper(c):'normal';}
 function recentSent(gid){const now=Date.now();sentAt[gid]=(sentAt[gid]||[]).filter(t=>now-t<60000);return sentAt[gid];}
-async function decide(gid){if(!onThisGroup(gid)){pending[gid]=[];return;}if(busy[gid]){schedule(gid,1500);return;}const items=pending[gid]||[];pending[gid]=[];if(!items.length)return;const c=roleOf(gid);if(!c)return;
+function quietByRule(gid){try{const p=phoneFriendState();if(typeof gmMutedUntil==='function'&&gmMutedUntil('pf',gid,p.id))return true;if(S.couple&&S.couple.gags&&typeof pfgGagKey==='function'&&S.couple.gags[pfgGagKey(gid)])return true;}catch(_){}return false;}
+async function decide(gid){if(!onThisGroup(gid)){pending[gid]=[];return;}if(quietByRule(gid)){pending[gid]=[];return;}if(busy[gid]){schedule(gid,1500);return;}const items=pending[gid]||[];pending[gid]=[];if(!items.length)return;const c=roleOf(gid);if(!c)return;
   /* 被别的角色点名：两分钟内最多认真回两次，防止两个角色没完没了地互相@ */
   const now=Date.now();roleCalls[gid]=(roleCalls[gid]||[]).filter(t=>now-t<ROLE_CALL_WINDOW);
   const humanCalled=items.some(x=>x.called&&x.who!=='role'),roleCalled=items.some(x=>x.called&&x.who==='role')&&roleCalls[gid].length<ROLE_CALL_MAX;
@@ -128,7 +135,7 @@ async function reply(gid,c,items,forced){const g=typeof pfGroupById==='function'
     mm=l.match(/^[\[【]\s*内心\s*[|｜:：]\s*([^\]】]*)[\]】]$/);if(mm){if(typeof setNaturalInnerThought==='function')setNaturalInnerThought(c,mm[1]);continue;}
     if(/^[\[【][^\]】]{1,20}[|｜:：]?[^\]】]*[\]】]$/.test(l))continue;/* 其它功能标签在群里都不执行 */
     const clean=l.replace(/^[（(【][^）)】]{0,40}[）)】]\s*/,'').trim();if(clean)out.push(clean);if(out.length>=3)break;}
-  for(let i=0;i<out.length;i++){if(!onThisGroup(gid))return;await new Promise(r=>setTimeout(r,i?700+Math.random()*900:200));if(!onThisGroup(gid))return;await sendPayload(gid,{type:ROLE_SAY,rid:myRid(c.id),name:roleName(c),text:out[i].slice(0,500)});recentSent(gid).push(Date.now());log.push(out[i]);}
+  for(let i=0;i<out.length;i++){if(!onThisGroup(gid))return;await new Promise(r=>setTimeout(r,i?700+Math.random()*900:200));if(!onThisGroup(gid))return;const say={type:ROLE_SAY,rid:myRid(c.id),name:roleName(c),text:out[i].slice(0,500)};if(!session.avatarSent[gid]){session.avatarSent[gid]=true;const a=await smallAvatar(c.avatar);if(a)say.avatar=a;}await sendPayload(gid,say);recentSent(gid).push(Date.now());log.push(out[i]);}
   if(rp&&rp.total>0&&Math.round(rp.total*100)>=rp.n&&onThisGroup(gid)){const splits=typeof rpSplitCents==='function'?rpSplitCents(rp.total,rp.n):[rp.total];await sendPayload(gid,{type:'redpacket',amount:rp.total,note:rp.note||'恭喜发财，大吉大利',count:rp.n,lucky:true,splits,role:{rid:myRid(c.id),name:roleName(c)}});log.push('[在群里发了一个'+rp.total+'元、'+rp.n+'个的拼手气红包]');}
   for(const t of privateLines){const m={role:'assistant',type:'text',content:t.slice(0,500),time:Date.now(),id:typeof uid==='function'?uid():String(Date.now())};msgs(c.id).push(m);if(typeof notifyIncoming==='function')notifyIncoming(c,m);log.push('[私聊里对她说]'+t);}
   if(log.length||items.length)remember(c,g,items,log);save();}
