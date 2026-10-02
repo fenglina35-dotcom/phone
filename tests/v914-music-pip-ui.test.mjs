@@ -9,8 +9,8 @@ const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProjec
 
 test('v1184 web source keeps private 1.0.315 compatibility',()=>{
   assert.match(app,/APP_VER='v1406 · 桌宠可以摘帽子'/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 430;/);
-  assert.match(project,/MARKETING_VERSION = 1.0.430;/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 431;/);
+  assert.match(project,/MARKETING_VERSION = 1.0.431;/);
 });
 
 test('public music search needs no user login and reuses together-listen songs',()=>{

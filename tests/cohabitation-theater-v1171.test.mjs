@@ -16,7 +16,7 @@ test('private v1355 inherits the current web theater without dropping its privat
   assert.equal(bundleTheater,theater);
   assert.match(bundleTheater,/guest2|ct_wechat_enabled/);
   assert.match(webHtml,/app\.js\?v=1406[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1406&r=v1274-web-cohab-guests-1"/);
-  for(const html of [privateHtml,privateAlias])assert.match(html,/app\.js\?v=1401[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1401[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1401&r=v1274-web-cohab-guests-1"/);
+  for(const html of [privateHtml,privateAlias])assert.match(html,/app\.js\?v=1407[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1407[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1407&r=v1274-web-cohab-guests-1"/);
   assert.match(read('sw.js'),/cohab-theater\.js\?v='\+BUILD\+'\&r=v1274-web-cohab-guests-1',kind:'theater'/);
 });
 
@@ -145,12 +145,12 @@ test('guest exit sends exactly one genuine memory-grounded WeChat message',()=>{
 });
 
 test('private artifact identity advances independently to v1355 and iOS 1.0.400 (399)',()=>{
-  assert.match(privateApp,/const APP_VER='v1401 · 追回不超过二十秒'/);
+  assert.match(privateApp,/const APP_VER='v1407 · 桌面宠物'/);
   assert.match(privateHtml,/private-runtime-diagnostics\.js\?v=339/);
-  assert.match(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),/1\.0\.430 \(430\)/);
+  assert.match(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),/1\.0\.431 \(431\)/);
   const project=read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
-  assert.ok((project.match(/CURRENT_PROJECT_VERSION = 430;/g)||[]).length>=12);
-  assert.ok((project.match(/MARKETING_VERSION = 1.0.430;/g)||[]).length>=12);
+  assert.ok((project.match(/CURRENT_PROJECT_VERSION = 431;/g)||[]).length>=12);
+  assert.ok((project.match(/MARKETING_VERSION = 1.0.431;/g)||[]).length>=12);
 });
 
 test('v1170 private friend-entry fix remains present in the v1184 private superset',()=>{

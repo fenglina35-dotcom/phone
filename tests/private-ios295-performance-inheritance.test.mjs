@@ -47,16 +47,16 @@ function functionSource(sourceText, name) {
 
 test('private identifiers remain v1355 and iOS 399 while public advances independently', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1401'/);
-  assert.match(index, /app\.js\?v=1401&r=v1401-private-pursuit-fast-1/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1407'/);
+  assert.match(index, /app\.js\?v=1407&r=v1407-private-desk-pet-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(app, /APP_VER='v1401 · 追回不超过二十秒'/);
+  assert.match(app, /APP_VER='v1407 · 桌面宠物'/);
   assert.match(overlay, /336-daily-file-backup/);
-  assert.match(webview, /1\.0\.430 \(430\)/);
-  assert.match(bridge, /private static let build = "1\.0\.430 \(430\)"/);
+  assert.match(webview, /1\.0\.431 \(431\)/);
+  assert.match(bridge, /private static let build = "1\.0\.431 \(431\)"/);
   assert.match(bridge, /static let contractVersion = 42/);
-  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 430;/g) || []).length, 12);
-  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.430;/g) || []).length, 12);
+  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 431;/g) || []).length, 12);
+  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.431;/g) || []).length, 12);
   assert.match(publicApp, /APP_VER='v1406 · 桌宠可以摘帽子'/);
   assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1406'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
@@ -160,11 +160,11 @@ test('Mac guide identifies the current private v1356 iOS422 source', () => {
     assert.match(guide, /Mac.*编译/);
     assert.match(guide, /真机|真实 iPhone/);
   }
-  assert.match(mac, /1\.0\.430 \(430\)/);
+  assert.match(mac, /1\.0\.431 \(431\)/);
   assert.match(mac, /原生桥.*38/);
   assert.match(install, /1\.0\.327 \(327\)/);
   assert.match(install, /原生桥.*35/);
-  assert.match(mac, /^# v1401 .*iOS430/);
+  assert.match(mac, /^# v1407 .*iOS431/);
   assert.match(mac, /网页.*推送/);
   assert.match(install, /私人内置网页 v1206/);
   assert.match(install, /两边共有/);
