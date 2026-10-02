@@ -335,9 +335,5 @@ if(typeof roleServerAutomationConfig==='function'){
   roleServerAutomationConfig=function(c){const result=original(c),b=_robotFaceBinding;
     result.robotFace=!!(b&&robotFaceAvailable()&&b.target===robotFaceScope()&&b.roleId===c.id);return result;};
 }
-if(typeof settingsHomeHTML==='function'){
-  const original=settingsHomeHTML;
-  settingsHomeHTML=function(...args){const html=original.apply(this,args);if(!robotFaceAvailable())return html;
-    return html.replace('<div class="ios-settings-version"','<div class="ios-settings-group"><button type="button" class="ios-settings-row" data-settings-search="小 K 桌面机器人 表情 StackChan" onclick="robotFaceOpen()"><span><b>小 K</b><small>桌面伙伴 · 表情联动</small></span><em>›</em></button></div><div class="ios-settings-version"');};
-}
+/* 设置页最下面原来有一个重复的「小 K」入口；主屏已经有小 K 图标，这里换成了虚拟桌面宠物的入口（desk-pet.js）。 */
 // Manual control only: no launch, visibility, page-entry or timer status requests.
