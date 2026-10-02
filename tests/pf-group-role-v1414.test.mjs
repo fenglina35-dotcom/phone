@@ -48,3 +48,10 @@ test('v1416: role bubbles look like any member, late-synced history is not treat
   assert.match(s,/function quietByRule\(gid\)/);assert.match(s,/if\(quietByRule\(gid\)\)\{pending\[gid\]=\[\];return;\}/);
   assert.match(s,/if\(!session\.avatarSent\[gid\]\)\{session\.avatarSent\[gid\]=true;/);
 });
+
+test('v1418: messages that @ her in a real group use the normal grey bubble',()=>{
+  for(const p of ['app.js',P+'app.js']){const a=read(p);
+    assert.doesNotMatch(a,/pfMentionsMe\(m\)&&!me\?'mention'/);
+    assert.match(a,/return bubbleSingleHTML\(m\.text,'',bstyle,me\);\}/);
+  }
+});

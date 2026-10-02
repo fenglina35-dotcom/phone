@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1416'){
+if(window.__NORTH_SHELL_BUILD__!=='1418'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -474,7 +474,7 @@ function pfPanelHTML(id){const stk=S.me.stickers||[];return `<div class="panel c
 function pfGroupPanelHTML(gid){const stk=S.me.stickers||[];return `<div class="panel chat-tools-panel group-chat-tools" id="pfgpanel" data-page="fn"><div class="chat-panel-pane chat-function-pane on"><div class="chat-function-viewport"><section class="chat-function-page"><button type="button" class="it" onclick="phoneFriendGroupSendImage('${gid}')"><span class="b">${svgIc('image',26,'currentColor')}</span><span>相册</span></button><button type="button" class="it" onclick="document.getElementById('pfgpanel').classList.remove('show');phoneFriendGroupTransferModal('${gid}','transfer')"><span class="b">${svgIc('money',26,'currentColor')}</span><span>转账</span></button><button type="button" class="it" onclick="document.getElementById('pfgpanel').classList.remove('show');phoneFriendGroupTransferModal('${gid}','redpacket')"><span class="b">${svgIc('redpacket',26,'currentColor')}</span><span>红包</span></button><button type="button" class="it" onclick="phoneFriendGroupPatModal('${gid}')"><span class="b" style="font-size:24px">↟</span><span>拍一拍</span></button><button type="button" class="it" onclick="addSticker()"><span class="b">${svgIc('smile',26,'currentColor')}</span><span>添加表情</span></button><button type="button" class="it" onclick="openStickerBatchImport()"><span class="b">${svgIc('image',26,'currentColor')}</span><span>批量添加</span></button></section></div></div><div class="chat-panel-pane chat-emoji-pane"><div class="ppage"><div class="estk">${stk.map((s,i)=>`<div class="s" onclick="phoneFriendGroupSendSticker('${gid}',${i})"><span class="x" onclick="event.stopPropagation();pfDeleteSticker(${i},'pfgpanel')">×</span>${stickerImageHTML(s.img)}<small>${esc(s.meaning||'')}</small></div>`).join('')||'<div style="color:#777;font-size:12px;padding:8px">还没有自定义表情，点加号里的「添加表情」上传</div>'}</div></div></div></div>`;}
 // 真人群转账可以指定收款人（payTo）：只有那个人能点收款，别人看到「转账给X」
 function pfGroupTransferOpts(m,p,me,done){const to=String(p.payTo||'').toUpperCase(),forMe=!me&&(!to||to===String(phoneFriendState().id||'').toUpperCase()),toName=to&&!forMe?(p.payToName||pfNameById(to)||'群成员'):'';return {me,received:done,amount:p.amount,note:p.note,toName,click:forMe&&!done?`pfReceivePay('${m.id}')`:''};}
-function pfBubblePart(m,me,bstyle){if(m&&m.recalled)return `<div class="bubble recalled">已撤回一条消息</div>`;const p=pfMsgPayload(m);if(!p){if(String(m.text||'').indexOf('[PF|')===0)return bubbleSingleHTML('[消息]','',bstyle,me);return bubbleSingleHTML(m.text,pfMentionsMe(m)&&!me?'mention':'',bstyle,me);}
+function pfBubblePart(m,me,bstyle){if(m&&m.recalled)return `<div class="bubble recalled">已撤回一条消息</div>`;const p=pfMsgPayload(m);if(!p){if(String(m.text||'').indexOf('[PF|')===0)return bubbleSingleHTML('[消息]','',bstyle,me);/* 别人@我的消息和普通消息一样是灰色气泡（@我的提醒照常） */return bubbleSingleHTML(m.text,'',bstyle,me);}
   if(p.type==='text')return bubbleSingleHTML(p.text||'','',bstyle,me);
   if(p.type==='pat')return bubbleSingleHTML(pfPatText(m,p),'',bstyle,me);
   if(p.type==='game_room_invite'){const g=mgrGame(p.game);return `<div class="card" style="width:250px;background:linear-gradient(145deg,#172033,#251f38);border:1px solid #4b5a78;box-shadow:0 8px 20px rgba(0,0,0,.22)" onclick="event.stopPropagation();openMixedGameRoom('${p.roomId}')"><div style="padding:13px"><div style="font-size:11px;color:#aeb9d4;margin-bottom:6px">${svgIc('dice',13,'#aeb9d4')} 多人游戏房间</div><div style="font-size:16px;color:#fff;font-weight:700">${esc(p.title||((g.e||'')+' '+g.n))}</div><div style="font-size:12px;color:#a9b1c5;line-height:1.6;margin-top:7px">房主：${esc(p.hostName||'小手机好友')}<br>等待所有真人玩家准备</div></div><div class="cfoot" style="color:#9fb0d8;background:rgba(255,255,255,.06)">点击进入房间</div></div>`;}
@@ -539,7 +539,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1416 · 真人群角色补漏';
+const APP_VER='v1418 · 艾特气泡改灰色';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1936,7 +1936,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1416&r=v1416-web-pf-role-fix-1';
+  const url='sw.js?v=1418&r=v1418-web-mention-grey-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}

@@ -37,6 +37,7 @@ const PERMANENT_FIXES = [
   {release:"v1374",scope:"web",least:1,name:"关系网：各自心里怎么看只给自己看",marker:"if(v.myView)s+='你心里怎么看ta、怎么看这些事：'"},
   {release:"v1376",scope:"web",least:1,name:"多人剧场：先打字再选对谁说，以选的人为准",marker:"/* 先打字、再选对谁说、再点让TA回：以点回复时选的人为准 */",file:"cohab-theater.js"},
   {release:"v1378",scope:"web",least:1,name:"他微信里不会有两个妈妈（同义称呼、人物卡转好友）",marker:"const mine=x=>x.relKey&&relKeyLive(x.relKey)===v.other;"},
+  {release:"v1418",scope:"both",least:1,name:"真人群里别人@我的气泡是正常灰色",marker:"/* 别人@我的消息和普通消息一样是灰色气泡（@我的提醒照常） */"},
   {release:"v1416",scope:"both",least:1,name:"真人群角色：气泡和成员一样、旧消息不当新消息、被禁言不说话",marker:"function quietByRule(gid){",file:"pf-group-role.js"},
   {release:"v1414",scope:"both",least:1,name:"每个人能把自己的角色带进真人群，只有主人开着群时才说话",marker:"function pfRoleRow(m,pl,gid,g){",file:"pf-group-role.js"},
   {release:"v1412",scope:"both",least:1,name:"微信已读（角色和真人好友），设置里可开关",marker:"function roleMarkRead(id){"},
