@@ -144,16 +144,17 @@ test('a pending user message keeps its own addressee even if the selector change
   assert.match(hostCalls[0].system,/当前用户主要在对【小雨】说话/);
 });
 
-test('a departed pending addressee never silently falls back to the host',async()=>{
+test('a departed pending addressee hands the turn to whoever is still present and says so',async()=>{
+  /* v1420：被点名的人离场后不能整轮没人说话（她要的是“暂时离场不影响其他角色回复”） */
   const {context,home,hostCalls,toasts}=harness();
   context.cohabTheaterSave('host');
   await context.cohabTheaterToggle('host');
   context.cohabPushMessage(home,{id:'pending-to-guest',who:'me',actorType:'me',displayNameSnapshot:'我',addressTo:'guest',addressNameSnapshot:'小雨',text:'这句话只问小雨',time:10});
   home.theater.guest=null;
   await context.offAI();
-  assert.equal(hostCalls.length,0);
-  assert.deepEqual(Array.from(home.msgs,x=>x.who),['me']);
-  assert.match(toasts.at(-1),/小雨 已不在场/);
+  assert.equal(hostCalls.length,1);
+  assert.deepEqual(Array.from(home.msgs,x=>x.who),['me','ta']);
+  assert.match(toasts.at(-1),/小雨 暂时离场，改由在场的人接话/);
 });
 
 test('manual support bubble limit counts actions and speech together',async()=>{
@@ -323,4 +324,37 @@ test('one manual away click gives every present support one turn and the host ex
   assert.equal(actorCalls.length,2);
   assert.equal(hostCalls.length,1);
   assert.match(hostCalls[0].system,/本轮已经先发生的配角反应[\s\S]*小雨[\s\S]*周医生/);
+});
+
+test('v1420 both WeChat guests answer every round, each after the one before',async()=>{
+  const {context,home,inputs,actorCalls}=harness();
+  inputs.ct_guest2_id.value='guest2-contact';
+  context.cohabTheaterSave('host');
+  await context.cohabTheaterToggle('host');
+  home.theater.addressTo='all';
+  await context.offAI();
+  assert.deepEqual(Array.from(home.msgs,x=>x.who),['ta','guest','guest2']);
+  assert.match(actorCalls.at(-1).map(x=>x.content).join('\n'),/配角简短回答/,'the second guest sees what the first guest just said');
+  home.theater.addressTo='guest2';
+  const before=home.msgs.length;
+  await context.offAI();
+  assert.deepEqual(Array.from(home.msgs.slice(before),x=>x.who),['guest2','ta','guest']);
+});
+
+test('v1420 a guest stepping away does not silence the others, and the addressee comes back with them',async()=>{
+  const {context,home,inputs}=harness();
+  inputs.ct_guest2_id.value='guest2-contact';
+  context.cohabTheaterSave('host');
+  await context.cohabTheaterToggle('host');
+  context.cohabTheaterAddress('host','guest');
+  context.cohabPushMessage(home,{id:'p1',who:'me',actorType:'me',displayNameSnapshot:'我',addressTo:'guest',addressNameSnapshot:'小雨',text:'小雨你在吗',time:10});
+  context.cohabTheaterPresence('host','guest',false);
+  assert.equal(home.theater.addressTo,'host');
+  await context.offAI();
+  assert.deepEqual(Array.from(home.msgs,x=>x.who),['me','ta','guest2']);
+  context.cohabTheaterPresence('host','guest',true);
+  assert.equal(home.theater.addressTo,'guest','回到现场后，原来对着说话的人重新被选中');
+  context.cohabTheaterAddress('host','guest2');
+  context.cohabTheaterPresence('host','guest',false);context.cohabTheaterPresence('host','guest',true);
+  assert.equal(home.theater.addressTo,'guest2','用户自己选的人不被离场/回来改掉');
 });
