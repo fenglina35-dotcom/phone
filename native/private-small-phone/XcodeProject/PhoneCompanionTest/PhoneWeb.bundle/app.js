@@ -2294,7 +2294,8 @@ function buildSystem(c,opt){
   s+=_main?adultRoleRule(c.remark||c.name||'角色'):altIdentityPrompt(c);
   s+=_main?memoryResetPrompt(c):'';
   s+=_main?friendOriginPrompt(c):'';
-  s+=_main?friendReaddPrompt(c)+(typeof pursuitPromptRecent==='function'?pursuitPromptRecent(c):'')+(typeof deskPetPrompt==='function'?deskPetPrompt(c):''):'';
+  s+=_main?friendReaddPrompt(c)+(typeof pursuitPromptRecent==='function'?pursuitPromptRecent(c):''):'';
+  if(_main&&typeof deskPetPrompt==='function')s+=deskPetPrompt(c);
   s+=_main?altReportMemoryPrompt(c):'';
   if(_main&&S.couple&&S.couple.cid===c.id)s+=coupleAlbumPrompt(c);
   if(_main&&typeof pixelHomeRoleContext==='function')s+=pixelHomeRoleContext(c);
@@ -15159,7 +15160,7 @@ async function maybeGrudgeResolve(reply,c,id){
     if(changed){hints.filter(Boolean).forEach(t=>dialogueResolveThread(c,t));save();if(/^(wechat|chat|couple|spy)$/.test(cur().p))render();}
   }catch(e){}}
 // 在"主动消息/查岗/节日/日程"等直接推送的回复里，把管控/记仇指令落地（记仇本、锁App都生效），显示时再用 CTLLEAK 滤掉这些标签行（普通卡片如红包/语音照常）
-const CTLLEAK=/^[\[【]\s*(桌宠|锁定|上锁|解锁|禁言|解禁|限时|加时|监督目标|目标完成|记仇|消气|拉黑|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|突脸|选择|改日记密码|改密码|改备注|登录微信|删好友|删我好友|群昵称|订票|送票|订酒店|换头像|发朋友圈|发推|发抖音|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回)\s*[|｜:：\]】]/;
+const CTLLEAK=/^[\[【]\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|监督目标|目标完成|记仇|消气|拉黑|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|突脸|选择|改日记密码|改密码|改备注|登录微信|删好友|删我好友|群昵称|订票|送票|订酒店|换头像|发朋友圈|发推|发抖音|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|桌宠)\s*[|｜:：\]】]/;
 function cleanMomentBody(t){let v=(''+(t||'')).replace(/^[\s「"'\[【]+|[\s」"'\]】]+$/g,'').trim();v=v.replace(/^发朋友圈\s*[\|:：]?\s*/,'').replace(/^朋友圈\s*[:：]\s*/,'').trim();return cleanRolePunct(v).trim().slice(0,140);}
 function cleanMomentText(t){let raw=String(t||'').replace(/\r/g,'').trim(),picked='';raw=raw.replace(/[\[【]\s*发朋友圈\s*[\|｜:：]\s*([^\]】\n]{1,240})[\]】]/g,(m,tx)=>{if(!picked)picked=tx;return '\n';});raw=raw.replace(/[\[【]\s*发朋友圈\s*[\]】]\s*[「"']?([^\n]{1,240})[」"']?/g,(m,tx)=>{if(!picked)picked=tx;return '\n';});raw=raw.split(/\n+/).map(x=>x.trim()).filter(x=>x&&!CTLLEAK.test(x)).join('\n');const seen=new Set(),lines=[];raw.split(/\n+/).forEach(x=>{const c=cleanMomentBody(x),k=c.replace(/\s+/g,'');if(c&&k&&!seen.has(k)){seen.add(k);lines.push(c);}});let v=lines.join('\n').trim();if(!v&&picked)v=cleanMomentBody(picked);if(picked){const p=cleanMomentBody(picked),np=p.replace(/\s+/g,''),nv=v.replace(/\s+/g,'');if(p&&(!v||nv===np||nv.includes(np)))v=p;}return cleanMomentBody(v||picked);}
 function roleMomentNorm(text){return String(text||'').toLowerCase().replace(/\s+/g,'').replace(/[^\u4e00-\u9fa5a-z0-9]/g,'');}
