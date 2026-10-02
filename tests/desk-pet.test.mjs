@@ -76,3 +76,9 @@ test('the pet lives on the chat input bar, hops bubble to bubble, runs off scree
   assert.match(s,/state\.napping=true/);
   assert.match(s,/on:false,cid:'',name:DP_DEFAULT_NAME/,'默认是关着的');
 });
+
+test('hats and headphones can be taken off in settings',()=>{
+  const s=read('desk-pet.js');
+  assert.match(s,/if\(c&&c\.hats===false&&hat&&hat!=='music'\)hat='';if\(c&&c\.phones===false&&hat==='music'\)hat='';/);
+  assert.match(s,/onclick="deskPetWear\('hats'\)"/);assert.match(s,/onclick="deskPetWear\('phones'\)"/);
+});

@@ -13,14 +13,14 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1404 · 桌面宠物'/);
-  assert.match(app,/const url='sw\.js\?v=1404&r=v1404-web-desk-pet-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1404'/);
-  assert.match(html,/app\.js\?v=1404/);
-  assert.match(sw,/const BUILD='1404'/);
-  assert.match(sw,/north-shell-v1404-web-desk-pet-1/);
-  assert.match(index,/小手机\.html\?v=1404/);
-  assert.match(repair,/小手机\.html\?v=1404/);
+  assert.match(app,/APP_VER='v1406 · 桌宠可以摘帽子'/);
+  assert.match(app,/const url='sw\.js\?v=1406&r=v1406-web-pet-hat-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1406'/);
+  assert.match(html,/app\.js\?v=1406/);
+  assert.match(sw,/const BUILD='1406'/);
+  assert.match(sw,/north-shell-v1406-web-pet-hat-1/);
+  assert.match(index,/小手机\.html\?v=1406/);
+  assert.match(repair,/小手机\.html\?v=1406/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{

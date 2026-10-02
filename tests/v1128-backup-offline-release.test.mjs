@@ -27,15 +27,15 @@ function functionSource(name){
 }
 
 test('v1178 has a unique visible identity across every public entry and cache layer',()=>{
-  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1404\'/);
-  assert.match(app,/APP_VER='v1404 · 桌面宠物'/);
-  assert.match(shell,/__NORTH_SHELL_BUILD__='1404'/);
-  assert.match(shell,/app\.js\?v=1404&r=v1404-web-desk-pet-1/);
-  assert.match(index,/小手机\.html\?v=1404/);
-  assert.match(repair,/小手机\.html\?v=1404/);
-  assert.match(worker,/const BUILD='1404'/);
-  assert.match(worker,/north-shell-v1404-web-desk-pet-1/);
-  assert.match(hotfix,/sw\.js\?v=1404&r=v1404-web-desk-pet-1/);
+  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1406\'/);
+  assert.match(app,/APP_VER='v1406 · 桌宠可以摘帽子'/);
+  assert.match(shell,/__NORTH_SHELL_BUILD__='1406'/);
+  assert.match(shell,/app\.js\?v=1406&r=v1406-web-pet-hat-1/);
+  assert.match(index,/小手机\.html\?v=1406/);
+  assert.match(repair,/小手机\.html\?v=1406/);
+  assert.match(worker,/const BUILD='1406'/);
+  assert.match(worker,/north-shell-v1406-web-pet-hat-1/);
+  assert.match(hotfix,/sw\.js\?v=1406&r=v1406-web-pet-hat-1/);
   for(const [name,source] of Object.entries({app,shell,index,repair,worker,hotfix})){
     assert.doesNotMatch(source,/v?1127/,`${name} must not reuse the prior web version`);
   }

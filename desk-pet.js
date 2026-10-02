@@ -272,6 +272,8 @@ function applyLook(){if(!root)return;const now=Date.now(),L=look(),c=cfg(),col=D
   if(now>=state.eyeSwapUntil){state.shownEyes=eyes;state.eyeTarget='';}
   const list=cls.split(/\s+/).filter(Boolean),anim=(list.find(x=>BODY_ANIM.test(x))||'')+'|'+list.filter(x=>/^(sit|lie)$/.test(x)).join('');
   root.className='dp-root '+list.join(' ');settleBody(anim);
+  /* 设置里关掉「戴帽子」：安全帽、睡帽、派对帽都摘掉；听歌的耳机另有开关 */
+  if(c&&c.hats===false&&hat&&hat!=='music')hat='';if(c&&c.phones===false&&hat==='music')hat='';
   root.dataset.eyes=shown;root.dataset.hat=hat;
   place();}
 function place(){if(!root)return;const d=dims();root.style.width=d.w+'px';root.style.height=d.h+'px';
@@ -460,6 +462,8 @@ function renderDeskPetPage(){css();const p=ensureCfg(),r=role(),col=DP_COLORS[p.
   <div class="dp-group">
    <div class="dp-row"><span>名字</span><input id="dp_name" maxlength="10" value="${escH(petName())}" placeholder="${DP_DEFAULT_NAME}" onchange="deskPetRename(this.value)"></div>
    <div class="dp-row"><span>陪着哪个角色</span><select onchange="deskPetBind(this.value)"><option value="">选择一个角色</option>${roles.map(c=>`<option value="${c.id}" ${p.cid===c.id?'selected':''}>${escH(rname(c))}</option>`).join('')}</select></div>
+   <div class="dp-row"><span>戴帽子<br><small style="color:#8e8e93;font-size:12px">上班安全帽、睡觉睡帽、过节派对帽</small></span><span class="sw ${p.hats!==false?'on':''}" style="flex-shrink:0" onclick="deskPetWear('hats')"></span></div>
+   <div class="dp-row"><span>听歌戴耳机</span><span class="sw ${p.phones!==false?'on':''}" style="flex-shrink:0" onclick="deskPetWear('phones')"></span></div>
    <div class="dp-row"><span>大小</span><div class="dp-seg">${seg('s','小')}${seg('m','中')}${seg('l','大')}</div></div>
    <div class="dp-row"><span>颜色</span><div class="dp-colors">${Object.keys(DP_COLORS).map(k=>`<button class="${(p.color||'clay')===k?'on':''}" title="${DP_COLOR_NAMES[k]}" style="background:${DP_COLORS[k][0]}" onclick="deskPetColor('${k}')"></button>`).join('')}</div></div>
   </div>
@@ -476,8 +480,9 @@ function deskPetRename(v){const p=ensureCfg();p.name=String(v||'').trim().slice(
   const n=petName();document.querySelectorAll('.dp-page .dp-hero b').forEach(e=>e.textContent=n);document.querySelectorAll('.dp-page .dp-label').forEach(e=>e.textContent='让'+n+'做个表情');if(typeof toast==='function')toast('它现在叫「'+petName()+'」了');}
 function deskPetSize(k){ensureCfg().size=k;save();if(root){unmount();sync();}rerender();}
 function deskPetColor(k){ensureCfg().color=k;save();applyLook();rerender();}
+function deskPetWear(k){const p=ensureCfg();p[k]=p[k]===false;save();applyLook();rerender();if(typeof toast==='function')toast(k==='hats'?(p.hats===false?'帽子摘下来啦':'帽子戴回去啦'):(p.phones===false?'听歌不戴耳机了':'听歌会戴耳机'));}
 function deskPetCmd(k){if(!root){if(typeof toast==='function')toast('先开启桌面宠物');return;}doCmd(k,USER_CMD_MS);}
 function deskPetHome(){if(!root){if(typeof toast==='function')toast('先开启桌面宠物');return;}doCmd('过来');}
-Object.assign(window,{deskPetOpen,renderDeskPetPage,deskPetToggle,deskPetBind,deskPetRename,deskPetSize,deskPetColor,deskPetCmd,deskPetHome,deskPetPrompt,deskPetConsume,
+Object.assign(window,{deskPetOpen,renderDeskPetPage,deskPetToggle,deskPetBind,deskPetRename,deskPetSize,deskPetColor,deskPetWear,deskPetCmd,deskPetHome,deskPetPrompt,deskPetConsume,
   __deskPet:{moodOf,state:()=>Object.assign({},state,{perch:!!state.perch,hop:!!state.hop}),refresh:()=>refreshMood(true),sync,tryPerch,tap,doCmd,runAway,groundY,newestBubble,nap:()=>{lastInteract=0;},normCmd,special:()=>special(Date.now()),typed:()=>{lastTypeAt=Date.now();},EYES:Object.keys(EYES),CMDS:Object.keys(CMDS)}});
 })();
