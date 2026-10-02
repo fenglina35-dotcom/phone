@@ -82,3 +82,8 @@ test('hats and headphones can be taken off in settings',()=>{
   assert.match(s,/if\(c&&c\.hats===false&&hat&&hat!=='music'\)hat='';if\(c&&c\.phones===false&&hat==='music'\)hat='';/);
   assert.match(s,/onclick="deskPetWear\('hats'\)"/);assert.match(s,/onclick="deskPetWear\('phones'\)"/);
 });
+
+test('the private bundle desk pet file is tracked, not swallowed by the bundle .gitignore',()=>{
+  const ig=read('native/private-small-phone/.gitignore');
+  assert.match(ig,/^!XcodeProject\/PhoneCompanionTest\/PhoneWeb\.bundle\/desk-pet\.js$/m);
+});
