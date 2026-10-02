@@ -168,7 +168,7 @@ function pfNotifyGroup(m,opt){opt=opt||{};if(pfIsHiddenTransport({text:m.body||m
   appNotify(title,line,{tag:'pfg-'+gid,data:{type:'open',target:'pfgroup',id:gid}});}
 function pfReadIds(m){let a=m&&m.readBy;if(!Array.isArray(a))a=m&&m.receivedBy?[m.receivedBy]:[];return a.map(x=>(''+x).toUpperCase()).filter(Boolean);}
 function pfSetReadBy(m,rid){rid=(''+rid).toUpperCase();if(!rid)return;m.readBy=pfReadIds(m);if(m.readBy.indexOf(rid)<0)m.readBy.push(rid);m.readAt=m.readAt||Date.now();}
-function pfAckRead(mid){const p=phoneFriendState();if(!mid||String(mid).startsWith('local_'))return;pfRpc('phone_friend_mark_received',{p_phone_id:p.id,p_secret:p.secret,p_message_id:mid},16000).catch(()=>{});}
+function pfAckRead(mid){const p=phoneFriendState();if(!mid||String(mid).startsWith('local_')||!readReceiptOn())return;pfRpc('phone_friend_mark_received',{p_phone_id:p.id,p_secret:p.secret,p_message_id:mid},16000).catch(()=>{});}
 function pfInferFriendRead(other,rid,ts){const p=phoneFriendState(),arr=pfMsgList(p.messages,other);rid=(''+rid).toUpperCase();if(!rid||rid===p.id)return false;let ch=false;arr.forEach(m=>{if(m.from===p.id&&!m.recalled&&!pfPayloadIsPay(m)&&(m.time||0)<=ts&&pfReadIds(m).indexOf(rid)<0){pfSetReadBy(m,rid);ch=true;}});return ch;}
 function pfInferGroupRead(gid,rid,ts){const p=phoneFriendState(),arr=pfMsgList(p.groupMessages,gid);rid=(''+rid).toUpperCase();if(!rid||rid===p.id)return false;let ch=false;arr.forEach(m=>{if(m.from!==rid&&!m.recalled&&!pfPayloadIsPay(m)&&(m.time||0)<=ts&&pfReadIds(m).indexOf(rid)<0){pfSetReadBy(m,rid);ch=true;}});return ch;}
 function pfReconcileReadInference(){const p=phoneFriendState();let ch=false;Object.keys(p.messages||{}).forEach(id=>{let latest=0;pfMsgList(p.messages,id).forEach(m=>{if(m.from===id)latest=Math.max(latest,m.time||0);});if(latest)ch=pfInferFriendRead(id,id,latest)||ch;});Object.keys(p.groupMessages||{}).forEach(gid=>{const latestBySender=new Map();pfMsgList(p.groupMessages,gid).forEach(m=>{if(m.from&&m.from!==p.id)latestBySender.set(m.from,Math.max(latestBySender.get(m.from)||0,m.time||0));});latestBySender.forEach((ts,id)=>{ch=pfInferGroupRead(gid,id,ts)||ch;});});return ch;}
@@ -279,7 +279,7 @@ function phoneFriendMaybeSync(force){const now=Date.now(),c=typeof cur==='functi
 function openPhoneFriends(){go('pffriends');setTimeout(()=>phoneFriendMaybeSync(true),60);}
 function pfReqs(dir){const p=phoneFriendState();return (p.requests||[]).filter(r=>r.direction===dir&&r.status==='pending');}
 function pfOnlineText(f){return pfIsOnline(f)?'在线':'离线';}
-function pfReadStatus(m,scope,gid){if(!m||m.recalled||String(m.id||'').startsWith('local_')||pfPayloadIsPay(m))return '';const p=phoneFriendState(),ids=pfReadIds(m).filter(x=>x&&x!==p.id);if(scope==='group'){const g=pfGroupById(gid)||{},total=Math.max(0,((g.members||[]).length||1)-1),n=ids.length;return n?`${n}${total?'/'+total:''}人已读`:'未读';}return ids.length?'已读':'未读';}
+function pfReadStatus(m,scope,gid){if(!readReceiptOn())return '';if(!m||m.recalled||String(m.id||'').startsWith('local_')||pfPayloadIsPay(m))return '';const p=phoneFriendState(),ids=pfReadIds(m).filter(x=>x&&x!==p.id);if(scope==='group'){const g=pfGroupById(gid)||{},total=Math.max(0,((g.members||[]).length||1)-1),n=ids.length;return n?`${n}${total?'/'+total:''}人已读`:'未读';}return ids.length?'已读':'未读';}
 function pfFriendRowsHTML(){const p=phoneFriendState(),fs=p.friends||[];if(!fs.length)return '';
   return fs.map(f=>{const id=(''+(f.phone_id||f.id)).toUpperCase(),arr=pfVisibleMsgList(p.messages,id),lm=arr[arr.length-1],unread=arr.filter(m=>m.from===id&&m.time>(p.friendRead[id]||0)).length;
     return `<div class="row" onclick="openPhoneFriendChat('${id}')">${pfAvatarOnlineHTML(f)}<div class="meta"><div class="n">${esc(pfFriendDisplayName(f))}</div><div class="s">${lm?esc(lm.recalled?'[已撤回一条消息]':((lm.from===p.id?'我：':'')+pfMsgPreview(lm))):'已经是好友，打个招呼吧'}</div></div><div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div>${pfUnreadDot(unread)}</div></div>`;}).join('');}
@@ -2520,7 +2520,7 @@ function appendChatHTML(cb,html,opt){if(!cb||!html)return null;opt=opt||{};const
   else{cb.insertAdjacentHTML('beforeend',html);node=cb.lastElementChild;}
   if(node&&node.classList&&node.classList.contains('msg')&&opt.animate!==false)node.classList.add('msg-enter');
   if(stick)chatPinBottom(cb);return node;}
-function appendChatMessageHTML(id,c,m,opt){const cb=$('#chatbg');if(!cb||!m)return null;const prev=chatPrevVisibleBefore(id,m),html=chatBoundaryHTML(prev,m)+bubbleRow(c,m),node=appendChatHTML(cb,html,opt||{});refreshChatMood(id);return node;}
+function appendChatMessageHTML(id,c,m,opt){const cb=$('#chatbg');if(!cb||!m)return null;const prev=chatPrevVisibleBefore(id,m),html=chatBoundaryHTML(prev,m)+bubbleRow(c,m),node=appendChatHTML(cb,html,opt||{});refreshChatMood(id);roleReadRefresh(id);return node;}
 function chatMessageListHTML(id,c){const all=msgs(id).filter(m=>!m._call);all.forEach(m=>{if(!m.id)m.id=uid();});const renderLimit=CHAT_RENDER_LIMIT+(_chatRenderExtra[id]||0),skipped=Math.max(0,all.length-renderLimit),list=skipped?all.slice(skipped):all;let body=skipped?`<div class="tstamp"><span onclick="showOlderChat('${id}')" style="cursor:pointer">加载更早 ${Math.min(CHAT_RENDER_LIMIT,skipped)} 条 · 还剩 ${skipped} 条</span></div>`:'';let prevVisible=null;list.forEach(m=>{if(m._silent)return;body+=chatBoundaryHTML(prevVisible,m);body+=bubbleRow(c,m);prevVisible=m;});return body;}
 function naturalInnerThoughtText(value){if(typeof value!=='string')return'';const text=value.replace(/[\u200B-\u200F\u2060\uFEFF]/g,'').replace(/\s+/g,' ').trim();if(!text||/[\[\]【】<>]/.test(text)||/^(?:null|undefined|none|nan)$/i.test(text)||!text.replace(/[\s.…·，。！？!?、:：;；|｜\-_]/g,''))return'';return text.slice(0,120);}
 function rememberValidInnerThought(c){if(!c)return false;const text=naturalInnerThoughtText(c.innerThought);if(!text||c.innerThoughtLastValid===text)return false;c.innerThoughtLastValid=text;c.innerThoughtLastValidAt=+c.innerThoughtAt||0;return true;}
@@ -4321,6 +4321,7 @@ function renderSettings(){const nativeBuild=privateNativeAppOn()?String(window._
       <div style="padding:11px 14px 5px;font-weight:700;color:#ffafc9">手动回复场景（可多选）</div>
       <div class="hint" style="padding:0 14px 6px">勾选：显示「让TA回应」，你点了角色才回复；不勾选：保持自动回复。角色主动找你不受影响。</div>
       ${MANUAL_REPLY_SCENE_OPTIONS.map(x=>`<div class="it"><span>${x.label}<br><small style="color:#888">${x.tip}</small></span><span class="sw ${manualReplySceneOn(x.key)?'on':''}" onclick="manualReplySceneToggle('${x.key}')"></span></div>`).join('')}
+      <div class="it"><span>微信已读<br><small style="color:#888">开：你发给角色的最后一条消息下面显示「未读 / 已读」，角色开始回你就变成已读；真人好友私聊和群聊也显示已读。关：都不显示，也不再告诉真人好友你读没读</small></span><span class="sw ${readReceiptOn()?'on':''}" onclick="readReceiptToggle()"></span></div>
       <div class="it"><span>角色自主主动联系<br><small style="color:#888">系统提供联系时机；主动来电几率未命中时，再由角色决定发消息或使用其他功能</small></span><span class="sw ${S.settings.initiative!==false?'on':''}" onclick="S.settings.initiative=(S.settings.initiative===false);save();render()"></span></div>
       <div class="it"><span>允许角色在朋友圈发图片<br><small style="color:#888">默认开启；关闭后角色仍可发文字朋友圈，但不会生成、复用或保存朋友圈图片。你的朋友圈和聊天图片不受影响</small></span><span class="sw ${roleMomentImagesAllowed()?'on':''}" role="switch" aria-checked="${roleMomentImagesAllowed()?'true':'false'}" onclick="S.settings.roleMomentImages=!roleMomentImagesAllowed();save();render();toast(S.settings.roleMomentImages?'已允许角色朋友圈图片':'已关闭角色朋友圈图片，文字朋友圈仍可发布')"></span></div>
       <div class="it"><span>角色差异化防护<br><small style="color:#888">让不同角色选择不同回应方式，并拦截跨角色重复的安慰、甜宠和固定开头</small></span><span class="sw ${S.settings.personaGuard!==false?'on':''}" onclick="S.settings.personaGuard=(S.settings.personaGuard===false);save();render()"></span></div>
@@ -8257,7 +8258,7 @@ function renderPhoneFriendChat(id){const p=phoneFriendState();id=(''+id).toUpper
     const prev=i?arr[i-1]:null;body+=chatBoundaryHTML(prev,m);
     if(m.recalled){body+=pfRecalledRow();return;}
     const me=m.from===p.id,rs=me&&!m._transferReceipt?pfReadStatus(m,'friend',id):'',rec=me&&!m._transferReceipt?`<button type="button" class="pfrecall" aria-label="撤回这条消息" onclick="event.stopPropagation();phoneFriendRecallMessage('${m.id}','friend','${id}')">撤回</button>`:'';
-    body+=`<div class="msg ${me?'me':'them'}"><span>${me?av(S.me.avatar):pfAvatarHTML(f)}</span><div class="col" onclick="pfMsgMenu('${m.id}','friend','${id}')">${pfBubblePart(m,me)}<div class="msgt">${rec}${rs?`<span style="margin-right:8px;color:#8d8d96">${rs}</span>`:''}${hm(m.time)}</div></div></div>`+pfRpSysLine(m,'friend',id);
+    body+=`<div class="msg ${me?'me':'them'}"><span>${me?av(S.me.avatar):pfAvatarHTML(f)}</span><div class="col" onclick="pfMsgMenu('${m.id}','friend','${id}')">${pfBubblePart(m,me)}<div class="msgt">${rec}${hm(m.time)}</div>${rs?`<div class="msgread-line">${rs}</div>`:''}</div></div>`+pfRpSysLine(m,'friend',id);
   });
   const gag=S.couple&&S.couple.gags&&S.couple.gags[pfGagKey(id)];
   return `<div class="nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(pfFriendDisplayName(f))}</span><span class="r" onclick="phoneFriendManage('${id}')">⋯</span></div>
@@ -8271,7 +8272,7 @@ function renderPhoneFriendGroup(gid){const g=pfGroupById(gid)||{name:'小手机�
     const pl=pfMsgPayload(m);if(pl&&pl.type==='pat'){body+=pfPatRow(m);return;}
     const me=m.from===p.id,sid=me?'me':(''+m.from).toUpperCase(),bs=pfGroupBubbleCfg(gid,sid),ac=bs&&bs.avatar==='round'?'av-round':'',member=pfGroupMemberById(g,m.from),ff=phoneFriendById(m.from)||member,name=pfGroupMemberName(g,member||{phone_id:m.from}),rs=me?pfReadStatus(m,'group',gid):'',rec=me?`<button type="button" class="pfrecall" aria-label="撤回这条消息" onclick="event.stopPropagation();phoneFriendRecallMessage('${m.id}','group','${gid}')">撤回</button>`:'',at=me?'':`onpointerdown="pfAtStart(event,'${gid}','${m.from}')" onpointerup="pfGroupAvatarTap(event,'${gid}','${m.from}')" onpointercancel="pfAtEnd()" onpointerleave="pfAtEnd()" ondblclick="pfGroupAvatarDouble(event,'${gid}','${m.from}')" title="双击拍一拍，长按@"`;
     const showName=!me&&!pfGroupPref(gid).hideNames;
-    body+=`<div class="msg ${me?'me':'them'}${showName?' gnamed':''}"><span ${at}>${me?av(S.me.avatar,ac):pfAvatarHTML(ff||{phone_id:m.from,display_name:name},ac)}</span><div class="col" onclick="pfMsgMenu('${m.id}','group','${gid}')">${showName?`<div class="gname">${esc(name||'成员')}</div>`:''}${pfBubblePart(m,me,bs)}<div class="msgt">${rec}${rs?`<span style="margin-right:8px;color:#8d8d96">${rs}</span>`:''}${hm(m.time)}</div></div></div>`+pfRpSysLine(m,'group',gid);
+    body+=`<div class="msg ${me?'me':'them'}${showName?' gnamed':''}"><span ${at}>${me?av(S.me.avatar,ac):pfAvatarHTML(ff||{phone_id:m.from,display_name:name},ac)}</span><div class="col" onclick="pfMsgMenu('${m.id}','group','${gid}')">${showName?`<div class="gname">${esc(name||'成员')}</div>`:''}${pfBubblePart(m,me,bs)}<div class="msgt">${rec}${hm(m.time)}</div>${rs?`<div class="msgread-line">${rs}</div>`:''}</div></div>`+pfRpSysLine(m,'group',gid);
   });
   const gag=S.couple&&S.couple.gags&&S.couple.gags[pfgGagKey(gid)];
   const pref=pfGroupPref(gid),bgSource=pref.chatBg?storedImageDisplaySource(pref.chatBg):'';
@@ -14528,6 +14529,16 @@ function renderChat(id){const c=getC(id);if(!c)return '';
       <button type="button" class="chat-composer-icon chat-function-toggle" aria-label="打开更多功能" onclick="chatPanelToggle('fn')"><span aria-hidden="true"></span></button>
       <button type="button" class="send chat-send" onclick="sendText('${id}')">${_voiceMode?'发语音':'发送'}</button>
     </div>`}`;}
+/* 微信已读（v1412）：你发给角色的最后一条消息下面显示「未读 / 已读」，角色开始回你就变成已读。设置 → 角色、时间与消息 里可以随时关掉，关掉后真人好友那边也不显示、也不再告诉对方你读没读。 */
+function readReceiptOn(){return !(S.settings&&S.settings.readReceipt===false);}
+function readReceiptToggle(){S.settings.readReceipt=!readReceiptOn();save();render();toast(readReceiptOn()?'已开启微信已读':'已关闭微信已读');}
+function roleReadCounted(m){return !!m&&!m._silent&&!m._call&&m.type!=='sys';}
+function roleLastUserMsg(id){const a=msgs(id);for(let i=a.length-1;i>=0;i--){const m=a[i];if(!roleReadCounted(m))continue;if(m.role==='user')return m;}return null;}
+function roleMsgRead(id,m){if(!m)return false;if(m.readAt)return true;const a=msgs(id),i=a.indexOf(m);return i>=0&&a.slice(i+1).some(x=>roleReadCounted(x)&&x.role==='assistant');}
+function roleReadLabelHTML(c,m){if(!readReceiptOn()||!c||!m||m.role!=='user'||!roleReadCounted(m))return '';const last=roleLastUserMsg(c.id);return `<div class="msgread msgread-line" data-read-for="${m.id}"${last&&last.id===m.id?'':' style="display:none"'}>${roleMsgRead(c.id,m)?'已读':'未读'}</div>`;}
+function roleReadRefresh(id){const cb=$('#chatbg');if(!cb)return;const last=roleLastUserMsg(id),on=readReceiptOn();cb.querySelectorAll('.msgread').forEach(el=>{const mine=on&&last&&el.dataset.readFor===last.id;el.style.display=mine?'':'none';if(mine)el.textContent=roleMsgRead(id,last)?'已读':'未读';});}
+/* 角色开始回你（出现正在输入）那一刻算他读了 */
+function roleMarkRead(id){const a=msgs(id),now=Date.now();let ch=false;for(let i=a.length-1;i>=0;i--){const m=a[i];if(!roleReadCounted(m))continue;if(m.role!=='user')continue;if(m.readAt)break;m.readAt=now;ch=true;}if(ch){save(800);if(cur().p==='chat'&&cur().id===id)roleReadRefresh(id);}return ch;}
 function bubbleRow(c,m){
   const me=m.role==='user';
   if(m._silent||m.type==='tcollect'||m.type==='treject')return '';
@@ -14538,9 +14549,11 @@ function bubbleRow(c,m){
   const h=selecting?`onclick="toggleSel('${m.id}')"`:`onclick="msgMenu('${c.id}','${m.id}')"`,avatarTap=selecting?h:(me?h:`onclick="event.stopPropagation();go('chatDetails',{id:'${c.id}'})"`);
   const tick=selecting?`<span id="tk_${m.id}" style="align-self:center;font-size:20px;color:${_sel.ids.includes(m.id)?'#07c160':'#555'}">${_sel.ids.includes(m.id)?'☑':'⚪'}</span>`:'';
   const ts=(typeof messageBeijingTimeHTML==='function'&&messageBeijingTimeHTML(m))||(m.time?`<div class="msgt">${hm(m.time)}</div>`:'');
+  /* 聊天页的时间行（.msgt）在新版微信样式里是隐藏的，所以已读单独占一小行 */
+  const readLine=me?roleReadLabelHTML(c,m):'';
   const longPressable=!selecting&&(m.type==='text'||m.type==='voice'||m.type==='image');
   const lp=longPressable?` onmousedown="qPressStart('${c.id}','${m.id}')" onmouseup="qPressEnd()" onmouseleave="qPressEnd()" ontouchstart="qPressStart('${c.id}','${m.id}')" ontouchend="qPressEnd()" ontouchmove="qPressEnd()"`:'';
-  return `<div class="msg ${me?'me':'them'}${msgEnterClass(m)}">${tick}<span ${avatarTap}>${av(me?S.me.avatar:c.avatar,bubbleAvatarClass(c,me))}</span><div class="col" ${h}${lp}>${inner}${ts}</div></div>`;}
+  return `<div class="msg ${me?'me':'them'}${msgEnterClass(m)}">${tick}<span ${avatarTap}>${av(me?S.me.avatar:c.avatar,bubbleAvatarClass(c,me))}</span><div class="col" ${h}${lp}>${inner}${ts}${readLine}</div></div>`;}
 function msgEnterClass(m){return m&&m.role==='assistant'&&!m._call&&m.type!=='sys'&&Date.now()-(+m.time||0)<20000?' msg-enter':'';}
 const _roleTextTranslationBusy=new Set();
 let _roleTextTranslationQueue=Promise.resolve();
@@ -16130,6 +16143,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
   if(wxLoginBlockReply(id,note))return;/* 角色登录用户微信期间不能同时给用户发消息；退出后合并承接 */
   if(initiativeNoteActive(note)&&!initiativeReplyFresh(c,note))return false;/* 主动任务排队后若用户又说话或争吵状态改变，旧任务立即作废 */
   if(hasPendingVision(id)){const ready=await awaitPendingVision(id,150000);if(replyStale(id,replyToken,replyAccount))return;if(replyAccountChanged(id,note,replyToken,replyAccount))return;if(!ready){toast('图片还在识别，等识别结束后再让ta回复');return;}}
+  if(!note||/^\[/.test(String(note)))roleMarkRead(id);
   // typing
   const _replyAudit=roleInterceptDiagnosticTurn(c,'online',replyAccount,'线上微信'),_replyActionOutcome={matched:0,handled:0,failed:0};let typingEl,delivered=false,_replyAuditFinal='',_replyAuditPartial=false,_replyAuditHandled=false,_replyDeferredIncoming=[];if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){
     typingEl=appendChatHTML(cb,`<div class="msg them" id="typing">${av(c.avatar,bubbleAvatarClass(c,false))}<div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`,{smooth:true});}}
