@@ -49,7 +49,7 @@ test('private candidate is v1355 and iOS 399 while public advances independently
   assert.match(bridge,/private static let build = "1\.0\.434 \(434\)"/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 434;/g)||[]).length,12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.434;/g)||[]).length,12);
-  assert.match(publicApp,/APP_VER='v1418 · 艾特气泡改灰色'/);
+  assert.match(publicApp,/APP_VER='v1420 · 线下剧场修复与删记录'/);
 });
 
 test('ordinary foreground polling is lightweight while explicit control verification stays complete',async()=>{

@@ -190,5 +190,5 @@ test('private identity advances while public web stays unchanged',()=>{
   assert.match(webView,/1\.0\.434 \(434\)/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 434;/g)||[]).length,12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.434;/g)||[]).length,12);
-  assert.match(read('app.js'),/APP_VER='v1418 · 艾特气泡改灰色'/);
+  assert.match(read('app.js'),/APP_VER='v1420 · 线下剧场修复与删记录'/);
 });
