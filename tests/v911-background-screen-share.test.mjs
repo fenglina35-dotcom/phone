@@ -14,10 +14,10 @@ const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest
 
 test('current web and private release versions align', () => {
   assert.match(app, /APP_VER='v1418 · 艾特气泡改灰色'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 433;/);
-  assert.match(project, /MARKETING_VERSION = 1.0.433;/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 434;/);
+  assert.match(project, /MARKETING_VERSION = 1.0.434;/);
   assert.match(bridge, /contractVersion = 42/);
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.433 \(433\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.434 \(434\)'/);
 });
 
 test('native speech freezes the system frame that belongs to the final utterance', () => {
