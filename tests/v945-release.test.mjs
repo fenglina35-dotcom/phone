@@ -13,7 +13,7 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1404 · 桌面小机器人'/);
+  assert.match(app,/APP_VER='v1404 · 桌面宠物'/);
   assert.match(app,/const url='sw\.js\?v=1404&r=v1404-web-desk-pet-1'/);
   assert.match(html,/__NORTH_SHELL_BUILD__='1404'/);
   assert.match(html,/app\.js\?v=1404/);

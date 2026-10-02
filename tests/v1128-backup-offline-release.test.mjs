@@ -28,7 +28,7 @@ function functionSource(name){
 
 test('v1178 has a unique visible identity across every public entry and cache layer',()=>{
   assert.match(app,/__NORTH_SHELL_BUILD__!==\'1404\'/);
-  assert.match(app,/APP_VER='v1404 · 桌面小机器人'/);
+  assert.match(app,/APP_VER='v1404 · 桌面宠物'/);
   assert.match(shell,/__NORTH_SHELL_BUILD__='1404'/);
   assert.match(shell,/app\.js\?v=1404&r=v1404-web-desk-pet-1/);
   assert.match(index,/小手机\.html\?v=1404/);

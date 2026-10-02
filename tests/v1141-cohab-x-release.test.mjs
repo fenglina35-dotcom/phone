@@ -14,7 +14,7 @@ test('v1184 web identity and cache markers are aligned', () => {
   const index = read('index.html');
   const repair = read('repair.html');
   assert.match(app, /__NORTH_SHELL_BUILD__!=='1404'/);
-  assert.match(app, /APP_VER='v1404 · 桌面小机器人'/);
+  assert.match(app, /APP_VER='v1404 · 桌面宠物'/);
   assert.match(shell, /__NORTH_SHELL_BUILD__='1404'/);
   assert.match(shell, /app\.js\?v=1404&r=v1404-web-desk-pet-1/);
   assert.match(sw, /const BUILD='1404'/);
