@@ -11,9 +11,9 @@ const DP_COLOR_NAMES={clay:'陶土橙',pink:'草莓粉',mint:'薄荷绿',milk:'�
 const DP_DEFAULT_NAME='小橘';
 const VB_W=16,VB_H=18,VB_Y=-5,FOOT=16/18;   /* 脚底在画布高度的 16/18 处 */
 const INK='#1b1311';
-const ROLE_CMD_MS=40000,USER_CMD_MS=12000,TYPE_MS=2500;
-let root=null,state={x:-1,y:-1,face:1,rot:0,mood:'idle',act:'',tx:0,ty:0,moving:false,climb:0,hop:null,perch:null,perchUntil:0,react:'',reactUntil:0,eyes:'',eyesUntil:0,annoyedUntil:0,cmd:'',cmdUntil:0,shownEyes:'',eyeSwapUntil:0,eyeTarget:'',bodyAnim:''},
-  raf=0,last=0,legT=0,legB=false,blinkAt=0,blink2=false,nextActAt=0,fxAt=0,moodAt=0,drag=null,taps=[],pressTimer=0,microAt=0,lastTypeAt=0,settleTimer=0;
+const ROLE_CMD_MS=40000,USER_CMD_MS=12000,TYPE_MS=2500,NAP_MS=90000,PLACE_MS=45000;
+let root=null,state={x:-1,y:-1,face:1,rot:0,mood:'idle',act:'',tx:0,ty:0,moving:false,climb:0,hop:null,perch:null,perchUntil:0,react:'',reactUntil:0,eyes:'',eyesUntil:0,annoyedUntil:0,cmd:'',cmdUntil:0,shownEyes:'',eyeSwapUntil:0,eyeTarget:'',bodyAnim:'',onGround:false,walkGround:false,placedUntil:0,out:null,napping:false},
+  raf=0,last=0,legT=0,legB=false,blinkAt=0,blink2=false,nextActAt=0,fxAt=0,moodAt=0,drag=null,taps=[],pressTimer=0,microAt=0,lastTypeAt=0,settleTimer=0,lastInteract=Date.now(),msgSig=null,msgCheckAt=0,wobbleAt=0,hiddenAt=0;
 
 function cfg(){if(typeof S==='undefined'||!S||!S.settings)return null;return S.settings.deskPet||null;}
 function ensureCfg(){S.settings.deskPet=Object.assign({on:false,cid:'',name:DP_DEFAULT_NAME,size:'m',color:'clay'},S.settings.deskPet||{});return S.settings.deskPet;}
@@ -100,7 +100,7 @@ const CMDS={
   '坐下':{eyes:'open',cls:'sit'},
 };
 const CMD_ALIAS={'高兴':'开心','笑':'开心','爱心':'爱心眼','喜欢':'爱心眼','星星':'星星眼','哭':'难过','伤心':'难过','委屈':'难过','发火':'生气','气':'生气','吃惊':'惊讶','晕':'晕乎乎','睡':'睡觉','舞':'跳舞','招手':'挥手','跳':'蹦跶','趴':'趴下','坐':'坐下'};
-function normCmd(v){v=String(v||'').trim().replace(/[。！!~～\s]/g,'');if(CMDS[v])return v;if(CMD_ALIAS[v])return CMD_ALIAS[v];if(/^(平静|恢复|正常|停|停下|好了)$/.test(v))return'平静';for(const k of Object.keys(CMDS))if(v.includes(k))return k;for(const [a,k] of Object.entries(CMD_ALIAS))if(v.includes(a))return k;return'';}
+function normCmd(v){v=String(v||'').trim().replace(/[。！!~～\s]/g,'');if(CMDS[v]||MOVES[v])return v;if(/^(出去|跑掉|溜走|躲起来)$/.test(v))return'跑出去';if(/^(回来|过来吧|来这里|到这来)$/.test(v))return'过来';if(/气泡/.test(v))return'跳上气泡';if(CMD_ALIAS[v])return CMD_ALIAS[v];if(/^(平静|恢复|正常|停|停下|好了)$/.test(v))return'平静';for(const k of Object.keys(CMDS))if(v.includes(k))return k;for(const [a,k] of Object.entries(CMD_ALIAS))if(v.includes(a))return k;return'';}
 
 function css(){if(document.getElementById('dpStyle'))return;const st=document.createElement('style');st.id='dpStyle';st.textContent=`
 .dp-root{position:absolute;left:0;top:0;z-index:180;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:grab;will-change:transform}
@@ -238,6 +238,7 @@ function special(now){
   if(state.cmd&&now<state.cmdUntil){const c=CMDS[state.cmd];return Object.assign({still:true,hat:look().hat},c);}
   if(typingOn(now))return{eyes:'focus',cls:'sit keys type',hat:'',fx:'code',every:1400,still:true};
   if(musicOn())return{eyes:'closed',cls:'sway',hat:'music',fx:'note',every:1500,still:true,micro:['happy']};
+  if(state.napping)return{eyes:'closed',cls:'sit slow',hat:'',fx:'z',every:1900,still:true};
   return null;
 }
 
@@ -282,65 +283,84 @@ function fx(kind,opt){if(!root)return;const F=FX[kind];if(!F)return;opt=opt||{};
   const side=state.face>0?.62:.18;e.style.left=(state.x+d.w*(opt.center?.5-F.w*k/d.w/2:side+(Math.random()-.5)*.25))+'px';e.style.top=(state.y+d.h*(opt.top!=null?opt.top:0)-F.h*k)+'px';
   h.appendChild(e);setTimeout(()=>e.remove(),1600);}
 
-/* ---------- 聊天气泡：可以跳上去趴着 ---------- */
+/* ---------- 地面：聊天页就是输入框上沿，别的页面是屏幕底 ---------- */
 function hostRect(){return host().getBoundingClientRect();}
-function perchSpots(){const hr=hostRect(),d=dims(),out=[];
-  document.querySelectorAll('.msg .bubble').forEach(el=>{if(!el.isConnected||el.closest('.modal'))return;const r=el.getBoundingClientRect();
-    if(r.width<d.w*.7||r.height<12)return;const top=r.top-hr.top;if(top-d.h*FOOT<70||r.bottom-hr.top>hr.height-60)return;out.push(el);});
-  return out;}
-function perchPos(el,ox){const hr=hostRect(),r=el.getBoundingClientRect(),d=dims();return{x:r.left-hr.left+ox,y:r.top-hr.top-d.h*FOOT+1,ok:el.isConnected&&r.width>0&&r.top-hr.top-d.h*FOOT>40&&r.bottom-hr.top<hr.height-30};}
-function hopTo(x,y,opt){opt=opt||{};const b=bounds();state.moving=false;state.climb=0;state.rot=0;state.act='';
+function groundEl(){const list=document.querySelectorAll('.chat-inputbar,.inputbar');for(const el of list){if(el.closest('.modal'))continue;const r=el.getBoundingClientRect();if(r.width>40&&r.bottom>0&&r.top<window.innerHeight)return el;}return null;}
+function groundY(){const hr=hostRect(),d=dims(),el=groundEl();if(el){const r=el.getBoundingClientRect();return Math.max(0,Math.min(bounds().h,r.top-hr.top-d.h*FOOT+1));}return bounds().h;}
+function hostW(){return host().clientWidth||window.innerWidth;}
+
+/* ---------- 聊天气泡：可以跳上去趴着，从一个气泡跳到另一个 ---------- */
+function bubbleOk(el){const hr=hostRect(),d=dims();if(!el||!el.isConnected||el.closest('.modal'))return false;const r=el.getBoundingClientRect();
+  if(r.width<d.w*.7||r.height<12)return false;const top=r.top-hr.top,g=groundEl();if(top-d.h*FOOT<60)return false;if(g&&r.bottom>g.getBoundingClientRect().top-4)return false;return r.bottom-hr.top<hr.height-40;}
+function perchSpots(){return [...document.querySelectorAll('.msg .bubble')].filter(bubbleOk);}
+function perchPos(el,ox){const hr=hostRect(),r=el.getBoundingClientRect(),d=dims();return{x:r.left-hr.left+ox,y:r.top-hr.top-d.h*FOOT+1,ok:bubbleOk(el)};}
+function hopTo(x,y,opt){opt=opt||{};const b=bounds();if(state.out){state.out=null;if(root)root.style.visibility='';}state.moving=false;state.climb=0;state.rot=0;state.act='';state.onGround=false;
   const tx=Math.max(0,Math.min(b.w,x)),ty=Math.max(-dims().h*.2,Math.min(b.h,y)),dist=Math.hypot(tx-state.x,ty-state.y);
-  state.face=tx<state.x?-1:1;state.hop={sx:state.x,sy:state.y,tx,ty,t0:performance.now(),dur:Math.min(900,380+dist*1.4),h:Math.min(110,30+dist*.35),perch:opt.perch||null};if(!raf)loop();}
-function tryPerch(){const spots=perchSpots();if(!spots.length)return false;const d=dims(),el=pick(spots),r=el.getBoundingClientRect(),ox=Math.max(-d.w*.15,Math.min(r.width-d.w*.85,Math.random()*(r.width-d.w)));
-  const p=perchPos(el,ox);if(!p.ok)return false;hopTo(p.x,p.y,{perch:{el,ox}});return true;}
-function leavePerch(down){state.perch=null;state.act='';const b=bounds();if(down)hopTo(state.x+(Math.random()-.5)*80,b.h);}
+  state.face=tx<state.x?-1:1;state.hop={sx:state.x,sy:state.y,tx,ty,t0:performance.now(),dur:Math.min(900,380+dist*1.4),h:Math.min(110,30+dist*.35),perch:opt.perch||null,ground:!!opt.ground};if(!raf)loop();}
+function perchOn(el){if(!bubbleOk(el))return false;const d=dims(),r=el.getBoundingClientRect(),ox=Math.max(-d.w*.15,Math.min(r.width-d.w*.85,Math.random()*(r.width-d.w)));
+  const p=perchPos(el,ox);if(!p.ok)return false;hopTo(p.x,p.y,{perch:{el,ox}});state.perchUntil=Date.now()+12000+Math.random()*14000;return true;}
+function tryPerch(){const spots=perchSpots().filter(el=>!state.perch||el!==state.perch.el);if(!spots.length)return false;
+  /* 优先跳到离自己近的气泡，看起来是一格一格蹦过去的 */
+  const hr=hostRect(),near=spots.map(el=>{const r=el.getBoundingClientRect();return{el,dist:Math.hypot(r.left-hr.left-state.x,r.top-hr.top-state.y)};}).sort((a,b)=>a.dist-b.dist);
+  const pool=near.slice(0,Math.min(3,near.length));return perchOn(pick(pool).el);}
+function newestBubble(){const all=perchSpots();return all[all.length-1]||null;}
+function toGround(){const gy=groundY();if(Math.abs(state.y-gy)>50)hopTo(state.x+(Math.random()-.5)*60,gy,{ground:true});else walkTo(state.x,gy,{ground:true});}
+function leavePerch(){state.perch=null;state.act='';toGround();}
 
 /* ---------- 行为 ---------- */
-function walkTo(x,y){const b=bounds();state.tx=Math.max(0,Math.min(b.w,x));state.ty=Math.max(0,Math.min(b.h,y));state.moving=true;state.face=state.tx<state.x?-1:1;if(!raf)loop();}
+function walkTo(x,y,opt){opt=opt||{};const b=bounds(),d=dims();const free=!!opt.free;state.tx=free?x:Math.max(0,Math.min(b.w,x));state.ty=Math.max(0,Math.min(b.h,y));state.walkGround=!!opt.ground;state.onGround=false;state.moving=true;state.face=state.tx<state.x?-1:1;if(!raf)loop();}
+/* 跑出屏幕外，过几秒再从某一边跑回来 */
+function runAway(){const d=dims(),left=state.x<hostW()/2;state.perch=null;state.hop=null;state.climb=0;state.rot=0;state.placedUntil=0;state.cmd='';state.out={phase:'leaving'};state.act='flee';walkTo(left?-d.w-12:hostW()+12,groundY(),{free:true});}
+function comeBack(){const d=dims(),fromLeft=Math.random()<.5;state.out={phase:'back'};state.x=fromLeft?-d.w-8:hostW()+8;state.y=groundY();if(root)root.style.visibility='';state.act='';walkTo(fromLeft?40+Math.random()*100:bounds().w-40-Math.random()*100,groundY(),{ground:true});}
 function chooseAct(now){
   const L=look(),b=bounds(),m=state.mood;state.act='';
   if(!L.speed){nextActAt=now+6000;return;}
   const r=Math.random(),playful=['idle','happy','love','party'].includes(m);
-  if(state.perch){/* 在气泡上：趴着、蹦跶、发呆，过一会儿换个气泡或者跳下来 */
-    if(now>state.perchUntil){if(Math.random()<.5&&tryPerch()){state.perchUntil=now+12000+Math.random()*14000;}else leavePerch(true);nextActAt=now+2500;return;}
+  if(now<state.placedUntil){/* 被你放在这里了：原地玩，不乱跑 */state.act=pick(['look-l','look-r','sit','wave','stretch',playful?'dance':'sit']);nextActAt=now+3000+Math.random()*3000;return;}
+  if(state.perch){/* 在气泡上：趴着、蹦跶、发呆，或者跳到下一个气泡 */
+    if(now>state.perchUntil){if(Math.random()<.55&&tryPerch()){}else leavePerch();nextActAt=now+2500;return;}
+    if(r<.22&&tryPerch()){nextActAt=now+2200;return;}
     state.act=pick(playful?['hop','hop','lie','lie','dance','wave','look-l','look-r','sit']:['lie','sit','look-l','look-r']);nextActAt=now+2600+Math.random()*2600;return;}
-  if(playful&&r<.3&&tryPerch()){state.perchUntil=now+12000+Math.random()*14000;nextActAt=now+1500;return;}
-  if(m==='work'){if(r<.25)walkTo(state.x+(Math.random()-.5)*120,state.y);nextActAt=now+7000+Math.random()*6000;return;}
-  if(m==='idle'){
-    if(r<.5)walkTo(Math.random()*b.w,Math.random()*b.h);
-    else if(r<.6){state.act='skate';walkTo(state.x<b.w/2?b.w:0,state.y);}
-    else if(r<.68){state.climb=1;walkTo(Math.random()<.5?0:b.w,state.y);}
-    else if(r<.74)hopTo(state.x+(Math.random()-.5)*160,state.y+(Math.random()-.5)*120);
-    else state.act=pick(['dance','stretch','wave','look-l','look-r','sit','sit']);
-  }else if(playful){
-    if(r<.55)walkTo(Math.random()*b.w,Math.random()*b.h);else if(r<.7)hopTo(state.x+(Math.random()-.5)*160,state.y+(Math.random()-.5)*100);else state.act=pick(['dance','dance','wave','stretch','hop']);
-  }else if(m==='sad'||m==='sleepy'){
-    if(r<.3)walkTo(state.x+(Math.random()-.5)*90,state.y+(Math.random()-.5)*60);else state.act=pick(['sit','lie','look-l','look-r']);
-  }else if(m==='angry'){
-    if(r<.6)walkTo(Math.random()*b.w,state.y+(Math.random()-.5)*80);else state.act='sit';
-  }
+  const gy=groundY(),offGround=Math.abs(state.y-gy)>4;
+  if(offGround&&r<.7){toGround();nextActAt=now+2000;return;}
+  if(m==='work'){if(r<.3)walkTo(state.x+(Math.random()-.5)*140,gy,{ground:true});nextActAt=now+7000+Math.random()*6000;return;}
+  if(m==='sad'||m==='sleepy'){if(r<.3)walkTo(state.x+(Math.random()-.5)*100,gy,{ground:true});else state.act=pick(['sit','lie','look-l','look-r']);nextActAt=now+5000+Math.random()*5000;return;}
+  if(m==='angry'){if(r<.5)walkTo(Math.random()*b.w,gy,{ground:true});else if(r<.62)runAway();else state.act='sit';nextActAt=now+4000+Math.random()*4000;return;}
+  /* 平常 / 开心 / 想你 / 过节：在输入框上来回走，偶尔跳上气泡、溜滑板、爬墙、跑出去 */
+  if(r<.42)walkTo(Math.random()*b.w,gy,{ground:true});
+  else if(r<.58&&tryPerch()){}
+  else if(r<.65){state.act='skate';walkTo(state.x<b.w/2?b.w:0,gy,{ground:true});}
+  else if(r<.70){state.climb=1;walkTo(Math.random()<.5?0:b.w,state.y);}
+  else if(r<.74)runAway();
+  else state.act=pick(m==='idle'?['dance','stretch','wave','look-l','look-r','sit','sit']:['dance','dance','wave','stretch','hop']);
   nextActAt=now+4500+Math.random()*6000;
 }
 function loop(){raf=requestAnimationFrame(tick);}
 function tick(t){raf=0;if(!root||document.hidden)return;const dt=Math.min(.05,last?(t-last)/1000:0);last=t;const now=Date.now(),sp=special(now);
-  if(sp&&sp.still&&state.moving&&!state.climb){state.moving=false;persist();}
-  if(state.hop&&!drag){const H=state.hop,p=Math.min(1,(t-H.t0)/H.dur);let ty=H.ty;if(H.perch){const q=perchPos(H.perch.el,H.perch.ox);if(q.ok){H.tx=q.x;ty=H.ty=q.y;}}
+  watchMessages(now);
+  if(state.out&&state.out.phase==='away'){if(now>state.out.until)comeBack();loop();return;}
+  if(sp&&sp.still&&state.moving&&!state.climb&&!state.out){state.moving=false;persist();}
+  if(state.hop&&!drag){const H=state.hop,p=Math.min(1,(t-H.t0)/H.dur);let ty=H.ty;if(H.perch){const q=perchPos(H.perch.el,H.perch.ox);if(q.ok){H.tx=q.x;ty=H.ty=q.y;}}else if(H.ground){ty=H.ty=groundY();}
     state.x=H.sx+(H.tx-H.sx)*p;state.y=H.sy+(ty-H.sy)*p-H.h*4*p*(1-p);
-    if(p>=1){state.hop=null;state.perch=H.perch;react('land',320);if(!state.perch)persist();nextActAt=now+900;}}
-  else if(state.perch&&!drag){const q=perchPos(state.perch.el,state.perch.ox);if(!q.ok){/* 气泡滑走了 */state.perch=null;const b=bounds();state.y=Math.max(0,Math.min(b.h,state.y));hopTo(state.x,b.h);}else{state.x=q.x;state.y=q.y;}}
-  else if(state.moving&&!drag){const L=look(),spd=(L.speed||30)*(state.act==='skate'?2.4:state.act==='flee'?3:1)*scale()/3,
-      dx=state.tx-state.x,dy=state.ty-state.y,dist=Math.hypot(dx,dy);
+    if(p>=1){state.hop=null;state.perch=H.perch&&bubbleOk(H.perch.el)?H.perch:null;state.onGround=!!H.ground;react('land',320);if(!state.perch)persist();nextActAt=now+900;}}
+  else if(state.perch&&!drag){const q=perchPos(state.perch.el,state.perch.ox);if(!q.ok){/* 气泡滑走了 */state.perch=null;toGround();}else{state.x=q.x;state.y=q.y;}}
+  else if(state.moving&&!drag){const L=look(),spd=(L.speed||30)*(state.act==='skate'?2.4:state.act==='flee'?3:1)*scale()/3;
+    if(state.walkGround)state.ty=groundY();
+    const dx=state.tx-state.x,dy=state.ty-state.y,dist=Math.hypot(dx,dy);
     if(dist<1.5){state.moving=false;state.x=state.tx;state.y=state.ty;
-      if(state.climb===1){const b=bounds();state.climb=2;state.rot=state.x<=1?90:-90;state.face=1;walkTo(state.x,Math.max(0,state.y-(80+Math.random()*Math.min(260,b.h*.6))));}
-      else if(state.climb===2){state.climb=3;setTimeout(()=>{if(state.climb===3){const b=bounds();state.climb=0;state.rot=0;walkTo(state.x<=1?40+Math.random()*80:b.w-40-Math.random()*80,state.y);}},1500+Math.random()*2500);}
-      else{if(state.act==='skate'||state.act==='flee')state.act='';persist();}
+      if(state.out&&state.out.phase==='leaving'){state.out={phase:'away',until:now+3000+Math.random()*6000};root.style.visibility='hidden';state.act='';}
+      else if(state.out&&state.out.phase==='back'){state.out=null;state.onGround=true;react('land',300);fx('spark');persist();}
+      else if(state.climb===1){const b=bounds();state.climb=2;state.rot=state.x<=1?90:-90;state.face=1;walkTo(state.x,Math.max(0,state.y-(80+Math.random()*Math.min(260,b.h*.6))));}
+      else if(state.climb===2){state.climb=3;setTimeout(()=>{if(state.climb===3){state.climb=0;state.rot=0;toGround();}},1500+Math.random()*2500);}
+      else{if(state.act==='skate'||state.act==='flee')state.act='';state.onGround=state.walkGround;persist();}
     }else{const k=Math.min(1,spd*dt/dist);state.x+=dx*k;state.y+=dy*k;legT+=dt;if(legT>(state.act==='skate'?1:.15)){legT=0;legB=!legB;}}}
+  else if(state.onGround&&!drag&&!state.climb){/* 输入框跟着键盘上下动时，它也跟着站稳 */const gy=groundY(),diff=gy-state.y;if(Math.abs(diff)>70)hopTo(state.x,gy,{ground:true});else if(Math.abs(diff)>.5)state.y+=diff*Math.min(1,dt*12);}
   if(now>blinkAt+2600+Math.random()*3500){blinkAt=now;blink2=Math.random()<.25;}
   if(state.reactUntil&&now>state.reactUntil){state.react='';state.reactUntil=0;}
   if(state.cmd&&now>=state.cmdUntil){state.cmd='';nextActAt=now+1500;}
+  if(!state.napping&&!sp&&now-lastInteract>NAP_MS&&state.mood!=='sleep'&&!state.out&&!state.moving&&!state.hop){state.napping=true;state.act='';}
   const L=look();
-  if(!sp&&!state.moving&&!state.hop&&!drag&&!state.climb&&now>nextActAt)chooseAct(now);
+  if(!sp&&!state.moving&&!state.hop&&!drag&&!state.climb&&!state.out&&now>nextActAt)chooseAct(now);
   const micro=sp?sp.micro:L.micro;
   if(!drag&&now>microAt&&!(state.eyes&&now<state.eyesUntil)){microAt=now+6000+Math.random()*9000;if(micro&&micro.length&&!state.moving){state.eyes=pick(micro);state.eyesUntil=now+900+Math.random()*900;}}
   const fxKind=sp?sp.fx:(L.fx&&pick(L.fx)),every=sp?(sp.every||2800):(L.every||4000);
@@ -349,47 +369,78 @@ function tick(t){raf=0;if(!root||document.hidden)return;const dt=Math.min(.05,la
 function react(kind,ms){state.react=kind;state.reactUntil=Date.now()+(ms||900);applyLook();}
 function setEyes(e,ms){state.eyes=e;state.eyesUntil=Date.now()+ms;}
 function refreshMood(force){const c=role();const m=moodOf(c);if(force||m!==state.mood){state.mood=m;state.act='';nextActAt=Date.now()+600;if(MOOD_LOOK[m]&&!MOOD_LOOK[m].speed){state.moving=false;state.climb=0;state.rot=0;}}moodAt=Date.now();}
+function wake(){lastInteract=Date.now();if(state.napping){state.napping=false;setEyes('wide',350);setTimeout(()=>react('stretch',1600),350);}}
+
+/* ---------- 有新消息时：角色来消息会精神一下跳到新气泡上；你发出去它会替你高兴 ---------- */
+function watchMessages(now){if(now<msgCheckAt)return;msgCheckAt=now+800;const c=role();if(!c||typeof msgs!=='function')return;let ms;try{ms=msgs(c.id)||[];}catch(_){return;}
+  const m=ms[ms.length-1],sig=m?(m.id||'')+'|'+ms.length:'';if(msgSig===null){msgSig=sig;return;}if(sig===msgSig)return;msgSig=sig;if(!m||Date.now()-(+m.time||0)>20000)return;
+  wake();if(state.out){/* 正在跑出去就让它跑完；已经在外面了就跑回来看消息 */if(state.out.phase==='away')comeBack();return;}
+  const here=typeof cur==='function'&&cur()&&cur().p==='chat'&&cur().id===c.id;
+  if(m.role==='assistant'){state.cmd='';setEyes('wide',450);fx(state.mood==='love'?'heart':'spark',{pop:true});
+    setTimeout(()=>{setEyes(state.mood==='love'?'heart':'happy',1200);if(here&&!drag&&!state.cmd&&!state.out){const el=newestBubble();if(!(el&&perchOn(el)))react('jump',500);}else react('jump',500);},450);}
+  else if(m.role==='user'){react('jump',500);fx('heart');if(here&&Math.random()<.35)setTimeout(()=>{const el=newestBubble();if(el&&!drag&&!state.out)perchOn(el);},600);}}
+
 /* 让它做一个表情 / 动作（角色标签或用户按钮） */
-function doCmd(name,ms){const k=normCmd(name);if(!k)return false;if(k==='平静'){state.cmd='';state.cmdUntil=0;return true;}
+function doCmd(name,ms){const k=normCmd(name);if(!k)return false;wake();if(k==='平静'){state.cmd='';state.cmdUntil=0;return true;}
+  if(state.out&&k!=='跑出去')comeBack();
+  if(MOVES[k]){state.cmd='';if(root)MOVES[k]();return true;}
   state.cmd=k;state.cmdUntil=Date.now()+(ms||USER_CMD_MS);state.moving=false;state.act='';state.annoyedUntil=0;
   if(root){const C=CMDS[k];if(C.fx){fx(C.fx,{pop:true});setTimeout(()=>fx(C.fx),300);}applyLook();}return true;}
+const MOVES={
+  '跑出去':()=>runAway(),
+  '过来':()=>{state.perch=null;state.placedUntil=0;const b=bounds();hopTo(b.w/2,groundY(),{ground:true});setTimeout(()=>fx('heart',{pop:true}),700);},
+  '跳上气泡':()=>{if(!tryPerch())react('jump',500);},
+};
 
 /* ---------- 交互：点、摸、拖 ---------- */
-function onDown(e){if(!root)return;e.preventDefault();e.stopPropagation();try{root.setPointerCapture(e.pointerId);}catch(_){}
+function onDown(e){if(!root)return;e.preventDefault();e.stopPropagation();wake();try{root.setPointerCapture(e.pointerId);}catch(_){}
   drag={id:e.pointerId,sx:e.clientX,sy:e.clientY,ox:state.x,oy:state.y,moved:false,at:Date.now()};
   clearTimeout(pressTimer);pressTimer=setTimeout(()=>{if(drag&&!drag.moved){drag.pet=true;pet();}},520);}
 function onMove(e){if(!drag||e.pointerId!==drag.id)return;const dx=e.clientX-drag.sx,dy=e.clientY-drag.sy;
-  if(!drag.moved&&Math.hypot(dx,dy)>6){drag.moved=true;clearTimeout(pressTimer);state.moving=false;state.climb=0;state.rot=0;state.act='';state.hop=null;state.perch=null;}
+  if(!drag.moved&&Math.hypot(dx,dy)>6){drag.moved=true;clearTimeout(pressTimer);state.moving=false;state.climb=0;state.rot=0;state.act='';state.hop=null;state.perch=null;state.onGround=false;state.out=null;}
   if(drag.moved){const b=bounds();state.x=Math.max(0,Math.min(b.w,drag.ox+dx));state.y=Math.max(0,Math.min(b.h,drag.oy+dy));state.face=dx<0?-1:1;applyLook();}}
+/* 放下时：落在气泡上就趴在气泡上，落在输入框附近就站在输入框上，其它地方就乖乖待在你放的位置 */
+function dropAt(){const d=dims(),hr=hostRect(),fx0=state.x+d.w/2+hr.left,fy=state.y+d.h*FOOT+hr.top;
+  const el=perchSpots().find(b=>{const r=b.getBoundingClientRect();return fx0>=r.left&&fx0<=r.right&&fy>=r.top-14&&fy<=r.top+Math.min(26,r.height);});
+  if(el){const r=el.getBoundingClientRect();state.perch={el,ox:Math.max(-d.w*.15,Math.min(r.width-d.w*.85,state.x-(r.left-hr.left)))};state.perchUntil=Date.now()+25000;return;}
+  const gy=groundY();if(Math.abs(state.y-gy)<36){state.y=gy;state.onGround=true;return;}
+  state.placedUntil=Date.now()+PLACE_MS;}
 function onUp(e){if(!drag||e.pointerId!==drag.id)return;clearTimeout(pressTimer);const d=drag;drag=null;
-  if(d.moved){react('land',360);setEyes('dizzy',1300);persist();nextActAt=Date.now()+2500;return;}
+  if(d.moved){dropAt();react('land',360);setEyes('dizzy',1300);persist();nextActAt=Date.now()+2500;return;}
   if(d.pet)return;tap();}
 /* 点一下冒爱心；连着点太多下会不耐烦，再点就生气跑开 */
 function tap(){const now=Date.now();taps=taps.filter(t=>now-t<5000);taps.push(now);const n=taps.length;
   if(now<state.annoyedUntil){state.face=-state.face;fx('anger',{pop:true});state.annoyedUntil=now+5000;
-    if(n>=9){const b=bounds();state.perch=null;state.hop=null;state.cmd='';state.act='flee';state.moving=true;state.tx=state.x<b.w/2?b.w:0;state.ty=Math.random()*b.h;state.face=state.tx<state.x?-1:1;taps=[];}
+    if(n>=9){taps=[];state.hop=null;state.annoyedUntil=0;runAway();}
     return;}
   if(n>=7){state.annoyedUntil=now+6000;state.face=-state.face;fx('anger',{pop:true});setTimeout(()=>fx('anger',{pop:true}),260);return;}
   setEyes('squint',220);setTimeout(()=>{if(Date.now()>=state.annoyedUntil)setEyes(n>=5?'wide':(state.mood==='love'?'heart':'happy'),900);},220);
   react(n>=5?'warn':'jump',n>=5?1400:500);
   fx('heart',{pop:n===1});if(n<=3&&Math.random()<.6)setTimeout(()=>fx('heart'),180);}
 function pet(){react('pet',1800);setEyes('heart',1800);taps=[];for(let i=0;i<4;i++)setTimeout(()=>fx('heart'),i*200);if(navigator.vibrate)try{navigator.vibrate(12);}catch(_){}}
+/* 你点屏幕别处时，它会转头看过去，有时还会好奇地走过去 */
+document.addEventListener('pointerdown',e=>{if(!root||root.contains(e.target))return;wake();if(drag||state.hop||state.out||state.moving||state.climb)return;const hr=hostRect(),px=e.clientX-hr.left,d=dims();
+  const left=px<state.x+d.w/2;state.face=left?-1:1;setEyes(left?'look-l':'look-r',900);
+  if(!special(Date.now())&&state.onGround&&Date.now()>state.placedUntil&&Math.random()<.2&&Math.abs(px-state.x)>60)setTimeout(()=>{if(!state.moving&&!drag&&!state.hop)walkTo(px-d.w/2,groundY(),{ground:true});},500);},true);
+document.addEventListener('keydown',()=>wake(),true);
+document.addEventListener('scroll',()=>{wake();if(root&&state.perch&&Date.now()-wobbleAt>900){wobbleAt=Date.now();react('shake',350);}},true);
 
 /* ---------- 挂载 ---------- */
 function mount(){css();const h=host();root=document.createElement('div');root.className='dp-root';root.innerHTML=`<div class="dp-flip">${spriteSVG()}</div><i class="dp-shadow"></i>`;
   root.addEventListener('pointerdown',onDown);root.addEventListener('pointermove',onMove);root.addEventListener('pointerup',onUp);root.addEventListener('pointercancel',onUp);
   root.addEventListener('contextmenu',e=>e.preventDefault());h.appendChild(root);state.bodyAnim='';state.shownEyes='';
-  const c=cfg(),b=bounds();state.x=c&&c.x>=0&&c.x<=b.w?c.x:b.w*.7;state.y=c&&c.y>=0&&c.y<=b.h?c.y:b.h*.72;state.perch=null;state.hop=null;refreshMood(true);applyLook();last=0;loop();}
+  const c=cfg(),b=bounds();state.x=c&&c.x>=0&&c.x<=b.w?c.x:b.w*.7;state.y=groundY();state.onGround=true;state.perch=null;state.hop=null;state.out=null;state.placedUntil=0;root.style.visibility='';refreshMood(true);applyLook();last=0;loop();}
 function unmount(){if(raf)cancelAnimationFrame(raf);raf=0;if(root)root.remove();root=null;}
 function sync(){const c=role();if(!c){if(root)unmount();return;}if(!root||!root.isConnected){unmount();mount();}else if(Date.now()-moodAt>12000)refreshMood();if(!raf&&!document.hidden)loop();}
-setInterval(sync,2000);document.addEventListener('visibilitychange',()=>{if(!document.hidden){last=0;sync();}});
+setInterval(sync,2000);document.addEventListener('visibilitychange',()=>{if(document.hidden){hiddenAt=Date.now();return;}last=0;sync();
+  /* 隔了一会儿再回来：它会挥手冒个爱心迎接你 */if(root&&hiddenAt&&Date.now()-hiddenAt>60000){wake();state.napping=false;setTimeout(()=>{react('wave',1600);fx('heart',{pop:true});},400);}});
 window.addEventListener('resize',()=>{if(!root)return;const b=bounds();state.x=Math.min(state.x,b.w);state.y=Math.min(state.y,b.h);place();});
 
 /* ---------- 角色那边：知道它叫什么，可以用 [桌宠|动作] 控制它 ---------- */
 function deskPetPrompt(c){const p=cfg();if(!p||!p.on||!c||p.cid!==c.id)return'';const me=(typeof S!=='undefined'&&S.me&&S.me.name)||'她',n=petName(),now=Date.now(),sp=special(now);
   const doing=sp?(state.cmd&&now<state.cmdUntil?'正在'+state.cmd:typingOn(now)?'在陪'+me+'打字，假装敲代码':musicOn()?'戴着耳机闭眼听歌、左右摇摆':''):MOOD_CN[state.mood]||'平常';
-  return '\n\n# 你们的虚拟桌面宠物「'+n+'」\n'+me+'的手机屏幕里住着一只像素风的虚拟桌面宠物小机器人，名字叫「'+n+'」。它是'+me+'在小手机里养的、跟着你的小家伙，只在屏幕里走来走去、爬墙、趴在聊天气泡上；它会跟着你的心情变表情。它是纯虚拟的，和实体桌面机器人「小K」没有任何关系，绝不能把两者混为一谈。'+(doing?'\n它现在：'+doing+'。':'')+
-    '\n你可以在微信回复里另起一行写 [桌宠|动作] 让「'+n+'」照做，这一行不会显示给'+me+'。可用动作：'+Object.keys(CMDS).join('、')+'、平静（恢复正常）。一轮最多一个，不必每轮都用；'+me+'让你控制它、或者你想借它表达心情时再用。被问到它叫什么、在干嘛时，按上面的事实回答。';}
+  return '\n\n# 你们的虚拟桌面宠物「'+n+'」\n'+me+'的手机屏幕里住着一只像素风的虚拟桌面宠物小机器人，名字叫「'+n+'」。它是'+me+'在小手机里养的、跟着你的小家伙，平时站在聊天输入框上来回走，会跳上聊天气泡、爬墙、偶尔跑出屏幕又跑回来；它会跟着你的心情变表情。它是纯虚拟的，和实体桌面机器人「小K」没有任何关系，绝不能把两者混为一谈。'+(doing?'\n它现在：'+doing+'。':'')+
+    '\n你可以在微信回复里另起一行写 [桌宠|动作] 让「'+n+'」照做，这一行不会显示给'+me+'。可用表情和动作：'+Object.keys(CMDS).join('、')+'、平静（恢复正常）；还能让它移动：'+Object.keys(MOVES).join('、')+'。一轮最多一个，不必每轮都用；'+me+'让你控制它、或者你想借它表达心情时再用。被问到它叫什么、在干嘛时，按上面的事实回答。';}
 function deskPetConsume(text,c){const s=String(text==null?'':text);if(!/[\[【]\s*桌宠/.test(s))return text;const p=cfg();let used=false;
   const out=s.replace(/[\[【]\s*桌宠\s*[|｜:：]\s*([^\]】\r\n]{1,16})\s*[\]】]/g,(m,v)=>{if(!used&&p&&p.on&&c&&p.cid===c.id&&doCmd(v,ROLE_CMD_MS))used=true;return'';}).replace(/\n[ \t]*\n[ \t]*\n/g,'\n\n').trim();
   return out;}
@@ -413,9 +464,9 @@ function renderDeskPetPage(){css();const p=ensureCfg(),r=role(),col=DP_COLORS[p.
    <div class="dp-row"><span>颜色</span><div class="dp-colors">${Object.keys(DP_COLORS).map(k=>`<button class="${(p.color||'clay')===k?'on':''}" title="${DP_COLOR_NAMES[k]}" style="background:${DP_COLORS[k][0]}" onclick="deskPetColor('${k}')"></button>`).join('')}</div></div>
   </div>
   <div class="dp-label">让${escH(petName())}做个表情</div>
-  <div class="dp-group"><div class="dp-cmds">${Object.keys(CMDS).map(k=>`<button onclick="deskPetCmd('${k}')">${k}</button>`).join('')}<button onclick="deskPetCmd('平静')">恢复</button></div></div>
+  <div class="dp-group"><div class="dp-cmds">${Object.keys(CMDS).concat(Object.keys(MOVES)).map(k=>`<button onclick="deskPetCmd('${k}')">${k}</button>`).join('')}<button onclick="deskPetCmd('平静')">恢复</button></div></div>
   <button class="dp-home-btn" onclick="deskPetHome()">叫它回到屏幕中间</button>
-  <div class="dp-note">· 只陪一个角色，跟着ta的心情和作息变表情：开心蹦跶、想你冒爱心、生气冒火、难过掉眼泪、上班戴安全帽、睡觉戴睡帽、过节戴派对帽。<br>· 你在听歌时它会戴上耳机、闭眼左右摇摆；你在打字时它会坐下来敲键盘。<br>· 角色知道它叫「${escH(petName())}」，也能在聊天里让它做表情；你也可以在上面直接点。<br>· 点它冒小爱心，连着点太多下会生气跑开；按住不动是摸摸；按住拖动可以把它拎走。在聊天页它会跳到气泡上趴着、蹦跶。</div>
+  <div class="dp-note">· 只陪一个角色，跟着ta的心情和作息变表情：开心蹦跶、想你冒爱心、生气冒火、难过掉眼泪、上班戴安全帽、睡觉戴睡帽、过节戴派对帽。<br>· 你在听歌时它会戴上耳机、闭眼左右摇摆；你在打字时它会坐下来敲键盘。<br>· 角色知道它叫「${escH(petName())}」，也能在聊天里让它做表情；你也可以在上面直接点。<br>· 平时它站在聊天输入框上来回走，会从一个气泡跳到另一个气泡，偶尔跑出屏幕又跑回来。角色来消息时它会精神一下跳到新气泡上；你太久不理它，它会打瞌睡，碰一下屏幕就醒。<br>· 点它冒小爱心，连着点太多下会生气跑开；按住不动是摸摸；按住拖动可以把它放到任何地方，放在气泡上就趴在气泡上。</div>
   </div>`;}
 function rerender(){if(typeof cur==='function'&&cur()&&cur().p==='deskPet'&&typeof render==='function')render();}
 function deskPetToggle(){const p=ensureCfg();if(!p.on&&!(p.cid&&getC(p.cid))){if(typeof toast==='function')toast('先选一个要陪的角色');return;}p.on=!p.on;if(p.on){p.x=-1;p.y=-1;}save();if(root)unmount();sync();rerender();if(typeof toast==='function')toast(p.on?petName()+'出来啦':petName()+'回去休息了');}
@@ -426,7 +477,7 @@ function deskPetRename(v){const p=ensureCfg();p.name=String(v||'').trim().slice(
 function deskPetSize(k){ensureCfg().size=k;save();if(root){unmount();sync();}rerender();}
 function deskPetColor(k){ensureCfg().color=k;save();applyLook();rerender();}
 function deskPetCmd(k){if(!root){if(typeof toast==='function')toast('先开启桌面宠物');return;}doCmd(k,USER_CMD_MS);}
-function deskPetHome(){if(!root){if(typeof toast==='function')toast('先开启桌面宠物');return;}const b=bounds();state.perch=null;hopTo(b.w/2,b.h/2);fx('heart',{pop:true});}
+function deskPetHome(){if(!root){if(typeof toast==='function')toast('先开启桌面宠物');return;}doCmd('过来');}
 Object.assign(window,{deskPetOpen,renderDeskPetPage,deskPetToggle,deskPetBind,deskPetRename,deskPetSize,deskPetColor,deskPetCmd,deskPetHome,deskPetPrompt,deskPetConsume,
-  __deskPet:{moodOf,state:()=>Object.assign({},state,{perch:!!state.perch,hop:!!state.hop}),refresh:()=>refreshMood(true),sync,tryPerch,tap,doCmd,normCmd,special:()=>special(Date.now()),typed:()=>{lastTypeAt=Date.now();},EYES:Object.keys(EYES),CMDS:Object.keys(CMDS)}});
+  __deskPet:{moodOf,state:()=>Object.assign({},state,{perch:!!state.perch,hop:!!state.hop}),refresh:()=>refreshMood(true),sync,tryPerch,tap,doCmd,runAway,groundY,newestBubble,nap:()=>{lastInteract=0;},normCmd,special:()=>special(Date.now()),typed:()=>{lastTypeAt=Date.now();},EYES:Object.keys(EYES),CMDS:Object.keys(CMDS)}});
 })();

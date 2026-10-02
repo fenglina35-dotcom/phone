@@ -55,3 +55,24 @@ test('desk pet taps, pets, drags, climbs and perches without text bubbles',()=>{
   assert.match(s,/\.dp-root\{position:absolute;left:0;top:0;z-index:180/);
   assert.doesNotMatch(s,/dp-bubble/);
 });
+
+test('the role reply line handler turns [桌宠|动作] into a pet action instead of a chat message',()=>{
+  for(const p of ['app.js',P+'app.js']){const s=read(p);
+    assert.match(s,/if\(\/\^\[\\\[【\]\\s\*桌宠\\s\*\[\|｜:：\]\[\^\\\]】\]\*\[\\\]】\]\$\/\.test\(line\)\)\{if\(typeof deskPetConsume==='function'\)deskPetConsume\(line,c\);continue;\}/);
+  }
+  const s=read('desk-pet.js');
+  assert.match(s,/function deskPetConsume\(text,c\)/);
+  for(const k of ['跑出去','过来','跳上气泡'])assert.match(s,new RegExp(`'${k}':\\(\\)=>`));
+});
+
+test('the pet lives on the chat input bar, hops bubble to bubble, runs off screen and stays where it is dropped',()=>{
+  const s=read('desk-pet.js');
+  assert.match(s,/function groundY\(\)/);assert.match(s,/\.chat-inputbar,\.inputbar/);
+  assert.match(s,/walkTo\(Math\.random\(\)\*b\.w,gy,\{ground:true\}\)/);
+  assert.match(s,/if\(r<\.22&&tryPerch\(\)\)/);
+  assert.match(s,/function runAway\(\)/);assert.match(s,/function comeBack\(\)/);
+  assert.match(s,/function dropAt\(\)/);assert.match(s,/state\.placedUntil=Date\.now\(\)\+PLACE_MS/);
+  assert.match(s,/function watchMessages\(now\)/);
+  assert.match(s,/state\.napping=true/);
+  assert.match(s,/on:false,cid:'',name:DP_DEFAULT_NAME/,'默认是关着的');
+});
