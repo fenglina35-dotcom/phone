@@ -2297,6 +2297,7 @@ function buildSystem(c,opt){
   s+=_main?friendReaddPrompt(c)+(typeof pursuitPromptRecent==='function'?pursuitPromptRecent(c):''):'';
   if(_main&&typeof deskPetPrompt==='function')s+=deskPetPrompt(c);
   if(_main&&typeof roleReadPrompt==='function')s+=roleReadPrompt(c);
+  if(_main&&typeof pfRoleGroupMemoryPrompt==='function')s+=pfRoleGroupMemoryPrompt(c);
   s+=_main?altReportMemoryPrompt(c):'';
   if(_main&&S.couple&&S.couple.cid===c.id)s+=coupleAlbumPrompt(c);
   if(_main&&typeof pixelHomeRoleContext==='function')s+=pixelHomeRoleContext(c);
@@ -8259,6 +8260,8 @@ function renderPhoneFriendGroup(gid){const g=pfGroupById(gid)||{name:'小手机�
     const prev=i?arr[i-1]:null;body+=chatBoundaryHTML(prev,m);
     if(m.recalled){body+=pfRecalledRow();return;}
     const pl=pfMsgPayload(m);if(pl&&pl.type==='pat'){body+=pfPatRow(m);return;}
+    /* 真人群里的角色（pf-group-role.js）：角色发的消息按单独的群成员显示 */
+    if(pl&&typeof pfRoleRow==='function'){const rr=pfRoleRow(m,pl,gid,g);if(rr){body+=rr;return;}}
     const me=m.from===p.id,sid=me?'me':(''+m.from).toUpperCase(),bs=pfGroupBubbleCfg(gid,sid),ac=bs&&bs.avatar==='round'?'av-round':'',member=pfGroupMemberById(g,m.from),ff=phoneFriendById(m.from)||member,name=pfGroupMemberName(g,member||{phone_id:m.from}),rs=me?pfReadStatus(m,'group',gid):'',rec=me?`<button type="button" class="pfrecall" aria-label="撤回这条消息" onclick="event.stopPropagation();phoneFriendRecallMessage('${m.id}','group','${gid}')">撤回</button>`:'',at=me?'':`onpointerdown="pfAtStart(event,'${gid}','${m.from}')" onpointerup="pfGroupAvatarTap(event,'${gid}','${m.from}')" onpointercancel="pfAtEnd()" onpointerleave="pfAtEnd()" ondblclick="pfGroupAvatarDouble(event,'${gid}','${m.from}')" title="双击拍一拍，长按@"`;
     const showName=!me&&!pfGroupPref(gid).hideNames;
     body+=`<div class="msg ${me?'me':'them'}${showName?' gnamed':''}"><span ${at}>${me?av(S.me.avatar,ac):pfAvatarHTML(ff||{phone_id:m.from,display_name:name},ac)}</span><div class="col" onclick="pfMsgMenu('${m.id}','group','${gid}')">${showName?`<div class="gname">${esc(name||'成员')}</div>`:''}${pfBubblePart(m,me,bs)}<div class="msgt">${rec}${hm(m.time)}</div>${rs?`<div class="msgread-line"${me?'':` data-pf-in="${m.id}"`}>${rs}</div>`:''}</div></div>`+pfRpSysLine(m,'group',gid);
@@ -8876,6 +8879,7 @@ function renderGroupInfoPage(kind,id){const t=ginfoTarget(kind,id),k=`'${kind}',
   <div class="scroll ginfo-scroll"><section class="ginfo-grid">${grid}</section>${gap}
   <section class="ginfo-group">${ginfoRow('群聊名称',esc(t.name),`ginfoRename(${k})`)}${ginfoRow('群二维码',qr,`go('gqr',{kind:'${kind}',id:'${id}'})`)}${ginfoRow('群公告',t.notice?esc(t.notice.slice(0,14))+(t.notice.length>14?'…':''):'未设置',`ginfoNotice(${k})`)}${ginfoRow('群管理','',`go('gmanage',{kind:'${kind}',id:'${id}'})`)}${ginfoRow('备注',t.remark?esc(t.remark):'',`ginfoRemark(${k})`)}</section>${gap}
   <section class="ginfo-group">${ginfoRow('查找聊天内容','',`ginfoSearch(${k})`)}</section>${gap}
+  ${kind==='pf'&&typeof pfRoleInfoRow==='function'?pfRoleInfoRow(id)+gap:''}
   <section class="ginfo-group">${ginfoSwitch('消息免打扰',t.muted,`ginfoToggle(${k},'muted')`)}${ginfoSwitch('置顶聊天',t.pinned,`ginfoToggle(${k},'pinned')`)}${ginfoSwitch('保存到通讯录',t.saved,`ginfoToggle(${k},'saved')`)}</section>${gap}
   <section class="ginfo-group">${ginfoRow('我在本群的昵称',esc(t.myNick),`ginfoMyNick(${k})`)}${ginfoSwitch('显示群成员昵称',t.showNames,`ginfoToggle(${k},'showNames')`)}</section>${gap}
   <section class="ginfo-group">${ginfoRow('设置当前聊天背景',t.chatBg?'已设置':'',`ginfoBg(${k})`)}</section>${gap}
