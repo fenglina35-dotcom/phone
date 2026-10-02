@@ -190,5 +190,5 @@ test('private identity advances while public web stays unchanged',()=>{
   assert.match(webView,/1\.0\.430 \(430\)/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 430;/g)||[]).length,12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.430;/g)||[]).length,12);
-  assert.match(read('app.js'),/APP_VER='v1400 · 追回不超过二十秒'/);
+  assert.match(read('app.js'),/APP_VER='v1402 · 节假日放假与手动请假'/);
 });

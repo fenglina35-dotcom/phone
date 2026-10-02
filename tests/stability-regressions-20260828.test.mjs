@@ -82,7 +82,7 @@ test('a role cannot claim early clock-out during configured work without synchro
   const sandbox=vm.createContext({
     S,String,Date,
     roleClockDate:()=>new Date(2026,7,28,15,40,0,0),
-    roleLeaveOn:()=>null,roleWorkday:()=>true,
+    roleLeaveOn:()=>null,roleWorkday:()=>true,roleDayOff:()=>null,
     toMin:v=>{const [h,m]=String(v).split(':').map(Number);return h*60+m;},
   });
   vm.runInContext('this.roleScheduleSyncTag='+functionSource('roleScheduleSyncTag')+';this.roleScheduleClaimIssue='+functionSource('roleScheduleClaimIssue'),sandbox);

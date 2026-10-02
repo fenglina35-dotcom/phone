@@ -34,7 +34,7 @@ test('the shared role schedule distinguishes weekdays from weekends',()=>{
   vm.runInNewContext([
     functionSource('toMin'),functionSource('weekdayCN'),functionSource('roleWorkday'),
     functionSource('scheduleDateKey'),functionSource('scheduleDateParse'),functionSource('scheduleLeaveDays'),
-    functionSource('scheduleLeaves'),functionSource('roleLeaveOn'),
+    functionSource('scheduleLeaves'),functionSource('roleLeaveOn'),functionSource('roleDayOff'),functionSource('roleHolidayOn'),functionSource('roleHolidaysOn'),functionSource('roleHolidayAt'),functionSource('roleHolidayTables'),functionSource('roleMakeupWorkday'),
     functionSource('activityHash'),functionSource('activityPick'),
     functionSource('whereNow'),functionSource('activitySpec'),
     'globalThis.spec=activitySpec;globalThis.where=whereNow;'

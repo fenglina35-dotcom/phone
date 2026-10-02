@@ -37,7 +37,7 @@ function functionSource(source, name) {
 }
 
 const FNS = [
-  'activityHash', 'activityPick', 'activitySpec', 'roleWorkday', 'roleLeaveOn',
+  'activityHash', 'activityPick', 'activitySpec', 'roleWorkday', 'roleLeaveOn', 'roleDayOff', 'roleHolidayOn', 'roleHolidaysOn', 'roleHolidayAt', 'roleHolidayTables', 'roleMakeupWorkday',
   'scheduleLeaves', 'scheduleDateKey', 'toMin', 'cohabSchedulePhase',
   'cohabScheduleSync', 'cohabAdvance', 'cohabPhaseLabel', 'cohabPhaseDefaultActivity',
   'cohabActivityClean', 'cohabPlaceClean', 'cohabStatusLabel', 'cohabSetPhase',

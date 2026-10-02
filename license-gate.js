@@ -411,7 +411,7 @@
       }
     }
     if (firstTemporary) throw firstTemporary;
-    if (missingCount) throw new Error('系统扫脸或指纹已通过，但这枚手机验证没有绑定到当前授权。请回到仍能进入的小手机浏览器，在设置里点“检查 / 补绑手机验证”后再试');
+    if (missingCount) throw new Error('系统扫脸或指纹已通过，但刚才选中的那一枚手机验证不是这份授权绑定的（可能是旧的、或别的授权留下的）。如果系统弹出的列表里有好几枚，请再点一次换另一枚；都不行的话，回到仍能进入的小手机浏览器，在设置里点“检查 / 补绑手机验证”，或者用新的授权码重新进入，本机聊天数据不会丢');
     throw lastError || new Error('授权服务暂时不可用');
   }
 

@@ -28,7 +28,7 @@ function functionSource(source, name) {
 }
 
 const SCHEDULE_FUNCTIONS = [
-  'activityHash', 'activityPick', 'activitySpec', 'roleWorkday', 'roleLeaveOn',
+  'activityHash', 'activityPick', 'activitySpec', 'roleWorkday', 'roleLeaveOn', 'roleDayOff', 'roleHolidayOn', 'roleHolidaysOn', 'roleHolidayAt', 'roleHolidayTables', 'roleMakeupWorkday',
   'scheduleLeaves', 'scheduleDateKey', 'toMin', 'cohabSchedulePhase',
   'cohabScheduleSync', 'cohabAdvance', 'cohabPhaseDefaultActivity',
   'cohabTravelAdvance', 'cohabActivityClean', 'cohabPlaceClean',
