@@ -13,13 +13,13 @@ const reportApp = read('native/private-small-phone/XcodeProject/PhoneCompanionRe
 const reportScene = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/TotalActivityReport.swift');
 
 test('public web v1184 and private web v1189 remain compatible with native iOS 1.0.315', () => {
-  assert.match(app, /APP_VER='v1410 · 桌宠平静表情'/);
-  assert.match(app, /sw\.js\?v=1410&r=v1410-web-pet-calm-1/);
-  assert.match(shell, /north-shell-v1410-web-pet-calm-1/);
+  assert.match(app, /APP_VER='v1412 · 微信已读'/);
+  assert.match(app, /sw\.js\?v=1412&r=v1412-web-read-receipt-1/);
+  assert.match(shell, /north-shell-v1412-web-read-receipt-1/);
   assert.match(bundleInfo, /<string>1200<\/string>/);
-  assert.match(localWebView, /1\.0\.432 \(432\)/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 432;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.432;/g) || []).length, 12);
+  assert.match(localWebView, /1\.0\.433 \(433\)/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 433;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.433;/g) || []).length, 12);
 });
 
 test('native shared-media gain uses only public AVFoundation types', () => {
