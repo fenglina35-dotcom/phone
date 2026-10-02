@@ -218,8 +218,9 @@ test('every onclick in app.js resolves to a function that exists', () => {
   const ui = readFileSync(new URL('../commerce-ui.js', import.meta.url), 'utf8');
   const pixel = readFileSync(new URL('../pixel-home.js', import.meta.url), 'utf8');
   const pet = readFileSync(new URL('../pet-game.js', import.meta.url), 'utf8');
+  const deskPet = readFileSync(new URL('../desk-pet.js', import.meta.url), 'utf8');
   const defined = new Set();
-  for (const src of [app, ui, pixel, pet]) {
+  for (const src of [app, ui, pixel, pet, deskPet]) {
     for (const m of src.matchAll(/^(?:async )?function ([A-Za-z_$][\w$]*)\(/gm)) defined.add(m[1]);
     for (const m of src.matchAll(/window\.([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?function/g)) defined.add(m[1]);
     for (const m of src.matchAll(/^(?:const|let|var) ([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:function|\(|[A-Za-z_$][\w$]*\s*=>)/gm)) defined.add(m[1]);
@@ -860,7 +861,8 @@ test('nothing that the 抖音 pages call went missing', () => {
      这条测试直接扫：抖音这一片 onclick 里叫到的函数，必须都真的存在。 */
   const dy = app.slice(app.indexOf('function dyInit('));
   const called = new Set([...dy.matchAll(/onclick="(?:event\.stopPropagation\(\);)?([a-zA-Z_$][\w$]*)\(/g)].map(m => m[1]));
-  const missing = [...called].filter(n => !new RegExp(`(?:^|\\n)(?:async )?function ${n}\\(`).test(app) && !/^(toast|render|save|back|go|closeModal|openModal|alert|\$)$/.test(n));
+  const deskPet = readFileSync(new URL('../desk-pet.js', import.meta.url), 'utf8');
+  const missing = [...called].filter(n => !new RegExp(`(?:^|\\n)(?:async )?function ${n}\\(`).test(app + '\n' + deskPet) && !/^(toast|render|save|back|go|closeModal|openModal|alert|\$)$/.test(n));
   assert.deepEqual(missing, [], '这些函数被点到但根本不存在：' + missing.join(', '));
 });
 

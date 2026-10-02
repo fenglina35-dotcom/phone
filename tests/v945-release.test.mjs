@@ -13,14 +13,14 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1402 · 节假日放假与手动请假'/);
-  assert.match(app,/const url='sw\.js\?v=1402&r=v1402-web-holiday-leave-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1402'/);
-  assert.match(html,/app\.js\?v=1402/);
-  assert.match(sw,/const BUILD='1402'/);
-  assert.match(sw,/north-shell-v1402-web-holiday-leave-1/);
-  assert.match(index,/小手机\.html\?v=1402/);
-  assert.match(repair,/小手机\.html\?v=1402/);
+  assert.match(app,/APP_VER='v1404 · 桌面小机器人'/);
+  assert.match(app,/const url='sw\.js\?v=1404&r=v1404-web-desk-pet-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1404'/);
+  assert.match(html,/app\.js\?v=1404/);
+  assert.match(sw,/const BUILD='1404'/);
+  assert.match(sw,/north-shell-v1404-web-desk-pet-1/);
+  assert.match(index,/小手机\.html\?v=1404/);
+  assert.match(repair,/小手机\.html\?v=1404/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{

@@ -37,6 +37,7 @@ const PERMANENT_FIXES = [
   {release:"v1374",scope:"web",least:1,name:"关系网：各自心里怎么看只给自己看",marker:"if(v.myView)s+='你心里怎么看ta、怎么看这些事：'"},
   {release:"v1376",scope:"web",least:1,name:"多人剧场：先打字再选对谁说，以选的人为准",marker:"/* 先打字、再选对谁说、再点让TA回：以点回复时选的人为准 */",file:"cohab-theater.js"},
   {release:"v1378",scope:"web",least:1,name:"他微信里不会有两个妈妈（同义称呼、人物卡转好友）",marker:"const mine=x=>x.relKey&&relKeyLive(x.relKey)===v.other;"},
+  {release:"v1404",scope:"both",least:1,name:"桌面小机器人跟着角色心情走来走去",marker:"function deskPetSet(id){",file:"desk-pet.js"},
   {release:"v1402",scope:"both",least:1,name:"可以手动给角色请假，节假日（国庆/七夕/情人节等）放假",marker:"function schedAddLeave(id){"},
   {release:"v1400",scope:"both",least:1,name:"追回边等边想、卡住的来电自动清掉",marker:"function pursuitPlanAhead(c){"},
   {release:"v1396",scope:"both",least:1,name:"拉黑后角色自己决定怎么追回，接电话/回短信就结束",marker:"function pursuitOnUserSms(num){"},

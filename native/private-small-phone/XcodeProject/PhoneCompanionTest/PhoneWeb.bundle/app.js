@@ -13767,6 +13767,7 @@ function renderRoleManagementAll(id){const c=getC(id);if(!c)return '';const sp=g
       `:`<div class="it"><span style="color:#888">你正用小号「${esc(S.me.name)}」看ta（陌生人视角，看不到主号的记忆/关系）</span></div>`}
       ${isMain()?`<div class="it" onclick="bindCouple('${id}')"><span>情侣空间</span><span class="v">${(S.couple&&S.couple.cid===id)?'已绑定 ✓':'绑定 ›'}</span></div>`:''}
       <div class="it" onclick="schedSet('${id}')"><span>作息时间表</span><span class="v">${(c.sched&&c.sched.on)?'已启用 ›':'未设 ›'}</span></div>
+      ${typeof deskPetSet==='function'?`<div class="it" onclick="deskPetSet('${id}')"><span>桌面小机器人</span><span class="v">${deskPetLabel(id)}</span></div>`:''}
       <div class="it" onclick="setChatBg('${id}')"><span>聊天背景</span><span class="v">${c.chatBg?'已设置':'默认'}</span></div>
       <div class="it" onclick="bubbleStyleOpen('${id}')"><span>微信气泡美化</span><span class="v">${c.bubbleStyle?'已设置 ›':'默认 ›'}</span></div>
       ${isMain()?`<div class="it"><span>ta的微信号</span><span class="v">${esc(c.wxid||'')}</span></div>`:''}
