@@ -87,3 +87,10 @@ test('the private bundle desk pet file is tracked, not swallowed by the bundle .
   const ig=read('native/private-small-phone/.gitignore');
   assert.match(ig,/^!XcodeProject\/PhoneCompanionTest\/PhoneWeb\.bundle\/desk-pet\.js$/m);
 });
+
+test('calm upright eyes are the default; star, smile and heart eyes only flash now and then',()=>{
+  const s=read('desk-pet.js');
+  for(const m of ['idle','happy','love','party'])assert.match(s,new RegExp(`\\b${m}:\\{eyes:'open'`));
+  assert.match(s,/'平静':\{eyes:'open',cls:''\}/);
+  assert.match(s,/if\(k==='恢复'\)\{state\.cmd='';/);
+});

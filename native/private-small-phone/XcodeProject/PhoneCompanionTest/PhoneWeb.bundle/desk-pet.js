@@ -84,6 +84,7 @@ const CMDS={
   '开心':{eyes:'happy',cls:'bob',fx:'spark'},
   '爱心眼':{eyes:'heart',cls:'bob blush',fx:'heart'},
   '星星眼':{eyes:'star',cls:'bob',fx:'spark'},
+  '平静':{eyes:'open',cls:''},
   '眨眼':{eyes:'wink',cls:''},
   '害羞':{eyes:'happy',cls:'blush',fx:'heart'},
   '难过':{eyes:'sad',cls:'droop tear',fx:'dots'},
@@ -100,7 +101,7 @@ const CMDS={
   '坐下':{eyes:'open',cls:'sit'},
 };
 const CMD_ALIAS={'高兴':'开心','笑':'开心','爱心':'爱心眼','喜欢':'爱心眼','星星':'星星眼','哭':'难过','伤心':'难过','委屈':'难过','发火':'生气','气':'生气','吃惊':'惊讶','晕':'晕乎乎','睡':'睡觉','舞':'跳舞','招手':'挥手','跳':'蹦跶','趴':'趴下','坐':'坐下'};
-function normCmd(v){v=String(v||'').trim().replace(/[。！!~～\s]/g,'');if(CMDS[v]||MOVES[v])return v;if(/^(出去|跑掉|溜走|躲起来)$/.test(v))return'跑出去';if(/^(回来|过来吧|来这里|到这来)$/.test(v))return'过来';if(/气泡/.test(v))return'跳上气泡';if(CMD_ALIAS[v])return CMD_ALIAS[v];if(/^(平静|恢复|正常|停|停下|好了)$/.test(v))return'平静';for(const k of Object.keys(CMDS))if(v.includes(k))return k;for(const [a,k] of Object.entries(CMD_ALIAS))if(v.includes(a))return k;return'';}
+function normCmd(v){v=String(v||'').trim().replace(/[。！!~～\s]/g,'');if(CMDS[v]||MOVES[v])return v;if(/^(出去|跑掉|溜走|躲起来)$/.test(v))return'跑出去';if(/^(回来|过来吧|来这里|到这来)$/.test(v))return'过来';if(/气泡/.test(v))return'跳上气泡';if(CMD_ALIAS[v])return CMD_ALIAS[v];if(/^(恢复|正常|停|停下|好了|别闹了)$/.test(v))return'恢复';for(const k of Object.keys(CMDS))if(v.includes(k))return k;for(const [a,k] of Object.entries(CMD_ALIAS))if(v.includes(a))return k;return'';}
 
 function css(){if(document.getElementById('dpStyle'))return;const st=document.createElement('style');st.id='dpStyle';st.textContent=`
 .dp-root{position:absolute;left:0;top:0;z-index:180;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:grab;will-change:transform}
@@ -213,15 +214,15 @@ function moodOf(c){
 }
 /* eyes：平时的眼睛；micro：发呆时偶尔换的小表情 */
 const MOOD_LOOK={
-  idle:{eyes:'open',micro:['wink','star','look-l','look-r','happy'],hat:'',cls:'',speed:38},
-  happy:{eyes:'happy',micro:['star','wink'],hat:'',cls:'bob',speed:55,fx:['spark','note'],every:5000},
-  love:{eyes:'heart',micro:['happy','wink'],hat:'',cls:'blush',speed:45,fx:['heart'],every:2600},
+  idle:{eyes:'open',micro:['wink','look-l','look-r','happy','look-l','star'],hat:'',cls:'',speed:38},
+  happy:{eyes:'open',micro:['happy','happy','star','wink'],hat:'',cls:'bob',speed:55,fx:['spark','note'],every:5000},
+  love:{eyes:'open',micro:['heart','heart','happy','wink'],hat:'',cls:'blush',speed:45,fx:['heart'],every:2600},
   sad:{eyes:'sad',micro:['closed'],hat:'',cls:'droop tear',speed:16,fx:['dots'],every:7000},
   angry:{eyes:'angry',micro:['squint'],hat:'',cls:'shake',speed:60,fx:['anger'],every:3500},
   sleep:{eyes:'closed',micro:[],hat:'sleep',cls:'sit slow',speed:0,fx:['z'],every:1700},
   sleepy:{eyes:'closed',micro:['open','dizzy'],hat:'',cls:'slow',speed:18,fx:['z'],every:5000},
   work:{eyes:'focus',micro:['open','squint'],hat:'work',cls:'sit keys',speed:30,fx:['dots','spark'],every:8000},
-  party:{eyes:'star',micro:['happy','wink'],hat:'party',cls:'bob',speed:50,fx:['spark','heart'],every:3200},
+  party:{eyes:'open',micro:['star','happy','happy','wink'],hat:'party',cls:'bob',speed:50,fx:['spark','heart'],every:3200},
 };
 const MOOD_CN={idle:'平常',happy:'开心',love:'想你、害羞',sad:'难过',angry:'生气',sleep:'睡着了',sleepy:'犯困',work:'陪你上班',party:'过节'};
 const BODY_ANIM=/\b(bob|walking|shake|droop|dance|sway|hop|jump|spin|stretch|land|breathe)\b/;
@@ -364,7 +365,7 @@ function tick(t){raf=0;if(!root||document.hidden)return;const dt=Math.min(.05,la
   const L=look();
   if(!sp&&!state.moving&&!state.hop&&!drag&&!state.climb&&!state.out&&now>nextActAt)chooseAct(now);
   const micro=sp?sp.micro:L.micro;
-  if(!drag&&now>microAt&&!(state.eyes&&now<state.eyesUntil)){microAt=now+6000+Math.random()*9000;if(micro&&micro.length&&!state.moving){state.eyes=pick(micro);state.eyesUntil=now+900+Math.random()*900;}}
+  if(!drag&&now>microAt&&!(state.eyes&&now<state.eyesUntil)){/* 平时是黑色小竖条眼睛，开心 / 想你 / 过节时隔一会儿换成笑眼、爱心眼、星星眼，过一两秒再回到平静 */microAt=now+(state.mood==='idle'?6000+Math.random()*9000:3500+Math.random()*5000);if(micro&&micro.length&&!state.moving){state.eyes=pick(micro);state.eyesUntil=now+1200+Math.random()*1300;}}
   const fxKind=sp?sp.fx:(L.fx&&pick(L.fx)),every=sp?(sp.every||2800):(L.every||4000);
   if(fxKind&&now>fxAt&&!drag){fxAt=now+every*(.8+Math.random()*.5);if(sp||state.mood!=='idle')fx(fxKind);}
   applyLook();loop();}
@@ -383,7 +384,7 @@ function watchMessages(now){if(now<msgCheckAt)return;msgCheckAt=now+800;const c=
   else if(m.role==='user'){react('jump',500);fx('heart');if(here&&Math.random()<.35)setTimeout(()=>{const el=newestBubble();if(el&&!drag&&!state.out)perchOn(el);},600);}}
 
 /* 让它做一个表情 / 动作（角色标签或用户按钮） */
-function doCmd(name,ms){const k=normCmd(name);if(!k)return false;wake();if(k==='平静'){state.cmd='';state.cmdUntil=0;return true;}
+function doCmd(name,ms){const k=normCmd(name);if(!k)return false;wake();if(k==='恢复'){state.cmd='';state.cmdUntil=0;return true;}
   if(state.out&&k!=='跑出去')comeBack();
   if(MOVES[k]){state.cmd='';if(root)MOVES[k]();return true;}
   state.cmd=k;state.cmdUntil=Date.now()+(ms||USER_CMD_MS);state.moving=false;state.act='';state.annoyedUntil=0;
@@ -442,7 +443,7 @@ window.addEventListener('resize',()=>{if(!root)return;const b=bounds();state.x=M
 function deskPetPrompt(c){const p=cfg();if(!p||!p.on||!c||p.cid!==c.id)return'';const me=(typeof S!=='undefined'&&S.me&&S.me.name)||'她',n=petName(),now=Date.now(),sp=special(now);
   const doing=sp?(state.cmd&&now<state.cmdUntil?'正在'+state.cmd:typingOn(now)?'在陪'+me+'打字，假装敲代码':musicOn()?'戴着耳机闭眼听歌、左右摇摆':''):MOOD_CN[state.mood]||'平常';
   return '\n\n# 你们的虚拟桌面宠物「'+n+'」\n'+me+'的手机屏幕里住着一只像素风的虚拟桌面宠物小机器人，名字叫「'+n+'」。它是'+me+'在小手机里养的、跟着你的小家伙，平时站在聊天输入框上来回走，会跳上聊天气泡、爬墙、偶尔跑出屏幕又跑回来；它会跟着你的心情变表情。它是纯虚拟的，和实体桌面机器人「小K」没有任何关系，绝不能把两者混为一谈。'+(doing?'\n它现在：'+doing+'。':'')+
-    '\n你可以在微信回复里另起一行写 [桌宠|动作] 让「'+n+'」照做，这一行不会显示给'+me+'。可用表情和动作：'+Object.keys(CMDS).join('、')+'、平静（恢复正常）；还能让它移动：'+Object.keys(MOVES).join('、')+'。一轮最多一个，不必每轮都用；'+me+'让你控制它、或者你想借它表达心情时再用。被问到它叫什么、在干嘛时，按上面的事实回答。';}
+    '\n你可以在微信回复里另起一行写 [桌宠|动作] 让「'+n+'」照做，这一行不会显示给'+me+'。可用表情和动作：'+Object.keys(CMDS).join('、')+'、恢复（回到跟着你心情的样子）；还能让它移动：'+Object.keys(MOVES).join('、')+'。一轮最多一个，不必每轮都用；'+me+'让你控制它、或者你想借它表达心情时再用。被问到它叫什么、在干嘛时，按上面的事实回答。';}
 function deskPetConsume(text,c){const s=String(text==null?'':text);if(!/[\[【]\s*桌宠/.test(s))return text;const p=cfg();let used=false;
   const out=s.replace(/[\[【]\s*桌宠\s*[|｜:：]\s*([^\]】\r\n]{1,16})\s*[\]】]/g,(m,v)=>{if(!used&&p&&p.on&&c&&p.cid===c.id&&doCmd(v,ROLE_CMD_MS))used=true;return'';}).replace(/\n[ \t]*\n[ \t]*\n/g,'\n\n').trim();
   return out;}
@@ -468,7 +469,7 @@ function renderDeskPetPage(){css();const p=ensureCfg(),r=role(),col=DP_COLORS[p.
    <div class="dp-row"><span>颜色</span><div class="dp-colors">${Object.keys(DP_COLORS).map(k=>`<button class="${(p.color||'clay')===k?'on':''}" title="${DP_COLOR_NAMES[k]}" style="background:${DP_COLORS[k][0]}" onclick="deskPetColor('${k}')"></button>`).join('')}</div></div>
   </div>
   <div class="dp-label">让${escH(petName())}做个表情</div>
-  <div class="dp-group"><div class="dp-cmds">${Object.keys(CMDS).concat(Object.keys(MOVES)).map(k=>`<button onclick="deskPetCmd('${k}')">${k}</button>`).join('')}<button onclick="deskPetCmd('平静')">恢复</button></div></div>
+  <div class="dp-group"><div class="dp-cmds">${Object.keys(CMDS).concat(Object.keys(MOVES)).map(k=>`<button onclick="deskPetCmd('${k}')">${k}</button>`).join('')}<button onclick="deskPetCmd('恢复')">恢复</button></div></div>
   <button class="dp-home-btn" onclick="deskPetHome()">叫它回到屏幕中间</button>
   <div class="dp-note">· 只陪一个角色，跟着ta的心情和作息变表情：开心蹦跶、想你冒爱心、生气冒火、难过掉眼泪、上班戴安全帽、睡觉戴睡帽、过节戴派对帽。<br>· 你在听歌时它会戴上耳机、闭眼左右摇摆；你在打字时它会坐下来敲键盘。<br>· 角色知道它叫「${escH(petName())}」，也能在聊天里让它做表情；你也可以在上面直接点。<br>· 平时它站在聊天输入框上来回走，会从一个气泡跳到另一个气泡，偶尔跑出屏幕又跑回来。角色来消息时它会精神一下跳到新气泡上；你太久不理它，它会打瞌睡，碰一下屏幕就醒。<br>· 点它冒小爱心，连着点太多下会生气跑开；按住不动是摸摸；按住拖动可以把它放到任何地方，放在气泡上就趴在气泡上。</div>
   </div>`;}
