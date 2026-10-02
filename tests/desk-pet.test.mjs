@@ -25,6 +25,7 @@ test('desk pet can be tapped, petted, dragged, climbs walls and stays under moda
   assert.match(s,/function tap\(\)/);assert.match(s,/function pet\(\)/);assert.match(s,/drag\.moved=true/);
   assert.match(s,/state\.rot=state\.x<=1\?90:-90/);
   assert.match(s,/\.dp-root\{position:absolute;left:0;top:0;z-index:180/);
-  assert.match(s,/openChat\(c\.id\)/);
+  assert.match(s,/function tryPerch\(\)/);assert.match(s,/state\.annoyedUntil=now\+6000/);assert.match(s,/dpBreathe/);
+  assert.doesNotMatch(s,/dp-bubble/,'点它不再弹文字框');
   assert.match(s,/S\.settings\.deskPet/);
 });
