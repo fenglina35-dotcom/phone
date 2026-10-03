@@ -28,3 +28,5 @@ test('refund, blocked roles and account switch invalidate reminders; solo purcha
 test('reminder cannot replace an ordinary reply already queued for that role',()=>{
  const {api,q,ctx,setNow,reminders}=fixture();assert(api.bookQuote(q,api.shows(q)[0].id));setNow(api.rows()[0].startAt);ctx.replyStateKey=(k,aid)=>aid+':'+k;ctx._replyTimers={'main:r':123};api.checkDue();assert.equal(reminders.length,0);delete ctx._replyTimers['main:r'];api.checkDue();assert.equal(reminders.length,1);
 });
+
+test("large role wallet concert booking and refund preserve exact balance",()=>{const {api,q,S}=fixture();S.contacts[0].wallet='999999999999999999999999.00';assert(api.bookQuote(q,api.shows(q)[0].id,S.contacts[0]));assert.notEqual(S.contacts[0].wallet,'999999999999999999999999.00');assert.equal(S.me.balance,10000);assert(api.refund(api.rows()[0].id));assert.equal(S.contacts[0].wallet,'999999999999999999999999.00');});

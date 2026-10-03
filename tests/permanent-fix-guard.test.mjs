@@ -29,6 +29,7 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"v1506/v1507",scope:"both",least:1,name:"旅行角色大额余额按十进制扣款",marker:"NorthHotelData.moneyNext(c.wallet,Math.round(delta*100))"},
   {release:"v1422/v1423 preview",scope:"both",least:1,name:"线下控制文本与安静决定不进入对话通知",marker:"function rolePublicText(value)"},
   {release:"v1422/v1423 preview",scope:"both",least:1,name:"抖音陌生私信有独立性格和开场重复检查",marker:"function dyStrangerParse(raw,styles,recent)"},
   {release:"v1422/v1423 preview",scope:"both",least:1,name:"群专属红包领取前核对对象",marker:"function gRpRecipient(g,m)"},

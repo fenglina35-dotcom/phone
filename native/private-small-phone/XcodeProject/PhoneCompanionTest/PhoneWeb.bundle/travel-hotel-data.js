@@ -30,5 +30,24 @@ function resolve(raw){const q=normalize(raw),all=cities(),country=COUNTRIES.find
 function words(raw){return String(raw||'').trim().toLowerCase().split(/\s+/).filter(Boolean).map(w=>normalize(w).replace(/(?:酒店|住宿|hotels|hotel)$/,'')).filter(Boolean);}
 function matches(item,raw){const hay=normalize([item.name,item.brand,item.city,item.country,item.area,...(item.aliases||[]),...(item.features||[])].join(' '));return words(raw).every(w=>hay.includes(w));}
 function knownTerm(raw){const q=normalize(raw);if(!q)return true;const suffixless=q.replace(/(?:酒店|住宿|hotel|hotels)$/,'');return BRANDS.some(b=>[b.name,b.group,...b.aliases].some(a=>normalize(a).includes(suffixless)||suffixless.includes(normalize(a))))||['市中心','景区','交通枢纽','近景点','早餐','宠物','停车','民宿','公寓'].some(w=>q.includes(w))||cities().some(c=>q.includes(normalize(c.name)));}
-root.NorthHotelData={brands:BRANDS,countries:COUNTRIES,cities,resolve,normalize,matches,knownTerm,countryAliases,limits:{rows:20,results:240}};
+
+// Keep large simulated balances as decimal strings; transaction prices remain safe integer cents.
+function moneyCents(value){
+ if(typeof BigInt!=='function')return null;
+ if(typeof value!=='string'&&typeof value!=='number'||typeof value==='number'&&!Number.isFinite(value))return null;
+ const text=String(value).trim();if(text.length>400)return null;
+ const m=/^\+?(\d+)(?:\.(\d*))?(?:e([+-]?\d+))?$/i.exec(text);if(!m)return null;
+ const exponent=Number(m[3]||0),digits=m[1]+(m[2]||'');if(!Number.isInteger(exponent)||Math.abs(exponent)>400)return null;
+ const shift=exponent-(m[2]||'').length+2;if(digits.length+Math.max(0,shift)>402)return null;
+ if(shift>=0)return BigInt(digits+'0'.repeat(shift));
+ const cut=digits.length+shift;if(cut<=0)return cut===0&&digits[0]>='5'?BigInt(1):BigInt(0);
+ return BigInt(digits.slice(0,cut))+(digits[cut]>='5'?BigInt(1):BigInt(0));
+}
+function moneyNext(value,deltaCents){
+ if(!Number.isSafeInteger(deltaCents))return null;if(typeof BigInt!=='function'){const n=Number(value),next=n+deltaCents/100;return Number.isFinite(n)&&n>=0&&Number.isFinite(next)&&next>=0?next:null;}const before=moneyCents(value);if(before===null)return null;
+ const after=before+BigInt(deltaCents);if(after<BigInt(0))return null;
+ if(after<=BigInt(Number.MAX_SAFE_INTEGER)){const number=Number(after)/100;if(moneyCents(number)===after)return number;}
+ return String(after/BigInt(100))+'.'+String(after%BigInt(100)).padStart(2,'0');
+}
+root.NorthHotelData={moneyCents,moneyNext,brands:BRANDS,countries:COUNTRIES,cities,resolve,normalize,matches,knownTerm,countryAliases,limits:{rows:20,results:240}};
 })(globalThis);
