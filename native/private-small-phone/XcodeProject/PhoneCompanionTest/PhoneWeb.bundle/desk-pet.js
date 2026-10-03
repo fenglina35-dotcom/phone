@@ -85,6 +85,9 @@ const CMDS={
   '爱心眼':{eyes:'heart',cls:'bob blush',fx:'heart'},
   '星星眼':{eyes:'star',cls:'bob',fx:'spark'},
   '平静':{eyes:'open',cls:''},
+  '醒来':{eyes:'open',hat:'',cls:''},
+  '戴帽子':{eyes:'open',hat:'party',cls:''},
+  '戴耳机':{eyes:'closed',hat:'music',cls:'sway',fx:'note'},
   '眨眼':{eyes:'wink',cls:''},
   '害羞':{eyes:'happy',cls:'blush',fx:'heart'},
   '难过':{eyes:'sad',cls:'droop tear',fx:'dots'},
@@ -100,8 +103,10 @@ const CMDS={
   '趴下':{eyes:'open',cls:'lie'},
   '坐下':{eyes:'open',cls:'sit'},
 };
-const CMD_ALIAS={'高兴':'开心','笑':'开心','爱心':'爱心眼','喜欢':'爱心眼','星星':'星星眼','哭':'难过','伤心':'难过','委屈':'难过','发火':'生气','气':'生气','吃惊':'惊讶','晕':'晕乎乎','睡':'睡觉','舞':'跳舞','招手':'挥手','跳':'蹦跶','趴':'趴下','坐':'坐下'};
-function normCmd(v){v=String(v||'').trim().replace(/[。！!~～\s]/g,'');if(CMDS[v]||MOVES[v])return v;if(/^(出去|跑掉|溜走|躲起来)$/.test(v))return'跑出去';if(/^(回来|过来吧|来这里|到这来)$/.test(v))return'过来';if(/气泡/.test(v))return'跳上气泡';if(CMD_ALIAS[v])return CMD_ALIAS[v];if(/^(恢复|正常|停|停下|好了|别闹了)$/.test(v))return'恢复';for(const k of Object.keys(CMDS))if(v.includes(k))return k;for(const [a,k] of Object.entries(CMD_ALIAS))if(v.includes(a))return k;return'';}
+const CMD_ALIAS={'醒醒':'醒来','醒过来':'醒来','起床':'醒来','醒':'醒来','笑一笑':'开心','笑起来':'开心','笑一个':'开心','回来':'过来','高兴':'开心','笑':'开心','爱心':'爱心眼','喜欢':'爱心眼','星星':'星星眼','哭':'难过','伤心':'难过','委屈':'难过','发火':'生气','气':'生气','吃惊':'惊讶','晕':'晕乎乎','睡':'睡觉','舞':'跳舞','招手':'挥手','跳':'蹦跶','趴':'趴下','坐':'坐下'};
+function normPetSetting(v){const aliases={'摘帽子':'摘帽子','脱帽子':'摘帽子','摘耳机':'摘耳机','取下耳机':'摘耳机','戴上帽子':'戴帽子','戴上耳机':'戴耳机'};if(aliases[v])return aliases[v];const color=String(v||'').match(/^(?:颜色|换颜色)[|｜:：](.+)$/);if(color){const key=Object.keys(DP_COLORS).find(k=>k===color[1]||DP_COLOR_NAMES[k]===color[1]);return key?'颜色:'+key:'';}const size=String(v||'').match(/^(?:大小|尺寸)[|｜:：](小|中|大|s|m|l)$/);if(size)return'大小:'+({小:'s',中:'m',大:'l'}[size[1]]||size[1]);const name=String(v||'').match(/^(?:名字|改名)[|｜:：]([^\[\]【】|｜<>]{1,10})$/);return name?'名字:'+name[1]:'';}
+function applyPetSetting(k){const p=cfg();if(!p)return false;if(k==='摘帽子')p.hats=false;else if(k==='摘耳机')p.phones=false;else if(k.startsWith('颜色:'))p.color=k.slice(3);else if(k.startsWith('大小:'))p.size=k.slice(3);else if(k.startsWith('名字:'))p.name=k.slice(3);else return false;if(root&&k.startsWith('大小:')){unmount();sync();}else applyLook();save();rerender();return true;}
+function normCmd(v){v=String(v||'').trim().replace(/[。！!~～\s]/g,'');const setting=normPetSetting(v);if(setting)return setting;if(CMDS[v]||MOVES[v])return v;if(/^(出去|跑掉|溜走|躲起来)$/.test(v))return'跑出去';if(/^(回来|过来吧|来这里|到这来)$/.test(v))return'过来';if(/气泡/.test(v))return'跳上气泡';if(CMD_ALIAS[v])return CMD_ALIAS[v];if(/^(恢复|正常|停|停下|好了|别闹了)$/.test(v))return'恢复';for(const k of Object.keys(CMDS))if(v.includes(k))return k;for(const [a,k] of Object.entries(CMD_ALIAS))if(v.includes(a))return k;return'';}
 
 function css(){if(document.getElementById('dpStyle'))return;const st=document.createElement('style');st.id='dpStyle';st.textContent=`
 .dp-root{position:absolute;left:0;top:0;z-index:180;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:grab;will-change:transform}
@@ -236,7 +241,7 @@ document.addEventListener('input',e=>{const t=e.target;if(!t||t.closest&&t.close
 function special(now){
   if(drag&&drag.moved)return{eyes:'wide',cls:'dangle',hat:look().hat,still:true};
   if(now<state.annoyedUntil)return{eyes:'angry',cls:'shake',hat:look().hat,still:false};
-  if(state.cmd&&now<state.cmdUntil){const c=CMDS[state.cmd];return Object.assign({still:true,hat:look().hat},c);}
+  if(state.cmd&&now<state.cmdUntil){const c=CMDS[state.cmd]||{eyes:'open',cls:'',hat:'',still:false};return Object.assign({still:true,hat:look().hat},c);}
   if(typingOn(now))return{eyes:'focus',cls:'sit keys type',hat:'',fx:'code',every:1400,still:true};
   if(musicOn())return{eyes:'closed',cls:'sway',hat:'music',fx:'note',every:1500,still:true,micro:['happy']};
   if(state.napping)return{eyes:'closed',cls:'sit slow',hat:'',fx:'z',every:1900,still:true};
@@ -264,7 +269,7 @@ function applyLook(){if(!root)return;const now=Date.now(),L=look(),c=cfg(),col=D
     if(state.eyes&&now<state.eyesUntil)eyes=state.eyes;}
   if(!sp&&(state.climb===2||state.climb===3))cls+=' climbing';
   if(!dragging&&sp&&state.eyes&&now<state.eyesUntil&&sp.micro&&sp.micro.includes(state.eyes))eyes=state.eyes;
-  if(!dragging&&!(sp&&now<state.annoyedUntil)&&state.react==='pet'&&now<state.reactUntil){eyes='heart';cls+=' blush';}
+  if(!dragging&&!(sp&&now<state.annoyedUntil)&&!(state.cmd&&now<state.cmdUntil)&&state.react==='pet'&&now<state.reactUntil){eyes='heart';cls+=' blush';}
   if(!BODY_ANIM.test(cls))cls+=' breathe';
   if(eyes==='look-l'||eyes==='look-r'){cls+=' '+eyes;eyes=(sp?sp.eyes:L.eyes);}
   /* 换表情时先轻轻闭一下眼，不让眼睛直接跳变 */
@@ -313,7 +318,7 @@ function leavePerch(){state.perch=null;state.act='';toGround();}
 /* ---------- 行为 ---------- */
 function walkTo(x,y,opt){opt=opt||{};const b=bounds(),d=dims();const free=!!opt.free;state.tx=free?x:Math.max(0,Math.min(b.w,x));state.ty=Math.max(0,Math.min(b.h,y));state.walkGround=!!opt.ground;state.onGround=false;state.moving=true;state.face=state.tx<state.x?-1:1;if(!raf)loop();}
 /* 跑出屏幕外，过几秒再从某一边跑回来 */
-function runAway(){const d=dims(),left=state.x<hostW()/2;state.perch=null;state.hop=null;state.climb=0;state.rot=0;state.placedUntil=0;state.cmd='';state.out={phase:'leaving'};state.act='flee';walkTo(left?-d.w-12:hostW()+12,groundY(),{free:true});}
+function runAway(){const d=dims(),left=state.x<hostW()/2;state.perch=null;state.hop=null;state.climb=0;state.rot=0;state.placedUntil=0;if(state.cmd!=='跑出去')state.cmd='';state.out={phase:'leaving'};state.act='flee';walkTo(left?-d.w-12:hostW()+12,groundY(),{free:true});}
 function comeBack(){const d=dims(),fromLeft=Math.random()<.5;state.out={phase:'back'};state.x=fromLeft?-d.w-8:hostW()+8;state.y=groundY();if(root)root.style.visibility='';state.act='';walkTo(fromLeft?40+Math.random()*100:bounds().w-40-Math.random()*100,groundY(),{ground:true});}
 function chooseAct(now){
   const L=look(),b=bounds(),m=state.mood;state.act='';
@@ -371,24 +376,27 @@ function tick(t){raf=0;if(!root||document.hidden)return;const dt=Math.min(.05,la
   applyLook();loop();}
 function react(kind,ms){state.react=kind;state.reactUntil=Date.now()+(ms||900);applyLook();}
 function setEyes(e,ms){state.eyes=e;state.eyesUntil=Date.now()+ms;}
-function refreshMood(force){const c=role();const m=moodOf(c);if(force||m!==state.mood){state.mood=m;state.act='';nextActAt=Date.now()+600;if(MOOD_LOOK[m]&&!MOOD_LOOK[m].speed){state.moving=false;state.climb=0;state.rot=0;}}moodAt=Date.now();}
+function refreshMood(force){const c=role();const m=moodOf(c);if(force||m!==state.mood){state.mood=m;state.act='';nextActAt=Date.now()+600;if(!(state.cmd&&Date.now()<state.cmdUntil)&&MOOD_LOOK[m]&&!MOOD_LOOK[m].speed){state.moving=false;state.climb=0;state.rot=0;}}moodAt=Date.now();}
 function wake(){lastInteract=Date.now();if(state.napping){state.napping=false;setEyes('wide',350);setTimeout(()=>react('stretch',1600),350);}}
 
 /* ---------- 有新消息时：角色来消息会精神一下跳到新气泡上；你发出去它会替你高兴 ---------- */
 function watchMessages(now){if(now<msgCheckAt)return;msgCheckAt=now+800;const c=role();if(!c||typeof msgs!=='function')return;let ms;try{ms=msgs(c.id)||[];}catch(_){return;}
   const m=ms[ms.length-1],sig=m?(m.id||'')+'|'+ms.length:'';if(msgSig===null){msgSig=sig;return;}if(sig===msgSig)return;msgSig=sig;if(!m||Date.now()-(+m.time||0)>20000)return;
-  wake();if(state.out){/* 正在跑出去就让它跑完；已经在外面了就跑回来看消息 */if(state.out.phase==='away')comeBack();return;}
+  wake();if(state.cmd&&now<state.cmdUntil){applyLook();return;}if(state.out){/* 正在跑出去就让它跑完；已经在外面了就跑回来看消息 */if(state.out.phase==='away')comeBack();return;}
   const here=typeof cur==='function'&&cur()&&cur().p==='chat'&&cur().id===c.id;
-  if(m.role==='assistant'){state.cmd='';setEyes('wide',450);fx(state.mood==='love'?'heart':'spark',{pop:true});
+  if(m.role==='assistant'){setEyes('wide',450);fx(state.mood==='love'?'heart':'spark',{pop:true});
     setTimeout(()=>{setEyes(state.mood==='love'?'heart':'happy',1200);if(here&&!drag&&!state.cmd&&!state.out){const el=newestBubble();if(!(el&&perchOn(el)))react('jump',500);}else react('jump',500);},450);}
   else if(m.role==='user'){react('jump',500);fx('heart');if(here&&Math.random()<.35)setTimeout(()=>{const el=newestBubble();if(el&&!drag&&!state.out)perchOn(el);},600);}}
 
 /* 让它做一个表情 / 动作（角色标签或用户按钮） */
-function doCmd(name,ms){const k=normCmd(name);if(!k)return false;wake();if(k==='恢复'){state.cmd='';state.cmdUntil=0;return true;}
-  if(state.out&&k!=='跑出去')comeBack();
-  if(MOVES[k]){state.cmd='';if(root)MOVES[k]();return true;}
-  state.cmd=k;state.cmdUntil=Date.now()+(ms||USER_CMD_MS);state.moving=false;state.act='';state.annoyedUntil=0;
-  if(root){const C=CMDS[k];if(C.fx){fx(C.fx,{pop:true});setTimeout(()=>fx(C.fx),300);}applyLook();}return true;}
+function doCmd(name,ms){const k=normCmd(name);if(!k)return false;if(applyPetSetting(k))return true;if(k==='戴帽子')ensureCfg().hats=true;if(k==='戴耳机')ensureCfg().phones=true;if(k==='戴帽子'||k==='戴耳机')save();wake();
+  state.react='';state.reactUntil=0;state.eyes='';state.eyesUntil=0;state.annoyedUntil=0;state.napping=false;
+  state.climb=0;state.rot=0;state.hop=null;state.moving=false;state.act='';state.cmd=k==='恢复'?'':k;state.cmdUntil=k==='恢复'?0:Date.now()+(ms||USER_CMD_MS);
+  if(k==='恢复'){applyLook();return true;}
+  if(state.out&&k!=='跑出去'){state.out=null;if(root)root.style.visibility='';state.x=Math.max(0,Math.min(bounds().w,state.x));state.y=groundY();}
+  if(MOVES[k]){if(root)MOVES[k]();applyLook();return true;}
+  if(root){const C=CMDS[k];if(C.fx){fx(C.fx,{pop:true});setTimeout(()=>{if(state.cmd===k)fx(C.fx);},300);}applyLook();}return true;
+}
 const MOVES={
   '跑出去':()=>runAway(),
   '过来':()=>{state.perch=null;state.placedUntil=0;const b=bounds();hopTo(b.w/2,groundY(),{ground:true});setTimeout(()=>fx('heart',{pop:true}),700);},
@@ -440,10 +448,21 @@ setInterval(sync,2000);document.addEventListener('visibilitychange',()=>{if(docu
 window.addEventListener('resize',()=>{if(!root)return;const b=bounds();state.x=Math.min(state.x,b.w);state.y=Math.min(state.y,b.h);place();});
 
 /* ---------- 角色那边：知道它叫什么，可以用 [桌宠|动作] 控制它 ---------- */
+function deskPetRequestedCommand(text,c){const p=cfg();if(!p||!p.on||!c||p.cid!==c.id||typeof actId==='function'&&actId()!=='main')return'';
+  const t=String(text||'').trim();if(/如果|假如|要是|昨天|之前|曾经|别让|不要让|不想|不希望|不需要|不用|不能|不可以|别叫|不要叫/.test(t))return'';
+  if(/实体|硬件|真实机器人|桌面机器人|小K/.test(t)&&!/虚拟|桌宠|桌面宠物/.test(t))return'';
+  const names=[petName(),'桌面虚拟宠物','虚拟桌面宠物','桌面小宠物','桌面宠物','小宠物','桌宠'],name=names.find(n=>n&&t.includes(n));if(!name)return'';
+  const at=t.indexOf(name),before=t.slice(0,at),after=t.slice(at+name.length).replace(/^[，,：:\s]+/,'');
+  if(!/想|希望|请|帮我|让|叫|把|给|能不能|可不可以/.test(before)&&!new RegExp('^(?:请|你)?'+name.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).test(t))return'';
+  if(/^(?:会|能|可以|为什么|怎么).*[吗？?]$/.test(after)||/^(?:不|别|不要)/.test(after.trim()))return'';
+  return normCmd(after);
+}
+function deskPetApplyUserRequest(c,text){const k=deskPetRequestedCommand(text,c);return k&&doCmd(k,ROLE_CMD_MS)?k:'';}
+if(typeof pushMsg==='function'){const original=pushMsg;pushMsg=function(id,m){const result=original.apply(this,arguments),page=typeof cur==='function'&&cur();if(page&&page.p==='chat'&&page.id===id&&m&&m.role==='user'&&(m.type==='text'||m.type==='voice')&&!m._call)deskPetApplyUserRequest(getC(id),m.content||m.text||'');return result;};}
 function deskPetPrompt(c){const p=cfg();if(!p||!p.on||!c||p.cid!==c.id)return'';const me=(typeof S!=='undefined'&&S.me&&S.me.name)||'她',n=petName(),now=Date.now(),sp=special(now);
   const doing=sp?(state.cmd&&now<state.cmdUntil?'正在'+state.cmd:typingOn(now)?'在陪'+me+'打字，假装敲代码':musicOn()?'戴着耳机闭眼听歌、左右摇摆':''):MOOD_CN[state.mood]||'平常';
   return '\n\n# 你们的虚拟桌面宠物「'+n+'」\n'+me+'的手机屏幕里住着一只像素风的虚拟桌面宠物小机器人，名字叫「'+n+'」。它是'+me+'在小手机里养的、跟着你的小家伙，平时站在聊天输入框上来回走，会跳上聊天气泡、爬墙、偶尔跑出屏幕又跑回来；它会跟着你的心情变表情。它是纯虚拟的，和实体桌面机器人「小K」没有任何关系，绝不能把两者混为一谈。'+(doing?'\n它现在：'+doing+'。':'')+
-    '\n你可以在微信回复里另起一行写 [桌宠|动作] 让「'+n+'」照做，这一行不会显示给'+me+'。可用表情和动作：'+Object.keys(CMDS).join('、')+'、恢复（回到跟着你心情的样子）；还能让它移动：'+Object.keys(MOVES).join('、')+'。一轮最多一个，不必每轮都用；'+me+'让你控制它、或者你想借它表达心情时再用。被问到它叫什么、在干嘛时，按上面的事实回答。';}
+    '\n你可以在微信回复里另起一行写 [桌宠|动作] 让「'+n+'」照做，这一行不会显示给'+me+'。可用表情和动作：'+Object.keys(CMDS).join('、')+'、恢复（回到跟着你心情的样子）；还能让它移动：'+Object.keys(MOVES).join('、')+'。也可以设置[桌宠|摘帽子]、[桌宠|摘耳机]、[桌宠|颜色:陶土橙/草莓粉/薄荷绿/奶油白/天空蓝]（只选择一种）、[桌宠|大小:小/中/大]（只选择一种）、[桌宠|名字:新名字]；改名、改颜色和大小只在用户明确要求时执行。用户明确要求它笑、醒来或做动作时，必须使用有效桌宠指令，不能只在嘴上说已完成；醒来用[桌宠|醒来]，笑用[桌宠|开心]。不要用它操控实体小K。一轮最多一个，不必每轮都用；'+me+'让你控制它、或者你想借它表达心情时再用。被问到它叫什么、在干嘛时，按上面的事实回答。';}
 function deskPetConsume(text,c){const s=String(text==null?'':text);if(!/[\[【]\s*桌宠/.test(s))return text;const p=cfg();let used=false;
   const out=s.replace(/[\[【]\s*桌宠\s*[|｜:：]\s*([^\]】\r\n]{1,16})\s*[\]】]/g,(m,v)=>{if(!used&&p&&p.on&&c&&p.cid===c.id&&doCmd(v,ROLE_CMD_MS))used=true;return'';}).replace(/\n[ \t]*\n[ \t]*\n/g,'\n\n').trim();
   return out;}
@@ -484,6 +503,6 @@ function deskPetColor(k){ensureCfg().color=k;save();applyLook();rerender();}
 function deskPetWear(k){const p=ensureCfg();p[k]=p[k]===false;save();applyLook();rerender();if(typeof toast==='function')toast(k==='hats'?(p.hats===false?'帽子摘下来啦':'帽子戴回去啦'):(p.phones===false?'听歌不戴耳机了':'听歌会戴耳机'));}
 function deskPetCmd(k){if(!root){if(typeof toast==='function')toast('先开启桌面宠物');return;}doCmd(k,USER_CMD_MS);}
 function deskPetHome(){if(!root){if(typeof toast==='function')toast('先开启桌面宠物');return;}doCmd('过来');}
-Object.assign(window,{deskPetOpen,renderDeskPetPage,deskPetToggle,deskPetBind,deskPetRename,deskPetSize,deskPetColor,deskPetWear,deskPetCmd,deskPetHome,deskPetPrompt,deskPetConsume,
+Object.assign(window,{deskPetOpen,renderDeskPetPage,deskPetToggle,deskPetBind,deskPetRename,deskPetSize,deskPetColor,deskPetWear,deskPetCmd,deskPetHome,deskPetPrompt,deskPetConsume,deskPetRequestedCommand,deskPetApplyUserRequest,
   __deskPet:{moodOf,state:()=>Object.assign({},state,{perch:!!state.perch,hop:!!state.hop}),refresh:()=>refreshMood(true),sync,tryPerch,tap,doCmd,runAway,groundY,newestBubble,nap:()=>{lastInteract=0;},normCmd,special:()=>special(Date.now()),typed:()=>{lastTypeAt=Date.now();},EYES:Object.keys(EYES),CMDS:Object.keys(CMDS)}});
 })();

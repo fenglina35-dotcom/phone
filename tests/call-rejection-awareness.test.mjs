@@ -24,12 +24,16 @@ function functionSource(name) {
   throw new Error(`unterminated ${name}`);
 }
 
-const noon = Date.now();
+const noon = new Date('2026-10-03T12:00:00+09:00').getTime();
+class TestDate extends Date {
+  constructor(...args) { super(...(args.length ? args : [noon])); }
+  static now() { return noon; }
+}
 const rows = [];
 const context = vm.createContext({
   msgs: () => rows,
   S: {me: {name: '小北'}},
-  Date,
+  Date: TestDate,
 });
 vm.runInContext(
   functionSource('rejectedCallToday') + '\n' + functionSource('rejectedCallPrompt') +

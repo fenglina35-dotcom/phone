@@ -9,7 +9,7 @@ const html = fs.readFileSync(path.join(root, "小手机.html"), "utf8");
 
 assert.match(
   source,
-  /\['wechat','chat','chatDetails','contactInfo','friendInfo','contactSettings','roleMoments','roleMomentDetail','roleFeatures'\]\.includes\(c\.p\)/,
+  /\['wechat','chat','pfchat','pfgroup','group','chatDetails','contactInfo','friendInfo','contactSettings','roleMoments','roleMomentDetail','roleFeatures'\]\.includes\(c\.p\)/,
   "white WeChat theme must include every role profile subpage",
 );
 assert.match(

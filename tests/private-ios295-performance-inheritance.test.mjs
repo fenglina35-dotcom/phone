@@ -47,18 +47,18 @@ function functionSource(sourceText, name) {
 
 test('private identifiers remain v1355 and iOS 399 while public advances independently', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1425'/);
-  assert.match(index, /app\.js\?v=1425&r=v1425-unread-persistence-1/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1427'/);
+  assert.match(index, /app\.js\?v=1427&r=v1427-pet-mail-chat-preview-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(app, /APP_VER='v1425 · 微信已读状态持久保存'/);
+  assert.match(app, /APP_VER='v1427 · 桌宠控制与信件投递'/);
   assert.match(overlay, /336-daily-file-backup/);
   assert.match(webview, /1\.0\.436 \(436\)/);
   assert.match(bridge, /private static let build = "1\.0\.436 \(436\)"/);
   assert.match(bridge, /static let contractVersion = 42/);
   assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 436;/g) || []).length, 12);
   assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.436;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1424 · 微信已读状态持久保存'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1424'/);
+  assert.match(publicApp, /APP_VER='v1426 · 桌宠控制与信件投递'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1426'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 

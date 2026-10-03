@@ -13,14 +13,14 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1424 · 微信已读状态持久保存'/);
-  assert.match(app,/const url='sw\.js\?v=1424&r=v1424-unread-persistence-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1424'/);
-  assert.match(html,/app\.js\?v=1424/);
-  assert.match(sw,/const BUILD='1424'/);
-  assert.match(sw,/north-shell-v1424-unread-persistence-1/);
-  assert.match(index,/小手机\.html\?v=1424/);
-  assert.match(repair,/小手机\.html\?v=1424/);
+  assert.match(app,/APP_VER='v1426 · 桌宠控制与信件投递'/);
+  assert.match(app,/const url='sw\.js\?v=1426&r=v1426-pet-mail-chat-preview-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1426'/);
+  assert.match(html,/app\.js\?v=1426/);
+  assert.match(sw,/const BUILD='1426'/);
+  assert.match(sw,/north-shell-v1426-pet-mail-chat-preview-1/);
+  assert.match(index,/小手机\.html\?v=1426/);
+  assert.match(repair,/小手机\.html\?v=1426/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{

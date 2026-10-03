@@ -8,3 +8,6 @@ XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/*
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-smart-air.css
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/desk-pet.js
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/pf-group-role.js
+
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/mail-outbox.js
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/mail-outbox.css
