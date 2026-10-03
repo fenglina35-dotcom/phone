@@ -34,7 +34,7 @@ test('lucky red packets split exactly, never below one cent', () => {
 test('each person grabs one share, the packet runs out at its count, and old single packets still work', () => {
   const bills = [];
   const ctx = { S: {}, Date, Math, Array, uid: () => 'u' + Math.random(), save: () => {}, gnm: (g, id) => id === 'me' ? 'North' : id, addBill: (...a) => bills.push(a) };
-  vm.runInNewContext([fn('gRpState'), fn('gRpTake'), 'globalThis.take=gRpTake;globalThis.state=gRpState;'].join('\n'), ctx);
+  vm.runInNewContext([fn('gRpRecipient'), fn('gRpState'), fn('gRpTake'), 'globalThis.take=gRpTake;globalThis.state=gRpState;'].join('\n'), ctx);
   const g = { msgs: [] };
   const m = { senderId: 'me', type: 'redpacket', amount: 1, count: 2, lucky: true, splits: [0.6, 0.4], grabs: [], time: 1 };
   assert.equal(ctx.take(g, m, 'a').amount, 0.6);

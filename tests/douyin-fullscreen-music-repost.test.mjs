@@ -4,11 +4,11 @@ import { test } from 'node:test';
 import vm from 'node:vm';
 
 const PRIVATE = '../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/';
-const app = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
-const priv = readFileSync(new URL(PRIVATE + 'app.js', import.meta.url), 'utf8');
-const html = readFileSync(new URL('../小手机.html', import.meta.url), 'utf8');
-const shell = readFileSync(new URL(PRIVATE + '小手机.html', import.meta.url), 'utf8');
-const index = readFileSync(new URL(PRIVATE + 'index.html', import.meta.url), 'utf8');
+const app = readFileSync(new URL('../app.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+const priv = readFileSync(new URL(PRIVATE + 'app.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+const html = readFileSync(new URL('../小手机.html', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+const shell = readFileSync(new URL(PRIVATE + '小手机.html', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+const index = readFileSync(new URL(PRIVATE + 'index.html', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 const shells = [html, shell, index];
 const lines = app.split('\n');
 const source = name => {

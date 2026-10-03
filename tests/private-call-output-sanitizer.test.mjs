@@ -69,7 +69,7 @@ test('private call boundary hides every smart-home protocol while public v1350 s
   const c=runtime(),raw='先处理。\n[智能家电|门锁|action=unlock]\n[智能家电|空调|temperature=24]\n[智能家电|小灯|power=on]';
   assert.equal(c.smartHomeRoleStripTags(raw),'先处理。');
   assert.match(privateApp,/content=_rawOutput\?smartHomeRoleStripTags\(content\):_callSmartHomeFinal\.content/);
-  assert.match(publicApp,/APP_VER='v1420 · 线下剧场修复与删记录'/);
+  assert.match(publicApp,/APP_VER='v1422 · 线下继承与八项聊天修复'/);
 });
 
 test('successful private cloud-backup timeout fix remains a release blocker',()=>{

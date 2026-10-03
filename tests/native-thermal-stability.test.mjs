@@ -215,7 +215,7 @@ test('mobile WebKit boot keeps historical image references lazy without allowing
 
 test('private navigation is prioritized and slow renders enter the measured performance guard',()=>{
   assert.match(app,/function appLaunch\(k\)[\s\S]*?privateNativeAppOn\(\)&&typeof queueMicrotask===['"]function['"]\)queueMicrotask\(f\);else setTimeout\(f,0\)/);
-  assert.match(app,/function render\(\)\{\s*const c=cur\(\);const app=\$\('#app'\),_renderStarted=privateNativeAppOn\(\)/);
+  assert.match(app,/function render\(\)\{\s*const c=cur\(\);wxMarkPageSeen\(c\);const app=\$\('#app'\),_renderStarted=privateNativeAppOn\(\)/);
   assert.match(app,/northNativePerformanceSample\('render-'\+c\.p,/);
 });
 

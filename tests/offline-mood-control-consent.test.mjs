@@ -8,7 +8,7 @@ for(const path of paths){
  const src=fs.readFileSync(new URL('../'+path,import.meta.url),'utf8');
  const fn=name=>src.split(/\r?\n/).find(l=>l.startsWith('function '+name+'('))||'';
  const ctx=vm.createContext({uid:()=> 'id',esc:s=>s});
- vm.runInContext(['companionAllControlClauseAction','companionNaturalAllControlAction','companionAllExternalIntent','companionRequestedAllControlAction','offlineStripMoodTags','modelUnfilteredLines','modelUnfilteredOfflineItems','offRevealText'].map(fn).join('\n'),ctx);
+ vm.runInContext(['roleInternalControlLine','rolePublicText','companionAllControlClauseAction','companionNaturalAllControlAction','companionAllExternalIntent','companionRequestedAllControlAction','offlineStripMoodTags','modelUnfilteredLines','modelUnfilteredOfflineItems','offRevealText'].map(fn).join('\n'),ctx);
  test(path+' refuses question and refusal all-unlock',()=>{
   for(const text of ['全部解锁？想得美，北。今天的账还挂着呢。','全部解锁? 想得美。','你说“全部解锁”。我可没同意。','全部解锁，才怪。','全部解锁，等你先把鞋摆好。']) assert.equal(ctx.companionNaturalAllControlAction(text),'',text);
   assert.equal(ctx.companionNaturalAllControlAction('全部解锁。'),'unlock');

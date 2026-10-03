@@ -4,14 +4,14 @@ import { test } from 'node:test';
 import vm from 'node:vm';
 
 const PRIVATE = '../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/';
-const app = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
-const priv = readFileSync(new URL(PRIVATE + 'app.js', import.meta.url), 'utf8');
-const css = readFileSync(new URL('../glass-theme.css', import.meta.url), 'utf8');
-const privCss = readFileSync(new URL(PRIVATE + 'glass-theme.css', import.meta.url), 'utf8');
+const app = readFileSync(new URL('../app.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+const priv = readFileSync(new URL(PRIVATE + 'app.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+const css = readFileSync(new URL('../glass-theme.css', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+const privCss = readFileSync(new URL(PRIVATE + 'glass-theme.css', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 const shells = [
-  readFileSync(new URL('../小手机.html', import.meta.url), 'utf8'),
-  readFileSync(new URL(PRIVATE + '小手机.html', import.meta.url), 'utf8'),
-  readFileSync(new URL(PRIVATE + 'index.html', import.meta.url), 'utf8'),
+  readFileSync(new URL('../小手机.html', import.meta.url), 'utf8').replace(/\r\n/g, '\n'),
+  readFileSync(new URL(PRIVATE + '小手机.html', import.meta.url), 'utf8').replace(/\r\n/g, '\n'),
+  readFileSync(new URL(PRIVATE + 'index.html', import.meta.url), 'utf8').replace(/\r\n/g, '\n'),
 ];
 const both = [app, priv];
 const grab = (src, name) => {
@@ -265,7 +265,7 @@ test('功能面板排在输入框后面（也就是键盘那个位置）', () =>
 /* ===== 六、她看完第一版之后提的四件事 ===== */
 
 test('圆角改成 5° 采样，不再有看得出来的平切面', () => {
-  const gen = readFileSync(new URL('../scripts/glass_ring_polygon.py', import.meta.url), 'utf8');
+  const gen = readFileSync(new URL('../scripts/glass_ring_polygon.py', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
   assert.match(gen, /^STEP = 5\.0/m, '她说「气泡最左边前端有点缺一块儿的感觉」——15° 的平切面在 18px 圆角上看得出来');
   assert.match(gen, /def _steps\(\):[\s\S]{0,240}?n = int\(round\(90\.0 \/ STEP\)\)[\s\S]{0,40}?return range\(n \+ 1\)/, '取点数必须从 STEP 算出来，不能写死');
   assert.doesNotMatch(gen, /for k in range\(7\)/, '别又退回 7 个点');

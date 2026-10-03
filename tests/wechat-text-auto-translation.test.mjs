@@ -1,10 +1,12 @@
-import test from 'node:test';
+import nodeTest from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const source=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
-const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
+for(const [label,p,h] of [['web','../app.js','../小手机.html'],['private','../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js','../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html']]){
+const source=fs.readFileSync(new URL(p,import.meta.url),'utf8');
+const html=fs.readFileSync(new URL(h,import.meta.url),'utf8');
+const test=(name,fn)=>nodeTest(label+': '+name,fn);
 
 function functionSource(name){
   const start=source.indexOf('function '+name+'(');assert.ok(start>=0,'missing '+name);
@@ -74,3 +76,5 @@ test('web runtime contains the automatic text-translation contract',()=>{
   assert.doesNotMatch(source,/function _chatDrift\(/);
   assert.match(html,/\.role-text-trans\{/);
 });
+
+}

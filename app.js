@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1420'){
+if(window.__NORTH_SHELL_BUILD__!=='1422'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -83,6 +83,26 @@ function pfAvatarHTML(f,extra){let v=phoneFriendAvatar(f);v=(''+(v||'')).trim();
   const nm=pfFriendDisplayName(f),ch=Array.from(nm||'?')[0]||'?';
   return `<div class="avatar ${extra||''}" style="background:linear-gradient(135deg,#9ec5fe,#c9b7ff);color:#fff;font-weight:800">${esc(ch)}</div>`;}
 function pfAvatarOnlineHTML(f,extra){return `<span class="pfavwrap">${pfAvatarHTML(f,extra)}${pfIsOnline(f)?'<i class="pfonline"></i>':''}</span>`;}
+
+/* v1422: protocol decisions never become dialogue/notifications. Keep actual user dialogue. */
+function roleInternalControlLine(value){return /^(?:[\[【]\s*(?:保持安静|不说话|沉默|不回)\s*[\]】]|已在本轮完成[，,、；;。\s]*不再重复[。.!！]?|本轮已完成[，,、；;。\s]*不再重复[。.!！]?)$/.test(String(value||'').trim());}
+function rolePublicText(value){return String(value==null?'':value).split(/\r?\n/).filter(line=>!roleInternalControlLine(line)).join('\n').trim();}
+function wxUnreadBadge(n,dot){n=Math.max(0,+n||0);return dot?'<span class="wx-unread-dot" aria-label="有新朋友圈"></span>':n?'<span class="wx-unread-badge" aria-label="'+n+'条未读消息">'+(n>99?'99+':n)+'</span>':'';}
+function wxUnreadAvatar(html,n){return '<span class="wx-unread-avatar">'+html+wxUnreadBadge(n)+'</span>';}
+function wxRoleUnread(id){return msgs(id).filter(m=>roleReadCounted(m)&&m.role==='assistant'&&!m.seenAt&&!m.recalled&&!roleInternalControlLine(m.content)).length;}
+function wxGroupUnread(g){return (g.msgs||[]).filter(m=>m&&m.senderId!=='me'&&m.type!=='sys'&&!m._silent&&!m.seenAt&&!m.recalled&&!roleInternalControlLine(m.content)).length;}
+function wxPfUnread(list,from,readAt,group){return (list||[]).filter(m=>m&&!m.recalled&&!pfIsHiddenTransport(m)&&!pfIsRpGrabTransport(m)&&!m._silent&&(group?m.from!==from:m.from===from)&&(+m.time||0)>(+readAt||0)).length;}
+function wxUnreadTotal(){let n=(S.contacts||[]).filter(c=>!c.deleted&&(isMain()||addedHere(c)||msgs(c.id).length)).reduce((sum,c)=>sum+wxRoleUnread(c.id),0);if(!isMain())return n;n+=(S.groups||[]).reduce((sum,g)=>sum+wxGroupUnread(g),0);const p=phoneFriendState();(p.friends||[]).forEach(f=>{const id=String(f.phone_id||f.id).toUpperCase();n+=wxPfUnread(pfVisibleMsgList(p.messages,id),id,p.friendRead[id],false);});(p.groups||[]).forEach(g=>{const id=g.group_id||g.id;n+=wxPfUnread(pfMsgList(p.groupMessages,id),p.id,p.groupRead[id],true);});return n;}
+function wxMomentSeenMap(){const root=S.me._wxMomentSeen||(S.me._wxMomentSeen={});return root[actId()]||(root[actId()]={});}
+function wxMomentUnread(){const seen=wxMomentSeenMap();return (S.moments||[]).some(m=>m&&m.authorId&&m.authorId!=='me'&&((m.acct||'main')===actId())&&!seen[m.id]);}
+function wxMarkPageSeen(page){if(!page||document.hidden||S.me.locked)return;let changed=false,now=Date.now(),list=[];if(page.p==='chat')list=msgs(page.id).filter(m=>roleReadCounted(m)&&m.role==='assistant');else if(page.p==='group'&&isMain()){const g=(S.groups||[]).find(x=>x.id===page.id);list=g?(g.msgs||[]).filter(m=>m&&m.senderId!=='me'&&m.type!=='sys'&&!m._silent):[];}list.forEach(m=>{if(!m.seenAt){m.seenAt=now;delete m._seenPending;changed=true;}});if(page.p==='wxmoment'||page.p==='roleMoments'||page.p==='roleMomentDetail'){const seen=wxMomentSeenMap();(S.moments||[]).filter(m=>m&&m.authorId&&m.authorId!=='me'&&((m.acct||'main')===actId())&&(page.p==='wxmoment'||m.authorId===page.id)).forEach(m=>{if(!seen[m.id]){seen[m.id]=now;changed=true;}});}if(changed)save(500);}
+/* Resolve only an explicit recipient, never infer ownership from generic blessings. */
+function gRpRecipient(g,m){if(!g||!m)return '';if(m.to)return String(m.to);const note=String(m.note||'').trim();if(!note)return '';const names=[{id:'me',names:[S.me&&S.me.name]},...(g.members||[]).map(id=>{const c=getC(id);return{id,names:c?[gnm(g,id),c.name,c.remark]:[]};})],hits=[];names.forEach(x=>{if(x.names.filter(Boolean).some(n=>note==='给'+n+'的专属红包'||note===n+'的专属红包'||note==='仅限'+n+'领取'||note==='只给'+n))hits.push(x.id);});if(hits.length===1){m.to=hits[0];return m.to;}return hits.length||/专属|仅限|只给/.test(note)?'__ambiguous__':'';}
+function groupTransferFind(gid,mid){const g=(S.groups||[]).find(x=>x.id===gid),m=g&&(g.msgs||[]).find(x=>x.id===mid&&x.type==='transfer');return m?{g,m}:null;}
+function openGroupTransferDetail(gid,mid){if(groupTransferFind(gid,mid))go('groupTransferDetail',{id:gid,mid});}
+function groupTransferDetailAction(gid,mid){const hit=groupTransferFind(gid,mid);if(!hit||hit.m.senderId==='me'||hit.m.received||(hit.m.to&&hit.m.to!=='me'))return;gGrab(gid,mid,true);}
+function renderGroupTransferDetail(gid,mid){const hit=groupTransferFind(gid,mid),m=hit&&hit.m,nav='<div class="nav wx-transfer-detail-nav"><span class="l" onclick="back()">‹</span><span class="t"></span><span class="r"></span></div>';if(!m)return nav+'<main class="wx-transfer-detail">这笔转账记录不存在</main>';const mine=m.senderId==='me',forMe=!mine&&(!m.to||m.to==='me'),state=m.received?'received':'pending',title=m.received?(forMe?'你已收款':'对方已收款'):(forMe?'待你收款':'待对方收款'),to=m.to?gnm(hit.g,m.to):S.me.name;return nav+'<main class="wx-transfer-detail state-'+state+'"><section class="wx-transfer-detail-hero"><div class="wx-transfer-detail-icon">'+transferDetailGlyph(state)+'</div><p>'+esc(title)+'</p><h1>¥'+(+m.amount||0).toFixed(2)+'</h1></section><dl class="wx-transfer-detail-meta"><div><dt>收款方</dt><dd>'+esc(to)+'</dd></div><div><dt>转账说明</dt><dd>'+esc(m.note||'转账')+'</dd></div><div><dt>转账时间</dt><dd>'+transferDateTime(m.time)+'</dd></div>'+(m.received?'<div><dt>收款时间</dt><dd>'+transferDateTime(m.receivedAt)+'</dd></div>':'')+'</dl>'+(forMe&&!m.received?'<div class="wx-transfer-actions"><button type="button" onclick="groupTransferDetailAction(\''+gid+'\',\''+mid+'\')">收款</button></div>':'')+'</main>';}
+
 function pfUnreadDot(n){return n?'<span title="有新消息" style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#ff4b64;vertical-align:middle"></span>':'';}
 function pfPack(o){try{return '[PF|'+btoa(unescape(encodeURIComponent(JSON.stringify(o||{}))))+']';}catch(_){return '';}}
 function pfUnpack(t){t=(''+(t||'')).trim();let m=t.match(/^\[PF\|([A-Za-z0-9+/=]+)\]$/);if(m){try{return JSON.parse(decodeURIComponent(escape(atob(m[1]))));}catch(_){}}
@@ -182,9 +202,9 @@ function pfClearLocalPending(other,serverMsg){const p=phoneFriendState();other=(
 }
 function pfHeaders(){return {'apikey':GATE_KEY,'Authorization':'Bearer '+GATE_KEY,'Content-Type':'application/json'};}
 function companionHeaders(){if(typeof NorthPublicRuntime!=='undefined'&&NorthPublicRuntime.available())return {apikey:NorthPublicRuntime.config.key,'Content-Type':'application/json'};return {'apikey':COMPANION_KEY,'Authorization':'Bearer '+COMPANION_KEY,'Content-Type':'application/json'};}
-async function pfRpc(fn,args,ms){const r=await fetchT(GATE_URL+'/rest/v1/rpc/'+fn,{method:'POST',headers:pfHeaders(),body:JSON.stringify(args||{})},ms||25000);
-  const txt=await r.text();let d=null;try{d=txt?JSON.parse(txt):null;}catch(_){d=txt;}
-  if(!r.ok){let msg=(d&&d.message)||txt||('HTTP '+r.status);if(/Could not find the function|schema cache|404/i.test(msg))msg='好友云端表还没开通，先把 supabase_phone_friends.sql 执行一次';throw new Error(String(msg).slice(0,160));}
+async function pfRpc(fn,args,ms){const base=await pfTransportRoute(ms),write=!['phone_friend_search','phone_friend_sync'].includes(fn);let r,txt;try{r=await fetchT(base+'/rest/v1/rpc/'+fn,{method:'POST',headers:pfHeaders(),body:JSON.stringify(args||{})},ms||25000);txt=await r.text();}catch(e){_pfTransportRoute='';const err=new Error(write?'发送结果尚未确认，请先刷新聊天核对，避免重复发送。':'真人好友连接中断，请稍后重试；好友和聊天记录已保留。');err.pfSubmissionUnknown=write;throw err;}
+  let d=null;try{d=txt?JSON.parse(txt):null;}catch(_){if(write&&r.ok){const err=new Error('发送结果尚未确认，请先刷新聊天核对，避免重复发送。');err.pfSubmissionUnknown=true;throw err;}d=txt;}
+  if(!r.ok){let msg=(d&&d.message)||txt||('HTTP '+r.status);if(/Could not find the function|schema cache|404/i.test(msg))msg='好友云端表还没开通，先把 supabase_phone_friends.sql 执行一次';const err=new Error(write&&r.status>=500?'发送结果尚未确认，请先刷新聊天核对，避免重复发送。':String(msg).slice(0,160));err.pfSubmissionUnknown=write&&r.status>=500;throw err;}
   return d;}
 function pfAvatarStorageKey(id){return 'pf_avatar_v2_'+String(id||'unknown').toUpperCase().replace(/[^A-Z0-9_-]/g,'_').slice(0,48);}
 function pfAvatarRevision(raw){raw=String(raw||'');if(!raw)return'';return raw.length+':'+raw.slice(0,32)+':'+raw.slice(-24);}
@@ -281,11 +301,11 @@ function pfReqs(dir){const p=phoneFriendState();return (p.requests||[]).filter(r
 function pfOnlineText(f){return pfIsOnline(f)?'在线':'离线';}
 function pfReadStatus(m,scope,gid){if(!readReceiptOn())return '';if(!m||m.recalled||String(m.id||'').startsWith('local_')||pfPayloadIsPay(m))return '';const p=phoneFriendState(),ids=pfReadIds(m).filter(x=>x&&x!==p.id);if(scope==='group'){const g=pfGroupById(gid)||{},total=Math.max(0,((g.members||[]).length||1)-1),n=ids.length;return n?`${n}${total?'/'+total:''}人已读`:'未读';}return ids.length?'已读':'未读';}
 function pfFriendRowsHTML(){const p=phoneFriendState(),fs=p.friends||[];if(!fs.length)return '';
-  return fs.map(f=>{const id=(''+(f.phone_id||f.id)).toUpperCase(),arr=pfVisibleMsgList(p.messages,id),lm=arr[arr.length-1],unread=arr.filter(m=>m.from===id&&m.time>(p.friendRead[id]||0)).length;
-    return `<div class="row" onclick="openPhoneFriendChat('${id}')">${pfAvatarOnlineHTML(f)}<div class="meta"><div class="n">${esc(pfFriendDisplayName(f))}</div><div class="s">${lm?esc(lm.recalled?'[已撤回一条消息]':((lm.from===p.id?'我：':'')+pfMsgPreview(lm))):'已经是好友，打个招呼吧'}</div></div><div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div>${pfUnreadDot(unread)}</div></div>`;}).join('');}
+  return fs.map(f=>{const id=(''+(f.phone_id||f.id)).toUpperCase(),arr=pfVisibleMsgList(p.messages,id),lm=arr[arr.length-1],unread=wxPfUnread(arr,id,p.friendRead[id],false);
+    return `<div class="row" onclick="openPhoneFriendChat('${id}')">${wxUnreadAvatar(pfAvatarOnlineHTML(f),unread)}<div class="meta"><div class="n">${esc(pfFriendDisplayName(f))}</div><div class="s">${lm?esc(lm.recalled?'[已撤回一条消息]':((lm.from===p.id?'我：':'')+pfMsgPreview(lm))):'已经是好友，打个招呼吧'}</div></div><div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div></div></div>`;}).join('');}
 function pfGroupRowsHTML(){const p=phoneFriendState(),gs=p.groups||[];if(!gs.length)return '';
-  return gs.map(g=>{const gid=g.group_id||g.id,arr=pfMsgList(p.groupMessages,gid),lm=arr[arr.length-1],unread=arr.filter(m=>m.from!==p.id&&m.time>(p.groupRead[gid]||0)).length;
-    return `<div class="row" onclick="openPhoneFriendGroup('${gid}')">${wxClassicGroupAvatarHTML()}<div class="meta"><div class="n">${esc(pfGroupDisplayName(g))}</div><div class="s">${lm?esc(lm.recalled?'[已撤回一条消息]':((pfNameById(lm.from)||'成员')+'：'+pfMsgPreview(lm))):'群聊已创建'}</div></div><div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div>${pfUnreadDot(unread)}</div></div>`;}).join('');}
+  return gs.map(g=>{const gid=g.group_id||g.id,arr=pfMsgList(p.groupMessages,gid),lm=arr[arr.length-1],unread=wxPfUnread(arr,p.id,p.groupRead[gid],true);
+    return `<div class="row" onclick="openPhoneFriendGroup('${gid}')">${wxUnreadAvatar(wxClassicGroupAvatarHTML(),unread)}<div class="meta"><div class="n">${esc(pfGroupDisplayName(g))}</div><div class="s">${lm?esc(lm.recalled?'[已撤回一条消息]':((pfNameById(lm.from)||'成员')+'：'+pfMsgPreview(lm))):'群聊已创建'}</div></div><div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div></div></div>`;}).join('');}
 function phoneFriendEntryHTML(){const n=pfReqs('incoming').length;return `<div class="list"><div class="row" onclick="openPhoneFriends()"><div class="avatar sm" style="background:#6574ff">${svgIc('users',22,'#fff')}</div><div class="meta"><div class="n">小手机好友</div><div class="s">我的小手机ID：${esc(phoneFriendId())}</div></div>${n?pfUnreadDot(n):'<span class="v">›</span>'}</div></div>`;}
 function phoneFriendContactRowsHTML(){const p=phoneFriendState(),fs=p.friends||[];if(!fs.length)return '';
   return `<div class="list">${fs.map(f=>{const id=(''+(f.phone_id||f.id)).toUpperCase();return `<div class="row" onclick="openPhoneFriendChat('${id}')">${pfAvatarOnlineHTML(f,'sm')}<div class="meta"><div class="n">${esc(pfFriendDisplayName(f))}</div><div class="s">小手机ID：${esc(id)}</div></div><span class="v">›</span></div>`;}).join('')}</div>`;}
@@ -318,8 +338,8 @@ async function sendPhoneFriendBody(id,body,opt){id=(''+id).toUpperCase();body=('
   if(opt.bill) addBill('out',opt.bill.amount,opt.bill.note);
   save();if(!silent)render();
   if(!silent&&S.settings.sound&&typeof playDing==='function')playDing();
-  try{await pfEnsure();const m=await pfRpc('phone_friend_send_message',{p_from_id:p.id,p_secret:p.secret,p_to_id:id,p_body:body},30000);pfStoreMessage(m);p.lastSync=0;save();phoneFriendSync(true);}
-  catch(e){if(opt.bill){addBill('in',opt.bill.amount,'发送失败退款：'+(opt.bill.refundName||'小手机转账'));const arr=pfMsgList(p.messages,id);if(arr.length){const i=arr.findIndex(x=>x.id===localId);if(i>=0)arr.splice(i,1);}}if(!transport)toast(e.message||'发送失败');}
+  let submitted=false;try{await pfEnsure();submitted=true;const m=await pfRpc('phone_friend_send_message',{p_from_id:p.id,p_secret:p.secret,p_to_id:id,p_body:body},30000);pfStoreMessage(m);p.lastSync=0;save();phoneFriendSync(true);}
+  catch(e){if(opt.bill&&(!submitted||!e.pfSubmissionUnknown)){addBill('in',opt.bill.amount,'发送失败退款：'+(opt.bill.refundName||'小手机转账'));const arr=pfMsgList(p.messages,id);if(arr.length){const i=arr.findIndex(x=>x.id===localId);if(i>=0)arr.splice(i,1);}}if(!transport)toast(e.message||'发送失败');}
   finally{if(!silent)delete _pfSendBusy[id];if(!silent&&cur().p==='pfchat'&&cur().id===id)render();}}
 async function sendPhoneFriend(id){const ta=$('#pf_input'),text=(ta&&ta.value||'').trim();if(!text)return;if(ta){ta.value='';ta.style.height='auto';chatComposerStateSync(ta);}
   const voice=groupComposerVoiceOn('pffriend',id);
@@ -416,8 +436,8 @@ async function sendPhoneFriendGroupBody(gid,body,opt){body=(''+(body||'')).trim(
   if(!silent&&typeof gmMutedUntil==='function'&&gmMutedUntil('pf',gid,p.id)){toast('你已被禁言');render();return;}
   pfStoreGroupMessage({id:localId,group_id:gid,from_id:p.id,body,time:Date.now()});if(opt.bill) addBill('out',opt.bill.amount,opt.bill.note);save();if(!silent)render();
   if(!silent&&S.settings.sound&&typeof playDing==='function')playDing();
-  try{await pfEnsure();const m=await pfRpc('phone_friend_send_group_message',{p_from_id:p.id,p_secret:p.secret,p_group_id:gid,p_body:body},30000);pfStoreGroupMessage(m);save();phoneFriendSync(true);}
-  catch(e){if(opt.bill){addBill('in',opt.bill.amount,'发送失败退款：'+(opt.bill.refundName||'小手机群转账'));const arr=pfMsgList(p.groupMessages,gid);if(arr.length){const i=arr.findIndex(x=>x.id===localId);if(i>=0)arr.splice(i,1);}}if(!silent)toast(e.message||'发送失败');}
+  let submitted=false;try{await pfEnsure();submitted=true;const m=await pfRpc('phone_friend_send_group_message',{p_from_id:p.id,p_secret:p.secret,p_group_id:gid,p_body:body},30000);pfStoreGroupMessage(m);save();phoneFriendSync(true);}
+  catch(e){if(opt.bill&&(!submitted||!e.pfSubmissionUnknown)){addBill('in',opt.bill.amount,'发送失败退款：'+(opt.bill.refundName||'小手机群转账'));const arr=pfMsgList(p.groupMessages,gid);if(arr.length){const i=arr.findIndex(x=>x.id===localId);if(i>=0)arr.splice(i,1);}}if(!silent)toast(e.message||'发送失败');}
   finally{if(!silent&&cur().p==='pfgroup'&&cur().gid===gid)render();}}
 function pfCardBody(type,amount,note){return pfPack({type,amount:+amount||0,note:(note||'').trim()});}
 function phoneFriendTransferModal(id,type){id=(''+id).toUpperCase();paySendOpen(type==='redpacket'?'red':'transfer','pf',id);}
@@ -539,7 +559,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1420 · 线下剧场修复与删记录';
+const APP_VER='v1422 · 线下继承与八项聊天修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -830,7 +850,7 @@ function modelUnfilteredText(value){return String(value==null?'':value);}
 function modelUnfilteredLines(value){return String(value==null?'':value).split(/\r?\n/).filter(line=>line.trim());}
 function modelUnfilteredMessages(line,c){const raw=String(line==null?'':line);if(/^\s*[\[【]\s*(?:语音|转账|红包|位置|图片|文件|骰子)\s*[|｜:：]/.test(raw)){const parsed=lineToMsgs(normTag(raw.trim()),c);if(parsed&&parsed.length)return parsed;}return raw.trim()?[{role:'assistant',type:'text',content:raw}]:[];}
 function offlineStripMoodTags(text){return String(text||'').replace(/[\[【［]\s*(?:内心|心情值?|情绪值|事件簿)\s*[|｜:：][^\]】］\r\n]*(?:[\]】］]|(?=\r?\n|$))/g,'').replace(/^\s*(?:内心|心情值?|情绪值|事件簿)\s*[|｜:：][^\r\n]*$/gm,'');}
-function modelUnfilteredOfflineItems(text){return modelUnfilteredLines(offlineStripMoodTags(text)).map(line=>{const closed=line.match(/^\s*【([^【】]+)】\s*$/),open=!closed&&line.match(/^\s*【([^【】]+)$/),action=closed||open;return{id:uid(),who:action?'旁白':'ta',source:'ta',text:action?action[1].trim():line};});}
+function modelUnfilteredOfflineItems(text){return modelUnfilteredLines(rolePublicText(offlineStripMoodTags(text))).map(line=>{const closed=line.match(/^\s*【([^【】]+)】\s*$/),open=!closed&&line.match(/^\s*【([^【】]+)$/),action=closed||open;return{id:uid(),who:action?'旁白':'ta',source:'ta',text:action?action[1].trim():line};});}
 function lifeNoteReadableText(n){return n&&(n.rolePerspective||n.source==='manual')?String(n.text||''):aboutMeNoteText(n&&n.text);}
 function lifeNotesForRole(c){return lifeNotes().filter(n=>n&&(!n.roleId||c&&n.roleId===c.id)&&(!n.accountId||n.accountId===memoryScopeKey()));}
 function lifeNoteAuthorship(n,c){if(n&&n.source==='manual')return '用户手动补充的事实';if(n&&n.rolePerspective)return '我记录的观察（我指'+(c&&(c.remark||c.name)||'原记录角色')+'）';return '旧版从聊天自动摘录的线索，记录者未核实；不是用户亲手写的小事簿';}
@@ -1936,7 +1956,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1420&r=v1420-web-offline-fixes-1';
+  const url='sw.js?v=1422&r=v1422-eight-chat-fixes-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -1975,7 +1995,7 @@ function lockVisible(){const e=$('#lockScreen');return !!(e&&e.classList.contain
 function lockTargetKey(t){if(!t)return '';return [t.type||'',t.id||t.gid||t.cid||'',t.tab||''].join(':');}
 function lockClearTarget(target,silent){try{const key=lockTargetKey(target);if(!key)return false;const arr=lockNotes();let changed=false;for(let i=arr.length-1;i>=0;i--){if(lockTargetKey(arr[i]&&arr[i].target)===key){arr.splice(i,1);changed=true;}}if(changed&&!silent){save(500);renderLockScreen(true);}return changed;}catch(_){return false;}}
 let _lockFreshId='';
-function lockNotify(title,body,opt){try{opt=opt||{};const arr=lockNotes(),id='ln_'+uid(),note={id,title:String(title||'通知').slice(0,40),body:String(body||'').replace(/\s+/g,' ').slice(0,80),time:Date.now(),avatar:opt.avatar||'',icon:opt.icon||'',target:opt.target||null};arr.unshift(note);if(arr.length>4)arr.length=4;_lockFreshId=id;save(600);renderLockScreen(true);}catch(_){}}
+function lockNotify(title,body,opt){body=rolePublicText(body);if(!body)return;try{opt=opt||{};const arr=lockNotes(),id='ln_'+uid(),note={id,title:String(title||'通知').slice(0,40),body:String(body||'').replace(/\s+/g,' ').slice(0,80),time:Date.now(),avatar:opt.avatar||'',icon:opt.icon||'',target:opt.target||null};arr.unshift(note);if(arr.length>4)arr.length=4;_lockFreshId=id;save(600);renderLockScreen(true);}catch(_){}}
 function lockAvatarHTML(n){if(n&&n.avatar)return av(n.avatar,'sm');if(n&&n.icon)return `<div class="avatar sm" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.13)">${svgIc(n.icon,18,'#fff',1.7)}</div>`;return `<div class="avatar sm" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.13)">${svgIc('bell',18,'#fff',1.7)}</div>`;}
 function lockRgbValue(hex){hex=widgetHex(hex,'#ffffff');const n=parseInt(hex.slice(1),16);return ((n>>16)&255)+','+((n>>8)&255)+','+(n&255);}
 function lockAppearanceVars(){const time=homeClockColor(),tint=glassThemeOn()?glassWidgetTint():widgetCardColor(),opacity=(glassThemeOn()?glassWidgetOpacity():widgetOpacityValue())/100,a=Math.max(.025,Math.min(.72,opacity));return {'--lock-time-rgb':lockRgbValue(time),'--lock-glass-main':widgetRgba(tint,a),'--lock-glass-soft':widgetRgba(tint,Math.max(.02,a*.42)),'--lock-glass-shine':widgetRgba(tint,Math.min(.42,a+.12)),'--lock-glass-line':widgetRgba(tint,Math.min(.58,a+.2))};}
@@ -1986,7 +2006,7 @@ function lockTimeMask(value){const safe=String(value||'').replace(/[&<>"']/g,c=>
 function applyLockTimeMaterial(el,value){if(!el)return;el.style.setProperty('--lock-time-mask',lockTimeMask(value));}
 let _lockClockPaintKey='';
 function renderLockClock(force){const e=$('#lockScreen');if(!e||!force&&(document.hidden||!e.classList.contains('show')))return;const t=e.querySelector('.locktime'),d=e.querySelector('.lockdate'),v=hm(),date=lockDateText(),key=v+'|'+date;if(!force&&_lockClockPaintKey===key&&(!t||t.textContent===v)&&(!d||d.textContent===date))return;_lockClockPaintKey=key;if(t){t.textContent=v;t.dataset.time=v;applyLockTimeMaterial(t,v);}if(d)d.textContent=date;}
-function renderLockScreen(fresh){const el=$('#lockScreen');if(!el||!S||!S.me)return;const show=S.me.locked!==false;el.classList.toggle('show',show);if(!show&&!fresh)return;const bg=storedImageDisplaySource(S.me.lockBg||S.me.homeBg||''),notes=lockNotes().slice(0,4);
+function renderLockScreen(fresh){const el=$('#lockScreen');if(!el||!S||!S.me)return;const show=S.me.locked!==false;el.classList.toggle('show',show);if(!show&&!fresh)return;const bg=storedImageDisplaySource(S.me.lockBg||S.me.homeBg||''),notes=lockNotes().filter(n=>n&&rolePublicText(n.body)).map(n=>Object.assign({},n,{body:rolePublicText(n.body)})).slice(0,4);
   applyLockAppearance(el);const clock=hm();el.innerHTML=`<div class="lockbg" style="${isImg(bg)?'background-image:url('+bg+');':''}"></div><div class="lockshade"></div><div class="locktop"><div class="lockdate">${lockDateText()}</div><div class="locktime" data-time="${clock}">${clock}</div></div><div class="locknotes">${notes.length?notes.map(lockNoteHTML).join(''):'<div class="lockempty">暂无新通知</div>'}</div><div class="lockbottom"><button class="lockquick" onclick="lockQuickTorch(event)" title="手电筒">${svgIc('flashlight',24,'#fff',1.75)}</button><div class="lockhint" onclick="lockOpen()"><div class="lockup"></div><div>上滑进入小手机</div><div class="lockhandle"></div></div><button class="lockquick" onclick="lockQuickCamera(event)" title="相机">${svgIc('camera',24,'#fff',1.75)}</button></div>`;applyLockTimeMaterial(el.querySelector('.locktime'),clock);_lockFreshId='';}
 function renderLockPull(){const e=$('#lockPull');if(!e||!S||!S.me)return false;let on=false;try{on=S.me.locked===false&&cur().p==='home'&&homePageClamp(_homePage)===0&&!_call;}catch(_){}e.classList.toggle('show',!!on);e.style.display=on?'':'none';e.setAttribute('aria-hidden',on?'false':'true');e.tabIndex=on?0:-1;return !!on;}
 let _lockPullRefreshTimer=0;
@@ -2536,7 +2556,7 @@ function renderScrollElement(t){return !t?null:(String(t.id).charAt(0)==='.'?doc
 function captureRenderScroll(c){const t=renderScrollTarget(c);if(!t)return null;const el=renderScrollElement(t);if(!el)return{key:renderPageKey(c),id:t.id,had:false};const bottom=Math.max(0,el.scrollHeight-el.scrollTop-el.clientHeight);return{key:renderScrollStateKey(c,el),id:t.id,had:true,top:el.scrollTop,bottom,nearBottom:bottom<80};}
 function restoreRenderScroll(c,st){const t=renderScrollTarget(c);if(!t)return;const el=renderScrollElement(t);if(!el)return;const key=renderScrollStateKey(c,el),force=_scrollBottomOnce&&_scrollBottomOnce[key];if(force){delete _scrollBottomOnce[key];requestAnimationFrame(()=>{el.scrollTop=el.scrollHeight;});el.scrollTop=el.scrollHeight;return;}const same=st&&st.had&&st.key===key&&st.id===t.id;if(t.stick){if(!same||st.nearBottom)el.scrollTop=el.scrollHeight;else el.scrollTop=st.top;}else if(same){el.scrollTop=st.top;requestAnimationFrame(()=>{if(el.isConnected)el.scrollTop=st.top;});}}
 function render(){
-  const c=cur();const app=$('#app'),_renderStarted=privateNativeAppOn()?(typeof performance!=='undefined'&&performance.now?performance.now():Date.now()):0;
+  const c=cur();wxMarkPageSeen(c);const app=$('#app'),_renderStarted=privateNativeAppOn()?(typeof performance!=='undefined'&&performance.now?performance.now():Date.now()):0;
   if(typeof coupleWatchTick==='function')coupleWatchTick();
   if(typeof pixelHomeKeepFrame==='function'&&pixelHomeKeepFrame())return;
   applyAppleHomeCompat();
@@ -2581,6 +2601,7 @@ function render(){
   else if(c.p==='contactEdit')html=renderContactEditor(c.id,c.isNew);
   else if(c.p==='chat')html=renderChat(c.id);
   else if(c.p==='transferDetail')html=renderTransferDetail(c.id,c.mid);
+  else if(c.p==='groupTransferDetail')html=renderGroupTransferDetail(c.id,c.mid);
   else if(c.p==='rpSend')html=renderRpSend(c);
   else if(c.p==='grpSend')html=renderGroupRpSend(c);
   else if(c.p==='tfSend')html=renderTfSend(c);
@@ -2657,12 +2678,12 @@ function render(){
   else if(c.p==='dywork')html=dyWorkView()+dyCmLayer();
   else if(c.p==='dypost')html=renderDyPost();
   else if(c.p==='momentDetail')html='';
-  const _wxGlassPages=['wechat','wxmoment','wxlive','wxnearby','wxprofile','wxqr','wxscan','wxservices','wxsmarthome','wxwallet','wxchange','wxbank','wxfamily','wxbills','wxsupport','wxfavorites','wxalbum','wxemoji','wxsettings','wxaccounts','wxsteps','chat','transferDetail','chatDetails','contactInfo','friendInfo','contactSettings','roleMoments','roleMomentDetail','roleFeatures','roleImageStudio','newfriends','wxonlychat','wxgroups','wxlabels','wxgroupcreate','contactEdit','wxsearch','pffriends','pfchat','pfgroup','group'];
+  const _wxGlassPages=['wechat','wxmoment','wxlive','wxnearby','wxprofile','wxqr','wxscan','wxservices','wxsmarthome','wxwallet','wxchange','wxbank','wxfamily','wxbills','wxsupport','wxfavorites','wxalbum','wxemoji','wxsettings','wxaccounts','wxsteps','chat','transferDetail','groupTransferDetail','chatDetails','contactInfo','friendInfo','contactSettings','roleMoments','roleMomentDetail','roleFeatures','roleImageStudio','newfriends','wxonlychat','wxgroups','wxlabels','wxgroupcreate','contactEdit','wxsearch','pffriends','pfchat','pfgroup','group'];
   const _isWxPage=_wxGlassPages.includes(c.p);
   const _glass=glassThemeOn()&&!_isWxPage?' glass-app':'';
   const _wxG='';
   const _setG=glassThemeOn()&&c.p==='settings'?' settings-glass':'';
-  const _wxLightBase=['wechat','chat','chatDetails','contactInfo','friendInfo','contactSettings','roleMoments','roleMomentDetail','roleFeatures'].includes(c.p)||c.p==='roleImageStudio'||c.p==='transferDetail'||c.p==='grpSend'||c.p==='rpSend'||c.p==='tfSend'||c.p==='rpDetail';
+  const _wxLightBase=['wechat','chat','chatDetails','contactInfo','friendInfo','contactSettings','roleMoments','roleMomentDetail','roleFeatures'].includes(c.p)||c.p==='roleImageStudio'||c.p==='transferDetail'||c.p==='groupTransferDetail'||c.p==='grpSend'||c.p==='rpSend'||c.p==='tfSend'||c.p==='rpDetail';
   const _wxLightDirectory=['wxmoment','wxlive','wxnearby','wxprofile','wxqr','wxscan','wxservices','wxsmarthome','wxwallet','wxchange','wxbank','wxfamily','wxbills','wxsupport','wxfavorites','wxalbum','wxemoji','wxsettings','wxaccounts','wxsteps','newfriends','wxonlychat','wxgroups','wxlabels','wxgroupcreate','contactEdit','hiscard','pffriends','pfchat','pfgroup','group','ginfo','gpick','gqr','gsearch','gmanage','gsettings','relnet','reledit','relperson'].includes(c.p);
   const _wxL=(S.me.wxTheme==='white'&&(_wxLightBase||_wxLightDirectory))?' wxlight':'';
   const _wxStandalonePremium=['wxprofile','wxqr','wxscan','wxservices','wxsmarthome','wxwallet','wxchange','wxbank','wxfamily','wxbills','wxsupport','wxfavorites','wxalbum','wxemoji','wxsettings','wxaccounts','wxsteps'].includes(c.p);
@@ -3447,7 +3468,7 @@ function appleHomeCompatEnvironment(){return appleHomeCompatBrowserEnvironment()
 function applyAppleHomeCompat(){const root=typeof document==='undefined'?null:document.documentElement,on=appleHomeCompatBrowserEnvironment();if(root&&root.classList){root.classList.remove('north-ios-home-safe');root.classList.remove('north-apple-remote-safe');root.classList.toggle('north-ios-standalone-status',on);}return on;}
 function glassThemeOn(){return !!(S&&S.me&&S.me.uiMaterial==='glass');}
 let _nativeStatusBarTheme='';
-function privateNativeStatusBarThemeName(){const page=typeof cur==='function'?cur():null,isWechat=page&&['wechat','chat','transferDetail','rpSend','grpSend','tfSend','rpDetail','chatDetails','contactInfo','friendInfo','contactSettings','roleMoments','roleMomentDetail','roleFeatures','roleImageStudio','newfriends','wxonlychat','wxgroups','wxlabels','wxgroupcreate','contactEdit','wxsearch','pffriends','pfchat','pfgroup','group'].includes(page.p);if(isWechat)return S&&S.me&&S.me.wxTheme==='white'?'white':'black';const on=glassThemeOn(),pack=appIconPack();return on&&['black','gray','pink','blue'].includes(pack)?pack:(S&&S.me&&S.me.theme==='white'?'white':S&&S.me&&S.me.theme==='pink'?'pink':'black');}
+function privateNativeStatusBarThemeName(){const page=typeof cur==='function'?cur():null,isWechat=page&&['wechat','chat','transferDetail','groupTransferDetail','rpSend','grpSend','tfSend','rpDetail','chatDetails','contactInfo','friendInfo','contactSettings','roleMoments','roleMomentDetail','roleFeatures','roleImageStudio','newfriends','wxonlychat','wxgroups','wxlabels','wxgroupcreate','contactEdit','wxsearch','pffriends','pfchat','pfgroup','group'].includes(page.p);if(isWechat)return S&&S.me&&S.me.wxTheme==='white'?'white':'black';const on=glassThemeOn(),pack=appIconPack();return on&&['black','gray','pink','blue'].includes(pack)?pack:(S&&S.me&&S.me.theme==='white'?'white':S&&S.me&&S.me.theme==='pink'?'pink':'black');}
 function webStatusBarThemeSync(theme){const colors={black:'#000000',pink:'#ffeaf3',blue:'#eaf4ff',gray:'#e6e8ec',white:'#ffffff'},color=colors[theme]||colors.black,root=typeof document==='undefined'?null:document.documentElement;if(root&&root.classList){['black','pink','blue','gray','white'].forEach(k=>root.classList.toggle('north-shell-'+k,k===theme));root.style.setProperty('--north-shell-status-color',color);}if(typeof document!=='undefined'){let meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.remove();meta=document.createElement('meta');meta.name='theme-color';meta.content=color;document.head.appendChild(meta);const apple=document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');if(apple)apple.setAttribute('content',appleHomeCompatBrowserEnvironment()?'black':'default');}return color;}
 function privateNativeStatusBarThemeSync(force){const theme=privateNativeStatusBarThemeName();webStatusBarThemeSync(theme);if(!privateNativeAppOn()){_nativeStatusBarTheme='';return theme;}if(!force&&theme===_nativeStatusBarTheme)return theme;_nativeStatusBarTheme=theme;window.SmallPhoneNative.request('appearance.statusBar',{theme}).catch(()=>{_nativeStatusBarTheme='';});return theme;}
 function applyGlassTheme(){const root=typeof document==='undefined'?null:document.documentElement,on=glassThemeOn(),pack=appIconPack();if(root&&root.classList){root.classList.toggle('north-glass-ui',on);['black','gray','pink','blue'].forEach(k=>root.classList.toggle('north-pack-'+k,on&&pack===k));}privateNativeStatusBarThemeSync(false);return on;}
@@ -6280,12 +6301,19 @@ function openDyDM(cid){const c=getC(cid);if(!c)return;closeModal();openDyDMName(
 function openDyDMName(name,cid,avatar){let d=cid?S.dy.dms.find(x=>x.cid===cid):S.dy.dms.find(x=>!x.cid&&x.name===name);if(!d){d={id:uid(),cid:cid||null,name,avatar:avatar||'',msgs:[]};S.dy.dms.unshift(d);save();}
   try{if(cur().p==='dydm'&&cur().id===d.id)return render();}catch(_){}
   go('dydm',{id:d.id});}
-async function dyGenDMs(){aiLoad('正在刷新私信…');const recent=(S.dy.mine||[]).slice(0,3).map(v=>v.desc).filter(Boolean).join('；')||(S.dy.history||[]).slice(0,3).join('、');
-  try{const rows=await dyAuxGen([{role:'system',content:'你生成抖音陌生网友私信。生成3条不同网友（看了'+S.me.name+'视频来的）发来的私信开场，要暧昧、会撩、夸她好看、想加微信想约她那种（目的是让她男朋友看到会吃醋），但别露骨下流。每行一条，格式：网友名:::私信内容。不要别的话。'},{role:'user',content:(recent?'她最近发的/搜的："'+recent+'"，可以结合。':'')+'生成撩人的私信开场。'}],{max:500},(r)=>{const out=(r||'').split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{const p=l.replace(/^[\d.、\-\s]+/,'').split(/:::|：：：|\|\||：|:/);const nm=clean(p[0]);if(!nm||/^http/.test(nm))return null;return {name:nm,text:(p.slice(1).join('：')||'在吗美女').trim().slice(0,80)};}).filter(Boolean);return out.length?out:null;});
-    if(!rows){toast('刷新失败了，再试一次');return;}
-    rows.forEach(x=>S.dy.dms.unshift({id:uid(),cid:null,name:x.name,avatar:'',msgs:[{from:'them',text:x.text,time:Date.now()}]}));
-    save();render();toast('有'+rows.length+'条新私信👀');
-  }catch(e){dyModelFail('刷新私信',e);}finally{aiDone();}}
+
+const DY_STRANGER_STYLES=['慢热谨慎，话少，先聊一个具体兴趣，尊重边界','爽快直白，句子短，有好感会说但不油腻','幽默跳脱，喜欢有趣的问题，不用同款撩人套话','细心温和，关注日常小细节，提问自然','好奇健谈，兴趣广泛，分享自己的想法','安静理性，聊作品或观点，不急着交朋友','活泼热情，表达鲜活，句式有变化','随性慵懒，有自己的生活节奏，不催回复','嘴硬但友善，调侃有分寸，不冒犯','认真真诚，目的明确但不急着要联系方式','古怪内敛，冷幽默，独立的审美偏好','爱音乐和美食，从自己的兴趣自然展开'];
+function dyStrangerPersona(d){if(d.persona)return String(d.persona);const name=String(d.name||''),hash=Array.from(name).reduce((n,c)=>n+c.charCodeAt(0),0);d.persona=DY_STRANGER_STYLES[hash%DY_STRANGER_STYLES.length];return d.persona;}
+function dyStrangerOpeningKey(text){return String(text||'').replace(/[\s，。！？、,.!?…：:;"'（）()【】<>《》—_-]/g,'').slice(0,10);}
+function dyStrangerArrivalOpening(text){return /^(?:刚?[看刷]了|刚?从|在.{0,24}视频|从.{0,24}(?:那边|视频)|刷到.{0,24}视频)/.test(String(text||'').trim());}
+function dyStrangerParse(raw,styles,recent){let rows;try{rows=JSON.parse(String(raw||'').replace(/^```(?:json)?\s*|\s*```$/g,''));}catch(_){return null;}if(!Array.isArray(rows)||rows.length!==3)return null;const names=new Set(),keys=new Set((recent||[]).map(dyStrangerOpeningKey));const out=[];for(let i=0;i<rows.length;i++){const x=rows[i]||{},name=String(x.name||'').trim().slice(0,20),text=String(x.text||'').trim(),key=dyStrangerOpeningKey(text);if(!name||!text||text.length>180||names.has(name)||keys.has(key)||dyStrangerArrivalOpening(text)||roleInternalControlLine(text))return null;names.add(name);keys.add(key);out.push({name,text,persona:styles[i]});}return out;}
+async function dyGenDMs(){if(_dyStrangerBusy)return;_dyStrangerBusy=true;dyInit();aiLoad('正在刷新私信…');const recent=(S.dy.mine||[]).slice(0,3).map(v=>v.desc).filter(Boolean).join('；'),openings=(S.dy.dms||[]).filter(d=>!d.cid).slice(0,24).map(d=>(d.msgs||[]).find(m=>m.from==='them')).filter(Boolean).map(m=>m.text),styles=DY_STRANGER_STYLES.slice().sort(()=>Math.random()-.5).slice(0,3);try{const messages=[{role:'system',content:'生成3个独立的抖音陌生网友，各自有不同性格、生活、兴趣和说话节奏。可以聊天、交流作品、问具体问题、分享兴趣或表达好感，不要求人人撩人、夸外貌、加微信或约见。每个人只发一句自然的开场，长短和句式各不相同。直接说想聊的具体内容；不要解释是看了谁的视频、从谁那边过来、顺藤摸瓜，也不要套同一开头、改几个词复用句子。只能使用给出的公开信息，不能假装与对方有共同经历或知道私人聊天。性格按顺序：'+styles.join('；')+'。只输出JSON数组，每项{"name":"独立昵称","text":"开场正文"}。'},{role:'user',content:(recent?'最近公开作品：'+recent+'\n':'')+'近期已经出现的开场（避免重复）：'+JSON.stringify(openings)}];const rows=await dyAuxGen(messages,{max:900,temp:.95},raw=>dyStrangerParse(raw,styles,openings),2);rows.forEach(x=>S.dy.dms.unshift({id:uid(),cid:null,name:x.name,avatar:'',persona:x.persona,msgs:[{from:'them',text:x.text,time:Date.now()}],unread:1}));save();render();toast('有'+rows.length+'条新私信');}catch(e){dyModelFail('刷新私信',e);}finally{_dyStrangerBusy=false;aiDone();}}
+let _dyStrangerBusy=false;
+/* Read-only route probe before writes. Never replay an uncertain send/transfer. */
+const PF_RELAY_BASE='https://license.smallphoneapp.com';
+let _pfTransportProbe=null,_pfTransportRoute='',_pfTransportAt=0;
+async function pfTransportRoute(ms){if(_pfTransportRoute&&Date.now()-_pfTransportAt<60000)return _pfTransportRoute;if(_pfTransportProbe)return _pfTransportProbe;_pfTransportProbe=(async()=>{const opt={method:'POST',headers:pfHeaders(),body:JSON.stringify({p_query:''})};try{const r=await fetchT(GATE_URL+'/rest/v1/rpc/phone_friend_search',opt,Math.min(ms||5000,5000));if(r.status<500){_pfTransportRoute=GATE_URL;_pfTransportAt=Date.now();return GATE_URL;}}catch(_){}try{const r=await fetchT(PF_RELAY_BASE+'/rest/v1/rpc/phone_friend_search',opt,5000);if(r.ok){_pfTransportRoute=PF_RELAY_BASE;_pfTransportAt=Date.now();return PF_RELAY_BASE;}}catch(_){}throw new Error('真人好友服务器暂时连不上，消息尚未提交。请稍后重试；现有好友和聊天记录已保留。');})();try{return await _pfTransportProbe;}finally{_pfTransportProbe=null;}}
+
 /* ===== 抖音群聊：建群、拉角色、公开群每天一位陌生人来申请、私密群只能邀请、管理员 ===== */
 let _dyGid='';let _dyGTab='聊天';let _dyGSel=[];let _dyGBusy={};
 function dyGroups(){dyInit();if(!Array.isArray(S.dy.groups))S.dy.groups=[];return S.dy.groups;}
@@ -7566,7 +7594,7 @@ function dyPayRule(rows){const m=dyPayLast(rows,true);if(!m)return '';
 async function dyDMReply(d){try{dyTypingOn('dm:'+d.id);const hist=d.msgs.slice(-dyChatCtxRows(d)).map(m=>({role:m.from==='me'?'user':'assistant',content:dyMsgPlain(m)}));let sys;
   const c=d.cid?getC(d.cid):null;
   if(c)sys=buildSystem(c)+'\n\n# 场景\n现在在【抖音私信】里和'+S.me.name+'聊天，口语、简短自然，别带方括号动作。'+dyDMMutePrompt(d.cid);
-  else sys='你是抖音上的陌生网友/小博主「'+d.name+'」，因为看了'+S.me.name+'的视频来私信她，自来熟、会撩、想加她微信想约她，但不下流。口语、简短、有网感，别带方括号。';
+  else sys='你是抖音上的普通网友「'+d.name+'」，你自己的性格和说话方式：'+dyStrangerPersona(d)+'。与你聊天的是'+S.me.name+'，沿用你们真实私信的关系进度。保持自己的性格和兴趣，不强求暧昧，不要每次先说从谁的视频过来，不编造共同经历或对方隐私。口语、简短、自然，别带方括号。';
   sys+=dyDMBubbleRule()+dyPayRule(d.msgs||[]);
   const r=await dyAuxChat([{role:'system',content:sys},...hist],{max:dyReplyBudget()});
     const paid=dyRunPayCommands(d.msgs||[],dyDMRunUnmute(d.cid,cleanReply(r)));
@@ -8170,7 +8198,7 @@ function wxTabIcon(k){const icons={
   contacts:`<path class="wx-tab-outline" d="M14.5 4.3c3.3 0 5.3 2.6 5.3 6.1 0 4-2.2 7-5.3 7s-5.3-3-5.3-7c0-3.5 2-6.1 5.3-6.1ZM4.4 28c.9-5.3 4.4-8.2 10.1-8.2s9.2 2.9 10.1 8.2H4.4Zm20.5-14.6h5.6m-5.6 4.3h5.6m-5.6 4.3h5.6"/><path class="wx-tab-solid" d="M14.5 3.2c3.8 0 6.1 2.9 6.1 6.9 0 4.4-2.5 7.6-6.1 7.6s-6.1-3.2-6.1-7.6c0-4 2.3-6.9 6.1-6.9ZM2.9 29c.8-6 5-9.4 11.6-9.4S25.3 23 26.1 29H2.9Zm23-16.9h5.7v2.8h-5.7v-2.8Zm0 5h5.7v2.8h-5.7v-2.8Zm0 5h5.7v2.8h-5.7v-2.8Z"/>`,
   moments:`<circle class="wx-tab-outline" cx="16" cy="16" r="12.5"/><path class="wx-tab-outline" d="m10.6 21.2 3-7.7 7.8-3-3 7.8-7.8 2.9Z"/><circle class="wx-tab-solid" cx="16" cy="16" r="14"/><path class="wx-tab-solid-cut" d="m10.2 21.8 3.3-8.3 8.3-3.3-3.3 8.3-8.3 3.3Z"/>`,
   me:`<path class="wx-tab-outline" d="M16 4.4c3.2 0 5.1 2.6 5.1 6.1 0 3.9-2 6.8-5.1 6.8s-5.1-2.9-5.1-6.8c0-3.5 1.9-6.1 5.1-6.1ZM5.2 28.1c.9-5.5 4.7-8.6 10.8-8.6s9.9 3.1 10.8 8.6H5.2Z"/><path class="wx-tab-solid" d="M16 3.4c3.8 0 6.1 3 6.1 7 0 4.5-2.4 7.7-6.1 7.7s-6.1-3.2-6.1-7.7c0-4 2.3-7 6.1-7ZM3.7 29.3c.9-6.3 5.3-9.9 12.3-9.9s11.4 3.6 12.3 9.9H3.7Z"/>`};return `<svg class="wx-tab-icon wx-tab-${k}" viewBox="0 0 32 32" aria-hidden="true">${icons[k]}</svg>`;}
-function tb(k,i,t){return `<button type="button" class="tb ${wxTab===k?'on':''}" onclick="_wxQuickOpen=false;wxTab='${k}';render()" aria-label="${t}"><div class="i">${i}</div><span>${t}</span></button>`;}
+function tb(k,i,t){return `<button type="button" class="tb ${wxTab===k?'on':''}" onclick="_wxQuickOpen=false;wxTab='${k}';render()" aria-label="${t}"><div class="i">${i}${k==='chats'?wxUnreadBadge(wxUnreadTotal()):k==='moments'&&wxMomentUnread()?wxUnreadBadge(0,true):''}</div><span>${t}</span></button>`;}
 function wxDiscoverIcon(kind){const icons={
   moments:'<path d="M16 4.5 19.4 11.6 15.5 12.8Z" stroke="#f2c94c"/><path d="M23.8 8.2 20.4 15.4 17.2 13Z" stroke="#f2994a"/><path d="M27.5 16 20.4 19.4 19.2 15.5Z" stroke="#eb5757"/><path d="M23.8 23.8 16.6 20.4 19 17.2Z" stroke="#bb6bd9"/><path d="M16 27.5 12.6 20.4 16.5 19.2Z" stroke="#2f80ed"/><path d="M8.2 23.8 11.6 16.6 14.8 19Z" stroke="#2d9cdb"/><path d="M4.5 16 11.6 12.6 12.8 16.5Z" stroke="#27ae60"/><path d="M8.2 8.2 15.4 11.6 13 14.8Z" stroke="#6fcf97"/>',
   channels:'<path d="M7 9.2c3.7-4.7 8.1-3.7 9 1.5.9-5.2 5.3-6.2 9-1.5 3.2 4.1 1.5 11.5-9 17-10.5-5.5-12.2-12.9-9-17Z"/>',
@@ -8180,7 +8208,7 @@ function wxDiscoverIcon(kind){const icons={
   search:'<circle cx="14" cy="14" r="7.5"/><path d="m19.6 19.6 6.4 6.4"/>',
   nearby:'<circle cx="16" cy="16" r="3.3"/><path d="M9.2 22.8a9.6 9.6 0 0 1 0-13.6M22.8 9.2a9.6 9.6 0 0 1 0 13.6M5 26.8a15.2 15.2 0 0 1 0-21.6M27 5.2a15.2 15.2 0 0 1 0 21.6"/>',
   games:'<path d="m10.5 5.5 5.5 5-5.5 5-5.5-5Z" stroke="#2f80ed"/><path d="m21.5 5.5 5.5 5-5.5 5-5.5-5Z" stroke="#27ae60"/><path d="m10.5 16.5 5.5 5-5.5 5-5.5-5Z" stroke="#eb5757"/><path d="m21.5 16.5 5.5 5-5.5 5-5.5-5Z" stroke="#9b51e0"/>'};return `<svg viewBox="0 0 32 32" aria-hidden="true">${icons[kind]||icons.moments}</svg>`;}
-function wxDiscoverRow(kind,label,action,lockKey,sub){const locked=!!(lockKey&&appLocked(lockKey));return `<button type="button" class="wx-discover-row tone-${kind}${locked?' locked':''}" ${locked?'disabled':''} onclick="${locked?'':action}"><i>${wxDiscoverIcon(kind)}</i><span>${esc(label)}${sub?`<small>${esc(sub)}</small>`:''}</span><em>${locked?`<b>${svgIc('lock',14,'currentColor')}</b><small>已锁定</small>`:'›'}</em></button>`;}
+function wxDiscoverRow(kind,label,action,lockKey,sub){const locked=!!(lockKey&&appLocked(lockKey));return `<button type="button" class="wx-discover-row tone-${kind}${locked?' locked':''}" ${locked?'disabled':''} onclick="${locked?'':action}"><i>${wxDiscoverIcon(kind)}</i><span>${esc(label)}${kind==='moments'&&wxMomentUnread()?wxUnreadBadge(0,true):''}${sub?`<small>${esc(sub)}</small>`:''}</span><em>${locked?`<b>${svgIc('lock',14,'currentColor')}</b><small>已锁定</small>`:'›'}</em></button>`;}
 function wxDiscover(){return `<div class="wx-discover-list">
   <section>${wxDiscoverRow('moments','朋友圈',"wxDiscoverOpen('moments')",'moments')}</section>
   <section>${wxDiscoverRow('channels','视频号',"wxDiscoverOpen('channels')",'douyin')}</section>
@@ -8297,14 +8325,14 @@ function wxChats(){
   const banner=isMain()?'':`<div style="padding:8px 12px;background:#3a2d4a;color:#d6c2f0;font-size:12px;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px">${svgIc('idcard',14,'#d6c2f0')}当前身份：${esc(S.me.name)}（在「我」里可切换/搜微信号加人）</div>`;
   const searchbar=`<button class="wx-chat-search" type="button" onclick="openWxSearch()">${svgIc('search',20,'currentColor')}<span>搜索</span></button>`;
   const desktop=`<div class="wx-desktop-login" role="status"><span>${wxMonitorIcon()}</span><b>Windows 微信已登录</b></div>`;
-  const roleRow=c=>{const lm=lastMsg(c.id);return `<div class="row wx-chat-row ${c.pinned?'pin':''}" onclick="openChat('${c.id}')">${av(c.avatar)}
+  const roleRow=c=>{const lm=lastMsg(c.id);return `<div class="row wx-chat-row ${c.pinned?'pin':''}" onclick="openChat('${c.id}')">${wxUnreadAvatar(av(c.avatar),wxRoleUnread(c.id))}
       <div class="meta"><div class="n">${esc(c.remark||c.name)} ${c.blocked?'<span class=tag>已拉黑</span>':''}</div>
       <div class="s">${lm?esc(previewOf(lm)):'打个招呼吧～'}</div></div>
       <div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div>${c.pinned?'<div style="font-size:10px;color:#ccc">置顶</div>':''}</div></div>`;};
   const entries=[],add=(time,pinned,html)=>entries.push({time:+time||0,pinned:!!pinned,html,order:entries.length});
   list.forEach(c=>{const lm=lastMsg(c.id);add(lm&&lm.time,c.pinned,roleRow(c));});
-  groups.forEach(g=>{const lm=g.msgs[g.msgs.length-1];add(lm&&lm.time,g.pinned,`<div class="row wx-chat-row ${g.pinned?'pin':''}" onclick="go('group',{id:'${g.id}'})">${g.avatar?av(g.avatar):'<div class="avatar" style="background:#7c6cc0">👥</div>'}<div class="meta"><div class="n">${esc(groupDisplayName(g))}(${g.members.length+1})${g.muted?' 🔕':''}</div><div class="s">${lm?esc(gpreview(lm,g)):'群聊已创建'}</div></div><div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div>${g.pinned?'<div style="font-size:10px;color:#ccc">置顶</div>':''}</div></div>`);});
-  if(isMain()){const p=phoneFriendState();(p.groups||[]).forEach(g=>{const gid=g.group_id||g.id,arr=pfMsgList(p.groupMessages,gid),lm=arr[arr.length-1],unread=arr.filter(m=>m.from!==p.id&&m.time>(p.groupRead[gid]||0)).length,pref=(p.groupPrefs&&p.groupPrefs[gid])||{},pinned=!!(g.pinned||pref.pinned);add(lm&&lm.time,pinned,`<div class="row ${pinned?'pin':''}" onclick="openPhoneFriendGroup('${gid}')">${wxClassicGroupAvatarHTML()}<div class="meta"><div class="n">${esc(pfGroupDisplayName(g))}${pref.muted?' 🔕':''}</div><div class="s">${lm?esc(lm.recalled?'[已撤回一条消息]':((pfNameById(lm.from)||'成员')+'：'+pfMsgPreview(lm))):'群聊已创建'}</div></div><div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div>${pfUnreadDot(unread)}${g.pinned?'<div style="font-size:10px;color:#ccc">置顶</div>':''}</div></div>`);});(p.friends||[]).forEach(f=>{const id=(''+(f.phone_id||f.id)).toUpperCase(),arr=pfVisibleMsgList(p.messages,id),lm=arr[arr.length-1],unread=arr.filter(m=>m.from===id&&m.time>(p.friendRead[id]||0)).length;add(lm&&lm.time,f.pinned,`<div class="row ${f.pinned?'pin':''}" onclick="openPhoneFriendChat('${id}')">${pfAvatarOnlineHTML(f)}<div class="meta"><div class="n">${esc(pfFriendDisplayName(f))}</div><div class="s">${lm?esc(lm.recalled?'[已撤回一条消息]':((lm.from===p.id?'我：':'')+pfMsgPreview(lm))):'已经是好友，打个招呼吧'}</div></div><div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div>${pfUnreadDot(unread)}${f.pinned?'<div style="font-size:10px;color:#ccc">置顶</div>':''}</div></div>`);});}
+  groups.forEach(g=>{const lm=g.msgs[g.msgs.length-1];add(lm&&lm.time,g.pinned,`<div class="row wx-chat-row ${g.pinned?'pin':''}" onclick="go('group',{id:'${g.id}'})">${wxUnreadAvatar(g.avatar?av(g.avatar):'<div class="avatar" style="background:#7c6cc0">👥</div>',wxGroupUnread(g))}<div class="meta"><div class="n">${esc(groupDisplayName(g))}(${g.members.length+1})${g.muted?' 🔕':''}</div><div class="s">${lm?esc(gpreview(lm,g)):'群聊已创建'}</div></div><div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div>${g.pinned?'<div style="font-size:10px;color:#ccc">置顶</div>':''}</div></div>`);});
+  if(isMain()){const p=phoneFriendState();(p.groups||[]).forEach(g=>{const gid=g.group_id||g.id,arr=pfMsgList(p.groupMessages,gid),lm=arr[arr.length-1],unread=wxPfUnread(arr,p.id,p.groupRead[gid],true),pref=(p.groupPrefs&&p.groupPrefs[gid])||{},pinned=!!(g.pinned||pref.pinned);add(lm&&lm.time,pinned,`<div class="row ${pinned?'pin':''}" onclick="openPhoneFriendGroup('${gid}')">${wxUnreadAvatar(wxClassicGroupAvatarHTML(),unread)}<div class="meta"><div class="n">${esc(pfGroupDisplayName(g))}${pref.muted?' 🔕':''}</div><div class="s">${lm?esc(lm.recalled?'[已撤回一条消息]':((pfNameById(lm.from)||'成员')+'：'+pfMsgPreview(lm))):'群聊已创建'}</div></div><div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div>${g.pinned?'<div style="font-size:10px;color:#ccc">置顶</div>':''}</div></div>`);});(p.friends||[]).forEach(f=>{const id=(''+(f.phone_id||f.id)).toUpperCase(),arr=pfVisibleMsgList(p.messages,id),lm=arr[arr.length-1],unread=wxPfUnread(arr,id,p.friendRead[id],false);add(lm&&lm.time,f.pinned,`<div class="row ${f.pinned?'pin':''}" onclick="openPhoneFriendChat('${id}')">${wxUnreadAvatar(pfAvatarOnlineHTML(f),unread)}<div class="meta"><div class="n">${esc(pfFriendDisplayName(f))}</div><div class="s">${lm?esc(lm.recalled?'[已撤回一条消息]':((lm.from===p.id?'我：':'')+pfMsgPreview(lm))):'已经是好友，打个招呼吧'}</div></div><div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div>${f.pinned?'<div style="font-size:10px;color:#ccc">置顶</div>':''}</div></div>`);});}
   if(!entries.length)return banner+searchbar+desktop+'<div class="list wx-chat-list">'+wxStepsChatRow()+'</div><div class="empty">'+(isMain()?'欢迎来到 North～<br>右上角 ＋ 新建你的第一个角色就能开聊<br><br><button class="btn p" style="max-width:220px;margin:14px auto 0" onclick="showManual()">使用说明书</button>':'这个身份还没加谁～<br>去「通讯录」搜微信号加人')+'</div>';
   entries.sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0)||b.time-a.time||a.order-b.order);
   const firstRegular=entries.findIndex(x=>!x.pinned),motionAt=firstRegular<0?entries.length:firstRegular;
@@ -8547,7 +8575,7 @@ function renderGroup(id){const g=S.groups.find(x=>x.id===id);if(!g)return '';
 let _gquoting=null;
 function gqPressStart(gid,mid){if(S.settings.quoteOn===false)return;_lpFired=false;clearTimeout(_lpT);_lpT=setTimeout(()=>{_lpFired=true;gQuoteSet(gid,mid);},480);}
 function gQuoteSet(gid,mid){const g=S.groups.find(x=>x.id===gid),m=g&&g.msgs.find(x=>x.id===mid),txt=quoteTextOf(m);if(!txt){toast('这条没法引用');return;}_gquoting={gid,text:txt,who:gnm(g,m.senderId)};try{closeModal();}catch(_){}gQuoteRefresh(gid);const ta=$('#ginput');if(ta)ta.focus();}
-function gQuoteHTML(gid){if(S.settings.quoteOn===false||!_gquoting||_gquoting.gid!==gid)return '';const t=_gquoting.text||'';return `<div class="chat-quote-pending" id="chatQuotePending" role="status"><span class="chat-quote-pending-text"><b>${esc(_gquoting.who||'')}：</b>${esc(t.slice(0,72))}${t.length>72?'…':''}</span><button type="button" class="chat-quote-cancel" aria-label="取消引用" onpointerdown="event.stopPropagation()" onclick="gQuoteClear(event)"><span aria-hidden="true">×</span></button></div>`;}
+function gQuoteHTML(gid){if(S.settings.quoteOn===false||!_gquoting||_gquoting.gid!==gid)return '';const t=_gquoting.text||'';return `<div class="chat-quote-pending" id="chatQuotePending" role="status"><span class="chat-quote-pending-text"><b>${esc(_gquoting.who||'')}：</b>${esc(t)}</span><button type="button" class="chat-quote-cancel" aria-label="取消引用" onpointerdown="event.stopPropagation()" onclick="gQuoteClear(event)"><span aria-hidden="true">×</span></button></div>`;}
 function gQuoteRefresh(gid){if(cur().p!=='group'||cur().id!==gid)return;const old=$('#chatQuotePending'),bar=document.querySelector('#app>.page>.chat-inputbar')||$('.chat-inputbar'),html=gQuoteHTML(gid);if(old){if(html)old.outerHTML=html;else old.remove();}else if(html&&bar)bar.insertAdjacentHTML('beforebegin',html);}
 function gQuoteClear(ev){if(ev){if(ev.preventDefault)ev.preventDefault();if(ev.stopPropagation)ev.stopPropagation();}const gid=_gquoting&&_gquoting.gid;_gquoting=null;if(gid)gQuoteRefresh(gid);}
 function gMsgMenu(gid,mid){if(_lpFired){_lpFired=false;return;}/* 刚长按过=去引用了，别再弹菜单 */const g=S.groups.find(x=>x.id===gid);if(!g)return;const m=g.msgs.find(x=>x.id===mid);if(!m||m.type==='sys')return;const me=m.senderId==='me';
@@ -8608,15 +8636,15 @@ function grelAdd(id){const g=S.groups.find(x=>x.id===id);if(!g)return;g.rels=g.r
   g.rels.push({mode:_grelMode,a,b,rel,story});_grelPick=[];save();groupRels(id);toast('已添加关系');}
 function grelDel(id,i){const g=S.groups.find(x=>x.id===id);if(!g||!g.rels)return;g.rels.splice(i,1);save();groupRels(id);}
 /* 群聊引用：和单聊一样的新版引用框，放在气泡下面。 */
-function groupQuoteBar(q){if(!q||!q.text)return '';const t=String(q.text||''),s=t.slice(0,72);return `<div class="chat-quote-sent"><b>${esc(q.who||'')}：</b><span>${esc(s)}${t.length>72?'…':''}</span></div>`;}
+function groupQuoteBar(q){if(!q||!q.text)return '';const s=String(q.text||'');return `<div class="chat-quote-sent"><b>${esc(q.who||'')}：</b><span>${esc(s)}</span></div>`;}
 function gbubble(g,m){const me=m.senderId==='me';if(m.type==='sys')return rpSysIs(m)?rpSysHTML(m.content):`<div class="tstamp"><span>${esc(m.content)}</span></div>`;
   const c=me?null:getC(m.senderId),_gbl=groupBubbleLook(g,m.senderId),_gbi=groupBubbleIcon(g,m.senderId),_gav=groupBubbleAvatarClass(g,m.senderId);const av0=av(me?S.me.avatar:(c?c.avatar:'🙂'),_gav);const nm=me||g.hideNames?'':`<div class="gname">${esc(gnm(g,m.senderId))}</div>`;
-  const q=groupQuoteBar(m.q);
+  const q=groupQuoteBar(!me&&m.q&&(m.q.senderId==='me'||m.q.who===gnm(g,'me'))?null:m.q);
   let inner;
   if(m.type==='redpacket'){const st=gRpState(m),opened=me?st.done:!!(st.mine||st.done);
     inner=rpCardHTML({me,opened,note:m.note,status:st.mine&&!me?'已领取':st.done?'已被领完':'',click:`redpOpen('group','${g.id}','${m.id}')`});
   }else if(m.type==='transfer'){const got=m.received,forMe=!me&&(!m.to||m.to==='me'),toName=m.to&&m.to!=='me'?gnm(g,m.to):'';
-    inner=groupTransferCardHTML({me,received:got,amount:m.amount,note:m.note,toName:forMe?'':toName,click:forMe&&!got?`gGrab('${g.id}','${m.id}')`:''});
+    inner=groupTransferCardHTML({me,received:got,amount:m.amount,note:m.note,toName:forMe?'':toName,click:`openGroupTransferDetail('${g.id}','${m.id}')`});
   }else if(m.type==='sticker')inner=`<div class="stickermsg">${isImg(storedImageDisplaySource(m.img))?`<img src="${storedImageDisplaySource(m.img)}">`:''}${m.meaning?`<div class="stkm">${esc(m.meaning)}</div>`:''}</div>`;
   else if(m.type==='voice')inner=`<div class="bubble group-voice-bubble${_gbl.cls}"${_gbl.css?` style="${_gbl.css}"`:''}>${_gbi}<span aria-hidden="true">◖ )))</span><span>${esc(m.content||'语音消息')}</span></div>${q}`;
   else inner=`<div class="bubble${_gbl.cls}"${_gbl.css?` style="${_gbl.css}"`:''}>${_gbi}${esc(m.content)}</div>${q}`;
@@ -8641,7 +8669,7 @@ function gRpState(m){if(!m||m.type!=='redpacket')return null;
   const grabs=m.grabs,done=grabs.length>=m.count,mine=grabs.find(x=>x.who==='me')||null,got=Math.round(grabs.reduce((a,x)=>a+(+x.amount||0),0)*100)/100;
   let best=-1;if(done&&m.count>1&&m.lucky!==false)grabs.forEach((x,i)=>{if(best<0||x.amount>grabs[best].amount)best=i;});
   return {count:m.count,splits:m.splits,grabs,done,mine,got,best,lucky:m.lucky!==false,total:+m.amount||0};}
-function gRpTake(g,m,who){const st=gRpState(m);if(!st||st.done||st.grabs.some(x=>x.who===who))return null;
+function gRpTake(g,m,who){const target=gRpRecipient(g,m);if(target&&target!==who)return null;const st=gRpState(m);if(!st||st.done||st.grabs.some(x=>x.who===who))return null;
   const one={who,amount:+st.splits[st.grabs.length]||0,time:Date.now()};st.grabs.push(one);if(who==='me'){m.received=true;m.receivedAt=one.time;}
   const sender=m.senderId==='me'?'你':gnm(g,m.senderId);
   if(who==='me'){addBill('in',one.amount,(m.senderId==='me'?'自己':sender)+'的群红包');g.msgs.push({senderId:'me',type:'sys',rp:1,content:m.senderId==='me'?'你领取了自己发的红包':'你领取了'+sender+'的红包',time:one.time,id:uid()});}
@@ -8650,12 +8678,12 @@ function gRpTake(g,m,who){const st=gRpState(m);if(!st||st.done||st.grabs.some(x=
 function gRpRefresh(gid){const c=cur();if((c.p==='group'&&c.id===gid)||(c.p==='rpDetail'&&c.scope==='group'&&c.key===gid))render();}
 // 角色抢红包：情侣角色一定抢而且抢得快，其他人看心情，抢的先后随机
 function gRpRoleGrabs(gid,mid){const g=S.groups.find(x=>x.id===gid),m=g&&g.msgs.find(x=>x.id===mid);if(!m)return;const couple=S.couple&&S.couple.cid;
-  const people=g.members.filter(cid=>getC(cid)&&cid!==m.senderId).sort(()=>Math.random()-.5).sort((a,b)=>(b===couple)-(a===couple));
+  const target=gRpRecipient(g,m),people=g.members.filter(cid=>getC(cid)&&cid!==m.senderId&&(!target||cid===target)).sort(()=>Math.random()-.5).sort((a,b)=>(b===couple)-(a===couple));
   let t=700;people.forEach(cid=>{if(cid!==couple&&Math.random()<.22)return;t+=500+Math.random()*2400;setTimeout(()=>{const g2=S.groups.find(x=>x.id===gid),m2=g2&&g2.msgs.find(x=>x.id===mid);if(!m2||!g2.members.includes(cid))return;if(gRpTake(g2,m2,cid))gRpRefresh(gid);},t);});
   /* 我发的红包：大家抢完再一起开口（谁抢得多、谁手慢），角色自己发的红包本来就在说话，不再多催一轮 */
   if(m.senderId==='me')setTimeout(()=>{const g2=S.groups.find(x=>x.id===gid),m2=g2&&g2.msgs.find(x=>x.id===mid);if(!m2)return;const st=gRpState(m2),who=st.grabs.map(x=>gnm(g2,x.who)+'抢到'+(+x.amount).toFixed(2)+'元').join('、');aiGroupReply(gid,'（'+S.me.name+'发了红包'+(who?'，'+who:'，还没人抢')+'）');},t+900);}
 // 角色在群里发的红包：按群人数自动拆成拼手气
-function gRpPrepareRole(g,it){const others=g.members.length;let n=it.count>=1?Math.min(it.count,GRP_MAX_COUNT):Math.max(1,Math.min(others,6));const cents=Math.round((+it.amount||0)*100);if(cents<1){it.amount=0.01;}n=Math.max(1,Math.min(n,Math.max(1,cents)));it.count=n;it.lucky=true;it.splits=rpSplitCents(+it.amount||0.01,n);it.grabs=[];}
+function gRpPrepareRole(g,it){const target=gRpRecipient(g,it);if(target)it.to=target;const others=g.members.length;let n=it.count>=1?Math.min(it.count,GRP_MAX_COUNT):Math.max(1,Math.min(others,6));const cents=Math.round((+it.amount||0)*100);if(cents<1){it.amount=0.01;}n=Math.max(1,Math.min(n,Math.max(1,cents)));if(target)n=1;it.count=n;it.lucky=!target;it.splits=rpSplitCents(+it.amount||0.01,n);it.grabs=[];}
 // 角色转给别的角色：对方几秒后收下
 function gRoleTransferAccept(gid,mid){setTimeout(()=>{const g=S.groups.find(x=>x.id===gid),m=g&&g.msgs.find(x=>x.id===mid);if(!m||m.received||!g.members.includes(m.to))return;m.received=true;m.receivedAt=Date.now();save();if(cur().p==='group'&&cur().id===gid)render();},2000+Math.random()*4000);}
 function gRpDuration(ms){const s=Math.max(1,Math.round(ms/1000));return s<60?s+'秒':s<3600?Math.round(s/60)+'分钟':Math.round(s/3600)+'小时';}
@@ -8719,11 +8747,11 @@ function gContext(g,c,recent){const others=g.members.filter(x=>x!==c.id&&getC(x)
    +(_myNick?'\n（你在这个群里的群昵称是「'+_myNick+'」，大家看到的你就是这个名字。）':'')
    +'\n- 你可以随心情【改自己在这个群里的群昵称】增加趣味：单独一行 [群昵称|新昵称]（比如改成搞怪的、或宣示主权的），改不改看你心情、别频繁乱改。这行不会被当成消息发出来。\n'
    +'- 你能看到上面【所有人】说的话，包括其他群友彼此之间的对话。要像真群聊那样：可以接群友的话、附和、拌嘴、调侃、起哄、吃醋——【不要每个人都只对着'+S.me.name+'说话】，不要和别人说一样的话、不要复读别人。\n'
-   +'- 【绝对不要用 @某人】这种格式。想专门回应某一条消息，就在你那句话【前面单独占一行】写 [引用|序号]（序号见下面群记录），引用'+S.me.name+'的或别的群友的都行；不是每句都要引用，一次最多引用一两条。\n'
+   +'- 【绝对不要用 @某人】这种格式。想专门回应某一条消息，就在你那句话【前面单独占一行】写 [引用|序号]（序号见下面群记录），只允许引用其他角色/群友的消息；回复'+S.me.name+'时直接说话，不要引用ta的消息；不是每句都要引用，一次最多引用一两条。\n'
    +'- 群记录里用（）括起来的是群里发生的事，不是谁说的话。看到「撤回了一条消息」时，你只知道有人撤回了，看不到原内容，绝对不要编造被撤回的是什么；可以像真人那样好奇、追问、调侃或干脆不理，看你心情，不必每次都提。\n'
    +'- 【你引用谁、就是在对谁说话】：如果你 [引用] 的是【另一个群友】说的话，那你这句就是【冲着那个群友】说的——按你和ta的关系来（怼ta、附和ta、阴阳怪气、跟ta争风吃醋抢'+S.me.name+'都行），【不是】在对'+S.me.name+'说话，别把对群友说的话说得像在哄'+S.me.name+'。只有当你引用'+S.me.name+'、或者没引用谁时，才是在跟'+S.me.name+'说话。\n'
    +'- 像真人发微信，每条短消息单独占一行，条数按轮到你时的提示来；可以只回一条，话不投机也可以就接一句，别凑数、别每个人都发一样多。\n'
-   +'- 红包、转账你想发就发（哄'+S.me.name+'、庆祝、赔罪、跟群友斗富、起哄都行，看你心情和性格）：单独一行 [红包|金额|祝福语|个数]（个数不写就按群里人数拼手气，大家来抢），或 [转账|金额|说明|给谁]（给谁不写就是转给'+S.me.name+'，也可以写群友的名字）。金额自己定。\n'
+   +'- 红包、转账你想发就发（哄'+S.me.name+'、庆祝、赔罪、跟群友斗富、起哄都行，看你心情和性格）：单独一行 [红包|金额|祝福语|个数]（默认大家来抢）；专属红包必须写 [红包|金额|祝福语|1|收款人名字]，只有这个人能领，或 [转账|金额|说明|给谁]（给谁不写就是转给'+S.me.name+'，也可以写群友的名字）。金额自己定。\n'
    +'- 口语、自然、有情绪，符合你的人设和心情值。';
   if(g.notice)s+='\n# 群公告（群里每个人都看过，说话要照着公告来）\n'+String(g.notice).slice(0,500);
   {const admins=(g.admins||[]).filter(x=>getC(x)),mutes=typeof gmMutes==='function'?gmMutes('role',g.id):{},muted=Object.keys(mutes).map(k=>gnm(g,k)+'（还剩'+gmMinutesText(mutes[k])+'）');
@@ -8734,13 +8762,13 @@ function gContext(g,c,recent){const others=g.members.filter(x=>x!==c.id&&getC(x)
   return s;}
 // 角色在群里发的红包/转账：说明后面可以再跟 |个数（红包）或 |给谁（转账）
 function gPayExtras(it,g){const parts=String(it.note||'').split(/[|｜]/).map(x=>x.trim());if(parts.length<2||!g)return it;const last=parts[parts.length-1];
-  if(it.type==='redpacket'){const n=parseInt(last.replace(/个$/,''),10);if(/^\d{1,3}个?$/.test(last)&&n>=1){it.count=Math.min(n,GRP_MAX_COUNT);it.note=parts.slice(0,-1).join(' ');}return it;}
+  if(it.type==='redpacket'){if(parts.length>=3){const nm=last.replace(/^[@＠]/,''),hit=[S.me.name,'我','你','群主'].includes(nm)?'me':(g.members||[]).find(id=>{const c=getC(id);return c&&[gnm(g,id),c.name,c.remark].filter(Boolean).includes(nm);});if(hit){it.to=hit;parts.pop();}}const n=parseInt(parts[parts.length-1].replace(/个$/,''),10);if(/^\d{1,3}个?$/.test(parts[parts.length-1])&&n>=1){it.count=Math.min(n,GRP_MAX_COUNT);it.note=parts.slice(0,-1).join(' ');}return it;}
   const nm=last.replace(/^[@＠]/,''),me=[S.me.name,'我','你','群主'].includes(nm),hit=me?'me':(g.members||[]).find(id=>{const c=getC(id);return c&&[gnm(g,id),c.name,c.remark].filter(Boolean).includes(nm);});
   if(hit){it.to=hit;it.note=parts.slice(0,-1).join(' ');}return it;}
 // 把群回复解析成「一条条」的消息项（文字气泡 + 红包/转账卡片），文字条数封顶
 function gParseReply(content,cap,recent,g){const out=[];let txt=0;let pq=null;
   splitBubbles(content).forEach(l=>{l=normTag(l);if(!l)return;
-    let qm=l.match(/^\[\s*引用\s*[|｜:：]?\s*(\d{1,2})\s*\]$/);if(qm){const rm=recent&&recent[+qm[1]-1];if(rm)pq={who:gName(rm,g),text:(gmText(rm)||'').slice(0,80)};return;}
+    let qm=l.match(/^\[\s*引用\s*[|｜:：]?\s*(\d{1,2})\s*\]$/);if(qm){const rm=recent&&recent[+qm[1]-1];pq=rm&&rm.senderId!=='me'?{who:gName(rm,g),senderId:rm.senderId,text:gmText(rm)||''}:null;return;}
     const pay=parsePayCardLine(l);if(pay){out.push(gPayExtras({type:pay.type,amount:pay.amount,note:pay.note,received:false},g));return;}
     let m=l.match(/^\[\s*转账\s*\|\s*([0-9.]+)\s*\|?\s*([^\]]*)\]$/);if(m){out.push({type:'transfer',amount:+m[1]||0,note:(m[2]||'').trim(),received:false});return;}
     m=l.match(/^\[\s*红包\s*\|\s*([0-9.]+)\s*\|?\s*([^\]]*)\]$/);if(m){out.push({type:'redpacket',amount:+m[1]||0,note:(m[2]||'').trim(),received:false});return;}
@@ -9708,7 +9736,7 @@ const OFF_WINDOW_STEP=300;
 let _offWindow={key:'',n:OFF_WINDOW_STEP};
 function offWindowKey(id){return (_off&&_off.mode==='cohab'?'cohab:':'date:')+id;}
 function offWindowSize(id){const k=offWindowKey(id);if(_offWindow.key!==k)_offWindow={key:k,n:OFF_WINDOW_STEP};return _offWindow.n;}
-function offWindowRows(id,rows){rows=Array.isArray(rows)?rows:[];const n=offWindowSize(id),hidden=Math.max(0,rows.length-n);
+function offWindowRows(id,rows){rows=Array.isArray(rows)?rows.filter(m=>!m||m.role==='user'||m.who==='me'||m.source==='me'||!roleInternalControlLine(m.text||m.content)):[];const n=offWindowSize(id),hidden=Math.max(0,rows.length-n);
   return {rows:hidden?rows.slice(-n):rows,hidden,
     more:hidden?`<button type="button" class="off-more" onclick="offShowMore('${id}')">看更早的 ${hidden} 条</button>`:''};}
 function offShowMore(id){const k=offWindowKey(id);_offWindow={key:k,n:(_offWindow.key===k?_offWindow.n:OFF_WINDOW_STEP)+OFF_WINDOW_STEP};
@@ -10088,7 +10116,7 @@ function offGeneratedTalk(text){return offResponseParts(text).filter(x=>x.kind==
 function offRecentParts(o){return(o&&o.msgs||[]).filter(m=>m&&((m.who==='旁白'&&m.source!=='me')||m.who==='ta')).slice(-80).map(m=>({kind:m.who==='旁白'?'nar':'talk',text:String(m.text||'')})).filter(x=>x.text);}
 function offCrossRepeat(part,old,currentInput,strict){if(!part||!old||part.kind!==old.kind)return false;const n=offRepeatNorm(part.text),p=offRepeatNorm(old.text),cur=offRepeatNorm(currentInput);if(!n||!p)return false;const userRaised=part.kind==='talk'&&((n.length>=2&&cur.includes(n))||(p.length>=2&&cur.includes(p)));if(n===p)return n.length>=(part.kind==='nar'?6:4)&&!userRaised;if(strict)return part.kind==='nar'&&Math.min(n.length,p.length)>=16&&offRepeatSimilarity(n,p)>=.9;const min=Math.min(n.length,p.length);if(part.kind==='talk'&&!userRaised&&min>=4&&(n.includes(p)||p.includes(n)))return true;return min>=(part.kind==='nar'?16:8)&&offRepeatSimilarity(n,p)>=(part.kind==='nar'?.78:.82)&&!userRaised;}
 function offDedupeItems(items,o,currentInput){const list=items||[],seen=new Set(),recent=offRecentParts(o),cur=offRepeatNorm(currentInput),replayed=list.some(item=>{const kind=item&&item.who==='旁白'?'nar':'talk';return recent.some(old=>offCrossRepeat({kind,text:item&&item.text},old,currentInput,true));});return list.filter(item=>{const norm=offRepeatNorm(item&&item.text),kind=item&&item.who==='旁白'?'nar':'talk',key=kind+'|'+norm;if(norm.length>=4&&seen.has(key))return false;if(norm.length>=4)seen.add(key);if(recent.some(old=>offCrossRepeat({kind,text:item.text},old,currentInput,true)))return false;if(replayed&&norm.length>=2&&!cur.includes(norm)&&recent.some(old=>old.kind===kind&&offRepeatNorm(old.text)===norm))return false;return true;});}
-function offReplyItems(text){const meta=arguments[1];text=offlineStripMoodTags(roleVisibleEnvelopeText(text));const items=[],partial=()=>{if(meta)meta.partial=true;};splitBubbles(text||'').forEach(l=>{l=normTag(l);if(LEAKRE.test(l)||isOOCLine(l)||isRefusal(l)){partial();return;}const whole=offResponsePart(l);if(whole.kind==='nar'){items.push({id:uid(),who:'旁白',source:'ta',text:whole.text});return;}l=l.replace(/\[[^\]]*\]/g,()=>{partial();return'';}).trim();if(!l)return;splitActions(l).forEach(p=>{p=(p||'').trim();if(!p)return;const part=offResponsePart(p);items.push({id:uid(),who:part.kind==='nar'?'旁白':'ta',source:'ta',text:part.text});});});return items;}
+function offReplyItems(text){const meta=arguments[1];text=rolePublicText(offlineStripMoodTags(roleVisibleEnvelopeText(text)));const items=[],partial=()=>{if(meta)meta.partial=true;};splitBubbles(text||'').forEach(l=>{l=normTag(l);if(LEAKRE.test(l)||isOOCLine(l)||isRefusal(l)){partial();return;}const whole=offResponsePart(l);if(whole.kind==='nar'){items.push({id:uid(),who:'旁白',source:'ta',text:whole.text});return;}l=l.replace(/\[[^\]]*\]/g,()=>{partial();return'';}).trim();if(!l)return;splitActions(l).forEach(p=>{p=(p||'').trim();if(!p)return;const part=offResponsePart(p);items.push({id:uid(),who:part.kind==='nar'?'旁白':'ta',source:'ta',text:part.text});});});return items;}
 function offlineMemoryRule(c){return '\n\n# 重要记忆（与微信使用同一套长期记忆）\n- 当'+S.me.name+'明确让你记住、记到/写进微信记忆，必须在回复末尾单独输出 [记住|精简后的关键事实]；遇到真正值得长期保留的喜好或忌口、纪念日、家人宠物、烦心事或心愿、承诺约定和关系进展，也应主动输出一条。已经记过的不要重复。\n- 标签里的内容必须是有本轮直接依据、能脱离聊天单独读懂的完整事实，写清人物/关系和事实；不得复制'+S.me.name+'或你刚说的原句，不得保存疑问、反问、辱骂、情绪碎片、截断的半句话或无依据推测。必须站在你自己的第一人称视角写：“我”只指你自己，用户用你平常对用户的称呼；不能把你的名字写成第三人称，也不能把用户写成“我”。\n- [记住] 是不会显示给'+S.me.name+'的隐藏标签，正常的面对面旁白和台词仍要完整生成。\n- 登录/退出微信、查看手机、屏幕共享、远程控制、同步、读取、上传和报错都只是功能操作，不是重要记忆，绝对不能把这些操作本身写进 [记住]；若操作中发现了真正重要的人和事，只记录那条人的事实，不记录操作过程。';}
 function offlineExplicitMemoryText(text){let t=String(text||'').replace(/\s+/g,' ').trim(),m;if(!t)return'';m=t.match(/把\s*([^。！？!?\n]{2,160}?)\s*(?:记|写|存)(?:到|进)(?:了)?(?:你(?:的)?|那个)?(?:微信(?:里|的)?)?(?:长期)?(?:重要)?记忆(?:里|中|里面)?/);if(!m)m=t.match(/(?:^|[。！？!?；;]\s*)(?:你)?(?:一定要|要|请|麻烦|帮我)?\s*记住(?:一下)?\s*[：:，,]?\s*([^。！？!?\n]{2,160})/);if(!m)m=t.match(/([^。！？!?\n]{2,120})[，,]\s*(?:你)?(?:一定要|要|给我)?\s*记住(?:了|啊|哦)?\s*$/);let v=String(m&&m[1]||'').replace(/^[“”「」『』\s]+|[“”「」『』\s]+$/g,'').replace(/(?:可以吗|行吗|好吗|好不好|记得吗|别忘了)[。！？!?]*$/,'').trim();if(v.length<2||/^(?:这件事|这个|那个|刚才的|上面的|我说的)$/.test(v)||memoryOperationalEventOnly(v))return'';return v.slice(0,220);}
 function offlineRememberExplicitRequest(c,text){const v=offlineExplicitMemoryText(text);if(!v)return'none';const r=rememberFromConversation(c,v,text,'');if(r!=='none'&&r!=='quota'){save();if(r==='added'||r==='replaced')toast(r==='replaced'?'已更新微信重要记忆':'已记进微信重要记忆');else if(r==='conflict')toast('这条和已有记忆不同，角色会先向你确认');}return r;}
@@ -14794,6 +14822,7 @@ function rpOverlayHost(){return document.querySelector('.screen')||document.body
 // 点红包：别人发给我的、还没领 → 弹開红包那一层；自己发的或已经领过的 → 直接看领取详情
 /* 红包和角色扮演以前都叫 rpOpen，后面的红包把角色扮演的覆盖了，点角色扮演会提示「这个红包找不到了」 */
 function redpOpen(scope,key,mid){const r=rpResolve(scope,key,mid);if(!r){toast('这个红包找不到了');return;}
+  if(scope==='group'){const g=(S.groups||[]).find(x=>x.id===key),target=gRpRecipient(g,r.m);if(target&&target!=='me'){toast('这是给'+(target==='__ambiguous__'?'指定成员':gnm(g,target))+'的专属红包');rpDetailOpen(scope,key,mid);return;}}
   const multi=scope==='group'||!!r.lucky;
   if(multi?(r.received||(r.me&&r.done)):(r.me||r.received||r.refunded)){rpDetailOpen(scope,r.key,mid);return;}/* 群红包自己发的也能抢一个，和微信一样 */
   const late=multi&&(r.done||(r.st&&r.st.late));
@@ -14926,7 +14955,7 @@ function sendText(id){if(wxLoginActive()){toast('微信被ta登录中，你暂�
 /* ===== 聊天引用 ===== */
 let _quoting=null,_lpT=null,_lpFired=false;
 function quoteTextOf(m){return (m&&(m.type==='text'||m.type==='voice'))?(m.content||'').trim():'';}
-function quoteComposerHTML(cid,c){c=c||getC(cid);if(!c||S.settings.quoteOn===false||!_quoting||_quoting.id!==cid)return'';const quoteName=_quoting.who==='me'?(S.me.name||'我'):(c.remark||c.name||'TA');return `<div class="chat-quote-pending" id="chatQuotePending" role="status"><span class="chat-quote-pending-text"><b>${esc(quoteName)}：</b>${esc((_quoting.text||'').slice(0,72))}${(_quoting.text||'').length>72?'…':''}</span><button type="button" class="chat-quote-cancel" aria-label="取消引用" onpointerdown="event.stopPropagation()" onclick="quoteClear(event)"><span aria-hidden="true">×</span></button></div>`;}
+function quoteComposerHTML(cid,c){c=c||getC(cid);if(!c||S.settings.quoteOn===false||!_quoting||_quoting.id!==cid)return'';const quoteName=_quoting.who==='me'?(S.me.name||'我'):(c.remark||c.name||'TA');return `<div class="chat-quote-pending" id="chatQuotePending" role="status"><span class="chat-quote-pending-text"><b>${esc(quoteName)}：</b>${esc(_quoting.text||'')}</span><button type="button" class="chat-quote-cancel" aria-label="取消引用" onpointerdown="event.stopPropagation()" onclick="quoteClear(event)"><span aria-hidden="true">×</span></button></div>`;}
 function quoteComposerRefresh(cid){if(cur().p!=='chat'||cur().id!==cid)return;const old=$('#chatQuotePending'),bar=document.querySelector('#app>.page>.chat-inputbar')||$('.chat-inputbar'),html=quoteComposerHTML(cid);if(old){if(html)old.outerHTML=html;else old.remove();}else if(html&&bar)bar.insertAdjacentHTML('beforebegin',html);}
 function quoteSet(cid,mid){if(S.settings.quoteOn===false)return;const m=msgs(cid).find(x=>x.id===mid);const txt=quoteTextOf(m);if(!txt){toast('这条没法引用');return;}_quoting={id:cid,text:txt,who:m.role==='user'?'me':'ta'};if(typeof closeModal==='function')closeModal();quoteComposerRefresh(cid);}
 function quoteClear(ev){if(ev){if(ev.preventDefault)ev.preventDefault();if(ev.stopPropagation)ev.stopPropagation();}const cid=_quoting&&_quoting.id;_quoting=null;if(cid)quoteComposerRefresh(cid);}
@@ -14936,8 +14965,8 @@ function _matchMyLine(id,frag){if(!frag)return null;const f=_gnorm(frag);if(!f)r
   return (best&&bestScore>=30)?best.trim():null;}
 function qPressStart(cid,mid){if(S.settings.quoteOn===false)return;_lpFired=false;clearTimeout(_lpT);_lpT=setTimeout(()=>{_lpFired=true;quoteSet(cid,mid);},480);}
 function qPressEnd(){clearTimeout(_lpT);}
-function quoteBar(c,m){if(!m||!m.quote||!m.quote.text)return '';const who=m.quote.who==='me'?(S.me.name||'我'):(c.remark||c.name||'TA'),t=(m.quote.text||'').slice(0,72);
-  return `<div class="chat-quote-sent"><b>${esc(who)}：</b><span>${esc(t)}${(m.quote.text||'').length>72?'…':''}</span></div>`;}
+function quoteBar(c,m){if(!m||!m.quote||!m.quote.text)return '';const who=m.quote.who==='me'?(S.me.name||'我'):(c.remark||c.name||'TA'),t=m.quote.text||'';
+  return `<div class="chat-quote-sent"><b>${esc(who)}：</b><span>${esc(t)}</span></div>`;}
 
 /* 功能面板发送 */
 function readAsDataURL(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f);});}
@@ -16684,6 +16713,7 @@ document.addEventListener('click',()=>{initAudio();const liveLoc=S.contacts.some
 function playDing(){if(_ma&&_mWantPlay&&!_ma.paused){webToneSequence([[880,.22]],{level:.12,decay:true});setTimeout(()=>{try{if(_ma&&_mWantPlay&&_ma.paused)_ma.play().catch(()=>{});}catch(_){}},180);return;}playMediaTone([[880,.28]],{key:'message-ding-soft-v3',level:.16,decay:true});}
 function playMessageDing(){if(!S.settings.sound)return null;const a=messageToneElement();if(!a){playDing();return null;}try{a.pause();a.loop=false;a.volume=Math.max(0,Math.min(1,.72*volMul()));if(!String(a.src||'').includes(MESSAGE_NOTIFICATION_URL))a.src=MESSAGE_NOTIFICATION_URL;a.currentTime=0;const p=a.play();if(p&&typeof p.catch==='function')p.catch(()=>playDing());return a;}catch(_){playDing();return null;}}
 function notifyIncoming(c,msg){
+  if(!msg||roleInternalControlLine(msg.content))return;
   // 语音消息：不再自动播放，改成点一下语音条才播（点开能重复听）
   if(c.muted)return;
   const viewing=cur().p==='chat'&&cur().id===c.id;

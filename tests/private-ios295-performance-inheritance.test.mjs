@@ -47,18 +47,18 @@ function functionSource(sourceText, name) {
 
 test('private identifiers remain v1355 and iOS 399 while public advances independently', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1419'/);
-  assert.match(index, /app\.js\?v=1419&r=v1419-private-pf-role-1/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1423'/);
+  assert.match(index, /app\.js\?v=1423&r=v1423-eight-chat-fixes-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(app, /APP_VER='v1419 · 角色进真人群'/);
+  assert.match(app, /APP_VER='v1423 · 线下继承与八项聊天修复'/);
   assert.match(overlay, /336-daily-file-backup/);
-  assert.match(webview, /1\.0\.434 \(434\)/);
-  assert.match(bridge, /private static let build = "1\.0\.434 \(434\)"/);
+  assert.match(webview, /1\.0\.435 \(435\)/);
+  assert.match(bridge, /private static let build = "1\.0\.435 \(435\)"/);
   assert.match(bridge, /static let contractVersion = 42/);
-  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 434;/g) || []).length, 12);
-  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.434;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1420 · 线下剧场修复与删记录'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1420'/);
+  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 435;/g) || []).length, 12);
+  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.435;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1422 · 线下继承与八项聊天修复'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1422'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
@@ -160,11 +160,11 @@ test('Mac guide identifies the current private v1356 iOS422 source', () => {
     assert.match(guide, /Mac.*编译/);
     assert.match(guide, /真机|真实 iPhone/);
   }
-  assert.match(mac, /1\.0\.434 \(434\)/);
+  assert.match(mac, /1\.0\.435 \(435\)/);
   assert.match(mac, /原生桥.*38/);
   assert.match(install, /1\.0\.327 \(327\)/);
   assert.match(install, /原生桥.*35/);
-  assert.match(mac, /^# v1419 .*iOS434/);
+  assert.match(mac, /^# v1423 .*iOS435/);
   assert.match(mac, /网页.*推送/);
   assert.match(install, /私人内置网页 v1206/);
   assert.match(install, /两边共有/);

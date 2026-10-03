@@ -4,11 +4,11 @@ import { test } from 'node:test';
 import vm from 'node:vm';
 
 const PRIVATE = '../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/';
-const app = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
-const priv = readFileSync(new URL(PRIVATE + 'app.js', import.meta.url), 'utf8');
-const html = readFileSync(new URL('../小手机.html', import.meta.url), 'utf8');
-const shell = readFileSync(new URL(PRIVATE + '小手机.html', import.meta.url), 'utf8');
-const index = readFileSync(new URL(PRIVATE + 'index.html', import.meta.url), 'utf8');
+const app = readFileSync(new URL('../app.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+const priv = readFileSync(new URL(PRIVATE + 'app.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+const html = readFileSync(new URL('../小手机.html', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+const shell = readFileSync(new URL(PRIVATE + '小手机.html', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+const index = readFileSync(new URL(PRIVATE + 'index.html', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 const lines = app.split('\n');
 /* 工程里绝大多数函数写在一行，但这几个页面函数带模板字面量、跨了好几行，
    所以按「下一个顶格声明」来切块，而不是只取第一行。 */
@@ -215,10 +215,10 @@ test('every shell carries the styles for the second batch too', () => {
    也没拦住，只有真的点一下才会暴露。所以这里把 app.js 里每一个 onclick 调用的函数名
    都对着实际定义验一遍，不再只盯着抖音那一段。 */
 test('every onclick in app.js resolves to a function that exists', () => {
-  const ui = readFileSync(new URL('../commerce-ui.js', import.meta.url), 'utf8');
-  const pixel = readFileSync(new URL('../pixel-home.js', import.meta.url), 'utf8');
-  const pet = readFileSync(new URL('../pet-game.js', import.meta.url), 'utf8');
-  const deskPet = readFileSync(new URL('../desk-pet.js', import.meta.url), 'utf8');
+  const ui = readFileSync(new URL('../commerce-ui.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const pixel = readFileSync(new URL('../pixel-home.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const pet = readFileSync(new URL('../pet-game.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const deskPet = readFileSync(new URL('../desk-pet.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
   const defined = new Set();
   for (const src of [app, ui, pixel, pet, deskPet]) {
     for (const m of src.matchAll(/^(?:async )?function ([A-Za-z_$][\w$]*)\(/gm)) defined.add(m[1]);
@@ -861,7 +861,7 @@ test('nothing that the 抖音 pages call went missing', () => {
      这条测试直接扫：抖音这一片 onclick 里叫到的函数，必须都真的存在。 */
   const dy = app.slice(app.indexOf('function dyInit('));
   const called = new Set([...dy.matchAll(/onclick="(?:event\.stopPropagation\(\);)?([a-zA-Z_$][\w$]*)\(/g)].map(m => m[1]));
-  const deskPet = readFileSync(new URL('../desk-pet.js', import.meta.url), 'utf8');
+  const deskPet = readFileSync(new URL('../desk-pet.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
   const missing = [...called].filter(n => !new RegExp(`(?:^|\\n)(?:async )?function ${n}\\(`).test(app + '\n' + deskPet) && !/^(toast|render|save|back|go|closeModal|openModal|alert|\$)$/.test(n));
   assert.deepEqual(missing, [], '这些函数被点到但根本不存在：' + missing.join(', '));
 });

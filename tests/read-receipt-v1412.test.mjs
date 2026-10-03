@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const P='native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/';
-const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
+const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8').replace(/\r\n/g,'\n');
 const fnSrc=(s,n)=>{const i=s.indexOf(`function ${n}(`);assert.ok(i>=0,n);return s.slice(i,s.indexOf('\n',i));};
 for(const [label,p,h] of [['web','app.js','小手机.html'],['private',P+'app.js',P+'index.html']]){
   const s=read(p),html=read(h);

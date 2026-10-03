@@ -35,7 +35,7 @@ function windowBox(app) {
   box.$ = () => null;
   vm.runInContext(app.match(/const OFF_WINDOW_STEP=\d+;/)[0], box);
   vm.runInContext("let _offWindow={key:'',n:OFF_WINDOW_STEP};", box);
-  for (const n of ["offWindowKey", "offWindowSize", "offWindowRows", "offShowMore", "offRgba"]) {
+  for (const n of ["roleInternalControlLine", "offWindowKey", "offWindowSize", "offWindowRows", "offShowMore", "offRgba"]) {
     vm.runInContext(fnSource(app, n), box);
   }
   return box;

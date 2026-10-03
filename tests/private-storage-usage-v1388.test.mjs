@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 // v1388 私人 App 存储明细：原生量 App 里各文件夹大小（只读文件信息，不读内容），音乐/放映室只读文件大小，图片聊天语音只数个数；可一键清理网页缓存。
-const bridge = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift', import.meta.url), 'utf8');
-const priv = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js', import.meta.url), 'utf8');
-const web = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+const bridge = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+const priv = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+const web = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 
 test('native measures folder sizes off the main thread and clears only HTTP caches', () => {
   assert.match(bridge, /case "storage\.usage":\n\s*performStorageUsage\(requestID: requestID\)/);

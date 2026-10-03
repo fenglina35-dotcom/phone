@@ -13,6 +13,30 @@ const ADMIN_ACTIONS = new Set(['admin_auth','admin_invite_generate','admin_invit
   'admin_config','admin_subscribe']);
 const ADMIN_PUBLIC_ACTIONS = new Set(['admin_owner_pair_claim']);
 const MAX_BODY = 65536;
+// Same original friend database, fixed RPC allowlist. No arbitrary REST proxy.
+const FRIEND_RPC = new Set(['phone_friend_search','phone_friend_sync','phone_friend_upsert_profile',
+  'phone_friend_send_message','phone_friend_send_group_message','phone_friend_send_request',
+  'phone_friend_respond_request','phone_friend_mark_received','phone_friend_recall_message',
+  'phone_friend_create_group','phone_friend_group_invite','phone_friend_group_accept_invite',
+  'phone_friend_group_disband','phone_friend_group_leave','phone_friend_group_remove_member',
+  'phone_friend_delete_friend']);
+async function friendRpcRelay(request, url, headers, fetchUpstream, timeoutMs) {
+  const fn=url.pathname.slice('/rest/v1/rpc/'.length),reply=(status,body)=>new Response(JSON.stringify(body),{status,headers});
+  if(!FRIEND_RPC.has(fn))return reply(404,{message:'friend-rpc-not-allowed'});
+  if(url.search)return reply(400,{message:'query-not-accepted'});
+  if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{...headers,'Access-Control-Allow-Methods':'POST, OPTIONS','Access-Control-Allow-Headers':'content-type, apikey, authorization'}});
+  if(request.method!=='POST')return reply(405,{message:'method-not-allowed'});
+  if(!/^application\/json(?:;|$)/i.test(request.headers.get('Content-Type')||''))return reply(415,{message:'json-required'});
+  const apikey=cleanText(request.headers.get('apikey'),2048),authorization=cleanText(request.headers.get('Authorization'),4096);
+  if(!apikey||!/^Bearer [A-Za-z0-9_.-]+$/.test(authorization))return reply(401,{message:'friend-auth-required'});
+  let body;try{body=await boundedBody(request,262144);if(body===null)return reply(413,{message:'body-too-large'});const data=JSON.parse(body);if(!data||typeof data!=='object'||Array.isArray(data))return reply(400,{message:'invalid-json'});}catch(_){return reply(400,{message:'invalid-json'});}
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),Math.max(timeoutMs,35000));
+  try{const response=await fetchUpstream('https://lkhlyfpssmrjkkzhuzag.supabase.co/rest/v1/rpc/'+fn,{method:'POST',headers:{'Content-Type':'application/json',apikey,Authorization:authorization},body,signal:controller.signal,redirect:'manual'});
+    if(response.status>=300&&response.status<400)return reply(502,{message:'friend-upstream-redirect-rejected'});
+    const data=await response.text();try{JSON.parse(data);}catch(_){return reply(502,{message:'friend-upstream-non-json'});}
+    return new Response(data,{status:response.status,headers});
+  }catch(_){return reply(502,{message:controller.signal.aborted?'friend-upstream-timeout':'friend-upstream-unreachable'});}finally{clearTimeout(timer);}
+}
 const MAX_TTS_BODY = 16384;
 const TTS_PROVIDERS = new Set(['minimax','fish','mossland','elevenlabs','hume']);
 async function boundedBody(request, maxBody = MAX_BODY) {
@@ -127,6 +151,7 @@ export function createHandler(fetchUpstream = (input, init) => fetch(input, init
     if (origin === APP_ORIGIN || origin === 'null') headers['Access-Control-Allow-Origin'] = origin;
     const reply = (status, body) => new Response(JSON.stringify(body), {status, headers});
     if (origin && origin !== APP_ORIGIN && origin !== 'null') return reply(403, {ok:false, code:'origin-not-allowed'});
+    if(url.pathname.startsWith('/rest/v1/rpc/'))return friendRpcRelay(request,url,headers,fetchUpstream,timeoutMs);
     const health = url.pathname === '/health';
     const externalTts = url.pathname === EXTERNAL_TTS_PATH;
     if (externalTts) {

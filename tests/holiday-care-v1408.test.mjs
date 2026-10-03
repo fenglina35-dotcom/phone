@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const P='native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/';
-const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
+const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8').replace(/\r\n/g,'\n');
 function fn(s,name){const start=s.indexOf(`function ${name}(`);assert.ok(start>=0,`missing ${name}`);const brace=s.indexOf('{',start);let d=0,q='',e=false;
   for(let i=brace;i<s.length;i++){const ch=s[i];if(q){if(e)e=false;else if(ch==='\\')e=true;else if(ch===q)q='';continue;}if(ch==='"'||ch==="'"||ch==='`'){q=ch;continue;}if(ch==='{')d++;else if(ch==='}'&&--d===0)return s.slice(start,i+1);}throw new Error('unterminated '+name);}
 

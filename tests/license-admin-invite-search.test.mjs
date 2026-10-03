@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
-const read = (path) => fs.readFileSync(new URL('../' + path, import.meta.url), 'utf8');
+const read = (path) => fs.readFileSync(new URL('../' + path, import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 const migration = read('supabase/migrations/202607250001_license_invite_attribution.sql');
 const licenseBackend = read('supabase/functions/phone-license/index.ts');
 const inviteListBlock = licenseBackend.match(/async function adminInviteList[\s\S]*?\n}\n/)?.[0] || '';

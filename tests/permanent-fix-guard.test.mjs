@@ -29,6 +29,14 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"v1422/v1423 preview",scope:"both",least:1,name:"线下控制文本与安静决定不进入对话通知",marker:"function rolePublicText(value)"},
+  {release:"v1422/v1423 preview",scope:"both",least:1,name:"抖音陌生私信有独立性格和开场重复检查",marker:"function dyStrangerParse(raw,styles,recent)"},
+  {release:"v1422/v1423 preview",scope:"both",least:1,name:"群专属红包领取前核对对象",marker:"function gRpRecipient(g,m)"},
+  {release:"v1422/v1423 preview",scope:"both",least:1,name:"角色群只引用其他群友并保留全文",marker:"pq=rm&&rm.senderId!=='me'?{who:gName(rm,g),senderId:rm.senderId,text:gmText(rm)||''}:null"},
+  {release:"v1422/v1423 preview",scope:"both",least:1,name:"真人好友先只读探测再选择原库固定入口",marker:"async function pfTransportRoute(ms)"},
+  {release:"v1422/v1423 preview",scope:"both",least:1,name:"群转账独立详情与明确收款动作",marker:"function groupTransferDetailAction(gid,mid)"},
+  {release:"v1422/v1423 preview",scope:"both",least:1,name:"微信会话未读汇总和进入即读",marker:"function wxMarkPageSeen(page)"},
+  {release:"v1422/v1423 preview",scope:"both",least:1,name:"朋友圈按账号保存未查看状态",marker:"function wxMomentSeenMap()"},
   {release:"v1370",scope:"web",least:1,name:"关系网：谁是谁的谁写进提示词（名单+相关详情）",marker:"function relPromptFor(c,focus,opt)"},
   {release:"v1370",scope:"web",least:1,name:"关系网：已故/失联/没有微信不能推荐",marker:"if(rp&&!relRecommendable(rp)&&!rp.cid){_replyAuditPartial=true;continue;}"},
   {release:"v1370",scope:"web",least:1,name:"关系网：他登录我的微信认得关系网里的人",marker:"relLoginTag(cid,x.id)"},
