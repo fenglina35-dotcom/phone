@@ -1,0 +1,6 @@
+Official source thumbnails for simulated travel preview. No claim of open license. Resized/compressed for local display; no hotlinking. Existing Shanghai pictures: GUIDE_IMAGE_SOURCES.txt.
+
+ticket-louvre.jpg
+Source page: https://www.louvre.fr/en/explore/the-palace/a-pyramid-for-a-symbol
+Image URL: https://api-www.louvre.fr/sites/default/files/2021-02/vue-de-la-pyramide-du-louvre-1.jpg
+Credit: Louvre official website; credit remains with original photographer/museum

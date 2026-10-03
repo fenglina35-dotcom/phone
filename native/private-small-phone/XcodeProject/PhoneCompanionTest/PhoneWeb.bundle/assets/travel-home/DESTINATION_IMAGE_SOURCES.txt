@@ -1,0 +1,101 @@
+Local destination thumbnails. Display cropping only; original pixels unmodified. Existing images: see ATTRIBUTION.txt and GUIDE_IMAGE_SOURCES.txt.
+
+广州 | destination-85da183b0683.jpg
+Author: Tim Wu
+License: CC BY-SA 4.0 https://creativecommons.org/licenses/by-sa/4.0
+Source: https://commons.wikimedia.org/wiki/File:Canton_Tower_20241027.jpg
+
+深圳 | destination-1bb5e3986433.jpg
+Author: Charlie fong
+License: CC BY-SA 4.0 https://creativecommons.org/licenses/by-sa/4.0
+Source: https://commons.wikimedia.org/wiki/File:Commercial_area_of_futian_to_east2020.jpg
+
+成都 | destination-d22258711825.jpg
+Author: FISU
+License: CC BY 3.0 https://creativecommons.org/licenses/by/3.0
+Source: https://commons.wikimedia.org/wiki/File:%E9%9B%AA%E5%B1%B1%E4%B8%8B%E7%9A%84%E6%88%90%E9%83%BD%E5%B8%82%E5%A4%A9%E9%99%85%E7%BA%BF_Chengdu_skyline_with_snow_capped_mountains.jpg
+
+西安 | destination-e2d11378ac18.jpg
+Author: xiquinhosilva
+License: CC BY 2.0 https://creativecommons.org/licenses/by/2.0
+Source: https://commons.wikimedia.org/wiki/File:City_wall_of_Xi%27an_51550-Xian_%2827959363326%29.jpg
+
+重庆 | destination-ea31f4d6d27d.jpg
+Author: Jay Huang
+License: CC BY 2.0 https://creativecommons.org/licenses/by/2.0
+Source: https://commons.wikimedia.org/wiki/File:Chongqing_Nightscape.jpg
+
+武汉 | destination-48afd8d3b926.jpg
+Author: 螺钉
+License: CC BY-SA 4.0 https://creativecommons.org/licenses/by-sa/4.0
+Source: https://commons.wikimedia.org/wiki/File:%E6%AD%A6%E6%B1%89%E9%BB%84%E9%B9%A4%E6%A5%BC%E4%BF%AF%E7%9E%B0.jpg
+
+长沙 | destination-65ba77fdcc27.jpg
+Author: Junchong
+License: CC BY-SA 4.0 https://creativecommons.org/licenses/by-sa/4.0
+Source: https://commons.wikimedia.org/wiki/File:%E7%88%B1%E6%99%9A%E4%BA%AD%EF%BC%88%E7%A7%8B-%E4%BE%A7%E9%9D%A2%EF%BC%89.jpg
+
+南昌 | destination-a02251f72015.jpg
+Author: Akira CA
+License: CC BY-SA 4.0 https://creativecommons.org/licenses/by-sa/4.0
+Source: https://commons.wikimedia.org/wiki/File:Nanchang_Skyline.jpg
+
+莫斯科 | destination-09fdb8c909a8.jpg
+Author: U.S. Department of State
+License: Public domain
+Source: https://commons.wikimedia.org/wiki/File:Saint_Basil%27s_Cathedral_and_the_Red_Square.jpg
+
+纽约 | destination-21f9f830edf1.jpg
+Author: Pedro Lastra
+License: CC0 http://creativecommons.org/publicdomain/zero/1.0/deed.en
+Source: https://commons.wikimedia.org/wiki/File:Lights_of_Rockefeller_Center_during_sunset.jpg
+
+米兰 | destination-9313f4070dc7.jpg
+Author: Jiuguang Wang
+License: CC BY-SA 3.0 https://creativecommons.org/licenses/by-sa/3.0
+Source: https://commons.wikimedia.org/wiki/File:Milan_Cathedral_from_Piazza_del_Duomo.jpg
+
+马尼拉 | destination-ef23d2489a3c.jpg
+Author: Bahnfrend
+License: CC BY-SA 4.0 https://creativecommons.org/licenses/by-sa/4.0
+Source: https://commons.wikimedia.org/wiki/File:Cityscape_of_Manila%2C_2025_%2801%29.jpg
+
+意大利 | destination-9313f4070dc7.jpg
+Author: Jiuguang Wang
+License: CC BY-SA 3.0 https://creativecommons.org/licenses/by-sa/3.0
+Source: https://commons.wikimedia.org/wiki/File:Milan_Cathedral_from_Piazza_del_Duomo.jpg
+
+俄罗斯 | destination-09fdb8c909a8.jpg
+Author: U.S. Department of State
+License: Public domain
+Source: https://commons.wikimedia.org/wiki/File:Saint_Basil%27s_Cathedral_and_the_Red_Square.jpg
+
+美国 | destination-21f9f830edf1.jpg
+Author: Pedro Lastra
+License: CC0 http://creativecommons.org/publicdomain/zero/1.0/deed.en
+Source: https://commons.wikimedia.org/wiki/File:Lights_of_Rockefeller_Center_during_sunset.jpg
+
+菲律宾 | destination-ef23d2489a3c.jpg
+Author: Bahnfrend
+License: CC BY-SA 4.0 https://creativecommons.org/licenses/by-sa/4.0
+Source: https://commons.wikimedia.org/wiki/File:Cityscape_of_Manila%2C_2025_%2801%29.jpg
+
+巴厘岛 | destination-e79f64400df7.jpg
+Author: Jeong seolah
+License: CC0 https://creativecommons.org/publicdomain/zero/1.0/
+Source: https://commons.wikimedia.org/wiki/File:Bali_beach.jpg
+
+东京 | destination-95b3ec132e6e.jpg
+Author: David Kernan
+License: CC BY 4.0 https://creativecommons.org/licenses/by/4.0/
+Source: https://commons.wikimedia.org/wiki/File:Minato_City%2C_Tokyo%2C_Japan.jpg
+
+日本 | destination-95b3ec132e6e.jpg
+Author: David Kernan
+License: CC BY 4.0 https://creativecommons.org/licenses/by/4.0/
+Source: https://commons.wikimedia.org/wiki/File:Minato_City%2C_Tokyo%2C_Japan.jpg
+
+印度尼西亚 | destination-e79f64400df7.jpg
+Author: Jeong seolah
+License: CC0 https://creativecommons.org/publicdomain/zero/1.0/
+Source: https://commons.wikimedia.org/wiki/File:Bali_beach.jpg

@@ -1,0 +1,10 @@
+CC BY-SA 3.0 https://creativecommons.org/licenses/by-sa/3.0/
+No local pixel edits; CSS object-fit display cropping. Both images use Wikimedia thumbnails.
+
+zurich.jpg: Ximeg
+https://commons.wikimedia.org/wiki/File:Panorama_of_Zurich_from_Lindenhof_hill.jpg
+https://thumb.wikimedia.org/wikipedia/commons/thumb/1/17/Panorama_of_Zurich_from_Lindenhof_hill.jpg/960px-Panorama_of_Zurich_from_Lindenhof_hill.jpg
+
+suzhou.jpg: Peripitus
+https://commons.wikimedia.org/wiki/File:Suzhou_canal_and_some_boats.jpg
+https://thumb.wikimedia.org/wikipedia/commons/thumb/1/18/Suzhou_canal_and_some_boats.jpg/960px-Suzhou_canal_and_some_boats.jpg

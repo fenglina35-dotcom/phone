@@ -1,0 +1,13 @@
+Shanghai guide imagery. Wikimedia 960px thumbnails, no pixel edits; CSS display crop only.
+shanghai.jpg: CC0. https://commons.wikimedia.org/wiki/File:Shanghai_skyline_from_the_bund.jpg
+https://creativecommons.org/publicdomain/zero/1.0/
+shanghai-disney.jpg: Jeremy Thompson, CC BY 2.0. https://commons.wikimedia.org/wiki/File:Shanghai_Disneyland_Castle.jpg
+https://creativecommons.org/licenses/by/2.0/
+shanghai-bund.jpg: Wilson Hui, https://commons.wikimedia.org/wiki/File:Shanghai_Skyline_from_the_Bund.jpg ; CC BY 2.0.
+https://creativecommons.org/licenses/by/2.0/
+
+hangzhou.jpg: Bjoertvedt ; https://creativecommons.org/licenses/by-sa/4.0/ ; https://commons.wikimedia.org/wiki/File:West_Lake_IMG_8755_hangzhou_panorama.jpg ; Wikimedia 330px thumbnail, no pixel edits, CSS display crop.
+
+nanjing.jpg: SQFP ; https://creativecommons.org/licenses/by/2.0/ ; https://commons.wikimedia.org/wiki/File:Qinhuai_River_Night.jpg ; Wikimedia 330px thumbnail, no pixel edits, CSS display crop.
+
+beijing.jpg: Robysan ; https://creativecommons.org/licenses/by-sa/3.0/ ; https://commons.wikimedia.org/wiki/File:Greatwall_badaling.jpg ; Wikimedia 330px thumbnail, no pixel edits, CSS display crop.

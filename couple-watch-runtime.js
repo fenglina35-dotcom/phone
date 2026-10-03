@@ -1,5 +1,5 @@
 /* Only names and foreground routes cross this permission boundary. */
-const COUPLE_WATCH_APPS={browser:'浏览器',moments:'朋友圈',spy:'查他手机',shop:'购物',calendar:'日历',x:'X',douyin:'抖音',food:'外卖',games:'游戏大厅',mail:'信箱',phoneapp:'电话',offline:'线下约会',roleplay:'角色扮演',tale:'规则怪谈',dread:'惊悚抉择',music:'音乐',cinema:'放映室',travel:'云程',pet:'电子宠物'};
+const COUPLE_WATCH_APPS={browser:'浏览器',moments:'朋友圈',spy:'查他手机',shop:'购物',calendar:'日历',x:'X',douyin:'抖音',food:'外卖',games:'游戏大厅',mail:'信箱',phoneapp:'电话',offline:'线下约会',roleplay:'角色扮演',tale:'规则怪谈',dread:'惊悚抉择',music:'音乐',cinema:'放映室',travel:'小鱼旅行',pet:'电子宠物'};
 var _coupleWatchEngine=null,_coupleWatchBusy=false;
 var _coupleWatchOutcome={stage:'idle',reason:'',at:0};
 var _coupleWatchAuthRevision={chat:0,app:0};

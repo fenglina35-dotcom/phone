@@ -1,6 +1,6 @@
-const BUILD='1436';
-const HOTFIX='v1436-role-family-card-preview-1';
-const SHELL_CACHE='north-shell-v1436-role-family-card-preview-1';
+const BUILD='1504';
+const HOTFIX='v1504-role-family-card-preview-1';
+const SHELL_CACHE='north-shell-v1504-role-family-card-preview-1';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
@@ -15,7 +15,7 @@ const CORE_FILES=[
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
   {url:'./app.js?v='+BUILD+'&r='+HOTFIX,kind:'app'},
   {url:'./cohab-theater.js?v='+BUILD+'&r=v1274-web-cohab-guests-1',kind:'theater'},
-  {url:'./web-hotfix.js?v='+BUILD+'&r=v1436-role-family-card-preview-1',kind:'hotfix'},
+  {url:'./web-hotfix.js?v='+BUILD+'&r=v1504-role-family-card-preview-1',kind:'hotfix'},
   {url:'./ai-account.js?v='+BUILD,kind:'ai'},
   {url:'./couple-watch.js?v='+BUILD,kind:'watch'},
   {url:'./couple-watch-runtime.js?v='+BUILD,kind:'watchRuntime'}
@@ -44,6 +44,32 @@ const OPTIONAL_FILES=[
   './mail-outbox.css?v='+BUILD,
   './role-family-card.js?v='+BUILD,
   './role-family-card.css?v='+BUILD,
+  './travel-home.js?v='+BUILD,
+  './travel-home.css?v='+BUILD,
+  './travel-gallery.js?v='+BUILD,
+  './travel-hotel.js?v='+BUILD,
+  './travel-hotel-data.js?v='+BUILD,
+  './travel-hotel.css?v='+BUILD,
+  './assets/travel-home/DESTINATION_IMAGE_SOURCES.txt',
+  './destination-photos.js?v='+BUILD,
+  './travel-ticket-data.js?v='+BUILD,
+  './travel-train.js?v='+BUILD,
+  './travel-train-booking.js?v='+BUILD,
+  './travel-train.css?v='+BUILD,
+  './travel-concert-booking.js?v='+BUILD,
+  './travel-concert-booking.css?v='+BUILD,
+  './travel-taxi.js?v='+BUILD,
+  './travel-taxi.css?v='+BUILD,
+  './travel-concert.js?v='+BUILD,
+  './travel-concert.css?v='+BUILD,
+  './travel-flight.js?v='+BUILD,
+  './travel-flight-booking.js?v='+BUILD,
+  './travel-flight.css?v='+BUILD,
+  './travel-guide.js?v='+BUILD,
+  './travel-guide.css?v='+BUILD,
+  './travel-regions.js?v='+BUILD,
+  './travel-regions.css?v='+BUILD,
+  './assets/travel-home/GUIDE_IMAGE_SOURCES.txt',
   './pf-group-role.js?v='+BUILD,
   './pet-game.css?v='+BUILD,
   /* 主屏组件、音乐光盘和图片裁剪都靠它；以前每次打开都走网络，网络一抖就整页失去样式。 */
@@ -102,7 +128,7 @@ function validShellText(kind,text){
     &&text.includes('theaterRevealActorItems')
     &&!text.includes('cohabReplyCore=async');
   if(kind==='hotfix')return text.length>800
-    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1436-role-family-card-preview-1'")
+    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1504-role-family-card-preview-1'")
     &&text.includes('reconcileExpiredWxLogin')
     &&text.includes('withBaseImageCheck')
     &&text.includes('isStoredImgRef');
@@ -172,12 +198,36 @@ self.addEventListener('message',event=>{
   try{if(event.source)event.source.postMessage({type:'north-update-ready',build:BUILD});}catch(_){}
 });
 
+// Travel thumbnails have their own bounded cache; never prefetch the whole catalogue.
+const TRAVEL_IMAGE_CACHE='north-travel-images-v1',TRAVEL_IMAGE_MAX_BYTES=512*1024,TRAVEL_IMAGE_MAX_FILES=24,TRAVEL_IMAGE_TOTAL_BYTES=5*1024*1024;
+let travelImageWrites=Promise.resolve(),travelImagePending=0;
+async function travelImageSave(cache,key,response){
+  if(!response.ok||!/^image\//i.test(response.headers.get('content-type')||''))return;
+  if(+response.headers.get('content-length')>TRAVEL_IMAGE_MAX_BYTES)return;
+  if(!response.body||typeof response.body.getReader!=='function')return;
+  const reader=response.body.getReader(),chunks=[];let bytes=0;
+  try{while(true){const next=await reader.read();if(next.done)break;bytes+=next.value.byteLength;if(bytes>TRAVEL_IMAGE_MAX_BYTES){reader.cancel().catch(()=>{});return;}chunks.push(next.value);}}finally{reader.releaseLock();}
+  const headers=new Headers(response.headers);headers.delete('content-encoding');headers.set('content-length',String(bytes));
+  await cache.put(key,new Response(new Blob(chunks),{status:response.status,headers}));
+  const keys=await cache.keys();let total=0;const sizes=[];for(const old of keys){const r=await cache.match(old);let n=Number(r?.headers.get('content-length'));if(!Number.isFinite(n)||n<=0)n=r?(await r.arrayBuffer()).byteLength:0;sizes.push(n);total+=n;}let count=keys.length;for(let i=0;i<keys.length&&(count>TRAVEL_IMAGE_MAX_FILES||total>TRAVEL_IMAGE_TOTAL_BYTES);i++){await cache.delete(keys[i]);total-=sizes[i];count--;}
+}
+async function travelImageResponse(request,event){
+  const url=new URL(request.url),key=new Request(url.origin+url.pathname);let cache;
+  try{cache=await caches.open(TRAVEL_IMAGE_CACHE);const hit=await cache.match(key);if(hit)return hit;}catch(_){/* Image cache failure must not block network or the app. */}
+  const response=await fetch(request);
+  if(cache&&response.ok&&travelImagePending<2){travelImagePending++;const copy=response.clone();travelImageWrites=travelImageWrites.then(()=>travelImageSave(cache,key,copy)).catch(()=>{}).finally(()=>travelImagePending--);event.waitUntil(travelImageWrites);}
+  return response;
+}
 self.addEventListener('fetch',event=>{
   const request=event.request;
   if(request.method!=='GET')return;
   let url;
   try{url=new URL(request.url);}catch(_){return;}
   if(url.origin!==self.location.origin)return;
+
+  if(/\/assets\/travel-home\/[^/]+\.(?:jpg|webp|png)$/.test(url.pathname)){
+    event.respondWith(travelImageResponse(request,event).catch(()=>Response.error()));return;
+  }
 
   // The embedded game has its own document, never the phone shell fallback.
   if(/\/games\/pixel-home\//.test(url.pathname)){

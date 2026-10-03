@@ -47,18 +47,18 @@ function functionSource(sourceText, name) {
 
 test('private identifiers remain v1355 and iOS 399 while public advances independently', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1437'/);
-  assert.match(index, /app\.js\?v=1437&r=v1437-role-family-card-preview-1/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1505'/);
+  assert.match(index, /app\.js\?v=1505&r=v1505-role-family-card-preview-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(app, /APP_VER='v1437 · 专属亲属卡'/);
+  assert.match(app, /APP_VER='v1505 · 小鱼旅行 · 旅行服务'/);
   assert.match(overlay, /336-daily-file-backup/);
   assert.match(webview, /1\.0\.436 \(436\)/);
   assert.match(bridge, /private static let build = "1\.0\.436 \(436\)"/);
   assert.match(bridge, /static let contractVersion = 42/);
   assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 436;/g) || []).length, 12);
   assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.436;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1436 · 专属亲属卡'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1436'/);
+  assert.match(publicApp, /APP_VER='v1504 · 小鱼旅行 · 旅行服务'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1504'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 

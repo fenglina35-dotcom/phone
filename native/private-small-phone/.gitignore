@@ -11,3 +11,12 @@ XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/*
 
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/mail-outbox.js
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/mail-outbox.css
+
+# Shared travel services must remain in committed private source.
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/travel-*.js
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/travel-*.css
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/destination-photos.js
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/
+XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/*
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/travel-home/
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/travel-home/**

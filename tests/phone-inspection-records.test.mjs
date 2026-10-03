@@ -18,6 +18,7 @@ for(const file of ['app.js','native/private-small-phone/XcodeProject/PhoneCompan
   ctx.actId=()=>ctx.account;
   const start=source.indexOf('/* Persistent per-record phone inspection ledger. */'),end=source.indexOf('/* End phone inspection ledger. */',start);
   assert(start>=0&&end>start,'missing persistent record ledger');
+  vm.runInContext(source.split(/\r?\n/).find(l=>l.startsWith('function tvHotelOwned(')),ctx);
   vm.runInContext(source.slice(start,end),ctx);
   return{ctx,S,c};
  }

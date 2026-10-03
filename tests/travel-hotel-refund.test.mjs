@@ -1,0 +1,9 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+const source=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8').match(/^async function tvHotelCancel\(.*$/m)[0];
+function fixture(){const h={id:'hotel',status:'upcoming',price:1234,payer:'me',accountId:'main',hotelName:'模拟酒店'},state={account:'main',balance:9000},confirmations=[];const context=vm.createContext({actId:()=>state.account,tvInit:()=>({hotels:[h]}),uiConfirm:()=>new Promise(r=>confirmations.push(r)),northLocaleNumber:String,getC:()=>null,addBill:(type,amount)=>{assert.equal(type,'in');state.balance+=amount;},save(){},closeModal(){},render(){},toast(){}});vm.runInContext(source,context);return {h,state,confirmations,cancel:(...args)=>context.tvHotelCancel(...args)};}
+test('two pending confirmations refund the original hotel amount only once',async()=>{const f=fixture(),a=f.cancel('hotel'),b=f.cancel('hotel');assert.equal(f.confirmations.length,2);f.confirmations.forEach(r=>r(true));await Promise.all([a,b]);assert.equal(f.state.balance,10234);assert.equal(f.h.status,'cancelled');await f.cancel('hotel',{direct:true});assert.equal(f.state.balance,10234);});
+test('switching accounts while cancellation is pending never credits the new account',async()=>{const f=fixture(),p=f.cancel('hotel');f.state.account='other';f.confirmations[0](true);await p;assert.equal(f.state.balance,9000);assert.equal(f.h.status,'upcoming');await f.cancel('hotel',{direct:true});assert.equal(f.state.balance,9000);});
+test('direct cancellation is one tap, uses the stored paid amount, and is idempotent',async()=>{const f=fixture();await f.cancel('hotel',{direct:true});await f.cancel('hotel',{direct:true});assert.equal(f.confirmations.length,0);assert.equal(f.state.balance,10234);});

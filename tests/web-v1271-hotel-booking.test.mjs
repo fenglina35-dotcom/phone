@@ -33,7 +33,7 @@ test('web Cloud Journey owns hotel search, orders, and role booking actions',()=
 test('hotel chat card stays boarding-pass sized and opens full details',()=>{
   const card=functionSource('tvHotelCardHTML');
   assert.match(card,/width:260px/);
-  assert.match(card,/tvHotelDetail\('/);
+  assert.match(card,/tvHotelDetail\(this\.dataset\.hotelId\)/);
   assert.match(card,/查看详情/);
   assert.doesNotMatch(card,/礼遇|BOOKED BY|已支付/);
   const detail=functionSource('tvHotelDetail');
@@ -54,7 +54,7 @@ test('hotel privacy exposes participant orders and phone-inspection orders at di
 test('hotel cards become role-readable chat context in the current private superset',()=>{
   assert.match(functionSource('msgToText'),/case 'hotel'/);
   assert.match(functionSource('buildPart'),/m\.type==='hotel'/);
-  assert.match(functionSource('buildSystem'),/你参与的云程酒店订单/);
+  assert.match(functionSource('buildSystem'),/你参与的小鱼旅行酒店订单/);
   assert.match(privateApp,/function tvHotelBook\(/);
 });
 
@@ -72,9 +72,10 @@ test('user hotel booking persists one paid order and only notifies a participati
 
 test('role hotel booking creates an assistant card and keeps unrelated roles outside participant scope',()=>{
   const north={id:'north',name:'North',wallet:5000},other={id:'other',name:'Other'},messages=[];
-  const S={me:{name:'我'},travel:{hotels:[]}};
+  const S={me:{name:'我'},travel:{hotels:[],hotelSearch:{city:'上海',checkIn:'2026-09-22',nights:2,roomType:'double',guestMode:'together',cid:'north'}}};
   const context=vm.createContext({S,tvInit:()=>S.travel,tvNormDate:x=>x,tvHotelNames:()=>['云庭臻选酒店'],tvHotelPrice:()=>1800,tvHotelNo:()=> 'YH2',uid:(()=>{let i=0;return()=>String(++i)})(),msgs:()=>messages,save:()=>{},cur:()=>({p:'home'}),render:()=>{},toast:()=>{},Date,getC:id=>id==='north'?north:id==='other'?other:null});
-  vm.runInContext(functionSource('tvHotelRoomText')+';'+functionSource('tvCharHotelBook')+';'+functionSource('tvHotelVisibleToRole')+';globalThis.ok=tvCharHotelBook(argumentsRole,"上海","2026-09-22",2,5,"双人间","我们一起");globalThis.own=tvHotelVisibleToRole(S.travel.hotels[0],"north");globalThis.other=tvHotelVisibleToRole(S.travel.hotels[0],"other");',Object.assign(context,{argumentsRole:north}));
+  Object.assign(context,{todayStr:()=> '2026-09-20',document:{getElementById:()=>null,querySelector:()=>null}});
+  vm.runInContext(fs.readFileSync(path.join(root,'travel-hotel-data.js'),'utf8')+fs.readFileSync(path.join(root,'travel-hotel.js'),'utf8')+['tvHotelOwned','tvHotelRoleMoney','tvHotelRoleMoneyApply','tvHotelRoomText','tvCharHotelBook','tvHotelVisibleToRole'].map(functionSource).join(';')+';globalThis.ok=tvCharHotelBook(argumentsRole,"上海","2026-09-22",2,5,"双人间","我们一起");globalThis.own=tvHotelVisibleToRole(S.travel.hotels[0],"north");globalThis.other=tvHotelVisibleToRole(S.travel.hotels[0],"other");',Object.assign(context,{argumentsRole:north}));
   assert.equal(context.ok,true);
   assert.equal(messages[0].type,'hotel');
   assert.equal(messages[0].role,'assistant');

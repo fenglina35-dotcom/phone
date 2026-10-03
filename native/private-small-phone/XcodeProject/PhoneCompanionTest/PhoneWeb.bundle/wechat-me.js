@@ -98,7 +98,7 @@ function wxServiceIcon(kind){const icons={
 function wxServiceTile(kind,title,sub,action,cls){return `<button type="button" class="wx-service-tile wx-service-${kind} ${cls||''}" ${action?`onclick="${action}"`:'disabled'}><i>${wxServiceIcon(kind)}</i><b>${esc(title)}</b>${sub?`<small>${esc(sub)}</small>`:''}</button>`;}
 function renderWxServices(){return `${WNav('服务')}<div class="scroll wxme-scroll wxservices">
   <div class="wx-service-hero">${wxServiceTile('receive','收付款','模拟展示，不可点击','')}${wxServiceTile('wallet','钱包',wxMoney(S.me.balance),"go('wxwallet')")}</div>
-  <section class="wx-service-card"><h4>小手机服务</h4><div class="wx-service-grid">${wxServiceTile('travel','云程','机票与行程',"tvInit();go('travel',{from:'wxservices'})")}${wxServiceTile('delivery','真实外卖','进入外卖应用',"openApp('food')")}${wxServiceTile('favorite','收藏','聊天收藏',"go('wxfavorites')")}${wxServiceTile('album','朋友圈相册','照片与视频',"go('wxalbum')")}${wxServiceTile('support','客服中心','功能解答',"go('wxsupport')")}${wxServiceTile('smarthome','智能家电','Windows 真实控制',"go('wxsmarthome')")}</div></section>
+  <section class="wx-service-card"><h4>小手机服务</h4><div class="wx-service-grid">${wxServiceTile('travel','小鱼旅行','机票与行程',"tvInit();go('travel',{from:'wxservices'})")}${wxServiceTile('delivery','真实外卖','进入外卖应用',"openApp('food')")}${wxServiceTile('favorite','收藏','聊天收藏',"go('wxfavorites')")}${wxServiceTile('album','朋友圈相册','照片与视频',"go('wxalbum')")}${wxServiceTile('support','客服中心','功能解答',"go('wxsupport')")}${wxServiceTile('smarthome','智能家电','Windows 真实控制',"go('wxsmarthome')")}</div></section>
   <section class="wx-service-card"><h4>更多服务</h4><div class="wx-service-grid">${wxServiceTile('recharge','手机充值','开发中','')}${wxServiceTile('utilities','生活缴费','开发中','')}${wxServiceTile('city','城市服务','开发中','')}</div></section>
   </div>`;}
 
@@ -407,15 +407,16 @@ const WX_HELP=[
   "scope": "网页与私人 App；原生权限功能以设备支持为准"
  },
  {
-  "title": "云程",
+  "title": "小鱼旅行",
   "aliases": [
    "云程",
+   "小鱼旅行",
    "火车票",
    "机票",
    "旅行"
   ],
-  "answer": "入口：主屏 → 云程。\n从“微信 → 我 → 服务 → 云程”会打开现有云程旅行页面；完成查看后使用左上角返回，会回到微信服务页。",
-  "path": "主屏 → 云程",
+  "answer": "入口：主屏 → 小鱼旅行。\n从“微信 → 我 → 服务 → 小鱼旅行”会打开小鱼旅行首页；完成查看后使用左上角返回，会回到微信服务页。",
+  "path": "主屏 → 小鱼旅行",
   "category": "主屏应用",
   "scope": "网页与私人 App；原生权限功能以设备支持为准"
  },

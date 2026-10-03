@@ -128,7 +128,7 @@ test('internal and external usage stay independent and per-app external time is 
 test('prototype data is clearly non-device data and version is aligned', () => {
   assert.match(functionSource('companionLoadDemo'), /不会连接或控制真实 iPhone/);
   assert.match(functionSource('companionSourceLabel'), /原型测试数据 · 非真实设备/);
-  assert.match(app, /const APP_VER='v1436 · 专属亲属卡'/);
+  assert.match(app, /const APP_VER='v1504 · 小鱼旅行 · 旅行服务'/);
 });
 
 test('manual sync reads locally in the bundled app and keeps cloud fallback', () => {
@@ -665,7 +665,7 @@ test('a mismatched limit association can never substitute a virtual internal app
 test('pending and conflicting device commands never masquerade as a confirmed red lock card', () => {
   const context = vm.createContext({});
   vm.runInContext(`const COMPANION_SNAPSHOT_FRESH_MS=120000,COMPANION_COMMAND_PENDING_MS=900000;${functionSource('companionLastExternalCommand')}\n${functionSource('companionSnapshotIsFresh')}\n${functionSource('companionExternalCommandState')}\nthis.state=companionExternalCommandState;`, context);
-  const appRow = { id: 'ios.trip', name: '携程旅行', locked: true };
+  const appRow = { id: 'ios.trip', name: '小鱼旅行', locked: true };
   const pending = { commands: [{ action: 'unlock', externalAppId: 'ios.trip', status: 'pending', ts: 2 }] };
   assert.equal(context.state(pending, appRow, 4).kind, 'pendingUnlock');
   const awaitingSnapshot = { lastSync: 2, commands: [{ action: 'unlock', externalAppId: 'ios.trip', status: 'completed', ts: 3 }] };
