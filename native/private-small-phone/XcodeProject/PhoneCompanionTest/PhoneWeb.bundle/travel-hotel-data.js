@@ -49,5 +49,6 @@ function moneyNext(value,deltaCents){
  if(after<=BigInt(Number.MAX_SAFE_INTEGER)){const number=Number(after)/100;if(moneyCents(number)===after)return number;}
  return String(after/BigInt(100))+'.'+String(after%BigInt(100)).padStart(2,'0');
 }
-root.NorthHotelData={moneyCents,moneyNext,brands:BRANDS,countries:COUNTRIES,cities,resolve,normalize,matches,knownTerm,countryAliases,limits:{rows:20,results:240}};
+function roleOrder(o){return !!o&&(o.payer==='ta'||o.bookedBy==='ta'||o.by==='ta'||['roleWallet','roleBank'].includes(o.fundingSource));}
+root.NorthHotelData={roleOrder,moneyCents,moneyNext,brands:BRANDS,countries:COUNTRIES,cities,resolve,normalize,matches,knownTerm,countryAliases,limits:{rows:20,results:240}};
 })(globalThis);
