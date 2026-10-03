@@ -219,8 +219,9 @@ test('every onclick in app.js resolves to a function that exists', () => {
   const pixel = readFileSync(new URL('../pixel-home.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
   const pet = readFileSync(new URL('../pet-game.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
   const deskPet = readFileSync(new URL('../desk-pet.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const family = readFileSync(new URL('../role-family-card.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
   const defined = new Set();
-  for (const src of [app, ui, pixel, pet, deskPet]) {
+  for (const src of [app, ui, pixel, pet, deskPet, family]) {
     for (const m of src.matchAll(/^(?:async )?function ([A-Za-z_$][\w$]*)\(/gm)) defined.add(m[1]);
     for (const m of src.matchAll(/window\.([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?function/g)) defined.add(m[1]);
     for (const m of src.matchAll(/^(?:const|let|var) ([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:function|\(|[A-Za-z_$][\w$]*\s*=>)/gm)) defined.add(m[1]);
@@ -862,7 +863,8 @@ test('nothing that the 抖音 pages call went missing', () => {
   const dy = app.slice(app.indexOf('function dyInit('));
   const called = new Set([...dy.matchAll(/onclick="(?:event\.stopPropagation\(\);)?([a-zA-Z_$][\w$]*)\(/g)].map(m => m[1]));
   const deskPet = readFileSync(new URL('../desk-pet.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
-  const missing = [...called].filter(n => !new RegExp(`(?:^|\\n)(?:async )?function ${n}\\(`).test(app + '\n' + deskPet) && !/^(toast|render|save|back|go|closeModal|openModal|alert|\$)$/.test(n));
+  const family = readFileSync(new URL('../role-family-card.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+  const missing = [...called].filter(n => !new RegExp(`(?:^|\\n)(?:async )?function ${n}\\(`).test(app + '\n' + deskPet + '\n' + family) && !/^(toast|render|save|back|go|closeModal|openModal|alert|\$)$/.test(n));
   assert.deepEqual(missing, [], '这些函数被点到但根本不存在：' + missing.join(', '));
 });
 
