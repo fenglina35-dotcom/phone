@@ -1,3 +1,5 @@
+当前最新候选为网页v1424、私人v1425 / iOS436 / bridge42，修复微信已读红点重开回归；完整继承上一交付v1423/iOS435。详见 docs/maintenance/v1424_微信未读持久化.md。Mac与iPhone仍须编译安装验收。
+
 # 私人「小手机」iOS App
 
 > 当前候选：私人完整页面 v1122；私人 iOS 1.0.248（248）；原生桥 25。本候选只改私人 Xcode 工程与私人 `PhoneWeb.bundle`，用于隔离 WKWebView／DeviceActivityReport 宿主生命周期，并提供可选择的本机存档与原生保护副本恢复。Windows 私人专项检查不等于 Mac 编译或真机修复成功；保留数据时只能覆盖安装，禁止先删除 App。

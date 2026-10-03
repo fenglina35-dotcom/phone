@@ -8,9 +8,9 @@ const pip=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/Ph
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
 test('v1184 web source keeps private 1.0.315 compatibility',()=>{
-  assert.match(app,/APP_VER='v1422 · 线下继承与八项聊天修复'/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 435;/);
-  assert.match(project,/MARKETING_VERSION = 1.0.435;/);
+  assert.match(app,/APP_VER='v1424 · 微信已读状态持久保存'/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 436;/);
+  assert.match(project,/MARKETING_VERSION = 1.0.436;/);
 });
 
 test('public music search needs no user login and reuses together-listen songs',()=>{

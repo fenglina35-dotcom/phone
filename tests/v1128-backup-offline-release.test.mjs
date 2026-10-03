@@ -27,15 +27,15 @@ function functionSource(name){
 }
 
 test('v1178 has a unique visible identity across every public entry and cache layer',()=>{
-  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1422\'/);
-  assert.match(app,/APP_VER='v1422 · 线下继承与八项聊天修复'/);
-  assert.match(shell,/__NORTH_SHELL_BUILD__='1422'/);
-  assert.match(shell,/app\.js\?v=1422&r=v1422-eight-chat-fixes-1/);
-  assert.match(index,/小手机\.html\?v=1422/);
-  assert.match(repair,/小手机\.html\?v=1422/);
-  assert.match(worker,/const BUILD='1422'/);
-  assert.match(worker,/north-shell-v1422-eight-chat-fixes-1/);
-  assert.match(hotfix,/sw\.js\?v=1422&r=v1422-eight-chat-fixes-1/);
+  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1424\'/);
+  assert.match(app,/APP_VER='v1424 · 微信已读状态持久保存'/);
+  assert.match(shell,/__NORTH_SHELL_BUILD__='1424'/);
+  assert.match(shell,/app\.js\?v=1424&r=v1424-unread-persistence-1/);
+  assert.match(index,/小手机\.html\?v=1424/);
+  assert.match(repair,/小手机\.html\?v=1424/);
+  assert.match(worker,/const BUILD='1424'/);
+  assert.match(worker,/north-shell-v1424-unread-persistence-1/);
+  assert.match(hotfix,/sw\.js\?v=1424&r=v1424-unread-persistence-1/);
   for(const [name,source] of Object.entries({app,shell,index,repair,worker,hotfix})){
     assert.doesNotMatch(source,/v?1127/,`${name} must not reuse the prior web version`);
   }

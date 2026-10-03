@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1422 · 线下继承与八项聊天修复'/);
+  assert.match(app,/APP_VER='v1424 · 微信已读状态持久保存'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1422-web-external-tts-relay-1/);
-  assert.match(html,/sw\.js\?v=1422&r=v1422-eight-chat-fixes-1/);
+  assert.match(html,/north-sw-reloaded-1424-web-external-tts-relay-1/);
+  assert.match(html,/sw\.js\?v=1424&r=v1424-unread-persistence-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{
