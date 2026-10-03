@@ -22,3 +22,13 @@
 .rf-premium p{font-size:10px;line-height:1.4;margin:6px 0 7px}.rf-premium footer{font-size:9px;margin-top:7px;padding-top:7px;line-height:1.3}
 .rf-orbit{width:225px;height:225px;top:-12px;right:-66px}
 .rf-chat-card{width:180px;padding:8px 10px}.rf-mini-head{font-size:9px;line-height:1.2}.rf-chat-card strong{font-size:21px;line-height:1.1;margin:5px 0 4px}.rf-chat-card p{margin:3px 0 5px;line-height:1.3}.rf-chat-card footer{padding-top:5px;font-size:9px;line-height:1.2}
+
+/* One continuous rose card in the role bank, without the grey outer frame. */
+.rf-bank{background:radial-gradient(ellipse at 0% 0%,#f8dfe450,transparent 65%),linear-gradient(125deg,#b18a9a,#78586d);border:1px solid #ddb9c56e;color:#fff0ed;box-shadow:inset 0 1px 0 #ffece950}
+.rf-bank-card{background:transparent;border:0;border-radius:0;padding:12px 0;margin-bottom:10px}
+.rf-bank h3,.rf-bank h4{color:#fff0ed}.rf-bank p{color:#eedce3}.rf-bank-row{border-bottom-color:#ffe9ef28}.rf-bank-row small{color:#f5e4e9;opacity:.85}.rf-bank-row b{color:#fff4ed}
+
+/* Balance and expenditure are two independent bank panels. */
+.rf-bank-balance .rf-bank-card{margin-bottom:0;padding-bottom:4px}
+.rf-bank-expenses{background:#1e1e1e;border:1px solid #ffffff0b;color:#dedede;box-shadow:none;margin-top:12px}
+.rf-bank-expenses h4{color:#dedede;margin-top:2px}.rf-bank-expenses p{color:#999}.rf-bank-expenses .rf-bank-row{border-bottom-color:#ffffff10}.rf-bank-expenses .rf-bank-row:last-child{border-bottom:0}.rf-bank-expenses .rf-bank-row small{color:#a2a2a2;opacity:1}.rf-bank-expenses .rf-bank-row b{color:#dedede}
