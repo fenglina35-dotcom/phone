@@ -1,4 +1,4 @@
-"""Create the private v1533 / iOS 438 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
+"""Create the private v1543 / iOS 438 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
 
 Unlike the earlier packaging scripts, every file is read from the committed tree
 (``git cat-file`` against HEAD) instead of the working directory. The v1235/iOS356
@@ -16,7 +16,6 @@ single, non-nested zip contains the current release rather than old deliveries.
 from hashlib import sha256
 from pathlib import Path, PurePosixPath
 from zipfile import ZIP_DEFLATED, ZipFile
-from tempfile import TemporaryDirectory
 import json
 import re
 import subprocess
@@ -24,10 +23,10 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "native/private-small-phone/XcodeProject/"
 BUNDLE = "PhoneCompanionTest/PhoneWeb.bundle/"
-PREFIX = "SmallPhone_v1533_iOS438_Private/"
-OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1533_iOS438.zip"
+PREFIX = "SmallPhone_v1543_iOS438_Private/"
+OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1543_iOS438.zip"
 
-WEB_VERSION = "1533"
+WEB_VERSION = "1543"
 MARKETING = "1.0.438"
 BUILD = "438"
 BRIDGE = "42"
@@ -614,6 +613,23 @@ def main() -> None:
     state["validation"] = {"macBuildVerified": False, "realIPhoneVerified": False, "models": "HTTP simulated in browser gates", "nodeTests": {"passed": 3112, "failed": 0}, "privateBrowserPayments": 15, "authorizedChatBothRuntimes": True}
     state["preserved"] += ["role-order-payment-remark-name", "full-history-mail-search-yellow-marks", "mail-read-forward-snapshot-theme-card", "mail-compose-bound-original-reply-and-wechat-context", "mail-account-request-isolation", "mail-svg-actions-purchaser-avatar-home-back", "request-failure-diagnostics-and-hangup-cancellation"]
     state["sourceCommit"] = text(git("rev-parse", "HEAD")).strip()
+    # Verify the last delivered overlay, preserving every file and unchanged native payload.
+    previous = ROOT.parent / "最新私人版本覆盖包_v1533_iOS438.zip"
+    assert sha256(previous.read_bytes()).hexdigest() == "c4d5c0b00070f6144b2b137fddb089c8622d4b213266538390507d0e6bb0dc50"
+    with ZipFile(previous) as old:
+        old_prefix = "SmallPhone_v1533_iOS438_Private/"
+        previous_files = {n[len(old_prefix):]:old.read(n) for n in old.namelist() if n.startswith(old_prefix)}
+    assert not (previous_files.keys() - files.keys() - {"SOURCE_STATE.json", "SHA256SUMS.json"}), "previously delivered files omitted"
+    for name, body in previous_files.items():
+        if name not in {"SOURCE_STATE.json", "SHA256SUMS.json", "请在Mac编译前先读.md"} and not name.startswith(BUNDLE):
+            assert files[name] == body, "unexpected native or signing change: " + name
+    state["preserved"] = sorted(set(state["preserved"] + json.loads(previous_files["SOURCE_STATE.json"])["preserved"] + ["pet-control-format-recovery", "grounded-memory-name-repair", "withdrawn-family-card-hidden-from-bank", "independent-multiselect-delete-green-forward", "compact-blue-phone-authorization", "home-game-entry-migration-stored-invites", "independent-girl-pet-icons-and-controls", "first-run-original-icons-custom-reset-race-guard", "removed-line-theme-migration", "hollow-white-glass-icon-rims"]))
+    state["webVersion"] = "v1542"
+    state["privateWeb"] = "v1543"
+    state["lastDeliveredPackage"] = {"name": previous.name, "sha256": sha256(previous.read_bytes()).hexdigest(), "sourceCommit": "4ba4041618e863f90d63c39db9f58f028cdd9b22"}
+    state["knownUnresolved"] = [x for x in state["knownUnresolved"] if not x.startswith("v1533-mac-")] + ["v1543-mac-build-signing-and-iphone-not-verified"]
+    state["validation"]["nodeTests"] = {"passed":3132,"failed":0}
+    state["validation"]["inheritedPreviousOverlay"] = True
     files["SOURCE_STATE.json"] = json.dumps(state, ensure_ascii=False, indent=2).encode("utf-8")
     files["SHA256SUMS.json"] = json.dumps({name:sha256(body).hexdigest() for name,body in sorted(files.items())},ensure_ascii=False,indent=2).encode("utf-8")
 
@@ -628,13 +644,11 @@ def main() -> None:
         for name in names:
             assert archive.read(name) == files[name[len(PREFIX):]], f"round-trip mismatch: {name}"
 
-    with TemporaryDirectory(prefix="private1533-verify-") as folder:
-        with ZipFile(OUTPUT) as archive:
-            assert archive.testzip() is None
-            archive.extractall(folder)
-        extracted=Path(folder)/PREFIX
-        actual={p.relative_to(extracted).as_posix():p.read_bytes() for p in extracted.rglob("*") if p.is_file()}
-        assert actual == files, "extracted file mismatch"
+    # Decompress and validate every member in memory; do not create another temporary directory.
+    with ZipFile(OUTPUT) as archive:
+        assert archive.testzip() is None
+        actual={name[len(PREFIX):]:archive.read(name) for name in archive.namelist()}
+        assert actual == files, "decompressed file mismatch"
         validate(actual)
 
     print(json.dumps({
