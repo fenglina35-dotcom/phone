@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1509'){
+if(window.__NORTH_SHELL_BUILD__!=='1511'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -615,7 +615,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1509 · 小鱼旅行 · 旅行服务';
+const APP_VER='v1511 · 小鱼旅行 · 旅行服务';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -16279,6 +16279,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
     // 他主动订机票来见你（惊喜）：生成一张登机牌卡片通知你
     let _flightBookingFailed=false;
     if(typeof NorthConcertBooking!=='undefined')content=NorthConcertBooking.consume(content,c,ok=>{if(ok)_replyAuditHandled=true;else {_replyAuditPartial=true;_flightBookingFailed=true;}});
+    if(typeof NorthTravelTaxi!=='undefined'){const taxiDraft=content;content=await NorthTravelTaxi.prepare(content,c,prompt=>chatAPI([{role:'system',content:_stableSys},...hist,{role:'assistant',content:taxiDraft},{role:'user',content:prompt},_pin],_repairMd));if(replyAccountChanged(id,note,replyToken,replyAccount,typingEl)||replyStale(id,replyToken,replyAccount))return;}
     if(typeof NorthTravelTaxi!=='undefined')content=NorthTravelTaxi.consume(content,c,ok=>{if(ok)_replyAuditHandled=true;else {_replyAuditPartial=true;_flightBookingFailed=true;}});
     if(typeof NorthTrainBooking!=='undefined')content=NorthTrainBooking.consume(content,c,ok=>{if(ok)_replyAuditHandled=true;else {_replyAuditPartial=true;_flightBookingFailed=true;}});
     if(typeof NorthFlightBooking!=='undefined')content=NorthFlightBooking.consume(content,c,ok=>{if(ok)_replyAuditHandled=true;else {_replyAuditPartial=true;_flightBookingFailed=true;}});

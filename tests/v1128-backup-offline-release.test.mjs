@@ -27,15 +27,15 @@ function functionSource(name){
 }
 
 test('v1178 has a unique visible identity across every public entry and cache layer',()=>{
-  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1508\'/);
-  assert.match(app,/APP_VER='v1508 · 小鱼旅行 · 旅行服务'/);
-  assert.match(shell,/__NORTH_SHELL_BUILD__='1508'/);
-  assert.match(shell,/app\.js\?v=1508&r=v1508-role-family-card-preview-1/);
-  assert.match(index,/小手机\.html\?v=1508/);
-  assert.match(repair,/小手机\.html\?v=1508/);
-  assert.match(worker,/const BUILD='1508'/);
-  assert.match(worker,/north-shell-v1508-role-family-card-preview-1/);
-  assert.match(hotfix,/sw\.js\?v=1508&r=v1508-role-family-card-preview-1/);
+  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1510\'/);
+  assert.match(app,/APP_VER='v1510 · 小鱼旅行 · 旅行服务'/);
+  assert.match(shell,/__NORTH_SHELL_BUILD__='1510'/);
+  assert.match(shell,/app\.js\?v=1510&r=v1510-role-family-card-preview-1/);
+  assert.match(index,/小手机\.html\?v=1510/);
+  assert.match(repair,/小手机\.html\?v=1510/);
+  assert.match(worker,/const BUILD='1510'/);
+  assert.match(worker,/north-shell-v1510-role-family-card-preview-1/);
+  assert.match(hotfix,/sw\.js\?v=1510&r=v1510-role-family-card-preview-1/);
   for(const [name,source] of Object.entries({app,shell,index,repair,worker,hotfix})){
     assert.doesNotMatch(source,/v?1127/,`${name} must not reuse the prior web version`);
   }
