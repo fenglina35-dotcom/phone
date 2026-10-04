@@ -45,10 +45,10 @@ test('private candidate is v1355 and iOS 399 while public advances independently
     assert.match(html,/private-runtime-diagnostics\.js\?v=339/);
   }
   assert.match(diagnostics,/OVERLAY_VERSION='336-daily-file-backup'/);
-  assert.match(webView,/1\.0\.437 \(437\)/);
-  assert.match(bridge,/private static let build = "1\.0\.437 \(437\)"/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 437;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.437;/g)||[]).length,12);
+  assert.match(webView,/1\.0\.438 \(438\)/);
+  assert.match(bridge,/private static let build = "1\.0\.438 \(438\)"/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 438;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.438;/g)||[]).length,12);
   assert.match(publicApp,/APP_VER='v1532 · 小鱼旅行 · 旅行服务'/);
 });
 

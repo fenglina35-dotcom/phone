@@ -187,8 +187,8 @@ test('private identity advances while public web stays unchanged',()=>{
   const webView=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
   const project=read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
   assert.match(privateApp,/APP_VER='v1533 · 小鱼旅行 · 旅行服务'/);
-  assert.match(webView,/1\.0\.437 \(437\)/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 437;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.437;/g)||[]).length,12);
+  assert.match(webView,/1\.0\.438 \(438\)/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 438;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.438;/g)||[]).length,12);
   assert.match(read('app.js'),/APP_VER='v1532 · 小鱼旅行 · 旅行服务'/);
 });
