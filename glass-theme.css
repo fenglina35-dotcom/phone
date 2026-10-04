@@ -31,6 +31,7 @@ html.north-glass-ui .home .dock:before{content:"";position:absolute;left:8%;righ
 html.north-glass-ui .home .app .ic{width:64px;height:64px;border-radius:20px;border:0!important;box-shadow:0 5px 14px rgba(9,8,11,.12)!important;isolation:isolate}
 html.north-glass-ui .home .app .ic.custom-app-icon{background:transparent!important}
 html.north-glass-ui .home .app .ic:after{content:'';position:absolute;inset:0;z-index:3;border-radius:inherit;pointer-events:none;padding:.8px;box-sizing:border-box;background:linear-gradient(140deg,rgba(255,255,255,.88),rgba(255,255,255,.32) 26%,rgba(255,255,255,.14) 50%,rgba(255,255,255,.38) 76%,rgba(255,255,255,.8));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;-webkit-backdrop-filter:brightness(1.72) saturate(1.68);backdrop-filter:brightness(1.72) saturate(1.68)}
+html.north-glass-ui.north-icon-rim-black .home .app .ic:after{background:linear-gradient(140deg,rgba(0,0,0,.86),rgba(0,0,0,.48) 26%,rgba(0,0,0,.26) 50%,rgba(0,0,0,.52) 76%,rgba(0,0,0,.8));-webkit-backdrop-filter:none;backdrop-filter:none}
 html.north-glass-ui .home .dock .app .ic{width:64px;height:64px}
 html.north-glass-ui .home .app>span{font-size:10.5px;color:#f5f5f6;text-shadow:0 1px 4px rgba(0,0,0,.9);font-weight:560}
 
@@ -704,3 +705,7 @@ html.north-real-preview .wx-contacts>.wx-alpha-rail{top:150px}
 .spy-access-title{grid-column:2;margin:0;font-size:15px;line-height:20px;letter-spacing:0}.spy-access-sub{grid-column:2;font-size:11px;line-height:18px}
 .spy-access-scope{grid-column:1/-1;gap:5px;margin-top:6px}.spy-access-scope span{padding:4px 6px;font-size:9px}
 .spy-access-foot{padding:6px 14px;font-size:9px;letter-spacing:0}.card.spy-access-card{border-radius:16px}
+
+html.north-glass-ui.north-shell-custom .statusbar{background:var(--north-shell-status-color)!important;color:var(--north-shell-status-text)!important}
+
+.sweetie-avatar-picker[data-glass-inner][style]>img,.sweetie-avatar-picker[data-glass-inner][style]>svg{background:transparent!important}

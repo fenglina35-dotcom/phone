@@ -29,6 +29,9 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"v1544/v1545",scope:"both",least:1,name:"图标黑白包边切换保留",marker:"function appIconRimSet(tone)"},
+  {release:"v1544/v1545",scope:"both",least:1,name:"玻璃内部小块独立颜色及零透明度",marker:"function glassInnerSet(key,field,value)"},
+  {release:"v1544/v1545",scope:"both",least:1,name:"顶部系统区域自由选色及跟随主题",marker:"function statusBarColorSet(value)"},
   {release:"local preview",scope:"both",least:1,name:"主屏仅保留四套玻璃主题，旧线条选择回退纯黑",marker:"return ['blue','pink','gray','black'].includes(pack)?pack:'black';"},
   {release:"v1534/v1535",scope:"both",least:1,name:"旧自动记忆按玩家姓名修复且控制标记排除",marker:"function repairGeneratedRoleMemories(list)"},
   {release:"v1534/v1535",scope:"both",least:1,name:"转发和多选删除独立模式",marker:"mode:mode==='delete'?'delete':'forward'"},

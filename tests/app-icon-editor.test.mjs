@@ -42,3 +42,12 @@ assert.match(rim, /brightness\(1\.72\) saturate\(1\.68\)/);
 assert.doesNotMatch(rim, /blur\(/);
 
 console.log("app icon editor tests passed");
+
+// Rim preference is saved independently from artwork and round-trips in beauty exports.
+for (const js of [source,privateSource]) {
+ assert.match(js,/function appIconRimSet\(tone\)[^\n]*S\.me\.appIconRim=tone==='black'\?'black':'white';applyGlassTheme\(\);save\(\);render\(\)/);
+ assert.match(js,/'appIconPack','appIconRim'/);
+ assert.match(js,/north-icon-rim-black',appIconRim\(\)==='black'/);
+ assert.match(js,/白色线条/);assert.match(js,/黑色线条/);
+}
+assert.match(glass,/north-icon-rim-black \.home \.app \.ic:after\{[^}]*rgba\(0,0,0,\.86\)[^}]*backdrop-filter:none/);

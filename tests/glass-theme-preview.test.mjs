@@ -120,7 +120,7 @@ test('private iOS top safe-area strip follows theme colors without moving the we
   const shell=fs.readFileSync(path.join(root,'native','private-small-phone','XcodeProject','PhoneCompanionTest','SmallPhonePrivateRootView.swift'),'utf8');
   assert.match(app,/function privateNativeStatusBarThemeSync\(force\)/);
   assert.match(app,/function webStatusBarThemeSync\(theme\)/);
-  assert.match(app,/request\('appearance\.statusBar',\{theme\}\)/);
+  assert.match(app,/request\('appearance\.statusBar',\{theme,color\}\)/);
   assert.match(app,/small-phone-native-ready[^\n]*privateNativeStatusBarThemeSync\(true\)/);
   for(const theme of ['pink','blue','gray','white'])assert.match(css,new RegExp(`north-shell-${theme} \\.statusbar\\{background:`));
   assert.doesNotMatch(css,/north-shell-black \.statusbar\{/);
@@ -131,7 +131,7 @@ test('private iOS top safe-area strip follows theme colors without moving the we
   assert.match(shell,/case \.blue:[\s\S]*234 \/ 255[\s\S]*244 \/ 255/);
   assert.match(shell,/case \.gray:[\s\S]*230 \/ 255[\s\S]*232 \/ 255[\s\S]*236 \/ 255/);
   assert.match(shell,/case \.white:[\s\S]*return \.white/);
-  assert.match(shell,/\.preferredColorScheme\(statusBarTheme\.colorScheme\)/);
+  assert.match(shell,/\.preferredColorScheme\(statusBarTint\?\.colorScheme \?\? statusBarTheme\.colorScheme\)/);
   assert.match(shell,/smallPhone\.statusBarTheme\.v1/);
   assert.match(shell,/LocalPhoneWebView/);
   assert.doesNotMatch(shell,/LocalPhoneWebView\s*\{[\s\S]{0,240}\}\s*\.ignoresSafeArea\(\.container, edges: \.top\)/);
@@ -264,7 +264,7 @@ test('component glass tint and opacity are user-adjustable without changing layo
 });
 
 test('dashboard photo is a direct isolated upload target and sweetie text is readable',()=>{
-  assert.match(app,/home-dashboard-photo" role="button" tabindex="0" onclick="event\.stopPropagation\(\);dashboardPickPhotoHome\(\)"/);
+  assert.match(app,/home-dashboard-photo"\$\{glassInnerAttrs\('photo'\)\} role="button" tabindex="0" onclick="event\.stopPropagation\(\);dashboardPickPhotoHome\(\)"/);
   assert.match(app,/function dashboardPickPhotoHome\(\)/);
   assert.match(css,/\.home-sweetie-card p\{[^}]*font-size:12px/);
   assert.match(app,/function sweetiePickAvatar\(which\)/);
@@ -361,4 +361,27 @@ test('removed line pack migrates to black in both runtimes and cannot be selecte
     }
     assert.doesNotMatch(source,/homeLineThemeSet|appIconPackSet\('line'\)|线条主题配色/);
   }
+});
+
+test('inner glass controls preserve zero, isolate themes and reset only one block',()=>{
+ const ctx={S:{me:{_glassAppearanceSchema:3,appIconPack:'black',glassWidgetAppearances:{}}},save(){},render(){},$(){return null}};
+ vm.createContext(ctx);
+ vm.runInContext("const GLASS_INNER_PARTS={heart:'heart',time:'time'};"+['appIconPack','widgetHex','widgetRgba','glassWidgetDefaultTint','glassWidgetAppearanceEnsure','glassWidgetAppearance','glassInnerAppearance','glassInnerOpacity','glassInnerTint','glassInnerAttrs','glassInnerSet'].map(functionSource).join('\n'),ctx);
+ vm.runInContext("glassInnerSet('heart','opacity',0);glassInnerSet('time','opacity',70)",ctx);
+ assert.equal(vm.runInContext("glassInnerOpacity('heart')",ctx),0);
+ assert.match(vm.runInContext("glassInnerAttrs('heart')",ctx),/0\.000/);
+ ctx.S.me.appIconPack='blue';assert.equal(vm.runInContext("glassInnerOpacity('heart')",ctx),35);
+ ctx.S.me.appIconPack='black';vm.runInContext("glassInnerSet('heart','reset')",ctx);
+ assert.equal(vm.runInContext("glassInnerOpacity('time')",ctx),70);
+ assert.doesNotMatch(vm.runInContext("glassInnerAttrs('heart')",ctx),/style=/);
+});
+
+test('system status custom colors validate and remain separate from theme selection',()=>{
+ const ctx={S:{me:{statusBarColor:'#123abc'}}};vm.createContext(ctx);vm.runInContext(functionSource('statusBarCustomColor'),ctx);
+ assert.equal(ctx.statusBarCustomColor(),'#123abc');ctx.S.me.statusBarColor='red';assert.equal(ctx.statusBarCustomColor(),'');
+ assert.match(functionSource('privateNativeStatusBarThemeSync'),/stamp=theme\+'\|'\+color/);
+ assert.match(css,/north-shell-custom \.statusbar\{background:var\(--north-shell-status-color\)/);
+ const swift=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/SmallPhonePrivateRootView.swift'),'utf8');
+ assert.match(swift,/statusBarTint\?\.color \?\? statusBarTheme\.color/);
+ assert.match(swift,/0\.299 \* red \+ 0\.587 \* green \+ 0\.114 \* blue/);
 });

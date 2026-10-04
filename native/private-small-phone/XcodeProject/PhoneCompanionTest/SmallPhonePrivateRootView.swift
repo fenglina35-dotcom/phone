@@ -42,6 +42,24 @@ private enum SmallPhoneStatusBarTheme: String {
     }
 }
 
+private struct SmallPhoneStatusBarTint {
+    let red: Double
+    let green: Double
+    let blue: Double
+    init?(hex: String) {
+        guard hex.range(of: "^#[0-9a-fA-F]{6}$", options: .regularExpression) != nil,
+              let value = UInt32(hex.dropFirst(), radix: 16) else { return nil }
+        red = Double((value >> 16) & 255) / 255
+        green = Double((value >> 8) & 255) / 255
+        blue = Double(value & 255) / 255
+    }
+    var color: Color { Color(red: red, green: green, blue: blue) }
+    var colorScheme: ColorScheme { 0.299 * red + 0.587 * green + 0.114 * blue < 0.55 ? .dark : .light }
+    static var persisted: SmallPhoneStatusBarTint? {
+        SmallPhoneStatusBarTint(hex: UserDefaults.standard.string(forKey: "smallPhone.statusBarColor.v1") ?? "")
+    }
+}
+
 private struct SmallPhoneUsageReportSurface: View {
     let filterEnd: Date
 
@@ -271,13 +289,14 @@ struct SmallPhonePrivateRootView: View {
     // Start with the persisted theme so first-page rendering does not need an
     // immediate root-state transition that can disturb the WKWebView host.
     @State private var statusBarTheme = SmallPhoneStatusBarTheme.persisted
+    @State private var statusBarTint = SmallPhoneStatusBarTint.persisted
 
     var body: some View {
         ZStack {
             // The system-owned top safe area stays outside the web view, but its
             // background and icon contrast now follow the selected phone theme.
             // This does not push the page under the Dynamic Island.
-            statusBarTheme.color
+            (statusBarTint?.color ?? statusBarTheme.color)
                 .ignoresSafeArea(.container, edges: .top)
 
             LocalPhoneWebView(
@@ -339,7 +358,7 @@ struct SmallPhonePrivateRootView: View {
         // The private WKWebView must continue beneath the home-indicator area.
         // The top status area remains system-owned while its color follows theme.
         .ignoresSafeArea(.container, edges: .bottom)
-        .preferredColorScheme(statusBarTheme.colorScheme)
+        .preferredColorScheme(statusBarTint?.colorScheme ?? statusBarTheme.colorScheme)
         // v1179 baseline: keep one stable WKWebView frame and let WebKit move
         // the focused composer from the real chat bottom. SwiftUI must not
         // resize the same page on a second keyboard animation timeline.
@@ -354,6 +373,7 @@ struct SmallPhonePrivateRootView: View {
                 return
             }
             statusBarTheme = theme
+            statusBarTint = SmallPhoneStatusBarTint(hex: notification.userInfo?["color"] as? String ?? "")
         }
         .fullScreenCover(isPresented: $showsDeviceManagement) {
             NavigationStack {

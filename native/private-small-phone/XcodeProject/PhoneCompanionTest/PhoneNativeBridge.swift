@@ -15,7 +15,7 @@ enum SmallPhoneDiagnosticsStore {
     )
     private static let maximumBytes = 256 * 1_024
     private static let maximumLines = 200
-    private static let build = "1.0.438 (438)"
+    private static let build = "1.0.439 (439)"
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -286,21 +286,16 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             let requested = arguments["theme"] as? String ?? "black"
             let allowed = Set(["black", "pink", "blue", "gray", "white"])
             let theme = allowed.contains(requested) ? requested : "black"
-            let previous = UserDefaults.standard.string(
-                forKey: "smallPhone.statusBarTheme.v1"
-            ) ?? "black"
-            UserDefaults.standard.set(
-                theme,
-                forKey: "smallPhone.statusBarTheme.v1"
-            )
-            if previous != theme {
-                NotificationCenter.default.post(
-                    name: .smallPhoneStatusBarThemeChanged,
-                    object: nil,
-                    userInfo: ["theme": theme]
-                )
+            let rawColor = arguments["color"] as? String ?? ""
+            let color = rawColor.range(of: "^#[0-9a-fA-F]{6}$", options: .regularExpression) != nil ? rawColor : ""
+            let previous = UserDefaults.standard.string(forKey: "smallPhone.statusBarTheme.v1") ?? "black"
+            let previousColor = UserDefaults.standard.string(forKey: "smallPhone.statusBarColor.v1") ?? ""
+            UserDefaults.standard.set(theme, forKey: "smallPhone.statusBarTheme.v1")
+            UserDefaults.standard.set(color, forKey: "smallPhone.statusBarColor.v1")
+            if previous != theme || previousColor != color {
+                NotificationCenter.default.post(name: .smallPhoneStatusBarThemeChanged, object: nil, userInfo: ["theme": theme, "color": color])
             }
-            reply(requestID: requestID, result: ["theme": theme])
+            reply(requestID: requestID, result: ["theme": theme, "color": color])
         case "alarm.sync":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             performAlarmSync(requestID: requestID, arguments: arguments)
