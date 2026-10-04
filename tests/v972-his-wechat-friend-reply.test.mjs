@@ -73,7 +73,42 @@ test('the send and UI paths use the reliable per-friend queue',()=>{
   assert.doesNotMatch(source,/let _hisReplyBusy=false/);
   assert.match(fn('renderHisChat'),/hisFriendReplyBusy\(cid,fid\)/);
   assert.match(fn('renderHisChat'),/对方正在输入/);
-  assert.match(source,/APP_VER='v1554 · 小鱼旅行 · 旅行服务'/);
+  assert.match(source,/APP_VER='v1566 · 小鱼旅行 · 旅行服务'/);
   assert.match(bundle,/queueHisFriendReply\(cid,fid\)/);
   assert.doesNotMatch(bundle,/let _hisReplyBusy=false/);
+});
+
+
+function rolePaymentHarness(){
+  const role={id:'role',name:'角色',wallet:100},messages=[],data={friends:[],payments:[]},S={me:{active:'main',name:'玩家',balance:20},hisWx:{role:data},spy:{}};
+  let seq=0;
+  const context=vm.createContext({S,Date,Number,JSON,String,Set,Math,uid:()=>String(++seq),actId:()=>S.me.active,getC:id=>id==='role'?role:null,hisWxData:()=>data,msgs:()=>messages,save:()=>{},hisLog:()=>{},toast:()=>{},back:()=>{},render:()=>{},fmtDT:()=>'',hisSpyFriend:()=>({lines:[]})});
+  vm.runInContext(`let _hisLogin={cid:'role'},_paySend=null;${['hisChatAllowed','hisMessageDescription','hisChatAppend','spyBalance','setSpyBalance','hisPayParts','hisPaymentFind','hisPaymentMessage','hisPaymentSettle','hisPaymentsExpire','hisPaymentCanReceive','hisPaySendSubmit'].map(fn).join('\n')}
+    globalThis.send=(amount,type='transfer')=>hisPaySendSubmit({id:JSON.stringify(['role','__me']),account:'main',session:_hisLogin,kind:type,note:''},amount);
+    globalThis.append=m=>hisChatAppend('role','__me',m);globalThis.expire=hisPaymentsExpire;globalThis.settle=hisPaymentSettle;globalThis.canReceive=hisPaymentCanReceive;`,context);
+  return {context,role,messages,data,S};
+}
+
+test('role-originated media shares the player conversation and keeps its true operator',()=>{
+  const h=rolePaymentHarness();h.context.append({type:'image',src:'data:image/png;base64,fixture'});
+  h.context.append({type:'sticker',img:'fixture',meaning:'笑'});
+  assert.deepEqual(h.messages.map(m=>m.type),['image','sticker']);
+  assert.ok(h.messages.every(m=>m.role==='assistant'&&m._forged&&m.id));
+});
+
+test('role payment debits only the role, retains deleted pending money, and refunds once',()=>{
+  const h=rolePaymentHarness();h.context.send(12.34);
+  assert.equal(h.role.wallet,87.66);assert.equal(h.S.me.balance,20);
+  assert.equal(h.messages[0]._hisPaymentId,h.data.payments[0].id);
+  h.context.send(999);assert.equal(h.data.payments.length,1);
+  const p=h.data.payments[0];h.messages.splice(0);p.time-=86400001;
+  h.context.expire();h.context.expire();assert.equal(h.role.wallet,100);assert.equal(p.state,'refunded');
+  assert.equal(h.S.spy.role.wallet.length,2);assert.equal(h.S.spy.role.wallet[1].amount,12.34);
+});
+
+test('role payments reject stale accounts and preserve explicit zero and phone-wallet balances',()=>{
+  const h=rolePaymentHarness();h.S.me.active='other';h.context.send(5);assert.equal(h.role.wallet,100);assert.equal(h.data.payments.length,0);
+  h.S.me.active='main';h.role.wallet=0;h.S.spy.role={balance:100};h.context.send(5);assert.equal(h.data.payments.length,0);
+  h.role.wallet=null;h.S.spy.role.balance=10;h.context.send(5);assert.equal(h.S.spy.role.balance,5);assert.equal(h.role.wallet,null);
+  const p=h.data.payments[0];h.context.settle(p,'received');h.context.settle(p,'refunded');assert.equal(h.S.spy.role.balance,5);assert.equal(p.state,'received');
 });

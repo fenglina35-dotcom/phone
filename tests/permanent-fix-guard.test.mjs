@@ -29,10 +29,14 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
-  {release:"v1554/v1555 local",scope:"both",least:1,name:"真人消息以独立发送标识核对丢失响应",marker:"async function pfRecoverSend(scope,target,body,p)"},
-  {release:"v1554/v1555 local",scope:"both",least:1,name:"相同正文分别匹配且兼容旧待发消息",marker:"function pfPendingMatches(local,server)"},
-  {release:"v1554/v1555 local",scope:"both",least:2,name:"确认发送后本机错误不退款",marker:"if(confirmed){"},
-  {release:"v1554/v1555 local",scope:"both",least:1,name:"好友连接诊断不采集正文与密钥",marker:"function phoneFriendDiagnostic()"},
+  {release:"v1566/v1567",scope:"both",least:1,name:"角色微信图片表情付款共用玩家聊天及代发身份",marker:"function hisChatAppend(cid,fid,m)"},
+  {release:"v1566/v1567",scope:"both",least:1,name:"角色微信付款只扣角色钱包",marker:"function hisPaySendSubmit(s,amount)"},
+  {release:"v1566/v1567",scope:"both",least:1,name:"角色付款账本独立于消息且超时原路退还",marker:"function hisPaymentsExpire()"},
+  {release:"v1566/v1567",scope:"both",least:1,name:"角色手机独立外观与原应用入口保留",marker:"function spyHome("},
+  {release:"v1566/v1567 local",scope:"both",least:1,name:"真人消息以独立发送标识核对丢失响应",marker:"async function pfRecoverSend(scope,target,body,p)"},
+  {release:"v1566/v1567 local",scope:"both",least:1,name:"相同正文分别匹配且兼容旧待发消息",marker:"function pfPendingMatches(local,server)"},
+  {release:"v1566/v1567 local",scope:"both",least:2,name:"确认发送后本机错误不退款",marker:"if(confirmed){"},
+  {release:"v1566/v1567 local",scope:"both",least:1,name:"好友连接诊断不采集正文与密钥",marker:"function phoneFriendDiagnostic()"},
   {release:"v1550/v1551",scope:"both",least:1,name:"图标恢复载入解除错误隐藏",marker:"this.style.display='';if(this.previousElementSibling)"},
   {release:"v1550/v1551",scope:"both",least:1,name:"游戏图片取消超时请求并自动恢复",file:"games/pixel-home/assets.js",marker:"async function loadImageRecover(url,label)"},
   {release:"v1550/v1551",scope:"both",least:1,name:"像素少女先保存再返回不等待磁盘",file:"games/pixel-home/game.js",marker:"cancelCare(false);if(!save())return;window.PixelHomeBridge.request('exit')"},
