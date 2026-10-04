@@ -1,6 +1,6 @@
-const BUILD='1548';
-const HOTFIX='v1548-role-family-card-preview-1';
-const SHELL_CACHE='north-shell-v1548-role-family-card-preview-1';
+const BUILD='1552';
+const HOTFIX='v1552-role-family-card-preview-1';
+const SHELL_CACHE='north-shell-v1552-role-family-card-preview-1';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
@@ -15,7 +15,7 @@ const CORE_FILES=[
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
   {url:'./app.js?v='+BUILD+'&r='+HOTFIX,kind:'app'},
   {url:'./cohab-theater.js?v='+BUILD+'&r=v1274-web-cohab-guests-1',kind:'theater'},
-  {url:'./web-hotfix.js?v='+BUILD+'&r=v1548-role-family-card-preview-1',kind:'hotfix'},
+  {url:'./web-hotfix.js?v='+BUILD+'&r=v1552-role-family-card-preview-1',kind:'hotfix'},
   {url:'./ai-account.js?v='+BUILD,kind:'ai'},
   {url:'./couple-watch.js?v='+BUILD,kind:'watch'},
   {url:'./couple-watch-runtime.js?v='+BUILD,kind:'watchRuntime'}
@@ -129,7 +129,7 @@ function validShellText(kind,text){
     &&text.includes('theaterRevealActorItems')
     &&!text.includes('cohabReplyCore=async');
   if(kind==='hotfix')return text.length>800
-    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1548-role-family-card-preview-1'")
+    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1552-role-family-card-preview-1'")
     &&text.includes('reconcileExpiredWxLogin')
     &&text.includes('withBaseImageCheck')
     &&text.includes('isStoredImgRef');
@@ -235,7 +235,7 @@ self.addEventListener('fetch',event=>{
     event.respondWith((async()=>{
       let cache;
       const key=new Request(url.origin+url.pathname+url.search);
-      try{cache=await caches.open(SHELL_CACHE);const cached=await cache.match(key);if(cached)return cached;}catch(_){/* Storage is optional, including on low-space mobile browsers. */}
+      if(!url.searchParams.has('northImageRetry'))try{cache=await caches.open(SHELL_CACHE);const cached=await cache.match(key);if(cached)return cached;}catch(_){/* Storage is optional, including on low-space mobile browsers. */}
       const response=await fetch(request);
       if(response.ok&&cache){const save=cache.put(key,response.clone()).catch(()=>{});event.waitUntil(save);}
       return response;

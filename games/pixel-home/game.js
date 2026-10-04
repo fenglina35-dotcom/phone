@@ -249,7 +249,7 @@
   function applyMorning(info){if(!info)return;if(info.wardrobe&&info.day&&state.wardrobeSchedule!==(info.scheduleKey||info.day)&&$('#wardrobe-overlay').hidden){window.RoseWardrobe?.applyState(info.wardrobe);state.wardrobeDay=info.day;state.wardrobeSchedule=info.scheduleKey||info.day;save();if(info.setName)log((info.period==='evening'?'今晚换上睡衣：':'今天的晨间穿搭：')+info.setName);}if(info.error&&info.error!==lastMorningError)say('角色选衣暂未完成，保留当前搭配；重新进入小屋可重试。',6500);lastMorningError=info.error||'';}
   document.addEventListener('pixel-home:morning',e=>applyMorning(e.detail));
   document.addEventListener('pixel-home:invalid',()=>{hostLive=false;cancelCare(false);cancelPointers();cancelAnimationFrame(raf);document.getElementById('game').inert=true;const overlay=document.createElement('div');overlay.className='loading';overlay.textContent='情侣绑定或账号已改变，请返回游戏大厅重新进入。';document.body.append(overlay);});
-  $('#exit-home').onclick=async()=>{cancelCare(false);save();await lastSave;window.PixelHomeBridge.request('exit').catch(e=>say(e.message));};
+  $('#exit-home').onclick=()=>{cancelCare(false);if(!save())return;window.PixelHomeBridge.request('exit').catch(e=>say(e.message));};
   setInterval(()=>{if(ready&&hostLive&&!document.hidden&&$('#wardrobe-overlay').hidden)window.PixelHomeBridge.request('morning',{day:state.wardrobeSchedule||state.wardrobeDay}).then(applyMorning).catch(()=>{});},1000);
   function suspend(){cancelCare(false);cancelPointers();setMirror(false,true);cancelAnimationFrame(raf);raf=0;advance();}
   function resume(){if(!ready||document.hidden||!hostLive)return;advance();renderRooms();renderTray();vitals();decorate();lastFrame=performance.now();if(!raf)raf=requestAnimationFrame(draw);}

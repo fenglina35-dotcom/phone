@@ -15,7 +15,7 @@ window.PixelHomeAssets=(()=>{
   function loadImage(url,label='图片',timeout=45000){
     return new Promise((resolve,reject)=>{
       const image=new Image();let done=false;
-      const finish=error=>{if(done)return;done=true;clearTimeout(timer);image.onload=image.onerror=null;error?reject(error):resolve(image);};
+      const finish=error=>{if(done)return;done=true;clearTimeout(timer);image.onload=image.onerror=null;if(error)image.src='';error?reject(error):resolve(image);};
       const timer=setTimeout(()=>finish(new Error('图片读取超时：'+label)),timeout);
       image.onload=()=>finish(image.naturalWidth>0?null:new Error('图片内容为空：'+label));
       image.onerror=()=>finish(new Error('图片读取失败：'+label));
@@ -24,9 +24,18 @@ window.PixelHomeAssets=(()=>{
       if(image.complete&&image.naturalWidth>0)finish();
     });
   }
+  async function loadImageRecover(url,label){
+    let error;
+    // A timeout must release its request; retry once with a fresh cache key.
+    for(let attempt=0;attempt<2;attempt++){
+      const next=new URL(url,base);if(attempt)next.searchParams.set('northImageRetry',String(Date.now()));
+      try{return await loadImage(next.href,label);}catch(e){error=e;}
+    }
+    throw error;
+  }
   async function load(name){
     if(!/^[a-z0-9-]+\.png$/.test(name))throw new Error('Invalid bundled image');
-    if(location.protocol!=='file:')return loadImage(new URL('assets/'+name,base).href,name);
+    if(location.protocol!=='file:')return loadImageRecover(new URL('assets/'+name,base).href,name);
     // Keep native asset-data loads serial: these files share one temporary slot.
     try{
       await loadScript('asset-data/'+name+'.js',15000);
@@ -51,7 +60,7 @@ window.PixelHomeAssets=(()=>{
     const images={};let cursor=0;
     // Bound concurrent image decodes to avoid a large startup memory spike.
     await Promise.all(Array.from({length:3},async()=>{
-      while(cursor<entries.length){const [name,url]=entries[cursor++];images[name]=await loadImage(url,name);}
+      while(cursor<entries.length){const [name,url]=entries[cursor++];images[name]=await (location.protocol==='file:'?loadImage(url,name):loadImageRecover(url,name));}
     }));
     return{catalog,images};
   }

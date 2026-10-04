@@ -114,8 +114,9 @@ test('a request killed by backgrounding says so instead of blaming the network',
   assert.equal(ctx.callBackgroundInterrupted({ elapsedMs: 4000 }, 0, now), false, '从来没切过后台');
   const text = source('callFailureText');
   assert.match(text, /callBackgroundInterrupted\(e,hiddenMark\)/);
-  assert.match(text, /切到后台/);
-  assert.ok(text.indexOf('切到后台') < text.indexOf('网络连接中断'), '切后台要排在笼统的网络提示前面');
+  assert.match(text, /处于或切入后台/);
+  assert.match(text, /尚不能确定连接失败原因/);
+  assert.doesNotMatch(text, /这句没送出去/, '后台状态不能证明请求没有送达');
 });
 
 /* 通话被长度上限截断时以前直接断在半句：微信的 complete 写死 true，通话写的是 !_rawOutput，

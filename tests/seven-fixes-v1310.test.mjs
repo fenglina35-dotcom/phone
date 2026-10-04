@@ -90,14 +90,16 @@ test('通话里的动作描写永远是中文', () => {
 test('在后台说话不该报成「网络连接中断」', () => {
   /* 她说「打电话退到后台，在浮框里跟他说话，会弹一个网络问题让我重试，
      他是在我发出去的瞬间就弹出来的，正常识别也不可能识别这么快」。
-     不是网络的事：页面在后台被系统掐了。原来只认「请求进行当中才切后台」，
+     后台状态仅是相关线索，不能证明请求被系统掐断。原来只认「请求进行当中才切后台」，
      她是【本来就在后台】，切后台的时间戳远早于这次请求，所以判不出来。 */
   const f = src(app, 'callBackgroundInterrupted');
   assert.match(f, /if\(typeof document!=='undefined'&&document\.hidden\)return true;/,
     '「现在就还在后台」这一种要认');
   assert.match(f, /return mark>=now-elapsed-3000;/, '原来那种「请求中途切后台」也得继续认');
   assert.match(f, /if\(!mark\|\|mark>now\)return false;/, '从来没切过后台就别乱认');
-  assert.match(src(app, 'callFailureText'), /callBackgroundInterrupted\(e,hiddenMark\)\)return'\(刚才小手机切到后台了/);
+  assert.match(src(app, 'callFailureText'), /callBackgroundInterrupted\(e,hiddenMark\)/);
+  assert.match(src(app, 'callFailureText'), /处于或切入后台/);
+  assert.doesNotMatch(src(app, 'callFailureText'), /这句没送出去/);
 });
 
 test('地图跟着人物资料里的城市走', () => {

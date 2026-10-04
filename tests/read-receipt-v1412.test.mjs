@@ -10,7 +10,7 @@ for(const [label,p,h] of [['web','app.js','小手机.html'],['private',P+'app.js
   test(`${label}: read receipts for roles and real friends share one switch in 角色、时间与消息`,()=>{
     assert.match(s,/function readReceiptOn\(\)\{return !\(S\.settings&&S\.settings\.readReceipt===false\);\}/);
     assert.match(s,/<span>微信已读<br>/);assert.match(s,/onclick="readReceiptToggle\(\)"/);
-    assert.match(s,/function pfReadStatus\(m,scope,gid\)\{if\(!readReceiptOn\(\)\)return '';/);
+    assert.match(s,/function pfReadStatus\(m,scope,gid\)\{[^\n]*if\(!readReceiptOn\(\)\)return '';/);
     assert.match(s,/function pfAckRead\(mid\)\{[^}]*readReceiptOn\(\)/,'关掉后不再告诉真人好友读没读');
   });
   test(`${label}: the role marks her messages read when he starts replying, shown on a line the premium theme does not hide`,()=>{

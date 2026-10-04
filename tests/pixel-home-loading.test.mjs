@@ -38,3 +38,17 @@ test('wardrobe image decoding has a bounded concurrency and canvas fallback',asy
   assert.equal(Object.keys((await context.window.PixelHomeAssets.loadCatalog()).images).length,15);assert.equal(peak,3);
   const canvas=context.window.PixelHomeAssets.createCanvas(1024,1536);assert.equal(canvas.width,1024);assert.equal(canvas.height,1536);
 });
+
+for(const runtime of ['games/pixel-home/assets.js','native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/games/pixel-home/assets.js'])test(runtime+' recovers a stalled first image attempt without restarting the game',async()=>{
+ let requests=0,cancelled=0;
+ class Image {naturalWidth=0;complete=false;set src(value){if(!value){cancelled++;return;}requests++;if(requests===2){this.naturalWidth=20;this.complete=true;queueMicrotask(()=>this.onload?.());}}}
+ const context={window:{},Image,URL,location:{protocol:'https:',href:'https://phone.test/games/pixel-home/'},document:{currentScript:{src:'https://phone.test/games/pixel-home/assets.js'}},setTimeout:(fn,ms)=>setTimeout(fn,ms>=1000?5:ms),clearTimeout};
+ vm.runInNewContext(fs.readFileSync(new URL(runtime,root),'utf8'),context);
+ assert.equal((await context.window.PixelHomeAssets.load('rooms.png')).naturalWidth,20);assert.equal(requests,2);assert.ok(cancelled>=1);
+});
+
+for(const file of ['games/pixel-home/game.js','native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/games/pixel-home/game.js'])test(file+' exit queues save before navigation but does not wait for slow disk',async()=>{
+ const js=fs.readFileSync(new URL(file,root),'utf8'),line=js.split('\n').findLast(l=>l.includes("$('#exit-home').onclick="));
+ let handler;const calls=[];const context={$:()=>({set onclick(fn){handler=fn;}}),cancelCare:()=>calls.push('cancel'),save:()=>{calls.push('save');return true;},lastSave:new Promise(()=>{}),window:{PixelHomeBridge:{request:()=>{calls.push('exit');return Promise.resolve();}}},say:()=>{}};
+ vm.runInNewContext(line,context);handler();await new Promise(r=>setTimeout(r,0));assert.deepEqual(calls,['cancel','save','exit']);
+});

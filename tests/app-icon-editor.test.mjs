@@ -38,7 +38,7 @@ assert.ok(rim);
 assert.match(rim, /padding:\.8px/);
 assert.match(rim, /mask-composite:exclude/);
 assert.match(rim, /pointer-events:none/);
-assert.match(rim, /brightness\(1\.72\) saturate\(1\.68\)/);
+assert.doesNotMatch(rim, /brightness\(/, "masked icon rims must not brighten the whole imported artwork");
 assert.doesNotMatch(rim, /blur\(/);
 
 console.log("app icon editor tests passed");
@@ -51,3 +51,12 @@ for (const js of [source,privateSource]) {
  assert.match(js,/白色线条/);assert.match(js,/黑色线条/);
 }
 assert.match(glass,/north-icon-rim-black \.home \.app \.ic:after\{[^}]*rgba\(0,0,0,\.86\)[^}]*backdrop-filter:none/);
+
+// A successful late image load must undo the temporary error hiding.
+for(const js of [source,privateSource]){
+ const fn=js.slice(js.indexOf('function aIco('),js.indexOf('// 通用线条图标',js.indexOf('function aIco(')));
+ const handler=fn.match(/onload="([^"]+)"/)[1];
+ const image={style:{display:'none'},previousElementSibling:{hidden:false}};
+ Function(handler).call(image);
+ assert.equal(image.style.display,'');assert.equal(image.previousElementSibling.hidden,true);
+}

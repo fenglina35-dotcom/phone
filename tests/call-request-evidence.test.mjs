@@ -26,3 +26,15 @@ for(const prefix of ['',bundle]){
   let abort;const ctx={AbortController,setTimeout:f=>{abort=f;return 1;},clearTimeout(){},fetch:(_url,opt)=>new Promise((_r,reject)=>{opt.signal.addEventListener('abort',()=>reject(Object.assign(new Error('operation aborted'),{name:'AbortError'})));}),Date};vm.createContext(ctx);vm.runInContext(fn(read(prefix+'app.js'),'fetchT'),ctx);const p=ctx.fetchT('https://fixture.invalid',{},30);abort();await assert.rejects(p,e=>e.transportTimedOut===true&&e.transportTimeoutMs===30&&e.transportName==='AbortError');
  });
 }
+
+for(const prefix of ['',bundle]) {
+ test(prefix+'empty call content uses the existing attempt budget',async()=>{
+  let n=0;const ctx={Date,_call:{session:'live'},wechatAuxConfigured:()=>false,sleep:async()=>{},chatAPI:async()=>++n===1?'   ':'我在。'};vm.createContext(ctx);const s=read(prefix+'app.js');vm.runInContext(fn(s,'callRetryableFailure')+'\n'+fn(s,'callChatWithRetry'),ctx);assert.equal(await ctx.callChatWithRetry([],{},{}),'我在。');assert.equal(n,2);
+ });
+ test(prefix+'all empty responses fail without extra attempts',async()=>{
+  let n=0;const ctx={Date,_call:{session:'live'},wechatAuxConfigured:()=>true,sleep:async()=>{},wechatModelRouteNotice(){},chatAPI:async()=>{n++;return '';}};vm.createContext(ctx);const s=read(prefix+'app.js');vm.runInContext(fn(s,'callRetryableFailure')+'\n'+fn(s,'callChatWithRetry'),ctx);await assert.rejects(ctx.callChatWithRetry([],{},{}),e=>e.code==='call-empty-response');assert.equal(n,3);
+ });
+ test(prefix+'transport and background hints do not claim an unproven cause',()=>{
+  const ctx={Date,document:{hidden:true},_pageHiddenMark:1};vm.createContext(ctx);const s=read(prefix+'app.js');vm.runInContext(fn(s,'callBackgroundInterrupted')+'\n'+fn(s,'callFailureText')+'\n'+fn(s,'callRetryableFailure'),ctx);const text=ctx.callFailureText({transportRaw:'Load failed',message:'网络连接失败',elapsedMs:100},1);assert.doesNotMatch(text,/没送出去|刚才小手机切到后台了/);assert.match(text,/尚不能确定/);assert.match(ctx.callFailureText({transportTimedOut:true,transportRaw:'Load failed'}),/等待超时/);assert.equal(ctx.callRetryableFailure({transportTimedOut:true,transportRaw:'Load failed',elapsedMs:190000}),false);assert.match(ctx.callFailureText({code:'call-empty-response'}),/正文/);
+ });
+}

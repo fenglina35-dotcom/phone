@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1548'){
+if(window.__NORTH_SHELL_BUILD__!=='1552'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -226,17 +226,28 @@ function pfInferGroupRead(gid,rid,ts){const p=phoneFriendState(),arr=pfMsgList(p
 function pfReconcileReadInference(){const p=phoneFriendState();let ch=false;Object.keys(p.messages||{}).forEach(id=>{let latest=0;pfMsgList(p.messages,id).forEach(m=>{if(m.from===id)latest=Math.max(latest,m.time||0);});if(latest)ch=pfInferFriendRead(id,id,latest)||ch;});Object.keys(p.groupMessages||{}).forEach(gid=>{const latestBySender=new Map();pfMsgList(p.groupMessages,gid).forEach(m=>{if(m.from&&m.from!==p.id)latestBySender.set(m.from,Math.max(latestBySender.get(m.from)||0,m.time||0));});latestBySender.forEach((ts,id)=>{ch=pfInferGroupRead(gid,id,ts)||ch;});});return ch;}
 function pfMarkRead(id){const p=phoneFriendState();id=(''+id).toUpperCase();p.friendRead[id]=Date.now();pfMsgList(p.messages,id).forEach(m=>{if(m.from===id&&!m.recalled&&!pfPayloadIsPay(m)&&pfReadIds(m).indexOf(p.id)<0){pfSetReadBy(m,p.id);pfAckRead(m.id);}});lockClearTarget({type:'pfchat',id},true);const durable=wxUnreadJournalWrite();save(durable?undefined:0);setTimeout(()=>pfReadInPlace(id),0);}
 function pfMarkGroupRead(gid){const p=phoneFriendState();if(gid){p.groupRead[gid]=Date.now();pfMsgList(p.groupMessages,gid).forEach(m=>{if(m.from!==p.id&&!m.recalled&&!pfPayloadIsPay(m)&&pfReadIds(m).indexOf(p.id)<0){pfSetReadBy(m,p.id);pfAckRead(m.id);}});lockClearTarget({type:'pfgroup',id:gid},true);const durable=wxUnreadJournalWrite();save(durable?undefined:0);}}
+function pfTagOutgoing(body,localId){const pl=pfUnpack(body)||{type:'text',text:body};pl._clientSendId=phoneFriendState().id+'_'+localId;return pfPack(pl)||body;}
+function pfPendingMatches(local,server){const body=String(server.body||server.text||''),a=pfUnpack(local.text||''),b=pfUnpack(body),ta=a&&a._clientSendId,tb=b&&b._clientSendId;if(ta||tb)return !!ta&&ta===tb;return local.text===body&&Date.now()-(local.time||0)<120000;}
+function pfSetSendState(scope,target,localId,state){const p=phoneFriendState(),arr=pfMsgList(scope==='group'?p.groupMessages:p.messages,target),m=arr.find(x=>x.id===localId);if(m)m.sendState=state;if(state!=='sending')try{save();}catch(_){}return m;}
+async function pfRecoverSend(scope,target,body,p){const token=(pfUnpack(body)||{})._clientSendId;if(!token)return false;const list=()=>pfMsgList(scope==='group'?p.groupMessages:p.messages,target),confirmed=()=>list().some(x=>!String(x.id||'').startsWith('local_')&&(pfMsgPayload(x)||{})._clientSendId===token);if(confirmed())return true;try{const d=await pfRpc('phone_friend_sync',{p_phone_id:p.id,p_secret:p.secret,p_since_ms:Math.max(0,Date.now()-300000)},15000);if(phoneFriendState()!==p)return false;const rows=scope==='group'?d&&d.group_messages:d&&d.messages;const m=(Array.isArray(rows)?rows:[]).find(x=>String(x.from_id||x.from||'').toUpperCase()===p.id&&(scope==='group'?String(x.group_id||x.gid||'')===target:String(x.to_id||x.to||'').toUpperCase()===target)&&(pfMsgPayload(x)||{})._clientSendId===token);if(m){if(scope==='group')pfStoreGroupMessage(m);else pfStoreMessage(m);try{save();}catch(_){}return true;}return confirmed();}catch(_){return phoneFriendState()===p&&confirmed();}}
+function pfTransportRecord(fn,stage,base,status,start,error){try{const p=phoneFriendState(),rows=p.transportDiagnostics||(p.transportDiagnostics=[]);rows.push({at:Date.now(),fn:String(fn||'').replace(/[^a-z0-9_]/gi,'').slice(0,64),stage,route:base===GATE_URL?'direct':base===PF_RELAY_BASE?'relay':'none',status:+status||0,duration:Math.max(0,Date.now()-start),error:error?String(error.name||'Error').replace(/[^a-z]/gi,'').slice(0,32):''});if(rows.length>24)rows.splice(0,rows.length-24);}catch(_){}}
+function phoneFriendDiagnostic(){const p=phoneFriendState(),text=JSON.stringify({version:APP_VER,note:'仅连接元数据，不含聊天正文、ID或密钥。',records:p.transportDiagnostics||[]},null,2);openModal('<h3>真人好友连接诊断</h3><div class="hint">长按复制。此页面不会发送消息或测试请求。</div><textarea readonly style="width:100%;height:50vh">'+esc(text)+'</textarea><button class="btn g" onclick="closeModal()">关闭</button>');}
 function pfClearLocalPending(other,serverMsg){const p=phoneFriendState();other=(''+other).toUpperCase();const arr=pfMsgList(p.messages,other);if(!arr.length||!serverMsg)return null;
   const from=(''+(serverMsg.from_id||serverMsg.from||'')).toUpperCase(),to=(''+(serverMsg.to_id||serverMsg.to||'')).toUpperCase(),body=''+(serverMsg.body||serverMsg.text||'');
   for(let i=arr.length-1;i>=0;i--){const x=arr[i];if(!x||!String(x.id||'').startsWith('local_'))continue;
-    if(x.from===from&&x.to===to&&x.text===body&&Date.now()-(x.time||0)<120000){arr.splice(i,1);return x;}}
+    if(x.from===from&&x.to===to&&pfPendingMatches(x,serverMsg)){arr.splice(i,1);return x;}}
   return null;
 }
 function pfHeaders(){return {'apikey':GATE_KEY,'Authorization':'Bearer '+GATE_KEY,'Content-Type':'application/json'};}
 function companionHeaders(){if(typeof NorthPublicRuntime!=='undefined'&&NorthPublicRuntime.available())return {apikey:NorthPublicRuntime.config.key,'Content-Type':'application/json'};return {'apikey':COMPANION_KEY,'Authorization':'Bearer '+COMPANION_KEY,'Content-Type':'application/json'};}
-async function pfRpc(fn,args,ms){const base=await pfTransportRoute(ms),write=!['phone_friend_search','phone_friend_sync'].includes(fn);let r,txt;try{r=await fetchT(base+'/rest/v1/rpc/'+fn,{method:'POST',headers:pfHeaders(),body:JSON.stringify(args||{})},ms||25000);txt=await r.text();}catch(e){_pfTransportRoute='';const err=new Error(write?'发送结果尚未确认，请先刷新聊天核对，避免重复发送。':'真人好友连接中断，请稍后重试；好友和聊天记录已保留。');err.pfSubmissionUnknown=write;throw err;}
-  let d=null;try{d=txt?JSON.parse(txt):null;}catch(_){if(write&&r.ok){const err=new Error('发送结果尚未确认，请先刷新聊天核对，避免重复发送。');err.pfSubmissionUnknown=true;throw err;}d=txt;}
-  if(!r.ok){let msg=(d&&d.message)||txt||('HTTP '+r.status);if(/Could not find the function|schema cache|404/i.test(msg))msg='好友云端表还没开通，先把 supabase_phone_friends.sql 执行一次';const err=new Error(write&&r.status>=500?'发送结果尚未确认，请先刷新聊天核对，避免重复发送。':String(msg).slice(0,160));err.pfSubmissionUnknown=write&&r.status>=500;throw err;}
+async function pfRpc(fn,args,ms){const write=!['phone_friend_search','phone_friend_sync'].includes(fn),messageWrite=fn==='phone_friend_send_message'||fn==='phone_friend_send_group_message';let base,r,txt,timer;const started=Date.now();
+  try{base=await pfTransportRoute(ms);}catch(e){if(messageWrite){const err=new Error('连接未成功，消息尚未提交；请稍后重试。');err.pfNotSubmitted=true;throw err;}throw e;}
+  try{r=await fetchT(base+'/rest/v1/rpc/'+fn,{method:'POST',headers:pfHeaders(),body:JSON.stringify(args||{})},ms||25000);txt=await Promise.race([r.text(),new Promise((_,reject)=>{timer=setTimeout(()=>{const e=new Error('response body timeout');e.name='TimeoutError';reject(e);},ms||25000);})]);}
+  catch(e){_pfTransportRoute='';if(typeof pfTransportRecord==='function')pfTransportRecord(fn,r?'reading-body':'waiting-response',base,r&&r.status,started,e);const err=new Error(write?(messageWrite?'发送结果尚未确认，请先刷新聊天核对，避免重复发送。':'操作结果尚未确认，请刷新核对；请勿重复操作。'):'真人好友连接中断，请稍后重试；好友和聊天记录已保留。');err.pfSubmissionUnknown=write;throw err;}finally{clearTimeout(timer);}
+  if(typeof pfTransportRecord==='function')pfTransportRecord(fn,'response',base,r.status,started);
+  let d=null;try{d=txt?JSON.parse(txt):null;}catch(_){if(typeof pfTransportRecord==='function')pfTransportRecord(fn,'invalid-json',base,r.status,started);if(write&&r.ok){const err=new Error(messageWrite?'发送结果尚未确认，请先刷新聊天核对，避免重复发送。':'操作结果尚未确认，请刷新核对；请勿重复操作。');err.pfSubmissionUnknown=true;throw err;}d=txt;}
+  if(!r.ok){let msg=(d&&d.message)||txt||('HTTP '+r.status);if(/Could not find the function|schema cache|404/i.test(msg))msg='好友云端表还没开通，先把 supabase_phone_friends.sql 执行一次';const err=new Error(write&&r.status>=500?(messageWrite?'发送结果尚未确认，请先刷新聊天核对，避免重复发送。':'操作结果尚未确认，请刷新核对；请勿重复操作。'):String(msg).slice(0,160));err.pfSubmissionUnknown=write&&r.status>=500;throw err;}
+  if(messageWrite&&(!d||typeof d!=='object'||!d.id)){if(typeof pfTransportRecord==='function')pfTransportRecord(fn,'unconfirmed-ack',base,r.status,started);const err=new Error('发送结果尚未确认，请先刷新聊天核对，避免重复发送。');err.pfSubmissionUnknown=true;throw err;}
   return d;}
 function pfAvatarStorageKey(id){return 'pf_avatar_v2_'+String(id||'unknown').toUpperCase().replace(/[^A-Z0-9_-]/g,'_').slice(0,48);}
 function pfAvatarRevision(raw){raw=String(raw||'');if(!raw)return'';return raw.length+':'+raw.slice(0,32)+':'+raw.slice(-24);}
@@ -287,11 +298,11 @@ function pfRpSettle(mid){const hit=pfRpFind(mid);if(!hit)return;const st=pfRpSta
   if(Math.round(mine*100)===Math.round(had*100))return;cred[mid]=mine;const diff=Math.round((mine-had)*100)/100,from=String(hit.m.from||'').toUpperCase()===String(p.id||'').toUpperCase()?'自己':pfRpName(hit.gid,hit.m.from);
   if(!had)addBill('in',mine,'收到 '+from+' 的群红包');else addBill(diff>0?'in':'out',Math.abs(diff),'群红包金额校正');}
 function pfRpGrab(mid){const hit=pfRpFind(mid);if(!hit)return false;if(String(mid).startsWith('local_')){toast('红包还在发出去的路上，等一下');return false;}const st=pfRpState(hit.m,hit.pay),myId=String(phoneFriendState().id||'').toUpperCase();if(!st||st.done||st.mine||st.late)return false;
-  sendPhoneFriendGroupBody(hit.gid,pfPack({type:'rp_grab',mid:String(mid)}),{silent:true}).then(()=>{const l=pfRpGrabStore()[mid]||[],i=l.findIndex(x=>x.who===myId&&String(x.id).startsWith('local_'));if(i>=0){l.splice(i,1);save();toast('网络不好，红包没抢到，再点一次试试');render();}else{save();const c=cur();if(c.p==='pfgroup'||c.p==='rpDetail')render();}});
+  sendPhoneFriendGroupBody(hit.gid,pfPack({type:'rp_grab',mid:String(mid)}),{silent:true}).then(result=>{if(result&&result.pending){toast('领取结果尚未确认，请稍后刷新核对。');return;}const l=pfRpGrabStore()[mid]||[],i=l.findIndex(x=>x.who===myId&&String(x.id).startsWith('local_'));if(i>=0){l.splice(i,1);save();toast('网络不好，红包没抢到，再点一次试试');render();}else{save();const c=cur();if(c.p==='pfgroup'||c.p==='rpDetail')render();}});
   return true;}
 function pfStoreGroupMessage(m){const p=phoneFriendState();if(!m)return false;const gid=m.group_id||m.gid;if(!gid)return false;p.groupMessages[gid]=pfEnsureMsgList(p.groupMessages,gid);
   const id=m.id||('gm_'+gid+'_'+(m.created_at||m.time||Date.now())+'_'+(m.from_id||'')),ts=+(m.time||m.ts||0)||(m.created_at?new Date(m.created_at).getTime():Date.now()),from=(''+(m.from_id||m.from||'')).toUpperCase();if(p.groupMessages[gid].some(x=>x.id===id))return false;if(from&&from!==p.id)pfInferGroupRead(gid,from,ts);
-  let oldLocal=null;if(!String(id).startsWith('local_')){const from=(''+(m.from_id||m.from||'')).toUpperCase(),body=''+(m.body||m.text||'');const arr=p.groupMessages[gid];for(let i=arr.length-1;i>=0;i--){const x=arr[i];if(String(x.id||'').startsWith('local_')&&x.from===from&&x.text===body&&Date.now()-(x.time||0)<120000){oldLocal=arr.splice(i,1)[0];break;}}}
+  let oldLocal=null;if(!String(id).startsWith('local_')){const from=(''+(m.from_id||m.from||'')).toUpperCase(),body=''+(m.body||m.text||'');const arr=p.groupMessages[gid];for(let i=arr.length-1;i>=0;i--){const x=arr[i];if(String(x.id||'').startsWith('local_')&&x.from===from&&pfPendingMatches(x,m)){oldLocal=arr.splice(i,1)[0];break;}}}
   if(ts<=(p.groupClearBefore[gid]||0))return false;
   const kept={id,gid,from,text:pfSafeBody(m.body||m.text||''),time:ts,recalled:!!m.recalled||!!(oldLocal&&oldLocal.recalled),received:!!m.received||!!(oldLocal&&oldLocal.received),receivedBy:m.received_by||m.receiver_id||(oldLocal&&oldLocal.receivedBy)||''};
   pfAbsorbGroupBubbleStyle(gid,from,kept);
@@ -331,7 +342,7 @@ function phoneFriendMaybeSync(force){const now=Date.now(),c=typeof cur==='functi
 function openPhoneFriends(){go('pffriends');setTimeout(()=>phoneFriendMaybeSync(true),60);}
 function pfReqs(dir){const p=phoneFriendState();return (p.requests||[]).filter(r=>r.direction===dir&&r.status==='pending');}
 function pfOnlineText(f){return pfIsOnline(f)?'在线':'离线';}
-function pfReadStatus(m,scope,gid){if(!readReceiptOn())return '';if(!m||m.recalled||String(m.id||'').startsWith('local_')||pfPayloadIsPay(m))return '';const p=phoneFriendState(),ids=pfReadIds(m).filter(x=>x&&x!==p.id);if(scope==='group'){const g=pfGroupById(gid)||{},total=Math.max(0,((g.members||[]).length||1)-1),n=ids.length;return n?`${n}${total?'/'+total:''}人已读`:'未读';}return ids.length?'已读':'未读';}
+function pfReadStatus(m,scope,gid){if(m&&String(m.id||'').startsWith('local_')&&m.sendState)return m.sendState==='sending'?'发送中…':m.sendState==='unknown'?'发送结果待确认':'尚未发送';if(!readReceiptOn())return '';if(!m||m.recalled||String(m.id||'').startsWith('local_')||pfPayloadIsPay(m))return '';const p=phoneFriendState(),ids=pfReadIds(m).filter(x=>x&&x!==p.id);if(scope==='group'){const g=pfGroupById(gid)||{},total=Math.max(0,((g.members||[]).length||1)-1),n=ids.length;return n?`${n}${total?'/'+total:''}人已读`:'未读';}return ids.length?'已读':'未读';}
 function pfFriendRowsHTML(){const p=phoneFriendState(),fs=p.friends||[];if(!fs.length)return '';
   return fs.map(f=>{const id=(''+(f.phone_id||f.id)).toUpperCase(),arr=pfVisibleMsgList(p.messages,id),lm=arr[arr.length-1],unread=wxPfUnread(arr,id,p.friendRead[id],false);
     return `<div class="row" onclick="openPhoneFriendChat('${id}')">${wxUnreadAvatar(pfAvatarOnlineHTML(f),unread)}<div class="meta"><div class="n">${esc(pfFriendDisplayName(f))}</div><div class="s">${lm?esc(lm.recalled?'[已撤回一条消息]':((lm.from===p.id?'我：':'')+pfMsgPreview(lm))):'已经是好友，打个招呼吧'}</div></div><div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div></div></div>`;}).join('');}
@@ -364,14 +375,14 @@ async function phoneFriendRespond(rid,ok){rid=''+(rid||'');if(!rid||_pfRespondBu
   finally{delete _pfRespondBusy[rid];}}
 function openPhoneFriendChat(id){id=(''+id).toUpperCase();pfMarkRead(id);go('pfchat',{id});setTimeout(()=>{const p=phoneFriendState(),empty=!pfMsgList(p.messages,id).length;if(empty)phoneFriendSync(true,false,true);else phoneFriendMaybeSync(true);},60);}
 function phoneFriendChatMessages(id){const p=phoneFriendState();id=(''+id).toUpperCase();return pfVisibleMsgList(p.messages,id).flatMap(m=>{const receipt=pfTransferReceiptMessage(m);return receipt?[m,receipt]:[m];}).sort((x,y)=>(x.time||0)-(y.time||0));}
-async function sendPhoneFriendBody(id,body,opt){id=(''+id).toUpperCase();body=(''+(body||'')).trim();opt=opt||{};const silent=!!opt.silent,transport=!!opt.transport;if(!body)return;if(body.length>PHONE_FRIEND_BODY_MAX){if(!transport)toast('这条消息太大，发不出去');return;}if(!silent&&_pfSendBusy[id]){toast('上一条还在发送');return;}const p=phoneFriendState();if(!silent)_pfSendBusy[id]=true;const localId='local_'+uid();
+async function sendPhoneFriendBody(id,body,opt){id=(''+id).toUpperCase();body=(''+(body||'')).trim();opt=opt||{};const silent=!!opt.silent,transport=!!opt.transport;if(!body)return;if(body.length>PHONE_FRIEND_BODY_MAX){if(!transport)toast('这条消息太大，发不出去');return;}if(!silent&&_pfSendBusy[id]){toast('上一条还在发送');return;}const p=phoneFriendState();const localId='local_'+uid();body=pfTagOutgoing(body,localId);if(body.length>PHONE_FRIEND_BODY_MAX){if(!transport)toast('这条消息太大，发不出去');return;}if(!silent)_pfSendBusy[id]=true;
   if(S.couple&&S.couple.gags&&S.couple.gags[pfGagKey(id)]){if(!silent)delete _pfSendBusy[id];if(!transport)toast('这段聊天被ta禁言了，先去求ta解开');return;}
   pfStoreMessage({id:localId,from_id:p.id,to_id:id,body,created_at:new Date().toISOString(),time:Date.now()});
-  if(opt.bill) addBill('out',opt.bill.amount,opt.bill.note);
+  pfSetSendState('friend',id,localId,'sending');if(opt.bill) addBill('out',opt.bill.amount,opt.bill.note);
   save();if(!silent)render();
   if(!silent&&S.settings.sound&&typeof playDing==='function')playDing();
-  let submitted=false;try{await pfEnsure();submitted=true;const m=await pfRpc('phone_friend_send_message',{p_from_id:p.id,p_secret:p.secret,p_to_id:id,p_body:body},30000);pfStoreMessage(m);p.lastSync=0;save();phoneFriendSync(true);}
-  catch(e){if(opt.bill&&(!submitted||!e.pfSubmissionUnknown)){addBill('in',opt.bill.amount,'发送失败退款：'+(opt.bill.refundName||'小手机转账'));const arr=pfMsgList(p.messages,id);if(arr.length){const i=arr.findIndex(x=>x.id===localId);if(i>=0)arr.splice(i,1);}}if(!transport)toast(e.message||'发送失败');}
+  let submitted=false,confirmed=false;try{await pfEnsure();submitted=true;const m=await pfRpc('phone_friend_send_message',{p_from_id:p.id,p_secret:p.secret,p_to_id:id,p_body:body},30000);confirmed=true;pfStoreMessage(m);p.lastSync=0;save();phoneFriendSync(true);}
+  catch(e){if(confirmed){if(!transport)toast('消息已发送，本机刷新暂时失败；请刷新聊天查看。');return;}const unknown=submitted&&!!e.pfSubmissionUnknown;if(unknown){pfSetSendState('friend',id,localId,'unknown');if(await pfRecoverSend('friend',id,body,p))return;}else pfSetSendState('friend',id,localId,'not-sent');if(opt.bill&&!unknown){addBill('in',opt.bill.amount,'发送失败退款：'+(opt.bill.refundName||'小手机转账'));const arr=pfMsgList(p.messages,id);if(arr.length){const i=arr.findIndex(x=>x.id===localId);if(i>=0)arr.splice(i,1);}}if(!transport)toast(!submitted?'连接未成功，消息尚未提交；请稍后重试。':e.message||'发送失败');}
   finally{if(!silent)delete _pfSendBusy[id];if(!silent&&cur().p==='pfchat'&&cur().id===id)render();}}
 async function sendPhoneFriend(id){const ta=$('#pf_input'),text=(ta&&ta.value||'').trim();if(!text)return;if(ta){ta.value='';ta.style.height='auto';chatComposerStateSync(ta);}
   const voice=groupComposerVoiceOn('pffriend',id);
@@ -463,13 +474,13 @@ async function pfGroupInviteAccept(mid,inviteId,ok){const p=phoneFriendState();l
   catch(e){found.inviteStatus='';save();render();toast(e.message||'操作失败');}}
 async function sendPhoneFriendGroup(gid){const ta=$('#pfg_input'),text=(ta&&ta.value||'').trim();if(!text)return;const p=phoneFriendState();if(ta)ta.value='';
   if(ta){ta.style.height='auto';chatComposerStateSync(ta);}const voice=groupComposerVoiceOn('pfgroup',gid);sendPhoneFriendGroupBody(gid,voice?pfPack({type:'voice',text,dur:Math.max(1,Math.round(text.length/3))}):text);}
-async function sendPhoneFriendGroupBody(gid,body,opt){body=(''+(body||'')).trim();opt=opt||{};if(!body)return;const silent=!!opt.silent;body=pfGroupOutgoingBody(gid,body);if(body.length>PHONE_FRIEND_BODY_MAX){if(!silent)toast('这条消息太大，发不出去');return;}const p=phoneFriendState(),localId='local_'+uid();
+async function sendPhoneFriendGroupBody(gid,body,opt){body=(''+(body||'')).trim();opt=opt||{};if(!body)return;const silent=!!opt.silent;body=pfGroupOutgoingBody(gid,body);if(body.length>PHONE_FRIEND_BODY_MAX){if(!silent)toast('这条消息太大，发不出去');return;}const p=phoneFriendState(),localId='local_'+uid();body=pfTagOutgoing(body,localId);if(body.length>PHONE_FRIEND_BODY_MAX){if(!silent)toast('这条消息太大，发不出去');return;}
   if(S.couple&&S.couple.gags&&S.couple.gags[pfgGagKey(gid)]){if(!silent)toast('这个群聊被ta禁言了，先去求ta解开');return;}
   if(!silent&&typeof gmMutedUntil==='function'&&gmMutedUntil('pf',gid,p.id)){toast('你已被禁言');render();return;}
-  pfStoreGroupMessage({id:localId,group_id:gid,from_id:p.id,body,time:Date.now()});if(opt.bill) addBill('out',opt.bill.amount,opt.bill.note);save();if(!silent)render();
+  pfStoreGroupMessage({id:localId,group_id:gid,from_id:p.id,body,time:Date.now()});pfSetSendState('group',gid,localId,'sending');if(opt.bill) addBill('out',opt.bill.amount,opt.bill.note);save();if(!silent)render();
   if(!silent&&S.settings.sound&&typeof playDing==='function')playDing();
-  let submitted=false;try{await pfEnsure();submitted=true;const m=await pfRpc('phone_friend_send_group_message',{p_from_id:p.id,p_secret:p.secret,p_group_id:gid,p_body:body},30000);pfStoreGroupMessage(m);save();phoneFriendSync(true);}
-  catch(e){if(opt.bill&&(!submitted||!e.pfSubmissionUnknown)){addBill('in',opt.bill.amount,'发送失败退款：'+(opt.bill.refundName||'小手机群转账'));const arr=pfMsgList(p.groupMessages,gid);if(arr.length){const i=arr.findIndex(x=>x.id===localId);if(i>=0)arr.splice(i,1);}}if(!silent)toast(e.message||'发送失败');}
+  let submitted=false,confirmed=false;try{await pfEnsure();submitted=true;const m=await pfRpc('phone_friend_send_group_message',{p_from_id:p.id,p_secret:p.secret,p_group_id:gid,p_body:body},30000);confirmed=true;pfStoreGroupMessage(m);save();phoneFriendSync(true);}
+  catch(e){if(confirmed){if(!silent)toast('消息已发送，本机刷新暂时失败；请刷新聊天查看。');return;}const unknown=submitted&&!!e.pfSubmissionUnknown;if(unknown){pfSetSendState('group',gid,localId,'unknown');if(await pfRecoverSend('group',gid,body,p))return;}else pfSetSendState('group',gid,localId,'not-sent');if(opt.bill&&!unknown){addBill('in',opt.bill.amount,'发送失败退款：'+(opt.bill.refundName||'小手机群转账'));const arr=pfMsgList(p.groupMessages,gid);if(arr.length){const i=arr.findIndex(x=>x.id===localId);if(i>=0)arr.splice(i,1);}}if(!silent)toast(!submitted?'连接未成功，消息尚未提交；请稍后重试。':e.message||'发送失败');return {pending:unknown};}
   finally{if(!silent&&cur().p==='pfgroup'&&cur().gid===gid)render();}}
 function pfCardBody(type,amount,note){return pfPack({type,amount:+amount||0,note:(note||'').trim()});}
 function phoneFriendTransferModal(id,type){id=(''+id).toUpperCase();paySendOpen(type==='redpacket'?'red':'transfer','pf',id);}
@@ -591,7 +602,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1548 · 小鱼旅行 · 旅行服务';
+const APP_VER='v1552 · 小鱼旅行 · 旅行服务';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1993,7 +2004,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1548&r=v1548-role-family-card-preview-1';
+  const url='sw.js?v=1552&r=v1552-role-family-card-preview-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -3944,7 +3955,7 @@ const MICO={
   travel:_MI('<path d="M3.5 12.2 20.5 5l-5.1 15.5-3.3-6.4-6.6-1.9z"/><path d="M12.1 14.1 20.5 5"/><path d="M5.5 12.7 3.8 18l4.6-2.8"/>'),
   dread:_MI('<path d="M12 3.2c3.2 4.2 6 7.2 6 10.6a6 6 0 0 1-12 0c0-3.4 2.8-6.4 6-10.6z"/>')
 };
-function aIco(key,emoji,bg,extra){const custom=S.me.appIcons&&S.me.appIcons[key],packed=custom?'':appIconPackAsset(key),ic=custom||packed,fallback=MICO[key]||emoji;const glyph=ic?`<span class="app-icon-fallback">${fallback}</span><img src="${ic}"${packed?' decoding="sync" loading="eager" fetchpriority="high"':''} draggable="false" onload="if(this.previousElementSibling)this.previousElementSibling.hidden=true" onerror="this.style.display='none'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%">`:fallback;
+function aIco(key,emoji,bg,extra){const custom=S.me.appIcons&&S.me.appIcons[key],packed=custom?'':appIconPackAsset(key),ic=custom||packed,fallback=MICO[key]||emoji;const glyph=ic?`<span class="app-icon-fallback">${fallback}</span><img src="${storedImageDisplaySource(ic)}"${packed?' decoding="sync" loading="eager" fetchpriority="high"':''} draggable="false" onload="this.style.display='';if(this.previousElementSibling)this.previousElementSibling.hidden=true" onerror="this.style.display='none'" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%">`:fallback;
   return `<div class="ic${custom?' custom-app-icon':''}${packed?' glass-pack-icon glass-icon-'+key:''}" style="${custom?'background:#222;':packed?'background:transparent;':'background:'+bg+';'}color:#fff;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center">${glyph}${extra||''}</div>`;}
 // 通用线条图标（UI 里替代 emoji，可指定颜色/大小，默认跟随文字色）
 const ICONS={
@@ -6392,7 +6403,7 @@ let _dyStrangerBusy=false;
 /* Read-only route probe before writes. Never replay an uncertain send/transfer. */
 const PF_RELAY_BASE='https://license.smallphoneapp.com';
 let _pfTransportProbe=null,_pfTransportRoute='',_pfTransportAt=0;
-async function pfTransportRoute(ms){if(_pfTransportRoute&&Date.now()-_pfTransportAt<60000)return _pfTransportRoute;if(_pfTransportProbe)return _pfTransportProbe;_pfTransportProbe=(async()=>{const opt={method:'POST',headers:pfHeaders(),body:JSON.stringify({p_query:''})};try{const r=await fetchT(GATE_URL+'/rest/v1/rpc/phone_friend_search',opt,Math.min(ms||5000,5000));if(r.status<500){_pfTransportRoute=GATE_URL;_pfTransportAt=Date.now();return GATE_URL;}}catch(_){}try{const r=await fetchT(PF_RELAY_BASE+'/rest/v1/rpc/phone_friend_search',opt,5000);if(r.ok){_pfTransportRoute=PF_RELAY_BASE;_pfTransportAt=Date.now();return PF_RELAY_BASE;}}catch(_){}throw new Error('真人好友服务器暂时连不上，消息尚未提交。请稍后重试；现有好友和聊天记录已保留。');})();try{return await _pfTransportProbe;}finally{_pfTransportProbe=null;}}
+async function pfTransportRoute(ms){if(_pfTransportRoute&&Date.now()-_pfTransportAt<60000)return _pfTransportRoute;if(_pfTransportProbe)return _pfTransportProbe;_pfTransportProbe=(async()=>{const opt={method:'POST',headers:pfHeaders(),body:JSON.stringify({p_query:''})},wait=Math.min(ms||8000,8000);for(const base of [GATE_URL,PF_RELAY_BASE]){const start=Date.now();try{const r=await fetchT(base+'/rest/v1/rpc/phone_friend_search',opt,wait);if(typeof pfTransportRecord==='function')pfTransportRecord('phone_friend_search','probe',base,r.status,start);if(r.ok||(base===GATE_URL&&(r.status===401||r.status===404))){_pfTransportRoute=base;_pfTransportAt=Date.now();return base;}}catch(e){if(typeof pfTransportRecord==='function')pfTransportRecord('phone_friend_search','probe',base,0,start,e);}}throw new Error('真人好友连接暂时未成功，请稍后重试；好友和聊天记录已保留。');})();try{return await _pfTransportProbe;}finally{_pfTransportProbe=null;}}
 
 /* ===== 抖音群聊：建群、拉角色、公开群每天一位陌生人来申请、私密群只能邀请、管理员 ===== */
 let _dyGid='';let _dyGTab='聊天';let _dyGSel=[];let _dyGBusy={};
@@ -8345,7 +8356,7 @@ function renderPhoneFriends(){const p=phoneFriendState();phoneFriendMaybeSync(fa
   return `<div class="nav pf-friends-nav"><span class="l" onclick="back()">‹</span><span class="t">小手机好友</span><span class="r" onclick="phoneFriendSync(false,true)">${svgIc('refresh',20,'currentColor')}</span></div>
   <div class="scroll pf-friends-page">
     <div class="section pf-friends-section" style="margin:12px">
-      <div class="pf-friends-kicker pf-id-title">我的小手机ID</div>
+      <div class="pf-friends-kicker pf-id-title">我的小手机ID</div><button class="minibtn" onclick="phoneFriendDiagnostic()">连接诊断</button>
       <div class="it"><span style="font-size:22px;font-weight:800;letter-spacing:1px">${esc(p.id)}</span><button class="minibtn" onclick="copyPhoneFriendId()">复制</button></div>
       <div class="it"><span>允许别人通过ID搜到我</span><span class="sw ${p.allowSearch!==false?'on':''}" onclick="phoneFriendToggleSearch()"></span></div>
       ${p._repairNote?`<div class="hint" style="color:#9ec5fe">${esc(p._repairNote)}</div>`:''}${p.lastError?`<div class="hint" style="color:#e8a85b">${esc(p.lastError)}</div>`:''}
@@ -17319,7 +17330,9 @@ function callRetryableFailure(e){if(!e||e.code==='call-output-blocked'||e.code==
   if([400,401,402,403,404,422].includes(status))return false;
   if(status===408||status===409||status===429||status>=500)return true;
   if(status)return false;
-  /* 没有 HTTP 状态码 = 连接压根没建起来或中途断了。判断只能看抛出来的英文原因，绝不能看中文提示：
+  if(e.code==='call-empty-response')return true;
+  if(e.transportTimedOut&&Math.max(0,+e.elapsedMs||0)>45000)return false;
+  /* 没有可读取的 HTTP 状态码不能证明服务器未收到请求。判断只能看抛出来的英文原因，绝不能看中文提示：
      那句提示自己就带着「不是付款或密钥错误」这种字样，拿正则去匹配会把它当成密钥问题而放弃重试。 */
   const raw=String(e.transportRaw||'').toLowerCase();
   if(!raw)return false;
@@ -17327,9 +17340,10 @@ function callRetryableFailure(e){if(!e||e.code==='call-output-blocked'||e.code==
   return /fetch|network|load failed|cors|connection|socket|econn|stream|timeout|timed out|abort/.test(raw);}
 async function callChatWithRetry(messages,md,c){const auxReady=!md.aux&&wechatAuxConfigured(md.routeIndex),session=typeof _call!=='undefined'&&_call?_call.session:null;md=Object.assign({},md,{diagnosticChannel:'call',diagnosticOperationId:md.diagnosticOperationId||('call-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,9))});let firstError=null;
   const assertSession=()=>{if(session!=null&&(typeof _call==='undefined'||!_call||_call.session!==session)){const e=new Error('通话已结束，未继续发起请求');e.code='call-session-ended';throw e;}};
-  for(let attempt=0;attempt<2;attempt++){assertSession();try{return await chatAPI(messages,Object.assign({},md,{diagnosticAttempt:attempt+1}));}catch(e){if(!firstError)firstError=e;if(!callRetryableFailure(e))throw e;if(attempt===0)await sleep(500);}}
+  const requireContent=r=>{if(typeof r==='string'&&r.trim())return r;const e=new Error('接口已响应，但没有可用的回复正文');e.code='call-empty-response';throw e;};
+  for(let attempt=0;attempt<2;attempt++){assertSession();try{return requireContent(await chatAPI(messages,Object.assign({},md,{diagnosticAttempt:attempt+1})));}catch(e){if(!firstError)firstError=e;if(!callRetryableFailure(e))throw e;if(attempt===0)await sleep(500);}}
   assertSession();if(!auxReady)throw firstError;
-  try{const r=await chatAPI(messages,Object.assign({},md,{aux:true,diagnosticAttempt:3}));if(c&&(!session||typeof _call!=='undefined'&&_call&&_call.session===session))wechatModelRouteNotice(c,true,true);return r;}catch(_){throw firstError;}}
+  try{const r=requireContent(await chatAPI(messages,Object.assign({},md,{aux:true,diagnosticAttempt:3})));if(c&&(!session||typeof _call!=='undefined'&&_call&&_call.session===session))wechatModelRouteNotice(c,true,true);return r;}catch(_){throw firstError;}}
 /* 通话被长度上限截断时以前直接断在半句：微信的 complete 写死 true，通话写的是 !_rawOutput，
    而「模型原文输出」全局常开之后 _rawOutput 永远是 true，续写就永远不会触发。 */
 function callReplyBudget(c){const route=chatMainCopy(chatRequestRoute(roleChatRouteIndex(c))||S.settings&&S.settings.chat||{}),own=Number(route.callMaxTokens)||0;
@@ -17350,9 +17364,10 @@ function callFailureText(e,hiddenMark){const status=+(e&&e.status||0),source=Str
   if(/insufficient[_ -]?(quota|credit)|no[_ -]?balance|余额不足|点数不足|额度不足|credit balance|quota exceeded/.test(detail))return source==='ai-core'?'(AI 账户点数不足，请充值后再通话)':'(当前聊天接口账户余额不足，请到接口平台充值)';
   if(status===429||/rate.?limit|too many requests|请求过于频繁|达到.{0,6}(限额|上限)/.test(detail))return'(当前聊天接口请求过于频繁或达到平台限额，请稍后再试)';
   if(/model.?not.?found|unknown model|模型.{0,6}(不存在|无效)|endpoint.{0,6}not found/.test(detail)||status===404)return'(当前聊天模型或接口地址不存在，请检查聊天接口设置)';
-  if(/timeout|timed out|abort|超时/.test(detail)||status===408||status===504)return'(连接超时，请再说一次)';
-  if(!status&&typeof callBackgroundInterrupted==='function'&&callBackgroundInterrupted(e,hiddenMark))return'(刚才小手机切到后台了，这句没送出去，再说一次就好)';
-  if(e&&e.network||/network|failed to fetch|网络|连接中断|cors/.test(detail))return'(网络连接中断，请再说一次)';
+  if(e&&e.code==='call-empty-response')return'(接口已响应，但没有可用的回复正文，请复制请求故障诊断)';
+  if(e&&e.transportTimedOut||status===408||status===504)return'(请求等待超时，请复制请求故障诊断)';
+  if(!status&&(e&&e.transportRaw||e&&e.network||/network|failed to fetch|网络|连接中断|cors/.test(detail))){const background=typeof callBackgroundInterrupted==='function'&&callBackgroundInterrupted(e,hiddenMark);return'(未取得可用的接口响应，尚不能确定连接失败原因'+(background?'；记录到页面处于或切入后台，请回到通话页后再试':'，请复制请求故障诊断')+')';}
+  if(/timeout|timed out|abort|超时/.test(detail))return'(请求中断或等待超时，请复制请求故障诊断)';
   if(status===401||status===403||/unauthor|forbidden|invalid.{0,6}(key|token)|密钥.{0,6}(无效|错误)|授权失败/.test(detail))return source==='ai-core'?'(内置 AI 服务授权失效，请重新登录或联系管理员)':'(当前聊天接口密钥无效或没有该模型权限，请检查聊天接口设置)';
   if(status>=500||/upstream|service unavailable|bad gateway|服务.{0,6}(异常|拥堵)/.test(detail))return'(上游聊天服务暂时异常，请稍后再试)';
   return'(通话回复中断，请检查当前聊天接口后再试)';}
@@ -18161,7 +18176,7 @@ function mergeBeautyPack(pack){if(!pack||pack.type!=='north-beauty-pack'||!pack.
   (pack.contacts||[]).forEach(src=>{const dst=beautyFind(S.contacts,src);if(dst)n+=beautyAssign(dst,src,['avatar','chatBg','bubbleStyle']);});
   (pack.groups||[]).forEach(src=>{const dst=beautyFind(S.groups,src);if(dst)n+=beautyAssign(dst,src,['avatar','chatBg','bubbleStyle','memberBubbleStyles']);});
   if(pack.beautyArchive!=null){S.beautyArchive=beautyClone(pack.beautyArchive);n++;}return n;}
-async function primeBeautyPackImages(pack){const found=new Set();(function walk(v){if(isBigImg(v)){found.add(v);return;}if(!v||typeof v!=='object')return;Object.keys(v).forEach(k=>walk(v[k]));})(pack);for(const img of found)await primeImageForSave(img);return found.size;}
+async function primeBeautyPackImages(pack){const found=new Set();(function walk(v){if(isBigImg(v)){found.add(v);return;}if(!v||typeof v!=='object')return;Object.keys(v).forEach(k=>walk(v[k]));})(pack);for(const img of found)await primeImageForSave(img);if(typeof Image==='function'){const icons=[...new Set(Object.values(pack.me&&pack.me.appIcons||{}).filter(v=>typeof v==='string'&&/^data:image\//.test(v)))];for(let i=0;i<icons.length;i+=2)await Promise.all(icons.slice(i,i+2).map(src=>new Promise(resolve=>{const image=new Image();let timer;const done=()=>{clearTimeout(timer);image.onload=image.onerror=null;resolve();};timer=setTimeout(done,8000);image.onload=done;image.onerror=done;image.src=src;if(image.complete&&image.naturalWidth)done();})));}return found.size;}
 async function applyBeautyPack(pack){const layout=beautyLayoutSnapshot(S.me);await primeBeautyPackImages(pack);const n=mergeBeautyPack(pack);beautyLayoutRestore(S.me,layout);if(!await saveNowAsync())throw new Error('美化图片保存失败，请检查浏览器存储权限');try{renderLockScreen(true);}catch(_){}render();return n;}
 /* 内置默认美化：第一次打开、而且一处都没自己弄过的手机，才套上那一套；别人的美化一律不碰 */
 const DEFAULT_BEAUTY_SRC='assets/default-beauty-pack.js?p=1',DEFAULT_BEAUTY_MARK='north_default_beauty_v1';

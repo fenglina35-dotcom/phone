@@ -172,8 +172,8 @@ assert.equal(failureContext.callFailureText({status:401,message:'unauthorized',s
 assert.equal(failureContext.callFailureText({status:401,message:'unauthorized',raw:'Insufficient credits',source:'external-chat'}),'(当前聊天接口账户余额不足，请到接口平台充值)');
 assert.equal(failureContext.callFailureText({status:402,message:'AI点数不足',raw:'no-balance',source:'ai-core'}),'(AI 账户点数不足，请充值后再通话)');
 assert.equal(failureContext.callFailureText({status:429,message:'Too many requests',source:'external-chat'}),'(当前聊天接口请求过于频繁或达到平台限额，请稍后再试)');
-assert.equal(failureContext.callFailureText({network:true,message:'fetch failed'}),'(网络连接中断，请再说一次)');
-assert.equal(failureContext.callFailureText(new Error('request timeout')),'(连接超时，请再说一次)');
+assert.equal(failureContext.callFailureText({network:true,message:'fetch failed'}),'(未取得可用的接口响应，尚不能确定连接失败原因，请复制请求故障诊断)');
+assert.equal(failureContext.callFailureText(new Error('request timeout')),'(请求中断或等待超时，请复制请求故障诊断)');
 assert.match(functionSource('chatAPI'),/e\.status=res\.status;e\.data=d\|\|null;e\.raw=raw;e\.source='external-chat'/,'direct chat errors must preserve upstream status and detail for the call UI');
 assert.match(functionSource('aiRelay'),/e\.source='ai-core'/,'built-in AI failures must identify their real source');
 assert.doesNotMatch(functionSource('callFailureText'),/通话服务授权失败，请检查 AI 账户/,'call failures must not collapse unrelated causes into the AI account hint');
