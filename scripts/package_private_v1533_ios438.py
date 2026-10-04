@@ -1,4 +1,4 @@
-"""Create the private v1543 / iOS 438 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
+"""Create the private v1549 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
 
 Unlike the earlier packaging scripts, every file is read from the committed tree
 (``git cat-file`` against HEAD) instead of the working directory. The v1235/iOS356
@@ -23,12 +23,12 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "native/private-small-phone/XcodeProject/"
 BUNDLE = "PhoneCompanionTest/PhoneWeb.bundle/"
-PREFIX = "SmallPhone_v1543_iOS438_Private/"
-OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1543_iOS438.zip"
+PREFIX = "SmallPhone_v1549_iOS439_Private/"
+OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1549_iOS439.zip"
 
-WEB_VERSION = "1543"
-MARKETING = "1.0.438"
-BUILD = "438"
+WEB_VERSION = "1549"
+MARKETING = "1.0.439"
+BUILD = "439"
 BRIDGE = "42"
 
 
@@ -614,22 +614,32 @@ def main() -> None:
     state["preserved"] += ["role-order-payment-remark-name", "full-history-mail-search-yellow-marks", "mail-read-forward-snapshot-theme-card", "mail-compose-bound-original-reply-and-wechat-context", "mail-account-request-isolation", "mail-svg-actions-purchaser-avatar-home-back", "request-failure-diagnostics-and-hangup-cancellation"]
     state["sourceCommit"] = text(git("rev-parse", "HEAD")).strip()
     # Verify the last delivered overlay, preserving every file and unchanged native payload.
-    previous = ROOT.parent / "最新私人版本覆盖包_v1533_iOS438.zip"
-    assert sha256(previous.read_bytes()).hexdigest() == "c4d5c0b00070f6144b2b137fddb089c8622d4b213266538390507d0e6bb0dc50"
+    previous = ROOT.parent / "最新私人版本覆盖包_v1543_iOS438.zip"
+    assert sha256(previous.read_bytes()).hexdigest() == "3dc04b801762c9c720abb3a635e6bf29e2727baa2401f29b396ba641e464e356"
     with ZipFile(previous) as old:
-        old_prefix = "SmallPhone_v1533_iOS438_Private/"
+        old_prefix = "SmallPhone_v1543_iOS438_Private/"
         previous_files = {n[len(old_prefix):]:old.read(n) for n in old.namelist() if n.startswith(old_prefix)}
     assert not (previous_files.keys() - files.keys() - {"SOURCE_STATE.json", "SHA256SUMS.json"}), "previously delivered files omitted"
     for name, body in previous_files.items():
         if name not in {"SOURCE_STATE.json", "SHA256SUMS.json", "请在Mac编译前先读.md"} and not name.startswith(BUNDLE):
-            assert files[name] == body, "unexpected native or signing change: " + name
+            if name in {"PhoneCompanionTest/PhoneNativeBridge.swift", "PhoneCompanionTest/SmallPhonePrivateRootView.swift"}:
+                assert files[name] == git("show", "9498a67df083757837065340199cedd053a50e80:" + SOURCE + name), "unreviewed status-color native change: " + name
+            elif name in {"PhoneCompanionTest.xcodeproj/project.pbxproj", "PhoneCompanionTest/LocalPhoneWebView.swift"}:
+                assert files[name].replace(b"439", b"438") == body, "unexpected native or signing change: " + name
+            else:
+                assert files[name] == body, "unexpected native or signing change: " + name
     state["preserved"] = sorted(set(state["preserved"] + json.loads(previous_files["SOURCE_STATE.json"])["preserved"] + ["pet-control-format-recovery", "grounded-memory-name-repair", "withdrawn-family-card-hidden-from-bank", "independent-multiselect-delete-green-forward", "compact-blue-phone-authorization", "home-game-entry-migration-stored-invites", "independent-girl-pet-icons-and-controls", "first-run-original-icons-custom-reset-race-guard", "removed-line-theme-migration", "hollow-white-glass-icon-rims"]))
-    state["webVersion"] = "v1542"
-    state["privateWeb"] = "v1543"
-    state["lastDeliveredPackage"] = {"name": previous.name, "sha256": sha256(previous.read_bytes()).hexdigest(), "sourceCommit": "4ba4041618e863f90d63c39db9f58f028cdd9b22"}
-    state["knownUnresolved"] = [x for x in state["knownUnresolved"] if not x.startswith("v1533-mac-")] + ["v1543-mac-build-signing-and-iphone-not-verified"]
-    state["validation"]["nodeTests"] = {"passed":3132,"failed":0}
+    state["webVersion"] = "v1548"
+    state["privateWeb"] = "v1549"
+    state["privateIOS"] = "1.0.439 (439)"
+    state["lastDeliveredPackage"] = {"name": previous.name, "sha256": sha256(previous.read_bytes()).hexdigest(), "sourceCommit": "ed8112ee74e1329ac4c6ee6ebee24f35d3778deb"}
+    state["knownUnresolved"] = [x for x in state["knownUnresolved"] if not x.startswith(("v1533-mac-", "v1543-mac-"))] + ["v1549-mac-build-signing-and-iphone-not-verified"]
+    state["validation"]["nodeTests"] = {"passed":3154,"failed":0}
     state["validation"]["inheritedPreviousOverlay"] = True
+    state["preserved"] = sorted(set(state["preserved"] + ["selectable-white-black-icon-rims", "per-widget-inner-color-opacity-saved-zero", "live-status-color-picker-no-rerender", "native-status-custom-color-and-icon-contrast", "vinyl-ring-arm-opacity-keeps-center-cover", "lock-pull-independent-color-opacity", "widget-reset-keeps-lock-pull", "home-screen-web-custom-color-body-default-meta"]))
+    css = text(files[BUNDLE + "glass-theme.css"])
+    for marker in ("function statusBarColorSet(", "function homeVinylOpacitySet(", "function lockPullAppearanceSet(", ".vinyl-record:before{content:", "north-shell-custom", "function glassInnerAppearance(", "function appIconRimSet("):
+        assert marker in css + text(files[BUNDLE + "app.js"]), "latest appearance fix missing: " + marker
     files["SOURCE_STATE.json"] = json.dumps(state, ensure_ascii=False, indent=2).encode("utf-8")
     files["SHA256SUMS.json"] = json.dumps({name:sha256(body).hexdigest() for name,body in sorted(files.items())},ensure_ascii=False,indent=2).encode("utf-8")
 
