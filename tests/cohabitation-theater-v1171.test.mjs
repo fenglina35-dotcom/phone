@@ -16,7 +16,7 @@ test('private v1355 inherits the current web theater without dropping its privat
   assert.equal(bundleTheater,theater);
   assert.match(bundleTheater,/guest2|ct_wechat_enabled/);
   assert.match(webHtml,/app\.js\?v=1522[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1522&r=v1274-web-cohab-guests-1"/);
-  for(const html of [privateHtml,privateAlias])assert.match(html,/app\.js\?v=1523[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1523[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1523&r=v1274-web-cohab-guests-1"/);
+  for(const html of [privateHtml,privateAlias])assert.match(html,/app\.js\?v=1525[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1525[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1525&r=v1274-web-cohab-guests-1"/);
   assert.match(read('sw.js'),/cohab-theater\.js\?v='\+BUILD\+'\&r=v1274-web-cohab-guests-1',kind:'theater'/);
 });
 
@@ -145,12 +145,12 @@ test('guest exit sends exactly one genuine memory-grounded WeChat message',()=>{
 });
 
 test('private artifact identity advances independently to v1355 and iOS 1.0.400 (399)',()=>{
-  assert.match(privateApp,/const APP_VER='v1523 · 小鱼旅行 · 旅行服务'/);
+  assert.match(privateApp,/const APP_VER='v1525 · 小鱼旅行 · 旅行服务'/);
   assert.match(privateHtml,/private-runtime-diagnostics\.js\?v=339/);
-  assert.match(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),/1\.0\.436 \(436\)/);
+  assert.match(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),/1\.0\.437 \(437\)/);
   const project=read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
-  assert.ok((project.match(/CURRENT_PROJECT_VERSION = 436;/g)||[]).length>=12);
-  assert.ok((project.match(/MARKETING_VERSION = 1.0.436;/g)||[]).length>=12);
+  assert.ok((project.match(/CURRENT_PROJECT_VERSION = 437;/g)||[]).length>=12);
+  assert.ok((project.match(/MARKETING_VERSION = 1.0.437;/g)||[]).length>=12);
 });
 
 test('v1170 private friend-entry fix remains present in the v1184 private superset',()=>{

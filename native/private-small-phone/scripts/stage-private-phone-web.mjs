@@ -20,6 +20,13 @@ const outputRoot = process.argv[2]
       'PhoneWeb.bundle'
     );
 
+// Preserve reviewed native/private logic: this legacy shared-core staging tool
+// may build a separate preview but must never erase the release bundle.
+const releaseBundle = path.join(privateRoot, 'XcodeProject', 'PhoneCompanionTest', 'PhoneWeb.bundle');
+if (path.resolve(outputRoot).toLowerCase() === path.resolve(releaseBundle).toLowerCase()) {
+  throw new Error('Refusing to overwrite the reviewed private bundle. Use the committed-tree private package script.');
+}
+
 const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
 const entries = [
   ...(manifest.files ?? []),
