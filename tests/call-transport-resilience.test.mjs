@@ -123,7 +123,7 @@ test('a request killed by backgrounding says so instead of blaming the network',
 test('a call reply truncated by the length ceiling is completed, not left mid-sentence', () => {
   for (const [name, src] of [['app.js', app], ['私人版', priv]]) {
     assert.ok(src.includes("diagnosticChannel:'call'"), `${name} 找不到通话请求参数`);
-    const md = src.slice(src.indexOf("diagnosticChannel:'call'"), src.indexOf("diagnosticChannel:'call'") + 400);
+    const md = src.slice(src.indexOf("const _md=Object.assign({diagnosticRoleId:c.id"), src.indexOf("const _md=Object.assign({diagnosticRoleId:c.id") + 400);
     assert.match(md, /complete:true/, `${name} 通话必须和微信一样把截断的回复补完`);
     assert.doesNotMatch(md, /complete:!_rawOutput/, `${name} 不能再把续写挂在原文输出开关上`);
     assert.match(md, /max:callReplyBudget\(c\)/, `${name} 通话要用自己那档回复长度`);

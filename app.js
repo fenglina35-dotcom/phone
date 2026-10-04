@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1526'){
+if(window.__NORTH_SHELL_BUILD__!=='1528'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -591,7 +591,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1526 · 小鱼旅行 · 旅行服务';
+const APP_VER='v1528 · 小鱼旅行 · 旅行服务';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1349,7 +1349,7 @@ function apiErrorCN(status,raw){status=+status||0;const src=apiRawErrorDetail(ra
   else if(status===503)tip='服务暂时拥堵或维护中；稍后重试';
   else if(status===504)tip='上游响应超时；稍后重试或换速度更快的模型';
   else if(!status&&/abort|timeout|超时/i.test(src))tip='请求超时；检查网络、接口地址，或换响应更快的模型';
-  else if(!status&&/fetch|network|load failed|cors/i.test(src))tip='网络连接失败或接口等待太久断开；如果刚才是生成图片，多半是中转站上游排队/限流，不是付款或密钥错误。';
+  else if(!status&&/fetch|network|load failed|cors/i.test(src))tip='未取得可读取的接口响应；可能是连接中断、跨域限制或接口连接故障，尚不能确定原因，请复制请求故障诊断。';
   const detail=src&&src.indexOf(tip)<0?src:'';return(status?'HTTP '+status+'：':'')+tip+(detail?'（上游原始原因：'+detail+'）':'');}
 function apiCaughtCN(e){const s=String((e&&e.message)||e||'');const m=s.match(/HTTP\s*(\d{3})/i);return apiErrorCN(m?+m[1]:0,s);}
 function aiCoreOn(){return false;}
@@ -1403,7 +1403,7 @@ async function chatAPI(messages,opt){opt=opt||{};const _requestDiag=chatRequestD
   chatRequestDiagnostic('configured',_requestDiag,opt,a,false);
   const request=async()=>{let res;try{res=await fetchT(a.base.replace(/\/+$/,'')+'/chat/completions',{method:'POST',
     headers:{'Content-Type':'application/json','Authorization':'Bearer '+a.key},
-    body:JSON.stringify({model:opt.model||a.model,temperature:(opt.temp!=null?opt.temp:Number(a.temp))||0.8,max_tokens:opt.max||Number(a.maxTokens)||900,messages})},Math.max(10000,Math.min(190000,+opt.timeout||190000)));}catch(cause){const e=new Error(apiCaughtCN(cause));e.transportRaw=String(cause&&cause.message||cause||'').slice(0,500);throw annotateChatRequestError(e,opt,fixedRoute,a,startedAt);}
+    body:JSON.stringify({model:opt.model||a.model,temperature:(opt.temp!=null?opt.temp:Number(a.temp))||0.8,max_tokens:opt.max||Number(a.maxTokens)||900,messages})},Math.max(10000,Math.min(190000,+opt.timeout||190000)));}catch(cause){const e=new Error(apiCaughtCN(cause));e.transportRaw=String(cause&&cause.message||cause||'').slice(0,500);e.transportName=String(cause&&cause.transportName||cause&&cause.name||'');e.transportTimedOut=!!(cause&&cause.transportTimedOut);e.transportTimeoutMs=Number(cause&&cause.transportTimeoutMs)||Math.max(10000,Math.min(190000,+opt.timeout||190000));throw annotateChatRequestError(e,opt,fixedRoute,a,startedAt);}
   const d=await chatReadDiagnosticResponse(res,_requestDiag);return{res,d};};
   const {res,d}=opt.offlineForeground?await offlineForegroundRequest(request,opt):await request();
   if(!res.ok){const raw=String((d&&d.error&&(d.error.message||JSON.stringify(d.error)))||(d&&JSON.stringify(d))||'');const e=new Error(apiErrorCN(res.status,raw));e.status=res.status;e.data=d||null;e.raw=raw;e.source='external-chat';throw annotateChatRequestError(e,opt,fixedRoute,a,startedAt);}
@@ -1991,7 +1991,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1526&r=v1526-role-family-card-preview-1';
+  const url='sw.js?v=1528&r=v1528-role-family-card-preview-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -4499,7 +4499,7 @@ async function testConn(){const o=$('#testOut');o.style.color='#999';o.textConte
 let _taskBusy=false;
 let _pageHiddenMark=0;
 if(typeof document!=='undefined')document.addEventListener('visibilitychange',()=>{if(document.hidden)_pageHiddenMark=Date.now();});
-function fetchT(url,opt,ms){const ac=new AbortController();const t=setTimeout(()=>ac.abort(),ms||25000);return fetch(url,Object.assign({},opt||{},{signal:ac.signal})).finally(()=>clearTimeout(t));}
+function fetchT(url,opt,ms){const ac=new AbortController(),timeoutMs=ms||25000;let timedOut=false;const t=setTimeout(()=>{timedOut=true;ac.abort();},timeoutMs);return fetch(url,Object.assign({},opt||{},{signal:ac.signal})).catch(e=>{try{e.transportName=String(e.name||'');e.transportTimedOut=timedOut;e.transportTimeoutMs=timeoutMs;}catch(_){}throw e;}).finally(()=>clearTimeout(t));}
 async function testModel(bId,kId,mId,outId,defM){const o=$('#'+outId);if(!o)return;o.style.color='#999';o.textContent='测试中…';
   const base=($('#'+bId).value.trim()||'').replace(/\/+$/,'');const key=$('#'+kId).value.trim();const model=$('#'+mId).value.trim()||defM;
   const fb=($('#s_cbase').value.trim()||'').replace(/\/+$/,''),fk=$('#s_ckey').value.trim();
@@ -17286,7 +17286,7 @@ function callSend(){const inp=$('#callMsg');if(!inp)return;const t=inp.value.tri
    同路线先重发一次，仍不行再落副模型，都失败了才显示提示。
    只重发传输层/限流/上游 5xx 这类「再试一次可能就好」的失败；余额、密钥、模型名、
    内容拦截这些重发一百次也一样，直接抛出去。已经等了很久的超时也不重发，通话等不起。 */
-function callRetryableFailure(e){if(!e||e.code==='call-output-blocked'||e.modelRefusal)return false;
+function callRetryableFailure(e){if(!e||e.code==='call-output-blocked'||e.code==='call-session-ended'||e.modelRefusal)return false;
   const status=+(e.status||0);
   if([400,401,402,403,404,422].includes(status))return false;
   if(status===408||status===409||status===429||status>=500)return true;
@@ -17297,10 +17297,11 @@ function callRetryableFailure(e){if(!e||e.code==='call-output-blocked'||e.modelR
   if(!raw)return false;
   if(/timeout|timed out|abort|超时/.test(raw)&&Math.max(0,+e.elapsedMs||0)>45000)return false;
   return /fetch|network|load failed|cors|connection|socket|econn|stream|timeout|timed out|abort/.test(raw);}
-async function callChatWithRetry(messages,md,c){const auxReady=!md.aux&&wechatAuxConfigured(md.routeIndex);let firstError=null;
-  for(let attempt=0;attempt<2;attempt++){try{return await chatAPI(messages,md);}catch(e){if(!firstError)firstError=e;if(!callRetryableFailure(e))throw e;if(attempt===0)await sleep(500);}}
-  if(!auxReady)throw firstError;
-  try{const r=await chatAPI(messages,Object.assign({},md,{aux:true}));if(c)wechatModelRouteNotice(c,true,true);return r;}catch(_){throw firstError;}}
+async function callChatWithRetry(messages,md,c){const auxReady=!md.aux&&wechatAuxConfigured(md.routeIndex),session=typeof _call!=='undefined'&&_call?_call.session:null;md=Object.assign({},md,{diagnosticChannel:'call',diagnosticOperationId:md.diagnosticOperationId||('call-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,9))});let firstError=null;
+  const assertSession=()=>{if(session!=null&&(typeof _call==='undefined'||!_call||_call.session!==session)){const e=new Error('通话已结束，未继续发起请求');e.code='call-session-ended';throw e;}};
+  for(let attempt=0;attempt<2;attempt++){assertSession();try{return await chatAPI(messages,Object.assign({},md,{diagnosticAttempt:attempt+1}));}catch(e){if(!firstError)firstError=e;if(!callRetryableFailure(e))throw e;if(attempt===0)await sleep(500);}}
+  assertSession();if(!auxReady)throw firstError;
+  try{const r=await chatAPI(messages,Object.assign({},md,{aux:true,diagnosticAttempt:3}));if(c&&(!session||typeof _call!=='undefined'&&_call&&_call.session===session))wechatModelRouteNotice(c,true,true);return r;}catch(_){throw firstError;}}
 /* 通话被长度上限截断时以前直接断在半句：微信的 complete 写死 true，通话写的是 !_rawOutput，
    而「模型原文输出」全局常开之后 _rawOutput 永远是 true，续写就永远不会触发。 */
 function callReplyBudget(c){const route=chatMainCopy(chatRequestRoute(roleChatRouteIndex(c))||S.settings&&S.settings.chat||{}),own=Number(route.callMaxTokens)||0;
