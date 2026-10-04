@@ -33,7 +33,7 @@ test('main-screen vinyl color is independent from the music app disc and remains
   assert.doesNotMatch(app.match(/function homeVinylColorSet\(value\)\{[^}]*\}/)?.[0] || '', /render\(/,
     'Android color input must not destroy its own picker by rendering the whole app');
   assert.match(html, /\.home-vinyl-color-presets button\{/);
-  assert.match(css, /\.home-vinyl-card \.vinyl-record\.home-vinyl-custom\{[^}]*--home-vinyl-color[^}]*!important/);
+  assert.match(css, /\.home-vinyl-card \.vinyl-record\.home-vinyl-custom:before\{[^}]*--home-vinyl-color[^}]*!important/);
   for (const line of app.match(/\[[^\n]*homeVinylColor[^\n]*\]/g) || []) assert.doesNotMatch(line, /musicDiscColor/);
 });
 

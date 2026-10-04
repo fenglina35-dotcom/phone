@@ -56,7 +56,7 @@ test('Apple home-screen web app colors the system status lane without covering u
   const apply=functionSource(app,'applyAppleHomeCompat');
   const sync=functionSource(app,'webStatusBarThemeSync');
   assert.match(apply,/north-ios-standalone-status/);
-  assert.match(sync,/appleHomeCompatBrowserEnvironment\(\)[\s\S]*black/);
+  assert.match(sync,/apple\.setAttribute\('content','default'\)/);
   assert.match(html,/html\.north-ios-standalone-status\{background-color:var\(--north-shell-status-color,#000\)\}/);
   assert.doesNotMatch(html,/north-ios-standalone-status::before/);
   assert.doesNotMatch(html,/north-ios-standalone-status[^}]*position:fixed/);

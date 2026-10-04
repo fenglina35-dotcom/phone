@@ -29,6 +29,8 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"v1548/v1549",scope:"both",least:1,name:"唱片外围透明而中心封面保留",file:"glass-theme.css",marker:'.vinyl-record:before{content:"";'},
+  {release:"v1548/v1549",scope:"both",least:1,name:"主屏网页版状态栏不强制黑色",marker:"apple.setAttribute('content','default')"},
   {release:"v1546/v1547",scope:"both",least:1,name:"光盘及唱臂一键透明度",marker:"function homeVinylOpacitySet(value)"},
   {release:"v1546/v1547",scope:"both",least:1,name:"顶部锁屏按钮独立颜色及透明度",marker:"function lockPullAppearanceSet(key,value)"},
   {release:"v1544/v1545",scope:"both",least:1,name:"图标黑白包边切换保留",marker:"function appIconRimSet(tone)"},

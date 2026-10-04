@@ -82,7 +82,7 @@ test('reference widgets use live storage and native-first telemetry without repl
 
 test('music player owns four independent colors while every home vinyl keeps its theme texture',()=>{
   for(const pack of ['black','pink','blue','gray']){
-    assert.match(css,new RegExp(`north-pack-${pack} \\.home-vinyl-card \\.vinyl-record\\{background:repeating-radial-gradient`));
+    assert.match(css,new RegExp(`north-pack-${pack} \\.home-vinyl-card \\.vinyl-record:before\\{background:repeating-radial-gradient`));
   }
   for(const color of ['black','white','blue','pink']){
     assert.match(css,new RegExp(`music-premium\\.music-disc-${color} \\.music-vinyl\\{background:repeating-radial-gradient`));
@@ -145,7 +145,7 @@ test('public web browser chrome follows every shell theme while native staging s
   assert.match(sync,/root\.style\.setProperty\('--north-shell-status-color',color\)/);
   assert.match(sync,/meta\.remove\(\)/);
   assert.match(sync,/document\.head\.appendChild\(meta\)/);
-  assert.match(sync,/apple\.setAttribute\('content',appleHomeCompatBrowserEnvironment\(\)\?'black':'default'\)/);
+  assert.match(sync,/apple\.setAttribute\('content','default'\)/);
   for(const [theme,color] of Object.entries({black:'#000',pink:'#ffeaf3',blue:'#eaf4ff',gray:'#e6e8ec',white:'#fff'})){
     assert.match(css,new RegExp(`north-shell-${theme}[^}]+background-color:${color.replace('#','\\#')}!important`));
   }
@@ -164,7 +164,7 @@ test('second-page portrait caption keeps theme color with a translucent glass fi
 test('final reference widgets keep the photo square and the vinyl controls removed',()=>{
   assert.match(css,/\.home-dashboard-photo\{width:128px;height:128px/);
   assert.match(css,/\.home-dashboard-photo img\{[^}]*inset:0!important[^}]*object-fit:cover/);
-  assert.match(css,/\.vinyl-record\{[^}]*repeating-radial-gradient[^}]*radial-gradient/);
+  assert.match(css,/\.vinyl-record:before\{[^}]*repeating-radial-gradient[^}]*radial-gradient/);
   assert.doesNotMatch(app,/class="vinyl-control"/);
   assert.doesNotMatch(app,/class="vinyl-switch"/);
   assert.match(css,/\.home \.dock\{display:grid!important;width:calc\(100% - 32px\)!important;max-width:348px!important/);
@@ -323,11 +323,11 @@ test('vinyl playback activates native iOS audio and every pack has a final recor
   assert.match(app,/function musicNativeAudioActivate\(\)/);
   assert.match(app,/SmallPhoneNative\.request\('music\.audio\.activate'\)/);
   assert.match(app,/async function musicToggle\(\)/);
-  assert.match(css,/north-pack-pink \.home-vinyl-card \.vinyl-record[^{]*\{[^}]*conic-gradient/);
-  assert.match(css,/north-pack-blue \.home-vinyl-card \.vinyl-record[^{]*\{[^}]*conic-gradient/);
-  assert.match(css,/north-pack-gray \.home-vinyl-card \.vinyl-record[^{]*\{[^}]*conic-gradient/);
-  assert.match(css,/north-pack-black \.home-vinyl-card \.vinyl-record[^{]*\{[^}]*conic-gradient/);
-  assert.match(css,/north-pack-gray \.home-vinyl-card \.vinyl-record\{background:repeating-radial-gradient[^}]*conic-gradient/);
+  assert.match(css,/north-pack-pink \.home-vinyl-card \.vinyl-record:before[^{]*\{[^}]*conic-gradient/);
+  assert.match(css,/north-pack-blue \.home-vinyl-card \.vinyl-record:before[^{]*\{[^}]*conic-gradient/);
+  assert.match(css,/north-pack-gray \.home-vinyl-card \.vinyl-record:before[^{]*\{[^}]*conic-gradient/);
+  assert.match(css,/north-pack-black \.home-vinyl-card \.vinyl-record:before[^{]*\{[^}]*conic-gradient/);
+  assert.match(css,/north-pack-gray \.home-vinyl-card \.vinyl-record:before\{background:repeating-radial-gradient[^}]*conic-gradient/);
   assert.match(css,/music-disc-black \.music-vinyl\{background:repeating-radial-gradient[^}]*conic-gradient/);
   assert.match(css,/music-disc-white \.music-vinyl\{background:repeating-radial-gradient[^}]*conic-gradient/);
   assert.match(css,/music-disc-blue \.music-vinyl\{background:repeating-radial-gradient[^}]*conic-gradient/);
@@ -399,7 +399,7 @@ test('one vinyl slider preserves zero and updates both surfaces without renderin
  vm.runInContext(['appIconPack','glassWidgetAppearanceEnsure','glassWidgetAppearance','homeVinylOpacity','homeVinylOpacitySet'].map(functionSource).join('\n'),ctx);
  ctx.homeVinylOpacitySet(0);assert.equal(ctx.homeVinylOpacity(),0);assert.ok(styles.some(x=>x[1]==='0'));
  ctx.S.me.appIconPack='blue';assert.equal(ctx.homeVinylOpacity(),100);ctx.S.me.appIconPack='black';assert.equal(ctx.homeVinylOpacity(),0);ctx.homeVinylOpacitySet(null);assert.equal(ctx.homeVinylOpacity(),100);
- assert.match(css,/\.home-vinyl-card \.vinyl-record,html\.north-glass-ui \.home-vinyl-card \.vinyl-arm\{opacity:var\(--home-vinyl-opacity,1\)/);
+ assert.match(css,/\.home-vinyl-card \.vinyl-arm\{opacity:var\(--home-vinyl-opacity,1\)/);
 });
 
 test('lock pull opacity accepts zero and persists independently per theme',()=>{
@@ -414,4 +414,16 @@ test('resetting glass widgets preserves the independent lock pull button appeara
  const ctx={S:{me:{_glassAppearanceSchema:3,appIconPack:'black',glassWidgetAppearances:{black:{opacity:5,vinylOpacity:0,lockPull:{opacity:42,color:'#397ba9'}}}}},save(){},render(){},widgetManager(){},toast(){}};vm.createContext(ctx);
  vm.runInContext(['appIconPack','glassWidgetAppearanceEnsure','glassWidgetAppearance','glassWidgetAppearanceReset'].map(functionSource).join('\n'),ctx);
  ctx.glassWidgetAppearanceReset();assert.equal(ctx.S.me.glassWidgetAppearances.black.lockPull.opacity,42);assert.equal(ctx.S.me.glassWidgetAppearances.black.vinylOpacity,undefined);
+});
+
+test('vinyl opacity fades only the decorative disc layer and arm, preserving the center cover',()=>{
+ assert.match(css,/\.vinyl-record:before\{[^}]*pointer-events:none[^}]*opacity:var\(--home-vinyl-opacity,1\)/);
+ assert.doesNotMatch(css,/\.home-vinyl-card \.vinyl-record[,\{][^}]*opacity:var\(--home-vinyl-opacity/);
+ assert.match(functionSource('wVinyl'),/\$\{cover\}<\/div><svg class="vinyl-arm"/);
+});
+
+test('Apple standalone custom status colors are not forced black or overridden by the body theme',()=>{
+ assert.match(functionSource('webStatusBarThemeSync'),/apple\.setAttribute\('content','default'\)/);
+ assert.doesNotMatch(functionSource('webStatusBarThemeSync'),/appleHomeCompatBrowserEnvironment\(\)\?'black'/);
+ assert.match(css,/html\.north-glass-ui\.north-shell-custom body\{background-color:var\(--north-shell-status-color\)!important\}/);
 });
