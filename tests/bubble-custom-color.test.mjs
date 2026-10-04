@@ -36,3 +36,20 @@ test('web and private-App bubble renderers stay aligned', () => {
   const bundled = readFileSync(join(root, 'native', 'private-small-phone', 'XcodeProject', 'PhoneCompanionTest', 'PhoneWeb.bundle', 'app.js'), 'utf8');
   assert.ok(bundled.includes(functionSource('bubbleReadableText')));
 });
+
+
+test('logged-in role WeChat keeps bubble style bound to the sender when message sides reverse',()=>{
+  const calls=[],role={id:'role',bubbleStyle:{themBg:'#123456',meBg:'#abcdef'}};
+  const render=Function('getC','bubbleLook','bubbleIconFor','msgToText','esc',functionSource('hisChatMessageHTML')+';return hisChatMessageHTML;')(
+    id=>id==='role'?role:null,
+    (c,user)=>{calls.push({c,user});return {cls:' bpretty',css:'--bbg:'+c.bubbleStyle[user?'meBg':'themBg']};},
+    (c,user)=>user?'PLAYER_ICON':'ROLE_ICON',m=>m.content,String);
+  const outgoing=render('role','__me',{type:'text',content:'role message'},true);
+  const incoming=render('role','__me',{type:'text',content:'player message'},false);
+  assert.match(outgoing,/#123456/);assert.match(outgoing,/ROLE_ICON/);
+  assert.match(incoming,/#abcdef/);assert.match(incoming,/PLAYER_ICON/);
+  assert.equal(calls[0].c,role);assert.equal(calls[0].user,false);assert.equal(calls[1].user,true);
+  assert.match(render('role','friend',{type:'text',c:'friend chat'},true),/#123456/);
+  const privateSource=readFileSync(join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js'),'utf8');
+  assert.ok(privateSource.includes(functionSource('hisChatMessageHTML')));
+});

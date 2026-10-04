@@ -29,7 +29,9 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
-  {release:"v1568/v1569",scope:"both",least:1,name:"角色手机名字原地编辑并支持完成与取消",marker:"function spyAppearanceNameKey(event,id)"},
+  {release:"v1570/v1571",scope:"both",least:1,name:"角色微信按消息作者同步气泡设置",marker:"const c=getC(cid),look=bubbleLook(c,!mine)"},
+  {release:"v1570/v1571",scope:"both",least:1,name:"角色密码拨号盘独立背景与恢复入口",marker:"function spyAppearanceLockWallpaperReset(id)"},
+  {release:"v1570/v1571",scope:"both",least:1,name:"角色手机名字原地编辑并支持完成与取消",marker:"function spyAppearanceNameKey(event,id)"},
   {release:"v1566/v1567",scope:"both",least:1,name:"角色微信图片表情付款共用玩家聊天及代发身份",marker:"function hisChatAppend(cid,fid,m)"},
   {release:"v1566/v1567",scope:"both",least:1,name:"角色微信付款只扣角色钱包",marker:"function hisPaySendSubmit(s,amount)"},
   {release:"v1566/v1567",scope:"both",least:1,name:"角色付款账本独立于消息且超时原路退还",marker:"function hisPaymentsExpire()"},
