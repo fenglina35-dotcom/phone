@@ -29,10 +29,10 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
-  {release:"v1552/v1553 local",scope:"both",least:1,name:"真人消息以独立发送标识核对丢失响应",marker:"async function pfRecoverSend(scope,target,body,p)"},
-  {release:"v1552/v1553 local",scope:"both",least:1,name:"相同正文分别匹配且兼容旧待发消息",marker:"function pfPendingMatches(local,server)"},
-  {release:"v1552/v1553 local",scope:"both",least:2,name:"确认发送后本机错误不退款",marker:"if(confirmed){"},
-  {release:"v1552/v1553 local",scope:"both",least:1,name:"好友连接诊断不采集正文与密钥",marker:"function phoneFriendDiagnostic()"},
+  {release:"v1554/v1555 local",scope:"both",least:1,name:"真人消息以独立发送标识核对丢失响应",marker:"async function pfRecoverSend(scope,target,body,p)"},
+  {release:"v1554/v1555 local",scope:"both",least:1,name:"相同正文分别匹配且兼容旧待发消息",marker:"function pfPendingMatches(local,server)"},
+  {release:"v1554/v1555 local",scope:"both",least:2,name:"确认发送后本机错误不退款",marker:"if(confirmed){"},
+  {release:"v1554/v1555 local",scope:"both",least:1,name:"好友连接诊断不采集正文与密钥",marker:"function phoneFriendDiagnostic()"},
   {release:"v1550/v1551",scope:"both",least:1,name:"图标恢复载入解除错误隐藏",marker:"this.style.display='';if(this.previousElementSibling)"},
   {release:"v1550/v1551",scope:"both",least:1,name:"游戏图片取消超时请求并自动恢复",file:"games/pixel-home/assets.js",marker:"async function loadImageRecover(url,label)"},
   {release:"v1550/v1551",scope:"both",least:1,name:"像素少女先保存再返回不等待磁盘",file:"games/pixel-home/game.js",marker:"cancelCare(false);if(!save())return;window.PixelHomeBridge.request('exit')"},
@@ -1370,13 +1370,6 @@ const DELIVERY_FIXES = [
   { name: 'v1344 外卖偏好必须是用户本轮亲口态度且是食物', marker: 'function memoryAttitudeGrounded(' },
 ];
 
-test('web and private keep v1344 daily event ledger turn-wide evidence matching', () => {
-  for (const p of ['daily-event-ledger.js', PRIVATE_DIR + 'daily-event-ledger.js']) {
-    const s = read(p);
-    assert.ok(s.includes('function turnMessages(c,userText,channel)'), `${p} 缺少本轮连发消息证据比对`);
-    assert.ok(s.includes('function evidenceSource(list,evidence)'), `${p} 缺少宽松标点证据比对`);
-  }
-});
 
 for (const fix of DELIVERY_FIXES) {
   test(`web and private keep v1330/v1331 delivery repair — ${fix.name}`, () => {

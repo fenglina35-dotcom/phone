@@ -2,69 +2,28 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-const code=fs.readFileSync(new URL('../daily-event-ledger.js',import.meta.url),'utf8');
-function setup(){const c={id:'a'},b={id:'b'},rows=[],box={console,Date,window:null,S:{me:{active:'main'}},c,b,rows,uid:(()=>{let i=0;return()=>String(++i)})(),esc:String,save(){},render(){},msgs:()=>rows,memoryScopeKey(){return box.S.me.active},getC:id=>id==='a'?c:b,lifeNoteModelPrompt:()=>'',lifeNoteStripModelTags:x=>x,lifeNoteReplyDraft:()=>null,lifeNoteCommitReply(){},clearContactMemoryData(c){c._memoryResetAt=Date.now()}};box.window=box;vm.createContext(box);vm.runInContext(code,box);return box;}
-const at=Date.parse('2026-09-09T19:00:00+08:00');
-test('off by default, per-role/account isolation and optional memory prompt',()=>{
- const x=setup(),api=x.DailyEventLedger;
- assert.equal(api.prompt(x.c),'');assert.equal(api.state(x.c),null);
- x.dailyEventLedgerSet('a','enabled',true);assert.match(api.prompt(x.c),/日常事件簿/);assert.equal(api.prompt(x.b),'');
- x.S.me.active='alt';assert.equal(api.prompt(x.c),'');x.S.me.active='main';assert.match(api.prompt(x.c),/日常事件簿/);
-});
-test('records only evidenced user fact after visible delivery, no duplicate on extra bubbles',()=>{
- const x=setup(),a=x.DailyEventLedger;x.dailyEventLedgerSet('a','enabled',true);
- x.rows.push({role:'user',content:'我昨天吃过晚饭了',time:at});
- const d=x.lifeNoteReplyDraft('[事件簿|新|已发生|我昨天吃过晚饭了|用户昨天吃过晚饭。]',x.c,'我昨天吃过晚饭了','wechat');
- assert.equal(a.state(x.c).items.length,0);x.lifeNoteCommitReply(d,'记得了。');x.lifeNoteCommitReply(d,'嗯。');
- assert.equal(a.state(x.c).items.length,1);assert.equal(a.state(x.c).items[0].eventDate,'2026-09-08');assert.equal(a.state(x.c).items[0].reportedAt,at);
- assert.equal(x.lifeNoteReplyDraft('[事件簿|新|已发生|你吃过饭|用户吃过饭了。]',x.c,'你猜','wechat'),null);
- assert.equal(a.strip('好。[事件簿|新|已发生|我吃过饭了|用户吃过饭了。]'),'好。');
-});
-test('v1344: evidence may come from any user message of the current burst and tolerates punctuation width',()=>{
- const x=setup(),a=x.DailyEventLedger;x.dailyEventLedgerSet('a','enabled',true);
- x.rows.push({role:'assistant',content:'在呢',time:at-5000},{role:'user',content:'今天中午去健身房练腿了',time:at-2000},{role:'user',content:'好累啊',time:at});
- a.commit(a.draft('[事件簿|新|已发生|今天中午去健身房练腿了|用户中午去健身房练了腿。]',x.c,'好累啊','wechat'),'辛苦了。');
- assert.equal(a.state(x.c).items.length,1,'an earlier message of the same burst is valid evidence');
- assert.equal(a.state(x.c).items[0].reportedAt,at-2000,'the report time is the message that contains the evidence');
- x.rows.push({role:'assistant',content:'辛苦了',time:at+1000},{role:'user',content:'晚上吃了火锅！',time:at+2000});
- a.commit(a.draft('[事件簿|新|已发生|晚上吃了火锅!|用户晚上吃了火锅。]',x.c,'晚上吃了火锅！','wechat'),'好。');
- assert.equal(a.state(x.c).items.length,2,'half-width punctuation in the quoted evidence must not drop the record');
- assert.equal(a.draft('[事件簿|新|已发生|今天中午去健身房练腿了|重复旧证据。]',x.c,'晚上吃了火锅！','wechat'),null,'a message before the last role reply is not this turn');
- assert.equal(a.draft('[事件簿|新|已发生|我今天去了医院|用户去了医院。]',x.c,'晚上吃了火锅！','wechat'),null,'fabricated evidence is still rejected');
- x.rows.push({role:'assistant',content:'嗯',time:at+3000},{role:'user',content:'今天要不要去健身呢？',time:at+4000},{role:'user',content:'好纠结',time:at+5000});
- a.commit(a.draft('[事件簿|新|已发生|今天要不要去健身呢|用户今天去健身。]',x.c,'好纠结','wechat'),'嗯。');
- assert.equal(a.state(x.c).items.find(v=>v.summary==='用户今天去健身。').status,'待确认','a question in the evidence message keeps the event unconfirmed');
-});
-test('pending questions and future plans never upgraded to completed by a substring',()=>{
- const x=setup(),a=x.DailyEventLedger;x.dailyEventLedgerSet('a','enabled',true);
- for(const user of ['我没有吃过晚饭','我吃过晚饭了吗？','如果我吃过晚饭就出去']){
-  const d=a.draft('[事件簿|新|已发生|吃过晚饭|用户吃过晚饭了。]',x.c,user,'wechat');a.commit(d,'嗯。');
-  assert.equal(a.state(x.c).items.at(-1).status,'待确认');
- }
-});
-test('same event progresses with previous state, clear/edit/toggle cancels stale write',()=>{
- const x=setup(),a=x.DailyEventLedger;x.dailyEventLedgerSet('a','enabled',true);
- let d=a.draft('[事件簿|新|计划中|明天去复查|用户计划明天去复查。]',x.c,'明天去复查','wechat');a.commit(d,'好。');const id=a.state(x.c).items[0].id;
- d=a.draft('[事件簿|'+id+'|已解决|已经复查完了|用户已完成复查。]',x.c,'已经复查完了','wechat');a.commit(d,'好。');assert.equal(a.state(x.c).items.length,1);assert.equal(a.state(x.c).items[0].previous.status,'计划中');
- d=a.draft('[事件簿|新|已发生|今天走过路|用户今天散步了。]',x.c,'今天走过路','wechat');x.dailyEventLedgerSet('a','enabled',false);a.commit(d,'好。');assert.equal(a.state(x.c).items.length,1);
- x.clearContactMemoryData(x.c,'a');assert.equal(a.state(x.c),null);
-});
-test('unknown date stays unknown and Beijing dates use original user timestamp',()=>{
- const x=setup(),a=x.DailyEventLedger;assert.equal(a.eventDay('昨天散步',Date.parse('2026-09-10T00:01:00+08:00')),'2026-09-09');
- assert.equal(a.eventDay('前几天散步',at),'');assert.equal(a.eventDay('吃过晚饭了',at),'');assert.equal(a.eventDay('2026年2月31日散步',at),'');assert.equal(a.eventDay('9月8日散步',at),'9月8日（年份未说明）');
-});
-test('cap is bounded and retrieval never includes every row',()=>{
- const x=setup(),a=x.DailyEventLedger;x.dailyEventLedgerSet('a','enabled',true);x.dailyEventLedgerSet('a','limit',50);
- for(let i=0;i<65;i++){const user='今天事件编号'+i;a.commit(a.draft('[事件簿|新|已发生|'+user+'|用户完成事件'+i+'。]',x.c,user,'wechat'),'好。');}
- assert.equal(a.state(x.c).items.length,50);assert(a.selected(x.c).length<=10);x.dailyEventLedgerSet('a','limit',5000);assert.equal(a.state(x.c).limit,300);
-});
-test('deleting an account clears only its ledger in both actual implementations',async()=>{
- for(const file of ['../app.js','../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js']){
-  const src=fs.readFileSync(new URL(file,import.meta.url),'utf8');
-  const start=src.indexOf('async function delAccount(id)'),end=src.indexOf('\nfunction cMark',start);
-  const ledgerMain={items:['keep']},c={_dailyEventLedgers:{main:ledgerMain,alt:{items:['remove']}}};
-  const box={S:{me:{accounts:[{id:'main'},{id:'alt'}]},messages:{'role#alt':[],role:[]},contacts:[c]},uiConfirm:async()=>true,actId:()=> 'main',save(){},accountMgr(){}};
-  vm.createContext(box);vm.runInContext(src.slice(start,end),box);await box.delAccount('alt');
-  assert.equal(c._dailyEventLedgers.main,ledgerMain);assert.equal(c._dailyEventLedgers.alt,undefined);assert.deepEqual(box.S.me.accounts,[{id:'main'}]);
- }
+const root=new URL('../',import.meta.url);
+const dirs=['','native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/'];
+for(const dir of dirs){
+ const read=name=>fs.readFileSync(new URL(dir+name,root),'utf8');
+ test(dir+'removed event ledger has no entry, runtime or model injection',()=>{
+  assert.equal(fs.existsSync(new URL(dir+'daily-event-ledger.js',root)),false);
+  for(const name of (dir?['小手机.html','index.html']:['小手机.html','sw.js']))assert.doesNotMatch(read(name),/daily-event-ledger/);
+  const app=read('app.js');
+  assert.doesNotMatch(app,/日常事件簿|dailyEventLedgerHTML/);
+  assert.match(app,/\['lifelog','小事簿'/);
+  assert.match(app,/function lifeNoteReplyDraft\(/);
+ });
+ test(dir+'old event tags remain invisible and legacy navigation returns home',()=>{
+  const app=read('app.js'),ctx={_spyApp:null,cur:()=>({p:'spy'}),render(){ctx.rendered=true;}};
+  vm.createContext(ctx);
+  vm.runInContext(app.match(/^function lifeNoteStripModelTags\(.*$/m)[0]+'\n'+app.match(/^function spyOpen\(.*$/m)[0],ctx);
+  assert.equal(ctx.lifeNoteStripModelTags('好的。[事件簿|新|已发生|吃饭|吃过饭]'),'好的。');
+  assert.equal(ctx.lifeNoteStripModelTags('好的。[小事簿|吃饭|吃过饭]'),'好的。');
+  ctx.spyOpen('role','events');assert.equal(ctx._spyApp,null);assert.equal(ctx.rendered,true);
+ });
+}
+test('private active package manifest excludes removed component',()=>{
+ const manifest=fs.readFileSync(new URL('native/private-small-phone/Resources/private-phone-web.manifest.json',root),'utf8');
+ assert.doesNotMatch(manifest,/daily-event-ledger/);JSON.parse(manifest);
 });

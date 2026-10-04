@@ -131,3 +131,24 @@ test('home gestures install one movement event family per browser',()=>{
   assert.ok(touch.includes('touchmove'));
   assert.ok(!touch.includes('pointermove'));
 });
+
+
+test('role WeChat remembers only successful password verification and unbind revokes it',()=>{
+ const c={id:'r',wxid:'role-id'},ctx={S:{me:{active:'main'}},actId:()=>ctx.S.me.active,isMain:()=>ctx.S.me.active==='main',getC:id=>id==='r'?c:null,save(){},toast(){},render(){},accountRoleWechatOpen(){},_hisLogin:null,_hisSync:true,_hisLoginMode:'wx',go(){ctx.screen='password';},hisStartSession(){ctx.sessions=(ctx.sessions||0)+1;},hisEndSession(){ctx._hisLogin=null;},spyPwd:()=> '1234',$:sel=>({value:sel==='#hl_acct'?'role-id':ctx.password}),Date};
+ vm.createContext(ctx);vm.runInContext(['hisWechatBound','hisWechatBind','hisWechatUnbind','hisLoginOpen','hisDoLogin'].map(functionSource).join('\n'),ctx);
+ ctx.password='wrong';ctx.hisDoLogin('r');assert.equal(ctx.hisWechatBound('r'),false);assert.equal(ctx.sessions,undefined);
+ ctx.password='1234';ctx.hisDoLogin('r');assert.equal(ctx.hisWechatBound('r'),true);assert.equal(ctx.sessions,1);assert(!JSON.stringify(ctx.S.me.roleWechatBindings).includes('1234'));
+ ctx.S=JSON.parse(JSON.stringify(ctx.S));ctx.hisLoginOpen('r');assert.equal(ctx.sessions,2,'binding survives saved-state reload');
+ ctx.S.me.active='alt';ctx.hisLoginOpen('r');assert.equal(ctx.sessions,2,'another account cannot reuse the binding');ctx.S.me.active='main';
+ c.blocked=true;assert.equal(ctx.hisWechatBound('r'),false);ctx.hisLoginOpen('r');assert.equal(ctx.sessions,2);c.blocked=false;
+ ctx.hisWechatUnbind('r');assert.equal(ctx.hisWechatBound('r'),false);ctx.hisLoginOpen('r');assert.equal(ctx.screen,'password');assert.equal(ctx.sessions,2);
+});
+test('web and private role-account binding implementation stays aligned',()=>{
+ const priv=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js',import.meta.url),'utf8');
+ for(const name of ['hisWechatBound','hisWechatBind','hisWechatUnbind','accountRoleWechatOpen','hisLoginOpen','hisDoLogin'])assert(priv.includes(functionSource(name)),name);
+});
+
+test('role bindings appear inline in the actual WeChat switch-account page',()=>{
+ const source=fs.readFileSync(new URL('../wechat-me.js',import.meta.url),'utf8');const start=source.indexOf('function renderWxAccounts('),end=source.indexOf('\nfunction ',start+1),renderSource=source.slice(start,end);
+ const ctx={initAccounts(){},S:{me:{accounts:[{id:'main',name:'North'}]},contacts:[{id:'one',name:'先生'},{id:'two',name:'哥哥'}]},actId:()=> 'main',isMain:()=>true,hisWechatBound:id=>id==='one',av:()=>'',esc:String,jq:JSON.stringify,WNav:()=>''};vm.createContext(ctx);vm.runInContext(renderSource,ctx);const html=ctx.renderWxAccounts();assert.match(html,/我的微信账号/);assert.match(html,/登录其他角色微信/);assert.match(html,/已绑定，可直接切换/);assert.match(html,/hisWechatUnbind/);assert.match(html,/>切换<\/button>/);assert.match(html,/>登录<\/button>/);assert.doesNotMatch(html,/角色登录记录<\/h4>/);
+});

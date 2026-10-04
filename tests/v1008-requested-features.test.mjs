@@ -64,7 +64,8 @@ test('Moment replies refresh only their social slot and stored images decode bef
 test('role model and role-WeChat login entries are moved to the requested pages',()=>{
   assert.match(functionSource('renderContactSettings'),/主模型 \/ 副模型/);
   assert.match(functionSource('accountMgr'),/登录角色微信/);
-  assert.match(functionSource('accountRoleWechatOpen'),/hisLoginOpen/);
+  assert.match(functionSource('accountRoleWechatOpen'),/accountMgr/);
+  assert.match(fs.readFileSync(new URL('../wechat-me.js',import.meta.url),'utf8'),/function renderWxAccounts\([\s\S]*hisLoginOpen/);
   assert.doesNotMatch(functionSource('renderRoleManagementAll'),/>聊天模型</);
   assert.doesNotMatch(functionSource('renderRoleManagementAll'),/>登录ta的微信</);
 });

@@ -1,6 +1,6 @@
-const BUILD='1552';
-const HOTFIX='v1552-role-family-card-preview-1';
-const SHELL_CACHE='north-shell-v1552-role-family-card-preview-1';
+const BUILD='1554';
+const HOTFIX='v1554-role-family-card-preview-1';
+const SHELL_CACHE='north-shell-v1554-role-family-card-preview-1';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
@@ -15,14 +15,13 @@ const CORE_FILES=[
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
   {url:'./app.js?v='+BUILD+'&r='+HOTFIX,kind:'app'},
   {url:'./cohab-theater.js?v='+BUILD+'&r=v1274-web-cohab-guests-1',kind:'theater'},
-  {url:'./web-hotfix.js?v='+BUILD+'&r=v1552-role-family-card-preview-1',kind:'hotfix'},
+  {url:'./web-hotfix.js?v='+BUILD+'&r=v1554-role-family-card-preview-1',kind:'hotfix'},
   {url:'./ai-account.js?v='+BUILD,kind:'ai'},
   {url:'./couple-watch.js?v='+BUILD,kind:'watch'},
   {url:'./couple-watch-runtime.js?v='+BUILD,kind:'watchRuntime'}
 ];
 const OPTIONAL_FILES=[
   './browser-diagnostics.js?v='+BUILD,
-  './daily-event-ledger.js?v='+BUILD,
   './request-diagnostics.js?v='+BUILD,
   './message-beijing-time.js?v='+BUILD+'&r=offline-me-1',
   './pixel-home-policy.js?v='+BUILD,
@@ -129,7 +128,7 @@ function validShellText(kind,text){
     &&text.includes('theaterRevealActorItems')
     &&!text.includes('cohabReplyCore=async');
   if(kind==='hotfix')return text.length>800
-    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1552-role-family-card-preview-1'")
+    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1554-role-family-card-preview-1'")
     &&text.includes('reconcileExpiredWxLogin')
     &&text.includes('withBaseImageCheck')
     &&text.includes('isStoredImgRef');
