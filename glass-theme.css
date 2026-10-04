@@ -709,3 +709,9 @@ html.north-real-preview .wx-contacts>.wx-alpha-rail{top:150px}
 html.north-glass-ui.north-shell-custom .statusbar{background:var(--north-shell-status-color)!important;color:var(--north-shell-status-text)!important}
 
 .sweetie-avatar-picker[data-glass-inner][style]>img,.sweetie-avatar-picker[data-glass-inner][style]>svg{background:transparent!important}
+
+html.north-glass-ui .home-vinyl-card .vinyl-record,html.north-glass-ui .home-vinyl-card .vinyl-arm{opacity:var(--home-vinyl-opacity,1)}
+
+html.north-glass-ui #lockPull.north-lockpull-color{background:var(--north-lockpull-color)!important}
+html.north-glass-ui #lockPull.north-lockpull-color:before{border-color:var(--north-lockpull-arrow)!important}
+html.north-glass-ui #lockPull.north-lockpull-opacity{opacity:var(--north-lockpull-opacity)!important}

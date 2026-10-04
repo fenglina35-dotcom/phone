@@ -29,6 +29,8 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"v1546/v1547",scope:"both",least:1,name:"光盘及唱臂一键透明度",marker:"function homeVinylOpacitySet(value)"},
+  {release:"v1546/v1547",scope:"both",least:1,name:"顶部锁屏按钮独立颜色及透明度",marker:"function lockPullAppearanceSet(key,value)"},
   {release:"v1544/v1545",scope:"both",least:1,name:"图标黑白包边切换保留",marker:"function appIconRimSet(tone)"},
   {release:"v1544/v1545",scope:"both",least:1,name:"玻璃内部小块独立颜色及零透明度",marker:"function glassInnerSet(key,field,value)"},
   {release:"v1544/v1545",scope:"both",least:1,name:"顶部系统区域自由选色及跟随主题",marker:"function statusBarColorSet(value)"},

@@ -385,3 +385,33 @@ test('system status custom colors validate and remain separate from theme select
  assert.match(swift,/statusBarTint\?\.color \?\? statusBarTheme\.color/);
  assert.match(swift,/0\.299 \* red \+ 0\.587 \* green \+ 0\.114 \* blue/);
 });
+
+test('continuous status color input keeps the open picker attached without full-page render',()=>{
+ const paints=[],saves=[];const ctx={S:{me:{}},save(delay){saves.push(delay)},privateNativeStatusBarThemeSync(force){paints.push([force,ctx.S.me.statusBarColor]);return 'black'},render(){throw new Error('color input destroyed by page render')},document:{querySelectorAll(){return []}},webStatusBarThemeSync(){return '#000000'}};
+ vm.createContext(ctx);vm.runInContext(functionSource('statusBarColorSet'),ctx);
+ for(const color of ['#123456','#abcdef','#ffffff'])ctx.statusBarColorSet(color);
+ assert.equal(ctx.S.me.statusBarColor,'#ffffff');assert.equal(paints.length,3);assert.deepEqual(saves,[250,250,250]);
+ ctx.statusBarColorSet('');assert.equal(ctx.S.me.statusBarColor,'');
+});
+
+test('one vinyl slider preserves zero and updates both surfaces without rendering the modal',()=>{
+ const styles=[],ctx={S:{me:{_glassAppearanceSchema:3,appIconPack:'black',glassWidgetAppearances:{}}},save(){},document:{querySelectorAll(){return [{style:{setProperty(k,v){styles.push([k,v])}}}]}},$(){return null}};vm.createContext(ctx);
+ vm.runInContext(['appIconPack','glassWidgetAppearanceEnsure','glassWidgetAppearance','homeVinylOpacity','homeVinylOpacitySet'].map(functionSource).join('\n'),ctx);
+ ctx.homeVinylOpacitySet(0);assert.equal(ctx.homeVinylOpacity(),0);assert.ok(styles.some(x=>x[1]==='0'));
+ ctx.S.me.appIconPack='blue';assert.equal(ctx.homeVinylOpacity(),100);ctx.S.me.appIconPack='black';assert.equal(ctx.homeVinylOpacity(),0);ctx.homeVinylOpacitySet(null);assert.equal(ctx.homeVinylOpacity(),100);
+ assert.match(css,/\.home-vinyl-card \.vinyl-record,html\.north-glass-ui \.home-vinyl-card \.vinyl-arm\{opacity:var\(--home-vinyl-opacity,1\)/);
+});
+
+test('lock pull opacity accepts zero and persists independently per theme',()=>{
+ const ctx={S:{me:{_glassAppearanceSchema:3,appIconPack:'black',glassWidgetAppearances:{}}},save(){},lockPullAppearancePaint(){},document:{querySelectorAll(){return []}},$(){return null}};vm.createContext(ctx);
+ vm.runInContext(['appIconPack','glassWidgetAppearanceEnsure','glassWidgetAppearance','lockPullAppearance','lockPullOpacity','lockPullAppearanceSet'].map(functionSource).join('\n'),ctx);
+ ctx.lockPullAppearanceSet('opacity',0);assert.equal(ctx.lockPullOpacity(),0);ctx.S.me.appIconPack='pink';assert.equal(ctx.lockPullOpacity(),100);ctx.S.me.appIconPack='black';ctx.lockPullAppearanceSet('reset');assert.equal(ctx.lockPullOpacity(),100);
+ assert.match(css,/north-lockpull-opacity\{opacity:var\(--north-lockpull-opacity\)!important\}/);
+});
+
+
+test('resetting glass widgets preserves the independent lock pull button appearance',()=>{
+ const ctx={S:{me:{_glassAppearanceSchema:3,appIconPack:'black',glassWidgetAppearances:{black:{opacity:5,vinylOpacity:0,lockPull:{opacity:42,color:'#397ba9'}}}}},save(){},render(){},widgetManager(){},toast(){}};vm.createContext(ctx);
+ vm.runInContext(['appIconPack','glassWidgetAppearanceEnsure','glassWidgetAppearance','glassWidgetAppearanceReset'].map(functionSource).join('\n'),ctx);
+ ctx.glassWidgetAppearanceReset();assert.equal(ctx.S.me.glassWidgetAppearances.black.lockPull.opacity,42);assert.equal(ctx.S.me.glassWidgetAppearances.black.vinylOpacity,undefined);
+});
