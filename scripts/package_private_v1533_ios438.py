@@ -1,4 +1,4 @@
-"""Create the private v1549 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
+"""Create the private v1571 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
 
 Unlike the earlier packaging scripts, every file is read from the committed tree
 (``git cat-file`` against HEAD) instead of the working directory. The v1235/iOS356
@@ -23,10 +23,10 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "native/private-small-phone/XcodeProject/"
 BUNDLE = "PhoneCompanionTest/PhoneWeb.bundle/"
-PREFIX = "SmallPhone_v1549_iOS439_Private/"
-OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1549_iOS439.zip"
+PREFIX = "SmallPhone_v1571_iOS439_Private/"
+OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1571_iOS439.zip"
 
-WEB_VERSION = "1549"
+WEB_VERSION = "1571"
 MARKETING = "1.0.439"
 BUILD = "439"
 BRIDGE = "42"
@@ -548,7 +548,7 @@ def validate(files: dict[str, bytes]) -> None:
     with ZipFile(previous) as archive:
         prefix = next(n for n in archive.namelist() if n.endswith("/SOURCE_STATE.json"))[:-len("SOURCE_STATE.json")]
         prior = [n[len(prefix):] for n in archive.namelist() if n.startswith(prefix) and not n.endswith("/") and not n.endswith(("SOURCE_STATE.json", "SHA256SUMS.json"))]
-        assert not set(prior) - files.keys(), "previous delivery files missing"
+        assert set(prior) - files.keys() == {BUNDLE + "daily-event-ledger.js"}, "unexpected previous delivery files missing"
 
     # Both the v1420 inheritance and this release must be in the actual archive.
     for marker in ("function roleInternalControlLine(", "function gRpRecipient(", "function groupTransferDetailAction(", "function wxUnreadTotal(", "function dyStrangerParse(", "async function pfTransportRoute(", "function offDelHistory(", "_offNarrateById", "function roleTextTranslationHTML(", "function roleChatRouteSet(", "function roleMomentImagesAllowed("):
@@ -607,36 +607,61 @@ def main() -> None:
     assert "if(Math.abs(amount)<1e-7)return" not in cozy_female, "standing pose T-pose regression returned"
     assert 'function wxUnreadRestore()' in text(files[BUNDLE + 'app.js'])
     assert 'wxUnreadJournalWrite();save(durable?' in text(files[BUNDLE + 'app.js'])
-    state = {'macBuildVerified': False, 'realIPhoneVerified': False, 'kind': 'Mac-source-not-IPA', 'preserved': ['v1369-cohab-tap-for-next-line', 'v1369-named-roles-answer-first', 'v1369-merged-calls-role-route-and-fallback', 'v1365-quote-box-keeps-bubble-width', 'v1365-douyin-solo-merged-calls', 'v1363-group-chat-redesign-info-qr-search-manage', 'v1363-group-lucky-red-packets-role-and-real-person', 'v1363-group-transfer-recipient-picker', 'v1363-group-long-press-quote', 'v1363-group-solo-merged-model-calls', 'v1363-role-mute-private-dm-and-release', 'v1363-group-reply-failure-reason', 'v1357-role-file-format-and-phone-inspection', 'v1356-real-red-packet-and-transfer-pages', 'v1356-cohab-proactive-handoff', 'v1356-meal-progress-phrasing', 'v1356-push-context-keeps-state-lines', 'robot-k-face-voice-history-cloud-usage-from-mac-v1352', 'native-bridge-42-robot-speech-transcribe', 'v1348-control-speech-never-executes-tags-only', 'v1344-raw-control-tag-lines-execute', 'v1346-stale-transfer-not-collected', 'v1344-web-search-result-card', 'v1344-delivery-memory-grounded', 'v1344-daily-ledger-turn-evidence', 'v1344-pay-card-full-name', 'v1344-dm-delete-returns', 'license-relay-same-backend-admin-identity', 'activation-before-optional-friend-registration', 'per-record-phone-inspection-read-ledger', 'per-role-call-probability', 'couple-tasks-opt-in', 'live-glass-bubble-colors', 'real-friend-transfer-receipt', 'four-default-reply-budgets-4096', 'all-public-v1332-features', 'role-moment-idb-cover-rehydration', 'internal-app-decision-hidden-at-all-delivery-boundaries', 'all-private-v1281-features', 'private-backup-4mib-object-chunks', 'private-backup-small-manifest-commit', 'private-backup-checksum-restore', 'private-backup-legacy-fallback', 'private-backup-single-upload-progress', 'web-cloud-existing-row-update', 'web-cloud-persistent-progress', 'private-backup-commit-timeout-1920s', 'private-call-smart-home-tag-sanitizer', 'private-call-inline-translation-deduplication', 'online-memory-recall-controls', 'offline-memory-scroll-restore', 'cozy-private-native-bridge', 'diagnostic-copy-freshness', 'native-probe-lifecycle', 'house052-complete-assets', 'first-person-head-tracking', 'isolated-mobile-shader-warmup', 'warm-gpu-resource-release', 'female-standing-pose', 'imessage-sms-page', 'per-contact-sms-background', 'traced-hairline-glass', 'thin-bubble-tail', 'bare-photo-messages', 'sms-typing-dots', 'sms-multi-bubble', 'global-context-everywhere', 'role-sets-chat-background', 'sms-photo-vision', 'frosted-body-with-hairline-ring', 'rim-picks-up-wallpaper-colour', 'imessage-text-effects', 'send-with-effect', 'fullscreen-screen-effects', 'cohab-manual-status-sticks', 'chat-background-keeps-quality', 'delivery-nested-bracket-actions', 'lockscreen-touch-ownership-and-drag-reset', 'delivery-contextual-kfc-choice', 'delivery-explicit-preference-learning', 'delivery-brand-only-natural-clarification', 'v1420-offline-narration-state', 'v1420-theater-all-present-roles-named-first', 'v1420-theater-address-and-presence-recovery', 'v1420-date-based-offline-history-delete', 'v1422-internal-control-lines-hidden', 'v1422-exclusive-packet-recipient-guard', 'v1422-full-role-quotes-user-quote-hidden', 'v1422-group-transfer-detail-explicit-receive', 'v1422-unread-counts-and-moments-dot', 'v1422-distinct-stranger-personas', 'v1422-friend-transport-single-submission', 'v1424-unread-read-journal-legacy-baseline', 'shared-role-text-auto-translation', 'shared-role-independent-model-route-selector', 'shared-role-moment-image-permission', 'v1426-virtual-pet-expression-and-wake-controls', 'v1426-delayed-letters-required-reply-and-wechat-ack', 'v1426-four-chat-types-shared-glass-layout', 'v1432-user-to-role-prepaid-family-card-separated-ledger', 'v1432-family-card-role-decision-own-purchases-only', 'v1432-family-card-recharge-freeze-refund-idempotency', 'v1432-family-card-phone-bank-shop-persistent-source', 'v1432-short-premium-pink-family-card-layout'], 'upstreamBaseline': '260f4f1f0fe5ea3490bc7f65f36c5c4b1f191fc3', 'webVersion': 'v1532', 'privateWeb': 'v1533', 'privateIOS': '1.0.438 (438)', 'bridge': 42, 'lastDeliveredPackage': {'name': '最新私人版本覆盖包_v1525_iOS437.zip', 'sha256': '8f3bc3f9c07662989a9643eda4a054193e40fcd470977af0989b0b26f7ff1e91', 'sourceCommit': 'b7c71aa9c29db509481acb3a0bf1ae16a5e515c5'}, 'knownUnresolved': ['oppo-health-verified-live-activation-and-admin-row-pending', 'iphone-safari-tap-stutter-not-device-verified', 'real-model-stranger-diversity-not-live-verified', 'friend-network-without-vpn-needs-device-verification', 'real-model-family-card-personality-not-live-verified', 'v1533-mac-build-signing-and-iphone-not-verified'], 'friendRelay': {'worker': 'north-license-connectivity', 'activeVersion': '05dd1e47', 'healthVerified': True, 'emptySearchVerified': True, 'realDeviceWithoutVPNVerified': False}}
-    state["friendRelay"] = {"worker": "north-license-connectivity", "activeVersion": "05dd1e47", "healthVerified": True, "emptySearchVerified": True, "realDeviceWithoutVPNVerified": False}
-    state["preserved"] += ["small-fish-travel-six-services", "role-travel-own-orders-and-funds", "flexible-simulated-role-booking", "common-hotel-brands-all-cities", "white-travel-dialogs-and-full-hotel-detail", "travel-wallet-role-family-payment", "payment-current-remark-name", "role-rose-balance-separated-expenses", "private-payment-completed-request-guard"]
-    state["validation"] = {"macBuildVerified": False, "realIPhoneVerified": False, "models": "HTTP simulated in browser gates", "nodeTests": {"passed": 3112, "failed": 0}, "privateBrowserPayments": 15, "authorizedChatBothRuntimes": True}
-    state["preserved"] += ["role-order-payment-remark-name", "full-history-mail-search-yellow-marks", "mail-read-forward-snapshot-theme-card", "mail-compose-bound-original-reply-and-wechat-context", "mail-account-request-isolation", "mail-svg-actions-purchaser-avatar-home-back", "request-failure-diagnostics-and-hangup-cancellation"]
-    state["sourceCommit"] = text(git("rev-parse", "HEAD")).strip()
-    # Verify the last delivered overlay, preserving every file and unchanged native payload.
-    previous = ROOT.parent / "最新私人版本覆盖包_v1543_iOS438.zip"
-    assert sha256(previous.read_bytes()).hexdigest() == "3dc04b801762c9c720abb3a635e6bf29e2727baa2401f29b396ba641e464e356"
+    # Compare the entire last delivered package, including its verified manifest.
+    previous = ROOT.parent / "最新私人版本覆盖包_v1549_iOS439.zip"
+    previous_sha = "bad2885137bed1972d21853c1728b3b755098217a343887fed179250a4b63ca2"
+    assert sha256(previous.read_bytes()).hexdigest() == previous_sha
     with ZipFile(previous) as old:
-        old_prefix = "SmallPhone_v1543_iOS438_Private/"
-        previous_files = {n[len(old_prefix):]:old.read(n) for n in old.namelist() if n.startswith(old_prefix)}
-    assert not (previous_files.keys() - files.keys() - {"SOURCE_STATE.json", "SHA256SUMS.json"}), "previously delivered files omitted"
+        old_prefix = "SmallPhone_v1549_iOS439_Private/"
+        previous_files = {n[len(old_prefix):]: old.read(n) for n in old.namelist() if n.startswith(old_prefix) and not n.endswith("/")}
+    prior_manifest = json.loads(previous_files["SHA256SUMS.json"])
+    assert set(prior_manifest) == previous_files.keys() - {"SHA256SUMS.json"}
+    for name, digest in prior_manifest.items():
+        assert sha256(previous_files[name]).hexdigest() == digest, "previous package checksum mismatch: " + name
+    # This component was explicitly retired in v1554; retaining it would restore a removed feature.
+    retired = {BUNDLE + "daily-event-ledger.js"}
+    assert previous_files.keys() - files.keys() - {"SOURCE_STATE.json", "SHA256SUMS.json"} == retired
     for name, body in previous_files.items():
         if name not in {"SOURCE_STATE.json", "SHA256SUMS.json", "请在Mac编译前先读.md"} and not name.startswith(BUNDLE):
-            if name in {"PhoneCompanionTest/PhoneNativeBridge.swift", "PhoneCompanionTest/SmallPhonePrivateRootView.swift"}:
-                assert files[name] == git("show", "9498a67df083757837065340199cedd053a50e80:" + SOURCE + name), "unreviewed status-color native change: " + name
-            elif name in {"PhoneCompanionTest.xcodeproj/project.pbxproj", "PhoneCompanionTest/LocalPhoneWebView.swift"}:
-                assert files[name].replace(b"439", b"438") == body, "unexpected native or signing change: " + name
-            else:
-                assert files[name] == body, "unexpected native or signing change: " + name
-    state["preserved"] = sorted(set(state["preserved"] + json.loads(previous_files["SOURCE_STATE.json"])["preserved"] + ["pet-control-format-recovery", "grounded-memory-name-repair", "withdrawn-family-card-hidden-from-bank", "independent-multiselect-delete-green-forward", "compact-blue-phone-authorization", "home-game-entry-migration-stored-invites", "independent-girl-pet-icons-and-controls", "first-run-original-icons-custom-reset-race-guard", "removed-line-theme-migration", "hollow-white-glass-icon-rims"]))
-    state["webVersion"] = "v1548"
-    state["privateWeb"] = "v1549"
-    state["privateIOS"] = "1.0.439 (439)"
-    state["lastDeliveredPackage"] = {"name": previous.name, "sha256": sha256(previous.read_bytes()).hexdigest(), "sourceCommit": "ed8112ee74e1329ac4c6ee6ebee24f35d3778deb"}
-    state["knownUnresolved"] = [x for x in state["knownUnresolved"] if not x.startswith(("v1533-mac-", "v1543-mac-"))] + ["v1549-mac-build-signing-and-iphone-not-verified"]
-    state["validation"]["nodeTests"] = {"passed":3154,"failed":0}
-    state["validation"]["inheritedPreviousOverlay"] = True
-    state["preserved"] = sorted(set(state["preserved"] + ["selectable-white-black-icon-rims", "per-widget-inner-color-opacity-saved-zero", "live-status-color-picker-no-rerender", "native-status-custom-color-and-icon-contrast", "vinyl-ring-arm-opacity-keeps-center-cover", "lock-pull-independent-color-opacity", "widget-reset-keeps-lock-pull", "home-screen-web-custom-color-body-default-meta"]))
+            assert files[name] == body, "unexpected native or signing change: " + name
+    state = json.loads(previous_files["SOURCE_STATE.json"])
+    assert state["sourceCommit"] == "beb14a18c8a1f163dd9b6afc2d48c8dc3d8f66bd"
+    additions = [
+        "v1552-role-real-image-display-and-context", "v1552-pixel-game-collision-and-zoom",
+        "v1552-friend-send-and-call-recovery", "v1554-role-wechat-switch-account-password-and-unbind",
+        "v1566-role-wechat-four-pages-theme-and-relationship-avatars",
+        "v1566-role-moments-own-avatar-cover-and-album", "v1566-role-services-wallet-and-independent-favorites",
+        "v1566-role-chat-image-sticker-sync-and-multiselect-delete",
+        "v1566-role-wallet-redpacket-transfer-shared-receipt-refund-ledger",
+        "v1566-forged-message-visible-hint-hidden-metadata-preserved",
+        "v1566-role-phone-all-apps-independent-appearance-and-reset",
+        "v1568-role-phone-inline-name-and-location-alignment",
+        "v1570-role-wechat-author-bound-bubble-configuration",
+        "v1570-role-phone-transparent-glass-pin-pad-and-independent-lock-wallpaper",
+    ]
+    state["preserved"] = sorted((set(state["preserved"]) - {"v1344-daily-ledger-turn-evidence"}) | set(additions))
+    state["retired"] = [{"file": next(iter(retired)), "commit": "a804f37a", "reason": "User requested removal of daily event ledger in v1554; independent small notebook, ordinary memory, chat and existing backup data preserved."}]
+    state["sourceCommit"] = text(git("rev-parse", "HEAD")).strip()
+    state["webSourceCommit"] = "269b14e5aca8e6f8d0b687c199a000a6671b8690"
+    state["webVersion"] = "v1570"
+    state["privateWeb"] = "v" + WEB_VERSION
+    state["privateIOS"] = f"{MARKETING} ({BUILD})"
+    state["lastDeliveredPackage"] = {"name": previous.name, "sha256": previous_sha, "sourceCommit": "beb14a18c8a1f163dd9b6afc2d48c8dc3d8f66bd"}
+    state["knownUnresolved"] = [x for x in state["knownUnresolved"] if not re.match(r"v\d+-mac-build", x)] + ["v1571-mac-build-signing-and-iphone-not-verified"]
+    state["validation"] = {"macBuildVerified": False, "realIPhoneVerified": False, "models": "HTTP simulated in browser gates", "nodeTests": {"passed": 3229, "failed": 0, "sourceCommit": state["webSourceCommit"]}, "authorizedChatBothRuntimes": True, "inheritedPreviousOverlay": True, "priorPackageManifestVerified": True, "nativePayloadUnchanged": True, "houseResourceFiles": len(cozy_files), "retiredFiles": sorted(retired)}
+    app = text(files[BUNDLE + "app.js"])
+    for marker in ("function hisChatMessageHTML(", "bubbleLook(c,!mine)", "bubbleIconFor(c,!mine)", "bubbleAvatarClass(c,!mine)", "function hisWxUtilityOpen(", "function hisWxFriendAvatar(", "function spyLockScreen(", "lockWallpaper", "_hisPaymentId", "_forged"):
+        assert marker in app, "latest role WeChat/phone repair missing: " + marker
+    wxme = text(files[BUNDLE + "wechat-me.js"])
+    assert "window.wxRoleUtilityAppearance=" in wxme and "window.wxRoleMeAppearance=" in wxme
+    assert files[BUNDLE + "wechat-me.js"] == git("show", "HEAD:wechat-me.js"), "shared WeChat appearance differs"
+    css = text(files[BUNDLE + "glass-theme.css"])
+    prior_css = text(previous_files[BUNDLE + "glass-theme.css"])
+    guard_start = prior_css.index("/* A measured private-App stall")
+    guard_end = prior_css.index("html.north-native-app.north-native-performance-guard .home img{filter:none!important}", guard_start) + len("html.north-native-app.north-native-performance-guard .home img{filter:none!important}\n")
+    private_guard = prior_css[guard_start:guard_end]
+    assert css.count(private_guard) == 1, "inherited private performance guard missing"
+    assert css.replace(private_guard, "") == text(git("show", "HEAD:glass-theme.css")), "shared appearance differs beyond inherited private guard"
     css = text(files[BUNDLE + "glass-theme.css"])
     for marker in ("function statusBarColorSet(", "function homeVinylOpacitySet(", "function lockPullAppearanceSet(", ".vinyl-record:before{content:", "north-shell-custom", "function glassInnerAppearance(", "function appIconRimSet("):
         assert marker in css + text(files[BUNDLE + "app.js"]), "latest appearance fix missing: " + marker
