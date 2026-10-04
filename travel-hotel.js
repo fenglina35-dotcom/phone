@@ -8,7 +8,7 @@
  function restoreList(top){const el=document.querySelector&&document.querySelector('.cth-list-scroll');if(el){el.scrollTop=top;if(typeof requestAnimationFrame==='function')requestAnimationFrame(()=>{if(el.isConnected)el.scrollTop=top;});}}
  function helpHTML(s){const q=s.hotelQuotes,h=q&&q.help;if(!h)return '';return '<aside class="cth-search-help" aria-live="polite"><b>'+esc(h.status==='loading'?'正在请模型检查查询条件':h.status==='error'?'模型检查暂未完成':'模型查询建议')+'</b><p>'+esc(h.text)+'</p>'+((h.suggestions||[]).map((x,i)=>'<button onclick="NorthTravelHotel.applySuggestion('+i+')">'+esc(x.label)+'</button>').join(''))+(h.status==='error'?'<button onclick="NorthTravelHotel.retryHelp()">重试模型检查</button>':'')+'</aside>';}
  function paintHelp(s,q){if(!active||view!=='results'||tvInit().hotelSearch!==s||s.hotelQuotes!==q||q.signature!==signature(s))return;const el=document.getElementById('cthSearchHelp');if(el){const top=listTop();el.innerHTML=helpHTML(s);restoreList(top);}}
- function parseHelp(raw){const str=String(raw||'').trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');const x=JSON.parse(str);if(!x||typeof x.explanation!=='string'||!x.explanation.trim())throw new Error('模型未返回有效查询建议');return {status:'done',text:x.explanation.trim().slice(0,700),suggestions:(Array.isArray(x.suggestions)?x.suggestions:[]).slice(0,3).filter(v=>v&&typeof v.label==='string'&&(typeof v.keyword==='string'||typeof v.city==='string')).map(v=>({label:v.label.slice(0,45),...(typeof v.keyword==='string'?{keyword:v.keyword.slice(0,100)}:{}),...(typeof v.city==='string'?{city:v.city.slice(0,40)}:{})}))};}
+ function parseHelp(raw){const str=String(raw||'').trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');let x;try{x=JSON.parse(str);}catch(_){if(str&&!/^[{[]/.test(str))x={explanation:str,suggestions:[]};else throw new Error('模型未返回有效查询建议，请重试');}if(!x||typeof x.explanation!=='string'||!x.explanation.trim())throw new Error('模型未返回有效查询建议');return {status:'done',text:x.explanation.trim().slice(0,700),suggestions:(Array.isArray(x.suggestions)?x.suggestions:[]).slice(0,3).filter(v=>v&&typeof v.label==='string'&&(typeof v.keyword==='string'||typeof v.city==='string')).map(v=>({label:v.label.slice(0,45),...(typeof v.keyword==='string'?{keyword:v.keyword.slice(0,100)}:{}),...(typeof v.city==='string'?{city:v.city.slice(0,40)}:{})}))};}
  async function assist(ui,s,q,retry){
   const key=q.signature;if(retry)helpCache.delete(key);
   if(helpCache.has(key)){q.help=helpCache.get(key);paintHelp(s,q);return;}
@@ -64,6 +64,7 @@
  function applyFilters(){const raw=document.getElementById('cthPrice').value,v=raw===''?0:Number(raw);if(!Number.isFinite(v)||v<0||v>100000)return fail('请输入0–100000之间的价格');const s=tvInit().hotelSearch;s.stars=+document.getElementById('cthStars').value;s.maxPrice=Math.floor(v);invalidate(s);save();closeModal();refresh();}
  function signature(s){return JSON.stringify([owner(),s.city,s.checkIn,+s.nights||1,+s.stars||0,s.roomType,+s.rooms||1,s.category||'domestic',+s.hours||4,s.keyword||'',+s.maxPrice||0,s.preferredTags||[],s.hotelArea||'',s.guestMode,s.cid,+s.adults||1,+s.children||0]);}
  function quote(s,i,fallback){const q=s.hotelQuotes;if(q&&q.signature===signature(s)&&q.items[i])return q.items[i].total;return fallback;}
+ function requestedBrands(keyword){const data=typeof NorthHotelData!=='undefined'?NorthHotelData:null;if(!data)return [];const text=data.normalize(keyword);if(!text)return [];const matches=data.brands.map(b=>({brand:b,length:Math.max(0,...[b.name,...(b.aliases||[])].map(n=>{const term=data.normalize(n);return term.length>=2&&text.includes(term)?term.length:0;}))}));const longest=Math.max(0,...matches.map(m=>m.length));return longest?matches.filter(m=>m.length===longest).map(m=>m.brand):[];}
  function catalogue(ui){
   const data=typeof NorthHotelData!=='undefined'?NorthHotelData:null;
   if(!data)return [];
@@ -81,8 +82,8 @@
    if(matches(x)){textMatched=true;if(fits(x)&&rows.length<MAX_RESULTS)rows.push(x);}
   }
   // Interleave cities so country-wide results do not only show the first city.
-  const brands=ui.category==='homestay'?homestays:data.brands;
-  for(const brand of brands){for(let a=0;a<3;a++){for(const city of cities){if(brand.scope==='CN'&&city.country&&city.country!=='中国')continue;record(city,brand,a,false);if(rows.length>=MAX_RESULTS)return rows;}}}
+  const selectedBrands=requestedBrands(ui.keyword),brands=ui.category==='homestay'?homestays:data.brands;
+  for(const brand of brands){for(let a=0;a<3;a++){for(const city of cities){if(brand.scope==='CN'&&city.country&&city.country!=='中国'&&!selectedBrands.includes(brand))continue;record(city,brand,a,false);if(rows.length>=MAX_RESULTS)return rows;}}}
   // Unknown names are explicitly local custom simulations; never invent real availability.
   if(!textMatched&&ui.keyword&&!data.knownTerm(ui.keyword)&&ui.keyword.length<=60){for(const level of [3,4,5])for(let a=0;a<3;a++)for(const city of cities)record(city,{name:ui.keyword.replace(/(?:酒店|住宿|hotel|hotels)$/i,'').trim()+'住宿',level,aliases:[ui.keyword]},a,true);}
   return rows;
@@ -92,6 +93,7 @@
   const s=tvInit().hotelSearch,input=document.getElementById('cthKeyword')||document.getElementById('cthResultKeyword');
   if(input)s.keyword=String(input.value||'').trim().slice(0,100);
   if(typeof NorthHotelData!=='undefined'){const d=NorthHotelData.resolve(s.city);if(d.known){s.city=d.label;if(['domestic','overseas'].includes(s.category||'domestic'))s.category=d.country==='中国'?'domestic':'overseas';}}
+  const selectedBrands=requestedBrands(s.keyword);if(selectedBrands.length&&s.stars&&!selectedBrands.some(b=>b.level===+s.stars)){s.stars=0;toast('已按品牌匹配，冲突的星级筛选已改为不限');}
   const ui=state();Object.assign(s,{rooms:ui.rooms,adults:ui.adults,children:ui.children,category:ui.category,preferredTags:ui.preferredTags});
   if(!ui.city||!Number.isFinite(day(ui.checkIn))||day(ui.checkIn)<day(todayStr())||ui.nights<1||ui.nights>30)return fail('请确认目的地和入住日期');
   if(ui.guestMode!=='me'&&(!ui.cid||!getC(ui.cid)))return fail('请在房间人数中选择入住角色');
@@ -100,7 +102,7 @@
   let items=catalogue(ui);
   if(s.hotelSort==='priceAsc')items.sort((a,b)=>a.unit-b.unit);else if(s.hotelSort==='priceDesc')items.sort((a,b)=>b.unit-a.unit);else if(s.hotelSort==='stars')items.sort((a,b)=>b.stars-a.stars||a.unit-b.unit);
   s.results=items.map(x=>x.name);s.hotelQuotes={signature:signature(s),items};view='results';page=0;save();render();
-  if(!items.length||items.every(x=>x.kind==='custom')||!NorthHotelData.resolve(ui.city).known)void assist(ui,s,s.hotelQuotes);
+  if(selectedBrands.length&&!items.length){s.hotelQuotes.help={status:'done',text:'已找到该品牌的模拟酒店，但当前价格、位置或住宿偏好筛掉了结果。请调整筛选条件；模拟分店不代表当地有真实门店。',suggestions:[]};save();paintHelp(s,s.hotelQuotes);}else if(!selectedBrands.length&&(!items.length||items.every(x=>x.kind==='custom')||!NorthHotelData.resolve(ui.city).known))void assist(ui,s,s.hotelQuotes);
  }
  function owner(){return typeof actId==='function'?actId():S.me.active||'main';}
  function bookingKey(s,item){return JSON.stringify([owner(),item.city||s.city,item.id||item.name,s.checkIn,+s.nights||1,s.category||'domestic',s.category==='hourly'?(+s.hours||4):0,s.roomType,+s.rooms||1,+s.adults||1,+s.children||0,s.guestMode,s.cid||'']);}
@@ -134,15 +136,14 @@
  function orderRows(){return tvInit().hotels.filter(h=>!NorthHotelData.roleOrder(h)&&(typeof NorthTravelOrders==='undefined'||NorthTravelOrders.visible(h,'hotel'))&&(h.accountId?String(h.accountId)===String(owner()):String(owner())==='main')).slice().sort((a,b)=>(+b.ts||0)-(+a.ts||0));}
  function rolePlan(c,city,date,nights,stars,room,guest,keyword,roomCount,adultCount,childCount){
   if(!c||c.deleted||c.isPhoneFriend)return {error:'入住角色无效'};
-  const destination=NorthHotelData.resolve(String(city||'').trim()),checkIn=String(date||'').trim(),n=Number(nights),star=Number(stars),roomType=/^(?:高级)?单人间$/.test(room)?'single':/^(?:高级)?双人间$/.test(room)?'double':'';
-  const guestMode={'我们一起':'together','我自己':'role','给你':'me'}[String(guest||'').trim()];
-  if(!destination.known)return {error:'目的地未匹配，请先在酒店页确认城市'};
+  const data=NorthHotelData,currentForm=state(),destination=data.resolve(data.roleCity(city,currentForm.city)),checkIn=data.roleDate(date,c),n=data.roleEmpty(nights)?1:Number(nights),chosenBrands=requestedBrands(keyword),star=chosenBrands.length?chosenBrands[0].level:data.roleEmpty(stars)||+stars===0?4:Number(stars),roomType=/单人|single/.test(room)?'single':'double';
+  const guestMode={'我们一起':'together','我自己':'role','给你':'me'}[data.roleGuest(String(guest||'').trim())];
   if(!Number.isFinite(day(checkIn))||day(checkIn)<day(todayStr())||!Number.isInteger(n)||n<1||n>30||![3,4,5].includes(star)||!roomType||!guestMode)return {error:'酒店入住日期、星级、房型或入住方式无效'};
   const current=state(),reuse=(current.cid===c.id||guestMode==='me'&&current.guestMode==='me'&&!current.cid)&&current.city===destination.label&&current.checkIn===checkIn&&+current.nights===n&&current.roomType===roomType&&current.guestMode===guestMode;
-  const rooms=roomCount!==undefined?Number(roomCount):reuse?current.rooms:guestMode==='together'&&roomType==='single'?2:1,adults=adultCount!==undefined?Number(adultCount):reuse?current.adults:guestMode==='together'?2:1,children=childCount!==undefined?Number(childCount):reuse?current.children:0;
+  const rooms=!data.roleEmpty(roomCount)?Number(roomCount):reuse?current.rooms:guestMode==='together'&&roomType==='single'?2:1,adults=!data.roleEmpty(adultCount)?Number(adultCount):reuse?current.adults:guestMode==='together'?2:1,children=!data.roleEmpty(childCount)?Number(childCount):reuse?current.children:0;
   if(!Number.isInteger(rooms)||rooms<1||rooms>5||!Number.isInteger(adults)||adults<1||adults>10||!Number.isInteger(children)||children<0||children>10||adults>rooms*(roomType==='single'?1:2)||children>rooms*2||guestMode==='together'&&adults<2)return {error:'入住人数与房间容量不符'};
-  const ui={city:destination.label,checkIn,nights:n,stars:star,roomType,guestMode,cid:c.id,rooms,adults,children,category:reuse?current.category:destination.country==='中国'?'domestic':'overseas',hours:reuse?current.hours:4,keyword:keyword!==undefined?String(keyword).trim().slice(0,100):reuse?current.keyword:'',maxPrice:reuse?current.maxPrice:0,hotelArea:reuse?current.hotelArea:'',preferredTags:reuse?current.preferredTags:[]};
-  const items=catalogue(ui).filter(x=>x.kind!=='custom').sort((a,b)=>a.total-b.total);
+  const ui={city:destination.label,checkIn,nights:n,stars:star,roomType,guestMode,cid:c.id,rooms,adults,children,category:reuse?current.category:destination.country==='中国'?'domestic':'overseas',hours:reuse?current.hours:4,keyword:!data.roleEmpty(keyword)?String(keyword).trim().slice(0,100):reuse?current.keyword:'',maxPrice:reuse?current.maxPrice:0,hotelArea:reuse?current.hotelArea:'',preferredTags:reuse?current.preferredTags:[]};
+  const items=catalogue(ui).sort((a,b)=>a.total-b.total);
   if(!items.length)return {error:'本地没有符合条件的住宿，请先查询并确认酒店名称或修改条件'};
   const item=items[0],key=bookingKey(ui,item),existing=tvInit().hotels.find(h=>NorthHotelData.roleOrder(h)&&h.cid===c.id&&h.accountId===owner()&&h.queryKey===key&&h.status==='upcoming'&&(typeof NorthTravelOrders==='undefined'||NorthTravelOrders.visible(h,'hotel')));
   if(existing)return {existing};

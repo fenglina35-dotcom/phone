@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1514'){
+if(window.__NORTH_SHELL_BUILD__!=='1516'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -591,7 +591,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1514 · 小鱼旅行 · 旅行服务';
+const APP_VER='v1516 · 小鱼旅行 · 旅行服务';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1991,7 +1991,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1514&r=v1514-role-family-card-preview-1';
+  const url='sw.js?v=1516&r=v1516-role-family-card-preview-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -2451,7 +2451,7 @@ function buildSystem(c,opt){
   if(_main&&typeof NorthConcertBooking!=='undefined')s+=NorthConcertBooking.rolePrompt(c);if(_main&&typeof NorthTravelTaxi!=='undefined')s+=NorthTravelTaxi.rolePrompt(c);
   if(_main&&typeof NorthTrainBooking!=='undefined')s+=NorthTrainBooking.rolePrompt(c);
   if(_main&&typeof NorthTravelOrders!=='undefined')s+=NorthTravelOrders.rolePrompt(c);
-  if(_main&&S.travel){const stays=(S.travel.hotels||[]).filter(h=>tvHotelVisibleToRole(h,c.id)).slice(-12);if(stays.length)s+='\n\n# 你参与的小鱼旅行酒店订单（小手机模拟订单，以下是当前状态）\n'+stays.map(h=>'· '+tvHotelSummary(h)).join('\n')+'\n你是预订人或入住人，所以知道这些订单；已取消订单不得当成仍有效，其他与你无关的酒店订单不会自动告诉你。';s+='\n\n# 你也能主动订模拟酒店\n只有你真的决定订房时，单独一行 [订酒店|城市|入住日期|晚数|星级|房型|入住方式]。入住日期必须YYYY-MM-DD且不能过去；入住方式只能“我们一起”“我自己”或“给你”；房型“单人间”或“双人间”，星级3到5。指定品牌或多人时使用 [订酒店|城市|入住日期|晚数|星级|房型|入住方式|酒店名称或品牌|房间数|成人数|儿童数]。费用使用你自己的模拟银行余额，不能动用户钱包或亲属卡；系统按新酒店资料及房间数×晚数计价，生成模拟订单和可点开的确认卡。余额不足、日期人数不符或酒店未匹配都不能宣称已订。'+tvHotelRoleQueryPrompt(c);}
+  if(_main&&S.travel){const stays=(S.travel.hotels||[]).filter(h=>tvHotelVisibleToRole(h,c.id)).slice(-12);if(stays.length)s+='\n\n# 你参与的小鱼旅行酒店订单（小手机模拟订单，以下是当前状态）\n'+stays.map(h=>'· '+tvHotelSummary(h)).join('\n')+'\n你是预订人或入住人，所以知道这些订单；已取消订单不得当成仍有效，其他与你无关的酒店订单不会自动告诉你。';s+='\n\n# 你也能主动订模拟酒店\n用户让你订房时可以自行补齐未说的需求，直接订好模拟酒店，不必反复追问。城市、品牌、星级、房型、入住方式未给出或写随便时由你合理选择；用户说今天到明天时必须按今天入住一晚。只有你真的决定订房时，单独一行 [订酒店|城市|入住日期|晚数|星级|房型|入住方式]。入住日期可用YYYY-MM-DD、今天或明天；未指定则按当前聊天或今天安排；入住方式只能“我们一起”“我自己”或“给你”；房型“单人间”或“双人间”，星级3到5。指定品牌或多人时使用 [订酒店|城市|入住日期|晚数|星级|房型|入住方式|酒店名称或品牌|房间数|成人数|儿童数]。费用使用你自己的模拟银行余额，不能动用户钱包或亲属卡；系统按新酒店资料及房间数×晚数计价，生成模拟订单和可点开的确认卡。余额不足、日期人数不符或酒店未匹配都不能宣称已订。'+tvHotelRoleQueryPrompt(c);}
   if(_main&&isLover(c)){const rp=S.me.report;if(rp&&rp.active)s+='\n\n# '+S.me.name+'此刻的报备（ta主动告诉你ta在干嘛）\nta现在正在「'+rp.active.type+'」，从 '+hm(rp.active.start)+' 开始，已经 '+sleepDurTxt(Date.now()-rp.active.start)+'了。你清楚ta在干嘛、别瞎担心瞎吃醋；但若时长明显离谱（洗澡/吃饭却好几个钟头），你可以起疑、追问。';
     if(rp&&(rp.log||[]).length){const rl=rp.log.slice(0,4);s+='\n\n# '+S.me.name+'最近的报备\n'+rl.map(r=>r.type+' '+hm(r.start)+'→'+hm(r.end)+'（'+sleepDurTxt(r.end-r.start)+'）').join('；');}}
   if(_main&&isLover(c)&&S.mood&&S.mood.length){pruneDailyMood();const mine=S.mood.filter(m=>m.who==='me').slice(0,6);if(mine.length)s+='\n\n# '+S.me.name+'最近的每日心情（ta在日历「心情表」里自己记的，只有你这个最亲密的人看得到，要懂ta、体贴ta）\n'+mine.map(m=>m.date.slice(5)+'：'+(moodLabel(m.emoji)||'')+(m.note?' '+m.note:'')).join('\n');}
@@ -10869,8 +10869,8 @@ function tvHotelCurrent(h){if(!h||!tvHotelOwned(h))return {};const live=(S.trave
 function tvHotelSummary(h){h=tvHotelCurrent(h);if(!h.hotelName)return '酒店订单不属于当前账号';return h.city+'「'+h.hotelName+'」，'+h.checkIn+(h.category==='hourly'?' · '+h.hours+'小时':' → '+tvHotelCheckout(h)+' · '+h.nights+'晚')+'，'+(+h.rooms||1)+'间'+tvHotelRoomText(h.roomType)+(h.adults?' · '+h.adults+'成人':'')+(h.children?' · '+h.children+'儿童':'')+'，入住人'+tvHotelGuestText(h)+'，由'+tvHotelBookerText(h)+'预订，付款方'+(h.payer==='ta'?tvHotelBookerText(Object.assign({},h,{bookedBy:'ta'})):'用户模拟钱包')+'，总额¥'+(+h.price||0).toFixed(2)+'，'+tvHotelStatusText(h.status);}
 function tvHotelRoleMoney(c){const d=S.spy&&S.spy[c.id];if(c.wallet!=null)return {balance:Number(c.wallet),rawBalance:c.wallet,source:'roleWallet',data:d};if(d)return {balance:d.balance!=null?Number(d.balance):(d.wallet||[]).reduce((n,w)=>n+(+w.amount||0),0),rawBalance:d.balance!=null?d.balance:(d.wallet||[]).reduce((n,w)=>n+(+w.amount||0),0),source:'roleBank',data:d};return null;}
 function tvHotelRoleMoneyApply(c,source,delta,h){const d=S.spy&&S.spy[c.id],m=tvHotelRoleMoney(c);if(source==='roleWallet'){const next=NorthHotelData.moneyNext(c.wallet,Math.round(delta*100));if(next===null)return false;c.wallet=next;}else{if(!d)return false;const balance=d.balance!=null?Number(d.balance):(d.wallet||[]).reduce((n,w)=>n+(+w.amount||0),0);const next=NorthHotelData.moneyNext(d.balance!=null?d.balance:balance,Math.round(delta*100));if(next===null)return false;d.balance=next;}if(d){d.wallet=d.wallet||[];d.wallet.unshift({item:(delta<0?'酒店预订：':'酒店退款：')+h.hotelName,amount:delta,when:h.checkIn,hotelId:h.id});d.wallet=d.wallet.slice(0,40);}return true;}
-function tvHotelRoleQueryPrompt(c){const s=S.travel&&S.travel.hotelSearch;if(!s||!s.city)return '';return '\n当前用户酒店查询条件（只是查询，不等于预订）：'+JSON.stringify({city:s.city,checkIn:s.checkIn,nights:s.nights,stars:s.stars,roomType:s.roomType,rooms:s.rooms||1,adults:s.adults||1,children:s.children||0,guestMode:s.guestMode,cid:s.cid,keyword:s.keyword||'',maxPrice:s.maxPrice||0,preferences:s.preferredTags||[]})+'。决定照此代订时必须保持日期、酒店名称、人数及价格限制；若名称未匹配或余额不足，不得宣称订好了。';}
-function tvHotelConsumeBookingTags(content,c,onResult){let failed=false;const text=String(content||'').replace(/[\[【]\s*订酒店\s*[|｜:：]([^\]】]{1,240})[\]】]/g,(tag,raw)=>{const p=raw.split(/[|｜]/).map(x=>x.trim());const ok=p.length>=6&&p.length<=10&&tvCharHotelBook(c,p[0],p[1],p[2],p[3],p[4],p[5],p[6],p[7],p[8],p[9]);if(!ok)failed=true;if(onResult)onResult(!!ok);return '';});return failed?'':text;}
+function tvHotelRoleQueryPrompt(c){const s=S.travel&&S.travel.hotelSearch;if(!s||!s.city)return '';return '\n当前用户酒店查询条件（只是查询，不等于预订）：'+JSON.stringify({city:s.city,checkIn:s.checkIn,nights:s.nights,stars:s.stars,roomType:s.roomType,rooms:s.rooms||1,adults:s.adults||1,children:s.children||0,guestMode:s.guestMode,cid:s.cid,keyword:s.keyword||'',maxPrice:s.maxPrice||0,preferences:s.preferredTags||[]})+'。决定照此代订时必须保持日期、酒店名称、人数及价格限制；缺少偏好时可自主安排，用户本轮新要求优先于这些旧查询；余额不足不得宣称订好了。';}
+function tvHotelConsumeBookingTags(content,c,onResult){let failed=false;const text=String(content||'').replace(/[\[【]\s*订酒店\s*[|｜:：]([^\]】]{1,240})[\]】]/g,(tag,raw)=>{const p=raw.split(/[|｜]/).map(x=>x.trim());const ok=p.length>=1&&p.length<=10&&tvCharHotelBook(c,p[0],p[1],p[2],p[3],p[4],p[5],p[6],p[7],p[8],p[9]);if(!ok)failed=true;if(onResult)onResult(!!ok);return '';});return failed?'':text;}
 function tvHotelRoomText(k){return k==='single'?'高级单人间':'高级双人间';}
 function tvHotelStatusText(k){return k==='deleted'?'记录已删除':k==='cancelled'?'已取消':k==='done'?'已完成':'预订成功';}
 function tvHotelBookerText(h){const c=h&&h.cid&&getC(h.cid);return h&&h.bookedBy==='ta'?(c?(c.remark||c.name):'角色'):S.me.name;}
@@ -17963,7 +17963,7 @@ function openModal(html){
   m.classList.toggle('wxmodal-light',S.me.wxTheme==='white'&&wxPages.includes(p));
   m.classList.toggle('wxmodal-green',wxPages.includes(p));
   m.classList.toggle('north-glass-modal',glassThemeOn());
-  $('#modalSheet').innerHTML=html;m.classList.add('show');
+  $('#modalSheet').innerHTML=html;m.classList.toggle('north-travel-modal',p==='travel'||!!m.querySelector('.cth-dialog,.ctg-dialog,.ctf-dialog,.ctn-dialog,.ctt-dialog'));m.classList.add('show');
   if(m.querySelector('[data-idb-avatar],img[src^="idb:"],img[data-idb-src],[style*="idb:"]'))scheduleVisibleStoredImages(true);
 }
 function openCallModal(html){openModal(html);$('#modal').classList.add('call-modal');}

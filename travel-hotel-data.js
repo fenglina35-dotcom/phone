@@ -50,5 +50,10 @@ function moneyNext(value,deltaCents){
  return String(after/BigInt(100))+'.'+String(after%BigInt(100)).padStart(2,'0');
 }
 function roleOrder(o){return !!o&&(o.payer==='ta'||o.bookedBy==='ta'||o.by==='ta'||['roleWallet','roleBank'].includes(o.fundingSource));}
-root.NorthHotelData={roleOrder,moneyCents,moneyNext,brands:BRANDS,countries:COUNTRIES,cities,resolve,normalize,matches,knownTerm,countryAliases,limits:{rows:20,results:240}};
+function roleEmpty(v){return !String(v??'').trim()||/^(?:随便|任意|不限|默认|你选|你决定|自动|unknown|null|undefined)$/i.test(String(v).trim());}
+function roleDate(value,c,fallback){let text=roleEmpty(value)?'':String(value).trim();if(!text&&c&&typeof msgs==='function'){const recent=msgs(c.id).filter(m=>m.role==='user'&&m.type!=='sys').slice(-4).map(m=>m.content||m.text||'').reverse();text=recent.map(t=>String(t).match(/\d{4}-\d{2}-\d{2}|后天|明天|今天|今日|今晚/)).find(Boolean)?.[0]||'';}if(/^(今天|今日|今晚|明天|后天)$/.test(text)){const d=new Date(todayStr()+'T12:00:00');d.setDate(d.getDate()+(/后天/.test(text)?2:/明天/.test(text)?1:0));return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}if(text&&typeof tvNormDate==='function'&&!/^\d{4}-\d{2}-\d{2}$/.test(text))return tvNormDate(text);return text||fallback||todayStr();}
+function roleGuest(v){return ['我们一起','给你','我自己'].includes(v)?v:'给你';}
+function roleCity(v,fallback){const x=resolve(roleEmpty(v)?fallback||'苏州':v);return x.known?x.label:String(roleEmpty(v)?fallback||'苏州':v).trim().slice(0,40);}
+function roleAdvice(){return '这是小手机内模拟预订。用户让你安排时，缺少城市、品牌、日期、房型、舱位、场次或入住/同行方式，你可以自己合理选择并直接输出预订指令，不必反复追问；用户明确给出的条件优先于旧查询和默认值。可使用今天、明天等日期。只有实际生成订单后才说订好了；只使用角色自己的模拟余额，不得动用户钱包或亲属卡。';}
+root.NorthHotelData={roleEmpty,roleDate,roleGuest,roleCity,roleAdvice,roleOrder,moneyCents,moneyNext,brands:BRANDS,countries:COUNTRIES,cities,resolve,normalize,matches,knownTerm,countryAliases,limits:{rows:20,results:240}};
 })(globalThis);
