@@ -464,7 +464,7 @@ function deskPetPrompt(c){const p=cfg();if(!p||!p.on||!c||p.cid!==c.id)return'';
   return '\n\n# 你们的虚拟桌面宠物「'+n+'」\n'+me+'的手机屏幕里住着一只像素风的虚拟桌面宠物小机器人，名字叫「'+n+'」。它是'+me+'在小手机里养的、跟着你的小家伙，平时站在聊天输入框上来回走，会跳上聊天气泡、爬墙、偶尔跑出屏幕又跑回来；它会跟着你的心情变表情。它是纯虚拟的，和实体桌面机器人「小K」没有任何关系，绝不能把两者混为一谈。'+(doing?'\n它现在：'+doing+'。':'')+
     '\n你可以在微信回复里另起一行写 [桌宠|动作] 让「'+n+'」照做，这一行不会显示给'+me+'。可用表情和动作：'+Object.keys(CMDS).join('、')+'、恢复（回到跟着你心情的样子）；还能让它移动：'+Object.keys(MOVES).join('、')+'。也可以设置[桌宠|摘帽子]、[桌宠|摘耳机]、[桌宠|颜色:陶土橙/草莓粉/薄荷绿/奶油白/天空蓝]（只选择一种）、[桌宠|大小:小/中/大]（只选择一种）、[桌宠|名字:新名字]；改名、改颜色和大小只在用户明确要求时执行。用户明确要求它笑、醒来或做动作时，必须使用有效桌宠指令，不能只在嘴上说已完成；醒来用[桌宠|醒来]，笑用[桌宠|开心]。不要用它操控实体小K。一轮最多一个，不必每轮都用；'+me+'让你控制它、或者你想借它表达心情时再用。被问到它叫什么、在干嘛时，按上面的事实回答。';}
 function deskPetConsume(text,c){const s=String(text==null?'':text);if(!/[\[【]\s*桌宠/.test(s))return text;const p=cfg();let used=false;
-  const out=s.replace(/[\[【]\s*桌宠\s*[|｜:：]\s*([^\]】\r\n]{1,16})\s*[\]】]/g,(m,v)=>{if(!used&&p&&p.on&&c&&p.cid===c.id&&doCmd(v,ROLE_CMD_MS))used=true;return'';}).replace(/\n[ \t]*\n[ \t]*\n/g,'\n\n').trim();
+  const out=s.replace(/[\[【]\s*桌宠\s*(?:[|｜:：]\s*)?([^\]】\r\n]{1,16})\s*[\]】]/g,(m,v)=>{if(!used&&p&&p.on&&c&&p.cid===c.id&&doCmd(v,ROLE_CMD_MS))used=true;return'';}).replace(/\n[ \t]*\n[ \t]*\n/g,'\n\n').trim();
   return out;}
 
 /* ---------- 设置页（设置最下面的入口） ---------- */

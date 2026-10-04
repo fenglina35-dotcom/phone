@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1532'){
+if(window.__NORTH_SHELL_BUILD__!=='1538'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -591,7 +591,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1532 · 小鱼旅行 · 旅行服务';
+const APP_VER='v1538 · 小鱼旅行 · 旅行服务';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -903,7 +903,7 @@ function lifeNoteTags(note){const raw=note&&note.tags;if(Array.isArray(raw))retu
 function lifeTopicOf(text){text=''+(text||'');const tags=[];
   [['work',/工作|上班|老板|同事|加班|项目|客户|会议|工资|职场|公司/],['sleep',/熬夜|睡不着|失眠|通宵|困|睡觉|晚睡/],['health',/生病|发烧|胃疼|头疼|疼|不舒服|医院|吃药|姨妈|例假/],['family',/家里|妈妈|爸爸|父母|亲戚|家人/],['friend',/朋友|闺蜜|同学|室友/],['money',/钱|花钱|工资|还款|账单|穷|买不起/],['emotion',/哭|崩溃|难受|委屈|焦虑|压力|害怕|生气|烦|低落|心情不好/]].forEach(x=>{if(x[1].test(text))tags.push(x[0]);});
   return tags;}
-function aboutMeNoteText(text){let v=(''+(text||'')).replace(/^[\s\[\【]*(?:记住|小事簿)\s*[\|｜:：]?/,'').replace(/[\]\】]\s*$/,'').replace(/\s+/g,' ').trim();if(!v)return '';
+function aboutMeNoteText(text){let v=(''+(text||'')).replace(/[\[【]\s*桌宠\s*(?:[|｜:：]\s*)?[^\]】\r\n]{1,16}(?:[\]】]|$)/g,'').replace(/^[\s\[\【]*(?:记住|小事簿)\s*[\|｜:：]?/,'').replace(/[\]\】]\s*$/,'').replace(/\s+/g,' ').trim();if(!v)return '';
   const me=(S.me&&S.me.name)||'ta';v=v.replace(/[「」『』"']/g,'').trim();
   if(!v)return '';
   if(v.indexOf(me)===0)return v;
@@ -915,7 +915,8 @@ function aboutMeNoteText(text){let v=(''+(text||'')).replace(/^[\s\[\【]*(?:记
   return v.slice(0,120);}
 function roleMemoryPerspectiveText(c,text){let v=String(text||'').replace(/^[\s\[\【]*(?:记住|小事簿)\s*[\|｜:：]?/,'').replace(/[\]\】]\s*$/,'').replace(/\s+/g,' ').replace(/[「」『』]/g,'').trim();if(!v)return'';const aliases=[c&&c.remark,c&&c.name].map(x=>String(x||'').trim()).filter(x=>x&&x!=='我').sort((a,b)=>b.length-a.length);for(const alias of [...new Set(aliases)])v=v.split(alias).join('我');return v.slice(0,220);}
 function memoryScopeKey(aid){return aid||(typeof actId==='function'?actId():'main');}
-function memoryList(c,aid){if(!c)return[];const k=memoryScopeKey(aid);if(k==='main'){c.memory=c.memory||[];return c.memory;}c._accountMemory=c._accountMemory||{};c._accountMemory[k]=c._accountMemory[k]||[];return c._accountMemory[k];}
+function repairGeneratedRoleMemories(list){const tag='【偷登我微信·完整记录】',player=S.me.name||'玩家';return list.filter(m=>!/^\s*[\[【]桌宠\s*(?:[|｜:：]\s*)?[^\]】\r\n]{1,16}[\]】]\s*$/.test(typeof m==='object'?m.text:String(m))).map(m=>{if(typeof m!=='string'||!m.startsWith(tag))return m;return m.replace(/忆北偷偷登录过我的微信/g,player+'偷偷登录过我的微信').replace(/【忆北冒充我发的】/g,'【'+player+'冒充我发的】').replace(/【这次忆北用我的号主动跟「/g,'【这次'+player+'用我的号主动跟「');});}
+function memoryList(c,aid){if(!c)return[];const k=memoryScopeKey(aid);if(k==='main'){c.memory=repairGeneratedRoleMemories(c.memory||[]);return c.memory;}c._accountMemory=c._accountMemory||{};c._accountMemory[k]=repairGeneratedRoleMemories(c._accountMemory[k]||[]);return c._accountMemory[k];}
 function onlineMemoryRecallLimits(){const st=S.settings||(S.settings={}),read=(key,fallback,max)=>st[key]==null?fallback:Math.max(0,Math.min(max,Math.round(+st[key]||0)));return{memory:read('onlineMemoryRecall',4,8),summary:read('onlineSummaryRecall',4,8),total:read('onlineRecallTotal',6,12)};}
 function onlineMemoryRecallSet(kind,value,el){const map={memory:['onlineMemoryRecall',8,'长期记忆'],summary:['onlineSummaryRecall',8,'对话总结'],total:['onlineRecallTotal',12,'每轮合计']},row=map[kind];if(!row)return;const n=Math.max(0,Math.min(row[1],Math.round(+value||0)));S.settings[row[0]]=n;if(el)el.value=n;save();toast(row[2]+'引用上限：'+n+' 条'+(n?'':'（关闭）'));}
 function memoryText(v){if(v&&typeof v==='object'&&v.rolePerspective)return String(v.text||'').replace(/\s+/g,' ').trim().slice(0,220);return aboutMeNoteText(v&&typeof v==='object'?v.text:v);}
@@ -930,7 +931,7 @@ function memoryConflictWith(list,v){const nf=memoryFact(v);if(!nf)return null;fo
     if((nf.kind==='positive'||nf.kind==='negative')&&(of.kind==='positive'||of.kind==='negative')&&nf.kind!==of.kind&&nf.subject&&of.subject&&(nf.subject===of.subject||nf.subject.includes(of.subject)||of.subject.includes(nf.subject)))return memoryText(old);
   }return null;}
 function memoryOperationalEventOnly(text){const t=aboutMeNoteText(text).replace(/\s+/g,'');if(!t)return false;const operational=/(?:登录|登进|进入|退出|打开).{0,16}微信|(?:查看|检查|偷看|翻看).{0,16}(?:微信|手机)|屏幕共享(?:开始|结束|开启|关闭)?|远程(?:控制|操控)(?:开始|结束|开启|关闭)?|(?:真实)?同步(?:成功|失败|超时)?|(?:读取|上传|连接)(?:成功|失败|超时)|(?:错误|报错|错误码|HTTP|Cloudflare|Supabase)\s*\d*/i.test(t);if(!operational)return false;const durable=/(?:喜欢|不喜欢|讨厌|爱吃|不吃|忌口|过敏|生日|纪念日|相遇|家人|父母|爸爸|妈妈|兄弟|姐妹|宠物|猫|狗|工作|上班|职业|学校|住在|搬家|来自|生病|身体|怀孕|愿望|心愿|烦心|难过|害怕|计划|打算|答应|承诺|约定|以后|关系|分手|结婚|订婚|秘密|习惯|偏好)/.test(t);return !durable;}
-function rememberForChar(c,text,opt){if(!c)return'none';opt=opt||{};const rolePerspective=!!opt.rolePerspective,v=rolePerspective?roleMemoryPerspectiveText(c,text):aboutMeNoteText(text),entry=()=>rolePerspective?{text:v,rolePerspective:true}:v;if(!v||memoryOperationalEventOnly(v))return'none';const list=memoryList(c),vn=memoryNorm(rolePerspective?{text:v,rolePerspective:true}:v),pending=memoryPending(c);
+function rememberForChar(c,text,opt){if(!c)return'none';opt=opt||{};const rolePerspective=!!opt.rolePerspective,v=rolePerspective?roleMemoryPerspectiveText(c,text):aboutMeNoteText(text),entry=()=>rolePerspective?{text:v,rolePerspective:true}:v;if(!v||!aboutMeNoteText(text)||memoryOperationalEventOnly(v))return'none';const list=memoryList(c),vn=memoryNorm(rolePerspective?{text:v,rolePerspective:true}:v),pending=memoryPending(c);
   if(pending&&(memoryNorm(pending.newText)===vn||memoryNorm(pending.oldText)===vn)){const meta=memoryMetaStore(c),oldKey=memoryNorm(pending.oldText),useRolePerspective=memoryNorm(pending.newText)===vn?!!pending.newRolePerspective:rolePerspective;if(memoryNorm(pending.newText)===vn){const oi=list.findIndex(x=>memoryNorm(x)===oldKey);if(oi>=0)list.splice(oi,1);delete meta[oldKey];if(!list.some(x=>memoryNorm(x)===vn))list.push(useRolePerspective?{text:v,rolePerspective:true}:v);}memorySetPending(c,null);meta[vn]={createdAt:(meta[vn]&&meta[vn].createdAt)||Date.now(),lastConfirmedAt:Date.now(),confidence:1,importance:4,scope:memoryScopeKey()};return memoryNorm(pending.newText)===vn?'replaced':'confirmed';}
   const same=list.find(x=>memoryNorm(x)===vn);if(same){const meta=memoryMetaStore(c);meta[vn]=Object.assign({},meta[vn]||{createdAt:Date.now(),importance:3,scope:memoryScopeKey()},{lastConfirmedAt:Date.now(),confidence:1});return'confirmed';}
   const oldText=memoryConflictWith(list,rolePerspective?{text:v,rolePerspective:true}:v);if(oldText){memorySetPending(c,{oldText,newText:v,newRolePerspective:rolePerspective,createdAt:Date.now()});return'conflict';}
@@ -1992,7 +1993,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1532&r=v1532-role-family-card-preview-1';
+  const url='sw.js?v=1538&r=v1538-role-family-card-preview-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -8616,11 +8617,12 @@ function renderGroup(id){const g=S.groups.find(x=>x.id===id);if(!g)return '';
       <button type="button" class="it" onclick="groupPayPick('role','${id}')"><span class="b">${svgIc('money',26,'currentColor')}</span><span>转账</span></button>
       <button type="button" class="it" onclick="document.getElementById('gpanel').classList.remove('show');groupAt('${id}')"><span class="b" style="font-size:24px">@</span><span>提到谁</span></button>
       <button type="button" class="it" onclick="enterGSelect('${id}')"><span class="b">${svgIc('forward',26,'currentColor')}</span><span>多选转发</span></button>
+      <button type="button" class="it" onclick="enterGSelect('${id}','delete')"><span class="b">${svgIc('trash',26,'currentColor')}</span><span>多选删除</span></button>
       <button type="button" class="it" onclick="addSticker()"><span class="b">${svgIc('smile',26,'currentColor')}</span><span>添加表情</span></button>
       <button type="button" class="it" onclick="openStickerBatchImport()"><span class="b">${svgIc('image',26,'currentColor')}</span><span>批量添加</span></button>
     </section></div></div><div class="chat-panel-pane chat-emoji-pane">${groupEmojiPanelHTML(id)}</div></div>`;
   const inbar=sel
-    ?`<div class="inputbar"><button class="btn g" style="flex:1" onclick="exitGSelect()">取消</button><button class="btn d" style="flex:1" onclick="gDelSelected('${id}')">删除(<span id="gfwdcnt">${_gmsel.ids.length}</span>)</button><button class="btn p" style="flex:1" onclick="gForwardSelected('${id}')">转发</button></div>`
+    ?`<div class="inputbar"><button class="btn g" style="flex:1" onclick="exitGSelect()">取消</button>${_gmsel.mode==='delete'?`<button class="btn d" style="flex:1" onclick="gDelSelected('${id}')">删除(<span id="gfwdcnt">${_gmsel.ids.length}</span>)</button>`:`<button class="btn" style="flex:1;background:#07c160;color:#fff" onclick="gForwardSelected('${id}')">转发(<span id="gfwdcnt">${_gmsel.ids.length}</span>)</button>`}</div>`
     :(gmMuteNoticeHTML('role',id)||gQuoteHTML(id)+groupComposerHTML('group',id,'ginput','群里说点啥…',`sendGroup('${id}')`,'gpanel'));
   const bgSource=g.chatBg?storedImageDisplaySource(g.chatBg):'';
   return `<div class="nav chat-glass-nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(groupDisplayName(g))}(${g.members.length+1})</span><span class="r" onclick="ginfoOpen('role','${id}')">⋯</span></div>
@@ -8643,7 +8645,7 @@ function gMsgMenu(gid,mid){if(_lpFired){_lpFired=false;return;}/* 刚长按过=�
    <button class="btn g" onclick="closeModal()">取消</button>`);}
 function gDelOne(gid,mid){const g=S.groups.find(x=>x.id===gid);if(!g)return;g.msgs=g.msgs.filter(m=>m.id!==mid);save();closeModal();render();toast('已删除');}
 function gRecallMsg(gid,mid){const g=S.groups.find(x=>x.id===gid);if(!g)return;const i=g.msgs.findIndex(m=>m.id===mid);if(i<0)return;const me=g.msgs[i].senderId==='me';g.msgs[i]={senderId:'me',role:'user',type:'sys',content:(me?'你':'对方')+'撤回了一条消息',time:g.msgs[i].time,id:mid};save();closeModal();render();}
-function enterGSelect(id){_gmsel={id,ids:[]};const p=document.getElementById('gpanel');if(p)p.classList.remove('show');try{closeModal();}catch(e){}render();}
+function enterGSelect(id,mode){_gmsel={id,ids:[],mode:mode==='delete'?'delete':'forward'};const p=document.getElementById('gpanel');if(p)p.classList.remove('show');try{closeModal();}catch(e){}render();}
 function exitGSelect(){_gmsel=null;render();}
 function gToggleSel(mid){if(!_gmsel)return;const i=_gmsel.ids.indexOf(mid);if(i<0)_gmsel.ids.push(mid);else _gmsel.ids.splice(i,1);render();}
 async function gDelSelected(id){if(!_gmsel||!_gmsel.ids.length){toast('先选几条');return;}if(!await uiConfirm('删除选中的 '+_gmsel.ids.length+' 条？'))return;const g=S.groups.find(x=>x.id===id);if(g)g.msgs=g.msgs.filter(m=>_gmsel.ids.indexOf(m.id)<0);_gmsel=null;save();render();toast('已删除');}
@@ -13574,8 +13576,8 @@ function hisOnExit(cid,caught){const c=getC(cid);if(!c)return;const d=hisWxData(
   // 我自己以前发的旧消息(r:'me'但无mine)只当背景、绝不能算成"她回的"，避免我把自己回的当成她回的。
   const chats=(d.friends||[]).filter(f=>(f.msgs||[]).some(m=>m.mine)).map(f=>{
     const arr=f.msgs||[];const fromIdx=arr.findIndex(m=>m.mine);const recent=arr.slice(Math.max(0,fromIdx-2));// 从她第一条动手起(带前2条上下文)
-    const body=recent.map(m=>{const who=m.mine?'【忆北冒充我发的】':(m.r==='me'?'（我之前发的旧消息）':f.name+'：');const tm=m.t?hm(m.t)+' ':'';return tm+who+m.c;}).join('  ');
-    return '【这次忆北用我的号主动跟「'+f.name+'」聊了】'+body;
+    const body=recent.map(m=>{const who=m.mine?'【'+(S.me.name||'玩家')+'冒充我发的】':(m.r==='me'?'（我之前发的旧消息）':f.name+'：');const tm=m.t?hm(m.t)+' ':'';return tm+who+m.c;}).join('  ');
+    return '【这次'+(S.me.name||'玩家')+'用我的号主动跟「'+f.name+'」聊了】'+body;
   }).join('\n');
   // 汇报完清掉本次的 mine 标记：下次她若没再动这个人，就不会被旧记录反复翻出来说事
   (d.friends||[]).forEach(f=>(f.msgs||[]).forEach(m=>{if(m.mine)delete m.mine;}));
@@ -13589,12 +13591,12 @@ function hisOnExit(cid,caught){const c=getC(cid);if(!c)return;const d=hisWxData(
   let mem=summary;if(mem.length>1600)mem=mem.slice(0,1600)+'…';
   // 写进记忆(去重更新)：他从此【完整知道】、你问起他都答得上来；靠"闹一次翻篇"的提示避免反复念叨
   c.memory=c.memory||[];const TAG='【偷登我微信·完整记录】';c.memory=c.memory.filter(m=>(''+m).indexOf(TAG)<0);
-  c.memory.push(TAG+'忆北偷偷登录过我的微信、用我的号做了这些（这些聊天记录我能完整看到）：\n'+mem);save();
+  c.memory.push(TAG+(S.me.name||'玩家')+'偷偷登录过我的微信、用我的号做了这些（这些聊天记录我能完整看到）：\n'+mem);save();
   if(c.blocked)return;
   const delay=caught?(1.8+Math.random()*2.5):(forged.length?(60+Math.random()*60):(8+Math.random()*12));/* 自导自演伪造过消息的：退出1~2分钟后才发现 */
   setTimeout(()=>hisDiscover(cid,caught,(summary.length>1200?summary.slice(0,1200)+'…':summary)),delay*1000);}
 function hisDiscover(cid,caught,summary){const c=getC(cid);if(!c||c.blocked)return;summary=summary||'登进去翻看了一圈';
-  const note='[系统：'+S.me.name+(caught?'刚才【偷偷登录了你的微信号】、用你的身份做了这些，被你重新登录挤下线、正好撞见：':'背着你【偷偷登录了你的微信号】、用你的身份做了这些（你回头翻自己手机/朋友圈才发现）：')+summary+'。\n【看清楚谁做的·别搞反】上面标了【忆北冒充我发的】的，才是ta这次用你号发出去的话；标了（我之前发的旧消息）的是你自己早先发的、不是ta干的，别把自己发过的旧消息当成ta刚发的来质问。也【只针对上面这次的事】反应，别把很久以前的旧账翻出来重说。如果ta其实没替你回谁、只是登进去看了看，就别硬说ta"回了谁的消息"。\n这是擅自动了你的号、冒用你身份。请【完全按你自己的性格和此刻心情】反应——可能是生气质问、吃醋、震惊、宠溺纵容、冷淡、觉得好笑、甚至无所谓，全由你的人设决定，【不要千篇一律地质问】。你可以追问细节、也可以 [来电|视频] 找ta，看你自己。【你为这件事反应、闹这一次就够了，说开之后就翻篇——别在以后的聊天里老揪着这件旧账反复念叨】。绝不要提"系统"两个字。]';
+  const note='[系统：'+S.me.name+(caught?'刚才【偷偷登录了你的微信号】、用你的身份做了这些，被你重新登录挤下线、正好撞见：':'背着你【偷偷登录了你的微信号】、用你的身份做了这些（你回头翻自己手机/朋友圈才发现）：')+summary+'。\n【看清楚谁做的·别搞反】上面标了【'+(S.me.name||'玩家')+'冒充我发的】的，才是ta这次用你号发出去的话；标了（我之前发的旧消息）的是你自己早先发的、不是ta干的，别把自己发过的旧消息当成ta刚发的来质问。也【只针对上面这次的事】反应，别把很久以前的旧账翻出来重说。如果ta其实没替你回谁、只是登进去看了看，就别硬说ta"回了谁的消息"。\n这是擅自动了你的号、冒用你身份。请【完全按你自己的性格和此刻心情】反应——可能是生气质问、吃醋、震惊、宠溺纵容、冷淡、觉得好笑、甚至无所谓，全由你的人设决定，【不要千篇一律地质问】。你可以追问细节、也可以 [来电|视频] 找ta，看你自己。【你为这件事反应、闹这一次就够了，说开之后就翻篇——别在以后的聊天里老揪着这件旧账反复念叨】。绝不要提"系统"两个字。]';
   scheduleReply(cid,note);}
 /* 他的微信主界面 */
 function renderHisWx(){const s=_hisLogin;if(!s){home();return '';}const cid=s.cid;const c=getC(cid);if(!c){hisEndSession();home();return '';}hisSeed(cid);/* 每次进来都合并最新的查手机数据，无需清空重登 */const d=hisWxData(cid);
@@ -14564,7 +14566,7 @@ function saveProactiveIdle(id){const c=getC(id),el=$('#pa_idle');if(!c||!el)retu
 
 /* ---------- 多选转发 ---------- */
 let _sel=null,_gmsel=null,_gfwd=null;
-function enterSelect(id){_sel={id,ids:[]};const p=$('#panel');if(p)p.classList.remove('show');render();}
+function enterSelect(id,mode){_sel={id,ids:[],mode:mode==='delete'?'delete':'forward'};const p=$('#panel');if(p)p.classList.remove('show');render();}
 function exitSelect(){_sel=null;render();}
 async function delSelected(id){if(!_sel||!_sel.ids.length){toast('先选几条');return;}if(!await uiConfirm('删除选中的 '+_sel.ids.length+' 条消息？'))return;S.messages[mkey(id)]=msgs(id).filter(m=>_sel.ids.indexOf(m.id)<0);_sel=null;await persistWechatMessagesNow();render();toast('已删除');}
 function toggleSel(mid){if(!_sel)return;const i=_sel.ids.indexOf(mid);const on=i<0;if(on)_sel.ids.push(mid);else _sel.ids.splice(i,1);
@@ -14612,9 +14614,9 @@ function afterGroupComposer(c){const id=c.p==='pfgroup'?'pfg_input':c.p==='pfcha
 function chatFunctionItem(label,icon,action){return `<button type="button" class="it" onclick="${action}"><span class="b">${svgIc(icon,25,'currentColor')}</span><span>${label}</span></button>`;}
 function chatFunctionPanel(id){const first=[
   chatFunctionItem('相册','image',`cPhoto('${id}')`),chatFunctionItem('图文描述','camera',`cPhotoText('${id}')`),chatFunctionItem('语音通话','phone',`placeCall('${id}','voice')`),chatFunctionItem('视频通话','video',`placeCall('${id}','video')`),
-  chatFunctionItem('位置','location',`cLoc('${id}')`),chatFunctionItem('红包','redpacket',`cRed('${id}')`),chatFunctionItem('转账','money',`cTransfer('${id}')`),chatFunctionItem('文件','file',`cDoc('${id}')`)
+  chatFunctionItem('位置','location',`cLoc('${id}')`),chatFunctionItem('红包','redpacket',`cRed('${id}')`),chatFunctionItem('转账','money',`cTransfer('${id}')`),chatFunctionItem('多选删除','trash',`enterSelect('${id}','delete')`)
 ].join(''),second=[
-  chatFunctionItem('名片','idcard',`cNamecard('${id}')`),chatFunctionItem('亲属卡','card',`cFamily('${id}')`),chatFunctionItem('授权查手机','spyphone',`cSpyGrant('${id}')`),chatFunctionItem('API路线','route','chatRouteQuickOpen()'),chatFunctionItem('多选转发','forward',`enterSelect('${id}')`),chatFunctionItem('骰子','dice',`cDice('${id}')`)
+  chatFunctionItem('名片','idcard',`cNamecard('${id}')`),chatFunctionItem('亲属卡','card',`cFamily('${id}')`),chatFunctionItem('授权查手机','spyphone',`cSpyGrant('${id}')`),chatFunctionItem('API路线','route','chatRouteQuickOpen()'),chatFunctionItem('多选转发','forward',`enterSelect('${id}')`),chatFunctionItem('文件','file',`cDoc('${id}')`),chatFunctionItem('骰子','dice',`cDice('${id}')`)
 ].join('');return `<div class="chat-function-viewport" id="chatFunctionViewport" onscroll="chatFunctionPanelScroll(this)"><section class="chat-function-page">${first}</section><section class="chat-function-page">${second}</section></div><div class="chat-panel-dots" aria-hidden="true"><i class="chat-panel-dot ${_chatFnPage===0?'on':''}"></i><i class="chat-panel-dot ${_chatFnPage===1?'on':''}"></i></div>`;}
 function renderChat(id){const c=getC(id);if(!c)return '';
   if(S.wxLogin){if(!wxLoginActive())setTimeout(wxLogout,0);else{if(!_wxLoginTimer)wxLoginStartTimer();return wxLockedScreen();}}
@@ -14633,7 +14635,7 @@ function renderChat(id){const c=getC(id);if(!c)return '';
       <div class="chat-panel-pane chat-function-pane ${_panelPage==='emoji'?'':'on'}">${chatFunctionPanel(id)}</div>
       <div class="chat-panel-pane chat-emoji-pane ${_panelPage==='emoji'?'on':''}"><div class="ppage">${emojiPanel(id)}</div></div>
     </div>
-    ${(_sel&&_sel.id===id)?`<div class="inputbar"><button class="btn g" style="flex:1" onclick="exitSelect()">取消</button><button class="btn d" style="flex:1" onclick="delSelected('${id}')">删除(<span id="fwdcnt">${_sel.ids.length}</span>)</button><button class="btn p" style="flex:1" onclick="forwardSelected()">转发</button></div>`:(S.couple&&S.couple.gags&&S.couple.gags[id])?`<div class="inputbar" style="justify-content:center;color:#fa5151;font-size:13px;padding:16px;text-align:center">ta把你们的聊天锁了，<span onclick="gagAskUnlock()" style="color:inherit;text-decoration:underline;cursor:pointer">去求他解锁</span></div>`:(manualReplySceneOn('wechat')&&!c.blocked?`<div class="manual-reply-row"><button class="manual-reply-chip" ${(replyGenState||visionBusy)?'disabled':''} onclick="manualReply('${id}')">${visionBusy?'正在识图…':replyGenState==='active'?'回复中…':replyGenState==='queued'?'排队中…':'▶ 让ta回'}</button></div>`:'')+qbar+`<div class="inputbar chat-inputbar${_voiceMode?' voice-on':''}">`+`
+    ${(_sel&&_sel.id===id)?`<div class="inputbar"><button class="btn g" style="flex:1" onclick="exitSelect()">取消</button>${_sel.mode==='delete'?`<button class="btn d" style="flex:1" onclick="delSelected('${id}')">删除(<span id="fwdcnt">${_sel.ids.length}</span>)</button>`:`<button class="btn" style="flex:1;background:#07c160;color:#fff" onclick="forwardSelected()">转发(<span id="fwdcnt">${_sel.ids.length}</span>)</button>`}</div>`:(S.couple&&S.couple.gags&&S.couple.gags[id])?`<div class="inputbar" style="justify-content:center;color:#fa5151;font-size:13px;padding:16px;text-align:center">ta把你们的聊天锁了，<span onclick="gagAskUnlock()" style="color:inherit;text-decoration:underline;cursor:pointer">去求他解锁</span></div>`:(manualReplySceneOn('wechat')&&!c.blocked?`<div class="manual-reply-row"><button class="manual-reply-chip" ${(replyGenState||visionBusy)?'disabled':''} onclick="manualReply('${id}')">${visionBusy?'正在识图…':replyGenState==='active'?'回复中…':replyGenState==='queued'?'排队中…':'▶ 让ta回'}</button></div>`:'')+qbar+`<div class="inputbar chat-inputbar${_voiceMode?' voice-on':''}">`+`
       <button type="button" class="chat-composer-icon chat-voice-toggle" aria-label="切换语音输入" onclick="chatVoiceToggle()">${chatVoiceButtonIcon()}</button>
       <textarea id="cinput" rows="1" placeholder="${c.blocked?'已拉黑，发不出去':(_voiceMode?'输入文字，发送为语音条…':'发消息…')}" ${c.blocked?'disabled':''}></textarea>
       <button type="button" class="chat-composer-icon chat-emoji-toggle" aria-label="打开表情" onclick="chatPanelToggle('emoji')">${chatEmojiButtonIcon()}</button>
@@ -14710,7 +14712,7 @@ function buildPart(c,m,me){
   if(m.type==='location')return liveLocCardHTML(c,m,me);
   if(m.type==='file'){const readable=!!String(m.text||'').trim(),tip=m.reading?'正在读…':(readable?'点开看内容':String(m.unreadable||''));
     return `<div class="card cfile${readable?' cfile-open':''}"${readable?` onclick="event.stopPropagation();chatFileOpen('${c.id}','${m.id}')"`:''}><div class="ic">📄</div><div><div class="n">${esc(m.name)}</div><div class="s">${esc([m.size||'',tip].filter(Boolean).join(' · '))}</div></div></div>`;}
-  if(m.type==='spycard')return `<div class="card"><div class="cpay" style="background:#5b6b9c"><div class="big">📱</div><div><div class="t1">小手机查看权限</div><div class="t2">已授权随时查看我的手机</div></div></div><div class="cfoot">权限卡片</div></div>`;
+  if(m.type==='spycard')return `<div class="card spy-access-card"><div class="spy-access-main"><div class="spy-access-top"><span class="spy-access-brand">PHONE ACCESS</span><span class="spy-access-state">${svgIc('check',12,'currentColor')} 已授权</span></div><div class="spy-access-icon">${svgIc('spyphone',26,'currentColor',1.4)}</div><h3 class="spy-access-title">小手机查看权限</h3><div class="spy-access-sub">已授权给 ${esc(c.remark||c.name)}</div><div class="spy-access-scope"><span>聊天</span><span>钱包</span><span>朋友圈</span><span>动态</span></div></div><div class="spy-access-foot">${svgIc('shield',12,'currentColor',1.5)}<span>专属权限 · 仅限当前聊天</span></div></div>`;
   if(m.type==='ticket'&&m.trip)return tvTicketCardHTML(m.trip,getC(m.trip.cid));
   if(m.type==='attractionTicket'&&m.order)return NorthTravelOrders.card(m.order);
   if(m.type==='mailforward')return mailForwardCard(m,c.id);

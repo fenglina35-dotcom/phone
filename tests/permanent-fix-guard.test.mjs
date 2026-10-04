@@ -29,6 +29,9 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"v1534/v1535",scope:"both",least:1,name:"旧自动记忆按玩家姓名修复且控制标记排除",marker:"function repairGeneratedRoleMemories(list)"},
+  {release:"v1534/v1535",scope:"both",least:1,name:"转发和多选删除独立模式",marker:"mode:mode==='delete'?'delete':'forward'"},
+  {release:"v1534/v1535",scope:"both",least:1,name:"银行不显示已撤回或婉拒卡",file:"role-family-card.js",marker:"const ks=cards(cid).filter(k=>!['revoked','declined'].includes(k.status))"},
   {release:"v1532/v1533",scope:"both",least:1,name:"电话挂断后不继续网络重试",marker:"const assertSession=()=>"},
   {release:"v1532/v1533",scope:"both",least:1,name:"电话与微信原始故障证据",marker:"failureStage:phase",file:"request-diagnostics.js"},
   {release:"v1532/v1533",scope:"both",least:1,name:"旅行订单卡显示实际付款人备注",marker:"NorthHotelData.payerLabel(h)"},

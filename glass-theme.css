@@ -685,3 +685,19 @@ html.north-real-preview .wx-contacts>.wx-alpha-rail{top:150px}
 
 /* v1422 unread counts and complete quotes; both light/dark themes. */
 .wx-unread-avatar{position:relative;display:inline-flex;flex-shrink:0;overflow:visible}.wx-unread-badge{position:absolute;top:-5px;right:-6px;z-index:2;display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 4px;box-sizing:border-box;border-radius:12px;background:#fa5151;color:#fff;font:500 12px/18px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;white-space:nowrap;pointer-events:none}.wx-unread-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#fa5151;flex-shrink:0;pointer-events:none}.tabbar .tb .i{position:relative;overflow:visible}.tabbar .wx-unread-dot{position:absolute;top:0;right:-3px}.wx-discover-row>span>.wx-unread-dot{margin-left:8px;vertical-align:middle}.chat-quote-sent{display:block;-webkit-line-clamp:unset;overflow:visible;white-space:pre-wrap;overflow-wrap:anywhere;max-height:none}.chat-quote-sent span{white-space:pre-wrap}
+
+.wx-chat-premium:has(.chat-tools-panel.show)>.manual-reply-row{display:none!important}
+
+/* Phone access: a blue permission card, with vector icons and clear hierarchy. */
+.card.spy-access-card{width:260px;max-width:100%;border:1px solid rgba(127,184,255,.28);border-radius:20px;overflow:hidden;background:linear-gradient(135deg,#193b6d 0%,#10294c 52%,#0d1d35 100%);color:#f4f8ff;box-shadow:0 8px 22px rgba(5,22,47,.18);position:relative}
+.spy-access-card:before{content:'';position:absolute;width:170px;height:170px;border:1px solid rgba(146,197,255,.13);border-radius:50%;top:-82px;right:0;pointer-events:none;box-shadow:0 0 0 22px rgba(128,185,255,.035),0 0 0 44px rgba(128,185,255,.025)}
+.spy-access-main{position:relative;padding:19px 18px 17px}.spy-access-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:22px}.spy-access-brand{font-size:9px;letter-spacing:1.7px;color:#a6c7ef;font-weight:600}.spy-access-state{display:inline-flex;align-items:center;gap:4px;color:#c7e1ff;font-size:10px;white-space:nowrap}.spy-access-icon{width:43px;height:43px;display:grid;place-items:center;border-radius:13px;border:1px solid rgba(168,210,255,.25);background:linear-gradient(145deg,rgba(159,206,255,.17),rgba(71,135,220,.06));color:#c5e4ff;margin-bottom:15px}.spy-access-title{margin:0 0 7px;font-size:18px;line-height:1.35;letter-spacing:.3px;font-weight:600}.spy-access-sub{font-size:12px;line-height:1.65;color:#b4cbe8;word-break:break-word}.spy-access-scope{display:flex;flex-wrap:wrap;gap:6px;margin-top:17px}.spy-access-scope span{font-size:10px;line-height:1.2;color:#bdd5f3;padding:5px 7px;border:1px solid rgba(163,197,240,.15);border-radius:6px;background:rgba(104,160,224,.05)}
+.spy-access-foot{display:flex;align-items:center;gap:6px;position:relative;padding:11px 18px;border-top:1px solid rgba(145,182,226,.16);font-size:10px;letter-spacing:.4px;color:#91afd5;background:rgba(3,12,28,.18)}
+
+/* Compact access card: keep the permission summary close to half the original height. */
+.spy-access-main{display:grid;grid-template-columns:36px minmax(0,1fr);column-gap:10px;row-gap:5px;padding:8px 14px}
+.spy-access-top{grid-column:1/-1;margin-bottom:5px}.spy-access-brand{font-size:8px;letter-spacing:1.3px}.spy-access-state{font-size:9px}
+.spy-access-icon{grid-column:1;grid-row:2/span 2;width:36px;height:36px;border-radius:10px;margin:0;align-self:center}.spy-access-icon svg{width:23px;height:23px}
+.spy-access-title{grid-column:2;margin:0;font-size:15px;line-height:20px;letter-spacing:0}.spy-access-sub{grid-column:2;font-size:11px;line-height:18px}
+.spy-access-scope{grid-column:1/-1;gap:5px;margin-top:6px}.spy-access-scope span{padding:4px 6px;font-size:9px}
+.spy-access-foot{padding:6px 14px;font-size:9px;letter-spacing:0}.card.spy-access-card{border-radius:16px}
