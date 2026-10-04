@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1528'){
+if(window.__NORTH_SHELL_BUILD__!=='1530'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -591,7 +591,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1528 · 小鱼旅行 · 旅行服务';
+const APP_VER='v1530 · 小鱼旅行 · 旅行服务';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1557,6 +1557,7 @@ function quoteContextText(m,kind){
   return kind==='voice'?'（我引用了我前面说的那句「'+q+'」，就这一句）':'（我引用了我前面说的那句「'+q+'」，现在补充说：）';
 }
 function msgToText(m){
+  if(m&&m.type==='mailforward')return mailForwardHistory(m);
   if(m&&['rolefamilycard','rolefamilypurchase'].includes(m.type)&&typeof familyRoleHistory==='function')return familyRoleHistory(m);
   if(m&&m.role==='assistant'&&m.type==='file')return roleFileHistoryText(m);
   if(m&&m.type==='transfer'&&m._transferReceipt){const amount=(+m.amount||0).toFixed(2),receive=m.receiptAction==='receive'||m.payState==='received';if(m.role==='user')return receive?'[真实转账回执：你此前转给用户的 ¥'+amount+' 已被用户收下；这是收款结果，不是用户给你转账，也不是用户把钱转回给你。]':'[真实转账回执：用户把你此前转给ta的 ¥'+amount+' 原路退还给你；这是退款，不是你再次给用户转账。]';return receive?'[真实转账回执：用户此前转给你的 ¥'+amount+' 已被你收下；这是收款结果，不是你给用户转账。]':'[真实转账回执：你已把用户此前转给你的 ¥'+amount+' 原路退还给用户；这是退款结果。]';}
@@ -1991,7 +1992,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1528&r=v1528-role-family-card-preview-1';
+  const url='sw.js?v=1530&r=v1530-role-family-card-preview-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -2666,6 +2667,7 @@ function render(){
   else if(c.p==='jail')html=renderJail();
   else if(c.p==='wg')html=renderWG();
   else if(c.p==='mail')html=renderMail();
+  else if(c.p==='mailRead')html=renderMailRead(c);
   else if(c.p==='mailWrite')html=typeof renderMailWrite==='function'?renderMailWrite():'';
   else if(c.p==='phoneapp')html=renderPhoneApp();
   else if(c.p==='phonesms')html=renderPhoneSMS(c.num,c.sk);
@@ -3510,7 +3512,7 @@ function appleHomeCompatEnvironment(){return appleHomeCompatBrowserEnvironment()
 function applyAppleHomeCompat(){const root=typeof document==='undefined'?null:document.documentElement,on=appleHomeCompatBrowserEnvironment();if(root&&root.classList){root.classList.remove('north-ios-home-safe');root.classList.remove('north-apple-remote-safe');root.classList.toggle('north-ios-standalone-status',on);}return on;}
 function glassThemeOn(){return !!(S&&S.me&&S.me.uiMaterial==='glass');}
 let _nativeStatusBarTheme='';
-function privateNativeStatusBarThemeName(){const page=typeof cur==='function'?cur():null,isWechat=page&&['wechat','chat','transferDetail','groupTransferDetail','rpSend','grpSend','tfSend','rpDetail','chatDetails','contactInfo','friendInfo','contactSettings','roleMoments','roleMomentDetail','roleFeatures','roleImageStudio','newfriends','wxonlychat','wxgroups','wxlabels','wxgroupcreate','contactEdit','wxsearch','pffriends','pfchat','pfgroup','group'].includes(page.p);if(isWechat)return S&&S.me&&S.me.wxTheme==='white'?'white':'black';const on=glassThemeOn(),pack=appIconPack();return on&&['black','gray','pink','blue'].includes(pack)?pack:(S&&S.me&&S.me.theme==='white'?'white':S&&S.me&&S.me.theme==='pink'?'pink':'black');}
+function privateNativeStatusBarThemeName(){const page=typeof cur==='function'?cur():null;if(page&&['mailRead','mailWrite'].includes(page.p))return 'black';const isWechat=page&&['wechat','chat','transferDetail','groupTransferDetail','rpSend','grpSend','tfSend','rpDetail','chatDetails','contactInfo','friendInfo','contactSettings','roleMoments','roleMomentDetail','roleFeatures','roleImageStudio','newfriends','wxonlychat','wxgroups','wxlabels','wxgroupcreate','contactEdit','wxsearch','pffriends','pfchat','pfgroup','group'].includes(page.p);if(isWechat)return S&&S.me&&S.me.wxTheme==='white'?'white':'black';const on=glassThemeOn(),pack=appIconPack();return on&&['black','gray','pink','blue'].includes(pack)?pack:(S&&S.me&&S.me.theme==='white'?'white':S&&S.me&&S.me.theme==='pink'?'pink':'black');}
 function webStatusBarThemeSync(theme){const colors={black:'#000000',pink:'#ffeaf3',blue:'#eaf4ff',gray:'#e6e8ec',white:'#ffffff'},color=colors[theme]||colors.black,root=typeof document==='undefined'?null:document.documentElement;if(root&&root.classList){['black','pink','blue','gray','white'].forEach(k=>root.classList.toggle('north-shell-'+k,k===theme));root.style.setProperty('--north-shell-status-color',color);}if(typeof document!=='undefined'){let meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.remove();meta=document.createElement('meta');meta.name='theme-color';meta.content=color;document.head.appendChild(meta);const apple=document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');if(apple)apple.setAttribute('content',appleHomeCompatBrowserEnvironment()?'black':'default');}return color;}
 function privateNativeStatusBarThemeSync(force){const theme=privateNativeStatusBarThemeName();webStatusBarThemeSync(theme);if(!privateNativeAppOn()){_nativeStatusBarTheme='';return theme;}if(!force&&theme===_nativeStatusBarTheme)return theme;_nativeStatusBarTheme=theme;window.SmallPhoneNative.request('appearance.statusBar',{theme}).catch(()=>{_nativeStatusBarTheme='';});return theme;}
 function applyGlassTheme(){const root=typeof document==='undefined'?null:document.documentElement,on=glassThemeOn(),pack=appIconPack();if(root&&root.classList){root.classList.toggle('north-glass-ui',on);['black','gray','pink','blue'].forEach(k=>root.classList.toggle('north-pack-'+k,on&&pack===k));}privateNativeStatusBarThemeSync(false);return on;}
@@ -5370,7 +5372,7 @@ function checkGiftDelivery(){if(!isMain())return;const now=Date.now();let ch=fal
     if(k==='food'){if(first){const sm={role:'user',type:'sys',content:'🛵 '+who+'帮你付的外卖「'+g.name+'」送到了，趁热吃~',time:Date.now(),id:uid()};if(g.cid)msgs(g.cid).push(sm);playDing();}if(g.notified===false&&!_giftNotifyBusy[g.id]&&g.cid&&c&&!c.blocked){_giftNotifyBusy[g.id]=1;const queued=scheduleReply(g.cid,'[系统：你帮'+S.me.name+'付钱点的外卖「'+g.name+'」刚送到ta那儿了。自然地宠ta、叮嘱ta趁热吃一句，一两句。]',ok=>{delete _giftNotifyBusy[g.id];if(ok){g.notified=true;save();}});if(!queued)delete _giftNotifyBusy[g.id];}return;}
     const subj=k==='self'?('你买的「'+g.name+'」到了'):k==='pay'?('代付的「'+g.name+'」到了'):('礼物到了：'+g.name);
     const bd=k==='self'?('你买的「'+g.name+'」到货了，签收一下吧。'):k==='pay'?('你让 '+who+' 帮你付的「'+g.name+'」到货了，签收一下吧。'):('快递到了，'+who+'给你寄的「'+g.name+'」到了，签收一下吧。');
-    S.mail=S.mail||[];S.mail.unshift({id:uid(),cid:g.cid,type:'gift',kind:k,giftName:g.name,giftPrice:g.price,giftRecipe:g.giftRecipe||null,subject:subj,body:bd,signed:false,read:false,time:Date.now()});if(S.mail.length>60)S.mail=S.mail.slice(0,60);
+    S.mail=S.mail||[];S.mail.unshift({id:uid(),cid:g.cid,type:'gift',kind:k,giftName:g.name,giftPrice:g.price,giftRecipe:g.giftRecipe||null,subject:subj,body:bd,signed:false,read:false,time:Date.now()});
     if(c)notifyMail(c,{subject:subj});else playDing();});
   S.giftbox=gb.filter(g=>!g.delivered||now-g.arriveTs<6048e5);
   if(ch){save();const cu=cur();if(cu&&cu.p==='mail')render();}}
@@ -11284,15 +11286,15 @@ function mailMoodPick(key){const sel=$('#mailMoodCid'),cs=S.contacts.filter(c=>!
 /* 信件以前写死 700／620，和任何设置都无关，长一点的信必被自己的上限截断。
    现在按路线单独配置，和线上、线下的回复长度各管各的。 */
 function letterReplyBudget(c){const n=Number(chatMainCopy(chatRequestRoute(roleChatRouteIndex(c))||S.settings&&S.settings.chat||{}).letterMaxTokens)||0;return Math.max(200,Math.min(8192,n>0?n:1200));}
-async function genMoodLetter(id,key){const c=getC(id),m=MAIL_MOODS.find(x=>x[0]===key)||MAIL_MOODS[0];if(!c||window._mailMoodBusy)return;window._mailMoodBusy=true;openModal(`<div style="text-align:center;padding:14px 4px"><div style="width:58px;height:58px;border-radius:16px;background:#111113;border:1px solid #34343a;margin:0 auto 12px;display:flex;align-items:center;justify-content:center">${svgIc('envelope',32,'#d7d7dc',1.35)}</div><h3>正在拆信</h3><div class="hint">${esc(c.remark||c.name)} 正在按「${esc(m[1])}」给你写一封信。</div></div>`);
+async function genMoodLetter(id,key){const c=getC(id),m=MAIL_MOODS.find(x=>x[0]===key)||MAIL_MOODS[0];if(!c||window._mailMoodBusy)return;window._mailMoodBusy=true;const mailAccount=String(actId()),mailState=S;openModal(`<div style="text-align:center;padding:14px 4px"><div style="width:58px;height:58px;border-radius:16px;background:#111113;border:1px solid #34343a;margin:0 auto 12px;display:flex;align-items:center;justify-content:center">${svgIc('envelope',32,'#d7d7dc',1.35)}</div><h3>正在拆信</h3><div class="hint">${esc(c.remark||c.name)} 正在按「${esc(m[1])}」给你写一封信。</div></div>`);
   const recent=msgs(id).slice(-18).map(msgToText).filter(Boolean).join('\n');
   const sys=buildSystem(c)+'\n\n# 现在：按心情给'+S.me.name+'写一封临时信\n'+S.me.name+'刚在信箱里选择了心情「'+m[1]+' '+m[2]+'」：'+m[3]+'。\n你要以自己的角色口吻，像恋人/重要的人一样写一封只给ta的信。要求：\n- 这是信，不是微信聊天；温柔、真诚、有细节，像真实手写信。\n- 紧扣ta选择的心情，先接住情绪，再给陪伴感。\n- 可以自然放 1 到 3 个可爱的颜文字，例如 '+m[2]+'、(っ˘̩╭╮˘̩)っ、(｡･ω･｡)ﾉ，但不要使用 Emoji。\n- 不要动作描写，不要第三人称旁白，不要输出系统标签。\n只输出下面两行，用 ::: 分隔：\n主题:::一句话标题\n正文:::正文（100-240字，可换行，结尾可署名）';
   try{let r=await chatAPI([{role:'system',content:sys},{role:'user',content:'最近聊天：\n'+(recent||'(最近没有聊天记录)')+'\n\n请按我的心情写这封信。'}],{max:letterReplyBudget(c),temp:.86});
     r=String(r||'').trim();let sub='给现在的你',body=r;const ms=r.match(/主题[:：]{1,3}\s*([^\n]+)/);if(ms)sub=ms[1].trim();const mb=r.split(/正文[:：]{1,3}/);if(mb[1])body=mb[1].trim();body=body.replace(/^主题[:：]{1,3}[^\n]*\n+/,'').trim();
     if(!body)body='我看到你现在有点'+m[1]+'，所以把这封信留给你。先别急着变好，也不用立刻解释什么，靠过来一点，我在这里陪你。'+m[2]+'\n\n今天剩下的事，我们慢慢来。';
-    const letter={id:uid(),cid:id,type:'mood',mood:key,subject:mailCleanText(sub).slice(0,40)||('给'+m[1]+'的你'),body:mailCleanText(body),time:Date.now(),read:false};
-    S.mail=S.mail||[];S.mail.unshift(letter);if(S.mail.length>60)S.mail=S.mail.slice(0,60);save();playDing();closeModal();if(cur().p==='mail')render();setTimeout(()=>openLetter(letter.id),80);
-  }catch(e){toast('信没有拆开，等会儿再试');closeModal();}finally{window._mailMoodBusy=false;}}
+    if(S!==mailState)return;const letter={id:uid(),cid:id,acct:mailAccount,type:'mood',mood:key,subject:mailCleanText(sub).slice(0,40)||('给'+m[1]+'的你'),body:mailCleanText(body),time:Date.now(),read:false};
+    S.mail=S.mail||[];S.mail.unshift(letter);save();if(String(actId())===mailAccount){playDing();closeModal();if(cur().p==='mail')render();setTimeout(()=>{if(String(actId())===mailAccount)openLetter(letter.id);},80);}
+  }catch(e){if(S===mailState&&String(actId())===mailAccount){toast('信没有拆开，等会儿再试');closeModal();}}finally{window._mailMoodBusy=false;}}
 function mailSettings(){const cs=S.contacts.filter(c=>!c.deleted);
   openModal(`<h3>信箱设置</h3><div class="hint">让角色每天主动给你写几封信（趁你不在时写的心里话，会结合你们最近的聊天）。0=不写。他也会自己想写就写。</div>
    <div class="section">${cs.length?cs.map(c=>`<div class="it"><span>${esc(c.remark||c.name)}</span><span class="v"><input type="number" min="0" max="5" value="${c.mailPerDay||0}" onchange="getC('${c.id}').mailPerDay=Math.max(0,Math.min(5,+this.value||0));save()" style="width:48px;text-align:center;border:1px solid #38383a;border-radius:6px;padding:5px;background:#2c2c2e;color:#eee"> 封/天</span></div>`).join(''):'<div class="empty">先创建一个角色</div>'}</div>
@@ -11318,7 +11320,7 @@ function scanMail(){if(!isMain())return;const today=new Date().toDateString();S.
       const live=S._mailCount&&S._mailCount[c.id];
       if(live&&live.date===pc.date&&live.n>0){live.n--;live.last=prevLast;save();}
     }).finally(()=>{delete _mailBusy[c.id];});});}
-async function genLetter(id){const c=getC(id);if(!c)return false;
+async function genLetter(id){const c=getC(id),mailAccount=String(actId()),mailState=S;if(!c)return false;
   const recent=msgs(id).slice(-20).map(msgToText).filter(Boolean).join('\n');
   const sys=buildSystem(c)+'\n\n# 现在：给'+S.me.name+'写一封信\n趁'+S.me.name+'不在身边，你想给ta写一封信，说说心里话。这不是微信消息，是一封正式的、温柔真诚的信。请结合你们最近的聊天和你对ta的感情来写，有细节、有温度，像真实的手写信。\n只输出下面两行、用:::分隔，别的都别写：\n主题:::一句话的信件标题\n正文:::信的正文（120-280字，可用换行分段，结尾可署名）';
   try{const r=await chatAPI([{role:'system',content:sys},{role:'user',content:'最近的聊天记录：\n'+(recent||'(还没怎么聊过)')+'\n\n请给我写一封信。'}],{max:letterReplyBudget(c),temp:.85});
@@ -11326,9 +11328,8 @@ async function genLetter(id){const c=getC(id);if(!c)return false;
     const ms=r.match(/主题[:：]{1,3}\s*([^\n]+)/);if(ms)sub=ms[1].trim();
     const mb=r.split(/正文[:：]{1,3}/);if(mb[1])body=mb[1].trim();
     body=body.replace(/^主题[:：]{1,3}[^\n]*\n+/,'').trim();
-    const letter={id:uid(),cid:id,subject:sub.slice(0,40),body,time:Date.now(),read:false};
-    S.mail.unshift(letter);if(S.mail.length>60)S.mail=S.mail.slice(0,60);save();notifyMail(c,letter);
-    if(cur().p==='mail'||cur().p==='home')render();return true;
+    if(S!==mailState)return false;const letter={id:uid(),cid:id,acct:mailAccount,subject:sub.slice(0,40),body,time:Date.now(),read:false};
+    S.mail.unshift(letter);save();if(String(actId())===mailAccount){notifyMail(c,letter);if(cur().p==='mail'||cur().p==='home')render();}return true;
   }catch(e){return false;}}
 function notifyMail(c,letter){if(c.muted)return;playDing();lockNotify((c.remark||c.name)+' 给你写了封信',mailCleanText(letter.subject),{avatar:c.avatar,icon:'envelope',target:{type:'mail'}});appNotify((c.remark||c.name)+' 给你写了封信',letter.subject,{tag:'mail-'+c.id,data:{type:'open',target:'mail'}});if(lockVisible())return;const b=$('#msgBanner');if(!b)return;
   b.innerHTML=`<div style="width:34px;height:34px;border-radius:9px;background:#151520;border:1px solid #34343a;display:flex;align-items:center;justify-content:center">${svgIc('envelope',19,'#d7d7dc',1.35)}</div><div style="flex:1;min-width:0"><div class="bn">${esc(c.remark||c.name)} 给你写了封信</div><div class="bm">${esc(mailCleanText(letter.subject))}</div></div>`;
@@ -12895,7 +12896,7 @@ function coupleSet(){openModal(`<h3>在一起的日子</h3><div class="field"><l
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="S.couple.startDate=$('#cp_d').value||S.couple.startDate;save();closeModal();render()">保存</button></div>`);}
 function addAnniv(){openModal(`<h3>添加纪念日</h3><div class="field"><label>日期</label><input id="an_d" type="date" value="${todayStr()}"></div><div class="field"><label>名称</label><input id="an_t" placeholder="第一次见面 / 订婚…"></div>
   <div class="btns"><button class="btn g" onclick="closeModal()">取消</button><button class="btn p" onclick="(function(){var d=$('#an_d').value,t=$('#an_t').value.trim();if(!d||!t){toast('填日期和名称');return;}S.couple.anniversaries=S.couple.anniversaries||[];S.couple.anniversaries.push({date:d,title:t});S.couple.anniversaries.sort((a,b)=>a.date<b.date?-1:1);save();closeModal();render();})()">保存</button></div>`);}
-function previewOf(m){if(m.type==='rolefamilycard')return '[专属亲属卡]';if(m.type==='rolefamilypurchase')return '[自购订单]';if(m.role==='assistant'){if(m.type==='weddinginvite')return m.phase==='ready'?'[现代婚礼入场邀请]':m.phase==='style'?'[请选择婚礼形式]':'[距离婚礼还有一段时间]';if(m.type==='familycard')return '[亲属卡邀请]';if(m.type==='namecard')return '[推荐好友：'+(m.cname||'')+']';if(m.type==='dateinvite')return '[约会邀请]';if(m.type==='roleplayinvite')return '[角色扮演邀请]';if(m.type==='gameinvite')return '[游戏邀请：'+(m.gname||'一起玩')+']';if(m.type==='verifyreq')return '[验证请求]';return splitBubbles(m.content)[0]||'[消息]';}
+function previewOf(m){if(m&&m.type==='mailforward')return '[转发信件] '+(m.letter&&m.letter.subject||'来信');if(m.type==='rolefamilycard')return '[专属亲属卡]';if(m.type==='rolefamilypurchase')return '[自购订单]';if(m.role==='assistant'){if(m.type==='weddinginvite')return m.phase==='ready'?'[现代婚礼入场邀请]':m.phase==='style'?'[请选择婚礼形式]':'[距离婚礼还有一段时间]';if(m.type==='familycard')return '[亲属卡邀请]';if(m.type==='namecard')return '[推荐好友：'+(m.cname||'')+']';if(m.type==='dateinvite')return '[约会邀请]';if(m.type==='roleplayinvite')return '[角色扮演邀请]';if(m.type==='gameinvite')return '[游戏邀请：'+(m.gname||'一起玩')+']';if(m.type==='verifyreq')return '[验证请求]';return splitBubbles(m.content)[0]||'[消息]';}
   return ({text:m.content,image:'[照片]',transfer:'[转账]',redpacket:'[红包]',location:'[位置]',file:'[文件]',spycard:'[查看权限]',dice:'[骰子]',gift:'[礼物]',paycard:'[求代付]',paid:'[已代付]',tweetcard:'[X推文]',dycard:'[抖音视频]',tcollect:'[已收款]',treject:'[已退还]',chatlog:'[聊天记录]',food:'[外卖]',payreject:'[拒绝代付]',voice:'[语音]',sticker:'[表情]',namecard:'[名片]',familybuy:'[亲属卡消费]',familyreq:'[亲属卡申请]',weblink:'[网页]',dateinvite:'[约会邀请]',roleplayinvite:'[角色扮演邀请]',outpass:'[出门申请]',musicinvite:'[一起听歌]',cinemainvite:'[放映室邀请]',gameinvite:'[游戏邀请]',sys:m.content})[m.type]||'[消息]';}
 
 function wxContactDirectoryState(){S.wechatDirectory=S.wechatDirectory&&typeof S.wechatDirectory==='object'?S.wechatDirectory:{};const d=S.wechatDirectory;d.onlyChat=d.onlyChat&&typeof d.onlyChat==='object'?d.onlyChat:{};d.labels=d.labels&&typeof d.labels==='object'?d.labels:{};const key=String(actId()||'main');d.onlyChat[key]=Array.isArray(d.onlyChat[key])?Array.from(new Set(d.onlyChat[key].filter(Boolean))):[];d.labels[key]=Array.isArray(d.labels[key])?d.labels[key].filter(x=>x&&x.id&&x.name).map(x=>({id:String(x.id),name:String(x.name).slice(0,18),members:Array.isArray(x.members)?Array.from(new Set(x.members.filter(Boolean))):[]})):[];return d;}
@@ -14712,6 +14713,7 @@ function buildPart(c,m,me){
   if(m.type==='spycard')return `<div class="card"><div class="cpay" style="background:#5b6b9c"><div class="big">📱</div><div><div class="t1">小手机查看权限</div><div class="t2">已授权随时查看我的手机</div></div></div><div class="cfoot">权限卡片</div></div>`;
   if(m.type==='ticket'&&m.trip)return tvTicketCardHTML(m.trip,getC(m.trip.cid));
   if(m.type==='attractionTicket'&&m.order)return NorthTravelOrders.card(m.order);
+  if(m.type==='mailforward')return mailForwardCard(m,c.id);
   if(m.type==='hotel'&&m.hotel)return tvHotelCardHTML(m.hotel);
   if(m.type==='dice')return `<div style="font-size:46px;line-height:1">${['','⚀','⚁','⚂','⚃','⚄','⚅'][m.value]||'🎲'}<span style="font-size:15px;color:#999;margin-left:6px">${m.value}点</span></div>`;
   if(m.type==='thoughtcard')return `<div class="thought-egg-chat-card" role="button" tabindex="0" aria-label="打开隐藏心声卡片" onclick="event.stopPropagation();thoughtMessageOpen('${m.id}',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();thoughtMessageOpen('${m.id}',this)}"><div class="thought-egg-chat-kicker">FOR YOUR EYES ONLY</div><div class="thought-egg-chat-title">有些话<br>只想让你看见</div><div class="thought-egg-chat-foot"><span>${m.openedAt?'再次打开':'一份未说完的心事'}</span><i></i></div></div>`;

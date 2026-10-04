@@ -29,11 +29,11 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
-  {release:"v1528/v1529",scope:"both",least:1,name:"电话挂断后不继续网络重试",marker:"const assertSession=()=>"},
-  {release:"v1528/v1529",scope:"both",least:1,name:"电话与微信原始故障证据",marker:"failureStage:phase",file:"request-diagnostics.js"},
-  {release:"v1528/v1529",scope:"both",least:1,name:"旅行订单卡显示实际付款人备注",marker:"NorthHotelData.payerLabel(h)"},
-  {release:"v1528/v1529",scope:"both",least:2,name:"已处理旅行代付不落回旧购物付款",marker:"NorthTravelPayment.currentRequest(id)"},
-  {release:"v1528/v1529",scope:"both",least:1,name:"角色旅行消费订单与用户退款权限分离",marker:"他的消费订单"},
+  {release:"v1530/v1531",scope:"both",least:1,name:"电话挂断后不继续网络重试",marker:"const assertSession=()=>"},
+  {release:"v1530/v1531",scope:"both",least:1,name:"电话与微信原始故障证据",marker:"failureStage:phase",file:"request-diagnostics.js"},
+  {release:"v1530/v1531",scope:"both",least:1,name:"旅行订单卡显示实际付款人备注",marker:"NorthHotelData.payerLabel(h)"},
+  {release:"v1530/v1531",scope:"both",least:2,name:"已处理旅行代付不落回旧购物付款",marker:"NorthTravelPayment.currentRequest(id)"},
+  {release:"v1530/v1531",scope:"both",least:1,name:"角色旅行消费订单与用户退款权限分离",marker:"他的消费订单"},
   {release:"v1506/v1507",scope:"both",least:1,name:"旅行角色大额余额按十进制扣款",marker:"NorthHotelData.moneyNext(c.wallet,Math.round(delta*100))"},
   {release:"v1422/v1423 preview",scope:"both",least:1,name:"线下控制文本与安静决定不进入对话通知",marker:"function rolePublicText(value)"},
   {release:"v1422/v1423 preview",scope:"both",least:1,name:"抖音陌生私信有独立性格和开场重复检查",marker:"function dyStrangerParse(raw,styles,recent)"},
@@ -1397,7 +1397,7 @@ test('support retains the local sticker answer and searchable feature paths in b
  }
 });
 
-// v1528/v1529: chat taxi shorthand must complete a grounded route before execution.
+// v1530/v1531: chat taxi shorthand must complete a grounded route before execution.
 test('chat taxi completion and original payer dedup remain present in both runtimes',()=>{for(const prefix of ['',PRIVATE_DIR]){const taxi=read(prefix+'travel-taxi.js'),app=read(prefix+'app.js');assert(taxi.includes('function chatContext(c)'));assert(taxi.includes('async function prepare(content,c,repair)'));assert(taxi.includes('未叫车：'));assert(taxi.includes("o.payer===(c?'ta':'me')"));assert(app.includes('await NorthTravelTaxi.prepare(content,c,'));}});
 
 test('hotel order details retain full-page rendering and role refund isolation in both runtimes',()=>{for(const prefix of ['',PRIVATE_DIR]){const js=read(prefix+'travel-hotel.js'),css=read(prefix+'travel-hotel.css');assert(js.includes("if(view==='detail')return detailPage()"));assert(js.includes('rolePlan,detail,backDetail'));assert(css.includes('.cth-detail-fields b{color:#243143;font-size:14px'));assert(js.includes("h.status==='upcoming'&&!NorthHotelData.roleOrder(h)"));}});
@@ -1409,3 +1409,5 @@ test('travel-only white dialog shells and local popular-brand search remain in b
  test('travel transport and concert dialogs keep inner whitespace',()=>{for(const prefix of ['', 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/']){const css=fs.readFileSync(prefix+'travel-home.css','utf8');assert(css.includes(':is(.ctf-dialog,.ctn-dialog){padding:20px;border-radius:inherit}'));assert(css.includes('min-height:40px'));}});
 
  test('all travel user booking entrances offer isolated payment sources in both runtimes',()=>{for(const prefix of ['', 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/']){assert(fs.readFileSync(prefix+'travel-payment.js','utf8').includes('function currentRequest'));for(const name of ['travel-hotel.js','travel-guide.js','travel-flight-booking.js','travel-train-booking.js','travel-concert-booking.js'])assert(fs.readFileSync(prefix+name,'utf8').includes('NorthTravelPayment.open'));}});
+
+test('mail redesign preserves historical search, reply binding and forwarded snapshots in both runtimes',()=>{for(const prefix of ['',PRIVATE_DIR]){const js=read(prefix+'mail-outbox.js'),app=read(prefix+'app.js');for(const marker of ['function mailHighlight','function mailDraftKey','function mailReplySource','originalLetter','function mailForwardHistory','function renderMailRead'])assert(js.includes(marker));assert(!app.includes('if(S.mail.length>60)S.mail=S.mail.slice(0,60)'));assert(app.includes("['mailRead','mailWrite'].includes(page.p)"));assert(app.includes('acct:mailAccount'));}});
