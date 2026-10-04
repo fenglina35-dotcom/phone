@@ -29,7 +29,7 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
-  {release:"v1518/v1519",scope:"both",least:1,name:"角色旅行消费订单与用户退款权限分离",marker:"他的消费订单"},
+  {release:"v1520/v1521",scope:"both",least:1,name:"角色旅行消费订单与用户退款权限分离",marker:"他的消费订单"},
   {release:"v1506/v1507",scope:"both",least:1,name:"旅行角色大额余额按十进制扣款",marker:"NorthHotelData.moneyNext(c.wallet,Math.round(delta*100))"},
   {release:"v1422/v1423 preview",scope:"both",least:1,name:"线下控制文本与安静决定不进入对话通知",marker:"function rolePublicText(value)"},
   {release:"v1422/v1423 preview",scope:"both",least:1,name:"抖音陌生私信有独立性格和开场重复检查",marker:"function dyStrangerParse(raw,styles,recent)"},
@@ -930,7 +930,7 @@ const PERMANENT_FIXES = [
     release: 'v1271',
     name: '云程酒店支持网页预订、紧凑聊天卡与角色知情边界',
     scope: 'web',
-    marker: 'function tvHotelBook(i)',
+    marker: 'function tvHotelBook(i,payment)',
     least: 1,
   },
   {
@@ -1393,7 +1393,7 @@ test('support retains the local sticker answer and searchable feature paths in b
  }
 });
 
-// v1518/v1519: chat taxi shorthand must complete a grounded route before execution.
+// v1520/v1521: chat taxi shorthand must complete a grounded route before execution.
 test('chat taxi completion and original payer dedup remain present in both runtimes',()=>{for(const prefix of ['',PRIVATE_DIR]){const taxi=read(prefix+'travel-taxi.js'),app=read(prefix+'app.js');assert(taxi.includes('function chatContext(c)'));assert(taxi.includes('async function prepare(content,c,repair)'));assert(taxi.includes('未叫车：'));assert(taxi.includes("o.payer===(c?'ta':'me')"));assert(app.includes('await NorthTravelTaxi.prepare(content,c,'));}});
 
 test('hotel order details retain full-page rendering and role refund isolation in both runtimes',()=>{for(const prefix of ['',PRIVATE_DIR]){const js=read(prefix+'travel-hotel.js'),css=read(prefix+'travel-hotel.css');assert(js.includes("if(view==='detail')return detailPage()"));assert(js.includes('rolePlan,detail,backDetail'));assert(css.includes('.cth-detail-fields b{color:#243143;font-size:14px'));assert(js.includes("h.status==='upcoming'&&!NorthHotelData.roleOrder(h)"));}});
@@ -1403,3 +1403,5 @@ test('travel-only white dialog shells and local popular-brand search remain in b
  test('simulated role bookings complete omitted preferences in both runtimes',()=>{for(const prefix of ['', 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/']){const data=fs.readFileSync(prefix+'travel-hotel-data.js','utf8');assert(data.includes('function roleAdvice'));for(const name of ['travel-hotel.js','travel-flight-booking.js','travel-train-booking.js','travel-concert-booking.js','travel-guide.js'])assert(fs.readFileSync(prefix+name,'utf8').includes('roleDate'));}});
 
  test('travel transport and concert dialogs keep inner whitespace',()=>{for(const prefix of ['', 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/']){const css=fs.readFileSync(prefix+'travel-home.css','utf8');assert(css.includes(':is(.ctf-dialog,.ctn-dialog){padding:20px;border-radius:inherit}'));assert(css.includes('min-height:40px'));}});
+
+ test('all travel user booking entrances offer isolated payment sources in both runtimes',()=>{for(const prefix of ['', 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/']){assert(fs.readFileSync(prefix+'travel-payment.js','utf8').includes('function currentRequest'));for(const name of ['travel-hotel.js','travel-guide.js','travel-flight-booking.js','travel-train-booking.js','travel-concert-booking.js'])assert(fs.readFileSync(prefix+name,'utf8').includes('NorthTravelPayment.open'));}});

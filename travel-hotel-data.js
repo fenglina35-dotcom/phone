@@ -49,7 +49,7 @@ function moneyNext(value,deltaCents){
  if(after<=BigInt(Number.MAX_SAFE_INTEGER)){const number=Number(after)/100;if(moneyCents(number)===after)return number;}
  return String(after/BigInt(100))+'.'+String(after%BigInt(100)).padStart(2,'0');
 }
-function roleOrder(o){return !!o&&(o.payer==='ta'||o.bookedBy==='ta'||o.by==='ta'||['roleWallet','roleBank'].includes(o.fundingSource));}
+function roleOrder(o){return !!o&&!o.paymentRequested&&(o.payer==='ta'||o.bookedBy==='ta'||o.by==='ta'||['roleWallet','roleBank'].includes(o.fundingSource));}
 function roleEmpty(v){return !String(v??'').trim()||/^(?:随便|任意|不限|默认|你选|你决定|自动|unknown|null|undefined)$/i.test(String(v).trim());}
 function roleDate(value,c,fallback){let text=roleEmpty(value)?'':String(value).trim();if(!text&&c&&typeof msgs==='function'){const recent=msgs(c.id).filter(m=>m.role==='user'&&m.type!=='sys').slice(-4).map(m=>m.content||m.text||'').reverse();text=recent.map(t=>String(t).match(/\d{4}-\d{2}-\d{2}|后天|明天|今天|今日|今晚/)).find(Boolean)?.[0]||'';}if(/^(今天|今日|今晚|明天|后天)$/.test(text)){const d=new Date(todayStr()+'T12:00:00');d.setDate(d.getDate()+(/后天/.test(text)?2:/明天/.test(text)?1:0));return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}if(text&&typeof tvNormDate==='function'&&!/^\d{4}-\d{2}-\d{2}$/.test(text))return tvNormDate(text);return text||fallback||todayStr();}
 function roleGuest(v){return ['我们一起','给你','我自己'].includes(v)?v:'给你';}
