@@ -29,7 +29,7 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
-  {release:"v1516/v1517",scope:"both",least:1,name:"角色旅行消费订单与用户退款权限分离",marker:"他的消费订单"},
+  {release:"v1518/v1519",scope:"both",least:1,name:"角色旅行消费订单与用户退款权限分离",marker:"他的消费订单"},
   {release:"v1506/v1507",scope:"both",least:1,name:"旅行角色大额余额按十进制扣款",marker:"NorthHotelData.moneyNext(c.wallet,Math.round(delta*100))"},
   {release:"v1422/v1423 preview",scope:"both",least:1,name:"线下控制文本与安静决定不进入对话通知",marker:"function rolePublicText(value)"},
   {release:"v1422/v1423 preview",scope:"both",least:1,name:"抖音陌生私信有独立性格和开场重复检查",marker:"function dyStrangerParse(raw,styles,recent)"},
@@ -1393,7 +1393,7 @@ test('support retains the local sticker answer and searchable feature paths in b
  }
 });
 
-// v1516/v1517: chat taxi shorthand must complete a grounded route before execution.
+// v1518/v1519: chat taxi shorthand must complete a grounded route before execution.
 test('chat taxi completion and original payer dedup remain present in both runtimes',()=>{for(const prefix of ['',PRIVATE_DIR]){const taxi=read(prefix+'travel-taxi.js'),app=read(prefix+'app.js');assert(taxi.includes('function chatContext(c)'));assert(taxi.includes('async function prepare(content,c,repair)'));assert(taxi.includes('未叫车：'));assert(taxi.includes("o.payer===(c?'ta':'me')"));assert(app.includes('await NorthTravelTaxi.prepare(content,c,'));}});
 
 test('hotel order details retain full-page rendering and role refund isolation in both runtimes',()=>{for(const prefix of ['',PRIVATE_DIR]){const js=read(prefix+'travel-hotel.js'),css=read(prefix+'travel-hotel.css');assert(js.includes("if(view==='detail')return detailPage()"));assert(js.includes('rolePlan,detail,backDetail'));assert(css.includes('.cth-detail-fields b{color:#243143;font-size:14px'));assert(js.includes("h.status==='upcoming'&&!NorthHotelData.roleOrder(h)"));}});
@@ -1401,3 +1401,5 @@ test('hotel order details retain full-page rendering and role refund isolation i
 test('travel-only white dialog shells and local popular-brand search remain in both runtimes',()=>{for(const prefix of ['',PRIVATE_DIR]){assert(read(prefix+'app.js').includes("m.classList.toggle('north-travel-modal'"));assert(read(prefix+'travel-home.css').includes('#modal.north-travel-modal #modalSheet'));assert(read(prefix+'travel-hotel.js').includes('function requestedBrands(keyword)'));}});
 
  test('simulated role bookings complete omitted preferences in both runtimes',()=>{for(const prefix of ['', 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/']){const data=fs.readFileSync(prefix+'travel-hotel-data.js','utf8');assert(data.includes('function roleAdvice'));for(const name of ['travel-hotel.js','travel-flight-booking.js','travel-train-booking.js','travel-concert-booking.js','travel-guide.js'])assert(fs.readFileSync(prefix+name,'utf8').includes('roleDate'));}});
+
+ test('travel transport and concert dialogs keep inner whitespace',()=>{for(const prefix of ['', 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/']){const css=fs.readFileSync(prefix+'travel-home.css','utf8');assert(css.includes(':is(.ctf-dialog,.ctn-dialog){padding:20px;border-radius:inherit}'));assert(css.includes('min-height:40px'));}});
