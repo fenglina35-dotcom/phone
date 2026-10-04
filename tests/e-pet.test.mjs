@@ -12,10 +12,10 @@ const html=readFileSync(join(root,'小手机.html'),'utf8');
 const preview=readFileSync(join(root,'pet-preview.html'),'utf8');
 const sw=readFileSync(join(root,'sw.js'),'utf8');
 
-test('game hall exposes a direct electronic-pet entry',()=>{
-  assert.match(app,/\{k:'pet',e:'',n:'电子宠物'/);
+test('home exposes a direct electronic-pet entry',()=>{
+  assert.match(app,/pet:\{e:'',c:'#17171c',t:'电子宠物'/);
   assert.match(app,/else if\(c\.p==='pet'\)html=renderPetGame\(\)/);
-  assert.match(app,/g\.k==='pet'\?'openPetGame\(\)'/);
+  assert.match(app,/pet:openPetGame/);
   assert.match(app,/if\(k==='pet'\)return openPetGame\(\)/);
   assert.match(app,/typeof petRolePrompt==='function'/);
   assert.match(app,/M8 8q4-2 8 0/,'the pet icon should have a closed top bridge');
@@ -186,8 +186,8 @@ test('Maine Coon, three hamsters and three white rabbit breeds use persistent li
 });
 
 test('preview and app load the complete visual module',()=>{
-assert.match(html,/pet-game\.css\?v=1538/);
-assert.match(html,/pet-game\.js\?v=1538/);
+assert.match(html,/pet-game\.css\?v=1542/);
+assert.match(html,/pet-game\.js\?v=1542/);
   assert.match(preview,/north-pet-preview/);
   assert.match(preview,/onclick="openPetGame\(\)"/);
   assert.match(css,/assets\/pet-room-v1\.webp/);

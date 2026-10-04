@@ -12,10 +12,10 @@ const list = source.slice(listStart, listEnd);
 
 assert.match(list, /\['phoneapp','☎','电话'\]/);
 assert.match(list, /\['douyin','🎵','抖音'\]/);
-assert.match(list, /\['tale','🕯️','规则怪谈'\]/);
-assert.match(list, /\['dread','🩸','惊悚抉择'\]/);
-assert.match(privateSource, /const HOMEAPPS=[\s\S]*?\['tale','🕯️','规则怪谈'\]/);
-assert.match(privateSource, /const HOMEAPPS=[\s\S]*?\['dread','🩸','惊悚抉择'\]/);
+assert.match(list, /\['pixelhome','','像素少女'\]/);
+assert.match(list, /\['pet','','电子宠物'\]/);
+assert.match(privateSource, /const HOMEAPPS=[\s\S]*?\['pixelhome','','像素少女'\]/);
+assert.match(privateSource, /const HOMEAPPS=[\s\S]*?\['pet','','电子宠物'\]/);
 assert.match(source, /function compressSquare\(file,size,q\)/);
 assert.match(source, /function setAppIcon\(key\)[\s\S]*?S\.me\.appIcons\[key\]=await compressSquare\(f,256,/);
 assert.match(source, /custom\?' custom-app-icon':''/);
@@ -24,5 +24,21 @@ assert.match(html, /\.app \.ic\.custom-app-icon\{aspect-ratio:1\/1;min-width:0;m
 assert.doesNotMatch(source, /loading="lazy" decoding="async" fetchpriority="low"/);
 assert.match(html, /\.app \.app-label\{[^}]*width:100%;[^}]*height:20px;[^}]*min-height:20px;[^}]*flex:0 0 20px;[^}]*box-sizing:border-box/);
 assert.match(source, /function appCell\(k\)[\s\S]*?aIco\(a\.icon\|\|k,a\.e,a\.c,badge\)\+homeAppLabel\(a\.t,locked\)/);
+
+
+
+// All home and dock icons share a hollow glass rim without a dark backing gutter.
+const glass = fs.readFileSync(new URL('../glass-theme.css', import.meta.url), 'utf8');
+const privateGlass = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/glass-theme.css', import.meta.url), 'utf8');
+assert.equal(glass.match(/\.home \.app \.ic:after\{[^}]+\}/)?.[0], privateGlass.match(/\.home \.app \.ic:after\{[^}]+\}/)?.[0]);
+assert.match(glass, /\.home \.app \.ic\{[^}]*border:0!important/);
+assert.match(glass, /\.ic\.custom-app-icon\{background:transparent!important\}/);
+const rim = glass.match(/\.home \.app \.ic:after\{([^}]+)\}/)?.[1];
+assert.ok(rim);
+assert.match(rim, /padding:\.8px/);
+assert.match(rim, /mask-composite:exclude/);
+assert.match(rim, /pointer-events:none/);
+assert.match(rim, /brightness\(1\.72\) saturate\(1\.68\)/);
+assert.doesNotMatch(rim, /blur\(/);
 
 console.log("app icon editor tests passed");

@@ -42,7 +42,7 @@ test('malformed inner-thought brackets are normalized locally before any repair 
 function gameRuntime(source,initial){
   let seq=0;const rows=initial.map(x=>({...x})),contact={id:'c1',gamesPlayed:[]};
   const ctx=vm.createContext({String,GAMES:[{k:'drawguess',n:'你画我猜'},{k:'heartquiz',n:'心动审判'},{k:'beads',n:'像素拼拼乐'}],msgs:()=>rows,getC:()=>contact,uid:()=>`m${++seq}`,Date,notifyIncoming(){},save(){},refreshChatMessages(){},render(){},cur:()=>({p:'chat',id:'c1'})});
-  const names=['gameInviteDecide','gameKindFromLabel','latestUserGameInvite','roleGameAcceptOrReinvite','roleGameInvite'];
+  const names=['gameDefinition','gameInviteDecide','gameKindFromLabel','latestUserGameInvite','roleGameAcceptOrReinvite','roleGameInvite'];
   vm.runInContext(names.map(n=>fnSource(source,n)).join('\n')+'\nthis.accept=roleGameAcceptOrReinvite;this.invite=roleGameInvite;',ctx);
   return{ctx,rows};
 }
@@ -57,4 +57,8 @@ test('natural game tags recover cards and a later yes after refusal sends a fres
     assert.match(source,/发送\|发出[^\n]+游戏邀请/,'sent-invite variants must be consumed instead of shown as text');
     assert.match(source,/^\s*if\(\/\^\\\[像素拼拼乐/m,'the canonical pixel-game tag must create a card');
   }
+});
+
+test('moving girl and pet out of the hall preserves role invitations with their original game keys',()=>{
+ for(const source of [app,privateApp]){for(const [name,key] of [['像素少女','pixelhome'],['电子宠物','pet']]){const h=gameRuntime(source,[]);assert.equal(h.ctx.invite('c1',name),true);assert.equal(h.rows[0].game,key);assert.equal(h.rows[0].gname,name);}}
 });

@@ -142,7 +142,7 @@ test('layout repair never forces overflow or newly discovered apps into the eigh
     APP_DEFLAYOUT: [[], [], []],
     APP_PAGES: 3,
   });
-  vm.runInContext(`${functionSource('appLayoutInit')};appLayoutInit();`, appCtx);
+  vm.runInContext(`${functionSource('homeGameEntriesMigrate')};${functionSource('appLayoutInit')};appLayoutInit();`, appCtx);
   assert.deepEqual(Array.from(appCtx.S.me.appLayout[0]), ['app0']);
   assert.equal(appCtx.S.me.appLayout[1].length, 13);
 
@@ -166,7 +166,8 @@ test('layout repair never forces overflow or newly discovered apps into the eigh
     homeLayoutSyncLegacy() {},
     save() {},
   });
-  vm.runInContext(`${functionSource('homeLayoutInit')};homeLayoutInit();`, homeCtx);
+  vm.runInContext(`${functionSource('homeGameEntriesMigrate')}
+${functionSource('homeLayoutInit')};homeLayoutInit();`, homeCtx);
   assert.equal(homeCtx.S.me.homeLayout[0].filter(k => appDefs[k]).length, 8);
   assert.ok(homeCtx.S.me.homeLayout[1].includes('app8'));
   assert.equal(new Set(homeCtx.S.me.homeLayout.flat()).size, homeCtx.S.me.homeLayout.flat().length);
@@ -184,4 +185,13 @@ test('preferences adjust all home app icons and labels with portable state', () 
   assert.match(source, /'appIconTone','appTextTone'/);
   assert.match(html, /\.home \.app \.ic\{filter:brightness\(var\(--home-app-icon-tone,100%\)\)/);
   assert.match(html, /\.home \.app>span\{opacity:var\(--home-app-text-opacity,1\);\}/);
+});
+
+test('moving game entries preserves customized positions and saved game data',()=>{
+ const state={me:{homeLayout:[['wechat'],['tale','dread','clock']],appLayout:[['tale','dread']],appDock:['tale'],homeReferenceAppSlots:{tale:4,dread:5},appIcons:{tale:'my-old-icon',wechat:'mine'}},tale:{active:true,rules:['saved']},dread:{active:true,hp:3}};
+ const before=JSON.stringify({tale:state.tale,dread:state.dread,icons:state.me.appIcons});
+ const box=vm.createContext({S:state});vm.runInContext(functionSource('homeGameEntriesMigrate')+';homeGameEntriesMigrate();homeGameEntriesMigrate();',box);
+ assert.deepEqual(Array.from(state.me.homeLayout[1]),['pixelhome','pet','clock']);assert.deepEqual(Array.from(state.me.appDock),['pixelhome']);
+ assert.equal(JSON.stringify({tale:state.tale,dread:state.dread,icons:state.me.appIcons}),before);
+ assert.equal(state.me.homeReferenceAppSlots.pixelhome,4);
 });

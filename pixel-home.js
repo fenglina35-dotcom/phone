@@ -4,7 +4,7 @@ let _pixelHome=null;
 function pixelHomeIdentity(){const cid=S.couple&&S.couple.cid,c=cid&&getC(cid);return c&&!c.deleted?{cid,account:actId(),me:S.me,c}:null;}
 function pixelHomeValid(s){const i=pixelHomeIdentity();return !!(s&&s===_pixelHome&&i&&s.cid===i.cid&&s.account===i.account&&s.me===i.me&&cur().p==='pixelhome');}
 function pixelHomeEntry(s){s.me.pixelHomes=s.me.pixelHomes||{};const key=JSON.stringify([s.account,s.cid]);return s.me.pixelHomes[key]||(s.me.pixelHomes[key]={plan:{},look:0,appliedDay:''});}
-function openPixelHome(){if(!pixelHomeIdentity()){toast('先在情侣空间绑定照顾你的角色');return;}closeModal();if(typeof _ma!=='undefined'&&_ma&&!_ma.paused){_mWantPlay=false;_ma.pause();}if(cur().p!=='pixelhome')go('pixelhome');else render();}
+function openPixelHome(){if(typeof appLocked==='function'&&appLocked('pixelhome')){toast('「像素少女」已被ta锁定');go('couple');return;}if(!pixelHomeIdentity()){toast('先在情侣空间绑定照顾你的角色');return;}closeModal();if(typeof _ma!=='undefined'&&_ma&&!_ma.paused){_mWantPlay=false;_ma.pause();}if(cur().p!=='pixelhome')go('pixelhome');else render();}
 function renderPixelHome(){
   const i=pixelHomeIdentity();if(!i)return '<div class="nav"><button class="l" onclick="back()">‹</button><span class="t">先在情侣空间绑定角色</span></div>';
   const entry=pixelHomeEntry(i);if(!_pixelOutfitJobs.has(JSON.stringify([i.account,i.cid]))){_pixelOutfitAttempted.delete(JSON.stringify([i.account,i.cid]));entry.outfitAttempt='';entry.outfitError='';}

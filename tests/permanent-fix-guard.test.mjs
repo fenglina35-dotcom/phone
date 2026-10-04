@@ -29,6 +29,7 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"local preview",scope:"both",least:1,name:"主屏仅保留四套玻璃主题，旧线条选择回退纯黑",marker:"return ['blue','pink','gray','black'].includes(pack)?pack:'black';"},
   {release:"v1534/v1535",scope:"both",least:1,name:"旧自动记忆按玩家姓名修复且控制标记排除",marker:"function repairGeneratedRoleMemories(list)"},
   {release:"v1534/v1535",scope:"both",least:1,name:"转发和多选删除独立模式",marker:"mode:mode==='delete'?'delete':'forward'"},
   {release:"v1534/v1535",scope:"both",least:1,name:"银行不显示已撤回或婉拒卡",file:"role-family-card.js",marker:"const ks=cards(cid).filter(k=>!['revoked','declined'].includes(k.status))"},
@@ -1416,3 +1417,7 @@ test('travel-only white dialog shells and local popular-brand search remain in b
 test('mail redesign preserves historical search, reply binding and forwarded snapshots in both runtimes',()=>{for(const prefix of ['',PRIVATE_DIR]){const js=read(prefix+'mail-outbox.js'),app=read(prefix+'app.js');for(const marker of ['function mailHighlight','function mailDraftKey','function mailReplySource','originalLetter','function mailForwardHistory','function renderMailRead'])assert(js.includes(marker));assert(!app.includes('if(S.mail.length>60)S.mail=S.mail.slice(0,60)'));assert(app.includes("['mailRead','mailWrite'].includes(page.p)"));assert(app.includes('acct:mailAccount'));}});
 
 test('mail sender identity and fixed-vector actions remain available in both runtimes',()=>{for(const prefix of ['',PRIVATE_DIR]){const js=read(prefix+'mail-outbox.js');assert(js.includes('function mailSender(l)'));assert(js.includes('function mailActionIcon(forward)'));assert(js.includes('mail-home-back'));assert(js.includes("l.kind==='self'"));}});
+
+test('independent girl/pet home controls and first-run custom-icon protection remain in both runtimes',()=>{for(const prefix of ['',PRIVATE_DIR]){const app=read(prefix+'app.js');assert(app.includes("pixelhome:'像素少女',pet:'电子宠物'"));assert(app.includes('function homeGameEntriesMigrate()'));assert(app.includes('defaultBeautyMark();save();appIconEditor();'));assert(read(prefix+'pixel-home.js').includes("appLocked('pixelhome')"));assert(read(prefix+'pet-game.js').includes("appLocked('pet')"));}});
+
+test('all home icons retain the approved hollow glass highlight in both runtimes',()=>{for(const prefix of ['',PRIVATE_DIR]){const css=read(prefix+'glass-theme.css'),rim=css.match(/\.home \.app \.ic:after\{([^}]+)\}/)?.[1];assert(rim);assert(rim.includes('padding:.8px'));assert(rim.includes('mask-composite:exclude'));assert(rim.includes('pointer-events:none'));assert(!rim.includes('blur('));assert(css.includes('.ic.custom-app-icon{background:transparent!important}'));}});

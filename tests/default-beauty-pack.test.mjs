@@ -221,3 +221,25 @@ test("someone who beautifies while the pack is downloading keeps their own look"
   assert.equal(box.applied, undefined, "下载中途她动过手，就必须让开");
   assert.equal(s.me.homeBg, "data:image/png;base64,hers");
 });
+
+test("new-user pack provides the requested girl and pet icons without old game icon slots", () => {
+  const pack = loadPack(packWeb);
+  for (const k of ["pixelhome", "pet"]) assert.match(pack.me.appIcons[k] || "", /^data:image\/jpeg;base64,/);
+  assert.ok(!pack.me.appIcons.tale && !pack.me.appIcons.dread);
+});
+test("a successful custom icon choice permanently stops automatic first-run beauty", () => {
+  for (const source of [app, privateApp]) assert.match(functionSource(source, "setAppIcon"), /defaultBeautyMark\(\)/);
+});
+
+test("resetting every custom icon never reapplies the default pack after one successful replacement", async () => {
+  const box=sandbox(blankState(),{pack:loadPack(packWeb),store:{north_default_beauty_v1:"1"}});
+  box.S.me.appIcons={};
+  assert.equal(await box.defaultBeautyApplyOnFirstRun(),false);
+  assert.equal(box.applied,undefined);
+});
+
+test("changing then resetting an icon during the first download still cancels the automatic pack",async()=>{
+ const box=sandbox(blankState());const pack=loadPack(packWeb);
+ Object.defineProperty(box.window,"__NORTH_DEFAULT_BEAUTY__",{get(){box.defaultBeautyMark();box.S.me.appIcons={};return pack;}});
+ assert.equal(await box.defaultBeautyApplyOnFirstRun(),false);assert.equal(box.applied,undefined);
+});

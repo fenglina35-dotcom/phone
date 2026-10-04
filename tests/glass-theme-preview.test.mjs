@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import vm from 'node:vm';
 
 const root=path.resolve(import.meta.dirname,'..');
 const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
@@ -14,7 +15,7 @@ function functionSource(name){
   return app.slice(start,next<0?app.length:next).trim();
 }
 
-test('transparent black glass is the default while line icons remain selectable',()=>{
+test('transparent black glass is the default with four glass packs only',()=>{
   assert.match(app,/uiMaterial:'glass',appIconPack:'black'/);
   assert.match(app,/function normalizeLoadedState\(\).*S\.me\.uiMaterial='glass'/);
   assert.match(app,/GLASS_ICON_PACKS=\{blue:'蓝白',pink:'粉白',gray:'灰白',black:'纯黑'\}/);
@@ -341,4 +342,23 @@ test('vinyl playback activates native iOS audio and every pack has a final recor
 
 test('music pairing avatars no longer show the two headphone guide lines',()=>{
   assert.match(css,/\.music-headphone-pair>svg\{display:none!important\}/);
+});
+
+// Legacy selection must migrate on load/import, while custom icons and user records survive.
+test('removed line pack migrates to black in both runtimes and cannot be selected again',()=>{
+  for(const file of ['app.js','native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js']){
+    const source=fs.readFileSync(path.join(root,file),'utf8');
+    const normalize=source.slice(source.indexOf('function normalizeLoadedState('),source.indexOf('\nnormalizeLoadedState();'));
+    const packFn=source.match(/^function appIconPack\(\).*$/m)[0];
+    const setFn=source.match(/^function appIconPackSet\(pack\).*$/m)[0];
+    for(const requested of ['line','missing',undefined,'black','pink','gray','blue']){
+      const custom={wechat:'data:image/png;base64,custom'},messages=[{text:'keep me'}];
+      const ctx={S:{me:{appIconPack:requested,theme:'pink',appIcons:custom},contacts:[],settings:{},messages},GLASS_ICON_PACKS:{black:'纯黑',pink:'粉白',gray:'灰白',blue:'蓝白'},glassWidgetAppearanceEnsure(){},applyGlassTheme(){},save(){},render(){},privateNativeStatusBarThemeSync(){},toast(){}};
+      vm.runInNewContext(normalize+';'+packFn+';'+setFn,ctx);
+      const expected=['black','pink','gray','blue'].includes(requested)?requested:'black';
+      ctx.normalizeLoadedState();assert.equal(ctx.S.me.appIconPack,expected);assert.equal(ctx.S.me.theme,'');assert.equal(ctx.appIconPack(),expected);
+      ctx.appIconPackSet(requested);assert.equal(ctx.S.me.appIconPack,expected);assert.equal(ctx.S.me.appIcons,custom);assert.equal(ctx.S.messages,messages);
+    }
+    assert.doesNotMatch(source,/homeLineThemeSet|appIconPackSet\('line'\)|线条主题配色/);
+  }
 });
