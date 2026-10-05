@@ -17,11 +17,11 @@ const publicApp=read('app.js');
 test('private v1355 loads daily backup after the diagnostic overlay while public advances independently',()=>{
   for(const name of ['index.html','小手机.html']){
     const html=read(bundle+name);
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1583'/);
-    assert.ok(html.indexOf('private-cloud-backup.js?v=1583')>html.indexOf('private-runtime-diagnostics.js?v=339'));
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1585'/);
+    assert.ok(html.indexOf('private-cloud-backup.js?v=1585')>html.indexOf('private-runtime-diagnostics.js?v=339'));
   }
-  assert.match(privateApp,/APP_VER='v1583 · 相册单张照片删除修复'/);
-  assert.match(publicApp,/APP_VER='v1582 · 相册单张照片删除修复'/);
+  assert.match(privateApp,/APP_VER='v1585 · 相册删除照片通知修复'/);
+  assert.match(publicApp,/APP_VER='v1584 · 相册删除照片通知修复'/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 439;/g)||[]).length,12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.439;/g)||[]).length,12);
 });

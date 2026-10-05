@@ -80,9 +80,9 @@ test('automatic safety snapshot rejects an out-of-order older write',async()=>{
 test('v914 shell and service worker are aligned',()=>{
   const html=readFileSync(join(root,'小手机.html'),'utf8');
   const sw=readFileSync(join(root,'sw.js'),'utf8');
-  assert.match(app,/APP_VER='v1582 · 相册单张照片删除修复'/);
-  assert.match(html,/app\.js\?v=1582/);
-  assert.match(sw,/BUILD='1582'/);
+  assert.match(app,/APP_VER='v1584 · 相册删除照片通知修复'/);
+  assert.match(html,/app\.js\?v=1584/);
+  assert.match(sw,/BUILD='1584'/);
 });
 
 test('service worker activation never reloads the active app page',()=>{
