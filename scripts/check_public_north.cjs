@@ -48,6 +48,7 @@ await page.evaluate(()=>{
   if(action==='screen_revoke')return{ok:true};throw Error('unexpected-screen-action');
  };_couTab=1;go('couple');
 });
+if(!privateApp){assert.equal(await page.locator('#cou_screen_cloud_details').evaluate(e=>e.open),false);await page.locator('#cou_screen_cloud_details summary').click();}
 await page.locator('#cou_screen_cloud button').first().click();
 await page.waitForFunction(()=>document.querySelector('#modal')?.textContent.includes('screen_upload')||document.body.textContent.includes('action（文本）'));
 assert(await page.getByText('action（文本）',{exact:true}).count());
@@ -55,6 +56,7 @@ await page.getByRole('button',{name:'完成',exact:true}).click();
 await page.locator('#cou_screen_cloud button').filter({hasText:'读取最新'}).click();
 await page.waitForFunction(()=>document.querySelector('#cou_screen_cloud')?.textContent.includes('微信'));
 assert(await page.evaluate(()=>buildSystem(getC(S.couple.cid)).includes('1234')));
+if(!privateApp){assert(await page.locator('#cou_screen_cloud_details').evaluate(e=>e.open));assert.equal(await page.locator('#cou_screen_cloud .hint').first().evaluate(e=>getComputedStyle(e).color),'rgb(255, 255, 255)');assert.equal(await page.locator('#cou_screen_cloud span').filter({hasText:'微信'}).evaluate(e=>getComputedStyle(e).color),'rgb(255, 255, 255)');await page.locator('#cou_screen_cloud_details summary').click();await page.evaluate(()=>render());assert.equal(await page.locator('#cou_screen_cloud_details').evaluate(e=>e.open),false);}
 assert.equal(await page.evaluate(()=>PhoneScreenTimeImport.cloudPrompt({id:'foreign-role'})),'');
 await page.evaluate(()=>PhoneScreenTimeImport.cloudRevoke());
 assert(await page.evaluate(()=>!buildSystem(getC(S.couple.cid)).includes('快捷指令云端时长')));

@@ -162,3 +162,20 @@ assert.doesNotMatch(feature,/退出登录/);
 
 assert.ok(css.length>5000,'WeChat me stylesheet should be present');
 console.log('WeChat me, QR, wallet, favorites, chat overlay, nearby avatar, and themed group tests passed');
+
+// Behavioral coverage: archive audio rather than re-synthesize, preserve provenance and accounts.
+{
+ const vm=await import('node:vm');
+ for(const path of ['wechat-me.js','native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/wechat-me.js']){
+  const src=fs.readFileSync(new URL('../'+path,import.meta.url),'utf8'),audio=new Map([['__audio_old','data:audio/wav;base64,c291bmQ=']]),favorites=[],messages={a:[{id:'v',role:'assistant',type:'voice',content:'原声',audio:'idb-audio:old',time:100,dur:2},{id:'t',role:'assistant',type:'text',content:'原话',time:200}]};let aid='main',played='',saved=true,replies=0;
+  const store={favorites};const ctx=vm.createContext({F:()=>store,S:{me:{name:'我'},contacts:[{id:'a',name:'甲'},{id:'b',name:'乙'}]},actId:()=>aid,getC:id=>({id,name:id==='a'?'甲':'乙'}),msgs:id=>messages[id]||(messages[id]=[]),uid:(()=>{let n=0;return()=>String(++n)})(),imgGet:async k=>audio.get(k),imgPut:async(k,v)=>audio.set(k,v),imgDel:async k=>audio.delete(k),saveNowAsync:async()=>saved,save(){},toast(){},closeModal(){},render(){},audioUnlock(){},audioPlayableUrl:async ref=>audio.get('__audio_'+ref.slice(10)),playUrl:u=>{played=u;},openChat(){},scheduleReply(){replies++;},CSS:{escape:s=>s},document:{querySelector:()=>null,getElementById:()=>({value:'你还记得吗？'})}});
+  vm.runInContext(src.slice(src.indexOf('function wxFavoriteAccount('),src.indexOf('function wxAlbumItems(')),ctx);
+  const x=await ctx.wxFavoriteAdd('a','v');assert(x.audio.startsWith('idb-audio:favorite_'));assert.equal(x.messageAt,100);assert.equal(x.authorId,'a');
+  messages.a=[];audio.delete('__audio_old');await ctx.wxFavoritePlay(x.id);assert.equal(played,'data:audio/wav;base64,c291bmQ=','original expiry/deletion cannot remove saved audio');
+  await ctx.wxFavoriteForward(x.id,'a');const card=messages.a.at(-1);assert.match(ctx.wxFavoriteForwardText(card),/原作者是你/);assert.match(ctx.wxFavoriteForwardText(card),/你还记得吗/);assert.equal(card._favorite.audio,x.audio);assert.equal(replies,1);
+  card._favorite.forged=true;assert.match(ctx.wxFavoriteForwardText(card),/代发/);assert.doesNotMatch(ctx.wxFavoriteForwardText(card),/原作者是你/);
+  aid='other';assert.equal(ctx.wxFavoriteRows().length,0);await ctx.wxFavoritePlay(x.id);aid='main';assert.equal(ctx.wxFavoriteRows().length,1);
+  messages.a.push({id:'missing',type:'voice',role:'assistant',content:'仅文字'});const noAudio=await ctx.wxFavoriteAdd('a','missing');assert.equal(noAudio.audioState,'missing');played='';await ctx.wxFavoritePlay(noAudio.id);assert.equal(played,'','missing originals must not use TTS or system speech');
+  messages.a.push({id:'failure',type:'text',role:'assistant',content:'保存失败'});saved=false;assert.equal(await ctx.wxFavoriteAdd('a','failure'),null);assert.equal(ctx.wxFavoriteRows().some(x=>x.mid==='failure'),false);
+ }
+}

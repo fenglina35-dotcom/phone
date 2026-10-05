@@ -13,15 +13,15 @@ test('v1184 web identity and cache markers are aligned', () => {
   const hotfix = read('web-hotfix.js');
   const index = read('index.html');
   const repair = read('repair.html');
-  assert.match(app, /__NORTH_SHELL_BUILD__!=='1588'/);
-  assert.match(app, /APP_VER='v1588 · 移除屏幕时长手动导入'/);
-  assert.match(shell, /__NORTH_SHELL_BUILD__='1588'/);
-  assert.match(shell, /app\.js\?v=1588&r=v1588-screen-time-cloud-upload-1/);
-  assert.match(sw, /const BUILD='1588'/);
-  assert.match(sw, /v1588-screen-time-cloud-upload-1/);
-  assert.match(hotfix, /v1588-screen-time-cloud-upload-1/);
-  assert.match(index, /小手机\.html\?v=1588/);
-  assert.match(repair, /小手机\.html\?v=1588/);
+  assert.match(app, /__NORTH_SHELL_BUILD__!=='1589'/);
+  assert.match(app, /APP_VER='v1589 · 微信收藏与亲属同步'/);
+  assert.match(shell, /__NORTH_SHELL_BUILD__='1589'/);
+  assert.match(shell, /app\.js\?v=1589&r=v1589-wechat-favorites-family-1/);
+  assert.match(sw, /const BUILD='1589'/);
+  assert.match(sw, /v1589-wechat-favorites-family-1/);
+  assert.match(hotfix, /v1589-wechat-favorites-family-1/);
+  assert.match(index, /小手机\.html\?v=1589/);
+  assert.match(repair, /小手机\.html\?v=1589/);
 });
 
 test('v1184 publishes shared cohab memory and X comment controls', () => {

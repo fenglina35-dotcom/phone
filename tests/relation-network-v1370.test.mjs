@@ -228,3 +228,49 @@ test('v1386: someone added from a card remembers their own birthday; the card st
   assert.equal(api.relSelfText('c1'), '', 'roles without a person card get nothing extra');
   assert.match(app, /\$\{esc\(relName\(key\)\)\}的资料卡<\/b><small>生日、纪念日、为人，ta自己会记得/);
 });
+
+
+const FAMILY_CORE=['relFamilyState','relFamilyTitle','relFamilyBlocked','relFamilyAllowed','relFamilyOpposite','relFamilyAccept','relFamilySync','relFamilyBlockLink','relFamilyRestore','relFamilyPrompt','relFamilyConsume','hisWxData','relPersonDelete','relEditDelete','relPersonSave'];
+const familyLoad=(src=app)=>{
+ const ctx=load();ctx.S.hisWx={};ctx.S.contacts[0].gender='男';ctx.actId=()=>ctx.account||'main';ctx.uiConfirm=async()=>true;ctx.back=()=>{};ctx.toast=()=>{};ctx.render=()=>{};ctx.relMd=v=>v||'';ctx._relPersonDraft=null;ctx._relEdit=null;
+ vm.runInNewContext([grab(src,'relTitleTaken'),grab(src,'relPromptFor'),grab(src,'relConsumeTags'),...FAMILY_CORE.map(n=>grab(src,n)),'globalThis.family={'+FAMILY_CORE.join(',')+'};'].join('\n'),ctx);
+ return ctx;
+};
+for(const [label,src] of [['web',app],['private',fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js',import.meta.url),'utf8')]]){
+ test(label+': old phone identities import once, title aliases merge, user name/avatar/persona stay authoritative',()=>{
+  const c=familyLoad(src),a=c.family,r=c.api.relInit(),d={friends:[{id:'f1',name:'妈妈',relation:'家人',msgs:[]},{id:'f2',name:'老妈',relation:'微信好友',msgs:[]},{id:'f3',name:'阿哲',relation:'朋友',msgs:[]}]};
+  a.relFamilySync('c1',d,true);assert.equal(r.people.length,2);assert.equal(r.links.length,2);assert.equal(a.relFamilyState('c1').created.length,0);
+  const mom=r.people.find(p=>p.name==='妈妈');mom.name='沈清秋';mom.avatar='data:image/png;base64,manual';mom.persona='你修改的人设';c.api.relHisFriends('c1',d);
+  a.relFamilySync('c1',d,false);c.api.relHisFriends('c1',d);assert.equal(r.people.length,2);assert.equal(d.friends.length,2);assert.equal(mom.name,'沈清秋');assert.equal(mom.persona,'你修改的人设');assert.equal(c.api.relAvatarSrc(d.friends.find(f=>f.relKey===mom.id).relKey),mom.avatar);
+  assert.ok(c.api.relTitleTaken('c1','母亲'));assert.equal(a.relFamilyAccept('c1',{name:'另一位妈妈',relation:'亲妈'},{auto:true,facts:'另一位妈妈'}),null);
+ });
+ test(label+': actual hidden creation tags obey evidence, one-per-turn, cooldown, lifetime cap and per-role state',()=>{
+  const c=familyLoad(src),a=c.family,r=c.api.relInit(),role=c.S.contacts[0];
+  const tag=(title,name)=>'我'+title+name+'刚给我打了电话。\n[建立亲属|'+title+'|'+name+'|刚谈到自己的亲属|喜欢画画]';
+  assert.equal(c.api.relConsumeTags(tag('妹妹','沈小雨'),role),'我妹妹沈小雨刚给我打了电话。');assert.equal(r.people.length,1);assert.equal(a.relFamilyState('c1').created.length,1);assert.equal(c.S.hisWx.c1.friends.length,1);
+  c.api.relConsumeTags(tag('弟弟','沈小舟'),role);assert.equal(r.people.length,1,'cooldown enforced');
+  a.relFamilyState('c1').created[0].at-=8*86400000;c.api.relConsumeTags(tag('弟弟','沈小舟')+'\n'+tag('姐姐','沈小月'),role);assert.equal(r.people.length,2,'one per turn');
+  a.relFamilyState('c1').created.forEach(x=>x.at-=8*86400000);c.api.relConsumeTags(tag('姐姐','沈小月'),role);assert.equal(r.people.length,3);
+  a.relFamilyState('c1').created.forEach(x=>x.at-=8*86400000);c.api.relConsumeTags(tag('哥哥','沈小山'),role);assert.equal(r.people.length,3,'cap enforced');
+  assert.equal(a.relFamilyState('c2').created.length,0);assert.match(a.relFamilyPrompt(role),/不得新增亲属/);
+ });
+ test(label+': disabled/zero/alternate account/only child and recursive relatives cannot create',()=>{
+  const c=familyLoad(src),a=c.family,role=c.S.contacts[0],f={name:'沈小雨',relation:'妹妹'};
+  assert.equal(a.relFamilyAccept('c1',f,{auto:true,facts:''}),null,'no grounded fact');
+  a.relFamilyState('c1').enabled=false;assert.equal(a.relFamilyAccept('c1',f,{auto:true,facts:'妹妹沈小雨'}),null);
+  a.relFamilyState('c1').enabled=true;a.relFamilyState('c1').cap=0;assert.equal(a.relFamilyAccept('c1',f,{auto:true,facts:'妹妹沈小雨'}),null);
+  a.relFamilyState('c1').cap=3;c.account='alt';assert.equal(a.relFamilyAccept('c1',f,{auto:true,facts:'妹妹沈小雨'}),null);c.account='main';role.persona='独生子';assert.equal(a.relFamilyAccept('c1',f,{auto:true,facts:'妹妹沈小雨'}),null);
+  role.persona='';const l=a.relFamilyAccept('c1',f,{auto:true,facts:'妹妹沈小雨'}),p=c.api.relPerson(l.b);c.S.contacts.push({id:'c3',name:p.name});c.api.relPromote(p.id,'c3','c1');assert.equal(a.relFamilyAllowed(c.S.contacts[2]),false);assert.equal(a.relFamilyPrompt(c.S.contacts[2]),'');
+  assert.equal(a.relFamilyAccept('c2',{name:'孩子',relation:'儿子'},{auto:true,facts:'儿子'}),null);
+ });
+ test(label+': deleting a person blocks stale source/name/title without returning quota; explicit restore works',async()=>{
+  const c=familyLoad(src),a=c.family,f={id:'f1',name:'沈小雨',relation:'妹妹'},l=a.relFamilyAccept('c1',f,{auto:true,facts:'妹妹沈小雨'}),pid=l.b;c.S.hisWx.c1={friends:[f]};const p=c.api.relPerson(pid);p.sourceAliases=['沈小雨'];p.name='小雨';
+  await a.relPersonDelete(pid);assert.equal(c.api.relPerson(pid),null);assert.equal(c.api.relLinksOf('c1').length,0);assert.equal(a.relFamilyState('c1').created.length,1);
+  assert.equal(a.relFamilyAccept('c1',f,{legacy:true}),null);assert.equal(a.relFamilyAccept('c1',{id:'new',name:'换名的妹妹',relation:'亲妹妹'},{legacy:true}),null,'deleted slot blocked even changed name');
+  a.relFamilyRestore('c1');assert.equal(a.relFamilyState('c1').created.length,1);a.relFamilyState('c1').created[0].at-=8*86400000;assert.ok(a.relFamilyAccept('c1',{id:'f1',name:'沈小雨',relation:'妹妹'},{sync:true}));
+ });
+ test(label+': same-name alone never joins another role identity; manual linked person is reused without mutation',()=>{
+  const c=familyLoad(src),a=c.family,r=c.api.relInit();r.people.push({id:'np_manual',name:'沈小雨',avatar:'manual',persona:'manual'});assert.equal(a.relFamilyAccept('c1',{id:'foreign',name:'沈小雨',relation:'妹妹'},{legacy:true}),null);
+  c.api.relNewLink('c1','np_manual',{ab:'亲妹妹',ba:'哥哥'});const f={id:'old',name:'沈小雨',relation:'妹妹'};assert.ok(a.relFamilyAccept('c1',f,{sync:true}));assert.equal(f.relKey,'np_manual');assert.equal(a.relFamilyState('c1').created.length,0);assert.equal(r.people[0].avatar,'manual');
+ });
+}

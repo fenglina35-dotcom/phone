@@ -31,6 +31,10 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"本地亲属同步候选",scope:"both",least:1,name:"亲属自主新增限额与间隔",marker:"q.created.length>=q.cap||q.created.some"},
+  {release:"本地亲属同步候选",scope:"both",least:1,name:"删除关系后防止刷新重建",marker:"if(old)relFamilyBlockLink(old)"},
+  {release:"本地收藏候选",scope:"both",least:1,name:"收藏转发保留原作者与历史时间",marker:"if(m&&m._favorite&&typeof wxFavoriteForwardText"},
+  {release:"本地收藏候选",scope:"both",least:1,name:"完整备份包含收藏及转发卡片的原声音频",marker:"path.some(p=>p==='favorites'||p==='_favorite')"},
   {release:"本地候选",scope:"both",least:1,name:"已有好友刷新补齐消息且保留历史并去重",marker:"if(n>(counts.get(k)||0)){existing.push(m);ch=true;}"},
   {release:"v1576/v1577",scope:"both",least:1,name:"角色微信按消息作者同步气泡设置",marker:"const c=getC(cid),look=bubbleLook(c,!mine)"},
   {release:"v1576/v1577",scope:"both",least:1,name:"角色密码拨号盘独立背景与恢复入口",marker:"function spyAppearanceLockWallpaperReset(id)"},
@@ -1451,3 +1455,6 @@ test('single photo viewer trash uses durable album deletion in both runtimes',()
 test('album deletion supplies bounded pre-delete facts without rerecognition or reviving photo memory',()=>{for(const prefix of ['',PRIVATE_DIR]){const js=read(prefix+'photo-album.js');for(const marker of ['function photoAlbumDeleteSnapshot(rows,context)','deletedFacts=photoAlbumDeleteSnapshot(removed,albumContext)',"photoAlbumNotifyOperation('delete',removed.length,[],albumContext,deletedFacts)",'rows.filter(r=>allowed.has(r)).slice(0,20)',"r.visionState==='success'?text(r.desc,300)",'不是当前相册照片','不要重新识图'])assert(js.includes(marker));}});
 
 test('recently deleted retains originals for three days and restores complete rows in both runtimes',()=>{for(const prefix of ['',PRIVATE_DIR]){const js=read(prefix+'photo-album.js');for(const marker of ['PHOTO_ALBUM_TRASH_MS=3*24*60*60*1000','photoAlbumTrashEntry()','async function photoAlbumTrashRestore()','async function photoAlbumTrashExpire()','S.photoAlbum.deletedItems=trash','items=before.concat(entry.row)','if(!await saveNowAsync())throw Error(\'清理未保存\')'])assert(js.includes(marker));}});
+
+
+test('real-friend route recovery keeps read-only failover and single-write protection in both runtimes',()=>{for(const file of [WEB,PRIVATE]){const js=read(file);for(const marker of ['[GATE_URL,PF_RELAY_BASE].forEach','Math.min(ms||15000,15000)','attempt<(write?1:2)','backendCode:','pfSubmissionUnknown','phoneFriendSync(true,false)'])assert(js.includes(marker),file+': '+marker);}});

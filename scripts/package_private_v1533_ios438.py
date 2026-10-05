@@ -1,4 +1,4 @@
-"""Create the private v1587 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
+"""Create the private v1591 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
 
 Unlike the earlier packaging scripts, every file is read from the committed tree
 (``git cat-file`` against HEAD) instead of the working directory. The v1235/iOS356
@@ -23,10 +23,10 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "native/private-small-phone/XcodeProject/"
 BUNDLE = "PhoneCompanionTest/PhoneWeb.bundle/"
-PREFIX = "SmallPhone_v1587_iOS439_Private/"
-OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1587_iOS439.zip"
+PREFIX = "SmallPhone_v1591_iOS439_Private/"
+OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1591_iOS439.zip"
 
-WEB_VERSION = "1587"
+WEB_VERSION = "1591"
 MARKETING = "1.0.439"
 BUILD = "439"
 BRIDGE = "42"
@@ -646,12 +646,12 @@ def main() -> None:
     state["retired"] = [{"file": BUNDLE+"daily-event-ledger.js", "commit": "a804f37a", "reason": "User requested removal; independent notes and existing data preserved."}, {"file": BUNDLE+"ai-account.js", "commit": "3708d8e1", "reason": "User requested AI account and internal speech/subtitle retirement, replaced by photo album; external interfaces retained."}]
     state["sourceCommit"] = text(git("rev-parse", "HEAD")).strip()
     state["webSourceCommit"] = state["sourceCommit"]
-    state["webVersion"] = "v1586"
+    state["webVersion"] = "v1589"
     state["privateWeb"] = "v" + WEB_VERSION
     state["privateIOS"] = f"{MARKETING} ({BUILD})"
     state["lastDeliveredPackage"] = {"name": previous.name, "sha256": previous_sha, "sourceCommit": "beb14a18c8a1f163dd9b6afc2d48c8dc3d8f66bd"}
-    state["knownUnresolved"] = [x for x in state["knownUnresolved"] if not re.match(r"v\d+-mac-build", x)] + ["v1587-mac-build-signing-and-iphone-not-verified"]
-    state["validation"] = {"macBuildVerified": False, "realIPhoneVerified": False, "models": "HTTP simulated in browser gates", "nodeTests": {"passed": 3349, "failed": 0, "sourceCommit": state["webSourceCommit"]}, "authorizedChatBothRuntimes": True, "inheritedPreviousOverlay": True, "priorPackageManifestVerified": True, "nativePayloadUnchanged": True, "houseResourceFiles": len(cozy_files), "retiredFiles": sorted(retired)}
+    state["knownUnresolved"] = [x for x in state["knownUnresolved"] if not re.match(r"v\d+-mac-build", x)] + ["v1591-mac-build-signing-and-iphone-not-verified"]
+    state["validation"] = {"macBuildVerified": False, "realIPhoneVerified": False, "models": "HTTP simulated in browser gates", "nodeTests": {"passed": 3384, "failed": 0, "sourceCommit": state["webSourceCommit"]}, "authorizedChatBothRuntimes": True, "inheritedPreviousOverlay": True, "priorPackageManifestVerified": True, "nativePayloadUnchanged": True, "houseResourceFiles": len(cozy_files), "retiredFiles": sorted(retired)}
     app = text(files[BUNDLE + "app.js"])
     for marker in ("function hisChatMessageHTML(", "bubbleLook(c,!mine)", "bubbleIconFor(c,!mine)", "bubbleAvatarClass(c,!mine)", "function hisWxUtilityOpen(", "function hisWxFriendAvatar(", "function spyLockScreen(", "lockWallpaper", "_hisPaymentId", "_forged"):
         assert marker in app, "latest role WeChat/phone repair missing: " + marker
@@ -668,8 +668,8 @@ def main() -> None:
     css = text(files[BUNDLE + "glass-theme.css"])
     for marker in ("function statusBarColorSet(", "function homeVinylOpacitySet(", "function lockPullAppearanceSet(", ".vinyl-record:before{content:", "north-shell-custom", "function glassInnerAppearance(", "function appIconRimSet("):
         assert marker in css + text(files[BUNDLE + "app.js"]), "latest appearance fix missing: " + marker
-    recent = ROOT.parent / "最新私人版本覆盖包_v1577_iOS439.zip"
-    recent_sha = "0f5564f687fd1f5cd0bdb4a09f32b35c195e416f4157522462816bf2e0c1260b"
+    recent = ROOT.parent / "最新私人版本覆盖包_v1587_iOS439.zip"
+    recent_sha = "1cb1df4108b71db9aa6a01107041e08c9eb9757c5c62dc9ea77c0ce825b1da65"
     assert sha256(recent.read_bytes()).hexdigest() == recent_sha
     with ZipFile(recent) as old:
         recent_prefix = next(n for n in old.namelist() if n.endswith("/SOURCE_STATE.json"))[:-len("SOURCE_STATE.json")]
@@ -690,6 +690,12 @@ def main() -> None:
         assert marker in text(files[BUNDLE + "app.js"]), marker
     assert 'onpointermove="msgBannerGesture(event)"' in text(files[BUNDLE + "index.html"])
     state["preserved"] = sorted(set(state["preserved"]) | {"v1582-single-photo-deletion", "v1584-delete-photo-facts", "v1586-recently-deleted-72h-restore"})
+    recent_state = json.loads(recent_files["SOURCE_STATE.json"])
+    state["preserved"] = sorted(set(state["preserved"]) | set(recent_state["preserved"]) | {"v1589-wechat-original-audio-favorites-and-provenance-forward", "v1589-wechat-green-controls", "v1589-role-family-capped-sync-edit-delete-tombstones", "v1589-real-friend-read-only-failover-single-write"})
+    for marker in ("function relFamilyState(", "function relFamilyConsume(", "q.created.length>=q.cap||q.created.some", "path.some(p=>p==='favorites'||p==='_favorite')", "attempt<(write?1:2)", "[GATE_URL,PF_RELAY_BASE].forEach", "backendCode:"):
+        assert marker in text(files[BUNDLE + "app.js"]), marker
+    for marker in ("wxFavoriteAudioCopy", "wxFavoriteForwardText", "wxFavoritePlay"):
+        assert marker in text(files[BUNDLE + "wechat-me.js"]), marker
     state["validation"]["mostRecentOverlayManifestVerified"] = True
     files["SOURCE_STATE.json"] = json.dumps(state, ensure_ascii=False, indent=2).encode("utf-8")
     files["SHA256SUMS.json"] = json.dumps({name:sha256(body).hexdigest() for name,body in sorted(files.items())},ensure_ascii=False,indent=2).encode("utf-8")

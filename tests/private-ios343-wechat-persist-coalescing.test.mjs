@@ -59,20 +59,20 @@ function persistenceRuntime() {
 }
 
 test('private identity remains v1355 and iOS 399 while public advances independently', () => {
-  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1587'/);
-  assert.match(privateApp, /APP_VER='v1587 · 相册最近删除与恢复'/);
+  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1591'/);
+  assert.match(privateApp, /APP_VER='v1591 · 微信收藏与亲属同步'/);
   for (const html of [privateIndex, privateAlias]) {
-    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1587'/);
-    assert.match(html, /app\.js\?v=1587&r=v1587-screen-time-cloud-upload-1/);
+    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1591'/);
+    assert.match(html, /app\.js\?v=1591&r=v1591-wechat-favorites-family-1/);
     assert.match(html, /private-runtime-diagnostics\.js\?v=339/);
   }
-  assert.match(privateRepair, /index\.html\?repair=1&v=1587/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1591/);
   assert.match(swift, /1\.0\.439 \(439\)/);
   assert.match(bridge, /private static let build = "1\.0\.439 \(439\)"/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 439;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.439;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1588 · 移除屏幕时长手动导入'/);
-  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1588'/);
+  assert.match(publicApp, /APP_VER='v1589 · 微信收藏与亲属同步'/);
+  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1589'/);
   assert.doesNotMatch(publicApp, /persistWechatRequested|smallPhoneWechatPersistTrace/);
 });
 
