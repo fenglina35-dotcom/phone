@@ -6,7 +6,6 @@ import {fileURLToPath} from 'node:url';
 import vm from 'node:vm';
 
 const root=dirname(dirname(fileURLToPath(import.meta.url)));
-const account=readFileSync(join(root,'ai-account.js'),'utf8');
 const html=readFileSync(join(root,'小手机.html'),'utf8');
 
 function functionSource(source,name){
@@ -22,20 +21,6 @@ function functionSource(source,name){
   }
   throw new Error(`unterminated ${name}`);
 }
-
-test('voice test accepts current, legacy and nested relay audio shapes',()=>{
-  const context=vm.createContext({});
-  vm.runInContext(functionSource(account,'aiRelayVoiceAudio')+';globalThis.pick=aiRelayVoiceAudio;',context);
-  assert.equal(context.pick({data:{audio:'current'}}),'current');
-  assert.equal(context.pick({data:{audio_file:'legacy-file'}}),'legacy-file');
-  assert.equal(context.pick({data:{data:{audio_url:'nested-url'}}}),'nested-url');
-  assert.equal(context.pick({data:{raw:{data:{audio:'minimax-raw'}}}}),'minimax-raw');
-  assert.equal(context.pick({audio:'top-level'}),'top-level');
-  assert.equal(context.pick({data:{}}),'');
-  assert.match(account,/audio=aiRelayVoiceAudio\(d\)/);
-  assert.match(account,/audioDataToBuf\(audio\)/);
-  assert.match(account,/音色绑定仍在，但后台没有返回音频/);
-});
 
 test('Android boot guard ignores anonymous injected errors and exposes native recovery links',()=>{
   const marker='/* 安卓启动保护：资源或旧缓存出错时显示自救页，不让用户只看到黑屏。 */';

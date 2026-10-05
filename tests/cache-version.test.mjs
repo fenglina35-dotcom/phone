@@ -15,7 +15,7 @@ assert.ok(version, 'app.js must expose a numeric APP_VER');
 assert.ok(privateVersion, 'private app.js must expose its own numeric APP_VER');
 
 assert.match(html, new RegExp(`app\\.js\\?v=${version}\\b`));
-assert.match(html, new RegExp(`ai-account\\.js\\?v=${version}\\b`));
+assert.match(html, new RegExp(`photo-album\\.js\\?v=${version}\\b`));
 assert.match(html, new RegExp(`sw\\.js\\?v=${version}\\b`));
 assert.match(html, new RegExp(`north-sw-reloaded-${version}\\b`));
 const controllerStart=html.indexOf("addEventListener('controllerchange'");
@@ -40,7 +40,7 @@ assert.match(index, new RegExp(`小手机\\.html\\?v=${version}\\b`));
 assert.match(repair, new RegExp(`小手机\\.html\\?v=${version}\\b`));
 assert.match(privateHtml, new RegExp(`window\\.__NORTH_SHELL_BUILD__='${privateVersion}'`));
 assert.match(privateHtml, new RegExp(`app\\.js\\?v=${privateVersion}\\b`));
-  assert.match(privateHtml, new RegExp(`ai-account\\.js\\?v=${privateVersion}\\b`));
+  assert.match(privateHtml, new RegExp(`photo-album\\.js\\?v=${privateVersion}\\b`));
   assert.match(privateHtml, new RegExp(`delivery\\.js\\?v=${privateVersion}\\b`));
   assert.match(privateHtml, new RegExp(`pet-game\\.js\\?v=${privateVersion}\\b`));
 assert.match(privateApp, new RegExp(`window\\.__NORTH_SHELL_BUILD__!==\\'${privateVersion}\\'`));

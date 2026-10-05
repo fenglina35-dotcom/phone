@@ -29,9 +29,10 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
-  {release:"v1570/v1571",scope:"both",least:1,name:"角色微信按消息作者同步气泡设置",marker:"const c=getC(cid),look=bubbleLook(c,!mine)"},
-  {release:"v1570/v1571",scope:"both",least:1,name:"角色密码拨号盘独立背景与恢复入口",marker:"function spyAppearanceLockWallpaperReset(id)"},
-  {release:"v1570/v1571",scope:"both",least:1,name:"角色手机名字原地编辑并支持完成与取消",marker:"function spyAppearanceNameKey(event,id)"},
+  {release:"本地候选",scope:"both",least:1,name:"已有好友刷新补齐消息且保留历史并去重",marker:"if(n>(counts.get(k)||0)){existing.push(m);ch=true;}"},
+  {release:"v1572/v1573",scope:"both",least:1,name:"角色微信按消息作者同步气泡设置",marker:"const c=getC(cid),look=bubbleLook(c,!mine)"},
+  {release:"v1572/v1573",scope:"both",least:1,name:"角色密码拨号盘独立背景与恢复入口",marker:"function spyAppearanceLockWallpaperReset(id)"},
+  {release:"v1572/v1573",scope:"both",least:1,name:"角色手机名字原地编辑并支持完成与取消",marker:"function spyAppearanceNameKey(event,id)"},
   {release:"v1566/v1567",scope:"both",least:1,name:"角色微信图片表情付款共用玩家聊天及代发身份",marker:"function hisChatAppend(cid,fid,m)"},
   {release:"v1566/v1567",scope:"both",least:1,name:"角色微信付款只扣角色钱包",marker:"function hisPaySendSubmit(s,amount)"},
   {release:"v1566/v1567",scope:"both",least:1,name:"角色付款账本独立于消息且超时原路退还",marker:"function hisPaymentsExpire()"},
@@ -58,7 +59,7 @@ const PERMANENT_FIXES = [
   {release:"v1532/v1533",scope:"both",least:1,name:"电话与微信原始故障证据",marker:"failureStage:phase",file:"request-diagnostics.js"},
   {release:"v1532/v1533",scope:"both",least:1,name:"旅行订单卡显示实际付款人备注",marker:"NorthHotelData.payerLabel(h)"},
   {release:"v1532/v1533",scope:"both",least:2,name:"已处理旅行代付不落回旧购物付款",marker:"NorthTravelPayment.currentRequest(id)"},
-  {release:"v1532/v1533",scope:"both",least:1,name:"角色旅行消费订单与用户退款权限分离",marker:"他的消费订单"},
+  {release:"v1532/v1533",scope:"both",least:1,name:"角色旅行消费订单与用户退款权限分离",marker:"function spyTravelOrderRows(id)"},
   {release:"v1506/v1507",scope:"both",least:1,name:"旅行角色大额余额按十进制扣款",marker:"NorthHotelData.moneyNext(c.wallet,Math.round(delta*100))"},
   {release:"v1422/v1423 preview",scope:"both",least:1,name:"线下控制文本与安静决定不进入对话通知",marker:"function rolePublicText(value)"},
   {release:"v1422/v1423 preview",scope:"both",least:1,name:"抖音陌生私信有独立性格和开场重复检查",marker:"function dyStrangerParse(raw,styles,recent)"},
@@ -149,7 +150,7 @@ const PERMANENT_FIXES = [
   {release:"v1338/v1339",scope:"both",least:1,name:"思考标签与未闭合思考流不得进入微信气泡",marker:"function wechatStripReasoningEnvelope(value)"},
   {release:"v1338",scope:"web",least:1,name:"多条英文自动翻译串行并对临时失败有限重试",marker:"let _roleTextTranslationQueue=Promise.resolve()"},
   {release:"v1336/v1337",scope:"both",least:1,name:"外置语音测试仅使用填写的接口快照",marker:"{externalConfig,tries:1,languageBoost:'auto'}"},
-  {release:"v1336/v1337",scope:"both",least:1,name:"内置关闭拒绝生成请求",marker:"内置语音已关闭，未发送生成请求"},
+  {release:"v1336/v1337",scope:"both",least:1,name:"内置服务彻底退役拒绝生成请求",marker:"function ttsRelayOn(t){return false;}"},
   {release:"v1328/v1329",scope:"both",least:1,name:"屏保手势中断清理拖动状态",marker:"function lockGestureReset()"},
   { release: "v1326/v1327", scope: "both", least: 1, name: "外卖动作支持商品名内部嵌套中文方括号", marker: "function deliveryStructuredActionTags(value)" },
   { release: "v1326/v1327", scope: "both", least: 1, name: "未完整消费的外卖控制标签绝不显示成角色气泡", marker: "任何未完整消费的外卖控制标签都必须静默拦截" },

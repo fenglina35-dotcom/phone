@@ -57,7 +57,7 @@ assert.match(source, /r\.time\?hm\(r\.time\):\(\x27第\x27\+\(i\+1\)\+\x27条\x2
 assert.match(source, /row&&row\.time\?hm\(row\.time\)/);
 assert.match(source, /_callVoiceCue:_turnVoiceCue\|\|\x27\x27/);
 assert.match(source, /function ttsRelayInterjection\(s,rawCue\)/);
-assert.match(source, /voice_setting:setting/);
+assert.match(source, /voice_setting:{speed:vp.speed/);
 
 // User-recorded voice is replayed from its original audio; typed/recognized text remains subtitle-only.
 assert.match(source, /m\.role===\x27assistant\x27\?m\.callAudio:\(m\.type===\x27voice\x27\?m\.audio:\x27\x27\)/);

@@ -3,7 +3,6 @@ import fs from "node:fs";
 import vm from "node:vm";
 
 const source = fs.readFileSync(new URL("../app.js", import.meta.url), "utf8");
-const account = fs.readFileSync(new URL("../ai-account.js", import.meta.url), "utf8");
 const backend = fs.readFileSync(new URL("../supabase/functions/phone-ai/index.ts", import.meta.url), "utf8");
 
 function functionSource(name) {
@@ -60,8 +59,6 @@ assert.match(source, /x==='粤'\?'yue':/);
 assert.match(source, /我喺度呀，頭先有啲走神/);
 assert.match(source, /粵語|粤语原文必须使用自然/);
 
-assert.match(account, /option value="粤"/);
-assert.match(account, /\['zh','粤','英','日','韩','法','德','俄'\]/);
 assert.match(backend, /"Chinese,Yue"/);
 assert.match(backend, /return "16k_yue"/);
 

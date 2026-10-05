@@ -5,6 +5,18 @@ import vm from 'node:vm';
 
 for(const file of ['app.js','native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js']){
  const source=fs.readFileSync(new URL('../'+file,import.meta.url),'utf8');
+ test(file+' refreshed login friend chat preserves rich messages and imports new lines once',()=>{
+  const c={name:'甲'},rich={r:'me',c:'图片',type:'image'},pay={r:'me',c:'转账',type:'transfer',amount:200};
+  const d={seeded:true,friends:[{name:'乙',msgs:[{r:'ta',c:'旧消息'},rich,pay]}]},S={spy:{a:{wechat:[{who:'乙',lines:['乙：旧消息','乙：新消息','他：图片']}]}}};
+  const ctx=vm.createContext({S,getC:()=>c,hisWxData:()=>d,save(){}});
+  vm.runInContext(source.slice(source.indexOf('function hisSeed('),source.indexOf('function hisLastMain(')),ctx);
+  ctx.hisSeed('a');assert.equal(d.friends[0].msgs.length,4);assert.equal(d.friends[0].msgs[3].c,'新消息');
+  assert.equal(d.friends[0].msgs[1],rich);assert.equal(d.friends[0].msgs[2],pay);
+  ctx.hisSeed('a');assert.equal(d.friends[0].msgs.length,4);
+  S.spy.a.wechat[0].lines.push('乙：第二次刷新','乙：第二次刷新');ctx.hisSeed('a');assert.equal(d.friends[0].msgs.length,6);
+  ctx.hisSeed('a');assert.equal(d.friends[0].msgs.length,6);
+ });
+
  test(file+' legacy moment snapshots expose only added lines',()=>{
   const fn=source.split(/\r?\n/).find(l=>l.startsWith('function rolePhoneInspectionNovelText('));
   const ctx=vm.createContext({});vm.runInContext(fn,ctx);
@@ -81,4 +93,58 @@ for(const file of ['app.js','native/private-small-phone/XcodeProject/PhoneCompan
   assert.doesNotMatch(ctx.rolePhoneLocalRead('a','overview').data,/OTHER_ACCOUNT_SECRET|OTHER_X_SECRET/);
  });
 
+}
+
+for(const file of ['app.js','native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js']){
+ const source=fs.readFileSync(new URL('../'+file,import.meta.url),'utf8');
+ test(file+' role phone shows live anonymous SMS with reversed directions and isolates other roles',()=>{
+  const c={id:'a',phone:'13800000001',phoneAliasHistory:[{ts:1,num:'15900000000',text:'history fallback',from:'stranger'}],phoneAliasCallHistory:[{ts:35,num:'15900000000',lines:[]}]};
+  const S={me:{name:'North'},phoneapp:{rolePhones:{a:c.phone},sms:{'alias:15900000000:13800000001':[{id:'in',time:10,text:'anonymous incoming',from:'me',aliasTo:'a'},{id:'out',time:20,text:'role reply',from:'them',aliasFrom:'a'}],'alias:15800000000:13800000002':[{time:100,text:'OTHER_ROLE_SECRET',from:'me',aliasTo:'b'}]},recents:[{time:30,num:c.phone,dir:'out',status:'ok'},{time:31,num:c.phone,dir:'out',line:'alias'}]},spy:{a:{calls:[{who:'old snapshot',time:5},{who:'fresh refresh',_snapshotAt:40}],sms:[]}}};
+  const ctx=vm.createContext({S,getC:id=>id==='a'?c:{id},phDigits:n=>String(n||'').replace(/\D/g,''),phFmt:String});
+  for(const name of ['phSmsIsAliasKey','phSmsAliasNumFromKey','phSmsDisplayNum'])vm.runInContext(source.split(/\r?\n/).find(l=>l.startsWith('function '+name+'(')),ctx);
+  const start=source.indexOf('function spyPhoneData('),end=source.indexOf('function spyPhoneSanitize(',start);assert.ok(start>=0);vm.runInContext(source.slice(start,end),ctx);
+  const before=JSON.stringify(S),a=ctx.spyPhoneData('a');assert.equal(JSON.stringify(S),before,'inspection cannot mutate player phone');
+  assert.equal(a.sms['15900000000'].length,2,'canonical thread supersedes truncated history');assert.equal(a.sms['15900000000'][0].from,'them');assert.equal(a.sms['15900000000'][1].from,'me');assert.doesNotMatch(JSON.stringify(a),/OTHER_ROLE_SECRET/);
+  assert.equal(a.calls.some(x=>x.time===31),false,'anonymous calls cannot reveal the player identity through main-number recents');assert.equal(a.calls[0].who,'fresh refresh');assert.equal(a.calls.find(x=>x.time===30).dir,'in');
+  S.phoneapp.sms['alias:15900000000:13800000001'].push({time:50,text:'new incoming while inspecting',from:'me'});S.spy.a.calls=[{who:'second refresh',_snapshotAt:60}];
+  const b=ctx.spyPhoneData('a');assert.equal(b.sms['15900000000'].slice(-1)[0].text,'new incoming while inspecting');assert.equal(b.calls[0].who,'second refresh');assert.doesNotMatch(JSON.stringify(b),/old snapshot|fresh refresh/);
+  delete S.phoneapp.sms['alias:15900000000:13800000001'];delete c.phoneAliasHistory;assert.equal(ctx.spyPhoneData('a').sms['15900000000'],undefined,'cleared SMS must not survive in a copied snapshot');
+ });
+}
+
+for(const file of ['app.js','native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js']){
+ const source=fs.readFileSync(new URL('../'+file,import.meta.url),'utf8');
+ test(file+' role travel keeps all live owned/party orders with account and expiry isolation',()=>{
+  const base={accountId:'main',payer:'ta',cid:'a',ts:10,status:'upcoming',price:250};
+  const S={travel:{trips:[{...base,id:'mine',flightV2:true},{...base,id:'other-role',cid:'b',flightV2:true},{...base,id:'other-account',accountId:'alt',flightV2:true},{...base,id:'expired',flightV2:true,expired:true},{...base,id:'shared',payer:'me',people:[{id:'role:a'}],railV2:true}],ticketOrders:Array.from({length:30},(_,i)=>({...base,id:'ticket'+i})),hotels:[]}};
+  const api={visible:o=>!o.expired,summary:o=>o.id};const ctx=vm.createContext({S,actId:()=> 'main',NorthHotelData:{roleOrder:o=>o.payer==='ta'},NorthFlightBooking:api,NorthTrainBooking:api,NorthTravelOrders:api,tvHotelVisibleToRole:()=>false,tvHotelSummary:()=>''});
+  const start=source.indexOf('function spyTravelEntries('),end=source.indexOf('const _spyTravelViews=',start);vm.runInContext(source.slice(start,end),ctx);vm.runInContext(source.split(/\r?\n/).find(l=>l.startsWith('function spyTravelOrderRows(')),ctx);
+  const before=JSON.stringify(S),rows=ctx.spyTravelOrderRows('a');assert.equal(rows.length,32,'inspection must not truncate older purchases at 24');assert.doesNotMatch(JSON.stringify(rows),/other-role|other-account|expired/);assert.equal(JSON.stringify(S),before);
+  S.travel.ticketOrders.push({...base,id:'new-order',ts:100});assert.equal(ctx.spyTravelOrderRows('a')[0].id,'new-order');
+ });
+ test(file+' role new friends tracks generated contacts and actual role friends without player requests',()=>{
+  const S={spy:{a:{contacts:[{name:'妈妈',note:'家人',added:'昨天'}],friends:['新同事']},b:{contacts:[{name:'OTHER_ROLE_SECRET'}]}},hisWx:{a:{friends:[{name:'妈妈'},{name:'老周',relation:'同事'}]}},friendRequests:[{contactId:'PLAYER_REQUEST_SECRET'}]};const c={_gotFromMe:['推荐朋友']};const ctx=vm.createContext({S,getC:id=>id==='a'?c:{}});vm.runInContext(source.split(/\r?\n/).find(l=>l.startsWith('function spyNewFriendRows(')),ctx);
+  const before=JSON.stringify(S),rows=ctx.spyNewFriendRows('a');assert.deepEqual(Array.from(rows,x=>x.name),['妈妈','新同事','推荐朋友','老周']);assert.equal(JSON.stringify(S),before);assert.doesNotMatch(JSON.stringify(rows),/OTHER_ROLE_SECRET|PLAYER_REQUEST_SECRET/);
+  S.spy.a.contacts.push({name:'刚生成的角色',note:'新认识',status:'pending'});assert.equal(ctx.spyNewFriendRows('a').find(x=>x.name==='刚生成的角色').status,'pending');
+ });
+}
+
+for(const file of ['app.js','native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js']){
+ const source=fs.readFileSync(new URL('../'+file,import.meta.url),'utf8');
+ test(file+' role settings keep only three categories and save name/PIN/phone on the selected role',()=>{
+  const c={id:'a',name:'Alice',blocked:true,spy:{pwd:'1234',phone:'13800000001',granted:true}},other={id:'b',name:'Bob',spy:{pwd:'9876'}};
+  const S={me:{name:'PLAYER_NAME',avatar:'PLAYER_AVATAR'},settings:{chat:{key:'PLAYER_API_SECRET'}},contacts:[c,other]},fields={};let account='main';
+  const ctx=vm.createContext({S,APP_VER:'fixture',actId:()=>account,getC:id=>S.contacts.find(x=>x.id===id),esc:s=>String(s??''),jq:s=>JSON.stringify(s),av:s=>String(s),save(){},render(){},toast(){},setTimeout(){},document:{getElementById:id=>fields[id]},$:id=>fields[id.replace('#','')],spyOpen(){},privatePhoneAccountAvailable(){throw Error('role settings must not read private cloud account');},privateNativeSettingsAction(){throw Error('role settings must not expose native maintenance actions');}});
+  const defs=source.slice(source.indexOf('const SETTINGS_CATEGORIES='),source.indexOf('function settingsCategoryMeta('));vm.runInContext(defs,ctx);
+  for(const name of ['getSpy','spyPwd','spyAppearance','spyAppearanceNameSave','settingsCategoryMeta','settingsLineIcon','settingsHomeRow','settingsHomeHTML']){
+   const a=source.indexOf('function '+name+'('),b=source.indexOf('\nfunction ',a);vm.runInContext(source.slice(a,b),ctx);
+  }
+  const a=source.indexOf('const _spySettingsViews='),b=source.indexOf('/* End role settings. */',a);vm.runInContext(source.slice(a,b),ctx);
+  for(const name of ['spyChangePwd','spySetPhone']){const a=source.indexOf('function '+name+'('),b=source.indexOf('\nfunction ',a);vm.runInContext(source.slice(a,b),ctx);}
+  const before=JSON.stringify({me:S.me,settings:S.settings,other}),home=ctx.renderSpySettings('a',c);
+  assert.equal((home.match(/class="ios-settings-row"/g)||[]).length,3);assert.match(home,/外观与主屏幕/);assert.doesNotMatch(home,/PLAYER_NAME|PLAYER_AVATAR|PLAYER_API_SECRET|聊天 API|声音与通话/);
+  ctx.spySettingsOpen('a','phone');assert.match(ctx.renderSpySettings('a',c),/13800000001/);account='alt';assert.equal((ctx.renderSpySettings('a',c).match(/class="ios-settings-row"/g)||[]).length,3,'navigation cannot leak between account views');account='main';
+  fields.spynewpw={value:'12'};ctx.spyChangePwd('a');assert.equal(c.spy.pwd,'1234');fields.spynewpw.value='2468';ctx.spyChangePwd('a');assert.equal(ctx.spyPwd(c),'2468');fields.spyphone={value:'invalid'};ctx.spySetPhone('a');assert.equal(c.spy.phone,'13800000001');fields.spyphone.value='13712345678';ctx.spySetPhone('a');assert.equal(c.spy.phone,'13712345678');
+  fields.spyAppearanceName={value:'Role display name',dataset:{}};ctx.spyAppearanceNameSave('a');assert.equal(c._spyAppearance.name,'Role display name');assert.equal(JSON.stringify({me:S.me,settings:S.settings,other}),before);
+ });
 }

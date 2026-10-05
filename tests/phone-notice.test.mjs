@@ -2,7 +2,6 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const source=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
-const account=fs.readFileSync(new URL('../ai-account.js',import.meta.url),'utf8');
 
 assert.match(source,/const PHONE_NOTICE_ACCEPTED_KEY='north_ai_account_notice_accepted'/);
 assert.match(source,/欢迎来到小手机。/);
@@ -14,18 +13,14 @@ assert.match(source,/感谢大家喜欢小手机，希望它能给大家带来�
 assert.match(source,/继续进入，即表示您已阅读并同意以上内容。/);
 
 assert.match(source,/onclick="acceptPhoneNotice\(\)">我已阅读并同意/);
-assert.match(source,/onclick="exitPhoneNotice\(\)">暂不进入/);
 assert.match(source,/localStorage\.setItem\(PHONE_NOTICE_ACCEPTED_KEY,'1'\)/);
 const acceptStart=source.indexOf('function acceptPhoneNotice('),acceptEnd=source.indexOf('\nfunction exitPhoneNotice(',acceptStart);
 assert.ok(acceptStart>=0&&acceptEnd>acceptStart);
 assert.doesNotMatch(source.slice(acceptStart,acceptEnd),/maybeFirstRun/);
 assert.match(source,/function maybePhoneNotice\(\).*phoneNoticeAccepted\(\)/s);
-assert.match(source,/function exitPhoneNotice\(\).*cur\(\)\.p==='aiaccount'\)back\(\)/s);
 assert.match(source,/setTimeout\(maybeFirstRun,600\)/);
 assert.match(source,/licenseFinishGate\(\).*setTimeout\(maybeFirstRun,400\)/s);
 assert.doesNotMatch(source,/renderSettings\(\)[\s\S]*?onclick="showPhoneNotice\(false\)"/);
-assert.match(account,/renderAIAccount\(\)[\s\S]*?maybePhoneNotice\(\)/);
-assert.match(account,/onclick="showPhoneNotice\(false\)"[^>]*>使用须知/);
 assert.match(source,/e\.target\.id==='modal'&&!_phoneNoticeRequired/);
 assert.doesNotMatch(source,/PHONE_NOTICE[^\n]*(birth|birthday|idcard)/i);
 

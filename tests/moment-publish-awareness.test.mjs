@@ -167,3 +167,61 @@ test('all role-speaking routes use the character route without changing cohab ro
   assert.match(functionSource('offlineSystem'), /roleVisibleUserMomentsPrompt\(c,6\)/);
   assert.match(functionSource('cohabSystem'), /roleVisibleUserMomentsPrompt\(c,6\)/);
 });
+
+
+test('composer publish eligibility rejects whitespace, pending uploads and another account; photo-only posts stay valid',()=>{
+ const fields={'#mm_t':{value:'  '},'#mm_card_desc':{value:''}};
+ const x=vm.createContext({window:{_mmDraft:{account:'main',pending:false},_mmImgs:[]},actId:()=> 'main',$:id=>fields[id]});
+ vm.runInContext(functionSource('momentEditorReady'),x);
+ assert.equal(x.momentEditorReady(),false);fields['#mm_t'].value='想说的话';assert.equal(x.momentEditorReady(),true);
+ fields['#mm_t'].value='';x.window._mmImgs=['photo'];assert.equal(x.momentEditorReady(),true);
+ x.window._mmDraft.pending=true;assert.equal(x.momentEditorReady(),false);x.window._mmDraft.pending=false;x.window._mmDraft.account='other';assert.equal(x.momentEditorReady(),false);
+});
+test('new visibility modes protect private/excluded posts and preserve old public/selective posts',()=>{
+ const x=vm.createContext({});vm.runInContext(functionSource('momentVisibleTo'),x);
+ assert.equal(x.momentVisibleTo({authorId:'me'},'a'),true);
+ assert.equal(x.momentVisibleTo({authorId:'me',visible:['a']},'b'),false);
+ assert.equal(x.momentVisibleTo({authorId:'me',visibilityMode:'private'},'a'),false);
+ assert.equal(x.momentVisibleTo({authorId:'me',visibilityMode:'include',visible:[]},'a'),false);
+ assert.equal(x.momentVisibleTo({authorId:'me',visibilityMode:'exclude',excluded:['a']},'a'),false);
+ assert.equal(x.momentVisibleTo({authorId:'me',visibilityMode:'exclude',excluded:['a']},'b'),true);
+});
+test('photo-only publishing copies images, stores manual location and removes reminders outside visibility',()=>{
+ const fields={'#mm_t':{value:''},'#mm_card_desc':{value:''}};
+ const imgs=['photo'];const x=vm.createContext({window:{_mmDraft:{account:'main',pending:false,mode:'include',visible:['a'],remind:['a','b'],location:'湖边'},_mmImgs:imgs},S:{me:{},moments:[]},$:id=>fields[id],actId:()=> 'main',uid:()=> 'p',cleanMomentText:t=>t,toast(){throw Error('unexpected reject')},save(){},momentEditorCancel(){x.closed=true},closeModal(){},render(){},reactToMyMoment(p){x.reacted=p}});
+ for(const n of ['momentEditorReady','momentVisibleTo','doPostMoment'])vm.runInContext(functionSource(n),x);
+ x.doPostMoment();assert.equal(x.S.moments.length,1);const p=x.S.moments[0];assert.equal(p.location,'湖边');assert.deepEqual(Array.from(p.remind),['a']);assert.notEqual(p.images,imgs);assert.equal(x.closed,true);assert.equal(x.reacted,p);assert.deepEqual(Array.from(p.visible),['a']);
+});
+test('late image conversion cannot attach to a cancelled/replaced draft',async()=>{
+ let callback,finish;const d={account:'main',pending:false};const x=vm.createContext({window:{_mmDraft:d,_mmImgs:[]},actId:()=> 'main',pickFile:(type,fn)=>{callback=fn},compress:()=>new Promise(r=>finish=r),momentEditorUpdate(){},momentEditorMedia(){x.media=true},toast(){},$:()=>({})});
+ vm.runInContext(functionSource('addMomentImg'),x);x.addMomentImg();const job=callback({});assert.equal(d.pending,true);x.window._mmDraft={account:'main',pending:false};finish('late-photo');await job;assert.equal(x.window._mmImgs.length,0);assert.equal(x.media,undefined);
+});
+
+
+test('friend selector search preserves checked friends hidden by filtering and close discards unconfirmed changes',()=>{
+ const fields={'#mm_visibility_mode':{value:'public'},'#mmPeoplePage':{remove(){x.removed=true}}};
+ const x=vm.createContext({window:{_mmDraft:{account:'main',mode:'public',remind:[],visible:[],people:{kind:'visible',ids:['a'],mode:'public'}}},S:{contacts:[{id:'a',name:'Alice',wxid:'aaa'},{id:'b',name:'Bob',wxid:'bbb'},{id:'gone',name:'Deleted',deleted:true},{id:'blocked',name:'Blocked',blocked:true}]},actId:()=> 'main',$:id=>fields[id],wxContactInitial:n=>n[0].toUpperCase(),momentEditorPeopleCount(){}});
+ for(const n of ['momentEditorPeopleRows','momentEditorPersonToggle','momentEditorPeopleClose'])vm.runInContext(functionSource(n),x);
+ assert.deepEqual(Array.from(x.momentEditorPeopleRows('bbb'),c=>c.id),['b']);assert.deepEqual(Array.from(x.window._mmDraft.people.ids),['a']);
+ x.momentEditorPersonToggle({checked:true,getAttribute:()=> 'b'});assert.deepEqual(Array.from(x.window._mmDraft.people.ids),['a','b']);assert.equal(fields['#mm_visibility_mode'].value,'include');assert.deepEqual(Array.from(x.window._mmDraft.visible),[]);
+ x.momentEditorPeopleClose();assert.equal(x.window._mmDraft.people,undefined);assert.deepEqual(Array.from(x.window._mmDraft.visible),[]);assert.equal(x.removed,true);
+});
+test('bottom Select commits both filtered-out and visible choices while dropping deleted contacts',()=>{
+ const x=vm.createContext({window:{_mmDraft:{account:'main',mode:'public',remind:[],visible:[],people:{kind:'remind',ids:['a','b','gone'],mode:'public'}}},S:{contacts:[{id:'a',name:'Alice'},{id:'b',name:'Bob'},{id:'gone',name:'Deleted',deleted:true}]},actId:()=> 'main',wxContactInitial:n=>n[0].toUpperCase(),momentEditorPeopleClose(){delete x.window._mmDraft.people},momentEditorUpdate(){},toast(){throw Error('unexpected')},Set});
+ for(const n of ['momentEditorPeopleRows','momentEditorPeopleSave'])vm.runInContext(functionSource(n),x);
+ x.momentEditorPeopleSave('remind');assert.deepEqual(Array.from(x.window._mmDraft.remind),['a','b']);assert.equal(x.window._mmDraft.mode,'public');
+ x.window._mmDraft.people={kind:'visible',mode:'exclude',ids:['b']};x.momentEditorPeopleSave('visible');assert.equal(x.window._mmDraft.mode,'exclude');assert.deepEqual(Array.from(x.window._mmDraft.visible),['b']);
+});
+
+test('mentioned roles receive the explicit reminder once, including friends beyond the usual reaction limit',async()=>{
+ const roles=Array.from({length:7},(_,i)=>({id:'r'+i,name:'Role'+i}));roles[0].relation='恋人';roles[5].blocked=true;roles[6].deleted=true;
+ const post={id:'mention',authorId:'me',text:'周末见',remind:['r0','r4','r4','r5','r6'],images:[],comments:[],likes:[],visibilityMode:'exclude',excluded:['r2']};
+ const calls=[];
+ const x=vm.createContext({S:{me:{name:'North'},contacts:roles,couple:{}},Date,Math,recordVisit(){},msgs:()=>[],msgToText:m=>m.text,momentPhotoCards:()=>[],buildSystem:c=>c.id,roleChatRouteIndex:()=>0,cleanMomentText:t=>t,cleanReply:t=>t,replyDedupNorm:t=>t,replyBigramScore:()=>0,chatAPI:async req=>{calls.push(req);return '忽略'},save(){},cur:()=>({p:'home'}),momentRunRoleExchange:async()=>{},uid:()=> 'comment'});
+ for(const n of ['momentVisibleTo','momentContactIsLover','momentEnsureRoleLike','momentRoleCommentRepeated','momentReactionText','momentRequestRoleReaction','reactToMyMoment'])vm.runInContext(functionSource(n),x);
+ await x.reactToMyMoment(post);
+ const ids=calls.map(r=>r[0].content);assert.deepEqual(ids,['r0','r4','r1']);
+ for(const id of ['r0','r4'])assert.match(calls.find(r=>r[0].content===id)[1].content,/特意使用了“提醒谁看”提醒你/);
+ assert.doesNotMatch(calls.find(r=>r[0].content==='r1')[1].content,/特意使用了/);
+ assert.equal(ids.filter(id=>id==='r0').length,1);
+});

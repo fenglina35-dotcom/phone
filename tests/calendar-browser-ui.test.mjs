@@ -28,7 +28,7 @@ test('calendar has a real month grid without the old visible system notice', () 
 });
 
 test('browser presents a Baidu-style home and structured result view', () => {
-  const start = source.indexOf('function renderBrowser()');
+  const start = source.indexOf('function renderBrowser(');
   const end = source.indexOf('async function browserModelSearch', start);
   const renderSource = source.slice(start, end);
   assert.match(renderSource, /br-logo/);

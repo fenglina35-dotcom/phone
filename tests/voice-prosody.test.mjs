@@ -174,14 +174,11 @@ for (const cue of ["angry", "sad", "happy", "surprised", "fearful", "disgusted",
   assert.equal(profile.vol, 1, `${cue} changed volume`);
 }
 
-assert.match(source, /aiRelay\('tts',\{text:t,voice_id:vid\|\|DEFAULT_TTS_VOICE,model:'speech-02-turbo',language_boost:languageBoost,voice_setting:setting\}\)/);
-assert.match(source, /if\(cue==='laugh'\)setting\.emotion='happy'/);
 assert.deepEqual(JSON.parse(JSON.stringify(context.ttsRelayVoiceIds({ voice: "account-clone" }))), ["account-clone"]);
 assert.deepEqual(JSON.parse(JSON.stringify(context.ttsRelayVoiceIds({ relayVoice: "internal-clone", voice: "external-clone" }))), ["internal-clone"]);
 assert.deepEqual(JSON.parse(JSON.stringify(context.ttsRelayVoiceIds({ voice: "" }))), ["male-qn-qingse"]);
 assert.equal(context.ttsVoiceAccessErrorText("you don't have access to this voice_id"), true);
 assert.equal(context.ttsVoiceAccessErrorText("tts-private-voice-not-owned"), true);
-assert.match(source, /const ids=ttsRelayVoiceIds\(tts\)/);
 assert.doesNotMatch(source, /ttsRelayVoiceIds\(v&&v\.ttsVoice,tts\)/);
 assert.doesNotMatch(source, /ttsRelayOn\(t\)&&!ttsExternalOn\(t\)/);
 assert.match(source, /function ttsUseRelay\(o\)\{const t=ttsCfg\(o\);return !!\(ttsEnabled\(t\)&&ttsRelayOn\(t\)\);\}/);
@@ -201,7 +198,6 @@ assert.match(backend, /if \(chars > TTS_MAX_CHARS\)/);
 assert.match(backend, /ledger_id: c\.ledgerId/);
 assert.match(backend, /action === "tts_refund"/);
 assert.match(backend, /function refundTtsLedger/);
-assert.match(source, /ttsRefundLedger\(ledger,'tts-no-audio'\)/);
 assert.match(source, /ttsRefundAudio\(ab,'tts-decode-failed'\)/);
 
 const route = { enabled: true, relay: false, base: "https://api.minimax.io", key: "sk-direct" };
@@ -214,10 +210,10 @@ for (const name of ["ttsExternalOn", "ttsRelayOn", "ttsEnabled", "ttsUseRelay"])
 }
 assert.equal(routeContext.ttsUseRelay(), false, "external MiniMax must stay external");
 route.relay = true;
-assert.equal(routeContext.ttsUseRelay(), true, "the explicit built-in voice switch must take priority over saved external credentials");
+assert.equal(routeContext.ttsUseRelay(), false, "retired internal flags cannot override external credentials");
 route.base = "";
 route.key = "";
-assert.equal(routeContext.ttsUseRelay(), true, "relay must remain active after external credentials are cleared");
+assert.equal(routeContext.ttsUseRelay(), false, "missing external credentials cannot fall back to retired relay");
 
 assert.match(relay, /model:model \|\| 'speech-02-turbo'/);
 assert.match(source, /'https:\/\/api\.elevenlabs\.io','eleven_v3'/);

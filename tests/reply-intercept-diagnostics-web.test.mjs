@@ -73,7 +73,7 @@ assert.match(source,/roleInterceptDiagnosticOpen\('\$\{id\}','online'\)[\s\S]{0,
 assert.match(source,/roleInterceptDiagnosticOpen\('\$\{id\}','offline'\)">查看上一轮拦截内容<\/button>/);
 assert.match(source,/roleInterceptDiagnosticOpen\('\$\{id\}','cohab'\)"><span>查看上一轮拦截内容<\/span>/);
 assert.match(source,/roleInterceptAudit:null[\s\S]{0,300}return joinAIContinuation/);
-assert.ok((source.match(/roleInterceptDiagnosticTurnCandidate\(opt\.roleInterceptAudit/g)||[]).length>=2);
+assert.ok((source.match(/roleInterceptDiagnosticTurnCandidate\(opt\.roleInterceptAudit/g)||[]).length>=1);
 assert.match(source,/roleInterceptDiagnosticTurn\(c,'online',replyAccount,'线上微信'\)/);
 assert.match(source,/roleInterceptDiagnosticTurn\(c,'cohab',null,'共同生活'\)/);
 assert.match(source,/roleInterceptDiagnosticTurn\(c,'offline',null,'单次约会'\)/);

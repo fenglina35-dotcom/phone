@@ -175,7 +175,6 @@ assert.equal(failureContext.callFailureText({status:429,message:'Too many reques
 assert.equal(failureContext.callFailureText({network:true,message:'fetch failed'}),'(未取得可用的接口响应，尚不能确定连接失败原因，请复制请求故障诊断)');
 assert.equal(failureContext.callFailureText(new Error('request timeout')),'(请求中断或等待超时，请复制请求故障诊断)');
 assert.match(functionSource('chatAPI'),/e\.status=res\.status;e\.data=d\|\|null;e\.raw=raw;e\.source='external-chat'/,'direct chat errors must preserve upstream status and detail for the call UI');
-assert.match(functionSource('aiRelay'),/e\.source='ai-core'/,'built-in AI failures must identify their real source');
 assert.doesNotMatch(functionSource('callFailureText'),/通话服务授权失败，请检查 AI 账户/,'call failures must not collapse unrelated causes into the AI account hint');
 assert.doesNotMatch(source,/\(信号不好…\)/,'call failures must not hide every root cause behind a generic signal message');
 console.log('call audio resilience tests passed');

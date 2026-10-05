@@ -3,7 +3,6 @@ import fs from 'node:fs';
 import test from 'node:test';
 
 const app = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
-const account = fs.readFileSync(new URL('../ai-account.js', import.meta.url), 'utf8');
 const license = fs.readFileSync(new URL('../license-gate.js', import.meta.url), 'utf8');
 const bridge = fs.readFileSync(
   new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift', import.meta.url),
@@ -40,11 +39,4 @@ test('automatic authorization checks back off silently during an outage', () => 
   assert.doesNotMatch(check, /toast\('授权检查暂时未连通/);
 });
 
-test('the last successful private voice list remains owned by the AI account page', () => {
-  assert.match(account, /function aiCachedPrivateVoices/);
-  assert.match(account, /function aiRememberPrivateVoices/);
-  assert.match(account, /function aiCachedVoiceList/);
-  assert.match(account, /云端暂时不可用，显示上次成功读取的音色/);
-  assert.doesNotMatch(app, /typeof aiCachedVoiceList==='function'/);
-  assert.match(app, /正在拉取外置账号音色/);
-});
+test('external voice picker does not borrow the retired internal account',()=>{assert.doesNotMatch(app,/typeof aiCachedVoiceList==='function'/);assert.match(app,/正在拉取外置账号音色/);});

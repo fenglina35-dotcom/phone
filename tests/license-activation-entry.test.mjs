@@ -35,6 +35,6 @@ vm.createContext(context);
 vm.runInContext(source.slice(helperStart, helperEnd), context);
 await context.licensePostActivationSetup();
 
-assert.deepEqual(calls, ['friend-register', 'ai', 'friend', 'passkey']);
-assert.ok(notices.some((message) => message.includes('不影响使用')));
+assert.deepEqual(calls, ['friend-register', 'friend', 'passkey']);
+assert.equal(calls.includes('ai'),false,'retired identity sync must not run');
 console.log('license activation entry tests passed');

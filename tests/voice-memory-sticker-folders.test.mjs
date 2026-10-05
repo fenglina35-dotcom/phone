@@ -41,7 +41,7 @@ assert.equal(sandbox.aiPickSticker('晚安',{stickerGroups:['cute']}),sandbox.S.
 assert.ok(sandbox.aiPickSticker('晚安',{stickerGroups:[]}), 'roles without a folder selection must remain backward compatible');
 
 assert.match(source,/每句之间停顿/);
-assert.match(source,/setting=ttsVoiceProfile\(t,opt,tts,opt&&opt\.voice\)/);
+assert.match(source,/vp=ttsVoiceProfile\(t,opt,tts,opt&&opt\.voice\)/);
 assert.match(source,/hasNextSpoken&&voicePauseMs\(c\)>0/);
 assert.match(source,/m\.role==='assistant'&&m\.type==='voice'/);
 assert.match(source,/保存并重新生成/);

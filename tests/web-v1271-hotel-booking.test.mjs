@@ -45,7 +45,8 @@ test('hotel chat card stays boarding-pass sized and opens full details',()=>{
 test('hotel privacy exposes participant orders and phone-inspection orders at different scopes',()=>{
   const own=functionSource('tvHotelVisibleToRole');
   assert.match(own,/h\.cid===cid/);
-  assert.match(functionSource('spyAppView'),/tvHotelVisibleToRole/);
+  assert.match(functionSource('spyAppView'),/renderSpyTravel/);
+  assert.match(functionSource('spyTravelEntries'),/tvHotelVisibleToRole/);
   assert.match(functionSource('remoteControlViewableSnapshot'),/hotelStays/);
   assert.match(functionSource('remoteControlViewFact'),/hotelStays/);
   assert.match(functionSource('spyFocusData'),/travelHotelDiscoveryLine/);

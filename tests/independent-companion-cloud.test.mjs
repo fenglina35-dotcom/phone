@@ -18,11 +18,9 @@ test('companion, background push, and private account use the dedicated cloud', 
   assert.match(syncView, /https:\/\/qvuahlqimcfgeoetosnl\.supabase\.co/);
 });
 
-test('license and AI points share the authorization project while companion remains isolated', () => {
+test('license endpoints share the authorization project while companion remains isolated', () => {
   assert.match(app, /const GATE_URL='https:\/\/lkhlyfpssmrjkkzhuzag\.supabase\.co'/);
   assert.match(app, /const LICENSE_FAILOVER_URL='https:\/\/lovbzibismsjqvjujilz\.supabase\.co'/);
-  assert.match(app, /const AI_BACKEND_URL=LICENSE_FAILOVER_URL\+'\/functions\/v1\/phone-ai'/);
-  assert.match(app, /aiCore:\{enabled:false,url:AI_BACKEND_URL/);
   assert.doesNotMatch(app, /LICENSE_FAILOVER_URL\+'\/functions\/v1\/(?:phone-role-push|phone-companion-push)'/);
 });
 

@@ -5,7 +5,6 @@ import path from 'node:path';
 const root = path.resolve(import.meta.dirname, '..');
 const read = (file) => fs.readFileSync(path.join(root, file), 'utf8');
 const app = read('app.js');
-const account = read('ai-account.js');
 const backend = read('supabase/functions/phone-ai/index.ts');
 const sql = read('supabase_ai_payment_review_v535.sql');
 const adminHtml = read('admin/index.html');
@@ -39,19 +38,8 @@ assert.match(backend, /\.from\(PROOF_BUCKET\)\.remove\(\[purchase\.proof_path\]\
 assert.match(backend, /requireAdmin\(req, body\)/);
 assert.match(backend, /admin-unauthorized"\) \? 401/);
 
-assert.doesNotMatch(account, /function aiOpenPurchaseClaim\(purchaseId\)/);
-assert.doesNotMatch(account, /purchase_submit|付款账号昵称或尾号|上传付款截图/);
-assert.match(account, /function aiDetectPointsArrival\(d\)/);
-assert.match(account, /AI点数已到账/);
-assert.match(account, /function aiPlayArrivalSound\(\)/);
-assert.match(account, /function aiScheduleAccountPoll\(\)/);
-assert.match(account, /aiAccountRefresh\(true,true\)/);
-assert.match(account, /历史充值与服务订单/);
-assert.match(account, /已有音色/);
 
-assert.doesNotMatch(account, />使用内置AI</);
 assert.match(app, /function aiCoreOn\(\)\{return false;\}/);
-assert.match(app, /if\(!id\|\|!ttsUseRelay\(\)\)return/);
 
 assert.match(adminHtml, /adminToken/);
 assert.match(adminHtml, /deleteAllBtn/);
@@ -76,7 +64,7 @@ assert.match(adminSw, /url\.origin !== self\.location\.origin/);
 assert.equal(manifest.display, 'standalone');
 assert.equal(manifest.scope, './');
 
-for (const file of ['admin/index.html', 'admin-owner/index.html', 'admin/app.js', 'admin/sw.js', 'admin/manifest.webmanifest', 'ai-account.js', 'app.js']) {
+for (const file of ['admin/index.html', 'admin-owner/index.html', 'admin/app.js', 'admin/sw.js', 'admin/manifest.webmanifest', 'app.js']) {
   assert.doesNotMatch(read(file), /ADMIN_ACCESS_TOKEN\s*[:=]\s*['"][^'"]+/);
 }
 

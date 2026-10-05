@@ -25,14 +25,15 @@ test('shared album contains only real stored images and exposes them to the boun
   const items=functionSource('coupleAlbumItems');
   assert.match(items,/m\.type==='image'&&m\.src&&!m\.pending&&m\._coupleAlbumSaved===true/);
   assert.match(items,/owner:m\.role==='assistant'\?'ta':'me'/);
-  assert.match(functionSource('coupleAlbumUpload'),/runVisionForMessage|coupleAlbumDescribe/);
-  assert.match(functionSource('coupleAlbumPrompt'),/没有描述的照片不能猜内容/);
+  const album=fs.readFileSync(new URL('../photo-album.js',import.meta.url),'utf8');
+  assert.match(functionSource('coupleAlbumUpload'),/photoAlbumUploadOpen\('共享相簿'\)/);
+  assert.match(functionSource('coupleAlbumPrompt'),/photoAlbumRolePrompt/);
   assert.match(functionSource('coupleAlbumConsumeSaveTag'),/存共同相册/);
-  assert.match(functionSource('lineToMsg'),/_coupleAlbumSaved:albumSaved/);
-  assert.match(app,/共同相册收录规则/);
-  assert.match(app,/不要把每张普通照片都存进共同相册/);
+  assert.match(album,/photoAlbumCoupleAllowed\(c\)/);
+  assert.match(album,/不得猜画面、拍摄日期或编造共同经历/);
+  assert.match(album,/分类只能选：回忆、相簿、人物与宠物、精选照片、共享相簿、最近的日子、旅程/);assert.match(album,/不确定用共享相簿/);
   assert.match(app,/id="cou_album"/);
-  assert.match(app,/不会生成或补造假照片/);
+  assert.doesNotMatch(app,/上传到共同相册/);
 });
 
 test('shared album deletes exactly one selected photo without deleting its original WeChat message',()=>{
@@ -43,7 +44,10 @@ test('shared album deletes exactly one selected photo without deleting its origi
   assert.match(remove,/albumHidden|coupleAlbumHidden/);
   assert.match(remove,/不会删除微信聊天里的原图或其他照片/);
   assert.doesNotMatch(remove,/msgsForAccount|S\.messages|\.messages\.splice/);
-  assert.ok((app.match(/coupleAlbumDelete\(\$\{jq\(x\.source\)\},\$\{jq\(x\.id\)\}\)/g)||[]).length>=2,'both the preview and full album expose single-photo delete');
+  assert.match(functionSource('coupleAlbumOpen'),/openApp\('album'\)/);
+  const album=fs.readFileSync(new URL('../photo-album.js',import.meta.url),'utf8');
+  assert.match(album,/photoAlbumDeleteSelected/);
+  assert.match(album,/legacyImported/);
 });
 
 test('Moment replies refresh only their social slot and stored images decode before the viewer reveals them',()=>{

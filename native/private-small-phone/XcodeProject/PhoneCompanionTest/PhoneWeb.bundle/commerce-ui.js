@@ -22,27 +22,34 @@
   window.shopQuick=shopQuick;
   window.foodQuick=foodQuick;
 
-  window.renderShop=function(){
-    coInit();
-    var rows=S.shop.results||[],cartN=(S.shop.cart||[]).length;
-    var orderRows=typeof shopOrderRows==='function'?shopOrderRows():(S.shop.orders||[]).filter(function(order){return order.kind!=='gift';});
+  window.renderShop=function(inspection){
+    if(!inspection)coInit();
+    var rows=inspection?[]:S.shop.results||[],cartN=inspection?0:(S.shop.cart||[]).length,busy=!inspection&&_shopBusy;
+    var orderRows=inspection?spyShopOrderRows(inspection):typeof shopOrderRows==='function'?shopOrderRows():(S.shop.orders||[]).filter(function(order){return order.kind!=='gift';});
     var orderN=orderRows.filter(function(order){return !order.refunded;}).length;
-    var co=S.shop.co||{};
+    var co=inspection?{on:false}:S.shop.co||{};
     var categories=[['✨','今日上新'],['💄','美妆'],['👗','穿搭'],['🏠','家居'],['🎁','礼物']];
-    return '<div class="commerce-top">'+
+    var html='<div class="commerce-top">'+
       '<button class="back" onclick="back()" aria-label="返回">‹</button><div class="title">NORTH SELECT <span class="sub">精选商城</span></div>'+
       '<div class="tools"><button class="commerce-icon" onclick="go(\'shopcs\')" aria-label="客服">'+svgIc('chat',21,'#222')+'</button>'+
       '<button class="commerce-icon" onclick="openOrders()" aria-label="订单">'+svgIc('bag',22,'#222')+(orderN?'<i class="badge">'+orderN+'</i>':'')+'</button>'+
       '<button class="commerce-icon" onclick="openCart()" aria-label="购物车">'+svgIc('bag',22,'#222')+(cartN?'<i class="badge">'+cartN+'</i>':'')+'</button></div></div>'+
       '<div class="scroll shop-scroll">'+
         '<section class="shop-hero"><div class="shop-kicker">DAILY CURATION</div><h2>把喜欢的生活带回家</h2><p>好物、心意和日常，都值得认真挑选</p>'+
-          '<div class="shop-search"><span>'+svgIc('search',17,'#777')+'</span><input id="shop_q" value="'+esc(S.shop.q||'')+'" placeholder="搜商品、品牌或礼物" onkeydown="if(event.key===\'Enter\')shopSearch()"><button onclick="shopSearch()" '+(_shopBusy?'disabled':'')+'>'+(_shopBusy?'搜索中':'搜索')+'</button></div></section>'+
+          '<div class="shop-search"><span>'+svgIc('search',17,'#777')+'</span><input id="shop_q" value="'+esc(inspection?'':S.shop.q||'')+'" placeholder="搜商品、品牌或礼物" onkeydown="if(event.key===\'Enter\')shopSearch()"><button onclick="shopSearch()" '+(busy?'disabled':'')+'>'+(busy?'搜索中':'搜索')+'</button></div></section>'+
         '<div class="quick-grid">'+categories.map(function(c){return '<button class="quick-item" onclick="shopQuick(\''+c[1]+'\')"><b>'+c[0]+'</b>'+c[1]+'</button>';}).join('')+'</div>'+
         '<div class="shop-benefits"><span><b>✓</b>品质严选</span><span><b>✓</b>安心售后</span><span><b>✓</b>次日达</span></div>'+
         (co.on?coPanel():'<button class="shop-primary" style="margin:0 0 9px" onclick="coInvite()">👫 邀请角色一起逛</button>')+
-        '<div class="section-head"><strong>'+(_shopBusy?'正在为你挑选':rows.length?'猜你喜欢':'逛逛精选')+'</strong><small>'+(_shopBusy?'请稍等…':rows.length?rows.length+' 件好物':'从分类开始发现')+'</small><button class="more" onclick="openOrders()">订单 ›</button></div>'+
-        '<div class="shop-grid">'+(_shopBusy?'<div class="commerce-empty"><span class="big">🔎</span>正在全网挑选好物…</div>':rows.length?rows.map(window.shopCard).join(''):'<div class="commerce-empty"><span class="big">🛍️</span>搜索你想买的东西<br><small>试试「香薰」「小裙子」或「盲盒」</small></div>')+'</div>'+
+        '<div class="section-head"><strong>'+(busy?'正在为你挑选':rows.length?'猜你喜欢':'逛逛精选')+'</strong><small>'+(busy?'请稍等…':rows.length?rows.length+' 件好物':'从分类开始发现')+'</small><button class="more" onclick="openOrders()">订单 ›</button></div>'+
+        '<div class="shop-grid">'+(busy?'<div class="commerce-empty"><span class="big">🔎</span>正在全网挑选好物…</div>':rows.length?rows.map(window.shopCard).join(''):'<div class="commerce-empty"><span class="big">🛍️</span>搜索你想买的东西<br><small>试试「香薰」「小裙子」或「盲盒」</small></div>')+'</div>'+
       '</div>';
+    if(!inspection)return html;
+    var template=document.createElement('template');template.innerHTML=html;
+    template.content.querySelectorAll('[onclick]').forEach(function(el){var action=el.getAttribute('onclick');el.setAttribute('onclick',action==='openOrders()'?'spyShopOrders('+JSON.stringify(inspection)+')':action==='back()'?'spyOpen('+JSON.stringify(inspection)+',"")':'hisWxSimulatedButton()');});
+    template.content.querySelectorAll('input').forEach(function(el){el.readOnly=true;el.removeAttribute('onkeydown');el.setAttribute('onclick','hisWxSimulatedButton()');});
+    template.content.querySelectorAll('[aria-label="订单"]').forEach(function(el){el.setAttribute('aria-label','我的订单');});
+    var more=template.content.querySelector('.section-head .more');if(more)more.textContent='我的订单 ›';
+    return template.innerHTML;
   };
 
   window.shopCard=function(p,i){

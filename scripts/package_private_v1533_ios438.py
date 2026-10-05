@@ -1,4 +1,4 @@
-"""Create the private v1571 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
+"""Create the private v1573 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
 
 Unlike the earlier packaging scripts, every file is read from the committed tree
 (``git cat-file`` against HEAD) instead of the working directory. The v1235/iOS356
@@ -23,10 +23,10 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "native/private-small-phone/XcodeProject/"
 BUNDLE = "PhoneCompanionTest/PhoneWeb.bundle/"
-PREFIX = "SmallPhone_v1571_iOS439_Private/"
-OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1571_iOS439.zip"
+PREFIX = "SmallPhone_v1573_iOS439_Private/"
+OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1573_iOS439.zip"
 
-WEB_VERSION = "1571"
+WEB_VERSION = "1573"
 MARKETING = "1.0.439"
 BUILD = "439"
 BRIDGE = "42"
@@ -573,7 +573,7 @@ def validate(files: dict[str, bytes]) -> None:
         assert files[BUNDLE + shared] == git("show", "HEAD:" + shared), "shared feature differs: " + shared
     assert "mailRead" in app and "mailWrite" in app
     assert app.count("await familyRoleConsume(content,c)") == 4
-    assert "familyRoleBank(id)" in app and "familyRoleShop(id)" in app
+    assert "familyRoleBank(id)" in app and "spyShopOrderRows(id)" in app
     assert "mailInboxPrompt(c)" in app
     assert "chat-glass-nav" in app
     assert len([n for n in files if n.startswith(BUNDLE)]) >= 350, "private web bundle looks incomplete"
@@ -643,11 +643,11 @@ def main() -> None:
     state["retired"] = [{"file": next(iter(retired)), "commit": "a804f37a", "reason": "User requested removal of daily event ledger in v1554; independent small notebook, ordinary memory, chat and existing backup data preserved."}]
     state["sourceCommit"] = text(git("rev-parse", "HEAD")).strip()
     state["webSourceCommit"] = "269b14e5aca8e6f8d0b687c199a000a6671b8690"
-    state["webVersion"] = "v1570"
+    state["webVersion"] = "v1572"
     state["privateWeb"] = "v" + WEB_VERSION
     state["privateIOS"] = f"{MARKETING} ({BUILD})"
     state["lastDeliveredPackage"] = {"name": previous.name, "sha256": previous_sha, "sourceCommit": "beb14a18c8a1f163dd9b6afc2d48c8dc3d8f66bd"}
-    state["knownUnresolved"] = [x for x in state["knownUnresolved"] if not re.match(r"v\d+-mac-build", x)] + ["v1571-mac-build-signing-and-iphone-not-verified"]
+    state["knownUnresolved"] = [x for x in state["knownUnresolved"] if not re.match(r"v\d+-mac-build", x)] + ["v1573-mac-build-signing-and-iphone-not-verified"]
     state["validation"] = {"macBuildVerified": False, "realIPhoneVerified": False, "models": "HTTP simulated in browser gates", "nodeTests": {"passed": 3229, "failed": 0, "sourceCommit": state["webSourceCommit"]}, "authorizedChatBothRuntimes": True, "inheritedPreviousOverlay": True, "priorPackageManifestVerified": True, "nativePayloadUnchanged": True, "houseResourceFiles": len(cozy_files), "retiredFiles": sorted(retired)}
     app = text(files[BUNDLE + "app.js"])
     for marker in ("function hisChatMessageHTML(", "bubbleLook(c,!mine)", "bubbleIconFor(c,!mine)", "bubbleAvatarClass(c,!mine)", "function hisWxUtilityOpen(", "function hisWxFriendAvatar(", "function spyLockScreen(", "lockWallpaper", "_hisPaymentId", "_forged"):

@@ -1,9 +1,9 @@
-const BUILD='1570';
-const HOTFIX='v1570-role-family-card-preview-1';
-const SHELL_CACHE='north-shell-v1570-role-family-card-preview-1';
+const BUILD='1572';
+const HOTFIX='v1572-role-family-card-preview-1';
+const SHELL_CACHE='north-shell-v1572-role-family-card-preview-1';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
-const GLASS_ICON_KEYS=['aiaccount','browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
+const GLASS_ICON_KEYS=['browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
 const GLASS_ICON_FILES=GLASS_ICON_PACKS.flatMap(pack=>GLASS_ICON_KEYS.map(key=>'./assets/app-icons/glass/'+pack+'/'+key+'.webp'));
 const CORE_FILES=[
   {url:'./public-north-policy.js?v='+BUILD,kind:'publicNorthPolicy'},
@@ -15,12 +15,13 @@ const CORE_FILES=[
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
   {url:'./app.js?v='+BUILD+'&r='+HOTFIX,kind:'app'},
   {url:'./cohab-theater.js?v='+BUILD+'&r=v1274-web-cohab-guests-1',kind:'theater'},
-  {url:'./web-hotfix.js?v='+BUILD+'&r=v1570-role-family-card-preview-1',kind:'hotfix'},
-  {url:'./ai-account.js?v='+BUILD,kind:'ai'},
+  {url:'./web-hotfix.js?v='+BUILD+'&r=v1572-role-family-card-preview-1',kind:'hotfix'},
+  {url:'./photo-album.js?v='+BUILD,kind:'album'},
   {url:'./couple-watch.js?v='+BUILD,kind:'watch'},
   {url:'./couple-watch-runtime.js?v='+BUILD,kind:'watchRuntime'}
 ];
 const OPTIONAL_FILES=[
+  ...GLASS_ICON_PACKS.map(pack=>'./assets/app-icons/glass/'+pack+'/album.png'),
   './browser-diagnostics.js?v='+BUILD,
   './request-diagnostics.js?v='+BUILD,
   './message-beijing-time.js?v='+BUILD+'&r=offline-me-1',
@@ -128,7 +129,7 @@ function validShellText(kind,text){
     &&text.includes('theaterRevealActorItems')
     &&!text.includes('cohabReplyCore=async');
   if(kind==='hotfix')return text.length>800
-    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1570-role-family-card-preview-1'")
+    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1572-role-family-card-preview-1'")
     &&text.includes('reconcileExpiredWxLogin')
     &&text.includes('withBaseImageCheck')
     &&text.includes('isStoredImgRef');
@@ -136,9 +137,7 @@ function validShellText(kind,text){
     &&text.includes('window.NorthLicense')
     &&text.includes('restorePasskey')
     &&text.includes('supportsPasskey');
-  if(kind==='ai')return text.length>30000
-    &&text.includes('function renderAIAccount()')
-    &&text.includes('function aiAccountApplyResult(');
+  if(kind==='album')return text.includes('function renderPhotoAlbum(')&&text.includes('function photoAlbumTab(');
   return false;
 }
 async function checkedResponse(request,kind,tries){
@@ -315,10 +314,10 @@ self.addEventListener('fetch',event=>{
     })());
     return;
   }
-  if(/\/ai-account\.js$/.test(url.pathname)){
+  if(/\/photo-album\.js$/.test(url.pathname)){
     event.respondWith((async()=>{
       const cache=await caches.open(SHELL_CACHE);
-      return (await currentCore(cache,'ai'))||checkedResponse(request,'ai',2);
+      return (await currentCore(cache,'album'))||checkedResponse(request,'album',2);
     })());
     return;
   }

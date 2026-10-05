@@ -4,7 +4,6 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 
 const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
-const account=fs.readFileSync(new URL('../ai-account.js',import.meta.url),'utf8');
 const edge=fs.readFileSync(new URL('../supabase/functions/phone-ai/index.ts',import.meta.url),'utf8');
 const migration=fs.readFileSync(new URL('../supabase/migrations/202607270001_asr_billing.sql',import.meta.url),'utf8');
 
@@ -20,11 +19,9 @@ function functionSource(name){
   throw new Error(`unterminated ${name}`);
 }
 
-test('cinema ASR is an independent AI-account switch',()=>{
+test('cinema ASR preserves external configuration with internal route disabled',()=>{
   assert.match(app,/stt:\{base:'',key:'',model:'',relay:false\}/);
   assert.match(app,/function sttRelayOn\(\)/);
-  assert.match(account,/影院字幕识别/);
-  assert.match(account,/function aiToggleAsrApi\(\)/);
   assert.match(app,/relay:!!oldStt\.relay/);
 });
 test('voice messages preserve audio and never call paid ASR',()=>{
@@ -36,9 +33,6 @@ test('voice messages preserve audio and never call paid ASR',()=>{
 test('diagnostic recordings are converted to wav for the cinema-only ASR route',()=>{
   assert.match(app,/async function sttRecordedWav\(blob,durationSeconds\)/);
   assert.match(app,/cinemaAudioChunkWav\(audio,0,end,16000\)/);
-  assert.match(account,/影院字幕接口测试（5秒）/);
-  assert.match(account,/function aiTestAsr\(\)/);
-  assert.match(account,/purpose:'diagnostic'/);
   assert.match(edge,/asr-purpose-not-allowed/);
 });
 

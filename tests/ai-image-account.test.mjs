@@ -4,19 +4,10 @@ import path from 'node:path';
 
 const root=path.resolve(import.meta.dirname,'..');
 const app=fs.readFileSync(path.join(root,'app.js'),'utf8');
-const account=fs.readFileSync(path.join(root,'ai-account.js'),'utf8');
 const backend=fs.readFileSync(path.join(root,'supabase/functions/phone-ai/index.ts'),'utf8');
 const setup=fs.readFileSync(path.join(root,'AI_BACKEND_SETUP.md'),'utf8');
 
-assert.doesNotMatch(account,/启用图片生成|图片中转站|图片生成套餐|生成一张图片|购买与生图扣费说明/);
-assert.doesNotMatch(account,/AI_PURCHASE_NOTICE|aiImageReady|aiImageRouteCount|aiImagePackageCards|aiToggleImageApi|aiOpenImageGenerator|aiGenerateAccountImage/);
 
-assert.doesNotMatch(account,/aiClaimCanvasData|aiClaimImageData|上传付款截图/);
-assert.match(account,/点数不足提醒/);
-assert.match(account,/function aiCheckLowBalance\(balance\)/);
-assert.match(account,/新的点数购买入口已经关闭/);
-assert.match(account,/内置 AI 用途范围/);
-assert.match(account,/仅用于语音生成和影院字幕识别；不用于普通聊天、聊天识图或聊天生图/);
 assert.match(app,/function aiCoreOn\(\)\{return false;\}/);
 
 assert.doesNotMatch(app,/function aiImageInit|function aiImageRelayOn|aiRelay\('image'/);

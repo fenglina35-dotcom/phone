@@ -9,7 +9,6 @@ const migration = fs.readFileSync(
   path.join(root, 'supabase/migrations/202607230003_private_tts_voices.sql'),
   'utf8',
 );
-const account = fs.readFileSync(path.join(root, 'ai-account.js'), 'utf8');
 const admin = fs.readFileSync(path.join(root, 'admin/app.js'), 'utf8');
 const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
 
@@ -48,7 +47,6 @@ assert.match(backend, /await minimaxVoices\(true\)/);
 assert.match(app, /function ttsRelayVoiceIds\(tts\)/);
 assert.match(app, /tts\.relayVoice/);
 assert.match(app, /typeof aiInternalVoiceId==='function'\?aiInternalVoiceId\(\):tts\.voice/);
-assert.match(app, /const ids=ttsRelayVoiceIds\(tts\)/);
 assert.doesNotMatch(app, /ttsRelayVoiceIds\(v&&v\.ttsVoice,tts\)/);
 assert.match(app, /角色使用的外置语音路线/);
 assert.match(app, /每条路线的角色音色ID会分开保存/);
@@ -56,16 +54,6 @@ assert.match(app, /ttsRouteVoices/);
 assert.match(backend, /\{ id: "qingshouyin20260726", name: "青受音", clone: true, preset: true \}/);
 assert.match(backend, /\{ id: "xiayizhou20260725", name: "夏以昼", clone: true, preset: true \}/);
 
-assert.match(account, /onclick="aiPullVoices\(\)"/);
-assert.match(account, /\{id:'qingshouyin20260726',name:'青受音',clone:true,preset:true\}/);
-assert.match(account, /\{id:'xiayizhou20260725',name:'夏以昼',clone:true,preset:true\}/);
-assert.match(account, /系统免费音色和尚未绑定的克隆音色/);
-assert.match(account, /未绑定克隆/);
-assert.match(account, /新的音色克隆申请入口已经关闭/);
-assert.match(account, /已经绑定的克隆音色只对绑定账户显示/);
-assert.match(account, /function aiUsePrivateVoice/);
-assert.match(account, /S\.settings\.tts\.relayVoice=voice\.voice_id/);
-assert.doesNotMatch(account, /function aiUsePrivateVoice\(id\)[^\n]*S\.settings\.tts\.voice=voice\.voice_id/);
 assert.match(admin, /绑定客户专属音色/);
 assert.match(admin, /admin_assign_private_voice/);
 

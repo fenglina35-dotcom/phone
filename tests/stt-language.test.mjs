@@ -42,7 +42,6 @@ assert.match(source, /影片“一键提取字幕”不可用/);
 assert.match(source, /识别语言（只转写，不翻译）/);
 assert.match(source, /英文 → 英文文字/);
 assert.match(source, /rawLang=opt\.lang\|\|a\.lang,language=sttApiLang\(rawLang\)/);
-assert.match(source, /language:sttRelayLang\(rawLang\)/);
 assert.match(source, /fd\.append\('language',language\)/);
 assert.match(source, /fd\.append\('response_format','verbose_json'\)/);
 assert.match(source, /fd\.append\('timestamp_granularities\[\]','segment'\)/);

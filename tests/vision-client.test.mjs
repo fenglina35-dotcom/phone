@@ -108,33 +108,6 @@ assert.equal(await context.visionAPI(dataURL, "再描述一次"), "备用模型�
 assert.equal(fallbackCalls.slice(beforeSecond).filter(x => x.body?.model === "claude-opus-4-6").length, 0);
 assert.equal(fallbackCalls.slice(beforeSecond).filter(x => x.body?.model === "gemini-2.5-pro").length, 1);
 
-const relayCalls = [];
-context.aiCoreOn = () => true;
-context.S.settings.vision = { base: "", key: "", model: "", protocols: {} };
-context.S.settings.chat.model = "gpt-4o-mini";
-context.aiRelay = async (action, payload) => {
-  relayCalls.push({ action, payload });
-  return { data: { choices: [{ message: { content: "验证码是 A7K9" } }] } };
-};
-assert.equal(await context.visionAPI(dataURL, "只回复验证码", { forceChat: true }), "验证码是 A7K9");
-assert.deepEqual(relayCalls.map(x => x.action), ["chat"]);
-assert.equal(relayCalls[0].payload.messages[0].content.filter(x => x.type === "image_url").length, 1);
-assert.equal(vm.runInContext("_visionLast.route", context), "chat");
-
-relayCalls.length = 0;
-context.aiRelay = async (action, payload) => {
-  relayCalls.push({ action, payload });
-  if (action === "chat") return { data: { choices: [{ message: { content: "no image attached" } }] } };
-  return { data: { choices: [{ message: { content: "备用识图看到了 A7K9" } }] } };
-};
-assert.equal(await context.visionAPI(dataURL, "只回复验证码", { forceChat: true }), "备用识图看到了 A7K9");
-assert.deepEqual(relayCalls.map(x => x.action), ["chat", "vision"]);
-assert.equal(vm.runInContext("_visionLast.fallback", context), true);
-
-relayCalls.length = 0;
-assert.equal(await context.visionAPI(dataURL, "再次回复验证码"), "备用识图看到了 A7K9");
-assert.deepEqual(relayCalls.map(x => x.action), ["vision"], "cached unsupported chat model must not be charged/tested again");
-
 context.aiCoreOn = () => false;
 context.S.settings.chat = { base: "https://same.test/v1", key: "same", model: "gpt-4o-mini" };
 context.S.settings.vision = { base: "https://same.test/v1", key: "same", model: "gpt-4o-mini", protocols: {} };
