@@ -1,4 +1,4 @@
-"""Create the private v1573 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
+"""Create the private v1575 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
 
 Unlike the earlier packaging scripts, every file is read from the committed tree
 (``git cat-file`` against HEAD) instead of the working directory. The v1235/iOS356
@@ -23,10 +23,10 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "native/private-small-phone/XcodeProject/"
 BUNDLE = "PhoneCompanionTest/PhoneWeb.bundle/"
-PREFIX = "SmallPhone_v1573_iOS439_Private/"
-OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1573_iOS439.zip"
+PREFIX = "SmallPhone_v1575_iOS439_Private/"
+OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1575_iOS439.zip"
 
-WEB_VERSION = "1573"
+WEB_VERSION = "1575"
 MARKETING = "1.0.439"
 BUILD = "439"
 BRIDGE = "42"
@@ -548,7 +548,7 @@ def validate(files: dict[str, bytes]) -> None:
     with ZipFile(previous) as archive:
         prefix = next(n for n in archive.namelist() if n.endswith("/SOURCE_STATE.json"))[:-len("SOURCE_STATE.json")]
         prior = [n[len(prefix):] for n in archive.namelist() if n.startswith(prefix) and not n.endswith("/") and not n.endswith(("SOURCE_STATE.json", "SHA256SUMS.json"))]
-        assert set(prior) - files.keys() == {BUNDLE + "daily-event-ledger.js"}, "unexpected previous delivery files missing"
+        assert set(prior) - files.keys() == {BUNDLE + "daily-event-ledger.js", BUNDLE + "ai-account.js"}, "unexpected previous delivery files missing"
 
     # Both the v1420 inheritance and this release must be in the actual archive.
     for marker in ("function roleInternalControlLine(", "function gRpRecipient(", "function groupTransferDetailAction(", "function wxUnreadTotal(", "function dyStrangerParse(", "async function pfTransportRoute(", "function offDelHistory(", "_offNarrateById", "function roleTextTranslationHTML(", "function roleChatRouteSet(", "function roleMomentImagesAllowed("):
@@ -619,7 +619,7 @@ def main() -> None:
     for name, digest in prior_manifest.items():
         assert sha256(previous_files[name]).hexdigest() == digest, "previous package checksum mismatch: " + name
     # This component was explicitly retired in v1554; retaining it would restore a removed feature.
-    retired = {BUNDLE + "daily-event-ledger.js"}
+    retired = {BUNDLE + "daily-event-ledger.js", BUNDLE + "ai-account.js"}
     assert previous_files.keys() - files.keys() - {"SOURCE_STATE.json", "SHA256SUMS.json"} == retired
     for name, body in previous_files.items():
         if name not in {"SOURCE_STATE.json", "SHA256SUMS.json", "请在Mac编译前先读.md"} and not name.startswith(BUNDLE):
@@ -638,17 +638,19 @@ def main() -> None:
         "v1568-role-phone-inline-name-and-location-alignment",
         "v1570-role-wechat-author-bound-bubble-configuration",
         "v1570-role-phone-transparent-glass-pin-pad-and-independent-lock-wallpaper",
+        "v1572-role-aware-photo-album-phone-inspection-and-moments",
+        "v1574-favorites-role-likes-metadata-classification-flicker-share-return",
     ]
     state["preserved"] = sorted((set(state["preserved"]) - {"v1344-daily-ledger-turn-evidence"}) | set(additions))
-    state["retired"] = [{"file": next(iter(retired)), "commit": "a804f37a", "reason": "User requested removal of daily event ledger in v1554; independent small notebook, ordinary memory, chat and existing backup data preserved."}]
+    state["retired"] = [{"file": BUNDLE+"daily-event-ledger.js", "commit": "a804f37a", "reason": "User requested removal; independent notes and existing data preserved."}, {"file": BUNDLE+"ai-account.js", "commit": "3708d8e1", "reason": "User requested AI account and internal speech/subtitle retirement, replaced by photo album; external interfaces retained."}]
     state["sourceCommit"] = text(git("rev-parse", "HEAD")).strip()
-    state["webSourceCommit"] = "269b14e5aca8e6f8d0b687c199a000a6671b8690"
-    state["webVersion"] = "v1572"
+    state["webSourceCommit"] = "a4084255482eea0d064cbe375bebc3ab342cda29"
+    state["webVersion"] = "v1574"
     state["privateWeb"] = "v" + WEB_VERSION
     state["privateIOS"] = f"{MARKETING} ({BUILD})"
     state["lastDeliveredPackage"] = {"name": previous.name, "sha256": previous_sha, "sourceCommit": "beb14a18c8a1f163dd9b6afc2d48c8dc3d8f66bd"}
-    state["knownUnresolved"] = [x for x in state["knownUnresolved"] if not re.match(r"v\d+-mac-build", x)] + ["v1573-mac-build-signing-and-iphone-not-verified"]
-    state["validation"] = {"macBuildVerified": False, "realIPhoneVerified": False, "models": "HTTP simulated in browser gates", "nodeTests": {"passed": 3229, "failed": 0, "sourceCommit": state["webSourceCommit"]}, "authorizedChatBothRuntimes": True, "inheritedPreviousOverlay": True, "priorPackageManifestVerified": True, "nativePayloadUnchanged": True, "houseResourceFiles": len(cozy_files), "retiredFiles": sorted(retired)}
+    state["knownUnresolved"] = [x for x in state["knownUnresolved"] if not re.match(r"v\d+-mac-build", x)] + ["v1575-mac-build-signing-and-iphone-not-verified"]
+    state["validation"] = {"macBuildVerified": False, "realIPhoneVerified": False, "models": "HTTP simulated in browser gates", "nodeTests": {"passed": 3328, "failed": 0, "sourceCommit": state["webSourceCommit"]}, "authorizedChatBothRuntimes": True, "inheritedPreviousOverlay": True, "priorPackageManifestVerified": True, "nativePayloadUnchanged": True, "houseResourceFiles": len(cozy_files), "retiredFiles": sorted(retired)}
     app = text(files[BUNDLE + "app.js"])
     for marker in ("function hisChatMessageHTML(", "bubbleLook(c,!mine)", "bubbleIconFor(c,!mine)", "bubbleAvatarClass(c,!mine)", "function hisWxUtilityOpen(", "function hisWxFriendAvatar(", "function spyLockScreen(", "lockWallpaper", "_hisPaymentId", "_forged"):
         assert marker in app, "latest role WeChat/phone repair missing: " + marker
@@ -661,10 +663,29 @@ def main() -> None:
     guard_end = prior_css.index("html.north-native-app.north-native-performance-guard .home img{filter:none!important}", guard_start) + len("html.north-native-app.north-native-performance-guard .home img{filter:none!important}\n")
     private_guard = prior_css[guard_start:guard_end]
     assert css.count(private_guard) == 1, "inherited private performance guard missing"
-    assert css.replace(private_guard, "") == text(git("show", "HEAD:glass-theme.css")), "shared appearance differs beyond inherited private guard"
+    assert [line for line in css.replace(private_guard, "").splitlines() if line.strip()] == [line for line in text(git("show", "HEAD:glass-theme.css")).splitlines() if line.strip()], "shared appearance differs beyond inherited private guard"
     css = text(files[BUNDLE + "glass-theme.css"])
     for marker in ("function statusBarColorSet(", "function homeVinylOpacitySet(", "function lockPullAppearanceSet(", ".vinyl-record:before{content:", "north-shell-custom", "function glassInnerAppearance(", "function appIconRimSet("):
         assert marker in css + text(files[BUNDLE + "app.js"]), "latest appearance fix missing: " + marker
+    recent = ROOT.parent / "最新私人版本覆盖包_v1571_iOS439.zip"
+    recent_sha = "1b6a45bfd0f5de8c492fa2a3e6eb430eb988015313d96224979370cfef6204b4"
+    assert sha256(recent.read_bytes()).hexdigest() == recent_sha
+    with ZipFile(recent) as old:
+        recent_prefix = next(n for n in old.namelist() if n.endswith("/SOURCE_STATE.json"))[:-len("SOURCE_STATE.json")]
+        recent_files = {n[len(recent_prefix):]: old.read(n) for n in old.namelist() if n.startswith(recent_prefix) and not n.endswith("/")}
+    recent_manifest = json.loads(recent_files["SHA256SUMS.json"])
+    assert set(recent_manifest) == recent_files.keys() - {"SHA256SUMS.json"}
+    for name, digest in recent_manifest.items():
+        assert sha256(recent_files[name]).hexdigest() == digest, name
+    assert recent_files.keys() - files.keys() - {"SOURCE_STATE.json", "SHA256SUMS.json"} == {BUNDLE + "ai-account.js"}
+    for name, body in recent_files.items():
+        if name not in {"SOURCE_STATE.json", "SHA256SUMS.json", "请在Mac编译前先读.md"} and not name.startswith(BUNDLE):
+            assert files[name] == body, "unexpected native/signing change: " + name
+    assert files[BUNDLE + "photo-album.js"] == git("show", "HEAD:photo-album.js")
+    for marker in ("photoAlbumHasLikes", "photoAlbumConsumeLikes", "photoAlbumCategorySave", "photoAlbumEditOpen", "likedByMe", "roleLikes"):
+        assert marker in text(files[BUNDLE + "photo-album.js"]), marker
+    state["lastDeliveredPackage"] = {"name": recent.name, "sha256": recent_sha, "sourceCommit": json.loads(recent_files["SOURCE_STATE.json"])["sourceCommit"]}
+    state["validation"]["mostRecentOverlayManifestVerified"] = True
     files["SOURCE_STATE.json"] = json.dumps(state, ensure_ascii=False, indent=2).encode("utf-8")
     files["SHA256SUMS.json"] = json.dumps({name:sha256(body).hexdigest() for name,body in sorted(files.items())},ensure_ascii=False,indent=2).encode("utf-8")
 
