@@ -13,14 +13,14 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1580 · 屏幕时长快捷指令自动上传'/);
-  assert.match(app,/const url='sw\.js\?v=1580&r=v1580-screen-time-cloud-upload-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1580'/);
-  assert.match(html,/app\.js\?v=1580/);
-  assert.match(sw,/const BUILD='1580'/);
-  assert.match(sw,/north-shell-v1580-screen-time-cloud-upload-1/);
-  assert.match(index,/小手机\.html\?v=1580/);
-  assert.match(repair,/小手机\.html\?v=1580/);
+  assert.match(app,/APP_VER='v1582 · 相册单张照片删除修复'/);
+  assert.match(app,/const url='sw\.js\?v=1582&r=v1582-screen-time-cloud-upload-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1582'/);
+  assert.match(html,/app\.js\?v=1582/);
+  assert.match(sw,/const BUILD='1582'/);
+  assert.match(sw,/north-shell-v1582-screen-time-cloud-upload-1/);
+  assert.match(index,/小手机\.html\?v=1582/);
+  assert.match(repair,/小手机\.html\?v=1582/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{
