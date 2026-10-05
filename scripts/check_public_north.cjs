@@ -22,6 +22,7 @@ const result=await page.evaluate(async privateApp=>{
 },privateApp);
 if(privateApp){assert.equal(result.available,false);assert(result.entry&&result.history);assert.equal(result.count,1);assert.equal(result.reply,'先歇一会。');}else{assert(result.isolated&&result.unconsented&&result.separate&&result.entry);assert(result.sys.includes('300 步'));assert(!result.html.includes('Apple Watch'));assert(!result.targets.some(x=>/睡眠|心率|心电|HRV/.test(x)));assert(result.targets.includes('iPhone步数'));assert(!result.cp.includes('当前环境没有真实 iPhone'));assert(result.calls.every(x=>x.url.includes('lkhlyfpssmrjkkzhuzag')));assert(result.calls.some(x=>x.body.p_command?.externalAppId==='fixture-app'));assert.deepEqual(result.rows,['到家了','回来啦，先歇一会。']);}
 await page.evaluate(()=>{_couTab=1;go('couple');});
+if(privateApp){
 await page.locator('#cou_shortcut_screen_time button').first().click();
 await page.locator('#sti_text').fill('抖音 | 11040.155秒钟\n微信 | 3530.637秒钟\nWeb | 2100秒钟\nexample.com | 2100秒钟');
 await page.locator('#sti_consent').check();
@@ -36,8 +37,10 @@ await page.evaluate(()=>history.replaceState(null,'',location.pathname));
 await page.reload();await page.waitForFunction(()=>window.__northBootReady);
 assert.equal(await page.evaluate(()=>PhoneScreenTimeImport.record()?.apps[0].seconds),11040.155);
 
+}else{assert.equal(await page.locator('#cou_shortcut_screen_time').count(),0);assert.equal(await page.locator('#cou_screen_cloud').count(),1);}
+
 await page.evaluate(()=>{
- S.me.locked=false;document.querySelector('#gate').style.display='none';S.couple.companion.linked=true;const c=getC(S.couple.cid);const p=NorthPublicRuntime.profile();if(p)p.target='fixture-cloud-owner';
+ S.me.locked=false;const gate=document.querySelector('#gate');if(gate)gate.style.display='none';S.couple.companion.linked=true;const c=getC(S.couple.cid);const p=NorthPublicRuntime.profile();if(p)p.target='fixture-cloud-owner';
  uiConfirm=async()=>true;window.__screenReadCount=0;
  PhoneShortcuts.request=async(action,body,auth)=>{
   if(action==='screen_save')return{ok:true,url:'https://cloud.example/functions/v1/phone-shortcuts',token:'a'.repeat(64)};
@@ -56,5 +59,5 @@ assert.equal(await page.evaluate(()=>PhoneScreenTimeImport.cloudPrompt({id:'fore
 await page.evaluate(()=>PhoneScreenTimeImport.cloudRevoke());
 assert(await page.evaluate(()=>!buildSystem(getC(S.couple.cid)).includes('快捷指令云端时长')));
 
-assert.deepEqual(errors,[]);console.log(JSON.stringify({privateApp,publicIsolation:true,entry:true,sharedHistory:true,shortcutDedup:true,screenImport:true,screenCloudSetupPullRevoke:true,persistedAfterReload:true,pageErrors:0}));await page.close();}
+assert.deepEqual(errors,[]);console.log(JSON.stringify({privateApp,publicIsolation:true,entry:true,sharedHistory:true,shortcutDedup:true,screenImport:privateApp,manualImportRemoved:!privateApp,screenCloudSetupPullRevoke:true,persistedAfterReload:true,pageErrors:0}));await page.close();}
 }finally{await browser.close();server.close();}})().catch(e=>{console.error(e);server.close();process.exitCode=1;});
