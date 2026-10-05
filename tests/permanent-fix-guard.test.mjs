@@ -30,9 +30,9 @@ const count = (source, marker) => source.split(marker).length - 1;
 // same commit that syncs it.
 const PERMANENT_FIXES = [
   {release:"本地候选",scope:"both",least:1,name:"已有好友刷新补齐消息且保留历史并去重",marker:"if(n>(counts.get(k)||0)){existing.push(m);ch=true;}"},
-  {release:"v1574/v1575",scope:"both",least:1,name:"角色微信按消息作者同步气泡设置",marker:"const c=getC(cid),look=bubbleLook(c,!mine)"},
-  {release:"v1574/v1575",scope:"both",least:1,name:"角色密码拨号盘独立背景与恢复入口",marker:"function spyAppearanceLockWallpaperReset(id)"},
-  {release:"v1574/v1575",scope:"both",least:1,name:"角色手机名字原地编辑并支持完成与取消",marker:"function spyAppearanceNameKey(event,id)"},
+  {release:"v1576/v1577",scope:"both",least:1,name:"角色微信按消息作者同步气泡设置",marker:"const c=getC(cid),look=bubbleLook(c,!mine)"},
+  {release:"v1576/v1577",scope:"both",least:1,name:"角色密码拨号盘独立背景与恢复入口",marker:"function spyAppearanceLockWallpaperReset(id)"},
+  {release:"v1576/v1577",scope:"both",least:1,name:"角色手机名字原地编辑并支持完成与取消",marker:"function spyAppearanceNameKey(event,id)"},
   {release:"v1566/v1567",scope:"both",least:1,name:"角色微信图片表情付款共用玩家聊天及代发身份",marker:"function hisChatAppend(cid,fid,m)"},
   {release:"v1566/v1567",scope:"both",least:1,name:"角色微信付款只扣角色钱包",marker:"function hisPaySendSubmit(s,amount)"},
   {release:"v1566/v1567",scope:"both",least:1,name:"角色付款账本独立于消息且超时原路退还",marker:"function hisPaymentsExpire()"},
@@ -1438,3 +1438,6 @@ test('independent girl/pet home controls and first-run custom-icon protection re
 test('all home icons retain the approved hollow glass highlight in both runtimes',()=>{for(const prefix of ['',PRIVATE_DIR]){const css=read(prefix+'glass-theme.css'),rim=css.match(/\.home \.app \.ic:after\{([^}]+)\}/)?.[1];assert(rim);assert(rim.includes('padding:.8px'));assert(rim.includes('mask-composite:exclude'));assert(rim.includes('pointer-events:none'));assert(!rim.includes('blur('));assert(css.includes('.ic.custom-app-icon{background:transparent!important}'));}});
 
 test('photo album keeps role likes permission-bound, independent favorites, safe metadata and category editors, and successful share returns library',()=>{for(const prefix of ['',PRIVATE_DIR]){const js=read(prefix+'photo-album.js'),app=read(prefix+'app.js');for(const marker of ['function photoAlbumHasLikes','async function photoAlbumUserLike','async function photoAlbumRoleLike','_photoAlbumRoleLikeBusy','shared=!!text.trim()','function photoAlbumCategoryHTML','async function photoAlbumCategorySave','function photoAlbumEditOpen','async function photoAlbumEditSave','function photoAlbumCommentRefresh','photoAlbumLikeBadge'])assert(js.includes(marker));assert(js.includes("groups=[...PHOTO_ALBUM_GROUPS,'我的喜欢']"));assert(js.includes('options.keepViewer'));assert(js.includes("_photoAlbumTab='library'"));assert(app.includes('content=await photoAlbumConsumeLikes(content,c,outcome,userText)'));}});
+
+
+test('message banners keep scoped swipe dismissal and nearby has complete couple lock entry guards in both runtimes',()=>{for(const prefix of ['',PRIVATE_DIR]){const app=read(prefix+'app.js'),html=read(prefix+'小手机.html');for(const marker of ['function msgBannerGesture(e)','_msgBannerNoClickUntil','nearby:()=>go(\'wxnearby\')','wxnearby:\'nearby\'','function wxNearbyBlocked()','if(wxNearbyBlocked())return;','if(p===\'wxnearby\'&&wxNearbyBlocked())return'])assert(app.includes(marker));assert(html.includes('onpointermove="msgBannerGesture(event)"'));assert(html.includes('touch-action:none;user-select:none'));}});

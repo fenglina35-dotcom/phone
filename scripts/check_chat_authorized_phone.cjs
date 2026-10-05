@@ -22,6 +22,33 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
    fetchT=async(url,opt)=>{if(!String(url).startsWith('https://fake.invalid/'))return{ok:true,json:async()=>false,text:async()=>'false'};testCalls.push(JSON.parse(opt.body));return{ok:true,json:async()=>({choices:[{message:{content:fixtureRaw},finish_reason:'stop'}]})};};
    openChat(role.id);
   });
+  // Exercise actual notification handlers and nearby permission controls in both HTML runtimes.
+  const controls=await page.evaluate(()=>{
+   const role=getC(testId);home();showMsgBanner(role,{type:'text',content:'手势测试消息'});
+   const b=document.getElementById('msgBanner'),event=(type,x,y)=>b.dispatchEvent(new PointerEvent(type,{bubbles:true,cancelable:true,pointerId:17,isPrimary:true,pointerType:'touch',clientX:x,clientY:y}));
+   const before=JSON.stringify(msgs(testId));event('pointerdown',100,80);event('pointermove',101,45);event('pointerup',101,45);b.click();
+   const dismissed=!b.classList.contains('show')&&cur().p==='home'&&JSON.stringify(msgs(testId))===before;
+   showMsgBanner(role,{type:'text',content:'新的横幅'});event('pointerdown',100,80);event('pointermove',145,75);event('pointerup',145,75);b.click();
+   const horizontal=b.classList.contains('show')&&cur().p==='home';
+   _msgBannerNoClickUntil=0;event('pointerdown',100,80);event('pointerup',100,80);b.click();const tap=cur().p==='chat'&&cur().id===role.id;
+   home();showMsgBanner(role,{type:'text',content:'旧通知'});event('pointerdown',100,80);showMsgBanner(role,{type:'text',content:'后到的新通知'});event('pointermove',100,30);
+   const newNoticeSafe=b.classList.contains('show');b.className='msgbanner';clearTimeout(_bannerT);
+   S.couple={cid:role.id,grant:{},locks:{}};
+   applyControlTags('[锁定|附近的人]',role,role.id,'','');const defaultDenied=!appLocked('nearby');
+   coupleGrant('nearby');const permission=!!S.couple.grant.nearby;
+   applyControlTags('[锁定|附近的人]',{id:'other-role'},'other-role','','');const otherDenied=!appLocked('nearby');
+   applyControlTags('[锁定|附近的人]',role,role.id,'','');const locked=appLocked('nearby');
+   home();wxDiscoverOpen('nearby');const discoverBlocked=cur().p!=='wxnearby';home();go('wxnearby');const routeBlocked=cur().p!=='wxnearby';
+   const callsBefore=testCalls.length;wxNearbyRefresh();const refreshBlocked=testCalls.length===callsBefore&&!_wxNearbyBusy;const beforeRequests=wxNearbyState().requests.length;wxNearbyAdd('missing');const addBlocked=wxNearbyState().requests.length===beforeRequests;
+   const lockedMarkup=renderWxNearby();const pageBlocked=lockedMarkup.includes('已被锁定')&&!lockedMarkup.includes('wx-nearby-list');
+   applyControlTags('[解锁|附近的人]',role,role.id,'','');wxDiscoverOpen('nearby');const unlocked=!appLocked('nearby')&&cur().p==='wxnearby'&&curAppKey()==='nearby';
+   applyControlTags('[锁定|附近的人]',role,role.id,'','');const wasBlocked=role.blocked;role.blocked=true;coupleGrant('nearby');role.blocked=wasBlocked;const revoked=!S.couple.grant.nearby&&!appLocked('nearby');
+   const snapshot=remoteControlCouplePermissions().find(x=>x.key==='grant:nearby');
+   S.couple={cid:role.id};openChat(role.id);
+   return{dismissed,horizontal,tap,newNoticeSafe,defaultDenied,permission,otherDenied,locked,discoverBlocked,routeBlocked,refreshBlocked,addBlocked,pageBlocked,unlocked,revoked,snapshot:!!snapshot};
+  });
+  for(const [key,value] of Object.entries(controls))assert.equal(value,true,JSON.stringify({privateApp,key,controls}));
+  console.log(JSON.stringify({privateApp,notificationSwipeAndNearbyControls:controls}));
   for(const granted of [false,true])for(const raw of [false,true])for(const populated of [false,true]){
    const result=await page.evaluate(async({granted,raw,populated})=>{
     const role=getC(testId);role.spy={granted,loc:false};S.settings.modelOutputUnfiltered=raw;
@@ -59,9 +86,9 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
   assert.deepEqual(await page.evaluate(()=>msgs(testId).map(m=>m.content)),['先生N','我在，慢慢说。']);
   const auto=await page.evaluate(async()=>{testCalls.length=0;fixtureRaw='刚才那些话我都记着呢。';S._spySeen={};const before=msgs(testId).length,oldSleep=sleep;sleep=async()=>{};try{const result=await doSpyViewCore(testId,true,{});return{result,calls:testCalls.length,delivered:msgs(testId).slice(before).some(m=>m.role==='assistant'&&m.content==='刚才那些话我都记着呢。')};}finally{sleep=oldSleep;}});
   assert.equal(auto.calls,1,JSON.stringify(auto));assert(auto.delivered,JSON.stringify(auto));
-  await page.evaluate(()=>saveNow());await page.goto(page.url().split('?')[0]);await page.waitForFunction(()=>window.__northBootReady);
-  const restored=await page.evaluate(()=>{const role=S.contacts[0];return{granted:role.spy.granted,reply:msgs(role.id).some(m=>m.content==='我在，慢慢说。'),sys:buildSystem(role).length};});
-  assert(restored.granted&&restored.reply&&restored.sys>0);assert.deepEqual(errors,[]);
+  await page.evaluate(async()=>{S.couple.grant={nearby:true};S.couple.locks={nearby:{pwd:'3456',time:Date.now()}};await saveNowAsync();});await page.goto(page.url().split('?')[0]);await page.waitForFunction(()=>window.__northBootReady);
+  const restored=await page.evaluate(()=>{const role=S.contacts[0];return{granted:role.spy.granted,reply:msgs(role.id).some(m=>m.content==='我在，慢慢说。'),sys:buildSystem(role).length,nearbyPermission:!!S.couple.grant.nearby,nearbyLock:appLocked('nearby')};});
+  assert(restored.granted&&restored.reply&&restored.sys>0&&restored.nearbyPermission&&restored.nearbyLock);assert.deepEqual(errors,[]);
   console.log(JSON.stringify({privateApp,composerAndManualReply:true,automaticInspection:auto,persisted:true}));
   console.log(JSON.stringify({privateApp,refreshAndSinceAndRevocation:true,pageErrors:errors.length}));
   await page.close();

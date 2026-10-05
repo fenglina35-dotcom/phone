@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1575'){
+if(window.__NORTH_SHELL_BUILD__!=='1577'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -625,7 +625,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1575 · 小鱼旅行 · 旅行服务';
+const APP_VER='v1577 · 小鱼旅行 · 旅行服务';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2013,6 +2013,33 @@ function appNotify(title,body,opt){if(!document.hidden)return;opt=opt||{};if(!('
   try{if(navigator.setAppBadge)navigator.setAppBadge(1).catch(()=>{});}catch(e){}
   const fallback=()=>{try{const n=new Notification(title,nopt);n.onclick=()=>{try{window.focus();appRouteFromNotify(Object.assign({type:'open'},data));n.close();}catch(e){}};}catch(e){}};
   registerSW().then(reg=>{if(reg&&reg.showNotification)reg.showNotification(title,nopt).catch(fallback);else fallback();});}
+let _msgBannerGesture=null,_msgBannerNoClickUntil=0;
+function msgBannerGesture(e){
+  const b=e.currentTarget;if(!b)return;
+  if(e.type==='pointerdown'){
+    if(!b.classList.contains('show')||e.isPrimary===false||(e.pointerType==='mouse'&&e.button!==0))return;
+    _msgBannerGesture={id:e.pointerId,x:e.clientX,y:e.clientY,body:b.innerHTML,moved:false};
+    try{b.setPointerCapture(e.pointerId);}catch(_){}return;
+  }
+  const g=_msgBannerGesture;if(!g||g.id!==e.pointerId)return;
+  if(!b.classList.contains('show')||b.innerHTML!==g.body){_msgBannerGesture=null;return;}
+  const dx=e.clientX-g.x,dy=e.clientY-g.y;
+  if(Math.abs(dx)>8||Math.abs(dy)>8)g.moved=true;
+  if(e.type==='pointermove'&&dy<=-28&&-dy>Math.abs(dx)*1.2){
+    _msgBannerNoClickUntil=Date.now()+500;_msgBannerGesture=null;
+    clearTimeout(_bannerT);b.className='msgbanner';b.onclick=null;
+    if(e.cancelable)e.preventDefault();return;
+  }
+  if(e.type==='pointerup'||e.type==='pointercancel'){
+    if(g.moved||e.type==='pointercancel')_msgBannerNoClickUntil=Date.now()+500;
+    _msgBannerGesture=null;
+  }
+}
+if(typeof document!=='undefined')document.addEventListener('click',function(e){
+  if(Date.now()<_msgBannerNoClickUntil&&e.target&&e.target.closest&&e.target.closest('#msgBanner')){
+    e.preventDefault();e.stopImmediatePropagation();
+  }
+},true);
 function showMsgBanner(c,msg){
   lockNotify(c.remark||c.name,previewOf(msg),{avatar:c.avatar,target:{type:'chat',id:c.id}});
   if(lockVisible())return;
@@ -2562,7 +2589,7 @@ let stack=[{p:'home'}];
 let wxTab='chats';
 let _wxQuickOpen=false;
 let _scrollBottomOnce={};
-function go(p,params){stack.push(Object.assign({p},params));render();}
+function go(p,params){if(p==='wxnearby'&&wxNearbyBlocked())return;stack.push(Object.assign({p},params));render();}
 function back(){const leaving=cur();if(leaving&&leaving.p==='wxscan'&&window.wxScanStop)window.wxScanStop();if(stack.length>1){stack.pop();render();}}
 function home(){if(window.wxScanStop)window.wxScanStop();window._wxReturnToDiscover=false;stack=[{p:'home'}];render();}
 function cur(){return stack[stack.length-1];}
@@ -4044,15 +4071,15 @@ function appIconEditor(){S.me.appIcons=S.me.appIcons||{};
    ${HOMEAPPS.map(a=>`<div class="it"><span>${S.me.appIcons[a[0]]?'':a[1]} ${a[2]}</span><span class="v">${S.me.appIcons[a[0]]?`<img src="${S.me.appIcons[a[0]]}" style="width:26px;height:26px;border-radius:6px;object-fit:cover;vertical-align:middle">`:''}<button class="minibtn" style="margin-left:6px" onclick="setAppIcon('${a[0]}')">${S.me.appIcons[a[0]]?'换':'上传'}</button>${S.me.appIcons[a[0]]?`<button class="minibtn" style="margin-left:4px" onclick="delete S.me.appIcons['${a[0]}'];save();appIconEditor();render()">复位</button>`:''}</span></div>`).join('')}
    <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function setAppIcon(key){pickFile('image/*',async f=>{S.me.appIcons=S.me.appIcons||{};S.me.appIcons[key]=await compressSquare(f,256,.84);defaultBeautyMark();save();appIconEditor();render();toast('图标已换 🎨');});}
-const LOCKABLE={browser:'浏览器',moments:'朋友圈',spy:'查他手机',shop:'购物',calendar:'日历',x:'X',douyin:'抖音',food:'外卖',games:'游戏大厅',mail:'信箱',phoneapp:'电话',offline:'线下约会',roleplay:'角色扮演',pixelhome:'像素少女',pet:'电子宠物',music:'音乐',cinema:'放映室',travel:'小鱼旅行',album:'相册'};
+const LOCKABLE={browser:'浏览器',moments:'朋友圈',spy:'查他手机',shop:'购物',calendar:'日历',x:'X',douyin:'抖音',food:'外卖',games:'游戏大厅',mail:'信箱',phoneapp:'电话',offline:'线下约会',roleplay:'角色扮演',pixelhome:'像素少女',pet:'电子宠物',music:'音乐',cinema:'放映室',travel:'小鱼旅行',album:'相册',nearby:'附近的人'};
 function appLocked(key){return !!(S.couple&&S.couple.locks&&S.couple.locks[key]);}
 function openApp(key){if(S.jail&&S.jail.active){toast('你被关在禁闭室里…出不去');go('jail');return;}if(appLocked(key)){toast('「'+(LOCKABLE[key]||key)+'」被ta锁了，去情侣空间求他解开');go('couple');return;}if(key==='mail'){if(lockClearTarget({type:'mail'},true))save(500);}else if(key==='x'){if(lockClearTarget({type:'x'},true))save(500);}
-   ({album:()=>go('album'),browser:()=>go('browser'),moments:()=>go('wxmoment'),spy:openSpy,shop:()=>go('shop'),calendar:()=>go('calendar'),x:openX,douyin:openDouyin,food:()=>go('food'),games:openGames,mail:()=>go('mail'),phoneapp:()=>go('phoneapp'),offline:openOfflineMenu,roleplay:()=>go('rphub'),tale:taleStart,dread:dreadStart,pixelhome:openPixelHome,pet:openPetGame,music:openMusic,cinema:()=>{cinemaInit();go('cinema');},travel:()=>{tvInit();go('travel');}}[key]||(()=>{}))();}
+   ({nearby:()=>go('wxnearby'),album:()=>go('album'),browser:()=>go('browser'),moments:()=>go('wxmoment'),spy:openSpy,shop:()=>go('shop'),calendar:()=>go('calendar'),x:openX,douyin:openDouyin,food:()=>go('food'),games:openGames,mail:()=>go('mail'),phoneapp:()=>go('phoneapp'),offline:openOfflineMenu,roleplay:()=>go('rphub'),tale:taleStart,dread:dreadStart,pixelhome:openPixelHome,pet:openPetGame,music:openMusic,cinema:()=>{cinemaInit();go('cinema');},travel:()=>{tvInit();go('travel');}}[key]||(()=>{}))();}
 
 /* ---------- 软件使用时长 / 限额倒计时（只对授权的软件生效） ---------- */
 // 把当前所在页面映射到 LOCKABLE 的 appKey；不在任何受控软件里返回 null
 function curAppKey(){const p=cur().p;
-  const map={album:'album',aiaccount:'album',browser:'browser',wxmoment:'moments',spy:'spy',shop:'shop',shopcs:'shop',calendar:'calendar',food:'food',mail:'mail',phoneapp:'phoneapp',phonesms:'phoneapp',phonecontact:'phoneapp',phonecall:'phoneapp',gameshub:'games',pixelhome:'pixelhome',pet:'pet',gs:'games',drawguess:'games',heartquiz:'games',beadstudio:'games',uc:'games',mgroom:'games',offline:'offline',off:'offline',rphub:'roleplay',rpset:'roleplay',rp:'roleplay',tale:'games',dread:'games',music:'music',cinema:'cinema',cinemawatch:'cinema',cinemaread:'cinema',x:'x',xtweet:'x',xdm:'x',xuser:'x',dy:'douyin',dydm:'douyin',dyuser:'douyin',dywork:'douyin'};
+  const map={wxnearby:'nearby',album:'album',aiaccount:'album',browser:'browser',wxmoment:'moments',spy:'spy',shop:'shop',shopcs:'shop',calendar:'calendar',food:'food',mail:'mail',phoneapp:'phoneapp',phonesms:'phoneapp',phonecontact:'phoneapp',phonecall:'phoneapp',gameshub:'games',pixelhome:'pixelhome',pet:'pet',gs:'games',drawguess:'games',heartquiz:'games',beadstudio:'games',uc:'games',mgroom:'games',offline:'offline',off:'offline',rphub:'roleplay',rpset:'roleplay',rp:'roleplay',tale:'games',dread:'games',music:'music',cinema:'cinema',cinemawatch:'cinema',cinemaread:'cinema',x:'x',xtweet:'x',xdm:'x',xuser:'x',dy:'douyin',dydm:'douyin',dyuser:'douyin',dywork:'douyin'};
   if(map[p])return map[p];
   if(p==='wechat'&&wxTab==='moments')return 'moments';
   return null;}
@@ -8320,10 +8347,10 @@ function wxDiscover(){return `<div class="wx-discover-list">
   <section>${wxDiscoverRow('channels','视频号',"wxDiscoverOpen('channels')",'douyin')}</section>
   <section>${wxDiscoverRow('music','听一听',"wxDiscoverOpen('music')",'music')}</section>
   <section>${wxDiscoverRow('cinema','看一看',"wxDiscoverOpen('cinema')",'cinema')}${wxDiscoverRow('search','搜一搜',"wxDiscoverOpen('browser')",'browser')}</section>
-  <section>${wxDiscoverRow('nearby','附近的人',"wxDiscoverOpen('nearby')",'', '发现匿名新朋友')}</section>
+  <section>${wxDiscoverRow('nearby','附近的人',"wxDiscoverOpen('nearby')",'nearby', '发现匿名新朋友')}</section>
   <section>${wxDiscoverRow('games','游戏',"wxDiscoverOpen('games')",'games')}</section>
   </div>`;}
-function wxDiscoverOpen(kind){if(kind==='nearby'){go('wxnearby');return;}if(kind==='channels'){if(appLocked('douyin'))return;_dyFromWx=true;if(dyInit())save(0);dyTab='feed';go('dy',{from:'wechat'});if(!S.dy.feed.length)dyGenFeed('',true);return;}const map={moments:'moments',music:'music',cinema:'cinema',browser:'browser',games:'games'};if(map[kind]){window._wxReturnToDiscover=true;openApp(map[kind]);}}
+function wxDiscoverOpen(kind){if(kind==='nearby'){openApp('nearby');return;}if(kind==='channels'){if(appLocked('douyin'))return;_dyFromWx=true;if(dyInit())save(0);dyTab='feed';go('dy',{from:'wechat'});if(!S.dy.feed.length)dyGenFeed('',true);return;}const map={moments:'moments',music:'music',cinema:'cinema',browser:'browser',games:'games'};if(map[kind]){window._wxReturnToDiscover=true;openApp(map[kind]);}}
 function renderWxLive(){return `<div class="wx-directory-head">${wxDirectoryNav('直播')}</div><div class="scroll wx-directory-scroll wx-live-coming"><div class="wx-live-orbit"><i>${wxDiscoverIcon('live')}</i></div><b>直播功能开发中</b><p>入口已经保留，后续会在这里接入真实直播内容。</p><button type="button" onclick="back()">返回发现</button></div>`;}
 function renderWxMomentFeed(){return `<div class="wx-directory-head">${wxDirectoryNav('朋友圈',`<button type="button" class="r wx-dir-plus" onclick="momentTools()">＋</button>`)}</div><div class="scroll wx-directory-scroll wx-moment-feed" id="wxMomentScroll">${wxMoments()}</div>`;}
 
@@ -8345,13 +8372,14 @@ function wxNearbyNormalize(x,i){x=x&&typeof x==='object'?x:{};const base=WX_NEAR
 function wxNearbyAvatar(){return `<span class="wx-nearby-avatar"><svg viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="15" r="8"/><path d="M8 39c1-10 6-14 14-14s13 4 14 14"/></svg></span>`;}
 function wxNearbyRequest(personId){return wxNearbyState().requests.slice().reverse().find(x=>x&&x.personId===personId)||null;}
 function wxNearbyCard(p){const req=wxNearbyRequest(p.id),pending=req&&req.status==='pending',accepted=req&&req.status==='accepted',click=accepted&&req.contactId?`wxNearbyOpen('${req.id}')`:`wxNearbyAdd('${p.id}')`;return `<article class="wx-nearby-card${pending?' pending':accepted?' accepted':''}">${wxNearbyAvatar()}<div class="wx-nearby-copy"><b>${esc(p.nickname)}</b><span>${esc(p.gender)} · ${esc(p.distance)}</span><p>${esc(p.signature)}</p></div><button type="button" ${pending?'disabled':''} onclick="${click}">${pending?'等待通过':accepted?'发消息':'添加'}</button></article>`;}
-function renderWxNearby(){wxNearbySweep(true);const d=wxNearbyState();if(!d.people.length){d.people=wxNearbyFallbackPeople(d.refreshSeq);save(500);}return `<div class="wx-directory-head">${wxDirectoryNav('附近的人',`<button type="button" class="r wx-dir-text" onclick="wxNearbyRefresh()" ${_wxNearbyBusy?'disabled':''}>${_wxNearbyBusy?'刷新中':'刷新'}</button>`)}</div><div class="scroll wx-directory-scroll wx-nearby-page" id="wxNearbyScroll"><div class="wx-nearby-hero"><i>${wxDiscoverIcon('nearby')}</i><span><b>附近的新朋友</b><small>匿名资料 · 添加后约 10 秒自动通过</small></span></div><div class="wx-nearby-list">${d.people.map(wxNearbyCard).join('')}</div><p class="wx-nearby-foot">不会展示真实照片和精确位置。成为好友后会出现在微信通讯录中。</p></div>`;}
-async function wxNearbyRefresh(){if(_wxNearbyBusy)return;const d=wxNearbyState(),before=wxNearbyFingerprint(d.people),seq=++d.refreshSeq;_wxNearbyBusy=true;render();let people=[];try{const arr=await aiGen([{role:'system',content:'你是微信“附近的人”匿名资料生成器。生成12个彼此不同、像真实普通网友的匿名资料：必须混合友善、慢热、直率、古怪、功利、推销、边界感差和纯骚扰等类型，不能全部温柔友好。骚扰型可以烦人、重复搭讪、催回复或试探边界，但不得出现人身威胁、仇恨、违法、精确定位或隐私泄露。不给真实姓名、电话、住址、公司，不要明星和现有角色。只输出JSON数组：[{"nickname":"匿名昵称","gender":"男/女/保密","distance":"120m到5km","signature":"一句自然个签","persona":"成为好友后会持续保持的性格、动机、说话方式和边界表现，不编共同经历","greeting":"通过好友后的第一句"}]'},{role:'user',content:'换一批附近的匿名用户。好坏混合、来意混合、性格明显不同，避免模板化。刷新批次：'+seq}],{max:2200,aux:true},parseArr);people=(arr||[]).slice(0,12).map(wxNearbyNormalize);}catch(_){}if(people.length<8||wxNearbyFingerprint(people)===before)people=wxNearbyFallbackPeople(seq);d.people=people;_wxNearbyBusy=false;save();if(cur().p==='wxnearby')render();toast('已换一批不同性格的附近的人');}
-function wxNearbyAdd(id){const d=wxNearbyState(),p=d.people.find(x=>x.id===id);if(!p||wxNearbyRequest(id))return;const req={id:'wnr_'+uid(),personId:id,person:Object.assign({},p),status:'pending',time:Date.now(),acceptAt:Date.now()+10000,contactId:''};d.requests.push(req);save();render();toast('好友申请已发送，等待对方通过');setTimeout(()=>wxNearbySweep(false),10050);}
+function wxNearbyBlocked(){if(!appLocked('nearby'))return false;toast('「附近的人」已被ta锁定，去情侣空间求ta解开');return true;}
+function renderWxNearby(){if(appLocked('nearby'))return `<div class="wx-directory-head">${wxDirectoryNav('附近的人','')}</div><div class="empty">附近的人已被锁定，请去情侣空间求ta解开</div>`;wxNearbySweep(true);const d=wxNearbyState();if(!d.people.length){d.people=wxNearbyFallbackPeople(d.refreshSeq);save(500);}return `<div class="wx-directory-head">${wxDirectoryNav('附近的人',`<button type="button" class="r wx-dir-text" onclick="wxNearbyRefresh()" ${_wxNearbyBusy?'disabled':''}>${_wxNearbyBusy?'刷新中':'刷新'}</button>`)}</div><div class="scroll wx-directory-scroll wx-nearby-page" id="wxNearbyScroll"><div class="wx-nearby-hero"><i>${wxDiscoverIcon('nearby')}</i><span><b>附近的新朋友</b><small>匿名资料 · 添加后约 10 秒自动通过</small></span></div><div class="wx-nearby-list">${d.people.map(wxNearbyCard).join('')}</div><p class="wx-nearby-foot">不会展示真实照片和精确位置。成为好友后会出现在微信通讯录中。</p></div>`;}
+async function wxNearbyRefresh(){if(wxNearbyBlocked()||_wxNearbyBusy)return;const d=wxNearbyState(),before=wxNearbyFingerprint(d.people),seq=++d.refreshSeq;_wxNearbyBusy=true;render();let people=[];try{const arr=await aiGen([{role:'system',content:'你是微信“附近的人”匿名资料生成器。生成12个彼此不同、像真实普通网友的匿名资料：必须混合友善、慢热、直率、古怪、功利、推销、边界感差和纯骚扰等类型，不能全部温柔友好。骚扰型可以烦人、重复搭讪、催回复或试探边界，但不得出现人身威胁、仇恨、违法、精确定位或隐私泄露。不给真实姓名、电话、住址、公司，不要明星和现有角色。只输出JSON数组：[{"nickname":"匿名昵称","gender":"男/女/保密","distance":"120m到5km","signature":"一句自然个签","persona":"成为好友后会持续保持的性格、动机、说话方式和边界表现，不编共同经历","greeting":"通过好友后的第一句"}]'},{role:'user',content:'换一批附近的匿名用户。好坏混合、来意混合、性格明显不同，避免模板化。刷新批次：'+seq}],{max:2200,aux:true},parseArr);people=(arr||[]).slice(0,12).map(wxNearbyNormalize);}catch(_){}if(people.length<8||wxNearbyFingerprint(people)===before)people=wxNearbyFallbackPeople(seq);d.people=people;_wxNearbyBusy=false;save();if(cur().p==='wxnearby')render();toast('已换一批不同性格的附近的人');}
+function wxNearbyAdd(id){if(wxNearbyBlocked())return;const d=wxNearbyState(),p=d.people.find(x=>x.id===id);if(!p||wxNearbyRequest(id))return;const req={id:'wnr_'+uid(),personId:id,person:Object.assign({},p),status:'pending',time:Date.now(),acceptAt:Date.now()+10000,contactId:''};d.requests.push(req);save();render();toast('好友申请已发送，等待对方通过');setTimeout(()=>wxNearbySweep(false),10050);}
 function initialFriendInnerThought(c,opt){if(!c||String(c.innerThought||'').trim())return false;opt=opt||{};const readd=!!opt.readd,nearby=String(opt.kind||c.friendOrigin&&c.friendOrigin.kind||'')==='nearby';c.innerThought=readd?'终于重新加回好友，心里还有些话想慢慢说清楚。':nearby?'刚通过好友，想先认真认识你。':'刚正式加上好友，对接下来的相处有点期待。';c.innerThoughtAt=+opt.at||Date.now();return true;}
 function wxNearbyContact(req){if(req.contactId){const old=getC(req.contactId);if(old)return old;}const old=(S.contacts||[]).find(c=>c&&c.friendOrigin&&c.friendOrigin.nearbyRequestId===req.id);if(old)return old;const p=req.person||{},now=Date.now(),c={id:cid(),name:String(p.nickname||'附近的人').slice(0,20),avatar:'👤',remark:'',wxid:genWxid(),signature:String(p.signature||'').slice(0,60),persona:String(p.persona||'你是通过微信附近的人认识的普通网友，真实、慢热、尊重边界。').slice(0,800),greeting:String(p.greeting||'你好，刚刚通过了你的好友申请。').slice(0,80),relation:'附近认识的朋友',gender:['男','女'].includes(p.gender)?p.gender:'',star:false,pinned:false,blocked:false,proactive:{enabled:false,start:9,end:23,times:2},chatBg:'',createdAt:now,deleted:false,_friendPending:false,_friendAcceptedAt:now};c.friendOrigin={kind:'nearby',source:'附近的人',intent:'从陌生人开始认识',requestMsg:'我想添加你为朋友',acceptedAt:now,everAdded:true,nearbyRequestId:req.id};initialFriendInnerThought(c,{kind:'nearby',at:now});S.contacts.push(c);msgs(c.id).push({role:'user',type:'sys',content:'对方通过了你从「附近的人」发出的好友申请',time:now,id:uid()});return c;}
 function wxNearbySweep(silent){const d=wxNearbyState(),now=Date.now(),due=d.requests.filter(x=>x&&x.status==='pending'&&(+x.acceptAt||0)<=now);if(!due.length)return false;const accepted=[];due.forEach(req=>{const c=wxNearbyContact(req);req.status='accepted';req.acceptedAt=now;req.contactId=c.id;accepted.push(c);});save();if(!silent&&cur().p==='wxnearby')render();if(!silent){if(S.settings.sound)playDing();toast(accepted.length>1?accepted.length+' 位附近好友已通过申请':(accepted[0].remark||accepted[0].name)+' 已通过好友申请');}accepted.forEach(c=>setTimeout(()=>scheduleReply(c.id,'[系统：你刚刚通过了'+S.me.name+'从微信“附近的人”发来的好友申请。你们此前没有共同经历，从普通陌生人开始；按你的人设发一条自然、克制、能继续认识的第一句微信，不要说系统或AI，不要动作描写。]'),650));return true;}
-function wxNearbyOpen(rid){const req=wxNearbyState().requests.find(x=>x.id===rid);if(req&&req.contactId)openChat(req.contactId);}
+function wxNearbyOpen(rid){if(wxNearbyBlocked())return;const req=wxNearbyState().requests.find(x=>x.id===rid);if(req&&req.contactId)openChat(req.contactId);}
 function openWxSearch(){go('wxsearch');setTimeout(()=>{const i=$('#wxs_in');if(i)i.focus();},80);}
 function openChatSearch(id){go('wxsearch',{id});setTimeout(()=>{const i=$('#wxs_in');if(i)i.focus();},80);}
 function renderWxSearch(id){const c=id&&getC(id),scope=c?'你和'+(c.remark||c.name)+'的聊天记录':'你和所有角色的聊天记录';
@@ -15386,7 +15414,7 @@ function badMoodDodge(content){let t=(''+(content||'')).replace(/[\[【]\s*心�
 function splitActions(line){const out=[];const re=/[（(【][^）)】]*[）)】]/g;let last=0,m;while((m=re.exec(line))){const before=line.slice(last,m.index).trim();if(before)out.push(before);out.push(m[0].trim());last=re.lastIndex;}const tail=line.slice(last).trim();if(tail)out.push(tail);return out.length?out:[line];}
 const TAGWORDS='心情值|心情|内心|换背景|心声彩蛋|拍一拍|记住|闹钟|日程|婚礼日程|监督目标|目标完成|发朋友圈|发推|发抖音|点外卖|语音|表情|收藏表情|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|约会|登录微信|删好友|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|同意游戏|拒绝游戏|你画我猜|心动审判|引用|换气泡|改日记密码|改密码|要求报备|要求定位|要求照片|关系';
 const APPNAME2KEY={'像素少女':'pixelhome','电子宠物':'pet','浏览器':'browser','搜索':'browser','上网':'browser','百度':'browser','朋友圈':'moments','动态':'moments','查他手机':'spy','查岗':'spy','查手机':'spy','购物':'shop','淘宝':'shop','商城':'shop','日历':'calendar','日程':'calendar','x':'x','X':'x','推特':'x','微博':'x','推':'x','抖音':'douyin','短视频':'douyin','刷视频':'douyin','刷抖音':'douyin','外卖':'food','点餐':'food','游戏':'games','游戏大厅':'games','打游戏':'games','信箱':'mail','邮箱':'mail','邮件':'mail','电话':'phoneapp','电话短信':'phoneapp','短信':'phoneapp','信息':'phoneapp','通讯录':'phoneapp','拨号':'phoneapp','来电':'phoneapp','通话':'phoneapp','线下约会':'offline','线下':'offline','约会':'offline','角色扮演':'roleplay','角色扮演软件':'roleplay','扮演':'roleplay','剧情':'roleplay','play':'roleplay','PLAY':'roleplay','规则怪谈':'tale','规则怪谈软件':'tale','怪谈':'tale','规则':'tale','惊悚抉择':'dread','惊悚抉择软件':'dread','惊悚选择':'dread','惊悚选择软件':'dread','恐怖选择':'dread','恐怖选择软件':'dread','惊辣选择':'dread','惊辣选择软件':'dread','精辣选择':'dread','精辣选择软件':'dread','抉择':'dread','音乐':'music','音乐软件':'music','听歌':'music','歌曲':'music','歌':'music','一起听':'music'};
-Object.assign(APPNAME2KEY,{'小鱼旅行':'travel','携程旅行':'travel','云程':'travel','云城':'travel'});
+Object.assign(APPNAME2KEY,{'附近的人':'nearby','微信附近的人':'nearby','小鱼旅行':'travel','携程旅行':'travel','云程':'travel','云城':'travel'});
 function genPwd(){return String(1000+Math.floor(Math.random()*9000));}
 /* 名称先查别名表，查不到再按 App 列表上显示的名字找（放映室、云程曾因漏在别名表里而永远锁不上）。 */
 function _appKeys(arg,pool,filt){if(/全部|所有|全锁|全/.test(arg))return pool.filter(filt);return arg.split(/[、,，\/\s]+/).map(x=>{const n=x.replace(/[「」『』"'《》]/g,'').trim();return APPNAME2KEY[n]||Object.keys(LOCKABLE).find(k=>LOCKABLE[k]===n);}).filter(k=>k&&filt(k));}
