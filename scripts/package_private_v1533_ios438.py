@@ -1,4 +1,4 @@
-"""Create the private v1577 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
+"""Create the private v1587 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
 
 Unlike the earlier packaging scripts, every file is read from the committed tree
 (``git cat-file`` against HEAD) instead of the working directory. The v1235/iOS356
@@ -23,10 +23,10 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "native/private-small-phone/XcodeProject/"
 BUNDLE = "PhoneCompanionTest/PhoneWeb.bundle/"
-PREFIX = "SmallPhone_v1577_iOS439_Private/"
-OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1577_iOS439.zip"
+PREFIX = "SmallPhone_v1587_iOS439_Private/"
+OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1587_iOS439.zip"
 
-WEB_VERSION = "1577"
+WEB_VERSION = "1587"
 MARKETING = "1.0.439"
 BUILD = "439"
 BRIDGE = "42"
@@ -645,13 +645,13 @@ def main() -> None:
     state["preserved"] = sorted((set(state["preserved"]) - {"v1344-daily-ledger-turn-evidence"}) | set(additions))
     state["retired"] = [{"file": BUNDLE+"daily-event-ledger.js", "commit": "a804f37a", "reason": "User requested removal; independent notes and existing data preserved."}, {"file": BUNDLE+"ai-account.js", "commit": "3708d8e1", "reason": "User requested AI account and internal speech/subtitle retirement, replaced by photo album; external interfaces retained."}]
     state["sourceCommit"] = text(git("rev-parse", "HEAD")).strip()
-    state["webSourceCommit"] = "e882562dd81d9d0b34d51b5bceed34a227b83e1b"
-    state["webVersion"] = "v1576"
+    state["webSourceCommit"] = state["sourceCommit"]
+    state["webVersion"] = "v1586"
     state["privateWeb"] = "v" + WEB_VERSION
     state["privateIOS"] = f"{MARKETING} ({BUILD})"
     state["lastDeliveredPackage"] = {"name": previous.name, "sha256": previous_sha, "sourceCommit": "beb14a18c8a1f163dd9b6afc2d48c8dc3d8f66bd"}
-    state["knownUnresolved"] = [x for x in state["knownUnresolved"] if not re.match(r"v\d+-mac-build", x)] + ["v1577-mac-build-signing-and-iphone-not-verified"]
-    state["validation"] = {"macBuildVerified": False, "realIPhoneVerified": False, "models": "HTTP simulated in browser gates", "nodeTests": {"passed": 3329, "failed": 0, "sourceCommit": state["webSourceCommit"]}, "authorizedChatBothRuntimes": True, "inheritedPreviousOverlay": True, "priorPackageManifestVerified": True, "nativePayloadUnchanged": True, "houseResourceFiles": len(cozy_files), "retiredFiles": sorted(retired)}
+    state["knownUnresolved"] = [x for x in state["knownUnresolved"] if not re.match(r"v\d+-mac-build", x)] + ["v1587-mac-build-signing-and-iphone-not-verified"]
+    state["validation"] = {"macBuildVerified": False, "realIPhoneVerified": False, "models": "HTTP simulated in browser gates", "nodeTests": {"passed": 3349, "failed": 0, "sourceCommit": state["webSourceCommit"]}, "authorizedChatBothRuntimes": True, "inheritedPreviousOverlay": True, "priorPackageManifestVerified": True, "nativePayloadUnchanged": True, "houseResourceFiles": len(cozy_files), "retiredFiles": sorted(retired)}
     app = text(files[BUNDLE + "app.js"])
     for marker in ("function hisChatMessageHTML(", "bubbleLook(c,!mine)", "bubbleIconFor(c,!mine)", "bubbleAvatarClass(c,!mine)", "function hisWxUtilityOpen(", "function hisWxFriendAvatar(", "function spyLockScreen(", "lockWallpaper", "_hisPaymentId", "_forged"):
         assert marker in app, "latest role WeChat/phone repair missing: " + marker
@@ -668,8 +668,8 @@ def main() -> None:
     css = text(files[BUNDLE + "glass-theme.css"])
     for marker in ("function statusBarColorSet(", "function homeVinylOpacitySet(", "function lockPullAppearanceSet(", ".vinyl-record:before{content:", "north-shell-custom", "function glassInnerAppearance(", "function appIconRimSet("):
         assert marker in css + text(files[BUNDLE + "app.js"]), "latest appearance fix missing: " + marker
-    recent = ROOT.parent / "最新私人版本覆盖包_v1575_iOS439.zip"
-    recent_sha = "afe34846bb83122923fd12e170277534c7a1d06771f96fd481815384bb73c725"
+    recent = ROOT.parent / "最新私人版本覆盖包_v1577_iOS439.zip"
+    recent_sha = "0f5564f687fd1f5cd0bdb4a09f32b35c195e416f4157522462816bf2e0c1260b"
     assert sha256(recent.read_bytes()).hexdigest() == recent_sha
     with ZipFile(recent) as old:
         recent_prefix = next(n for n in old.namelist() if n.endswith("/SOURCE_STATE.json"))[:-len("SOURCE_STATE.json")]
@@ -683,12 +683,13 @@ def main() -> None:
         if name not in {"SOURCE_STATE.json", "SHA256SUMS.json", "请在Mac编译前先读.md"} and not name.startswith(BUNDLE):
             assert files[name] == body, "unexpected native/signing change: " + name
     assert files[BUNDLE + "photo-album.js"] == git("show", "HEAD:photo-album.js")
-    for marker in ("photoAlbumHasLikes", "photoAlbumConsumeLikes", "photoAlbumCategorySave", "photoAlbumEditOpen", "likedByMe", "roleLikes"):
+    for marker in ("photoAlbumHasLikes", "photoAlbumConsumeLikes", "photoAlbumCategorySave", "photoAlbumEditOpen", "likedByMe", "roleLikes", "PHOTO_ALBUM_TRASH_MS", "photoAlbumTrashRestore", "photoAlbumTrashExpire"):
         assert marker in text(files[BUNDLE + "photo-album.js"]), marker
     state["lastDeliveredPackage"] = {"name": recent.name, "sha256": recent_sha, "sourceCommit": json.loads(recent_files["SOURCE_STATE.json"])["sourceCommit"]}
     for marker in ("function msgBannerGesture(e)", "_msgBannerNoClickUntil", "nearby:()=>go('wxnearby')", "wxnearby:'nearby'", "function wxNearbyBlocked()", "if(wxNearbyBlocked())return;"):
         assert marker in text(files[BUNDLE + "app.js"]), marker
     assert 'onpointermove="msgBannerGesture(event)"' in text(files[BUNDLE + "index.html"])
+    state["preserved"] = sorted(set(state["preserved"]) | {"v1582-single-photo-deletion", "v1584-delete-photo-facts", "v1586-recently-deleted-72h-restore"})
     state["validation"]["mostRecentOverlayManifestVerified"] = True
     files["SOURCE_STATE.json"] = json.dumps(state, ensure_ascii=False, indent=2).encode("utf-8")
     files["SHA256SUMS.json"] = json.dumps({name:sha256(body).hexdigest() for name,body in sorted(files.items())},ensure_ascii=False,indent=2).encode("utf-8")
