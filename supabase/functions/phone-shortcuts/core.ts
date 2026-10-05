@@ -1,4 +1,22 @@
 export const MODES = new Set(['user_message','role_event']);
+// Screen uploads are data snapshots, never model jobs. Empty App names can be website rows.
+export function screenSnapshot(text: unknown, date: unknown, now=Date.now()) {
+ const today=new Date(now+28800000).toISOString().slice(0,10),day=String(date||today);
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(day)||new Date(day+'T12:00:00Z').toISOString().slice(0,10)!==day||day>today||now-Date.parse(day+'T00:00:00+08:00')>8*86400000)throw Error('invalid-screen-date');
+ if(typeof text!=='string'||!text.trim()||text.length>100000)throw Error('invalid-screen-text');
+ const apps: {name:string,seconds:number}[]=[],seen=new Set<string>();let skipped=0;
+ for(const line of text.trim().split(/\r?\n/).filter(x=>x.trim())) {
+  const pair=line.match(/^\s*(.*?)\s*[|｜]\s*(.*?)\s*$/);if(!pair)throw Error('invalid-screen-row');
+  const name=pair[1].trim(),duration=pair[2].replace(/,/g,'').trim();
+  if(!/^\d+(?:\.\d+)?\s*(?:秒钟?|s|seconds?)?$/i.test(duration))throw Error('invalid-screen-duration');
+  const seconds=parseFloat(duration);if(!Number.isFinite(seconds)||seconds<0||seconds>86400)throw Error('invalid-screen-duration');
+  if(!name){skipped++;continue;}
+  if(name.length>120||/[\x00-\x1f]/.test(name)||seen.has(name.toLowerCase()))throw Error('invalid-screen-name');
+  seen.add(name.toLowerCase());apps.push({name,seconds:Math.round(seconds*1000)/1000});
+ }
+ if(!apps.length||apps.length>500)throw Error('invalid-screen-count');
+ return {schema:1,date:day,apps,skipped,source:'ios-shortcut-cloud'};
+}
 export function validId(value: unknown) { return typeof value==='string' && /^[A-Za-z0-9_-]{8,100}$/.test(value); }
 export function publicHost(host: string) {
  const h=host.toLowerCase().replace(/^\[|\]$/g,'');

@@ -102,3 +102,46 @@ grant execute on function public.phone_shortcut_accept(text,text,text), public.p
 
 -- A separate pg_cron job must invoke the new worker with its own dispatch secret.
 -- Do not alter the existing role-push schedule; deployment steps are in the runbook.
+
+-- Screen Time direct-upload extension (independent of model automation).
+create table if not exists public.phone_screen_sources (
+ owner_id text not null, client_id text not null, role_id text not null,
+ token_hash text not null unique, enabled boolean not null default true,
+ snapshot jsonb, received_at timestamptz,
+ primary key(owner_id,client_id,role_id)
+);
+alter table public.phone_screen_sources enable row level security;
+revoke all on public.phone_screen_sources from public,anon,authenticated;
+grant all on public.phone_screen_sources to service_role;
+create or replace function public.phone_screen_manage(p_owner text,p_client text,p_role text,p_action text,p_hash text default '')
+returns jsonb language plpgsql security definer set search_path=public,extensions as $$
+declare r public.phone_screen_sources;
+begin
+ if p_action='save' then
+  if p_hash !~ '^[a-f0-9]{64}$' then raise exception 'invalid-hash'; end if;
+  insert into public.phone_screen_sources(owner_id,client_id,role_id,token_hash)
+  values(p_owner,p_client,p_role,p_hash)
+  on conflict(owner_id,client_id,role_id) do update set token_hash=excluded.token_hash,enabled=true,snapshot=null,received_at=null;
+  return jsonb_build_object('ok',true);
+ elsif p_action='revoke' then
+  update public.phone_screen_sources set enabled=false,snapshot=null,received_at=null,token_hash='revoked:'||gen_random_uuid() where owner_id=p_owner and client_id=p_client and role_id=p_role;
+  return jsonb_build_object('ok',true);
+ elsif p_action='pull' then
+  select * into r from public.phone_screen_sources where owner_id=p_owner and client_id=p_client and role_id=p_role and enabled;
+  return jsonb_build_object('ok',true,'enabled',found,'snapshot',r.snapshot,'receivedAt',r.received_at);
+ end if;
+ raise exception 'invalid-action';
+end $$;
+create or replace function public.phone_screen_upload(p_hash text,p_snapshot jsonb)
+returns jsonb language plpgsql security definer set search_path=public,extensions as $$
+declare r public.phone_screen_sources; stamp timestamptz:=clock_timestamp();
+begin
+ select * into r from public.phone_screen_sources where token_hash=p_hash and enabled for update;
+ if not found then return jsonb_build_object('error','unauthorized'); end if;
+ if jsonb_typeof(p_snapshot->'apps')<>'array' or jsonb_array_length(p_snapshot->'apps') not between 1 and 500 or octet_length(p_snapshot::text)>100000 then return jsonb_build_object('error','invalid-snapshot'); end if;
+ if r.snapshot->>'date'>p_snapshot->>'date' then return jsonb_build_object('error','older-day'); end if;
+ update public.phone_screen_sources set snapshot=p_snapshot,received_at=stamp where owner_id=r.owner_id and client_id=r.client_id and role_id=r.role_id;
+ return jsonb_build_object('ok',true,'receivedAt',stamp,'count',jsonb_array_length(p_snapshot->'apps'),'skipped',p_snapshot->'skipped');
+end $$;
+revoke all on function public.phone_screen_manage(text,text,text,text,text), public.phone_screen_upload(text,jsonb) from public,anon,authenticated;
+grant execute on function public.phone_screen_manage(text,text,text,text,text), public.phone_screen_upload(text,jsonb) to service_role;

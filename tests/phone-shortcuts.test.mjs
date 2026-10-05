@@ -7,10 +7,28 @@ test('shortcut queue has exact-event dedup, quotas, revocation and no automatic 
 
 function screenImportRuntime(prefix=''){
  const source=fs.readFileSync(prefix+'phone-shortcuts.js','utf8'),elements={},state={couple:{cid:'role-a',companion:{screenTimeSec:999}},me:{active:'main'}};
- let saved=true;const sandbox={window:{},Date,Set,Error,JSON,Number,String,Math,S:state,actId:()=>state.me.active,esc:s=>String(s).replace(/</g,'&lt;'),toast:()=>{},openModal:html=>{sandbox.modal=html;},closeModal:()=>{},render:()=>{},saveNowAsync:async()=>saved,uiConfirm:async()=>true,$:id=>elements[id],renderCouple:()=>'<div id="coupage1"><p>existing</p></div>',buildSystem:()=> 'original-chat-system'};
+ let saved=true;const sandbox={window:{},Date,Set,Error,JSON,Number,String,Math,S:state,actId:()=>state.me.active,esc:s=>String(s).replace(/</g,'&lt;'),toast:()=>{},openModal:html=>{sandbox.modal=html;},closeModal:()=>{},render:()=>{},saveNowAsync:async()=>saved,uiConfirm:async()=>true,$:id=>elements[id],renderCouple:()=>'<div id="coupage1"><p>existing</p></div>',chatAPI:async messages=>{sandbox.sent=messages;return 'ok';},buildSystem:()=> 'original-chat-system'};
  vm.createContext(sandbox);vm.runInContext(source.slice(source.indexOf('/* Screen Time shortcut import:')),sandbox);return{sandbox,state,elements,api:sandbox.window.PhoneScreenTimeImport,setSaved:value=>{saved=value;}};
 }
 for(const prefix of ['', 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/']){
  test(prefix+'screen import keeps named duration pairs, zero and overlap separate',()=>{const{api}=screenImportRuntime(prefix),r=api.parse('抖音 | 11,040.155秒钟\nWeb | 2100\nexample.com | 2100\n未使用 | 0','2026-01-01');assert.equal(r.apps[0].seconds,11040.155);assert.equal(r.apps[3].seconds,0);assert.equal(r.apps.length,4);assert.equal(r.totalSeconds,undefined);assert.equal(api.parse('微信\n57分钟','2026-01-01').apps[0].seconds,3420);for(const raw of ['微信 | -1','微信 | 86401','微信 | 1\n微信 | 2','这里只有名称','[{"name":"微信","seconds":null}]'])assert.throws(()=>api.parse(raw,'2026-01-01'));assert.throws(()=>api.parse('微信 | 1','2026-02-30'));assert.throws(()=>api.parse('微信 | 1','2099-01-01'));});
  test(prefix+'screen import consent, account and role boundaries survive failed saves',async()=>{const r=screenImportRuntime(prefix),{api,state,elements,sandbox}=r,now=new Date(),date=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');api.open();elements['#sti_text']={value:'抖音 | 11040.155'};elements['#sti_day']={value:date};elements['#sti_consent']={checked:false};api.prepare();r.setSaved(false);assert.equal(await api.commit(),false);assert.equal(state.couple.shortcutScreenTime,undefined);r.setSaved(true);assert.equal(await api.commit(),true);assert.equal(api.prompt({id:'role-a'}),'');assert.equal(state.couple.companion.screenTimeSec,999);state.couple.shortcutScreenTime.roleAccess=true;assert(api.prompt({id:'role-a'}).includes('11040.155'));assert.equal(api.prompt({id:'role-b'}),'');state.me.active='other';assert.equal(api.record(),null);assert.equal(api.prompt({id:'role-a'}),'');state.me.active='main';state.couple.shortcutScreenTime.date='2026-01-01';assert.equal(api.prompt({id:'role-a'}),'');assert(sandbox.renderCouple().includes('cou_shortcut_screen_time'));api.open();state.couple.cid='role-b';api.prepare();assert.equal(await api.commit(),false);assert.equal(state.couple.shortcutScreenTime.cid,'role-a');});
 }
+
+
+test('screen upload parses actual iPhone seconds, skips anonymous website rows and preserves zero',()=>{
+ const r=ctx.screenSnapshot('抖音 | 11,601.648秒\n | 2,747.097秒\n微信 | 0秒','2026-10-05',Date.parse('2026-10-05T11:00:00+08:00'));
+ assert.equal(r.apps.length,2);assert.equal(r.apps[0].seconds,11601.648);assert.equal(r.apps[1].seconds,0);assert.equal(r.skipped,1);assert.equal(r.totalSeconds,undefined);
+ for(const text of ['微信 | -1','微信 | 86401','微信 | 1\n微信 | 2',' | 1','微信 | nope'])assert.throws(()=>ctx.screenSnapshot(text,'2026-10-05',Date.parse('2026-10-05T11:00:00+08:00')));
+ assert.throws(()=>ctx.screenSnapshot('微信 | 1','2026-02-30'));assert.throws(()=>ctx.screenSnapshot('微信 | 1','2099-01-01'));
+});
+for(const prefix of ['', 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/'])test(prefix+'direct cloud read refreshes before chat without leaking another role or stale session',async()=>{
+ const r=screenImportRuntime(prefix),{state,sandbox,api}=r,auth={target:'owner-a',clientId:'phone_main',url:'https://cloud.example'},today=new Date().toLocaleDateString('en-CA');
+ // toLocaleDateString is not used by production; derive its local date explicitly.
+ const d=new Date(),date=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+ let calls=0,resolve;
+ sandbox.PhoneShortcuts={identity:()=>auth,request:async()=>{calls++;return{ok:true,enabled:true,snapshot:{date,apps:[{name:'微信',seconds:20}],skipped:1},receivedAt:new Date().toISOString()};}};
+ sandbox.fmtDT=String;state.couple.screenCloudByRole={'main:role-a':{enabled:true,...auth,record:null}};
+ assert.equal(await api.cloudPull(true),true);assert.equal(calls,1);await sandbox.chatAPI([{role:'system',content:sandbox.buildSystem({id:'role-a'})}],{});assert.equal(calls,2);assert(sandbox.sent[0].content.includes('20'));assert(api.cloudPrompt({id:'role-a'}).includes('20'));assert.equal(api.cloudPrompt({id:'role-b'}),'');assert.equal(state.couple.companion.screenTimeSec,999);
+ sandbox.PhoneShortcuts.request=()=>new Promise(done=>resolve=done);const pending=api.cloudPull(true);state.me.active='other';resolve({ok:true,enabled:true,snapshot:{date,apps:[{name:'secret',seconds:100}]},receivedAt:new Date().toISOString()});assert.equal(await pending,false);assert.equal(api.cloudPrompt({id:'role-a'}),'');assert.equal(state.couple.screenCloudByRole['main:role-a'].record.apps[0].name,'微信');
+});

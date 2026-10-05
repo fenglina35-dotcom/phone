@@ -59,20 +59,20 @@ function persistenceRuntime() {
 }
 
 test('private identity remains v1355 and iOS 399 while public advances independently', () => {
-  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1579'/);
-  assert.match(privateApp, /APP_VER='v1579 · 屏幕时长快捷指令导入'/);
+  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1581'/);
+  assert.match(privateApp, /APP_VER='v1581 · 屏幕时长快捷指令自动上传'/);
   for (const html of [privateIndex, privateAlias]) {
-    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1579'/);
-    assert.match(html, /app\.js\?v=1579&r=v1579-screen-time-shortcut-import-1/);
+    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1581'/);
+    assert.match(html, /app\.js\?v=1581&r=v1581-screen-time-cloud-upload-1/);
     assert.match(html, /private-runtime-diagnostics\.js\?v=339/);
   }
-  assert.match(privateRepair, /index\.html\?repair=1&v=1579/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1581/);
   assert.match(swift, /1\.0\.439 \(439\)/);
   assert.match(bridge, /private static let build = "1\.0\.439 \(439\)"/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 439;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.439;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1578 · 屏幕时长快捷指令导入'/);
-  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1578'/);
+  assert.match(publicApp, /APP_VER='v1580 · 屏幕时长快捷指令自动上传'/);
+  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1580'/);
   assert.doesNotMatch(publicApp, /persistWechatRequested|smallPhoneWechatPersistTrace/);
 });
 

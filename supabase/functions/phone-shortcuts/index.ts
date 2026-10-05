@@ -1,5 +1,5 @@
 import {createClient} from 'https://esm.sh/@supabase/supabase-js@2.45.4';
-import {validId,validateConfig,modelURL,modelMessages,visibleReply,publicIPv4} from './core.ts';
+import {validId,validateConfig,modelURL,modelMessages,visibleReply,publicIPv4,screenSnapshot} from './core.ts';
 
 const cors={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization,apikey,content-type','Access-Control-Allow-Methods':'POST,OPTIONS'};
 const reply=(value:unknown,status=200)=>new Response(JSON.stringify(value),{status,headers:{...cors,'Content-Type':'application/json'}});
@@ -37,6 +37,12 @@ export async function handle(request:Request){
  try{
   const raw=await request.text();if(raw.length>220000)return reply({error:'request-too-large'},413);
   const input=JSON.parse(raw),action=String(input.action||'trigger');
+  if(action==='screen_upload'){
+   const token=String(input.token||'');if(!/^[a-f0-9]{64}$/.test(token))return reply({error:'unauthorized'},401);
+   const snapshot=screenSnapshot(input.text,input.date);
+   const result=must<any>(await client.rpc('phone_screen_upload',{p_hash:await hash(token),p_snapshot:snapshot}));
+   return reply(result,result.error==='unauthorized'?401:result.error?409:200);
+  }
   if(action==='dispatch'){
    if(request.headers.get('authorization')!=='Bearer '+key)return reply({error:'unauthorized'},401);
    EdgeRuntime.waitUntil(work(client,url,key));return reply({ok:true});
@@ -52,6 +58,15 @@ export async function handle(request:Request){
   // This existing authenticated RPC is callable only for a real paired owner.
   const auth=must<any>(await client.rpc('phone_role_push_status',{p_target:target,p_owner_secret:secret,p_role_id:String(input.roleId||'shortcuts')}));
   if(auth?.ok!==true)return reply({error:'owner-not-linked'},403);
+  if(['screen_save','screen_pull','screen_revoke'].includes(action)){
+   const roleId=String(input.roleId||'');if(!roleId||roleId.length>120)return reply({error:'invalid-role'},400);
+   if(action==='screen_save'){
+    const token=Array.from(crypto.getRandomValues(new Uint8Array(32)),b=>b.toString(16).padStart(2,'0')).join('');
+    must(await client.rpc('phone_screen_manage',{p_owner:target,p_client:clientId,p_role:roleId,p_action:'save',p_hash:await hash(token)}));
+    return reply({ok:true,token,url:url+'/functions/v1/phone-shortcuts'});
+   }
+   return reply(must(await client.rpc('phone_screen_manage',{p_owner:target,p_client:clientId,p_role:roleId,p_action:action==='screen_pull'?'pull':'revoke'})));
+  }
   if(action==='list')return reply({rules:must(await client.from('phone_shortcut_rules').select('id,role_id,role_name,name,mode,preset,enabled,revision,synced_at,cooldown_seconds,daily_limit').eq('owner_id',target).eq('client_id',clientId).order('created_at',{ascending:false}))});
   if(action==='save'){
    const config=validateConfig(input.config),preset=String(input.preset||'').trim(),name=String(input.name||'').trim(),roleId=String(input.roleId||'');

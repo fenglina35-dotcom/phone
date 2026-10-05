@@ -35,5 +35,26 @@ assert(importCheck.prompt);assert.equal(importCheck.foreign,'');
 await page.evaluate(()=>history.replaceState(null,'',location.pathname));
 await page.reload();await page.waitForFunction(()=>window.__northBootReady);
 assert.equal(await page.evaluate(()=>PhoneScreenTimeImport.record()?.apps[0].seconds),11040.155);
-assert.deepEqual(errors,[]);console.log(JSON.stringify({privateApp,publicIsolation:true,entry:true,sharedHistory:true,shortcutDedup:true,screenImport:true,persistedAfterReload:true,pageErrors:0}));await page.close();}
+
+await page.evaluate(()=>{
+ S.me.locked=false;document.querySelector('#gate').style.display='none';S.couple.companion.linked=true;const c=getC(S.couple.cid);const p=NorthPublicRuntime.profile();if(p)p.target='fixture-cloud-owner';
+ uiConfirm=async()=>true;window.__screenReadCount=0;
+ PhoneShortcuts.request=async(action,body,auth)=>{
+  if(action==='screen_save')return{ok:true,url:'https://cloud.example/functions/v1/phone-shortcuts',token:'a'.repeat(64)};
+  if(action==='screen_pull'){window.__screenReadCount++;const d=new Date(),date=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');return{ok:true,enabled:true,snapshot:{date,apps:[{name:'微信',seconds:1234}],skipped:1},receivedAt:new Date().toISOString()};}
+  if(action==='screen_revoke')return{ok:true};throw Error('unexpected-screen-action');
+ };_couTab=1;go('couple');
+});
+await page.locator('#cou_screen_cloud button').first().click();
+await page.waitForFunction(()=>document.querySelector('#modal')?.textContent.includes('screen_upload')||document.body.textContent.includes('action（文本）'));
+assert(await page.getByText('action（文本）',{exact:true}).count());
+await page.getByRole('button',{name:'完成',exact:true}).click();
+await page.locator('#cou_screen_cloud button').filter({hasText:'读取最新'}).click();
+await page.waitForFunction(()=>document.querySelector('#cou_screen_cloud')?.textContent.includes('微信'));
+assert(await page.evaluate(()=>buildSystem(getC(S.couple.cid)).includes('1234')));
+assert.equal(await page.evaluate(()=>PhoneScreenTimeImport.cloudPrompt({id:'foreign-role'})),'');
+await page.evaluate(()=>PhoneScreenTimeImport.cloudRevoke());
+assert(await page.evaluate(()=>!buildSystem(getC(S.couple.cid)).includes('快捷指令云端时长')));
+
+assert.deepEqual(errors,[]);console.log(JSON.stringify({privateApp,publicIsolation:true,entry:true,sharedHistory:true,shortcutDedup:true,screenImport:true,screenCloudSetupPullRevoke:true,persistedAfterReload:true,pageErrors:0}));await page.close();}
 }finally{await browser.close();server.close();}})().catch(e=>{console.error(e);server.close();process.exitCode=1;});
