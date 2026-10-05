@@ -27,15 +27,15 @@ function functionSource(name){
 }
 
 test('v1178 has a unique visible identity across every public entry and cache layer',()=>{
-  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1589\'/);
-  assert.match(app,/APP_VER='v1589 · 微信收藏与亲属同步'/);
-  assert.match(shell,/__NORTH_SHELL_BUILD__='1589'/);
-  assert.match(shell,/app\.js\?v=1589&r=v1589-wechat-favorites-family-1/);
-  assert.match(index,/小手机\.html\?v=1589/);
-  assert.match(repair,/小手机\.html\?v=1589/);
-  assert.match(worker,/const BUILD='1589'/);
-  assert.match(worker,/north-shell-v1589-wechat-favorites-family-1/);
-  assert.match(hotfix,/sw\.js\?v=1589&r=v1589-wechat-favorites-family-1/);
+  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1592\'/);
+  assert.match(app,/APP_VER='v1592 · 角色微信表情包尺寸修复'/);
+  assert.match(shell,/__NORTH_SHELL_BUILD__='1592'/);
+  assert.match(shell,/app\.js\?v=1592&r=v1592-role-sticker-size-1/);
+  assert.match(index,/小手机\.html\?v=1592/);
+  assert.match(repair,/小手机\.html\?v=1592/);
+  assert.match(worker,/const BUILD='1592'/);
+  assert.match(worker,/north-shell-v1592-role-sticker-size-1/);
+  assert.match(hotfix,/sw\.js\?v=1592&r=v1592-role-sticker-size-1/);
   for(const [name,source] of Object.entries({app,shell,index,repair,worker,hotfix})){
     assert.doesNotMatch(source,/v?1127/,`${name} must not reuse the prior web version`);
   }

@@ -13,14 +13,14 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1589 · 微信收藏与亲属同步'/);
-  assert.match(app,/const url='sw\.js\?v=1589&r=v1589-wechat-favorites-family-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1589'/);
-  assert.match(html,/app\.js\?v=1589/);
-  assert.match(sw,/const BUILD='1589'/);
-  assert.match(sw,/north-shell-v1589-wechat-favorites-family-1/);
-  assert.match(index,/小手机\.html\?v=1589/);
-  assert.match(repair,/小手机\.html\?v=1589/);
+  assert.match(app,/APP_VER='v1592 · 角色微信表情包尺寸修复'/);
+  assert.match(app,/const url='sw\.js\?v=1592&r=v1592-role-sticker-size-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1592'/);
+  assert.match(html,/app\.js\?v=1592/);
+  assert.match(sw,/const BUILD='1592'/);
+  assert.match(sw,/north-shell-v1592-role-sticker-size-1/);
+  assert.match(index,/小手机\.html\?v=1592/);
+  assert.match(repair,/小手机\.html\?v=1592/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{

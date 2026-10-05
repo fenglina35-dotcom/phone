@@ -47,18 +47,18 @@ function functionSource(sourceText, name) {
 
 test('private identifiers remain v1355 and iOS 399 while public advances independently', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1591'/);
-  assert.match(index, /app\.js\?v=1591&r=v1591-wechat-favorites-family-1/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1593'/);
+  assert.match(index, /app\.js\?v=1593&r=v1593-role-sticker-size-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(app, /APP_VER='v1591 · 微信收藏与亲属同步'/);
+  assert.match(app, /APP_VER='v1593 · 角色微信表情包尺寸修复'/);
   assert.match(overlay, /336-daily-file-backup/);
   assert.match(webview, /1\.0\.439 \(439\)/);
   assert.match(bridge, /private static let build = "1\.0\.439 \(439\)"/);
   assert.match(bridge, /static let contractVersion = 42/);
   assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 439;/g) || []).length, 12);
   assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.439;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1589 · 微信收藏与亲属同步'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1589'/);
+  assert.match(publicApp, /APP_VER='v1592 · 角色微信表情包尺寸修复'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1592'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
