@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1572'){
+if(window.__NORTH_SHELL_BUILD__!=='1574'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -601,7 +601,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1572 · 小鱼旅行 · 旅行服务';
+const APP_VER='v1574 · 小鱼旅行 · 旅行服务';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1993,7 +1993,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1572&r=v1572-role-family-card-preview-1';
+  const url='sw.js?v=1574&r=v1574-role-family-card-preview-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -12826,7 +12826,7 @@ function couTab(n){n=[1,2,3].includes(+n)?+n:1;_couTab=n;[1,2,3].forEach(i=>{con
 function coupleAlbumStore(){if(!S.couple)return[];if(!Array.isArray(S.couple.album))S.couple.album=[];return S.couple.album;}
 function coupleAlbumHidden(){if(!S.couple)return[];if(!Array.isArray(S.couple.albumHidden))S.couple.albumHidden=[];return S.couple.albumHidden;}
 async function coupleAlbumSaveRecent(c,text,category){if(typeof photoAlbumCoupleAllowed!=='function'||!photoAlbumCoupleAllowed(c))return false;const image=[...(msgsForAccount(c.id,'main')||[])].reverse().find(m=>m&&m.type==='image'&&m.src&&!m.pending&&!m._deleted);if(!image)return false;if(!image.id)image.id=uid();return photoAlbumRoleSave(c,image,text,category);}
-async function coupleAlbumConsumeSaveTag(content,c,outcome,userText){content=String(content||'');const re=/[\[【]\s*存共同相册(?:\s*[|｜]([^\]】]+))?\s*[\]】]/g,tags=[...content.matchAll(re)];content=content.replace(re,'');for(const tag of tags){const fields=String(tag[1]||'').split(/[|｜]/),categorized=fields.length>1;roleInterceptDiagnosticAction(outcome,await coupleAlbumSaveRecent(c,categorized?fields.slice(1).join('｜').trim():String(tag[1]||'').trim(),categorized?fields[0].trim():undefined));}return typeof photoAlbumConsumeMemory==='function'?photoAlbumConsumeMemory(content,c,outcome,userText):content;}
+async function coupleAlbumConsumeSaveTag(content,c,outcome,userText){content=String(content||'');const re=/[\[【]\s*存共同相册(?:\s*[|｜]([^\]】]+))?\s*[\]】]/g,tags=[...content.matchAll(re)];content=content.replace(re,'');for(const tag of tags){const fields=String(tag[1]||'').split(/[|｜]/),categorized=fields.length>1;roleInterceptDiagnosticAction(outcome,await coupleAlbumSaveRecent(c,categorized?fields.slice(1).join('｜').trim():String(tag[1]||'').trim(),categorized?fields[0].trim():undefined));}if(typeof photoAlbumConsumeLikes==='function')content=await photoAlbumConsumeLikes(content,c,outcome,userText);return typeof photoAlbumConsumeMemory==='function'?photoAlbumConsumeMemory(content,c,outcome,userText):content;}
 function coupleAlbumItems(c){if(!c||!S.couple||S.couple.cid!==c.id)return[];const out=[],seen=new Set(),hidden=new Set(coupleAlbumHidden()),add=x=>{if(!x||!x.src)return;const key=String(x.source||'')+':'+String(x.id||'');if(hidden.has(key)||seen.has(key))return;seen.add(key);out.push(x);};
   coupleAlbumStore().forEach(x=>add({id:x.id,source:'album',src:x.src,owner:x.owner==='ta'?'ta':'me',desc:String(x.desc||''),visionState:x.visionState||'',visionError:x.visionError||'',time:+x.time||0,manual:true}));
   (msgsForAccount(c.id,'main')||[]).forEach(m=>{if(m&&m.type==='image'&&m.src&&!m.pending&&m._coupleAlbumSaved===true){if(!m.id)m.id=uid();add({id:m.id,source:'wechat',src:m.src,owner:m.role==='assistant'?'ta':'me',desc:String(m.desc||''),visionState:m.visionState||'',visionError:m.visionError||'',time:+m.time||0,manual:false});}});
