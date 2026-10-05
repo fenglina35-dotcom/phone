@@ -16,6 +16,8 @@ import fs from 'node:fs';
 
 const read = name => fs.readFileSync(new URL('../' + name, import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 const WEB = 'app.js';
+
+test('owner-pasted Screen Time records stay separate from native telemetry in both runtimes',()=>{for(const prefix of ['', 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/']){const js=read(prefix+'phone-shortcuts.js');for(const marker of ['window.PhoneScreenTimeImport','cou_shortcut_screen_time','roleAccess:p.consent',"source:'ios-shortcut'",'r.date!==day()','id.account===p.account'])assert(js.includes(marker));assert(!js.includes('st.screenTimeSec=value'));}});
 const PRIVATE_DIR = 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/';
 const PRIVATE = PRIVATE_DIR + 'app.js';
 const DELIVERY = 'delivery.js';

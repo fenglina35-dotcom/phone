@@ -21,5 +21,19 @@ const result=await page.evaluate(async privateApp=>{
  return {isolated,sys,html,targets,cp,unconsented,calls,separate:first!==second&&first!==accountTarget&&accountEmpty,rows:rows.map(x=>x.content),entry:renderSettings().includes('PhoneShortcuts.open')};
 },privateApp);
 if(privateApp){assert.equal(result.available,false);assert(result.entry&&result.history);assert.equal(result.count,1);assert.equal(result.reply,'先歇一会。');}else{assert(result.isolated&&result.unconsented&&result.separate&&result.entry);assert(result.sys.includes('300 步'));assert(!result.html.includes('Apple Watch'));assert(!result.targets.some(x=>/睡眠|心率|心电|HRV/.test(x)));assert(result.targets.includes('iPhone步数'));assert(!result.cp.includes('当前环境没有真实 iPhone'));assert(result.calls.every(x=>x.url.includes('lkhlyfpssmrjkkzhuzag')));assert(result.calls.some(x=>x.body.p_command?.externalAppId==='fixture-app'));assert.deepEqual(result.rows,['到家了','回来啦，先歇一会。']);}
-assert.deepEqual(errors,[]);console.log(JSON.stringify({privateApp,publicIsolation:true,entry:true,sharedHistory:true,shortcutDedup:true,pageErrors:0}));await page.close();}
+await page.evaluate(()=>{_couTab=1;go('couple');});
+await page.locator('#cou_shortcut_screen_time button').first().click();
+await page.locator('#sti_text').fill('抖音 | 11040.155秒钟\n微信 | 3530.637秒钟\nWeb | 2100秒钟\nexample.com | 2100秒钟');
+await page.locator('#sti_consent').check();
+await page.getByRole('button',{name:'预览导入',exact:true}).click();
+await page.locator('#sti_commit').click();
+await page.waitForFunction(()=>PhoneScreenTimeImport.record()?.apps.length===4);
+assert.equal(await page.evaluate(()=>PhoneScreenTimeImport.record().apps[0].seconds),11040.155);
+await page.waitForFunction(()=>document.querySelector('#cou_shortcut_screen_time')?.textContent.includes('3 小时 4 分钟'));
+const importCheck=await page.evaluate(()=>{const c=getC(S.couple.cid);return {prompt:buildSystem(c,{}).includes('用户授权的快捷指令屏幕时长'),foreign:PhoneScreenTimeImport.prompt({id:'foreign-role'}),native:companionState().screenTimeSec};});
+assert(importCheck.prompt);assert.equal(importCheck.foreign,'');
+await page.evaluate(()=>history.replaceState(null,'',location.pathname));
+await page.reload();await page.waitForFunction(()=>window.__northBootReady);
+assert.equal(await page.evaluate(()=>PhoneScreenTimeImport.record()?.apps[0].seconds),11040.155);
+assert.deepEqual(errors,[]);console.log(JSON.stringify({privateApp,publicIsolation:true,entry:true,sharedHistory:true,shortcutDedup:true,screenImport:true,persistedAfterReload:true,pageErrors:0}));await page.close();}
 }finally{await browser.close();server.close();}})().catch(e=>{console.error(e);server.close();process.exitCode=1;});
