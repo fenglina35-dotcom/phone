@@ -1,4 +1,4 @@
-"""Create the private v1591 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
+"""Create the private v1599 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
 
 Unlike the earlier packaging scripts, every file is read from the committed tree
 (``git cat-file`` against HEAD) instead of the working directory. The v1235/iOS356
@@ -23,10 +23,10 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "native/private-small-phone/XcodeProject/"
 BUNDLE = "PhoneCompanionTest/PhoneWeb.bundle/"
-PREFIX = "SmallPhone_v1591_iOS439_Private/"
-OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1591_iOS439.zip"
+PREFIX = "SmallPhone_v1599_iOS439_Private/"
+OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1599_iOS439.zip"
 
-WEB_VERSION = "1591"
+WEB_VERSION = "1599"
 MARKETING = "1.0.439"
 BUILD = "439"
 BRIDGE = "42"
@@ -646,12 +646,12 @@ def main() -> None:
     state["retired"] = [{"file": BUNDLE+"daily-event-ledger.js", "commit": "a804f37a", "reason": "User requested removal; independent notes and existing data preserved."}, {"file": BUNDLE+"ai-account.js", "commit": "3708d8e1", "reason": "User requested AI account and internal speech/subtitle retirement, replaced by photo album; external interfaces retained."}]
     state["sourceCommit"] = text(git("rev-parse", "HEAD")).strip()
     state["webSourceCommit"] = state["sourceCommit"]
-    state["webVersion"] = "v1589"
+    state["webVersion"] = "v1598"
     state["privateWeb"] = "v" + WEB_VERSION
     state["privateIOS"] = f"{MARKETING} ({BUILD})"
     state["lastDeliveredPackage"] = {"name": previous.name, "sha256": previous_sha, "sourceCommit": "beb14a18c8a1f163dd9b6afc2d48c8dc3d8f66bd"}
-    state["knownUnresolved"] = [x for x in state["knownUnresolved"] if not re.match(r"v\d+-mac-build", x)] + ["v1591-mac-build-signing-and-iphone-not-verified"]
-    state["validation"] = {"macBuildVerified": False, "realIPhoneVerified": False, "models": "HTTP simulated in browser gates", "nodeTests": {"passed": 3384, "failed": 0, "sourceCommit": state["webSourceCommit"]}, "authorizedChatBothRuntimes": True, "inheritedPreviousOverlay": True, "priorPackageManifestVerified": True, "nativePayloadUnchanged": True, "houseResourceFiles": len(cozy_files), "retiredFiles": sorted(retired)}
+    state["knownUnresolved"] = [x for x in state["knownUnresolved"] if not re.match(r"v\d+-mac-build", x)] + ["v1599-mac-build-signing-and-iphone-not-verified"]
+    state["validation"] = {"macBuildVerified": False, "realIPhoneVerified": False, "models": "HTTP simulated in browser gates", "nodeTests": {"passed": 3400, "failed": 0, "sourceCommit": state["webSourceCommit"]}, "authorizedChatBothRuntimes": True, "inheritedPreviousOverlay": True, "priorPackageManifestVerified": True, "nativePayloadUnchanged": True, "houseResourceFiles": len(cozy_files), "retiredFiles": sorted(retired)}
     app = text(files[BUNDLE + "app.js"])
     for marker in ("function hisChatMessageHTML(", "bubbleLook(c,!mine)", "bubbleIconFor(c,!mine)", "bubbleAvatarClass(c,!mine)", "function hisWxUtilityOpen(", "function hisWxFriendAvatar(", "function spyLockScreen(", "lockWallpaper", "_hisPaymentId", "_forged"):
         assert marker in app, "latest role WeChat/phone repair missing: " + marker
@@ -697,6 +697,34 @@ def main() -> None:
     for marker in ("wxFavoriteAudioCopy", "wxFavoriteForwardText", "wxFavoritePlay"):
         assert marker in text(files[BUNDLE + "wechat-me.js"]), marker
     state["validation"]["mostRecentOverlayManifestVerified"] = True
+    latest = ROOT.parent / "最新私人版本覆盖包_v1591_iOS439.zip"
+    latest_sha = "6a4cea00fd3e5a351a802e8877f194d1b7ba7d71f2ca9cda7dbaa716fc49b918"
+    assert sha256(latest.read_bytes()).hexdigest() == latest_sha
+    with ZipFile(latest) as old:
+        latest_prefix = next(n for n in old.namelist() if n.endswith("/SOURCE_STATE.json"))[:-len("SOURCE_STATE.json")]
+        latest_files = {n[len(latest_prefix):]: old.read(n) for n in old.namelist() if n.startswith(latest_prefix) and not n.endswith("/")}
+    latest_manifest = json.loads(latest_files["SHA256SUMS.json"])
+    assert set(latest_manifest) == latest_files.keys() - {"SHA256SUMS.json"}
+    for name, digest in latest_manifest.items():
+        assert sha256(latest_files[name]).hexdigest() == digest, name
+    assert not (latest_files.keys() - files.keys() - {"SOURCE_STATE.json", "SHA256SUMS.json"}), "last delivered v1591 files missing"
+    for name, body in latest_files.items():
+        if name not in {"SOURCE_STATE.json", "SHA256SUMS.json", "请在Mac编译前先读.md"} and not name.startswith(BUNDLE):
+            assert files[name] == body, "unexpected native/signing change: " + name
+    latest_state = json.loads(latest_files["SOURCE_STATE.json"])
+    state["lastDeliveredPackage"] = {"name": latest.name, "sha256": latest_sha, "sourceCommit": latest_state["sourceCommit"]}
+    state["preserved"] = sorted(set(state["preserved"]) | set(latest_state["preserved"]) | {"v1592-role-wechat-sticker-size", "v1599-role-photo-thumbnail-original-viewer", "v1599-friend-sync-timeout-backoff", "v1599-natural-delivery-retry-and-restricted-items", "private-native-companion-intentional-asymmetry"})
+    for marker in ("class=\"imgmsg\" onclick=\"event.stopPropagation();viewImg", "class=\"stickermsg\"", "pfBackendTimeout=true", "p._syncRetryAt=Date.now()"):
+        assert marker in app, "new private fix missing: " + marker
+    for marker in ("function deliveryRetryRequest(", "function deliveryRestrictedItemList(", "function naturalDeliveryFollowupPrompt("):
+        assert marker in text(files[BUNDLE+"delivery.js"]), marker
+    assert 'cloudPanel' not in text(files[BUNDLE+"phone-shortcuts.js"])
+    assert 'function panel()' in text(files[BUNDLE+"phone-shortcuts.js"])
+    for name in ("public-north-policy.js", "public-north-runtime.js"):
+        assert files[BUNDLE+name] == latest_files[BUNDLE+name], "private companion overwritten: " + name
+    state["crossWorkspaceAudit"] = {"naturalRetry": {"sourceWorktree": ".codex_delivery_natural_retry", "included": "scoped delivery patch and regressions"}, "cozy": "reviewed house052 snapshot and native bridge retained; old version360 draft not copied", "robot": "existing delivered voice/history/face bridge retained; untracked diagnostic image not packaged", "deliveryRepeatHistory": "independent desktop agent/browser service source only; not an iOS payload", "publicNorth": "public source and retirements excluded", "friendSQL": "not deployed; not an iOS payload"}
+    state["validation"]["latestV1591ManifestVerified"] = True
+    state["validation"]["privateCompanionNativeUnchanged"] = True
     files["SOURCE_STATE.json"] = json.dumps(state, ensure_ascii=False, indent=2).encode("utf-8")
     files["SHA256SUMS.json"] = json.dumps({name:sha256(body).hexdigest() for name,body in sorted(files.items())},ensure_ascii=False,indent=2).encode("utf-8")
 

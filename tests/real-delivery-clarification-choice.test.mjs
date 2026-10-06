@@ -111,6 +111,65 @@ test('an ordinary chat followed by 好 cannot enter delivery repair',()=>{
   assert.equal(ctx.deliveryMissingActionRepairPrompt('role-1',meta.userText,'好',meta),'');
 });
 
+test('重新点 does not require the user to repeat 我要吃',()=>{
+  const {ctx,meta}=makeRuntime('重新点一次');
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  delete ctx.S.food.real.roleAttempts['role-1'];
+  ctx.S.food.real.roleTasks={};
+  meta.userText='重新点一次';
+  const prompt=ctx.deliveryMissingActionRepairPrompt('role-1',meta.userText,'好，重新点一点，等一下别急。',meta);
+  assert.match(prompt,/重新点/);
+  assert.match(prompt,/最近一次明确的外卖要求/);
+  assert.doesNotMatch(prompt,/必须.*我要吃/);
+});
+
+test('明确商品清单和排除项 can enter repair without an ordering catchphrase',()=>{
+  const {ctx,meta}=makeRuntime('食物牛奶燕麦粥，肉饼，其他的不要');
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  delete ctx.S.food.real.roleAttempts['role-1'];
+  ctx.S.food.real.roleTasks={};
+  meta.userText='食物牛奶燕麦粥，肉饼，其他的不要';
+  const prompt=ctx.deliveryMissingActionRepairPrompt('role-1',meta.userText,'好，等我一下。',meta);
+  assert.match(prompt,/牛奶燕麦粥/);
+  assert.match(prompt,/肉饼/);
+  assert.match(prompt,/其他的不要/);
+  assert.match(prompt,/全部商品与排除条件/);
+});
+
+test('普通食物讨论 and an incomplete exclusion cannot start delivery repair',()=>{
+  for(const request of ['牛奶燕麦粥和肉饼好不好','我今天吃了牛奶燕麦粥和肉饼','其他的不要']){
+    const {ctx,meta}=makeRuntime(request);
+    delete ctx.S.food.real.roleClarifications['role-1'];
+    delete ctx.S.food.real.roleAttempts['role-1'];
+    ctx.S.food.real.roleTasks={};
+    meta.userText=request;
+    assert.equal(ctx.deliveryMissingActionRepairPrompt('role-1',request,'好',meta),'',request);
+  }
+});
+
+test('重新点 and restricted lists receive one strict formatting retry after a malformed repair',()=>{
+  for(const [request,reply,expected] of [
+    ['重新点一次','好，重新点一点，等一下别急。',/最近一次明确的外卖要求/],
+    ['食物牛奶燕麦粥，肉饼，其他的不要','好，等我一下。',/商品=牛奶燕麦粥、肉饼/],
+  ]){
+    const {ctx,meta}=makeRuntime(request);
+    delete ctx.S.food.real.roleClarifications['role-1'];
+    delete ctx.S.food.real.roleAttempts['role-1'];
+    ctx.S.food.real.roleTasks={};
+    meta.userText=request;
+    assert.match(ctx.deliveryMissingActionRetryPrompt('role-1',request,reply,'我再聊一句',meta),expected);
+  }
+});
+
+test('the main role prompt explains natural retry and restricted-list semantics',()=>{
+  const {ctx}=makeRuntime('普通聊天');
+  delete ctx.S.food.real.roleClarifications['role-1'];
+  delete ctx.S.food.real.roleAttempts['role-1'];
+  assert.match(ctx.deliveryRolePrompt(ctx.getC('role-1')),/外卖自然表达承接/);
+  assert.match(ctx.deliveryRolePrompt(ctx.getC('role-1')),/不得要求对方重复说“我要吃”/);
+  assert.match(ctx.deliveryRolePrompt(ctx.getC('role-1')),/其他的不要\/\只要这些/);
+});
+
 test('a precise merchant and product reply stays actionable without repeating 点 or 想喝',async()=>{
   const {ctx,searches,merchants,meta}=makeRuntime('李若桃家的：草莓桃儿白糯米酸奶昔');
   delete ctx.S.food.real.roleClarifications['role-1'];
