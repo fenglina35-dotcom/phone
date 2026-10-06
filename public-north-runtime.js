@@ -9,7 +9,8 @@ window.NorthPublicRuntime=(()=>{
   let st=cp.publicNorthByRole[slot];
   if(!st||st.schema!==1)st=cp.publicNorthByRole[slot]={...companionDefaultState(),schema:1,roleId:id,backgroundConsent:{},publicFacts:null};
   st.demo=false;st.transport='public-north';st.defaultScope='external';st.readScope='external';
-  st.automations={eveningScreen:true,absenceBattery:false,criticalBattery:false,...st.automations,morningSleep:false,emotionCare:false,manualUnlockAlert:false};
+  st.automations={eveningScreen:true,absenceBattery:false,criticalBattery:false,...st.automations,morningSleep:false,emotionCare:false,manualUnlockAlert:false,eveningScreen:false};
+  st.permissions.screenTime=false;
   return st;
  }
  function profile(){
@@ -42,14 +43,14 @@ window.NorthPublicRuntime=(()=>{
   for(const row of Array.isArray(data.commands)?data.commands:[]){const item=st.commands.find(x=>x.serverId===row.id);if(item){item.status=row.status||item.status;item.result=row.result;item.acknowledgedAt=companionTime(row.acknowledgedAt);}}
   if(!NorthPublicPolicy.canReplace(st.publicFacts,facts))return false;
   if(facts.controlOnly&&st.publicFacts?.linked){const old=st.publicFacts;
-   if(!facts.screen.available)facts.screen={...old.screen,apps:old.screen.apps.map(a=>({...a,...facts.screen.apps.find(b=>b.id===a.id),usedSeconds:a.usedSeconds})),fresh:false};
+   if(!facts.screen.available)facts.screen={...facts.screen,apps:facts.screen.apps,fresh:false};
    for(const key of ['battery','health','location'])if(!facts[key])facts[key]=old[key];
    if(!facts.footprints.length)facts.footprints=old.footprints;
   }
   const oldApps=new Map(st.apps.map(a=>[a.id,a]));
   st.publicFacts=facts;st.linked=facts.linked;st.deviceId=facts.deviceId;st.deviceName=facts.deviceName||'North iPhone';st.lastSync=facts.uploadedAt||facts.generatedAt;
-  st.screenTimeAvailable=facts.screen.available&&facts.screen.totalSeconds!==null;st.screenTimeSec=facts.screen.totalSeconds;st.screenTimeMode=st.screenTimeAvailable?'per_app':'total_only';
-  st.usageGeneratedAt=facts.screen.generatedAt;st.usageDay=facts.screen.usageDay;st.usageTimeZone='';st.dynamicSync=facts.generatedAt;
+  st.screenTimeAvailable=false;st.screenTimeSec=null;st.screenTimeMode='unavailable';
+  st.usageGeneratedAt=0;st.usageDay='';st.usageTimeZone='';st.dynamicSync=facts.generatedAt;
   st.apps=facts.screen.apps.map(a=>({...a,name:a.name||oldApps.get(a.id)?.name||('App '+a.bindingCode),usedSec:a.usedSeconds,limitMin:a.limitMinutes,reportedLocked:a.locked===true,locked:a.locked===true}));
   st.battery=facts.battery?{...facts.battery,ts:facts.battery.generatedAt}:null;
   st.health=facts.health?{steps:facts.health.availability==='reported'?facts.health.steps:null,ts:facts.health.generatedAt,source:'HealthKit 步数'}:null;
@@ -70,10 +71,19 @@ window.NorthPublicRuntime=(()=>{
   const st=state(),template=document.createElement('template');
   template.innerHTML=renderCompanionPageCore(c,SEC,HD).replaceAll('查看 Apple Watch / 健康摘要','查看步数').replaceAll('外置 iPhone 今日概览','North 最近报告').replaceAll('今日足迹','已返回足迹');
   template.content.querySelectorAll('[onclick*="companionLoadDemo"],[onclick*="companionClearDemo"]').forEach(e=>e.remove());
+  // Web companion and private companion intentionally have different capabilities.
+  template.content.querySelectorAll('small,span').forEach(e=>{
+   const t=e.textContent.trim();
+   if(t==='外置屏幕使用')e.parentElement.remove();
+   else if(t==='外置逐 App 时长')e.closest('.it')?.remove();
+   else if(t==='屏幕使用时间'&&e.closest('#cou_companion_permissions'))e.closest('.it')?.remove();
+   else if(t.startsWith('外置：已用 '))e.textContent=t.replace(/^外置：已用 .*? · /,'外置：');
+  });
+
   const facts=st.publicFacts,fmt=v=>v?fmtDT(v):'未知',section=(id,title,body)=>`<div id="${id}" ${SEC}>${HD('phone',title,'#9ec5fe')}${body}</div>`;
   let html=template.innerHTML;
-  const wellness=section('cou_companion_wellness','电量与步数',`<div class="it"><span>iPhone 电量</span><span class="v">${facts?.battery?Math.round(facts.battery.level*100)+'%':'尚未返回'}</span></div><div class="it"><span>设备步数报告</span><span class="v">${facts?.health?.availability==='reported'?facts.health.steps+' 步':'尚不能确认'}</span></div><div class="hint" style="padding:12px">屏幕报告采集：${esc(fmt(facts?.screen?.generatedAt))}。公开 App 未提供报告所属日和时区，因此不会把旧报告冒充今天；步数 0 在当前公开版也可能表示没有取得数据。</div>`);
-  const auto=section('cou_companion_automations','角色主动查看规则',`<div class="hint" style="padding:12px">按授权读取公开 North 实际支持的数据。关闭网页后由服务器执行；iOS 是否及时上传新数据和显示通知仍取决于系统权限与调度。</div><div class="it"><span>每天查看屏幕报告</span><span class="sw ${st.automations.eveningScreen?'on':''}" onclick="NorthPublicRuntime.toggleAutomation('eveningScreen')"></span></div><div class="it"><span>查看开始<input id="comp_auto_usage_start" type="time" value="${st.automationWindows.usageStart}"></span><span>结束<input id="comp_auto_usage_end" type="time" value="${st.automationWindows.usageEnd}"></span><button class="minibtn" onclick="NorthPublicRuntime.saveWindows()">保存</button></div>${[['absenceBattery','长时间未回时查看电量与位置'],['criticalBattery','新鲜数据确认低电量时提醒']].map(([k,label])=>`<div class="it"><span>${label}</span><span class="sw ${st.automations[k]?'on':''}" onclick="NorthPublicRuntime.toggleAutomation('${k}')"></span></div>`).join('')}`);
+  const wellness=section('cou_companion_wellness','电量与步数',`<div class="it"><span>iPhone 电量</span><span class="v">${facts?.battery?Math.round(facts.battery.level*100)+'%':'尚未返回'}</span></div><div class="it"><span>设备步数报告</span><span class="v">${facts?.health?.availability==='reported'?facts.health.steps+' 步':'尚不能确认'}</span></div><div class="hint" style="padding:12px">步数 0 在当前公开版也可能表示没有取得数据。</div>`);
+  const auto=section('cou_companion_automations','角色主动查看规则',`<div class="hint" style="padding:12px">按授权读取公开 North 实际支持的数据。关闭网页后由服务器执行；iOS 是否及时上传新数据和显示通知仍取决于系统权限与调度。</div>${[['absenceBattery','长时间未回时查看电量与位置'],['criticalBattery','新鲜数据确认低电量时提醒']].map(([k,label])=>`<div class="it"><span>${label}</span><span class="sw ${st.automations[k]?'on':''}" onclick="NorthPublicRuntime.toggleAutomation('${k}')"></span></div>`).join('')}`);
   const background=section('cou_companion_notifications','后台消息与通知记录',`<div class="it"><span>允许该角色在关闭网页后联系</span><span class="sw ${st.backgroundConsent[c.id]&&c.proactive?.serverPush?'on':''}" onclick="roleServerPushToggle(${jq(c.id)})"></span></div>${roleServerPushStatusHTML(c.id)}<div style="padding:12px;display:flex;gap:8px;flex-wrap:wrap"><button class="minibtn" onclick="NorthPublicRuntime.history()">查看后台记录</button><button class="minibtn" onclick="roleServerPushOneMinuteTest(${jq(c.id)})">测试通知链路</button><button class="minibtn" onclick="NorthPublicRuntime.exportProfile()">导出连接凭据</button><button class="minibtn" onclick="NorthPublicRuntime.importProfile()">导入公开连接</button></div>`);
   return html.replace('<div id="cou_companion_apps"',wellness+auto+background+'<div id="cou_companion_apps"');
  }
@@ -106,7 +116,7 @@ window.NorthPublicRuntime=(()=>{
   const focusCore=spyFocusData;
   spyFocusData=function(id,focus){if(companionRoleExternalFocus(focus))return {label:'公开 North 最近授权报告',data:prompt(getC(id))||'当前没有这项读取授权，不能声称已经查看。'};return focusCore(id,focus);};
   const targetsCore=cohabPhoneTargets,cohabPromptCore=cohabPhonePrompt;
-  cohabPhoneTargets=function(c){const out=targetsCore(c),st=state();if(String(c?.id)!==st?.roleId||!st.roleAccess)return out;for(const [key,label]of [['screenTime','iPhone屏幕使用时间'],['health','iPhone步数'],['battery','iPhone电量'],['location','iPhone定位']])if(st.permissions[key])out.push(label);return [...new Set(out)];};
+  cohabPhoneTargets=function(c){const out=targetsCore(c),st=state();if(String(c?.id)!==st?.roleId||!st.roleAccess)return out;for(const [key,label]of [['health','iPhone步数'],['battery','iPhone电量'],['location','iPhone定位']])if(st.permissions[key])out.push(label);return [...new Set(out)];};
   cohabPhonePrompt=function(c){let text=cohabPromptCore(c);const facts=prompt(c);if(!facts)return text;text=text.replace(/- 当前环境没有真实 iPhone 伴生读取能力[^\n]*\n/,'- 当前支持公开 North 最近授权报告；不是实时读取保证，必须保留原采集时间。\n');return text+facts+'\n共同生活可写 [共同生活查看|准确项目]。只读取公开版已支持项目，不请求睡眠、心率或手动解锁事件。';};
   for(const name of ['initiativeQueueNote','initiativeGroundingContext']){const old=window[name];if(typeof old==='function')window[name]=function(c,...args){return old(c,...args)+prompt(c);};}
   const commandCore=companionSendCommand;
@@ -116,11 +126,12 @@ window.NorthPublicRuntime=(()=>{
    return commandCore(st,action,app,{...opt,scope:'external',internalId:''},log);
   };
   renderCompanionPage=renderPage;
+  const decorateCore=companionDecoratePage;companionDecoratePage=function(){decorateCore();document.querySelectorAll('#coupage3 .companion-usage-meter').forEach(e=>e.remove());};
   const pollCore=companionPollSnapshot,pullCore=roleServerPushPull,backgroundCore=roleBackgroundAvailable;
   companionPollSnapshot=async force=>{const st=state();if(!st||!st.linked&&!st.pairing)return false;return pollCore(force);};
   roleServerPushPull=async force=>{const st=state();if(!st?.linked||!Object.values(st.backgroundConsent).some(Boolean))return false;return pullCore(force);};
   roleBackgroundAvailable=id=>!!state()?.linked&&!!state()?.backgroundConsent[id]&&backgroundCore(id);
-  companionHelp=()=>openModal('<h3>公开 North 权限</h3><div class="hint">在已上架的 North 内连接并授权步数、电量、屏幕时间或定位。小手机只在你允许后提供给绑定角色。公开版不支持手表心率、睡眠、心境、私人智能家居或手动解锁事件提醒。排队不代表执行成功。</div><button class="btn g" onclick="closeModal()">关闭</button>');
+  companionHelp=()=>openModal('<h3>公开 North 权限</h3><div class="hint">在已上架的 North 内连接并授权步数、电量或定位，选择 App 后可锁定、解锁和设置限额；使用时长通过情侣空间的快捷指令自动上传读取。小手机只在你允许后提供给绑定角色。公开版不支持手表心率、睡眠、心境、私人智能家居或手动解锁事件提醒。排队不代表执行成功。</div><button class="btn g" onclick="closeModal()">关闭</button>');
   const syncCore=roleServerPushSync;
   roleServerPushSync=async(c,silent)=>{if(!state()?.backgroundConsent[c?.id])return false;return syncCore(c,silent);};
   roleServerPushToggle=async id=>{
@@ -132,14 +143,14 @@ window.NorthPublicRuntime=(()=>{
    const ok=await syncCore(c,false);if(!ok)c.proactive.serverPush=enabled;save();render();return ok;
   };
   const autoCore=roleServerAutomationConfig;
-  roleServerAutomationConfig=c=>{const value=autoCore(c),st=state(),bound=st?.roleId===String(c.id)&&st.roleAccess;return{...value,publicNorth:true,permissions:bound?{...st.permissions}:{},flags:bound?{...st.automations,morningSleep:false,emotionCare:false,manualUnlockAlert:false}:{},automationEvents:[],publicNorthPrompt:bound?prompt(c):''};};
+  roleServerAutomationConfig=c=>{const value=autoCore(c),st=state(),bound=st?.roleId===String(c.id)&&st.roleAccess;return{...value,publicNorth:true,permissions:bound?{...st.permissions}:{},flags:bound?{...st.automations,morningSleep:false,emotionCare:false,manualUnlockAlert:false,eveningScreen:false}:{},automationEvents:[],publicNorthPrompt:bound?prompt(c):''};};
   const effectiveCore=roleServerPushEffectiveEnabled;
   roleServerPushEffectiveEnabled=c=>!!state()?.backgroundConsent[c?.id]&&effectiveCore(c);
   // Do not execute private-only health/manual-unlock timers in a public browser.
   companionAutomationMaybeSend=()=>false;
  }
  return {config,available,state,profile,rpc,apply,prompt,install,history,exportProfile,importProfile,
-  toggleAutomation:k=>{if(!['eveningScreen','absenceBattery','criticalBattery'].includes(k))return;const st=state();st.automations[k]=!st.automations[k];sync();},
+  toggleAutomation:k=>{if(!['absenceBattery','criticalBattery'].includes(k))return;const st=state();st.automations[k]=!st.automations[k];sync();},
   saveWindows:()=>{const st=state();for(const [key,id]of [['usageStart','comp_auto_usage_start'],['usageEnd','comp_auto_usage_end']]){const value=document.getElementById(id)?.value;if(/^\d{2}:\d{2}$/.test(value))st.automationWindows[key]=value;}sync();}};
 })();
 NorthPublicRuntime.install();

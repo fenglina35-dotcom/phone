@@ -17,7 +17,7 @@
     if (!Number.isFinite(lat)||!Number.isFinite(lng)||Math.abs(lat)>90||Math.abs(lng)>180) return null;
     return {lat,lng,place:text(value.place||value.address,160),generatedAt:stamp(value.ts||value.generatedAt),accuracy:number(value,'accuracy',100000)};
   }
-  const capabilities = Object.freeze({ steps: true, battery: true, screenTime: true,
+  const capabilities = Object.freeze({ steps: true, battery: true, screenTime: false,
     appControl: true, limits: true, location: true, footprints: true,
     heartRate: false, sleep: false, hrv: false, ecg: false, smartHome: false,
     explicitManualUnlockEvents: false });
@@ -30,7 +30,7 @@
     const health = s.health && typeof s.health === 'object' ? s.health : {};
     const at = stamp(s.generatedAt), screenAt = stamp(screen.generatedAt);
     const level = number(battery, 'batteryLevel', 1), steps = number(health, 'steps', 200000);
-    const reportAvailable = linked && screen.reportAvailable === true && screenAt > 0;
+    const reportAvailable = false; // Public usage telemetry retired; App control metadata remains.
     // The public binary does not send usageDay or device timeZone. Never guess
     // either from the browser's timezone, server upload time, or today's date.
     const usageDay = /^\d{4}-\d{2}-\d{2}$/.test(text(screen.usageDay)) ? screen.usageDay : '';
@@ -76,15 +76,6 @@
       '公开 North 不提供心率、睡眠、HRV、心电或心境；不得声称已经读取，也不得请求这些项目。'];
     if (!facts || !facts.linked) return rows.concat('公开 North 尚未完成连接，没有可使用的设备事实。').join('\n');
     const describe = at => at ? new Date(at).toISOString() : '未知';
-    if (p.screenTime) {
-      const s = facts.screen;
-      if (!s || !s.available || s.totalSeconds === null) rows.push('屏幕使用报告尚未返回，不能说实际使用为零。');
-      else {
-        rows.push('屏幕报告采集 '+describe(s.generatedAt)+'；'+(s.usageDay ? '设备明确报告使用日 '+s.usageDay : '设备未提供使用日和时区，不能断言这是今天的数据')+'；'+
-          (fresh(s.generatedAt, now, 180000) ? '最近采集' : '旧报告，仅作历史参考')+'；报告累计总使用 '+s.totalSeconds+' 秒。');
-        for (const a of s.apps) if (a.usedSeconds !== null) rows.push('报告中的 App「'+(a.name || '未命名 App')+'」累计实际使用 '+a.usedSeconds+' 秒。');
-      }
-    }
     if (p.battery) rows.push(facts.battery ? '电量采集 '+describe(facts.battery.generatedAt)+'：'+Math.round(facts.battery.level*100)+'%，'+facts.battery.state+
       '；'+(fresh(facts.battery.generatedAt,now,1200000)?'最近采集，仍非实时保证':'旧或时间未知，不能据此提醒当前低电量')+'。' : '电量尚未返回。');
     if (p.health) rows.push(facts.health ? facts.health.availability === 'zero-or-unavailable'
@@ -98,7 +89,7 @@
   }
   function command(facts, permissions, action, appId, minutes, actor, now=Date.now()) {
     if (!facts?.linked) throw new Error('公开 North 尚未连接');
-    const permission={view:'screenTime',location:'location',lock:'appControl',unlock:'appControl',limit:'limits'}[action];
+    const permission={location:'location',lock:'appControl',unlock:'appControl',limit:'limits'}[action];
     if (!permission) throw new Error('公开 North 不支持该操作');
     if (!permissions?.roleAccess || !permissions.permissions?.[permission]) throw new Error('用户没有授予这项权限');
     const requiresApp=['lock','unlock','limit'].includes(action),app=requiresApp?facts.screen?.apps.find(a=>a.id===appId):null;

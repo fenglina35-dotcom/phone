@@ -22,7 +22,7 @@ test('screen upload parses actual iPhone seconds, skips anonymous website rows a
  for(const text of ['微信 | -1','微信 | 86401','微信 | 1\n微信 | 2',' | 1','微信 | nope'])assert.throws(()=>ctx.screenSnapshot(text,'2026-10-05',Date.parse('2026-10-05T11:00:00+08:00')));
  assert.throws(()=>ctx.screenSnapshot('微信 | 1','2026-02-30'));assert.throws(()=>ctx.screenSnapshot('微信 | 1','2099-01-01'));
 });
-for(const prefix of ['', 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/'])test(prefix+'direct cloud read refreshes before chat without leaking another role or stale session',async()=>{
+for(const prefix of [''])test(prefix+'direct cloud read refreshes before chat without leaking another role or stale session',async()=>{
  const r=screenImportRuntime(prefix),{state,sandbox,api}=r,auth={target:'owner-a',clientId:'phone_main',url:'https://cloud.example'},today=new Date().toLocaleDateString('en-CA');
  // toLocaleDateString is not used by production; derive its local date explicitly.
  const d=new Date(),date=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -34,6 +34,8 @@ for(const prefix of ['', 'native/private-small-phone/XcodeProject/PhoneCompanion
 });
 
 test('web retires manual import without erasing stored records or exposing them to chat',()=>{const{sandbox,state,api}=screenImportRuntime();sandbox.fmtDT=String;const old={cid:'role-a',account:'main',roleAccess:true,apps:[{name:'stored-secret',seconds:42}]};state.couple.shortcutScreenTime=old;assert(!sandbox.renderCouple().includes('cou_shortcut_screen_time'));assert(sandbox.renderCouple().includes('cou_screen_cloud'));assert.equal(api.open,undefined);assert.equal(api.commit,undefined);assert.equal(sandbox.buildSystem({id:'role-a'}),'original-chat-system');assert.equal(state.couple.shortcutScreenTime,old);});
+
+test('private shortcut upload removed while native companion and ordinary shortcut entry remain',()=>{const{api,sandbox}=screenImportRuntime('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/');assert.equal(api.cloudSetup,undefined);assert.equal(api.cloudPull,undefined);assert(!sandbox.renderCouple().includes('cou_screen_cloud'));assert(sandbox.renderCouple().includes('cou_shortcut_screen_time'));const js=fs.readFileSync('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/phone-shortcuts.js','utf8');assert(js.includes('window.PhoneShortcuts'));});
 
 
 test('web couple space opens after unbinding without requesting a missing controller identity',async()=>{

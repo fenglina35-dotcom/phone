@@ -27,10 +27,10 @@ test('public location and footprints preserve original time and permission bound
  assert.doesNotMatch(p.prompt(n,{roleAccess:true,permissions:{location:true}},now),/公园/);
  assert.match(p.prompt(n,{roleAccess:true,permissions:{footprints:true}},now),/公园/);
 });
-test('North 1.0(8) legacy report stays usable without inventing a date or timezone',()=>{
+test('public usage retired while App IDs, lock state, battery and steps remain usable',()=>{
   const n=p.normalize(payload(),now);
-  assert.equal(n.screen.available,true);assert.equal(n.screen.totalSeconds,340);
-  assert.equal(n.screen.apps[0].usedSeconds,123);assert.equal(n.screen.usageDay,'');
+  assert.equal(n.screen.available,false);assert.equal(n.screen.totalSeconds,null);
+  assert.equal(n.screen.apps[0].usedSeconds,null);assert.equal(n.screen.apps[0].id,'app1');assert.equal(n.screen.apps[0].locked,true);assert.equal(n.screen.usageDay,'');
   assert.equal(n.battery.level,.34);assert.equal(n.health.steps,100);
   assert.deepEqual(Object.keys(n.health).sort(),['availability','fresh','generatedAt','source','steps']);
 });
@@ -52,7 +52,7 @@ test('old production parser rejects the real public report shape',()=>{
   const report=payload().snapshot.screenTime;
   assert.equal(actual.decide({},report).accept,false);
   assert.equal(actual.decide({},report).reason,'not-current-day');
-  assert.equal(p.normalize(payload(),now).screen.available,true);
+  assert.equal(p.normalize(payload(),now).screen.available,false);
 });
 test('missing and explicit null are not coerced to real zero',()=>{
   const x=payload();x.snapshot.deviceTelemetry.batteryLevel=null;x.snapshot.health.steps=null;
@@ -77,7 +77,17 @@ test('foreground and background share permission-aware public prompt',()=>{
   const battery=p.prompt(n,{roleAccess:true,permissions:{battery:true}},now);
   assert.match(battery,/34%/);assert.doesNotMatch(battery,/100 步|340 秒|123 秒/);
   const all=p.prompt(n,{roleAccess:true,permissions:{battery:true,screenTime:true,health:true}},now);
-  assert.match(all,/340 秒/);assert.match(all,/不能断言这是今天/);assert.match(all,/100 步/);
+  assert.doesNotMatch(all,/340 秒|123 秒|屏幕报告|屏幕使用报告/);assert.match(all,/100 步/);
   assert.doesNotMatch(all,/98|20000|88/);
   assert.match(p.prompt(n,{roleAccess:true,permissions:{battery:true}},now+3600000),/旧或时间未知/);
+});
+
+test('public removed usage cannot issue legacy view commands and private policy remains unchanged',()=>{
+ const facts=p.normalize(payload(),now);assert.equal(p.capabilities.screenTime,false);
+ assert.throws(()=>p.command(facts,{roleAccess:true,permissions:{screenTime:true}},'view','',0,'角色',now),/不支持/);
+ const privatePolicy=readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/public-north-policy.js',import.meta.url),'utf8');assert.match(privatePolicy,/screenTime: true/);
+ const swift=readFileSync(new URL('../native/public-north-review/PhoneCompanionTest/PhoneCompanionTest/CompanionSyncView.swift',import.meta.url),'utf8');
+ assert.doesNotMatch(swift,/CompanionUsageReportSurface|今日真实屏幕使用时间/);
+ assert.match(swift,/let report: DeviceReportSnapshot\? = nil \/\/ Public usage collection retired/);
+ const native=readFileSync(new URL('../native/public-north-review/PhoneCompanionTest/PhoneCompanionTest/ContentView.swift',import.meta.url),'utf8');assert.doesNotMatch(native,/Text\("今日屏幕使用时间"\)/);assert.match(native,/授权 App 限时与锁定/);
 });

@@ -16,62 +16,11 @@ extension Notification.Name {
     )
 }
 
-private struct CompanionUsageReportSurface: View {
-    let filterEnd: Date
-
-    private let reportContext =
-        DeviceActivityReport.Context("Total Activity")
-
-    private var todayFilter: DeviceActivityFilter {
-        let calendar = Calendar.current
-        let start = calendar.startOfDay(for: Date())
-        let end = min(
-            calendar.date(byAdding: .day, value: 1, to: start) ?? Date(),
-            max(start.addingTimeInterval(1), filterEnd)
-        )
-        return DeviceActivityFilter(
-            segment: .daily(during: DateInterval(start: start, end: end)),
-            users: .all,
-            devices: .init([.iPhone])
-        )
-    }
-
-    var body: some View {
-        DeviceActivityReport(reportContext, filter: todayFilter)
-            .frame(width: 2, height: 2)
-            .opacity(0.01)
-            .allowsHitTesting(false)
-    }
-}
-
 struct CompanionRootView: View {
-    @State private var usageReportFilterEnd = Date()
-
     var body: some View {
-        ZStack {
-            TabView {
-                ContentView()
-                    .tabItem {
-                        Label("本机管理", systemImage: "hourglass")
-                    }
-
-                CompanionSyncView()
-                    .tabItem {
-                        Label("角色远程管理", systemImage: "person.2.badge.gearshape")
-                    }
-            }
-
-            CompanionUsageReportSurface(filterEnd: usageReportFilterEnd)
-        }
-        .onReceive(
-            NotificationCenter.default.publisher(
-                for: .companionUsageReportRefreshRequested
-            )
-        ) { _ in
-            let now = Date()
-            usageReportFilterEnd = now > usageReportFilterEnd
-                ? now
-                : usageReportFilterEnd.addingTimeInterval(1)
+        TabView {
+            ContentView().tabItem { Label("本机管理", systemImage: "hourglass") }
+            CompanionSyncView().tabItem { Label("角色远程管理", systemImage: "person.2.badge.gearshape") }
         }
     }
 }
@@ -121,28 +70,6 @@ struct CompanionSyncView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("今日真实屏幕使用时间")
-                            .font(.headline)
-                        Spacer()
-                        Text(service.reportGenerationText)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-
-                    DeviceActivityReport(
-                        reportContext,
-                        filter: todayFilter
-                    )
-                    .frame(height: 72)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .frame(height: 118)
-                .background(Color(uiColor: .secondarySystemGroupedBackground))
-
                 Form {
                 Section("角色远程管理") {
                     Text(
@@ -253,7 +180,7 @@ struct CompanionSyncView: View {
                     }
                 } else {
                     Section("真实数据同步") {
-                        Button("立即上传真实数据") {
+                        Button("立即同步设备数据") {
                             Task {
                                 await requestLiveUsageAndSynchronize()
                             }
@@ -274,14 +201,6 @@ struct CompanionSyncView: View {
                         LabeledContent(
                             "已选 App",
                             value: "\(service.lastAppCount) 个"
-                        )
-                        LabeledContent(
-                            "同步模式",
-                            value: service.dataAccessModeText
-                        )
-                        LabeledContent(
-                            "逐 App 数据",
-                            value: service.reportStatusText
                         )
                         LabeledContent(
                             "快照上传",
@@ -383,12 +302,12 @@ struct CompanionSyncView: View {
 
                 Section("说明") {
                     Text(
-                        "个人直读模式会上传 iPhone 的真实总时长和逐 App 时长；分享兼容模式只同步已选 App、限额、锁定状态、位置和足迹，不会把缺失时长伪装成 0。"
+                        "同步已选 App、限额、锁定状态、电量、步数、位置和足迹。使用时长请在网页情侣空间设置快捷指令自动上传。"
                     )
                     .font(.footnote)
 
                     Text(
-                        "打开本页会读取一次真实使用数据；前台每 5 秒处理基础同步和角色发来的设备命令，不会让报告扩展反复转圈。"
+                        "前台每 5 秒处理设备数据同步和角色发来的管控命令。"
                     )
                     .font(.footnote)
                 }
@@ -933,23 +852,7 @@ final class CompanionSyncService: ObservableObject {
                 "命令处理失败：\(error.localizedDescription)"
         }
 
-        var report = latestDirectUsageSnapshot
-        let automaticUsageRefreshDue =
-            ["个人直读模式", "隐私报告模式"]
-                .contains(dataAccessModeText) &&
-            Date().timeIntervalSince(lastUsageRefreshDate ?? .distantPast) >= 60
-        if refreshUsage || automaticUsageRefreshDue {
-            lastUsageRefreshDate = Date()
-            if !quiet {
-                reportStatusText = "正在从主 App 读取真实使用数据"
-                reportGenerationText = "读取中"
-            }
-            if #available(iOS 26.0, *) {
-                report = await fetchTodayDirectUsage()
-            } else {
-                report = nil
-            }
-        }
+        let report: DeviceReportSnapshot? = nil // Public usage collection retired.
 
         do {
             let snapshot = await makeSnapshot(
@@ -974,13 +877,7 @@ final class CompanionSyncService: ObservableObject {
 
             lastSyncDate = Date()
             if !quiet {
-                if let report, report.hasPositiveAppUsage {
-                    uploadStatusText = "真实逐 App 数据已上传"
-                } else if report != nil {
-                    uploadStatusText = "真实总时长已上传；逐 App 暂未匹配"
-                } else {
-                    uploadStatusText = "已上传兼容数据；逐 App 时长不可用"
-                }
+                uploadStatusText = "设备数据已上传"
             }
         } catch {
             if !quiet {
@@ -1021,8 +918,7 @@ final class CompanionSyncService: ObservableObject {
         }
 
         do {
-            let report = latestDirectUsageSnapshot
-                ?? loadCachedTodayExtensionUsage()
+            let report: DeviceReportSnapshot? = nil
             let snapshot = await makeSnapshot(
                 locationManager: locationManager,
                 report: report,
@@ -1268,11 +1164,12 @@ final class CompanionSyncService: ObservableObject {
 
     private func makeSnapshot(
         locationManager: LocationManager,
-        report: DeviceReportSnapshot?,
+        report unusedReport: DeviceReportSnapshot?,
         wellnessService: CompanionWellnessService,
         resolvePlaceNames: Bool = true,
         controlOnly: Bool = false
     ) async -> [String: Any] {
+        let report: DeviceReportSnapshot? = nil // Never re-upload cached usage.
         let selection = loadSelection()
         let lockedTokens = manualLockStore.shield.applications ?? []
         let limitSettings = loadLimitSettings()
@@ -1326,7 +1223,6 @@ final class CompanionSyncService: ObservableObject {
                 "id": externalID,
                 "bindingCode": bindingCodeByID[externalID] ?? "",
                 "name": appAliases[externalID] ?? "",
-                "usedSeconds": usageByID[externalID] ?? 0,
                 "limitMinutes": setting?.isEnabled == true
                     ? (setting?.minutes ?? 0)
                     : 0,
@@ -1377,47 +1273,11 @@ final class CompanionSyncService: ObservableObject {
             ])
         }
 
-        let screenTime: [String: Any]
-        if let report {
-            let reportAge = max(
-                0,
-                Date().timeIntervalSince(report.generatedAt)
-            )
-            let usageRevision = Int64(
-                report.generatedAt.timeIntervalSince1970 * 1_000
-            )
-            screenTime = [
-                "reportAvailable": true,
-                "reportFresh": reportAge < 180,
-                "schema": report.schema,
-                "requestID": report.requestID,
-                "requestedAt": iso8601(report.requestedAt),
-                "usageDay": usageDay(for: report.generatedAt),
-                "timeZone": TimeZone.current.identifier,
-                "usageRevision": usageRevision,
-                "totalSeconds": report.totalSeconds,
-                "generatedAt": iso8601(report.generatedAt),
-                "reportAppCount": report.apps.count,
-                "hasPositiveAppUsage": report.hasPositiveAppUsage,
-                "apps": appRows
-            ]
-        } else {
-            screenTime = [
-                "reportAvailable": false,
-                "reportFresh": false,
-                "schema": 4,
-                "requestID": "",
-                "requestedAt": "",
-                "usageDay": "",
-                "timeZone": TimeZone.current.identifier,
-                "usageRevision": 0,
-                "totalSeconds": 0,
-                "generatedAt": "",
-                "reportAppCount": 0,
-                "hasPositiveAppUsage": false,
-                "apps": appRows
-            ]
-        }
+        // Keep only the control inventory; missing usage is never encoded as zero.
+        let screenTime: [String: Any] = [
+            "reportAvailable": false,
+            "apps": appRows
+        ]
 
         var snapshot: [String: Any] = [
             "schema": 2,
@@ -1564,7 +1424,7 @@ final class CompanionSyncService: ObservableObject {
 
             let snapshot = await makeSnapshot(
                 locationManager: locationManager,
-                report: latestDirectUsageSnapshot,
+                report: nil,
                 wellnessService: wellnessService,
                 resolvePlaceNames: false,
                 controlOnly: true

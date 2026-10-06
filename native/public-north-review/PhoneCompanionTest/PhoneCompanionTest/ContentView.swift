@@ -238,7 +238,7 @@ struct ContentView: View {
                 .font(.system(size: 64))
                 .foregroundStyle(.blue)
 
-            Text("屏幕使用时间")
+            Text("App 管控授权")
                 .font(.largeTitle)
                 .bold()
 
@@ -246,21 +246,12 @@ struct ContentView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
-            Button("请求屏幕使用时间权限") {
+            Button("授权 App 限时与锁定") {
                 requestScreenTimeAuthorization()
             }
             .buttonStyle(.borderedProminent)
 
-            Text("今日屏幕使用时间")
-                .font(.title2)
-                .bold()
-                .padding(.top, 10)
 
-            DeviceActivityReport(
-                reportContext,
-                filter: todayFilter
-            )
-            .frame(height: 120)
         }
     }
 
@@ -583,23 +574,23 @@ struct ContentView: View {
         if #available(iOS 26.0, *),
            authorizationStatus == .approvedWithDataAccess {
             isScreenTimeAuthorized = true
-            statusText = "屏幕使用时间权限：已授权（真实数据）"
+            statusText = "App 管控权限：已授权"
             return
         }
 
         switch authorizationStatus {
         case .approved:
             isScreenTimeAuthorized = true
-            statusText = "屏幕使用时间权限：已授权"
+            statusText = "App 管控权限：已授权"
         case .denied:
             isScreenTimeAuthorized = false
-            statusText = "屏幕使用时间权限：已拒绝"
+            statusText = "App 管控权限：已拒绝"
         case .notDetermined:
             isScreenTimeAuthorized = false
-            statusText = "屏幕使用时间权限：尚未请求"
+            statusText = "App 管控权限：尚未请求"
         @unknown default:
             isScreenTimeAuthorized = false
-            statusText = "屏幕使用时间权限：未知状态"
+            statusText = "App 管控权限：未知状态"
         }
     }
 
