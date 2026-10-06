@@ -71,8 +71,8 @@ test('private identity remains v1355 and iOS 399 while public advances independe
   assert.match(bridge, /private static let build = "1\.0\.439 \(439\)"/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 439;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.439;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1592 · 角色微信表情包尺寸修复'/);
-  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1592'/);
+  assert.match(publicApp, /APP_VER='v1594 · 情侣空间解绑后重开修复'/);
+  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1594'/);
   assert.doesNotMatch(publicApp, /persistWechatRequested|smallPhoneWechatPersistTrace/);
 });
 

@@ -34,3 +34,16 @@ for(const prefix of ['', 'native/private-small-phone/XcodeProject/PhoneCompanion
 });
 
 test('web retires manual import without erasing stored records or exposing them to chat',()=>{const{sandbox,state,api}=screenImportRuntime();sandbox.fmtDT=String;const old={cid:'role-a',account:'main',roleAccess:true,apps:[{name:'stored-secret',seconds:42}]};state.couple.shortcutScreenTime=old;assert(!sandbox.renderCouple().includes('cou_shortcut_screen_time'));assert(sandbox.renderCouple().includes('cou_screen_cloud'));assert.equal(api.open,undefined);assert.equal(api.commit,undefined);assert.equal(sandbox.buildSystem({id:'role-a'}),'original-chat-system');assert.equal(state.couple.shortcutScreenTime,old);});
+
+
+test('web couple space opens after unbinding without requesting a missing controller identity',async()=>{
+ const {sandbox,state,api}=screenImportRuntime();let calls=0;
+ sandbox.PhoneShortcuts={identity:()=>{calls++;throw Error('missing couple identity');},request:()=>{throw Error('must not request while unbound');}};
+ for(const unbound of [null,{}, {cid:''}]){state.couple=unbound;assert.equal(api.cloudPanel(),'');assert.equal(await api.cloudPull(true),false);assert.equal(api.cloudPrompt({id:'role-a'}),'');assert.equal(sandbox.buildSystem({id:'role-a'}),'original-chat-system');assert.equal(sandbox.renderCouple(),'<div id="coupage1"><p>existing</p></div>');}
+ assert.equal(calls,0);
+ state.couple={cid:'role-a',companion:{}};sandbox.PhoneShortcuts.identity=()=>{calls++;return {target:'restored',clientId:'phone_main',url:'https://cloud.example'};};sandbox.fmtDT=String;assert(sandbox.renderCouple().includes('cou_screen_cloud'));assert(calls>0);
+});
+
+test('web in-flight screen pull cannot write into a newly rebound couple',async()=>{
+ const {sandbox,state,api}=screenImportRuntime();const auth={target:'owner-a',clientId:'phone_main',url:'https://cloud.example'};let resolve;const old=state.couple;old.screenCloudByRole={'main:role-a':{enabled:true,...auth,record:null}};sandbox.PhoneShortcuts={identity:()=>auth,request:()=>new Promise(done=>resolve=done)};sandbox.fmtDT=String;const pending=api.cloudPull(true);state.couple=null;state.couple={cid:'role-b',companion:{}};resolve({ok:true,enabled:true,snapshot:{date:'2026-01-01',apps:[{name:'private-old-role',seconds:10}]},receivedAt:new Date().toISOString()});assert.equal(await pending,false);assert.equal(old.screenCloudByRole['main:role-a'].record,null);assert.equal(state.couple.screenCloudByRole,undefined);assert.equal(api.cloudPrompt({id:'role-a'}),'');
+});
