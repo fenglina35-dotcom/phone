@@ -1458,3 +1458,13 @@ test('recently deleted retains originals for three days and restores complete ro
 
 
 test('real-friend route recovery keeps read-only failover and single-write protection in both runtimes',()=>{for(const file of [WEB,PRIVATE]){const js=read(file);for(const marker of ['[GATE_URL,PF_RELAY_BASE].forEach','Math.min(ms||15000,15000)','attempt<(write?1:2)','backendCode:','pfSubmissionUnknown','phoneFriendSync(true,false)'])assert(js.includes(marker),file+': '+marker);}});
+
+test('marketplace keeps couple-only cloud funds, guarded gift cards and original simulation payment isolation',()=>{
+ for(const prefix of ['',PRIVATE_DIR]){
+  const ui=read(prefix+'commerce-ui.js'),app=read(prefix+'app.js');
+  for(const marker of ['function northMarketCoupleRole()','function northMarketTransactions()','northMarketTransactionSnapshot(d)','真人店铺不支持亲属卡','window.northMarketRoleBank','window.northMarketPinSettings','northMarketSpecChange()'])assert(ui.includes(marker));
+  assert(app.includes('northMarketRoleBank(id)'));assert(app.includes('NorthMarket.giftCard(c,m)'));
+ }
+ const sql=read('supabase/migrations/202610070001_north_market.sql');
+ for(const marker of ['values(actor,100000)','market-couple-only','market-completed-order-required','market-self-order-not-allowed','north_market_upload_boundary',"p_target not in ('wallet','couple')"])assert(sql.includes(marker));
+});

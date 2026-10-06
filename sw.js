@@ -1,6 +1,6 @@
-const BUILD='1598';
-const HOTFIX='v1598-couple-unbind-reopen-1';
-const SHELL_CACHE='north-shell-v1598-couple-unbind-reopen-1';
+const BUILD='1600';
+const HOTFIX='v1600-couple-unbind-reopen-1';
+const SHELL_CACHE='north-shell-v1600-couple-unbind-reopen-1';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
@@ -15,7 +15,7 @@ const CORE_FILES=[
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
   {url:'./app.js?v='+BUILD+'&r='+HOTFIX,kind:'app'},
   {url:'./cohab-theater.js?v='+BUILD+'&r=v1274-web-cohab-guests-1',kind:'theater'},
-  {url:'./web-hotfix.js?v='+BUILD+'&r=v1598-couple-unbind-reopen-1',kind:'hotfix'},
+  {url:'./web-hotfix.js?v='+BUILD+'&r=v1600-couple-unbind-reopen-1',kind:'hotfix'},
   {url:'./photo-album.js?v='+BUILD,kind:'album'},
   {url:'./couple-watch.js?v='+BUILD,kind:'watch'},
   {url:'./couple-watch-runtime.js?v='+BUILD,kind:'watchRuntime'}
@@ -29,6 +29,29 @@ const OPTIONAL_FILES=[
   './pixel-wardrobe-info.js?v='+BUILD,
   './pixel-home.js?v='+BUILD,
   './icon.png',
+  './assets/meituan-categories.png',
+  './assets/meituan-kangaroo.png',
+  './assets/meituan-north-cover.jpg',
+  './assets/north-extra-green.jpg',
+  './assets/north-extra-rainbow.jpg',
+  './assets/north-extra-cocoa.jpg',
+  './assets/north-extra-peach.jpg',
+  './assets/north-extra-crystal.jpg',
+  './assets/north-extra-coconut.jpg',
+  './assets/north-coffee-cloud.jpg',
+  './assets/north-coffee-mint.jpg',
+  './assets/north-ice-blue.jpg',
+  './assets/north-ice-berry.jpg',
+  './assets/north-ice-lime.jpg',
+  './assets/north-ice-sunset.jpg',
+  './assets/north-ice-lemon.jpg',
+  './assets/north-ice-passion.jpg',
+  './assets/north-snow-mango.jpg',
+  './assets/north-snow-cocoa.jpg',
+  './assets/north-snow-mulberry.jpg',
+  './assets/north-snow-strawberry.jpg',
+  './assets/north-snow-guava.jpg',
+  './assets/north-snow-taro.jpg',
   './assets/incoming-wechat-call-default-v2.mp3',
   './assets/message-notification-user-v1.mp3',
   './assets/pet-room-v1.webp',
@@ -129,7 +152,7 @@ function validShellText(kind,text){
     &&text.includes('theaterRevealActorItems')
     &&!text.includes('cohabReplyCore=async');
   if(kind==='hotfix')return text.length>800
-    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1598-couple-unbind-reopen-1'")
+    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1600-couple-unbind-reopen-1'")
     &&text.includes('reconcileExpiredWxLogin')
     &&text.includes('withBaseImageCheck')
     &&text.includes('isStoredImgRef');
