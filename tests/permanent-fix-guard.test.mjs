@@ -1485,3 +1485,13 @@ test('market business retains finite paid inventory, manual couple funds, three 
  const sql=read('supabase/migrations/202610070002_north_market_social_orders.sql');
  for(const marker of ['values(actor,50000)','market-three-shop-limit','market-earned-profit-required','market-completed-order-no-refund','north_market_stock_take','north_market_stock_restore','north_market_stock_lots','north_market_role_order','notice_revision=i.restock_revision'])assert(sql.includes(marker));
 });
+
+test('cloud voucher entry keeps the colorful main page, one-line address and development-only errands',()=>{
+ for(const prefix of ['',PRIVATE_DIR]){
+  const ui=read(prefix+'commerce-ui.js');
+  for(const marker of ['north-voucher-header','northMarketCouponRules','northMarketCouponBuy','white-space:nowrap;overflow:hidden;text-overflow:ellipsis',"window.mtFoodErrand=function(){toast('开发中');}","c[0]==='errand'?'mtFoodErrand()'"])assert(ui.includes(marker));
+  assert(ui.includes("v.page==='coupons'?' north-voucher-page'"));assert(ui.includes('return northMarketCoupons();'));
+ }
+});
+
+test('market rules and distinct replenishment/wallet icons remain in both runtimes',()=>{for(const prefix of ['',PRIVATE_DIR]){const ui=read(prefix+'commerce-ui.js');for(const marker of ['northPlayRulesHTML','northPlayRules()', 'data-north-icon="stock"','data-north-icon="wallet"','fmtDT(Date.parse(c.expires_at))'])assert(ui.includes(marker));}});

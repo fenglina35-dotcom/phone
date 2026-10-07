@@ -126,3 +126,34 @@ for(const priv of [false,true]){
   assert.equal(await ctx.finalize(),false);assert.equal(ctx.S.me.balance,200);assert.equal(ctx.S.food.north.vouchers.length,0);assert.equal(ctx.northCouponPurchase,null);assert.equal(closed,1);
  });
 }
+
+for (const priv of [false,true]) {
+ const src=fs.readFileSync(priv?'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/commerce-ui.js':'commerce-ui.js','utf8');
+ test((priv?'private':'web')+' main cloud vouchers retain colorful layout and actual cloud coupon fields',()=>{
+  const c={id:'cloud-coupon',face:500,minimum:3500,inflated:true,expires_at:'2026-11-01T00:00:00Z'};
+  const ctx={money:n=>(+n).toFixed(2),esc:String,fmtDT:n=>new Date(+n||1791356400000).toISOString(),mtGlyph:()=>'',northNavIcon:()=>'',northMarketNavigation:()=>'<nav>nav</nav>',window:{},toast:()=>{},northCouponPacks:[{id:'light',name:'轻享包',price:590},{id:'daily',name:'日常包',price:690}]};
+  vm.createContext(ctx);vm.runInContext(src.match(/  function northMarketCouponsHTML\(v\)\{[^\n]+/)[0],ctx);
+  const html=ctx.northMarketCouponsHTML({busy:false,rows:[c]});
+  assert.match(html,/north-voucher-header/);assert.match(html,/north-voucher-hero/);
+  assert.match(html,/¥5\.00/);assert.match(html,/35\.00/);assert.match(html,/2026-11-01/);
+  assert.match(html,/northMarketCouponBuy\(/);assert.match(html,/northMarketCouponBoost\(/);
+  assert.doesNotMatch(html,/northStartCouponPurchase\(/);
+ });
+ test((priv?'private':'web')+' errand entry only reports development without triggering a search',()=>{
+  let notices=[],searches=0;const ctx={window:{},toast:s=>notices.push(s),foodQuick:()=>searches++};
+  vm.createContext(ctx);const handler=src.match(/  window\.mtFoodErrand=function\(\)\{[^\n]+/);
+  assert.ok(handler,'errand development handler exists');vm.runInContext(handler[0],ctx);
+  ctx.window.mtFoodErrand();assert.deepEqual(notices,['开发中']);assert.equal(searches,0);
+ });
+}
+
+for(const priv of [false,true]){
+ const src=fs.readFileSync(priv?'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/commerce-ui.js':'commerce-ui.js','utf8');
+ test((priv?'private':'web')+' rules page is read only and stock/wallet icons are distinct',()=>{
+  const ctx={esc:String,northPersonalHeader:s=>'<header>'+s+'</header>',mtGlyph:()=>'<svg>order</svg>'};vm.createContext(ctx);
+  vm.runInContext(src.match(/  function northPlayRulesHTML\(\)\{[^\n]+/)[0],ctx);
+  const html=ctx.northPlayRulesHTML();assert.match(html,/玩法规则/);assert.match(html,/首次可领取500/);assert.match(html,/已完成订单不能退款/);assert.match(html,/真人店不支持亲属卡/);assert.doesNotMatch(html,/onclick=|<input|<form/);
+  vm.runInContext(src.match(/  function northMyFunctionIcon\(kind\)\{[^\n]+/)[0],ctx);
+  assert.match(ctx.northMyFunctionIcon('stock'),/data-north-icon="stock"/);assert.match(ctx.northMyFunctionIcon('wallet'),/data-north-icon="wallet"/);assert.notEqual(ctx.northMyFunctionIcon('stock'),ctx.northMyFunctionIcon('wallet'));
+ });
+}
