@@ -18,14 +18,14 @@ test('game status and rewards preserve unrelated store snapshots while purchases
 });
 test('remaining in the middle lane cannot survive the first 23 seconds without any control',()=>{const g=engine.create(42);while(!g.done&&g.tick<1400)engine.step(g);assert.equal(g.hearts,0);});
 test('difficulty advances world speed and no stationary lane remains safe',()=>{
- assert.equal(engine.speed(0),160);assert(engine.speed(1800)>engine.speed(600));assert.equal(engine.speed(6000),400);
+ assert.equal(engine.speed(0),160);assert(engine.speed(1800)>engine.speed(600));assert.equal(engine.speed(6000),660);assert(engine.speed(5400)>engine.speed(4800));assert.equal(engine.speed(6000,1),400);
  for(const seed of [1,7,42,109,98765])for(const lane of [0,1,2]){const g=engine.create(seed);g.lane=lane;g.x=lane*1000;while(!g.done&&g.tick<1400)engine.step(g);assert.equal(g.hearts,0,'standing still must fail: '+seed+'/'+lane);}
 });
 test('ground projection uses the same world distance as collision and multi-lane routes remain solvable',()=>{
  assert.equal(engine.project(0),1);assert(engine.project(14000)<engine.project(7000));
  for(let seed=1;seed<=32;seed++){const rows=engine.track(seed);assert(rows.some(r=>r.objects.length===3));for(const row of rows){assert(row.objects.length>=1&&row.objects.length<=3);assert(!row.objects.some(o=>o.lane===row.safeLane&&o.type===2));}const g=finish(seed);assert.equal(g.hearts,3,'route must be solvable: '+seed);assert.equal(g.distance,engine.distanceAt(g.tick));}
 });
-function finish(seed,safe=true){const g=engine.create(seed);let moved=-1,acted=-1;while(!g.done){const o=g.rows[g.row];if(safe&&o){const gap=o.distance-g.distance;if(gap<=engine.speed(g.tick)*40&&moved!==g.row){if(g.lane!==o.safeLane)engine.input(g,g.lane>o.safeLane?'l':'r');moved=g.row;}if(gap<=engine.speed(g.tick)*18&&acted!==g.row&&o.action){engine.input(g,o.action);acted=g.row;}}engine.step(g);}return g;}
+function finish(seed,safe=true,version=2){const g=engine.create(seed,version);let moved=-1,acted=-1;while(!g.done){const o=g.rows[g.row];if(safe&&o){const gap=o.distance-g.distance;if(gap<=engine.speed(g.tick,g.physicsVersion)*40&&moved!==g.row){if(g.lane!==o.safeLane)engine.input(g,g.lane>o.safeLane?'l':'r');moved=g.row;}if(gap<=engine.speed(g.tick,g.physicsVersion)*18&&acted!==g.row&&o.action){engine.input(g,o.action);acted=g.row;}}engine.step(g);}return g;}
 test('runner fixed simulation has repeatable tracks, three hearts, bounded controls and terminal reward count',()=>{
  assert.deepEqual(engine.track(1),engine.track(1));assert.notDeepEqual(engine.track(1),engine.track(2));
  const safe=finish(42);assert.equal(safe.tick,6000);assert.equal(safe.orders,10);assert.equal(safe.hearts,3);
@@ -50,12 +50,12 @@ test('real PostgreSQL reward replay verifies time, identity, idempotency, daily 
  create table public.north_market_ledger(owner_id text,kind text constraint north_market_ledger_kind_check check(kind in ('grant','admin_credit','purchase','refund','income','withdraw','allocate','coupon','restock','stock_return','startup')),amount bigint,request_id uuid,target text,unique(owner_id,kind,request_id));
  insert into public.phone_friend_profiles values('SPRUNNER',md5('runner-test')),('SPOTHER',md5('other-test'));insert into public.phone_licenses(id,status,phone_friend_id) values('11111111-1111-4111-8111-111111111111','active','SPRUNNER'),('22222222-2222-4222-8222-222222222222','active','SPOTHER');`);
  const base=fs.readFileSync('supabase/migrations/202610070001_north_market.sql','utf8');await db.exec(base.slice(base.indexOf('create or replace function public.north_market_identity('),base.indexOf('create or replace function public.north_market_image_valid(')));
- await db.exec(fs.readFileSync('supabase/migrations/202610080002_north_runner_rewards.sql','utf8'));
+ await db.exec(fs.readFileSync('supabase/migrations/202610080002_north_runner_rewards.sql','utf8'));await db.exec(fs.readFileSync('supabase/migrations/202610080003_north_runner_continuous_speed.sql','utf8'));
  const call=async(name,args=[],phone='SPRUNNER',secret='runner-test')=>(await db.query(`select public.north_market_runner_${name}(${Array.from({length:args.length+2},(_,i)=>'$'+(i+1)).join(',')}) as d`,[phone,secret,...args])).rows[0].d;
  await assert.rejects(()=>call('status',[],'SPRUNNER','bad'),/market-auth-required/);
  let used=0;
  for(let round=0;round<4;round++){
-  const client=crypto.randomUUID(),s=await call('start',[client]);assert.equal((await call('start',[client])).id,s.id);const g=finish(s.seed);
+  const client=crypto.randomUUID(),s=await call('start',[client,2]);assert.equal((await call('start',[client,2])).id,s.id);const g=finish(s.seed);
   await assert.rejects(()=>call('claim',[s.id,g.tick,JSON.stringify(g.inputs)]),/runner-too-fast/);
   await db.query("update public.north_runner_sessions set started_at=now()-interval '110 seconds' where id=$1",[s.id]);
   await assert.rejects(()=>call('claim',[s.id,g.tick,JSON.stringify(g.inputs)],'SPOTHER','other-test'),/runner-invalid/);
@@ -64,6 +64,7 @@ test('real PostgreSQL reward replay verifies time, identity, idempotency, daily 
  }
  const wallet=(await db.query('select * from public.north_market_wallets')).rows;assert.equal(wallet.length,1);assert.equal(Number(wallet[0].balance),3000);assert.equal(Number(wallet[0].income),0);
  assert.equal(Number((await db.query('select count(*) as n from public.north_market_ledger')).rows[0].n),3);
+ const legacy=await call('start',[crypto.randomUUID()]);const legacyGame=finish(legacy.seed,true,1);assert.equal(legacyGame.tick,6000);await db.query("update public.north_runner_sessions set started_at=now()-interval '110 seconds' where id=$1",[legacy.id]);assert.equal((await call('claim',[legacy.id,legacyGame.tick,JSON.stringify(legacyGame.inputs)])).reward,0);
  const stale=await call('start',[crypto.randomUUID()]);await call('start',[crypto.randomUUID()]);await assert.rejects(()=>call('claim',[stale.id,6000,'[]']),/runner-expired/);
  const acl=(await db.query("select has_table_privilege('anon','public.north_runner_sessions','INSERT') as write,has_function_privilege('anon','public.north_market_runner_claim(text,text,uuid,integer,jsonb)','EXECUTE') as claim")).rows[0];assert.equal(acl.write,false);assert.equal(acl.claim,true);
  }finally{await db.close();}
