@@ -228,3 +228,30 @@ begin
  raise notice 'PASS cover authorization, unpublishing, deadline, auto phases, one settlement, arrival, review, refund, scheduled/cancelled/legacy isolation';
 end $test$;
 `;
+
+for(const priv of [false,true]){
+ const file=priv?'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/commerce-ui.js':'commerce-ui.js';
+ const src=process.env.NORTH_TEST_OLD?cp.execFileSync('git',['show','HEAD:'+file],{encoding:'utf8',maxBuffer:8e6}):fs.readFileSync(new URL('../'+file,import.meta.url),'utf8');
+ const take=p=>src.split('\n').find(l=>l.startsWith('  '+p))||'';
+ test((priv?'private':'web')+' cloud return never pushes duplicate food pages and repeated return is inert',()=>{
+  let paints=0;const routes=[{p:'home'},{p:'food'}],c={northMarketEpoch:1,northMarketView:{page:'store'},northMarketBusy:true,northMarketOrigin:null,northPersonalView:null,northMyView:null,stack:routes,cur:()=>routes.at(-1),render:()=>paints++,closeModal(){},go:(p,a)=>routes.push({p,...a}),back:()=>{routes.pop();paints++;}};c.window=c;vm.createContext(c);vm.runInContext(take('window.northMarketClose='),c);
+  c.northMarketClose();assert.equal(routes.length,2);assert.equal(c.northMarketView,null);assert.equal(c.northMarketBusy,false);assert.equal(paints,1);c.northMarketClose();assert.equal(routes.length,2);assert.equal(paints,1);
+  routes.splice(1,1,{p:'chat',id:'role'},{p:'food'});c.northMarketView={page:'order'};c.northMarketOrigin={p:'chat',id:'role'};c.northMarketClose();assert.deepEqual(routes.at(-1),{p:'chat',id:'role'});assert.equal(routes.length,2);assert.equal(c.northMarketOrigin,null);
+ });
+ test((priv?'private':'web')+' leaving a loading shop ignores its delayed reply without reopening or repainting',async()=>{
+  let resolve,paints=0;const routes=[{p:'home'},{p:'food'}],c={actId:()=> 'main',northMarketEnter:()=>true,northMarketEpoch:0,northMarketView:null,northMarketBusy:false,northMarketOrigin:null,northPersonalView:null,northMyView:null,stack:routes,cur:()=>routes.at(-1),render:()=>paints++,closeModal(){},go:p=>routes.push({p}),back:()=>routes.pop(),northMarketRemember(){},northMarketRpc:()=>new Promise(r=>resolve=r)};c.window=c;vm.createContext(c);vm.runInContext(src.slice(src.indexOf('  window.northMarketOpen='),src.indexOf('  window.northMarketProductPage='))+take('window.northMarketClose='),c);
+  const pending=c.northMarketOpen('shop');c.northMarketClose();const before=paints;resolve({shop:{id:'shop'},products:[]});await pending;assert.equal(c.northMarketView,null);assert.equal(c.northMarketBusy,false);assert.equal(paints,before);assert.equal(routes.length,2);
+ });
+ test((priv?'private':'web')+' real gift card uses escaped role remark then name and stays compact',()=>{
+  const c={actId:()=> 'main',mtStyles(){},northNavIcon:()=>'',esc:s=>String(s).replaceAll('<','&lt;').replaceAll('>','&gt;'),money:n=>n.toFixed(2),northCompactOrderItems:()=>'<details>other items</details>'};vm.createContext(c);vm.runInContext(take('function northMarketGiftCard(')+';this.card=northMarketGiftCard;',c);const m={marketGiftOrderId:'order',marketGiftDetail:{account:'main',items:[],shop:'store',total:1200}};
+  assert.match(c.card({remark:'先生',name:'默认名'},m),/我给先生点/);assert.match(c.card({name:'小北'},m),/我给小北点/);assert.match(c.card({remark:'<b>角色</b>'},m),/我给&lt;b&gt;角色&lt;\/b&gt;点/);assert.doesNotMatch(c.card({name:'小北'},m),/我给情侣点/);assert.equal(c.card({name:'小北'},{marketGiftDetail:{account:'other'}}),'');
+ });
+}
+
+for(const priv of [false,true]){
+ const file=priv?'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js':'app.js';
+ const src=process.env.NORTH_TEST_OLD?cp.execFileSync('git',['show','HEAD:'+file],{encoding:'utf8',maxBuffer:8e6}):fs.readFileSync(new URL('../'+file,import.meta.url),'utf8');
+ test((priv?'private':'web')+' global back dismisses active cloud page before popping unrelated navigation',()=>{
+  let active=true,closes=0,paints=0;const routes=[{p:'home'},{p:'food'}],c={stack:routes,cur:()=>routes.at(-1),render:()=>paints++,northMarketBack:()=>{if(!active)return false;active=false;closes++;return true;}};vm.createContext(c);vm.runInContext(src.split('\n').find(l=>l.startsWith('function back(){'))+';this.leave=back;',c);c.leave();assert.equal(routes.length,2);assert.equal(closes,1);c.leave();assert.equal(routes.length,1);assert.equal(paints,1);
+ });
+}
