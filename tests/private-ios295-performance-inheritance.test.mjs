@@ -47,18 +47,18 @@ function functionSource(sourceText, name) {
 
 test('private identifiers remain v1355 and iOS 399 while public advances independently', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1629'/);
-  assert.match(index, /app\.js\?v=1629&r=v1629-private-package-1/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1631'/);
+  assert.match(index, /app\.js\?v=1631&r=v1631-private-package-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(app, /APP_VER='v1629 · 撤除快捷指令时长自动上传'/);
+  assert.match(app, /APP_VER='v1631 · 撤除快捷指令时长自动上传'/);
   assert.match(overlay, /336-daily-file-backup/);
   assert.match(webview, /1\.0\.439 \(439\)/);
   assert.match(bridge, /private static let build = "1\.0\.439 \(439\)"/);
   assert.match(bridge, /static let contractVersion = 42/);
   assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 439;/g) || []).length, 12);
   assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.439;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1628 · 公开伴生时长入口撤除'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1628'/);
+  assert.match(publicApp, /APP_VER='v1630 · 公开伴生时长入口撤除'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1630'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
@@ -164,7 +164,7 @@ test('Mac guide identifies the current private v1356 iOS422 source', () => {
   assert.match(mac, /原生桥.*38/);
   assert.match(install, /1\.0\.327 \(327\)/);
   assert.match(install, /原生桥.*35/);
-  assert.match(mac, /^# v1629 .*iOS439/);
+  assert.match(mac, /^# v1631 .*iOS439/);
   assert.match(mac, /网页.*推送/);
   assert.match(install, /私人内置网页 v1206/);
   assert.match(install, /两边共有/);
