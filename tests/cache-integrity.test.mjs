@@ -27,3 +27,7 @@ assert.doesNotMatch(app,/loading="lazy" decoding="async" fetchpriority="low"/);
 assert.match(app,/packed\?' decoding="sync" loading="eager" fetchpriority="high"':''/);
 
 console.log('cache integrity tests passed');
+
+assert.equal(context.validShellText('commerce',fs.readFileSync(new URL('../commerce-ui.js',import.meta.url),'utf8')),true,'complete commerce runtime passes');
+assert.equal(context.validShellText('commerce','window.renderFood=function(){};'),false,'missing or incomplete commerce must not activate as a valid release');
+assert.match(sw,/kind:'commerce'/);assert.match(sw,/currentCore\(cache,'commerce'\)/);

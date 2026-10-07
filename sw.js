@@ -1,11 +1,12 @@
-const BUILD='1626';
-const HOTFIX='v1626-couple-unbind-reopen-1';
-const SHELL_CACHE='north-shell-v1626-couple-unbind-reopen-1';
+const BUILD='1628';
+const HOTFIX='v1628-couple-unbind-reopen-1';
+const SHELL_CACHE='north-shell-v1628-couple-unbind-reopen-1';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
 const GLASS_ICON_FILES=GLASS_ICON_PACKS.flatMap(pack=>GLASS_ICON_KEYS.map(key=>'./assets/app-icons/glass/'+pack+'/'+key+'.webp'));
 const CORE_FILES=[
+  {url:'./commerce-ui.js?v='+BUILD,kind:'commerce'},
   {url:'./public-north-policy.js?v='+BUILD,kind:'publicNorthPolicy'},
   {url:'./public-north-runtime.js?v='+BUILD,kind:'publicNorthRuntime'},
   {url:'./phone-shortcuts.js?v='+BUILD,kind:'shortcuts'},
@@ -15,7 +16,7 @@ const CORE_FILES=[
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
   {url:'./app.js?v='+BUILD+'&r='+HOTFIX,kind:'app'},
   {url:'./cohab-theater.js?v='+BUILD+'&r=v1274-web-cohab-guests-1',kind:'theater'},
-  {url:'./web-hotfix.js?v='+BUILD+'&r=v1626-couple-unbind-reopen-1',kind:'hotfix'},
+  {url:'./web-hotfix.js?v='+BUILD+'&r=v1628-couple-unbind-reopen-1',kind:'hotfix'},
   {url:'./photo-album.js?v='+BUILD,kind:'album'},
   {url:'./couple-watch.js?v='+BUILD,kind:'watch'},
   {url:'./couple-watch-runtime.js?v='+BUILD,kind:'watchRuntime'}
@@ -56,7 +57,6 @@ const OPTIONAL_FILES=[
   './assets/message-notification-user-v1.mp3',
   './assets/pet-room-v1.webp',
   './assets/north-dessert-shop.js?v='+BUILD,
-  './commerce-ui.js?v='+BUILD,
   './north-runner.js?v='+BUILD,
   './delivery.js?v='+BUILD,
   './gift-effects.js?v='+BUILD,
@@ -130,6 +130,7 @@ async function fetchRetry(request,options,tries){
   throw last||new Error('network failed');
 }
 function validShellText(kind,text){
+  if(kind==='commerce')return text.length>100000&&text.includes('window.renderFood=function')&&text.includes('northMarketHomeHTML')&&text.includes('window.__NORTH_COMMERCE_READY__=window.__NORTH_SHELL_BUILD__')&&text.trim().endsWith('})();');
   if(kind==='publicNorthPolicy')return text.includes('root.NorthPublicPolicy = Object.freeze');
   if(kind==='publicNorthRuntime')return text.includes('window.NorthPublicRuntime=')&&text.includes('NorthPublicRuntime.install();');
   if(kind==='shortcuts')return text.includes('window.PhoneShortcuts=')&&text.includes('phone-shortcuts');
@@ -154,7 +155,7 @@ function validShellText(kind,text){
     &&text.includes('theaterRevealActorItems')
     &&!text.includes('cohabReplyCore=async');
   if(kind==='hotfix')return text.length>800
-    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1626-couple-unbind-reopen-1'")
+    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1628-couple-unbind-reopen-1'")
     &&text.includes('reconcileExpiredWxLogin')
     &&text.includes('withBaseImageCheck')
     &&text.includes('isStoredImgRef');
@@ -312,7 +313,7 @@ self.addEventListener('fetch',event=>{
       if(cached&&!explicit)return cached;
       try{
         const response=await checkedResponse(request,'html',1);
-        await cache.put(CORE_FILES[0].url,response.clone());
+        await cache.put(CORE_FILES.find(item=>item.kind==='html').url,response.clone());
         return response;
       }catch(_){
         if(cached)return cached;
@@ -324,6 +325,8 @@ self.addEventListener('fetch',event=>{
     })());
     return;
   }
+
+  if(/\/commerce-ui\.js$/.test(url.pathname)){event.respondWith((async()=>{const cache=await caches.open(SHELL_CACHE);return (await currentCore(cache,'commerce'))||checkedResponse(request,'commerce',2);})());return;}
 
   if(/\/app\.js$/.test(url.pathname)){
     event.respondWith((async()=>{

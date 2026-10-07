@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1626'){
+if(window.__NORTH_SHELL_BUILD__!=='1628'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -606,7 +606,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1626 · 公开伴生时长入口撤除';
+const APP_VER='v1628 · 公开伴生时长入口撤除';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2000,7 +2000,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1626&r=v1626-couple-unbind-reopen-1';
+  const url='sw.js?v=1628&r=v1628-couple-unbind-reopen-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -5357,12 +5357,12 @@ function coPanel(){const co=S.shop.co;const c=getC(co.cid);const name=c?(c.remar
 
 /* ---------- 外卖 ---------- */
 let _foodBusy=false;
-function renderFood(){const r=S.food.results||[];const cartN=(S.food.cart||[]).length;
-  return `<div class="nav food-nav"><span class="l" onclick="back()">‹</span><span class="t">外卖</span><span class="r" onclick="openFoodCart()">${svgIc('bag',20,'#fff')}${cartN?'<span class="badge" style="margin-left:2px">'+cartN+'</span>':''}</span></div>
-    <div style="padding:10px 12px;background:#1c1c1e;display:flex;gap:8px;border-bottom:.5px solid #2a2a2c">
-      <input id="food_q" value="${esc(S.food.q||'')}" placeholder="搜想吃的…奶茶/火锅/炸鸡" style="flex:1;border:1px solid #38383a;border-radius:18px;padding:8px 14px;background:#2c2c2e;color:#eee;outline:none" onkeydown="if(event.key==='Enter')foodSearch()">
-      <button class="send" style="background:#ffb83b" onclick="foodSearch()" ${_foodBusy?'disabled':''}>${_foodBusy?'…':'搜'}</button></div>
-    <div class="scroll food-scroll" style="background:#000">${_foodBusy?'<div class="empty">🍳 正在找好吃的…</div>':(r.length?r.map(foodCard).join(''):'<div class="empty">搜想吃的吧～<br>比如「奶茶」「螺蛳粉」「炸鸡」</div>')}<div style="height:20px"></div></div>`;}
+var _northCommerceLoad={attempts:0,busy:false,error:false};
+function northCommerceLoadFailed(){_northCommerceLoad.error=true;if(typeof cur==='function'&&cur().p==='food')render();}
+function northCommerceRetry(){if(window.__NORTH_COMMERCE_READY__===window.__NORTH_SHELL_BUILD__||_northCommerceLoad.busy||_northCommerceLoad.attempts>=2||window.__NORTH_COMMERCE_STARTED__)return;_northCommerceLoad.busy=true;_northCommerceLoad.attempts++;var script=document.createElement('script');script.src='commerce-ui.js?v='+encodeURIComponent(window.__NORTH_SHELL_BUILD__)+'&componentRetry='+_northCommerceLoad.attempts;script.onload=function(){_northCommerceLoad.busy=false;_northCommerceLoad.error=window.__NORTH_COMMERCE_READY__!==window.__NORTH_SHELL_BUILD__;if(typeof cur==='function'&&cur().p==='food')render();};script.onerror=function(){_northCommerceLoad.busy=false;_northCommerceLoad.error=true;if(typeof cur==='function'&&cur().p==='food')render();};document.head.appendChild(script);}
+function northCommerceUnavailableHTML(){if(!_northCommerceLoad.busy&&_northCommerceLoad.attempts===0&&!window.__NORTH_COMMERCE_STARTED__)setTimeout(northCommerceRetry,0);var busy=_northCommerceLoad.busy||!_northCommerceLoad.attempts&&!window.__NORTH_COMMERCE_STARTED__;return '<div class="nav food-nav"><span class="l" onclick="back()">‹</span><span class="t">美团</span></div><div class="empty" style="padding:36px 22px"><h3>'+ (busy?'正在加载新版美团…':'新版美团未能加载')+'</h3><p style="margin:14px 0;line-height:1.8">'+(busy?'聊天和店铺数据保留，请稍候。':'请重试组件加载；聊天、店铺、订单和密钥不会删除。')+'</p>'+(!busy&&_northCommerceLoad.attempts<2&&!window.__NORTH_COMMERCE_STARTED__?'<button class="btn" style="background:#ffe238;color:#222" onclick="northCommerceRetry();render()">重试加载美团</button>':'')+(!busy?'<button class="btn" style="margin-top:12px" onclick="location.reload()">重新加载页面</button>':'')+'</div>';}
+function renderFood(){return northCommerceUnavailableHTML();}
+
 function foodCard(p,i){return `<div class="mpost" style="align-items:center">
     <div class="avatar" style="width:64px;height:64px;flex-basis:64px;font-size:34px;border-radius:14px;background:linear-gradient(135deg,#ffe7b3,#ffd6a0)">${p.emoji||'🍱'}</div>
     <div class="body"><div style="font-size:15px;color:#eee">${esc(p.name)}</div>

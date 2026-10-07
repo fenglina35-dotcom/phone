@@ -2,6 +2,7 @@
    Loaded after app.js so the existing data/payment/chat flows stay untouched. */
 (function(){
   'use strict';
+  window.__NORTH_COMMERCE_STARTED__=true;
 
   function seedOf(value){
     var text=String(value||''),n=17;
@@ -1018,4 +1019,6 @@ async function northBusinessRoleRefresh(){
      和 private-reply-intercept.js 一样属于「改了核心却看不到效果」的陷阱，故移除。
      dyProfileSwitch 保留为兼容入口，旧的 onclick 不会报错。 */
   window.dyProfileSwitch=function(pane){if(typeof dyMeSetTab==='function')dyMeSetTab(pane==='liked'?'喜欢':'作品');};
+  window.__NORTH_COMMERCE_READY__=window.__NORTH_SHELL_BUILD__;
+  if(typeof cur==='function'&&cur().p==='food'&&typeof render==='function')render();
 })();
