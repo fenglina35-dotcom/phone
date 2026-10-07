@@ -1494,4 +1494,4 @@ test('cloud voucher entry keeps the colorful main page, one-line address and dev
  }
 });
 
-test('market rules and distinct replenishment/wallet icons remain in both runtimes',()=>{for(const prefix of ['',PRIVATE_DIR]){const ui=read(prefix+'commerce-ui.js');for(const marker of ['northPlayRulesHTML','northPlayRules()', 'data-north-icon="stock"','data-north-icon="wallet"','fmtDT(Date.parse(c.expires_at))'])assert(ui.includes(marker));}});
+test('market rules and distinct replenishment/wallet icons remain in both runtimes',()=>{for(const prefix of ['',PRIVATE_DIR]){const ui=read(prefix+'commerce-ui.js');for(const marker of ['northPlayRulesHTML','northPlayRules()', 'northAIShopCheckout','northAITemperature','northAIQuotePreview','northBusinessBatchOpen','northMerchantQuickTag','northMerchantPreviewBack','northMarketArgument','north-menu-layout', 'data-north-icon="stock"','data-north-icon="wallet"','fmtDT(Date.parse(c.expires_at))'])assert(ui.includes(marker));}});
