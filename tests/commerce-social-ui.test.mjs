@@ -110,9 +110,9 @@ for (const priv of [false,true]) test((priv?'private':'web')+' personal food rec
  api.northAddressEditor(data.addresses[0].id);fields.north_address_edit.value='修改位置';ok=false;await api.northAddressSave();assert.equal(data.addresses[0].address,'生活街 3号楼');ok=true;await api.northAddressSave();assert.equal(data.addresses[0].address,'修改位置');
  api.northPersonalEditMode();api.northPersonalSelect(data.addresses[0].id);await api.northPersonalDelete();assert.equal(data.addresses.length,0);assert.equal(ctx.S.food.north.addresses.main,undefined);
  const order={id:'review',account:'main',shop:'自己的店',status:'completed',receivedAt:Date.now(),items:[{name:'饭',price:12}],review:{rating:5,text:'原评价',createdAt:Date.now()}};
- ctx.S.food.north.orders.push(order);api.northMyReviews();api.northReviewFollowup(order.id);await api.northReviewFollowupSave(order.id);assert.equal(order.review.followups[0].text,'追加感受');
+ ctx.S.food.north.orders.push(order);api.northLocalReviews();api.northReviewFollowup(order.id);await api.northReviewFollowupSave(order.id);assert.equal(order.review.followups[0].text,'追加感受');
  await api.northSaveReview(order.id);assert.equal(order.review.followups.length,1,'editing original review preserves followups');
- api.northMyReviews();ok=false;await api.northReviewDelete(order.id);assert(order.review);ok=true;await api.northReviewDelete(order.id);assert.equal(order.review,undefined);assert.equal(ctx.S.food.north.orders.length,1);
+ api.northLocalReviews();ok=false;await api.northReviewDelete(order.id);assert(order.review);ok=true;await api.northReviewDelete(order.id);assert.equal(order.review,undefined);assert.equal(ctx.S.food.north.orders.length,1);
  api.northSearchPage();await api.foodSearch();assert.equal(data.searches[0],'奶茶');await api.foodSearch();assert.equal(data.searches.length,1);ok=false;await api.northClearSearches();assert.equal(data.searches.length,1);ok=true;await api.northClearSearches();assert.equal(data.searches.length,0);
  real=true;const count=data.favorites.length;await api.northFavorite('store','north','north');assert.equal(data.favorites.length,count);
 });
@@ -212,20 +212,20 @@ for(const priv of [false,true])test((priv?'private':'web')+' fixed tea merchant 
  account='main';api.northOpen();api.northSpecs(0);await api.northAction('pay');real=true;callback('role');assert.equal(sent,0);
 });
 
-for(const priv of [false,true])test((priv?'private':'web')+' vouchers pay once, expire safely, discount and refund atomically',async()=>{
+for(const priv of [false,true])test((priv?'private':'web')+' new purchases route to cloud only; historical vouchers expire, discount and refund atomically',async()=>{
  const src=readFileSync(new URL(priv?'../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/commerce-ui.js':'../commerce-ui.js',import.meta.url),'utf8');
  const block=src.slice(src.indexOf('  var northShopName='),src.indexOf('  window.renderFood=function'));
  let seq=0,ok=true,account='main';const fields={north_size:{value:'standard'},north_sugar:{value:'半糖'},north_ice:{value:'少冰'},north_qty:{value:'1'},north_receiver:{value:'演示'},north_address:{value:'虚拟街区'},north_note:{value:''},north_utensil_save:{disabled:true}};
  const ctx={window:{openFoodCart(){},openFoodOrders(){},foodDoBuy(){}},S:{food:{cart:[]},me:{balance:200,bills:[],accounts:[]}},actId:()=>account,deliveryRealEnabled:()=>false,render(){},esc:x=>x,familyContacts:()=>[],openModal(){},closeModal(){},toast(){},save(){},saveNowAsync:async()=>ok,uid:()=>String(++seq),fmtDT:n=>String(n),money:n=>Number(n).toFixed(2),setInterval(){},mtPaintCart(){},document:{getElementById:id=>fields[id],querySelector:()=>null,querySelectorAll:()=>[]}};
  vm.createContext(ctx);vm.runInContext((src.match(/  async function northMarketSearchStores\(query,view\)\{[^\n]+/)||[''])[0]+'\n'+block,ctx);Object.assign(ctx,ctx.window);const api=ctx.window;
  const pin=async()=>{for(let i=0;i<4;i++)await api.northPinKey('0');await Promise.all([api.northPinKey('0'),api.northPinKey('0')]);};
- api.northStartCouponPurchase('daily');await pin();assert.equal(ctx.S.me.balance,193.1);assert.equal(ctx.S.food.north.vouchers.length,5);assert.equal(ctx.S.food.north.voucherPurchases.length,1);assert.equal(ctx.S.food.north.vouchers[0].expiresAt-ctx.S.food.north.vouchers[0].createdAt,31*86400000);
- api.northStartCouponPurchase('light');await pin();assert.equal(ctx.S.food.north.vouchers.length,5);assert.equal(ctx.S.me.balance,193.1);
+ const routed=[];ctx.northMarketCouponBuy=id=>routed.push(id);api.northStartCouponPurchase('daily');api.northStartCouponPurchase('light');assert.deepEqual(routed,['daily','light']);assert.equal(ctx.S.me.balance,200);
+ api.northOpen();const now=Date.now();ctx.S.food.north.vouchers=[[300,2000],[300,2000],[300,2000],[500,3500],[500,3500]].map((pair,i)=>({id:'historical-'+i,account:'main',face:pair[0],minimum:pair[1],createdAt:now,expiresAt:now+31*86400000,paid:true,inflated:false,usedOrderId:null,packId:'historical'}));ctx.S.food.north.voucherPurchases=[{id:'historical',account:'main',createdAt:now}];ctx.S.food.north.voucherRules={main:{lastPurchaseAt:now,lastBoostAt:0}};
  const expiry=ctx.S.food.north.vouchers[0].expiresAt;await Promise.all([api.northBoostCoupon(),api.northBoostCoupon()]);assert.equal(ctx.S.food.north.vouchers.filter(c=>c.inflated).length,1);assert.equal(ctx.S.food.north.vouchers[0].minimum,3500);assert.equal(ctx.S.food.north.vouchers[0].face,500);assert.equal(ctx.S.food.north.vouchers[0].expiresAt,expiry);
- api.northOpen();api.northSpecs(0);await api.northAction('buy');const c=ctx.S.food.north.vouchers[1];api.northPickCoupon(c.id);c.expiresAt=Date.now()-1;api.northPay();api.northUtensils('no');api.northUtensilSave();await pin();assert.equal(ctx.S.me.balance,193.1);assert.equal(ctx.S.food.north.orders.length,0);assert.equal(c.usedOrderId,null);
- c.expiresAt=expiry;api.northPay();api.northUtensils('no');api.northUtensilSave();await pin();const order=ctx.S.food.north.orders[0];assert.equal(order.discount,300);assert.equal(order.total,2090);assert.equal(ctx.S.me.balance,172.2);assert.equal(c.usedOrderId,order.id);
- await Promise.all([api.northRefund(order.id),api.northRefund(order.id)]);assert.equal(ctx.S.me.balance,193.1);assert.equal(c.usedOrderId,null);assert.equal(ctx.S.me.bills.filter(b=>b.id===order.id+'-refund').length,1);
- account='other';ok=false;api.northStartCouponPurchase('light');await pin();assert.equal(ctx.S.me.balance,193.1);assert.equal(ctx.S.food.north.vouchers.length,5);assert.equal(ctx.S.food.north.voucherPurchases.length,1);
+ api.northOpen();api.northSpecs(0);await api.northAction('buy');const c=ctx.S.food.north.vouchers[1];api.northPickCoupon(c.id);c.expiresAt=Date.now()-1;api.northPay();api.northUtensils('no');api.northUtensilSave();await pin();assert.equal(ctx.S.me.balance,200);assert.equal(ctx.S.food.north.orders.length,0);assert.equal(c.usedOrderId,null);
+ c.expiresAt=expiry;api.northPay();api.northUtensils('no');api.northUtensilSave();await pin();const order=ctx.S.food.north.orders[0];assert.equal(order.discount,300);assert.equal(order.total,2090);assert.equal(ctx.S.me.balance,179.1);assert.equal(c.usedOrderId,order.id);
+ await Promise.all([api.northRefund(order.id),api.northRefund(order.id)]);assert.equal(ctx.S.me.balance,200);assert.equal(c.usedOrderId,null);assert.equal(ctx.S.me.bills.filter(b=>b.id===order.id+'-refund').length,1);
+ account='other';ok=false;api.northStartCouponPurchase('light');await pin();assert.equal(ctx.S.me.balance,200);assert.equal(ctx.S.food.north.vouchers.length,5);assert.equal(ctx.S.food.north.voucherPurchases.length,1);
 });
 
 for(const priv of [false,true])test((priv?'private':'web')+' local merchant custom specs, fee, revision and failed-save isolation',async()=>{

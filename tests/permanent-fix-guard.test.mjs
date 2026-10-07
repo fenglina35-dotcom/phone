@@ -1468,3 +1468,20 @@ test('marketplace keeps couple-only cloud funds, guarded gift cards and original
  const sql=read('supabase/migrations/202610070001_north_market.sql');
  for(const marker of ['values(actor,100000)','market-couple-only','market-completed-order-required','market-self-order-not-allowed','north_market_upload_boundary',"p_target not in ('wallet','couple')"])assert(sql.includes(marker));
 });
+test('marketplace preserves independent split confirmation, one seller reply and cloud-only new voucher purchase',()=>{
+ for(const prefix of ['',PRIVATE_DIR]){
+  const ui=read(prefix+'commerce-ui.js');
+  for(const marker of ['northMarketResumeSplit(entry)','northMarketSplitPay(pin)','northMarketReviewInbox(false)','northMarketReplySend','northScheduleOpen(true)','window.northStartCouponPurchase=function(id){return northMarketCouponBuy(id);}','northArrivalBanner'])assert(ui.includes(marker));
+ }
+ const sql=read('supabase/migrations/202610070002_north_market_social_orders.sql');
+ for(const marker of ['market-reply-already-sent','market-friend-only','if g.host_paid and g.guest_paid','g.state=\'pending\' and g.expires_at<=now()','market-client-used-for-split','market-scheduled-time-not-reached'])assert(sql.includes(marker));
+});
+test('market business retains finite paid inventory, manual couple funds, three storefronts and thirty-day visits',()=>{
+ for(const prefix of ['',PRIVATE_DIR]){
+  const ui=read(prefix+'commerce-ui.js'),app=read(prefix+'app.js');
+  for(const marker of ['northRecentVisits(rows,now)','30*86400000','northExpireFootprints()','northBusinessRetry()','businessPending','northPreferredRoleFood','northBusinessRoleRefresh','north-soldout','north-wallet-view'])assert(ui.includes(marker));
+  assert(app.includes('NorthMarketBusiness.preferredFood'));assert(app.includes('NorthMarketBusiness.roleFacts'));
+ }
+ const sql=read('supabase/migrations/202610070002_north_market_social_orders.sql');
+ for(const marker of ['values(actor,50000)','market-three-shop-limit','market-earned-profit-required','market-completed-order-no-refund','north_market_stock_take','north_market_stock_restore','north_market_stock_lots','north_market_role_order','notice_revision=i.restock_revision'])assert(sql.includes(marker));
+});

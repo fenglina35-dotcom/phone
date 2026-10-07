@@ -130,8 +130,17 @@ for (const [kind,path] of [['web','commerce-ui.js'],['private','native/private-s
     await assert.rejects(call,/账号已切换/);
   });
   test(`${kind} denied backend responses do not look like successful publication`,async()=>{
-    const {context}=setup(async()=>({ok:false,json:async()=>({message:'market-auth-required'})}));
-    await assert.rejects(context.call('save_shop',{},true),/market-auth-required/);
+    const {context}=setup(async()=>({ok:false,status:401,json:async()=>({message:'market-auth-required'})}));
+    await assert.rejects(context.call('save_shop',{},true),error=>error.backendMessage==='market-auth-required'&&error.httpStatus===401&&error.message.includes('云端交易授权'));
+  });
+  test(`${kind} public invitation-free preview can browse but cannot register or trade as a real account`,async()=>{
+    let fetches=0,registrations=0;
+    const {context}=setup(async()=>{fetches++;return {ok:true,json:async()=>({ok:true,shops:[]})};});
+    context.NORTH_PREVIEW=true;context.location={hostname:'preview.github.io'};context.pfEnsure=async()=>{registrations++;};
+    await assert.rejects(context.call('save_shop',{},true),/免邀请码预览/);assert.equal(fetches,0);
+    await context.call('list',{p_query:''});assert.equal(fetches,1);
+    const source=fs.readFileSync(path,'utf8');vm.runInContext(source.match(/  async function northMarketEnsure\(\)\{[^\n]+/)[0]+';this.ensure=northMarketEnsure;',context);
+    await assert.rejects(context.ensure(),/免邀请码预览/);assert.equal(registrations,0);
   });
   test(`${kind} opening a public store keeps every available product rather than only eight`,async()=>{
     const source=fs.readFileSync(path,'utf8');
