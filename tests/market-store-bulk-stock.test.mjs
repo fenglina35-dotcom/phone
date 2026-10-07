@@ -4,6 +4,48 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import cp from 'node:child_process';
 
+for(const priv of [false,true]){
+ const file=priv?'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/commerce-ui.js':'commerce-ui.js';
+ const src=process.env.NORTH_TEST_OLD?cp.execFileSync('git',['show','HEAD:'+file],{encoding:'utf8',maxBuffer:8e6}):fs.readFileSync(new URL('../'+file,import.meta.url),'utf8');
+ const take=p=>src.split('\n').find(l=>l.startsWith('  '+p))||'';
+ test((priv?'private':'web')+' real utensils require explicit save before PIN or partner authorization',()=>{
+  const state={},draft={account:'main',state,utensils:null,roleId:''};let pins=0,requests=0;
+  const save={disabled:true},c={window:{},S:state,northMarketPayDraft:draft,northMarketBusy:false,actId:()=> 'main',document:{querySelectorAll:()=>[{classList:{toggle(){}}},{classList:{toggle(){}}}],getElementById:()=>save},northMarketPinOpen:()=>pins++,northMarketRequestCouple:()=>requests++};vm.createContext(c);vm.runInContext(take('window.northMarketUtensils=')+'\n'+take('window.northMarketUtensilSave='),c);
+  c.window.northMarketUtensils(false);assert.equal(pins,0);assert.equal(requests,0);assert.equal(save.disabled,false);assert.equal(draft.utensils,false);c.window.northMarketUtensilSave();assert.equal(pins,1);
+  draft.roleId='partner';c.window.northMarketUtensils(true);assert.equal(requests,0);c.window.northMarketUtensilSave();assert.equal(requests,1);assert.equal(pins,1);
+  draft.utensils=null;c.window.northMarketUtensilSave();assert.equal(requests,1);c.S={};c.window.northMarketUtensils(false);assert.equal(draft.utensils,null);
+ });
+ test((priv?'private':'web')+' real delivery map uses server status and never local elapsed-time simulation',()=>{
+  const c={northMarketStatus:s=>s,esc:s=>String(s||''),fmtDT:s=>s,mtGlyph:()=>'<svg/>',northStage:()=>{throw Error('must not simulate real status');},northMapHint:()=>{throw Error('must not simulate real hint');}};vm.createContext(c);vm.runInContext(take('function northMap(')+'\n'+take('function northMarketProgress(')+';this.progress=northMarketProgress;',c);
+  for(const [status,stage] of [['paid',0],['accepted',1],['ready',2],['delivered',3],['completed',3],['cancelled',-1]]){const h=c.progress({status,created_at:0});assert.match(h,new RegExp('data-stage="'+stage+'"'));assert.match(h,/meituan-kangaroo.png/);assert.equal((h.match(/north-track-node/g)||[]).length,4);assert.doesNotMatch(h,/northAdvance|northReceive|\u6a21\u62df\u6d41\u7a0b/);}
+ });
+ test((priv?'private':'web')+' home refresh pages four cloud shops and wraps without discarding data on failure',async()=>{
+  const all=Array.from({length:7},(_,i)=>({id:String(i+1),name:'shop'+i})),requests=[];let render=0;
+  const cache={rows:all.slice(0,4),at:1,busy:false,cursor:'4',pageAfter:null,account:'main'},c={window:{},S:{},actId:()=> 'main',northMarketHomeCache:cache,northMarketRemember(){},northMarketView:null,northView:null,northMyView:null,cur:()=>({p:'food'}),render:()=>render++,northMarketRpc:async(n,a)=>{requests.push(a);return{shops:all.filter(s=>!a.p_after||+s.id>+a.p_after).slice(0,a.p_limit)};}};vm.createContext(c);vm.runInContext(take('window.northMarketHomeRefresh='),c);
+  await c.window.northMarketHomeRefresh(true);assert.deepEqual(cache.rows.map(s=>s.id),['5','6','7']);assert.equal(requests[0].p_limit,5);assert.equal(requests[0].p_after,'4');await c.window.northMarketHomeRefresh(true);assert.deepEqual(cache.rows.map(s=>s.id),['1','2','3','4']);assert.equal(requests.length,3);assert.equal(render,2);
+  c.northMarketRpc=async()=>{throw Error('offline');};await c.window.northMarketHomeRefresh(true);assert.deepEqual(cache.rows.map(s=>s.id),['1','2','3','4']);assert.equal(cache.error,true);assert.equal(cache.busy,false);
+  c.northMarketRpc=async()=>{c.actId=()=> 'other';return{shops:all.slice(4)};};await c.window.northMarketHomeRefresh(true);assert.deepEqual(cache.rows.map(s=>s.id),['1','2','3','4']);
+ });
+}
+
+for(const priv of [false,true]){
+ const file=priv?'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/commerce-ui.js':'commerce-ui.js';
+ const src=process.env.NORTH_TEST_OLD?cp.execFileSync('git',['show','HEAD:'+file],{encoding:'utf8',maxBuffer:8e6}):fs.readFileSync(new URL('../'+file,import.meta.url),'utf8');
+ const take=p=>{const line=src.split('\n').find(l=>l.startsWith('  '+p));assert.ok(line,p);return line;};
+ test((priv?'private':'web')+' hall cart badge and contents include current cloud rows only',()=>{
+  let html='',badge=null;const button={querySelector:()=>badge,appendChild:b=>badge=b};
+  const c={S:{food:{cart:[{_northAccount:'main',_northMarket:'cloud',name:'Cake',shop:'Real store',price:12,quantity:2,_northLabels:['cold']},{_northAccount:'other',_northMarket:'other',quantity:9},{_northAccount:'main',offerId:'platform',quantity:8}]}},actId:()=> 'main',deliveryRealEnabled:()=>false,document:{querySelector:()=>button,createElement:()=>({remove(){badge=null;}})},northSimulationCartRows:()=>[],northMarketArgument:id=>JSON.stringify(id).replace(/"/g,'&quot;'),northCents:n=>n*100,money:n=>n.toFixed(2),esc:n=>String(n||''),openModal:h=>html=h};c.window=c;vm.createContext(c);
+  const visible=src.split('\n').find(l=>l.startsWith('  function northVisibleCartRows()'))||'';
+  vm.runInContext(visible+';'+take('function mtPaintCart()')+';this.paint=mtPaintCart;',c);c.paint();assert.equal(badge.textContent,'2');
+  vm.runInContext(take('window.northSimulationCart='),c);c.northSimulationCart();assert.match(html,/Cake/);assert.match(html,/northMarketOpen/);assert.doesNotMatch(html,/\u8d2d\u7269\u8f66\u662f\u7a7a\u7684/);
+  c.S.food.cart.shift();c.paint();assert.equal(badge,null);c.northSimulationCart();assert.match(html,/\u8d2d\u7269\u8f66\u662f\u7a7a\u7684/);
+ });
+ test((priv?'private':'web')+' cloud gift shortcut explains missing partner without adding or charging',async()=>{
+  let message='',adds=0;const c={window:{},northSaving:false,northMarketBusy:false,northMarketCoupleRole:()=>null,toast:m=>message=m,northMarketAdd:()=>adds++};vm.createContext(c);vm.runInContext(take('window.northMarketSpecAction='),c);await c.window.northMarketSpecAction('gift');assert.match(message,/\u60c5\u4fa3/);assert.equal(adds,0);
+ });
+ test((priv?'private':'web')+' hosted no-code preview rejects cloud add before altering the cart',async()=>{let text='',writes=0;const c={window:{},northSaving:false,northMarketBusy:false,northMarketSpecDraft:{account:'main',quote:{total:1200,labels:[]},product:{id:'p',name:'Cake'},shop:{id:'s',name:'Shop'},selections:{},quantity:1},actId:()=> 'main',NORTH_PREVIEW:true,location:{hostname:'example.com'},toast:m=>text=m,S:{food:{cart:[]}},northMarketCartRows:()=>[],uid:()=> 'r',northCommit:()=>{writes++;return false;}};vm.createContext(c);vm.runInContext(take('window.northMarketAdd='),c);assert.equal(await c.window.northMarketAdd(),false);assert.match(text,/\u9884\u89c8/);assert.equal(writes,0);assert.equal(c.S.food.cart.length,0);});
+}
+
 export const transactionSQL=String.raw`
 do $test$
 declare seller text:='SP'||upper(substr(md5(gen_random_uuid()::text),1,8));
@@ -88,7 +130,7 @@ for(const priv of [false,true]){
  const take=p=>src.split('\n').find(l=>l.startsWith('  '+p));
  test((priv?'private':'web')+' published own shop occurs once above other real shops and opens cloud catalogue',()=>{
   const own={id:'local',name:'North甜品店',marketId:'cloud-own',marketPublished:true,status:'open',products:[],tags:[]};let opened,preview=0;
-  const c={northMerchantSaved:()=>own,northOwnShopHomeHTML:()=>'<section>North甜品店</section>',northMarketStoreCards:r=>r.map(p=>p.name).join(','),northMarketHomeCache:{busy:false,at:Date.now(),rows:[{id:'cloud-own',name:own.name},{id:'cloud-other',name:'朋友的店'}]},Date,northMarketOpen:id=>opened=id,northMerchantPreview:()=>preview++,deliveryRealEnabled:()=>false};c.window=c;vm.createContext(c);
+  const c={actId:()=> 'main',northMerchantSaved:()=>own,northOwnShopHomeHTML:()=>'<section>North甜品店</section>',northMarketStoreCards:r=>r.map(p=>p.name).join(','),northMarketHomeCache:{busy:false,at:Date.now(),rows:[{id:'cloud-own',name:own.name},{id:'cloud-other',name:'朋友的店'}]},Date,northMarketOpen:id=>opened=id,northMerchantPreview:()=>preview++,deliveryRealEnabled:()=>false};c.window=c;vm.createContext(c);
   vm.runInContext(take('function northMarketHomeHTML()')+';this.home=northMarketHomeHTML;',c);const html=c.home();assert.equal((html.match(/North甜品店/g)||[]).length,1);assert(html.indexOf('North甜品店')<html.indexOf('真人店铺'));assert.match(html,/朋友的店/);
   assert(take('window.northOwnShopOpen='));vm.runInContext(take('window.northOwnShopOpen='),c);c.northOwnShopOpen();assert.equal(opened,'cloud-own');assert.equal(preview,0);
  });
