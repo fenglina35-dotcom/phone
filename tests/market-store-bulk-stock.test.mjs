@@ -82,3 +82,41 @@ for(const priv of [false,true]){
   vm.runInContext(take('window.northAIShopCheckout='),c);c.northAIShopCheckout();assert.equal(checkout.length,1);assert.equal(checkout[0].shop,'\u86cb\u7cd5\u5e97');
  });
 }
+
+for(const priv of [false,true]){
+ const file=priv?'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/commerce-ui.js':'commerce-ui.js',src=process.env.NORTH_TEST_OLD?cp.execFileSync('git',['show','HEAD:'+file],{encoding:'utf8',maxBuffer:8e6}):fs.readFileSync(new URL('../'+file,import.meta.url),'utf8');
+ const take=p=>src.split('\n').find(l=>l.startsWith('  '+p));
+ test((priv?'private':'web')+' published own shop occurs once above other real shops and opens cloud catalogue',()=>{
+  const own={id:'local',name:'North甜品店',marketId:'cloud-own',marketPublished:true,status:'open',products:[],tags:[]};let opened,preview=0;
+  const c={northMerchantSaved:()=>own,northOwnShopHomeHTML:()=>'<section>North甜品店</section>',northMarketStoreCards:r=>r.map(p=>p.name).join(','),northMarketHomeCache:{busy:false,at:Date.now(),rows:[{id:'cloud-own',name:own.name},{id:'cloud-other',name:'朋友的店'}]},Date,northMarketOpen:id=>opened=id,northMerchantPreview:()=>preview++,deliveryRealEnabled:()=>false};c.window=c;vm.createContext(c);
+  vm.runInContext(take('function northMarketHomeHTML()')+';this.home=northMarketHomeHTML;',c);const html=c.home();assert.equal((html.match(/North甜品店/g)||[]).length,1);assert(html.indexOf('North甜品店')<html.indexOf('真人店铺'));assert.match(html,/朋友的店/);
+  assert(take('window.northOwnShopOpen='));vm.runInContext(take('window.northOwnShopOpen='),c);c.northOwnShopOpen();assert.equal(opened,'cloud-own');assert.equal(preview,0);
+ });
+ test((priv?'private':'web')+' each merchant product exposes a direct editable specification entry',()=>{
+  const c={northMerchantView:{draft:{groups:[{id:'g',name:'甜品'}],products:[{id:'cake',name:'蛋糕',groupId:'g',price:1500,specGroups:[],available:true}]}},mtMedia:()=>'',northSignatureBadge:()=>'',money:n=>n.toFixed(2),esc:n=>String(n||''),northMarketArgument:n=>JSON.stringify(n).replace(/"/g,'&quot;')};vm.createContext(c);vm.runInContext(take('function northMerchantProductsHTML()')+';this.products=northMerchantProductsHTML;',c);assert.match(c.products(),/northMerchantProductSpecs/);assert.match(c.products(),/编辑规格/);
+ });
+}
+
+for(const priv of [false,true]){
+ const base=priv?'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/':'',src=process.env.NORTH_TEST_OLD?cp.execFileSync('git',['show','HEAD:'+base+'commerce-ui.js'],{encoding:'utf8',maxBuffer:8e6}):fs.readFileSync(new URL('../'+base+'commerce-ui.js',import.meta.url),'utf8');
+ test((priv?'private':'web')+' local preview retains full storefront tabs and grouped product ordering',()=>{
+  const shop={id:'local',name:'甜品店',category:'甜品',tags:[],status:'open',minimum:1500,delivery:190,groups:[{id:'g',name:'蛋糕'}],products:[{id:'cake',groupId:'g',name:'蛋糕',price:1500,available:true}]};
+  const c={northMerchantView:{draft:shop,dirty:false,group:'all',tab:'menu'},actId:()=> 'me',mtGlyph:()=>'',mtMedia:()=>'<img>',northSignatureBadge:()=>'',northFavoriteButton:()=>'',northShopFigures:()=>'',northMerchantReviews:()=>'',northMarketAttr:n=>String(n||''),northMerchantCartbar:()=>'',northMarketArgument:n=>JSON.stringify(n).replace(/"/g,'&quot;'),money:n=>n.toFixed(2),esc:n=>String(n||'')};vm.createContext(c);vm.runInContext(src.split('\n').find(l=>l.startsWith('  function northMerchantPreviewRender()'))+';this.page=northMerchantPreviewRender;',c);const html=c.page();assert.match(html,/north-info/);assert.match(html,/north-tabs/);assert.match(html,/north-menu-layout/);assert.match(html,/northMerchantPreviewTab/);
+ });
+ test((priv?'private':'web')+' cohab settings expose existing date-scoped chat deletion without executing deletion',()=>{
+  const app=process.env.NORTH_TEST_OLD?cp.execFileSync('git',['show','HEAD:'+base+'app.js'],{encoding:'utf8',maxBuffer:12e6}):fs.readFileSync(new URL('../'+base+'app.js',import.meta.url),'utf8');
+  const line=app.split('\n').find(l=>l.startsWith('function cohabSettingsPanel('));const c={cohabSettings:()=>({}),cohabSettingsBrief:()=>'',getC:()=>null,cohabTogetherScene:()=>false,CHAT_ROUTE_NAMES:[],esc:n=>String(n||''),roleScheduleBrief:()=>'',_offSel:null};vm.createContext(c);vm.runInContext(line+';this.panel=cohabSettingsPanel;',c);assert.match(c.panel('role',{summaries:[]}),/cohab-history-delete[^>]*offDelHistory/);assert.match(app,/function offHistMatch/);assert.match(app,/删除一天前的记录/);assert.match(app,/删除三天前的记录/);assert.match(app,/删除这一天的记录/);
+ });
+}
+
+for(const priv of [false,true]){
+ const file=priv?'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/commerce-ui.js':'commerce-ui.js',src=process.env.NORTH_TEST_OLD?cp.execFileSync('git',['show','HEAD:'+file],{encoding:'utf8',maxBuffer:8e6}):fs.readFileSync(new URL('../'+file,import.meta.url),'utf8'),take=p=>src.split('\n').find(l=>l.startsWith('  '+p));
+ test((priv?'private':'web')+' shop default specs are isolated and cloned for new products',()=>{
+  assert(take('function northMerchantDefaultSpecs('));const c={};vm.createContext(c);vm.runInContext(take('function northMerchantDefaultSpecs(')+';this.specs=northMerchantDefaultSpecs;',c);
+  const a={defaultSpecGroups:[{id:'heat',name:'温度',options:[{id:'warm',label:'温的',price:0}]}]},b={defaultSpecGroups:[{id:'spice',name:'辣度',options:[]}]},copy=c.specs(a);copy[0].options[0].label='修改';assert.equal(a.defaultSpecGroups[0].options[0].label,'温的');assert.equal(c.specs(b)[0].name,'辣度');assert.match(take('window.northMerchantProductEdit='),/specGroups:northMerchantDefaultSpecs\(d\)/);
+ });
+ test((priv?'private':'web')+' applying shop specs requires confirmation and never changes other shop or product fields',async()=>{
+  assert(take('window.northMerchantSpecsApply='));const d={groups:[{id:'g'}],products:[{id:'a',name:'蛋糕',price:1500,image:'cake.jpg',specGroups:[]},{id:'b',name:'奶茶',price:2000,image:'tea.jpg',specGroups:[]}]},other={defaultSpecGroups:[{name:'别店规格'}]};let yes=false,closed=0;
+  const c={northSaving:false,northMerchantView:{account:'me',nonce:'view',draft:d,dirty:false},northProductEdit:{product:{specGroups:[{id:'heat',name:'温度',mode:'single',required:true,options:[{id:'warm',label:'温的',price:0}]}]}},northProductActive:()=>true,northMerchantProductError:()=>'',actId:()=> 'me',uiConfirm:async()=>yes,closeModal:()=>closed++,render(){},toast(){}};c.window=c;vm.createContext(c);vm.runInContext(take('window.northMerchantSpecsApply='),c);await c.northMerchantSpecsApply();assert.equal(d.products[0].specGroups.length,0);yes=true;await c.northMerchantSpecsApply();assert.equal(closed,1);assert.equal(d.products[1].specGroups[0].name,'温度');assert.equal(d.products[0].price,1500);assert.equal(d.products[1].image,'tea.jpg');d.products[0].specGroups[0].name='单品修改';assert.equal(d.products[1].specGroups[0].name,'温度');assert.equal(d.defaultSpecGroups[0].name,'温度');assert.equal(other.defaultSpecGroups[0].name,'别店规格');
+ });
+}
