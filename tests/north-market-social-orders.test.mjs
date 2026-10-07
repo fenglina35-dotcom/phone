@@ -238,3 +238,14 @@ begin
  raise notice 'PASS role catalog AND keywords, actual specs, own-shop exclusion, coupon ownership/expiry/replay/refund, atomic role payment and stock';
 end $test$;
 `;
+
+for(const prefix of ['', 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/'])test(prefix+' arrival follows recipient, not payer, with one persisted role notice',async()=>{
+ const source=fs.readFileSync(prefix+'commerce-ui.js','utf8'),match=source.match(/  async function northArrivalRoute\(order,cloud\)\{[\s\S]*?\n  \}/);assert.ok(match,'recipient arrival routing must exist');
+ const messages=[],banners=[],replies=[],role={id:'role-one',name:'先生'},state={},ctx={S:state,actId:()=> 'main',getC:id=>id===role.id?role:null,msgs:()=>messages,pushMsg:(_id,m)=>messages.push(m),saveNowAsync:async()=>true,scheduleReply:(...args)=>replies.push(args),northArrivalBanner:(...args)=>banners.push(args),Date,esc:s=>s};vm.createContext(ctx);vm.runInContext(match[0],ctx);
+ const gift={id:'gift-one',shop_name:'甜品店',status:'completed',address:{recipientRole:'role-one'},items:[{name:'草莓蛋糕',quantity:1,labels:['微甜']}]};assert.equal(await ctx.northArrivalRoute(gift,true),true);assert.equal(banners.length,0);assert.equal(messages.length,1);assert.match(messages[0].content,/草莓蛋糕/);assert.match(messages[0].content,/已经送到你这里/);assert.equal(replies.length,1);
+ await ctx.northArrivalRoute(gift,true);assert.equal(messages.length,1);assert.equal(replies.length,1);
+ await ctx.northArrivalRoute({...gift,id:'self-one',payer_role:'role-one',address:{}},true);assert.equal(banners.length,1);assert.equal(banners[0][0],'self-one');
+ assert.equal(await ctx.northArrivalRoute({...gift,id:'missing',address:{recipientRole:'removed'}},true),false);assert.equal(banners.length,1);
+ role.blocked=true;assert.equal(await ctx.northArrivalRoute({...gift,id:'blocked'},true),false);assert.equal(messages.length,1);role.blocked=false;
+ ctx.saveNowAsync=async()=>false;assert.equal(await ctx.northArrivalRoute({...gift,id:'unsaved'},true),false);assert.equal(messages.length,1);assert.equal(replies.length,1);
+});
