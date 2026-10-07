@@ -1,6 +1,6 @@
-const BUILD='1620';
-const HOTFIX='v1620-couple-unbind-reopen-1';
-const SHELL_CACHE='north-shell-v1620-couple-unbind-reopen-1';
+const BUILD='1622';
+const HOTFIX='v1622-couple-unbind-reopen-1';
+const SHELL_CACHE='north-shell-v1622-couple-unbind-reopen-1';
 const GLASS_ICON_CACHE='north-glass-icons-v1';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
@@ -15,7 +15,7 @@ const CORE_FILES=[
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
   {url:'./app.js?v='+BUILD+'&r='+HOTFIX,kind:'app'},
   {url:'./cohab-theater.js?v='+BUILD+'&r=v1274-web-cohab-guests-1',kind:'theater'},
-  {url:'./web-hotfix.js?v='+BUILD+'&r=v1620-couple-unbind-reopen-1',kind:'hotfix'},
+  {url:'./web-hotfix.js?v='+BUILD+'&r=v1622-couple-unbind-reopen-1',kind:'hotfix'},
   {url:'./photo-album.js?v='+BUILD,kind:'album'},
   {url:'./couple-watch.js?v='+BUILD,kind:'watch'},
   {url:'./couple-watch-runtime.js?v='+BUILD,kind:'watchRuntime'}
@@ -56,6 +56,7 @@ const OPTIONAL_FILES=[
   './assets/message-notification-user-v1.mp3',
   './assets/pet-room-v1.webp',
   './commerce-ui.js?v='+BUILD,
+  './north-runner.js?v='+BUILD,
   './delivery.js?v='+BUILD,
   './gift-effects.js?v='+BUILD,
   './heart-quiz.js?v='+BUILD,
@@ -152,7 +153,7 @@ function validShellText(kind,text){
     &&text.includes('theaterRevealActorItems')
     &&!text.includes('cohabReplyCore=async');
   if(kind==='hotfix')return text.length>800
-    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1620-couple-unbind-reopen-1'")
+    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1622-couple-unbind-reopen-1'")
     &&text.includes('reconcileExpiredWxLogin')
     &&text.includes('withBaseImageCheck')
     &&text.includes('isStoredImgRef');
@@ -355,7 +356,7 @@ self.addEventListener('fetch',event=>{
     event.respondWith((async()=>{const cache=await caches.open(SHELL_CACHE);return (await currentCore(cache,'requestSize'))||checkedResponse(request,'requestSize',2);})());return;
   }
   const optionalPath=OPTIONAL_FILES.some(value=>{try{return new URL(value,self.location.href).pathname===url.pathname;}catch(_){return false;}});
-  if(optionalPath||/\/commerce-ui\.js$/.test(url.pathname)||/\/(?:gift-effects|thought-card-effects)\.js$/.test(url.pathname)||/\/pet-game\.js$/.test(url.pathname)||/\/pet-game\.css$/.test(url.pathname)||/\/assets\/pet-room-v1\.webp$/.test(url.pathname)||/\/icon\.png$/.test(url.pathname)||/\/vendor\//.test(url.pathname)){
+  if(/\/assets\/north-runner-(?:(?:rider|street|van)\.png|(?:game|result)\.mp3)$/.test(url.pathname)||optionalPath||/\/commerce-ui\.js$/.test(url.pathname)||/\/(?:gift-effects|thought-card-effects)\.js$/.test(url.pathname)||/\/pet-game\.js$/.test(url.pathname)||/\/pet-game\.css$/.test(url.pathname)||/\/assets\/pet-room-v1\.webp$/.test(url.pathname)||/\/icon\.png$/.test(url.pathname)||/\/vendor\//.test(url.pathname)){
     event.respondWith((async()=>{
       const cache=await caches.open(SHELL_CACHE);
       const cached=await cache.match(request,{ignoreSearch:true});

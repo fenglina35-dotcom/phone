@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1620'){
+if(window.__NORTH_SHELL_BUILD__!=='1622'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -606,7 +606,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1620 · 公开伴生时长入口撤除';
+const APP_VER='v1622 · 公开伴生时长入口撤除';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2000,7 +2000,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1620&r=v1620-couple-unbind-reopen-1';
+  const url='sw.js?v=1622&r=v1622-couple-unbind-reopen-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -2606,7 +2606,7 @@ let wxTab='chats';
 let _wxQuickOpen=false;
 let _scrollBottomOnce={};
 function go(p,params){if(p==='wxnearby'&&wxNearbyBlocked())return;stack.push(Object.assign({p},params));render();}
-function back(){const leaving=cur();if(leaving&&leaving.p==='food'&&typeof northMarketBack==='function'&&northMarketBack())return;if(leaving&&leaving.p==='wxscan'&&window.wxScanStop)window.wxScanStop();if(stack.length>1){stack.pop();render();}}
+function back(){if(typeof window!=='undefined'&&window.NorthRunner&&NorthRunner.back())return;const leaving=cur();if(leaving&&leaving.p==='food'&&typeof northMarketBack==='function'&&northMarketBack())return;if(leaving&&leaving.p==='wxscan'&&window.wxScanStop)window.wxScanStop();if(stack.length>1){stack.pop();render();}}
 function home(){if(window.wxScanStop)window.wxScanStop();window._wxReturnToDiscover=false;stack=[{p:'home'}];render();}
 function cur(){return stack[stack.length-1];}
 function renderPageKey(c){if(!c)return'';if(c.p==='chat')return'chat:'+c.id;if(c.p==='pfchat')return'pfchat:'+c.id;if(c.p==='pfgroup')return'pfgroup:'+c.gid;if(c.p==='group')return'group:'+c.id;if(c.p==='mgroom')return'mgroom:'+c.id;if(c.p==='hischat')return'hischat:'+c.id+':'+c.fid;if(c.p==='dydm')return'dydm:'+c.id;return c.p;}

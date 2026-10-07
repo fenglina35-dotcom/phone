@@ -10,6 +10,7 @@
     "license-gate.js",
     "delivery.js",
     "commerce-ui.js",
+    "north-runner.js",
     "assets/meituan-categories.png",
     "assets/meituan-kangaroo.png",
     "assets/meituan-north-cover.jpg",
@@ -92,7 +93,12 @@
     "travel-train.js",
     "vendor/qr/jsQR.js",
     "vendor/qr/qrcode.js",
-    "web-hotfix.js"
+    "web-hotfix.js",
+    "assets/north-runner-rider.png",
+    "assets/north-runner-street.png",
+    "assets/north-runner-van.png",
+    "assets/north-runner-game.mp3",
+    "assets/north-runner-result.mp3"
   ],
   "directories": [
     "assets/incoming-wechat-call-default-v2.mp3",

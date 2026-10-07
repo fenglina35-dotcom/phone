@@ -140,11 +140,11 @@ for (const priv of [false,true]) {
   assert.match(html,/northMarketCouponBuy\(/);assert.match(html,/northMarketCouponBoost\(/);
   assert.doesNotMatch(html,/northStartCouponPurchase\(/);
  });
- test((priv?'private':'web')+' errand entry only reports development without triggering a search',()=>{
+ test((priv?'private':'web')+' errand opens the runner without triggering a store search',()=>{
   let notices=[],searches=0;const ctx={window:{},toast:s=>notices.push(s),foodQuick:()=>searches++};
   vm.createContext(ctx);const handler=src.match(/  window\.mtFoodErrand=function\(\)\{[^\n]+/);
   assert.ok(handler,'errand development handler exists');vm.runInContext(handler[0],ctx);
-  ctx.window.mtFoodErrand();assert.deepEqual(notices,['开发中']);assert.equal(searches,0);
+  ctx.NorthRunner={open:()=>notices.push('game')};ctx.window.NorthRunner=ctx.NorthRunner;ctx.window.mtFoodErrand();assert.deepEqual(notices,['game']);assert.equal(searches,0);
  });
 }
 

@@ -1,0 +1,5 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>小袋鼠跑腿 · 本地试玩</title><style>html,body{margin:0;height:100%;font-family:system-ui,sans-serif;background:#e8efeb;color:#343832}body{display:grid;place-items:center}html body .nr-root{max-width:430px;left:50%;right:auto;width:100%;transform:translateX(-50%)}#launch{border:0;border-radius:25px;padding:18px 30px;background:#ffe43a;font:700 18px system-ui;cursor:pointer}</style></head>
+<body><button id="launch" onclick="NorthRunner.open()">打开小袋鼠跑腿试玩</button>
+<script>let S={food:{north:{}}};function actId(){return 'main'}function isMain(){return true}function phoneFriendState(){return {id:'LOCAL-PREVIEW',secret:''}}function save(){}function toast(s){alert(s)}async function northRunnerRPC(name){if(name==='status')return {used:0,preview:true};throw Error('本地试玩不连接钱包，不领取云端奖励');}</script>
+<script src="north-runner.js" onload="NorthRunner.open()"></script></body></html>
