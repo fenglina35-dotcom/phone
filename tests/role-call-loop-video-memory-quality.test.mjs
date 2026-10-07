@@ -101,8 +101,8 @@ test('online, call and offline memory tags all use the same evidence gate',()=>{
 
 test('shared call and memory sources stay synchronized during the scoped web-only import repair',()=>{
   const webVersion=releaseVersion(app),privateVersion=releaseVersion(privateApp);
-  assert.equal(webVersion,1624,'the scoped browser release must keep its assigned web version');
-  assert.equal(privateVersion,1625,'the private bundle must carry the release identity assigned to it this round');
+  assert.equal(webVersion,1626,'the scoped browser release must keep its assigned web version');
+  assert.equal(privateVersion,1627,'the private bundle must carry the release identity assigned to it this round');
   for(const name of ['roleCallLoopVideoSave','renderCall','callPersist','restoreActiveCall']){
     assert.ok(privateApp.includes(functionSource(name)),`private call function differs: ${name}`);
   }
