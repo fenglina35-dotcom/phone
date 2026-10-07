@@ -1,4 +1,4 @@
-"""Create the private v1599 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
+"""Create the private v1607 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
 
 Unlike the earlier packaging scripts, every file is read from the committed tree
 (``git cat-file`` against HEAD) instead of the working directory. The v1235/iOS356
@@ -741,7 +741,7 @@ def main() -> None:
     for marker in ("northAIShopCheckout", "northAITemperature", "northMarketStoreHTML", "northBusinessBatchOpen", "northMerchantQuickTag", "northMerchantPreviewBack", "northMarketCouponRules", "northPlayRulesHTML", 'data-north-icon="stock"', 'data-north-icon="wallet"', "northPreferredRoleFood", "northBusinessRetry()", "northRecentVisits(rows,now)"):
         assert marker in ui, "current marketplace feature missing: "+marker
     state["preserved"]=sorted(set(state["preserved"])|{"v1600-real-user-virtual-marketplace", "v1602-paid-inventory-business-splits-schedules-replies", "v1604-colorful-cloud-vouchers-and-one-line-address", "v1604-rules-boxes-wallet-development-errands"})
-    state["lastDeliveredPackage"]={"name":delivered.name,"sha256":hashlib.sha256(delivered.read_bytes()).hexdigest(),"sourceCommit":json.loads(prior["SOURCE_STATE.json"])["sourceCommit"]}
+    state["lastDeliveredPackage"]={"name":delivered.name,"sha256":sha256(delivered.read_bytes()).hexdigest(),"sourceCommit":json.loads(prior["SOURCE_STATE.json"])["sourceCommit"]}
     state["validation"]["latestV1605ManifestVerified"]=True
     state["validation"]["latestV1605FilesInherited"]=len(prior)
     state["macBuildVerified"]=False
