@@ -149,7 +149,7 @@ for (const [kind,path] of [['web','commerce-ui.js'],['private','native/private-s
     const context={window:{},northMarketBusy:false,northMarketEpoch:0,northMarketView:null,actId:()=> 'main',cur:()=>({p:'food'}),render:()=>{},northMarketPageGet:()=>null,northMarketPagePut(){},northMarketPageReset(){},northMarketPagePaint(){},northMarketRpc:async()=>({shop:{id:'shop'},products})};
     Object.assign(context,Object.fromEntries(['northMerchantView','northProductEdit','northMyView','northCouponView','northCouponPurchase','northOrderView','northCheckoutDraft','northPinEntry','northView','northPersonalView'].map(k=>[k,null])));
     const enterStart=source.indexOf('  function northMarketEnter('),enterEnd=source.indexOf('  var northMarketOrderSeller=',enterStart);
-    vm.runInNewContext('var northMarketKnownStores={};'+source.match(/  function northMarketRemember\(rows\)\{[^\n]+/)[0]+source.slice(enterStart,enterEnd)+source.slice(start,end),context);
+    vm.runInNewContext('var northMarketKnownStores={};'+source.split('\n').find(l=>l.startsWith('  function northMerchantOrderedProducts('))+source.match(/  function northMarketRemember\(rows\)\{[^\n]+/)[0]+source.slice(enterStart,enterEnd)+source.slice(start,end),context);
     await context.window.northMarketOpen('shop');
     assert.equal(context.northMarketView.products.length,50);
     assert.equal(context.northMarketView.products[49].name,'商品49');

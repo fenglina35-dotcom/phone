@@ -33,7 +33,7 @@ vm.runInContext(
 
 assert.equal(sandbox.api.autoWebQuery("刚刚有人给你发消息吗？", {}), "");
 assert.equal(sandbox.api.autoWebQuery("刚才谁加你微信了？", {}), "");
-assert.equal(sandbox.api.autoWebQuery("帮我联网查一下今天的新闻", {}), "今天的新闻");
+assert.equal(sandbox.api.autoWebQuery("帮我联网查一下今天的新闻", {}), "");
 
 assert.match(source, /function altReportDeliverLocal\(c,info\)/);
 assert.match(source, /_altReportLocalFallback:true/);

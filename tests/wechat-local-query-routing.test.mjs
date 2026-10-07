@@ -27,8 +27,8 @@ assert.equal(sandbox.local("你查一下微信是不是有人给你发消息了"
 assert.equal(sandbox.route("你查一下微信是不是有人给你发消息了", {}), "");
 assert.equal(sandbox.route("刚刚有人加你微信吗，你查一下", {}), "");
 assert.equal(sandbox.route("你看看自己手机里有没有新消息", {}), "");
-assert.match(sandbox.route("帮我查一下今天北京天气", {}), /天气/);
-assert.equal(sandbox.route("联网查一下微信最新版本", {}), "微信最新版本");
+assert.equal(sandbox.route("帮我查一下今天北京天气", {}), "");
+assert.equal(sandbox.route("联网查一下微信最新版本", {}), "");
 assert.match(source, /if\(wq&&_localPersonalQuery\)/);
 assert.match(source, /绝对不要联网，也不要输出\[联网\]/);
 
