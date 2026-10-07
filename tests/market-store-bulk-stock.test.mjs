@@ -11,7 +11,7 @@ for(const priv of [false,true]){
 
  test((priv?'private':'web')+' real order headers show shop covers while products keep their own images',()=>{
   const base='https://lkhlyfpssmrjkkzhuzag.supabase.co/storage/v1/object/public/north-market/'+'a'.repeat(32)+'/';
-  const c={northMarketHeader:()=>'',northMarketPendingSplitsHTML:()=>'',esc:s=>String(s||''),money:n=>n.toFixed(2),fmtDT:s=>s,northMarketStatus:s=>s};vm.createContext(c);vm.runInContext(take('function northMarketImage(')+'\n'+take('function northMarketOrdersHTML(')+';this.html=northMarketOrdersHTML;',c);
+  const c={northMarketHeader:()=>'',mtGlyph:()=>'',northMarketPendingSplitsHTML:()=>'',esc:s=>String(s||''),money:n=>n.toFixed(2),fmtDT:s=>s,northMarketStatus:s=>s};vm.createContext(c);vm.runInContext(take('function northMarketImage(')+'\n'+take('function northMarketOrdersHTML(')+';this.html=northMarketOrdersHTML;',c);
   const row={id:'order1',shop_name:'Dessert store',shop_cover:base+'store.jpg',status:'completed',created_at:'today',total:2500,items:[{name:'Cake',image:base+'cake.jpg'}]};
   for(const seller of [false,true]){const h=c.html({seller,rows:[row]});const head=h.match(/<button class="north-history-head"[\s\S]*?<\/button>/)[0];assert.match(head,/store\.jpg/);assert.doesNotMatch(head,/cake\.jpg|meituan-kangaroo\.png/);assert.match(h,/cake\.jpg/);assert.match(head,/Dessert store/);}
   row.shop_cover='javascript:alert(1)';let h=c.html({seller:false,rows:[row]});assert.doesNotMatch(h,/javascript:/);assert.match(h,/meituan-kangaroo\.png/);delete row.shop_cover;h=c.html({seller:false,rows:[row]});assert.match(h,/meituan-kangaroo\.png/);assert.match(h,/cake\.jpg/);
@@ -116,9 +116,9 @@ for(const priv of [false,true]){
  test(title+' shop preview returns to hall unless it was opened from the editor',()=>{let back=0,editor=0;const c={northMerchantActive:()=>true,northMerchantView:{returnToEditor:false,dirty:false},northProductEdit:{},northMerchantLineDraft:{},northBack:()=>back++,northMerchantEditor:()=>editor++};c.window=c;vm.createContext(c);vm.runInContext(fn('window.northMerchantPreviewBack='),c);c.northMerchantPreviewBack();assert.equal(back,1);assert.equal(c.northMerchantView,null);c.northMerchantView={returnToEditor:true,dirty:true};c.northMerchantPreviewBack();assert.equal(editor,1);assert.equal(c.northMerchantView.dirty,true);});
  test(title+' real store uses grouped tea-shop layout with complete catalogue and sold-out protection',()=>{
   const v={shop:{id:'shop',name:'蛋糕店',minimum:2500,delivery:190,groups:[{id:'cakes',name:'蛋糕'},{id:'food',name:'主食'}]},products:Array.from({length:50},(_,i)=>({id:'p'+i,name:'商品'+i,price:1500,stock:i?3:0,soldOut:!i,unit:'份',groupId:i%2?'food':'cakes',signature:i===1}))};
-  const c={northMarketArgument:x=>JSON.stringify(x).replace(/"/g,'&quot;'),northMarketCartRows:()=>[],northMarketHeader:()=>'',northFavoriteButton:()=>'',northMarketImage:()=>'<img>',northSignatureBadge:()=>'',northCartMascot:()=>'',northCents:x=>x*100,money:x=>x.toFixed(2),esc:x=>String(x||'')};vm.createContext(c);vm.runInContext(fn('function northMarketStoreHTML(v)')+';this.store=northMarketStoreHTML;',c);
+  const c={northMarketAttr:x=>String(x),northMarketArgument:x=>JSON.stringify(x).replace(/"/g,'&quot;'),northMarketCartRows:()=>[],northMarketHeader:()=>'',northFavoriteButton:()=>'',northMarketImage:()=>'<img>',northSignatureBadge:()=>'',northCartMascot:()=>'',northCents:x=>x*100,money:x=>x.toFixed(2),esc:x=>String(x||'')};vm.createContext(c);vm.runInContext(fn('function northMarketStoreHTML(v)')+';this.store=northMarketStoreHTML;',c);
   let html=c.store(v);assert.match(html,/north-menu-layout/);assert.match(html,/蛋糕/);assert.equal((html.match(/class="north-drink(?: north-soldout)?"/g)||[]).length,50);assert.match(html,/disabled>选规格/);assert.doesNotMatch(html,/下一批商品|自取/);
-  v.group='cakes';html=c.store(v);assert.equal((html.match(/class="north-drink(?: north-soldout)?"/g)||[]).length,25);
+  v.group='cakes';html=c.store(v);assert.equal((html.match(/class="north-drink(?: north-soldout)?"/g)||[]).length,50);assert.equal((html.match(/data-cloud-group="food" hidden/g)||[]).length,25);
  });
  test(title+' bulk quote validates the whole list before offering a debit',()=>{
   const c={};vm.createContext(c);vm.runInContext(fn('function northBusinessBatchQuote(rows,quantity)')+';this.quote=northBusinessBatchQuote;',c);
@@ -239,7 +239,7 @@ for(const priv of [false,true]){
   routes.splice(1,1,{p:'chat',id:'role'},{p:'food'});c.northMarketView={page:'order'};c.northMarketOrigin={p:'chat',id:'role'};c.northMarketClose();assert.deepEqual(routes.at(-1),{p:'chat',id:'role'});assert.equal(routes.length,2);assert.equal(c.northMarketOrigin,null);
  });
  test((priv?'private':'web')+' leaving a loading shop ignores its delayed reply without reopening or repainting',async()=>{
-  let resolve,paints=0;const routes=[{p:'home'},{p:'food'}],c={actId:()=> 'main',northMarketEnter:()=>true,northMarketEpoch:0,northMarketView:null,northMarketBusy:false,northMarketOrigin:null,northPersonalView:null,northMyView:null,stack:routes,cur:()=>routes.at(-1),render:()=>paints++,closeModal(){},go:p=>routes.push({p}),back:()=>routes.pop(),northMarketRemember(){},northMarketRpc:()=>new Promise(r=>resolve=r)};c.window=c;vm.createContext(c);vm.runInContext(src.slice(src.indexOf('  window.northMarketOpen='),src.indexOf('  window.northMarketProductPage='))+take('window.northMarketClose='),c);
+  let resolve,paints=0;const routes=[{p:'home'},{p:'food'}],c={actId:()=> 'main',northMarketEnter:()=>true,northMarketEpoch:0,northMarketView:null,northMarketBusy:false,northMarketOrigin:null,northPersonalView:null,northMyView:null,stack:routes,cur:()=>routes.at(-1),render:()=>paints++,closeModal(){},go:p=>routes.push({p}),back:()=>routes.pop(),northMarketPageGet:()=>null,northMarketPagePut(){},northMarketPageReset(){},northMarketPagePaint:()=>paints++,northMarketRemember(){},northMarketRpc:()=>new Promise(r=>resolve=r)};c.window=c;vm.createContext(c);vm.runInContext(src.slice(src.indexOf('  window.northMarketOpen='),src.indexOf('  window.northMarketProductPage='))+take('window.northMarketClose='),c);
   const pending=c.northMarketOpen('shop');c.northMarketClose();const before=paints;resolve({shop:{id:'shop'},products:[]});await pending;assert.equal(c.northMarketView,null);assert.equal(c.northMarketBusy,false);assert.equal(paints,before);assert.equal(routes.length,2);
  });
  test((priv?'private':'web')+' real gift card uses escaped role remark then name and stays compact',()=>{
@@ -253,5 +253,30 @@ for(const priv of [false,true]){
  const src=process.env.NORTH_TEST_OLD?cp.execFileSync('git',['show','HEAD:'+file],{encoding:'utf8',maxBuffer:8e6}):fs.readFileSync(new URL('../'+file,import.meta.url),'utf8');
  test((priv?'private':'web')+' global back dismisses active cloud page before popping unrelated navigation',()=>{
   let active=true,closes=0,paints=0;const routes=[{p:'home'},{p:'food'}],c={stack:routes,cur:()=>routes.at(-1),render:()=>paints++,northMarketBack:()=>{if(!active)return false;active=false;closes++;return true;}};vm.createContext(c);vm.runInContext(src.split('\n').find(l=>l.startsWith('function back(){'))+';this.leave=back;',c);c.leave();assert.equal(routes.length,2);assert.equal(closes,1);c.leave();assert.equal(routes.length,1);assert.equal(paints,1);
+ });
+}
+
+for(const priv of [false,true]){
+ const file=priv?'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/commerce-ui.js':'commerce-ui.js';
+ const src=process.env.NORTH_TEST_OLD?cp.execFileSync('git',['show','HEAD:'+file],{encoding:'utf8',maxBuffer:8e6}):fs.readFileSync(new URL('../'+file,import.meta.url),'utf8');
+ const take=p=>src.split('\n').find(l=>l.startsWith('  '+p))||'';
+ test((priv?'private':'web')+' real orders use the original yellow order header and filters',()=>{
+  const c={northMarketHeader:()=>'<header class="north-personal-head">white</header>',mtGlyph:()=>'',northMarketPendingSplitsHTML:()=>'',esc:s=>s,money:n=>n,fmtDT:s=>s};vm.createContext(c);vm.runInContext(take('function northMarketOrdersHTML(')+';this.html=northMarketOrdersHTML;',c);const h=c.html({seller:false,busy:false,rows:[]});assert.match(h,/north-orders-header/);assert.match(h,/north-orders-filters/);assert.doesNotMatch(h,/north-personal-head/);
+ });
+ test((priv?'private':'web')+' page snapshots are bounded cloned short lived and isolated by state and identity',()=>{
+  const pf={id:'phone1',secret:'s1'},c={S:{},actId:()=> 'main',phoneFriendState:()=>pf,Date:{now:()=>100000},JSON};vm.createContext(c);vm.runInContext(src.split('\n').filter(l=>/^  (var northMarketPageCache|function northMarketPage(Get|Put|Reset))/.test(l)).join('\n')+';this.get=northMarketPageGet;this.put=northMarketPagePut;',c);
+  c.put('shop1',{shop:{name:'one'},products:[]});const snap=c.get('shop1');snap.shop.name='tampered';assert.equal(c.get('shop1').shop.name,'one');pf.secret='changed';assert.equal(c.get('shop1'),null);c.put('shop1',{shop:{name:'new'}});c.S={};assert.equal(c.get('shop1'),null);for(let i=0;i<30;i++)c.put('key'+i,{n:i});assert.equal(c.get('key0'),null);assert.equal(c.get('key29').n,29);c.Date.now=()=>300000;assert.equal(c.get('key29'),null);
+ });
+}
+
+for(const priv of [false,true]){
+ const file=priv?'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/commerce-ui.js':'commerce-ui.js';
+ const src=process.env.NORTH_TEST_OLD?cp.execFileSync('git',['show','HEAD:'+file],{encoding:'utf8',maxBuffer:8e6}):fs.readFileSync(new URL('../'+file,import.meta.url),'utf8');const take=p=>src.split('\n').find(l=>l.startsWith('  '+p))||'';
+ test((priv?'private':'web')+' cached shop returns immediately, refresh keeps content, and identical data never repaints',async()=>{
+  let now=100000,calls=0,paint=0,resolve;const pf={id:'p',secret:'s'},data={shop:{id:'one',groups:[]},products:[]},c={S:{},phoneFriendState:()=>pf,actId:()=> 'main',Date:{now:()=>now},JSON,northMarketBusy:false,northMarketEpoch:0,northMarketView:null,northMarketEnter:()=>true,northMarketRemember(){},render:()=>paint++,northMarketPagePaint:()=>paint++,northMarketRpc:()=>{calls++;return new Promise(r=>resolve=r);}};c.window=c;vm.createContext(c);vm.runInContext(src.split('\n').filter(l=>/^  (var northMarketPageCache|function northMarketPage(Get|Put|Reset))/.test(l)).join('\n')+'\n'+take('window.northMarketOpen='),c);
+  const first=c.northMarketOpen('one');resolve(data);await first;assert.equal(calls,1);await c.northMarketOpen('one');assert.equal(calls,1);assert.equal(c.northMarketView.busy,false);now+=16000;const pending=c.northMarketOpen('one');assert.equal(c.northMarketView.shop.id,'one');assert.equal(c.northMarketView.busy,false);const before=paint;resolve(data);await pending;assert.equal(paint,before);assert.equal(c.northMarketBusy,false);
+ });
+ test((priv?'private':'web')+' cloud group change retains image nodes rather than rebuilding the page',()=>{
+  let rendered=0;const nodes=[{group:'a',hidden:false},{group:'b',hidden:false}];nodes.forEach(n=>n.getAttribute=()=>n.group);const buttons=Array.from({length:3},()=>({classList:{toggle(){}}}));const root={querySelectorAll:q=>q==='[data-cloud-group]'?nodes:q.includes('aside')?buttons:[]};const c={northMarketView:{page:'store',account:'main',shop:{groups:[{id:'a'},{id:'b'}]}},actId:()=> 'main',document:{querySelector:()=>root},render:()=>rendered++};c.window=c;vm.createContext(c);vm.runInContext(take('window.northMarketGroup='),c);c.northMarketGroup('a');assert.equal(nodes[0].hidden,false);assert.equal(nodes[1].hidden,true);c.northMarketGroup('');assert.equal(nodes[1].hidden,false);assert.equal(rendered,0);
  });
 }

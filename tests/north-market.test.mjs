@@ -146,7 +146,7 @@ for (const [kind,path] of [['web','commerce-ui.js'],['private','native/private-s
     const source=fs.readFileSync(path,'utf8');
     const start=source.indexOf('  window.northMarketOpen='),end=source.indexOf('  window.northMarketProductPage=',start);
     const products=Array.from({length:50},(_,i)=>({id:`product_${i}`,name:`商品${i}`}));
-    const context={window:{},northMarketBusy:false,northMarketEpoch:0,northMarketView:null,actId:()=> 'main',cur:()=>({p:'food'}),render:()=>{},northMarketRpc:async()=>({shop:{id:'shop'},products})};
+    const context={window:{},northMarketBusy:false,northMarketEpoch:0,northMarketView:null,actId:()=> 'main',cur:()=>({p:'food'}),render:()=>{},northMarketPageGet:()=>null,northMarketPagePut(){},northMarketPageReset(){},northMarketPagePaint(){},northMarketRpc:async()=>({shop:{id:'shop'},products})};
     Object.assign(context,Object.fromEntries(['northMerchantView','northProductEdit','northMyView','northCouponView','northCouponPurchase','northOrderView','northCheckoutDraft','northPinEntry','northView','northPersonalView'].map(k=>[k,null])));
     const enterStart=source.indexOf('  function northMarketEnter('),enterEnd=source.indexOf('  var northMarketOrderSeller=',enterStart);
     vm.runInNewContext('var northMarketKnownStores={};'+source.match(/  function northMarketRemember\(rows\)\{[^\n]+/)[0]+source.slice(enterStart,enterEnd)+source.slice(start,end),context);
