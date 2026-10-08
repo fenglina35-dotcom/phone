@@ -37,8 +37,8 @@ const PERMANENT_FIXES = [
   {release:"本地收藏候选",scope:"both",least:1,name:"完整备份包含收藏及转发卡片的原声音频",marker:"path.some(p=>p==='favorites'||p==='_favorite')"},
   {release:"本地候选",scope:"both",least:1,name:"已有好友刷新补齐消息且保留历史并去重",marker:"if(n>(counts.get(k)||0)){existing.push(m);ch=true;}"},
   {release:"v1576/v1577",scope:"both",least:1,name:"角色微信按消息作者同步气泡设置",marker:"const c=getC(cid),look=bubbleLook(c,!mine)"},
-  {release:"v1666",scope:"both",least:1,name:"像素少女脚本下载失败自动重试，不再 PixelHomeBridge 未定义",marker:"小屋脚本按顺序载入",file:"games/pixel-home/index.html"},
-  {release:"v1666",scope:"both",least:1,name:"像素少女、电子宠物组件没下载下来时打开即重下",marker:"function northEnsureComponent(key)"},
+  {release:"v1668",scope:"both",least:1,name:"像素少女脚本下载失败自动重试，不再 PixelHomeBridge 未定义",marker:"小屋脚本按顺序载入",file:"games/pixel-home/index.html"},
+  {release:"v1668",scope:"both",least:1,name:"像素少女、电子宠物组件没下载下来时打开即重下",marker:"function northEnsureComponent(key)"},
   {release:"v1660",scope:"both",least:1,name:"角色点外卖：规格按真实菜单修正，不再整单失败",marker:"function northRoleRepairSelections(p,raw,wants)",file:"commerce-ui.js"},
   {release:"v1660",scope:"both",least:1,name:"查店铺后的回复遇到500改写消息再试一次",marker:"function northShopFlatMessages(messages)"},
   {release:"v1576/v1577",scope:"both",least:1,name:"角色密码拨号盘独立背景与恢复入口",marker:"function spyAppearanceLockWallpaperReset(id)"},
@@ -1566,3 +1566,6 @@ test('merchant replenishment keeps one-shop quotes, shop-scoped lists and explic
 
 
 test('calendar offers a desktop exit and warm shop remains in both built-in catalogues',()=>{for(const prefix of ['', PRIVATE_DIR]){const app=read(prefix+'app.js');assert.ok(app.includes('function calHome()'));assert.ok(app.includes('aria-label="返回主屏幕"'));assert.ok(read(prefix+'glass-theme.css').includes('.cal-integrated-page .cal-period-note'));assert.ok(read(prefix+'assets/north-dessert-shop.js').includes('north-nuanyan'));}});
+
+
+test('deleted merchant recovery remains owner-authenticated and does not charge or reset rewards',()=>{for(const prefix of ['', PRIVATE_DIR]){const ui=read(prefix+'commerce-ui.js');for(const marker of ['northDeletedShopsOpen','northDeletedShopRestore','northRestoredShop','恢复不收费','恢复中…'])assert.ok(ui.includes(marker),marker);}const sql=read('supabase/migrations/202610090001_north_market_shop_restore.sql');for(const marker of ['owner_id=actor','market-revision-changed','market-shop-limit','deleted_at=null,published=false','north-market-owner:'])assert.ok(sql.includes(marker),marker);assert.ok(!/update public\.north_market_wallets|insert into public\.north_market_ledger/i.test(sql));});
