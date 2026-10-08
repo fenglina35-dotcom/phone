@@ -21,7 +21,7 @@ assert.match(source,/角色已经选择副模型时只请求这一份副模型�
 assert.match(source,/主模型「'\+firstMeta\.model\+'」失败，已由副模型「'\+fallbackMeta\.model\+'」成功回复/,'successful fallback must identify both actual models');
 assert.match(source,/reason:'主模型：'\+firstReason\+'；副模型：'\+wechatDiagnosticReason\(e\)/,'dual failure must retain both causes');
 
-const role={id:'r1',model:'chat',chatRouteIndex:0,_chatRouteDiagnostic:{at:1,outcome:'fallback',routeName:'路线一',slot:'主模型',model:'model-main',actualRoute:'路线一',actualSlot:'副模型',actualModel:'model-aux',status:503,reason:'worker <overloaded>',messageCount:14,requestChars:16424}};
+const role={id:'r1',model:'chat',chatRouteIndex:0,_chatRouteDiagnostic:{at:1,outcome:'fallback',routeName:'路线一',slot:'主模型',model:'model-main',actualRoute:'路线一',actualSlot:'副模型',actualModel:'model-aux',status:503,reason:'worker <overloaded>',messageCount:14,requestChars:16444}};
 let modal='';
 const uiSandbox={
   S:{settings:{chat:{model:'model-main'},aux:{model:'model-aux'},chatRouteActive:0}},
@@ -44,7 +44,7 @@ uiSandbox.roleChatDiagnosticOpen('r1');
 assert.match(modal,/路线一 · 主模型/);
 assert.match(modal,/路线一 · 副模型/);
 assert.match(modal,/model-aux/);
-assert.match(modal,/14 条 · 16424 字符/);
+assert.match(modal,/14 条 · 16444 字符/);
 assert.match(modal,/HTTP 503/);
 assert.match(modal,/worker &lt;overloaded&gt;/,'raw provider details must be HTML-escaped before display');
 

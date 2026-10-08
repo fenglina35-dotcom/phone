@@ -38,10 +38,10 @@ function pollHarness(){
 }
 
 test('private candidate is v1355 and iOS 399 while public advances independently',()=>{
-  assert.match(app,/APP_VER='v1643 · 点餐执行·形象衣柜与构图·新增店铺'/);
+  assert.match(app,/APP_VER='v1645 · NORTH药店上架·衣柜入口移到底部'/);
   for(const html of [index,alias]){
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1643'/);
-    assert.match(html,/app\.js\?v=1643&r=v1643-private-package-1/);
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1645'/);
+    assert.match(html,/app\.js\?v=1645&r=v1645-private-package-1/);
     assert.match(html,/private-runtime-diagnostics\.js\?v=339/);
   }
   assert.match(diagnostics,/OVERLAY_VERSION='336-daily-file-backup'/);
@@ -49,7 +49,7 @@ test('private candidate is v1355 and iOS 399 while public advances independently
   assert.match(bridge,/private static let build = "1\.0\.439 \(439\)"/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 439;/g)||[]).length,12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.439;/g)||[]).length,12);
-  assert.match(publicApp,/APP_VER='v1642 · 点餐执行·形象衣柜与构图·新增店铺'/);
+  assert.match(publicApp,/APP_VER='v1644 · NORTH药店上架·衣柜入口移到底部'/);
 });
 
 test('ordinary foreground polling is lightweight while explicit control verification stays complete',async()=>{

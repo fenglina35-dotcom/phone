@@ -1522,3 +1522,6 @@ test('shop lookup returns a visible result card and the original McDonalds pack 
 
 
 test('personal wardrobe stays account-isolated and framing never turns hand/back requests into forced portraits',()=>{for(const prefix of ['',PRIVATE_DIR]){const app=read(prefix+'app.js'),ui=read(prefix+'commerce-ui.js');for(const marker of ['function userImageStudioContact(','function roleImageFrame(','【局部构图优先】','【参考图人物绑定】','requireReferences:','本次未退回随机形象','accountId:actId()'])assert(app.includes(marker));assert(ui.includes('queriedMeal'));assert(ui.includes('plainMeal'));assert(read(prefix+'小手机.html').includes('assets/north-luckin-shop.js'));assert(read(prefix+'wechat-me.js').includes('我的形象工作室与衣柜'));}});
+
+
+test('pharmacy remains in medicine category and the personal wardrobe entry stays at the profile bottom',()=>{for(const prefix of ['',PRIVATE_DIR]){const ui=read(prefix+'commerce-ui.js'),me=read(prefix+'wechat-me.js'),html=read(prefix+'小手机.html');assert(ui.includes("['medicine','看病买药','看病买药']"));assert(html.includes('assets/north-pharmacy-shop.js'));const profile=me.slice(me.indexOf('function renderWxProfile('),me.indexOf('function wxProfileAvatar'));assert(profile.indexOf('userImageStudioOpen()')>profile.indexOf("wxProfileEdit('persona')"));assert(read(prefix+'assets/north-pharmacy-shop.js').includes('布洛芬缓释胶囊'));}});
