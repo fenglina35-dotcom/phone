@@ -1,4 +1,4 @@
-"""Create the private v1645 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
+"""Create the private v1667 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
 
 Unlike the earlier packaging scripts, every file is read from the committed tree
 (``git cat-file`` against HEAD) instead of the working directory. The v1235/iOS356
@@ -23,10 +23,10 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "native/private-small-phone/XcodeProject/"
 BUNDLE = "PhoneCompanionTest/PhoneWeb.bundle/"
-PREFIX = "SmallPhone_v1645_iOS439_Private/"
-OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1645_iOS439.zip"
+PREFIX = "SmallPhone_v1667_iOS439_Private/"
+OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1667_iOS439.zip"
 
-WEB_VERSION = "1645"
+WEB_VERSION = "1667"
 MARKETING = "1.0.439"
 BUILD = "439"
 BRIDGE = "42"
@@ -40,11 +40,11 @@ def text(body: bytes) -> str:
     return body.decode("utf-8").replace("\r\n", "\n")
 
 
-def committed_private_files() -> dict[str, bytes]:
+def committed_private_files(ref: str = "HEAD") -> dict[str, bytes]:
     """Every releasable tracked file under SOURCE, read from HEAD."""
-    listing = text(git("ls-tree", "-r", "-z", "--name-only", "HEAD", "--", SOURCE)).strip("\0")
+    listing = text(git("ls-tree", "-r", "-z", "--name-only", ref, "--", SOURCE)).strip("\0")
     files: dict[str, bytes] = {}
-    commit = text(git("rev-parse", "HEAD")).strip()
+    commit = text(git("rev-parse", ref)).strip()
     with subprocess.Popen(["git", "cat-file", "--batch"], cwd=ROOT, stdin=subprocess.PIPE, stdout=subprocess.PIPE) as process:
         for name in listing.split("\0"):
             if not name: continue
@@ -582,218 +582,100 @@ def validate(files: dict[str, bytes]) -> None:
 def main() -> None:
     dirty = text(git("diff", "HEAD", "--name-only", "--", SOURCE)).strip()
     assert not dirty, "commit the private source before packaging:\n" + dirty
-
+    assert not OUTPUT.exists(), "refusing to overwrite an existing package"
+    commit = text(git("rev-parse", "HEAD")).strip()
+    web_commit = "4616f99d090ac47f6802adef4bb81bbe7debd7b6"
     files = committed_private_files()
     validate(files)
-    # The independent 温馨小家3D workspace may advance in parallel. A private
-    # release must use the reviewed cozy-home snapshot committed in this repo;
-    # reading the other workspace here would silently mix unrelated work into
-    # an otherwise reproducible package.
-    assert b"cozyHomeKeepFrame" in files[BUNDLE + "app.js"]
-    assert b"diagnosticCopyPending" in files[BUNDLE + "private-runtime-diagnostics.js"]
-    assert b"CozyHomeSchemeHandler" in files["PhoneCompanionTest/LocalPhoneWebView.swift"]
-    cozy_files = [n for n in files if n.startswith(BUNDLE + "games/cozy-home/")]
-    assert len(cozy_files) == 1253, "complete house resource set is missing"
-    cozy_app = text(files[BUNDLE + "games/cozy-home/app.mjs"])
-    cozy_player = text(files[BUNDLE + "games/cozy-home/house-player036.mjs"])
-    cozy_female = text(files[BUNDLE + "games/cozy-home/female-avatar001.mjs"])
-    assert "revision:52" in cozy_app, "house revision 52 missing"
-    assert "const warmDraw=()=>{const warmMaps=new Map(),materialClones=new Map(),objectSwaps=[]" in cozy_app, "isolated mobile shader warmup missing"
-    assert "mirrors.releaseGPU();const geometries=new Set()" in cozy_app, "warm geometry and mirror release missing"
-    assert "renderer.setSize(96,96,false)" not in cozy_app, "package restored the unsafe real-room preload"
-    assert "const visualYaw=!postureMotion" in cozy_player, "first-person body/head resampling missing"
-    assert "camera.position.addScaledVector(viewForward,.045)" in cozy_player, "eye camera forward offset missing"
-    assert "procedural(0)" in cozy_female, "female procedural reset path missing"
-    assert "if(Math.abs(amount)<1e-7)return" not in cozy_female, "standing pose T-pose regression returned"
-    assert 'function wxUnreadRestore()' in text(files[BUNDLE + 'app.js'])
-    assert 'wxUnreadJournalWrite();save(durable?' in text(files[BUNDLE + 'app.js'])
-    # Compare the entire last delivered package, including its verified manifest.
-    previous = ROOT.parent / "最新私人版本覆盖包_v1549_iOS439.zip"
-    previous_sha = "bad2885137bed1972d21853c1728b3b755098217a343887fed179250a4b63ca2"
+    previous = ROOT.parent / "最新私人版本覆盖包_v1655_iOS439.zip"
+    previous_sha = "5f7ab9f5af6beb84802b017fe1a48c865d608c2ca0ea2464f06bab266a5b5843"
     assert sha256(previous.read_bytes()).hexdigest() == previous_sha
     with ZipFile(previous) as old:
-        old_prefix = "SmallPhone_v1549_iOS439_Private/"
-        previous_files = {n[len(old_prefix):]: old.read(n) for n in old.namelist() if n.startswith(old_prefix) and not n.endswith("/")}
-    prior_manifest = json.loads(previous_files["SHA256SUMS.json"])
-    assert set(prior_manifest) == previous_files.keys() - {"SHA256SUMS.json"}
-    for name, digest in prior_manifest.items():
-        assert sha256(previous_files[name]).hexdigest() == digest, "previous package checksum mismatch: " + name
-    # This component was explicitly retired in v1554; retaining it would restore a removed feature.
-    retired = {BUNDLE + "daily-event-ledger.js", BUNDLE + "ai-account.js"}
-    assert previous_files.keys() - files.keys() - {"SOURCE_STATE.json", "SHA256SUMS.json"} == retired
-    for name, body in previous_files.items():
-        if name not in {"SOURCE_STATE.json", "SHA256SUMS.json", "请在Mac编译前先读.md"} and not name.startswith(BUNDLE):
-            assert files[name] == body, "unexpected native or signing change: " + name
-    state = json.loads(previous_files["SOURCE_STATE.json"])
-    assert state["sourceCommit"] == "beb14a18c8a1f163dd9b6afc2d48c8dc3d8f66bd"
-    additions = [
-        "v1552-role-real-image-display-and-context", "v1552-pixel-game-collision-and-zoom",
-        "v1552-friend-send-and-call-recovery", "v1554-role-wechat-switch-account-password-and-unbind",
-        "v1566-role-wechat-four-pages-theme-and-relationship-avatars",
-        "v1566-role-moments-own-avatar-cover-and-album", "v1566-role-services-wallet-and-independent-favorites",
-        "v1566-role-chat-image-sticker-sync-and-multiselect-delete",
-        "v1566-role-wallet-redpacket-transfer-shared-receipt-refund-ledger",
-        "v1566-forged-message-visible-hint-hidden-metadata-preserved",
-        "v1566-role-phone-all-apps-independent-appearance-and-reset",
-        "v1568-role-phone-inline-name-and-location-alignment",
-        "v1570-role-wechat-author-bound-bubble-configuration",
-        "v1570-role-phone-transparent-glass-pin-pad-and-independent-lock-wallpaper",
-        "v1572-role-aware-photo-album-phone-inspection-and-moments",
-        "v1574-favorites-role-likes-metadata-classification-flicker-share-return",
-        "v1576-notification-swipe-dismiss-and-nearby-couple-permission",
-    ]
-    state["preserved"] = sorted((set(state["preserved"]) - {"v1344-daily-ledger-turn-evidence"}) | set(additions))
-    state["retired"] = [{"file": BUNDLE+"daily-event-ledger.js", "commit": "a804f37a", "reason": "User requested removal; independent notes and existing data preserved."}, {"file": BUNDLE+"ai-account.js", "commit": "3708d8e1", "reason": "User requested AI account and internal speech/subtitle retirement, replaced by photo album; external interfaces retained."}]
-    state["sourceCommit"] = text(git("rev-parse", "HEAD")).strip()
-    state["webSourceCommit"] = state["sourceCommit"]
-    state["webVersion"] = "v1644"
+        prefix = next(n for n in old.namelist() if n.endswith("/SOURCE_STATE.json"))[:-len("SOURCE_STATE.json")]
+        names = {n[len(prefix):] for n in old.namelist() if n.startswith(prefix) and not n.endswith("/")}
+        manifest = json.loads(old.read(prefix + "SHA256SUMS.json"))
+        assert set(manifest) == names - {"SHA256SUMS.json"}
+        assert not (names - files.keys() - {"SHA256SUMS.json", "SOURCE_STATE.json"}), "previous delivery files missing"
+        state = json.loads(old.read(prefix + "SOURCE_STATE.json"))
+        assert state["sourceCommit"] == "5b5cf7086d2a84dad795545d1152db21c07a49c8"
+        for name, digest in manifest.items():
+            body = old.read(prefix + name)
+            assert sha256(body).hexdigest() == digest, "previous checksum mismatch: " + name
+            if name not in {"SOURCE_STATE.json", "请在Mac编译前先读.md"} and not name.startswith(BUNDLE):
+                assert files[name] == body, "native/signing change: " + name
+        for name in ("public-north-policy.js", "public-north-runtime.js"):
+            assert files[BUNDLE + name] == old.read(prefix + BUNDLE + name), "private companion changed: " + name
+        css, prior_css = text(files[BUNDLE + "glass-theme.css"]), text(old.read(prefix + BUNDLE + "glass-theme.css"))
+        start = prior_css.index("/* A measured private-App stall")
+        end_marker = "html.north-native-app.north-native-performance-guard .home img{filter:none!important}"
+        end = prior_css.index(end_marker, start) + len(end_marker)
+        assert css.count(prior_css[start:end]) == 1, "private performance guard changed"
+    app = text(files[BUNDLE + "app.js"])
+    ui = text(files[BUNDLE + "commerce-ui.js"])
+    for marker in ("calPlayerConsume", "calCreatedCardHTML", "roleCalConsume", "calParticipationHTML", "calFireCalendarCare", "calCareValid", "calInvitationRespond", "calSearchResults", "calDayLayout", "calPeriodOpen", "calCustomApply", "function calHome()", "calHomeButton", "photoAlbumRoleLikedRows", "northNativeBackgroundTask('calendar',checkCalendar)"):
+        assert marker in app + text(files[BUNDLE + "photo-album.js"]), "calendar/role/private hook missing: " + marker
+    for marker in ("northBusinessShopId", "northBusinessCurrentStock", "northBusinessBatchQuantity", "onlyEmpty:selectedOnly!==true", "northBusinessStockSelect", "不要求净利润", "northMarketVisibleOrders"):
+        assert marker in ui, "merchant repair missing: " + marker
+    for name in ("commerce-ui.js", "photo-album.js", "assets/north-dessert-shop.js"):
+        assert files[BUNDLE + name] == git("show", web_commit + ":" + name), "shared feature payload mismatch: " + name
+    warm = text(files[BUNDLE + "assets/north-dessert-shop.js"])
+    assert '"id":"north-nuanyan"' in warm and "暖燕" in warm
+    cozy_files = [n for n in files if n.startswith(BUNDLE + "games/cozy-home/")]
+    assert len(cozy_files) == 1253
+    # Runtime payload is exactly the reviewed release; only the Mac guide changes for this delivery.
+    reviewed = committed_private_files(web_commit)
+    assert files.keys() == reviewed.keys(), "private project file set differs from reviewed release"
+    for name, body in files.items():
+        if name != "请在Mac编译前先读.md":
+            assert body == reviewed[name], "unreviewed private payload: " + name
+    del reviewed
+    state["sourceCommit"] = commit
+    state["webSourceCommit"] = web_commit
+    state["webVersion"] = "v1666"
     state["privateWeb"] = "v" + WEB_VERSION
     state["privateIOS"] = f"{MARKETING} ({BUILD})"
-    state["lastDeliveredPackage"] = {"name": previous.name, "sha256": previous_sha, "sourceCommit": "beb14a18c8a1f163dd9b6afc2d48c8dc3d8f66bd"}
-    state["knownUnresolved"] = [x for x in state["knownUnresolved"] if not re.match(r"v\d+-mac-build", x)] + ["v1645-mac-build-signing-and-iphone-not-verified"]
-    state["validation"] = {"macBuildVerified": False, "realIPhoneVerified": False, "models": "HTTP simulated in browser gates", "nodeTests": {"passed": 3677, "failed": 0, "sourceCommit": state["webSourceCommit"]}, "authorizedChatBothRuntimes": True, "inheritedPreviousOverlay": True, "priorPackageManifestVerified": True, "nativePayloadUnchanged": True, "houseResourceFiles": len(cozy_files), "retiredFiles": sorted(retired)}
-    app = text(files[BUNDLE + "app.js"])
-    for marker in ("function hisChatMessageHTML(", "bubbleLook(c,!mine)", "bubbleIconFor(c,!mine)", "bubbleAvatarClass(c,!mine)", "function hisWxUtilityOpen(", "function hisWxFriendAvatar(", "function spyLockScreen(", "lockWallpaper", "_hisPaymentId", "_forged"):
-        assert marker in app, "latest role WeChat/phone repair missing: " + marker
-    wxme = text(files[BUNDLE + "wechat-me.js"])
-    assert "window.wxRoleUtilityAppearance=" in wxme and "window.wxRoleMeAppearance=" in wxme
-    assert files[BUNDLE + "wechat-me.js"] == git("show", "HEAD:wechat-me.js"), "shared WeChat appearance differs"
-    css = text(files[BUNDLE + "glass-theme.css"])
-    prior_css = text(previous_files[BUNDLE + "glass-theme.css"])
-    guard_start = prior_css.index("/* A measured private-App stall")
-    guard_end = prior_css.index("html.north-native-app.north-native-performance-guard .home img{filter:none!important}", guard_start) + len("html.north-native-app.north-native-performance-guard .home img{filter:none!important}\n")
-    private_guard = prior_css[guard_start:guard_end]
-    assert css.count(private_guard) == 1, "inherited private performance guard missing"
-    assert [line for line in css.replace(private_guard, "").splitlines() if line.strip()] == [line for line in text(git("show", "HEAD:glass-theme.css")).splitlines() if line.strip()], "shared appearance differs beyond inherited private guard"
-    css = text(files[BUNDLE + "glass-theme.css"])
-    for marker in ("function statusBarColorSet(", "function homeVinylOpacitySet(", "function lockPullAppearanceSet(", ".vinyl-record:before{content:", "north-shell-custom", "function glassInnerAppearance(", "function appIconRimSet("):
-        assert marker in css + text(files[BUNDLE + "app.js"]), "latest appearance fix missing: " + marker
-    recent = ROOT.parent / "最新私人版本覆盖包_v1587_iOS439.zip"
-    recent_sha = "1cb1df4108b71db9aa6a01107041e08c9eb9757c5c62dc9ea77c0ce825b1da65"
-    assert sha256(recent.read_bytes()).hexdigest() == recent_sha
-    with ZipFile(recent) as old:
-        recent_prefix = next(n for n in old.namelist() if n.endswith("/SOURCE_STATE.json"))[:-len("SOURCE_STATE.json")]
-        recent_files = {n[len(recent_prefix):]: old.read(n) for n in old.namelist() if n.startswith(recent_prefix) and not n.endswith("/")}
-    recent_manifest = json.loads(recent_files["SHA256SUMS.json"])
-    assert set(recent_manifest) == recent_files.keys() - {"SHA256SUMS.json"}
-    for name, digest in recent_manifest.items():
-        assert sha256(recent_files[name]).hexdigest() == digest, name
-    assert not (recent_files.keys() - files.keys() - {"SOURCE_STATE.json", "SHA256SUMS.json"}), "latest delivered files missing"
-    for name, body in recent_files.items():
-        if name not in {"SOURCE_STATE.json", "SHA256SUMS.json", "请在Mac编译前先读.md"} and not name.startswith(BUNDLE):
-            assert files[name] == body, "unexpected native/signing change: " + name
-    assert files[BUNDLE + "photo-album.js"] == git("show", "HEAD:photo-album.js")
-    for marker in ("photoAlbumHasLikes", "photoAlbumConsumeLikes", "photoAlbumCategorySave", "photoAlbumEditOpen", "likedByMe", "roleLikes", "PHOTO_ALBUM_TRASH_MS", "photoAlbumTrashRestore", "photoAlbumTrashExpire"):
-        assert marker in text(files[BUNDLE + "photo-album.js"]), marker
-    state["lastDeliveredPackage"] = {"name": recent.name, "sha256": recent_sha, "sourceCommit": json.loads(recent_files["SOURCE_STATE.json"])["sourceCommit"]}
-    for marker in ("function msgBannerGesture(e)", "_msgBannerNoClickUntil", "nearby:()=>go('wxnearby')", "wxnearby:'nearby'", "function wxNearbyBlocked()", "if(wxNearbyBlocked())return;"):
-        assert marker in text(files[BUNDLE + "app.js"]), marker
-    assert 'onpointermove="msgBannerGesture(event)"' in text(files[BUNDLE + "index.html"])
-    state["preserved"] = sorted(set(state["preserved"]) | {"v1582-single-photo-deletion", "v1584-delete-photo-facts", "v1586-recently-deleted-72h-restore"})
-    recent_state = json.loads(recent_files["SOURCE_STATE.json"])
-    state["preserved"] = sorted(set(state["preserved"]) | set(recent_state["preserved"]) | {"v1589-wechat-original-audio-favorites-and-provenance-forward", "v1589-wechat-green-controls", "v1589-role-family-capped-sync-edit-delete-tombstones", "v1589-real-friend-read-only-failover-single-write"})
-    for marker in ("function relFamilyState(", "function relFamilyConsume(", "q.created.length>=q.cap||q.created.some", "path.some(p=>p==='favorites'||p==='_favorite')", "attempt<(write?1:2)", "[GATE_URL,PF_RELAY_BASE].forEach", "backendCode:"):
-        assert marker in text(files[BUNDLE + "app.js"]), marker
-    for marker in ("wxFavoriteAudioCopy", "wxFavoriteForwardText", "wxFavoritePlay"):
-        assert marker in text(files[BUNDLE + "wechat-me.js"]), marker
-    state["validation"]["mostRecentOverlayManifestVerified"] = True
-    latest = ROOT.parent / "最新私人版本覆盖包_v1591_iOS439.zip"
-    latest_sha = "6a4cea00fd3e5a351a802e8877f194d1b7ba7d71f2ca9cda7dbaa716fc49b918"
-    assert sha256(latest.read_bytes()).hexdigest() == latest_sha
-    with ZipFile(latest) as old:
-        latest_prefix = next(n for n in old.namelist() if n.endswith("/SOURCE_STATE.json"))[:-len("SOURCE_STATE.json")]
-        latest_files = {n[len(latest_prefix):]: old.read(n) for n in old.namelist() if n.startswith(latest_prefix) and not n.endswith("/")}
-    latest_manifest = json.loads(latest_files["SHA256SUMS.json"])
-    assert set(latest_manifest) == latest_files.keys() - {"SHA256SUMS.json"}
-    for name, digest in latest_manifest.items():
-        assert sha256(latest_files[name]).hexdigest() == digest, name
-    assert not (latest_files.keys() - files.keys() - {"SOURCE_STATE.json", "SHA256SUMS.json"}), "last delivered v1591 files missing"
-    for name, body in latest_files.items():
-        if name not in {"SOURCE_STATE.json", "SHA256SUMS.json", "请在Mac编译前先读.md"} and not name.startswith(BUNDLE):
-            assert files[name] == body, "unexpected native/signing change: " + name
-    latest_state = json.loads(latest_files["SOURCE_STATE.json"])
-    state["lastDeliveredPackage"] = {"name": latest.name, "sha256": latest_sha, "sourceCommit": latest_state["sourceCommit"]}
-    state["preserved"] = sorted(set(state["preserved"]) | set(latest_state["preserved"]) | {"v1592-role-wechat-sticker-size", "v1599-role-photo-thumbnail-original-viewer", "v1599-friend-sync-timeout-backoff", "v1599-natural-delivery-retry-and-restricted-items", "private-native-companion-intentional-asymmetry"})
-    for marker in ("class=\"imgmsg\" onclick=\"event.stopPropagation();viewImg", "class=\"stickermsg\"", "pfBackendTimeout=true", "p._syncRetryAt=Date.now()"):
-        assert marker in app, "new private fix missing: " + marker
-    for marker in ("function deliveryRetryRequest(", "function deliveryRestrictedItemList(", "function naturalDeliveryFollowupPrompt("):
-        assert marker in text(files[BUNDLE+"delivery.js"]), marker
-    assert 'cloudPanel' not in text(files[BUNDLE+"phone-shortcuts.js"])
-    assert 'function panel()' in text(files[BUNDLE+"phone-shortcuts.js"])
-    for name in ("public-north-policy.js", "public-north-runtime.js"):
-        assert files[BUNDLE+name] == latest_files[BUNDLE+name], "private companion overwritten: " + name
-    state["crossWorkspaceAudit"] = {"naturalRetry": {"sourceWorktree": ".codex_delivery_natural_retry", "included": "scoped delivery patch and regressions"}, "cozy": "reviewed house052 snapshot and native bridge retained; old version360 draft not copied", "robot": "existing delivered voice/history/face bridge retained; untracked diagnostic image not packaged", "deliveryRepeatHistory": "independent desktop agent/browser service source only; not an iOS payload", "publicNorth": "public source and retirements excluded", "friendSQL": "not deployed; not an iOS payload"}
-    state["validation"]["latestV1591ManifestVerified"] = True
-    state["validation"]["privateCompanionNativeUnchanged"] = True
-    # Verify the complete immediately preceding delivery before producing the new overlay.
-    delivered = ROOT.parent / "\u6700\u65b0\u79c1\u4eba\u7248\u672c\u8986\u76d6\u5305_v1607_iOS439.zip"
-    with ZipFile(delivered) as old:
-        prefix = old.namelist()[0].split("/")[0]+"/"
-        prior = {n[len(prefix):]:old.read(n) for n in old.namelist() if n.startswith(prefix) and not n.endswith("/")}
-    manifest = json.loads(prior["SHA256SUMS.json"])
-    assert set(manifest) == prior.keys()-{"SHA256SUMS.json"}
-    for name,digest in manifest.items():assert sha256(prior[name]).hexdigest()==digest,name
-    assert not (prior.keys()-files.keys()-{"SOURCE_STATE.json","SHA256SUMS.json"}), "previous delivery file missing"
-    for name,body in prior.items():
-        if name not in {"SOURCE_STATE.json","SHA256SUMS.json","\u8bf7\u5728Mac\u7f16\u8bd1\u524d\u5148\u8bfb.md"} and not name.startswith(BUNDLE):
-            assert files[name]==body,"native/signing payload changed: "+name
-    ui=text(files[BUNDLE+"commerce-ui.js"])
-    for marker in ("northAIShopCheckout", "northAITemperature", "northMarketStoreHTML", "northBusinessBatchOpen", "northMerchantQuickTag", "northMerchantPreviewBack", "northMarketCouponRules", "northPlayRulesHTML", 'data-north-icon="stock"', 'data-north-icon="wallet"', "northPreferredRoleFood", "northBusinessRetry()", "northRecentVisits(rows,now)"):
-        assert marker in ui, "current marketplace feature missing: "+marker
-    state["preserved"]=sorted(set(state["preserved"])|{"v1600-real-user-virtual-marketplace", "v1602-paid-inventory-business-splits-schedules-replies", "v1604-colorful-cloud-vouchers-and-one-line-address", "v1604-rules-boxes-wallet-development-errands"})
-    state["lastDeliveredPackage"]={"name":delivered.name,"sha256":sha256(delivered.read_bytes()).hexdigest(),"sourceCommit":json.loads(prior["SOURCE_STATE.json"])["sourceCommit"]}
-    state["validation"]["latestV1607ManifestVerified"]=True
-    state["validation"]["latestV1607FilesInherited"]=len(prior)
-    # Current shared repairs are required alongside the complete previous private delivery.
-    app = text(files[BUNDLE + "app.js"])
-    for marker in ("userImageStudioContact", "roleImageFrame", "roleImageIdentityRefs", "roleImageGenerateOptions", "northRoleEnsureAction", "northShopQueryRecord", "NORTH药店上架·衣柜入口移到底部"):
-        assert marker in app + ui, "latest shared repair missing: " + marker
-    profile = text(files[BUNDLE + "wechat-me.js"])
-    assert "userImageStudioOpen()" in profile
-    for shop in ("dessert", "mcdonalds", "luckin", "breakfast", "fruit-bowl", "pharmacy"):
-        name = "assets/north-" + shop + "-shop.js"
-        assert BUNDLE + name in files, name
-        assert files[BUNDLE + name] == git("show", "HEAD:" + name), "shop payload differs: " + name
-    assert "看病买药" in ui
-    for name in ("public-north-policy.js", "public-north-runtime.js"):
-        assert files[BUNDLE + name] == prior[BUNDLE + name], "private companion policy changed: " + name
-    state["preserved"] = sorted(set(state["preserved"]) | {"v1645-role-multi-food-execution-and-query-receipts", "v1645-shop-deletion-and-adjacent-product-ordering", "v1645-user-role-wardrobe-framing-and-reference-guards", "v1645-seven-local-shops-pharmacy-medicine-category", "v1645-profile-image-studio-last-entry", "v1645-theme-icons-and-autonomous-role-search"})
-    state["validation"]["latestPrivateGuardsVerified"] = True
-    state["validation"]["nodeTests"]["sourceCommit"] = text(git("rev-parse", "HEAD")).strip()
-    state["validation"]["nodeTests"]["evidenceNote"] = "3677 passing tests and authorized web/private chat gate on feature commit f8b6e0aa; subsequent changes only packaging helper and Mac guide."
-    state["macBuildVerified"]=False
-    state["realIPhoneVerified"]=False
+    state["bridge"] = BRIDGE
+    state["deliveryKind"] = "Mac-Xcode-source-overlay-not-IPA"
+    state["lastDeliveredPackage"] = {"name": previous.name, "sha256": previous_sha, "sourceCommit": "5b5cf7086d2a84dad795545d1152db21c07a49c8"}
+    state["preserved"] = sorted(set(state.get("preserved", [])) | {
+        "v1667-calendar-real-month-year-day-search-events-and-reminders",
+        "v1667-role-scheduling-sharing-invitations-participation-and-opt-in-care",
+        "v1667-calendar-colors-period-integration-home-exit-and-note-spacing",
+        "v1667-role-liked-gallery-owner-isolation",
+        "v1667-single-shop-zero-only-restock-per-product-quantities",
+        "v1667-cloud-startup-fees-lifetime-shop-rewards-profit-and-deleted-shop-order-filter",
+        "v1667-warm-yan-13-products-original-pictures-and-prices",
+        "v1667-pixel-and-pet-bounded-script-redownload",
+        "private-native-companion-intentional-asymmetry"})
+    state["macBuildVerified"] = False
+    state["realIPhoneVerified"] = False
+    state["knownUnresolved"] = [x for x in state.get("knownUnresolved", []) if not re.match(r"v\d+-mac-build", x)] + ["v1667-mac-build-signing-and-iphone-not-verified", "calendar-closed-app-system-notifications-not-implemented", "real-model-calendar-personality-and-voice-acceptance-pending"]
+    state["validation"] = {"macBuildVerified": False, "realIPhoneVerified": False,
+        "nodeTests": {"passed": 3772, "failed": 0, "sourceCommit": web_commit},
+        "models": "HTTP simulated; no live model or production financial tests",
+        "authorizedChatBothRuntimes": True, "missingOptionalFlightGateBothRuntimes": True,
+        "calendarAndMerchantRealHTMLBothRuntimes": True,
+        "inheritedPreviousOverlay": True, "priorPackageManifestVerified": True,
+        "nativePayloadUnchanged": True, "privateCompanionNativeUnchanged": True,
+        "privateRuntimeMatchesReviewedRelease": web_commit, "houseResourceFiles": len(cozy_files)}
     files["SOURCE_STATE.json"] = json.dumps(state, ensure_ascii=False, indent=2).encode("utf-8")
-    files["SHA256SUMS.json"] = json.dumps({name:sha256(body).hexdigest() for name,body in sorted(files.items())},ensure_ascii=False,indent=2).encode("utf-8")
-
-    assert not OUTPUT.exists(), "refusing to overwrite an existing package"
+    files["SHA256SUMS.json"] = json.dumps({name: sha256(body).hexdigest() for name, body in sorted(files.items())}, ensure_ascii=False, indent=2).encode("utf-8")
     with ZipFile(OUTPUT, "x", ZIP_DEFLATED, compresslevel=6) as archive:
-        for name in sorted(files):
-            archive.writestr(PREFIX + name, files[name])
-
-    with ZipFile(OUTPUT) as archive:
-        names = archive.namelist()
-        assert len(names) == len(files)
-        for name in names:
-            assert archive.read(name) == files[name[len(PREFIX):]], f"round-trip mismatch: {name}"
-
-    # Decompress and validate every member in memory; do not create another temporary directory.
+        for name in sorted(files): archive.writestr(PREFIX + name, files[name])
     with ZipFile(OUTPUT) as archive:
         assert archive.testzip() is None
-        actual={name[len(PREFIX):]:archive.read(name) for name in archive.namelist()}
-        assert actual == files, "decompressed file mismatch"
+        assert len(archive.namelist()) == len(files)
+        for name, body in files.items():
+            assert archive.read(PREFIX + name) == body, "round-trip mismatch: " + name
+        actual = {n[len(PREFIX):]: archive.read(n) for n in archive.namelist()}
         validate(actual)
-
-    print(json.dumps({
-        "path": str(OUTPUT),
-        "sourceCommit": text(git("rev-parse", "HEAD")).strip(),
-        "files": len(files),
-        "bytes": OUTPUT.stat().st_size,
-        "sha256": sha256(OUTPUT.read_bytes()).hexdigest(),
-        "webVersion": WEB_VERSION,
-        "native": f"{MARKETING} ({BUILD})",
-        "bridge": BRIDGE,
-    }, ensure_ascii=False, indent=2))
+        checks = json.loads(actual["SHA256SUMS.json"])
+        assert set(checks) == actual.keys() - {"SHA256SUMS.json"}
+        for name, digest in checks.items(): assert sha256(actual[name]).hexdigest() == digest, name
+    print(json.dumps({"path": str(OUTPUT), "sourceCommit": commit, "webSourceCommit": web_commit,
+        "files": len(files), "manifestEntries": len(files)-1, "bytes": OUTPUT.stat().st_size,
+        "sha256": sha256(OUTPUT.read_bytes()).hexdigest(), "privateWeb": "v"+WEB_VERSION,
+        "native": f"{MARKETING} ({BUILD})", "bridge": BRIDGE}, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":
