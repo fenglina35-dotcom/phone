@@ -73,7 +73,7 @@ test('goal and period UI and proactive safeguards are wired into existing reliab
   assert.match(source, /每项每天最多提醒一次/);
   assert.match(source, /function coupleGoalReminder\([\s\S]*scheduleFeatureReply/);
   assert.match(source, /function checkCalendar\([\s\S]*coupleGoalKey/);
-  assert.match(source, /function renderCalendar\([\s\S]*periodRecords\(\)[\s\S]*_periodDay/);
+  assert.match(source, /function calEventsByYear\([\s\S]*periodRecords\(\)[\s\S]*_periodDay/);
   assert.match(source, /经期临近生活提醒/);
   assert.match(source, /预测只依据你的历史记录/);
   assert.match(source, /consumeCoupleGoalTags\(content,c\)/);
