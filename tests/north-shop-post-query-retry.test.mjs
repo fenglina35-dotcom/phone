@@ -6,7 +6,7 @@ import vm from 'node:vm';
 for(const file of ['app.js','native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js']){
  const src=fs.readFileSync(file,'utf8');
  const pick=name=>src.match(new RegExp('(?:async )?function '+name+'\\([^\\n]+'))[0];
- test(file+' v1658 the reply after a shop lookup retries once with flattened messages instead of stopping on a 500',async()=>{
+ test(file+' v1660 the reply after a shop lookup retries once with flattened messages instead of stopping on a 500',async()=>{
   const calls=[];const ctx={wechatPrimaryReply:async ms=>{calls.push(ms);if(calls.length===1){const e=Error('HTTP 500');e.status=500;throw e;}return '好，给你点。[点外卖|可爱甜心蛋糕|68|凌逾甜点|4寸|不适用|1]';},wechatAuxConfigured:()=>false,roleVisibleEnvelopeText:x=>x,modelUnfilteredText:x=>x,chatAPI:async()=>''};
   vm.createContext(ctx);vm.runInContext(pick('northShopFlatMessages')+'\n'+pick('northShopPostQueryReply'),ctx);
   const msgs=[{role:'system',content:'人设'},{role:'user',content:'想吃可爱甜心'},{role:'assistant',content:'[查店铺|凌逾甜点]'},{role:'system',content:'菜单……'},{role:'system',content:'提醒'}];

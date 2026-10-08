@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1658'){
+if(window.__NORTH_SHELL_BUILD__!=='1660'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -606,7 +606,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1658 · 云端余额开店、三档奖励与缺货补货';
+const APP_VER='v1660 · 角色点赞图库、利润与顾客订单';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2015,7 +2015,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1658&r=v1658-couple-unbind-reopen-1';
+  const url='sw.js?v=1660&r=v1660-couple-unbind-reopen-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -4924,7 +4924,7 @@ function spyAppView(id,c,app){const d=S.spy[id]||{};
   if(app==='settings')return renderSpySettings(id,c);
 
   let title='',body='';
-  if(app==='album'){title='相册';body=spyAlbumHTML(d);}
+  if(app==='album')return typeof renderRolePhotoAlbum==='function'?renderRolePhotoAlbum(id):navbar('图库')+'<div class="empty" style="padding:34px">图库组件尚未加载，请稍后重新打开。</div>';
   else if(app==='bank'){const bal=spyBalance(c,d);title='银行 / 钱包';body=`<div style="margin:12px;padding:18px;border-radius:14px;background:linear-gradient(135deg,#11998e,#38ef7d);color:#fff"><div style="font-size:12px;opacity:.85">自己的银行余额</div><div style="font-size:30px;font-weight:700">¥${bal.toFixed(2)}</div></div>`+
     `<div class="section" style="margin:12px"><div class="it" style="gap:10px"><span style="flex:1;font-size:13px;color:#ddd">登录微信转给自己<small style="display:block;color:#888;margin-top:3px">仅在小手机内模拟，会留下账单痕迹，ta之后可能发现。</small></span><button class="minibtn" onclick="spyWxTransferOpen('${id}')">转给自己</button></div></div>`+
     sec('近期收支','#2bb36a',(d.wallet||[]).map(w=>`<div class="bill"><div>${esc(w.item||'')}</div><div class="${(+w.amount)>=0?'pos':'neg'}">${(+w.amount)>=0?'+':''}${(+w.amount).toFixed(2)}</div></div>`).join('')||'<div class="it"><span class="v">无</span></div>');if(typeof familyRoleBank==='function')body+=familyRoleBank(id);if(typeof northMarketRoleBank==='function')body+=northMarketRoleBank(id);}

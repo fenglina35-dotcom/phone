@@ -11,7 +11,7 @@ for(const priv of [false,true]){
 
  test((priv?'private':'web')+' real order headers show shop covers while products keep their own images',()=>{
   const base='https://lkhlyfpssmrjkkzhuzag.supabase.co/storage/v1/object/public/north-market/'+'a'.repeat(32)+'/';
-  const c={northMarketHeader:()=>'',mtGlyph:()=>'',northMarketPendingSplitsHTML:()=>'',esc:s=>String(s||''),money:n=>n.toFixed(2),fmtDT:s=>s,northMarketStatus:s=>s};vm.createContext(c);vm.runInContext(take('function northMarketImage(')+'\n'+take('function northMarketOrdersHTML(')+';this.html=northMarketOrdersHTML;',c);
+  const c={northData:()=>({}),actId:()=> 'main',northMarketHeader:()=>'',mtGlyph:()=>'',northMarketPendingSplitsHTML:()=>'',esc:s=>String(s||''),money:n=>n.toFixed(2),fmtDT:s=>s,northMarketStatus:s=>s};vm.createContext(c);vm.runInContext(take('function northMarketImage(')+'\n'+take('function northMarketVisibleOrders(')+'\n'+take('function northMarketOrdersHTML(')+';this.html=northMarketOrdersHTML;',c);
   const row={id:'order1',shop_name:'Dessert store',shop_cover:base+'store.jpg',status:'completed',created_at:'today',total:2500,items:[{name:'Cake',image:base+'cake.jpg'}]};
   for(const seller of [false,true]){const h=c.html({seller,rows:[row]});const head=h.match(/<button class="north-history-head"[\s\S]*?<\/button>/)[0];assert.match(head,/store\.jpg/);assert.doesNotMatch(head,/cake\.jpg|meituan-kangaroo\.png/);assert.match(h,/cake\.jpg/);assert.match(head,/Dessert store/);}
   row.shop_cover='javascript:alert(1)';let h=c.html({seller:false,rows:[row]});assert.doesNotMatch(h,/javascript:/);assert.match(h,/meituan-kangaroo\.png/);delete row.shop_cover;h=c.html({seller:false,rows:[row]});assert.match(h,/meituan-kangaroo\.png/);assert.match(h,/cake\.jpg/);
@@ -261,7 +261,7 @@ for(const priv of [false,true]){
  const src=process.env.NORTH_TEST_OLD?cp.execFileSync('git',['show','HEAD:'+file],{encoding:'utf8',maxBuffer:8e6}):fs.readFileSync(new URL('../'+file,import.meta.url),'utf8');
  const take=p=>src.split('\n').find(l=>l.startsWith('  '+p))||'';
  test((priv?'private':'web')+' real orders use the original yellow order header and filters',()=>{
-  const c={northMarketHeader:()=>'<header class="north-personal-head">white</header>',mtGlyph:()=>'',northMarketPendingSplitsHTML:()=>'',esc:s=>s,money:n=>n,fmtDT:s=>s};vm.createContext(c);vm.runInContext(take('function northMarketOrdersHTML(')+';this.html=northMarketOrdersHTML;',c);const h=c.html({seller:false,busy:false,rows:[]});assert.match(h,/north-orders-header/);assert.match(h,/north-orders-filters/);assert.doesNotMatch(h,/north-personal-head/);
+  const c={northData:()=>({}),actId:()=> 'main',northMarketHeader:()=>'<header class="north-personal-head">white</header>',mtGlyph:()=>'',northMarketPendingSplitsHTML:()=>'',esc:s=>s,money:n=>n,fmtDT:s=>s};vm.createContext(c);vm.runInContext(take('function northMarketVisibleOrders(')+'\n'+take('function northMarketOrdersHTML(')+';this.html=northMarketOrdersHTML;',c);const h=c.html({seller:false,busy:false,rows:[]});assert.match(h,/north-orders-header/);assert.match(h,/north-orders-filters/);assert.doesNotMatch(h,/north-personal-head/);
  });
  test((priv?'private':'web')+' page snapshots are bounded cloned short lived and isolated by state and identity',()=>{
   const pf={id:'phone1',secret:'s1'},c={S:{},actId:()=> 'main',phoneFriendState:()=>pf,Date:{now:()=>100000},JSON};vm.createContext(c);vm.runInContext(src.split('\n').filter(l=>/^  (var northMarketPageCache|function northMarketPage(Get|Put|Reset))/.test(l)).join('\n')+';this.get=northMarketPageGet;this.put=northMarketPagePut;',c);
@@ -304,5 +304,17 @@ for(const priv of [false,true]){
   let h=c.html({shopReward:{claimedTiers:1,nextTier:2,shopCount:2,eligible:true}});assert.match(h,/northMarketShopRewardClaim\(2\)/);assert.doesNotMatch(h,/northMarketShopRewardClaim\(1\)|northMarketShopRewardClaim\(3\)/);assert.match(h,/删店重开不重置/);
   h=c.html({shopReward:{claimedTiers:1,nextTier:2,shopCount:1,eligible:false}});assert.doesNotMatch(h,/onclick="northMarketShopRewardClaim/);assert.match(h,/同时拥有2家店/);
   h=c.html({shopReward:{claimedTiers:3,nextTier:null,shopCount:0,eligible:false}});assert.doesNotMatch(h,/onclick="northMarketShopRewardClaim/);assert.equal((h.match(/disabled/g)||[]).length,3);
+ });
+}
+
+for(const priv of [false,true]){
+ const file=priv?'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/commerce-ui.js':'commerce-ui.js';const src=process.env.NORTH_DELETED_OLD?cp.execFileSync('git',['show','HEAD:'+file],{encoding:'utf8',maxBuffer:8e6}):fs.readFileSync(file,'utf8'),take=p=>src.split('\n').find(l=>l.startsWith('  '+p))||'';
+ test((priv?'private':'web')+' deleted shop sales are hidden from cached seller lists while buyer history remains',()=>{
+  let account='main';const c={northData:()=>({merchantLibrary:{main:{old:{status:'deleted'},conflict:{status:'deleted',marketDeleteConflict:true}},other:{live:{status:'deleted'}}}}),actId:()=>account};vm.createContext(c);vm.runInContext(take('function northMarketVisibleOrders(')+';this.visible=northMarketVisibleOrders;',c);assert.equal(typeof c.visible,'function');
+  const rows=[{shop_id:'old',name:'local deletion'},{shop_id:'cloud',shop_deleted:true,name:'remote deletion'},{shop_id:'live',name:'live'},{shop_id:'conflict',name:'conflicted deletion'}];assert.deepEqual(Array.from(c.visible({seller:true,rows}),r=>r.name),['live','conflicted deletion']);assert.equal(c.visible({seller:false,rows}),rows);account='other';assert.deepEqual(Array.from(c.visible({seller:true,rows}),r=>r.name),['local deletion','conflicted deletion']);assert.equal(rows.length,4,'history never mutated');
+ });
+ test((priv?'private':'web')+' realized profit remains visible for positive zero and negative values after startup gate removal',()=>{
+  const data={income:12300,profit:12900,inventoryValue:24000,shops:[],shopCount:0,stock:[]},c={northMarketHeader:()=>'',northActiveBusinessData:x=>x,northBusinessSelectionRows:()=>[],northData:()=>({}),actId:()=> 'main',esc:x=>String(x),money:n=>n.toFixed(2)};vm.createContext(c);vm.runInContext(take('function northMarketBusinessHTML(')+';this.html=northMarketBusinessHTML;',c);
+  for(const value of [12900,0,-5000]){data.profit=value;const h=c.html({data});assert.match(h,/已实现净利润/);assert.ok(h.includes('¥'+(value/100).toFixed(2)));assert.match(h,/未售库存资产/);}
  });
 }

@@ -38,10 +38,10 @@ function pollHarness(){
 }
 
 test('private candidate is v1355 and iOS 399 while public advances independently',()=>{
-  assert.match(app,/APP_VER='v1659 · 云端余额开店、三档奖励与缺货补货'/);
+  assert.match(app,/APP_VER='v1661 · 角色点赞图库、利润与顾客订单'/);
   for(const html of [index,alias]){
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1659'/);
-    assert.match(html,/app\.js\?v=1659&r=v1659-private-package-1/);
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1661'/);
+    assert.match(html,/app\.js\?v=1661&r=v1661-private-package-1/);
     assert.match(html,/private-runtime-diagnostics\.js\?v=339/);
   }
   assert.match(diagnostics,/OVERLAY_VERSION='336-daily-file-backup'/);
@@ -49,7 +49,7 @@ test('private candidate is v1355 and iOS 399 while public advances independently
   assert.match(bridge,/private static let build = "1\.0\.439 \(439\)"/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 439;/g)||[]).length,12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.439;/g)||[]).length,12);
-  assert.match(publicApp,/APP_VER='v1658 · 云端余额开店、三档奖励与缺货补货'/);
+  assert.match(publicApp,/APP_VER='v1660 · 角色点赞图库、利润与顾客订单'/);
 });
 
 test('ordinary foreground polling is lightweight while explicit control verification stays complete',async()=>{
