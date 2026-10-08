@@ -37,6 +37,8 @@ const PERMANENT_FIXES = [
   {release:"本地收藏候选",scope:"both",least:1,name:"完整备份包含收藏及转发卡片的原声音频",marker:"path.some(p=>p==='favorites'||p==='_favorite')"},
   {release:"本地候选",scope:"both",least:1,name:"已有好友刷新补齐消息且保留历史并去重",marker:"if(n>(counts.get(k)||0)){existing.push(m);ch=true;}"},
   {release:"v1576/v1577",scope:"both",least:1,name:"角色微信按消息作者同步气泡设置",marker:"const c=getC(cid),look=bubbleLook(c,!mine)"},
+  {release:"v1658",scope:"both",least:1,name:"角色点外卖：规格按真实菜单修正，不再整单失败",marker:"function northRoleRepairSelections(p,raw,wants)",file:"commerce-ui.js"},
+  {release:"v1658",scope:"both",least:1,name:"查店铺后的回复遇到500改写消息再试一次",marker:"function northShopFlatMessages(messages)"},
   {release:"v1576/v1577",scope:"both",least:1,name:"角色密码拨号盘独立背景与恢复入口",marker:"function spyAppearanceLockWallpaperReset(id)"},
   {release:"v1576/v1577",scope:"both",least:1,name:"角色手机名字原地编辑并支持完成与取消",marker:"function spyAppearanceNameKey(event,id)"},
   {release:"v1566/v1567",scope:"both",least:1,name:"角色微信图片表情付款共用玩家聊天及代发身份",marker:"function hisChatAppend(cid,fid,m)"},

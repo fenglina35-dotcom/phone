@@ -227,6 +227,6 @@ test('three shop reward tiers preserve old claims and require active count; star
  await assert.rejects(()=>call('stock_empty_batch',[[empty,stocked],'wallet',request(),'00000',1200]),/market-stock-not-empty/);assert.equal((await call('wallet')).balance,210000,'mixed batch is fully rolled back');
  const restock=request();await call('stock_empty_batch',[[empty],'wallet',restock,'00000',800]);assert.equal((await call('wallet')).balance,209200);await call('stock_empty_batch',[[empty],'wallet',restock,'00000',800]);assert.equal((await call('wallet')).balance,209200,'unknown-result retry returns original receipt despite replenished stock');
  await assert.rejects(()=>call('stock_empty_batch',[[empty],'wallet',request(),'00000',800]),/market-stock-not-empty/);assert.equal((await call('wallet')).balance,209200);
- assert.equal((await db.query("select has_function_privilege('anon','public.north_market_shop_reward_state(text)','EXECUTE') yes")).rows[0].yes,false);
+ assert.equal((await db.query("select has_function_privilege('anon','public.north_market_shop_reward_state(text)','EXECUTE') yes")).rows[0].yes,false);assert.equal((await db.query("select has_function_privilege('authenticated','public.north_market_shop_reward_state(text)','EXECUTE') yes")).rows[0].yes,false);
  }finally{await db.close();}
 });

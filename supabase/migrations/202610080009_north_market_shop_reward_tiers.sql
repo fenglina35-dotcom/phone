@@ -16,7 +16,7 @@ returns jsonb language sql stable set search_path='' as $$
  select jsonb_build_object('amount',100000,'shopCount',owned.n,'claimedTiers',claimed.n,'nextTier',case when claimed.n<3 then claimed.n+1 else null end,
  'eligible',claimed.n<3 and owned.n>=claimed.n+1,'claimed',claimed.n=3,'totalClaimed',claimed.n*100000,'limit',3) from owned,claimed;
 $$;
-revoke all on function public.north_market_shop_reward_state(text) from public;
+revoke all on function public.north_market_shop_reward_state(text) from public,anon,authenticated;
 
 -- Change only the reward projection; keep existing wallet, couple and ledger fields.
 do $wallet$
