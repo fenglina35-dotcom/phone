@@ -280,3 +280,29 @@ for(const priv of [false,true]){
   let rendered=0;const nodes=[{group:'a',hidden:false},{group:'b',hidden:false}];nodes.forEach(n=>n.getAttribute=()=>n.group);const buttons=Array.from({length:3},()=>({classList:{toggle(){}}}));const root={querySelectorAll:q=>q==='[data-cloud-group]'?nodes:q.includes('aside')?buttons:[]};const c={northMarketView:{page:'store',account:'main',shop:{groups:[{id:'a'},{id:'b'}]}},actId:()=> 'main',document:{querySelector:()=>root},render:()=>rendered++};c.window=c;vm.createContext(c);vm.runInContext(take('window.northMarketGroup='),c);c.northMarketGroup('a');assert.equal(nodes[0].hidden,false);assert.equal(nodes[1].hidden,true);c.northMarketGroup('');assert.equal(nodes[1].hidden,false);assert.equal(rendered,0);
  });
 }
+
+for(const priv of [false,true]){
+ const file=priv?'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/commerce-ui.js':'commerce-ui.js';
+ const src=process.env.NORTH_TEST_OLD?cp.execFileSync('git',['show','HEAD:'+file],{encoding:'utf8',maxBuffer:8e6}):fs.readFileSync(file,'utf8'),take=p=>src.split('\n').find(l=>l.startsWith('  '+p))||'';
+ test((priv?'private':'web')+' selected bulk restock contains only checked products and remains account isolated',()=>{
+  const state={},rows=[{shop_id:'s1',product_id:'a',name:'A',sale_price:2000,quantity:0},{shop_id:'s1',product_id:'b',name:'B',sale_price:1000,quantity:2},{shop_id:'s2',product_id:'a',name:'C',sale_price:1500,quantity:0},{shop_id:'s2',product_id:'gone',name:'D',sale_price:null,quantity:5}],notices=[];let account='main',modal='';
+  const c={S:state,actId:()=>account,northBusinessCache:{account:'main',state,data:{stock:rows,balance:80000,income:0}},northMarketBusy:false,northSaving:false,northBusinessStockSelection:null,northData:()=>({}),northActiveBusinessData:x=>x,northMarketPagePaint(){},northBusinessBatchPreview(){},northBusinessRetry(){throw Error('must not replace pending request');},crypto:{randomUUID:()=> 'request'},openModal:h=>modal=h,money:n=>n.toFixed(2),toast:n=>notices.push(n)};c.window=c;vm.createContext(c);
+  vm.runInContext(['function northBusinessSelectionRows(','window.northBusinessStockSelect=','window.northBusinessBatchOpen='].map(take).join('\n'),c);
+  assert.equal(typeof c.northBusinessStockSelect,'function','selection handler must exist');c.northBusinessStockSelect('s1','a',true);c.northBusinessStockSelect('s2','a',true);c.northBusinessStockSelect('s2','gone',true);c.northBusinessBatchOpen(true);
+  assert.deepEqual(Array.from(c.northBusinessDraft.rows,r=>r.name),['A','C']);assert.match(modal,/已选缺货商品/);assert.equal(c.northBusinessDraft.fee,0);
+  c.northBusinessStockSelect('s1','a',false);c.northBusinessBatchOpen(true);assert.deepEqual(Array.from(c.northBusinessDraft.rows,r=>r.name),['C']);
+  c.northBusinessBatchOpen();assert.deepEqual(Array.from(c.northBusinessDraft.rows,r=>r.name),['A','C'],'bulk route skips stocked products');c.northBusinessStockSelect('s1','b',true);assert.deepEqual(Array.from(c.northBusinessSelectionRows(c.northBusinessCache.data),r=>r.name),['C'],'stocked product cannot be selected');rows[2].quantity=1;c.northBusinessDraft=null;c.northBusinessBatchOpen(true);assert.equal(c.northBusinessDraft,null,'fresh stock invalidates old selection');rows[2].quantity=0;
+  account='other';c.northBusinessCache={account:'other',state,data:{stock:rows,balance:1000}};c.northBusinessDraft=null;c.northBusinessBatchOpen(true);assert.equal(c.northBusinessDraft,null);assert.match(notices.at(-1),/勾选/);
+  account='main';c.northBusinessCache={account:'main',state,data:{stock:rows,balance:1000}};c.S={};c.northBusinessDraft=null;c.northBusinessBatchOpen(true);assert.equal(c.northBusinessDraft,null,'new state cannot inherit checks');
+ });
+ test((priv?'private':'web')+' startup dialog accepts zero profit and income when cloud balance covers fee',()=>{
+  let modal='',notice='',account='main';const state={},c={window:{},S:state,actId:()=>account,northData:()=>({}),northBusinessCache:{account:'main',state,data:{shopCount:2,nextStartupFee:50000,balance:60000,profit:0,income:0}},crypto:{randomUUID:()=> 'request'},openModal:h=>modal=h,toast:n=>notice=n,money:n=>n.toFixed(2)};vm.createContext(c);vm.runInContext(take('window.northBusinessCreateOpen='),c);c.window.northBusinessCreateOpen();assert.match(modal,/500\.00/);assert.match(modal,/本人美团云端余额/);assert.match(modal,/不要求净利润/);assert.equal(notice,'');
+  modal='';c.northBusinessCache.data.balance=49999;c.window.northBusinessCreateOpen();assert.equal(modal,'');assert.match(notice,/云端余额不足/);
+ });
+ test((priv?'private':'web')+' tier reward UI only offers the next eligible lifetime tier',()=>{
+  const c={};vm.createContext(c);vm.runInContext(take('function northMarketShopRewardHTML(')+';this.html=northMarketShopRewardHTML;',c);
+  let h=c.html({shopReward:{claimedTiers:1,nextTier:2,shopCount:2,eligible:true}});assert.match(h,/northMarketShopRewardClaim\(2\)/);assert.doesNotMatch(h,/northMarketShopRewardClaim\(1\)|northMarketShopRewardClaim\(3\)/);assert.match(h,/删店重开不重置/);
+  h=c.html({shopReward:{claimedTiers:1,nextTier:2,shopCount:1,eligible:false}});assert.doesNotMatch(h,/onclick="northMarketShopRewardClaim/);assert.match(h,/同时拥有2家店/);
+  h=c.html({shopReward:{claimedTiers:3,nextTier:null,shopCount:0,eligible:false}});assert.doesNotMatch(h,/onclick="northMarketShopRewardClaim/);assert.equal((h.match(/disabled/g)||[]).length,3);
+ });
+}
