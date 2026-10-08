@@ -1,6 +1,6 @@
-const BUILD='1660';
-const HOTFIX='v1660-couple-unbind-reopen-1';
-const SHELL_CACHE='north-shell-v1660-couple-unbind-reopen-1';
+const BUILD='1662';
+const HOTFIX='v1662-couple-unbind-reopen-1';
+const SHELL_CACHE='north-shell-v1662-couple-unbind-reopen-1';
 const GLASS_ICON_CACHE='north-glass-icons-v2';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
@@ -16,7 +16,7 @@ const CORE_FILES=[
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
   {url:'./app.js?v='+BUILD+'&r='+HOTFIX,kind:'app'},
   {url:'./cohab-theater.js?v='+BUILD+'&r=v1274-web-cohab-guests-1',kind:'theater'},
-  {url:'./web-hotfix.js?v='+BUILD+'&r=v1660-couple-unbind-reopen-1',kind:'hotfix'},
+  {url:'./web-hotfix.js?v='+BUILD+'&r=v1662-couple-unbind-reopen-1',kind:'hotfix'},
   {url:'./photo-album.js?v='+BUILD,kind:'album'},
   {url:'./couple-watch.js?v='+BUILD,kind:'watch'},
   {url:'./couple-watch-runtime.js?v='+BUILD,kind:'watchRuntime'}
@@ -160,7 +160,7 @@ function validShellText(kind,text){
     &&text.includes('theaterRevealActorItems')
     &&!text.includes('cohabReplyCore=async');
   if(kind==='hotfix')return text.length>800
-    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1660-couple-unbind-reopen-1'")
+    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1662-couple-unbind-reopen-1'")
     &&text.includes('reconcileExpiredWxLogin')
     &&text.includes('withBaseImageCheck')
     &&text.includes('isStoredImgRef');
@@ -264,10 +264,23 @@ self.addEventListener('fetch',event=>{
   if(/\/games\/pixel-home\//.test(url.pathname)){
     event.respondWith((async()=>{
       let cache;
-      const key=new Request(url.origin+url.pathname+url.search);
-      if(!url.searchParams.has('northImageRetry'))try{cache=await caches.open(SHELL_CACHE);const cached=await cache.match(key);if(cached)return cached;}catch(_){/* Storage is optional, including on low-space mobile browsers. */}
-      const response=await fetch(request);
-      if(response.ok&&cache){const save=cache.put(key,response.clone()).catch(()=>{});event.waitUntil(save);}
+      /* v1662: the per-visit session token is not part of the file, so it is not part of the cache key
+         (every visit used to add another copy of index.html). Explicit retries always go to the network. */
+      const keyUrl=new URL(url.href);keyUrl.searchParams.delete('session');keyUrl.searchParams.delete('retry');
+      const key=new Request(keyUrl.href),retry=url.searchParams.has('northImageRetry')||url.searchParams.has('retry');
+      try{cache=await caches.open(SHELL_CACHE);if(!retry){const cached=await cache.match(key);if(cached)return cached;}}catch(_){/* Storage is optional, including on low-space mobile browsers. */}
+      /* A single failed download used to leave the game without a script; retry, then use any earlier copy. */
+      let response,failure;
+      try{
+        response=await fetchRetry(request,{cache:retry?'no-store':'no-cache'},3);
+        if(response.ok&&cache){const save=cache.put(key,response.clone()).catch(()=>{});event.waitUntil(save);}
+        if(response.ok||!cache)return response;
+      }catch(error){if(!cache)throw error;failure=error;}
+      try{
+        const older=await cache.match(key,{ignoreSearch:true});if(older)return older;
+        for(const name of await caches.keys()){if(!/^north-shell-/.test(name))continue;const hit=await (await caches.open(name)).match(key,{ignoreSearch:true});if(hit)return hit;}
+      }catch(_){/* An older copy is only a bonus. */}
+      if(failure)throw failure;
       return response;
     })());return;
   }

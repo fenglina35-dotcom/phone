@@ -21,7 +21,7 @@ test('private v1355 loads daily backup after the diagnostic overlay while public
     assert.ok(html.indexOf('private-cloud-backup.js?v=1661')>html.indexOf('private-runtime-diagnostics.js?v=339'));
   }
   assert.match(privateApp,/APP_VER='v1661 · 角色点赞图库、利润与顾客订单'/);
-  assert.match(publicApp,/APP_VER='v1660 · 角色点赞图库、利润与顾客订单'/);
+  assert.match(publicApp,/APP_VER='v1662 · 像素少女与电子宠物断网自动重下'/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 439;/g)||[]).length,12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.439;/g)||[]).length,12);
 });

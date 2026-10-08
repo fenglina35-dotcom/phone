@@ -37,6 +37,8 @@ const PERMANENT_FIXES = [
   {release:"本地收藏候选",scope:"both",least:1,name:"完整备份包含收藏及转发卡片的原声音频",marker:"path.some(p=>p==='favorites'||p==='_favorite')"},
   {release:"本地候选",scope:"both",least:1,name:"已有好友刷新补齐消息且保留历史并去重",marker:"if(n>(counts.get(k)||0)){existing.push(m);ch=true;}"},
   {release:"v1576/v1577",scope:"both",least:1,name:"角色微信按消息作者同步气泡设置",marker:"const c=getC(cid),look=bubbleLook(c,!mine)"},
+  {release:"v1662",scope:"both",least:1,name:"像素少女脚本下载失败自动重试，不再 PixelHomeBridge 未定义",marker:"小屋脚本按顺序载入",file:"games/pixel-home/index.html"},
+  {release:"v1662",scope:"both",least:1,name:"像素少女、电子宠物组件没下载下来时打开即重下",marker:"function northEnsureComponent(key)"},
   {release:"v1660",scope:"both",least:1,name:"角色点外卖：规格按真实菜单修正，不再整单失败",marker:"function northRoleRepairSelections(p,raw,wants)",file:"commerce-ui.js"},
   {release:"v1660",scope:"both",least:1,name:"查店铺后的回复遇到500改写消息再试一次",marker:"function northShopFlatMessages(messages)"},
   {release:"v1576/v1577",scope:"both",least:1,name:"角色密码拨号盘独立背景与恢复入口",marker:"function spyAppearanceLockWallpaperReset(id)"},

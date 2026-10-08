@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1660'){
+if(window.__NORTH_SHELL_BUILD__!=='1662'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -606,7 +606,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1660 · 角色点赞图库、利润与顾客订单';
+const APP_VER='v1662 · 像素少女与电子宠物断网自动重下';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2015,7 +2015,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1660&r=v1660-couple-unbind-reopen-1';
+  const url='sw.js?v=1662&r=v1662-couple-unbind-reopen-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -4101,7 +4101,7 @@ function setAppIcon(key){pickFile('image/*',async f=>{S.me.appIcons=S.me.appIcon
 const LOCKABLE={browser:'浏览器',moments:'朋友圈',spy:'查他手机',shop:'购物',calendar:'日历',x:'X',douyin:'抖音',food:'外卖',games:'游戏大厅',mail:'信箱',phoneapp:'电话',offline:'线下约会',roleplay:'角色扮演',pixelhome:'像素少女',pet:'电子宠物',music:'音乐',cinema:'放映室',travel:'小鱼旅行',album:'相册',nearby:'附近的人'};
 function appLocked(key){return !!(S.couple&&S.couple.locks&&S.couple.locks[key]);}
 function openApp(key){if(S.jail&&S.jail.active){toast('你被关在禁闭室里…出不去');go('jail');return;}if(appLocked(key)){toast('「'+(LOCKABLE[key]||key)+'」被ta锁了，去情侣空间求他解开');go('couple');return;}if(key==='mail'){if(lockClearTarget({type:'mail'},true))save(500);}else if(key==='x'){if(lockClearTarget({type:'x'},true))save(500);}
-   ({nearby:()=>go('wxnearby'),album:()=>go('album'),browser:()=>go('browser'),moments:()=>go('wxmoment'),spy:()=>openSpy(),shop:()=>go('shop'),calendar:()=>go('calendar'),x:()=>openX(),douyin:()=>openDouyin(),food:()=>go('food'),games:()=>openGames(),mail:()=>go('mail'),phoneapp:()=>go('phoneapp'),offline:()=>openOfflineMenu(),roleplay:()=>go('rphub'),tale:()=>taleStart(),dread:()=>dreadStart(),pixelhome:()=>{if(typeof openPixelHome!=='function'){toast('像素少女组件尚未加载，请检查网络后重新打开页面；其他应用仍可使用');return;}openPixelHome();},pet:()=>{if(typeof openPetGame!=='function'){toast('电子宠物组件尚未加载，请检查网络后重新打开页面；其他应用仍可使用');return;}openPetGame();},music:()=>openMusic(),cinema:()=>{cinemaInit();go('cinema');},travel:()=>{tvInit();go('travel');}}[key]||(()=>{}))();}
+   ({nearby:()=>go('wxnearby'),album:()=>go('album'),browser:()=>go('browser'),moments:()=>go('wxmoment'),spy:()=>openSpy(),shop:()=>go('shop'),calendar:()=>go('calendar'),x:()=>openX(),douyin:()=>openDouyin(),food:()=>go('food'),games:()=>openGames(),mail:()=>go('mail'),phoneapp:()=>go('phoneapp'),offline:()=>openOfflineMenu(),roleplay:()=>go('rphub'),tale:()=>taleStart(),dread:()=>dreadStart(),pixelhome:()=>{if(typeof openPixelHome!=='function'&&typeof northOpenComponent==='function')return northOpenComponent('pixelhome','像素少女',()=>openPixelHome());if(typeof openPixelHome!=='function'){toast('像素少女组件尚未加载，请检查网络后重新打开页面；其他应用仍可使用');return;}openPixelHome();},pet:()=>{if(typeof openPetGame!=='function'&&typeof northOpenComponent==='function')return northOpenComponent('pet','电子宠物',()=>openPetGame());if(typeof openPetGame!=='function'){toast('电子宠物组件尚未加载，请检查网络后重新打开页面；其他应用仍可使用');return;}openPetGame();},music:()=>openMusic(),cinema:()=>{cinemaInit();go('cinema');},travel:()=>{tvInit();go('travel');}}[key]||(()=>{}))();}
 
 /* ---------- 软件使用时长 / 限额倒计时（只对授权的软件生效） ---------- */
 // 把当前所在页面映射到 LOCKABLE 的 appKey；不在任何受控软件里返回 null
@@ -9335,6 +9335,14 @@ const GAMES=[
   {k:'drama',e:'',n:'即兴小剧场',kick:'我们来即兴小剧场，你给我们设定一个情境或开场白，然后一起把剧情演下去。开场吧。'},
   {k:'quick',e:'',n:'快问快答',kick:'我们玩快问快答，你连续快速地问我问题、我来答，答完你也可以让我问你。开始。'}
 ];
+/* v1662：像素少女、电子宠物这类组件如果开机时没下载下来（部分网络下 GitHub Pages 偶发失败），打开时现场重新下载，最多三次，再不行才提示 */
+const NORTH_LAZY_COMPONENTS={pixelhome:[['pixel-home-policy.js',()=>typeof PixelHomePolicy!=='undefined'],['pixel-wardrobe-info.js',()=>typeof PixelHomeWardrobeInfo!=='undefined'],['pixel-home.js',()=>typeof openPixelHome==='function']],pet:[['pet-game.js',()=>typeof openPetGame==='function']]};
+const _northLazyLoading={};
+function northLazyScript(file,attempt){return new Promise((resolve,reject)=>{const el=document.createElement('script');el.src=file+'?v='+(window.__NORTH_SHELL_BUILD__||'0')+(attempt?'&retry='+attempt+'-'+Date.now():'');el.onload=()=>resolve();el.onerror=()=>{el.remove();reject(new Error(file));};document.head.appendChild(el);});}
+function northEnsureComponent(key){const parts=NORTH_LAZY_COMPONENTS[key];if(!parts)return Promise.resolve(false);if(parts.every(p=>p[1]()))return Promise.resolve(true);if(_northLazyLoading[key])return _northLazyLoading[key];
+  const job=(async()=>{for(const [file,ready] of parts){for(let attempt=0;!ready()&&attempt<3;attempt++){try{await northLazyScript(file,attempt);}catch(_){await new Promise(r=>setTimeout(r,600*(attempt+1)));}}if(!ready())return false;}return true;})();
+  _northLazyLoading[key]=job;job.finally(()=>{delete _northLazyLoading[key];});return job;}
+function northOpenComponent(key,label,open){const parts=NORTH_LAZY_COMPONENTS[key];if(!parts||parts.every(p=>p[1]()))return open();toast(label+'组件正在重新下载…');northEnsureComponent(key).then(ok=>{if(ok)open();else toast(label+'组件下载失败，请检查网络后再点一次；其他应用仍可使用');});}
 function gameDefinition(k){return GAMES.find(x=>x.k===k)||(k==='pixelhome'?{k,e:'',n:'像素少女'}:k==='pet'?{k,e:'',n:'电子宠物'}:null);}
 function gameContextRounds(){S.settings=S.settings||{};const n=Math.floor(Number(S.settings.gameHistRounds));return Number.isFinite(n)&&n>=2?Math.min(100,n):24;}
 function gameContextRows(rows){rows=Array.isArray(rows)?rows:[];const starts=[],human=m=>m&&(m.who==='me'||m.kind==='me'||m.kind==='pf'||m.kind==='host');for(let i=0;i<rows.length;i++){if(human(rows[i])&&(i===0||!human(rows[i-1])))starts.push(i);}const rounds=gameContextRounds(),start=starts.length>rounds?starts[starts.length-rounds]:0;return rows.slice(start);}
@@ -9357,7 +9365,7 @@ function renderGameHub(){const drafts=gsDraftList(),dd=dgDraftList(),bd=typeof b
   <div class="gamehub-title"><b>全部游戏</b><span>选择游戏，进入对应的玩法设置</span></div><div class="gamehub-grid">${GAMES.map(g=>`<article class="gamehub-card ${g.k==='drawguess'||g.k==='beads'||g.k==='pet'||g.k==='heartquiz'?'featured':''}" onclick="${g.k==='tale'?"openApp('tale')":g.k==='dread'?"openApp('dread')":`pickGameChar('${g.k}')`}"><i>${g.k==='pixelhome'?'<img src="games/pixel-home/assets/teddy-p07.png" alt="" style="width:52px;height:52px;object-fit:contain">':gameLineIcon(g.k)}</i><div><b>${esc(g.n)}</b><small>${esc(g.tag||(MIX_GAME_KEYS.indexOf(g.k)>=0?'支持单人 / 多人房':'单人游戏'))}</small></div>${MIX_GAME_KEYS.indexOf(g.k)>=0?`<button onclick="event.stopPropagation();openMixedGamePicker('${g.k}')">多人</button>`:'<span>›</span>'}</article>`).join('')}</div>
   <button class="gamehub-gallery" onclick="dgOpenGallery()">${gameLineIcon('drawguess')}<span><b>我的画作</b><small>查看、保留或删除已经完成的画布</small></span><em>›</em></button>
   </div></div>`;}
-function pickGameChar(k){if(k==='pixelhome')return openPixelHome();const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){toast('先创建一个角色');return;}
+function pickGameChar(k){if(k==='pixelhome')return northOpenComponent('pixelhome','像素少女',()=>openPixelHome());const cs=S.contacts.filter(c=>!c.deleted);if(!cs.length){toast('先创建一个角色');return;}
   openModal(`<h3>邀请谁一起玩？</h3><div class="hint">会给ta发一张【游戏邀请卡片】，ta同意之后，你才能和ta进游戏空间一起玩～</div>${cs.map(c=>`<div class="section"><div class="it" onclick="sendGameInvite('${k}','${c.id}')">${esc(c.remark||c.name)}<span class="v">›</span></div></div>`).join('')}<button class="btn g" style="margin-top:8px" onclick="closeModal()">取消</button>`);}
 function sendGameInvite(k,cid){const g=gameDefinition(k);const c=getC(cid);if(!g||!c)return;closeModal();
   if(c.blocked){toast('ta把你拉黑了，没法邀请');return;}
@@ -9376,6 +9384,7 @@ function roleGameInvite(id,kind){kind=gameKindFromLabel(kind)||'drawguess';const
 function roleGameInviteDecide(id,mid,ok){const c=getC(id),m=msgs(id).find(x=>x&&x.id===mid&&x.type==='gameinvite'&&x.role==='assistant');if(!c||!m||m.status!=='pending')return;m.status=ok?'accepted':'declined';if(ok){c.gamesPlayed=c.gamesPlayed||[];if(c.gamesPlayed.indexOf(m.gname)<0)c.gamesPlayed.push(m.gname);}save();render();if(ok)toast('邀请已接受，可以进入'+(m.gname||'游戏')+'了');}
 function enterGameNow(cid,k){const inv=[...msgs(cid)].reverse().find(x=>x.type==='gameinvite'&&x.game===k);if(inv&&inv.status!=='accepted'){toast('要等ta同意了才能进去玩哦');return;}startGame(k,cid);}
 function startGame(k,cid){const g=gameDefinition(k);if(!g)return;closeModal();if(k==='tale'||k==='dread')return openApp(k);
+  if((k==='pixelhome'||k==='pet')&&!(k==='pet'?typeof openPetGame==='function':typeof openPixelHome==='function'))return northOpenComponent(k,k==='pet'?'电子宠物':'像素少女',()=>k==='pet'?openPetGame():openPixelHome());
   if(k==='pixelhome')return openPixelHome();
   if(k==='pet')return openPetGame();
   if(k==='drawguess')return dgOpenSetup(cid);

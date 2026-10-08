@@ -15,7 +15,7 @@ const privateApp=read('native/private-small-phone/XcodeProject/PhoneCompanionTes
 test('private v1355 inherits the current web theater without dropping its private shell',()=>{
   assert.equal(bundleTheater,theater);
   assert.match(bundleTheater,/guest2|ct_wechat_enabled/);
-  assert.match(webHtml,/app\.js\?v=1660[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1660&r=v1274-web-cohab-guests-1"/);
+  assert.match(webHtml,/app\.js\?v=1662[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1662&r=v1274-web-cohab-guests-1"/);
   for(const html of [privateHtml,privateAlias])assert.match(html,/app\.js\?v=1661[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1661[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1661&r=v1274-web-cohab-guests-1"/);
   assert.match(read('sw.js'),/cohab-theater\.js\?v='\+BUILD\+'\&r=v1274-web-cohab-guests-1',kind:'theater'/);
 });
