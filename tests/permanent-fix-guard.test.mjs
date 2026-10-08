@@ -1519,3 +1519,6 @@ test('cloud deletion, adjacent moves, nonempty shop continuation and natural soc
 
 
 test('shop lookup returns a visible result card and the original McDonalds pack stays installed',()=>{for(const prefix of ['',PRIVATE_DIR]){const app=read(prefix+'app.js'),ui=read(prefix+'commerce-ui.js'),html=read(prefix+'小手机.html');assert(app.includes('function northShopQueryRecord('));assert(app.includes("m.type==='shopquery'"));assert(ui.includes('function northShopQueryCard('));assert(ui.includes('查看完整店铺'));assert(html.includes('assets/north-mcdonalds-shop.js'));assert(read(prefix+'assets/north-mcdonalds-shop.js').includes('麦麦五件套'));}assert(read('sw.js').includes("GLASS_ICON_CACHE='north-glass-icons-v2'"));});
+
+
+test('personal wardrobe stays account-isolated and framing never turns hand/back requests into forced portraits',()=>{for(const prefix of ['',PRIVATE_DIR]){const app=read(prefix+'app.js'),ui=read(prefix+'commerce-ui.js');for(const marker of ['function userImageStudioContact(','function roleImageFrame(','【局部构图优先】','【参考图人物绑定】','requireReferences:','本次未退回随机形象','accountId:actId()'])assert(app.includes(marker));assert(ui.includes('queriedMeal'));assert(ui.includes('plainMeal'));assert(read(prefix+'小手机.html').includes('assets/north-luckin-shop.js'));assert(read(prefix+'wechat-me.js').includes('我的形象工作室与衣柜'));}});

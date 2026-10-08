@@ -149,6 +149,7 @@ test('independent wardrobe time save mutates only the selected row and validates
   let toastText = '';
   const sandbox = {
     getC: () => contact,
+    roleImageStudioOwner: () => contact,
     roleImageStudio: () => studio,
     roleImageStudioCapture: () => studio,
     roleImageStudioOutfitReadTimeRange: () => timing,
@@ -236,6 +237,7 @@ test('full wardrobe save waits for persistence and rolls an existing outfit back
   let toastText = '';
   const sandbox = {
     getC: id => (id === 'c1' ? { id: 'c1' } : null),
+    roleImageStudioOwner: id => (id === 'c1' ? { id: 'c1' } : null),
     roleImageStudio: () => studio,
     roleImageStudioOutfitReadTimeRange: () => ({ enabled: true, start: '22:00', end: '02:00' }),
     roleImageStudioOutfitTimeError: () => '',

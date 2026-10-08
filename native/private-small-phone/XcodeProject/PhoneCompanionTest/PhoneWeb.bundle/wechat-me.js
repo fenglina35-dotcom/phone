@@ -35,7 +35,7 @@ function wxMe1037(){F();return `<div class="wxme-home">
 function wxProfileRow(title,value,action,cls){return `<button type="button" class="wxprofile-row ${cls||''}" onclick="${action}"><span>${esc(title)}</span><b>${esc(value||'')}</b><em aria-hidden="true">›</em></button>`;}
 function wxProfilePhoneText(){const v=String(S.me.wxPhone||'').replace(/\s+/g,'');if(!v)return '未设置';if(v.length<7)return v;return v.slice(0,3)+'******'+v.slice(-2);}
 function wxProfileRingText(){try{return incomingRingCurrentLabel().replace(/^从音乐库选择歌曲（当前：|）$/g,'')||'默认微信来电';}catch(_){return '默认微信来电';}}
-function renderWxProfile(){return `${WNav('个人资料')}<div class="scroll wxprofile-page">
+function renderWxProfile(){return `${WNav('个人资料')}<div class="scroll wxprofile-page"><section class="wxprofile-list"><button type="button" class="wxprofile-row" onclick="userImageStudioOpen()"><span>我的形象工作室与衣柜</span><em>›</em></button></section>
   <section class="wxprofile-list wxprofile-primary">
     <button type="button" class="wxprofile-row wxprofile-avatar-row" onclick="wxProfileAvatar()"><span>头像</span>${av(S.me.avatar,'sm')}<em aria-hidden="true">›</em></button>
     ${wxProfileRow('名字',S.me.name||'我',"wxProfileEdit('name')")}

@@ -80,7 +80,7 @@ test('⑧ a portrait size rejected with 400 falls back to the square the test bu
   // 所以上游只开通方图时，测试永远成功、实际永远失败。
   assert.match(app, /const t0=Date\.now\(\);/);
   assert.match(app, /imageGenerateExternal\(base,key,model,'一只可爱的小猫[^']*','1024x1024'\)/, '测试出图用方图');
-  assert.match(app, /imageGenerateExternal\(base,key,model,prompt,'1024x1536','medium',\{references\}\)/, '实际生成用竖图');
+  assert.match(app, /imageGenerateExternal\(base,key,model,prompt,'1024x1536','medium',\{references,requireReferences:[^}]+\}\)/, '实际生成用竖图');
   assert.match(app, /res\.status===400&&target!=='1024x1024'/, '400 时退回方图再试一次');
   assert.match(app, /size:'1024x1024'\},requestTimeout\)/);
   // 审核拦截也是 400，但换个尺寸同样会被拦：不能白白多花一次生图调用，提示也不能说成模型名不对。

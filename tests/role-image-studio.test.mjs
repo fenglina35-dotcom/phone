@@ -66,14 +66,14 @@ for(const [name,source] of [['web',root],['private bundle',bundle]]){
   assert.equal(ctx.roleImageGenerateOptions(c,faceTest).faceMode,'required',`${name}: generation receives the required-face mode instead of the old hidden lock`);
   c.imageStudio.identityNote='固定脸型';
   const ordinaryTest=ctx.roleImageStudioPrompt(c,{scene:'在工作室整理文件',requestText:'在工作室整理文件'});
-  assert.match(ordinaryTest,/【本次露脸硬要求】/,`${name}: ordinary character photos keep the face visible`);
-  assert.equal(ctx.roleImageGenerateOptions(c,ordinaryTest).faceMode,'required');
+  assert.doesNotMatch(ordinaryTest,/【本次露脸硬要求】/,`${name}: allowing faces no longer forces a portrait`);assert.match(ordinaryTest,/是否露脸及角度服从本次构图/);
+  assert.equal(ctx.roleImageGenerateOptions(c,ordinaryTest).faceMode,'allowed');
   const mirrorTest=ctx.roleImageStudioPrompt(c,{scene:'穿今天的衣服拍一张全身对镜照片',requestText:'穿今天的衣服拍一张全身对镜照片'});
   assert.match(mirrorTest,/【全身对镜遮脸特例】/,`${name}: only an explicit full-body mirror photo permits occasional phone occlusion`);
   assert.equal(ctx.roleImageGenerateOptions(c,mirrorTest).faceMode,'mirror');
   const croppedMirror=ctx.roleImageStudioPrompt(c,{scene:'拍一张对镜半身照',requestText:'拍一张对镜半身照'});
   assert.doesNotMatch(croppedMirror,/【全身对镜遮脸特例】/);
-  assert.equal(ctx.roleImageGenerateOptions(c,croppedMirror).faceMode,'required');
+  assert.equal(ctx.roleImageGenerateOptions(c,croppedMirror).faceMode,'allowed');
   const directCamera=ctx.roleImageStudioPrompt(c,{scene:'不要拿手机遮脸，假装凶一点看镜头',requestText:'不要拿手机遮脸，假装凶一点看镜头'});
   assert.match(directCamera,/脸部清晰无遮挡/,`${name}: negative phone wording becomes a positive visible-face instruction`);
   assert.match(directCamera,/直视镜头/);
@@ -87,8 +87,8 @@ for(const [name,source] of [['web',root],['private bundle',bundle]]){
   assert.match(source,/没有上传正面或侧面身份参考时，即使选了允许露脸，也会自动按“不允许露脸”执行/);
   assert.match(source,/function imageGenerateReferenceEdit\(/);
   assert.match(source,/input_fidelity','high'/);
-  assert.match(source,/genOptions:roleImageStudioOn\(cch\)\?\{roleId:cch\.id\}:null/);
-  assert.match(source,/genImage\(prompt,\{roleId:c\.id\}\)/);
+  assert.match(source,/genOptions:roleImageStudioForScene\(cch,/);
+  assert.match(source,/genImage\(prompt,\{roleId:c\.id,accountId:photoAccount\}\)/);
   assert.match(source,/roleImageStudioOutfitEdit/);
   assert.match(source,/>仅替换图片<\//,`${name}: the edit modal exposes a dedicated image-only action`);
   const replaceSource=source.slice(source.indexOf('function roleImageStudioOutfitReplaceImage'),source.indexOf('\nfunction roleImageStudioOutfitActions'));
@@ -99,7 +99,7 @@ for(const [name,source] of [['web',root],['private bundle',bundle]]){
   const flow=vm.createContext({
     $:key=>({value:key==='#rio_name'?'尚未保存的新名字':key==='#rio_occasion'?'date':'尚未保存的新说明'}),
     pickFile:(_accept,callback)=>{pending=callback({name:'new.png'});},
-    getC:()=>({id:'c1'}),roleImageStudio:()=>({outfits:[flowRow]}),aiLoad:()=>{},aiDone:()=>{},
+    getC:()=>({id:'c1'}),roleImageStudioOwner:()=>({id:'c1'}),roleImageStudio:()=>({outfits:[flowRow]}),aiLoad:()=>{},aiDone:()=>{},
     compress:async()=>'new-ref',primeImageForSave:async()=>{},save:()=>{saveCount++;},
     roleImageStudioOutfitReadTimeRange:()=>({enabled:true,start:'10:00',end:'12:00'}),
     roleImageStudioOutfitApplyImage:(row,src)=>{row.image=String(src);return true;},
@@ -130,4 +130,34 @@ for(const [name,source] of [['web',root],['private bundle',bundle]]){
   assert.match(source,/scene=studio\?rawScene:sanitizeRolePhotoScene\(rawScene\)/,`${name}: chat images preserve the real request whenever the studio is enabled`);
   assert.match(source,/safe=studio\?\(raw\|\|String\(text\|\|''\)\.slice\(0,180\)\):sanitizeRolePhotoScene/,`${name}: social images also bypass the old face-mask rewrite`);
   assert.match(source,/body=faceMode==='required'\?roleImageStudioVisibleScene\(prompt\)/,`${name}: retries clean legacy phone-cover text before the image request`);
+}
+
+
+for(const [name,source] of [['web',root],['private',bundle]]){
+  const ctx=loadStudio(source);let account='main';
+  const role={id:'r',name:'角色',gender:'男',imageStudio:{enabled:true,faceMode:'allowed',appearancePrompt:'成年男性，浅肤色',identityNote:'必须露脸，不可遮脸',identityRefs:[{id:'r-face',angle:'front',image:'role-face',note:'固定人物'}],outfits:[{id:'r-coat',name:'角色黑外套',occasion:'daily',image:'role-coat',note:'黑色棉质衣袖'}]}};
+  const me={id:'main',name:'本人',imageStudio:{enabled:false,gender:'女',faceMode:'allowed',identityRefs:[{id:'u-face',angle:'side',image:'user-face',note:'本人侧面'}],outfits:[{id:'u-shirt',name:'本人白衬衫',occasion:'daily',image:'user-shirt',note:'白色衣袖'}]}};
+  ctx.S={me:{accounts:[me,{id:'other',name:'另一个账号'}]}};ctx.actId=()=>account;ctx.getC=id=>id==='r'?role:null;ctx.roleVisualIdentity=()=> '角色原有身份';
+  const start=source.indexOf('function rolePhotoExplicitFemale('),end=source.indexOf('function rolePhotoClothesOnlyRequest(',start);vm.runInContext(source.slice(start,end),ctx);
+  assert.equal(ctx.roleImageStudioForScene(role,'我和他的合照'),true);
+  const before=ctx.roleImageStudioPrompt(role,{scene:'我和他的合照',requestText:'我和他的合照'});
+  assert.ok(!before.includes('人物B'),'disabled personal wardrobe never injects the user');
+  me.imageStudio.enabled=true;
+  const pair=ctx.roleImageStudioPrompt(role,{scene:'我和他的合照',requestText:'我和他的合照',userRequest:'我和他的合照'}),pairOpt=ctx.roleImageGenerateOptions(role,pair);
+  assert.match(pair,/人物A.*人物B/);assert.match(pair,/成年女性/);assert.deepEqual(Array.from(pairOpt.references),['role-face','role-coat','user-face','user-shirt']);assert.deepEqual(Array.from(pairOpt.referenceLabels),['当前角色的身份参考','当前角色的衣物参考','用户本人的身份参考','用户本人的衣物参考']);assert.equal(pairOpt.faceMode,'paired');
+  for(const scene of ['我和他的手部照片','我们俩牵手特写','只拍他的手腕','脚部特写']){
+    const prompt=ctx.roleImageStudioPrompt(role,{scene,requestText:scene,userRequest:scene}),opt=ctx.roleImageGenerateOptions(role,prompt);
+    assert.match(prompt,/【局部构图优先】/);assert.doesNotMatch(prompt,/必须露脸|【本次露脸硬要求】/);assert.equal(opt.faceMode,'detail');assert.ok(!Array.from(opt.references).some(ref=>ref.includes('face')),name+' '+scene+' never sends portrait references');
+  }
+  const back=ctx.roleImageStudioPrompt(role,{scene:'我和他的背影照片',requestText:'我和他的背影照片'});assert.equal(ctx.roleImageGenerateOptions(role,back).faceMode,'back');assert.doesNotMatch(back,/【本次露脸硬要求】/);
+  const objects=ctx.roleImageStudioPrompt(role,{scene:'只拍桌上咖啡，不要人物',objectOnly:true});assert.deepEqual(Array.from(ctx.roleImageGenerateOptions(role,objects).references),[]);
+  const mother=ctx.roleImageStudioPrompt(role,{scene:'和妈妈合照',requestText:'和妈妈合照',userRequest:'和妈妈合照'});assert.ok(!mother.includes('用户本人的身份'),'another named woman is not replaced by the user');
+  const first=ctx.userImageStudioContact(false);assert.equal(first.imageStudio,me.imageStudio);account='other';assert.equal(ctx.roleImageStudioOwner(first.id),null);assert.equal(ctx.userImageStudioContact(false),null);const other=ctx.userImageStudioContact(true);ctx.roleImageStudio(other,true);assert.equal(other.imageStudio.enabled,false);assert.notEqual(other.imageStudio,me.imageStudio);account='main';assert.equal(ctx.userImageStudioContact(false),first);
+  const normalizeStart=source.indexOf('function normalizeAccount('),normalizeEnd=source.indexOf('\nfunction initAccounts',normalizeStart);ctx.accountIdOK=()=>true;ctx.genWxid=()=> 'fixture';vm.runInContext(source.slice(normalizeStart,normalizeEnd),ctx);assert.equal(ctx.normalizeAccount(me,0,new Set()).imageStudio,me.imageStudio,'normalizing the account preserves its wardrobe');
+  assert.equal(ctx.roleImageFrame('不要背影，要正脸'),'natural');assert.equal(ctx.roleImageFrame('别露脸'),'covered');assert.equal(ctx.roleImageFrame('不要拿手机遮脸，看镜头'),'natural');
+  const hidden=ctx.roleImageStudioPrompt(role,{scene:'自然全身对镜照',requestText:'全身对镜照，别露脸，手机自然挡脸',userRequest:'全身对镜照，别露脸，手机自然挡脸'});assert.equal(ctx.roleImageGenerateOptions(role,hidden).faceMode,'covered');assert.match(hidden,/不强行改成背影/);
+  const solo=ctx.roleImageStudioPrompt(role,{scene:'本人在窗边',requestText:'拍我的照片',userRequest:'拍我的照片'}),soloOpt=ctx.roleImageGenerateOptions(role,solo);assert.match(solo,/【仅用户本人入镜】/);assert.ok(!Array.from(soloOpt.references).includes('role-face'));assert.ok(Array.from(soloOpt.references).includes('user-face'));
+  role.imageStudio.identityRefs.push({id:'rside',angle:'side',image:'role-side',note:'角色侧面'});const side=ctx.roleImageStudioPrompt(role,{scene:'自然生活照',requestText:'只拍角色侧脸，朝窗外看',userRequest:'只拍角色侧脸，朝窗外看'});assert.match(side,/用户原要求：只拍角色侧脸，朝窗外看/);assert.equal(ctx.roleImageGenerateOptions(role,side).references[0],'role-side');
+  const duplicate=ctx.roleImageStudioPrompt(role,{scene:'角色黑外套自然照片',requestText:'角色黑外套自然照片'});role.imageStudio.outfits.push({id:'r-other',name:'角色黑外套',occasion:'daily',image:'wrong-coat',note:'另一件衣服'});ctx.Math.random=()=>.99;assert.ok(!Array.from(ctx.roleImageGenerateOptions(role,duplicate).references).includes('wrong-coat'),'the chosen outfit id survives duplicate names and another random draw');
+
 }
