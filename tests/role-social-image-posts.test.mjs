@@ -118,3 +118,21 @@ test('profile ellipsis uses a compact realistic spacing', () => {
   assert.match(html, /\.wx-real-nav button:last-child\{[^}]*letter-spacing:-1\.5px/);
   assert.match(app, /aria-label="联系人设置">•••<\/button>/);
 });
+
+
+test('social generation uses role-specific recent openings without rewriting history or spending an extra request', async () => {
+  const posts=[{authorId:'a',text:'六点二十，咖啡终于凉了。'},{authorId:'b',text:'其他角色秘密开头'}];
+  const tweets=[{who:'a',text:'07:30，又在等电梯。'}];
+  const original=JSON.stringify({posts,tweets}), calls=[];
+  const context=vm.createContext({S:{moments:posts,x:{tweets,users:{}}},circleObj:()=>({}),roleMomentRecentText:()=>'',roleTweetLifeContext:()=> '当前时间：08:10',buildSystem:()=> '角色人设',roleSocialIdentityPin:()=> '',roleChatRouteIndex:()=> 0,cleanReply:x=>x,cleanTweetText:x=>x,cleanMomentText:x=>x,roleMomentSimilarity:()=>({hard:false,soft:false}),roleTweetSimilarity:()=>({hard:false,soft:false}),chatAPI:async messages=>{calls.push(messages);return '杯沿的热气散了，正好喝。';}});
+  for(const name of ['roleSocialOpeningPrompt','roleTweetGenerate','roleMomentGenerate'])vm.runInContext(functionSource(name),context);
+  for(const platform of ['moment','x']){
+    const prompt=context.roleSocialOpeningPrompt({id:'a'},platform);
+    assert.match(prompt,/不要习惯性/);assert.match(prompt,/才自然提到准确时间/);assert.doesNotMatch(prompt,/其他角色秘密开头/);
+  }
+  await context.roleMomentGenerate({id:'a',name:'A'});
+  await context.roleTweetGenerate({id:'a',name:'A'});
+  assert.equal(calls.length,2);
+  assert.match(calls[0][1].content,/六点二十/);assert.match(calls[1][1].content,/07:30/);
+  assert.equal(JSON.stringify({posts,tweets}),original);
+});
