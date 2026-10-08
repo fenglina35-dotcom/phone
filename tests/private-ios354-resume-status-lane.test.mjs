@@ -38,10 +38,10 @@ function pollHarness(){
 }
 
 test('private candidate is v1355 and iOS 399 while public advances independently',()=>{
-  assert.match(app,/APP_VER='v1653 · 分享点单修复·150秒跑酷'/);
+  assert.match(app,/APP_VER='v1655 · 航班组件缺失时聊天恢复'/);
   for(const html of [index,alias]){
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1653'/);
-    assert.match(html,/app\.js\?v=1653&r=v1653-private-package-1/);
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1655'/);
+    assert.match(html,/app\.js\?v=1655&r=v1655-private-package-1/);
     assert.match(html,/private-runtime-diagnostics\.js\?v=339/);
   }
   assert.match(diagnostics,/OVERLAY_VERSION='336-daily-file-backup'/);
@@ -49,7 +49,7 @@ test('private candidate is v1355 and iOS 399 while public advances independently
   assert.match(bridge,/private static let build = "1\.0\.439 \(439\)"/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 439;/g)||[]).length,12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.439;/g)||[]).length,12);
-  assert.match(publicApp,/APP_VER='v1652 · 分享点单修复·150秒跑酷'/);
+  assert.match(publicApp,/APP_VER='v1654 · 航班组件缺失时聊天恢复'/);
 });
 
 test('ordinary foreground polling is lightweight while explicit control verification stays complete',async()=>{
