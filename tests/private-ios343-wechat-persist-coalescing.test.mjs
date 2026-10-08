@@ -59,20 +59,20 @@ function persistenceRuntime() {
 }
 
 test('private identity remains v1355 and iOS 399 while public advances independently', () => {
-  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1665'/);
-  assert.match(privateApp, /APP_VER='v1665 · 日历角色互动与单店补货'/);
+  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1667'/);
+  assert.match(privateApp, /APP_VER='v1667 · 日历返回与暖燕店铺'/);
   for (const html of [privateIndex, privateAlias]) {
-    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1665'/);
-    assert.match(html, /app\.js\?v=1665&r=v1665-private-package-1/);
+    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1667'/);
+    assert.match(html, /app\.js\?v=1667&r=v1667-private-package-1/);
     assert.match(html, /private-runtime-diagnostics\.js\?v=339/);
   }
-  assert.match(privateRepair, /index\.html\?repair=1&v=1665/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1667/);
   assert.match(swift, /1\.0\.439 \(439\)/);
   assert.match(bridge, /private static let build = "1\.0\.439 \(439\)"/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 439;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.439;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1664 · 日历角色互动与单店补货'/);
-  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1664'/);
+  assert.match(publicApp, /APP_VER='v1666 · 日历返回与暖燕店铺'/);
+  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1666'/);
   assert.doesNotMatch(publicApp, /persistWechatRequested|smallPhoneWechatPersistTrace/);
 });
 

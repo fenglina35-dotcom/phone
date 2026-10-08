@@ -37,8 +37,8 @@ const PERMANENT_FIXES = [
   {release:"本地收藏候选",scope:"both",least:1,name:"完整备份包含收藏及转发卡片的原声音频",marker:"path.some(p=>p==='favorites'||p==='_favorite')"},
   {release:"本地候选",scope:"both",least:1,name:"已有好友刷新补齐消息且保留历史并去重",marker:"if(n>(counts.get(k)||0)){existing.push(m);ch=true;}"},
   {release:"v1576/v1577",scope:"both",least:1,name:"角色微信按消息作者同步气泡设置",marker:"const c=getC(cid),look=bubbleLook(c,!mine)"},
-  {release:"v1664",scope:"both",least:1,name:"像素少女脚本下载失败自动重试，不再 PixelHomeBridge 未定义",marker:"小屋脚本按顺序载入",file:"games/pixel-home/index.html"},
-  {release:"v1664",scope:"both",least:1,name:"像素少女、电子宠物组件没下载下来时打开即重下",marker:"function northEnsureComponent(key)"},
+  {release:"v1666",scope:"both",least:1,name:"像素少女脚本下载失败自动重试，不再 PixelHomeBridge 未定义",marker:"小屋脚本按顺序载入",file:"games/pixel-home/index.html"},
+  {release:"v1666",scope:"both",least:1,name:"像素少女、电子宠物组件没下载下来时打开即重下",marker:"function northEnsureComponent(key)"},
   {release:"v1660",scope:"both",least:1,name:"角色点外卖：规格按真实菜单修正，不再整单失败",marker:"function northRoleRepairSelections(p,raw,wants)",file:"commerce-ui.js"},
   {release:"v1660",scope:"both",least:1,name:"查店铺后的回复遇到500改写消息再试一次",marker:"function northShopFlatMessages(messages)"},
   {release:"v1576/v1577",scope:"both",least:1,name:"角色密码拨号盘独立背景与恢复入口",marker:"function spyAppearanceLockWallpaperReset(id)"},
@@ -1563,3 +1563,6 @@ test('role phone gallery reads only saved role likes and never routes to the leg
 
 test('calendar role participation and real shared scheduling remain in both runtimes',()=>{for(const prefix of ['', 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/']){const app=fs.readFileSync(prefix+'app.js','utf8');for(const marker of ['function calParticipation(e,cid)','function calRoleCanRemind(e,cid)','async function calPlayerConsume(content,c,turn)','function calCreatedCardHTML(m)','function calFireCalendarCare(now)','async function calRoleParticipationConsume(content,c)','function calCareValid(meta,cid,owner)','async function calEventOutcome(id,date)','function calParticipationHTML(e,draft)','function calPeriodOpen('])assert.ok(app.includes(marker),marker);}});
 test('merchant replenishment keeps one-shop quotes, shop-scoped lists and explicit per-product quantities',()=>{for(const prefix of ['', 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/']){const ui=fs.readFileSync(prefix+'commerce-ui.js','utf8');for(const marker of ['function northBusinessShopId(data)','function northBusinessCurrentStock(data)','window.northBusinessShopSelect=','window.northBusinessBatchQuantity=','onlyEmpty:selectedOnly!==true','new Set(rows.map(function(r){return r.shop_id;})).size!==1'])assert.ok(ui.includes(marker),marker);}});
+
+
+test('calendar offers a desktop exit and warm shop remains in both built-in catalogues',()=>{for(const prefix of ['', PRIVATE_DIR]){const app=read(prefix+'app.js');assert.ok(app.includes('function calHome()'));assert.ok(app.includes('aria-label="返回主屏幕"'));assert.ok(read(prefix+'glass-theme.css').includes('.cal-integrated-page .cal-period-note'));assert.ok(read(prefix+'assets/north-dessert-shop.js').includes('north-nuanyan'));}});

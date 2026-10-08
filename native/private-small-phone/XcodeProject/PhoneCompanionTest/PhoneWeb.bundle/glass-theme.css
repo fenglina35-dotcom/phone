@@ -870,3 +870,6 @@ html.north-glass-ui.north-shell-custom,html.north-glass-ui.north-shell-custom bo
 .cal-participant .cal-switch{width:62px;height:32px;min-height:32px;background:#636366;border-radius:20px;position:relative;flex:none;padding:0;border:0}.cal-participant .cal-switch.on{background:#30d158}
 
 .cal-participant .cal-picker-tabs button{flex:1;height:36px;padding:0;border:0;border-radius:22px;background:transparent;color:#ddd;font-size:12px;cursor:pointer}.cal-participant .cal-picker-tabs button.selected{background:#68686e;color:#fff}
+
+/* Period explanations stay below their card; home exit stays independent of year navigation. */
+.cal-integrated-page .cal-period-note{margin:10px 16px 24px;line-height:1.7}.cal-nav-leading{display:flex;align-items:center;gap:8px;min-width:0}.cal-month-page .cal-home{width:44px;height:44px;flex:none;padding:0;display:grid;place-items:center}.cal-home svg{width:22px;height:26px}.cal-nav-leading .cal-year{padding:0 12px;font-size:18px}.cal-year-nav{justify-content:space-between!important}
