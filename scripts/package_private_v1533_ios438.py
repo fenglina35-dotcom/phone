@@ -1,4 +1,4 @@
-"""Create the private v1667 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
+"""Create the private v1669 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
 
 Unlike the earlier packaging scripts, every file is read from the committed tree
 (``git cat-file`` against HEAD) instead of the working directory. The v1235/iOS356
@@ -23,10 +23,10 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "native/private-small-phone/XcodeProject/"
 BUNDLE = "PhoneCompanionTest/PhoneWeb.bundle/"
-PREFIX = "SmallPhone_v1667_iOS439_Private/"
-OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1667_iOS439.zip"
+PREFIX = "SmallPhone_v1669_iOS439_Private/"
+OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1669_iOS439.zip"
 
-WEB_VERSION = "1667"
+WEB_VERSION = "1669"
 MARKETING = "1.0.439"
 BUILD = "439"
 BRIDGE = "42"
@@ -584,7 +584,7 @@ def main() -> None:
     assert not dirty, "commit the private source before packaging:\n" + dirty
     assert not OUTPUT.exists(), "refusing to overwrite an existing package"
     commit = text(git("rev-parse", "HEAD")).strip()
-    web_commit = "4616f99d090ac47f6802adef4bb81bbe7debd7b6"
+    web_commit = "d7ebc79d1a8886f67c81005f974084c48f0fb835"
     files = committed_private_files()
     validate(files)
     previous = ROOT.parent / "最新私人版本覆盖包_v1655_iOS439.zip"
@@ -614,7 +614,7 @@ def main() -> None:
     ui = text(files[BUNDLE + "commerce-ui.js"])
     for marker in ("calPlayerConsume", "calCreatedCardHTML", "roleCalConsume", "calParticipationHTML", "calFireCalendarCare", "calCareValid", "calInvitationRespond", "calSearchResults", "calDayLayout", "calPeriodOpen", "calCustomApply", "function calHome()", "calHomeButton", "photoAlbumRoleLikedRows", "northNativeBackgroundTask('calendar',checkCalendar)"):
         assert marker in app + text(files[BUNDLE + "photo-album.js"]), "calendar/role/private hook missing: " + marker
-    for marker in ("northBusinessShopId", "northBusinessCurrentStock", "northBusinessBatchQuantity", "onlyEmpty:selectedOnly!==true", "northBusinessStockSelect", "不要求净利润", "northMarketVisibleOrders"):
+    for marker in ("northBusinessShopId", "northBusinessCurrentStock", "northBusinessBatchQuantity", "onlyEmpty:selectedOnly!==true", "northBusinessStockSelect", "不要求净利润", "northMarketVisibleOrders", "northDeletedShopsOpen", "northDeletedShopRestore", "northRestoredShop"):
         assert marker in ui, "merchant repair missing: " + marker
     for name in ("commerce-ui.js", "photo-album.js", "assets/north-dessert-shop.js"):
         assert files[BUNDLE + name] == git("show", web_commit + ":" + name), "shared feature payload mismatch: " + name
@@ -631,33 +631,33 @@ def main() -> None:
     del reviewed
     state["sourceCommit"] = commit
     state["webSourceCommit"] = web_commit
-    state["webVersion"] = "v1666"
+    state["webVersion"] = "v1668"
     state["privateWeb"] = "v" + WEB_VERSION
     state["privateIOS"] = f"{MARKETING} ({BUILD})"
     state["bridge"] = BRIDGE
     state["deliveryKind"] = "Mac-Xcode-source-overlay-not-IPA"
     state["lastDeliveredPackage"] = {"name": previous.name, "sha256": previous_sha, "sourceCommit": "5b5cf7086d2a84dad795545d1152db21c07a49c8"}
     state["preserved"] = sorted(set(state.get("preserved", [])) | {
-        "v1667-calendar-real-month-year-day-search-events-and-reminders",
-        "v1667-role-scheduling-sharing-invitations-participation-and-opt-in-care",
-        "v1667-calendar-colors-period-integration-home-exit-and-note-spacing",
-        "v1667-role-liked-gallery-owner-isolation",
-        "v1667-single-shop-zero-only-restock-per-product-quantities",
-        "v1667-cloud-startup-fees-lifetime-shop-rewards-profit-and-deleted-shop-order-filter",
-        "v1667-warm-yan-13-products-original-pictures-and-prices",
-        "v1667-pixel-and-pet-bounded-script-redownload",
-        "private-native-companion-intentional-asymmetry"})
+        "v1669-calendar-real-month-year-day-search-events-and-reminders",
+        "v1669-role-scheduling-sharing-invitations-participation-and-opt-in-care",
+        "v1669-calendar-colors-period-integration-home-exit-and-note-spacing",
+        "v1669-role-liked-gallery-owner-isolation",
+        "v1669-single-shop-zero-only-restock-per-product-quantities",
+        "v1669-cloud-startup-fees-lifetime-shop-rewards-profit-and-deleted-shop-order-filter",
+        "v1669-warm-yan-13-products-original-pictures-and-prices",
+        "v1669-pixel-and-pet-bounded-script-redownload",
+        "private-native-companion-intentional-asymmetry", "v1669-original-shop-restore-no-fee-no-reward-reset"})
     state["macBuildVerified"] = False
     state["realIPhoneVerified"] = False
-    state["knownUnresolved"] = [x for x in state.get("knownUnresolved", []) if not re.match(r"v\d+-mac-build", x)] + ["v1667-mac-build-signing-and-iphone-not-verified", "calendar-closed-app-system-notifications-not-implemented", "real-model-calendar-personality-and-voice-acceptance-pending"]
+    state["knownUnresolved"] = [x for x in state.get("knownUnresolved", []) if not re.match(r"v\d+-mac-build", x)] + ["v1669-mac-build-signing-and-iphone-not-verified", "calendar-closed-app-system-notifications-not-implemented", "real-model-calendar-personality-and-voice-acceptance-pending"]
     state["validation"] = {"macBuildVerified": False, "realIPhoneVerified": False,
-        "nodeTests": {"passed": 3772, "failed": 0, "sourceCommit": web_commit},
+        "nodeTests": {"passed": 3777, "failed": 0, "sourceCommit": web_commit},
         "models": "HTTP simulated; no live model or production financial tests",
         "authorizedChatBothRuntimes": True, "missingOptionalFlightGateBothRuntimes": True,
         "calendarAndMerchantRealHTMLBothRuntimes": True,
         "inheritedPreviousOverlay": True, "priorPackageManifestVerified": True,
         "nativePayloadUnchanged": True, "privateCompanionNativeUnchanged": True,
-        "privateRuntimeMatchesReviewedRelease": web_commit, "houseResourceFiles": len(cozy_files)}
+        "privateRuntimeMatchesReviewedRelease": web_commit, "shopRestoreBackendDeployedAndVerified": True, "houseResourceFiles": len(cozy_files)}
     files["SOURCE_STATE.json"] = json.dumps(state, ensure_ascii=False, indent=2).encode("utf-8")
     files["SHA256SUMS.json"] = json.dumps({name: sha256(body).hexdigest() for name, body in sorted(files.items())}, ensure_ascii=False, indent=2).encode("utf-8")
     with ZipFile(OUTPUT, "x", ZIP_DEFLATED, compresslevel=6) as archive:
