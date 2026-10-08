@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1644'){
+if(window.__NORTH_SHELL_BUILD__!=='1646'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -606,7 +606,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1644 · NORTH药店上架·衣柜入口移到底部';
+const APP_VER='v1646 · 首页应用打开与组件故障隔离';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2015,7 +2015,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1644&r=v1644-couple-unbind-reopen-1';
+  const url='sw.js?v=1646&r=v1646-couple-unbind-reopen-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -4101,7 +4101,7 @@ function setAppIcon(key){pickFile('image/*',async f=>{S.me.appIcons=S.me.appIcon
 const LOCKABLE={browser:'浏览器',moments:'朋友圈',spy:'查他手机',shop:'购物',calendar:'日历',x:'X',douyin:'抖音',food:'外卖',games:'游戏大厅',mail:'信箱',phoneapp:'电话',offline:'线下约会',roleplay:'角色扮演',pixelhome:'像素少女',pet:'电子宠物',music:'音乐',cinema:'放映室',travel:'小鱼旅行',album:'相册',nearby:'附近的人'};
 function appLocked(key){return !!(S.couple&&S.couple.locks&&S.couple.locks[key]);}
 function openApp(key){if(S.jail&&S.jail.active){toast('你被关在禁闭室里…出不去');go('jail');return;}if(appLocked(key)){toast('「'+(LOCKABLE[key]||key)+'」被ta锁了，去情侣空间求他解开');go('couple');return;}if(key==='mail'){if(lockClearTarget({type:'mail'},true))save(500);}else if(key==='x'){if(lockClearTarget({type:'x'},true))save(500);}
-   ({nearby:()=>go('wxnearby'),album:()=>go('album'),browser:()=>go('browser'),moments:()=>go('wxmoment'),spy:openSpy,shop:()=>go('shop'),calendar:()=>go('calendar'),x:openX,douyin:openDouyin,food:()=>go('food'),games:openGames,mail:()=>go('mail'),phoneapp:()=>go('phoneapp'),offline:openOfflineMenu,roleplay:()=>go('rphub'),tale:taleStart,dread:dreadStart,pixelhome:openPixelHome,pet:openPetGame,music:openMusic,cinema:()=>{cinemaInit();go('cinema');},travel:()=>{tvInit();go('travel');}}[key]||(()=>{}))();}
+   ({nearby:()=>go('wxnearby'),album:()=>go('album'),browser:()=>go('browser'),moments:()=>go('wxmoment'),spy:()=>openSpy(),shop:()=>go('shop'),calendar:()=>go('calendar'),x:()=>openX(),douyin:()=>openDouyin(),food:()=>go('food'),games:()=>openGames(),mail:()=>go('mail'),phoneapp:()=>go('phoneapp'),offline:()=>openOfflineMenu(),roleplay:()=>go('rphub'),tale:()=>taleStart(),dread:()=>dreadStart(),pixelhome:()=>{if(typeof openPixelHome!=='function'){toast('像素少女组件尚未加载，请检查网络后重新打开页面；其他应用仍可使用');return;}openPixelHome();},pet:()=>{if(typeof openPetGame!=='function'){toast('电子宠物组件尚未加载，请检查网络后重新打开页面；其他应用仍可使用');return;}openPetGame();},music:()=>openMusic(),cinema:()=>{cinemaInit();go('cinema');},travel:()=>{tvInit();go('travel');}}[key]||(()=>{}))();}
 
 /* ---------- 软件使用时长 / 限额倒计时（只对授权的软件生效） ---------- */
 // 把当前所在页面映射到 LOCKABLE 的 appKey；不在任何受控软件里返回 null

@@ -7,7 +7,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const source = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "小手机.html"), "utf8");
 
-assert.match(source, /const APP_VER='v1644 · NORTH药店上架·衣柜入口移到底部'/);
+assert.match(source, /const APP_VER='v1646 · 首页应用打开与组件故障隔离'/);
 assert.match(source, /const APP_TAP_MOVE=26,APP_TAP_MS=650,APP_DRAG_MS=620/);
 assert.match(source, /onclick="appTap\(event,\\''\+k\+'\\'\)"/);
 assert.match(source, /onpointerdown="appDown\(event,\\''\+k\+'\\'\)"/);
@@ -22,10 +22,10 @@ assert.match(source, /function appTouchMove\(e\)[\s\S]*?appPendingMove\(t\.clien
 assert.doesNotMatch(source, /function appPanMove\(/);
 assert.match(source, /pixelhome:\(\)=>openApp\('pixelhome'\)/);
 assert.match(source, /pet:\(\)=>openApp\('pet'\)/);
-assert.match(source, /tale:taleStart/);
-assert.match(source, /dread:dreadStart/);
+assert.match(source, /tale:\(\)=>taleStart\(\)/);
+assert.match(source, /dread:\(\)=>dreadStart\(\)/);
 assert.match(source, /function appLaunch\(k\)[\s\S]*?privateNativeAppOn\(\)&&typeof queueMicrotask===['"]function['"]\)queueMicrotask\(f\);else setTimeout\(f,0\)/,'the private shell keeps its previously stable prioritized launch while other shells defer');
-assert.match(source, /offline:openOfflineMenu/,'offline opening inherits the shared deferred pointerup launch');
+assert.match(source, /offline:\(\)=>openOfflineMenu\(\)/,'offline opening inherits the shared deferred pointerup launch');
 
 assert.match(source, /const NORTH_ANDROID=.*?Android/,'Android is detected without changing the private iOS path');
 assert.match(source, /function lazyStoredImagesOn\(\)\{return privateNativeAppOn\(\)\|\|NORTH_ANDROID\|\|NORTH_IOS_WEBKIT;\}/);

@@ -1525,3 +1525,11 @@ test('personal wardrobe stays account-isolated and framing never turns hand/back
 
 
 test('pharmacy remains in medicine category and the personal wardrobe entry stays at the profile bottom',()=>{for(const prefix of ['',PRIVATE_DIR]){const ui=read(prefix+'commerce-ui.js'),me=read(prefix+'wechat-me.js'),html=read(prefix+'小手机.html');assert(ui.includes("['medicine','看病买药','看病买药']"));assert(html.includes('assets/north-pharmacy-shop.js'));const profile=me.slice(me.indexOf('function renderWxProfile('),me.indexOf('function wxProfileAvatar'));assert(profile.indexOf('userImageStudioOpen()')>profile.indexOf("wxProfileEdit('persona')"));assert(read(prefix+'assets/north-pharmacy-shop.js').includes('布洛芬缓释胶囊'));}});
+
+test('web and private launch isolate optional component availability',()=>{
+ for(const relative of ['app.js','native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js']){
+  const launch=fs.readFileSync(new URL('../'+relative,import.meta.url),'utf8');
+  assert.ok(launch.includes("typeof openPixelHome!=='function'"));
+  assert.ok(launch.includes("typeof openPetGame!=='function'"));
+ }
+});

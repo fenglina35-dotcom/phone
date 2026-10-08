@@ -195,3 +195,47 @@ test('moving game entries preserves customized positions and saved game data',()
  assert.equal(JSON.stringify({tale:state.tale,dread:state.dread,icons:state.me.appIcons}),before);
  assert.equal(state.me.homeReferenceAppSlots.pixelhome,4);
 });
+
+for (const relative of ['app.js','native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js']) {
+  test(relative + ' opens independent apps when optional game scripts are unavailable', () => {
+    const body=fs.readFileSync(path.join(root,relative),'utf8');
+    const start=body.indexOf('function openApp('),end=body.indexOf('/* ---------- 软件使用时长',start);
+    for (const absent of ['openPixelHome','openPetGame','both']) {
+      const routes=[],notices=[];
+      const ctx=vm.createContext({S:{},appLocked:()=>false,LOCKABLE:{},toast:v=>notices.push(v),go:p=>routes.push(p),lockClearTarget:()=>false,save(){},openSpy(){},openX(){},openDouyin(){},openGames(){},openOfflineMenu(){},taleStart(){},dreadStart(){},openMusic(){},cinemaInit(){},tvInit(){}});
+      if(absent!=='openPixelHome'&&absent!=='both')ctx.openPixelHome=()=>routes.push('pixelhome');
+      if(absent!=='openPetGame'&&absent!=='both')ctx.openPetGame=()=>routes.push('pet');
+      vm.runInContext(body.slice(start,end)+';globalThis.openApp=openApp;',ctx);
+      for(const key of ['calendar','shop','food','browser','album','mail','phoneapp','roleplay'])ctx.openApp(key);
+      assert.deepEqual(routes,['calendar','shop','food','browser','album','mail','phoneapp','rphub']);
+      ctx.openApp(absent==='openPetGame'?'pet':'pixelhome');
+      assert.equal(notices.length,1);assert.match(notices[0],/组件.*未加载/);
+      const before=routes.length;ctx.appLocked=()=>true;ctx.openApp('shop');assert.equal(routes.at(-1),'couple');
+      ctx.appLocked=()=>false;ctx.S.jail={active:true};ctx.openApp('food');assert.equal(routes.at(-1),'jail');assert.equal(routes.length,before+2);
+    }
+  });
+}
+
+test('web and private home clicks survive missing optional scripts and preserve navigation',async()=>{
+ const {createServer}=await import('node:http'),{createRequire}=await import('node:module');
+ const {chromium}=createRequire(import.meta.url)('playwright');
+ const server=createServer((req,res)=>{const file=path.resolve(root,decodeURIComponent(new URL(req.url,'http://localhost').pathname).replace(/^\/+/,''));if(!file.startsWith(root+path.sep)||!fs.existsSync(file)||!fs.statSync(file).isFile()){res.writeHead(404);return res.end();}res.setHeader('Content-Type',({'.html':'text/html','.js':'text/javascript','.css':'text/css'}[path.extname(file)]||'application/octet-stream')+'; charset=utf-8');res.end(fs.readFileSync(file));});
+ await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin='http://127.0.0.1:'+server.address().port;
+ const browser=await chromium.launch({headless:true,executablePath:'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'});
+ try{for(const privateApp of [false,true])for(const missing of [[],['pixel-home.js'],['pet-game.js'],['pixel-home.js','pet-game.js']]){
+  const page=await browser.newPage({viewport:{width:390,height:844}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  if(privateApp)await page.addInitScript(()=>{window.__SMALL_PHONE_PRIVATE__=true;window.SmallPhoneNative={request:async()=>({ok:false,error:'fixture-native-unavailable'})};});
+  await page.route('**/*',r=>{const url=new URL(r.request().url());if(url.origin!==origin)return r.abort();if(missing.some(n=>url.pathname.endsWith('/'+n)))return r.fulfill({status:200,contentType:'text/javascript',body:'/* simulated incomplete optional component response */'});return r.continue();});
+  await page.goto(origin+(privateApp?'/native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html':'/小手机.html')+'?northPreview=black-home');await page.waitForFunction(()=>window.__northBootReady);
+  for(const [key,route] of [['wechat','wechat'],['worldbook','worldbook'],['calendar','calendar'],['shop','shop'],['food','food'],['browser','browser'],['album','album'],['phoneapp','phoneapp'],['games','gameshub'],['mail','mail'],['settings','settings']]){
+   await page.evaluate(()=>{S.me.locked=false;S.jail=null;S.couple={};_aNoClick=0;home();});
+   await page.locator('.home-item[data-token="'+key+'"]').first().click({timeout:8000});
+   await page.waitForFunction(p=>cur().p===p,route,{timeout:8000});
+   await page.evaluate(()=>back());assert.equal(await page.evaluate(()=>cur().p),'home');
+  }
+  for(const [file,key] of [['pixel-home.js','pixelhome'],['pet-game.js','pet']])if(missing.includes(file)){
+   await page.evaluate(k=>openApp(k),key);assert.equal(await page.evaluate(()=>cur().p),'home');assert.match(await page.locator('#toast').innerText(),/组件尚未加载/);
+  }
+  assert.deepEqual(errors,[],JSON.stringify({privateApp,missing,errors}));await page.close();
+ }}finally{await browser.close();await new Promise(r=>server.close(r));}
+});
