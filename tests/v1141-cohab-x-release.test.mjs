@@ -13,15 +13,15 @@ test('v1184 web identity and cache markers are aligned', () => {
   const hotfix = read('web-hotfix.js');
   const index = read('index.html');
   const repair = read('repair.html');
-  assert.match(app, /__NORTH_SHELL_BUILD__!=='1648'/);
-  assert.match(app, /APP_VER='v1648 · 店铺分享与经营提醒订单识别'/);
-  assert.match(shell, /__NORTH_SHELL_BUILD__='1648'/);
-  assert.match(shell, /app\.js\?v=1648&r=v1648-couple-unbind-reopen-1/);
-  assert.match(sw, /const BUILD='1648'/);
-  assert.match(sw, /v1648-couple-unbind-reopen-1/);
-  assert.match(hotfix, /v1648-couple-unbind-reopen-1/);
-  assert.match(index, /小手机\.html\?v=1648/);
-  assert.match(repair, /小手机\.html\?v=1648/);
+  assert.match(app, /__NORTH_SHELL_BUILD__!=='1650'/);
+  assert.match(app, /APP_VER='v1650 · 开店奖励·角色代付·订单评价·三分钟跑酷'/);
+  assert.match(shell, /__NORTH_SHELL_BUILD__='1650'/);
+  assert.match(shell, /app\.js\?v=1650&r=v1650-couple-unbind-reopen-1/);
+  assert.match(sw, /const BUILD='1650'/);
+  assert.match(sw, /v1650-couple-unbind-reopen-1/);
+  assert.match(hotfix, /v1650-couple-unbind-reopen-1/);
+  assert.match(index, /小手机\.html\?v=1650/);
+  assert.match(repair, /小手机\.html\?v=1650/);
 });
 
 test('v1184 publishes shared cohab memory and X comment controls', () => {
