@@ -47,10 +47,17 @@
 </main>
 <aside class="journal"><div class="eyebrow">LITTLE MOMENTS</div><h2>今天的小确幸</h2><p>衣服会留下回忆，<br>照顾也会。</p><ol id="diary"></ol><div class="journal-bottom">轻戳 · 抚摸 · 拖拽 · 换装<br><span>用鼠标或手指，都可以陪她玩。</span></div></aside>
 <div id="care-cursor" hidden aria-hidden="true"><div id="care-held"></div><svg width="32" height="40" viewBox="0 0 32 40"><path d="M3 2 L3 31 L11 24 L18 38 L24 35 L17 22 L29 22 Z" fill="#fff9ef" stroke="#b57587" stroke-width="2"/></svg></div>
-<section id="body-panel" hidden aria-label="人物比例"><button id="body-close" aria-label="关闭比例调整">×</button><div class="body-controls"><label>人物大小<input id="room-size" type="range" min="60" max="150" step="1" value="100"><output id="room-size-value">100%</output></label><label>腿部长度<input id="room-legs" type="range" min="55" max="110" step="1" value="85"><output id="room-legs-value">85%</output></label><label>腿部宽度<input id="room-legWidth" type="range" min="60" max="140" step="1" value="100"><output id="room-legWidth-value">100%</output></label></div><button id="body-save">保存参数</button></section><script src="bridge.js?v=1213"></script><script src="assets.js?v=1272"></script><script src="sound.js"></script>
-<script src="music.js"></script>
-<script src="core.js"></script>
-<script src="care-policy.js"></script>
-<script src="game.js?v=1550"></script>
+<section id="body-panel" hidden aria-label="人物比例"><button id="body-close" aria-label="关闭比例调整">×</button><div class="body-controls"><label>人物大小<input id="room-size" type="range" min="60" max="150" step="1" value="100"><output id="room-size-value">100%</output></label><label>腿部长度<input id="room-legs" type="range" min="55" max="110" step="1" value="85"><output id="room-legs-value">85%</output></label><label>腿部宽度<input id="room-legWidth" type="range" min="60" max="140" step="1" value="100"><output id="room-legWidth-value">100%</output></label></div><button id="body-save">保存参数</button></section>
+<script>
+/* v1662：小屋脚本按顺序载入。某个文件没下载成功（部分网络下 GitHub Pages 会偶发失败）就换个地址再试两次，
+   不会再停在「undefined is not an object (window.PixelHomeBridge.request)」。 */
+(function(){var V='1662',files=[['bridge.js','PixelHomeBridge'],['assets.js','PixelHomeAssets'],['sound.js','RoseDollSound'],['music.js','RoseDollMusic'],['core.js',''],['care-policy.js',''],['game.js','']];
+function show(t){var l=document.getElementById('loading');if(l)l.textContent=t;}
+function load(i,attempt){if(i>=files.length)return;var f=files[i],s=document.createElement('script'),done=false;
+ function fail(){if(done)return;done=true;s.remove();if(attempt<2)setTimeout(function(){load(i,attempt+1);},700*(attempt+1));else show('小屋文件「'+f[0]+'」没有下载成功，请检查网络后返回游戏大厅重新进入。');}
+ s.src=f[0]+'?v='+V+(attempt?'&retry='+attempt+'-'+Date.now():'');s.async=false;
+ s.onload=function(){if(done)return;if(f[1]&&!window[f[1]])return fail();done=true;load(i+1,0);};s.onerror=fail;document.body.appendChild(s);}
+load(0,0);})();
+</script>
 </body>
 </html>
