@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1654'){
+if(window.__NORTH_SHELL_BUILD__!=='1656'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -606,7 +606,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1654 · 航班组件缺失时聊天恢复';
+const APP_VER='v1656 · 角色点外卖规格修正';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2015,7 +2015,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1654&r=v1654-couple-unbind-reopen-1';
+  const url='sw.js?v=1656&r=v1656-couple-unbind-reopen-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -17739,7 +17739,9 @@ function webShareDetailHTML(m){const items=Array.isArray(m.items)?m.items:[],bod
 function webSearchFailed(text){return /^（(?:联网|搜索)(?:失败|未启用)|^（没搜到/.test((''+(text||'')).trim());}
 function localPersonalStateQuery(text){const t=(''+(text||'')).replace(/\s+/g,' ').trim();if(!t)return false;const internetExplicit=/(?:上网|联网|互联网|网页|网络)(?:查|搜)|(?:查|搜).{0,5}(?:互联网|网页|网络)/.test(t),personalState=/(?:你|你的|你自己|刚才|刚刚|有没有人|是不是有人).{0,18}(?:微信|消息|聊天|好友|手机|通讯录|短信|电话|谁找你|谁加你)|(?:微信|消息|聊天|好友|手机|通讯录|短信|电话).{0,18}(?:有人|谁|发来|找你|加你|刚才|刚刚)/.test(t);return personalState&&!internetExplicit;}
 function northShopQueryRecord(c,query,result,key,request){const rows=msgs(c.id),old=rows.find(m=>m._northShopQuery&&m._northShopUserMessageId===String(key||'')&&m.shopQuery&&m.shopQuery.query===query),content=result.ok?(result.shops.length?'App内已查到：'+result.shops.map(shop=>shop.name).join('、')+'。这是店铺目录查询，尚未付款。':'App内本次查询没有匹配店铺，尚未付款。'):'App内店铺目录查询暂时失败，尚未付款。',data={account:actId(),query:String(query).slice(0,60),ok:result.ok,shops:result.shops||[],at:Date.now(),orderRequested:!!request,anchorId:String(request&&request.anchorId||key||'')};if(old){old.content=content;old.shopQuery=data;old.type='shopquery';old.role='assistant';old.from='ta';save();refreshChatMessages(c.id);return old;}const card={id:uid(),time:Date.now(),role:'assistant',from:'ta',type:'shopquery',_northShopQuery:true,_northShopUserMessageId:String(key||''),content,shopQuery:data};pushMsg(c.id,card);save();refreshChatMessages(c.id);return card;}
-async function northShopPostQueryReply(messages,md,state,c){let raw=await wechatPrimaryReply(messages,md,state,c),content=md.unfilteredOutput?modelUnfilteredText(raw):roleVisibleEnvelopeText(raw),usable=value=>!!String(value||'').replace(/[\[【]\s*(?:内心|心情|情绪|事件簿)\s*[|｜:：][^\]】]*[\]】]/g,'').replace(/\[查店铺\|[^\]]*\]/g,'').replace(/[\[【]\s*(?:保持安静|不说话)\s*[\]】]/g,'').trim();if(!usable(content)&&!state.fallback&&wechatAuxConfigured(md.routeIndex)){state.fallback=true;raw=await chatAPI(messages,Object.assign({},md,{aux:true}));content=md.unfilteredOutput?modelUnfilteredText(raw):roleVisibleEnvelopeText(raw);}if(!usable(content)){const error=new Error('查询后的模型没有返回可执行回复');error.code='north-shop-empty-reply';throw error;}return content;}
+/* 查完店铺后的那次回复：中间插着的系统消息、一次性 5xx 都会让一些中转接口报错。失败时把中途的系统提示并成普通消息、合并相邻同角色消息，再试一次 */
+function northShopFlatMessages(messages){const out=[];(messages||[]).forEach((m,i)=>{if(!m)return;const role=i>0&&m.role==='system'?'user':m.role,content=i>0&&m.role==='system'?'【系统提示】'+String(m.content||''):m.content,last=out[out.length-1];if(last&&last.role===role&&role!=='system'&&typeof last.content==='string'&&typeof content==='string')last.content+='\n\n'+content;else out.push({role,content});});if(out.length&&out[out.length-1].role==='assistant')out.push({role:'user',content:'【系统提示】请继续。'});return out;}
+async function northShopPostQueryReply(messages,md,state,c){let raw;try{raw=await wechatPrimaryReply(messages,md,state,c);}catch(e){if(e&&e.name==='AbortError'||/abort/i.test(String(e&&e.message)))throw e;raw=await wechatPrimaryReply(northShopFlatMessages(messages),md,state,c);}let content=md.unfilteredOutput?modelUnfilteredText(raw):roleVisibleEnvelopeText(raw),usable=value=>!!String(value||'').replace(/[\[【]\s*(?:内心|心情|情绪|事件簿)\s*[|｜:：][^\]】]*[\]】]/g,'').replace(/\[查店铺\|[^\]]*\]/g,'').replace(/[\[【]\s*(?:保持安静|不说话)\s*[\]】]/g,'').trim();if(!usable(content)&&!state.fallback&&wechatAuxConfigured(md.routeIndex)){state.fallback=true;raw=await chatAPI(messages,Object.assign({},md,{aux:true}));content=md.unfilteredOutput?modelUnfilteredText(raw):roleVisibleEnvelopeText(raw);}if(!usable(content)){const error=new Error('查询后的模型没有返回可执行回复');error.code='north-shop-empty-reply';throw error;}return content;}
 function autoWebQuery(){return ''; }
 async function webSearch(q){const ws=S.settings.search||{};
   if(ws.mode==='model'){const a=S.settings.chat;const base=(ws.base||a.base||'').replace(/\/+$/,'');const key=ws.key||a.key;const model=ws.model||a.model;
