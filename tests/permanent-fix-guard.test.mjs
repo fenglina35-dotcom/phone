@@ -1533,3 +1533,5 @@ test('web and private launch isolate optional component availability',()=>{
   assert.ok(launch.includes("typeof openPetGame!=='function'"));
  }
 });
+
+test('store sharing, oral stock reminders and purchase/sales inspection remain in both runtimes',()=>{for(const prefix of ['', 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/']){const commerce=fs.readFileSync(prefix+'commerce-ui.js','utf8'),app=fs.readFileSync(prefix+'app.js','utf8');for(const marker of ['northShareVisit','northSharedCatalog','northBusinessReminderFlights','_northBusinessNoticeIds','<300000','northPrepareOrderInspection','店铺收到的顾客订单'])assert.ok(commerce.includes(marker),prefix+marker);assert.ok(app.includes("m.type==='shopshare'"));assert.ok(app.includes('NorthMarketBusiness.prepareInspection(c)'));}});
