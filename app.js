@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1650'){
+if(window.__NORTH_SHELL_BUILD__!=='1652'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -606,7 +606,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1650 · 开店奖励·角色代付·订单评价·三分钟跑酷';
+const APP_VER='v1652 · 分享点单修复·150秒跑酷';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2015,7 +2015,7 @@ function northUpdatePrompt(){clearTimeout(_northUpdatePromptTimer);_northUpdateP
 function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');const current=northBuildNumber(window.__NORTH_SHELL_BUILD__);if(!build||northBuildNumber(build)<=current)return false;_northUpdatePending=build;northUpdatePrompt();return true;}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1650&r=v1650-couple-unbind-reopen-1';
+  const url='sw.js?v=1652&r=v1652-couple-unbind-reopen-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{reg.update().catch(()=>{});const ask=()=>{try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}};ask();setTimeout(ask,800);setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -14872,7 +14872,7 @@ function pfReadInPlace(id){if(!readReceiptOn())return;const p=phoneFriendState()
 function pfLastIncoming(arr,pid){if(!Array.isArray(arr))return null;for(let i=arr.length-1;i>=0;i--){const x=arr[i];if(x&&x.from!==pid&&!x.recalled&&!x._transferReceipt)return x;}return null;}
 function roleReadPrompt(c){if(!readReceiptOn()||!c)return '';const a=msgs(c.id);let last=null;for(let i=a.length-1;i>=0;i--){if(roleReadCounted(a[i])){last=a[i];break;}}if(!last||last.role!=='assistant'||!last.seenAt)return '';const min=Math.floor((Date.now()-last.seenAt)/60000);if(min<2)return '';return '\n\n# 已读\n微信开着已读：你发的最后一条消息，'+S.me.name+'在'+(min<60?min+'分钟':Math.floor(min/60)+'小时')+'前已经读了，但还没回你。你知道这件事，可以按人设自然地在意或不在意，别每次都提。';}
 function roleMarkRead(id){const a=msgs(id),now=Date.now();let ch=false;for(let i=a.length-1;i>=0;i--){const m=a[i];if(!roleReadCounted(m))continue;if(m.role!=='user')continue;if(m.readAt)break;m.readAt=now;ch=true;}if(ch){save(800);if(cur().p==='chat'&&cur().id===id)roleReadRefresh(id);}return ch;}
-function bubbleRow(c,m){
+function bubbleRow(c,m){if(m&&m.type==='shopquery')return '';
   if(m.type==='ticket'&&m.trip&&m.trip.railV2&&typeof NorthTrainBooking!=='undefined'&&!NorthTrainBooking.visible(NorthTrainBooking.current(m.trip)))return '';
   if(m.type==='ticket'&&m.trip&&m.trip.flightV2&&typeof NorthFlightBooking!=='undefined'&&!NorthFlightBooking.visible(NorthFlightBooking.current(m.trip)))return '';
 
@@ -14934,7 +14934,7 @@ function buildPart(c,m,me){
     if(effect){const color=m.giftRecipe&&m.giftRecipe.boxColor||giftBoxColor(m.id);return `<div class="giftcard giftcard-effect giftcard-simple" role="button" tabindex="0" aria-label="打开${esc(m.name)}礼物特效" onclick="event.stopPropagation();giftMessageOpen('${m.id}',this)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();giftMessageOpen('${m.id}',this)}">${giftBoxCardArt(color)}<div class="gift-simple-copy"><strong>${esc(m.name)}</strong><small>${giftBoxEnglish(effect)}</small></div></div>`;}
     return `<div class="giftcard"><div class="giftmain"><div class="giftline">${svgIc('gift',30,'#d7d7dc',1.35)}</div><div class="giftcopy"><div class="gifteyebrow">PRIVATE GIFT</div><div class="giftname">${esc(m.name)}</div><div class="giftmeta">${price}　·　${status}</div></div></div><div class="giftfoot"><span>${m.shop?esc(m.shop):'私人赠礼'}</span><span>GIFT DELIVERY</span></div></div>${pend?`<div style="display:flex;gap:7px;margin-top:6px"><button class="minibtn" style="background:#e7e7ea;color:#1c1c1f;border:0" onclick="event.stopPropagation();receiveGift('${m.id}')">领取</button><button class="minibtn" style="background:#25262a;color:#aaa;border:1px solid #3b3c41" onclick="event.stopPropagation();rejectGift('${m.id}')">拒收</button></div>`:''}`;}
   if(m.type==='deliveryorder'&&typeof deliveryRealChatCardHTML==='function')return deliveryRealChatCardHTML(c,m,me);
-  if(m.type==='shopshare'&&typeof NorthMarketBusiness!=='undefined')return NorthMarketBusiness.shareCard(m.shopShare);if(m.type==='shopquery'&&typeof NorthMarketBusiness!=='undefined')return NorthMarketBusiness.shopQueryCard(c,m);
+  if(m.type==='shopshare'&&typeof NorthMarketBusiness!=='undefined')return NorthMarketBusiness.shareCard(m.shopShare);if(m.type==='shopquery')return '';
   if(m.type==='marketfood'&&typeof NorthMarketBusiness!=='undefined')return NorthMarketBusiness.roleFoodCard(c,m);
   if(m.marketGiftOrderId&&typeof NorthMarket!=='undefined')return NorthMarket.giftCard(c,m);
   if(m.marketRequestId&&typeof NorthMarket!=='undefined')return NorthMarket.card(c,m);
@@ -16659,7 +16659,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
     }
     if(_webShare&&String(content||'').trim()){replyHandoffPush(_handoffTurn,msgs(id),_webShare);notifyIncoming(c,_webShare);save();refreshChatMessages(id);_webShare=null;}
     content=typeof deskPetConsume==='function'?deskPetConsume(content,c):content;content=typeof familyRoleConsume==='function'?await familyRoleConsume(content,c):content;
-    _deliveryActionMeta.northCurrentRequest=_deliveryCurrentUserTurn||!note||!!(replyOptions&&replyOptions.reopenCompleted);if(_appFoodRequest){_deliveryActionMeta.northRequestKey=_appFoodRequest.anchorId;_deliveryActionMeta.northUserRequest=_appFoodRequest.text;}if(_appShopLookup){_deliveryActionMeta.northShopFacts=_appShopLookup.prompt;if(_appShopLookup.shops&&_appShopLookup.shops.length)_deliveryActionMeta.northCatalogOnly=true;}
+    _deliveryActionMeta.northCurrentRequest=_deliveryCurrentUserTurn||!note||!!(replyOptions&&replyOptions.reopenCompleted);if(_appFoodRequest){_deliveryActionMeta.northRequestKey=_appFoodRequest.anchorId;_deliveryActionMeta.northUserRequest=_appFoodRequest.text;if(typeof _appFoodRequest.actualText==='string')_deliveryActionMeta.northActualUserText=_appFoodRequest.actualText;}if(_appShopLookup){_deliveryActionMeta.northShopFacts=_appShopLookup.prompt;if(_appShopLookup.shops&&_appShopLookup.shops.length)_deliveryActionMeta.northCatalogOnly=true;}
     if(typeof NorthMarketBusiness!=='undefined'&&typeof NorthMarketBusiness.ensureAction==='function')content=await NorthMarketBusiness.ensureAction(c,content,_userText,_deliveryActionMeta);
     if(typeof NorthMarketBusiness!=='undefined'&&typeof NorthMarketBusiness.filterClaims==='function')content=NorthMarketBusiness.filterClaims(c,content);
     const _replyCandidate=String(content||'').trim(),_realDeliveryCommandTurn=typeof deliveryRealEnabled==='function'&&deliveryRealEnabled()&&/[\[【]\s*(?:真实外卖|点外卖)\s*[|｜:：]/.test(_replyCandidate),_roleFiles=roleFileExtract(content),lines=(content=_roleFiles.text,_rawOutput?modelUnfilteredLines(content):splitChatBubbles(content,30));_replyAuditFinal=_replyCandidate;if(splitChatBubbles(content,60).length>lines.length)_replyAuditPartial=true;let got=false;let txtN=0;let diceUsed=false;let pendQuote=null;let photoTail=0;let _realDeliveryCommandSeen=false;let _realDeliveryPreludeShown=false;
