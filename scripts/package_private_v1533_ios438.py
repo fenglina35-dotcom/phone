@@ -1,4 +1,4 @@
-"""Create the private v1607 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
+"""Create the private v1645 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
 
 Unlike the earlier packaging scripts, every file is read from the committed tree
 (``git cat-file`` against HEAD) instead of the working directory. The v1235/iOS356
@@ -23,10 +23,10 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "native/private-small-phone/XcodeProject/"
 BUNDLE = "PhoneCompanionTest/PhoneWeb.bundle/"
-PREFIX = "SmallPhone_v1607_iOS439_Private/"
-OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1607_iOS439.zip"
+PREFIX = "SmallPhone_v1645_iOS439_Private/"
+OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1645_iOS439.zip"
 
-WEB_VERSION = "1607"
+WEB_VERSION = "1645"
 MARKETING = "1.0.439"
 BUILD = "439"
 BRIDGE = "42"
@@ -646,12 +646,12 @@ def main() -> None:
     state["retired"] = [{"file": BUNDLE+"daily-event-ledger.js", "commit": "a804f37a", "reason": "User requested removal; independent notes and existing data preserved."}, {"file": BUNDLE+"ai-account.js", "commit": "3708d8e1", "reason": "User requested AI account and internal speech/subtitle retirement, replaced by photo album; external interfaces retained."}]
     state["sourceCommit"] = text(git("rev-parse", "HEAD")).strip()
     state["webSourceCommit"] = state["sourceCommit"]
-    state["webVersion"] = "v1606"
+    state["webVersion"] = "v1644"
     state["privateWeb"] = "v" + WEB_VERSION
     state["privateIOS"] = f"{MARKETING} ({BUILD})"
     state["lastDeliveredPackage"] = {"name": previous.name, "sha256": previous_sha, "sourceCommit": "beb14a18c8a1f163dd9b6afc2d48c8dc3d8f66bd"}
-    state["knownUnresolved"] = [x for x in state["knownUnresolved"] if not re.match(r"v\d+-mac-build", x)] + ["v1607-mac-build-signing-and-iphone-not-verified"]
-    state["validation"] = {"macBuildVerified": False, "realIPhoneVerified": False, "models": "HTTP simulated in browser gates", "nodeTests": {"passed": 3481, "failed": 0, "sourceCommit": state["webSourceCommit"]}, "authorizedChatBothRuntimes": True, "inheritedPreviousOverlay": True, "priorPackageManifestVerified": True, "nativePayloadUnchanged": True, "houseResourceFiles": len(cozy_files), "retiredFiles": sorted(retired)}
+    state["knownUnresolved"] = [x for x in state["knownUnresolved"] if not re.match(r"v\d+-mac-build", x)] + ["v1645-mac-build-signing-and-iphone-not-verified"]
+    state["validation"] = {"macBuildVerified": False, "realIPhoneVerified": False, "models": "HTTP simulated in browser gates", "nodeTests": {"passed": 3677, "failed": 0, "sourceCommit": state["webSourceCommit"]}, "authorizedChatBothRuntimes": True, "inheritedPreviousOverlay": True, "priorPackageManifestVerified": True, "nativePayloadUnchanged": True, "houseResourceFiles": len(cozy_files), "retiredFiles": sorted(retired)}
     app = text(files[BUNDLE + "app.js"])
     for marker in ("function hisChatMessageHTML(", "bubbleLook(c,!mine)", "bubbleIconFor(c,!mine)", "bubbleAvatarClass(c,!mine)", "function hisWxUtilityOpen(", "function hisWxFriendAvatar(", "function spyLockScreen(", "lockWallpaper", "_hisPaymentId", "_forged"):
         assert marker in app, "latest role WeChat/phone repair missing: " + marker
@@ -726,7 +726,7 @@ def main() -> None:
     state["validation"]["latestV1591ManifestVerified"] = True
     state["validation"]["privateCompanionNativeUnchanged"] = True
     # Verify the complete immediately preceding delivery before producing the new overlay.
-    delivered = ROOT.parent / "\u6700\u65b0\u79c1\u4eba\u7248\u672c\u8986\u76d6\u5305_v1605_iOS439.zip"
+    delivered = ROOT.parent / "\u6700\u65b0\u79c1\u4eba\u7248\u672c\u8986\u76d6\u5305_v1607_iOS439.zip"
     with ZipFile(delivered) as old:
         prefix = old.namelist()[0].split("/")[0]+"/"
         prior = {n[len(prefix):]:old.read(n) for n in old.namelist() if n.startswith(prefix) and not n.endswith("/")}
@@ -742,8 +742,25 @@ def main() -> None:
         assert marker in ui, "current marketplace feature missing: "+marker
     state["preserved"]=sorted(set(state["preserved"])|{"v1600-real-user-virtual-marketplace", "v1602-paid-inventory-business-splits-schedules-replies", "v1604-colorful-cloud-vouchers-and-one-line-address", "v1604-rules-boxes-wallet-development-errands"})
     state["lastDeliveredPackage"]={"name":delivered.name,"sha256":sha256(delivered.read_bytes()).hexdigest(),"sourceCommit":json.loads(prior["SOURCE_STATE.json"])["sourceCommit"]}
-    state["validation"]["latestV1605ManifestVerified"]=True
-    state["validation"]["latestV1605FilesInherited"]=len(prior)
+    state["validation"]["latestV1607ManifestVerified"]=True
+    state["validation"]["latestV1607FilesInherited"]=len(prior)
+    # Current shared repairs are required alongside the complete previous private delivery.
+    app = text(files[BUNDLE + "app.js"])
+    for marker in ("userImageStudioContact", "roleImageFrame", "roleImageIdentityRefs", "roleImageGenerateOptions", "northRoleEnsureAction", "northShopQueryRecord", "NORTH药店上架·衣柜入口移到底部"):
+        assert marker in app + ui, "latest shared repair missing: " + marker
+    profile = text(files[BUNDLE + "wechat-me.js"])
+    assert "userImageStudioOpen()" in profile
+    for shop in ("dessert", "mcdonalds", "luckin", "breakfast", "fruit-bowl", "pharmacy"):
+        name = "assets/north-" + shop + "-shop.js"
+        assert BUNDLE + name in files, name
+        assert files[BUNDLE + name] == git("show", "HEAD:" + name), "shop payload differs: " + name
+    assert "看病买药" in ui
+    for name in ("public-north-policy.js", "public-north-runtime.js"):
+        assert files[BUNDLE + name] == prior[BUNDLE + name], "private companion policy changed: " + name
+    state["preserved"] = sorted(set(state["preserved"]) | {"v1645-role-multi-food-execution-and-query-receipts", "v1645-shop-deletion-and-adjacent-product-ordering", "v1645-user-role-wardrobe-framing-and-reference-guards", "v1645-seven-local-shops-pharmacy-medicine-category", "v1645-profile-image-studio-last-entry", "v1645-theme-icons-and-autonomous-role-search"})
+    state["validation"]["latestPrivateGuardsVerified"] = True
+    state["validation"]["nodeTests"]["sourceCommit"] = text(git("rev-parse", "HEAD")).strip()
+    state["validation"]["nodeTests"]["evidenceNote"] = "3677 passing tests and authorized web/private chat gate on feature commit f8b6e0aa; subsequent changes only packaging helper and Mac guide."
     state["macBuildVerified"]=False
     state["realIPhoneVerified"]=False
     files["SOURCE_STATE.json"] = json.dumps(state, ensure_ascii=False, indent=2).encode("utf-8")
