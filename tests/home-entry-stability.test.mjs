@@ -223,7 +223,7 @@ test('web and private home clicks survive missing optional scripts and preserve 
  await new Promise(r=>server.listen(0,'127.0.0.1',r));const origin='http://127.0.0.1:'+server.address().port;
  const browser=await chromium.launch({headless:true,executablePath:'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'});
  try{for(const privateApp of [false,true])for(const missing of [[],['pixel-home.js'],['pet-game.js'],['pixel-home.js','pet-game.js']]){
-  const page=await browser.newPage({viewport:{width:390,height:844}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  const page=await browser.newPage({viewport:{width:390,height:844},serviceWorkers:'block'}),errors=[];page.on('pageerror',e=>errors.push(e.message));
   if(privateApp)await page.addInitScript(()=>{window.__SMALL_PHONE_PRIVATE__=true;window.SmallPhoneNative={request:async()=>({ok:false,error:'fixture-native-unavailable'})};});
   await page.route('**/*',r=>{const url=new URL(r.request().url());if(url.origin!==origin)return r.abort();if(missing.some(n=>url.pathname.endsWith('/'+n)))return r.fulfill({status:200,contentType:'text/javascript',body:'/* simulated incomplete optional component response */'});return r.continue();});
   await page.goto(origin+(privateApp?'/native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html':'/小手机.html')+'?northPreview=black-home');await page.waitForFunction(()=>window.__northBootReady);
@@ -234,7 +234,7 @@ test('web and private home clicks survive missing optional scripts and preserve 
    await page.evaluate(()=>back());assert.equal(await page.evaluate(()=>cur().p),'home');
   }
   for(const [file,key] of [['pixel-home.js','pixelhome'],['pet-game.js','pet']])if(missing.includes(file)){
-   await page.evaluate(k=>openApp(k),key);assert.equal(await page.evaluate(()=>cur().p),'home');assert.match(await page.locator('#toast').innerText(),/组件尚未加载/);
+   await page.evaluate(k=>openApp(k),key);await page.waitForFunction(()=>/组件下载失败/.test(document.querySelector('#toast').innerText),null,{timeout:8000});assert.equal(await page.evaluate(()=>cur().p),'home');assert.match(await page.locator('#toast').innerText(),/组件下载失败/);
   }
   assert.deepEqual(errors,[],JSON.stringify({privateApp,missing,errors}));await page.close();
  }}finally{await browser.close();await new Promise(r=>server.close(r));}

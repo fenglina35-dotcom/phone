@@ -27,15 +27,15 @@ function functionSource(name){
 }
 
 test('v1178 has a unique visible identity across every public entry and cache layer',()=>{
-  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1662\'/);
-  assert.match(app,/APP_VER='v1662 · 像素少女与电子宠物断网自动重下'/);
-  assert.match(shell,/__NORTH_SHELL_BUILD__='1662'/);
-  assert.match(shell,/app\.js\?v=1662&r=v1662-couple-unbind-reopen-1/);
-  assert.match(index,/小手机\.html\?v=1662/);
-  assert.match(repair,/小手机\.html\?v=1662/);
-  assert.match(worker,/const BUILD='1662'/);
-  assert.match(worker,/north-shell-v1662-couple-unbind-reopen-1/);
-  assert.match(hotfix,/sw\.js\?v=1662&r=v1662-couple-unbind-reopen-1/);
+  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1664\'/);
+  assert.match(app,/APP_VER='v1664 · 日历角色互动与单店补货'/);
+  assert.match(shell,/__NORTH_SHELL_BUILD__='1664'/);
+  assert.match(shell,/app\.js\?v=1664&r=v1664-couple-unbind-reopen-1/);
+  assert.match(index,/小手机\.html\?v=1664/);
+  assert.match(repair,/小手机\.html\?v=1664/);
+  assert.match(worker,/const BUILD='1664'/);
+  assert.match(worker,/north-shell-v1664-couple-unbind-reopen-1/);
+  assert.match(hotfix,/sw\.js\?v=1664&r=v1664-couple-unbind-reopen-1/);
   for(const [name,source] of Object.entries({app,shell,index,repair,worker,hotfix})){
     assert.doesNotMatch(source,/v?1127/,`${name} must not reuse the prior web version`);
   }
