@@ -1,4 +1,4 @@
-"""Create the private v1669 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
+"""Create the private v1675 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
 
 Unlike the earlier packaging scripts, every file is read from the committed tree
 (``git cat-file`` against HEAD) instead of the working directory. The v1235/iOS356
@@ -23,10 +23,10 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "native/private-small-phone/XcodeProject/"
 BUNDLE = "PhoneCompanionTest/PhoneWeb.bundle/"
-PREFIX = "SmallPhone_v1669_iOS439_Private/"
-OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1669_iOS439.zip"
+PREFIX = "SmallPhone_v1675_iOS439_Private/"
+OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1675_iOS439.zip"
 
-WEB_VERSION = "1669"
+WEB_VERSION = "1675"
 MARKETING = "1.0.439"
 BUILD = "439"
 BRIDGE = "42"
@@ -581,14 +581,16 @@ def validate(files: dict[str, bytes]) -> None:
 
 def main() -> None:
     dirty = text(git("diff", "HEAD", "--name-only", "--", SOURCE)).strip()
-    assert not dirty, "commit the private source before packaging:\n" + dirty
+    protected_other_chat = SOURCE + BUNDLE + "delivery.js"
+    assert not (set(dirty.splitlines()) - {protected_other_chat}), "commit the private source before packaging:\n" + dirty
+    # This explicitly excluded parallel diagnostic stays in the working tree; payload still comes only from git cat-file HEAD.
     assert not OUTPUT.exists(), "refusing to overwrite an existing package"
     commit = text(git("rev-parse", "HEAD")).strip()
-    web_commit = "d7ebc79d1a8886f67c81005f974084c48f0fb835"
+    web_commit = "3cb33fac407d6c015571c6aef0550f296a0b61a8"
     files = committed_private_files()
     validate(files)
-    previous = ROOT.parent / "最新私人版本覆盖包_v1655_iOS439.zip"
-    previous_sha = "5f7ab9f5af6beb84802b017fe1a48c865d608c2ca0ea2464f06bab266a5b5843"
+    previous = ROOT.parent / "最新私人版本覆盖包_v1669_iOS439.zip"
+    previous_sha = "dcb9d666c0128aa8e688b1045300b85fcc1854584a51fb4d2d20c7c97172b0d3"
     assert sha256(previous.read_bytes()).hexdigest() == previous_sha
     with ZipFile(previous) as old:
         prefix = next(n for n in old.namelist() if n.endswith("/SOURCE_STATE.json"))[:-len("SOURCE_STATE.json")]
@@ -597,7 +599,7 @@ def main() -> None:
         assert set(manifest) == names - {"SHA256SUMS.json"}
         assert not (names - files.keys() - {"SHA256SUMS.json", "SOURCE_STATE.json"}), "previous delivery files missing"
         state = json.loads(old.read(prefix + "SOURCE_STATE.json"))
-        assert state["sourceCommit"] == "5b5cf7086d2a84dad795545d1152db21c07a49c8"
+        assert state["sourceCommit"] == "0945037def1e9234bd373fc1f99ba72ba24b27de"
         for name, digest in manifest.items():
             body = old.read(prefix + name)
             assert sha256(body).hexdigest() == digest, "previous checksum mismatch: " + name
@@ -618,6 +620,10 @@ def main() -> None:
         assert marker in ui, "merchant repair missing: " + marker
     for name in ("commerce-ui.js", "photo-album.js", "assets/north-dessert-shop.js"):
         assert files[BUNDLE + name] == git("show", web_commit + ":" + name), "shared feature payload mismatch: " + name
+    for marker in ("roleAllLockAnnounced", "announcementSaved===true&&roleAllLockAnnounced", "_postedDecision", "roleActionEnvelopeContent", "roleThoughtRecencyText", "_flightFailureInfo"):
+        assert marker in app, "role repair missing: " + marker
+    for marker in ("northRoleCompletedFood", "northRoleFixedMilkBody"):
+        assert marker in ui, "food repair missing: " + marker
     warm = text(files[BUNDLE + "assets/north-dessert-shop.js"])
     assert '"id":"north-nuanyan"' in warm and "暖燕" in warm
     cozy_files = [n for n in files if n.startswith(BUNDLE + "games/cozy-home/")]
@@ -631,12 +637,12 @@ def main() -> None:
     del reviewed
     state["sourceCommit"] = commit
     state["webSourceCommit"] = web_commit
-    state["webVersion"] = "v1668"
+    state["webVersion"] = "v1674"
     state["privateWeb"] = "v" + WEB_VERSION
     state["privateIOS"] = f"{MARKETING} ({BUILD})"
     state["bridge"] = BRIDGE
     state["deliveryKind"] = "Mac-Xcode-source-overlay-not-IPA"
-    state["lastDeliveredPackage"] = {"name": previous.name, "sha256": previous_sha, "sourceCommit": "5b5cf7086d2a84dad795545d1152db21c07a49c8"}
+    state["lastDeliveredPackage"] = {"name": previous.name, "sha256": previous_sha, "sourceCommit": "0945037def1e9234bd373fc1f99ba72ba24b27de"}
     state["preserved"] = sorted(set(state.get("preserved", [])) | {
         "v1669-calendar-real-month-year-day-search-events-and-reminders",
         "v1669-role-scheduling-sharing-invitations-participation-and-opt-in-care",
@@ -646,12 +652,12 @@ def main() -> None:
         "v1669-cloud-startup-fees-lifetime-shop-rewards-profit-and-deleted-shop-order-filter",
         "v1669-warm-yan-13-products-original-pictures-and-prices",
         "v1669-pixel-and-pet-bounded-script-redownload",
-        "private-native-companion-intentional-asymmetry", "v1669-original-shop-restore-no-fee-no-reward-reset"})
+        "private-native-companion-intentional-asymmetry", "v1669-original-shop-restore-no-fee-no-reward-reset", "v1675-saved-visible-declaration-before-all-lock", "v1675-current-app-target-refusal-and-thought-action-isolation", "v1675-fixed-milk-spec-defaults-and-completed-order-replay-guard", "v1675-old-image-and-thought-recency-boundaries", "v1675-yanan-relative-weekday-morning-role-only-flight-and-failure-reply"})
     state["macBuildVerified"] = False
     state["realIPhoneVerified"] = False
-    state["knownUnresolved"] = [x for x in state.get("knownUnresolved", []) if not re.match(r"v\d+-mac-build", x)] + ["v1669-mac-build-signing-and-iphone-not-verified", "calendar-closed-app-system-notifications-not-implemented", "real-model-calendar-personality-and-voice-acceptance-pending"]
+    state["knownUnresolved"] = [x for x in state.get("knownUnresolved", []) if not re.match(r"v\d+-mac-build", x)] + ["v1675-mac-build-signing-and-iphone-not-verified", "calendar-closed-app-system-notifications-not-implemented", "real-model-calendar-personality-and-voice-acceptance-pending", "v1675-user-main-model-and-native-lock-receipts-pending"]
     state["validation"] = {"macBuildVerified": False, "realIPhoneVerified": False,
-        "nodeTests": {"passed": 3777, "failed": 0, "sourceCommit": web_commit},
+        "nodeTests": {"passed": 3824, "failed": 0, "sourceCommit": web_commit},
         "models": "HTTP simulated; no live model or production financial tests",
         "authorizedChatBothRuntimes": True, "missingOptionalFlightGateBothRuntimes": True,
         "calendarAndMerchantRealHTMLBothRuntimes": True,
