@@ -18,11 +18,11 @@ test('v1045 removes synchronous camera JPEG work and preserves the camera audio 
 });
 
 test('automatic task failures stay silent and the cache identity is new',()=>{
-  assert.match(app,/APP_VER='v1670 · 日历显示与流式设置'/);
+  assert.match(app,/APP_VER='v1672 · 主屏幕更新修复'/);
   assert.match(app,/自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示/);
   assert.match(app,/if\(!automatic\)toast\('没布置成功，再点一次'\)/);
-  assert.match(html,/north-sw-reloaded-1670-couple-unbind-reopen-1/);
-  assert.match(html,/sw\.js\?v=1670&r=v1670-couple-unbind-reopen-1/);
+  assert.match(html,/north-sw-reloaded-1672-couple-unbind-reopen-1/);
+  assert.match(html,/sw\.js\?v=1672&r=v1672-couple-unbind-reopen-1/);
 });
 
 test('settings use an iOS-style categorized home without changing the underlying controls',()=>{

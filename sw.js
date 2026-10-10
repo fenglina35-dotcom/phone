@@ -1,6 +1,6 @@
-const BUILD='1670';
-const HOTFIX='v1670-couple-unbind-reopen-1';
-const SHELL_CACHE='north-shell-v1670-couple-unbind-reopen-1';
+const BUILD='1672';
+const HOTFIX='v1672-couple-unbind-reopen-1';
+const SHELL_CACHE='north-shell-v1672-couple-unbind-reopen-1';
 const GLASS_ICON_CACHE='north-glass-icons-v2';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
@@ -17,7 +17,7 @@ const CORE_FILES=[
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
   {url:'./app.js?v='+BUILD+'&r='+HOTFIX,kind:'app'},
   {url:'./cohab-theater.js?v='+BUILD+'&r=v1274-web-cohab-guests-1',kind:'theater'},
-  {url:'./web-hotfix.js?v='+BUILD+'&r=v1670-couple-unbind-reopen-1',kind:'hotfix'},
+  {url:'./web-hotfix.js?v='+BUILD+'&r=v1672-couple-unbind-reopen-1',kind:'hotfix'},
   {url:'./photo-album.js?v='+BUILD,kind:'album'},
   {url:'./couple-watch.js?v='+BUILD,kind:'watch'},
   {url:'./couple-watch-runtime.js?v='+BUILD,kind:'watchRuntime'}
@@ -161,7 +161,7 @@ function validShellText(kind,text){
     &&text.includes('theaterRevealActorItems')
     &&!text.includes('cohabReplyCore=async');
   if(kind==='hotfix')return text.length>800
-    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1670-couple-unbind-reopen-1'")
+    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1672-couple-unbind-reopen-1'")
     &&text.includes('reconcileExpiredWxLogin')
     &&text.includes('withBaseImageCheck')
     &&text.includes('isStoredImgRef');
@@ -256,6 +256,7 @@ self.addEventListener('fetch',event=>{
   let url;
   try{url=new URL(request.url);}catch(_){return;}
   if(url.origin!==self.location.origin)return;
+  let decodedPath;try{decodedPath=decodeURIComponent(url.pathname);}catch(_){decodedPath=url.pathname;}
 
   if(/\/assets\/travel-home\/[^/]+\.(?:jpg|webp|png)$/.test(url.pathname)){
     event.respondWith(travelImageResponse(request,event).catch(()=>Response.error()));return;
@@ -265,7 +266,7 @@ self.addEventListener('fetch',event=>{
   if(/\/games\/pixel-home\//.test(url.pathname)){
     event.respondWith((async()=>{
       let cache;
-      /* v1670: the per-visit session token is not part of the file, so it is not part of the cache key
+      /* v1672: the per-visit session token is not part of the file, so it is not part of the cache key
          (every visit used to add another copy of index.html). Explicit retries always go to the network. */
       const keyUrl=new URL(url.href);keyUrl.searchParams.delete('session');keyUrl.searchParams.delete('retry');
       const key=new Request(keyUrl.href),retry=url.searchParams.has('northImageRetry')||url.searchParams.has('retry');
@@ -319,7 +320,7 @@ self.addEventListener('fetch',event=>{
   // Otherwise an old cached app shell can replace the preview with the gate.
   if(request.mode==='navigate'&&(
     /\/theme-real-preview\.html$/.test(url.pathname)||
-    (/\/小手机\.html$/.test(url.pathname)&&url.searchParams.has('northPreview'))
+    (/\/小手机\.html$/.test(decodedPath)&&url.searchParams.has('northPreview'))
   )){
     event.respondWith(fetch(request,{cache:'no-store'}));
     return;
@@ -329,8 +330,9 @@ self.addEventListener('fetch',event=>{
     event.respondWith((async()=>{
       const cache=await caches.open(SHELL_CACHE);
       const cached=await currentCore(cache,'html');
-      const explicit=/\/小手机\.html$/.test(url.pathname)&&(url.searchParams.has('reload')||url.searchParams.has('open')||url.searchParams.has('from'));
-      if(cached&&!explicit)return cached;
+      const explicit=/\/小手机\.html$/.test(decodedPath)&&(url.searchParams.has('reload')||url.searchParams.has('open')||url.searchParams.has('from')||url.searchParams.has('north_update'));
+      const reloading=request.cache==='reload'||request.cache==='no-cache';
+      if(cached&&!explicit&&!reloading)return cached;
       try{
         const response=await checkedResponse(request,'html',1);
         await cache.put(CORE_FILES.find(item=>item.kind==='html').url,response.clone());
