@@ -1,6 +1,6 @@
-const BUILD='1668';
-const HOTFIX='v1668-couple-unbind-reopen-1';
-const SHELL_CACHE='north-shell-v1668-couple-unbind-reopen-1';
+const BUILD='1670';
+const HOTFIX='v1670-couple-unbind-reopen-1';
+const SHELL_CACHE='north-shell-v1670-couple-unbind-reopen-1';
 const GLASS_ICON_CACHE='north-glass-icons-v2';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
@@ -11,12 +11,13 @@ const CORE_FILES=[
   {url:'./public-north-runtime.js?v='+BUILD,kind:'publicNorthRuntime'},
   {url:'./phone-shortcuts.js?v='+BUILD,kind:'shortcuts'},
   {url:'./request-size-details.js?v='+BUILD,kind:'requestSize'},
+  {url:'./request-diagnostics.js?v='+BUILD,kind:'requestDiagnostics'},
   {url:'./cohab-model-diagnostics.js?v='+BUILD,kind:'cohabDiagnostics'},
   {url:'./小手机.html?v='+BUILD+'&r='+HOTFIX,kind:'html'},
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
   {url:'./app.js?v='+BUILD+'&r='+HOTFIX,kind:'app'},
   {url:'./cohab-theater.js?v='+BUILD+'&r=v1274-web-cohab-guests-1',kind:'theater'},
-  {url:'./web-hotfix.js?v='+BUILD+'&r=v1668-couple-unbind-reopen-1',kind:'hotfix'},
+  {url:'./web-hotfix.js?v='+BUILD+'&r=v1670-couple-unbind-reopen-1',kind:'hotfix'},
   {url:'./photo-album.js?v='+BUILD,kind:'album'},
   {url:'./couple-watch.js?v='+BUILD,kind:'watch'},
   {url:'./couple-watch-runtime.js?v='+BUILD,kind:'watchRuntime'}
@@ -24,7 +25,6 @@ const CORE_FILES=[
 const OPTIONAL_FILES=[
   ...GLASS_ICON_PACKS.map(pack=>'./assets/app-icons/glass/'+pack+'/album.png'),
   './browser-diagnostics.js?v='+BUILD,
-  './request-diagnostics.js?v='+BUILD,
   './message-beijing-time.js?v='+BUILD+'&r=offline-me-1',
   './pixel-home-policy.js?v='+BUILD,
   './pixel-wardrobe-info.js?v='+BUILD,
@@ -139,6 +139,7 @@ function validShellText(kind,text){
   if(kind==='publicNorthPolicy')return text.includes('root.NorthPublicPolicy = Object.freeze');
   if(kind==='publicNorthRuntime')return text.includes('window.NorthPublicRuntime=')&&text.includes('NorthPublicRuntime.install();');
   if(kind==='shortcuts')return text.includes('window.PhoneShortcuts=')&&text.includes('phone-shortcuts');
+  if(kind==='requestDiagnostics')return text.includes('function streamData(raw)')&&text.includes('async function streamBody(res,timeout)')&&text.includes('root.NorthRequestDiagnostics=');
   if(kind==='requestSize')return text.includes('window.requestSizeBreakdown=')&&text.includes('window.requestSizeDetailsHtml=');
   if(kind==='cohabDiagnostics')return text.includes('window.cohabModelDiagnosticOpen=')&&text.includes('const records=new Map()');
   if(kind==='watch')return text.includes('function localDay(at)')&&text.includes('function create(options)');
@@ -160,7 +161,7 @@ function validShellText(kind,text){
     &&text.includes('theaterRevealActorItems')
     &&!text.includes('cohabReplyCore=async');
   if(kind==='hotfix')return text.length>800
-    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1668-couple-unbind-reopen-1'")
+    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1670-couple-unbind-reopen-1'")
     &&text.includes('reconcileExpiredWxLogin')
     &&text.includes('withBaseImageCheck')
     &&text.includes('isStoredImgRef');
@@ -264,7 +265,7 @@ self.addEventListener('fetch',event=>{
   if(/\/games\/pixel-home\//.test(url.pathname)){
     event.respondWith((async()=>{
       let cache;
-      /* v1668: the per-visit session token is not part of the file, so it is not part of the cache key
+      /* v1670: the per-visit session token is not part of the file, so it is not part of the cache key
          (every visit used to add another copy of index.html). Explicit retries always go to the network. */
       const keyUrl=new URL(url.href);keyUrl.searchParams.delete('session');keyUrl.searchParams.delete('retry');
       const key=new Request(keyUrl.href),retry=url.searchParams.has('northImageRetry')||url.searchParams.has('retry');
@@ -375,6 +376,8 @@ self.addEventListener('fetch',event=>{
   if(/\/cohab-model-diagnostics\.js$/.test(url.pathname)){
     event.respondWith((async()=>{const cache=await caches.open(SHELL_CACHE);return (await currentCore(cache,'cohabDiagnostics'))||checkedResponse(request,'cohabDiagnostics',2);})());return;
   }
+  if(/\/request-diagnostics\.js$/.test(url.pathname)){event.respondWith((async()=>{const cache=await caches.open(SHELL_CACHE);return (await currentCore(cache,'requestDiagnostics'))||checkedResponse(request,'requestDiagnostics',2);})());return;}
+
   if(/\/request-size-details\.js$/.test(url.pathname)){
     event.respondWith((async()=>{const cache=await caches.open(SHELL_CACHE);return (await currentCore(cache,'requestSize'))||checkedResponse(request,'requestSize',2);})());return;
   }

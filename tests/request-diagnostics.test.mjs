@@ -9,10 +9,10 @@ function load(file,store=new Map()){
  const source=process.env.DIAGNOSTICS_BASELINE==='1'?cp.execFileSync('git',['show','9defbd8b:'+file],{encoding:'utf8',maxBuffer:20*1024*1024}):fs.readFileSync(file,'utf8');
  const start=source.indexOf('async function chatAPI('),end=source.indexOf('\nfunction uniq(',start),names=['chatRequestDiagnostic','chatReadDiagnosticResponse','chatResultText'];
  const lines=source.split('\n').filter(l=>names.some(n=>l.startsWith('function '+n+'(')||l.startsWith('async function '+n+'('))).join('\n');
- let calls=0,body=JSON.stringify({choices:[{message:{content:'正常中文'}}]}),status=200,type='application/json',fail=false;
- const ctx={Response,Date,Map,Set,console,S:{settings:{chat:{base:'https://fixture.invalid/v1',key:'DO_NOT_SHARE_SECRET',model:'test-main'},aux:{model:'test-aux'}}},actId:()=>ctx.account||'main',gameModelSessionPage:()=>false,chatRouteSessionPage:()=>false,chatRequestRoute:()=>null,chatModelAssertText(){},aiCoreOn:()=>false,annotateChatRequestError:e=>e,apiCaughtCN:e=>e.message,apiErrorCN:()=> '上游失败',roleInterceptDiagnosticTurnCandidate(){},localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v)},fetchT:async()=>{calls++;if(fail)throw new Error('network DO_NOT_SHARE_SECRET');return new Response(body,{status,headers:{'content-type':type,'x-request-id':'fixture-123'}});}};
+ let requests=[];let calls=0,body=JSON.stringify({choices:[{message:{content:'正常中文'}}]}),status=200,type='application/json',fail=false;
+ const ctx={Response,Date,Map,Set,console,TextDecoder,setTimeout,clearTimeout,S:{settings:{chat:{base:'https://fixture.invalid/v1',key:'DO_NOT_SHARE_SECRET',model:'test-main'},aux:{model:'test-aux'}}},actId:()=>ctx.account||'main',gameModelSessionPage:()=>false,chatRouteSessionPage:()=>false,chatRequestRoute:()=>null,chatModelAssertText(){},aiCoreOn:()=>false,annotateChatRequestError:e=>e,apiCaughtCN:e=>e.message,apiErrorCN:()=> '上游失败',roleInterceptDiagnosticTurnCandidate(){},localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v)},fetchT:async(url,opt)=>{requests.push(JSON.parse(opt.body));calls++;if(fail)throw new Error('network DO_NOT_SHARE_SECRET');return new Response(body,{status,headers:{'content-type':type,'x-request-id':'fixture-123'}});}};
  vm.createContext(ctx);vm.runInContext(moduleCode+'\n'+lines+'\n'+source.slice(start,end),ctx);
- return{ctx,store,calls:()=>calls,set:(value,code=200,contentType='application/json',network=false)=>{body=value;status=code;type=contentType;fail=network;}};
+ return{ctx,store,calls:()=>calls,requests,set:(value,code=200,contentType='application/json',network=false)=>{body=value;status=code;type=contentType;fail=network;}};
 }
 for(const file of entries){
  test(file+' records pending and failed request without additional calls',async()=>{
@@ -43,4 +43,28 @@ for(const file of entries){
 test('private diagnostic module is identical and script is loaded before both cores',()=>{
  const p='native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/';assert.equal(fs.readFileSync(p+'request-diagnostics.js','utf8'),moduleCode);
  for(const f of ['小手机.html',p+'index.html',p+'小手机.html']){const html=fs.readFileSync(f,'utf8');assert(html.indexOf('request-diagnostics.js?')>=0);assert(html.indexOf('request-diagnostics.js?')<html.indexOf('<script src="app.js?'));}
+});
+
+for(const file of entries)test(file+' opt-in streaming reads complete SSE without exposing partial actions',async()=>{
+ const w=load(file);w.ctx.S.settings.chatStreaming=true;
+ w.set('data: {"choices":[{"delta":{"content":"中文"}}]}\n\ndata: {"choices":[{"delta":{"content":"回复"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',200,'text/event-stream');
+ assert.equal(await w.ctx.chatAPI([],{unfilteredOutput:true}),'中文回复');assert.equal(w.calls(),1);assert.equal(w.requests[0].stream,true);
+ w.set('data: {"choices":[{"delta":{"content":"[为你安排日程|"}}]}\n\n',200,'text/event-stream');
+ await assert.rejects(w.ctx.chatAPI([],{unfilteredOutput:true}),/流式/);assert.equal(w.calls(),2);
+});
+
+for(const file of entries)test(file+' streaming switch off preserves JSON and ignores streamed reasoning',async()=>{
+ const w=load(file);w.set(JSON.stringify({choices:[{message:{content:'普通回复'}}]}));
+ assert.equal(await w.ctx.chatAPI([],{unfilteredOutput:true}),'普通回复');assert.equal(w.requests[0].stream,undefined);
+ w.ctx.S.settings.chatStreaming=true;assert.equal(await w.ctx.chatAPI([],{unfilteredOutput:true}),'普通回复');assert.equal(w.requests[1].stream,true);
+ w.set('data: {"choices":[{"delta":{"reasoning_content":"hidden","content":"正文"},"finish_reason":"stop"}]}\n\ndata: [DONE]\n\n',200,'text/event-stream');assert.equal(await w.ctx.chatAPI([],{unfilteredOutput:true}),'正文');
+});
+
+for(const file of entries)test(file+' fragmented UTF8 streaming returns complete content and stops on broken transport',async()=>{
+ const w=load(file);w.ctx.S.settings.chatStreaming=true;let seen=[];w.ctx.roleInterceptDiagnosticTurnCandidate=(audit,text)=>seen.push(text);
+ const raw='data: {"choices":[{"delta":{"content":"你好"}}]}\r\n\r\ndata: {"choices":[{"delta":{"content":"[我的日程|2099-01-01|09:00|工作]"},"finish_reason":"stop"}]}\r\n\r\ndata: [DONE]\r\n\r\n';const bytes=new TextEncoder().encode(raw);
+ w.ctx.fetchT=async()=>new Response(new ReadableStream({start(ctrl){for(let i=0;i<bytes.length;i+=3)ctrl.enqueue(bytes.slice(i,i+3));ctrl.close();}}),{headers:{'content-type':'text/event-stream'}});
+ assert.equal(await w.ctx.chatAPI([],{unfilteredOutput:true}),'你好[我的日程|2099-01-01|09:00|工作]');if(file==='app.js')assert.deepEqual(seen,['你好[我的日程|2099-01-01|09:00|工作]']);
+ w.ctx.fetchT=async()=>new Response(new ReadableStream({start(ctrl){ctrl.enqueue(bytes.slice(0,30));ctrl.error(new Error('lost connection'));}}),{headers:{'content-type':'text/event-stream'}});
+ await assert.rejects(w.ctx.chatAPI([],{unfilteredOutput:true}),/lost connection/);assert.equal(seen.length,file==='app.js'?1:0);
 });

@@ -5,7 +5,7 @@ const app = fs.readFileSync(new URL("../app.js", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../小手机.html", import.meta.url), "utf8");
 const sw = fs.readFileSync(new URL("../sw.js", import.meta.url), "utf8");
 
-assert.match(app, /APP_VER='v1668 · 已删除店铺恢复'/);
+assert.match(app, /APP_VER='v1670 · 日历显示与流式设置'/);
 assert.match(app, /function northUpdateAvailable\(build\)/);
 assert.match(app, /发现新版本 v\$\{esc\(build\)\}/);
 assert.match(app, /不需要退出或划掉小手机/);
@@ -14,8 +14,15 @@ assert.match(app, /setInterval\(\(\)=>reg\.update\(\)\.catch\(\(\)=>\{\}\),15\*6
 assert.match(app, /postMessage\(\{type:'north-version-query'\}\)/);
 assert.match(sw, /client\.postMessage\(\{type:'north-update-ready',build:BUILD\}\)/);
 assert.match(sw, /event\.data\.type!==['"]north-version-query['"]/);
-assert.match(html, /window\.__NORTH_SHELL_BUILD__='1668'/);
-assert.match(html, /sw\.js\?v=1668&r=v1668-couple-unbind-reopen-1/);
-assert.match(html, /web-hotfix\.js\?v=1668&r=v1668-couple-unbind-reopen-1/);
+assert.match(html, /window\.__NORTH_SHELL_BUILD__='1670'/);
+assert.match(html, /sw\.js\?v=1670&r=v1670-couple-unbind-reopen-1/);
+assert.match(html, /web-hotfix\.js\?v=1670&r=v1670-couple-unbind-reopen-1/);
 
 console.log("update prompt tests passed");
+
+const {default:vm}=await import('node:vm');
+const northUpdateCheckLine=app.split('\n').find(line=>line.startsWith('function northUpdateCheck('));
+let queried=0,checked=0;const updateContext={Promise,navigator:{serviceWorker:{controller:{postMessage(){queried++;}}}}};vm.createContext(updateContext);vm.runInContext(northUpdateCheckLine,updateContext);
+await updateContext.northUpdateCheck({update:async()=>{checked++;}});assert.equal(queried,1);assert.equal(checked,1);
+await updateContext.northUpdateCheck({active:{postMessage(){queried++;}},update:async()=>{throw new Error('offline');}});assert.equal(queried,2);
+assert.match(app,/addEventListener\('controllerchange',ask\)/);assert.match(app,/worker.state==='activated'/);

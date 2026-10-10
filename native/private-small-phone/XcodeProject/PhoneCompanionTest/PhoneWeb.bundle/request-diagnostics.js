@@ -25,17 +25,40 @@
   let format='missing-content';if(typeof content==='string')format=content.trim()?'text':'empty-content';else if(content!=null)format='non-string-content';else if(value&&(value.output_text!=null||value.candidates||value.content))format='alternate-format';
   patch(row,{inputTokens:typeof(value&&value.usage&&value.usage.prompt_tokens)==='number'?value.usage.prompt_tokens:null,outputTokens:typeof(value&&value.usage&&value.usage.completion_tokens)==='number'?value.usage.completion_tokens:null,format,bodyChars:typeof content==='string'?content.length:0,finishReason:scrub(choice&&choice.finish_reason||''),responseModel:scrub(value&&value.model||''),responseId:scrub(value&&value.id||'')});
  }
- async function read(res,row){
+ // Streaming is assembled before any action protocol is consumed. Never retry a paid request here.
+ function streamData(raw){
+  let content='',complete=false,result={choices:[{message:{role:'assistant',content:''},finish_reason:null}]};
+  for(const block of raw.replace(/\r\n/g,'\n').split(/\n\n+/)){
+   const payload=block.split('\n').filter(line=>line.startsWith('data:')).map(line=>line.slice(5).replace(/^ /,'')).join('\n');
+   if(!payload)continue;if(payload.trim()==='[DONE]'){complete=true;break;}
+   let part;try{part=JSON.parse(payload);}catch(_){throw new Error('流式回复格式损坏，未执行角色操作');}
+   if(part.error)throw new Error('流式接口失败：'+scrub(part.error.message||'未知错误'));
+   if(part.id)result.id=part.id;if(part.model)result.model=part.model;if(part.usage)result.usage=part.usage;
+   const choice=(part.choices||[]).find(x=>x.index==null||x.index===0);if(!choice)continue;
+   const delta=choice.delta||choice.message||{},text=delta.content;
+   if(typeof text==='string')content+=text;else if(Array.isArray(text))content+=text.filter(x=>x&&x.type==='text').map(x=>x.text||'').join('');
+   if(choice.finish_reason){result.choices[0].finish_reason=choice.finish_reason;complete=true;}
+  }
+  if(!complete)throw new Error('流式回复意外中断，未执行角色操作，请确认后再重试');
+  result.choices[0].message.content=content;return result;
+ }
+ async function streamBody(res,timeout){
+  if(!res.body||typeof res.body.getReader!=='function')return res.text();
+  const reader=res.body.getReader(),decoder=new TextDecoder(),limit=Math.max(10000,Math.min(190000,+timeout||190000));let timer,raw='';
+  try{return await Promise.race([(async()=>{for(;;){const chunk=await reader.read();if(chunk.done)break;raw+=decoder.decode(chunk.value,{stream:true});}return raw+decoder.decode();})(),new Promise((_,reject)=>{timer=setTimeout(()=>{reader.cancel().catch(()=>{});reject(new Error('流式回复读取超时，未执行角色操作'));},limit);})]);}finally{clearTimeout(timer);try{reader.releaseLock();}catch(_){}}
+ }
+ async function read(res,row,opt){opt=opt||{};
+
   const header=name=>{try{return res.headers.get(name)||'';}catch(_){return '';}};
   patch(row,{status:Number(res.status)||0,contentType:scrub(header('content-type')),requestId:scrub(header('x-request-id')||header('request-id')||header('x-trace-id')),state:'reading',reason:'已收到响应头，读取正文'});
   let result=null;
   try{
    if(typeof res.text==='function'){
-    const raw=await res.text();patch(row,{responseChars:raw.length});
+    const raw=opt.stream&&res.ok?await streamBody(res,opt.timeout):await res.text();patch(row,{responseChars:raw.length});
     if(row)previews.set(row.id,scrub(raw.slice(0,400)));
-    try{result=JSON.parse(raw);}catch(_){patch(row,{format:/^\s*(?:data:|event:)/.test(raw)?'sse':raw.trim()?'invalid-json':'empty-body'});}
+    if(opt.stream&&res.ok&&(/^\s*(?:data:|event:|:)/.test(raw)||/event-stream/i.test(header('content-type'))))result=streamData(raw);else try{result=JSON.parse(raw);}catch(_){patch(row,{format:/^\s*(?:data:|event:)/.test(raw)?'sse':raw.trim()?'invalid-json':'empty-body'});}
    }else result=await res.json();
-  }catch(e){patch(row,{format:'body-read-failed',failureStage:'reading-body',rawError:scrub(e&&e.message||e),errorName:scrub(e&&e.name||'')});}
+  }catch(e){patch(row,{format:'body-read-failed',failureStage:'reading-body',rawError:scrub(e&&e.message||e),errorName:scrub(e&&e.name||'')});if(opt.stream&&res.ok)throw e;}
   if(result!=null)data(row,result);
   return result;
  }

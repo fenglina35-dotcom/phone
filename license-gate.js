@@ -291,7 +291,8 @@
         if (temporary && !firstTemporary) firstTemporary = error;
         if (error && error.permanent && !firstPermanent) firstPermanent = error;
         const mayBelongToAnotherBackend = !!(body && body.sessionToken) || ['restore_options', 'restore_verify'].includes(action);
-        const shouldTryNext = index + 1 < endpoints.length && (temporary || (mayBelongToAnotherBackend && error && error.permanent));
+        const missingSessionRead = ['session_check', 'session_list'].includes(action) && !!(body && body.sessionToken) && error && error.server && Number(error.status) === 409 && error.code === 'license-session-missing';
+        const shouldTryNext = index + 1 < endpoints.length && (temporary || missingSessionRead || (mayBelongToAnotherBackend && error && error.permanent));
         if (!shouldTryNext) {
           if (index + 1 >= endpoints.length && firstTemporary && !temporary) throw firstTemporary;
           throw error;

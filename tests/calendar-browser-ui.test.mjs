@@ -110,3 +110,15 @@ test('a role response is scoped to its invitation and a failed response persiste
 
 
 test('calendar home exit returns to the phone desktop without changing schedules or period records',()=>{const c=calendarVM();c.S.calendar=[{id:'saved',date:'2026-10-10',title:'保留'}];c.S.periods=[{id:'period',startDate:'2026-10-01'}];let exits=0;c.home=()=>exits++;vm.runInContext("let _calSaving=false,_calPanel='',_calSearchOpen=true;",c);vm.runInContext(source.split('\n').find(x=>x.startsWith('function calHome(')),c);const before=JSON.stringify(c.S);c.calHome();assert.equal(exits,1);assert.equal(JSON.stringify(c.S),before);assert.equal(vm.runInContext('_calSearchOpen',c),false);vm.runInContext('_calSaving=true;',c);c.calHome();assert.equal(exits,1);});
+
+// New events must not silently inherit a hidden collection.
+test('manual calendar defaults remain visible when every collection is hidden',()=>{
+ const c=calendarVM();Object.assign(c,{calEnsure(){},uid:()=> 'new',_calSaving:false});
+ c.S.calendarCollections=[{id:'hidden',owner:'main',visible:false}];
+ vm.runInContext(source.split('\n').find(x=>x.startsWith('function calNewEvent(')),c);
+ c.calNewEvent('2026-10-08');assert.equal(c._calEventDraft.calendarId,'');
+ c.S.calendarPreferences={main:{legacyVisible:false}};
+ assert.equal(c.calEventVisible({...c._calEventDraft,owner:'main',editorVersion:1}),true);
+ assert.equal(c.calEventVisible({date:'2026-10-08',title:'old'}),false);
+ assert.equal(c.calEventVisible({calendarId:'hidden',owner:'main',editorVersion:1}),false);
+});

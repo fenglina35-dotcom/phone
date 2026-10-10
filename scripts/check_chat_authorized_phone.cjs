@@ -24,6 +24,19 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
    if(typeof NorthTravelFlight==='undefined'){const date='2099-10-05';tvInit().trips.push({id:'missing-component-saved-flight',accountId:'main',flightV2:true,from:'北京',to:'上海',date,dep:'09:00',arr:'11:00',cls:'economy',adults:1,children:0,infants:0,people:[{id:'role:'+role.id,name:role.name}],knownRoleIds:[role.id],status:'upcoming',payer:'ta',cid:role.id,price:100,_reminded:true});}
    openChat(role.id);
   });
+  // Real calendar UI: hidden-category defaults, saved participation switches and network setting.
+  await page.evaluate(()=>{S.calendar=[];S.calendarPreferences={main:{legacyVisible:false}};S.calendarCollections=[{id:'gate-hidden',owner:'main',name:'隐藏分类',visible:false}];go('calendar');calNewEvent(todayStr());});
+  await page.getByRole('textbox',{name:'日程标题',exact:true}).fill('手动新建可见回归');
+  await page.evaluate(()=>{_calEventDraft.invitees=[testId];_calEventDraft.roleParticipation={[testId]:{mode:'remind',response:'accepted',prepare:true,followup:true}};calNewRender();});
+  await page.getByRole('button',{name:/只告知/}).click();assert.equal(await page.evaluate(()=>calParticipation(_calEventDraft,testId).mode),'inform');
+  await page.evaluate(()=>calNewSave());await page.waitForFunction(()=>!_calSaving);assert.equal(await page.evaluate(()=>S.calendar.length),1);assert.equal(await page.evaluate(()=>calEventVisible(S.calendar[0])),true);
+  assert(await page.getByText('手动新建可见回归',{exact:true}).count());
+  await page.evaluate(()=>calDetailOpen(S.calendar[0].id,S.calendar[0].date));
+  await page.getByRole('button',{name:/帮我提醒/}).click();await page.waitForFunction(()=>!_calSaving);
+  await page.getByRole('switch',{name:/提前准备/}).click();await page.waitForFunction(()=>!_calSaving);assert.equal(await page.evaluate(()=>calParticipation(S.calendar[0],testId).prepare),true);
+  await page.getByRole('button',{name:/只告知/}).click();await page.waitForFunction(()=>!_calSaving);assert.equal(await page.evaluate(()=>calRoleCanRemind(S.calendar[0],testId)),false);assert.equal(await page.evaluate(()=>calParticipation(S.calendar[0],testId).prepare),false);
+  await page.evaluate(()=>openSettings('network'));await page.getByRole('checkbox',{name:'流式回复',exact:true}).check();assert.equal(await page.evaluate(()=>S.settings.chatStreaming),true);
+  console.log(JSON.stringify({privateApp,manualSaveVisible:true,participationButtons:true,streamToggle:true}));
   // Exercise actual notification handlers and nearby permission controls in both HTML runtimes.
   const controls=await page.evaluate(()=>{
    const role=getC(testId);home();showMsgBanner(role,{type:'text',content:'手势测试消息'});
@@ -90,8 +103,8 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
   assert.equal(auto.calls,1,JSON.stringify(auto));assert(auto.delivered,JSON.stringify(auto));
   if(process.env.NORTH_MISSING_FLIGHT==='1'&&!privateApp){await page.evaluate(()=>openChat(S.contacts[0].id));await page.waitForTimeout(2500);await page.screenshot({path:path.join(root,'.codex_tmp/eight-chat/chat-missing-flight.png')});}
   await page.evaluate(async()=>{S.couple.grant={nearby:true};S.couple.locks={nearby:{pwd:'3456',time:Date.now()}};await saveNowAsync();});await page.goto(page.url().split('?')[0]);await page.waitForFunction(()=>window.__northBootReady);
-  const restored=await page.evaluate(()=>{const role=S.contacts[0];return{granted:role.spy.granted,reply:msgs(role.id).some(m=>m.content==='我在，慢慢说。'),sys:buildSystem(role).length,nearbyPermission:!!S.couple.grant.nearby,nearbyLock:appLocked('nearby')};});
-  assert(restored.granted&&restored.reply&&restored.sys>0&&restored.nearbyPermission&&restored.nearbyLock);assert.deepEqual(errors,[]);
+  const restored=await page.evaluate(()=>{const role=S.contacts[0];return{granted:role.spy.granted,reply:msgs(role.id).some(m=>m.content==='我在，慢慢说。'),sys:buildSystem(role).length,nearbyPermission:!!S.couple.grant.nearby,nearbyLock:appLocked('nearby'),streaming:S.settings.chatStreaming===true};});
+  assert(restored.granted&&restored.reply&&restored.sys>0&&restored.nearbyPermission&&restored.nearbyLock&&restored.streaming);assert.deepEqual(errors,[]);
   console.log(JSON.stringify({privateApp,composerAndManualReply:true,automaticInspection:auto,persisted:true}));
   console.log(JSON.stringify({privateApp,refreshAndSinceAndRevocation:true,pageErrors:errors.length}));
   await page.close();
