@@ -126,3 +126,30 @@ test('control notices are a transient toast, only for real lock/unlock, never a 
     assert.ok(!src.includes("content:'🔐 '"), `${label}: 不带表情`);
   }
 });
+
+for(const [label,src] of BUILDS)test(label+' current explicit app target cannot be replaced by an old collective reference',()=>{
+ const c={companionLatestUserText:()=> '前面那几个都锁了',companionRoleRequestedScope:()=> '',companionMentionedExternalTargets:()=> [],companionRoleReferenceCount:()=>0,companionRecentExternalGroup:()=>[{name:'放映室'}],companionRecentUniqueExternal:()=>({name:'放映室'}),companionAllExternalIntent:()=>false,LOCKABLE:{wechat:'微信',cinema:'放映室'},APPNAME2KEY:{微信:'wechat'}};
+ vm.runInNewContext(one(src,'_appKeys')+'\n'+one(src,'companionResolveRoleActionTarget')+'\nglobalThis.f=companionResolveRoleActionTarget;',c);assert.equal(c.f({}, {id:'r'},'微信','微信已经锁上了。前面那几个也别用。').text,'微信');
+});
+for(const [label,src] of BUILDS)test(label+' a target containing 全 is not an all-app command',()=>{const c={LOCKABLE:{wechat:'微信',cinema:'放映室'},APPNAME2KEY:{微信:'wechat'}};vm.runInNewContext(one(src,'_appKeys')+'\nglobalThis.f=_appKeys;',c);assert.deepEqual(Array.from(c.f('安全浏览器',Object.keys(c.LOCKABLE),()=>true)),[]);assert.deepEqual(Array.from(c.f('全部应用',Object.keys(c.LOCKABLE),()=>true)),['wechat','cinema']);});
+function controlExecutionFixture(src){
+ const role={id:'r',name:'角色'},c={S:{couple:{cid:'r',grant:{wechat:true,cinema:true},locks:{wechat:{pwd:'1234'}}}},LOCKABLE:{wechat:'微信',cinema:'放映室'},APPNAME2KEY:{微信:'wechat'},routePhoneInspectionTags:x=>x,companionApplyReadTags:x=>({content:x,changed:false}),roleDiaryPasswordIntent:()=>'',rolePhonePasswordIntent:()=>'',companionState:()=>({roleAccess:false}),companionAllExternalIntent:x=>/全部|所有/.test(x),companionDispatchRoleAll(action){if(action==='lock')this.S.couple.locks.cinema={pwd:'1234'};return true;},companionStripSupersededAllControlTags:x=>x,genPwd:()=> '1234',roleInterceptDiagnosticAction(){},controlNameKnown:()=>true,controlResolveUnknownApps:async()=>false,controlTargetName:(a,x)=>x,save(){},render(){},toast(){},cur:()=>({p:'chat'}),msgs:()=>[]};
+ vm.createContext(c);const start=src.indexOf('function applyControlTags('),end=src.indexOf('\nlet _ctFired=',start);vm.runInContext('let _ctFired=false,_collarTagFired=false,_controlRetrying=false;\n'+one(src,'_appKeys')+'\n'+one(src,'companionAllControlClauseAction')+'\n'+one(src,'roleAllLockAnnounced')+'\n'+one(src,'companionRequestedAllControlAction')+'\n'+src.slice(start,end),c);return {c,role};
+}
+for(const [label,src] of BUILDS)test(label+' explicit refusal cannot execute a contradictory unlock tag',()=>{const {c,role}=controlExecutionFixture(src);c.applyControlTags('不给你解锁。[解锁|微信]',role,'r');assert(c.S.couple.locks.wechat);});
+
+for(const [label,src] of BUILDS)test(label+' nested inner thoughts cannot lock every app',()=>{const {c,role}=controlExecutionFixture(src);c.companionDispatchRoleAll=()=>{c.S.couple.locks.cinema={pwd:'1234'};return true;};c.applyControlTags('[内心|想[锁定|全部应用]和[解锁|微信]，但没有决定]\n嗯。',role,'r');assert.equal(c.S.couple.locks.cinema,undefined);assert(c.S.couple.locks.wechat);});
+
+for(const [label,src] of BUILDS)test(label+' unlock refusal is scoped while positive and quoted replies still work',()=>{for(const text of ['微信不解，放映室给你解了。[解锁|放映室]','你刚才说“不给解锁”，但我现在给你解了。[解锁|微信]']){const {c,role}=controlExecutionFixture(src);c.S.couple.locks.cinema={pwd:'1234'};c.applyControlTags(text,role,'r');if(text.startsWith('微信不解')){assert(c.S.couple.locks.wechat);assert.equal(c.S.couple.locks.cinema,undefined);}else assert.equal(c.S.couple.locks.wechat,undefined);}});
+
+for(const [label,src] of BUILDS)test(label+' a think block cannot unlock apps or trigger natural control confirmation',()=>{const {c,role}=controlExecutionFixture(src);c.applyControlTags('<think>我想先[解锁|微信]，但没有决定。</think>\n不解，先等等。',role,'r');assert(c.S.couple.locks.wechat);const h={};vm.runInNewContext(src.split('\n').find(l=>l.startsWith('const CONTROL_CLAIM_WORD='))+'\n'+one(src,'controlClaimCandidates')+'\nglobalThis.f=controlClaimCandidates;',h);assert.deepEqual(Array.from(h.f('<think>我已经把微信解开了。</think>\n不解。')),[]);});
+
+for(const [label,src] of BUILDS)test(label+' late app-name resolution cannot apply after a newer user turn',async()=>{let finish,applied=0,rows=[{id:'u1',role:'user',type:'text',content:'先等等'}];const role={id:'r'},ctx={S:{couple:{cid:'r'}},actId:()=> 'main',msgs:()=>rows,controlAvailableNames:()=>['微信'],chatAPI:()=>new Promise(r=>finish=r),stripJSON:x=>x,applyControlTags(){applied++;},_ctFired:true,_controlRetrying:false};vm.createContext(ctx);const begin=src.indexOf('async function controlResolveUnknownApps(');vm.runInContext(src.slice(begin,src.indexOf('\nfunction roleActionEnvelopeContent(',begin)),ctx);const pending=ctx.controlResolveUnknownApps([{name:'微信App',act:'解锁',arg:'微信App'}],role,'r');rows.push({id:'u2',role:'user',type:'text',content:'不用解了'});finish('{"微信App":"微信"}');await pending;assert.equal(applied,0);});
+
+for(const [label,src] of BUILDS)test(label+' full lock requires a saved visible current declaration',()=>{
+ for(const [text,saved,want] of [['',true,false],['[内心|我要锁住全部应用]',true,false],['明天把全部应用锁上。',true,false],['我现在把全部应用锁上。',false,false],['我现在把全部应用锁上。',true,true]]){
+ const {c,role}=controlExecutionFixture(src);c.companionDispatchRoleAll=()=>{c.S.couple.locks.cinema={pwd:'1234'};return true;};const args=['[锁定|全部应用]',role,'r',null,''];if(label==='web')args.push(undefined);args.push(text,saved);c.applyControlTags(...args);assert.equal(!!c.S.couple.locks.cinema,want,text+' saved='+saved);
+ }
+});
+
+for(const [label,src] of BUILDS)test(label+' declared all-lock still locks authorized internal apps without an external iPhone',()=>{const {c,role}=controlExecutionFixture(src);c.companionDispatchRoleAll=()=>false;const args=['[锁定|全部应用]',role,'r',null,''];if(label==='web')args.push(undefined);args.push('我现在把全部应用锁上。',true);c.applyControlTags(...args);assert(c.S.couple.locks.wechat);assert(c.S.couple.locks.cinema);});

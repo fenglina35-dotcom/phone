@@ -96,6 +96,7 @@ test('all-app companion commands dispatch every selected real iPhone app and eve
     const LOCKABLE={wechat:'微信'};
     function companionState(){return st;}
     function companionReady(value){return !!(value&&value.linked);}
+    function roleAllLockAnnounced(value){return value==='我现在把全部应用锁上。';}
     function companionScopeForAction(){return 'appControl';}
     function companionScope(value){return ['internal','external','both'].includes(value)?value:'';}
     function companionUnifiedLimitInternalIds(){return [];}
@@ -111,7 +112,8 @@ test('all-app companion commands dispatch every selected real iPhone app and eve
     ${functionSource('companionDispatchRoleAll')}
     this.dispatch=companionDispatchRoleByText;
   `, context);
-  assert.equal(context.dispatch('lock', '全部已选 App', { scope: 'external', actor: '角色' }), true);
+  assert.equal(context.dispatch('lock','全部已选 App',{scope:'external',actor:'角色'}),false,'shared cohabitation and other role paths cannot bypass the spoken-before-all-lock gate');
+  assert.equal(context.dispatch('lock', '全部已选 App', { scope: 'external', actor: '角色', announcementSaved:true, decisionText:'我现在把全部应用锁上。' }), true);
   assert.equal(context.dispatch('unlock', '全部已选 App', { scope: 'external', actor: '角色' }), true);
   assert.deepEqual(JSON.parse(JSON.stringify(external)), [
     { action: 'lock', id: 'real.wechat', actor: '角色' },
@@ -200,7 +202,8 @@ test('web and private share the same tag-only control contract', () => {
   assert.equal(normalized(functionSource('companionNaturalAllControlAction', bundled)), normalized(functionSource('companionNaturalAllControlAction')));
   assert.equal(normalized(functionSource('companionRequestedAllControlAction', bundled)), normalized(functionSource('companionRequestedAllControlAction')));
   assert.equal(normalized(functionSource('companionDispatchRoleAll', bundled)), normalized(functionSource('companionDispatchRoleAll')));
-  assert.equal(normalized(functionSource('controlClaimConfirm', bundled)), normalized(confirm));
+  assert.equal(normalized(functionSource('controlClaimConfirm', bundled)), normalized(confirm).replace(",undefined,String(reply||'')",",String(reply||'')")); // Web-only diagnostic outcome is intentionally absent in private.
+  for(const source of [app,bundled]){assert.match(functionSource('controlClaimConfirm',source),/String\(reply\|\|''\),opt\.announcementSaved===true/);assert.match(functionSource('applyControlTags',source),/announcementSaved===true&&roleAllLockAnnounced/);}
   assert.equal(normalized(functionSource('controlClaimCandidates', bundled)), normalized(functionSource('controlClaimCandidates')));
 });
 

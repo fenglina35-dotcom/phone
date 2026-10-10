@@ -122,3 +122,12 @@ test('web source and private iOS bundle both keep the continuity functions they 
   assert.match(functionSource(bundled,'cohabReplyCore'),/cohabReplyHistory\(c,o\)/);
   assert.match(functionSource(bundled,'cohabReplyCore'),/cohabRepairMessages\(c,o,turn/);
 });
+
+for(const [label,src] of [['web',app],['private',bundled]])test(label+' a previous photo cannot become a mandatory response in an unrelated new turn',()=>{
+ const rows=[{id:'photo',role:'user',type:'image',desc:'轮回对戒'}, {role:'assistant',type:'text',content:'已经看过了'}, {id:'now',role:'user',type:'text',content:'好～'}],ctx=vm.createContext({S:{settings:{hist:12}},id:'r',msgs:()=>rows,lastRounds:r=>r,note:'',_lu:rows[2],_userText:'好～'});
+ const line=src.split('\n').find(l=>l.trim().startsWith('const _recentVision='));vm.runInContext(line+'\nglobalThis.guard=_visionGuard;',ctx);assert.equal(ctx.guard,'');
+});
+
+for(const [label,src] of [['web',app],['private',bundled]])test(label+' old dismissive words remain remembered but cannot be described as just now in a new thought',()=>{const now=Date.now(),rows=[{role:'user',at:now-7200000,text:'滚'}, {role:'assistant',at:now-7199000,text:'先冷静'}, {role:'user',at:now-1000,text:'好～'}],c={id:'r'},ctx=vm.createContext({Date,roleInteractionRows:()=>rows,wechatNaturalOn:()=>true,rememberValidInnerThought(){}});for(const name of ['roleThoughtRecencyText','naturalInnerThoughtText','setNaturalInnerThought'])vm.runInContext(functionSource(src,name),ctx);ctx.setNaturalInnerThought(c,'她刚才让我滚，我还有点不高兴');assert.match(c.innerThought,/之前让我滚/);assert.doesNotMatch(c.innerThought,/刚才/);});
+
+for(const [label,src] of [['web',app],['private',bundled]])test(label+' thinking about a query or food order cannot execute it',()=>{const ctx=vm.createContext({String});vm.runInContext(functionSource(src,'roleActionEnvelopeContent'),ctx);const clean=ctx.roleActionEnvelopeContent('[内心|想[查店铺|奶茶]，也想[点外卖|奶茶|15|店|无|温热|1]，还没决定]\n好～\n[锁定|微信]');assert.doesNotMatch(clean,/查店铺|点外卖/);assert.match(clean,/内心/);assert.match(clean,/好～/);assert.match(clean,/\[锁定\|微信\]/);const query=src.indexOf('const _shopAction=content.match('),envelope=src.lastIndexOf('content=roleActionEnvelopeContent(content);',query);assert(envelope>=0&&envelope<query);});

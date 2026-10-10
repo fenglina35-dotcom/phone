@@ -366,7 +366,24 @@ function roleTranscriptConversationBoundary(profile: Record<string, unknown>) {
   };
 }
 
+function roleVerifiedConversationBoundary(profile) {
+  const raw = profile?.automation_config?.conversationBoundary;
+  const userAt = Number(raw?.userAt || 0), recordedAt = typeof profile?.last_user_at === "number" ? profile.last_user_at : Date.parse(String(profile?.last_user_at || ""));
+  if (!raw || raw.hasUser !== true || !Number.isFinite(userAt) || !Number.isFinite(recordedAt) || userAt <= 0 || Math.abs(userAt - recordedAt) > 1000 || userAt > Date.now() + 60000) return null;
+  return { hasUser: true, answered: raw.answered === true, userText: String(raw.userText || "").trim().slice(0, 320), assistantMessages: Array.isArray(raw.assistantMessages) ? raw.assistantMessages.map(value => String(value || "").trim()).filter(Boolean).slice(-6) : [], userAt };
+}
+
+function roleOldThoughtRecencyText(value, profile) {
+  const text = String(value || "");
+  if (!/(?:你|她|他|对方|ta).{0,6}(?:刚才|刚刚|方才).{0,8}(?:让我|叫我|喊我).{0,4}(?:滚|走开|别烦)/i.test(text)) return text;
+  const current = roleVerifiedConversationBoundary(profile);
+  if (current && Date.now() - current.userAt < 600000 && /滚|走开|别烦/.test(current.userText)) return text;
+  return text.replace(/(?:你|她|他|对方|ta).{0,6}(?:刚才|刚刚|方才).{0,8}(?:让我|叫我|喊我).{0,4}(?:滚|走开|别烦)/gi, clause => clause.replace(/刚才|刚刚|方才/g, "之前"));
+}
+
 function roleStructuredConversationBoundary(profile: Record<string, unknown>) {
+  const current = typeof roleVerifiedConversationBoundary === "function" ? roleVerifiedConversationBoundary(profile) : null;
+  if (current) return current;
   const transcript = roleTranscriptConversationBoundary(profile);
   if (transcript) return transcript;
   const automation = profile?.automation_config && typeof profile.automation_config === "object"
@@ -665,8 +682,10 @@ async function roleMessage(
     recent ? `你最近通过这条后台主动联系通道发过：\n${recent}` : "这条后台主动联系通道暂时没有近期消息。",
     timeAware && lastUserAt ? `距离同一角色最近一次真实互动约 ${silenceMinutes} 分钟。` : "不提供用户沉默时长。",
     `本次对话边界：${turnBoundary.text}`,
-    ordinaryProactive ? '从你自己最后已经说到的位置继续；不要只把已经问过的问题换个说法再问。仅沉默时长增加、手机仍满电或位置未变不算新的进展，也不证明用户在躲避你。可以分享新的想法、具体日常或自然换话题；没有新内容时按本轮静默规则决定。' : '',
+    ordinaryProactive ? '本轮是独立主动联系，已结束的旧图片、旧争执和旧请求只当历史，不能重播成刚发生；只有真实未完成的交代可以自然关心下一步。不要只把已经问过的问题换个说法再问。仅沉默时长增加、手机仍满电或位置未变不算新的进展，也不证明用户在躲避你。可以分享新的想法、具体日常或自然换话题；没有新内容时按本轮静默规则决定。' : '',
   ];
+  const currentFocus = roleStructuredConversationBoundary(profile);
+  if (currentFocus?.hasUser) prompt.push(`最近一轮真实用户输入：${currentFocus.userText}。这一轮${currentFocus.answered ? "已经回答完，只是背景，不能再次回答" : "仍在等待正常回复"}。已给出的回答：${currentFocus.assistantMessages.join("；")}。不要把历史图片当新上传，也不要把旧话说成刚才的新话；是否另开新话题由你本人决定。`);
   if (!timeAware) {
     prompt[4] = "时间感知已关闭：不知道当前日期、时间、星期、时段或间隔，不得推测。";
   }
@@ -768,9 +787,10 @@ async function roleMessage(
           )) return { kind: "unavailable", body: "", reason: "private-model-refusal" };
           const languageDecision = appDecision ? parseRoleAppDecision(rawText) : null;
           if (roleReplyEnglishOnly(rawText) || languageDecision && (roleReplyEnglishOnly(languageDecision.body) || roleReplyEnglishOnly(languageDecision.failureBody))) return { kind: "unavailable", body: "", reason: "english-only-output" };
-          const text = unfilteredOutput ? rawText : rawText
+          let text = unfilteredOutput ? rawText : rawText
             .replace(/<think>[\s\S]*?<\/think>/gi, "")
             .trim().replace(/^[“\"']|[”\"']$/g, "");
+          if (!unfilteredOutput) text = roleOldThoughtRecencyText(text, profile);
           if (!text) return manualUnlockEvent
             ? roleManualUnlockFailureResult(eventContext, repeatCandidates)
             : { kind: "unavailable", body: "", reason: "empty-model-output" };
@@ -1228,6 +1248,8 @@ function snapshotAutomationFacts(snapshot: Record<string, unknown>, kind: string
 }
 
 function roleRecentTurnBoundary(profile: Record<string, unknown>) {
+  const current = typeof roleVerifiedConversationBoundary === "function" ? roleVerifiedConversationBoundary(profile) : null;
+  if (current) return current.answered ? {pending:false,text:"用户最近一条消息已经得到回复，上一轮已经结束；这次只能独立主动联系，不能重播旧图片或旧话题。"} : {pending:true,text:"最新用户消息尚未得到正常回复，本次正式主动联系保持安静。"};
   const raw = String(profile?.recent_context || "");
   if (/\[对话边界\]\s*用户最近一条(?:微信|共同生活|电话)?消息已经得到角色回复/.test(raw)) {
     return { pending: false, text: "用户最后一条消息已经由角色回复，上一轮已经结束；不得再次回答、复述或改写那一轮。" };
