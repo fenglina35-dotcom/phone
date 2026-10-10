@@ -37,6 +37,27 @@ async function friendRpcRelay(request, url, headers, fetchUpstream, timeoutMs) {
     return new Response(data,{status:response.status,headers});
   }catch(_){return reply(502,{message:controller.signal.aborted?'friend-upstream-timeout':'friend-upstream-unreachable'});}finally{clearTimeout(timer);}
 }
+// Private role sync uses its original independent database. No general companion proxy.
+const ROLE_SYNC_RPC = new Set(['phone_role_background_enqueue','phone_role_background_cancel','phone_role_background_complete_turn','phone_role_push_pull','phone_role_push_ack','phone_role_push_status','phone_role_push_upsert_profile','phone_role_push_disable_profile','phone_role_push_touch_activity','phone_role_push_reset_memory']);
+async function roleSyncRelay(request,url,headers,fetchUpstream,timeoutMs){
+ const reply=(status,body)=>new Response(JSON.stringify(body),{status,headers});
+ if(url.search)return reply(400,{message:'query-not-accepted'});
+ if(url.pathname==='/companion/health')return request.method==='GET'?reply(200,{ok:true,code:'private-role-sync-relay-v1'}):reply(405,{message:'method-not-allowed'});
+ const taskStatus=url.pathname==='/companion/functions/v1/phone-role-push',fn=url.pathname.slice('/companion/rest/v1/rpc/'.length);
+ if(!taskStatus&&(!url.pathname.startsWith('/companion/rest/v1/rpc/')||!ROLE_SYNC_RPC.has(fn)))return reply(404,{message:'role-sync-rpc-not-allowed'});
+ if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{...headers,'Access-Control-Allow-Methods':'POST, OPTIONS','Access-Control-Allow-Headers':'content-type, apikey, authorization'}});
+ if(request.method!=='POST')return reply(405,{message:'method-not-allowed'});
+ if(!/^application\/json(?:;|$)/i.test(request.headers.get('Content-Type')||''))return reply(415,{message:'json-required'});
+ const apikey=cleanText(request.headers.get('apikey'),2048),authorization=cleanText(request.headers.get('Authorization'),4096);
+ if(!apikey||!/^Bearer [A-Za-z0-9_.-]+$/.test(authorization))return reply(401,{message:'role-sync-auth-required'});
+ let body;try{body=await boundedBody(request,1048576);if(body===null)return reply(413,{message:'body-too-large'});const data=JSON.parse(body);if(taskStatus&&data.action!=='task_status')return reply(403,{message:'role-sync-action-not-allowed'});const target=taskStatus?data.target:data.p_target,secret=taskStatus?data.ownerSecret:data.p_owner_secret;if(!data||typeof data!=='object'||Array.isArray(data)||typeof target!=='string'||!target||typeof secret!=='string'||secret.length<24)return reply(400,{message:'role-sync-owner-required'});}catch(_){return reply(400,{message:'invalid-json'});}
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),Math.max(1,timeoutMs));
+ try{const response=await fetchUpstream((taskStatus?'https://qvuahlqimcfgeoetosnl.supabase.co/functions/v1/phone-role-push':'https://qvuahlqimcfgeoetosnl.supabase.co/rest/v1/rpc/'+fn),{method:'POST',headers:{'Content-Type':'application/json',apikey,Authorization:authorization},body,signal:controller.signal,redirect:'manual'});
+ if(response.status>=300&&response.status<400)return reply(502,{message:'role-sync-redirect-rejected'});
+ const text=await response.text();try{JSON.parse(text);}catch(_){return reply(502,{message:'role-sync-invalid-response'});}
+ return new Response(text,{status:response.status,headers});
+ }catch(_){return reply(502,{message:controller.signal.aborted?'role-sync-timeout':'role-sync-unreachable'});}finally{clearTimeout(timer);}
+}
 const MAX_TTS_BODY = 16384;
 const TTS_PROVIDERS = new Set(['minimax','fish','mossland','elevenlabs','hume']);
 async function boundedBody(request, maxBody = MAX_BODY) {
@@ -151,6 +172,7 @@ export function createHandler(fetchUpstream = (input, init) => fetch(input, init
     if (origin === APP_ORIGIN || origin === 'null') headers['Access-Control-Allow-Origin'] = origin;
     const reply = (status, body) => new Response(JSON.stringify(body), {status, headers});
     if (origin && origin !== APP_ORIGIN && origin !== 'null') return reply(403, {ok:false, code:'origin-not-allowed'});
+    if(url.pathname.startsWith('/companion/'))return roleSyncRelay(request,url,headers,fetchUpstream,timeoutMs);
     if(url.pathname.startsWith('/rest/v1/rpc/'))return friendRpcRelay(request,url,headers,fetchUpstream,timeoutMs);
     const health = url.pathname === '/health';
     const externalTts = url.pathname === EXTERNAL_TTS_PATH;

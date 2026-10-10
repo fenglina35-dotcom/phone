@@ -100,7 +100,8 @@ test('private phone account can claim the sole companion controller without unpa
   assert.match(controllerMigration, /grant execute[\s\S]+to authenticated/i);
   assert.match(app, /privatePhoneClaimCompanionController/);
   assert.match(app, /async function companionRpc\([^\n]+let claimError=null/,'an account outage must not preempt an already-linked owner RPC');
-  assert.match(app, /async function companionRpc\([^\n]+catch\(e\)[^\n]+claimError=e[^\n]+fetchT\(/,'the existing secure link is verified by the server after a failed account refresh');
+  assert.match(app, /async function companionRpc\([^\n]+catch\(e\)[^\n]+claimError=e[^\n]+roleSyncRpcFetch\(/,'the existing secure link is still verified by the server after a failed account refresh');
+  assert.match(app,/return await fetchT\(endpoint,opt,ms\)/,'the fixed transport must preserve the original authenticated request');
   assert.match(app, /async function companionRpc\([^\n]+if\(claimError&&unlinked\)throw claimError/,'first-time or genuinely unlinked devices still require the private account claim');
   assert.match(app, /name!==['"]phone_companion_begin_pairing['"]/);
   assert.match(bridge, /companion\.controller\.claim/);

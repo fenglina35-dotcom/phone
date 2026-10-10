@@ -27,15 +27,15 @@ function functionSource(name){
 }
 
 test('v1178 has a unique visible identity across every public entry and cache layer',()=>{
-  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1674\'/);
-  assert.match(app,/APP_VER='v1674 · 角色执行与上下文修复'/);
-  assert.match(shell,/__NORTH_SHELL_BUILD__='1674'/);
-  assert.match(shell,/app\.js\?v=1674&r=v1674-couple-unbind-reopen-1/);
-  assert.match(index,/小手机\.html\?v=1674/);
-  assert.match(repair,/小手机\.html\?v=1674/);
-  assert.match(worker,/const BUILD='1674'/);
-  assert.match(worker,/north-shell-v1674-couple-unbind-reopen-1/);
-  assert.match(hotfix,/sw\.js\?v=1674&r=v1674-couple-unbind-reopen-1/);
+  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1676\'/);
+  assert.match(app,/APP_VER='v1676 · 统一玻璃与后台同步修复'/);
+  assert.match(shell,/__NORTH_SHELL_BUILD__='1676'/);
+  assert.match(shell,/app\.js\?v=1676&r=v1676-couple-unbind-reopen-1/);
+  assert.match(index,/小手机\.html\?v=1676/);
+  assert.match(repair,/小手机\.html\?v=1676/);
+  assert.match(worker,/const BUILD='1676'/);
+  assert.match(worker,/north-shell-v1676-couple-unbind-reopen-1/);
+  assert.match(hotfix,/sw\.js\?v=1676&r=v1676-couple-unbind-reopen-1/);
   for(const [name,source] of Object.entries({app,shell,index,repair,worker,hotfix})){
     assert.doesNotMatch(source,/v?1127/,`${name} must not reuse the prior web version`);
   }

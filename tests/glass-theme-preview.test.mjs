@@ -427,3 +427,64 @@ test('Apple standalone custom status colors are not forced black or overridden b
  assert.doesNotMatch(functionSource('webStatusBarThemeSync'),/appleHomeCompatBrowserEnvironment\(\)\?'black'/);
  assert.match(css,/html\.north-glass-ui\.north-shell-custom body\{background-color:var\(--north-shell-status-color\)!important\}/);
 });
+
+
+test('optical lab validates a separate bounded recipe while retaining explicit zero',()=>{const preview=fs.readFileSync(path.join(root,'theme-real-preview.html'),'utf8'),fields=preview.slice(preview.indexOf('const GL_LAB_FIELDS=['),preview.indexOf('const GL_LAB_KEY=')),normalize=preview.split(/\r?\n/).find(x=>x.startsWith('function glLabNormalize(')),ctx={};vm.createContext(ctx);vm.runInContext(fields+'\n'+normalize+'\nglobalThis.normalize=glLabNormalize;globalThis.fields=GL_LAB_FIELDS;',ctx);assert.equal(ctx.fields.length,22);const value=ctx.normalize({params:{blur:0,tint:0,ior:99,bend:-10,shadow:'bad',highlight:null}});assert.equal(value.params.blur,0);assert.equal(value.params.tint,0);assert.equal(value.params.ior,2);assert.equal(value.params.bend,0);assert.equal(value.params.shadow,1);assert.equal(value.params.highlight,1);assert.equal(Object.keys(value.params).length,22);assert.match(preview,/GL_LAB_KEY='north-glass-lab-v1'/);assert.match(preview,/glLabState\.active\|\|document\.hidden/);});
+
+
+test('home-only optical trial preserves the approved 22-value recipe and limits surface targets',()=>{const html=fs.readFileSync(path.join(root,'theme-real-preview.html'),'utf8'),line=html.split(/\r?\n/).find(x=>x.startsWith('const GL_HOME_RECIPE=')),profile=JSON.parse(line.slice('const GL_HOME_RECIPE='.length,-1));assert.equal(profile.params.blur,2.25);assert.equal(profile.params.ior,1.38);assert.equal(profile.params.tint,.05);assert.equal(profile.params.dispersion,0);assert.equal(profile.params.materialBlur,0);assert.equal(profile.expand,false);assert.equal(profile.tone,'white');assert.equal(Object.keys(profile.params).length,22);assert.match(html,/assets\/travel-home\/shanghai\.jpg/);assert.match(html,/home-optical-canvas\{[^}]*pointer-events:none/);assert.match(html,/gl\.deleteTexture\(s\.texture\)/);assert.doesNotMatch(html,/localStorage\.setItem\(['"](?:sp|north-core)/);});
+
+
+test('unified optical runtime uses the approved immutable recipe without changing business state',()=>{
+ const source=app.slice(app.indexOf('/* NORTH_OPTICAL_MATERIAL_V1:'));
+ const sandbox={window:{},document:{readyState:'loading',addEventListener(){}},console};
+ vm.runInNewContext(source,sandbox);
+ const runtime=sandbox.window.NorthOpticalGlass;
+ const selected=JSON.parse(fs.readFileSync(path.join(root,'theme-real-preview.html'),'utf8').match(/const GL_HOME_RECIPE=(.*?);/)[1]);
+ assert.equal(JSON.stringify(runtime.recipe),JSON.stringify(selected));
+ assert.ok(Object.isFrozen(runtime.recipe.params));
+ assert.ok(runtime.edgeAt(1,40,100,80,20)>runtime.edgeAt(50,40,100,80,20));
+ for(const x of [-10,0,1,10,50,100,110])for(const y of [0,1,40,80]){
+  const alpha=runtime.edgeAt(x,y,100,80,20);assert.ok(Number.isFinite(alpha)&&alpha>=0&&alpha<=1);
+ }
+ assert.doesNotMatch(source,/\bS\.|localStorage|fetch\(|\.onclick\s*=|\.innerHTML\s*=/);
+ const privateApp=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js'),'utf8');
+ assert.equal(privateApp.slice(privateApp.indexOf('/* NORTH_OPTICAL_MATERIAL_V1:')),source);
+});
+
+
+test('glass CSS discovery handles nested-style CSSOM and disposed callbacks stay inactive',()=>{
+ const source=app.slice(app.indexOf('/* NORTH_OPTICAL_MATERIAL_V1:'));
+ let pending=null,queries=[],disconnected=0,attributes={};
+ const document={readyState:'complete',hidden:false,body:{},styleSheets:[{cssRules:[{selectorText:'.dock',cssRules:[],style:{getPropertyValue:k=>k==='backdrop-filter'?'blur(22px)':''}}]}],querySelector:()=>null,querySelectorAll:s=>{queries.push(s);return[];},documentElement:{dataset:attributes},addEventListener(){},removeEventListener(){}};
+ const sandbox={window:{addEventListener(){},removeEventListener(){}},document,console,MutationObserver:class{observe(){}disconnect(){disconnected++;}},ResizeObserver:class{observe(){}disconnect(){disconnected++;}},requestAnimationFrame:fn=>{pending=fn;return 1;},cancelAnimationFrame:()=>{pending=null;}};
+ vm.runInNewContext(source,sandbox);assert.ok(pending);pending();
+ assert.ok(queries.some(q=>q.includes('.dock')),'native .dock filter must be discovered even when a style rule has cssRules=[]');
+ sandbox.window.NorthOpticalGlass.dispose();assert.equal(disconnected,2);pending=null;
+ sandbox.window.NorthOpticalGlass.refresh();assert.equal(pending,null,'disposed late callbacks must not revive the material');
+});
+
+
+test('optical demo initializes a missing couple without changing normal preview fixtures',()=>{
+ const sandbox={defState:()=>({me:{},settings:{},phoneapp:{rolePhones:{}},couple:null,spy:{}})};
+ vm.createContext(sandbox);vm.runInContext(functionSource('previewSeed'),sandbox);
+ const demo=sandbox.previewSeed('black-role-phone-optical');
+ assert.equal(demo.couple.cid,'preview_1');assert.equal(demo.contacts[0].spy.pwd,'1234');
+ assert.equal(demo.phoneapp.sms['13800000001'].length,2);
+ assert.equal(sandbox.previewSeed('black-home').couple,null);
+});
+
+
+test('glass material discovers styles inserted later into the document head',()=>{
+ const source=app.slice(app.indexOf('/* NORTH_OPTICAL_MATERIAL_V1:'));
+ let callback,pending,observed,queries=[];const styles=[];
+ const document={readyState:'complete',hidden:false,body:{},styleSheets:styles,querySelector:()=>null,querySelectorAll:s=>{queries.push(s);return[];},documentElement:{dataset:{}},addEventListener(){},removeEventListener(){}};
+ const sandbox={document,window:{addEventListener(){},removeEventListener(){}},console,MutationObserver:class{constructor(fn){callback=fn;}observe(el){observed=el;}disconnect(){}},ResizeObserver:class{observe(){}disconnect(){}},requestAnimationFrame:fn=>{pending=fn;return 1;},cancelAnimationFrame(){}};
+ vm.runInNewContext(source,sandbox);pending();assert.equal(observed,document.documentElement);
+ styles.push({cssRules:[{selectorText:'.late-glass-panel',cssRules:[],style:{getPropertyValue:k=>k==='backdrop-filter'?'blur(14px)':''}}]});
+ callback([{type:'childList',target:{tagName:'STYLE'},addedNodes:[]}]);pending();
+ assert.ok(queries.some(s=>s.includes('.late-glass-panel')),'newly injected styles must be discovered without a reload');
+});
+
+
+test('phone control SVG glass is included without changing picture messages or glyph paths',()=>{const source=app.slice(app.indexOf('/* NORTH_OPTICAL_MATERIAL_V1:'));assert(source.includes("el instanceof SVGSVGElement&&el.matches('.phcallctl>svg')"));assert(source.includes("!el.closest('svg,.imsg-b.pic,.bubble.pic,.cal-color-grid,.cal-color-spectrum')"));assert(source.includes('svg,svg *'));assert.doesNotMatch(source,/\.innerHTML\s*=|\.textContent\s*=|setAttribute\('(?:d|viewBox|fill|stroke)'/);});

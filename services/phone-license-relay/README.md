@@ -43,3 +43,17 @@ Worker：north-license-connectivity；默认地址：https://north-license-conne
 正式接入注意：保持原 license-failover 后台身份和数据库；激活响应丢失时不能盲目重试核销；通行密钥 RP 与网页 origin 保持原值；网页/私人兼容和既有授权回归通过后再发布。
 
 管理员登记是用户明确要求：supabase/functions/phone-license/index.ts 的 activateInvite 调用 redeem_invite_license；管理员 adminLicenseUsers 调用 phone_license_admin_page，读取同一套 phone_licenses。正式代理固定转发到 lkhlyfpssmrjkkzhuzag 的备用 phone-license，备用函数必须使用原项目 lovbzibismsjqvjujilz 的 PHONE_SUPABASE_URL 与 PHONE_SERVICE_ROLE_KEY，保留原始业务响应和设备信息，不另建邀请码或用户数据库。当前已核对两项备用函数密钥的 SHA-256 指纹均指向原项目，尚未使用真实新邀请码完成管理员页面登记验收，不能写成已完成真实登记测试。
+
+
+## 2026-10-11 私人角色同步代理候选（未部署）
+
+复用当前 Worker 和 license.smallphoneapp.com，在 /companion/ 下新增固定私人角色同步白名单。GET /companion/health 仅返回 private-role-sync-relay-v1，不读用户数据、不访问上游；POST /companion/rest/v1/rpc/ 仅允许既有 7 个 phone_role_push_* 同步 RPC 及 3 个 phone_role_background_* 交接 RPC，固定原 qvuahlqimcfgeoetosnl 独立项目。另只转发 phone-role-push 的 task_status；拒绝 dispatch_due、shortcut_deliver、账号/备份/真实设备控制、任意上游与查询参数。
+
+保持原 apikey/Authorization/owner secret/payload 及后端所有权核验，不使用 service role、不另建数据库、不改后台模型、定时任务或 APNs；角色资料可能含原模型 Key 和聊天上下文，发布前须明确授权该代理传输。不转发 Cookie，不存储/缓存/打印正文或密钥，1MiB 请求上限，20 秒上游请求与读取超时，不跟随重定向，不自动重试任何未知写结果。客户端先用无凭据健康探测核验入口，完整探测最多3.5秒；不可用时保持原直连，公共 North 项目和原生管控接口保持原路。后台 keepalive 使用已核验的路线，不在退后台时再等待探测。
+
+本地测试包括 HEAD 旧 Worker 明确404、新白名单固定上游、鉴权/owner/Origin/体积/超时/重定向/非JSON/未知ACK只发送一次；客户端网络恢复立即補拉、非数组拒绝不能假称同步成功，以及交接/状态消费者。暂无手机关梯子、生产代理、新私人包或真机验收。用户上一轮明确先不推送/打包；此候选未提交、未部署、未生成包，须发布授权后才能实际生效。
+
+
+## 2026-10-11 已授权部署
+
+已获用户明确传输/发布授权，现有Worker部署46720726，替换前线上05dd1e47与Git基线核验一致。固定健康200、官方Origin预检204、缺owner400、global dispatch403；未真实调用模型或通知。截图复用.cloudflare-deployed.jpg（固定eight-chat目录）。私人1677前台/网页1676使用核验入口；iPhone关闭代理移动网络仍待验收。

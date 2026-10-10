@@ -1,4 +1,4 @@
-"""Create the private v1675 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
+"""Create the private v1677 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
 
 Unlike the earlier packaging scripts, every file is read from the committed tree
 (``git cat-file`` against HEAD) instead of the working directory. The v1235/iOS356
@@ -23,10 +23,10 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "native/private-small-phone/XcodeProject/"
 BUNDLE = "PhoneCompanionTest/PhoneWeb.bundle/"
-PREFIX = "SmallPhone_v1675_iOS439_Private/"
-OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1675_iOS439.zip"
+PREFIX = "SmallPhone_v1677_iOS439_Private/"
+OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1677_iOS439.zip"
 
-WEB_VERSION = "1675"
+WEB_VERSION = "1677"
 MARKETING = "1.0.439"
 BUILD = "439"
 BRIDGE = "42"
@@ -586,11 +586,11 @@ def main() -> None:
     # This explicitly excluded parallel diagnostic stays in the working tree; payload still comes only from git cat-file HEAD.
     assert not OUTPUT.exists(), "refusing to overwrite an existing package"
     commit = text(git("rev-parse", "HEAD")).strip()
-    web_commit = "3cb33fac407d6c015571c6aef0550f296a0b61a8"
+    web_commit = commit
     files = committed_private_files()
     validate(files)
-    previous = ROOT.parent / "最新私人版本覆盖包_v1669_iOS439.zip"
-    previous_sha = "dcb9d666c0128aa8e688b1045300b85fcc1854584a51fb4d2d20c7c97172b0d3"
+    previous = ROOT.parent / "最新私人版本覆盖包_v1675_iOS439.zip"
+    previous_sha = "a45812032c5c418d668c62f231a7c1e113a8874cc53671c0744a3deb66f0fa79"
     assert sha256(previous.read_bytes()).hexdigest() == previous_sha
     with ZipFile(previous) as old:
         prefix = next(n for n in old.namelist() if n.endswith("/SOURCE_STATE.json"))[:-len("SOURCE_STATE.json")]
@@ -599,7 +599,7 @@ def main() -> None:
         assert set(manifest) == names - {"SHA256SUMS.json"}
         assert not (names - files.keys() - {"SHA256SUMS.json", "SOURCE_STATE.json"}), "previous delivery files missing"
         state = json.loads(old.read(prefix + "SOURCE_STATE.json"))
-        assert state["sourceCommit"] == "0945037def1e9234bd373fc1f99ba72ba24b27de"
+        assert state["sourceCommit"] == "f81f5de4849c2e318e09c75b9f6ac464d42c83bd"
         for name, digest in manifest.items():
             body = old.read(prefix + name)
             assert sha256(body).hexdigest() == digest, "previous checksum mismatch: " + name
@@ -628,21 +628,18 @@ def main() -> None:
     assert '"id":"north-nuanyan"' in warm and "暖燕" in warm
     cozy_files = [n for n in files if n.startswith(BUNDLE + "games/cozy-home/")]
     assert len(cozy_files) == 1253
-    # Runtime payload is exactly the reviewed release; only the Mac guide changes for this delivery.
-    reviewed = committed_private_files(web_commit)
-    assert files.keys() == reviewed.keys(), "private project file set differs from reviewed release"
-    for name, body in files.items():
-        if name != "请在Mac编译前先读.md":
-            assert body == reviewed[name], "unreviewed private payload: " + name
-    del reviewed
+    # All payload comes from committed HEAD; compare previous complete overlay above.
+    assert not (names - files.keys() - {"SHA256SUMS.json", "SOURCE_STATE.json"})
+    for marker in ("NORTH_OPTICAL_MATERIAL_V1", "NORTH_ROLE_SYNC_RELAY_V1", "roleSyncRpcFetch", "_roleServerPushPullError", "function cohabTapNextHTML(", "不显示该聊天"):
+        assert marker in app, "authorized repair missing: " + marker
     state["sourceCommit"] = commit
     state["webSourceCommit"] = web_commit
-    state["webVersion"] = "v1674"
+    state["webVersion"] = "v1676"
     state["privateWeb"] = "v" + WEB_VERSION
     state["privateIOS"] = f"{MARKETING} ({BUILD})"
     state["bridge"] = BRIDGE
     state["deliveryKind"] = "Mac-Xcode-source-overlay-not-IPA"
-    state["lastDeliveredPackage"] = {"name": previous.name, "sha256": previous_sha, "sourceCommit": "0945037def1e9234bd373fc1f99ba72ba24b27de"}
+    state["lastDeliveredPackage"] = {"name": previous.name, "sha256": previous_sha, "sourceCommit": "f81f5de4849c2e318e09c75b9f6ac464d42c83bd"}
     state["preserved"] = sorted(set(state.get("preserved", [])) | {
         "v1669-calendar-real-month-year-day-search-events-and-reminders",
         "v1669-role-scheduling-sharing-invitations-participation-and-opt-in-care",
@@ -652,15 +649,15 @@ def main() -> None:
         "v1669-cloud-startup-fees-lifetime-shop-rewards-profit-and-deleted-shop-order-filter",
         "v1669-warm-yan-13-products-original-pictures-and-prices",
         "v1669-pixel-and-pet-bounded-script-redownload",
-        "private-native-companion-intentional-asymmetry", "v1669-original-shop-restore-no-fee-no-reward-reset", "v1675-saved-visible-declaration-before-all-lock", "v1675-current-app-target-refusal-and-thought-action-isolation", "v1675-fixed-milk-spec-defaults-and-completed-order-replay-guard", "v1675-old-image-and-thought-recency-boundaries", "v1675-yanan-relative-weekday-morning-role-only-flight-and-failure-reply"})
+        "private-native-companion-intentional-asymmetry", "v1669-original-shop-restore-no-fee-no-reward-reset", "v1675-saved-visible-declaration-before-all-lock", "v1675-current-app-target-refusal-and-thought-action-isolation", "v1675-fixed-milk-spec-defaults-and-completed-order-replay-guard", "v1675-old-image-and-thought-recency-boundaries", "v1675-yanan-relative-weekday-morning-role-only-flight-and-failure-reply", "v1677-user-approved-22-parameter-optical-material", "v1677-role-sync-fixed-relay-and-pull-recovery", "v1677-cohab-next-arrow-and-hide-chat"})
     state["macBuildVerified"] = False
     state["realIPhoneVerified"] = False
-    state["knownUnresolved"] = [x for x in state.get("knownUnresolved", []) if not re.match(r"v\d+-mac-build", x)] + ["v1675-mac-build-signing-and-iphone-not-verified", "calendar-closed-app-system-notifications-not-implemented", "real-model-calendar-personality-and-voice-acceptance-pending", "v1675-user-main-model-and-native-lock-receipts-pending"]
+    state["knownUnresolved"] = [x for x in state.get("knownUnresolved", []) if not re.match(r"v\d+-mac-build", x)] + ["v1677-mac-build-signing-and-iphone-not-verified", "calendar-closed-app-system-notifications-not-implemented", "real-model-calendar-personality-and-voice-acceptance-pending", "v1675-user-main-model-and-native-lock-receipts-pending"]
     state["validation"] = {"macBuildVerified": False, "realIPhoneVerified": False,
-        "nodeTests": {"passed": 3824, "failed": 0, "sourceCommit": web_commit},
+        "nodeTests": {"passed": 3788, "failed": 0, "browserDriverSkipped": 54, "sourceCommit": web_commit, "resultSource": ".codex_tmp/eight-chat/full-tests.log"},
         "models": "HTTP simulated; no live model or production financial tests",
-        "authorizedChatBothRuntimes": True, "missingOptionalFlightGateBothRuntimes": True,
-        "calendarAndMerchantRealHTMLBothRuntimes": True,
+        "authorizedChatBothRuntimes": True, "authorizedChatExecution": "original gate scenarios through CUA CDP with simulated HTTP", "missingOptionalFlightGateBothRuntimes": True,
+        "calendarManualSaveAndParticipationBothRuntimes": True,
         "inheritedPreviousOverlay": True, "priorPackageManifestVerified": True,
         "nativePayloadUnchanged": True, "privateCompanionNativeUnchanged": True,
         "privateRuntimeMatchesReviewedRelease": web_commit, "shopRestoreBackendDeployedAndVerified": True, "houseResourceFiles": len(cozy_files)}

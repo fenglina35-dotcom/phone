@@ -15,8 +15,8 @@ const privateApp=read('native/private-small-phone/XcodeProject/PhoneCompanionTes
 test('private v1355 inherits the current web theater without dropping its private shell',()=>{
   assert.equal(bundleTheater,theater);
   assert.match(bundleTheater,/guest2|ct_wechat_enabled/);
-  assert.match(webHtml,/app\.js\?v=1674[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1674&r=v1274-web-cohab-guests-1"/);
-  for(const html of [privateHtml,privateAlias])assert.match(html,/app\.js\?v=1675[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1675[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1675&r=v1274-web-cohab-guests-1"/);
+  assert.match(webHtml,/app\.js\?v=1676[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1676&r=v1274-web-cohab-guests-1"/);
+  for(const html of [privateHtml,privateAlias])assert.match(html,/app\.js\?v=1677[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1677[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1677&r=v1274-web-cohab-guests-1"/);
   assert.match(read('sw.js'),/cohab-theater\.js\?v='\+BUILD\+'\&r=v1274-web-cohab-guests-1',kind:'theater'/);
 });
 
@@ -145,7 +145,7 @@ test('guest exit sends exactly one genuine memory-grounded WeChat message',()=>{
 });
 
 test('private artifact identity advances independently to v1355 and iOS 1.0.400 (399)',()=>{
-  assert.match(privateApp,/const APP_VER='v1675 · 角色执行与上下文修复'/);
+  assert.match(privateApp,/const APP_VER='v1677 · 统一玻璃与后台同步修复'/);
   assert.match(privateHtml,/private-runtime-diagnostics\.js\?v=339/);
   assert.match(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),/1\.0\.439 \(439\)/);
   const project=read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
