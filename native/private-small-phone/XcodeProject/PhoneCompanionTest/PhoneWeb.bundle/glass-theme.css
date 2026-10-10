@@ -902,7 +902,10 @@ html:is(#north-optical-material,html) body .spy-profile-info[data-north-optical-
 html:is(#north-optical-material,html) body [data-north-optical-label] .spy-app-label{color:var(--north-optical-ink)!important;text-shadow:0 1px 2px rgba(255,255,255,.35)}
 
 /* Bubble tails retain their existing generated hollow rim rather than receiving a rectangular outline. */
-html:is(#north-optical-material,html) body .imsg-b[data-north-optical]::before{background:linear-gradient(229deg,rgba(235,245,255,.65),rgba(235,245,255,.14) 26%,rgba(235,245,255,.05) 50%,rgba(235,245,255,.25) 76%,rgba(235,245,255,.5))!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html:is(#north-optical-material,html) body .imsg-b[data-north-optical]::before{background:linear-gradient(315deg,rgba(235,245,255,.65),rgba(235,245,255,.14) 26%,rgba(235,245,255,.05) 50%,rgba(235,245,255,.25) 76%,rgba(235,245,255,.5))!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 
 /* Only phone control SVG backgrounds receive the material; glyph paths and red hang-up buttons stay intact. */
 html:is(#north-optical-material,html) body svg[data-north-optical-image][stroke="#fff"]{stroke:var(--north-optical-ink,#fff)}
+
+/* NORTH_OPTICAL_TEXT_V2: glass affects the material, not foreground text shadows. */
+html:is(#north-optical-material,html) body :is(.home-dashboard-card,.home-vinyl-card,.home-sweetie-card)[data-north-optical],html:is(#north-optical-material,html) body :is(.home-dashboard-card,.home-vinyl-card,.home-sweetie-card)[data-north-optical] :is(b,strong,small,em,p,span){text-shadow:none!important}

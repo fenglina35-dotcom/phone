@@ -432,7 +432,7 @@ test('Apple standalone custom status colors are not forced black or overridden b
 test('optical lab validates a separate bounded recipe while retaining explicit zero',()=>{const preview=fs.readFileSync(path.join(root,'theme-real-preview.html'),'utf8'),fields=preview.slice(preview.indexOf('const GL_LAB_FIELDS=['),preview.indexOf('const GL_LAB_KEY=')),normalize=preview.split(/\r?\n/).find(x=>x.startsWith('function glLabNormalize(')),ctx={};vm.createContext(ctx);vm.runInContext(fields+'\n'+normalize+'\nglobalThis.normalize=glLabNormalize;globalThis.fields=GL_LAB_FIELDS;',ctx);assert.equal(ctx.fields.length,22);const value=ctx.normalize({params:{blur:0,tint:0,ior:99,bend:-10,shadow:'bad',highlight:null}});assert.equal(value.params.blur,0);assert.equal(value.params.tint,0);assert.equal(value.params.ior,2);assert.equal(value.params.bend,0);assert.equal(value.params.shadow,1);assert.equal(value.params.highlight,1);assert.equal(Object.keys(value.params).length,22);assert.match(preview,/GL_LAB_KEY='north-glass-lab-v1'/);assert.match(preview,/glLabState\.active\|\|document\.hidden/);});
 
 
-test('home-only optical trial preserves the approved 22-value recipe and limits surface targets',()=>{const html=fs.readFileSync(path.join(root,'theme-real-preview.html'),'utf8'),line=html.split(/\r?\n/).find(x=>x.startsWith('const GL_HOME_RECIPE=')),profile=JSON.parse(line.slice('const GL_HOME_RECIPE='.length,-1));assert.equal(profile.params.blur,2.25);assert.equal(profile.params.ior,1.38);assert.equal(profile.params.tint,.05);assert.equal(profile.params.dispersion,0);assert.equal(profile.params.materialBlur,0);assert.equal(profile.expand,false);assert.equal(profile.tone,'white');assert.equal(Object.keys(profile.params).length,22);assert.match(html,/assets\/travel-home\/shanghai\.jpg/);assert.match(html,/home-optical-canvas\{[^}]*pointer-events:none/);assert.match(html,/gl\.deleteTexture\(s\.texture\)/);assert.doesNotMatch(html,/localStorage\.setItem\(['"](?:sp|north-core)/);});
+test('home-only optical trial preserves the approved 22-value recipe and limits surface targets',()=>{const html=fs.readFileSync(path.join(root,'theme-real-preview.html'),'utf8'),line=html.split(/\r?\n/).find(x=>x.startsWith('const GL_HOME_RECIPE=')),profile=JSON.parse(line.slice('const GL_HOME_RECIPE='.length,-1));assert.equal(profile.params.blur,2.25);assert.equal(profile.params.ior,1.38);assert.equal(profile.params.shadow,.5);assert.equal(profile.params.angle,315);assert.equal(profile.params.thickness,1.9);assert.equal(profile.params.outer,0);assert.equal(profile.params.bevel,3);assert.equal(profile.params.tint,.05);assert.equal(profile.params.dispersion,0);assert.equal(profile.params.materialBlur,0);assert.equal(profile.expand,false);assert.equal(profile.tone,'white');assert.equal(Object.keys(profile.params).length,22);assert.match(html,/assets\/travel-home\/shanghai\.jpg/);assert.match(html,/home-optical-canvas\{[^}]*pointer-events:none/);assert.match(html,/gl\.deleteTexture\(s\.texture\)/);assert.doesNotMatch(html,/localStorage\.setItem\(['"](?:sp|north-core)/);});
 
 
 test('unified optical runtime uses the approved immutable recipe without changing business state',()=>{
@@ -487,4 +487,27 @@ test('glass material discovers styles inserted later into the document head',()=
 });
 
 
-test('phone control SVG glass is included without changing picture messages or glyph paths',()=>{const source=app.slice(app.indexOf('/* NORTH_OPTICAL_MATERIAL_V1:'));assert(source.includes("el instanceof SVGSVGElement&&el.matches('.phcallctl>svg')"));assert(source.includes("!el.closest('svg,.imsg-b.pic,.bubble.pic,.cal-color-grid,.cal-color-spectrum')"));assert(source.includes('svg,svg *'));assert.doesNotMatch(source,/\.innerHTML\s*=|\.textContent\s*=|setAttribute\('(?:d|viewBox|fill|stroke)'/);});
+test('phone control SVG keeps original material without changing picture messages or glyph paths',()=>{const source=app.slice(app.indexOf('/* NORTH_OPTICAL_MATERIAL_V1:'));assert(!source.includes(".phcallctl>svg"));assert(source.includes("!el.closest('svg,.imsg-b.pic,.bubble.pic,.cal-color-grid,.cal-color-spectrum')"));assert(source.includes('svg,svg *'));assert.doesNotMatch(source,/\.innerHTML\s*=|\.textContent\s*=|setAttribute\('(?:d|viewBox|fill|stroke)'/);});
+
+
+test('approved glass scope leaves WeChat, settings and non-SMS phone pages unchanged',()=>{
+ const source=app.slice(app.indexOf('/* NORTH_OPTICAL_MATERIAL_V1:')).replace('window.NorthOpticalGlass={recipe,','window.NorthOpticalGlass={safeGlass,recipe,');
+ class Element{constructor(area,denied=false){this.area=area;this.denied=denied;}matches(){return false;}closest(selector){if(selector.startsWith('#homeDesktop'))return selector.split(',').includes(this.area)?this:null;if(selector.startsWith('.settings-glass'))return this.denied?this:null;return null;}querySelector(){return null;}}
+ const sandbox={window:{},HTMLElement:Element,document:{readyState:'loading',addEventListener(){}},console};vm.runInNewContext(source,sandbox);
+ const check=sandbox.window.NorthOpticalGlass.safeGlass;
+ for(const name of ['.wx-premium','.settings-glass','.phmain','.phcall','.phcontacts','.cal-month-page','.photo-album-page'])assert.equal(check(new Element(name)),false,name);
+ for(const name of ['#homeDesktop','.spy-desktop:not(.spy-lock-screen)','.offstage','.offline-hub','.imsg'])assert.equal(check(new Element(name)),true,name);
+ assert.equal(check(new Element('#homeDesktop',true)),false,'nested settings must not inherit a home surface');
+});
+
+test('offscreen glass keeps its material and DOM replacements decorate before the next frame',()=>{
+ const source=app.slice(app.indexOf('/* NORTH_OPTICAL_MATERIAL_V1:'));
+ const registeredPass=source.slice(source.indexOf('for(const el of [...registered])'),source.indexOf('for(const el of document.querySelectorAll(selectors))'));
+ assert.doesNotMatch(registeredPass,/r\.bottom<0|r\.top>innerHeight|r\.left>innerWidth/);
+ assert.match(registeredPass,/!safeGlass\(el\)/);
+ let callback,pending,paints=0;
+ const document={readyState:'complete',hidden:false,body:{},styleSheets:[],querySelector:()=>null,querySelectorAll:()=>{paints++;return[];},documentElement:{dataset:{}},addEventListener(){},removeEventListener(){}};
+ const sandbox={document,window:{addEventListener(){},removeEventListener(){}},console,MutationObserver:class{constructor(fn){callback=fn;}observe(){}disconnect(){}},requestAnimationFrame:fn=>{pending=fn;return 1;},cancelAnimationFrame:()=>{pending=null;}};
+ vm.runInNewContext(source,sandbox);assert.equal(paints,0);
+ callback([{type:'childList',target:{tagName:'DIV'},addedNodes:[]}]);assert.equal(paints,1);assert.equal(pending,null);
+});
