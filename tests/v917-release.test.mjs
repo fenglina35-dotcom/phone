@@ -10,9 +10,9 @@ const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest
 const webView = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web source keeps private 1.0.315 compatibility', () => {
-  assert.match(app, /APP_VER='v1680 · 组件调色与玻璃性能修复'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='1680'/);
-  assert.match(sw, /const BUILD='1680'/);
+  assert.match(app, /APP_VER='v1682 · 背景恢复与线下滚动修复'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='1682'/);
+  assert.match(sw, /const BUILD='1682'/);
   assert.doesNotMatch(project, /CURRENT_PROJECT_VERSION = 40;|MARKETING_VERSION = 1\.0\.40;/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 439;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.439;/g) || []).length, 12);

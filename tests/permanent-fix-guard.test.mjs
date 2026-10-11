@@ -1590,3 +1590,6 @@ test('optical glass stays inside the approved scope and keeps foreground text cl
 
 
 test('widget foreground controls and stable material repaint survive both releases',()=>{for(const prefix of ['',PRIVATE_DIR]){const js=read(prefix+'app.js'),css=read(prefix+'glass-theme.css');for(const marker of ['NORTH_WIDGET_FOREGROUND_V1','glassWidgetTextSet','NORTH_OPTICAL_STABILITY_V3'])assert(js.includes(marker));assert(css.includes('transition-property:transform,opacity!important'));}});
+
+
+test('optical surfaces never replace wallpaper roots or repaint on offline scroll',()=>{for(const prefix of ['',PRIVATE_DIR]){const js=read(prefix+'app.js'),css=read(prefix+'glass-theme.css');assert(js.includes('NORTH_OPTICAL_ROOT_GUARD_V4'));assert(js.includes('NORTH_OPTICAL_SCROLL_SAFE_V4'));assert(js.includes('lite?null:source(el)'));assert(css.includes('[data-north-optical-lite]{backdrop-filter:none!important'));}});

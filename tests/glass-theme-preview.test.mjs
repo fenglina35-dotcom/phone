@@ -272,7 +272,7 @@ test('dashboard photo is a direct isolated upload target and sweetie text is rea
   assert.match(css,/\.sweetie-avatar-picker\{width:60px;height:60px/);
   assert.match(css,/\.home-vinyl-card \.vinyl-cover\{inset:20%!important;width:60%!important;height:60%!important\}/);
   assert.doesNotMatch(css,/\.music-vinyl-cover\{[^}]*inset:20%/);
-  assert.match(css,/\.home\[style\*="background:url"\]:before,html\.north-glass-ui \.home\[style\*="background:url"\]:after\{display:none!important;content:none!important\}/);
+  assert.match(css,/\.home\.has-home-wallpaper:before,html\.north-glass-ui \.home\.has-home-wallpaper:after\{display:none!important;content:none!important\}/);
 });
 
 test('sweetie widget reuses the couple start date for an unboxed relationship-day label',()=>{
@@ -453,13 +453,13 @@ test('unified optical runtime uses the approved immutable recipe without changin
 });
 
 
-test('glass CSS discovery handles nested-style CSSOM and disposed callbacks stay inactive',()=>{
+test('glass uses an explicit dock target and disposed callbacks stay inactive',()=>{
  const source=app.slice(app.indexOf('/* NORTH_OPTICAL_MATERIAL_V1:'));
  let pending=null,queries=[],disconnected=0,attributes={};
  const document={readyState:'complete',hidden:false,body:{},styleSheets:[{cssRules:[{selectorText:'.dock',cssRules:[],style:{getPropertyValue:k=>k==='backdrop-filter'?'blur(22px)':''}}]}],querySelector:()=>null,querySelectorAll:s=>{queries.push(s);return[];},documentElement:{dataset:attributes},addEventListener(){},removeEventListener(){}};
  const sandbox={window:{addEventListener(){},removeEventListener(){}},document,console,MutationObserver:class{observe(){}disconnect(){disconnected++;}},ResizeObserver:class{observe(){}disconnect(){disconnected++;}},requestAnimationFrame:fn=>{pending=fn;return 1;},cancelAnimationFrame:()=>{pending=null;}};
  vm.runInNewContext(source,sandbox);assert.ok(pending);pending();
- assert.ok(queries.some(q=>q.includes('.dock')),'native .dock filter must be discovered even when a style rule has cssRules=[]');
+ assert.ok(queries.some(q=>q.includes('.dock')),'the approved dock must stay explicitly targeted without broad CSS discovery');
  sandbox.window.NorthOpticalGlass.dispose();assert.equal(disconnected,2);pending=null;
  sandbox.window.NorthOpticalGlass.refresh();assert.equal(pending,null,'disposed late callbacks must not revive the material');
 });
@@ -475,7 +475,7 @@ test('optical demo initializes a missing couple without changing normal preview 
 });
 
 
-test('glass material discovers styles inserted later into the document head',()=>{
+test('late stylesheet insertion cannot expand glass onto arbitrary background containers',()=>{
  const source=app.slice(app.indexOf('/* NORTH_OPTICAL_MATERIAL_V1:'));
  let callback,pending,observed,queries=[];const styles=[];
  const document={readyState:'complete',hidden:false,body:{},styleSheets:styles,querySelector:()=>null,querySelectorAll:s=>{queries.push(s);return[];},documentElement:{dataset:{}},addEventListener(){},removeEventListener(){}};
@@ -483,7 +483,7 @@ test('glass material discovers styles inserted later into the document head',()=
  vm.runInNewContext(source,sandbox);pending();assert.equal(observed,document.documentElement);
  styles.push({cssRules:[{selectorText:'.late-glass-panel',cssRules:[],style:{getPropertyValue:k=>k==='backdrop-filter'?'blur(14px)':''}}]});
  callback([{type:'childList',target:{tagName:'STYLE'},addedNodes:[]}]);pending();
- assert.ok(queries.some(s=>s.includes('.late-glass-panel')),'newly injected styles must be discovered without a reload');
+ assert.ok(queries.every(s=>!s.includes('.late-glass-panel')),'late arbitrary selectors must not become glass surfaces');
 });
 
 
@@ -527,3 +527,19 @@ test('resolved wallpaper images are reused and decorated parents cannot become a
 test('text-only mutations do not redraw glass and lightweight fallback keeps a hollow rim',()=>{
  const src=app.slice(app.indexOf('/* NORTH_OPTICAL_MATERIAL_V1:')).replace('window.NorthOpticalGlass={recipe,','window.NorthOpticalGlass={fallback,recipe,');let callback,pending,paints=0;const document={readyState:'complete',hidden:false,body:{},styleSheets:[],querySelector:()=>null,querySelectorAll:()=>{paints++;return[];},documentElement:{dataset:{}},addEventListener(){},removeEventListener(){}};const sandbox={document,window:{addEventListener(){},removeEventListener(){}},console,MutationObserver:class{constructor(fn){callback=fn;}observe(){}disconnect(){}},requestAnimationFrame:fn=>{pending=fn;return 1;},cancelAnimationFrame(){}};vm.runInNewContext(src,sandbox);pending();const before=paints;for(let i=0;i<50;i++)callback([{type:'childList',target:{tagName:'SPAN'},addedNodes:[{nodeType:3}],removedNodes:[{nodeType:3}]}]);assert.equal(paints,before);const uri=sandbox.window.NorthOpticalGlass.fallback(300,900,24);assert.match(decodeURIComponent(uri),/fill="none"/);assert.equal(sandbox.window.NorthOpticalGlass.fallback(300,900,24),uri);
 });
+
+test('background roots remain untouched even when they contain a backdrop style',()=>{
+ const src=app.slice(app.indexOf('/* NORTH_OPTICAL_MATERIAL_V1:')).replace('window.NorthOpticalGlass={recipe,','window.NorthOpticalGlass={safeGlass,recipe,');
+ class Element{constructor(root){this.root=root;}matches(selector){return selector.split(',').includes(this.root);}closest(selector){return selector.split(',').includes(this.root)?this:null;}querySelector(){return null;}}
+ const sandbox={window:{},HTMLElement:Element,document:{readyState:'loading',addEventListener(){}},console};vm.runInNewContext(src,sandbox);for(const root of ['#homeDesktop','.offstage','.offline-hub','.spy-desktop','.imsg','.photo-album-page'])assert.equal(sandbox.window.NorthOpticalGlass.safeGlass(new Element(root)),false,root);
+});
+test('scroll cannot schedule optical repaint and cached offline controls do not repeat layout reads',()=>{
+ const src=app.slice(app.indexOf('/* NORTH_OPTICAL_MATERIAL_V1:'));let cb,raf,rectReads=0;const events=[],attrs=new Set(),properties=new Map();
+ class Element{constructor(){this.style={getPropertyValue:k=>properties.get(k)||'',getPropertyPriority:()=>'',setProperty:(k,v)=>properties.set(k,v),removeProperty:k=>properties.delete(k)};this.isConnected=true;this.parentElement=null;}matches(sel){return sel.split(',').includes('.offbubble');}closest(sel){return sel.split(',').includes('.offstage')?{}:null;}hasAttribute(k){return attrs.has(k);}setAttribute(k){attrs.add(k);}removeAttribute(k){attrs.delete(k);}toggleAttribute(k,on){if(on)attrs.add(k);else attrs.delete(k);}getBoundingClientRect(){rectReads++;return{width:120,height:36,top:10,left:0,right:120,bottom:46};}getClientRects(){return[{}];}querySelector(){return null;}}
+ const el=new Element(),document={readyState:'complete',hidden:false,body:{},querySelectorAll:()=>[el],documentElement:{dataset:{}},addEventListener:e=>events.push(e),removeEventListener(){}};
+ const sandbox={document,HTMLElement:Element,window:{addEventListener(){},removeEventListener(){}},innerHeight:900,innerWidth:430,getComputedStyle:()=>({backgroundImage:'none',backgroundColor:'transparent',borderTopLeftRadius:'10px',content:'none'}),console,MutationObserver:class{constructor(f){cb=f;}observe(){}disconnect(){}},requestAnimationFrame:f=>{raf=f;return 1;},cancelAnimationFrame(){}};
+ vm.runInNewContext(src,sandbox);raf();assert.equal(attrs.has('data-north-optical-lite'),true);assert.equal(rectReads,1);assert.equal(events.includes('scroll'),false);for(let i=0;i<20;i++)cb([{type:'childList',target:{tagName:'DIV'},addedNodes:[{nodeType:1,matches:()=>false,querySelector:()=>null}]}]);assert.equal(rectReads,1,'already decorated controls must not repeatedly force layout');
+});
+
+
+test('home wallpaper recognition is independent of style serialization by foreground setters',()=>{for(const prefix of ['', 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/']){const js=fs.readFileSync(prefix+'app.js','utf8'),css=fs.readFileSync(prefix+'glass-theme.css','utf8');assert(js.includes("isImg(storedImageDisplaySource(S.me.homeBg))?' has-home-wallpaper':''"));assert(css.includes('.home:not(.has-home-wallpaper)'));assert(!css.includes('[style*="background:url"]'));}});
