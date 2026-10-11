@@ -245,7 +245,7 @@ test('old dates and co-living summaries share the role-perspective memory rule',
 
 test('the established offline narration presentation is preserved',()=>{
   const originalRender=source.slice(source.indexOf('function renderOff(id,mode)'),source.indexOf('/* ===== 信箱 ====='));
-  assert.match(originalRender,/if\(m\.who==='旁白'\)return `<div class="offnar[^`]+\$\{offRevealText\(m\)\}<\/div>`/);
+  assert.match(originalRender,/if\(m\.who==='旁白'\|\|m\.who==='ta'&&offResponsePart\(m\.text\)\.kind==='nar'\)return `<div class="offnar[^`]+\$\{offRevealText\(m\)\}<\/div>`/);
   assert.doesNotMatch(preview,/<div class="nar">【/);
   assert.doesNotMatch(preview,/】<\/div>/);
   assert.doesNotMatch(html,/\.offnar[^}]*:before[^}]*【/);

@@ -8,7 +8,7 @@ for(const path of paths){
  const src=fs.readFileSync(new URL('../'+path,import.meta.url),'utf8');
  const fn=name=>src.split(/\r?\n/).find(l=>l.startsWith('function '+name+'('))||'';
  const ctx=vm.createContext({uid:()=> 'id',esc:s=>s});
- vm.runInContext(['roleInternalControlLine','rolePublicText','companionAllControlClauseAction','companionNaturalAllControlAction','companionAllExternalIntent','companionRequestedAllControlAction','offlineStripMoodTags','modelUnfilteredLines','modelUnfilteredOfflineItems','offRevealText'].map(fn).join('\n'),ctx);
+ vm.runInContext(['roleInternalControlLine','rolePublicText','companionAllControlClauseAction','companionNaturalAllControlAction','companionAllExternalIntent','companionRequestedAllControlAction','offlineStripMoodTags','modelUnfilteredLines','offNarrationText','offImplicitNarrationText','offResponsePart','modelUnfilteredOfflineItems','offRevealText'].map(fn).join('\n'),ctx);
  test(path+' refuses question and refusal all-unlock',()=>{
   for(const text of ['全部解锁？想得美，北。今天的账还挂着呢。','全部解锁? 想得美。','你说“全部解锁”。我可没同意。','全部解锁，才怪。','全部解锁，等你先把鞋摆好。']) assert.equal(ctx.companionNaturalAllControlAction(text),'',text);
   assert.equal(ctx.companionNaturalAllControlAction('全部解锁。'),'unlock');
@@ -28,5 +28,10 @@ for(const path of paths){
   assert.equal(ctx.offRevealText({who:'ta',text:'[心情|微恼]过来。'}),'过来。');
   assert.equal(ctx.offRevealText({who:'旁白',source:'ta',text:'心情|微恼'}),'');
   assert.equal(ctx.offRevealText({who:'旁白',source:'me',text:'[心情|我自己写的]'}),'[心情|我自己写的]');
+ });
+
+ test(path+' raw cohab output keeps reported action prose out of spoken bubbles',()=>{
+  const text='他没有擦。他甚至不知道那滴东西在那里。';
+  const row=ctx.modelUnfilteredOfflineItems(text)[0];assert.equal(row.who,'旁白');assert.equal(row.text,text);
  });
 }

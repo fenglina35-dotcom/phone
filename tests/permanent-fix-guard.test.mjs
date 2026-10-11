@@ -1692,3 +1692,10 @@ for(const file of ['app.js','native/private-small-phone/XcodeProject/PhoneCompan
 for(const file of ['app.js','native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js'])test(file+': global gray bubbles reach role groups and retain member overrides',()=>{const s=read(file);assert.ok(s.includes("gray:{meBg:'#95ec69'"));assert.ok(s.includes("themBg:'#2c2c2e',themText:'#ececec'"));assert.ok(s.includes('if(own)return own;const b=S.me&&S.me.wxFeatures&&S.me.wxFeatures.globalBubble;'));});
 
 for(const file of ['app.js','native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js'])test(file+': X typing and failures remain visible with session ownership',()=>{const s=read(file);assert.ok(s.includes('const _xDMReplies=new WeakMap();'));assert.ok(s.includes('class="xmsg xdm-typing"'));assert.ok(s.includes('推特私信回复失败：'));assert.ok(s.includes('finally{_xDMReplies.delete(d);paint();}'));assert.ok(s.includes('actId()===account&&S.x===owner'));});
+
+for(const file of ['app.js',PRIVATE])test(file+': optional route reasoning and raw offline narration keep their contracts',()=>{
+ const s=read(file);for(const marker of ['reasoningEnabled:x.reasoningEnabled===true','id="s_reasoning_on"','reasoning_effort:',"who:part.kind==='nar'?'旁白':'ta'","m.who==='ta'&&offResponsePart(m.text).kind==='nar'"])assert(s.includes(marker),marker);
+});
+test('APNs quiet control is stripped at final notification projection',()=>{
+ const s=read('supabase/functions/phone-role-push/index.ts');const projection=s.slice(s.indexOf('function roleNotificationBody('),s.indexOf('function roleNotificationPreview('));assert(projection.includes('保持安静|不说话|沉默|不回'));
+});

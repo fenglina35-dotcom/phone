@@ -100,6 +100,14 @@ for (const [kind,path] of [['web','commerce-ui.js'],['private','native/private-s
     vm.runInNewContext(source.split('\n').filter(l=>l.startsWith('  var northDeletedSyncBusy=')||l.startsWith('  async function northSyncDeletedShops(')).join('\n')+source.slice(start,end)+';globalThis.call=northMarketRpc;',context);
     return {context,identity,switchAccount:()=>{account='other';}};
   }
+  test(`${kind} shop transport failure is readable and does not retry transactions`,async()=>{
+    let calls=0;const {context}=setup(async()=>{calls++;throw Error('Load failed');});
+    await assert.rejects(context.call('list',{}),/真人店铺.*连接/);assert.equal(calls,1);
+  });
+  test(`${kind} non-JSON 522 response exposes service status`,async()=>{
+    const {context}=setup(async()=>({ok:false,status:522,json:async()=>{throw SyntaxError('not JSON');}}));
+    await assert.rejects(context.call('list',{}),/522/);
+  });
   test(`${kind} public directory request does not send a private identity`,async()=>{
     let request;
     const {context}=setup(async(url,opt)=>{request={url,opt};return {ok:true,json:async()=>({ok:true,shops:[]})};});

@@ -81,3 +81,8 @@ assert.match(source, /const whole=offResponsePart\(l\);if\(whole\.kind==='nar'\)
 assert.match(source, /who:part\.kind==='nar'\?'旁白':'ta'/, 'mixed narration and dialogue must keep separate storage roles');
 
 console.log('offline narration format tests passed');
+
+for(const text of ['他没有擦。他甚至不知道那滴东西在那里。','他只是看着她，用那双湿的、红的、碎的眼睛看着她。','那双从今天下午到现在一直翻着冷的、暗的东西的狭长深眸，此刻是红的。他的睫毛根部湿了。']){
+ assert.equal(sandbox.parse(text)[0].kind,'nar','reported cohab prose must not be spoken: '+text);
+}
+for(const text of ['他今天会来。','你拿什么都能激我。','我看着你。'])assert.equal(sandbox.parse(text)[0].kind,'talk');

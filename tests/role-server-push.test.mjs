@@ -747,3 +747,22 @@ test('deleting a role disables its server schedule', () => {
 });
 
 test('server uses verified current structured turn instead of an older serialized topic',()=>{const transcript=edgeFunctionSource('roleTranscriptConversationBoundary').replace('profile: Record<string, unknown>','profile').replace('const turns: Array<{ speaker: string; channel: string; text: string }> = [];','const turns = [];'),structured=edgeFunctionSource('roleStructuredConversationBoundary').replaceAll(': Record<string, unknown>','').replaceAll(' as Record<string, unknown>','').replaceAll(' as string[]','');const focus=Function(edgeFunctionSource('roleVerifiedConversationBoundary')+'\n'+transcript+'\n'+structured+'\nreturn roleStructuredConversationBoundary;')();const now=Date.now();const profile={user_name:'North',role_name:'先生',last_user_at:new Date(now).toISOString(),recent_context:'2026年9月5日 00:31 [微信]North：这张对戒好看吗\n2026年9月5日 00:31 [微信]先生：看到了对戒',automation_config:{conversationBoundary:{hasUser:true,answered:true,userText:'我正在吃蓝莓',userAt:now,assistantMessages:['慢慢吃']}}};assert.equal(focus(profile).userText,'我正在吃蓝莓');});
+
+test('APNs projection removes quiet control tokens without erasing genuine speech or actions',()=>{
+ const ctx={};vm.runInNewContext(edgeFunctionSource('roleNotificationBody').replace(': string','')+';globalThis.project=roleNotificationBody;',ctx);
+ for(const text of ['[保持安静]','【保持安静】','[保持安静]\n[内心|不打扰她]'])assert.equal(ctx.project(text),'');
+ assert.equal(ctx.project('[保持安静]\n晚安。'),'晚安。');
+ assert.equal(ctx.project('我会保持安静，陪着你。'),'我会保持安静，陪着你。');
+ assert.equal(ctx.project('[来电|语音]'),'[来电|语音]');
+});
+
+test('quiet-only APNs stops before credentials, network and fallback alert',async()=>{
+ const {stripTypeScriptTypes}=await import('node:module');let credentialReads=0;
+ const ctx={Deno:{env:{get(){credentialReads++;return '';}}}};
+ const script=['roleMessageParts','roleNotificationBody'].map(edgeFunctionSource).join('\n')+'\nasync '+edgeFunctionSource('sendAPNs')+';globalThis.send=sendAPNs;';
+ vm.runInNewContext(stripTypeScriptTypes(script),ctx);
+ for(const body of ['[保持安静]','[保持安静]\n[内心|不打扰她]']){
+  const result=await ctx.send('token','production','role','先生',body,'row','');assert.equal(result.status,'suppressed-metadata');
+ }
+ assert.equal(credentialReads,0);
+});

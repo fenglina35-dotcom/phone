@@ -142,6 +142,17 @@ test('actual web/private renderers: narration, role login, Douyin, music, calls 
    _gs={cid,kind:'tod',title:'测试',msgs:[{id:'game-1',who:'me',text:'你好',time:now}],start:now,busy:false};show('game',renderGS(),{p:'gs'},'gsbg');
    const cue={side:'l',text:'音乐聊天'};document.getElementById('app').innerHTML=_mBubHTML(cue);naturalMotionTransientScan();fixtureOut.push({name:'music',animated:document.querySelector('[data-natural-transient]').getAnimations().length>0});
    _call={id:cid,session:'fixture',state:'active',sub:{who:'them',text:'电话字幕'}};document.getElementById('app').innerHTML='<div id="callSub"></div>';updateCallSub();fixtureOut.push({name:'call',animated:document.querySelector('.csline').getAnimations().length>0});_call=null;
+   const prose='他没有擦。他甚至不知道那滴东西在那里。';
+   const oldRow={id:'old-prose',who:'ta',source:'ta',text:prose,time:now};o.msgs=[oldRow];d.msgs=[oldRow];
+   _off={id:cid,mode:'offline',busy:false};const offlineHTML=renderOff(cid,'offline');_off={id:cid,mode:'cohab',busy:false};const cohabHTML=renderCohab(cid);
+   document.getElementById('app').innerHTML=cohabHTML;
+   fixtureOut.push({name:'reported-history-narration',plain:!!document.querySelector('.offnar')&&!document.querySelector('.offbubble')&&oldRow.who==='ta'&&oldRow.text===prose&&offlineHTML.includes('class="offnar')});
+   fixtureOut.push({name:'reported-raw-narration',plain:modelUnfilteredOfflineItems(prose)[0].who==='旁白'});
+   _setCategory='network';document.getElementById('app').innerHTML=renderSettings();
+   const on=document.getElementById('s_reasoning_on'),effort=document.getElementById('s_reasoning_effort');
+   on.checked=true;effort.value='max';chatRouteCaptureForm();const saved=S.settings.chatRouteActive;
+   chatRouteSwitch((saved+1)%4);const offDefault=!on.checked;chatRouteSwitch(saved);
+   fixtureOut.push({name:'reasoning-route-ui',plain:offDefault&&on.checked&&effort.value==='max'&&S.settings.chat.reasoningEffort==='max'});
    return fixtureOut;
   });
   for(const item of result){if('mounted' in item)assert(item.mounted&&item.rows>0,JSON.stringify({priv,item}));if('plain' in item)assert(item.plain);if('animated' in item)assert(item.animated);}assert.deepEqual(errors,[]);await page.close();

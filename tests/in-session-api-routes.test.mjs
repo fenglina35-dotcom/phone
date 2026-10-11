@@ -90,3 +90,19 @@ assert.equal(calls[3].url,'https://aux.example/v1/chat/completions');
 assert.equal(calls[3].body.model,'aux-model','other auxiliary tasks must keep their existing routing');
 
 console.log('in-session api route tests passed');
+
+// Exercise real request construction; no external model calls.
+context.cur=()=>({p:'chat'});
+assert.equal(calls[0].body.reasoning_effort,undefined,'legacy requests omit opt-in parameter');
+for(const effort of ['low','high','max']){
+ context.S.settings.chat.reasoningEnabled=true;context.S.settings.chat.reasoningEffort=effort;
+ for(const aux of [false,true]){
+  await context.chatAPI([{role:'user',content:'测试'}],{aux,independentRoleModel:true});
+  assert.equal(calls.at(-1).body.reasoning_effort,effort);
+  assert.equal(calls.at(-1).body.max_tokens,700);
+ }
+}
+context.S.settings.chat.reasoningEnabled=false;
+await context.chatAPI([],{aux:true});assert.equal(calls.at(-1).body.reasoning_effort,undefined);
+context.chatRequestRoute=()=>({base:'https://fixed.example/v1',key:'fixture',model:'fixed',maxTokens:8192,reasoningEnabled:true,reasoningEffort:'low',aux:{model:'fixed-aux'}});
+await context.chatAPI([],{routeIndex:1,aux:true});assert.equal(calls.at(-1).body.reasoning_effort,'low');assert.equal(calls.at(-1).body.model,'fixed-aux');assert.equal(calls.at(-1).body.max_tokens,8192);

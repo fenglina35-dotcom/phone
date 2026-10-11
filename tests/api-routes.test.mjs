@@ -181,3 +181,13 @@ assert.equal(routes[1].aux.model, "shared-aux", "all legacy routes must inherit 
 assert.equal(routes[2].aux.model, "", "an explicitly empty auxiliary model must stay empty instead of being overwritten by migration");
 
 console.log("api route tests passed");
+
+// Optional per-route reasoning settings must survive save, switch and reload.
+context.S.settings.chatRouteActive=0;fields.s_reasoning_on={checked:true};fields.s_reasoning_effort={value:'max'};
+context.chatRouteCaptureForm();
+assert.equal(context.S.settings.chat.reasoningEnabled,true);
+assert.equal(context.S.settings.chat.reasoningEffort,'max');
+context.chatRouteSwitch(1);assert.equal(fields.s_reasoning_on.checked,false);
+context.chatRouteSwitch(0);assert.equal(fields.s_reasoning_on.checked,true);assert.equal(fields.s_reasoning_effort.value,'max');
+assert.equal(context.chatMainCopy({}).reasoningEnabled,false);
+assert.equal(context.chatMainCopy({reasoningEffort:'invalid'}).reasoningEffort,'high');
