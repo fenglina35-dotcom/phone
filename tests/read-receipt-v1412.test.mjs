@@ -64,7 +64,7 @@ for(const file of ['app.js',P+'app.js']){
 
 test('real browser: friend ACK and role/group redraw keep entrance progress on both sources',async()=>{
  const {createRequire}=await import('node:module'),require=createRequire(import.meta.url),{chromium}=require('playwright');
- const browser=await chromium.launch({headless:true,executablePath:'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'});
+ const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
  try{for(const file of ['app.js',P+'app.js']){
   const app=read(file),page=await browser.newPage();
   await page.setContent('<div id="chatbg"></div><div id="pfchatbg"></div><div id="pfgroupbg"></div>');
@@ -84,7 +84,7 @@ test('real browser: friend ACK and role/group redraw keep entrance progress on b
 });
 
 test('browser: timestamps and read letters keep progress through friend acknowledgement and redraw',async()=>{
- const {createRequire}=await import('node:module'),{chromium}=createRequire(import.meta.url)('playwright');const browser=await chromium.launch({headless:true,executablePath:'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'});
+ const {createRequire}=await import('node:module'),{chromium}=createRequire(import.meta.url)('playwright');const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
  try{for(const file of ['app.js',P+'app.js']){
   const app=read(file),page=await browser.newPage();await page.setContent('<div id="pfchatbg"></div>');
   await page.addScriptTag({content:'function actId(){return "main";}function renderPageKey(){return "pfchat:fixture";}function readReceiptOn(){return true;}'+app.slice(app.indexOf('let _wechatMotion=null;'),app.indexOf('let _scrollBottomOnce'))});
@@ -105,7 +105,7 @@ test('browser: timestamps and read letters keep progress through friend acknowle
 });
 
 test('natural chat motion: all bubble surfaces animate, preserve history and exclude cinema',async()=>{
- const {createRequire}=await import('node:module'),require=createRequire(import.meta.url),{chromium}=require('playwright');const browser=await chromium.launch({headless:true,executablePath:'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'});
+ const {createRequire}=await import('node:module'),require=createRequire(import.meta.url),{chromium}=require('playwright');const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
  try{for(const file of ['app.js',P+'app.js']){
   const app=process.env.NORTH_CHAT_OLD?require('node:child_process').execFileSync('git',['show','HEAD:'+file],{maxBuffer:10e6}).toString():read(file),page=await browser.newPage();
   await page.addScriptTag({content:'function actId(){return "main";}function renderPageKey(c){return c.p+":"+(c.id||"");}function readReceiptOn(){return false;}function nearBottom(b){return b.scrollHeight-b.scrollTop-b.clientHeight<80;}'+app.slice(app.indexOf('let _wechatMotion=null;'),app.indexOf('let _scrollBottomOnce'))});
@@ -123,7 +123,7 @@ test('natural chat motion: all bubble surfaces animate, preserve history and exc
 });
 
 test('actual web/private renderers: narration, role login, Douyin, music, calls and other bubble pages',async()=>{
- const {createRequire}=await import('node:module'),require=createRequire(import.meta.url),{chromium}=require('playwright'),path=require('node:path');const browser=await chromium.launch({headless:true,executablePath:'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'});
+ const {createRequire}=await import('node:module'),require=createRequire(import.meta.url),{chromium}=require('playwright'),path=require('node:path');const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
  try{for(const priv of [false,true]){
   const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));const origin='http://127.0.0.1:8778';
   await page.route('**/*',route=>{const u=new URL(route.request().url());if(u.origin!==origin)return route.abort();const f=path.resolve(decodeURIComponent(u.pathname.slice(1)));if(!f.startsWith(process.cwd()+path.sep)||!fs.existsSync(f))return route.fulfill({status:404,body:''});return route.fulfill({status:200,contentType:f.endsWith('.js')?'text/javascript':f.endsWith('.html')?'text/html':f.endsWith('.css')?'text/css':'application/octet-stream',body:fs.readFileSync(f)});});
@@ -145,5 +145,33 @@ test('actual web/private renderers: narration, role login, Douyin, music, calls 
    return fixtureOut;
   });
   for(const item of result){if('mounted' in item)assert(item.mounted&&item.rows>0,JSON.stringify({priv,item}));if('plain' in item)assert(item.plain);if('animated' in item)assert(item.animated);}assert.deepEqual(errors,[]);await page.close();
+ }}finally{await browser.close();}
+});
+
+for(const scenario of ['narration clarity','rapid Douyin follow','cold music avatar','music composer and reply','music request failure'])test('reported natural chat regression: '+scenario,async()=>{
+ const {createRequire}=await import('node:module'),require=createRequire(import.meta.url),{chromium}=require('playwright'),path=require('node:path'),cp=require('node:child_process');const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
+ try{for(const priv of [false,true]){
+  const page=await browser.newPage({viewport:{width:390,height:844}}),errors=[];page.on('pageerror',e=>errors.push(e.message));const origin='http://127.0.0.1:8778';
+  await page.route('**/*',route=>{const u=new URL(route.request().url());if(u.pathname.endsWith('/chat/completions')&&scenario==='music request failure')return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:{message:'fixture model unavailable'}})});if(u.pathname.endsWith('/chat/completions'))return route.fulfill({contentType:'application/json',body:JSON.stringify({choices:[{message:{content:'嗯，这首很好听'}}]})});if(u.origin!==origin)return route.abort();const rel=decodeURIComponent(u.pathname.slice(1)),f=path.resolve(rel);if(!f.startsWith(process.cwd()+path.sep)||!fs.existsSync(f))return route.fulfill({status:404,body:''});const body=process.env.NORTH_REPORTED_OLD==='1'&&(rel.endsWith('app.js')||rel.endsWith('.html'))?cp.execFileSync('git',['show','HEAD:'+rel],{maxBuffer:32*1024*1024}):fs.readFileSync(f);return route.fulfill({status:200,contentType:f.endsWith('.js')?'text/javascript':f.endsWith('.html')?'text/html':f.endsWith('.css')?'text/css':'application/octet-stream',body});});
+  await page.goto(origin+(priv?'/'+P+'index.html':'/小手机.html')+'?northPreview=black-home');await page.waitForFunction(()=>window.__northBootReady);
+  await page.evaluate(()=>{S.me.locked=false;S.me.active='main';S.settings.sound=false;S.contacts.forEach(c=>c.proactive={enabled:false});window.testCid=S.contacts[0].id;});
+  if(scenario==='narration clarity'){
+   const r=await page.evaluate(()=>{const o=offData(testCid);o.introSeen=true;o.msgs=[{id:'clear',who:'旁白',text:'一起坐下来',_reveal:true,_revealStep:100}];_off={id:testCid,mode:'offline',busy:false};stack=[{p:'off',id:testCid}];render();const glyph=document.querySelector('.offglyph');return{filter:getComputedStyle(glyph).filter,opacity:getComputedStyle(glyph).opacity};});assert.equal(r.filter,'none');assert.equal(r.opacity,'1');
+  }else if(scenario==='rapid Douyin follow'){
+   await page.evaluate(()=>{S.dy.dms=[{id:'rapid',cid:testCid,name:'测试',msgs:Array.from({length:16},(_,i)=>({id:'d'+i,from:'them',text:'已有消息 '+i,time:Date.now()+i}))}];stack=[{p:'dydm',id:'rapid'}];render();});await page.waitForTimeout(100);
+   await page.evaluate(()=>{S.dy.dms[0].msgs.push({id:'long1',from:'them',text:'第一条新消息。'.repeat(70),time:Date.now()+100});render();});await page.waitForTimeout(170);
+   await page.evaluate(()=>{S.dy.dms[0].msgs.push({id:'long2',from:'them',text:'第二条新消息。'.repeat(70),time:Date.now()+200});render();});await page.waitForTimeout(750);
+   const remaining=await page.evaluate(()=>{const b=document.getElementById('dydmbox');return b.scrollHeight-b.scrollTop-b.clientHeight;});assert(remaining<3,'new replies must remain fully visible; remaining='+remaining);
+  }else{
+   await page.evaluate(()=>{musicInit();S.music.songs=[{id:'song-test',title:'测试曲',artist:'测试',url:''}];_mCur='song-test';_mView='player';S.music.session={cid:testCid,songId:_mCur,startTs:Date.now()};S.settings.chat={base:'http://127.0.0.1:8778/v1',key:'fixture',model:'fixture'};S.settings.chatRoutes=null;S.contacts[0].model='main';stack=[{p:'music'}];});
+   if(scenario==='music request failure'){await page.evaluate(async()=>{render();document.getElementById('m_chat').value='你好';musicChatSend();await new Promise(r=>setTimeout(r,800));});assert(await page.evaluate(()=>document.body.textContent.includes('一起听回复失败')),'request failures must be visible');assert(await page.evaluate(()=>!_mReplyBusy),'failed model releases composer');}else if(scenario==='cold music avatar'){
+    const r=await page.evaluate(()=>{S.music.meAvatar='idb:music-cold';delete _imgCache['music-cold'];render();const node=document.querySelector('.music-headphone-avatars [data-idb-avatar]');_imgCache['music-cold']='data:image/svg+xml;base64,'+btoa('<svg xmlns="http://www.w3.org/2000/svg" width="640" height="640"><rect width="640" height="640" fill="red"/></svg>');hydrateStoredImageNodes();return{hadPending:!!node,critical:routeCriticalStoredImageKeys().includes('music-cold'),imageWidth:node.querySelector('img').getBoundingClientRect().width};});assert(r.hadPending);assert(r.critical);assert(r.imageWidth<=66&&r.imageWidth>0,'hydrated avatar fits first render '+JSON.stringify(r));
+   }else{
+    await page.evaluate(()=>{render();window.__SMALL_PHONE_PRIVATE__=true;document.getElementById('m_chat').focus();});await page.waitForTimeout(220);
+    assert(await page.evaluate(()=>document.getElementById('musicChatDock').style.position==='fixed'),'private composer follows visible keyboard viewport');
+    const result=await page.evaluate(async()=>{const input=document.getElementById('m_chat');input.value='这一首好好听\n'.repeat(10);input.scrollTop=200;musicChatSend();await new Promise(r=>setTimeout(r,900));return{user:S.music.chat.some(m=>m.role==='user'),reply:S.music.chat.some(m=>m.role==='assistant'),busy:_mReplyBusy,scroll:input.scrollTop,box:getComputedStyle(input).boxSizing,height:input.clientHeight,line:parseFloat(getComputedStyle(input).lineHeight)+parseFloat(getComputedStyle(input).paddingTop)+parseFloat(getComputedStyle(input).paddingBottom)};});assert(result.user&&result.reply&&!result.busy,JSON.stringify(result));assert.equal(result.scroll,0);assert.equal(result.box,'border-box');assert(result.height>=result.line);
+   }
+  }
+  assert.deepEqual(errors,[]);await page.close();
  }}finally{await browser.close();}
 });
