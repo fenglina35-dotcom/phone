@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1682'){
+if(window.__NORTH_SHELL_BUILD__!=='1684'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -606,7 +606,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1682 · 背景恢复与线下滚动修复';
+const APP_VER='v1684 · 仅主屏保留玻璃材质';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2016,7 +2016,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1682&r=v1682-couple-unbind-reopen-1';
+  const url='sw.js?v=1684&r=v1684-couple-unbind-reopen-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -19090,15 +19090,15 @@ const recipe={"schema":1,"renderer":"north-optical-lab-1","params":{"blur":2.25,
 'float amount=(facing*facing+opposite*opposite*(.15+uP[12]*.5))*uP[9];vec3 edge=mix(vec3(.92,.96,1.0),clamp(original*1.6+.12,0.0,1.0),uP[16]);color+=edge*(inner+outer+glow)*(.22+amount);float mask=1.0-smoothstep(-.5,.8,distance);result=mix(result,color,mask);}',
 'gl_FragColor=vec4(clamp(result,0.0,1.0),1.0);}'].join('\n');
 Object.freeze(recipe.params);Object.freeze(recipe);
-const explicit='.home .dock,.home-editbar,.offnav,.offmeta,.offbubble,.offinput,.offselect,.cohab-meta,.cohab-status-chip,.cohab-away-panel,.cohab-return-banner,.cohab-memory-open,.offline-hub-role,.offline-hub-block,.home-dashboard-card,.home-vinyl-card,.home-sweetie-card,.home-dashboard-grid>.dash-heart,.home-dashboard-grid>.dash-time,.home-dashboard-grid>.dash-battery,.home-dashboard-grid>.dash-weather,.home-dashboard-grid>.dash-storage,.spy-glass,.imsg-b:not(.pic),.imsg-rb,.imsg-input,.imsg-send,.imsg-tool,.cal-glass,.cal-sheet-close,.cal-event-popover,.cal-share-card,.photo-album-glass,.cohab-settings-grid label,.cohab-settings-grid input,.cohab-settings-grid select,.north-offline-sheet input:not([type="range"]):not([type="color"]),.north-offline-sheet select,.north-offline-sheet textarea';
+const explicit='.home .dock,.home-editbar,.home-dashboard-card,.home-vinyl-card,.home-sweetie-card,.home-dashboard-grid>.dash-heart,.home-dashboard-grid>.dash-time,.home-dashboard-grid>.dash-battery,.home-dashboard-grid>.dash-weather,.home-dashboard-grid>.dash-storage';
 const excluded='[role="switch"],[role="checkbox"],.cal-check,.cal-complete-circle,.cal-grid-swatch,.cal-save-swatch,.cal-saved-swatch,img,video,canvas,svg,svg *,input[type="range"],input[type="color"],input[type="checkbox"],input[type="radio"],.imsg-b.pic,.bubble.pic,.glass-pack-icon,.custom-app-icon,.wpet,.cohab-tap-next,.cal-toggle,.cal-switch,.spy-wallpaper,.spy-profile-cover,.home-dashboard-photo,.sweetie-avatar-picker,.vinyl-cover';
 let glState=null,rendererUnavailable=false,raf=0,observer=null,resize=null,selectors=explicit,started=false,painting=false,repaintAll=false;
 const originals=new WeakMap(),images=new Map(),surfaces=new Map(),inks=new Map(),registered=new Set();
 const p=recipe.params;
-/* NORTH_OPTICAL_SCOPE_V2: approved home/role-home/offline/SMS/calendar/album surfaces. */
-function allowedSurface(el){return !!el.closest('#homeDesktop,.spy-desktop:not(.spy-lock-screen),.offstage,.offline-hub,.north-offline-sheet,.imsg,.cal-month-page,.cal-year-page,.cal-day-page,.cal-detail-page,.cal-integrated-page,.cal-sheet,.cal-sheet-page,.cal-new-sheet,.photo-album-page')&&!el.closest('.settings-glass,.ios-settings-page,.spy-settings-page,.wx-premium,.wx-glass,.wx-light,.wx-page,.chat-glass,.spy-lock-screen');}
+/* NORTH_OPTICAL_SCOPE_V2: NORTH_OPTICAL_HOME_ONLY_V5: only the main home screen retains the optical recipe. */
+function allowedSurface(el){return !!el.closest('#homeDesktop')&&!el.closest('.settings-glass,.ios-settings-page,.spy-settings-page,.wx-premium,.wx-glass,.wx-light,.wx-page,.chat-glass,.spy-lock-screen');}
 /* NORTH_OPTICAL_ROOT_GUARD_V4: background and scroll containers are never material surfaces. */
-function safeGlass(el){if(el.matches('#homeDesktop,.home,.appswipe,.apppage,.home-item,.home-dashboard-grid,.offstage,.offline-hub,.offscroll,.cohab-scroll,.scroll,.spy-desktop,.spy-wallpaper,.imsg,.photo-album-page,.cohab-settings,.cohab-settings-grid'))return false;if(!allowedSurface(el))return false;return el instanceof HTMLElement&&!el.matches(excluded)&&!el.closest('svg,.imsg-b.pic,.bubble.pic,.cal-color-grid,.cal-color-spectrum')&&!(el.matches('.bubble,.smsbubble')&&el.querySelector('img,video'));}
+function safeGlass(el){if(el.matches('#homeDesktop,.home,.appswipe,.apppage,.home-dashboard-grid,.offstage,.offline-hub,.offscroll,.cohab-scroll,.scroll,.spy-desktop,.spy-wallpaper,.imsg,.photo-album-page,.cohab-settings,.cohab-settings-grid'))return false;if(!allowedSurface(el))return false;return el instanceof HTMLElement&&!el.matches(excluded)&&!el.closest('svg,.imsg-b.pic,.bubble.pic,.cal-color-grid,.cal-color-spectrum')&&!(el.matches('.bubble,.smsbubble')&&el.querySelector('img,video'));}
 function discover(){selectors=explicit;}
 function sdf(x,y,w,h,r){const qx=Math.abs(x-w/2)-w/2+r,qy=Math.abs(y-h/2)-h/2+r;return Math.hypot(Math.max(qx,0),Math.max(qy,0))+Math.min(Math.max(qx,qy),0)-r;}
 function edgeAt(x,y,w,h,r){const d=sdf(x,y,w,h,r),dx=sdf(x+.7,y,w,h,r)-sdf(x-.7,y,w,h,r)+.00001,dy=sdf(x,y+.7,w,h,r)-sdf(x,y-.7,w,h,r)+.00001,n=Math.hypot(dx,dy)||1,nx=dx/n,ny=dy/n,a=p.angle*Math.PI/180,f=Math.max(0,nx*Math.cos(a)+ny*Math.sin(a)),op=Math.max(0,-nx*Math.cos(a)-ny*Math.sin(a)),depth=Math.max(0,-d),width=Math.max(2,p.thickness*p.bevel*17),inner=Math.exp(-Math.abs(d+1.9)/1.1)*p.inner*.15,outer=Math.exp(-Math.abs(d)/.52)*p.outer*.27,glow=Math.exp(-depth/Math.max(1,width*.25))*p.scatter*.07,amount=(f*f+op*op*(.15+p.lobes*.5))*p.highlight;return d<.8?Math.min(1,(inner+outer+glow)*(.22+amount)*(1-Math.min(1,Math.max(0,(d+.5)/1.3)))):0;}

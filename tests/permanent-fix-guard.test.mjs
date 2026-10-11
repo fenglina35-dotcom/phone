@@ -1593,3 +1593,6 @@ test('widget foreground controls and stable material repaint survive both releas
 
 
 test('optical surfaces never replace wallpaper roots or repaint on offline scroll',()=>{for(const prefix of ['',PRIVATE_DIR]){const js=read(prefix+'app.js'),css=read(prefix+'glass-theme.css');assert(js.includes('NORTH_OPTICAL_ROOT_GUARD_V4'));assert(js.includes('NORTH_OPTICAL_SCROLL_SAFE_V4'));assert(js.includes('lite?null:source(el)'));assert(css.includes('[data-north-optical-lite]{backdrop-filter:none!important'));}});
+
+
+test('optical recipe remains home-only and offline controls stay flat',()=>{for(const prefix of ['',PRIVATE_DIR]){const js=read(prefix+'app.js'),css=read(prefix+'glass-theme.css');assert(js.includes('NORTH_OPTICAL_HOME_ONLY_V5'));assert(css.includes('NORTH_OFFLINE_FLAT_V5'));}});
