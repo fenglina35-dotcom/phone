@@ -82,3 +82,24 @@ test('real browser: friend ACK and role/group redraw keep entrance progress on b
   }await page.close();
  }}finally{await browser.close();}
 });
+
+test('browser: timestamps and read letters keep progress through friend acknowledgement and redraw',async()=>{
+ const {createRequire}=await import('node:module'),{chromium}=createRequire(import.meta.url)('playwright');const browser=await chromium.launch({headless:true,executablePath:'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'});
+ try{for(const file of ['app.js',P+'app.js']){
+  const app=read(file),page=await browser.newPage();await page.setContent('<div id="pfchatbg"></div>');
+  await page.addScriptTag({content:'function actId(){return "main";}function renderPageKey(){return "pfchat:fixture";}function readReceiptOn(){return true;}'+app.slice(app.indexOf('let _wechatMotion=null;'),app.indexOf('let _scrollBottomOnce'))});
+  await page.evaluate(()=>{window.box=document.getElementById('pfchatbg');wechatMotionMount({p:'pfchat'});window.html=(id,time)=>'<div class="tstamp">'+time+'</div><div class="msg me" data-message-id="'+id+'" data-wx-motion-id="client:fixture"><div class="col">消息<div class="msgread-line" data-wx-read="已读">已读</div></div></div>';box.innerHTML=html('local_1','12:00');});
+  await page.waitForTimeout(330);
+  const before=await page.evaluate(()=>box.querySelector('.tstamp').getAnimations()[0].currentTime);
+  await page.evaluate(()=>{box.innerHTML=html('server_1','12:01');wechatMotionMount({p:'pfchat'});});
+  assert(await page.evaluate(()=>box.querySelector('.tstamp').getAnimations()[0]?.currentTime>=0) ,'timestamp exists');
+  const after=await page.evaluate(()=>box.querySelector('.tstamp').getAnimations()[0]?.currentTime);assert(after>=before,'ACK must resume timestamp rather than restart');
+  // Use the real timer deadline; do not wait an additional two seconds after redraw.
+  await page.waitForFunction(()=>box.querySelector('.msgread-line span')!==null,null,{timeout:4000});await page.waitForTimeout(220);
+  const readBefore=await page.evaluate(()=>box.querySelector('.msgread-line span').getAnimations()[0].currentTime);
+  await page.evaluate(()=>{box.innerHTML=html('server_1','12:01');wechatMotionMount({p:'pfchat'});});
+  const readAfter=await page.evaluate(()=>box.querySelector('.msgread-line span')?.getAnimations()[0]?.currentTime);assert(readAfter>=readBefore,'read letters resume instead of jumping straight to full opacity');
+  await page.waitForTimeout(850);await page.evaluate(()=>{box.innerHTML=html('server_1','12:01');wechatMotionMount({p:'pfchat'});});
+  assert.equal(await page.evaluate(()=>box.querySelector('.tstamp').getAnimations().length),0,'finished timestamp does not replay');assert.equal(await page.evaluate(()=>box.querySelector('.msgread-line').getAnimations({subtree:true}).length),0,'finished read does not replay');await page.close();
+ }}finally{await browser.close();}
+});

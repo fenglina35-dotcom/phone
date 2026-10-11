@@ -1671,3 +1671,5 @@ test('a stalled authorization refusal never switches the private inbox to anothe
 test('web and private retain per-message WeChat motion without touching receipt facts',()=>{for(const file of ['app.js',PRIVATE]){const js=read(file);assert.match(js,/WECHAT_MESSAGE_MOTION_V1694/);assert.match(js,/born\+2000/);assert.match(js,/wechatMotionMount\(c\)/);assert.match(js,/data-wx-read=/);assert.match(js,/roleMarkRead\(id\)/);assert.match(js,/pfAckRead\(mid\)/);}});
 
 test('WeChat entrance survives local acknowledgement and redraw on web and private',()=>{for(const file of ['app.js',PRIVATE]){const js=read(file);assert.match(js,/function wechatMotionMessageId\(m\)/);assert.match(js,/data-wx-motion-id=/);assert.match(js,/rec\.avatarMotion\.currentTime/);assert.match(js,/animation\.currentTime=age/);}});
+
+test('WeChat timestamps and read letters retain animation progress on redraw',()=>{for(const file of ['app.js',PRIVATE]){const js=read(file);assert.match(js,/times:new Map\(\)/);assert.match(js,/rec\.motion\.currentTime/);assert.match(js,/rec\.readNode===el/);assert.match(js,/previous\[i\]\.currentTime/);assert.match(js,/rec\.readShownAt=now/);}});
