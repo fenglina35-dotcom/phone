@@ -36,7 +36,7 @@ function functionSource(name) {
 }
 
 const resultContext = vm.createContext({ chatAPI: async () => "unused", joinAIContinuation: (a, b) => a + b });
-vm.runInContext(`async ${functionSource("chatResultText")}`, resultContext);
+vm.runInContext(functionSource("roleMoodScopeText")+`\nasync ${functionSource("chatResultText")}`, resultContext);
 // rejectRefusal 本身仍是 chatResultText 支持的选项，只是通话不再使用它。
 await assert.rejects(
   () => resultContext.chatResultText([], { rejectRefusal: true }, { choices: [{ message: { content: "" }, finish_reason: "content_filter" }] }),

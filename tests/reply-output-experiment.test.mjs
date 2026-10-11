@@ -6,7 +6,7 @@ import {stripTypeScriptTypes} from 'node:module';
 
 const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 function source(name,text=app){const match=new RegExp('^(?:async )?function '+name+'\\(','m').exec(text);assert(match,name);const tail=text.slice(match.index+1),end=/^(?:(?:async )?function |(?:const|let|var) |\/\*)/m.exec(tail);return text.slice(match.index,end?match.index+1+end.index:undefined);}
-function load(names,ctx={}){vm.createContext(ctx);vm.runInContext(names.map(name=>source(name)).join('\n'),ctx);return ctx;}
+function load(names,ctx={}){if(names.includes('chatResultText'))names=['roleMoodScopeText',...names];vm.createContext(ctx);vm.runInContext(names.map(name=>source(name)).join('\n'),ctx);return ctx;}
 function notebook(){const c={id:'a',name:'阿北'},ctx={S:{me:{name:'佳佳',lifeNotes:[]},settings:{},couple:{cid:'a'}},memoryScopeKey:()=> 'main',uid:()=>String(Math.random()),save:()=>{}};load(['aboutMeNoteText','memoryText','memoryNorm','memoryTerms','memoryCandidateGrounded','lifeNotes','lifeNotesAutoOn','lifeNotesForRole','lifeNoteReadableText','lifeNoteAuthorship','lifeNoteCandidateValid','lifeNoteConsumeModelTags','lifeNoteOnUserMsg'],ctx);return{ctx,c};}
 
 test('notebook rejects verbatim fragments and general daily events without changing old records',()=>{const {ctx,c}=notebook();ctx.S.me.lifeNotes.push({text:'旧记录',source:'manual'});for(const input of ['烦死了，我还不如多睡会','凭什么对方说不生气就','我睡了八小时','我手机充满电了']){ctx.lifeNoteOnUserMsg(c.id,{content:input});ctx.lifeNoteConsumeModelTags(`[小事簿|情绪|${input}|${input}]`,c,input,'wechat');}assert.equal(ctx.lifeNotes().length,1);assert.equal(ctx.lifeNotes()[0].text,'旧记录');});

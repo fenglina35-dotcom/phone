@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" id="pwaAppleIcon" href="icon.png" />
 <link rel="manifest" id="pwaManifest" />
 <title>North 📱</title>
-<script>window.__NORTH_SHELL_BUILD__='1701';</script>
+<script>window.__NORTH_SHELL_BUILD__='1703';</script>
 <script>
 /* PWA：固定使用 icon.png 作为主屏幕图标，避免运行时临时图标覆盖原头像 */
 (function(){try{
@@ -33,7 +33,7 @@
   navigator.serviceWorker.addEventListener('controllerchange',function(){
     try{sessionStorage.setItem(key,'1');}catch(e){}
   });
-  var url='sw.js?v=1701&r=v1701-private-package-1';
+  var url='sw.js?v=1703&r=v1703-private-package-1';
   navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(function(){return navigator.serviceWorker.register(url);}).then(function(reg){return reg.update();}).catch(function(){});
 })();
 </script>
@@ -334,7 +334,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .mcover .me{position:absolute;z-index:2;right:14px;bottom:10px;display:flex;align-items:flex-end;gap:10px;}
 .mcover .me .nm{color:#fff;font-weight:600;font-size:16px;text-shadow:0 1px 3px rgba(0,0,0,.3);margin-bottom:24px;}
 .mcover .me .avatar.lg{border:2px solid #fff;}
-.music-premium{--music-red:#eb4d57;position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;color:#fff;background:#111214;isolation:isolate}.music-premium:before{content:"";position:absolute;inset:-34px;z-index:-3;background:radial-gradient(circle at 50% 14%,#404247 0,#202124 32%,#111214 72%);pointer-events:none}.music-ambient{position:absolute;inset:-46px;z-index:-2;background-position:center;background-size:cover;filter:blur(38px) saturate(.68);opacity:.42;transform:scale(1.12);pointer-events:none}.music-premium:after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(10,11,13,.28),rgba(14,15,17,.78) 43%,#111214 82%);pointer-events:none}.music-topbar{height:64px;display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;padding:8px 12px 0;flex:none}.music-iconbtn{width:40px;height:40px;border:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.055);color:#fff;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);cursor:pointer}.music-topcopy{min-width:0;text-align:center}.music-topcopy small{display:block;color:rgba(255,255,255,.46);font-size:8px;letter-spacing:.24em}.music-topcopy b{display:block;margin-top:4px;overflow:hidden;color:#f7f7f8;font-size:14px;font-weight:650;text-overflow:ellipsis;white-space:nowrap}.music-topcopy span{display:block;margin-top:2px;overflow:hidden;color:rgba(255,255,255,.55);font-size:10px;text-overflow:ellipsis;white-space:nowrap}.music-together-card{position:relative;display:flex;align-items:center;gap:10px;margin:3px 18px 5px;padding:8px 11px;border:1px solid rgba(255,255,255,.085);border-radius:18px;background:rgba(255,255,255,.055);box-shadow:inset 0 1px rgba(255,255,255,.04);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);flex:none}.music-together-avatars{display:flex;align-items:center;flex:none}.music-together-avatars>div+div{margin-left:-9px}.music-together-avatars>div>div{border-width:1.5px!important;box-shadow:0 4px 14px rgba(0,0,0,.35)!important}.music-together-copy{min-width:0;flex:1}.music-together-copy b,.music-together-copy span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.music-together-copy b{font-size:11px;font-weight:600;color:#f2f2f3}.music-together-copy span{margin-top:3px;color:rgba(255,255,255,.48);font-size:8px}.music-together-action{height:29px;min-width:58px;padding:0 10px;border:0;border-radius:15px;background:rgba(235,77,87,.16);color:#ff8189;font-size:9px;font-weight:650;cursor:pointer}.music-bubbles{display:grid;grid-template-columns:1fr 1fr;gap:10px;min-height:1px;padding:0 18px;flex:none}.music-stage{position:relative;min-height:220px;display:flex;align-items:center;justify-content:center;flex:1}.music-vinyl-wrap{position:relative;width:256px;height:256px}.music-vinyl{position:absolute;inset:4px;border-radius:50%;border:1px solid rgba(255,255,255,.13);background:radial-gradient(circle at center,transparent 0 5px,#d9d9da 5.5px 7px,transparent 7.5px 36px,rgba(4,4,5,.86) 37px 47%,#070708 48% 100%),repeating-radial-gradient(circle at center,rgba(255,255,255,.055) 0 1px,rgba(0,0,0,.18) 1.4px 3px);box-shadow:0 22px 48px rgba(0,0,0,.62),0 0 0 9px rgba(255,255,255,.022),inset 0 0 24px rgba(255,255,255,.025);animation:dyspin 16s linear infinite}.music-vinyl-cover{position:absolute;inset:38px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#8d2730,#2b171a);background-position:center;background-size:cover;box-shadow:inset 0 0 18px rgba(0,0,0,.42);cursor:pointer}.music-vinyl-cover span{width:72%;color:rgba(255,255,255,.8);font-family:"Songti SC","STSong",serif;font-size:30px;text-align:center;text-shadow:0 3px 12px rgba(0,0,0,.3)}.music-vinyl-hole{position:absolute;left:50%;top:50%;z-index:3;width:10px;height:10px;border:3px solid rgba(255,255,255,.78);border-radius:50%;background:#171719;transform:translate(-50%,-50%)}.music-arm{position:absolute;right:-8px;top:-16px;z-index:4;width:72px;height:154px;transform:rotate(6deg);transform-origin:54px 17px;transition:transform .55s cubic-bezier(.22,.78,.22,1);pointer-events:none}.music-arm:before{content:"";position:absolute;right:10px;top:8px;width:32px;height:32px;border:8px solid #b9babd;border-radius:50%;background:#3a3b3e;box-shadow:0 3px 10px rgba(0,0,0,.42)}.music-arm:after{content:"";position:absolute;right:31px;top:38px;width:7px;height:111px;border-radius:5px;background:linear-gradient(90deg,#d6d7d9,#8d8e91);box-shadow:0 2px 8px rgba(0,0,0,.36);transform:rotate(-12deg);transform-origin:top}.music-arm i{position:absolute;right:43px;bottom:1px;width:17px;height:28px;border-radius:4px 4px 8px 8px;background:#a6a7aa;transform:rotate(-12deg)}.music-meta{padding:0 26px 5px;text-align:center;flex:none}.music-meta b{display:block;overflow:hidden;color:#f6f6f7;font-size:19px;font-weight:680;letter-spacing:.01em;text-overflow:ellipsis;white-space:nowrap}.music-meta span{display:block;margin-top:4px;overflow:hidden;color:rgba(255,255,255,.46);font-size:11px;text-overflow:ellipsis;white-space:nowrap}.music-lyrics{height:64px;overflow:hidden;padding:1px 24px;text-align:center;scroll-behavior:smooth;-webkit-mask-image:linear-gradient(transparent,#000 22%,#000 78%,transparent);mask-image:linear-gradient(transparent,#000 22%,#000 78%,transparent);flex:none}.music-lyrics .mlrc{overflow:hidden;color:rgba(255,255,255,.28);font-size:11px;line-height:2.05;text-overflow:ellipsis;white-space:nowrap;transition:color .3s,transform .3s}.music-controls{padding:1px 22px 12px;flex:none}.music-seek{position:relative;height:18px;display:flex;align-items:center;cursor:pointer}.music-seek-track{width:100%;height:3px;border-radius:3px;background:rgba(255,255,255,.16);overflow:visible}.music-seek-fill{position:relative;height:100%;width:0;border-radius:3px;background:var(--music-red)}.music-seek-fill:after{content:"";position:absolute;right:-4px;top:50%;width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.35);transform:translateY(-50%)}.music-time{display:flex;justify-content:space-between;margin-top:-1px;color:rgba(255,255,255,.35);font-size:8px}.music-control-row{height:68px;display:flex;align-items:center;justify-content:space-between}.music-ctl{width:40px;height:40px;border:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:transparent;color:#fff;cursor:pointer}.music-ctl.on{background:rgba(235,77,87,.14);color:#ff737c}.music-play{width:58px;height:58px;border:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#f4f4f5;color:#171719;box-shadow:0 9px 24px rgba(0,0,0,.32);cursor:pointer}.music-play svg path,.music-play svg rect{fill:#171719}.music-chatbar{position:static!important;height:42px;margin:1px 0 0!important;padding:4px 5px 4px 13px!important;border:1px solid rgba(255,255,255,.07)!important;border-radius:21px!important;background:rgba(255,255,255,.055)!important}.music-chatbar textarea{color:#eee!important;font-size:11px!important}.music-chatbar .send{min-width:46px;height:32px;border-radius:16px!important;background:var(--music-red)!important;font-size:10px}.music-empty{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;color:#fff;background:radial-gradient(circle at 50% 30%,#36383d,#111214 68%)}.music-empty-body{display:flex;flex:1;min-height:0;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}.music-empty-art{position:relative;width:176px;height:176px;margin-bottom:24px}.music-empty-art:before,.music-empty-art:after{content:"";position:absolute;border-radius:20px;background:linear-gradient(145deg,#27282c,#17181b);box-shadow:0 18px 35px rgba(0,0,0,.34)}.music-empty-art:before{inset:18px -8px -2px 28px;transform:rotate(9deg)}.music-empty-art:after{inset:0 12px 16px 8px;background:linear-gradient(145deg,#a4313a,#371a1e);transform:rotate(-5deg)}.music-empty-record{position:absolute;z-index:2;inset:23px 35px 39px 20px;border:1px solid rgba(255,255,255,.08);border-radius:50%;background:repeating-radial-gradient(circle at center,#09090a 0 3px,#171719 4px 6px)}.music-empty-record:after{content:"";position:absolute;left:50%;top:50%;width:38px;height:38px;border-radius:50%;background:#ec5962;transform:translate(-50%,-50%)}.music-empty-body small{color:rgba(255,255,255,.4);font-size:9px;letter-spacing:.22em}.music-empty-body h2{margin:8px 0 5px;font-size:23px}.music-empty-body p{margin:0;color:rgba(255,255,255,.48);font-size:11px}.music-primary{height:42px;margin-top:22px;padding:0 22px;border:0;border-radius:21px;background:var(--music-red,#eb4d57);color:#fff;font-size:12px;font-weight:650}.music-library-list{display:flex;flex-direction:column;gap:5px}.music-library-row{display:grid;grid-template-columns:46px minmax(0,1fr) auto;align-items:center;gap:10px;padding:7px;border-radius:13px;background:#202124}.music-library-row.current{background:linear-gradient(90deg,rgba(235,77,87,.16),#202124 58%)}.music-library-cover{width:46px;height:46px;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:9px;background:linear-gradient(145deg,#8e3037,#25262a);color:#fff;font-family:"Songti SC","STSong",serif;font-size:17px;background-position:center;background-size:cover}.music-library-copy{min-width:0;cursor:pointer}.music-library-copy b,.music-library-copy span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.music-library-copy b{color:#f4f4f5;font-size:12px}.music-library-copy span{margin-top:4px;color:#777a80;font-size:9px}.music-library-actions{display:flex;align-items:center}.music-library-actions button{width:29px;height:29px;border:0;border-radius:50%;background:transparent;color:#a9abb0;font-size:12px}.music-library-actions button.danger{color:#df6b72}@media(max-height:720px){.music-topbar{height:56px}.music-together-card{margin-top:0;padding-top:6px;padding-bottom:6px}.music-stage{min-height:184px}.music-vinyl-wrap{width:218px;height:218px}.music-arm{right:-14px;top:-22px;transform:scale(.88) rotate(6deg)}.music-meta b{font-size:17px}.music-lyrics{height:48px}.music-controls{padding-bottom:7px}.music-control-row{height:58px}.music-play{width:52px;height:52px}}
+.music-premium{--music-red:#eb4d57;position:absolute;inset:0;display:flex;flex-direction:column;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;color:#fff;background:#111214;isolation:isolate}.music-premium:before{content:"";position:absolute;inset:-34px;z-index:-3;background:radial-gradient(circle at 50% 14%,#404247 0,#202124 32%,#111214 72%);pointer-events:none}.music-ambient{position:absolute;inset:-46px;z-index:-2;background-position:center;background-size:cover;filter:blur(38px) saturate(.68);opacity:.42;transform:scale(1.12);pointer-events:none}.music-premium:after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(10,11,13,.28),rgba(14,15,17,.78) 43%,#111214 82%);pointer-events:none}.music-topbar{height:64px;display:grid;grid-template-columns:44px minmax(0,1fr) 44px;align-items:center;padding:8px 12px 0;flex:none}.music-iconbtn{width:40px;height:40px;border:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.055);color:#fff;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);cursor:pointer}.music-topcopy{min-width:0;text-align:center}.music-topcopy small{display:block;color:rgba(255,255,255,.46);font-size:8px;letter-spacing:.24em}.music-topcopy b{display:block;margin-top:4px;overflow:hidden;color:#f7f7f8;font-size:14px;font-weight:650;text-overflow:ellipsis;white-space:nowrap}.music-topcopy span{display:block;margin-top:2px;overflow:hidden;color:rgba(255,255,255,.55);font-size:10px;text-overflow:ellipsis;white-space:nowrap}.music-together-card{position:relative;display:flex;align-items:center;gap:10px;margin:3px 18px 5px;padding:8px 11px;border:1px solid rgba(255,255,255,.085);border-radius:18px;background:rgba(255,255,255,.055);box-shadow:inset 0 1px rgba(255,255,255,.04);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);flex:none}.music-together-avatars{display:flex;align-items:center;flex:none}.music-together-avatars>div+div{margin-left:-9px}.music-together-avatars>div>div{border-width:1.5px!important;box-shadow:0 4px 14px rgba(0,0,0,.35)!important}.music-together-copy{min-width:0;flex:1}.music-together-copy b,.music-together-copy span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.music-together-copy b{font-size:11px;font-weight:600;color:#f2f2f3}.music-together-copy span{margin-top:3px;color:rgba(255,255,255,.48);font-size:8px}.music-together-action{height:29px;min-width:58px;padding:0 10px;border:0;border-radius:15px;background:rgba(235,77,87,.16);color:#ff8189;font-size:9px;font-weight:650;cursor:pointer}.music-bubbles{display:grid;grid-template-columns:1fr 1fr;gap:10px;min-height:1px;padding:0 18px;flex:none}.music-stage{position:relative;min-height:220px;display:flex;align-items:center;justify-content:center;flex:1}.music-vinyl-wrap{position:relative;width:256px;height:256px}.music-vinyl{position:absolute;inset:4px;border-radius:50%;border:1px solid rgba(255,255,255,.13);background:radial-gradient(circle at center,transparent 0 5px,#d9d9da 5.5px 7px,transparent 7.5px 36px,rgba(4,4,5,.86) 37px 47%,#070708 48% 100%),repeating-radial-gradient(circle at center,rgba(255,255,255,.055) 0 1px,rgba(0,0,0,.18) 1.4px 3px);box-shadow:0 22px 48px rgba(0,0,0,.62),0 0 0 9px rgba(255,255,255,.022),inset 0 0 24px rgba(255,255,255,.025);animation:dyspin 16s linear infinite}.music-vinyl-cover{position:absolute;inset:38px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#8d2730,#2b171a);background-position:center;background-size:cover;box-shadow:inset 0 0 18px rgba(0,0,0,.42);cursor:pointer}.music-vinyl-cover span{width:72%;color:rgba(255,255,255,.8);font-family:"Songti SC","STSong",serif;font-size:30px;text-align:center;text-shadow:0 3px 12px rgba(0,0,0,.3)}.music-vinyl-hole{position:absolute;left:50%;top:50%;z-index:3;width:10px;height:10px;border:3px solid rgba(255,255,255,.78);border-radius:50%;background:#171719;transform:translate(-50%,-50%)}.music-arm{position:absolute;right:-8px;top:-16px;z-index:4;width:72px;height:154px;transform:rotate(6deg);transform-origin:54px 17px;transition:transform .55s cubic-bezier(.22,.78,.22,1);pointer-events:none}.music-arm:before{content:"";position:absolute;right:10px;top:8px;width:32px;height:32px;border:8px solid #b9babd;border-radius:50%;background:#3a3b3e;box-shadow:0 3px 10px rgba(0,0,0,.42)}.music-arm:after{content:"";position:absolute;right:31px;top:38px;width:7px;height:111px;border-radius:5px;background:linear-gradient(90deg,#d6d7d9,#8d8e91);box-shadow:0 2px 8px rgba(0,0,0,.36);transform:rotate(-12deg);transform-origin:top}.music-arm i{position:absolute;right:43px;bottom:1px;width:17px;height:28px;border-radius:4px 4px 8px 8px;background:#a6a7aa;transform:rotate(-12deg)}.music-meta{padding:0 26px 5px;text-align:center;flex:none}.music-meta b{display:block;overflow:hidden;color:#f6f6f7;font-size:19px;font-weight:680;letter-spacing:.01em;text-overflow:ellipsis;white-space:nowrap}.music-meta span{display:block;margin-top:4px;overflow:hidden;color:rgba(255,255,255,.46);font-size:11px;text-overflow:ellipsis;white-space:nowrap}.music-lyrics{height:64px;overflow:hidden;padding:1px 24px;text-align:center;scroll-behavior:smooth;-webkit-mask-image:linear-gradient(transparent,#000 22%,#000 78%,transparent);mask-image:linear-gradient(transparent,#000 22%,#000 78%,transparent);flex:none}.music-lyrics .mlrc{overflow:hidden;color:rgba(255,255,255,.28);font-size:11px;line-height:2.05;text-overflow:ellipsis;white-space:nowrap;transition:color .3s,transform .3s}.music-controls{padding:1px 22px 12px;flex:none}.music-seek{position:relative;height:18px;display:flex;align-items:center;cursor:pointer}.music-seek-track{width:100%;height:3px;border-radius:3px;background:rgba(255,255,255,.16);overflow:visible}.music-seek-fill{position:relative;height:100%;width:0;border-radius:3px;background:var(--music-red)}.music-seek-fill:after{content:"";position:absolute;right:-4px;top:50%;width:8px;height:8px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.35);transform:translateY(-50%)}.music-time{display:flex;justify-content:space-between;margin-top:-1px;color:rgba(255,255,255,.35);font-size:8px}.music-control-row{height:68px;display:flex;align-items:center;justify-content:space-between}.music-ctl{width:40px;height:40px;border:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:transparent;color:#fff;cursor:pointer}.music-ctl.on{background:rgba(235,77,87,.14);color:#ff737c}.music-play{width:58px;height:58px;border:0;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#f4f4f5;color:#171719;box-shadow:0 9px 24px rgba(0,0,0,.32);cursor:pointer}.music-play svg path,.music-play svg rect{fill:#171719}.music-chatbar{position:static!important;height:42px;margin:1px 0 0!important;padding:4px 5px 4px 13px!important;border:1px solid rgba(255,255,255,.07)!important;border-radius:21px!important;background:rgba(255,255,255,.055)!important}.music-chatbar textarea{color:#eee!important;font-size:11px!important}.music-chatbar .send{min-width:46px;height:32px;border-radius:16px!important;background:var(--music-red)!important;font-size:10px}.music-empty{position:absolute;inset:0;display:flex;flex-direction:column;overflow:hidden;color:#fff;background:radial-gradient(circle at 50% 30%,#36383d,#111214 68%)}.music-empty-body{display:flex;flex:1;min-height:0;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center}.music-empty-art{position:relative;width:176px;height:176px;margin-bottom:24px}.music-empty-art:before,.music-empty-art:after{content:"";position:absolute;border-radius:20px;background:linear-gradient(145deg,#27282c,#17181b);box-shadow:0 18px 35px rgba(0,0,0,.34)}.music-empty-art:before{inset:18px -8px -2px 28px;transform:rotate(9deg)}.music-empty-art:after{inset:0 12px 16px 8px;background:linear-gradient(145deg,#a4313a,#371a1e);transform:rotate(-5deg)}.music-empty-record{position:absolute;z-index:2;inset:23px 35px 39px 20px;border:1px solid rgba(255,255,255,.08);border-radius:50%;background:repeating-radial-gradient(circle at center,#09090a 0 3px,#171719 4px 6px)}.music-empty-record:after{content:"";position:absolute;left:50%;top:50%;width:38px;height:38px;border-radius:50%;background:#ec5962;transform:translate(-50%,-50%)}.music-empty-body small{color:rgba(255,255,255,.4);font-size:9px;letter-spacing:.22em}.music-empty-body h2{margin:8px 0 5px;font-size:23px}.music-empty-body p{margin:0;color:rgba(255,255,255,.48);font-size:11px}.music-primary{height:42px;margin-top:22px;padding:0 22px;border:0;border-radius:21px;background:var(--music-red,#eb4d57);color:#fff;font-size:12px;font-weight:650}.music-library-list{display:flex;flex-direction:column;gap:5px}.music-library-row{display:grid;grid-template-columns:46px minmax(0,1fr) auto;align-items:center;gap:10px;padding:7px;border-radius:13px;background:#202124}.music-library-row.current{background:linear-gradient(90deg,rgba(235,77,87,.16),#202124 58%)}.music-library-cover{width:46px;height:46px;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:9px;background:linear-gradient(145deg,#8e3037,#25262a);color:#fff;font-family:"Songti SC","STSong",serif;font-size:17px;background-position:center;background-size:cover}.music-library-copy{min-width:0;cursor:pointer}.music-library-copy b,.music-library-copy span{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.music-library-copy b{color:#f4f4f5;font-size:12px}.music-library-copy span{margin-top:4px;color:#777a80;font-size:9px}.music-library-actions{display:flex;align-items:center}.music-library-actions button{width:29px;height:29px;border:0;border-radius:50%;background:transparent;color:#a9abb0;font-size:12px}.music-library-actions button.danger{color:#df6b72}@media(max-height:720px){.music-topbar{height:56px}.music-together-card{margin-top:0;padding-top:6px;padding-bottom:6px}.music-stage{min-height:184px}.music-vinyl-wrap{width:218px;height:218px}.music-arm{right:-14px;top:-22px;transform:scale(.88) rotate(6deg)}.music-meta b{font-size:17px}.music-lyrics{height:48px}.music-controls{padding-bottom:7px}.music-control-row{height:58px}.music-play{width:52px;height:52px}}
 /* 歌词需要允许手动浏览；自动跟唱仅在用户停止滑动后恢复。 */
 .music-lyrics{overflow-x:hidden!important;overflow-y:auto!important;scroll-behavior:auto!important;touch-action:pan-y;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none}.music-lyrics::-webkit-scrollbar{display:none}
 /* 音乐库与音乐管理页：保留播放页沉浸感，同时让空状态与管理页更像完整应用 */
@@ -2835,20 +2835,20 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
 /* 作品文案里的 @ 也要挑出来 */
 .dyat-tx{color:#9ec6ff;font-weight:400;}
 </style>
-<link rel="stylesheet" href="glass-theme.css?v=1701&r=music-disc-color-1">
-<link rel="stylesheet" href="mail-outbox.css?v=1701" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="travel-home.css?v=1701" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="travel-hotel.css?v=1701" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="travel-regions.css?v=1701" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="travel-train.css?v=1701" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="travel-concert-booking.css?v=1701" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="travel-taxi.css?v=1701" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="travel-concert.css?v=1701" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="travel-flight.css?v=1701" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="travel-guide.css?v=1701" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="role-family-card.css?v=1701" onerror="__northCssRetry(this)">
-<link rel="stylesheet" href="wechat-me.css?v=1701">
-<link rel="stylesheet" href="pet-game.css?v=1701">
+<link rel="stylesheet" href="glass-theme.css?v=1703&r=music-disc-color-1">
+<link rel="stylesheet" href="mail-outbox.css?v=1703" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="travel-home.css?v=1703" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="travel-hotel.css?v=1703" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="travel-regions.css?v=1703" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="travel-train.css?v=1703" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="travel-concert-booking.css?v=1703" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="travel-taxi.css?v=1703" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="travel-concert.css?v=1703" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="travel-flight.css?v=1703" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="travel-guide.css?v=1703" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="role-family-card.css?v=1703" onerror="__northCssRetry(this)">
+<link rel="stylesheet" href="wechat-me.css?v=1703">
+<link rel="stylesheet" href="pet-game.css?v=1703">
 <link rel="stylesheet" href="wedding-game.css?v=wedding-dual-17">
 </head>
 <body>
@@ -2902,71 +2902,71 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
   setTimeout(function(){if(!window.__northBootReady)window.__northBootFail(window.__northBootStarted?'本机存档读取超过 60 秒，请重新加载；仍不会删除聊天、角色或主题':'关键页面文件加载超过 60 秒，请检查网络后重新加载');},60000);
 })();
 </script>
-<script src="browser-diagnostics.js?v=1701"></script>
-<script src="license-gate.js?v=1701" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
-<script src="couple-watch.js?v=1701" onerror="__northBootFail('页面组件载入失败')"></script>
-<script src="request-diagnostics.js?v=1701"></script>
-<script src="message-beijing-time.js?v=1701&r=offline-me-1"></script>
-<script src="travel-gallery.js?v=1701"></script>
-<script src="travel-home.js?v=1701"></script>
-<script src="travel-hotel-data.js?v=1701"></script>
-<script src="travel-payment.js?v=1701"></script>
-<script src="travel-hotel.js?v=1701"></script>
-<script src="destination-photos.js?v=1701"></script>
-<script src="travel-ticket-data.js?v=1701"></script><script src="travel-guide.js?v=1701"></script>
-<script src="travel-regions.js?v=1701"></script>
-<script src="travel-train.js?v=1701" onerror="__northBootFail(\'火车票组件载入失败\')"></script><script src="travel-train-booking.js?v=1701"></script>
-<script src="travel-concert-booking.js?v=1701"></script>
-<script src="travel-taxi.js?v=1701"></script>
-<script src="travel-concert.js?v=1701"></script>
-<script src="travel-flight.js?v=1701" onerror="__northBootFail('机票组件载入失败')"></script><script src="travel-flight-booking.js?v=1701"></script>
-<script src="app.js?v=1701&r=v1701-private-package-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
-<script src="private-reply-intercept.js?v=1701&r=v1178-private-intercept-parity-1" onerror="__northBootFail('私人回复拦截记录组件载入失败（安装包不完整）')"></script>
-<script src="cohab-theater.js?v=1701&r=v1274-web-cohab-guests-1" onerror="__northBootFail('共同生活多人剧场组件载入失败（可能是网络或 404）')"></script>
-<script src="public-north-policy.js?v=1701"></script>
-<script src="public-north-runtime.js?v=1701"></script>
-<script src="phone-shortcuts.js?v=1701"></script>
-<script src="request-size-details.js?v=1701" onerror="__northBootFail('请求规模详情组件载入失败')"></script>
-<script src="cohab-model-diagnostics.js?v=1701" onerror="__northBootFail('共同生活模型诊断组件载入失败')"></script>
-<script src="bead-studio.js?v=1701&r=v1184-pixel-puzzle-4" onerror="__northBootFail('像素拼拼乐组件载入失败（安装包不完整）')"></script>
-<script src="heart-quiz.js?v=1701" onerror="console.warn('心动审判预览组件载入失败')"></script>
+<script src="browser-diagnostics.js?v=1703"></script>
+<script src="license-gate.js?v=1703" onerror="__northBootFail('授权组件载入失败（可能是网络或 404）')"></script>
+<script src="couple-watch.js?v=1703" onerror="__northBootFail('页面组件载入失败')"></script>
+<script src="request-diagnostics.js?v=1703"></script>
+<script src="message-beijing-time.js?v=1703&r=offline-me-1"></script>
+<script src="travel-gallery.js?v=1703"></script>
+<script src="travel-home.js?v=1703"></script>
+<script src="travel-hotel-data.js?v=1703"></script>
+<script src="travel-payment.js?v=1703"></script>
+<script src="travel-hotel.js?v=1703"></script>
+<script src="destination-photos.js?v=1703"></script>
+<script src="travel-ticket-data.js?v=1703"></script><script src="travel-guide.js?v=1703"></script>
+<script src="travel-regions.js?v=1703"></script>
+<script src="travel-train.js?v=1703" onerror="__northBootFail(\'火车票组件载入失败\')"></script><script src="travel-train-booking.js?v=1703"></script>
+<script src="travel-concert-booking.js?v=1703"></script>
+<script src="travel-taxi.js?v=1703"></script>
+<script src="travel-concert.js?v=1703"></script>
+<script src="travel-flight.js?v=1703" onerror="__northBootFail('机票组件载入失败')"></script><script src="travel-flight-booking.js?v=1703"></script>
+<script src="app.js?v=1703&r=v1703-private-package-1" onerror="__northBootFail('app.js 载入失败（可能是网络或 404）')"></script>
+<script src="private-reply-intercept.js?v=1703&r=v1178-private-intercept-parity-1" onerror="__northBootFail('私人回复拦截记录组件载入失败（安装包不完整）')"></script>
+<script src="cohab-theater.js?v=1703&r=v1274-web-cohab-guests-1" onerror="__northBootFail('共同生活多人剧场组件载入失败（可能是网络或 404）')"></script>
+<script src="public-north-policy.js?v=1703"></script>
+<script src="public-north-runtime.js?v=1703"></script>
+<script src="phone-shortcuts.js?v=1703"></script>
+<script src="request-size-details.js?v=1703" onerror="__northBootFail('请求规模详情组件载入失败')"></script>
+<script src="cohab-model-diagnostics.js?v=1703" onerror="__northBootFail('共同生活模型诊断组件载入失败')"></script>
+<script src="bead-studio.js?v=1703&r=v1184-pixel-puzzle-4" onerror="__northBootFail('像素拼拼乐组件载入失败（安装包不完整）')"></script>
+<script src="heart-quiz.js?v=1703" onerror="console.warn('心动审判预览组件载入失败')"></script>
 <script src="private-runtime-diagnostics.js?v=339" onerror="__northBootFail('私人 App 性能保护组件载入失败（安装包不完整）')"></script>
 <script src="vendor/qr/qrcode.js?v=2.0.4"></script>
 <script src="vendor/qr/jsQR.js?v=1.4.0"></script>
-<script src="wechat-me.js?v=1701" onerror="__northBootFail('微信个人页组件载入失败（可能是网络或 404）')"></script>
+<script src="wechat-me.js?v=1703" onerror="__northBootFail('微信个人页组件载入失败（可能是网络或 404）')"></script>
 <link rel="stylesheet" href="private-smart-lock.css?v=339">
 <link rel="stylesheet" href="private-smart-air.css?v=342">
-<script src="smart-home.js?v=1701" onerror="__northBootFail('智能家电组件载入失败（可能是网络或 404）')"></script>
+<script src="smart-home.js?v=1703" onerror="__northBootFail('智能家电组件载入失败（可能是网络或 404）')"></script>
 <script src="private-smart-lock.js?v=339" onerror="__northBootFail('私人门锁组件载入失败（安装包不完整）')"></script>
-<script src="private-smart-air.js?v=1701" onerror="__northBootFail('私人空调组件载入失败（安装包不完整）')"></script>
-<script src="assets/north-dessert-shop.js?v=1701"></script>
-<script src="assets/north-mcdonalds-shop.js?v=1701"></script>
-<script src="assets/north-luckin-shop.js?v=1701"></script>
-<script src="assets/north-breakfast-shop.js?v=1701"></script>
-<script src="assets/north-fruit-bowl-shop.js?v=1701"></script>
-<script src="assets/north-pharmacy-shop.js?v=1701"></script>
-<script src="delivery.js?v=1701" onerror="__northBootFail('真实外卖组件载入失败（可能是网络或 404）')"></script>
-<script src="commerce-ui.js?v=1701" onerror="northCommerceLoadFailed()"></script>
-<script src="north-runner.js?v=1701" defer></script>
-<script src="pet-game.js?v=1701" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
-<script src="desk-pet.js?v=1701" onerror="console.warn('桌面小机器人载入失败')"></script>
-<script src="mail-outbox.js?v=1701" onerror="__northBootFail('信件投递组件载入失败')"></script>
-<script src="role-family-card.js?v=1701" onerror="__northBootFail('亲属卡组件载入失败')"></script>
-<script src="pf-group-role.js?v=1701" onerror="console.warn('真人群角色组件载入失败')"></script>
-<script src="pixel-home-policy.js?v=1701"></script>
-<script src="pixel-wardrobe-info.js?v=1701"></script>
-<script src="pixel-home.js?v=1701"></script>
-<script src="gift-effects.js?v=1701" onerror="console.warn('礼物粒子特效载入失败')"></script>
-<script src="thought-card-effects.js?v=1701" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
-<script src="photo-album.js?v=1701"></script>
+<script src="private-smart-air.js?v=1703" onerror="__northBootFail('私人空调组件载入失败（安装包不完整）')"></script>
+<script src="assets/north-dessert-shop.js?v=1703"></script>
+<script src="assets/north-mcdonalds-shop.js?v=1703"></script>
+<script src="assets/north-luckin-shop.js?v=1703"></script>
+<script src="assets/north-breakfast-shop.js?v=1703"></script>
+<script src="assets/north-fruit-bowl-shop.js?v=1703"></script>
+<script src="assets/north-pharmacy-shop.js?v=1703"></script>
+<script src="delivery.js?v=1703" onerror="__northBootFail('真实外卖组件载入失败（可能是网络或 404）')"></script>
+<script src="commerce-ui.js?v=1703" onerror="northCommerceLoadFailed()"></script>
+<script src="north-runner.js?v=1703" defer></script>
+<script src="pet-game.js?v=1703" onerror="__northBootFail('电子宠物组件载入失败（可能是网络或 404）')"></script>
+<script src="desk-pet.js?v=1703" onerror="console.warn('桌面小机器人载入失败')"></script>
+<script src="mail-outbox.js?v=1703" onerror="__northBootFail('信件投递组件载入失败')"></script>
+<script src="role-family-card.js?v=1703" onerror="__northBootFail('亲属卡组件载入失败')"></script>
+<script src="pf-group-role.js?v=1703" onerror="console.warn('真人群角色组件载入失败')"></script>
+<script src="pixel-home-policy.js?v=1703"></script>
+<script src="pixel-wardrobe-info.js?v=1703"></script>
+<script src="pixel-home.js?v=1703"></script>
+<script src="gift-effects.js?v=1703" onerror="console.warn('礼物粒子特效载入失败')"></script>
+<script src="thought-card-effects.js?v=1703" onerror="console.warn('隐藏心声彩蛋载入失败')"></script>
+<script src="photo-album.js?v=1703"></script>
 <script src="wedding-game.js?v=wedding-dual-17" onerror="console.warn('现代婚礼预览载入失败')"></script>
-<script src="couple-watch-runtime.js?v=1701" onerror="__northBootFail('页面组件载入失败')"></script>
-<script src="private-cloud-backup.js?v=1701" onerror="__northBootFail('私人云备份组件载入失败')"></script>
-<script src="robot-face-protocol.js?v=1701"></script>
-<script src="private-cloud-usage.js?v=1701"></script>
-<script src="private-device-history.js?v=1701"></script>
-<script src="private-robot-face.js?v=1701"></script>
-<script src="private-robot-voice.js?v=1701"></script>
-<script src="cozy-home.js?v=1701" onerror="__northBootFail('私人小家桥接组件载入失败（安装包不完整）')"></script>
+<script src="couple-watch-runtime.js?v=1703" onerror="__northBootFail('页面组件载入失败')"></script>
+<script src="private-cloud-backup.js?v=1703" onerror="__northBootFail('私人云备份组件载入失败')"></script>
+<script src="robot-face-protocol.js?v=1703"></script>
+<script src="private-cloud-usage.js?v=1703"></script>
+<script src="private-device-history.js?v=1703"></script>
+<script src="private-robot-face.js?v=1703"></script>
+<script src="private-robot-voice.js?v=1703"></script>
+<script src="cozy-home.js?v=1703" onerror="__northBootFail('私人小家桥接组件载入失败（安装包不完整）')"></script>
 </body>
 </html>

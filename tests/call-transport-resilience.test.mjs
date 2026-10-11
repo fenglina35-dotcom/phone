@@ -15,6 +15,7 @@ const source = name => {
   return lines.slice(i, j).join('\n');
 };
 const load = (names, extra = {}) => {
+  if(names.includes("chatResultText"))names=["roleMoodScopeText",...names];
   const ctx = vm.createContext(Object.assign({ Math, String, Number, Object, Array, JSON, Date, Error, TypeError, console }, extra));
   vm.runInContext(names.map(source).join('\n') + '\n' + names.map(n => `globalThis.${n}=${n};`).join(''), ctx);
   return ctx;

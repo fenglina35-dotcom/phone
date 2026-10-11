@@ -31,7 +31,7 @@ test('截断续写排在原文直通之前，开着原文输出也会补完', as
       joinAIContinuation: (a, b) => a + b,
       chatAPI: async (msgs, opt) => { calls.push(opt); return '后半段。'; },
     };
-    vm.runInNewContext(one(src, 'chatResultText') + '\nglobalThis.f=chatResultText;', ctx);
+    vm.runInNewContext(one(src, 'roleMoodScopeText')+'\n'+one(src, 'chatResultText') + '\nglobalThis.f=chatResultText;', ctx);
     const data = { choices: [{ message: { content: '前半段被截断' }, finish_reason: 'length' }] };
 
     const out = await ctx.f([], { complete: true, unfilteredOutput: true, max: 900 }, data);
@@ -50,7 +50,7 @@ test('截断续写排在原文直通之前，开着原文输出也会补完', as
 });
 
 test('两边的微信请求参数必须一致，不能再各跑各的', () => {
-  const md = src => (src.match(/_md=\{roleReplyLanguageGuard:true,[^}]*\}/) || [])[0];
+  const md = src => (src.match(/_md=\{allowWechatThought:true,roleReplyLanguageGuard:true,[^}]*\}/) || [])[0];
   const w = md(web), p = md(priv);
   assert.ok(w && p, '两边都要能找到 _md');
   for (const key of ['complete:true', 'unfilteredOutput:_rawOutput']) {
