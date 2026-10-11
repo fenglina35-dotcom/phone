@@ -59,20 +59,20 @@ function persistenceRuntime() {
 }
 
 test('private identity remains v1355 and iOS 399 while public advances independently', () => {
-  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1693'/);
-  assert.match(privateApp, /APP_VER='v1693 · 微信自然消息动画'/);
+  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1695'/);
+  assert.match(privateApp, /APP_VER='v1695 · 微信消息动画防闪动'/);
   for (const html of [privateIndex, privateAlias]) {
-    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1693'/);
-    assert.match(html, /app\.js\?v=1693&r=v1693-private-package-1/);
+    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1695'/);
+    assert.match(html, /app\.js\?v=1695&r=v1695-private-package-1/);
     assert.match(html, /private-runtime-diagnostics\.js\?v=339/);
   }
-  assert.match(privateRepair, /index\.html\?repair=1&v=1693/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1695/);
   assert.match(swift, /1\.0\.439 \(439\)/);
   assert.match(bridge, /private static let build = "1\.0\.439 \(439\)"/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 439;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.439;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1692 · 微信自然消息动画'/);
-  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1692'/);
+  assert.match(publicApp, /APP_VER='v1694 · 微信消息动画防闪动'/);
+  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1694'/);
   assert.doesNotMatch(publicApp, /persistWechatRequested|smallPhoneWechatPersistTrace/);
 });
 

@@ -1668,4 +1668,6 @@ test('a stalled authorization refusal never switches the private inbox to anothe
  vm.createContext(ctx);vm.runInContext(src,ctx);await assert.rejects(ctx.roleSyncRpcFetch('phone_role_push_pull',{method:'POST',body:'{}'},50),/完整响应超时/);assert.equal(calls,1);
 });
 
-test('web and private retain per-message WeChat motion without touching receipt facts',()=>{for(const file of ['app.js',PRIVATE]){const js=read(file);assert.match(js,/WECHAT_MESSAGE_MOTION_V1692/);assert.match(js,/born\+2000/);assert.match(js,/wechatMotionMount\(c\)/);assert.match(js,/data-wx-read=/);assert.match(js,/roleMarkRead\(id\)/);assert.match(js,/pfAckRead\(mid\)/);}});
+test('web and private retain per-message WeChat motion without touching receipt facts',()=>{for(const file of ['app.js',PRIVATE]){const js=read(file);assert.match(js,/WECHAT_MESSAGE_MOTION_V1694/);assert.match(js,/born\+2000/);assert.match(js,/wechatMotionMount\(c\)/);assert.match(js,/data-wx-read=/);assert.match(js,/roleMarkRead\(id\)/);assert.match(js,/pfAckRead\(mid\)/);}});
+
+test('WeChat entrance survives local acknowledgement and redraw on web and private',()=>{for(const file of ['app.js',PRIVATE]){const js=read(file);assert.match(js,/function wechatMotionMessageId\(m\)/);assert.match(js,/data-wx-motion-id=/);assert.match(js,/rec\.avatarMotion\.currentTime/);assert.match(js,/animation\.currentTime=age/);}});

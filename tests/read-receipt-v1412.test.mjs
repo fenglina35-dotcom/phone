@@ -43,3 +43,42 @@ for(const file of ['app.js',P+'app.js']){
   assert.equal(ctx.wechatMotionReadDue({born:1000,initial:true,due:0},'已读',6000,true),6000,'historical read never replays');
  });
 }
+
+for(const file of ['app.js',P+'app.js']){
+ test(file+': message animation identity survives friend/group server acknowledgement',()=>{
+  const app=read(file),ctx=vm.createContext({pfMsgPayload:m=>m.payload});
+  vm.runInContext(fnSrc(app,'wechatMotionMessageId'),ctx);
+  assert.equal(ctx.wechatMotionMessageId({id:'local_1',payload:{_clientSendId:'SPME_local_1'}}),ctx.wechatMotionMessageId({id:'server_88',payload:{_clientSendId:'SPME_local_1'}}));
+  assert.notEqual(ctx.wechatMotionMessageId({id:'a'}),ctx.wechatMotionMessageId({id:'b'}));
+ });
+ test(file+': replaced message elements resume elapsed entrance instead of flashing or replaying',()=>{
+  const app=read(file),calls=[],ctx=vm.createContext({Math,wechatMotionReduced:()=>false});
+  vm.runInContext(fnSrc(app,'wechatMotionAnimate'),ctx);
+  const el={animate:(frames,options)=>{const a={currentTime:0};calls.push({frames,options,a});return a;}};
+  ctx.wechatMotionAnimate(el,{opacity:0},520,80,240);
+  assert.equal(calls[0].a.currentTime,240,'replacement resumes original timeline including avatar delay');
+  ctx.wechatMotionAnimate(el,{opacity:0},520,80,700);
+  assert.equal(calls.length,1,'finished history must not animate again');
+ });
+}
+
+test('real browser: friend ACK and role/group redraw keep entrance progress on both sources',async()=>{
+ const {createRequire}=await import('node:module'),require=createRequire(import.meta.url),{chromium}=require('playwright');
+ const browser=await chromium.launch({headless:true,executablePath:'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'});
+ try{for(const file of ['app.js',P+'app.js']){
+  const app=read(file),page=await browser.newPage();
+  await page.setContent('<div id="chatbg"></div><div id="pfchatbg"></div><div id="pfgroupbg"></div>');
+  await page.addScriptTag({content:'function actId(){return "main";}function renderPageKey(c){return c.p+":"+c.id;}function readReceiptOn(){return false;}function pfMsgPayload(m){return m.payload;}'+app.slice(app.indexOf('let _wechatMotion=null;'),app.indexOf('let _scrollBottomOnce'))});
+  for(const kind of ['chat','group','pfchat','pfgroup']){
+   await page.evaluate(kind=>{window.kind=kind;window.box=document.getElementById(kind==='pfchat'?'pfchatbg':kind==='pfgroup'?'pfgroupbg':'chatbg');box.innerHTML='';wechatMotionDispose();wechatMotionMount({p:kind,id:'fixture'});window.rowHTML=id=>'<div class="msg me" data-message-id="'+id+'" data-wx-motion-id="client:fixture"><div class="avatar">头像</div><div class="col">消息</div></div>';box.innerHTML=rowHTML('local_1');},kind);
+   await page.waitForTimeout(180);
+   const before=await page.evaluate(()=>({opacity:Number(getComputedStyle(box.querySelector('.avatar')).opacity),time:box.querySelector('.avatar').getAnimations()[0].currentTime}));
+   await page.evaluate(()=>{box.innerHTML=rowHTML('server_1');wechatMotionMount({p:kind,id:'fixture'});});
+   const after=await page.evaluate(()=>({opacity:Number(getComputedStyle(box.querySelector('.avatar')).opacity),size:_wechatMotion.rows.size,time:box.querySelector('.avatar').getAnimations()[0]?.currentTime}));
+   assert.equal(after.size,1,file+' '+kind+' acknowledgement keeps one record');assert(after.time>=before.time&&after.time>0,file+' '+kind+' resumed timeline');assert(Math.abs(after.opacity-before.opacity)<.16,file+' '+kind+' no reset: '+JSON.stringify({before,after}));
+   await page.waitForTimeout(650);
+   await page.evaluate(()=>{box.innerHTML=rowHTML('server_1');wechatMotionMount({p:kind,id:'fixture'});});
+   assert.equal(await page.evaluate(()=>box.querySelector('.avatar').getAnimations().length),0,'finished message does not replay');
+  }await page.close();
+ }}finally{await browser.close();}
+});
