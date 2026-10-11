@@ -8,7 +8,10 @@ const part=app.slice(app.indexOf('/* ===== v1716 液态玻璃'));
 
 test('v1716 liquid glass is baked once per widget and never redrawn while swiping',()=>{
   assert.ok(part.length>1000);
-  assert.doesNotMatch(part,/addEventListener\('scroll'|onscroll|MutationObserver|getImageData|toDataURL|requestAnimationFrame\(lgHomeRefresh/,'滑动、DOM 变化都不能触发重算，也不能拍背景快照');
+  assert.doesNotMatch(part,/MutationObserver|getImageData|toDataURL|requestAnimationFrame\(lgHomeRefresh/,'DOM 变化不能触发重算，也不能拍背景快照');
+  assert.match(part,/sw\.addEventListener\('scroll',lgSwipe,\{passive:true\}\)/,'v1718：翻页时玻璃里的壁纸跟着实时变');
+  assert.match(part,/if\(!g\|\|cv\._lgShift===shift&&cv\._lgScale===scale\)return;/,'没变的组件不重画');
+  assert.match(part,/final\?1:0\.6/,'滑动中低分辨率、停下后原分辨率');
   assert.match(part,/function lgGeometry\(host,desk\)/);assert.match(part,/closest\('\.apppage'\)/,'位置按组件停好的那一页算，翻页时整页一起滑');
   assert.match(part,/_lg\.cache\.get\(key\)/,'重新渲染直接装回缓存的画布');
   assert.match(part,/webglcontextlost/);assert.match(part,/已经烤好放进组件的画布不受影响/);
