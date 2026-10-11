@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import vm from 'node:vm';
 
 // Every release must carry these repairs. They are user-visible fixes that were
 // paid for with real debugging, and at least one of them has already been lost
@@ -1681,3 +1682,7 @@ test('natural chat follow, clear narration and music composer recovery remain on
 test('music normal-flow composer retains WeChat model budget and same-route fallback',()=>{for(const file of ['app.js',PRIVATE]){const js=read(file);assert(js.includes('MUSIC_STABLE_FLOW_V1'));assert(js.includes('musicReplyStatus'));const part=js.slice(js.indexOf('async function aiMusicReply('),js.indexOf('function musicHomeSongHTML('));assert(part.includes('wechatPrimaryReply'));assert(part.includes('independentRoleModel:true,complete:true'));assert(!part.includes('max:200'));}});
 
 test('thought metadata stays exclusive to WeChat role private replies',()=>{for(const file of ['app.js',PRIVATE]){const js=read(file);assert(js.includes('messages=roleMoodScopeMessages(messages,opt)'));assert(js.includes('const rawText=roleMoodScopeText('));assert(js.includes('_md={allowWechatThought:true,roleReplyLanguageGuard:true'));const music=js.slice(js.indexOf('async function aiMusicReply('),js.indexOf('function musicHomeSongHTML('));assert(!music.includes('allowWechatThought:true'));}});
+
+test('music reply failures persist across redraw and include preparation and delivery stages',()=>{for(const file of ['app.js',PRIVATE]){const js=read(file);for(const marker of ['musicReplyStatusText(sess&&sess.cid)','musicReplyFailure(stage,e,cid)',"stage='显示角色回复'","stage='匹配歌曲'","diagnosticRoleId:cid,roleInterceptStage:'音乐回复'"])assert(js.includes(marker),marker);assert(!js.includes('if(!c||c.blocked)return;musicInit();_mReplyBusy=true'));}});
+
+test('release updates preserve the inherited travel price calculation',()=>{for(const file of ['app.js',PRIVATE]){const js=read(file),start=js.indexOf('function tvPrice('),end=js.indexOf('function tvFlightNo(',start),ctx={tvCity:()=>({i:false}),TV_CLS:[{k:'economy',m:1}],Math};vm.createContext(ctx);vm.runInContext(js.slice(start,end),ctx);assert.equal(ctx.tvPrice('北京','上海','economy'),1790);}});
