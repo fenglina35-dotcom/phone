@@ -57,3 +57,8 @@ Worker：north-license-connectivity；默认地址：https://north-license-conne
 ## 2026-10-11 已授权部署
 
 已获用户明确传输/发布授权，现有Worker部署46720726，替换前线上05dd1e47与Git基线核验一致。固定健康200、官方Origin预检204、缺owner400、global dispatch403；未真实调用模型或通知。截图复用.cloudflare-deployed.jpg（固定eight-chat目录）。私人1677前台/网页1676使用核验入口；iPhone关闭代理移动网络仍待验收。
+
+
+## 2026-10-11 按用户要求撤回角色同步代理
+
+生产版本c26a0d51，仅停用 `/companion/` 路径并返回410 `role-sync-relay-retired`；旧私人客户端健康探测不再通过，会回到原独立后台。新私人源码v1689移除代理与探测等待，RPC直接使用配置的原后台。保留授权、好友RPC、外部TTS路由，保留原独立后台与安全的收件保存/确认顺序。实测 `/health` 200，好友和TTS GET 405（路由仍存在）；未更换账号、设备密钥、模型配置，也未承诺原后台在各移动网络均直连成功。

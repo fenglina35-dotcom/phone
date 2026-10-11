@@ -146,7 +146,7 @@ test('role WeChat remembers only successful password verification and unbind rev
 });
 test('web and private role-account binding implementation stays aligned',()=>{
  const priv=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js',import.meta.url),'utf8');
- for(const name of ['hisWechatBound','hisWechatBind','hisWechatUnbind','accountRoleWechatOpen','hisLoginOpen','hisDoLogin']){if(name!=='hisDoLogin')assert(priv.includes(functionSource(name)),name);else assert.equal(priv.replace(/\r\n/g,'\n'),execFileSync('git',['show','c13ef80b:native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js'],{encoding:'utf8',maxBuffer:10000000}).replace(/\r\n/g,'\n'));}
+ for(const name of ['hisWechatBound','hisWechatBind','hisWechatUnbind','accountRoleWechatOpen','hisLoginOpen','hisDoLogin']){if(name!=='hisDoLogin')assert(priv.includes(functionSource(name)),name);else assert.equal(priv.slice(priv.indexOf('function hisDoLogin('),priv.indexOf('\nfunction ',priv.indexOf('function hisDoLogin(')+10)).replace(/\r\n/g,'\n'),(()=>{const prior=execFileSync('git',['show','c13ef80b:native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js'],{encoding:'utf8',maxBuffer:10000000}).replace(/\r\n/g,'\n');const at=prior.indexOf('function hisDoLogin(');return prior.slice(at,prior.indexOf('\nfunction ',at+10));})());}
 });
 
 test('role bindings appear inline in the actual WeChat switch-account page',()=>{

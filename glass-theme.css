@@ -862,3 +862,35 @@ html.north-glass-ui.north-shell-custom,html.north-glass-ui.north-shell-custom bo
 
 /* Period explanations stay below their card; home exit stays independent of year navigation. */
 .cal-integrated-page .cal-period-note{margin:10px 16px 24px;line-height:1.7}.cal-nav-leading{display:flex;align-items:center;gap:8px;min-width:0}.cal-month-page .cal-home{width:44px;height:44px;flex:none;padding:0;display:grid;place-items:center}.cal-home svg{width:22px;height:26px}.cal-nav-leading .cal-year{padding:0 12px;font-size:18px}.cal-year-nav{justify-content:space-between!important}
+
+/* Local preview: hide a conversation without touching contacts or messages. */
+.wx-conversation-swipe{position:relative;overflow:hidden;touch-action:pan-y;background:var(--wx-row)}
+.wx-hide-conversation{position:absolute;right:0;top:0;bottom:0;width:128px;border:0;background:#62646b;color:#fff;font:400 14px/1.3 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;cursor:pointer}
+.wx-conversation-front{position:relative;z-index:1;user-select:none;-webkit-user-select:none;background:var(--wx-row);transition:transform .18s ease;touch-action:pan-y}
+.wx-conversation-swipe.open .wx-conversation-front{transform:translateX(-128px)}
+.cohab-stage .cohab-tap-next{position:relative;margin:14px auto 20px;width:36px;height:36px;border-radius:0;border:0;background:transparent;color:#dce2ed;display:grid;place-items:center;padding:0;box-shadow:none;touch-action:manipulation;cursor:pointer}
+.cohab-stage .cohab-tap-next::before,.cohab-stage .cohab-tap-next::after{content:none!important}
+.cohab-tap-next svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+@media(prefers-reduced-motion:reduce){.wx-conversation-front{transition:none}}
+
+.wx-chats .wx-conversation-swipe:not(:last-child) .row:after{display:block}
+
+
+/* NORTH_WIDGET_FOREGROUND_V1: customizable foreground, never dim photos or avatars. */
+html body #homeDesktop :is(.home-dashboard-grid,.home-vinyl-card,.home-sweetie-card){color:var(--north-widget-ink,#fff)!important}
+html body #homeDesktop :is(.home-dashboard-grid,.home-vinyl-card,.home-sweetie-card) :is(b,strong,small,em,p,span,i,label){color:var(--north-widget-ink,#fff)!important;text-shadow:none!important}
+html body #homeDesktop .home-dashboard-grid svg{color:var(--north-widget-ink,#fff)!important;stroke:var(--north-widget-ink,#fff)!important}
+html body #homeDesktop .dash-heart>svg{width:19px!important;height:19px!important}
+
+/* NORTH_OFFLINE_BRIGHT_V1: all offline text is bright; media and status fills remain independent. */
+html body :is(.offstage,.offline-hub,.north-offline-sheet),html body :is(.offstage,.offline-hub,.north-offline-sheet) :is(small,span,b,strong,p,em,i,label,summary,time,h1,h2,h3,button,input,select,textarea,.hint,.offnar,.offdate,.offbubble){color:#fff!important;-webkit-text-fill-color:#fff;text-shadow:none!important}
+html body :is(.offstage,.offline-hub,.north-offline-sheet) :is(input,textarea)::placeholder{color:rgba(255,255,255,.85)!important;-webkit-text-fill-color:rgba(255,255,255,.85)}
+html body .cohab-settings-grid :is(input,select){color:#fff!important;-webkit-text-fill-color:#fff}
+html body .cohab-settings-grid select option{background:#24252b;color:#fff}
+
+
+
+/* NORTH_OFFLINE_TRANSPARENT_V2: lightweight clear controls; preserve wallpapers and original bubble geometry. */
+html body :is(.offstage,.offline-hub,.north-offline-sheet) :is(.cohab-settings-grid input,.cohab-settings-grid select,.cohab-settings-grid textarea,.offbubble,.minibtn,.btn,.inputbar,.off-field,.cohab-status-chip,.cohab-settings,.cohab-debug-reply,.cohab-reply-button,.fg input,.fg select,.fg textarea){background-color:rgba(255,255,255,.07)!important;background-image:none!important;border-color:rgba(255,255,255,.2)!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html body .north-offline-sheet{background-color:rgba(35,37,44,.72)!important;color:#fff!important}
+html body .offstage{--offc-me-ink:#fff;--offc-them-ink:#fff;--offc-nar:#fff}

@@ -1575,3 +1575,50 @@ test('calendar manual visibility, complete streaming replies and existing-sessio
 test('encoded iOS home-screen explicit updates and reloads bypass the stale shell',()=>{const sw=read('sw.js');assert(sw.includes('decodedPath=decodeURIComponent(url.pathname)'));assert(sw.includes("url.searchParams.has('north_update')"));assert(sw.includes("request.cache==='reload'"));assert(sw.includes('if(cached&&!explicit&&!reloading)return cached;'));});
 
 test('role actions respect current targets, decisions, thought boundaries and completed food requests',()=>{for(const prefix of ['',PRIVATE_DIR]){const js=read(prefix+'app.js'),ui=read(prefix+'commerce-ui.js');for(const marker of ['function roleActionEnvelopeContent(','function roleAllLockAnnounced(','announcementSaved===true&&roleAllLockAnnounced','_postedDecision','function roleThoughtRecencyText(','latest()!==turn',"if(act==='解锁'&&unlockVeto(arg))return '';",'_flightFailureInfo','NorthFlightBooking.consume(content,c'])assert(js.includes(marker));assert(ui.includes('function northRoleCompletedFood('));assert(ui.includes('fixedMilk'));assert(read(prefix+'travel-hotel-data.js').includes('["延安","中国","Yanan"]'));assert(read(prefix+'travel-flight-booking.js').includes('preferredTime'));}assert(read('supabase/functions/phone-role-push/index.ts').includes('function roleVerifiedConversationBoundary('));});
+
+
+// v1688/v1689: restore only requested interactions and foreground, not the optical renderer.
+test('hidden chat preserves contacts/history and separates accounts; new messages restore visibility',async()=>{
+ const {default:vm}=await import('node:vm');
+ for(const file of [WEB,PRIVATE]){
+  const js=read(file),start=js.indexOf('function wxHiddenChatStore('),end=js.indexOf('function wxChats(',start);
+  assert(start>=0&&end>start);const ctx={S:{contacts:[{id:'role-a'}],chats:{'role-a':[{text:'retained'}]}},owner:'main',actId:()=>ctx.owner,save(){},render(){},toast(){}};
+  const before=JSON.stringify(ctx.S);vm.createContext(ctx);vm.runInContext(js.slice(start,end),ctx);
+  const at=Date.now();ctx.wxChatHide('role:role-a');assert(ctx.wxChatIsHidden('role:role-a',at-1));
+  assert.equal(JSON.stringify({contacts:ctx.S.contacts,chats:ctx.S.chats}),before);
+  assert.equal(ctx.wxChatIsHidden('role:role-a',Date.now()+1000),false);
+  ctx.owner='second';assert.equal(ctx.wxChatIsHidden('role:role-a',at-1),false);
+  ctx.owner='main';ctx.wxChatRestore('role:role-a');assert.equal(ctx.wxChatIsHidden('role:role-a',at-1),false);
+ }
+});
+test('bare continuation arrow exists only while the correct cohabitation reply awaits a tap',async()=>{
+ const {default:vm}=await import('node:vm');
+ for(const file of [WEB,PRIVATE]){
+  const js=read(file),ctx={_cohabTap:null};vm.createContext(ctx);
+  vm.runInContext(js.split(/\r?\n/).find(x=>x.startsWith('function cohabTapNextHTML(')),ctx);
+  assert.equal(ctx.cohabTapNextHTML('a'),'');ctx._cohabTap={id:'a'};assert.match(ctx.cohabTapNextHTML('a'),/cohab-tap-next/);assert.equal(ctx.cohabTapNextHTML('b'),'');
+  ctx._cohabTap=null;assert.equal(ctx.cohabTapNextHTML('a'),'');
+  assert(!js.includes('body+\'<div class="cohab-tap-hint"'));
+ }
+});
+test('widget foreground defaults white without changing pictures; retired private sync has no relay wait',()=>{
+ for(const file of [WEB,PRIVATE]){const js=read(file);assert(js.includes("function glassWidgetTextColor(){return widgetHex(glassWidgetAppearance().textColor,'#ffffff');}"));assert(js.includes("svgIc('heart',19,'#fff',1.7)"));}
+ const js=read(PRIVATE);assert(!js.includes('ROLE_SYNC_RELAY_BASE'));assert(!js.includes('_roleSyncRelayProbe'));assert(js.includes("return fetchT(roleSyncRpcCachedEndpoint(name),opt,ms)"));
+});
+
+test('private role sync uses one configured-backend request, propagates failure, and never probes the retired relay',async()=>{
+ const {default:vm}=await import('node:vm');const js=read(PRIVATE),calls=[];
+ const ctx={companionCloudURL:()=> 'https://original-backend.example',fetchT:async(...args)=>{calls.push(args);return {ok:true};}};vm.createContext(ctx);
+ vm.runInContext(js.slice(js.indexOf('async function roleSyncRpcEndpoint('),js.indexOf('async function companionRpc(')),ctx);
+ assert.equal(await ctx.roleSyncRpcEndpoint('phone_role_push_pull'),'https://original-backend.example/rest/v1/rpc/phone_role_push_pull');
+ assert.equal(await ctx.roleSyncTaskEndpoint(),'https://original-backend.example/functions/v1/phone-role-push');
+ const options={method:'POST',body:'fixture'};await ctx.roleSyncRpcFetch('phone_role_push_ack',options,25000);
+ assert.equal(calls.length,1);assert.equal(calls[0][0],'https://original-backend.example/rest/v1/rpc/phone_role_push_ack');assert.equal(calls[0][1],options);
+ ctx.fetchT=async()=>{throw Error('network failed');};await assert.rejects(ctx.roleSyncRpcFetch('phone_role_push_pull',options,25000),/network failed/);
+});
+
+test('requested feature restoration never brings back the optical material in either runtime',()=>{
+ for(const prefix of ['',PRIVATE_DIR]){const js=read(prefix+'app.js'),css=read(prefix+'glass-theme.css');
+  assert(!js.includes('window.NorthOpticalGlass='));assert(!js.includes('NORTH_OPTICAL_MATERIAL_V1'));assert(!css.includes('[data-north-optical]'));
+  assert(css.includes('NORTH_OFFLINE_TRANSPARENT_V2'));assert(css.includes('box-shadow:none!important'));}
+});
