@@ -1,4 +1,4 @@
-"""Create the private v1689 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
+"""Create the private v1691 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
 
 Unlike the earlier packaging scripts, every file is read from the committed tree
 (``git cat-file`` against HEAD) instead of the working directory. The v1235/iOS356
@@ -23,11 +23,11 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "native/private-small-phone/XcodeProject/"
 BUNDLE = "PhoneCompanionTest/PhoneWeb.bundle/"
-PREFIX = "SmallPhone_v1689_iOS439_Private/"
-OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1689_iOS439.zip"
+PREFIX = "SmallPhone_v1691_iOS439_Private/"
+OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1691_iOS439.zip"
 
-WEB_VERSION = "1689"
-REVIEWED_RUNTIME_COMMIT = "1a81f164057a12df75b3b275aa822f787c55cce8"
+WEB_VERSION = "1691"
+REVIEWED_RUNTIME_COMMIT = "31ebb0ef3ba22b07900cc8e5861834ed1170f6b4"
 MARKETING = "1.0.439"
 BUILD = "439"
 BRIDGE = "42"
@@ -591,8 +591,8 @@ def main() -> None:
     assert text(git("show", web_commit + ":app.js")).find("v1688 · 透明控件与交互恢复") >= 0
     files = committed_private_files()
     validate(files)
-    previous = ROOT.parent / "最新私人版本覆盖包_v1677_iOS439.zip"
-    previous_sha = "ad7dcb0e25a9ce3f46ea150e717ac0d620ae7d86a924afb4a7605787d991d694"
+    previous = ROOT.parent / "最新私人版本覆盖包_v1689_iOS439.zip"
+    previous_sha = "ba0782a87856aee42163eda53f8b497d13c89f6ee70b023e10bb12bcb4caba70"
     assert sha256(previous.read_bytes()).hexdigest() == previous_sha
     with ZipFile(previous) as old:
         prefix = next(n for n in old.namelist() if n.endswith("/SOURCE_STATE.json"))[:-len("SOURCE_STATE.json")]
@@ -601,7 +601,7 @@ def main() -> None:
         assert set(manifest) == names - {"SHA256SUMS.json"}
         assert not (names - files.keys() - {"SHA256SUMS.json", "SOURCE_STATE.json"}), "previous delivery files missing"
         state = json.loads(old.read(prefix + "SOURCE_STATE.json"))
-        assert state["sourceCommit"] == "93d71cd8d1fbe82b890aa7beee3fc267b7c51ff7"
+        assert state["sourceCommit"] == "e1aab3bce838f50db335f37a8c8e6d46de06e743"
         for name, digest in manifest.items():
             body = old.read(prefix + name)
             assert sha256(body).hexdigest() == digest, "previous checksum mismatch: " + name
@@ -638,6 +638,11 @@ def main() -> None:
     for removed in ("NORTH_OPTICAL_MATERIAL_V1", "window.NorthOpticalGlass=", "ROLE_SYNC_RELAY_BASE", "NORTH_ROLE_SYNC_RELAY_V1"):
         assert removed not in app, "removed material or relay reintroduced: " + removed
     assert "data-north-optical" not in css, "material CSS reintroduced"
+    for marker in ("ROLE_INBOX_GATEWAY", "async function roleInboxBufferedFetch(", "async function roleInboxClaimController(", "ownerState=S,ownerAccount=", "['home','wechat'].includes(cur().p)"):
+        assert marker in app, "inbox repair missing: " + marker
+    assert "new Set(['phone_role_push_pull','phone_role_push_ack','phone_role_push_status'])" in app
+    assert files[BUNDLE + "glass-theme.css"] == git("show", "e1aab3bc:" + SOURCE + BUNDLE + "glass-theme.css"), "material changed during inbox repair"
+
     for marker in ("NORTH_WIDGET_FOREGROUND_V1", "NORTH_OFFLINE_BRIGHT_V1", "NORTH_OFFLINE_TRANSPARENT_V2", ".cohab-tap-next", ".wx-conversation-swipe"):
         assert marker in css, "requested UI repair missing: " + marker
     assert "svgIc('heart',19,'#fff',1.7)" in app
@@ -647,7 +652,7 @@ def main() -> None:
         if name.startswith(BUNDLE):
             assert body == reviewed_files[name], "runtime differs from reviewed release: " + name
     state["inheritedValidation"] = {"sourceCommit": state.get("sourceCommit"), "validation": state.get("validation", {})}
-    state["preserved"] = [x for x in state.get("preserved", []) if x not in {"v1677-user-approved-22-parameter-optical-material", "v1677-role-sync-fixed-relay-and-pull-recovery"}]
+    state["preserved"] = [x for x in state.get("preserved", []) if x not in {"v1677-user-approved-22-parameter-optical-material", "v1677-role-sync-fixed-relay-and-pull-recovery", "v1689-original-backend-direct-sync"}]
     state["intentionalRemovals"] = ["v1677-optical-material-renderer-and-overrides", "v1677-role-sync-relay-transport"]
     state["sourceCommit"] = commit
     state["webSourceCommit"] = web_commit
@@ -656,7 +661,7 @@ def main() -> None:
     state["privateIOS"] = f"{MARKETING} ({BUILD})"
     state["bridge"] = BRIDGE
     state["deliveryKind"] = "Mac-Xcode-source-overlay-not-IPA"
-    state["lastDeliveredPackage"] = {"name": previous.name, "sha256": previous_sha, "sourceCommit": "93d71cd8d1fbe82b890aa7beee3fc267b7c51ff7"}
+    state["lastDeliveredPackage"] = {"name": previous.name, "sha256": previous_sha, "sourceCommit": "e1aab3bce838f50db335f37a8c8e6d46de06e743"}
     state["preserved"] = sorted(set(state.get("preserved", [])) | {
         "v1669-calendar-real-month-year-day-search-events-and-reminders",
         "v1669-role-scheduling-sharing-invitations-participation-and-opt-in-care",
@@ -666,12 +671,12 @@ def main() -> None:
         "v1669-cloud-startup-fees-lifetime-shop-rewards-profit-and-deleted-shop-order-filter",
         "v1669-warm-yan-13-products-original-pictures-and-prices",
         "v1669-pixel-and-pet-bounded-script-redownload",
-        "private-native-companion-intentional-asymmetry", "v1669-original-shop-restore-no-fee-no-reward-reset", "v1675-saved-visible-declaration-before-all-lock", "v1675-current-app-target-refusal-and-thought-action-isolation", "v1675-fixed-milk-spec-defaults-and-completed-order-replay-guard", "v1675-old-image-and-thought-recency-boundaries", "v1675-yanan-relative-weekday-morning-role-only-flight-and-failure-reply", "v1689-no-optical-material", "v1689-original-backend-direct-sync", "v1689-cohab-bare-next-arrow-and-hide-chat", "v1689-white-adjustable-widget-text-and-small-heart", "v1689-light-clear-offline-controls-white-text"})
+        "private-native-companion-intentional-asymmetry", "v1669-original-shop-restore-no-fee-no-reward-reset", "v1675-saved-visible-declaration-before-all-lock", "v1675-current-app-target-refusal-and-thought-action-isolation", "v1675-fixed-milk-spec-defaults-and-completed-order-replay-guard", "v1675-old-image-and-thought-recency-boundaries", "v1675-yanan-relative-weekday-morning-role-only-flight-and-failure-reply", "v1689-no-optical-material", "v1691-approved-inbox-only-gateway-and-original-backend-fallback", "v1691-body-and-controller-timeout-account-boundary-and-wechat-refresh", "v1689-cohab-bare-next-arrow-and-hide-chat", "v1689-white-adjustable-widget-text-and-small-heart", "v1689-light-clear-offline-controls-white-text"})
     state["macBuildVerified"] = False
     state["realIPhoneVerified"] = False
-    state["knownUnresolved"] = [x for x in state.get("knownUnresolved", []) if not re.match(r"v\d+-mac-build", x)] + ["v1689-mac-build-signing-and-iphone-not-verified", "calendar-closed-app-system-notifications-not-implemented", "real-model-calendar-personality-and-voice-acceptance-pending", "v1675-user-main-model-and-native-lock-receipts-pending"]
+    state["knownUnresolved"] = [x for x in state.get("knownUnresolved", []) if not re.match(r"v\d+-mac-build", x)] + ["v1691-mac-build-signing-and-iphone-not-verified", "calendar-closed-app-system-notifications-not-implemented", "real-model-calendar-personality-and-voice-acceptance-pending", "v1675-user-main-model-and-native-lock-receipts-pending"]
     state["validation"] = {"macBuildVerified": False, "realIPhoneVerified": False,
-        "nodeTests": {"passed": 3815, "failed": 0, "browserDriverSkipped": 54, "sourceCommit": web_commit, "resultSource": ".codex_tmp/eight-chat/full-tests.log"},
+        "nodeTests": {"passed": 3824, "failed": 0, "browserDriverSkipped": 54, "sourceCommit": web_commit, "resultSource": ".codex_tmp/eight-chat/full-tests.log"},
         "models": "HTTP simulated; no live model or production financial tests",
         "authorizedChatBothRuntimes": True, "authorizedChatExecution": "original gate scenarios through CUA CDP with simulated HTTP",
         "inheritedPreviousOverlay": True, "priorPackageManifestVerified": True,
