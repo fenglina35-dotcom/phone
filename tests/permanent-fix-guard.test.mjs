@@ -1587,3 +1587,6 @@ test('private role foreground sync keeps its fixed relay and durable receive-bef
 
 
 test('optical glass stays inside the approved scope and keeps foreground text clear',()=>{for(const prefix of ['',PRIVATE_DIR]){const js=read(prefix+'app.js'),css=read(prefix+'glass-theme.css');assert(js.includes('NORTH_OPTICAL_SCOPE_V2'));assert(js.includes('function allowedSurface(el)'));assert(js.includes('if(!safeGlass(el)||!el.matches(selectors))restore(el)'));assert(css.includes('NORTH_OPTICAL_TEXT_V2'));}});
+
+
+test('widget foreground controls and stable material repaint survive both releases',()=>{for(const prefix of ['',PRIVATE_DIR]){const js=read(prefix+'app.js'),css=read(prefix+'glass-theme.css');for(const marker of ['NORTH_WIDGET_FOREGROUND_V1','glassWidgetTextSet','NORTH_OPTICAL_STABILITY_V3'])assert(js.includes(marker));assert(css.includes('transition-property:transform,opacity!important'));}});

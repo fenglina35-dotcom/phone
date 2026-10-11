@@ -13,9 +13,9 @@ const reportApp = read('native/private-small-phone/XcodeProject/PhoneCompanionRe
 const reportScene = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/TotalActivityReport.swift');
 
 test('public web v1184 and private web v1189 remain compatible with native iOS 1.0.315', () => {
-  assert.match(app, /APP_VER='v1678 · 玻璃新配方与覆盖范围修正'/);
-  assert.match(app, /sw\.js\?v=1678&r=v1678-couple-unbind-reopen-1/);
-  assert.match(shell, /north-shell-v1678-couple-unbind-reopen-1/);
+  assert.match(app, /APP_VER='v1680 · 组件调色与玻璃性能修复'/);
+  assert.match(app, /sw\.js\?v=1680&r=v1680-couple-unbind-reopen-1/);
+  assert.match(shell, /north-shell-v1680-couple-unbind-reopen-1/);
   assert.match(bundleInfo, /<string>1200<\/string>/);
   assert.match(localWebView, /1\.0\.439 \(439\)/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 439;/g) || []).length, 12);

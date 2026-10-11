@@ -93,13 +93,13 @@ test('status-bar theme does not force an avoidable first root transition', () =>
 test('private build and bundled recovery page advance together', () => {
   assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.439 \(439\)'/);
   assert.match(webView, /smallPhone\.webContentTerminationTimes\.v25\.build333/);
-  assert.match(privateApp, /APP_VER='v1679 · 玻璃新配方与覆盖范围修正'/);
+  assert.match(privateApp, /APP_VER='v1681 · 组件调色与玻璃性能修复'/);
   assert.equal(privateAlias, privateIndex);
-  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1679'/);
-  assert.match(privateIndex, /app\.js\?v=1679/);
+  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1681'/);
+  assert.match(privateIndex, /app\.js\?v=1681/);
   assert.match(privateIndex, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(privateRepair, /index\.html\?repair=1&v=1679/);
-  assert.match(privateApp, /__NORTH_SHELL_BUILD__!==\'1679\'/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1681/);
+  assert.match(privateApp, /__NORTH_SHELL_BUILD__!==\'1681\'/);
 });
 
 test('glass home widgets can be restored after an old-build over-install', () => {

@@ -495,8 +495,8 @@ test('approved glass scope leaves WeChat, settings and non-SMS phone pages uncha
  class Element{constructor(area,denied=false){this.area=area;this.denied=denied;}matches(){return false;}closest(selector){if(selector.startsWith('#homeDesktop'))return selector.split(',').includes(this.area)?this:null;if(selector.startsWith('.settings-glass'))return this.denied?this:null;return null;}querySelector(){return null;}}
  const sandbox={window:{},HTMLElement:Element,document:{readyState:'loading',addEventListener(){}},console};vm.runInNewContext(source,sandbox);
  const check=sandbox.window.NorthOpticalGlass.safeGlass;
- for(const name of ['.wx-premium','.settings-glass','.phmain','.phcall','.phcontacts','.cal-month-page','.photo-album-page'])assert.equal(check(new Element(name)),false,name);
- for(const name of ['#homeDesktop','.spy-desktop:not(.spy-lock-screen)','.offstage','.offline-hub','.imsg'])assert.equal(check(new Element(name)),true,name);
+ for(const name of ['.wx-premium','.settings-glass','.phmain','.phcall','.phcontacts'])assert.equal(check(new Element(name)),false,name);
+ for(const name of ['#homeDesktop','.spy-desktop:not(.spy-lock-screen)','.offstage','.offline-hub','.north-offline-sheet','.imsg','.cal-month-page','.cal-year-page','.cal-day-page','.cal-detail-page','.cal-integrated-page','.cal-sheet','.cal-sheet-page','.cal-new-sheet','.photo-album-page'])assert.equal(check(new Element(name)),true,name);
  assert.equal(check(new Element('#homeDesktop',true)),false,'nested settings must not inherit a home surface');
 });
 
@@ -509,5 +509,21 @@ test('offscreen glass keeps its material and DOM replacements decorate before th
  const document={readyState:'complete',hidden:false,body:{},styleSheets:[],querySelector:()=>null,querySelectorAll:()=>{paints++;return[];},documentElement:{dataset:{}},addEventListener(){},removeEventListener(){}};
  const sandbox={document,window:{addEventListener(){},removeEventListener(){}},console,MutationObserver:class{constructor(fn){callback=fn;}observe(){}disconnect(){}},requestAnimationFrame:fn=>{pending=fn;return 1;},cancelAnimationFrame:()=>{pending=null;}};
  vm.runInNewContext(source,sandbox);assert.equal(paints,0);
- callback([{type:'childList',target:{tagName:'DIV'},addedNodes:[]}]);assert.equal(paints,1);assert.equal(pending,null);
+ callback([{type:'childList',target:{tagName:'DIV'},addedNodes:[{nodeType:1,matches:()=>false,querySelector:()=>null}]}]);assert.equal(paints,1);assert.equal(pending,null);
+});
+
+for(const file of ['app.js','native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js'])test(file+': widget foreground color and opacity persist independently without rerendering',()=>{
+ const src=fs.readFileSync(file,'utf8'),names=['glassWidgetTextColor','glassWidgetTextOpacity','glassWidgetTextPaint','glassWidgetTextSet'],code=names.map(n=>{const start=src.indexOf('function '+n+'(');assert(start>=0,n);return src.slice(start,src.indexOf('\n',start));}).join('\n');
+ let pack='black',saves=0;const map={},styles={},sandbox={glassWidgetAppearanceEnsure:()=>map,glassWidgetAppearance:()=>map[pack]||{},appIconPack:()=>pack,widgetHex:(v,f)=>/^#[a-f0-9]{6}$/i.test(v||'')?v:f,widgetRgba:(v,a)=>v+':'+a,document:{querySelectorAll:sel=>sel==='#homeDesktop'?[{style:{getPropertyValue:k=>styles[k],setProperty:(k,v)=>styles[k]=v}}]:[]},$:()=>null,save:()=>saves++};vm.createContext(sandbox);vm.runInContext(code,sandbox);
+ assert.equal(sandbox.glassWidgetTextColor(),'#ffffff');assert.equal(sandbox.glassWidgetTextOpacity(),100);
+ sandbox.glassWidgetTextSet('color','#ff3300');sandbox.glassWidgetTextSet('opacity',0);assert.equal(styles['--north-widget-ink'],'#ff3300:0');assert.equal(map.black.textOpacity,0);assert.equal(saves,2);
+ pack='blue';assert.equal(sandbox.glassWidgetTextColor(),'#ffffff');assert.equal(sandbox.glassWidgetTextOpacity(),100);pack='black';assert.equal(sandbox.glassWidgetTextColor(),'#ff3300');sandbox.glassWidgetTextSet('opacity',200);assert.equal(sandbox.glassWidgetTextOpacity(),100);sandbox.glassWidgetTextSet('reset');assert.equal(sandbox.glassWidgetTextColor(),'#ffffff');assert.equal(sandbox.glassWidgetTextOpacity(),100);
+});
+test('resolved wallpaper images are reused and decorated parents cannot become a sampled wallpaper',()=>{
+ const src=app.slice(app.indexOf('/* NORTH_OPTICAL_MATERIAL_V1:')).replace('window.NorthOpticalGlass={recipe,','window.NorthOpticalGlass={load,source,recipe,');
+ const image={complete:true,naturalWidth:100,src:'https://example.test/wall.jpg'},root={hasAttribute:()=>false,matches:()=>false,parentElement:null,getBoundingClientRect:()=>({width:100,height:200})},nested={hasAttribute:()=>true,parentElement:root},sandbox={window:{},URL,location:{href:'https://example.test/',origin:'https://example.test'},Image:class{constructor(){throw Error('must reuse loaded image');}},document:{readyState:'loading',images:[image],addEventListener(){},body:{}},getComputedStyle:()=>({backgroundImage:'url("https://example.test/wall.jpg")',backgroundSize:'cover',backgroundPosition:'50% 50%'}),console};vm.runInNewContext(src,sandbox);const api=sandbox.window.NorthOpticalGlass;assert.equal(api.load({url:image.src}),image);assert.equal(api.source({parentElement:nested}).url,image.src);
+});
+
+test('text-only mutations do not redraw glass and lightweight fallback keeps a hollow rim',()=>{
+ const src=app.slice(app.indexOf('/* NORTH_OPTICAL_MATERIAL_V1:')).replace('window.NorthOpticalGlass={recipe,','window.NorthOpticalGlass={fallback,recipe,');let callback,pending,paints=0;const document={readyState:'complete',hidden:false,body:{},styleSheets:[],querySelector:()=>null,querySelectorAll:()=>{paints++;return[];},documentElement:{dataset:{}},addEventListener(){},removeEventListener(){}};const sandbox={document,window:{addEventListener(){},removeEventListener(){}},console,MutationObserver:class{constructor(fn){callback=fn;}observe(){}disconnect(){}},requestAnimationFrame:fn=>{pending=fn;return 1;},cancelAnimationFrame(){}};vm.runInNewContext(src,sandbox);pending();const before=paints;for(let i=0;i<50;i++)callback([{type:'childList',target:{tagName:'SPAN'},addedNodes:[{nodeType:3}],removedNodes:[{nodeType:3}]}]);assert.equal(paints,before);const uri=sandbox.window.NorthOpticalGlass.fallback(300,900,24);assert.match(decodeURIComponent(uri),/fill="none"/);assert.equal(sandbox.window.NorthOpticalGlass.fallback(300,900,24),uri);
 });

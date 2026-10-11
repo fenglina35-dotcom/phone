@@ -898,3 +898,17 @@ html:is(#north-optical-material,html) body svg[data-north-optical-image][stroke=
 
 /* NORTH_OPTICAL_TEXT_V2: glass affects the material, not foreground text shadows. */
 html:is(#north-optical-material,html) body :is(.home-dashboard-card,.home-vinyl-card,.home-sweetie-card)[data-north-optical],html:is(#north-optical-material,html) body :is(.home-dashboard-card,.home-vinyl-card,.home-sweetie-card)[data-north-optical] :is(b,strong,small,em,p,span){text-shadow:none!important}
+
+/* NORTH_WIDGET_FOREGROUND_V1: customizable foreground, never dim photos or avatars. */
+html:is(#north-optical-material,html) body #homeDesktop :is(.home-dashboard-grid,.home-vinyl-card,.home-sweetie-card){color:var(--north-widget-ink,#fff)!important}
+html:is(#north-optical-material,html) body #homeDesktop :is(.home-dashboard-grid,.home-vinyl-card,.home-sweetie-card) :is(b,strong,small,em,p,span,i,label){color:var(--north-widget-ink,#fff)!important;text-shadow:none!important}
+html:is(#north-optical-material,html) body #homeDesktop .home-dashboard-grid svg{color:var(--north-widget-ink,#fff)!important;stroke:var(--north-widget-ink,#fff)!important}
+html:is(#north-optical-material,html) body #homeDesktop .dash-heart>svg{width:19px!important;height:19px!important}
+/* NORTH_OPTICAL_STABILITY_V3: material layers switch atomically, without background/filter cross-fades. */
+html:is(#north-optical-material,html) body [data-north-optical]{transition-property:transform,opacity!important}
+
+/* NORTH_OFFLINE_BRIGHT_V1: all offline text is bright; media and status fills remain independent. */
+html:is(#north-optical-material,html) body :is(.offstage,.offline-hub,.north-offline-sheet),html:is(#north-optical-material,html) body :is(.offstage,.offline-hub,.north-offline-sheet) :is(small,span,b,strong,p,em,i,label,summary,time,h1,h2,h3,button,input,select,textarea,.hint,.offnar,.offdate,.offbubble){color:#fff!important;-webkit-text-fill-color:#fff;text-shadow:none!important}
+html:is(#north-optical-material,html) body :is(.offstage,.offline-hub,.north-offline-sheet) :is(input,textarea)::placeholder{color:rgba(255,255,255,.85)!important;-webkit-text-fill-color:rgba(255,255,255,.85)}
+html:is(#north-optical-material,html) body .cohab-settings-grid :is(input,select){color:#fff!important;-webkit-text-fill-color:#fff}
+html:is(#north-optical-material,html) body .cohab-settings-grid select option{background:#24252b;color:#fff}
