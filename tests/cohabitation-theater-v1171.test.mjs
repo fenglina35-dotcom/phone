@@ -15,8 +15,8 @@ const privateApp=read('native/private-small-phone/XcodeProject/PhoneCompanionTes
 test('private v1355 inherits the current web theater without dropping its private shell',()=>{
   assert.equal(bundleTheater,theater);
   assert.match(bundleTheater,/guest2|ct_wechat_enabled/);
-  assert.match(webHtml,/app\.js\?v=1708[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1708&r=v1274-web-cohab-guests-1"/);
-  for(const html of [privateHtml,privateAlias])assert.match(html,/app\.js\?v=1711[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1711[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1711&r=v1274-web-cohab-guests-1"/);
+  assert.match(webHtml,/app\.js\?v=1712[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1712&r=v1274-web-cohab-guests-1"/);
+  for(const html of [privateHtml,privateAlias])assert.match(html,/app\.js\?v=1713[^\n]*<\/script>\s*<script src="private-reply-intercept\.js\?v=1713[^\n]*<\/script>\s*<script src="cohab-theater\.js\?v=1713&r=v1274-web-cohab-guests-1"/);
   assert.match(read('sw.js'),/cohab-theater\.js\?v='\+BUILD\+'\&r=v1274-web-cohab-guests-1',kind:'theater'/);
 });
 
@@ -145,7 +145,7 @@ test('guest exit sends exactly one genuine memory-grounded WeChat message',()=>{
 });
 
 test('private artifact identity advances independently to v1355 and iOS 1.0.400 (399)',()=>{
-  assert.match(privateApp,/const APP_VER='v1711 · 精准时间实验'/);
+  assert.match(privateApp,/const APP_VER='v1713 · 共同生活待续箭头'/);
   assert.match(privateHtml,/private-runtime-diagnostics\.js\?v=339/);
   assert.match(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift'),/1\.0\.439 \(439\)/);
   const project=read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
@@ -157,4 +157,26 @@ test('v1170 private friend-entry fix remains present in the v1184 private supers
   assert.match(privateApp,/function pfEnsureForSync\(/);
   assert.match(privateApp,/profileDeferred=await pfEnsureForSync/);
   assert.doesNotMatch(read('app.js'),/function pfEnsureForSync\(/);
+});
+
+
+test('actual web/private continuation arrow follows pending taps even with theater disabled and old guest history',async()=>{
+ const {createRequire}=await import('node:module'),require=createRequire(import.meta.url),{chromium}=require('playwright');
+ const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
+ try{for(const priv of [false,true]){
+  const page=await browser.newPage({viewport:{width:390,height:844}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.route('**/*',route=>{const u=new URL(route.request().url());if(u.origin!=='http://127.0.0.1:8778')return route.abort();const f=path.resolve(decodeURIComponent(u.pathname.slice(1))),ok=f.startsWith(root+path.sep)&&fs.existsSync(f)&&fs.statSync(f).isFile();return route.fulfill({status:ok?200:404,body:ok?fs.readFileSync(f):'',contentType:f.endsWith('.js')?'text/javascript':f.endsWith('.css')?'text/css':'text/html'});});
+  await page.goto('http://127.0.0.1:8778/'+(priv?'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html':'小手机.html')+'?northPreview=black-home');await page.waitForFunction(()=>window.__northBootReady);
+  for(const kind of ['ordinary','history-only','theater']){
+   const out=await page.evaluate(async kind=>{
+    cohabTapRelease();S.me.locked=false;S.me.active='main';S.contacts.forEach(c=>c.proactive={enabled:false});const id=S.contacts[0].id,r=cohabRoot();r.enabled=true;r.paused=false;r.cid=id;const d=cohabData(id);d.phase='home';d.nextAt=Date.now()+86400000;d.theater={enabled:kind==='theater'};d.settings.tapAdvance=true;
+    d.msgs=(kind==='history-only'?[{id:'old-guest',who:'guest',text:'以前来过，现在已离开',time:Date.now()-86400000,displayNameSnapshot:'旧来客'}]:[]).concat([{id:'pending-host',who:'ta',text:'普通生活的较长回复。'.repeat(40),time:Date.now()}]);
+    _off={id,mode:'cohab',busy:false};_offSel=null;stack=[{p:'home'},{p:'off',id,mode:'cohab'}];render();const original=JSON.stringify(d.msgs);let released=0;cohabTapWait(id,d.msgs.at(-1),{reveal:0}).then(()=>released++);await new Promise(r=>setTimeout(r,650));
+    const box=document.querySelector('#offbg'),arrow=box.querySelector('.cohab-tap-next'),rect=arrow&&arrow.getBoundingClientRect(),br=box.getBoundingClientRect();const pending={exists:!!arrow,one:box.querySelectorAll('.cohab-tap-next').length===1,visible:!!rect&&rect.top>=br.top&&rect.bottom<=br.bottom,parent:arrow&&arrow.parentElement===box};
+    if(arrow)arrow.remove();cohabTapIndicatorSync();const restored=box.querySelectorAll('.cohab-tap-next').length===1;_offSel=[];cohabTapIndicatorSync();const selectionHidden=!box.querySelector('.cohab-tap-next');_offSel=null;cohabTapIndicatorSync();d.phase='away';offRender();const awayHidden=!document.querySelector('.cohab-tap-next');d.phase='home';offRender();const bubble=document.querySelector('.offbubble');if(bubble)bubble.click();await new Promise(r=>setTimeout(r,30));const result={pending,restored,selectionHidden,awayHidden,released,ended:!document.querySelector('.cohab-tap-next'),unchanged:JSON.stringify(d.msgs)===original,menuIntact:!!document.querySelector('[onclick*="offMsgMenu"]')};cohabTapRelease();return result;
+   },kind);
+   assert.equal(out.pending.exists,true,`${priv?'private':'web'} ${kind}: missing continuation arrow`);assert.equal(out.restored,true);assert.equal(out.selectionHidden,true);assert.equal(out.awayHidden,true);assert.equal(out.pending.one,true);assert.equal(out.pending.visible,true);assert.equal(out.pending.parent,true);assert.equal(out.released,1);assert.equal(out.ended,true);assert.equal(out.unchanged,true);assert.equal(out.menuIntact,true);
+  }
+  assert.deepEqual(errors,[]);await page.close();
+ }}finally{await browser.close();}
 });

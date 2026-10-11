@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1708'){
+if(window.__NORTH_SHELL_BUILD__!=='1712'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -606,7 +606,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1708 · 旁白与推理设置修复';
+const APP_VER='v1712 · 共同生活待续箭头';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2036,7 +2036,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1708&r=v1708-couple-unbind-reopen-1';
+  const url='sw.js?v=1712&r=v1712-couple-unbind-reopen-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -10577,12 +10577,15 @@ function offlineBehaviorLedgerPrompt(c){return behaviorPrompt(c);}
 /* ===== 共同生活「点一下出一句」：第一句角色自己说，后面每点一下屏幕出一句；点到没反应就是说完了 ===== */
 let _cohabTap=null;
 function cohabTapOn(d){return !!(d&&d.settings&&d.settings.tapAdvance===true);}
-function cohabTapRelease(){const t=_cohabTap;if(!t)return;_cohabTap=null;clearInterval(t.watch);t.resolve();}
+function cohabTapRelease(){const t=_cohabTap;if(!t)return;_cohabTap=null;clearInterval(t.watch);cohabTapIndicatorSync();t.resolve();}
 function cohabTapWait(id,item,timing){cohabTapRelease();return new Promise(resolve=>{const t={id,item,revealEnd:Date.now()+(+timing.reveal||0),resolve};
   t.watch=setInterval(()=>{if(!_off||_off.id!==id||_off.mode!=='cohab'||(typeof cohabSceneActive==='function'&&!cohabSceneActive()))cohabTapRelease();},400);/* 离开共同生活就不再等，剩下的直接收进记录里 */
   _cohabTap=t;offRender();});}
 function cohabTapNext(){const t=_cohabTap;if(!t||!_off||_off.id!==t.id||_off.mode!=='cohab')return;if(Date.now()<t.revealEnd&&t.item&&t.item._reveal){t.item._reveal=false;t.revealEnd=0;offRender();return;}cohabTapRelease();offRender();}
 function cohabTapNextHTML(id){return _cohabTap&&_cohabTap.id===id?'<button type="button" class="cohab-tap-next" aria-label="还有回复，点击继续" onclick="cohabTapNext()"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>':'';}
+/* COHAB_CONTINUATION_ARROW_V2: project pending state into every current cohab renderer. */
+function cohabTapIndicatorSync(){const box=typeof document!=='undefined'&&document.getElementById('offbg');if(!box||!box.closest('.cohab-stage'))return;const arrows=box.querySelectorAll('.cohab-tap-next'),t=_cohabTap,active=!!(t&&_off&&_off.mode==='cohab'&&_off.id===t.id&&cur().p==='off'&&!_offSel&&!document.querySelector('.cohab-away-panel'));if(!active){arrows.forEach(a=>a.remove());return;}if(!arrows.length)box.insertAdjacentHTML('beforeend',cohabTapNextHTML(t.id));else for(let i=1;i<arrows.length;i++)arrows[i].remove();}
+
 function cohabTapHandle(e){const t=_cohabTap;if(!t||!e)return;const el=e.target&&e.target.closest?e.target:null;if(!el||!el.closest('.cohab-stage'))return;
   if(el.closest('button,a,input,textarea,select,label,summary,details,.cohab-settings,.inputbar,.offselect,.cohab-away-panel,.cohab-return-banner,.cohab-meta,.nav'))return;/* 按钮、输入框照常用 */
   e.preventDefault();e.stopPropagation();
@@ -10794,7 +10797,7 @@ if(typeof document!=='undefined'){
   document.addEventListener('pointerdown',e=>{if(Date.now()-_offNarrationPointerAt<800)return;const target=e&&e.target,btn=target&&target.closest&&target.closest('.off-narrate'),note=target&&target.closest&&target.closest('.off-note');if(note)_offComposerGuardUntil=Date.now()+650;if(btn&&(e.pointerType==='touch'||e.pointerType==='pen'))offNarrationPress(e);},{capture:true});
 }
 function offNarrationDecorate(){if(typeof document==='undefined')return;const btn=$('.off-narrate'),ta=$('#off_in'),on=offNarrationMode();if(btn){btn.classList.toggle('on',on);btn.setAttribute('aria-pressed',String(on));btn.title=on?'旁白输入已开启，再点恢复普通对话':'切换为旁白输入';}if(ta){ta.placeholder=on?'输入第三人称动作 / 场景旁白…':(_off&&_off.mode==='cohab'?'当面对TA说…':'当面对他说…');const bar=ta.closest&&ta.closest('.offinput');if(bar)bar.classList.toggle('narration-mode',on);if(document.activeElement!==ta)offInputAutoSize(ta);}}
-function offRender(){if(cur().p==='off'){render();setTimeout(offNarrationDecorate,0);}}
+function offRender(){if(cur().p==='off'){render();cohabTapIndicatorSync();setTimeout(offNarrationDecorate,0);}}
 let _offComposerGuardUntil=0,_offNarrationPointerAt=0,_offNarrationClickEat=0;
 function offComposerEvent(e){try{if(e){e.preventDefault();e.stopPropagation();}}catch(_){}_offComposerGuardUntil=Date.now()+650;}
 function offNarrationPress(e){if(e&&(e.type==='touchstart'||e.type==='pointerdown')){if(e.type==='touchstart'||e.pointerType==='touch'||e.pointerType==='pen'){offComposerEvent(e);if(Date.now()-_offNarrationPointerAt<500)return false;_offNarrationPointerAt=Date.now();_offNarrationClickEat=Date.now();offNarrate(true);return false;}return true;}if(e&&e.type==='click'&&Date.now()-_offNarrationPointerAt<800){offComposerEvent(e);return false;}offComposerEvent(e);offNarrate();return false;}
