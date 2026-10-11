@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1714'){
+if(window.__NORTH_SHELL_BUILD__!=='1716'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -606,7 +606,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1714 · 角色后台接力不再重复回复';
+const APP_VER='v1716 · 主屏组件液态玻璃';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2036,7 +2036,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1714&r=v1714-couple-unbind-reopen-1';
+  const url='sw.js?v=1716&r=v1716-couple-unbind-reopen-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -4563,6 +4563,7 @@ function renderSettings(){const nativeBuild=privateNativeAppOn()?String(window._
       <div class="it" style="flex-wrap:wrap"><span>App 图标颜色深浅 <b id="homeAppIconToneVal" style="color:#ff8fab">${homeAppIconTone()}%</b><small style="display:block;color:#888">一键调整主屏全部 App，包括底部四个固定图标；数值低更暗，数值高更亮</small></span><input id="homeAppIconTone" type="range" min="45" max="135" step="5" value="${homeAppIconTone()}" style="width:100%;margin-top:7px" oninput="homeAppAppearanceSet('icon',this.value)"></div>
       <div class="it" style="flex-wrap:wrap"><span>App 名称文字深浅 <b id="homeAppTextToneVal" style="color:#ff8fab">${homeAppTextTone()}%</b><small style="display:block;color:#888">一键调整主屏所有软件名称；数值低更浅，100% 最清晰</small></span><input id="homeAppTextTone" type="range" min="30" max="100" step="5" value="${homeAppTextTone()}" style="width:100%;margin-top:7px" oninput="homeAppAppearanceSet('text',this.value)"></div>
       <div class="it"><span>App 图标与文字深浅</span><button class="minibtn" onclick="homeAppAppearanceReset()">恢复默认</button></div>
+      <div class="it" onclick="lgOpen()"><span>${svgIc('star',15,'#bbb')} 液态玻璃<br><small style="color:#888">主屏组件的玻璃折射、模糊、高光，可逐项调参</small></span><span class="v">${lgCfg().on?'已开启':'已关闭'} ›</span></div>
       <div class="it" onclick="widgetManager()"><span>${svgIc('star',15,'#bbb')} 主屏组件</span><span class="v">${(()=>{widInit();return S.me.widgets.length;})()}个 · 排序/开关 ›</span></div>
       <div class="it"><span>${svgIc('heart',15,'#bbb')} 主题配色</span><span class="v">当前玻璃图标自带配色</span></div>
       <div class="it"><span>${svgIc('clock',15,'#bbb')} 时间颜色（主屏 / 屏保）<br><small style="color:#888">同步控制屏保清水玻璃数字的折射高光颜色</small></span><input type="color" value="${homeClockColor()}" oninput="homeClockColorSet(this.value)"></div>
@@ -19128,3 +19129,98 @@ setTimeout(maybeFirstRun,600);
 function northBrowserDiagnosticError(where,error){try{if(window.NorthBrowserDiagnostics)NorthBrowserDiagnostics.error(where,error);}catch(_){}}
 function northBrowserDiagnosticMark(stage,count){try{if(window.NorthBrowserDiagnostics)NorthBrowserDiagnostics.mark(stage,count);}catch(_){}}
 window.northBrowserDiagnosticContext=function(){const page=cur(),stats=recoveryStateStats(S),archiveChars=Object.values(_heavy||{}).reduce((n,v)=>n+(typeof v==='string'?v.length:0),0);return {appVersion:APP_VER,page:String(page&&page.p||'').replace(/[^a-zA-Z0-9_-]/g,'').slice(0,40),bootReady:!!window.__northBootReady,exportBusy:!!_fullBackupExportBusy,importBusy:!!_fullBackupImportBusy,contacts:Array.isArray(S.contacts)?S.contacts.length:0,messageRows:stats.messages,memoryRows:stats.memories,retainedArchiveChars:archiveChars,coreLogicalBytes:_coreLogicalBytes,homePage:typeof _homePage==='number'?_homePage:null,homeLayoutCounts:Array.isArray(S.me.homeLayout)?S.me.homeLayout.slice(0,12).map(p=>Array.isArray(p)?p.length:0):[],cohabEnabled:!!(S.cohabitation&&S.cohabitation.enabled),offBusy:!!(_off&&_off.busy)};};
+/* ===== v1716 液态玻璃 · 主屏组件（网页先试） =====
+   做法和以前失败的那版完全不同（见 docs/maintenance/README.md 2026-10-11 一组记录）：
+   以前每个组件反复拍「背景快照」、监听 DOM、滑动时跟着重算，真机上会掉材质、闪、卡。
+   现在：一个共用的 WebGL 程序把每个组件「烤」成一张静态小画布，放进组件自己里面。
+   画布跟着组件一起滑，滑动、翻页时一帧都不重算；只有壁纸、参数、组件大小或位置变了才重烤一次。
+   烤好之前组件保持原来的玻璃样子，所以不会出现空白或闪一下。 */
+const LG_DEFAULTS={on:true,tone:'black',blur:1.2,ior:1.42,bend:1.4,disp:0.03,thick:22,edgeBlur:1.0,tint:0.16,sat:1.1,hi:1.0,angle:128,rim:0.6};
+const LG_FIELDS=[['blur','背景模糊',0,6,0.05],['ior','折射率',1,2,0.01],['bend','弯的力度',0,3,0.05],['disp','色散',0,0.1,0.002],['thick','厚度（边宽）',4,60,1],['edgeBlur','边上散射',0,4,0.05],['tint','料（染色）',0,0.8,0.01],['sat','饱和度',0,2,0.01],['hi','高光',0,2,0.01],['angle','光的方向',0,360,1],['rim','背光边',0,2,0.01]];
+const LG_HOSTS='.hwid,.glass-second-portrait,.glass-second-photos,.dock';
+function lgCfg(){S.me=S.me||{};const raw=S.me.liquidGlass&&typeof S.me.liquidGlass==='object'?S.me.liquidGlass:{},out={on:raw.on!==false,tone:raw.tone==='white'?'white':'black'};LG_FIELDS.forEach(([k,,min,max])=>{const n=Number(raw[k]);out[k]=Number.isFinite(n)?Math.max(min,Math.min(max,n)):LG_DEFAULTS[k];});return out;}
+function lgWallSrc(){const src=storedImageDisplaySource(S.me&&S.me.homeBg);return isImg(src)?src:'';}
+function lgActive(){return glassThemeOn()&&lgCfg().on&&!!lgWallSrc();}
+const _lg={gl:null,canvas:null,prog:null,buf:null,tex:null,texSrc:'',texInfo:null,loading:null,cache:new Map(),failed:false,timer:0,pending:false};
+function lgStyle(){if(document.getElementById('lgStyle'))return;const st=document.createElement('style');st.id='lgStyle';st.textContent='.lg-host.lg-ready{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:transparent!important;background-image:none!important;isolation:isolate}.lg-canvas{position:absolute;left:0;top:0;width:100%;height:100%;border-radius:inherit;z-index:-1;pointer-events:none;display:block}';document.head.appendChild(st);}
+const LG_VS='attribute vec2 a;varying vec2 v;void main(){v=a*0.5+0.5;gl_Position=vec4(a,0.0,1.0);}';
+const LG_FS=`precision highp float;
+uniform sampler2D uTex;uniform vec2 uSize;uniform vec2 uOrigin;uniform vec4 uMap;uniform float uRadius;
+uniform float uBlur,uIor,uBend,uDisp,uThick,uEdgeBlur,uTint,uSat,uHi,uRim;uniform vec3 uTintColor;uniform vec2 uLight;
+varying vec2 v;
+vec3 samp(vec2 px,float bias){vec2 uv=clamp((px-uMap.xy)/uMap.zw,vec2(0.001),vec2(0.999));return texture2D(uTex,uv,bias).rgb;}
+void main(){
+ vec2 p=vec2(v.x,1.0-v.y)*uSize;vec2 hs=uSize*0.5;vec2 c=p-hs;float r=min(uRadius,min(hs.x,hs.y));
+ vec2 q=abs(c)-(hs-r);float d=length(max(q,0.0))+min(max(q.x,q.y),0.0)-r;float inside=-d;
+ vec2 s=vec2(c.x<0.0?-1.0:1.0,c.y<0.0?-1.0:1.0);vec2 n;
+ if(q.x>0.0&&q.y>0.0)n=normalize(q)*s;else if(q.x>q.y)n=vec2(s.x,0.0);else n=vec2(0.0,s.y);
+ float th=max(uThick,1.0);float t=clamp(1.0-inside/th,0.0,1.0);
+ float curve=t*t*(3.0-2.0*t);curve=pow(curve,max(0.35,1.6-uBend*0.4));
+ vec2 off=n*curve*th*(uIor-1.0)*uBend;
+ vec2 base=uOrigin+p;float bias=uBlur+t*uEdgeBlur;
+ vec3 col=vec3(samp(base+off*(1.0+uDisp*8.0),bias).r,samp(base+off,bias).g,samp(base+off*(1.0-uDisp*8.0),bias).b);
+ float l=dot(col,vec3(0.299,0.587,0.114));col=mix(vec3(l),col,uSat);col=mix(col,uTintColor,uTint);
+ float facing=max(dot(n,uLight),0.0),back=max(dot(n,-uLight),0.0);
+ float ring=1.0-smoothstep(0.0,2.2,inside);float band=(1.0-smoothstep(0.0,th*0.55,inside))*t;
+ col+=vec3(1.0)*(ring*(0.18+0.82*facing)*0.75*uHi+band*facing*0.22*uHi+ring*back*0.35*uRim);
+ float a=clamp(inside+0.5,0.0,1.0);gl_FragColor=vec4(clamp(col,0.0,1.0)*a,a);}`;
+function lgGL(){if(_lg.gl&&!_lg.gl.isContextLost())return _lg.gl;if(_lg.failed)return null;try{const cv=document.createElement('canvas');const gl=cv.getContext('webgl',{premultipliedAlpha:true,preserveDrawingBuffer:true,antialias:false,alpha:true});if(!gl){_lg.failed=true;return null;}
+  const sh=(type,src)=>{const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s;};
+  const prog=gl.createProgram();gl.attachShader(prog,sh(gl.VERTEX_SHADER,LG_VS));gl.attachShader(prog,sh(gl.FRAGMENT_SHADER,LG_FS));gl.linkProgram(prog);if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(prog));
+  const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
+  /* 上下文丢了只影响「以后重烤」，已经烤好放进组件的画布不受影响，所以不会掉材质 */
+  cv.addEventListener('webglcontextlost',e=>{e.preventDefault();_lg.gl=null;_lg.tex=null;_lg.texSrc='';},false);
+  Object.assign(_lg,{gl,canvas:cv,prog,buf,tex:null,texSrc:''});return gl;}catch(e){console.warn('液态玻璃不可用',e);_lg.failed=true;return null;}}
+function lgPot(n){let p=256;while(p<n&&p<2048)p*=2;return p;}
+function lgTexture(src){const gl=lgGL();if(!gl)return Promise.resolve(false);if(_lg.tex&&_lg.texSrc===src)return Promise.resolve(true);if(_lg.loading&&_lg.loading.src===src)return _lg.loading.p;
+  const p=new Promise(resolve=>{const img=new Image();img.decoding='async';img.onload=()=>{try{const w=img.naturalWidth,h=img.naturalHeight;if(!w||!h)return resolve(false);const tw=1024,th=lgPot(Math.round(1024*h/w)),cv=document.createElement('canvas');cv.width=tw;cv.height=th;cv.getContext('2d').drawImage(img,0,0,tw,th);
+      const g=lgGL();if(!g)return resolve(false);const tex=g.createTexture();g.bindTexture(g.TEXTURE_2D,tex);g.pixelStorei(g.UNPACK_FLIP_Y_WEBGL,false);g.texImage2D(g.TEXTURE_2D,0,g.RGBA,g.RGBA,g.UNSIGNED_BYTE,cv);g.generateMipmap(g.TEXTURE_2D);
+      g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MIN_FILTER,g.LINEAR_MIPMAP_LINEAR);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MAG_FILTER,g.LINEAR);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_S,g.CLAMP_TO_EDGE);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_T,g.CLAMP_TO_EDGE);
+      if(_lg.tex)g.deleteTexture(_lg.tex);_lg.tex=tex;_lg.texSrc=src;_lg.texInfo={w,h};cv.width=cv.height=1;resolve(true);}catch(e){console.warn('液态玻璃壁纸读取失败',e);resolve(false);}};img.onerror=()=>resolve(false);img.src=src;});
+  _lg.loading={src,p};p.finally(()=>{if(_lg.loading&&_lg.loading.p===p)_lg.loading=null;});return p;}
+/* 组件在「自己那一页停好」时相对整块桌面的位置；翻页时整页一起滑，所以这个位置不随滑动变化 */
+function lgGeometry(host,desk){const r=host.getBoundingClientRect(),d=desk.getBoundingClientRect();if(r.width<8||r.height<8)return null;let x=r.left-d.left,y=r.top-d.top;const page=host.closest('.apppage'),swipe=page&&page.parentElement;if(page&&swipe){const pr=page.getBoundingClientRect(),sr=swipe.getBoundingClientRect();x=r.left-pr.left+sr.left-d.left;}
+  const radius=parseFloat(getComputedStyle(host).borderTopLeftRadius)||0;return {x:Math.round(x),y:Math.round(y),w:Math.round(r.width),h:Math.round(r.height),radius,dw:d.width,dh:d.height};}
+function lgKey(g,cfg,src,dpr){return [src.length,src.slice(-48),JSON.stringify(cfg),g.x,g.y,g.w,g.h,g.radius,Math.round(g.dw),Math.round(g.dh),dpr].join('|');}
+function lgBake(g,cfg){const gl=lgGL();if(!gl||!_lg.tex||!_lg.texInfo)return null;const dpr=Math.min(2,window.devicePixelRatio||1),W=Math.max(1,Math.round(g.w*dpr)),H=Math.max(1,Math.round(g.h*dpr));
+  const cv=_lg.canvas;if(cv.width!==W)cv.width=W;if(cv.height!==H)cv.height=H;gl.viewport(0,0,W,H);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.useProgram(_lg.prog);
+  gl.bindBuffer(gl.ARRAY_BUFFER,_lg.buf);const loc=gl.getAttribLocation(_lg.prog,'a');gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+  gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,_lg.tex);const u=n=>gl.getUniformLocation(_lg.prog,n);gl.uniform1i(u('uTex'),0);
+  /* 壁纸按 center/cover 铺在桌面上：算出图片在桌面上的位置和大小 */
+  const iw=_lg.texInfo.w,ih=_lg.texInfo.h,sc=Math.max(g.dw/iw,g.dh/ih),mw=iw*sc,mh=ih*sc;
+  gl.uniform2f(u('uSize'),g.w,g.h);gl.uniform2f(u('uOrigin'),g.x,g.y);gl.uniform4f(u('uMap'),(g.dw-mw)/2,(g.dh-mh)/2,mw,mh);gl.uniform1f(u('uRadius'),g.radius);
+  gl.uniform1f(u('uBlur'),cfg.blur);gl.uniform1f(u('uIor'),cfg.ior);gl.uniform1f(u('uBend'),cfg.bend);gl.uniform1f(u('uDisp'),cfg.disp);gl.uniform1f(u('uThick'),cfg.thick);gl.uniform1f(u('uEdgeBlur'),cfg.edgeBlur);gl.uniform1f(u('uTint'),cfg.tint);gl.uniform1f(u('uSat'),cfg.sat);gl.uniform1f(u('uHi'),cfg.hi);gl.uniform1f(u('uRim'),cfg.rim);
+  const tc=cfg.tone==='white'?[0.94,0.95,0.97]:[0.04,0.04,0.05];gl.uniform3f(u('uTintColor'),tc[0],tc[1],tc[2]);const ang=cfg.angle*Math.PI/180;gl.uniform2f(u('uLight'),Math.cos(ang),-Math.sin(ang));
+  gl.drawArrays(gl.TRIANGLE_STRIP,0,4);const out=document.createElement('canvas');out.className='lg-canvas';out.width=W;out.height=H;out.setAttribute('aria-hidden','true');out.getContext('2d').drawImage(cv,0,0);return out;}
+function lgAttachTo(host,canvas,key){const old=host.querySelector(':scope>canvas.lg-canvas');if(old&&old!==canvas)old.remove();if(canvas.parentNode!==host)host.insertBefore(canvas,host.firstChild);canvas.dataset.lgKey=key;if(getComputedStyle(host).position==='static')host.style.position='relative';host.classList.add('lg-host','lg-ready');}
+function lgClear(root){(root||document).querySelectorAll('canvas.lg-canvas').forEach(c=>c.remove());(root||document).querySelectorAll('.lg-host').forEach(h=>h.classList.remove('lg-host','lg-ready'));}
+function lgRemember(key,canvas){_lg.cache.delete(key);_lg.cache.set(key,canvas);while(_lg.cache.size>24)_lg.cache.delete(_lg.cache.keys().next().value);}
+/* deskEl 是壁纸铺满的那块；hosts 是要做成玻璃的元素。能用缓存的立即装上，不需要等下一帧 */
+async function lgApply(deskEl,hosts,src,cfg){lgStyle();const dpr=Math.min(2,window.devicePixelRatio||1),todo=[];
+  for(const host of hosts){if(host.parentElement&&host.parentElement.closest('.lg-host'))continue;const g=lgGeometry(host,deskEl);if(!g)continue;const key=lgKey(g,cfg,src,dpr),cur=host.querySelector(':scope>canvas.lg-canvas');if(cur&&cur.dataset.lgKey===key)continue;const hit=_lg.cache.get(key);if(hit){lgAttachTo(host,hit,key);continue;}todo.push({host,g,key});}
+  if(!todo.length)return true;if(!await lgTexture(src))return false;
+  for(const {host,g,key} of todo){if(!host.isConnected)continue;const cv=lgBake(g,cfg);if(!cv)return false;lgRemember(key,cv);lgAttachTo(host,cv,key);}return true;}
+function lgHomeRefresh(){_lg.timer=0;const desk=document.getElementById('homeDesktop');if(!desk)return;if(!lgActive()){lgClear(desk);return;}lgApply(desk,Array.from(desk.querySelectorAll(LG_HOSTS)),lgWallSrc(),lgCfg()).catch(e=>console.warn('液态玻璃',e));}
+function lgAfterRender(){if(typeof document==='undefined')return;const desk=document.getElementById('homeDesktop');if(!desk)return;if(!lgActive()){lgClear(desk);return;}lgHomeRefresh();}
+function lgSoon(){if(_lg.timer)return;_lg.timer=setTimeout(lgHomeRefresh,120);}
+if(typeof render==='function'&&!render.__lg){const _lgRender=render;render=function(){const out=_lgRender.apply(this,arguments);try{lgAfterRender();}catch(e){console.warn('液态玻璃',e);}return out;};render.__lg=true;}
+if(typeof window!=='undefined'){window.addEventListener('resize',lgSoon);window.addEventListener('orientationchange',lgSoon);}
+/* ---- 设置：液态玻璃调参 ---- */
+function lgSet(k,v){const cfg=lgCfg();if(k==='on')cfg.on=!!v;else if(k==='tone')cfg.tone=v==='white'?'white':'black';else{const f=LG_FIELDS.find(x=>x[0]===k);if(!f)return;cfg[k]=Math.max(f[2],Math.min(f[3],Number(v)||0));const el=document.getElementById('lgVal_'+k);if(el)el.textContent=lgFmt(k,cfg[k]);}
+  S.me.liquidGlass=cfg;save(400);lgPreviewSoon();}
+function lgFmt(k,v){const f=LG_FIELDS.find(x=>x[0]===k);const step=f?f[4]:1;return step>=1?String(Math.round(v)):v.toFixed(step<0.01?3:2);}
+function lgPreset(name){const cfg=Object.assign({},LG_DEFAULTS,name==='white'?{tone:'white',tint:0.14,sat:1.0,hi:1.1}:{});cfg.on=lgCfg().on;S.me.liquidGlass=cfg;save(300);lgOpen();}
+let _lgPreviewTimer=0;function lgPreviewSoon(){if(_lgPreviewTimer)return;_lgPreviewTimer=requestAnimationFrame(()=>{_lgPreviewTimer=0;lgPreviewDraw();});}
+function lgPreviewDraw(){const box=document.getElementById('lgPreview');if(!box)return;const src=lgWallSrc(),cfg=lgCfg();if(!src||!cfg.on){lgClear(box);return;}lgApply(box,Array.from(box.querySelectorAll('[data-lg-preview]')),src,cfg).then(ok=>{const n=document.getElementById('lgNote');if(n&&!ok)n.textContent=_lg.failed?'这台设备的浏览器不支持 WebGL，主屏组件保持原来的玻璃样子。':'壁纸图片读取失败（可能是外链图片），主屏组件保持原来的玻璃样子。';});}
+function lgOpen(){const cfg=lgCfg(),src=lgWallSrc();
+  openModal(`<h3>液态玻璃 · 主屏组件</h3><div class="hint">背后的壁纸在组件边上被推弯。每个组件只在壁纸、参数或位置变化时算一次，滑动翻页时不会重算，所以不卡、不闪。</div>
+  <div id="lgPreview" style="position:relative;height:200px;border-radius:18px;overflow:hidden;margin:10px 0;background:${src?'url('+src+') center/cover':'#222'}">
+    <div data-lg-preview style="position:absolute;left:16px;right:16px;top:18px;height:84px;border-radius:24px;display:flex;align-items:center;padding:0 18px;color:#fff;font-weight:700;font-size:20px;text-shadow:0 1px 3px rgba(0,0,0,.35)">背后被推弯</div>
+    <div data-lg-preview style="position:absolute;left:16px;bottom:22px;width:150px;height:46px;border-radius:23px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600">胶囊 · 玻璃</div>
+    <div data-lg-preview style="position:absolute;right:22px;bottom:16px;width:62px;height:62px;border-radius:31px"></div></div>
+  <div id="lgNote" class="hint" style="margin:0 0 8px">${!glassThemeOn()?'需要先使用透明玻璃图标主题。':!src?'需要先设置主屏壁纸图片才有折射效果。':''}</div>
+  <div class="section"><div class="it"><span>在主屏组件上使用</span><span class="sw ${cfg.on?'on':''}" onclick="lgSet('on',${!cfg.on});lgOpen()"></span></div></div>
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0"><button class="minibtn" style="${cfg.tone==='black'?'background:#ff8fab;color:#fff':''}" onclick="lgPreset('black')">黑玻璃</button><button class="minibtn" style="${cfg.tone==='white'?'background:#ff8fab;color:#fff':''}" onclick="lgPreset('white')">白玻璃</button><button class="minibtn" onclick="lgPreset(lgCfg().tone)">回到默认</button></div>
+  <div class="section">${LG_FIELDS.map(([k,label,min,max,step])=>`<div class="it" style="display:block"><span>${label} <b id="lgVal_${k}" style="float:right">${lgFmt(k,cfg[k])}</b></span><input type="range" min="${min}" max="${max}" step="${step}" value="${cfg[k]}" oninput="lgSet('${k}',this.value)" style="width:100%"></div>`).join('')}</div>
+  <button class="btn g" style="margin-top:10px" onclick="closeModal();render()">完成</button>`);
+  requestAnimationFrame(lgPreviewDraw);}

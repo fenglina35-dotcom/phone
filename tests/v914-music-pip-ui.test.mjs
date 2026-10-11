@@ -8,7 +8,7 @@ const pip=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/Ph
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
 test('v1184 web source keeps private 1.0.315 compatibility',()=>{
-  assert.match(app,/APP_VER='v1714 · 角色后台接力不再重复回复'/);
+  assert.match(app,/APP_VER='v1716 · 主屏组件液态玻璃'/);
   assert.match(project,/CURRENT_PROJECT_VERSION = 439;/);
   assert.match(project,/MARKETING_VERSION = 1.0.439;/);
 });
