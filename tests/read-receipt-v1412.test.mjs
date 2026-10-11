@@ -250,3 +250,25 @@ test('browser: Douyin staggered read and moment first reply survive DOM redraw',
   await page.close();
  }}finally{await browser.close();}
 });
+
+test('actual web/private settings: precise-time trial toggles, persists, and restores old prompt/config when off',async()=>{
+ const {createRequire}=await import('node:module'),require=createRequire(import.meta.url),{chromium}=require('playwright'),path=require('node:path');const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
+ try{for(const priv of [false,true]){
+  const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));const origin='http://127.0.0.1:8778';
+  await page.route('**/*',route=>{const u=new URL(route.request().url());if(u.origin!==origin)return route.abort();const f=path.resolve(decodeURIComponent(u.pathname.slice(1)));if(!f.startsWith(process.cwd()+path.sep)||!fs.existsSync(f))return route.fulfill({status:404,body:''});return route.fulfill({status:200,contentType:f.endsWith('.js')?'text/javascript':f.endsWith('.html')?'text/html':f.endsWith('.css')?'text/css':'application/octet-stream',body:fs.readFileSync(f)});});
+  await page.goto(origin+(priv?'/'+P+'index.html':'/小手机.html')+'?northPreview=black-home');await page.waitForFunction(()=>window.__northBootReady);
+  await page.evaluate(()=>{S.me.locked=false;S.me.active='main';S.settings.sound=false;S.settings.timeAware=true;delete S.settings.preciseRoleTime;S.contacts.forEach(c=>c.proactive={enabled:false});stack=[{p:'settings'}];window.preciseCid=S.contacts[0].id;msgs(preciseCid).push({id:'away',role:'user',type:'text',content:'我去上厕所了',time:Date.now()-23*60000});_setCategory='behavior';document.getElementById('app').innerHTML=renderSettings();window.oldPrecisionPin=roleReplyContinuityPin(getC(preciseCid),Date.now());});
+  const toggle=page.getByRole('button',{name:'测试角色精准时间观念',exact:true});assert.equal(await toggle.getAttribute('aria-pressed'),'false');await toggle.click();assert.equal(await toggle.getAttribute('aria-pressed'),'true');
+  const on=await page.evaluate(()=>{const c=getC(preciseCid);return {enabled:S.settings.preciseRoleTime,epoch:S.settings.preciseRoleTimeEpoch,pin:roleReplyContinuityPin(c,Date.now()),cloud:roleServerAutomationConfig(c).preciseTime};});assert(on.enabled&&on.epoch);assert.match(on.pin,/精准事件时间事实/);assert(on.cloud.enabled);assert.match(await page.evaluate(()=>roleTimeClaimIssue('你离开已经过了一分钟。',getC(preciseCid),Date.now())),/精准事件时长/);assert.equal(on.cloud.promise,null,'enabling does not recreate old promises');
+  await page.evaluate(()=>{
+   const c=getC(preciseCid),now=Date.now();S.couple={cid:c.id};S.settings.preciseRoleTimeSince=now-181000;S.settings.replyDelay=0;S.settings.chat={base:'https://fake.invalid/v1',key:'fixture',model:'fixture',maxTokens:900,temp:.7};S.settings.aux={};S.settings.chatRoutes=null;aiCoreOn=()=>false;
+   const key=accountMessageKey(c.id,actId());S.messages[key]=[{id:'away-flight',role:'user',type:'text',content:'我去上厕所了',time:now-181000},{id:'promise-flight',role:'assistant',type:'text',content:'三分钟后我来找你。',time:now-180000}];window.preciseBefore=S.messages[key].length;window.preciseRequest=null;
+   fetchT=async(url,opt)=>{if(!String(url).startsWith('https://fake.invalid/'))return{ok:true,json:async()=>false,text:async()=>'false'};window.preciseRequest=JSON.parse(opt.body);return new Promise(resolve=>{window.preciseRelease=()=>resolve({ok:true,json:async()=>({choices:[{message:{content:'回来了吗？'},finish_reason:'stop'}]})});});};
+   const state=rolePreciseTimeState(c);const note=initiativeQueueNote(c,{kind:'autonomy'},'[这是一次【主动消息】：约定到期。'+rolePreciseTimePrompt(c)+'[精准时间约定|'+c.id+'|'+state.promise.key+']]');window.preciseFlight=aiReply(c.id,note,replyEpoch(c.id,actId()),actId());
+  });
+  await page.waitForFunction(()=>!!window.preciseRelease);assert(await page.evaluate(()=>preciseRequest.messages.some(m=>String(m.content).includes('精准事件时间事实'))),'real request carries event facts');
+  await toggle.click();assert.equal(await toggle.getAttribute('aria-pressed'),'false');const off=await page.evaluate(()=>({enabled:S.settings.preciseRoleTime,pin:roleReplyContinuityPin(getC(preciseCid),Date.now()),cloud:roleServerAutomationConfig(getC(preciseCid))}));assert.equal(off.enabled,false);assert.doesNotMatch(off.pin,/精准事件时间事实/);assert(!Object.hasOwn(off.cloud,'preciseTime'),'old profile shape restored');
+  const flight=await page.evaluate(async()=>{preciseRelease();await preciseFlight;return{count:msgs(preciseCid).length,before:preciseBefore,busy:replyGenerationBusy(preciseCid)};});assert.equal(flight.count,flight.before,'disable during generation prevents late output');assert.equal(flight.busy,false);
+  await page.evaluate(async()=>await saveNowAsync());await page.goto(page.url().split('?')[0]);await page.waitForFunction(()=>window.__northBootReady);assert.equal(await page.evaluate(()=>S.settings.preciseRoleTime),false);assert.deepEqual(errors,[]);await page.close();
+ }}finally{await browser.close();}
+});

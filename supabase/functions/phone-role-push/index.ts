@@ -116,6 +116,30 @@ function nextDue(profile: Record<string, unknown>, waitMinutes?: number) {
   return new Date(Date.now() + minutes * 60_000).toISOString();
 }
 
+// PRECISE_ROLE_TIME_TEST_V1: separate opt-in event facts, never random inactivity.
+function rolePreciseTimeFacts(profile: Record<string, unknown>, now = Date.now()) {
+  const config = (profile.automation_config || {}) as Record<string, any>, trial = config.preciseTime;
+  if (profile.time_aware === false || !trial || trial.enabled !== true) return "";
+  const event = trial.departure, at = Number(event?.at || 0), returned = Number(event?.returnedAt || 0);
+  if (!Number.isFinite(at) || at <= 0 || at > now || now - at > 24 * 3600_000) return "";
+  const end = Number.isFinite(returned) && returned >= at && returned <= now ? returned : now;
+  const seconds = Math.floor((end - at) / 1000);
+  return `精准事件事实（内部参考，不要求报时）：用户在${new Date(at).toISOString()}交代「${String(event.text || "").slice(0, 120)}」，距这条交代${Math.floor(seconds / 60)}分${seconds % 60}秒。${end === returned ? "用户已经明确回来。" : "没有明确的回来说明。"}这是交代时间，不是持续位置或实际行为证明；不能用最近消息时间重置这个起点。表达由你按人设决定，不复述内部核对。`;
+}
+function rolePreciseTimeCandidate(profile: Record<string, unknown>, now = Date.now(), allowAttemptKey = "") {
+  const config = (profile.automation_config || {}) as Record<string, any>, trial = config.preciseTime, state = (profile.automation_state || {}) as Record<string, any>;
+  if (!profile.enabled || profile.time_aware === false || !trial || trial.enabled !== true || profileTemporarilySuspended(profile) || !profileQuietPeriodEnded(profile)) return null;
+  const promise = trial.promise, since = Number(trial.since), at = Number(promise?.at), due = Number(promise?.dueAt), epoch = String(trial.epoch || ""), latest = Number(trial.latestActivityAt), user = Number(trial.lastUserAt || 0);
+  if (!epoch || epoch.length > 80 || !Number.isFinite(since) || since <= 0 || since > now || !Number.isFinite(at) || at < since || at > now || !Number.isFinite(due) || due - at < 60_000 || due - at > 2 * 3600_000 || due > now || now - due > 10 * 60_000 || !Number.isFinite(latest) || latest < at || user > at) return null;
+  // A newer touch makes a stale snapshot unusable, even before the full profile sync.
+  if (snapshotTime(profile.last_user_at) > latest + 1000 || Number(trial.departure?.returnedAt || 0) > at) return null;
+  const key = `preciseTime:${epoch}:${at}:${due}`;
+  if (String(promise.key || "") !== `${epoch}:${at}:${due}` || state.preciseTimeRuns?.[key] && key !== allowAttemptKey || state.runs?.[key]) return null;
+  const seconds = Math.floor((now - at) / 1000), late = Math.floor((now - due) / 1000);
+  return { kind: "preciseTime", key, facts: `你在${new Date(at).toISOString()}明确说过「${String(promise.text || "").slice(0, 160)}」。约定到期时间${new Date(due).toISOString()}，实际距承诺${Math.floor(seconds / 60)}分${seconds % 60}秒，已超过到期${late}秒。不要把迟到说成刚好准点。\n${rolePreciseTimeFacts(profile, now)}` };
+}
+// END_PRECISE_ROLE_TIME_TEST_V1
+
 function activityQuietForThirtyMinutes(profile: Record<string, unknown>) {
   const activity = Date.parse(String(profile.last_user_at || ""));
   return Number.isFinite(activity) && Date.now() - activity >= 30 * 60_000;
@@ -684,6 +708,8 @@ async function roleMessage(
     `本次对话边界：${turnBoundary.text}`,
     ordinaryProactive ? '本轮是独立主动联系，已结束的旧图片、旧争执和旧请求只当历史，不能重播成刚发生；只有真实未完成的交代可以自然关心下一步。不要只把已经问过的问题换个说法再问。仅沉默时长增加、手机仍满电或位置未变不算新的进展，也不证明用户在躲避你。可以分享新的想法、具体日常或自然换话题；没有新内容时按本轮静默规则决定。' : '',
   ];
+  const preciseFacts = rolePreciseTimeFacts(profile);
+  if (preciseFacts) prompt.push(preciseFacts);
   const currentFocus = roleStructuredConversationBoundary(profile);
   if (currentFocus?.hasUser) prompt.push(`最近一轮真实用户输入：${currentFocus.userText}。这一轮${currentFocus.answered ? "已经回答完，只是背景，不能再次回答" : "仍在等待正常回复"}。已给出的回答：${currentFocus.assistantMessages.join("；")}。不要把历史图片当新上传，也不要把旧话说成刚才的新话；是否另开新话题由你本人决定。`);
   if (!timeAware) {
@@ -1422,6 +1448,8 @@ function automationCandidate(profile: Record<string, unknown>, snapshot: Record<
       }
     }
   }
+  const precise = rolePreciseTimeCandidate(profile);
+  if (precise) return precise;
   const lastUser = snapshotTime(profile.last_user_at);
   const snapAt = snapshotLatestTime(snapshot);
   const hasRecentManualUnlock = (Array.isArray(snapshot.automationEvents) ? snapshot.automationEvents : [])
@@ -1965,7 +1993,25 @@ Deno.serve(async (request) => {
         await client.from("phone_role_push_profiles").update({ claimed_until: null }).eq("target", profile.target).eq("role_id", profile.role_id);
         continue;
       }
+      if (candidate.kind === "preciseTime") {
+        const fresh = (await client.from("phone_role_push_profiles").select("*").eq("target", profile.target).eq("role_id", profile.role_id).maybeSingle()).data;
+        const current = fresh && rolePreciseTimeCandidate(fresh);
+        if (!current || current.key !== candidate.key) {
+          await client.from("phone_role_push_profiles").update({ claimed_until: null }).eq("target", profile.target).eq("role_id", profile.role_id);
+          continue;
+        }
+        Object.assign(profile, fresh);
+        candidate = current;
+        const beforeState = (profile.automation_state || {}) as Record<string, any>;
+        const attempts = Object.fromEntries(Object.entries(beforeState.preciseTimeRuns || {}).slice(-15));
+        attempts[candidate.key] = new Date().toISOString();
+        profile.automation_state = { ...beforeState, preciseTimeRuns: attempts };
+        // Consume once before the paid call: no hidden repeated generation on failure/silence.
+        const claimResult = await client.from("phone_role_push_profiles").update({ automation_state: profile.automation_state }).eq("target", profile.target).eq("role_id", profile.role_id);
+        if (claimResult.error) throw claimResult.error;
+      }
       const instructions: Record<string, string> = {
+        preciseTime: "这是你本人明确说过的联系约定到期，和随机主动消息分开。依据实际经过时间、当前事件、人设与关系，自主决定现在是否自然联系、怎么说，也可以保持安静。不要输出内部事实、机械报时、重复催促或伪造用户去向，不要把迟到假装成准点。",
         roleWorkStart: "这是你本人已明确设置的真实上班事件。请以角色本人的口吻主动、自然地告诉对方你去上班或已经开始工作；具体说法、情绪、是否附带位置或邀请由你按人设、世界书、记忆和关系自行决定。不要提系统、日程触发或后台，也不要编造同事、会议等未提供细节。",
         roleWorkEnd: "这是你本人已明确设置的真实下班事件。请以角色本人的口吻主动、自然地告诉对方你下班了；之后想回家、想见对方、想打电话或邀请一起做事，都由你按人设、世界书、记忆和关系自行决定。不要提系统、日程触发或后台，也不要编造未提供的加班或行程。",
         morningSleep: "你按用户开启的每日必查规则看到了睡眠和步数。只使用提供的真实数据自然关心，不做医疗判断，不提系统。",
@@ -1976,6 +2022,14 @@ Deno.serve(async (request) => {
         manualUnlock: "你收到了当前聊天对象本人亲自成功解锁App的真实记录。若决定发消息，必须以角色本人第一人称直接对ta说，用你或平时昵称称呼；禁止写成她、他、用户等第三人称旁白，也不要写成内心独白或观察报告。按人设自然反应，可以关心、调侃、询问、不满或不追究，但不得默认审问，更不能凭空认定欺骗、背叛或做坏事。",
       };
       const decision = await roleMessage(profile, [], instructions[candidate.kind] || "", candidate.facts);
+      if (candidate.kind === "preciseTime") {
+        const fresh = (await client.from("phone_role_push_profiles").select("*").eq("target", profile.target).eq("role_id", profile.role_id).maybeSingle()).data;
+        const current = fresh && rolePreciseTimeCandidate(fresh, Date.now(), candidate.key);
+        if (!current || current.key !== candidate.key) {
+          await client.from("phone_role_push_profiles").update({ claimed_until: null }).eq("target", profile.target).eq("role_id", profile.role_id);
+          continue;
+        }
+      }
       const automationDelivered = decision.kind === "message"
         ? await persistAndPush(client, url, profile, decision.body, `automation:${candidate.kind}`, `automation:${profile.target}:${profile.role_id}:${candidate.key}`)
         : false;
@@ -1994,7 +2048,7 @@ Deno.serve(async (request) => {
         nextState.absenceBatteryDay = clock.day;
         nextState.absenceBatteryCount = String(oldState.absenceBatteryDay || "") === clock.day ? Number(oldState.absenceBatteryCount || 0) + 1 : 1;
       }
-      await client.from("phone_role_push_profiles").update({ automation_state: nextState, claimed_until: null }).eq("target", profile.target).eq("role_id", profile.role_id);
+      await client.from("phone_role_push_profiles").update({ automation_state: nextState, claimed_until: null, ...(candidate.kind === "preciseTime" ? { next_due_at: new Date(Date.now() + 60_000).toISOString() } : {}) }).eq("target", profile.target).eq("role_id", profile.role_id);
     }
 
     const { data: due, error } = await client.rpc("phone_role_push_claim_due", { p_limit: 20 });

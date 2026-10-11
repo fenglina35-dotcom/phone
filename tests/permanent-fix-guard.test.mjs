@@ -1699,3 +1699,5 @@ for(const file of ['app.js',PRIVATE])test(file+': optional route reasoning and r
 test('APNs quiet control is stripped at final notification projection',()=>{
  const s=read('supabase/functions/phone-role-push/index.ts');const projection=s.slice(s.indexOf('function roleNotificationBody('),s.indexOf('function roleNotificationPreview('));assert(projection.includes('保持安静|不说话|沉默|不回'));
 });
+
+test('precise time trial stays opt-in and independent from ordinary messages and background task kinds',()=>{for(const prefix of ['',PRIVATE_DIR]){const a=read(prefix+'app.js'),t=read(prefix+'cohab-theater.js');for(const marker of ['PRECISE_ROLE_TIME_TEST_V1','preciseRoleTime===true','测试角色精准时间观念','preciseRoleTimeEpoch','rolePreciseTimeNoteValid(note,id)'])assert(a.includes(marker));assert(t.includes("typeof rolePreciseTimePrompt==='function'?rolePreciseTimePrompt(c,now):''"));}const e=read('supabase/functions/phone-role-push/index.ts');assert(e.includes('function rolePreciseTimeCandidate('));assert(e.includes('preciseTimeRuns'));assert(e.includes('activityQuietForThirtyMinutes(freshProfile)'));assert(!e.includes('p_kind: \'preciseTime\''));});

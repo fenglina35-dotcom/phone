@@ -766,3 +766,23 @@ test('quiet-only APNs stops before credentials, network and fallback alert',asyn
  }
  assert.equal(credentialReads,0);
 });
+
+test('precise time cloud trial is off by default, respects live activity and consumes a promise once',async()=>{
+ const {stripTypeScriptTypes}=await import('node:module');const begin=edge.indexOf('// PRECISE_ROLE_TIME_TEST_V1:'),end=edge.indexOf('// END_PRECISE_ROLE_TIME_TEST_V1');assert(begin>=0&&end>begin);let now=10000000;
+ const x={Date:class extends Date{static now(){return now}},profileTemporarilySuspended:p=>!!p.suspended,profileQuietPeriodEnded:p=>!p.quiet_until_at||Date.parse(p.quiet_until_at)<=now,snapshotTime:t=>+t||Date.parse(t)||0};vm.runInNewContext(stripTypeScriptTypes(edge.slice(begin,end)),x);
+ const at=now-180000,p={enabled:true,time_aware:true,last_user_at:at,automation_state:{},automation_config:{preciseTime:{enabled:true,epoch:'e',since:at-1,latestActivityAt:at,lastUserAt:at-1000,departure:{at:at-1000,text:'我去上厕所了',returnedAt:0},promise:{at,dueAt:now,key:'e:'+at+':'+now,text:'三分钟后我找你。'}}}};
+ const candidate=x.rolePreciseTimeCandidate(p);assert.equal(candidate.kind,'preciseTime');assert.match(candidate.facts,/3分0秒/);assert.match(x.rolePreciseTimeFacts(p),/3分1秒/);
+ p.automation_state.preciseTimeRuns={[candidate.key]:now};assert.equal(x.rolePreciseTimeCandidate(p),null);assert.equal(x.rolePreciseTimeCandidate(p,now,candidate.key).key,candidate.key);
+ for(const edit of [q=>q.enabled=false,q=>q.time_aware=false,q=>q.automation_config.preciseTime.enabled=false,q=>q.suspended=true,q=>q.last_user_at=now,q=>q.automation_config.preciseTime.lastUserAt=now,q=>q.automation_config.preciseTime.departure.returnedAt=now,q=>q.automation_config.preciseTime.since=now+1,q=>q.automation_config.preciseTime.promise.dueAt=now+1]){const q=structuredClone(p);edit(q);assert.equal(x.rolePreciseTimeCandidate(q,now,candidate.key),null);}
+ now+=11*60000;assert.equal(x.rolePreciseTimeCandidate(p,now,candidate.key),null,'no stale overdue nagging');assert.equal(x.rolePreciseTimeFacts({automation_config:{}}),'');assert.equal(x.rolePreciseTimeCandidate({enabled:true,automation_config:{}}),null);
+});
+test('actual precise cloud dispatcher rechecks opt-in after generation and does not retry a timed promise',async()=>{
+ const {stripTypeScriptTypes}=await import('node:module');const begin=edge.indexOf('// PRECISE_ROLE_TIME_TEST_V1:'),end=edge.indexOf('// END_PRECISE_ROLE_TIME_TEST_V1');assert(begin>=0);let now=10000000;
+ for(const revoke of [false,true]){
+  let calls=0,sends=0,handler;const at=now-180000;let live={target:'owner',role_id:'r',enabled:true,time_aware:true,last_user_at:at,automation_state:{},automation_config:{preciseTime:{enabled:true,epoch:'e',since:at-1,latestActivityAt:at,lastUserAt:at-1000,promise:{at,dueAt:now,key:'e:'+at+':'+now,text:'三分钟后我找你。'}}}};
+  const client={rpc:async name=>({data:name==='phone_role_automation_claim'?[structuredClone(live)]:[]}),from:table=>{let update=null,filters=[];const q={select:()=>q,update:v=>{update=v;return q},eq:(k,v)=>{filters.push([k,v]);return q},maybeSingle:async()=>({data:table==='phone_role_push_profiles'?structuredClone(live):null}),then:(resolve,reject)=>Promise.resolve().then(()=>{if(update&&table==='phone_role_push_profiles'){assert(filters.some(([k,v])=>k==='target'&&v==='owner'));assert(filters.some(([k,v])=>k==='role_id'&&v==='r'));Object.assign(live,update);}return {error:null}}).then(resolve,reject)};return q}};
+  const x={Date:class extends Date{static now(){return now}},Deno:{serve:fn=>handler=fn},supabaseAdmin:()=>({url:'https://fixture',client}),snapshotTime:t=>+t||0,profileTemporarilySuspended:()=>false,profileQuietPeriodEnded:()=>true,reply:v=>v,automationCandidate:p=>x.rolePreciseTimeCandidate(p),companionAutomationRefreshCandidate:()=>null,roleMessage:async()=>{calls++;if(revoke)live.automation_config.preciseTime.enabled=false;return{kind:'message',body:'回来了吗？'}},persistAndPush:async()=>{sends++;return true},localClock:()=>({day:'2026-10-12'}),Object};
+  vm.runInNewContext(stripTypeScriptTypes(edge.slice(begin,end)),x);vm.runInNewContext(stripTypeScriptTypes(edge.slice(edge.indexOf('Deno.serve(async (request) =>'))),x);
+  const request={method:'POST',json:async()=>({action:'dispatch_due'})};await handler(request);await handler(request);assert.equal(calls,1);assert.equal(sends,revoke?0:1);assert(live.automation_state.preciseTimeRuns,'attempt consumed before generation');
+ }
+});
