@@ -1667,3 +1667,5 @@ test('a stalled authorization refusal never switches the private inbox to anothe
  const ctx={COMPANION_URL:'https://original.example',companionCloudURL:()=> 'https://original.example',setTimeout:(fn,ms)=>setTimeout(fn,Math.min(ms,10)),clearTimeout,Response,TextDecoder,fetchT:async()=>{calls++;return new Response(new ReadableStream({start(c){c.enqueue(new TextEncoder().encode('{'));}}),{status:403});}};
  vm.createContext(ctx);vm.runInContext(src,ctx);await assert.rejects(ctx.roleSyncRpcFetch('phone_role_push_pull',{method:'POST',body:'{}'},50),/完整响应超时/);assert.equal(calls,1);
 });
+
+test('web and private retain per-message WeChat motion without touching receipt facts',()=>{for(const file of ['app.js',PRIVATE]){const js=read(file);assert.match(js,/WECHAT_MESSAGE_MOTION_V1692/);assert.match(js,/born\+2000/);assert.match(js,/wechatMotionMount\(c\)/);assert.match(js,/data-wx-read=/);assert.match(js,/roleMarkRead\(id\)/);assert.match(js,/pfAckRead\(mid\)/);}});

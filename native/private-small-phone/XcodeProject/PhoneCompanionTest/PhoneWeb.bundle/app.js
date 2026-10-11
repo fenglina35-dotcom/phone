@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1691'){
+if(window.__NORTH_SHELL_BUILD__!=='1693'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -368,7 +368,7 @@ function phoneFriendMaybeSync(force){const now=Date.now();if(!force&&(northNativ
 function openPhoneFriends(){go('pffriends');setTimeout(()=>phoneFriendMaybeSync(true),60);}
 function pfReqs(dir){const p=phoneFriendState();return (p.requests||[]).filter(r=>r.direction===dir&&r.status==='pending');}
 function pfOnlineText(f){return pfIsOnline(f)?'在线':'离线';}
-function pfReadStatus(m,scope,gid){if(m&&String(m.id||'').startsWith('local_')&&m.sendState)return m.sendState==='sending'?'发送中…':m.sendState==='unknown'?'发送结果待确认':'尚未发送';if(!readReceiptOn())return '';if(!m||m.recalled||String(m.id||'').startsWith('local_')||pfPayloadIsPay(m))return '';const p=phoneFriendState(),ids=pfReadIds(m).filter(x=>x&&x!==p.id);if(scope==='group'){const g=pfGroupById(gid)||{},total=Math.max(0,((g.members||[]).length||1)-1),n=ids.length;return n?`${n}${total?'/'+total:''}人已读`:'未读';}return ids.length?'已读':'未读';}
+function pfReadStatus(m,scope,gid){if(m&&String(m.id||'').startsWith('local_')&&m.sendState)return m.sendState==='sending'?'发送中…':m.sendState==='unknown'?'发送结果待确认':'尚未发送';if(!readReceiptOn())return '';if(!m||m.recalled||String(m.id||'').startsWith('local_')||pfPayloadIsPay(m))return '';const p=phoneFriendState(),ids=pfReadIds(m).filter(x=>x&&x!==p.id);if(scope==='group'){const g=pfGroupById(gid)||{},total=Math.max(0,((g.members||[]).length||1)-1),n=ids.length;return n?`${n}${total?'/'+total:''}人已读`:'';}return ids.length?'已读':'';}
 function pfFriendRowsHTML(){const p=phoneFriendState(),fs=p.friends||[];if(!fs.length)return '';
   return fs.map(f=>{const id=(''+(f.phone_id||f.id)).toUpperCase(),arr=pfVisibleMsgList(p.messages,id),lm=arr[arr.length-1],unread=wxPfUnread(arr,id,p.friendRead[id],false);
     return `<div class="row" onclick="openPhoneFriendChat('${id}')">${wxUnreadAvatar(pfAvatarOnlineHTML(f),unread)}<div class="meta"><div class="n">${esc(pfFriendDisplayName(f))}</div><div class="s">${lm?esc(lm.recalled?'[已撤回一条消息]':((lm.from===p.id?'我：':'')+pfMsgPreview(lm))):'已经是好友，打个招呼吧'}</div></div><div style="text-align:right"><div class="meta time">${lm?hm(lm.time):''}</div></div></div>`;}).join('');}
@@ -630,7 +630,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1691 · 后台收件修复';
+const APP_VER='v1693 · 微信自然消息动画';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2616,6 +2616,18 @@ function buildSystem(c,opt){
 let stack=[{p:'home'}];
 let wxTab='chats';
 let _wxQuickOpen=false;
+/* WECHAT_MESSAGE_MOTION_V1692: selected preview timings; presentation only. */
+let _wechatMotion=null;
+function wechatMotionReadDue(rec,text,now,incoming){if(!text)return 0;if(!rec.due)rec.due=rec.initial?now:(incoming?Math.max(rec.born+2000,now):now+2000);return rec.due;}
+function wechatMotionReduced(){return typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;}
+function wechatMotionAnimate(el,from,duration,delay){if(!el||typeof el.animate!=='function'||wechatMotionReduced())return;el.animate([from,{opacity:1,transform:'translateY(0) scale(1)'}],{duration:duration,delay:delay||0,easing:'ease-out',fill:'backwards'});}
+function wechatMotionDispose(){const st=_wechatMotion;if(!st)return;if(st.observer)st.observer.disconnect();cancelAnimationFrame(st.frame);st.rows.forEach(r=>clearTimeout(r.timer));_wechatMotion=null;}
+function wechatMotionReadLabel(el,text){if(!el)return;if(el.getAttribute('data-wx-read')!==text)el.setAttribute('data-wx-read',text);const st=_wechatMotion;if(st&&st.box.contains(el))wechatMotionScan(st,false);else if(el.textContent!==text)el.textContent=text;}
+function wechatMotionReceipt(st,row,rec,el){if(!el)return;const text=el.getAttribute('data-wx-read')||'',now=Date.now();if(!readReceiptOn()||!text){clearTimeout(rec.timer);rec.timer=0;rec.due=0;rec.shown=false;if(el.textContent)el.textContent='';return;}const due=wechatMotionReadDue(rec,text,now,!row.classList.contains('me'));if(now<due){if(el.textContent)el.textContent='';if(!rec.timer)rec.timer=setTimeout(()=>{rec.timer=0;if(_wechatMotion===st&&st.box.isConnected&&!document.hidden)wechatMotionScan(st,false);},due-now);return;}clearTimeout(rec.timer);rec.timer=0;if(el.textContent===text&&rec.shown)return;const animate=!rec.initial&&!rec.shown;rec.shown=true;el.textContent='';Array.from(text).forEach((letter,i)=>{const span=document.createElement('span');span.textContent=letter;span.style.display='inline-block';el.appendChild(span);if(animate)wechatMotionAnimate(span,{opacity:0,transform:'translateY(4px)'},700,i*90);});el.setAttribute('data-wx-read-shown-at',String(now));}
+function wechatMotionScan(st,initial){if(!st||_wechatMotion!==st)return;st.box.querySelectorAll('.msg[data-message-id]').forEach(row=>{const id=row.getAttribute('data-message-id');let rec=st.rows.get(id);if(!rec){rec={born:Date.now(),initial:!!initial,due:0,shown:false,timer:0};st.rows.set(id,rec);if(!initial){wechatMotionAnimate(row.querySelector('.col'),{opacity:0,transform:'translateY(12px) scale(.97)'},420,0);wechatMotionAnimate(row.querySelector('.avatar')||row.querySelector(':scope > span'),{opacity:0,transform:'translateY(6px) scale(.94)'},520,80);st.added=true;}}wechatMotionReceipt(st,row,rec,row.querySelector('.msgread-line[data-wx-read]'));});st.box.querySelectorAll('.tstamp').forEach(el=>{if(el.hasAttribute('data-wx-motion-time'))return;el.setAttribute('data-wx-motion-time','1');const stamp=el.textContent+'|'+String(el.nextElementSibling&&el.nextElementSibling.getAttribute('data-message-id')||'');if(st.times.has(stamp))return;st.times.add(stamp);if(!initial)wechatMotionAnimate(el,{opacity:0,transform:'translateY(5px)'},600,220);});}
+function wechatMotionScroll(box,start){const st=_wechatMotion;if(!st||st.box!==box)return false;cancelAnimationFrame(st.frame);const from=start==null?box.scrollTop:start,target=()=>Math.max(0,box.scrollHeight-box.clientHeight);if(wechatMotionReduced()){box.scrollTop=target();return true;}const began=performance.now();box.scrollTop=from;function tick(now){if(_wechatMotion!==st||!box.isConnected||document.hidden)return;const t=Math.min(1,Math.max(0,(now-began)/580));box.scrollTop=from+(target()-from)*(1-Math.pow(1-t,3));if(t<1)st.frame=requestAnimationFrame(tick);}st.frame=requestAnimationFrame(tick);return true;}
+function wechatMotionMount(c){const target=['chat','group'].includes(c.p)?'chatbg':c.p==='pfchat'?'pfchatbg':c.p==='pfgroup'?'pfgroupbg':'';const box=target&&document.getElementById(target),key=String(actId())+':'+renderPageKey(c);if(!box){wechatMotionDispose();return;}let st=_wechatMotion,initial=!st||st.key!==key;if(initial){wechatMotionDispose();st={key:key,box:box,rows:new Map(),times:new Set(),frame:0,observer:null,added:false};_wechatMotion=st;}else{if(st.observer)st.observer.disconnect();cancelAnimationFrame(st.frame);st.box=box;st.added=false;}box.classList.add('wx-motion-chat');if(!document.getElementById('wechatMessageMotionStyle')){const style=document.createElement('style');style.id='wechatMessageMotionStyle';style.textContent='.wx-motion-chat{padding-bottom:18px!important;overflow-anchor:none;scroll-behavior:auto!important}.wx-motion-chat .msg{margin-top:12px;margin-bottom:12px}.wx-motion-chat .msg.msg-enter{animation:none!important}.wx-motion-chat .msgread-line{pointer-events:none}';document.head.appendChild(style);}wechatMotionScan(st,initial);st.observer=new MutationObserver(()=>wechatMotionScan(st,false));st.observer.observe(box,{childList:true,subtree:true,attributes:true,attributeFilter:['data-wx-read']});if(!box._wxMotionInput){box._wxMotionInput=true;['wheel','touchstart','pointerdown','keydown'].forEach(type=>box.addEventListener(type,()=>{if(_wechatMotion&&_wechatMotion.box===box)cancelAnimationFrame(_wechatMotion.frame);},{passive:true}));} }
+document.addEventListener('visibilitychange',()=>{const st=_wechatMotion;if(!st)return;if(document.hidden)cancelAnimationFrame(st.frame);else wechatMotionScan(st,false);});
 let _scrollBottomOnce={};
 function go(p,params){if(p==='group'&&params&&params.id)wxChatRestore('group:'+params.id);if(p==='wxnearby'&&wxNearbyBlocked())return;stack.push(Object.assign({p},params));render();}
 function back(){if(typeof window!=='undefined'&&window.NorthRunner&&NorthRunner.back())return;const leaving=cur();if(leaving&&leaving.p==='food'&&typeof northMarketBack==='function'&&northMarketBack())return;if(leaving&&leaving.p==='wxscan'&&window.wxScanStop)window.wxScanStop();if(stack.length>1){stack.pop();render();}}
@@ -2627,7 +2639,7 @@ function renderScrollTarget(c){if(!c)return null;if(c.p==='travel'&&typeof North
     if(sub==='work')return{id:'.dywk-box',stick:false};}
   const x=map[c.p];return x?{id:x[0],stick:!!x[1]}:null;}
 function nearBottom(el){return !el||Math.max(0,el.scrollHeight-el.scrollTop-el.clientHeight)<80;}
-function chatPinBottom(cb){if(!cb)return;const pin=()=>{if(!cb.isConnected)return;cb.scrollTop=Math.max(0,cb.scrollHeight-cb.clientHeight);};pin();requestAnimationFrame(pin);}
+function chatPinBottom(cb){if(!cb)return;if(typeof wechatMotionScroll==='function'&&wechatMotionScroll(cb))return;const pin=()=>{if(!cb.isConnected)return;cb.scrollTop=Math.max(0,cb.scrollHeight-cb.clientHeight);};pin();requestAnimationFrame(pin);}
 function appendChatHTML(cb,html,opt){if(!cb||!html)return null;opt=opt||{};const stick=nearBottom(cb),typing=opt.replaceTyping?cb.querySelector('#typing'):null;let node=null;
   if(typing&&typing.isConnected){typing.insertAdjacentHTML('afterend',html);node=typing.nextElementSibling;typing.remove();}
   else{cb.insertAdjacentHTML('beforeend',html);node=cb.lastElementChild;}
@@ -2645,7 +2657,7 @@ function restoreChatComposer(c,st){if(!st||!c||st.key!==renderPageKey(c))return;
 function renderScrollStateKey(c,el){return String(el&&el.getAttribute&&el.getAttribute('data-render-scroll-key')||renderPageKey(c));}
 function renderScrollElement(t){return !t?null:(String(t.id).charAt(0)==='.'?document.querySelector(t.id):document.getElementById(t.id));}
 function captureRenderScroll(c){const t=renderScrollTarget(c);if(!t)return null;const el=renderScrollElement(t);if(!el)return{key:renderPageKey(c),id:t.id,had:false};const bottom=Math.max(0,el.scrollHeight-el.scrollTop-el.clientHeight);return{key:renderScrollStateKey(c,el),id:t.id,had:true,top:el.scrollTop,bottom,nearBottom:bottom<80};}
-function restoreRenderScroll(c,st){const t=renderScrollTarget(c);if(!t)return;const el=renderScrollElement(t);if(!el)return;const key=renderScrollStateKey(c,el),force=_scrollBottomOnce&&_scrollBottomOnce[key];if(force){delete _scrollBottomOnce[key];requestAnimationFrame(()=>{el.scrollTop=el.scrollHeight;});el.scrollTop=el.scrollHeight;return;}const same=st&&st.had&&st.key===key&&st.id===t.id;if(t.stick){if(!same||st.nearBottom)el.scrollTop=el.scrollHeight;else el.scrollTop=st.top;}else if(same){el.scrollTop=st.top;requestAnimationFrame(()=>{if(el.isConnected)el.scrollTop=st.top;});}}
+function restoreRenderScroll(c,st){const t=renderScrollTarget(c);if(!t)return;const el=renderScrollElement(t);if(!el)return;const key=renderScrollStateKey(c,el),force=_scrollBottomOnce&&_scrollBottomOnce[key];if(force){delete _scrollBottomOnce[key];requestAnimationFrame(()=>{el.scrollTop=el.scrollHeight;});el.scrollTop=el.scrollHeight;return;}const same=st&&st.had&&st.key===key&&st.id===t.id;if(t.stick){if(same&&st.nearBottom&&typeof _wechatMotion!=='undefined'&&_wechatMotion&&_wechatMotion.box===el&&_wechatMotion.added)wechatMotionScroll(el,st.top);else if(!same||st.nearBottom)el.scrollTop=el.scrollHeight;else el.scrollTop=st.top;}else if(same){el.scrollTop=st.top;requestAnimationFrame(()=>{if(el.isConnected)el.scrollTop=st.top;});}}
 function render(){
   const c=cur();wxMarkPageSeen(c);if(typeof licenseNoteRouteActivity==='function')licenseNoteRouteActivity();const app=$('#app'),_renderStarted=privateNativeAppOn()?(typeof performance!=='undefined'&&performance.now?performance.now():Date.now()):0;
   hisPaymentsExpire();
@@ -2812,6 +2824,7 @@ function render(){
   if(c.p==='cinemawatch')cinemaAfterVideoRender();
   if(c.p==='cinemaread')cinemaAfterReaderRender();
   if(c.p==='drawguess')requestAnimationFrame(dgMount);
+  wechatMotionMount(c);
   restoreRenderScroll(c,_scrollState);
   if((c.p==='tale'&&S.tale&&S.tale.active)||(c.p==='dread'&&S.dread&&S.dread.active)){setTimeout(jailAmbientStart,40);}
   else if(c.p!=='jail'){jailAmbientStop();}
@@ -8740,8 +8753,8 @@ function renderPhoneFriendChat(id){const started=pfSyncClock(),p=phoneFriendStat
   let body=hidden?`<button class="btn g" style="width:calc(100% - 32px);margin:12px 16px" onclick="phoneFriendChatShowEarlier('${id}')">查看更早消息（还有 ${hidden} 条）</button>`:'';arr.forEach((m,i)=>{
     const prev=i?arr[i-1]:null;body+=chatBoundaryHTML(prev,m);
     if(m.recalled){body+=pfRecalledRow();return;}
-    const me=m.from===p.id,rs=me&&!m._transferReceipt?pfReadStatus(m,'friend',id):(!me&&!m._transferReceipt&&readReceiptOn()?(pfReadIds(m).indexOf(p.id)>=0?'已读':'未读'):''),rec=me&&!m._transferReceipt?`<button type="button" class="pfrecall" aria-label="撤回这条消息" onclick="event.stopPropagation();phoneFriendRecallMessage('${m.id}','friend','${id}')">撤回</button>`:'';
-    body+=`<div class="msg ${me?'me':'them'}"><span>${me?av(S.me.avatar):pfAvatarHTML(f)}</span><div class="col" onclick="pfMsgMenu('${m.id}','friend','${id}')">${pfBubblePart(m,me)}<div class="msgt">${rec}${hm(m.time)}</div>${rs?`<div class="msgread-line"${me?'':` data-pf-in="${m.id}"`}>${rs}</div>`:''}</div></div>`+pfRpSysLine(m,'friend',id);
+    const me=m.from===p.id,rs=me&&!m._transferReceipt?pfReadStatus(m,'friend',id):(!me&&!m._transferReceipt&&readReceiptOn()?(pfReadIds(m).indexOf(p.id)>=0?'已读':''):''),rec=me&&!m._transferReceipt?`<button type="button" class="pfrecall" aria-label="撤回这条消息" onclick="event.stopPropagation();phoneFriendRecallMessage('${m.id}','friend','${id}')">撤回</button>`:'';
+    body+=`<div data-message-id="${esc(m.id)}" class="msg ${me?'me':'them'}"><span>${me?av(S.me.avatar):pfAvatarHTML(f)}</span><div class="col" onclick="pfMsgMenu('${m.id}','friend','${id}')">${pfBubblePart(m,me)}<div class="msgt">${rec}${hm(m.time)}</div>${!m._transferReceipt&&readReceiptOn()?`<div class="msgread-line"${me?'':` data-pf-in="${m.id}"`}${/已读/.test(rs)?` data-wx-read="${esc(rs)}"`:rs?'':' data-wx-read=""'}>${rs}</div>`:''}</div></div>`+pfRpSysLine(m,'friend',id);
   });
   const gag=S.couple&&S.couple.gags&&S.couple.gags[pfGagKey(id)];pfSyncTrace('chatRender.end',{messages:all.length,rendered:arr.length,hidden,ms:Math.max(0,Math.round(pfSyncClock()-started))});
   return `<div class="nav chat-glass-nav"><span class="l" onclick="back()">‹</span><span class="t">${esc(pfFriendDisplayName(f))}</span><span class="r" onclick="phoneFriendManage('${id}')">⋯</span></div>
@@ -8757,7 +8770,7 @@ function renderPhoneFriendGroup(gid){const g=pfGroupById(gid)||{name:'小手机�
     if(pl&&typeof pfRoleRow==='function'){const rr=pfRoleRow(m,pl,gid,g);if(rr){body+=rr;return;}}
     const me=m.from===p.id,sid=me?'me':(''+m.from).toUpperCase(),bs=pfGroupBubbleCfg(gid,sid),ac=bs&&bs.avatar==='round'?'av-round':'',member=pfGroupMemberById(g,m.from),ff=phoneFriendById(m.from)||member,name=pfGroupMemberName(g,member||{phone_id:m.from}),rs=me?pfReadStatus(m,'group',gid):'',rec=me?`<button type="button" class="pfrecall" aria-label="撤回这条消息" onclick="event.stopPropagation();phoneFriendRecallMessage('${m.id}','group','${gid}')">撤回</button>`:'',at=me?'':`onpointerdown="pfAtStart(event,'${gid}','${m.from}')" onpointerup="pfGroupAvatarTap(event,'${gid}','${m.from}')" onpointercancel="pfAtEnd()" onpointerleave="pfAtEnd()" ondblclick="pfGroupAvatarDouble(event,'${gid}','${m.from}')" title="双击拍一拍，长按@"`;
     const showName=!me&&!pfGroupPref(gid).hideNames;
-    body+=`<div class="msg ${me?'me':'them'}${showName?' gnamed':''}"><span ${at}>${me?av(S.me.avatar,ac):pfAvatarHTML(ff||{phone_id:m.from,display_name:name},ac)}</span><div class="col" onclick="pfMsgMenu('${m.id}','group','${gid}')">${showName?`<div class="gname">${esc(name||'成员')}</div>`:''}${pfBubblePart(m,me,bs)}<div class="msgt">${rec}${hm(m.time)}</div>${rs?`<div class="msgread-line"${me?'':` data-pf-in="${m.id}"`}>${rs}</div>`:''}</div></div>`+pfRpSysLine(m,'group',gid);
+    body+=`<div data-message-id="${esc(m.id)}" class="msg ${me?'me':'them'}${showName?' gnamed':''}"><span ${at}>${me?av(S.me.avatar,ac):pfAvatarHTML(ff||{phone_id:m.from,display_name:name},ac)}</span><div class="col" onclick="pfMsgMenu('${m.id}','group','${gid}')">${showName?`<div class="gname">${esc(name||'成员')}</div>`:''}${pfBubblePart(m,me,bs)}<div class="msgt">${rec}${hm(m.time)}</div>${!m._transferReceipt&&readReceiptOn()?`<div class="msgread-line"${me?'':` data-pf-in="${m.id}"`}${/已读/.test(rs)?` data-wx-read="${esc(rs)}"`:rs?'':' data-wx-read=""'}>${rs}</div>`:''}</div></div>`+pfRpSysLine(m,'group',gid);
   });
   const gag=S.couple&&S.couple.gags&&S.couple.gags[pfgGagKey(gid)];
   const pref=pfGroupPref(gid),bgSource=pref.chatBg?storedImageDisplaySource(pref.chatBg):'';
@@ -9091,7 +9104,7 @@ function gbubble(g,m){const me=m.senderId==='me';if(m.type==='sys')return rpSysI
   const tick=selecting?`<span style="align-self:center;font-size:20px;margin:0 4px;color:${_gmsel.ids.includes(m.id)?'#07c160':'#666'}">${_gmsel.ids.includes(m.id)?'☑':'⚪'}</span>`:'';
   const click=selecting?`onclick="gToggleSel('${m.id}')"`:`onclick="gMsgMenu('${g.id}','${m.id}')"`;
   const lp=!selecting&&(m.type==='text'||m.type==='voice')?` onmousedown="gqPressStart('${g.id}','${m.id}')" onmouseup="qPressEnd()" onmouseleave="qPressEnd()" ontouchstart="gqPressStart('${g.id}','${m.id}')" ontouchend="qPressEnd()" ontouchmove="qPressEnd()" oncontextmenu="event.preventDefault()"`:'';
-  return `<div class="msg ${me?'me':'them'}${nm?' gnamed':''}" ${click}${lp} style="cursor:pointer">${selecting&&me?tick:''}${av0}<div class="col">${nm}${inner}${(typeof messageBeijingTimeHTML==='function'&&messageBeijingTimeHTML(m))||`<div class="msgt">${hm(m.time)}</div>`}</div>${selecting&&!me?tick:''}</div>`;}
+  return `<div data-message-id="${esc(m.id)}" class="msg ${me?'me':'them'}${nm?' gnamed':''}" ${click}${lp} style="cursor:pointer">${selecting&&me?tick:''}${av0}<div class="col">${nm}${inner}${(typeof messageBeijingTimeHTML==='function'&&messageBeijingTimeHTML(m))||`<div class="msgt">${hm(m.time)}</div>`}</div>${selecting&&!me?tick:''}</div>`;}
 function gGrab(gid,mid,quiet){const g=S.groups.find(x=>x.id===gid);if(!g)return;const m=g.msgs.find(x=>x.id===mid);if(!m||(m.type!=='transfer'&&m.type!=='redpacket'))return;
   if(m.type==='redpacket'){const got=gRpTake(g,m,'me');if(got&&!quiet)toast('已领取 ¥'+got.amount.toFixed(2));return;}
   if(m.received||(m.to&&m.to!=='me'))return;/* 群转账指定了收款人，只有那个人能收 */
@@ -9255,7 +9268,7 @@ async function gEmitRoleItems(g,c,items){const id=g.id;let first=true;
     if(!first)await sleep(420+Math.random()*560);first=false;
     it.senderId=c.id;it.role='assistant';it.time=Date.now();it.id=uid();if(it.type==='redpacket')gRpPrepareRole(g,it);if(it.type==='transfer'&&(!it.to||it.to===c.id))it.to='me';g.msgs.push(it);save();if(it.type==='redpacket')gRpRoleGrabs(g.id,it.id);if(it.type==='transfer'&&it.to!=='me')gRoleTransferAccept(g.id,it.id);
     if(S.settings.sound&&!c.muted&&!g.muted)playMessageDing();// 每条角色群消息都使用用户指定的提示音；群免打扰时不响
-    if(cur().p==='group'&&cur().id===id){const cb=$('#chatbg');if(cb){const stick=nearBottom(cb);cb.insertAdjacentHTML('beforeend',gbubble(g,it));if(stick)cb.scrollTop=cb.scrollHeight;}}
+    if(cur().p==='group'&&cur().id===id){const cb=$('#chatbg');if(cb){const stick=nearBottom(cb);cb.insertAdjacentHTML('beforeend',gbubble(g,it));if(stick)chatPinBottom(cb);}}
   }
   gNotify(g,c);}
 /* ===== 角色群：单独调用 / 合并调用 =====
@@ -15093,17 +15106,17 @@ function roleReadCounted(m){return !!m&&!m._silent&&!m._call&&m.type!=='sys';}
 function roleLastUserMsg(id){const a=msgs(id);for(let i=a.length-1;i>=0;i--){const m=a[i];if(!roleReadCounted(m))continue;if(m.role==='user')return m;}return null;}
 function roleMsgRead(id,m){if(!m)return false;if(m.readAt)return true;const a=msgs(id);for(let i=a.length-1;i>=0;i--){const x=a[i];if(x===m)return false;if(roleReadCounted(x)&&x.role==='assistant')return true;}return false;}
 /* 每一条都显示：读了就一直是已读，不会因为后面那条读了前面的就消失 */
-function roleReadLabelHTML(c,m){if(!readReceiptOn()||!c||!m||m.role!=='user'||!roleReadCounted(m))return '';return `<div class="msgread msgread-line" data-read-for="${m.id}">${roleMsgRead(c.id,m)?'已读':'未读'}</div>`;}
+function roleReadLabelHTML(c,m){if(!readReceiptOn()||!c||!m||m.role!=='user'||!roleReadCounted(m))return '';return `<div class="msgread msgread-line" data-read-for="${m.id}" data-wx-read="${roleMsgRead(c.id,m)?'已读':''}">${roleMsgRead(c.id,m)?'已读':''}</div>`;}
 function roleLastRoleMsg(id){const a=msgs(id);for(let i=a.length-1;i>=0;i--){const m=a[i];if(!roleReadCounted(m))continue;if(m.role==='assistant')return m;}return null;}
 /* 他发来的最后一条消息旁边显示你读没读：你打开聊天看到了就变成已读 */
-function roleSeenLabelHTML(c,m){if(!readReceiptOn()||!c||!m||m.role!=='assistant'||!roleReadCounted(m))return '';return `<div class="msgread msgread-line" data-seen-for="${m.id}">${m.seenAt?'已读':'未读'}</div>`;}
+function roleSeenLabelHTML(c,m){if(!readReceiptOn()||!c||!m||m.role!=='assistant'||!roleReadCounted(m))return '';return `<div class="msgread msgread-line" data-seen-for="${m.id}" data-wx-read="${m.seenAt?'已读':''}">${m.seenAt?'已读':''}</div>`;}
 function roleReadRefresh(id){const cb=$('#chatbg');if(!cb)return;const els=cb.querySelectorAll('.msgread');if(!els.length)return;const a=msgs(id),on=readReceiptOn(),byId=new Map(),pos=new Map();a.forEach((m,i)=>{if(m&&m.id){byId.set(m.id,m);pos.set(m.id,i);}});let lastRoleIdx=-1;for(let i=a.length-1;i>=0;i--){if(roleReadCounted(a[i])&&a[i].role==='assistant'){lastRoleIdx=i;break;}}
-  els.forEach(el=>{el.style.display=on?'':'none';if(!on)return;const sid=el.dataset.seenFor,rid=el.dataset.readFor,m=byId.get(sid||rid);if(!m)return;const t=sid?(m.seenAt?'已读':'未读'):((m.readAt||pos.get(rid)<lastRoleIdx)?'已读':'未读');if(el.textContent!==t)el.textContent=t;});}
+  els.forEach(el=>{el.style.display=on?'':'none';if(!on)return;const sid=el.dataset.seenFor,rid=el.dataset.readFor,m=byId.get(sid||rid);if(!m)return;const t=sid?(m.seenAt?'已读':''):((m.readAt||pos.get(rid)<lastRoleIdx)?'已读':'');if(typeof wechatMotionReadLabel==='function')wechatMotionReadLabel(el,t);else if(el.textContent!==t)el.textContent=t;});}
 function roleSeenTick(){if(document.hidden||S.me.locked||typeof cur!=='function')return;const k=cur();if(!k||k.p!=='chat'||!k.id)return;const a=msgs(k.id),now=Date.now();let ch=false;for(let i=a.length-1;i>=0;i--){const m=a[i];if(!roleReadCounted(m)||m.role!=='assistant'||m.seenAt)continue;if(!m._seenPending){m._seenPending=now;continue;}if(now-m._seenPending>=700){m.seenAt=now;delete m._seenPending;ch=true;}}if(ch){wxMarkPageSeen(k);save(1500);roleReadRefresh(k.id);}}
 setInterval(roleSeenTick,500);
 /* 角色开始回你（出现正在输入）那一刻算他读了 */
 /* 标完已读后直接改界面上的字，不用整页重画 */
-function pfReadInPlace(id){if(!readReceiptOn())return;const p=phoneFriendState(),me=(''+p.id).toUpperCase(),arr=pfMsgList(p.messages,(''+id).toUpperCase());if(!arr.length)return;const byId=new Map(arr.map(m=>[m&&m.id,m]));document.querySelectorAll('[data-pf-in]').forEach(el=>{const m=byId.get(el.dataset.pfIn);if(m&&pfReadIds(m).indexOf(me)>=0&&el.textContent!=='已读')el.textContent='已读';});}
+function pfReadInPlace(id){if(!readReceiptOn())return;const p=phoneFriendState(),me=(''+p.id).toUpperCase(),arr=pfMsgList(p.messages,(''+id).toUpperCase());if(!arr.length)return;const byId=new Map(arr.map(m=>[m&&m.id,m]));document.querySelectorAll('[data-pf-in]').forEach(el=>{const m=byId.get(el.dataset.pfIn);if(m&&pfReadIds(m).indexOf(me)>=0){if(typeof wechatMotionReadLabel==='function')wechatMotionReadLabel(el,'已读');else if(el.textContent!=='已读')el.textContent='已读';}});}
 function pfLastIncoming(arr,pid){if(!Array.isArray(arr))return null;for(let i=arr.length-1;i>=0;i--){const x=arr[i];if(x&&x.from!==pid&&!x.recalled&&!x._transferReceipt)return x;}return null;}
 function roleReadPrompt(c){if(!readReceiptOn()||!c)return '';const a=msgs(c.id);let last=null;for(let i=a.length-1;i>=0;i--){if(roleReadCounted(a[i])){last=a[i];break;}}if(!last||last.role!=='assistant'||!last.seenAt)return '';const min=Math.floor((Date.now()-last.seenAt)/60000);if(min<2)return '';return '\n\n# 已读\n微信开着已读：你发的最后一条消息，'+S.me.name+'在'+(min<60?min+'分钟':Math.floor(min/60)+'小时')+'前已经读了，但还没回你。你知道这件事，可以按人设自然地在意或不在意，别每次都提。';}
 function roleMarkRead(id){const a=msgs(id),now=Date.now();let ch=false;for(let i=a.length-1;i>=0;i--){const m=a[i];if(!roleReadCounted(m))continue;if(m.role!=='user')continue;if(m.readAt)break;m.readAt=now;ch=true;}if(ch){save(800);if(cur().p==='chat'&&cur().id===id)roleReadRefresh(id);}return ch;}
@@ -15457,7 +15470,7 @@ function afterChat(id){
 
 function pushMsg(id,m){m.time=Date.now();if(m.role==='user'){if(!m.id)m.id=uid();if(m.type!=='sys')replyTouch(id);suspicionOnUserMsg(id,m);coupleGoalOnUserMsg(id,m);}msgs(id).push(m);save();if(m.role==='user'&&m.type!=='sys'){roleBackgroundCancel(id,['one_minute_test','app_watch_test']);roleServerPushTouchActivity(id,m.time,true);roleBackgroundPrepare(id,'reply_handoff',{userText:String(msgToText(m)||'').slice(0,2000),messageId:String(m.id||''),accountId:String(actId()),sessionId:String(accountMessageKey(id,actId())||'')});}
   if(m.role==='user'){behaviorOnUserMsg(id,m);lifeNoteOnUserMsg(id,m);emotionOnUserMsg(id,m);}
-  if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){const stick=nearBottom(cb),c=getC(id),prev=chatPrevVisibleBefore(id,m);cb.insertAdjacentHTML('beforeend',chatBoundaryHTML(prev,m)+bubbleRow(c,m));if(stick)cb.scrollTop=cb.scrollHeight;}}}
+  if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){const stick=nearBottom(cb),c=getC(id),prev=chatPrevVisibleBefore(id,m);cb.insertAdjacentHTML('beforeend',chatBoundaryHTML(prev,m)+bubbleRow(c,m));if(stick)chatPinBottom(cb);}}}
 
 let _voiceMode=false;let _panelPage='fn';let _chatFnPage=0;
 function chatPanelKeyboardDismiss(){const ta=$('#cinput');if(ta&&document.activeElement===ta)ta.blur();}
