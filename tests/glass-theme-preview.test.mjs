@@ -272,7 +272,7 @@ test('dashboard photo is a direct isolated upload target and sweetie text is rea
   assert.match(css,/\.sweetie-avatar-picker\{width:60px;height:60px/);
   assert.match(css,/\.home-vinyl-card \.vinyl-cover\{inset:20%!important;width:60%!important;height:60%!important\}/);
   assert.doesNotMatch(css,/\.music-vinyl-cover\{[^}]*inset:20%/);
-  assert.match(css,/\.home\[style\*="background:url"\]:before,html\.north-glass-ui \.home\[style\*="background:url"\]:after\{display:none!important;content:none!important\}/);
+  assert.match(css,/\.home\.has-home-wallpaper:before,html\.north-glass-ui \.home\.has-home-wallpaper:after\{display:none!important;content:none!important\}/);
 });
 
 test('sweetie widget reuses the couple start date for an unboxed relationship-day label',()=>{
@@ -488,3 +488,15 @@ test('glass material discovers styles inserted later into the document head',()=
 
 
 test('phone control SVG glass is included without changing picture messages or glyph paths',()=>{const source=app.slice(app.indexOf('/* NORTH_OPTICAL_MATERIAL_V1:'));assert(source.includes("el instanceof SVGSVGElement&&el.matches('.phcallctl>svg')"));assert(source.includes("!el.closest('svg,.imsg-b.pic,.bubble.pic,.cal-color-grid,.cal-color-spectrum')"));assert(source.includes('svg,svg *'));assert.doesNotMatch(source,/\.innerHTML\s*=|\.textContent\s*=|setAttribute\('(?:d|viewBox|fill|stroke)'/);});
+
+for(const file of ['app.js','native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js'])test(file+': widget foreground color and opacity persist independently without rerendering',()=>{
+ const src=fs.readFileSync(file,'utf8'),names=['glassWidgetTextColor','glassWidgetTextOpacity','glassWidgetTextPaint','glassWidgetTextSet'],code=names.map(n=>{const start=src.indexOf('function '+n+'(');assert(start>=0,n);return src.slice(start,src.indexOf('\n',start));}).join('\n');
+ let pack='black',saves=0;const map={},styles={},sandbox={glassWidgetAppearanceEnsure:()=>map,glassWidgetAppearance:()=>map[pack]||{},appIconPack:()=>pack,widgetHex:(v,f)=>/^#[a-f0-9]{6}$/i.test(v||'')?v:f,widgetRgba:(v,a)=>v+':'+a,document:{querySelectorAll:sel=>sel==='#homeDesktop'?[{style:{getPropertyValue:k=>styles[k],setProperty:(k,v)=>styles[k]=v}}]:[]},$:()=>null,save:()=>saves++};vm.createContext(sandbox);vm.runInContext(code,sandbox);
+ assert.equal(sandbox.glassWidgetTextColor(),'#ffffff');assert.equal(sandbox.glassWidgetTextOpacity(),100);
+ sandbox.glassWidgetTextSet('color','#ff3300');sandbox.glassWidgetTextSet('opacity',0);assert.equal(styles['--north-widget-ink'],'#ff3300:0');assert.equal(map.black.textOpacity,0);assert.equal(saves,2);
+ pack='blue';assert.equal(sandbox.glassWidgetTextColor(),'#ffffff');assert.equal(sandbox.glassWidgetTextOpacity(),100);pack='black';assert.equal(sandbox.glassWidgetTextColor(),'#ff3300');sandbox.glassWidgetTextSet('opacity',200);assert.equal(sandbox.glassWidgetTextOpacity(),100);sandbox.glassWidgetTextSet('reset');assert.equal(sandbox.glassWidgetTextColor(),'#ffffff');assert.equal(sandbox.glassWidgetTextOpacity(),100);
+});
+
+test('home wallpaper recognition is independent of style serialization by foreground setters',()=>{for(const prefix of ['', 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/']){const js=fs.readFileSync(prefix+'app.js','utf8'),css=fs.readFileSync(prefix+'glass-theme.css','utf8');assert(js.includes("isImg(storedImageDisplaySource(S.me.homeBg))?' has-home-wallpaper':''"));assert(css.includes('.home:not(.has-home-wallpaper)'));assert(!css.includes('[style*="background:url"]'));}});
+
+

@@ -1584,3 +1584,13 @@ test('approved optical material remains shared while photos, switches and iOS gu
 
 
 test('private role foreground sync keeps its fixed relay and durable receive-before-ack ordering',()=>{for(const prefix of ['',PRIVATE_DIR]){const js=read(prefix+'app.js');for(const marker of ['NORTH_ROLE_SYNC_RELAY_V1','private-role-sync-relay-v1',"companionCloudURL()!==COMPANION_URL",'服务器没有返回有效收件列表','_roleServerPushPullAt=0;_roleServerPushPullError=','前台同步暂未完成'])assert(js.includes(marker),marker);const start=js.indexOf('async function roleServerPushPull('),end=js.indexOf('let _roleServerPushWakePromise',start),body=js.slice(start,end);assert(body.indexOf('await persistWechatMessagesNow()')<body.indexOf("phone_role_push_ack"));}const worker=read('services/phone-license-relay/worker.mjs');assert(worker.includes('https://qvuahlqimcfgeoetosnl.supabase.co/rest/v1/rpc/'));assert(worker.includes('role-sync-owner-required'));assert(worker.includes('ROLE_SYNC_RPC.has(fn)'));});
+
+
+
+
+
+
+
+
+
+test('only material reverts while widget foreground and wallpaper repairs remain',()=>{for(const prefix of ['',PRIVATE_DIR]){const js=read(prefix+'app.js'),css=read(prefix+'glass-theme.css');assert(js.includes('NORTH_WIDGET_FOREGROUND_V1'));assert(js.includes('has-home-wallpaper'));assert(css.includes('NORTH_WIDGET_FOREGROUND_V1'));assert(css.includes('NORTH_OFFLINE_BRIGHT_V1'));assert(css.includes('NORTH_MATERIAL_ONLY_RESTORE_V1'));assert(!css.includes('NORTH_OFFLINE_FLAT_V5'));assert(js.includes('"thickness":2.7'));assert(js.includes('"angle":229'));assert(!js.includes('NORTH_OPTICAL_HOME_ONLY_V5'));}});
