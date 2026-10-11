@@ -1,4 +1,4 @@
-"""Create the private v1677 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
+"""Create the private v1689 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
 
 Unlike the earlier packaging scripts, every file is read from the committed tree
 (``git cat-file`` against HEAD) instead of the working directory. The v1235/iOS356
@@ -23,10 +23,11 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "native/private-small-phone/XcodeProject/"
 BUNDLE = "PhoneCompanionTest/PhoneWeb.bundle/"
-PREFIX = "SmallPhone_v1677_iOS439_Private/"
-OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1677_iOS439.zip"
+PREFIX = "SmallPhone_v1689_iOS439_Private/"
+OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1689_iOS439.zip"
 
-WEB_VERSION = "1677"
+WEB_VERSION = "1689"
+REVIEWED_RUNTIME_COMMIT = "1a81f164057a12df75b3b275aa822f787c55cce8"
 MARKETING = "1.0.439"
 BUILD = "439"
 BRIDGE = "42"
@@ -586,11 +587,12 @@ def main() -> None:
     # This explicitly excluded parallel diagnostic stays in the working tree; payload still comes only from git cat-file HEAD.
     assert not OUTPUT.exists(), "refusing to overwrite an existing package"
     commit = text(git("rev-parse", "HEAD")).strip()
-    web_commit = commit
+    web_commit = REVIEWED_RUNTIME_COMMIT
+    assert text(git("show", web_commit + ":app.js")).find("v1688 · 透明控件与交互恢复") >= 0
     files = committed_private_files()
     validate(files)
-    previous = ROOT.parent / "最新私人版本覆盖包_v1675_iOS439.zip"
-    previous_sha = "a45812032c5c418d668c62f231a7c1e113a8874cc53671c0744a3deb66f0fa79"
+    previous = ROOT.parent / "最新私人版本覆盖包_v1677_iOS439.zip"
+    previous_sha = "ad7dcb0e25a9ce3f46ea150e717ac0d620ae7d86a924afb4a7605787d991d694"
     assert sha256(previous.read_bytes()).hexdigest() == previous_sha
     with ZipFile(previous) as old:
         prefix = next(n for n in old.namelist() if n.endswith("/SOURCE_STATE.json"))[:-len("SOURCE_STATE.json")]
@@ -599,7 +601,7 @@ def main() -> None:
         assert set(manifest) == names - {"SHA256SUMS.json"}
         assert not (names - files.keys() - {"SHA256SUMS.json", "SOURCE_STATE.json"}), "previous delivery files missing"
         state = json.loads(old.read(prefix + "SOURCE_STATE.json"))
-        assert state["sourceCommit"] == "f81f5de4849c2e318e09c75b9f6ac464d42c83bd"
+        assert state["sourceCommit"] == "93d71cd8d1fbe82b890aa7beee3fc267b7c51ff7"
         for name, digest in manifest.items():
             body = old.read(prefix + name)
             assert sha256(body).hexdigest() == digest, "previous checksum mismatch: " + name
@@ -630,16 +632,30 @@ def main() -> None:
     assert len(cozy_files) == 1253
     # All payload comes from committed HEAD; compare previous complete overlay above.
     assert not (names - files.keys() - {"SHA256SUMS.json", "SOURCE_STATE.json"})
-    for marker in ("NORTH_OPTICAL_MATERIAL_V1", "NORTH_ROLE_SYNC_RELAY_V1", "roleSyncRpcFetch", "_roleServerPushPullError", "function cohabTapNextHTML(", "不显示该聊天"):
+    for marker in ("NORTH_ROLE_SYNC_DIRECT_V1", "roleSyncRpcFetch", "_roleServerPushPullError", "function cohabTapNextHTML(", "不显示该聊天"):
         assert marker in app, "authorized repair missing: " + marker
+    css = text(files[BUNDLE + "glass-theme.css"])
+    for removed in ("NORTH_OPTICAL_MATERIAL_V1", "window.NorthOpticalGlass=", "ROLE_SYNC_RELAY_BASE", "NORTH_ROLE_SYNC_RELAY_V1"):
+        assert removed not in app, "removed material or relay reintroduced: " + removed
+    assert "data-north-optical" not in css, "material CSS reintroduced"
+    for marker in ("NORTH_WIDGET_FOREGROUND_V1", "NORTH_OFFLINE_BRIGHT_V1", "NORTH_OFFLINE_TRANSPARENT_V2", ".cohab-tap-next", ".wx-conversation-swipe"):
+        assert marker in css, "requested UI repair missing: " + marker
+    assert "svgIc('heart',19,'#fff',1.7)" in app
+    assert "glassWidgetTextColor(){return widgetHex(glassWidgetAppearance().textColor,'#ffffff')" in app
+    for name, body in files.items():
+        if name.startswith(BUNDLE):
+            assert body == git("show", REVIEWED_RUNTIME_COMMIT + ":" + SOURCE + name), "runtime differs from reviewed release: " + name
+    state["inheritedValidation"] = {"sourceCommit": state.get("sourceCommit"), "validation": state.get("validation", {})}
+    state["preserved"] = [x for x in state.get("preserved", []) if x not in {"v1677-user-approved-22-parameter-optical-material", "v1677-role-sync-fixed-relay-and-pull-recovery"}]
+    state["intentionalRemovals"] = ["v1677-optical-material-renderer-and-overrides", "v1677-role-sync-relay-transport"]
     state["sourceCommit"] = commit
     state["webSourceCommit"] = web_commit
-    state["webVersion"] = "v1676"
+    state["webVersion"] = "v1688"
     state["privateWeb"] = "v" + WEB_VERSION
     state["privateIOS"] = f"{MARKETING} ({BUILD})"
     state["bridge"] = BRIDGE
     state["deliveryKind"] = "Mac-Xcode-source-overlay-not-IPA"
-    state["lastDeliveredPackage"] = {"name": previous.name, "sha256": previous_sha, "sourceCommit": "f81f5de4849c2e318e09c75b9f6ac464d42c83bd"}
+    state["lastDeliveredPackage"] = {"name": previous.name, "sha256": previous_sha, "sourceCommit": "93d71cd8d1fbe82b890aa7beee3fc267b7c51ff7"}
     state["preserved"] = sorted(set(state.get("preserved", [])) | {
         "v1669-calendar-real-month-year-day-search-events-and-reminders",
         "v1669-role-scheduling-sharing-invitations-participation-and-opt-in-care",
@@ -649,15 +665,14 @@ def main() -> None:
         "v1669-cloud-startup-fees-lifetime-shop-rewards-profit-and-deleted-shop-order-filter",
         "v1669-warm-yan-13-products-original-pictures-and-prices",
         "v1669-pixel-and-pet-bounded-script-redownload",
-        "private-native-companion-intentional-asymmetry", "v1669-original-shop-restore-no-fee-no-reward-reset", "v1675-saved-visible-declaration-before-all-lock", "v1675-current-app-target-refusal-and-thought-action-isolation", "v1675-fixed-milk-spec-defaults-and-completed-order-replay-guard", "v1675-old-image-and-thought-recency-boundaries", "v1675-yanan-relative-weekday-morning-role-only-flight-and-failure-reply", "v1677-user-approved-22-parameter-optical-material", "v1677-role-sync-fixed-relay-and-pull-recovery", "v1677-cohab-next-arrow-and-hide-chat"})
+        "private-native-companion-intentional-asymmetry", "v1669-original-shop-restore-no-fee-no-reward-reset", "v1675-saved-visible-declaration-before-all-lock", "v1675-current-app-target-refusal-and-thought-action-isolation", "v1675-fixed-milk-spec-defaults-and-completed-order-replay-guard", "v1675-old-image-and-thought-recency-boundaries", "v1675-yanan-relative-weekday-morning-role-only-flight-and-failure-reply", "v1689-no-optical-material", "v1689-original-backend-direct-sync", "v1689-cohab-bare-next-arrow-and-hide-chat", "v1689-white-adjustable-widget-text-and-small-heart", "v1689-light-clear-offline-controls-white-text"})
     state["macBuildVerified"] = False
     state["realIPhoneVerified"] = False
-    state["knownUnresolved"] = [x for x in state.get("knownUnresolved", []) if not re.match(r"v\d+-mac-build", x)] + ["v1677-mac-build-signing-and-iphone-not-verified", "calendar-closed-app-system-notifications-not-implemented", "real-model-calendar-personality-and-voice-acceptance-pending", "v1675-user-main-model-and-native-lock-receipts-pending"]
+    state["knownUnresolved"] = [x for x in state.get("knownUnresolved", []) if not re.match(r"v\d+-mac-build", x)] + ["v1689-mac-build-signing-and-iphone-not-verified", "calendar-closed-app-system-notifications-not-implemented", "real-model-calendar-personality-and-voice-acceptance-pending", "v1675-user-main-model-and-native-lock-receipts-pending"]
     state["validation"] = {"macBuildVerified": False, "realIPhoneVerified": False,
-        "nodeTests": {"passed": 3788, "failed": 0, "browserDriverSkipped": 54, "sourceCommit": web_commit, "resultSource": ".codex_tmp/eight-chat/full-tests.log"},
+        "nodeTests": {"passed": 3815, "failed": 0, "browserDriverSkipped": 54, "sourceCommit": web_commit, "resultSource": ".codex_tmp/eight-chat/full-tests.log"},
         "models": "HTTP simulated; no live model or production financial tests",
-        "authorizedChatBothRuntimes": True, "authorizedChatExecution": "original gate scenarios through CUA CDP with simulated HTTP", "missingOptionalFlightGateBothRuntimes": True,
-        "calendarManualSaveAndParticipationBothRuntimes": True,
+        "authorizedChatBothRuntimes": True, "authorizedChatExecution": "original gate scenarios through CUA CDP with simulated HTTP",
         "inheritedPreviousOverlay": True, "priorPackageManifestVerified": True,
         "nativePayloadUnchanged": True, "privateCompanionNativeUnchanged": True,
         "privateRuntimeMatchesReviewedRelease": web_commit, "shopRestoreBackendDeployedAndVerified": True, "houseResourceFiles": len(cozy_files)}
