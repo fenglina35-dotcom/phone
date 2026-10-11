@@ -1,4 +1,4 @@
-"""Create the private v1707 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
+"""Create the private v1709 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
 
 Unlike the earlier packaging scripts, every file is read from the committed tree
 (``git cat-file`` against HEAD) instead of the working directory. The v1235/iOS356
@@ -23,11 +23,11 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "native/private-small-phone/XcodeProject/"
 BUNDLE = "PhoneCompanionTest/PhoneWeb.bundle/"
-PREFIX = "SmallPhone_v1707_iOS439_Private/"
-OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1707_iOS439.zip"
+PREFIX = "SmallPhone_v1709_iOS439_Private/"
+OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1709_iOS439.zip"
 
-WEB_VERSION = "1707"
-REVIEWED_RUNTIME_COMMIT = "781c83bd1e85f78a6ce3ac11cbce784b90cd29a5"
+WEB_VERSION = "1709"
+REVIEWED_RUNTIME_COMMIT = "f50603bc2c5404ceacb6adc5589b2cd4f71fbeef"
 MARKETING = "1.0.439"
 BUILD = "439"
 BRIDGE = "42"
@@ -588,11 +588,11 @@ def main() -> None:
     assert not OUTPUT.exists(), "refusing to overwrite an existing package"
     commit = text(git("rev-parse", "HEAD")).strip()
     web_commit = REVIEWED_RUNTIME_COMMIT
-    assert re.search(r"APP_VER='v1706\b", text(git("show", web_commit + ":app.js")))
+    assert re.search(r"APP_VER='v1708\b", text(git("show", web_commit + ":app.js")))
     files = committed_private_files()
     validate(files)
-    previous = ROOT.parent / "最新私人版本覆盖包_v1705_iOS439.zip"
-    previous_sha = "9cdb705480c5f0fc99eafad5f8336096f3e4071282d33dc24e4dc5b1305d0136"
+    previous = ROOT.parent / "最新私人版本覆盖包_v1707_iOS439.zip"
+    previous_sha = "77a3db330e1da211c9bad59f38ec55f453f97630a3e455a7cac60914bfb24434"
     assert sha256(previous.read_bytes()).hexdigest() == previous_sha
     with ZipFile(previous) as old:
         prefix = next(n for n in old.namelist() if n.endswith("/SOURCE_STATE.json"))[:-len("SOURCE_STATE.json")]
@@ -601,13 +601,13 @@ def main() -> None:
         assert set(manifest) == names - {"SHA256SUMS.json"}
         assert not (names - files.keys() - {"SHA256SUMS.json", "SOURCE_STATE.json"}), "previous delivery files missing"
         state = json.loads(old.read(prefix + "SOURCE_STATE.json"))
-        assert state["sourceCommit"] == "0533dd7fa107bfedb937ff54995d523baa491b7c"
+        assert state["sourceCommit"] == "0239e55229ace932f0d8b6426480e95d426cf622"
         for name, digest in manifest.items():
             body = old.read(prefix + name)
             assert sha256(body).hexdigest() == digest, "previous checksum mismatch: " + name
             if name not in {"SOURCE_STATE.json", "请在Mac编译前先读.md"} and not name.startswith(BUNDLE):
                 assert files[name] == body, "native/signing change: " + name
-        allowed_bundle_changes = {BUNDLE + n for n in ("app.js", "wechat-me.js", "index.html", "小手机.html", "repair.html")}
+        allowed_bundle_changes = {BUNDLE + n for n in ("app.js", "commerce-ui.js", "index.html", "小手机.html", "repair.html")}
         for name in sorted(names):
             if name.startswith(BUNDLE) and name not in allowed_bundle_changes:
                 assert files[name] == old.read(prefix + name), "unrelated private payload changed: " + name
@@ -659,25 +659,28 @@ def main() -> None:
         assert marker in app, "latest chat/music repair missing: " + marker
     for marker in ('class="dydm-read" data-wx-read="已读"', '.dydm-read[data-wx-read]', 'function momentReplyMotionScan()', 'momentCommentMotionAttr(p.id,cm)', 'if(own)return own;const b=S.me&&S.me.wxFeatures&&S.me.wxFeatures.globalBubble;', "gray:{meBg:'#95ec69'", 'const _xDMReplies=new WeakMap();', 'class="xmsg xdm-typing"', '推特私信回复失败：', 'finally{_xDMReplies.delete(d);paint();}'):
         assert marker in app, "latest social motion repair missing: " + marker
+    for marker in ("reasoningEnabled:x.reasoningEnabled===true", "s_reasoning_on", "s_reasoning_effort", "reasoning_effort:['low','high','max'].includes(a.reasoningEffort)", "part=action?{kind:'nar'", "m.who==='ta'&&offResponsePart(m.text).kind==='nar'"):
+        assert marker in app, "v1709 narration/reasoning repair missing: " + marker
+    assert "真人店铺后台连接异常（HTTP " in ui and "真人店铺" in ui, "v1709 shop diagnostics missing"
     assert "微信灰色" in text(files[BUNDLE + "wechat-me.js"])
     music_reply = app[app.index("async function aiMusicReply("):app.index("function musicHomeSongHTML(")]
     assert "wechatPrimaryReply" in music_reply and "max:200" not in music_reply
     assert "diagnosticRoleId:cid,roleInterceptStage:'音乐回复'" in music_reply
     for html in (text(files[BUNDLE + "index.html"]), text(files[BUNDLE + "小手机.html"])):
-        assert re.search(r"window\.__NORTH_SHELL_BUILD__='1707'", html)
+        assert re.search(r"window\.__NORTH_SHELL_BUILD__='1709'", html)
     log = text((ROOT / ".codex_tmp/eight-chat/full-tests.log").read_bytes())
-    assert "pass 3894" in log and "fail 0" in log, "latest complete test evidence missing"
+    assert "pass 3905" in log and "fail 0" in log, "latest complete test evidence missing"
     state["inheritedValidation"] = {"sourceCommit": state.get("sourceCommit"), "validation": state.get("validation", {}), "previous": state.get("inheritedValidation")}
     state["preserved"] = [x for x in state.get("preserved", []) if x not in {"v1677-user-approved-22-parameter-optical-material", "v1677-role-sync-fixed-relay-and-pull-recovery", "v1689-original-backend-direct-sync"}]
     state["intentionalRemovals"] = ["v1677-optical-material-renderer-and-overrides", "v1677-role-sync-relay-transport"]
     state["sourceCommit"] = commit
     state["webSourceCommit"] = web_commit
-    state["webVersion"] = "v1706"
+    state["webVersion"] = "v1708"
     state["privateWeb"] = "v" + WEB_VERSION
     state["privateIOS"] = f"{MARKETING} ({BUILD})"
     state["bridge"] = BRIDGE
     state["deliveryKind"] = "Mac-Xcode-source-overlay-not-IPA"
-    state["lastDeliveredPackage"] = {"name": previous.name, "sha256": previous_sha, "sourceCommit": "0533dd7fa107bfedb937ff54995d523baa491b7c"}
+    state["lastDeliveredPackage"] = {"name": previous.name, "sha256": previous_sha, "sourceCommit": "0239e55229ace932f0d8b6426480e95d426cf622"}
     state["preserved"] = sorted(set(state.get("preserved", [])) | {
         "v1669-calendar-real-month-year-day-search-events-and-reminders",
         "v1669-role-scheduling-sharing-invitations-participation-and-opt-in-care",
@@ -701,11 +704,13 @@ def main() -> None:
         "v1707-moment-new-reply-motion-and-redraw-history-stability",
         "v1707-global-gray-bubbles-and-role-group-inheritance-with-explicit-overrides",
         "v1707-x-dm-typing-failure-toast-and-account-thread-isolation"})
+    state["preserved"] = sorted(set(state["preserved"]) | {"v1709-offline-raw-and-existing-narration-display-without-record-rewrite", "v1709-route-reasoning-effort-default-off", "v1709-readable-shop-transport-errors"})
+    state["backendQuietControlFilter"] = {"privateFunctionVersion":43,"publicFunctionVersion":42,"deployedSourcesVerified":True,"publicBaselinePreserved":True,"packagedFunction":False}
     state["macBuildVerified"] = False
     state["realIPhoneVerified"] = False
-    state["knownUnresolved"] = [x for x in state.get("knownUnresolved", []) if not re.match(r"v\d+-mac-build", x)] + ["v1707-mac-build-signing-and-iphone-not-verified", "v1705-private-music-keyboard-and-role-response-acceptance-pending", "calendar-closed-app-system-notifications-not-implemented", "real-model-calendar-personality-and-voice-acceptance-pending", "v1675-user-main-model-and-native-lock-receipts-pending"]
+    state["knownUnresolved"] = [x for x in state.get("knownUnresolved", []) if not re.match(r"v\d+-mac-build", x)] + ["v1709-mac-build-signing-and-iphone-not-verified", "v1705-private-music-keyboard-and-role-response-acceptance-pending", "calendar-closed-app-system-notifications-not-implemented", "real-model-calendar-personality-and-voice-acceptance-pending", "v1675-user-main-model-and-native-lock-receipts-pending"]
     state["validation"] = {"macBuildVerified": False, "realIPhoneVerified": False,
-        "nodeTests": {"passed": 3894, "failed": 0, "skipped": 0, "includesProtectedParallelTestChanges": True, "sourceCommit": web_commit, "resultSource": ".codex_tmp/eight-chat/full-tests.log"},
+        "nodeTests": {"passed": 3905, "failed": 0, "skipped": 0, "includesProtectedParallelTestChanges": True, "sourceCommit": web_commit, "resultSource": ".codex_tmp/eight-chat/full-tests.log"},
         "models": "HTTP simulated; no live model or production financial tests",
         "authorizedChatBothRuntimes": True, "authorizedChatExecution": "both actual runtime pages; eight permission/output/history combinations, manual/automatic inspection and persistence; simulated model HTTP",
         "inheritedPreviousOverlay": True, "priorPackageManifestVerified": True,
