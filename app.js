@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1712'){
+if(window.__NORTH_SHELL_BUILD__!=='1714'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -606,7 +606,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1712 · 共同生活待续箭头';
+const APP_VER='v1714 · 角色后台接力不再重复回复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2036,7 +2036,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1712&r=v1712-couple-unbind-reopen-1';
+  const url='sw.js?v=1714&r=v1714-couple-unbind-reopen-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -15065,10 +15065,24 @@ function replyHandoffCancelRemote(turn){
 }
 const _roleBackgroundPending={};
 function roleBackgroundAvailable(id){const c=getC(id),st=companionState();return !!(c&&c.proactive&&c.proactive.enabled&&c.proactive.serverPush&&st&&st.linked&&gateOK());}
-function roleBackgroundPrepare(id,kind,payload){if(!roleBackgroundAvailable(id))return false;const row=_roleBackgroundPending[id]={kind,payload:Object.assign({},payload||{}),baseline:roleServerPushLastUserAt(getC(id))||Date.now()};/* 普通前台回复只登记本机兜底，不能提前创建一条会再次调用模型的服务器任务；App 真正退后台时由 roleBackgroundFlush 立即接管。其他真实设备读取任务仍保留原来的服务器兜底。 */if(kind!=='reply_handoff')roleBackgroundEnqueue(id,kind,row.payload,Date.now()+60000,row.baseline,false);else if(typeof document!=='undefined'&&document.hidden)roleBackgroundEnqueue(id,kind,row.payload,Date.now()+5000,row.baseline,true);return true;}
+function roleBackgroundPrepare(id,kind,payload){if(!roleBackgroundAvailable(id))return false;const row=_roleBackgroundPending[id]={kind,payload:Object.assign({},payload||{}),baseline:roleServerPushLastUserAt(getC(id))||Date.now()};/* 普通前台回复只登记本机兜底，不能提前创建一条会再次调用模型的服务器任务；App 真正退后台时由 roleBackgroundFlush 立即接管。其他真实设备读取任务仍保留原来的服务器兜底。 */if(kind!=='reply_handoff')roleBackgroundEnqueue(id,kind,row.payload,Date.now()+60000,row.baseline,false);else if(typeof document!=='undefined'&&document.hidden){row.flushedMessageId=String(row.payload.messageId||'');roleBackgroundEnqueue(id,kind,row.payload,Date.now()+5000,row.baseline,true);}return true;}
 async function roleBackgroundEnqueue(id,kind,payload,due,baseline,keepalive){const args={p_target:companionCloudTarget(),p_owner_secret:companionOwnerSecret(),p_role_id:id,p_kind:kind,p_payload:payload||{},p_due_ms:Math.round(+due||Date.now()),p_baseline_user_ms:Math.round(+baseline||0)};if(!keepalive)return companionRpc('phone_role_background_enqueue',args).catch(()=>null);try{fetch(companionCloudURL()+'/rest/v1/rpc/phone_role_background_enqueue',{method:'POST',headers:companionHeaders(),body:JSON.stringify(args),keepalive:true}).catch(()=>{});return true;}catch(_){return false;}}
 function roleBackgroundCancel(id,kinds){delete _roleBackgroundPending[id];if(!roleBackgroundAvailable(id))return Promise.resolve(false);return companionRpc('phone_role_background_cancel',{p_target:cloudId(),p_owner_secret:companionOwnerSecret(),p_role_id:id,p_kinds:kinds||null}).then(()=>true).catch(()=>false);}
-function roleBackgroundFlush(){Object.keys(_roleBackgroundPending).forEach(id=>{const row=_roleBackgroundPending[id];if(row&&roleBackgroundAvailable(id))roleBackgroundEnqueue(id,row.kind,row.payload,Date.now()+5000,row.baseline,true);});}
+function roleBackgroundFlush(){Object.keys(_roleBackgroundPending).forEach(id=>{const row=_roleBackgroundPending[id];if(row&&roleBackgroundAvailable(id)&&roleBackgroundShouldHandOff(id,row))roleBackgroundEnqueue(id,row.kind,row.payload,Date.now()+5000,row.baseline,true);});}
+/* v1714：服务器接力只用来「接着把本机正在回的这一轮回完」。
+   以前每发一条消息都会登记接力，而且每次切到后台都会再交给服务器一次：
+   人停在前台、角色本来没在回（手动回复、忙碌延后、没排队），一退后台服务器就替他回；再切一次又回一次，
+   就像接力棒一样一条接一条，还会把最后一句当成新消息反复回。 */
+function roleBackgroundShouldHandOff(id,row){
+  if(!row||row.kind!=='reply_handoff')return true;
+  const messageId=String(row.payload&&row.payload.messageId||''),aid=String(row.payload&&row.payload.accountId||'main');
+  const source=messageId&&(msgsForAccount(id,aid)||[]).find(m=>m&&String(m.id||'')===messageId);
+  if(!source||source._replyHandoffCompleted){delete _roleBackgroundPending[id];return false;}
+  if(row.flushedMessageId===messageId)return false;
+  const key=replyStateKey(id,aid),localReplying=replyGenerationBusy(id,aid)||!!(_replyTimers&&_replyTimers[key]);
+  if(!localReplying)return false;
+  row.flushedMessageId=messageId;return true;
+}
 function roleBackgroundLocalReplyActive(id,row){const key=replyStateKey(id);if(replyGenerationBusy(id)||_replyTimers&&_replyTimers[key])return true;const baseline=+(row&&row.baseline)||0;return (msgs(id)||[]).some(m=>m&&m.role==='assistant'&&!m._call&&m.type!=='sys'&&msgToText(m)&&(+m.time||0)>baseline+1000);}
 function roleBackgroundResumeForeground(){Object.keys(_roleBackgroundPending).forEach(id=>{const row=_roleBackgroundPending[id];if(!row||row.kind!=='reply_handoff'||!roleBackgroundAvailable(id)||!roleBackgroundLocalReplyActive(id,row))return;/* 只有本地回复仍在运行、已排队或已经落盘时才撤销远端接力。若 WebContent 在后台被系统终止，本地没有回复可继续，必须保留服务器接力，避免用户永远收不到这一轮。 */companionRpc('phone_role_background_cancel',{p_target:cloudId(),p_owner_secret:companionOwnerSecret(),p_role_id:id,p_kinds:['reply_handoff']}).catch(()=>{});});}
 async function roleBackgroundPreflight(id,needWatch){const c=getC(id),st=companionState(),missing=[];if(!c)return{ok:false,missing:['没有找到这个角色']};if(!c.proactive||!c.proactive.enabled)missing.push('“主动消息”尚未开启');if(!c.proactive||!c.proactive.serverPush)missing.push('“关闭小手机后仍可主动联系”尚未开启');if(!roleServerModelRoute(c))missing.push('当前角色使用的聊天 API 线路不完整，后台服务器拿不到可用的地址、Key 或模型名');/* 立即测试明确不计每日次数，0 次只关闭正式随机查看，不能拦住测试。 */if(needWatch&&(!c.proactive.appWatch))missing.push('“知道我正在用哪个软件”开关尚未开启');if(!st||!st.linked)missing.push('真实 iPhone 伴生 App 尚未连接');if(needWatch&&st&&st.linked&&!st.roleAccess)missing.push('伴生 App 的角色访问权限尚未开启');if(needWatch&&st&&st.linked&&(!st.permissions||!st.permissions.screenTime))missing.push('伴生 App 的屏幕使用权限尚未开启');if(!gateOK())missing.push('当前授权校验尚未完成');if(missing.length)return{ok:false,missing};const synced=await roleServerPushSync(c,true);if(!synced)return{ok:false,missing:['角色后台资料同步失败，请重新核验后台链路']};await roleServerPushCheckStatus(id,false);const row=_roleServerPushStatusById[id]||{};if(row.error)return{ok:false,missing:['后台链路核验失败：'+row.error]};if(row.checkedAt&&(!row.pushRegistered||!row.profileEnabled||!row.cronActive)){if(!row.pushRegistered)missing.push('iPhone 通知令牌未登记');if(!row.profileEnabled)missing.push('角色服务器资料未启用');if(!row.cronActive)missing.push('服务器每分钟任务未运行');}return{ok:!missing.length,missing};}
