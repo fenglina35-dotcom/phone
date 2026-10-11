@@ -148,14 +148,24 @@ test('actual web/private renderers: narration, role login, Douyin, music, calls 
  }}finally{await browser.close();}
 });
 
-for(const scenario of ['narration clarity','rapid Douyin follow','cold music avatar','music composer and reply','music request failure','music stable click','music fallback and budget','music draft continuity','music pre-request failure','music missing contact','music status survives redraw','music delivery failure'])test('reported natural chat regression: '+scenario,async()=>{
+for(const scenario of ['X reply typing','X reply failure','X reply empty','global gray group bubbles','narration clarity','rapid Douyin follow','cold music avatar','music composer and reply','music request failure','music stable click','music fallback and budget','music draft continuity','music pre-request failure','music missing contact','music status survives redraw','music delivery failure'])test('reported natural chat regression: '+scenario,async()=>{
  const {createRequire}=await import('node:module'),require=createRequire(import.meta.url),{chromium}=require('playwright'),path=require('node:path'),cp=require('node:child_process');const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
  try{for(const priv of [false,true]){
   const page=await browser.newPage({viewport:{width:390,height:844}}),errors=[],musicRequests=[];page.on('pageerror',e=>errors.push(e.message));const origin='http://127.0.0.1:8778';
-  await page.route('**/*',route=>{const u=new URL(route.request().url());if(u.pathname.endsWith('/chat/completions')){const body=JSON.parse(route.request().postData()||'{}');musicRequests.push({url:u.pathname,...body});if(scenario==='music fallback and budget'&&body.model==='main-broken')return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:{message:'primary unavailable'}})});}if(u.pathname.endsWith('/chat/completions')&&['music request failure','music status survives redraw'].includes(scenario))return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:{message:'fixture model unavailable'}})});if(u.pathname.endsWith('/chat/completions'))return route.fulfill({contentType:'application/json',body:JSON.stringify({choices:[{message:{content:'嗯，这首很好听'}}]})});if(u.origin!==origin)return route.abort();const rel=decodeURIComponent(u.pathname.slice(1)),f=path.resolve(rel);if(!f.startsWith(process.cwd()+path.sep)||!fs.existsSync(f))return route.fulfill({status:404,body:''});const body=process.env.NORTH_REPORTED_OLD==='1'&&(rel.endsWith('app.js')||rel.endsWith('.html'))?cp.execFileSync('git',['show','HEAD:'+rel],{maxBuffer:32*1024*1024}):fs.readFileSync(f);return route.fulfill({status:200,contentType:f.endsWith('.js')?'text/javascript':f.endsWith('.html')?'text/html':f.endsWith('.css')?'text/css':'application/octet-stream',body});});
+  await page.route('**/*',async route=>{const u=new URL(route.request().url());if(u.pathname.endsWith('/chat/completions')&&scenario.startsWith('X reply')){await new Promise(r=>setTimeout(r,700));if(scenario==='X reply failure')return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:{message:'fixture X model unavailable'}})});return route.fulfill({contentType:'application/json',body:JSON.stringify({choices:[{message:{content:scenario==='X reply empty'?'':'推特正常回复'}}]})});}if(u.pathname.endsWith('/chat/completions')){const body=JSON.parse(route.request().postData()||'{}');musicRequests.push({url:u.pathname,...body});if(scenario==='music fallback and budget'&&body.model==='main-broken')return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:{message:'primary unavailable'}})});}if(u.pathname.endsWith('/chat/completions')&&['music request failure','music status survives redraw'].includes(scenario))return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:{message:'fixture model unavailable'}})});if(u.pathname.endsWith('/chat/completions'))return route.fulfill({contentType:'application/json',body:JSON.stringify({choices:[{message:{content:'嗯，这首很好听'}}]})});if(u.origin!==origin)return route.abort();const rel=decodeURIComponent(u.pathname.slice(1)),f=path.resolve(rel);if(!f.startsWith(process.cwd()+path.sep)||!fs.existsSync(f))return route.fulfill({status:404,body:''});const body=process.env.NORTH_REPORTED_OLD==='1'&&(rel.endsWith('app.js')||rel.endsWith('.html'))?cp.execFileSync('git',['show','HEAD:'+rel],{maxBuffer:32*1024*1024}):fs.readFileSync(f);return route.fulfill({status:200,contentType:f.endsWith('.js')?'text/javascript':f.endsWith('.html')?'text/html':f.endsWith('.css')?'text/css':'application/octet-stream',body});});
   await page.goto(origin+(priv?'/'+P+'index.html':'/小手机.html')+'?northPreview=black-home');await page.waitForFunction(()=>window.__northBootReady);
   await page.evaluate(()=>{S.me.locked=false;S.me.active='main';S.settings.sound=false;S.contacts.forEach(c=>c.proactive={enabled:false});window.testCid=S.contacts[0].id;});
-  if(scenario==='narration clarity'){
+  if(scenario.startsWith('X reply')){
+   await page.evaluate(()=>{S.settings.chat={base:'http://127.0.0.1:8778/v1',key:'fixture',model:'fixture'};S.settings.aux={};S.settings.chatRoutes=null;S.x.dms=[{id:'x-reply-fixture',cid:testCid,name:'测试角色',msgs:[]}];stack=[{p:'xdm',id:'x-reply-fixture'}];render();document.getElementById('xdm_in').value='你好';xSendDM('x-reply-fixture');});
+   await page.waitForSelector('.xdm-typing',{timeout:4000});assert.equal(await page.locator('.xdm-typing .typing span').count(),3);
+   await page.evaluate(()=>render());assert.equal(await page.locator('.xdm-typing .typing span').count(),3,'typing survives redraw');
+   await page.waitForFunction(()=>!document.querySelector('.xdm-typing'),null,{timeout:10000});
+   if(scenario==='X reply typing')assert.match(await page.locator('#xdmbox').innerText(),/推特正常回复/);
+   else{assert.match(await page.locator('#toast').innerText(),/推特私信回复失败/);assert.equal(await page.evaluate(()=>S.x.dms[0].msgs.length),1,'failure keeps sent message without fake reply');}
+  }else if(scenario==='global gray group bubbles'){
+   const result=await page.evaluate(()=>{S.me.wxFeatures=S.me.wxFeatures||{};S.me.wxFeatures.globalBubble=Object.assign({},BUBBLE_PRESETS.gray);const g={id:'gray-group',name:'测试群',members:[testCid],msgs:[]};const m={id:'gray-msg',senderId:testCid,type:'text',content:'群里也使用灰色',time:Date.now()};document.getElementById('app').innerHTML='<div class="page"><div id="chatbg">'+gbubble(g,m)+'</div></div>';const el=document.querySelector('.bubble');return {bg:getComputedStyle(el).backgroundColor,fg:getComputedStyle(el).color,html:el.outerHTML};});
+   assert.equal(result.bg,'rgb(44, 44, 46)');assert.equal(result.fg,'rgb(236, 236, 236)');
+  }else if(scenario==='narration clarity'){
    const r=await page.evaluate(()=>{const o=offData(testCid);o.introSeen=true;o.msgs=[{id:'clear',who:'旁白',text:'一起坐下来',_reveal:true,_revealStep:100}];_off={id:testCid,mode:'offline',busy:false};stack=[{p:'off',id:testCid}];render();const glyph=document.querySelector('.offglyph');return{filter:getComputedStyle(glyph).filter,opacity:getComputedStyle(glyph).opacity};});assert.equal(r.filter,'none');assert.equal(r.opacity,'1');
   }else if(scenario==='rapid Douyin follow'){
    await page.evaluate(()=>{S.dy.dms=[{id:'rapid',cid:testCid,name:'测试',msgs:Array.from({length:16},(_,i)=>({id:'d'+i,from:'them',text:'已有消息 '+i,time:Date.now()+i}))}];stack=[{p:'dydm',id:'rapid'}];render();});await page.waitForTimeout(100);
@@ -177,5 +187,55 @@ for(const scenario of ['narration clarity','rapid Douyin follow','cold music ava
    }
   }
   assert.deepEqual(errors,[]);await page.close();
+ }}finally{await browser.close();}
+});
+
+for(const file of ['app.js',P+'app.js']){
+ test(file+': Douyin receipts enter the shared independent deadline renderer',()=>{
+  const s=read(file);assert.match(s,/<span class="dydm-read" data-wx-read="已读"><\/span>/);
+  assert.ok(fnSrc(s,'wechatMotionScan').includes('.dydm-read[data-wx-read]'));
+  const ctx=vm.createContext({Math});vm.runInContext(fnSrc(s,'wechatMotionReadDue'),ctx);
+  const a={born:1000,initial:false},b={born:1600,initial:false};
+  assert.equal(ctx.wechatMotionReadDue(a,'已读',1000,false),3000);
+  assert.equal(ctx.wechatMotionReadDue(b,'已读',1600,false),3600);
+  assert.equal(ctx.wechatMotionReadDue(a,'已读',2000,false),3000);
+ });
+ test(file+': new moment replies animate once, first comment works, redraw resumes and history stays still',()=>{
+  const s=read(file),calls=[];let now=1000,nodes=[],page={p:'wxmoment'};
+  const ctx=vm.createContext({Date:{now:()=>now},Map,cur:()=>page,actId:()=> 'main',renderPageKey:p=>p.p,document:{querySelectorAll:()=>nodes},wechatMotionAnimate:(el,from,duration,delay,age)=>{calls.push({el,age});return {currentTime:age};}});
+  vm.runInContext('let _momentReplyMotion=null;'+fnSrc(s,'momentReplyMotionScan'),ctx);
+  const row=id=>({getAttribute:()=>id});ctx.momentReplyMotionScan();
+  nodes=[row('post:first')];ctx.momentReplyMotionScan();assert.equal(calls.length,1);
+  ctx.momentReplyMotionScan();assert.equal(calls.length,1);
+  now=1100;calls[0].el=null;nodes=[row('post:first'),row('post:second')];ctx.momentReplyMotionScan();assert.equal(calls.length,3);
+  assert.equal(calls[2].age,0);ctx.momentReplyMotionScan();assert.equal(calls.length,3);
+  page={p:'roleMomentDetail',pid:'post'};ctx.momentReplyMotionScan();assert.equal(calls.length,3,'existing replies stay still on entry');
+  assert.ok(fnSrc(s,'momentCommentLine').includes('momentCommentMotionAttr'));
+  assert.ok(fnSrc(s,'momentSocialHTML').includes('momentCommentMotionAttr'));
+  assert.equal(fnSrc(s,'momentSocialRefresh').split('momentReplyMotionScan()').length-1,2,'scan both sides of local refresh');
+ });
+}
+
+test('browser: Douyin staggered read and moment first reply survive DOM redraw',async()=>{
+ const {createRequire}=await import('node:module'),require=createRequire(import.meta.url),{chromium}=require('playwright'),browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
+ try{for(const file of ['app.js',P+'app.js']){
+  const app=process.env.NORTH_CHAT_OLD?require('node:child_process').execFileSync('git',['show','HEAD:'+file],{maxBuffer:32e6}).toString():read(file),page=await browser.newPage();
+  await page.setContent('<div id="dydmbox" style="height:200px;overflow:auto"></div><div id="social"></div>');
+  await page.addScriptTag({content:'function actId(){return "main";}function cur(){return {p:"wxmoment"};}function renderPageKey(c){return c.p;}function nearBottom(){return true;}function readReceiptOn(){return true;}'+app.slice(app.indexOf('let _wechatMotion=null;'),app.indexOf('let _scrollBottomOnce'))});
+  await page.evaluate(()=>{window.box=document.getElementById('dydmbox');window.dy={p:'dydm',id:'role'};wechatMotionMount(dy);window.row=id=>'<div class="dydm-msg me" data-chat-motion-row="'+id+'"><div class="dydm-b">hello</div><span class="dydm-read" data-wx-read="已读"></span></div>';box.innerHTML=row('a');wechatMotionMount(dy);});
+  await page.waitForTimeout(650);await page.evaluate(()=>{box.insertAdjacentHTML('beforeend',row('b'));wechatMotionMount(dy);});
+  assert.equal(await page.locator('.dydm-read').first().textContent(),'');
+  await page.waitForFunction(()=>document.querySelector('.dydm-read').textContent==='已读',null,{timeout:3000});
+  assert.equal(await page.locator('.dydm-read').nth(1).textContent(),'','second receipt remains pending');
+  await page.waitForFunction(()=>[...document.querySelectorAll('.dydm-read')].every(el=>el.textContent==='已读'),null,{timeout:2000});
+  const stamps=await page.locator('.dydm-read').evaluateAll(els=>els.map(el=>+el.dataset.wxReadShownAt));assert(stamps[1]-stamps[0]>=500);
+  await page.waitForTimeout(850);await page.evaluate(()=>{box.innerHTML=row('a')+row('b');wechatMotionMount(dy);});
+  assert.equal(await page.locator('.dydm-read').evaluateAll(els=>els.reduce((n,el)=>n+el.getAnimations({subtree:true}).length,0)),0);
+  await page.addScriptTag({content:'let _momentReplyMotion=null;'+fnSrc(app,'momentReplyMotionScan')});
+  await page.evaluate(()=>{momentReplyMotionScan();document.getElementById('social').innerHTML='<div data-moment-comment-motion="post:first">角色回复</div>';momentReplyMotionScan();});
+  assert.equal(await page.locator('[data-moment-comment-motion]').evaluate(el=>el.getAnimations().length),1);
+  await page.waitForTimeout(500);await page.evaluate(()=>{const slot=document.getElementById('social');slot.innerHTML=slot.innerHTML;momentReplyMotionScan();});
+  assert.equal(await page.locator('[data-moment-comment-motion]').evaluate(el=>el.getAnimations().length),0);
+  await page.close();
  }}finally{await browser.close();}
 });

@@ -179,3 +179,25 @@ console.log('WeChat me, QR, wallet, favorites, chat overlay, nearby avatar, and 
   messages.a.push({id:'failure',type:'text',role:'assistant',content:'保存失败'});saved=false;assert.equal(await ctx.wxFavoriteAdd('a','failure'),null);assert.equal(ctx.wxFavoriteRows().some(x=>x.mid==='failure'),false);
  }
 }
+
+// Global preset must reach role groups without overwriting explicit group-member styles.
+{
+ const vm=await import('node:vm');
+ for(const path of ['app.js','native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js']){
+  const src=process.env.NORTH_BUBBLE_OLD?execFileSync('git',['show','HEAD:'+path],{maxBuffer:32e6}).toString():fs.readFileSync(path,'utf8');
+  const preset=src.slice(src.indexOf('const BUBBLE_PRESETS='),src.indexOf('const BUBBLE_ICONS='));
+  const fn=name=>{const start=src.indexOf('function '+name+'(');assert(start>=0);return src.slice(start,src.indexOf('\n',start));};
+  const state={me:{wxFeatures:{}}},ctx=vm.createContext({S:state});vm.runInContext(preset+fn('bubbleCfg')+'\n'+fn('groupBubbleCfg')+'\nthis.presets=BUBBLE_PRESETS;',ctx);
+  state.me.wxFeatures.globalBubble=ctx.presets.strawberry;
+  assert.equal(ctx.groupBubbleCfg({},'role').bg,ctx.presets.strawberry.themBg,'role group inherits global incoming');
+  assert.equal(ctx.groupBubbleCfg({},'me').bg,ctx.presets.strawberry.meBg,'group self inherits global outgoing');
+  state.me.wxFeatures.globalBubble=ctx.presets.gray;
+  assert.equal(ctx.bubbleCfg({}).themBg,'#2c2c2e');assert.equal(ctx.groupBubbleCfg({},'role').bg,'#2c2c2e');
+  const custom={bg:'#112233',text:'#eeeeee',avatar:'round'};
+  assert.equal(ctx.groupBubbleCfg({bubbleStyles:{role:custom}},'role'),custom);
+  const roleStyle={themBg:'#456789'};assert.equal(ctx.bubbleCfg({bubbleStyle:roleStyle}),roleStyle);
+  assert.equal(ctx.presets.classic.themBg,'#ffffff','classic white remains selectable');
+  assert.equal(ctx.groupBubbleCfg({},'role').icon,'none');assert.equal(ctx.groupBubbleCfg({},'role').shape,'square');
+  state.me.wxFeatures.globalBubble=null;assert.equal(ctx.groupBubbleCfg({},'role'),null);
+ }
+}
