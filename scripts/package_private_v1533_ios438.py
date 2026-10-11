@@ -642,9 +642,10 @@ def main() -> None:
         assert marker in css, "requested UI repair missing: " + marker
     assert "svgIc('heart',19,'#fff',1.7)" in app
     assert "glassWidgetTextColor(){return widgetHex(glassWidgetAppearance().textColor,'#ffffff')" in app
+    reviewed_files = committed_private_files(REVIEWED_RUNTIME_COMMIT)
     for name, body in files.items():
         if name.startswith(BUNDLE):
-            assert body == git("show", REVIEWED_RUNTIME_COMMIT + ":" + SOURCE + name), "runtime differs from reviewed release: " + name
+            assert body == reviewed_files[name], "runtime differs from reviewed release: " + name
     state["inheritedValidation"] = {"sourceCommit": state.get("sourceCommit"), "validation": state.get("validation", {})}
     state["preserved"] = [x for x in state.get("preserved", []) if x not in {"v1677-user-approved-22-parameter-optical-material", "v1677-role-sync-fixed-relay-and-pull-recovery"}]
     state["intentionalRemovals"] = ["v1677-optical-material-renderer-and-overrides", "v1677-role-sync-relay-transport"]
