@@ -17,10 +17,10 @@ html.north-glass-ui .home .hwid:not(.wpet),
 html.north-glass-ui .home .dock,
 html.north-glass-ui .home .home-editbar{overflow:hidden;border:1px solid var(--ng-line)!important;box-shadow:var(--ng-shadow)!important;backdrop-filter:blur(22px) saturate(150%)!important;-webkit-backdrop-filter:blur(22px) saturate(150%)!important}
 
-html.north-glass-ui .home:not(.has-home-wallpaper){background:radial-gradient(circle at 74% 18%,rgba(255,255,255,.055),transparent 28%),radial-gradient(circle at 20% 56%,rgba(255,255,255,.035),transparent 32%),linear-gradient(160deg,#101114,#030405 58%,#0a0b0d)!important;color:#f3f3f4}
-html.north-glass-ui .home:not(.has-home-wallpaper):before{background:radial-gradient(circle,rgba(255,255,255,.055),transparent 70%);opacity:.7}
-html.north-glass-ui .home:not(.has-home-wallpaper):after{background:radial-gradient(circle,rgba(148,154,166,.09),transparent 70%);opacity:.6}
-html.north-glass-ui .home.has-home-wallpaper:before,html.north-glass-ui .home.has-home-wallpaper:after{display:none!important;content:none!important}
+html.north-glass-ui .home:not([style*="background:url"]){background:radial-gradient(circle at 74% 18%,rgba(255,255,255,.055),transparent 28%),radial-gradient(circle at 20% 56%,rgba(255,255,255,.035),transparent 32%),linear-gradient(160deg,#101114,#030405 58%,#0a0b0d)!important;color:#f3f3f4}
+html.north-glass-ui .home:not([style*="background:url"]):before{background:radial-gradient(circle,rgba(255,255,255,.055),transparent 70%);opacity:.7}
+html.north-glass-ui .home:not([style*="background:url"]):after{background:radial-gradient(circle,rgba(148,154,166,.09),transparent 70%);opacity:.6}
+html.north-glass-ui .home[style*="background:url"]:before,html.north-glass-ui .home[style*="background:url"]:after{display:none!important;content:none!important}
 html.north-glass-ui .home:not(.tpink):not(.twhite) .hwid:not(.wpet){background:linear-gradient(145deg,rgba(24,25,29,.2),rgba(8,9,12,.09))!important}
 html.north-glass-ui .home:not(.tpink):not(.twhite) .dock{background:linear-gradient(145deg,rgba(25,27,31,.18),rgba(7,8,10,.08))!important}
 html.north-glass-ui .home.tpink .hwid:not(.wpet),html.north-glass-ui .home.tpink .dock{background:linear-gradient(145deg,rgba(255,219,233,.18),rgba(247,180,207,.08))!important}
@@ -862,51 +862,3 @@ html.north-glass-ui.north-shell-custom,html.north-glass-ui.north-shell-custom bo
 
 /* Period explanations stay below their card; home exit stays independent of year navigation. */
 .cal-integrated-page .cal-period-note{margin:10px 16px 24px;line-height:1.7}.cal-nav-leading{display:flex;align-items:center;gap:8px;min-width:0}.cal-month-page .cal-home{width:44px;height:44px;flex:none;padding:0;display:grid;place-items:center}.cal-home svg{width:22px;height:26px}.cal-nav-leading .cal-year{padding:0 12px;font-size:18px}.cal-year-nav{justify-content:space-between!important}
-
-/* Local preview: hide a conversation without touching contacts or messages. */
-.wx-conversation-swipe{position:relative;overflow:hidden;touch-action:pan-y;background:var(--wx-row)}
-.wx-hide-conversation{position:absolute;right:0;top:0;bottom:0;width:128px;border:0;background:#62646b;color:#fff;font:400 14px/1.3 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;cursor:pointer}
-.wx-conversation-front{position:relative;z-index:1;user-select:none;-webkit-user-select:none;background:var(--wx-row);transition:transform .18s ease;touch-action:pan-y}
-.wx-conversation-swipe.open .wx-conversation-front{transform:translateX(-128px)}
-.cohab-stage .cohab-tap-next{position:relative;margin:14px auto 20px;width:36px;height:36px;border-radius:0;border:0;background:transparent;color:#dce2ed;display:grid;place-items:center;padding:0;box-shadow:none;touch-action:manipulation;cursor:pointer}
-.cohab-stage .cohab-tap-next::before,.cohab-stage .cohab-tap-next::after{content:none!important}
-.cohab-tap-next svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-@media(prefers-reduced-motion:reduce){.wx-conversation-front{transition:none}}
-
-.wx-chats .wx-conversation-swipe:not(:last-child) .row:after{display:block}
-
-/* NORTH_OPTICAL_MATERIAL_V1: unified approved material, decoration only. Background images and bubble clip/tails retain their original geometry. */
-html:is(#north-optical-material,html) body [data-north-optical]{background-image:var(--north-optical-surface)!important;background-size:100% 100%!important;background-position:center!important;background-repeat:no-repeat!important;background-color:var(--north-optical-fill)!important;border-color:transparent!important;box-shadow:0 5px 16px rgba(0,0,0,var(--north-optical-shadow))!important;backdrop-filter:blur(var(--north-optical-blur)) saturate(var(--north-optical-sat))!important;-webkit-backdrop-filter:blur(var(--north-optical-blur)) saturate(var(--north-optical-sat))!important}
-html:is(#north-optical-material,html) body [data-north-optical-image]{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background-color:transparent!important}
-html:is(#north-optical-material,html) body [data-north-optical-before]::before,html:is(#north-optical-material,html) body [data-north-optical-after]::after{background:none!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-html:is(#north-optical-material,html) body :is(.home-dashboard-card,.home-sweetie-card,.spy-glass)[data-north-optical-image]{color:var(--north-optical-ink)!important}
-html:is(#north-optical-material,html) body :is(.home-dashboard-card,.home-sweetie-card)[data-north-optical-image] :is(b,small,em,p),html:is(#north-optical-material,html) body .home-dashboard-grid [data-north-optical-image] :is(b,small,em){color:var(--north-optical-ink)!important}
-html:is(#north-optical-material,html) body [data-north-optical-image] svg[stroke="#fff"]{stroke:var(--north-optical-ink,#fff)}
-/* Retain the shipped iOS/Android compositor guards; never re-enable many live backdrop layers on a protected device. */
-html:is(#north-optical-material,html):is(.north-native-app,.north-ios-webkit) body [data-north-optical],html:is(#north-optical-material,html).north-android body .settings-glass [data-north-optical]{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-
-html:is(#north-optical-material,html) body [data-north-optical-image]{color:var(--north-optical-ink,inherit)!important}
-
-html:is(#north-optical-material,html) body .spy-profile-info[data-north-optical-image] :is(.spy-profile-words,.spy-profile-location){color:var(--north-optical-ink)!important}
-html:is(#north-optical-material,html) body [data-north-optical-label] .spy-app-label{color:var(--north-optical-ink)!important;text-shadow:0 1px 2px rgba(255,255,255,.35)}
-
-/* Bubble tails retain their existing generated hollow rim rather than receiving a rectangular outline. */
-html:is(#north-optical-material,html) body .imsg-b[data-north-optical]::before{background:linear-gradient(229deg,rgba(235,245,255,.65),rgba(235,245,255,.14) 26%,rgba(235,245,255,.05) 50%,rgba(235,245,255,.25) 76%,rgba(235,245,255,.5))!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-
-/* Only phone control SVG backgrounds receive the material; glyph paths and red hang-up buttons stay intact. */
-html:is(#north-optical-material,html) body svg[data-north-optical-image][stroke="#fff"]{stroke:var(--north-optical-ink,#fff)}
-
-/* NORTH_WIDGET_FOREGROUND_V1: customizable foreground, never dim photos or avatars. */
-html:is(#north-optical-material,html) body #homeDesktop :is(.home-dashboard-grid,.home-vinyl-card,.home-sweetie-card){color:var(--north-widget-ink,#fff)!important}
-html:is(#north-optical-material,html) body #homeDesktop :is(.home-dashboard-grid,.home-vinyl-card,.home-sweetie-card) :is(b,strong,small,em,p,span,i,label){color:var(--north-widget-ink,#fff)!important;text-shadow:none!important}
-html:is(#north-optical-material,html) body #homeDesktop .home-dashboard-grid svg{color:var(--north-widget-ink,#fff)!important;stroke:var(--north-widget-ink,#fff)!important}
-html:is(#north-optical-material,html) body #homeDesktop .dash-heart>svg{width:19px!important;height:19px!important}
-
-/* NORTH_OFFLINE_BRIGHT_V1: all offline text is bright; media and status fills remain independent. */
-html:is(#north-optical-material,html) body :is(.offstage,.offline-hub,.north-offline-sheet),html:is(#north-optical-material,html) body :is(.offstage,.offline-hub,.north-offline-sheet) :is(small,span,b,strong,p,em,i,label,summary,time,h1,h2,h3,button,input,select,textarea,.hint,.offnar,.offdate,.offbubble){color:#fff!important;-webkit-text-fill-color:#fff;text-shadow:none!important}
-html:is(#north-optical-material,html) body :is(.offstage,.offline-hub,.north-offline-sheet) :is(input,textarea)::placeholder{color:rgba(255,255,255,.85)!important;-webkit-text-fill-color:rgba(255,255,255,.85)}
-html:is(#north-optical-material,html) body .cohab-settings-grid :is(input,select){color:#fff!important;-webkit-text-fill-color:#fff}
-html:is(#north-optical-material,html) body .cohab-settings-grid select option{background:#24252b;color:#fff}
-
-
-/* NORTH_MATERIAL_ONLY_RESTORE_V1: legacy glass recipe; foreground and wallpaper repairs retained. */

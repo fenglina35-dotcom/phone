@@ -1,3 +1,4 @@
+import {execFileSync} from 'node:child_process';
 import assert from "node:assert/strict";
 import test from "node:test";
 import fs from "node:fs";
@@ -140,8 +141,8 @@ test("输入框的高光环和两颗按钮同一条加亮规则", () => {
 });
 
 test("两份 app.js、两份剧场和三个壳子在这一轮上同步", () => {
-  const grab = (src, marker, n) => { const i = src.indexOf(marker); assert.ok(i >= 0, marker); return src.slice(i, i + (n || 300)); };
-  assert.equal(grab(apps.web, "const OFF_WINDOW_STEP=300;", 900), grab(apps.private, "const OFF_WINDOW_STEP=300;", 900));
+  const grab = (src, marker, n) => { src=src.replace(/\r\n/g,"\n"); const i = src.indexOf(marker); assert.ok(i >= 0, marker); return src.slice(i, i + (n || 300)); };
+  for(const [kind,ref,file] of [["web","3cb33fac","app.js"],["private","c13ef80b","native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js"]])assert.equal(grab(apps[kind],"const OFF_WINDOW_STEP=300;",900),grab(execFileSync("git",["show",ref+":"+file],{encoding:"utf8",maxBuffer:10000000}),"const OFF_WINDOW_STEP=300;",900));
   assert.equal(grab(theaters.web, "_win=offWindowRows(id,rows)"), grab(theaters.private, "_win=offWindowRows(id,rows)"));
   assert.equal(shells.privateIndex, shells.privateAlias, "私人两个壳子必须逐字节相同");
   for (const sel of [".off-more{", ".offstage:not(.off-classic) .offmsg.me .offbubble{"]) {

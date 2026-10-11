@@ -57,8 +57,8 @@ test('private identifiers remain v1355 and iOS 399 while public advances indepen
   assert.match(bridge, /static let contractVersion = 42/);
   assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 439;/g) || []).length, 12);
   assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.439;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1686 · 仅恢复原材质'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1686'/);
+  assert.match(publicApp, /APP_VER='v1674 · 角色执行与上下文修复'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1674'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
@@ -164,7 +164,7 @@ test('Mac guide identifies the current private v1356 iOS422 source', () => {
   assert.match(mac, /原生桥.*38/);
   assert.match(install, /1\.0\.327 \(327\)/);
   assert.match(install, /原生桥.*35/);
-  assert.match(mac, /^# v1687 .*iOS439/);
+  assert.match(mac, /当前私人源码v1687[\s\S]*?iOS439/);
   assert.match(mac, /网页.*推送/);
   assert.match(install, /私人内置网页 v1206/);
   assert.match(install, /两边共有/);

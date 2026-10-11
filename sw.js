@@ -1,6 +1,6 @@
-const BUILD='1686';
-const HOTFIX='v1686-couple-unbind-reopen-1';
-const SHELL_CACHE='north-shell-v1686-couple-unbind-reopen-1';
+const BUILD='1674';
+const HOTFIX='v1674-couple-unbind-reopen-1';
+const SHELL_CACHE='north-shell-v1674-couple-unbind-reopen-1';
 const GLASS_ICON_CACHE='north-glass-icons-v2';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
@@ -17,7 +17,7 @@ const CORE_FILES=[
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
   {url:'./app.js?v='+BUILD+'&r='+HOTFIX,kind:'app'},
   {url:'./cohab-theater.js?v='+BUILD+'&r=v1274-web-cohab-guests-1',kind:'theater'},
-  {url:'./web-hotfix.js?v='+BUILD+'&r=v1686-couple-unbind-reopen-1',kind:'hotfix'},
+  {url:'./web-hotfix.js?v='+BUILD+'&r=v1674-couple-unbind-reopen-1',kind:'hotfix'},
   {url:'./photo-album.js?v='+BUILD,kind:'album'},
   {url:'./couple-watch.js?v='+BUILD,kind:'watch'},
   {url:'./couple-watch-runtime.js?v='+BUILD,kind:'watchRuntime'}
@@ -161,7 +161,7 @@ function validShellText(kind,text){
     &&text.includes('theaterRevealActorItems')
     &&!text.includes('cohabReplyCore=async');
   if(kind==='hotfix')return text.length>800
-    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1686-couple-unbind-reopen-1'")
+    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1674-couple-unbind-reopen-1'")
     &&text.includes('reconcileExpiredWxLogin')
     &&text.includes('withBaseImageCheck')
     &&text.includes('isStoredImgRef');
@@ -266,7 +266,7 @@ self.addEventListener('fetch',event=>{
   if(/\/games\/pixel-home\//.test(url.pathname)){
     event.respondWith((async()=>{
       let cache;
-      /* v1686: the per-visit session token is not part of the file, so it is not part of the cache key
+      /* v1674: the per-visit session token is not part of the file, so it is not part of the cache key
          (every visit used to add another copy of index.html). Explicit retries always go to the network. */
       const keyUrl=new URL(url.href);keyUrl.searchParams.delete('session');keyUrl.searchParams.delete('retry');
       const key=new Request(keyUrl.href),retry=url.searchParams.has('northImageRetry')||url.searchParams.has('retry');

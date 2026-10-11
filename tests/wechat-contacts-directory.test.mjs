@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import vm from 'node:vm';
 
 const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const glass=fs.readFileSync(new URL('../glass-theme.css',import.meta.url),'utf8');
@@ -71,5 +70,3 @@ assert.match(glass,/\.wxlight \.pf-friends-page\{background:#ededed!important;co
 assert.match(glass,/\.wxlight \.pf-friends-search\{[^}]*background:#f2f2f4!important/);
 
 console.log('wechat contacts directory tests passed');
-
-for(const file of ['app.js','native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js']){const source=fs.readFileSync(new URL('../'+file,import.meta.url),'utf8');let owner='main';const ctx={S:{contacts:[{id:'r',name:'朋友'}],messages:{r:[{content:'历史保留'}]}},actId:()=>owner,save(){},render(){},toast(){},_wxConversationSwipe:null};vm.createContext(ctx);vm.runInContext(source.split(/\r?\n/).filter(x=>/^function wx(?:HiddenChatStore|ChatIsHidden|ChatHide|ChatRestore)\(/.test(x)).join('\n'),ctx);const contacts=JSON.stringify(ctx.S.contacts),history=JSON.stringify(ctx.S.messages);ctx.wxChatHide('role:r');const at=ctx.S.wxHiddenChats.main['role:r'];assert(ctx.wxChatIsHidden('role:r',at-1));assert(!ctx.wxChatIsHidden('role:r',at+1));owner='alt';assert(!ctx.wxChatIsHidden('role:r',at-1));owner='main';ctx.S=JSON.parse(JSON.stringify(ctx.S));assert(ctx.wxChatIsHidden('role:r',at-1));ctx.wxChatRestore('role:r');assert(!ctx.wxChatIsHidden('role:r',at-1));assert.equal(JSON.stringify(ctx.S.contacts),contacts);assert.equal(JSON.stringify(ctx.S.messages),history);}

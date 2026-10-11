@@ -19,7 +19,7 @@ test('role, real friend, and real group chats share one time-sorted list', () =>
 
 test('pinned chats remain above recent unpinned chats', () => {
   assert.match(chats, /entries\.sort\(\(a,b\)=>\(b\.pinned\?1:0\)-\(a\.pinned\?1:0\)\|\|b\.time-a\.time\|\|a\.order-b\.order\)/);
-  assert.match(chats, /add\(lm&&lm\.time,c\.pinned,roleRow\(c\),'role:'\+c\.id\)/);
+  assert.match(chats, /add\(lm&&lm\.time,c\.pinned,roleRow\(c\)\)/);
   assert.match(chats, /add\(lm&&lm\.time,f\.pinned,/);
   assert.match(chats, /add\(lm&&lm\.time,g\.pinned,/);
 });
