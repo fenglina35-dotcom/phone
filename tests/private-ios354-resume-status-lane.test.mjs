@@ -38,10 +38,10 @@ function pollHarness(){
 }
 
 test('private candidate is v1355 and iOS 399 while public advances independently',()=>{
-  assert.match(app,/APP_VER='v1710 · 精准时间实验'/);
+  assert.match(app,/APP_VER='v1711 · 精准时间实验'/);
   for(const html of [index,alias]){
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1710'/);
-    assert.match(html,/app\.js\?v=1710&r=v1710-private-package-1/);
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1711'/);
+    assert.match(html,/app\.js\?v=1711&r=v1711-private-package-1/);
     assert.match(html,/private-runtime-diagnostics\.js\?v=339/);
   }
   assert.match(diagnostics,/OVERLAY_VERSION='336-daily-file-backup'/);

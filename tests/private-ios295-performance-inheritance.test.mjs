@@ -47,10 +47,10 @@ function functionSource(sourceText, name) {
 
 test('private identifiers remain v1355 and iOS 399 while public advances independently', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1710'/);
-  assert.match(index, /app\.js\?v=1710&r=v1710-private-package-1/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1711'/);
+  assert.match(index, /app\.js\?v=1711&r=v1711-private-package-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(app, /APP_VER='v1710 · 精准时间实验'/);
+  assert.match(app, /APP_VER='v1711 · 精准时间实验'/);
   assert.match(overlay, /336-daily-file-backup/);
   assert.match(webview, /1\.0\.439 \(439\)/);
   assert.match(bridge, /private static let build = "1\.0\.439 \(439\)"/);
@@ -164,7 +164,7 @@ test('Mac guide identifies the current private v1356 iOS422 source', () => {
   assert.match(mac, /原生桥.*38/);
   assert.match(install, /1\.0\.327 \(327\)/);
   assert.match(install, /原生桥.*35/);
-  assert.match(mac, /当前私人源码v1710[\s\S]*?iOS439/);
+  assert.match(mac, /当前私人源码v1711[\s\S]*?iOS439/);
   assert.match(mac, /网页.*推送/);
   assert.match(install, /私人内置网页 v1206/);
   assert.match(install, /两边共有/);

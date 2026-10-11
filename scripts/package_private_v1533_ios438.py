@@ -1,4 +1,4 @@
-"""Create the private v1710 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
+"""Create the private v1711 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
 
 Unlike the earlier packaging scripts, every file is read from the committed tree
 (``git cat-file`` against HEAD) instead of the working directory. The v1235/iOS356
@@ -23,10 +23,10 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "native/private-small-phone/XcodeProject/"
 BUNDLE = "PhoneCompanionTest/PhoneWeb.bundle/"
-PREFIX = "SmallPhone_v1710_iOS439_Private/"
-OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1710_iOS439.zip"
+PREFIX = "SmallPhone_v1711_iOS439_Private/"
+OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1711_iOS439.zip"
 
-WEB_VERSION = "1710"
+WEB_VERSION = "1711"
 REVIEWED_RUNTIME_COMMIT = "HEAD"  # This locally committed candidate was validated before packaging.
 MARKETING = "1.0.439"
 BUILD = "439"
@@ -667,7 +667,7 @@ def main() -> None:
     assert "wechatPrimaryReply" in music_reply and "max:200" not in music_reply
     assert "diagnosticRoleId:cid,roleInterceptStage:'音乐回复'" in music_reply
     for html in (text(files[BUNDLE + "index.html"]), text(files[BUNDLE + "小手机.html"])):
-        assert re.search(r"window\.__NORTH_SHELL_BUILD__='1710'", html)
+        assert re.search(r"window\.__NORTH_SHELL_BUILD__='1711'", html)
     for marker in ("PRECISE_ROLE_TIME_TEST_V1", "测试角色精准时间观念", "rolePreciseTimeSyncSerialize", "rolePreciseTimeNoteValid"):
         assert marker in app, "precise time experiment missing: " + marker
     assert "rolePreciseTimePrompt" in text(files[BUNDLE + "cohab-theater.js"])
@@ -712,10 +712,10 @@ def main() -> None:
     state["preserved"] = sorted(set(state["preserved"]) | {"v1709-offline-raw-and-existing-narration-display-without-record-rewrite", "v1709-route-reasoning-effort-default-off", "v1709-readable-shop-transport-errors"})
     state["backendQuietControlFilter"] = {"privateFunctionVersion":43,"publicFunctionVersion":42,"deployedSourcesVerified":True,"publicBaselinePreserved":True,"packagedFunction":False}
     state["preciseRoleTimeTrial"] = {"defaultOff":True,"frontendPackaged":True,"backgroundDeployed":False,"realModelVerified":False,"realIPhoneVerified":False}
-    state["preserved"] = sorted(set(state["preserved"]) | {"v1710-opt-in-precise-event-time-and-cancelable-foreground-promises"})
+    state["preserved"] = sorted(set(state["preserved"]) | {"v1711-opt-in-precise-event-time-and-cancelable-foreground-promises"})
     state["macBuildVerified"] = False
     state["realIPhoneVerified"] = False
-    state["knownUnresolved"] = [x for x in state.get("knownUnresolved", []) if not re.match(r"v\d+-mac-build", x)] + ["v1710-mac-build-signing-and-iphone-not-verified", "precise-time-background-dispatch-not-deployed", "v1705-private-music-keyboard-and-role-response-acceptance-pending", "calendar-closed-app-system-notifications-not-implemented", "real-model-calendar-personality-and-voice-acceptance-pending", "v1675-user-main-model-and-native-lock-receipts-pending"]
+    state["knownUnresolved"] = [x for x in state.get("knownUnresolved", []) if not re.match(r"v\d+-mac-build", x)] + ["v1711-mac-build-signing-and-iphone-not-verified", "precise-time-background-dispatch-not-deployed", "v1705-private-music-keyboard-and-role-response-acceptance-pending", "calendar-closed-app-system-notifications-not-implemented", "real-model-calendar-personality-and-voice-acceptance-pending", "v1675-user-main-model-and-native-lock-receipts-pending"]
     state["validation"] = {"macBuildVerified": False, "realIPhoneVerified": False,
         "nodeTests": {"passed": passed_tests, "failed": 0, "skipped": 0, "includesProtectedParallelTestChanges": True, "sourceCommit": web_commit, "resultSource": ".codex_tmp/eight-chat/full-tests.log"},
         "models": "HTTP simulated; no live model or production financial tests",
