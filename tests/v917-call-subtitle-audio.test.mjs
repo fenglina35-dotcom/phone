@@ -13,7 +13,7 @@ const pip = fs.readFileSync(
 );
 
 test('web and native PiP share one subtitle motion contract', () => {
-  assert.match(app, /const CALL_SUBTITLE_MOTION=\{phraseDurationMs:300,translateY:8,scale:0\.98,x1:0\.25,y1:0\.1,x2:0\.25,y2:1\}/);
+  assert.match(app, /const CALL_SUBTITLE_MOTION=\{phraseDurationMs:420,translateY:12,scale:0\.97,x1:0\.25,y1:0\.1,x2:0\.25,y2:1\}/);
   assert.match(app, /subtitleWho:s&&s\.who==='me'\?'me':'them'/);
   assert.match(app, /subtitleMotion:CALL_SUBTITLE_MOTION/);
   assert.match(bridge, /let subtitleMotion = arguments\["subtitleMotion"\]/);

@@ -103,3 +103,47 @@ test('browser: timestamps and read letters keep progress through friend acknowle
   assert.equal(await page.evaluate(()=>box.querySelector('.tstamp').getAnimations().length),0,'finished timestamp does not replay');assert.equal(await page.evaluate(()=>box.querySelector('.msgread-line').getAnimations({subtree:true}).length),0,'finished read does not replay');await page.close();
  }}finally{await browser.close();}
 });
+
+test('natural chat motion: all bubble surfaces animate, preserve history and exclude cinema',async()=>{
+ const {createRequire}=await import('node:module'),require=createRequire(import.meta.url),{chromium}=require('playwright');const browser=await chromium.launch({headless:true,executablePath:'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'});
+ try{for(const file of ['app.js',P+'app.js']){
+  const app=process.env.NORTH_CHAT_OLD?require('node:child_process').execFileSync('git',['show','HEAD:'+file],{maxBuffer:10e6}).toString():read(file),page=await browser.newPage();
+  await page.addScriptTag({content:'function actId(){return "main";}function renderPageKey(c){return c.p+":"+(c.id||"");}function readReceiptOn(){return false;}function nearBottom(b){return b.scrollHeight-b.scrollTop-b.clientHeight<80;}'+app.slice(app.indexOf('let _wechatMotion=null;'),app.indexOf('let _scrollBottomOnce'))});
+  for(const [p,id,cls] of [['off','offbg','offnar'],['rp','rpbg','rpnar'],['hischat','hischatlog','msg'],['hischat','hisselflog','msg'],['dydm','dydmbox','dydm-msg'],['dy','dy-group','dyg-msg'],['xdm','xdmbox','xmsg'],['phonesms','smsbody','imsg-row'],['shopcs','csbox','custom'],['mgroom','mgrbg','msg'],['gs','gsbg','msg'],['jail','jailbox','jnar'],['tale','talebox','jbub'],['dread','dreadbox','jnar'],['alter','alterbg','custom']]){
+   await page.evaluate(({p,id,cls})=>{document.body.innerHTML='<div id="'+id+'" '+(p==='dy'?'class="dyg-box" data-render-scroll-key="dyg:fixture"':'')+' style="height:100px;overflow:auto"></div>';window.box=document.getElementById(id);window.context={p,id:'role',fid:id==='hisselflog'?'__me':'friend'};wechatMotionDispose();box.innerHTML='<div data-chat-motion-row="old" class="'+cls+'" style="height:150px"><div class="col">已有内容</div></div>';wechatMotionMount(context);box.scrollTop=box.scrollHeight;window.row='<div data-chat-motion-row="new" class="'+cls+'" style="height:100px"><div class="col">新回复和旁白</div></div>';box.insertAdjacentHTML('beforeend',row);},{p,id,cls});
+   await page.waitForTimeout(120);
+   const before=await page.evaluate(()=>{const row=box.querySelector('[data-chat-motion-row="new"]');return{n:row.getAnimations({subtree:true}).length,time:row.getAnimations({subtree:true})[0]?.currentTime};});assert(before.n>0,file+' '+p+' new bubble/narration animates');
+   await page.evaluate(()=>{const content=box.innerHTML;box.innerHTML=content;wechatMotionMount(context);});
+   assert(await page.evaluate(()=>box.querySelector('[data-chat-motion-row="new"]').getAnimations({subtree:true})[0]?.currentTime)>=before.time,'redraw resumes');
+   await page.waitForTimeout(650);await page.evaluate(()=>{box.innerHTML=box.innerHTML;wechatMotionMount(context);});assert.equal(await page.evaluate(()=>box.querySelector('[data-chat-motion-row="new"]').getAnimations({subtree:true}).length),0,'history never replays');
+  }
+  await page.evaluate(()=>{document.body.innerHTML='<div id="cinLog"><div class="msg">放映室</div></div>';wechatMotionMount({p:'cinema'});});assert.equal(await page.evaluate(()=>document.querySelector('#cinLog').className),'','cinema is outside the shared presentation layer');
+  await page.evaluate(()=>{document.body.innerHTML='<div id="single">音乐或电话</div>';window.cue={text:'你好'};naturalMotionTransient(document.getElementById('single'),cue);});await page.waitForTimeout(180);const t=await page.evaluate(()=>document.getElementById('single').getAnimations()[0].currentTime);await page.evaluate(()=>{document.body.innerHTML='<div id="single">音乐或电话</div>';naturalMotionTransient(document.getElementById('single'),cue);});assert(await page.evaluate(()=>document.getElementById('single').getAnimations()[0].currentTime)>=t,'single music/call cue resumes');await page.close();
+ }}finally{await browser.close();}
+});
+
+test('actual web/private renderers: narration, role login, Douyin, music, calls and other bubble pages',async()=>{
+ const {createRequire}=await import('node:module'),require=createRequire(import.meta.url),{chromium}=require('playwright'),path=require('node:path');const browser=await chromium.launch({headless:true,executablePath:'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'});
+ try{for(const priv of [false,true]){
+  const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));const origin='http://127.0.0.1:8778';
+  await page.route('**/*',route=>{const u=new URL(route.request().url());if(u.origin!==origin)return route.abort();const f=path.resolve(decodeURIComponent(u.pathname.slice(1)));if(!f.startsWith(process.cwd()+path.sep)||!fs.existsSync(f))return route.fulfill({status:404,body:''});return route.fulfill({status:200,contentType:f.endsWith('.js')?'text/javascript':f.endsWith('.html')?'text/html':f.endsWith('.css')?'text/css':'application/octet-stream',body:fs.readFileSync(f)});});
+  await page.goto(origin+(priv?'/'+P+'index.html':'/小手机.html')+'?northPreview=black-home');await page.waitForFunction(()=>window.__northBootReady);
+  const result=await page.evaluate(()=>{
+   S.me.locked=false;S.me.active='main';S.settings.sound=false;S.contacts.forEach(c=>c.proactive={enabled:false});const cid=S.contacts[0].id,now=Date.now();window.fixtureOut=[];
+   const show=(name,html,c,selector)=>{document.getElementById('app').innerHTML='<div class="page">'+html+'</div>';wechatMotionMount(c);naturalMotionTransientScan();const box=renderScrollElement({id:selector});fixtureOut.push({name,mounted:box&&box.classList.contains('natural-motion-chat'),rows:box&&box.querySelectorAll('[data-message-id]').length});};
+   const o=offData(cid);o.introSeen=true;o.msgs=[{id:'off-1',who:'旁白',text:'【轻轻走近】',_reveal:true,_revealStep:50,time:now}];_off={id:cid,mode:'offline',busy:false};show('offline',renderOff(cid),{p:'off',id:cid},'offbg');const glyph=document.querySelector('.offglyph');fixtureOut.push({name:'narration-glyph',plain:getComputedStyle(glyph).animationName==='none'&&getComputedStyle(glyph).opacity==='1'});
+   const r=cohabRoot();r.enabled=true;r.paused=false;r.cid=cid;const d=cohabData(cid);d.phase='home';d.nextAt=now+86400000;d.msgs=[{id:'cohab-1',who:'旁白',text:'【一起坐下】',time:now}];_off={id:cid,mode:'cohab',busy:false};show('cohab',renderCohab(cid),{p:'off',id:cid,mode:'cohab'},'offbg');
+   rpData(cid).msgs=[{id:'rp-1',who:'旁白',text:'【抬起眼睛】',time:now}];show('roleplay',renderRP(cid),{p:'rp',id:cid},'rpbg');
+   S.dy.dms=[{id:'dm-fixture',cid,name:'测试角色',msgs:[{id:'dy-1',from:'me',text:'你好',time:now}]}];show('douyin',renderDyDM('dm-fixture'),{p:'dydm',id:'dm-fixture'},'dydmbox');dyTypingHTML('');
+   S.x.dms=[{id:'x-fixture',name:'测试',msgs:[{id:'x-1',from:'me',text:'你好',time:now}]}];show('x',renderXDM('x-fixture'),{p:'xdm',id:'x-fixture'},'xdmbox');
+   _hisLogin={cid};msgs(cid).push({id:'his-1',role:'assistant',type:'text',content:'你好',time:now});show('role-wechat',renderHisChat(cid,'__me'),{p:'hischat',id:cid,fid:'__me'},'hisselflog');
+   show('imessage',renderPhoneIMsg('10086','fixture',[{id:'sms-1',from:'me',text:'你好',time:now}],null),{p:'phonesms',num:'10086',sk:'fixture'},'smsbody');
+   csList().push({from:'me',text:'订单怎么样',time:now});show('customer-service',renderShopCS(),{p:'shopcs'},'csbox');
+   _gs={cid,kind:'tod',title:'测试',msgs:[{id:'game-1',who:'me',text:'你好',time:now}],start:now,busy:false};show('game',renderGS(),{p:'gs'},'gsbg');
+   const cue={side:'l',text:'音乐聊天'};document.getElementById('app').innerHTML=_mBubHTML(cue);naturalMotionTransientScan();fixtureOut.push({name:'music',animated:document.querySelector('[data-natural-transient]').getAnimations().length>0});
+   _call={id:cid,session:'fixture',state:'active',sub:{who:'them',text:'电话字幕'}};document.getElementById('app').innerHTML='<div id="callSub"></div>';updateCallSub();fixtureOut.push({name:'call',animated:document.querySelector('.csline').getAnimations().length>0});_call=null;
+   return fixtureOut;
+  });
+  for(const item of result){if('mounted' in item)assert(item.mounted&&item.rows>0,JSON.stringify({priv,item}));if('plain' in item)assert(item.plain);if('animated' in item)assert(item.animated);}assert.deepEqual(errors,[]);await page.close();
+ }}finally{await browser.close();}
+});

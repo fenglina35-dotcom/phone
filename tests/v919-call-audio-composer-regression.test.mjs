@@ -20,7 +20,7 @@ test('the v800-v850 hands-free noise filter is restored without touching subtitl
   assert.doesNotMatch(app, /_callHFPending\.push\(\{text:t,meta\}\)/);
   assert.match(app, /Date\.now\(\)\+1200/);
   assert.match(app, /Date\.now\(\)\+1500/);
-  assert.match(app, /const CALL_SUBTITLE_MOTION=\{phraseDurationMs:300,translateY:8,scale:0\.98,x1:0\.25,y1:0\.1,x2:0\.25,y2:1\}/);
+  assert.match(app, /const CALL_SUBTITLE_MOTION=\{phraseDurationMs:420,translateY:12,scale:0\.97,x1:0\.25,y1:0\.1,x2:0\.25,y2:1\}/);
   assert.match(app, /function callSubtitleEnter\(box\)/);
   assert.match(html, /@keyframes csphrasein/);
 });
