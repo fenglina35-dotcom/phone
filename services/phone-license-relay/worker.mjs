@@ -38,6 +38,36 @@ async function friendRpcRelay(request, url, headers, fetchUpstream, timeoutMs) {
   }catch(_){return reply(502,{message:controller.signal.aborted?'friend-upstream-timeout':'friend-upstream-unreachable'});}finally{clearTimeout(timer);}
 }
 // Private role sync uses its original independent database. No general companion proxy.
+// Narrow candidate inbox failover. The retired /companion/ relay remains disabled.
+const ROLE_INBOX_RPC = new Set(['phone_role_push_pull','phone_role_push_ack','phone_role_push_status']);
+async function roleInboxRelay(request,url,headers,fetchUpstream,timeoutMs){
+ const reply=(status,body)=>new Response(JSON.stringify(body),{status,headers});
+ const fn=url.pathname.slice('/role-inbox/v1/'.length);
+ if(!ROLE_INBOX_RPC.has(fn))return reply(404,{ok:false,code:'inbox-rpc-not-allowed'});
+ if(url.search)return reply(400,{ok:false,code:'query-not-accepted'});
+ if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{...headers,'Access-Control-Allow-Methods':'POST, OPTIONS','Access-Control-Allow-Headers':'content-type, apikey, authorization'}});
+ if(request.method!=='POST')return reply(405,{ok:false,code:'method-not-allowed'});
+ if(!/^application\/json(?:;|$)/i.test(request.headers.get('Content-Type')||''))return reply(415,{ok:false,code:'json-required'});
+ const apikey=cleanText(request.headers.get('apikey'),2048),authorization=cleanText(request.headers.get('Authorization'),4096);
+ if(!apikey||!/^Bearer [A-Za-z0-9_.-]+$/.test(authorization))return reply(401,{ok:false,code:'inbox-auth-required'});
+ let body;try{
+  body=await boundedBody(request,65536);if(body===null)return reply(413,{ok:false,code:'body-too-large'});
+  const args=JSON.parse(body),allowed=new Set(['p_target','p_owner_secret',...(fn==='phone_role_push_pull'?['p_limit']:fn==='phone_role_push_ack'?['p_ids']:['p_role_id'])]);
+  if(!args||typeof args!=='object'||Array.isArray(args)||Object.keys(args).some(k=>!allowed.has(k)))return reply(400,{ok:false,code:'inbox-fields-not-allowed'});
+  if(typeof args.p_target!=='string'||!args.p_target||args.p_target.length>160||typeof args.p_owner_secret!=='string'||args.p_owner_secret.length<24||args.p_owner_secret.length>512)return reply(400,{ok:false,code:'inbox-owner-required'});
+  if(fn==='phone_role_push_pull'&&args.p_limit!=null&&(!Number.isInteger(args.p_limit)||args.p_limit<1||args.p_limit>40))return reply(400,{ok:false,code:'inbox-limit-invalid'});
+  if(fn==='phone_role_push_status'&&(typeof args.p_role_id!=='string'||!args.p_role_id||args.p_role_id.length>160))return reply(400,{ok:false,code:'inbox-role-invalid'});
+  if(fn==='phone_role_push_ack'&&(!Array.isArray(args.p_ids)||!args.p_ids.length||args.p_ids.length>40||args.p_ids.some(id=>typeof id!=='string'||!id||id.length>160)))return reply(400,{ok:false,code:'inbox-ids-invalid'});
+ }catch(_){return reply(400,{ok:false,code:'invalid-json'});}
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),Math.max(1,timeoutMs));
+ try{
+  const upstream=await fetchUpstream('https://qvuahlqimcfgeoetosnl.supabase.co/rest/v1/rpc/'+fn,{method:'POST',headers:{'Content-Type':'application/json',apikey,Authorization:authorization},body,signal:controller.signal,redirect:'manual'});
+  if(upstream.status>=300&&upstream.status<400)return reply(502,{ok:false,code:'inbox-redirect-rejected'});
+  const text=await upstream.text();try{JSON.parse(text);}catch(_){return reply(502,{ok:false,code:'inbox-invalid-response'});}
+  return new Response(text,{status:upstream.status,headers});
+ }catch(_){return reply(502,{ok:false,code:controller.signal.aborted?'inbox-timeout':'inbox-unreachable'});}finally{clearTimeout(timer);}
+}
+
 const MAX_TTS_BODY = 16384;
 const TTS_PROVIDERS = new Set(['minimax','fish','mossland','elevenlabs','hume']);
 async function boundedBody(request, maxBody = MAX_BODY) {
@@ -153,6 +183,7 @@ export function createHandler(fetchUpstream = (input, init) => fetch(input, init
     const reply = (status, body) => new Response(JSON.stringify(body), {status, headers});
     if (origin && origin !== APP_ORIGIN && origin !== 'null') return reply(403, {ok:false, code:'origin-not-allowed'});
     if(url.pathname.startsWith('/companion/'))return reply(410,{ok:false,code:'role-sync-relay-retired'});
+    if(url.pathname.startsWith('/role-inbox/v1/'))return roleInboxRelay(request,url,headers,fetchUpstream,timeoutMs);
     if(url.pathname.startsWith('/rest/v1/rpc/'))return friendRpcRelay(request,url,headers,fetchUpstream,timeoutMs);
     const health = url.pathname === '/health';
     const externalTts = url.pathname === EXTERNAL_TTS_PATH;

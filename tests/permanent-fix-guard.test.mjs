@@ -1577,7 +1577,7 @@ test('encoded iOS home-screen explicit updates and reloads bypass the stale shel
 test('role actions respect current targets, decisions, thought boundaries and completed food requests',()=>{for(const prefix of ['',PRIVATE_DIR]){const js=read(prefix+'app.js'),ui=read(prefix+'commerce-ui.js');for(const marker of ['function roleActionEnvelopeContent(','function roleAllLockAnnounced(','announcementSaved===true&&roleAllLockAnnounced','_postedDecision','function roleThoughtRecencyText(','latest()!==turn',"if(act==='解锁'&&unlockVeto(arg))return '';",'_flightFailureInfo','NorthFlightBooking.consume(content,c'])assert(js.includes(marker));assert(ui.includes('function northRoleCompletedFood('));assert(ui.includes('fixedMilk'));assert(read(prefix+'travel-hotel-data.js').includes('["延安","中国","Yanan"]'));assert(read(prefix+'travel-flight-booking.js').includes('preferredTime'));}assert(read('supabase/functions/phone-role-push/index.ts').includes('function roleVerifiedConversationBoundary('));});
 
 
-// v1688/v1689: restore only requested interactions and foreground, not the optical renderer.
+// v1688/v1691: restore only requested interactions and foreground, not the optical renderer.
 test('hidden chat preserves contacts/history and separates accounts; new messages restore visibility',async()=>{
  const {default:vm}=await import('node:vm');
  for(const file of [WEB,PRIVATE]){
@@ -1608,7 +1608,7 @@ test('widget foreground defaults white without changing pictures; retired privat
 
 test('private role sync uses one configured-backend request, propagates failure, and never probes the retired relay',async()=>{
  const {default:vm}=await import('node:vm');const js=read(PRIVATE),calls=[];
- const ctx={companionCloudURL:()=> 'https://original-backend.example',fetchT:async(...args)=>{calls.push(args);return {ok:true};}};vm.createContext(ctx);
+ const ctx={COMPANION_URL:'https://fixed-original.example',setTimeout,clearTimeout,Response,TextDecoder,companionCloudURL:()=> 'https://original-backend.example',fetchT:async(...args)=>{calls.push(args);return {ok:true};}};vm.createContext(ctx);
  vm.runInContext(js.slice(js.indexOf('async function roleSyncRpcEndpoint('),js.indexOf('async function companionRpc(')),ctx);
  assert.equal(await ctx.roleSyncRpcEndpoint('phone_role_push_pull'),'https://original-backend.example/rest/v1/rpc/phone_role_push_pull');
  assert.equal(await ctx.roleSyncTaskEndpoint(),'https://original-backend.example/functions/v1/phone-role-push');
@@ -1621,4 +1621,49 @@ test('requested feature restoration never brings back the optical material in ei
  for(const prefix of ['',PRIVATE_DIR]){const js=read(prefix+'app.js'),css=read(prefix+'glass-theme.css');
   assert(!js.includes('window.NorthOpticalGlass='));assert(!js.includes('NORTH_OPTICAL_MATERIAL_V1'));assert(!css.includes('[data-north-optical]'));
   assert(css.includes('NORTH_OFFLINE_TRANSPARENT_V2'));assert(css.includes('box-shadow:none!important'));}
+});
+
+test('private inbox failover is bounded through a stalled body; the released old code remains waiting',async()=>{
+ const {default:vm}=await import('node:vm');const {execFileSync}=await import('node:child_process');
+ const priv=read(PRIVATE),old=execFileSync('git',['show','e1aab3bc:native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js'],{encoding:'utf8',maxBuffer:10000000});
+ async function run(js){const calls=[];let controller,cancelled=false;const source=js.slice(js.indexOf('// NORTH_ROLE_SYNC_DIRECT_V1:'),js.indexOf('async function companionRpc('));
+  const rpc=js.split(/\r?\n/).find(x=>x.startsWith('async function companionRpc('));
+  const ctx={COMPANION_URL:'https://original.example',companionCloudURL:()=> 'https://original.example',companionFeatureAvailable:()=>true,privatePhoneAccountAvailable:()=>false,companionHeaders:()=>({'Content-Type':'application/json'}),setTimeout:(fn,ms)=>setTimeout(fn,Math.min(ms,20)),clearTimeout,Response,TextDecoder,
+   fetchT:async(url)=>{calls.push(url);if(calls.length>1)return new Response('[{"id":"fixture-message","roleId":"fixture-role","body":"收到消息"}]');return new Response(new ReadableStream({start(c){controller=c;c.enqueue(new TextEncoder().encode('['));},cancel(){cancelled=true;}}));}};
+  vm.createContext(ctx);vm.runInContext(source+rpc,ctx);const pending=ctx.companionRpc('phone_role_push_pull',{p_target:'fixture-device',p_owner_secret:'fixture-owner-secret-123456',p_limit:20}).then(rows=>({rows}),error=>({error:String(error.message)}));
+  const result=await Promise.race([pending,new Promise(r=>setTimeout(()=>r({waiting:true}),90))]);try{controller.error(Error('fixture cleanup'));}catch(_){}await pending;return {result,calls,cancelled};
+ }
+ const before=await run(old);assert.equal(before.result.waiting,true);assert.equal(before.calls.length,1);
+ const after=await run(priv);assert.equal(after.result.rows[0].body,'收到消息');assert.equal(after.calls.length,2);assert(after.cancelled);
+});
+test('private inbox alternate cannot reroute model requests, device controls, other projects or authorization refusals',async()=>{
+ const {default:vm}=await import('node:vm');const js=read(PRIVATE),src=js.slice(js.indexOf('// NORTH_ROLE_SYNC_DIRECT_V1:'),js.indexOf('async function companionRpc(')),calls=[];
+ const ctx={COMPANION_URL:'https://original.example',companionCloudURL:()=> 'https://original.example',setTimeout,clearTimeout,Response,TextDecoder,fetchT:async(url)=>{calls.push(url);return new Response('{"message":"denied"}',{status:403});}};
+ vm.createContext(ctx);vm.runInContext(src,ctx);const opt={method:'POST',body:JSON.stringify({p_target:'device',p_owner_secret:'owner-secret-123456789012345'})};
+ assert.equal((await ctx.roleSyncRpcFetch('phone_role_push_pull',opt,50)).status,403);assert.equal(calls.length,1);calls.length=0;
+ for(const fn of ['phone_companion_enqueue_command','phone_role_push_upsert_profile','phone_role_background_enqueue'])await ctx.roleSyncRpcFetch(fn,opt,50);
+ assert(calls.every(url=>!url.includes('/role-inbox/')));
+ ctx.companionCloudURL=()=> 'https://custom-project.example';ctx.fetchT=async url=>{calls.push(url);throw Error('network failed');};const prior=calls.length;await assert.rejects(ctx.roleSyncRpcFetch('phone_role_push_pull',opt,50),/network failed/);assert.equal(calls.length,prior+1);assert(!calls.at(-1).includes('/role-inbox/'));
+});
+
+test('private inbox buffering preserves no-content ACK and does not duplicate it',async()=>{
+ const {default:vm}=await import('node:vm');const js=read(PRIVATE),src=js.slice(js.indexOf('// NORTH_ROLE_SYNC_DIRECT_V1:'),js.indexOf('async function companionRpc('));let calls=0;
+ const ctx={COMPANION_URL:'https://fixed.example',companionCloudURL:()=> 'https://custom.example',setTimeout,clearTimeout,Response,TextDecoder,fetchT:async()=>{calls++;return new Response(null,{status:204});}};
+ vm.createContext(ctx);vm.runInContext(src,ctx);const r=await ctx.roleSyncRpcFetch('phone_role_push_ack',{method:'POST',body:'{}'},50);assert.equal(r.status,204);assert.equal(await r.text(),'');assert.equal(calls,1);
+});
+
+test('private inbox cannot be held forever by an optional controller claim; other writes still await the claim',async()=>{
+ const {default:vm}=await import('node:vm');const js=read(PRIVATE),src=js.slice(js.indexOf('// NORTH_ROLE_SYNC_DIRECT_V1:'),js.indexOf('async function companionRpc('));
+ const rpc=js.split(/\r?\n/).find(x=>x.startsWith('async function companionRpc('));
+ const ctx={COMPANION_URL:'https://original.example',companionCloudURL:()=> 'https://original.example',companionFeatureAvailable:()=>true,privatePhoneAccountAvailable:()=>true,privatePhoneClaimCompanionController:()=>new Promise(()=>{}),companionHeaders:()=>({'Content-Type':'application/json'}),setTimeout:(fn,ms)=>setTimeout(fn,Math.min(ms,15)),clearTimeout,Response,TextDecoder,fetchT:async()=>new Response('[{"id":"received","body":"消息不能被核验卡住"}]')};
+ vm.createContext(ctx);vm.runInContext(src+rpc,ctx);
+ const rows=await ctx.companionRpc('phone_role_push_pull',{p_target:'device',p_owner_secret:'owner-secret-123456789012345',p_limit:1});assert.equal(rows[0].id,'received');
+ const write=ctx.roleInboxClaimController('phone_companion_enqueue_command');const stopped=await Promise.race([write.then(()=>false),new Promise(r=>setTimeout(()=>r(true),30))]);assert(stopped);
+ ctx.fetchT=async()=>new Response('[]');await assert.rejects(ctx.companionRpc('phone_role_push_pull',{}),/控制权核验等待超时/);
+});
+
+test('a stalled authorization refusal never switches the private inbox to another endpoint',async()=>{
+ const {default:vm}=await import('node:vm');const js=read(PRIVATE),src=js.slice(js.indexOf('// NORTH_ROLE_SYNC_DIRECT_V1:'),js.indexOf('async function companionRpc('));let calls=0;
+ const ctx={COMPANION_URL:'https://original.example',companionCloudURL:()=> 'https://original.example',setTimeout:(fn,ms)=>setTimeout(fn,Math.min(ms,10)),clearTimeout,Response,TextDecoder,fetchT:async()=>{calls++;return new Response(new ReadableStream({start(c){c.enqueue(new TextEncoder().encode('{'));}}),{status:403});}};
+ vm.createContext(ctx);vm.runInContext(src,ctx);await assert.rejects(ctx.roleSyncRpcFetch('phone_role_push_pull',{method:'POST',body:'{}'},50),/完整响应超时/);assert.equal(calls,1);
 });

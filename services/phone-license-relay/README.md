@@ -62,3 +62,8 @@ Worker：north-license-connectivity；默认地址：https://north-license-conne
 ## 2026-10-11 按用户要求撤回角色同步代理
 
 生产版本c26a0d51，仅停用 `/companion/` 路径并返回410 `role-sync-relay-retired`；旧私人客户端健康探测不再通过，会回到原独立后台。新私人源码v1689移除代理与探测等待，RPC直接使用配置的原后台。保留授权、好友RPC、外部TTS路由，保留原独立后台与安全的收件保存/确认顺序。实测 `/health` 200，好友和TTS GET 405（路由仍存在）；未更换账号、设备密钥、模型配置，也未承诺原后台在各移动网络均直连成功。
+
+
+## 2026-10-11 已授权部署独立收件入口
+
+Worker生产4d054a59。只允许 `/role-inbox/v1/phone_role_push_pull`、`phone_role_push_ack`、`phone_role_push_status`，保持 `/companion/` 410。不接收角色资料、模型Key、模型URL或设备命令；固定原独立云、原设备owner鉴权，禁止额外字段与上游重定向。仅代码无日志/存储，不打印密钥或正文。用户明确同意设备鉴权密钥、收件请求、收到的聊天内容、收件确认经此域中转。实测收件200、未绑定假设备状态owner-not-linked、禁止profile404、原授权health200；测试未读取真实用户消息。私人v1691优先收件入口并保留原域后备，模型和其他写指令保持原路线。
