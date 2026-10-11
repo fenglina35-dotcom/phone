@@ -17,10 +17,10 @@ html.north-glass-ui .home .hwid:not(.wpet),
 html.north-glass-ui .home .dock,
 html.north-glass-ui .home .home-editbar{overflow:hidden;border:1px solid var(--ng-line)!important;box-shadow:var(--ng-shadow)!important;backdrop-filter:blur(22px) saturate(150%)!important;-webkit-backdrop-filter:blur(22px) saturate(150%)!important}
 
-html.north-glass-ui .home:not(.has-home-wallpaper){background:radial-gradient(circle at 74% 18%,rgba(255,255,255,.055),transparent 28%),radial-gradient(circle at 20% 56%,rgba(255,255,255,.035),transparent 32%),linear-gradient(160deg,#101114,#030405 58%,#0a0b0d)!important;color:#f3f3f4}
-html.north-glass-ui .home:not(.has-home-wallpaper):before{background:radial-gradient(circle,rgba(255,255,255,.055),transparent 70%);opacity:.7}
-html.north-glass-ui .home:not(.has-home-wallpaper):after{background:radial-gradient(circle,rgba(148,154,166,.09),transparent 70%);opacity:.6}
-html.north-glass-ui .home.has-home-wallpaper:before,html.north-glass-ui .home.has-home-wallpaper:after{display:none!important;content:none!important}
+html.north-glass-ui .home:not([style*="background:url"]){background:radial-gradient(circle at 74% 18%,rgba(255,255,255,.055),transparent 28%),radial-gradient(circle at 20% 56%,rgba(255,255,255,.035),transparent 32%),linear-gradient(160deg,#101114,#030405 58%,#0a0b0d)!important;color:#f3f3f4}
+html.north-glass-ui .home:not([style*="background:url"]):before{background:radial-gradient(circle,rgba(255,255,255,.055),transparent 70%);opacity:.7}
+html.north-glass-ui .home:not([style*="background:url"]):after{background:radial-gradient(circle,rgba(148,154,166,.09),transparent 70%);opacity:.6}
+html.north-glass-ui .home[style*="background:url"]:before,html.north-glass-ui .home[style*="background:url"]:after{display:none!important;content:none!important}
 html.north-glass-ui .home:not(.tpink):not(.twhite) .hwid:not(.wpet){background:linear-gradient(145deg,rgba(24,25,29,.2),rgba(8,9,12,.09))!important}
 html.north-glass-ui .home:not(.tpink):not(.twhite) .dock{background:linear-gradient(145deg,rgba(25,27,31,.18),rgba(7,8,10,.08))!important}
 html.north-glass-ui .home.tpink .hwid:not(.wpet),html.north-glass-ui .home.tpink .dock{background:linear-gradient(145deg,rgba(255,219,233,.18),rgba(247,180,207,.08))!important}
@@ -902,38 +902,7 @@ html:is(#north-optical-material,html) body .spy-profile-info[data-north-optical-
 html:is(#north-optical-material,html) body [data-north-optical-label] .spy-app-label{color:var(--north-optical-ink)!important;text-shadow:0 1px 2px rgba(255,255,255,.35)}
 
 /* Bubble tails retain their existing generated hollow rim rather than receiving a rectangular outline. */
-html:is(#north-optical-material,html) body .imsg-b[data-north-optical]::before{background:linear-gradient(315deg,rgba(235,245,255,.65),rgba(235,245,255,.14) 26%,rgba(235,245,255,.05) 50%,rgba(235,245,255,.25) 76%,rgba(235,245,255,.5))!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html:is(#north-optical-material,html) body .imsg-b[data-north-optical]::before{background:linear-gradient(229deg,rgba(235,245,255,.65),rgba(235,245,255,.14) 26%,rgba(235,245,255,.05) 50%,rgba(235,245,255,.25) 76%,rgba(235,245,255,.5))!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 
 /* Only phone control SVG backgrounds receive the material; glyph paths and red hang-up buttons stay intact. */
 html:is(#north-optical-material,html) body svg[data-north-optical-image][stroke="#fff"]{stroke:var(--north-optical-ink,#fff)}
-
-/* NORTH_OPTICAL_TEXT_V2: glass affects the material, not foreground text shadows. */
-html:is(#north-optical-material,html) body :is(.home-dashboard-card,.home-vinyl-card,.home-sweetie-card)[data-north-optical],html:is(#north-optical-material,html) body :is(.home-dashboard-card,.home-vinyl-card,.home-sweetie-card)[data-north-optical] :is(b,strong,small,em,p,span){text-shadow:none!important}
-
-/* NORTH_WIDGET_FOREGROUND_V1: customizable foreground, never dim photos or avatars. */
-html:is(#north-optical-material,html) body #homeDesktop :is(.home-dashboard-grid,.home-vinyl-card,.home-sweetie-card){color:var(--north-widget-ink,#fff)!important}
-html:is(#north-optical-material,html) body #homeDesktop :is(.home-dashboard-grid,.home-vinyl-card,.home-sweetie-card) :is(b,strong,small,em,p,span,i,label){color:var(--north-widget-ink,#fff)!important;text-shadow:none!important}
-html:is(#north-optical-material,html) body #homeDesktop .home-dashboard-grid svg{color:var(--north-widget-ink,#fff)!important;stroke:var(--north-widget-ink,#fff)!important}
-html:is(#north-optical-material,html) body #homeDesktop .dash-heart>svg{width:19px!important;height:19px!important}
-/* NORTH_OPTICAL_STABILITY_V3: material layers switch atomically, without background/filter cross-fades. */
-html:is(#north-optical-material,html) body [data-north-optical]{transition-property:transform,opacity!important}
-
-/* NORTH_OFFLINE_BRIGHT_V1: all offline text is bright; media and status fills remain independent. */
-html:is(#north-optical-material,html) body :is(.offstage,.offline-hub,.north-offline-sheet),html:is(#north-optical-material,html) body :is(.offstage,.offline-hub,.north-offline-sheet) :is(small,span,b,strong,p,em,i,label,summary,time,h1,h2,h3,button,input,select,textarea,.hint,.offnar,.offdate,.offbubble){color:#fff!important;-webkit-text-fill-color:#fff;text-shadow:none!important}
-html:is(#north-optical-material,html) body :is(.offstage,.offline-hub,.north-offline-sheet) :is(input,textarea)::placeholder{color:rgba(255,255,255,.85)!important;-webkit-text-fill-color:rgba(255,255,255,.85)}
-html:is(#north-optical-material,html) body .cohab-settings-grid :is(input,select){color:#fff!important;-webkit-text-fill-color:#fff}
-html:is(#north-optical-material,html) body .cohab-settings-grid select option{background:#24252b;color:#fff}
-
-/* NORTH_OPTICAL_SCROLL_SAFE_V4: offline controls use a static lightweight rim, without nested live filters. */
-html:is(#north-optical-material,html) body [data-north-optical-lite]{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:none!important}
-html:is(#north-optical-material,html) body [data-north-optical-lite]::before,html:is(#north-optical-material,html) body [data-north-optical-lite]::after{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;filter:none!important}
-
-html:is(#north-optical-material,html) body :is(.offstage,.offline-hub,.north-offline-sheet) :is(.offscroll,.cohab-settings,.cohab-settings-grid,.offbubble,.offnar,.cohab-settings-grid label,.cohab-settings-grid input,.cohab-settings-grid select){backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-
-/* NORTH_OFFLINE_FLAT_V5: offline controls are plain, without old or new glass effects. */
-html:is(#north-optical-material,html) body :is(.offstage,.offline-hub,.north-offline-sheet) :is(.offnav,.offmeta,.offbubble,.offinput,.offselect,.cohab-meta,.cohab-settings,.cohab-settings-grid label,.cohab-settings-grid input,.cohab-settings-grid select,.cohab-status-chip,.cohab-debug-reply,.cohab-away-panel,.cohab-return-banner,.cohab-memory-open,.offline-hub-role,.offline-hub-block,.offline-hub-back,.btn,.minibtn,.field input,.field select,.field textarea){backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background-image:none!important;box-shadow:none!important;border-color:rgba(255,255,255,.12)!important}
-html:is(#north-optical-material,html) body :is(.offstage,.offline-hub,.north-offline-sheet) :is(.offbubble,.cohab-settings,.cohab-settings-grid label,.cohab-settings-grid input,.cohab-settings-grid select,.cohab-memory-open,.offline-hub-role,.offline-hub-block,.field input,.field select,.field textarea){background-color:#222227!important}
-html:is(#north-optical-material,html) body :is(.offstage,.offline-hub,.north-offline-sheet) :is(.offnav,.offmeta,.offbubble,.offinput,.offselect,.cohab-meta,.cohab-settings,.cohab-settings-grid label,.cohab-settings-grid input,.cohab-settings-grid select,.cohab-status-chip,.cohab-debug-reply,.cohab-memory-open,.offline-hub-role,.offline-hub-block)::before,html:is(#north-optical-material,html) body :is(.offstage,.offline-hub,.north-offline-sheet) :is(.offnav,.offmeta,.offbubble,.offinput,.offselect,.cohab-meta,.cohab-settings,.cohab-settings-grid label,.cohab-settings-grid input,.cohab-settings-grid select,.cohab-status-chip,.cohab-debug-reply,.cohab-memory-open,.offline-hub-role,.offline-hub-block)::after{background:none!important;box-shadow:none!important;filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
-
-html:is(#north-optical-material,html) body :is(.offstage,.offline-hub,.north-offline-sheet) *,html:is(#north-optical-material,html) body :is(.offstage,.offline-hub,.north-offline-sheet) *::before,html:is(#north-optical-material,html) body :is(.offstage,.offline-hub,.north-offline-sheet) *::after{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;box-shadow:none!important}
-html:is(#north-optical-material,html) body :is(.offstage,.offline-hub,.north-offline-sheet) :is(button,.offbubble,.offinput,.offselect){background-image:none!important}

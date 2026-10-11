@@ -238,8 +238,7 @@ test('边栏和评论区的爱心、星星都换成了 dyIc', () => {
     assert.match(s, /dyLike\('\$\{v\.id\}'\)">\$\{dyIc\('heart',30,liked,'#f5243d','#fff'\)\}/);
     assert.match(s, /dyStar\('\$\{v\.id\}'\)">\$\{dyIc\('star',29,starred,'#f5c518','#fff',2\)\}/);
     assert.match(s, /dyCmLike\('\$\{v\.id\}',\$\{ci\}\)">\$\{dyIc\('heart',19,cm\.liked,'#f5243d','#7b7b83',1\.8\)\}/);
-    const nonDashboard=s.replace(/^function wDashboard\(\)\{[^\n]+/m,''); // Home heart size is independent of Douyin controls.
-    assert.equal(/svgIc\('heart',(?:34|30|19),/.test(nonDashboard), false, '还有抖音的爱心没换成 dyIc');
+    assert.equal(/svgIc\('heart',(?:34|30|19),/.test(s), false, '还有抖音的爱心没换成 dyIc');
     assert.equal(/svgIc\('star',(?:33|29),/.test(s), false, '还有抖音的星星没换成 dyIc');
   }
 });

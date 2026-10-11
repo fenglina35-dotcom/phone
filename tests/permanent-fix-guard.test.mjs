@@ -1584,15 +1584,3 @@ test('approved optical material remains shared while photos, switches and iOS gu
 
 
 test('private role foreground sync keeps its fixed relay and durable receive-before-ack ordering',()=>{for(const prefix of ['',PRIVATE_DIR]){const js=read(prefix+'app.js');for(const marker of ['NORTH_ROLE_SYNC_RELAY_V1','private-role-sync-relay-v1',"companionCloudURL()!==COMPANION_URL",'服务器没有返回有效收件列表','_roleServerPushPullAt=0;_roleServerPushPullError=','前台同步暂未完成'])assert(js.includes(marker),marker);const start=js.indexOf('async function roleServerPushPull('),end=js.indexOf('let _roleServerPushWakePromise',start),body=js.slice(start,end);assert(body.indexOf('await persistWechatMessagesNow()')<body.indexOf("phone_role_push_ack"));}const worker=read('services/phone-license-relay/worker.mjs');assert(worker.includes('https://qvuahlqimcfgeoetosnl.supabase.co/rest/v1/rpc/'));assert(worker.includes('role-sync-owner-required'));assert(worker.includes('ROLE_SYNC_RPC.has(fn)'));});
-
-
-test('optical glass stays inside the approved scope and keeps foreground text clear',()=>{for(const prefix of ['',PRIVATE_DIR]){const js=read(prefix+'app.js'),css=read(prefix+'glass-theme.css');assert(js.includes('NORTH_OPTICAL_SCOPE_V2'));assert(js.includes('function allowedSurface(el)'));assert(js.includes('if(!safeGlass(el)||!el.matches(selectors))restore(el)'));assert(css.includes('NORTH_OPTICAL_TEXT_V2'));}});
-
-
-test('widget foreground controls and stable material repaint survive both releases',()=>{for(const prefix of ['',PRIVATE_DIR]){const js=read(prefix+'app.js'),css=read(prefix+'glass-theme.css');for(const marker of ['NORTH_WIDGET_FOREGROUND_V1','glassWidgetTextSet','NORTH_OPTICAL_STABILITY_V3'])assert(js.includes(marker));assert(css.includes('transition-property:transform,opacity!important'));}});
-
-
-test('optical surfaces never replace wallpaper roots or repaint on offline scroll',()=>{for(const prefix of ['',PRIVATE_DIR]){const js=read(prefix+'app.js'),css=read(prefix+'glass-theme.css');assert(js.includes('NORTH_OPTICAL_ROOT_GUARD_V4'));assert(js.includes('NORTH_OPTICAL_SCROLL_SAFE_V4'));assert(js.includes('lite?null:source(el)'));assert(css.includes('[data-north-optical-lite]{backdrop-filter:none!important'));}});
-
-
-test('optical recipe remains home-only and offline controls stay flat',()=>{for(const prefix of ['',PRIVATE_DIR]){const js=read(prefix+'app.js'),css=read(prefix+'glass-theme.css');assert(js.includes('NORTH_OPTICAL_HOME_ONLY_V5'));assert(css.includes('NORTH_OFFLINE_FLAT_V5'));}});

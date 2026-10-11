@@ -41,7 +41,7 @@ iconEvents.fetch({request:new Request('https://phone.example/assets/app-icons/gl
 assert.equal(await(await iconResponse).text(),'CURRENT_ICON');assert.equal(iconNetwork,1);assert.ok(opened.includes('north-glass-icons-v2'));assert.ok(!opened.includes('north-glass-icons-v1'));
 
 // iOS home-screen navigation uses a percent-encoded Chinese pathname.
-for(const query of ['?open=latest','?north_update=1684','?reload=1','?northPreview=black-home']){
+for(const query of ['?open=latest','?north_update=1676','?reload=1','?northPreview=black-home']){
  const events={};let supplied,network=0,writes=0;
  const ctx=vm.createContext({self:{location:{origin:'https://phone.example'},addEventListener:(name,fn)=>events[name]=fn},caches:{open:async()=>({match:async()=>new Response('STALE_SHELL'),put:async()=>writes++})},fetch:async()=>{network++;return new Response(html+'\n<!-- fresh-shell -->');},URL,Request,Response,AbortController,setTimeout,clearTimeout});vm.runInContext(sw,ctx);
  events.fetch({request:{method:'GET',mode:'navigate',url:'https://phone.example/phone/'+encodeURIComponent('小手机.html')+query},respondWith:value=>supplied=value});
