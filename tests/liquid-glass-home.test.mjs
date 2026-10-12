@@ -48,7 +48,7 @@ test('v1722 offline date and cohabitation use the same glass except the backgrou
 
 test('v1724 spy phone lock pad and home use the same glass, with the default gradient drawn in when no wallpaper',()=>{
   assert.match(part,/\{root:'\.spy-desktop',body:'\.spy-home-scroll,\.spy-lock-scroll',hbody:'#spyHomePages',hosts:'\.spy-glass',spy:true\}/);
-  assert.match(part,/return v\|\|'lg:spy';/,'没换壁纸时用默认渐变');
+  assert.match(part,/if\(!wall\)return 'lg:spy';/,'没换壁纸时用默认渐变');
   assert.match(part,/function lgDefaultWall\(src\)/);assert.match(part,/'#a9c9ce'/);
   assert.match(part,/ox=g\.hscroll\?g\.x\+g\.sl-sl:g\.x/,'左右翻页的图标横向跟着走');
   assert.match(part,/\.spy-desktop \.lg-host\.lg-ready:before\{|\.spy-desktop \.lg-host\.lg-ready:before,/,'细环不再整块提亮');

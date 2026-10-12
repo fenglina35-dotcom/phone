@@ -102,7 +102,9 @@ for (const [kind,path] of [['web','commerce-ui.js'],['private','native/private-s
   }
   test(`${kind} shop transport failure is readable and does not retry transactions`,async()=>{
     let calls=0;const {context}=setup(async()=>{calls++;throw Error('Load failed');});
-    await assert.rejects(context.call('list',{}),/真人店铺.*连接/);assert.equal(calls,1);
+    /* v1726：只读的 list 网络失败自动再试一次；写操作（发布店铺、下单）绝不自动重发 */
+    await assert.rejects(context.call('list',{}),/真人店铺.*连接/);assert.equal(calls,2);
+    calls=0;await assert.rejects(context.call('save_shop',{p_expected:0,p_shop:{name:'测试'}},true),/真人店铺.*连接/);assert.equal(calls,1);
   });
   test(`${kind} non-JSON 522 response exposes service status`,async()=>{
     const {context}=setup(async()=>({ok:false,status:522,json:async()=>{throw SyntaxError('not JSON');}}));
