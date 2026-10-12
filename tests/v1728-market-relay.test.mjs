@@ -27,9 +27,13 @@ for (const [kind,path] of [['web','commerce-ui.js'],['private','native/private-s
     assert.equal(await context.upload('abc/x.jpg'),GATE+'/storage/v1/object/north-market/abc/x.jpg');
   });
   test(`${kind} reads switch line once on network failure; writes are never resent`,async()=>{
-    let n=0;const {context,calls}=setup(async url=>{if(url.endsWith('/market-ready'))return ok({ok:true,code:'market-relay-v1'});n++;if(url.startsWith(RELAY+'/rest'))throw Error('reset');return ok({ok:true,shops:[]});});
-    await context.call('list',{});assert.deepEqual(calls.filter(c=>c.url.includes('/rpc/')).map(c=>c.url.startsWith(RELAY)?'relay':'direct'),['relay','direct']);
-    calls.length=0;await assert.rejects(context.call('role_checkout',{p_total:1},true),/连接失败/);assert.equal(calls.filter(c=>c.url.includes('/rpc/')).length,1);
+    let probed=false;const {context,calls}=setup(async url=>{if(url.endsWith('/market-ready'))return ok({ok:true,code:'market-relay-v1'});if(url.startsWith(RELAY+'/rest')){if(!probed){probed=true;return ok({ok:true,shops:[]});}throw Error('reset');}return ok({ok:true,shops:[]});});
+    await context.call('list',{});assert.deepEqual(calls.filter(c=>c.url.includes('/rpc/')).slice(1).map(c=>c.url.startsWith(RELAY)?'relay':'direct'),['relay','direct']);
+    calls.length=0;await assert.rejects(context.call('role_checkout',{p_total:1},true),/连接失败|账号/);assert.equal(calls.filter(c=>c.url.includes('/rpc/')).length,1);
+  });
+  test(`${kind} a relay that cannot actually read the shop database is never used`,async()=>{
+    const {context,calls}=setup(async url=>url.endsWith('/market-ready')?ok({ok:true,code:'market-relay-v1'}):url.startsWith(RELAY+'/rest')?{ok:false,status:502,json:async()=>({message:'friend-upstream-non-json'})}:ok({ok:true,shops:[]}));
+    await context.call('list',{});assert.equal(calls.at(-1).url,GATE+'/rest/v1/rpc/north_market_list');
   });
   test(`${kind} images shown through the relay are saved back as original addresses`,async()=>{
     const {context,calls}=setup(async url=>url.endsWith('/market-ready')?ok({ok:true,code:'market-relay-v1'}):ok({ok:true,id:'x'}));

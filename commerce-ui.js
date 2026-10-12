@@ -155,7 +155,11 @@
   function northMarketRelayBase(){return typeof PF_RELAY_BASE!=='undefined'?PF_RELAY_BASE:'';}
   /* 中转服务还没部署店铺支持时（返回不了 market-relay-v1）继续直连，避免先上线网页、后部署中转的这段时间店铺反而打不开 */
   var northMarketRelayOk=null,northMarketRelayCheckedAt=0;
-  async function northMarketRelayReady(){var relay=northMarketRelayBase();if(!relay)return false;if(northMarketRelayOk===true||northMarketRelayOk===false&&Date.now()-northMarketRelayCheckedAt<600000)return northMarketRelayOk;try{var r=await fetchT(relay+'/market-ready',{method:'GET'},6000),j=await r.json();northMarketRelayOk=!!(r.ok&&j&&j.code==='market-relay-v1');}catch(_){northMarketRelayOk=false;}northMarketRelayCheckedAt=Date.now();return northMarketRelayOk;}
+  async function northMarketRelayReady(){var relay=northMarketRelayBase();if(!relay)return false;if(northMarketRelayOk===true||northMarketRelayOk===false&&Date.now()-northMarketRelayCheckedAt<600000)return northMarketRelayOk;try{var r=await fetchT(relay+'/market-ready',{method:'GET'},6000),j=await r.json();northMarketRelayOk=!!(r.ok&&j&&j.code==='market-relay-v1');
+      /* 光有 market-ready 不够：线上实测中转到店铺数据库那一段可能不通（friend-upstream-non-json）。
+         再用中转真读一次店铺目录（只读、公开），拿到正常 JSON 才切过去，否则继续直连。 */
+      if(northMarketRelayOk){var t=await fetchT(relay+'/rest/v1/rpc/north_market_list',{method:'POST',headers:pfHeaders(),body:JSON.stringify({p_query:'',p_limit:1})},8000),tj=null;try{tj=await t.json();}catch(_){tj=null;}northMarketRelayOk=!!(t.ok&&tj&&typeof tj==='object'&&!tj.message);}
+    }catch(_){northMarketRelayOk=false;}northMarketRelayCheckedAt=Date.now();return northMarketRelayOk;}
   async function northMarketBase(){try{if(typeof pfTransportRoute==='function'&&northMarketRelayBase()){var route=await pfTransportRoute(8000);if(route===northMarketRelayBase()&&!(await northMarketRelayReady()))return GATE_URL;return route;}}catch(_){}return GATE_URL;}
   function northMarketMapUrls(value,from,to){if(!from||!to||from===to)return value;if(typeof value==='string')return value.indexOf(from)===0?to+value.slice(from.length):value;if(Array.isArray(value))return value.map(function(v){return northMarketMapUrls(v,from,to);});if(value&&typeof value==='object'){var out={};Object.keys(value).forEach(function(k){out[k]=northMarketMapUrls(value[k],from,to);});return out;}return value;}
   function northMarketMediaUrl(url,base){var relay=northMarketRelayBase();return base&&relay&&base===relay&&northMarketRelayOk===true?northMarketMapUrls(url,GATE_URL+'/storage/v1/object/public/north-market/',relay+'/market-media/'):url;}

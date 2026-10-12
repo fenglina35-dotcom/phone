@@ -41,3 +41,9 @@ test('market upload forwards owner headers to the fixed bucket, image only, size
   assert.equal(calls.length,1);
 });
 test('market-ready answers without touching the database',async()=>{let calls=0;const h=createHandler(async()=>{calls++;});const r=await h(new Request(BASE+'/market-ready',{headers:{Origin:'null'}}));assert.equal(r.status,200);assert.equal((await r.json()).code,'market-relay-v1');assert.equal(calls,0);});
+test('non-JSON upstream answers carry status and a short sanitized snippet; empty answers become null',async()=>{
+  const h=createHandler(async()=>new Response('<html>error code: 1016 sb_publishable_ABCDEFGHIJKLMNOP</html>',{status:530,headers:{'Content-Type':'text/html'}}));
+  const r=await h(post('north_market_list',{}));assert.equal(r.status,502);const j=await r.json();
+  assert.equal(j.message,'friend-upstream-non-json');assert.equal(j.upstreamStatus,530);assert.match(j.upstreamSnippet,/1016/);assert.doesNotMatch(j.upstreamSnippet,/ABCDEFGHIJ/);
+  const e=createHandler(async()=>new Response(null,{status:204}));const r2=await e(post('phone_friend_mark_received',{}));assert.equal(r2.status,200);assert.equal(await r2.text(),'null');
+});

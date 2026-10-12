@@ -41,7 +41,12 @@ async function friendRpcRelay(request, url, headers, fetchUpstream, timeoutMs) {
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),Math.max(timeoutMs,35000));
   try{const response=await fetchUpstream('https://lkhlyfpssmrjkkzhuzag.supabase.co/rest/v1/rpc/'+fn,{method:'POST',headers:{'Content-Type':'application/json',apikey,Authorization:authorization},body,signal:controller.signal,redirect:'manual'});
     if(response.status>=300&&response.status<400)return reply(502,{message:'friend-upstream-redirect-rejected'});
-    const data=await response.text();try{JSON.parse(data);}catch(_){return reply(502,{message:'friend-upstream-non-json'});}
+    const data=await response.text();
+    /* 没有返回值的接口：原样当作 null，不算错误 */
+    if(!data.trim())return new Response('null',{status:response.status===204?200:response.status,headers});
+    /* 2026-10-12：线上实测 north_market_list 收到 friend-upstream-non-json，但看不到原因。
+       现在附带上游状态码、类型和开头 160 个字（去掉看起来像密钥的长串），方便判断是 Supabase 报错页、限流还是网络拦截。 */
+    try{JSON.parse(data);}catch(_){return reply(502,{message:'friend-upstream-non-json',upstreamStatus:response.status,upstreamType:String(response.headers.get('Content-Type')||'').slice(0,80),upstreamSnippet:data.slice(0,160).replace(/(?:sb_[a-z]+_|eyJ)[A-Za-z0-9_.-]{8,}/g,'[key]').replace(/[A-Za-z0-9_-]{40,}/g,'[long]')});}
     return new Response(data,{status:response.status,headers});
   }catch(_){return reply(502,{message:controller.signal.aborted?'friend-upstream-timeout':'friend-upstream-unreachable'});}finally{clearTimeout(timer);}
 }
