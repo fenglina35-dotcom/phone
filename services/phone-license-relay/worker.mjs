@@ -20,22 +20,59 @@ const FRIEND_RPC = new Set(['phone_friend_search','phone_friend_sync','phone_fri
   'phone_friend_create_group','phone_friend_group_invite','phone_friend_group_accept_invite',
   'phone_friend_group_disband','phone_friend_group_leave','phone_friend_group_remove_member',
   'phone_friend_delete_friend']);
+// 2026-10-12 真人店铺（north_market_*）同一个原数据库，固定白名单：只有小手机客户端实际调用的接口，
+// 不含管理员加款、触发器、内部函数。鉴权、店主校验、余额校验全部仍由原数据库函数自己做。
+const MARKET_RPC = new Set(['list','shop','shop_mine','shop_deleted_list','shop_create','shop_delete','shop_restore','shop_reward',
+  'save_shop','mine','orders','order','order_create','order_status','quote','wallet','coupons','coupon_buy','coupon_boost',
+  'reviews','review_save','review_inbox','reply','reply_read','split_get','split_create','split_pay','split_cancel',
+  'business','business_notices','notifications','role_catalog','role_checkout','transfer','stock_change','pin','couple','claim',
+  'runner_status','runner_start','runner_claim','runner_reward'].map(n=>'north_market_'+n));
 async function friendRpcRelay(request, url, headers, fetchUpstream, timeoutMs) {
   const fn=url.pathname.slice('/rest/v1/rpc/'.length),reply=(status,body)=>new Response(JSON.stringify(body),{status,headers});
-  if(!FRIEND_RPC.has(fn))return reply(404,{message:'friend-rpc-not-allowed'});
+  const market=MARKET_RPC.has(fn);
+  if(!FRIEND_RPC.has(fn)&&!market)return reply(404,{message:'friend-rpc-not-allowed'});
   if(url.search)return reply(400,{message:'query-not-accepted'});
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{...headers,'Access-Control-Allow-Methods':'POST, OPTIONS','Access-Control-Allow-Headers':'content-type, apikey, authorization'}});
   if(request.method!=='POST')return reply(405,{message:'method-not-allowed'});
   if(!/^application\/json(?:;|$)/i.test(request.headers.get('Content-Type')||''))return reply(415,{message:'json-required'});
   const apikey=cleanText(request.headers.get('apikey'),2048),authorization=cleanText(request.headers.get('Authorization'),4096);
   if(!apikey||!/^Bearer [A-Za-z0-9_.-]+$/.test(authorization))return reply(401,{message:'friend-auth-required'});
-  let body;try{body=await boundedBody(request,262144);if(body===null)return reply(413,{message:'body-too-large'});const data=JSON.parse(body);if(!data||typeof data!=='object'||Array.isArray(data))return reply(400,{message:'invalid-json'});}catch(_){return reply(400,{message:'invalid-json'});}
+  let body;try{body=await boundedBody(request,market?1048576:262144);if(body===null)return reply(413,{message:'body-too-large'});const data=JSON.parse(body);if(!data||typeof data!=='object'||Array.isArray(data))return reply(400,{message:'invalid-json'});}catch(_){return reply(400,{message:'invalid-json'});}
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),Math.max(timeoutMs,35000));
   try{const response=await fetchUpstream('https://lkhlyfpssmrjkkzhuzag.supabase.co/rest/v1/rpc/'+fn,{method:'POST',headers:{'Content-Type':'application/json',apikey,Authorization:authorization},body,signal:controller.signal,redirect:'manual'});
     if(response.status>=300&&response.status<400)return reply(502,{message:'friend-upstream-redirect-rejected'});
     const data=await response.text();try{JSON.parse(data);}catch(_){return reply(502,{message:'friend-upstream-non-json'});}
     return new Response(data,{status:response.status,headers});
   }catch(_){return reply(502,{message:controller.signal.aborted?'friend-upstream-timeout':'friend-upstream-unreachable'});}finally{clearTimeout(timer);}
+}
+// 真人店铺图片：只读公开桶 north-market 的 GET，和固定路径的上传（≤1MiB、仅图片、原样转发店主凭证）。
+const MARKET_STORAGE = 'https://lkhlyfpssmrjkkzhuzag.supabase.co/storage/v1/object/';
+const MARKET_PATH = /^[A-Za-z0-9_-]{1,80}(?:\/[A-Za-z0-9_-]{1,80}){0,4}\.(?:jpg|jpeg|png|webp|gif)$/i;
+async function marketMediaRelay(request,url,headers,fetchUpstream,timeoutMs){
+  const reply=(status,body)=>new Response(JSON.stringify(body),{status,headers});
+  const upload=url.pathname.startsWith('/market-upload/'),path=decodeURIComponent(url.pathname.slice(upload?'/market-upload/'.length:'/market-media/'.length));
+  if(!MARKET_PATH.test(path)||path.includes('..'))return reply(404,{ok:false,code:'media-path-not-allowed'});
+  if(url.search)return reply(400,{ok:false,code:'query-not-accepted'});
+  if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{...headers,'Access-Control-Allow-Methods':upload?'POST, OPTIONS':'GET, OPTIONS','Access-Control-Allow-Headers':'content-type, apikey, authorization, x-north-phone, x-north-secret'}});
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),Math.max(timeoutMs,30000));
+  try{
+    if(!upload){
+      if(request.method!=='GET'&&request.method!=='HEAD')return reply(405,{ok:false,code:'method-not-allowed'});
+      const r=await fetchUpstream(MARKET_STORAGE+'public/north-market/'+path,{method:request.method,signal:controller.signal,redirect:'manual'});
+      if(r.status>=300&&r.status<400)return reply(502,{ok:false,code:'media-upstream-redirect-rejected'});
+      const type=r.headers.get('Content-Type')||'';if(r.ok&&!/^image\//i.test(type))return reply(502,{ok:false,code:'media-not-image'});
+      return new Response(r.body,{status:r.status,headers:{'Content-Type':r.ok?type:'application/json; charset=utf-8','Cache-Control':r.ok?'public, max-age=604800, immutable':'no-store','X-Content-Type-Options':'nosniff','Access-Control-Allow-Origin':'*'}});
+    }
+    if(request.method!=='POST')return reply(405,{ok:false,code:'method-not-allowed'});
+    const type=request.headers.get('Content-Type')||'';if(!/^image\/(?:jpeg|png|webp|gif)$/i.test(type))return reply(415,{ok:false,code:'image-required'});
+    const apikey=cleanText(request.headers.get('apikey'),2048),authorization=cleanText(request.headers.get('Authorization'),4096),phone=cleanText(request.headers.get('x-north-phone'),200),secret=cleanText(request.headers.get('x-north-secret'),512);
+    if(!apikey||!/^Bearer [A-Za-z0-9_.-]+$/.test(authorization)||!phone||!secret)return reply(401,{ok:false,code:'upload-auth-required'});
+    if(Number(request.headers.get('Content-Length'))>1048576)return reply(413,{ok:false,code:'body-too-large'});
+    const buf=await request.arrayBuffer();if(buf.byteLength>1048576)return reply(413,{ok:false,code:'body-too-large'});
+    const r=await fetchUpstream(MARKET_STORAGE+'north-market/'+path,{method:'POST',headers:{'Content-Type':type,apikey,Authorization:authorization,'x-north-phone':phone,'x-north-secret':secret},body:buf,signal:controller.signal,redirect:'manual'});
+    if(r.status>=300&&r.status<400)return reply(502,{ok:false,code:'upload-upstream-redirect-rejected'});
+    return new Response(await r.text(),{status:r.status,headers});
+  }catch(_){return reply(502,{ok:false,code:controller.signal.aborted?'media-upstream-timeout':'media-upstream-unreachable'});}finally{clearTimeout(timer);}
 }
 // Private role sync uses its original independent database. No general companion proxy.
 // Narrow candidate inbox failover. The retired /companion/ relay remains disabled.
@@ -185,6 +222,8 @@ export function createHandler(fetchUpstream = (input, init) => fetch(input, init
     if(url.pathname.startsWith('/companion/'))return reply(410,{ok:false,code:'role-sync-relay-retired'});
     if(url.pathname.startsWith('/role-inbox/v1/'))return roleInboxRelay(request,url,headers,fetchUpstream,timeoutMs);
     if(url.pathname.startsWith('/rest/v1/rpc/'))return friendRpcRelay(request,url,headers,fetchUpstream,timeoutMs);
+    if(url.pathname.startsWith('/market-media/')||url.pathname.startsWith('/market-upload/'))return marketMediaRelay(request,url,headers,fetchUpstream,timeoutMs);
+    if(url.pathname==='/market-ready'){if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{...headers,'Access-Control-Allow-Methods':'GET, OPTIONS'}});if(request.method!=='GET')return reply(405,{ok:false,code:'method-not-allowed'});return reply(200,{ok:true,code:'market-relay-v1'});}
     const health = url.pathname === '/health';
     const externalTts = url.pathname === EXTERNAL_TTS_PATH;
     if (externalTts) {

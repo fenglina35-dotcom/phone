@@ -37,6 +37,8 @@ const PERMANENT_FIXES = [
   {release:"本地收藏候选",scope:"both",least:1,name:"收藏转发保留原作者与历史时间",marker:"if(m&&m._favorite&&typeof wxFavoriteForwardText"},
   {release:"本地收藏候选",scope:"both",least:1,name:"完整备份包含收藏及转发卡片的原声音频",marker:"path.some(p=>p==='favorites'||p==='_favorite')"},
   {release:"本地候选",scope:"both",least:1,name:"已有好友刷新补齐消息且保留历史并去重",marker:"if(n>(counts.get(k)||0)){existing.push(m);ch=true;}"},
+  {release:"v1728",scope:"both",least:1,name:"真人店铺、店铺图片与上传走中转/直连自动选线，中转未部署时保持直连",marker:"async function northMarketRelayReady()",file:"commerce-ui.js"},
+  {release:"v1726",scope:"both",least:1,name:"角色点外卖选商品失败时按真实菜单兜底",marker:"function northRoleFallbackPick(found,plan)",file:"commerce-ui.js"},
   {release:"v1726",scope:"web",least:1,name:"液态玻璃贴图被挤掉后重新读图，不再定格",marker:"if(!_lg.texs.has(wall)){if(!_lgSwipeReload)"},
   {release:"v1726",scope:"both",least:1,name:"表情包删除不跳顶、多选批量删除、链接表情存本机",marker:"async function stkSelDelete()"},
   {release:"v1726",scope:"both",least:1,name:"新版机票/火车票出行当天聊天提醒",marker:"function tvV2DayNotice(tr)"},

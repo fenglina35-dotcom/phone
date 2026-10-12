@@ -5,7 +5,7 @@ const app = fs.readFileSync(new URL("../app.js", import.meta.url), "utf8");
 const html = fs.readFileSync(new URL("../小手机.html", import.meta.url), "utf8");
 const sw = fs.readFileSync(new URL("../sw.js", import.meta.url), "utf8");
 
-assert.match(app, /APP_VER='v1726 · 外卖表情包放映室等七项修复'/);
+assert.match(app, /APP_VER='v1728 · 真人店铺走中转线路'/);
 assert.match(app, /function northUpdateAvailable\(build\)/);
 assert.match(app, /发现新版本 v\$\{esc\(build\)\}/);
 assert.match(app, /不需要退出或划掉小手机/);
@@ -14,9 +14,9 @@ assert.match(app, /setInterval\(\(\)=>reg\.update\(\)\.catch\(\(\)=>\{\}\),15\*6
 assert.match(app, /postMessage\(\{type:'north-version-query'\}\)/);
 assert.match(sw, /client\.postMessage\(\{type:'north-update-ready',build:BUILD\}\)/);
 assert.match(sw, /event\.data\.type!==['"]north-version-query['"]/);
-assert.match(html, /window\.__NORTH_SHELL_BUILD__='1726'/);
-assert.match(html, /sw\.js\?v=1726&r=v1726-couple-unbind-reopen-1/);
-assert.match(html, /web-hotfix\.js\?v=1726&r=v1726-couple-unbind-reopen-1/);
+assert.match(html, /window\.__NORTH_SHELL_BUILD__='1728'/);
+assert.match(html, /sw\.js\?v=1728&r=v1728-couple-unbind-reopen-1/);
+assert.match(html, /web-hotfix\.js\?v=1728&r=v1728-couple-unbind-reopen-1/);
 
 console.log("update prompt tests passed");
 
