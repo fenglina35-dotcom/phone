@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1722'){
+if(window.__NORTH_SHELL_BUILD__!=='1724'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -606,7 +606,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1722 · 线下约会共同生活液态玻璃';
+const APP_VER='v1724 · 查他手机液态玻璃';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2036,7 +2036,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1722&r=v1722-couple-unbind-reopen-1';
+  const url='sw.js?v=1724&r=v1724-couple-unbind-reopen-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -19142,7 +19142,7 @@ function lgCfg(){S.me=S.me||{};const raw=S.me.liquidGlass&&typeof S.me.liquidGla
 function lgWallSrc(){const src=storedImageDisplaySource(S.me&&S.me.homeBg);return isImg(src)?src:'';}
 function lgActive(){return glassThemeOn()&&lgCfg().on&&!!lgWallSrc();}
 const _lg={gl:null,canvas:null,prog:null,buf:null,tex:null,texSrc:'',texInfo:null,texs:new Map(),loading:null,cache:new Map(),failed:false,timer:0,pending:false};
-function lgStyle(){if(document.getElementById('lgStyle'))return;const st=document.createElement('style');st.id='lgStyle';st.textContent='.lg-host.lg-ready{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:transparent!important;background-image:none!important;isolation:isolate}.lg-canvas{position:absolute;left:0;top:0;width:100%;height:100%;border-radius:inherit;z-index:-1;pointer-events:none;display:block}.imsg .lg-host.lg-ready:before,.offstage .lg-host.lg-ready:before{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;opacity:.62}';document.head.appendChild(st);}
+function lgStyle(){if(document.getElementById('lgStyle'))return;const st=document.createElement('style');st.id='lgStyle';st.textContent='.lg-host.lg-ready{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:transparent!important;background-image:none!important;isolation:isolate}.lg-canvas{position:absolute;left:0;top:0;width:100%;height:100%;border-radius:inherit;z-index:-1;pointer-events:none;display:block}.imsg .lg-host.lg-ready:before,.offstage .lg-host.lg-ready:before,.spy-desktop .lg-host.lg-ready:before{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;opacity:.62}';document.head.appendChild(st);}
 const LG_VS='attribute vec2 a;varying vec2 v;void main(){v=a*0.5+0.5;gl_Position=vec4(a,0.0,1.0);}';
 const LG_FS=`precision highp float;
 uniform sampler2D uTex;uniform vec2 uSize;uniform vec2 uOrigin;uniform vec4 uMap;uniform vec4 uBox;uniform vec4 uRad;uniform vec2 uTail;uniform vec4 uShade;uniform float uDeskH;
@@ -19175,9 +19175,18 @@ function lgGL(){if(_lg.gl&&!_lg.gl.isContextLost())return _lg.gl;if(_lg.failed)r
   /* 上下文丢了只影响「以后重烤」，已经烤好放进组件的画布不受影响，所以不会掉材质 */
   cv.addEventListener('webglcontextlost',e=>{e.preventDefault();_lg.gl=null;_lg.tex=null;_lg.texSrc='';_lg.texs.clear();},false);
   Object.assign(_lg,{gl,canvas:cv,prog,buf,tex:null,texSrc:''});return gl;}catch(e){console.warn('液态玻璃不可用',e);_lg.failed=true;return null;}}
+/* 没有图片的默认背景（目前只有查他手机那张渐变）：照着 CSS 画一张，当壁纸用 */
+function lgDefaultWall(src){const cv=document.createElement('canvas');cv.width=1024;cv.height=2048;const x=cv.getContext('2d'),W=1024,H=2048;
+  if(src==='lg:spy'){const a=160*Math.PI/180,L=Math.abs(W*Math.sin(a))+Math.abs(H*Math.cos(a)),dx=Math.sin(a)*L/2,dy=-Math.cos(a)*L/2,lin=x.createLinearGradient(W/2-dx,H/2-dy,W/2+dx,H/2+dy);lin.addColorStop(0,'#6b8b98');lin.addColorStop(.7,'#253e4b');lin.addColorStop(1,'#111e29');x.fillStyle=lin;x.fillRect(0,0,W,H);
+    const blob=(cx,cy,rx,ry,col,stop)=>{x.save();x.translate(cx,cy);x.scale(1,ry/rx);const g=x.createRadialGradient(0,0,0,0,0,rx);g.addColorStop(0,col);g.addColorStop(stop,col+'00');g.addColorStop(1,col+'00');x.fillStyle=g;x.fillRect(-rx,-rx*rx/ry,rx*2,rx*rx/ry*2);x.restore();};
+    blob(W*.12,H*.05,W*.88*1.414,H*.95*1.414,'#a9c9ce',.53);blob(W*.94,H*.57,W*.94*1.414,H*.57*1.414,'#486978',.64);}
+  return cv;}
+function lgTextureFrom(src,cv){const g=lgGL();if(!g)return false;const tex=g.createTexture();g.bindTexture(g.TEXTURE_2D,tex);g.pixelStorei(g.UNPACK_FLIP_Y_WEBGL,false);g.texImage2D(g.TEXTURE_2D,0,g.RGBA,g.RGBA,g.UNSIGNED_BYTE,cv);g.generateMipmap(g.TEXTURE_2D);
+  g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MIN_FILTER,g.LINEAR_MIPMAP_LINEAR);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MAG_FILTER,g.LINEAR);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_S,g.CLAMP_TO_EDGE);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_T,g.CLAMP_TO_EDGE);
+  const w=cv.width,h=cv.height;_lg.texs.set(src,{tex,w,h});while(_lg.texs.size>2){const k=_lg.texs.keys().next().value;g.deleteTexture(_lg.texs.get(k).tex);_lg.texs.delete(k);}_lg.tex=tex;_lg.texSrc=src;_lg.texInfo={w,h};cv.width=cv.height=1;return true;}
 function lgPot(n){let p=256;while(p<n&&p<2048)p*=2;return p;}
 function lgTexture(src){const gl=lgGL();if(!gl)return Promise.resolve(false);if(_lg.texs.has(src))return Promise.resolve(true);if(_lg.loading&&_lg.loading.src===src)return _lg.loading.p;
-  const p=new Promise(resolve=>{const img=new Image();img.decoding='async';img.onload=()=>{try{const w=img.naturalWidth,h=img.naturalHeight;if(!w||!h)return resolve(false);const tw=1024,th=lgPot(Math.round(1024*h/w)),cv=document.createElement('canvas');cv.width=tw;cv.height=th;cv.getContext('2d').drawImage(img,0,0,tw,th);
+  const p=src.indexOf('lg:')===0?Promise.resolve(lgTextureFrom(src,lgDefaultWall(src))):new Promise(resolve=>{const img=new Image();img.decoding='async';img.onload=()=>{try{const w=img.naturalWidth,h=img.naturalHeight;if(!w||!h)return resolve(false);const tw=1024,th=lgPot(Math.round(1024*h/w)),cv=document.createElement('canvas');cv.width=tw;cv.height=th;cv.getContext('2d').drawImage(img,0,0,tw,th);
       const g=lgGL();if(!g)return resolve(false);const tex=g.createTexture();g.bindTexture(g.TEXTURE_2D,tex);g.pixelStorei(g.UNPACK_FLIP_Y_WEBGL,false);g.texImage2D(g.TEXTURE_2D,0,g.RGBA,g.RGBA,g.UNSIGNED_BYTE,cv);g.generateMipmap(g.TEXTURE_2D);
       g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MIN_FILTER,g.LINEAR_MIPMAP_LINEAR);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MAG_FILTER,g.LINEAR);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_S,g.CLAMP_TO_EDGE);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_T,g.CLAMP_TO_EDGE);
       /* v1720：主屏壁纸和信息页聊天背景各留一张，来回切换不用重新读图 */
@@ -19230,35 +19239,40 @@ const LG_OFF_HOSTS='.offmsg .offbubble,.offnav,.offmeta,.cohab-meta,.cohab-setti
 /* shade：页面根上那层 :before 上下压暗（上面多暗、到哪儿为止、下面从哪儿开始、多暗），玻璃里也照样压，里外对得上 */
 const LG_SCENES=[
   {root:'.imsg.hasbg',body:'.imsg-body',hosts:LG_IMSG_HOSTS,bubble:'imsg-b',me:'.imsg-row.me',shade:[.34,.24,.76,.52]},
-  {root:'.offstage.hasbg:not(.off-classic)',body:'.offscroll',hosts:LG_OFF_HOSTS,bubble:'offbubble',me:'.offmsg.me',shade:[.44,.22,.72,.58],off:true}];
+  {root:'.offstage.hasbg:not(.off-classic)',body:'.offscroll',hosts:LG_OFF_HOSTS,bubble:'offbubble',me:'.offmsg.me',shade:[.44,.22,.72,.58],off:true},
+  /* v1724：查他手机（密码盘、主屏）。他的手机没换壁纸时用默认渐变，渐变也画进玻璃里；
+     主屏图标在左右翻页的 #spyHomePages 里，横向也跟着滚动距离推算 */
+  {root:'.spy-desktop',body:'.spy-home-scroll,.spy-lock-scroll',hbody:'#spyHomePages',hosts:'.spy-glass',spy:true}];
 let _lgImRaf=0,_lgImSettle=0;
 function lgScene(){for(const sc of LG_SCENES){const root=document.querySelector(sc.root);if(root)return {sc,root};}return null;}
-function lgImsgSrc(root){const m=/url\((['"]?)(.*?)\1\)/.exec(root&&root.style.backgroundImage||'');return m&&m[2]?m[2]:'';}
+function lgImsgSrc(root,sc){if(sc&&sc.spy){const img=root.querySelector(':scope>.spy-wallpaper img');const v=img&&(img.currentSrc||img.getAttribute('src'))||'';return v||'lg:spy';}const m=/url\((['"]?)(.*?)\1\)/.exec(root&&root.style.backgroundImage||'');return m&&m[2]?m[2]:'';}
 /* 线下气泡的颜色是她在「外观」里自己挑的，玻璃就染成那个颜色 */
 const _lgRgb=new Map();
 function lgRgb(str){str=String(str||'').trim();if(!str)return null;if(_lgRgb.has(str))return _lgRgb.get(str);let out=null;try{const x=document.createElement('canvas').getContext('2d');x.fillStyle='#000';x.fillStyle=str;const v=String(x.fillStyle);let m=/^#([0-9a-f]{6})$/i.exec(v);if(m){const n=parseInt(m[1],16);out=[(n>>16)/255,(n>>8&255)/255,(n&255)/255];}else if((m=/rgba?\(([^)]+)\)/.exec(v))){const p=m[1].split(',').map(Number);out=[p[0]/255,p[1]/255,p[2]/255];}}catch(e){}_lgRgb.set(str,out);return out;}
-function lgImsgGeo(host,root,body,src,cfg,sc){const r=host.getBoundingClientRect(),d=root.getBoundingClientRect();if(r.width<8||r.height<8)return null;
-  const w=Math.round(r.width),h=Math.round(r.height),scroll=!!(body&&body.contains(host)),bubble=host.classList.contains(sc.bubble),me=!!host.closest(sc.me),blue=!sc.off&&(bubble&&me||host.classList.contains('imsg-send'));
+function lgImsgGeo(host,root,body,src,cfg,sc,hbody){const r=host.getBoundingClientRect(),d=root.getBoundingClientRect();if(r.width<8||r.height<8)return null;
+  const w=Math.round(r.width),h=Math.round(r.height),scroll=!!(body&&body.contains(host)),hscroll=!!(hbody&&hbody.contains(host)),bubble=!!(sc.bubble&&host.classList.contains(sc.bubble)),me=!!(sc.me&&host.closest(sc.me)),blue=!sc.off&&(bubble&&me||host.classList.contains('imsg-send'));
   const radius=parseFloat(getComputedStyle(host).borderTopLeftRadius)||0,opt={shade:sc.shade,thick:Math.max(4,Math.min(cfg.thick,Math.min(w,h)*0.3)),tintAmt:Math.max(cfg.tint,bubble?0.42:0.3)};
   if(bubble){opt.box=me?[0,0,w-7,h]:[7,0,w-7,h];opt.rad=me?[18,18,0,18]:[18,18,18,0];opt.tail=[me?1:-1,10];}
-  /* 通栏的顶栏/输入栏左右贴着屏幕边，那两条边不弯，否则角上会折出两个三角 */
-  else if(w>=d.width-4)opt.box=[-60,0,w+120,h];
+  else{const cs=getComputedStyle(host),rr=k=>{const v=cs[k]||'',n=parseFloat(v)||0;return /%$/.test(v)?n/100*Math.min(w,h)*2:n;};opt.rad=[rr('borderTopLeftRadius'),rr('borderTopRightRadius'),rr('borderBottomRightRadius'),rr('borderBottomLeftRadius')];
+    /* 通栏的顶栏/输入栏左右贴着屏幕边，那两条边不弯，否则角上会折出两个三角 */
+    if(w>=d.width-4)opt.box=[-60,0,w+120,h];}
   /* 字是白的，白玻璃会看不清，所以身子固定偏深；信息页自己的气泡和发送键是 iMessage 蓝 */
   opt.tint=blue?[0.04,0.52,1.0]:[0.1,0.1,0.12];if(blue)opt.tintAmt=Math.max(cfg.tint,0.7);
+  if(sc.spy){opt.tint=[0.23,0.3,0.34];opt.tintAmt=Math.max(cfg.tint,0.28);}
   if(sc.off&&bubble){const col=lgRgb(getComputedStyle(root).getPropertyValue(me?'--offc-me':'--offc-them'));if(col){opt.tint=col;opt.tintAmt=Math.max(cfg.tint,me?0.62:0.52);}}
-  return {src,x:Math.round(r.left-d.left),y:Math.round(r.top-d.top),w,h,radius,dw:d.width,dh:d.height,scroll,st:scroll?body.scrollTop:0,opt};}
-function lgImsgFrame(final){_lgImRaf=0;const hit=lgScene(),cfg=lgCfg();if(!hit||!cfg.on)return;const {sc,root}=hit,src=lgImsgSrc(root);if(!src||!isImg(src))return;
+  return {src,x:Math.round(r.left-d.left),y:Math.round(r.top-d.top),w,h,radius,dw:d.width,dh:d.height,scroll,st:scroll?body.scrollTop:0,hscroll,sl:hscroll?hbody.scrollLeft:0,opt};}
+function lgImsgFrame(final){_lgImRaf=0;const hit=lgScene(),cfg=lgCfg();if(!hit||!cfg.on)return;const {sc,root}=hit,src=lgImsgSrc(root,sc);if(!src||!(isImg(src)||src.indexOf('lg:')===0))return;
   if(!_lg.texs.has(src)){lgTexture(src).then(ok=>{if(ok)lgImsgFrame(true);});return;}lgStyle();
-  const body=root.querySelector(sc.body);if(body&&!body._lgBound){body._lgBound=true;body.addEventListener('scroll',lgImsgScroll,{passive:true});}
+  const body=root.querySelector(sc.body),hbody=sc.hbody?root.querySelector(sc.hbody):null;[body,hbody].forEach(el=>{if(el&&!el._lgBound){el._lgBound=true;el.addEventListener('scroll',lgImsgScroll,{passive:true});}});
   /* 输入框打字变高时，停下来再按新大小画一遍 */
   if(!root._lgBound){root._lgBound=true;root.addEventListener('input',lgImsgSettle,{passive:true});}
-  const st=body?body.scrollTop:0,top=body?body.offsetTop:0,bottom=top+(body?body.clientHeight:0),dpr=Math.min(2,window.devicePixelRatio||1),scale=final?1:0.6;
-  root.querySelectorAll(sc.hosts).forEach(host=>{let g=host._lgGeo;if(final||!g||g.src!==src)g=host._lgGeo=lgImsgGeo(host,root,body,src,cfg,sc);if(!g)return;
-    const oy=g.scroll?g.y+g.st-st:g.y;if(g.scroll&&(oy+g.h<top-40||oy>bottom+40))return;
-    let cv=host.querySelector(':scope>canvas.lg-canvas');const W=Math.max(1,Math.round(g.w*dpr)),H=Math.max(1,Math.round(g.h*dpr)),key=[g.x,oy,W,H,scale,g.opt.tint.join(),g.opt.tintAmt].join('|');
+  const st=body?body.scrollTop:0,sl=hbody?hbody.scrollLeft:0,top=body?body.offsetTop:0,bottom=top+(body?body.clientHeight:0),dpr=Math.min(2,window.devicePixelRatio||1),scale=final?1:0.6;
+  root.querySelectorAll(sc.hosts).forEach(host=>{let g=host._lgGeo;if(final||!g||g.src!==src)g=host._lgGeo=lgImsgGeo(host,root,body,src,cfg,sc,hbody);if(!g)return;
+    const oy=g.scroll?g.y+g.st-st:g.y,ox=g.hscroll?g.x+g.sl-sl:g.x;if(g.scroll&&(oy+g.h<top-40||oy>bottom+40))return;if(g.hscroll&&(ox+g.w<-40||ox>g.dw+40))return;
+    let cv=host.querySelector(':scope>canvas.lg-canvas');const W=Math.max(1,Math.round(g.w*dpr)),H=Math.max(1,Math.round(g.h*dpr)),key=[ox,oy,W,H,scale,g.opt.tint.join(),g.opt.tintAmt].join('|');
     if(cv&&cv._lgKey===key)return;
     if(!cv){cv=document.createElement('canvas');cv.className='lg-canvas';cv.setAttribute('aria-hidden','true');}
-    if(cv.width!==W)cv.width=W;if(cv.height!==H)cv.height=H;if(!lgDraw(g,cfg,g.x,oy,cv,scale))return;cv._lgKey=key;
+    if(cv.width!==W)cv.width=W;if(cv.height!==H)cv.height=H;if(!lgDraw(g,cfg,ox,oy,cv,scale))return;cv._lgKey=key;
     if(cv.parentNode!==host)lgAttachTo(host,cv,sc.bubble);});}
 function lgImsgScroll(){if(!_lgImRaf)_lgImRaf=requestAnimationFrame(()=>lgImsgFrame(false));lgImsgSettle();}
 function lgImsgSettle(){clearTimeout(_lgImSettle);_lgImSettle=setTimeout(()=>lgImsgFrame(true),140);}
@@ -19274,7 +19288,7 @@ function lgPreset(name){const cfg=Object.assign({},LG_DEFAULTS,name==='white'?{t
 let _lgPreviewTimer=0;function lgPreviewSoon(){if(_lgPreviewTimer)return;_lgPreviewTimer=requestAnimationFrame(()=>{_lgPreviewTimer=0;lgPreviewDraw();});}
 function lgPreviewDraw(){const box=document.getElementById('lgPreview');if(!box)return;const src=lgWallSrc(),cfg=lgCfg();if(!src||!cfg.on){lgClear(box);return;}lgApply(box,Array.from(box.querySelectorAll('[data-lg-preview]')),src,cfg).then(ok=>{const n=document.getElementById('lgNote');if(n&&!ok)n.textContent=_lg.failed?'这台设备的浏览器不支持 WebGL，主屏组件保持原来的玻璃样子。':'壁纸图片读取失败（可能是外链图片），主屏组件保持原来的玻璃样子。';});}
 function lgOpen(){const cfg=lgCfg(),src=lgWallSrc();
-  openModal(`<h3>液态玻璃 · 主屏组件</h3><div class="hint">背后的壁纸在组件边上被推弯。电话 → 信息页、线下单次约会和共同生活换了背景后，气泡和按钮也用这一套。每个组件只在壁纸、参数或位置变化时算一次，滑动翻页时不会重算，所以不卡、不闪。</div>
+  openModal(`<h3>液态玻璃 · 主屏组件</h3><div class="hint">背后的壁纸在组件边上被推弯。电话 → 信息页、线下单次约会和共同生活换了背景后，查他手机的密码盘和主屏，气泡和按钮也用这一套。每个组件只在壁纸、参数或位置变化时算一次，滑动翻页时不会重算，所以不卡、不闪。</div>
   <div id="lgPreview" style="position:relative;height:200px;border-radius:18px;overflow:hidden;margin:10px 0;background:${src?'url('+src+') center/cover':'#222'}">
     <div data-lg-preview style="position:absolute;left:16px;right:16px;top:18px;height:84px;border-radius:24px;display:flex;align-items:center;padding:0 18px;color:#fff;font-weight:700;font-size:20px;text-shadow:0 1px 3px rgba(0,0,0,.35)">背后被推弯</div>
     <div data-lg-preview style="position:absolute;left:16px;bottom:22px;width:150px;height:46px;border-radius:23px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600">胶囊 · 玻璃</div>

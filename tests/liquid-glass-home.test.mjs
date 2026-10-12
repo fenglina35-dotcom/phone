@@ -28,12 +28,12 @@ test('v1716 settings values are clamped, zero is kept, and the private bundle is
 
 test('v1720 iMessage bubbles and buttons use the same glass, redraw only on scroll, keep the ring recipe',()=>{
   assert.match(part,/const LG_IMSG_HOSTS='\.imsg-b:not\(\.pic\):not\(\.iminv\)/,'发出去的图片和隐形墨水不套');
-  assert.match(part,/body\.addEventListener\('scroll',lgImsgScroll,\{passive:true\}\)/,'聊天上下滚时玻璃里的背景跟着变');
+  assert.match(part,/\[body,hbody\]\.forEach\(el=>\{if\(el&&!el\._lgBound\)\{el\._lgBound=true;el\.addEventListener\('scroll',lgImsgScroll,\{passive:true\}\);/,'聊天上下滚时玻璃里的背景跟着变');
   assert.match(part,/root:'\.imsg\.hasbg'/,'没换聊天背景时保持原样');
-  assert.match(part,/const oy=g\.scroll\?g\.y\+g\.st-st:g\.y;/,'滚动中位置用滚动距离推算，不读布局');
+  assert.match(part,/const oy=g\.scroll\?g\.y\+g\.st-st:g\.y,/,'滚动中位置用滚动距离推算，不读布局');
   assert.match(part,/if\(g\.scroll&&\(oy\+g\.h<top-40\|\|oy>bottom\+40\)\)return;/,'只画露在屏幕上的');
   assert.match(part,/uniform vec2 uTail;/);assert.match(part,/float a=max\(clamp\(inside\+0\.5,0\.0,1\.0\),tz\);/,'尾巴那一截也铺玻璃');
-  assert.match(part,/\.imsg \.lg-host\.lg-ready:before,\.offstage \.lg-host\.lg-ready:before\{backdrop-filter:none!important/,'细环不再整块提亮');
+  assert.match(part,/\.imsg \.lg-host\.lg-ready:before,\.offstage \.lg-host\.lg-ready:before,[^{]*\{backdrop-filter:none!important/,'细环不再整块提亮');
   assert.match(part,/_lg\.texs\.get\(g\.src\)/,'主屏和信息页各用自己的背景贴图');
 });
 
@@ -42,6 +42,14 @@ test('v1722 offline date and cohabitation use the same glass except the backgrou
   for(const sel of ['.offmsg .offbubble','.offnav','.offmeta','.cohab-meta','.cohab-settings label','.cohab-memory-open','.off-reply-top','.offinput .send','.off-field','.cohab-status-chip'])assert.ok(part.includes(sel),sel);
   assert.doesNotMatch(part.match(/const LG_OFF_HOSTS='[^']+'/)[0],/offstage,|\.offscroll|\.offnar|\binput\b|\bselect\b/,'背景、旁白文字、input/select 本身不套');
   assert.match(part,/getPropertyValue\(me\?'--offc-me':'--offc-them'\)/,'线下气泡染成外观里挑的颜色');
-  assert.match(part,/else if\(w>=d\.width-4\)opt\.box=\[-60,0,w\+120,h\];/,'通栏两侧不折');
+  assert.match(part,/if\(w>=d\.width-4\)opt\.box=\[-60,0,w\+120,h\];/,'通栏两侧不折');
   assert.match(part,/if\(cv&&cv\._lgKey===key\)return;/,'没变的不重画');
+});
+
+test('v1724 spy phone lock pad and home use the same glass, with the default gradient drawn in when no wallpaper',()=>{
+  assert.match(part,/\{root:'\.spy-desktop',body:'\.spy-home-scroll,\.spy-lock-scroll',hbody:'#spyHomePages',hosts:'\.spy-glass',spy:true\}/);
+  assert.match(part,/return v\|\|'lg:spy';/,'没换壁纸时用默认渐变');
+  assert.match(part,/function lgDefaultWall\(src\)/);assert.match(part,/'#a9c9ce'/);
+  assert.match(part,/ox=g\.hscroll\?g\.x\+g\.sl-sl:g\.x/,'左右翻页的图标横向跟着走');
+  assert.match(part,/\.spy-desktop \.lg-host\.lg-ready:before\{|\.spy-desktop \.lg-host\.lg-ready:before,/,'细环不再整块提亮');
 });
