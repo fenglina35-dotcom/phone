@@ -104,3 +104,18 @@ test('runner music switches one player, loops gameplay, stops on pause and handl
 test('physics 5 lasts three minutes, preserves old terminal ticks and has 32 solvable long routes',()=>{assert.equal(engine.maxTicks(5),10800);assert.equal(engine.maxTicks(4),6000);assert.equal(engine.speed(10800,5),900);for(let seed=1;seed<=32;seed++){const g=finish(seed,true,5);assert.equal(g.tick,10800);assert.equal(g.hearts,3);assert.equal(g.orders,18);assert.equal(g.distance,engine.distanceAt(10800,5));}});
 
 test('physics 6 lasts150 seconds and pays up to25 while versions4 and5 keep their original limits',()=>{assert.equal(engine.maxTicks(6),9000);assert.equal(engine.maxTicks(5),10800);assert.equal(engine.maxTicks(4),6000);for(let seed=1;seed<=32;seed++){const g=finish(seed,true,6);assert.equal(g.tick,9000);assert.equal(g.orders,25);assert.equal(g.hearts,3);assert.equal(g.distance,engine.distanceAt(9000,6));}});
+
+
+test('actual runner restores full-canvas pixel scaling after a backing-store reset',async()=>{
+ const {chromium}=require('playwright');const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
+ try{for(const priv of [false,true]){
+  const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:3}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.route('**/*',route=>{const u=new URL(route.request().url());if(u.origin!=='http://127.0.0.1:8778')return route.abort();const f=path.resolve(decodeURIComponent(u.pathname.slice(1))),ok=f.startsWith(process.cwd()+path.sep)&&fs.existsSync(f)&&fs.statSync(f).isFile();return route.fulfill({status:ok?200:404,body:ok?fs.readFileSync(f):'',contentType:f.endsWith('.js')?'text/javascript':f.endsWith('.css')?'text/css':f.endsWith('.png')?'image/png':'text/html'});});
+  await page.goto('http://127.0.0.1:8778/'+(priv?'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html':'小手机.html')+'?northPreview=black-home');await page.waitForFunction(()=>window.__northBootReady);
+  await page.evaluate(()=>{S.me.active='main';S.me.locked=false;S.food=S.food||{};S.food.north=S.food.north||{};delete S.food.north.runnerPending;northRunnerRPC=async()=>({used:0,limit:10000});NorthRunner.open();});await page.locator('[data-nr="practice"]').click();await page.waitForTimeout(100);
+  const before=await page.evaluate(()=>{const c=document.querySelector('.nr-stage canvas');return{width:c.width,css:c.getBoundingClientRect().width,scale:c.getContext('2d').getTransform().a};});
+  await page.evaluate(()=>{const c=document.querySelector('.nr-stage canvas');c.width=c.width;});await page.waitForTimeout(150);
+  const after=await page.evaluate(()=>{const c=document.querySelector('.nr-stage canvas'),x=c.getContext('2d');return{scale:x.getTransform().a,expected:c.width/c.getBoundingClientRect().width};});
+  assert(before.scale>1.4);assert(Math.abs(after.scale-after.expected)<.01,`${priv?'private':'web'} canvas lost DPR scaling; content shrinks to ${after.scale/after.expected}`);await page.setViewportSize({width:430,height:932});await page.waitForTimeout(100);const resized=await page.evaluate(()=>{const c=document.querySelector('.nr-stage canvas');return Math.abs(c.getContext('2d').getTransform().a-c.width/c.getBoundingClientRect().width)<.01;});assert.equal(resized,true);await page.locator('[data-nr="pause"]').click();await page.locator('[data-nr="resume"]').click();await page.waitForTimeout(80);assert.deepEqual(errors,[]);await page.evaluate(()=>NorthRunner.close());assert.equal(await page.locator('.nr-root').count(),0);await page.close();
+ }}finally{await browser.close();}
+});
