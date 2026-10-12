@@ -905,3 +905,6 @@ html body .cohab-settings-grid select option{background:#24252b;color:#fff}
 html body :is(.offstage,.offline-hub,.north-offline-sheet) :is(.cohab-settings-grid input,.cohab-settings-grid select,.cohab-settings-grid textarea,.offbubble,.minibtn,.btn,.inputbar,.off-field,.cohab-status-chip,.cohab-settings,.cohab-debug-reply,.cohab-reply-button,.fg input,.fg select,.fg textarea){background-color:rgba(255,255,255,.07)!important;background-image:none!important;border-color:rgba(255,255,255,.2)!important;box-shadow:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 html body .north-offline-sheet{background-color:rgba(35,37,44,.72)!important;color:#fff!important}
 html body .offstage{--offc-me-ink:#fff;--offc-them-ink:#fff;--offc-nar:#fff}
+
+/* PRIVATE_LIQUID_GLASS_V1737: only ready baked canvases replace the native fallback fill. */
+html.north-native-app.north-glass-ui .phone .lg-host.lg-ready:not(#north-lg-fallback){background:transparent!important;background-image:none!important}

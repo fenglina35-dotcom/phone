@@ -6,7 +6,7 @@ import vm from 'node:vm';
 const source=fs.readFileSync(new URL('../delivery.js',import.meta.url),'utf8');
 const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 
-function makeRuntime(answer){
+function makeRuntime(answer,runtimeSource=source){
   let n=0;
   const now=Date.now();
   const role={id:'role-1',name:'先生'};
@@ -44,7 +44,7 @@ function makeRuntime(answer){
     if(body.action==='pay_order')return {ok:true,status:200,json:async()=>({ok:true,data:{status:'pending_payment',paymentMethod:'alipay',payQrDataUrl:'data:image/png;base64,iVBORw0KGgo='}})};
     throw new Error('unexpected action '+body.action);
   };
-  vm.runInNewContext(source,ctx,{filename:'delivery.js'});
+  vm.runInNewContext(runtimeSource,ctx,{filename:'delivery.js'});
   ctx.S.food.real.connectorUrl='https://delivery.example.test/api';
   ctx.S.food.real.enabled=true;
   ctx.S.food.real.approvedAddressFingerprint='addr-1';
@@ -61,6 +61,45 @@ function makeRuntime(answer){
   ctx.S.food.real.roleClarifications[role.id]={taskId:task.taskId,kind:'minimum_order',query:task.query,merchant:'杨姥佬家de撒汤',item:'撒汤',reason:'未达到起送价',at:now-800};
   const meta={structuredModelAction:true,allowNewTask:true,accountId:'main',sessionId:'role-1:main',turnId:'user-current',messageId:'user-current',modelReplyId:'reply-current',channel:'chat',userText:answer};
   return {ctx,searches,merchants,meta,task};
+}
+
+for(const [label,runtimeSource] of [['private',fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/delivery.js',import.meta.url),'utf8')]]){
+  function kfcChoiceRuntime(answer='就套餐',original='我要吃KFC',age=600){
+    const r=makeRuntime(answer,runtimeSource);
+    r.ctx.S.food.real.roleTasks={};r.ctx.S.food.real.roleAttempts={};r.ctx.S.food.real.roleClarifications={};
+    const rows=r.ctx.msgs('role-1');rows.splice(0,rows.length,
+      {id:'kfc-original',role:'user',type:'text',content:original,time:Date.now()-age},
+      {id:'kfc-question',role:'assistant',type:'text',content:'行，先生给你点。想吃什么，套餐还是单点。',time:Date.now()-300},
+      {id:'user-current',role:'user',type:'text',content:answer,time:Date.now()-100});
+    return r;
+  }
+  test(`${label}: screenshot KFC then 就套餐 and a current commitment produces a bounded action repair`,()=>{
+    const {ctx,meta,searches}=kfcChoiceRuntime();
+    const reply='等我一下，先生给你找。';
+    const prompt=ctx.deliveryMissingActionRepairPrompt('role-1',meta.userText,reply,meta);
+    assert.match(prompt,/真实外卖动作补判/);
+    assert.match(prompt,/肯德基/);
+    assert.match(prompt,/套餐/);
+    assert.equal(ctx.deliveryMissingActionRepairPrompt('role-1',meta.userText,reply,meta),'');
+    assert.match(ctx.deliveryMissingActionRetryPrompt('role-1',meta.userText,reply,'等我一下',meta),/肯德基/);
+    assert.equal(ctx.deliveryReportActionRepairFailure('role-1',meta.userText,reply,meta),true);
+    assert.equal(searches.length,0,'producing a repair prompt alone must not search or place an order');
+  });
+  test(`${label}: KFC category followups cannot use discussion, cancellation, stale context or future promises`,()=>{
+    for(const [answer,original,reply,age] of [
+      ['就套餐','普通聊天','等我一下，先生给你找。',600],
+      ['这套餐好吃吗','我要吃KFC','等我一下，先生给你找。',600],
+      ['就套餐','上次吃过KFC','等我一下，先生给你找。',600],
+      ['就套餐','算了，不点KFC','等我一下，先生给你找。',600],
+      ['就套餐','我要吃KFC','不点，别吃了。',600],
+      ['就套餐','我要吃KFC','明天再给你找。',600],
+      ['就套餐','我要吃KFC','等我一下，先生给你找。',40*60000],
+    ]){
+      const {ctx,meta,searches}=kfcChoiceRuntime(answer,original,age);
+      assert.equal(ctx.deliveryMissingActionRepairPrompt('role-1',answer,reply,meta),'',JSON.stringify({answer,original,reply,age}));
+      assert.equal(searches.length,0);
+    }
+  });
 }
 
 test('a named add-on resumes only that item on the original task',async()=>{

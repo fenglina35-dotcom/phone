@@ -63,11 +63,11 @@ function functionSource(source, name) {
 
 test('private performance candidate keeps v1355 while public web advances independently', () => {
   assert.equal(privateIndex, privateAlias);
-  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1735'/);
-  assert.match(privateIndex, /app\.js\?v=1735&r=v1735-private-package-1/);
+  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1737'/);
+  assert.match(privateIndex, /app\.js\?v=1737&r=v1737-private-package-1/);
   assert.match(privateIndex, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(privateRepair, /index\.html\?repair=1&v=1735/);
-  assert.match(privateApp, /APP_VER='v1735 · 角色扮演与跑腿画面修复'/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1737/);
+  assert.match(privateApp, /APP_VER='v1737 · 外卖修复与液态玻璃'/);
   assert.match(overlay, /336-daily-file-backup/);
   assert.match(webView, /1\.0\.439 \(439\)/);
   assert.match(bridge, /private static let build = "1\.0\.439 \(439\)"/);

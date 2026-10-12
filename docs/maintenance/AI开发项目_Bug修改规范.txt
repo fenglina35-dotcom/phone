@@ -1744,3 +1744,12 @@ CUA核验22项控件、发送未读空白、已读等待阶段空白、保存180
 
 
 2026-10-13 网页v1736发布前最终检查：全量499文件3974项通过/0失败/0跳过（139.98秒），681永久门禁通过，双端核心各8组合/pageErrors0。测试已完整结束，Python汇总输出因宿主cp949不能编码ℹ返回非零；读取UTF-8原始日志确认测试无失败，未重复测试或降低门禁。私人源码/native/backend/跑腿等无产品差异，仅网页恢复修复与版本更新。本次发布不打包；原图恢复能力仍以本机实际保存文件为限。
+
+
+2026-10-13 网页v1736发布完成：提交e968f76ad5529446ee148c587ac20a17938a34a3一次正常push main成功；GitHub Pages38295792370 completed/success，build/deploy/report均通过。线上小手机.html/app.js/browser-diagnostics.js/sw.js/web-hotfix.js/index.html/repair.html/glass-theme.css八项HTTP200且逐字节匹配提交。3974全量/681永久门禁/双端核心各8组合pageErrors0通过。私人源码仍1735，本次不打包、不改native/backend/正常启动或普通导入，不承诺已恢复受影响真人所有原图；需原主屏入口更新后验证，先保留现有聊天与旧备份，不清站点数据、不卸载、不盲目二次覆盖恢复。原eight-chat并行dirty与所有唯一旧包保留；之前被自动审批拒绝删除的两张既有测试自动图片未绕过删除。此最终发布结果仅维护记录未再推送。
+
+
+2026-10-13 私人v1737重新打包候选：用户明确要求含刚刚外卖改动及网页已有液态玻璃，并回复确认指原eight-chat未提交的肯德基点单上下文/角色当前答应后启动。以最新main e968f76a为基线，复用现有工作区，原eight-chat仍1b29c92f及并行dirty保持。仅抽取私人delivery的missingActionRepairPrompt/Retry/Failure、contextualCommittedKfcChoice及出口，私人aiReply当前raw/自然模式承诺补判条件；未纳入并行被动连接诊断、数据库迁移、后台、其他app dirty。网页app/delivery不改，网页仍1736。私人APP/两入口/repair资源升1737，原生iOS439/桥42/Team/Bundle ID/伴生/共享屏幕/备份保持。上次按网页独有排除的v1716～1726 WebGL材质，本轮新授权纳入私人设置入口与完全相同尾部renderer，11参数/黑白预设/开关/旧材质fallback，未恢复旧NorthOpticalGlass失败方案。原native合成保护不撤，仅lg-ready烤画布成功后去掉底色。实际iPhone-like浏览器发现native旧高specificity主题渐变仍盖canvas；初版低specificity规则仍被覆盖，停编辑核对glass-theme329的:not组合优先级，按现有CSS覆盖优先级用native限定lg-ready:not(#north-lg-fallback)保护条件，未改未ready/关闭/其他容器。原新外卖测试与private缺renderer在旧实现失败；最终定向741项通过，实际完整私人HTML验证WebGL像素、原生标志、透明底、pointer-none、11参数入口、关闭无canvas且pageErrors0。永久门禁682独立通过，全量/双端核心结果待补。脚本复用package_private_v1533_ios438.py，改1737/前包1733继承/已提交e968基线和合法bundle差异；不从dirty打包，不覆盖旧唯一包。Mac/iPhone真实GPU/性能及真实收费角色模型尚未验证。
+
+
+2026-10-13 私人v1737打包前最终验收：全量499文件3978项全部通过/0失败/0跳过（138.86秒）；682永久门禁通过，双端原始核心各8组合/手动自动回复/查手机权限撤销和存档恢复/pageErrors0。第一轮3977通过1失败仅Mac guide当前版本说明缺“当前私人源码”固定表述，改正确文档并保留断言，定向8通过和最终完整3978重跑通过，产品逻辑未变化。基线remote main仍e968f76a，网页1736所有源码不改；私人1737仅授权KFC/液态glass与资源版本，PRIVATE_LIQUID_GLASS_V1737门禁保留ready-only样式，原native/sidebar/签名/后台/原eight-chat并行dirty不变。按已提交HEAD打包1737并校验1733旧包继承/CRC/manifest/分卷合并哈希；结果另补。

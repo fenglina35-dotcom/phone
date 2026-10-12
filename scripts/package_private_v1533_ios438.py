@@ -1,4 +1,4 @@
-"""Create the private v1733 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
+"""Create the private v1737 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
 
 Unlike the earlier packaging scripts, every file is read from the committed tree
 (``git cat-file`` against HEAD) instead of the working directory. The v1235/iOS356
@@ -23,12 +23,12 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "native/private-small-phone/XcodeProject/"
 BUNDLE = "PhoneCompanionTest/PhoneWeb.bundle/"
-PREFIX = "SmallPhone_v1733_iOS439_Private/"
-OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1733_iOS439.zip"
+PREFIX = "SmallPhone_v1737_iOS439_Private/"
+OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1737_iOS439.zip"
 
-WEB_VERSION = "1733"
+WEB_VERSION = "1737"
 REVIEWED_RUNTIME_COMMIT = "HEAD"
-MAIN_BASE_COMMIT = "8f93cb787989a6664d5f92539d09c1fded3e7cf2"
+MAIN_BASE_COMMIT = "e968f76ad5529446ee148c587ac20a17938a34a3"
 EVIDENCE_ROOT = ROOT.parent / ".codex-eight-chat-fixes" / ".codex_tmp"
 VOLUME_BYTES = 50 * 1024 * 1024
 MARKETING = "1.0.439"
@@ -585,19 +585,18 @@ def validate(files: dict[str, bytes]) -> None:
 
 def main() -> None:
     dirty = text(git("diff", "HEAD", "--name-only", "--", SOURCE)).strip()
-    protected_other_chat = SOURCE + BUNDLE + "delivery.js"
-    assert not (set(dirty.splitlines()) - {protected_other_chat}), "commit the private source before packaging:\n" + dirty
-    # This explicitly excluded parallel diagnostic stays in the working tree; payload still comes only from git cat-file HEAD.
+    assert not dirty, "commit the private source before packaging:\n" + dirty
+    # The private payload must be clean and committed; parallel work is kept in its own checkout.
     assert not OUTPUT.exists(), "refusing to overwrite an existing package"
     assert not list(OUTPUT.parent.glob(OUTPUT.name + ".[0-9][0-9][0-9]")), "refusing to overwrite split volumes"
     commit = text(git("rev-parse", "HEAD")).strip()
     web_commit = MAIN_BASE_COMMIT
     git("merge-base", "--is-ancestor", MAIN_BASE_COMMIT, commit)
-    assert re.search(r"APP_VER='v1732\b", text(git("show", web_commit + ":app.js")))
+    assert re.search(r"APP_VER='v1736\b", text(git("show", web_commit + ":app.js")))
     files = committed_private_files()
     validate(files)
-    previous = ROOT.parent / "最新私人版本覆盖包_v1713_iOS439.zip"
-    previous_sha = "d217f900dad08d97e23770000639d4a5241dbae05093b97f32639cc3ee1dcd0f"
+    previous = ROOT.parent / "最新私人版本覆盖包_v1733_iOS439.zip"
+    previous_sha = "892f16ddbe3d948a027416e2a0d68f1a7fc21988719e445f7477760f2ef96520"
     assert sha256(previous.read_bytes()).hexdigest() == previous_sha
     with ZipFile(previous) as old:
         prefix = next(n for n in old.namelist() if n.endswith("/SOURCE_STATE.json"))[:-len("SOURCE_STATE.json")]
@@ -606,13 +605,13 @@ def main() -> None:
         assert set(manifest) == names - {"SHA256SUMS.json"}
         assert not (names - files.keys() - {"SHA256SUMS.json", "SOURCE_STATE.json"}), "previous delivery files missing"
         state = json.loads(old.read(prefix + "SOURCE_STATE.json"))
-        assert state["sourceCommit"] == "1b29c92fc08233c074e9723aeae548c4ad35212d"
+        assert state["sourceCommit"] == "5210776f163d39d8eb5e72275a75f624e5149ea6"
         for name, digest in manifest.items():
             body = old.read(prefix + name)
             assert sha256(body).hexdigest() == digest, "previous checksum mismatch: " + name
             if name not in {"SOURCE_STATE.json", "请在Mac编译前先读.md"} and not name.startswith(BUNDLE):
                 assert files[name] == body, "native/signing change: " + name
-        allowed_bundle_changes = {BUNDLE + n for n in ("app.js", "cohab-theater.js", "commerce-ui.js", "index.html", "小手机.html", "repair.html")}
+        allowed_bundle_changes = {BUNDLE + n for n in ("app.js", "delivery.js", "north-runner.js", "glass-theme.css", "cohab-theater.js", "commerce-ui.js", "index.html", "小手机.html", "repair.html")}
         for name in sorted(names):
             if name.startswith(BUNDLE) and name not in allowed_bundle_changes:
                 assert files[name] == old.read(prefix + name), "unrelated private payload changed: " + name
@@ -650,7 +649,8 @@ def main() -> None:
     for marker in ("ROLE_INBOX_GATEWAY", "async function roleInboxBufferedFetch(", "async function roleInboxClaimController(", "ownerState=S,ownerAccount=", "['home','wechat'].includes(cur().p)"):
         assert marker in app, "inbox repair missing: " + marker
     assert "new Set(['phone_role_push_pull','phone_role_push_ack','phone_role_push_status'])" in app
-    assert files[BUNDLE + "glass-theme.css"] == git("show", "e1aab3bc:" + SOURCE + BUNDLE + "glass-theme.css"), "material changed during inbox repair"
+    assert css.startswith(prior_css.rstrip()), "previous private styles must remain intact"
+    assert "PRIVATE_LIQUID_GLASS_V1737" in css, "ready-only native canvas fill missing"
 
     for marker in ("NORTH_WIDGET_FOREGROUND_V1", "NORTH_OFFLINE_BRIGHT_V1", "NORTH_OFFLINE_TRANSPARENT_V2", ".cohab-tap-next", ".wx-conversation-swipe"):
         assert marker in css, "requested UI repair missing: " + marker
@@ -672,7 +672,7 @@ def main() -> None:
     assert "wechatPrimaryReply" in music_reply and "max:200" not in music_reply
     assert "diagnosticRoleId:cid,roleInterceptStage:'音乐回复'" in music_reply
     for html in (text(files[BUNDLE + "index.html"]), text(files[BUNDLE + "小手机.html"])):
-        assert re.search(r"window\.__NORTH_SHELL_BUILD__='1733'", html)
+        assert re.search(r"window\.__NORTH_SHELL_BUILD__='1737'", html)
     for marker in ("PRECISE_ROLE_TIME_TEST_V1", "测试角色精准时间观念", "rolePreciseTimeSyncSerialize", "rolePreciseTimeNoteValid"):
         assert marker in app, "precise time experiment missing: " + marker
     assert "rolePreciseTimePrompt" in text(files[BUNDLE + "cohab-theater.js"])
@@ -681,23 +681,29 @@ def main() -> None:
     for marker in ("function northRoleFallbackPick(", "async function northMarketRelayReady("):
         assert marker in ui, "requested market repair missing: " + marker
     for marker in ("/* ===== v1716 液态玻璃", "function lgDraw(", "function lgHomeRefresh("):
-        assert marker not in app, "web-only liquid glass entered private app: " + marker
+        assert marker in app, "authorized private liquid glass missing: " + marker
     assert "cohabTapNextHTML(id)" in text(files[BUNDLE + "cohab-theater.js"])
+    assert "ROLEPLAY_REPLY_RECOVERY_V1734" in app
+    assert "RUNNER_CANVAS_RECOVERY_V1734" in text(files[BUNDLE + "north-runner.js"])
+    assert "deliveryCurrentKfcChoiceCommitted(c,_deliveryPendingUserText,content)" in app
+    assert "function contextualCommittedKfcChoice(" in text(files[BUNDLE + "delivery.js"])
+    assert "connectionDiagnostics=new WeakMap" not in text(files[BUNDLE + "delivery.js"]), "unapproved parallel diagnostics entered package"
+    assert "WEB_LOCAL_RECOVERY_MEDIA_V1" not in app, "web-only recovery entered private"
     log = text((EVIDENCE_ROOT / "eight-chat/full-tests.log").read_bytes())
     passed_tests = int(re.search(r"pass (\d+)", log).group(1))
-    assert passed_tests >= 3919 and "fail 0" in log and "cancelled 0" in log, "latest complete test evidence missing"
+    assert passed_tests >= 3974 and "fail 0" in log and "cancelled 0" in log, "latest complete test evidence missing"
     state["inheritedValidation"] = {"sourceCommit": state.get("sourceCommit"), "validation": state.get("validation", {}), "previous": state.get("inheritedValidation")}
     state["preserved"] = [x for x in state.get("preserved", []) if x not in {"v1677-user-approved-22-parameter-optical-material", "v1677-role-sync-fixed-relay-and-pull-recovery", "v1689-original-backend-direct-sync"}]
     state["intentionalRemovals"] = ["v1677-optical-material-renderer-and-overrides", "v1677-role-sync-relay-transport"]
     state["sourceCommit"] = commit
     state["webSourceCommit"] = web_commit
-    state["webVersion"] = "v1732"
+    state["webVersion"] = "v1736"
     state["webPublishedCommit"] = MAIN_BASE_COMMIT
     state["privateWeb"] = "v" + WEB_VERSION
     state["privateIOS"] = f"{MARKETING} ({BUILD})"
     state["bridge"] = BRIDGE
     state["deliveryKind"] = "Mac-Xcode-source-overlay-not-IPA"
-    state["lastDeliveredPackage"] = {"name": previous.name, "sha256": previous_sha, "sourceCommit": "1b29c92fc08233c074e9723aeae548c4ad35212d"}
+    state["lastDeliveredPackage"] = {"name": previous.name, "sha256": previous_sha, "sourceCommit": "5210776f163d39d8eb5e72275a75f624e5149ea6"}
     state["preserved"] = sorted(set(state.get("preserved", [])) | {
         "v1669-calendar-real-month-year-day-search-events-and-reminders",
         "v1669-role-scheduling-sharing-invitations-participation-and-opt-in-care",
@@ -726,11 +732,14 @@ def main() -> None:
     state["preciseRoleTimeTrial"] = {"defaultOff":True,"frontendPackaged":True,"backgroundDeployed":False,"realModelVerified":False,"realIPhoneVerified":False}
     state["preserved"] = sorted(set(state["preserved"]) | {"v1711-opt-in-precise-event-time-and-cancelable-foreground-promises"})
     state["mainBaseCommit"] = MAIN_BASE_COMMIT
-    state["webLiquidGlassIncluded"] = False
+    state["webLiquidGlassIncluded"] = True
+    state["privateLiquidGlassAuthorized"] = True
+    state["webRecoveryMediaIncluded"] = False
+    state["preserved"] = sorted(set(state["preserved"]) | {"v1737-current-kfc-category-commitment-action-repair", "v1737-shared-web-liquid-glass-renderer-and-native-ready-only-fill", "v1735-roleplay-reply-lifecycle-and-runner-canvas-scaling"})
     state["preserved"] = sorted(set(state["preserved"]) | {"v1726-takeout-real-menu-fallback-and-cooldown", "v1726-roleplay-current-round-and-cinema-header", "v1726-flight-rail-day-notice", "v1726-sticker-batch-delete-localization-and-scroll", "v1728-v1730-market-relay-real-read-verified-route", "v1732-friend-idle-sync-backoff-and-active-reset", "v1713-cohab-pending-arrow-all-renderers"})
     state["macBuildVerified"] = False
     state["realIPhoneVerified"] = False
-    state["knownUnresolved"] = [x for x in state.get("knownUnresolved", []) if not re.match(r"v\d+-mac-build", x)] + ["v1733-mac-build-signing-and-iphone-not-verified", "precise-time-background-dispatch-not-deployed", "v1705-private-music-keyboard-and-role-response-acceptance-pending", "calendar-closed-app-system-notifications-not-implemented", "real-model-calendar-personality-and-voice-acceptance-pending", "v1675-user-main-model-and-native-lock-receipts-pending"]
+    state["knownUnresolved"] = [x for x in state.get("knownUnresolved", []) if not re.match(r"v\d+-mac-build", x)] + ["v1737-mac-build-signing-and-iphone-not-verified", "precise-time-background-dispatch-not-deployed", "v1705-private-music-keyboard-and-role-response-acceptance-pending", "calendar-closed-app-system-notifications-not-implemented", "real-model-calendar-personality-and-voice-acceptance-pending", "v1675-user-main-model-and-native-lock-receipts-pending"]
     state["validation"] = {"macBuildVerified": False, "realIPhoneVerified": False,
         "nodeTests": {"passed": passed_tests, "failed": 0, "skipped": 0, "includesProtectedParallelTestChanges": False, "sourceCommit": commit, "resultSource": str(EVIDENCE_ROOT / "eight-chat/full-tests.log")},
         "models": "HTTP simulated; no live model or production financial tests",

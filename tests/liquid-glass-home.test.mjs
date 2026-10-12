@@ -18,12 +18,13 @@ test('v1716 liquid glass is baked once per widget and never redrawn while swipin
   assert.match(part,/\.lg-host\.lg-ready\{backdrop-filter:none!important/,'只有装好画布的组件才去掉原来的玻璃');
 });
 
-test('v1716 settings values are clamped, zero is kept, and the private bundle is untouched',()=>{
+test('v1716 settings values are clamped, zero is kept, and private shares the authorized renderer',()=>{
   const ctx={S:{me:{liquidGlass:{on:true,tone:'white',blur:0,ior:9,thick:-5,disp:'x'}}}};vm.createContext(ctx);
   vm.runInContext(part.match(/const LG_DEFAULTS=[^\n]+/)[0]+'\n'+part.match(/const LG_FIELDS=[^\n]+/)[0]+'\n'+part.match(/function lgCfg\(\)[^\n]+/)[0]+';this.lgCfg=lgCfg;',ctx);
   const cfg=ctx.lgCfg();assert.equal(cfg.blur,0);assert.equal(cfg.ior,2);assert.equal(cfg.thick,4);assert.equal(cfg.disp,0.03);assert.equal(cfg.tone,'white');
   const priv=fs.readFileSync('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js','utf8');
-  assert.doesNotMatch(priv,/v1716 液态玻璃/,'先只在网页版试，私人版不动');
+  assert.match(priv,/v1716 液态玻璃/,'用户本次明确要求私人版纳入网页现有材质');
+  assert.equal(priv.slice(priv.indexOf('/* ===== v1716 液态玻璃')),part,'共享材质参数与实现必须一致');
 });
 
 test('v1720 iMessage bubbles and buttons use the same glass, redraw only on scroll, keep the ring recipe',()=>{
@@ -52,4 +53,22 @@ test('v1724 spy phone lock pad and home use the same glass, with the default gra
   assert.match(part,/function lgDefaultWall\(src\)/);assert.match(part,/'#a9c9ce'/);
   assert.match(part,/ox=g\.hscroll\?g\.x\+g\.sl-sl:g\.x/,'左右翻页的图标横向跟着走');
   assert.match(part,/\.spy-desktop \.lg-host\.lg-ready:before\{|\.spy-desktop \.lg-host\.lg-ready:before,/,'细环不再整块提亮');
+});
+
+
+test('private actual glass paints pixels, reveals canvas through native fallback and preserves opt-out',async()=>{
+ const {createRequire}=await import('node:module'),require=createRequire(import.meta.url),{chromium}=require('playwright'),{join,resolve}=require('node:path');
+ const root=resolve('.'),browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',args:['--enable-unsafe-swiftshader']});
+ try{const page=await browser.newPage({viewport:{width:390,height:844},userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 18_7 like Mac OS X) AppleWebKit/605.1.15 Version/18.7 Mobile/15E148 Safari/604.1'}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.addInitScript(()=>{window.__SMALL_PHONE_PRIVATE__=true;window.SmallPhoneNative={request:async()=>({ok:false,error:'fixture-native-unavailable'})};});
+ await page.route('**/*',route=>{const u=new URL(route.request().url());if(u.origin!=='http://127.0.0.1:8778')return route.abort();const f=join(root,decodeURIComponent(u.pathname.slice(1)));if(!f.startsWith(root)||!fs.existsSync(f))return route.fulfill({status:404,body:''});return route.fulfill({status:200,body:fs.readFileSync(f),contentType:f.endsWith('.js')?'text/javascript':f.endsWith('.css')?'text/css':f.endsWith('.png')?'image/png':'text/html'});});
+ await page.goto('http://127.0.0.1:8778/native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/index.html?northPreview=black-home');await page.waitForFunction(()=>window.__northBootReady);
+ const wall='data:image/png;base64,'+fs.readFileSync('assets/meituan-kangaroo.png').toString('base64');
+ await page.evaluate(wall=>{S.me.uiMaterial='glass';S.me.homeBg=wall;S.me.liquidGlass={on:true};render();document.documentElement.classList.add('north-native-app','north-glass-ui');},wall);
+ await page.waitForFunction(()=>document.querySelector('#homeDesktop canvas.lg-canvas'));
+ const painted=await page.evaluate(()=>{const cv=document.querySelector('#homeDesktop canvas.lg-canvas'),host=cv.parentElement,pixels=cv.getContext('2d').getImageData(0,0,cv.width,cv.height).data;return{width:cv.width,nonzero:pixels.some(v=>v>0),background:getComputedStyle(host).backgroundColor,image:getComputedStyle(host).backgroundImage,pointer:getComputedStyle(cv).pointerEvents,glFailed:_lg.failed,privateOn:privateNativeAppOn()};});
+ assert(painted.width>0&&painted.nonzero);assert.equal(painted.glFailed,false);assert.equal(painted.privateOn,true);assert.equal(painted.background,'rgba(0, 0, 0, 0)');assert.equal(painted.image,'none');assert.equal(painted.pointer,'none');
+ await page.evaluate(()=>{go('settings');lgOpen();});assert((await page.locator('.modal').innerText()).includes('液态玻璃'));assert.equal(await page.locator('.modal input[type=range]').count(),11);
+ await page.evaluate(()=>{lgSet('on',false);closeModal();home();render();});await page.waitForFunction(()=>!document.querySelector('#homeDesktop canvas.lg-canvas'));assert.deepEqual(errors,[]);
+ await page.close();}finally{await browser.close();}
 });
