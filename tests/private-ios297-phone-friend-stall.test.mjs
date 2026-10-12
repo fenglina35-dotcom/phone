@@ -89,6 +89,6 @@ test('private diagnostics expose only stage timing and counts', () => {
 });
 
 test('v1178 public candidate adds only the shared theater layer, not the private friend repair', () => {
-  assert.match(publicSource, /APP_VER='v1720 · 信息页气泡按钮液态玻璃'/);
+  assert.match(publicSource, /APP_VER='v1722 · 线下约会共同生活液态玻璃'/);
   assert.doesNotMatch(publicSource, /function pfEnsureForSync/);
 });
