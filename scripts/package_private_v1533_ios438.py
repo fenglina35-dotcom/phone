@@ -1,4 +1,4 @@
-"""Create the private v1711 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
+"""Create the private v1733 / iOS 439 Mac-source overlay package (all travel and role-card changes, protected private inheritance).
 
 Unlike the earlier packaging scripts, every file is read from the committed tree
 (``git cat-file`` against HEAD) instead of the working directory. The v1235/iOS356
@@ -23,11 +23,14 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "native/private-small-phone/XcodeProject/"
 BUNDLE = "PhoneCompanionTest/PhoneWeb.bundle/"
-PREFIX = "SmallPhone_v1711_iOS439_Private/"
-OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1711_iOS439.zip"
+PREFIX = "SmallPhone_v1733_iOS439_Private/"
+OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1733_iOS439.zip"
 
-WEB_VERSION = "1711"
-REVIEWED_RUNTIME_COMMIT = "HEAD"  # This locally committed candidate was validated before packaging.
+WEB_VERSION = "1733"
+REVIEWED_RUNTIME_COMMIT = "HEAD"
+MAIN_BASE_COMMIT = "8f93cb787989a6664d5f92539d09c1fded3e7cf2"
+EVIDENCE_ROOT = ROOT.parent / ".codex-eight-chat-fixes" / ".codex_tmp"
+VOLUME_BYTES = 50 * 1024 * 1024
 MARKETING = "1.0.439"
 BUILD = "439"
 BRIDGE = "42"
@@ -586,13 +589,15 @@ def main() -> None:
     assert not (set(dirty.splitlines()) - {protected_other_chat}), "commit the private source before packaging:\n" + dirty
     # This explicitly excluded parallel diagnostic stays in the working tree; payload still comes only from git cat-file HEAD.
     assert not OUTPUT.exists(), "refusing to overwrite an existing package"
+    assert not list(OUTPUT.parent.glob(OUTPUT.name + ".[0-9][0-9][0-9]")), "refusing to overwrite split volumes"
     commit = text(git("rev-parse", "HEAD")).strip()
-    web_commit = commit
-    assert re.search(r"APP_VER='v1708\b", text(git("show", web_commit + ":app.js")))
+    web_commit = MAIN_BASE_COMMIT
+    git("merge-base", "--is-ancestor", MAIN_BASE_COMMIT, commit)
+    assert re.search(r"APP_VER='v1732\b", text(git("show", web_commit + ":app.js")))
     files = committed_private_files()
     validate(files)
-    previous = ROOT.parent / "最新私人版本覆盖包_v1709_iOS439.zip"
-    previous_sha = "d055105d18d7f2f0480806e8c8ca2dfdf80fd460fce92143bf06482794228876"
+    previous = ROOT.parent / "最新私人版本覆盖包_v1713_iOS439.zip"
+    previous_sha = "d217f900dad08d97e23770000639d4a5241dbae05093b97f32639cc3ee1dcd0f"
     assert sha256(previous.read_bytes()).hexdigest() == previous_sha
     with ZipFile(previous) as old:
         prefix = next(n for n in old.namelist() if n.endswith("/SOURCE_STATE.json"))[:-len("SOURCE_STATE.json")]
@@ -601,13 +606,13 @@ def main() -> None:
         assert set(manifest) == names - {"SHA256SUMS.json"}
         assert not (names - files.keys() - {"SHA256SUMS.json", "SOURCE_STATE.json"}), "previous delivery files missing"
         state = json.loads(old.read(prefix + "SOURCE_STATE.json"))
-        assert state["sourceCommit"] == "6975aa0d12e64618b65ad6928852c247f8e29b33"
+        assert state["sourceCommit"] == "1b29c92fc08233c074e9723aeae548c4ad35212d"
         for name, digest in manifest.items():
             body = old.read(prefix + name)
             assert sha256(body).hexdigest() == digest, "previous checksum mismatch: " + name
             if name not in {"SOURCE_STATE.json", "请在Mac编译前先读.md"} and not name.startswith(BUNDLE):
                 assert files[name] == body, "native/signing change: " + name
-        allowed_bundle_changes = {BUNDLE + n for n in ("app.js", "cohab-theater.js", "index.html", "小手机.html", "repair.html")}
+        allowed_bundle_changes = {BUNDLE + n for n in ("app.js", "cohab-theater.js", "commerce-ui.js", "index.html", "小手机.html", "repair.html")}
         for name in sorted(names):
             if name.startswith(BUNDLE) and name not in allowed_bundle_changes:
                 assert files[name] == old.read(prefix + name), "unrelated private payload changed: " + name
@@ -667,25 +672,32 @@ def main() -> None:
     assert "wechatPrimaryReply" in music_reply and "max:200" not in music_reply
     assert "diagnosticRoleId:cid,roleInterceptStage:'音乐回复'" in music_reply
     for html in (text(files[BUNDLE + "index.html"]), text(files[BUNDLE + "小手机.html"])):
-        assert re.search(r"window\.__NORTH_SHELL_BUILD__='1711'", html)
+        assert re.search(r"window\.__NORTH_SHELL_BUILD__='1733'", html)
     for marker in ("PRECISE_ROLE_TIME_TEST_V1", "测试角色精准时间观念", "rolePreciseTimeSyncSerialize", "rolePreciseTimeNoteValid"):
         assert marker in app, "precise time experiment missing: " + marker
     assert "rolePreciseTimePrompt" in text(files[BUNDLE + "cohab-theater.js"])
-    log = text((ROOT / ".codex_tmp/eight-chat/full-tests.log").read_bytes())
+    for marker in ("function roleOrderCoolingDown(", "function tvV2DayNotice(", "async function stkSelDelete(", "async function stickerLocalize(", "function phoneFriendPollDelay(", "function phoneFriendSyncActive(", "COHAB_CONTINUATION_ARROW_V2"):
+        assert marker in app, "requested private repair missing: " + marker
+    for marker in ("function northRoleFallbackPick(", "async function northMarketRelayReady("):
+        assert marker in ui, "requested market repair missing: " + marker
+    for marker in ("/* ===== v1716 液态玻璃", "function lgDraw(", "function lgHomeRefresh("):
+        assert marker not in app, "web-only liquid glass entered private app: " + marker
+    assert "cohabTapNextHTML(id)" in text(files[BUNDLE + "cohab-theater.js"])
+    log = text((EVIDENCE_ROOT / "eight-chat/full-tests.log").read_bytes())
     passed_tests = int(re.search(r"pass (\d+)", log).group(1))
-    assert passed_tests >= 3917 and "fail 0" in log and "cancelled 0" in log, "latest complete test evidence missing"
+    assert passed_tests >= 3919 and "fail 0" in log and "cancelled 0" in log, "latest complete test evidence missing"
     state["inheritedValidation"] = {"sourceCommit": state.get("sourceCommit"), "validation": state.get("validation", {}), "previous": state.get("inheritedValidation")}
     state["preserved"] = [x for x in state.get("preserved", []) if x not in {"v1677-user-approved-22-parameter-optical-material", "v1677-role-sync-fixed-relay-and-pull-recovery", "v1689-original-backend-direct-sync"}]
     state["intentionalRemovals"] = ["v1677-optical-material-renderer-and-overrides", "v1677-role-sync-relay-transport"]
     state["sourceCommit"] = commit
     state["webSourceCommit"] = web_commit
-    state["webVersion"] = "v1708"
-    state["webPublishedCommit"] = "f50603bc2c5404ceacb6adc5589b2cd4f71fbeef"
+    state["webVersion"] = "v1732"
+    state["webPublishedCommit"] = MAIN_BASE_COMMIT
     state["privateWeb"] = "v" + WEB_VERSION
     state["privateIOS"] = f"{MARKETING} ({BUILD})"
     state["bridge"] = BRIDGE
     state["deliveryKind"] = "Mac-Xcode-source-overlay-not-IPA"
-    state["lastDeliveredPackage"] = {"name": previous.name, "sha256": previous_sha, "sourceCommit": "6975aa0d12e64618b65ad6928852c247f8e29b33"}
+    state["lastDeliveredPackage"] = {"name": previous.name, "sha256": previous_sha, "sourceCommit": "1b29c92fc08233c074e9723aeae548c4ad35212d"}
     state["preserved"] = sorted(set(state.get("preserved", [])) | {
         "v1669-calendar-real-month-year-day-search-events-and-reminders",
         "v1669-role-scheduling-sharing-invitations-participation-and-opt-in-care",
@@ -713,16 +725,19 @@ def main() -> None:
     state["backendQuietControlFilter"] = {"privateFunctionVersion":43,"publicFunctionVersion":42,"deployedSourcesVerified":True,"publicBaselinePreserved":True,"packagedFunction":False}
     state["preciseRoleTimeTrial"] = {"defaultOff":True,"frontendPackaged":True,"backgroundDeployed":False,"realModelVerified":False,"realIPhoneVerified":False}
     state["preserved"] = sorted(set(state["preserved"]) | {"v1711-opt-in-precise-event-time-and-cancelable-foreground-promises"})
+    state["mainBaseCommit"] = MAIN_BASE_COMMIT
+    state["webLiquidGlassIncluded"] = False
+    state["preserved"] = sorted(set(state["preserved"]) | {"v1726-takeout-real-menu-fallback-and-cooldown", "v1726-roleplay-current-round-and-cinema-header", "v1726-flight-rail-day-notice", "v1726-sticker-batch-delete-localization-and-scroll", "v1728-v1730-market-relay-real-read-verified-route", "v1732-friend-idle-sync-backoff-and-active-reset", "v1713-cohab-pending-arrow-all-renderers"})
     state["macBuildVerified"] = False
     state["realIPhoneVerified"] = False
-    state["knownUnresolved"] = [x for x in state.get("knownUnresolved", []) if not re.match(r"v\d+-mac-build", x)] + ["v1711-mac-build-signing-and-iphone-not-verified", "precise-time-background-dispatch-not-deployed", "v1705-private-music-keyboard-and-role-response-acceptance-pending", "calendar-closed-app-system-notifications-not-implemented", "real-model-calendar-personality-and-voice-acceptance-pending", "v1675-user-main-model-and-native-lock-receipts-pending"]
+    state["knownUnresolved"] = [x for x in state.get("knownUnresolved", []) if not re.match(r"v\d+-mac-build", x)] + ["v1733-mac-build-signing-and-iphone-not-verified", "precise-time-background-dispatch-not-deployed", "v1705-private-music-keyboard-and-role-response-acceptance-pending", "calendar-closed-app-system-notifications-not-implemented", "real-model-calendar-personality-and-voice-acceptance-pending", "v1675-user-main-model-and-native-lock-receipts-pending"]
     state["validation"] = {"macBuildVerified": False, "realIPhoneVerified": False,
-        "nodeTests": {"passed": passed_tests, "failed": 0, "skipped": 0, "includesProtectedParallelTestChanges": True, "sourceCommit": web_commit, "resultSource": ".codex_tmp/eight-chat/full-tests.log"},
+        "nodeTests": {"passed": passed_tests, "failed": 0, "skipped": 0, "includesProtectedParallelTestChanges": True, "sourceCommit": commit, "resultSource": str(EVIDENCE_ROOT / "eight-chat/full-tests.log")},
         "models": "HTTP simulated; no live model or production financial tests",
         "authorizedChatBothRuntimes": True, "authorizedChatExecution": "both actual runtime pages; eight permission/output/history combinations, manual/automatic inspection and persistence; simulated model HTTP",
         "inheritedPreviousOverlay": True, "priorPackageManifestVerified": True,
         "nativePayloadUnchanged": True, "privateCompanionNativeUnchanged": True,
-        "privateRuntimeMatchesReviewedRelease": web_commit, "userConfirmedWebMusicReply": {"version": "v1704", "date": "2026-10-11", "confirmed": True}, "privateMusicRealDeviceVerified": False, "shopRestoreBackendDeployedAndVerified": True, "houseResourceFiles": len(cozy_files)}
+        "privateRuntimeMatchesReviewedRelease": commit, "userConfirmedWebMusicReply": {"version": "v1704", "date": "2026-10-11", "confirmed": True}, "privateMusicRealDeviceVerified": False, "shopRestoreBackendDeployedAndVerified": True, "houseResourceFiles": len(cozy_files)}
     files["SOURCE_STATE.json"] = json.dumps(state, ensure_ascii=False, indent=2).encode("utf-8")
     files["SHA256SUMS.json"] = json.dumps({name: sha256(body).hexdigest() for name, body in sorted(files.items())}, ensure_ascii=False, indent=2).encode("utf-8")
     with ZipFile(OUTPUT, "x", ZIP_DEFLATED, compresslevel=6) as archive:
@@ -737,10 +752,24 @@ def main() -> None:
         checks = json.loads(actual["SHA256SUMS.json"])
         assert set(checks) == actual.keys() - {"SHA256SUMS.json"}
         for name, digest in checks.items(): assert sha256(actual[name]).hexdigest() == digest, name
+    volumes = []
+    combined = sha256()
+    with OUTPUT.open("rb") as source:
+        part = 1
+        while chunk := source.read(VOLUME_BYTES):
+            path = OUTPUT.with_name(OUTPUT.name + f".{part:03d}")
+            with path.open("xb") as target:
+                assert target.write(chunk) == len(chunk)
+            reread = path.read_bytes()
+            assert reread == chunk, "split round-trip mismatch"
+            combined.update(reread)
+            volumes.append({"path": str(path), "bytes": len(reread), "sha256": sha256(reread).hexdigest()})
+            part += 1
+    assert combined.hexdigest() == sha256(OUTPUT.read_bytes()).hexdigest(), "split concatenation differs from full ZIP"
     print(json.dumps({"path": str(OUTPUT), "sourceCommit": commit, "webSourceCommit": web_commit,
         "files": len(files), "manifestEntries": len(files)-1, "bytes": OUTPUT.stat().st_size,
         "sha256": sha256(OUTPUT.read_bytes()).hexdigest(), "privateWeb": "v"+WEB_VERSION,
-        "native": f"{MARKETING} ({BUILD})", "bridge": BRIDGE}, ensure_ascii=False, indent=2))
+        "native": f"{MARKETING} ({BUILD})", "bridge": BRIDGE, "mainBaseCommit": MAIN_BASE_COMMIT, "volumes": volumes, "splitConcatenationVerified": True}, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

@@ -7,7 +7,12 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const source = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
 
-assert.match(source, /function phoneFriendPollDelay\(\)[\s\S]*?return 2500/, 'open friend chats must use the fast foreground polling window');
+const pollStart=source.indexOf('let _pfIdleSyncs=0;'),pollEnd=source.indexOf("if(typeof document!=='undefined'&&document.addEventListener)document.addEventListener('visibilitychange',()=>{if(!document.hidden)phoneFriendSyncActive();});",pollStart);
+assert.ok(pollStart>=0&&pollEnd>pollStart,'friend polling helpers must exist');
+const polling={cur:()=>({p:'pfchat'}),Math};vm.createContext(polling);
+vm.runInContext(source.slice(pollStart,pollEnd)+';globalThis.delay=phoneFriendPollDelay;globalThis.active=phoneFriendSyncActive;globalThis.idle=n=>{_pfIdleSyncs=n;};',polling);
+assert.equal(polling.delay(),2500,'active friend chats must start with the fast foreground polling window');
+polling.idle(20);assert.equal(polling.delay(),8000,'idle chats retain the v1732 bounded backoff');polling.active();assert.equal(polling.delay(),2500,'new activity restores the fastest window');
 assert.match(source, /setInterval\(\(\)=>\{if\(_appBootFinished\)phoneFriendMaybeSync\(false\);\},2500\)/, 'friend sync scheduler must reach the fast polling window only after startup restoration finishes');
 assert.match(source, /_pfRenderQueued=true/, 'messages received while typing must request a later safe repaint');
 
