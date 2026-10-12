@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1730'){
+if(window.__NORTH_SHELL_BUILD__!=='1732'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -239,7 +239,7 @@ function pfClearLocalPending(other,serverMsg){const p=phoneFriendState();other=(
 }
 function pfHeaders(){return {'apikey':GATE_KEY,'Authorization':'Bearer '+GATE_KEY,'Content-Type':'application/json'};}
 function companionHeaders(){if(typeof NorthPublicRuntime!=='undefined'&&NorthPublicRuntime.available())return {apikey:NorthPublicRuntime.config.key,'Content-Type':'application/json'};return {'apikey':COMPANION_KEY,'Authorization':'Bearer '+COMPANION_KEY,'Content-Type':'application/json'};}
-async function pfRpc(fn,args,ms){const write=!['phone_friend_search','phone_friend_sync'].includes(fn),messageWrite=fn==='phone_friend_send_message'||fn==='phone_friend_send_group_message';let base;
+async function pfRpc(fn,args,ms){if(/send|respond|create_group|invite|accept/.test(fn)&&typeof phoneFriendSyncActive==='function')phoneFriendSyncActive();const write=!['phone_friend_search','phone_friend_sync'].includes(fn),messageWrite=fn==='phone_friend_send_message'||fn==='phone_friend_send_group_message';let base;
   try{base=await pfTransportRoute(ms);}catch(e){if(messageWrite){const err=new Error('连接未成功，消息尚未提交；请稍后重试。');err.pfNotSubmitted=true;throw err;}throw e;}
   const deadline=Date.now()+(ms||25000);
   for(let attempt=0;attempt<(write?1:2);attempt++){let r,txt,timer;const started=Date.now(),remaining=Math.max(1,deadline-started),wait=write||attempt?remaining:Math.min(15000,remaining);
@@ -338,12 +338,22 @@ async function phoneFriendSync(silent,forceProfile,forceFull){if(_pfSyncBusy){pf
     srvMsgs.forEach(m=>{const from=(''+(m.from_id||'')).toUpperCase(),ts=m.created_at?new Date(m.created_at).getTime():0,key='f:'+(m.id||'');if(from&&from!==p.id&&(full||insertedFriend.has(''+(m.id||'')))){const fresh=pfRememberNotification(p,key);if(!full&&fresh&&ts>(oldFriendMsgMax[from]||0))pfNotifyFriend(m);}});
     srvGroupMsgs.forEach(m=>{const gid=m.group_id,from=(''+(m.from_id||'')).toUpperCase(),ts=m.created_at?new Date(m.created_at).getTime():0,key='g:'+(m.id||'');if(from&&from!==p.id&&gid&&(full||insertedGroup.has(''+(m.id||'')))){const fresh=pfRememberNotification(p,key);if(!full&&fresh&&ts>(oldGroupMsgMax[gid]||0))pfNotifyGroup(m);}});
     if(typeof pfGroupQrProcess==='function')pfGroupQrProcess(srvMsgs);
-    const hadError=!!p.lastError;p.lastSync=+(d&&d.server_time_ms)||Date.now();if(full){p._lastFullSyncAt=Date.now();delete p._forceFullSync;delete p._repairNote;}p.lastError='';p._syncFailures=0;p._syncRetryAt=0;const persistCursor=Date.now()-(p._lastCursorPersistAt||0)>300000;if(changed||hadError||persistCursor){p._lastCursorPersistAt=Date.now();save();}const c=cur&&cur(),paintable=c&&(c.p==='pffriends'||c.p==='pfchat'||c.p==='pfgroup'||c.p==='wechat');if(changed&&paintable&&pfTypingActive())_pfRenderQueued=true;else if(paintable&&!pfTypingActive()&&(changed||_pfRenderQueued)){_pfRenderQueued=false;render();}}
+    const hadError=!!p.lastError;p.lastSync=+(d&&d.server_time_ms)||Date.now();if(full){p._lastFullSyncAt=Date.now();delete p._forceFullSync;delete p._repairNote;}p.lastError='';p._syncFailures=0;p._syncRetryAt=0;if(changed)_pfIdleSyncs=0;else _pfIdleSyncs++;const persistCursor=Date.now()-(p._lastCursorPersistAt||0)>300000;if(changed||hadError||persistCursor){p._lastCursorPersistAt=Date.now();save();}const c=cur&&cur(),paintable=c&&(c.p==='pffriends'||c.p==='pfchat'||c.p==='pfgroup'||c.p==='wechat');if(changed&&paintable&&pfTypingActive())_pfRenderQueued=true;else if(paintable&&!pfTypingActive()&&(changed||_pfRenderQueued)){_pfRenderQueued=false;render();}}
   catch(e){const msg=e&&e.message||'好友同步失败',changed=p.lastError!==msg;p.lastError=msg;p._syncFailures=Math.min(5,(p._syncFailures||0)+1);p._syncRetryAt=Date.now()+Math.min(30000,3000*Math.pow(2,p._syncFailures-1));if(changed)save();if(!silent)toast(p.lastError);}
   finally{_pfSyncBusy=false;const queued=_pfSyncQueued;_pfSyncQueued=null;if(queued)setTimeout(()=>phoneFriendSync(queued.silent,queued.forceProfile,queued.forceFull),queued.silent&&!queued.forceProfile&&!queued.forceFull?Math.max(0,(p._syncRetryAt||0)-Date.now()):0);}}
-function phoneFriendPollDelay(){const c=typeof cur==='function'&&cur();if(c&&(c.p==='pfchat'||c.p==='pfgroup'))return 2500;if(c&&(c.p==='pffriends'||c.p==='wechat'))return 6000;return 15000;}
+/* v1732：数据库后台实测 phone_friend_sync 一个接口就占了全部数据库时间的 42%（一万多次调用），
+   最小规格的服务器 CPU 100%、读写额度 96%，最后卡死，授权、好友、店铺一起不可用。
+   原来只要小手机开着就每 15 秒同步一次（在微信 6 秒、在聊天里 2.5 秒），不管有没有新消息。
+   现在：一直没有新东西就逐渐放慢；一有新消息、自己发消息、切回小手机、打开好友页，立刻恢复快速。
+   - 真人好友聊天里：2.5 秒起，最慢 8 秒（正在聊天的体验不变）
+   - 微信 / 好友列表：6 秒起，最慢 30 秒
+   - 其他页面：30 秒起，最慢 3 分钟（这时只是为了通知，晚一点没关系） */
+let _pfIdleSyncs=0;
+function phoneFriendSyncActive(){_pfIdleSyncs=0;}
+function phoneFriendPollDelay(){const c=typeof cur==='function'&&cur(),grow=Math.pow(1.5,Math.min(_pfIdleSyncs,12));if(c&&(c.p==='pfchat'||c.p==='pfgroup'))return Math.min(8000,2500*grow);if(c&&(c.p==='pffriends'||c.p==='wechat'))return Math.min(30000,6000*grow);return Math.min(180000,30000*grow);}
+if(typeof document!=='undefined'&&document.addEventListener)document.addEventListener('visibilitychange',()=>{if(!document.hidden)phoneFriendSyncActive();});
 function phoneFriendMaybeSync(force){const now=Date.now(),c=typeof cur==='function'?cur():null,active=!!(c&&['pfchat','pfgroup','pffriends','wechat'].includes(c.p));if(!force&&(northNativeMaintenancePaused()&&!active||(typeof document!=='undefined'&&document.hidden)||phoneFriendState()._syncRetryAt>now||now-_pfLastAuto<phoneFriendPollDelay()))return;_pfLastAuto=now;phoneFriendSync(true,false);}
-function openPhoneFriends(){go('pffriends');setTimeout(()=>phoneFriendMaybeSync(true),60);}
+function openPhoneFriends(){phoneFriendSyncActive();go('pffriends');setTimeout(()=>phoneFriendMaybeSync(true),60);}
 function pfReqs(dir){const p=phoneFriendState();return (p.requests||[]).filter(r=>r.direction===dir&&r.status==='pending');}
 function pfOnlineText(f){return pfIsOnline(f)?'在线':'离线';}
 function pfReadStatus(m,scope,gid){if(m&&String(m.id||'').startsWith('local_')&&m.sendState)return m.sendState==='sending'?'发送中…':m.sendState==='unknown'?'发送结果待确认':'尚未发送';if(!readReceiptOn())return '';if(!m||m.recalled||String(m.id||'').startsWith('local_')||pfPayloadIsPay(m))return '';const p=phoneFriendState(),ids=pfReadIds(m).filter(x=>x&&x!==p.id);if(scope==='group'){const g=pfGroupById(gid)||{},total=Math.max(0,((g.members||[]).length||1)-1),n=ids.length;return n?`${n}${total?'/'+total:''}人已读`:'';}return ids.length?'已读':'';}
@@ -377,7 +387,7 @@ async function phoneFriendRespond(rid,ok){rid=''+(rid||'');if(!rid||_pfRespondBu
     req.status=ok?'accepted':'rejected';delete req._responding;if(ok){const other=(''+(req.from_id||'')).toUpperCase();if(other&&!phoneFriendById(other))p.friends.unshift({phone_id:other,display_name:req.from_name||other,avatar:req.from_avatar||'🙂',since:new Date().toISOString()});}p.lastSync=0;save();render();toast(ok?'已通过':'已忽略');await phoneFriendSync(true,false,true);}
   catch(e){delete req._responding;delete _pfRespondBusy[rid];render();toast(e.message||'操作失败');}
   finally{delete _pfRespondBusy[rid];}}
-function openPhoneFriendChat(id){wxChatRestore('friend:'+String(id).toUpperCase());id=(''+id).toUpperCase();pfMarkRead(id);go('pfchat',{id});setTimeout(()=>{const p=phoneFriendState(),empty=!pfMsgList(p.messages,id).length;if(empty)phoneFriendSync(true,false,true);else phoneFriendMaybeSync(true);},60);}
+function openPhoneFriendChat(id){phoneFriendSyncActive();wxChatRestore('friend:'+String(id).toUpperCase());id=(''+id).toUpperCase();pfMarkRead(id);go('pfchat',{id});setTimeout(()=>{const p=phoneFriendState(),empty=!pfMsgList(p.messages,id).length;if(empty)phoneFriendSync(true,false,true);else phoneFriendMaybeSync(true);},60);}
 function phoneFriendChatMessages(id){const p=phoneFriendState();id=(''+id).toUpperCase();return pfVisibleMsgList(p.messages,id).flatMap(m=>{const receipt=pfTransferReceiptMessage(m);return receipt?[m,receipt]:[m];}).sort((x,y)=>(x.time||0)-(y.time||0));}
 async function sendPhoneFriendBody(id,body,opt){id=(''+id).toUpperCase();body=(''+(body||'')).trim();opt=opt||{};const silent=!!opt.silent,transport=!!opt.transport;if(!body)return;if(body.length>PHONE_FRIEND_BODY_MAX){if(!transport)toast('这条消息太大，发不出去');return;}if(!silent&&_pfSendBusy[id]){toast('上一条还在发送');return;}const p=phoneFriendState();const localId='local_'+uid();body=pfTagOutgoing(body,localId);if(body.length>PHONE_FRIEND_BODY_MAX){if(!transport)toast('这条消息太大，发不出去');return;}if(!silent)_pfSendBusy[id]=true;
   if(S.couple&&S.couple.gags&&S.couple.gags[pfGagKey(id)]){if(!silent)delete _pfSendBusy[id];if(!transport)toast('这段聊天被ta禁言了，先去求ta解开');return;}
@@ -410,7 +420,7 @@ function wxLoginWechatSummary(cid){const since=Date.now()-2*86400000,out=[],me=S
 }
 function pfNameById(id){id=(''+id).toUpperCase();const p=phoneFriendState();if(id===p.id)return S.me.name||'我';const f=phoneFriendById(id);return f?pfFriendDisplayName(f):id;}
 const _pfGroupRenderLimit={};
-function openPhoneFriendGroup(gid){wxChatRestore('friend-group:'+gid);_pfGroupRenderLimit[gid]=120;pfMarkGroupRead(gid);_scrollBottomOnce['pfgroup:'+gid]=Date.now();go('pfgroup',{gid});setTimeout(()=>phoneFriendMaybeSync(true),60);}
+function openPhoneFriendGroup(gid){phoneFriendSyncActive();wxChatRestore('friend-group:'+gid);_pfGroupRenderLimit[gid]=120;pfMarkGroupRead(gid);_scrollBottomOnce['pfgroup:'+gid]=Date.now();go('pfgroup',{gid});setTimeout(()=>phoneFriendMaybeSync(true),60);}
 function pfGroupById(gid){return (phoneFriendState().groups||[]).find(g=>(g.group_id||g.id)===gid)||null;}
 function pfGroupMessages(gid){const p=phoneFriendState();return pfMsgList(p.groupMessages,gid).slice().sort((a,b)=>(a.time||0)-(b.time||0));}
 function pfGroupMemberById(g,id){id=(''+id).toUpperCase();return (g&&Array.isArray(g.members)?g.members:[]).find(m=>pfKeyOf(m)===id)||null;}
@@ -606,7 +616,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1730 · 中转真读通店铺才切换';
+const APP_VER='v1732 · 真人好友同步减负';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2036,7 +2046,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1730&r=v1730-couple-unbind-reopen-1';
+  const url='sw.js?v=1732&r=v1732-couple-unbind-reopen-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
