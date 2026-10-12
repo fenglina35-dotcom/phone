@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1718'){
+if(window.__NORTH_SHELL_BUILD__!=='1720'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -606,7 +606,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1718 · 液态玻璃滑动时实时折射';
+const APP_VER='v1720 · 信息页气泡按钮液态玻璃';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2036,7 +2036,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1718&r=v1718-couple-unbind-reopen-1';
+  const url='sw.js?v=1720&r=v1720-couple-unbind-reopen-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -19141,57 +19141,62 @@ const LG_HOSTS='.hwid,.glass-second-portrait,.glass-second-photos,.dock';
 function lgCfg(){S.me=S.me||{};const raw=S.me.liquidGlass&&typeof S.me.liquidGlass==='object'?S.me.liquidGlass:{},out={on:raw.on!==false,tone:raw.tone==='white'?'white':'black'};LG_FIELDS.forEach(([k,,min,max])=>{const n=Number(raw[k]);out[k]=Number.isFinite(n)?Math.max(min,Math.min(max,n)):LG_DEFAULTS[k];});return out;}
 function lgWallSrc(){const src=storedImageDisplaySource(S.me&&S.me.homeBg);return isImg(src)?src:'';}
 function lgActive(){return glassThemeOn()&&lgCfg().on&&!!lgWallSrc();}
-const _lg={gl:null,canvas:null,prog:null,buf:null,tex:null,texSrc:'',texInfo:null,loading:null,cache:new Map(),failed:false,timer:0,pending:false};
-function lgStyle(){if(document.getElementById('lgStyle'))return;const st=document.createElement('style');st.id='lgStyle';st.textContent='.lg-host.lg-ready{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:transparent!important;background-image:none!important;isolation:isolate}.lg-canvas{position:absolute;left:0;top:0;width:100%;height:100%;border-radius:inherit;z-index:-1;pointer-events:none;display:block}';document.head.appendChild(st);}
+const _lg={gl:null,canvas:null,prog:null,buf:null,tex:null,texSrc:'',texInfo:null,texs:new Map(),loading:null,cache:new Map(),failed:false,timer:0,pending:false};
+function lgStyle(){if(document.getElementById('lgStyle'))return;const st=document.createElement('style');st.id='lgStyle';st.textContent='.lg-host.lg-ready{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;background:transparent!important;background-image:none!important;isolation:isolate}.lg-canvas{position:absolute;left:0;top:0;width:100%;height:100%;border-radius:inherit;z-index:-1;pointer-events:none;display:block}.imsg .lg-host.lg-ready:before{backdrop-filter:none!important;-webkit-backdrop-filter:none!important;opacity:.62}';document.head.appendChild(st);}
 const LG_VS='attribute vec2 a;varying vec2 v;void main(){v=a*0.5+0.5;gl_Position=vec4(a,0.0,1.0);}';
 const LG_FS=`precision highp float;
-uniform sampler2D uTex;uniform vec2 uSize;uniform vec2 uOrigin;uniform vec4 uMap;uniform float uRadius;
+uniform sampler2D uTex;uniform vec2 uSize;uniform vec2 uOrigin;uniform vec4 uMap;uniform vec4 uBox;uniform vec4 uRad;uniform vec2 uTail;uniform vec2 uShade;
 uniform float uBlur,uIor,uBend,uDisp,uThick,uEdgeBlur,uTint,uSat,uHi,uRim;uniform vec3 uTintColor;uniform vec2 uLight;
 varying vec2 v;
 vec3 samp(vec2 px,float bias){vec2 uv=clamp((px-uMap.xy)/uMap.zw,vec2(0.001),vec2(0.999));return texture2D(uTex,uv,bias).rgb;}
 void main(){
- vec2 p=vec2(v.x,1.0-v.y)*uSize;vec2 hs=uSize*0.5;vec2 c=p-hs;float r=min(uRadius,min(hs.x,hs.y));
+ vec2 P=vec2(v.x,1.0-v.y)*uSize;vec2 p=P-uBox.xy;vec2 hs=uBox.zw*0.5;vec2 c=p-hs;
+ float r=c.x<0.0?(c.y<0.0?uRad.x:uRad.w):(c.y<0.0?uRad.y:uRad.z);r=min(r,min(hs.x,hs.y));
  vec2 q=abs(c)-(hs-r);float d=length(max(q,0.0))+min(max(q.x,q.y),0.0)-r;float inside=-d;
  vec2 s=vec2(c.x<0.0?-1.0:1.0,c.y<0.0?-1.0:1.0);vec2 n;
  if(q.x>0.0&&q.y>0.0)n=normalize(q)*s;else if(q.x>q.y)n=vec2(s.x,0.0);else n=vec2(0.0,s.y);
+ float tz=(uTail.x!=0.0&&P.y>uSize.y-uTail.y&&n.x*uTail.x>0.5)?1.0:0.0;
  float th=max(uThick,1.0);float t=clamp(1.0-inside/th,0.0,1.0);
- float curve=t*t*(3.0-2.0*t);curve=pow(curve,max(0.35,1.6-uBend*0.4));
+ float curve=t*t*(3.0-2.0*t);curve=pow(curve,max(0.35,1.6-uBend*0.4))*(1.0-tz);
  vec2 off=n*curve*th*(uIor-1.0)*uBend;
- vec2 base=uOrigin+p;float bias=uBlur+t*uEdgeBlur;
+ vec2 base=uOrigin+P;float bias=uBlur+t*uEdgeBlur;
  vec3 col=vec3(samp(base+off*(1.0+uDisp*8.0),bias).r,samp(base+off,bias).g,samp(base+off*(1.0-uDisp*8.0),bias).b);
- float l=dot(col,vec3(0.299,0.587,0.114));col=mix(vec3(l),col,uSat);col=mix(col,uTintColor,uTint);
+ float l=dot(col,vec3(0.299,0.587,0.114));col=mix(vec3(l),col,uSat);
+ if(uShade.y>0.5){float y=clamp(base.y/uShade.x,0.0,1.0);col*=1.0-(y<0.24?0.34*(1.0-y/0.24):(y>0.76?0.52*(y-0.76)/0.24:0.0));}
+ col=mix(col,uTintColor,uTint);
  float facing=max(dot(n,uLight),0.0),back=max(dot(n,-uLight),0.0);
- float ring=1.0-smoothstep(0.0,2.2,inside);float band=(1.0-smoothstep(0.0,th*0.55,inside))*t;
+ float ring=(1.0-smoothstep(0.0,2.2,inside))*(1.0-tz);float band=(1.0-smoothstep(0.0,th*0.55,inside))*t;
  col+=vec3(1.0)*(ring*(0.18+0.82*facing)*0.75*uHi+band*facing*0.22*uHi+ring*back*0.35*uRim);
- float a=clamp(inside+0.5,0.0,1.0);gl_FragColor=vec4(clamp(col,0.0,1.0)*a,a);}`;
+ float a=max(clamp(inside+0.5,0.0,1.0),tz);gl_FragColor=vec4(clamp(col,0.0,1.0)*a,a);}`;
 function lgGL(){if(_lg.gl&&!_lg.gl.isContextLost())return _lg.gl;if(_lg.failed)return null;try{const cv=document.createElement('canvas');const gl=cv.getContext('webgl',{premultipliedAlpha:true,preserveDrawingBuffer:true,antialias:false,alpha:true});if(!gl){_lg.failed=true;return null;}
   const sh=(type,src)=>{const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(s));return s;};
   const prog=gl.createProgram();gl.attachShader(prog,sh(gl.VERTEX_SHADER,LG_VS));gl.attachShader(prog,sh(gl.FRAGMENT_SHADER,LG_FS));gl.linkProgram(prog);if(!gl.getProgramParameter(prog,gl.LINK_STATUS))throw new Error(gl.getProgramInfoLog(prog));
   const buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,1,1]),gl.STATIC_DRAW);
   /* 上下文丢了只影响「以后重烤」，已经烤好放进组件的画布不受影响，所以不会掉材质 */
-  cv.addEventListener('webglcontextlost',e=>{e.preventDefault();_lg.gl=null;_lg.tex=null;_lg.texSrc='';},false);
+  cv.addEventListener('webglcontextlost',e=>{e.preventDefault();_lg.gl=null;_lg.tex=null;_lg.texSrc='';_lg.texs.clear();},false);
   Object.assign(_lg,{gl,canvas:cv,prog,buf,tex:null,texSrc:''});return gl;}catch(e){console.warn('液态玻璃不可用',e);_lg.failed=true;return null;}}
 function lgPot(n){let p=256;while(p<n&&p<2048)p*=2;return p;}
-function lgTexture(src){const gl=lgGL();if(!gl)return Promise.resolve(false);if(_lg.tex&&_lg.texSrc===src)return Promise.resolve(true);if(_lg.loading&&_lg.loading.src===src)return _lg.loading.p;
+function lgTexture(src){const gl=lgGL();if(!gl)return Promise.resolve(false);if(_lg.texs.has(src))return Promise.resolve(true);if(_lg.loading&&_lg.loading.src===src)return _lg.loading.p;
   const p=new Promise(resolve=>{const img=new Image();img.decoding='async';img.onload=()=>{try{const w=img.naturalWidth,h=img.naturalHeight;if(!w||!h)return resolve(false);const tw=1024,th=lgPot(Math.round(1024*h/w)),cv=document.createElement('canvas');cv.width=tw;cv.height=th;cv.getContext('2d').drawImage(img,0,0,tw,th);
       const g=lgGL();if(!g)return resolve(false);const tex=g.createTexture();g.bindTexture(g.TEXTURE_2D,tex);g.pixelStorei(g.UNPACK_FLIP_Y_WEBGL,false);g.texImage2D(g.TEXTURE_2D,0,g.RGBA,g.RGBA,g.UNSIGNED_BYTE,cv);g.generateMipmap(g.TEXTURE_2D);
       g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MIN_FILTER,g.LINEAR_MIPMAP_LINEAR);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_MAG_FILTER,g.LINEAR);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_S,g.CLAMP_TO_EDGE);g.texParameteri(g.TEXTURE_2D,g.TEXTURE_WRAP_T,g.CLAMP_TO_EDGE);
-      if(_lg.tex)g.deleteTexture(_lg.tex);_lg.tex=tex;_lg.texSrc=src;_lg.texInfo={w,h};cv.width=cv.height=1;resolve(true);}catch(e){console.warn('液态玻璃壁纸读取失败',e);resolve(false);}};img.onerror=()=>resolve(false);img.src=src;});
+      /* v1720：主屏壁纸和信息页聊天背景各留一张，来回切换不用重新读图 */
+      _lg.texs.set(src,{tex,w,h});while(_lg.texs.size>2){const k=_lg.texs.keys().next().value;g.deleteTexture(_lg.texs.get(k).tex);_lg.texs.delete(k);}_lg.tex=tex;_lg.texSrc=src;_lg.texInfo={w,h};cv.width=cv.height=1;resolve(true);}catch(e){console.warn('液态玻璃壁纸读取失败',e);resolve(false);}};img.onerror=()=>resolve(false);img.src=src;});
   _lg.loading={src,p};p.finally(()=>{if(_lg.loading&&_lg.loading.p===p)_lg.loading=null;});return p;}
 /* 组件在「自己那一页停好」时相对整块桌面的位置；翻页时整页一起滑，所以这个位置不随滑动变化 */
 function lgGeometry(host,desk){const r=host.getBoundingClientRect(),d=desk.getBoundingClientRect();if(r.width<8||r.height<8)return null;let x=r.left-d.left,y=r.top-d.top;const page=host.closest('.apppage'),swipe=page&&page.parentElement;if(page&&swipe){const pr=page.getBoundingClientRect(),sr=swipe.getBoundingClientRect();x=r.left-pr.left+sr.left-d.left;}
   const radius=parseFloat(getComputedStyle(host).borderTopLeftRadius)||0;return {x:Math.round(x),y:Math.round(y),w:Math.round(r.width),h:Math.round(r.height),radius,dw:d.width,dh:d.height};}
 function lgKey(g,cfg,src,dpr){return [src.length,src.slice(-48),JSON.stringify(cfg),g.x,g.y,g.w,g.h,g.radius,Math.round(g.dw),Math.round(g.dh),dpr].join('|');}
 /* 把一个组件画进 target。ox/oy 是组件此刻在桌面上的位置（滑动时会变），scale<1 用于滑动中的省电画法 */
-function lgDraw(g,cfg,ox,oy,target,scale){const gl=lgGL();if(!gl||!_lg.tex||!_lg.texInfo)return false;const W=target.width,H=target.height,w=Math.max(1,Math.round(W*(scale||1))),h=Math.max(1,Math.round(H*(scale||1)));
+function lgDraw(g,cfg,ox,oy,target,scale){const gl=lgGL(),t=gl&&_lg.texs.get(g.src);if(!t)return false;const o=g.opt||{};const W=target.width,H=target.height,w=Math.max(1,Math.round(W*(scale||1))),h=Math.max(1,Math.round(H*(scale||1)));
   const cv=_lg.canvas;if(cv.width<w)cv.width=Math.max(w,cv.width);if(cv.height<h)cv.height=Math.max(h,cv.height);const CH=cv.height;gl.viewport(0,0,w,h);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);gl.useProgram(_lg.prog);
   gl.bindBuffer(gl.ARRAY_BUFFER,_lg.buf);const loc=gl.getAttribLocation(_lg.prog,'a');gl.enableVertexAttribArray(loc);gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
-  gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,_lg.tex);const u=n=>gl.getUniformLocation(_lg.prog,n);gl.uniform1i(u('uTex'),0);
+  gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,t.tex);const u=n=>gl.getUniformLocation(_lg.prog,n);gl.uniform1i(u('uTex'),0);
   /* 壁纸按 center/cover 铺在桌面上：算出图片在桌面上的位置和大小 */
-  const iw=_lg.texInfo.w,ih=_lg.texInfo.h,sc=Math.max(g.dw/iw,g.dh/ih),mw=iw*sc,mh=ih*sc;
-  gl.uniform2f(u('uSize'),g.w,g.h);gl.uniform2f(u('uOrigin'),ox,oy);gl.uniform4f(u('uMap'),(g.dw-mw)/2,(g.dh-mh)/2,mw,mh);gl.uniform1f(u('uRadius'),g.radius);
-  gl.uniform1f(u('uBlur'),cfg.blur);gl.uniform1f(u('uIor'),cfg.ior);gl.uniform1f(u('uBend'),cfg.bend);gl.uniform1f(u('uDisp'),cfg.disp);gl.uniform1f(u('uThick'),cfg.thick);gl.uniform1f(u('uEdgeBlur'),cfg.edgeBlur);gl.uniform1f(u('uTint'),cfg.tint);gl.uniform1f(u('uSat'),cfg.sat);gl.uniform1f(u('uHi'),cfg.hi);gl.uniform1f(u('uRim'),cfg.rim);
-  const tc=cfg.tone==='white'?[0.94,0.95,0.97]:[0.04,0.04,0.05];gl.uniform3f(u('uTintColor'),tc[0],tc[1],tc[2]);const ang=cfg.angle*Math.PI/180;gl.uniform2f(u('uLight'),Math.cos(ang),-Math.sin(ang));
+  const iw=t.w,ih=t.h,sc=Math.max(g.dw/iw,g.dh/ih),mw=iw*sc,mh=ih*sc;
+  gl.uniform2f(u('uSize'),g.w,g.h);gl.uniform2f(u('uOrigin'),ox,oy);gl.uniform4f(u('uMap'),(g.dw-mw)/2,(g.dh-mh)/2,mw,mh);const bx=o.box||[0,0,g.w,g.h],rd=o.rad||[g.radius,g.radius,g.radius,g.radius],tl=o.tail||[0,0];gl.uniform4f(u('uBox'),bx[0],bx[1],bx[2],bx[3]);gl.uniform4f(u('uRad'),rd[0],rd[1],rd[2],rd[3]);gl.uniform2f(u('uTail'),tl[0],tl[1]);gl.uniform2f(u('uShade'),g.dh,o.shade?1:0);
+  gl.uniform1f(u('uBlur'),cfg.blur);gl.uniform1f(u('uIor'),cfg.ior);gl.uniform1f(u('uBend'),cfg.bend);gl.uniform1f(u('uDisp'),cfg.disp);gl.uniform1f(u('uThick'),o.thick||cfg.thick);gl.uniform1f(u('uEdgeBlur'),cfg.edgeBlur);gl.uniform1f(u('uTint'),o.tintAmt!=null?o.tintAmt:cfg.tint);gl.uniform1f(u('uSat'),cfg.sat);gl.uniform1f(u('uHi'),cfg.hi);gl.uniform1f(u('uRim'),cfg.rim);
+  const tc=o.tint||(cfg.tone==='white'?[0.94,0.95,0.97]:[0.04,0.04,0.05]);gl.uniform3f(u('uTintColor'),tc[0],tc[1],tc[2]);const ang=cfg.angle*Math.PI/180;gl.uniform2f(u('uLight'),Math.cos(ang),-Math.sin(ang));
   gl.drawArrays(gl.TRIANGLE_STRIP,0,4);const ctx=target.getContext('2d');ctx.clearRect(0,0,W,H);ctx.drawImage(cv,0,CH-h,w,h,0,0,W,H);return true;}
 function lgBake(g,cfg){if(!lgGL()||!_lg.tex)return null;const dpr=Math.min(2,window.devicePixelRatio||1),out=document.createElement('canvas');out.className='lg-canvas';out.width=Math.max(1,Math.round(g.w*dpr));out.height=Math.max(1,Math.round(g.h*dpr));out.setAttribute('aria-hidden','true');if(!lgDraw(g,cfg,g.x,g.y,out,1))return null;out._lgShift=0;out._lgScale=1;return out;}
 function lgAttachTo(host,canvas,key){const old=host.querySelector(':scope>canvas.lg-canvas');if(old&&old!==canvas)old.remove();if(canvas.parentNode!==host)host.insertBefore(canvas,host.firstChild);canvas.dataset.lgKey=key;if(getComputedStyle(host).position==='static')host.style.position='relative';host.classList.add('lg-host','lg-ready');}
@@ -19199,19 +19204,48 @@ function lgClear(root){(root||document).querySelectorAll('canvas.lg-canvas').for
 function lgRemember(key,canvas){_lg.cache.delete(key);_lg.cache.set(key,canvas);while(_lg.cache.size>24)_lg.cache.delete(_lg.cache.keys().next().value);}
 /* deskEl 是壁纸铺满的那块；hosts 是要做成玻璃的元素。能用缓存的立即装上，不需要等下一帧 */
 async function lgApply(deskEl,hosts,src,cfg){lgStyle();const dpr=Math.min(2,window.devicePixelRatio||1),todo=[];
-  for(const host of hosts){if(host.parentElement&&host.parentElement.closest('.lg-host'))continue;const g=lgGeometry(host,deskEl);if(!g)continue;const key=lgKey(g,cfg,src,dpr),cur=host.querySelector(':scope>canvas.lg-canvas');host._lgGeo=g;if(cur&&cur.dataset.lgKey===key)continue;const hit=_lg.cache.get(key);if(hit){lgAttachTo(host,hit,key);continue;}todo.push({host,g,key});}
+  for(const host of hosts){if(host.parentElement&&host.parentElement.closest('.lg-host'))continue;const g=lgGeometry(host,deskEl);if(!g)continue;g.src=src;const key=lgKey(g,cfg,src,dpr),cur=host.querySelector(':scope>canvas.lg-canvas');host._lgGeo=g;if(cur&&cur.dataset.lgKey===key)continue;const hit=_lg.cache.get(key);if(hit){lgAttachTo(host,hit,key);continue;}todo.push({host,g,key});}
   if(!todo.length)return true;if(!await lgTexture(src))return false;
   for(const {host,g,key} of todo){if(!host.isConnected)continue;const cv=lgBake(g,cfg);if(!cv)return false;lgRemember(key,cv);lgAttachTo(host,cv,key);}return true;}
 function lgHomeRefresh(){_lg.timer=0;const desk=document.getElementById('homeDesktop');if(!desk)return;if(!lgActive()){lgClear(desk);return;}lgBindSwipe();lgApply(desk,Array.from(desk.querySelectorAll(LG_HOSTS)),lgWallSrc(),lgCfg()).then(()=>lgSwipeFrame(true)).catch(e=>console.warn('液态玻璃',e));}
-function lgAfterRender(){if(typeof document==='undefined')return;const desk=document.getElementById('homeDesktop');if(!desk)return;if(!lgActive()){lgClear(desk);return;}lgHomeRefresh();}
+function lgAfterRender(){if(typeof document==='undefined')return;lgImsgSoon();const desk=document.getElementById('homeDesktop');if(!desk)return;if(!lgActive()){lgClear(desk);return;}lgHomeRefresh();}
 /* v1718：翻页滑动时，玻璃里的壁纸跟着组件此刻的位置实时变（以前停在组件原地的样子）。
    只在 #appswipe 真的在滑时，每帧重画此刻露在屏幕上的组件；位置直接用滚动距离推算，不读布局；
    滑动中用 0.6 倍分辨率省电，停下后再用原分辨率画一遍。 */
 let _lgSwipeRaf=0,_lgSwipeSettle=0;
-function lgSwipeFrame(final){_lgSwipeRaf=0;const desk=document.getElementById('homeDesktop'),sw=document.getElementById('appswipe');if(!desk||!sw||!lgActive()||!_lg.tex)return;const cfg=lgCfg(),w=sw.clientWidth||1,sl=sw.scrollLeft||0;
+function lgSwipeFrame(final){_lgSwipeRaf=0;const desk=document.getElementById('homeDesktop'),sw=document.getElementById('appswipe');if(!desk||!sw||!lgActive())return;const cfg=lgCfg(),w=sw.clientWidth||1,sl=sw.scrollLeft||0;
   sw.querySelectorAll('.apppage').forEach((page,i)=>{const shift=sl-i*w;if(!final&&Math.abs(shift)>=w)return;page.querySelectorAll('canvas.lg-canvas').forEach(cv=>{const host=cv.parentElement,g=host&&host._lgGeo,scale=final?1:0.6;if(!g||cv._lgShift===shift&&cv._lgScale===scale)return;if(lgDraw(g,cfg,g.x-shift,g.y,cv,scale)){cv._lgShift=shift;cv._lgScale=scale;}});});}
 function lgSwipe(){if(!_lgSwipeRaf)_lgSwipeRaf=requestAnimationFrame(()=>lgSwipeFrame(false));clearTimeout(_lgSwipeSettle);_lgSwipeSettle=setTimeout(()=>lgSwipeFrame(true),140);}
 function lgBindSwipe(){const sw=document.getElementById('appswipe');if(sw&&!sw._lgBound){sw._lgBound=true;sw.addEventListener('scroll',lgSwipe,{passive:true});}}
+/* v1720：电话 → 信息（iMessage）页也用这一套材质：换了聊天背景时，气泡和按钮里是被推弯的背景。
+   聊天背景铺在 .imsg 上不动，气泡跟着 .imsg-body 上下滚，所以只重画此刻露在屏幕上的那几个；
+   滚动中位置直接用滚动距离推算、0.6 倍分辨率，停下后再量一次位置、原分辨率画一遍。
+   气泡形状还是 scripts/glass_ring_polygon.py 那条 clip-path 剪的（尾巴、细高光环都不动），
+   画布只负责里面的玻璃身子；尾巴那一小截只铺背景、不弯不加光，免得接缝处冒出一道线。
+   没换背景（纯黑）时什么都不做，保持原来的样子。发出去的图片、隐形墨水不套。 */
+const LG_IMSG_HOSTS='.imsg-b:not(.pic):not(.iminv),.imsg-rb,.imsg-name,.imsg-plus,.imsg-send,.imsg-field';
+let _lgImRaf=0,_lgImSettle=0;
+function lgImsgSrc(root){const m=/url\((['"]?)(.*?)\1\)/.exec(root&&root.style.backgroundImage||'');return m&&m[2]?m[2]:'';}
+function lgImsgGeo(host,root,body,src,cfg){const r=host.getBoundingClientRect(),d=root.getBoundingClientRect();if(r.width<8||r.height<8)return null;
+  const w=Math.round(r.width),h=Math.round(r.height),scroll=!!(body&&body.contains(host)),bubble=host.classList.contains('imsg-b'),me=!!host.closest('.imsg-row.me'),blue=bubble&&me||host.classList.contains('imsg-send');
+  const radius=parseFloat(getComputedStyle(host).borderTopLeftRadius)||0,opt={shade:true,thick:Math.max(4,Math.min(cfg.thick,Math.min(w,h)*0.3)),tintAmt:Math.max(cfg.tint,bubble?0.42:0.3)};
+  if(bubble){opt.box=me?[0,0,w-7,h]:[7,0,w-7,h];opt.rad=me?[18,18,0,18]:[18,18,18,0];opt.tail=[me?1:-1,10];}
+  /* 信息页的字是白的，白玻璃会看不清，所以这里身子固定偏深；自己的气泡和发送键是 iMessage 蓝 */
+  opt.tint=blue?[0.04,0.52,1.0]:[0.1,0.1,0.12];if(blue)opt.tintAmt=Math.max(cfg.tint,0.7);
+  return {src,x:r.left-d.left,y:r.top-d.top,w,h,radius,dw:d.width,dh:d.height,scroll,st:scroll?body.scrollTop:0,opt};}
+function lgImsgFrame(final){_lgImRaf=0;const root=document.querySelector('.imsg.hasbg'),cfg=lgCfg();if(!root||!cfg.on)return;const src=lgImsgSrc(root);if(!src||!isImg(src))return;
+  if(!_lg.texs.has(src)){lgTexture(src).then(ok=>{if(ok)lgImsgFrame(true);});return;}lgStyle();
+  const body=root.querySelector('.imsg-body');if(body&&!body._lgBound){body._lgBound=true;body.addEventListener('scroll',lgImsgScroll,{passive:true});}
+  const st=body?body.scrollTop:0,top=body?body.offsetTop:0,bottom=top+(body?body.clientHeight:0),dpr=Math.min(2,window.devicePixelRatio||1),scale=final?1:0.6;
+  root.querySelectorAll(LG_IMSG_HOSTS).forEach(host=>{let g=host._lgGeo;if(final||!g||g.src!==src)g=host._lgGeo=lgImsgGeo(host,root,body,src,cfg);if(!g)return;
+    const oy=g.scroll?g.y+g.st-st:g.y;if(g.scroll&&(oy+g.h<top-40||oy>bottom+40))return;
+    let cv=host.querySelector(':scope>canvas.lg-canvas');const W=Math.max(1,Math.round(g.w*dpr)),H=Math.max(1,Math.round(g.h*dpr));
+    if(cv&&cv._lgY===oy&&cv._lgScale===scale&&cv.width===W&&cv.height===H&&cv._lgGeo===g)return;
+    if(!cv){cv=document.createElement('canvas');cv.className='lg-canvas';cv.setAttribute('aria-hidden','true');}
+    if(cv.width!==W)cv.width=W;if(cv.height!==H)cv.height=H;if(!lgDraw(g,cfg,g.x,oy,cv,scale))return;cv._lgY=oy;cv._lgScale=scale;cv._lgGeo=g;
+    if(cv.parentNode!==host)lgAttachTo(host,cv,'imsg');});}
+function lgImsgScroll(){if(!_lgImRaf)_lgImRaf=requestAnimationFrame(()=>lgImsgFrame(false));clearTimeout(_lgImSettle);_lgImSettle=setTimeout(()=>lgImsgFrame(true),140);}
+function lgImsgSoon(){if(!document.querySelector('.imsg.hasbg'))return;cancelAnimationFrame(_lgImRaf);_lgImRaf=requestAnimationFrame(()=>lgImsgFrame(true));}
 function lgSoon(){if(_lg.timer)return;_lg.timer=setTimeout(lgHomeRefresh,120);}
 if(typeof render==='function'&&!render.__lg){const _lgRender=render;render=function(){const out=_lgRender.apply(this,arguments);try{lgAfterRender();}catch(e){console.warn('液态玻璃',e);}return out;};render.__lg=true;}
 if(typeof window!=='undefined'){window.addEventListener('resize',lgSoon);window.addEventListener('orientationchange',lgSoon);}
@@ -19223,7 +19257,7 @@ function lgPreset(name){const cfg=Object.assign({},LG_DEFAULTS,name==='white'?{t
 let _lgPreviewTimer=0;function lgPreviewSoon(){if(_lgPreviewTimer)return;_lgPreviewTimer=requestAnimationFrame(()=>{_lgPreviewTimer=0;lgPreviewDraw();});}
 function lgPreviewDraw(){const box=document.getElementById('lgPreview');if(!box)return;const src=lgWallSrc(),cfg=lgCfg();if(!src||!cfg.on){lgClear(box);return;}lgApply(box,Array.from(box.querySelectorAll('[data-lg-preview]')),src,cfg).then(ok=>{const n=document.getElementById('lgNote');if(n&&!ok)n.textContent=_lg.failed?'这台设备的浏览器不支持 WebGL，主屏组件保持原来的玻璃样子。':'壁纸图片读取失败（可能是外链图片），主屏组件保持原来的玻璃样子。';});}
 function lgOpen(){const cfg=lgCfg(),src=lgWallSrc();
-  openModal(`<h3>液态玻璃 · 主屏组件</h3><div class="hint">背后的壁纸在组件边上被推弯。每个组件只在壁纸、参数或位置变化时算一次，滑动翻页时不会重算，所以不卡、不闪。</div>
+  openModal(`<h3>液态玻璃 · 主屏组件</h3><div class="hint">背后的壁纸在组件边上被推弯。电话 → 信息页换了聊天背景后，气泡和按钮也用这一套。每个组件只在壁纸、参数或位置变化时算一次，滑动翻页时不会重算，所以不卡、不闪。</div>
   <div id="lgPreview" style="position:relative;height:200px;border-radius:18px;overflow:hidden;margin:10px 0;background:${src?'url('+src+') center/cover':'#222'}">
     <div data-lg-preview style="position:absolute;left:16px;right:16px;top:18px;height:84px;border-radius:24px;display:flex;align-items:center;padding:0 18px;color:#fff;font-weight:700;font-size:20px;text-shadow:0 1px 3px rgba(0,0,0,.35)">背后被推弯</div>
     <div data-lg-preview style="position:absolute;left:16px;bottom:22px;width:150px;height:46px;border-radius:23px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600">胶囊 · 玻璃</div>

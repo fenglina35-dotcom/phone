@@ -37,6 +37,7 @@ const PERMANENT_FIXES = [
   {release:"本地收藏候选",scope:"both",least:1,name:"收藏转发保留原作者与历史时间",marker:"if(m&&m._favorite&&typeof wxFavoriteForwardText"},
   {release:"本地收藏候选",scope:"both",least:1,name:"完整备份包含收藏及转发卡片的原声音频",marker:"path.some(p=>p==='favorites'||p==='_favorite')"},
   {release:"本地候选",scope:"both",least:1,name:"已有好友刷新补齐消息且保留历史并去重",marker:"if(n>(counts.get(k)||0)){existing.push(m);ch=true;}"},
+  {release:"v1720",scope:"web",least:1,name:"信息页气泡和按钮用液态玻璃，滚动时实时折射",marker:"function lgImsgFrame(final)"},
   {release:"v1718",scope:"web",least:1,name:"液态玻璃翻页时实时跟着壁纸折射",marker:"function lgSwipeFrame(final)"},
   {release:"v1716",scope:"web",least:1,name:"主屏组件液态玻璃：每个组件只烤一次，滑动不重算",marker:"function lgGeometry(host,desk)"},
   {release:"v1714",scope:"both",least:1,name:"服务器接力只接本机正在回的那一轮，同一条只交一次",marker:"function roleBackgroundShouldHandOff(id,row)"},

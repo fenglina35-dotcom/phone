@@ -25,3 +25,14 @@ test('v1716 settings values are clamped, zero is kept, and the private bundle is
   const priv=fs.readFileSync('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js','utf8');
   assert.doesNotMatch(priv,/v1716 液态玻璃/,'先只在网页版试，私人版不动');
 });
+
+test('v1720 iMessage bubbles and buttons use the same glass, redraw only on scroll, keep the ring recipe',()=>{
+  assert.match(part,/const LG_IMSG_HOSTS='\.imsg-b:not\(\.pic\):not\(\.iminv\)/,'发出去的图片和隐形墨水不套');
+  assert.match(part,/body\.addEventListener\('scroll',lgImsgScroll,\{passive:true\}\)/,'聊天上下滚时玻璃里的背景跟着变');
+  assert.match(part,/document\.querySelector\('\.imsg\.hasbg'\)/,'没换聊天背景时保持原样');
+  assert.match(part,/const oy=g\.scroll\?g\.y\+g\.st-st:g\.y;/,'滚动中位置用滚动距离推算，不读布局');
+  assert.match(part,/if\(g\.scroll&&\(oy\+g\.h<top-40\|\|oy>bottom\+40\)\)return;/,'只画露在屏幕上的');
+  assert.match(part,/uniform vec2 uTail;/);assert.match(part,/float a=max\(clamp\(inside\+0\.5,0\.0,1\.0\),tz\);/,'尾巴那一截也铺玻璃');
+  assert.match(part,/\.imsg \.lg-host\.lg-ready:before\{backdrop-filter:none!important/,'细环不再整块提亮');
+  assert.match(part,/_lg\.texs\.get\(g\.src\)/,'主屏和信息页各用自己的背景贴图');
+});

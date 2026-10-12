@@ -71,8 +71,8 @@ test('private identity remains v1355 and iOS 399 while public advances independe
   assert.match(bridge, /private static let build = "1\.0\.439 \(439\)"/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 439;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.439;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1718 · 液态玻璃滑动时实时折射'/);
-  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1718'/);
+  assert.match(publicApp, /APP_VER='v1720 · 信息页气泡按钮液态玻璃'/);
+  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1720'/);
   assert.doesNotMatch(publicApp, /persistWechatRequested|smallPhoneWechatPersistTrace/);
 });
 
