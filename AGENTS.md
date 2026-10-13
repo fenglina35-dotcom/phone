@@ -1,5 +1,14 @@
 # Project Agent Notes
 
+## Area guides: read the one for what you are changing
+
+- `docs/areas/README.md` lists a short guide per feature (how it works now, what went wrong
+  before, what was tried and failed). Before changing a feature that has a guide, read that
+  guide; it replaces reading the whole maintenance history for that feature.
+- When you change how a feature behaves, update its guide in the same commit. When you work
+  on a feature that has no guide yet, write one.
+- The Bug record stays the full archive. Search it by keyword; it is too large to read whole.
+
 ## Long-term maintenance documents
 
 - Before analyzing or changing code, read `docs/maintenance/README.md` and the four DOCX files it lists. Treat them as maintained project records, not temporary references.
