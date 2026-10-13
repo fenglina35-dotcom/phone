@@ -416,6 +416,18 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
         case "screenShare.stop":
             ScreenShareCoordinator.shared.requestStop()
             reply(requestID: requestID, result: ["stopRequested": true])
+        case "screenShare.robot.configure":
+            let arguments = payload["payload"] as? [String: Any] ?? [:]
+            let configured = ScreenShareCoordinator.shared.configureRobotUpload(
+                url: arguments["url"] as? String,
+                token: arguments["token"] as? String
+            )
+            reply(requestID: requestID, result: ["configured": configured])
+        case "screenShare.robot.clear":
+            ScreenShareCoordinator.shared.clearRobotUpload()
+            reply(requestID: requestID, result: ["cleared": true])
+        case "screenShare.robot.status":
+            reply(requestID: requestID, result: ScreenShareCoordinator.shared.robotUploadStatus())
         case "screenShare.status":
             reply(requestID: requestID, result: ScreenShareCoordinator.shared.status())
         case "screenShare.frame":

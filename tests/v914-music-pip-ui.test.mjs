@@ -8,7 +8,7 @@ const pip=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/Ph
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
 test('v1184 web source keeps private 1.0.315 compatibility',()=>{
-  assert.match(app,/APP_VER='v1736 · 本机恢复与图片保护'/);
+  assert.match(app,/APP_VER='v1738 · 翻译合并与搜索跳转'/);
   assert.match(project,/CURRENT_PROJECT_VERSION = 439;/);
   assert.match(project,/MARKETING_VERSION = 1.0.439;/);
 });

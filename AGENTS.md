@@ -1,5 +1,26 @@
 # Project Agent Notes
 
+## Area guides: read the one for what you are changing
+
+- `docs/areas/README.md` lists a short guide per feature (how it works now, what went wrong
+  before, what was tried and failed). Before changing a feature that has a guide, read that
+  guide; it replaces reading the whole maintenance history for that feature.
+- When you change how a feature behaves, update its guide in the same commit. When you work
+  on a feature that has no guide yet, write one.
+- The Bug record stays the full archive. Search it by keyword; it is too large to read whole.
+
+## Running the tests on the Mac
+
+- Many browser tests and every `scripts/check_*.cjs` launch Edge from its fixed Windows path,
+  and a few database tests load PGlite from the Windows user profile. On the Mac run them
+  through `scripts/run_tests_mac.sh`, which preloads `scripts/test_browser_fallback.cjs`: a
+  missing executable or module is replaced by the one in `~/.north-test-tools`. No test file
+  is changed, and on the Windows PC nothing is altered.
+- `scripts/run_tests_mac.sh` runs the whole suite; pass test files to run some of them;
+  `scripts/run_tests_mac.sh --check scripts/check_chat_authorized_phone.cjs` runs a check script.
+- Checks may leave `.codex_tmp/` in the repository root. It is a by-product: remove it, do not
+  commit it.
+
 ## Long-term maintenance documents
 
 - Before analyzing or changing code, read `docs/maintenance/README.md` and the four DOCX files it lists. Treat them as maintained project records, not temporary references.
