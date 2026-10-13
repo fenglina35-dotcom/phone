@@ -111,6 +111,43 @@ final class ScreenShareCoordinator {
         return button != nil
     }
 
+    // Watch together with K: the web side hands over where the broadcast extension may post
+    // its latest picture, and the key of this one share. Both live in the App Group only.
+    private static let robotURLKey = "screenShare.robotURL.v1"
+    private static let robotTokenKey = "screenShare.robotToken.v1"
+
+    func configureRobotUpload(url: String?, token: String?) -> Bool {
+        guard let token, token.count == 64,
+              token.allSatisfy({ $0.isHexDigit && !$0.isUppercase }),
+              let url, let parsed = URLComponents(string: url),
+              parsed.scheme == "https", let host = parsed.host, !host.isEmpty,
+              parsed.path.hasSuffix("/functions/v1/phone-robot"),
+              parsed.query == "action=screen" else { return false }
+        let defaults = UserDefaults(suiteName: Self.appGroup)
+        defaults?.set(url, forKey: Self.robotURLKey)
+        defaults?.set(token, forKey: Self.robotTokenKey)
+        defaults?.removeObject(forKey: "screenShare.robotLastStatus.v1")
+        defaults?.removeObject(forKey: "screenShare.robotLastAt.v1")
+        defaults?.synchronize()
+        return true
+    }
+
+    func clearRobotUpload() {
+        let defaults = UserDefaults(suiteName: Self.appGroup)
+        defaults?.removeObject(forKey: Self.robotURLKey)
+        defaults?.removeObject(forKey: Self.robotTokenKey)
+        defaults?.synchronize()
+    }
+
+    func robotUploadStatus() -> [String: Any] {
+        let defaults = UserDefaults(suiteName: Self.appGroup)
+        return [
+            "configured": defaults?.string(forKey: Self.robotTokenKey) != nil,
+            "lastStatus": defaults?.integer(forKey: "screenShare.robotLastStatus.v1") ?? 0,
+            "lastAt": defaults?.double(forKey: "screenShare.robotLastAt.v1") ?? 0
+        ]
+    }
+
     func requestStop() {
         UserDefaults(suiteName: Self.appGroup)?.set(true, forKey: "screenShare.stopRequested.v1")
     }

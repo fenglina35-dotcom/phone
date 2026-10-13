@@ -358,8 +358,79 @@ if(typeof robotFacePrompt==='function'){
     prompt=prompt.replace('嘴型资源不代表已经开通语音；不得声称 K 已经说话。','嘴型按实际播放同步；语音已提交不等于设备已播放成功，失败以真实回执为准。');
   }return prompt;};
 }
+/* Watch together with K. The owner switches it on here; the screen broadcast extension then
+   posts its latest picture to the robot's cloud function, and the role speaking through K can
+   see the screen (docs/areas/屏幕共享.md). Nothing in this block runs on a timer: the web side
+   is suspended whenever another App is in front, so it only starts, stops and tidies up. */
+var RobotScreen = (()=>{
+  const KEY='north.robotScreenShare.v1';
+  let on=false,busy=false;
+  const nativeOn=()=>typeof privateNativeAppOn==='function'&&privateNativeAppOn()&&!!globalThis.SmallPhoneNative;
+  const say=(text)=>{try{toast(text);}catch(_){}};
+  function paint(){
+    const text=document.getElementById('robot-screen-state'),item=document.getElementById('robot-screen-item');
+    if(text)text.textContent=busy?'请稍等…':on?'他现在看得到你的屏幕 · 点一下停止':'让他看到你的手机屏幕 · 点一下开始';
+    if(item)item.dataset.on=on?'true':'false';
+  }
+  async function owner(op){
+    const target=robotFaceScope();if(!target||actId()!=='main')throw Error('小 K 仅在私人主账号可用');
+    const data=await companionRpc('phone_robot_screen_owner',{p_target:target,p_owner_secret:companionOwnerSecret(),p_op:op});
+    if(target!==robotFaceScope())throw Error('账号已切换');
+    return data;
+  }
+  const remember=value=>{try{if(value)localStorage.setItem(KEY,value);else localStorage.removeItem(KEY);}catch(_){}};
+  const inCallShare=()=>{try{return !!(_call&&_call.state==='active'&&callScreenShareOn());}catch(_){return false;}};
+  async function start(){
+    const data=await owner('start');
+    if(!data?.ok||!/^[0-9a-f]{64}$/.test(String(data.token||'')))throw Error(data?.reason==='unbound'?'请先在“设备连接”里绑定小 K':'云端没有同意开始共享');
+    let set=null;try{set=await SmallPhoneNative.request('screenShare.robot.configure',{url:companionCloudURL()+'/functions/v1/phone-robot?action=screen',token:data.token});}catch(_){}
+    if(!set?.configured){try{await owner('stop');}catch(_){}throw Error('这个版本的 App 还不能把画面交给小 K，请先更新 App');}
+    on=true;remember(robotFaceScope());
+    let live=false;try{live=!!(await SmallPhoneNative.request('screenShare.status',{}))?.active;}catch(_){}
+    if(live){say('已经在共享屏幕，小 K 现在也看得到了');return;}
+    const opened=await SmallPhoneNative.request('screenShare.start',{});
+    if(opened&&opened.pickerPresented===false){await stop(false);throw Error('系统屏幕共享面板暂时打不开');}
+    say('请在系统面板点“开始直播”');
+  }
+  // endBroadcast is false when the broadcast has already ended, or belongs to a call.
+  async function stop(endBroadcast){
+    on=false;remember('');
+    try{await SmallPhoneNative.request('screenShare.robot.clear',{});}catch(_){}
+    if(endBroadcast!==false&&!inCallShare())try{await SmallPhoneNative.request('screenShare.stop',{});}catch(_){}
+    await owner('stop');
+  }
+  async function toggle(){
+    if(busy)return false;
+    if(!nativeOn()){say('屏幕共享只在私人小手机 App 里可用');return false;}
+    busy=true;paint();
+    try{if(on){await stop(true);say('已停止，小 K 看不到你的屏幕了');}else await start();return true;}
+    catch(e){say(String(e&&e.message||'没有成功，请稍后再试'));return false;}
+    finally{busy=false;paint();}
+  }
+  // The broadcast ended (the red bar, the lock screen, a call hanging up): tell the cloud.
+  function nativeEvent(event){
+    if(!on||!event||event.active!==false||busy)return;
+    busy=true;stop(false).catch(()=>{}).finally(()=>{busy=false;paint();});
+  }
+  // After a restart: a share that was on but whose broadcast is gone is closed on the cloud too.
+  async function resume(){
+    let scope='';try{scope=localStorage.getItem(KEY)||'';}catch(_){}
+    if(!scope||!nativeOn())return;
+    try{
+      const [status,robot]=await Promise.all([SmallPhoneNative.request('screenShare.status',{}),SmallPhoneNative.request('screenShare.robot.status',{})]);
+      if(status?.active&&robot?.configured&&scope===robotFaceScope()){on=true;paint();return;}
+      if(scope===robotFaceScope())await stop(false);else remember('');
+    }catch(_){}
+    paint();
+  }
+  return {toggle,nativeEvent,resume,paint,active:()=>on};
+})();
+if(typeof window!=='undefined'){
+  const previous=window.__smallPhoneScreenShareEvent;
+  window.__smallPhoneScreenShareEvent=function(event){try{RobotScreen.nativeEvent(event);}catch(_){}return typeof previous==='function'?previous.apply(this,arguments):undefined;};
+}
 if(typeof robotFacePaint==='function'){
   const original=robotFacePaint;
-  robotFacePaint=function(){const value=original.apply(this,arguments);RobotVoice.mount();return value;};
+  robotFacePaint=function(){const value=original.apply(this,arguments);RobotVoice.mount();RobotScreen.paint();return value;};
 }
-if(typeof privateNativeAppOn==='function'&&privateNativeAppOn())RobotVoice.start();
+if(typeof privateNativeAppOn==='function'&&privateNativeAppOn()){RobotVoice.start();RobotScreen.resume();}
