@@ -27,7 +27,7 @@
  }
  // Streaming is assembled before any action protocol is consumed. Never retry a paid request here.
  function streamData(raw){
-  let content='',complete=false,result={choices:[{message:{role:'assistant',content:''},finish_reason:null}]};
+  let content='',reasoning='',complete=false,result={choices:[{message:{role:'assistant',content:''},finish_reason:null}]};
   for(const block of raw.replace(/\r\n/g,'\n').split(/\n\n+/)){
    const payload=block.split('\n').filter(line=>line.startsWith('data:')).map(line=>line.slice(5).replace(/^ /,'')).join('\n');
    if(!payload)continue;if(payload.trim()==='[DONE]'){complete=true;break;}
@@ -35,12 +35,12 @@
    if(part.error)throw new Error('流式接口失败：'+scrub(part.error.message||'未知错误'));
    if(part.id)result.id=part.id;if(part.model)result.model=part.model;if(part.usage)result.usage=part.usage;
    const choice=(part.choices||[]).find(x=>x.index==null||x.index===0);if(!choice)continue;
-   const delta=choice.delta||choice.message||{},text=delta.content;
+   const delta=choice.delta||choice.message||{},text=delta.content;if(typeof delta.reasoning_content==='string')reasoning+=delta.reasoning_content;else if(typeof delta.reasoning==='string')reasoning+=delta.reasoning;
    if(typeof text==='string')content+=text;else if(Array.isArray(text))content+=text.filter(x=>x&&x.type==='text').map(x=>x.text||'').join('');
    if(choice.finish_reason){result.choices[0].finish_reason=choice.finish_reason;complete=true;}
   }
   if(!complete)throw new Error('流式回复意外中断，未执行角色操作，请确认后再重试');
-  result.choices[0].message.content=content;return result;
+  result.choices[0].message.content=content;if(reasoning)result.choices[0].message.reasoning_content=reasoning;return result;
  }
  async function streamBody(res,timeout){
   if(!res.body||typeof res.body.getReader!=='function')return res.text();
