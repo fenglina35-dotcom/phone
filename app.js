@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1740'){
+if(window.__NORTH_SHELL_BUILD__!=='1742'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -616,7 +616,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1740 · 心声展开与思考摘要';
+const APP_VER='v1742 · 角色微信聊天不再重复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2089,7 +2089,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1740&r=v1740-thought-preview-1';
+  const url='sw.js?v=1742&r=v1742-thought-preview-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -14095,18 +14095,28 @@ function hisSeed(cid){const c=getC(cid);const d=hisWxData(cid);const sp=(S.spy&&
       if(sp2==='他'||sp2==='我'||sp2==='自己'||sp2===c.name||(c.remark&&sp2===c.remark))r='me';/* 角色本人 */
       else if(sp2===fname||/对方|对面/.test(sp2)||sp2==='对')r='ta';/* 对方 */
       else r=mm?'ta':'me';/* 有名字但认不出当对方，没标签的当他本人 */
-      return {r,c:txt,t:Date.now()};});
+      return {r,c:txt.trim(),t:Date.now()};}).filter(m=>m.c);
     let f=d.friends.find(x=>x.name===w.who||(Array.isArray(x.alias)&&x.alias.includes(w.who)));if(f){delete f.familyPlaceholder;if(!f.relKey&&w.relation)f.relation=String(w.relation).slice(0,20);}
     if(!f){d.friends.push({id:'hf'+Math.random().toString(36).slice(2,8),name:w.who,relation:String(w.relation||((sp.contacts||[]).find(x=>x.name===w.who)||{}).note||'微信好友'),avatar:'',persona:'',msgs:ms});ch=true;}
-    else if(ms.length){/* 快照没有消息 ID：按方向、正文及出现次数补齐，保留已发送的图片、付款和历史消息；重复刷新不重复导入。 */
+    else if(ms.length){/* 快照没有消息 ID：按正文（hisMsgKey，忽略空白、标点和说话人写法）及出现次数补齐，保留已发送的图片、付款和历史消息；重复刷新不重复导入。 */
       const existing=f.msgs||(f.msgs=[]),counts=new Map(),seen=new Map();
-      const key=m=>JSON.stringify([m.r|| (m.mine?'me':'ta'),String(m.c==null?'':m.c)]);
+      const key=m=>hisMsgKey(m.c);
       existing.forEach(m=>{const k=key(m);counts.set(k,(counts.get(k)||0)+1);});
       ms.forEach(m=>{const k=key(m),n=(seen.get(k)||0)+1;seen.set(k,n);if(n>(counts.get(k)||0)){existing.push(m);ch=true;}});}});
   (c._gotFromMe||[]).forEach(nm=>{if(nm&&!has(nm)){d.friends.push({id:'hf'+Math.random().toString(36).slice(2,8),name:nm,relation:'朋友',avatar:'',persona:'',msgs:[]});ch=true;}});
   if(typeof relHisFriends==='function'&&relHisFriends(cid,d))ch=true;
   if(typeof relFamilySync==='function'){if(relFamilySync(cid,d,legacyFamily))ch=true;if(!family.migrated){family.migrated=true;ch=true;}if(typeof relHisFriends==='function'&&relHisFriends(cid,d))ch=true;}/* 关系网里的人：刷新时出现在他的好友列表，语气跟着好感走 */
+  d.friends.forEach(f=>{if(hisCollapseRepeats(f.msgs))ch=true;});/* 之前已经重复存进去的段落顺手收起 */
   if(!d.seeded){d.seeded=true;ch=true;}if(ch)save();}
+/* 查他手机每次刷新都是模型重新写的一份聊天快照，同一句话常常只差一个空格、全角/半角逗号，或者把角色写成简称（「裴：」而不是「他：」）。
+   以前按「方向+原文」逐字比对，这些差别会让同一句话被当成新消息再追加一遍，登录角色微信里的聊天就一段一段地重复。
+   比对时去掉空白、标点和零宽字符，也不看是谁说的；去完什么都不剩的（如单个问号）才退回原文比对。 */
+function hisMsgKey(text){const raw=String(text==null?'':text).normalize('NFKC').replace(/[\s​-‏⁠﻿]/g,''),key=raw.replace(/[\p{P}\p{S}]/gu,'');return key||raw;}
+/* 修复已经存进去的重复：连续出现、逐条相同的一段（2 到 12 条，或单独一条较长的话）只留第一段。
+   只看纯文字消息，图片、表情、转账、红包和带付款记录的消息不动。返回删掉的条数。 */
+function hisCollapseRepeats(list){if(!Array.isArray(list)||list.length<2)return 0;const plain=m=>m&&(!m.type||m.type==='text')&&!m._hisPaymentId,same=(a,b)=>plain(a)&&plain(b)&&(a.r||(a.mine?'me':'ta'))===(b.r||(b.mine?'me':'ta'))&&hisMsgKey(a.c)===hisMsgKey(b.c);let removed=0;
+  for(let i=1;i<list.length;i++){for(let k=Math.min(12,i,list.length-i);k>=1;k--){let hit=true;for(let j=0;j<k&&hit;j++)hit=same(list[i-k+j],list[i+j]);if(!hit)continue;if(k===1&&hisMsgKey(list[i].c).length<6)continue;list.splice(i,k);removed+=k;i=Math.max(0,i-k-1);break;}}
+  return removed;}
 function hisLastMain(cid){const m=msgs(cid).filter(x=>!x._call);const lm=m[m.length-1];return lm?previewOf(lm):'';}
 function hisLoginOpen(cid){const c=getC(cid);if(!isMain()||!c||c.deleted||c.blocked)return;if(hisWechatBound(cid)){_hisSync=true;hisStartSession(cid);return;}_hisLoginMode='wx';_hisSync=false;go('hislogin',{id:cid});}
 function renderHisLogin(cid){const c=getC(cid);if(!c)return '';const ph=_hisLoginMode==='phone';

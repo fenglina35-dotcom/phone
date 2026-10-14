@@ -41,6 +41,8 @@ const PERMANENT_FIXES = [
   {release:"v1732",scope:"both",least:1,name:"真人好友同步没有新消息时逐渐放慢，减轻数据库负载",marker:"function phoneFriendSyncActive(){_pfIdleSyncs=0;}"},
   {release:"v1728",scope:"both",least:1,name:"真人店铺、店铺图片与上传走中转/直连自动选线，中转未部署时保持直连",marker:"async function northMarketRelayReady()",file:"commerce-ui.js"},
   {release:"v1726",scope:"both",least:1,name:"角色点外卖选商品失败时按真实菜单兜底",marker:"function northRoleFallbackPick(found,plan)",file:"commerce-ui.js"},
+  {release:"v1742",scope:"web",least:1,name:"登录角色微信：查他手机刷新不再把同样的聊天重复导入，已重复的段落自动收起",marker:"function hisCollapseRepeats(list)"},
+  {release:"v1742",scope:"web",least:1,name:"登录角色微信：快照合并按正文比对，忽略空白、标点和说话人写法",marker:"const key=m=>hisMsgKey(m.c);"},
   {release:"v1738",scope:"web",least:1,name:"一轮回复里的多条外语气泡合并成一次翻译请求，限流时退避重试",marker:"function roleTextTranslationBatchPrompt(sources)"},
   {release:"v1738",scope:"web",least:1,name:"点一次重试把这个聊天里所有翻译失败的气泡一起重试",marker:"x._textTransState==='failed'&&!x.textTrans"},
   {release:"v1738",scope:"web",least:1,file:"travel-flight.js",name:"机票接受城市库外的中文城市（苏州→威海不再判城市无效）",marker:"const custom=customCity(n);return custom?{n:custom,c:'---',i:0,g:'自定义',r:'中国',custom:true}:null;"},

@@ -81,9 +81,9 @@ test('automatic safety snapshot rejects an out-of-order older write',async()=>{
 test('v914 shell and service worker are aligned',()=>{
   const html=readFileSync(join(root,'小手机.html'),'utf8');
   const sw=readFileSync(join(root,'sw.js'),'utf8');
-  assert.match(app,/APP_VER='v1740 · 心声展开与思考摘要'/);
-  assert.match(html,/app\.js\?v=1740/);
-  assert.match(sw,/BUILD='1740'/);
+  assert.match(app,/APP_VER='v1742 · 角色微信聊天不再重复'/);
+  assert.match(html,/app\.js\?v=1742/);
+  assert.match(sw,/BUILD='1742'/);
 });
 
 test('service worker activation never reloads the active app page',()=>{
