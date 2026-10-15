@@ -1,6 +1,6 @@
-"""Create the private v1755 / iOS 446 Mac-source overlay package (unhurried laughs, director on the role model; protected private inheritance).
+"""Create the private v1757 / iOS 447 Mac-source overlay package (expressive voice recognises Fish Drama 3; protected private inheritance).
 
-v1755 is packaged on the Mac: the previous delivery is the v1753 overlay zip next to
+v1757 is packaged on the Mac: the previous delivery is the v1755 overlay zip next to
 the repository (its SHA256 is checked against the value recorded for that delivery),
 and the full-test evidence is the Mac run log.
 
@@ -27,17 +27,17 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "native/private-small-phone/XcodeProject/"
 BUNDLE = "PhoneCompanionTest/PhoneWeb.bundle/"
-PREFIX = "SmallPhone_v1755_iOS446_Private/"
-OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1755_iOS446.zip"
+PREFIX = "SmallPhone_v1757_iOS447_Private/"
+OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1757_iOS447.zip"
 
-WEB_VERSION = "1755"
+WEB_VERSION = "1757"
 REVIEWED_RUNTIME_COMMIT = "HEAD"
 MAIN_BASE_COMMIT = "4d9865e894b5fc214017e41c471cc60120a7405e"
 EVIDENCE_ROOT = ROOT.parent / ".codex-eight-chat-fixes" / ".codex_tmp"
-TEST_LOG = ROOT.parent / "mac" / "extracted" / "claude-work" / "full-tests-1755.log"
-PREVIOUS_ZIP = ROOT.parent / "最新私人版本覆盖包_v1753_iOS445.zip"
-PREVIOUS_ZIP_SHA256 = "553f2c18a4458dfb192cb13aac518ff10898b454e182df3a0a7c88fe15ff5062"
-PREVIOUS_SOURCE = "46c2f8822937f917513f441e17944bc35cdd70e5"
+TEST_LOG = ROOT.parent / "mac" / "extracted" / "claude-work" / "full-tests-1757.log"
+PREVIOUS_ZIP = ROOT.parent / "最新私人版本覆盖包_v1755_iOS446.zip"
+PREVIOUS_ZIP_SHA256 = "ac2ebe3bc8fb149928c5b7d0a6d4bc08c8f1223848d7c930767bfc207705ebad"
+PREVIOUS_SOURCE = "62397f0c748bc3d83c2b5649922892a4410d947f"
 
 
 class FolderArchive:
@@ -60,8 +60,8 @@ class FolderArchive:
     def read(self, name: str) -> bytes:
         return (self.root / name.split("/", 1)[1]).read_bytes()
 VOLUME_BYTES = 50 * 1024 * 1024
-MARKETING = "1.0.446"
-BUILD = "446"
+MARKETING = "1.0.447"
+BUILD = "447"
 BRIDGE = "42"
 
 
@@ -624,11 +624,11 @@ def main() -> None:
     commit = text(git("rev-parse", "HEAD")).strip()
     web_commit = commit
     git("merge-base", "--is-ancestor", MAIN_BASE_COMMIT, commit)
-    assert re.search(r"APP_VER='v1750\b", text(git("show", web_commit + ":app.js")))
+    assert re.search(r"APP_VER='v1752\b", text(git("show", web_commit + ":app.js")))
     files = committed_private_files()
     validate(files)
     previous = PREVIOUS_ZIP
-    assert sha256(previous.read_bytes()).hexdigest() == PREVIOUS_ZIP_SHA256, "previous v1753 delivery zip changed"
+    assert sha256(previous.read_bytes()).hexdigest() == PREVIOUS_ZIP_SHA256, "previous v1755 delivery zip changed"
     git("merge-base", "--is-ancestor", PREVIOUS_SOURCE, commit)
     with ZipFile(previous) as old:
         prefix = next(n for n in old.namelist() if n.endswith("/SOURCE_STATE.json"))[:-len("SOURCE_STATE.json")]
@@ -644,8 +644,8 @@ def main() -> None:
             assert sha256(body).hexdigest() == digest, "previous checksum mismatch: " + name
             if name not in {"SOURCE_STATE.json", "请在Mac编译前先读.md"} and not name.startswith(BUNDLE):
                 if name in {"PhoneCompanionTest.xcodeproj/project.pbxproj", "PhoneCompanionTest/LocalPhoneWebView.swift", "PhoneCompanionTest/PhoneNativeBridge.swift"}:
-                    # v1755 changes only the build number in these files.
-                    assert text(files[name]).replace("1.0.446", "1.0.445").replace("(446)", "(445)").replace("VERSION = 446;", "VERSION = 445;") == text(body), "native change beyond the 446 build number: " + name
+                    # v1757 changes only the build number in these files.
+                    assert text(files[name]).replace("1.0.447", "1.0.446").replace("(447)", "(446)").replace("VERSION = 447;", "VERSION = 446;") == text(body), "native change beyond the 447 build number: " + name
                 else:
                     assert files[name] == body, "native/signing change: " + name
         allowed_bundle_changes = {BUNDLE + n for n in ("app.js", "index.html", "小手机.html", "repair.html", "voice-expressive.js")}
@@ -744,7 +744,7 @@ def main() -> None:
     state["intentionalRemovals"] = ["v1677-optical-material-renderer-and-overrides", "v1677-role-sync-relay-transport"]
     state["sourceCommit"] = commit
     state["webSourceCommit"] = web_commit
-    state["webVersion"] = "v1750"
+    state["webVersion"] = "v1752"
     state["webPublishedCommit"] = commit
     state["privateWeb"] = "v" + WEB_VERSION
     state["privateIOS"] = f"{MARKETING} ({BUILD})"
@@ -787,7 +787,8 @@ def main() -> None:
     state["preserved"] = sorted(set(state["preserved"]) | {"v1739-default-off-thinking-summary-budget-and-original-protocol", "v1739-inline-rounded-thought-and-small-buttons", "published-main-private-screen-share-and-k-trials"})
     state["roleThinkingPreview"] = {"defaultOff": True, "defaultBudget": 2048, "range": [1024,32768], "display": "returned-summary-only", "nativeMessagesShortProbePassed": True, "actualRoleRealModelVerified": False, "realIPhoneVerified": False}
     state["preserved"] = sorted(set(state["preserved"]) | {"v1743-cozy-home-062-light-volume-and-boot-precompile", "v1743-cozy-offline-online-scene-notes-in-shared-history"})
-    state["preserved"] = sorted(set(state["preserved"]) | {"v1745-private-flight-rail-niche-cities-content-dates-and-rail-aliases", "v1747-private-album-tags-diagnostic-helper-defined", "v1749-expressive-voice-and-binaural-voice-notes-default-off", "v1751-leftover-voice-tag-repair-explicit-asks-and-3d-badge", "v1753-voice-director-pass-and-spoken-length", "v1755-unhurried-laughs-director-on-role-model"})
+    state["preserved"] = sorted(set(state["preserved"]) | {"v1745-private-flight-rail-niche-cities-content-dates-and-rail-aliases", "v1747-private-album-tags-diagnostic-helper-defined", "v1749-expressive-voice-and-binaural-voice-notes-default-off", "v1751-leftover-voice-tag-repair-explicit-asks-and-3d-badge", "v1753-voice-director-pass-and-spoken-length", "v1755-unhurried-laughs-director-on-role-model", "v1757-expressive-voice-recognises-fish-drama-3"})
+    assert "/drama/i.test(String(tts.model||\x27\x27))" in text(files[BUNDLE + "voice-expressive.js"]), "v1757 Drama 3 recognition missing"
     assert "function directorLaughOnce(t){" in text(files[BUNDLE + "voice-expressive.js"]), "v1755 laugh rule missing"
     assert "NorthVoiceExpressive.direct(m,o)" in app and "ttsSpokenLength(t)>VOICE_MAX_CHARS" in app, "v1753 voice director missing"
     assert "NorthVoiceExpressive.normalize(m)" in app and "m.voice3d=true" in app, "v1751 voice repair missing"
@@ -799,9 +800,9 @@ def main() -> None:
     for name in ("travel-flight.js", "travel-flight-booking.js", "travel-train.js", "travel-train-booking.js"):
         assert files[BUNDLE + name] == git("show", "HEAD:" + name), "private booking file differs from web: " + name
     assert "function customCity(n)" in text(files[BUNDLE + "travel-flight.js"]) and "function customCity(n)" in text(files[BUNDLE + "travel-train.js"]), "niche-city booking repair missing"
-    state["macBuildVerified"] = True  # xcodebuild Release for the user's iPhone 15 on the Mac, 2026-10-15 (xcodebuild-1755.log)
+    state["macBuildVerified"] = True  # xcodebuild Release for the user's iPhone 15 on the Mac, 2026-10-15 (xcodebuild-1757.log)
     state["realIPhoneVerified"] = False
-    state["knownUnresolved"] = [x for x in state.get("knownUnresolved", []) if not re.match(r"v\d+-mac-build", x)] + ["v1755-real-iphone-laugh-pacing-awaiting-user-listening", "v1753-real-iphone-voice-director-awaiting-user-listening", "v1751-real-iphone-voice-second-pass-awaiting-user-listening", "v1749-real-iphone-expressive-voice-and-3d-awaiting-user-listening", "v1747-real-iphone-album-tag-reply-awaiting-user-confirmation", "v1745-real-iphone-flight-booking-awaiting-user-confirmation", "v1743-real-iphone-cozy-and-scene-notes-awaiting-user-confirmation", "precise-time-background-dispatch-not-deployed", "v1705-private-music-keyboard-and-role-response-acceptance-pending", "calendar-closed-app-system-notifications-not-implemented", "real-model-calendar-personality-and-voice-acceptance-pending", "v1675-user-main-model-and-native-lock-receipts-pending"]
+    state["knownUnresolved"] = [x for x in state.get("knownUnresolved", []) if not re.match(r"v\d+-mac-build", x)] + ["v1757-real-iphone-awaiting-user-listening", "v1755-real-iphone-laugh-pacing-awaiting-user-listening", "v1753-real-iphone-voice-director-awaiting-user-listening", "v1751-real-iphone-voice-second-pass-awaiting-user-listening", "v1749-real-iphone-expressive-voice-and-3d-awaiting-user-listening", "v1747-real-iphone-album-tag-reply-awaiting-user-confirmation", "v1745-real-iphone-flight-booking-awaiting-user-confirmation", "v1743-real-iphone-cozy-and-scene-notes-awaiting-user-confirmation", "precise-time-background-dispatch-not-deployed", "v1705-private-music-keyboard-and-role-response-acceptance-pending", "calendar-closed-app-system-notifications-not-implemented", "real-model-calendar-personality-and-voice-acceptance-pending", "v1675-user-main-model-and-native-lock-receipts-pending"]
     state["validation"] = {"macBuildVerified": True, "realIPhoneVerified": False,
         "nodeTests": {"passed": passed_tests, "failed": 0, "skipped": 0, "includesProtectedParallelTestChanges": False, "sourceCommit": commit, "resultSource": str(TEST_LOG)},
         "models": "HTTP simulated; no live model or production financial tests",
