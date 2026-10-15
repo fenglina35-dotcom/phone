@@ -80,6 +80,7 @@ function performance(text,o,tts,opt){if(!on())return null;const kind=styleKind(t
 
 
 /* ───────────── 语音导演（只对 Fish S2/S2.1）：角色回完话后，再专门做一次表演标注 ─────────────
+   用的是这个角色自己的聊天模型（和聊天同一条路线），不是副模型：用户反馈副模型写出来的表演不够好。
    角色一边聊天一边顺手写的提示往往很随意，笑声也短得几乎听不到。这里参考了 dawnsyo-blip/ttsdirectorskill-chatting 对 Fish s2.1 的实测结论
    （稳定有效的标签、克制、改写文字比堆标签有效、命令句用软标签），用自己的话写成导演规则；中英文台词都支持。
    结果缓存在消息上（voiceDirected / voiceDirectedFor），同一条语音不会重复调用；任何失败都退回上面的行内提示逻辑。 */
@@ -96,8 +97,8 @@ const DIRECTOR_PROMPT=[
 '   强度可以加程度词：[slightly sad] < [sad] < [very happy]。',
 '5. 停顿和呼吸默认不加：模型自己会换气，标点已经给出停顿。只有真正的情绪落点才用 [pause] [long pause] [sigh] [inhales]，同一个位置只放一个；“……”“——”后面不要再接停顿标签。',
 '6. 这是陪伴聊天：语气可两解时，往温柔、宠溺、心疼的方向读。命令句和道别句（去睡觉、乖、闭眼、晚安、come here、go to sleep）用 [soft] [gently nudging] [whispering] 这类软标签，不要用 [forceful] [serious]。嘴硬心软用 [chuckling] [warm] 把温度写出来，不要冷淡平板的语气。',
-'7. 笑：要让人真的听到笑。轻轻笑用 [chuckle] 或 [laugh softly] 放在那句前面，边笑边说用 [chuckling]；可以同时在句首或句尾加一个自然的笑声词（哈……、嘿、heh、haha）。没有理由就不要笑；一条最多一处笑。',
-'8. 如果给了“用户这一轮的要求”（让你笑、凶一点、撒娇、小声等），这条语音必须明显做到：让笑就一定有清楚的笑声；让凶就用 [serious] [angry] [forceful] 这类，但仍然是同一个人的声音，不要尖叫；让撒娇就用 [voice softening into a low murmur] [draw out the final syllable]。',
+'7. 笑：要让人真的听到一段从容的笑，不要急。一条最多笑一次，只用一个笑的标签：想笑出声就把 [laugh softly] 单独放在一句前面，笑完用“……”或“...”留出一点空再接话（例如 "[laugh softly] ...Okay, okay. You win."、"[laugh softly] ……好啦，给你笑。"）；只是边说边带笑意才用 [chuckling]。不要把 [chuckling] [chuckle] [laugh softly] 叠在一起，也不要写 haha、hahaha、哈哈哈 这类字去凑笑声——Fish 会把它念成很快的几下，听起来急促。没有理由就不要笑。',
+'8. 如果给了“用户这一轮的要求”（让你笑、凶一点、撒娇、小声等），这条语音必须明显做到：让笑就一定有一段清楚、从容的笑（[laugh softly] 加一点留白，见第 7 条）；让凶就用 [serious] [angry] [forceful] 这类，但仍然是同一个人的声音，不要尖叫；让撒娇就用 [voice softening into a low murmur] [draw out the final syllable]。',
 '9. 如果给了“角色自己写的表演提示”，把它当参考，换成上面的标签放到对应位置。',
 '10. 语言：台词是英文就用英文语气词改写，标签仍是英文；台词是中文就用中文语气词。不要翻译，不要换语言。',
 '11. 不要使用：环境音标签（风声、雨声等）、XML 标签、中文方括号提示、任何解释。',
@@ -106,6 +107,8 @@ const FILLER_RE=/[嗯唔哈嘿啧呀嘛啊呢吧哦噢诶欸呃哎唉呵]|\b(?:m
 function directorClean(raw){let t=String(raw==null?'':raw).trim().replace(/^```[\w-]*\s*|\s*```$/g,'').trim();t=t.replace(/^(?:输出|标注后?的?台词|台词|Output|Annotated)\s*[:：]\s*/i,'').trim();if(/^["“「](.*)["”」]$/s.test(t))t=t.replace(/^["“「]|["”」]$/g,'').trim();
   t=t.replace(/[\[【]\s*[^\]】]*[\u3400-\u9fff][^\]】]*\s*[\]】]/g,'').replace(/<(?!\|phoneme_)[^>]{1,40}>/g,'');
   t=t.replace(/\[\s*([^\]\n]{1,60}?)\s*\]\s*/g,'[$1] ').replace(/[ \t]{2,}/g,' ').replace(/\n{3,}/g,'\n\n').trim();return t;}
+/* 一条只笑一次：保留第一个笑的标签，后面的笑标签去掉；紧跟在笑标签后的 haha/哈哈 这类字去掉，换成留白，免得被念成很快的几下。 */
+function directorLaughOnce(t){t=String(t||'');const cjk=/[\u3400-\u9fff]/.test(t);let seen=false;t=t.replace(/\[([^\]\n]*\b(?:laugh\w*|chuckl\w*)\b[^\]\n]*)\]\s*((?:(?:ha){2,}h?|(?:哈){2,}|(?:呵){2,}|heh(?:eh)+)[\s,，.。!！~～…]*)?/gi,(x,tag,syl)=>{if(seen)return '';seen=true;return '['+tag+'] '+(syl?(cjk?'……':'... '):'');});return t.replace(/[ \t]{2,}/g,' ').trim();}
 function directorPlain(t){return String(t||'').replace(/\[[^\]\n]{1,60}\]/g,' ').replace(/<\|phoneme_start\|>[a-z]+[1-5]<\|phoneme_end\|>/gi,'').toLowerCase().replace(FILLER_RE,'').replace(/[^\p{L}\p{N}]/gu,'');}
 function lcs(a,b){a=[...a];b=[...b];if(!a.length||!b.length)return 0;let prev=new Array(b.length+1).fill(0);for(let i=1;i<=a.length;i++){const cur=new Array(b.length+1).fill(0);for(let j=1;j<=b.length;j++)cur[j]=a[i-1]===b[j-1]?prev[j-1]+1:Math.max(prev[j],cur[j-1]);prev=cur;}return prev[b.length];}
 /* 导演只能改语气、加语气词和标签，不能改意思：去掉标签和语气词后，原台词的字要几乎都在，而且不能多出一大段。 */
@@ -114,8 +117,8 @@ function directorValid(out,src){if(!out)return false;const tags=(out.match(/\[[^
   return keep>=.9&&grow<=1.3;}
 async function direct(m,o){if(!on()||!m||m.type!=='voice'||!m.content)return null;if(styleKind(roleTts(o))!=='fish')return null;if(m.voiceDirected&&m.voiceDirectedFor===m.content)return m.voiceDirected;if(typeof chatAPI!=='function')return null;
   const st=state()||{},me=(st.me&&st.me.name)||'对方',payload=['角色：'+String((o&&(o.name||o.remark))||'角色')+'（在和'+me+'说话）','用户这一轮的要求：'+(String(m.voiceAsk||'').trim()||'无'),'角色自己写的表演提示：'+(String(m.voicePerf||'').trim()||'无'),'台词：',String(m.content)].join('\n');
-  try{const routeIndex=typeof roleChatRouteIndex==='function'?roleChatRouteIndex(o):undefined,raw=await chatAPI([{role:'system',content:DIRECTOR_PROMPT},{role:'user',content:payload}],{aux:true,routeIndex,temp:.4,max:Math.max(300,Math.min(1200,[...String(m.content)].length*3)),timeout:45000,complete:true,roleInterceptAudit:null,roleInterceptStage:'语音表演标注'});
-    const out=directorClean(raw);if(!directorValid(out,m.content)){m.voiceDirectError='导演结果改动了台词或格式不对，已用简单标注';return null;}
+  try{const routeIndex=typeof roleChatRouteIndex==='function'?roleChatRouteIndex(o):undefined,raw=await chatAPI([{role:'system',content:DIRECTOR_PROMPT},{role:'user',content:payload}],{aux:false,independentRoleModel:true,routeIndex,temp:.4,max:Math.max(300,Math.min(1200,[...String(m.content)].length*3)),timeout:45000,complete:true,roleInterceptAudit:null,roleInterceptStage:'语音表演标注'});
+    const out=directorLaughOnce(directorClean(raw));if(!directorValid(out,m.content)){m.voiceDirectError='导演结果改动了台词或格式不对，已用简单标注';return null;}
     m.voiceDirected=out;m.voiceDirectedFor=m.content;delete m.voiceDirectError;return out;}catch(e){m.voiceDirectError=String(e&&e.message||e||'').slice(0,80);return null;}}
 
 /* ───────────── 3D 贴耳：KU100 近场 HRIR 双耳渲染（算法照 binaural_voice.py） ───────────── */
@@ -168,6 +171,6 @@ async function binaural(ab,spatial,text){if(!on()||!ab)return null;try{const raw
     const ch=buf.numberOfChannels,n=buf.length,x=new Float32Array(n);for(let c=0;c<ch;c++){const d=buf.getChannelData(c);for(let i=0;i<n;i++)x[i]+=d[i]/ch;}
     const out=await renderSamples(x,buf.sampleRate,raw,spatial,[...String(text||'')].length);return wav16(out.L,out.R,out.fs);}catch(_){return null;}}
 
-root.NorthVoiceExpressive={on,split,normalize,prompt,performance,binaural,handPerf,direct,renderSamples,plan,_test:{DIRECTOR_PROMPT,directorClean,directorValid,FISH,ELEVEN,SOUND,soundAllowed,soundMark,_soundAt,hrirAt,wav16,loadHrir}};
+root.NorthVoiceExpressive={on,split,normalize,prompt,performance,binaural,handPerf,direct,renderSamples,plan,_test:{DIRECTOR_PROMPT,directorClean,directorValid,directorLaughOnce,FISH,ELEVEN,SOUND,soundAllowed,soundMark,_soundAt,hrirAt,wav16,loadHrir}};
 root.voiceExpressiveOn=on;
 })(typeof globalThis!=='undefined'?globalThis:this);

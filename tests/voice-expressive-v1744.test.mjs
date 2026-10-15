@@ -165,10 +165,10 @@ test('the director annotates Chinese and English lines with natural fillers and 
   const zh=directorSandbox('输出：[soft] 嗯……过来。[chuckling] 我才不信呢。'),m={type:'voice',content:'过来。我才不信。',voiceAsk:'笑一笑'};
   assert.equal(await zh.NorthVoiceExpressive.direct(m,{id:'r',name:'Claude'}),'[soft] 嗯……过来。[chuckling] 我才不信呢。');
   assert.equal(m.voiceDirectedFor,'过来。我才不信。');
-  const call=zh.calls[0];assert.equal(call.opt.aux,true);assert.equal(call.opt.roleInterceptAudit,null);
+  const call=zh.calls[0];assert.equal(call.opt.aux,false,'the director uses the role\'s own chat model');assert.equal(call.opt.independentRoleModel,true);assert.equal(call.opt.roleInterceptAudit,null);
   assert.match(call.rows[1].content,/用户这一轮的要求：笑一笑/);assert.match(call.rows[1].content,/台词：\n过来。我才不信。/);
-  const en=directorSandbox("[soft] Hey... come here. [chuckling] You're ridiculous, haha."),e={type:'voice',content:"Come here. You're ridiculous."};
-  assert.equal(await en.NorthVoiceExpressive.direct(e,{id:'r'}),"[soft] Hey... come here. [chuckling] You're ridiculous, haha.");
+  const en=directorSandbox("[soft] Hey... come here. [chuckling] You're ridiculous."),e={type:'voice',content:"Come here. You're ridiculous."};
+  assert.equal(await en.NorthVoiceExpressive.direct(e,{id:'r'}),"[soft] Hey... come here. [chuckling] You're ridiculous.");
   const V=zh.NorthVoiceExpressive;V.handPerf(m.content,'',m.voiceAsk,m.voiceDirected);
   assert.equal(V.performance(m.content,{id:'r'},{},{}),'[soft] 嗯……过来。[chuckling] 我才不信呢。','the directed text goes to Fish as is');
 });
@@ -197,4 +197,12 @@ test('director clean-up, prompt rules and the spoken-length limit',()=>{
     const fnSrc=src.split('\n').find(l=>l.startsWith('function ttsSpokenLength('));const ctx=vm.createContext({});vm.runInContext(fnSrc,ctx);
     assert.equal(ctx.ttsSpokenLength('[soft] [voice softening into a low murmur] 过来'),2,'tags do not count against the voice length limit');
   }
+});
+
+test('laughs get room: one laugh per note, no rapid haha syllables glued to the laugh tag',()=>{
+  const T=sandbox({voiceExpressive:true}).NorthVoiceExpressive._test;
+  assert.equal(T.directorLaughOnce('[chuckling] Mm... you want me to laugh? [laugh softly] Haha, fine.'),'[chuckling] Mm... you want me to laugh? fine.','a second laugh tag is removed');
+  assert.equal(T.directorLaughOnce('[laugh softly] Hahaha, okay you win.'),'[laugh softly] ... okay you win.','written laugh syllables after the tag become a pause');
+  assert.equal(T.directorLaughOnce('[laugh softly] 哈哈哈，好啦给你笑。'),'[laugh softly] ……好啦给你笑。');
+  assert.match(T.DIRECTOR_PROMPT,/一条最多笑一次/);assert.match(T.DIRECTOR_PROMPT,/听起来急促/);
 });
