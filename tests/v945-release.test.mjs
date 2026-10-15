@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1744 · 细腻情绪与3D贴耳'/);
-  assert.match(app,/const url='sw\.js\?v=1744&r=v1744-thought-preview-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1744'/);
-  assert.match(html,/app\.js\?v=1744/);
-  assert.match(sw,/const BUILD='1744'/);
-  assert.match(sw,/north-shell-v1744-thought-preview-1/);
-  assert.match(index,/小手机\.html\?v=1744/);
-  assert.match(repair,/小手机\.html\?v=1744/);
+  assert.match(app,/APP_VER='v1746 · 语音笑声凶语气与3D标记'/);
+  assert.match(app,/const url='sw\.js\?v=1746&r=v1746-thought-preview-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1746'/);
+  assert.match(html,/app\.js\?v=1746/);
+  assert.match(sw,/const BUILD='1746'/);
+  assert.match(sw,/north-shell-v1746-thought-preview-1/);
+  assert.match(index,/小手机\.html\?v=1746/);
+  assert.match(repair,/小手机\.html\?v=1746/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{
   assert.match(privateBundle,/<string>1200<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.443;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 443;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.443 \(443\)'/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.444;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 444;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.444 \(444\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

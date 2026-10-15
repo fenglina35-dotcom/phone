@@ -15,7 +15,7 @@
    渲染失败时照常播放原来的语音，不会因此没有声音。 */
 (function(root){'use strict';
 const SOUND={轻笑:1,叹气:1,哽咽:1};
-const FISH={轻笑:'[soft chuckle]',笑着说:'[smiling]',开心:'[happy, light]',撒娇:'[sweet, clingy]',黏糊:'[sweet, clingy, drawn out]',温柔:'[gentle, tender]',宠溺:'[doting, tender]',小声:'[soft voice]',气声:'[breathy]',难过:'[sad, quiet]',低落:'[low, sad]',委屈:'[aggrieved, soft]',哽咽:'[choked up]',叹气:'[soft sigh]',停顿:'[pause]',慢慢说:'[slowly]',害羞:'[shy]',认真:'[serious, calm]',不满:'[displeased, restrained]',惊讶:'[surprised]'};
+const FISH={轻笑:'[chuckling]',笑着说:'[smiling]',开心:'[happy, light]',撒娇:'[sweet, clingy]',黏糊:'[sweet, clingy, drawn out]',温柔:'[gentle, tender]',宠溺:'[doting, tender]',小声:'[soft voice]',气声:'[breathy]',难过:'[sad, quiet]',低落:'[low, sad]',委屈:'[aggrieved, soft]',哽咽:'[choked up]',叹气:'[sighing softly]',停顿:'[pause]',慢慢说:'[slowly]',害羞:'[shy]',认真:'[serious, calm]',不满:'[displeased, restrained]',惊讶:'[surprised]'};
 const ELEVEN={轻笑:'[chuckles softly]',笑着说:'[smiling]',开心:'[happy]',撒娇:'[sweetly]',黏糊:'[sweetly, drawn out]',温柔:'[gently]',宠溺:'[tenderly]',小声:'[softly]',气声:'[breathy]',难过:'[sad]',低落:'[quietly sad]',委屈:'[hurt, softly]',哽咽:'[voice breaking]',叹气:'[sighs softly]',停顿:'[pause]',慢慢说:'[slowly]',害羞:'[shyly]',认真:'[seriously]',不满:'[annoyed]',惊讶:'[surprised]'};
 const ALIAS={笑:'笑着说',微笑:'笑着说',高兴:'开心',耳语:'小声',悄悄:'小声',轻声:'小声',伤心:'难过',心疼:'温柔',哄:'温柔',腻:'黏糊',黏:'黏糊',粘:'黏糊',哭腔:'哽咽',叹:'叹气',顿:'停顿',慢:'慢慢说',生气:'不满',吃醋:'不满'};
 const CUE_WORDS='轻笑|笑着说|微笑|笑|开心|高兴|撒娇|黏糊|腻|黏|粘|温柔|宠溺|心疼|哄|小声|耳语|悄悄|轻声|气声|难过|伤心|低落|委屈|哽咽|哭腔|叹气|叹|停顿|顿|慢慢说|慢|害羞|认真|不满|生气|吃醋|惊讶';
@@ -23,8 +23,15 @@ const cueRe=()=>new RegExp('[\\[【]\\s*('+CUE_WORDS+')\\s*[\\]】]','g');
 const spatialRe=()=>/[\[【]\s*(左耳|右耳|脑后|面前|贴近|退开)\s*[\]】]/g;
 const SOUND_COOLDOWN_MS=6*60000,_soundAt=new Map(),_handed=new Map();
 /* warmVoiceMsg 把带小提示的念法交过来，下一次合成同一正文时取用一次（发声入口仍读 m.content，原有的语言锁照常作用在它身上） */
-function handPerf(text,perf){const k=String(text||'').trim();if(k&&perf)_handed.set(k,{perf:String(perf),at:Date.now()});if(_handed.size>40){const old=[..._handed.keys()].slice(0,_handed.size-40);old.forEach(x=>_handed.delete(x));}}
-function takePerf(text){const k=String(text||'').trim(),v=_handed.get(k);if(!v)return '';_handed.delete(k);if(Date.now()-v.at>120000)return '';return v.perf;}
+function handPerf(text,perf,ask){const k=String(text||'').trim();if(k&&(perf||ask))_handed.set(k,{perf:String(perf||''),ask:String(ask||''),at:Date.now()});if(_handed.size>40){const old=[..._handed.keys()].slice(0,_handed.size-40);old.forEach(x=>_handed.delete(x));}}
+function takePerf(text){const k=String(text||'').trim(),v=_handed.get(k);if(!v)return null;_handed.delete(k);if(Date.now()-v.at>120000)return null;return v;}
+/* 用户这一轮明确提的要求：让角色笑、凶一点、撒娇。明确要求优先于限量和温和规则（只作用在这一条语音里）。 */
+const ASK_LAUGH=/笑一?笑|笑一下|笑一个|笑出声|笑给我|大笑|哈哈|\b(?:laugh|giggle|chuckle)/i,ASK_LOUD_LAUGH=/大笑|笑出声|放声|哈哈大笑|laugh out loud/i,ASK_FIERCE=/凶|严厉|生气|发火|吼|质问|骂|狠一点|大声|\b(?:angry|stern|mean)\b/i,ASK_SWEET=/撒娇|温柔|黏|软一点|甜一点/;
+/* 不管语音是从哪条路生成的：正文里如果还留着小提示或方位标签，挪进 voicePerf / voiceSpatial，正文和转文字保持干净。返回是否有改动。 */
+function normalize(m){if(!m||m.type!=='voice')return false;const has=t=>new RegExp(cueRe().source+'|'+spatialRe().source).test(String(t||''));let changed=false;
+  if(has(m.content)){const s=split(m.content,true);if(s){if(!m.voicePerf&&s.perf!==s.text)m.voicePerf=s.perf;if(!(m.voiceSpatial&&m.voiceSpatial.length)&&s.spatial.length)m.voiceSpatial=s.spatial;m.content=s.text;if(m.text!=null)m.text=s.text;changed=true;}}
+  if(has(m.trans)){const s=split(m.trans,true);if(s){m.trans=s.text;changed=true;}}
+  return changed;}
 
 /* app.js 的 S 是脚本级 let，不挂在 window 上，要直接按名字读 */
 function state(){try{return typeof S!=='undefined'?S:root.S;}catch(_){return null;}}
@@ -33,7 +40,7 @@ function styleKind(tts){try{return typeof ttsStyleKind==='function'?ttsStyleKind
 function roleTts(c){try{return typeof ttsCfg==='function'?ttsCfg(c):null;}catch(_){return null;}}
 
 /* 语音正文 → 显示用的干净文字、给模型念的带提示文字、方位标签（记在干净文字的第几个字）。开关关着时不处理。 */
-function split(raw){if(!on())return null;raw=String(raw==null?'':raw);const re=new RegExp(cueRe().source+'|'+spatialRe().source,'g');let text='',perf='',last=0,m;const spatial=[];let hit=false;
+function split(raw,force){if(!on()&&!force)return null;raw=String(raw==null?'':raw);const re=new RegExp(cueRe().source+'|'+spatialRe().source,'g');let text='',perf='',last=0,m;const spatial=[];let hit=false;
   while((m=re.exec(raw))){const chunk=raw.slice(last,m.index);text+=chunk;perf+=chunk;last=re.lastIndex;hit=true;
     if(m[1]){perf+='['+(ALIAS[m[1]]||m[1])+']';}else if(m[2]){spatial.push({at:[...text].length,tag:m[2]});}}
   if(!hit)return null;const tail=raw.slice(last);text+=tail;perf+=tail;
@@ -53,13 +60,18 @@ function mildCue(cue,kind){let k='';try{k=typeof ttsCueKind==='function'?ttsCueK
 
 /* 给模型念的文字。开关关着、或模型不支持行内标签时返回 null，由原来的逻辑处理。 */
 function performance(text,o,tts,opt){if(!on())return null;const kind=styleKind(tts);if(kind!=='fish'&&kind!=='eleven')return null;
-  const map=kind==='fish'?FISH:ELEVEN,marks=[];let src=String((opt&&opt.perf)||takePerf(text)||text||'').replace(spatialRe(),'');
-  src=src.replace(cueRe(),(_,w)=>{marks.push(ALIAS[w]||w);return ''+(marks.length-1)+'';});
+  const map=kind==='fish'?FISH:ELEVEN,marks=[];const handed=takePerf(text)||{},ask=String((opt&&opt.ask)||handed.ask||'');let src=String((opt&&opt.perf)||handed.perf||text||'').replace(spatialRe(),'');
+  src=src.replace(cueRe(),(_,w)=>{marks.push(ALIAS[w]||w);return '\uE010'+(marks.length-1)+'\uE011';});
   /* 外语角色的语言锁（去掉混进外语语音里的中文）同样作用在带提示的念法上；提示已换成占位符，不会被误删 */
   if(typeof ttsDropOffLanguage==='function')src=ttsDropOffLanguage(src,o);
-  let base=typeof ttsCleanBase==='function'?ttsCleanBase(src):src.trim();if(!base.replace(/\d+/g,'').trim())return '';
-  const allowSound=soundAllowed(o);let used=0,sounds=0,last='';
-  base=base.replace(/(\d+)/g,(_,i)=>{const name=marks[+i];if(!name||!map[name]||name===last)return '';if(SOUND[name]){if(sounds||!allowSound)return '';}if(used>=2)return '';if(SOUND[name])sounds++;used++;last=name;return map[name]+' ';});
+  let base=typeof ttsCleanBase==='function'?ttsCleanBase(src):src.trim();if(!base.replace(/\uE010\d+\uE011/g,'').trim())return '';
+  const wantLaugh=ASK_LAUGH.test(ask),wantFierce=ASK_FIERCE.test(ask),wantSweet=ASK_SWEET.test(ask),allowSound=wantLaugh||soundAllowed(o);let used=0,sounds=0,last='';
+  const tagFor=name=>{if(name==='轻笑'&&wantLaugh&&ASK_LOUD_LAUGH.test(ask))return kind==='fish'?'[laughing]':'[laughs]';if(wantFierce&&(name==='不满'||name==='认真'))return kind==='fish'?'[angry, firm voice]':'[angry]';return map[name];};
+  base=base.replace(/\uE010(\d+)\uE011/g,(_,i)=>{const name=marks[+i];if(!name||!map[name]||name===last)return '';if(SOUND[name]){if(sounds||!allowSound)return '';}if(used>=2)return '';if(SOUND[name])sounds++;used++;last=name;return tagFor(name)+' ';});
+  /* 明确要求了却没写对应提示：补一个，让这句要求真的听得出来 */
+  if(wantLaugh&&!sounds){base=(kind==='fish'?(ASK_LOUD_LAUGH.test(ask)?'[laughing]':'[chuckling]'):(ASK_LOUD_LAUGH.test(ask)?'[laughs]':'[chuckles]'))+' '+base;sounds++;used++;}
+  else if(wantFierce&&!/angry/.test(base)){base=(kind==='fish'?'[angry, firm voice]':'[angry]')+' '+base;used++;}
+  else if(wantSweet&&!used){base=map['撒娇']+' '+base;used++;}
   base=base.replace(/\s*\[[^\]]+\]\s*$/,m=>/chuckle|sigh|choked|breaking/.test(m)?m:'');
   if(!used){const lead=mildCue(opt&&opt.cue,kind);if(lead)base=lead+' '+base;}
   if(sounds)soundMark(o);
@@ -115,6 +127,6 @@ async function binaural(ab,spatial,text){if(!on()||!ab)return null;try{const raw
     const ch=buf.numberOfChannels,n=buf.length,x=new Float32Array(n);for(let c=0;c<ch;c++){const d=buf.getChannelData(c);for(let i=0;i<n;i++)x[i]+=d[i]/ch;}
     const out=await renderSamples(x,buf.sampleRate,raw,spatial,[...String(text||'')].length);return wav16(out.L,out.R,out.fs);}catch(_){return null;}}
 
-root.NorthVoiceExpressive={on,split,prompt,performance,binaural,handPerf,renderSamples,plan,_test:{FISH,ELEVEN,SOUND,soundAllowed,soundMark,_soundAt,hrirAt,wav16,loadHrir}};
+root.NorthVoiceExpressive={on,split,normalize,prompt,performance,binaural,handPerf,renderSamples,plan,_test:{FISH,ELEVEN,SOUND,soundAllowed,soundMark,_soundAt,hrirAt,wav16,loadHrir}};
 root.voiceExpressiveOn=on;
 })(typeof globalThis!=='undefined'?globalThis:this);

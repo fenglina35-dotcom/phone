@@ -29,11 +29,11 @@ test('switched off: nothing changes (text, prompt, rendering, split)',async()=>{
 test('inline cues become gentle Fish tags in place; at most two, one sound, no fake 哈哈/唉',()=>{
   const c=sandbox({voiceExpressive:true}),V=c.NorthVoiceExpressive;
   const out=V.performance('[黏糊]你怎么才回我呀……[轻笑]我才不信。[叹气]算了[小声]想你了',{id:'r1'},{},{cue:'温柔'});
-  assert.equal(out,'[sweet, clingy, drawn out] 你怎么才回我呀……[soft chuckle] 我才不信。算了想你了');
-  assert.doesNotMatch(out,/哈哈|呵呵|唉|laughing|sobbing|shouting|angry|excited/);
+  assert.equal(out,'[sweet, clingy, drawn out] 你怎么才回我呀……[chuckling] 我才不信。算了想你了');
+  assert.doesNotMatch(out,/哈哈|呵呵|唉|laughing|sobbing|shouting|angry|excited/,'no fake laugh text and no timbre-pulling tags unless explicitly asked');
   const again=V.performance('[轻笑]又来了',{id:'r1'},{},{});
   assert.equal(again,'又来了','a laugh within minutes of the last one is dropped');
-  assert.equal(V.performance('[轻笑]你好',{id:'r2'},{},{}),'[soft chuckle] 你好','cooldown is per role');
+  assert.equal(V.performance('[轻笑]你好',{id:'r2'},{},{}),'[chuckling] 你好','cooldown is per role');
   assert.equal(V.performance('想你了[温柔]',{id:'r3'},{},{}),'想你了','a dangling tone tag at the very end is removed');
 });
 
@@ -82,8 +82,8 @@ test('3D rendering produces a real left/right difference, matched loudness and a
 test('app hooks: switch-guarded TTS text, transcript split, binaural voice notes, prompt, entry and offline cache',()=>{
   assert.match(app,/if\(typeof NorthVoiceExpressive!=='undefined'\)\{const vx=NorthVoiceExpressive\.performance\(text,o,tts,opt\);if\(vx!=null\)return vx;\}/);
   assert.match(app,/_vx=typeof NorthVoiceExpressive!=='undefined'\?NorthVoiceExpressive\.split\(vt\):null/);
-  assert.match(app,/if\(_vxOn\)\{const bin=await NorthVoiceExpressive\.binaural\(ab,m\.voiceSpatial,m\.content\);if\(bin\)\{ab=bin;_mime='audio\/wav';\}\}/);
-  assert.ok(app.includes("if(_vxOn&&m.voicePerf)NorthVoiceExpressive.handPerf(m.content,m.voicePerf);")&&app.includes('await ttsArr(m.content,o,{cue:m.voiceCue})'),'voice notes still synthesize from m.content so the language lock keeps working');
+  assert.match(app,/if\(_vxOn\)\{const bin=await NorthVoiceExpressive\.binaural\(ab,m\.voiceSpatial,m\.content\);if\(bin\)\{ab=bin;_mime='audio\/wav';m\.voice3d=true;\}\}/);
+  assert.ok(app.includes("if(_vxOn&&(m.voicePerf||m.voiceAsk))NorthVoiceExpressive.handPerf(m.content,m.voicePerf,m.voiceAsk);")&&app.includes('await ttsArr(m.content,o,{cue:m.voiceCue})'),'voice notes still synthesize from m.content so the language lock keeps working');
   assert.match(app,/NorthVoiceExpressive\.prompt\(c\)/);
   assert.match(html,/<script src="voice-expressive\.js\?v=\d+"><\/script>/);
   assert.match(read('sw.js'),/'\.\/voice-expressive\.js\?v='\+BUILD/);
@@ -118,4 +118,39 @@ test('handed-over performance text is used once for the same transcript and pass
   assert.equal(V.performance('I miss you.',{id:'f',voice:{lang:'英'}},{},{}),'[sweet, clingy] I miss you.');
   assert.match(locked,/\uE010\d\uE011I miss you\.宝贝/,'the lock sees the cue as a placeholder, so only the stray Chinese is dropped');
   assert.equal(V.performance('I miss you.',{id:'f'},{},{}),'I miss you.','the hand-off is consumed once');
+});
+
+test('an explicit request in this turn wins: 笑一笑 always laughs, 凶一点 gets firm, even past the cooldown',()=>{
+  const c=sandbox({voiceExpressive:true}),V=c.NorthVoiceExpressive;
+  V.performance('[轻笑]先笑一个',{id:'k'},{},{});
+  V.handPerf('满意了吧','','笑一笑');
+  assert.equal(V.performance('满意了吧',{id:'k'},{},{}),'[chuckling] 满意了吧','asked to laugh: a laugh is added even inside the cooldown and without a written cue');
+  V.handPerf('满意了吧','[轻笑]满意了吧','大笑给我听');
+  assert.equal(V.performance('满意了吧',{id:'k'},{},{}),'[laughing] 满意了吧','a big laugh request uses the full laugh tag');
+  V.handPerf('你再说一遍','','凶一点');
+  assert.equal(V.performance('你再说一遍',{id:'k'},{},{}),'[angry, firm voice] 你再说一遍');
+  V.handPerf('你再说一遍','[不满]你再说一遍','凶一点');
+  assert.equal(V.performance('你再说一遍',{id:'k'},{},{}),'[angry, firm voice] 你再说一遍','a written 不满 becomes firm when the user asked for it');
+  assert.equal(V.performance('你再说一遍',{id:'k2'},{},{}),'你再说一遍','without the request it stays gentle');
+});
+
+test('normalize repairs a voice note that still carries cues or position tags, whatever path created it',()=>{
+  const V=sandbox({}).NorthVoiceExpressive,m={type:'voice',content:'[左耳][小声]嘿，小狗……[右耳]现在我在这边了。',trans:'',showText:true};
+  assert.equal(V.normalize(m),true,'works even with the switch off, so the transcript is always clean');
+  assert.equal(m.content,'嘿，小狗……现在我在这边了。');
+  assert.equal(m.voicePerf,'[小声]嘿，小狗……现在我在这边了。');
+  assert.deepEqual(JSON.parse(JSON.stringify(m.voiceSpatial)),[{at:0,tag:'左耳'},{at:6,tag:'右耳'}]);
+  assert.equal(V.normalize(m),false,'idempotent');
+  assert.equal(V.normalize({type:'text',content:'[小声]x'}),false,'only voice notes');
+});
+
+test('app hooks: render and synthesis both normalize, the 3D badge marks rendered notes, the request is kept',()=>{
+  for(const src of [app,read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js')]){
+    assert.match(src,/if\(m\.type==='voice'\)\{if\(typeof NorthVoiceExpressive!=='undefined'\)NorthVoiceExpressive\.normalize\(m\);/);
+    assert.match(src,/NorthVoiceExpressive\.normalize\(m\)\)save\(\);if\(_vxOn&&\(m\.voicePerf\|\|m\.voiceAsk\)\)NorthVoiceExpressive\.handPerf\(m\.content,m\.voicePerf,m\.voiceAsk\);/);
+    assert.match(src,/if\(bin\)\{ab=bin;_mime='audio\/wav';m\.voice3d=true;\}/);
+    assert.match(src,/\$\{m\.voice3d\?'<span class="v3d" title="已渲染 3D 贴耳">3D<\/span>':''\}/);
+    assert.match(src,/\{voiceAsk:String\(_userText\)\.slice\(0,80\)\}/);
+  }
+  assert.match(html,/\.voiceb \.v3d\{/);
 });
