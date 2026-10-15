@@ -2873,3 +2873,5 @@ CUA核验22项控件、发送未读空白、已读等待阶段空白、保存180
 2026-10-16 网页v1754 / 私人v1759 / iOS1.0.448(448)：用户已在 Fish 付了月付7.5美元（应为创作者会员半价，API 用量可能需另外充值，已提醒用户先试，报余额不足再充 API 余额）。按用户要求去掉语音条上的「3D」小标记（m.voice3d 仍记录）；「语音服务与模型」快捷选项新增 Fish Drama 3·情绪（api.fish.audio / drama-3）。
 
 2026-10-16 网页v1756 / 私人v1761 / iOS449：新增 Fish 会员登录（MCP）语音模式。根因与决定：Fish MCP 拒绝所有浏览器 Origin（实测无 Origin 200，github.io/null 403），故 MCP 与音频下载走自有中转 license.smallphoneapp.com /fish-mcp、/fish-mcp-audio（固定上游、方法与工具白名单、不存凭证；Worker 版本 1e0ce230，回退基线 30363424）。凭证只存本机 localStorage north_fish_mcp_v1，不进 S/备份/导出。私人 App 用 fish-oauth.html 显示授权码粘贴（不改原生）。失败尝试：直连 MCP（CORS 预检通过但请求被 Origin 拦）。测试：fish-mcp-v1756 5/5，中转 38/38，用户 Plus 团队实测余额与生成成功（扣 9 点）。
+
+2026-10-16 私人v1761覆盖包：最新私人版本覆盖包_v1761_iOS449.zip，209632842字节，1831文件，SHA256=56bfdcbd6e56d4e4ed880edb202df7031438dcefdb4262acf41402ce4f0a12d9，另有分卷。以v1757完整包（SHA256 2d09fde3…已核对）为继承基线，原生只允许449构建号变化。全量4099/4099，核心聊天门禁两端通过。Mac已xcodebuild编译并覆盖安装到用户iPhone 15。线上网页已是v1756，fish-oauth.html 可访问。不是IPA。
