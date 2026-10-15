@@ -59,20 +59,20 @@ function persistenceRuntime() {
 }
 
 test('private identity remains v1355 and iOS 399 while public advances independently', () => {
-  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1747'/);
-  assert.match(privateApp, /APP_VER='v1747 · 存共同相册不再报错'/);
+  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1749'/);
+  assert.match(privateApp, /APP_VER='v1749 · 细腻情绪与3D贴耳'/);
   for (const html of [privateIndex, privateAlias]) {
-    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1747'/);
-    assert.match(html, /app\.js\?v=1747&r=v1747-private-package-1/);
+    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1749'/);
+    assert.match(html, /app\.js\?v=1749&r=v1749-private-package-1/);
     assert.match(html, /private-runtime-diagnostics\.js\?v=339/);
   }
-  assert.match(privateRepair, /index\.html\?repair=1&v=1747/);
-  assert.match(swift, /1\.0\.442 \(442\)/);
-  assert.match(bridge, /private static let build = "1\.0\.442 \(442\)"/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 442;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.442;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1742 · 角色微信聊天不再重复'/);
-  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1742'/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1749/);
+  assert.match(swift, /1\.0\.443 \(443\)/);
+  assert.match(bridge, /private static let build = "1\.0\.443 \(443\)"/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 443;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.443;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1744 · 细腻情绪与3D贴耳'/);
+  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1744'/);
   assert.doesNotMatch(publicApp, /persistWechatRequested|smallPhoneWechatPersistTrace/);
 });
 

@@ -41,6 +41,8 @@ const PERMANENT_FIXES = [
   {release:"v1732",scope:"both",least:1,name:"真人好友同步没有新消息时逐渐放慢，减轻数据库负载",marker:"function phoneFriendSyncActive(){_pfIdleSyncs=0;}"},
   {release:"v1728",scope:"both",least:1,name:"真人店铺、店铺图片与上传走中转/直连自动选线，中转未部署时保持直连",marker:"async function northMarketRelayReady()",file:"commerce-ui.js"},
   {release:"v1726",scope:"both",least:1,name:"角色点外卖选商品失败时按真实菜单兜底",marker:"function northRoleFallbackPick(found,plan)",file:"commerce-ui.js"},
+  {release:"v1744",scope:"both",least:1,name:"细腻情绪与 3D 贴耳：开关打开且模型支持时才接管语音文字，关掉完全走原逻辑",marker:"if(typeof NorthVoiceExpressive!=='undefined'){const vx=NorthVoiceExpressive.performance(text,o,tts,opt);if(vx!=null)return vx;}"},
+  {release:"v1744",scope:"both",least:1,name:"细腻情绪与 3D 贴耳：语音条渲染失败时照常用原音频",marker:"if(_vxOn){const bin=await NorthVoiceExpressive.binaural(ab,m.voiceSpatial,m.content);if(bin){ab=bin;_mime='audio/wav';}}"},
   {release:"v1747",scope:"web",least:1,file:PRIVATE_DIR+"app.js",name:"私人版定义 roleInterceptDiagnosticAction，[存共同相册]/[回忆相册] 不再让整轮回复报错",marker:"function roleInterceptDiagnosticAction(outcome,ok){if(outcome){outcome.matched="},
   {release:"v1745",scope:"web",least:1,file:PRIVATE_DIR+"travel-flight.js",name:"私人版机票接受城市库外的中文城市（苏州→威海）",marker:"const custom=customCity(n);return custom?{n:custom,c:'---',i:0,g:'自定义',r:'中国',custom:true}:null;"},
   {release:"v1745",scope:"web",least:1,file:PRIVATE_DIR+"travel-train.js",name:"私人版火车票接受城市库外的中文城市",marker:"const custom=customCity(n);return custom?{n:custom,r:'中国',custom:true}:null;"},

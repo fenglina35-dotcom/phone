@@ -12,6 +12,10 @@ XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/*
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/mail-outbox.js
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/mail-outbox.css
 
+# 细腻情绪与 3D 贴耳（v1749）：共用模块与 KU100 近场数据，必须进私人源码提交，打包只读提交内容。
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/voice-expressive.js
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/binaural-hrir.js
+
 # Shared travel services must remain in committed private source.
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/travel-*.js
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/travel-*.css
