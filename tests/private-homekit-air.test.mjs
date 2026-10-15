@@ -48,7 +48,7 @@ test('air UI is private-only, mirrored byte-for-byte, and loaded after lock over
   assert.equal(airSource,airBundle);
   assert.equal(airCss,fs.readFileSync(path.join(xcodeRoot,'PhoneWeb.bundle','private-smart-air.css'),'utf8'));
   assert.match(privateIndex,/private-smart-air\.css\?v=342/);
-  assert.match(privateIndex,/private-smart-lock\.js\?v=339[^]*private-smart-air\.js\?v=1739/);
+  assert.match(privateIndex,/private-smart-lock\.js\?v=339[^]*private-smart-air\.js\?v=1743/);
   assert.match(lockSource,/privateSmartAirChooserCard/);
   const staging=read('native/private-small-phone/scripts/stage-private-phone-web.mjs');
   assert.match(staging,/path\.join\(privateRoot, 'Resources', 'Web'\)/);
@@ -186,9 +186,9 @@ test('private identity advances while public web stays unchanged',()=>{
   const privateApp=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js');
   const webView=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
   const project=read('native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj');
-  assert.match(privateApp,/APP_VER='v1739 · 心声展开与思考摘要'/);
-  assert.match(webView,/1\.0\.439 \(439\)/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 439;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.439;/g)||[]).length,12);
+  assert.match(privateApp,/APP_VER='v1743 · 小家062与线上线下场景'/);
+  assert.match(webView,/1\.0\.440 \(440\)/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 440;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.440;/g)||[]).length,12);
   assert.match(read('app.js'),/APP_VER='v1742 · 角色微信聊天不再重复'/);
 });

@@ -69,9 +69,7 @@ export function prepareMobileCharacter(root) {
     if(!sources.has(c))sources.set(c,new T.Source(c));
     t.source=sources.get(c);t.needsUpdate=true;resized++;
   }
-  // ImageBitmap pixels are no longer referenced by character textures. Releasing
-  // them avoids retaining the original decoded 2048px copies beside the canvases.
-  for(const im of images.keys())if(typeof im.close==='function')try{im.close();}catch{}
+  // Shared decoded sources belong to the loader cache, not to one character.
   budget.characterTexturesResized=(budget.characterTexturesResized||0)+resized;
   return resized;
 }

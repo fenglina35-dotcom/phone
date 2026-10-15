@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {lean,budget} from './mobile-budget024.mjs?build=050';
+import {lean,budget} from './mobile-budget024.mjs?build=053';
 
 // Materials keep a stable shader while a uniform mask removes lights that
 // cannot reach their geometry. Mobile render slots are preferred over authored

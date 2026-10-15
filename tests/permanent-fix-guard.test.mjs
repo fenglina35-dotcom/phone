@@ -1005,18 +1005,20 @@ const PERMANENT_FIXES = [
   },
   {
     release: 'v1274',
-    name: '温馨小家移动端使用隔离材质预热，正式材质不参与整屋启动预绘制',
+    // v1743 起小家网页线 052/053 已改为只编译、不绘制真实房间的预热（不再有 warmDraw），标记随实现迁移。
+    name: '温馨小家移动端启动预热只编译着色器（含镜面输出变体），不用真实房间资源预绘制',
     scope: 'private',
     file: PRIVATE_DIR + 'games/cozy-home/app.mjs',
-    marker: 'const warmDraw=()=>{const warmMaps=new Map(),materialClones=new Map(),objectSwaps=[]',
+    marker: 'Compile the mirror output-color variant too, without drawing geometry or images.',
     least: 1,
   },
   {
     release: 'v1274',
-    name: '温馨小家进入前释放预热几何和镜面缓冲',
+    // v1743 起预热不再生成临时几何和镜面绘制，只剩编译用的 1×1 目标，进入前释放。
+    name: '温馨小家进入前释放预热用的编译目标',
     scope: 'private',
     file: PRIVATE_DIR + 'games/cozy-home/app.mjs',
-    marker: 'mirrors.releaseGPU();const geometries=new Set()',
+    marker: 'reflectionCompileTarget.dispose();',
     least: 1,
   },
   {
@@ -1329,6 +1331,22 @@ const PERMANENT_FIXES = [
     name: '我的气泡默认浅黄，旧的那个默认蓝只迁一次',
     scope: 'both',
     marker: 'if(!t._meWarmV1){if(t.me===OFF_THEME_OLD_ME)',
+    least: 1,
+  },
+  {
+    release: 'v1743',
+    name: '温馨小家 062：粗糙材质改用光照体积，启动时预编译全部房间，进门不再临时编译',
+    scope: 'private',
+    file: PRIVATE_DIR + 'games/cozy-home/app.mjs',
+    marker: 'lightVolume=installLightVolume(renderer,scene);lightVolume.update(true);',
+    least: 1,
+  },
+  {
+    release: 'v1743',
+    name: '小家当面对话与微信消息共用记忆，切换处标明线下/线上场景',
+    scope: 'private',
+    file: PRIVATE_DIR + 'app.js',
+    marker: "const s=m._cozy?'home':'online';",
     least: 1,
   },
 ];

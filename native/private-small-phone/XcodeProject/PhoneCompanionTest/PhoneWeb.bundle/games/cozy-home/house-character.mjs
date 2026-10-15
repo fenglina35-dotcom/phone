@@ -10,7 +10,7 @@ import * as T from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {createNavigation} from './actor-navigation.mjs?build=040';
 import {createTalkController} from './character/talk-controller.mjs';
-import {prepareMobileCharacter} from './mobile-budget024.mjs?build=050';
+import {prepareMobileCharacter} from './mobile-budget024.mjs?build=053';
 
 export async function installHouseCharacter({scene,house,world,renderer,camera,player,roomControls,livingInteractions,getPlayerPosture}){
  const [gltf,poses]=await Promise.all([new GLTFLoader().loadAsync('./character/roland-expressions-actions-v012.glb'),fetch('./character/poses.json').then(r=>r.json())]);

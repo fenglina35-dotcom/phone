@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1739'){
+if(window.__NORTH_SHELL_BUILD__!=='1743'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -640,7 +640,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1739 · 心声展开与思考摘要';
+const APP_VER='v1743 · 小家062与线上线下场景';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -4274,7 +4274,7 @@ function chatDateStampHTML(t,withTime){return `<div class="tstamp datestamp"><sp
 function chatBoundaryHTML(prev,m){if(!m||m._silent)return'';const t=m.time||Date.now(),pt=prev&&(prev.time||0),newDay=!prev||dayKey(pt)!==dayKey(t);if(newDay)return chatDateStampHTML(t,true);if(t-pt>300000)return`<div class="tstamp"><span>${hm(t)}</span></div>`;return'';}
 function chatPrevVisibleBefore(id,m){const a=msgs(id).filter(x=>x&&!x._call&&!x._silent),idx=a.indexOf(m);if(idx>0)return a[idx-1];for(let i=a.length-1;i>=0;i--){if(a[i]!==m)return a[i];}return null;}
 function chatHistoryDateNote(t){return '【日期分隔：'+ymdFull(t)+' '+weekdayCN(t)+'，这是'+dayRelText(t)+'；下面的聊天从这一天开始。角色必须据此分清今天、昨天、前几天和新的一天，不能把跨天前的话说成刚刚发生。】';}
-function chatHistoryWithDateBoundaries(arr,mapFn){const out=[];let last='';(arr||[]).forEach(m=>{if(!m||m._silent)return;const item=mapFn?mapFn(m):{role:m._transferReceipt?'system':m.role,content:msgToText(m)};if(!item||item.content==null)return;const t=m.time||Date.now(),k=dayKey(t);if(k!==last){out.push({role:'system',content:chatHistoryDateNote(t)});last=k;}out.push(item);});return out;}
+function chatHistoryWithDateBoundaries(arr,mapFn){const out=[];let last='',scene='';(arr||[]).forEach(m=>{if(!m||m._silent)return;const item=mapFn?mapFn(m):{role:m._transferReceipt?'system':m.role,content:msgToText(m)};if(!item||item.content==null)return;const t=m.time||Date.now(),k=dayKey(t);if(k!==last){out.push({role:'system',content:chatHistoryDateNote(t)});last=k;}/* 小家当面消息(_cozy)与微信消息共用记忆，切换处标明线下/线上，角色才分得清。 */const s=m._cozy?'home':'online';if(s!==scene){if(s==='home')out.push({role:'system',content:'【场景：以下是你和用户在小家里面对面相处时当面说的话，不是微信消息】'});else if(scene==='home')out.push({role:'system',content:'【场景：已离开小家，以下回到微信文字聊天；你们此刻不在一起。之前在小家当面发生的事可以自然提起，但那是见面时的事】'});scene=s;}out.push(item);});return out;}
 function openWeChat(tab){wxTab=tab||'chats';go('wechat');scanProactive();}
 function scanProactive(){S.contacts.forEach(c=>{if(!c.deleted&&c.proactive&&c.proactive.enabled)maybeProactive(c.id);});}
 function saveAuto(id){const c=getC(id);c.autoMoment=Math.max(0,+$('#ap_m').value||0);c.autoTweet=Math.max(0,+$('#ap_t').value||0);save();toast('已保存');}
