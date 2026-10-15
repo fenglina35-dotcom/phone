@@ -83,7 +83,7 @@ test('app hooks: switch-guarded TTS text, transcript split, binaural voice notes
   assert.match(app,/if\(typeof NorthVoiceExpressive!=='undefined'\)\{const vx=NorthVoiceExpressive\.performance\(text,o,tts,opt\);if\(vx!=null\)return vx;\}/);
   assert.match(app,/_vx=typeof NorthVoiceExpressive!=='undefined'\?NorthVoiceExpressive\.split\(vt\):null/);
   assert.match(app,/if\(_vxOn\)\{const bin=await NorthVoiceExpressive\.binaural\(ab,m\.voiceSpatial,m\.content\);if\(bin\)\{ab=bin;_mime='audio\/wav';m\.voice3d=true;\}\}/);
-  assert.ok(app.includes("if(_vxOn&&(m.voicePerf||m.voiceAsk))NorthVoiceExpressive.handPerf(m.content,m.voicePerf,m.voiceAsk);")&&app.includes('await ttsArr(m.content,o,{cue:m.voiceCue})'),'voice notes still synthesize from m.content so the language lock keeps working');
+  assert.ok(app.includes("if(_vxOn&&(m.voicePerf||m.voiceAsk||m.voiceDirected))NorthVoiceExpressive.handPerf(m.content,m.voicePerf,m.voiceAsk,m.voiceDirected);")&&app.includes('await ttsArr(m.content,o,{cue:m.voiceCue})'),'voice notes still synthesize from m.content so the language lock keeps working');
   assert.match(app,/NorthVoiceExpressive\.prompt\(c\)/);
   assert.match(html,/<script src="voice-expressive\.js\?v=\d+"><\/script>/);
   assert.match(read('sw.js'),/'\.\/voice-expressive\.js\?v='\+BUILD/);
@@ -147,10 +147,54 @@ test('normalize repairs a voice note that still carries cues or position tags, w
 test('app hooks: render and synthesis both normalize, the 3D badge marks rendered notes, the request is kept',()=>{
   for(const src of [app,read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js')]){
     assert.match(src,/if\(m\.type==='voice'\)\{if\(typeof NorthVoiceExpressive!=='undefined'\)NorthVoiceExpressive\.normalize\(m\);/);
-    assert.match(src,/NorthVoiceExpressive\.normalize\(m\)\)save\(\);if\(_vxOn&&\(m\.voicePerf\|\|m\.voiceAsk\)\)NorthVoiceExpressive\.handPerf\(m\.content,m\.voicePerf,m\.voiceAsk\);/);
+    assert.match(src,/NorthVoiceExpressive\.normalize\(m\)\)save\(\);if\(_vxOn\)\{try\{if\(await NorthVoiceExpressive\.direct\(m,o\)\)save\(\);\}catch\(_\)\{\}\}[^\n]*?if\(_vxOn&&\(m\.voicePerf\|\|m\.voiceAsk\|\|m\.voiceDirected\)\)NorthVoiceExpressive\.handPerf\(m\.content,m\.voicePerf,m\.voiceAsk,m\.voiceDirected\);/);
     assert.match(src,/if\(bin\)\{ab=bin;_mime='audio\/wav';m\.voice3d=true;\}/);
     assert.match(src,/\$\{m\.voice3d\?'<span class="v3d" title="已渲染 3D 贴耳">3D<\/span>':''\}/);
     assert.match(src,/\{voiceAsk:String\(_userText\)\.slice\(0,80\)\}/);
   }
   assert.match(html,/\.voiceb \.v3d\{/);
+});
+
+/* 第三版：语音导演。角色回完话后，用副模型（没配就用主模型）专门给这条语音做一次表演标注再交给 Fish。 */
+function directorSandbox(reply,kind='fish'){
+  const c=sandbox({voiceExpressive:true},kind);c.calls=[];c.roleChatRouteIndex=()=>0;
+  c.chatAPI=async(rows,opt)=>{c.calls.push({rows,opt});if(reply instanceof Error)throw reply;return typeof reply==='function'?reply(rows):reply;};
+  return c;
+}
+test('the director annotates Chinese and English lines with natural fillers and verified Fish tags',async()=>{
+  const zh=directorSandbox('输出：[soft] 嗯……过来。[chuckling] 我才不信呢。'),m={type:'voice',content:'过来。我才不信。',voiceAsk:'笑一笑'};
+  assert.equal(await zh.NorthVoiceExpressive.direct(m,{id:'r',name:'Claude'}),'[soft] 嗯……过来。[chuckling] 我才不信呢。');
+  assert.equal(m.voiceDirectedFor,'过来。我才不信。');
+  const call=zh.calls[0];assert.equal(call.opt.aux,true);assert.equal(call.opt.roleInterceptAudit,null);
+  assert.match(call.rows[1].content,/用户这一轮的要求：笑一笑/);assert.match(call.rows[1].content,/台词：\n过来。我才不信。/);
+  const en=directorSandbox("[soft] Hey... come here. [chuckling] You're ridiculous, haha."),e={type:'voice',content:"Come here. You're ridiculous."};
+  assert.equal(await en.NorthVoiceExpressive.direct(e,{id:'r'}),"[soft] Hey... come here. [chuckling] You're ridiculous, haha.");
+  const V=zh.NorthVoiceExpressive;V.handPerf(m.content,'',m.voiceAsk,m.voiceDirected);
+  assert.equal(V.performance(m.content,{id:'r'},{},{}),'[soft] 嗯……过来。[chuckling] 我才不信呢。','the directed text goes to Fish as is');
+});
+test('the director may not change the meaning; a bad or failed result falls back to the inline cues',async()=>{
+  const c=directorSandbox('[happy] 过来。我才不信。我们明天去海边吧，我已经订好票了！'),m={type:'voice',content:'过来。我才不信。'};
+  assert.equal(await c.NorthVoiceExpressive.direct(m,{id:'r'}),null);assert.equal(m.voiceDirected,undefined);assert.match(m.voiceDirectError,/改动了台词/);
+  const f=directorSandbox(new Error('HTTP 500')),n={type:'voice',content:'过来。'};
+  assert.equal(await f.NorthVoiceExpressive.direct(n,{id:'r'}),null);assert.match(n.voiceDirectError,/500/);
+  const t=directorSandbox('[rain] 过来。'),k={type:'voice',content:'过来。'};
+  assert.equal(await t.NorthVoiceExpressive.direct(k,{id:'r'}),null,'ambient sound tags are refused');
+});
+test('the director runs once per line, only for Fish, only with the switch on',async()=>{
+  const c=directorSandbox('[soft] 过来。'),m={type:'voice',content:'过来。'};
+  await c.NorthVoiceExpressive.direct(m,{id:'r'});await c.NorthVoiceExpressive.direct(m,{id:'r'});assert.equal(c.calls.length,1,'cached on the message');
+  m.content='别走。';await c.NorthVoiceExpressive.direct(m,{id:'r'});assert.equal(c.calls.length,2,'an edited line is directed again');
+  const mm=directorSandbox('[soft] x','minimax');assert.equal(await mm.NorthVoiceExpressive.direct({type:'voice',content:'过来。'},{id:'r'}),null);assert.equal(mm.calls.length,0);
+  const off=sandbox({});off.chatAPI=async()=>{throw new Error('must not call');};assert.equal(await off.NorthVoiceExpressive.direct({type:'voice',content:'过来。'},{id:'r'}),null);
+});
+test('director clean-up, prompt rules and the spoken-length limit',()=>{
+  const V=sandbox({voiceExpressive:true}).NorthVoiceExpressive,T=V._test;
+  assert.equal(T.directorClean('```\n"[soft]过来。[小声]乖"\n```'),'[soft] 过来。乖','Chinese bracket cues are dropped and a space follows each tag');
+  assert.match(T.DIRECTOR_PROMPT,/\[laugh softly\]/);assert.match(T.DIRECTOR_PROMPT,/台词是英文就用英文语气词改写/);assert.match(T.DIRECTOR_PROMPT,/不能增删事实/);
+  for(const src of [app,read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js')]){
+    assert.match(src,/if\(_vxOn\)\{try\{if\(await NorthVoiceExpressive\.direct\(m,o\)\)save\(\);\}catch\(_\)\{\}\}/);
+    assert.match(src,/if\(ttsSpokenLength\(t\)>VOICE_MAX_CHARS\)\{/);
+    const fnSrc=src.split('\n').find(l=>l.startsWith('function ttsSpokenLength('));const ctx=vm.createContext({});vm.runInContext(fnSrc,ctx);
+    assert.equal(ctx.ttsSpokenLength('[soft] [voice softening into a low murmur] 过来'),2,'tags do not count against the voice length limit');
+  }
 });

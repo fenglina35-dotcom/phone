@@ -23,7 +23,7 @@ const cueRe=()=>new RegExp('[\\[【]\\s*('+CUE_WORDS+')\\s*[\\]】]','g');
 const spatialRe=()=>/[\[【]\s*(左耳|右耳|脑后|面前|贴近|退开)\s*[\]】]/g;
 const SOUND_COOLDOWN_MS=6*60000,_soundAt=new Map(),_handed=new Map();
 /* warmVoiceMsg 把带小提示的念法交过来，下一次合成同一正文时取用一次（发声入口仍读 m.content，原有的语言锁照常作用在它身上） */
-function handPerf(text,perf,ask){const k=String(text||'').trim();if(k&&(perf||ask))_handed.set(k,{perf:String(perf||''),ask:String(ask||''),at:Date.now()});if(_handed.size>40){const old=[..._handed.keys()].slice(0,_handed.size-40);old.forEach(x=>_handed.delete(x));}}
+function handPerf(text,perf,ask,directed){const k=String(text||'').trim();if(k&&(perf||ask||directed))_handed.set(k,{perf:String(perf||''),ask:String(ask||''),directed:String(directed||''),at:Date.now()});if(_handed.size>40){const old=[..._handed.keys()].slice(0,_handed.size-40);old.forEach(x=>_handed.delete(x));}}
 function takePerf(text){const k=String(text||'').trim(),v=_handed.get(k);if(!v)return null;_handed.delete(k);if(Date.now()-v.at>120000)return null;return v;}
 /* 用户这一轮明确提的要求：让角色笑、凶一点、撒娇。明确要求优先于限量和温和规则（只作用在这一条语音里）。 */
 const ASK_LAUGH=/笑一?笑|笑一下|笑一个|笑出声|笑给我|大笑|哈哈|\b(?:laugh|giggle|chuckle)/i,ASK_LOUD_LAUGH=/大笑|笑出声|放声|哈哈大笑|laugh out loud/i,ASK_FIERCE=/凶|严厉|生气|发火|吼|质问|骂|狠一点|大声|\b(?:angry|stern|mean)\b/i,ASK_SWEET=/撒娇|温柔|黏|软一点|甜一点/;
@@ -60,7 +60,8 @@ function mildCue(cue,kind){let k='';try{k=typeof ttsCueKind==='function'?ttsCueK
 
 /* 给模型念的文字。开关关着、或模型不支持行内标签时返回 null，由原来的逻辑处理。 */
 function performance(text,o,tts,opt){if(!on())return null;const kind=styleKind(tts);if(kind!=='fish'&&kind!=='eleven')return null;
-  const map=kind==='fish'?FISH:ELEVEN,marks=[];const handed=takePerf(text)||{},ask=String((opt&&opt.ask)||handed.ask||'');let src=String((opt&&opt.perf)||handed.perf||text||'').replace(spatialRe(),'');
+  const map=kind==='fish'?FISH:ELEVEN,marks=[];const handed=takePerf(text)||{},ask=String((opt&&opt.ask)||handed.ask||'');
+  if(handed.directed&&kind==='fish'){const tags=[];let d=String(handed.directed).replace(/\[[^\]\n]{1,60}\]/g,x=>{tags.push(x);return '\uE010'+(tags.length-1)+'\uE011';});if(typeof ttsDropOffLanguage==='function')d=ttsDropOffLanguage(d,o);d=d.replace(/\uE010(\d+)\uE011/g,(_,i)=>tags[+i]||'').replace(/[ \t]{2,}/g,' ').trim();if(d){if(/chuckl|laugh|sigh/i.test(d))soundMark(o);return d;}}let src=String((opt&&opt.perf)||handed.perf||text||'').replace(spatialRe(),'');
   src=src.replace(cueRe(),(_,w)=>{marks.push(ALIAS[w]||w);return '\uE010'+(marks.length-1)+'\uE011';});
   /* 外语角色的语言锁（去掉混进外语语音里的中文）同样作用在带提示的念法上；提示已换成占位符，不会被误删 */
   if(typeof ttsDropOffLanguage==='function')src=ttsDropOffLanguage(src,o);
@@ -76,6 +77,46 @@ function performance(text,o,tts,opt){if(!on())return null;const kind=styleKind(t
   if(!used){const lead=mildCue(opt&&opt.cue,kind);if(lead)base=lead+' '+base;}
   if(sounds)soundMark(o);
   return base.replace(/\s+/g,' ').trim();}
+
+
+/* ───────────── 语音导演（只对 Fish S2/S2.1）：角色回完话后，再专门做一次表演标注 ─────────────
+   角色一边聊天一边顺手写的提示往往很随意，笑声也短得几乎听不到。这里参考了 dawnsyo-blip/ttsdirectorskill-chatting 对 Fish s2.1 的实测结论
+   （稳定有效的标签、克制、改写文字比堆标签有效、命令句用软标签），用自己的话写成导演规则；中英文台词都支持。
+   结果缓存在消息上（voiceDirected / voiceDirectedFor），同一条语音不会重复调用；任何失败都退回上面的行内提示逻辑。 */
+const DIRECTOR_PROMPT=[
+'你是语音导演。只做一件事：把一条马上要交给 Fish Audio s2.1 合成的角色语音台词，标注成听起来像真人在说话的版本。',
+'1. 克制：默认少标。能靠文字本身表达的不加标签；表面意思和真实情绪一致的平铺句子几乎不用标。情绪转折、口是心非、撒娇、调情、笑、难过的地方才标。',
+'2. 改写比标签更有效：可以加入自然的语气词和停顿标点（中文：嗯、唔、哈、啧、呀、嘛、……、～；英文：mm, hm, hey, oh, haha, heh, ..., —），可以拆成更口语的短句、调整语序、叠词。但不能增删事实、不能改变意思、不能添加新的内容，原有的每个意思都要保留。',
+'3. 标签格式：方括号里写英文，放在它要作用的那段文字前面，和文字之间留一个空格，例如 "[soft] 过来。"、"[chuckling] You\'re ridiculous."。同一处最多叠两个（一个管音量、一个管情绪）；整条一般 1 到 4 个。',
+'4. 在 Fish s2.1 上稳定有效的标签（优先从这里选）：',
+'   情绪：[warm] [doting] [happy] [pleased] [teasing] [playful] [curious] [sad] [worried] [surprised] [slightly surprised] [serious] [angry]',
+'   动作式，通常比情绪词更准：[comfort] [plead] [gently nudging] [to charm] [seduce] [complain] [feel sorry] [praising] [threaten]（可以是玩笑式的）',
+'   声音：[soft] [whispering] [low voice] [voice softening into a low murmur]（撒娇、示弱） [voice dropping to a low, sultry tone]（调情） [draw out the final syllable]（拉长尾音） [emphasis] [forceful]（只用于真的生气） [crying] [sobbing]',
+'   笑和气息：[chuckle] [laugh softly] [chuckling]（边笑边说） [with a knowing chuckle] [warmly teasing] [with a soft, fond sigh] [sigh] [pause] [long pause] [inhales]',
+'   强度可以加程度词：[slightly sad] < [sad] < [very happy]。',
+'5. 停顿和呼吸默认不加：模型自己会换气，标点已经给出停顿。只有真正的情绪落点才用 [pause] [long pause] [sigh] [inhales]，同一个位置只放一个；“……”“——”后面不要再接停顿标签。',
+'6. 这是陪伴聊天：语气可两解时，往温柔、宠溺、心疼的方向读。命令句和道别句（去睡觉、乖、闭眼、晚安、come here、go to sleep）用 [soft] [gently nudging] [whispering] 这类软标签，不要用 [forceful] [serious]。嘴硬心软用 [chuckling] [warm] 把温度写出来，不要冷淡平板的语气。',
+'7. 笑：要让人真的听到笑。轻轻笑用 [chuckle] 或 [laugh softly] 放在那句前面，边笑边说用 [chuckling]；可以同时在句首或句尾加一个自然的笑声词（哈……、嘿、heh、haha）。没有理由就不要笑；一条最多一处笑。',
+'8. 如果给了“用户这一轮的要求”（让你笑、凶一点、撒娇、小声等），这条语音必须明显做到：让笑就一定有清楚的笑声；让凶就用 [serious] [angry] [forceful] 这类，但仍然是同一个人的声音，不要尖叫；让撒娇就用 [voice softening into a low murmur] [draw out the final syllable]。',
+'9. 如果给了“角色自己写的表演提示”，把它当参考，换成上面的标签放到对应位置。',
+'10. 语言：台词是英文就用英文语气词改写，标签仍是英文；台词是中文就用中文语气词。不要翻译，不要换语言。',
+'11. 不要使用：环境音标签（风声、雨声等）、XML 标签、中文方括号提示、任何解释。',
+'输出：只输出标注后的台词本身，不加引号，不加说明。'].join('\n');
+const FILLER_RE=/[嗯唔哈嘿啧呀嘛啊呢吧哦噢诶欸呃哎唉呵]|\b(?:mm+|hm+|hmm+|hey|oh|ah+|uh+|um+|haha+|heh|hah|ha|aw+|ooh|mhm)\b/gi;
+function directorClean(raw){let t=String(raw==null?'':raw).trim().replace(/^```[\w-]*\s*|\s*```$/g,'').trim();t=t.replace(/^(?:输出|标注后?的?台词|台词|Output|Annotated)\s*[:：]\s*/i,'').trim();if(/^["“「](.*)["”」]$/s.test(t))t=t.replace(/^["“「]|["”」]$/g,'').trim();
+  t=t.replace(/[\[【]\s*[^\]】]*[\u3400-\u9fff][^\]】]*\s*[\]】]/g,'').replace(/<(?!\|phoneme_)[^>]{1,40}>/g,'');
+  t=t.replace(/\[\s*([^\]\n]{1,60}?)\s*\]\s*/g,'[$1] ').replace(/[ \t]{2,}/g,' ').replace(/\n{3,}/g,'\n\n').trim();return t;}
+function directorPlain(t){return String(t||'').replace(/\[[^\]\n]{1,60}\]/g,' ').replace(/<\|phoneme_start\|>[a-z]+[1-5]<\|phoneme_end\|>/gi,'').toLowerCase().replace(FILLER_RE,'').replace(/[^\p{L}\p{N}]/gu,'');}
+function lcs(a,b){a=[...a];b=[...b];if(!a.length||!b.length)return 0;let prev=new Array(b.length+1).fill(0);for(let i=1;i<=a.length;i++){const cur=new Array(b.length+1).fill(0);for(let j=1;j<=b.length;j++)cur[j]=a[i-1]===b[j-1]?prev[j-1]+1:Math.max(prev[j],cur[j-1]);prev=cur;}return prev[b.length];}
+/* 导演只能改语气、加语气词和标签，不能改意思：去掉标签和语气词后，原台词的字要几乎都在，而且不能多出一大段。 */
+function directorValid(out,src){if(!out)return false;const tags=(out.match(/\[[^\]\n]{1,60}\]/g)||[]);if(tags.length>8)return false;if(tags.some(x=>/rain|wind|water|thunder|music|footstep|door|环境/i.test(x)))return false;
+  const a=directorPlain(src),b=directorPlain(out);if(!a)return false;const keep=lcs(a,b)/[...a].length,grow=[...b].length/[...a].length;
+  return keep>=.9&&grow<=1.3;}
+async function direct(m,o){if(!on()||!m||m.type!=='voice'||!m.content)return null;if(styleKind(roleTts(o))!=='fish')return null;if(m.voiceDirected&&m.voiceDirectedFor===m.content)return m.voiceDirected;if(typeof chatAPI!=='function')return null;
+  const st=state()||{},me=(st.me&&st.me.name)||'对方',payload=['角色：'+String((o&&(o.name||o.remark))||'角色')+'（在和'+me+'说话）','用户这一轮的要求：'+(String(m.voiceAsk||'').trim()||'无'),'角色自己写的表演提示：'+(String(m.voicePerf||'').trim()||'无'),'台词：',String(m.content)].join('\n');
+  try{const routeIndex=typeof roleChatRouteIndex==='function'?roleChatRouteIndex(o):undefined,raw=await chatAPI([{role:'system',content:DIRECTOR_PROMPT},{role:'user',content:payload}],{aux:true,routeIndex,temp:.4,max:Math.max(300,Math.min(1200,[...String(m.content)].length*3)),timeout:45000,complete:true,roleInterceptAudit:null,roleInterceptStage:'语音表演标注'});
+    const out=directorClean(raw);if(!directorValid(out,m.content)){m.voiceDirectError='导演结果改动了台词或格式不对，已用简单标注';return null;}
+    m.voiceDirected=out;m.voiceDirectedFor=m.content;delete m.voiceDirectError;return out;}catch(e){m.voiceDirectError=String(e&&e.message||e||'').slice(0,80);return null;}}
 
 /* ───────────── 3D 贴耳：KU100 近场 HRIR 双耳渲染（算法照 binaural_voice.py） ───────────── */
 const PLACES={左耳:[90,.25],右耳:[270,.25],脑后:[180,.31],面前:[0,.42]},NEAR=.25,FAR=.5,HALF_TURN=4.5,DIST_MOVE=1.5,DRIFT_DEG=5,DRIFT_M=.015;
@@ -127,6 +168,6 @@ async function binaural(ab,spatial,text){if(!on()||!ab)return null;try{const raw
     const ch=buf.numberOfChannels,n=buf.length,x=new Float32Array(n);for(let c=0;c<ch;c++){const d=buf.getChannelData(c);for(let i=0;i<n;i++)x[i]+=d[i]/ch;}
     const out=await renderSamples(x,buf.sampleRate,raw,spatial,[...String(text||'')].length);return wav16(out.L,out.R,out.fs);}catch(_){return null;}}
 
-root.NorthVoiceExpressive={on,split,normalize,prompt,performance,binaural,handPerf,renderSamples,plan,_test:{FISH,ELEVEN,SOUND,soundAllowed,soundMark,_soundAt,hrirAt,wav16,loadHrir}};
+root.NorthVoiceExpressive={on,split,normalize,prompt,performance,binaural,handPerf,direct,renderSamples,plan,_test:{DIRECTOR_PROMPT,directorClean,directorValid,FISH,ELEVEN,SOUND,soundAllowed,soundMark,_soundAt,hrirAt,wav16,loadHrir}};
 root.voiceExpressiveOn=on;
 })(typeof globalThis!=='undefined'?globalThis:this);

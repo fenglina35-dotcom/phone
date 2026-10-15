@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1746'){
+if(window.__NORTH_SHELL_BUILD__!=='1748'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -616,7 +616,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1746 · 语音笑声凶语气与3D标记';
+const APP_VER='v1748 · 语音导演标注';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2033,7 +2033,9 @@ async function _ttsOnce(t,vid,tts,opt){let r;const languageBoost=String(opt&&opt
    目标语言时才清理，清理后为空就原样返回，保证任何情况下都不会把一整句变成哑音。 */
 function ttsTidyOrphanPunct(s){return String(s||'').replace(/\s+/g,' ').replace(/\s+([,.;:!?])/g,'$1').replace(/([,;:])(?=[.!?])/g,'').replace(/,\s*,/g,',').replace(/^[\s,;:.!?]+/,'').trim();}
 function ttsDropOffLanguage(text,o){const lang=ttsContentLang(o);if(!['英','法','德','俄','韩'].includes(lang))return text;const s=String(text||'');if(!s||!hasForeign(s,lang))return text;const cleaned=ttsTidyOrphanPunct(hasCN(s)?s.replace(CJK_RE,' ').replace(CN_PUNCT_RE,' '):s);return cleaned&&hasForeign(cleaned,lang)?cleaned:text;}
-async function ttsArr(text,o,opt){opt=Object.assign({},opt||{});text=ttsDropOffLanguage(text,o);if(!opt.languageBoost)opt.languageBoost=ttsLanguageBoost(o);const tts=opt.externalConfig?Object.assign({},opt.externalConfig,{relay:false,enabled:true}):ttsCfg(o),raw=ttsCleanBase(text);if(!raw)return null;if([...raw].length>VOICE_MAX_CHARS){if(!opt.quiet)toast('语音超过'+VOICE_MAX_CHARS+'字，已改用文字');return null;}const t=ttsPerformanceText(text,o,tts,opt);if(!t)return null;if([...t].length>VOICE_MAX_CHARS){if(!opt.quiet)toast('语音超过'+VOICE_MAX_CHARS+'字，已改用文字');return null;}const v=o?getVoice(o):null;opt.voice=v;
+/* 语音字数只算真正念出来的内容：表演标签（[soft]、[chuckling] 等）和发音标注不占字数，不会因为加了标签就超限合成失败 */
+function ttsSpokenLength(t){return [...String(t||'').replace(/\[[^\]\n]{1,60}\]/g,'').replace(/<\|phoneme_start\|>[a-z]+[1-5]<\|phoneme_end\|>/gi,'x').replace(/\s+/g,' ').trim()].length;}
+async function ttsArr(text,o,opt){opt=Object.assign({},opt||{});text=ttsDropOffLanguage(text,o);if(!opt.languageBoost)opt.languageBoost=ttsLanguageBoost(o);const tts=opt.externalConfig?Object.assign({},opt.externalConfig,{relay:false,enabled:true}):ttsCfg(o),raw=ttsCleanBase(text);if(!raw)return null;if([...raw].length>VOICE_MAX_CHARS){if(!opt.quiet)toast('语音超过'+VOICE_MAX_CHARS+'字，已改用文字');return null;}const t=ttsPerformanceText(text,o,tts,opt);if(!t)return null;if(ttsSpokenLength(t)>VOICE_MAX_CHARS){if(!opt.quiet)toast('语音超过'+VOICE_MAX_CHARS+'字，已改用文字');return null;}const v=o?getVoice(o):null;opt.voice=v;
   if(!ttsEnabled(tts)||(!ttsRelayOn(tts)&&!ttsExternalOn(tts)))return null;const vid=ttsRoleVoiceId(o,tts);
 
   let lastErr='',tries=Math.max(1,Math.min(3,+opt.tries||3));
@@ -2061,7 +2063,7 @@ function warmVoiceMsg(m,o){
   if(m._ttsTask)return m._ttsTask;
   if(m._ttsFailAt&&Date.now()-m._ttsFailAt<15000)return null;
   m._ttsLoading=true;refreshVoiceBubble(m);
-  m._ttsTask=(async()=>{try{const _vxOn=typeof NorthVoiceExpressive!=='undefined'&&NorthVoiceExpressive.on();if(typeof NorthVoiceExpressive!=='undefined'&&NorthVoiceExpressive.normalize(m))save();if(_vxOn&&(m.voicePerf||m.voiceAsk))NorthVoiceExpressive.handPerf(m.content,m.voicePerf,m.voiceAsk);/* 带小提示的念法交给下一次同一正文的合成；发声仍读 m.content，语言锁照常生效 */let ab=await ttsArr(m.content,o,{cue:m.voiceCue});let _mime='audio/mpeg';
+  m._ttsTask=(async()=>{try{const _vxOn=typeof NorthVoiceExpressive!=='undefined'&&NorthVoiceExpressive.on();if(typeof NorthVoiceExpressive!=='undefined'&&NorthVoiceExpressive.normalize(m))save();if(_vxOn){try{if(await NorthVoiceExpressive.direct(m,o))save();}catch(_){}}/* 语音导演：再做一次表演标注，失败就用行内提示 */if(_vxOn&&(m.voicePerf||m.voiceAsk||m.voiceDirected))NorthVoiceExpressive.handPerf(m.content,m.voicePerf,m.voiceAsk,m.voiceDirected);/* 带小提示的念法交给下一次同一正文的合成；发声仍读 m.content，语言锁照常生效 */let ab=await ttsArr(m.content,o,{cue:m.voiceCue});let _mime='audio/mpeg';
     if(ab){try{const dec=await decodeBuf(ab);if(!dec){await ttsRefundAudio(ab,'tts-decode-failed');m._ttsFailAt=Date.now();return null;}if(dec.duration>VOICE_MAX_SECONDS+.25){await ttsRefundAudio(ab,'tts-over-60-seconds');m.type='text';m.showText=true;m.dur=0;m._ttsFailAt=Date.now();save();if(cur().p==='chat')render();toast('这条语音超过60秒，已改用文字显示');return null;}m.dur=Math.max(1,Math.min(VOICE_MAX_SECONDS,Math.ceil(dec.duration)));/* 3D 贴耳：开关打开时把语音条渲染成双耳立体声；失败就用原来的音频 */if(_vxOn){const bin=await NorthVoiceExpressive.binaural(ab,m.voiceSpatial,m.content);if(bin){ab=bin;_mime='audio/wav';m.voice3d=true;}}const du=audioBufToDataUrl(ab,_mime);if(du){const k=m.id||uid();try{await imgPut('__audio_'+k,du);m.audio='idb-audio:'+k;m.audioTs=Date.now();}catch(_){m.audio=du;m.audioTs=Date.now();}}m._aurl=URL.createObjectURL(new Blob([ab],{type:_mime}));delete m._ttsFailAt;return m.audio||m._aurl;}catch(e){}}
     m._ttsFailAt=Date.now();return null;}catch(e){m._ttsFailAt=Date.now();return null;}})().then(async x=>{delete m._ttsTask;delete m._ttsLoading;if(m.audio)save();refreshVoiceBubble(m);if(x&&m._playWhenReady){delete m._playWhenReady;const u=await audioPlayableUrl(x);if(u){playUrl(u);const el=document.querySelector('[data-vid="'+m.id+'"]');if(el){el.classList.add('playing');setTimeout(()=>el.classList.remove('playing'),Math.min(9000,(m.dur||3)*1000+800));}}refreshVoiceBubble(m);}return x;});
   return m._ttsTask;}
@@ -2089,7 +2091,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1746&r=v1746-thought-preview-1';
+  const url='sw.js?v=1748&r=v1748-thought-preview-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
