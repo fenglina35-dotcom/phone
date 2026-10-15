@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1758'){
+if(window.__NORTH_SHELL_BUILD__!=='1760'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -616,7 +616,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1758 · Fish 授权码页修复';
+const APP_VER='v1760 · 角色订票记忆修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1683,6 +1683,8 @@ function msgToText(m){if(m&&m.type==='calendarcreated'){const e=calCreatedCardEv
     if(m.type==='sticker')return '[我发了个表情'+(m.meaning?'：'+m.meaning:'')+']';
     if(m.type==='voice')return m.content?('[我发语音说：'+m.content+']'):'[我发了条语音]';
     if(m.type==='image')return m.textCard?'[我发了一张图文照片卡。这在聊天里是一张图片，照片描述是：'+(m.desc||'未填写描述')+'。后续只能以这段描述作为画面事实。]':'[我发了一张照片'+(m.desc?'，画面是：'+m.desc:'')+']';
+    /* 我自己订的票（机票/火车/演唱会/打车）卡片没有 content，以前这里返回空，我就看不到自己订成功过 */
+    if(m.type==='ticket'){const t=msgToText({...m,role:'user'});return !t?'':/^\[/.test(t)?t:'[我订好并发给你的订单卡：'+t+']';}
     return m.content||'';
   }
   switch(m.type){
@@ -2092,7 +2094,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1758&r=v1758-thought-preview-1';
+  const url='sw.js?v=1760&r=v1760-thought-preview-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}

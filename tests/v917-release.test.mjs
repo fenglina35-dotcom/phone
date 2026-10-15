@@ -10,13 +10,13 @@ const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest
 const webView = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web source keeps private 1.0.315 compatibility', () => {
-  assert.match(app, /APP_VER='v1758 · Fish 授权码页修复'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='1758'/);
-  assert.match(sw, /const BUILD='1758'/);
+  assert.match(app, /APP_VER='v1760 · 角色订票记忆修复'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='1760'/);
+  assert.match(sw, /const BUILD='1760'/);
   assert.doesNotMatch(project, /CURRENT_PROJECT_VERSION = 40;|MARKETING_VERSION = 1\.0\.40;/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 449;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.449;/g) || []).length, 12);
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.449 \(449\)'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 450;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.450;/g) || []).length, 12);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.450 \(450\)'/);
 });
 
 test('album replaces the removed account runtime',()=>{assert.match(html,/photo-album\.js/);assert.doesNotMatch(html,/ai-account\.js/);});

@@ -160,6 +160,6 @@ test('terminated WebContent remounts once while active and thermally safe', () =
 });
 
 test('recovery suite is pinned to the private bundled app only', () => {
-  assert.match(app, /APP_VER='v1761 · Fish 会员登录（MCP）';/);
+  assert.match(app, /APP_VER='v1763 · 角色订票记忆修复';/);
   assert.match(app, /function emergencyRestorePreview\(index\)/);
 });

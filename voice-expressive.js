@@ -37,7 +37,9 @@ function normalize(m){if(!m||m.type!=='voice')return false;const has=t=>new RegE
 function state(){try{return typeof S!=='undefined'?S:root.S;}catch(_){return null;}}
 function on(){const st=state();return !!(st&&st.settings&&st.settings.voiceExpressive===true);}
 /* Fish 的新模型 Drama 3（API 模型名 drama-3）同样用方括号行内标签，而且笑、哭、耳语不再被参考音色压平；原来的识别只认 s2 系列，这里补上。 */
-function styleKind(tts){let k='';try{k=typeof ttsStyleKind==='function'?ttsStyleKind(tts):'';}catch(_){k='';}if(!k&&tts&&/fish\.?audio/i.test(String(tts.base||''))&&/drama/i.test(String(tts.model||'')))k='fish';return k;}
+function styleKind(tts){let k='';try{k=typeof ttsStyleKind==='function'?ttsStyleKind(tts):'';}catch(_){k='';}if(!k&&tts&&/fish\.?audio/i.test(String(tts.base||''))&&/drama/i.test(String(tts.model||'')))k='fish';
+  /* Fish 会员登录（MCP）不能选模型、模型栏不起作用，只要选了它就按 Fish 情绪处理 */
+  if(!k&&tts&&String(tts.provider||'').trim().toLowerCase()==='fishmcp')k='fish';return k;}
 function roleTts(c){try{return typeof ttsCfg==='function'?ttsCfg(c):null;}catch(_){return null;}}
 
 /* 语音正文 → 显示用的干净文字、给模型念的带提示文字、方位标签（记在干净文字的第几个字）。开关关着时不处理。 */
@@ -86,11 +88,11 @@ function performance(text,o,tts,opt){if(!on())return null;const kind=styleKind(t
    （稳定有效的标签、克制、改写文字比堆标签有效、命令句用软标签），用自己的话写成导演规则；中英文台词都支持。
    结果缓存在消息上（voiceDirected / voiceDirectedFor），同一条语音不会重复调用；任何失败都退回上面的行内提示逻辑。 */
 const DIRECTOR_PROMPT=[
-'你是语音导演。只做一件事：把一条马上要交给 Fish Audio s2.1 合成的角色语音台词，标注成听起来像真人在说话的版本。',
+'你是语音导演。只做一件事：把一条马上要交给 Fish Audio 合成的角色语音台词，标注成听起来像真人在说话的版本。',
 '1. 克制：默认少标。能靠文字本身表达的不加标签；表面意思和真实情绪一致的平铺句子几乎不用标。情绪转折、口是心非、撒娇、调情、笑、难过的地方才标。',
 '2. 改写比标签更有效：可以加入自然的语气词和停顿标点（中文：嗯、唔、哈、啧、呀、嘛、……、～；英文：mm, hm, hey, oh, haha, heh, ..., —），可以拆成更口语的短句、调整语序、叠词。但不能增删事实、不能改变意思、不能添加新的内容，原有的每个意思都要保留。',
 '3. 标签格式：方括号里写英文，放在它要作用的那段文字前面，和文字之间留一个空格，例如 "[soft] 过来。"、"[chuckling] You\'re ridiculous."。同一处最多叠两个（一个管音量、一个管情绪）；整条一般 1 到 4 个。',
-'4. 在 Fish s2.1 上稳定有效的标签（优先从这里选）：',
+'4. 在 Fish 上稳定有效的标签（优先从这里选）：',
 '   情绪：[warm] [doting] [happy] [pleased] [teasing] [playful] [curious] [sad] [worried] [surprised] [slightly surprised] [serious] [angry]',
 '   动作式，通常比情绪词更准：[comfort] [plead] [gently nudging] [to charm] [seduce] [complain] [feel sorry] [praising] [threaten]（可以是玩笑式的）',
 '   声音：[soft] [whispering] [low voice] [voice softening into a low murmur]（撒娇、示弱） [voice dropping to a low, sultry tone]（调情） [draw out the final syllable]（拉长尾音） [emphasis] [forceful]（只用于真的生气） [crying] [sobbing]',

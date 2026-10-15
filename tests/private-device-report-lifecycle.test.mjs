@@ -91,15 +91,15 @@ test('status-bar theme does not force an avoidable first root transition', () =>
 });
 
 test('private build and bundled recovery page advance together', () => {
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.449 \(449\)'/);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.450 \(450\)'/);
   assert.match(webView, /smallPhone\.webContentTerminationTimes\.v25\.build333/);
-  assert.match(privateApp, /APP_VER='v1761 · Fish 会员登录（MCP）'/);
+  assert.match(privateApp, /APP_VER='v1763 · 角色订票记忆修复'/);
   assert.equal(privateAlias, privateIndex);
-  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1761'/);
-  assert.match(privateIndex, /app\.js\?v=1761/);
+  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1763'/);
+  assert.match(privateIndex, /app\.js\?v=1763/);
   assert.match(privateIndex, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(privateRepair, /index\.html\?repair=1&v=1761/);
-  assert.match(privateApp, /__NORTH_SHELL_BUILD__!==\'1761\'/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1763/);
+  assert.match(privateApp, /__NORTH_SHELL_BUILD__!==\'1763\'/);
 });
 
 test('glass home widgets can be restored after an old-build over-install', () => {

@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1761'){
+if(window.__NORTH_SHELL_BUILD__!=='1763'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -640,7 +640,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1761 · Fish 会员登录（MCP）';
+const APP_VER='v1763 · 角色订票记忆修复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1674,6 +1674,8 @@ function msgToText(m){if(m&&m.type==='calendarcreated'){const e=calCreatedCardEv
     if(m.type==='sticker')return '[我发了个表情'+(m.meaning?'：'+m.meaning:'')+']';
     if(m.type==='voice')return m.content?('[我发语音说：'+m.content+']'):'[我发了条语音]';
     if(m.type==='image')return m.textCard?'[我发了一张图文照片卡。这在聊天里是一张图片，照片描述是：'+(m.desc||'未填写描述')+'。后续只能以这段描述作为画面事实。]':'[我发了一张照片'+(m.desc?'，画面是：'+m.desc:'')+']';
+    /* 我自己订的票（机票/火车/演唱会/打车）卡片没有 content，以前这里返回空，我就看不到自己订成功过 */
+    if(m.type==='ticket'){const t=msgToText({...m,role:'user'});return !t?'':/^\[/.test(t)?t:'[我订好并发给你的订单卡：'+t+']';}
     return m.content||'';
   }
   switch(m.type){

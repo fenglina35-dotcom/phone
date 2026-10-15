@@ -99,3 +99,13 @@ test('the Fish code page is never replaced by the cached phone shell (Safari tha
   assert.equal(nav('/phone/fish-oauth.html?code=abc&state=x'),false,'goes straight to the network');
   assert.equal(nav('/phone/小手机.html'),true,'the app itself still uses the cached shell');
 });
+
+test('member login (fishmcp) always gets the Fish expressive treatment, whatever the model field says',()=>{
+  for(const file of ['voice-expressive.js',PRIVATE+'voice-expressive.js']){
+    const ctx=vm.createContext({S:{settings:{voiceExpressive:true},me:{name:'North'}},Math,Date,String,Array,Float32Array,ArrayBuffer,DataView,Promise,Map,RegExp,Object,setTimeout,
+      ttsStyleKind:()=>'',ttsCfg:()=>({}),ttsCleanBase:t=>String(t||''),ttsCueKind:()=>''});
+    vm.runInContext(read(file),ctx);const V=ctx.NorthVoiceExpressive;
+    assert.notEqual(V.performance('[轻笑]我才不信',{id:'r'},{provider:'fishmcp',base:'https://api.fish.audio',model:''},{}),null,file+': model field empty');
+    assert.equal(V.performance('[轻笑]我才不信',{id:'r2'},{provider:'fish',base:'https://api.fish.audio',model:''},{}),null,file+': API Key mode still follows the model field');
+  }
+});
