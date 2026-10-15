@@ -2875,3 +2875,5 @@ CUA核验22项控件、发送未读空白、已读等待阶段空白、保存180
 2026-10-16 网页v1756 / 私人v1761 / iOS449：新增 Fish 会员登录（MCP）语音模式。根因与决定：Fish MCP 拒绝所有浏览器 Origin（实测无 Origin 200，github.io/null 403），故 MCP 与音频下载走自有中转 license.smallphoneapp.com /fish-mcp、/fish-mcp-audio（固定上游、方法与工具白名单、不存凭证；Worker 版本 1e0ce230，回退基线 30363424）。凭证只存本机 localStorage north_fish_mcp_v1，不进 S/备份/导出。私人 App 用 fish-oauth.html 显示授权码粘贴（不改原生）。失败尝试：直连 MCP（CORS 预检通过但请求被 Origin 拦）。测试：fish-mcp-v1756 5/5，中转 38/38，用户 Plus 团队实测余额与生成成功（扣 9 点）。
 
 2026-10-16 私人v1761覆盖包：最新私人版本覆盖包_v1761_iOS449.zip，209632842字节，1831文件，SHA256=56bfdcbd6e56d4e4ed880edb202df7031438dcefdb4262acf41402ce4f0a12d9，另有分卷。以v1757完整包（SHA256 2d09fde3…已核对）为继承基线，原生只允许449构建号变化。全量4099/4099，核心聊天门禁两端通过。Mac已xcodebuild编译并覆盖安装到用户iPhone 15。线上网页已是v1756，fish-oauth.html 可访问。不是IPA。
+
+2026-10-16 网页v1758（私人仍v1761/iOS449，未改）：Fish 会员登录实机问题——私人App在Safari授权后看到小手机网页版登录页而不是授权码。根因：该Safari以前打开过网页版，sw.js 对 /phone/ 下所有导航返回缓存外壳，fish-oauth.html 被顶替。修复：sw.js 对 fish-oauth.html 导航直接走网络（skipWaiting 使新SW在下一次访问即生效）。回归：tests/fish-mcp-v1756.test.mjs 新增SW导航测试，旧sw.js 失败、新版通过；permanent-fix-guard v1758。临时办法：复制Safari地址栏整段网址粘贴，finish() 可从网址取码。

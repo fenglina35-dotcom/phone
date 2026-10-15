@@ -57,8 +57,8 @@ test('private identifiers remain v1355 and iOS 399 while public advances indepen
   assert.match(bridge, /static let contractVersion = 42/);
   assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 449;/g) || []).length, 12);
   assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.449;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1756 · Fish 会员登录（MCP）'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1756'/);
+  assert.match(publicApp, /APP_VER='v1758 · Fish 授权码页修复'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1758'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 

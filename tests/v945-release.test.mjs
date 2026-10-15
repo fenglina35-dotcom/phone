@@ -13,14 +13,14 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1756 · Fish 会员登录（MCP）'/);
-  assert.match(app,/const url='sw\.js\?v=1756&r=v1756-thought-preview-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1756'/);
-  assert.match(html,/app\.js\?v=1756/);
-  assert.match(sw,/const BUILD='1756'/);
-  assert.match(sw,/north-shell-v1756-thought-preview-1/);
-  assert.match(index,/小手机\.html\?v=1756/);
-  assert.match(repair,/小手机\.html\?v=1756/);
+  assert.match(app,/APP_VER='v1758 · Fish 授权码页修复'/);
+  assert.match(app,/const url='sw\.js\?v=1758&r=v1758-thought-preview-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1758'/);
+  assert.match(html,/app\.js\?v=1758/);
+  assert.match(sw,/const BUILD='1758'/);
+  assert.match(sw,/north-shell-v1758-thought-preview-1/);
+  assert.match(index,/小手机\.html\?v=1758/);
+  assert.match(repair,/小手机\.html\?v=1758/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{

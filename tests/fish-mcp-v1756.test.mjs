@@ -89,3 +89,13 @@ test('app: fishmcp provider needs no key and calls the module; the API Key path 
   assert.match(read('native/private-small-phone/Resources/private-phone-web.manifest.json'),/"fish-mcp\.js"/);
   const cb=read('fish-oauth.html');assert.doesNotMatch(cb,/<script[^>]+src=/,'callback page loads no external script');assert.match(cb,/no-referrer/);
 });
+
+test('the Fish code page is never replaced by the cached phone shell (Safari that once opened the web build)',()=>{
+  const src=read('sw.js'),L={};
+  const ctx=vm.createContext({self:{addEventListener:(t,f)=>L[t]=f,location:{origin:'https://fenglina35-dotcom.github.io',href:'https://fenglina35-dotcom.github.io/phone/sw.js'},registration:{scope:'https://fenglina35-dotcom.github.io/phone/'}},
+    URL,caches:{open:async()=>({match:async()=>null,put:async()=>{}})},fetch:async()=>new Response('x'),Response,Request,console,setTimeout,decodeURIComponent,Promise});
+  vm.runInContext(src,ctx);
+  const nav=p=>{let used=false;L.fetch({request:{mode:'navigate',method:'GET',url:'https://fenglina35-dotcom.github.io'+encodeURI(p),cache:'default',headers:new Headers()},respondWith(){used=true;},waitUntil(){}});return used;};
+  assert.equal(nav('/phone/fish-oauth.html?code=abc&state=x'),false,'goes straight to the network');
+  assert.equal(nav('/phone/小手机.html'),true,'the app itself still uses the cached shell');
+});

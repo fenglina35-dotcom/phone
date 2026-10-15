@@ -89,6 +89,6 @@ test('private diagnostics expose only stage timing and counts', () => {
 });
 
 test('v1178 public candidate adds only the shared theater layer, not the private friend repair', () => {
-  assert.match(publicSource, /APP_VER='v1756 · Fish 会员登录（MCP）'/);
+  assert.match(publicSource, /APP_VER='v1758 · Fish 授权码页修复'/);
   assert.doesNotMatch(publicSource, /function pfEnsureForSync/);
 });

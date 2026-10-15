@@ -21,7 +21,7 @@ test('private v1355 loads daily backup after the diagnostic overlay while public
     assert.ok(html.indexOf('private-cloud-backup.js?v=1761')>html.indexOf('private-runtime-diagnostics.js?v=339'));
   }
   assert.match(privateApp,/APP_VER='v1761 · Fish 会员登录（MCP）'/);
-  assert.match(publicApp,/APP_VER='v1756 · Fish 会员登录（MCP）'/);
+  assert.match(publicApp,/APP_VER='v1758 · Fish 授权码页修复'/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 449;/g)||[]).length,12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.449;/g)||[]).length,12);
 });

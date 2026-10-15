@@ -71,8 +71,8 @@ test('private identity remains v1355 and iOS 399 while public advances independe
   assert.match(bridge, /private static let build = "1\.0\.449 \(449\)"/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 449;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.449;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1756 · Fish 会员登录（MCP）'/);
-  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1756'/);
+  assert.match(publicApp, /APP_VER='v1758 · Fish 授权码页修复'/);
+  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1758'/);
   assert.doesNotMatch(publicApp, /persistWechatRequested|smallPhoneWechatPersistTrace/);
 });
 

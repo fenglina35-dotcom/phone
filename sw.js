@@ -1,6 +1,6 @@
-const BUILD='1756';
-const HOTFIX='v1756-thought-preview-1';
-const SHELL_CACHE='north-shell-v1756-thought-preview-1';
+const BUILD='1758';
+const HOTFIX='v1758-thought-preview-1';
+const SHELL_CACHE='north-shell-v1758-thought-preview-1';
 const GLASS_ICON_CACHE='north-glass-icons-v2';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
@@ -17,7 +17,7 @@ const CORE_FILES=[
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
   {url:'./app.js?v='+BUILD+'&r='+HOTFIX,kind:'app'},
   {url:'./cohab-theater.js?v='+BUILD+'&r=v1274-web-cohab-guests-1',kind:'theater'},
-  {url:'./web-hotfix.js?v='+BUILD+'&r=v1756-thought-preview-1',kind:'hotfix'},
+  {url:'./web-hotfix.js?v='+BUILD+'&r=v1758-thought-preview-1',kind:'hotfix'},
   {url:'./photo-album.js?v='+BUILD,kind:'album'},
   {url:'./couple-watch.js?v='+BUILD,kind:'watch'},
   {url:'./couple-watch-runtime.js?v='+BUILD,kind:'watchRuntime'}
@@ -164,7 +164,7 @@ function validShellText(kind,text){
     &&text.includes('theaterRevealActorItems')
     &&!text.includes('cohabReplyCore=async');
   if(kind==='hotfix')return text.length>800
-    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1756-thought-preview-1'")
+    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1758-thought-preview-1'")
     &&text.includes('reconcileExpiredWxLogin')
     &&text.includes('withBaseImageCheck')
     &&text.includes('isStoredImgRef');
@@ -303,6 +303,10 @@ self.addEventListener('fetch',event=>{
   // public documents. They must
   // never be replaced by the cached small-phone application shell.
   if(request.mode==='navigate'&&/\/north-(?:support|privacy|role-controller)\.html$/.test(url.pathname))return;
+
+  // Fish 会员登录的授权码页（私人 App 在 Safari 登录后跳到这里）。以前访问过网页版的 Safari
+  // 会被缓存的小手机外壳顶替，用户看不到授权码（2026-10-16 实机）。必须直接走网络。
+  if(request.mode==='navigate'&&/\/fish-oauth\.html$/.test(url.pathname))return;
 
   // The owner and staff admin portals have their own application shells and
   // service workers. Never replace either portal with the cached phone shell.
