@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1760 · 角色订票记忆修复'/);
-  assert.match(app,/const url='sw\.js\?v=1760&r=v1760-thought-preview-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1760'/);
-  assert.match(html,/app\.js\?v=1760/);
-  assert.match(sw,/const BUILD='1760'/);
-  assert.match(sw,/north-shell-v1760-thought-preview-1/);
-  assert.match(index,/小手机\.html\?v=1760/);
-  assert.match(repair,/小手机\.html\?v=1760/);
+  assert.match(app,/APP_VER='v1762 · 卡片记忆与抖音不重复'/);
+  assert.match(app,/const url='sw\.js\?v=1762&r=v1762-thought-preview-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1762'/);
+  assert.match(html,/app\.js\?v=1762/);
+  assert.match(sw,/const BUILD='1762'/);
+  assert.match(sw,/north-shell-v1762-thought-preview-1/);
+  assert.match(index,/小手机\.html\?v=1762/);
+  assert.match(repair,/小手机\.html\?v=1762/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{
   assert.match(privateBundle,/<string>1200<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.450;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 450;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.450 \(450\)'/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.451;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 451;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.451 \(451\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

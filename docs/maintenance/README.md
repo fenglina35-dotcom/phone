@@ -2881,3 +2881,5 @@ CUA核验22项控件、发送未读空白、已读等待阶段空白、保存180
 2026-10-16 网页v1760 / 私人v1763 / iOS450：用户反馈 Claude（Opus 4.6，人设与记忆都很短，上下文50回合）八轮后忘了自己10-16帮她订的10-18苏州→西安机票。排除：行程未过期（先误判为过期清理，已收回）、无电话/共同生活切换。根因：msgToText 角色分支没有 ticket 类型，返回 m.content||\x27\x27 即空串；consume 又删掉了 [订机票] 指令，历史里只剩“我先试试帮你订”。修复：角色分支复用通用 ticket 摘要。另：fishmcp 时 voice-expressive styleKind 一律为 fish，导演提示去掉过时的 s2.1 字样。回归：role-booked-ticket-history-v1760（旧实现空串失败）、fish-mcp-v1756 新增 fishmcp 情绪测试（旧实现 null 失败）。
 
 2026-10-16 私人v1763覆盖包：最新私人版本覆盖包_v1763_iOS450.zip，209633374字节，1831文件，SHA256=8e4ae2e029905a8e89037d9ef28454f1cead1f32b59acc9a93f21c4a9fb35ef8，另有分卷。以v1761完整包（SHA256 56bfdcbd…已核对）为继承基线，原生只允许450构建号变化。全量4108/4108，核心聊天门禁两端通过。Mac已xcodebuild编译并覆盖安装到用户iPhone 15。不是IPA。
+
+2026-10-16 网页v1762 / 私人v1765 / iOS451：用户要求查外卖等卡片，并反馈角色对她的一条抖音作品隔几轮又问一遍。1) 全量对照消息类型与 msgToText：角色发出的 marketfood、paid、payreject、dice、musicinvite 只在通用分支有文字、角色分支返回空，补上（普通外卖、红包、转账、礼物、酒店原本正常）。2) 抖音：dyMemoryPrompt 每轮列出她最近作品且写“可以自然提起”，无时间、无“聊过别再问”，改为每条带多久以前并明确不重复追问（提示词层面修正，实机待观察）。回归：role-booked-ticket-history-v1760 扩充（旧实现空串失败）、douyin-memory-no-repeat-v1762（旧实现失败）。

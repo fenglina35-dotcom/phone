@@ -16,12 +16,19 @@ function run(file){
   vm.runInContext(fnSource(read(file),'msgToText'),ctx);return ctx.msgToText;}
 
 for(const file of ['app.js','native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js']){
-  test(file+': a ticket the role booked itself is readable in its own history',()=>{
+  test(file+': cards the role sent itself (tickets, real-shop food, pay results, dice, music) are readable in its own history',()=>{
     const msgToText=run(file);
     const flight=msgToText({role:'assistant',type:'ticket',trip:{id:'o1',flightV2:true}});
     assert.match(flight,/苏州→西安/,'the role sees what it booked');assert.match(flight,/2026-10-18/);assert.match(flight,/预订成功/);
     for(const [trip,want] of [[{railV2:true},/火车票/],[{concertV2:true},/演唱会/],[{taxiV2:true},/打车/]])assert.match(msgToText({role:'assistant',type:'ticket',trip}),want);
     assert.equal(msgToText({role:'user',type:'ticket',trip:{id:'o1',flightV2:true}}),'模拟机票 苏州→西安 · 2026-10-18 09:00—10:40 · 经济舱 · 同行：North · Claude付款 ¥1130.00 · 预订成功','user-side tickets unchanged');
     assert.equal(msgToText({role:'assistant',type:'text',content:'我先试试帮你订18号的'}),'我先试试帮你订18号的','ordinary role text unchanged');
+    // 同样曾是空白的角色卡片：真人店铺外卖、代付成功/拒绝、骰子、一起听歌
+    assert.match(msgToText({role:'assistant',type:'marketfood',shop:'小面馆',name:'牛肉面',price:28,marketFood:{order:{discount:0},resultText:'已下单'}}),/小面馆.*牛肉面/);
+    assert.match(msgToText({role:'assistant',type:'paid',name:'奶茶',price:18}),/我帮你代付成功了：奶茶/);
+    assert.match(msgToText({role:'assistant',type:'payreject',name:'奶茶',price:18}),/我拒绝了帮你代付：奶茶/);
+    assert.match(msgToText({role:'assistant',type:'dice',value:5}),/点数是5/);
+    assert.match(msgToText({role:'assistant',type:'musicinvite',title:'晴天',artist:''}),/我邀请你一起听歌：晴天/);
+    assert.match(msgToText({role:'user',type:'musicinvite',title:'晴天',artist:''}),/North邀请你一起听歌/,'user-side invite unchanged');
   });
 }

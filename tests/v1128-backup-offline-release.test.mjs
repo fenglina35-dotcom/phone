@@ -27,15 +27,15 @@ function functionSource(name){
 }
 
 test('v1178 has a unique visible identity across every public entry and cache layer',()=>{
-  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1760\'/);
-  assert.match(app,/APP_VER='v1760 · 角色订票记忆修复'/);
-  assert.match(shell,/__NORTH_SHELL_BUILD__='1760'/);
-  assert.match(shell,/app\.js\?v=1760&r=v1760-thought-preview-1/);
-  assert.match(index,/小手机\.html\?v=1760/);
-  assert.match(repair,/小手机\.html\?v=1760/);
-  assert.match(worker,/const BUILD='1760'/);
-  assert.match(worker,/north-shell-v1760-thought-preview-1/);
-  assert.match(hotfix,/sw\.js\?v=1760&r=v1760-thought-preview-1/);
+  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1762\'/);
+  assert.match(app,/APP_VER='v1762 · 卡片记忆与抖音不重复'/);
+  assert.match(shell,/__NORTH_SHELL_BUILD__='1762'/);
+  assert.match(shell,/app\.js\?v=1762&r=v1762-thought-preview-1/);
+  assert.match(index,/小手机\.html\?v=1762/);
+  assert.match(repair,/小手机\.html\?v=1762/);
+  assert.match(worker,/const BUILD='1762'/);
+  assert.match(worker,/north-shell-v1762-thought-preview-1/);
+  assert.match(hotfix,/sw\.js\?v=1762&r=v1762-thought-preview-1/);
   for(const [name,source] of Object.entries({app,shell,index,repair,worker,hotfix})){
     assert.doesNotMatch(source,/v?1127/,`${name} must not reuse the prior web version`);
   }

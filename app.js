@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1760'){
+if(window.__NORTH_SHELL_BUILD__!=='1762'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -616,7 +616,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1760 · 角色订票记忆修复';
+const APP_VER='v1762 · 卡片记忆与抖音不重复';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1685,6 +1685,9 @@ function msgToText(m){if(m&&m.type==='calendarcreated'){const e=calCreatedCardEv
     if(m.type==='image')return m.textCard?'[我发了一张图文照片卡。这在聊天里是一张图片，照片描述是：'+(m.desc||'未填写描述')+'。后续只能以这段描述作为画面事实。]':'[我发了一张照片'+(m.desc?'，画面是：'+m.desc:'')+']';
     /* 我自己订的票（机票/火车/演唱会/打车）卡片没有 content，以前这里返回空，我就看不到自己订成功过 */
     if(m.type==='ticket'){const t=msgToText({...m,role:'user'});return !t?'':/^\[/.test(t)?t:'[我订好并发给你的订单卡：'+t+']';}
+    /* 真人店铺外卖、代付结果、骰子：通用分支的文字本来就是按我（角色）的口吻写的，以前这里返回空 */
+    if(['marketfood','paid','payreject','dice'].includes(m.type))return msgToText({...m,role:'user'});
+    if(m.type==='musicinvite')return '[我邀请你一起听歌：'+(m.title||'一首歌')+(m.artist?'（'+m.artist+'）':'')+'，我们正一起听]';
     return m.content||'';
   }
   switch(m.type){
@@ -2094,7 +2097,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1760&r=v1760-thought-preview-1';
+  const url='sw.js?v=1762&r=v1762-thought-preview-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -7753,11 +7756,12 @@ function dyMemoryLines(cid,limit){const out=[];
       out.push({t:m.time||0,s:'【抖音群聊·'+g.name+'】'+who+'：'+String(m.text||'').slice(0,80)});});});
   (S.dy.mine||[]).slice(0,4).forEach(v=>{out.push({t:v.ts||0,s:'【'+S.me.name+'发的抖音作品】'+String(v.desc||'').slice(0,40)+(dyWorkBody(v)?'｜'+dyWorkBody(v).replace(/\s+/g,' ').slice(0,70):'')});
     (v.comments||[]).filter(cm=>cm.cid===cid||cm.me).slice(-3).forEach(cm=>out.push({t:v.ts||0,s:'【这条作品下的评论】'+(cm.me?S.me.name:cm.name)+'：'+String(cm.text||'').slice(0,60)}));});
-  return out.sort((a,b)=>a.t-b.t).slice(-(limit||24)).map(x=>x.s);}
+  /* 带上多久以前：没有时间，角色分不清是刚发的还是早就聊过的，会隔几轮又问一遍（2026-10-16 实机） */
+  return out.sort((a,b)=>a.t-b.t).slice(-(limit||24)).map(x=>(x.t&&typeof dyTimeAgo==='function'?'（'+dyTimeAgo(x.t)+'）':'')+x.s);}
 function dyMemoryPrompt(c){if(!c||!c.id)return'';
   try{if(S.dy&&S.dy.memoryOff)return'';const lines=dyMemoryLines(c.id,24);if(!lines.length)return'';
     return '\n\n# 抖音上最近发生的事（你都经历过，可以自然提起）\n'+lines.join('\n')
-      +'\n这些是你和'+(S.me.name||'她')+'在抖音里真实发生过的互动：私信、群聊、她发的作品和评论。你记得它们，聊天时可以自然提到，但不要逐条复述，也不要说"根据记录"。';
+      +'\n这些是你和'+(S.me.name||'她')+'在抖音里真实发生过的互动：私信、群聊、她发的作品和评论。你记得它们，聊天时可以自然提到，但不要逐条复述，也不要说"根据记录"。\n这些是背景，不是每轮都要提的新话题：微信聊天记录里你已经问过、夸过、聊过的作品或事情，不要再问一遍或重复提起，除非'+(S.me.name||'她')+'自己又说起，或者出现了新的作品、评论、私信。';
   }catch(e){return'';}}
 /* ===== 抖音消息页：粉丝、互动消息、群通知、私聊 ===== */
 let _dyActTab='赞与其他';let _dyActOnly='全部';
