@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1745'){
+if(window.__NORTH_SHELL_BUILD__!=='1747'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -640,7 +640,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1745 · 机票火车票小众城市';
+const APP_VER='v1747 · 存共同相册不再报错';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -13228,6 +13228,9 @@ function couTab(n){n=[1,2,3].includes(+n)?+n:1;_couTab=n;[1,2,3].forEach(i=>{con
 function coupleAlbumStore(){if(!S.couple)return[];if(!Array.isArray(S.couple.album))S.couple.album=[];return S.couple.album;}
 function coupleAlbumHidden(){if(!S.couple)return[];if(!Array.isArray(S.couple.albumHidden))S.couple.albumHidden=[];return S.couple.albumHidden;}
 async function coupleAlbumSaveRecent(c,text,category){if(typeof photoAlbumCoupleAllowed!=='function'||!photoAlbumCoupleAllowed(c))return false;const image=[...(msgsForAccount(c.id,'main')||[])].reverse().find(m=>m&&m.type==='image'&&m.src&&!m.pending&&!m._deleted);if(!image)return false;if(!image.id)image.id=uid();return photoAlbumRoleSave(c,image,text,category);}
+/* [存共同相册] 和共用相册组件的 [回忆相册] 会记录这个动作有没有执行成功。网页版在回复拦截诊断模块里定义它，私人版没有那套模块，
+   以前一旦角色回复里带这两个标签就报「Can't find variable: roleInterceptDiagnosticAction」，模型已经回了（也扣了费）却整轮显示失败。这里补上与网页相同的最小实现。 */
+function roleInterceptDiagnosticAction(outcome,ok){if(outcome){outcome.matched=(+outcome.matched||0)+1;if(ok)outcome.handled=(+outcome.handled||0)+1;else outcome.failed=(+outcome.failed||0)+1;}return !!ok;}
 async function coupleAlbumConsumeSaveTag(content,c,outcome,userText){content=String(content||'');const re=/[\[【]\s*存共同相册(?:\s*[|｜]([^\]】]+))?\s*[\]】]/g,tags=[...content.matchAll(re)];content=content.replace(re,'');for(const tag of tags){const fields=String(tag[1]||'').split(/[|｜]/),categorized=fields.length>1;roleInterceptDiagnosticAction(outcome,await coupleAlbumSaveRecent(c,categorized?fields.slice(1).join('｜').trim():String(tag[1]||'').trim(),categorized?fields[0].trim():undefined));}if(typeof photoAlbumConsumeLikes==='function')content=await photoAlbumConsumeLikes(content,c,outcome,userText);return typeof photoAlbumConsumeMemory==='function'?photoAlbumConsumeMemory(content,c,outcome,userText):content;}
 function coupleAlbumItems(c){if(!c||!S.couple||S.couple.cid!==c.id)return[];const out=[],seen=new Set(),hidden=new Set(coupleAlbumHidden()),add=x=>{if(!x||!x.src)return;const key=String(x.source||'')+':'+String(x.id||'');if(hidden.has(key)||seen.has(key))return;seen.add(key);out.push(x);};
   coupleAlbumStore().forEach(x=>add({id:x.id,source:'album',src:x.src,owner:x.owner==='ta'?'ta':'me',desc:String(x.desc||''),visionState:x.visionState||'',visionError:x.visionError||'',time:+x.time||0,manual:true}));
