@@ -206,3 +206,12 @@ test('laughs get room: one laugh per note, no rapid haha syllables glued to the 
   assert.equal(T.directorLaughOnce('[laugh softly] 哈哈哈，好啦给你笑。'),'[laugh softly] ……好啦给你笑。');
   assert.match(T.DIRECTOR_PROMPT,/一条最多笑一次/);assert.match(T.DIRECTOR_PROMPT,/听起来急促/);
 });
+
+test('Fish Drama 3 (model drama-3) is treated as an inline-tag model, so the director and cues stay on',()=>{
+  const ctx=vm.createContext({Math,Date,String,Array,RegExp,Object,Map});
+  vm.runInContext("let S={settings:{voiceExpressive:true},me:{name:'North'}};function ttsStyleKind(t){return /s2/.test(t.model)?'fish':'';}function ttsCfg(){return {base:'https://api.fish.audio',model:'drama-3'};}function ttsCleanBase(t){return String(t).replace(/\\[[^\\]]*\\]/g,'').trim();}",ctx);
+  vm.runInContext(read('voice-expressive.js'),ctx);
+  assert.match(vm.runInContext('NorthVoiceExpressive.prompt({id:"r"})',ctx),/语音细节/);
+  assert.equal(vm.runInContext("NorthVoiceExpressive.performance('[温柔]过来',{id:'r'},{base:'https://api.fish.audio',model:'drama-3'},{})",ctx),'[gentle, tender] 过来');
+  assert.equal(vm.runInContext("NorthVoiceExpressive.performance('[温柔]过来',{id:'r'},{base:'https://api.minimax.chat',model:'drama-3'},{})",ctx),null,'only on Fish');
+});

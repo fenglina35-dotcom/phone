@@ -36,7 +36,8 @@ function normalize(m){if(!m||m.type!=='voice')return false;const has=t=>new RegE
 /* app.js 的 S 是脚本级 let，不挂在 window 上，要直接按名字读 */
 function state(){try{return typeof S!=='undefined'?S:root.S;}catch(_){return null;}}
 function on(){const st=state();return !!(st&&st.settings&&st.settings.voiceExpressive===true);}
-function styleKind(tts){try{return typeof ttsStyleKind==='function'?ttsStyleKind(tts):'';}catch(_){return '';}}
+/* Fish 的新模型 Drama 3（API 模型名 drama-3）同样用方括号行内标签，而且笑、哭、耳语不再被参考音色压平；原来的识别只认 s2 系列，这里补上。 */
+function styleKind(tts){let k='';try{k=typeof ttsStyleKind==='function'?ttsStyleKind(tts):'';}catch(_){k='';}if(!k&&tts&&/fish\.?audio/i.test(String(tts.base||''))&&/drama/i.test(String(tts.model||'')))k='fish';return k;}
 function roleTts(c){try{return typeof ttsCfg==='function'?ttsCfg(c):null;}catch(_){return null;}}
 
 /* 语音正文 → 显示用的干净文字、给模型念的带提示文字、方位标签（记在干净文字的第几个字）。开关关着时不处理。 */
