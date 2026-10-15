@@ -21,6 +21,18 @@
 - Checks may leave `.codex_tmp/` in the repository root. It is a by-product: remove it, do not
   commit it.
 
+## Web and private bundles call only what they define (after the v1747 incident)
+
+- The web build (root `*.js`, `小手机.html`) and the private App bundle (`PhoneWeb.bundle/`) share
+  much code but not the same `app.js`. In v1747 the private `app.js` and the shared `photo-album.js`
+  called `roleInterceptDiagnosticAction`, which only the web `app.js` defines: every private reply with
+  `[存共同相册|…]` threw, and a reply the model had already returned (and billed) showed as 模型未回复.
+- When you copy or merge code between the two bundles, or change a shared file, check that every
+  helper it calls is defined in the bundle that ships it, or call it behind `typeof name==='function'`.
+- `tests/cross-bundle-helper-drift.test.mjs` scans both directions in the normal suite and is a release
+  blocker. Do not silence it by widening its `KNOWN` list; an entry there needs a written reason and
+  is removed once fixed.
+
 ## Long-term maintenance documents
 
 - Before analyzing or changing code, read `docs/maintenance/README.md` and the four DOCX files it lists. Treat them as maintained project records, not temporary references.
