@@ -1,8 +1,8 @@
-"""Create the private v1743 / iOS 440 Mac-source overlay package (cozy home 062, offline/online scene notes, protected private inheritance).
+"""Create the private v1745 / iOS 441 Mac-source overlay package (flight and rail booking repair synced from web v1738, protected private inheritance).
 
-v1743 is packaged on the Mac: the previous delivery is the unpacked v1739 overlay
-folder next to the repository (verified against its own SHA256SUMS.json), and the
-full-test evidence is the Mac run log.
+v1745 is packaged on the Mac: the previous delivery is the v1743 overlay zip next to
+the repository (its SHA256 is checked against the value recorded for that delivery),
+and the full-test evidence is the Mac run log.
 
 Unlike the earlier packaging scripts, every file is read from the committed tree
 (``git cat-file`` against HEAD) instead of the working directory. The v1235/iOS356
@@ -27,16 +27,17 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "native/private-small-phone/XcodeProject/"
 BUNDLE = "PhoneCompanionTest/PhoneWeb.bundle/"
-PREFIX = "SmallPhone_v1743_iOS440_Private/"
-OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1743_iOS440.zip"
+PREFIX = "SmallPhone_v1745_iOS441_Private/"
+OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1745_iOS441.zip"
 
-WEB_VERSION = "1743"
+WEB_VERSION = "1745"
 REVIEWED_RUNTIME_COMMIT = "HEAD"
 MAIN_BASE_COMMIT = "4d9865e894b5fc214017e41c471cc60120a7405e"
 EVIDENCE_ROOT = ROOT.parent / ".codex-eight-chat-fixes" / ".codex_tmp"
-TEST_LOG = ROOT.parent / "mac" / "extracted" / "claude-work" / "full-tests-1743.log"
-PREVIOUS_DIR = ROOT.parent / "SmallPhone_v1739_iOS439_Private"
-PREVIOUS_SOURCE = "1e6edec8f08e083012bcde493bd91fa62e135f87"
+TEST_LOG = ROOT.parent / "mac" / "extracted" / "claude-work" / "full-tests-1745.log"
+PREVIOUS_ZIP = ROOT.parent / "最新私人版本覆盖包_v1743_iOS440.zip"
+PREVIOUS_ZIP_SHA256 = "b58b6e857f6dd34220e89e757876462cc52b26669767bf93323abe189f5bcf5f"
+PREVIOUS_SOURCE = "76ac19bd6de08860481b434544e1ac95275e36ec"
 
 
 class FolderArchive:
@@ -59,8 +60,8 @@ class FolderArchive:
     def read(self, name: str) -> bytes:
         return (self.root / name.split("/", 1)[1]).read_bytes()
 VOLUME_BYTES = 50 * 1024 * 1024
-MARKETING = "1.0.440"
-BUILD = "440"
+MARKETING = "1.0.441"
+BUILD = "441"
 BRIDGE = "42"
 
 
@@ -603,8 +604,8 @@ def validate(files: dict[str, bytes]) -> None:
     for marker in ("function mailSender(", "function mailForwardHistory(", "function mailForwardCard(", "function mailCommitReply(", "l.inReplyTo=source.id", "mail-home-back", "S.me.wxTheme==='white'"):
         assert marker in mail, "missing latest mailbox behavior: " + marker
     for shared in ("mail-outbox.js", "mail-outbox.css", "travel-hotel-data.js", "travel-payment.js", "travel-flight-booking.js", "travel-train-booking.js", "travel-concert-booking.js", "travel-taxi.js", "travel-guide.js", "role-family-card.js", "role-family-card.css"):
-        # Main v1738 changed web booking parsers only; keep the published private payload.
-        expected = MAIN_BASE_COMMIT + ":" + SOURCE + BUNDLE + shared if shared in {"travel-flight-booking.js", "travel-train-booking.js"} else "HEAD:" + shared
+        # v1745 syncs the v1738 web booking repair into the App, so every shared file matches web again.
+        expected = "HEAD:" + shared
         assert files[BUNDLE + shared] == git("show", expected), "shared/private feature differs: " + shared
     assert "mailRead" in app and "mailWrite" in app
     assert app.count("await familyRoleConsume(content,c)") == 4
@@ -626,13 +627,14 @@ def main() -> None:
     assert re.search(r"APP_VER='v1742\b", text(git("show", web_commit + ":app.js")))
     files = committed_private_files()
     validate(files)
-    previous = PREVIOUS_DIR
-    previous_sha = sha256((previous / "SHA256SUMS.json").read_bytes()).hexdigest()
+    previous = PREVIOUS_ZIP
+    assert sha256(previous.read_bytes()).hexdigest() == PREVIOUS_ZIP_SHA256, "previous v1743 delivery zip changed"
     git("merge-base", "--is-ancestor", PREVIOUS_SOURCE, commit)
-    with FolderArchive(previous) as old:
+    with ZipFile(previous) as old:
         prefix = next(n for n in old.namelist() if n.endswith("/SOURCE_STATE.json"))[:-len("SOURCE_STATE.json")]
         names = {n[len(prefix):] for n in old.namelist() if n.startswith(prefix) and not n.endswith("/")}
         manifest = json.loads(old.read(prefix + "SHA256SUMS.json"))
+        previous_sha = sha256(old.read(prefix + "SHA256SUMS.json")).hexdigest()
         assert set(manifest) == names - {"SHA256SUMS.json"}
         assert not (names - files.keys() - {"SHA256SUMS.json", "SOURCE_STATE.json"}), "previous delivery files missing"
         state = json.loads(old.read(prefix + "SOURCE_STATE.json"))
@@ -642,16 +644,16 @@ def main() -> None:
             assert sha256(body).hexdigest() == digest, "previous checksum mismatch: " + name
             if name not in {"SOURCE_STATE.json", "请在Mac编译前先读.md"} and not name.startswith(BUNDLE):
                 if name in {"PhoneCompanionTest.xcodeproj/project.pbxproj", "PhoneCompanionTest/LocalPhoneWebView.swift", "PhoneCompanionTest/PhoneNativeBridge.swift"}:
-                    # v1743 changes only the build number in these files.
-                    assert text(files[name]).replace("1.0.440", "1.0.439").replace("(440)", "(439)").replace("VERSION = 440;", "VERSION = 439;") == text(body), "native change beyond the 440 build number: " + name
+                    # v1745 changes only the build number in these files.
+                    assert text(files[name]).replace("1.0.441", "1.0.440").replace("(441)", "(440)").replace("VERSION = 441;", "VERSION = 440;") == text(body), "native change beyond the 441 build number: " + name
                 else:
                     assert files[name] == body, "native/signing change: " + name
-        allowed_bundle_changes = {BUNDLE + n for n in ("app.js", "index.html", "小手机.html", "repair.html", "private-robot-voice.js")}
+        allowed_bundle_changes = {BUNDLE + n for n in ("app.js", "index.html", "小手机.html", "repair.html", "travel-flight.js", "travel-flight-booking.js", "travel-train.js", "travel-train-booking.js")}
         assert files[BUNDLE + "private-robot-face.js"] == git("show", MAIN_BASE_COMMIT + ":" + SOURCE + BUNDLE + "private-robot-face.js"), "published robot screen-sharing payload changed: private-robot-face.js"
         # main 3ef9f81e (after the v1739 package): screen share has no cap on looks and names North; inherited unchanged.
         assert files[BUNDLE + "private-robot-voice.js"] == git("show", "3ef9f81e5675519a2d4349c9531b32f71c6878dd:" + SOURCE + BUNDLE + "private-robot-voice.js"), "private-robot-voice.js differs from main 3ef9f81e"
         for name in sorted(names):
-            if name.startswith(BUNDLE) and name not in allowed_bundle_changes and not name.startswith(BUNDLE + "games/cozy-home/"):
+            if name.startswith(BUNDLE) and name not in allowed_bundle_changes:
                 assert files[name] == old.read(prefix + name), "unrelated private payload changed: " + name
         for name in ("public-north-policy.js", "public-north-runtime.js"):
             assert files[BUNDLE + name] == old.read(prefix + BUNDLE + name), "private companion changed: " + name
@@ -785,9 +787,13 @@ def main() -> None:
     state["preserved"] = sorted(set(state["preserved"]) | {"v1739-default-off-thinking-summary-budget-and-original-protocol", "v1739-inline-rounded-thought-and-small-buttons", "published-main-private-screen-share-and-k-trials"})
     state["roleThinkingPreview"] = {"defaultOff": True, "defaultBudget": 2048, "range": [1024,32768], "display": "returned-summary-only", "nativeMessagesShortProbePassed": True, "actualRoleRealModelVerified": False, "realIPhoneVerified": False}
     state["preserved"] = sorted(set(state["preserved"]) | {"v1743-cozy-home-062-light-volume-and-boot-precompile", "v1743-cozy-offline-online-scene-notes-in-shared-history"})
-    state["macBuildVerified"] = True  # xcodebuild Release + devicectl install on the Mac, 2026-10-15
+    state["preserved"] = sorted(set(state["preserved"]) | {"v1745-private-flight-rail-niche-cities-content-dates-and-rail-aliases"})
+    for name in ("travel-flight.js", "travel-flight-booking.js", "travel-train.js", "travel-train-booking.js"):
+        assert files[BUNDLE + name] == git("show", "HEAD:" + name), "private booking file differs from web: " + name
+    assert "function customCity(n)" in text(files[BUNDLE + "travel-flight.js"]) and "function customCity(n)" in text(files[BUNDLE + "travel-train.js"]), "niche-city booking repair missing"
+    state["macBuildVerified"] = True  # xcodebuild Release for the user's iPhone 15 on the Mac, 2026-10-15 (xcodebuild-1745.log)
     state["realIPhoneVerified"] = False
-    state["knownUnresolved"] = [x for x in state.get("knownUnresolved", []) if not re.match(r"v\d+-mac-build", x)] + ["v1743-real-iphone-cozy-and-scene-notes-awaiting-user-confirmation", "precise-time-background-dispatch-not-deployed", "v1705-private-music-keyboard-and-role-response-acceptance-pending", "calendar-closed-app-system-notifications-not-implemented", "real-model-calendar-personality-and-voice-acceptance-pending", "v1675-user-main-model-and-native-lock-receipts-pending"]
+    state["knownUnresolved"] = [x for x in state.get("knownUnresolved", []) if not re.match(r"v\d+-mac-build", x)] + ["v1745-real-iphone-flight-booking-awaiting-user-confirmation", "v1743-real-iphone-cozy-and-scene-notes-awaiting-user-confirmation", "precise-time-background-dispatch-not-deployed", "v1705-private-music-keyboard-and-role-response-acceptance-pending", "calendar-closed-app-system-notifications-not-implemented", "real-model-calendar-personality-and-voice-acceptance-pending", "v1675-user-main-model-and-native-lock-receipts-pending"]
     state["validation"] = {"macBuildVerified": True, "realIPhoneVerified": False,
         "nodeTests": {"passed": passed_tests, "failed": 0, "skipped": 0, "includesProtectedParallelTestChanges": False, "sourceCommit": commit, "resultSource": str(TEST_LOG)},
         "models": "HTTP simulated; no live model or production financial tests",
