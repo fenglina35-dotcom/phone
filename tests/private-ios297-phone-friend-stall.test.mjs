@@ -89,6 +89,6 @@ test('private diagnostics expose only stage timing and counts', () => {
 });
 
 test('v1178 public candidate adds only the shared theater layer, not the private friend repair', () => {
-  assert.match(publicSource, /APP_VER='v1752 · 支持Fish Drama 3'/);
+  assert.match(publicSource, /APP_VER='v1754 · 去掉3D标记加Drama 3快捷项'/);
   assert.doesNotMatch(publicSource, /function pfEnsureForSync/);
 });

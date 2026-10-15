@@ -14,13 +14,13 @@ const project=fs.readFileSync(path.join(root,'native/private-small-phone/XcodePr
 const native=fs.readFileSync(path.join(root,'native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift'),'utf8');
 
 test('v1184 web keeps private 1.0.315 compatibility',()=>{
-  assert.match(app,/APP_VER='v1752 · 支持Fish Drama 3'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1752'/);
-  assert.match(sw,/BUILD='1752'/);
+  assert.match(app,/APP_VER='v1754 · 去掉3D标记加Drama 3快捷项'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1754'/);
+  assert.match(sw,/BUILD='1754'/);
   assert.match(plist,/<string>1200<\/string>/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 447;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.447;/g)||[]).length,12);
-  assert.match(native,/1\.0\.447 \(447\)/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 448;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.448;/g)||[]).length,12);
+  assert.match(native,/1\.0\.448 \(448\)/);
 });
 
 test('normal taps and paging stay native until a real long press drag begins',()=>{

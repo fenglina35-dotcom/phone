@@ -59,20 +59,20 @@ function persistenceRuntime() {
 }
 
 test('private identity remains v1355 and iOS 399 while public advances independently', () => {
-  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1757'/);
-  assert.match(privateApp, /APP_VER='v1757 · 支持Fish Drama 3'/);
+  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1759'/);
+  assert.match(privateApp, /APP_VER='v1759 · 去掉3D标记加Drama 3快捷项'/);
   for (const html of [privateIndex, privateAlias]) {
-    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1757'/);
-    assert.match(html, /app\.js\?v=1757&r=v1757-private-package-1/);
+    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1759'/);
+    assert.match(html, /app\.js\?v=1759&r=v1759-private-package-1/);
     assert.match(html, /private-runtime-diagnostics\.js\?v=339/);
   }
-  assert.match(privateRepair, /index\.html\?repair=1&v=1757/);
-  assert.match(swift, /1\.0\.447 \(447\)/);
-  assert.match(bridge, /private static let build = "1\.0\.447 \(447\)"/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 447;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.447;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1752 · 支持Fish Drama 3'/);
-  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1752'/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1759/);
+  assert.match(swift, /1\.0\.448 \(448\)/);
+  assert.match(bridge, /private static let build = "1\.0\.448 \(448\)"/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 448;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.448;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1754 · 去掉3D标记加Drama 3快捷项'/);
+  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1754'/);
   assert.doesNotMatch(publicApp, /persistWechatRequested|smallPhoneWechatPersistTrace/);
 });
 

@@ -144,15 +144,16 @@ test('normalize repairs a voice note that still carries cues or position tags, w
   assert.equal(V.normalize({type:'text',content:'[小声]x'}),false,'only voice notes');
 });
 
-test('app hooks: render and synthesis both normalize, the 3D badge marks rendered notes, the request is kept',()=>{
+test('app hooks: render and synthesis both normalize, no visible 3D badge, Drama 3 quick pick, the request is kept',()=>{
   for(const src of [app,read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js')]){
     assert.match(src,/if\(m\.type==='voice'\)\{if\(typeof NorthVoiceExpressive!=='undefined'\)NorthVoiceExpressive\.normalize\(m\);/);
     assert.match(src,/NorthVoiceExpressive\.normalize\(m\)\)save\(\);if\(_vxOn\)\{try\{if\(await NorthVoiceExpressive\.direct\(m,o\)\)save\(\);\}catch\(_\)\{\}\}[^\n]*?if\(_vxOn&&\(m\.voicePerf\|\|m\.voiceAsk\|\|m\.voiceDirected\)\)NorthVoiceExpressive\.handPerf\(m\.content,m\.voicePerf,m\.voiceAsk,m\.voiceDirected\);/);
     assert.match(src,/if\(bin\)\{ab=bin;_mime='audio\/wav';m\.voice3d=true;\}/);
-    assert.match(src,/\$\{m\.voice3d\?'<span class="v3d" title="已渲染 3D 贴耳">3D<\/span>':''\}/);
+    assert.doesNotMatch(src,/class="v3d"/,'the owner asked for no visible 3D badge');
+    assert.match(src,/\['https:\/\/api\.fish\.audio','drama-3','Fish Drama 3·情绪','fish'\]/,'Drama 3 is a quick pick');
     assert.match(src,/\{voiceAsk:String\(_userText\)\.slice\(0,80\)\}/);
   }
-  assert.match(html,/\.voiceb \.v3d\{/);
+  assert.doesNotMatch(html,/\.voiceb \.v3d\{/);
 });
 
 /* 第三版：语音导演。角色回完话后，用副模型（没配就用主模型）专门给这条语音做一次表演标注再交给 Fish。 */

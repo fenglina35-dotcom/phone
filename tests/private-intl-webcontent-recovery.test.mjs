@@ -160,6 +160,6 @@ test('terminated WebContent remounts once while active and thermally safe', () =
 });
 
 test('recovery suite is pinned to the private bundled app only', () => {
-  assert.match(app, /APP_VER='v1757 · 支持Fish Drama 3';/);
+  assert.match(app, /APP_VER='v1759 · 去掉3D标记加Drama 3快捷项';/);
   assert.match(app, /function emergencyRestorePreview\(index\)/);
 });

@@ -14,9 +14,9 @@ const project = read('native/private-small-phone/XcodeProject/PhoneCompanionTest
 const info = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/Info.plist');
 
 test('current release versions stay aligned after v910 screen-share support', () => {
-  assert.match(app, /APP_VER='v1752 · 支持Fish Drama 3'/);
-  assert.match(project, /CURRENT_PROJECT_VERSION = 447;/);
-  assert.match(project, /MARKETING_VERSION = 1.0.447;/);
+  assert.match(app, /APP_VER='v1754 · 去掉3D标记加Drama 3快捷项'/);
+  assert.match(project, /CURRENT_PROJECT_VERSION = 448;/);
+  assert.match(project, /MARKETING_VERSION = 1.0.448;/);
   assert.match(bridge, /contractVersion = 42/);
 });
 

@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1752 · 支持Fish Drama 3'/);
-  assert.match(app,/const url='sw\.js\?v=1752&r=v1752-thought-preview-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1752'/);
-  assert.match(html,/app\.js\?v=1752/);
-  assert.match(sw,/const BUILD='1752'/);
-  assert.match(sw,/north-shell-v1752-thought-preview-1/);
-  assert.match(index,/小手机\.html\?v=1752/);
-  assert.match(repair,/小手机\.html\?v=1752/);
+  assert.match(app,/APP_VER='v1754 · 去掉3D标记加Drama 3快捷项'/);
+  assert.match(app,/const url='sw\.js\?v=1754&r=v1754-thought-preview-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1754'/);
+  assert.match(html,/app\.js\?v=1754/);
+  assert.match(sw,/const BUILD='1754'/);
+  assert.match(sw,/north-shell-v1754-thought-preview-1/);
+  assert.match(index,/小手机\.html\?v=1754/);
+  assert.match(repair,/小手机\.html\?v=1754/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{
   assert.match(privateBundle,/<string>1200<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.447;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 447;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.447 \(447\)'/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.448;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 448;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.448 \(448\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

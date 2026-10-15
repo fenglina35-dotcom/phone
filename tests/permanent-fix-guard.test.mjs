@@ -41,6 +41,7 @@ const PERMANENT_FIXES = [
   {release:"v1732",scope:"both",least:1,name:"真人好友同步没有新消息时逐渐放慢，减轻数据库负载",marker:"function phoneFriendSyncActive(){_pfIdleSyncs=0;}"},
   {release:"v1728",scope:"both",least:1,name:"真人店铺、店铺图片与上传走中转/直连自动选线，中转未部署时保持直连",marker:"async function northMarketRelayReady()",file:"commerce-ui.js"},
   {release:"v1726",scope:"both",least:1,name:"角色点外卖选商品失败时按真实菜单兜底",marker:"function northRoleFallbackPick(found,plan)",file:"commerce-ui.js"},
+  {release:"v1754",scope:"both",least:1,name:"语音 API 快捷选项含 Fish Drama 3",marker:"['https://api.fish.audio','drama-3','Fish Drama 3·情绪','fish']"},
   {release:"v1752",scope:"web",least:1,file:"voice-expressive.js",name:"细腻情绪识别 Fish Drama 3（drama-3）",marker:"/drama/i.test(String(tts.model||''))"},
   {release:"v1752",scope:"web",least:1,file:PRIVATE_DIR+"voice-expressive.js",name:"私人版细腻情绪识别 Fish Drama 3",marker:"/drama/i.test(String(tts.model||''))"},
   {release:"v1750",scope:"web",least:1,file:"voice-expressive.js",name:"笑声从容：一条只笑一次，去掉多余笑标签和紧跟的 haha",marker:"function directorLaughOnce(t){"},
