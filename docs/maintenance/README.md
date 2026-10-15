@@ -2839,3 +2839,5 @@ CUA核验22项控件、发送未读空白、已读等待阶段空白、保存180
 验证：scripts/run_tests_mac.sh 全量 4042/4042 通过；scripts/check_chat_authorized_phone.cjs 网页与私人两端通过，pageErrors 0。
 
 2026-10-15 私人v1743覆盖包：最新私人版本覆盖包_v1743_iOS440.zip，209298590字节，1828文件，SHA256=b58b6e857f6dd34220e89e757876462cc52b26669767bf93323abe189f5bcf5f，另有4个50MiB分卷，分卷顺序合并与完整ZIP一致。源码提交76ac19bd，由scripts/package_private_v1533_ios438.py从提交读取生成；在Mac上以下载目录里未改动的v1739交付目录（逐文件核对其SHA256SUMS）为继承基线，原生只允许440构建号变化，私人网页只允许app.js/入口/repair、main 3ef9f81e的屏幕共享文件和小家062目录变化。Mac已xcodebuild编译并覆盖安装到用户iPhone15；用户实测待确认。不是IPA。
+
+2026-10-15 私人v1745 / iOS1.0.441(441)：用户在iPhone私人App里让角色订苏州→威海10月15日机票，仍提示「城市或日期无效」。原因：v1738只修了网页，私人包四个订票文件（travel-flight.js、travel-flight-booking.js、travel-train.js、travel-train-booking.js）仍是旧版，v1739/v1743打包脚本还按「网页v1738只改网页订票」明确保留了私人旧文件。私人包四个文件与改动前的网页逐字节一致，本次直接同步为网页当前版本；用10-15凌晨03:08模拟，私人包三种写法由失败变为出票。只动订票文件与版本号，伴生、原生桥、后台不改。新增私人与网页订票文件一致性测试和永久门禁标记。验证：scripts/run_tests_mac.sh 全量4047/4047；核心聊天门禁两端通过，pageErrors 0。
