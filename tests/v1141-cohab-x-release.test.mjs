@@ -13,15 +13,15 @@ test('v1184 web identity and cache markers are aligned', () => {
   const hotfix = read('web-hotfix.js');
   const index = read('index.html');
   const repair = read('repair.html');
-  assert.match(app, /__NORTH_SHELL_BUILD__!=='1754'/);
-  assert.match(app, /APP_VER='v1754 · 去掉3D标记加Drama 3快捷项'/);
-  assert.match(shell, /__NORTH_SHELL_BUILD__='1754'/);
-  assert.match(shell, /app\.js\?v=1754&r=v1754-thought-preview-1/);
-  assert.match(sw, /const BUILD='1754'/);
-  assert.match(sw, /v1754-thought-preview-1/);
-  assert.match(hotfix, /v1754-thought-preview-1/);
-  assert.match(index, /小手机\.html\?v=1754/);
-  assert.match(repair, /小手机\.html\?v=1754/);
+  assert.match(app, /__NORTH_SHELL_BUILD__!=='1756'/);
+  assert.match(app, /APP_VER='v1756 · Fish 会员登录（MCP）'/);
+  assert.match(shell, /__NORTH_SHELL_BUILD__='1756'/);
+  assert.match(shell, /app\.js\?v=1756&r=v1756-thought-preview-1/);
+  assert.match(sw, /const BUILD='1756'/);
+  assert.match(sw, /v1756-thought-preview-1/);
+  assert.match(hotfix, /v1756-thought-preview-1/);
+  assert.match(index, /小手机\.html\?v=1756/);
+  assert.match(repair, /小手机\.html\?v=1756/);
 });
 
 test('v1184 publishes shared cohab memory and X comment controls', () => {

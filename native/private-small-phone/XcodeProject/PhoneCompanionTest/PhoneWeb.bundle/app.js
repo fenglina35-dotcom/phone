@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1759'){
+if(window.__NORTH_SHELL_BUILD__!=='1761'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -640,7 +640,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1759 · 去掉3D标记加Drama 3快捷项';
+const APP_VER='v1761 · Fish 会员登录（MCP）';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1459,8 +1459,8 @@ function imageGenerationAvailable(){const ch=S.settings.chat||{};return !!((S.se
 function ttsRoleRouteOwnIndex(o){const n=parseInt(o&&o.voice&&o.voice.ttsRouteIndex,10);return Number.isInteger(n)&&n>=0&&n<TTS_ROUTE_NAMES.length?n:null;}
 function ttsRoleRouteIndex(o){const rs=ttsRoutesInit(),own=ttsRoleRouteOwnIndex(o),fallback=Math.max(0,Math.min(rs.length-1,parseInt(S.settings.ttsRouteActive,10)||0));return own==null?fallback:own;}
 function ttsCfg(o){S.settings=S.settings||{};S.settings.tts=S.settings.tts||{};const current=S.settings.tts,own=ttsRoleRouteOwnIndex(o);if(own==null)return current;const route=ttsRouteCopy(ttsRoutesInit()[own]);return Object.assign({},route,{enabled:current.enabled,relay:!!current.relay,relayLang:current.relayLang||'',relayVoice:current.relayVoice||''});}
-function ttsProviderKind(t){t=t||{};const p=String(t.provider||'').trim().toLowerCase(),base=String(t.base||'').toLowerCase();if(['minimax','mossland','fish','elevenlabs','hume','openai'].includes(p))return p;if(/api\.mosi\.cn|mossland/.test(base))return 'mossland';if(/fish\.?audio/.test(base))return 'fish';if(/elevenlabs/.test(base))return 'elevenlabs';if(/hume\.ai/.test(base))return 'hume';if(/minimax/.test(base))return 'minimax';return 'openai';}
-function ttsExternalOn(t){return !!(t&&t.base&&t.key);}
+function ttsProviderKind(t){t=t||{};const p=String(t.provider||'').trim().toLowerCase(),base=String(t.base||'').toLowerCase();if(['minimax','mossland','fish','fishmcp','elevenlabs','hume','openai'].includes(p))return p;if(/api\.mosi\.cn|mossland/.test(base))return 'mossland';if(/fish\.?audio/.test(base))return 'fish';if(/elevenlabs/.test(base))return 'elevenlabs';if(/hume\.ai/.test(base))return 'hume';if(/minimax/.test(base))return 'minimax';return 'openai';}
+function ttsExternalOn(t){return !!(t&&t.base&&(t.key||ttsProviderKind(t)==='fishmcp'));}
 function ttsRelayOn(t){return false;}
 function ttsEnabled(t){return !!(t&&t.enabled!==false&&(t.enabled===true||(t.enabled==null&&(ttsRelayOn(t)||ttsExternalOn(t)))));}
 function ttsApiOn(o){const t=ttsCfg(o);return !!(ttsEnabled(t)&&(ttsRelayOn(t)||ttsExternalOn(t)));}
@@ -2006,6 +2006,7 @@ async function externalTtsRelay(tts,body,timeoutMs){const payload=Object.assign(
 async function _ttsOnce(t,vid,tts,opt){let r;const languageBoost=String(opt&&opt.languageBoost||'auto'),provider=ttsProviderKind(tts);
   if(provider==='mossland'){
     r=await externalTtsRelay(tts,{voice_id:vid,text:t});if(r.ok){const type=String(r.headers.get('Content-Type')||'');if(/json/i.test(type)){const j=await r.json(),audio=j&&(j.audio||j.audio_file||j.audio_url||j.url),ab=await audioDataToBuf(audio);return ab?{buf:ab}:{err:'Mossland无音频'};}return {buf:await r.arrayBuffer()};}}
+  else if(provider==='fishmcp'){if(typeof NorthFishMcp==='undefined')return {err:'Fish 会员登录模块没有加载'};return await NorthFishMcp.speak({text:t,voiceId:vid,model:tts.model});}
   else if(provider==='fish')r=await externalTtsRelay(tts,{voice_id:vid,text:t});
   else if(provider==='elevenlabs')r=await externalTtsRelay(tts,{voice_id:vid,text:t});
   else if(provider==='hume')r=await externalTtsRelay(tts,{voice_id:vid,text:t});
@@ -4434,7 +4435,7 @@ function settingsDataToolsHTML(){return `${quickJumpBar([['手机号账号',"set
     <div style="height:20px"></div>`;}
 const CHAT_ROUTE_NAMES=['路线一','路线二','路线三','路线四'];
 const TTS_ROUTE_NAMES=['语音路线一','语音路线二','语音路线三','语音路线四'];
-const TTS_PROVIDER_NAMES={auto:'自动识别',minimax:'MiniMax 海螺',mossland:'Mossland',fish:'Fish Audio',elevenlabs:'ElevenLabs',hume:'Hume',openai:'兼容接口'};
+const TTS_PROVIDER_NAMES={auto:'自动识别',minimax:'MiniMax 海螺',mossland:'Mossland',fish:'Fish Audio',fishmcp:'Fish 会员登录',elevenlabs:'ElevenLabs',hume:'Hume',openai:'兼容接口'};
 const MANUAL_REPLY_SCENE_OPTIONS=[
   {key:'wechat',label:'微信聊天',tip:'发完微信后点「让ta回」'},
   {key:'games',label:'游戏大厅',tip:'单人聊天游戏里点「让TA回应」'},
@@ -4534,13 +4535,14 @@ function renderSettings(){const nativeBuild=privateNativeAppOn()?String(window._
       <div style="padding:0 14px 10px"><div style="font-size:12px;color:#aaa;margin-bottom:7px">外置语音路线 · 点击会先保存当前填写，再切换并回填</div><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px">${voiceRoutes.map((r,i)=>`<button type="button" data-tts-route="${i}" onclick="ttsRouteSwitch(${i})" style="min-width:0;border:1px solid ${i===voiceRouteActive?'#9d7bd0':'rgba(255,255,255,.1)'};border-radius:8px;padding:8px 9px;background:${i===voiceRouteActive?'#7657a8':'#24242a'};color:${i===voiceRouteActive?'#fff':'#ddd'};text-align:left;cursor:pointer"><b style="display:block;font-size:13px">${TTS_ROUTE_NAMES[i]}</b><small style="display:block;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.72">${esc(ttsRouteSummary(r))}</small></button>`).join('')}</div><div style="font-size:11px;color:#777;line-height:1.5;margin-top:7px">每条路线独立保存平台、接口地址、Key、模型、默认音色和海螺 GroupId。</div></div>
       <div class="it"><span>启用语音API<br><small style="color:#888">开：角色语音条和电话使用内置或外置API音色；关：使用手机系统音。</small></span><span class="sw ${ttsEnabled(S.settings.tts||{})?'on':''}" onclick="S.settings.tts=S.settings.tts||{};S.settings.tts.enabled=!ttsEnabled(S.settings.tts);save();render()"></span></div>
       <div class="it"><span>细腻情绪与 3D 贴耳（新）<br><small style="color:#888">开：角色语音更细腻有情绪（只对 Fish S2/S2.1 和 ElevenLabs v3 生效，不再硬加笑声和叹气），语音条戴耳机时像贴在耳边说话、会绕着头走；关：完全恢复原来的语音。打电话不加 3D。耳边定位使用 KU100 近场实测数据（Arend 等，CC BY 4.0）。</small></span><span class="sw ${S.settings.voiceExpressive===true?'on':''}" onclick="S.settings.voiceExpressive=S.settings.voiceExpressive!==true;save();render()"></span></div>
-      <div class="field" style="padding:0 14px"><label>语音平台</label><select id="s_tprovider"><option value="" ${!(S.settings.tts||{}).provider?'selected':''}>自动识别</option>${[['minimax','MiniMax 海螺'],['mossland','Mossland'],['fish','Fish Audio'],['elevenlabs','ElevenLabs'],['hume','Hume'],['openai','其他兼容接口']].map(x=>`<option value="${x[0]}" ${(S.settings.tts||{}).provider===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></div>
+      <div class="field" style="padding:0 14px"><label>语音平台</label><select id="s_tprovider" onchange="if(typeof NorthFishMcp!=='undefined')NorthFishMcp.refreshPanel()"><option value="" ${!(S.settings.tts||{}).provider?'selected':''}>自动识别</option>${[['minimax','MiniMax 海螺'],['mossland','Mossland'],['fish','Fish Audio（API Key）'],['fishmcp','Fish 会员登录（用套餐点数）'],['elevenlabs','ElevenLabs'],['hume','Hume'],['openai','其他兼容接口']].map(x=>`<option value="${x[0]}" ${(S.settings.tts||{}).provider===x[0]?'selected':''}>${x[1]}</option>`).join('')}</select></div>
+      ${typeof NorthFishMcp!=='undefined'?NorthFishMcp.panel((S.settings.tts||{}).provider):''}
       <div class="field" style="padding:0 14px"><label>接口地址</label><input id="s_tbase" value="${esc((S.settings.tts||{}).base||'')}" placeholder="https://api.minimax.io 或 https://api.mosi.cn/v1"></div>
       <div class="field" style="padding:0 14px"><label>API Key</label><input id="s_tkey" type="password" value="${esc((S.settings.tts||{}).key||'')}"></div>
       <div class="two" style="padding:0 14px 2px"><div class="field"><label>模型</label><input id="s_tmodel" value="${esc((S.settings.tts||{}).model||'')}" placeholder="speech-02-turbo / eleven_flash_v2_5"></div><div class="field"><label>默认音色</label><input id="s_tvoice" value="${esc((S.settings.tts||{}).voice||'')}" placeholder="male-qn-qingse / voice id / 克隆ID"></div></div>
       <div class="field" style="padding:2px 14px 2px"><label>GroupId（海螺·选填）</label><input id="s_tgroup" value="${esc((S.settings.tts||{}).group||'')}" placeholder="新版sk-api留空即可；若报「token not match group」就把团队ID填这里"></div>
       <div style="padding:2px 14px 4px;font-size:12px;color:#9aa">语音服务与模型（点一下同时填接口和模型）：</div>
-      <div style="padding:0 14px 8px">${[['https://api.minimax.io','speech-02-turbo','海螺·省钱','minimax'],['https://api.minimax.io','speech-02-hd','海螺·高清','minimax'],['https://api.minimax.io','speech-2.8-turbo','海螺2.8·快速','minimax'],['https://api.minimax.io','speech-2.8-hd','海螺2.8·表演','minimax'],['https://api.mosi.cn/v1','moss-tts','Mossland','mossland'],['https://api.elevenlabs.io','eleven_flash_v2_5','Eleven·省额度','elevenlabs'],['https://api.elevenlabs.io','eleven_multilingual_v2','Eleven·稳定','elevenlabs'],['https://api.elevenlabs.io','eleven_v3','Eleven v3·情绪','elevenlabs'],['https://api.fish.audio','s2.1-pro-free','Fish S2.1·免费','fish'],['https://api.fish.audio','drama-3','Fish Drama 3·情绪','fish'],['https://api.hume.ai','octave-2','Hume Octave 2','hume']].map(m=>`<span onclick="pickTtsProvider('${m[0]}','${m[1]}','${m[3]}')" style="display:inline-block;margin:0 5px 5px 0;padding:4px 10px;background:#2c2c2e;border-radius:13px;font-size:12px;color:#cdd;cursor:pointer">${m[2]}</span>`).join('')}</div>
+      <div style="padding:0 14px 8px">${[['https://api.minimax.io','speech-02-turbo','海螺·省钱','minimax'],['https://api.minimax.io','speech-02-hd','海螺·高清','minimax'],['https://api.minimax.io','speech-2.8-turbo','海螺2.8·快速','minimax'],['https://api.minimax.io','speech-2.8-hd','海螺2.8·表演','minimax'],['https://api.mosi.cn/v1','moss-tts','Mossland','mossland'],['https://api.elevenlabs.io','eleven_flash_v2_5','Eleven·省额度','elevenlabs'],['https://api.elevenlabs.io','eleven_multilingual_v2','Eleven·稳定','elevenlabs'],['https://api.elevenlabs.io','eleven_v3','Eleven v3·情绪','elevenlabs'],['https://api.fish.audio','s2.1-pro-free','Fish S2.1·免费','fish'],['https://api.fish.audio','drama-3','Fish Drama 3·情绪','fish'],['https://api.fish.audio','drama-3','Fish Drama 3·会员点数','fishmcp'],['https://api.hume.ai','octave-2','Hume Octave 2','hume']].map(m=>`<span onclick="pickTtsProvider('${m[0]}','${m[1]}','${m[3]}')" style="display:inline-block;margin:0 5px 5px 0;padding:4px 10px;background:#2c2c2e;border-radius:13px;font-size:12px;color:#cdd;cursor:pointer">${m[2]}</span>`).join('')}</div>
       <div style="padding:0 14px 4px;font-size:12px;color:#9aa">海螺常用音色（点一下填入"默认音色"）：</div>
       <div style="padding:0 14px 8px">${[['male-qn-qingse','青涩青年'],['male-qn-jingying','精英青年'],['male-qn-badao','霸道青年'],['presenter_male','男主持'],['audiobook_male_1','有声书男'],['female-shaonv','少女'],['female-yujie','御姐'],['presenter_female','女主持']].map(v=>`<span onclick="pickVoice('${v[0]}')" style="display:inline-block;margin:0 5px 5px 0;padding:4px 10px;background:#2c2c2e;border-radius:13px;font-size:12px;color:#cdd;cursor:pointer">${v[1]}</span>`).join('')}</div>
       <div class="btns" style="padding:0 14px 6px"><button class="btn g" onclick="pullVoices()">拉取我的全部音色（含克隆）</button></div>
@@ -4648,7 +4650,7 @@ function saveSettings(){if(!chatModelFormReady())return false;const g=id=>$('#'+
   S.settings.search={mode:(S.settings.search&&S.settings.search.mode)||'jina',base:($('#s_sebase')?$('#s_sebase').value.trim():''),key:($('#s_sekey')?$('#s_sekey').value.trim():''),model:($('#s_semodel')?$('#s_semodel').value.trim():((S.settings.search||{}).model||''))};
   {const ov=S.settings.vision||{};S.settings.vision={base:g('s_vbase'),key:g('s_vkey'),model:g('s_vmodel'),fallbackModel:g('s_vfallback'),protocols:ov.protocols||{},lastGoodModel:ov.lastGoodModel||'',chatImageFailedKey:ov.chatImageFailedKey||'',chatImageFailedAt:+ov.chatImageFailedAt||0};}
   const oldTts=S.settings.tts||{},tbase=g('s_tbase'),tkey=g('s_tkey'),explicitTts=oldTts.enabled===true||oldTts.enabled===false;
-  S.settings.tts={provider:($('#s_tprovider')?$('#s_tprovider').value.trim():(oldTts.provider||'')),base:tbase,key:tkey,model:g('s_tmodel'),voice:g('s_tvoice'),group:($('#s_tgroup')?$('#s_tgroup').value.trim():(oldTts.group||'')),enabled:explicitTts?!!oldTts.enabled:!!(tbase&&tkey),relay:!!oldTts.relay,relayLang:oldTts.relayLang||''};
+  S.settings.tts={provider:($('#s_tprovider')?$('#s_tprovider').value.trim():(oldTts.provider||'')),base:tbase,key:tkey,model:g('s_tmodel'),voice:g('s_tvoice'),group:($('#s_tgroup')?$('#s_tgroup').value.trim():(oldTts.group||'')),enabled:explicitTts?!!oldTts.enabled:!!(tbase&&(tkey||($('#s_tprovider')&&$('#s_tprovider').value.trim()==='fishmcp'))),relay:!!oldTts.relay,relayLang:oldTts.relayLang||''};
   {const voiceRoutes=ttsRoutesInit(),voiceRouteActive=S.settings.ttsRouteActive;voiceRoutes[voiceRouteActive]=ttsRouteCopy(S.settings.tts);}
   {const oldStt=S.settings.stt||{};S.settings.stt={base:g('s_sbase'),key:g('s_skey'),model:g('s_smodel'),lang:sttLangCode(($('#s_slang')&&$('#s_slang').value)||(oldStt.lang)),relay:!!oldStt.relay};}
   if($('#s_imgmodel'))S.settings.imgModel=g('s_imgmodel')||'gpt-image-2';
@@ -4758,7 +4760,7 @@ async function testSTT(){const o=$('#testS');if(!o)return;const base=((($('#s_sb
 async function testTTS(){
   const o=$('#testT');if(!o)return;
   const value=id=>String(($('#'+id)||{}).value||'').trim(),provider=value('s_tprovider'),base=value('s_tbase').replace(/\/+$/,''),key=value('s_tkey'),model=value('s_tmodel'),voice=value('s_tvoice'),group=value('s_tgroup');
-  if(!base||!key){o.style.color='#e85';o.textContent='请先填写外置语音接口地址和 API Key；此测试不会调用内置语音';return;}
+  if(!base||(!key&&provider!=='fishmcp')){o.style.color='#e85';o.textContent='请先填写外置语音接口地址和 API Key；此测试不会调用内置语音';return;}
   const externalConfig={provider,base,key,model,voice,group};
   audioUnlock();o.style.color='#999';o.textContent='正在测试填写的外置语音接口…';
   try{initAudio();const testOptions={externalConfig,tries:1,languageBoost:'auto'};testOptions.throwExternalError=true;const ab=await ttsArr('喵～ 测试成功啦',{voice:{engine:'api',ttsVoice:voice}},testOptions);
@@ -4796,7 +4798,7 @@ function showVoicePicker(){const q=(_voiceQ||'').toLowerCase();
     <button class="btn g" style="margin-top:8px" onclick="closeModal()">关闭</button>`);}
 function pickVoice(id){const el=$('#s_tvoice');if(el)el.value=id;if(typeof closeModal==='function')closeModal();toast('已选音色：'+id);}
 function pickTtsModel(m){const el=$('#s_tmodel');if(el)el.value=m;toast('已选模型：'+m);}
-function pickTtsProvider(base,model,provider){const b=$('#s_tbase'),m=$('#s_tmodel'),p=$('#s_tprovider');if(b)b.value=base;if(m)m.value=model;if(p)p.value=provider||'';toast('已填语音平台与模型：'+model);}
+function pickTtsProvider(base,model,provider){const b=$('#s_tbase'),m=$('#s_tmodel'),p=$('#s_tprovider');if(b)b.value=base;if(m)m.value=model;if(p)p.value=provider||'';if(typeof NorthFishMcp!=='undefined')NorthFishMcp.refreshPanel();toast('已填语音平台与模型：'+model);}
 
 /* ---------- 世界书 ---------- */
 let _worldbookCategoryFilter='all';

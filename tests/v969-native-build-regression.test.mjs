@@ -13,13 +13,13 @@ const reportApp = read('native/private-small-phone/XcodeProject/PhoneCompanionRe
 const reportScene = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/TotalActivityReport.swift');
 
 test('public web v1184 and private web v1189 remain compatible with native iOS 1.0.315', () => {
-  assert.match(app, /APP_VER='v1754 · 去掉3D标记加Drama 3快捷项'/);
-  assert.match(app, /sw\.js\?v=1754&r=v1754-thought-preview-1/);
-  assert.match(shell, /north-shell-v1754-thought-preview-1/);
+  assert.match(app, /APP_VER='v1756 · Fish 会员登录（MCP）'/);
+  assert.match(app, /sw\.js\?v=1756&r=v1756-thought-preview-1/);
+  assert.match(shell, /north-shell-v1756-thought-preview-1/);
   assert.match(bundleInfo, /<string>1200<\/string>/);
-  assert.match(localWebView, /1\.0\.448 \(448\)/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 448;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.448;/g) || []).length, 12);
+  assert.match(localWebView, /1\.0\.449 \(449\)/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 449;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.449;/g) || []).length, 12);
 });
 
 test('native shared-media gain uses only public AVFoundation types', () => {

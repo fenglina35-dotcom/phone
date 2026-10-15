@@ -8,9 +8,9 @@ const pip=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/Ph
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
 test('v1184 web source keeps private 1.0.315 compatibility',()=>{
-  assert.match(app,/APP_VER='v1754 · 去掉3D标记加Drama 3快捷项'/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 448;/);
-  assert.match(project,/MARKETING_VERSION = 1.0.448;/);
+  assert.match(app,/APP_VER='v1756 · Fish 会员登录（MCP）'/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 449;/);
+  assert.match(project,/MARKETING_VERSION = 1.0.449;/);
 });
 
 test('public music search needs no user login and reuses together-listen songs',()=>{

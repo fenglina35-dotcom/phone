@@ -110,6 +110,40 @@ async function roleInboxRelay(request,url,headers,fetchUpstream,timeoutMs){
  }catch(_){return reply(502,{ok:false,code:controller.signal.aborted?'inbox-timeout':'inbox-unreachable'});}finally{clearTimeout(timer);}
 }
 
+// 2026-10-16 Fish 会员登录（MCP）：Fish 的 MCP 服务拒绝一切浏览器来源（Origin），只能由服务器转发。
+// 固定上游 https://api.fish.audio/mcp，只放行小手机用到的 JSON-RPC 方法和三个工具；用户的 Fish 登录凭证只随本次请求转发，不存、不记录。
+// 生成的音频地址也经这里取回，只允许 https 且主机属于 fish.audio。
+const FISH_MCP_PATH='/fish-mcp',FISH_AUDIO_PATH='/fish-mcp-audio',FISH_MCP_UPSTREAM='https://api.fish.audio/mcp';
+const FISH_MCP_METHODS=new Set(['initialize','notifications/initialized','tools/list','tools/call']);
+const FISH_MCP_TOOLS=new Set(['text_to_speech','get_credit_balance','search_voices']);
+const FISH_MCP_MAX_BODY=65536;
+function fishAudioHostOk(u){try{const x=new URL(u);return x.protocol==='https:'&&!x.username&&!x.password&&(x.port===''||x.port==='443')&&(x.hostname==='fish.audio'||x.hostname.endsWith('.fish.audio'));}catch(_){return false;}}
+async function fishMcpRelay(request,url,headers,fetchUpstream){
+  const cors={...headers,'Access-Control-Allow-Methods':'POST, OPTIONS','Access-Control-Allow-Headers':'content-type, authorization, mcp-session-id, mcp-protocol-version','Access-Control-Expose-Headers':'Mcp-Session-Id'};
+  const reply=(status,body)=>new Response(JSON.stringify(body),{status,headers:cors});
+  if(url.search)return reply(400,{ok:false,code:'query-not-accepted'});
+  if(request.method==='OPTIONS')return new Response(null,{status:204,headers:cors});
+  if(request.method!=='POST')return reply(405,{ok:false,code:'method-not-allowed'});
+  if(!/^application\/json(?:;|$)/i.test(request.headers.get('Content-Type')||''))return reply(415,{ok:false,code:'json-required'});
+  const auth=String(request.headers.get('Authorization')||'');if(!/^Bearer [\x21-\x7e]{8,4096}$/.test(auth))return reply(401,{ok:false,code:'fish-login-required'});
+  const raw=await boundedBody(request,FISH_MCP_MAX_BODY);if(raw===null)return reply(413,{ok:false,code:'body-too-large'});
+  let input;try{input=JSON.parse(raw);}catch(_){return reply(400,{ok:false,code:'invalid-json'});}
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),190000);
+  try{
+    if(url.pathname===FISH_AUDIO_PATH){if(!input||!fishAudioHostOk(input.url))return reply(403,{ok:false,code:'audio-host-not-allowed'});
+      const up=await fetchUpstream(input.url,{method:'GET',redirect:'manual',signal:controller.signal});if(up.status>=300&&up.status<400)return reply(502,{ok:false,code:'upstream-redirect-rejected'});
+      return new Response(up.body,{status:up.status,headers:{...cors,'Content-Type':up.headers.get('Content-Type')||'audio/mpeg'}});}
+    if(!input||input.jsonrpc!=='2.0'||!FISH_MCP_METHODS.has(input.method))return reply(403,{ok:false,code:'method-not-allowed'});
+    if(input.method==='tools/call'&&!FISH_MCP_TOOLS.has(input.params&&input.params.name))return reply(403,{ok:false,code:'tool-not-allowed'});
+    const h={'Content-Type':'application/json','Accept':'application/json, text/event-stream','Authorization':auth},sid=cleanText(request.headers.get('Mcp-Session-Id'),200),pv=cleanText(request.headers.get('Mcp-Protocol-Version'),40);
+    if(sid)h['Mcp-Session-Id']=sid;if(pv)h['Mcp-Protocol-Version']=pv;
+    const up=await fetchUpstream(FISH_MCP_UPSTREAM,{method:'POST',headers:h,body:JSON.stringify(input),redirect:'manual',signal:controller.signal});
+    if(up.status>=300&&up.status<400)return reply(502,{ok:false,code:'upstream-redirect-rejected'});
+    const out={...cors,'Content-Type':up.headers.get('Content-Type')||'application/json'},usid=up.headers.get('Mcp-Session-Id');if(usid)out['Mcp-Session-Id']=usid;
+    return new Response(up.body,{status:up.status,headers:out});
+  }catch(_){return reply(502,{ok:false,code:controller.signal.aborted?'upstream-timeout':'upstream-unreachable'});}finally{clearTimeout(timer);}
+}
+
 const MAX_TTS_BODY = 16384;
 const TTS_PROVIDERS = new Set(['minimax','fish','mossland','elevenlabs','hume']);
 async function boundedBody(request, maxBody = MAX_BODY) {
@@ -228,6 +262,7 @@ export function createHandler(fetchUpstream = (input, init) => fetch(input, init
     if(url.pathname.startsWith('/role-inbox/v1/'))return roleInboxRelay(request,url,headers,fetchUpstream,timeoutMs);
     if(url.pathname.startsWith('/rest/v1/rpc/'))return friendRpcRelay(request,url,headers,fetchUpstream,timeoutMs);
     if(url.pathname.startsWith('/market-media/')||url.pathname.startsWith('/market-upload/'))return marketMediaRelay(request,url,headers,fetchUpstream,timeoutMs);
+    if(url.pathname===FISH_MCP_PATH||url.pathname===FISH_AUDIO_PATH)return fishMcpRelay(request,url,headers,fetchUpstream);
     if(url.pathname==='/market-ready'){if(request.method==='OPTIONS')return new Response(null,{status:204,headers:{...headers,'Access-Control-Allow-Methods':'GET, OPTIONS'}});if(request.method!=='GET')return reply(405,{ok:false,code:'method-not-allowed'});return reply(200,{ok:true,code:'market-relay-v1'});}
     const health = url.pathname === '/health';
     const externalTts = url.pathname === EXTERNAL_TTS_PATH;

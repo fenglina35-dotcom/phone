@@ -105,6 +105,7 @@
     "assets/north-runner-van.png",
     "assets/north-runner-game.mp3",
     "assets/north-runner-result.mp3",
+    "fish-mcp.js",
     "voice-expressive.js",
     "binaural-hrir.js"
   ],

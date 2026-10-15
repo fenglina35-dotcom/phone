@@ -17,13 +17,13 @@ const publicApp=read('app.js');
 test('private v1355 loads daily backup after the diagnostic overlay while public advances independently',()=>{
   for(const name of ['index.html','小手机.html']){
     const html=read(bundle+name);
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1759'/);
-    assert.ok(html.indexOf('private-cloud-backup.js?v=1759')>html.indexOf('private-runtime-diagnostics.js?v=339'));
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1761'/);
+    assert.ok(html.indexOf('private-cloud-backup.js?v=1761')>html.indexOf('private-runtime-diagnostics.js?v=339'));
   }
-  assert.match(privateApp,/APP_VER='v1759 · 去掉3D标记加Drama 3快捷项'/);
-  assert.match(publicApp,/APP_VER='v1754 · 去掉3D标记加Drama 3快捷项'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 448;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.448;/g)||[]).length,12);
+  assert.match(privateApp,/APP_VER='v1761 · Fish 会员登录（MCP）'/);
+  assert.match(publicApp,/APP_VER='v1756 · Fish 会员登录（MCP）'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 449;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.449;/g)||[]).length,12);
 });
 
 test('web backup sends bounded ordered chunks and records a day only after confirmed save',()=>{

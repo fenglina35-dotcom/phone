@@ -160,6 +160,6 @@ test('terminated WebContent remounts once while active and thermally safe', () =
 });
 
 test('recovery suite is pinned to the private bundled app only', () => {
-  assert.match(app, /APP_VER='v1759 · 去掉3D标记加Drama 3快捷项';/);
+  assert.match(app, /APP_VER='v1761 · Fish 会员登录（MCP）';/);
   assert.match(app, /function emergencyRestorePreview\(index\)/);
 });

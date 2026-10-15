@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer"><meta name="robots" content="noindex">
+<title>Fish 授权码</title>
+<!-- 私人 App 登录 Fish（MCP 模式）后的回调页：只在本页显示授权码供复制，不保存、不上传、不加载任何外部脚本。
+     授权码一次有效，且必须配合小手机本机保存的 PKCE 校验串才能换到凭证，别人拿到这串码也用不了。 -->
+<style>
+:root{--bg:#f4f1ec;--card:#fff;--fg:#1d1d1f;--sub:#6b6b70;--line:#e3ded6;--btn:#1d1d1f;--btnfg:#fff}
+@media (prefers-color-scheme:dark){:root{--bg:#141416;--card:#1f2024;--fg:#f2f2f4;--sub:#a0a0a8;--line:#33343a;--btn:#f2f2f4;--btnfg:#141416}}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;display:flex;min-height:100vh;align-items:center;justify-content:center;padding:16px;box-sizing:border-box}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px 20px;max-width:420px;width:100%;box-sizing:border-box}
+h1{font-size:19px;margin:0 0 6px}p{margin:6px 0;color:var(--sub);font-size:14px}
+.code{margin:14px 0 10px;padding:12px;border-radius:12px;border:1px dashed var(--line);font:15px/1.4 ui-monospace,Menlo,monospace;word-break:break-all;user-select:all;-webkit-user-select:all}
+button{width:100%;padding:12px;border:0;border-radius:12px;background:var(--btn);color:var(--btnfg);font-size:16px;font-weight:600}
+.err{color:#d2493f}
+</style></head><body><div class="card" id="c"></div>
+<script>
+(function(){var q=new URLSearchParams(location.search),code=q.get('code')||'',err=q.get('error_description')||q.get('error')||'',c=document.getElementById('c');
+function esc(s){return String(s).replace(/[&<>"']/g,function(x){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x];});}
+try{history.replaceState(null,'',location.pathname);}catch(_){}
+if(err||!code){c.innerHTML='<h1>没有拿到授权码</h1><p class="err">'+esc(err||'这次登录没有完成')+'</p><p>回到小手机，重新点「登录 Fish」。</p>';return;}
+c.innerHTML='<h1>Fish 登录成功</h1><p>复制下面的授权码，回到小手机：设置 → 声音与通话 → 「粘贴授权码」。</p><div class="code" id="k">'+esc(code)+'</div><button id="b">复制授权码</button><p>授权码只能用一次，30 分钟内有效。复制后可以关掉这个页面。</p>';
+document.getElementById('b').onclick=function(){var b=this;function ok(){b.textContent='已复制，回小手机粘贴';}
+  if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(code).then(ok,function(){sel();});}else sel();
+  function sel(){var r=document.createRange();r.selectNodeContents(document.getElementById('k'));var s=getSelection();s.removeAllRanges();s.addRange(r);try{document.execCommand('copy');ok();}catch(_){b.textContent='请长按上面的授权码复制';}}};
+})();
+</script></body></html>
