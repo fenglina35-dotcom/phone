@@ -2884,6 +2884,7 @@ function render(){
   else if(c.p==='dywork')html=dyWorkView()+dyCmLayer();
   else if(c.p==='dypost')html=renderDyPost();
   else if(c.p==='momentDetail')html='';
+  else if(typeof window!=='undefined'&&window.NorthExtraPages&&typeof window.NorthExtraPages[c.p]==='function')html=window.NorthExtraPages[c.p]();
   const _wxGlassPages=['wechat','wxmoment','wxlive','wxnearby','wxprofile','wxqr','wxscan','wxservices','wxsmarthome','wxwallet','wxchange','wxbank','wxfamily','wxbills','wxsupport','wxfavorites','wxalbum','wxemoji','wxsettings','wxaccounts','wxsteps','chat','transferDetail','groupTransferDetail','chatDetails','contactInfo','friendInfo','contactSettings','roleMoments','roleMomentDetail','roleFeatures','roleImageStudio','newfriends','wxonlychat','wxgroups','wxlabels','wxgroupcreate','contactEdit','wxsearch','pffriends','pfchat','pfgroup','group'];
   const _isWxPage=_wxGlassPages.includes(c.p);
   const _glass=glassThemeOn()&&!_isWxPage?' glass-app':'';

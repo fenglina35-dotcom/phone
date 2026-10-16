@@ -301,6 +301,30 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             performAlarmSync(requestID: requestID, arguments: arguments)
         case "location.current":
             performNativeLocation(requestID: requestID)
+        case "checkin.configure", "checkin.openers.set":
+            let arguments = payload["payload"] as? [String: Any] ?? [:]
+            let config = CheckInStore.Configuration(
+                enabled: arguments["enabled"] as? Bool ?? false,
+                account: arguments["account"] as? String ?? "",
+                cid: arguments["cid"] as? String ?? "",
+                scope: arguments["scope"] as? String ?? "",
+                lines: arguments["lines"] as? [String] ?? []
+            )
+            Task { [weak self] in
+                let count = await CheckInStore.shared.configure(config)
+                self?.reply(requestID: requestID, result: ["count": count, "configured": true])
+            }
+        case "checkin.take":
+            let arguments = payload["payload"] as? [String: Any] ?? [:]
+            performCheckInTake(requestID: requestID, scope: arguments["scope"] as? String ?? "")
+        case "checkin.ack":
+            let arguments = payload["payload"] as? [String: Any] ?? [:]
+            let id = arguments["id"] as? String ?? ""
+            let scope = arguments["scope"] as? String ?? ""
+            Task { [weak self] in
+                let removed = await CheckInStore.shared.remove(id: id, scope: scope)
+                self?.reply(requestID: requestID, result: ["removed": removed])
+            }
         case "media.resolveBilibiliShort":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             performBilibiliShortResolve(
@@ -625,6 +649,52 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
             }
         default:
             reply(requestID: requestID, error: "photo_library_denied")
+        }
+    }
+
+    // 快捷指令查岗截屏：一次取最早的一张。图片走 callAsyncJavaScript 的参数，
+    // 不拼进脚本源码（与恢复存档同理，避免 WebKit 把几百 KB 当代码解析）。
+    private func performCheckInTake(requestID: String, scope: String) {
+        Task.detached(priority: .userInitiated) { [weak self] in
+            let item = await CheckInStore.shared.oldest(scope: scope)
+            await MainActor.run {
+                guard let self, let webView = self.webView else { return }
+                guard let item else {
+                    self.reply(requestID: requestID, result: ["found": false])
+                    return
+                }
+                webView.callAsyncJavaScript(
+                    """
+                    if (window.__smallPhoneNativeReply) {
+                      window.__smallPhoneNativeReply({
+                        requestId: String(requestID),
+                        result: {
+                          found: true,
+                          id: String(id),
+                          at: Number(at) || 0,
+                          account: String(account),
+                          cid: String(cid),
+                          scope: String(scope),
+                          mime: 'image/jpeg',
+                          base64: String(base64 || '')
+                        }
+                      });
+                    }
+                    """,
+                    arguments: [
+                        "requestID": requestID,
+                        "id": item.metadata.id,
+                        "at": item.metadata.at,
+                        "account": item.metadata.account,
+                        "cid": item.metadata.cid,
+                        "scope": item.metadata.scope,
+                        "base64": item.data.base64EncodedString()
+                    ],
+                    in: nil,
+                    in: .page,
+                    completionHandler: { _ in }
+                )
+            }
         }
     }
 

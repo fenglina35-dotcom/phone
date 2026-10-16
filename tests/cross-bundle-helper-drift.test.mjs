@@ -8,8 +8,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import {fileURLToPath} from 'node:url';
 
-const ROOT=new URL('..',import.meta.url).pathname;
+const ROOT=fileURLToPath(new URL('..',import.meta.url));
 const PRIVATE='native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/';
 const read=f=>fs.readFileSync(path.resolve(ROOT,f),'utf8');
 const list=dir=>fs.readdirSync(path.join(ROOT,dir)).filter(n=>n.endsWith('.js')).map(n=>dir+n);

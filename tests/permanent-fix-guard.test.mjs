@@ -32,6 +32,7 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"查岗截屏本地候选",scope:"both",least:1,file:"phone-shortcuts.js",name:"明确授权截图接收、角色开场白和原云端入口分离",marker:"CHECKIN_SHORTCUTS_V1"},
   {release:"心声原地展开候选",scope:"both",least:1,name:"默认关闭的独立思考摘要与原地心声",marker:"ROLE_THINKING_PREVIEW_V1"},
   {release:"本地亲属同步候选",scope:"both",least:1,name:"亲属自主新增限额与间隔",marker:"q.created.length>=q.cap||q.created.some"},
   {release:"本地亲属同步候选",scope:"both",least:1,name:"删除关系后防止刷新重建",marker:"if(old)relFamilyBlockLink(old)"},
