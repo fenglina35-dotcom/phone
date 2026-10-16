@@ -659,7 +659,7 @@ def main() -> None:
         for name, body in reviewed.items():
             if name == "请在Mac编译前先读.md": continue
             if name in {BUNDLE+n for n in ("app.js", "index.html", "小手机.html", "repair.html")}:
-                assert text(files[name]).replace("1767", "1765").replace("v1765 · 查岗截屏", "v1765 · 卡片记忆与抖音不重复") == text(body), "runtime beyond reviewed feature: " + name
+                assert text(files[name]) == text(body).replace("1765", "1767").replace("v1767 · 卡片记忆与抖音不重复", "v1767 · 查岗截屏"), "runtime beyond reviewed feature: " + name
             elif name in {"PhoneCompanionTest/PhoneNativeBridge.swift", "PhoneCompanionTest/LocalPhoneWebView.swift", "PhoneCompanionTest.xcodeproj/project.pbxproj"}:
                 normalized = text(files[name]).replace("1.0.452", "1.0.451").replace("(452)", "(451)").replace("VERSION = 452;", "VERSION = 451;")
                 assert normalized == text(body), "native beyond reviewed feature/build: " + name
