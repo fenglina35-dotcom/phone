@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1780 · 网页快捷指令教程'/);
-  assert.match(app,/const url='sw\.js\?v=1780&r=v1780-thought-preview-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1780'/);
-  assert.match(html,/app\.js\?v=1780/);
-  assert.match(sw,/const BUILD='1780'/);
-  assert.match(sw,/north-shell-v1780-thought-preview-1/);
-  assert.match(index,/小手机\.html\?v=1780/);
-  assert.match(repair,/小手机\.html\?v=1780/);
+  assert.match(app,/APP_VER='v1782 · 日记与翻译顺滑'/);
+  assert.match(app,/const url='sw\.js\?v=1782&r=v1782-thought-preview-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1782'/);
+  assert.match(html,/app\.js\?v=1782/);
+  assert.match(sw,/const BUILD='1782'/);
+  assert.match(sw,/north-shell-v1782-thought-preview-1/);
+  assert.match(index,/小手机\.html\?v=1782/);
+  assert.match(repair,/小手机\.html\?v=1782/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{
   assert.match(privateBundle,/<string>1200<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.460;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 460;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.460 \(460\)'/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.461;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 461;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.461 \(461\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 

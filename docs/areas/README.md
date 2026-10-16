@@ -93,6 +93,22 @@ v1762 补查全部卡片类型：角色发出的真人店铺外卖（marketfood�
 
 验证：tests/role-lock-until.test.mjs（时间解析、默认7点、7天上限、标签还原、双端说明与接入点、原生源码）；核心聊天门禁 roleLockUntil 用真实 applyControlTags 锁「附近的人」2小时、管控授权页显示、到点自动解开、无时间默认7点（旧实现失败已验证）。未真机验证：超过一天的一次性 DeviceActivity 能否按时触发、App 关闭时屏蔽是否真的解开、屏蔽页文字。核对到：2026-10-16（v1783/iOS460）。
 
+## 微信文字自动翻译
+
+现在：角色外语文字消息由 roleTextTranslationHTML 在渲染时标记待翻译，roleTextTranslationSchedule/Flush 把同一聊天的气泡合并成一次编号请求（辅助模型、429 退避、漏号只补问漏掉的）。译文到达或进入“正在翻译”时用 roleTextTranslationPatch 只替换那条气泡（data-message-id）里的 .role-text-trans，并在原本贴底时保持贴底；找不到那一行才整页 refreshChatMessages。
+
+踩坑：以前译文到达和标记“正在翻译”都会整页 refreshChatMessages，正好撞在新气泡出现的动画上，带翻译的消息出来时明显顿一下（v1783 实机）。旧测试只抽取翻译片段运行，调用处要 typeof 守卫。
+
+验证：tests/wechat-translation-reasoning-queue.test.mjs；核心聊天门禁 diaryAndTranslation.translationPatched（译文出现期间整页刷新次数为0，旧实现失败）。核对到：2026-10-17（v1785/iOS461）。
+
+## 查他手机 · 私人日记
+
+现在：日记只在日记 App 解锁并打开时生成（roleDiaryGenerateDay，当天一篇），长度用 letterReplyBudget(c)，与「回复长度（信件）」同一设置，正文上限8000字。日记页顶栏单独为棕色（.spy-diary-nav，#6f5243→#5d4437，浅色文字），右上角刷新调用 spyDiaryRewriteToday：用当天真实记录重写今天这篇，保留收藏和时间，提示里附上上一版让角色换写法；手机整体刷新 spyRefresh 仍不碰日记。
+
+踩坑：生成时 max 写死500、正文截1000，长一点就被截断（v1783 实机）。日记页原来共用“查他手机”的黑色顶栏和 spyRefresh，刷新显示成功但日记不变。
+
+验证：核心聊天门禁 diaryAndTranslation（长度等于信件长度、棕色顶栏且刷新指向重写、重写后今天只有一篇且内容更新；旧实现失败）。未真机验证：顶栏上方安全区颜色。核对到：2026-10-17（v1785/iOS461）。
+
 ## 聊天搜索与网页功能继承核对
 
 角色私聊与角色群的关键词搜索使用 wxSearchChats 按会话分组，wxSearchOpen 展开匹配项；wxSearchJump 设置一次性 _chatJump，扩大旧消息渲染窗口，restoreRenderScroll 消费定位并阻止置底覆盖。返回搜索页保留关键词与列表位置。gsearchRows/gsearchResultHTML 负责群内分类结果的点击定位；私人两个 HTML 入口必须包含 .wxs-page、明暗主题及 msgJumpHit 样式。
