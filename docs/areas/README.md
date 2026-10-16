@@ -70,15 +70,15 @@ v1762 补查全部卡片类型：角色发出的真人店铺外卖（marketfood�
 
 ## 快捷指令查岗截屏
 
-现在：app.js 只有 NorthExtraPages 的受保护路由扩展；phone-shortcuts.js 的 CHECKIN_SHORTCUTS_V1 在双端追加同一组件，PhoneShortcuts.open 进入独立 shortcutSettings，原函数保留为 cloudOpen。开启前明确说明识图服务、额度和聊天图片保留，网页截屏开关禁用；原有云端动作、私人时长导入均保持。角色按当前微信路线写开场白，池按账号/角色隔离、支持删/重写；不使用预设台词，不将生成任务放入聊天。生成时带最近16条聊天和当前时间，角色同时给出想查程度 want 0-3（JSON 对象 {want,lines}，旧数组仍可解析）；超过3小时，或聊了新内容且距上次40分钟，前台自动重写，每天最多8次。「什么时候查」两档：试用（每次都查）/让TA自己决定（默认）。
+现在：app.js 只有 NorthExtraPages 的受保护路由扩展；phone-shortcuts.js 的 CHECKIN_SHORTCUTS_V1 在双端追加同一组件，PhoneShortcuts.open 进入独立 shortcutSettings，原函数保留为 cloudOpen。开启前明确说明识图服务、额度和聊天图片保留，网页截屏开关禁用；原有云端动作、私人时长导入均保持。角色按当前微信路线写开场白，池按账号/角色隔离、支持删/重写；不使用预设台词，不将生成任务放入聊天。生成时带最近16条聊天和当前时间，角色同时给出想查程度 want 0-3（JSON 对象 {want,lines}，旧数组仍可解析）；超过3小时，或聊了新内容且距上次40分钟，前台自动重写，每天最多8次。「什么时候查」两档：试用（每次都查）/让TA自己决定（默认）。让TA自己决定时，角色同时悄悄定下次查岗时间 next（"HH:MM"，24小时内，离现在不足10分钟顺延到明天），存 planAt，不进聊天也不进角色提示；已有未过期（到点后2小时内）的时间不被新一批覆盖。页面只显示「TA心里已经有打算了」，点「偷看一眼」才显示，离开页面重新藏起。
 
-原生 CheckInStore actor：配置、确认凭据、图片串行处理；小手机·查岗开场清旧凭据，先由 roleWantsNow 决定这次查不查（want 概率 0/10%/30%/65%，want 超过12小时最多按1算，23-5点×1.5封顶90%，45分钟冷却，每天最多5次），不查就返回空、不弹窗；查才请求系统确认，确认后120秒单张有效。交给小手机查岗以 supportedModes [.background,.foreground(.dynamic)] 后台运行，没有确认凭据的截图直接丢弃不写盘；保存成功才 continueInForeground(alwaysConfirm:false) 打开小手机，失败改发本地通知。交给小手机查岗只接受已确认图片，1440像素JPEG、20MB输入上限、6张队列、24小时过期下次使用清理、临时目录不进备份。scope/账号/cid随图片保存，take不删除，ACK须匹配scope。Xcode主App是同步文件夹目标，新Swift自动纳入，不加到扩展。
+原生 CheckInStore actor：配置、确认凭据、图片串行处理；小手机·查岗开场清旧凭据，先由 roleWantsNow 决定这次查不查（want 概率 0/10%/30%/65%，want 超过12小时最多按1算，23-5点×1.5封顶90%，45分钟冷却，每天最多5次；有角色定的 planAt 时，没到时间一律不查，到点后2小时内、且上次查岗早于该时间的第一次触发必查；上次查岗时间跨午夜保留，防止同一个时间查两次），不查就返回空、不弹窗；查才请求系统确认，确认后120秒单张有效。交给小手机查岗以 supportedModes [.background,.foreground(.dynamic)] 后台运行，没有确认凭据的截图直接丢弃不写盘；保存成功才 continueInForeground(alwaysConfirm:false) 打开小手机，失败改发本地通知。交给小手机查岗只接受已确认图片，1440像素JPEG、20MB输入上限、6张队列、24小时过期下次使用清理、临时目录不进备份。scope/账号/cid随图片保存，take不删除，ACK须匹配scope。Xcode主App是同步文件夹目标，新Swift自动纳入，不加到扩展。
 
 接收：仅私人前台且App自身已解锁、设置有效时轮询本地队列（15秒及启动/回前台检查，不是夜巡、不对空队列发模型请求）。先imgPut，并像相册选图一样让消息 src 直接是图片本身（登记 _imgCache/_imgRev/_imgReady，存档层写成同一 idb 键），持久化后再ACK；不在该角色聊天就 openChat；receipt防重复与删除后重建。visionAPI只看已保存原图，成功后以本次明确分享事件交给原scheduleReply，遵循占用与角色限制。失败不伪造台词，已中断识图由聊天图片重试；账户/角色/开关/记忆重置变更后不写入新上下文。ACK后仅删除原生临时副本，聊天记录和正常备份保留。
 
 踩坑：消息 src 只写 idb: 短引用时，识图后 refreshChatMessages 局部重画直接用原始 src，不走懒加载回填，自己看到空白图（v1771 实机）。只在 cur().p!=='chat' 时跳转，停在别人聊天里不会进入。普通scheduleReply不带note会被默认手动回复挡住，实际只出现生成与识图请求；不要改全局手动开关，应使用featureEventNote表示这一次已确认分享。不能把临时图片“取到”当作已保存，ACK必须晚于持久化。不能把截图仅存本机当真，真实识图会发给设置的服务。不能用全局未分账号的开场白或固定兜底。Windows的文件URL必须fileURLToPath，不能直接.pathname；漂移守护的KNOWN不能放宽。
 
-验证：tests/phone-shortcuts.test.mjs；scripts/check_chat_authorized_phone.cjs 使用 NORTH_CHECKIN_PREVIEW=1，模型HTTP和原生接口受控，prompt/myActivity/visionAPI/普通回复/图片库不替换；NORTH_CHECKIN_BASELINE=1复现原缺模块独立入口失败。门禁会核对截图在角色聊天中真实显示、停在别人聊天也会跳转。原生编译和真实iPhone系统确认/截屏/冷启动仍须Mac验收，不以Windows绿灯代替；continueInForeground 在自动化中是否额外询问、不查时是否完全无感须真机确认。核对到：2026-10-16（v1773/iOS455）。
+验证：tests/phone-shortcuts.test.mjs；scripts/check_chat_authorized_phone.cjs 使用 NORTH_CHECKIN_PREVIEW=1，模型HTTP和原生接口受控，prompt/myActivity/visionAPI/普通回复/图片库不替换；NORTH_CHECKIN_BASELINE=1复现原缺模块独立入口失败。门禁会核对截图在角色聊天中真实显示、停在别人聊天也会跳转。原生编译和真实iPhone系统确认/截屏/冷启动仍须Mac验收，不以Windows绿灯代替；continueInForeground 在自动化中是否额外询问、不查时是否完全无感须真机确认。核对到：2026-10-16（v1775/iOS456）。
 
 
 ## 聊天搜索与网页功能继承核对
