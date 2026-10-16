@@ -2230,3 +2230,5 @@ CUA核验22项控件、发送未读空白、已读等待阶段空白、保存180
 2026-10-16 私人v1775 / iOS456：从提交 e4a49009 的干净工作区 xcodebuild（Release，BUILD SUCCEEDED，456）并覆盖安装到用户 iPhone 15。未生成覆盖包（本 Mac 无 v1769 基线）；全量 4205/4205，核心聊天门禁两端通过。
 
 2026-10-16 网页v1772 / 私人v1777 / iOS457：用户反馈角色锁 App 后常常忘了解锁，要求以后锁定必须设定解锁时间（如晚7点锁到早7点、三天后解锁），角色可提前解锁；忘写时默认锁到第二天早上7点；打开被锁 App 时要看到还剩多久。经用户单独同意修改私人伴生功能。做法：教角色的锁定说明要求标签带时间；applyControlTags 执行前 lockUntilPrepare 取出时间段并还原标签（原锁定代码不改），执行后 lockUntilCommit 按前后快照记 S.couple.lockUntil；lockUntilSweep 每30秒/回前台到点解锁；默认下一个至少一小时后的07:00，最长7天。原生：device.autoUnlock → App Group 记录 + 一次性 DeviceActivity autoUnlock.*，Monitor 扩展到点移除屏蔽和账本；主 App 补锁前 applyDueAutoUnlocks 清保存名单；unlock 命令取消定时；屏蔽页显示剩余时间（只此一行，旧灰色解释不恢复，role-app-lock 测试相应调整并写明原因）。Monitor 对 autoUnlock.* 活动不再清每日限额。回归：新增 tests/role-lock-until.test.mjs；核心聊天门禁新增 roleLockUntil 实页面场景（旧实现失败：lockUntil 不存在）；旧测试抽取片段运行处以 typeof 守卫兼容；升版本号时误改 north-market 测试中一处图片哈希，已撤回并核查前两次提交无此类误改。全量 4213/4213，门禁普通与查岗模式两端通过，Mac 编译通过。未真机验证：多日一次性 DeviceActivity 触发、App 关闭时解锁、屏蔽页文字显示。
+
+2026-10-16 私人v1777 / iOS457：从提交 47cb130b 的干净工作区 xcodebuild（Release，BUILD SUCCEEDED，457）并覆盖安装到用户 iPhone 15。未生成覆盖包（本 Mac 无 v1769 基线）；全量 4213/4213，核心聊天门禁两端通过。
