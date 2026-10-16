@@ -2945,3 +2945,5 @@ CUA核验22项控件、发送未读空白、已读等待阶段空白、保存180
 2026-10-17 网页v1782 / 私人v1785 / iOS461：用户反馈①带翻译的消息气泡出来时明显卡一下；②查他手机的日记被截断，希望长度和信件回复长度绑定；③日记页点刷新显示刷新了但点开还是旧内容；④私人日记顶部黑条改成匹配的棕色。根因：①译文到达与标记“正在翻译”都整页 refreshChatMessages，撞上新气泡动画；②日记生成 max 写死500、正文截1000；③日记页共用手机整体刷新 spyRefresh，代码明确不碰日记，今天的日记每天只生成一次；④日记页共用“查他手机”的黑色顶栏。修复：①roleTextTranslationPatch 只换那条气泡的译文行；②max 用 letterReplyBudget(c)，正文上限8000；③日记页刷新改为 spyDiaryRewriteToday 重写今天这篇（保留收藏）；④日记列表顶栏棕色渐变。截图经用户确认。回归：核心聊天门禁 diaryAndTranslation 四项（旧实现失败已验证）；翻译旧测试抽片段处 typeof 守卫。全量 4233/4233，门禁普通与查岗模式两端通过。
 
 2026-10-17 v1785 同版并入：小K会话提交 03ed2f54（只改 PhoneWeb.bundle/private-robot-voice.js 与新增 tests/private-robot-voice-routes.test.mjs）：cloudSettings 让小K固定使用记住的 Groq、角色 Fish 音色和 Fish API Key（s2.1-pro-free），手机里改语音设置不再让小K断开。本次私人 v1785/iOS461 构建基于其后提交，完整保留；全量测试包含其新测试并通过。
+
+2026-10-17 私人v1785 / iOS461：从提交 303ae15b（含小K会话 03ed2f54）的干净工作区 xcodebuild（Release，BUILD SUCCEEDED，461）并覆盖安装到用户 iPhone 15；安装包内 private-robot-voice.js 已核对含 cloudSettings。未生成覆盖包。
