@@ -43,6 +43,11 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
         let isRoleLock = !rawActor.isEmpty
         let isDailyLimit = !isRoleLock && limitDay == usageDay(for: Date())
         let actor = String(rawActor.prefix(24))
+        let unlockAt = (defaults?.dictionary(forKey: "companion.lock.autoUnlock.v1")
+            as? [String: Double])?[externalID] ?? 0
+        let subtitleText = unlockAt > Date().timeIntervalSince1970
+            ? remainingText(until: Date(timeIntervalSince1970: unlockAt))
+            : nil
         let titleText = isRoleLock
             ? "\(appName)已被\(actor)锁定"
             : isDailyLimit
@@ -66,7 +71,9 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
                     alpha: 1.0
                 )
             ),
-            subtitle: nil,
+            subtitle: subtitleText.map {
+                ShieldConfiguration.Label(text: $0, color: UIColor(white: 0.86, alpha: 1))
+            },
             primaryButtonLabel: ShieldConfiguration.Label(
                 text: "知道了",
                 color: .white
@@ -79,6 +86,20 @@ final class ShieldConfigurationExtension: ShieldConfigurationDataSource {
             ),
             secondaryButtonLabel: nil
         )
+    }
+
+    // ROLE_LOCK_UNTIL_V1: worked out each time the shield is shown.
+    private func remainingText(until date: Date) -> String {
+        let left = max(60, Int(date.timeIntervalSinceNow))
+        let days = left / 86_400, hours = left % 86_400 / 3_600, minutes = left % 3_600 / 60
+        var parts = ""
+        if days > 0 { parts += "\(days)天" }
+        if days > 0 || hours > 0 { parts += "\(hours)小时" }
+        parts += "\(minutes)分"
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "zh_CN")
+        formatter.dateFormat = "M月d日 HH:mm"
+        return "还剩 \(parts)\n\(formatter.string(from: date)) 自动解锁"
     }
 
     private func stableExternalID(

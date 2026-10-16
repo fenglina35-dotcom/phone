@@ -22,12 +22,46 @@ final class DeviceActivityMonitorExtension: DeviceActivityMonitor {
 
     override func intervalDidStart(for activity: DeviceActivityName) {
         super.intervalDidStart(for: activity)
+        if activity.rawValue.hasPrefix("autoUnlock.") { return }
         clearDailyLimitLock()
     }
 
     override func intervalDidEnd(for activity: DeviceActivityName) {
         super.intervalDidEnd(for: activity)
+        if activity.rawValue.hasPrefix("autoUnlock.") {
+            releaseDueRoleLocks()
+            return
+        }
         clearDailyLimitLock()
+    }
+
+    // ROLE_LOCK_UNTIL_V1: clear a role lock whose time has come, even with the app closed. The entry
+    // stays in the map so the app also removes the app from its own saved lock list next launch.
+    private func releaseDueRoleLocks() {
+        guard let defaults = sharedDefaults else { return }
+        let map = defaults.dictionary(forKey: "companion.lock.autoUnlock.v1") as? [String: Double] ?? [:]
+        let now = Date().timeIntervalSince1970 + 60
+        let manual = ManagedSettingsStore()
+        let ledger = ManagedSettingsStore(named: .init("persistentLockLedger"))
+        var ledgerTokens = defaults.data(forKey: "companion.lock.ledger.v1")
+            .flatMap { try? JSONDecoder().decode(Set<ApplicationToken>.self, from: $0) } ?? []
+        var actors = defaults.dictionary(forKey: "companion.shield.roleActors.v1") as? [String: String] ?? [:]
+        for (externalID, at) in map where at <= now {
+            guard let data = defaults.data(forKey: "companion.lock.autoUnlock.token." + externalID),
+                  let token = try? JSONDecoder().decode(ApplicationToken.self, from: data) else { continue }
+            var apps = manual.shield.applications ?? []
+            apps.remove(token)
+            manual.shield.applications = apps.isEmpty ? nil : apps
+            var held = ledger.shield.applications ?? []
+            held.remove(token)
+            ledger.shield.applications = held.isEmpty ? nil : held
+            ledgerTokens.remove(token)
+            actors.removeValue(forKey: externalID)
+        }
+        if let data = try? JSONEncoder().encode(ledgerTokens) {
+            defaults.set(data, forKey: "companion.lock.ledger.v1")
+        }
+        defaults.set(actors, forKey: "companion.shield.roleActors.v1")
     }
 
     override func eventDidReachThreshold(

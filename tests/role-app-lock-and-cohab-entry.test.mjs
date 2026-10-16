@@ -65,8 +65,10 @@ test('shield UI distinguishes lock sources in the title without gray subtitle te
   assert.match(shield, /\? "\\\(appName\)已被\\\(actor\)锁定"/);
   assert.match(shield, /\? "\\\(appName\) 今日限额已达到"/);
   assert.match(shield, /: "\\\(appName\) 暂时已锁定"/);
-  assert.match(shield, /subtitle: nil/);
-  assert.doesNotMatch(shield, /let subtitleText/);
+  // The old gray explanation lines stay removed; since v1777 the only subtitle is the time left of a
+  // timed role lock, which the owner asked to see when opening a locked app.
+  assert.doesNotMatch(shield, /不是今日使用限额|不是角色主动锁定|锁定来源尚未同步/);
+  assert.match(shield, /let subtitleText = unlockAt > Date\(\)\.timeIntervalSince1970\n            \? remainingText/);
   assert.doesNotMatch(shield, /绑定角色|某某/);
   assert.doesNotMatch(sync, /绑定角色|某某/);
   assert.match(shield, /companion\.shield\.roleActors\.v1/);

@@ -15,7 +15,7 @@ enum SmallPhoneDiagnosticsStore {
     )
     private static let maximumBytes = 256 * 1_024
     private static let maximumLines = 200
-    private static let build = "1.0.456 (456)"
+    private static let build = "1.0.457 (457)"
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -344,6 +344,15 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                 requestID: requestID,
                 arguments: arguments
             )
+        case "device.autoUnlock":
+            let arguments = payload["payload"] as? [String: Any] ?? [:]
+            let externalID = arguments["externalAppId"] as? String ?? ""
+            let unlockAt = (arguments["unlockAt"] as? NSNumber)?.doubleValue ?? 0
+            Task { @MainActor [weak self] in
+                let scheduled = !externalID.isEmpty && unlockAt > 0 && CompanionSyncService.shared
+                    .scheduleAutoUnlock(externalID: externalID, at: Date(timeIntervalSince1970: unlockAt / 1_000))
+                self?.reply(requestID: requestID, result: ["scheduled": scheduled])
+            }
         case "device.command":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             performLocalDeviceCommand(

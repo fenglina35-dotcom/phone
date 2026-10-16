@@ -124,6 +124,10 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
   });
   for(const [key,value] of Object.entries(controls))assert.equal(value,true,JSON.stringify({privateApp,key,controls}));
   console.log(JSON.stringify({privateApp,notificationSwipeAndNearbyControls:controls}));
+  // A role lock carries an unlock time and reopens by itself (ROLE_LOCK_UNTIL_V1), through the real tag consumer.
+  const lockUntilQA=await page.evaluate(()=>{const role=getC(testId);S.couple={cid:role.id,grant:{nearby:true},locks:{}};const t0=Date.now();applyControlTags('我锁上了。\n[锁定|附近的人|2小时]',role,role.id,'','');const locked=appLocked('nearby');const at=+(S.couple.lockUntil&&S.couple.lockUntil['int:nearby']||0);const timed=Math.abs(at-(t0+2*3600e3))<60e3;_couTab=2;go('couple');const shown=document.body.innerText.includes('自动解锁');_couTab=1;S.couple.lockUntil['int:nearby']=Date.now()-1000;lockUntilSweep();const reopened=!appLocked('nearby')&&!S.couple.lockUntil['int:nearby'];applyControlTags('[锁定|附近的人]',role,role.id,'','');const d=new Date(+S.couple.lockUntil['int:nearby']);const defaultSeven=appLocked('nearby')&&d.getHours()===7&&d.getMinutes()===0;S.couple={cid:role.id};openChat(role.id);return{locked,timed,shown,reopened,defaultSeven};});
+  for(const [key,value] of Object.entries(lockUntilQA))assert.equal(value,true,JSON.stringify({privateApp,key,lockUntilQA}));
+  console.log(JSON.stringify({privateApp,roleLockUntil:lockUntilQA}));
   for(const granted of [false,true])for(const raw of [false,true])for(const populated of [false,true]){
    const result=await page.evaluate(async({granted,raw,populated})=>{
     const role=getC(testId);role.spy={granted,loc:false};S.settings.modelOutputUnfiltered=raw;

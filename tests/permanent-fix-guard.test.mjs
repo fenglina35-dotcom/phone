@@ -37,6 +37,8 @@ const PERMANENT_FIXES = [
   {release:"web v1768 / private v1773",scope:"both",least:1,file:"phone-shortcuts.js",name:"收到查岗截图一定进入该角色聊天，即使停在别人的聊天里",marker:"if(m&&!(cur().p==='chat'&&cur().id===x.cid))openChat(x.cid);"},
   {release:"web v1768 / private v1773",scope:"both",least:1,file:"phone-shortcuts.js",name:"角色按最近聊天和时间重写开场白并给出想查程度，交给原生决定突然查岗",marker:"const modeOf=cfg=>cfg&&cfg.mode==='always'?'always':'role';"},
   {release:"web v1770 / private v1775",scope:"both",least:1,file:"phone-shortcuts.js",name:"角色悄悄定下次查岗时间，页面默认藏起、可偷看",marker:"const planPending=(cfg,now)=>+(cfg&&cfg.planAt)>(now||Date.now())-PLAN_GRACE;"},
+  {release:"web v1772 / private v1777",scope:"both",least:1,name:"角色锁定App必须带解锁时间（默认到下一个早上7点），到点自动解锁",marker:"const _lockPlan=typeof lockUntilPrepare==='function'?lockUntilPrepare(content):null,_lockBefore=_lockPlan?lockUntilSnapshot():null;if(_lockPlan)content=_lockPlan.content;"},
+  {release:"web v1772 / private v1777",scope:"both",least:1,name:"锁定剩余时间显示在情侣空间与被锁App提示里",marker:"${typeof lockUntilOf==='function'&&lockUntilOf(k)?esc(lockUntilText(lockUntilOf(k))):'已锁'}"},
   {release:"心声原地展开候选",scope:"both",least:1,name:"默认关闭的独立思考摘要与原地心声",marker:"ROLE_THINKING_PREVIEW_V1"},
   {release:"本地亲属同步候选",scope:"both",least:1,name:"亲属自主新增限额与间隔",marker:"q.created.length>=q.cap||q.created.some"},
   {release:"本地亲属同步候选",scope:"both",least:1,name:"删除关系后防止刷新重建",marker:"if(old)relFamilyBlockLink(old)"},

@@ -81,6 +81,16 @@ v1762 补查全部卡片类型：角色发出的真人店铺外卖（marketfood�
 验证：tests/phone-shortcuts.test.mjs；scripts/check_chat_authorized_phone.cjs 使用 NORTH_CHECKIN_PREVIEW=1，模型HTTP和原生接口受控，prompt/myActivity/visionAPI/普通回复/图片库不替换；NORTH_CHECKIN_BASELINE=1复现原缺模块独立入口失败。门禁会核对截图在角色聊天中真实显示、停在别人聊天也会跳转。原生编译和真实iPhone系统确认/截屏/冷启动仍须Mac验收，不以Windows绿灯代替；continueInForeground 在自动化中是否额外询问、不查时是否完全无感须真机确认。核对到：2026-10-16（v1775/iOS456）。
 
 
+## 情侣空间锁定到点自动解锁
+
+现在：角色锁 App（小手机内置 App 与伴生的真实 iPhone App）必须带解锁时间：[锁定|App名|到07:00]、[锁定|App名|3天]、2小时、30分钟、明晚10点；不写就锁到下一个至少一小时后的 07:00，最长7天。教角色的四处锁定说明都写了这条。applyControlTags 在执行任何锁定标签前用 lockUntilPrepare 取出时间段并还原标签，原锁定代码不变；执行完 lockUntilCommit 按前后快照只给新锁上（或已有时间的再次锁定）的目标记 S.couple.lockUntil（'int:'+内置键 / 'ext:'+外置ID），外置同时发 device.autoUnlock 给原生。lockUntilSweep 每30秒和回前台检查：到点内置删锁、外置发角色解锁命令；目标已被提前解锁就删记录。情侣空间「管控授权」页「ta锁住的」和打开被锁 App 的提示显示「还剩…·几月几日 HH:MM 自动解锁」。自动限额锁（auto）不受影响。
+
+原生：CompanionSyncService.scheduleAutoUnlock 把 externalID→解锁秒数和 token 存进 App Group（companion.lock.autoUnlock.v1 / .token.），启动一次性 DeviceActivity「autoUnlock.*」（至少15分钟）。PhoneCompanionMonitor 在该活动 intervalDidEnd 时把 token 从默认屏蔽库和 persistentLockLedger 库及账本移除，记录保留；主 App 在 effectiveLockedTokens 开头 applyDueAutoUnlocks，先把到点条目从 UserDefaults 保存的锁定名单和账本删掉，避免重新补锁。提前解锁（unlock 命令）会 forgetAutoUnlock。屏蔽页只在有未到点的解锁时间时显示一行浅白剩余时间（每次显示屏蔽页时计算，不是实时跳动）。
+
+踩坑：主 App 会用保存的锁定名单（UserDefaults.standard，扩展读不到）把屏蔽补回去，只靠扩展清屏蔽会被重新锁上，所以必须在补锁前清名单。Monitor 原本任何活动开始/结束都清每日限额，新活动必须按前缀跳过。旧测试只抽取 applyControlTags 片段运行，接入点要用 typeof 守卫。旧屏蔽页灰色解释小字（v1113 移除）不能加回，只允许剩余时间一行。升版本号脚本只能改版本号上下文，16进制哈希里可能含有版本号数字（v1777 发布时误改过一次测试里的图片哈希，已撤回）。
+
+验证：tests/role-lock-until.test.mjs（时间解析、默认7点、7天上限、标签还原、双端说明与接入点、原生源码）；核心聊天门禁 roleLockUntil 用真实 applyControlTags 锁「附近的人」2小时、管控授权页显示、到点自动解开、无时间默认7点（旧实现失败已验证）。未真机验证：超过一天的一次性 DeviceActivity 能否按时触发、App 关闭时屏蔽是否真的解开、屏蔽页文字。核对到：2026-10-16（v1777/iOS457）。
+
 ## 聊天搜索与网页功能继承核对
 
 角色私聊与角色群的关键词搜索使用 wxSearchChats 按会话分组，wxSearchOpen 展开匹配项；wxSearchJump 设置一次性 _chatJump，扩大旧消息渲染窗口，restoreRenderScroll 消费定位并阻止置底覆盖。返回搜索页保留关键词与列表位置。gsearchRows/gsearchResultHTML 负责群内分类结果的点击定位；私人两个 HTML 入口必须包含 .wxs-page、明暗主题及 msgJumpHit 样式。

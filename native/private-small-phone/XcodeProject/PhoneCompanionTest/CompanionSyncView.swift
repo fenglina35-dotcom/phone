@@ -2095,6 +2095,7 @@ final class CompanionSyncService: ObservableObject {
                 throw CompanionSyncError.message("本地屏蔽配置移除失败，未发送成功回执")
             }
             forgetRoleShieldActor(for: token)
+            forgetAutoUnlock(externalID: externalID)
             return "屏蔽配置已移除；最终是否生效请以目标 App 能否正常打开为准"
 
         case "limit":
@@ -2516,7 +2517,83 @@ final class CompanionSyncService: ObservableObject {
         }
     }
 
+    // ROLE_LOCK_UNTIL_V1: a role lock's unlock time. The Monitor extension clears the shield at that
+    // time even when this app is closed; this app also drops due entries before re-applying any
+    // saved lock list, so an expired lock is never put back.
+    private let autoUnlockKey = "companion.lock.autoUnlock.v1"
+    private let autoUnlockTokenPrefix = "companion.lock.autoUnlock.token."
+
+    private func autoUnlockMap() -> [String: Double] {
+        sharedDefaults?.dictionary(forKey: autoUnlockKey) as? [String: Double] ?? [:]
+    }
+
+    private func autoUnlockActivity(_ externalID: String) -> DeviceActivityName {
+        DeviceActivityName("autoUnlock." + String(externalID.suffix(20)))
+    }
+
+    func scheduleAutoUnlock(externalID: String, at date: Date) -> Bool {
+        guard let token = token(forExternalID: externalID),
+              let tokenData = try? JSONEncoder().encode(token) else { return false }
+        var map = autoUnlockMap()
+        map[externalID] = date.timeIntervalSince1970
+        sharedDefaults?.set(map, forKey: autoUnlockKey)
+        sharedDefaults?.set(tokenData, forKey: autoUnlockTokenPrefix + externalID)
+        sharedDefaults?.synchronize()
+        let name = autoUnlockActivity(externalID)
+        activityCenter.stopMonitoring([name])
+        // DeviceActivity needs at least 15 minutes; a shorter lock is released by the app's own check.
+        let start = Date()
+        let end = max(date, start.addingTimeInterval(15 * 60 + 30))
+        let parts: Set<Calendar.Component> = [.year, .month, .day, .hour, .minute, .second]
+        let schedule = DeviceActivitySchedule(
+            intervalStart: Calendar.current.dateComponents(parts, from: start),
+            intervalEnd: Calendar.current.dateComponents(parts, from: end),
+            repeats: false
+        )
+        do { try activityCenter.startMonitoring(name, during: schedule) } catch { return false }
+        return true
+    }
+
+    func forgetAutoUnlock(externalID: String) {
+        var map = autoUnlockMap()
+        guard map.removeValue(forKey: externalID) != nil else { return }
+        sharedDefaults?.set(map, forKey: autoUnlockKey)
+        sharedDefaults?.removeObject(forKey: autoUnlockTokenPrefix + externalID)
+        activityCenter.stopMonitoring([autoUnlockActivity(externalID)])
+    }
+
+    private func applyDueAutoUnlocks() {
+        var map = autoUnlockMap()
+        let now = Date().timeIntervalSince1970
+        let due = map.filter { $0.value <= now }
+        guard !due.isEmpty else { return }
+        var manual = manualLockStore.shield.applications ?? []
+        var savedManual = loadLockedTokens()
+        var ledger = persistentLockStore.shield.applications ?? []
+        var savedLedger = loadPersistentLockLedger()
+        for externalID in due.keys {
+            let stored = sharedDefaults?.data(forKey: autoUnlockTokenPrefix + externalID)
+                .flatMap { try? JSONDecoder().decode(ApplicationToken.self, from: $0) }
+            if let token = stored ?? token(forExternalID: externalID) {
+                manual.remove(token)
+                savedManual.remove(token)
+                ledger.remove(token)
+                savedLedger.remove(token)
+                forgetRoleShieldActor(for: token)
+            }
+            map.removeValue(forKey: externalID)
+            sharedDefaults?.removeObject(forKey: autoUnlockTokenPrefix + externalID)
+            activityCenter.stopMonitoring([autoUnlockActivity(externalID)])
+        }
+        manualLockStore.shield.applications = manual.isEmpty ? nil : manual
+        persistentLockStore.shield.applications = ledger.isEmpty ? nil : ledger
+        saveLockedTokens(savedManual)
+        savePersistentLockLedger(savedLedger)
+        sharedDefaults?.set(map, forKey: autoUnlockKey)
+    }
+
     private func effectiveLockedTokens() -> Set<ApplicationToken> {
+        applyDueAutoUnlocks()
         let manualTokens = (manualLockStore.shield.applications ?? [])
             .union(loadLockedTokens())
         let savedLimitTokens = loadLimitLockedTokens()
