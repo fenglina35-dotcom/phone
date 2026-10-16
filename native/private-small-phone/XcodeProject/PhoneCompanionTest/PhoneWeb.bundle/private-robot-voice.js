@@ -48,15 +48,39 @@ var RobotVoice = (()=>{
     }catch(e){if(state)state.online=false;const el=document.getElementById('robot-voice-status');if(el)el.textContent=detail(e);}
     finally{busy=false;if(!stopped)timer=setTimeout(poll,active()?1600:15000);}
   }
+  // K keeps its own speech routes, apart from the phone's: Groq for listening, and for speaking
+  // the role's Fish voice through the Fish API key with s2.1-pro-free. Whenever the phone's
+  // current settings provide them they are remembered here; when the owner later switches the
+  // phone to something else (Fish member login, drama-3, another platform, another STT), K keeps
+  // using what it remembered instead of being cut off. Kept on this device only.
+  const K_ROUTES_KEY='smallPhone.robotVoice.kRoutes.v1';
+  function kRoutes(){try{const value=JSON.parse(localStorage.getItem(K_ROUTES_KEY)||'{}');return value&&typeof value==='object'?value:{};}catch(_){return {};}}
+  function rememberKRoute(name,value){try{const all=kRoutes();if(JSON.stringify(all[name])===JSON.stringify(value))return;all[name]=value;localStorage.setItem(K_ROUTES_KEY,JSON.stringify(all));}catch(_){}}
+  function kListenRoute(){
+    const asr=sttCfg(),base=String(asr.base||'').replace(/\/$/,'');
+    if(base==='https://api.groq.com/openai/v1'&&asr.key&&!sttRelayOn()){const route={base,key:asr.key,model:asr.model||'whisper-1'};rememberKRoute('listen',route);return route;}
+    const kept=kRoutes().listen;
+    if(kept?.base==='https://api.groq.com/openai/v1'&&kept.key)return kept;
+    throw Error('小 K 需要 Groq 语音转文字：在语音设置里填过一次 Groq 即可，之后手机改用别的也不影响小 K');
+  }
+  function kVoiceRoute(c){
+    try{
+      const route=external(c),cfg=route.cfg,kind=ttsProviderKind(cfg);
+      if(['fish','fishmcp'].includes(kind)&&/fish\.?audio/i.test(String(cfg.base||'https://api.fish.audio'))&&cfg.key&&route.voice){
+        const kept={key:cfg.key,voice:route.voice};rememberKRoute('voice:'+c.id,kept);return kept;
+      }
+    }catch(_){}
+    const kept=kRoutes()['voice:'+c.id];
+    if(kept?.key&&kept.voice)return kept;
+    throw Error('小 K 需要这个角色的 Fish 音色和 Fish API Key：填过一次即可，之后手机改用会员登录或别的平台也不影响小 K');
+  }
   function cloudSettings(){
     const c=getC(state?.roleId);if(!c||c.deleted||c.blocked)throw Error('绑定角色不可用');
-    const asr=sttCfg(),route=external(c),tts=route.cfg;
-    if(String(asr.base||'').replace(/\/$/,'')!=='https://api.groq.com/openai/v1'||!asr.key||sttRelayOn())throw Error('后台语音需要已配置的 Groq 语音转文字');
-    if(ttsProviderKind(tts)!=='fish'||String(tts.base||'').replace(/\/$/,'')!=='https://api.fish.audio'||tts.model!=='s2.1-pro-free')throw Error('后台语音需要当前角色的 Fish s2.1-pro-free 音色配置');
+    const asr=kListenRoute(),voice=kVoiceRoute(c);
     const main=chatRequestRoute(roleChatRouteIndex(c));
     const chat=c.model==='aux'?{...main,...main.aux,base:main.aux?.base||main.base,key:main.aux?.key||main.key}:main;
     if(!chat?.base||!chat.key||!chat.model)throw Error('当前角色的聊天模型配置不完整');
-    const routes={asr:{base:asr.base.replace(/\/$/,''),key:asr.key,model:asr.model||'whisper-1'},tts:{base:'https://api.fish.audio',key:tts.key,model:tts.model,voice:route.voice},chat:{base:chat.base,key:chat.key,model:chat.model,temp:chat.temp??0.7}};
+    const routes={asr,tts:{base:'https://api.fish.audio',key:voice.key,model:'s2.1-pro-free',voice:voice.voice},chat:{base:chat.base,key:chat.key,model:chat.model,temp:chat.temp??0.7}};
     const messages=msgsForAccount(c.id,'main').filter(m=>['user','assistant'].includes(m.role)&&['text','voice'].includes(m.type)).slice(-80).map(m=>({id:m.id,role:m.role,content:chinese(m)}));
     const replyMaxTokens=Math.max(256,Math.min(8192,Number(chat.callMaxTokens||chat.maxTokens)||3000));
     return {routes,context:{roleId:c.id,system:buildSystem(c),messages,replyMaxTokens}};
