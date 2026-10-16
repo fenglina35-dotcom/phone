@@ -33,6 +33,9 @@ const count = (source, marker) => source.split(marker).length - 1;
 // same commit that syncs it.
 const PERMANENT_FIXES = [
   {release:"查岗截屏本地候选",scope:"both",least:1,file:"phone-shortcuts.js",name:"明确授权截图接收、角色开场白和原云端入口分离",marker:"CHECKIN_SHORTCUTS_V1"},
+  {release:"web v1768 / private v1773",scope:"both",least:1,file:"phone-shortcuts.js",name:"查岗截图在聊天里显示原图（不再是空白气泡）",marker:"_imgCache[key]=image;_imgRev.set(image,key);_imgReady.add(key);"},
+  {release:"web v1768 / private v1773",scope:"both",least:1,file:"phone-shortcuts.js",name:"收到查岗截图一定进入该角色聊天，即使停在别人的聊天里",marker:"if(m&&!(cur().p==='chat'&&cur().id===x.cid))openChat(x.cid);"},
+  {release:"web v1768 / private v1773",scope:"both",least:1,file:"phone-shortcuts.js",name:"角色按最近聊天和时间重写开场白并给出想查程度，交给原生决定突然查岗",marker:"const modeOf=cfg=>cfg&&cfg.mode==='always'?'always':'role';"},
   {release:"心声原地展开候选",scope:"both",least:1,name:"默认关闭的独立思考摘要与原地心声",marker:"ROLE_THINKING_PREVIEW_V1"},
   {release:"本地亲属同步候选",scope:"both",least:1,name:"亲属自主新增限额与间隔",marker:"q.created.length>=q.cap||q.created.some"},
   {release:"本地亲属同步候选",scope:"both",least:1,name:"删除关系后防止刷新重建",marker:"if(old)relFamilyBlockLink(old)"},

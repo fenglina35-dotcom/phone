@@ -2,6 +2,7 @@ import AppIntents
 import Foundation
 import ImageIO
 import UniformTypeIdentifiers
+import UserNotifications
 
 // CHECKIN_SHORTCUTS_V1: only a confirmed, configured owner shortcut can enqueue a screenshot.
 // Temporary native files expire; the received chat image follows normal chat retention.
@@ -10,6 +11,7 @@ actor CheckInStore {
     private let configKey = "smallPhone.checkIn.config.v2"
     private let approvalKey = "smallPhone.checkIn.approval.v2"
     private let previousKey = "smallPhone.checkIn.previousLine.v2"
+    private let firedKey = "smallPhone.checkIn.fired.v1"
     private struct Approval: Codable { let scope: String; let at: Date }
     private func approval() -> Approval? {
         guard let data = UserDefaults.standard.data(forKey: approvalKey) else { return nil }
@@ -23,7 +25,12 @@ actor CheckInStore {
         var cid: String
         var scope: String
         var lines: [String]
+        // Optional so a configuration saved by an older build still decodes.
+        var mode: String? = nil
+        var want: Int? = nil
+        var wantAt: Double? = nil
     }
+    private struct Fired: Codable { var day: String; var count: Int; var last: Date }
     struct Metadata: Codable, Sendable {
         let id: String
         let at: Double
@@ -57,7 +64,8 @@ actor CheckInStore {
         let valid = !value.account.isEmpty && value.account.count <= 120 &&
             !value.cid.isEmpty && value.cid.count <= 120 && !value.scope.isEmpty && value.scope.count <= 120
         let stored = Configuration(enabled: value.enabled && valid && !lines.isEmpty,
-            account: value.account, cid: value.cid, scope: value.scope, lines: Array(lines.prefix(40)))
+            account: value.account, cid: value.cid, scope: value.scope, lines: Array(lines.prefix(40)),
+            mode: value.mode == "always" ? "always" : "role", want: min(3, max(0, value.want ?? 1)), wantAt: value.wantAt)
         if old?.scope != stored.scope || old?.account != stored.account || old?.cid != stored.cid || !stored.enabled {
             UserDefaults.standard.removeObject(forKey: approvalKey)
         }
@@ -65,11 +73,36 @@ actor CheckInStore {
         return stored.lines.count
     }
 
-    func prepareOpening() throws -> Opening {
+    // The role's own wish, the hour and the time since the last check decide; most triggers pass quietly.
+    private func roleWantsNow(_ config: Configuration, now: Date = Date()) -> Bool {
+        if config.mode == "always" { return true }
+        var want = config.want ?? 1
+        if let at = config.wantAt, now.timeIntervalSince1970 * 1_000 - at > 12 * 3_600_000 { want = min(want, 1) }
+        var chance = [0.0, 0.1, 0.3, 0.65][min(3, max(0, want))]
+        let hour = Calendar.current.component(.hour, from: now)
+        if hour >= 23 || hour < 5 { chance = min(0.9, chance * 1.5) }
+        let day = Self.dayText(now)
+        var fired = (UserDefaults.standard.data(forKey: firedKey)).flatMap { try? JSONDecoder().decode(Fired.self, from: $0) }
+        if fired?.day != day { fired = nil }
+        if let last = fired?.last, now.timeIntervalSince(last) < 45 * 60 { return false }
+        if (fired?.count ?? 0) >= 5 { return false }
+        guard Double.random(in: 0..<1) < chance else { return false }
+        let next = Fired(day: day, count: (fired?.count ?? 0) + 1, last: now)
+        if let data = try? JSONEncoder().encode(next) { UserDefaults.standard.set(data, forKey: firedKey) }
+        return true
+    }
+    private static func dayText(_ date: Date) -> String {
+        let parts = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        return "\(parts.year ?? 0)-\(parts.month ?? 0)-\(parts.day ?? 0)"
+    }
+
+    /// nil means this trigger passes quietly: no prompt, and the screenshot that follows is discarded.
+    func prepareOpening() throws -> Opening? {
         UserDefaults.standard.removeObject(forKey: approvalKey) // A cancelled second prompt must never reuse an earlier approval.
-        guard let config = configuration(), config.enabled, !config.lines.isEmpty else {
+        guard let config = configuration() else {
             throw CheckInError("先在小手机的快捷指令与查岗页面选择角色、生成开场白并开启截屏")
         }
+        guard config.enabled, !config.lines.isEmpty, roleWantsNow(config) else { return nil }
         let previousLine = UserDefaults.standard.string(forKey: previousKey) ?? ""
         let choices = config.lines.filter { $0 != previousLine }
         guard let line = (choices.isEmpty ? config.lines : choices).randomElement() else {
@@ -99,12 +132,11 @@ actor CheckInStore {
         return folder
     }
 
-    func save(imageData: Data) throws -> String {
+    /// nil when nothing was confirmed for this run: the image is dropped without being written anywhere.
+    func save(imageData: Data) throws -> String? {
         guard let config = configuration(), config.enabled, let permitted = approval(),
               permitted.scope == config.scope, Date().timeIntervalSince(permitted.at) >= 0,
-              Date().timeIntervalSince(permitted.at) <= 120 else {
-            throw CheckInError("请先运行并确认「小手机·查岗开场」，取消后不会接收截图")
-        }
+              Date().timeIntervalSince(permitted.at) <= 120 else { return nil }
         UserDefaults.standard.removeObject(forKey: approvalKey) // One confirmation authorizes exactly one screenshot, never an ongoing feed.
         guard !imageData.isEmpty, imageData.count <= 20 * 1_024 * 1_024,
               let source = CGImageSourceCreateWithData(imageData as CFData, nil),
@@ -195,7 +227,7 @@ struct CheckInOpenerIntent: AppIntent {
     static var openAppWhenRun = false
     @MainActor
     func perform() async throws -> some IntentResult & ReturnsValue<String> {
-        let opening = try await CheckInStore.shared.prepareOpening()
+        guard let opening = try await CheckInStore.shared.prepareOpening() else { return .result(value: "") }
         try await requestConfirmation(actionName: .continue, dialog: IntentDialog(stringLiteral: opening.line))
         try await CheckInStore.shared.approve(scope: opening.scope)
         return .result(value: opening.line)
@@ -204,12 +236,21 @@ struct CheckInOpenerIntent: AppIntent {
 
 struct CheckInScreenshotIntent: AppIntent {
     static var title: LocalizedStringResource = "交给小手机查岗"
-    static var description = IntentDescription("接收上一步截屏并打开小手机。进入指定角色微信后，会通过配置的识图服务理解并回复。")
-    static var openAppWhenRun = true
+    static var description = IntentDescription("接收上一步截屏。本次确认过才保存并打开小手机，交给指定角色；没确认的截屏直接丢弃。")
+    // Runs in the background; only a confirmed screenshot brings the app forward.
+    static let supportedModes: IntentModes = [.background, .foreground(.dynamic)]
     @Parameter(title: "截图", supportedContentTypes: [.image]) var screenshot: IntentFile
     @MainActor
     func perform() async throws -> some IntentResult {
-        _ = try await CheckInStore.shared.save(imageData: screenshot.data)
+        guard try await CheckInStore.shared.save(imageData: screenshot.data) != nil else { return .result() }
+        do { try await continueInForeground(nil, alwaysConfirm: false) }
+        catch {
+            // The image is already queued; a tap on this opens the app, which picks it up.
+            let content = UNMutableNotificationContent()
+            content.title = "查岗截图已交出"
+            content.body = "点开小手机，看看TA怎么说。"
+            try? await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: "checkin-handoff", content: content, trigger: nil))
+        }
         return .result()
     }
 }
