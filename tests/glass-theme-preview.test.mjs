@@ -286,7 +286,7 @@ test('sweetie widget reuses the couple start date for an unboxed relationship-da
 test('legacy duplicate widgets are removed while the four-slot glass dock is restored',()=>{
   assert.match(app,/const WIDS=\[\['dashboard'/);
   assert.match(app,/const HOME_DOCK_DEFAULT=\['calendar','games','mail','settings'\];/);
-  assert.match(app,/const HOME_SHORTCUTS=\{clock:\{[^}]*t:'时钟'[^}]*run:\(\)=>openApp\('calendar'\)/);
+  assert.match(app,/const HOME_SHORTCUTS=\{clock:\{[^}]*t:'日历'[^}]*run:\(\)=>openApp\('calendar'\)/);
   assert.match(app,/const dockTokens=Array\.from\(dock\.children\)/);
   assert.match(app,/S\.me\.appDock=dockTokens/);
   assert.match(app,/before\.length!==beforeSet\.size\|\|after\.length!==afterSet\.size/,'a malformed drag must not persist missing or duplicated apps');

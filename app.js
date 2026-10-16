@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1784'){
+if(window.__NORTH_SHELL_BUILD__!=='1786'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -616,7 +616,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1784 · 任务便签今日页';
+const APP_VER='v1786 · 任务便签全部页与角色提醒';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2097,7 +2097,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1784&r=v1784-thought-preview-1';
+  const url='sw.js?v=1786&r=v1786-thought-preview-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -3744,7 +3744,7 @@ const APPRUN={wechat:()=>openWeChat(),phoneapp:()=>openApp('phoneapp'),settings:
 const APP_PAGES=3;
 const APP_DEFLAYOUT=[['wechat','phoneapp','settings','album','worldbook','browser','spy','shop','calendar','x','douyin','food','couple','tasks','games'],['mail','offline','roleplay','travel','music','cinema','pixelhome','pet'],[]];
 const HOME_DOCK_DEFAULT=['calendar','games','mail','settings'];
-const HOME_SHORTCUTS={clock:{e:'',c:'#1a1a1f',t:'时钟',icon:'calendar',run:()=>openApp('calendar')}};
+const HOME_SHORTCUTS={clock:{e:'',c:'#1a1a1f',t:'日历',icon:'calendar',run:()=>openApp('calendar')}};
 function homeGameEntriesMigrate(){if(S.couple)for(const field of ['grant','locks','limits']){const data=S.couple[field];if(data&&Object.prototype.hasOwnProperty.call(data,'aiaccount')){if(data.album===undefined)data.album=data.aiaccount;delete data.aiaccount;}}const keys={tale:'pixelhome',dread:'pet',aiaccount:'album'},map=k=>keys[k]||k;for(const k of ['appLayout','homeLayout'])if(Array.isArray(S.me[k]))S.me[k]=S.me[k].map(pg=>Array.isArray(pg)?pg.map(map):pg);if(Array.isArray(S.me.appDock))S.me.appDock=S.me.appDock.map(map);const slots=S.me.homeReferenceAppSlots;if(slots&&typeof slots==='object')for(const old of Object.keys(keys))if(Object.prototype.hasOwnProperty.call(slots,old)){if(!Object.prototype.hasOwnProperty.call(slots,keys[old]))slots[keys[old]]=slots[old];delete slots[old];}}
 function appLayoutInit(){homeGameEntriesMigrate();let L=S.me.appLayout;
   if(!Array.isArray(L)||!Array.isArray(L[0]))L=APP_DEFLAYOUT.map(p=>p.slice());

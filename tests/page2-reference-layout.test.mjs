@@ -31,7 +31,7 @@ test('page one reference layout and dock stay untouched',()=>{
 });
 
 test('page two has twelve unique app positions without duplicating a stored app',()=>{
-  assert.match(app,/const HOME_SHORTCUTS=\{clock:\{[^}]*t:'时钟'/);
+  assert.match(app,/const HOME_SHORTCUTS=\{clock:\{[^}]*t:'日历'/);
   assert.match(app,/_glassSecondPageLayoutV1/);
   assert.match(app,/H=\[first,rest\.slice\(0,12\),rest\.slice\(12\)\]/);
   assert.match(app,/reserved=new Set\(first\.concat\(dock\)\)/);
