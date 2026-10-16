@@ -34,7 +34,7 @@ OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1769_iOS453.zip"
 WEB_VERSION = "1769"
 REVIEWED_RUNTIME_COMMIT = "HEAD"
 MAIN_BASE_COMMIT = "bd9e52131cd8a299ea547b4291bf9c1b690b3410"
-FEATURE_COMMIT = "8dd79e0e"
+FEATURE_COMMIT = "187f5dc6e6f1ae0728ed9d7ce4d5818c96ba8fea"
 EVIDENCE_ROOT = ROOT.parent / ".codex-eight-chat-fixes" / ".codex_tmp"
 TEST_LOG = EVIDENCE_ROOT / "eight-chat" / "full-tests.log"
 PREVIOUS_ZIP = ROOT.parent / "最新私人版本覆盖包_v1767_iOS452.zip"
@@ -212,6 +212,9 @@ def validate(files: dict[str, bytes]) -> None:
     assert 'case "robot.speech.transcribe":' in bridge, "native robot speech bridge missing"
     assert "function wechatStripReasoningEnvelope(value)" in app, "package restored the pre-v1338 reasoning leak handling"
     assert "function browserLicenseBase(endpoint)" in text(files[BUNDLE + "license-gate.js"]), "package restored the pre-v1332 license gate"
+    for marker in ("function wxSearchJump(", "function chatJumpToMessage(", "function roleTextTranslationFlush(", "function groupTotalCap(", "function summaryPerspectiveIssue(", "function hisCollapseRepeats(", "PRIVATE_WEB_PARITY_V1769"):
+        assert marker in app, "audited shared feature missing: " + marker
+    assert ".wxs-page{" in index and "window.__northCssRetry=function" in index, "search styles or CSS retry omitted"
     assert index == alias, "index.html and 小手机.html must stay identical"
     assert f"window.__NORTH_SHELL_BUILD__='{WEB_VERSION}'" in index
     assert f"APP_VER='v{WEB_VERSION}" in app
@@ -657,14 +660,7 @@ def main() -> None:
             if name not in allowed:
                 assert files[name] == body, "unrelated main payload changed: " + name
         for name, body in reviewed.items():
-            if name == "请在Mac编译前先读.md": continue
-            if name in {BUNDLE+n for n in ("app.js", "index.html", "小手机.html", "repair.html")}:
-                assert text(files[name]) == re.sub(r"(?<![0-9a-fA-F])1767(?![0-9a-fA-F])", "1769", text(body)).replace("v1769 · 查岗截屏", "v1769 · 搜索与功能补齐"), "runtime beyond reviewed feature: " + name
-            elif name in {"PhoneCompanionTest/PhoneNativeBridge.swift", "PhoneCompanionTest/LocalPhoneWebView.swift", "PhoneCompanionTest.xcodeproj/project.pbxproj"}:
-                normalized = text(files[name]).replace("1.0.453", "1.0.452").replace("(453)", "(452)").replace("VERSION = 453;", "VERSION = 452;")
-                assert normalized == text(body), "native beyond reviewed feature/build: " + name
-            else:
-                assert files[name] == body, "payload beyond reviewed feature: " + name
+            assert files[name] == body, "payload differs from the reviewed final private tree: " + name
         css, prior_css = text(files[BUNDLE + "glass-theme.css"]), text(old.read(prefix + BUNDLE + "glass-theme.css"))
         assert "CHECKIN_SHORTCUTS_V1" in text(files[BUNDLE + "phone-shortcuts.js"])
         assert "struct CheckInOpenerIntent: AppIntent" in text(files["PhoneCompanionTest/CheckInShortcuts.swift"])
@@ -746,7 +742,7 @@ def main() -> None:
     assert "WEB_LOCAL_RECOVERY_MEDIA_V1" not in app, "web-only recovery entered private"
     log = text(TEST_LOG.read_bytes())
     passed_tests = int(re.search(r"pass (\d+)", log).group(1))
-    assert passed_tests >= 4184 and "fail 0" in log and "cancelled 0" in log, "latest complete test evidence missing"
+    assert passed_tests >= 4185 and "fail 0" in log and "cancelled 0" in log, "latest complete test evidence missing"
     browser_log = text((EVIDENCE_ROOT / "eight-chat" / "eight-browser.log").read_bytes())
     assert '"checkinActualPage"' in browser_log and '"nativeAck":true' in browser_log and '"visionHttp":true' in browser_log, "actual screenshot pipeline evidence missing"
     assert browser_log.count('"searchParityActualPage"') >= 2, "search actual UI evidence missing"
