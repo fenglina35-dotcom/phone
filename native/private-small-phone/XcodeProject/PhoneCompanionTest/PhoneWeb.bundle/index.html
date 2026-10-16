@@ -270,6 +270,35 @@ body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei
 .gsearch-av .avatar{width:40px!important;height:40px!important;border-radius:5px!important}
 .gsearch-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}.gsearch-main b{font-weight:500;font-size:15px}.gsearch-main span{font-size:14px;color:var(--gi-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gsearch-hit small{flex:0 0 auto;font-size:12px;color:var(--gi-sub)}
+/* 搜索聊天记录（微信样式）：按聊天分组，头像 + 名字 + 日期 + 命中片段 + 「共 N 条相关聊天记录」 */
+.wxs-page{--wxs-bg:#111;--wxs-field:#1f1f1f;--wxs-line:rgba(255,255,255,.08);--wxs-text:#e9e9ea;--wxs-sub:#7f7f84;--wxs-green:#3eb575;--wxs-link:#7d90a9;position:absolute;inset:0;display:flex;flex-direction:column;background:var(--wxs-bg);color:var(--wxs-text)}
+.wxlight .wxs-page{--wxs-bg:#ededed;--wxs-field:#fff;--wxs-line:rgba(0,0,0,.09);--wxs-text:#111;--wxs-sub:#888;--wxs-green:#07c160;--wxs-link:#576b95}
+.wxs-top{display:flex;align-items:center;gap:6px;padding:8px 14px 10px 6px;flex:0 0 auto}
+.wxs-back{flex:0 0 auto;width:34px;height:38px;display:flex;align-items:center;justify-content:center;border:0;padding:0;background:none;color:var(--wxs-text);cursor:pointer}
+.wxs-box{flex:1;min-width:0;display:flex;align-items:center;gap:8px;height:38px;padding:0 10px 0 12px;border-radius:8px;background:var(--wxs-field);color:var(--wxs-sub)}
+.wxs-box input{flex:1;min-width:0;border:0;background:none;color:var(--wxs-text);font:inherit;font-size:17px;outline:none;padding:0}
+.wxs-box input::placeholder{color:var(--wxs-sub)}
+.wxs-clear{flex:0 0 auto;width:18px;height:18px;border:0;border-radius:50%;padding:0;background:var(--wxs-sub);color:var(--wxs-field);font-size:14px;line-height:18px;text-align:center;cursor:pointer}
+.wxs-clear[hidden]{display:none}
+.wxs-cancel{flex:0 0 auto;border:0;background:none;color:var(--wxs-link);font:inherit;font-size:17px;padding:0 0 0 8px;cursor:pointer;white-space:nowrap}
+.wxs-scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.wxs-head{margin:0 0 0 16px;padding:12px 0 10px;font-size:14px;color:var(--wxs-sub);border-bottom:.5px solid var(--wxs-line)}
+.wxs-row{display:flex;align-items:flex-start;gap:12px;padding:12px 0 0 16px;cursor:pointer}
+.wxs-row:active{background:rgba(127,127,127,.12)}
+.wxs-av{flex:0 0 auto;padding-bottom:12px}
+.wxs-av .avatar{width:44px!important;height:44px!important;border-radius:6px!important;font-size:24px}
+.wxs-main{flex:1;min-width:0;padding:0 16px 12px 0;border-bottom:.5px solid var(--wxs-line)}
+.wxs-line{display:flex;align-items:baseline;gap:10px}
+.wxs-line b{flex:1;min-width:0;font-weight:400;font-size:17px;line-height:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wxs-line small{flex:0 0 auto;font-size:13px;color:var(--wxs-sub)}
+.wxs-snip{margin-top:2px;font-size:14px;line-height:21px;color:var(--wxs-sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wxs-snip b{font-weight:400;color:var(--wxs-green)}
+.wxs-count{margin-top:2px;font-size:13px;line-height:19px;color:var(--wxs-sub)}
+.wxs-count i{font-style:normal;color:var(--wxs-green)}
+.wxs-empty{padding:56px 24px;text-align:center;color:var(--wxs-sub);font-size:14px;line-height:1.8}
+/* 从搜索结果跳进聊天：被找到的那条消息闪一下 */
+@keyframes msgJumpHit{0%,60%{filter:brightness(1.55)}100%{filter:none}}
+.msg.msg-jump-hit .col{animation:msgJumpHit 2.2s ease-out}
 /* 群管理 / 角色设置页 */
 .gmanage-page{--gi-bg:#111;--gi-card:#1c1c1c;--gi-field:#262628;--gi-line:rgba(255,255,255,.07);--gi-text:#e9e9ea;--gi-sub:#8d8d92;--gi-green:#07c160;position:absolute;inset:0;display:flex;flex-direction:column;background:var(--gi-bg);color:var(--gi-text)}
 .wxlight .gmanage-page{--gi-bg:#ededed;--gi-card:#fff;--gi-field:#f2f2f4;--gi-line:rgba(0,0,0,.08);--gi-text:#111;--gi-sub:#888}
@@ -2835,6 +2864,7 @@ html.north-ios-home-safe .imsg-bar{padding-bottom:calc(24px + var(--north-ios-ho
 /* 作品文案里的 @ 也要挑出来 */
 .dyat-tx{color:#9ec6ff;font-weight:400;}
 </style>
+<script>/* 样式表偶尔在打开瞬间下载失败，页面会失去主屏组件样式；失败时自动换地址再载一次，不用退出重进。 */window.__northCssRetry=function(link){try{if(!link||link.dataset.retried)return;link.dataset.retried='1';var next=document.createElement('link');next.rel='stylesheet';next.href=link.href+(link.href.indexOf('?')<0?'?':'&')+'retry='+Date.now();next.dataset.retried='1';link.parentNode.insertBefore(next,link.nextSibling);}catch(_){}};</script>
 <link rel="stylesheet" href="glass-theme.css?v=1767&r=music-disc-color-1">
 <link rel="stylesheet" href="mail-outbox.css?v=1767" onerror="__northCssRetry(this)">
 <link rel="stylesheet" href="travel-home.css?v=1767" onerror="__northCssRetry(this)">

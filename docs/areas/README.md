@@ -79,3 +79,14 @@ v1762 补查全部卡片类型：角色发出的真人店铺外卖（marketfood�
 踩坑：普通scheduleReply不带note会被默认手动回复挡住，实际只出现生成与识图请求；不要改全局手动开关，应使用featureEventNote表示这一次已确认分享。不能把临时图片“取到”当作已保存，ACK必须晚于持久化。不能把截图仅存本机当真，真实识图会发给设置的服务。不能用全局未分账号的开场白或固定兜底。Windows的文件URL必须fileURLToPath，不能直接.pathname；漂移守护的KNOWN不能放宽。
 
 验证：tests/phone-shortcuts.test.mjs；scripts/check_chat_authorized_phone.cjs 使用 NORTH_CHECKIN_PREVIEW=1，模型HTTP和原生接口受控，prompt/myActivity/visionAPI/普通回复/图片库不替换；NORTH_CHECKIN_BASELINE=1复现原缺模块独立入口失败。原生编译和真实iPhone系统确认/截屏/冷启动仍须Mac验收，不以Windows绿灯代替。核对到：2026-10-16。
+
+
+## 聊天搜索与网页功能继承核对
+
+角色私聊与角色群的关键词搜索使用 wxSearchChats 按会话分组，wxSearchOpen 展开匹配项；wxSearchJump 设置一次性 _chatJump，扩大旧消息渲染窗口，restoreRenderScroll 消费定位并阻止置底覆盖。返回搜索页保留关键词与列表位置。gsearchRows/gsearchResultHTML 负责群内分类结果的点击定位；私人两个 HTML 入口必须包含 .wxs-page、明暗主题及 msgJumpHit 样式。
+
+已审查并同步的共享行为：聊天翻译批量排队及限流退避；groupReplyPlan 的角色条数覆盖与 aiGroupReplyRun 每轮总预算；手动总结的 summaryPerspectiveIssue；登录角色微信 hisMsgKey/hisCollapseRepeats 防重复；他人群气泡透明边框；私人 CSS 加载失败自动重试定义。
+
+审计不能只比较脚本文件名或打包完整性：旧 v1767 的文件齐全，但 app.js 里仍是旧功能。v1738、v1742 的行为回归现在必须同时跑网页和私人源码，已有旧实现19项失败证据。private-web-feature-parity 对上述关键函数比较实际代码；永久门禁双端守住函数标记。真实 HTML 搜索检查需覆盖超过默认窗口的旧消息、关键词与群命中、返回结果及浅色样式。
+
+刻意保留的差异：私人原生时长/管控/共享屏幕和 HomeKit；角色收件窄入口、后台任务、真人好友分段减负、文件备份与安全恢复合并；私人诊断扩展独立实现。网页 web-hotfix、网页云端额度/停用入口和 webRecovery* 不照抄进私人包。delivery.js 的私人肯德基上下文补判比网页多，保留；phone-shortcuts.js 两端保留各自已有入口并共享查岗追加模块。公共策略脚本和原生桥不为消除差异而覆盖。核对到2026-10-16。

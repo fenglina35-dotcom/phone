@@ -24,6 +24,21 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
    if(typeof NorthTravelFlight==='undefined'){const date='2099-10-05';tvInit().trips.push({id:'missing-component-saved-flight',accountId:'main',flightV2:true,from:'北京',to:'上海',date,dep:'09:00',arr:'11:00',cls:'economy',adults:1,children:0,infants:0,people:[{id:'role:'+role.id,name:role.name}],knownRoleIds:[role.id],status:'upcoming',payer:'ta',cid:role.id,price:100,_reminded:true});}
    openChat(role.id);
   });
+  if(process.env.NORTH_SEARCH_PARITY==='1'){
+   await page.evaluate(()=>{window.searchFixtureSaved={messages:msgs(testId).slice(),groups:S.groups,theme:S.me.wxTheme};const rows=msgs(testId);rows.splice(0,rows.length,...Array.from({length:420},(_,i)=>({id:'search-gate-'+i,role:i%2?'assistant':'user',type:'text',content:i===5?'定位词 较早消息':i===410?'定位词 最近消息':'普通消息 '+i,time:Date.now()-500000+i*500})));S.groups=(S.groups||[]).concat([{id:'search-gate-group',name:'搜索核验群',members:[testId],msgs:[{id:'search-group-hit',senderId:testId,type:'text',content:'定位词 群里的消息',time:Date.now()-1000}]}]);S.me.wxTheme='white';openChatSearch(testId);});
+   await page.locator('#wxs_in').fill('定位词');assert.equal(await page.locator('.wxs-row').count(),2);
+   assert.equal(await page.locator('.wxs-page').evaluate(n=>getComputedStyle(n).backgroundColor),'rgb(237, 237, 237)');
+   await page.locator('.wxs-row').filter({hasText:'较早消息'}).click();
+   await page.waitForFunction(()=>cur().p==='chat'&&document.querySelector('.msg-jump-hit[data-message-id="search-gate-5"]'));
+   const positioned=await page.locator('[data-message-id="search-gate-5"]').evaluate(n=>{const b=n.closest('.chatbg'),a=n.getBoundingClientRect(),r=b.getBoundingClientRect();return a.bottom>r.top&&a.top<r.bottom;});assert(positioned,'old matching message must be visibly positioned');
+   await page.evaluate(()=>back());assert.equal(await page.locator('#wxs_in').inputValue(),'定位词');assert.equal(await page.locator('.wxs-row').count(),2);
+   await page.evaluate(()=>{go('wechat');openWxSearch();});await page.locator('#wxs_in').fill('定位词');assert.equal(await page.locator('.wxs-row').count(),2,'one role row plus one group row');
+   await page.locator('.wxs-row').filter({hasText:'搜索核验群'}).click();await page.waitForFunction(()=>cur().p==='group'&&document.querySelector('.msg-jump-hit[data-message-id="search-group-hit"]'));
+   await page.evaluate(()=>go('gsettings',{id:'search-gate-group'}));await page.locator('#g_total').fill('4');await page.locator('.g-role-max').fill('2');await page.getByRole('button',{name:'完成',exact:true}).click();
+   assert.deepEqual(await page.evaluate(()=>{const g=S.groups.find(g=>g.id==='search-gate-group');return[g.totalMax,g.roleMsgMax[testId]];}),[4,2]);
+   await page.evaluate(()=>{const a=searchFixtureSaved;msgs(testId).splice(0,msgs(testId).length,...a.messages);S.groups=a.groups;S.me.wxTheme=a.theme;delete window.searchFixtureSaved;openChat(testId);});
+   console.log(JSON.stringify({privateApp,searchParityActualPage:{oldMessagePositioned:true,keywordPreserved:true,groupJump:true,lightTheme:true,groupLimitsSaved:true}}));
+  }
   // Real calendar UI: hidden-category defaults, saved participation switches and network setting.
   await page.evaluate(()=>{S.calendar=[];S.calendarPreferences={main:{legacyVisible:false}};S.calendarCollections=[{id:'gate-hidden',owner:'main',name:'隐藏分类',visible:false}];go('calendar');calNewEvent(todayStr());});
   await page.getByRole('textbox',{name:'日程标题',exact:true}).fill('手动新建可见回归');

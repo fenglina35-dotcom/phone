@@ -2890,7 +2890,7 @@ function render(){
   const _glass=glassThemeOn()&&!_isWxPage?' glass-app':'';
   const _wxG='';
   const _setG=glassThemeOn()&&c.p==='settings'?' settings-glass':'';
-  const _wxLightBase=['wechat','chat','pfchat','pfgroup','group','chatDetails','contactInfo','friendInfo','contactSettings','roleMoments','roleMomentDetail','roleFeatures'].includes(c.p)||c.p==='roleImageStudio'||c.p==='transferDetail'||c.p==='groupTransferDetail'||c.p==='grpSend'||c.p==='rpSend'||c.p==='tfSend'||c.p==='rpDetail';
+  const _wxLightBase=['wechat','wxsearch','chat','pfchat','pfgroup','group','chatDetails','contactInfo','friendInfo','contactSettings','roleMoments','roleMomentDetail','roleFeatures'].includes(c.p)||c.p==='roleImageStudio'||c.p==='transferDetail'||c.p==='groupTransferDetail'||c.p==='grpSend'||c.p==='rpSend'||c.p==='tfSend'||c.p==='rpDetail';
   const _wxLightDirectory=['wxmoment','wxlive','wxnearby','wxprofile','wxqr','wxscan','wxservices','wxsmarthome','wxwallet','wxchange','wxbank','wxfamily','wxbills','wxsupport','wxfavorites','wxalbum','wxemoji','wxsettings','wxaccounts','wxsteps','newfriends','wxonlychat','wxgroups','wxlabels','wxgroupcreate','contactEdit','hiscard','pffriends','pfchat','pfgroup','group','ginfo','gpick','gqr','gsearch','gmanage','gsettings','relnet','reledit','relperson'].includes(c.p);
   document.body.toggleAttribute('data-wechat-switches',_isWxPage||_wxLightBase||_wxLightDirectory||['hiswx','hischat','hislogin','hismoments','hisservices','hiswallet','hischange','hisbills','hisfavorites','hisalbum'].includes(c.p)||(c.p==='spy'&&_spyApp==='wechat'));
   const _wxL=(S.me.wxTheme==='white'&&(_wxLightBase||_wxLightDirectory))?' wxlight':'';

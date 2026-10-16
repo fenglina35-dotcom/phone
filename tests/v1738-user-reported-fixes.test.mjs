@@ -1,11 +1,15 @@
 /* v1738 用户反馈的六项：库外城市订票、总结视角误判、群聊气泡白边、群聊每人条数与总条数、搜索聊天记录分组与跳转。
    每一条都对着旧实现会失败的那个具体行为写。 */
-import test from 'node:test';
+import nodeTest from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
+const readBase=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
+for(const runtime of ['web','private']){
+const prefix='native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/';
+const read=p=>readBase(runtime==='private'&&!p.startsWith('native/')?prefix+p:p);
+const test=(name,run)=>nodeTest(runtime+': '+name,run);
 const app=read('app.js'),html=read('小手机.html');
 function fn(name){
   const m=new RegExp('(?:^|\\n)(?:async )?function '+name+'\\(').exec(app);assert.ok(m,'missing '+name);
@@ -201,3 +205,5 @@ test('the private App ships the same flight and rail booking files as the web bu
   for(const f of ['travel-flight.js','travel-flight-booking.js','travel-train.js','travel-train-booking.js'])
     assert.equal(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/'+f),read(f),f+' differs between web and private');
 });
+
+}

@@ -26,3 +26,12 @@ test('private shell contains every public runtime and stylesheet',()=>{
     }
   }
 });
+
+// Compare behavior-bearing code, not merely whether both shells list the same filenames.
+const webCore=fs.readFileSync(path.join(root,'app.js'),'utf8').replace(/\r\n/g,'\n');
+const privateCore=fs.readFileSync(path.join(privateRoot,'app.js'),'utf8').replace(/\r\n/g,'\n');
+function sharedFunction(source,name){const m=new RegExp('^(?:async )?function '+name+'\\(','m').exec(source);assert(m,'missing '+name);const tail=source.slice(m.index+1),next=/^(?:(?:async )?function |(?:const|let|var) )/m.exec(tail);return source.slice(m.index,next?m.index+1+next.index:undefined).trim();}
+for(const name of ['wxSearchChats','wxSearchBodyHTML','wxSearchOpen','wxSearchJump','chatJumpToMessage','restoreRenderScroll','gsearchRows','gsearchResultHTML','groupReplyPlan','groupTotalCap','aiGroupReplyRun','gsettingsSave','renderGroupSettingsPage','bubbleSingleLook','summaryPerspectiveIssue','summaryPerspectiveValid','manualWechatSummary','hisSeed','hisMsgKey','hisCollapseRepeats','roleTextTranslationRun','roleTextTranslationFlush','roleTextTranslationSchedule','retryRoleTextTranslation']){
+ test('private inherits the audited web behavior: '+name,()=>assert.equal(sharedFunction(privateCore,name),sharedFunction(webCore,name),name));
+}
+test('both private entrypoints include search theme, highlight and the CSS retry definition',()=>{for(const entry of ['index.html','小手机.html']){const s=fs.readFileSync(path.join(privateRoot,entry),'utf8');for(const marker of ['.wxs-page{','.wxlight .wxs-page{','.wxs-count i{','@keyframes msgJumpHit','window.__northCssRetry=function'])assert(s.includes(marker),entry+' missing '+marker);}});

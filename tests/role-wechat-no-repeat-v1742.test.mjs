@@ -2,12 +2,14 @@
    根因：hisSeed 把「查他手机」的聊天快照并进角色微信时按「方向+原文」逐字比对；模型每次刷新重写快照，
    同一句话只差空格、全角/半角逗号或把角色写成简称（「裴：」），就被当成新消息再追加一遍。
    第一个用例在旧实现上 3 → 5 → 7。 */
-import test from 'node:test';
+import nodeTest from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 
-const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
+for(const runtime of ['app.js','native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js']){
+const test=(name,run)=>nodeTest(runtime+': '+name,run);
+const app=fs.readFileSync(new URL('../'+runtime,import.meta.url),'utf8');
 const fn=name=>{const s=app.indexOf('\nfunction '+name+'(');assert.ok(s>=0,'missing '+name);const e=app.indexOf('\nfunction ',s+5);return app.slice(s+1,e);};
 function sandbox(){
   const S={me:{name:'North'},spy:{r:{wechat:[]}},hisWx:{}};
@@ -47,3 +49,5 @@ test('messages the user sent from the role account, payments and images survive 
   assert.deepEqual(msgs.map(m=>m.c),[A,'[转账 ¥20.00] 买粥','在吗',B]);
   assert.equal(msgs[1]._hisPaymentId,'p1');
 });
+
+}

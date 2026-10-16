@@ -18,9 +18,6 @@ const web=[...list(''),'小手机.html'],priv=[...list(PRIVATE),PRIVATE+'index.h
 
 /* 已知且已评估过的例外：写明原因，修好就从这里删掉。 */
 const KNOWN={
-  /* 私人入口的样式表 onerror 调用它，但私人入口没定义。只在本地样式表加载失败时才会执行（App 内本地文件几乎不会失败），
-     失败时只是少一次自动重试，不影响聊天。下一次私人包一并补上定义后删除这一行。 */
-  'private:__northCssRetry':true,
 };
 
 function definitions(files){

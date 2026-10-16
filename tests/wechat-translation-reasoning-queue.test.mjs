@@ -23,7 +23,6 @@ for(const file of files){
     assert.equal(c.wechatReasoningLeak('Let me think for a second, I miss you.'),false,'one ordinary sentence must not be over-blocked');
   });
 
-  if(file!==files[0])continue;
 
   /* v1738：一轮回复里的多条外语气泡合并成一次请求。以前每条各调一次模型，连发几句就连吃 429。 */
   const TRANSLATION_FUNCTIONS=['roleTextTranslationClean','roleTextTranslationPrompt','roleTextTranslationBatchPrompt','roleTextTranslationBatchParse','roleTextTranslationRetryable','roleTextTranslationBackoff','roleTextTranslationFailureLabel','roleTextTranslationRun','roleTextTranslationFlush','roleTextTranslationSchedule','translateRoleTextMessage','retryRoleTextTranslation'];
