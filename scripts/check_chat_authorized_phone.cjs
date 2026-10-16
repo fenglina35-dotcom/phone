@@ -68,8 +68,10 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
   }
   // Check-in exercises the actual HTML, IndexedDB, model routing and normal reply path.
   if(process.env.NORTH_CHECKIN_PREVIEW==='1'){
-   await page.evaluate(()=>PhoneShortcuts.open());assert(await page.getByText('快捷指令与查岗',{exact:true}).isVisible());assert(await page.getByRole('button',{name:'管理云端动作',exact:true}).isVisible());
-   if(!privateApp)assert(await page.getByRole('checkbox',{name:'查岗截屏',exact:true}).isDisabled());
+   await page.evaluate(()=>PhoneShortcuts.open());
+   // The web cannot take a screenshot check-in, so it must not show that page; it opens the cloud actions it can use.
+   if(!privateApp){assert.notEqual(await page.evaluate(()=>cur().p),'shortcutSettings');assert.equal(await page.getByText('查岗截屏',{exact:true}).count(),0);assert(await page.getByText('快捷指令自动化教程',{exact:true}).isVisible());assert(await page.getByText('你还没在情侣空间连接 North',{exact:false}).first().isVisible());assert(await page.getByText('第二步：在「快捷指令」App 里建快捷指令',{exact:true}).isVisible());await page.evaluate(()=>closeModal());await page.evaluate(()=>{openSettings();});assert(await page.getByText('替你发消息、向角色报告事件',{exact:true}).isVisible());await page.evaluate(()=>{closeModal();openChat(testId);});}
+   else{assert(await page.getByText('快捷指令与查岗',{exact:true}).isVisible());assert(await page.getByRole('button',{name:'管理云端动作',exact:true}).isVisible());}
    if(privateApp){
     await page.evaluate(()=>{window.checkinOriginalFetch=fetchT;window.checkinOriginalBridge=SmallPhoneNative.request;window.checkinNativeItem=null;window.checkinNativeEvents=[];window.checkinHttp=[];
      SmallPhoneNative.request=async(action,args)=>{if(action.startsWith('checkin.')){checkinNativeEvents.push(action);if(action==='checkin.configure')return{configured:true};if(action==='checkin.take')return checkinNativeItem||{found:false};if(action==='checkin.ack'){checkinNativeItem=null;return{removed:true};}}if(action==='storage.put')return{saved:true};if(action==='storage.delete')return{deleted:true};return checkinOriginalBridge(action,args);};

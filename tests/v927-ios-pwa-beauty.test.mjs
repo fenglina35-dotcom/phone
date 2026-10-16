@@ -8,8 +8,8 @@ const app = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
 const project = fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj', import.meta.url), 'utf8');
 
 test('v1184 web keeps private 1.0.315 compatibility', () => {
-  assert.match(app, /APP_VER='v1778 · 解锁时间单独列给角色'/);
-  assert.match(html, /__NORTH_SHELL_BUILD__='1778'/);
+  assert.match(app, /APP_VER='v1780 · 网页快捷指令教程'/);
+  assert.match(html, /__NORTH_SHELL_BUILD__='1780'/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 460;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.460;/g) || []).length, 12);
 });

@@ -81,6 +81,8 @@ v1762 补查全部卡片类型：角色发出的真人店铺外卖（marketfood�
 验证：tests/phone-shortcuts.test.mjs；scripts/check_chat_authorized_phone.cjs 使用 NORTH_CHECKIN_PREVIEW=1，模型HTTP和原生接口受控，prompt/myActivity/visionAPI/普通回复/图片库不替换；NORTH_CHECKIN_BASELINE=1复现原缺模块独立入口失败。门禁会核对截图在角色聊天中真实显示、停在别人聊天也会跳转。原生编译和真实iPhone系统确认/截屏/冷启动仍须Mac验收，不以Windows绿灯代替；continueInForeground 在自动化中是否额外询问、不查时是否完全无感须真机确认。核对到：2026-10-16（v1775/iOS456）。
 
 
+
+网页版（v1780 起）：查岗截屏只有私人 iPhone App 能做。网页的设置行小字改为「替你发消息、向角色报告事件」，PhoneShortcuts.open 在非私人原生时直接进入云端动作（未连接 North 时显示教程），云端动作窗口与生成结果窗口有「详细教程」（PhoneShortcuts.guide，只在网页 phone-shortcuts.js）。私人版不改。
 ## 情侣空间锁定到点自动解锁
 
 现在：角色锁 App（小手机内置 App 与伴生的真实 iPhone App）必须带解锁时间：[锁定|App名|到07:00]、[锁定|App名|3天]、2小时、30分钟、明晚10点；标签没写时间时依次：lockUntilFromText 从角色这条回复的可见话里找（锁到…/锁你N天/N小时后再给你开/明天中午再给你开，支持中文数字，内心块不算），再 lockUntilAsk 后台问角色一句（不进聊天，roleInterceptStage「锁定解锁时间」，账号或绑定变化则作废，只覆盖仍是默认值的记录），都失败才用下一个至少一小时后的 07:00；最长7天。无上下午词的「N点」取更近的上午或晚上（晚7点说「到十一点」是23点），补零写法 07:00 仍是早上。教角色的四处锁定说明都写了这条。applyControlTags 在执行任何锁定标签前用 lockUntilPrepare 取出时间段并还原标签，原锁定代码不变；执行完 lockUntilCommit 按前后快照只给新锁上（或已有时间的再次锁定）的目标记 S.couple.lockUntil（'int:'+内置键 / 'ext:'+外置ID），外置同时发 device.autoUnlock 给原生。lockUntilSweep 每30秒和回前台检查：到点内置删锁、外置发角色解锁命令；目标已被提前解锁就删记录。情侣空间「管控授权」页「ta锁住的」和打开被锁 App 的提示显示「还剩…·几月几日 HH:MM 自动解锁」。角色看到的锁定状态（buildSystem 内置控制台账与「你现在锁着ta的」、伴生外置状态、companionControlLedgerForParser）都附 lockUntilRoleNote「你定的解锁时间：…，还剩…」，否则角色被问锁到几点会说没设时间（v1779 实机）。「你现在锁着ta的」整段要求授权过内置 App，只用伴生锁真实 iPhone 时根本不出现，外置时间又埋在伴生设备长段里，角色仍说没设（v1781 实机）；现在 buildSystem 在授权判断之前单独加「# 你自己定的自动解锁时间」（lockUntilRoleRows，内置与外置都列）。自动限额锁（auto）不受影响。
