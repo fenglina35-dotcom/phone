@@ -9,8 +9,8 @@ const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProjec
 assert.match(source,/APP_VER='v1762 · 卡片记忆与抖音不重复'/);
 assert.match(html,/__NORTH_SHELL_BUILD__='1762'/);
 assert.match(sw,/BUILD='1762'/);
-assert.equal((project.match(/CURRENT_PROJECT_VERSION = 451;/g)||[]).length,12);
-assert.equal((project.match(/MARKETING_VERSION = 1.0.451;/g)||[]).length,12);
+assert.equal((project.match(/CURRENT_PROJECT_VERSION = 452;/g)||[]).length,12);
+assert.equal((project.match(/MARKETING_VERSION = 1.0.452;/g)||[]).length,12);
 
 assert.match(source,/const WECHAT_UNIFIED_SYSTEM=true/);
 assert.match(source,/function wechatNaturalOn\(\)\{return WECHAT_UNIFIED_SYSTEM;\}/);
