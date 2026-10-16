@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {lean,budget} from './mobile-budget024.mjs?build=050';
+import {lean,budget} from './mobile-budget024.mjs?build=053';
 
 // Matte surfaces use a bounded solid-angle diffuse approximation. Glossy
 // surfaces retain LTC; punctual highlights and the environment are untouched.

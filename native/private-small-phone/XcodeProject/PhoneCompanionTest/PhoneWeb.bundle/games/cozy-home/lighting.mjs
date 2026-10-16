@@ -1,5 +1,5 @@
 import * as T from 'three';
-import {lean} from './mobile-budget024.mjs?build=050';
+import {lean} from './mobile-budget024.mjs?build=053';
 import {RectAreaLightUniformsLib} from 'three/addons/lights/RectAreaLightUniformsLib.js';
 
 export function createLighting(scene,renderer,house){

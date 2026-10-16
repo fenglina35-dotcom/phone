@@ -35,7 +35,14 @@ export function installMirrorFrustum(mirror,renderer){
    if(!frustum.intersectsObject(o)){hidden.push(o);o.visible=false;}
   });
   mirror.userData.culledOutsideSurface=hidden.length;
-  try{return original.call(this,scene,camera);}finally{for(const o of hidden)o.visible=true;hidden.length=0;}
+  // Shade only texels sampled by this surface; preserve projection and all
+  // 768 pixels of reflection resolution. Padding covers bilinear filtering.
+  const oldScissor=target.scissor.clone(),oldTest=target.scissorTest;
+  const x=Math.floor(minX*target.width),y=Math.floor(minY*target.height);
+  target.scissor.set(x,y,Math.ceil(maxX*target.width)-x,Math.ceil(maxY*target.height)-y);target.scissorTest=true;
+  mirror.userData.reflectionPixels=target.scissor.z*target.scissor.w;
+  renderer.setRenderTarget(target);
+  try{return original.call(this,scene,camera);}finally{target.scissor.copy(oldScissor);target.scissorTest=oldTest;renderer.setRenderTarget(target);for(const o of hidden)o.visible=true;hidden.length=0;}
  };
  return ()=>{renderer.render=original;};
 }

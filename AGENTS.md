@@ -21,6 +21,18 @@
 - Checks may leave `.codex_tmp/` in the repository root. It is a by-product: remove it, do not
   commit it.
 
+## Web and private bundles call only what they define (after the v1747 incident)
+
+- The web build (root `*.js`, `小手机.html`) and the private App bundle (`PhoneWeb.bundle/`) share
+  much code but not the same `app.js`. In v1747 the private `app.js` and the shared `photo-album.js`
+  called `roleInterceptDiagnosticAction`, which only the web `app.js` defines: every private reply with
+  `[存共同相册|…]` threw, and a reply the model had already returned (and billed) showed as 模型未回复.
+- When you copy or merge code between the two bundles, or change a shared file, check that every
+  helper it calls is defined in the bundle that ships it, or call it behind `typeof name==='function'`.
+- `tests/cross-bundle-helper-drift.test.mjs` scans both directions in the normal suite and is a release
+  blocker. Do not silence it by widening its `KNOWN` list; an entry there needs a written reason and
+  is removed once fixed.
+
 ## Long-term maintenance documents
 
 - Before analyzing or changing code, read `docs/maintenance/README.md` and the four DOCX files it lists. Treat them as maintained project records, not temporary references.
@@ -107,5 +119,12 @@ ask whether a past fix is still included.
 - 网页/公开 North 伴生功能与私人伴生功能不同是正常且有意的设计，不得以功能一致或版本同步为由覆盖私人版。
 - 未经用户单独明确允许，不得修改私人伴生功能、原生桥或私人后台，不得把网页伴生改动复制进 PhoneWeb.bundle 或打入私人覆盖包。
 - 后续私人打包必须核对这项差异；公开版移除的屏幕总时长/逐 App 回传，以及网页对应入口的撤除，不得迁移到私人版。私人原有时长采集、管控、共享屏幕及其他伴生功能保持。
+
+## 私人版提示词里称呼用户本人为「North」（用户明确规则，2026-10-13）
+- 私人版里**写给角色看**的提示词，用「North」称呼用户本人，不写「用户」。角色的人设里一直认得这个名字。（这里的 North 是她的名字，不是公开版 App 的名字。）
+- 只能写在私人版专属的地方：`PhoneWeb.bundle/private-*.js`、私人原生代码、私人后台。**与公开版共用的文件（`app.js` 等）不得出现她的名字**，否则会进入公开版；共用文件里需要称呼时照旧写「用户」。
+- 不改：她自己写的人设原文、她自己说的话、只给分类/整理用的小模型看的说明。
+- 能做成自动替换就不要逐句手写。小 K 的云端通道已经这样做：设置项 `K_OWNER_NAME`，发给角色前把规则、感知事件、屏幕共享提示里的「用户」统一换成名字（云端代码不在本仓库，由维护小 K 的 Mac 会话管）。
+- 截至 2026-10-13，`private-robot-voice.js` 里 `ChatScreen` 的几句提示还写着「用户」，下次改到它时一并换掉。
 
 - 本轮唯一私人伴生例外授权：只移除新增“屏幕使用时间 · 自动上传”快捷指令云端卡片及读取定时器，原有私人伴生时长同步/管控/共享屏幕继续保留。不得扩大为其他私人改动。

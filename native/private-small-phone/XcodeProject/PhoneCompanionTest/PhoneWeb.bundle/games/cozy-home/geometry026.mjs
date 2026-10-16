@@ -1,5 +1,5 @@
 import {indexGeometryCompact} from './geometry-compact044.mjs';
-import {lean,budget,stage} from './mobile-budget024.mjs?build=050';
+import {lean,budget,stage} from './mobile-budget024.mjs?build=053';
 
 export async function indexStaticGeometry(root){
  if(!lean)return;

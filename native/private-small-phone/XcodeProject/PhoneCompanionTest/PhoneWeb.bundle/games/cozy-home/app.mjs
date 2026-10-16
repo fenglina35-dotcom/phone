@@ -1,19 +1,31 @@
-import {shareGLTFImages,sharedImageStats} from './shared-images044.mjs';
+import {createResumeTrace} from './resume-trace061.mjs';
+import {createFrameClock,createFrameLoop} from './frame-loop058.mjs';
+import {prepareGpuImages,finishGpuImages,gpuImageStats} from './gpu-images056.mjs';
+import {createRenderPassStats} from './render-passes055.mjs';
+import {installWallOcclusion} from './wall-occlusion054.mjs?build=055';
+import {cacheLocalTransforms} from './transform-cache054.mjs';
+import {createViewportSizer} from './viewport054.mjs';
+import {createFrameCosts} from './frame-cost054.mjs';
+import {createFrameProbe} from './frame-probe060.mjs?build=061';
+import {installRenderDiagnostics} from './render-diagnostics053.mjs?build=061';
+import {installTextureResidency} from './gpu-residency056.mjs';
+import {shareGLTFImages,sharedImageStats} from './shared-images056.mjs';
 import {createOpaqueSort} from './opaque-order043.mjs';
 import {findStandingPoint} from './player-exit037.mjs?build=041';
-import {installFemalePlayer} from './house-player036.mjs?build=051';
-import {installHouseMirrors} from './house-mirrors036.mjs?build=050';
-import {installHouseCharacter} from './house-character.mjs?build=050';
-import {advanceWalk,walkSeconds} from './walk030.mjs';
-import {bindSurfaceLights} from './surface-lights029.mjs?build=050';
-import {optimizeMatteLighting} from './material-performance027.mjs?build=050';
-import {indexStaticGeometry} from './geometry026.mjs?build=050';
+import {installFemalePlayer} from './house-player036.mjs?build=053';
+import {installHouseMirrors} from './house-mirrors036.mjs?build=056';
+import {installHouseCharacter} from './house-character.mjs?build=053';
+import {advanceWalk} from './walk030.mjs';
+import {bindSurfaceLights} from './surface-lights029.mjs?build=053';
+import {optimizeMatteLighting} from './material-performance027.mjs?build=053';
+import {indexStaticGeometry} from './geometry026.mjs?build=053';
 import {createFrameTiming} from './frame-timing026.mjs?build=041';
 import {createTouchLook} from './touch-look026.mjs';
-import {installMobileRendering} from './mobile-render025.mjs?build=050';
-import {mobile,lean,budget,stage,prepareMobileScene,resolution,bootComplete,toggleSharp,isSharp,qualityName} from './mobile-budget024.mjs?build=050';
+import {installMobileRendering} from './mobile-render025.mjs?build=053';
+import {mobile,lean,budget,stage,prepareMobileScene,resolution,bootComplete,toggleSharp,isSharp,qualityName} from './mobile-budget024.mjs?build=053';
 import {installWaterLife020} from './water-life-v020.mjs';
 import {installRoomControls} from './room-controls-v019.mjs';
+import {installLightVolume} from './light-volume062.mjs?build=062';
 import {installLivingInteractions} from './living-interactions-v018.mjs';
 import {refineLivingMaterials018,installWindowPictures018} from './living-materials-v018.mjs';
 import {finishAtmosphere017,bindStar017} from './refinements-v017.mjs';
@@ -31,7 +43,7 @@ import {applyDetailAssets} from './detail-assets.mjs';
 import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
 import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
 import {SSAOPass} from 'three/addons/postprocessing/SSAOPass.js';
-import {createLighting} from './lighting.mjs?build=045';
+import {createLighting} from './lighting.mjs?build=053';
 import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
 import {finishLivingRoom} from './living-finish.mjs';
 import {createLayoutEditor} from './layout-editor.mjs';
@@ -44,11 +56,11 @@ const show=(id,visible)=>{const el=$(id);if(el.hidden===visible)el.hidden=!visib
 const error=e=>{console.error(e);$('error').hidden=false;$('error').textContent='场景暂时没有加载成功。\n'+e.message;$('intro').hidden=true;};
 window.addEventListener('error',e=>error(e.error||new Error(e.message)));
 window.addEventListener('unhandledrejection',e=>error(e.reason));
-let mobileWarmResources=[];
+
 
 async function boot(){
  shareGLTFImages();
- let character=null,femalePlayer=null,mirrors=null;
+ let character=null,femalePlayer=null,mirrors=null,residency=null,renderPasses=null,lightVolume=null;
  const bootAt=performance.now();
  await stage('正在读取房屋布局…');
  const L=await fetch('./layout.json').then(r=>{if(!r.ok)throw new Error('无法读取户型数据');return r.json()});
@@ -60,9 +72,13 @@ async function boot(){
  // multisample framebuffer and an unused stencil plane while retaining native
  // canvas resolution, original textures and all scene detail.
  const renderer=new T.WebGLRenderer({canvas:$('view'),antialias:!mobile,stencil:false,powerPreference:'high-performance'});
+ const frameClock=createFrameClock(),frameLoop=createFrameLoop(render);
+ const frameProbe=createFrameProbe(renderer);
+ const resumeTrace=createResumeTrace({probe:frameProbe,read:()=>({draw:{...renderer.info.render},buffer:{width:renderer.domElement.width,height:renderer.domElement.height},camera:{x:camera.position.x,y:camera.position.y,z:camera.position.z,yaw:camera.rotation.y,pitch:camera.rotation.x}})});
  renderer.setOpaqueSort(createOpaqueSort(renderer));
  renderer.setPixelRatio(resolution());renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;
  renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;
+ await prepareGpuImages(renderer);
  const scene=new T.Scene();scene.background=new T.Color('#d6e5e5');
  const camera=new T.PerspectiveCamera(62,innerWidth/innerHeight,.05,200);camera.rotation.order='YXZ';const interactionCamera=camera.clone();
  await stage('正在准备客厅家具…');
@@ -80,14 +96,19 @@ async function boot(){
  const mobileRendering=installMobileRendering(scene,house,camera);const surfaceLights=bindSurfaceLights(scene,house.root);optimizeMatteLighting(scene);
  let composer=null,ao=null;
  if(!lean){composer=new EffectComposer(renderer);composer.addPass(new RenderPass(scene,camera));ao=new SSAOPass(scene,camera,innerWidth,innerHeight,32);ao.kernelRadius=1.7;ao.minDistance=.00035;ao.maxDistance=.003;ao.ssaoMaterial.fragmentShader=ao.ssaoMaterial.fragmentShader.replace('1.0 - occlusion','1.0 - occlusion * 0.55');composer.addPass(ao);composer.addPass(new OutputPass());budget.postprocessing=true;}
- let contextLost=false,recoveryFramePending=false;$('view').addEventListener('webglcontextlost',e=>{e.preventDefault();contextLost=true;});
- $('view').addEventListener('webglcontextrestored',()=>{contextLost=false;recoveryFramePending=true;renderer.shadowMap.needsUpdate=true;});
+ let contextLost=false,recoveryFramePending=false;$('view').addEventListener('webglcontextlost',e=>{e.preventDefault();contextLost=true;frameLoop.pause('context');frameClock.reset();});
+ $('view').addEventListener('webglcontextrestored',async()=>{
+  // Keep the recovery overlay until shaders are ready; a draw-call count alone
+  // is not proof of a recovered frame. Do not synchronously compile in input RAF.
+  try{mirrors?.invalidate();lightVolume?.invalidate();await renderer.compileAsync(scene,camera);contextLost=false;recoveryFramePending=true;renderer.shadowMap.needsUpdate=true;frameClock.reset();frameLoop.resume('context');}
+  catch(e){error(e);}
+ });
  let fine=!lean&&renderer.extensions.has('EXT_color_buffer_float');
  function setQuality(){ $('quality').textContent=lean?('画质：'+qualityName()):(fine?'画质：细腻':'画质：流畅'); }
  $('quality').onclick=()=>{if(lean){toggleSharp();resize();}else fine=!fine&&renderer.extensions.has('EXT_color_buffer_float');setQuality();};setQuality();renderer.info.autoReset=false;renderer.shadowMap.autoUpdate=false;renderer.shadowMap.needsUpdate=true;
  const touchLook=createTouchLook(),frameTiming=createFrameTiming();
  const player={x:10.7,y:0,z:6.5,yaw:0,pitch:-.04};
- let mode='walk',started=false,seated=false,posture=null,postureEye=null,lastStand=null,eyeY=1.42,keys=new Set(),drag=null,joy={x:0,z:0},joyPointer=null,lastTime=0,noticeTimer,editor=null;
+ let mode='walk',started=false,seated=false,posture=null,postureEye=null,lastStand=null,eyeY=1.42,keys=new Set(),drag=null,joy={x:0,z:0},joyPointer=null,noticeTimer,editor=null;
  let lastHintTime=-Infinity,cachedAction=null;
  let orbit={yaw:.58,elevation:1.00,distance:22,target:new T.Vector3(7,0,6)},frames=0,soundOn=false,audioContext=null,lastFoot=0;
  function notice(s){$('notice').textContent=s;$('notice').classList.add('show');clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>$('notice').classList.remove('show'),2300);}
@@ -137,8 +158,12 @@ async function boot(){
   if(e.code==='Escape'){if(seated)interact();keys.clear();drag=null;}
  });
  addEventListener('keyup',e=>keys.delete(e.code));
- const clearInput=()=>{lastTime=0;touchLook.reset(player);keys.clear();drag=null;joyPointer=null;joy={x:0,z:0};$('stick').style.transform='';};
- addEventListener('blur',clearInput);addEventListener('pagehide',clearInput);addEventListener('orientationchange',clearInput);document.addEventListener('visibilitychange',()=>{if(document.hidden)clearInput();});
+ const clearInput=()=>{frameClock.reset();touchLook.reset(player);keys.clear();const viewId=drag?.id,stickId=joyPointer;drag=null;joyPointer=null;joy={x:0,z:0};$('stick').style.transform='';for(const [el,id]of [[$('view'),viewId],[$('joystick'),stickId]])if(id!=null&&el.hasPointerCapture(id))el.releasePointerCapture(id);};
+ const suspend=reason=>{clearInput();frameTiming.reset();frameLoop.pause(reason);};
+ const resume=reason=>{clearInput();frameTiming.reset();frameLoop.resume(reason);};
+ addEventListener('blur',clearInput);addEventListener('focus',clearInput);addEventListener('pagehide',()=>suspend('page'));addEventListener('pageshow',()=>resume('page'));addEventListener('orientationchange',clearInput);
+ document.addEventListener('visibilitychange',()=>document.hidden?suspend('hidden'):resume('hidden'));
+ if(document.hidden)frameLoop.pause('hidden');
  $('view').addEventListener('pointerdown',e=>{if(!started||editor?.active)return;if(drag)return;touchLook.begin(player);drag={id:e.pointerId,x:e.clientX,y:e.clientY,startX:e.clientX,startY:e.clientY};$('view').setPointerCapture(e.pointerId);});
  $('view').addEventListener('pointermove',e=>{
   if(editor?.active||!drag||drag.id!==e.pointerId)return;
@@ -157,18 +182,23 @@ async function boot(){
  for(const ev of ['pointerup','pointercancel','lostpointercapture'])addEventListener(ev,endJoy,true);
  for(const ev of ['touchend','touchcancel'])addEventListener(ev,e=>{if(!e.touches.length){joyPointer=null;joy={x:0,z:0};$('stick').style.transform='';}},{capture:true,passive:true});
  const viewportSize=()=>{const v=mobile?visualViewport:null;return {width:Math.max(1,Math.round(v?.width||document.documentElement.clientWidth||innerWidth)),height:Math.max(1,Math.round(v?.height||document.documentElement.clientHeight||innerHeight))}};
- function resize(){const {width,height}=viewportSize();camera.aspect=width/height;camera.updateProjectionMatrix();interactionCamera.aspect=camera.aspect;interactionCamera.updateProjectionMatrix();renderer.setPixelRatio(resolution(width,height));renderer.setSize(width,height,false);composer?.setSize(width,height);ao?.setSize(Math.round(width*.7),Math.round(height*.7));document.documentElement.style.setProperty('--cozy-vh',height+'px');}let resizeFrame=0;const scheduleResize=()=>{cancelAnimationFrame(resizeFrame);resizeFrame=requestAnimationFrame(()=>requestAnimationFrame(resize));};addEventListener('resize',scheduleResize);addEventListener('orientationchange',scheduleResize);visualViewport?.addEventListener('resize',scheduleResize);visualViewport?.addEventListener('scroll',scheduleResize);resize();
+ const viewportSizer=createViewportSizer({renderer,camera,interactionCamera,composer,ao,resolution,readSize:viewportSize,onHeight:height=>document.documentElement.style.setProperty('--cozy-vh',height+'px')}),resize=viewportSizer.resize,frameCosts=createFrameCosts();let resizeFrame=0;const scheduleResize=()=>{cancelAnimationFrame(resizeFrame);resizeFrame=requestAnimationFrame(()=>requestAnimationFrame(resize));};addEventListener('resize',scheduleResize);addEventListener('orientationchange',scheduleResize);visualViewport?.addEventListener('resize',scheduleResize);visualViewport?.addEventListener('scroll',scheduleResize);resize();
   function render(time){
-  if(contextLost){lastTime=0;requestAnimationFrame(render);return;}
-  if(recoveryFramePending){clearInput();frameTiming.reset();renderer.resetState();resize();renderer.shadowMap.needsUpdate=true;}
-  if(document.hidden){lastTime=0;frameTiming.reset();requestAnimationFrame(render);return;}
+  if(contextLost||document.hidden)return;
+  if(recoveryFramePending){clearInput();frameTiming.reset();renderer.resetState();resize(true);renderer.shadowMap.needsUpdate=true;}
 
-  if(lastTime)frameTiming.record(time-lastTime);
-
-  // After a main-thread stall, never replay a stale held direction.
-  if(lastTime&&time-lastTime>350)clearInput();
+  resumeTrace.begin();frameCosts.begin();
+  const tick=frameClock.tick(time);if(tick.rawMs)frameTiming.record(tick.rawMs);
+  // Slow frames retain elapsed time; suspended frames are discarded.
+  // Substep collision and animation together, render once.
+  if(tick.stalled)clearInput();
   let cameraLook=player;
-  const elapsed=lastTime?(time-lastTime)/1000:.016,walkDt=walkSeconds(elapsed),dt=Math.min(.04,elapsed);lastTime=time;frames++;house.update(dt);const gateMoved=house.basementFinish.update(dt,player),doorMoved=house.architecture.update(dt,player);if(gateMoved||doorMoved)renderer.shadowMap.needsUpdate=true;if(time<wardrobeMovingUntil)renderer.shadowMap.needsUpdate=true;lighting.update(dt);windowPictures.update();life.update(dt,camera);const timeLabel=lighting.state().mode==='day'?'时段：白天':'时段：夜晚';if($('lighting').textContent!==timeLabel)$('lighting').textContent=timeLabel;roomControls.update(dt);livingInteractions.update(dt);
+  frames++;
+  // Visual/environment work needs the final pose once, not every collision step.
+  house.update(tick.seconds);lighting.update(tick.seconds);windowPictures.update();life.update(tick.seconds,camera);roomControls.update(tick.seconds);livingInteractions.update(tick.seconds);
+  const timeLabel=lighting.state().mode==='day'?'时段：白天':'时段：夜晚';if($('lighting').textContent!==timeLabel)$('lighting').textContent=timeLabel;
+  for(let step=0;step<tick.steps;step++){
+  const dt=tick.stepSeconds,walkDt=dt;const gateMoved=house.basementFinish.update(dt,player),doorMoved=house.architecture.update(dt,player);if(gateMoved||doorMoved)renderer.shadowMap.needsUpdate=true;if(time<wardrobeMovingUntil)renderer.shadowMap.needsUpdate=true;
   character?.update(dt);
   if(editor?.active){editor.update();$('interact').hidden=true;}
   else if(mode==='walk'){
@@ -188,10 +218,12 @@ async function boot(){
    camera.position.set(orbit.target.x+Math.sin(orbit.yaw)*Math.cos(orbit.elevation)*orbit.distance,orbit.target.y+Math.sin(orbit.elevation)*orbit.distance,orbit.target.z+Math.cos(orbit.yaw)*Math.cos(orbit.elevation)*orbit.distance);
    camera.lookAt(orbit.target);$('roomName').textContent=mode==='main'?'主层全景':'地下层全景';$('floorName').textContent='同一场景 · 剖切';
   }
-  surfaceLights.update(!!editor?.active);if(mobileRendering.update(player,dt,mode!=='walk',!!editor?.active))surfaceLights.refresh();
-  femalePlayer?.update(dt,cameraLook);renderer.info.reset();if(fine)composer.render();else renderer.render(scene,camera);
+  }
+  femalePlayer?.update(tick.seconds,cameraLook);
+  surfaceLights.update(!!editor?.active);if(mobileRendering.update(player,tick.seconds,mode!=='walk',!!editor?.active))surfaceLights.refresh();
+  lightVolume?.update();residency?.begin(time);renderer.info.reset();mirrors?.beginFrame(time);renderPasses?.begin();frameCosts.draw();resumeTrace.draw();frameProbe.begin();if(fine)composer.render();else renderer.render(scene,camera);frameProbe.end();residency?.end();frameCosts.end();renderPasses?.end();resumeTrace.end();
   if(recoveryFramePending&&!renderer.getContext().isContextLost()&&renderer.info.render.calls>0){recoveryFramePending=false;$('view').dispatchEvent(new Event('cozy-render-restored'));}
-  requestAnimationFrame(render);
+
  }
  editor=createLayoutEditor({scene,camera,renderer,house,world,lighting,notify:notice,onActive:active=>{
   mobileRendering.restore();livingInteractions.refresh();clearInput();seated=false;setPeople('off');
@@ -201,38 +233,35 @@ async function boot(){
  }});
  await stage('正在准备第一帧画面…');
  camera.position.set(10.7,1.42,6.5);scene.updateMatrixWorld(true);
- // On iPhone, never draw the six rooms with their real materials during boot.
- // Doing so keeps every HD texture, geometry buffer and mirror target resident
- // at once; WebKit then degrades live materials to black/white under GPU pressure.
+ // Compile without uploading distant room images or replacing live materials.
  if(!mobile)await renderer.compileAsync(scene,camera);mobileRendering.update(player,.13,false,false);
  await stage('正在接入罗兰与动作…');character=await installHouseCharacter({scene,house,world,renderer,camera,player,roomControls,livingInteractions,getPlayerPosture:()=>({seated,eyeY})});
  await stage('正在接入你的角色与实时镜面…');femalePlayer=await installFemalePlayer({scene,camera,world,player,house,getState:()=>({seated,posture,mode,editing:!!editor?.active})});mirrors=installHouseMirrors(scene,house,{mobile:matchMedia('(pointer:coarse)').matches,world});
+ // Rough materials take local lights from the irradiance volume. Compile every
+ // room's converted programs now (screen and mirror targets) so walking into a
+ // room never compiles shaders mid-game.
+ await stage('正在准备房间光影…');lightVolume=installLightVolume(renderer,scene);lightVolume.update(true);
+ {mobileRendering.restore();const volumeCompileTarget=new T.WebGLRenderTarget(1,1,{type:T.HalfFloatType});await renderer.compileAsync(scene,camera);renderer.setRenderTarget(volumeCompileTarget);await renderer.compileAsync(scene,camera);renderer.setRenderTarget(null);volumeCompileTarget.dispose();mobileRendering.update(player,.13,false,false);surfaceLights.refresh();}
  if(mobile){
-  // Compile room shader variants with isolated one-pixel stand-ins. Formal
-  // scene materials are restored before every warm draw finishes, so Safari
-  // cannot cache a stand-in against a character, floor or furniture material.
-  await stage('正在准备房间光影…');const savedPosition=camera.position.clone(),savedQuaternion=camera.quaternion.clone();
-  const warmDraw=()=>{const warmMaps=new Map(),materialClones=new Map(),objectSwaps=[],warmTexture=source=>{const key=source.colorSpace||'';if(warmMaps.has(key))return warmMaps.get(key);const t=new T.DataTexture(new Uint8Array([255,255,255,255]),1,1,T.RGBAFormat);t.colorSpace=source.colorSpace;t.needsUpdate=true;warmMaps.set(key,t);return t;};
-   const cloneMaterial=source=>{if(materialClones.has(source))return materialClones.get(source);const clone=source.clone();clone.onBeforeCompile=source.onBeforeCompile;clone.customProgramCacheKey=source.customProgramCacheKey;for(const key of Object.keys(clone)){const texture=clone[key];if(texture?.isTexture&&key!=='envMap')clone[key]=warmTexture(texture);}materialClones.set(source,clone);return clone;};
-   scene.traverse(o=>{if(!o.material||o.userData.liveMirror)return;objectSwaps.push([o,o.material]);o.material=Array.isArray(o.material)?o.material.map(cloneMaterial):cloneMaterial(o.material);});
-   try{renderer.render(scene,camera);}finally{for(const [o,material]of objectSwaps)o.material=material;mobileWarmResources.push(...materialClones.values(),...warmMaps.values());}
-  };
+  await stage('正在准备房间光影…');const savedPosition=camera.position.clone(),savedQuaternion=camera.quaternion.clone(),reflectionCompileTarget=new T.WebGLRenderTarget(1,1,{type:T.HalfFloatType});
   for(const name of ['living','kitchen','bed_vanity','bath_basin','office_work','cell_front']){
    const [x,y,z,yaw,pitch]=viewpoints[name],warm={x,y,z};mobileRendering.update(warm,.13,false,false);surfaceLights.refresh();
    const focus=new T.Vector3(x,y+1.05,z),offset=new T.Vector3(0,.42,2.1).applyEuler(new T.Euler(pitch*.65,yaw,0,'YXZ'));camera.position.copy(focus).add(offset);camera.lookAt(focus);scene.updateMatrixWorld(true);await renderer.compileAsync(scene,camera);
-   if(name==='bed_vanity'||name==='bath_basin')warmDraw();
+   // Compile the mirror output-color variant too, without drawing geometry or images.
+   renderer.setRenderTarget(reflectionCompileTarget);await renderer.compileAsync(scene,camera);renderer.setRenderTarget(null);
   }
-  // Keep the compiled programs but release warm geometry and mirror buffers.
-  // CPU input smoothing and allocation reductions remain active; stability
-  // takes priority over keeping all rooms resident on a phone GPU.
-  mirrors.releaseGPU();const geometries=new Set();scene.traverse(o=>{if(o.geometry)geometries.add(o.geometry);});geometries.forEach(geometry=>geometry.dispose());
-  const warmSet=new Set(mobileWarmResources);let warmResourceLeaks=0;scene.traverse(o=>{for(const material of Array.isArray(o.material)?o.material:o.material?[o.material]:[]){if(warmSet.has(material))warmResourceLeaks++;for(const value of Object.values(material))if(warmSet.has(value))warmResourceLeaks++;}});budget.warmResourceLeaks=warmResourceLeaks;if(warmResourceLeaks)throw new Error('临时预热材质没有完全退出正式场景');
+  reflectionCompileTarget.dispose();
   camera.position.copy(savedPosition);camera.quaternion.copy(savedQuaternion);mobileRendering.update(player,.13,false,false);surfaceLights.refresh();
  }
+ finishGpuImages();
+ const transformCache=cacheLocalTransforms(scene),occlusion=installWallOcclusion(renderer,scene,house,camera,{enabled:()=>mode==='walk'&&!editor?.active});
+ renderPasses=createRenderPassStats(renderer,mirrors);
+ mirrors.setVisibilityGuard(occlusion.withFullVisibility);mirrors.beginFrame();
+ residency=installTextureResidency(scene,renderer);
  renderer.render(scene,camera);budget.firstFrameMs=Math.round(performance.now()-bootAt);bootComplete();
- editor.setActive(false);$('start').disabled=false;$('start').innerHTML='进入小家 <span>→</span>';setMode('walk');requestAnimationFrame(render);
+ editor.setActive(false);$('start').disabled=false;$('start').innerHTML='进入小家 <span>→</span>';setMode('walk');frameLoop.start();
  // Test/export entry points. Presentation controls don't bypass collision during normal walking.
- window.cozy={ready:true,revision:52,sharedImageStats,femalePlayer,mirrors,touchLook,frameTiming,budget,mobileRendering,life,windowPictures,roomControls,livingInteractions,lighting,L,world,player,house,camera,scene,renderer,editor,
+ window.cozy={ready:true,revision:62,lightVolume,resumeTrace,frameProbe,frameClock,frameLoop,gpuImageStats,renderPasses,occlusion,frameCosts,viewportSizer,transformCache,residency,sharedImageStats,femalePlayer,mirrors,touchLook,frameTiming,budget,mobileRendering,life,windowPictures,roomControls,livingInteractions,lighting,L,world,player,house,camera,scene,renderer,editor,
   state:()=>({lighting:lighting.state(),mode,seated,posture,started,player:{...player},frames,peopleMode,fridgeOpen:house.kitchenMechanisms019.fridgeDoors.some(g=>g.userData.mechanism018.open),drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles}),
   start:()=>{$('start').click()},officeOverview,setMode,setPeople,viewpoints,
   useSeat:id=>{if(seated)return notice('请先起身');const r=house.playerSeat(id);if(r.seat){lastStand={...player};seated=true;posture=r.posture;postureEye=r.eye;Object.assign(player,r.seat);}notice(r.message);},
@@ -250,8 +279,4 @@ async function boot(){
   }
  };
 }
-boot().then(()=>{const v=new URLSearchParams(location.search).get('view');if(window.cozy?.viewpoints[v]){cozy.start();if(v==='office_overhead')cozy.officeOverview();else cozy.setPosition(...cozy.viewpoints[v]);}}).catch(error);
-
-
-
-
+boot().then(()=>{installRenderDiagnostics(cozy);const v=new URLSearchParams(location.search).get('view');if(window.cozy?.viewpoints[v]){cozy.start();if(v==='office_overhead')cozy.officeOverview();else cozy.setPosition(...cozy.viewpoints[v]);}}).catch(error);

@@ -114,7 +114,7 @@ test('⑦ a native request cannot hang the backup forever', async () => {
     assert.match(e.message, /没有回应/);
     return true;
   });
-  assert.ok(Date.now() - started >= 4500, '必须真的等到超时才中断');
+  assert.ok(Date.now() - started >= 4510, '必须真的等到超时才中断');
 
   // 正常回应不受影响
   sandbox.window.SmallPhoneNative.request = () => Promise.resolve({ ok: true });

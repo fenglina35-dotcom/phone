@@ -180,3 +180,24 @@ test('MiniMax external TTS omits an empty or unknown emotion instead of sending 
  for(const body of bodies.slice(0,3))assert.equal('emotion' in body.voice_setting,false);
  assert.equal(bodies[3].voice_setting.emotion,'sad');
 });
+
+test('fish-mcp: forwards only allowed JSON-RPC to the fixed Fish MCP upstream without Origin; audio only from fish.audio',async()=>{
+ const calls=[];const handle=createHandler(async(url,init)=>{calls.push({url,init});return new Response('{"jsonrpc":"2.0","id":1,"result":{}}',{status:200,headers:{'Content-Type':'application/json','Mcp-Session-Id':'S9'}});});
+ const H={Origin:'https://fenglina35-dotcom.github.io','Content-Type':'application/json',Authorization:'Bearer fixture-access-token','Mcp-Session-Id':'S1','Mcp-Protocol-Version':'2025-06-18'};
+ const pre=await handle(new Request('https://relay.example/fish-mcp',{method:'OPTIONS',headers:{Origin:'null'}}));
+ assert.equal(pre.status,204);assert.match(pre.headers.get('access-control-allow-headers'),/authorization/);assert.equal(pre.headers.get('access-control-expose-headers'),'Mcp-Session-Id');
+ const ok=await handle(new Request('https://relay.example/fish-mcp',{method:'POST',headers:H,body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/call',params:{name:'text_to_speech',arguments:{text:'hi'}}})}));
+ assert.equal(ok.status,200);assert.equal(ok.headers.get('mcp-session-id'),'S9');
+ assert.equal(calls[0].url,'https://api.fish.audio/mcp');assert.equal(calls[0].init.headers.Origin,undefined,'Fish rejects browser origins, so none is sent');
+ assert.equal(calls[0].init.headers.Authorization,'Bearer fixture-access-token');assert.equal(calls[0].init.headers['Mcp-Session-Id'],'S1');assert.equal(calls[0].init.redirect,'manual');
+ const blocked=[
+  [{jsonrpc:'2.0',id:2,method:'tools/call',params:{name:'create_voice_clone',arguments:{}}},H,403],
+  [{jsonrpc:'2.0',id:3,method:'resources/read',params:{}},H,403],
+  [{jsonrpc:'2.0',id:4,method:'tools/list'},{...H,Authorization:''},401],
+  [{jsonrpc:'2.0',id:5,method:'tools/list'},{...H,Origin:'https://other.example'},403]];
+ for(const [body,headers,status] of blocked){const r=await handle(new Request('https://relay.example/fish-mcp',{method:'POST',headers,body:JSON.stringify(body)}));assert.equal(r.status,status,JSON.stringify(body));}
+ for(const u of ['https://evil.example/a.mp3','http://cdn.fish.audio/a.mp3','https://fish.audio.evil.example/a.mp3']){const r=await handle(new Request('https://relay.example/fish-mcp-audio',{method:'POST',headers:H,body:JSON.stringify({url:u})}));assert.equal(r.status,403,u);}
+ assert.equal(calls.length,1,'blocked requests never reach the network');
+ const au=await handle(new Request('https://relay.example/fish-mcp-audio',{method:'POST',headers:H,body:JSON.stringify({url:'https://cdn.fish.audio/x/1.mp3'})}));
+ assert.equal(au.status,200);assert.equal(calls[1].url,'https://cdn.fish.audio/x/1.mp3');assert.equal(calls[1].init.method,'GET');assert.equal(calls[1].init.headers,undefined,'the Fish login is not sent to the audio host');
+});

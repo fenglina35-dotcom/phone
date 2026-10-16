@@ -47,18 +47,18 @@ function functionSource(sourceText, name) {
 
 test('private identifiers remain v1355 and iOS 399 while public advances independently', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1739'/);
-  assert.match(index, /app\.js\?v=1739&r=v1739-private-package-1/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1765'/);
+  assert.match(index, /app\.js\?v=1765&r=v1765-private-package-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(app, /APP_VER='v1739 · 心声展开与思考摘要'/);
+  assert.match(app, /APP_VER='v1765 · 卡片记忆与抖音不重复'/);
   assert.match(overlay, /336-daily-file-backup/);
-  assert.match(webview, /1\.0\.439 \(439\)/);
-  assert.match(bridge, /private static let build = "1\.0\.439 \(439\)"/);
+  assert.match(webview, /1\.0\.451 \(451\)/);
+  assert.match(bridge, /private static let build = "1\.0\.451 \(451\)"/);
   assert.match(bridge, /static let contractVersion = 42/);
-  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 439;/g) || []).length, 12);
-  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.439;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1740 · 心声展开与思考摘要'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1740'/);
+  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 451;/g) || []).length, 12);
+  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.451;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1762 · 卡片记忆与抖音不重复'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1762'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
@@ -160,11 +160,11 @@ test('Mac guide identifies the current private v1356 iOS422 source', () => {
     assert.match(guide, /Mac.*编译/);
     assert.match(guide, /真机|真实 iPhone/);
   }
-  assert.match(mac, /1\.0\.439 \(439\)/);
+  assert.match(mac, /1\.0\.451 \(451\)/);
   assert.match(mac, /原生桥.*38/);
   assert.match(install, /1\.0\.327 \(327\)/);
   assert.match(install, /原生桥.*35/);
-  assert.match(mac, /当前私人源码v1739[\s\S]*?iOS439/);
+  assert.match(mac, /当前私人源码v1765[\s\S]*?iOS451/);
   assert.match(mac, /网页.*推送/);
   assert.match(install, /私人内置网页 v1206/);
   assert.match(install, /两边共有/);

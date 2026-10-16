@@ -195,3 +195,9 @@ test('the render pipeline consumes a pending jump once and leaves normal opens p
   assert.match(html,/\.msg\.msg-jump-hit \.col\{animation:msgJumpHit/);
   assert.match(fn('wxSearchRun'),/!scopeId\|\|c\.id===scopeId/);
 });
+
+/* v1745：私人版 App 一直还是旧的订票文件（苏州→威海仍提示城市或日期无效）。私人版的四个订票文件与网页逐字节一致。 */
+test('the private App ships the same flight and rail booking files as the web build',()=>{
+  for(const f of ['travel-flight.js','travel-flight-booking.js','travel-train.js','travel-train-booking.js'])
+    assert.equal(read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/'+f),read(f),f+' differs between web and private');
+});

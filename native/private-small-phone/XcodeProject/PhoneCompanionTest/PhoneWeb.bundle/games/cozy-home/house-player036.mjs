@@ -1,6 +1,6 @@
 import * as T from 'three';
 import {createFemaleAvatar} from './female-avatar001.mjs?build=051';
-import {prepareMobileCharacter} from './mobile-budget024.mjs?build=050';
+import {prepareMobileCharacter} from './mobile-budget024.mjs?build=053';
 
 export async function installFemalePlayer({scene,camera,world,player,house,getState}){
  const avatar=await createFemaleAvatar();prepareMobileCharacter(avatar.root);scene.add(avatar.root);const pillows=[];const cushions=[];house.root.traverse(o=>{if(o.name.startsWith('Supported cotton pillow'))pillows.push({o,scale:o.scale.y});if(['Supported blue lumbar cushion','Soft five-point rose cushion','Round honey cushion'].includes(o.name))cushions.push(o)});

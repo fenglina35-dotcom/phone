@@ -1,11 +1,8 @@
 import * as T from 'three';
-import {budget} from './mobile-budget024.mjs?build=050';
+import {budget} from './mobile-budget024.mjs?build=053';
 
-// Safari pays the lighting loop cost for every light in every lit fragment,
-// including lights whose intensity is zero. Keep the authored lights as the
-// source of truth, but feed the renderer a small, fixed-size cohort for the
-// current room. The slot count never changes, so walking between rooms cannot
-// trigger shader recompilation or the accompanying long frame.
+// Light ownership follows manual switches, never the player's location.
+// Surface masks bound the fragment work using object/light positions.
 export function installMobileRendering(scene,house,camera){
  const sources={area:[],point:[],spot:[]};
  scene.traverse(l=>{
@@ -15,18 +12,7 @@ export function installMobileRendering(scene,house,camera){
   else if(l.isSpotLight)sources.spot.push(l);
  });
  const originalCount=sources.area.length+sources.point.length+sources.spot.length;
- for(const list of Object.values(sources))for(const light of list){light.userData.mobileRenderSource=true;light.visible=false;}
-
- const slots={area:[],point:[],spot:[]};
- const addSlot=(kind,light)=>{light.name=`Mobile ${kind} light slot`;light.userData.mobileRenderSlot=true;light.castShadow=false;light.intensity=0;scene.add(light);slots[kind].push(light);return light;};
- for(let i=0;i<4;i++)addSlot('area',new T.RectAreaLight(0xffffff,0,1,1));
- for(let i=0;i<3;i++)addSlot('point',new T.PointLight(0xffffff,0,0,2));
- for(let i=0;i<2;i++){const light=addSlot('spot',new T.SpotLight(0xffffff,0,0,Math.PI/4,0,2));light.target.name='Mobile spot target';light.target.userData.mobileRenderSlot=true;scene.add(light.target);}
-
- const anchors={
-  kitchen:new T.Vector3(3.4,1.2,3.7),living:new T.Vector3(10.7,1.2,3.7),bedroom:new T.Vector3(18.3,1.2,3.7),bath:new T.Vector3(23.7,1.2,3.7),
-  office:new T.Vector3(10.2,1.2,12.3),rear:new T.Vector3(16.8,.4,11.8),basement:new T.Vector3(19.5,-1.6,14)
- };
+ const slots=sources;
  const zoneAt=p=>p.y<-.7?'basement':p.z>7.8?(p.x<13.2?'office':'rear'):p.x<6.6?'kitchen':p.x<14.6?'living':p.x<21.2?'bedroom':'bath';
  const structural=/door|hinge|finish|floor|ceiling|wallpaper|casing|roof/i,roomGroups=[];
  for(const object of house.main.children){
@@ -41,34 +27,8 @@ export function installMobileRendering(scene,house,camera){
   else if(bounds.max.z<=7.5&&bounds.min.x>=6.5&&bounds.max.x<=14.7)zone='living';
   if(zone)roomGroups.push({object,zone,visible:object.visible});
  }
- const worldPos=new T.Vector3(),worldQuat=new T.Quaternion(),playerPos=new T.Vector3(),sourceForSlot=new Map();
- let cohort='',sourceState='',visibilityState='';
- const intensityState=()=>Object.values(sources).flat().map(l=>`${l.visible?1:0}:${Math.round(l.intensity*1000)}`).join(',');
- const score=(light,anchor)=>{
-  const distance=light.getWorldPosition(worldPos).distanceToSquared(anchor);
-  // Prefer lights that can currently contribute. A zero-intensity lamp remains
-  // eligible as a spare slot, so a day/night switch can be copied immediately.
-  return distance+(light.intensity>0?0:400);
- };
- function select(zone,force=false){
-  const state=intensityState();if(!force&&zone===cohort&&state===sourceState)return false;
-  cohort=zone;sourceState=state;const anchor=anchors[zone]||anchors.living;
-  for(const kind of Object.keys(slots)){
-   const ranked=[...sources[kind]].sort((a,b)=>score(a,anchor)-score(b,anchor));
-   slots[kind].forEach((slot,i)=>sourceForSlot.set(slot,ranked[i]||null));
-  }
-  budget.lightCohort=cohort;return true;
- }
- function copyCommon(slot,source){
-  if(!source){slot.intensity=0;return;}
-  slot.visible=true;slot.color.copy(source.color);slot.intensity=source.intensity;
-  source.getWorldPosition(worldPos);source.getWorldQuaternion(worldQuat);slot.position.copy(worldPos);slot.quaternion.copy(worldQuat);
- }
- function sync(){
-  for(const slot of slots.area){const source=sourceForSlot.get(slot);copyCommon(slot,source);if(source){slot.width=source.width;slot.height=source.height;}}
-  for(const slot of slots.point){const source=sourceForSlot.get(slot);copyCommon(slot,source);if(source){slot.distance=source.distance;slot.decay=source.decay;}}
-  for(const slot of slots.spot){const source=sourceForSlot.get(slot);copyCommon(slot,source);if(source){slot.distance=source.distance;slot.decay=source.decay;slot.angle=source.angle;slot.penumbra=source.penumbra;source.target.getWorldPosition(worldPos);slot.target.position.copy(worldPos);}}
- }
+ const playerPos=new T.Vector3();
+ let visibilityState='';
  function roomVisibility(position,zone,overview,editing){
   const near=(x,z,d=3.2)=>Math.hypot(position.x-x,position.z-z)<d;
   const key=overview||editing?'all':`${zone}:${near(14.6,6)?1:0}${near(21.2,6)?1:0}${near(12.8,12.4)?1:0}`;if(key===visibilityState)return false;visibilityState=key;
@@ -80,11 +40,12 @@ export function installMobileRendering(scene,house,camera){
   budget.culledRoomGroups=hidden;return true;
  }
  function update(player,dt,overview=false,editing=false){
-  const position=Number.isFinite(player?.x)?playerPos.set(player.x,player.y,player.z):camera.position,zone=zoneAt(position),changed=select(zone);sync();return roomVisibility(position,zone,overview,editing)||changed;
+  const position=Number.isFinite(player?.x)?playerPos.set(player.x,player.y,player.z):camera.position,zone=zoneAt(position);
+  budget.lightCohort='manual-all-rooms';
+  return roomVisibility(position,zone,overview,editing);
  }
- function restore(){cohort='';sourceState='';visibilityState='';for(const record of roomGroups)record.object.visible=record.visible;}
- select('living',true);sync();roomVisibility(anchors.living,'living',false,false);
- budget.hiddenMeshes=0;budget.occlusionGroups=0;budget.localLightSlots=slots.area.length+slots.point.length+slots.spot.length;budget.persistentLights=originalCount;
- budget.localLightTypes={area:slots.area.length,point:slots.point.length,spot:slots.spot.length};budget.roomCullCandidates=roomGroups.length;budget.visibilityPolicy='fixed-room-light-cohort-and-occluded-rooms';
+ function restore(){visibilityState='';for(const record of roomGroups)record.object.visible=record.visible;}
+ budget.hiddenMeshes=0;budget.occlusionGroups=0;budget.localLightSlots=originalCount;budget.persistentLights=originalCount;
+ budget.localLightTypes={area:slots.area.length,point:slots.point.length,spot:slots.spot.length};budget.roomCullCandidates=roomGroups.length;budget.visibilityPolicy='manual-lights-and-occluded-rooms';
  return {update,restore,lights:Object.values(slots).flat(),sources,slots};
 }
