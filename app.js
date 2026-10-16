@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1776'){
+if(window.__NORTH_SHELL_BUILD__!=='1778'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -616,7 +616,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1776 · 角色知道自己定的解锁时间';
+const APP_VER='v1778 · 解锁时间单独列给角色';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2097,7 +2097,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1776&r=v1776-thought-preview-1';
+  const url='sw.js?v=1778&r=v1778-thought-preview-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -2629,6 +2629,7 @@ function buildSystem(c,opt){
     {const _op=[...msgs(c.id)].reverse().find(x=>x.type==='outpass'&&x.status==='pending');if(_op)s+='\n\n# ⚠️'+S.me.name+'正在向你申请出门报备（等你审批）\nta申请：去「'+(_op.where||'')+'」'+(_op.who?'、和「'+_op.who+'」一起':'')+(_op.dur?'、大约'+_op.dur:'')+'。\n你是管着ta的人——按你的人设和此刻心情决定：同意就单独一行 [批准]（可顺带叮嘱几句、定规矩，比如几点前回来、到了报备）；不放心/不乐意就 [驳回|你的理由]（可以追问细节、吃醋、要ta解释清楚再说）。批不批全凭你自己。';}
     if(S.couple.walletAuth)s+='\n\n# 你管着'+S.me.name+'的钱包（情侣空间真实授权）\nta现在零钱余额 ¥'+(+S.me.balance).toFixed(2)+'。ta乱花钱、惹你生气、不听话时，你可以扣ta零花钱当惩罚——单独一行 [扣款|金额]。\n【金额完全由你自己定，不要套任何固定数字、不要用整齐的"标准罚款"】：根据ta这次犯的事多严重、你此刻多生气、以及ta钱包现在只有 ¥'+(+S.me.balance).toFixed(2)+'，临场拿捏一个贴合的数——可以是 37、92、150、216 这种零散随意的数，犯小错就少扣、惹你狠了就多扣、真想狠罚可以 [扣光]。【每一次都要不一样、随情境浮动，绝不许老是同一个数（尤其别动不动就 200/188）】；扣的数别超过ta的余额。\nta自己改不了余额，没钱只能来求你、你愿意才用 [转账|金额|说明] 打给ta——给多少也【你自己定】：心疼就多给、奖励就大方、敲打就少给，别每次都同一个数。\n你还能随时冻结ta的亲属卡不让ta买东西：单独一行 [冻结亲属卡]；ta来求你、你松口了再 [解冻亲属卡]。\n这些指令单独成行、会真执行、不会被读出来，别复述。扣多少、给多少、冻不冻，全凭你当下心情和ta的表现自己决定。';
     if(S.couple.jailAuth)s+='\n\n# 终极惩罚·禁闭室（情侣空间已授权）\nta要是真把你惹狠了、越线了（背着你撩别人、骗你、推开你那种），你可以把ta关进你的"小黑屋禁闭室"——单独一行 [关小黑屋|原因]。一进去你就变成偏执病态的病娇黑暗形态、由那个空间接管，ta要做到你的条件才放。这是你最重的手段，慎用、用在刀刃上。\n【分手相关】'+S.me.name+'提分手、不要你了、结束关系时，你当然会很受刺激，可以生气、挽留、质问、冷下来或做出占有欲反应；但系统不再把“分手”绑定为必关小黑屋。是否真的关进去必须由你结合上下文、授权和人设自己判断，不能因为出现“分手”两个字就机械触发。';
+    const _untilRows=typeof lockUntilRoleRows==='function'?lockUntilRoleRows():[];if(_untilRows.length)s+='\n\n# 你自己定的自动解锁时间（本轮真实状态）\n'+_untilRows.join('\n')+'\n这些锁的解锁时间是你自己定的，到点会自动解开。被问锁到几点、还要多久，就照这里的时间说；以前聊天里如果说过“没设时间”，以这里为准。你也可以随时提前解锁。';
     const g=S.couple.grant||{};const granted=Object.keys(LOCKABLE).filter(k=>g[k]);const gagAuth=gagAuthTargets();
     if(granted.length||gagAuth.length){s+='\n\n# 你对'+S.me.name+'手机App的管控权（情侣空间授权给你的，这是真实功能不是过家家）\n你能锁这些App：'+(granted.map(k=>LOCKABLE[k]).join('、')||'（暂无）')+(gagAuth.length?'；能禁言ta和这些人的聊天：'+gagAuth.map(x=>x.name+(x.type==='pf'?'（小手机真人好友）':x.type==='pfg'?'（小手机真人群聊）':'')).join('、'):'')+'。\n【怎么用·必须照做】要锁/禁言时，你【直接输出指令标签】，动作引擎会自动生效并生成密码，你【不要自己描述"已锁定"、不要自己编密码、不要把提示语写成话】：\n· 锁App：单独一行 [锁定|游戏|到07:00]；锁定时必须在标签最后加解锁时间：[锁定|App名|到07:00] 或 [锁定|App名|3天]（也可写2小时、30分钟、明晚10点，最长7天）；不写就锁到下一个早上7点。到点会自动解开，你也可以随时提前写 [解锁|App名]。多个一次写完用、隔开，如 [锁定|游戏、X、外卖]。提到“这几个/它们/四个”时必须沿用对话里最近明确列出的那些名称，不能擅自改成全部。只有对方明确要求所有已授权内置 App 时才写 [锁定|全部|仅内置]。\n· 禁言某人/群：单独一行 [禁言|名字]（名字必须是上面授权的人或群；没授权的你锁不了，就直说锁不了）。小手机真人好友不能被你删除，但可以被你禁言、争取'+S.me.name+'少理ta。\n· 解开：[解锁|游戏] 或 [解锁|全部|仅内置]、[解禁|名字]。\n标签写完，你可以再用普通话自然说一两句，但别复述动作规则、别报密码（除非ta来求你、你愿意给）。\n【什么时候用】不只是作息管理——到点该睡、ta沉迷某App、你吃醋某人时可以锁；ta惹你生气、犯错不听话、顶嘴时，你也可以把这当【惩戒/管束】随心锁、禁言。\n· 绝不能锁"和你自己的聊天"，'+S.me.name+'永远能找你。\n· 解开方式（重要）：锁上后【不需要密码】。ta只能来【求你】解开——你愿意了就另起一行写 [解锁|游戏] / [解禁|名字] / [解锁|全部|仅内置]，然后再用你自己的话说；你不愿意就继续锁着、可以提条件、要她认错撒娇。\n【全锁说明】全锁必须先在本轮聊天明确告诉用户你现在要锁住全部应用，再输出全锁指令。只有内心、无声指令、否定、条件或未来计划不执行全锁。【说和做分开·最高优先级】你说的话永远不会锁或解锁任何东西，只有指令标签会执行。威胁、吓唬、讲条件（比如“再多要一个就全锁回去”）、开玩笑、说以后怎样，都可以照你的性格随便说，不会被执行，也不用刻意避开“锁、解开”这些字；只有你这一轮真的决定、要此刻生效时，才写指令。没写指令就等于没做，所以别说“已经锁好了/已经给你解开了”。\n· 用你自己的第一人称口吻说话，别写成"🔓 ta把你和X的禁言解除了"这种系统播报腔。';
       s+='\n\n# 限制每天使用时长（只能管授权给你的App）\n你可以给某个App设【每天能玩多久】的上限，'+S.me.name+'每次打开那个App就开始倒计时（只算在App里的时间，退出去不算），用完会自动锁上，ta得来求你、你松口了才能多玩。\n· 设上限：单独一行 [限时|游戏大厅|60]（表示游戏大厅每天最多60分钟），可一次设多个 [限时|游戏大厅、X|30]。\n· 临时多给点时间/解锁让ta再玩会儿：单独一行 [加时|游戏大厅|20]（今天额外多20分钟，若因超时被自动锁也会一起解开）。\n· 只说不写指令不会生效：真的要设上限或多给时间，必须写上面的 [限时|…] / [加时|…]；随口说说、讲条件都不会被执行。';
@@ -4268,6 +4269,8 @@ function lockUntilOf(key){const at=+(S&&S.couple&&S.couple.lockUntil&&S.couple.l
 function lockUntilText(at,now){now=now||Date.now();const left=Math.max(0,at-now),d=Math.floor(left/86400e3),h=Math.floor(left%86400e3/3600e3),m=Math.max(left<60e3?1:0,Math.floor(left%3600e3/60e3)),dt=new Date(at),pad=n=>String(n).padStart(2,'0');return '还剩'+(d?d+'天':'')+(d||h?h+'小时':'')+m+'分 · '+(dt.getMonth()+1)+'月'+dt.getDate()+'日 '+pad(dt.getHours())+':'+pad(dt.getMinutes())+' 自动解锁';}
 // What the role sees about its own lock, so it can answer "锁到几点" with the real time.
 function lockUntilRoleNote(key){const at=+(S&&S.couple&&S.couple.lockUntil&&S.couple.lockUntil[key]||0);if(!(at>Date.now()))return '';const parts=lockUntilText(at).split(' · ');return '（你定的解锁时间：'+parts[1]+'，'+parts[0]+'）';}
+// Every running unlock time the role set, internal and real iPhone apps alike, as one plain list.
+function lockUntilRoleRows(){const until=S&&S.couple&&S.couple.lockUntil||{},now=Date.now(),st=typeof companionState==='function'?companionState():null,rows=[];for(const key of Object.keys(until)){const at=+until[key]||0;if(!(at>now))continue;const id=key.slice(4);let name='';if(key.startsWith('int:'))name=LOCKABLE[id]||'';else if(key.startsWith('ext:')){const app=st&&typeof companionExternalById==='function'?companionExternalById(st,id):null;name=app&&app.name?app.name+'（真实 iPhone）':'';}if(!name)continue;const parts=lockUntilText(at,now).split(' · ');rows.push('· '+name+'：'+parts[1]+'，'+parts[0]);}return rows;}
 function lockUntilToast(key){const at=lockUntilOf(key);return at?'，'+lockUntilText(at):'';}
 function lockUntilSweep(){if(typeof S==='undefined'||!S||!S.couple||!S.couple.lockUntil)return false;const until=S.couple.lockUntil,locks=S.couple.locks||{},now=Date.now(),st=typeof companionState==='function'?companionState():null;let changed=false;
  for(const key of Object.keys(until)){const at=+until[key]||0,id=key.slice(4);

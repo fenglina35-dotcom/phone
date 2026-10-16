@@ -53,6 +53,20 @@ for (const file of ['app.js', PRIVATE_DIR + 'PhoneCompanionTest/PhoneWeb.bundle/
   });
 }
 
+for (const file of ['app.js', PRIVATE_DIR + 'PhoneCompanionTest/PhoneWeb.bundle/app.js']) {
+  test(file + ': the role gets one plain list of every running unlock time, real iPhone apps included', () => {
+    const c = lockUntil(file), now = Date.now();
+    c.LOCKABLE = { nearby: '附近的人' };
+    c.S = { couple: { lockUntil: { 'int:nearby': now + 3 * 3600e3, 'ext:ios.abc': now + 26 * 3600e3, 'ext:gone': now + 3600e3, 'int:nearby2': now - 1000 } } };
+    c.companionState = () => ({ apps: [{ id: 'ios.abc', name: '抖音' }] });
+    c.companionExternalById = (st, id) => st.apps.find(a => a.id === id) || null;
+    const rows = c.lockUntilRoleRows();
+    assert.equal(rows.length, 2, JSON.stringify(rows));
+    assert.match(rows[0], /^· 附近的人：\d+月\d+日 \d\d:\d\d 自动解锁，还剩(2小时59分|3小时0分)$/);
+    assert.match(rows[1], /^· 抖音（真实 iPhone）：/);
+  });
+}
+
 test('the role is told every lock needs an unlock time, in both bundles', () => {
   for (const file of ['app.js', PRIVATE_DIR + 'PhoneCompanionTest/PhoneWeb.bundle/app.js']) {
     const s = fs.readFileSync(file, 'utf8');
@@ -62,6 +76,7 @@ test('the role is told every lock needs an unlock time, in both bundles', () => 
     assert(s.includes("roleInterceptStage:'锁定解锁时间'"), file + ' asks the role in the background when no time was given');
     assert.equal(s.split("lockUntilRoleNote('int:'+k)").length - 1, 3, file + ': the role sees its own unlock time in every internal lock list');
     assert.equal(s.split("lockUntilRoleNote('ext:'+app.id)").length - 1, 2, file + ': and for real iPhone apps');
+    assert(s.includes("if(_untilRows.length)s+='\\n\\n# 你自己定的自动解锁时间（本轮真实状态）\\n'"), file + ': the list does not depend on internal app grants');
     assert(s.includes("${typeof lockUntilOf==='function'&&lockUntilOf(k)?esc(lockUntilText(lockUntilOf(k))):'已锁'}"), file);
   }
 });

@@ -6,11 +6,11 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-assert.match(source,/APP_VER='v1776 · 角色知道自己定的解锁时间'/);
-assert.match(html,/__NORTH_SHELL_BUILD__='1776'/);
-assert.match(sw,/BUILD='1776'/);
-assert.equal((project.match(/CURRENT_PROJECT_VERSION = 459;/g)||[]).length,12);
-assert.equal((project.match(/MARKETING_VERSION = 1.0.459;/g)||[]).length,12);
+assert.match(source,/APP_VER='v1778 · 解锁时间单独列给角色'/);
+assert.match(html,/__NORTH_SHELL_BUILD__='1778'/);
+assert.match(sw,/BUILD='1778'/);
+assert.equal((project.match(/CURRENT_PROJECT_VERSION = 460;/g)||[]).length,12);
+assert.equal((project.match(/MARKETING_VERSION = 1.0.460;/g)||[]).length,12);
 
 assert.match(source,/const WECHAT_UNIFIED_SYSTEM=true/);
 assert.match(source,/function wechatNaturalOn\(\)\{return WECHAT_UNIFIED_SYSTEM;\}/);
