@@ -38,18 +38,18 @@ function pollHarness(){
 }
 
 test('private candidate is v1355 and iOS 399 while public advances independently',()=>{
-  assert.match(app,/APP_VER='v1769 · 搜索与功能补齐'/);
+  assert.match(app,/APP_VER='v1771 · 快捷指令页外观修复'/);
   for(const html of [index,alias]){
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1769'/);
-    assert.match(html,/app\.js\?v=1769&r=v1769-private-package-1/);
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1771'/);
+    assert.match(html,/app\.js\?v=1771&r=v1771-private-package-1/);
     assert.match(html,/private-runtime-diagnostics\.js\?v=339/);
   }
   assert.match(diagnostics,/OVERLAY_VERSION='336-daily-file-backup'/);
-  assert.match(webView,/1\.0\.453 \(453\)/);
-  assert.match(bridge,/private static let build = "1\.0\.453 \(453\)"/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 453;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.453;/g)||[]).length,12);
-  assert.match(publicApp,/APP_VER='v1764 · 卡片记忆与抖音不重复'/);
+  assert.match(webView,/1\.0\.454 \(454\)/);
+  assert.match(bridge,/private static let build = "1\.0\.454 \(454\)"/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 454;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.454;/g)||[]).length,12);
+  assert.match(publicApp,/APP_VER='v1766 · 快捷指令页外观修复'/);
 });
 
 test('ordinary foreground polling is lightweight while explicit control verification stays complete',async()=>{
