@@ -29,6 +29,7 @@ actor CheckInStore {
         var mode: String? = nil
         var want: Int? = nil
         var wantAt: Double? = nil
+        var planAt: Double? = nil
     }
     private struct Fired: Codable { var day: String; var count: Int; var last: Date }
     struct Metadata: Codable, Sendable {
@@ -65,7 +66,7 @@ actor CheckInStore {
             !value.cid.isEmpty && value.cid.count <= 120 && !value.scope.isEmpty && value.scope.count <= 120
         let stored = Configuration(enabled: value.enabled && valid && !lines.isEmpty,
             account: value.account, cid: value.cid, scope: value.scope, lines: Array(lines.prefix(40)),
-            mode: value.mode == "always" ? "always" : "role", want: min(3, max(0, value.want ?? 1)), wantAt: value.wantAt)
+            mode: value.mode == "always" ? "always" : "role", want: min(3, max(0, value.want ?? 1)), wantAt: value.wantAt, planAt: value.planAt)
         if old?.scope != stored.scope || old?.account != stored.account || old?.cid != stored.cid || !stored.enabled {
             UserDefaults.standard.removeObject(forKey: approvalKey)
         }
@@ -82,12 +83,19 @@ actor CheckInStore {
         let hour = Calendar.current.component(.hour, from: now)
         if hour >= 23 || hour < 5 { chance = min(0.9, chance * 1.5) }
         let day = Self.dayText(now)
-        var fired = (UserDefaults.standard.data(forKey: firedKey)).flatMap { try? JSONDecoder().decode(Fired.self, from: $0) }
-        if fired?.day != day { fired = nil }
-        if let last = fired?.last, now.timeIntervalSince(last) < 45 * 60 { return false }
-        if (fired?.count ?? 0) >= 5 { return false }
+        let fired = (UserDefaults.standard.data(forKey: firedKey)).flatMap { try? JSONDecoder().decode(Fired.self, from: $0) }
+        let last = fired?.last ?? .distantPast // kept across midnight so a used plan never fires twice
+        let count = fired?.day == day ? fired?.count ?? 0 : 0
+        if now.timeIntervalSince(last) < 45 * 60 { return false }
+        if count >= 5 { return false }
+        // The role's own hidden time: nothing before it, the first trigger within two hours after it.
+        if let ms = config.planAt, ms > 0 {
+            let plan = Date(timeIntervalSince1970: ms / 1_000)
+            if now < plan { return false }
+            if now.timeIntervalSince(plan) < 2 * 3_600, last < plan { chance = 1 }
+        }
         guard Double.random(in: 0..<1) < chance else { return false }
-        let next = Fired(day: day, count: (fired?.count ?? 0) + 1, last: now)
+        let next = Fired(day: day, count: count + 1, last: now)
         if let data = try? JSONEncoder().encode(next) { UserDefaults.standard.set(data, forKey: firedKey) }
         return true
     }
