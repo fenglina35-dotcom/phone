@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1767'){
+if(window.__NORTH_SHELL_BUILD__!=='1769'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -640,7 +640,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1767 · 查岗截屏';
+const APP_VER='v1769 · 搜索与功能补齐';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -14010,12 +14010,6 @@ function hisAv(name,sz){sz=sz||40;const nm=(''+(name||'')).replace(/[（(][^)）
 /* 和「查他手机」互通：他微信里的好友/聊天同步到 spy 数据 */
 function hisSpyW(cid){S.spy=S.spy||{};S.spy[cid]=S.spy[cid]||{};S.spy[cid].wechat=S.spy[cid].wechat||[];return S.spy[cid].wechat;}
 function hisSpyFriend(cid,name){const w=hisSpyW(cid);let e=w.find(x=>x.who===name);if(!e){e={who:name,lines:[]};w.push(e);}e.lines=e.lines||[];return e;}
-function hisMsgKey(text){const raw=String(text==null?'':text).normalize('NFKC').replace(/[\s​-‏⁠﻿]/g,''),key=raw.replace(/[\p{P}\p{S}]/gu,'');return key||raw;}
-/* 修复已经存进去的重复：连续出现、逐条相同的一段（2 到 12 条，或单独一条较长的话）只留第一段。
-   只看纯文字消息，图片、表情、转账、红包和带付款记录的消息不动。返回删掉的条数。 */
-function hisCollapseRepeats(list){if(!Array.isArray(list)||list.length<2)return 0;const plain=m=>m&&(!m.type||m.type==='text')&&!m._hisPaymentId,same=(a,b)=>plain(a)&&plain(b)&&(a.r||(a.mine?'me':'ta'))===(b.r||(b.mine?'me':'ta'))&&hisMsgKey(a.c)===hisMsgKey(b.c);let removed=0;
-  for(let i=1;i<list.length;i++){for(let k=Math.min(12,i,list.length-i);k>=1;k--){let hit=true;for(let j=0;j<k&&hit;j++)hit=same(list[i-k+j],list[i+j]);if(!hit)continue;if(k===1&&hisMsgKey(list[i].c).length<6)continue;list.splice(i,k);removed+=k;i=Math.max(0,i-k-1);break;}}
-  return removed;}
 function hisSeed(cid){const c=getC(cid);const d=hisWxData(cid);const sp=(S.spy&&S.spy[cid])||{};const has=nm=>d.friends.some(f=>f.name===nm);let ch=false;const family=typeof relFamilyState==='function'?relFamilyState(cid):{},legacyFamily=!family.migrated;
   // 第一次、且查手机也没数据 → 给几个默认好友
   if(!d.seeded&&!(sp.wechat&&sp.wechat.length)&&!(c._gotFromMe&&c._gotFromMe.length)&&!d.friends.length){
@@ -14043,6 +14037,12 @@ function hisSeed(cid){const c=getC(cid);const d=hisWxData(cid);const sp=(S.spy&&
 /* 查他手机每次刷新都是模型重新写的一份聊天快照，同一句话常常只差一个空格、全角/半角逗号，或者把角色写成简称（「裴：」而不是「他：」）。
    以前按「方向+原文」逐字比对，这些差别会让同一句话被当成新消息再追加一遍，登录角色微信里的聊天就一段一段地重复。
    比对时去掉空白、标点和零宽字符，也不看是谁说的；去完什么都不剩的（如单个问号）才退回原文比对。 */
+function hisMsgKey(text){const raw=String(text==null?'':text).normalize('NFKC').replace(/[\s​-‏⁠﻿]/g,''),key=raw.replace(/[\p{P}\p{S}]/gu,'');return key||raw;}
+/* 修复已经存进去的重复：连续出现、逐条相同的一段（2 到 12 条，或单独一条较长的话）只留第一段。
+   只看纯文字消息，图片、表情、转账、红包和带付款记录的消息不动。返回删掉的条数。 */
+function hisCollapseRepeats(list){if(!Array.isArray(list)||list.length<2)return 0;const plain=m=>m&&(!m.type||m.type==='text')&&!m._hisPaymentId,same=(a,b)=>plain(a)&&plain(b)&&(a.r||(a.mine?'me':'ta'))===(b.r||(b.mine?'me':'ta'))&&hisMsgKey(a.c)===hisMsgKey(b.c);let removed=0;
+  for(let i=1;i<list.length;i++){for(let k=Math.min(12,i,list.length-i);k>=1;k--){let hit=true;for(let j=0;j<k&&hit;j++)hit=same(list[i-k+j],list[i+j]);if(!hit)continue;if(k===1&&hisMsgKey(list[i].c).length<6)continue;list.splice(i,k);removed+=k;i=Math.max(0,i-k-1);break;}}
+  return removed;}
 function hisLastMain(cid){const m=msgs(cid).filter(x=>!x._call);const lm=m[m.length-1];return lm?previewOf(lm):'';}
 function hisLoginOpen(cid){const c=getC(cid);if(!isMain()||!c||c.deleted||c.blocked)return;if(hisWechatBound(cid)){_hisSync=true;hisStartSession(cid);return;}_hisLoginMode='wx';_hisSync=false;go('hislogin',{id:cid});}
 function renderHisLogin(cid){const c=getC(cid);if(!c)return '';const ph=_hisLoginMode==='phone';

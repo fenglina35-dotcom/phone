@@ -1,9 +1,9 @@
-"""Create the private v1767 / iOS 452 Mac-source overlay package (role-sent food/pay/dice/music cards readable; Douyin memory no re-ask; protected private inheritance).
+"""Create the private v1769 / iOS 453 Mac-source overlay package (role-sent food/pay/dice/music cards readable; Douyin memory no re-ask; protected private inheritance).
 
-v1767 is packaged on Windows from committed source. The last overlay retained on
-this PC is v1739; validate that archive and the complete published-main v1765 tree.
-Only this approved check-in feature and the private version markers may differ.
-Mac/Xcode and real-iPhone validation for this new native feature remain pending.
+v1769 is packaged on Windows from committed source. Verify the last delivered
+v1767 archive and all its hashes, plus the complete published-main private tree.
+The audited shared-feature port and the private version markers may differ.
+Mac/Xcode and real-iPhone validation of the inherited check-in feature is pending.
 
 Unlike the earlier packaging scripts, every file is read from the committed tree
 (``git cat-file`` against HEAD) instead of the working directory. The v1235/iOS356
@@ -28,18 +28,18 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "native/private-small-phone/XcodeProject/"
 BUNDLE = "PhoneCompanionTest/PhoneWeb.bundle/"
-PREFIX = "SmallPhone_v1767_iOS452_Private/"
-OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1767_iOS452.zip"
+PREFIX = "SmallPhone_v1769_iOS453_Private/"
+OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1769_iOS453.zip"
 
-WEB_VERSION = "1767"
+WEB_VERSION = "1769"
 REVIEWED_RUNTIME_COMMIT = "HEAD"
 MAIN_BASE_COMMIT = "bd9e52131cd8a299ea547b4291bf9c1b690b3410"
-FEATURE_COMMIT = "3e6347c4eca31c2fc3aa181b7ca9d40a5c2d7329"
+FEATURE_COMMIT = "8dd79e0e"
 EVIDENCE_ROOT = ROOT.parent / ".codex-eight-chat-fixes" / ".codex_tmp"
 TEST_LOG = EVIDENCE_ROOT / "eight-chat" / "full-tests.log"
-PREVIOUS_ZIP = ROOT.parent / "最新私人版本覆盖包_v1739_iOS439.zip"
-PREVIOUS_ZIP_SHA256 = "86c713b7cf7b59fea9dc56c432f992f1c1b37a32257b568a9293bb373a50171f"
-PREVIOUS_SOURCE = "1e6edec8f08e083012bcde493bd91fa62e135f87"
+PREVIOUS_ZIP = ROOT.parent / "最新私人版本覆盖包_v1767_iOS452.zip"
+PREVIOUS_ZIP_SHA256 = "050edf62b91a061b3611e08d5eae2245b5211a0af822db088e6f85c93b26aedf"
+PREVIOUS_SOURCE = "bcef7b225d9b4947ee01f44a0a4ad05731b7202a"
 
 
 class FolderArchive:
@@ -62,8 +62,8 @@ class FolderArchive:
     def read(self, name: str) -> bytes:
         return (self.root / name.split("/", 1)[1]).read_bytes()
 VOLUME_BYTES = 50 * 1024 * 1024
-MARKETING = "1.0.452"
-BUILD = "452"
+MARKETING = "1.0.453"
+BUILD = "453"
 BRIDGE = "42"
 
 
@@ -630,7 +630,7 @@ def main() -> None:
     files = committed_private_files()
     validate(files)
     previous = PREVIOUS_ZIP
-    assert sha256(previous.read_bytes()).hexdigest() == PREVIOUS_ZIP_SHA256, "previous local v1739 delivery zip changed"
+    assert sha256(previous.read_bytes()).hexdigest() == PREVIOUS_ZIP_SHA256, "previous v1767 delivery zip changed"
     git("merge-base", "--is-ancestor", PREVIOUS_SOURCE, commit)
     with ZipFile(previous) as old:
         prefix = next(n for n in old.namelist() if n.endswith("/SOURCE_STATE.json"))[:-len("SOURCE_STATE.json")]
@@ -659,9 +659,9 @@ def main() -> None:
         for name, body in reviewed.items():
             if name == "请在Mac编译前先读.md": continue
             if name in {BUNDLE+n for n in ("app.js", "index.html", "小手机.html", "repair.html")}:
-                assert text(files[name]) == text(body).replace("1765", "1767").replace("v1767 · 卡片记忆与抖音不重复", "v1767 · 查岗截屏"), "runtime beyond reviewed feature: " + name
+                assert text(files[name]) == re.sub(r"(?<![0-9a-fA-F])1767(?![0-9a-fA-F])", "1769", text(body)).replace("v1769 · 查岗截屏", "v1769 · 搜索与功能补齐"), "runtime beyond reviewed feature: " + name
             elif name in {"PhoneCompanionTest/PhoneNativeBridge.swift", "PhoneCompanionTest/LocalPhoneWebView.swift", "PhoneCompanionTest.xcodeproj/project.pbxproj"}:
-                normalized = text(files[name]).replace("1.0.452", "1.0.451").replace("(452)", "(451)").replace("VERSION = 452;", "VERSION = 451;")
+                normalized = text(files[name]).replace("1.0.453", "1.0.452").replace("(453)", "(452)").replace("VERSION = 453;", "VERSION = 452;")
                 assert normalized == text(body), "native beyond reviewed feature/build: " + name
             else:
                 assert files[name] == body, "payload beyond reviewed feature: " + name
@@ -746,9 +746,10 @@ def main() -> None:
     assert "WEB_LOCAL_RECOVERY_MEDIA_V1" not in app, "web-only recovery entered private"
     log = text(TEST_LOG.read_bytes())
     passed_tests = int(re.search(r"pass (\d+)", log).group(1))
-    assert passed_tests >= 4135 and "fail 0" in log and "cancelled 0" in log, "latest complete test evidence missing"
+    assert passed_tests >= 4184 and "fail 0" in log and "cancelled 0" in log, "latest complete test evidence missing"
     browser_log = text((EVIDENCE_ROOT / "eight-chat" / "eight-browser.log").read_bytes())
     assert '"checkinActualPage"' in browser_log and '"nativeAck":true' in browser_log and '"visionHttp":true' in browser_log, "actual screenshot pipeline evidence missing"
+    assert browser_log.count('"searchParityActualPage"') >= 2, "search actual UI evidence missing"
     assert browser_log.count('"pageErrors":0') >= 2, "both real HTML runtime gates must pass"
     state["inheritedValidation"] = {"sourceCommit": state.get("sourceCommit"), "validation": state.get("validation", {}), "previous": state.get("inheritedValidation")}
     state["preserved"] = [x for x in state.get("preserved", []) if x not in {"v1677-user-approved-22-parameter-optical-material", "v1677-role-sync-fixed-relay-and-pull-recovery", "v1689-original-backend-direct-sync"}]
@@ -817,17 +818,19 @@ def main() -> None:
     assert "function customCity(n)" in text(files[BUNDLE + "travel-flight.js"]) and "function customCity(n)" in text(files[BUNDLE + "travel-train.js"]), "niche-city booking repair missing"
     state["macBuildVerified"] = False  # New AppIntent/native changes have not been compiled on a Mac.
     state["realIPhoneVerified"] = False
+    state["preserved"] = sorted(set(state["preserved"]) | {"v1769-audited-search-translation-group-summary-role-wechat-parity"})
+    state["privateWebParityAudit"] = {"featureCommit": FEATURE_COMMIT, "regressionsRunAgainstBothRuntimes": True, "oldPrivateBehaviorFailures": 19, "protectedNativeDifferencesPreserved": True}
     state["checkInScreenshot"] = {"defaultOff": True, "explicitPerCaptureConfirmation": True,
-        "featureCommit": FEATURE_COMMIT, "nativeBuildVerified": False, "realIPhoneVerified": False,
+        "featureCommit": "3e6347c4eca31c2fc3aa181b7ca9d40a5c2d7329", "nativeBuildVerified": False, "realIPhoneVerified": False,
         "nightPatrolIncluded": False, "configuredVisionAndChatModelCostApplies": True}
     state["preserved"] = sorted(set(state["preserved"]) | {"v1767-confirmed-screenshot-checkin-role-opening-pool-and-independent-page"})
-    state["knownUnresolved"] = [x for x in state.get("knownUnresolved", []) if not re.match(r"v\d+-mac-build", x)] + ["v1767-mac-build-and-shortcuts-real-device-pending", "v1765-real-iphone-awaiting-user-listening", "v1763-real-iphone-awaiting-user-listening", "v1761-real-iphone-awaiting-user-listening", "v1757-real-iphone-awaiting-user-listening", "v1755-real-iphone-laugh-pacing-awaiting-user-listening", "v1753-real-iphone-voice-director-awaiting-user-listening", "v1751-real-iphone-voice-second-pass-awaiting-user-listening", "v1749-real-iphone-expressive-voice-and-3d-awaiting-user-listening", "v1747-real-iphone-album-tag-reply-awaiting-user-confirmation", "v1745-real-iphone-flight-booking-awaiting-user-confirmation", "v1743-real-iphone-cozy-and-scene-notes-awaiting-user-confirmation", "precise-time-background-dispatch-not-deployed", "v1705-private-music-keyboard-and-role-response-acceptance-pending", "calendar-closed-app-system-notifications-not-implemented", "real-model-calendar-personality-and-voice-acceptance-pending", "v1675-user-main-model-and-native-lock-receipts-pending"]
+    state["knownUnresolved"] = [x for x in state.get("knownUnresolved", []) if not re.match(r"v\d+-mac-build", x)] + ["v1769-mac-build-search-and-shortcuts-real-device-pending", "v1767-mac-build-and-shortcuts-real-device-pending", "v1765-real-iphone-awaiting-user-listening", "v1763-real-iphone-awaiting-user-listening", "v1761-real-iphone-awaiting-user-listening", "v1757-real-iphone-awaiting-user-listening", "v1755-real-iphone-laugh-pacing-awaiting-user-listening", "v1753-real-iphone-voice-director-awaiting-user-listening", "v1751-real-iphone-voice-second-pass-awaiting-user-listening", "v1749-real-iphone-expressive-voice-and-3d-awaiting-user-listening", "v1747-real-iphone-album-tag-reply-awaiting-user-confirmation", "v1745-real-iphone-flight-booking-awaiting-user-confirmation", "v1743-real-iphone-cozy-and-scene-notes-awaiting-user-confirmation", "precise-time-background-dispatch-not-deployed", "v1705-private-music-keyboard-and-role-response-acceptance-pending", "calendar-closed-app-system-notifications-not-implemented", "real-model-calendar-personality-and-voice-acceptance-pending", "v1675-user-main-model-and-native-lock-receipts-pending"]
     state["validation"] = {"macBuildVerified": False, "realIPhoneVerified": False,
         "nodeTests": {"passed": passed_tests, "failed": 0, "skipped": 0, "includesProtectedParallelTestChanges": False, "sourceCommit": commit, "resultSource": str(TEST_LOG)},
         "models": "HTTP simulated; no live model or production financial tests",
         "authorizedChatBothRuntimes": True, "authorizedChatExecution": "both actual runtime pages; eight permission/output/history combinations, manual/automatic inspection and persistence; simulated model HTTP",
         "inheritedPreviousOverlay": True, "priorPackageManifestVerified": True,
-        "nativePayloadUnchanged": False, "nativePayloadMatchesPublishedMain": False, "nativeChangesInheritedFromMain": MAIN_BASE_COMMIT, "privateCompanionNativeChangesThisRelease": True,
+        "nativePayloadUnchanged": False, "nativePayloadMatchesPublishedMain": False, "nativeChangesInheritedFromMain": MAIN_BASE_COMMIT, "privateCompanionNativeChangesThisRelease": False, "nativeBehaviorUnchangedFromPreviousPackage": True,
         "privateRuntimeMatchesReviewedRelease": commit, "userConfirmedWebMusicReply": {"version": "v1704", "date": "2026-10-11", "confirmed": True}, "privateMusicRealDeviceVerified": False, "shopRestoreBackendDeployedAndVerified": True, "houseResourceFiles": len(cozy_files)}
     files["SOURCE_STATE.json"] = json.dumps(state, ensure_ascii=False, indent=2).encode("utf-8")
     files["SHA256SUMS.json"] = json.dumps({name: sha256(body).hexdigest() for name, body in sorted(files.items())}, ensure_ascii=False, indent=2).encode("utf-8")
