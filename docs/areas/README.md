@@ -83,13 +83,13 @@ v1762 补查全部卡片类型：角色发出的真人店铺外卖（marketfood�
 
 ## 情侣空间锁定到点自动解锁
 
-现在：角色锁 App（小手机内置 App 与伴生的真实 iPhone App）必须带解锁时间：[锁定|App名|到07:00]、[锁定|App名|3天]、2小时、30分钟、明晚10点；标签没写时间时依次：lockUntilFromText 从角色这条回复的可见话里找（锁到…/锁你N天/N小时后再给你开/明天中午再给你开，支持中文数字，内心块不算），再 lockUntilAsk 后台问角色一句（不进聊天，roleInterceptStage「锁定解锁时间」，账号或绑定变化则作废，只覆盖仍是默认值的记录），都失败才用下一个至少一小时后的 07:00；最长7天。无上下午词的「N点」取更近的上午或晚上（晚7点说「到十一点」是23点），补零写法 07:00 仍是早上。教角色的四处锁定说明都写了这条。applyControlTags 在执行任何锁定标签前用 lockUntilPrepare 取出时间段并还原标签，原锁定代码不变；执行完 lockUntilCommit 按前后快照只给新锁上（或已有时间的再次锁定）的目标记 S.couple.lockUntil（'int:'+内置键 / 'ext:'+外置ID），外置同时发 device.autoUnlock 给原生。lockUntilSweep 每30秒和回前台检查：到点内置删锁、外置发角色解锁命令；目标已被提前解锁就删记录。情侣空间「管控授权」页「ta锁住的」和打开被锁 App 的提示显示「还剩…·几月几日 HH:MM 自动解锁」。自动限额锁（auto）不受影响。
+现在：角色锁 App（小手机内置 App 与伴生的真实 iPhone App）必须带解锁时间：[锁定|App名|到07:00]、[锁定|App名|3天]、2小时、30分钟、明晚10点；标签没写时间时依次：lockUntilFromText 从角色这条回复的可见话里找（锁到…/锁你N天/N小时后再给你开/明天中午再给你开，支持中文数字，内心块不算），再 lockUntilAsk 后台问角色一句（不进聊天，roleInterceptStage「锁定解锁时间」，账号或绑定变化则作废，只覆盖仍是默认值的记录），都失败才用下一个至少一小时后的 07:00；最长7天。无上下午词的「N点」取更近的上午或晚上（晚7点说「到十一点」是23点），补零写法 07:00 仍是早上。教角色的四处锁定说明都写了这条。applyControlTags 在执行任何锁定标签前用 lockUntilPrepare 取出时间段并还原标签，原锁定代码不变；执行完 lockUntilCommit 按前后快照只给新锁上（或已有时间的再次锁定）的目标记 S.couple.lockUntil（'int:'+内置键 / 'ext:'+外置ID），外置同时发 device.autoUnlock 给原生。lockUntilSweep 每30秒和回前台检查：到点内置删锁、外置发角色解锁命令；目标已被提前解锁就删记录。情侣空间「管控授权」页「ta锁住的」和打开被锁 App 的提示显示「还剩…·几月几日 HH:MM 自动解锁」。角色看到的锁定状态（buildSystem 内置控制台账与「你现在锁着ta的」、伴生外置状态、companionControlLedgerForParser）都附 lockUntilRoleNote「你定的解锁时间：…，还剩…」，否则角色被问锁到几点会说没设时间（v1779 实机）。自动限额锁（auto）不受影响。
 
 原生：CompanionSyncService.scheduleAutoUnlock 把 externalID→解锁秒数和 token 存进 App Group（companion.lock.autoUnlock.v1 / .token.），启动一次性 DeviceActivity「autoUnlock.*」（至少15分钟）。PhoneCompanionMonitor 在该活动 intervalDidEnd 时把 token 从默认屏蔽库和 persistentLockLedger 库及账本移除，记录保留；主 App 在 effectiveLockedTokens 开头 applyDueAutoUnlocks，先把到点条目从 UserDefaults 保存的锁定名单和账本删掉，避免重新补锁。提前解锁（unlock 命令）会 forgetAutoUnlock。屏蔽页只在有未到点的解锁时间时显示一行浅白剩余时间（每次显示屏蔽页时计算，不是实时跳动）。
 
 踩坑：主 App 会用保存的锁定名单（UserDefaults.standard，扩展读不到）把屏蔽补回去，只靠扩展清屏蔽会被重新锁上，所以必须在补锁前清名单。Monitor 原本任何活动开始/结束都清每日限额，新活动必须按前缀跳过。旧测试只抽取 applyControlTags 片段运行，接入点要用 typeof 守卫。旧屏蔽页灰色解释小字（v1113 移除）不能加回，只允许剩余时间一行。升版本号脚本只能改版本号上下文，16进制哈希里可能含有版本号数字（v1777 发布时误改过一次测试里的图片哈希，已撤回）。
 
-验证：tests/role-lock-until.test.mjs（时间解析、默认7点、7天上限、标签还原、双端说明与接入点、原生源码）；核心聊天门禁 roleLockUntil 用真实 applyControlTags 锁「附近的人」2小时、管控授权页显示、到点自动解开、无时间默认7点（旧实现失败已验证）。未真机验证：超过一天的一次性 DeviceActivity 能否按时触发、App 关闭时屏蔽是否真的解开、屏蔽页文字。核对到：2026-10-16（v1779/iOS458）。
+验证：tests/role-lock-until.test.mjs（时间解析、默认7点、7天上限、标签还原、双端说明与接入点、原生源码）；核心聊天门禁 roleLockUntil 用真实 applyControlTags 锁「附近的人」2小时、管控授权页显示、到点自动解开、无时间默认7点（旧实现失败已验证）。未真机验证：超过一天的一次性 DeviceActivity 能否按时触发、App 关闭时屏蔽是否真的解开、屏蔽页文字。核对到：2026-10-16（v1781/iOS459）。
 
 ## 聊天搜索与网页功能继承核对
 

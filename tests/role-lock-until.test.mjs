@@ -60,6 +60,8 @@ test('the role is told every lock needs an unlock time, in both bundles', () => 
     assert(s.includes("const _lockPlan=typeof lockUntilPrepare==='function'?lockUntilPrepare(content):null,_lockBefore=_lockPlan?lockUntilSnapshot():null;if(_lockPlan)content=_lockPlan.content;"), file);
     assert(s.includes('if(_lockPlan)lockUntilCommit(_lockPlan,_lockBefore,c,decisionText||content);'), file);
     assert(s.includes("roleInterceptStage:'锁定解锁时间'"), file + ' asks the role in the background when no time was given');
+    assert.equal(s.split("lockUntilRoleNote('int:'+k)").length - 1, 3, file + ': the role sees its own unlock time in every internal lock list');
+    assert.equal(s.split("lockUntilRoleNote('ext:'+app.id)").length - 1, 2, file + ': and for real iPhone apps');
     assert(s.includes("${typeof lockUntilOf==='function'&&lockUntilOf(k)?esc(lockUntilText(lockUntilOf(k))):'已锁'}"), file);
   }
 });
