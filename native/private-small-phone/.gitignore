@@ -55,3 +55,8 @@ XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/*
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/north-extra-peach.jpg
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/north-extra-crystal.jpg
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/north-extra-coconut.jpg
+
+# 任务便签（v1787）：共用模块与插图必须进私人源码提交，打包只读提交内容。
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/task-notes.js
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/task-notes/
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/task-notes/**

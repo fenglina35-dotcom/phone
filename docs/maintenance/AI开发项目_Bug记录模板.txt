@@ -2252,3 +2252,5 @@ CUA核验22项控件、发送未读空白、已读等待阶段空白、保存180
 2026-10-17 v1785 同版并入：小K会话提交 03ed2f54（只改 PhoneWeb.bundle/private-robot-voice.js 与新增 tests/private-robot-voice-routes.test.mjs）：cloudSettings 让小K固定使用记住的 Groq、角色 Fish 音色和 Fish API Key（s2.1-pro-free），手机里改语音设置不再让小K断开。本次私人 v1785/iOS461 构建基于其后提交，完整保留；全量测试包含其新测试并通过。
 
 2026-10-17 私人v1785 / iOS461：从提交 303ae15b（含小K会话 03ed2f54）的干净工作区 xcodebuild（Release，BUILD SUCCEEDED，461）并覆盖安装到用户 iPhone 15；安装包内 private-robot-voice.js 已核对含 cloudSettings。未生成覆盖包。
+
+2026-10-17 网页v1784 / 私人v1787 / iOS462：新功能——任务便签按用户提供的四张设计图重做，按页推进，本次完成第1页“今日”及其功能（自己加/改/删小事、角色任务原规则保留、过时标红、星星、旧卡片自动清理、到点提醒、角色知道并偶尔夸/提醒）。用户确认：猫爪按钮四个白色爪垫中间两个大；加任务窗口取消改右上角粉色小叉、保存在下。小猫图暂从设计图剪下，Codex 正在按清单生成透明图（assets/task-notes/ 同名覆盖）。新增文件 task-notes.js 已登记 sw.js（含校验规则：缺规则曾导致离线新版装不上，cache-version 测试超时）与私人打包清单。原生新增 tasknotes.reminders。回归：核心聊天门禁 taskNotes 9项两端通过。

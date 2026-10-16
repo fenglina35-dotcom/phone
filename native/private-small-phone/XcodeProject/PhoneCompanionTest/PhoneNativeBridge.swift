@@ -6,6 +6,7 @@ import Photos
 import Security
 import Speech
 import UIKit
+import UserNotifications
 import WebKit
 
 enum SmallPhoneDiagnosticsStore {
@@ -15,7 +16,7 @@ enum SmallPhoneDiagnosticsStore {
     )
     private static let maximumBytes = 256 * 1_024
     private static let maximumLines = 200
-    private static let build = "1.0.461 (461)"
+    private static let build = "1.0.462 (462)"
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -296,6 +297,13 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                 NotificationCenter.default.post(name: .smallPhoneStatusBarThemeChanged, object: nil, userInfo: ["theme": theme, "color": color])
             }
             reply(requestID: requestID, result: ["theme": theme, "color": color])
+        case "tasknotes.reminders":
+            let arguments = payload["payload"] as? [String: Any] ?? [:]
+            let rows = arguments["items"] as? [[String: Any]] ?? []
+            Task { [weak self] in
+                let count = await Self.syncTaskNoteReminders(rows)
+                self?.reply(requestID: requestID, result: ["scheduled": count])
+            }
         case "alarm.sync":
             let arguments = payload["payload"] as? [String: Any] ?? [:]
             performAlarmSync(requestID: requestID, arguments: arguments)
@@ -667,6 +675,33 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
 
     // 快捷指令查岗截屏：一次取最早的一张。图片走 callAsyncJavaScript 的参数，
     // 不拼进脚本源码（与恢复存档同理，避免 WebKit 把几百 KB 当代码解析）。
+    // TASK_NOTES_V2: a quiet banner at a task's time (not the ringing system alarm). The web side sends
+    // the full list each time; earlier task reminders are replaced so a removed task never fires.
+    private static func syncTaskNoteReminders(_ rows: [[String: Any]]) async -> Int {
+        let center = UNUserNotificationCenter.current()
+        let prefix = "small-phone-task-"
+        let pending = await center.pendingNotificationRequests()
+        center.removePendingNotificationRequests(withIdentifiers: pending.map(\.identifier).filter { $0.hasPrefix(prefix) })
+        let now = Date().timeIntervalSince1970 * 1_000
+        var count = 0
+        for row in rows.prefix(40) {
+            let id = String((row["id"] as? String ?? "").prefix(60))
+            let at = (row["at"] as? NSNumber)?.doubleValue ?? 0
+            guard !id.isEmpty, at > now, at < now + 8 * 86_400_000 else { continue }
+            let content = UNMutableNotificationContent()
+            content.title = String((row["title"] as? String ?? "任务便签").prefix(40))
+            content.body = String((row["body"] as? String ?? "").prefix(120))
+            content.sound = .default
+            content.threadIdentifier = "small-phone-task-notes"
+            let date = Date(timeIntervalSince1970: at / 1_000)
+            let parts = Calendar.autoupdatingCurrent.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+            let request = UNNotificationRequest(identifier: prefix + id, content: content,
+                trigger: UNCalendarNotificationTrigger(dateMatching: parts, repeats: false))
+            if (try? await center.add(request)) != nil { count += 1 }
+        }
+        return count
+    }
+
     private func performCheckInTake(requestID: String, scope: String) {
         Task.detached(priority: .userInitiated) { [weak self] in
             let item = await CheckInStore.shared.oldest(scope: scope)

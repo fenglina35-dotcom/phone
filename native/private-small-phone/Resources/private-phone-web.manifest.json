@@ -7,6 +7,7 @@
     "couple-watch.js",
     "couple-watch-runtime.js",
     "photo-album.js",
+    "task-notes.js",
     "license-gate.js",
     "delivery.js",
     "assets/north-dessert-shop.js",
@@ -121,6 +122,7 @@
     "assets/app-icons/glass/blue",
     "vendor",
     "fonts",
-    "assets/travel-home"
+    "assets/travel-home",
+    "assets/task-notes"
   ]
 }

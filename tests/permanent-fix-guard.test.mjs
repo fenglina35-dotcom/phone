@@ -46,6 +46,8 @@ const PERMANENT_FIXES = [
   {release:"web v1782 / private v1785",scope:"both",least:1,name:"带翻译的气泡只更新自己那一行译文，不整页重画",marker:"roleTextTranslationPatch(cid,live.map(j=>j.m)):cur().p==='chat'"},
   {release:"web v1782 / private v1785",scope:"both",least:1,name:"查他手机日记长度跟随信件回复长度，不再截断",marker:"{max:letterReplyBudget(c),temp:.55,aux:!!(S.settings&&S.settings.spyAux),complete:true}"},
   {release:"web v1782 / private v1785",scope:"both",least:1,name:"日记页自己的刷新会重写今天的日记；棕色顶栏",marker:"onclick=\"spyDiaryRewriteToday('${id}')\""},
+  {release:"web v1784 / private v1787",scope:"both",least:1,file:"task-notes.js",name:"任务便签按设计图重做的今日页：自己加的小事、角色任务、星星、提醒、角色知道",marker:"TASK_NOTES_V2"},
+  {release:"web v1784 / private v1787",scope:"both",least:1,file:"task-notes.js",name:"任务便签旧卡片不堆积：未完成3天、已完成35天后自动消失",marker:"s.items=s.items.filter(x=>x&&(x.date>=k3||x.done&&x.date>=k35));"},
   {release:"web v1774 / private v1779",scope:"both",least:1,file:"phone-shortcuts.js",name:"查岗截图交给角色时说明这是角色自己发起的、弹的是哪句",marker:"const note=featureEventNote('你发起的查岗'"},
   {release:"心声原地展开候选",scope:"both",least:1,name:"默认关闭的独立思考摘要与原地心声",marker:"ROLE_THINKING_PREVIEW_V1"},
   {release:"本地亲属同步候选",scope:"both",least:1,name:"亲属自主新增限额与间隔",marker:"q.created.length>=q.cap||q.created.some"},
