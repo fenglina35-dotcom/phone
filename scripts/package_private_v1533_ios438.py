@@ -746,7 +746,10 @@ def main() -> None:
     assert "WEB_LOCAL_RECOVERY_MEDIA_V1" not in app, "web-only recovery entered private"
     log = text(TEST_LOG.read_bytes())
     passed_tests = int(re.search(r"pass (\d+)", log).group(1))
-    assert passed_tests >= 4032 and "fail 0" in log and "cancelled 0" in log, "latest complete test evidence missing"
+    assert passed_tests >= 4135 and "fail 0" in log and "cancelled 0" in log, "latest complete test evidence missing"
+    browser_log = text((EVIDENCE_ROOT / "eight-chat" / "eight-browser.log").read_bytes())
+    assert '"checkinActualPage"' in browser_log and '"nativeAck":true' in browser_log and '"visionHttp":true' in browser_log, "actual screenshot pipeline evidence missing"
+    assert browser_log.count('"pageErrors":0') >= 2, "both real HTML runtime gates must pass"
     state["inheritedValidation"] = {"sourceCommit": state.get("sourceCommit"), "validation": state.get("validation", {}), "previous": state.get("inheritedValidation")}
     state["preserved"] = [x for x in state.get("preserved", []) if x not in {"v1677-user-approved-22-parameter-optical-material", "v1677-role-sync-fixed-relay-and-pull-recovery", "v1689-original-backend-direct-sync"}]
     state["intentionalRemovals"] = ["v1677-optical-material-renderer-and-overrides", "v1677-role-sync-relay-transport"]
