@@ -15,7 +15,7 @@ enum SmallPhoneDiagnosticsStore {
     )
     private static let maximumBytes = 256 * 1_024
     private static let maximumLines = 200
-    private static let build = "1.0.457 (457)"
+    private static let build = "1.0.458 (458)"
     // Accessed only from `queue`; caching the line count avoids rereading and
     // atomically rewriting the whole bounded log for every event.
     private static var cachedLineCount: Int?
@@ -689,6 +689,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                           cid: String(cid),
                           scope: String(scope),
                           mime: 'image/jpeg',
+                          line: String(line || ''),
                           base64: String(base64 || '')
                         }
                       });
@@ -701,6 +702,7 @@ final class PhoneNativeBridge: NSObject, WKScriptMessageHandler {
                         "account": item.metadata.account,
                         "cid": item.metadata.cid,
                         "scope": item.metadata.scope,
+                        "line": item.metadata.line ?? "",
                         "base64": item.data.base64EncodedString()
                     ],
                     in: nil,

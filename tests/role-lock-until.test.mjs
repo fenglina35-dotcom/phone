@@ -35,7 +35,20 @@ for (const file of ['app.js', PRIVATE_DIR + 'PhoneCompanionTest/PhoneWeb.bundle/
     assert.equal(plan.content, '好，锁了。\n[锁定|抖音|仅外置]\n[锁定|游戏]');
     assert.equal(plan.items.length, 2);
     assert.equal(new Date(plan.items[0].at).getHours(), 7);
-    assert.equal(plan.items[1].at, c.lockUntilDefault(Date.now()));
+    assert.equal(plan.items[1].at, 0, 'no time in the tag: the words, then the role, then the default decide');
+    assert.equal(c.lockUntilParse('三天', now), now + 3 * 86400e3);
+    assert.equal(c.lockUntilParse('两个小时', now), now + 2 * 3600e3);
+    assert.equal(c.lockUntilParse('到十一点', now), at(2026, 9, 16, 23, 0));
+    assert.equal(c.lockUntilParse('到07:00', at(2026, 9, 16, 18, 0)), at(2026, 9, 17, 7, 0), 'a zero-padded clock time stays in the morning');
+    assert.equal(c.lockUntilParse('到7点', at(2026, 9, 17, 2, 0)), at(2026, 9, 17, 7, 0));
+    assert.equal(c.lockUntilParse('明天中午', now), at(2026, 9, 17, 12, 0));
+    assert.equal(c.lockUntilParse('明天', now), at(2026, 9, 17, 7, 0));
+    assert.equal(c.lockUntilFromText('今晚别玩了，明天中午再给你开。[锁定|抖音]', now), at(2026, 9, 17, 12, 0));
+    assert.equal(c.lockUntilFromText('先锁你三天，好好反省。', now), now + 3 * 86400e3);
+    assert.equal(c.lockUntilFromText('锁到早上七点，睡觉。', now), at(2026, 9, 17, 7, 0));
+    assert.equal(c.lockUntilFromText('两小时后再给你解开', now), now + 2 * 3600e3);
+    assert.equal(c.lockUntilFromText('乖，别玩了，我锁上了。', now), 0, 'nothing said: ask the role');
+    assert.equal(c.lockUntilFromText('<think>锁到明天</think>不给你玩。', now), 0, 'inner thoughts are not a decision');
     assert.match(c.lockUntilText(now + (26 * 60 + 5) * 60e3, now), /^还剩1天2小时5分 · 10月17日 21:05 自动解锁$/);
   });
 }
@@ -45,7 +58,8 @@ test('the role is told every lock needs an unlock time, in both bundles', () => 
     const s = fs.readFileSync(file, 'utf8');
     assert.equal(s.split('锁定时必须在标签最后加解锁时间').length - 1, 2, file);
     assert(s.includes("const _lockPlan=typeof lockUntilPrepare==='function'?lockUntilPrepare(content):null,_lockBefore=_lockPlan?lockUntilSnapshot():null;if(_lockPlan)content=_lockPlan.content;"), file);
-    assert(s.includes('if(_lockPlan)lockUntilCommit(_lockPlan,_lockBefore);'), file);
+    assert(s.includes('if(_lockPlan)lockUntilCommit(_lockPlan,_lockBefore,c,decisionText||content);'), file);
+    assert(s.includes("roleInterceptStage:'锁定解锁时间'"), file + ' asks the role in the background when no time was given');
     assert(s.includes("${typeof lockUntilOf==='function'&&lockUntilOf(k)?esc(lockUntilText(lockUntilOf(k))):'已锁'}"), file);
   }
 });

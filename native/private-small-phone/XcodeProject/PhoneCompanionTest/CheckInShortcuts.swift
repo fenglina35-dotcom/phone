@@ -38,6 +38,8 @@ actor CheckInStore {
         let account: String
         let cid: String
         let scope: String
+        // The opening line that was shown; optional so files from an older build still decode.
+        var line: String? = nil
     }
     struct Pending: Sendable {
         let metadata: Metadata
@@ -162,7 +164,8 @@ actor CheckInStore {
         guard CGImageDestinationFinalize(destination) else { throw CheckInError("截图保存失败") }
         let at = Date().timeIntervalSince1970 * 1_000
         let id = "\(Int64(at))-\(UUID().uuidString.prefix(8))"
-        let metadata = Metadata(id: id, at: at, account: config.account, cid: config.cid, scope: config.scope)
+        let metadata = Metadata(id: id, at: at, account: config.account, cid: config.cid, scope: config.scope,
+            line: UserDefaults.standard.string(forKey: previousKey))
         let folder = try directory()
         let metaURL = folder.appendingPathComponent(id + ".json")
         try JSONEncoder().encode(metadata).write(to: metaURL, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
@@ -238,6 +241,8 @@ struct CheckInOpenerIntent: AppIntent {
         guard let opening = try await CheckInStore.shared.prepareOpening() else { return .result(value: "") }
         try await requestConfirmation(actionName: .continue, dialog: IntentDialog(stringLiteral: opening.line))
         try await CheckInStore.shared.approve(scope: opening.scope)
+        // Let the prompt finish closing so the next "截屏" step captures the screen, not the prompt.
+        try? await Task.sleep(nanoseconds: 900_000_000)
         return .result(value: opening.line)
     }
 }

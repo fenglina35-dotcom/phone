@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1772'){
+if(window.__NORTH_SHELL_BUILD__!=='1774'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -616,7 +616,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1772 · 锁定到点自动解锁';
+const APP_VER='v1774 · 角色自己定解锁时间·查岗知情';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2097,7 +2097,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1772&r=v1772-thought-preview-1';
+  const url='sw.js?v=1774&r=v1774-thought-preview-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -4219,26 +4219,51 @@ const LOCKABLE={browser:'浏览器',moments:'朋友圈',spy:'查他手机',shop:
 function appLocked(key){return !!(S.couple&&S.couple.locks&&S.couple.locks[key]);}
 /* ROLE_LOCK_UNTIL_V1: a role's lock always carries an unlock time and reopens on its own. The tag's
    time segment is read before the old lock code runs, so that code is unchanged; the time lives in
-   S.couple.lockUntil ('int:'+app key / 'ext:'+external id). Default: the next 07:00 at least an hour away. */
-const LOCK_UNTIL_MAX=7*86400e3;
+   S.couple.lockUntil ('int:'+app key / 'ext:'+external id). Where the time comes from, in order:
+   the tag, the role's own words in that reply, a short background question to the role, and only
+   then the next 07:00 at least an hour away. */
+const LOCK_UNTIL_MAX=7*86400e3,LOCK_DAY_WORDS='今天|今晚|明天|明早|明晚|后天',LOCK_PART_WORDS='早上|早晨|上午|中午|下午|傍晚|晚上|夜里|凌晨',LOCK_PART_HOUR={早上:7,早晨:7,上午:9,中午:12,下午:15,傍晚:18,晚上:20,夜里:22,凌晨:5};
+function lockUntilDigits(text){const d={零:0,一:1,二:2,两:2,三:3,四:4,五:5,六:6,七:7,八:8,九:9};return String(text||'').replace(/[一二两三四五六七八九]?十[一二三四五六七八九]?|[零一二两三四五六七八九](?=[天日小个钟分点时半])/g,w=>{if(!w.includes('十'))return String(d[w]);const [a,b]=w.split('十');return String((a?d[a]:1)*10+(b?d[b]:0));});}
 function lockUntilDefault(now){const d=new Date(now);d.setHours(7,0,0,0);let at=d.getTime();while(at<=now+3600e3)at+=86400e3;return at;}
-function lockUntilParse(seg,now){const s=String(seg||'').replace(/\s+/g,'');if(!s)return 0;let m=/^(?:锁|锁定|共|一共)?(\d+(?:\.\d+)?)(天|日|个小时|小时|钟头|h|分钟|分|min)$/i.exec(s);
+function lockUntilParse(seg,now){const s=lockUntilDigits(String(seg||'').replace(/\s+/g,''));if(!s)return 0;let m=/^(?:锁|锁定|共|一共)?(\d+(?:\.\d+)?)(天|日|个小时|小时|钟头|h|分钟|分|min)$/i.exec(s);
  if(m){const n=+m[1],u=m[2].toLowerCase(),ms=/天|日/.test(u)?n*86400e3:/分|min/.test(u)?n*60e3:n*3600e3;return ms>0?now+ms:0;}
- m=/^(?:到|至|直到|锁到)?(今天|今晚|明天|明早|明晚|后天)?(早上|早晨|上午|中午|下午|傍晚|晚上|夜里|凌晨)?(\d{1,2})(?:[:：点时](\d{1,2})?分?(半)?)?$/.exec(s);
- if(!m||!(m[1]||m[2]||/[:：点时]/.test(s)||/^(?:到|至|直到|锁到)/.test(s)))return 0;let h=+m[3],min=m[5]?30:+(m[4]||0);if(h>23||min>59)return 0;
- if(/下午|傍晚|晚上|夜里|今晚|明晚/.test((m[1]||'')+(m[2]||''))&&h<12)h+=12;if(m[2]==='中午'&&h<6)h+=12;
+ m=new RegExp('^(?:到|至|直到|锁到)?('+LOCK_DAY_WORDS+')?('+LOCK_PART_WORDS+')?(?:(\\d{1,2})(?:[:：点时](\\d{1,2})?分?(半)?)?)?$').exec(s);
+ if(!m||!(m[1]||m[2]||m[3]))return 0;if(!m[3]&&!m[1]&&!m[2])return 0;if(m[3]&&!(m[1]||m[2]||/[:：点时]/.test(s)||/^(?:到|至|直到|锁到)/.test(s)))return 0;
+ let h=m[3]?+m[3]:m[2]?LOCK_PART_HOUR[m[2]]:/晚/.test(m[1])?20:7,min=m[5]?30:+(m[4]||0);if(h>23||min>59)return 0;
+ if(m[3]&&/下午|傍晚|晚上|夜里|今晚|明晚/.test((m[1]||'')+(m[2]||''))&&h<12)h+=12;if(m[3]&&m[2]==='中午'&&h<6)h+=12;
  const d=new Date(now);d.setHours(h,min,0,0);let at=d.getTime();const offset={明天:1,明早:1,明晚:1,后天:2}[m[1]]||0;
- if(offset)at+=offset*86400e3;else while(at<=now+60e3)at+=86400e3;return at;}
+ if(offset)at+=offset*86400e3;else{while(at<=now+60e3)at+=86400e3;
+  // "到十一点" said at 7 pm means 11 tonight: a bare 点 hour takes the nearer of morning and evening.
+  if(m[3]&&!m[1]&&!m[2]&&h<12&&/点/.test(s)){const pm=new Date(now);pm.setHours(h+12,min,0,0);if(pm.getTime()>now+60e3&&pm.getTime()<at)at=pm.getTime();}}return at;}
+// Layer 2: the role said when in its own words ("明天中午再给你开", "锁你三天", "锁到十一点").
+function lockUntilFromText(text,now){const t=lockUntilDigits(String(text||'').replace(/<(think|analysis|reasoning)\b[^>]*>[\s\S]*?(?:<\/\1>|$)/gi,' ').replace(/[\[【][^\]】]*[\]】]/g,' ').replace(/\s+/g,''));
+ const when='(?:(?:'+LOCK_DAY_WORDS+')(?:'+LOCK_PART_WORDS+')?|(?:'+LOCK_PART_WORDS+'))?(?:\\d{1,2}(?:[:：点时]\\d{0,2}分?半?)?)?',span='\\d+(?:\\.\\d+)?(?:天|日|个小时|小时|钟头|分钟)';
+ const rules=[new RegExp('(?:锁到|锁至|关到|锁你到|锁它到)('+when+')'),new RegExp('锁(?:你|它|这个|这些|一下)?('+span+')'),new RegExp('('+span+')(?:以后|之后|后)?(?:再|才)(?:给你)?(?:解|开|放)'),new RegExp('('+when+')(?:再|才)(?:给你)?(?:解开|解锁|打开|开|放)')];
+ for(const re of rules){const m=re.exec(t);if(m&&m[1]){const at=lockUntilParse(m[1],now);if(at)return at;}}return 0;}
 function lockUntilClamp(at,now){return Math.min(Math.max(+at||0,now+60e3),now+LOCK_UNTIL_MAX);}
-function lockUntilPrepare(content){const now=Date.now(),items=[];const text=String(content||'').replace(/([\[【]\s*(?:锁定|上锁)\s*[\|｜:：]\s*)([^\]】]*)([\]】])/g,(all,head,arg,tail)=>{let at=0;const rest=[];for(const part of String(arg).split(/[\|｜]/)){const t=at?0:lockUntilParse(part,now);if(t)at=t;else rest.push(part);}const target=rest.join('|');items.push({target,at:lockUntilClamp(at||lockUntilDefault(now),now)});return head+target+tail;});return{content:text,items};}
+function lockUntilPrepare(content){const now=Date.now(),items=[];const text=String(content||'').replace(/([\[【]\s*(?:锁定|上锁)\s*[\|｜:：]\s*)([^\]】]*)([\]】])/g,(all,head,arg,tail)=>{let at=0;const rest=[];for(const part of String(arg).split(/[\|｜]/)){const t=at?0:lockUntilParse(part,now);if(t)at=t;else rest.push(part);}const target=rest.join('|');items.push({target,at:at?lockUntilClamp(at,now):0});return head+target+tail;});return{content:text,items};}
 function lockUntilExternalLocked(st,app){try{return typeof companionExternalAlreadyInState==='function'&&companionExternalAlreadyInState(st,app,'lock');}catch(_){return false;}}
 function lockUntilSnapshot(){const st=typeof companionState==='function'?companionState():null,ext={};(Array.isArray(st&&st.apps)?st.apps:[]).forEach(app=>{if(app&&app.id)ext[app.id]=lockUntilExternalLocked(st,app);});return{int:Object.assign({},S.couple&&S.couple.locks||{}),ext};}
 function lockUntilNative(id,at){try{if(typeof companionLocalNativeAvailable==='function'&&companionLocalNativeAvailable()&&window.SmallPhoneNative)window.SmallPhoneNative.request('device.autoUnlock',{externalAppId:id,unlockAt:at}).catch(()=>{});}catch(_){}}
-function lockUntilCommit(plan,before){if(!plan||!plan.items.length||!S.couple)return false;const until=S.couple.lockUntil=S.couple.lockUntil||{},locks=S.couple.locks||{},st=typeof companionState==='function'?companionState():null;let changed=false;
- const atFor=match=>{const hit=plan.items.find(match);return(hit||plan.items[plan.items.length-1]).at;};
- Object.keys(locks).forEach(k=>{if(locks[k]&&locks[k].auto)return;const key='int:'+k,fresh=!before.int[k];if(!fresh&&!until[key])return;const at=atFor(it=>{try{return _appKeys(it.target,[k],()=>true).includes(k);}catch(_){return false;}});if(fresh||until[key]!==at){until[key]=at;changed=true;}});
- (Array.isArray(st&&st.apps)?st.apps:[]).forEach(app=>{if(!app||!app.id||!lockUntilExternalLocked(st,app))return;const key='ext:'+app.id,fresh=!before.ext[app.id];const item=plan.items.find(it=>{try{return companionExternalTargetsByText(st,it.target).some(a=>a&&a.id===app.id);}catch(_){return false;}});if(!item||!fresh&&!until[key])return;if(until[key]!==item.at){until[key]=item.at;lockUntilNative(app.id,item.at);changed=true;}});
- if(changed)save();return changed;}
+function lockUntilCommit(plan,before,c,text){if(!plan||!plan.items.length||!S.couple)return false;const now=Date.now(),until=S.couple.lockUntil=S.couple.lockUntil||{},locks=S.couple.locks||{},st=typeof companionState==='function'?companionState():null;
+ const spoken=lockUntilFromText(text,now),fallback=lockUntilDefault(now),asked=[],names=[];let changed=false;
+ const resolve=item=>item&&item.at?item.at:spoken?lockUntilClamp(spoken,now):0;
+ const put=(key,at,name,ext)=>{const value=at||fallback;if(until[key]!==value){until[key]=value;changed=true;if(ext)lockUntilNative(ext,value);}if(!at){asked.push({key,value,ext});if(name&&!names.includes(name))names.push(name);}};
+ Object.keys(locks).forEach(k=>{if(locks[k]&&locks[k].auto)return;const key='int:'+k,fresh=!before.int[k];if(!fresh&&!until[key])return;const item=plan.items.find(it=>{try{return _appKeys(it.target,[k],()=>true).includes(k);}catch(_){return false;}})||plan.items[plan.items.length-1];put(key,resolve(item),LOCKABLE[k]||k,'');});
+ (Array.isArray(st&&st.apps)?st.apps:[]).forEach(app=>{if(!app||!app.id||!lockUntilExternalLocked(st,app))return;const key='ext:'+app.id,fresh=!before.ext[app.id];const item=plan.items.find(it=>{try{return companionExternalTargetsByText(st,it.target).some(a=>a&&a.id===app.id);}catch(_){return false;}});if(!item||!fresh&&!until[key])return;put(key,resolve(item),app.name||'',app.id);});
+ if(changed)save();if(asked.length&&c)window._lockUntilAsking=lockUntilAsk(c,asked,names);return changed;}
+// Layer 3: one short background question to the role, never shown in the chat.
+async function lockUntilAsk(c,asked,names){const account=typeof actId==='function'?actId():'',now=Date.now();try{
+  const recent=(typeof msgs==='function'?msgs(c.id):[]).filter(m=>m&&!m._deleted&&m.type!=='sys').slice(-8).map(m=>(m.role==='user'?(S.me.name||'对方'):'你')+'：'+String(typeof msgToText==='function'?msgToText(m):(m.content||'')).replace(/\s+/g,' ').slice(0,100)).join('\n');
+  const who=S.me.name||'对方',d=new Date(now),clock=(d.getMonth()+1)+'月'+d.getDate()+'日 '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+  const raw=await chatAPI([{role:'system',content:buildSystem(c,{natural:typeof wechatNaturalOn==='function'&&wechatNaturalOn()})},{role:'user',content:'现在是'+clock+'。'+(recent?'你和'+who+'刚才的聊天：\n'+recent+'\n\n':'')+'你刚把'+who+'的「'+names.join('、')+'」锁上了，但没定什么时候解开。按你自己的性格、刚才聊的事和'+who+'的作息，定一个到点自动解锁的时间（最长7天）。只输出这个时间，例如：到07:00、明天中午12点、3小时、2天。不要输出别的。'}],{routeIndex:roleChatRouteIndex(c),aux:c.model==='aux',independentRoleModel:true,allowSessionModel:true,allowWechatThought:false,max:120,diagnosticRoleId:c.id,roleInterceptStage:'锁定解锁时间'});
+  const answer=String(raw||'').replace(/<(think|analysis|reasoning)\b[^>]*>[\s\S]*?(?:<\/\1>|$)/gi,'').trim(),line=answer.split(/\n/).map(x=>x.trim()).filter(Boolean)[0]||'';
+  const at=lockUntilParse(line.replace(/[。.!！]$/,''),Date.now())||lockUntilFromText('锁到'+line,Date.now())||lockUntilFromText(answer,Date.now());
+  if(!at||!S.couple||S.couple.cid!==c.id||(typeof actId==='function'&&actId()!==account))return false;
+  const until=S.couple.lockUntil||{},value=lockUntilClamp(at,Date.now());let changed=false;
+  for(const row of asked){if(until[row.key]!==row.value)continue;until[row.key]=value;changed=true;if(row.ext)lockUntilNative(row.ext,value);}
+  if(changed){save();try{if(['couple','home'].includes(cur().p))render();}catch(_){}}return changed;
+ }catch(_){return false;}}
 function lockUntilOf(key){const at=+(S&&S.couple&&S.couple.lockUntil&&S.couple.lockUntil['int:'+key]||0);return at>Date.now()?at:0;}
 function lockUntilText(at,now){now=now||Date.now();const left=Math.max(0,at-now),d=Math.floor(left/86400e3),h=Math.floor(left%86400e3/3600e3),m=Math.max(left<60e3?1:0,Math.floor(left%3600e3/60e3)),dt=new Date(at),pad=n=>String(n).padStart(2,'0');return '还剩'+(d?d+'天':'')+(d||h?h+'小时':'')+m+'分 · '+(dt.getMonth()+1)+'月'+dt.getDate()+'日 '+pad(dt.getHours())+':'+pad(dt.getMinutes())+' 自动解锁';}
 function lockUntilToast(key){const at=lockUntilOf(key);return at?'，'+lockUntilText(at):'';}
@@ -16875,7 +16900,7 @@ function applyControlTags(content,c,id,statedPwd,requestText,outcome,decisionTex
     if(!ok&&['锁定','上锁','解锁','限时','加时'].includes(act)){const nm=controlTargetName(act,rawArg);if(nm&&!controlNameKnown(nm,st))unknownTargets.push({act,arg:rawArg,name:nm});else if(nm&&!/全部|所有|全锁|全/.test(nm)&&act!=='解锁'&&!dual&&!_appKeys(nm,Object.keys(LOCKABLE),k=>gr[k]).length)deniedTargets.push(nm);}
     if(ok&&/^(?:锁定|上锁|解锁)$/.test(act))notices.push(({锁定:'锁定了',上锁:'锁定了',解锁:'解锁了',禁言:'禁言了',解禁:'解除了禁言：',限时:'设了每日限时：',加时:'多给了时间：'}[act]||act)+'「'+String(cleanArg||'').replace(/[|｜]+/g,' ').trim()+'」');roleInterceptDiagnosticAction(outcome,ok);return '';
   });
-  if(_lockPlan)lockUntilCommit(_lockPlan,_lockBefore);
+  if(_lockPlan)lockUntilCommit(_lockPlan,_lockBefore,c,decisionText||content);
   out=out.replace(/[\[【]\s*(扣款|没收零花|扣光|清空零花|冻结亲属卡|解冻亲属卡)\s*[\|｜:：]?\s*([^\]】]*)[\]】]/g,(mm,act,arg)=>{let ok=false;if(S.couple.walletAuth){const nm=(c.remark||c.name);
     if(act==='扣款'||act==='没收零花'){const amt=+(((arg||'').match(/[\d.]+/)||[0])[0])||0;const actual=Math.min(amt,Math.max(0,S.me.balance));if(actual>0){addBill('out',actual,'被'+nm+'扣的零花钱');ok=true;}}
     else if(act==='扣光'||act==='清空零花'){const actual=Math.max(0,S.me.balance);if(actual>0){addBill('out',actual,'被'+nm+'扣光了零花钱');ok=true;}}
