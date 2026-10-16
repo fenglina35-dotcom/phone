@@ -71,8 +71,8 @@ test('private identity remains v1355 and iOS 399 while public advances independe
   assert.match(bridge, /private static let build = "1\.0\.453 \(453\)"/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 453;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.453;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1762 · 卡片记忆与抖音不重复'/);
-  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1762'/);
+  assert.match(publicApp, /APP_VER='v1764 · 卡片记忆与抖音不重复'/);
+  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1764'/);
   assert.doesNotMatch(publicApp, /persistWechatRequested|smallPhoneWechatPersistTrace/);
 });
 
