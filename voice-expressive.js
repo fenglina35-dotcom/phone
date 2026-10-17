@@ -54,6 +54,9 @@ function prompt(c){if(!on())return '';let s='';const k=styleKind(roleTts(c));
   s+='\n- 耳边方位（隐藏，只用于语音条；'+((state()&&state().me&&state().me.name)||'对方')+'戴着耳机，能听到你的声音在头边移动）：可以在语音正文里写 [左耳] [右耳] [脑后] [面前] 表示声音移到那里，[贴近] [退开] 只改远近；写在说那句话的地方，例如“[右耳]别动。[脑后]我就在你后面。”不写会自动安排，不需要每条都写。';
   return s;}
 
+// Action text in calls (【轻笑着看你】) becomes the voice cue of the next spoken line, so the laugh is heard, not only described.
+ const ACTION_CUES=[[/大笑|笑出声|放声笑|轻笑|低笑|浅笑|笑了|笑一下|笑起来|笑着|失笑|嗤笑|闷笑|勾起.{0,3}(?:嘴角|唇角)|笑意/,'轻笑'],[/叹气|叹了|叹息/,'叹气'],[/哽咽|哭腔|抽泣|红了眼/,'哽咽'],[/撒娇/,'撒娇'],[/宠溺/,'宠溺'],[/温柔|柔声|放软/,'温柔'],[/小声|压低声音|耳语|凑近耳边/,'小声']];
+ function actionCues(text){const t=String(text||''),out=[];for(const [re,name] of ACTION_CUES){if(out.length>=2)break;if(re.test(t)&&!out.includes(name))out.push(name);}return out;}
 function soundAllowed(o){const k=String(o&&o.id||'_');return Date.now()-(_soundAt.get(k)||0)>SOUND_COOLDOWN_MS;}
 function soundMark(o){_soundAt.set(String(o&&o.id||'_'),Date.now());}
 function mildCue(cue,kind){let k='';try{k=typeof ttsCueKind==='function'?ttsCueKind(cue):'';}catch(_){}
@@ -77,6 +80,8 @@ function performance(text,o,tts,opt){if(!on())return null;const kind=styleKind(t
   else if(wantFierce&&!/angry/.test(base)){base=(kind==='fish'?'[angry, firm voice]':'[angry]')+' '+base;used++;}
   else if(wantSweet&&!used){base=map['撒娇']+' '+base;used++;}
   base=base.replace(/\s*\[[^\]]+\]\s*$/,m=>/chuckle|sigh|choked|breaking/.test(m)?m:'');
+  /* the role chose 语气:轻笑 for the whole line (no inline cue): one real chuckle, still within the per-role cooldown */
+  if(!used&&!sounds&&/轻笑|笑出声|chuckl|giggl|laugh/i.test(String(opt&&opt.cue||''))&&soundAllowed(o)){base=map['轻笑']+' '+base;used++;sounds++;}
   if(!used){const lead=mildCue(opt&&opt.cue,kind);if(lead)base=lead+' '+base;}
   if(sounds)soundMark(o);
   return base.replace(/\s+/g,' ').trim();}
@@ -174,6 +179,6 @@ async function binaural(ab,spatial,text){if(!on()||!ab)return null;try{const raw
     const ch=buf.numberOfChannels,n=buf.length,x=new Float32Array(n);for(let c=0;c<ch;c++){const d=buf.getChannelData(c);for(let i=0;i<n;i++)x[i]+=d[i]/ch;}
     const out=await renderSamples(x,buf.sampleRate,raw,spatial,[...String(text||'')].length);return wav16(out.L,out.R,out.fs);}catch(_){return null;}}
 
-root.NorthVoiceExpressive={on,split,normalize,prompt,performance,binaural,handPerf,direct,renderSamples,plan,_test:{DIRECTOR_PROMPT,directorClean,directorValid,directorLaughOnce,FISH,ELEVEN,SOUND,soundAllowed,soundMark,_soundAt,hrirAt,wav16,loadHrir}};
+root.NorthVoiceExpressive={on,split,actionCues,normalize,prompt,performance,binaural,handPerf,direct,renderSamples,plan,_test:{DIRECTOR_PROMPT,directorClean,directorValid,directorLaughOnce,FISH,ELEVEN,SOUND,soundAllowed,soundMark,_soundAt,hrirAt,wav16,loadHrir}};
 root.voiceExpressiveOn=on;
 })(typeof globalThis!=='undefined'?globalThis:this);

@@ -232,3 +232,20 @@ test('a laugh the role writes into a call line is voiced even inside the cooldow
     assert.match(src,/prepareCallSpeech\(row\.spoken,c,\{cue:row\.cue,interjection:row\.interjection,perf:row\.perf,inlineSound:row\.inlineSound/);
   }
 });
+
+/* 实机（2026-10-17）：视频通话里动作描写写着「轻笑」，说出来的话却没有笑声；开不开细腻情绪听不出区别。
+   动作描写里的笑、叹气、哽咽、温柔、小声现在变成下一句说的话的语气；角色给整句定了「语气:轻笑」时也真的轻笑一声。 */
+test('action text in calls becomes the voice cue of the next spoken line; 语气:轻笑 really chuckles',()=>{
+  const V=sandbox({voiceExpressive:true}).NorthVoiceExpressive;
+  assert.deepEqual([...V.actionCues('【低头轻笑着看你】')],['轻笑']);
+  assert.deepEqual([...V.actionCues('【叹了口气，声音放软】')],['叹气','温柔']);
+  assert.deepEqual([...V.actionCues('【看向镜头】')],[]);
+  assert.equal(V.performance('Come on, puppy.',{id:'v1'},{},{perf:'[轻笑]Come on, puppy.',inlineSound:true}),'[chuckling] Come on, puppy.');
+  assert.equal(V.performance('你又来了',{id:'v2'},{},{cue:'轻笑'}),'[chuckling] 你又来了','a chosen 轻笑 tone is heard');
+  assert.equal(V.performance('你又来了',{id:'v2'},{},{cue:'轻笑'}),'[happy, light] 你又来了','but not twice within the cooldown');
+  for(const src of [app,read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js')]){
+    assert.match(src,/NorthVoiceExpressive\.actionCues\(\(l\.match\(\/【\[\^】\]\*】\/g\)\|\|\[\]\)\.join\(''\)\)/,'voice calls read the hidden action text');
+    assert.match(src,/if\(!_bare\)\{_actCarry\.push\(\.\.\._acts\);return;\}/,'an action on its own line is carried to the next spoken line');
+    assert.match(src,/video&&callIsActionLine\((?:p|units\[_i\]\.orig)\)/,'video calls hand the action cue to the next spoken line');
+  }
+});

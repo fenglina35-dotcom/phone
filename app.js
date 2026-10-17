@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1794'){
+if(window.__NORTH_SHELL_BUILD__!=='1796'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -616,7 +616,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1794 · 拍照任务与粉色提示';
+const APP_VER='v1796 · 通话动作里的笑声';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2098,7 +2098,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1794&r=v1794-thought-preview-1';
+  const url='sw.js?v=1796&r=v1796-thought-preview-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -18329,18 +18329,18 @@ async function callAI(sysNote,opts){if(!_call)return;const _rawOutput=typeof mod
     maybeAffectionShift(_call.id,c,_luc,content);
     maybeCollarIntent(content,c);maybeGrudgeResolve(content,c,_call.id);
     if(!_rawOutput&&_lang==='zh')content=refreshDirectClockReply(content,_luc&&msgToText(_luc),Date.now());content=callStripForeignActions(content);if(!_rawOutput&&video)content=ensureVideoCallAction(content,_callCueTag);if(_videoVision)callVideoVisionStatus('');if(screenShareReason)setTimeout(()=>callScreenShareRequest(screenShareReason),260);
-    const wantHang=/\[挂断\]/.test(content);const pieces=[];const _vlang=ttsContentLang(c);
+    const wantHang=/\[挂断\]/.test(content);const pieces=[],_actCarry=[];const _vlang=ttsContentLang(c);
     (_rawOutput?modelUnfilteredLines(content):splitBubbles(content)).forEach(l=>{if(!_rawOutput)l=normTag(l);if(/^\[挂断\]$/.test(l))return;let mm=l.match(/^\[内心\|([^\]]*)\]$/);if(mm){if(setNaturalInnerThought(c,mm[1]))save();return;}mm=l.match(/^\[心情\|([^\]]*)\]$/);if(mm){if(!wechatNaturalOn())c.mood=moodInnerMonologue(c,honestMoodText(c,mm[1]));return;}const mvm=l.match(/^\[心情值\|([+\-]?\d{1,3})\]$/);if(mvm){adjMood(_call.id,parseInt(mvm[1],10)||0);return;}if(!_rawOutput&&LEAKRE.test(l))return;l=_rawOutput?modelUnfilteredThoughtTags(l,c):stripCallControlTags(l,c,_call.id,video);if(!l)return;
       if(_rawOutput){pieces.push(l);return;}
       if(video){if(!isOOCLine(l))splitActions(l).forEach(p=>{if(!isOOCLine(p))pieces.push(p);});}
-      else{const cleaned=l.replace(/【[^】]*】/g,'').trim();if(cleaned&&!isOOCLine(cleaned))splitActions(cleaned).forEach(p=>{if(!isOOCLine(p))pieces.push(p);});}});
+      else{/* 语音通话不显示动作描写，但动作里的笑、叹气等变成这一句的语气，交给语音 */const _acts=typeof NorthVoiceExpressive!=='undefined'&&NorthVoiceExpressive.actionCues?NorthVoiceExpressive.actionCues((l.match(/【[^】]*】/g)||[]).join('')):[],_bare=l.replace(/【[^】]*】/g,'').trim();if(!_bare){_actCarry.push(..._acts);return;}const _tags=_actCarry.splice(0).concat(_acts).slice(0,2),cleaned=(_tags.length?_tags.map(x=>'['+x+']').join(''):'')+_bare;if(cleaned&&!isOOCLine(cleaned))splitActions(cleaned).forEach(p=>{if(!isOOCLine(p))pieces.push(p);});}});
     // 把"外语原文 + 紧跟的（中文翻译）"配成一组，字幕里一起显示、只读原文、停顿一次，避免字幕快闪/翻译跟原文脱节
     if(!_inspectionCompletion&&rolePhoneInspectionGenerationStale(c.id,_inspectionStartEpoch)){if(_call){_call.sub=null;updateCallSub();}return;}/* 已生成的通话内容也受查看代次门控制 */
     if(_callStateStale()){_call.sub=null;updateCallSub();return;}const units=[],_pendingCues=[];pieces.forEach(p=>{p=_rawOutput?String(p||''):callNormalizeLine((p||'').trim(),_vlang);if(!p)return;
       if(!_rawOutput&&callBadForeignLine(p,_vlang))return;
       const isTrans=/^[（(][^）)]*[）)]$/.test(p)&&hasCN(p);
       if(isTrans&&(!_rawOutput||units.length&&!units[units.length-1].trans)){if(units.length&&!units[units.length-1].trans)units[units.length-1].trans=p;/* 同一句原文只认第一条翻译，多余/重复的翻译行(不管半角全角)直接丢掉 */return;}
-      /* 角色在通话里写的中文小提示（[轻笑][叹气][温柔]…）：字幕和通话记录里不显示，交给语音去真的笑、真的叹气 */const _vx=typeof NorthVoiceExpressive!=='undefined'?NorthVoiceExpressive.split(p,true):null;if(_vx){const names=(_vx.perf.match(/\[([^\]]+)\]/g)||[]).map(x=>x.slice(1,-1));if(!_vx.text){_pendingCues.push(...names);return;}units.push({orig:_vx.text,trans:'',cues:_pendingCues.splice(0).concat(names)});return;}units.push({orig:p,trans:'',cues:_pendingCues.splice(0)});});
+      /* 角色在通话里写的中文小提示（[轻笑][叹气][温柔]…）：字幕和通话记录里不显示，交给语音去真的笑、真的叹气 */if(video&&callIsActionLine(p)){if(typeof NorthVoiceExpressive!=='undefined'&&NorthVoiceExpressive.actionCues)_pendingCues.push(...NorthVoiceExpressive.actionCues(p));units.push({orig:p,trans:'',cues:[]});return;}/* 视频通话：动作描写照常显示，里面的笑、叹气交给下一句说的话 */const _vx=typeof NorthVoiceExpressive!=='undefined'?NorthVoiceExpressive.split(p,true):null;if(_vx){const names=(_vx.perf.match(/\[([^\]]+)\]/g)||[]).map(x=>x.slice(1,-1));if(!_vx.text){_pendingCues.push(...names);return;}units.push({orig:_vx.text,trans:'',cues:_pendingCues.splice(0).concat(names)});return;}units.push({orig:p,trans:'',cues:_pendingCues.splice(0)});});
     let _prevP='',_prefetchP='',_prefetchInterjectionUsed=false;const _speechRows=units.map(u=>{const duplicate=!_rawOutput&&u.orig===_prefetchP;_prefetchP=u.orig;const isAction=video&&callIsActionLine(u.orig),spoken=(duplicate||isAction)?'':(_rawOutput&&(!_vlang||_vlang==='zh'))?u.orig:pickSpoken(u.orig,_vlang),cues=(u.cues||[]).slice(0,2),sound=cues.find(x=>/^(轻笑|笑|叹气|叹|哽咽|哭腔)$/.test(x)),interjection=!!(spoken&&(sound||!_prefetchInterjectionUsed));if(spoken&&!sound)_prefetchInterjectionUsed=true;return{isAction,spoken,cue:spoken&&cues.length?(sound||cues[0]):_turnVoiceCue,interjection,perf:spoken&&cues.length?cues.map(x=>'['+x+']').join('')+spoken:'',inlineSound:!!(spoken&&sound)};});
     const _speechJobs=(_call.replyVoice&&!c.muted&&ttsApiOn(c)&&!voiceProgressiveOn())?callPrefetchSpeech(_speechRows,c,()=>!!(_call&&_call.session===sess&&_call.state==='active')):[];
     for(let _ui=0;_ui<units.length;_ui++){const u=units[_ui];if(!_call||_call.session!==sess||_callStateStale())return;

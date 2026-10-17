@@ -56,6 +56,7 @@ const PERMANENT_FIXES = [
   {release:"web v1794 / private v1797",scope:"both",least:1,file:"task-notes.js",name:"拍照任务必须在任务里上传照片、识图核对后才算完成",marker:"PHOTO_TASK_PROOF_V1"},
   {release:"web v1794 / private v1797",scope:"both",least:1,name:"完成任务提示用粉色小提示",marker:"if(typeof taskToast==='function')taskToast('完成啦');else toast('完成啦 ✅');"},
   {release:"web v1794 / private v1797",scope:"web",least:1,file:PRIVATE_DIR+"phone-shortcuts.js",name:"查岗教程：用「如果」包住截屏，不查岗时不截屏不闪屏",marker:"「否则」里什么都不放"},
+  {release:"web v1796 / private v1799",scope:"both",least:1,file:"voice-expressive.js",name:"通话动作描写里的轻笑/叹气交给下一句语音，真的笑出来",marker:"function actionCues(text){"},
   {release:"web v1790 / private v1793",scope:"both",least:1,file:"voice-expressive.js",name:"通话里角色写的[轻笑]等不显示在字幕、交给语音真的笑",marker:"allowSound=wantLaugh||!!(opt&&opt.inlineSound)||soundAllowed(o);"},
   {release:"web v1790 / private v1793",scope:"both",least:1,name:"漏做任务提醒与布置新任务合成一条回复，超过3天的旧任务不再追究",marker:"const _taskPenaltyNote={};"},
   {release:"web v1790 / private v1793",scope:"both",least:1,file:"task-notes.js",name:"角色布置的长任务两行省略、点开看全文",marker:"long=[...String(r.text||'')].length>26"},
