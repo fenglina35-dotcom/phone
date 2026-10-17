@@ -313,16 +313,23 @@ style.textContent+='.cohab-theater-member-actions{display:flex;gap:6px;align-ite
 
 /* COHAB_VOICE_V1 共同生活语音模式：借用视频通话的声音和旁白，但它是共同生活里的面对面相处，不是视频通话。
    - 入口：共同生活输入框没字时「记下」变成 ＋，展开后有「共同生活语音模式」；只有两人在一起（在家/一起外出）时才有输入框。
-   - 角色那边：系统提示换成共同生活的（cohabSystem），历史是共同生活历史 + 这一段语音；不提镜头/电话/挂断。
+   - 界面：阅读式（COHAB_VOICE_READER_V1）：旁白和台词像文章一样往下排，可以往上翻；停在最底下时跟着 TA 说话自动往下走。
+     不显示头像、不显示时长，右上角是「结束」。
+   - 角色那边：系统提示换成共同生活的（cohabSystem），历史是共同生活历史 + 这一段语音；生成提示时这一段暂时不算进
+     微信/电话的跨渠道记录（否则会被标成“视频通话”），角色不会以为是打电话。
    - 不串台：结束时把这一段从微信消息里整段移走，存进共同生活（语音记录 + 隐藏的共同生活历史），微信通话记录、
-     微信上下文都看不到；总结写进同一份长期记忆，标【共同生活语音】，所以线上也记得。
+     微信上下文都看不到；总结写进同一份长期记忆，标【共同生活语音】，所以线上也记得。结束后聊天里不加任何提示。
+   - 语音记录：进行中也能看，每一句都能改、能删（和线上通话记录一样）。
    - 期间暂停共同生活自己推进的事（作息出门、主动行为），结束后照常继续。 */
 (function(){
 'use strict';
 if(window.CohabVoice)return;
 const isActive=id=>typeof _call!=='undefined'&&!!_call&&!!_call.cohab&&(!id||_call.id===id);
 const esc2=s=>typeof esc==='function'?esc(s):String(s||'');
+const hasDom=()=>typeof document!=='undefined'&&typeof document.getElementById==='function'&&typeof document.querySelector==='function';
 function fmtDur(sec){sec=Math.max(0,sec|0);const m=Math.floor(sec/60),s=sec%60;return m?(m+' 分'+(s?' '+s+' 秒':'')):(s+' 秒');}
+const isAction=t=>typeof callIsActionLine==='function'&&callIsActionLine(String(t||''));
+let following=true,watch=0,lastSig='',narr=false;
 
 /* ---------- 进入 ---------- */
 function start(){const id=typeof _off!=='undefined'&&_off&&_off.id;const c=id&&getC(id),o=id&&cohabData(id);if(!c||!o)return;
@@ -331,35 +338,32 @@ function start(){const id=typeof _off!=='undefined'&&_off&&_off.id;const c=id&&g
   if(_off&&_off.busy){toast('TA 正在回应，等一下再进入语音模式');return;}
   closeTray();if(typeof audioUnlock==='function')audioUnlock();
   if(typeof ttsApiOn==='function'&&!ttsApiOn(c))setTimeout(()=>toast('这个角色还没开外置语音，只能看到文字'),400);
+  following=true;lastSig='';
   _call={id,accountId:actId(),kind:'video',state:'active',dir:'outgoing',opened:true,replyVoice:true,session:uid(),sub:null,start:Date.now(),lastUserTs:Date.now(),silentStage:0,cohab:true};
-  clearInterval(_callTimer);_callTimer=setInterval(renderCallTime,1000);clearInterval(_callSilTimer);
+  clearInterval(_callTimer);clearInterval(_callSilTimer);
   if(typeof roleServerPushCallStarted==='function')roleServerPushCallStarted(id);
   renderCall();callPersist();}
 
-/* ---------- 结束：回到文字 ---------- */
+/* ---------- 结束：回到文字（聊天里不加任何提示） ---------- */
 function end(){if(!isActive())return;const id=_call.id,sess=_call.session,aid=_call.accountId||actId(),begin=_call.start||Date.now();
-  endCallTimers();audioRouteReset(false);hideCallBanner();
+  clearInterval(watch);watch=0;endCallTimers();audioRouteReset(false);hideCallBanner();
   const list=msgs(id),rows=list.filter(m=>m&&m._cs===sess);for(let i=list.length-1;i>=0;i--)if(list[i]&&list[i]._cs===sess)list.splice(i,1);
   _call=null;_callBusy=false;_callPend=null;_callVisionPend=[];_callStatePend=null;_callStateEpoch++;callClearPersist(sess);renderCall();
   if(typeof roleServerPushCallEnded==='function')roleServerPushCallEnded(id);
   const o=cohabData(id),c=getC(id),dur=Math.max(0,Math.floor((Date.now()-begin)/1000));
   if(o)archive(o,rows,sess,begin,dur);
   save();summarize(c,rows,aid);
-  if(typeof cohabSceneActive==='function'&&cohabSceneActive())render();else if(typeof cur==='function'&&cur().p==='chat')render();
-  toast('已回到文字');}
+  if(typeof cohabSceneActive==='function'&&cohabSceneActive())render();else if(typeof cur==='function'&&cur().p==='chat')render();}
+// One line per spoken unit; a translation message is folded into the line it belongs to.
+function lineRows(rows){const out=[],byId={};rows.forEach(m=>{if(!m||m.type==='sys')return;if(m._callTranslationOf){const p=byId[m._callTranslationOf];if(p&&!p.trans)p.trans=String(m.content||'');return;}const t=String(m.content||'').trim();if(!t)return;const row={id:m.id,role:m.role==='user'?'user':'assistant',content:t,trans:String(m._callTrans||''),time:+m.time||Date.now(),action:isAction(t),audio:m.callAudio||''};byId[m.id]=row;out.push(row);});return out;}
 const spoken=rows=>rows.filter(m=>m&&m.type!=='sys'&&!m._callTranslationOf&&String(m.content||'').trim());
-function archive(o,rows,sess,begin,dur){const lines=spoken(rows);
-  o.voiceLog=Array.isArray(o.voiceLog)?o.voiceLog:[];
-  if(lines.length)o.voiceLog.push({id:uid(),sess,start:begin,end:Date.now(),dur,lines:lines.map(m=>({id:m.id,role:m.role==='user'?'user':'assistant',content:String(m.content||''),trans:String(m._callTrans||''),time:+m.time||Date.now(),action:m.role!=='user'&&typeof callIsActionLine==='function'&&callIsActionLine(m.content),audio:m.callAudio||''}))});
-  o.voiceLog=o.voiceLog.slice(-40);
+function hiddenItem(l,sess){const t=l.content;let item;if(l.role==='user')item=l.action?{id:uid(),who:'旁白',source:'me',text:t.replace(/^【|】$/g,'')}:{id:uid(),who:'me',text:t};else if(l.action)item={id:uid(),who:'旁白',source:'ta',text:t.replace(/^【|】$/g,'')};else item={id:uid(),who:'ta',source:'ta',text:t+(l.trans?'\n'+l.trans:'')};item.time=l.time;item._voice=sess;return item;}
+function archive(o,rows,sess,begin,dur){const lines=lineRows(rows);
+  o.voiceLog=Array.isArray(o.voiceLog)?o.voiceLog:[];o.msgs=Array.isArray(o.msgs)?o.msgs:[];
   // 共同生活历史里的隐藏副本：页面不显示，但共同生活（以及开了同步时的微信）都把它当成当面说过的话。
-  o.msgs=Array.isArray(o.msgs)?o.msgs:[];
-  lines.forEach(m=>{const t=String(m.content||'').trim();let item;
-    if(m.role==='user')item={id:uid(),who:'me',text:t};
-    else if(typeof callIsActionLine==='function'&&callIsActionLine(t))item={id:uid(),who:'旁白',source:'ta',text:t.replace(/^【|】$/g,'')};
-    else item={id:uid(),who:'ta',source:'ta',text:t+(m._callTrans?'\n'+m._callTrans:'')};
-    o.msgSeq=Math.max(0,+o.msgSeq||0)+1;item.cohabSeq=o.msgSeq;item.time=+m.time||Date.now();item._voice=sess;o.msgs.push(item);});
-  if(typeof cohabPushNotice==='function')cohabPushNotice(o,lines.length?'刚才用语音聊了 '+fmtDur(dur)+'，记录在共同生活设置里':'刚才进了一下语音模式，没有说话',{kind:'voice',key:'voice-'+sess});}
+  lines.forEach(l=>{const item=hiddenItem(l,sess);o.msgSeq=Math.max(0,+o.msgSeq||0)+1;item.cohabSeq=o.msgSeq;o.msgs.push(item);l.hid=item.id;});
+  if(lines.length)o.voiceLog.push({id:uid(),sess,start:begin,end:Date.now(),dur,lines});
+  o.voiceLog=o.voiceLog.slice(-40);}
 async function summarize(c,rows,aid){const lines=spoken(rows);if(!c||lines.length<2||typeof chatAPI!=='function')return;
   const ul=typeof summaryUserLabel==='function'?summaryUserLabel(c,aid):(S.me&&S.me.name||'对方');
   const text=lines.map(m=>(m.role==='user'?ul:c.name)+'：'+String(m.content||'').replace(/\s+/g,' ')).join('\n');
@@ -368,23 +372,89 @@ async function summarize(c,rows,aid){const lines=spoken(rows);if(!c||lines.lengt
 
 /* ---------- 给角色看的（callAI 在语音模式时调用） ---------- */
 function history(c,sess){const o=cohabData(c.id),out=(typeof cohabReplyHistory==='function'?cohabReplyHistory(c,o):[]).map(x=>({role:x.role,content:x.content}));
-  msgs(c.id).filter(m=>m&&m._cs===sess&&m.type!=='sys'&&!m._callTranslationOf).forEach(m=>{const t=String(m.content||'')+(m._callTrans?'\n'+m._callTrans:'');if(!t.trim())return;const role=m.role==='user'?'user':'assistant',last=out[out.length-1];if(last&&last.role===role)last.content+='\n'+t;else out.push({role,content:t});});
+  lineRows(msgs(c.id).filter(m=>m&&m._cs===sess)).forEach(l=>{const t=l.content+(l.trans?'\n'+l.trans:'');const role=l.role,last=out[out.length-1];if(last&&last.role===role)last.content+='\n'+t;else out.push({role,content:t});});
   return out;}
+// While the prompt is built, this voice stretch is left out of the WeChat/phone timeline (it would read as a video call there);
+// it is already in the 共同生活 history above. Returns the function that puts the lines back.
+function hideSession(c,sess){const list=msgs(c.id),taken=[];for(let i=list.length-1;i>=0;i--)if(list[i]&&list[i]._cs===sess){taken.unshift({i,m:list[i]});list.splice(i,1);}return()=>{taken.forEach(({i,m})=>list.splice(Math.min(i,list.length),0,m));};}
 function system(c,query){const o=cohabData(c.id);return cohabSystem(c,o,query)+(typeof cohabMemoryPrompt==='function'?cohabMemoryPrompt(o,query):'');}
 function frame(c,lang,langN){const me=S.me&&S.me.name||'对方';
-  let s='\n\n# 现在是共同生活里的语音模式（务必遵守）\n- 这不是视频通话，也不是打电话。你和'+me+'此刻就在同一个空间里面对面相处，和平时共同生活里打字聊天完全一样，只是这一段你说出口的话会被真的念出来，让'+me+'听见你的声音。\n- 绝对不要提视频、镜头、屏幕、电话、通话、挂断、接通、信号、听筒这类词，也不要写对着镜头的动作；你们是当面，伸手就能碰到。\n- 用口语短句，每句单独一行。\n- 每轮先在最前面单独写一行隐藏控制：[通话语气|中性/温柔/开心/难过/愤怒/质问/惊讶/害怕/厌恶/低声/亲亲/轻笑/大笑/叹气/吸气/呼气/哭泣]，只选一个最贴切的；'+me+'明确要你笑、亲、凶一点或温柔一点时必须照做。这个标签不会显示或读出。\n- 你的动作、神态和身边的环境用【】单独成行写，是第三人称旁白，写你在房间里真实的动作（比如【他把你往怀里带了带，下巴抵在你发顶】）。旁白用中文写，不会被念出来。每轮至少说1句真正会被听见的台词，旁白写1到2行，旁白和台词不要写在同一行；旁白不能替代台词。\n- 不要写 [挂断]；这段语音什么时候结束由'+me+'决定，结束后你们照常用文字继续，内容是连在一起的。\n- 共同生活里能用的隐藏标签（[记住|…]、共同生活状态和位置等）照常可用，标签单独成行，不会被念出。不要发表情包。';
+  let s='\n\n# 现在是共同生活里的语音模式（务必遵守）\n- 这不是视频通话，也不是打电话，没有谁打给谁。你和'+me+'此刻就在同一个空间里面对面相处，和平时共同生活里打字聊天完全一样，只是'+me+'换了一种方式和你说话：这一段你说出口的话会被真的念出来，让'+me+'听见你的声音。\n- 绝对不要说“你打过来了”“打电话”“接电话”“挂了”之类的话，也不要提视频、镜头、屏幕、通话、接通、信号、听筒；不要写对着镜头的动作。你们是当面，伸手就能碰到。\n- 用口语短句，每句单独一行。\n- 每轮先在最前面单独写一行隐藏控制：[通话语气|中性/温柔/开心/难过/愤怒/质问/惊讶/害怕/厌恶/低声/亲亲/轻笑/大笑/叹气/吸气/呼气/哭泣]，只选一个最贴切的；'+me+'明确要你笑、亲、凶一点或温柔一点时必须照做。这个标签不会显示或读出。\n- 你的动作、神态和身边的环境用【】单独成行写，是第三人称旁白，写你在房间里真实的动作（比如【他把你往怀里带了带，下巴抵在你发顶】）。旁白用中文写，不会被念出来。每轮至少说1句真正会被听见的台词，旁白写1到2行，旁白和台词不要写在同一行；旁白不能替代台词。\n- 不要写 [挂断]；这段语音什么时候结束由'+me+'决定，结束后你们照常用文字继续，内容是连在一起的。\n- 共同生活里能用的隐藏标签（[记住|…]、共同生活状态和位置等）照常可用，标签单独成行，不会被念出。不要发表情包。';
   if(langN)s+='\n- ‼️最重要：说出口的台词全程只能说'+langN+'，每一句都是'+langN+'。格式：先单独一行写'+langN+'原文（会被念出来），紧接着换一行用（）写普通话中文翻译（不会被念）。一句原文配一句翻译，严格交替，翻译只写一遍。旁白【】照常用中文，不需要翻译。例如：\n'+(typeof voicePromptExample==='function'?voicePromptExample(lang):'');
   return s;}
 
-/* ---------- 共同生活语音记录（共同生活设置里） ---------- */
-function log(id){const o=cohabData(id),c=getC(id);if(!o||!c)return;const logs=(o.voiceLog||[]).slice().reverse(),who=l=>l.role==='user'?(S.me&&S.me.name||'我'):(c.remark||c.name);
-  const body=logs.length?logs.map((g,gi)=>'<details style="margin:10px 0;border:1px solid #2a2a2c;border-radius:14px;overflow:hidden;background:#141416"><summary style="list-style-position:inside;background:#1e1e22;padding:9px 12px;cursor:pointer"><span style="display:inline-block;width:calc(100% - 22px);vertical-align:top"><span style="font-size:13px;color:#e6c79c;font-weight:600">🎙 共同生活语音 · 第'+(logs.length-gi)+'次</span><span style="display:block;font-size:11px;color:#888;margin-top:2px">'+esc2(typeof fmtDate==='function'?fmtDate(g.start):'')+'　开始 '+hm(g.start)+' — 结束 '+hm(g.end)+' · '+fmtDur(g.dur)+'</span></span></summary><div style="padding:2px 12px 10px">'+g.lines.map(l=>'<div style="padding:6px 0;border-top:.5px solid #242428"><div style="font-size:11px;color:#888">'+esc2(l.action?'旁白':who(l))+'</div><div style="white-space:pre-wrap;font-size:14px;margin-top:2px;color:'+(l.action?'#a99f93;font-style:italic':'#ddd')+'">'+esc2(l.content+(l.trans?'\n'+l.trans:''))+'</div></div>').join('')+'<button class="minibtn" style="margin-top:8px;color:#ff8a8a" onclick="CohabVoice.remove(\''+esc2(id)+'\',\''+esc2(g.id)+'\')">删除这次记录</button></div></details>').join(''):'<div class="empty" style="padding:24px 0;text-align:center;color:#888">还没有共同生活语音记录</div>';
-  openModal('<h3>共同生活语音记录</h3><div class="hint">在共同生活里用语音模式说过的话。只在这里显示，不会出现在微信的通话记录里。</div>'+body+'<div class="btns" style="margin-top:10px"><button class="btn g" onclick="closeModal()">关闭</button></div>');}
+/* ---------- 共同生活语音记录：进行中的也在，每句可改可删 ---------- */
+function sessionsFor(id){const o=cohabData(id),list=(o&&o.voiceLog||[]).slice().reverse().map(g=>Object.assign({live:false},g));
+  if(isActive(id)){const lines=lineRows(msgs(id).filter(m=>m&&m._cs===_call.session));list.unshift({id:'live',live:true,sess:_call.session,start:_call.start||Date.now(),end:Date.now(),dur:Math.floor((Date.now()-(_call.start||Date.now()))/1000),lines});}
+  return list;}
+function log(id,openKey){const o=cohabData(id),c=getC(id);if(!o||!c)return;const all=sessionsFor(id),who=l=>l.action?(l.role==='user'?'我的旁白':'旁白'):l.role==='user'?(S.me&&S.me.name||'我'):(c.remark||c.name),total=all.filter(g=>!g.live).length;
+  const body=all.length?all.map((g,gi)=>{const n=g.live?'正在进行':'第'+(total-(all[0]&&all[0].live?gi-1:gi))+'次',key=g.live?'live':g.id;
+    return '<details '+(openKey===key||g.live?'open':'')+' style="margin:10px 0;border:1px solid #2a2a2c;border-radius:14px;overflow:hidden;background:#141416"><summary style="list-style-position:inside;background:#1e1e22;padding:9px 12px;cursor:pointer"><span style="display:inline-block;width:calc(100% - 22px);vertical-align:top"><span style="font-size:13px;color:#e6c79c;font-weight:600">🎙 共同生活语音 · '+n+'</span><span style="display:block;font-size:11px;color:#888;margin-top:2px">'+esc2(typeof fmtDate==='function'?fmtDate(g.start):'')+'　开始 '+hm(g.start)+(g.live?' · 还在说':' — 结束 '+hm(g.end))+'</span></span></summary><div style="padding:2px 12px 10px">'
+     +(g.lines.length?g.lines.map(l=>'<div style="padding:6px 0;border-top:.5px solid #242428"><div style="font-size:11px;color:#888;display:flex;justify-content:space-between"><span>'+esc2(who(l))+'</span><span><span onclick="CohabVoice.editLine(\''+esc2(id)+'\',\''+esc2(key)+'\',\''+esc2(l.id)+'\')" style="color:#54a0ff;cursor:pointer">✎改</span><span onclick="CohabVoice.delLine(\''+esc2(id)+'\',\''+esc2(key)+'\',\''+esc2(l.id)+'\')" style="color:#fa5151;cursor:pointer;margin-left:14px">✕删</span></span></div><div style="white-space:pre-wrap;font-size:14px;margin-top:2px;color:'+(l.action?'#a99f93;font-style:italic':'#ddd')+'">'+esc2(l.content+(l.trans?'\n'+l.trans:''))+'</div></div>').join(''):'<div style="padding:10px 0;color:#888;font-size:13px">还没有说话</div>')
+     +(g.live?'':'<button class="minibtn" style="margin-top:8px;color:#ff8a8a" onclick="CohabVoice.remove(\''+esc2(id)+'\',\''+esc2(g.id)+'\')">删除这次记录</button>')+'</div></details>';}).join(''):'<div class="empty" style="padding:24px 0;text-align:center;color:#888">还没有共同生活语音记录</div>';
+  openModal('<h3>共同生活语音记录</h3><div class="hint">在共同生活里用语音模式说过的话，正在进行的也在这里。只在共同生活里显示，不会出现在微信的通话记录里。</div>'+body+'<div class="btns" style="margin-top:10px"><button class="btn g" onclick="closeModal()">关闭</button></div>');}
+function findLine(id,key,lineId){if(key==='live'){if(!isActive(id))return null;const m=msgs(id).find(x=>x&&x.id===lineId&&x._cs===_call.session);return m?{live:true,m}:null;}const o=cohabData(id),g=(o&&o.voiceLog||[]).find(x=>x.id===key),l=g&&g.lines.find(x=>x.id===lineId);return l?{live:false,o,g,l}:null;}
+function editLine(id,key,lineId){const f=findLine(id,key,lineId);if(!f)return;const text=f.live?String(f.m.content||''):f.l.content;
+  openModal('<h3>改这一句</h3><div class="field"><textarea id="cv_edit" rows="4">'+esc2(text)+'</textarea></div><div class="btns"><button class="btn g" onclick="CohabVoice.log(\''+esc2(id)+'\',\''+esc2(key)+'\')">取消</button><button class="btn p" onclick="CohabVoice.saveLine(\''+esc2(id)+'\',\''+esc2(key)+'\',\''+esc2(lineId)+'\')">保存</button></div>');}
+function saveLine(id,key,lineId){const f=findLine(id,key,lineId),el=hasDom()&&document.getElementById('cv_edit'),v=String(el&&el.value||'').trim();if(!f)return;if(!v){toast('不能是空的，要删掉请点删');return;}
+  if(f.live){f.m.content=v;}else{f.l.content=v;const item=(f.o.msgs||[]).find(m=>m&&m.id===f.l.hid);if(item){const fresh=hiddenItem(f.l,f.g.sess);item.text=fresh.text;}}
+  save();log(id,key);if(isActive(id))refresh(true);}
+async function delLine(id,key,lineId){const f=findLine(id,key,lineId);if(!f)return;if(typeof uiConfirm==='function'&&!await uiConfirm('删除这一句？'))return;
+  if(f.live){const list=msgs(id);for(let i=list.length-1;i>=0;i--){const m=list[i];if(m&&(m.id===lineId||m._callTranslationOf===lineId))list.splice(i,1);}}
+  else{f.g.lines=f.g.lines.filter(x=>x.id!==lineId);f.o.msgs=(f.o.msgs||[]).filter(m=>!(m&&(f.l.hid?m.id===f.l.hid:(m._voice===f.g.sess&&m.time===f.l.time))));if(!f.g.lines.length)f.o.voiceLog=f.o.voiceLog.filter(x=>x.id!==key);}
+  save();log(id,key);if(isActive(id))refresh(true);}
 async function remove(id,logId){const o=cohabData(id);if(!o)return;const g=(o.voiceLog||[]).find(x=>x.id===logId);if(!g)return;if(typeof uiConfirm==='function'&&!await uiConfirm('删除这次共同生活语音记录？TA 对这段的记忆不受影响。'))return;o.voiceLog=o.voiceLog.filter(x=>x.id!==logId);o.msgs=(o.msgs||[]).filter(m=>!(m&&m._voice===g.sess));save();log(id);}
+
+/* ---------- 阅读式语音界面（COHAB_VOICE_READER_V1） ---------- */
+// Same look as the 共同生活 page: its 外观 colors (--offc-*), background image and black stage.
+const READER_CSS='.callscreen.cvr-mode #callSub,.callscreen.cvr-mode .callsub{display:none!important}.callscreen.cvr-mode{display:block!important;padding:0!important;align-items:stretch!important;background-color:#050505!important;background-position:center!important;background-size:cover!important;background-repeat:no-repeat!important;color:#ddd8cf}.callscreen.cvr-mode:not(.hasbg){background-image:radial-gradient(circle at 50% 0,rgba(98,82,62,.12),transparent 32%)!important}.callscreen.cvr-mode.hasbg:before{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;background:linear-gradient(180deg,rgba(0,0,0,.5),rgba(0,0,0,.18) 30%,rgba(0,0,0,.25) 70%,rgba(0,0,0,.62))}'
+ +'.cvr-head{position:absolute;left:0;right:0;top:0;z-index:3;display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top,0px) + 12px) 16px 14px;background:linear-gradient(180deg,rgba(5,5,5,.96) 55%,rgba(5,5,5,0))}.callscreen.cvr-mode.hasbg .cvr-head{background:rgba(18,18,20,.4);-webkit-backdrop-filter:blur(20px) saturate(1.35);backdrop-filter:blur(20px) saturate(1.35);border-bottom:1px solid rgba(255,255,255,.1)}.cvr-min{width:34px;height:34px;border:0;border-radius:50%;background:rgba(255,255,255,.07);color:#ddd8cf;font-size:18px}.cvr-title{flex:1;min-width:0;text-align:center}.cvr-title small{display:block;font-size:10px;letter-spacing:3px;color:#6c665e}.cvr-title b{display:block;margin-top:3px;font-size:17px;font-weight:600;color:#f2efe9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cvr-end{height:30px;padding:0 14px;border:1px solid rgba(255,255,255,.16);border-radius:15px;background:rgba(255,255,255,.06);color:#ecebe7;font-size:13px}'
+ +'.cvr-scroll{position:absolute;left:0;right:0;top:0;bottom:0;z-index:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}.cvr-body{max-width:640px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 88px) 22px calc(env(safe-area-inset-bottom,0px) + 150px)}'
+ +'.cvr-line{transition:opacity .5s ease;opacity:.5}.cvr-line.now,.cvr-line.me-now{opacity:1}.cvr-line.fresh{animation:cvrIn .55s cubic-bezier(.2,.8,.3,1) both}@keyframes cvrIn{from{opacity:0;transform:translateY(10px)}}'
+ +'.cvr-nar{margin:18px 0 6px;font:italic 15px/1.95 "Songti SC","STSong",serif;color:var(--offc-nar,#c9c2b6)}.cvr-say{margin:6px 0 2px;font:400 20px/1.75 "Songti SC","STSong",serif;color:#f2efe9;letter-spacing:.3px}.callscreen.cvr-mode.hasbg .cvr-say,.callscreen.cvr-mode.hasbg .cvr-nar{text-shadow:0 1px 6px rgba(0,0,0,.6)}.cvr-say i{display:block;margin-top:2px;font:400 13.5px/1.6 -apple-system,"PingFang SC",sans-serif;font-style:normal;color:rgba(255,255,255,.5)}'
+ +'.cvr-me{display:flex;justify-content:flex-end;margin:18px 0}.cvr-me span{max-width:78%;padding:9px 14px;border-radius:18px 18px 5px 18px;background:var(--offc-me,#0a84ff);color:var(--offc-me-ink,#fff);font:15px/1.6 -apple-system,"PingFang SC",sans-serif;white-space:pre-wrap}'
+ +'.cvr-empty{margin-top:30vh;text-align:center;color:var(--offc-nar,#c9c2b6);opacity:.7;font:15px/1.9 -apple-system,"PingFang SC",sans-serif;letter-spacing:2px}.cvr-dots{display:flex;gap:6px;margin:16px 0 0 2px}.cvr-dots b{width:6px;height:6px;border-radius:50%;background:var(--offc-nar,#c9c2b6);opacity:.35;animation:cvrDot 1.2s infinite}.cvr-dots b:nth-child(2){animation-delay:.2s}.cvr-dots b:nth-child(3){animation-delay:.4s}@keyframes cvrDot{40%{opacity:1;transform:translateY(-3px)}}'
+ +'.cvr-latest{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 92px);z-index:4;transform:translateX(-50%);height:32px;padding:0 14px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(30,30,32,.9);color:#ecebe7;font-size:12.5px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}.cvr-latest[hidden]{display:none}'
+ +'.callscreen.cvr-mode .cvr-dock{position:absolute;left:0;right:0;bottom:0;z-index:3;display:flex!important;align-items:center;gap:10px;margin:0!important;width:auto!important;padding:10px 12px calc(env(safe-area-inset-bottom,0px) + 12px)!important;background:rgba(10,10,10,.94);border-top:.5px solid rgba(255,255,255,.08)}.callscreen.cvr-mode.hasbg .cvr-dock{background:rgba(18,18,20,.45);-webkit-backdrop-filter:blur(20px) saturate(1.35);backdrop-filter:blur(20px) saturate(1.35)}.cvr-dock input{flex:1;min-width:0;height:40px;padding:0 14px;border:1px solid #312e29;border-radius:20px;background:#121212;color:#ecebe7;font-size:15px}.cvr-dock .cvr-send{height:40px;padding:0 16px;border:0;border-radius:20px;background:var(--offc-me,#0a84ff);color:var(--offc-me-ink,#fff);font-weight:700}.cvr-mic{position:relative;width:40px;height:40px;min-width:40px;border:1px solid #312e29;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#121212;color:#ddd8cf}.cvr-mic.on{background:var(--offc-me,#0a84ff);color:var(--offc-me-ink,#fff);border-color:transparent}.cvr-mic.on:after{content:"";position:absolute;inset:-5px;border-radius:50%;border:1.5px solid rgba(236,235,231,.55);animation:cvrMic 1.6s ease-out infinite;pointer-events:none}@keyframes cvrMic{0%{transform:scale(.85);opacity:.9}100%{transform:scale(1.25);opacity:0}}'
+ +'.callscreen.cvr-mode:not(.off-classic) .cvr-me span{background:rgba(20,20,22,.55);border:1px solid rgba(255,255,255,.45);color:#fff}.callscreen.cvr-mode:not(.off-classic) .cvr-dock .cvr-send{background:#ecebe7;color:#111}.callscreen.cvr-mode:not(.off-classic) .cvr-mic.on{background:#ecebe7;color:#111}.cvr-nar-me{text-align:right}.cvr-nar-btn{height:40px;min-width:48px;padding:0 10px;border:1px solid #312e29;border-radius:20px;background:#121212;color:#ddd8cf;font-size:13px}.cvr-nar-btn.on{background:#ecebe7;color:#111;border-color:transparent}.cvr-reply{position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 72px);z-index:4;height:30px;padding:0 13px;border:1px solid rgba(255,255,255,.16);border-radius:15px;background:rgba(24,24,26,.92);color:#ecebe7;font-size:12.5px;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}.cvr-latest{bottom:calc(env(safe-area-inset-bottom,0px) + 112px)!important}';
+function transcriptHTML(){if(!isActive())return '';const lines=lineRows(msgs(_call.id).filter(m=>m&&m._cs===_call.session)),sub=_call.sub&&String(_call.sub.text||'').split('\n')[0];
+  let nowIdx=-1;for(let i=lines.length-1;i>=0;i--){if(lines[i].role==='assistant'&&!lines[i].action&&sub&&lines[i].content===sub){nowIdx=i;break;}}
+  if(nowIdx<0)for(let i=lines.length-1;i>=0;i--){if(lines[i].role==='assistant'&&!lines[i].action){nowIdx=i;break;}}
+  if(!lines.length)return '<div class="cvr-empty">像平时一样说话就好<br>TA 会用声音回你</div>';
+  const lastUser=(()=>{for(let i=lines.length-1;i>=0;i--)if(lines[i].role==='user')return i;return -1;})();
+  let h=lines.map((l,i)=>{const cls='cvr-line'+(i>=nowIdx-1&&i>nowIdx-3&&l.role!=='user'?' now':'')+(i===lastUser&&lastUser>nowIdx?' me-now':'')+(i===lines.length-1?' fresh':'');
+    if(l.role==='user'&&l.action)return '<div class="'+cls+' cvr-nar cvr-nar-me">'+esc2(l.content.replace(/^【|】$/g,''))+'</div>';
+    if(l.role==='user')return '<div class="'+cls+' cvr-me"><span>'+esc2(l.content)+'</span></div>';
+    if(l.action)return '<div class="'+cls+' cvr-nar">'+esc2(l.content.replace(/^【|】$/g,''))+'</div>';
+    return '<div class="'+cls+' cvr-say'+(i===nowIdx?' now':'')+'">'+esc2(l.content)+(l.trans?'<i>'+esc2(l.trans)+'</i>':'')+'</div>';}).join('');
+  if(typeof _callBusy!=='undefined'&&_callBusy&&lastUser===lines.length-1)h+='<div class="cvr-dots"><b></b><b></b><b></b></div>';
+  return h;}
+function refresh(force){if(!hasDom()||!isActive())return;const body=document.getElementById('cvrBody'),sc=document.getElementById('cvrScroll');if(!body||!sc)return;
+  const sig=JSON.stringify([msgs(_call.id).filter(m=>m&&m._cs===_call.session).map(m=>m.id+':'+String(m.content||'').length),_call.sub&&_call.sub.text,typeof _callBusy!=='undefined'&&_callBusy]);if(!force&&sig===lastSig)return;lastSig=sig;
+  body.innerHTML=transcriptHTML();if(following)sc.scrollTop=sc.scrollHeight;const lt=document.getElementById('cvrLatest');if(lt)lt.hidden=following;}
+// 旁白开关：和共同生活打字时的「旁白」一样，写的是你的动作，TA 当成你的动作来回应。
+function narrToggle(){narr=!narr;const L=hasDom()&&document.getElementById('callLayer');if(L&&isActive()&&!_call.min)paintReader(L);setTimeout(()=>{const i=hasDom()&&document.getElementById('callMsg');if(i&&i.focus)i.focus();},30);}
+// 共同生活开了手动回复时，说的话只记下，点「让TA回」才回；否则和平时一样说完就回。
+const manual=()=>typeof manualReplySceneOn==='function'&&manualReplySceneOn('offline');
+function send(){const inp=hasDom()&&document.getElementById('callMsg');if(!inp||!isActive())return;const t=String(inp.value||'').trim();if(!t)return;const v=narr?'【'+t.replace(/^【|】$/g,'')+'】':t;following=true;
+  if(!manual()){inp.value=v;callSend();return;}
+  inp.value='';const um={role:'user',type:'text',content:v,time:Date.now(),id:uid(),_call:true,_ck:_call.kind,_cs:_call.session};msgs(_call.id).push(um);save();_call.sub={who:'me',text:v};updateCallSub();refresh(true);}
+function reply(){if(!isActive())return;if(typeof _callBusy!=='undefined'&&_callBusy){toast('TA 正在回');return;}following=true;callAI();setTimeout(()=>refresh(true),50);}
+function toLatest(){following=true;const sc=hasDom()&&document.getElementById('cvrScroll');if(sc)sc.scrollTo({top:sc.scrollHeight,behavior:'smooth'});const lt=document.getElementById('cvrLatest');if(lt)lt.hidden=true;}
+function paintReader(L){const c=getC(_call.id);if(!c)return;const old=document.getElementById('callMsg'),draft=old?old.value:'';
+  const st=typeof offStageAttrs==='function'?offStageAttrs(c):{cls:'',style:''};L.removeAttribute('style');L.className='callscreen show active cohab-voice cvr-mode'+(st.cls||'');L.setAttribute('style',st.style||'');
+  const hf=typeof _callHF!=='undefined'&&_callHF;
+  L.innerHTML='<div class="cvr-scroll" id="cvrScroll"><div class="cvr-body" id="cvrBody"></div></div>'
+   +'<header class="cvr-head"><button class="cvr-min" onclick="callMin()" aria-label="缩小">⤵︎</button><div class="cvr-title"><small>共同生活 · 语音</small><b>'+esc2(c.remark||c.name)+'</b></div><button class="cvr-end" onclick="hangupCall()" aria-label="结束语音模式，回到文字">结束</button></header>'
+   +'<button class="cvr-latest" id="cvrLatest" hidden onclick="CohabVoice.toLatest()">回到最新 ↓</button>'
+   +'<button class="cvr-reply" onclick="CohabVoice.reply()">让TA回</button><div class="callinput show cvr-dock" id="callInput"><button class="cvr-nar-btn'+(narr?' on':'')+'" onclick="CohabVoice.narr()" aria-pressed="'+(narr?'true':'false')+'" aria-label="旁白：写你的动作">旁白</button><button data-call-mic="1" class="cvr-mic'+(hf?' on':'')+'" onclick="callHFToggle()" title="免提·直接说" aria-label="免提">'+(typeof svgIc==='function'?svgIc('mic',18,'currentColor'):'🎙')+'</button><input id="callMsg" inputmode="text" enterkeyhint="send" placeholder="'+(narr?'写你的动作（第三人称）…':hf?'免提中·直接对TA说…':'对TA说…')+'" onkeydown="if(event.key===\'Enter\'){event.preventDefault();CohabVoice.send()}"><button class="cvr-send" onclick="CohabVoice.send()">'+(narr?'写':'说')+'</button></div>'
+   +'<div class="callsub" id="callSub" hidden></div>';
+  const inp=document.getElementById('callMsg');if(inp&&draft)inp.value=draft;
+  const sc=document.getElementById('cvrScroll');if(sc)sc.addEventListener('scroll',()=>{const near=sc.scrollHeight-sc.scrollTop-sc.clientHeight<70;following=near;const lt=document.getElementById('cvrLatest');if(lt)lt.hidden=near;},{passive:true});
+  lastSig='';refresh(true);clearInterval(watch);watch=setInterval(()=>{if(!isActive()){clearInterval(watch);watch=0;return;}refresh(false);},600);}
 
 /* ---------- 共同生活输入框：没字时显示 ＋，展开语音模式入口 ---------- */
 function trayHTML(){return '<div class="cv-tray" id="cvTray" hidden><button type="button" onclick="CohabVoice.start()" aria-label="共同生活语音模式"><b><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg></b><span>共同生活语音模式</span></button><small>能听到TA的声音，像平时一样当面聊</small></div>';}
-const hasDom=()=>typeof document!=='undefined'&&typeof document.getElementById==='function'&&typeof document.querySelector==='function';
 function closeTray(){if(!hasDom())return;const t=document.getElementById('cvTray');if(t)t.hidden=true;const b=document.querySelector('.cv-note');if(b)b.classList.remove('open');}
 function sync(){if(!hasDom())return;const ta=document.getElementById('off_in'),b=document.querySelector('.cv-note');if(!ta||!b)return;const has=!!String(ta.value||'').trim();b.classList.toggle('cv-plus',!has);b.textContent=has?'记下':'＋';b.setAttribute('aria-label',has?'记下':'更多');if(has)closeTray();}
 function note(){if(!hasDom())return;const ta=document.getElementById('off_in');if(ta&&String(ta.value||'').trim()){offSay();setTimeout(sync,0);return;}const t=document.getElementById('cvTray'),b=document.querySelector('.cv-note');if(!t)return;t.hidden=!t.hidden;if(b)b.classList.toggle('open',!t.hidden);}
@@ -395,7 +465,7 @@ renderCohab=function(id){const d=cohabData(id);let html;if(d&&Array.isArray(d.ms
   if(typeof html==='string'&&html.includes(btn)){html=html.replace(btn,'<button class="send off-note cv-note cv-plus" onclick="CohabVoice.note()" aria-label="更多">＋</button>').replace('<textarea id="off_in"','<textarea id="off_in" oninput="CohabVoice.sync()" onfocus="CohabVoice.sync()"');const i=html.indexOf('cv-note');const j=html.indexOf('</div>',i);if(j>0)html=html.slice(0,j+6)+trayHTML()+html.slice(j+6);setTimeout(sync,0);}
   return html;};}
 if(typeof cohabSettingsPanel==='function'){const baseSettings=cohabSettingsPanel;
-cohabSettingsPanel=function(id,o){let html=baseSettings(id,o);const n=(o&&o.voiceLog||[]).length,row='<button type="button" class="cohab-memory-open" onclick="CohabVoice.log(\''+esc2(id)+'\')"><span>共同生活语音记录</span><small>'+n+' 次 ›</small></button>',m=String(html).indexOf('cohabMemoryOpen('),k=m>=0?String(html).indexOf('</button>',m)+9:String(html).lastIndexOf('</div></details>');if(k>8)html=html.slice(0,k)+row+html.slice(k);return html;};}
+cohabSettingsPanel=function(id,o){let html=baseSettings(id,o);const n=(o&&o.voiceLog||[]).length,row='<button type="button" class="cohab-memory-open" onclick="CohabVoice.log(\''+esc2(id)+'\')"><span>共同生活语音记录</span><small>'+(isActive(id)?'进行中 · ':'')+n+' 次 ›</small></button>',m=String(html).indexOf('cohabMemoryOpen('),k=m>=0?String(html).indexOf('</button>',m)+9:String(html).lastIndexOf('</div></details>');if(k>8)html=html.slice(0,k)+row+html.slice(k);return html;};}
 if(typeof offSay==='function'){const baseOffSay=offSay;
 offSay=function(e){if(isActive()){toast('正在语音模式，先点「结束」再打字');return;}return baseOffSay.apply(this,arguments);};}
 
@@ -407,22 +477,24 @@ cohabAdvance=function(id,now){if(isActive(id))return cohabData(id);return baseAd
 if(typeof cohabSummaryRows==='function'){const baseSummaryRows=cohabSummaryRows;
 cohabSummaryRows=function(d){return baseSummaryRows(d).filter(m=>!(m&&m._voice));};}
 
-/* ---------- 通话界面：不显示头像、挂断改结束、没有摄像头和共享 ---------- */
+/* ---------- 通话界面接管 ---------- */
 if(typeof renderCall==='function'){const baseRenderCall=renderCall;
-renderCall=function(){baseRenderCall.apply(this,arguments);const L=document.getElementById('callLayer');if(!L)return;const on=isActive();L.classList.toggle('cohab-voice',on);if(!on)return;
-  L.querySelectorAll('.call-screen-tools,.call-camera-tools,#callCameraPreview,#callScreenPreview').forEach(n=>n.remove());
-  L.querySelectorAll('.cbtncol').forEach(col=>{col.childNodes.forEach(n=>{if(n.nodeType===3&&/挂断/.test(n.textContent))n.textContent='结束';});const b=col.querySelector('.cbtn.red');if(b)b.setAttribute('aria-label','结束语音模式，回到文字');});
-  const st=L.querySelector('.cstat');if(st&&!L.querySelector('.cv-badge'))st.insertAdjacentHTML('beforebegin','<div class="cv-badge">共同生活 · 语音模式</div>');};}
+renderCall=function(){const L=hasDom()&&document.getElementById('callLayer');if(L&&isActive()&&!_call.min){paintReader(L);return;}if(L)L.classList.remove('cvr-mode','cohab-voice');const r=baseRenderCall.apply(this,arguments);
+  // 缩小后的小条：不显示头像、不计时，红色挂断换成「结束」
+  if(L&&isActive()&&_call.min){const c=getC(_call.id),av=L.querySelector('.cav');if(av)av.innerHTML='<span style="display:flex;width:100%;height:100%;align-items:center;justify-content:center;background:#26231f;color:#c9b797;border-radius:10px">'+(typeof svgIc==='function'?svgIc('mic',16,'#c9b797'):'🎙')+'</span>';const name=L.querySelector('span[style*="white-space:nowrap"]');if(name)name.innerHTML=esc2(c&&(c.remark||c.name)||'')+' <small style="color:#c9b797;letter-spacing:1px">· 共同生活语音</small>';const end=L.querySelector('.cbtn.red');if(end){end.innerHTML='结束';end.style.width='auto';end.style.padding='0 12px';end.style.borderRadius='16px';end.style.fontSize='13px';}}
+  return r;};}
+if(typeof updateCallSub==='function'){const baseSub=updateCallSub;
+updateCallSub=function(){const r=baseSub.apply(this,arguments);if(isActive())refresh(false);return r;};}
 if(typeof hangupCall==='function'){const baseHang=hangupCall;
 hangupCall=function(byAI,reason){if(isActive())return end(byAI,reason);return baseHang.apply(this,arguments);};}
 if(typeof callPersist==='function'){const basePersist=callPersist;
 callPersist=function(){basePersist.apply(this,arguments);if(isActive()&&S._activeCall){S._activeCall.cohab=true;save(0);}};}
 if(typeof restoreActiveCall==='function'){const baseRestore=restoreActiveCall;
-restoreActiveCall=function(){const p=S._activeCall,wasCohab=!!(p&&p.cohab);baseRestore.apply(this,arguments);if(wasCohab&&typeof _call!=='undefined'&&_call&&_call.session===p.session){_call.cohab=true;clearInterval(_callSilTimer);renderCall();}};}
+restoreActiveCall=function(){const p=S._activeCall,wasCohab=!!(p&&p.cohab);baseRestore.apply(this,arguments);if(wasCohab&&typeof _call!=='undefined'&&_call&&_call.session===p.session){_call.cohab=true;clearInterval(_callSilTimer);clearInterval(_callTimer);renderCall();}};}
 
-if(typeof document!=='undefined'&&document.createElement){const css=document.createElement('style');css.id='north-cohab-voice-style';
-css.textContent='.cv-note.cv-plus{font-size:24px;font-weight:300;line-height:1;min-width:42px}.cv-note.open{transform:rotate(45deg)}.cv-tray{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:12px 18px calc(env(safe-area-inset-bottom,0px) + 14px);border-top:.5px solid rgba(255,255,255,.08);background:rgba(10,10,10,.92)}.cv-tray[hidden]{display:none!important}.cv-tray button{display:flex;align-items:center;gap:10px;padding:0;border:0;background:none;color:#e9e3da;font-size:14px}.cv-tray button b{width:52px;height:52px;flex:0 0 52px;border-radius:16px;background:#26231f;border:1px solid rgba(201,183,151,.28);display:flex;align-items:center;justify-content:center;color:#c9b797}.cv-tray small{color:#8f877c;font-size:11px;padding-left:62px}.callscreen.cohab-voice .cav{display:none!important}.callscreen.cohab-voice .cv-badge{margin-top:2px;color:#c9b797;font-size:12px;letter-spacing:2px}';
+if(hasDom()&&document.createElement){const css=document.createElement('style');css.id='north-cohab-voice-style';
+css.textContent='.cv-note.cv-plus{font-size:24px;font-weight:300;line-height:1;min-width:42px}.cv-note.open{transform:rotate(45deg)}.cv-tray{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:12px 18px calc(env(safe-area-inset-bottom,0px) + 14px);border-top:.5px solid rgba(255,255,255,.08);background:rgba(10,10,10,.92)}.cv-tray[hidden]{display:none!important}.cv-tray button{display:flex;align-items:center;gap:10px;padding:0;border:0;background:none;color:#e9e3da;font-size:14px}.cv-tray button b{width:52px;height:52px;flex:0 0 52px;border-radius:16px;background:#26231f;border:1px solid rgba(201,183,151,.28);display:flex;align-items:center;justify-content:center;color:#c9b797}.cv-tray small{color:#8f877c;font-size:11px;padding-left:62px}'+READER_CSS;
 try{(document.head||document.documentElement).appendChild(css);}catch(_){}}
 
-window.CohabVoice={start,end,note,sync,log,remove,history,system,frame,active:isActive,_archive:archive};
+window.CohabVoice={start,end,note,sync,narr:narrToggle,send,reply,log,remove,editLine,saveLine,delLine,history,hideSession,system,frame,toLatest,refresh,active:isActive,_archive:archive,_transcript:transcriptHTML};
 })();

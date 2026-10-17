@@ -1,6 +1,6 @@
-const BUILD='1800';
-const HOTFIX='v1800-thought-preview-1';
-const SHELL_CACHE='north-shell-v1800-thought-preview-1';
+const BUILD='1802';
+const HOTFIX='v1802-thought-preview-1';
+const SHELL_CACHE='north-shell-v1802-thought-preview-1';
 const GLASS_ICON_CACHE='north-glass-icons-v2';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
@@ -17,7 +17,7 @@ const CORE_FILES=[
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
   {url:'./app.js?v='+BUILD+'&r='+HOTFIX,kind:'app'},
   {url:'./cohab-theater.js?v='+BUILD+'&r=v1274-web-cohab-guests-1',kind:'theater'},
-  {url:'./web-hotfix.js?v='+BUILD+'&r=v1800-thought-preview-1',kind:'hotfix'},
+  {url:'./web-hotfix.js?v='+BUILD+'&r=v1802-thought-preview-1',kind:'hotfix'},
   {url:'./photo-album.js?v='+BUILD,kind:'album'},
   {url:'./task-notes.js?v='+BUILD,kind:'tasks'},
   {url:'./couple-watch.js?v='+BUILD,kind:'watch'},
@@ -165,7 +165,7 @@ function validShellText(kind,text){
     &&text.includes('theaterRevealActorItems')
     &&!text.includes('cohabReplyCore=async');
   if(kind==='hotfix')return text.length>800
-    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1800-thought-preview-1'")
+    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1802-thought-preview-1'")
     &&text.includes('reconcileExpiredWxLogin')
     &&text.includes('withBaseImageCheck')
     &&text.includes('isStoredImgRef');

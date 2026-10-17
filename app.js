@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1800'){
+if(window.__NORTH_SHELL_BUILD__!=='1802'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -616,7 +616,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1800 · 共同生活语音模式';
+const APP_VER='v1802 · 共同生活语音阅读页';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2098,7 +2098,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1800&r=v1800-thought-preview-1';
+  const url='sw.js?v=1802&r=v1802-thought-preview-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -18252,10 +18252,11 @@ async function callAI(sysNote,opts){if(!_call)return;const _rawOutput=typeof mod
     if(typeof deliveryRolePrompt==='function')cf+=deliveryRolePrompt(c);
     cf+=callVisualHistoryPrompt(_videoVision?_videoVisionScene:'');
     cf+=callSpyRecentPrompt(c.id)+lifeNoteModelPrompt(c);
+    /* 共同生活语音模式：生成提示时这一段先不算进微信/电话跨渠道记录（会被标成“视频通话”），它已经在共同生活历史里 */const _cvRestore=(_call.cohab&&typeof CohabVoice!=='undefined'&&CohabVoice.hideSession)?CohabVoice.hideSession(c,sess):null;
     const _callQuery=(sysNote||'')+'\n'+hist.slice(-6).map(x=>x.content||'').join('\n'),_callMemory=selectRelevantMemory(c,_callQuery,5),sys=(_call.cohab&&typeof CohabVoice!=='undefined')?CohabVoice.system(c,_callQuery)+cf:buildSystem(c,{natural:wechatNaturalOn(),query:_callQuery,selectiveMemory:true,memoryItems:_callMemory.items})+memoryRetrievalPrompt(c,_callMemory)+cf;
     const _md=Object.assign({diagnosticRoleId:c.id,diagnosticChannel:'call',roleReplyLanguageGuard:true,routeIndex:roleChatRouteIndex(c),aux:c.model==='aux',complete:true,max:callReplyBudget(c),unfilteredOutput:_rawOutput},_callOpts),_videoVisionTurn=sysNote||('[视频通话当前画面]\n'+_videoVisionScene);let _activeCallMd=_md;const _callChat=(messages,routeMd)=>{const rows=messages.slice();if(_videoVisionAutomatic){const last=rows[rows.length-1];if(last&&last.role==='user')rows[rows.length-1]={role:'user',content:String(last.content||'')+'\n\n'+_videoVisionTurn};else rows.push({role:'user',content:_videoVisionTurn});}return callChatWithRetry(rows,routeMd||_activeCallMd,c);};
-    const _ordinaryCallContinuity=!_videoVision&&!_screenShareEvent&&!_connectionEvent&&!_inspectionCompletion?roleReplyContinuityPin(c,Date.now()):'';
-    const _initialCallMessages=_videoVisionAutomatic?[{role:'system',content:sys},{role:'system',content:personaPin(c)}]:[{role:'system',content:sys},...hist,{role:'system',content:personaPin(c)+_ordinaryCallContinuity}];
+    const _ordinaryCallContinuity=!_videoVision&&!_screenShareEvent&&!_connectionEvent&&!_inspectionCompletion?roleReplyContinuityPin(c,Date.now(),_call.cohab?{channel:'cohab'}:undefined):'';
+    const _initialCallMessages=_videoVisionAutomatic?[{role:'system',content:sys},{role:'system',content:personaPin(c)}]:[{role:'system',content:sys},...hist,{role:'system',content:personaPin(c)+_ordinaryCallContinuity}];if(_cvRestore)_cvRestore();
     if(_videoVision)callVideoVisionStatus('working');
     let content=await _callChat(_initialCallMessages,_md);
     if(!_call||_call.session!==sess)return;
