@@ -406,34 +406,99 @@ async function delLine(id,key,lineId){const f=findLine(id,key,lineId);if(!f)retu
 async function remove(id,logId){const o=cohabData(id);if(!o)return;const g=(o.voiceLog||[]).find(x=>x.id===logId);if(!g)return;if(typeof uiConfirm==='function'&&!await uiConfirm('删除这次共同生活语音记录？TA 对这段的记忆不受影响。'))return;o.voiceLog=o.voiceLog.filter(x=>x.id!==logId);o.msgs=(o.msgs||[]).filter(m=>!(m&&m._voice===g.sess));save();log(id);}
 
 /* ---------- 阅读式语音界面（COHAB_VOICE_READER_V1） ---------- */
-// Same look as the 共同生活 page: its 外观 colors (--offc-*), background image and black stage.
-const READER_CSS='.callscreen.cvr-mode #callSub,.callscreen.cvr-mode .callsub{display:none!important}.callscreen.cvr-mode{display:block!important;padding:0!important;align-items:stretch!important;background-color:#050505!important;background-position:center!important;background-size:cover!important;background-repeat:no-repeat!important;color:#ddd8cf}.callscreen.cvr-mode:not(.hasbg){background-image:radial-gradient(circle at 50% 0,rgba(98,82,62,.12),transparent 32%)!important}.callscreen.cvr-mode.hasbg:before{content:"";position:absolute;inset:0;pointer-events:none;z-index:0;background:linear-gradient(180deg,rgba(0,0,0,.5),rgba(0,0,0,.18) 30%,rgba(0,0,0,.25) 70%,rgba(0,0,0,.62))}'
- +'.cvr-head{position:absolute;left:0;right:0;top:0;z-index:3;display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top,0px) + 12px) 16px 14px;background:linear-gradient(180deg,rgba(5,5,5,.96) 55%,rgba(5,5,5,0))}.callscreen.cvr-mode.hasbg .cvr-head{background:rgba(18,18,20,.4);-webkit-backdrop-filter:blur(20px) saturate(1.35);backdrop-filter:blur(20px) saturate(1.35);border-bottom:1px solid rgba(255,255,255,.1)}.cvr-min{width:34px;height:34px;border:0;border-radius:50%;background:rgba(255,255,255,.07);color:#ddd8cf;font-size:18px}.cvr-title{flex:1;min-width:0;text-align:center}.cvr-title small{display:block;font-size:10px;letter-spacing:3px;color:#6c665e}.cvr-title b{display:block;margin-top:3px;font-size:17px;font-weight:600;color:#f2efe9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cvr-end{height:30px;padding:0 14px;border:1px solid rgba(255,255,255,.16);border-radius:15px;background:rgba(255,255,255,.06);color:#ecebe7;font-size:13px}'
- +'.cvr-scroll{position:absolute;left:0;right:0;top:0;bottom:0;z-index:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}.cvr-body{max-width:640px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 88px) 22px calc(env(safe-area-inset-bottom,0px) + 150px)}'
- +'.cvr-line{transition:opacity .5s ease;opacity:.5}.cvr-line.now,.cvr-line.me-now{opacity:1}.cvr-line.fresh{animation:cvrIn .55s cubic-bezier(.2,.8,.3,1) both}@keyframes cvrIn{from{opacity:0;transform:translateY(10px)}}'
- +'.cvr-nar{margin:18px 0 6px;font:italic 15px/1.95 "Songti SC","STSong",serif;color:var(--offc-nar,#c9c2b6)}.cvr-say{margin:6px 0 2px;font:400 20px/1.75 "Songti SC","STSong",serif;color:#f2efe9;letter-spacing:.3px}.callscreen.cvr-mode.hasbg .cvr-say,.callscreen.cvr-mode.hasbg .cvr-nar{text-shadow:0 1px 6px rgba(0,0,0,.6)}.cvr-say i{display:block;margin-top:2px;font:400 13.5px/1.6 -apple-system,"PingFang SC",sans-serif;font-style:normal;color:rgba(255,255,255,.5)}'
- +'.cvr-me{display:flex;justify-content:flex-end;margin:18px 0}.cvr-me span{max-width:78%;padding:9px 14px;border-radius:18px 18px 5px 18px;background:var(--offc-me,#0a84ff);color:var(--offc-me-ink,#fff);font:15px/1.6 -apple-system,"PingFang SC",sans-serif;white-space:pre-wrap}'
+// COHAB_VOICE_GLASS_V1：整页放进一层 .offstage（读外观里的颜色、背景图、玻璃/经典皮肤），自己的话、按钮、输入栏、缩小后的小条
+// 都用共同生活页同一套液态玻璃（磨砂身子 + 剪成环的细高光，见 docs/maintenance/液态玻璃_磨砂加细高光_做法.md）。
+// 防闪（2026-10-18 实机：文字会闪、上下跳两下）：以前每次字幕或翻译一变就整段 innerHTML 重写，最后一句的进场动画跟着重播。
+// 现在按每句的 id 增量更新：已经在的句子不动，只给新句子加节点；TA 的话等声音开始（字幕对上这一句）才一个字一个字出来，
+// 和共同生活打字时的 offglyph 动画一样；等待时占位但不可见，所以不会把下面的内容顶来顶去。
+// 共同生活气泡的材质原样复用（2026-10-18 用户：「现在现有的直接复制过去就可以」）：身子是 7% 的白、不磨砂，
+// 边上是气泡同一条细高光环（同样的白渐变和 brightness(1.72) saturate(1.68)）。开着的按钮是更亮的白玻璃，不用黄色。
+const RING='content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;padding:.8px;box-sizing:border-box;background:linear-gradient(140deg,rgba(255,255,255,.72),rgba(255,255,255,.26) 26%,rgba(255,255,255,.1) 50%,rgba(255,255,255,.3) 76%,rgba(255,255,255,.64));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;-webkit-backdrop-filter:brightness(1.72) saturate(1.68);backdrop-filter:brightness(1.72) saturate(1.68)';
+const GLASS_BODY='background:rgba(255,255,255,.07)!important;background-image:none!important;border:0!important;box-shadow:none!important;color:#fff!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important';
+const GLASS_ON='background:rgba(255,255,255,.3)!important;background-image:none!important;color:#fff!important';
+const READER_CSS='.callscreen.cvr-mode #callSub,.callscreen.cvr-mode .callsub{display:none!important}.callscreen.cvr-mode{display:block!important;padding:0!important;align-items:stretch!important;background:#050505!important;color:#ddd8cf}'
+ +'.cvr-stage{z-index:0}.cvr-stage:not(.hasbg){background-image:radial-gradient(circle at 50% 0,rgba(98,82,62,.12),transparent 32%)}'
+ +'.cvr-head{position:absolute;left:0;right:0;top:0;z-index:3;display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top,0px) + 12px) 16px 14px;background:linear-gradient(180deg,rgba(5,5,5,.96) 55%,rgba(5,5,5,0))}.cvr-stage.hasbg:not(.off-classic) .cvr-head{background:rgba(16,16,18,.34);-webkit-backdrop-filter:blur(16px) saturate(1.3);backdrop-filter:blur(16px) saturate(1.3);border-bottom:1px solid rgba(255,255,255,.08)}'
+ +'.cvr-title{flex:1;min-width:0;text-align:center}.cvr-title small{display:block;font-size:10px;letter-spacing:3px;color:rgba(255,255,255,.6)}.cvr-title b{display:block;margin-top:3px;font-size:17px;font-weight:600;color:#f2efe9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cvr-stage.hasbg .cvr-title{text-shadow:0 1px 5px rgba(0,0,0,.55)}'
+ +'.cvr-glass{position:relative;'+GLASS_BODY+'}.cvr-glass:before{'+RING+'}.cvr-glass.on{'+GLASS_ON+'}'
+ +'.cvr-min{width:36px;height:36px;border-radius:50%;font-size:17px;display:flex;align-items:center;justify-content:center;padding:0}.cvr-end{height:32px;padding:0 15px;border-radius:16px;font-size:13px;font-weight:600}'
+ +'.cvr-scroll{position:absolute;left:0;right:0;top:0;bottom:calc(env(safe-area-inset-bottom,0px) + 64px);z-index:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;overflow-anchor:none}.cvr-body{max-width:640px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 88px) 22px 96px}'
+ +'.cvr-line{transition:opacity .5s ease;opacity:.5}.cvr-line.cvr-me{opacity:.8}.cvr-line.now,.cvr-line.me-now{opacity:1}.cvr-line.cvr-wait{visibility:hidden}.cvr-line.cvr-in{animation:offlinein .42s cubic-bezier(.22,.8,.3,1) both}'
+ +'.cvr-nar{margin:18px 0 6px;font:italic 15px/1.95 "Songti SC","STSong",serif;color:var(--offc-nar,#c9c2b6)}.cvr-say{margin:6px 0 2px;font:400 20px/1.75 "Songti SC","STSong",serif;color:#f2efe9;letter-spacing:.3px}.cvr-stage.hasbg .cvr-say,.cvr-stage.hasbg .cvr-nar{text-shadow:0 1px 6px rgba(0,0,0,.6)}.cvr-say i{display:block;margin-top:2px;font:400 13.5px/1.6 -apple-system,"PingFang SC",sans-serif;font-style:normal;color:rgba(255,255,255,.5)}.cvr-nar-me{text-align:right}'
+ +'.cvr-body .offmsg.cvr-me{margin:16px 0}.cvr-body .offmsg.cvr-me .col{max-width:80%;min-width:0}.cvr-body .offmsg.cvr-me .offbubble{max-width:100%;white-space:pre-wrap;font-size:15px}'
  +'.cvr-empty{margin-top:30vh;text-align:center;color:var(--offc-nar,#c9c2b6);opacity:.7;font:15px/1.9 -apple-system,"PingFang SC",sans-serif;letter-spacing:2px}.cvr-dots{display:flex;gap:6px;margin:16px 0 0 2px}.cvr-dots b{width:6px;height:6px;border-radius:50%;background:var(--offc-nar,#c9c2b6);opacity:.35;animation:cvrDot 1.2s infinite}.cvr-dots b:nth-child(2){animation-delay:.2s}.cvr-dots b:nth-child(3){animation-delay:.4s}@keyframes cvrDot{40%{opacity:1;transform:translateY(-3px)}}'
- +'.cvr-latest{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 92px);z-index:4;transform:translateX(-50%);height:32px;padding:0 14px;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(30,30,32,.9);color:#ecebe7;font-size:12.5px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}.cvr-latest[hidden]{display:none}'
- +'.callscreen.cvr-mode .cvr-dock{position:absolute;left:0;right:0;bottom:0;z-index:3;display:flex!important;align-items:center;gap:10px;margin:0!important;width:auto!important;padding:10px 12px calc(env(safe-area-inset-bottom,0px) + 12px)!important;background:rgba(10,10,10,.94);border-top:.5px solid rgba(255,255,255,.08)}.callscreen.cvr-mode.hasbg .cvr-dock{background:rgba(18,18,20,.45);-webkit-backdrop-filter:blur(20px) saturate(1.35);backdrop-filter:blur(20px) saturate(1.35)}.cvr-dock input{flex:1;min-width:0;height:40px;padding:0 14px;border:1px solid #312e29;border-radius:20px;background:#121212;color:#ecebe7;font-size:15px}.cvr-dock .cvr-send{height:40px;padding:0 16px;border:0;border-radius:20px;background:var(--offc-me,#0a84ff);color:var(--offc-me-ink,#fff);font-weight:700}.cvr-mic{position:relative;width:40px;height:40px;min-width:40px;border:1px solid #312e29;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#121212;color:#ddd8cf}.cvr-mic.on{background:var(--offc-me,#0a84ff);color:var(--offc-me-ink,#fff);border-color:transparent}.cvr-mic.on:after{content:"";position:absolute;inset:-5px;border-radius:50%;border:1.5px solid rgba(236,235,231,.55);animation:cvrMic 1.6s ease-out infinite;pointer-events:none}@keyframes cvrMic{0%{transform:scale(.85);opacity:.9}100%{transform:scale(1.25);opacity:0}}'
- +'.callscreen.cvr-mode:not(.off-classic) .cvr-me span{background:rgba(20,20,22,.55);border:1px solid rgba(255,255,255,.45);color:#fff}.callscreen.cvr-mode:not(.off-classic) .cvr-dock .cvr-send{background:#ecebe7;color:#111}.callscreen.cvr-mode:not(.off-classic) .cvr-mic.on{background:#ecebe7;color:#111}.cvr-nar-me{text-align:right}.cvr-nar-btn{height:40px;min-width:48px;padding:0 10px;border:1px solid #312e29;border-radius:20px;background:#121212;color:#ddd8cf;font-size:13px}.cvr-nar-btn.on{background:#ecebe7;color:#111;border-color:transparent}.cvr-reply{position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 72px);z-index:4;height:30px;padding:0 13px;border:1px solid rgba(255,255,255,.16);border-radius:15px;background:rgba(24,24,26,.92);color:#ecebe7;font-size:12.5px;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px)}.cvr-latest{bottom:calc(env(safe-area-inset-bottom,0px) + 112px)!important}';
-function transcriptHTML(){if(!isActive())return '';const lines=lineRows(msgs(_call.id).filter(m=>m&&m._cs===_call.session)),sub=_call.sub&&String(_call.sub.text||'').split('\n')[0];
+ +'.cvr-latest{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 112px);z-index:4;transform:translateX(-50%);height:34px;padding:0 15px;border-radius:17px;font-size:12.5px}.cvr-latest[hidden]{display:none}'
+ +'.cvr-reply{position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 74px);z-index:4;height:32px;padding:0 14px;border-radius:16px;font-size:12.5px;font-weight:600}'
+ +'.callscreen.cvr-mode .cvr-dock{position:absolute!important;left:0;right:0;bottom:0;z-index:3;display:flex!important;align-items:flex-end;margin:0!important;width:auto!important;padding:9px 11px calc(env(safe-area-inset-bottom,0px) + 12px)!important}'
+ +'.cvr-dock .off-field input{display:block;box-sizing:border-box;width:100%;height:42px;padding:10px 14px 9px;border:0;border-radius:21px;background:transparent;color:#f2efe9;caret-color:#4aa3ff;font:400 16px/21px -apple-system,BlinkMacSystemFont,"PingFang SC",sans-serif;outline:none;-webkit-appearance:none;appearance:none}.cvr-dock .off-field input::placeholder{color:rgba(255,255,255,.5)}.cvr-stage.hasbg .cvr-dock .off-field input{text-shadow:0 1px 3px rgba(0,0,0,.5)}.cvr-stage.hasbg .cvr-dock .off-field input::placeholder{color:rgba(255,255,255,.72)}'
+ +'.offinput .send.cvr-mic{width:42px;min-width:42px;padding:0;border-radius:50%!important;display:flex;align-items:center;justify-content:center}.offinput .send.cvr-mic.on{'+GLASS_ON+'}.cvr-mic.on:after{content:"";position:absolute;inset:-5px;border-radius:50%;border:1.5px solid rgba(236,235,231,.55);animation:cvrMic 1.6s ease-out infinite;pointer-events:none}@keyframes cvrMic{0%{transform:scale(.85);opacity:.9}100%{transform:scale(1.25);opacity:0}}'
+ // 经典皮肤：和共同生活经典皮肤一样是实心的，不做玻璃
+ +'.cvr-stage.off-classic .cvr-glass,.cvr-stage.off-classic .offinput .send.cvr-mic{background:#111!important;border:1px solid #3b3730!important;color:#b8a78d!important;-webkit-backdrop-filter:none;backdrop-filter:none;border-radius:5px!important}.cvr-stage.off-classic .cvr-min,.cvr-stage.off-classic .offinput .send.cvr-mic{border-radius:50%!important}.cvr-stage.off-classic .cvr-glass:before{display:none}.cvr-stage.off-classic .cvr-glass.on,.cvr-stage.off-classic .offinput .send.cvr-mic.on{background:#d8cdb8!important;border-color:#d8cdb8!important;color:#18140f!important}.cvr-stage.off-classic .cvr-dock .off-field input{border-radius:5px;color:#e1ddd5}'
+ // 缩小后的小条：整条是玻璃胶囊，左边一个圆的玻璃话筒（点它回到语音页）
+ +'.callscreen.mini.cvr-mini{background:rgba(255,255,255,.07)!important;border:0!important;-webkit-backdrop-filter:blur(18px) brightness(.72);backdrop-filter:blur(18px) brightness(.72);box-shadow:0 6px 20px rgba(0,0,0,.4);padding:6px 8px 6px 6px;gap:9px;overflow:visible}.callscreen.mini.cvr-mini:before{'+RING+'}'
+ +'.cvr-mini .cvr-mini-mic{width:36px;height:36px;min-width:36px;border-radius:50%;display:flex;align-items:center;justify-content:center}.cvr-mini .cvr-mini-mic.on{'+GLASS_ON+'}.cvr-mini .cvr-mini-name{font-size:13px;color:#fff;white-space:nowrap;display:flex;align-items:center;gap:5px}.cvr-mini .cvr-mini-name small{color:rgba(255,255,255,.65);letter-spacing:1px;font-size:11px}.cvr-mini .cmax{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer}.cvr-mini .cvr-mini-end{height:30px;padding:0 12px;border-radius:15px;font-size:12.5px;font-weight:600;display:flex;align-items:center;cursor:pointer}';
+// 共同生活页和从共同生活点开的页面（外观、测试控制、作息、记忆、语音记录、多人剧场……）：灰色的块统一换成气泡的材质。经典皮肤不动。
+const G=':is(.offstage:not(.off-classic),#modal.cohab-glass-modal)';
+// 手机上（私人版玻璃主题）这些块大多由液态玻璃画（lg-ready，和气泡同一块镜片），那时不再叠这层 CSS，只在没有液态玻璃时用它兜底
+const COHAB_GLASS_CSS=G+' :is(.offinput .send,.cohab-settings-grid label,.cohab-memory-open,.cohab-theater-settings,.cohab-theater-settings button,.cohab-debug-reply,.cohab-status-chip,.offselect button:not(.danger),.minibtn,.btn:not(.d):not(.p),.cv-tray button b,.cohab-away-panel,.cohab-return-banner,.off-more):not(.lg-ready){'+GLASS_BODY+'}'
+ // 高光环要贴着它画，所以本来不定位的块改成 relative；「让TA回」本来就是浮在右边的（absolute），不能动它
+ +G+' :is(.cohab-settings-grid label,.cohab-memory-open,.cohab-theater-settings,.cohab-theater-settings button,.offselect button:not(.danger),.minibtn,.btn:not(.d):not(.p),.cv-tray button b,.cohab-away-panel,.cohab-return-banner,.off-more,#modalSheet .section,#modalSheet details){position:relative}'
+ +G+' :is(.offinput .send,.cohab-settings-grid label,.cohab-memory-open,.cohab-theater-settings,.cohab-theater-settings button,.cohab-debug-reply,.cohab-status-chip,.offselect button:not(.danger),.minibtn,.btn:not(.d):not(.p),.cv-tray button b,.cohab-away-panel,.cohab-return-banner,.off-more):not(.lg-ready):before{'+RING+'}'
+ +G+' :is(.offinput .off-narrate.on,.offinput .send.cvr-mic.on,.cvr-glass.on,.btn.p):not(.lg-ready){'+GLASS_ON+'}.cvr-mini .cvr-mini-mic.on{'+GLASS_ON+'}'
+ // 液态玻璃上的底色被镜片盖住，开着的按钮改成整块提亮（同样是更亮的白玻璃）
+ +':is(.offstage,.cvr-stage) :is(.offinput .off-narrate.on,.offinput .send.cvr-mic.on,.cvr-glass.on).lg-ready{-webkit-filter:brightness(1.55);filter:brightness(1.55)}'
+ +'.offstage:not(.off-classic) .offinput.narration-mode .off-field{background:rgba(255,255,255,.14)!important}'
+ // 点开的页面本身也是气泡材质；后面的页面糊掉一层，不然透明的页面上字会和后面的字叠在一起看不清
+ +'#modal.cohab-glass-modal{-webkit-backdrop-filter:blur(22px) brightness(.62);backdrop-filter:blur(22px) brightness(.62)}#modal.cohab-glass-modal #modalSheet{position:relative;'+GLASS_BODY+'}#modal.cohab-glass-modal #modalSheet:before{'+RING+'}'
+ // 点开页面里的深色分组、选择框和输入框：同样的 7% 白；输入框画不了高光环，用和共同生活设置里输入框一样的细白边
+ +'#modal.cohab-glass-modal #modalSheet :is(.section,details){'+GLASS_BODY+'}#modal.cohab-glass-modal #modalSheet :is(.section,details):before{'+RING+'}#modal.cohab-glass-modal #modalSheet details>summary{background:transparent!important}'
+ +'#modal.cohab-glass-modal #modalSheet :is(input:not([type=color]):not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea){background:rgba(255,255,255,.07)!important;background-image:none!important;border:1px solid rgba(255,255,255,.2)!important;box-shadow:none!important;color:#fff!important;-webkit-text-fill-color:#fff}#modal.cohab-glass-modal #modalSheet select option{background:#2a2a2e;color:#fff}';
+const revealed=new Set();let dom=null;
+const lineKey=l=>[l.role,l.action?1:0,l.content,l.trans].join('\u0001');
+const glyphs=(t,start)=>Array.from(String(t||'')).map((ch,i)=>ch==='\n'?'<br>':'<span class="offglyph" style="animation-delay:'+((start+i)*50)+'ms">'+(ch===' '?'&nbsp;':esc2(ch))+'</span>').join('');
+const reduceMotion=()=>typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+function lineInner(l,animate){const plain=t=>esc2(t),txt=animate?glyphs:plain;
+  if(l.role==='user'&&!l.action)return '<div class="col"><div class="bubble offbubble">'+esc2(l.content)+'</div></div>';
+  if(l.action)return txt(l.content.replace(/^【|】$/g,''),0);
+  const n=Array.from(l.content).length;return txt(l.content,0)+(l.trans?'<i>'+(animate?glyphs(l.trans,n):plain(l.trans))+'</i>':'');}
+function lineBase(l){if(l.role==='user'&&l.action)return 'cvr-line cvr-nar cvr-nar-me';if(l.role==='user')return 'cvr-line msg me offmsg cvr-me';return l.action?'cvr-line cvr-nar':'cvr-line cvr-say';}
+function currentLines(){return isActive()?lineRows(msgs(_call.id).filter(m=>m&&m._cs===_call.session)):[];}
+// TA 的一句：字幕（声音开始时才写）对上这一句，或者后面已经有新句子、或者这一轮已经说完，就该出来了
+function readyToShow(lines,i,sub,busy){const l=lines[i];if(l.role==='user'||revealed.has(l.id))return true;if(!busy)return true;if(sub&&l.content===sub)return true;return lines.slice(i+1).some(x=>x.role==='assistant'&&revealed.has(x.id));}
+function transcriptHTML(){if(!isActive())return '';const lines=currentLines();if(!lines.length)return '<div class="cvr-empty">像平时一样说话就好<br>TA 会用声音回你</div>';
+  const st=lineState(lines);let h=lines.map((l,i)=>'<div class="'+lineBase(l)+st.cls(i)+'" data-k="'+esc2(l.id)+'">'+lineInner(l,false)+'</div>').join('');if(st.dots)h+='<div class="cvr-dots"><b></b><b></b><b></b></div>';return h;}
+function lineState(lines){const sub=_call&&_call.sub&&String(_call.sub.text||'').split('\n')[0];
   let nowIdx=-1;for(let i=lines.length-1;i>=0;i--){if(lines[i].role==='assistant'&&!lines[i].action&&sub&&lines[i].content===sub){nowIdx=i;break;}}
+  if(nowIdx<0)for(let i=lines.length-1;i>=0;i--){if(lines[i].role==='assistant'&&!lines[i].action&&revealed.has(lines[i].id)){nowIdx=i;break;}}
   if(nowIdx<0)for(let i=lines.length-1;i>=0;i--){if(lines[i].role==='assistant'&&!lines[i].action){nowIdx=i;break;}}
-  if(!lines.length)return '<div class="cvr-empty">像平时一样说话就好<br>TA 会用声音回你</div>';
-  const lastUser=(()=>{for(let i=lines.length-1;i>=0;i--)if(lines[i].role==='user')return i;return -1;})();
-  let h=lines.map((l,i)=>{const cls='cvr-line'+(i>=nowIdx-1&&i>nowIdx-3&&l.role!=='user'?' now':'')+(i===lastUser&&lastUser>nowIdx?' me-now':'')+(i===lines.length-1?' fresh':'');
-    if(l.role==='user'&&l.action)return '<div class="'+cls+' cvr-nar cvr-nar-me">'+esc2(l.content.replace(/^【|】$/g,''))+'</div>';
-    if(l.role==='user')return '<div class="'+cls+' cvr-me"><span>'+esc2(l.content)+'</span></div>';
-    if(l.action)return '<div class="'+cls+' cvr-nar">'+esc2(l.content.replace(/^【|】$/g,''))+'</div>';
-    return '<div class="'+cls+' cvr-say'+(i===nowIdx?' now':'')+'">'+esc2(l.content)+(l.trans?'<i>'+esc2(l.trans)+'</i>':'')+'</div>';}).join('');
-  if(typeof _callBusy!=='undefined'&&_callBusy&&lastUser===lines.length-1)h+='<div class="cvr-dots"><b></b><b></b><b></b></div>';
-  return h;}
+  let lastUser=-1;for(let i=lines.length-1;i>=0;i--)if(lines[i].role==='user'){lastUser=i;break;}
+  const busy=typeof _callBusy!=='undefined'&&!!_callBusy;
+  return {sub,busy,dots:busy&&lastUser===lines.length-1,cls:i=>{const l=lines[i];return (i>=nowIdx-1&&i>nowIdx-3&&l.role!=='user'?' now':'')+(i===lastUser&&lastUser>nowIdx?' me-now':'');}};}
+// 增量更新：已经显示的句子不重画，只改「正在说/变淡」的样子；新句子才加节点、才播进场和逐字动画。
 function refresh(force){if(!hasDom()||!isActive())return;const body=document.getElementById('cvrBody'),sc=document.getElementById('cvrScroll');if(!body||!sc)return;
-  const sig=JSON.stringify([msgs(_call.id).filter(m=>m&&m._cs===_call.session).map(m=>m.id+':'+String(m.content||'').length),_call.sub&&_call.sub.text,typeof _callBusy!=='undefined'&&_callBusy]);if(!force&&sig===lastSig)return;lastSig=sig;
-  body.innerHTML=transcriptHTML();if(following)sc.scrollTop=sc.scrollHeight;const lt=document.getElementById('cvrLatest');if(lt)lt.hidden=following;}
+  const lines=currentLines(),st=lineState(lines),first=!dom||dom.body!==body||force==='paint';
+  if(first){dom={body,nodes:new Map()};body.innerHTML='';lines.forEach(l=>revealed.add(l.id));}
+  const before=sc.scrollHeight,keep=new Set(lines.map(l=>l.id));
+  dom.nodes.forEach((n,k)=>{if(!keep.has(k)){n.el.remove();dom.nodes.delete(k);}});
+  const empty=body.querySelector('.cvr-empty');if(lines.length&&empty)empty.remove();if(!lines.length&&!empty){body.innerHTML='<div class="cvr-empty">像平时一样说话就好<br>TA 会用声音回你</div>';dom.nodes.clear();}
+  let dots=body.querySelector('.cvr-dots');if(dots)dots.remove();
+  lines.forEach((l,i)=>{let n=dom.nodes.get(l.id);const key=lineKey(l),show=readyToShow(lines,i,st.sub,st.busy);
+    if(!n){const el=document.createElement('div');el.dataset.k=l.id;n={el,key,shown:false};dom.nodes.set(l.id,n);body.appendChild(el);
+      if(show&&(first||l.role==='user')){n.shown=true;revealed.add(l.id);el.innerHTML=lineInner(l,false);if(!first)n.enter=true;}else el.innerHTML=lineInner(l,false);}
+    else if(n.key!==key){n.key=key;n.el.innerHTML=lineInner(l,false);}
+    if(!n.shown&&show){n.shown=true;revealed.add(l.id);n.enter=true;if(l.role!=='user'&&!reduceMotion())n.el.innerHTML=lineInner(l,true);}
+    const cls=lineBase(l)+st.cls(i)+(n.shown?'':' cvr-wait')+(n.enter?' cvr-in offreveal':'');if(n.el.className!==cls)n.el.className=cls;
+  });
+  if(st.dots){dots=document.createElement('div');dots.className='cvr-dots';dots.innerHTML='<b></b><b></b><b></b>';body.appendChild(dots);}
+  if(first||sc.scrollHeight!==before)lensSoon(true);
+  if(following&&(first||sc.scrollHeight!==before||force))sc.scrollTop=sc.scrollHeight;
+  const lt=document.getElementById('cvrLatest');if(lt)lt.hidden=following;syncMic();}
+// 话筒：点了马上变色（以前点了只重画后面的共同生活页，语音页上的按钮不变）
+function syncMic(){if(!hasDom())return;const on=typeof _callHF!=='undefined'&&!!_callHF;document.querySelectorAll('.cvr-mic,.cvr-mini-mic').forEach(b=>{b.classList.toggle('on',on);b.setAttribute('aria-pressed',on?'true':'false');});const i=document.getElementById('callMsg');if(i&&!narr)i.placeholder=on?'免提中·直接对TA说…':'对TA说…';}
+function mic(){if(typeof callHFToggle==='function')callHFToggle();syncMic();setTimeout(syncMic,250);setTimeout(syncMic,900);}
 // 旁白开关：和共同生活打字时的「旁白」一样，写的是你的动作，TA 当成你的动作来回应。
-function narrToggle(){narr=!narr;const L=hasDom()&&document.getElementById('callLayer');if(L&&isActive()&&!_call.min)paintReader(L);setTimeout(()=>{const i=hasDom()&&document.getElementById('callMsg');if(i&&i.focus)i.focus();},30);}
+function narrToggle(){narr=!narr;const b=hasDom()&&document.querySelector('.cvr-dock .off-narrate'),d=hasDom()&&document.getElementById('callInput'),i=hasDom()&&document.getElementById('callMsg'),s=hasDom()&&document.querySelector('.cvr-dock .cvr-send');
+  if(b){b.classList.toggle('on',narr);b.setAttribute('aria-pressed',narr?'true':'false');}if(d)d.classList.toggle('narration-mode',narr);if(s)s.textContent=narr?'写':'说';if(i){i.placeholder=narr?'写你的动作（第三人称）…':(typeof _callHF!=='undefined'&&_callHF)?'免提中·直接对TA说…':'对TA说…';setTimeout(()=>{if(i.focus)i.focus();},30);}}
 // 共同生活开了手动回复时，说的话只记下，点「让TA回」才回；否则和平时一样说完就回。
 const manual=()=>typeof manualReplySceneOn==='function'&&manualReplySceneOn('offline');
 function send(){const inp=hasDom()&&document.getElementById('callMsg');if(!inp||!isActive())return;const t=String(inp.value||'').trim();if(!t)return;const v=narr?'【'+t.replace(/^【|】$/g,'')+'】':t;following=true;
@@ -441,20 +506,35 @@ function send(){const inp=hasDom()&&document.getElementById('callMsg');if(!inp||
   inp.value='';const um={role:'user',type:'text',content:v,time:Date.now(),id:uid(),_call:true,_ck:_call.kind,_cs:_call.session};msgs(_call.id).push(um);save();_call.sub={who:'me',text:v};updateCallSub();refresh(true);}
 function reply(){if(!isActive())return;if(typeof _callBusy!=='undefined'&&_callBusy){toast('TA 正在回');return;}following=true;callAI();setTimeout(()=>refresh(true),50);}
 function toLatest(){following=true;const sc=hasDom()&&document.getElementById('cvrScroll');if(sc)sc.scrollTo({top:sc.scrollHeight,behavior:'smooth'});const lt=document.getElementById('cvrLatest');if(lt)lt.hidden=true;}
+const micSvg=n=>typeof svgIc==='function'?svgIc('mic',n,'currentColor'):'🎙';
 function paintReader(L){const c=getC(_call.id);if(!c)return;const old=document.getElementById('callMsg'),draft=old?old.value:'';
-  const st=typeof offStageAttrs==='function'?offStageAttrs(c):{cls:'',style:''};L.removeAttribute('style');L.className='callscreen show active cohab-voice cvr-mode'+(st.cls||'');L.setAttribute('style',st.style||'');
+  const st=typeof offStageAttrs==='function'?offStageAttrs(c):{cls:'',style:''};L.removeAttribute('style');L.className='callscreen show active cohab-voice cvr-mode';
   const hf=typeof _callHF!=='undefined'&&_callHF;
-  L.innerHTML='<div class="cvr-scroll" id="cvrScroll"><div class="cvr-body" id="cvrBody"></div></div>'
-   +'<header class="cvr-head"><button class="cvr-min" onclick="callMin()" aria-label="缩小">⤵︎</button><div class="cvr-title"><small>共同生活 · 语音</small><b>'+esc2(c.remark||c.name)+'</b></div><button class="cvr-end" onclick="hangupCall()" aria-label="结束语音模式，回到文字">结束</button></header>'
-   +'<button class="cvr-latest" id="cvrLatest" hidden onclick="CohabVoice.toLatest()">回到最新 ↓</button>'
-   +'<button class="cvr-reply" onclick="CohabVoice.reply()">让TA回</button><div class="callinput show cvr-dock" id="callInput"><button class="cvr-nar-btn'+(narr?' on':'')+'" onclick="CohabVoice.narr()" aria-pressed="'+(narr?'true':'false')+'" aria-label="旁白：写你的动作">旁白</button><button data-call-mic="1" class="cvr-mic'+(hf?' on':'')+'" onclick="callHFToggle()" title="免提·直接说" aria-label="免提">'+(typeof svgIc==='function'?svgIc('mic',18,'currentColor'):'🎙')+'</button><input id="callMsg" inputmode="text" enterkeyhint="send" placeholder="'+(narr?'写你的动作（第三人称）…':hf?'免提中·直接对TA说…':'对TA说…')+'" onkeydown="if(event.key===\'Enter\'){event.preventDefault();CohabVoice.send()}"><button class="cvr-send" onclick="CohabVoice.send()">'+(narr?'写':'说')+'</button></div>'
-   +'<div class="callsub" id="callSub" hidden></div>';
+  L.innerHTML='<div class="offstage cvr-stage'+esc2(st.cls||'')+'" style="'+esc2(st.style||'')+'">'
+   +'<div class="cvr-scroll" id="cvrScroll"><div class="cvr-body" id="cvrBody"></div></div>'
+   +'<header class="cvr-head"><button class="cvr-min cvr-glass" onclick="callMin()" aria-label="缩小">⤵︎</button><div class="cvr-title"><small>共同生活 · 语音</small><b>'+esc2(c.remark||c.name)+'</b></div><button class="cvr-end cvr-glass" onclick="hangupCall()" aria-label="结束语音模式，回到文字">结束</button></header>'
+   +'<button class="cvr-latest cvr-glass" id="cvrLatest" hidden onclick="CohabVoice.toLatest()">回到最新 ↓</button>'
+   +'<button class="cvr-reply cvr-glass" onclick="CohabVoice.reply()">让TA回</button>'
+   +'<div class="inputbar offinput callinput show cvr-dock'+(narr?' narration-mode':'')+'" id="callInput"><button class="send off-narrate'+(narr?' on':'')+'" onclick="CohabVoice.narr()" aria-pressed="'+(narr?'true':'false')+'" aria-label="旁白：写你的动作">旁白</button><button data-call-mic="1" class="send cvr-mic'+(hf?' on':'')+'" onclick="CohabVoice.mic()" title="免提·直接说" aria-label="免提" aria-pressed="'+(hf?'true':'false')+'">'+micSvg(18)+'</button><div class="off-field"><input id="callMsg" inputmode="text" enterkeyhint="send" placeholder="'+(narr?'写你的动作（第三人称）…':hf?'免提中·直接对TA说…':'对TA说…')+'" onkeydown="if(event.key===\'Enter\'){event.preventDefault();CohabVoice.send()}"></div><button class="send off-note cvr-send" onclick="CohabVoice.send()">'+(narr?'写':'说')+'</button></div>'
+   +'</div><div class="callsub" id="callSub" hidden></div>';
   const inp=document.getElementById('callMsg');if(inp&&draft)inp.value=draft;
   const sc=document.getElementById('cvrScroll');if(sc)sc.addEventListener('scroll',()=>{const near=sc.scrollHeight-sc.scrollTop-sc.clientHeight<70;following=near;const lt=document.getElementById('cvrLatest');if(lt)lt.hidden=near;},{passive:true});
-  lastSig='';refresh(true);clearInterval(watch);watch=setInterval(()=>{if(!isActive()){clearInterval(watch);watch=0;return;}refresh(false);},600);}
+  dom=null;refresh('paint');lensSoon(false);clearInterval(watch);watch=setInterval(()=>{if(!isActive()){clearInterval(watch);watch=0;return;}refresh(false);},600);}
+// 缩小后的小条：不显示头像、不计时；圆的玻璃话筒（点了回到语音页）+ 名字 + 放大 + 「结束」
+function paintMini(L){const c=getC(_call.id);if(!c)return false;const hf=typeof _callHF!=='undefined'&&_callHF;clearInterval(watch);watch=0;dom=null;
+  L.removeAttribute('style');L.className='callscreen show mini cvr-mini';if(typeof callClearBackdrop==='function')callClearBackdrop(L);
+  L.innerHTML='<span class="cvr-mini-mic cvr-glass cmax'+(hf?' on':'')+'" onclick="callMax()" aria-label="回到共同生活语音">'+micSvg(17)+'</span><span class="cvr-mini-name">'+esc2(c.remark||c.name)+'<small>· 共同生活语音</small></span><span class="cmax cvr-glass" onclick="callMax()" title="放大" aria-label="放大">'+(typeof svgIc==='function'?svgIc('expand',15,'currentColor'):'⤢')+'</span><span class="cbtn cvr-mini-end cvr-glass" onclick="hangupCall()">结束</span><div class="callsub" id="callSub" hidden></div>';
+  if(typeof makeMiniDraggable==='function')setTimeout(makeMiniDraggable,0);return true;}
+
+// 语音页也登记成液态玻璃的一页（私人版玻璃主题、换了背景时）：气泡、顶栏、按钮、输入栏和共同生活用同一块镜片。
+// 放在共同生活那一页前面：语音页开着时它盖在共同生活上面，先画它；结束后找不到它，自然回到共同生活那一页。
+if(typeof LG_SCENES!=='undefined'&&Array.isArray(LG_SCENES)&&!LG_SCENES.some(x=>x&&x.cvr))LG_SCENES.unshift({root:'.callscreen.cvr-mode .cvr-stage.hasbg:not(.off-classic)',body:'.cvr-scroll',hosts:'.offmsg .offbubble,.cvr-head,.cvr-glass,.offinput,.offinput .send,.off-field',bubble:'offbubble',me:'.offmsg.me',shade:[.44,.22,.72,.58],off:true,cvr:true});
+function lensSoon(settle){try{if(settle&&typeof lgImsgSettle==='function')lgImsgSettle();else if(typeof lgImsgSoon==='function')lgImsgSoon();}catch(_){}}
 
 /* ---------- 共同生活输入框：没字时显示 ＋，展开语音模式入口 ---------- */
-function trayHTML(){return '<div class="cv-tray" id="cvTray" hidden><button type="button" onclick="CohabVoice.start()" aria-label="共同生活语音模式"><b><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg></b><span>共同生活语音模式</span></button><small>能听到TA的声音，像平时一样当面聊</small></div>';}
+function trayHTML(){return '<div class="cv-tray" id="cvTray" hidden><button type="button" onclick="CohabVoice.start()" aria-label="共同生活语音模式"><b><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg></b><span>语音模式</span></button><button type="button" onclick="CohabVoice.multi()" aria-label="多选删除"><b><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4" width="5" height="5" rx="1.3"/><path d="m4.6 6.6 1.2 1.1 2-2.2M12 6.5h8.5"/><rect x="3.5" y="14.5" width="5" height="5" rx="1.3"/><path d="M12 17h8.5"/></svg></b><span>多选删除</span></button></div>';}
+// 多选删除（2026-10-18 用户要求）：从顶上「多选」挪到这里；点消息不再弹出编辑/删除。
+function multi(){closeTray();if(typeof offSelToggle==='function'&&!(typeof _offSel!=='undefined'&&_offSel))offSelToggle();}
 function closeTray(){if(!hasDom())return;const t=document.getElementById('cvTray');if(t)t.hidden=true;const b=document.querySelector('.cv-note');if(b)b.classList.remove('open');}
 function sync(){if(!hasDom())return;const ta=document.getElementById('off_in'),b=document.querySelector('.cv-note');if(!ta||!b)return;const has=!!String(ta.value||'').trim();b.classList.toggle('cv-plus',!has);b.textContent=has?'记下':'＋';b.setAttribute('aria-label',has?'记下':'更多');if(has)closeTray();}
 function note(){if(!hasDom())return;const ta=document.getElementById('off_in');if(ta&&String(ta.value||'').trim()){offSay();setTimeout(sync,0);return;}const t=document.getElementById('cvTray'),b=document.querySelector('.cv-note');if(!t)return;t.hidden=!t.hidden;if(b)b.classList.toggle('open',!t.hidden);}
@@ -463,11 +543,22 @@ if(typeof renderCohab==='function'){const baseRenderCohab=renderCohab;
 renderCohab=function(id){const d=cohabData(id);let html;if(d&&Array.isArray(d.msgs)&&d.msgs.some(m=>m&&m._voice)){const keep=d.msgs;d.msgs=keep.filter(m=>!(m&&m._voice));try{html=baseRenderCohab(id);}finally{d.msgs=keep;}}else html=baseRenderCohab(id);
   const btn='<button class="send off-note" onclick="offSay()">记下</button>';
   if(typeof html==='string'&&html.includes(btn)){html=html.replace(btn,'<button class="send off-note cv-note cv-plus" onclick="CohabVoice.note()" aria-label="更多">＋</button>').replace('<textarea id="off_in"','<textarea id="off_in" oninput="CohabVoice.sync()" onfocus="CohabVoice.sync()"');const i=html.indexOf('cv-note');const j=html.indexOf('</div>',i);if(j>0)html=html.slice(0,j+6)+trayHTML()+html.slice(j+6);setTimeout(sync,0);}
+  if(typeof html==='string'){const sel=html.indexOf('class="offselect"');html=html.replace(/<button(?: type="button")? onclick="offSelToggle\(\)">(?:多选|取消)<\/button>/,(m,at)=>sel>=0&&at>sel?m:'');}
   return html;};}
+// 共同生活里点消息不再弹出「编辑 / 删除」（用户要求去掉，删除改用 ＋ 里的多选删除）；线下约会照旧。
+if(typeof offMsgMenu==='function'){const baseMsgMenu=offMsgMenu;
+offMsgMenu=function(id,mid){if(typeof _off!=='undefined'&&_off&&_off.mode==='cohab')return;return baseMsgMenu.apply(this,arguments);};}
 if(typeof cohabSettingsPanel==='function'){const baseSettings=cohabSettingsPanel;
 cohabSettingsPanel=function(id,o){let html=baseSettings(id,o);const n=(o&&o.voiceLog||[]).length,row='<button type="button" class="cohab-memory-open" onclick="CohabVoice.log(\''+esc2(id)+'\')"><span>共同生活语音记录</span><small>'+(isActive(id)?'进行中 · ':'')+n+' 次 ›</small></button>',m=String(html).indexOf('cohabMemoryOpen('),k=m>=0?String(html).indexOf('</button>',m)+9:String(html).lastIndexOf('</div></details>');if(k>8)html=html.slice(0,k)+row+html.slice(k);return html;};}
 if(typeof offSay==='function'){const baseOffSay=offSay;
 offSay=function(e){if(isActive()){toast('正在语音模式，先点「结束」再打字');return;}return baseOffSay.apply(this,arguments);};}
+
+// 从共同生活点开的页面打上 cohab-glass-modal，用上面的气泡材质；关掉时去掉，别的页面（微信、线下约会）不受影响。
+function cohabGlassSkin(){if(typeof _off==='undefined'||!_off||_off.mode!=='cohab'||typeof cur!=='function'||cur().p!=='off')return false;const c=getC(_off.id);return !!c&&typeof offTheme==='function'&&offTheme(c).skin!=='classic';}
+if(typeof openModal==='function'){const baseOpenModal=openModal;
+openModal=function(){const r=baseOpenModal.apply(this,arguments);if(hasDom()){const m=document.getElementById('modal');if(m)m.classList.toggle('cohab-glass-modal',cohabGlassSkin());}return r;};}
+if(typeof closeModal==='function'){const baseCloseModal=closeModal;
+closeModal=function(){const r=baseCloseModal.apply(this,arguments);if(hasDom()){const m=document.getElementById('modal');if(m)m.classList.remove('cohab-glass-modal');}return r;};}
 
 /* ---------- 期间暂停共同生活自己推进的事 ---------- */
 if(typeof cohabAdvance==='function'){const baseAdvance=cohabAdvance;
@@ -479,10 +570,7 @@ cohabSummaryRows=function(d){return baseSummaryRows(d).filter(m=>!(m&&m._voice))
 
 /* ---------- 通话界面接管 ---------- */
 if(typeof renderCall==='function'){const baseRenderCall=renderCall;
-renderCall=function(){const L=hasDom()&&document.getElementById('callLayer');if(L&&isActive()&&!_call.min){paintReader(L);return;}if(L)L.classList.remove('cvr-mode','cohab-voice');const r=baseRenderCall.apply(this,arguments);
-  // 缩小后的小条：不显示头像、不计时，红色挂断换成「结束」
-  if(L&&isActive()&&_call.min){const c=getC(_call.id),av=L.querySelector('.cav');if(av)av.innerHTML='<span style="display:flex;width:100%;height:100%;align-items:center;justify-content:center;background:#26231f;color:#c9b797;border-radius:10px">'+(typeof svgIc==='function'?svgIc('mic',16,'#c9b797'):'🎙')+'</span>';const name=L.querySelector('span[style*="white-space:nowrap"]');if(name)name.innerHTML=esc2(c&&(c.remark||c.name)||'')+' <small style="color:#c9b797;letter-spacing:1px">· 共同生活语音</small>';const end=L.querySelector('.cbtn.red');if(end){end.innerHTML='结束';end.style.width='auto';end.style.padding='0 12px';end.style.borderRadius='16px';end.style.fontSize='13px';}}
-  return r;};}
+renderCall=function(){const L=hasDom()&&document.getElementById('callLayer');if(L&&isActive()&&!_call.min){paintReader(L);return;}if(L&&isActive()&&_call.min&&paintMini(L))return;if(L)L.classList.remove('cvr-mode','cohab-voice','cvr-mini');return baseRenderCall.apply(this,arguments);};}
 if(typeof updateCallSub==='function'){const baseSub=updateCallSub;
 updateCallSub=function(){const r=baseSub.apply(this,arguments);if(isActive())refresh(false);return r;};}
 if(typeof hangupCall==='function'){const baseHang=hangupCall;
@@ -493,8 +581,8 @@ if(typeof restoreActiveCall==='function'){const baseRestore=restoreActiveCall;
 restoreActiveCall=function(){const p=S._activeCall,wasCohab=!!(p&&p.cohab);baseRestore.apply(this,arguments);if(wasCohab&&typeof _call!=='undefined'&&_call&&_call.session===p.session){_call.cohab=true;clearInterval(_callSilTimer);clearInterval(_callTimer);renderCall();}};}
 
 if(hasDom()&&document.createElement){const css=document.createElement('style');css.id='north-cohab-voice-style';
-css.textContent='.cv-note.cv-plus{font-size:24px;font-weight:300;line-height:1;min-width:42px}.cv-note.open{transform:rotate(45deg)}.cv-tray{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:12px 18px calc(env(safe-area-inset-bottom,0px) + 14px);border-top:.5px solid rgba(255,255,255,.08);background:rgba(10,10,10,.92)}.cv-tray[hidden]{display:none!important}.cv-tray button{display:flex;align-items:center;gap:10px;padding:0;border:0;background:none;color:#e9e3da;font-size:14px}.cv-tray button b{width:52px;height:52px;flex:0 0 52px;border-radius:16px;background:#26231f;border:1px solid rgba(201,183,151,.28);display:flex;align-items:center;justify-content:center;color:#c9b797}.cv-tray small{color:#8f877c;font-size:11px;padding-left:62px}'+READER_CSS;
+css.textContent='.cv-note.cv-plus{font-size:24px;font-weight:300;line-height:1;min-width:42px}.cv-note.open{transform:rotate(45deg)}.cv-tray{display:flex;align-items:flex-start;gap:22px;padding:14px 20px calc(env(safe-area-inset-bottom,0px) + 14px);border-top:.5px solid rgba(255,255,255,.08);background:rgba(10,10,11,.92)}.offstage.hasbg:not(.off-classic) .cv-tray{background:rgba(16,16,18,.3);-webkit-backdrop-filter:blur(20px) saturate(1.34);backdrop-filter:blur(20px) saturate(1.34);border-top:1px solid rgba(255,255,255,.1)}.cv-tray[hidden]{display:none!important}.cv-tray button{display:flex;flex-direction:column;align-items:center;gap:7px;padding:0;border:0;background:none;color:#e9e3da;font-size:12px}.cv-tray button b{position:relative;width:56px;height:56px;flex:0 0 56px;border-radius:18px;display:flex;align-items:center;justify-content:center;'+GLASS_BODY+'}.cv-tray button b:before{'+RING+'}.offstage.off-classic .cv-tray{background:#080808;border-top:1px solid #1d1c19}.offstage.off-classic .cv-tray button b{background:#111!important;border:1px solid #3b3730;color:#b8a78d!important;-webkit-backdrop-filter:none;backdrop-filter:none;border-radius:8px}.offstage.off-classic .cv-tray button b:before{display:none}'+READER_CSS+COHAB_GLASS_CSS;
 try{(document.head||document.documentElement).appendChild(css);}catch(_){}}
 
-window.CohabVoice={start,end,note,sync,narr:narrToggle,send,reply,log,remove,editLine,saveLine,delLine,history,hideSession,system,frame,toLatest,refresh,active:isActive,_archive:archive,_transcript:transcriptHTML};
+window.CohabVoice={start,end,note,sync,multi,mic,narr:narrToggle,send,reply,log,remove,editLine,saveLine,delLine,history,hideSession,system,frame,toLatest,refresh,active:isActive,_archive:archive,_transcript:transcriptHTML};
 })();

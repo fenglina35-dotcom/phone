@@ -141,7 +141,7 @@ v1762 补查全部卡片类型：角色发出的真人店铺外卖（marketfood�
 
 ## 共同生活语音模式（COHAB_VOICE_V1）
 
-现在：在 cohab-theater.js 末尾的独立段落（两包同一份）。共同生活输入框没字时「记下」变成 ＋，点开下方有「共同生活语音模式」；一输入文字就变回「记下」。只有两人在一起（在家/一起外出）时才有输入框，所以 TA 不在家时看不到入口。进入后 _call.cohab=true（kind 为 video，直接是接通状态，不响铃、不拒接、不主动开口、没有静默续聊）。
+现在：在 cohab-theater.js 末尾的独立段落（两包同一份）。共同生活输入框没字时「记下」变成 ＋，点开下方是两块玻璃按钮「语音模式」和「多选删除」（顶上原来的「多选」去掉了；共同生活里点消息不再弹出编辑/删除，线下约会照旧）；一输入文字就变回「记下」。只有两人在一起（在家/一起外出）时才有输入框，所以 TA 不在家时看不到入口。进入后 _call.cohab=true（kind 为 video，直接是接通状态，不响铃、不拒接、不主动开口、没有静默续聊）。
 
 界面（COHAB_VOICE_READER_V1，2026-10-18 用户要求“像阅读文章”）：接管 renderCall，换成阅读式页面：顶部「共同生活 · 语音」和名字，左边缩小，右边「结束」；中间旁白（斜体宋体、偏暗）和台词（大号宋体、外语角色带一行翻译）、自己的话靠右小气泡，旧的变淡、正在说的最亮；停在最底下时 TA 每说一句自动往下走，往上翻就停住并出现「回到最新 ↓」，新话不会把人拉回去；等 TA 回话时有三个点。不显示头像、不显示时长，没有摄像头和屏幕共享。缩小后的小条：不显示头像、不计时，按钮写「结束」。原来的 #callSub 字幕保留但隐藏（引擎照常写），updateCallSub 之后刷新阅读页，另有 0.6 秒的轻量检查兜底。颜色跟共同生活页一致：读 offStageAttrs（外观里的气泡色、旁白色、背景图），黑底；玻璃皮肤时自己的话是深色描白边，经典皮肤用外观里的颜色。输入栏左边有「旁白」开关（同共同生活打字时的旁白）：打开后写的是自己的动作，存成【…】，阅读页右侧斜体显示，角色当成你的动作；「说/写」上方有「让TA回」：共同生活开了手动回复时，说的话只记下，点它才回；没开时说完自动回，它用来让 TA 接着说。角色的格式（【】旁白 + 台词，外语角色原文加翻译）不变；线上电话的格式完全不受影响（所有改动只在 _call.cohab 时生效）。
 
@@ -153,7 +153,11 @@ v1762 补查全部卡片类型：角色发出的真人店铺外卖（marketfood�
 
 期间暂停：cohabAdvance 不推进（作息出门、回家等）、共同生活手机自主行为/每日必做/补查暂停，结束后照常继续；语音模式中不能在共同生活打字（提示先点结束）。后台恢复时 S._activeCall.cohab 保留，恢复后仍是语音模式。
 
-验证：核心聊天门禁 cvPrompt（含不出现“[视频通话]/[电话]”）/cvHistory/cvNoCamera（阅读页、结束、无头像无计时）/cvLiveLog/cvStored/cvMoved/cvNoWechatLog/cvMemory/cvNotice（结束后无提示）/cvRestore/cvPaused。未真机验证：真实语音合成和语音输入在共同生活里的体验。核对到：2026-10-18。
+玻璃与防闪（COHAB_VOICE_GLASS_V1，2026-10-18 用户要求“和共同生活一模一样的材质”“现在现有的直接复制过去就可以”）：材质就是共同生活气泡实际生效的那一套（glass-theme.css 把 .offbubble 等压成 7% 白、不磨砂，再加 .offbubble:before 那条细高光环），cohab-theater.js 里 GLASS_BODY/RING 原样复制，不另做。用在：语音页的缩小、结束、回到最新、让TA回、旁白、话筒、说；自己的话是 .offmsg.me .offbubble；共同生活页的旁白/＋、＋ 里两块、设置里的小方块和下面几行、多人剧场卡片和按钮、多选栏的取消、让TA回、右上状态；从共同生活点开的页面（openModal 包一层：_off.mode 为 cohab、在 off 页、皮肤不是经典时给 #modal 加 cohab-glass-modal，closeModal 去掉）：页面本身、里面的分组和按钮；输入框和选择框用 7% 白加细白边（它们画不了高光环）。开着的按钮（旁白、话筒、主按钮）是更亮的白玻璃（30% 白），不用黄色。只有两处多了磨砂：缩小后的小条（浮在别的页面上，不糊字看不清）和点开页面后面那层遮罩。经典皮肤全部不动。踩坑：给「让TA回」加 position:relative 会把它从右上角挤到左边（它本来是 absolute），只给本来不定位的块加。门禁 cvTray 还检查从共同生活点开的页面是 7% 白、关掉后标记去掉。
+液态玻璃（私人版玻璃主题、换了背景时，app.js 的 LG_SCENES 用 WebGL 画的镜片，就是她手机上看到的共同生活气泡）：语音页在 cohab-theater.js 里也登记成一页（root .callscreen.cvr-mode .cvr-stage.hasbg，放在共同生活前面），气泡、顶栏、按钮、输入栏和共同生活是同一块镜片；上面那层 CSS 材质加了 :not(.lg-ready)，只在没有镜片时兜底；镜片上开着的按钮用 brightness 整块提亮（底色会被镜片盖住）。白雾（COHAB_SETTINGS_NO_FOG_V1，2026-10-18 实机）：LG_OFF_HOSTS 里原来有整个 .cohab-settings，展开后是一块很高的镜片，边上的高光被拉长成上下两片白雾；现在只让标题行 .cohab-settings>summary 和里面每个小方块各自是一块镜片。tests/liquid-glass-home.test.mjs 守住。
+踩坑（实机：文字会闪、上下跳两下）：旧 refresh 每次字幕或翻译一变就整段 innerHTML 重写，最后一句的进场动画跟着重播。现在按每句 id 增量更新（已经在的不动，只改 now/变淡），TA 的话等字幕对上这一句（声音开始）才用 offglyph 一个字一个字出来，等待时 visibility:hidden 占位不顶内容。门禁 cvNoReplay 数每句 animationstart 必须正好一次（旧实现最后一句播 3 次）。
+笑声（COHAB_VOICE_ASK_V1）：语音条会把用户这一轮的要求（笑一下…）经 handPerf 交给 performance，通话以前没有；现在共同生活语音把用户这一句作为 ask 交给这一轮第一句会出声的话（prefetch 和 speakWait 都带）。仍然只在「细腻情绪」开着且语音是 Fish/ElevenLabs 时生效，其他语音模型听不到行内笑声。
+验证：核心聊天门禁 cvNoReplay/cvTray/cvNoTapMenu/cvMic，以及 cvPrompt（含不出现“[视频通话]/[电话]”）/cvHistory/cvNoCamera（阅读页、结束、无头像无计时）/cvLiveLog/cvStored/cvMoved/cvNoWechatLog/cvMemory/cvNotice（结束后无提示）/cvRestore/cvPaused。未真机验证：真实语音合成和语音输入在共同生活里的体验。核对到：2026-10-18。
 
 ## 聊天搜索与网页功能继承核对
 

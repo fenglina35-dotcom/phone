@@ -41,6 +41,8 @@ test('v1720 iMessage bubbles and buttons use the same glass, redraw only on scro
 test('v1722 offline date and cohabitation use the same glass except the background itself',()=>{
   assert.match(part,/root:'\.offstage\.hasbg:not\(\.off-classic\)'/,'只在玻璃主题且换了背景时；旧的黑色文学风不动');
   for(const sel of ['.offmsg .offbubble','.offnav','.offmeta','.cohab-meta','.cohab-settings label','.cohab-memory-open','.off-reply-top','.offinput .send','.off-field','.cohab-status-chip'])assert.ok(part.includes(sel),sel);
+  assert.doesNotMatch(part.match(/const LG_OFF_HOSTS='[^']+'/)[0],/\.cohab-settings,/,'共同生活设置整块不当一块玻璃：展开后高光被拉长成白雾，里面的小方块也被盖住');
+  assert.ok(part.match(/const LG_OFF_HOSTS='[^']+'/)[0].includes('.cohab-settings>summary'),'设置那一行标题自己是一块玻璃');
   assert.doesNotMatch(part.match(/const LG_OFF_HOSTS='[^']+'/)[0],/offstage,|\.offscroll|\.offnar|\binput\b|\bselect\b/,'背景、旁白文字、input/select 本身不套');
   assert.match(part,/getPropertyValue\(me\?'--offc-me':'--offc-them'\)/,'线下气泡染成外观里挑的颜色');
   assert.match(part,/if\(w>=d\.width-4\)opt\.box=\[-60,0,w\+120,h\];/,'通栏两侧不折');
