@@ -2961,3 +2961,5 @@ CUA核验22项控件、发送未读空白、已读等待阶段空白、保存180
 2026-10-17 私人v1791 / iOS464：从提交 33c985d6 的干净工作区 xcodebuild（Release，BUILD SUCCEEDED，464）并覆盖安装到用户 iPhone 15；安装包内 44 个贴纸/主题图、tn-title.woff2、globe-design.jpg、SNOW_GLOBE_V1 与 isImg 放行已核对。未生成覆盖包。
 
 2026-10-17 网页v1790 / 私人v1793 / iOS465：用户实机反馈五项：①共同生活顶部状态字过长超出气泡——.cohab-status-chip b 原为 overflow:visible，聊天页 .cohab-wx-state 是 inline-flex 直接放文字，省略号不生效；改为气泡内省略（三个 HTML 外壳）。②开「细腻情绪」后通话记录露出「[轻笑]」且角色没真的笑——通话台词送合成前 pickSpoken 把方括号整个删掉，字幕却原样显示；现在通话台词里的小提示（两包各自的拆句处）从字幕拿掉，作为这一句的语气交给语音（支持行内标签的模型用 perf，其他模型用 cue+interjection），角色亲手写的笑声不受6分钟冷却限制（inlineSound）。③角色布置的长任务把卡片撑得很高——超过26字只显示两行加「查看详情」，点开小页面看全文并可直接去完成。④布置任务后提醒重复一句——漏做提醒和“今天的任务布置好了”两条系统提示几乎同时发出，第二条把第一条又说一遍；改为漏做提醒先等4秒，紧接着布置就合成一条回复；超过3天的旧任务不再追究（实机翻出了8月22日的任务）。⑤「我的」头像默认用微信头像，可点头像从相册换；蝴蝶结按用户第二次调整放到右上大猫上。验证：voice-expressive 新增通话笑声用例（旧实现失败）；核心聊天门禁新增 mergedOnce/staleQuiet/longDetail/avatarPhoto。
+
+2026-10-17 私人v1793 / iOS465：从提交 a32ba1b1 的干净工作区 xcodebuild（Release，BUILD SUCCEEDED，465）并覆盖安装到用户 iPhone 15；安装包内通话笑声（inlineSound）、任务提醒合并（_taskPenaltyNote）、微信头像（avatarImg）已核对。未生成覆盖包。
