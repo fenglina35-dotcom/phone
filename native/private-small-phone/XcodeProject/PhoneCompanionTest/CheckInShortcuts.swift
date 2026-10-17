@@ -30,6 +30,8 @@ actor CheckInStore {
         var want: Int? = nil
         var wantAt: Double? = nil
         var planAt: Double? = nil
+        // DAILY_CHECKIN_V1: the role's three check times for today (ms since 1970).
+        var plans: [Double]? = nil
     }
     private struct Fired: Codable { var day: String; var count: Int; var last: Date }
     struct Metadata: Codable, Sendable {
@@ -68,7 +70,8 @@ actor CheckInStore {
             !value.cid.isEmpty && value.cid.count <= 120 && !value.scope.isEmpty && value.scope.count <= 120
         let stored = Configuration(enabled: value.enabled && valid && !lines.isEmpty,
             account: value.account, cid: value.cid, scope: value.scope, lines: Array(lines.prefix(40)),
-            mode: value.mode == "always" ? "always" : "role", want: min(3, max(0, value.want ?? 1)), wantAt: value.wantAt, planAt: value.planAt)
+            mode: value.mode == "always" ? "always" : value.mode == "daily3" ? "daily3" : "role", want: min(3, max(0, value.want ?? 1)), wantAt: value.wantAt, planAt: value.planAt,
+            plans: Array((value.plans ?? []).filter { $0 > 0 }.sorted().prefix(3)))
         if old?.scope != stored.scope || old?.account != stored.account || old?.cid != stored.cid || !stored.enabled {
             UserDefaults.standard.removeObject(forKey: approvalKey)
         }
@@ -79,6 +82,7 @@ actor CheckInStore {
     // The role's own wish, the hour and the time since the last check decide; most triggers pass quietly.
     private func roleWantsNow(_ config: Configuration, now: Date = Date()) -> Bool {
         if config.mode == "always" { return true }
+        if config.mode == "daily3" { return dailyPlanDue(config, now: now) }
         var want = config.want ?? 1
         if let at = config.wantAt, now.timeIntervalSince1970 * 1_000 - at > 12 * 3_600_000 { want = min(want, 1) }
         var chance = [0.0, 0.1, 0.3, 0.65][min(3, max(0, want))]
@@ -97,6 +101,18 @@ actor CheckInStore {
             if now.timeIntervalSince(plan) < 2 * 3_600, last < plan { chance = 1 }
         }
         guard Double.random(in: 0..<1) < chance else { return false }
+        let next = Fired(day: day, count: count + 1, last: now)
+        if let data = try? JSONEncoder().encode(next) { UserDefaults.standard.set(data, forKey: firedKey) }
+        return true
+    }
+    // Three times a day, chosen by the role: the first trigger within two hours after a time checks for sure, each time once.
+    private func dailyPlanDue(_ config: Configuration, now: Date) -> Bool {
+        let fired = (UserDefaults.standard.data(forKey: firedKey)).flatMap { try? JSONDecoder().decode(Fired.self, from: $0) }
+        let last = fired?.last ?? .distantPast
+        let plans = (config.plans ?? []).map { Date(timeIntervalSince1970: $0 / 1_000) }
+        guard plans.contains(where: { $0 <= now && now.timeIntervalSince($0) < 2 * 3_600 && last < $0 }) else { return false }
+        let day = Self.dayText(now)
+        let count = fired?.day == day ? fired?.count ?? 0 : 0
         let next = Fired(day: day, count: count + 1, last: now)
         if let data = try? JSONEncoder().encode(next) { UserDefaults.standard.set(data, forKey: firedKey) }
         return true

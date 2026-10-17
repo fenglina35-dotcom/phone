@@ -63,18 +63,18 @@ function functionSource(source, name) {
 
 test('private performance candidate keeps v1355 while public web advances independently', () => {
   assert.equal(privateIndex, privateAlias);
-  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1793'/);
-  assert.match(privateIndex, /app\.js\?v=1793&r=v1793-private-package-1/);
+  assert.match(privateIndex, /window\.__NORTH_SHELL_BUILD__='1795'/);
+  assert.match(privateIndex, /app\.js\?v=1795&r=v1795-private-package-1/);
   assert.match(privateIndex, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(privateRepair, /index\.html\?repair=1&v=1793/);
-  assert.match(privateApp, /APP_VER='v1793 · 任务便签头像与通话笑声'/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1795/);
+  assert.match(privateApp, /APP_VER='v1795 · 查岗每天三次与回答框'/);
   assert.match(overlay, /336-daily-file-backup/);
-  assert.match(webView, /1\.0\.465 \(465\)/);
-  assert.match(bridge, /private static let build = "1\.0\.465 \(465\)"/);
+  assert.match(webView, /1\.0\.466 \(466\)/);
+  assert.match(bridge, /private static let build = "1\.0\.466 \(466\)"/);
   assert.match(bridge, /static let contractVersion = 42/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 465;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.465;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1790 · 任务便签头像与通话笑声'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 466;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.466;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1792 · 查岗每天三次与回答框'/);
   assert.doesNotMatch(publicApp, /function northNativeBackgroundTask\(name,run\)/);
 });
 
