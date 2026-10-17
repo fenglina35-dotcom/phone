@@ -216,3 +216,19 @@ test('Fish Drama 3 (model drama-3) is treated as an inline-tag model, so the dir
   assert.equal(vm.runInContext("NorthVoiceExpressive.performance('[温柔]过来',{id:'r'},{base:'https://api.fish.audio',model:'drama-3'},{})",ctx),'[gentle, tender] 过来');
   assert.equal(vm.runInContext("NorthVoiceExpressive.performance('[温柔]过来',{id:'r'},{base:'https://api.minimax.chat',model:'drama-3'},{})",ctx),null,'only on Fish');
 });
+
+/* 实机（2026-10-17）：通话记录里露出「[轻笑] Come on, puppy.」，而且角色并没有真的笑出来——通话台词送去合成前，
+   方括号被 pickSpoken 整个删掉了。现在通话里角色写的小提示从字幕里拿掉，交给语音：一句里角色亲手写的笑声照念，不受几分钟一次的限制。 */
+test('a laugh the role writes into a call line is voiced even inside the cooldown, and never shown',()=>{
+  const V=sandbox({voiceExpressive:true}).NorthVoiceExpressive;
+  assert.equal(V.performance('[轻笑]先来一次',{id:'call'},{},{}),'[chuckling] 先来一次');
+  assert.equal(V.performance('Come on, puppy.',{id:'call'},{},{perf:'[轻笑]Come on, puppy.'}),'Come on, puppy.','without the call flag the cooldown still drops it');
+  assert.equal(V.performance('Come on, puppy.',{id:'call'},{},{perf:'[轻笑]Come on, puppy.',inlineSound:true}),'[chuckling] Come on, puppy.');
+  const s=V.split('[轻笑] Come on, puppy.',true);
+  assert.equal(s.text,'Come on, puppy.');
+  for(const src of [app,read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js')]){
+    assert.match(src,/NorthVoiceExpressive\.split\((?:p|units\[_i\]\.orig),true\)/,'call lines take the cues out of the transcript');
+    assert.match(src,/speakWait\(spoken,c,\{cue:_speechRows\[_ui\]\.cue,interjection:_speechRows\[_ui\]\.interjection,perf:_speechRows\[_ui\]\.perf,inlineSound:_speechRows\[_ui\]\.inlineSound/);
+    assert.match(src,/prepareCallSpeech\(row\.spoken,c,\{cue:row\.cue,interjection:row\.interjection,perf:row\.perf,inlineSound:row\.inlineSound/);
+  }
+});

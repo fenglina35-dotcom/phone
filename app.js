@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1788'){
+if(window.__NORTH_SHELL_BUILD__!=='1790'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -616,7 +616,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1788 · 任务便签奖励屋';
+const APP_VER='v1790 · 任务便签头像与通话笑声';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2098,7 +2098,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1788&r=v1788-thought-preview-1';
+  const url='sw.js?v=1790&r=v1790-thought-preview-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -8736,7 +8736,7 @@ function renderTasks(){const c=taskC();
   return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">任务便签</span><span class="r"></span></div>
     <div class="scroll" style="background:#000">${body}<div style="height:20px"></div></div>`;}
 async function genTasks(opt){opt=opt||{};const automatic=opt.automatic===true,c=taskC();if(!c){if(!automatic)toast('没有可布置任务的角色');return;}if(!coupleTasksEnabled(c)){if(!automatic)toast('这个角色已关闭布置任务');return;}if(tasksToday(c)){if(!automatic)toast('今天的任务ta已经布置过啦');return;}if(_taskBusy)return;
-  checkTaskPenalty(c);_taskBusy=true;if(!automatic||cur().p==='tasks')render();if(!automatic)toast('ta在琢磨今天怎么安排你…');
+  checkTaskPenalty(c);const _penalty=_taskPenaltyNote[c.id]||'';delete _taskPenaltyNote[c.id];_taskBusy=true;if(!automatic||cur().p==='tasks')render();if(!automatic)toast('ta在琢磨今天怎么安排你…');
   const n=taskDailyCount(c),normalN=Math.max(0,n-1);
   const hist=(c.taskHist||[]).map(s=>({text:s}));// 最近几天布置过的任务，用来防止重复
   const avoidTxt=hist.length?'\n· 【最近这些任务你已经布置过了，今天务必换着花样来，别再重复、也别换汤不换药地重复同类】：'+hist.map(h=>h.text).join('；'):'';
@@ -8766,8 +8766,8 @@ async function genTasks(opt){opt=opt||{};const automatic=opt.automatic===true,c=
     list.push({id:uid(),text:truthQ||'今天，你最想跟我说、却一直没说出口的一句话是什么？',kind:'truth',verify:'truth',target:0,done:false,truth:true});// 固定的"他想问我的真心话"
     c.taskHist=[...list.map(x=>x.text),...(c.taskHist||[])].slice(0,30);// 记下今天布置的，往后几天别重复
     c.tasks={date:todayStr(),assignTs:Date.now(),list,rewarded:false,penalized:false};c.taskAuto={date:todayStr(),attempts:0,nextAt:0,lastErrorAt:0};taskDailyJournalWrite(c);save();_taskBusy=false;render();if(!automatic||cur().p==='tasks')toast('任务来咯📋');
-    if(!c.blocked)scheduleReply(c.id,'[系统：你刚在'+S.me.name+'手机的任务便签里给ta布置了今天的任务，跟ta说一声、催ta【今天23:59之前】完成、说说不完成的后果，一两句，符合你人设。别逐条复述任务。]');
-  }catch(e){const st=taskAutoState(c),attempts=Math.min(8,(+st.attempts||0)+1);st.attempts=attempts;st.lastErrorAt=Date.now();st.lastError='generation_failed';st.nextAt=Date.now()+Math.min(6*3600000,15*60000*Math.pow(2,attempts-1));save();_taskBusy=false;if(!automatic||cur().p==='tasks')render();/* 自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示。 */if(!automatic)toast('没布置成功，再点一次');}}
+    if(!c.blocked)scheduleReply(c.id,'[系统：'+(_penalty?'两件事合在这一次回复里说，每件只说一遍：①'+_penalty+'②':'')+'你刚在'+S.me.name+'手机的任务便签里给ta布置了今天的任务，跟ta说一声、催ta【今天23:59之前】完成、说说不完成的后果，一两句，符合你人设。别逐条复述任务。]');
+  }catch(e){const st=taskAutoState(c),attempts=Math.min(8,(+st.attempts||0)+1);st.attempts=attempts;st.lastErrorAt=Date.now();st.lastError='generation_failed';st.nextAt=Date.now()+Math.min(6*3600000,15*60000*Math.pow(2,attempts-1));save();_taskBusy=false;if(_penalty&&!c.blocked)scheduleReply(c.id,'[系统：'+_penalty+']');if(!automatic||cur().p==='tasks')render();/* 自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示。 */if(!automatic)toast('没布置成功，再点一次');}}
 async function completeTask(id){const c=taskC();const t=tasksToday(c);if(!t)return;const x=t.list.find(z=>z.id===id);if(!x||x.done)return;
   if(x.verify==='truth'){openTruth(id);return;}
   if(x.verify==='essay'){openEssay(id);return;}
@@ -8796,11 +8796,14 @@ function openTruth(id){const c=taskC();const t=tasksToday(c);const x=t&&t.list.f
 function submitTruth(id){const ta=$('#truth_t');const v=(ta?ta.value:'').trim();if(v.length<2){toast('好歹答一句嘛~');return;}
   const c=taskC();const t=tasksToday(c);const x=t&&t.list.find(z=>z.id===id);if(!x)return;
   pushMsg(c.id,{role:'user',type:'text',content:'【真心话·'+x.text+'】\n'+v,id:uid()});closeModal();finishTask(c,x,v);}
+/* 没完成的旧任务：只追究最近3天内的（两个月前的旧账不再翻）。提醒不立刻发：先留4秒，若紧接着要布置今天的任务，
+   就和“今天的任务布置好了”合成一条回复，免得两条系统提示挤在一起，第二条把第一条的话又说一遍。 */
+const _taskPenaltyNote={};
 function checkTaskPenalty(c){const t=c&&c.tasks;if(!t||t.date===todayStr()||t.penalized)return;
-  const undone=t.list.filter(x=>!x.done);t.penalized=true;
-  if(undone.length){grudgesOf(c).unshift({id:uid(),text:t.date+' 没完成我布置的任务（差'+undone.length+'条：'+undone.map(x=>x.text).join('、').slice(0,36)+'）',done:false,ts:Date.now()});
+  const undone=t.list.filter(x=>!x.done);t.penalized=true;const ageDays=Math.round((Date.parse(todayStr())-Date.parse(t.date))/864e5);
+  if(undone.length&&!(ageDays>3)){grudgesOf(c).unshift({id:uid(),text:t.date+' 没完成我布置的任务（差'+undone.length+'条：'+undone.map(x=>x.text).join('、').slice(0,36)+'）',done:false,ts:Date.now()});
     behaviorRecord('task',t.date+' 有 '+undone.length+' 条任务没完成：'+undone.map(x=>x.text).join('、').slice(0,50),'task',{force:true});
-    if(!c.blocked)scheduleReply(c.id,'[系统：'+t.date+'你给'+S.me.name+'布置的任务，ta有 '+undone.length+' 条没完成。你不太高兴，已经记到你的小本本上了，冷淡地说一句、并威胁线下见面要罚ta（怎么罚你自己定，符合人设），一两句。]');}
+    if(!c.blocked){_taskPenaltyNote[c.id]=t.date+'你给'+S.me.name+'布置的任务，ta有 '+undone.length+' 条没完成。你不太高兴，已经记到你的小本本上了，冷淡地说一句、并威胁线下见面要罚ta（怎么罚你自己定，符合人设），一两句。';setTimeout(()=>{const n=_taskPenaltyNote[c.id];if(!n)return;delete _taskPenaltyNote[c.id];scheduleReply(c.id,'[系统：'+n+']');},4000);}}
   save();}
 
 /* ---------- 微信主界面 ---------- */
@@ -18151,7 +18154,7 @@ function playCallFallbackWait(buf,onStart){const maxWait=Math.max(5000,(Number(b
 function callArrayBufferBase64(ab){const bytes=new Uint8Array(ab),step=32768,parts=[];for(let i=0;i<bytes.length;i+=step)parts.push(String.fromCharCode(...bytes.subarray(i,i+step)));return btoa(parts.join(''));}
 async function playCallMediaWait(ab,buf,onStart){if(!ab)return playCallFallbackWait(buf,onStart);stopCallMediaAudio('next-sentence');/* 通话退到后台、B站陪看、系统屏幕共享或原生摄像头视频期间复用当前音频会话，不能切换或停用正在承载外部媒体、摄像头与免提识别的会话。共享媒体场景把完整的 0–300% 设置交给原生人声增强链，不能在网页侧先截成 100%。 */const nativeBackground=privateNativeAppOn()&&typeof document!=='undefined'&&document.hidden,nativeCinema=cinemaNativeMediaAudioOn(),nativeScreenShare=privateNativeAppOn()&&callScreenShareOn(),nativeCamera=privateNativeAppOn()&&callVideoCameraOn(),nativeSharedMedia=nativeCinema||nativeScreenShare||nativeCamera;if(nativeBackground||nativeSharedMedia)try{if(onStart)onStart(Math.max(1,Number(buf&&buf.duration)||1)*1000);const r=await window.SmallPhoneNative.request('call.audio.play',{base64:callArrayBufferBase64(ab),mime:callAudioMime(ab),volume:Math.max(0,Math.min(3,volMul())),mixMode:nativeCinema?'cinema':nativeScreenShare?'screenShare':nativeCamera?'camera':'call'});if(r&&r.played)return true;}catch(_){}const a=callMediaElement();if(!a)return playCallFallbackWait(buf,onStart);const token=_callMediaToken,url=URL.createObjectURL(new Blob([ab],{type:callAudioMime(ab)}));_callMediaUrl=url;return new Promise(resolve=>{let done=false,started=false,startTimer=null,hardTimer=null;const clear=()=>{if(startTimer)clearTimeout(startTimer);if(hardTimer)clearTimeout(hardTimer);a.onplaying=a.onended=a.onerror=a.onstalled=null;if(_callMediaUrl===url){try{URL.revokeObjectURL(url);}catch(_){}_callMediaUrl='';}};const finish=ok=>{if(done)return;done=true;if(ok===false)try{a.pause();}catch(_){}clear();resolve(ok!==false);};const fallback=()=>{if(done)return;if(started){finish(false);return;}done=true;clear();try{a.pause();}catch(_){}playCallFallbackWait(buf,onStart).then(resolve,()=>resolve(false));};try{a.loop=false;a.volume=Math.max(0,Math.min(1,volMul()));a.src=url;a.currentTime=0;a.onplaying=()=>{if(done||token!==_callMediaToken)return;started=true;if(startTimer){clearTimeout(startTimer);startTimer=null;}if(onStart)try{onStart(Math.max(1,Number(buf&&buf.duration)||1)*1000);}catch(_){}};a.onended=()=>finish(true);a.onerror=fallback;a.onstalled=()=>{if(!started)fallback();};const p=a.play();if(p&&typeof p.catch==='function')p.catch(fallback);startTimer=setTimeout(()=>{if(!started)fallback();},2500);hardTimer=setTimeout(()=>finish(false),Math.max(12000,(Number(buf&&buf.duration)||1)*1000+8000));}catch(_){fallback();}});}
 async function prepareCallSpeech(text,c,opt){opt=opt||{};const attempts=opt.shortRetry===false?1:2;for(let attempt=0;attempt<attempts;attempt++){let ab=null;try{ab=await ttsArr(text,c,opt);const buf=await decodeBuf(ab);if(buf&&callSpeechDurationPlausible(text,buf.duration))return{ab,buf};if(ab){const reason=buf?'call-tts-too-short':'call-tts-decode-failed',refunded=await ttsRefundAudio(ab,reason);if(buf&&attempt+1<attempts&&(refunded||!ttsUseRelay(c)))continue;}}catch(e){if(ab)await ttsRefundAudio(ab,'call-tts-prepare-failed');}return null;}return null;}
-function callPrefetchSpeech(rows,c,stillActive){rows=Array.isArray(rows)?rows:[];const slots=rows.map(()=>{let resolve;const promise=new Promise(r=>resolve=r);return{promise,resolve};});let next=0;const worker=async()=>{while(next<rows.length){const i=next++,row=rows[i]||{};if(!row.spoken||stillActive&&!stillActive()){slots[i].resolve(null);continue;}const ready=await prepareCallSpeech(row.spoken,c,{cue:row.cue,interjection:row.interjection,quiet:true});if(stillActive&&!stillActive()){if(ready&&ready.ab)await ttsRefundAudio(ready.ab,'call-prefetch-cancelled');slots[i].resolve(null);}else slots[i].resolve(ready);}};if(rows.length)worker();return slots.map(x=>x.promise);}
+function callPrefetchSpeech(rows,c,stillActive){rows=Array.isArray(rows)?rows:[];const slots=rows.map(()=>{let resolve;const promise=new Promise(r=>resolve=r);return{promise,resolve};});let next=0;const worker=async()=>{while(next<rows.length){const i=next++,row=rows[i]||{};if(!row.spoken||stillActive&&!stillActive()){slots[i].resolve(null);continue;}const ready=await prepareCallSpeech(row.spoken,c,{cue:row.cue,interjection:row.interjection,perf:row.perf,inlineSound:row.inlineSound,quiet:true});if(stillActive&&!stillActive()){if(ready&&ready.ab)await ttsRefundAudio(ready.ab,'call-prefetch-cancelled');slots[i].resolve(null);}else slots[i].resolve(ready);}};if(rows.length)worker();return slots.map(x=>x.promise);}
 async function speakWait(text,c,opt){opt=opt||{};const v=c?getVoice(c):null;const t=ttsSentencePauseText(ttsSafeProsody(ttsCleanBase(text),c),c);
   if(!t)return new Promise(r=>setTimeout(r,1100));
   let started=false;const start=durationMs=>{if(started)return;started=true;if(opt.onAudioStart)try{opt.onAudioStart(durationMs);}catch(_){}};
@@ -18331,23 +18334,23 @@ async function callAI(sysNote,opts){if(!_call)return;const _rawOutput=typeof mod
       else{const cleaned=l.replace(/【[^】]*】/g,'').trim();if(cleaned&&!isOOCLine(cleaned))splitActions(cleaned).forEach(p=>{if(!isOOCLine(p))pieces.push(p);});}});
     // 把"外语原文 + 紧跟的（中文翻译）"配成一组，字幕里一起显示、只读原文、停顿一次，避免字幕快闪/翻译跟原文脱节
     if(!_inspectionCompletion&&rolePhoneInspectionGenerationStale(c.id,_inspectionStartEpoch)){if(_call){_call.sub=null;updateCallSub();}return;}/* 已生成的通话内容也受查看代次门控制 */
-    if(_callStateStale()){_call.sub=null;updateCallSub();return;}const units=[];pieces.forEach(p=>{p=_rawOutput?String(p||''):callNormalizeLine((p||'').trim(),_vlang);if(!p)return;
+    if(_callStateStale()){_call.sub=null;updateCallSub();return;}const units=[],_pendingCues=[];pieces.forEach(p=>{p=_rawOutput?String(p||''):callNormalizeLine((p||'').trim(),_vlang);if(!p)return;
       if(!_rawOutput&&callBadForeignLine(p,_vlang))return;
       const isTrans=/^[（(][^）)]*[）)]$/.test(p)&&hasCN(p);
       if(isTrans&&(!_rawOutput||units.length&&!units[units.length-1].trans)){if(units.length&&!units[units.length-1].trans)units[units.length-1].trans=p;/* 同一句原文只认第一条翻译，多余/重复的翻译行(不管半角全角)直接丢掉 */return;}
-      units.push({orig:p,trans:''});});
-    let _prevP='',_prefetchP='',_prefetchInterjectionUsed=false;const _speechRows=units.map(u=>{const duplicate=!_rawOutput&&u.orig===_prefetchP;_prefetchP=u.orig;const isAction=video&&callIsActionLine(u.orig),spoken=(duplicate||isAction)?'':(_rawOutput&&(!_vlang||_vlang==='zh'))?u.orig:pickSpoken(u.orig,_vlang),interjection=!!(spoken&&!_prefetchInterjectionUsed);if(spoken)_prefetchInterjectionUsed=true;return{isAction,spoken,cue:_turnVoiceCue,interjection};});
+      /* 角色在通话里写的中文小提示（[轻笑][叹气][温柔]…）：字幕和通话记录里不显示，交给语音去真的笑、真的叹气 */const _vx=typeof NorthVoiceExpressive!=='undefined'?NorthVoiceExpressive.split(p,true):null;if(_vx){const names=(_vx.perf.match(/\[([^\]]+)\]/g)||[]).map(x=>x.slice(1,-1));if(!_vx.text){_pendingCues.push(...names);return;}units.push({orig:_vx.text,trans:'',cues:_pendingCues.splice(0).concat(names)});return;}units.push({orig:p,trans:'',cues:_pendingCues.splice(0)});});
+    let _prevP='',_prefetchP='',_prefetchInterjectionUsed=false;const _speechRows=units.map(u=>{const duplicate=!_rawOutput&&u.orig===_prefetchP;_prefetchP=u.orig;const isAction=video&&callIsActionLine(u.orig),spoken=(duplicate||isAction)?'':(_rawOutput&&(!_vlang||_vlang==='zh'))?u.orig:pickSpoken(u.orig,_vlang),cues=(u.cues||[]).slice(0,2),sound=cues.find(x=>/^(轻笑|笑|叹气|叹|哽咽|哭腔)$/.test(x)),interjection=!!(spoken&&(sound||!_prefetchInterjectionUsed));if(spoken&&!sound)_prefetchInterjectionUsed=true;return{isAction,spoken,cue:spoken&&cues.length?(sound||cues[0]):_turnVoiceCue,interjection,perf:spoken&&cues.length?cues.map(x=>'['+x+']').join('')+spoken:'',inlineSound:!!(spoken&&sound)};});
     const _speechJobs=(_call.replyVoice&&!c.muted&&ttsApiOn(c)&&!voiceProgressiveOn())?callPrefetchSpeech(_speechRows,c,()=>!!(_call&&_call.session===sess&&_call.state==='active')):[];
     for(let _ui=0;_ui<units.length;_ui++){const u=units[_ui];if(!_call||_call.session!==sess||_callStateStale())return;
       if(!_rawOutput&&u.orig===_prevP)continue;/* 跳过和上一句完全相同的（防止发两遍） */
       const isAction=_speechRows[_ui].isAction;_prevP=u.orig;
-      const callMsg={role:'assistant',type:'text',content:u.orig,time:Date.now(),id:uid(),_call:true,_ck:video?'video':'voice',_cs:sess,_callTrans:u.trans||'',_callVoiceCue:_turnVoiceCue||'',_callVoiceInterjection:_speechRows[_ui].interjection};msgs(c.id).push(callMsg);lifeNoteCommitReply(_lifeNoteDraft,callMsg.content);
+      const callMsg={role:'assistant',type:'text',content:u.orig,time:Date.now(),id:uid(),_call:true,_ck:video?'video':'voice',_cs:sess,_callTrans:u.trans||'',_callVoiceCue:_speechRows[_ui].cue||_turnVoiceCue||'',_callVoiceInterjection:_speechRows[_ui].interjection};msgs(c.id).push(callMsg);lifeNoteCommitReply(_lifeNoteDraft,callMsg.content);
       if(u.trans)msgs(c.id).push({role:'assistant',type:'text',content:u.trans,time:Date.now(),id:uid(),_call:true,_ck:video?'video':'voice',_cs:sess,_callTranslationOf:callMsg.id});
       save();roleServerPushTouchSoon(c.id,callMsg.time);
       const spoken=_speechRows[_ui].spoken;
       const subText=u.orig+(u.trans?'\n'+u.trans:'');
       if(isAction){_call.sub={who:'them',text:subText};updateCallSub();await sleep(callPaceMs(Math.max(1150,Array.from(u.orig).length*105),760));continue;}
-      if(_call.replyVoice&&!c.muted&&spoken){/* B站陪看、系统屏幕共享和私人版摄像头取流时保持原生识别持续开启：_callBusy 会丢弃角色回声，暂停识别会 setActive(false) 并让同一 AVAudioSession 上的视频预览短暂停顿。 */if(!callNativeSharedMediaAudioOn()&&!callNativeCameraMediaOn()&&!hfAudioPaused&&_callHF&&_callSR){hfAudioPaused=true;await callHFPauseForRoleAudio();}let shown=false;const show=()=>{if(shown)return;shown=true;if(_call&&_call.session===sess){_call.sub={who:'them',text:subText};updateCallSub();}};const off=phPhoneVoiceOffset();await speakWait(spoken,c,{cue:_turnVoiceCue,interjection:_speechRows[_ui].interjection,prepared:_speechJobs[_ui],cacheMessage:video?callMsg:null,onAudioStart:()=>{if(off)setTimeout(show,off);else show();}});if(!shown&&_call&&_call.session===sess){show();await sleep(callPaceMs(620,420));}const hasNextSpoken=_speechRows.slice(_ui+1).some(x=>x&&x.spoken);if(hasNextSpoken&&voicePauseMs(c)>0)await sleep(voicePauseMs(c));}else{_call.sub={who:'them',text:subText};updateCallSub();await sleep(callPaceMs(Math.max(900,u.orig.length*72),620));}}
+      if(_call.replyVoice&&!c.muted&&spoken){/* B站陪看、系统屏幕共享和私人版摄像头取流时保持原生识别持续开启：_callBusy 会丢弃角色回声，暂停识别会 setActive(false) 并让同一 AVAudioSession 上的视频预览短暂停顿。 */if(!callNativeSharedMediaAudioOn()&&!callNativeCameraMediaOn()&&!hfAudioPaused&&_callHF&&_callSR){hfAudioPaused=true;await callHFPauseForRoleAudio();}let shown=false;const show=()=>{if(shown)return;shown=true;if(_call&&_call.session===sess){_call.sub={who:'them',text:subText};updateCallSub();}};const off=phPhoneVoiceOffset();await speakWait(spoken,c,{cue:_speechRows[_ui].cue,interjection:_speechRows[_ui].interjection,perf:_speechRows[_ui].perf,inlineSound:_speechRows[_ui].inlineSound,prepared:_speechJobs[_ui],cacheMessage:video?callMsg:null,onAudioStart:()=>{if(off)setTimeout(show,off);else show();}});if(!shown&&_call&&_call.session===sess){show();await sleep(callPaceMs(620,420));}const hasNextSpoken=_speechRows.slice(_ui+1).some(x=>x&&x.spoken);if(hasNextSpoken&&voicePauseMs(c)>0)await sleep(voicePauseMs(c));}else{_call.sub={who:'them',text:subText};updateCallSub();await sleep(callPaceMs(Math.max(900,u.orig.length*72),620));}}
     if(_call&&_call.session===sess){_call.sub=null;updateCallSub();}
     if(_screenShareResumeDecision&&_call&&_call.session===sess&&callScreenShareOn())callScreenAutonomyApply(_screenShareResumeDecision);
     if((wantHang||wantWxLogin||wantRemoteControl)&&_call&&_call.session===sess)setTimeout(()=>{const cid=_call&&_call.id;if(_call&&_call.id===c.id)hangupCall(true,wantWxLogin?'wxlogin':wantRemoteControl?'remotecontrol':'');if(wantWxLogin)setTimeout(()=>{if(!wxLoginActive())wxDoLogin(cid||c.id);},1400);else if(wantRemoteControl)setTimeout(()=>{if(!(typeof _call!=='undefined'&&_call))remoteControlRequest(cid||c.id);},1400);},900);

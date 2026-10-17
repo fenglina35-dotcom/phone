@@ -50,7 +50,7 @@ function split(raw,force){if(!on()&&!force)return null;raw=String(raw==null?'':r
   return {text:text.replace(/[ \t]{2,}/g,' ').trim(),perf:perf.trim(),spatial};}
 
 function prompt(c){if(!on())return '';let s='';const k=styleKind(roleTts(c));
-  if(k==='fish'||k==='eleven')s+='\n- 语音细节（隐藏，只用于语音条）：想让声音更细腻时，可以在语音正文里、真正需要的位置插入中文小提示：[温柔] [撒娇] [黏糊] [宠溺] [开心] [笑着说] [轻笑] [小声] [气声] [慢慢说] [停顿] [难过] [低落] [委屈] [哽咽] [叹气] [害羞] [认真] [不满] [惊讶]。写在它管的那句话前面，例如 [语音|[黏糊]你怎么才回我呀……[小声]想你了|语气:温柔]。每条最多两个；[轻笑][叹气][哽咽]这种会出声的，一条最多一个，只在情绪真的到了才用，平时不用，不要每条都笑或叹气；不要另外写“哈哈”“呵呵”“唉”来假装笑或叹气。开心就让开心听得出来，难过就让难过听得出来，但始终是你原本的声音，不要喊叫或夸张。';
+  if(k==='fish'||k==='eleven')s+='\n- 语音细节（隐藏，用于语音条和语音/视频通话）：想让声音更细腻时，可以在语音正文或通话台词里、真正需要的位置插入中文小提示：[温柔] [撒娇] [黏糊] [宠溺] [开心] [笑着说] [轻笑] [小声] [气声] [慢慢说] [停顿] [难过] [低落] [委屈] [哽咽] [叹气] [害羞] [认真] [不满] [惊讶]。写在它管的那句话前面，例如 [语音|[黏糊]你怎么才回我呀……[小声]想你了|语气:温柔]。每条最多两个；[轻笑][叹气][哽咽]这种会出声的，一条最多一个，只在情绪真的到了才用，平时不用，不要每条都笑或叹气；不要另外写“哈哈”“呵呵”“唉”来假装笑或叹气。开心就让开心听得出来，难过就让难过听得出来，但始终是你原本的声音，不要喊叫或夸张。';
   s+='\n- 耳边方位（隐藏，只用于语音条；'+((state()&&state().me&&state().me.name)||'对方')+'戴着耳机，能听到你的声音在头边移动）：可以在语音正文里写 [左耳] [右耳] [脑后] [面前] 表示声音移到那里，[贴近] [退开] 只改远近；写在说那句话的地方，例如“[右耳]别动。[脑后]我就在你后面。”不写会自动安排，不需要每条都写。';
   return s;}
 
@@ -69,7 +69,7 @@ function performance(text,o,tts,opt){if(!on())return null;const kind=styleKind(t
   /* 外语角色的语言锁（去掉混进外语语音里的中文）同样作用在带提示的念法上；提示已换成占位符，不会被误删 */
   if(typeof ttsDropOffLanguage==='function')src=ttsDropOffLanguage(src,o);
   let base=typeof ttsCleanBase==='function'?ttsCleanBase(src):src.trim();if(!base.replace(/\uE010\d+\uE011/g,'').trim())return '';
-  const wantLaugh=ASK_LAUGH.test(ask),wantFierce=ASK_FIERCE.test(ask),wantSweet=ASK_SWEET.test(ask),allowSound=wantLaugh||soundAllowed(o);let used=0,sounds=0,last='';
+  const wantLaugh=ASK_LAUGH.test(ask),wantFierce=ASK_FIERCE.test(ask),wantSweet=ASK_SWEET.test(ask),allowSound=wantLaugh||!!(opt&&opt.inlineSound)||soundAllowed(o);/* 通话里角色亲手写的 [轻笑] 等照念，不受几分钟一次的限制（一句最多一个） */let used=0,sounds=0,last='';
   const tagFor=name=>{if(name==='轻笑'&&wantLaugh&&ASK_LOUD_LAUGH.test(ask))return kind==='fish'?'[laughing]':'[laughs]';if(wantFierce&&(name==='不满'||name==='认真'))return kind==='fish'?'[angry, firm voice]':'[angry]';return map[name];};
   base=base.replace(/\uE010(\d+)\uE011/g,(_,i)=>{const name=marks[+i];if(!name||!map[name]||name===last)return '';if(SOUND[name]){if(sounds||!allowSound)return '';}if(used>=2)return '';if(SOUND[name])sounds++;used++;last=name;return tagFor(name)+' ';});
   /* 明确要求了却没写对应提示：补一个，让这句要求真的听得出来 */

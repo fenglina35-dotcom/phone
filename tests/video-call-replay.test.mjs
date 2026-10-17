@@ -55,7 +55,7 @@ assert.match(source, /ttsRefundAudio\(ab,\x27call-revoice-store-failed\x27\)/);
 assert.match(source, /ttsRefundAudio\(ab,\x27call-revoice-exception\x27\)/);
 assert.match(source, /r\.time\?hm\(r\.time\):\(\x27第\x27\+\(i\+1\)\+\x27条\x27\)/);
 assert.match(source, /row&&row\.time\?hm\(row\.time\)/);
-assert.match(source, /_callVoiceCue:_turnVoiceCue\|\|\x27\x27/);
+assert.match(source, /_callVoiceCue:_speechRows\[_ui\]\.cue\|\|_turnVoiceCue\|\|\x27\x27/);/* 回放存这一句自己的语气（角色在台词里写的 [轻笑] 等），没有才用整轮语气 */
 assert.match(source, /function ttsRelayInterjection\(s,rawCue\)/);
 assert.match(source, /voice_setting:{speed:vp.speed/);
 
