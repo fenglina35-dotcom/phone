@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1792'){
+if(window.__NORTH_SHELL_BUILD__!=='1794'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -616,7 +616,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1792 · 查岗每天三次与回答框';
+const APP_VER='v1794 · 拍照任务与粉色提示';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2098,7 +2098,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1792&r=v1792-thought-preview-1';
+  const url='sw.js?v=1794&r=v1794-thought-preview-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -8705,7 +8705,7 @@ function taskDup(list,text){const nt=_taskNorm(text);if(!nt)return true;const se
     const setX=new Set(nx);let inter=0;setT.forEach(ch=>{if(setX.has(ch))inter++;});
     const shorter=Math.min(setT.size,setX.size);
     return shorter>=3&&inter/shorter>=0.8;/* 短任务的字几乎都在另一条里→重复 */});}
-function taskVerifyLabel(x){return {steps:'我走够了',essay:'写好交给ta',moment:'我发朋友圈了',tweet:'我发推了',douyin:'我发抖音了',real:'完成了',truth:'老实回答ta'}[x.verify]||'完成';}
+function taskVerifyLabel(x){if(typeof taskNeedsPhoto==='function'&&taskNeedsPhoto(x))return '上传照片给ta看';return {steps:'我走够了',essay:'写好交给ta',moment:'我发朋友圈了',tweet:'我发推了',douyin:'我发抖音了',real:'完成了',truth:'老实回答ta',photo:'上传照片给ta看'}[x.verify]||'完成';}
 function postedSince(kind,since){since=since||0;
   if(kind==='moment')return S.moments.some(p=>p.authorId==='me'&&(p.time||0)>since);
   if(kind==='tweet')return (S.x&&S.x.tweets||[]).some(t=>t.who==='me'&&(t.time||0)>since);
@@ -8736,11 +8736,11 @@ function renderTasks(){const c=taskC();
   return `<div class="nav"><span class="l" onclick="home()">‹</span><span class="t">任务便签</span><span class="r"></span></div>
     <div class="scroll" style="background:#000">${body}<div style="height:20px"></div></div>`;}
 async function genTasks(opt){opt=opt||{};const automatic=opt.automatic===true,c=taskC();if(!c){if(!automatic)toast('没有可布置任务的角色');return;}if(!coupleTasksEnabled(c)){if(!automatic)toast('这个角色已关闭布置任务');return;}if(tasksToday(c)){if(!automatic)toast('今天的任务ta已经布置过啦');return;}if(_taskBusy)return;
-  checkTaskPenalty(c);const _penalty=_taskPenaltyNote[c.id]||'';delete _taskPenaltyNote[c.id];_taskBusy=true;if(!automatic||cur().p==='tasks')render();if(!automatic)toast('ta在琢磨今天怎么安排你…');
+  checkTaskPenalty(c);const _penalty=_taskPenaltyNote[c.id]||'';delete _taskPenaltyNote[c.id];_taskBusy=true;if(!automatic||cur().p==='tasks')render();if(!automatic){if(typeof taskToast==='function')taskToast('ta在琢磨今天怎么安排你…');else toast('ta在琢磨今天怎么安排你…');}
   const n=taskDailyCount(c),normalN=Math.max(0,n-1);
   const hist=(c.taskHist||[]).map(s=>({text:s}));// 最近几天布置过的任务，用来防止重复
   const avoidTxt=hist.length?'\n· 【最近这些任务你已经布置过了，今天务必换着花样来，别再重复、也别换汤不换药地重复同类】：'+hist.map(h=>h.text).join('；'):'';
-  try{const allowed='essay（写小作文/检讨/彩虹屁/想你的话/保证书，target填字数上限如100）、moment（发一条朋友圈）、tweet（发一条推特X）、douyin（发一条抖音）、real（现实里的小事或暧昧亲密小任务，靠她自觉打卡，比如：喝杯水、好好吃饭、敷面膜、早点睡、给你拍张自拍、睡前跟你撒娇道晚安、对着镜头说想你、穿你喜欢的小裙子拍给你、乖乖只想你一个、今天不准跟别的男生聊天等）';
+  try{const allowed='essay（写小作文/检讨/彩虹屁/想你的话/保证书，target填字数上限如100）、moment（发一条朋友圈）、tweet（发一条推特X）、douyin（发一条抖音）、real（现实里的小事或暧昧亲密小任务，靠她自觉打卡，比如：喝杯水、好好吃饭、敷面膜、早点睡、睡前跟你撒娇道晚安、乖乖只想你一个、今天不准跟别的男生聊天等）、photo（要她拍照片给你看的：给你拍张自拍、拍正在吃的饭、拍手边最喜欢的东西、穿你喜欢的小裙子拍给你等；她必须在任务里上传照片、你看过才算完成）';
     const _tm=[{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：现在你来给'+S.me.name+'布置今天总共恰好 '+n+' 条小任务。你是ta的恋人/掌控者，按你的人设、此刻心情、ta最近的表现来布置。\n· 任务一定要【有趣、有创意、好玩】，别死板、别像打卡清单、别每天千篇一律——可以整点花活、玩梗、设小情境。'+avoidTxt+'\n· 多来点【暧昧、撩人、亲密】的，而且要以【Dom的姿态】来布置：命令式、强势、掌控欲拉满，把ta当你的小sub来调教，语气笃定带点危险又宠溺，要ta乖乖服从听话。可以大胆放得开、带点涩，越让ta脸红心跳、心甘情愿被你拿捏越好（保持是两个相爱的人之间有掌控有宠爱的情趣，不用拘谨）。\n· 现实任务一定要轻松，别累人：绝对不要罚跑步/暴走/喝很多杯水那种。\n大部分任务要是【在手机上就能完成的】(essay/moment/tweet/douyin)，可以有一两条现实任务(real)。每条必须从这些可验证类型里选一个：'+allowed+'。\n· 这 '+n+' 条里必须有且只有一条 verify 为 truth 的任务，内容是你【今天最想问'+S.me.name+'的一个真心话问题】（一句问句就好，可以暧昧、走心或是你好奇/在意的事），target填0、kind填real。真心话算在总数里，除此之外只能再给 '+normalN+' 条，绝不能额外追加。\n只输出JSON数组、不要任何解释：[{"text":"任务描述(用你的第一人称口吻，强势Dom的命令语气，像在调教/撩/宠你的小sub，可以霸道也可以俏皮有梗)","kind":"app或real","verify":"类型代码","target":数字(没有填0)}]'}];
     let arr=await aiGen(_tm,{max:760},parseArr);
     if(!arr||!arr.length)arr=await aiGen(_tm,{max:760,aux:true},parseArr);/* 主模型不行就用副模型兜底 */
@@ -8749,7 +8749,7 @@ async function genTasks(opt){opt=opt||{};const automatic=opt.automatic===true,c=
     const list=[];for(const o of arr){const text=(o.text||'').toString().slice(0,140);if(!text)continue;
       if(o.verify==='truth'){if(!truthQ)truthQ=text;continue;}/* 真心话算在每日总数里 */
       if(list.length>=normalN)continue;if(taskDup(list,text)||taskDup(hist,text))continue;/* 跳过重复/最近布置过的 */
-      list.push({id:uid(),text,kind:o.kind==='real'?'real':'app',verify:['essay','moment','tweet','douyin','real'].indexOf(o.verify)>=0?o.verify:'real',target:+o.target||0,done:false});}
+      list.push({id:uid(),text,kind:o.kind==='real'?'real':'app',verify:['essay','moment','tweet','douyin','real','photo'].indexOf(o.verify)>=0?o.verify:'real',target:+o.target||0,done:false});}
     const fallback=[
       {text:'睡前认真来跟我说一句只属于今天的晚安。',kind:'real',verify:'real',target:0},
       {text:'写三句今天为什么喜欢我，别敷衍。',kind:'app',verify:'essay',target:80},
@@ -8765,19 +8765,21 @@ async function genTasks(opt){opt=opt||{};const automatic=opt.automatic===true,c=
     if(list.length!==normalN)throw 0;
     list.push({id:uid(),text:truthQ||'今天，你最想跟我说、却一直没说出口的一句话是什么？',kind:'truth',verify:'truth',target:0,done:false,truth:true});// 固定的"他想问我的真心话"
     c.taskHist=[...list.map(x=>x.text),...(c.taskHist||[])].slice(0,30);// 记下今天布置的，往后几天别重复
-    c.tasks={date:todayStr(),assignTs:Date.now(),list,rewarded:false,penalized:false};c.taskAuto={date:todayStr(),attempts:0,nextAt:0,lastErrorAt:0};taskDailyJournalWrite(c);save();_taskBusy=false;render();if(!automatic||cur().p==='tasks')toast('任务来咯📋');
+    c.tasks={date:todayStr(),assignTs:Date.now(),list,rewarded:false,penalized:false};c.taskAuto={date:todayStr(),attempts:0,nextAt:0,lastErrorAt:0};taskDailyJournalWrite(c);save();_taskBusy=false;render();if(!automatic||cur().p==='tasks'){if(typeof taskToast==='function')taskToast('今天的任务来咯');else toast('任务来咯📋');}
     if(!c.blocked)scheduleReply(c.id,'[系统：'+(_penalty?'两件事合在这一次回复里说，每件只说一遍：①'+_penalty+'②':'')+'你刚在'+S.me.name+'手机的任务便签里给ta布置了今天的任务，跟ta说一声、催ta【今天23:59之前】完成、说说不完成的后果，一两句，符合你人设。别逐条复述任务。]');
   }catch(e){const st=taskAutoState(c),attempts=Math.min(8,(+st.attempts||0)+1);st.attempts=attempts;st.lastErrorAt=Date.now();st.lastError='generation_failed';st.nextAt=Date.now()+Math.min(6*3600000,15*60000*Math.pow(2,attempts-1));save();_taskBusy=false;if(_penalty&&!c.blocked)scheduleReply(c.id,'[系统：'+_penalty+']');if(!automatic||cur().p==='tasks')render();/* 自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示。 */if(!automatic)toast('没布置成功，再点一次');}}
 async function completeTask(id){const c=taskC();const t=tasksToday(c);if(!t)return;const x=t.list.find(z=>z.id===id);if(!x||x.done)return;
   if(x.verify==='truth'){openTruth(id);return;}
   if(x.verify==='essay'){openEssay(id);return;}
+  /* 要拍照片的任务：必须在任务里上传照片、经角色看过才算完成，不能直接点完成（防止糊弄） */
+  if(typeof taskNeedsPhoto==='function'&&taskNeedsPhoto(x)&&typeof openPhotoProof==='function'){openPhotoProof(id);return;}
   if(x.verify==='steps'){if(!await uiConfirm('完成这条了吗？（步数任务已取消，点确定即可完成）'))return;}
   if(x.verify==='moment'&&!postedSince('moment',t.assignTs)){toast('布置任务后还没发朋友圈哦，发一条再来点完成');return;}
   if(x.verify==='tweet'&&!postedSince('tweet',t.assignTs)){toast('布置任务后还没发推哦，发一条再来');return;}
   if(x.verify==='douyin'&&!postedSince('douyin',t.assignTs)){toast('布置任务后还没发抖音哦，去发一条');return;}
   if(x.verify==='real'&&!await uiConfirm('确定真的完成了这条现实任务吗？\n骗ta的话…线下见面要受罚的哦')){return;}
   finishTask(c,x);}
-function finishTask(c,x,proof){x.done=true;x.doneTs=Date.now();taskDailyJournalWrite(c);save();render();toast('完成啦 ✅');
+function finishTask(c,x,proof){x.done=true;x.doneTs=Date.now();taskDailyJournalWrite(c);save();render();if(typeof taskToast==='function')taskToast('完成啦');else toast('完成啦 ✅');
   if(!c.blocked)scheduleReply(c.id,'[系统：'+S.me.name+'完成了你今天布置的任务「'+x.text+'」'+(proof?'，ta把内容发到你们聊天里了，先看一眼':'')+'。简短回应一句（夸ta/调侃/继续端着都行，符合你人设）。]');
   checkAllDone(c);}
 function checkAllDone(c){const t=tasksToday(c);if(!t||t.rewarded)return;if(t.list.length&&t.list.every(x=>x.done)){t.rewarded=true;taskDailyJournalWrite(c);save();
