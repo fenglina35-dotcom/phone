@@ -2965,3 +2965,5 @@ CUA核验22项控件、发送未读空白、已读等待阶段空白、保存180
 2026-10-17 私人v1793 / iOS465：从提交 a32ba1b1 的干净工作区 xcodebuild（Release，BUILD SUCCEEDED，465）并覆盖安装到用户 iPhone 15；安装包内通话笑声（inlineSound）、任务提醒合并（_taskPenaltyNote）、微信头像（avatarImg）已核对。未生成覆盖包。
 
 2026-10-17 网页v1792 / 私人v1795 / iOS466：①真心话/交作业回答框换成任务便签奶油样式（task-notes.js 覆盖 openTruth/openEssay，字段 id 与提交函数不变）。②奖励屋标题区高度 196→158，去掉中间空白。③私人查岗改为每天写一次、角色定三个不同时间必查（DAILY_CHECKIN_V1，只改私人包 phone-shortcuts.js、CheckInShortcuts.swift、PhoneNativeBridge.swift）：提示不再带最近聊天，去掉「什么时候查」，开场白可改/删/自己加，偷看后三个时间可改；原生 daily3 模式无随机。网页包保持原逻辑，测试按前缀分开；核心门禁预览模式改为验证三个时间。
+
+2026-10-17 私人v1795 / iOS466：从提交 ab2fbe62 的干净工作区 xcodebuild（Release，BUILD SUCCEEDED，466）并覆盖安装到用户 iPhone 15；安装包内 DAILY_CHECKIN_V1、ANSWER_CSS 已核对。未生成覆盖包。
