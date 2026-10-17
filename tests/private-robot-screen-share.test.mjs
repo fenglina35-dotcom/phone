@@ -238,3 +238,14 @@ test('core chat is touched in two guarded places only',()=>{
   assert.equal(strip('让我看看。\n[请求屏幕共享|想看看你在干嘛]'),'让我看看。\n');assert.equal(strip('【请求屏幕共享】'),'');
   assert.match(voice,/try\{ChatScreen\.nativeEvent\(event\);\}catch\(_\)\{\}/);
 });
+
+test('the broadcast panel still opens after SwiftUI rebuilds the web view (2026-10-17)',()=>{
+  // The old view's bridge reports nil after the new one attached; that must not drop the live view.
+  assert.match(coordinator,/if webView == nil, let current = self\.webView, current\.window != nil \{\s*return\s*\}/);
+  // The picker needs a view on screen: the web view, or else the key window's root view.
+  assert.match(coordinator,/if let webView, webView\.window != nil \{\s*host = webView/);
+  assert.match(coordinator,/\.first \{ \$0\.isKeyWindow \}\?\s*\.rootViewController\?\.view/);
+  // Its button is searched through the whole subtree, not only direct children.
+  assert.match(coordinator,/private static func firstButton\(in view: UIView\) -> UIButton\?/);
+  assert.match(coordinator,/guard let button = Self\.firstButton\(in: broadcastPicker\) else \{ return false \}/);
+});

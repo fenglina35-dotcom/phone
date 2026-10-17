@@ -63,6 +63,13 @@ final class ScreenShareCoordinator {
     }
 
     func attach(to webView: WKWebView?) {
+        // SwiftUI may build the replacement web view before it dismantles the old one, and the
+        // old one's bridge then reports nil. Only a web view that is no longer on screen may be
+        // let go; otherwise the live one would be lost and the system broadcast panel could not
+        // be opened ("系统屏幕共享面板暂时打不开", 2026-10-17).
+        if webView == nil, let current = self.webView, current.window != nil {
+            return
+        }
         self.webView = webView
         guard webView != nil else {
             timer?.invalidate()
@@ -98,17 +105,39 @@ final class ScreenShareCoordinator {
     }
 
     func presentSystemPicker() -> Bool {
-        guard let webView else { return false }
+        // The panel is opened through the system's own picker button, which must sit in a view
+        // that is on screen. Prefer the web view; fall back to the key window's root view.
+        let host: UIView?
+        if let webView, webView.window != nil {
+            host = webView
+        } else {
+            host = UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .flatMap(\.windows)
+                .first { $0.isKeyWindow }?
+                .rootViewController?.view
+        }
+        guard let host else { return false }
         picker?.removeFromSuperview()
         let broadcastPicker = RPSystemBroadcastPickerView(frame: CGRect(x: 1, y: 1, width: 44, height: 44))
         broadcastPicker.preferredExtension = Self.broadcastBundleID
         broadcastPicker.showsMicrophoneButton = false
         broadcastPicker.alpha = 0.01
-        webView.addSubview(broadcastPicker)
+        host.addSubview(broadcastPicker)
+        broadcastPicker.layoutIfNeeded()
         picker = broadcastPicker
-        let button = broadcastPicker.subviews.compactMap { $0 as? UIButton }.first
-        button?.sendActions(for: .touchUpInside)
-        return button != nil
+        guard let button = Self.firstButton(in: broadcastPicker) else { return false }
+        button.sendActions(for: .touchUpInside)
+        return true
+    }
+
+    /// The picker's button is not always a direct subview; look through the whole tree.
+    private static func firstButton(in view: UIView) -> UIButton? {
+        for child in view.subviews {
+            if let button = child as? UIButton { return button }
+            if let nested = firstButton(in: child) { return nested }
+        }
+        return nil
     }
 
     // Watch together with K: the web side hands over where the broadcast extension may post
