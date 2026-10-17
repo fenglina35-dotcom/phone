@@ -52,7 +52,7 @@ test('camera frames use the existing vision route and feed a natural in-call rep
   assert.match(analyze,/callVideoVisionStatus\('working'\)/);
   assert.match(analyze,/callVideoVisionStatus\('failed'\)/);
   const callAI=functionSource('callAI');
-  assert.match(callAI,/const hist=\(_videoVisionAutomatic\|\|_screenShareEvent\)\?\[\]:chatHistoryWithDateBoundaries/,'automatic vision replies must not receive stale chat turns');
+  assert.match(callAI,/const hist=\(_videoVisionAutomatic\|\|_screenShareEvent\)\?\[\]:(?:\(_call\.cohab&&typeof CohabVoice!=='undefined'\)\?CohabVoice\.history\(c,sess\):)?chatHistoryWithDateBoundaries/,'automatic vision replies must not receive stale chat turns');
   assert.match(callAI,/if\(sysNote&&!_videoVisionAutomatic\)hist\.push/,'the proven spoken vision path keeps its existing event-note structure');
   assert.match(callAI,/_videoVisionTurn=sysNote/,'the current frame remains the only active vision event');
   assert.match(callAI,/if\(_videoVisionAutomatic\)/,'only automatic vision uses the cinema-style synthetic user event');
@@ -116,8 +116,8 @@ test('private iOS app grants bundled camera capture and declares privacy usage',
   assert.match(webView,/type == \.cameraAndMicrophone/);
   assert.match(webView,/bundledPage && supportedCapture \? \.grant : \.deny/);
   assert.match(project,/INFOPLIST_KEY_NSCameraUsageDescription/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 470/);
-  assert.match(project,/MARKETING_VERSION = 1.0.470/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 471/);
+  assert.match(project,/MARKETING_VERSION = 1.0.471/);
 });
 
 test('private iOS camera preview keeps one media session across recognized sentences',()=>{

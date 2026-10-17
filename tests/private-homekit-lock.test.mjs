@@ -214,8 +214,8 @@ test('a verified manual unlock notifies the role without turning a manual lock i
 test('private release identity is iOS 399 while public web advances independently',()=>{
   const webView=fs.readFileSync(path.join(xcodeRoot,'LocalPhoneWebView.swift'),'utf8');
   const project=fs.readFileSync(path.join(nativeRoot,'XcodeProject','PhoneCompanionTest.xcodeproj','project.pbxproj'),'utf8');
-  assert.match(webView,/1\.0\.470 \(470\)/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 470/);
-  assert.match(project,/MARKETING_VERSION = 1.0.470/);
-  assert.match(read('app.js'),/__NORTH_SHELL_BUILD__!==\'1798\'/);
+  assert.match(webView,/1\.0\.471 \(471\)/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 471/);
+  assert.match(project,/MARKETING_VERSION = 1.0.471/);
+  assert.match(read('app.js'),/__NORTH_SHELL_BUILD__!==\'1800\'/);
 });

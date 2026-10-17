@@ -83,7 +83,7 @@ test('通话里的动作描写永远是中文', () => {
   assert.match(strip, /return \(kept\.length\?kept:rows\)\.join/,
     '整条只有一个外文动作时不能清空，留着让 ensureVideoCallAction 去补中文的');
   for (const x of [app, priv])
-    assert.match(x, /content=callStripForeignActions\(content\);if\(!_rawOutput&&video\)content=ensureVideoCallAction/,
+    assert.match(x, /content=callStripForeignActions\(content\);if\(!_rawOutput&&video(?:&&!_call\.cohab)?\)content=ensureVideoCallAction/,
       '要挂在通话回复的处理链上，而且排在补中文动作之前');
 });
 

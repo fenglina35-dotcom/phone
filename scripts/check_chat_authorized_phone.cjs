@@ -140,8 +140,28 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
      TaskNotes.setProof(pic);visionAPI=async()=>'一张风景照，远处是山。\n判断：不符合：这是风景不是自拍';await TaskNotes.sendProof('ph1');photoReject=!c.tasks.list[0].done&&msgs(c.id).length===n0&&(document.getElementById('tn_proof_note')||{}).textContent.includes('这是风景不是自拍');
      visionAPI=async()=>'一张自拍，女生对着镜头比耶。\n判断：符合';await TaskNotes.sendProof('ph1');const last=msgs(c.id).at(-1);photoPass=c.tasks.list[0].done===true&&!!last&&last.type==='image'&&last.src===pic&&/对着镜头比耶/.test(last.desc)&&!/判断/.test(last.desc);closeModal();
     }finally{visionAPI=vKeep;visionConfigured=vcKeep;scheduleReply=srKeep2;c.tasks=tKeep2;S.messages[accountMessageKey(testId,actId())]=(msgs(testId)||[]).filter(m=>!(m.type==='image'&&/为完成任务/.test(m.desc||'')));}
+    // 共同生活语音模式（COHAB_VOICE_V1）：角色收到的是共同生活当面相处的说明和共同生活历史，不是视频通话；结束后从微信里整段移走，
+    // 微信通话记录和微信上下文看不到，共同生活历史（隐藏）和长期记忆【共同生活语音】里都有；恢复后台通话时仍是语音模式。
+    let cvPrompt=false,cvHistory=false,cvNoCamera=false,cvStored=false,cvMoved=false,cvNoWechatLog=false,cvMemory=false,cvNotice=false,cvRestore=false,cvPaused=false;
+    const cohabKeep=JSON.stringify(S.cohabitation||null),capi=chatAPI,sumKeep=JSON.stringify(c.summaries||[]),srKeep3=scheduleReply,sfrKeep3=scheduleFeatureReply;
+    try{scheduleReply=()=>true;scheduleFeatureReply=()=>true;const r=cohabRoot();r.cid=c.id;r.enabled=true;r.paused=false;const d=cohabData(c.id);d.phase='home';d.place='客厅';d.nextAt=0;d.nextPhase='';
+     cohabPushMessage(d,{id:uid(),who:'me',source:'me',text:'共同生活里的一句：回来啦',time:Date.now()-5000});cohabEnter(c.id);await sleep(80);
+     let seen=null;chatAPI=async(rows)=>{seen=rows;return '[通话语气|温柔]\n【他笑着把你往怀里带】\n过来，让我抱一下。';};
+     CohabVoice.start();const sess=_call&&_call.session;await sleep(40);const dp=cohabData(c.id);dp.nextAt=Date.now()-1000;dp.nextPhase='work';cohabAdvance(c.id);cvPaused=!!sess&&cohabData(c.id).phase==='home';
+     msgs(c.id).push({role:'user',type:'text',content:'你今天想我了吗',time:Date.now(),id:uid(),_call:true,_ck:'video',_cs:sess});await callAI();await sleep(80);
+     const sys=String(seen&&seen[0]&&seen[0].content||''),hist=(seen||[]).slice(1).map(x=>String(x.content||'')).join('\n');
+     cvPrompt=sys.includes('共同生活里的语音模式')&&sys.includes('共同生活实时状态')&&!sys.includes('正在视频通话')&&!sys.includes('凑近镜头');
+     cvHistory=hist.includes('共同生活里的一句：回来啦')&&hist.includes('你今天想我了吗');
+     const L=document.getElementById('callLayer');cvNoCamera=!!L&&L.classList.contains('cohab-voice')&&!L.querySelector('.call-camera-tools,.call-screen-tools')&&L.innerText.includes('结束')&&!L.innerText.includes('挂断')&&getComputedStyle(L.querySelector('.cav')||document.body).display==='none';
+     cvStored=msgs(c.id).some(m=>m._cs===sess&&m.role==='assistant'&&/让我抱一下/.test(m.content||''));
+     callPersist();cvRestore=!!(S._activeCall&&S._activeCall.cohab);
+     chatAPI=async()=>'我们在客厅当面说了会儿话，她问我今天想没想她，我说想，把她抱进怀里。[重要度:3]';CohabVoice.end();await sleep(60);
+     const dd=cohabData(c.id);cvMoved=!msgs(c.id).some(m=>m._cs===sess)&&dd.msgs.some(m=>m._voice===sess&&/让我抱一下/.test(m.text))&&!document.body.innerText.includes('让我抱一下');
+     const wx=String(buildSystem(c)||''),wi=wx.indexOf('让我抱一下');cvNoWechatLog=!String(renderCallLog(c.id)||'').includes('让我抱一下')&&(wi<0||/最近共同生活现场/.test(wx.slice(Math.max(0,wi-400),wi))&&!/视频通话|语音通话|通话里/.test(wx.slice(Math.max(0,wi-160),wi)));
+     cvMemory=(c.summaries||[]).some(x=>/共同生活语音/.test(JSON.stringify(x)));cvNotice=(dd.notices||[]).some(n=>/刚才用语音聊了/.test(n.text))&&(dd.voiceLog||[]).length>0;
+    }finally{if(typeof _call!=='undefined'&&_call&&_call.cohab){try{CohabVoice.end();}catch(_){}}chatAPI=capi;scheduleReply=srKeep3;scheduleFeatureReply=sfrKeep3;S.cohabitation=JSON.parse(cohabKeep)||undefined;c.summaries=JSON.parse(sumKeep);delete S._activeCall;closeModal();go('home');}
     TaskNotes.tab('today');
-    const shop={ownCap,boxBtn,boxed,boxOnce,sakuraLack,sakuraOwned,packWaits,pickOne,dailyOnce,newEvery,rareByFive,boxRare,chatPack,removalSticks,globeQA,mergedOnce,staleQuiet,longDetail,avatarPhoto,photoGate,photoReject,photoPass};
+    const shop={ownCap,boxBtn,boxed,boxOnce,sakuraLack,sakuraOwned,packWaits,pickOne,dailyOnce,newEvery,rareByFive,boxRare,chatPack,removalSticks,globeQA,mergedOnce,staleQuiet,longDetail,avatarPhoto,photoGate,photoReject,photoPass,cvPrompt,cvHistory,cvNoCamera,cvStored,cvMoved,cvNoWechatLog,cvMemory,cvNotice,cvRestore,cvPaused};
     return Object.assign(shop,{pruned,late,roleStar,roleStarOnce,gained,refunded,praised:praised===1,roleKnows,reminder,filters,pickedDay},lineQA);
    }finally{Math.random=rnd;scheduleFeatureReply=sfr;if(baseReq)SmallPhoneNative.request=baseReq;S.couple=keep.couple;c.tasks=keep.tasks;S.taskNotes=keep.notes||{items:[]};openChat(testId);}},privateApp);
   for(const [name,ok] of Object.entries(taskQA))assert.equal(ok,true,name+' '+JSON.stringify({privateApp,taskQA}));console.log(JSON.stringify({privateApp,taskNotes:taskQA}));
