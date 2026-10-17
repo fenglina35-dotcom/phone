@@ -51,12 +51,14 @@ function split(raw,force){if(!on()&&!force)return null;raw=String(raw==null?'':r
 
 function prompt(c){if(!on())return '';let s='';const k=styleKind(roleTts(c));
   if(k==='fish'||k==='eleven')s+='\n- 语音细节（隐藏，用于语音条和语音/视频通话）：想让声音更细腻时，可以在语音正文或通话台词里、真正需要的位置插入中文小提示：[温柔] [撒娇] [黏糊] [宠溺] [开心] [笑着说] [轻笑] [小声] [气声] [慢慢说] [停顿] [难过] [低落] [委屈] [哽咽] [叹气] [害羞] [认真] [不满] [惊讶]。写在它管的那句话前面，例如 [语音|[黏糊]你怎么才回我呀……[小声]想你了|语气:温柔]。每条最多两个；[轻笑][叹气][哽咽]这种会出声的，一条最多一个，只在情绪真的到了才用，平时不用，不要每条都笑或叹气；不要另外写“哈哈”“呵呵”“唉”来假装笑或叹气。开心就让开心听得出来，难过就让难过听得出来，但始终是你原本的声音，不要喊叫或夸张。';
-  s+='\n- 耳边方位（隐藏，只用于语音条；'+((state()&&state().me&&state().me.name)||'对方')+'戴着耳机，能听到你的声音在头边移动）：可以在语音正文里写 [左耳] [右耳] [脑后] [面前] 表示声音移到那里，[贴近] [退开] 只改远近；写在说那句话的地方，例如“[右耳]别动。[脑后]我就在你后面。”不写会自动安排，不需要每条都写。';
+  s+='\n- 耳边方位（隐藏，只用于语音条；'+((state()&&state().me&&state().me.name)||'对方')+'戴着耳机，能听到你的声音在头边移动；只用于语音条，语音或视频通话里绝对不要写这些方位标签）：可以在语音正文里写 [左耳] [右耳] [脑后] [面前] 表示声音移到那里，[贴近] [退开] 只改远近；写在说那句话的地方，例如“[右耳]别动。[脑后]我就在你后面。”不写会自动安排，不需要每条都写。';
   return s;}
 
 // Action text in calls (【轻笑着看你】) becomes the voice cue of the next spoken line, so the laugh is heard, not only described.
  const ACTION_CUES=[[/大笑|笑出声|放声笑|轻笑|低笑|浅笑|笑了|笑一下|笑起来|笑着|失笑|嗤笑|闷笑|勾起.{0,3}(?:嘴角|唇角)|笑意/,'轻笑'],[/叹气|叹了|叹息/,'叹气'],[/哽咽|哭腔|抽泣|红了眼/,'哽咽'],[/撒娇/,'撒娇'],[/宠溺/,'宠溺'],[/温柔|柔声|放软/,'温柔'],[/小声|压低声音|耳语|凑近耳边/,'小声']];
  function actionCues(text){const t=String(text||''),out=[];for(const [re,name] of ACTION_CUES){if(out.length>=2)break;if(re.test(t)&&!out.includes(name))out.push(name);}return out;}
+// Cue and position tags are performance hints only: never shown, never kept in call lines or their translations.
+ function stripTags(t){return String(t==null?'':t).replace(new RegExp('\\[\\s*(?:'+CUE_WORDS+')\\s*\\]|'+spatialRe().source,'g'),'').replace(/([（(])\s+/g,'$1').replace(/[ \t]{2,}/g,' ').trim();}
 function soundAllowed(o){const k=String(o&&o.id||'_');return Date.now()-(_soundAt.get(k)||0)>SOUND_COOLDOWN_MS;}
 function soundMark(o){_soundAt.set(String(o&&o.id||'_'),Date.now());}
 function mildCue(cue,kind){let k='';try{k=typeof ttsCueKind==='function'?ttsCueKind(cue):'';}catch(_){}
@@ -179,6 +181,6 @@ async function binaural(ab,spatial,text){if(!on()||!ab)return null;try{const raw
     const ch=buf.numberOfChannels,n=buf.length,x=new Float32Array(n);for(let c=0;c<ch;c++){const d=buf.getChannelData(c);for(let i=0;i<n;i++)x[i]+=d[i]/ch;}
     const out=await renderSamples(x,buf.sampleRate,raw,spatial,[...String(text||'')].length);return wav16(out.L,out.R,out.fs);}catch(_){return null;}}
 
-root.NorthVoiceExpressive={on,split,actionCues,normalize,prompt,performance,binaural,handPerf,direct,renderSamples,plan,_test:{DIRECTOR_PROMPT,directorClean,directorValid,directorLaughOnce,FISH,ELEVEN,SOUND,soundAllowed,soundMark,_soundAt,hrirAt,wav16,loadHrir}};
+root.NorthVoiceExpressive={on,split,actionCues,stripTags,normalize,prompt,performance,binaural,handPerf,direct,renderSamples,plan,_test:{DIRECTOR_PROMPT,directorClean,directorValid,directorLaughOnce,FISH,ELEVEN,SOUND,soundAllowed,soundMark,_soundAt,hrirAt,wav16,loadHrir}};
 root.voiceExpressiveOn=on;
 })(typeof globalThis!=='undefined'?globalThis:this);

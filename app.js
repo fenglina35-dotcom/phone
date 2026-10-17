@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1796'){
+if(window.__NORTH_SHELL_BUILD__!=='1798'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -616,7 +616,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1796 · 通话动作里的笑声';
+const APP_VER='v1798 · 通话标签清理';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2098,7 +2098,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1796&r=v1796-thought-preview-1';
+  const url='sw.js?v=1798&r=v1798-thought-preview-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -10360,7 +10360,7 @@ function renderCallLog(id){const c=getC(id);if(!c)return '';
   const html=groups.map((g,gi)=>{const first=g.msgs[0],last=g.msgs[g.msgs.length-1],groupKey=id+'|'+(g.cs||('_'+(first.time||0)));
     const kind=g.ck==='video'?'📹 视频通话':'📞 语音通话';
     const dateStr=first.time?fmtDate(first.time):'';const st=first.time?hm(first.time):'';const et=last.time?hm(last.time):'';
-    const inner=g.msgs.map(m=>{const who=m.role==='user'?S.me.name:(c.remark||c.name);const txt=m.type==='voice'?('🎙️ '+(m.content||'语音')):(m.content||'');
+    const inner=g.msgs.map(m=>{const who=m.role==='user'?S.me.name:(c.remark||c.name);const txt=m.type==='voice'?('🎙️ '+(m.content||'语音')):(typeof NorthVoiceExpressive!=='undefined'&&NorthVoiceExpressive.stripTags?NorthVoiceExpressive.stripTags(m.content||''):(m.content||''));
       return `<div style="padding:6px 0;border-top:.5px solid #242428"><div style="font-size:11px;color:#888;display:flex;justify-content:space-between"><span>${esc(who)}</span><span><span onclick="clEdit('${id}','${m.id}')" style="color:#54a0ff;cursor:pointer">✎改</span><span onclick="clDel('${id}','${m.id}')" style="color:#fa5151;cursor:pointer;margin-left:14px">✕删</span></span></div><div style="color:#ddd;white-space:pre-wrap;font-size:14px;margin-top:2px">${esc(txt)}</div></div>`;}).join('');
     return `<details data-cl-key="${esc(groupKey)}" ${_clOpen[groupKey]?'open':''} ontoggle="clToggle(this)" style="margin:10px;border:1px solid #2a2a2c;border-radius:14px;overflow:hidden;background:#141416">
       <summary style="list-style-position:inside;background:#1e1e22;padding:9px 12px;cursor:pointer"><div style="display:inline-flex;width:calc(100% - 22px);justify-content:space-between;align-items:flex-start;gap:8px;vertical-align:top"><div style="min-width:0"><div style="font-size:13px;color:#9ec5fe;font-weight:600">${kind} · 第${gi+1}通</div><div style="font-size:11px;color:#888;margin-top:2px">${dateStr}　开始 ${st} — 结束 ${et}</div><div style="font-size:10px;color:#777;margin-top:4px">内容默认折叠 · 点标题展开</div></div><div style="display:flex;gap:10px;align-items:center">${g.ck==='video'?`<span onclick="event.preventDefault();event.stopPropagation();clReplayPicker('${id}','${g.cs}')" style="color:#70d99b;font-size:12px;cursor:pointer;white-space:nowrap">回放/导出</span>`:''}<span onclick="event.preventDefault();event.stopPropagation();clDelSession('${id}','${g.cs}')" style="color:#fa5151;font-size:12px;cursor:pointer;white-space:nowrap">删这通</span></div></div></summary>
@@ -18340,7 +18340,7 @@ async function callAI(sysNote,opts){if(!_call)return;const _rawOutput=typeof mod
       if(!_rawOutput&&callBadForeignLine(p,_vlang))return;
       const isTrans=/^[（(][^）)]*[）)]$/.test(p)&&hasCN(p);
       if(isTrans&&(!_rawOutput||units.length&&!units[units.length-1].trans)){if(units.length&&!units[units.length-1].trans)units[units.length-1].trans=p;/* 同一句原文只认第一条翻译，多余/重复的翻译行(不管半角全角)直接丢掉 */return;}
-      /* 角色在通话里写的中文小提示（[轻笑][叹气][温柔]…）：字幕和通话记录里不显示，交给语音去真的笑、真的叹气 */if(video&&callIsActionLine(p)){if(typeof NorthVoiceExpressive!=='undefined'&&NorthVoiceExpressive.actionCues)_pendingCues.push(...NorthVoiceExpressive.actionCues(p));units.push({orig:p,trans:'',cues:[]});return;}/* 视频通话：动作描写照常显示，里面的笑、叹气交给下一句说的话 */const _vx=typeof NorthVoiceExpressive!=='undefined'?NorthVoiceExpressive.split(p,true):null;if(_vx){const names=(_vx.perf.match(/\[([^\]]+)\]/g)||[]).map(x=>x.slice(1,-1));if(!_vx.text){_pendingCues.push(...names);return;}units.push({orig:_vx.text,trans:'',cues:_pendingCues.splice(0).concat(names)});return;}units.push({orig:p,trans:'',cues:_pendingCues.splice(0)});});
+      /* 角色在通话里写的中文小提示（[轻笑][叹气][温柔]…）：字幕和通话记录里不显示，交给语音去真的笑、真的叹气 */if(video&&callIsActionLine(p)){if(typeof NorthVoiceExpressive!=='undefined'&&NorthVoiceExpressive.actionCues)_pendingCues.push(...NorthVoiceExpressive.actionCues(p));units.push({orig:p,trans:'',cues:[]});return;}/* 视频通话：动作描写照常显示，里面的笑、叹气交给下一句说的话 */const _vx=typeof NorthVoiceExpressive!=='undefined'?NorthVoiceExpressive.split(p,true):null;if(_vx){const names=(_vx.perf.match(/\[([^\]]+)\]/g)||[]).map(x=>x.slice(1,-1));if(!_vx.text){_pendingCues.push(...names);return;}units.push({orig:_vx.text,trans:'',cues:_pendingCues.splice(0).concat(names)});return;}units.push({orig:p,trans:'',cues:_pendingCues.splice(0)});});/* 通话台词和翻译里不留任何语气/方位标签（原样输出模式也一样）；旧通话记录里残留的也顺手清掉，免得角色照着历史继续写 */if(typeof NorthVoiceExpressive!=='undefined'&&NorthVoiceExpressive.stripTags){units.forEach(u=>{u.orig=NorthVoiceExpressive.stripTags(u.orig);if(u.trans)u.trans=NorthVoiceExpressive.stripTags(u.trans);});let _old=false;msgs(c.id).forEach(m=>{if(m&&m._call&&typeof m.content==='string'&&/\[\s*(?:左耳|右耳|脑后|面前|贴近|退开|轻笑|叹气|温柔|小声|撒娇|宠溺|哽咽)\s*\]/.test(m.content)){m.content=NorthVoiceExpressive.stripTags(m.content);if(m._callTrans)m._callTrans=NorthVoiceExpressive.stripTags(m._callTrans);_old=true;}});if(_old)save();}
     let _prevP='',_prefetchP='',_prefetchInterjectionUsed=false;const _speechRows=units.map(u=>{const duplicate=!_rawOutput&&u.orig===_prefetchP;_prefetchP=u.orig;const isAction=video&&callIsActionLine(u.orig),spoken=(duplicate||isAction)?'':(_rawOutput&&(!_vlang||_vlang==='zh'))?u.orig:pickSpoken(u.orig,_vlang),cues=(u.cues||[]).slice(0,2),sound=cues.find(x=>/^(轻笑|笑|叹气|叹|哽咽|哭腔)$/.test(x)),interjection=!!(spoken&&(sound||!_prefetchInterjectionUsed));if(spoken&&!sound)_prefetchInterjectionUsed=true;return{isAction,spoken,cue:spoken&&cues.length?(sound||cues[0]):_turnVoiceCue,interjection,perf:spoken&&cues.length?cues.map(x=>'['+x+']').join('')+spoken:'',inlineSound:!!(spoken&&sound)};});
     const _speechJobs=(_call.replyVoice&&!c.muted&&ttsApiOn(c)&&!voiceProgressiveOn())?callPrefetchSpeech(_speechRows,c,()=>!!(_call&&_call.session===sess&&_call.state==='active')):[];
     for(let _ui=0;_ui<units.length;_ui++){const u=units[_ui];if(!_call||_call.session!==sess||_callStateStale())return;

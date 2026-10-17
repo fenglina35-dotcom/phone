@@ -249,3 +249,20 @@ test('action text in calls becomes the voice cue of the next spoken line; 语气
     assert.match(src,/video&&callIsActionLine\((?:p|units\[_i\]\.orig)\)/,'video calls hand the action cue to the next spoken line');
   }
 });
+
+/* 实机（2026-10-17，iOS469）：通话记录又出现「[右耳]You feel that?（[右耳]感觉到了吗？）」「[贴近]Good girl.」。
+   私人版在「原样输出」时跳过了清理，翻译行从来没清理，旧记录带着标签回到历史里让角色继续写。 */
+test('position and cue tags never stay in call lines, their translations, raw output or old records',()=>{
+  const V=sandbox({voiceExpressive:true}).NorthVoiceExpressive;
+  assert.equal(V.stripTags('[右耳]You feel that?'),'You feel that?');
+  assert.equal(V.stripTags('（[右耳]感觉到了吗？）'),'（感觉到了吗？）');
+  assert.equal(V.stripTags('[贴近]Good girl.\n（[贴近]乖孩子。）'),'Good girl.\n（乖孩子。）');
+  assert.equal(V.stripTags('【笑着看你】'),'【笑着看你】','video action lines are kept');
+  assert.match(V.prompt({id:'r'}),/语音或视频通话里绝对不要写这些方位标签/);
+  const priv=read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/app.js');
+  for(const src of [app,priv]){
+    assert.match(src,/units\.forEach\(u=>\{u\.orig=NorthVoiceExpressive\.stripTags\(u\.orig\);if\(u\.trans\)u\.trans=NorthVoiceExpressive\.stripTags\(u\.trans\);\}\)/);
+    assert.match(src,/m\._call&&typeof m\.content==='string'&&\/\\\[\\s\*\(\?:左耳/,'old call records are cleaned');
+  }
+  assert.doesNotMatch(priv,/if\(!_rawOutput&&typeof NorthVoiceExpressive!=='undefined'\)\{const _pend/,'raw output mode no longer skips the cleanup');
+});
