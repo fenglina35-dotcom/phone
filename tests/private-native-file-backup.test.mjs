@@ -22,8 +22,8 @@ test('private v1355 loads daily backup after the diagnostic overlay while public
   }
   assert.match(privateApp,/APP_VER='v1797 · 拍照任务与粉色提示'/);
   assert.match(publicApp,/APP_VER='v1794 · 拍照任务与粉色提示'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 467;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.467;/g)||[]).length,12);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 468;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.468;/g)||[]).length,12);
 });
 
 test('web backup sends bounded ordered chunks and records a day only after confirmed save',()=>{

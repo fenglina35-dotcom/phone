@@ -69,11 +69,11 @@ test('private performance candidate keeps v1355 while public web advances indepe
   assert.match(privateRepair, /index\.html\?repair=1&v=1797/);
   assert.match(privateApp, /APP_VER='v1797 · 拍照任务与粉色提示'/);
   assert.match(overlay, /336-daily-file-backup/);
-  assert.match(webView, /1\.0\.467 \(467\)/);
-  assert.match(bridge, /private static let build = "1\.0\.467 \(467\)"/);
+  assert.match(webView, /1\.0\.468 \(468\)/);
+  assert.match(bridge, /private static let build = "1\.0\.468 \(468\)"/);
   assert.match(bridge, /static let contractVersion = 42/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 467;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.467;/g) || []).length, 12);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 468;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.468;/g) || []).length, 12);
   assert.match(publicApp, /APP_VER='v1794 · 拍照任务与粉色提示'/);
   assert.doesNotMatch(publicApp, /function northNativeBackgroundTask\(name,run\)/);
 });

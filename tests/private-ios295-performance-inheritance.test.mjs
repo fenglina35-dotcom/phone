@@ -52,11 +52,11 @@ test('private identifiers remain v1355 and iOS 399 while public advances indepen
   assert.match(index, /private-runtime-diagnostics\.js\?v=339/);
   assert.match(app, /APP_VER='v1797 · 拍照任务与粉色提示'/);
   assert.match(overlay, /336-daily-file-backup/);
-  assert.match(webview, /1\.0\.467 \(467\)/);
-  assert.match(bridge, /private static let build = "1\.0\.467 \(467\)"/);
+  assert.match(webview, /1\.0\.468 \(468\)/);
+  assert.match(bridge, /private static let build = "1\.0\.468 \(468\)"/);
   assert.match(bridge, /static let contractVersion = 42/);
-  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 467;/g) || []).length, 12);
-  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.467;/g) || []).length, 12);
+  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 468;/g) || []).length, 12);
+  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.468;/g) || []).length, 12);
   assert.match(publicApp, /APP_VER='v1794 · 拍照任务与粉色提示'/);
   assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1794'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
@@ -160,7 +160,7 @@ test('Mac guide identifies the current private v1356 iOS422 source', () => {
     assert.match(guide, /Mac.*编译/);
     assert.match(guide, /真机|真实 iPhone/);
   }
-  assert.match(mac, /1\.0\.467 \(467\)/);
+  assert.match(mac, /1\.0\.468 \(468\)/);
   assert.match(mac, /原生桥.*38/);
   assert.match(install, /1\.0\.327 \(327\)/);
   assert.match(install, /原生桥.*35/);

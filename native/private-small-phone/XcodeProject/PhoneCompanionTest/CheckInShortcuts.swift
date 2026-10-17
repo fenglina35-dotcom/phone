@@ -253,8 +253,10 @@ struct CheckInOpenerIntent: AppIntent {
     static var description = IntentDescription("弹出角色写的开场白。取消会停止快捷指令；确认仅允许本次截屏。")
     static var openAppWhenRun = false
     @MainActor
-    func perform() async throws -> some IntentResult & ReturnsValue<String> {
-        guard let opening = try await CheckInStore.shared.prepareOpening() else { return .result(value: "") }
+    // Not checking returns no value at all (empty text still counts as "有任何值" in Shortcuts), so a
+    // 如果「查岗开场」有任何值 around 截屏 skips the screenshot and the screen does not flash.
+    func perform() async throws -> some IntentResult & ReturnsValue<String?> {
+        guard let opening = try await CheckInStore.shared.prepareOpening() else { return .result(value: nil) }
         try await requestConfirmation(actionName: .continue, dialog: IntentDialog(stringLiteral: opening.line))
         try await CheckInStore.shared.approve(scope: opening.scope)
         // Let the prompt finish closing so the next "截屏" step captures the screen, not the prompt.

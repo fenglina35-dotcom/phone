@@ -14,9 +14,9 @@ test('v1184 web source keeps private 1.0.315 compatibility', () => {
   assert.match(html, /__NORTH_SHELL_BUILD__='1794'/);
   assert.match(sw, /const BUILD='1794'/);
   assert.doesNotMatch(project, /CURRENT_PROJECT_VERSION = 40;|MARKETING_VERSION = 1\.0\.40;/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 467;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.467;/g) || []).length, 12);
-  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.467 \(467\)'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 468;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.468;/g) || []).length, 12);
+  assert.match(webView, /__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.468 \(468\)'/);
 });
 
 test('album replaces the removed account runtime',()=>{assert.match(html,/photo-album\.js/);assert.doesNotMatch(html,/ai-account\.js/);});
