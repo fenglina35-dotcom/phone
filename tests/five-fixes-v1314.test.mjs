@@ -110,7 +110,8 @@ test('线下的颜色全部走变量，默认是蓝／深灰', () => {
 
 test('外观里能改五种颜色，也能换背景，而且不压画质', () => {
   for (const x of both) {
-    assert.match(x, /const OFF_THEME_DEF=\{me:'#d2c9ba',meInk:'#181614',them:'#26262a',themInk:'#ffffff',nar:'#c9c2b6'\}/, '我的气泡默认是浅黄，不是那个蓝');
+    assert.match(x, /const OFF_THEME_DEF=\{me:'#26262a',meInk:'#ffffff',them:'#26262a',themInk:'#ffffff',nar:'#c9c2b6'\}/, '我的气泡默认和 ta 一样（2026-10-18）');
+    assert.match(x, /if\(!t\._meLikeTaV1\)\{if\(t\.me===OFF_THEME_WARM_ME&&t\.meInk==='#181614'\)/, '以前默认浅黄的迁一次');
     assert.match(x, /const OFF_THEME_OLD_ME='#0a84ff';/);
     assert.match(x, /function offAppearance\(id\)/);
     assert.match(x, /function offThemeSet\(id,key,val\)/);
@@ -296,14 +297,14 @@ test('「让TA回」是偏灰的磨砂玻璃，原来那套主题里还是老样
   }
 });
 
-test('两套主题都留着，切换存在角色身上', () => {
+test('外观只剩磨砂玻璃（2026-10-18 她要求删掉「原来的 · 黑色文学风」）', () => {
   for (const x of both) {
-    assert.match(x, /t\.skin=t\.skin==='classic'\?'classic':'glass';/);
+    assert.match(x, /t\.skin='glass';/);
+    assert.doesNotMatch(grab(x, 'offAppearance'), /黑色文学风|offSkinSet/, '外观里不再有主题可选');
     assert.match(x, /function offSkinSet\(id,skin\)/);
     assert.match(grab(x, 'offStageAttrs'), /classic=t\.skin==='classic'/);
     assert.match(grab(x, 'offStageAttrs'), /cls:\(classic\?' off-classic':''\)\+\(bg\?' hasbg':''\)/);
-    assert.match(grab(x, 'offStageAttrs'), /bg=\(!classic&&t\.bg\)\?storedImageDisplaySource\(t\.bg\):''/, '原来那套本来就没有背景图');
-    assert.match(x, /offSkinSet\('\$\{id\}','\$\{k\}'\)/, '外观里要能点');
+    assert.match(grab(x, 'offStageAttrs'), /bg=\(!classic&&t\.bg\)\?storedImageDisplaySource\(t\.bg\):\(!classic\?OFF_BLACK_BG:''\)/, '没换背景时用纯黑图，液态玻璃照样画');
   }
   for (const s of shells) {
     /* 原来那套的关键几条：方一点的气泡、没有玻璃、没有那圈高光 */
@@ -315,12 +316,12 @@ test('两套主题都留着，切换存在角色身上', () => {
   }
 });
 
-test('主题只认这两个，别的都退回玻璃', () => {
+test('不管以前存的是什么，都是玻璃', () => {
   const ctx = { save: () => {} };
   vm.createContext(ctx);
-  vm.runInContext(source('offColorOk') + '\n' + app.match(/const OFF_THEME_DEF=\{[^\n]*\}/)[0] + '\n' + app.match(/const OFF_THEME_OLD_ME='[^']*';/)[0] + '\n' + source('offTheme'), ctx);
+  vm.runInContext(source('offColorOk') + '\n' + app.match(/const OFF_THEME_DEF=\{[^\n]*\}/)[0] + '\n' + app.match(/const OFF_THEME_OLD_ME='[^']*';/)[0] + '\n' + app.match(/const OFF_THEME_WARM_ME='[^']*';/)[0] + '\n' + source('offTheme'), ctx);
   const skin = v => { ctx.c = { offTheme: { skin: v } }; return vm.runInContext('offTheme(c).skin', ctx); };
-  assert.equal(skin('classic'), 'classic');
+  assert.equal(skin('classic'), 'glass', '以前选过「原来的」也回到玻璃');
   assert.equal(skin('glass'), 'glass');
   assert.equal(skin('neon'), 'glass');
   assert.equal(skin(undefined), 'glass', '没设过就是新的玻璃');

@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1807'){
+if(window.__NORTH_SHELL_BUILD__!=='1809'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -640,7 +640,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1807 · 共同生活语音玻璃';
+const APP_VER='v1809 · 共同生活磨砂玻璃';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1919,7 +1919,7 @@ function callNormalizeCnTranslationLine(line){const m=String(line||'').trim().ma
 function callNormalizeForeignOrig(line,lang){lang=normVoiceLang(lang);let s=String(line||'').trim();if(lang==='英'){s=s.replace(/^answer\s*(?:先生|主人|哥哥|姐姐|老公|老婆|宝贝|宝宝|亲爱的)\s*[。.!?！？]*$/i,'Answer me.');s=s.replace(/^(reply|respond)\s*(?:先生|主人|哥哥|姐姐|老公|老婆|宝贝|宝宝|亲爱的)\s*[。.!?！？]*$/i,'Answer me.').replace(/(?:宝贝|宝宝|亲爱的)/g,'baby');}return s;}
 function callInlineTranslationParts(line,lang){lang=normVoiceLang(lang);const raw=String(line||'').trim();if(!raw||lang==='zh'||callIsActionLine(raw))return{orig:raw,trans:''};const m=raw.match(/^([\s\S]*?\S)\s*[（(]\s*([^）)]*[\u3400-\u9fff][^）)]*)\s*[）)]\s*$/);if(!m)return{orig:raw,trans:''};const orig=callNormalizeForeignOrig(m[1].trim(),lang),trans=callNormalizeCnTranslationLine('（'+m[2].trim()+'）');return orig&&trans?{orig,trans}:{orig:raw,trans:''};}
 function callNormalizeLine(line,lang){lang=normVoiceLang(lang);const s=String(line||'').trim();if(/^[（(][^）)]*[）)]$/.test(s))return callNormalizeCnTranslationLine(s);return (!lang||lang==='zh')?s:callNormalizeForeignOrig(s,lang);}
-function callIsActionLine(line){return /^【(?!\s*(?:心情|心情值|通话语气|挂断|登录微信|发朋友圈|发推|发抖音|点外卖|转账|红包|记住|闹钟|日程|婚礼日程|监督目标|目标完成|送礼|锁定|禁言|限时|加时|扣款|关小黑屋|位置|图片|文件)(?:\s*[|｜:：\]】]|$))[^】]{1,80}】$/.test(String(line||'').trim());}
+function callIsActionLine(line){/* COHAB_VOICE_LONG_NARRATION_V1：共同生活语音里角色的旁白常常超过 80 字，以前被当成台词（大字、带【】、还可能被念出来）；只在共同生活语音里放宽，长的【】不可能是控制标签。线上电话不变 */if(typeof _call!=='undefined'&&_call&&_call.cohab&&/^【[^】]{81,800}】$/.test(String(line||'').trim()))return true;return /^【(?!\s*(?:心情|心情值|通话语气|挂断|登录微信|发朋友圈|发推|发抖音|点外卖|转账|红包|记住|闹钟|日程|婚礼日程|监督目标|目标完成|送礼|锁定|禁言|限时|加时|扣款|关小黑屋|位置|图片|文件)(?:\s*[|｜:：\]】]|$))[^】]{1,80}】$/.test(String(line||'').trim());}
 function callHasVideoAction(text){return (String(text||'').match(/【[^】]{1,80}】/g)||[]).some(callIsActionLine);}
 function ensureVideoCallAction(text,cue){text=String(text||'').trim();if(callHasVideoAction(text))return text;cue=ttsCueKind(cue);const action=cue==='tense'?'【目光落在镜头上，神情认真了些】':cue==='soft'?'【望着镜头，神情慢慢柔和下来】':cue==='laugh'?'【看着镜头轻轻笑了一下】':cue==='sleepy'?'【靠近镜头，困倦地眨了眨眼】':cue==='surprised'?'【看向镜头，神情明显怔了一下】':'【看着镜头，神情随着话音轻轻变化】';return text?(text+'\n'+action):action;}
 function callHasSpokenDialogue(text,lang){return String(text||'').split(/\n+/).some(line=>{line=String(line||'').trim();if(!line||callIsActionLine(line)||/^[（(][^）)]*[）)]$/.test(line))return false;return !!pickSpoken(line,lang);});}
@@ -10400,17 +10400,23 @@ let _off=null;
    所以换了场次、进共同生活也还是她挑的那一套。
    背景走和微信聊天背景同一个 compressChatBackground——2600px、质量 .93，
    她说过「换聊天背景不要压画质」。 */
-const OFF_THEME_DEF={me:'#d2c9ba',meInk:'#181614',them:'#26262a',themInk:'#ffffff',nar:'#c9c2b6'};
+/* OFF_ME_LIKE_TA_V1（2026-10-18 她说「我自己的那个气泡颜色也改成跟角色一样的颜色，默认颜色」）：我的气泡默认和 ta 的一样 */
+const OFF_THEME_DEF={me:'#26262a',meInk:'#ffffff',them:'#26262a',themInk:'#ffffff',nar:'#c9c2b6'};
+const OFF_THEME_WARM_ME='#d2c9ba';
+/* OFF_BLACK_BG_V1：没换背景时用一张纯黑的图当背景（她说「默认是黑色背景图，纯黑的」）——液态玻璃要有背景图才画得出来，以前没背景时玻璃整个不出现，材质就变了 */
+const OFF_BLACK_BG='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAgCAIAAACU62+bAAAAFUlEQVR42mNgGAWjYBSMglEwCjABAAYgAAHw0JvSAAAAAElFTkSuQmCC';
 const OFF_THEME_OLD_ME='#0a84ff';
 function offColorOk(v,def){v=String(v||'').trim();return /^#[0-9a-fA-F]{6}$/.test(v)?v.toLowerCase():def;}
 function offTheme(c){if(!c)return Object.assign({bg:'',skin:'glass'},OFF_THEME_DEF);
   const t=c.offTheme&&typeof c.offTheme==='object'&&!Array.isArray(c.offTheme)?c.offTheme:(c.offTheme={});
   t.bg=typeof t.bg==='string'?t.bg:'';
-  /* 她说「这两个主题都要保留，没改之前的也要保留」——所以旧的那套黑色文学风原样留着，随时切回去 */
-  t.skin=t.skin==='classic'?'classic':'glass';
+  /* OFF_GLASS_ONLY_V1（2026-10-18 她说「把原来的黑色文学风那个风格删掉，默认是这个磨砂玻璃」）：只剩玻璃，以前选过「原来的」也回到玻璃；没换背景时是纯黑 */
+  t.skin='glass';
   for(const k in OFF_THEME_DEF)t[k]=offColorOk(t[k],OFF_THEME_DEF[k]);
   /* 我的气泡默认从那个蓝换回浅黄；只迁一次，自己挑过颜色的不动 */
   if(!t._meWarmV1){if(t.me===OFF_THEME_OLD_ME){t.me=OFF_THEME_DEF.me;t.meInk=OFF_THEME_DEF.meInk;}t._meWarmV1=1;}
+  /* 还是以前默认浅黄（没自己挑过）的，换成新的默认（和 ta 一样）；只迁一次，自己挑过颜色的不动 */
+  if(!t._meLikeTaV1){if(t.me===OFF_THEME_WARM_ME&&t.meInk==='#181614'){t.me=OFF_THEME_DEF.me;t.meInk=OFF_THEME_DEF.meInk;}t._meLikeTaV1=1;}
   return t;}
 /* 线下和共同生活都只画最近这些条，其余留在存档里，点「看更早」再多放一段出来。
    一万条的时候整页重画要 90ms，每点一下按钮都要重画一次，就是她说的「点按钮很慢」。 */
@@ -10427,7 +10433,7 @@ function offShowMore(id){const k=offWindowKey(id);_offWindow={key:k,n:(_offWindo
   const g=$('#offbg');if(g&&keep!=null)g.scrollTop=Math.max(0,g.scrollHeight-keep);}
 function offRgba(hex,a){const h=String(hex||'').replace('#','');if(!/^[0-9a-fA-F]{6}$/.test(h))return '';
   const n=parseInt(h,16);return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')';}
-function offStageAttrs(c){const t=offTheme(c),classic=t.skin==='classic',bg=(!classic&&t.bg)?storedImageDisplaySource(t.bg):'';
+function offStageAttrs(c){const t=offTheme(c),classic=t.skin==='classic',bg=(!classic&&t.bg)?storedImageDisplaySource(t.bg):(!classic?OFF_BLACK_BG:'');
   return {cls:(classic?' off-classic':'')+(bg?' hasbg':''),
     style:`--offc-me:${t.me};--offc-me-ink:${t.meInk};--offc-them:${t.them};--offc-them-ink:${t.themInk};--offc-nar:${t.nar};`+`--offc-me-soft:${offRgba(t.me,.62)};--offc-them-soft:${offRgba(t.them,.52)};`
       +(bg?`background-image:url(${bg});`:'')};}
@@ -10440,10 +10446,7 @@ function offAppearance(id){const c=getC(id);if(!c)return;const t=offTheme(c);
     +`<div class="avline"><input type="color" value="${t[k]}" oninput="offThemeSet('${id}','${k}',this.value)" style="width:56px;height:34px;padding:0;border:1px solid #38383a;border-radius:8px;background:#2c2c2e">`
     +`<span style="color:#8a8a8f;font-size:12px">${t[k]}</span></div></div>`;
   const glass=t.skin!=='classic';
-  const chip=(k,label,note)=>`<button type="button" class="minibtn" style="flex:1;margin:0;padding:9px 6px;background:${t.skin===k?'#0a84ff':'#2c2c2e'};color:${t.skin===k?'#fff':'#bbb'}" onclick="offSkinSet('${id}','${k}')">${label}<small style="display:block;opacity:.75;font-weight:400">${note}</small></button>`;
   openModal(`<h3>线下外观</h3>
-   <div class="field"><label>主题</label><div style="display:flex;gap:8px;padding-top:6px">
-     ${chip('glass','玻璃','磨砂＋细高光')}${chip('classic','原来的','黑色文学风')}</div></div>
    ${glass?`<div class="hint">和信息页同一套玻璃：气泡是磨砂的，边上那条高光会跟着背景的颜色走。颜色改完立刻就能看见。</div>
    <div class="field"><label>聊天背景<small style="display:block;color:#888">按原图质量存（2600px），不会压糊</small></label>
      <div class="avline"><button class="btn imblue" style="flex:1" onclick="offBgPick('${id}')">选图片</button>

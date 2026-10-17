@@ -107,24 +107,28 @@ test("两边的气泡都是半透明磨砂，经典主题还是实心的", () =>
   }
 });
 
-test("我的气泡默认是浅黄，旧的那个蓝只迁一次", () => {
+test("我的气泡默认和 ta 一样（2026-10-18），旧的蓝和旧的浅黄默认都只迁一次", () => {
   for (const [name, app] of Object.entries(apps)) {
-    assert.match(app, /const OFF_THEME_DEF=\{me:'#d2c9ba',meInk:'#181614',/, name);
+    assert.match(app, /const OFF_THEME_DEF=\{me:'#26262a',meInk:'#ffffff',them:'#26262a',themInk:'#ffffff',/, name);
     const box = vm.createContext({});
     vm.runInContext(app.match(/const OFF_THEME_DEF=\{[^\n]*\}/)[0] + ";", box);
     vm.runInContext(app.match(/const OFF_THEME_OLD_ME='[^']*';/)[0], box);
+    vm.runInContext(app.match(/const OFF_THEME_WARM_ME='[^']*';/)[0], box);
     vm.runInContext(fnSource(app, "offColorOk"), box);
     vm.runInContext(fnSource(app, "offTheme"), box);
     const theme = stored => { box.c = { offTheme: stored }; return vm.runInContext("offTheme(c)", box); };
-    const migrated = theme({ me: "#0a84ff", meInk: "#ffffff" });
-    assert.equal(migrated.me, "#d2c9ba", `${name}: 没人选过的旧默认蓝要换成浅黄`);
-    assert.equal(migrated.meInk, "#181614", name);
-    assert.equal(migrated._meWarmV1, 1, name);
+    const blue = theme({ me: "#0a84ff", meInk: "#ffffff" });
+    assert.equal(blue.me, "#26262a", `${name}: 没人选过的旧默认蓝换成新默认`);
+    assert.equal(blue.meInk, "#ffffff", name);
+    const warm = theme({ me: "#d2c9ba", meInk: "#181614", _meWarmV1: 1 });
+    assert.equal(warm.me, "#26262a", `${name}: 以前默认浅黄（没挑过）换成和 ta 一样`);
+    assert.equal(warm.meInk, "#ffffff", name);
+    assert.equal(warm._meLikeTaV1, 1, name);
     const picked = theme({ me: "#ff6699", meInk: "#ffffff" });
     assert.equal(picked.me, "#ff6699", `${name}: 自己挑过的颜色一点都不能动`);
-    const again = { me: "#0a84ff", meInk: "#ffffff", _meWarmV1: 1 };
-    assert.equal(theme(again).me, "#0a84ff", `${name}: 迁过一次之后她再选蓝就留着`);
-    assert.equal(theme({}).me, "#d2c9ba", `${name}: 全新的角色直接就是浅黄`);
+    const again = { me: "#d2c9ba", meInk: "#181614", _meWarmV1: 1, _meLikeTaV1: 1 };
+    assert.equal(theme(again).me, "#d2c9ba", `${name}: 迁过一次之后她再选浅黄就留着`);
+    assert.equal(theme({}).me, "#26262a", `${name}: 全新的角色直接就是和 ta 一样`);
   }
 });
 

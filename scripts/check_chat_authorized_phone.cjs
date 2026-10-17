@@ -142,21 +142,24 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
     }finally{visionAPI=vKeep;visionConfigured=vcKeep;scheduleReply=srKeep2;c.tasks=tKeep2;S.messages[accountMessageKey(testId,actId())]=(msgs(testId)||[]).filter(m=>!(m.type==='image'&&/为完成任务/.test(m.desc||'')));}
     // 共同生活语音模式（COHAB_VOICE_V1）：角色收到的是共同生活当面相处的说明和共同生活历史，不是视频通话；结束后从微信里整段移走，
     // 微信通话记录和微信上下文看不到，共同生活历史（隐藏）和长期记忆【共同生活语音】里都有；恢复后台通话时仍是语音模式。
-    let cvNoReplay=false,cvTray=false,cvNoTapMenu=false,cvMic=false,cvNarr=false,cvLiveLog=false,cvPrompt=false,cvHistory=false,cvNoCamera=false,cvStored=false,cvMoved=false,cvNoWechatLog=false,cvMemory=false,cvNotice=false,cvRestore=false,cvPaused=false;
+    let cvNoReplay=false,cvTray=false,cvModalGlass=false,cvReplyPos=false,cvNoTapMenu=false,cvMic=false,cvNarr=false,cvLiveLog=false,cvPrompt=false,cvHistory=false,cvNoCamera=false,cvStored=false,cvMoved=false,cvNoWechatLog=false,cvMemory=false,cvNotice=false,cvRestore=false,cvPaused=false;
     const cohabKeep=JSON.stringify(S.cohabitation||null),capi=chatAPI,sumKeep=JSON.stringify(c.summaries||[]),srKeep3=scheduleReply,sfrKeep3=scheduleFeatureReply;
     try{scheduleReply=()=>true;scheduleFeatureReply=()=>true;const r=cohabRoot();r.cid=c.id;r.enabled=true;r.paused=false;const d=cohabData(c.id);d.phase='home';d.place='客厅';d.nextAt=0;d.nextPhase='';
      cohabPushMessage(d,{id:uid(),who:'me',source:'me',text:'共同生活里的一句：回来啦',time:Date.now()-5000});cohabEnter(c.id);await sleep(80);
      // ＋ 里有语音模式和多选删除，顶上不再有「多选」；共同生活里点消息不弹编辑/删除（COHAB_VOICE_GLASS_V1）
      render();await sleep(30);const acts=(document.querySelector('.cohab-meta-acts')||{}).innerText||'',tray=document.getElementById('cvTray');CohabVoice.note();CohabVoice.multi();await sleep(30);cvTray=!/多选/.test(acts)&&!!tray&&/语音模式/.test(tray.innerText)&&/多选删除/.test(tray.innerText)&&!!document.querySelector('.offselect')&&Array.isArray(_offSel);offSelToggle();await sleep(30);
      // 从共同生活点开的页面用气泡材质（7% 白、不磨砂），关掉后别的页面不受影响
-     cohabControls(c.id);await sleep(30);const gm=document.getElementById('modal'),gs=getComputedStyle(document.getElementById('modalSheet'));cvTray=cvTray&&gm.classList.contains('cohab-glass-modal')&&gs.backgroundColor==='rgba(255, 255, 255, 0.07)';closeModal();cvTray=cvTray&&!gm.classList.contains('cohab-glass-modal');
+     cohabControls(c.id);await sleep(30);const gm=document.getElementById('modal'),gs=getComputedStyle(document.getElementById('modalSheet'));cvModalGlass=gm.classList.contains('cohab-glass-modal')&&gs.backgroundColor==='rgba(30, 30, 36, 0.62)'&&/blur/.test(gs.backdropFilter||gs.webkitBackdropFilter||'');closeModal();await sleep(30);cvModalGlass=cvModalGlass&&!gm.classList.contains('cohab-glass-modal');
      const tapRow=document.querySelector('#offbg .offmsg, .offmsg');if(tapRow)tapRow.click();await sleep(30);const ms=document.getElementById('modalSheet');cvNoTapMenu=!!tapRow&&!(ms&&ms.offsetParent&&/编辑 \/ 删除/.test(ms.innerText));closeModal();
+     // 「让TA回」挪到输入栏里，浮在 ＋ 正上方（COHAB_REPLY_ABOVE_PLUS_V1）
+     {const keepMr=manualReplySceneOn;manualReplySceneOn=()=>true;try{render();await sleep(30);const rb=document.querySelector('.offinput .cohab-float-acts .cohab-debug-reply'),pl=document.querySelector('.cv-note');if(rb&&pl){const a=rb.getBoundingClientRect(),b=pl.getBoundingClientRect();cvReplyPos=a.bottom<=b.top&&Math.abs(a.right-b.right)<2;}}finally{manualReplySceneOn=keepMr;render();await sleep(30);}}
      let seen=null;chatAPI=async(rows)=>{seen=rows;return '[通话语气|温柔]\n【他笑着把你往怀里带】\n过来，让我抱一下。';};
      CohabVoice.start();const sess=_call&&_call.session;await sleep(40);const dp=cohabData(c.id);dp.nextAt=Date.now()-1000;dp.nextPhase='work';cohabAdvance(c.id);cvPaused=!!sess&&cohabData(c.id).phase==='home';
      msgs(c.id).push({role:'user',type:'text',content:'你今天想我了吗',time:Date.now(),id:uid(),_call:true,_ck:'video',_cs:sess});
      // 防闪：每一句的进场动画只播一次（旧做法字幕一变就整段重写，最后一句的动画重播，看起来上下跳）
      const anim={},onAnim=e=>{const n=e.target;if(!n||!n.parentNode||n.parentNode.id!=='cvrBody')return;const k=n.textContent;anim[k]=(anim[k]||0)+1;};document.addEventListener('animationstart',onAnim,true);
      await callAI();await sleep(700);document.removeEventListener('animationstart',onAnim,true);cvNoReplay=Object.keys(anim).length>0&&Object.values(anim).every(n=>n===1);
+     {const longNar='【'+'他抱着手臂靠在门框上，眉头挑了一下，盯着她看了两秒，然后从鼻腔里漏出一声很短的笑，嘴角往上弯了一点，眼尾的弧度跟着软了半分，但眼神还是那副“你在跟我转移话题”的锐利。他没说话，就那样看着她，等她自己先开口。'+'】';cvNoReplay=cvNoReplay&&Array.from(longNar).length>82&&callIsActionLine(longNar)&&CohabVoice._transcript!==undefined;const keepCall=_call;_call=null;try{cvNoReplay=cvNoReplay&&!callIsActionLine(longNar);}finally{_call=keepCall;}}
      // 话筒一点就变色
      const hfKeep=callHFToggle;callHFToggle=()=>{_callHF=!_callHF;};try{CohabVoice.mic();cvMic=document.querySelector('.cvr-mic').classList.contains('on');CohabVoice.mic();cvMic=cvMic&&!document.querySelector('.cvr-mic').classList.contains('on');}finally{callHFToggle=hfKeep;}
      const sys=String(seen&&seen[0]&&seen[0].content||''),hist=(seen||[]).slice(1).map(x=>String(x.content||'')).join('\n');
@@ -173,7 +176,7 @@ const server=http.createServer((req,res)=>{const file=path.resolve(root,decodeUR
      cvMemory=(c.summaries||[]).some(x=>/共同生活语音/.test(JSON.stringify(x)));cvNotice=!(dd.notices||[]).some(n=>/语音/.test(n.text))&&(dd.voiceLog||[]).length>0&&dd.voiceLog.at(-1).lines.every(l=>!!l.hid);
     }finally{if(typeof _call!=='undefined'&&_call&&_call.cohab){try{CohabVoice.end();}catch(_){}}chatAPI=capi;scheduleReply=srKeep3;scheduleFeatureReply=sfrKeep3;S.cohabitation=JSON.parse(cohabKeep)||undefined;c.summaries=JSON.parse(sumKeep);delete S._activeCall;closeModal();go('home');}
     TaskNotes.tab('today');
-    const shop={ownCap,boxBtn,boxed,boxOnce,sakuraLack,sakuraOwned,packWaits,pickOne,dailyOnce,newEvery,rareByFive,boxRare,chatPack,removalSticks,globeQA,mergedOnce,staleQuiet,longDetail,avatarPhoto,photoGate,photoReject,photoPass,cvPrompt,cvHistory,cvNoCamera,cvStored,cvMoved,cvNoWechatLog,cvMemory,cvNotice,cvRestore,cvPaused,cvLiveLog,cvNarr,cvNoReplay,cvTray,cvNoTapMenu,cvMic};
+    const shop={ownCap,boxBtn,boxed,boxOnce,sakuraLack,sakuraOwned,packWaits,pickOne,dailyOnce,newEvery,rareByFive,boxRare,chatPack,removalSticks,globeQA,mergedOnce,staleQuiet,longDetail,avatarPhoto,photoGate,photoReject,photoPass,cvPrompt,cvHistory,cvNoCamera,cvStored,cvMoved,cvNoWechatLog,cvMemory,cvNotice,cvRestore,cvPaused,cvLiveLog,cvNarr,cvNoReplay,cvTray,cvModalGlass,cvReplyPos,cvNoTapMenu,cvMic};
     return Object.assign(shop,{pruned,late,roleStar,roleStarOnce,gained,refunded,praised:praised===1,roleKnows,reminder,filters,pickedDay},lineQA);
    }finally{Math.random=rnd;scheduleFeatureReply=sfr;if(baseReq)SmallPhoneNative.request=baseReq;S.couple=keep.couple;c.tasks=keep.tasks;S.taskNotes=keep.notes||{items:[]};openChat(testId);}},privateApp);
   for(const [name,ok] of Object.entries(taskQA))assert.equal(ok,true,name+' '+JSON.stringify({privateApp,taskQA}));console.log(JSON.stringify({privateApp,taskNotes:taskQA}));
