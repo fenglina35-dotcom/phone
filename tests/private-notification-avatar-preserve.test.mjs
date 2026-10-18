@@ -9,15 +9,15 @@ function fixture({source='data:image/png;base64,PHOTO',loadFail=false,readFail=f
  const state={fallback:0,draw:0,sent:[],remote:'LAST_GOOD_PHOTO'};
  const ctx2d={fillRect(){},beginPath(){},arc(){},fill(){},createLinearGradient(){return {addColorStop(){}}},fillText(){state.fallback++},drawImage(){state.draw++}};
  const role={id:'role-a',avatar:'idb:photo-a',name:'先生',proactive:{enabled:true,serverPush:true}};
- const context={document:{createElement(){return {getContext:()=>ctx2d,toDataURL(){if(tainted)throw Error('tainted');return oversize?'x'.repeat(50001):state.draw?'data:image/jpeg;base64,PHOTO':'data:image/jpeg;base64,MONOGRAM'}}}},
+ const context={S:{couple:{cid:role.id},spy:{}},_testAccount:'main',isMain:()=>true,getC:()=>role,todayStr:()=> '2026-10-18',deviceTimeZone:()=> 'Asia/Shanghai',document:{createElement(){return {getContext:()=>ctx2d,toDataURL(){if(tainted)throw Error('tainted');return oversize?'x'.repeat(50001):state.draw?'data:image/jpeg;base64,PHOTO':'data:image/jpeg;base64,MONOGRAM'}}}},
   Image:class {naturalWidth=96;naturalHeight=96;set src(v){if(!loadHang)queueMicrotask(()=>loadFail?this.onerror():this.onload())}},
   setTimeout:(fn,ms)=>setTimeout(fn,ms===5000?10:ms),clearTimeout,_imgCache:{},_imgRev:new Map(),_imgReady:new Set(),
   isStoredImgRef:v=>typeof v==='string'&&v.startsWith('idb:'),isImg:v=>/^(https?:|data:|blob:)/i.test(v),
   imgGet:async()=>{if(readFail)throw Error('idb unavailable');if(readHang)return new Promise(()=>{});return source},
-  gateOK:()=>true,roleServerPushProfile:c=>({roleId:c.id,enabled:c.proactive.enabled}),cloudId:()=> 'target-a',companionOwnerSecret:()=> 'fixture-secret',
+  gateOK:()=>true,roleServerPushProfile:c=>({roleId:c.id,enabled:c.proactive.enabled,automationConfig:{}}),cloudId:()=> 'target-a',companionOwnerSecret:()=> 'fixture-secret',
   companionRpc:async(name,args)=>{state.sent.push(args);if(args.p_profile.avatarData)state.remote=args.p_profile.avatarData;return true},
   roleServerPushCheckStatus(){},toast(){},_roleServerPushStatusById:{}};
- vm.createContext(context);vm.runInContext(block,context);return {context,role,state};
+ context.actId=()=>context._testAccount;const helpers=['spyTodoOwnerRows','spyTodoCloudConfig','spyTodoSyncSerialize'].map(name=>app.split('\n').find(l=>l.startsWith('function '+name+'('))).join('\n');vm.createContext(context);vm.runInContext('const _spyTodoSyncChains=Object.create(null);\n'+helpers+'\n'+block,context);return {context,role,state};
 }
 for(const problem of [{source:''},{loadFail:true},{readFail:true},{tainted:true},{oversize:true},{readHang:true},{loadHang:true}]){
  test('notification photo failure preserves photo without blocking profile '+JSON.stringify(problem),async()=>{
@@ -46,3 +46,5 @@ test('changed avatar during decoding cannot upload old photo',async()=>{
  context.imgGet=async()=>{role.avatar='idb:new-photo';return 'data:image/png;base64,OLD'};
  await context.roleServerPushSync(role,true);assert.equal(state.sent[0].p_profile.avatarData,'');
 });
+
+test('account change while notification photo is decoding cannot sync an old role profile to the new account',async()=>{const {context,role,state}=fixture();context.imgGet=async()=>{context._testAccount='other';return 'data:image/png;base64,OLD';};assert.equal(await context.roleServerPushSync(role,true),false);assert.equal(state.sent.length,0);});

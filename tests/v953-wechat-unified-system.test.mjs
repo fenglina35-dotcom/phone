@@ -6,9 +6,9 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-assert.match(source,/APP_VER='v1826 · 角色记录与任务照片修复'/);
-assert.match(html,/__NORTH_SHELL_BUILD__='1826'/);
-assert.match(sw,/BUILD='1826'/);
+assert.match(source,/APP_VER='v1827 · 角色日程到点自然报备'/);
+assert.match(html,/__NORTH_SHELL_BUILD__='1827'/);
+assert.match(sw,/BUILD='1827'/);
 assert.equal((project.match(/CURRENT_PROJECT_VERSION = 480;/g)||[]).length,12);
 assert.equal((project.match(/MARKETING_VERSION = 1.0.480;/g)||[]).length,12);
 

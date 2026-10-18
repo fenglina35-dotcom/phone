@@ -32,6 +32,7 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"本地候选",scope:"both",least:1,file:"app.js",name:"手动角色日程同步后台并自然报备，改删与账号隔离",marker:"ROLE_OWNER_TODO_REPORT_V1"},
   {release:"本地候选",scope:"both",least:1,file:"task-notes.js",name:"任务照片选择器挂载页面，异步选图绑定原任务与账号",marker:"PHOTO_TASK_PICKER_V2"},
   {release:"查岗截屏本地候选",scope:"both",least:1,file:"phone-shortcuts.js",name:"明确授权截图接收、角色开场白和原云端入口分离",marker:"CHECKIN_SHORTCUTS_V1"},
   {release:"web v1768 / private v1773",scope:"both",least:1,file:"phone-shortcuts.js",name:"查岗截图在聊天里显示原图（不再是空白气泡）",marker:"_imgCache[key]=image;_imgRev.set(image,key);_imgReady.add(key);"},

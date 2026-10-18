@@ -1387,7 +1387,24 @@ function snapshotAmbientFacts(profile: Record<string, unknown>, snapshot: Record
   return facts.slice(0, 3).join("；");
 }
 
+// ROLE_OWNER_TODO_REPORT_V1: one server-owned event lane, independent of idle chat and device snapshots.
+function ownerTodoCandidate(profile: Record<string, any>, now = Date.now(), allowKey = "") {
+  if (!profile.enabled || profileTemporarilySuspended(profile)) return null;
+  const config = profile.automation_config?.ownerTodo;
+  if (!config || config.schema !== 1 || config.accountId !== "main" || String(config.roleId) !== String(profile.role_id) || !/^\d{4}-\d{2}-\d{2}$/.test(String(config.day || "")) || !Number.isFinite(config.expiresAt) || now > config.expiresAt) return null;
+  const state = profile.automation_state || {}, runs = state.runs || {}, attempts = state.ownerTodoAttempts || {};
+  const rows = (Array.isArray(config.items) ? config.items : []).slice(0, 24).filter((row: any) => row && typeof row.id === "string" && /^[a-zA-Z0-9_-]{1,100}$/.test(row.id) && Number.isSafeInteger(row.revision) && row.revision >= 0 && row.key === `ownerTodo:${config.day}:${row.id}:${row.revision}` && typeof row.text === "string" && row.text.trim() && row.text.length <= 220 && /^\d{2}:\d{2}$/.test(String(row.time)) && Number.isFinite(row.dueAt) && row.dueAt <= now && row.dueAt < config.expiresAt && row.dueAt >= config.expiresAt - 86400_000 && !runs[row.key]).sort((a: any, b: any) => a.dueAt - b.dueAt);
+  for (const row of rows) {
+    const attempt = attempts[row.key] || {};
+    if (row.key !== allowKey && (Number(attempt.count || 0) >= 3 || Number(attempt.nextAt || 0) > now)) continue;
+    const late = Math.max(0, Math.floor((now - row.dueAt) / 60000));
+    return { kind: "ownerTodo", key: row.key, facts: `对方给你本人安排的今日日程（执行人是你，不是对方）：${config.day} ${row.time}，${row.text}。${late ? `已过约定时间约${late}分钟，不要假装准点。` : "现在已经到约定时间。"}这只是到了开始做的时间，不能声称已经完成整件事。`, text: row.text };
+  }
+  return null;
+}
+// END_ROLE_OWNER_TODO_REPORT_V1
 function automationCandidate(profile: Record<string, unknown>, snapshot: Record<string, unknown>) {
+  const ownerTodo = ownerTodoCandidate(profile);if (ownerTodo) return ownerTodo;
   if(publicNorthCloud())snapshot={...snapshot,automationEvents:[]};
   const config = (profile.automation_config && typeof profile.automation_config === "object" ? profile.automation_config : {}) as Record<string, unknown>;
   const configUnlockEvents = Array.isArray(config.automationEvents)
@@ -2008,6 +2025,17 @@ Deno.serve(async (request) => {
         await client.from("phone_role_push_profiles").update({ claimed_until: null }).eq("target", profile.target).eq("role_id", profile.role_id);
         continue;
       }
+      if (candidate.kind === "ownerTodo") {
+        const fresh = (await client.from("phone_role_push_profiles").select("*").eq("target", profile.target).eq("role_id", profile.role_id).maybeSingle()).data;
+        const current = fresh && ownerTodoCandidate(fresh);
+        if (!current || current.key !== candidate.key) {await client.from("phone_role_push_profiles").update({claimed_until:null}).eq("target",profile.target).eq("role_id",profile.role_id);continue;}
+        Object.assign(profile, fresh);candidate = current;
+        const state = profile.automation_state || {}, attempts = {...(state.ownerTodoAttempts || {})}, old = attempts[candidate.key] || {};
+        attempts[candidate.key] = {count:Number(old.count || 0)+1,nextAt:Date.now()+180_000};
+        profile.automation_state = {...state,ownerTodoAttempts:Object.fromEntries(Object.entries(attempts).slice(-72))};
+        const reserved = await client.from("phone_role_push_profiles").update({automation_state:profile.automation_state}).eq("target",profile.target).eq("role_id",profile.role_id);
+        if(reserved.error)throw reserved.error;
+      }
       if (candidate.kind === "preciseTime") {
         const fresh = (await client.from("phone_role_push_profiles").select("*").eq("target", profile.target).eq("role_id", profile.role_id).maybeSingle()).data;
         const current = fresh && rolePreciseTimeCandidate(fresh);
@@ -2026,6 +2054,7 @@ Deno.serve(async (request) => {
         if (claimResult.error) throw claimResult.error;
       }
       const instructions: Record<string, string> = {
+        ownerTodo: "这是对方给你本人安排的日程到点了。你现在准备去做或刚开始做这件事，以你本人的第一人称自然向对方报备一两句；根据人设、当前关系和真实上下文自行选择称呼、语气和说法。如果现场有明确冲突就自然说明需要稍等，不编造已经完成或新地点人物。不要提醒或命令对方替你做，不要念系统、日程触发、后台或固定模板。本轮要发出对方可见的文字报备，不输出保持安静。",
         preciseTime: "这是你本人明确说过的联系约定到期，和随机主动消息分开。依据实际经过时间、当前事件、人设与关系，自主决定现在是否自然联系、怎么说，也可以保持安静。不要输出内部事实、机械报时、重复催促或伪造用户去向，不要把迟到假装成准点。",
         roleWorkStart: "这是你本人已明确设置的真实上班事件。请以角色本人的口吻主动、自然地告诉对方你去上班或已经开始工作；具体说法、情绪、是否附带位置或邀请由你按人设、世界书、记忆和关系自行决定。不要提系统、日程触发或后台，也不要编造同事、会议等未提供细节。",
         roleWorkEnd: "这是你本人已明确设置的真实下班事件。请以角色本人的口吻主动、自然地告诉对方你下班了；之后想回家、想见对方、想打电话或邀请一起做事，都由你按人设、世界书、记忆和关系自行决定。不要提系统、日程触发或后台，也不要编造未提供的加班或行程。",
@@ -2036,7 +2065,7 @@ Deno.serve(async (request) => {
         emotionCare: "用户刚才表达难过或当前对话正在谈是否相信对方。你只把最新心率作为关心线索，不得据此证明撒谎、哭泣、疾病或作医疗诊断。",
         manualUnlock: "你收到了当前聊天对象本人亲自成功解锁App的真实记录。若决定发消息，必须以角色本人第一人称直接对ta说，用你或平时昵称称呼；禁止写成她、他、用户等第三人称旁白，也不要写成内心独白或观察报告。按人设自然反应，可以关心、调侃、询问、不满或不追究，但不得默认审问，更不能凭空认定欺骗、背叛或做坏事。",
       };
-      const decision = await roleMessage(profile, [], instructions[candidate.kind] || "", candidate.facts);
+      const decision = await roleMessage(profile, [], instructions[candidate.kind] || "", candidate.facts, candidate.kind !== "ownerTodo");
       if (candidate.kind === "preciseTime") {
         const fresh = (await client.from("phone_role_push_profiles").select("*").eq("target", profile.target).eq("role_id", profile.role_id).maybeSingle()).data;
         const current = fresh && rolePreciseTimeCandidate(fresh, Date.now(), candidate.key);
@@ -2045,8 +2074,14 @@ Deno.serve(async (request) => {
           continue;
         }
       }
+      if (candidate.kind === "ownerTodo") {
+        const fresh = (await client.from("phone_role_push_profiles").select("*").eq("target", profile.target).eq("role_id", profile.role_id).maybeSingle()).data;
+        const current = fresh && ownerTodoCandidate(fresh,Date.now(),candidate.key);
+        if(!current || current.key!==candidate.key){await client.from("phone_role_push_profiles").update({claimed_until:null}).eq("target",profile.target).eq("role_id",profile.role_id);continue;}
+        Object.assign(profile,fresh);
+      }
       const automationDelivered = decision.kind === "message"
-        ? await persistAndPush(client, url, profile, decision.body, `automation:${candidate.kind}`, `automation:${profile.target}:${profile.role_id}:${candidate.key}`)
+        ? await persistAndPush(client, url, profile, decision.body, candidate.kind === "ownerTodo" ? `automation:${candidate.key}` : `automation:${candidate.kind}`, `automation:${profile.target}:${profile.role_id}:${candidate.key}`)
         : false;
       if (!automationDelivered) {
         await client.from("phone_role_push_profiles").update({ claimed_until: null }).eq("target", profile.target).eq("role_id", profile.role_id);

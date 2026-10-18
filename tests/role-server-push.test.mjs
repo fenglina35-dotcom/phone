@@ -619,6 +619,7 @@ test('a scheduled push racing with a live call is acknowledged without entering 
     ${functionSource('roleServerPushReceiptMark')}
     ${functionSource('roleServerPushReceiptForget')}
     ${app.slice(app.indexOf('const _replyHandoffClaims='),app.indexOf('const _roleBackgroundPending='))}
+    ${functionSource('spyTodoServerRow')}
     async ${functionSource('roleServerPushPull')}
     this.pull=roleServerPushPull;
   `,context);
@@ -663,6 +664,7 @@ ${functionSource('roleServerPushUnsafeBody')}
     ${functionSource('roleServerPushReceiptMark')}
     ${functionSource('roleServerPushReceiptForget')}
     ${app.slice(app.indexOf('const _replyHandoffClaims='),app.indexOf('const _roleBackgroundPending='))}
+    ${functionSource('spyTodoServerRow')}
     async ${functionSource('roleServerPushPull')}
     this.pull=roleServerPushPull;
   `,context);

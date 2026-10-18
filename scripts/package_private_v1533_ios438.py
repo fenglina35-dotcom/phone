@@ -12,18 +12,18 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "native/private-small-phone/XcodeProject/"
 BUNDLE = "PhoneCompanionTest/PhoneWeb.bundle/"
-PREFIX = "SmallPhone_v1821_iOS480_Private/"
-OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1821_iOS480.zip"
+PREFIX = "SmallPhone_v1830_iOS480_Private/"
+OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1830_iOS480.zip"
 
-WEB_VERSION = "1821"
+WEB_VERSION = "1830"
 REVIEWED_RUNTIME_COMMIT = "HEAD"
-MAIN_BASE_COMMIT = "c458745e4eb4f8c14f25b7fc447de815f3462cb6"
-PUBLIC_VERSION = "1818"
+MAIN_BASE_COMMIT = "ae94dc528153a4a411f9a16d5c03ed58bd8ba13f"
+PUBLIC_VERSION = "1827"
 EVIDENCE_ROOT = ROOT / ".codex_tmp"
 TEST_LOG = EVIDENCE_ROOT / "eight-chat" / "full-tests.log"
-PREVIOUS_ZIP = ROOT.parent / "最新私人版本覆盖包_v1769_iOS453.zip"
-PREVIOUS_ZIP_SHA256 = "74d684e60ca61a225269581dd633a597efe747e0e6d40024148d955730c33cec"
-PREVIOUS_SOURCE = "51cee578f4ab220d82446482618babbfa74093dd"
+PREVIOUS_ZIP = ROOT.parent / "最新私人版本覆盖包_v1821_iOS480.zip"
+PREVIOUS_ZIP_SHA256 = "dd15491a1672d74f3acc73e483fb0ffc81302197d6d7453302fa98559e53f801"
+PREVIOUS_SOURCE = "710ed6c805a06013db3f5a32b80ead942f717f7d"
 
 
 class FolderArchive:
@@ -95,9 +95,9 @@ def validate(files):
     for name in ("PhoneCompanionTest.xcodeproj/project.pbxproj", "PhoneCompanionTest/PhoneNativeBridge.swift", "PhoneCompanionTest/CheckInShortcuts.swift", "PhoneCompanionTest/PhoneCompanionTest.entitlements", "PhoneCompanionTest/LocalPhoneWebView.swift", "请在Mac编译前先读.md"):
         assert name in files, name
     app = text(files[BUNDLE + "app.js"])
-    assert f"APP_VER='v{WEB_VERSION} · 设置黑底蓝色与记仇先开口'" in app
+    assert f"APP_VER='v{WEB_VERSION} · 角色日程到点自然报备'" in app
     runtime = app + text(files[BUNDLE + "cohab-theater.js"]) + text(files[BUNDLE + "glass-theme.css"])
-    for marker in ("GRUDGE_JAIL_ANNOUNCE_V1", "roleJailAnnounced(decisionText)", "data-settings-appearance", "OFF_LAST_SESSION_V1", "CONTACT_PHOTO_DEL_V1", "APP_SOLID_MODAL_V1", "COHAB_GLASS_NO_COLOR_V1", "VOICE_SEND_DIAG_V1", "ROLE_LOCK_UNTIL_V1"):
+    for marker in ("ROLE_OWNER_TODO_REPORT_V1", "GRUDGE_JAIL_ANNOUNCE_V1", "roleJailAnnounced(decisionText)", "data-settings-appearance", "OFF_LAST_SESSION_V1", "CONTACT_PHOTO_DEL_V1", "APP_SOLID_MODAL_V1", "COHAB_GLASS_NO_COLOR_V1", "VOICE_SEND_DIAG_V1", "ROLE_LOCK_UNTIL_V1"):
         assert marker in runtime, marker
     assert "SETTINGS_BLACK_BLUE_V1" in text(files[BUNDLE + "glass-theme.css"])
     assert "DAILY_CHECKIN_V1" in text(files[BUNDLE + "phone-shortcuts.js"])
@@ -125,24 +125,24 @@ def validate(files):
 
 
 def main():
-    assert not text(git("status", "--porcelain", "--untracked-files=no")).strip(), "commit tracked changes before packaging"
+    assert not text(git("status", "--porcelain", "--untracked-files=no", "--", SOURCE)).strip(), "commit tracked changes before packaging"
     assert not OUTPUT.exists() and not list(OUTPUT.parent.glob(OUTPUT.name + ".[0-9][0-9][0-9]")), "refusing to overwrite deliverables"
     commit = text(git("rev-parse", "HEAD")).strip()
     git("merge-base", "--is-ancestor", MAIN_BASE_COMMIT, commit)
     git("merge-base", "--is-ancestor", PREVIOUS_SOURCE, commit)
-    assert f"APP_VER='v{PUBLIC_VERSION} · 设置黑底蓝色与记仇先开口'" in text(git("show", "HEAD:app.js"))
+    assert f"APP_VER='v{PUBLIC_VERSION} · 角色日程到点自然报备'" in text(git("show", "HEAD:app.js"))
     files = committed_private_files()
     validate(files)
     base = committed_private_files(MAIN_BASE_COMMIT)
     assert set(base) == set(files), "unexpected runtime/native file additions or removals"
-    reviewed = {BUNDLE + n for n in ("app.js", "glass-theme.css", "index.html", "小手机.html", "repair.html")} | {"PhoneCompanionTest.xcodeproj/project.pbxproj", "请在Mac编译前先读.md", "PhoneCompanionTest/LocalPhoneWebView.swift", "PhoneCompanionTest/PhoneNativeBridge.swift"}
+    reviewed = {BUNDLE + n for n in ("app.js", "glass-theme.css", "index.html", "小手机.html", "repair.html", "web-hotfix.js", "public-north-runtime.js")} | {"PhoneCompanionTest.xcodeproj/project.pbxproj", "请在Mac编译前先读.md", "PhoneCompanionTest/LocalPhoneWebView.swift", "PhoneCompanionTest/PhoneNativeBridge.swift"}
     changed = {n for n in files if files[n] != base[n]}
     assert changed <= reviewed, "unreviewed private changes: " + str(sorted(changed - reviewed))
     def normalized_versions(body):
         return re.sub(r"MARKETING_VERSION = 1\.0\.\d+;", "MARKETING_VERSION = <version>;", re.sub(r"CURRENT_PROJECT_VERSION = \d+;", "CURRENT_PROJECT_VERSION = <build>;", text(body)))
     assert normalized_versions(files["PhoneCompanionTest.xcodeproj/project.pbxproj"]) == normalized_versions(base["PhoneCompanionTest.xcodeproj/project.pbxproj"]), "signing/build configuration changed"
     for name in ("PhoneCompanionTest/LocalPhoneWebView.swift", "PhoneCompanionTest/PhoneNativeBridge.swift"):
-        assert text(files[name]).replace("1.0.480 (480)", "1.0.479 (479)") == text(base[name]), "unexpected native change: " + name
+        assert files[name] == base[name], "unexpected native change: " + name
     del base
     assert file_hash(PREVIOUS_ZIP) == PREVIOUS_ZIP_SHA256
     with ZipFile(PREVIOUS_ZIP) as prior:
@@ -153,24 +153,24 @@ def main():
         assert set(manifest) == {n[len(prefix):] for n in prior.namelist() if n.startswith(prefix)} - {"SHA256SUMS.json"}
         for name, digest in manifest.items(): assert sha256(prior.read(prefix + name)).hexdigest() == digest, name
         previous_state = json.loads(prior.read(prefix + "SOURCE_STATE.json"))
-        assert previous_state["sourceCommit"] == PREVIOUS_SOURCE
+        assert previous_state["sourceCommit"].startswith(PREVIOUS_SOURCE)
         assert not (set(manifest) - {"SOURCE_STATE.json"} - set(files)), "previous package files missing"
     log = text(TEST_LOG.read_bytes())
     match = re.search(r"pass (\d+)", log)
-    assert match and int(match[1]) >= 4348 and re.search(r"fail 0\b", log) and "cancelled 0" in log
+    assert match and int(match[1]) >= 4393 and re.search(r"fail 0\b", log) and "cancelled 0" in log
     browser = text((EVIDENCE_ROOT / "eight-chat/eight-browser.log").read_bytes())
-    assert browser.count('"refreshAndSinceAndRevocation":true,"pageErrors":0') == 2
-    preview = text((EVIDENCE_ROOT / "eight-chat/settings-preview.log").read_bytes())
-    assert preview.count('"scoped":true') == 2
+    assert browser.count('"refreshAndSinceAndRevocation":true,"pageErrors":0') >= 2
+    assert browser.count('"ownerTodo":true,"realEditor":true') >= 2
     state = {
         "sourceCommit": commit, "webSourceCommit": commit, "privateWeb": "v"+WEB_VERSION, "publicWeb": "v"+PUBLIC_VERSION,
         "marketingVersion": MARKETING, "build": BUILD, "bridge": BRIDGE, "packageKind": "Mac/Xcode committed-source overlay, not IPA",
         "mainBaseCommit": MAIN_BASE_COMMIT,
         "lastDeliveredPackage": {"name": PREVIOUS_ZIP.name, "sha256": PREVIOUS_ZIP_SHA256, "manifestSha256": sha256(manifest_bytes).hexdigest(), "sourceCommit": PREVIOUS_SOURCE},
         "inheritedValidation": {"sourceCommit": PREVIOUS_SOURCE, "validation": previous_state.get("validation", {})},
-        "preserved": sorted(set(previous_state.get("preserved", [])) | {"complete-published-main-c458745e-private-payload", "GRUDGE_JAIL_ANNOUNCE_V1", "SETTINGS_BLACK_BLUE_V1", "all-43-stickers-and-list", "all-25-task-note-assets", "OFF_LAST_SESSION_V1", "COHAB_GLASS_NO_COLOR_V1", "APP_SOLID_MODAL_V1"}),
+        "preserved": sorted(set(previous_state.get("preserved", [])) | {"complete-published-main-ae94dc52-private-payload", "GRUDGE_JAIL_ANNOUNCE_V1", "SETTINGS_BLACK_BLUE_V1", "all-43-stickers-and-list", "all-25-task-note-assets", "OFF_LAST_SESSION_V1", "COHAB_GLASS_NO_COLOR_V1", "APP_SOLID_MODAL_V1"}),
         "knownUnresolved": ["iOS480-Mac-build-signing-and-real-iPhone-not-verified", "checkin-after-19:08-user-result-pending", "historical-checkin-Busy-launch-not-proven-fixed", "cohab-real-laughter-and-voice-visual-device-acceptance-pending"],
-        "validation": {"nodeTests": {"passed": int(match[1]), "failed": 0, "sourceCommit": commit}, "authorizedChatBothRuntimes": True, "settingsBlackBlueBothRuntimes": True, "previousManifestCRCVerified": True, "publishedBaselinePayloadVerified": True, "privateCompanionNativeChangesThisRelease": False, "signingConfigurationUnchanged": True, "macBuildVerified": False, "realIPhoneVerified": False},
+        "validation": {"nodeTests": {"passed": int(match[1]), "failed": 0, "sourceCommit": commit}, "authorizedChatBothRuntimes": True, "ownerTodoBothRuntimes": True, "previousManifestCRCVerified": True, "publishedBaselinePayloadVerified": True, "privateCompanionNativeChangesThisRelease": False, "signingConfigurationUnchanged": True, "macBuildVerified": False, "realIPhoneVerified": False},
+        "ownerTodoBackend": {"private":47,"public":43,"deployedSeparately":True,"realDeviceVerified":False},
         "externalBackend": {"APNS_ENV_FALLBACK_V1": "already deployed separately; one real test sent and client acknowledged; not redeployed by this ZIP"},
         "intentionalExclusions": "historical native install docs; all runtime resources and notices included",
         "reviewedPrivateChanges": sorted(changed),

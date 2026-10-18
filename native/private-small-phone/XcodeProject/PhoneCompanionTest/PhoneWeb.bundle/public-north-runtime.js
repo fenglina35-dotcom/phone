@@ -122,7 +122,7 @@ window.NorthPublicRuntime=(()=>{
   roleBackgroundAvailable=id=>!!state()?.linked&&!!state()?.backgroundConsent[id]&&backgroundCore(id);
   companionHelp=()=>openModal('<h3>公开 North 权限</h3><div class="hint">在已上架的 North 内连接并授权步数、电量、屏幕时间或定位。小手机只在你允许后提供给绑定角色。公开版不支持手表心率、睡眠、心境、私人智能家居或手动解锁事件提醒。排队不代表执行成功。</div><button class="btn g" onclick="closeModal()">关闭</button>');
   const syncCore=roleServerPushSync;
-  roleServerPushSync=async(c,silent)=>{if(!state()?.backgroundConsent[c?.id])return false;return syncCore(c,silent);};
+  roleServerPushSync=async(c,silent,...args)=>{if(!state()?.backgroundConsent[c?.id])return false;return syncCore(c,silent,...args);};
   roleServerPushToggle=async id=>{
    const st=state(),c=getC(id);if(!st||!c)return false;
    if(!st.linked){toast('请先连接公开 North');return false;}

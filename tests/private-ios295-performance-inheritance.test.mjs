@@ -47,18 +47,18 @@ function functionSource(sourceText, name) {
 
 test('private identifiers remain v1355 and iOS 399 while public advances independently', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1829'/);
-  assert.match(index, /app\.js\?v=1829&r=v1829-private-package-1/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1830'/);
+  assert.match(index, /app\.js\?v=1830&r=v1830-private-package-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(app, /APP_VER='v1829 · 角色记录与任务照片修复'/);
+  assert.match(app, /APP_VER='v1830 · 角色日程到点自然报备'/);
   assert.match(overlay, /336-daily-file-backup/);
   assert.match(webview, /1\.0\.480 \(480\)/);
   assert.match(bridge, /private static let build = "1\.0\.480 \(480\)"/);
   assert.match(bridge, /static let contractVersion = 42/);
   assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 480;/g) || []).length, 12);
   assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.480;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1826 · 角色记录与任务照片修复'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1826'/);
+  assert.match(publicApp, /APP_VER='v1827 · 角色日程到点自然报备'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1827'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
