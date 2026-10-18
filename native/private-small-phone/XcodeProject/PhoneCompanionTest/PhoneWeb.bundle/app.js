@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1813'){
+if(window.__NORTH_SHELL_BUILD__!=='1815'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -640,7 +640,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1813 · 抖音编辑主页';
+const APP_VER='v1815 · 软件弹框实心';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -18871,7 +18871,7 @@ function openModal(html){
   m.classList.toggle('wxmodal-light',S.me.wxTheme==='white'&&wxPages.includes(p));
   m.classList.toggle('wxmodal-green',wxPages.includes(p));
   m.classList.toggle('north-glass-modal',glassThemeOn());
-  m.classList.toggle('dy-solid-modal',DY_SOLID_PAGES.includes(p));if(DY_SOLID_PAGES.includes(p))dySolidStyle();
+  appSolidMark(m,p);
   $('#modalSheet').classList.toggle('north-offline-sheet',['off','offline'].includes(p));
   $('#modalSheet').innerHTML=html;$('#modalSheet').classList.toggle('north-spec-sheet',!!m.querySelector('.north-spec-layout'));if(m.querySelector('.north-spec-layout'))$('#modalSheet').scrollTop=0;m.classList.toggle('north-travel-modal',p==='travel'||!!m.querySelector('.cth-dialog,.ctg-dialog,.ctf-dialog,.ctn-dialog,.ctt-dialog'));m.classList.add('show');
   if(m.querySelector('[data-idb-avatar],img[src^="idb:"],img[data-idb-src],[style*="idb:"]'))scheduleVisibleStoredImages(true);
@@ -18887,7 +18887,16 @@ function dySolidStyle(){if(typeof document==='undefined'||document.getElementByI
    +'#modal.dy-solid-modal .sheet :where(.section,.dyall-i,.btn,.minibtn,.dybtn.out,.it,input:not([type=color]):not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea),#cfm.dy-solid-modal .cfmb{'+BOX+'}'
    +'#modal.dy-solid-modal .sheet .section .it{background:transparent!important}#modal.dy-solid-modal .sheet .section{border-radius:12px!important;overflow:hidden}'
    +'#modal.dy-solid-modal .sheet :is(.btn,.minibtn,.dybtn,.section,.dyall-i,input,select,textarea):before,#cfm.dy-solid-modal .cfmb:before{display:none!important}'
-   +'#modal.dy-solid-modal .sheet :is(.btn.p,.dybtn:not(.out)),#cfm.dy-solid-modal .cfmb.p{background:#fe2c55!important;color:#fff!important;-webkit-text-fill-color:#fff}'
+   +'#modal.dy-solid-modal.dy-solid-dy .sheet :is(.btn.p,.dybtn:not(.out)),#cfm.dy-solid-modal.dy-solid-dy .cfmb.p{background:#fe2c55!important;color:#fff!important;-webkit-text-fill-color:#fff}'
+   // 白色主题：白底、浅灰色框、黑字；主要按钮微信绿 / 其他蓝；抖音粉只给抖音
+   +'#modal.dy-solid-modal:not(.dy-solid-dy) .sheet :is(.btn.p),#cfm.dy-solid-modal:not(.dy-solid-dy) .cfmb.p{background:#0a84ff!important;color:#fff!important;-webkit-text-fill-color:#fff}'
+   +'#modal.dy-solid-modal.dy-solid-wx .sheet :is(.btn.p),#cfm.dy-solid-modal.dy-solid-wx .cfmb.p{background:#07c160!important}'
+   +'#modal.dy-solid-modal.dy-solid-light .sheet,#cfm.dy-solid-modal.dy-solid-light .cfmbox{background:#fff!important;border-color:#e5e5ea!important;color:#111!important;box-shadow:0 18px 50px rgba(0,0,0,.18)!important}'
+   +'#modal.dy-solid-modal.dy-solid-light .sheet :where(.section,.dyall-i,.btn,.minibtn,.dybtn.out,input:not([type=color]):not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea),#cfm.dy-solid-modal.dy-solid-light .cfmb{background:#f2f2f7!important;color:#111!important;-webkit-text-fill-color:#111}'
+   +'#modal.dy-solid-modal.dy-solid-light .sheet :is(h3,label,b,.n,.it,.v,.cfmmsg),#cfm.dy-solid-modal.dy-solid-light .cfmmsg{color:#111!important;-webkit-text-fill-color:#111}#modal.dy-solid-modal.dy-solid-light .sheet :is(.hint,.s,small){color:#6d6d72!important;-webkit-text-fill-color:#6d6d72}'
+   +'#modal.dy-solid-modal.dy-solid-light .sheet :not(input):not(select):not(textarea){border-color:#e5e5ea!important}#modal.dy-solid-modal.dy-solid-light .sheet .section :is(.minibtn,.btn){background:#e5e5ea!important}'
+   +'#modal.dy-solid-modal.dy-solid-light .sheet :is(.btn.p),#cfm.dy-solid-modal.dy-solid-light .cfmb.p{color:#fff!important;-webkit-text-fill-color:#fff}#modal.dy-solid-modal.dy-solid-light .sheet .btn.d,#cfm.dy-solid-modal.dy-solid-light .cfmb.d{color:#ff3b30!important;-webkit-text-fill-color:#ff3b30}'
+   +'#modal.dy-solid-modal.dy-solid-light,#cfm.dy-solid-modal.dy-solid-light{background:rgba(0,0,0,.32)!important}'
    +'#modal.dy-solid-modal .sheet .btn.d,#cfm.dy-solid-modal .cfmb.d{color:#ff6b81!important;-webkit-text-fill-color:#ff6b81}'
    +'#modal.dy-solid-modal .sheet :is(h3,.hint,label,.n,.s,.v,span,div){-webkit-backdrop-filter:none!important;backdrop-filter:none!important}'
    // 抖音页面上浮在封面上的那些小框（添加好友、换背景、右上角几个圆钮、创作 AI 作品、别人主页的返回/求更新/搜索/…、编辑页的返回/更换封面）：实心灰，图标和字改白
@@ -18897,6 +18906,23 @@ function dySolidStyle(){if(typeof document==='undefined'||document.getElementByI
    +'.dyus-stats:has(.dyme-edit){flex-wrap:nowrap}.dyus-stats:has(.dyme-edit) span{margin-right:10px;white-space:nowrap}'
    +':is(.dyme-addfriend,.dyme-cover-edit,.dyme-tool,.dyus-top>i,.dyus-poke,.dyed-back,.dyed-coverbtn) :is(svg,svg *){stroke:#f2f2f4!important}.dyme-ai b,.dyme-ai span{color:#f2f2f4!important}';
   (document.head||document.documentElement).appendChild(st);}
+/* APP_SOLID_MODAL_V1（2026-10-18 她说：微信、电话、音乐、放映室、购物、X、世界书，后来又加了游戏大厅、浏览器，这些软件里那些框也是玻璃主题留下的透明框，
+   跟抖音一样改：黑色主题纯黑底灰色框，白色主题白底浅灰色框；共同生活不动，只改这几个软件）。
+   哪个软件：先看 curAppKey（购物、X、音乐、放映室、电话、抖音、游戏大厅和里面的各个游戏、浏览器），微信和世界书看导航栈里最先打开的那一页；共同生活、线下约会一律不算。
+   白还是黑：微信跟着微信自己的白色/夜间主题；别的软件看弹窗后面那一页实际的底色，浅色就用白底。 */
+const SOLID_APP_KEYS=['phoneapp','music','cinema','shop','x','douyin','moments','nearby','games','browser'];
+const SOLID_APP_ROOTS=['wechat','phoneapp','music','cinema','shop','x','worldbook','dy','gameshub','browser'];
+const SOLID_WX_PAGES=['wechat','chat','transferDetail','groupTransferDetail','rpSend','grpSend','tfSend','rpDetail','chatDetails','contactInfo','friendInfo','contactSettings','roleMoments','roleMomentDetail','roleFeatures','roleImageStudio','newfriends','wxonlychat','wxgroups','wxlabels','wxgroupcreate','contactEdit','wxprofile','wxqr','wxscan','wxsearch','wxservices','wxsmarthome','wxwallet','wxchange','wxbank','wxfamily','wxbills','wxsupport','wxfavorites','wxalbum','wxemoji','wxsettings','wxaccounts','wxsteps','wxmoment','wxnearby','pffriends','pfchat','pfgroup','group'];
+function solidAppOf(p){p=String(p||'');if(['off','offline'].includes(p))return '';if(DY_SOLID_PAGES.includes(p))return 'douyin';if(SOLID_WX_PAGES.includes(p))return 'wechat';if(p==='worldbook')return 'worldbook';
+  const k=typeof curAppKey==='function'?curAppKey():null;if(k)return SOLID_APP_KEYS.includes(k)?(k==='moments'||k==='nearby'?'wechat':k):'';
+  const r=typeof stack!=='undefined'&&stack[1]&&stack[1].p;return SOLID_APP_ROOTS.includes(r)?(r==='dy'?'douyin':r):'';}
+function solidPageIsLight(){try{if(typeof document==='undefined'||!document.elementFromPoint)return null;let e=document.elementFromPoint(6,Math.round((window.innerHeight||800)*0.45));if(e&&e.closest&&e.closest('#modal.show,#cfm.show'))return null;
+  while(e&&e!==document.documentElement){const m=getComputedStyle(e).backgroundColor.match(/rgba?\(([^)]*)\)/);if(m){const p=m[1].split(',').map(Number),a=p.length>3?p[3]:1;if(a>0.5)return (0.299*p[0]+0.587*p[1]+0.114*p[2])/255>0.6;}e=e.parentElement;}
+  const b=getComputedStyle(document.body).backgroundColor.match(/rgba?\(([^)]*)\)/);if(b){const p=b[1].split(',').map(Number);return (0.299*p[0]+0.587*p[1]+0.114*p[2])/255>0.6;}}catch(_){}return null;}
+function appSolidMark(m,p){if(!m)return;const app=solidAppOf(p),on=!!app;m.classList.toggle('dy-solid-modal',on);m.classList.toggle('dy-solid-dy',app==='douyin');m.classList.toggle('dy-solid-wx',app==='wechat');
+  if(!on){m.classList.remove('dy-solid-light');return;}
+  const light=app==='wechat'?!!(S&&S.me&&S.me.wxTheme==='white'):app==='douyin'?false:solidPageIsLight();
+  if(light!==null)m.classList.toggle('dy-solid-light',!!light);dySolidStyle();}
 if(typeof document!=='undefined')dySolidStyle();
 function openCallModal(html){openModal(html);$('#modal').classList.add('call-modal');}
 function closeModal(){const m=$('#modal');if(!m)return false;m.classList.remove('show');m.classList.remove('wxmodal-light');m.classList.remove('wxmodal-green');m.classList.remove('call-modal');if(m._home&&m.parentNode!==m._home)m._home.appendChild(m);return true;}
@@ -18905,7 +18931,7 @@ let _uiConfirmDone=null;
 function uiConfirm(msg,opt){opt=opt||{};if(_uiConfirmDone)_uiConfirmDone(false);return new Promise(res=>{let el=document.getElementById('cfm');
   if(!el){el=document.createElement('div');el.id='cfm';el.className='cfm';document.body.appendChild(el);}if(!el._home)el._home=el.parentNode;const host=document.fullscreenElement;if(document.body.classList.contains('cin-theater-open')&&host&&!host.contains(el))host.appendChild(el);
   el.innerHTML='<div class="cfmbox"><div class="cfmmsg">'+esc(msg||'确定吗？').replace(/\n/g,'<br>')+'</div><div class="cfmbtns"><button class="cfmb g" id="cfmNo">'+esc(opt.no||'取消')+'</button><button class="cfmb '+(opt.danger?'d':'p')+'" id="cfmYes">'+esc(opt.yes||'确定')+'</button></div></div>';
-  el.classList.toggle('dy-solid-modal',typeof cur==='function'&&DY_SOLID_PAGES.includes((cur()||{}).p));if(el.classList.contains('dy-solid-modal'))dySolidStyle();el.classList.add('show');
+  appSolidMark(el,typeof cur==='function'?(cur()||{}).p:'');el.classList.add('show');
   let settled=false;const done=v=>{if(settled)return;settled=true;if(_uiConfirmDone===done)_uiConfirmDone=null;el.classList.remove('show');if(el._home&&el.parentNode!==el._home)el._home.appendChild(el);res(v);};_uiConfirmDone=done;
   el.onclick=e=>{if(e.target.id==='cfm')done(false);};
   document.getElementById('cfmNo').onclick=()=>done(false);
