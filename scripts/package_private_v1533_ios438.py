@@ -1,21 +1,5 @@
-"""Create the private v1769 / iOS 453 Mac-source overlay package (role-sent food/pay/dice/music cards readable; Douyin memory no re-ask; protected private inheritance).
-
-v1769 is packaged on Windows from committed source. Verify the last delivered
-v1767 archive and all its hashes, plus the complete published-main private tree.
-The audited shared-feature port and the private version markers may differ.
-Mac/Xcode and real-iPhone validation of the inherited check-in feature is pending.
-
-Unlike the earlier packaging scripts, every file is read from the committed tree
-(``git cat-file`` against HEAD) instead of the working directory. The v1235/iOS356
-lag repair only ever reached a device because a packaging script read the working
-tree and silently carried uncommitted work into the zip; once later packages were
-built from a clean checkout the repair vanished. Reading from HEAD makes a package
-reproducible from the commit it names, and makes an uncommitted fix impossible to
-ship by accident.
-
-The archive keeps the current Mac build guide plus the cozy-home documentation
-and third-party notices. Historical installation notes remain excluded so the
-single, non-nested zip contains the current release rather than old deliveries.
+"""Current committed-source overlay builder; historical filename retained.
+Current full/permanent gates and exact baseline/archive checks replace obsolete version-locked guards.
 """
 
 from hashlib import sha256
@@ -28,18 +12,18 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "native/private-small-phone/XcodeProject/"
 BUNDLE = "PhoneCompanionTest/PhoneWeb.bundle/"
-PREFIX = "SmallPhone_v1769_iOS453_Private/"
-OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1769_iOS453.zip"
+PREFIX = "SmallPhone_v1821_iOS480_Private/"
+OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1821_iOS480.zip"
 
-WEB_VERSION = "1769"
+WEB_VERSION = "1821"
 REVIEWED_RUNTIME_COMMIT = "HEAD"
-MAIN_BASE_COMMIT = "bd9e52131cd8a299ea547b4291bf9c1b690b3410"
-FEATURE_COMMIT = "187f5dc6e6f1ae0728ed9d7ce4d5818c96ba8fea"
-EVIDENCE_ROOT = ROOT.parent / ".codex-eight-chat-fixes" / ".codex_tmp"
+MAIN_BASE_COMMIT = "c458745e4eb4f8c14f25b7fc447de815f3462cb6"
+PUBLIC_VERSION = "1818"
+EVIDENCE_ROOT = ROOT / ".codex_tmp"
 TEST_LOG = EVIDENCE_ROOT / "eight-chat" / "full-tests.log"
-PREVIOUS_ZIP = ROOT.parent / "最新私人版本覆盖包_v1767_iOS452.zip"
-PREVIOUS_ZIP_SHA256 = "050edf62b91a061b3611e08d5eae2245b5211a0af822db088e6f85c93b26aedf"
-PREVIOUS_SOURCE = "bcef7b225d9b4947ee01f44a0a4ad05731b7202a"
+PREVIOUS_ZIP = ROOT.parent / "最新私人版本覆盖包_v1769_iOS453.zip"
+PREVIOUS_ZIP_SHA256 = "74d684e60ca61a225269581dd633a597efe747e0e6d40024148d955730c33cec"
+PREVIOUS_SOURCE = "51cee578f4ab220d82446482618babbfa74093dd"
 
 
 class FolderArchive:
@@ -62,8 +46,8 @@ class FolderArchive:
     def read(self, name: str) -> bytes:
         return (self.root / name.split("/", 1)[1]).read_bytes()
 VOLUME_BYTES = 50 * 1024 * 1024
-MARKETING = "1.0.453"
-BUILD = "453"
+MARKETING = "1.0.480"
+BUILD = "480"
 BRIDGE = "42"
 
 
@@ -86,7 +70,7 @@ def committed_private_files(ref: str = "HEAD") -> dict[str, bytes]:
             relative = name[len(SOURCE):]
             suffix = PurePosixPath(relative).suffix.lower()
             current_guide = relative == "请在Mac编译前先读.md"
-            cozy_doc = relative.startswith(BUNDLE + "games/cozy-home/") or relative.startswith(BUNDLE + "assets/travel-home/")
+            cozy_doc = relative.startswith(BUNDLE)  # All runtime docs/lists/notices, including stickers.txt, must ship.
             if suffix == ".md" and not (current_guide or cozy_doc): continue
             if suffix == ".txt" and not cozy_doc: continue
             process.stdin.write((commit + ":" + name + "\n").encode("utf-8")); process.stdin.flush()
@@ -99,767 +83,121 @@ def committed_private_files(ref: str = "HEAD") -> dict[str, bytes]:
     return files
 
 
-def validate(files: dict[str, bytes]) -> None:
-    required = {
-        "PhoneCompanionTest.xcodeproj/project.pbxproj",
-        "PhoneCompanionTest/Info.plist",
-        "PhoneCompanionTest/PhoneCompanionTest.entitlements",
-        "PhoneCompanionTest/LocalPhoneWebView.swift",
-        "PhoneCompanionTest/PhoneNativeBridge.swift",
-        BUNDLE + "app.js",
-        BUNDLE + "cozy-home.js",
-        BUNDLE + "games/cozy-home/private-bridge.mjs",
-        BUNDLE + "index.html",
-        BUNDLE + "小手机.html",
-        BUNDLE + "private-runtime-diagnostics.js",
-        BUNDLE + "private-cloud-backup.js",
-        BUNDLE + "desk-pet.js",
-        BUNDLE + "pf-group-role.js",
-        "请在Mac编译前先读.md",
-    }
-    missing = sorted(required - files.keys())
-    assert not missing, "missing private files: " + ", ".join(missing)
-    assert not [n for n in files if n.lower().endswith((".md", ".txt")) and n != "请在Mac编译前先读.md" and not n.startswith((BUNDLE + "games/cozy-home/", BUNDLE + "assets/travel-home/"))], "only the current Mac guide and cozy-home documentation are retained"
 
-    license_gate = text(files[BUNDLE + "license-gate.js"])
-    assert "https://license.smallphoneapp.com" in license_gate
-    assert "function browserLicenseBase(endpoint)" in license_gate
+def file_hash(path):
+    digest = sha256()
+    with path.open("rb") as stream:
+        while chunk := stream.read(4 * 1024 * 1024): digest.update(chunk)
+    return digest.hexdigest()
+
+
+def validate(files):
+    for name in ("PhoneCompanionTest.xcodeproj/project.pbxproj", "PhoneCompanionTest/PhoneNativeBridge.swift", "PhoneCompanionTest/CheckInShortcuts.swift", "PhoneCompanionTest/PhoneCompanionTest.entitlements", "PhoneCompanionTest/LocalPhoneWebView.swift", "请在Mac编译前先读.md"):
+        assert name in files, name
     app = text(files[BUNDLE + "app.js"])
-    index = text(files[BUNDLE + "index.html"])
-    alias = text(files[BUNDLE + "小手机.html"])
-    pbx = text(files["PhoneCompanionTest.xcodeproj/project.pbxproj"])
+    assert f"APP_VER='v{WEB_VERSION} · 设置黑底蓝色与记仇先开口'" in app
+    runtime = app + text(files[BUNDLE + "cohab-theater.js"]) + text(files[BUNDLE + "glass-theme.css"])
+    for marker in ("GRUDGE_JAIL_ANNOUNCE_V1", "roleJailAnnounced(decisionText)", "data-settings-appearance", "OFF_LAST_SESSION_V1", "CONTACT_PHOTO_DEL_V1", "APP_SOLID_MODAL_V1", "COHAB_GLASS_NO_COLOR_V1", "VOICE_SEND_DIAG_V1", "ROLE_LOCK_UNTIL_V1"):
+        assert marker in runtime, marker
+    assert "SETTINGS_BLACK_BLUE_V1" in text(files[BUNDLE + "glass-theme.css"])
+    assert "DAILY_CHECKIN_V1" in text(files[BUNDLE + "phone-shortcuts.js"])
+    for name in ("private-cloud-backup.js", "cohab-theater.js", "task-notes.js", "license-gate.js", "delivery.js", "private-runtime-diagnostics.js"):
+        assert BUNDLE + name in files, name
     bridge = text(files["PhoneCompanionTest/PhoneNativeBridge.swift"])
-    web_view = text(files["PhoneCompanionTest/LocalPhoneWebView.swift"])
-    backup = text(files[BUNDLE + "private-cloud-backup.js"])
-    delivery = text(files[BUNDLE + "delivery.js"])
-
-    assert '.lockscreen{touch-action:none;overscroll-behavior:none;' in index
-    assert '.lockscreen.dragging{transition:none;}' in index
-    assert 'function lockGestureReset()' in app
-    for marker, label in [
-        ("async function controlClaimConfirm(reply,c,id,opt)", "v1349 说的话不执行，只回头确认"),
-        ("【说和做分开·最高优先级】你说的话永远不会锁或解锁任何东西", "v1349 管控提示词说和做分开"),
-        ("只有真的锁上或解锁时弹一下系统提示，自动消失，不写进聊天。", "v1355 锁定提示改为弹窗"),
-        ("function transferMarkRoleSeen(list)", "v1349 旧转账不再突然收款"),
-        ("function webShareCardMsg(q,raw)", "v1349 联网结果卡片"),
-        ("原文模式也要执行控制指令", "v1349 原文模式整行指令执行"),
-    ]:
-        assert marker in app, f"package would drop a required repair: {label}"
-    assert "function extractControl(" not in app, "package restored speech-driven control"
-    for marker, label in [
-        ("function rpOpen(", "v1356 红包点开是「開」"),
-        ("function renderRpSend(", "v1356 发红包页"),
-        ("function renderTfSend(", "v1356 转账键盘页"),
-        ("<b>${RP_DEFAULT_NOTE}</b>${line?`<em>${esc(line)}</em>`:''}", "v1356 红包标题固定、祝福语第二行"),
-        ("line=st==='pending'?(memo||copy):(memo?copy+' · '+memo:copy)", "v1356 转账卡片显示备注"),
-        ("【本轮是从'+where+'回到微信后你主动发的第一条（最高优先级）】", "v1356 共同生活后主动消息接着共同生活说"),
-        ("|吃过(?:饭|早饭|早餐|午饭|晚饭|晚餐|午餐|夜宵|东西)?(?:了|啦|咯|喽)|", "v1356 认得「吃过饭了」"),
-        ("return top.concat(kept,tail).join('\\n').slice(-8000);", "v1356 后台上下文保住状态行"),
-    ]:
-        assert marker in app, f"package would drop a required repair: {label}"
-    for marker, label in [
-        ("function gqPressStart(gid,mid)", "v1363 群聊长按引用"),
-        ("function rpSplitCents(total,count,rand)", "v1363 群红包拼手气"),
-        ("if(pfIsRpGrabTransport(kept)){pfAbsorbRpGrab(gid,from,kept);return false;}", "v1363 真人群抢红包同步"),
-        ("function renderGroupRpSend(c)", "v1363 群发红包页"),
-        ("function groupPayPick(kind,id)", "v1363 群转账选择收款方"),
-        ("function gmCanActOn(kind,id,actor,target,action)", "v1363 群管理规则"),
-        ("function renderGroupInfoPage(", "v1363 聊天信息页"),
-        ("if(!spoke&&why.length){", "v1363 群里没人回说原因"),
-        ("function gCallSolo(g,cid)", "v1363 单独/合并调用"),
-        ("async function groupBatchReplyItems(g,batch,recent,why)", "v1363 合并调用拆回每个人"),
-        ("function applyGroupUnmuteTag(content,c)", "v1363 禁言后私聊能解禁"),
-        ("content=applyControlTags(content,c,id,_statedPwd,_userText);content=applyGroupUnmuteTag(content,c);", "v1363 私聊回复处理 [群解禁]"),
-    ]:
-        assert marker in app, f"package would drop a required repair: {label}"
-    assert ".msg.them.gnamed>span:first-child{margin-top:2px}" in index, "group bubble position missing"
-    assert ".msg.them>.col>.bubble{align-self:flex-start}" in index, "v1365 quote box stretches bubble again"
-    assert "function dyGCallSolo(g,m)" in app, "v1365 douyin solo/merged calls missing"
-    assert "function cohabTapWait(id,item,timing)" in app and "cohabTapOn(o))cohabTapWait(c.id,item,timing).then(res)" in app, "v1369 common life tap-for-next-line missing"
-    assert "mentioned.forEach(c=>plan.push(pick(c,true)));if(couple&&mentioned.indexOf(couple)<0)plan.push(pick(couple,true));" in app, "v1369 named roles first missing"
-    assert "if(got.failed){" in app, "v1369 merged call fallback missing"
-    assert ".cohab-tap-hint{" in index, "v1369 tap hint style missing"
-    assert "function relPromptFor(c,focus,opt)" in app and "function relFriendSys(cid,f)" in app and "function relKinGroup(title)" in app, "v1381 relationship network missing"
-    assert "function renderHisCard(c)" in app and ".hcard-page{" in index, "v1381 name card page missing"
-    assert "if(typeof relConsumeTags==='function')r=relConsumeTags(r,c);" in app, "v1381 offline relation tags missing"
-    assert "function redpOpen(scope,key,mid){" in app and "function relSelfText(k){" in app, "v1389 role play open / own birthday missing"
-    assert "function pursuitPlanAhead(c){" in app and "function phClearStaleSimCall(){" in app and "setInterval(pursuitSweep,1000);" in app, "v1401 pursuit timing missing"
-    assert "function dyRA(cid,fallback){" in app and "function pursuitOnUserSms(num){" in app and "body.remote-forced .remote-stop{display:none!important}" in index and ".nf-action .accept{background:#07c160" in index, "v1399 features missing"
-    desk = text(files[BUNDLE + "desk-pet.js"])
-    assert "function renderDeskPetPage(){" in desk and "function deskPetWear(k){" in desk and "function watchMessages(now)" in desk, "v1407 desk pet missing"
-    assert f'desk-pet.js?v={WEB_VERSION}' in index, "private entry does not load desk-pet.js"
-    assert "else if(c.p==='deskPet')html=" in app and "deskPetConsume(line,c);continue;" in app and "s+=deskPetPrompt(c);" in app, "v1407 desk pet wiring missing"
-    assert "桌面伙伴 · 表情联动" not in text(files[BUNDLE + "private-robot-face.js"]), "duplicate 小 K settings row came back"
-    pfr = text(files[BUNDLE + "pf-group-role.js"])
-    assert "function pfRoleRow(m,pl,gid,g){" in pfr and "function quietByRule(gid){" in pfr and f'pf-group-role.js?v={WEB_VERSION}' in index and "pfRoleRow(m,pl,gid,g)" in app, "v1419 roles in real groups missing"
-    assert "return bubbleSingleHTML(m.text,'',bstyle,me);}" in app, "v1419 grey @ bubble missing"
-    assert "function roleMarkRead(id){" in app and "function roleSeenTick(){" in app and "function pfReadInPlace(id){" in app and ".msgread-line{position:absolute" in index, "v1413 read receipts missing"
-    assert "'平静':{eyes:'open',cls:''}" in text(files[BUNDLE + "desk-pet.js"]), "v1413 calm desk pet eyes missing"
-    assert "function holidayCare(id,name,date,opt){" in app and "LUNAR_FESTIVALS" in app and "if(!_wantBg)continue;" in app, "v1409 holiday care / explicit background missing"
-    assert "function schedAddLeave(id){" in app and "function roleDayOff(c,t){" in app, "v1407 manual leave / holidays missing"
-    assert "async function audioOrphanGC(){" in app and "storage.clearTemp" in app and 'case "storage.clearTemp":' in bridge, "v1391 cleanup missing"
-    assert "countIDBKeys(imgDB,'img'," in app and "storage.clearWebCache" in app and ".hcard-head>div:not(.avatar)" in index, "v1389 storage detail / card avatar missing"
-    assert "function groupQrParse(" in text(files[BUNDLE + "wechat-me.js"]) or "groupQrParse" in text(files[BUNDLE + "wechat-me.js"]), "group QR scan hook missing"
-    assert "连不上配对服务器" in text(files[BUNDLE + "public-north-runtime.js"]), "pairing retry missing"
-    theme = text(files[BUNDLE + "glass-theme.css"])
-    assert ".wxlight .wx-tfs-panel{background:#fff}" in theme and ".wx-rp-main{min-height:60px;padding:12px 14px 6px;" in theme, "red packet styles missing"
-    for name in ["robot-face-protocol.js","private-robot-face.js","private-robot-voice.js","private-device-history.js","private-cloud-usage.js","assets/k-default-face.png"]:
-        assert BUNDLE + name in files, "robot K component missing: " + name
-        assert f'{name}?v={WEB_VERSION}' in index or name.startswith("assets/"), "private entry does not load " + name
-    assert "return APPNAME2KEY[n]||Object.keys(LOCKABLE).find(k=>LOCKABLE[k]===n);" in app, "cinema/travel lock names would fail again"
-    assert "toast((c.remark||c.name)+notices.join('，'),2600);" in app and "content:'🔐 '" not in app, "lock notices must be a transient toast, not a chat line"
-    assert "RobotVoice.roleActive(id)" in app and "robotFaceFirstVisible(" in app, "robot K reply hooks missing"
-    assert 'case "robot.speech.transcribe":' in bridge, "native robot speech bridge missing"
-    assert "function wechatStripReasoningEnvelope(value)" in app, "package restored the pre-v1338 reasoning leak handling"
-    assert "function browserLicenseBase(endpoint)" in text(files[BUNDLE + "license-gate.js"]), "package restored the pre-v1332 license gate"
-    for marker in ("function wxSearchJump(", "function chatJumpToMessage(", "function roleTextTranslationFlush(", "function groupTotalCap(", "function summaryPerspectiveIssue(", "function hisCollapseRepeats(", "PRIVATE_WEB_PARITY_V1769"):
-        assert marker in app, "audited shared feature missing: " + marker
-    assert ".wxs-page{" in index and "window.__northCssRetry=function" in index, "search styles or CSS retry omitted"
-    assert index == alias, "index.html and 小手机.html must stay identical"
-    assert f"window.__NORTH_SHELL_BUILD__='{WEB_VERSION}'" in index
-    assert f"APP_VER='v{WEB_VERSION}" in app
-    assert f'window.__NORTH_SHELL_BUILD__!==\'{WEB_VERSION}\'' in app
-    assert f'static let contractVersion = {BRIDGE}' in bridge
-    assert f"{MARKETING} ({BUILD})" in bridge
-    assert f"{MARKETING} ({BUILD})" in web_view
-    assert pbx.count(f"CURRENT_PROJECT_VERSION = {BUILD};") == 12
-    assert pbx.count(f"MARKETING_VERSION = {MARKETING};") == 12
-    assert f"private-cloud-backup.js?v={WEB_VERSION}" in index, "private backup component is not loaded"
-    for action in ("begin", "chunk", "commit", "progress", "abort"):
-        assert f"account.backup.file.{action}" in backup, f"private backup action missing: {action}"
-        assert f'"account.backup.file.{action}"' in bridge, f"native backup action missing: {action}"
-    assert "const CHUNK=192*1024" in backup, "private backup fell back to an oversized whole-object bridge"
-    assert "account.backup.file.commit',{token},1920000" in backup, "web backup timeout does not cover the complete multi-part native upload"
-    assert "手机号私人备份和网页镜像是两个入口" in backup, "private account backup still starts a second full web mirror"
-    assert "privatePrimaryMirrorUpload(await fullBackupState())" not in backup, "private account backup regenerates the full archive"
-    assert "await cloudBackup({current,onProgress:" in app, "existing web cloud backups are no longer updated"
-    assert "id=\"cloud_backup_now\"" in app and "上一份云备份仍在进行" in app, "web cloud progress or duplicate-click guard missing"
-    assert "private actor PrivateBackupFileStore" in bridge
-    assert "privateBackupChunkBytes = 4 * 1_024 * 1_024" in bridge
-    assert "privateBackupStorageURL" in bridge and "uploader.upload(" in bridge
-    assert "from: part" in bridge, "backup is not uploaded as bounded object chunks"
-    assert "/rest/v1/rpc/save_private_phone_backup_manifest" in bridge
-    assert "privateBackupFileMetadata" in bridge and "restorePrivateBackupFile" in bridge
-    assert "SHA256.hash(data: archive)" in bridge, "restore checksum guard missing"
-    assert '"backup_storage_failed"' in bridge, "storage failures are mislabeled as account failures"
-    assert "action === 'account.backup.file.commit' ? 1800000 : 60000" in web_view
-    assert "PrivateBackupUploadProgressDelegate" in bridge
-    assert "正在上传私人云备份" in backup
-    assert "backup_upload_timeout" in bridge
-    assert "isa = PBXFileSystemSynchronizedRootGroup;" in pbx and "path = PhoneCompanionTest;" in pbx
-    assert not re.search(r"membershipExceptions = \([^)]*private-cloud-backup\.js", pbx, re.S), "private backup component was excluded from the Xcode target"
-    for marker, label in [
-        ("function explicitMemoryFromUserText(", "v1333 明确长期外卖偏好直接保存"),
-        ("function contextualKfcAction(", "v1333 KFC 随便点和四件套续接"),
-        ("function brandOnlyDeliveryRequest(", "v1333 只说品牌时自然追问"),
-    ]:
-        assert marker in delivery, f"package would drop a required delivery repair: {label}"
-
-    # Repairs that must ride along in every package. Keep in step with
-    # tests/permanent-fix-guard.test.mjs; a package is never allowed to drop one.
-    for marker, label in [
-        ("const label=cohabActivityClean(spec.label)", "v1248 作息同步清洗后比较"),
-        ("clearTimeout(_roleServerPushSoonTimers[key])", "v1248 角色服务器同步去抖"),
-        ("else if(/^[（(【]/.test(raw)&&!/[）)】]$/.test(raw))", "v1246 截断旁白识别"),
-        ("open=!closed&&line.match", "v1246 原文输出路径截断旁白"),
-        ("function offlineReplyBudget(input,c)", "v1247 共同生活回复长度可调"),
-        ("s_cmax_offline", "v1247 独立回复长度设置项"),
-        ("backupJsonBlob", "大存档分段备份"),
-        ("pfSyncMaybeYield", "好友同步让出主线程"),
-        ("_fullBackupSkippedImages.add(key)", "v1249 完整备份跳过坏图"),
-        ("nowMin<toMin(sp.time)", "v1249 定时查岗当天补跑"),
-        ("offArchiveUnfinishedSession(o)", "v1249 未结束约会先归档"),
-        ("roleOnlineProactiveBlocked(id)&&!(cohabRestricted&&opt.requestedByUser)", "v1249 共同生活期间可来电"),
-        ("roleReplyDropEnglishNarration", "v1249 整段英文旁白本地丢弃"),
-        ("storedImageDisplaySource(m.img)", "v1251 表情包引用先还原"),
-        ("storedImageDisplaySource(S.me.homeBg)", "v1251 主屏壁纸引用先还原"),
-        ("绝不能说成你申请加ta、或你终于等到ta通过", "v1251 好友申请方向按来源区分"),
-        ("绝对不要反问“你是谁”“你哪位”", "v1251 陌生来电知道是自己拨出"),
-        ("记不记、记哪一条，完全由你自己判断", "v1251 小本子由角色自行判断"),
-        ("NATIVE_TIMEOUT", "v1251 原生请求有界"),
-        ("res.status===400&&target!=='1024x1024'", "v1251 竖图被拒退回方图"),
-        ("text=ttsDropOffLanguage(text,o);", "v1253 语音语言锁"),
-        ("(_rawOutput&&(!_vlang||_vlang==='zh'))?u.orig:pickSpoken(u.orig,_vlang)", "v1253 原文输出不绕过通话语言过滤"),
-        ("onclick=\"pfMsgMenu('${m.id}','friend'", "v1253 真人好友单聊气泡菜单"),
-        ("onclick=\"pfMsgMenu('${m.id}','group'", "v1253 真人好友群聊气泡菜单"),
-        ("roleServerPushHoldHandoff(c,handoffPeek(c,row))", "v1255 后台接力送不进去时停掉服务器任务"),
-        ("if(handoff)replyHandoffCancelRemote(handoff);", "v1255 本地已回过时取消服务器任务"),
-        ("roleInterceptPurpose:'length-continuation'", "v1255 截断续写不记入候选"),
-        ("function letterReplyBudget(c)", "v1255 信件独立回复长度"),
-        ("complete:true,unfilteredOutput:_rawOutput", "v1255 两边微信请求参数一致"),
-        ("function modelOutputUnfiltered(){return true;}", "v1255 原文输出全局默认"),
-        ("wechatReasoningLeak==='function'&&wechatReasoningLeak(t))||isRefusal(t)", "v1255 线下推理泄漏检查"),
-        ("companionControlLedgerForParser()", "v1257 解析器知道当前锁定状态"),
-        ("function controlClaimCandidates(reply)", "v1257 威胁不触发真锁（v1348 起说的话一律不执行）"),
-        ("opt.by==='role'&&companionExternalAlreadyInState(st,app,action)", "v1257 外置不重复下发"),
-        ("这不是设备读数汇报", "v1257 手动解锁改为关系事件"),
-        ("async function callChatWithRetry(messages,md,c)", "v1260 通话掉线自动重发"),
-        ("complete:true,max:callReplyBudget(c)", "v1260 通话截断续写＋独立回复长度"),
-        ("function callBackgroundInterrupted(e,mark,now)", "v1260 切后台说人话"),
-        ("hadGap=/^\\s/.test(more)", "v1260 英文续写不粘词"),
-        ("async function testCallScale()", "v1260 按通话规模测"),
-        ("let _taskBusy=false;", "v1260 _taskBusy 有声明"),
-        ("async function dyAuxChat(messages,opt)", "v1262 抖音副模型失败回落主模型"),
-        ("function dyModelFail(what,e)", "v1262 抖音失败不再静默"),
-        ("function dyProfile(){const p=S.dy.profile", "v1259 抖音「我」页"),
-        ("function dyGroupInfoView()", "v1261 抖音群聊设置"),
-        ("g.lastApplyDay=dyApplyDayKey();save();", "v1261 公开群每天一位陌生人"),
-        ("function dyGroupSpeakerPrompt(g,m)", "v1261 群里各按人设接话"),
-        ("function dyWorkCardHTML(v,opt)", "v1262 文字作品"),
-        ("function dyFriendView()", "v1262 朋友页"),
-        ("function dyGrowthTick()", "v1262 涨粉掉粉靠发作品"),
-        ("function dyCommentResponder(v)", "v1262 评论一定有角色回"),
-        ("function cohabMemoryAfterPrompt(c)", "v1259 共同生活关掉也记得"),
-        ("function memoryPruneLowStars(rows,maxStar)", "v1259 清理低星保五星"),
-        ("function dyUserView()", "v1265 抖音里每个人都有主页"),
-        ("function dyPersonFind(key)", "v1265 按各种 key 找人"),
-        ("function dyGMembersView()", "v1265 群成员独立成页"),
-        ("function dyMemoryPrompt(c)", "v1265 抖音的事进角色记忆"),
-        ("function dyChatCtxRows(box)", "v1265 私聊群聊各自调上下文"),
-        ("function dyReplyBudget()", "v1265 回复长度跟设置走"),
-        ("function dyTypingHTML(face)", "v1265 等回复时三个点"),
-        ("function dyFace(v,cls)", "v1265 陌生人统一灰底小人"),
-        ("'@'+(toName||S.me.name)+' '+said", "v1265 角色回评论先 @ 人"),
-        ("m.from==='me'?av(dyAvatar(),'sm'):dyFace(dyRA(d.cid,d.avatar),'sm')", "v1265 私信我这边也有头像"),
-        ("function chatFileText(file)", "v1266 她发的文件真的读得到"),
-        ("function chatFileContextBody(m)", "v1266 文件正文进上下文"),
-        ("function roleFileExtract(content)", "v1266 角色能写多行文件"),
-        ("function chatFileOpen(cid,mid)", "v1266 文件卡点得开"),
-        ("chatFunctionItem('骰子','dice'", "v1266 骰子回到功能面板"),
-        ("function dyPersonBio(p)", "v1267 抖音简介单独存，不是人设"),
-        ("function dyUserBioGen()", "v1267 让 TA 自己写简介"),
-        ("function dyUserKey()", "v1267 主页是独立的一页"),
-        ("function dyOpenDMUser(id)", "v1267 私聊点头像进主页"),
-        ("function dyUserBack()", "v1267 主页返回回到来的那一页"),
-        ("function dyMarkAllSeen(kind,rows)", "v1268 红点进页面就全清"),
-        ("function dySparkTick(d)", "v1268 火花只涨不清零"),
-        ("function dyDMBubbles(raw)", "v1268 私聊能连发 1～4 条"),
-        ("function dyGCast(g,fromText,forceKeys)", "v1268 群聊按性格出场"),
-        ("function dyGTalk(m)", "v1268 话痨度"),
-        ("function dyGCareHit(m,text)", "v1268 在意的话题会把人拽出来"),
-        ("function dyGCrowdPrompt(g,crowd)", "v1268 网友合并一次调用"),
-        ("function dyGCmdDeny(g,actorKey,kind,target)", "v1268 禁言踢人的规矩由代码硬卡"),
-        ("function dyGMutedBarHTML(g)", "v1268 被禁言时输入框锁死"),
-        ("function dyDMRunUnmute(cid,text)", "v1268 私信里能解禁"),
-        ("async function dyGroupIdleChat(gid)", "v1268 群里冷场会自己聊起来"),
-        ("function dyPersonIP(p)", "v1268 IP 跟人设走"),
-        ("function dyGBubbles(g,m,raw)", "v1269 群聊气泡一条条出"),
-        ("function dyGSplitAt(line)", "v1269 一个气泡不能 @ 两个人"),
-        ("function dyDing()", "v1269 收到消息的提示音"),
-        ("function dySparkBadge(d)", "v1269 火花在顶部名字旁边"),
-        ("function dyEmojiPanelHTML(scope,id)", "v1269 输入栏复用微信表情"),
-        ("function dyMoneySend(scope,id,kind)", "v1269 转账红包走微信账本"),
-        ("function dyGreed(m)", "v1269 抢红包手速看性格"),
-        ("function dyPostImage(shoot)", "v1269 拍摄或从相册"),
-        ("function dyWorkSceneText(v)", "v1269 看不见图绝不编"),
-        ("async function dyAtFansShow(v,p,fans)", "v1269 粉丝来捧场"),
-        ("function dyDMKey(d)", "v1269 误删过的私聊 key，别再掉"),
-        ("function dyDMStamp(rows,mi)", "v1269 误删过的时间戳，别再掉"),
-        ("sub==='group')return{id:'.dyg-box',stick:true}", "v1271 群聊不再弹回顶部"),
-        ("if(!dyGFind(g,m.k))continue;", "v1271 被踢的人不能再说话"),
-        ("function dyWorkMusicPlay(id)", "v1271 作品配乐真的能放"),
-        ("function onlineMemoryRecallLimits()", "v1274 线上记忆引用上限"),
-        ("function offMemoryRestoreScroll(top)", "v1274 线下记忆删除保持滚动位置"),
-        ("function callResponseUnits(pieces,lang,rawOutput)", "v1281 通话内嵌翻译拆分与去重"),
-        ("m._call&&!m._callTranslationOf", "v1281 通话记录隐藏翻译辅助行"),
-        ("\\s*[^|｜:：\\]】]+\\s*[|｜:：][^\\]】]+", "v1281 所有智能家居标签最终隐藏"),
-        ("function phImsgOn(num,sk)", "v1294 信息页照 iMessage 重做"),
-        ("function phSmsBgMap()", "v1294 聊天背景一人一张"),
-        ("function phSmsPic(num,sk)", "v1294 ＋ 点一下开相册"),
-        ("function phSendSmsImage(num,sk,src,opt)", "v1294 短信能发图片"),
-        ("function phRoleSetSmsBg(num,sk)", "v1294 角色把照片换成短信背景"),
-        ("c.chatBg=last.src;save();", "v1294 角色把照片换成微信背景"),
-        ("function phCtxRows()", "v1294 上下文统一跟随全局"),
-        ("function phSmsBubbleRange(c)", "v1294 短信条数跟通讯录设置"),
-        ("function phDeliverSmsBubbles(num,sk,list,c)", "v1294 短信一条条出"),
-        ("function phSmsTypingSet(num,sk,on)", "v1294 短信正在输入的三个点"),
-        ("function phSmsTyping()", "v1294 有字才出现蓝色发送键"),
-        ("const bg=phSmsBg(num),name=phName(num),sel=phSmsSelOn(sk);", "v1296 主号／匿名号那条不压在输入框上面（v1313 起这行还带多选开关）"),
-        ("async function phSmsVision(m,file)", "v1298 短信里的照片真的识图"),
-        ("function phSmsImgLine(m)", "v1298 识出来的画面进上下文"),
-        ("function phSmsRetryVision(num,mid,sk)", "v1298 没识出来的能重试"),
-        ("else setTimeout(()=>phAutoSmsReply(num,line),700+Math.random()*900);", "v1298 发完图非角色联系人也有人回"),
-        ("d.msgs.slice(-phCtxRows())", "v1294 X 私信跟随全局上下文"),
-        ("Number.isFinite(n)&&n>0?n:Math.min(60,phCtxRows())", "v1294 抖音私信没单独设就跟随全局"),
-        # ——— v1300 这一轮 ———
-        ("async function compressChatBackground(file)", "v1300 聊天背景不再压画质"),
-        ("compress(file,2600,.93)", "v1300 聊天背景第一档 2600/.93"),
-        ("chatBg=await compressChatBackground(f)", "v1300 微信换背景走高清那档"),
-        ("src=await compressChatBackground(f);", "v1300 短信换背景走高清那档"),
-        ("compress(f,1400,.82)", "v1300 短信发图不再压到 900"),
-        ("activitySpec(c,roleClockDate(d.phaseAt))", "v1300 共同生活手动保存用角色的钟"),
-        ("if(d.phase==='home')return ['在家',place?'在'+place:'',extra]", "v1300 在家也显示正在做什么"),
-        ("placeHint=opt.placeSet?(opt.place||'')", "v1300 手动清空地点就是清空"),
-        ("source:'owner-manual'});closeModal();render();", "v1300 手动改完一定重绘"),
-        ("const PH_FX_TEXT=[", "v1300 文字特效"),
-        ("function phFxRuns(text,ch)", "v1300 效果按字存、连着的合成一段"),
-        ("function phFxSync()", "v1300 改字时效果跟着那几个字走"),
-        ("function phFxSendHold(", "v1300 长按发送键带效果发送"),
-        ("function phScreenFx(kind,m)", "v1300 整屏特效"),
-        ("function phSmsPlusMenu(", "v1300 文字效果收进 ＋ 里"),
-        # ——— v1302 这一轮：抖音发作品四处修复 ———
-        ("function roleDouyinDedupeText(c,tx)", "v1302 重复文案自动编号，绝不静默吞掉"),
-        ("const DY_TAG_RE=", "v1302 发抖音标签按行贪婪匹配"),
-        ("const DY_TAG_BARE_RE=", "v1302 光秃秃的 [发抖音] 也认"),
-        ("async function ensureRequestedDouyin(content,c,userText)", "v1302 她明确让发就兜底补一条"),
-        ("function roleDouyinAskIntent(text)", "v1302 分得清「发个抖音」和「先别发抖音」"),
-        ("return roleDouyinRecentImage(c,3*3600000,12)", "v1302 没点名也往回看三小时十二条"),
-        ("function dyMusicCoverHTML(s,cls)", "v1302 歌的封面从图库里取"),
-        ("dyDelVideo('${id}')", "v1302 别人的作品也删得掉"),
-        # ——— v1300 这一轮的特效返工也在这一包里 ———
-        ("function phFxOpenText(", "v1300/1302 一个字一个字地挑"),
-        ("function phFxParseTags(", "v1302 角色自己也能发特效"),
-        ("function phFxTagHelp(", "v1302 提示词里把特效标签讲给他听"),
-        ("const PH_INV_DONE=", "v1302 隐形墨水刮开六成就散"),
-        ("function phInvScratch(", "v1302 隐形墨水是手指刮的"),
-        ("groupComposerHTML('pffriend'", "v1302 真人好友用和角色一样的聊天框"),
-        # ——— v1305 这一轮：特效按她的反馈返工 ———
-        ("function phFxSwell(node)", "v1305 字撑大了气泡跟着鼓"),
-        ("if(Math.abs(grow)<8||Math.abs(grow)/bw<.12)return;", "v1305 撑不动就不撑（「比较小的就不会」）"),
-        ("function phFxSwellAll()", "v1305 重绘之后重新量气泡"),
-        ("const SR=stage.getBoundingClientRect(),SH=", "v1305 按屏幕真实高度算，不再用 vh"),
-        ("--rise:${(SH*(1-cy/100)).toFixed(0)}px", "v1305 烟花真的从屏幕底部升空"),
-        # ——— v1307 这一轮：短信语音 + 特效再返工 ———
-        ("function phSmsVoiceHelp(c)", "v1307 告诉角色短信也能发语音"),
-        ("m.voice=1;m.type='voice';m.role='assistant';m.content=say;m.text=say;", "v1307 语音存成和微信一样的形状"),
-        ("function phVoiceTap(num,mid,sk)", "v1307 点一下播放并转文字"),
-        ("function phSmsVoiceLine(m)", "v1307 语音进上下文时带上原文和翻译"),
-        ("function phSmsLineText(m)", "v1307 图片和语音都要让模型看见"),
-        ("scheduleVoiceWarm(m,c,voiceProgressiveOn())", "v1307 收到语音就预热 TTS"),
-        ("const PH_BURST_FLY=2300,PH_BURST_GONE=5000;", "v1307 爆发摔两下、消失整整五秒"),
-        ("function phBurstPlay(node)", "v1307 爆发贴到屏幕层上飞（气泡会裁掉）"),
-        ("const dir=i%2?1:-1,bx=dir*(52+((i*37)%37))", "v1307/1309 爆发方向按序号算死，范围已收小"),
-        ("const a=n*2.399963", "v1307 回声落点用黄金角铺满整屏"),
-        ("if(b>a&&b<=text.length)for(let i=a;i<b;i++)pick.push(i);", "v1307 选字默认一个都不选"),
-        # ——— v1309 这一轮 ———
-        ("async function pfStickerImage(s)", "v1309 真人好友表情包先把真图读出来"),
-        ("async function pfStickerBody(s)", "v1309 表情包打包（读出真图之后再判大小）"),
-        ("const r=await pfStickerBody(s);if(!r.body){toast(r.why);return;}", "v1309 读不出来要吭一声"),
-        ("const stk=storedImageDisplaySource(p.img);", "v1309 以前发坏的表情包也能显示"),
-        ("function dyGMuteWechatFollowup(g,actorKey,mins)", "v1309 抖音群禁言之后来微信找她"),
-        ("function dyGMuteContext(g,n)", "v1309 把当时群里真的发生了什么带过去"),
-        ("if(target.k==='me'&&actorKey!=='me')wx=dyGMuteWechatFollowup(g,actorKey,mins);", "v1309 只有她被别人禁才触发"),
-        ("function dyGUngagFromWechat(cid)", "v1309 他写 [解禁] 真的解掉"),
-        ("function consumeDouyinUngag(content,c,audit)", "v1309 [解禁] 标签不显示出来"),
-        # ——— v1311 这一轮 ———
-        ("const prevLast=pc.last;pc.n++;pc.last=Date.now();save(0);", "v1311 每日一封信先占坑再写"),
-        ("live.n--;live.last=prevLast;save();", "v1311 信写失败要退坑"),
-        ("不许替'+S.me.name+'把还没发生的事演完", "v1311 不许角色预演没发生的事"),
-        ("function callActionLineForeign(line)", "v1311 通话动作描写必须中文"),
-        ("function callStripForeignActions(text)", "v1311 外文动作整行丢掉"),
-        ("content=callStripForeignActions(content);", "v1311 挂在通话处理链上"),
-        ("if(typeof document!=='undefined'&&document.hidden)return true;", "v1311 后台说话不误报网络"),
-        ("function liveLocMatch(text)", "v1311 只认城市、不兜底"),
-        ("liveLocMatch(hint)||liveLocMatch(c.city)||liveLocMatch(charHomeCity(c))", "v1311 地图跟资料里的城市走"),
-        ("<span class=\"cmt-re\">回复</span>", "v1311 朋友圈去掉 @"),
-        # ——— v1313 这一轮 ———
-        ("function phFxWantFromText(text)", "v1313 认出她在短信里要哪个效果"),
-        ("const PH_FX_WANT_CUE=", "v1313 得像在要才算点单，随口感叹不算"),
-        ("function phFxWantPrompt(want)", "v1313 把「必须写这个标签」钉进这一轮"),
-        ("function phSmsApplyWantedFx(num,sk,sent,want)", "v1313 他忘了写标签就兜底补上"),
-        ("phFxTagHelp()+phFxWantPrompt(_want)", "v1313 挂在短信那一轮的系统提示上"),
-        ("phSmsApplyWantedFx(num,sk,_sent,_want)", "v1313 发完真的兜底"),
-        ("function phSmsSelEnter(num,sk)", "v1313 短信多选删除"),
-        ("function phSmsSelBarHTML()", "v1313 多选时底栏换成删除条"),
-        ("function phSmsComposerHTML(num,sk)", "v1313 输入框抽出来了"),
-        ("多选删除信息", "v1313 ＋ 号里的入口"),
-        ("function phClearContactChat(num)", "v1313 联系人页一键清空全部聊天"),
-        ("function phContactSmsKeys(num)", "v1313 只清这个人名下的几条线"),
-        ("if(_main){const gd=(c.grudges||[]);", "v1313 统一模式下也把记仇本发给角色"),
-        ("if(!_natural&&_gn>=8&&S.couple", "v1313 满 8 笔关小黑屋保留原样，没顺手打开"),
-        ("这本子只有你自己看得见", "v1313 什么事值得记，写清楚了"),
-        # ——— v1325 这一轮 ———
-        ("s+='\\n- 聊天背景：'+S.me.name+'让你把某张照片换成你们的聊天背景", "v1325 换背景说明单独发，不再挂在表情包的 if 里"),
-        ("只在嘴上说「换好了」是没有用的", "v1325 光说没用，写死在提示词里"),
-        ("function wechatBgRequest(text)", "v1325 认出她在要换背景"),
-        ("function wechatApplyBgRequest(c,id)", "v1325 他忘了写标签就替他换上"),
-        ("if(_wantBg&&!_bgApplied)wechatApplyBgRequest(c,id);", "v1325 收尾兜底"),
-        ("const OFF_THEME_DEF=", "v1325 线下配色"),
-        ("function offStageAttrs(c)", "v1325 线下主题＋背景挂到舞台上"),
-        ("function offAppearance(id)", "v1325 线下外观面板"),
-        ("function offSkinSet(id,skin)", "v1325 两套主题切换"),
-        ("t.skin=t.skin==='classic'?'classic':'glass';", "v1325 主题只认这两个"),
-        ("function offBgPick(id)", "v1325 线下换背景（不压画质）"),
-        ("function offFieldHTML(placeholder)", "v1325 线下输入框包了一层玻璃"),
-        ("const PF_CID_PREFIX='pf:'", "v1325 真人好友转账走角色那一套"),
-        ("function pfTransferView(m)", "v1325 pf 转账翻成角色转账的形状"),
-        ("function pfTransferDetailAction(fid,mid,action)", "v1325 pf 收款/退还"),
-        ("function pfHandleTransferRefund(m)", "v1325 对方退还之后钱退回来"),
-        ("p.type==='style_update'||p.type==='transfer_refund'", "v1325 退还消息不当气泡显示"),
-        ("c.p==='pfchat'?'pf_input':'ginput'", "v1325 真人好友 1v1 的输入框终于被绑上"),
-        ("else if(c.p==='pfchat')sendPhoneFriend(c.id)", "v1325 回车也能发"),
-        ("||c.p==='pfchat')afterGroupComposer(c);", "v1325 渲染完要去绑"),
-        ("${pfPanelHTML(id)}`;}", "v1325 真人好友功能面板在输入框下面"),
-        ("${pfGroupPanelHTML(gid)}`;}", "v1325 群聊功能面板也在下面"),
-        ("onclick=\"genCharPrompt()\">✨ 一键生成", "v1325 新的朋友里的一键生成入口"),
-        # ——— v1329 这一轮 ———
-        ("function deliveryStructuredActionTags(value)", "v1329 外卖动作支持商品名内部嵌套中文方括号"),
-        ("function deliveryIsolateStructuredActions(value)", "v1329 外卖动作与角色正文可靠分行"),
-        ("function deliveryReplaceStructuredActions(value,replacer)", "v1329 通话路径同样完整消费嵌套外卖动作"),
-        ("任何未完整消费的外卖控制标签都必须静默拦截", "v1329 畸形外卖标签不会显示成角色气泡"),
-        ("function storedImageElementSource(v)", "role cover cache-miss hydration"),
-        ("应用处理\\s*[|｜]", "internal app decision visibility"),
-    ]:
-        assert marker in app, f"package would drop a required repair: {label}"
-    # 这一轮的外壳样式同样不许漏（信息页整页都靠它们）
-    for marker, label in [
-        (".imsg-row.them .imsg-b{padding:8px 14px 8px 21px;clip-path:polygon(", "v1294 气泡连尾巴一整块剪出来"),
-        (".imsg-row.them .imsg-b:before{clip-path:polygon(", "v1294 高光是沿轮廓描的细线"),
-        ("backdrop-filter:brightness(1.72) saturate(1.68)", "v1300 高光跟着背景变颜色"),
-        (".imsg-row .imsg-b.pic{padding:0!important;background:none!important;", "v1294 图片是原模原样的"),
-        (".imsg-b.typing>i span{", "v1294 短信正在输入的三个点"),
-        (".imsg-tick{", "v1313 多选的小圆圈"),
-        (".offmsg.them .offbubble{padding:9px 15px 9px 22px;background:var(--offc-them);", "v1325 线下气泡走同一套轮廓"),
-        (".offstage .offmsg .offbubble:before{", "v1325 线下那条细高光环"),
-        (".offstage{--offc-me:#0a84ff;", "v1325 线下配色变量"),
-        (".off-field:before,.offinput .send:before{", "v1325 输入框和按钮那圈挖空的环"),
-        (".off-date-nav>.t{position:absolute!important;left:50%!important;", "v1325 线下昵称按整条栏居中"),
-        (".off-reply-top{position:relative;height:27px;", "v1325 让TA回改成灰玻璃"),
-        (".offstage.off-classic .offmsg .offbubble{clip-path:none!important;", "v1325 原来那套主题原样留着"),
-        (".offstage.hasbg{background-size:cover;background-position:center;background-repeat:no-repeat;}", "v1325 壁纸真的铺满全屏"),
-        (".offstage.hasbg:not(.off-classic) .cohab-settings{", "v1325 共同生活设置也变玻璃"),
-        (".offstage.hasbg:not(.off-classic) .cohab-status-chip{position:relative;", "v1325 在家的状态也变玻璃"),
-        (".offstage.hasbg:not(.off-classic) .cohab-debug-reply{", "v1325 共同生活的让TA回也变玻璃"),
-        (".imsg-selbar{", "v1313 多选底栏"),
-        (".imsg-body.selmode .imsg-row.me .imsg-col{margin-left:auto;}", "v1313 多选时我的气泡照样靠右"),
-        (".dyfd-card.photo .dyimg img{width:100%;height:100%;max-height:none;object-fit:contain;}", "v1313 抖音首页图按原比例"),
-        (".dywk-frame.photo .dyimg img{width:100%;height:100%;max-height:none;object-fit:contain;}", "v1313 作品详情页图按原比例"),
-        # v1300 的玻璃：身子磨砂在父元素上，描边剪成一个环压在上面。
-        # 做法见 docs/maintenance/液态玻璃_磨砂加细高光_做法.md，环由
-        # scripts/glass_ring_polygon.py 生成，别手改。
-        (".imsg-b{position:relative;max-width:74%", "v1300 气泡身子是磨砂的"),
-        ("backdrop-filter:blur(14px) saturate(1.32)", "v1300 磨砂在身子那一层"),
-        ("mask-composite:exclude;", "v1300 按钮那圈是挖空的细边"),
-        ("padding:.8px;box-sizing:border-box;", "v1300 按钮描边只有 .8px"),
-        # v1307 起爆发不在气泡里循环了（气泡的 clip-path 会把飞出去的字整块裁掉），
-        # 改成贴屏幕层飞，所以这里盯的是 .imburst 那一套，见下面
-
-        (".imsfx{position:absolute;inset:0", "v1300 整屏特效盖满全屏"),
-        (".btn.imblue{", "v1300 信息里的弹窗用气泡那个蓝"),
-        # ——— v1302 这一轮的特效返工 ———
-        (".imfx{display:inline-block;font-style:inherit;font-weight:inherit;font-family:inherit;}",
-         "v1302 加特效不许改字体"),
-        ("-webkit-mask:url(\"data:image/svg+xml,", "v1302 爱心是一整条 SVG 路径，没有拼接线"),
-        ("@keyframes imsfx-ring{", "v1302 烟花的冲击波环"),
-        (".imsfx-balloons i>u{", "v1302 气球的线插在中间"),
-        (".iminv-cv{", "v1302 隐形墨水那层刮开的画布"),
-        (".imfx-pick b.on{", "v1302 选字面板"),
-        (".dymu-cover{", "v1302 抖音选音乐的封面"),
-        # ——— v1305 ———
-        (".imsg-b.imb-swell{animation:imb-swell 4.2s infinite;}", "v1305 气泡被字撑大"),
-        ("@keyframes imfx-jitter{0%,62%,100%", "v1305 抖动提频到 11.4Hz"),
-        ("@keyframes imsfx-flutter{", "v1305 纸屑扇动那一层（不会被压成线）"),
-        ("@keyframes imsfx-hsway{", "v1305 爱心左右摇那一层"),
-        ("@keyframes imsfx-night{", "v1305 把屏幕压暗"),
-        (".imsfx-fireworks i.spark{width:0;height:0;opacity:0;", "v1305 碎片炸开前不许亮"),
-        # ——— v1307 ———
-        (".imburst{position:absolute;inset:0;", "v1307 爆发的屏幕层"),
-        ("@keyframes imburst-fly{", "v1307 爆发摔两下的轨迹"),
-        (".imfx-burst.away .imfxc{visibility:hidden;}", "v1307 飞的时候原字藏起来"),
-        ("@keyframes imsfx-echo{", "v1307 回声照真机重做"),
-        (".imsfx-echo i{left:var(--ox);top:var(--oy)", "v1307 回声从这条气泡出发"),
-        (".imsfx-fireworks{animation:imsfx-night", "v1307 放烟花时屏幕也压暗"),
-        (".imsg-b.imsgv{cursor:pointer;align-self:flex-start;}", "v1307 短信语音条"),
-        (".imsgv-wave i{", "v1307 语音条的波形"),
-        (".imsg-vtext .tr:before{content:'译 '", "v1307 外语语音底下的中文翻译"),
-        (".imsfx i{position:absolute;display:block;font-style:normal;}", "v1307 粒子里的字不许变斜体"),
-    ]:
-        assert marker in index, f"package would drop a required style: {label}"
-    for marker in ("function rolePhoneLocalRead(", "function rolePhoneLocalCommit(", "function coupleTasksEnabled(", "function pfTransferReceiptMessage(", "function effCallProb(c)", "function roleCallPreferenceOpen(id)", "function roleCallPreferenceSave(id)"):
-        assert marker in app, "missing inherited/current repair: " + marker
-    assert app.count("northNativeBackgroundTask") >= 30, "private background-task wrappers missing"
-    assert "north-native-performance-guard" in app, "private performance guard missing"
-
-    for resource in ("travel-home.js", "travel-hotel.js", "travel-hotel-data.js", "travel-guide.js", "travel-ticket-data.js", "travel-flight.js", "travel-flight-booking.js", "travel-train.js", "travel-train-booking.js", "travel-concert.js", "travel-concert-booking.js", "travel-taxi.js", "travel-regions.js", "destination-photos.js", "travel-gallery.js", "travel-payment.js"):
-        assert BUNDLE + resource in files, "missing travel module: " + resource
-        assert resource + "?v=" + WEB_VERSION in index, "unloaded travel module: " + resource
-    assert app.count("NorthTravelPayment.currentRequest(id)") == 2
-    assert "NorthTravelPayment.pending(id)" not in app
-    assert "name(c)+'代付成功'" in text(files[BUNDLE + "travel-payment.js"])
-    assert "rf-bank-expenses" in text(files[BUNDLE + "role-family-card.js"])
-    for entry in (index, alias):
-        for resource in re.findall(r'(?:src|href)=["\']([^"\'?#]+\.(?:js|css))', entry):
-            if "://" not in resource:
-                assert BUNDLE + resource in files, "missing loaded asset: " + resource
-    previous = ROOT.parent / "最新私人版本覆盖包_v1525_iOS437.zip"
-    if previous.exists():  # kept on the Windows PC; the Mac checks inheritance against the v1739 folder in main()
-      assert sha256(previous.read_bytes()).hexdigest() == "8f3bc3f9c07662989a9643eda4a054193e40fcd470977af0989b0b26f7ff1e91"
-      with ZipFile(previous) as archive:
-        prefix = next(n for n in archive.namelist() if n.endswith("/SOURCE_STATE.json"))[:-len("SOURCE_STATE.json")]
-        prior = [n[len(prefix):] for n in archive.namelist() if n.startswith(prefix) and not n.endswith("/") and not n.endswith(("SOURCE_STATE.json", "SHA256SUMS.json"))]
-        assert set(prior) - files.keys() == {BUNDLE + "daily-event-ledger.js", BUNDLE + "ai-account.js"}, "unexpected previous delivery files missing"
-
-    # Both the v1420 inheritance and this release must be in the actual archive.
-    for marker in ("function roleInternalControlLine(", "function gRpRecipient(", "function groupTransferDetailAction(", "function wxUnreadTotal(", "function dyStrangerParse(", "async function pfTransportRoute(", "function offDelHistory(", "_offNarrateById", "function roleTextTranslationHTML(", "function roleChatRouteSet(", "function roleMomentImagesAllowed("):
-        assert marker in app, "missing v1420/v1422 repair: " + marker
-    theater = text(files[BUNDLE + "cohab-theater.js"])
-    for marker in ("function theaterTurnOrder(", "function theaterSyncAddressFromUI(", "t.addressAway", "roleInternalControlLine"):
-        assert marker in theater, "missing inherited theater repair: " + marker
-    assert ".wx-unread-badge" in text(files[BUNDLE + "glass-theme.css"])
-    assert int(WEB_VERSION) % 2 == 1, "private release must be odd"
-
-    for name in ("mail-outbox.js", "mail-outbox.css", "role-family-card.js", "role-family-card.css"):
-        assert BUNDLE + name in files, "missing new shared feature: " + name
-        assert f'{name}?v={WEB_VERSION}' in index, "new component not loaded: " + name
-    assert "function familyRoleBuy(" in text(files[BUNDLE+"role-family-card.js"])
-    assert "function familyRoleDecide(" in text(files[BUNDLE+"role-family-card.js"])
-    assert "function mailCommitReply(" in text(files[BUNDLE+"mail-outbox.js"])
-    assert "function requestedCommand(" in text(files[BUNDLE+"desk-pet.js"]) or "deskPetRequestedCommand" in text(files[BUNDLE+"desk-pet.js"])
-    mail = text(files[BUNDLE + "mail-outbox.js"])
-    for marker in ("function mailSender(", "function mailForwardHistory(", "function mailForwardCard(", "function mailCommitReply(", "l.inReplyTo=source.id", "mail-home-back", "S.me.wxTheme==='white'"):
-        assert marker in mail, "missing latest mailbox behavior: " + marker
-    for shared in ("mail-outbox.js", "mail-outbox.css", "travel-hotel-data.js", "travel-payment.js", "travel-flight-booking.js", "travel-train-booking.js", "travel-concert-booking.js", "travel-taxi.js", "travel-guide.js", "role-family-card.js", "role-family-card.css"):
-        # v1745 syncs the v1738 web booking repair into the App, so every shared file matches web again.
-        expected = "HEAD:" + shared
-        assert files[BUNDLE + shared] == git("show", expected), "shared/private feature differs: " + shared
-    assert "mailRead" in app and "mailWrite" in app
-    assert app.count("await familyRoleConsume(content,c)") == 4
-    assert "familyRoleBank(id)" in app and "spyShopOrderRows(id)" in app
-    assert "mailInboxPrompt(c)" in app
-    assert "chat-glass-nav" in app
-    assert len([n for n in files if n.startswith(BUNDLE)]) >= 350, "private web bundle looks incomplete"
+    assert f"static let contractVersion = {BRIDGE}" in bridge
+    assert "account.backup.file.commit" in bridge and "checkin.configure" in bridge
+    pbx = text(files["PhoneCompanionTest.xcodeproj/project.pbxproj"])
+    assert set(re.findall(r"CURRENT_PROJECT_VERSION = ([^;]+);", pbx)) == {BUILD}
+    assert set(re.findall(r"MARKETING_VERSION = ([^;]+);", pbx)) == {MARKETING}
+    for entry in ("index.html", "小手机.html"):
+        html = text(files[BUNDLE + entry])
+        assert f"window.__NORTH_SHELL_BUILD__='{WEB_VERSION}'" in html
+        for resource in re.findall(r"(?:src|href)=[\"']([^\"'?#]+\.(?:js|css))", html):
+            if "://" not in resource and not resource.startswith("data:"):
+                assert BUNDLE + resource.removeprefix("./") in files, resource
+    sticker_root = BUNDLE + "assets/task-notes/stickers/"
+    stickers = [n for n in files if n.startswith(sticker_root) and n.endswith(".png")]
+    assert len(stickers) == 43
+    rows = text(files[sticker_root + "stickers.txt"]).strip().splitlines()
+    assert len(rows) == 43
+    for name in stickers: assert name.rsplit("/", 1)[1] in "\n".join(rows), name
+    assert len([n for n in files if n.startswith(BUNDLE + "assets/task-notes/") and "/stickers/" not in n and n.endswith(".png")]) == 25
 
 
-def main() -> None:
-    dirty = text(git("diff", "HEAD", "--name-only", "--", SOURCE)).strip()
-    assert not dirty, "commit the private source before packaging:\n" + dirty
-    # The private payload must be clean and committed; parallel work is kept in its own checkout.
-    assert not OUTPUT.exists(), "refusing to overwrite an existing package"
-    assert not list(OUTPUT.parent.glob(OUTPUT.name + ".[0-9][0-9][0-9]")), "refusing to overwrite split volumes"
+def main():
+    assert not text(git("status", "--porcelain", "--untracked-files=no")).strip(), "commit tracked changes before packaging"
+    assert not OUTPUT.exists() and not list(OUTPUT.parent.glob(OUTPUT.name + ".[0-9][0-9][0-9]")), "refusing to overwrite deliverables"
     commit = text(git("rev-parse", "HEAD")).strip()
-    web_commit = commit
     git("merge-base", "--is-ancestor", MAIN_BASE_COMMIT, commit)
-    assert re.search(r"APP_VER='v1762\b", text(git("show", web_commit + ":app.js")))
+    git("merge-base", "--is-ancestor", PREVIOUS_SOURCE, commit)
+    assert f"APP_VER='v{PUBLIC_VERSION} · 设置黑底蓝色与记仇先开口'" in text(git("show", "HEAD:app.js"))
     files = committed_private_files()
     validate(files)
-    previous = PREVIOUS_ZIP
-    assert sha256(previous.read_bytes()).hexdigest() == PREVIOUS_ZIP_SHA256, "previous v1767 delivery zip changed"
-    git("merge-base", "--is-ancestor", PREVIOUS_SOURCE, commit)
-    with ZipFile(previous) as old:
-        prefix = next(n for n in old.namelist() if n.endswith("/SOURCE_STATE.json"))[:-len("SOURCE_STATE.json")]
-        names = {n[len(prefix):] for n in old.namelist() if n.startswith(prefix) and not n.endswith("/")}
-        manifest = json.loads(old.read(prefix + "SHA256SUMS.json"))
-        previous_sha = sha256(old.read(prefix + "SHA256SUMS.json")).hexdigest()
-        assert set(manifest) == names - {"SHA256SUMS.json"}
-        assert not (names - files.keys() - {"SHA256SUMS.json", "SOURCE_STATE.json"}), "previous delivery files missing"
-        state = json.loads(old.read(prefix + "SOURCE_STATE.json"))
-        assert state["sourceCommit"] == PREVIOUS_SOURCE
-        for name, digest in manifest.items():
-            body = old.read(prefix + name)
-            assert sha256(body).hexdigest() == digest, "previous checksum mismatch: " + name
-        # Compare the whole published private tree, including signing and companion files.
-        base_files = committed_private_files(MAIN_BASE_COMMIT)
-        reviewed = committed_private_files(FEATURE_COMMIT)
-        allowed = {"请在Mac编译前先读.md", "PhoneCompanionTest/CheckInShortcuts.swift",
-                   "PhoneCompanionTest/PhoneNativeBridge.swift", "PhoneCompanionTest/LocalPhoneWebView.swift",
-                   "PhoneCompanionTest.xcodeproj/project.pbxproj"} | {BUNDLE+n for n in
-                   ("app.js", "phone-shortcuts.js", "index.html", "小手机.html", "repair.html")}
-        assert not (base_files.keys() - files.keys()), "published-main private files missing"
-        assert set(files) - set(base_files) == {"PhoneCompanionTest/CheckInShortcuts.swift"}, "unexpected new payload"
-        for name, body in base_files.items():
-            if name not in allowed:
-                assert files[name] == body, "unrelated main payload changed: " + name
-        for name, body in reviewed.items():
-            assert files[name] == body, "payload differs from the reviewed final private tree: " + name
-        css, prior_css = text(files[BUNDLE + "glass-theme.css"]), text(old.read(prefix + BUNDLE + "glass-theme.css"))
-        assert "CHECKIN_SHORTCUTS_V1" in text(files[BUNDLE + "phone-shortcuts.js"])
-        assert "struct CheckInOpenerIntent: AppIntent" in text(files["PhoneCompanionTest/CheckInShortcuts.swift"])
-        assert 'case "checkin.take":' in text(files["PhoneCompanionTest/PhoneNativeBridge.swift"])
-        assert "PBXFileSystemSynchronizedRootGroup" in text(files["PhoneCompanionTest.xcodeproj/project.pbxproj"])
-    app = text(files[BUNDLE + "app.js"])
-    for marker in ("ROLE_THINKING_PREVIEW_V1", "function toggleChatThought(", "function roleThinkingNativeResult(", "function roleThinkingCommit(", "roleThinkingPreview===true", "roleThinkingBudget", "toggleChatThought(cur().id)"):
-        assert marker in app, "thinking preview missing: " + marker
-    ui = text(files[BUNDLE + "commerce-ui.js"])
-    for marker in ("calPlayerConsume", "calCreatedCardHTML", "roleCalConsume", "calParticipationHTML", "calFireCalendarCare", "calCareValid", "calInvitationRespond", "calSearchResults", "calDayLayout", "calPeriodOpen", "calCustomApply", "function calHome()", "calHomeButton", "photoAlbumRoleLikedRows", "northNativeBackgroundTask('calendar',checkCalendar)"):
-        assert marker in app + text(files[BUNDLE + "photo-album.js"]), "calendar/role/private hook missing: " + marker
-    for marker in ("northBusinessShopId", "northBusinessCurrentStock", "northBusinessBatchQuantity", "onlyEmpty:selectedOnly!==true", "northBusinessStockSelect", "不要求净利润", "northMarketVisibleOrders", "northDeletedShopsOpen", "northDeletedShopRestore", "northRestoredShop"):
-        assert marker in ui, "merchant repair missing: " + marker
-    for name in ("commerce-ui.js", "photo-album.js", "assets/north-dessert-shop.js"):
-        assert files[BUNDLE + name] == git("show", web_commit + ":" + name), "shared feature payload mismatch: " + name
-    for marker in ("roleAllLockAnnounced", "announcementSaved===true&&roleAllLockAnnounced", "_postedDecision", "roleActionEnvelopeContent", "roleThoughtRecencyText", "_flightFailureInfo"):
-        assert marker in app, "role repair missing: " + marker
-    for marker in ("northRoleCompletedFood", "northRoleFixedMilkBody"):
-        assert marker in ui, "food repair missing: " + marker
-    warm = text(files[BUNDLE + "assets/north-dessert-shop.js"])
-    assert '"id":"north-nuanyan"' in warm and "暖燕" in warm
-    cozy_files = [n for n in files if n.startswith(BUNDLE + "games/cozy-home/")]
-    assert len(cozy_files) == 1312
-    cozy = text(files[BUNDLE + "games/cozy-home/app.mjs"])
-    assert "revision:62" in cozy and "lightVolume=installLightVolume(renderer,scene);lightVolume.update(true);" in cozy, "cozy home 062 missing"
-    for name in ("private-bridge.mjs", "web023.mjs"):
-        assert text(files[BUNDLE + "games/cozy-home/" + name]) == text(git("show", MAIN_BASE_COMMIT + ":" + SOURCE + BUNDLE + "games/cozy-home/" + name)), "cozy home bridge changed: " + name
-    assert "const s=m._cozy?'home':'online';" in app, "offline/online scene notes missing"
-    # All payload comes from committed HEAD; compare previous complete overlay above.
-    assert not (names - files.keys() - {"SHA256SUMS.json", "SOURCE_STATE.json"})
-    for marker in ("NORTH_ROLE_SYNC_DIRECT_V1", "roleSyncRpcFetch", "_roleServerPushPullError", "function cohabTapNextHTML(", "不显示该聊天"):
-        assert marker in app, "authorized repair missing: " + marker
-    css = text(files[BUNDLE + "glass-theme.css"])
-    for removed in ("NORTH_OPTICAL_MATERIAL_V1", "window.NorthOpticalGlass=", "ROLE_SYNC_RELAY_BASE", "NORTH_ROLE_SYNC_RELAY_V1"):
-        assert removed not in app, "removed material or relay reintroduced: " + removed
-    assert "data-north-optical" not in css, "material CSS reintroduced"
-    for marker in ("ROLE_INBOX_GATEWAY", "async function roleInboxBufferedFetch(", "async function roleInboxClaimController(", "ownerState=S,ownerAccount=", "['home','wechat'].includes(cur().p)"):
-        assert marker in app, "inbox repair missing: " + marker
-    assert "new Set(['phone_role_push_pull','phone_role_push_ack','phone_role_push_status'])" in app
-    assert css.startswith(prior_css.rstrip()), "previous private styles must remain intact"
-    assert "PRIVATE_LIQUID_GLASS_V1737" in css, "ready-only native canvas fill missing"
-
-    for marker in ("NORTH_WIDGET_FOREGROUND_V1", "NORTH_OFFLINE_BRIGHT_V1", "NORTH_OFFLINE_TRANSPARENT_V2", ".cohab-tap-next", ".wx-conversation-swipe"):
-        assert marker in css, "requested UI repair missing: " + marker
-    assert "svgIc('heart',19,'#fff',1.7)" in app
-    assert "glassWidgetTextColor(){return widgetHex(glassWidgetAppearance().textColor,'#ffffff')" in app
-    reviewed_files = committed_private_files(REVIEWED_RUNTIME_COMMIT)
-    for name, body in files.items():
-        if name.startswith(BUNDLE):
-            assert body == reviewed_files[name], "runtime differs from reviewed release: " + name
-    for marker in ("WECHAT_MESSAGE_MOTION_V1694", "NATURAL_CHAT_MOTION_ALL_V1", "MUSIC_STABLE_FLOW_V1", "musicReplyStatusText(sess&&sess.cid)", "musicReplyFailure(stage,e,cid)", "_md={allowWechatThought:true,roleReplyLanguageGuard:true", "messages=roleMoodScopeMessages(messages,opt)", "const span=intl?5400:1700;"):
-        assert marker in app, "latest chat/music repair missing: " + marker
-    for marker in ('class="dydm-read" data-wx-read="已读"', '.dydm-read[data-wx-read]', 'function momentReplyMotionScan()', 'momentCommentMotionAttr(p.id,cm)', 'if(own)return own;const b=S.me&&S.me.wxFeatures&&S.me.wxFeatures.globalBubble;', "gray:{meBg:'#95ec69'", 'const _xDMReplies=new WeakMap();', 'class="xmsg xdm-typing"', '推特私信回复失败：', 'finally{_xDMReplies.delete(d);paint();}'):
-        assert marker in app, "latest social motion repair missing: " + marker
-    for marker in ("reasoningEnabled:x.reasoningEnabled===true", "s_reasoning_on", "s_reasoning_effort", "reasoning_effort:['low','high','max'].includes(a.reasoningEffort)", "part=action?{kind:'nar'", "m.who==='ta'&&offResponsePart(m.text).kind==='nar'"):
-        assert marker in app, "v1709 narration/reasoning repair missing: " + marker
-    assert "真人店铺后台连接异常（HTTP " in ui and "真人店铺" in ui, "v1709 shop diagnostics missing"
-    assert "微信灰色" in text(files[BUNDLE + "wechat-me.js"])
-    music_reply = app[app.index("async function aiMusicReply("):app.index("function musicHomeSongHTML(")]
-    assert "wechatPrimaryReply" in music_reply and "max:200" not in music_reply
-    assert "diagnosticRoleId:cid,roleInterceptStage:'音乐回复'" in music_reply
-    for html in (text(files[BUNDLE + "index.html"]), text(files[BUNDLE + "小手机.html"])):
-        assert re.search(r"window\.__NORTH_SHELL_BUILD__='" + WEB_VERSION + "'", html)
-    for marker in ("PRECISE_ROLE_TIME_TEST_V1", "测试角色精准时间观念", "rolePreciseTimeSyncSerialize", "rolePreciseTimeNoteValid"):
-        assert marker in app, "precise time experiment missing: " + marker
-    assert "rolePreciseTimePrompt" in text(files[BUNDLE + "cohab-theater.js"])
-    for marker in ("function roleOrderCoolingDown(", "function tvV2DayNotice(", "async function stkSelDelete(", "async function stickerLocalize(", "function phoneFriendPollDelay(", "function phoneFriendSyncActive(", "COHAB_CONTINUATION_ARROW_V2"):
-        assert marker in app, "requested private repair missing: " + marker
-    for marker in ("function northRoleFallbackPick(", "async function northMarketRelayReady("):
-        assert marker in ui, "requested market repair missing: " + marker
-    for marker in ("/* ===== v1716 液态玻璃", "function lgDraw(", "function lgHomeRefresh("):
-        assert marker in app, "authorized private liquid glass missing: " + marker
-    assert "cohabTapNextHTML(id)" in text(files[BUNDLE + "cohab-theater.js"])
-    assert "ROLEPLAY_REPLY_RECOVERY_V1734" in app
-    assert "RUNNER_CANVAS_RECOVERY_V1734" in text(files[BUNDLE + "north-runner.js"])
-    assert "deliveryCurrentKfcChoiceCommitted(c,_deliveryPendingUserText,content)" in app
-    assert "function contextualCommittedKfcChoice(" in text(files[BUNDLE + "delivery.js"])
-    assert "connectionDiagnostics=new WeakMap" not in text(files[BUNDLE + "delivery.js"]), "unapproved parallel diagnostics entered package"
-    assert "WEB_LOCAL_RECOVERY_MEDIA_V1" not in app, "web-only recovery entered private"
+    base = committed_private_files(MAIN_BASE_COMMIT)
+    assert set(base) == set(files), "unexpected runtime/native file additions or removals"
+    reviewed = {BUNDLE + n for n in ("app.js", "glass-theme.css", "index.html", "小手机.html", "repair.html")} | {"PhoneCompanionTest.xcodeproj/project.pbxproj", "请在Mac编译前先读.md", "PhoneCompanionTest/LocalPhoneWebView.swift", "PhoneCompanionTest/PhoneNativeBridge.swift"}
+    changed = {n for n in files if files[n] != base[n]}
+    assert changed <= reviewed, "unreviewed private changes: " + str(sorted(changed - reviewed))
+    def normalized_versions(body):
+        return re.sub(r"MARKETING_VERSION = 1\.0\.\d+;", "MARKETING_VERSION = <version>;", re.sub(r"CURRENT_PROJECT_VERSION = \d+;", "CURRENT_PROJECT_VERSION = <build>;", text(body)))
+    assert normalized_versions(files["PhoneCompanionTest.xcodeproj/project.pbxproj"]) == normalized_versions(base["PhoneCompanionTest.xcodeproj/project.pbxproj"]), "signing/build configuration changed"
+    for name in ("PhoneCompanionTest/LocalPhoneWebView.swift", "PhoneCompanionTest/PhoneNativeBridge.swift"):
+        assert text(files[name]).replace("1.0.480 (480)", "1.0.479 (479)") == text(base[name]), "unexpected native change: " + name
+    del base
+    assert file_hash(PREVIOUS_ZIP) == PREVIOUS_ZIP_SHA256
+    with ZipFile(PREVIOUS_ZIP) as prior:
+        assert prior.testzip() is None
+        prefix = next(n for n in prior.namelist() if n.endswith("/SOURCE_STATE.json")).removesuffix("SOURCE_STATE.json")
+        manifest_bytes = prior.read(prefix + "SHA256SUMS.json")
+        manifest = json.loads(manifest_bytes)
+        assert set(manifest) == {n[len(prefix):] for n in prior.namelist() if n.startswith(prefix)} - {"SHA256SUMS.json"}
+        for name, digest in manifest.items(): assert sha256(prior.read(prefix + name)).hexdigest() == digest, name
+        previous_state = json.loads(prior.read(prefix + "SOURCE_STATE.json"))
+        assert previous_state["sourceCommit"] == PREVIOUS_SOURCE
+        assert not (set(manifest) - {"SOURCE_STATE.json"} - set(files)), "previous package files missing"
     log = text(TEST_LOG.read_bytes())
-    passed_tests = int(re.search(r"pass (\d+)", log).group(1))
-    assert passed_tests >= 4185 and "fail 0" in log and "cancelled 0" in log, "latest complete test evidence missing"
-    browser_log = text((EVIDENCE_ROOT / "eight-chat" / "eight-browser.log").read_bytes())
-    assert '"checkinActualPage"' in browser_log and '"nativeAck":true' in browser_log and '"visionHttp":true' in browser_log, "actual screenshot pipeline evidence missing"
-    assert browser_log.count('"searchParityActualPage"') >= 2, "search actual UI evidence missing"
-    assert browser_log.count('"pageErrors":0') >= 2, "both real HTML runtime gates must pass"
-    state["inheritedValidation"] = {"sourceCommit": state.get("sourceCommit"), "validation": state.get("validation", {}), "previous": state.get("inheritedValidation")}
-    state["preserved"] = [x for x in state.get("preserved", []) if x not in {"v1677-user-approved-22-parameter-optical-material", "v1677-role-sync-fixed-relay-and-pull-recovery", "v1689-original-backend-direct-sync"}]
-    state["intentionalRemovals"] = ["v1677-optical-material-renderer-and-overrides", "v1677-role-sync-relay-transport"]
-    state["sourceCommit"] = commit
-    state["webSourceCommit"] = web_commit
-    state["webVersion"] = "v1762"
-    state["webPublishedCommit"] = MAIN_BASE_COMMIT
-    state["webPublishedThisDelivery"] = False
-    state["privateWeb"] = "v" + WEB_VERSION
-    state["privateIOS"] = f"{MARKETING} ({BUILD})"
-    state["bridge"] = BRIDGE
-    state["deliveryKind"] = "Mac-Xcode-source-overlay-not-IPA"
-    state["lastDeliveredPackage"] = {"name": previous.name, "manifestSha256": previous_sha, "sourceCommit": PREVIOUS_SOURCE}
-    state["preserved"] = sorted(set(state.get("preserved", [])) | {
-        "v1669-calendar-real-month-year-day-search-events-and-reminders",
-        "v1669-role-scheduling-sharing-invitations-participation-and-opt-in-care",
-        "v1669-calendar-colors-period-integration-home-exit-and-note-spacing",
-        "v1669-role-liked-gallery-owner-isolation",
-        "v1669-single-shop-zero-only-restock-per-product-quantities",
-        "v1669-cloud-startup-fees-lifetime-shop-rewards-profit-and-deleted-shop-order-filter",
-        "v1669-warm-yan-13-products-original-pictures-and-prices",
-        "v1669-pixel-and-pet-bounded-script-redownload",
-        "private-native-companion-intentional-asymmetry", "v1669-original-shop-restore-no-fee-no-reward-reset", "v1675-saved-visible-declaration-before-all-lock", "v1675-current-app-target-refusal-and-thought-action-isolation", "v1675-fixed-milk-spec-defaults-and-completed-order-replay-guard", "v1675-old-image-and-thought-recency-boundaries", "v1675-yanan-relative-weekday-morning-role-only-flight-and-failure-reply", "v1689-no-optical-material", "v1691-approved-inbox-only-gateway-and-original-backend-fallback", "v1691-body-and-controller-timeout-account-boundary-and-wechat-refresh", "v1689-cohab-bare-next-arrow-and-hide-chat", "v1689-white-adjustable-widget-text-and-small-heart", "v1689-light-clear-offline-controls-white-text"})
-    state["preserved"] = sorted(set(state["preserved"]) | {
-        "v1705-per-message-wechat-motion-and-avatar-time-read-progress",
-        "v1705-natural-chat-motion-all-surfaces-except-cinema",
-        "v1705-music-normal-flow-keyboard-avatar-draft-and-composer",
-        "v1705-music-role-route-budget-fallback-and-visible-send-request-delivery-stages",
-        "v1705-mood-metadata-only-wechat-role-private-chat",
-        "v1705-clear-offline-narration-and-douyin-follow-scroll",
-        "v1705-original-travel-price-span-preserved"})
-    state["preserved"] = sorted(set(state["preserved"]) | {
-        "v1707-douyin-independent-two-second-read-and-stable-letter-motion",
-        "v1707-moment-new-reply-motion-and-redraw-history-stability",
-        "v1707-global-gray-bubbles-and-role-group-inheritance-with-explicit-overrides",
-        "v1707-x-dm-typing-failure-toast-and-account-thread-isolation"})
-    state["preserved"] = sorted(set(state["preserved"]) | {"v1709-offline-raw-and-existing-narration-display-without-record-rewrite", "v1709-route-reasoning-effort-default-off", "v1709-readable-shop-transport-errors"})
-    state["backendQuietControlFilter"] = {"privateFunctionVersion":43,"publicFunctionVersion":42,"deployedSourcesVerified":True,"publicBaselinePreserved":True,"packagedFunction":False}
-    state["preciseRoleTimeTrial"] = {"defaultOff":True,"frontendPackaged":True,"backgroundDeployed":False,"realModelVerified":False,"realIPhoneVerified":False}
-    state["preserved"] = sorted(set(state["preserved"]) | {"v1711-opt-in-precise-event-time-and-cancelable-foreground-promises"})
-    state["mainBaseCommit"] = MAIN_BASE_COMMIT
-    state["webLiquidGlassIncluded"] = True
-    state["privateLiquidGlassAuthorized"] = True
-    state["webRecoveryMediaIncluded"] = False
-    state["preserved"] = sorted(set(state["preserved"]) | {"v1737-current-kfc-category-commitment-action-repair", "v1737-shared-web-liquid-glass-renderer-and-native-ready-only-fill", "v1735-roleplay-reply-lifecycle-and-runner-canvas-scaling"})
-    state["preserved"] = sorted(set(state["preserved"]) | {"v1726-takeout-real-menu-fallback-and-cooldown", "v1726-roleplay-current-round-and-cinema-header", "v1726-flight-rail-day-notice", "v1726-sticker-batch-delete-localization-and-scroll", "v1728-v1730-market-relay-real-read-verified-route", "v1732-friend-idle-sync-backoff-and-active-reset", "v1713-cohab-pending-arrow-all-renderers"})
-    state["preserved"] = sorted(set(state["preserved"]) | {"v1739-default-off-thinking-summary-budget-and-original-protocol", "v1739-inline-rounded-thought-and-small-buttons", "published-main-private-screen-share-and-k-trials"})
-    state["roleThinkingPreview"] = {"defaultOff": True, "defaultBudget": 2048, "range": [1024,32768], "display": "returned-summary-only", "nativeMessagesShortProbePassed": True, "actualRoleRealModelVerified": False, "realIPhoneVerified": False}
-    state["preserved"] = sorted(set(state["preserved"]) | {"v1743-cozy-home-062-light-volume-and-boot-precompile", "v1743-cozy-offline-online-scene-notes-in-shared-history"})
-    state["preserved"] = sorted(set(state["preserved"]) | {"v1745-private-flight-rail-niche-cities-content-dates-and-rail-aliases", "v1747-private-album-tags-diagnostic-helper-defined", "v1749-expressive-voice-and-binaural-voice-notes-default-off", "v1751-leftover-voice-tag-repair-explicit-asks-and-3d-badge", "v1753-voice-director-pass-and-spoken-length", "v1755-unhurried-laughs-director-on-role-model", "v1757-expressive-voice-recognises-fish-drama-3", "v1761-fish-member-login-mcp-voice-mode-and-v1759-badge-removal", "v1763-role-booked-ticket-history-and-fishmcp-expressive", "v1765-role-cards-readable-and-douyin-no-reask"})
-    assert "if(['marketfood','paid','payreject','dice'].includes(m.type))" in app and '不要再问一遍' in app, "v1765 card history or Douyin no-reask missing"
-    assert "if(m.type==='ticket'){const t=msgToText({...m,role:'user'});" in app and "toLowerCase()==='fishmcp')k='fish'" in text(files[BUNDLE + 'voice-expressive.js']), "v1763 ticket history or fishmcp expressive missing"
-    assert files.get(BUNDLE + "fish-mcp.js") == git("show", "HEAD:fish-mcp.js") and "NorthFishMcp.speak(" in app and "class=\"v3d\"" not in app, "v1761 Fish member login or v1759 badge removal missing"
-    assert "/drama/i.test(String(tts.model||\x27\x27))" in text(files[BUNDLE + "voice-expressive.js"]), "v1757 Drama 3 recognition missing"
-    assert "function directorLaughOnce(t){" in text(files[BUNDLE + "voice-expressive.js"]), "v1755 laugh rule missing"
-    assert "NorthVoiceExpressive.direct(m,o)" in app and "ttsSpokenLength(t)>VOICE_MAX_CHARS" in app, "v1753 voice director missing"
-    assert "NorthVoiceExpressive.normalize(m)" in app and "m.voice3d=true" in app, "v1751 voice repair missing"
-    for name in ("voice-expressive.js", "binaural-hrir.js"):
-        assert BUNDLE + name in files and files[BUNDLE + name] == git("show", "HEAD:" + name), "expressive voice file missing or differs from web: " + name
-        assert f'{name}?v={WEB_VERSION}' in text(files[BUNDLE + "index.html"]) or name == "binaural-hrir.js", "private entry does not load " + name
-    assert "NorthVoiceExpressive.performance(text,o,tts,opt)" in app and "NorthVoiceExpressive.binaural(ab,m.voiceSpatial,m.content)" in app, "expressive voice hooks missing"
-    assert "function roleInterceptDiagnosticAction(outcome,ok)" in app, "v1747 album tag helper missing"
-    for name in ("travel-flight.js", "travel-flight-booking.js", "travel-train.js", "travel-train-booking.js"):
-        assert files[BUNDLE + name] == git("show", "HEAD:" + name), "private booking file differs from web: " + name
-    assert "function customCity(n)" in text(files[BUNDLE + "travel-flight.js"]) and "function customCity(n)" in text(files[BUNDLE + "travel-train.js"]), "niche-city booking repair missing"
-    state["macBuildVerified"] = False  # New AppIntent/native changes have not been compiled on a Mac.
-    state["realIPhoneVerified"] = False
-    state["preserved"] = sorted(set(state["preserved"]) | {"v1769-audited-search-translation-group-summary-role-wechat-parity"})
-    state["privateWebParityAudit"] = {"featureCommit": FEATURE_COMMIT, "regressionsRunAgainstBothRuntimes": True, "oldPrivateBehaviorFailures": 19, "protectedNativeDifferencesPreserved": True}
-    state["checkInScreenshot"] = {"defaultOff": True, "explicitPerCaptureConfirmation": True,
-        "featureCommit": "3e6347c4eca31c2fc3aa181b7ca9d40a5c2d7329", "nativeBuildVerified": False, "realIPhoneVerified": False,
-        "nightPatrolIncluded": False, "configuredVisionAndChatModelCostApplies": True}
-    state["preserved"] = sorted(set(state["preserved"]) | {"v1767-confirmed-screenshot-checkin-role-opening-pool-and-independent-page"})
-    state["knownUnresolved"] = [x for x in state.get("knownUnresolved", []) if not re.match(r"v\d+-mac-build", x)] + ["v1769-mac-build-search-and-shortcuts-real-device-pending", "v1767-mac-build-and-shortcuts-real-device-pending", "v1765-real-iphone-awaiting-user-listening", "v1763-real-iphone-awaiting-user-listening", "v1761-real-iphone-awaiting-user-listening", "v1757-real-iphone-awaiting-user-listening", "v1755-real-iphone-laugh-pacing-awaiting-user-listening", "v1753-real-iphone-voice-director-awaiting-user-listening", "v1751-real-iphone-voice-second-pass-awaiting-user-listening", "v1749-real-iphone-expressive-voice-and-3d-awaiting-user-listening", "v1747-real-iphone-album-tag-reply-awaiting-user-confirmation", "v1745-real-iphone-flight-booking-awaiting-user-confirmation", "v1743-real-iphone-cozy-and-scene-notes-awaiting-user-confirmation", "precise-time-background-dispatch-not-deployed", "v1705-private-music-keyboard-and-role-response-acceptance-pending", "calendar-closed-app-system-notifications-not-implemented", "real-model-calendar-personality-and-voice-acceptance-pending", "v1675-user-main-model-and-native-lock-receipts-pending"]
-    state["validation"] = {"macBuildVerified": False, "realIPhoneVerified": False,
-        "nodeTests": {"passed": passed_tests, "failed": 0, "skipped": 0, "includesProtectedParallelTestChanges": False, "sourceCommit": commit, "resultSource": str(TEST_LOG)},
-        "models": "HTTP simulated; no live model or production financial tests",
-        "authorizedChatBothRuntimes": True, "authorizedChatExecution": "both actual runtime pages; eight permission/output/history combinations, manual/automatic inspection and persistence; simulated model HTTP",
-        "inheritedPreviousOverlay": True, "priorPackageManifestVerified": True,
-        "nativePayloadUnchanged": False, "nativePayloadMatchesPublishedMain": False, "nativeChangesInheritedFromMain": MAIN_BASE_COMMIT, "privateCompanionNativeChangesThisRelease": False, "nativeBehaviorUnchangedFromPreviousPackage": True,
-        "privateRuntimeMatchesReviewedRelease": commit, "userConfirmedWebMusicReply": {"version": "v1704", "date": "2026-10-11", "confirmed": True}, "privateMusicRealDeviceVerified": False, "shopRestoreBackendDeployedAndVerified": True, "houseResourceFiles": len(cozy_files)}
+    match = re.search(r"pass (\d+)", log)
+    assert match and int(match[1]) >= 4348 and re.search(r"fail 0\b", log) and "cancelled 0" in log
+    browser = text((EVIDENCE_ROOT / "eight-chat/eight-browser.log").read_bytes())
+    assert browser.count('"refreshAndSinceAndRevocation":true,"pageErrors":0') == 2
+    preview = text((EVIDENCE_ROOT / "eight-chat/settings-preview.log").read_bytes())
+    assert preview.count('"scoped":true') == 2
+    state = {
+        "sourceCommit": commit, "webSourceCommit": commit, "privateWeb": "v"+WEB_VERSION, "publicWeb": "v"+PUBLIC_VERSION,
+        "marketingVersion": MARKETING, "build": BUILD, "bridge": BRIDGE, "packageKind": "Mac/Xcode committed-source overlay, not IPA",
+        "mainBaseCommit": MAIN_BASE_COMMIT,
+        "lastDeliveredPackage": {"name": PREVIOUS_ZIP.name, "sha256": PREVIOUS_ZIP_SHA256, "manifestSha256": sha256(manifest_bytes).hexdigest(), "sourceCommit": PREVIOUS_SOURCE},
+        "inheritedValidation": {"sourceCommit": PREVIOUS_SOURCE, "validation": previous_state.get("validation", {})},
+        "preserved": sorted(set(previous_state.get("preserved", [])) | {"complete-published-main-c458745e-private-payload", "GRUDGE_JAIL_ANNOUNCE_V1", "SETTINGS_BLACK_BLUE_V1", "all-43-stickers-and-list", "all-25-task-note-assets", "OFF_LAST_SESSION_V1", "COHAB_GLASS_NO_COLOR_V1", "APP_SOLID_MODAL_V1"}),
+        "knownUnresolved": ["iOS480-Mac-build-signing-and-real-iPhone-not-verified", "checkin-after-19:08-user-result-pending", "historical-checkin-Busy-launch-not-proven-fixed", "cohab-real-laughter-and-voice-visual-device-acceptance-pending"],
+        "validation": {"nodeTests": {"passed": int(match[1]), "failed": 0, "sourceCommit": commit}, "authorizedChatBothRuntimes": True, "settingsBlackBlueBothRuntimes": True, "previousManifestCRCVerified": True, "publishedBaselinePayloadVerified": True, "privateCompanionNativeChangesThisRelease": False, "signingConfigurationUnchanged": True, "macBuildVerified": False, "realIPhoneVerified": False},
+        "externalBackend": {"APNS_ENV_FALLBACK_V1": "already deployed separately; one real test sent and client acknowledged; not redeployed by this ZIP"},
+        "intentionalExclusions": "historical native install docs; all runtime resources and notices included",
+        "reviewedPrivateChanges": sorted(changed),
+    }
     files["SOURCE_STATE.json"] = json.dumps(state, ensure_ascii=False, indent=2).encode("utf-8")
-    files["SHA256SUMS.json"] = json.dumps({name: sha256(body).hexdigest() for name, body in sorted(files.items())}, ensure_ascii=False, indent=2).encode("utf-8")
+    files["SHA256SUMS.json"] = json.dumps({n: sha256(b).hexdigest() for n,b in sorted(files.items())}, ensure_ascii=False, indent=2).encode("utf-8")
     with ZipFile(OUTPUT, "x", ZIP_DEFLATED, compresslevel=6) as archive:
         for name in sorted(files): archive.writestr(PREFIX + name, files[name])
     with ZipFile(OUTPUT) as archive:
         assert archive.testzip() is None
         assert len(archive.namelist()) == len(files)
+        checks = json.loads(archive.read(PREFIX + "SHA256SUMS.json"))
+        assert set(checks) == set(files) - {"SHA256SUMS.json"}
         for name, body in files.items():
-            assert archive.read(PREFIX + name) == body, "round-trip mismatch: " + name
-        actual = {n[len(PREFIX):]: archive.read(n) for n in archive.namelist()}
-        validate(actual)
-        checks = json.loads(actual["SHA256SUMS.json"])
-        assert set(checks) == actual.keys() - {"SHA256SUMS.json"}
-        for name, digest in checks.items(): assert sha256(actual[name]).hexdigest() == digest, name
-    volumes = []
-    combined = sha256()
+            reread = archive.read(PREFIX + name)
+            assert reread == body, "source roundtrip: " + name
+            if name in checks: assert sha256(reread).hexdigest() == checks[name], name
+    volumes, combined = [], sha256()
     with OUTPUT.open("rb") as source:
         part = 1
         while chunk := source.read(VOLUME_BYTES):
             path = OUTPUT.with_name(OUTPUT.name + f".{part:03d}")
-            with path.open("xb") as target:
-                assert target.write(chunk) == len(chunk)
-            reread = path.read_bytes()
-            assert reread == chunk, "split round-trip mismatch"
-            combined.update(reread)
-            volumes.append({"path": str(path), "bytes": len(reread), "sha256": sha256(reread).hexdigest()})
-            part += 1
-    assert combined.hexdigest() == sha256(OUTPUT.read_bytes()).hexdigest(), "split concatenation differs from full ZIP"
-    print(json.dumps({"path": str(OUTPUT), "sourceCommit": commit, "webSourceCommit": web_commit,
-        "files": len(files), "manifestEntries": len(files)-1, "bytes": OUTPUT.stat().st_size,
-        "sha256": sha256(OUTPUT.read_bytes()).hexdigest(), "privateWeb": "v"+WEB_VERSION,
-        "native": f"{MARKETING} ({BUILD})", "bridge": BRIDGE, "mainBaseCommit": MAIN_BASE_COMMIT, "volumes": volumes, "splitConcatenationVerified": True}, ensure_ascii=False, indent=2))
+            with path.open("xb") as out: assert out.write(chunk) == len(chunk)
+            reread = path.read_bytes(); assert reread == chunk
+            combined.update(reread); volumes.append({"name": path.name, "bytes": len(reread), "sha256": sha256(reread).hexdigest()}); part += 1
+    digest = file_hash(OUTPUT); assert combined.hexdigest() == digest
+    print(json.dumps({"path": str(OUTPUT), "sourceCommit": commit, "files": len(files), "manifestEntries": len(files)-1, "bytes": OUTPUT.stat().st_size, "sha256": digest, "privateWeb": "v"+WEB_VERSION, "native": f"{MARKETING} ({BUILD})", "bridge": BRIDGE, "volumes": volumes, "splitConcatenationVerified": True}, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

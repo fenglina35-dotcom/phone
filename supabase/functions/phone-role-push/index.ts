@@ -984,6 +984,21 @@ async function apnsFetch(url: string, init: RequestInit) {
     try {
       const response = await fetch(url, { ...init, signal: controller.signal });
       clearTimeout(timeout);
+      // APNS_ENV_FALLBACK_V1: only a definitive token/environment rejection is safe to retry elsewhere.
+      if (response.status === 400) {
+        const detail = await response.clone().json().catch(() => ({}));
+        const other = url.startsWith("https://api.push.apple.com/")
+          ? url.replace("https://api.push.apple.com/", "https://api.sandbox.push.apple.com/")
+          : url.startsWith("https://api.sandbox.push.apple.com/")
+          ? url.replace("https://api.sandbox.push.apple.com/", "https://api.push.apple.com/") : "";
+        if (detail?.reason === "BadDeviceToken" && other) {
+          try {
+            const alternate = await fetch(other, { ...init, signal: AbortSignal.timeout(12_000) });
+            if (alternate.ok) return { response: alternate, attempt: attempt + 1, failures, environmentFallback: true };
+            failures.push(`alternate-environment-http-${alternate.status}`);
+          } catch (error) { failures.push(pushException(error)); }
+        }
+      }
       return { response, attempt, failures };
     } catch (error) {
       clearTimeout(timeout);

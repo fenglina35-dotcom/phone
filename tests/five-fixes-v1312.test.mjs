@@ -223,8 +223,10 @@ test('统一模式下记仇本真的发给角色，也真的落地', () => {
     assert.doesNotMatch(x, /wechatNaturalOn\(\)\?content\.replace\(\/\[\\\[【\]\\s\*\(\?:记仇\|消气\)/);
     assert.match(x, /maybeCollarIntent\(content,c\);maybeGrudgeResolve\(content,c,id\);/);
     assert.match(x, /maybeCollarIntent\(content,c\);maybeGrudgeResolve\(content,c,_call\.id\);/);
-    /* 旧账满 8 笔自动关小黑屋是另一码事，她没提，不该顺手打开 */
-    assert.match(x, /if\(!_natural&&_gn>=8&&S\.couple&&S\.couple\.jailAuth/);
+    /* 2026-10-18 明确授权：满8条必须处理，两种模式都先由角色开口，禁止条数直接关人。 */
+    assert.match(x, /s\+=roleGrudgeJailPrompt\(c\)/);
+    assert.match(x, /announcementSaved===true&&roleJailAnnounced\(decisionText\)/);
+    assert.doesNotMatch(x, /if\(!_natural&&_gn>=8/);
   }
 });
 

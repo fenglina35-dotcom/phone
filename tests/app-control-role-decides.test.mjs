@@ -134,7 +134,7 @@ for(const [label,src] of BUILDS)test(label+' current explicit app target cannot 
 for(const [label,src] of BUILDS)test(label+' a target containing 全 is not an all-app command',()=>{const c={LOCKABLE:{wechat:'微信',cinema:'放映室'},APPNAME2KEY:{微信:'wechat'}};vm.runInNewContext(one(src,'_appKeys')+'\nglobalThis.f=_appKeys;',c);assert.deepEqual(Array.from(c.f('安全浏览器',Object.keys(c.LOCKABLE),()=>true)),[]);assert.deepEqual(Array.from(c.f('全部应用',Object.keys(c.LOCKABLE),()=>true)),['wechat','cinema']);});
 function controlExecutionFixture(src){
  const role={id:'r',name:'角色'},c={S:{couple:{cid:'r',grant:{wechat:true,cinema:true},locks:{wechat:{pwd:'1234'}}}},LOCKABLE:{wechat:'微信',cinema:'放映室'},APPNAME2KEY:{微信:'wechat'},routePhoneInspectionTags:x=>x,companionApplyReadTags:x=>({content:x,changed:false}),roleDiaryPasswordIntent:()=>'',rolePhonePasswordIntent:()=>'',companionState:()=>({roleAccess:false}),companionAllExternalIntent:x=>/全部|所有/.test(x),companionDispatchRoleAll(action){if(action==='lock')this.S.couple.locks.cinema={pwd:'1234'};return true;},companionStripSupersededAllControlTags:x=>x,genPwd:()=> '1234',roleInterceptDiagnosticAction(){},controlNameKnown:()=>true,controlResolveUnknownApps:async()=>false,controlTargetName:(a,x)=>x,save(){},render(){},toast(){},cur:()=>({p:'chat'}),msgs:()=>[]};
- vm.createContext(c);const start=src.indexOf('function applyControlTags('),end=src.indexOf('\nlet _ctFired=',start);vm.runInContext('let _ctFired=false,_collarTagFired=false,_controlRetrying=false;\n'+one(src,'_appKeys')+'\n'+one(src,'companionAllControlClauseAction')+'\n'+one(src,'roleAllLockAnnounced')+'\n'+one(src,'companionRequestedAllControlAction')+'\n'+src.slice(start,end),c);return {c,role};
+ vm.createContext(c);const start=src.indexOf('function applyControlTags('),end=src.indexOf('\nlet _ctFired=',start);vm.runInContext('let _ctFired=false,_collarTagFired=false,_controlRetrying=false;\n'+one(src,'_appKeys')+'\n'+one(src,'companionAllControlClauseAction')+'\n'+(src.includes('function roleJailAnnounced(')?one(src,'roleJailAnnounced')+'\n':'')+one(src,'roleAllLockAnnounced')+'\n'+one(src,'companionRequestedAllControlAction')+'\n'+src.slice(start,end),c);return {c,role};
 }
 for(const [label,src] of BUILDS)test(label+' explicit refusal cannot execute a contradictory unlock tag',()=>{const {c,role}=controlExecutionFixture(src);c.applyControlTags('不给你解锁。[解锁|微信]',role,'r');assert(c.S.couple.locks.wechat);});
 
@@ -153,3 +153,41 @@ for(const [label,src] of BUILDS)test(label+' full lock requires a saved visible 
 });
 
 for(const [label,src] of BUILDS)test(label+' declared all-lock still locks authorized internal apps without an external iPhone',()=>{const {c,role}=controlExecutionFixture(src);c.companionDispatchRoleAll=()=>false;const args=['[锁定|全部应用]',role,'r',null,''];if(label==='web')args.push(undefined);args.push('我现在把全部应用锁上。',true);c.applyControlTags(...args);assert(c.S.couple.locks.wechat);assert(c.S.couple.locks.cinema);});
+
+
+// GRUDGE_JAIL_ANNOUNCE_V1: a hidden command must never outrun the role's delivered words.
+for(const [label,src] of BUILDS){
+ test(label+' jail commands require a saved, explicit announcement, not a counter or hidden thought',()=>{
+  for(const [text,saved,want] of [
+   ['',true,false],['嗯。',true,false],['[内心|想[关小黑屋|旧账]，现在带你进小黑屋。]',true,false],['[内心|现在把你关进小黑屋。]',true,false],
+   ['<think>现在把你关进小黑屋。</think>嗯。',true,false],
+   ['我不会把你关进小黑屋。',true,false],['再这样就把你关进小黑屋。',true,false],
+   ['你说“把我关进小黑屋”，我还没答应。',true,false],
+   ['现在跟我去小黑屋，把这几件事说清楚。',false,false],
+   ['现在跟我去小黑屋，把这几件事说清楚。',true,true],
+   ['这回我要带你进禁闭室，一件件谈。',true,true],['不能再拖了，现在跟我去小黑屋。',true,true],['别躲了，跟我进小黑屋。',true,true],
+   ['小黑屋里等着，我带你过去算清这些账。',true,true],
+  ]){
+   const {c,role}=controlExecutionFixture(src);let entered=0;const timers=[];
+   c.S.couple.jailAuth=true;c.S.jail={active:false};role.grudges=Array.from({length:8},(_,i)=>({text:'事'+i,done:false}));
+   c.setTimeout=f=>{timers.push(f);return timers.length;};c.enterJail=()=>{entered++;};c.getC=()=>role;c.actId=()=> 'main';
+   const args=['[关小黑屋|这些事需要当面谈]',role,'r',null,''];if(label==='web')args.push(undefined);args.push(text,saved);
+   c.applyControlTags(...args);timers.forEach(f=>f());assert.equal(entered,want?1:0,text+' saved='+saved);
+  }
+ });
+ test(label+' pending jail entry rechecks permission and account before opening',()=>{
+  for(const invalidate of [c=>c.S.couple.jailAuth=false,c=>c.S.couple.cid='other',c=>c.actId=()=> 'other',c=>c.S.jail={active:true}]){
+   const {c,role}=controlExecutionFixture(src);let entered=0;const timers=[];
+   c.S.couple.jailAuth=true;c.S.jail={active:false};c.setTimeout=f=>timers.push(f);c.enterJail=()=>entered++;c.getC=()=>role;c.actId=()=> 'main';
+   const args=['[关小黑屋|谈清]',role,'r',null,''];if(label==='web')args.push(undefined);args.push('现在带你进小黑屋。',true);
+   c.applyControlTags(...args);invalidate(c);timers.forEach(f=>f());assert.equal(entered,0);
+  }
+ });
+}
+
+for(const [label,src] of BUILDS)test(label+' grudge threshold counts only unresolved entries from eight in both output modes',()=>{
+ const role={id:'r',grudges:[]},ctx={S:{couple:{cid:'r',jailAuth:true},jail:{active:false}}};vm.createContext(ctx);vm.runInContext(one(src,'roleGrudgeJailPrompt'),ctx);
+ for(const n of [0,7,8,9]){role.grudges=Array.from({length:n},()=>({done:false})).concat(Array.from({length:10},()=>({done:true})));const prompt=ctx.roleGrudgeJailPrompt(role);assert.equal(!!prompt,n>=8);if(prompt){assert(prompt.includes('第8笔'));assert(prompt.includes('不提供固定台词'));assert(!prompt.includes('旧账积太多了今天一起跟你算清'));}}
+ ctx.S.couple.jailAuth=false;assert.equal(ctx.roleGrudgeJailPrompt(role),'');ctx.S.couple.jailAuth=true;ctx.S.couple.cid='other';assert.equal(ctx.roleGrudgeJailPrompt(role),'');ctx.S.couple.cid='r';ctx.S.jail.active=true;assert.equal(ctx.roleGrudgeJailPrompt(role),'');
+ const promptSite=src.slice(src.indexOf('if(_main){const gd='),src.indexOf('if(_main){const gd=')+2500);assert(promptSite.includes('s+=roleGrudgeJailPrompt(c)'));assert(!src.includes('if(!_natural&&_gn>=8'));
+});

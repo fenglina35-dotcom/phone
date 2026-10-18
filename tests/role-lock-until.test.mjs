@@ -82,7 +82,7 @@ test('the role is told every lock needs an unlock time, in both bundles', () => 
 });
 
 test('the iPhone releases a due role lock with the app closed and never puts it back', () => {
-  const svc = fs.readFileSync(PRIVATE_DIR + 'PhoneCompanionTest/CompanionSyncView.swift', 'utf8');
+  const svc = fs.readFileSync(PRIVATE_DIR + 'PhoneCompanionTest/CompanionSyncView.swift', 'utf8').replace(/\r\n/g, '\n');
   const bridge = fs.readFileSync(PRIVATE_DIR + 'PhoneCompanionTest/PhoneNativeBridge.swift', 'utf8');
   const monitor = fs.readFileSync(PRIVATE_DIR + 'PhoneCompanionMonitor/DeviceActivityMonitorExtension.swift', 'utf8');
   const shield = fs.readFileSync(PRIVATE_DIR + 'PhoneCompanionShield/ShieldConfigurationExtension.swift', 'utf8');

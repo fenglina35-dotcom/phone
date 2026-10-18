@@ -908,3 +908,16 @@ html body .offstage{--offc-me-ink:#fff;--offc-them-ink:#fff;--offc-nar:#fff}
 
 /* PRIVATE_LIQUID_GLASS_V1737: only ready baked canvases replace the native fallback fill. */
 html.north-native-app.north-glass-ui .phone .lg-host.lg-ready:not(#north-lg-fallback){background:transparent!important;background-image:none!important}
+
+/* SETTINGS_BLACK_BLUE_V1: settings-only black canvas and blue actions, including its shortcut page and sheets. */
+html body[data-settings-appearance] .page.settings-appearance,
+html body[data-settings-appearance] .page.settings-appearance>.nav,
+html body[data-settings-appearance] .page.settings-appearance>.scroll,
+html body[data-settings-appearance] .page.settings-appearance>#settingsscroll,
+html body[data-settings-appearance] .page.settings-appearance .ios-settings,
+html body[data-settings-appearance] .page.settings-appearance #shortcut-settings-page{background-color:#000!important;background-image:none!important;color:#f5f5f7}
+html body[data-settings-appearance] .page.settings-appearance .section{background-color:rgba(28,28,30,.9)!important;background-image:none!important}
+html body[data-settings-appearance] :is(#modal .sheet,#cfm .cfmbox){background-color:#000!important;background-image:none!important}
+html body[data-settings-appearance] :is(.page.settings-appearance,#modal,#cfm) :is(.btn.p,.sw.on){background-color:#0a84ff!important;background-image:none!important;color:#fff!important;box-shadow:none!important}
+html body[data-settings-appearance] :is(.page.settings-appearance,#modal,#cfm) :is(input[type=checkbox],input[type=radio],input[type=range]){accent-color:#0a84ff}
+html body[data-settings-appearance] .page.settings-appearance .section[onclick="showManual()"] :is(b,.v){color:#64acff!important}

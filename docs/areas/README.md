@@ -191,3 +191,30 @@ v1762 补查全部卡片类型：角色发出的真人店铺外卖（marketfood�
 ## 单次约会：结束后还能看上次记录（OFF_LAST_SESSION_V1）
 
 现在：offEnd 结束时把这一次完整的现场另存为 o.lastSession（场景、时间、结束时间、全部消息的副本），o.msgs 照旧清空，所以记忆总结、「上次没结束」归档都和以前一样。上次约会是一整页（offlast，renderOffLast，和约会现场同一套 offstage 样子、只读，底部只有「再次开启」走 offlineInvite）：首页点这个角色（offlineEnter：没在约会、也没有能继续的，就进这一页）或点「查看上次约会」都进来。她要的是能直接点开的大屏，不是小框。offBeginSession 开始新的一次时才 delete o.lastSession，所以只有点了再次开启、真正开始下一次约会，上次的记录才被换掉。lastSession 不进任何提示词，只给她看。验证：浏览器里结束一次约会后 msgs 为 0、lastSession 4 条、首页出现「查看上次约会」、原文都在；再次开启后 lastSession 没了，也没有被当成「上次没结束」再归档一遍（网页和私人版都跑过）。另：朋友资料里的照片每张右上角有 ✕，确认后删掉这一张（CONTACT_PHOTO_DEL_V1）。核对到：2026-10-18。
+
+
+## 记仇满八条与小黑屋进入顺序
+
+未解决条数达到8（含8）时，当前情侣角色已获小黑屋授权且尚未进入，buildSystem调用roleGrudgeJailPrompt，要求当轮主动提出进小黑屋逐项处理；自然/原始输出共用规则。已消气的不计入，不由条数直接调用enterJail。角色台词、情绪和指令原因根据人设与真实旧账自己生成，没有固定台词。
+
+GRUDGE_JAIL_ANNOUNCE_V1：roleJailTakeTags将关小黑屋/关禁闭/禁闭指令从提前执行阶段暂存；微信全部气泡送达并persistWechatMessagesNow成功后才执行。通话等本轮台词展示/播放结束后处理，直接主动推送等新消息保存后处理。roleJailAnnounced只认可可见的明确进入表达，排除内心/推理/引用、否定、条件威胁和未来意图；识别表达而非要求逐字匹配台词。未通过则不进入，不合成台词、不因满八条直接兜底关人；下一次真实回复仍带待处理规则。
+
+执行仍需角色输出动作指令，并在延迟执行前复查账号、角色、授权、删除/拉黑和当前禁闭状态。保留原小黑屋测试入口、五分钟放出冷却与原谅逻辑。禁止恢复旧600毫秒抢先执行或自然模式跳过门槛；只改提示词不解决送达时序。
+
+验证：tests/app-control-role-decides.test.mjs对两端执行真实管控函数，旧实现4项失败；scripts/check_chat_authorized_phone.cjs的NORTH_GRUDGE_JAIL=1使用真实buildSystem和回复流程检验先显示后进入；上游模型HTTP为受控，不证明真实模型每次遵从及真机听感。永久门禁收录本标记。核对到：2026-10-18。
+
+
+## 后台角色通知的苹果环境纠错
+
+APNS_ENV_FALLBACK_V1：phone-role-push的apnsFetch先使用设备登记环境。只有HTTP400且苹果JSON原因为BadDeviceToken时，才向另一个固定官方APNs环境验证同一payload一次；仅alternate.ok替换为成功响应。已接受、网络结果不明、鉴权/限流/其他400或服务端错误不跨环境重发，两边拒绝不循环、不伪造成功。通知先保存outbox再发APNs，前台持久化后ACK仍独立；不重放已确认旧消息、不更新token或全局APNS配置。
+
+部署须只补线上该函数片段，线上可能落后本地其他功能，不得整份部署夹带。开发签名设备用Release构建仍可能持有sandbox token，不能把Release等同生产签名；本方案不依赖旧App再次打包即可纠正明确环境拒绝，token在两个环境均无效仍会保留失败。
+
+验证：tests/apns-key-normalization.test.mjs对真实apnsFetch模拟两个官方端点，旧实现3项失败；覆盖双向恢复、相同payload、成功不重发、其他HTTP不换环境、网络未知不换环境、两边拒绝最多一次。核对到2026-10-18。
+
+
+## 设置黑底与蓝色操作
+
+SETTINGS_BLACK_BLUE_V1：render仅在settings/shortcutSettings路由为body添加data-settings-appearance、当前page添加settings-appearance；离开后清除。glass-theme.css在该范围把首页/七个分类页/查岗页的底片、滚动区、导航设为#000且background-image:none，分组保留中性深灰；原粉色.btn.p和.sw.on改#0a84ff，表单accent-color同步，设置内弹层底色黑、主按钮蓝。分组图标各自色彩、危险操作红色、其他软件和用户壁纸不变，两包独立追加同一限定规则，不覆盖私人既有CSS差异。
+
+原玻璃settings-glass渐变优先级覆盖黑底；#settingsscroll原透明important含ID，覆盖时需带同一ID的限定选择器。不要用全局.btn.p或全局背景替换波及其他App，也不修改主题/路由保存逻辑。scripts/check_chat_authorized_phone.cjs的NORTH_SETTINGS_BLUE=1实际打开两端首页、七类及私人查岗，检查黑底/蓝按钮/弹层/离开后清除标记并保存截图；其余核心聊天检查继续用正常模式运行。核对到2026-10-18。

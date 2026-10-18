@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import crypto from 'node:crypto';
 
-const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8');
+const read=p=>fs.readFileSync(new URL('../'+p,import.meta.url),'utf8').replace(/\r\n/g,'\n');
 const PRIVATE='native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/';
 const mod=read('fish-mcp.js');
 
