@@ -17,13 +17,13 @@ const publicApp=read('app.js');
 test('private v1355 loads daily backup after the diagnostic overlay while public advances independently',()=>{
   for(const name of ['index.html','小手机.html']){
     const html=read(bundle+name);
-    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1811'/);
-    assert.ok(html.indexOf('private-cloud-backup.js?v=1811')>html.indexOf('private-runtime-diagnostics.js?v=339'));
+    assert.match(html,/window\.__NORTH_SHELL_BUILD__='1813'/);
+    assert.ok(html.indexOf('private-cloud-backup.js?v=1813')>html.indexOf('private-runtime-diagnostics.js?v=339'));
   }
-  assert.match(privateApp,/APP_VER='v1811 · 共同生活液态玻璃'/);
-  assert.match(publicApp,/APP_VER='v1808 · 共同生活液态玻璃'/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 475;/g)||[]).length,12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.475;/g)||[]).length,12);
+  assert.match(privateApp,/APP_VER='v1813 · 抖音编辑主页'/);
+  assert.match(publicApp,/APP_VER='v1810 · 抖音编辑主页'/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 476;/g)||[]).length,12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.476;/g)||[]).length,12);
 });
 
 test('web backup sends bounded ordered chunks and records a day only after confirmed save',()=>{
