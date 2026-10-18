@@ -13,15 +13,15 @@ test('v1184 web identity and cache markers are aligned', () => {
   const hotfix = read('web-hotfix.js');
   const index = read('index.html');
   const repair = read('repair.html');
-  assert.match(app, /__NORTH_SHELL_BUILD__!=='1820'/);
-  assert.match(app, /APP_VER='v1820 · 游戏大厅与弹框重排'/);
-  assert.match(shell, /__NORTH_SHELL_BUILD__='1820'/);
-  assert.match(shell, /app\.js\?v=1820&r=v1820-gamehub-reference-1/);
-  assert.match(sw, /const BUILD='1820'/);
-  assert.match(sw, /v1820-gamehub-reference-1/);
-  assert.match(hotfix, /v1820-gamehub-reference-1/);
-  assert.match(index, /小手机\.html\?v=1820/);
-  assert.match(repair, /小手机\.html\?v=1820/);
+  assert.match(app, /__NORTH_SHELL_BUILD__!=='1822'/);
+  assert.match(app, /APP_VER='v1822 · 世界书猫猫档案库'/);
+  assert.match(shell, /__NORTH_SHELL_BUILD__='1822'/);
+  assert.match(shell, /app\.js\?v=1822&r=v1822-worldbook-archive-1/);
+  assert.match(sw, /const BUILD='1822'/);
+  assert.match(sw, /v1822-worldbook-archive-1/);
+  assert.match(hotfix, /v1822-worldbook-archive-1/);
+  assert.match(index, /小手机\.html\?v=1822/);
+  assert.match(repair, /小手机\.html\?v=1822/);
 });
 
 test('v1184 publishes shared cohab memory and X comment controls', () => {

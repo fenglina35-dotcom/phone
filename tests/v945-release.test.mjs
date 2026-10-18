@@ -13,14 +13,14 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1820 · 游戏大厅与弹框重排'/);
-  assert.match(app,/const url='sw\.js\?v=1820&r=v1820-gamehub-reference-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1820'/);
-  assert.match(html,/app\.js\?v=1820/);
-  assert.match(sw,/const BUILD='1820'/);
-  assert.match(sw,/north-shell-v1820-gamehub-reference-1/);
-  assert.match(index,/小手机\.html\?v=1820/);
-  assert.match(repair,/小手机\.html\?v=1820/);
+  assert.match(app,/APP_VER='v1822 · 世界书猫猫档案库'/);
+  assert.match(app,/const url='sw\.js\?v=1822&r=v1822-worldbook-archive-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1822'/);
+  assert.match(html,/app\.js\?v=1822/);
+  assert.match(sw,/const BUILD='1822'/);
+  assert.match(sw,/north-shell-v1822-worldbook-archive-1/);
+  assert.match(index,/小手机\.html\?v=1822/);
+  assert.match(repair,/小手机\.html\?v=1822/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{

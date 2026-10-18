@@ -67,3 +67,8 @@ XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/*
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/game-hub/game-icons.png
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/game-hub/heart-card.png
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/game-hub/dice.png
+
+# Worldbook reference artwork belongs to committed private payload.
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/worldbook-archive/
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/worldbook-archive/archive-icons.png
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/worldbook-archive/footer-cat.png
