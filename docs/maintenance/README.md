@@ -3231,3 +3231,5 @@ NORTH_PHONE_MONITOR=1复用既有QA，双端真实页面/来源不变/主体与�
 2026-10-18 私人v1837 / iOS486：从提交 d48ef1c9 的干净工作区 xcodebuild（Release，BUILD SUCCEEDED，1.0.486/486）并覆盖安装到用户 iPhone 15；安装包内 APP_VER v1837 · 表情面板小橘标签，assets/sticker-store/pet 下 20 个表情和 icon.png 齐全，task-notes.js 含表情面板扩展标签；devicectl 读回 1.0.486 (486)。发布前全量 4431/4431 通过，核心聊天检查普通与查岗预览均通过。注：该提交标题误写为“private v1835→v1837”，实际私人版本为 v1837（已推送，不改写历史）。
 
 2026-10-18 网页v1835 / 私人v1838 / iOS487：①修复表情频率“关闭”时角色说没有表情包、点名要表情改发照片（STICKER_OFF_ON_REQUEST_V1，经过见 Bug 记录）；角色说明列出它拥有的全部表情包与关键词。②角色发真实照片可配五条路线，选哪条默认用哪条（IMG_ROUTES_V1）。她说“修复好了直接发布”。
+
+2026-10-18 私人v1838 / iOS487：从提交 baaf1930 的干净工作区 xcodebuild（Release，BUILD SUCCEEDED，1.0.487/487）并覆盖安装到用户 iPhone 15；安装包内 APP_VER v1838 · 表情点名就发与生图路线，app.js 含 STICKER_OFF_ON_REQUEST_V1 与 IMG_ROUTES_V1，wechat-me.js 含完整表情包清单；devicectl 读回 1.0.487 (487)。发布前全量 4437/4437 通过，核心聊天检查普通与查岗预览均通过。真实模型下角色点名发表情、真实图片平台出图待她回报。
