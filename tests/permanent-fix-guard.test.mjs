@@ -32,6 +32,8 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"web v1834 / private v1837",scope:"both",least:1,file:"task-notes.js",name:"表情仓库添加的包在聊天表情面板里单独一个标签（无白底）",marker:"window.emojiPackTabs()"},
+  {release:"web v1834 / private v1837",scope:"both",least:1,name:"角色知道表情仓库包的关键词，按 [表情|关键词] 发对应那张",marker:"if(typeof stickerStorePrompt==='function')s+=stickerStorePrompt(c);"},
   {release:"web v1833 / private v1836",scope:"both",least:1,file:"wechat-me.js",name:"微信表情仓库：桌宠小橘动态表情包、添加到我的表情/指定角色、导入表情自动写含义",marker:"STICKER_STORE_V1"},
   {release:"web v1833 / private v1836",scope:"both",least:1,file:"desk-pet.js",name:"桌面宠物会想你、亲亲、抱抱，角色能用指令让它做",marker:"DESK_PET_MISS_KISS_HUG_V1"},
   {release:"web v1833 / private v1836",scope:"both",least:1,name:"聊天里能显示表情仓库里随包带的表情图",marker:"/^assets\\/sticker-store\\/[\\w-]+\\/[\\w-]+\\.(?:png|webp|gif)$/"},

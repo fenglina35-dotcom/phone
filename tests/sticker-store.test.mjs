@@ -54,3 +54,16 @@ test('the desk pet can miss, kiss and hug, and the role is offered those actions
   // the role prompt lists every CMDS key, so new actions reach the role without a separate list
   assert.match(s, /可用表情和动作：'\+Object\.keys\(CMDS\)\.join\('、'\)/);
 });
+
+test('an added pack is its own emoji-panel tab and the role is told its keywords', () => {
+  for (const name of ['assets/sticker-store/pet/icon.png']) assert.ok(fs.readFileSync(url(name)).equals(fs.readFileSync(url(P + name))), name);
+  const wm = read('wechat-me.js'), tn = read('task-notes.js');
+  assert.equal(read(P + 'task-notes.js'), tn);
+  assert.match(wm, /window\.emojiPackTabs=function\(\)/);
+  assert.doesNotMatch(wm, /S\.me\.stickers\.push\(\{img:x\.img/, 'adding a pack must not copy pictures into the custom row');
+  assert.match(tn, /window\.emojiPackTabs\(\)/);
+  assert.match(tn, /tn-egrid-clear span\{background:transparent\}/);
+  assert.match(wm, /function stickerStorePrompt\(c\)/);
+  for (const file of ['app.js', P + 'app.js']) assert.match(read(file), /if\(typeof stickerStorePrompt==='function'\)s\+=stickerStorePrompt\(c\);/);
+});
+

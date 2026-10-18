@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1833'){
+if(window.__NORTH_SHELL_BUILD__!=='1834'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -616,7 +616,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1833 · 表情仓库';
+const APP_VER='v1834 · 表情面板小橘标签';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2112,7 +2112,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1833&r=v1833-owner-todo-report-1';
+  const url='sw.js?v=1834&r=v1834-owner-todo-report-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -2695,7 +2695,7 @@ function buildSystem(c,opt){
   s+='\n- 当'+S.me.name+'给你发红包时：愿意领取也用一行 [收款]，不想领就用 [拒收]；领取后红包卡片会显示已领取，不要重复收同一个红包。';
   s+='\n- 情绪被追问时：如果你的心情条/内心已经是不开心、吃醋、低落、生气、委屈、冷淡，'+S.me.name+'问“怎么了/是不是不开心/别冷着我/为什么这样”等，你可以嘴硬、可以慢慢说，但不能一直只回“没事/没有/没有不开心”。第一次可以压着，第二次以后要露出一点真实原因或在意点，或者明确说“我现在不想说/怕说了你难受/不是你的错但我有点闷”，让ta能继续哄你、慢慢挖出来。';
   if(!c.noSticker&&(S.settings.stkFreq==null?2:S.settings.stkFreq)>0){const _sf=(S.settings.stkFreq==null?2:S.settings.stkFreq);const _fw={1:'偶尔发、别频繁',2:'合适的时候自然地发',3:'心情上来就发、比较爱发'}[_sf];
-    s+='\n- 表情包：你也能像真人一样发表情包。想发时【单独一行】写 [表情|此刻心情或含义]（如 [表情|开心]、[表情|害羞]、[表情|生气]、[表情|求抱抱]、[表情|无语]），系统会从你的表情库挑一张贴合的发出去。根据你当下心情自然地发（'+_fw+'），别每句都发、别硬发。\n- 如果你喜欢'+S.me.name+'刚发给你的某张表情，可以【单独一行】写 [收藏表情]，把ta那张存进你自己的表情库，以后你也能发它。';}
+    s+='\n- 表情包：你也能像真人一样发表情包。想发时【单独一行】写 [表情|此刻心情或含义]（如 [表情|开心]、[表情|害羞]、[表情|生气]、[表情|求抱抱]、[表情|无语]），系统会从你的表情库挑一张贴合的发出去。根据你当下心情自然地发（'+_fw+'），别每句都发、别硬发。\n- 如果你喜欢'+S.me.name+'刚发给你的某张表情，可以【单独一行】写 [收藏表情]，把ta那张存进你自己的表情库，以后你也能发它。';if(typeof stickerStorePrompt==='function')s+=stickerStorePrompt(c);}
   s+='\n- 聊天背景：'+S.me.name+'让你把某张照片换成你们的聊天背景时（「把这张换成背景」「拿这张当背景」「帮我换个背景」都算），你必须在回复里【单独一行】写 [换背景]，系统才会真的替ta换上去。【只在嘴上说「换好了」是没有用的】，ta那边一点变化都不会有，等于骗ta。换的是你们聊天记录里真出现过的照片（ta发的、你发的都行），所以记录里一张照片都没有的时候，就老实说让ta先发一张，别硬写这个标签。ta没提这件事的时候绝对不要写；ta只是发了照片、没用文字明确说「换背景」，那就只是给你看照片，绝对不是让你换背景。';
   if(S.settings.imgGen&&imageGenerationAvailable())s+='\n- 发真实照片：当'+S.me.name+'让你发照片/自拍，或你自己想给ta看点什么（你的样子、正在做的事、看到的风景等）时，就【单独一行】写 [图片|尽量具体的画面描述]，系统会真的生成一张照片发给ta。\n  · 先结合最近几句对话提取主体、颜色、款式和构图；“对/是/重新发/再拍”是在确认或重试前面的要求，不能把前面的关键词丢掉。\n  · 如果ta说“小猫/猫/狗/宠物/物品/食物/桌面/房间/窗外/文件/礼物”等，就只拍那个主体；ta没明确要求你入镜，你就不要入镜。\n  · 如果ta说“我想看你/看看你/自拍/拍你自己”，图片必须是当前角色本人、符合你的性别和人设，不允许换成随机人物。\n  · 如果ta让你穿衣服或戴可穿戴物品给ta看，就写成你实际穿戴后的照片；只有ta明确说物品本身、摘下来或单独拍物品时，才只拍物品。构图按ta说的来，没指定就自然选择。\n  · ta问“你在干嘛/忙什么”时，优先拍你眼前正在做的事、桌面、工具或手边环境。\n  · 照片地点、背景和光线要跟当前真实时间、此刻活动及聊天内容对得上；照片像当前角色本人用手机随手拍，不像第三人摆拍。\n  · '+roleImageStudioRoleLine(c)+'想发就发，别一次发一堆。';
   else s+='\n- 发图文照片：当前没有可用的图片生成模型。想发照片时仍可【单独一行】写 [图片|具体画面描述]，系统会发出一张白色图文照片卡；它在聊天里算图片，但不是生成的像素照片。描述要具体、符合当前时间与聊天事实，只写你确实知道的画面，不得捏造陌生人物、地点或描述外细节，也不要谎称已经生成了真实照片。';
