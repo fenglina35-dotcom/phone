@@ -433,3 +433,15 @@ NORTH_PHONE_MONITOR=1复用既有QA，双端真实页面/来源不变/主体与�
 验证（浏览器模拟）：先在线打开存好文件，再发一个新版本并让 /games/pixel-home/ 和 /assets/ 全部 503：旧代码 5 个文件全部打不开，新代码全部能用。页面请求每次延迟 10 秒时，点立即更新旧 10.2 秒 → 新 0.2 秒；从桌面打开旧 10.2 秒 → 新 3.7 秒。没解决的：第一次打开还是要能从 GitHub 下载；后台云端（Supabase）照旧直连国外。私人版东西都在 App 里，不受影响。核对到：2026-10-18。
 
 微信运动图标（WX_STEPS_NEW_ICON_V1）：wxStepsAppIcon 改用 spyBankIcon('wechat')——查他手机银行页「登录微信转给自己」旁边那个新的微信图标（绿气泡 + 黑边白气泡），底色是她自己在色板里挑的 #7EE571（夜间、白色主题都一样），图标放大到 92%（glass-theme.css 两包）。聊天列表、微信运动页、角色功能里的入口都用它。第一次误改成给旧图标描边、又误改了银行页那个图标本身，都已撤回。
+
+## 聊天记录长库读不到时不删（MSG_ARCHIVE_NO_WIPE_V1，两包 app.js）
+
+聊天很多时（超过 2 万字），S.messages 存进 IndexedDB 的 `__messages`（长聊天库），核心存档里只留 `{__idb:'messages'}` 记号；开机 bootImages 读长库再合并。
+
+2026-10-18 事故：私人 App 21:46 打开后读长库卡住，21:52 网页进程崩溃；21:57 重开又等了 189 秒，imgGetIDB 出错时返回 null，旧代码把「读不到」当成「没有聊天」。22:00 角色发来消息，persistWechatDrain 看聊天不到 2 万字就 deleteMessageArchive()，把整个长库删了，16:30 之后的 110 条只剩手机数据库空闲页里的残留。不是那次版本改动造成的（1830→1832 只改版本号和图标）。
+
+现在：开机读长库多试 3 次；还读不出来（或读出来坏了）就 msgArchiveMarkLost()：记下 _msgArchiveLost，这期间 deleteMessageArchive / writeMessageArchive 都不动长库，_imgReplacer 保存时留着 `__idb:'messages'` 记号并带上这次的新消息（下次开机 bootImages 会合并），后台每 20 秒重读一次（最多 30 次），读到就 mergeBootMessages 合并回来、清掉标记、再正常保存。她亲自在恢复页确认恢复时（recoveryPersistStateNow / webRecoveryPersistState）清掉标记，按她选的那份写。
+
+测试：tests/message-archive-no-wipe.test.mjs 用两包真实函数复现事故，旧代码在「长库被删」这一步失败。没解决的：长库为什么读了 3 分钟（IndexedDB 约 8.5GB，大部分是空闲页和图片）还没查清；真机上「读不到→重试读到」只在测试里验证过。核对到：2026-10-18。
+
+找回方法（以后再出事可以照做，只读手机）：`xcrun devicectl device copy from --domain-type appDataContainer --domain-identifier com.qianyi.PhoneCompanionTest` 复制 `Library/WebKit/WebsiteData/Default/<来源>/<来源>/IndexedDB/<库>/IndexedDB.sqlite3`（大的那个），数据库没开自动整理（auto_vacuum=0），被删的长库还在空闲页里：按 4KB 页扫 UTF-16 的 `"role":"`，按每页前 4 字节的下一页编号串起来，再逐个解析消息对象；只取「历史完整快照」保存时间之后的消息，更早的散落旧消息多半是她以前自己删的，不要带回来。
