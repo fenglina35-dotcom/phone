@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1815'){
+if(window.__NORTH_SHELL_BUILD__!=='1817'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -640,7 +640,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1815 · 软件弹框实心';
+const APP_VER='v1817 · 弹框实心补充';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -18884,7 +18884,7 @@ function dySolidStyle(){if(typeof document==='undefined'||document.getElementByI
   st.textContent='#modal.dy-solid-modal,#cfm.dy-solid-modal{background:rgba(0,0,0,.6)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}'
    +'#modal.dy-solid-modal .sheet,#cfm.dy-solid-modal .cfmbox{background:#000!important;background-image:none!important;border:1px solid #2c2c2e!important;box-shadow:0 18px 50px rgba(0,0,0,.6)!important;color:#f2f2f4!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}'
    +'#modal.dy-solid-modal .sheet:before,#modal.dy-solid-modal .sheet:after,#cfm.dy-solid-modal .cfmbox:before{display:none!important}'
-   +'#modal.dy-solid-modal .sheet :where(.section,.dyall-i,.btn,.minibtn,.dybtn.out,.it,input:not([type=color]):not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea),#cfm.dy-solid-modal .cfmb{'+BOX+'}'
+   +'#modal.dy-solid-modal .sheet :where(.section,.dyall-i,.btn,.minibtn,.dybtn.out,.it,.bill,input:not([type=color]):not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea),#cfm.dy-solid-modal .cfmb{'+BOX+'}'
    +'#modal.dy-solid-modal .sheet .section .it{background:transparent!important}#modal.dy-solid-modal .sheet .section{border-radius:12px!important;overflow:hidden}'
    +'#modal.dy-solid-modal .sheet :is(.btn,.minibtn,.dybtn,.section,.dyall-i,input,select,textarea):before,#cfm.dy-solid-modal .cfmb:before{display:none!important}'
    +'#modal.dy-solid-modal.dy-solid-dy .sheet :is(.btn.p,.dybtn:not(.out)),#cfm.dy-solid-modal.dy-solid-dy .cfmb.p{background:#fe2c55!important;color:#fff!important;-webkit-text-fill-color:#fff}'
@@ -18892,36 +18892,45 @@ function dySolidStyle(){if(typeof document==='undefined'||document.getElementByI
    +'#modal.dy-solid-modal:not(.dy-solid-dy) .sheet :is(.btn.p),#cfm.dy-solid-modal:not(.dy-solid-dy) .cfmb.p{background:#0a84ff!important;color:#fff!important;-webkit-text-fill-color:#fff}'
    +'#modal.dy-solid-modal.dy-solid-wx .sheet :is(.btn.p),#cfm.dy-solid-modal.dy-solid-wx .cfmb.p{background:#07c160!important}'
    +'#modal.dy-solid-modal.dy-solid-light .sheet,#cfm.dy-solid-modal.dy-solid-light .cfmbox{background:#fff!important;border-color:#e5e5ea!important;color:#111!important;box-shadow:0 18px 50px rgba(0,0,0,.18)!important}'
-   +'#modal.dy-solid-modal.dy-solid-light .sheet :where(.section,.dyall-i,.btn,.minibtn,.dybtn.out,input:not([type=color]):not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea),#cfm.dy-solid-modal.dy-solid-light .cfmb{background:#f2f2f7!important;color:#111!important;-webkit-text-fill-color:#111}'
+   +'#modal.dy-solid-modal.dy-solid-light .sheet :where(.section,.dyall-i,.btn,.minibtn,.dybtn.out,.it,.bill,input:not([type=color]):not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea),#cfm.dy-solid-modal.dy-solid-light .cfmb{background:#f2f2f7!important;color:#111!important;-webkit-text-fill-color:#111}'
    +'#modal.dy-solid-modal.dy-solid-light .sheet :is(h3,label,b,.n,.it,.v,.cfmmsg),#cfm.dy-solid-modal.dy-solid-light .cfmmsg{color:#111!important;-webkit-text-fill-color:#111}#modal.dy-solid-modal.dy-solid-light .sheet :is(.hint,.s,small){color:#6d6d72!important;-webkit-text-fill-color:#6d6d72}'
-   +'#modal.dy-solid-modal.dy-solid-light .sheet :not(input):not(select):not(textarea){border-color:#e5e5ea!important}#modal.dy-solid-modal.dy-solid-light .sheet .section :is(.minibtn,.btn){background:#e5e5ea!important}'
+   +'#modal.dy-solid-modal.dy-solid-light .sheet :not(input):not(select):not(textarea){border-color:#e5e5ea!important}#modal.dy-solid-modal.dy-solid-light .sheet :is(.section,.bill) :is(.minibtn,.btn){background:#e5e5ea!important}'
    +'#modal.dy-solid-modal.dy-solid-light .sheet :is(.btn.p),#cfm.dy-solid-modal.dy-solid-light .cfmb.p{color:#fff!important;-webkit-text-fill-color:#fff}#modal.dy-solid-modal.dy-solid-light .sheet .btn.d,#cfm.dy-solid-modal.dy-solid-light .cfmb.d{color:#ff3b30!important;-webkit-text-fill-color:#ff3b30}'
-   +'#modal.dy-solid-modal.dy-solid-light,#cfm.dy-solid-modal.dy-solid-light{background:rgba(0,0,0,.32)!important}'
+   +'#modal.dy-solid-modal.dy-solid-light,#cfm.dy-solid-modal.dy-solid-light{background:rgba(0,0,0,.32)!important}#modal.dy-solid-modal.dy-solid-light .sheet .section .it{background:transparent!important}'
+   // 电子宠物：不用黑框，照宠物页面自己的颜色——奶白底、浅米色框、咖啡色字、粉色主要按钮
+   +'#modal.dy-solid-modal.dy-solid-pet,#cfm.dy-solid-modal.dy-solid-pet{background:rgba(74,58,54,.28)!important}'
+   +'#modal.dy-solid-modal.dy-solid-pet .sheet,#cfm.dy-solid-modal.dy-solid-pet .cfmbox{background:#fffaf5!important;border-color:#eadcd2!important;color:#4a3a36!important;box-shadow:0 18px 50px rgba(74,58,54,.22)!important}'
+   +'#modal.dy-solid-modal.dy-solid-pet .sheet :where(.section,.dyall-i,.btn,.minibtn,.dybtn.out,.it,.bill,input:not([type=color]):not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea),#cfm.dy-solid-modal.dy-solid-pet .cfmb{background:#f4e9e1!important;color:#4a3a36!important;-webkit-text-fill-color:#4a3a36}'
+   +'#modal.dy-solid-modal.dy-solid-pet .sheet .section .it{background:transparent!important}#modal.dy-solid-modal.dy-solid-pet .sheet :is(h3,label,b,.n,.it,.v),#cfm.dy-solid-modal.dy-solid-pet .cfmmsg{color:#4a3a36!important;-webkit-text-fill-color:#4a3a36}#modal.dy-solid-modal.dy-solid-pet .sheet :is(.hint,.s,small){color:#887772!important;-webkit-text-fill-color:#887772}'
+   +'#modal.dy-solid-modal.dy-solid-pet .sheet :not(input):not(select):not(textarea){border-color:#eadcd2!important}#modal.dy-solid-modal.dy-solid-pet .sheet :is(.section,.bill) :is(.minibtn,.btn){background:#ecdcd1!important}'
+   +'#modal.dy-solid-modal.dy-solid-pet .sheet .btn.p,#cfm.dy-solid-modal.dy-solid-pet .cfmb.p{background:#e98ca8!important;color:#fff!important;-webkit-text-fill-color:#fff}#modal.dy-solid-modal.dy-solid-pet .sheet .btn.d,#cfm.dy-solid-modal.dy-solid-pet .cfmb.d{color:#d9534f!important;-webkit-text-fill-color:#d9534f}'
    +'#modal.dy-solid-modal .sheet .btn.d,#cfm.dy-solid-modal .cfmb.d{color:#ff6b81!important;-webkit-text-fill-color:#ff6b81}'
    +'#modal.dy-solid-modal .sheet :is(h3,.hint,label,.n,.s,.v,span,div){-webkit-backdrop-filter:none!important;backdrop-filter:none!important}'
    // 抖音页面上浮在封面上的那些小框（添加好友、换背景、右上角几个圆钮、创作 AI 作品、别人主页的返回/求更新/搜索/…、编辑页的返回/更换封面）：实心灰，图标和字改白
    +'.dyme-addfriend,.dyme-cover-edit,.dyme-tool,.dyme-ai,.dyus-top>i,.dyus-poke,.dyed-back,.dyed-coverbtn{background:#2c2c2e!important;background-image:none!important;color:#f2f2f4!important;-webkit-text-fill-color:#f2f2f4;border:0!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}'
-   +'#modal.dy-solid-modal .sheet :not(input):not(select):not(textarea){border-color:#2c2c2e!important}#modal.dy-solid-modal .sheet .section :is(.minibtn,.btn){background:#3a3a3c!important}'
+   +'#modal.dy-solid-modal .sheet :not(input):not(select):not(textarea){border-color:#2c2c2e!important}#modal.dy-solid-modal .sheet :is(.section,.bill) :is(.minibtn,.btn){background:#3a3a3c!important}'
    +'.dyme-addfriend span,.dyme-cover-edit span{white-space:nowrap}'
+   // 表情包网格空着时那句提示占满一整行，不挤在四列里的第一列（以前三个字一行竖着排）
+   +'.estk>div:not(.s){grid-column:1/-1}'
    +'.dyus-stats:has(.dyme-edit){flex-wrap:nowrap}.dyus-stats:has(.dyme-edit) span{margin-right:10px;white-space:nowrap}'
    +':is(.dyme-addfriend,.dyme-cover-edit,.dyme-tool,.dyus-top>i,.dyus-poke,.dyed-back,.dyed-coverbtn) :is(svg,svg *){stroke:#f2f2f4!important}.dyme-ai b,.dyme-ai span{color:#f2f2f4!important}';
   (document.head||document.documentElement).appendChild(st);}
-/* APP_SOLID_MODAL_V1（2026-10-18 她说：微信、电话、音乐、放映室、购物、X、世界书，后来又加了游戏大厅、浏览器，这些软件里那些框也是玻璃主题留下的透明框，
+/* APP_SOLID_MODAL_V1（2026-10-18 她说：微信、电话、音乐、放映室、购物、X、世界书，后来又加了游戏大厅、浏览器、设置、查他手机、电子宠物（电子宠物用它自己页面的奶白配色，不用黑框），这些软件里那些框也是玻璃主题留下的透明框，
    跟抖音一样改：黑色主题纯黑底灰色框，白色主题白底浅灰色框；共同生活不动，只改这几个软件）。
    哪个软件：先看 curAppKey（购物、X、音乐、放映室、电话、抖音、游戏大厅和里面的各个游戏、浏览器），微信和世界书看导航栈里最先打开的那一页；共同生活、线下约会一律不算。
    白还是黑：微信跟着微信自己的白色/夜间主题；别的软件看弹窗后面那一页实际的底色，浅色就用白底。 */
-const SOLID_APP_KEYS=['phoneapp','music','cinema','shop','x','douyin','moments','nearby','games','browser'];
-const SOLID_APP_ROOTS=['wechat','phoneapp','music','cinema','shop','x','worldbook','dy','gameshub','browser'];
+const SOLID_APP_KEYS=['phoneapp','music','cinema','shop','x','douyin','moments','nearby','games','browser','pet','spy'];
+const SOLID_APP_ROOTS=['wechat','phoneapp','music','cinema','shop','x','worldbook','dy','gameshub','browser','settings','spy','pet'];
 const SOLID_WX_PAGES=['wechat','chat','transferDetail','groupTransferDetail','rpSend','grpSend','tfSend','rpDetail','chatDetails','contactInfo','friendInfo','contactSettings','roleMoments','roleMomentDetail','roleFeatures','roleImageStudio','newfriends','wxonlychat','wxgroups','wxlabels','wxgroupcreate','contactEdit','wxprofile','wxqr','wxscan','wxsearch','wxservices','wxsmarthome','wxwallet','wxchange','wxbank','wxfamily','wxbills','wxsupport','wxfavorites','wxalbum','wxemoji','wxsettings','wxaccounts','wxsteps','wxmoment','wxnearby','pffriends','pfchat','pfgroup','group'];
-function solidAppOf(p){p=String(p||'');if(['off','offline'].includes(p))return '';if(DY_SOLID_PAGES.includes(p))return 'douyin';if(SOLID_WX_PAGES.includes(p))return 'wechat';if(p==='worldbook')return 'worldbook';
+function solidAppOf(p){p=String(p||'');if(['off','offline'].includes(p))return '';if(p==='pet')return 'pet';if(DY_SOLID_PAGES.includes(p))return 'douyin';if(SOLID_WX_PAGES.includes(p))return 'wechat';if(p==='worldbook')return 'worldbook';
   const k=typeof curAppKey==='function'?curAppKey():null;if(k)return SOLID_APP_KEYS.includes(k)?(k==='moments'||k==='nearby'?'wechat':k):'';
   const r=typeof stack!=='undefined'&&stack[1]&&stack[1].p;return SOLID_APP_ROOTS.includes(r)?(r==='dy'?'douyin':r):'';}
 function solidPageIsLight(){try{if(typeof document==='undefined'||!document.elementFromPoint)return null;let e=document.elementFromPoint(6,Math.round((window.innerHeight||800)*0.45));if(e&&e.closest&&e.closest('#modal.show,#cfm.show'))return null;
   while(e&&e!==document.documentElement){const m=getComputedStyle(e).backgroundColor.match(/rgba?\(([^)]*)\)/);if(m){const p=m[1].split(',').map(Number),a=p.length>3?p[3]:1;if(a>0.5)return (0.299*p[0]+0.587*p[1]+0.114*p[2])/255>0.6;}e=e.parentElement;}
   const b=getComputedStyle(document.body).backgroundColor.match(/rgba?\(([^)]*)\)/);if(b){const p=b[1].split(',').map(Number);return (0.299*p[0]+0.587*p[1]+0.114*p[2])/255>0.6;}}catch(_){}return null;}
-function appSolidMark(m,p){if(!m)return;const app=solidAppOf(p),on=!!app;m.classList.toggle('dy-solid-modal',on);m.classList.toggle('dy-solid-dy',app==='douyin');m.classList.toggle('dy-solid-wx',app==='wechat');
+function appSolidMark(m,p){if(!m)return;const app=solidAppOf(p),on=!!app;m.classList.toggle('dy-solid-modal',on);m.classList.toggle('dy-solid-dy',app==='douyin');m.classList.toggle('dy-solid-wx',app==='wechat');m.classList.toggle('dy-solid-pet',app==='pet');
   if(!on){m.classList.remove('dy-solid-light');return;}
-  const light=app==='wechat'?!!(S&&S.me&&S.me.wxTheme==='white'):app==='douyin'?false:solidPageIsLight();
+  const light=app==='wechat'?!!(S&&S.me&&S.me.wxTheme==='white'):app==='douyin'||app==='pet'?false:solidPageIsLight();
   if(light!==null)m.classList.toggle('dy-solid-light',!!light);dySolidStyle();}
 if(typeof document!=='undefined')dySolidStyle();
 function openCallModal(html){openModal(html);$('#modal').classList.add('call-modal');}

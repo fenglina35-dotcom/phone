@@ -73,6 +73,7 @@ const PERMANENT_FIXES = [
   {release:"web v1810 / private v1813",scope:"both",least:1,name:"抖音角色主页有「编辑主页」，三个点直接进编辑页，原菜单功能都在里面",marker:"DY_USER_EDIT_V1"},
   {release:"web v1810 / private v1813",scope:"both",least:1,name:"抖音里点开的框纯黑底、灰色框，不透明",marker:"DY_SOLID_MODAL_V1"},
   {release:"web v1812 / private v1815",scope:"both",least:1,name:"微信、电话、音乐、放映室、购物、X、世界书、游戏大厅、浏览器点开的框：黑色主题纯黑灰框，白色主题白底浅灰框；共同生活不动",marker:"APP_SOLID_MODAL_V1"},
+  {release:"web v1814 / private v1817",scope:"both",least:1,name:"设置、查他手机也是实心框；电子宠物的框用宠物页的奶白配色；白色主题里列表行和订单行不再是黑块",marker:"dy-solid-pet"},
   {release:"web v1804 / private v1807",scope:"both",least:1,file:"cohab-theater.js",name:"共同生活语音页和共同生活用同一块液态玻璃",marker:"LG_SCENES.unshift({root:'.callscreen.cvr-mode .cvr-stage.hasbg:not(.off-classic)'"},
   {release:"web v1802 / private v1805",scope:"both",least:1,file:"cohab-theater.js",name:"共同生活语音模式阅读式界面、记录进行中可看每句可改删",marker:"COHAB_VOICE_READER_V1"},
   {release:"web v1802 / private v1805",scope:"both",least:1,name:"共同生活语音建提示时不把这一段标成视频通话",marker:"CohabVoice.hideSession(c,sess):null;"},

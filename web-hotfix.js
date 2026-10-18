@@ -59,7 +59,7 @@
   window.addEventListener('pageshow',reconcileExpiredWxLogin,{passive:true});
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)reconcileExpiredWxLogin();});
   if('serviceWorker'in navigator&&location.protocol!=='file:'){
-    const workerUrl='sw.js?v=1812&r=v1812-thought-preview-1';
+    const workerUrl='sw.js?v=1814&r=v1814-thought-preview-1';
     navigator.serviceWorker.register(workerUrl,{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
   }
   setTimeout(()=>{
@@ -70,5 +70,5 @@
     }
   },0);
 
-  window.__NORTH_WEB_HOTFIX__='v1812-thought-preview-1';
+  window.__NORTH_WEB_HOTFIX__='v1814-thought-preview-1';
 })();
