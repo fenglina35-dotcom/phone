@@ -72,3 +72,7 @@ XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/*
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/worldbook-archive/
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/worldbook-archive/archive-icons.png
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/worldbook-archive/footer-cat.png
+
+# Roleplay theatre card is required by the private studio.
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/roleplay-studio/
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/roleplay-studio/theatre-card.png

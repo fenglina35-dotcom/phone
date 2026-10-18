@@ -47,18 +47,18 @@ function functionSource(sourceText, name) {
 
 test('private identifiers remain v1355 and iOS 399 while public advances independently', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1825'/);
-  assert.match(index, /app\.js\?v=1825&r=v1825-private-package-1/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1827'/);
+  assert.match(index, /app\.js\?v=1827&r=v1827-private-package-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(app, /APP_VER='v1825 · 世界书猫猫档案库'/);
+  assert.match(app, /APP_VER='v1827 · 角色扮演猫咪剧场'/);
   assert.match(overlay, /336-daily-file-backup/);
   assert.match(webview, /1\.0\.480 \(480\)/);
   assert.match(bridge, /private static let build = "1\.0\.480 \(480\)"/);
   assert.match(bridge, /static let contractVersion = 42/);
   assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 480;/g) || []).length, 12);
   assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.480;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1822 · 世界书猫猫档案库'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1822'/);
+  assert.match(publicApp, /APP_VER='v1824 · 角色扮演猫咪剧场'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1824'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 

@@ -160,6 +160,6 @@ test('terminated WebContent remounts once while active and thermally safe', () =
 });
 
 test('recovery suite is pinned to the private bundled app only', () => {
-  assert.match(app, /APP_VER='v1825 · 世界书猫猫档案库';/);
+  assert.match(app, /APP_VER='v1827 · 角色扮演猫咪剧场';/);
   assert.match(app, /function emergencyRestorePreview\(index\)/);
 });

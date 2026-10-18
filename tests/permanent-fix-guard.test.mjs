@@ -101,6 +101,7 @@ const PERMANENT_FIXES = [
   {release:"v1766",scope:"web",least:1,file:PRIVATE_DIR+"phone-shortcuts.js",name:"私人版快捷指令页返回键无白块、整页不被定时重画打断",marker:"if(page()===shownPage)return;"},
   {release:"v1732",scope:"both",least:1,name:"真人好友同步没有新消息时逐渐放慢，减轻数据库负载",marker:"function phoneFriendSyncActive(){_pfIdleSyncs=0;}"},
   {release:"v1728",scope:"both",least:1,name:"真人店铺、店铺图片与上传走中转/直连自动选线，中转未部署时保持直连",marker:"async function northMarketRelayReady()",file:"commerce-ui.js"},
+  {release:"roleplay-studio",scope:"both",least:1,name:"角色扮演工作室真实功能与配套弹框",marker:"// ROLEPLAY_STUDIO_V1:"},
   {release:"v1726",scope:"both",least:1,name:"角色点外卖选商品失败时按真实菜单兜底",marker:"function northRoleFallbackPick(found,plan)",file:"commerce-ui.js"},
   {release:"v1764",scope:"both",least:1,name:"角色自己发的外卖/代付/骰子卡片在它的记录里可读",marker:"if(['marketfood','paid','payreject','dice'].includes(m.type))return msgToText({...m,role:'user'});"},
   {release:"v1764",scope:"both",least:1,name:"角色自己发的一起听歌邀请可读",marker:"if(m.type==='musicinvite')return '[我邀请你一起听歌："},

@@ -89,6 +89,6 @@ test('private diagnostics expose only stage timing and counts', () => {
 });
 
 test('v1178 public candidate adds only the shared theater layer, not the private friend repair', () => {
-  assert.match(publicSource, /APP_VER='v1822 · 世界书猫猫档案库'/);
+  assert.match(publicSource, /APP_VER='v1824 · 角色扮演猫咪剧场'/);
   assert.doesNotMatch(publicSource, /function pfEnsureForSync/);
 });

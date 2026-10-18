@@ -59,20 +59,20 @@ function persistenceRuntime() {
 }
 
 test('private identity remains v1355 and iOS 399 while public advances independently', () => {
-  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1825'/);
-  assert.match(privateApp, /APP_VER='v1825 · 世界书猫猫档案库'/);
+  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1827'/);
+  assert.match(privateApp, /APP_VER='v1827 · 角色扮演猫咪剧场'/);
   for (const html of [privateIndex, privateAlias]) {
-    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1825'/);
-    assert.match(html, /app\.js\?v=1825&r=v1825-private-package-1/);
+    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1827'/);
+    assert.match(html, /app\.js\?v=1827&r=v1827-private-package-1/);
     assert.match(html, /private-runtime-diagnostics\.js\?v=339/);
   }
-  assert.match(privateRepair, /index\.html\?repair=1&v=1825/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1827/);
   assert.match(swift, /1\.0\.480 \(480\)/);
   assert.match(bridge, /private static let build = "1\.0\.480 \(480\)"/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 480;/g) || []).length, 12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.480;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1822 · 世界书猫猫档案库'/);
-  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1822'/);
+  assert.match(publicApp, /APP_VER='v1824 · 角色扮演猫咪剧场'/);
+  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1824'/);
   assert.doesNotMatch(publicApp, /persistWechatRequested|smallPhoneWechatPersistTrace/);
 });
 
