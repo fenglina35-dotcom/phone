@@ -32,6 +32,7 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"本地候选",scope:"both",least:1,file:"task-notes.js",name:"任务照片选择器挂载页面，异步选图绑定原任务与账号",marker:"PHOTO_TASK_PICKER_V2"},
   {release:"查岗截屏本地候选",scope:"both",least:1,file:"phone-shortcuts.js",name:"明确授权截图接收、角色开场白和原云端入口分离",marker:"CHECKIN_SHORTCUTS_V1"},
   {release:"web v1768 / private v1773",scope:"both",least:1,file:"phone-shortcuts.js",name:"查岗截图在聊天里显示原图（不再是空白气泡）",marker:"_imgCache[key]=image;_imgRev.set(image,key);_imgReady.add(key);"},
   {release:"web v1768 / private v1773",scope:"both",least:1,file:"phone-shortcuts.js",name:"收到查岗截图一定进入该角色聊天，即使停在别人的聊天里",marker:"if(m&&!(cur().p==='chat'&&cur().id===x.cid))openChat(x.cid);"},
@@ -102,6 +103,13 @@ const PERMANENT_FIXES = [
   {release:"v1732",scope:"both",least:1,name:"真人好友同步没有新消息时逐渐放慢，减轻数据库负载",marker:"function phoneFriendSyncActive(){_pfIdleSyncs=0;}"},
   {release:"v1728",scope:"both",least:1,name:"真人店铺、店铺图片与上传走中转/直连自动选线，中转未部署时保持直连",marker:"async function northMarketRelayReady()",file:"commerce-ui.js"},
   {release:"bank-family",scope:"both",least:1,name:"银行钱包与亲属卡使用真实原有支付路径",marker:"// SPY_BANK_STUDIO_V1:"},
+  {release:"spy-monitor-studio",scope:"both",least:1,name:"监控我按真实主体账号与授权展示查手机时长和点赞",marker:"// SPY_MONITOR_STUDIO_V1:"},
+  {release:"life-note-category",scope:"both",least:1,name:"小事簿保留角色自行分类而非非约定一律情绪",marker:"// LIFE_NOTE_CATEGORY_V2:"},
+  {release:"spy-life-studio",scope:"both",least:1,name:"小事簿蓝色时间线复用角色账号记录与自动记录开关",marker:"// SPY_LIFE_STUDIO_V1:"},
+  {release:"spy-date-studio",scope:"both",least:1,name:"约会页展示真实线下数据与当前账号邀请且不编造结束进度",marker:"// SPY_DATE_STUDIO_V1:"},
+  {release:"spy-organizer-studio",scope:"both",least:1,name:"日程与鲜红记仇本保留真实账本和角色决定入小黑屋",marker:"// SPY_ORGANIZER_STUDIO_V1:"},
+  {release:"page-art-cache",scope:"both",least:1,name:"三个图片大厅在启动后提前解码且不阻塞导航",marker:"// PAGE_ART_MEMORY_V1:"},
+  {release:"page-art-cache",scope:"web",least:1,file:"sw.js",name:"固定原图独立哈希缓存跨外壳更新复用",marker:"// PAGE_ART_CACHE_V1:"},
   {release:"roleplay-member-layout",scope:"both",least:1,file:"glass-theme.css",name:"剧情配置复选框固定宽度防止头像越界",marker:"/* RP_MEMBER_LAYOUT_V2:"},
   {release:"roleplay-studio",scope:"both",least:1,name:"角色扮演工作室真实功能与配套弹框",marker:"// ROLEPLAY_STUDIO_V1:"},
   {release:"v1726",scope:"both",least:1,name:"角色点外卖选商品失败时按真实菜单兜底",marker:"function northRoleFallbackPick(found,plan)",file:"commerce-ui.js"},

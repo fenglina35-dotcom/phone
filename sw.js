@@ -1,10 +1,13 @@
-const BUILD='1825';
-const HOTFIX='v1825-bank-family-1';
-const SHELL_CACHE='north-shell-v1825-bank-family-1';
+const BUILD='1826';
+const HOTFIX='v1826-role-records-1';
+const SHELL_CACHE='north-shell-v1826-role-records-1';
 const GLASS_ICON_CACHE='north-glass-icons-v2';
 const GLASS_ICON_PACKS=['black','gray','pink','blue'];
 const GLASS_ICON_KEYS=['browser','calendar','cinema','couple','douyin','dread','food','games','mail','moments','music','offline','phoneapp','roleplay','settings','shop','spy','tale','tasks','travel','wechat','worldbook','x'];
 const GLASS_ICON_FILES=GLASS_ICON_PACKS.flatMap(pack=>GLASS_ICON_KEYS.map(key=>'./assets/app-icons/glass/'+pack+'/'+key+'.webp'));
+// PAGE_ART_CACHE_V1: bounded original art cache survives shell-only updates.
+const PAGE_ART_CACHE='north-page-art-v1';
+const PAGE_ART_FILES=[{"src":"assets/roleplay-studio/theatre-card.png?r=user-choice-4&art=e69a60671450","hash":"e69a60671450f61da9a1154ce40a0eb900661ab3044a4dc956079f5b79de8996"},{"src":"assets/game-hub/hero-board.png?art=4eceb1c4003f","hash":"4eceb1c4003f56c52d3f09d9931f7f59947cd14f8bddc26391eeef20ddb719cf"},{"src":"assets/game-hub/game-icons.png?art=2a33e7488bf9","hash":"2a33e7488bf9649f8b5f6859e604eb811b6296dbac6bf6c38fb86695d96b8a1c"},{"src":"assets/game-hub/heart-card.png?art=3d53b35915a3","hash":"3d53b35915a3ddc491a3a8b2583446d9bb9ec1ffe602417401b992019636b44c"},{"src":"assets/game-hub/dice.png?art=59d4dd351e43","hash":"59d4dd351e4366ca24fb22b4b680dcd7c525b8f3465c6feef7bcf635d20b1196"},{"src":"assets/worldbook-archive/archive-icons.png?art=c72d9bfc6f3a","hash":"c72d9bfc6f3aae6cc257d24eeb438ced55ec4ff1ade0a96e8573fec40a1531ba"},{"src":"assets/worldbook-archive/footer-cat.png?art=44cef7b9e5b3","hash":"44cef7b9e5b3aa49dc35ed92b0051be0ace0cb80495588c1917afe377a9728ca"}];
 const CORE_FILES=[
   {url:'./commerce-ui.js?v='+BUILD,kind:'commerce'},
   {url:'./public-north-policy.js?v='+BUILD,kind:'publicNorthPolicy'},
@@ -17,7 +20,7 @@ const CORE_FILES=[
   {url:'./license-gate.js?v='+BUILD,kind:'license'},
   {url:'./app.js?v='+BUILD+'&r='+HOTFIX,kind:'app'},
   {url:'./cohab-theater.js?v='+BUILD+'&r=v1274-web-cohab-guests-1',kind:'theater'},
-  {url:'./web-hotfix.js?v='+BUILD+'&r=v1825-bank-family-1',kind:'hotfix'},
+  {url:'./web-hotfix.js?v='+BUILD+'&r=v1826-role-records-1',kind:'hotfix'},
   {url:'./photo-album.js?v='+BUILD,kind:'album'},
   {url:'./task-notes.js?v='+BUILD,kind:'tasks'},
   {url:'./couple-watch.js?v='+BUILD,kind:'watch'},
@@ -165,7 +168,7 @@ function validShellText(kind,text){
     &&text.includes('theaterRevealActorItems')
     &&!text.includes('cohabReplyCore=async');
   if(kind==='hotfix')return text.length>800
-    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1825-bank-family-1'")
+    &&text.includes("window.__NORTH_WEB_HOTFIX__='v1826-role-records-1'")
     &&text.includes('reconcileExpiredWxLogin')
     &&text.includes('withBaseImageCheck')
     &&text.includes('isStoredImgRef');
@@ -202,6 +205,12 @@ async function warmOptionalFiles(){
   }
 }
 
+function pageArtURL(item){return new URL(item.src,self.location.href||self.location.origin+'/');}
+function pageArtEntry(url){return PAGE_ART_FILES.find(item=>{const expected=pageArtURL(item);return url.pathname===expected.pathname&&url.searchParams.get('art')===expected.searchParams.get('art');});}
+async function pageArtValid(response,item){if(!response||!response.ok||!/^image\/png(?:;|$)/i.test(response.headers.get('content-type')||'')||typeof crypto==='undefined'||!crypto.subtle)return false;try{const bytes=await response.clone().arrayBuffer();if(bytes.byteLength>3*1024*1024||bytes.byteLength<8)return false;const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',bytes)),n=>n.toString(16).padStart(2,'0')).join('');return hash===item.hash;}catch(_){return false;}}
+async function pageArtResponse(request,item){let cache;const key=pageArtURL(item).href;try{cache=await caches.open(PAGE_ART_CACHE);const hit=await cache.match(key);if(hit)return hit;}catch(_){/* Full or unavailable storage must not prevent drawing the page. */}const response=await timeoutFetch(request,{cache:'no-cache'},12000);if(cache&&await pageArtValid(response,item)){try{await cache.put(key,response.clone());const allowed=new Set(PAGE_ART_FILES.map(file=>pageArtURL(file).href));for(const old of await cache.keys())if(!allowed.has(old.url))await cache.delete(old);}catch(_){}}return response;}
+async function warmPageArt(){let next=0;await Promise.all([0,1].map(async()=>{while(next<PAGE_ART_FILES.length){const item=PAGE_ART_FILES[next++];try{await pageArtResponse(new Request(pageArtURL(item).href),item);}catch(_){}}}));}
+
 self.addEventListener('install',event=>{
   event.waitUntil((async()=>{
     const cache=await caches.open(SHELL_CACHE);
@@ -231,6 +240,7 @@ self.addEventListener('activate',event=>{
 });
 
 self.addEventListener('message',event=>{
+  if(event.data&&event.data.type==='north-page-art-warm'){event.waitUntil(warmPageArt());return;}
   if(!event.data||event.data.type!=='north-version-query')return;
   try{if(event.source)event.source.postMessage({type:'north-update-ready',build:BUILD});}catch(_){}
 });
@@ -262,6 +272,7 @@ self.addEventListener('fetch',event=>{
   try{url=new URL(request.url);}catch(_){return;}
   if(url.origin!==self.location.origin)return;
   let decodedPath;try{decodedPath=decodeURIComponent(url.pathname);}catch(_){decodedPath=url.pathname;}
+  const artwork=pageArtEntry(url);if(artwork){event.respondWith(pageArtResponse(request,artwork).catch(()=>Response.error()));return;}
 
   if(/\/assets\/travel-home\/[^/]+\.(?:jpg|webp|png)$/.test(url.pathname)){
     event.respondWith(travelImageResponse(request,event).catch(()=>Response.error()));return;

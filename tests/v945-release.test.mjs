@@ -13,14 +13,14 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1825 · 黑金亲属卡与配置修复'/);
-  assert.match(app,/const url='sw\.js\?v=1825&r=v1825-bank-family-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1825'/);
-  assert.match(html,/app\.js\?v=1825/);
-  assert.match(sw,/const BUILD='1825'/);
-  assert.match(sw,/north-shell-v1825-bank-family-1/);
-  assert.match(index,/小手机\.html\?v=1825/);
-  assert.match(repair,/小手机\.html\?v=1825/);
+  assert.match(app,/APP_VER='v1826 · 角色记录与任务照片修复'/);
+  assert.match(app,/const url='sw\.js\?v=1826&r=v1826-role-records-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1826'/);
+  assert.match(html,/app\.js\?v=1826/);
+  assert.match(sw,/const BUILD='1826'/);
+  assert.match(sw,/north-shell-v1826-role-records-1/);
+  assert.match(index,/小手机\.html\?v=1826/);
+  assert.match(repair,/小手机\.html\?v=1826/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{
