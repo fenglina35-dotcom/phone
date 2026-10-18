@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1835'){
+if(window.__NORTH_SHELL_BUILD__!=='1836'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -640,7 +640,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1835 · 任务截止与小惩罚';
+const APP_VER='v1836 · 表情仓库';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1064,7 +1064,7 @@ function purgeRemovedHomeAppData(){let changed=false;const oldKey='co'+'zy';if(S
 const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 /* 任务便签的小猫贴纸随包附带，是相对路径；只放行这一个固定目录，聊天、群聊、查手机里都能显示。 */
-function isImg(v){return v&&(/^(https?:|data:|blob:)/i.test(v)||/^assets\/task-notes\/stickers\/[\w-]+\.png$/.test(v));}
+function isImg(v){return v&&(/^(https?:|data:|blob:)/i.test(v)||/^assets\/task-notes\/stickers\/[\w-]+\.png$/.test(v)||/^assets\/sticker-store\/[\w-]+\/[\w-]+\.(?:png|webp|gif)$/.test(v));}
 function isStoredImgRef(v){return typeof v==='string'&&v.indexOf('idb:')===0;}
 function storedImageDisplaySource(v){if(!isStoredImgRef(v))return v;return _imgCache[v.slice(4)]||v;}
 function storedImageElementSource(v){const src=storedImageDisplaySource(v);return isImg(src)||isStoredImgRef(v)?src:'';}

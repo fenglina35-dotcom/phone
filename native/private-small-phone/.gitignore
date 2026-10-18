@@ -25,6 +25,9 @@ XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/*
 XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/*
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/travel-home/
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/travel-home/**
+# Sticker store packs (STICKER_STORE_V1) ship inside the private app.
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/sticker-store/
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/sticker-store/**
 
 # Generated shared category atlas must not be omitted from private deliveries.
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/meituan-categories.png

@@ -32,6 +32,9 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"web v1833 / private v1836",scope:"both",least:1,file:"wechat-me.js",name:"微信表情仓库：桌宠小橘动态表情包、添加到我的表情/指定角色、导入表情自动写含义",marker:"STICKER_STORE_V1"},
+  {release:"web v1833 / private v1836",scope:"both",least:1,file:"desk-pet.js",name:"桌面宠物会想你、亲亲、抱抱，角色能用指令让它做",marker:"DESK_PET_MISS_KISS_HUG_V1"},
+  {release:"web v1833 / private v1836",scope:"both",least:1,name:"聊天里能显示表情仓库里随包带的表情图",marker:"/^assets\\/sticker-store\\/[\\w-]+\\/[\\w-]+\\.(?:png|webp|gif)$/"},
   {release:"web v1832 / private v1835",scope:"both",least:1,file:"app.js",name:"角色任务限定时间段（早上/中午/晚上…）带截止时间，过了算逾期、不能再交",marker:"TASK_DUE_SLOT_V1"},
   {release:"web v1832 / private v1835",scope:"both",least:1,file:"task-notes.js",name:"交作业/真心话发成小猫卡片，长内容折叠、点开卡片风格全文",marker:"TASK_DONE_CARD_V1"},
   {release:"web v1832 / private v1835",scope:"both",least:2,file:"app.js",name:"任务没做完第二天必受角色自己想的小惩罚，连续三天先通知再关小黑屋",marker:"TASK_PUNISH_V1"},

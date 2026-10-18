@@ -1,0 +1,56 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+
+// STICKER_STORE_V1 / DESK_PET_MISS_KISS_HUG_V1: the sticker store ships the same pet pack in the web and
+// private bundles, every listed sticker exists as an animated transparent WebP, chat accepts those paths,
+// and the desk pet itself can do the three new actions the stickers show.
+const P = 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/';
+const url = name => new URL('../' + name, import.meta.url);
+const read = name => fs.readFileSync(url(name), 'utf8');
+
+test('the sticker store and desk pet are the same file in both bundles', () => {
+  assert.equal(read(P + 'wechat-me.js'), read('wechat-me.js'));
+  assert.equal(read(P + 'desk-pet.js'), read('desk-pet.js'));
+});
+
+test('every pet sticker exists in both bundles as an animated WebP with transparency', () => {
+  const src = read('wechat-me.js'), m = src.match(/const SS_PET=(\[[^\n]*\]);/);
+  assert.ok(m, 'SS_PET must exist');
+  const pet = vm.runInNewContext(m[1]);
+  assert.equal(pet.length, 20);
+  for (const [cmd, caption] of [['想你', '想你了'], ['亲亲', '亲亲'], ['抱抱', '抱抱'], ['伸懒腰', '哦']])
+    assert.ok(pet.some(x => x[0] === cmd && x[1] === caption), cmd + ' sticker must be listed');
+  pet.forEach((_, i) => {
+    const name = 'assets/sticker-store/pet/pet-' + String(i + 1).padStart(2, '0') + '.webp';
+    const web = fs.readFileSync(url(name)), priv = fs.readFileSync(url(P + name));
+    assert.ok(web.equals(priv), name + ' must be identical in the private bundle');
+    assert.equal(web.toString('latin1', 0, 4), 'RIFF');
+    assert.ok(web.includes(Buffer.from('ANIM')), name + ' must be animated');
+    assert.ok(web.includes(Buffer.from('ALPH')) || web.includes(Buffer.from('VP8L')), name + ' must keep transparency');
+  });
+});
+
+test('chat shows bundled sticker-store pictures in both bundles', () => {
+  for (const file of ['app.js', P + 'app.js']) {
+    const src = read(file), m = src.match(/function isImg\(v\)\{[^\n]*?\}/);
+    assert.ok(m, 'isImg must exist in ' + file);
+    const isImg = vm.runInNewContext('(' + m[0] + ')');
+    assert.ok(isImg('assets/sticker-store/pet/pet-01.webp'));
+    assert.ok(isImg('assets/task-notes/stickers/sticker-01.png'), 'the cat stickers still show');
+    assert.ok(!isImg('assets/sticker-store/../app.js'));
+    assert.ok(!isImg('assets/other/pet-01.webp'));
+  }
+});
+
+test('the desk pet can miss, kiss and hug, and the role is offered those actions', () => {
+  const s = read('desk-pet.js');
+  for (const k of ['想你', '亲亲', '抱抱']) assert.match(s, new RegExp("'" + k + "':\\{eyes:'"));
+  assert.match(s, /miss:\{w:9,h:7,svg:/);
+  assert.match(s, /kiss:\{w:7,h:3,svg:/);
+  assert.match(s, /\.dp-root\.hug \.dp-nub-l,\.dp-root\.hug \.dp-nub-r\{animation:dpHug/);
+  assert.match(s, /'求抱抱':'抱抱'/);
+  // the role prompt lists every CMDS key, so new actions reach the role without a separate list
+  assert.match(s, /可用表情和动作：'\+Object\.keys\(CMDS\)\.join\('、'\)/);
+});
