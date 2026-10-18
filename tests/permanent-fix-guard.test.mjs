@@ -32,6 +32,10 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"web v1832 / private v1835",scope:"both",least:1,file:"app.js",name:"角色任务限定时间段（早上/中午/晚上…）带截止时间，过了算逾期、不能再交",marker:"TASK_DUE_SLOT_V1"},
+  {release:"web v1832 / private v1835",scope:"both",least:1,file:"task-notes.js",name:"交作业/真心话发成小猫卡片，长内容折叠、点开卡片风格全文",marker:"TASK_DONE_CARD_V1"},
+  {release:"web v1832 / private v1835",scope:"both",least:2,file:"app.js",name:"任务没做完第二天必受角色自己想的小惩罚，连续三天先通知再关小黑屋",marker:"TASK_PUNISH_V1"},
+  {release:"web v1832 / private v1835",scope:"both",least:1,file:"app.js",name:"罚的任务有截止时间，过点没做完先通知再关小黑屋（没授权就再罚一次）",marker:"function taskPunishDeadline(c)"},
   {release:"本地候选",scope:"both",least:1,file:"app.js",name:"手动角色日程同步后台并自然报备，改删与账号隔离",marker:"ROLE_OWNER_TODO_REPORT_V1"},
   {release:"本地候选",scope:"both",least:1,file:"task-notes.js",name:"任务照片选择器挂载页面，异步选图绑定原任务与账号",marker:"PHOTO_TASK_PICKER_V2"},
   {release:"查岗截屏本地候选",scope:"both",least:1,file:"phone-shortcuts.js",name:"明确授权截图接收、角色开场白和原云端入口分离",marker:"CHECKIN_SHORTCUTS_V1"},

@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1831'){
+if(window.__NORTH_SHELL_BUILD__!=='1832'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -616,7 +616,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1831 · 安全合并不再卡住';
+const APP_VER='v1832 · 任务截止与小惩罚';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2112,7 +2112,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1831&r=v1831-owner-todo-report-1';
+  const url='sw.js?v=1832&r=v1832-owner-todo-report-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -8868,7 +8868,7 @@ function taskDailyJournalMerge(c){try{const j=taskDailyJournalRead();if(!j)retur
 function taskDailyCount(c){return Math.max(1,Math.min(8,+((c&&c.taskN)||3)));}
 function taskAutoState(c){if(!c)return null;const day=todayStr(),old=c.taskAuto&&typeof c.taskAuto==='object'?c.taskAuto:null;if(!old||old.date!==day)c.taskAuto={date:day,attempts:0,nextAt:0,lastErrorAt:0};return c.taskAuto;}
 function tasksToday(c){if(taskDailyJournalMerge(c))save(0);const t=c&&c.tasks;if(!t||t.date!==todayStr())return null;
-  const cap=taskDailyCount(c),old=Array.isArray(t.list)?t.list:[],clean=old.filter(x=>x&&!x.extra).slice(0,cap);
+  const cap=taskDailyCount(c),old=Array.isArray(t.list)?t.list:[],clean=old.filter(x=>x&&!x.extra).filter((x,i,a)=>x.punish||a.slice(0,i+1).filter(y=>!y.punish).length<=cap);
   if(clean.length!==old.length){t.list=clean;save();}
   return t;}
 function _taskNorm(s){return (''+s).replace(/[\s，。、！!？?.~…：:；;「」『』""''（）()]/g,'');}
@@ -8883,6 +8883,14 @@ function taskDup(list,text){const nt=_taskNorm(text);if(!nt)return true;const se
     const setX=new Set(nx);let inter=0;setT.forEach(ch=>{if(setX.has(ch))inter++;});
     const shorter=Math.min(setT.size,setX.size);
     return shorter>=3&&inter/shorter>=0.8;/* 短任务的字几乎都在另一条里→重复 */});}
+/* 任务限定了时间段（早上拍照、中午吃饭…）就带最晚完成时间 due（"HH:MM"），过了还没做就是逾期，不能再点完成（TASK_DUE_SLOT_V1）。
+   角色布置时自己给 due；没给但任务里写了时间段，按默认时间补上。 */
+const TASK_SLOTS=[[/早上|早晨|清晨|一早|起床/,'早上','10:00'],[/上午/,'上午','12:00'],[/中午|午饭|午餐|午休/,'中午','14:00'],[/下午/,'下午','18:00'],[/傍晚|黄昏/,'傍晚','19:30'],[/晚上|今晚|晚饭|晚餐|睡前|夜里/,'晚上','23:30']];
+function taskDueFor(o,text){const s=String(text||'');let slot=null,at=1e9;for(const z of TASK_SLOTS){const m=s.match(z[0]);if(m&&m.index<at){at=m.index;slot=z;}}
+  const raw=String(o&&o.due||'').trim().replace('：',':'),m=raw.match(/^(\d{1,2}):(\d{2})$/);let due='';if(m&&+m[1]>=5&&+m[1]<=23&&+m[2]<=59)due=String(+m[1]).padStart(2,'0')+':'+m[2];
+  if(!due&&slot)due=slot[2];return due?{due,slot:slot?slot[1]:''}:null;}
+function taskDueAt(t,x){if(!t||!x||!x.due||!/^\d{2}:\d{2}$/.test(x.due))return 0;const [y,mo,d]=String(t.date||'').split('-').map(Number),[h,mi]=x.due.split(':').map(Number);return y?new Date(y,mo-1,d,h,mi,0,0).getTime():0;}
+function taskOverdue(x,t,now){const at=taskDueAt(t,x);return !!at&&!(x&&x.done)&&(now==null?Date.now():now)>at;}
 function taskVerifyLabel(x){if(typeof taskNeedsPhoto==='function'&&taskNeedsPhoto(x))return '上传照片给ta看';return {steps:'我走够了',essay:'写好交给ta',moment:'我发朋友圈了',tweet:'我发推了',douyin:'我发抖音了',real:'完成了',truth:'老实回答ta',photo:'上传照片给ta看'}[x.verify]||'完成';}
 function postedSince(kind,since){since=since||0;
   if(kind==='moment')return S.moments.some(p=>p.authorId==='me'&&(p.time||0)>since);
@@ -8919,7 +8927,7 @@ async function genTasks(opt){opt=opt||{};const automatic=opt.automatic===true,c=
   const hist=(c.taskHist||[]).map(s=>({text:s}));// 最近几天布置过的任务，用来防止重复
   const avoidTxt=hist.length?'\n· 【最近这些任务你已经布置过了，今天务必换着花样来，别再重复、也别换汤不换药地重复同类】：'+hist.map(h=>h.text).join('；'):'';
   try{const allowed='essay（写小作文/检讨/彩虹屁/想你的话/保证书，target填字数上限如100）、moment（发一条朋友圈）、tweet（发一条推特X）、douyin（发一条抖音）、real（现实里的小事或暧昧亲密小任务，靠她自觉打卡，比如：喝杯水、好好吃饭、敷面膜、早点睡、睡前跟你撒娇道晚安、乖乖只想你一个、今天不准跟别的男生聊天等）、photo（要她拍照片给你看的：给你拍张自拍、拍正在吃的饭、拍手边最喜欢的东西、穿你喜欢的小裙子拍给你等；她必须在任务里上传照片、你看过才算完成）';
-    const _tm=[{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：现在你来给'+S.me.name+'布置今天总共恰好 '+n+' 条小任务。你是ta的恋人/掌控者，按你的人设、此刻心情、ta最近的表现来布置。\n· 任务一定要【有趣、有创意、好玩】，别死板、别像打卡清单、别每天千篇一律——可以整点花活、玩梗、设小情境。'+avoidTxt+'\n· 多来点【暧昧、撩人、亲密】的，而且要以【Dom的姿态】来布置：命令式、强势、掌控欲拉满，把ta当你的小sub来调教，语气笃定带点危险又宠溺，要ta乖乖服从听话。可以大胆放得开、带点涩，越让ta脸红心跳、心甘情愿被你拿捏越好（保持是两个相爱的人之间有掌控有宠爱的情趣，不用拘谨）。\n· 现实任务一定要轻松，别累人：绝对不要罚跑步/暴走/喝很多杯水那种。\n大部分任务要是【在手机上就能完成的】(essay/moment/tweet/douyin)，可以有一两条现实任务(real)。每条必须从这些可验证类型里选一个：'+allowed+'。\n· 这 '+n+' 条里必须有且只有一条 verify 为 truth 的任务，内容是你【今天最想问'+S.me.name+'的一个真心话问题】（一句问句就好，可以暧昧、走心或是你好奇/在意的事），target填0、kind填real。真心话算在总数里，除此之外只能再给 '+normalN+' 条，绝不能额外追加。\n只输出JSON数组、不要任何解释：[{"text":"任务描述(用你的第一人称口吻，强势Dom的命令语气，像在调教/撩/宠你的小sub，可以霸道也可以俏皮有梗)","kind":"app或real","verify":"类型代码","target":数字(没有填0)}]'}];
+    const _tm=[{role:'system',content:buildSystem(c)},{role:'user',content:'[系统：现在你来给'+S.me.name+'布置今天总共恰好 '+n+' 条小任务。你是ta的恋人/掌控者，按你的人设、此刻心情、ta最近的表现来布置。\n· 任务一定要【有趣、有创意、好玩】，别死板、别像打卡清单、别每天千篇一律——可以整点花活、玩梗、设小情境。'+avoidTxt+'\n· 多来点【暧昧、撩人、亲密】的，而且要以【Dom的姿态】来布置：命令式、强势、掌控欲拉满，把ta当你的小sub来调教，语气笃定带点危险又宠溺，要ta乖乖服从听话。可以大胆放得开、带点涩，越让ta脸红心跳、心甘情愿被你拿捏越好（保持是两个相爱的人之间有掌控有宠爱的情趣，不用拘谨）。\n· 现实任务一定要轻松，别累人：绝对不要罚跑步/暴走/喝很多杯水那种。\n大部分任务要是【在手机上就能完成的】(essay/moment/tweet/douyin)，可以有一两条现实任务(real)。每条必须从这些可验证类型里选一个：'+allowed+'。\n· 这 '+n+' 条里必须有且只有一条 verify 为 truth 的任务，内容是你【今天最想问'+S.me.name+'的一个真心话问题】（一句问句就好，可以暧昧、走心或是你好奇/在意的事），target填0、kind填real。真心话算在总数里，除此之外只能再给 '+normalN+' 条，绝不能额外追加。\n· 现在是'+hm(Date.now())+'。如果某条任务限定了时间段（早上/上午/中午/下午/傍晚/晚上/睡前），必须给它加 due，写最晚完成时间"HH:MM"（一般早上10:00、上午12:00、中午14:00、下午18:00、傍晚19:30、晚上23:30，你也可以按人设定得更严），过了这个时间没做就算逾期；已经过去的时间段不要再布置。没限定时间段的任务不写 due，当天23:59前完成即可。\n只输出JSON数组、不要任何解释：[{"text":"任务描述(用你的第一人称口吻，强势Dom的命令语气，像在调教/撩/宠你的小sub，可以霸道也可以俏皮有梗)","kind":"app或real","verify":"类型代码","target":数字(没有填0),"due":"HH:MM(只有限定了时间段才写)"}]'}];
     let arr=await aiGen(_tm,{max:760},parseArr);
     if(!arr||!arr.length)arr=await aiGen(_tm,{max:760,aux:true},parseArr);/* 主模型不行就用副模型兜底 */
     if(!Array.isArray(arr))arr=[];
@@ -8927,7 +8935,8 @@ async function genTasks(opt){opt=opt||{};const automatic=opt.automatic===true,c=
     const list=[];for(const o of arr){const text=(o.text||'').toString().slice(0,140);if(!text)continue;
       if(o.verify==='truth'){if(!truthQ)truthQ=text;continue;}/* 真心话算在每日总数里 */
       if(list.length>=normalN)continue;if(taskDup(list,text)||taskDup(hist,text))continue;/* 跳过重复/最近布置过的 */
-      list.push({id:uid(),text,kind:o.kind==='real'?'real':'app',verify:['essay','moment','tweet','douyin','real','photo'].indexOf(o.verify)>=0?o.verify:'real',target:+o.target||0,done:false});}
+      const due=taskDueFor(o,text);if(due&&taskDueAt({date:todayStr()},due)<=Date.now()+20*60000)continue;/* 时间段已经过了的不布置 */
+      list.push({id:uid(),text,kind:o.kind==='real'?'real':'app',verify:['essay','moment','tweet','douyin','real','photo'].indexOf(o.verify)>=0?o.verify:'real',target:+o.target||0,done:false,...(due||{})});}
     const fallback=[
       {text:'睡前认真来跟我说一句只属于今天的晚安。',kind:'real',verify:'real',target:0},
       {text:'写三句今天为什么喜欢我，别敷衍。',kind:'app',verify:'essay',target:80},
@@ -8943,10 +8952,11 @@ async function genTasks(opt){opt=opt||{};const automatic=opt.automatic===true,c=
     if(list.length!==normalN)throw 0;
     list.push({id:uid(),text:truthQ||'今天，你最想跟我说、却一直没说出口的一句话是什么？',kind:'truth',verify:'truth',target:0,done:false,truth:true});// 固定的"他想问我的真心话"
     c.taskHist=[...list.map(x=>x.text),...(c.taskHist||[])].slice(0,30);// 记下今天布置的，往后几天别重复
-    c.tasks={date:todayStr(),assignTs:Date.now(),list,rewarded:false,penalized:false};c.taskAuto={date:todayStr(),attempts:0,nextAt:0,lastErrorAt:0};taskDailyJournalWrite(c);save();_taskBusy=false;render();if(!automatic||cur().p==='tasks'){if(typeof taskToast==='function')taskToast('今天的任务来咯');else toast('任务来咯📋');}
-    if(!c.blocked)scheduleReply(c.id,'[系统：'+(_penalty?'两件事合在这一次回复里说，每件只说一遍：①'+_penalty+'②':'')+'你刚在'+S.me.name+'手机的任务便签里给ta布置了今天的任务，跟ta说一声、催ta【今天23:59之前】完成、说说不完成的后果，一两句，符合你人设。别逐条复述任务。]');
+    c.tasks={date:todayStr(),assignTs:Date.now(),list,rewarded:false,penalized:false};taskPunishFlush(c);c.taskAuto={date:todayStr(),attempts:0,nextAt:0,lastErrorAt:0};taskDailyJournalWrite(c);save();_taskBusy=false;render();if(!automatic||cur().p==='tasks'){if(typeof taskToast==='function')taskToast('今天的任务来咯');else toast('任务来咯📋');}
+    if(!c.blocked)scheduleReply(c.id,'[系统：'+(_penalty?'两件事合在这一次回复里说，每件只说一遍：①'+_penalty+'②':'')+'你刚在'+S.me.name+'手机的任务便签里给ta布置了今天的任务，跟ta说一声、催ta按时完成（限定了时间段的要在你定的时间前，其余【今天23:59之前】）、说说不完成的后果，一两句，符合你人设。别逐条复述任务。]');
   }catch(e){const st=taskAutoState(c),attempts=Math.min(8,(+st.attempts||0)+1);st.attempts=attempts;st.lastErrorAt=Date.now();st.lastError='generation_failed';st.nextAt=Date.now()+Math.min(6*3600000,15*60000*Math.pow(2,attempts-1));save();_taskBusy=false;if(_penalty&&!c.blocked)scheduleReply(c.id,'[系统：'+_penalty+']');if(!automatic||cur().p==='tasks')render();/* 自动布置失败只留内部退避记录，打开小手机时绝不弹失败提示。 */if(!automatic)toast('没布置成功，再点一次');}}
 async function completeTask(id){const c=taskC();const t=tasksToday(c);if(!t)return;const x=t.list.find(z=>z.id===id);if(!x||x.done)return;
+  if(taskOverdue(x,t)){const tip='这条要在'+(x.slot?x.slot+' ':'')+x.due+'前做完，已经逾期啦';if(typeof taskToast==='function')taskToast(tip);else toast(tip);return;}
   if(x.verify==='truth'){openTruth(id);return;}
   if(x.verify==='essay'){openEssay(id);return;}
   /* 要拍照片的任务：必须在任务里上传照片、经角色看过才算完成，不能直接点完成（防止糊弄） */
@@ -8980,11 +8990,49 @@ function submitTruth(id){const ta=$('#truth_t');const v=(ta?ta.value:'').trim();
    就和“今天的任务布置好了”合成一条回复，免得两条系统提示挤在一起，第二条把第一条的话又说一遍。 */
 const _taskPenaltyNote={};
 function checkTaskPenalty(c){const t=c&&c.tasks;if(!t||t.date===todayStr()||t.penalized)return;
-  const undone=t.list.filter(x=>!x.done);t.penalized=true;const ageDays=Math.round((Date.parse(todayStr())-Date.parse(t.date))/864e5);
+  const undone=t.list.filter(x=>!x.done&&!x.missed);t.penalized=true;const ageDays=Math.round((Date.parse(todayStr())-Date.parse(t.date))/864e5);
+  /* 连续几天没做完（TASK_PUNISH_V1）：只有相邻两天都有没做完的才接着数，做完的一天清零 */
+  const ms=c.taskMiss||{},gap=ms.date?Math.round((Date.parse(t.date)-Date.parse(ms.date))/864e5):0;ms.streak=undone.length?(gap===1?(+ms.streak||0)+1:1):0;ms.date=t.date;c.taskMiss=ms;
   if(undone.length&&!(ageDays>3)){grudgesOf(c).unshift({id:uid(),text:t.date+' 没完成我布置的任务（差'+undone.length+'条：'+undone.map(x=>x.text).join('、').slice(0,36)+'）',done:false,ts:Date.now()});
     behaviorRecord('task',t.date+' 有 '+undone.length+' 条任务没完成：'+undone.map(x=>x.text).join('、').slice(0,50),'task',{force:true});
-    if(!c.blocked){_taskPenaltyNote[c.id]=t.date+'你给'+S.me.name+'布置的任务，ta有 '+undone.length+' 条没完成。你不太高兴，已经记到你的小本本上了，冷淡地说一句、并威胁线下见面要罚ta（怎么罚你自己定，符合人设），一两句。';setTimeout(()=>{const n=_taskPenaltyNote[c.id];if(!n)return;delete _taskPenaltyNote[c.id];scheduleReply(c.id,'[系统：'+n+']');},4000);}}
+    if(!c.blocked){const jail=ms.streak>=3&&!!(S.couple&&S.couple.cid===c.id&&S.couple.jailAuth)&&!(S.jail&&S.jail.active);
+      c.taskPunish={date:t.date,status:'pending',jail,at:Date.now(),tries:0,before:taskPunishSnap(c)};
+      _taskPenaltyNote[c.id]=taskPunishNote(c,t,undone,ms.streak,jail);setTimeout(()=>{const n=_taskPenaltyNote[c.id];if(!n)return;delete _taskPenaltyNote[c.id];scheduleReply(c.id,'[系统：'+n+']');},4000);}}
   save();}
+/* 任务没做完必须受一个小惩罚（TASK_PUNISH_V1）：第二天由角色自己想、用真实功能执行——扣零花钱、锁软件、罚写检讨/罚任务；
+   连续三天没做完且情侣空间授权了小黑屋，角色先用自己的口吻通知，再关进去（关小黑屋本身就要求先说出口）。
+   角色没真正执行就再催一次；还没有，系统按角色的名义补一条罚写检讨，保证“没做完必有惩罚”。 */
+function taskPunishTools(c){const rows=[];if(S.couple&&S.couple.cid===c.id){
+    if(S.couple.walletAuth&&(+S.me.balance||0)>0)rows.push('扣零花钱：单独一行 [扣款|金额]（ta现在余额 ¥'+(+S.me.balance).toFixed(2)+'，金额你自己拿捏，别超过余额）');
+    const g=S.couple.grant||{},apps=Object.keys(LOCKABLE).filter(k=>g[k]).map(k=>LOCKABLE[k]);if(apps.length)rows.push('锁ta的软件：单独一行 [锁定|App名|时长]（能锁：'+apps.join('、')+'；时长你定，比如 3小时、到明早8点，最长7天）');}
+  const jailOk=!!(S.couple&&S.couple.cid===c.id&&S.couple.jailAuth);
+  rows.push('罚写检讨或加一条罚的任务：单独一行 [罚任务|内容|字数|截止时间]，比如 [罚任务|写一份检讨，说清楚昨天为什么没做完|150|21:00]；不用写字的现实小惩罚字数填0；截止时间你自己定（今天之内的"HH:MM"），不写就是4小时后。它会出现在ta今天的任务便签里，ta也得完成'+(jailOk?'，到点没做完你就把ta关进小黑屋':''));
+  return rows;}
+function taskPunishNote(c,t,undone,streak,jail){const who=S.me.name,list=undone.map(x=>x.text).join('、').slice(0,60);
+  if(jail)return t.date+'你给'+who+'布置的任务，ta又有 '+undone.length+' 条没完成（'+list+'），这已经是连续第 '+streak+' 天没做完了。你决定把ta关进小黑屋：先用你自己的口吻明明白白告诉ta，你现在就要把ta关进小黑屋、为什么（一两句，让ta知道要被关了，不要说“如果/再这样”），然后单独一行 [关小黑屋|连续'+streak+'天没完成任务]。这是真实执行的。';
+  return t.date+'你给'+who+'布置的任务，ta有 '+undone.length+' 条没完成（'+list+'）'+(streak>=2?'，已经连续 '+streak+' 天没做完了，罚得重一点':'')+'。规则：任务没做完就必须受一个小惩罚，罚什么由你自己想，按你的人设和此刻心情来。可以用的方式：\n· '+taskPunishTools(c).join('\n· ')+'\n先用你的口吻说一两句（冷淡、生气、失望、坏笑都行），然后必须输出一个惩罚指令，真的执行，不能只是口头威胁，也别说“下次再罚”。';}
+function taskPunishSnap(c){const st=typeof companionState==='function'&&S.couple&&S.couple.cid===c.id?companionState():null,t=c.tasks;
+  return {bal:+S.me.balance||0,locks:Object.keys(S.couple&&S.couple.locks||{}).length,cmds:(st&&st.commands||[]).filter(x=>x&&(x.action==='lock'||x.action==='limit')).length,jail:!!(S.jail&&S.jail.active),pt:(c.taskPunishQueue||[]).length+(t&&t.date===todayStr()?t.list.filter(x=>x&&x.punish).length:0)};}
+function taskPunishFired(c){const p=c&&c.taskPunish,b=p&&p.before;if(!b)return false;const n=taskPunishSnap(c);return n.bal<b.bal-.001||n.locks>b.locks||n.cmds>b.cmds||n.jail&&!b.jail||n.pt>b.pt;}
+function taskPunishAddTask(c,arg){if(!c)return false;const parts=String(arg||'').split(/[|｜]/),text=(parts[0]||'').replace(/[「」『』\x22]/g,'').trim().slice(0,80);if(text.length<2)return false;
+  const n=parseInt(String(parts[1]||'').replace(/[^\d]/g,''),10),due=taskPunishDue(parts[2]),write=n>0||/检讨|保证书|写|字/.test(text)&&!(parts.length>1&&n===0),target=write?Math.max(30,Math.min(500,n||100)):0;
+  const x={id:uid(),text,kind:write?'app':'real',verify:write?'essay':'real',target,done:false,punish:true,date:todayStr(),due},t=c.tasks&&c.tasks.date===todayStr()?c.tasks:null;
+  if(t){if(t.list.filter(z=>z&&z.punish).length>=2)return false;t.list.push(x);t.rewarded=false;}else{c.taskPunishQueue=(c.taskPunishQueue||[]).slice(0,1);c.taskPunishQueue.push(x);}
+  save();if(cur().p==='tasks')render();return true;}
+function taskPunishFlush(c){const q=c&&c.taskPunishQueue;if(!q||!q.length||!c.tasks||c.tasks.date!==todayStr())return;c.tasks.list.push(...q.splice(0).filter(x=>!x.date||x.date===todayStr()).map(x=>({...x,id:x.id||uid()})));delete c.taskPunishQueue;}
+/* 罚的任务都有截止时间（角色定，没定就是4小时后，最晚23:30，至少留1小时）；到点没做完：授权了小黑屋就让角色先开口通知再关进去，没授权就再罚一次 */
+function taskPunishDue(raw){const m=String(raw||'').trim().replace('：',':').match(/^(\d{1,2}):(\d{2})$/),now=new Date(),pad=n=>String(n).padStart(2,'0'),hm=d=>pad(d.getHours())+':'+pad(d.getMinutes());let due=m&&+m[1]<=23&&+m[2]<=59?pad(+m[1])+':'+m[2]:'';
+  const min=new Date(Date.now()+60*60000),dflt=new Date(Math.min(Date.now()+4*3600000,new Date(now.getFullYear(),now.getMonth(),now.getDate(),23,30).getTime()));if(min.getDate()!==now.getDate())return '23:59';if(!due||due<hm(min))due=hm(dflt<min?min:dflt);return due;}
+function taskPunishDeadline(c){const t=c&&c.tasks;if(!t||t.date!==todayStr()||c.blocked||c.taskPunish&&c.taskPunish.status==='pending')return;const x=t.list.find(z=>z&&z.punish&&!z.done&&!z.missed&&taskOverdue(z,t));if(!x)return;x.missed=true;
+  const jail=!!(S.couple&&S.couple.cid===c.id&&S.couple.jailAuth)&&!(S.jail&&S.jail.active),who=S.me.name;c.taskPunish={date:t.date,status:'pending',jail,at:Date.now(),tries:0,before:taskPunishSnap(c),source:'punish-overdue'};save();
+  scheduleReply(c.id,'[系统：你罚'+who+'的「'+x.text+'」要求 '+x.due+' 前完成，ta到点了还没做。'+(jail?'说好的，你现在就把ta关进小黑屋：先用你自己的口吻明明白白告诉ta，你现在就要把ta关进小黑屋、为什么（一两句，不要说“如果/再这样”），然后单独一行 [关小黑屋|罚的任务没按时完成]。这是真实执行的。':'再给ta一个小惩罚，必须真的执行。可以用的方式：\n· '+taskPunishTools(c).join('\n· ')+'\n先用你的口吻说一两句，然后输出一个惩罚指令。')+']');}
+function taskPunishSweep(c){const p=c&&c.taskPunish;if(!p||p.status!=='pending')return;
+  if(taskPunishFired(c)){p.status='done';p.doneAt=Date.now();if(p.jail&&S.jail&&S.jail.active&&c.taskMiss)c.taskMiss.streak=0;save();return;}
+  if(Date.now()-p.at<3*60000||_taskPenaltyNote[c.id]||c.blocked)return;
+  if((+p.tries||0)<1){p.tries=1;p.at=Date.now();save();scheduleReply(c.id,'[系统：你刚才说要罚'+S.me.name+'（昨天的任务没做完），但还没有真正执行。现在就执行：'+(p.jail?'先用一句话告诉ta你要把ta关进小黑屋，然后单独一行 [关小黑屋|连续没完成任务]':'从这些里挑一个，单独一行输出指令：\n· '+taskPunishTools(c).join('\n· '))+'。不要解释规则。]');return;}
+  if(p.jail&&(+p.tries||0)<2){p.tries=2;p.jail=false;p.at=Date.now();save();scheduleReply(c.id,'[系统：小黑屋这次没能关成。改成给'+S.me.name+'一个小惩罚，单独一行输出指令：\n· '+taskPunishTools(c).join('\n· ')+'。不要解释规则。]');return;}
+  p.status='done';p.fallback=true;p.doneAt=Date.now();taskPunishAddTask(c,'写一份检讨，说清楚'+p.date.slice(5).replace('-','月')+'日的任务为什么没做完|100');
+  pushMsg(c.id,{role:'assistant',type:'sys',content:(c.remark||c.name)+' 罚你写一份检讨，已经放进今天的任务便签',id:uid()});save();}
 
 /* ---------- 微信主界面 ---------- */
 function renderWeChat(){
@@ -16447,7 +16495,7 @@ function userNeedsComfortText(t){return /哭|呜呜|😭|😢|难过|委屈|不�
 function badMoodInContent(){return false;}
 function badMoodDodge(content){let t=(''+(content||'')).replace(/[\[【]\s*心情\s*[\|｜][^\]】]*[\]】]/g,'').replace(/\s+/g,'');if(!t)return false;const denial=/(我没事|没事|我没有不开心|没有不开心|没有不高兴|没有生气|没生气|没有啊|没什么|真没事|别多想|不用管)/.test(t);const reveal=/(有点|其实|只是|因为|我怕|我想|我在意|介意|吃醋|生气|委屈|难过|不高兴|不开心|心里|闷|烦|冷|在乎|不是你的错|不想说|现在不想说|怕说了)/.test(t.replace(/没有不开心|没有不高兴|没有生气|没生气/g,''));return denial&&!reveal;}
 function splitActions(line){const out=[];const re=/[（(【][^）)】]*[）)】]/g;let last=0,m;while((m=re.exec(line))){const before=line.slice(last,m.index).trim();if(before)out.push(before);out.push(m[0].trim());last=re.lastIndex;}const tail=line.slice(last).trim();if(tail)out.push(tail);return out.length?out:[line];}
-const TAGWORDS='心情值|心情|内心|换背景|心声彩蛋|拍一拍|记住|闹钟|日程|婚礼日程|监督目标|目标完成|发朋友圈|发推|发抖音|点外卖|语音|表情|收藏表情|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|约会|登录微信|删好友|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|同意游戏|拒绝游戏|你画我猜|心动审判|引用|换气泡|改日记密码|改密码|要求报备|要求定位|要求照片|关系';
+const TAGWORDS='心情值|心情|内心|换背景|心声彩蛋|拍一拍|记住|闹钟|日程|婚礼日程|监督目标|目标完成|发朋友圈|发推|发抖音|点外卖|语音|表情|收藏表情|拒绝代付|代付成功|收款|拒收|收礼|拒礼|来电|联网|转账|红包|位置|图片|文件|骰子|送礼|挂断|亲属卡|推荐好友|已加|拉黑|锁定|禁言|解锁|解禁|限时|加时|记仇|消气|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|约会|登录微信|删好友|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|同意游戏|拒绝游戏|你画我猜|心动审判|引用|换气泡|改日记密码|改密码|要求报备|要求定位|要求照片|罚任务|惩罚任务|罚写检讨|罚检讨|关系';
 const APPNAME2KEY={'像素少女':'pixelhome','电子宠物':'pet','浏览器':'browser','搜索':'browser','上网':'browser','百度':'browser','朋友圈':'moments','动态':'moments','查他手机':'spy','查岗':'spy','查手机':'spy','购物':'shop','淘宝':'shop','商城':'shop','日历':'calendar','日程':'calendar','x':'x','X':'x','推特':'x','微博':'x','推':'x','抖音':'douyin','短视频':'douyin','刷视频':'douyin','刷抖音':'douyin','外卖':'food','点餐':'food','游戏':'games','游戏大厅':'games','打游戏':'games','信箱':'mail','邮箱':'mail','邮件':'mail','电话':'phoneapp','电话短信':'phoneapp','短信':'phoneapp','信息':'phoneapp','通讯录':'phoneapp','拨号':'phoneapp','来电':'phoneapp','通话':'phoneapp','线下约会':'offline','线下':'offline','约会':'offline','角色扮演':'roleplay','角色扮演软件':'roleplay','扮演':'roleplay','剧情':'roleplay','play':'roleplay','PLAY':'roleplay','规则怪谈':'tale','规则怪谈软件':'tale','怪谈':'tale','规则':'tale','惊悚抉择':'dread','惊悚抉择软件':'dread','惊悚选择':'dread','惊悚选择软件':'dread','恐怖选择':'dread','恐怖选择软件':'dread','惊辣选择':'dread','惊辣选择软件':'dread','精辣选择':'dread','精辣选择软件':'dread','抉择':'dread','音乐':'music','音乐软件':'music','听歌':'music','歌曲':'music','歌':'music','一起听':'music'};
 Object.assign(APPNAME2KEY,{'附近的人':'nearby','微信附近的人':'nearby','小鱼旅行':'travel','携程旅行':'travel','云程':'travel','云城':'travel'});
 function genPwd(){return String(1000+Math.floor(Math.random()*9000));}
@@ -16519,7 +16567,7 @@ async function maybeGrudgeResolve(reply,c,id){
     if(changed){hints.filter(Boolean).forEach(t=>dialogueResolveThread(c,t));save();if(/^(wechat|chat|couple|spy)$/.test(cur().p))render();}
   }catch(e){}}
 // 在"主动消息/查岗/节日/日程"等直接推送的回复里，把管控/记仇指令落地（记仇本、锁App都生效），显示时再用 CTLLEAK 滤掉这些标签行（普通卡片如红包/语音照常）
-const CTLLEAK=/^[\[【]\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|监督目标|目标完成|记仇|消气|拉黑|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|突脸|选择|改日记密码|改密码|改备注|登录微信|删好友|删我好友|群昵称|叫车查询|叫车|订演唱会查询|订演唱会|订火车票查询|订火车票|订机票查询|订机票|订票|送票|订酒店|换头像|发朋友圈|发推|发抖音|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|批准|驳回|桌宠)\s*[|｜:：\]】]/;
+const CTLLEAK=/^[\[【]\s*(锁定|上锁|解锁|禁言|解禁|限时|加时|监督目标|目标完成|记仇|消气|拉黑|重点|取消重点|扣款|扣光|没收零花|清空零花|冻结亲属卡|解冻亲属卡|关小黑屋|禁闭|放出|放出来|放行|原谅|突脸|选择|改日记密码|改密码|改备注|登录微信|删好友|删我好友|群昵称|叫车查询|叫车|订演唱会查询|订演唱会|订火车票查询|订火车票|订机票查询|订机票|订票|送票|订酒店|换头像|发朋友圈|发推|发抖音|对Ta说|挂项圈|换项圈|改项圈|戴项圈|套项圈|摘项圈|取项圈|解项圈|去项圈|卸项圈|替发朋友圈|罚任务|惩罚任务|罚写检讨|罚检讨|批准|驳回|桌宠)\s*[|｜:：\]】]/;
 function cleanMomentBody(t){let v=(''+(t||'')).replace(/^[\s「"'\[【]+|[\s」"'\]】]+$/g,'').trim();v=v.replace(/^发朋友圈\s*[\|:：]?\s*/,'').replace(/^朋友圈\s*[:：]\s*/,'').trim();return cleanRolePunct(v).trim().slice(0,140);}
 function cleanMomentText(t){let raw=String(t||'').replace(/\r/g,'').trim(),picked='';raw=raw.replace(/[\[【]\s*发朋友圈\s*[\|｜:：]\s*([^\]】\n]{1,240})[\]】]/g,(m,tx)=>{if(!picked)picked=tx;return '\n';});raw=raw.replace(/[\[【]\s*发朋友圈\s*[\]】]\s*[「"']?([^\n]{1,240})[」"']?/g,(m,tx)=>{if(!picked)picked=tx;return '\n';});raw=raw.split(/\n+/).map(x=>x.trim()).filter(x=>x&&!CTLLEAK.test(x)).join('\n');const seen=new Set(),lines=[];raw.split(/\n+/).forEach(x=>{const c=cleanMomentBody(x),k=c.replace(/\s+/g,'');if(c&&k&&!seen.has(k)){seen.add(k);lines.push(c);}});let v=lines.join('\n').trim();if(!v&&picked)v=cleanMomentBody(picked);if(picked){const p=cleanMomentBody(picked),np=p.replace(/\s+/g,''),nv=v.replace(/\s+/g,'');if(p&&(!v||nv===np||nv.includes(np)))v=p;}return cleanMomentBody(v||picked);}
 function roleMomentNorm(text){return String(text||'').toLowerCase().replace(/\s+/g,'').replace(/[^\u4e00-\u9fa5a-z0-9]/g,'');}
@@ -17123,6 +17171,7 @@ function applyControlTags(content,c,id,statedPwd,requestText,outcome,decisionTex
   const hiddenRanges=[],hiddenHead=/[\[【]\s*(?:内心|心情|状态|思考|推理)\s*[|｜:：]/g;let hiddenMatch;
   while((hiddenMatch=hiddenHead.exec(content))){let depth=0,end=content.length;for(let i=hiddenMatch.index;i<content.length;i++){if(/[\[【]/.test(content[i]))depth++;else if(/[\]】]/.test(content[i])&&--depth===0){end=i+1;break;}}hiddenRanges.push({start:hiddenMatch.index,end,head:hiddenMatch[0].length});hiddenHead.lastIndex=end;}
   hiddenRanges.reverse().forEach(r=>{const block=content.slice(r.start,r.end),closed=/[\]】]$/.test(block),body=block.slice(r.head,closed?-1:undefined).replace(/[\[【][^\[【\]】\n]*[\]】]/g,'');content=content.slice(0,r.start)+block.slice(0,r.head)+body+(closed?block.slice(-1):'')+content.slice(r.end);});
+  content=content.replace(/[\[【]\s*(?:罚任务|惩罚任务|罚写检讨|罚检讨)\s*[|｜:：]\s*([^\]】]+)[\]】]/g,(mm,arg)=>{taskPunishAddTask(c,arg);return '';});/* TASK_PUNISH_V1 */
   function unlockVeto(arg){const keys=_appKeys(String(arg||''),Object.keys(LOCKABLE),()=>true),aliases=Object.keys(APPNAME2KEY),target=[String(arg||'').trim(),...keys.map(k=>LOCKABLE[k]),...aliases.filter(a=>keys.includes(APPNAME2KEY[a]))].filter(Boolean),visible=String(decisionText||content).replace(/<(think|analysis|reasoning)\b[^>]*>[\s\S]*?(?:<\/\1>|$)/gi,' ').replace(/[\[【][^\]】]*[\]】]/g,' ').replace(/[“「『\x22][^”」』\x22]*[”」』\x22]/g,' ');return visible.split(/[。！？!?\n；;，,]/).some(cl=>/(?:不给|不会|不能|不想|不准|不许|不允许|不要|暂不|先不|不|别|没).{0,12}(?:解锁|解开|开锁|解除锁定|放开|解)|(?:解锁|解开).{0,5}(?:不行|不可以|不允许|免谈)/.test(cl)&&(target.some(a=>cl.includes(a))||!aliases.concat(Object.values(LOCKABLE)).some(a=>cl.includes(a))));}
   content=routePhoneInspectionTags(content,c,'');
   const companionReads=companionApplyReadTags(content,c,outcome);content=companionReads.content;
@@ -18711,7 +18760,7 @@ function checkStepReport(){if(!isMain()||offlineFocusActive()||_call||_stepRepor
   if(!c||c.blocked)return;_stepReportBusy=true;const queued=scheduleReply(c.id,'[真实健康事实：现在23点，你看到'+S.me.name+'今天的微信步数是 '+(S.me.steps||0)+' 步。今天只提供这一次步数事实；它本身不规定ta懒、累、健康或需要被催促。请按基础人设、世界书、相关记忆与本人判断，自主决定是否回应、怎样表达或保持安静；不要解释规则。]',ok=>{_stepReportBusy=false;if(ok){S.me._stepRptDate=today;save();}});if(!queued)_stepReportBusy=false;}
 const _checkStepReportStable=checkStepReport;checkStepReport=function(){return _checkStepReportStable();};
 setInterval(checkStepReport,60000);setTimeout(checkStepReport,8000);
-function checkTasksDaily(){if(!isMain())return;const c=taskC();if(c){checkTaskPenalty(c);autoAssignTasks();}}
+function checkTasksDaily(){if(!isMain())return;const c=taskC();if(c){checkTaskPenalty(c);autoAssignTasks();taskPunishSweep(c);taskPunishDeadline(c);}}
 setTimeout(checkTasksDaily,9000);setInterval(checkTasksDaily,300000);
 // 每天打开小手机就自动收到当天任务（当天只生成一次；当天23:59前完成，否则次日记仇）
 let _autoTaskTry=0;
