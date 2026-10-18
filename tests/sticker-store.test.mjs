@@ -101,3 +101,13 @@ test('importing keeps animated stickers: native photo picker in the private app,
   assert.doesNotMatch(wm, /items:st\.items\.map\(\(x,i\)=>\(\{id:'m'\+i,img:x\.img,name:[^}]*anim/, 'the badge is never saved with a sticker');
 });
 
+test('imported packs: names written by hand, a chosen cover, and the pack name reaches the role', () => {
+  const wm = read('wechat-me.js');
+  assert.doesNotMatch(wm, /visionAPI/, 'import no longer asks the vision service');
+  assert.match(wm, /placeholder="写这张的名字"/);
+  assert.match(wm, /cover:ssImportCoverImg\(st\),items:/);
+  assert.match(wm, /function ssRow\(p\)\{const cover=\{img:p\.cover\|\|p\.items\[0\]\.img\}/);
+  assert.match(wm, /icon:p\.icon\|\|p\.cover\|\|p\.items\[0\]\.img,/);
+  assert.match(wm, /p\.cover=ssImportCoverImg\(st\);\{const gg=\(S\.aiStickerGroups\|\|\[\]\)\.find\(x=>x\.id===ssGroupId\(p\)\);if\(gg\)gg\.name=p\.name;\}/);
+});
+
