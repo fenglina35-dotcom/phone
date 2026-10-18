@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1837'){
+if(window.__NORTH_SHELL_BUILD__!=='1838'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -640,7 +640,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1837 · 表情面板小橘标签';
+const APP_VER='v1838 · 表情点名就发与生图路线';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -1470,6 +1470,14 @@ function apiCaughtCN(e){const s=String((e&&e.message)||e||'');const m=s.match(/H
 function aiCoreOn(){return false;}
 function aiCoreUrl(){return '';}
 
+/* IMG_ROUTES_V1（2026-10-18 她要的）：角色发真实照片可配五条路线，选中哪条默认用哪条。
+   imgBase/imgKey/imgModel 始终存“当前选中路线”的值，所以所有生图的地方（聊天发照片、朋友圈配图、形象工作室、你画我猜）都不用改；
+   切换路线时先把正在填的内容存回原路线，再把新路线的值换进来。路线1第一次打开时继承原来的设置。 */
+function imgRoutesState(){const st=S.settings;let routes=Array.isArray(st.imgRoutes)?st.imgRoutes:null;if(!routes||routes.length!==5){const old=routes||[];routes=Array.from({length:5},(_,i)=>Object.assign({name:'路线'+(i+1),base:'',key:'',model:'gpt-image-2'},old[i]||{}));if(!old.length){routes[0].base=st.imgBase||'';routes[0].key=st.imgKey||'';routes[0].model=st.imgModel||'gpt-image-2';}st.imgRoutes=routes;}const i=Math.floor(+st.imgRoute);st.imgRoute=i>=0&&i<5?i:0;return routes;}
+function imgRouteSync(){const routes=imgRoutesState(),r=routes[S.settings.imgRoute];r.base=S.settings.imgBase||'';r.key=S.settings.imgKey||'';r.model=S.settings.imgModel||'gpt-image-2';const n=$('#s_iroute_name');if(n)r.name=n.value.trim().slice(0,12)||('路线'+(S.settings.imgRoute+1));}
+function imgRouteUse(i){i=Math.floor(+i);if(!(i>=0&&i<5))return;const routes=imgRoutesState(),cur=routes[S.settings.imgRoute],g=id=>{const el=$('#'+id);return el?el.value.trim():null;};const b=g('s_ibase'),k=g('s_ikey'),m=g('s_imgmodel'),n=g('s_iroute_name');if(b!==null)cur.base=b;if(k!==null)cur.key=k;if(m!==null)cur.model=m||'gpt-image-2';if(n!==null)cur.name=n.slice(0,12)||cur.name;
+  S.settings.imgRoute=i;const r=routes[i];S.settings.imgBase=r.base||'';S.settings.imgKey=r.key||'';S.settings.imgModel=r.model||'gpt-image-2';save();render();toast('角色发照片改用「'+r.name+'」');}
+function imgRouteChipsHTML(){const rs=imgRoutesState(),sel=S.settings.imgRoute;return `<div style="padding:6px 14px 2px;font-size:12px;color:#888">选择路线：选中哪条，角色发照片就默认用哪条（每条单独填地址、Key、模型）</div><div style="display:flex;gap:6px;flex-wrap:wrap;padding:4px 14px 8px">${rs.map((r,i)=>{const on=i===sel,empty=i>0&&!r.base&&!r.key;return `<button type="button" onclick="imgRouteUse(${i})" style="border:0;padding:6px 13px;border-radius:14px;font-size:13px;${on?'background:#e58fb0;color:#fff;font-weight:600':'background:#2c2c2e;color:#cdd'}">${esc(r.name)}${empty?'<small style="opacity:.6"> ·未填</small>':''}</button>`;}).join('')}</div><div class="field" style="padding:0 14px"><label>这条路线的名字</label><input id="s_iroute_name" maxlength="12" value="${esc(rs[sel].name)}"></div>`;}
 function imageGenerationAvailable(){const ch=S.settings.chat||{};return !!((S.settings.imgBase||ch.base)&&(S.settings.imgKey||ch.key));}
 function ttsRoleRouteOwnIndex(o){const n=parseInt(o&&o.voice&&o.voice.ttsRouteIndex,10);return Number.isInteger(n)&&n>=0&&n<TTS_ROUTE_NAMES.length?n:null;}
 function ttsRoleRouteIndex(o){const rs=ttsRoutesInit(),own=ttsRoleRouteOwnIndex(o),fallback=Math.max(0,Math.min(rs.length-1,parseInt(S.settings.ttsRouteActive,10)||0));return own==null?fallback:own;}
@@ -2689,6 +2697,8 @@ function buildSystem(c,opt){
   if((S.settings.voiceFreq==null?1:S.settings.voiceFreq)!==0)s+='\n- 语音表演补充：如果'+S.me.name+'要求“笑一下/laugh/giggle/chuckle”，不要只说“我笑了”，要发语音并写 [语音|自然要说的话|语气:轻笑] 或 [语音|自然要说的话|语气:大笑]；如果ta要亲亲/亲一下，用 [语音|自然要说的话|语气:亲亲]。生气、吃醋、逼问、反问、要ta解释时，可以用 [语音|你到底为什么这样|语气:质问]。语气标签是隐藏控制，不要把“语气:”写进正常聊天内容。';
   s+='\n- 当'+S.me.name+'给你发红包时：愿意领取也用一行 [收款]，不想领就用 [拒收]；领取后红包卡片会显示已领取，不要重复收同一个红包。';
   s+='\n- 情绪被追问时：如果你的心情条/内心已经是不开心、吃醋、低落、生气、委屈、冷淡，'+S.me.name+'问“怎么了/是不是不开心/别冷着我/为什么这样”等，你可以嘴硬、可以慢慢说，但不能一直只回“没事/没有/没有不开心”。第一次可以压着，第二次以后要露出一点真实原因或在意点，或者明确说“我现在不想说/怕说了你难受/不是你的错但我有点闷”，让ta能继续哄你、慢慢挖出来。';
+  /* STICKER_OFF_ON_REQUEST_V1：频率选“关闭”只表示不主动发；她点名要表情时角色照样能发，也知道自己有哪些表情包（以前整段说明被拿掉，角色说“没有表情包”、改发照片）。 */
+  if(!c.noSticker&&(S.settings.stkFreq==null?2:S.settings.stkFreq)<=0){s+='\n- 表情包：'+S.me.name+'把“角色发表情频率”设成了关闭，所以你平时不主动发表情包。但ta明确让你发表情包时（比如“发个转圈圈”“发个小橘表情”“发张小猫贴纸”），要【单独一行】写 [表情|ta要的关键词或含义] 发出去；不要说自己没有表情包，也不要改发照片。';if(typeof stickerStorePrompt==='function')s+=stickerStorePrompt(c);}
   if(!c.noSticker&&(S.settings.stkFreq==null?2:S.settings.stkFreq)>0){const _sf=(S.settings.stkFreq==null?2:S.settings.stkFreq);const _fw={1:'偶尔发、别频繁',2:'合适的时候自然地发',3:'心情上来就发、比较爱发'}[_sf];
     s+='\n- 表情包：你也能像真人一样发表情包。想发时【单独一行】写 [表情|此刻心情或含义]（如 [表情|开心]、[表情|害羞]、[表情|生气]、[表情|求抱抱]、[表情|无语]），系统会从你的表情库挑一张贴合的发出去。根据你当下心情自然地发（'+_fw+'），别每句都发、别硬发。\n- 如果你喜欢'+S.me.name+'刚发给你的某张表情，可以【单独一行】写 [收藏表情]，把ta那张存进你自己的表情库，以后你也能发它。';if(typeof stickerStorePrompt==='function')s+=stickerStorePrompt(c);}
   s+='\n- 聊天背景：'+S.me.name+'让你把某张照片换成你们的聊天背景时（「把这张换成背景」「拿这张当背景」「帮我换个背景」都算），你必须在回复里【单独一行】写 [换背景]，系统才会真的替ta换上去。【只在嘴上说「换好了」是没有用的】，ta那边一点变化都不会有，等于骗ta。换的是你们聊天记录里真出现过的照片（ta发的、你发的都行），所以记录里一张照片都没有的时候，就老实说让ta先发一张，别硬写这个标签。ta没提这件事的时候绝对不要写；ta只是发了照片、没用文字明确说「换背景」，那就只是给你看照片，绝对不是让你换背景。';
@@ -4641,7 +4651,7 @@ function renderSettings(){const nativeBuild=privateNativeAppOn()?String(window._
     <div class="section" id="set_image">
       <div style="padding:11px 14px 2px;font-weight:600;color:#e58fb0;font-size:13px">${svgIc('image',15,'#e58fb0')} AI 真图（角色发真实照片）</div>
       <div class="it"><span>让角色发真照片<br><small style="color:#888">开且配置有效：使用下方外置图片接口生成，由对应平台计费。未开启或未配置：显示白色图文照片卡</small></span><span class="sw ${S.settings.imgGen?'on':''}" onclick="S.settings.imgGen=!S.settings.imgGen;save();render()"></span></div>
-      <div class="field" style="padding:0 14px"><label>接口地址（留空=用上面聊天模型的）</label><input id="s_ibase" value="${esc(S.settings.imgBase||'')}" placeholder="${esc((S.settings.chat&&S.settings.chat.base)||'https://vg.v1api.cc/v1')}"></div>
+      ${imgRouteChipsHTML()}<div class="field" style="padding:0 14px"><label>接口地址（留空=用上面聊天模型的）</label><input id="s_ibase" value="${esc(S.settings.imgBase||'')}" placeholder="${esc((S.settings.chat&&S.settings.chat.base)||'https://vg.v1api.cc/v1')}"></div>
       <div class="field" style="padding:0 14px"><label>API Key（留空=用聊天模型的）</label><input id="s_ikey" type="password" value="${esc(S.settings.imgKey||'')}" placeholder="留空则用聊天的Key"></div>
       <div class="field" style="padding:0 14px 4px"><label>绘图模型名（默认推荐 gpt-image-2：更像日常照片）</label><div style="display:flex;gap:6px"><input id="s_imgmodel" value="${esc(S.settings.imgModel||'gpt-image-2')}" placeholder="gpt-image-2" style="flex:1"><button class="minibtn" onclick="fetchModels('s_ibase','s_ikey','s_imgmodel')">拉取</button></div></div>
       <div style="padding:0 14px 6px">${[['gpt-image-2','image-2·推荐(日常感更强)'],['gpt-4o-image','4o图·兼容备选'],['gemini-3.1-flash-image-preview','banana2·快'],['gemini-3-pro-image-preview','banana pro·质感']].map(m=>`<span onclick="S.settings.imgModel='${m[0]}';$('#s_imgmodel').value='${m[0]}';save();toast('已选 ${m[0]}')" style="display:inline-block;margin:0 5px 5px 0;padding:4px 10px;background:#2c2c2e;border-radius:13px;font-size:12px;color:#cdd;cursor:pointer">${m[1]}</span>`).join('')}</div>
@@ -4739,7 +4749,7 @@ function saveSettings(){if(!chatModelFormReady())return false;const g=id=>$('#'+
   {const voiceRoutes=ttsRoutesInit(),voiceRouteActive=S.settings.ttsRouteActive;voiceRoutes[voiceRouteActive]=ttsRouteCopy(S.settings.tts);}
   {const oldStt=S.settings.stt||{};S.settings.stt={base:g('s_sbase'),key:g('s_skey'),model:g('s_smodel'),lang:sttLangCode(($('#s_slang')&&$('#s_slang').value)||(oldStt.lang)),relay:!!oldStt.relay};}
   if($('#s_imgmodel'))S.settings.imgModel=g('s_imgmodel')||'gpt-image-2';
-  if($('#s_ibase'))S.settings.imgBase=g('s_ibase');if($('#s_ikey'))S.settings.imgKey=g('s_ikey');
+  if($('#s_ibase'))S.settings.imgBase=g('s_ibase');if($('#s_ikey'))S.settings.imgKey=g('s_ikey');if($('#s_ibase'))imgRouteSync();
 const oldVideoVisionInterval=videoVisionIntervalMin(),oldCallProb=effCallProb();
 S.settings.hist=Math.max(2,Math.min(100,+$('#s_hist').value||12));S.settings.histUnit='rounds';S.settings.replyDelay=$('#s_delay').value||0;S.settings.summaryRounds=Math.max(0,Math.min(100,+$('#s_sum').value||0));S.settings.summaryModel=($('#s_summarymodel')&&$('#s_summarymodel').value)==='aux'?'aux':'main';S.settings.offSummaryModel=($('#s_offsummarymodel')&&$('#s_offsummarymodel').value)==='aux'?'aux':'main';S.settings.callSilentMin=Math.max(0,Math.min(60,parseInt($('#s_callsilent').value,10)||0));S.settings.callPace=Math.max(.8,Math.min(2,parseInt(($('#s_callpace')&&$('#s_callpace').value)||100,10)/100||1));S.settings.videoVisionIntervalMin=Math.max(0,Math.min(60,parseInt(($('#s_vvision_interval')&&$('#s_vvision_interval').value)||'0',10)||0));delete S.settings.videoVisionIntervalSec;S.settings.videoVisionMaxPerCall=Math.max(1,Math.min(100,parseInt(($('#s_vvision_max')&&$('#s_vvision_max').value)||'6',10)||6));S.settings.phoneVoiceOffset=Math.max(-600,Math.min(1200,parseInt(($('#s_phoffset')&&$('#s_phoffset').value)||S.settings.phoneVoiceOffset||0,10)||0));
   if(oldVideoVisionInterval!==videoVisionIntervalMin()&&_call&&_call.kind==='video'&&_call.state==='active'&&callVideoSourceOn())callVideoVisionArm();if(_call&&_call.kind==='video'&&_call.state==='active')callScreenRealtimeArm();save();if(oldCallProb!==effCallProb())(S.contacts||[]).filter(c=>c&&c.proactive&&c.proactive.serverPush).forEach(c=>roleServerPushSync(c,true));chatRouteRefreshUI();ttsRouteRefreshUI();toast('已保存 '+CHAT_ROUTE_NAMES[routeActive]+' 和 '+TTS_ROUTE_NAMES[S.settings.ttsRouteActive]+' ✅');return true;}

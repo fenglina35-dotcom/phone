@@ -67,3 +67,23 @@ test('an added pack is its own emoji-panel tab and the role is told its keywords
   for (const file of ['app.js', P + 'app.js']) assert.match(read(file), /if\(typeof stickerStorePrompt==='function'\)s\+=stickerStorePrompt\(c\);/);
 });
 
+test('with sticker frequency off the role still knows its stickers and sends one when asked', () => {
+  for (const file of ['app.js', P + 'app.js']) {
+    const s = read(file);
+    assert.match(s, /STICKER_OFF_ON_REQUEST_V1/);
+    assert.match(s, /\(S\.settings\.stkFreq==null\?2:S\.settings\.stkFreq\)<=0\)\{s\+='\\n- 表情包：/);
+    assert.match(s, /不要说自己没有表情包，也不要改发照片。';if\(typeof stickerStorePrompt==='function'\)s\+=stickerStorePrompt\(c\);\}/);
+  }
+  assert.match(read('wechat-me.js'), /下面是你现在真的拥有、可以发的表情包/);
+});
+
+test('role photos can use five configurable image routes', () => {
+  for (const file of ['app.js', P + 'app.js']) {
+    const s = read(file);
+    assert.match(s, /function imgRoutesState\(\)/);
+    assert.match(s, /function imgRouteUse\(i\)/);
+    assert.match(s, /\$\{imgRouteChipsHTML\(\)\}<div class="field" style="padding:0 14px"><label>接口地址/);
+    assert.match(s, /if\(\$\('#s_ibase'\)\)imgRouteSync\(\);/);
+  }
+});
+
