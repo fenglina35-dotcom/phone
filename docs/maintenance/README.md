@@ -3223,3 +3223,5 @@ NORTH_PHONE_MONITOR=1复用既有QA，双端真实页面/来源不变/主体与�
 2026-10-18 私人v1835 / iOS484：从提交 2b93c350 的干净工作区 xcodebuild（Release，BUILD SUCCEEDED，1.0.484/484）并覆盖安装到用户 iPhone 15；安装包内 APP_VER v1835 · 任务截止与小惩罚，app.js 含 TASK_DUE_SLOT_V1 / TASK_PUNISH_V1 / taskPunishDeadline，task-notes.js 含 TASK_DONE_CARD_V1 且与提交内容逐字节相同；devicectl 读回已装版本 1.0.484 (484)。发布前全量 4416/4416 通过，核心聊天检查普通与查岗预览均通过。手机上实际观感和真模型选择惩罚的表现待她回报。
 
 2026-10-18 网页v1833 / 私人v1836 / iOS485：微信表情仓库与桌宠新动作（她提需求、看过截图和动图后说推送装手机）。微信 → 我 → 表情 改成表情仓库：内置「桌宠小橘」20 个透明动态表情（含新做的想你了、亲亲、抱抱，生气带生气符号、晚安带 zzz，“早安”改为“哦”），可一键添加到自己表情或指定角色；导入表情包一次多选、动图保留、识图自动写含义；附从微信存表情的教程。桌面宠物本身加了想你、亲亲、抱抱三个动作，角色可用 [桌宠|…] 让它做（STICKER_STORE_V1 / DESK_PET_MISS_KISS_HUG_V1）。私人包 .gitignore 放行 assets/sticker-store/。验证见 docs/areas/README.md 末节；全量测试与核心聊天检查（普通/查岗预览）通过。3D 表情做了挑选页，她决定先不加。
+
+2026-10-18 私人v1836 / iOS485：从提交 177fe7ff 的干净工作区 xcodebuild（Release，BUILD SUCCEEDED，1.0.485/485）并覆盖安装到用户 iPhone 15；安装包内 APP_VER v1836 · 表情仓库，assets/sticker-store/pet 下 20 个表情图齐全，wechat-me.js 含 STICKER_STORE_V1，desk-pet.js 含 DESK_PET_MISS_KISS_HUG_V1；devicectl 读回已装版本 1.0.485 (485)。发布前全量 4426/4426 通过，核心聊天检查普通与查岗预览均通过。手机上的观感、真识图写含义的效果待她回报。
