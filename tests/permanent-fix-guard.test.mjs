@@ -81,6 +81,7 @@ const PERMANENT_FIXES = [
   {release:"web v1818",scope:"web",least:1,file:"sw.js",name:"网页版大文件（像素少女、美团数据、图片声音）存进不随版本删除的长期缓存；点立即更新直接用已存好的页面",marker:"SW_KEEP_BIG_FILES_V1"},
   {release:"web v1829 / private v1832",scope:"both",least:1,name:"微信运动图标用查他手机银行页那个新的微信图标，不再是绿色方块",marker:"WX_STEPS_NEW_ICON_V1"},
   {release:"web v1830 / private v1833",scope:"both",least:1,name:"开机读不出长聊天库时不当成没有聊天，不删也不覆盖长库，后台重试读到后合并（2026-10-18 聊天被清空事故）",marker:"MSG_ARCHIVE_NO_WIPE_V1"},
+  {release:"private v1834",scope:"private",least:1,name:"恢复页安全合并时存档被自动保存过也能继续，不再每次报「这份物理候选刚有变化」",marker:"RECOVERY_MERGE_ALLOW_NEWER_V1"},
   {release:"web v1804 / private v1807",scope:"both",least:1,file:"cohab-theater.js",name:"共同生活语音页和共同生活用同一块液态玻璃",marker:"LG_SCENES.unshift({root:'.callscreen.cvr-mode .cvr-stage.hasbg:not(.off-classic)'"},
   {release:"web v1802 / private v1805",scope:"both",least:1,file:"cohab-theater.js",name:"共同生活语音模式阅读式界面、记录进行中可看每句可改删",marker:"COHAB_VOICE_READER_V1"},
   {release:"web v1802 / private v1805",scope:"both",least:1,name:"共同生活语音建提示时不把这一段标成视频通话",marker:"CohabVoice.hideSession(c,sess):null;"},

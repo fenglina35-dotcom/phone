@@ -100,3 +100,21 @@ for(const [name,url] of Object.entries(BUNDLES)){
     assert.equal(JSON.parse(store.__messages).ciqgj7n2.length,401);
   });
 }
+
+// RECOVERY_MERGE_ALLOW_NEWER_V1 (same evening): while the App is open the core archive and the safety snapshot
+// autosave every few seconds, so the safe merge, which re-reads every candidate, aborted with
+// 「这份物理候选刚有变化」 every time and the chats could not be merged back.
+test('private: the safe merge reads a candidate that autosaved after the scan',async()=>{
+  const source=readFileSync(BUNDLES.private,'utf8');
+  let rec={savedAt:2000,json:JSON.stringify({settings:{},messages:{a:[{id:'x'}]}})};
+  const context=vm.createContext({JSON,Error,privateNativeCoreGet:async()=>rec,imgGetIDB:async()=>rec,recoveryCloneJSON:v=>JSON.parse(JSON.stringify(v))});
+  vm.runInContext(functionSource(source,'recoveryReadCandidateRaw'),context);
+  const candidate={kind:'native-primary',storageKey:'__core_state',savedAt:1000,jsonBytes:10};
+  await assert.rejects(context.recoveryReadCandidateRaw(candidate),/刚有变化/,'a full restore still refuses a changed candidate');
+  const raw=await context.recoveryReadCandidateRaw(candidate,{allowNewer:true});
+  assert.deepEqual(raw.messages.a.map(m=>m.id),['x']);
+  rec={savedAt:500,json:rec.json};
+  await assert.rejects(context.recoveryReadCandidateRaw(candidate,{allowNewer:true}),/刚有变化/,'an older copy is never taken');
+  for(const call of ['recoveryReadCandidateRaw(candidate,{allowNewer:true})','recoveryReadCandidateRaw(row.x,{allowNewer:true})','recoveryReadCandidateRaw(fresh.candidate,{allowNewer:true})'])
+    assert.ok(source.includes(call),`safe merge must use ${call}`);
+});

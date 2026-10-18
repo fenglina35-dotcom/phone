@@ -445,3 +445,5 @@ NORTH_PHONE_MONITOR=1复用既有QA，双端真实页面/来源不变/主体与�
 测试：tests/message-archive-no-wipe.test.mjs 用两包真实函数复现事故，旧代码在「长库被删」这一步失败。没解决的：长库为什么读了 3 分钟（IndexedDB 约 8.5GB，大部分是空闲页和图片）还没查清；真机上「读不到→重试读到」只在测试里验证过。核对到：2026-10-18。
 
 找回方法（以后再出事可以照做，只读手机）：`xcrun devicectl device copy from --domain-type appDataContainer --domain-identifier com.qianyi.PhoneCompanionTest` 复制 `Library/WebKit/WebsiteData/Default/<来源>/<来源>/IndexedDB/<库>/IndexedDB.sqlite3`（大的那个），数据库没开自动整理（auto_vacuum=0），被删的长库还在空闲页里：按 4KB 页扫 UTF-16 的 `"role":"`，按每页前 4 字节的下一页编号串起来，再逐个解析消息对象；只取「历史完整快照」保存时间之后的消息，更早的散落旧消息多半是她以前自己删的，不要带回来。
+
+恢复页「安全合并」（RECOVERY_MERGE_ALLOW_NEWER_V1，私人包）：App 开着时核心存档、安全快照每十几秒自动保存，合并重读候选时允许它们变成更新的版本（变旧或换了一份仍中止）；以前每次都报「这份物理候选刚有变化」，2026-10-18 她找回聊天时卡在这里。整份恢复仍严格核对。

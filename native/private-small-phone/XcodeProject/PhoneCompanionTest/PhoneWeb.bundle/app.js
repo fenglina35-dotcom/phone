@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1833'){
+if(window.__NORTH_SHELL_BUILD__!=='1834'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -640,7 +640,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1833 · 聊天库读不到不删';
+const APP_VER='v1834 · 安全合并不再卡住';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -19275,20 +19275,23 @@ async function recoveryCurrentFriendStores(){
   return {messages,groupMessages};
 }
 function recoveryApplyCurrentFriendStores(restored,stores){restored.me=restored.me&&typeof restored.me==='object'?restored.me:{};const p=restored.me.phoneFriend&&typeof restored.me.phoneFriend==='object'?restored.me.phoneFriend:(restored.me.phoneFriend={});p.messages=recoveryCloneJSON(stores&&stores.messages)||{};p.groupMessages=recoveryCloneJSON(stores&&stores.groupMessages)||{};}
-async function recoveryReadCandidateRaw(candidate){if(!candidate)throw new Error('这份候选已经失效，请重新扫描');let rec=null;if(candidate.kind==='native-primary')rec=await privateNativeCoreGet(candidate.storageKey,{primaryOnly:true});else if(candidate.kind==='native-backup')rec=await privateNativeCoreGet(candidate.storageKey,{backup:true});else if(candidate.kind==='idb')rec=await imgGetIDB(candidate.storageKey);else if(candidate.kind==='inline')rec={json:candidate.json,savedAt:candidate.savedAt};else if(candidate.raw)return recoveryCloneJSON(candidate.raw);if(!rec||typeof rec.json!=='string')throw new Error('这份物理候选已经无法读取，请重新扫描');const savedAt=+rec.savedAt||0,bytes=rec.json.length;if(candidate.savedAt&&savedAt&&savedAt!==candidate.savedAt||candidate.jsonBytes&&bytes!==candidate.jsonBytes)throw new Error('这份物理候选刚有变化，请重新扫描后再选择');let raw;try{raw=JSON.parse(rec.json);}catch(_){throw new Error('这份物理候选内容不完整，不能恢复');}if(!raw||!raw.settings)throw new Error('这份物理候选缺少核心设置，不能恢复');return raw;}
+/* RECOVERY_MERGE_ALLOW_NEWER_V1（2026-10-18 她找回聊天时，安全合并每次都报「这份物理候选刚有变化」：App 开着时核心存档和安全快照每十几秒自动保存一次，
+   合并要把所有候选重读一遍，只要有一份比扫描时新就整个中止，重扫也没用）。安全合并读候选时允许同一份存档被自动保存成更新的版本，直接用最新的；
+   存档变旧或者读到的不是同一份时仍然中止。「整份恢复」照旧严格核对。 */
+async function recoveryReadCandidateRaw(candidate,opt){if(!candidate)throw new Error('这份候选已经失效，请重新扫描');let rec=null;if(candidate.kind==='native-primary')rec=await privateNativeCoreGet(candidate.storageKey,{primaryOnly:true});else if(candidate.kind==='native-backup')rec=await privateNativeCoreGet(candidate.storageKey,{backup:true});else if(candidate.kind==='idb')rec=await imgGetIDB(candidate.storageKey);else if(candidate.kind==='inline')rec={json:candidate.json,savedAt:candidate.savedAt};else if(candidate.raw)return recoveryCloneJSON(candidate.raw);if(!rec||typeof rec.json!=='string')throw new Error('这份物理候选已经无法读取，请重新扫描');const savedAt=+rec.savedAt||0,bytes=rec.json.length,newerSave=!!(opt&&opt.allowNewer)&&candidate.kind!=='inline'&&savedAt>(+candidate.savedAt||0);if(!newerSave&&(candidate.savedAt&&savedAt&&savedAt!==candidate.savedAt||candidate.jsonBytes&&bytes!==candidate.jsonBytes))throw new Error('这份物理候选刚有变化，请重新扫描后再选择');let raw;try{raw=JSON.parse(rec.json);}catch(_){throw new Error('这份物理候选内容不完整，不能恢复');}if(!raw||!raw.settings)throw new Error('这份物理候选缺少核心设置，不能恢复');return raw;}
 async function recoveryBuildSafeMergePlan(index,opt){
   opt=opt||{};
   const candidate=_recoveryCandidates[index];
   if(!candidate)throw new Error('这份候选已经失效，请重新扫描');
   const liveJSON=JSON.stringify(S&&S.messages||{}),liveMessages=JSON.parse(liveJSON);
-  const selectedRaw=await recoveryReadCandidateRaw(candidate),base=await recoveryHydrateCandidate(selectedRaw),allowed=recoveryAllowedMessageKeys(base);
+  const selectedRaw=await recoveryReadCandidateRaw(candidate,{allowNewer:true}),base=await recoveryHydrateCandidate(selectedRaw),allowed=recoveryAllowedMessageKeys(base);
   if(!allowed.size)throw new Error('这份基底没有可核对的角色 ID，不能自动合并');
   let archive={};
   try{const blob=await imgGetIDB('__messages');if(blob)archive=JSON.parse(blob)||{};}catch(_){archive={};}
   const state=recoveryMergeRoleMessageState(),primary=[liveMessages,archive,base.messages];
   for(const store of primary)recoveryMergeRoleMessageStoreInto(state,store,allowed);
   const baselineStats=recoveryMergeBucketsStats(state),donors=_recoveryCandidates.map((x,i)=>({x,i})).filter(row=>row.i!==index).sort((a,b)=>(b.x.savedAt-a.x.savedAt));
-  for(const row of donors){const donorRaw=await recoveryReadCandidateRaw(row.x);recoveryMergeRoleMessageStoreInto(state,donorRaw&&donorRaw.messages,allowed);}
+  for(const row of donors){const donorRaw=await recoveryReadCandidateRaw(row.x,{allowNewer:true});recoveryMergeRoleMessageStoreInto(state,donorRaw&&donorRaw.messages,allowed);}
   const merged=recoveryFinishRoleMessageMerge(state),stamp=await recoveryExactMessageStamp(merged.messages);
   if(JSON.stringify(S&&S.messages||{})!==liveJSON)throw new Error('核对期间刚收到新的角色消息，已中止；请重新打开预览后再确认');
   const baseRawStats=recoveryRoleMessageStats(selectedRaw&&selectedRaw.messages,allowed),archiveStats=recoveryRoleMessageStats(archive,allowed),addedRows=Math.max(0,merged.stats.rows-baselineStats.rows),addedCallRows=Math.max(0,merged.stats.callRows-baselineStats.callRows),includeMessages=opt.includeMessages===true;
@@ -19321,7 +19324,7 @@ async function emergencyRestoreSafeMergeConfirm(){
     const verified=await imgGetIDB(PRIVATE_LOCAL_RECOVERY_ROLLBACK_KEY);
     if(!verified||verified.json!==beforeJSON)throw new Error('恢复前完整快照校验失败，当前数据没有改变');
     snapshotSaved=true;before=null;toast('正在写入去重后的角色聊天和通话…');
-    const selectedRaw=await recoveryReadCandidateRaw(fresh.candidate),restored=await recoveryHydrateCandidate(selectedRaw),currentFriendStores=await recoveryCurrentFriendStores();
+    const selectedRaw=await recoveryReadCandidateRaw(fresh.candidate,{allowNewer:true}),restored=await recoveryHydrateCandidate(selectedRaw),currentFriendStores=await recoveryCurrentFriendStores();
     if(!fresh.liveJSON||JSON.stringify(S.messages||{})!==fresh.liveJSON)throw new Error('确认期间刚收到新的角色消息，已中止；请重新打开预览后再确认');
     recoveryApplyCurrentFriendStores(restored,currentFriendStores);
     restored.messages=fresh.messages||{};fresh.messages=null;fresh.liveJSON='';
