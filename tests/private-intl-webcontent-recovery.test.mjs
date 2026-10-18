@@ -160,6 +160,6 @@ test('terminated WebContent remounts once while active and thermally safe', () =
 });
 
 test('recovery suite is pinned to the private bundled app only', () => {
-  assert.match(app, /APP_VER='v1821 · 设置黑底蓝色与记仇先开口';/);
+  assert.match(app, /APP_VER='v1823 · 游戏大厅与弹框重排';/);
   assert.match(app, /function emergencyRestorePreview\(index\)/);
 });

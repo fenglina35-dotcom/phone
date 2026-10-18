@@ -13,9 +13,9 @@ const reportApp = read('native/private-small-phone/XcodeProject/PhoneCompanionRe
 const reportScene = read('native/private-small-phone/XcodeProject/PhoneCompanionReport/TotalActivityReport.swift');
 
 test('public web v1184 and private web v1189 remain compatible with native iOS 1.0.315', () => {
-  assert.match(app, /APP_VER='v1818 · 设置黑底蓝色与记仇先开口'/);
-  assert.match(app, /sw\.js\?v=1818&r=v1818-settings-black-blue-1/);
-  assert.match(shell, /north-shell-v1818-settings-black-blue-1/);
+  assert.match(app, /APP_VER='v1820 · 游戏大厅与弹框重排'/);
+  assert.match(app, /sw\.js\?v=1820&r=v1820-gamehub-reference-1/);
+  assert.match(shell, /north-shell-v1820-gamehub-reference-1/);
   assert.match(bundleInfo, /<string>1200<\/string>/);
   assert.match(localWebView, /1\.0\.480 \(480\)/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 480;/g) || []).length, 12);

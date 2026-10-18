@@ -60,3 +60,10 @@ XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/*
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/task-notes.js
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/task-notes/
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/task-notes/**
+
+# Game lobby hero is required in committed private source.
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/game-hub/
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/game-hub/hero-board.png
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/game-hub/game-icons.png
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/game-hub/heart-card.png
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/game-hub/dice.png

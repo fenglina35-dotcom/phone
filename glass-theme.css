@@ -907,3 +907,108 @@ html body[data-settings-appearance] :is(#modal .sheet,#cfm .cfmbox){background-c
 html body[data-settings-appearance] :is(.page.settings-appearance,#modal,#cfm) :is(.btn.p,.sw.on){background-color:#0a84ff!important;background-image:none!important;color:#fff!important;box-shadow:none!important}
 html body[data-settings-appearance] :is(.page.settings-appearance,#modal,#cfm) :is(input[type=checkbox],input[type=radio],input[type=range]){accent-color:#0a84ff}
 html body[data-settings-appearance] .page.settings-appearance .section[onclick="showManual()"] :is(b,.v){color:#64acff!important}
+
+/* GAMEHUB_REFERENCE_V1 — reference game lobby, isolated from game play screens. */
+.page .gamehub-reference{background:#090a0c;color:#eeeaf0;font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+.page .gamehub-reference .gamehub-nav{flex:none;height:43px;min-height:43px;padding:0 15px;border:0;background:#090a0c}
+.page .gamehub-reference .gamehub-actions{gap:12px}.page .gamehub-reference .gamehub-model{height:29px;padding:0 9px;border-color:#665c70;background:linear-gradient(135deg,#1a1a24,#2d2233);box-shadow:inset 0 0 0 2px #ffffff05;border-radius:10px;color:#eee5f3}
+.page .gamehub-reference .gamehub-model b{font-size:10px}.page .gamehub-reference .gamehub-settings{font-size:12px;color:#a6a1a8}
+.page .gamehub-reference .gamehub-scroll{padding:3px 14px 20px;scrollbar-width:none}
+.page .gamehub-reference .gamehub-hero{min-height:0;height:151px;padding:14px 22px;border:1px solid #76616f;border-radius:19px;background:#1c171e url('assets/game-hub/hero-board.png') center/cover no-repeat;box-shadow:inset 0 0 0 1px #ffffff07}
+.page .gamehub-reference .gamehub-hero:after{inset:0;width:auto;height:auto;border:0;border-radius:inherit;box-shadow:none;background:linear-gradient(90deg,rgba(21,17,24,.35),transparent 70%);pointer-events:none}
+.page .gamehub-reference .gamehub-hero>div{z-index:1;max-width:100%;height:100%}.page .gamehub-reference .gamehub-hero small{font-size:7px;letter-spacing:.31em;color:#d0c1ce}
+.page .gamehub-reference .gamehub-hero h2{margin:6px 0 0;font-family:"Songti SC","Noto Serif CJK SC",SimSun,serif;font-weight:700;font-size:29px;letter-spacing:2px;line-height:1.2;text-shadow:0 2px 8px #000}
+.page .gamehub-reference .gamehub-english{display:block;margin:3px 0 5px;color:#b5a7b1;font-size:6px;letter-spacing:.29em}
+.page .gamehub-reference .gamehub-hero p{font-size:11px;color:#e5dce3;line-height:1.5;letter-spacing:.3px}
+.page .gamehub-reference .gamehub-random{height:37px;width:130px;display:flex;align-items:center;gap:8px;margin-top:11px;padding:0 12px;border:1px solid #e5acc6;border-radius:16px;background:linear-gradient(120deg,#dfa1c1,#a76c8d);box-shadow:inset 0 1px 2px #ffdfed55,0 0 10px #e591bc16;color:#261b2a;cursor:pointer}
+.page .gamehub-reference .gamehub-random svg{width:23px;height:23px;stroke:#332033;fill:#33203320}.page .gamehub-reference .gamehub-random b{font-size:12px}.page .gamehub-reference .gamehub-random span{margin-left:auto;font-size:24px;font-weight:200}
+.page .gamehub-reference .gamehub-title{margin:11px 10px 5px}.page .gamehub-reference .gamehub-title b{font-size:13px}.page .gamehub-reference .gamehub-title b span{margin-left:4px;font-size:19px;color:#847d85}
+.page .gamehub-reference .gamehub-drafts{gap:8px}.page .gamehub-reference .gamehub-drafts>button{position:relative;overflow:hidden;min-width:100%;min-height:50px;padding:7px 13px;border:1px solid #434048;border-radius:15px;background:linear-gradient(100deg,#16171a,#121317 65%,#261b28);gap:10px}
+.page .gamehub-reference .gamehub-drafts>button:after,.page .gamehub-reference .gamehub-gallery:after{content:"";position:absolute;right:32px;top:0;width:65px;height:100%;background:repeating-linear-gradient(0deg,transparent 0 9px,#a477991c 10px 11px),repeating-linear-gradient(90deg,transparent 0 9px,#a477991c 10px 11px);transform:rotate(-2deg);pointer-events:none;opacity:.7}
+.page .gamehub-reference .gamehub-drafts i{width:36px;height:36px;border-radius:11px;background:linear-gradient(140deg,#2c2a32,#1c1c23);color:#d3bed7}.page .gamehub-reference .gamehub-drafts b{font-size:12px}.page .gamehub-reference .gamehub-drafts small{font-size:9px;color:#9a969e}.page .gamehub-reference .gamehub-drafts>button>span{flex:1;position:relative;z-index:1}.page .gamehub-reference .gamehub-drafts em{font-size:23px;color:#c7bec7;font-style:normal;z-index:1}.page .gamehub-reference .gamehub-progress{display:inline-block;vertical-align:middle;width:64px;height:4px;margin:0 8px;border-radius:4px;background:#29272f;overflow:hidden}.page .gamehub-reference .gamehub-progress i{display:block;height:100%;width:var(--progress);background:#c185a7;border-radius:4px}
+.page .gamehub-reference .gamehub-filters{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 6px 9px}.page .gamehub-reference .gamehub-filters button{height:30px;border:1px solid #3a373f;border-radius:18px;background:linear-gradient(#151519,#0d0e11);color:#a7a2ab;font-size:12px;cursor:pointer}.page .gamehub-reference .gamehub-filters .on{border-color:#e1a8c7;background:radial-gradient(ellipse at bottom,#59374c,#211922);color:#faeaf4;box-shadow:inset 0 0 0 1px #e8adca55,0 0 7px #ce86aa24}
+.page .gamehub-reference .gamehub-grid{gap:7px 8px;padding:0 4px}.page .gamehub-reference .gamehub-card{display:flex;align-items:center;gap:9px;min-width:0;min-height:62px;padding:8px;border:1px solid #423d45;border-radius:15px;background:linear-gradient(140deg,#1c1c20 0,#121316 45%,#111215);box-shadow:inset 0 0 0 1px #ffffff04;cursor:pointer;overflow:hidden}
+.page .gamehub-reference .gamehub-card.wide{grid-column:1/-1;min-height:76px;padding:8px 12px;gap:16px}.page .gamehub-reference .gamehub-card.featured{border:1px solid #e1a5c2;background:linear-gradient(110deg,#291d28,#19151c 60%,#201720);box-shadow:inset 0 0 0 1px #d5a3bc45,0 0 9px #c17b9b14}
+.page .gamehub-reference .gamehub-card>i{flex:none;display:grid;place-items:center;width:42px;height:46px;margin:0;border-radius:13px;background:linear-gradient(135deg,#303035,#1d1d24);box-shadow:inset 0 1px 0 #ffffff09;color:#d6c2cf}.page .gamehub-reference .gamehub-card>i svg{width:31px;height:31px;stroke-width:1.35;filter:drop-shadow(0 0 4px #e5a6c727)}
+.page .gamehub-reference .gamehub-card.wide>i{width:57px;height:58px}.page .gamehub-reference .gamehub-card.story>i{background:radial-gradient(ellipse,#3c252944,transparent 70%);color:#e3c3bd}.page .gamehub-reference .gamehub-card.story>i svg{width:39px;height:45px}.page .gamehub-reference .gamehub-card.featured>i svg{width:43px;height:43px;color:#e2a2c6}
+.page .gamehub-reference .gamehub-card-copy{min-width:0;position:relative;z-index:1}.page .gamehub-reference .gamehub-meta{height:14px;display:flex;align-items:center;gap:10px;margin-bottom:3px;color:#98919c;font-size:9px;letter-spacing:1px}.page .gamehub-reference .gamehub-meta>span{height:15px;padding:1px 7px;border:1px solid #776975;border-radius:9px;font-size:8px;line-height:11px;letter-spacing:0;background:#302934;color:#d8c9da}.page .gamehub-reference .gamehub-meta>span.hot{background:#df9ab9;color:#473040;border-color:#dd9ab9}
+.page .gamehub-reference .gamehub-card div b{font-size:13px;font-weight:600;white-space:nowrap;letter-spacing:.2px}.page .gamehub-reference .gamehub-card[data-game=escape] div b{font-size:11px}.page .gamehub-reference .gamehub-card.wide div b{font-size:16px}.page .gamehub-reference .gamehub-card div small{margin-top:4px;color:#a39aa6;font-size:8px;white-space:nowrap}.page .gamehub-reference .gamehub-card.wide div small{font-size:10px}
+.page .gamehub-reference .gamehub-card>span.gamehub-chevron{position:relative;right:auto;bottom:auto;margin-left:auto;padding-left:3px;flex:none;font-size:23px;line-height:1;color:#c3bbc5;z-index:1;font-weight:200}.page .gamehub-reference .gamehub-card>.gamehub-multi{position:absolute;right:8px;bottom:9px;padding:2px 7px;border:1px solid #8eb6a5;background:#15332b;color:#acd2bf;border-radius:12px;font-size:9px;z-index:2}
+.page .gamehub-reference .gamehub-card[data-game=soup] .gamehub-card-copy,.page .gamehub-reference .gamehub-card[data-game=drama] .gamehub-card-copy,.page .gamehub-reference .gamehub-card[data-game=undercover] .gamehub-card-copy,.page .gamehub-reference .gamehub-card[data-game=wordguess] .gamehub-card-copy{padding-bottom:12px}
+.page .gamehub-reference .gamehub-mystery{position:absolute;right:42px;top:8px;width:70px;height:72px;transform:rotate(-19deg);border:1px solid #66505d55;border-radius:5px;background:linear-gradient(140deg,#30232d,#131316);box-shadow:6px 2px 0 #141418,7px 2px 0 #50404b66}.page .gamehub-reference .gamehub-mystery>i{display:grid;place-items:center;height:100%;border:3px double #72526744;margin:3px;color:#916b83;font-size:40px;font-family:Georgia,serif;font-style:normal}
+.page .gamehub-reference .gamehub-orbit{position:absolute;right:33px;top:9px;width:93px;height:53px;border:1px dashed #ae839b;border-radius:50%;transform:rotate(-25deg)}.page .gamehub-reference .gamehub-orbit span{display:block;text-align:center;font-size:50px;line-height:48px;transform:rotate(25deg);color:#b87998;text-shadow:2px 2px #654051;filter:drop-shadow(0 0 4px #ca8eab30)}
+.page .gamehub-reference .gamehub-gallery{position:relative;width:calc(100% - 8px);margin:7px 4px 0;padding:9px 14px;min-height:56px;border:1px solid #443d48;border-radius:16px;background:linear-gradient(130deg,#1b1b20,#121316);overflow:hidden;gap:15px}.page .gamehub-reference .gamehub-gallery>svg{width:40px;height:40px;color:#d5b5ce;stroke-width:1.4}.page .gamehub-reference .gamehub-gallery b{font-size:13px}.page .gamehub-reference .gamehub-gallery small{font-size:9px;color:#a39aa6}.page .gamehub-reference .gamehub-gallery em{z-index:1;font-size:24px;color:#cbc1cd}
+@media(max-width:380px){.page .gamehub-reference .gamehub-card{gap:6px;padding:7px}.page .gamehub-reference .gamehub-card>i{width:35px;height:43px}.page .gamehub-reference .gamehub-card div b{font-size:11px}.page .gamehub-reference .gamehub-card[data-game=escape] div b{font-size:9px}.page .gamehub-reference .gamehub-card div small{font-size:7px}.page .gamehub-reference .gamehub-mystery{right:30px}.page .gamehub-reference .gamehub-orbit{right:25px;width:75px}}
+
+.page .gamehub-reference .gamehub-hero{height:153px}.page .gamehub-reference .gamehub-hero h2{font-size:28px;margin-top:4px}.page .gamehub-reference .gamehub-english{margin:1px 0 4px}.page .gamehub-reference .gamehub-random{margin-top:7px;height:36px}
+.page .gamehub-reference .gamehub-orbit svg{display:block;width:49px;height:49px;margin:1px auto;transform:rotate(25deg);stroke:none;filter:drop-shadow(0 0 4px #ca8eab30)}
+
+.page .gamehub-reference .gamehub-card{line-height:1.2}.page .gamehub-reference .gamehub-card .gamehub-card-copy{padding-bottom:0!important}
+
+/* Reference detail correction: pink multiplayer actions, readable labels and filled pixel accents. */
+.page .gamehub-reference .gamehub-card>.gamehub-multi{border-color:#ce91b0;background:linear-gradient(135deg,#583347,#382332);color:#f2c9dd;box-shadow:inset 0 1px 1px #ffd6e71a}
+.page .gamehub-reference .gamehub-card{padding-top:7px;padding-bottom:7px}.page .gamehub-reference .gamehub-card div b{font-size:14px}.page .gamehub-reference .gamehub-card div small{font-size:9px}.page .gamehub-reference .gamehub-card.wide div b{font-size:16px}.page .gamehub-reference .gamehub-card[data-game=escape] div b{font-size:11px}.page .gamehub-reference .gamehub-card[data-game=soup] small,.page .gamehub-reference .gamehub-card[data-game=drama] small,.page .gamehub-reference .gamehub-card[data-game=undercover] small,.page .gamehub-reference .gamehub-card[data-game=wordguess] small{font-size:8px}
+.page .gamehub-reference .gamehub-card.story:before{content:"✦";position:absolute;left:10px;top:8px;color:#b88f9e;font-size:7px;text-shadow:50px 50px #d8bdc8,7px 45px #9d7895}
+.page .gamehub-reference .gamehub-orbit:before{content:"♥";position:absolute;left:-23px;top:9px;color:#d198b6;font-size:14px;transform:rotate(25deg)}.page .gamehub-reference .gamehub-orbit:after{content:"✦";position:absolute;right:3px;bottom:-7px;color:#bda4b8;font-size:7px}
+.page .gamehub-reference .gamehub-drafts>button:before,.page .gamehub-reference .gamehub-gallery:before{content:"";position:absolute;width:10px;height:10px;right:68px;top:17px;background:#bb829f88;box-shadow:-11px 11px #a06b8e55,11px 11px #d9aac566,22px -11px #855d7a33,-22px -11px #a16b8f33;pointer-events:none}
+@media(max-width:380px){.page .gamehub-reference .gamehub-card div b{font-size:12px}.page .gamehub-reference .gamehub-card[data-game=escape] div b{font-size:9px}.page .gamehub-reference .gamehub-card div small{font-size:7.5px}}
+
+/* Reference-derived generated icon atlas: four columns by three rows, one exact tile per entry. */
+.page .gamehub-reference .gamehub-card>i.gamehub-art:not(.gamehub-icon-wordguess){background-image:url('assets/game-hub/game-icons.png');background-size:480% 360%;background-position:var(--hub-x) var(--hub-y);background-color:transparent;border:0;border-radius:0;box-shadow:none}
+.page .gamehub-reference .gamehub-art:not(.gamehub-icon-wordguess)>svg{visibility:hidden}
+.page .gamehub-reference .gamehub-icon-tale{--hub-x:2.631579%;--hub-y:3.846154%}
+.page .gamehub-reference .gamehub-icon-dread{--hub-x:34.210526%;--hub-y:3.846154%}
+.page .gamehub-reference .gamehub-icon-drawguess{--hub-x:65.789474%;--hub-y:3.846154%}
+.page .gamehub-reference .gamehub-icon-heartquiz{--hub-x:97.368421%;--hub-y:3.846154%}
+.page .gamehub-reference .gamehub-icon-soup{--hub-x:2.631579%;--hub-y:50%}
+.page .gamehub-reference .gamehub-icon-beads{--hub-x:34.210526%;--hub-y:50%}
+.page .gamehub-reference .gamehub-icon-escape{--hub-x:65.789474%;--hub-y:50%}
+.page .gamehub-reference .gamehub-icon-tod{--hub-x:97.368421%;--hub-y:50%}
+.page .gamehub-reference .gamehub-icon-quiz{--hub-x:2.631579%;--hub-y:96.153846%}
+.page .gamehub-reference .gamehub-icon-drama{--hub-x:34.210526%;--hub-y:96.153846%}
+.page .gamehub-reference .gamehub-icon-undercover{--hub-x:65.789474%;--hub-y:96.153846%}
+.page .gamehub-reference .gamehub-icon-quick{--hub-x:97.368421%;--hub-y:96.153846%}
+.page .gamehub-reference .gamehub-random>svg{display:none}.page .gamehub-reference .gamehub-random:before{content:"";flex:none;width:25px;height:25px;background:url('assets/game-hub/game-icons.png') 97.368421% 50%/480% 360% no-repeat}
+.page .gamehub-reference .gamehub-mystery:before,.page .gamehub-reference .gamehub-mystery:after{content:"";position:absolute;inset:0;border:1px solid #6a52624a;border-radius:4px;background:linear-gradient(135deg,#231d23,#111215);z-index:-1;transform:rotate(14deg)}.page .gamehub-reference .gamehub-mystery:after{transform:rotate(28deg);z-index:-2}
+
+.page .gamehub-reference .gamehub-card>.gamehub-multi{font-size:10px;padding:2px 8px}.page .gamehub-reference .gamehub-mystery{right:49px}
+
+/* HEART_CARD_ECG_V1: regenerated card art, heartbeat wave inside heart; labels remain live HTML. */
+.page .gamehub-reference .gamehub-card.featured{background:#19151c url('assets/game-hub/heart-card.png') center/cover no-repeat}
+.page .gamehub-reference .gamehub-card.featured>i.gamehub-art{background:none!important;box-shadow:none}.page .gamehub-reference .gamehub-card.featured>.gamehub-orbit{display:none}
+
+.page .gamehub-reference .gamehub-card>.gamehub-multi{background:linear-gradient(135deg,#e0a3c0,#bb7d9e);border-color:#e7b3cc;color:#35232f;box-shadow:inset 0 1px 1px #ffe2ef55}
+
+/* DICE_NO_FRAME_V1: isolated enlarged dice in random action and truth-or-dare entry. */
+.page .gamehub-reference .gamehub-random{width:138px}.page .gamehub-reference .gamehub-random b{white-space:nowrap}.page .gamehub-reference .gamehub-random:before{width:32px;height:32px;background: url('assets/game-hub/dice.png') center/contain no-repeat}
+.page .gamehub-reference .gamehub-card>i.gamehub-art.gamehub-icon-tod{width:46px;height:48px;background:transparent url('assets/game-hub/dice.png') center/contain no-repeat;border:0;border-radius:0;box-shadow:none}
+
+/* GAMEHUB_MODAL_V1: game-only solid blush/charcoal dialogs; reset by appSolidMark on every opening. */
+html body :is(#modal,#cfm).gamehub-modal.dy-solid-modal{background:rgba(3,2,5,.74)!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html body :is(#modal.gamehub-modal.dy-solid-modal .sheet,#cfm.gamehub-modal.dy-solid-modal .cfmbox){background:linear-gradient(145deg,#241b27,#121115 65%,#1c151e)!important;border:1px solid #8b677e!important;border-radius:22px!important;box-shadow:inset 0 1px 0 #e1b1cc20,0 20px 65px #000b,0 0 22px #bd75931a!important;color:#f3eaf1!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html body #modal.gamehub-modal.dy-solid-modal .sheet{padding:21px 18px 18px!important;scrollbar-color:#76576c #17131b}
+html body #modal.gamehub-modal.dy-solid-modal .sheet h3{margin:0 0 12px;color:#f4e6ef!important;font-size:19px;letter-spacing:.5px;line-height:1.4}
+html body #modal.gamehub-modal.dy-solid-modal .sheet :is(.hint,.empty,.field>label,.fg>label,small){color:#bcaabb!important;line-height:1.65}
+html body #modal.gamehub-modal.dy-solid-modal .sheet :is(.section,.it,.avline,.bill,.dg-setup-mark,.bead-setup-mark){background:#211b25!important;border-color:#493747!important;color:#eee3ed!important;box-shadow:none!important;border-radius:13px}
+html body #modal.gamehub-modal.dy-solid-modal .sheet :is(.it,.avline){gap:10px;min-width:0}.gamehub-modal .avline>span{min-width:0}
+html body #modal.gamehub-modal.dy-solid-modal .sheet :is(input:not([type=color]):not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea){background:#17131c!important;background-image:none!important;border:1px solid #5d4559!important;border-radius:11px!important;color:#f2e8ef!important;-webkit-text-fill-color:#f2e8ef;box-shadow:inset 0 1px 3px #0004!important;max-width:100%;min-width:0;box-sizing:border-box;caret-color:#e4a5c6;color-scheme:dark}
+html body #modal.gamehub-modal.dy-solid-modal .sheet :is(input,textarea)::placeholder{color:#94818f!important;-webkit-text-fill-color:#94818f}
+html body #modal.gamehub-modal.dy-solid-modal .sheet select option{background:#211b25;color:#f2e8ef}
+html body #modal.gamehub-modal.dy-solid-modal .sheet :is(input[type=checkbox],input[type=radio],input[type=range]){accent-color:#d99ab8}
+html body #modal.gamehub-modal.dy-solid-modal .sheet :is(.btn,.minibtn,.dg-mode-grid button,.dg-art-style button){border:1px solid #644b60!important;border-radius:12px!important;background:#2b202f!important;background-image:none!important;color:#e8d5e2!important;-webkit-text-fill-color:#e8d5e2;box-shadow:inset 0 1px 0 #e9b4cc0c!important;line-height:1.4;min-height:40px;white-space:normal;word-break:normal}
+html body #modal.gamehub-modal.dy-solid-modal .sheet :is(.btn.p,.dg-art-style button.on),html body #cfm.gamehub-modal.dy-solid-modal .cfmb.p{background:linear-gradient(135deg,#e0a3c0,#bb7d9e)!important;border:1px solid #e7b3cc!important;color:#35232f!important;-webkit-text-fill-color:#35232f;box-shadow:inset 0 1px 1px #ffe2ef55!important}
+html body #modal.gamehub-modal.dy-solid-modal .sheet .dg-art-style button.on :is(b,small){color:#35232f!important;-webkit-text-fill-color:#35232f}
+html body #modal.gamehub-modal.dy-solid-modal .sheet .sw{background:#473646!important;border:1px solid #72546a!important;box-shadow:none!important;flex-shrink:0}
+html body #modal.gamehub-modal.dy-solid-modal .sheet .sw.on{background:#d99ab8!important;border-color:#e7b3cc!important}
+html body #modal.gamehub-modal.dy-solid-modal .sheet :is(.btn.d,.danger),html body #cfm.gamehub-modal.dy-solid-modal .cfmb.d{background:#342027!important;color:#f0a8b7!important;-webkit-text-fill-color:#f0a8b7;border-color:#885365!important}
+html body #modal.gamehub-modal.dy-solid-modal .sheet :is(.dg-setup-mark,.bead-setup-mark,.dg-mode-grid) svg{color:#dca6c1!important}
+html body #modal.gamehub-modal.dy-solid-modal .sheet .dg-art-style{border-color:#564050;background:#1d1722;border-radius:13px}
+html body #cfm.gamehub-modal.dy-solid-modal .cfmmsg{color:#f0e4ed!important;line-height:1.7}.gamehub-modal .cfmbtns{gap:10px;padding:12px 15px 15px}
+html body #cfm.gamehub-modal.dy-solid-modal .cfmb{background:#2b202f!important;border:1px solid #644b60!important;border-radius:12px!important;color:#e8d5e2!important;-webkit-text-fill-color:#e8d5e2;min-height:42px;box-shadow:none!important}
+html body #modal.gamehub-modal.dy-solid-modal .sheet button:disabled{opacity:.45!important;cursor:not-allowed}
+html body :is(#modal,#cfm).gamehub-modal :is(button,input,select,textarea,[tabindex]):focus-visible{outline:2px solid #e3a5c4!important;outline-offset:3px}
+html body #modal.gamehub-modal.dy-solid-modal .sheet .btns{gap:10px;margin-top:14px}html body #modal.gamehub-modal.dy-solid-modal .sheet .btns>.btn{min-width:0;flex:1}
+@media(max-width:380px){html body #modal.gamehub-modal.dy-solid-modal .sheet{padding:18px 14px 14px!important}html body #modal.gamehub-modal.dy-solid-modal .sheet h3{font-size:18px}}
+
+html body #modal.gamehub-modal.dy-solid-modal .sheet label.avline{display:flex!important;align-items:center!important;justify-content:space-between;padding:10px 12px;gap:10px;min-height:50px}
+html body #modal.gamehub-modal.dy-solid-modal .sheet .avline .av{flex-shrink:0}html body #modal.gamehub-modal.dy-solid-modal .sheet .avline>.sw{display:inline-block!important;flex:0 0 44px!important;width:44px;height:25px;margin-left:auto}
