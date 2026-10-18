@@ -1136,3 +1136,14 @@ html body #modal.roleplay-modal.dy-solid-modal .sheet .avline .av{flex-shrink:0}
 .page .rp-studio-info>svg,.page .rp-studio-search>svg{color:#eca8cc}.page .rp-studio-info{border-color:#664655}.page .rp-feature{border-color:#9c6c85}.page .rp-studio-search{border-color:#9b6a84}.page .rp-outline{border-color:#ae7a96}.page .rp-feature-rule{background:#eca8cc;box-shadow:none}.page .rp-studio-row{border-bottom-color:#4b303f}.page .rp-studio-tabs{border-bottom-color:#4b303f}
 
 .page .rp-studio-nav>.rp-studio-refresh{justify-content:center;align-content:center}.page .rp-studio-nav>.rp-studio-refresh svg{justify-self:center;align-self:center;margin:0}
+
+/* RP_MEMBER_LAYOUT_V2: field inputs must not stretch participant checkboxes to full width. */
+.page .roleplay-config .rp-member-card{min-width:0;box-sizing:border-box}
+.page .roleplay-config .rp-member-select{display:grid!important;grid-template-columns:20px 36px minmax(0,1fr);align-items:center;gap:9px;width:100%;min-width:0;box-sizing:border-box;margin:0}
+.page .roleplay-config .rp-member-select>input[type=checkbox]{position:static!important;width:18px!important;height:18px!important;min-width:18px;max-width:18px;min-height:18px;padding:0;margin:0;justify-self:start;flex:none;transform:none}
+.page .roleplay-config .rp-member-avatar{position:static;display:block;min-width:0;width:36px;height:36px}.page .roleplay-config .rp-member-avatar>.avatar{position:static!important;inset:auto!important;transform:none!important;float:none;width:36px;height:36px;min-width:36px;margin:0;border-radius:8px}
+.page .roleplay-config .rp-member-name{position:static;min-width:0;white-space:normal;overflow-wrap:anywhere;line-height:1.5}
+.page .roleplay-config .rp-main-member{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}.page .roleplay-config .rp-main-member>.avatar{position:static!important;flex:0 0 36px;width:36px;height:36px;margin:0}
+.page .roleplay-config .two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}.page .roleplay-config .two input{width:100%;min-width:0;box-sizing:border-box}.page .roleplay-config input:is([type=date],[type=time]){display:block;min-width:0;width:100%;padding-left:5px;padding-right:5px}.page .roleplay-config input:is([type=date],[type=time])::-webkit-date-and-time-value{min-width:0;text-align:center}
+/* Use the accepted green/white WeChat mark in all WeChat Sports entries. */
+.wx-steps-icon{background:transparent;box-shadow:none}.wx-steps-icon svg.sb-wechat-icon{overflow:visible}

@@ -13,15 +13,15 @@ test('v1184 web identity and cache markers are aligned', () => {
   const hotfix = read('web-hotfix.js');
   const index = read('index.html');
   const repair = read('repair.html');
-  assert.match(app, /__NORTH_SHELL_BUILD__!=='1824'/);
-  assert.match(app, /APP_VER='v1824 · 角色扮演猫咪剧场'/);
-  assert.match(shell, /__NORTH_SHELL_BUILD__='1824'/);
-  assert.match(shell, /app\.js\?v=1824&r=v1824-roleplay-studio-1/);
-  assert.match(sw, /const BUILD='1824'/);
-  assert.match(sw, /v1824-roleplay-studio-1/);
-  assert.match(hotfix, /v1824-roleplay-studio-1/);
-  assert.match(index, /小手机\.html\?v=1824/);
-  assert.match(repair, /小手机\.html\?v=1824/);
+  assert.match(app, /__NORTH_SHELL_BUILD__!=='1825'/);
+  assert.match(app, /APP_VER='v1825 · 黑金亲属卡与配置修复'/);
+  assert.match(shell, /__NORTH_SHELL_BUILD__='1825'/);
+  assert.match(shell, /app\.js\?v=1825&r=v1825-bank-family-1/);
+  assert.match(sw, /const BUILD='1825'/);
+  assert.match(sw, /v1825-bank-family-1/);
+  assert.match(hotfix, /v1825-bank-family-1/);
+  assert.match(index, /小手机\.html\?v=1825/);
+  assert.match(repair, /小手机\.html\?v=1825/);
 });
 
 test('v1184 publishes shared cohab memory and X comment controls', () => {
