@@ -3227,3 +3227,5 @@ NORTH_PHONE_MONITOR=1复用既有QA，双端真实页面/来源不变/主体与�
 2026-10-18 私人v1836 / iOS485：从提交 177fe7ff 的干净工作区 xcodebuild（Release，BUILD SUCCEEDED，1.0.485/485）并覆盖安装到用户 iPhone 15；安装包内 APP_VER v1836 · 表情仓库，assets/sticker-store/pet 下 20 个表情图齐全，wechat-me.js 含 STICKER_STORE_V1，desk-pet.js 含 DESK_PET_MISS_KISS_HUG_V1；devicectl 读回已装版本 1.0.485 (485)。发布前全量 4426/4426 通过，核心聊天检查普通与查岗预览均通过。手机上的观感、真识图写含义的效果待她回报。
 
 2026-10-18 网页v1834 / 私人v1837 / iOS486：表情仓库按她看手机后的要求调整——添加到我的表情改成表情面板里单独的小橘标签（不再抄进笑脸自定义表情，旧副本自动挪回）；仓库和面板去掉表情后面的白底，小橘裁掉空白放大；角色提示里列出可用表情包的关键词，角色写 [表情|抱抱] 等就发对应那张（两包真实回复流程验证：抱抱→pet-20、哼！→pet-07）。
+
+2026-10-18 私人v1837 / iOS486：从提交 d48ef1c9 的干净工作区 xcodebuild（Release，BUILD SUCCEEDED，1.0.486/486）并覆盖安装到用户 iPhone 15；安装包内 APP_VER v1837 · 表情面板小橘标签，assets/sticker-store/pet 下 20 个表情和 icon.png 齐全，task-notes.js 含表情面板扩展标签；devicectl 读回 1.0.486 (486)。发布前全量 4431/4431 通过，核心聊天检查普通与查岗预览均通过。注：该提交标题误写为“private v1835→v1837”，实际私人版本为 v1837（已推送，不改写历史）。
