@@ -392,7 +392,11 @@ function log(id,openKey){const o=cohabData(id),c=getC(id);if(!o||!c)return;const
     return '<details '+(openKey===key||g.live?'open':'')+' style="margin:10px 0;border:1px solid #2a2a2c;border-radius:14px;overflow:hidden;background:#141416"><summary style="list-style-position:inside;background:#1e1e22;padding:9px 12px;cursor:pointer"><span style="display:inline-block;width:calc(100% - 22px);vertical-align:top"><span style="font-size:13px;color:#e6c79c;font-weight:600">🎙 共同生活语音 · '+n+'</span><span style="display:block;font-size:11px;color:#888;margin-top:2px">'+esc2(typeof fmtDate==='function'?fmtDate(g.start):'')+'　开始 '+hm(g.start)+(g.live?' · 还在说':' — 结束 '+hm(g.end))+'</span></span></summary><div style="padding:2px 12px 10px">'
      +(g.lines.length?g.lines.map(l=>'<div style="padding:6px 0;border-top:.5px solid #242428"><div style="font-size:11px;color:#888;display:flex;justify-content:space-between"><span>'+esc2(who(l))+'</span><span><span onclick="CohabVoice.editLine(\''+esc2(id)+'\',\''+esc2(key)+'\',\''+esc2(l.id)+'\')" style="color:#54a0ff;cursor:pointer">✎改</span><span onclick="CohabVoice.delLine(\''+esc2(id)+'\',\''+esc2(key)+'\',\''+esc2(l.id)+'\')" style="color:#fa5151;cursor:pointer;margin-left:14px">✕删</span></span></div><div style="white-space:pre-wrap;font-size:14px;margin-top:2px;color:'+(l.action?'#a99f93;font-style:italic':'#ddd')+'">'+esc2(l.content+(l.trans?'\n'+l.trans:''))+'</div></div>').join(''):'<div style="padding:10px 0;color:#888;font-size:13px">还没有说话</div>')
      +(g.live?'':'<button class="minibtn" style="margin-top:8px;color:#ff8a8a" onclick="CohabVoice.remove(\''+esc2(id)+'\',\''+esc2(g.id)+'\')">删除这次记录</button>')+'</div></details>';}).join(''):'<div class="empty" style="padding:24px 0;text-align:center;color:#888">还没有共同生活语音记录</div>';
-  openModal('<h3>共同生活语音记录</h3><div class="hint">在共同生活里用语音模式说过的话，正在进行的也在这里。只在共同生活里显示，不会出现在微信的通话记录里。</div>'+body+'<div class="btns" style="margin-top:10px"><button class="btn g" onclick="closeModal()">关闭</button></div>');}
+  const diag=(typeof window!=='undefined'&&Array.isArray(window.__northTtsDiag)?window.__northTtsDiag:[]).slice().reverse();
+  const diagHTML='<details style="margin:10px 0;border-radius:14px;overflow:hidden"><summary style="padding:9px 12px;cursor:pointer;font-size:13px">语音诊断 · 最近交给语音的 '+diag.length+' 句</summary><div style="padding:4px 12px 10px;font-size:12px;line-height:1.6">'
+   +(diag.length?diag.map(d=>'<div style="padding:7px 0;border-top:.5px solid rgba(255,255,255,.14)"><div style="opacity:.7">'+hm(d.at)+' · '+esc2(d.provider||d.kind||'语音')+(d.model?' / '+esc2(d.model):'')+(d.relay?' · 中转':'')+' · 细腻情绪'+(d.vx?'开':'关')+(d.cue?' · 语气:'+esc2(d.cue):'')+'</div>'+(d.ask?'<div>你的话：'+esc2(d.ask)+'</div>':'')+'<div>交给语音：<b style="font-weight:500">'+esc2(d.sent)+'</b></div></div>').join(''):'<div style="padding:8px 0;opacity:.7">还没有。开着共同生活语音让 TA 说几句话，再回来看。</div>')
+   +'</div></details>';
+  openModal('<h3>共同生活语音记录</h3><div class="hint">在共同生活里用语音模式说过的话，正在进行的也在这里。只在共同生活里显示，不会出现在微信的通话记录里。</div>'+body+diagHTML+'<div class="btns" style="margin-top:10px"><button class="btn g" onclick="closeModal()">关闭</button></div>');}
 function findLine(id,key,lineId){if(key==='live'){if(!isActive(id))return null;const m=msgs(id).find(x=>x&&x.id===lineId&&x._cs===_call.session);return m?{live:true,m}:null;}const o=cohabData(id),g=(o&&o.voiceLog||[]).find(x=>x.id===key),l=g&&g.lines.find(x=>x.id===lineId);return l?{live:false,o,g,l}:null;}
 function editLine(id,key,lineId){const f=findLine(id,key,lineId);if(!f)return;const text=f.live?String(f.m.content||''):f.l.content;
   openModal('<h3>改这一句</h3><div class="field"><textarea id="cv_edit" rows="4">'+esc2(text)+'</textarea></div><div class="btns"><button class="btn g" onclick="CohabVoice.log(\''+esc2(id)+'\',\''+esc2(key)+'\')">取消</button><button class="btn p" onclick="CohabVoice.saveLine(\''+esc2(id)+'\',\''+esc2(key)+'\',\''+esc2(lineId)+'\')">保存</button></div>');}
@@ -416,11 +420,17 @@ async function remove(id,logId){const o=cohabData(id);if(!o)return;const g=(o.vo
 const RING='content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;padding:.8px;box-sizing:border-box;background:linear-gradient(140deg,rgba(255,255,255,.72),rgba(255,255,255,.26) 26%,rgba(255,255,255,.1) 50%,rgba(255,255,255,.3) 76%,rgba(255,255,255,.64));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;-webkit-backdrop-filter:brightness(1.72) saturate(1.68);backdrop-filter:brightness(1.72) saturate(1.68)';
 // 2026-10-18 第三轮（实机：「太透了，字都看不清」「玻璃会掉材质，要重新进页面才出来」）：兜底材质改成和镜片一样的磨砂，
 // 镜片画上去时把它盖住；镜片没画、或者手机切后台把画好的镜片清掉时，露出来的也是同样的磨砂，所以看起来不会变。
-const GLASS_BODY='background:rgba(26,26,31,.34)!important;background-image:none!important;border:0!important;box-shadow:none!important;color:#fff!important;-webkit-backdrop-filter:blur(14px) saturate(1.32)!important;backdrop-filter:blur(14px) saturate(1.32)!important';
-const GLASS_BAR='background:rgba(16,16,18,.38)!important;background-image:none!important;-webkit-backdrop-filter:blur(20px) saturate(1.34)!important;backdrop-filter:blur(20px) saturate(1.34)!important';
-const GLASS_INNER='background:rgba(255,255,255,.07)!important;background-image:none!important;border:0!important;box-shadow:none!important;color:#fff!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important';
-const GLASS_SHEET='background:rgba(30,30,36,.62)!important;background-image:none!important;border:0!important;box-shadow:0 18px 50px rgba(0,0,0,.38)!important;color:#fff!important;-webkit-backdrop-filter:blur(26px) saturate(1.35)!important;backdrop-filter:blur(26px) saturate(1.35)!important';
-const GLASS_ON='background:rgba(255,255,255,.3)!important;background-image:none!important;color:#fff!important';
+// COHAB_GLASS_NO_COLOR_V1（2026-10-18 她说：液态玻璃「其实没有颜色，是根据背景来换颜色的，你不需要去固定它的颜色」）：
+// 身子完全透明，不涂灰、不涂黑；看到的颜色全是后面背景磨砂之后的样子。「黑磨砂」是把背景压暗（brightness），不是涂一层黑。
+// 和共同生活输入框同一个做法：手机上镜片盖在上面，镜片同样是取背景的颜色。
+const GLASS_FILTER='-webkit-backdrop-filter:blur(16px) saturate(1.5) brightness(.74)!important;backdrop-filter:blur(16px) saturate(1.5) brightness(.74)!important';
+const GLASS_BODY='background:transparent!important;background-image:none!important;border:0!important;box-shadow:none!important;color:#fff!important;-webkit-text-fill-color:#fff;'+GLASS_FILTER;
+const GLASS_BAR='background:transparent!important;background-image:none!important;-webkit-backdrop-filter:blur(22px) saturate(1.45) brightness(.78)!important;backdrop-filter:blur(22px) saturate(1.45) brightness(.78)!important';
+const GLASS_INPUT='background:transparent!important;background-image:none!important;border:1px solid rgba(255,255,255,.24)!important;box-shadow:none!important;color:#fff!important;-webkit-text-fill-color:#fff;'+GLASS_FILTER;
+// 点开的页面：同样不涂颜色，磨得更厚、压得更暗，字才看得清。边线用 border，不用 :before 的环——页面会上下滚，:before 的环跟着内容走，会在屏幕中间留一条白线
+const GLASS_SHEET='background:transparent!important;background-image:none!important;border:1px solid rgba(255,255,255,.2)!important;box-shadow:0 18px 50px rgba(0,0,0,.35)!important;color:#fff!important;-webkit-backdrop-filter:blur(30px) saturate(1.45) brightness(.6)!important;backdrop-filter:blur(30px) saturate(1.45) brightness(.6)!important';
+// 开着的按钮：不填颜色，只把边线描亮
+const GLASS_ON='outline:1.5px solid rgba(255,255,255,.82)!important;outline-offset:-1.5px;font-weight:700!important';
 const READER_CSS='.callscreen.cvr-mode #callSub,.callscreen.cvr-mode .callsub{display:none!important}.callscreen.cvr-mode{display:block!important;padding:0!important;align-items:stretch!important;background:#000!important;color:#ddd8cf}'
  +'.cvr-stage{z-index:0}'
  +'.cvr-head{position:absolute;left:0;right:0;top:0;z-index:3;display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top,0px) + 12px) 16px 14px;background:linear-gradient(180deg,rgba(5,5,5,.96) 55%,rgba(5,5,5,0))}.cvr-stage.hasbg:not(.off-classic) .cvr-head{background:rgba(16,16,18,.34);-webkit-backdrop-filter:blur(16px) saturate(1.3);backdrop-filter:blur(16px) saturate(1.3);border-bottom:1px solid rgba(255,255,255,.08)}'
@@ -428,8 +438,8 @@ const READER_CSS='.callscreen.cvr-mode #callSub,.callscreen.cvr-mode .callsub{di
  +'.cvr-glass{position:relative;'+GLASS_BODY+'}.cvr-glass:before{'+RING+'}.cvr-glass.on{'+GLASS_ON+'}'
  +'.cvr-min{width:36px;height:36px;border-radius:50%;font-size:17px;display:flex;align-items:center;justify-content:center;padding:0}.cvr-end{height:32px;padding:0 15px;border-radius:16px;font-size:13px;font-weight:600}'
  +'.cvr-scroll{position:absolute;left:0;right:0;top:0;bottom:calc(env(safe-area-inset-bottom,0px) + 64px);z-index:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;overflow-anchor:none}.cvr-body{max-width:640px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 88px) 22px 96px}'
- +'.cvr-line{transition:opacity .5s ease;opacity:.5}.cvr-line.cvr-me{opacity:.8}.cvr-line.now,.cvr-line.me-now{opacity:1}.cvr-line.cvr-wait{visibility:hidden}.cvr-line.cvr-in{animation:offlinein .42s cubic-bezier(.22,.8,.3,1) both}'
- +'.cvr-nar{margin:18px 0 6px;font:italic 15px/1.95 "Songti SC","STSong",serif;color:var(--offc-nar,#c9c2b6)}.cvr-say{margin:6px 0 2px;font:400 20px/1.75 "Songti SC","STSong",serif;color:#f2efe9;letter-spacing:.3px}.cvr-stage.hasbg .cvr-say,.cvr-stage.hasbg .cvr-nar{text-shadow:0 1px 6px rgba(0,0,0,.6)}.cvr-say i{display:block;margin-top:2px;font:400 13.5px/1.6 -apple-system,"PingFang SC",sans-serif;font-style:normal;color:rgba(255,255,255,.5)}.cvr-nar-me{text-align:right}'
+ +'.cvr-line{transition:opacity .5s ease;opacity:.5}.cvr-line.cvr-me{opacity:.8}.cvr-line.now,.cvr-line.me-now{opacity:1}.cvr-line.cvr-wait{visibility:hidden}.cvr-line.cvr-in{animation:cvrPop .34s cubic-bezier(.2,.9,.3,1.15) both;transform-origin:left bottom}.cvr-line.cvr-me.cvr-in,.cvr-line.cvr-nar-me.cvr-in{transform-origin:right bottom}@keyframes cvrPop{from{opacity:0;transform:translateY(8px) scale(.94)}}'
+ +'.cvr-nar{margin:18px 0 6px;font:italic 15px/1.95 "Songti SC","STSong",serif;color:var(--offc-nar,#c9c2b6)}.cvr-say{margin:6px 0 2px;font:400 20px/1.75 "Songti SC","STSong",serif;color:#f2efe9;letter-spacing:.3px}.cvr-stage.hasbg .cvr-say,.cvr-stage.hasbg .cvr-nar{text-shadow:0 1px 3px rgba(0,0,0,.6),0 0 14px rgba(0,0,0,.4)}.cvr-say i{display:block;margin-top:2px;font:400 13.5px/1.6 -apple-system,"PingFang SC",sans-serif;font-style:normal;color:rgba(255,255,255,.5)}.cvr-nar-me{text-align:right}'
  +'.cvr-body .offmsg.cvr-me{margin:16px 0}.cvr-body .offmsg.cvr-me .col{max-width:80%;min-width:0}.cvr-body .offmsg.cvr-me .offbubble{max-width:100%;white-space:pre-wrap;font-size:15px}'
  +'.cvr-empty{margin-top:30vh;text-align:center;color:var(--offc-nar,#c9c2b6);opacity:.7;font:15px/1.9 -apple-system,"PingFang SC",sans-serif;letter-spacing:2px}.cvr-dots{display:flex;gap:6px;margin:16px 0 0 2px}.cvr-dots b{width:6px;height:6px;border-radius:50%;background:var(--offc-nar,#c9c2b6);opacity:.35;animation:cvrDot 1.2s infinite}.cvr-dots b:nth-child(2){animation-delay:.2s}.cvr-dots b:nth-child(3){animation-delay:.4s}@keyframes cvrDot{40%{opacity:1;transform:translateY(-3px)}}'
  +'.cvr-latest{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 112px);z-index:4;transform:translateX(-50%);height:34px;padding:0 15px;border-radius:17px;font-size:12.5px}.cvr-latest[hidden]{display:none}'
@@ -440,28 +450,31 @@ const READER_CSS='.callscreen.cvr-mode #callSub,.callscreen.cvr-mode .callsub{di
  // 经典皮肤：和共同生活经典皮肤一样是实心的，不做玻璃
  +'.cvr-stage.off-classic .cvr-glass,.cvr-stage.off-classic .offinput .send.cvr-mic{background:#111!important;border:1px solid #3b3730!important;color:#b8a78d!important;-webkit-backdrop-filter:none;backdrop-filter:none;border-radius:5px!important}.cvr-stage.off-classic .cvr-min,.cvr-stage.off-classic .offinput .send.cvr-mic{border-radius:50%!important}.cvr-stage.off-classic .cvr-glass:before{display:none}.cvr-stage.off-classic .cvr-glass.on,.cvr-stage.off-classic .offinput .send.cvr-mic.on{background:#d8cdb8!important;border-color:#d8cdb8!important;color:#18140f!important}.cvr-stage.off-classic .cvr-dock .off-field input{border-radius:5px;color:#e1ddd5}'
  // 缩小后的小条：整条是玻璃胶囊，左边一个圆的玻璃话筒（点它回到语音页）
- +'.callscreen.mini.cvr-mini{background:rgba(30,30,36,.62)!important;border:0!important;-webkit-backdrop-filter:blur(22px) saturate(1.35);backdrop-filter:blur(22px) saturate(1.35);box-shadow:0 6px 20px rgba(0,0,0,.4);padding:6px 8px 6px 6px;gap:9px;overflow:visible}.callscreen.mini.cvr-mini:before{'+RING+'}'
+ +'.callscreen.mini.cvr-mini{background:transparent!important;border:0!important;-webkit-backdrop-filter:blur(30px) saturate(1.45) brightness(.58);backdrop-filter:blur(30px) saturate(1.45) brightness(.58);box-shadow:0 6px 20px rgba(0,0,0,.4);padding:6px 8px 6px 6px;gap:9px;overflow:visible}.callscreen.mini.cvr-mini:before{'+RING+'}'
  +'.cvr-mini .cvr-mini-mic{width:36px;height:36px;min-width:36px;border-radius:50%;display:flex;align-items:center;justify-content:center}.cvr-mini .cvr-mini-mic.on{'+GLASS_ON+'}.cvr-mini .cvr-mini-name{font-size:13px;color:#fff;white-space:nowrap;display:flex;align-items:center;gap:5px}.cvr-mini .cvr-mini-name small{color:rgba(255,255,255,.65);letter-spacing:1px;font-size:11px}.cvr-mini .cmax{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer}.cvr-mini .cvr-mini-end{height:30px;padding:0 12px;border-radius:15px;font-size:12.5px;font-weight:600;display:flex;align-items:center;cursor:pointer}';
 // 共同生活页和从共同生活点开的页面（外观、测试控制、作息、记忆、语音记录、多人剧场……）：灰色的块统一换成气泡的材质。经典皮肤不动。
-const G=':is(.offstage:not(.off-classic),#modal.cohab-glass-modal)';
-// 手机上（私人版玻璃主题）这些块大多由液态玻璃画（lg-ready，和气泡同一块镜片），那时不再叠这层 CSS，只在没有液态玻璃时用它兜底
-const COHAB_GLASS_CSS=G+' :is(.offinput .send,.cohab-settings-grid label,.cohab-memory-open,.cohab-theater-settings,.cohab-theater-settings button,.cohab-debug-reply,.cohab-status-chip,.offselect button:not(.danger),.minibtn,.btn:not(.d):not(.p),.cv-tray button b,.cohab-away-panel,.cohab-return-banner,.off-more,.off-field,.cvr-glass){'+GLASS_BODY+'}'
- +G+' :is(.offnav,.offmeta,.cohab-meta,.offinput,.cohab-settings>summary,.off-reply-top,.cvr-head){'+GLASS_BAR+'}'
+const G=':is(.offstage:not(.off-classic),#modal.cohab-glass-modal,#cfm.cohab-glass-modal)';
+const BOXES='.cfmb,.offinput .send,.off-field,.cvr-glass,.cohab-settings-grid label,.cohab-memory-open,.cohab-theater-settings,.cohab-theater-settings button,.cohab-debug-reply,.cohab-status-chip,.offselect button,.minibtn,.btn,.cv-tray button b,.cohab-away-panel,.cohab-return-banner,.off-more,#modalSheet .section,#modalSheet details,#modalSheet pre';
+const COHAB_GLASS_CSS=G+' :is('+BOXES+'){'+GLASS_BODY+'}'
+ +G+' :is(.offnav,.offmeta,.cohab-meta,.offinput,.cohab-settings,.off-reply-top,.cvr-head,.cv-tray,.offselect){'+GLASS_BAR+'}'
+ // 记忆里那些小 × 和星星按钮：不涂颜色
+ +'#modal.cohab-glass-modal #modalSheet .cohab-memory-list button{background:transparent!important;background-image:none!important}'
+ // 删除前弹出的确认框（另一种弹窗，以前漏了）：和点开的页面一样
+ +'#cfm.cohab-glass-modal .cfmbox{position:relative;'+GLASS_SHEET+'}#cfm.cohab-glass-modal .cfmmsg{color:#fff}#cfm.cohab-glass-modal .cfmb{position:relative}#cfm.cohab-glass-modal .cfmb.p{'+GLASS_ON+'}'
+ // 气泡保留她在外观里挑的颜色（那是她自己的设置），镜片也是按这个颜色染
  +G+' .offmsg.them .offbubble{background:var(--offc-them-soft,rgba(38,38,42,.52))!important;background-image:none!important;-webkit-backdrop-filter:blur(13px) saturate(1.3)!important;backdrop-filter:blur(13px) saturate(1.3)!important}'
- +G+' .offmsg.me .offbubble{background:var(--offc-me-soft,rgba(210,201,186,.62))!important;background-image:none!important;-webkit-backdrop-filter:blur(13px) saturate(1.3)!important;backdrop-filter:blur(13px) saturate(1.3)!important}'
+ +G+' .offmsg.me .offbubble{background:var(--offc-me-soft,rgba(38,38,42,.52))!important;background-image:none!important;-webkit-backdrop-filter:blur(13px) saturate(1.3)!important;backdrop-filter:blur(13px) saturate(1.3)!important}'
  +'.offstage:not(.hasbg){background-color:#000!important;background-image:none!important}.offstage:not(.hasbg) .offscroll{background:#000!important}'
- // 高光环要贴着它画，所以本来不定位的块改成 relative；「让TA回」本来就是浮在右边的（absolute），不能动它
- +G+' :is(.cohab-settings-grid label,.cohab-memory-open,.cohab-theater-settings,.cohab-theater-settings button,.offselect button:not(.danger),.minibtn,.btn:not(.d):not(.p),.cv-tray button b,.cohab-away-panel,.cohab-return-banner,.off-more,#modalSheet .section,#modalSheet details){position:relative}'
- +G+' :is(.offinput .send,.cohab-settings-grid label,.cohab-memory-open,.cohab-theater-settings,.cohab-theater-settings button,.cohab-debug-reply,.cohab-status-chip,.offselect button:not(.danger),.minibtn,.btn:not(.d):not(.p),.cv-tray button b,.cohab-away-panel,.cohab-return-banner,.off-more):not(.lg-ready):before{'+RING+'}'
- +G+' :is(.offinput .off-narrate.on,.offinput .send.cvr-mic.on,.cvr-glass.on,.btn.p):not(.lg-ready){'+GLASS_ON+'}.cvr-mini .cvr-mini-mic.on{'+GLASS_ON+'}'
- // 液态玻璃上的底色被镜片盖住，开着的按钮改成整块提亮（同样是更亮的白玻璃）
- +':is(.offstage,.cvr-stage) :is(.offinput .off-narrate.on,.offinput .send.cvr-mic.on,.cvr-glass.on).lg-ready{-webkit-filter:brightness(1.55);filter:brightness(1.55)}'
- +'.offstage:not(.off-classic) .offinput.narration-mode .off-field{background:rgba(255,255,255,.14)!important}'
- // 点开的页面本身也是气泡材质；后面的页面糊掉一层，不然透明的页面上字会和后面的字叠在一起看不清
- +'#modal.cohab-glass-modal #modalSheet{position:relative;'+GLASS_SHEET+'}#modal.cohab-glass-modal #modalSheet:before{'+RING+'}'
- // 点开页面里的深色分组、选择框和输入框：同样的 7% 白；输入框画不了高光环，用和共同生活设置里输入框一样的细白边
- +'#modal.cohab-glass-modal #modalSheet :is(.section,details,pre){'+GLASS_INNER+'}#modal.cohab-glass-modal #modalSheet :is(.section,details):before{'+RING+'}#modal.cohab-glass-modal #modalSheet details>summary{background:transparent!important}'
- +'#modal.cohab-glass-modal #modalSheet :is(input:not([type=color]):not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea){background:rgba(255,255,255,.07)!important;background-image:none!important;border:1px solid rgba(255,255,255,.2)!important;box-shadow:none!important;color:#fff!important;-webkit-text-fill-color:#fff}#modal.cohab-glass-modal #modalSheet select option{background:#2a2a2e;color:#fff}';
+ // 高光环要贴着块画，本来不定位的块改成 relative；「让TA回」本来就是浮着的（absolute），不能动它
+ +G+' :is(.cohab-settings-grid label,.cohab-memory-open,.cohab-theater-settings,.cohab-theater-settings button,.offselect button,.minibtn,.btn,.cv-tray button b,.cohab-away-panel,.cohab-return-banner,.off-more,#modalSheet .section,#modalSheet details){position:relative}'
+ +G+' :is('+BOXES+'):not(.lg-ready):before{'+RING+'}'
+ +G+' :is(.btn.d,.offselect button.danger){color:#ff9b93!important;-webkit-text-fill-color:#ff9b93}'
+ +G+' :is(.offinput .off-narrate.on,.offinput .send.cvr-mic.on,.cvr-glass.on,.btn.p){'+GLASS_ON+'}.cvr-mini .cvr-mini-mic.on{'+GLASS_ON+'}'
+ // 设置里的数字框/选择框、点开页面里的输入框：同样透明磨砂，输入框画不了 :before，用细白边当高光
+ +G+' :is(.cohab-settings-grid input,.cohab-settings-grid select,#modalSheet input:not([type=color]):not([type=checkbox]):not([type=radio]):not([type=range]),#modalSheet select,#modalSheet textarea){'+GLASS_INPUT+'}'
+ +G+' :is(.cohab-settings-grid select option,#modalSheet select option){background:#1c1c1e;color:#fff}'
+ +'#modal.cohab-glass-modal #modalSheet{position:relative;'+GLASS_SHEET+'}#modal.cohab-glass-modal #modalSheet:before{display:none!important}'
+ +'#modal.cohab-glass-modal #modalSheet details>summary{background:transparent!important}';
 const revealed=new Set();let dom=null;
 const lineKey=l=>[l.role,l.action?1:0,l.content,l.trans].join('\u0001');
 const glyphs=(t,start)=>Array.from(String(t||'')).map((ch,i)=>ch==='\n'?'<br>':'<span class="offglyph" style="animation-delay:'+((start+i)*50)+'ms">'+(ch===' '?'&nbsp;':esc2(ch))+'</span>').join('');
@@ -495,8 +508,8 @@ function refresh(force){if(!hasDom()||!isActive())return;const body=document.get
     if(!n){const el=document.createElement('div');el.dataset.k=l.id;n={el,key,shown:false};dom.nodes.set(l.id,n);body.appendChild(el);
       if(show&&(first||l.role==='user')){n.shown=true;revealed.add(l.id);el.innerHTML=lineInner(l,false);if(!first)n.enter=true;}else el.innerHTML=lineInner(l,false);}
     else if(n.key!==key){n.key=key;n.el.innerHTML=lineInner(l,false);}
-    if(!n.shown&&show){n.shown=true;revealed.add(l.id);n.enter=true;if(l.role!=='user'&&!reduceMotion())n.el.innerHTML=lineInner(l,true);}
-    const cls=lineBase(l)+st.cls(i)+(n.shown?'':' cvr-wait')+(n.enter?' cvr-in offreveal':'');if(n.el.className!==cls)n.el.className=cls;
+    if(!n.shown&&show){n.shown=true;revealed.add(l.id);n.enter=true;}
+    const cls=lineBase(l)+st.cls(i)+(n.shown?'':' cvr-wait')+(n.enter?' cvr-in':'');if(n.el.className!==cls)n.el.className=cls;
   });
   if(st.dots){dots=document.createElement('div');dots.className='cvr-dots';dots.innerHTML='<b></b><b></b><b></b>';body.appendChild(dots);}
   if(first||sc.scrollHeight!==before)lensSoon(true);
@@ -533,6 +546,8 @@ function paintReader(L){const c=getC(_call.id);if(!c)return;const old=document.g
 function paintMini(L){const c=getC(_call.id);if(!c)return false;const hf=typeof _callHF!=='undefined'&&_callHF;clearInterval(watch);watch=0;dom=null;
   L.removeAttribute('style');L.className='callscreen show mini cvr-mini';if(typeof callClearBackdrop==='function')callClearBackdrop(L);
   L.innerHTML='<span class="cvr-mini-mic cvr-glass cmax'+(hf?' on':'')+'" onclick="callMax()" aria-label="回到共同生活语音">'+micSvg(17)+'</span><span class="cvr-mini-name">'+esc2(c.remark||c.name)+'<small>· 共同生活语音</small></span><span class="cmax cvr-glass" onclick="callMax()" title="放大" aria-label="放大">'+(typeof svgIc==='function'?svgIc('expand',15,'currentColor'):'⤢')+'</span><span class="cbtn cvr-mini-end cvr-glass" onclick="hangupCall()">结束</span><div class="callsub" id="callSub" hidden></div>';
+  // 没拖过时，默认放在共同生活顶上两条（名字/时间、共同生活设置）的下面，不挡标题和时间；拖过就按她拖到的位置
+  if(!_call._mpos){const bars=[...document.querySelectorAll('.offstage .offnav,.offstage .cohab-meta,.offstage .offmeta,.offstage .cohab-settings>summary')].filter(e=>e.offsetParent!==null),below=bars.reduce((m,e)=>Math.max(m,e.getBoundingClientRect().bottom),0);if(below>0){const op=L.offsetParent,base=op?op.getBoundingClientRect().top:0,top=Math.round(below-base+8);L.style.top=top+'px';L.style.bottom='auto';}}
   if(typeof makeMiniDraggable==='function')setTimeout(makeMiniDraggable,0);return true;}
 
 // 语音页也登记成液态玻璃的一页（私人版玻璃主题、换了背景时）：气泡、顶栏、按钮、输入栏和共同生活用同一块镜片。
@@ -572,8 +587,11 @@ offSay=function(e){if(isActive()){toast('正在语音模式，先点「结束」
 // 从共同生活点开的页面打上 cohab-glass-modal，用上面的气泡材质；关掉时去掉，别的页面（微信、线下约会）不受影响。
 function cohabGlassSkin(){if(typeof _off==='undefined'||!_off||_off.mode!=='cohab'||typeof cur!=='function'||cur().p!=='off')return false;const c=getC(_off.id);return !!c&&typeof offTheme==='function'&&offTheme(c).skin!=='classic';}
 // 不包 openModal：有的页面（私人版「查看上一轮拦截内容」）拿的是最原始的 openModal，包不到。改成看着 #modal：一出现就按当前是不是共同生活决定加不加。
-function markModal(){if(!hasDom())return;const m=document.getElementById('modal');if(!m)return;const want=m.classList.contains('show')&&cohabGlassSkin();if(m.classList.contains('cohab-glass-modal')!==want)m.classList.toggle('cohab-glass-modal',want);}
-if(hasDom()&&typeof MutationObserver!=='undefined'){const watchModal=()=>{const m=document.getElementById('modal');if(!m||m._cvWatch)return;m._cvWatch=true;new MutationObserver(markModal).observe(m,{attributes:true,attributeFilter:['class']});new MutationObserver(markModal).observe(document.getElementById('modalSheet')||m,{childList:true});markModal();};if(document.getElementById('modal'))watchModal();else if(document.addEventListener)document.addEventListener('DOMContentLoaded',watchModal);}
+function markModal(){if(!hasDom())return;['modal','cfm'].forEach(k=>{const m=document.getElementById(k);if(!m)return;const want=m.classList.contains('show')&&cohabGlassSkin();if(m.classList.contains('cohab-glass-modal')!==want)m.classList.toggle('cohab-glass-modal',want);});}
+function watchModal(){if(!hasDom()||typeof MutationObserver==='undefined')return;const m=document.getElementById('modal');if(m&&!m._cvWatch){m._cvWatch=true;new MutationObserver(markModal).observe(m,{attributes:true,attributeFilter:['class']});new MutationObserver(markModal).observe(document.getElementById('modalSheet')||m,{childList:true});}const f=document.getElementById('cfm');if(f&&!f._cvWatch){f._cvWatch=true;new MutationObserver(markModal).observe(f,{attributes:true,attributeFilter:['class']});}markModal();}
+if(hasDom()&&typeof MutationObserver!=='undefined'){
+// 确认框 #cfm 第一次用到时才建出来，所以每次弹出前再挂一次
+if(typeof uiConfirm==='function'){const baseConfirm=uiConfirm;uiConfirm=function(){const r=baseConfirm.apply(this,arguments);try{watchModal();setTimeout(watchModal,0);}catch(_){}return r;};}if(document.getElementById('modal'))watchModal();else if(document.addEventListener)document.addEventListener('DOMContentLoaded',watchModal);}
 
 /* ---------- 期间暂停共同生活自己推进的事 ---------- */
 if(typeof cohabAdvance==='function'){const baseAdvance=cohabAdvance;

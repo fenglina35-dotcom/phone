@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1806'){
+if(window.__NORTH_SHELL_BUILD__!=='1808'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -616,7 +616,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1806 · 共同生活磨砂玻璃';
+const APP_VER='v1808 · 共同生活液态玻璃';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2042,7 +2042,7 @@ function ttsTidyOrphanPunct(s){return String(s||'').replace(/\s+/g,' ').replace(
 function ttsDropOffLanguage(text,o){const lang=ttsContentLang(o);if(!['英','法','德','俄','韩'].includes(lang))return text;const s=String(text||'');if(!s||!hasForeign(s,lang))return text;const cleaned=ttsTidyOrphanPunct(hasCN(s)?s.replace(CJK_RE,' ').replace(CN_PUNCT_RE,' '):s);return cleaned&&hasForeign(cleaned,lang)?cleaned:text;}
 /* 语音字数只算真正念出来的内容：表演标签（[soft]、[chuckling] 等）和发音标注不占字数，不会因为加了标签就超限合成失败 */
 function ttsSpokenLength(t){return [...String(t||'').replace(/\[[^\]\n]{1,60}\]/g,'').replace(/<\|phoneme_start\|>[a-z]+[1-5]<\|phoneme_end\|>/gi,'x').replace(/\s+/g,' ').trim()].length;}
-async function ttsArr(text,o,opt){opt=Object.assign({},opt||{});text=ttsDropOffLanguage(text,o);if(!opt.languageBoost)opt.languageBoost=ttsLanguageBoost(o);const tts=opt.externalConfig?Object.assign({},opt.externalConfig,{relay:false,enabled:true}):ttsCfg(o),raw=ttsCleanBase(text);if(!raw)return null;if([...raw].length>VOICE_MAX_CHARS){if(!opt.quiet)toast('语音超过'+VOICE_MAX_CHARS+'字，已改用文字');return null;}const t=ttsPerformanceText(text,o,tts,opt);if(!t)return null;if(ttsSpokenLength(t)>VOICE_MAX_CHARS){if(!opt.quiet)toast('语音超过'+VOICE_MAX_CHARS+'字，已改用文字');return null;}const v=o?getVoice(o):null;opt.voice=v;
+async function ttsArr(text,o,opt){opt=Object.assign({},opt||{});text=ttsDropOffLanguage(text,o);if(!opt.languageBoost)opt.languageBoost=ttsLanguageBoost(o);const tts=opt.externalConfig?Object.assign({},opt.externalConfig,{relay:false,enabled:true}):ttsCfg(o),raw=ttsCleanBase(text);if(!raw)return null;if([...raw].length>VOICE_MAX_CHARS){if(!opt.quiet)toast('语音超过'+VOICE_MAX_CHARS+'字，已改用文字');return null;}const t=ttsPerformanceText(text,o,tts,opt);if(!t)return null;/* VOICE_SEND_DIAG_V1：最近 12 句真正交给语音的文字（共同生活语音记录最下面能看），用来查「让TA笑却没有笑声」到底是哪一步丢的 */try{const _d=(window.__northTtsDiag=window.__northTtsDiag||[]);_d.push({at:Date.now(),kind:String(ttsStyleKind(tts)||''),provider:String(tts&&tts.provider||''),model:String(tts&&tts.model||''),relay:!!(typeof ttsRelayOn==='function'&&ttsRelayOn(tts)),vx:!!(typeof NorthVoiceExpressive!=='undefined'&&NorthVoiceExpressive.on()),cue:String(opt.cue||''),ask:String(opt.ask||''),perf:String(opt.perf||''),text:String(text||'').slice(0,160),sent:String(t).slice(0,260)});while(_d.length>12)_d.shift();}catch(_){}if(ttsSpokenLength(t)>VOICE_MAX_CHARS){if(!opt.quiet)toast('语音超过'+VOICE_MAX_CHARS+'字，已改用文字');return null;}const v=o?getVoice(o):null;opt.voice=v;
   if(!ttsEnabled(tts)||(!ttsRelayOn(tts)&&!ttsExternalOn(tts)))return null;const vid=ttsRoleVoiceId(o,tts);
 
   let lastErr='',tries=Math.max(1,Math.min(3,+opt.tries||3));
@@ -2098,7 +2098,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1806&r=v1806-thought-preview-1';
+  const url='sw.js?v=1808&r=v1808-thought-preview-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
