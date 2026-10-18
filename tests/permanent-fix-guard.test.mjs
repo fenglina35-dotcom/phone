@@ -18,6 +18,17 @@ import vm from 'node:vm';
 const read = name => fs.readFileSync(new URL('../' + name, import.meta.url), 'utf8').replace(/\r\n/g, '\n');
 const WEB = 'app.js';
 
+test('public North local view cannot overwrite a remote lock with cached UI state', () => {
+  const publicDir = 'native/public-north-review/PhoneCompanionTest/PhoneCompanionTest/';
+  const content = read(publicDir + 'ContentView.swift');
+  assert.match(content, /PUBLIC_MANUAL_LOCK_STATE_V1/);
+  assert.match(content, /private func reloadManualLocksFromStore\(\)\s*\{\s*lockedAppTokens = manualLockStore\.shield\.applications \?\? \[\]/);
+  const task = content.slice(content.indexOf('.task {'), content.indexOf('.onReceive(', content.indexOf('.task {')));
+  assert.match(task, /reloadManualLocksFromStore\(\)/);
+  assert.doesNotMatch(task, /applyManualLocks\(\)/);
+  assert.match(read(publicDir + 'CompanionSyncView.swift'), /name: \.companionManualLocksDidChange/);
+});
+
 test('private owner-pasted Screen Time records remain separate from native telemetry',()=>{for(const prefix of ['native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/']){const js=read(prefix+'phone-shortcuts.js');for(const marker of ['window.PhoneScreenTimeImport','cou_shortcut_screen_time','roleAccess:p.consent',"source:'ios-shortcut'",'r.date!==day()','id.account===p.account'])assert(js.includes(marker));assert(!js.includes('st.screenTimeSec=value'));}});
 const PRIVATE_DIR = 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/';
 const PRIVATE = PRIVATE_DIR + 'app.js';
