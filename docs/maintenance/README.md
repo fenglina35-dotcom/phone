@@ -3011,3 +3011,5 @@ CUA核验22项控件、发送未读空白、已读等待阶段空白、保存180
 2026-10-18 私人v1813 / iOS476：从提交 70561bae 的干净工作区 xcodebuild（Release，BUILD SUCCEEDED，1.0.476/476）并覆盖安装到用户 iPhone 15；安装包内 APP_VER v1813、DY_USER_EDIT_V1、DY_SOLID_MODAL_V1、COHAB_WX_STATE_BW_V1，以及之前的 COHAB_GLASS_NO_COLOR_V1、VOICE_SEND_DIAG_V1 已核对，app.js 与 cohab-theater.js 与提交逐字节一致。未推送（用户只要求提交和安装）。未生成覆盖包。
 
 2026-10-18 网页v1812 / 私人v1815 / iOS477：微信、电话、音乐、放映室、购物、X、世界书、游戏大厅、浏览器（加上之前的抖音）点开的框改成实心：黑色主题纯黑底灰色框，白色主题白底浅灰色框；共同生活不动（APP_SOLID_MODAL_V1）。判断软件用 curAppKey + 导航栈第一页，判断深浅用微信主题或弹窗后面那一页的实际底色。40 多个弹框逐个打开核对，门禁 solidApps 在上一版失败。全量测试一次因外卖搜索测试超时失败，单独重跑两次全量都是 4323 项通过（偶发超时，与本次改动无关）。还没做：页面本身上的框、软件自己画的弹出层。
+
+2026-10-18 私人v1815 / iOS477：从提交 a97de7ff 的干净工作区 xcodebuild（Release，BUILD SUCCEEDED，1.0.477/477）并覆盖安装到用户 iPhone 15；安装包内 APP_VER v1815、APP_SOLID_MODAL_V1、DY_SOLID_MODAL_V1、DY_USER_EDIT_V1 已核对，app.js 与 cohab-theater.js 与提交逐字节一致。未推送（用户只要求提交和安装）。未生成覆盖包。
