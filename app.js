@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1827'){
+if(window.__NORTH_SHELL_BUILD__!=='1829'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -616,7 +616,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1827 · 角色日程到点自然报备';
+const APP_VER='v1829 · 大文件不重下';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2101,7 +2101,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1827&r=v1827-owner-todo-report-1';
+  const url='sw.js?v=1829&r=v1829-owner-todo-report-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -9160,7 +9160,8 @@ function renderPhoneFriendGroup(gid){const g=pfGroupById(gid)||{name:'小手机�
     ${gag?`<div class="inputbar" style="justify-content:center;color:#fa5151;font-size:13px;padding:16px;text-align:center">ta把「${esc(pfGroupDisplayName(g))}」锁了，<span onclick="gagAskUnlock()" style="color:inherit;text-decoration:underline;cursor:pointer">去求他解锁</span></div>`:gmMuteNoticeHTML('pf',gid)?gmMuteNoticeHTML('pf',gid):groupComposerHTML('pfgroup',gid,'pfg_input','发群消息…',`sendPhoneFriendGroup('${gid}')`,'pfgpanel')}
     ${pfGroupPanelHTML(gid)}`;}
 
-function wxStepsAppIcon(extraClass=''){return `<span class="wx-steps-icon ${extraClass}" aria-hidden="true">${spyBankIcon('wechat',39)}</span>`;}
+/* WX_STEPS_NEW_ICON_V1（2026-10-18 她说：把微信运动里那个绿色方块图标，换成查他手机银行页那个新的微信图标）：不要绿色方块底，直接用那两个气泡 */
+function wxStepsAppIcon(extraClass=''){return `<span class="wx-steps-icon wx-steps-new ${extraClass}" aria-hidden="true">${spyBankIcon('wechat',40)}</span>`;}
 function wxStepsSummary(){ensureDailySteps();const steps=Math.max(0,Math.round(+S.me.steps||0));return S.me.stepOn?`今日 ${northLocaleNumber(steps,'zh-CN')} 步 · 已启用`:'[链接] 开启微信运动，记录每天步数';}
 function wxStepsChatRow(){return `<button type="button" class="row wx-chat-row wx-steps-chat-row" onclick="go('wxsteps')">${wxStepsAppIcon('avatar')}<span class="meta"><b class="n">微信运动</b><small class="s">${esc(wxStepsSummary())}</small></span><span class="meta time">${S.me.stepOn?hm():''}</span></button>`;}
 async function wxStepsToggle(){if(S.me.stepOn&&!_stepOn){S.me.stepOn=false;if(!flushStepSave())save();render();toast('已停止计步');return;}await toggleSteps();}

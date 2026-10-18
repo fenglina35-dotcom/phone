@@ -59,20 +59,20 @@ function persistenceRuntime() {
 }
 
 test('private identity remains v1355 and iOS 399 while public advances independently', () => {
-  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1830'/);
-  assert.match(privateApp, /APP_VER='v1830 · 角色日程到点自然报备'/);
+  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1832'/);
+  assert.match(privateApp, /APP_VER='v1832 · 大文件不重下'/);
   for (const html of [privateIndex, privateAlias]) {
-    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1830'/);
-    assert.match(html, /app\.js\?v=1830&r=v1830-private-package-1/);
+    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1832'/);
+    assert.match(html, /app\.js\?v=1832&r=v1832-private-package-1/);
     assert.match(html, /private-runtime-diagnostics\.js\?v=339/);
   }
-  assert.match(privateRepair, /index\.html\?repair=1&v=1830/);
-  assert.match(swift, /1\.0\.480 \(480\)/);
-  assert.match(bridge, /private static let build = "1\.0\.480 \(480\)"/);
-  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 480;/g) || []).length, 12);
-  assert.equal((project.match(/MARKETING_VERSION = 1.0.480;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1827 · 角色日程到点自然报备'/);
-  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1827'/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1832/);
+  assert.match(swift, /1\.0\.481 \(481\)/);
+  assert.match(bridge, /private static let build = "1\.0\.481 \(481\)"/);
+  assert.equal((project.match(/CURRENT_PROJECT_VERSION = 481;/g) || []).length, 12);
+  assert.equal((project.match(/MARKETING_VERSION = 1.0.481;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1829 · 大文件不重下'/);
+  assert.match(publicIndex, /window\.__NORTH_SHELL_BUILD__='1829'/);
   assert.doesNotMatch(publicApp, /persistWechatRequested|smallPhoneWechatPersistTrace/);
 });
 

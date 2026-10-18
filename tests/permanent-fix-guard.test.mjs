@@ -78,6 +78,8 @@ const PERMANENT_FIXES = [
   {release:"web v1814 / private v1817",scope:"both",least:1,name:"设置、查他手机也是实心框；电子宠物的框用宠物页的奶白配色；白色主题里列表行和订单行不再是黑块",marker:"dy-solid-pet"},
   {release:"web v1816 / private v1819",scope:"both",least:1,name:"朋友资料里的照片每张都能删",marker:"CONTACT_PHOTO_DEL_V1"},
   {release:"web v1816 / private v1819",scope:"both",least:1,name:"单次约会结束后保留上次记录可查看，再次开启才覆盖",marker:"OFF_LAST_SESSION_V1"},
+  {release:"web v1818",scope:"web",least:1,file:"sw.js",name:"网页版大文件（像素少女、美团数据、图片声音）存进不随版本删除的长期缓存；点立即更新直接用已存好的页面",marker:"SW_KEEP_BIG_FILES_V1"},
+  {release:"web v1829 / private v1832",scope:"both",least:1,name:"微信运动图标用查他手机银行页那个新的微信图标，不再是绿色方块",marker:"WX_STEPS_NEW_ICON_V1"},
   {release:"web v1804 / private v1807",scope:"both",least:1,file:"cohab-theater.js",name:"共同生活语音页和共同生活用同一块液态玻璃",marker:"LG_SCENES.unshift({root:'.callscreen.cvr-mode .cvr-stage.hasbg:not(.off-classic)'"},
   {release:"web v1802 / private v1805",scope:"both",least:1,file:"cohab-theater.js",name:"共同生活语音模式阅读式界面、记录进行中可看每句可改删",marker:"COHAB_VOICE_READER_V1"},
   {release:"web v1802 / private v1805",scope:"both",least:1,name:"共同生活语音建提示时不把这一段标成视频通话",marker:"CohabVoice.hideSession(c,sess):null;"},
