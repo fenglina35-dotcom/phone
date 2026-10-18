@@ -469,6 +469,7 @@ v1834/v1837 改动（她看手机后提的）：
 - 仓库页面里表情和封面后面的白色圆角底去掉。小橘放大：按每张所有帧的可见范围裁掉空白再做成正方形（最小画面250像素，特效很高的几张略小），见会话脚本 tight_crop 的做法：ffmpeg alphaextract+bbox 取并集。
 - 角色会按关键词发：stickerStorePrompt(c) 接在角色表情说明后（app.js 两包各一行 typeof 守卫），列出它能用的包和关键词（图上的字）；给角色的含义改成“关键词：含义”（旧条目在生成提示时自动升级）；aiPickSticker 包装先去掉标点（[表情|哼！] 也能对上）。角色要先在仓库里「添加给角色」才会有这些表情。
 v1835/v1838：表情频率选“关闭”时，角色仍会被告知自己有哪些表情包，她点名要就发（STICKER_OFF_ON_REQUEST_V1，app.js 两包）；stickerStorePrompt 也列出小猫贴纸、自建文件夹和未分组表情的关键词。以前频率关闭会把整段表情说明拿掉，角色说“没有表情包”、改发照片。
+v1836/v1839 导入动图（她说“只看见图片”）：WKWebView 自带的文件选择从相册取图时会把动图转成静止 JPEG。私人 App 加了原生选图器（NATIVE_IMAGE_PICKER_V1，PhoneNativeBridge.swift：media.pickImages / .read / .clear，经她同意改原生桥；PHPicker 要求原始格式 .current，GIF/WebP/PNG/JPEG 原样，HEIC 转 JPEG；不需要相册读取授权；先回张数和格式，再逐张用 callAsyncJavaScript 参数传图片；可选动作，contractVersion 仍为 42，网页遇到 unsupported_action 退回系统选择）。导入页两个按钮：「从相册选」（私人 App 走原生）和「从“文件”里选」（不限类型，苹果会给“选取文件”）；按后缀也认 gif/webp/png/jpg；GIF/WebP 2MB 以内、PNG 1MB 以内原样保留（PNG 保留透明），其余压缩；每张标“动图/静图”（只在导入页，不存进表情）。未验证：真机上从相册选动图（模拟器要邀请码进不去）。
 验证：tests/sticker-store.test.mjs（两包同文件、20张都在且是带透明的动图、聊天能显示这个路径、桌宠三个动作）；两包真实页面走完：仓库首页、打开小橘、添加到我的表情20个、只给选中的角色、导入两张自动写含义且动图保留、聊天里发出去能显示；桌宠 [桌宠|抱抱] 执行且不外露、别名、提示里有新动作。未验证：iPhone 上的观感、真识图服务写出的含义质量。
 
 ## 角色发真实照片：五条可选路线（IMG_ROUTES_V1）

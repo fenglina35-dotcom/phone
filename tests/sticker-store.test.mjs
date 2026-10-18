@@ -87,3 +87,17 @@ test('role photos can use five configurable image routes', () => {
   }
 });
 
+test('importing keeps animated stickers: native photo picker in the private app, any file from Files', () => {
+  const bridge = read('native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift');
+  assert.match(bridge, /case "media\.pickImages":/);
+  assert.match(bridge, /case "media\.pickImages\.read":/);
+  assert.match(bridge, /configuration\.preferredAssetRepresentationMode = \.current/);
+  assert.match(bridge, /\(\.gif, "image\/gif"\), \(\.webP, "image\/webp"\)/);
+  assert.match(bridge, /static let contractVersion = 42/, 'an optional action, the bridge contract stays');
+  const wm = read('wechat-me.js');
+  assert.match(wm, /window\.SmallPhoneNative\.request\('media\.pickImages',/);
+  assert.match(wm, /function ssImportPickFiles\(\)\{if\(typeof pickFiles!=='function'\)return;pickFiles\('',/);
+  assert.match(wm, /function ssIsAnimated\(src\)/);
+  assert.doesNotMatch(wm, /items:st\.items\.map\(\(x,i\)=>\(\{id:'m'\+i,img:x\.img,name:[^}]*anim/, 'the badge is never saved with a sticker');
+});
+
