@@ -3007,3 +3007,5 @@ CUA核验22项控件、发送未读空白、已读等待阶段空白、保存180
 2026-10-18 私人v1811 / iOS475：从提交 098d572d 的干净工作区 xcodebuild（Release，BUILD SUCCEEDED，1.0.475/475）并覆盖安装到用户 iPhone 15；安装包内 APP_VER v1811、COHAB_GLASS_NO_COLOR_V1、cvrPop、COHAB_GLASS_KEEP_V1、VOICE_SEND_DIAG_V1、OFF_BLACK_BG_V1、COHAB_VOICE_LONG_NARRATION_V1 已核对，app.js 与 cohab-theater.js 与提交逐字节一致。未推送（用户只要求提交和安装），本机待推送提交 6 个。未生成覆盖包。
 
 2026-10-18 网页v1810 / 私人v1813 / iOS476：①抖音角色主页加「编辑主页」，三个点直接进编辑页，原菜单功能都放进去，编辑页和「我」的同一套样子（DY_USER_EDIT_V1）。②抖音里点开的框（发起群聊、私信谁、我的关注、全部功能、隐私设置、编辑字段、删除确认等）纯黑底、实心灰框、不透明（DY_SOLID_MODAL_V1）；封面上的小框也改成实心灰。③隐私设置的字被挤成竖排：.btn 默认 width:100%，按钮把左边的字挤成一个字宽；改成按钮 width:auto。同时发现灰色框规则优先级太高把「已开启」的粉色盖成灰色，改用 :where()。第一次给她看截图时漏看了这一张，之后逐张核对并给扫描加了竖排检查（旧排版能抓到）。④微信聊天页名字下的共同生活状态：夜间白、白色主题黑（COHAB_WX_STATE_BW_V1）；第一次误改成了共同生活页里的状态提示，已撤回。测试：全量 4321 项通过。
+
+2026-10-18 私人v1813 / iOS476：从提交 70561bae 的干净工作区 xcodebuild（Release，BUILD SUCCEEDED，1.0.476/476）并覆盖安装到用户 iPhone 15；安装包内 APP_VER v1813、DY_USER_EDIT_V1、DY_SOLID_MODAL_V1、COHAB_WX_STATE_BW_V1，以及之前的 COHAB_GLASS_NO_COLOR_V1、VOICE_SEND_DIAG_V1 已核对，app.js 与 cohab-theater.js 与提交逐字节一致。未推送（用户只要求提交和安装）。未生成覆盖包。
