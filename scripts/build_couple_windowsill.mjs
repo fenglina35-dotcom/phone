@@ -24,15 +24,14 @@ let js = readdirSync(jsDir).filter(f => f.endsWith('.js')).sort().map(f => readF
 // Each replacement must match exactly once, so an upstream change is noticed instead of silently skipped.
 for (const [from, to] of [
   ['const DPR = Math.min(window.devicePixelRatio || 1, framed ? 2 : 1.6);', 'const DPR = Math.min(window.devicePixelRatio || 1, framed ? 2 : (window.__WS_DPR_MAX || 1.6));'],
-  // window.__WS_TIER_SET: the first speed check is done, so the loading cover can lift without a resize flash afterwards
-  ['if (ftAcc / ftN > 1 / 34) goLowQ();', 'if (ftAcc / ftN > 1 / (window.__WS_LOWQ_FPS || 34)) goLowQ(); window.__WS_TIER_SET = true;'],
+  ['if (ftAcc / ftN > 1 / 34) goLowQ();', 'if (ftAcc / ftN > 1 / (window.__WS_LOWQ_FPS || 34)) goLowQ();'],
   // less depth-of-field blur: on a phone screen the strong camera blur reads as blurry (she: 其他的画面这么糊)
   ['bokeh.uniforms.aperture.value = ap; bokeh.uniforms.maxblur.value = mb;', 'bokeh.uniforms.aperture.value = ap * (window.__WS_DOF ?? 1); bokeh.uniforms.maxblur.value = mb * (window.__WS_DOF ?? 1);'],
   // the low tier keeps some sharpness instead of dropping to 1x for good
   ['renderer.setPixelRatio(1); composer.setPixelRatio(1); resize(); sun.shadow.mapSize.set(1024, 1024);', 'renderer.setPixelRatio(window.__WS_LOWQ_PR || 1); composer.setPixelRatio(window.__WS_LOWQ_PR || 1); resize(); sun.shadow.mapSize.set(1024, 1024);'],
   ['const pr = want ? Math.min(window.devicePixelRatio || 1, 2.6) : (lowQ ? 1 : DPR);', 'const pr = want ? Math.min(window.devicePixelRatio || 1, 2.6) : (lowQ ? (window.__WS_LOWQ_PR || 1) : DPR);'],
-  // no resolution switch while she looks around: each switch resizes every buffer and flashes a frame on the phone (她：闪屏)
-  ["const want = focusKey === 'phone' && focusT > .97 && phoneFlip.v > .97;", "const want = !window.__WS_NO_CRISP && focusKey === 'phone' && focusT > .97 && phoneFlip.v > .97;"],
+  // the phone screen turns sharp while the camera is still moving in, not a second after it arrives
+  ["const want = focusKey === 'phone' && focusT > .97 && phoneFlip.v > .97;", "const want = focusKey === 'phone' && focusT > .6 && phoneFlip.v > .6;"],
   // the desk phone's screen texture, so shell.js can draw her own lock screen on it
   ['const scr = new THREE.MeshPhysicalMaterial({map: screen, roughness: .15', 'window.__WS_PHONE_SCREEN = screen; const scr = new THREE.MeshPhysicalMaterial({map: screen, roughness: .15'],
   // tap the phone once: it turns over and lights up (upstream); tap the lit screen again: enter the small phone

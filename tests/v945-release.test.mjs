@@ -13,21 +13,21 @@ const xcode=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest.
 const webView=read('../native/private-small-phone/XcodeProject/PhoneCompanionTest/LocalPhoneWebView.swift');
 
 test('v1184 web files use one cache-busting build number',()=>{
-  assert.match(app,/APP_VER='v1841 · 窗台流畅不闪屏'/);
-  assert.match(app,/const url='sw\.js\?v=1841&r=v1841-owner-todo-report-1'/);
-  assert.match(html,/__NORTH_SHELL_BUILD__='1841'/);
-  assert.match(html,/app\.js\?v=1841/);
-  assert.match(sw,/const BUILD='1841'/);
-  assert.match(sw,/north-shell-v1841-owner-todo-report-1/);
-  assert.match(index,/小手机\.html\?v=1841/);
-  assert.match(repair,/小手机\.html\?v=1841/);
+  assert.match(app,/APP_VER='v1842 · 窗台画质退回492'/);
+  assert.match(app,/const url='sw\.js\?v=1842&r=v1842-owner-todo-report-1'/);
+  assert.match(html,/__NORTH_SHELL_BUILD__='1842'/);
+  assert.match(html,/app\.js\?v=1842/);
+  assert.match(sw,/const BUILD='1842'/);
+  assert.match(sw,/north-shell-v1842-owner-todo-report-1/);
+  assert.match(index,/小手机\.html\?v=1842/);
+  assert.match(repair,/小手机\.html\?v=1842/);
 });
 
 test('the private iOS source embeds private web v1189 and keeps native build 315 before repackaging',()=>{
   assert.match(privateBundle,/<string>1200<\/string>/);
-  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.493;/g)||[]).length,12);
-  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 493;/g)||[]).length,12);
-  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.493 \(493\)'/);
+  assert.equal((xcode.match(/MARKETING_VERSION = 1.0.494;/g)||[]).length,12);
+  assert.equal((xcode.match(/CURRENT_PROJECT_VERSION = 494;/g)||[]).length,12);
+  assert.match(webView,/__SMALL_PHONE_PRIVATE_BUILD__ = '1\.0\.494 \(494\)'/);
   assert.match(webView,/typeof window\.lockPullRefresh === 'function'/);
 });
 
