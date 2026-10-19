@@ -161,3 +161,30 @@ for(const [name,source] of [['web',root],['private',bundle]]){
   const duplicate=ctx.roleImageStudioPrompt(role,{scene:'角色黑外套自然照片',requestText:'角色黑外套自然照片'});role.imageStudio.outfits.push({id:'r-other',name:'角色黑外套',occasion:'daily',image:'wrong-coat',note:'另一件衣服'});ctx.Math.random=()=>.99;assert.ok(!Array.from(ctx.roleImageGenerateOptions(role,duplicate).references).includes('wrong-coat'),'the chosen outfit id survives duplicate names and another random draw');
 
 }
+
+
+const {default:test}=await import('node:test');
+test('web personal studio opens and stays usable when a saved reference is unavailable',async()=>{
+ const {createRequire}=await import('node:module'),require=createRequire(import.meta.url),{chromium}=require('playwright'),path=require('node:path');
+ const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'});
+ try{
+  const page=await browser.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.route('**/*',route=>{const u=new URL(route.request().url());if(u.origin!=='http://127.0.0.1:8778')return route.abort();const f=path.resolve(decodeURIComponent(u.pathname.slice(1))),ok=f.startsWith(process.cwd()+path.sep)&&fs.existsSync(f)&&fs.statSync(f).isFile();return route.fulfill({status:ok?200:404,body:ok?fs.readFileSync(f):'',contentType:f.endsWith('.js')?'text/javascript':f.endsWith('.css')?'text/css':'text/html'});});
+  await page.goto('http://127.0.0.1:8778/小手机.html?northPreview=black-home');await page.waitForFunction(()=>window.__northBootReady);
+  await page.evaluate(()=>{S.me.locked=false;const account=S.me.accounts.find(a=>a.id===actId());account.imageStudio={enabled:true,identityRefs:[{id:'missing-face',angle:'front',image:'idb:studio-missing-fixture'}],outfits:[]};go('wxprofile');});
+  await page.getByRole('button',{name:'我的形象工作室与衣柜'}).click();
+  const result=await page.evaluate(async()=>{const input=document.getElementById('ris_prompt');input.value='未保存的外观说明';await new Promise(r=>setTimeout(r,600));return{route:cur().p,same:input===document.getElementById('ris_prompt'),draft:document.getElementById('ris_prompt')?.value,refs:userImageStudioContact(false).imageStudio.identityRefs.length};});
+  assert.equal(result.route,'roleImageStudio');assert.equal(result.same,true,'a missing image must not repeatedly rebuild the studio');assert.equal(result.draft,'未保存的外观说明');assert.equal(result.refs,1,'missing reference records must not be deleted');assert.deepEqual(errors,[]);
+ }finally{await browser.close();}
+});
+
+
+test('web studio still refreshes successfully loaded references and ignores an old account',async()=>{
+ const fn=root.match(/^function roleImageStudioWarm\(id\).*$/m)[0];
+ for(const outcome of ['missing','loaded','switched']){
+  const c={},cache={},state={identityRefs:[{image:'idb:fixture'}],outfits:[]};let redraws=0,switched=false;
+  const ctx=vm.createContext({roleImageStudioOwner:()=>switched?{}:c,roleImageStudio:()=>state,isStoredImgRef:s=>s.startsWith('idb:'),_imgCache:cache,viewerImageSource:async()=>{if(outcome!=='missing')cache.fixture='data:image/png;base64,fixture';if(outcome==='switched')switched=true;return cache.fixture||'';},cur:()=>({p:'roleImageStudio',id:'__user_image__main'}),render:()=>redraws++});
+  vm.runInContext(fn+';roleImageStudioWarm("__user_image__main");',ctx);await new Promise(r=>setImmediate(r));
+  assert.equal(redraws,outcome==='loaded'?1:0,outcome);
+ }
+});

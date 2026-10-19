@@ -6,9 +6,9 @@ const html=fs.readFileSync(new URL('../小手机.html',import.meta.url),'utf8');
 const sw=fs.readFileSync(new URL('../sw.js',import.meta.url),'utf8');
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
-assert.match(source,/APP_VER='v1846 · 发送不闪'/);
-assert.match(html,/__NORTH_SHELL_BUILD__='1846'/);
-assert.match(sw,/BUILD='1846'/);
+assert.match(source,/APP_VER='v1847 · 形象工作室加载修复'/);
+assert.match(html,/__NORTH_SHELL_BUILD__='1847'/);
+assert.match(sw,/BUILD='1847'/);
 assert.equal((project.match(/CURRENT_PROJECT_VERSION = 498;/g)||[]).length,12);
 assert.equal((project.match(/MARKETING_VERSION = 1.0.498;/g)||[]).length,12);
 
