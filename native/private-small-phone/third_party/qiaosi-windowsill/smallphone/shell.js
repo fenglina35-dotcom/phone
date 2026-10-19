@@ -1,8 +1,10 @@
 /* 小手机 · 窗台外壳（COUPLE_WINDOWSILL_V1）
    作者唐幡（TangfanOVO）的「赴约 · 窗台」原样不改，这一层只做小手机需要的事：
    1. App 里是本地文件，不能用 fetch 读模型：场景要 ./models/*.gltf.json 时，从打包好的 window.__WS_MODELS 里给。
-   2. 画质：清晰度上限（正常 2，省电 1.25）、“跑不动才降一档”的门槛（正常每秒低于 22 帧、省电低于 16 帧才降）、降档后至少 1.5 倍、景深虚化减到 0.45，
-      由 scripts/build_couple_windowsill.mjs 在打包时把上游两个常数换成读这里的值；省电模式每秒最多画 30 帧。
+   2. 画质：清晰度上限和“跑不动就降一档”照作者原来的（正常 1.6、每秒不到 34 帧就降；省电 1.25、不到 16 帧才降），降档后 1.25 倍；
+      景深虚化减到 0.45（看着清楚靠少虚化，不靠加像素：iPhone 15 加到 2 倍时只有二十几帧，动起来发涩）；
+      看的过程中不再切换清晰度（每切一次整张画面重建，会闪一下屏），第一次测速做完才揭开加载层，降档发生在加载层后面。
+      由 scripts/build_couple_windowsill.mjs 在打包时把上游常数换成读这里的值；省电模式每秒最多画 30 帧。
    3. 底色改深色：上游底色是浅米白，画面清空或重新调整大小时会闪白。3D 画面被系统回收时通知外面重新加载。
    4. 去掉标题下的「草稿 · 演示数据」（她要求）；左上角只有一个小箭头「返回」，凑近某样东西时让位给上游的「退回」。
    5. 桌上的手机：屏幕画她的锁屏（壁纸、日期、时间）；点一下翻过来亮起，再点一下屏幕（或卡片上的「进入小手机」）进入小手机。
@@ -10,14 +12,16 @@
    7. 一起听：电脑屏幕上放的是小手机「音乐」里真正在放的歌（外面每秒报一次），卡片上有上一首 / 播放暂停 / 下一首，点了让外面的播放器去做。
    8. 窗台上的透卡去掉（她觉得多余）；流麻牌上的小家伙换成小手机的桌宠小橘（pet.js 里的动图帧，由 scripts/build_couple_windowsill_pet.cjs 生成）；
       角色或她让桌宠做的表情、桌宠睡着、正在放歌，卡上跟着变；点一下换一个表情。帧图没加载好时仍是上游的颜文字。
+
    这一层和场景一样按 AGPL-3.0 提供，见同目录 UPSTREAM.md。 */
 (function () {
   'use strict';
   var q = new URLSearchParams(location.search);
   var saver = q.get('saver') === '1';
-  window.__WS_DPR_MAX = saver ? 1.25 : 2;
-  window.__WS_LOWQ_FPS = saver ? 16 : 22;
-  window.__WS_LOWQ_PR = saver ? 1 : 1.5;   // even the low tier keeps some sharpness
+  window.__WS_DPR_MAX = saver ? 1.25 : 1.6;   // upstream's own cap; 2 made an iPhone 15 crawl
+  window.__WS_LOWQ_FPS = saver ? 16 : 34;     // upstream's own threshold
+  window.__WS_LOWQ_PR = saver ? 1 : 1.25;
+  window.__WS_NO_CRISP = true;                // no resolution switch while looking around (it flashes)
   window.__WS_DOF = .45;                    // gentler depth-of-field blur
   window.__WS_NO_SILL_PET = true;           // no 透卡 on the sill: 小橘 lives on the 流麻牌 on the desk only
 
@@ -216,5 +220,11 @@
     setTimeout(function () { var er = document.getElementById('err'); if (er && getComputedStyle(er).display !== 'none') tell({type: 'windowsill:nogl'}); }, 2500);
   });
   // tell the phone once everything is loaded (a timer, not animation frames: a hidden frame may not be drawn)
-  window.addEventListener('load', function () { setTimeout(function () { tell({type: 'windowsill:ready'}); }, 400); });
+  // ...and only after the first speed check (a drop to the lower tier resizes everything and would flash in view); at most 6.5 s
+  window.addEventListener('load', function () {
+    var t0 = Date.now(), iv = setInterval(function () {
+      if (!window.__WS_TIER_SET && Date.now() - t0 < 6500) return;
+      clearInterval(iv); setTimeout(function () { tell({type: 'windowsill:ready'}); }, 150);
+    }, 100);
+  });
 })();

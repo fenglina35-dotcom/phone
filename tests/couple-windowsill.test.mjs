@@ -60,6 +60,14 @@ test('only the private app loads the windowsill, inside the phone screen under o
   // sharper picture: gentler depth of field, the low tier keeps 1.5x
   assert.match(built, /__WS_DOF/);
   assert.match(built, /__WS_LOWQ_PR/);
+  // smooth on an iPhone 15 (她：动起来变慢、闪屏): upstream's own cap and threshold, no resolution switch in view,
+  // the loading cover lifts only after the first speed check
+  assert.match(shell, /window\.__WS_DPR_MAX = saver \? 1\.25 : 1\.6;/);
+  assert.match(shell, /window\.__WS_LOWQ_FPS = saver \? 16 : 34;/);
+  assert.match(shell, /window\.__WS_NO_CRISP = true;/);
+  assert.match(built, /!window\.__WS_NO_CRISP&&/);
+  assert.match(built, /window\.__WS_TIER_SET=!0/);
+  assert.match(shell, /if \(!window\.__WS_TIER_SET && Date\.now\(\) - t0 < 6500\) return;/);
   // 一起听 plays the small phone's own music; the card has prev / play / next
   assert.match(js, /musicToggle\(\)/);
   assert.match(js, /musicNext\(\)/);
