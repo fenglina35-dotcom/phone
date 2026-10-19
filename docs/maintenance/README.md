@@ -3288,3 +3288,5 @@ NORTH_PHONE_MONITOR=1复用既有QA，双端真实页面/来源不变/主体与�
 最终复验：完整4457/4457通过，核心聊天普通/查岗预览通过；版本/缓存/工作室及保护专项930/930通过。仅发布网页版v1847；私人目录无差异。另一个正在进行的窗台工作涉及scripts/build_couple_windowsill.mjs与scripts/windowsill_phone_test/两个文件，全部保留、不纳入本次提交。清理本轮测试生成的两张无关证明图与空.codex_tmp。
 
 网页版发布完成：0c3c8c03已推main，GitHub Pages部署39354320442 completed/success；线上app.js读回v1847 · 形象工作室加载修复并包含WEB_STUDIO_MISSING_REF_NO_LOOP_V1。私人版未改未安装。用户实际“点了没反应”尚待新版复测，缺失参考图循环已在真实浏览器复现并修复。项目重命名仍因缺少接口和Codex界面控制被拒而未完成。
+
+2026-10-20 私人v1850 / iOS499（提交 f8d3f086，网页仍为 v1847）：WINDOWSILL_STEADY30_V1，3D 窗台重新启用，用她在手机测速网页选定的「新方案，清晰度 1.6，稳定每秒 30 张」。全部测试 4457 项通过，核心聊天检查两种模式通过；已装到她的 iPhone（devicectl 核对 1.0.499 (499)，包内窗台有 WINDOWSILL_STEADY30_V1、无暂停）。真机效果待她试。
