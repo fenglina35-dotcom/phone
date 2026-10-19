@@ -25,10 +25,22 @@ let js = readdirSync(jsDir).filter(f => f.endsWith('.js')).sort().map(f => readF
 for (const [from, to] of [
   ['const DPR = Math.min(window.devicePixelRatio || 1, framed ? 2 : 1.6);', 'const DPR = Math.min(window.devicePixelRatio || 1, framed ? 2 : (window.__WS_DPR_MAX || 1.6));'],
   ['if (ftAcc / ftN > 1 / 34) goLowQ();', 'if (ftAcc / ftN > 1 / (window.__WS_LOWQ_FPS || 34)) goLowQ();'],
+  // less depth-of-field blur: on a phone screen the strong camera blur reads as blurry (she: 其他的画面这么糊)
+  ['bokeh.uniforms.aperture.value = ap; bokeh.uniforms.maxblur.value = mb;', 'bokeh.uniforms.aperture.value = ap * (window.__WS_DOF ?? 1); bokeh.uniforms.maxblur.value = mb * (window.__WS_DOF ?? 1);'],
+  // the low tier keeps some sharpness instead of dropping to 1x for good
+  ['renderer.setPixelRatio(1); composer.setPixelRatio(1); resize(); sun.shadow.mapSize.set(1024, 1024);', 'renderer.setPixelRatio(window.__WS_LOWQ_PR || 1); composer.setPixelRatio(window.__WS_LOWQ_PR || 1); resize(); sun.shadow.mapSize.set(1024, 1024);'],
+  ['const pr = want ? Math.min(window.devicePixelRatio || 1, 2.6) : (lowQ ? 1 : DPR);', 'const pr = want ? Math.min(window.devicePixelRatio || 1, 2.6) : (lowQ ? (window.__WS_LOWQ_PR || 1) : DPR);'],
+  // the phone screen turns sharp while the camera is still moving in, not a second after it arrives
+  ["const want = focusKey === 'phone' && focusT > .97 && phoneFlip.v > .97;", "const want = focusKey === 'phone' && focusT > .6 && phoneFlip.v > .6;"],
   // the desk phone's screen texture, so shell.js can draw her own lock screen on it
   ['const scr = new THREE.MeshPhysicalMaterial({map: screen, roughness: .15', 'window.__WS_PHONE_SCREEN = screen; const scr = new THREE.MeshPhysicalMaterial({map: screen, roughness: .15'],
   // tap the phone once: it turns over and lights up (upstream); tap the lit screen again: enter the small phone
   ["if (hit && hit.object.userData.key === 'phone' && focusKey === 'phone'){ flipPhone(phoneFlip.to < .5); return; }", "if (hit && hit.object.userData.key === 'phone' && focusKey === 'phone'){ if (phoneFlip.to > .5 && window.__WS_PHONE_ENTER){ window.__WS_PHONE_ENTER(); return; } flipPhone(phoneFlip.to < .5); return; }"],
+  // the 透卡 on the sill is a second desk pet; she wants only the 流麻牌 on the desk (她：窗台上那个多余的桌面宠物，去掉)
+  ['for (const t of TAGS) t.view = t.out ? 1 : 0;', "if (window.__WS_NO_SILL_PET){ TAGS.splice(TAGS.findIndex(t => t.key === 'pet'), 1); tcard.removeFromParent(); cardShadow.mesh.removeFromParent(); }\nfor (const t of TAGS) t.view = t.out ? 1 : 0;"],
+  // 小橘 on the 透卡 / 流麻牌 (shell.js draws her desk pet's frames; upstream's kaomoji stay as the fallback)
+  ["    tick(dt){\n      const b = ctx();", "    tick(dt){\n      if (window.__WS_PET && window.__WS_PET.tick(dt, g, ctx(), () => drawPet(cv))) return;\n      const b = ctx();"],
+  ['next(){ const k = PICK.indexOf(cur);', 'next(){ if (window.__WS_PET && window.__WS_PET.next()) return; const k = PICK.indexOf(cur);'],
 ]) {
   if (js.split(from).length !== 2) throw new Error('上游代码变了，找不到：' + from);
   js = js.replace(from, () => to);
@@ -56,8 +68,10 @@ if (!im) throw new Error('模板里找不到 importmap');
 tpl = tpl.replace(im[0], '');
 const mod = '<script type="module">\n/*@@SCRIPT@@*/</script>';
 if (!tpl.includes(mod)) throw new Error('模板里找不到场景脚本的位置');
-tpl = tpl.replace(mod, '<script src="shell.js"></script>\n<script src="models.js"></script>\n<script src="windowsill.js"></script>');
+// pet.js comes from scripts/build_couple_windowsill_pet.cjs (小橘's frames); it is not rebuilt here
+try { readFileSync(join(out, 'pet.js')); } catch (e) { throw new Error('先运行 scripts/build_couple_windowsill_pet.cjs 生成 pet.js'); }
+tpl = tpl.replace(mod, '<script src="shell.js"></script>\n<script src="models.js"></script>\n<script src="pet.js"></script>\n<script src="windowsill.js"></script>');
 if (/cdn\.jsdelivr|https?:\/\/(?!github\.com\/TangfanOVO)/.test(tpl.replace(/<!--[\s\S]*?-->/g, ''))) throw new Error('页面里还有联网地址');
 writeFileSync(join(out, 'index.html'), '<!-- 赴约 · 窗台 by 唐幡 (TangfanOVO), AGPL-3.0. Source: native/private-small-phone/third_party/qiaosi-windowsill -->\n' + tpl);
 const kb = f => Math.round(readFileSync(join(out, f)).length / 1024);
-console.log('couple-windowsill:', ['index.html', 'shell.js', 'models.js', 'windowsill.js'].map(f => f + ' ' + kb(f) + 'KB').join(', '));
+console.log('couple-windowsill:', ['index.html', 'shell.js', 'models.js', 'pet.js', 'windowsill.js'].map(f => f + ' ' + kb(f) + 'KB').join(', '));

@@ -18,7 +18,7 @@ test('the upstream scene is kept with its licence and origin', () => {
 test('the built page works offline: no CDN, models and three.js bundled', () => {
   const html = read(P + 'couple-windowsill/index.html');
   assert.doesNotMatch(html, /cdn\.jsdelivr|importmap|type="module"/);
-  assert.match(html, /<script src="shell\.js"><\/script>\s*<script src="models\.js"><\/script>\s*<script src="windowsill\.js"><\/script>/);
+  assert.match(html, /<script src="shell\.js"><\/script>\s*<script src="models\.js"><\/script>\s*<script src="pet\.js"><\/script>\s*<script src="windowsill\.js"><\/script>/);
   const models = read(P + 'couple-windowsill/models.js');
   for (const m of ['laptop', 'phone', 'bookcase', 'organizer']) assert.ok(models.includes('"./models/' + m + '.gltf.json"'), m);
   const scene = read(P + 'couple-windowsill/windowsill.js');
@@ -57,6 +57,25 @@ test('only the private app loads the windowsill, inside the phone screen under o
   assert.match(shell, /windowsill:lock/);
   assert.match(js, /function sendLock\(\)/);
   assert.match(js, /top:env\(safe-area-inset-top,0px\);bottom:env\(safe-area-inset-bottom,0px\)/, 'the windowsill keeps clear of the status bar and home bar');
+  // sharper picture: gentler depth of field, the low tier keeps 1.5x
+  assert.match(built, /__WS_DOF/);
+  assert.match(built, /__WS_LOWQ_PR/);
+  // 一起听 plays the small phone's own music; the card has prev / play / next
+  assert.match(js, /musicToggle\(\)/);
+  assert.match(js, /musicNext\(\)/);
+  assert.match(js, /musicPrev\(\)/);
+  assert.match(js, /type: 'windowsill:np'/);
+  assert.match(shell, /windowsill:music/);
+  assert.match(shell, /data-m="prev"[\s\S]*data-m="toggle"[\s\S]*data-m="next"/);
+  assert.match(shell, /fuyue\.setNowPlaying/);
+  // 小橘 on the 透卡 / 流麻牌, following the desk pet
+  assert.match(built, /window\.__WS_PET\.tick/);
+  assert.match(js, /__deskPet\.state\(\)/);
+  assert.match(built, /__WS_NO_SILL_PET/, 'the 透卡 on the sill is taken out (she: 多余的桌宠)');
+  const page = read(P + 'couple-windowsill/index.html');
+  assert.match(page, /<script src="pet\.js"><\/script>/);
+  assert.match(read(P + 'couple-windowsill/pet.js'), /^\/\*[^]*?\*\/\nwindow\.__WS_PET_SHEET=\{"cell":160,"names":\["开心"/);
+  assert.doesNotMatch(read(P + 'couple-windowsill/pet.js'), /https?:\/\//, 'the frames are inside the file, nothing is fetched');
   // the release gate reads the unlock time where it now lives
   assert.match(read('scripts/check_chat_authorized_phone.cjs'), /_couTab=2;go\('couple',\{list:1\}\);const shown=document\.body\.innerText\.includes\('自动解锁'\);/);
 });

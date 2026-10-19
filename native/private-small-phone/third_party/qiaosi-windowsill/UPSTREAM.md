@@ -15,7 +15,14 @@
   - `00-setup.js` 清晰度上限 1.6 → 读 `window.__WS_DPR_MAX`（正常 2、省电 1.25）；
   - `19-frame-api.js` 降一档门槛每秒 34 帧 → 读 `window.__WS_LOWQ_FPS`（正常 22、省电 16）。
   - `09-left-writing-corner.js` 把桌上手机屏幕的贴图交给 `window.__WS_PHONE_SCREEN`（shell.js 在上面画她的锁屏）；
+  - `17-tags-camera-glass.js` 景深虚化乘 `window.__WS_DOF`（0.45）；
+  - `19-frame-api.js` 降档后的清晰度用 `window.__WS_LOWQ_PR`（1.5）；凑近手机提前在镜头推到六成时变清楚；
   - `18-input-sliders.js` 手机已经亮着时再点一下它，调用 `window.__WS_PHONE_ENTER`（进入小手机），没亮时照上游翻过来。
+
+  - `17-tags-camera-glass.js` 有 `window.__WS_NO_SILL_PET` 时去掉窗台上的透卡（标注、模型和它的彩色影子），只留桌上的流麻牌；
+  - `13-desk-pet.js` 桌宠的 tick / next 先问 `window.__WS_PET`（shell.js 用 pet.js 里小橘的帧图画透卡和流麻牌；没加载好时照上游颜文字）。
+- `pet.js`：小手机自己画的 20 个小橘动态表情拆成的帧图，由 `scripts/build_couple_windowsill_pet.cjs` 生成（要先生成它，再运行下面的打包）。
+- shell.js 还接了「一起听」：电脑屏幕显示小手机音乐里正在放的歌，卡片上可以上一首 / 播放暂停 / 下一首。
 
 ## 怎么生成 App 里用的页面
 
