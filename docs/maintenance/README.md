@@ -3275,3 +3275,5 @@ NORTH_PHONE_MONITOR=1复用既有QA，双端真实页面/来源不变/主体与�
 2026-10-20 安装完成：网页v1844 / 私人v1847 / iOS496，源码8e8b8a50已推main。最终完整4452/4452及核心聊天普通/查岗预览均通过；从干净提交Release编译BUILD SUCCEEDED，安装包app.js、private-couple-windowsill.js、index.html与提交逐字节相同。已覆盖安装iPhone15，devicectl读回com.qianyi.PhoneCompanionTest 1.0.496 (496)。3D继续停用，聊天数据不改；发送闪空白实际体验待用户确认。仅清理本轮两张自动测试截图及空.codex_tmp目录，无新工作树或源码副本。
 
 2026-10-20 网页v1845 / 私人v1848 / iOS497（提交 d4b3945d）：临时发送记录器 SEND_DIAG_V1，查情侣角色发文字时旧消息闪一下。全部测试 4452 项通过，核心聊天检查两种模式通过；已装到她的 iPhone（devicectl 核对 1.0.497 (497)）。等她发几条后用 devicectl 读 __send_diag.json；修好后删除记录器。
+
+2026-10-20 网页v1846 / 私人v1849 / iOS498（提交 319c9264）：SEND_TOUCH_DEFER_V1，发消息后等发送画完再通知服务器，修情侣角色发文字时旧气泡闪空；删除临时记录器 SEND_DIAG_V1。全部测试 4455 项通过，核心聊天检查两种模式通过；已装到她的 iPhone（devicectl 核对 1.0.498 (498)，包内无记录器、有 SEND_TOUCH_DEFER_V1）。真机效果待她试。
