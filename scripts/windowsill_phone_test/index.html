@@ -54,8 +54,9 @@
   <section>
     <h2>一、自动测速（约 1 分半）</h2>
     <p class="sub">窗台会自己换三种做法，每种开一次：先看全景，再凑近「共读」、凑近「一起听」，分开记下每秒画了几张，和每一步各用了多久。</p>
-    <button id="run4">开始耐久测速（约 4 分钟）</button>
-    <p class="sub">六种做法每种连续跑 35 秒，分开看「开头」和「手机降速以后」。</p>
+    <button id="run5">第五轮：新方案耐久测速（约 3 分钟）</button>
+    <p class="sub">新方案：两盏面光换成便宜的光（底下不会太暗），玻璃保留。四档清晰度每种连续跑 35 秒，分开看「开头」和「手机降速以后」。</p>
+    <button id="run4" class="ghost">第四轮耐久测速（约 4 分钟）</button>
     <button id="run" class="ghost">上一轮的快速测速（约 1 分半）</button>
     <div id="status"></div>
     <div id="table"></div>
@@ -82,8 +83,19 @@
     {id: 'freeze-ao-dof', name: '同上＋去掉景深虚化', q: 'dpr=1.6&lowfps=1', freeze: true, off: ['gtao', 'bokeh']},
     {id: 'np6', name: '1.6，电脑屏幕少刷新', q: 'dpr=1.6&lowfps=1&npfps=6'}
   ];
+  // 第五轮（她说没有面光底下太暗、画质想再好一点、玻璃别去掉）：两盏面光换成便宜的光，玻璃保留，试四档清晰度
+  var F5 = {freeze: true, off: ['gtao', 'bokeh'], pcf: true, noCandleShadow: true, fakeLights: true};
+  var SEGS5 = [
+    Object.assign({}, F5, {id: 'f16', name: '新方案，清晰度 1.6', q: 'dpr=1.6&lowfps=1'}),
+    Object.assign({}, F5, {id: 'f2', name: '新方案，清晰度 2', q: 'dpr=2&lowfps=1'}),
+    Object.assign({}, F5, {id: 'f25', name: '新方案，清晰度 2.5', q: 'dpr=2.5&lowfps=1'}),
+    Object.assign({}, F5, {id: 'f3', name: '新方案，清晰度 3（手机原本的清晰度）', q: 'dpr=3&lowfps=1'})
+  ];
   // 第三轮后她觉得「影子只画一次＋去影子细节＋去景深」最顺：给「自己试看」加三种推荐做法，先看好看不好看、顺不顺
   var PICKS = [
+    Object.assign({}, F5, {id: 'n16', name: '新方案，清晰度 1.6，稳定 30 张', q: 'dpr=1.6&lowfps=1&cap=30'}),
+    Object.assign({}, F5, {id: 'n2', name: '新方案，清晰度 2，稳定 30 张', q: 'dpr=2&lowfps=1&cap=30'}),
+    Object.assign({}, F5, {id: 'n25', name: '新方案，清晰度 2.5，稳定 30 张', q: 'dpr=2.5&lowfps=1&cap=30'}),
     {id: 'rec16', name: '推荐做法，清晰度 1.6', q: 'dpr=1.6&lowfps=1', freeze: true, off: ['gtao', 'bokeh']},
     {id: 'rec2', name: '推荐做法，清晰度 2（更清楚）', q: 'dpr=2&lowfps=1', freeze: true, off: ['gtao', 'bokeh']},
     {id: 'rec30', name: '推荐做法，稳定每秒 30 张', q: 'dpr=1.6&lowfps=1&cap=30', freeze: true, off: ['gtao', 'bokeh']},
@@ -134,7 +146,20 @@
     var w = frame.contentWindow, recompile = false;
     if (seg.pcf) { dev.renderer.shadowMap.type = w.__fy.THREE.PCFShadowMap; recompile = true; }
     if (seg.noCandleShadow && dev.candleLight) { dev.candleLight.castShadow = false; recompile = true; }
-    if (seg.noAreaLights) { if (dev.winLight) dev.winLight.visible = false; if (dev.screenGlow) dev.screenGlow.visible = false; recompile = true; }
+    if (seg.noAreaLights || seg.fakeLights) { if (dev.winLight) dev.winLight.visible = false; if (dev.screenGlow) dev.screenGlow.visible = false; recompile = true; }
+    // 第五轮：两盏面光换成便宜的光——窗口照进来的一道柔光（不投影子）＋电脑屏幕前一盏小点光，亮度在电脑上对过（窗 0.65 倍、屏 1 倍）
+    if (seg.fakeLights) {
+      var T = w.__fy.THREE, sc = w.__fy.scene;
+      var ws = new T.DirectionalLight('#ffffff', 0); ws.position.copy(dev.winLight.position);
+      var tg = new T.Object3D(); tg.position.copy(dev.winLight.position).add(new T.Vector3(0, -7, 12)); sc.add(tg); ws.target = tg; sc.add(ws);
+      var gs = new T.PointLight('#ffffff', 0, 9, 1.5); gs.position.copy(dev.screenGlow.position); sc.add(gs);
+      var render = dev.composer.render.bind(dev.composer);
+      dev.composer.render = function () {
+        ws.intensity = dev.winLight.intensity * .65; ws.color.copy(dev.winLight.color);
+        gs.intensity = dev.screenGlow.intensity; gs.color.copy(dev.screenGlow.color);
+        return render.apply(null, arguments);
+      };
+    }
     if (recompile) w.__fy.scene.traverse(function (o) { if (o.material) [].concat(o.material).forEach(function (m) { m.needsUpdate = true; }); });
     if (seg.freeze) { dev.renderer.shadowMap.autoUpdate = false; dev.renderer.shadowMap.needsUpdate = true; }
   }
@@ -212,12 +237,14 @@
   };
 
   // round 4: long runs, the tour repeats; early = first 10 s, late = 20-35 s
-  $('run4').onclick = async function () {
+  $('run5').onclick = function () { longRun.call(this, SEGS5, 5); };
+  $('run4').onclick = function () { longRun.call(this, SEGS4, 4); };
+  async function longRun(LIST, round) {
     var btn = this; btn.disabled = true; var rows = [];
-    for (var i = 0; i < SEGS4.length; i++) {
-      var seg = SEGS4[i];
-      $('status').textContent = '第 ' + (i + 1) + ' / ' + SEGS4.length + ' 种：' + seg.name + '（35 秒）…';
-      hud.innerHTML = (i + 1) + ' / ' + SEGS4.length + '<small>' + seg.name + '</small>';
+    for (var i = 0; i < LIST.length; i++) {
+      var seg = LIST[i];
+      $('status').textContent = '第 ' + (i + 1) + ' / ' + LIST.length + ' 种：' + seg.name + '（35 秒）…';
+      hud.innerHTML = (i + 1) + ' / ' + LIST.length + '<small>' + seg.name + '</small>';
       var how = await open(seg), row = {id: seg.id, name: seg.name};
       if (how !== 'ready') { row.error = how === 'nogl' ? '打不开 3D' : '加载太久'; rows.push(row); close(); continue; }
       apply(seg); await sleep(WARM);
@@ -235,13 +262,13 @@
     }
     $('status').textContent = '测完了，正在传回电脑…';
     try {
-      var r = await fetch('report', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({round: 4, at: new Date().toISOString(), device: info, runMs: RUN4_MS, segments: rows})});
+      var r = await fetch('report', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({round: round, at: new Date().toISOString(), device: info, runMs: RUN4_MS, segments: rows})});
       $('status').textContent = r.ok ? '测完了，结果已经传回电脑 ✓ 可以把自动锁定改回去了。' : '测完了，但传回电脑失败（' + r.status + '），请截图这张表发给我。';
     } catch (e) { $('status').textContent = '测完了，但传回电脑失败，请截图这张表发给我。'; }
     btn.disabled = false;
-  };
+  }
   function table4(rows) {
-    var h = '<table><tr><th>做法（一种比一种多减一样）</th><th class="n">开头</th><th class="n">降速后</th></tr>';
+    var h = '<table><tr><th>做法</th><th class="n">开头</th><th class="n">降速后</th></tr>';
     rows.forEach(function (r) { h += '<tr><td>' + r.name + (r.error ? '（' + r.error + '）' : '') + '</td>' + cell(r.early) + cell(r.late) + '</tr>'; });
     return h + '</table><p class="sub">数字是每秒画了几张。「降速后」超过 30，锁成每秒 30 张就能一直稳住。</p>';
   }
