@@ -24,8 +24,8 @@ createServer((req, res) => {
         writeFileSync(file, JSON.stringify(data, null, 2));
         console.log('\n收到测速结果 ' + file + '\n' + (data.device && data.device.ua || ''));
         const ph = p => p ? `${p.fps}帧 程序${p.jsAvg}ms 画${p.calls}遍` : '—';
-        for (const s of data.segments || []) for (const k of ['overview', 'book', 'back1', 'music', 'back2']) if (s[k] && s[k].steps) console.log('  ' + (s.id + ' ' + k).padEnd(16), Object.entries(s[k].steps).slice(0, 6).map(([n, v]) => n + ' ' + v + 'ms').join('  '));
-        for (const s of data.segments || []) console.log((s.name || s.id).padEnd(22), s.error || (s.overview ? `全景 ${ph(s.overview)} | 共读 ${ph(s.book)} | 一起听 ${ph(s.music)} | 清晰度 ${s.scale}` : `${s.fps} 帧/秒  最卡 ${s.worst}ms  卡顿 ${s.slow} 次  清晰度 ${s.scale}`));
+        for (const s of data.segments || []) for (const k of ['overview', 'book', 'back1', 'music', 'back2', 'early', 'mid', 'late']) if (s[k] && s[k].steps) console.log('  ' + (s.id + ' ' + k).padEnd(16), Object.entries(s[k].steps).slice(0, 6).map(([n, v]) => n + ' ' + v + 'ms').join('  '));
+        for (const s of data.segments || []) console.log((s.name || s.id).padEnd(22), s.error || (s.early ? `开头 ${ph(s.early)} | 中间 ${ph(s.mid)} | 降速后 ${ph(s.late)} | 清晰度 ${s.scale}` : s.overview ? `全景 ${ph(s.overview)} | 共读 ${ph(s.book)} | 一起听 ${ph(s.music)} | 清晰度 ${s.scale}` : `${s.fps} 帧/秒  最卡 ${s.worst}ms  卡顿 ${s.slow} 次  清晰度 ${s.scale}`));
         res.writeHead(200, {'Content-Type': 'application/json'}); res.end('{"ok":true}');
       } catch (e) { res.writeHead(400); res.end('bad report'); }
     });

@@ -55,7 +55,7 @@ for (const [from, to] of [
 if (testOut) {
   const from = 'const glass = new GlassPass(); composer.addPass(glass);';
   if (js.split(from).length !== 2) throw new Error('上游代码变了，找不到：' + from);
-  js = js.replace(from, () => from + ' window.__WS_DEV = {renderer, composer, gtao, bokeh, glass, grade};');
+  js = js.replace(from, () => from + ' window.__WS_DEV = {renderer, composer, gtao, bokeh, glass, grade, sun, candleLight, winLight, screenGlow};');
   // how often the laptop screen is redrawn (upstream: 24 times a second while you look at it, 10 otherwise)
   const np = "NP.acc += dt; if (NP.acc < (focusKey === 'music' ? 1 / 24 : 1 / 10)) return;";
   if (js.split(np).length !== 2) throw new Error('上游代码变了，找不到：' + np);
