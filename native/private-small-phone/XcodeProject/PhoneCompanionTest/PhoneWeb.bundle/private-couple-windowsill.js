@@ -5,7 +5,7 @@
      入口是桌上的手机：点手机，卡片上点「进入小手机」（她要求，不放右上角按钮，窗台上也不显示锁定条）。
    - 窗台挂在小手机屏幕里（来电、横幅、弹窗、提示、远程操控都在它上面），不跟着小手机重画；离开或进后台就拆掉，省电。
    - 窗台框让出状态栏和底部横条（框里的页面拿不到这两处的高度，按钮会和时间叠在一起）；深色底，加载时盖一层「正在摆好书桌…」，加载完淡出（不闪白）；3D 画面被系统回收（会闪白、贴图变黑）时重新加载，最多两次，再不行退回原来的情侣空间。
-   - 省电模式（S.settings.windowsillSaver）：清晰度和帧数都降一点。
+   - 省电模式（S.settings.windowsillSaver）：清晰度降到 1.25（平时 1.6，两种都每秒最多 30 张）。
    - 3D 打不开（WebGL 不可用）时直接退回原来的情侣空间。
    - 一起听（她要求，在情侣空间里直接放）：电脑屏幕上是小手机「音乐」正在放的歌，每秒报给窗台一次（歌名、歌手、进度、带时间的歌词）；
      卡片上的上一首 / 播放暂停 / 下一首直接调音乐自己的 musicPrev / musicToggle / musicNext，离开窗台歌也接着放（和音乐 App 一样）。
@@ -13,10 +13,8 @@
    - 桌宠小橘：每两秒把桌宠现在的表情指令（角色或她让它做的）、心情和名字报给窗台，透卡上的小橘跟着变。 */
 (function () {
   'use strict';
-  // COUPLE_WINDOWSILL_PAUSED_V1：按要求暂时恢复原情侣空间；保留场景，独立网页测试后再讨论启用。
-  // 在包装渲染和注册监听器之前退出，不创建 iframe、计时器或省电设置入口。
-  window.CoupleWindowsill = {paused: true, sync: function () {}, mounted: function () { return false; }};
-  return;
+  // 2026-10-20 重新启用（COUPLE_WINDOWSILL_PAUSED_V1 停用过一段）：她在独立测速网页上选定「新方案，清晰度 1.6，稳定 30 张」后要求装回 App，
+  // 画质做法见 couple-windowsill/shell.js 的 WINDOWSILL_STEADY30_V1。
   if (typeof renderCouple !== 'function' || typeof render !== 'function') return;
   var frame = null, holder = null, failed = false, reloads = 0, ready = false, ticker = 0, sentSong = null;
 

@@ -44,6 +44,28 @@ for (const [from, to] of [
   ["if (hit && hit.object.userData.key === 'phone' && focusKey === 'phone'){ flipPhone(phoneFlip.to < .5); return; }", "if (hit && hit.object.userData.key === 'phone' && focusKey === 'phone'){ if (phoneFlip.to > .5 && window.__WS_PHONE_ENTER){ window.__WS_PHONE_ENTER(); return; } flipPhone(phoneFlip.to < .5); return; }"],
   // the 透卡 on the sill is a second desk pet; she wants only the 流麻牌 on the desk (她：窗台上那个多余的桌面宠物，去掉)
   ['for (const t of TAGS) t.view = t.out ? 1 : 0;', "if (window.__WS_NO_SILL_PET){ TAGS.splice(TAGS.findIndex(t => t.key === 'pet'), 1); tcard.removeFromParent(); cardShadow.mesh.removeFromParent(); }\nfor (const t of TAGS) t.view = t.out ? 1 : 0;"],
+  // WINDOWSILL_STEADY30_V1 (she picked it on her iPhone 15 after five rounds of the phone speed test, scripts/windowsill_phone_test):
+  // each switch below is read from smallphone/shell.js. Shadows are drawn once and again only when the sun moves (they were
+  // ~5,000 of ~5,500 draws per frame); no ambient occlusion and no depth-of-field blur; plain PCF shadow edges; no candle
+  // shadow; the two rect area lights (the costliest light per pixel) become a shadowless light from the window (0.65x,
+  // matched by desk/sill brightness for day, dusk and night) and a small point light at the laptop screen. Glass kept.
+  ['renderer.shadowMap.enabled = true;', 'renderer.shadowMap.enabled = true; renderer.shadowMap.autoUpdate = !window.__WS_SHADOW_FREEZE;'],
+  ['renderer.shadowMap.type = THREE.PCFSoftShadowMap;', 'renderer.shadowMap.type = window.__WS_PCF ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;'],
+  ['candleLight.castShadow = true;', 'candleLight.castShadow = !window.__WS_NO_CANDLE_SHADOW;'],
+  ['scene.add(screenGlow);', `scene.add(screenGlow);
+const fakeWin = window.__WS_FAKE_AREA ? new THREE.DirectionalLight('#ffffff', 0) : null, fakeGlow = window.__WS_FAKE_AREA ? new THREE.PointLight('#ffffff', 0, 9, 1.5) : null;
+if (fakeWin){ winLight.visible = false; screenGlow.visible = false; fakeWin.position.copy(winLight.position); const tg = new THREE.Object3D(); tg.position.copy(winLight.position).add(V(0, -7, 12)); scene.add(tg); fakeWin.target = tg; scene.add(fakeWin); fakeGlow.position.copy(screenGlow.position); scene.add(fakeGlow); }
+let steadySunAt = null, steadyT = 0, steadyN = 0;
+const steadyTick = dt => {
+  if (fakeWin){ fakeWin.intensity = winLight.intensity * .65; fakeWin.color.copy(winLight.color); fakeGlow.intensity = screenGlow.intensity; fakeGlow.color.copy(screenGlow.color); }
+  if (!window.__WS_SHADOW_FREEZE) return;
+  steadyT += dt;
+  const moved = !steadySunAt || steadySunAt.distanceToSquared(sun.position) > 1 || !sun.shadow.map;   // the sun moved about half a degree, or the low tier dropped the map
+  const settle = steadyN < 4 && steadyT > [1, 3, 6, 10][steadyN];                                    // models finish loading in the first seconds
+  if (moved || settle){ if (settle) steadyN++; renderer.shadowMap.needsUpdate = true; steadySunAt = (steadySunAt || new THREE.Vector3()).copy(sun.position); }
+};`],
+  ['const glass = new GlassPass(); composer.addPass(glass);', 'const glass = new GlassPass(); composer.addPass(glass); if (window.__WS_NO_AO) gtao.enabled = false; if (window.__WS_NO_DOF) bokeh.enabled = false;'],
+  ['  composer.render();\n  instant = false;', '  steadyTick(dt);\n  composer.render();\n  instant = false;'],
   // 小橘 on the 透卡 / 流麻牌 (shell.js draws her desk pet's frames; upstream's kaomoji stay as the fallback)
   ["    tick(dt){\n      const b = ctx();", "    tick(dt){\n      if (window.__WS_PET && window.__WS_PET.tick(dt, g, ctx(), () => drawPet(cv))) return;\n      const b = ctx();"],
   ['next(){ const k = PICK.indexOf(cur);', 'next(){ if (window.__WS_PET && window.__WS_PET.next()) return; const k = PICK.indexOf(cur);'],

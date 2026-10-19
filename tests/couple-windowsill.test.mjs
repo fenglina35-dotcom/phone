@@ -9,17 +9,23 @@ const T = 'native/private-small-phone/third_party/qiaosi-windowsill/';
 const url = name => new URL('../' + name, import.meta.url);
 const read = name => fs.readFileSync(url(name), 'utf8');
 
-test('temporarily paused windowsill preserves the original couple renderer without listeners or timers', () => {
-  const renderCouple = () => '<div>原来的情侣空间</div>';
-  const render = () => renderCouple();
-  const context = {renderCouple, render, window: {}};
-  vm.runInNewContext(read(P + 'private-couple-windowsill.js'), context);
-  assert.equal(context.renderCouple, renderCouple);
-  assert.equal(context.render, render);
-  assert.equal(context.render(), '<div>原来的情侣空间</div>');
-  assert.equal(context.window.CoupleWindowsill.mounted(), false);
-  assert.equal(context.window.CoupleWindowsill.paused, true);
-  context.window.CoupleWindowsill.sync();
+test('the windowsill is enabled again with the steady-30 setting she picked on her phone', () => {
+  // COUPLE_WINDOWSILL_PAUSED_V1 paused it on 2026-10-20; after five rounds of scripts/windowsill_phone_test she chose
+  // 「新方案，清晰度 1.6，稳定 30 张」 and asked for it in the app (WINDOWSILL_STEADY30_V1).
+  const js = read(P + 'private-couple-windowsill.js');
+  assert.doesNotMatch(js, /paused: true/);
+  assert.doesNotMatch(js, /^\s*return;\s*$/m, 'no early exit before the windowsill is wired');
+  const shell = read(T + 'smallphone/shell.js');
+  assert.match(shell, /WINDOWSILL_STEADY30_V1/);
+  assert.match(shell, /window\.__WS_DPR_MAX = saver \? 1\.25 : 1\.6;/);
+  for (const k of ['__WS_SHADOW_FREEZE', '__WS_NO_AO', '__WS_NO_DOF', '__WS_PCF', '__WS_NO_CANDLE_SHADOW', '__WS_FAKE_AREA']) assert.match(shell, new RegExp('window\\.' + k + ' = true;'), k);
+  assert.match(shell, /go = t - last >= 31/, 'at most 30 pictures a second, one decision per display frame');
+  assert.doesNotMatch(shell, /__WS_NO_GLASS|glass\.enabled = false/, 'she asked to keep the glass');
+  const built = read(P + 'couple-windowsill/windowsill.js');
+  assert.match(built, /shadowMap\.autoUpdate=!window\.__WS_SHADOW_FREEZE/);
+  assert.match(built, /window\.__WS_FAKE_AREA/);
+  assert.match(built, /\.65/);
+  assert.doesNotMatch(built, /__WS_DEV|__WS_PROF/, 'the speed-test hooks stay out of the app build');
 });
 
 test('the upstream scene is kept with its licence and origin', () => {

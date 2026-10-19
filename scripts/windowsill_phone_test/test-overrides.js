@@ -12,8 +12,8 @@
   if (o !== null) window.__WS_DOF = o;
   // cap=30: draw at most 30 pictures a second (steadier, cooler); same idea as the app's power-saving mode
   if (n('cap') === 30) {
-    var raf = window.requestAnimationFrame.bind(window), last = 0;
-    window.requestAnimationFrame = function (cb) { return raf(function step(t) { if (t - last < 31) return raf(step); last = t; cb(t); }); };
+    var raf = window.requestAnimationFrame.bind(window), last = 0, seenT = -1, go = true;
+    window.requestAnimationFrame = function (cb) { return raf(function step(t) { if (t !== seenT) { seenT = t; go = t - last >= 31; if (go) last = t; } if (!go) return raf(step); cb(t); }); };
   }
   var np = n('npfps'); if (np) { window.__WS_NP_FOCUS_DT = 1 / np; window.__WS_NP_DT = 1 / Math.min(np, 10); }
 })();

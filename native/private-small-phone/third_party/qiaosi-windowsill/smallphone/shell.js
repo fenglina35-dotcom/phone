@@ -1,8 +1,10 @@
 /* 小手机 · 窗台外壳（COUPLE_WINDOWSILL_V1）
    作者唐幡（TangfanOVO）的「赴约 · 窗台」原样不改，这一层只做小手机需要的事：
    1. App 里是本地文件，不能用 fetch 读模型：场景要 ./models/*.gltf.json 时，从打包好的 window.__WS_MODELS 里给。
-   2. 画质：清晰度上限（正常 2，省电 1.25）、“跑不动才降一档”的门槛（正常每秒低于 22 帧、省电低于 16 帧才降）、降档后至少 1.5 倍、景深虚化减到 0.45，
-      由 scripts/build_couple_windowsill.mjs 在打包时把上游两个常数换成读这里的值；省电模式每秒最多画 30 帧。
+   2. 画质（WINDOWSILL_STEADY30_V1，她在 iPhone 15 上用测速网页 scripts/windowsill_phone_test 试了五轮后选的）：
+      清晰度 1.6（省电 1.25），每秒最多画 30 张；影子只画一次、太阳挪动时才重画；不要阴影细节和景深虚化；影子边简单；
+      蜡烛不投影子；两盏面光换成便宜的光（窗口照进来一道柔光＋电脑屏幕前一盏小灯），玻璃保留。
+      这些开关由 scripts/build_couple_windowsill.mjs 在打包时接进上游脚本（上游文件不改）。
    3. 底色改深色：上游底色是浅米白，画面清空或重新调整大小时会闪白。3D 画面被系统回收时通知外面重新加载。
    4. 去掉标题下的「草稿 · 演示数据」（她要求）；左上角只有一个小箭头「返回」，凑近某样东西时让位给上游的「退回」。
    5. 桌上的手机：屏幕画她的锁屏（壁纸、日期、时间）；点一下翻过来亮起，再点一下屏幕（或卡片上的「进入小手机」）进入小手机。
@@ -15,10 +17,17 @@
   'use strict';
   var q = new URLSearchParams(location.search);
   var saver = q.get('saver') === '1';
-  window.__WS_DPR_MAX = saver ? 1.25 : 2;
-  window.__WS_LOWQ_FPS = saver ? 16 : 22;
-  window.__WS_LOWQ_PR = saver ? 1 : 1.5;   // even the low tier keeps some sharpness
-  window.__WS_DOF = .45;                    // gentler depth-of-field blur
+  // WINDOWSILL_STEADY30_V1: the setting she picked on her iPhone 15 (「新方案，清晰度 1.6，稳定 30 张」): steady 30 pictures a second
+  window.__WS_DPR_MAX = saver ? 1.25 : 1.6;
+  window.__WS_LOWQ_FPS = 14;                // capped at 30, so only drop a tier when it really cannot keep up
+  window.__WS_LOWQ_PR = saver ? 1 : 1.25;
+  window.__WS_DOF = .45;
+  window.__WS_SHADOW_FREEZE = true;         // shadows drawn once, again only when the sun moves
+  window.__WS_NO_AO = true;                 // no ambient-occlusion pass
+  window.__WS_NO_DOF = true;                // no depth-of-field blur (also what made the room look blurry)
+  window.__WS_PCF = true;                   // plain shadow edges
+  window.__WS_NO_CANDLE_SHADOW = true;
+  window.__WS_FAKE_AREA = true;             // cheap stand-ins for the two area lights (the glass stays)
   window.__WS_NO_SILL_PET = true;           // no 透卡 on the sill: 小橘 lives on the 流麻牌 on the desk only
 
   var realFetch = window.fetch ? window.fetch.bind(window) : null;
@@ -28,12 +37,15 @@
     return realFetch ? realFetch(url, opt) : Promise.reject(new Error('offline'));
   };
 
-  if (saver) {
-    var raf = window.requestAnimationFrame.bind(window), last = 0;
+  {   // at most 30 pictures a second, saver or not (steady 30 felt smoother than 16-40).
+      // One decision per display frame (by its timestamp), so every callback of that frame is let through or held together;
+      // deciding per callback let the scene's loop take every slot and starved any other callback.
+    var raf = window.requestAnimationFrame.bind(window), last = 0, seenT = -1, go = true;
     window.requestAnimationFrame = function (cb) {
       return raf(function step(t) {
-        if (t - last < 31) return raf(step);
-        last = t; cb(t);
+        if (t !== seenT) { seenT = t; go = t - last >= 31; if (go) last = t; }
+        if (!go) return raf(step);
+        cb(t);
       });
     };
   }
