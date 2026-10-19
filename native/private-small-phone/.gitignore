@@ -25,6 +25,10 @@ XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/*
 XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/*
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/travel-home/
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/travel-home/**
+# Couple space 3D windowsill (COUPLE_WINDOWSILL_V1), built from third_party/qiaosi-windowsill.
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-couple-windowsill.js
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/couple-windowsill/
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/couple-windowsill/**
 # Sticker store packs (STICKER_STORE_V1) ship inside the private app.
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/sticker-store/
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/sticker-store/**

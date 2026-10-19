@@ -477,3 +477,10 @@ v1837/v1840（她的要求）：导入时不再用识图，每张名字她自己
 
 现在：设置 → 图片与识别 → AI 真图，多了路线1到路线5，每条单独填名字、接口地址、Key、模型，点选哪条就默认用哪条。实现：S.settings.imgRoutes 存五条，S.settings.imgRoute 是选中的序号；imgBase/imgKey/imgModel 始终是选中路线的值，所以所有生图的地方（聊天发照片、朋友圈配图、形象工作室、你画我猜、婚礼游戏）都不用改。切换时 imgRouteUse 先把输入框里正在填的内容存回原路线，再换进新路线；点“保存”时 imgRouteSync 把当前三项写回选中的路线。第一次打开时路线1继承原来的设置。没有失败自动换线（她只要求“选哪条默认用哪条”）。
 验证：两包真实设置页：五个路线按钮、路线1继承旧值、填路线2后来回切不丢、保存写回、genImage 实际用选中路线的地址/Key/模型（截住请求核对）。未验证：真实图片平台出图。
+
+## 情侣空间 · 赴约窗台（COUPLE_WINDOWSILL_V1，私人版）
+
+现在：私人版打开情侣空间先看到 3D「赴约 · 窗台」（唐幡 TangfanOVO 的开源作品，AGPL-3.0，她说已征得作者同意；网页版不接，接之前要作者书面授权）。上游源码原样放在 native/private-small-phone/third_party/qiaosi-windowsill（固定在 309508f1，UPSTREAM.md 写出处），我们加的只有 smallphone/shell.js。scripts/build_couple_windowsill.mjs（需要临时装 esbuild@0.24.0 和 three@0.170.0）把 three.js + 场景打成普通脚本 windowsill.js、四件模型打成 models.js，输出到 PhoneWeb.bundle/couple-windowsill/（私人 .gitignore 已放行）；App 是本地文件，不能用模块脚本和 fetch，所以 shell.js 把场景读 ./models/*.gltf.json 的请求换成打包数据。shell.js 还：省电模式（saver=1：像素密度 1、最多 30 帧）、左上角「返回」（postMessage windowsill:back）、去掉「草稿 · 演示数据」、打不开 WebGL 时通知退回旧情侣空间。
+private-couple-windowsill.js（只在私人版两个入口加载）：包装 renderCouple 和 render。首页（cur().p==='couple' 且无 list）在 .screen 里挂一个 iframe（z-index 150，在弹窗 200、提示 500、远程操控 550、来电和横幅之下），不跟着小手机重画；离开或 App 进后台就拆掉省电。右上「设置与授权」下面的小玻璃条列出正在锁着的软件和「还剩…自动解锁」（ROLE_LOCK_UNTIL_V1 要求情侣空间能看到解锁时间，核心检查会查；第一次发布前就是因为窗台盖住了这行，核心检查失败后补上的）。「设置与授权」= go('couple',{list:1})，就是原来完整的情侣空间（甜蜜日常、管控授权、伴生设备），最上面多一个窗台省电开关（S.settings.windowsillSaver）。角色远程操控用自己的模拟层，不受窗台影响。
+后续步骤（未做）：点桌上东西打开对应功能（对照表见聊天：手机=进入真实小手机，电脑=一起听，书=共读，挂历=纪念日，便签=报备，蜡烛=睡眠，茶=健康，千纸鹤=我在哪，透卡/流麻牌=桌宠小橘，风铃=朋友圈，信=信箱，木盒=游戏大厅，手帐=出门，星星罐=表情仓库，盆景=作者致谢），接真实数据，桌宠换小橘；以后可加开关做成整个 App 首页。
+验证：tests/couple-windowsill.test.mjs；电脑上私人页面：窗台离线显示（无联网请求、无报错）、设置与授权保留原内容、返回离开并拆掉、远程操控层和弹窗盖在窗台上、网页版情侣空间不变。未验证：iPhone 上速度、发热、WebGL 表现。

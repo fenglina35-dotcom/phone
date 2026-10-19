@@ -32,6 +32,7 @@ const count = (source, marker) => source.split(marker).length - 1;
 // 'web' entry is later synced into the private bundle, move it to 'both' in the
 // same commit that syncs it.
 const PERMANENT_FIXES = [
+  {release:"private v1841 / iOS490",scope:"private",least:1,file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-couple-windowsill.js",name:"私人版情侣空间首页是 3D 赴约窗台（不联网、可返回、设置与授权保留原内容、省电模式）",marker:"COUPLE_WINDOWSILL_V1"},
   {release:"web v1837 / private v1840",scope:"both",least:1,file:"wechat-me.js",name:"自己导入的表情包可设封面，名字自己写（导入不再用识图）",marker:"cover:ssImportCoverImg(st),items:"},
   {release:"private v1839 / iOS488",scope:"private",least:1,file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift",name:"表情仓库从相册选图走原生选图器，动图保持会动",marker:"NATIVE_IMAGE_PICKER_V1"},
   {release:"web v1836 / private v1839",scope:"both",least:1,file:"wechat-me.js",name:"导入表情包可从“文件”里选并标出动图/静图",marker:"function ssImportPickFiles()"},
