@@ -3,13 +3,19 @@
 // local files, so everything is bundled into plain scripts: three.js + scene (windowsill.js), models (models.js).
 // Upstream files are read as they are; nothing in third_party is rewritten.
 // Usage: node scripts/build_couple_windowsill.mjs --tools <folder whose node_modules has esbuild@0.24.0 and three@0.170.0>
-import {readFileSync, writeFileSync, readdirSync, mkdirSync, copyFileSync} from 'node:fs';
+//        add --test-out <dir> to build only the phone speed-test copy (scripts/windowsill_phone_test), never the app's:
+//        it also exposes the render passes as window.__WS_DEV and loads test-overrides.js (picture settings from the address).
+import {readFileSync, writeFileSync, readdirSync, mkdirSync, copyFileSync, existsSync} from 'node:fs';
 import {join, resolve, dirname} from 'node:path';
 import {fileURLToPath, pathToFileURL} from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const src = join(root, 'native/private-small-phone/third_party/qiaosi-windowsill');
-const out = join(root, 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/couple-windowsill');
+const appOut = join(root, 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/couple-windowsill');
+const oi = process.argv.indexOf('--test-out');
+const testOut = oi >= 0 && process.argv[oi + 1] ? resolve(process.argv[oi + 1]) : null;
+if (testOut && testOut.startsWith(join(root, 'native'))) throw new Error('测试版不能放进 App 的文件夹');
+const out = testOut || appOut;
 const ti = process.argv.indexOf('--tools');
 if (ti < 0 || !process.argv[ti + 1]) throw new Error('需要 --tools <装了 esbuild 和 three 的文件夹>');
 const tools = resolve(process.argv[ti + 1]);
@@ -45,6 +51,12 @@ for (const [from, to] of [
   if (js.split(from).length !== 2) throw new Error('上游代码变了，找不到：' + from);
   js = js.replace(from, () => to);
 }
+// speed-test copy only: hand the render passes to the test page so it can switch them off one at a time
+if (testOut) {
+  const from = 'const glass = new GlassPass(); composer.addPass(glass);';
+  if (js.split(from).length !== 2) throw new Error('上游代码变了，找不到：' + from);
+  js = js.replace(from, () => from + ' window.__WS_DEV = {renderer, composer, gtao, bokeh, glass, grade};');
+}
 const result = await esbuild.build({
   stdin: {contents: js, resolveDir: tools, sourcefile: 'windowsill-scene.js', loader: 'js'},
   bundle: true, format: 'iife', target: ['safari16'], minify: true, legalComments: 'eof', write: false,
@@ -60,6 +72,10 @@ for (const f of readdirSync(join(src, 'models')).filter(f => f.endsWith('.gltf.j
 writeFileSync(join(out, 'models.js'), banner + 'window.__WS_MODELS=' + JSON.stringify(models) + ';\n');
 
 copyFileSync(join(src, 'smallphone/shell.js'), join(out, 'shell.js'));
+if (testOut) {
+  copyFileSync(join(appOut, 'pet.js'), join(out, 'pet.js'));
+  copyFileSync(join(root, 'scripts/windowsill_phone_test/test-overrides.js'), join(out, 'test-overrides.js'));
+}
 
 // the upstream page without the CDN import map; plain scripts instead of the module
 let tpl = readFileSync(join(src, 'src/index.template.html'), 'utf8');
@@ -70,7 +86,7 @@ const mod = '<script type="module">\n/*@@SCRIPT@@*/</script>';
 if (!tpl.includes(mod)) throw new Error('模板里找不到场景脚本的位置');
 // pet.js comes from scripts/build_couple_windowsill_pet.cjs (小橘's frames); it is not rebuilt here
 try { readFileSync(join(out, 'pet.js')); } catch (e) { throw new Error('先运行 scripts/build_couple_windowsill_pet.cjs 生成 pet.js'); }
-tpl = tpl.replace(mod, '<script src="shell.js"></script>\n<script src="models.js"></script>\n<script src="pet.js"></script>\n<script src="windowsill.js"></script>');
+tpl = tpl.replace(mod, '<script src="shell.js"></script>\n' + (testOut ? '<script src="test-overrides.js"></script>\n' : '') + '<script src="models.js"></script>\n<script src="pet.js"></script>\n<script src="windowsill.js"></script>');
 if (/cdn\.jsdelivr|https?:\/\/(?!github\.com\/TangfanOVO)/.test(tpl.replace(/<!--[\s\S]*?-->/g, ''))) throw new Error('页面里还有联网地址');
 writeFileSync(join(out, 'index.html'), '<!-- 赴约 · 窗台 by 唐幡 (TangfanOVO), AGPL-3.0. Source: native/private-small-phone/third_party/qiaosi-windowsill -->\n' + tpl);
 const kb = f => Math.round(readFileSync(join(out, f)).length / 1024);

@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>窗台测速</title>
+<!-- 窗台测速（独立测试页，不在小手机、不在 App 里）：在手机 Safari 里打开，测不同画质下每秒能画几帧，结果自动传回电脑。
+     窗台用的是 build/ 里另外打的一份（node scripts/build_couple_windowsill.mjs --tools … --test-out scripts/windowsill_phone_test/build）。 -->
+<style>
+  :root{--bg:#14110f;--card:#211c19;--ink:#f4ede4;--sub:#b5aa9c;--line:#3a322c;--accent:#d9a06b;--ok:#7fc39a;--bad:#e58a7a}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 -apple-system,"PingFang SC",system-ui,sans-serif;-webkit-text-size-adjust:100%}
+  main{max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 18px) 16px calc(env(safe-area-inset-bottom,0px) + 28px)}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--sub);font-size:13px;margin:0 0 16px}
+  section{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin:0 0 14px}
+  h2{font-size:17px;margin:0 0 8px}
+  ol,ul{margin:6px 0 10px;padding-left:20px}
+  li{margin:2px 0}
+  button{font:inherit;border:0;border-radius:12px;padding:12px 14px;background:var(--accent);color:#1b140f;font-weight:700;width:100%;cursor:pointer}
+  button.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);font-weight:500;text-align:left}
+  button:disabled{opacity:.5}
+  .grid{display:grid;gap:8px}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
+  th,td{border-bottom:1px solid var(--line);padding:7px 4px;text-align:left;vertical-align:top}
+  th{color:var(--sub);font-weight:500}
+  td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .good{color:var(--ok)} .poor{color:var(--bad)}
+  #status{color:var(--sub);font-size:13px;margin-top:8px;min-height:1.6em}
+  #stage{position:fixed;inset:0;z-index:10;display:none;background:#0d0b0a}
+  #stage.on{display:block}
+  #stage iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#0d0b0a}
+  #hud{position:absolute;z-index:2;left:50%;transform:translateX(-50%);top:calc(env(safe-area-inset-top,0px) + 66px);white-space:nowrap;background:rgba(0,0,0,.62);color:#fff;border-radius:10px;padding:6px 10px;font:600 13px/1.4 -apple-system,system-ui,sans-serif;pointer-events:none;text-align:center;font-variant-numeric:tabular-nums}
+  #hud small{display:block;font-weight:400;opacity:.8}
+  code{background:#2c2521;border-radius:6px;padding:1px 5px}
+</style>
+</head>
+<body>
+<main>
+  <h1>窗台测速</h1>
+  <p class="sub">单独的测试网页，不是小手机。测完的结果会自动传回电脑。</p>
+
+  <section>
+    <h2>测之前</h2>
+    <ol>
+      <li>让手机凉一会儿，别边充电边测。</li>
+      <li>关掉低电量模式。</li>
+      <li>屏幕别自动锁：<b>设置 → 显示与亮度 → 自动锁定</b> 先选「永不」，测完改回来。</li>
+      <li>测的时候别碰屏幕，放平就行。</li>
+    </ol>
+    <p class="sub" id="device"></p>
+  </section>
+
+  <section>
+    <h2>一、自动测速（约 4 分钟）</h2>
+    <p class="sub">窗台会自己换九种画质，每种开一次、镜头自己凑近两样东西再退回，记下每秒画了几帧。</p>
+    <button id="run">开始自动测速</button>
+    <div id="status"></div>
+    <div id="table"></div>
+  </section>
+
+  <section>
+    <h2>二、自己试看</h2>
+    <p class="sub">点一种画质打开窗台，像平常一样转一转、点东西。顶上中间是每秒帧数（60 最顺，30 以下会觉得卡）。点窗台左上角的小箭头回到这里。</p>
+    <div class="grid" id="manual"></div>
+  </section>
+</main>
+
+<div id="stage"><iframe title="窗台"></iframe><div id="hud"></div></div>
+
+<script>
+(function () {
+  'use strict';
+  // 九段：App 现在的设置、四档清晰度（不让它自动降档，好比较）、在 1.6 上分别关掉三样费力的效果，最后再测一次 App 设置看手机有没有变烫变慢
+  var SEGS = [
+    {id: 'app', name: '现在 App 里的设置', q: 'dpr=2&lowfps=22&lowpr=1.5'},
+    {id: 'd2', name: '清晰度 2', q: 'dpr=2&lowfps=1'},
+    {id: 'd16', name: '清晰度 1.6（作者原值）', q: 'dpr=1.6&lowfps=1'},
+    {id: 'd125', name: '清晰度 1.25', q: 'dpr=1.25&lowfps=1'},
+    {id: 'd1', name: '清晰度 1', q: 'dpr=1&lowfps=1'},
+    {id: 'noao', name: '1.6，关掉阴影细节', q: 'dpr=1.6&lowfps=1', off: ['gtao']},
+    {id: 'nodof', name: '1.6，关掉景深虚化', q: 'dpr=1.6&lowfps=1', off: ['bokeh']},
+    {id: 'noglass', name: '1.6，关掉玻璃效果', q: 'dpr=1.6&lowfps=1', off: ['glass']},
+    {id: 'app2', name: '再测一次 App 设置（看有没有变慢）', q: 'dpr=2&lowfps=22&lowpr=1.5'}
+  ];
+  var WARM = 3000, MEASURE = 15000;
+  var stage = document.getElementById('stage'), frame = stage.querySelector('iframe'), hud = document.getElementById('hud');
+  var $ = function (id) { return document.getElementById(id); };
+  var info = {ua: navigator.userAgent, dpr: window.devicePixelRatio, screen: screen.width + '×' + screen.height};
+  $('device').textContent = '这台手机：屏幕 ' + info.screen + '，像素倍数 ' + info.dpr;
+
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function open(seg) {
+    return new Promise(function (resolve) {
+      var done = false, t = setTimeout(function () { finish('timeout'); }, 25000);
+      function finish(how) { if (done) return; done = true; clearTimeout(t); removeEventListener('message', onMsg); resolve(how); }
+      function onMsg(e) {
+        if (e.source !== frame.contentWindow) return;
+        var d = e.data || {};
+        if (d.type === 'windowsill:ready') finish('ready');
+        else if (d.type === 'windowsill:nogl') finish('nogl');
+        else if (d.type === 'windowsill:lost') finish('lost');
+      }
+      addEventListener('message', onMsg);
+      stage.classList.add('on');
+      frame.src = 'build/index.html?' + seg.q + '&t=' + Date.now();
+    });
+  }
+  function close() { frame.src = 'about:blank'; stage.classList.remove('on'); hud.textContent = ''; }
+  function passesOff(seg) {
+    var w = frame.contentWindow, dev = w && w.__WS_DEV;
+    (seg.off || []).forEach(function (k) { if (dev && dev[k]) dev[k].enabled = false; });
+  }
+  // frame gaps measured inside the windowsill page itself
+  function meter() {
+    var w = frame.contentWindow, gaps = [], last = 0, on = true, c = w.document.getElementById('c'), widths = {};
+    function tick(now) { if (!on) return; if (last) gaps.push(now - last); last = now; if (c) widths[c.width + '×' + c.height] = 1; w.requestAnimationFrame(tick); }
+    w.requestAnimationFrame(tick);
+    return {
+      gaps: gaps,
+      stop: function () {
+        on = false;
+        var g = gaps.slice().sort(function (a, b) { return a - b; }), total = gaps.reduce(function (a, b) { return a + b; }, 0);
+        return {
+          fps: total ? Math.round(gaps.length / (total / 1000) * 10) / 10 : 0,
+          p95: g.length ? Math.round(g[Math.floor(g.length * .95)]) : null,
+          worst: g.length ? Math.round(g[g.length - 1]) : null,
+          slow: gaps.filter(function (x) { return x > 50; }).length,
+          frames: gaps.length,
+          canvas: Object.keys(widths),
+          scale: c ? Math.round(c.width / w.innerWidth * 100) / 100 : null
+        };
+      }
+    };
+  }
+  // the same small tour in every segment: look at the book, back, look at the laptop, back
+  async function tour(w, ms) {
+    var steps = [[0, function () { w.__fy.tapKey('book'); }], [5000, back], [8000, function () { w.__fy.tapKey('music'); }], [12500, back]];
+    function back() { var b = w.document.getElementById('back'); if (b) b.click(); }
+    var t0 = Date.now();
+    for (var i = 0; i < steps.length; i++) { var wait = steps[i][0] - (Date.now() - t0); if (wait > 0) await sleep(wait); try { steps[i][1](); } catch (e) {} }
+    var rest = ms - (Date.now() - t0); if (rest > 0) await sleep(rest);
+  }
+  function cls(fps) { return fps >= 50 ? 'good' : fps < 30 ? 'poor' : ''; }
+  function table(rows) {
+    var h = '<table><tr><th>画质</th><th class="n">每秒帧数</th><th class="n">最卡一下</th><th class="n">卡顿次数</th></tr>';
+    rows.forEach(function (r) {
+      h += '<tr><td>' + r.name + (r.error ? '（' + r.error + '）' : '') + '</td><td class="n ' + cls(r.fps) + '">' + (r.fps == null ? '—' : r.fps) + '</td><td class="n">' + (r.worst == null ? '—' : r.worst + 'ms') + '</td><td class="n">' + (r.slow == null ? '—' : r.slow) + '</td></tr>';
+    });
+    return h + '</table><p class="sub">「最卡一下」是最长的一帧用了多久；「卡顿次数」是超过 50ms 的帧（看得出顿一下）。</p>';
+  }
+
+  $('run').onclick = async function () {
+    var btn = this; btn.disabled = true; var rows = [];
+    for (var i = 0; i < SEGS.length; i++) {
+      var seg = SEGS[i];
+      $('status').textContent = '第 ' + (i + 1) + ' / ' + SEGS.length + ' 段：' + seg.name + '…';
+      hud.innerHTML = (i + 1) + ' / ' + SEGS.length + '<small>' + seg.name + '</small>';
+      var how = await open(seg), row = {id: seg.id, name: seg.name};
+      if (how !== 'ready') { row.error = how === 'nogl' ? '打不开 3D' : how === 'lost' ? '画面被系统收回' : '加载太久'; rows.push(row); close(); continue; }
+      passesOff(seg);
+      await sleep(WARM);
+      var w = frame.contentWindow, m = meter();
+      await tour(w, MEASURE);
+      Object.assign(row, m.stop());
+      rows.push(row); close();
+      $('table').innerHTML = table(rows);
+      await sleep(1500);
+    }
+    $('status').textContent = '测完了，正在传回电脑…';
+    try {
+      var r = await fetch('report', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({at: new Date().toISOString(), device: info, warmMs: WARM, measureMs: MEASURE, segments: rows})});
+      $('status').textContent = r.ok ? '测完了，结果已经传回电脑 ✓ 可以把自动锁定改回去了。' : '测完了，但传回电脑失败（' + r.status + '），请截图这张表发给我。';
+    } catch (e) { $('status').textContent = '测完了，但传回电脑失败，请截图这张表发给我。'; }
+    btn.disabled = false;
+  };
+
+  // manual: open one setting and look around, with frames per second in the corner
+  var live = null;
+  SEGS.slice(0, 8).forEach(function (seg) {
+    var b = document.createElement('button'); b.className = 'ghost'; b.type = 'button'; b.textContent = seg.name;
+    b.onclick = async function () {
+      hud.innerHTML = '打开中…';
+      var how = await open(seg);
+      if (how !== 'ready') { hud.textContent = how === 'nogl' ? '打不开 3D' : '加载失败'; return; }
+      passesOff(seg);
+      var w = frame.contentWindow, c = w.document.getElementById('c'), n = 0, t0 = performance.now(), worst = 0, last = 0;
+      live = true;
+      (function tick(now) {
+        if (!live) return; n++; if (last) worst = Math.max(worst, now - last); last = now;
+        if (now - t0 >= 500) {
+          hud.innerHTML = Math.round(n / ((now - t0) / 1000)) + ' 帧/秒<small>' + seg.name + ' · 最卡 ' + Math.round(worst) + 'ms</small>';
+          n = 0; t0 = now; worst = 0;
+        }
+        w.requestAnimationFrame(tick);
+      })(performance.now());
+    };
+    $('manual').appendChild(b);
+  });
+  // the windowsill's own back arrow brings her back to this page
+  addEventListener('message', function (e) { if (live && e.source === frame.contentWindow && e.data && e.data.type === 'windowsill:back') { live = false; close(); } });
+})();
+</script>
+</body>
+</html>
