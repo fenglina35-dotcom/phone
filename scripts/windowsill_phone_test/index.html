@@ -52,8 +52,8 @@
   </section>
 
   <section>
-    <h2>一、自动测速（约 4 分钟）</h2>
-    <p class="sub">窗台会自己换九种做法，每种开一次：先看全景，再凑近「共读」、凑近「一起听」，分开记下每秒画了几张。</p>
+    <h2>一、自动测速（约 1 分半）</h2>
+    <p class="sub">窗台会自己换三种做法，每种开一次：先看全景，再凑近「共读」、凑近「一起听」，分开记下每秒画了几张，和每一步各用了多久。</p>
     <button id="run">开始自动测速</button>
     <div id="status"></div>
     <div id="table"></div>
@@ -71,19 +71,16 @@
 <script>
 (function () {
   'use strict';
-  // 第二轮：清晰度几乎不影响快慢，所以测「每张画面都要做的固定功夫」：
-  // 影子只画一次（freeze）、去掉影子细节（gtao）、去掉景深虚化（bokeh）、电脑屏幕少刷新（npfps），以及全部一起
+  // 第三轮：从共读回来以后程序用时翻倍（画的次数没变），所以记下每一帧里每一步各用多久（测试版窗台的 window.__WS_PROF）
   var SEGS = [
     {id: 'app', name: '现在 App 里的设置', q: 'dpr=2&lowfps=22&lowpr=1.5'},
-    {id: 'd1', name: '清晰度 1（最糊）', q: 'dpr=1&lowfps=1'},
     {id: 'd16', name: '清晰度 1.6', q: 'dpr=1.6&lowfps=1'},
-    {id: 'freeze', name: '1.6，影子只画一次', q: 'dpr=1.6&lowfps=1', freeze: true},
+    {id: 'all', name: '1.6，影子只画一次＋去影子细节＋去景深', q: 'dpr=1.6&lowfps=1', freeze: true, off: ['gtao', 'bokeh']},
     {id: 'freeze-ao', name: '1.6，影子只画一次＋去掉影子细节', q: 'dpr=1.6&lowfps=1', freeze: true, off: ['gtao']},
     {id: 'freeze-ao-dof', name: '同上＋去掉景深虚化', q: 'dpr=1.6&lowfps=1', freeze: true, off: ['gtao', 'bokeh']},
-    {id: 'np6', name: '1.6，电脑屏幕少刷新', q: 'dpr=1.6&lowfps=1&npfps=6'},
-    {id: 'all', name: '1.6，以上全部一起', q: 'dpr=1.6&lowfps=1&npfps=6', freeze: true, off: ['gtao', 'bokeh']},
-    {id: 'app2', name: '再测一次 App 设置（看有没有变慢）', q: 'dpr=2&lowfps=22&lowpr=1.5'}
+    {id: 'np6', name: '1.6，电脑屏幕少刷新', q: 'dpr=1.6&lowfps=1&npfps=6'}
   ];
+  var RUN = 3;   // 第三轮只跑前三段（约 1 分半）：看每一步各用多久
   var WARM = 3000;
   // one tour per segment: look at the whole room, go close to 共读 (book), back, go close to 一起听 (laptop), back
   var PHASES = [['overview', 4000, null], ['book', 5000, 'book'], ['back1', 1500, 'back'], ['music', 5000, 'music'], ['back2', 1500, 'back']];
@@ -117,7 +114,8 @@
   }
   // inside the windowsill page: gaps between frames, how long the scene's own work takes each frame, and how many draws it makes
   function meter() {
-    var w = frame.contentWindow, dev = w.__WS_DEV, orig = w.requestAnimationFrame.bind(w), phase = 'warm', rec = {}, last = 0, on = true, c = w.document.getElementById('c');
+    var w = frame.contentWindow, dev = w.__WS_DEV, orig = w.requestAnimationFrame.bind(w), phase = 'warm', rec = {}, last = 0, on = true, c = w.document.getElementById('c'), prof = {};
+    w.__WS_PROF = prof.warm = {};
     function bucket() { return rec[phase] || (rec[phase] = {gaps: [], js: [], calls: [], tris: []}); }
     if (dev) dev.renderer.info.autoReset = false;
     w.requestAnimationFrame = function (cb) {
@@ -132,14 +130,16 @@
     orig(tick);
     function stat(a) { var g = a.slice().sort(function (x, y) { return x - y; }), sum = a.reduce(function (x, y) { return x + y; }, 0); return {n: a.length, avg: a.length ? sum / a.length : 0, p95: g.length ? g[Math.floor(g.length * .95)] : 0, max: g.length ? g[g.length - 1] : 0, sum: sum}; }
     return {
-      phase: function (p) { phase = p; },
+      phase: function (p) { phase = p; w.__WS_PROF = prof[p] = {}; },
       stop: function () {
-        on = false; w.requestAnimationFrame = orig; if (dev) dev.renderer.info.autoReset = true;
+        on = false; w.requestAnimationFrame = orig; w.__WS_PROF = null; if (dev) dev.renderer.info.autoReset = true;
         var out = {scale: c ? Math.round(c.width / w.innerWidth * 100) / 100 : null};
         Object.keys(rec).forEach(function (k) {
           var r = rec[k], g = stat(r.gaps), j = stat(r.js), cl = stat(r.calls), tr = stat(r.tris);
+          var steps = {}, pr = prof[k] || {}, frames = Math.max(1, r.js.length);
+          Object.keys(pr).sort(function (a, b) { return pr[b] - pr[a]; }).forEach(function (n) { steps[n] = Math.round(pr[n] / frames * 10) / 10; });
           out[k] = {fps: g.sum ? Math.round(g.n / (g.sum / 1000) * 10) / 10 : 0, worst: Math.round(g.max), slow: r.gaps.filter(function (x) { return x > 50; }).length,
-            jsAvg: Math.round(j.avg * 10) / 10, jsP95: Math.round(j.p95), calls: Math.round(cl.avg), tris: Math.round(tr.avg)};
+            jsAvg: Math.round(j.avg * 10) / 10, jsP95: Math.round(j.p95), calls: Math.round(cl.avg), tris: Math.round(tr.avg), steps: steps};
         });
         return out;
       }
@@ -162,10 +162,10 @@
 
   $('run').onclick = async function () {
     var btn = this; btn.disabled = true; var rows = [];
-    for (var i = 0; i < SEGS.length; i++) {
+    for (var i = 0; i < RUN; i++) {
       var seg = SEGS[i];
-      $('status').textContent = '第 ' + (i + 1) + ' / ' + SEGS.length + ' 段：' + seg.name + '…';
-      hud.innerHTML = (i + 1) + ' / ' + SEGS.length + '<small>' + seg.name + '</small>';
+      $('status').textContent = '第 ' + (i + 1) + ' / ' + RUN + ' 段：' + seg.name + '…';
+      hud.innerHTML = (i + 1) + ' / ' + RUN + '<small>' + seg.name + '</small>';
       var how = await open(seg), row = {id: seg.id, name: seg.name};
       if (how !== 'ready') { row.error = how === 'nogl' ? '打不开 3D' : how === 'lost' ? '画面被系统收回' : '加载太久'; rows.push(row); close(); continue; }
       apply(seg);
@@ -179,7 +179,7 @@
     }
     $('status').textContent = '测完了，正在传回电脑…';
     try {
-      var r = await fetch('report', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({round: 2, at: new Date().toISOString(), device: info, warmMs: WARM, phases: PHASES, segments: rows})});
+      var r = await fetch('report', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({round: 3, at: new Date().toISOString(), device: info, warmMs: WARM, phases: PHASES, segments: rows})});
       $('status').textContent = r.ok ? '测完了，结果已经传回电脑 ✓ 可以把自动锁定改回去了。' : '测完了，但传回电脑失败（' + r.status + '），请截图这张表发给我。';
     } catch (e) { $('status').textContent = '测完了，但传回电脑失败，请截图这张表发给我。'; }
     btn.disabled = false;

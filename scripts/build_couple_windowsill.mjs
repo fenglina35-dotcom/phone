@@ -60,6 +60,23 @@ if (testOut) {
   const np = "NP.acc += dt; if (NP.acc < (focusKey === 'music' ? 1 / 24 : 1 / 10)) return;";
   if (js.split(np).length !== 2) throw new Error('上游代码变了，找不到：' + np);
   js = js.replace(np, () => "NP.acc += dt; if (NP.acc < (focusKey === 'music' ? (window.__WS_NP_FOCUS_DT || 1 / 24) : (window.__WS_NP_DT || 1 / 10))) return;");
+  // time every step of a frame into window.__WS_PROF (the test page reads it per scene)
+  const M = n => ` __M('${n}');`;
+  for (const [from, to] of [
+    ['  stepCandle(dt, t); stepPhone(dt); stepSteam(dt, t); stepNP(dt); stepCrisp();', "  const __p = window.__WS_PROF; let __t = performance.now(); const __M = n => { if (!__p) return; const x = performance.now(); __p[n] = (__p[n] || 0) + x - __t; __t = x; };\n  __M('begin'); stepCandle(dt, t);" + M('candle') + ' stepPhone(dt);' + M('phone') + ' stepSteam(dt, t);' + M('steam') + ' stepNP(dt);' + M('laptop') + ' stepCrisp();' + M('crisp')],
+    ['  stepTod(instant ? 1 : 1 - Math.exp(-dt * 1.5));', '  stepTod(instant ? 1 : 1 - Math.exp(-dt * 1.5));' + M('daylight')],
+    ['  stepWeather(dt, t); SKYU.uT.value = t; LIFE.step(dt, t);', "  stepWeather(dt, t);" + M('weather') + ' SKYU.uT.value = t; LIFE.step(dt, t);' + M('life')],
+    ['  placeCamera(viewT);', '  placeCamera(viewT);' + M('camera')],
+    ['  stepFurin(t, dt);', '  stepFurin(t, dt);' + M('windchime')],
+    ['  FALL.step(dt, t);', '  FALL.step(dt, t);' + M('leaves')],
+    ['  PET.tick(dt); QS.step(dt, t); cardShadow.update(', '  PET.tick(dt);' + M('pet') + ' QS.step(dt, t);' + M('quicksand') + ' cardShadow.update('],
+    ['  placeTags();', '  placeTags();' + M('cardShadow+tags')],
+    ['  glassSync(); grade.uniforms.time.value = t % 10;', '  glassSync();' + M('glass') + ' grade.uniforms.time.value = t % 10;'],
+    ['  composer.render();\n  instant = false;', '  composer.render();' + M('draw') + '\n  instant = false;'],
+  ]) {
+    if (js.split(from).length !== 2) throw new Error('上游代码变了，找不到：' + from);
+    js = js.replace(from, () => to);
+  }
 }
 const result = await esbuild.build({
   stdin: {contents: js, resolveDir: tools, sourcefile: 'windowsill-scene.js', loader: 'js'},
