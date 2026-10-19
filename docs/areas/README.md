@@ -480,6 +480,8 @@ v1837/v1840（她的要求）：导入时不再用识图，每张名字她自己
 
 ## 情侣空间 · 赴约窗台（COUPLE_WINDOWSILL_V1，私人版）
 
+当前状态（私人v1846 / iOS495）：按要求暂时停用3D首页，打开情侣空间直接回到原页面。private-couple-windowsill.js入口提前返回，不包装原渲染、不注册事件或计时器、不显示窗台省电项；CoupleWindowsill.paused=true。场景和第三方源码保留，以下是暂停前的历史做法。重新启用前需先完成独立网页真机测试并与她商量。
+
 现在：私人版打开情侣空间先看到 3D「赴约 · 窗台」（唐幡 TangfanOVO 的开源作品，AGPL-3.0，她说已征得作者同意；网页版不接，接之前要作者书面授权）。上游源码原样放在 native/private-small-phone/third_party/qiaosi-windowsill（固定在 309508f1，UPSTREAM.md 写出处），我们加的只有 smallphone/shell.js。scripts/build_couple_windowsill.mjs（需要临时装 esbuild@0.24.0 和 three@0.170.0）把 three.js + 场景打成普通脚本 windowsill.js、四件模型打成 models.js，输出到 PhoneWeb.bundle/couple-windowsill/（私人 .gitignore 已放行）；App 是本地文件，不能用模块脚本和 fetch，所以 shell.js 把场景读 ./models/*.gltf.json 的请求换成打包数据。shell.js 还：省电模式（saver=1：像素密度 1、最多 30 帧）、左上角「返回」（postMessage windowsill:back）、去掉「草稿 · 演示数据」、打不开 WebGL 时通知退回旧情侣空间。
 private-couple-windowsill.js（只在私人版两个入口加载）：包装 renderCouple 和 render。首页（cur().p==='couple' 且无 list）在 .screen 里挂一个 iframe（z-index 150，在弹窗 200、提示 500、远程操控 550、来电和横幅之下），不跟着小手机重画；离开或 App 进后台就拆掉省电。右上「设置与授权」下面的小玻璃条列出正在锁着的软件和「还剩…自动解锁」（ROLE_LOCK_UNTIL_V1 要求情侣空间能看到解锁时间，核心检查会查；第一次发布前就是因为窗台盖住了这行，核心检查失败后补上的）。「设置与授权」= go('couple',{list:1})，就是原来完整的情侣空间（甜蜜日常、管控授权、伴生设备），最上面多一个窗台省电开关（S.settings.windowsillSaver）。角色远程操控用自己的模拟层，不受窗台影响。
 v1842（她第一次在手机上试后的要求）：

@@ -8,9 +8,9 @@ const pip=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/Ph
 const project=fs.readFileSync(new URL('../native/private-small-phone/XcodeProject/PhoneCompanionTest.xcodeproj/project.pbxproj',import.meta.url),'utf8');
 
 test('v1184 web source keeps private 1.0.315 compatibility',()=>{
-  assert.match(app,/APP_VER='v1842 · 窗台画质退回492'/);
-  assert.match(project,/CURRENT_PROJECT_VERSION = 494;/);
-  assert.match(project,/MARKETING_VERSION = 1.0.494;/);
+  assert.match(app,/APP_VER='v1843 · 恢复原情侣空间'/);
+  assert.match(project,/CURRENT_PROJECT_VERSION = 495;/);
+  assert.match(project,/MARKETING_VERSION = 1.0.495;/);
 });
 
 test('public music search needs no user login and reuses together-listen songs',()=>{

@@ -1,12 +1,26 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import vm from 'node:vm';
 
 // COUPLE_WINDOWSILL_V1: the private couple space opens on 唐幡's 3D "赴约 · 窗台" (AGPL-3.0, private app only).
 const P = 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/';
 const T = 'native/private-small-phone/third_party/qiaosi-windowsill/';
 const url = name => new URL('../' + name, import.meta.url);
 const read = name => fs.readFileSync(url(name), 'utf8');
+
+test('temporarily paused windowsill preserves the original couple renderer without listeners or timers', () => {
+  const renderCouple = () => '<div>原来的情侣空间</div>';
+  const render = () => renderCouple();
+  const context = {renderCouple, render, window: {}};
+  vm.runInNewContext(read(P + 'private-couple-windowsill.js'), context);
+  assert.equal(context.renderCouple, renderCouple);
+  assert.equal(context.render, render);
+  assert.equal(context.render(), '<div>原来的情侣空间</div>');
+  assert.equal(context.window.CoupleWindowsill.mounted(), false);
+  assert.equal(context.window.CoupleWindowsill.paused, true);
+  context.window.CoupleWindowsill.sync();
+});
 
 test('the upstream scene is kept with its licence and origin', () => {
   assert.match(read(T + 'LICENSE'), /GNU AFFERO GENERAL PUBLIC LICENSE/);

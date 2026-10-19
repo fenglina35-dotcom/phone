@@ -13,6 +13,10 @@
    - 桌宠小橘：每两秒把桌宠现在的表情指令（角色或她让它做的）、心情和名字报给窗台，透卡上的小橘跟着变。 */
 (function () {
   'use strict';
+  // COUPLE_WINDOWSILL_PAUSED_V1：按要求暂时恢复原情侣空间；保留场景，独立网页测试后再讨论启用。
+  // 在包装渲染和注册监听器之前退出，不创建 iframe、计时器或省电设置入口。
+  window.CoupleWindowsill = {paused: true, sync: function () {}, mounted: function () { return false; }};
+  return;
   if (typeof renderCouple !== 'function' || typeof render !== 'function') return;
   var frame = null, holder = null, failed = false, reloads = 0, ready = false, ticker = 0, sentSong = null;
 

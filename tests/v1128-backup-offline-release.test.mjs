@@ -27,15 +27,15 @@ function functionSource(name){
 }
 
 test('v1178 has a unique visible identity across every public entry and cache layer',()=>{
-  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1842\'/);
-  assert.match(app,/APP_VER='v1842 · 窗台画质退回492'/);
-  assert.match(shell,/__NORTH_SHELL_BUILD__='1842'/);
-  assert.match(shell,/app\.js\?v=1842&r=v1842-owner-todo-report-1/);
-  assert.match(index,/小手机\.html\?v=1842/);
-  assert.match(repair,/小手机\.html\?v=1842/);
-  assert.match(worker,/const BUILD='1842'/);
-  assert.match(worker,/north-shell-v1842-owner-todo-report-1/);
-  assert.match(hotfix,/sw\.js\?v=1842&r=v1842-owner-todo-report-1/);
+  assert.match(app,/__NORTH_SHELL_BUILD__!==\'1843\'/);
+  assert.match(app,/APP_VER='v1843 · 恢复原情侣空间'/);
+  assert.match(shell,/__NORTH_SHELL_BUILD__='1843'/);
+  assert.match(shell,/app\.js\?v=1843&r=v1843-owner-todo-report-1/);
+  assert.match(index,/小手机\.html\?v=1843/);
+  assert.match(repair,/小手机\.html\?v=1843/);
+  assert.match(worker,/const BUILD='1843'/);
+  assert.match(worker,/north-shell-v1843-owner-todo-report-1/);
+  assert.match(hotfix,/sw\.js\?v=1843&r=v1843-owner-todo-report-1/);
   for(const [name,source] of Object.entries({app,shell,index,repair,worker,hotfix})){
     assert.doesNotMatch(source,/v?1127/,`${name} must not reuse the prior web version`);
   }
