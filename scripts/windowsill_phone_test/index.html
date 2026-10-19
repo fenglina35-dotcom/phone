@@ -24,7 +24,7 @@
   table{width:100%;border-collapse:collapse;font-size:13px;margin-top:10px}
   th,td{border-bottom:1px solid var(--line);padding:7px 4px;text-align:left;vertical-align:top}
   th{color:var(--sub);font-weight:500}
-  td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
   .good{color:var(--ok)} .poor{color:var(--bad)}
   #status{color:var(--sub);font-size:13px;margin-top:8px;min-height:1.6em}
   #stage{position:fixed;inset:0;z-index:10;display:none;background:#0d0b0a}
@@ -43,7 +43,7 @@
   <section>
     <h2>测之前</h2>
     <ol>
-      <li>让手机凉一会儿，别边充电边测。</li>
+      <li>像平时用的样子测就行，充不充电都可以（充电时也要顺才算数）。</li>
       <li>关掉低电量模式。</li>
       <li>屏幕别自动锁：<b>设置 → 显示与亮度 → 自动锁定</b> 先选「永不」，测完改回来。</li>
       <li>测的时候别碰屏幕，放平就行。</li>
@@ -53,7 +53,7 @@
 
   <section>
     <h2>一、自动测速（约 4 分钟）</h2>
-    <p class="sub">窗台会自己换九种画质，每种开一次、镜头自己凑近两样东西再退回，记下每秒画了几帧。</p>
+    <p class="sub">窗台会自己换九种做法，每种开一次：先看全景，再凑近「共读」、凑近「一起听」，分开记下每秒画了几张。</p>
     <button id="run">开始自动测速</button>
     <div id="status"></div>
     <div id="table"></div>
@@ -71,19 +71,22 @@
 <script>
 (function () {
   'use strict';
-  // 九段：App 现在的设置、四档清晰度（不让它自动降档，好比较）、在 1.6 上分别关掉三样费力的效果，最后再测一次 App 设置看手机有没有变烫变慢
+  // 第二轮：清晰度几乎不影响快慢，所以测「每张画面都要做的固定功夫」：
+  // 影子只画一次（freeze）、去掉影子细节（gtao）、去掉景深虚化（bokeh）、电脑屏幕少刷新（npfps），以及全部一起
   var SEGS = [
     {id: 'app', name: '现在 App 里的设置', q: 'dpr=2&lowfps=22&lowpr=1.5'},
-    {id: 'd2', name: '清晰度 2', q: 'dpr=2&lowfps=1'},
-    {id: 'd16', name: '清晰度 1.6（作者原值）', q: 'dpr=1.6&lowfps=1'},
-    {id: 'd125', name: '清晰度 1.25', q: 'dpr=1.25&lowfps=1'},
-    {id: 'd1', name: '清晰度 1', q: 'dpr=1&lowfps=1'},
-    {id: 'noao', name: '1.6，关掉阴影细节', q: 'dpr=1.6&lowfps=1', off: ['gtao']},
-    {id: 'nodof', name: '1.6，关掉景深虚化', q: 'dpr=1.6&lowfps=1', off: ['bokeh']},
-    {id: 'noglass', name: '1.6，关掉玻璃效果', q: 'dpr=1.6&lowfps=1', off: ['glass']},
+    {id: 'd1', name: '清晰度 1（最糊）', q: 'dpr=1&lowfps=1'},
+    {id: 'd16', name: '清晰度 1.6', q: 'dpr=1.6&lowfps=1'},
+    {id: 'freeze', name: '1.6，影子只画一次', q: 'dpr=1.6&lowfps=1', freeze: true},
+    {id: 'freeze-ao', name: '1.6，影子只画一次＋去掉影子细节', q: 'dpr=1.6&lowfps=1', freeze: true, off: ['gtao']},
+    {id: 'freeze-ao-dof', name: '同上＋去掉景深虚化', q: 'dpr=1.6&lowfps=1', freeze: true, off: ['gtao', 'bokeh']},
+    {id: 'np6', name: '1.6，电脑屏幕少刷新', q: 'dpr=1.6&lowfps=1&npfps=6'},
+    {id: 'all', name: '1.6，以上全部一起', q: 'dpr=1.6&lowfps=1&npfps=6', freeze: true, off: ['gtao', 'bokeh']},
     {id: 'app2', name: '再测一次 App 设置（看有没有变慢）', q: 'dpr=2&lowfps=22&lowpr=1.5'}
   ];
-  var WARM = 3000, MEASURE = 15000;
+  var WARM = 3000;
+  // one tour per segment: look at the whole room, go close to 共读 (book), back, go close to 一起听 (laptop), back
+  var PHASES = [['overview', 4000, null], ['book', 5000, 'book'], ['back1', 1500, 'back'], ['music', 5000, 'music'], ['back2', 1500, 'back']];
   var stage = document.getElementById('stage'), frame = stage.querySelector('iframe'), hud = document.getElementById('hud');
   var $ = function (id) { return document.getElementById(id); };
   var info = {ua: navigator.userAgent, dpr: window.devicePixelRatio, screen: screen.width + '×' + screen.height};
@@ -107,47 +110,54 @@
     });
   }
   function close() { frame.src = 'about:blank'; stage.classList.remove('on'); hud.textContent = ''; }
-  function passesOff(seg) {
-    var w = frame.contentWindow, dev = w && w.__WS_DEV;
-    (seg.off || []).forEach(function (k) { if (dev && dev[k]) dev[k].enabled = false; });
+  function apply(seg) {
+    var dev = frame.contentWindow && frame.contentWindow.__WS_DEV; if (!dev) return;
+    (seg.off || []).forEach(function (k) { if (dev[k]) dev[k].enabled = false; });
+    if (seg.freeze) { dev.renderer.shadowMap.autoUpdate = false; dev.renderer.shadowMap.needsUpdate = true; }
   }
-  // frame gaps measured inside the windowsill page itself
+  // inside the windowsill page: gaps between frames, how long the scene's own work takes each frame, and how many draws it makes
   function meter() {
-    var w = frame.contentWindow, gaps = [], last = 0, on = true, c = w.document.getElementById('c'), widths = {};
-    function tick(now) { if (!on) return; if (last) gaps.push(now - last); last = now; if (c) widths[c.width + '×' + c.height] = 1; w.requestAnimationFrame(tick); }
-    w.requestAnimationFrame(tick);
+    var w = frame.contentWindow, dev = w.__WS_DEV, orig = w.requestAnimationFrame.bind(w), phase = 'warm', rec = {}, last = 0, on = true, c = w.document.getElementById('c');
+    function bucket() { return rec[phase] || (rec[phase] = {gaps: [], js: [], calls: [], tris: []}); }
+    if (dev) dev.renderer.info.autoReset = false;
+    w.requestAnimationFrame = function (cb) {
+      return orig(function (t) {
+        if (dev) dev.renderer.info.reset();
+        var s = performance.now(); cb(t); var b = bucket();
+        b.js.push(performance.now() - s);
+        if (dev) { b.calls.push(dev.renderer.info.render.calls); b.tris.push(dev.renderer.info.render.triangles); }
+      });
+    };
+    function tick(now) { if (!on) return; if (last) bucket().gaps.push(now - last); last = now; orig(tick); }
+    orig(tick);
+    function stat(a) { var g = a.slice().sort(function (x, y) { return x - y; }), sum = a.reduce(function (x, y) { return x + y; }, 0); return {n: a.length, avg: a.length ? sum / a.length : 0, p95: g.length ? g[Math.floor(g.length * .95)] : 0, max: g.length ? g[g.length - 1] : 0, sum: sum}; }
     return {
-      gaps: gaps,
+      phase: function (p) { phase = p; },
       stop: function () {
-        on = false;
-        var g = gaps.slice().sort(function (a, b) { return a - b; }), total = gaps.reduce(function (a, b) { return a + b; }, 0);
-        return {
-          fps: total ? Math.round(gaps.length / (total / 1000) * 10) / 10 : 0,
-          p95: g.length ? Math.round(g[Math.floor(g.length * .95)]) : null,
-          worst: g.length ? Math.round(g[g.length - 1]) : null,
-          slow: gaps.filter(function (x) { return x > 50; }).length,
-          frames: gaps.length,
-          canvas: Object.keys(widths),
-          scale: c ? Math.round(c.width / w.innerWidth * 100) / 100 : null
-        };
+        on = false; w.requestAnimationFrame = orig; if (dev) dev.renderer.info.autoReset = true;
+        var out = {scale: c ? Math.round(c.width / w.innerWidth * 100) / 100 : null};
+        Object.keys(rec).forEach(function (k) {
+          var r = rec[k], g = stat(r.gaps), j = stat(r.js), cl = stat(r.calls), tr = stat(r.tris);
+          out[k] = {fps: g.sum ? Math.round(g.n / (g.sum / 1000) * 10) / 10 : 0, worst: Math.round(g.max), slow: r.gaps.filter(function (x) { return x > 50; }).length,
+            jsAvg: Math.round(j.avg * 10) / 10, jsP95: Math.round(j.p95), calls: Math.round(cl.avg), tris: Math.round(tr.avg)};
+        });
+        return out;
       }
     };
   }
-  // the same small tour in every segment: look at the book, back, look at the laptop, back
-  async function tour(w, ms) {
-    var steps = [[0, function () { w.__fy.tapKey('book'); }], [5000, back], [8000, function () { w.__fy.tapKey('music'); }], [12500, back]];
-    function back() { var b = w.document.getElementById('back'); if (b) b.click(); }
-    var t0 = Date.now();
-    for (var i = 0; i < steps.length; i++) { var wait = steps[i][0] - (Date.now() - t0); if (wait > 0) await sleep(wait); try { steps[i][1](); } catch (e) {} }
-    var rest = ms - (Date.now() - t0); if (rest > 0) await sleep(rest);
+  async function tour(w, m) {
+    for (var i = 0; i < PHASES.length; i++) {
+      var p = PHASES[i];
+      try { if (p[2] === 'back') { var b = w.document.getElementById('back'); if (b) b.click(); } else if (p[2]) w.__fy.tapKey(p[2]); } catch (e) {}
+      m.phase(p[0]); await sleep(p[1]);
+    }
   }
   function cls(fps) { return fps >= 50 ? 'good' : fps < 30 ? 'poor' : ''; }
+  function cell(x) { return x && x.fps != null ? '<td class="n ' + cls(x.fps) + '">' + x.fps + '</td>' : '<td class="n">—</td>'; }
   function table(rows) {
-    var h = '<table><tr><th>画质</th><th class="n">每秒帧数</th><th class="n">最卡一下</th><th class="n">卡顿次数</th></tr>';
-    rows.forEach(function (r) {
-      h += '<tr><td>' + r.name + (r.error ? '（' + r.error + '）' : '') + '</td><td class="n ' + cls(r.fps) + '">' + (r.fps == null ? '—' : r.fps) + '</td><td class="n">' + (r.worst == null ? '—' : r.worst + 'ms') + '</td><td class="n">' + (r.slow == null ? '—' : r.slow) + '</td></tr>';
-    });
-    return h + '</table><p class="sub">「最卡一下」是最长的一帧用了多久；「卡顿次数」是超过 50ms 的帧（看得出顿一下）。</p>';
+    var h = '<table><tr><th>做法</th><th class="n">全景</th><th class="n">共读</th><th class="n">一起听</th></tr>';
+    rows.forEach(function (r) { h += '<tr><td>' + r.name + (r.error ? '（' + r.error + '）' : '') + '</td>' + cell(r.overview) + cell(r.book) + cell(r.music) + '</tr>'; });
+    return h + '</table><p class="sub">数字是每秒画了几张：60 最顺，30 以下会觉得卡。更细的数（每张用了多久、画了几遍）已经一起传回电脑。</p>';
   }
 
   $('run').onclick = async function () {
@@ -158,10 +168,10 @@
       hud.innerHTML = (i + 1) + ' / ' + SEGS.length + '<small>' + seg.name + '</small>';
       var how = await open(seg), row = {id: seg.id, name: seg.name};
       if (how !== 'ready') { row.error = how === 'nogl' ? '打不开 3D' : how === 'lost' ? '画面被系统收回' : '加载太久'; rows.push(row); close(); continue; }
-      passesOff(seg);
+      apply(seg);
       await sleep(WARM);
       var w = frame.contentWindow, m = meter();
-      await tour(w, MEASURE);
+      await tour(w, m);
       Object.assign(row, m.stop());
       rows.push(row); close();
       $('table').innerHTML = table(rows);
@@ -169,13 +179,13 @@
     }
     $('status').textContent = '测完了，正在传回电脑…';
     try {
-      var r = await fetch('report', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({at: new Date().toISOString(), device: info, warmMs: WARM, measureMs: MEASURE, segments: rows})});
+      var r = await fetch('report', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({round: 2, at: new Date().toISOString(), device: info, warmMs: WARM, phases: PHASES, segments: rows})});
       $('status').textContent = r.ok ? '测完了，结果已经传回电脑 ✓ 可以把自动锁定改回去了。' : '测完了，但传回电脑失败（' + r.status + '），请截图这张表发给我。';
     } catch (e) { $('status').textContent = '测完了，但传回电脑失败，请截图这张表发给我。'; }
     btn.disabled = false;
   };
 
-  // manual: open one setting and look around, with frames per second in the corner
+  // manual: open one way of drawing and look around, with pictures per second at the top
   var live = null;
   SEGS.slice(0, 8).forEach(function (seg) {
     var b = document.createElement('button'); b.className = 'ghost'; b.type = 'button'; b.textContent = seg.name;
@@ -183,15 +193,12 @@
       hud.innerHTML = '打开中…';
       var how = await open(seg);
       if (how !== 'ready') { hud.textContent = how === 'nogl' ? '打不开 3D' : '加载失败'; return; }
-      passesOff(seg);
-      var w = frame.contentWindow, c = w.document.getElementById('c'), n = 0, t0 = performance.now(), worst = 0, last = 0;
+      apply(seg);
+      var w = frame.contentWindow, n = 0, t0 = performance.now(), worst = 0, last = 0;
       live = true;
       (function tick(now) {
         if (!live) return; n++; if (last) worst = Math.max(worst, now - last); last = now;
-        if (now - t0 >= 500) {
-          hud.innerHTML = Math.round(n / ((now - t0) / 1000)) + ' 帧/秒<small>' + seg.name + ' · 最卡 ' + Math.round(worst) + 'ms</small>';
-          n = 0; t0 = now; worst = 0;
-        }
+        if (now - t0 >= 500) { hud.innerHTML = Math.round(n / ((now - t0) / 1000)) + ' 帧/秒<small>' + seg.name + ' · 最卡 ' + Math.round(worst) + 'ms</small>'; n = 0; t0 = now; worst = 0; }
         w.requestAnimationFrame(tick);
       })(performance.now());
     };
