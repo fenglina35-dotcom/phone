@@ -3273,3 +3273,5 @@ NORTH_PHONE_MONITOR=1复用既有QA，双端真实页面/来源不变/主体与�
 2026-10-20 按用户要求安装：网页v1844 / 私人v1847 / iOS496，CHAT_SEND_KEEP_HISTORY_V1修复进入本次发布，3D窗台继续停用。此前完整4452项及两种核心聊天检查通过；发布版本身份已升级，最终发布复验进行中，尚未安装。
 
 2026-10-20 安装完成：网页v1844 / 私人v1847 / iOS496，源码8e8b8a50已推main。最终完整4452/4452及核心聊天普通/查岗预览均通过；从干净提交Release编译BUILD SUCCEEDED，安装包app.js、private-couple-windowsill.js、index.html与提交逐字节相同。已覆盖安装iPhone15，devicectl读回com.qianyi.PhoneCompanionTest 1.0.496 (496)。3D继续停用，聊天数据不改；发送闪空白实际体验待用户确认。仅清理本轮两张自动测试截图及空.codex_tmp目录，无新工作树或源码副本。
+
+2026-10-20 网页v1845 / 私人v1848 / iOS497（提交 d4b3945d）：临时发送记录器 SEND_DIAG_V1，查情侣角色发文字时旧消息闪一下。全部测试 4452 项通过，核心聊天检查两种模式通过；已装到她的 iPhone（devicectl 核对 1.0.497 (497)）。等她发几条后用 devicectl 读 __send_diag.json；修好后删除记录器。
