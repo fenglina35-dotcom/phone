@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1846'){
+if(window.__NORTH_SHELL_BUILD__!=='1847'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -640,7 +640,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1846 · 恢复原情侣空间';
+const APP_VER='v1847 · 发送保留聊天';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -16071,7 +16071,7 @@ function chatVoiceToggle(){_voiceMode=!_voiceMode;const ta=$('#cinput'),bar=ta&&
 function sendText(id){if(wxLoginActive()){toast('微信被ta登录中，你暂时不能操作');return;}const c=getC(id);if(c.blocked){toast('已拉黑，先解除吧');return;}
   if(c._cbTries)c._cbTries=0;// 她主动发消息=重新搭理ta，回拨追逐结束、计数清零
   const ta=$('#cinput');const t=ta.value.trim();if(!t)return;ta.value='';ta.style.height='auto';chatComposerStateSync(ta);
-  const q=(S.settings.quoteOn!==false&&_quoting&&_quoting.id===id)?{text:_quoting.text,who:_quoting.who}:null;_quoting=null;
+  const q=(S.settings.quoteOn!==false&&_quoting&&_quoting.id===id)?{text:_quoting.text,who:_quoting.who}:null;_quoting=null;quoteComposerRefresh(id);
   if(_voiceMode)pushMsg(id,{role:'user',type:'voice',content:t,dur:Math.max(1,Math.round(t.length/3)),id:uid(),quote:q});
   else pushMsg(id,{role:'user',type:'text',content:t,quote:q});
   wechatContinueUserText(id,t);}
@@ -17830,13 +17830,14 @@ function scheduleReply(id,note,onDone,replyAid){
   const aid=replyAid||actId(),k=replyStateKey(id,aid);if(featureEventAutoActive(note)&&!featureEventNoteActive(note))note=featureEventNote('真实操作变化',note);if(featureEventNoteActive(note))featureEventQueueAdd(id,note,aid);const queuedFeature=featureEventQueueEntries(id,aid);if(queuedFeature.length){clearTimeout(_replyFeatureTimers[k]);delete _replyFeatureTimers[k];note=featureEventQueueMerge(id,note,aid);}const replyIntent=offlineReplyIntent(id,note);if(offlineReplyBlocked(replyIntent,id)){if(typeof onDone==='function')onDone(false);return false;}
   if(typeof cinemaRoleOccupied==='function'&&cinemaRoleOccupied(id)){if(typeof onDone==='function')onDone(false);return false;}
   if(wxLoginBlockReply(id,note)){if(typeof onDone==='function')onDone(false);return false;}
-  if(!wxLoginCompletionFeature(note)&&typeof roleBusyDeferReply==='function'&&roleBusyDeferReply(id,note,aid)){if(cur().p==='chat'&&cur().id===id)render();return true;}
+  /* CHAT_SEND_KEEP_HISTORY_V1：消息已由pushMsg追加，等待回复只更新按钮，保留旧消息与图片节点。 */
+  if(!wxLoginCompletionFeature(note)&&typeof roleBusyDeferReply==='function'&&roleBusyDeferReply(id,note,aid)){replyGenerationRefresh(id,aid);return true;}
   if(note&&_call&&_call.state==='active'&&_call.id===id&&/任务|便签|没完成|未完成|完成|验收|奖励|惩罚|罚/.test(note)){
     callAI(String(note).replace(/\]\s*$/,'\n【重要·此刻正在通话中】你们正在通话，这件事必须在电话里直接说，绝对不要另发微信消息。]'));
     if(typeof onDone==='function')onDone(true);return true;
   }
   // 手动回复模式：回应"我发的消息"(无note)时不自动回，等我点「让ta回复」；主动找我的(带note/系统触发)照常自动
-  if(!note&&manualReplySceneOn('wechat')){if(cur().p==='chat'&&cur().id===id)render();if(typeof onDone==='function')onDone(false);return false;}
+  if(!note&&manualReplySceneOn('wechat')){replyGenerationRefresh(id,aid);if(typeof onDone==='function')onDone(false);return false;}
   const token=replyEpoch(id,aid);clearTimeout(_replyTimers[k]);if(_replyDone[k]){const prev=_replyDone[k];delete _replyDone[k];try{prev(false);}catch(_){}}delete _replyDeferred[k];if(typeof onDone==='function')_replyDone[k]=onDone;_replyTimers[k]=setTimeout(async()=>{delete _replyTimers[k];const done=_replyDone[k];delete _replyDone[k];if(actId()!==aid){deferAccountReply(id,note,token,aid);if(done)done(false);return;}let success=false;try{success=(await aiReply(id,note,token,aid,replyIntent))===true;if(!success&&featureEventNoteActive(note)&&!replyStale(id,token,aid)&&actId()===aid&&!rolePhoneInspectionBlocksOrdinary(id)&&!wxLoginActive()){await sleep(180);const retryNote=note+'\n[本次仅重试一次：上一版没有形成任何用户能看到的消息。继续使用上面同一份真实事件和最新上下文，用角色本人语气自然发出一至三条内容；不要重复已回复的旧句，不要解释重试。]';success=(await aiReply(id,retryNote,token,aid,'user'))===true;}if(!success&&friendAcceptedAutoNote(note))success=friendAcceptedLocalFallback(id,note,aid);}catch(_){if(friendAcceptedAutoNote(note))success=friendAcceptedLocalFallback(id,note,aid);}featureEventQueueAck(id,aid,note,success);if(done)done(success);},queuedFeature.length?Math.min(220,(Number(S.settings.replyDelay)||0)*1000):(Number(S.settings.replyDelay)||0)*1000);return true;}
 function manualReplyRetryAllowed(id,aid,token){const c=getC(id);return !!(c&&!c.blocked&&!c.deleted&&actId()===aid&&!replyStale(id,token,aid)&&!cinemaRoleOccupied(id)&&!wxLoginBlockReply(id));}
 function manualReply(id){

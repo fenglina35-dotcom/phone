@@ -47,18 +47,18 @@ function functionSource(sourceText, name) {
 
 test('private identifiers remain v1355 and iOS 399 while public advances independently', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1846'/);
-  assert.match(index, /app\.js\?v=1846&r=v1846-private-package-1/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1847'/);
+  assert.match(index, /app\.js\?v=1847&r=v1847-private-package-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(app, /APP_VER='v1846 · 恢复原情侣空间'/);
+  assert.match(app, /APP_VER='v1847 · 发送保留聊天'/);
   assert.match(overlay, /336-daily-file-backup/);
-  assert.match(webview, /1\.0\.495 \(495\)/);
-  assert.match(bridge, /private static let build = "1\.0\.495 \(495\)"/);
+  assert.match(webview, /1\.0\.496 \(496\)/);
+  assert.match(bridge, /private static let build = "1\.0\.496 \(496\)"/);
   assert.match(bridge, /static let contractVersion = 42/);
-  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 495;/g) || []).length, 12);
-  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.495;/g) || []).length, 12);
-  assert.match(publicApp, /APP_VER='v1843 · 恢复原情侣空间'/);
-  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1843'/);
+  assert.equal((pbx.match(/CURRENT_PROJECT_VERSION = 496;/g) || []).length, 12);
+  assert.equal((pbx.match(/MARKETING_VERSION = 1\.0\.496;/g) || []).length, 12);
+  assert.match(publicApp, /APP_VER='v1844 · 发送保留聊天'/);
+  assert.match(publicEntry, /window\.__NORTH_SHELL_BUILD__='1844'/);
   assert.doesNotMatch(publicApp, /licenseManagedIdentitySyncPlan/);
 });
 
@@ -160,7 +160,7 @@ test('Mac guide identifies the current private v1356 iOS422 source', () => {
     assert.match(guide, /Mac.*编译/);
     assert.match(guide, /真机|真实 iPhone/);
   }
-  assert.match(mac, /1\.0\.495 \(495\)/);
+  assert.match(mac, /1\.0\.496 \(496\)/);
   assert.match(mac, /原生桥.*38/);
   assert.match(install, /1\.0\.327 \(327\)/);
   assert.match(install, /原生桥.*35/);
