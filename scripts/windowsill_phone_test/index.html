@@ -80,6 +80,12 @@
     {id: 'freeze-ao-dof', name: '同上＋去掉景深虚化', q: 'dpr=1.6&lowfps=1', freeze: true, off: ['gtao', 'bokeh']},
     {id: 'np6', name: '1.6，电脑屏幕少刷新', q: 'dpr=1.6&lowfps=1&npfps=6'}
   ];
+  // 第三轮后她觉得「影子只画一次＋去影子细节＋去景深」最顺：给「自己试看」加三种推荐做法，先看好看不好看、顺不顺
+  var PICKS = [
+    {id: 'rec16', name: '推荐做法，清晰度 1.6', q: 'dpr=1.6&lowfps=1', freeze: true, off: ['gtao', 'bokeh']},
+    {id: 'rec2', name: '推荐做法，清晰度 2（更清楚）', q: 'dpr=2&lowfps=1', freeze: true, off: ['gtao', 'bokeh']},
+    {id: 'rec30', name: '推荐做法，稳定每秒 30 张', q: 'dpr=1.6&lowfps=1&cap=30', freeze: true, off: ['gtao', 'bokeh']}
+  ];
   var RUN = 3;   // 第三轮只跑前三段（约 1 分半）：看每一步各用多久
   var WARM = 3000;
   // one tour per segment: look at the whole room, go close to 共读 (book), back, go close to 一起听 (laptop), back
@@ -187,20 +193,24 @@
 
   // manual: open one way of drawing and look around, with pictures per second at the top
   var live = null;
-  SEGS.slice(0, 8).forEach(function (seg) {
+  PICKS.concat(SEGS.slice(0, 3)).forEach(function (seg) {
     var b = document.createElement('button'); b.className = 'ghost'; b.type = 'button'; b.textContent = seg.name;
     b.onclick = async function () {
       hud.innerHTML = '打开中…';
       var how = await open(seg);
       if (how !== 'ready') { hud.textContent = how === 'nogl' ? '打不开 3D' : '加载失败'; return; }
       apply(seg);
-      var w = frame.contentWindow, n = 0, t0 = performance.now(), worst = 0, last = 0;
-      live = true;
-      (function tick(now) {
-        if (!live) return; n++; if (last) worst = Math.max(worst, now - last); last = now;
-        if (now - t0 >= 500) { hud.innerHTML = Math.round(n / ((now - t0) / 1000)) + ' 帧/秒<small>' + seg.name + ' · 最卡 ' + Math.round(worst) + 'ms</small>'; n = 0; t0 = now; worst = 0; }
-        w.requestAnimationFrame(tick);
-      })(performance.now());
+      // count the pictures the scene really draws (works with the 30-a-second limit too), shown twice a second
+      var w = frame.contentWindow, dev = w.__WS_DEV, n = 0, t0 = performance.now(), worst = 0, last = 0;
+      var render = dev.composer.render.bind(dev.composer);
+      dev.composer.render = function () { var now = performance.now(); n++; if (last) worst = Math.max(worst, now - last); last = now; return render.apply(null, arguments); };
+      live = true; clearInterval(window.__hudTimer);
+      window.__hudTimer = setInterval(function () {
+        if (!live) { clearInterval(window.__hudTimer); return; }
+        var now = performance.now();
+        hud.innerHTML = Math.round(n / ((now - t0) / 1000)) + ' 帧/秒<small>' + seg.name + ' · 最卡 ' + Math.round(worst) + 'ms</small>';
+        n = 0; t0 = now; worst = 0;
+      }, 500);
     };
     $('manual').appendChild(b);
   });
