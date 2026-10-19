@@ -1,4 +1,4 @@
-if(window.__NORTH_SHELL_BUILD__!=='1845'){
+if(window.__NORTH_SHELL_BUILD__!=='1846'){
   if(typeof window.__northBootFail==='function')window.__northBootFail('页面与脚本版本不一致，请修复页面缓存');
   throw new Error('North shell version mismatch');
 }
@@ -616,7 +616,7 @@ function gateOK(){if(NORTH_PREVIEW)return true;if(!SHARE_GATE)return true;try{
   if(window.NorthLicense&&NorthLicense.session())return true;
   return localStorage.getItem('yibei_unlocked')===String(SHARE_EPOCH);
 }catch(e){return false;}}
-const APP_VER='v1845 · 发送诊断';
+const APP_VER='v1846 · 发送不闪';
 const VOICE_MAX_CHARS=300;
 const VOICE_MAX_SECONDS=60;
 const VOICE_AUDIO_TTL_MS=24*60*60*1000;
@@ -2120,7 +2120,7 @@ function northUpdateAvailable(build){build=String(build||'').replace(/\D/g,'');c
 function northUpdateCheck(reg){if(!reg)return;try{const worker=reg.active||navigator.serviceWorker.controller;if(worker)worker.postMessage({type:'north-version-query'});}catch(_){}return Promise.resolve().then(()=>reg.update()).catch(()=>{});}
 function appServiceWorkerMessage(e){const d=e&&e.data||{};if(d.type==='north-update-ready'){northUpdateAvailable(d.build);return;}appRouteFromNotify(d);}
 function registerSW(){if(_swReady)return _swReady;if(NORTH_PREVIEW||!('serviceWorker'in navigator)||location.protocol==='file:')return Promise.resolve(null);
-  const url='sw.js?v=1845&r=v1845-owner-todo-report-1';
+  const url='sw.js?v=1846&r=v1846-owner-todo-report-1';
   if(!_swEventsBound){_swEventsBound=true;navigator.serviceWorker.addEventListener('message',appServiceWorkerMessage);}
   _swReady=navigator.serviceWorker.register(url,{updateViaCache:'none'}).catch(()=>navigator.serviceWorker.register(url)).then(reg=>{const ask=()=>northUpdateCheck(reg);ask();setTimeout(ask,800);const watch=()=>{const worker=reg.installing;if(worker)worker.addEventListener('statechange',()=>{if(worker.state==='activated')ask();});};reg.addEventListener('updatefound',watch);watch();navigator.serviceWorker.addEventListener('controllerchange',ask);window.addEventListener('pageshow',ask);document.addEventListener('visibilitychange',()=>{if(!document.hidden)ask();});setInterval(()=>reg.update().catch(()=>{}),15*60*1000);return reg;}).catch(()=>null);
   return _swReady;}
@@ -10783,7 +10783,11 @@ function cohabCallRestricted(id){const r=S&&S.cohabitation;return !!(id&&r&&r.en
 function explicitIncomingCallRequest(text){let t=String(text||'').replace(/[\s，。！？!?、；;：“”"']/g,'');if(!t)return false;t=t.replace(/^(?:好吧|那|行|可以|嗯|好)+/,'');return /^(?:(?:我(?:想|要|现在想)?(?:让|叫)你|请你|你))?(?:现在|马上|一会儿|等下|待会儿)?(?:可以|能不能|可不可以)?(?:给我(?:打|拨|发起|开)(?:个|一个|一通)?(?:语音|视频)?(?:电话|通话)|给我(?:打|拨)(?:电话)?过来|(?:打|拨)(?:个|一个|一通)?(?:语音|视频)?(?:电话|通话)?给我|(?:打|拨)(?:电话)?过来|给我来(?:个|一个|一通)?(?:语音|视频)?电话)(?:吧|吗|好不好)?$/.test(t);}
 function roleOnlineLiveStateText(c){if(!c)return'';const name=c.remark||c.name||'角色',user=S.me&&S.me.name||'用户',o=offlineWechatLiveState(c),d=cohabWechatState(c);if(o)return '【实时状态】'+user+'和'+name+'正在同一场线下约会现场，普通微信主动消息必须静默；若'+user+'主动从微信发来消息，只能理解为约会间隙拿起手机，不代表分开或许久未联系。地点'+(S.settings.timeAware?'/时间：'+[o.loc,o.when,o.daypart].filter(Boolean).join(' · '):'：'+String(o.loc||'当前约会地点'));if(d){const together=cohabTogetherScene(d),fact=cohabPhaseFact(d);return '【实时状态】共同生活已开启且未暂停，'+user+'和'+name+'当前为持续同居/共同生活；当前状态【'+cohabStatusLabel(d)+'】。'+fact+(together?' 现在两人面对面在一起；伴生后台生成的普通文字消息仍可照常送到线上微信，但必须理解这是共同生活中的线上消息，绝不能催回复、假装异地、分居、等待落地或很久没见。':' 这是同居中的短暂分开，可以自然发消息；不能说恢复异地或分居。')+' 共同生活开启期间不得在没有当前命令时自行来电；只有'+user+'在当前消息里明确要求你给ta打语音或视频电话时，你才可以按本人性格、情绪和电话频率决定是否输出来电动作，不打也可以。';}return'';}
 const _roleServerTouchTimers={};
-function roleServerPushTouchSoon(id,activityAt){id=String(id||'');if(!id)return;const at=+activityAt||Date.now(),old=_roleServerTouchTimers[id];if(old)clearTimeout(old.timer);_roleServerTouchTimers[id]={at:Math.max(at,old&&old.at||0),timer:setTimeout(()=>{const row=_roleServerTouchTimers[id];delete _roleServerTouchTimers[id];if(row&&typeof roleServerPushTouchActivity==='function')roleServerPushTouchActivity(id,row.at,true);},260)};}
+function roleServerPushTouchSoon(id,activityAt,delay){id=String(id||'');if(!id)return;const at=+activityAt||Date.now(),old=_roleServerTouchTimers[id];if(old)clearTimeout(old.timer);_roleServerTouchTimers[id]={at:Math.max(at,old&&old.at||0),timer:setTimeout(()=>{const row=_roleServerTouchTimers[id];delete _roleServerTouchTimers[id];if(row&&typeof roleServerPushTouchActivity==='function')roleServerPushTouchActivity(id,row.at,true);},delay>0?delay:260)};}
+/* SEND_TOUCH_DEFER_V1：她发消息时，通知服务器「刚聊过」要整理一遍最近聊天（情侣角色在手机上要几百毫秒），以前在发送那一刻同步做，手机来不及画，旧气泡会空一下。
+   现在等发送和滚动做完再通知（同一角色连发合并成一次）；App 进后台或关页面时立刻把还没发的通知补上，服务器不会漏掉。 */
+function roleServerPushTouchFlush(){Object.keys(_roleServerTouchTimers).forEach(id=>{const row=_roleServerTouchTimers[id];if(!row)return;clearTimeout(row.timer);delete _roleServerTouchTimers[id];if(typeof roleServerPushTouchActivity==='function')roleServerPushTouchActivity(id,row.at,true);});}
+if(typeof document!=='undefined'){document.addEventListener('visibilitychange',()=>{if(document.hidden)roleServerPushTouchFlush();});addEventListener('pagehide',roleServerPushTouchFlush);}
 const _roleServerPushSoonTimers={};
 function roleServerPushSyncSoon(id){const c=getC(id);if(!c||!c.proactive||!c.proactive.serverPush||typeof roleServerPushSync!=='function')return;const key=String(id);clearTimeout(_roleServerPushSoonTimers[key]);_roleServerPushSoonTimers[key]=setTimeout(()=>{delete _roleServerPushSoonTimers[key];roleServerPushSync(c,true);},200);}
 function cohabPhoneLimitApps(st){if(!st||!st.roleAccess||!st.permissions||!st.permissions.limits)return[];const grant=S.couple&&S.couple.grant||{},names=[];for(const binding of st.bindings||[]){const app=binding&&companionExternalById(st,binding.externalAppId),internalId=binding&&binding.internalAppId;if(app&&app.name&&LOCKABLE[internalId]&&grant[internalId])names.push(app.name);}return[...new Set(names)];}
@@ -16131,7 +16135,7 @@ function afterChat(id){
   if(ta){ta._chatId=id;chatComposerStateSync(ta);}
   maybeProactive(id);maybeSpyIdle(id);}
 
-function pushMsg(id,m){m.time=Date.now();if(m.role==='user'){if(!m.id)m.id=uid();if(m.type!=='sys')replyTouch(id);suspicionOnUserMsg(id,m);coupleGoalOnUserMsg(id,m);}msgs(id).push(m);if(m.role==='user'&&m.type!=='sys')wechatTailJournalWrite(id,actId());save();if(m.role==='user'&&m.type!=='sys'){roleBackgroundCancel(id,['one_minute_test','app_watch_test']);roleServerPushTouchActivity(id,m.time,true);roleBackgroundPrepare(id,'reply_handoff',{userText:String(msgToText(m)||'').slice(0,2000),messageId:String(m.id||''),accountId:String(actId()),sessionId:String(accountMessageKey(id,actId())||'')});}
+function pushMsg(id,m){m.time=Date.now();if(m.role==='user'){if(!m.id)m.id=uid();if(m.type!=='sys')replyTouch(id);suspicionOnUserMsg(id,m);coupleGoalOnUserMsg(id,m);}msgs(id).push(m);if(m.role==='user'&&m.type!=='sys')wechatTailJournalWrite(id,actId());save();if(m.role==='user'&&m.type!=='sys'){roleBackgroundCancel(id,['one_minute_test','app_watch_test']);roleServerPushTouchSoon(id,m.time,900);roleBackgroundPrepare(id,'reply_handoff',{userText:String(msgToText(m)||'').slice(0,2000),messageId:String(m.id||''),accountId:String(actId()),sessionId:String(accountMessageKey(id,actId())||'')});}
   if(m.role==='user'){behaviorOnUserMsg(id,m);lifeNoteOnUserMsg(id,m);emotionOnUserMsg(id,m);}
   if(cur().p==='chat'&&cur().id===id){const cb=$('#chatbg');if(cb){const stick=nearBottom(cb),c=getC(id),prev=chatPrevVisibleBefore(id,m);cb.insertAdjacentHTML('beforeend',chatBoundaryHTML(prev,m)+bubbleRow(c,m));if(stick)chatPinBottom(cb);}}}
 

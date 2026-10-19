@@ -2391,3 +2391,11 @@ CUA核验22项控件、发送未读空白、已读等待阶段空白、保存180
 - 已排除：①聊天背景图（她换成默认背景后照样闪）；②电脑上照她情侣角色的设置（自定义气泡样式、聊天背景、桌宠绑定、600 条历史）发文字和表情，旧消息一条都没被删换，也只有新消息播出现动画，复现不出来。
 - 为了不再猜：加临时记录器 SEND_DIAG_V1（PhoneWeb.bundle/private-send-diag.js，只在私人版）：发消息后 3 秒内记消息行增删、出现动画、每帧间隔、滚动、整页重画、画面里透明气泡数，不记文字内容；存原生存储 __send_diag.json，最近 20 次，用数据线读。修好后整个删掉。
 - 电脑上试跑：两个私人入口都记到文字和表情两次、存进原生存储、记录里没有消息文字，页面无错误。
+
+2026-10-20 SEND_TOUCH_DEFER_V1（网页v1846 / 私人v1849 / iOS498）：情侣角色发文字时旧气泡空一下——找到原因并修复
+- 证据：手机自带运行诊断（Library/Application Support/small-phone-runtime-diagnostics-v1.jsonl）里每次发送后有整存聊天和 render-chat；临时记录器 SEND_DIAG_V1 在手机上没有写出文件（原因未查清，已删除）。电脑上载入她手机的设置存档（只读，用完删除）、补 400 条占位聊天后用性能分析对比：发给情侣角色时 sendText→pushMsg→roleServerPushTouchActivity→roleServerPushRecentContext→roleInteractionRows 在发送那一刻同步跑约 78ms（电脑），手机慢几倍；情侣角色开了服务器推送（proactive.serverPush），所以只有她。
+- 修复：pushMsg 改为 roleServerPushTouchSoon(id,m.time,900)，等发送和 580ms 滚动做完再通知，同一角色连发合并、带最新消息时间；visibilitychange 隐藏和 pagehide 时 roleServerPushTouchFlush 立刻补发。roleServerPushTouchSoon 加可选延迟参数，其他调用仍是 260ms。
+- 测试：tests/send-touch-defer.test.mjs 两个入口真实 sendText：发送当下 0 次、连发合并 1 次且带最新时间、进后台立刻补发、不重复；旧写法在「the server notice ran inside the send」处失败。电脑用她的设置量发送后 0.7 秒内最长一帧：修改前 83～100ms，修改后 17ms。
+- 已知：那段整理仍要做，只是挪到发送约 1 秒后（画面已停）；手机上那一下若正好在滑动可能有一点顿。没有改服务器推送的内容和规则。
+- 桌宠找气泡时逐个量全部气泡位置也有一点开销（电脑约 10ms），这次没动。
+- SEND_DIAG_V1 记录器已删除（文件、两个私人入口引用、.gitignore 一行）。

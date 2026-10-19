@@ -33,6 +33,7 @@ const count = (source, marker) => source.split(marker).length - 1;
 // same commit that syncs it.
 const PERMANENT_FIXES = [
   {release:"web v1844 / private v1847",scope:"both",least:1,file:"app.js",name:"发送后手动等待与忙碌等待保留旧聊天节点",marker:"CHAT_SEND_KEEP_HISTORY_V1"},
+  {release:"web v1846 / private v1849",scope:"both",least:1,file:"app.js",name:"发消息后等发送画完再通知服务器（情侣角色发文字旧气泡不再闪空）",marker:"SEND_TOUCH_DEFER_V1"},
   {release:"private v1846 / iOS495",scope:"private",least:1,file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-couple-windowsill.js",name:"按要求暂时停用3D窗台，恢复原情侣空间",marker:"COUPLE_WINDOWSILL_PAUSED_V1"},
   {release:"private v1841 / iOS490",scope:"private",least:1,file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-couple-windowsill.js",name:"私人版情侣空间首页是 3D 赴约窗台（不联网、可返回、设置与授权保留原内容、省电模式）",marker:"COUPLE_WINDOWSILL_V1"},
   {release:"web v1837 / private v1840",scope:"both",least:1,file:"wechat-me.js",name:"自己导入的表情包可设封面，名字自己写（导入不再用识图）",marker:"cover:ssImportCoverImg(st),items:"},
