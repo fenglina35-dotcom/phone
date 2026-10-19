@@ -10,7 +10,12 @@
 
 - `src/`、`models/`、`blender/`、`build.mjs`、`README.md`、`CHANGELOG.md`、`LICENSE`、`COMMERCIAL.md`：原样从上游复制，**一字未改**。
 - `smallphone/`：小手机加的一层（同样按 AGPL-3.0 提供），不改上游文件：
-  - `shell.js`：本地文件环境下从打包数据读模型、省电模式、左上角「返回」。
+  - `shell.js`：本地文件环境下从打包数据读模型、画质与省电、深色底、小箭头返回、桌上手机进入小手机、画面被回收时通知重载。
+- 打包时对上游脚本的两处替换（只在生成的 windowsill.js 里，源码不动；见 `scripts/build_couple_windowsill.mjs`）：
+  - `00-setup.js` 清晰度上限 1.6 → 读 `window.__WS_DPR_MAX`（正常 2、省电 1.25）；
+  - `19-frame-api.js` 降一档门槛每秒 34 帧 → 读 `window.__WS_LOWQ_FPS`（正常 22、省电 16）。
+  - `09-left-writing-corner.js` 把桌上手机屏幕的贴图交给 `window.__WS_PHONE_SCREEN`（shell.js 在上面画她的锁屏）；
+  - `18-input-sliders.js` 手机已经亮着时再点一下它，调用 `window.__WS_PHONE_ENTER`（进入小手机），没亮时照上游翻过来。
 
 ## 怎么生成 App 里用的页面
 

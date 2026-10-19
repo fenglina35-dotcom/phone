@@ -19,7 +19,20 @@ if (threeVer !== '0.170.0') throw new Error('上游用的是 three@0.170.0，这
 
 // the scene script, in the same order upstream build.mjs uses
 const jsDir = join(src, 'src/js');
-const js = readdirSync(jsDir).filter(f => f.endsWith('.js')).sort().map(f => readFileSync(join(jsDir, f), 'utf8')).join('');
+let js = readdirSync(jsDir).filter(f => f.endsWith('.js')).sort().map(f => readFileSync(join(jsDir, f), 'utf8')).join('');
+// Two upstream constants read values set by smallphone/shell.js (quality cap; only drop quality when really slow).
+// Each replacement must match exactly once, so an upstream change is noticed instead of silently skipped.
+for (const [from, to] of [
+  ['const DPR = Math.min(window.devicePixelRatio || 1, framed ? 2 : 1.6);', 'const DPR = Math.min(window.devicePixelRatio || 1, framed ? 2 : (window.__WS_DPR_MAX || 1.6));'],
+  ['if (ftAcc / ftN > 1 / 34) goLowQ();', 'if (ftAcc / ftN > 1 / (window.__WS_LOWQ_FPS || 34)) goLowQ();'],
+  // the desk phone's screen texture, so shell.js can draw her own lock screen on it
+  ['const scr = new THREE.MeshPhysicalMaterial({map: screen, roughness: .15', 'window.__WS_PHONE_SCREEN = screen; const scr = new THREE.MeshPhysicalMaterial({map: screen, roughness: .15'],
+  // tap the phone once: it turns over and lights up (upstream); tap the lit screen again: enter the small phone
+  ["if (hit && hit.object.userData.key === 'phone' && focusKey === 'phone'){ flipPhone(phoneFlip.to < .5); return; }", "if (hit && hit.object.userData.key === 'phone' && focusKey === 'phone'){ if (phoneFlip.to > .5 && window.__WS_PHONE_ENTER){ window.__WS_PHONE_ENTER(); return; } flipPhone(phoneFlip.to < .5); return; }"],
+]) {
+  if (js.split(from).length !== 2) throw new Error('上游代码变了，找不到：' + from);
+  js = js.replace(from, () => to);
+}
 const result = await esbuild.build({
   stdin: {contents: js, resolveDir: tools, sourcefile: 'windowsill-scene.js', loader: 'js'},
   bundle: true, format: 'iife', target: ['safari16'], minify: true, legalComments: 'eof', write: false,

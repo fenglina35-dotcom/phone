@@ -40,5 +40,23 @@ test('only the private app loads the windowsill, inside the phone screen under o
   assert.match(js, /\(document\.querySelector\('\.screen'\) \|\| document\.body\)\.appendChild\(holder\)/);
   assert.match(js, /go\('couple', \{list: 1\}\)/);
   assert.match(js, /S\.settings\.windowsillSaver/);
-  assert.match(js, /lockUntilText\(at\)/, 'lock unlock times stay visible on the windowsill');
+  assert.doesNotMatch(js, /cw-set|cw-locks/, 'no top-right button or lock strip on the windowsill');
+  assert.match(js, /d\.type === 'windowsill:open' && d\.key === 'phone'\) \{ go\('couple', \{list: 1\}\); \}/, 'the desk phone opens 设置与授权');
+  assert.match(js, /windowsill:lost/);
+  const shell = read(T + 'smallphone/shell.js');
+  assert.match(shell, /进入小手机/);
+  assert.match(shell, /:root\{--bg:#0d0b0a!important\}/, 'dark background, no white flash');
+  assert.match(shell, /webglcontextlost/);
+  assert.doesNotMatch(shell, /返回<\/|>返回'/, 'the back button is just an arrow');
+  const built = read(P + 'couple-windowsill/windowsill.js');
+  assert.match(built, /__WS_DPR_MAX/);
+  assert.match(built, /__WS_LOWQ_FPS/);
+  assert.match(built, /window\.__WS_PHONE_SCREEN=/, 'the desk phone screen texture is handed to the shell');
+  assert.match(built, /window\.__WS_PHONE_ENTER/, 'a second tap on the lit phone enters the small phone');
+  assert.match(shell, /轻点进入小手机/);
+  assert.match(shell, /windowsill:lock/);
+  assert.match(js, /function sendLock\(\)/);
+  assert.match(js, /top:env\(safe-area-inset-top,0px\);bottom:env\(safe-area-inset-bottom,0px\)/, 'the windowsill keeps clear of the status bar and home bar');
+  // the release gate reads the unlock time where it now lives
+  assert.match(read('scripts/check_chat_authorized_phone.cjs'), /_couTab=2;go\('couple',\{list:1\}\);const shown=document\.body\.innerText\.includes\('自动解锁'\);/);
 });

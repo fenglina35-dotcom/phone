@@ -3245,3 +3245,5 @@ NORTH_PHONE_MONITOR=1复用既有QA，双端真实页面/来源不变/主体与�
 2026-10-19 网页v1838 / 私人v1841 / iOS490：情侣空间大改第一步（只私人版）：首页换成唐幡的开源 3D「赴约 · 窗台」（AGPL-3.0，第三方源码与出处在 native/private-small-phone/third_party/qiaosi-windowsill，打包脚本 scripts/build_couple_windowsill.mjs），不联网；左上返回、右上「设置与授权」进入原来完整的情侣空间、省电模式；去掉「草稿 · 演示数据」；窗台放在小手机屏幕层里，来电/横幅/弹窗/远程操控都在其上。网页版不变。
 
 2026-10-19 私人v1841 / iOS490：从提交 8e4cc09a 的干净工作区 xcodebuild（Release，BUILD SUCCEEDED，1.0.490/490）并覆盖安装到用户 iPhone 15；安装包内 APP_VER v1841 · 情侣空间赴约窗台，couple-windowsill/（index.html、shell.js、models.js、windowsill.js）与 private-couple-windowsill.js 都在；devicectl 读回 1.0.490 (490)。发布前：第一次核心聊天检查两种都失败（锁定解锁时间被窗台盖住看不到），补上窗台上的锁定条后核心检查两种都通过，全量 4448/4448 通过。真机速度、发热、WebGL 表现待她回报。
+
+2026-10-19 网页v1839 / 私人v1842 / iOS491：窗台按她试用后的意见调整——修闪白屏（深色底、WebGL 被回收时重载）、提高画质（降档门槛与清晰度上限）、窗台让出状态栏与底部横条、返回改成小箭头、去掉右上「设置与授权」与锁定条；桌上手机点一下亮起她的锁屏，再点一下进入小手机（原来完整的情侣空间）。发布门槛 check_chat_authorized_phone.cjs 的锁定解锁时间检查改为打开「设置与授权」读取（只改读取位置，判断不变）。
