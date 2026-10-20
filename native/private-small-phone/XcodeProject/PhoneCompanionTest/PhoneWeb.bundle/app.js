@@ -17294,7 +17294,8 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
     typingEl=appendChatHTML(cb,`<div class="msg them" id="typing">${av(c.avatar,bubbleAvatarClass(c,false))}<div class="col"><div class="bubble typing"><span></span><span></span><span></span></div></div></div>`,{smooth:true});}}
   const _handoffTurn=replyHandoffBegin(id,note,replyToken,replyAccount,replyIntent,!!(replyOptions&&replyOptions.reopenCompleted));if(_handoffTurn&&replyHandoffCompleted(_handoffTurn)){if(typingEl&&typingEl.isConnected)typingEl.remove();replyNoVisibleReasonSet(id,replyAccount,replyToken,'这条消息已完成回复，本次没有请求模型');return false;}
   try{
-    let _lu=null;{const _ms=msgs(id);for(let i=_ms.length-1;i>=0;i--){if(_ms[i].role==='user'&&_ms[i].type!=='sys'){_lu=_ms[i];break;}}}
+    if(!note&&typeof NorthSkyRoleSync!=='undefined'){await NorthSkyRoleSync.preparePhone(c);if(replyStale(id,replyToken,replyAccount)||actId()!==replyAccount)return false;}
+    let _lu=null;{const _ms=msgs(id);for(let i=_ms.length-1;i>=0;i--){if(_ms[i].role==='user'&&_ms[i].type!=='sys'&&_ms[i]._skySource!=='sky'){_lu=_ms[i];break;}}}
     const _transferPendingAtStart=transferPendingUserItems(id);
     const _userText=(_lu&&msgToText(_lu))||'',_explicitCallTurn=!note&&explicitIncomingCallRequest(_userText),_naturalOn=wechatNaturalOn(),_autonomyNote=wechatNaturalAutonomyNoteActive(note),_manualUnlockNote=manualUnlockReplyActive(note),_altFirstContact=altFriendFirstContact(c,replyAccount),_altReportInfo=replyAccount==='main'?altAccountReportInfo(c,note):null,_foodReceiptInfo=replyAccount==='main'?foodReceiptEventInfo(note):null,_offEndInfo=replyAccount==='main'?offEndReplyEventInfo(note):null,_hlPlan=null;let _initiativeNoImage=initiativeBlocksImage(note),_initiativeNoLocation=initiativeBlocksLocation(note);
     const _nativeUserInspectionQueued=!note&&(nativeInspectionPending(_lu,id)||companionChargingConfirmationSchedule(c,_lu)||maybeSpyIntent('',c,id,_lu,{nativeOnly:true,immediate:true,suppressInitial:true}));if(_nativeUserInspectionQueued){if(typingEl&&typingEl.isConnected)typingEl.remove();return true;}
@@ -17310,7 +17311,7 @@ async function aiReply(id,note,replyToken,replyAccount,replyIntent,replyOptions)
     const _giftIntent='',_giftTurnPrompt='',_thoughtIntent=!note&&thoughtEggRequestIntent(_userText),_thoughtTurnPrompt=_thoughtIntent?thoughtEggRequestPrompt(_userText):'',_relIntent=null,_baseOpt=_memCtx?{selectiveMemory:true,memoryItems:_memCtx.items,commercePayment:true}:{commercePayment:true},_usageTruth=replyAccount==='main'?rolePhoneAuthoritativeUsageContext(c):'',_tail=lifeNoteModelPrompt(c)+(_appFoodRequest&&_appFoodRequest.followup?'\n\n# 本轮App点餐上下文\n'+JSON.stringify(_appFoodRequest)+'\n本轮店名补充和催促接住这笔请求，不能另开无关订单；已完成时不要再下单。是否查询、是否立即点仍由你决定，查App目录用[查店铺|具体词]，不要查现实网页来否认App店。':'')+(_memCtx?memoryRetrievalPrompt(c,_memCtx):'')+_webPrompt+_visionGuard+_voiceTurnPrompt+_thoughtTurnPrompt+_usageTruth+wxGroupMutePrompt(c),_sys=buildSystem(c,Object.assign({},_baseOpt,{natural:_naturalOn,query:_memQuery}))+_tail,_stableSys=_naturalOn?buildSystem(c,Object.assign({},_baseOpt,{natural:true,allModules:true,query:_memQuery}))+_tail:_sys;
     const _historySource=roleReplyOnlineHistorySource(c,lastRounds(msgs(id),S.settings.hist||12),Date.now()),hist=chatHistoryWithDateBoundaries(_historySource,m=>{
       if(m._call){const cn=callToCN(m.content!=null?m.content:msgToText(m));return cn?{role:_naturalOn&&m.type==='sys'?'system':m.role,content:cn}:null;}
-      return {role:(_naturalOn&&m.type==='sys')||m._transferReceipt?'system':m.role,content:msgToText(m)};}).filter(x=>x&&x.content!=null);
+      return {role:(_naturalOn&&m.type==='sys')||m._transferReceipt?'system':m.role,content:typeof NorthSkyRoleSync!=='undefined'?NorthSkyRoleSync.historyContent(m,msgToText(m)):msgToText(m)};}).filter(x=>x&&x.content!=null);
     if(note)hist.push({role:friendAcceptedAutoNote(note)||initiativeNoteActive(note)||wechatNaturalCallEventActive(note)||featureEventNoteActive(note)?'user':(_naturalOn?'system':'user'),content:note});
     const _pin=roleReplyRequestPin(c,Date.now());
     const _routeIndex=roleChatRouteIndex(c),_md={allowWechatThought:true,roleReplyLanguageGuard:true,routeIndex:_routeIndex,aux:c.model==='aux',complete:true,unfilteredOutput:_rawOutput,roleVoiceFormatRepair:true,roleVoiceRequested:_voiceRequired},_repairMd=Object.assign({},_md,{aux:c.model==='aux'||wechatAuxConfigured(_routeIndex)}),_routeState={fallback:false};// 正常回复走当前角色自己的路线；主模型失败/跳出角色时才用同一路线的副模型重试一次
@@ -17636,7 +17637,7 @@ async function maybeSummarize(id,aid){
   if(aid==='main'&&!st.cursorV2&&(!st.count||st.count<0)&&arr.length){summaryStateSave(c,aid,all.length);pruneSummaries(c,aid);save();return false;}
   const done=summaryStateDone(c,aid,all),pending=all.slice(done);
   if(summaryCompletedRounds(pending)<rounds)return false;
-  const chunk=pending.map(m=>{if(!m||m._call||m.type==='sys')return'';const t=msgToText(m);return t?(m.role==='user'?summaryUserLabel(c,aid):c.name)+'：'+t:'';}).filter(Boolean).join('\n');
+  const chunk=pending.map(m=>{if(!m||m._call||m.type==='sys')return'';const raw=msgToText(m),t=typeof NorthSkyRoleSync!=='undefined'?NorthSkyRoleSync.historyContent(m,raw):raw;return t?(m.role==='user'?summaryUserLabel(c,aid):c.name)+'：'+t:'';}).filter(Boolean).join('\n');
   if(!chunk){summaryStateSave(c,aid,all.length);save();return false;}
   const prior=arr.slice(-8).map(x=>'· '+summaryCleanText(c,x.text,aid)).join('\n'),system=wechatSummarySystem(c,aid,prior),messages=[{role:'system',content:system},{role:'user',content:chunk}];
   busy.add(key);
@@ -17653,7 +17654,7 @@ async function maybeSummarize(id,aid){
   finally{busy.delete(key);}
 }
 const _manualWechatSummaryBusy=new Set();
-function manualWechatSummarySource(id,aid){const c=getC(id);aid=memoryScopeKey(aid);if(!c)return null;const all=msgsForAccount(id,aid),arr=summaryList(c,aid),st=summaryState(c,aid),upto=all.length,legacy=aid==='main'&&!st.cursorV2&&(!st.count||st.count<0)&&arr.length,done=summaryStateDone(c,aid,all),chunk=all.slice(done,upto).map(m=>{if(!m||m._call||m.type==='sys')return'';const t=msgToText(m);if(!t)return'';return(m.role==='user'?summaryUserLabel(c,aid):c.name)+'：'+t;}).filter(Boolean).join('\n');return{c,aid,arr,st,all,upto,done,legacy,chunk};}
+function manualWechatSummarySource(id,aid){const c=getC(id);aid=memoryScopeKey(aid);if(!c)return null;const all=msgsForAccount(id,aid),arr=summaryList(c,aid),st=summaryState(c,aid),upto=all.length,legacy=aid==='main'&&!st.cursorV2&&(!st.count||st.count<0)&&arr.length,done=summaryStateDone(c,aid,all),chunk=all.slice(done,upto).map(m=>{if(!m||m._call||m.type==='sys')return'';const raw=msgToText(m),t=typeof NorthSkyRoleSync!=='undefined'?NorthSkyRoleSync.historyContent(m,raw):raw;if(!t)return'';return(m.role==='user'?summaryUserLabel(c,aid):c.name)+'：'+t;}).filter(Boolean).join('\n');return{c,aid,arr,st,all,upto,done,legacy,chunk};}
 function manualWechatSummaryCanRepairClearedCursor(src){return!!(src&&src.st&&src.st.cursorV2&&!src.st.lastMessageId&&src.st.count>0&&src.done>=src.upto&&src.all.some(m=>m&&!m._call&&m.type!=='sys'&&msgToText(m)));}
 async function manualWechatSummary(id){
   const aid=memoryScopeKey(),key=id+'#'+aid;

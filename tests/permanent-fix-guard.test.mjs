@@ -32,6 +32,14 @@ test('public North local view cannot overwrite a remote lock with cached UI stat
 test('private owner-pasted Screen Time records remain separate from native telemetry',()=>{for(const prefix of ['native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/']){const js=read(prefix+'phone-shortcuts.js');for(const marker of ['window.PhoneScreenTimeImport','cou_shortcut_screen_time','roleAccess:p.consent',"source:'ios-shortcut'",'r.date!==day()','id.account===p.account'])assert(js.includes(marker));assert(!js.includes('st.screenTimeSec=value'));}});
 const PRIVATE_DIR = 'native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/';
 const PRIVATE = PRIVATE_DIR + 'app.js';
+test('private Sky role channel retains scoped pairing, hidden metadata and both entry points',()=>{
+ const source=read(PRIVATE_DIR+'private-sky-sync.js');
+ for(const marker of ['SKY_ROLE_SYNC_V1','resolveBinding','preparePhone','historyContent','sceneVersion','sentSignature'])assert(source.includes(marker));
+ for(const entry of ['index.html','小手机.html'])assert(read(PRIVATE_DIR+entry).includes('private-sky-sync.js?v=1'));
+ assert(read(PRIVATE).includes('NorthSkyRoleSync.preparePhone(c)'));
+ assert(read(PRIVATE).includes("_ms[i]._skySource!=='sky'"));
+ assert(!read(WEB).includes('NorthSkyRoleSync.preparePhone(c)'));
+});
 const DELIVERY = 'delivery.js';
 const PRIVATE_DELIVERY = PRIVATE_DIR + 'delivery.js';
 

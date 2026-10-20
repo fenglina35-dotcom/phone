@@ -76,3 +76,6 @@ XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/*
 # Roleplay theatre card is required by the private studio.
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/roleplay-studio/
 !XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/assets/roleplay-studio/theatre-card.png
+
+# Private Sky role channel authorized 2026-10-20.
+!XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-sky-sync.js
