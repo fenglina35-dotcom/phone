@@ -101,7 +101,8 @@
     list.sort(function (a, b) { return (b.time || 0) - (a.time || 0); });
     return list[0] || null;
   }
-  function season() { var m = new Date().getMonth() + 1; return m >= 3 && m <= 5 ? 'spring' : m >= 6 && m <= 8 ? 'summer' : m >= 9 && m <= 11 ? 'autumn' : 'winter'; }
+  // the season is whatever she last chose on the windowsill (not the calendar month)
+  function season() { var s = S.settings && S.settings.windowsillSeason; return /^(spring|summer|autumn|winter)$/.test(s || '') ? s : null; }
   function deskData() {
     var c = him(), name = c ? (c.remark || c.name || '他') : '他', cards = {}, sl = S.me && S.me.sleep, sleeping = !!(sl && sl.active);
     var days = typeof coupleDays === 'function' && cp().startDate ? coupleDays(cp().startDate) : 0, anniv = nextAnniv();
@@ -255,6 +256,7 @@
     }
     else if (d.type === 'windowsill:music') { music(d.cmd); }
     else if (d.type === 'windowsill:candle') { candle(); }
+    else if (d.type === 'windowsill:season' && /^(spring|summer|autumn|winter)$/.test(d.season || '')) { if (!S.settings) S.settings = {}; if (S.settings.windowsillSeason !== d.season) { S.settings.windowsillSeason = d.season; save(); } }
     else if (d.type === 'windowsill:open' && d.key && d.key !== 'phone' && d.key !== 'music') { openDesk(d.key); }
     else if (d.type === 'windowsill:photo') {
       var slot = +d.slot;

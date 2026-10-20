@@ -56,12 +56,18 @@ test('the desk is wired to her small phone (WINDOWSILL_DESK_V1)', () => {
   assert.match(read('scripts/build_couple_windowsill.mjs'), /d: V\(-4\.15, 7\.9, 6\.6\), t: V\(-4\.2, 7\.6, 0\), fov: 30/);
   assert.match(read('scripts/build_couple_windowsill.mjs'), /\['at\(j, 8\.9, SILL_Y, -4\.1, \.4\); add\(j, null\);', '\/\* 黄铜小壶：她要求去掉 \*\/'\]/);
   assert.match(built, /window\.__WS_CANDLE_TAP\?window\.__WS_CANDLE_TAP\(\):/);
-  // real weather where she is, season by month, the crane flies off while he is out
+  // real weather where she is, the crane flies off while he is out
   assert.match(js, /api\.open-meteo\.com\/v1\/forecast\?latitude=' \+ pos\.coords\.latitude\.toFixed\(3\)/);
   assert.match(js, /30 \* 60000/);
   assert.match(shell, /window\.__WS_PLANE\.visible = d\.letterUnread > 0/); assert.match(js, /letterUnread: unread/);   // the paper plane means unopened letters
   assert.match(shell, /function craneAway\(out\)/); assert.match(shell, /px\.userData\.key = 'where'/);   // still tappable once it has flown off
-  assert.match(js, /function season\(\)/);
+  assert.match(js, /function season\(\) \{ var s = S\.settings && S\.settings\.windowsillSeason;/, 'the season is hers, remembered, not the month');
+  assert.match(js, /d\.type === 'windowsill:season'/);
+  assert.match(built, /window\.__WS_SEASON_CHANGED&&window\.__WS_SEASON_CHANGED\(/);
+  // every close-up goes to 2.6 while the camera moves in
+  assert.match(read('scripts/build_couple_windowsill.mjs'), /const want = !!focusKey && focusT > \.6 && \(focusKey !== 'phone' \|\| phoneFlip\.v > \.6\);/);
+  // her photos are not darkened by the room light
+  assert.match(shell, /mat\.emissiveMap = t; mat\.emissiveIntensity = \.55;/);
   // star jar = 任务便签 stars; the buttons open the matching pages
   assert.match(js, /S\.taskNotes && S\.taskNotes\.stars/);
   assert.match(js, /else if \(key === 'jar'\) go\('tasks'\)/);

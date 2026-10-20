@@ -14,7 +14,7 @@
      挂历=在一起天数和下一个纪念日，便签=他每天的碎碎念（每天第一次打开窗台时调一次副模型，每张最多 3 行、每行最多 6 字），
      蜡烛=晚安/睡眠（吹灭就是晚安、点上就是醒啦，不弹框不弹提示），书=共读，茶=健康（伴生同步的数据，只看），千纸鹤=他在哪（他出门就飞走、沙滩有脚印），
      风铃=他发了新动态你还没看时自己晃，信=信箱（有没拆的信时窗台上才有纸飞机），木盒=游戏大厅，手帐=出门，星星罐=任务便签的星星，盆景=致谢作者；
-     天气按她手机所在位置查 open-meteo（和小手机天气同一来源，坐标只留三位小数，半小时一次），季节跟月份。
+     天气按她手机所在位置查 open-meteo（和小手机天气同一来源，坐标只留三位小数，半小时一次），季节她自己调、会记住。
      相册：挂板上五个地方（拍立得、明信片、三连拍三格）放她的照片，存在 S.couple.wallPhotos（大图存档时自动进图片库）。
    - 桌宠小橘：每两秒把桌宠现在的表情指令（角色或她让它做的）、心情和名字报给窗台，透卡上的小橘跟着变。 */
 (function () {
@@ -112,7 +112,8 @@
     list.sort(function (a, b) { return (b.time || 0) - (a.time || 0); });
     return list[0] || null;
   }
-  function season() { var m = new Date().getMonth() + 1; return m >= 3 && m <= 5 ? 'spring' : m >= 6 && m <= 8 ? 'summer' : m >= 9 && m <= 11 ? 'autumn' : 'winter'; }
+  // the season is whatever she last chose on the windowsill (not the calendar month)
+  function season() { var s = S.settings && S.settings.windowsillSeason; return /^(spring|summer|autumn|winter)$/.test(s || '') ? s : null; }
   function deskData() {
     var c = him(), name = c ? (c.remark || c.name || '他') : '他', cards = {}, sl = S.me && S.me.sleep, sleeping = !!(sl && sl.active);
     var days = typeof coupleDays === 'function' && cp().startDate ? coupleDays(cp().startDate) : 0, anniv = nextAnniv();
@@ -266,6 +267,7 @@
     }
     else if (d.type === 'windowsill:music') { music(d.cmd); }
     else if (d.type === 'windowsill:candle') { candle(); }
+    else if (d.type === 'windowsill:season' && /^(spring|summer|autumn|winter)$/.test(d.season || '')) { if (!S.settings) S.settings = {}; if (S.settings.windowsillSeason !== d.season) { S.settings.windowsillSeason = d.season; save(); } }
     else if (d.type === 'windowsill:open' && d.key && d.key !== 'phone' && d.key !== 'music') { openDesk(d.key); }
     else if (d.type === 'windowsill:photo') {
       var slot = +d.slot;

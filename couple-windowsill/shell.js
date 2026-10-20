@@ -12,7 +12,7 @@
    7. 一起听：电脑屏幕上放的是小手机「音乐」里真正在放的歌（外面每秒报一次），卡片上有上一首 / 播放暂停 / 下一首，点了让外面的播放器去做。
    9. WINDOWSILL_DESK_V1：桌上的东西接小手机（她定的对照表）：挂历=在一起天数和纪念日，便签=他每天的碎碎念，蜡烛=晚安/睡眠（先问），
       书=共读，茶=健康，千纸鹤=他在哪（出门就飞走），风铃=他有新动态时自己晃，信=信箱，木盒=游戏大厅，手帐=出门，星星罐=任务便签的星星，
-      盆景=致谢作者；天气跟她所在地的真实天气，季节跟真实月份。挂板上五个地方放她的照片（相册），点了放大看。
+      盆景=致谢作者；天气跟她所在地的真实天气，季节她自己调、会记住。挂板上五个地方放她的照片（相册），点了放大看。
    8. 窗台上的透卡去掉（她觉得多余）；流麻牌上的小家伙换成小手机的桌宠小橘（pet.js 里的动图帧，由 scripts/build_couple_windowsill_pet.cjs 生成）；
       信=信箱，有没拆的信时窗台上才落下纸飞机；
       角色或她让桌宠做的表情、桌宠睡着、正在放歌，卡上跟着变；点一下换一个表情。帧图没加载好时仍是上游的颜文字。
@@ -211,6 +211,7 @@
     }
     crane.children.forEach(function (ch) { if (ch !== crane.userData.spProxy) ch.visible = !out; });
   }
+  window.__WS_SEASON_CHANGED = function (s) { tell({type: 'windowsill:season', season: s}); };   // remembered by the small phone
   // the candle asks the small phone first (goodnight starts sleep there)
   window.__WS_CANDLE_TAP = function () { tell({type: 'windowsill:candle', lit: window.__WS_CANDLE_LIT ? window.__WS_CANDLE_LIT() : true}); };
 
@@ -231,6 +232,10 @@
     if (m === 1 && phImg[1]) { cover(g, phImg[1], 0, 0, c.width, c.height); g.fillStyle = 'rgba(236,230,220,.92)'; g.fillRect(0, 0, c.width, 8 * K); g.fillRect(0, c.height - 8 * K, c.width, 8 * K); g.fillRect(0, 0, 8 * K, c.height); g.fillRect(c.width - 8 * K, 0, 8 * K, c.height); }
     if (m === 2) for (var f = 0; f < 3; f++) if (phImg[2 + f]) cover(g, phImg[2 + f], 8 * K, (10 + f * 88) * K, 64 * K, 78 * K);
     t.image = c; t.dispose(); t.needsUpdate = true;   // a new size needs a fresh GPU texture
+    // her photos glow a little on their own so the room's dim light does not darken them (she: 上传的图片明显变暗了)
+    var mat = mesh.material, lit = m === 0 ? !!phImg[0] : m === 1 ? !!phImg[1] : !!(phImg[2] || phImg[3] || phImg[4]);
+    if (lit && mat.emissiveMap !== t) { mat.emissive && mat.emissive.set('#ffffff'); mat.emissiveMap = t; mat.emissiveIntensity = .55; mat.needsUpdate = true; }
+    else if (!lit && mat.emissiveMap) { mat.emissiveMap = null; mat.emissiveIntensity = 0; mat.needsUpdate = true; }
   }
   function setPhoto(i, url, keep) {
     photos[i] = url || '';

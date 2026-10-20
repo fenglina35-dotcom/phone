@@ -36,8 +36,9 @@ for (const [from, to] of [
   // the low tier keeps some sharpness instead of dropping to 1x for good
   ['renderer.setPixelRatio(1); composer.setPixelRatio(1); resize(); sun.shadow.mapSize.set(1024, 1024);', 'renderer.setPixelRatio(window.__WS_LOWQ_PR || 1); composer.setPixelRatio(window.__WS_LOWQ_PR || 1); resize(); sun.shadow.mapSize.set(1024, 1024);'],
   ['const pr = want ? Math.min(window.devicePixelRatio || 1, 2.6) : (lowQ ? 1 : DPR);', 'const pr = want ? Math.min(window.devicePixelRatio || 1, 2.6) : (lowQ ? (window.__WS_LOWQ_PR || 1) : DPR);'],
-  // the phone screen turns sharp while the camera is still moving in, not a second after it arrives
-  ["const want = focusKey === 'phone' && focusT > .97 && phoneFlip.v > .97;", "const want = focusKey === 'phone' && focusT > .6 && phoneFlip.v > .6;"],
+  // every close-up turns sharp (2.6, as upstream does for the phone screen) while the camera moves in; the overview stays at 1.6
+  // (she tried it on her phone with the speed test page and chose it, 2026-10-20). The phone still waits until it is turned over.
+  ["const want = focusKey === 'phone' && focusT > .97 && phoneFlip.v > .97;", "const want = !!focusKey && focusT > .6 && (focusKey !== 'phone' || phoneFlip.v > .6);"],
   // the desk phone's screen texture, so shell.js can draw her own lock screen on it
   ['const scr = new THREE.MeshPhysicalMaterial({map: screen, roughness: .15', 'window.__WS_PHONE_SCREEN = screen; const scr = new THREE.MeshPhysicalMaterial({map: screen, roughness: .15'],
   // tap the phone once: it turns over and lights up (upstream); tap the lit screen again: enter the small phone
@@ -89,6 +90,8 @@ const steadyTick = dt => {
   // the 相册 tag sits on the postcard (her red circle); its camera is the position she set herself with the tuning panel
   ["  {key: 'notes', obj: notes,", "  {key: 'photos', obj: WALLPH[1], at: V(-.45, .05, .1), fn: '相册', name: '挂板上的照片', lab: 'PHOTOS', note: '', go: '选几张照片放上墙', shot: (window.__WS_PHOTO_SHOT = {d: V(-4.15, 7.9, 6.6), t: V(-4.2, 7.6, 0), fov: 30, abs: true})},\n  {key: 'notes', obj: notes,"],
   ["  if (hit && hit.object.userData.key === 'quick'){", "  if (hit && hit.object.userData.key === 'photos' && window.__WS_PHOTO_TAP && window.__WS_PHOTO_TAP(hit, focusKey)) return;\n  if (hit && hit.object.userData.key === 'quick'){"],
+  // the season is hers to choose and is remembered (she: 不根据真实情况变，我手动调是什么就是什么)
+  ['const setSeason = s => {\n  if (s === season) return;', 'const setSeason = s => {\n  if (s === season) return;\n  if (window.__WS_SEASON_CHANGED) window.__WS_SEASON_CHANGED(s);'],
   // the note pad by the letter shows the real day of the week (she asked); the desk phone in pink metal (she asked)
   ["x.fillText('周六 · 海边', 0, 0);", "x.fillText('周' + '日一二三四五六'[new Date().getDay()] + ' · 海边', 0, 0);"],
   ["alu: new THREE.MeshPhysicalMaterial({color: '#28324a',", "alu: new THREE.MeshPhysicalMaterial({color: window.__WS_PHONE_COLOR || '#28324a',"],
