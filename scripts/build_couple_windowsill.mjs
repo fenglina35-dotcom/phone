@@ -66,6 +66,37 @@ const steadyTick = dt => {
 };`],
   ['const glass = new GlassPass(); composer.addPass(glass);', 'const glass = new GlassPass(); composer.addPass(glass); if (window.__WS_NO_AO) gtao.enabled = false; if (window.__WS_NO_DOF) bokeh.enabled = false;'],
   ['  composer.render();\n  instant = false;', '  steadyTick(dt);\n  composer.render();\n  instant = false;'],
+  // WINDOWSILL_DESK_V1 (2026-10-20, her mapping of the desk to the small phone): names she asked for, and small hooks that
+  // smallphone/shell.js fills with her real data. The look of the room stays the author's.
+  ["fn: '梗库'", "fn: '星星罐'"],
+  ["fn: '我在哪'", "fn: '他在哪'"],
+  ["fn: '彩蛋'", "fn: '致谢'"],
+  // the wall calendar: shell.js redraws the paper with the real days together and the next anniversary
+  ['cal.add(paperM(1.35, 1.8, tx, .03));', 'cal.add(paperM(1.35, 1.8, tx, .03)); window.__WS_CAL_TEX = tx;'],
+  // the paper plane on the sill only lands when there are unopened letters (the author's own idea for it)
+  ["plane.rotation.set(0, 2.5, 0); add(plane, 'letter');", "plane.rotation.set(0, 2.5, 0); add(plane, 'letter'); window.__WS_PLANE = plane;"],
+  // the paper crane is away while he is out
+  ["crane.rotation.y = .7; add(crane, 'where');", "crane.rotation.y = .7; add(crane, 'where'); window.__WS_CRANE = crane;"],
+  // the candle: blowing it out means goodnight (starts sleep in the small phone), so the small phone asks first
+  ["  say(candleTo ? '蜡烛点上了' : '晚安');\n};", "  if (!window.__WS_QUIET_CANDLE) say(candleTo ? '蜡烛点上了' : '晚安');\n};\nwindow.__WS_CANDLE_LIT = () => candleTo > .5; window.__WS_CANDLE_SET = on => { if ((candleTo > .5) !== !!on) blowCandle(); };"],
+  ["if (focusKey === 'candle'){ blowCandle(); return; }", "if (focusKey === 'candle'){ if (window.__WS_CANDLE_TAP) window.__WS_CANDLE_TAP(); else blowCandle(); return; }"],
+  ["if (hit && hit.object.userData.key === 'candle' && focusKey === 'candle'){ blowCandle(); return; }", "if (hit && hit.object.userData.key === 'candle' && focusKey === 'candle'){ if (window.__WS_CANDLE_TAP) window.__WS_CANDLE_TAP(); else blowCandle(); return; }"],
+  // 相册 (her photos on the board, five places: Polaroid, postcard, the three cells of the strip); the tag sits on the postcard
+  ['// 拍立得、明信片、车票、一条三连拍、一片压干的玉兰花瓣\n{', '// 拍立得、明信片、车票、一条三连拍、一片压干的玉兰花瓣\nconst WALLPH = []; window.__WS_WALLPH = WALLPH;\n{'],
+  ['add(onBoard(paperM(.85, 1.02, pol), 1.55, 1.6, .09, .01), null);', "(WALLPH[0] = add(onBoard(paperM(.85, 1.02, pol), 1.55, 1.6, .09, .01), 'photos')).userData.slot = 0;"],
+  ["add(onBoard(pinIt(paperM(1.5, 1.03, pc, .05), 1.5, 1.03, ['tl', 'tr'], .05), -1.2, -.95, -.05), null);", "(WALLPH[1] = add(onBoard(pinIt(paperM(1.5, 1.03, pc, .05), 1.5, 1.03, ['tl', 'tr'], .05), -1.2, -.95, -.05), 'photos')).userData.slot = 1;"],
+  ["add(onBoard(pinIt(paperM(.42, 1.45, strip, .03), .42, 1.45, ['tr'], .03), 1.68, .02, .1, .006), null);", "(WALLPH[2] = add(onBoard(pinIt(paperM(.42, 1.45, strip, .03), .42, 1.45, ['tr'], .03), 1.68, .02, .1, .006), 'photos')).userData.slot = 2;"],
+  // the 相册 tag sits on the postcard (her red circle); its camera is the position she set herself with the tuning panel
+  ["  {key: 'notes', obj: notes,", "  {key: 'photos', obj: WALLPH[1], at: V(-.45, .05, .1), fn: '相册', name: '挂板上的照片', lab: 'PHOTOS', note: '', go: '选几张照片放上墙', shot: (window.__WS_PHOTO_SHOT = {d: V(-4.15, 7.9, 6.6), t: V(-4.2, 7.6, 0), fov: 30, abs: true})},\n  {key: 'notes', obj: notes,"],
+  ["  if (hit && hit.object.userData.key === 'quick'){", "  if (hit && hit.object.userData.key === 'photos' && window.__WS_PHOTO_TAP && window.__WS_PHOTO_TAP(hit, focusKey)) return;\n  if (hit && hit.object.userData.key === 'quick'){"],
+  // the note pad by the letter shows the real day of the week (she asked); the desk phone in pink metal (she asked)
+  ["x.fillText('周六 · 海边', 0, 0);", "x.fillText('周' + '日一二三四五六'[new Date().getDay()] + ' · 海边', 0, 0);"],
+  ["alu: new THREE.MeshPhysicalMaterial({color: '#28324a',", "alu: new THREE.MeshPhysicalMaterial({color: window.__WS_PHONE_COLOR || '#28324a',"],
+  ["glassBack: new THREE.MeshPhysicalMaterial({color: '#39445c',", "glassBack: new THREE.MeshPhysicalMaterial({color: window.__WS_PHONE_BACK || '#39445c',"],
+  ["ring: new THREE.MeshPhysicalMaterial({color: '#323c52',", "ring: new THREE.MeshPhysicalMaterial({color: window.__WS_PHONE_RING || '#323c52',"],
+  ["band: std('#262d3b', .6),", "band: std(window.__WS_PHONE_BAND || '#262d3b', .6),"],
+  // the brass pot behind the maple on the sill is taken away (she asked); the rest of the sill stays the author's
+  ['at(j, 8.9, SILL_Y, -4.1, .4); add(j, null);', '/* 黄铜小壶：她要求去掉 */'],
   // 小橘 on the 透卡 / 流麻牌 (shell.js draws her desk pet's frames; upstream's kaomoji stay as the fallback)
   ["    tick(dt){\n      const b = ctx();", "    tick(dt){\n      if (window.__WS_PET && window.__WS_PET.tick(dt, g, ctx(), () => drawPet(cv))) return;\n      const b = ctx();"],
   ['next(){ const k = PICK.indexOf(cur);', 'next(){ if (window.__WS_PET && window.__WS_PET.next()) return; const k = PICK.indexOf(cur);'],

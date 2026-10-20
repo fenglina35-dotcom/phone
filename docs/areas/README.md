@@ -528,6 +528,8 @@ v1844（她在 iPhone 15 上试 v1843：画质和电脑上不一样、动起来�
 - 手机第二、三轮（iPhone 15，在充电）：「影子只画一次＋去影子细节＋去景深」最好（全景、共读约 30 帧，App 现设置约 23），她也觉得这个最顺。从共读回来以后所有步骤一起慢 2～3 倍（画的次数不变），像是手机没人碰十来秒后自己降速；真用时有触摸，应比测试好。小橘每帧要 2～4ms（表情每秒换几次、每次重贴整张卡），可以减。iPhone 15 上这个场景到不了 60，目标是稳定 30。
 - 测试页「自己试看」加了三种推荐做法（1.6、2、稳定每秒 30 张，地址参数 cap=30）；手动帧数改成数 composer.render 的次数（限 30 张时别的帧回调会被挤掉，旧数法不准）。
 现在（v1850，WINDOWSILL_STEADY30_V1，2026-10-20）：窗台重新启用，用她在手机测速网页上选定的「新方案，清晰度 1.6，稳定 30 张」——开关都在 smallphone/shell.js（__WS_SHADOW_FREEZE、__WS_NO_AO、__WS_NO_DOF、__WS_PCF、__WS_NO_CANDLE_SHADOW、__WS_FAKE_AREA，清晰度 1.6/省电 1.25，降档门槛 14 帧），打包脚本把它们接进上游。改画质先在测速网页上量，别回到在电脑上猜（上面 v1842～v1844 的失败）。
+桌面功能（v1851，WINDOWSILL_DESK_V1，她定的对照表）：外层 private-couple-windowsill.js 的 deskData() 每 30 秒和回来时把真实内容发给窗台（windowsill:data），shell.js 按卡片标题（DESK 表）改卡片文字、按钮发 windowsill:open 回外层打开对应页面（openDesk）。碎碎念 S.couple.wsNotes（当天）／wsNotesTried（当天已试过，失败也不再调），看窗台满 4 秒才写（为此核心检查曾数到多余的模型调用）。天气 S.couple.wsWeather（半小时）。相册 S.couple.wallPhotos 五格，镜头位置是她用预览窗口里的调整面板自己定的（打包脚本里 __WS_PHOTO_SHOT）。改名 梗库→星星罐、我在哪→他在哪、彩蛋→致谢。千纸鹤「飞走」只藏模型，原处有看不见的点击盒（隐藏的东西不能点）。纸飞机只在有没拆的信时出现。黄铜小壶去掉；手机壳粉色金属（__WS_PHONE_COLOR/BACK/RING/BAND）。
+停放（WINDOWSILL_KEEP_V1）：离开窗台 = park()（holder 隐藏、发 windowsill:pause，shell 的限速 rAF 把回调攒着不画），回来 unpark() 立即继续；离开满 10 分钟或 WebGL 被收回才真正 unmount。render() 只换 #app，窗台挂在 .screen 下不会被冲掉。
 - 注意：shell.js 比 pet.js 先加载，帧图要等 DOMContentLoaded 再读。
 
 后续步骤（未做）：点桌上东西打开对应功能（对照表见聊天：手机=进入真实小手机，电脑=一起听，书=共读，挂历=纪念日，便签=报备，蜡烛=睡眠，茶=健康，千纸鹤=我在哪，透卡/流麻牌=桌宠小橘，风铃=朋友圈，信=信箱，木盒=游戏大厅，手帐=出门，星星罐=表情仓库，盆景=作者致谢），接真实数据，桌宠换小橘；以后可加开关做成整个 App 首页。
