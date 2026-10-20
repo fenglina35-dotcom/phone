@@ -92,7 +92,10 @@
     Object.assign({}, F5, {id: 'f3', name: '新方案，清晰度 3（手机原本的清晰度）', q: 'dpr=3&lowfps=1'})
   ];
   // 第三轮后她觉得「影子只画一次＋去影子细节＋去景深」最顺：给「自己试看」加三种推荐做法，先看好看不好看、顺不顺
+  // 她想试：凑近（放大）任何东西时再变清楚，退回全景又降回 1.6，像桌上手机那样；看会不会卡
   var PICKS = [
+    Object.assign({}, F5, {id: 'z22', name: '凑近时变清楚到 2.2，稳定 30 张', q: 'dpr=1.6&lowfps=1&cap=30', zoomSharp: 2.2}),
+    Object.assign({}, F5, {id: 'z26', name: '凑近时变清楚到 2.6（和手机一样），稳定 30 张', q: 'dpr=1.6&lowfps=1&cap=30', zoomSharp: 2.6}),
     Object.assign({}, F5, {id: 'n16', name: '新方案，清晰度 1.6，稳定 30 张', q: 'dpr=1.6&lowfps=1&cap=30'}),
     Object.assign({}, F5, {id: 'n2', name: '新方案，清晰度 2，稳定 30 张', q: 'dpr=2&lowfps=1&cap=30'}),
     Object.assign({}, F5, {id: 'n25', name: '新方案，清晰度 2.5，稳定 30 张', q: 'dpr=2.5&lowfps=1&cap=30'}),
@@ -162,6 +165,17 @@
     }
     if (recompile) w.__fy.scene.traverse(function (o) { if (o.material) [].concat(o.material).forEach(function (m) { m.needsUpdate = true; }); });
     if (seg.freeze) { dev.renderer.shadowMap.autoUpdate = false; dev.renderer.shadowMap.needsUpdate = true; }
+    if (seg.zoomSharp) {
+      var base = Math.min(w.devicePixelRatio || 1, 1.6), on = false;
+      clearInterval(window.__zoomTimer);
+      window.__zoomTimer = setInterval(function () {
+        if (frame.contentWindow !== w) { clearInterval(window.__zoomTimer); return; }
+        var st = w.__fy && w.__fy.state(), want = !!(st && st.focusKey && st.focusKey !== 'phone' && st.focusT > .6);
+        if (want === on) return; on = want;
+        var pr = want ? Math.min(w.devicePixelRatio || 1, seg.zoomSharp) : base;
+        dev.renderer.setPixelRatio(pr); dev.composer.setPixelRatio(pr); w.dispatchEvent(new w.Event('resize'));
+      }, 150);
+    }
   }
   // inside the windowsill page: gaps between frames, how long the scene's own work takes each frame, and how many draws it makes
   function meter() {
