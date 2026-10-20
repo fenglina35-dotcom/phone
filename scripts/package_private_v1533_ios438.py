@@ -12,13 +12,13 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "native/private-small-phone/XcodeProject/"
 BUNDLE = "PhoneCompanionTest/PhoneWeb.bundle/"
-PREFIX = "SmallPhone_v1831_iOS480_Private/"
-OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1831_iOS480.zip"
+PREFIX = "SmallPhone_v1853_iOS501_Private/"
+OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1853_iOS501.zip"
 
-WEB_VERSION = "1831"
+WEB_VERSION = "1853"
 REVIEWED_RUNTIME_COMMIT = "HEAD"
-MAIN_BASE_COMMIT = "b0f5ff83754dce56b30eb286a27c28dfe13ebf87"
-PUBLIC_VERSION = "1827"
+MAIN_BASE_COMMIT = "5ee8e315b2fb3e9b520989aa59bf73a80b559a73"
+PUBLIC_VERSION = "1849"
 EVIDENCE_ROOT = ROOT / ".codex_tmp"
 TEST_LOG = EVIDENCE_ROOT / "eight-chat" / "sky-full-tests.log"
 PREVIOUS_ZIP = ROOT.parent / "最新私人版本覆盖包_v1830_iOS480.zip"
@@ -46,8 +46,8 @@ class FolderArchive:
     def read(self, name: str) -> bytes:
         return (self.root / name.split("/", 1)[1]).read_bytes()
 VOLUME_BYTES = 50 * 1024 * 1024
-MARKETING = "1.0.480"
-BUILD = "480"
+MARKETING = "1.0.501"
+BUILD = "501"
 BRIDGE = "42"
 
 
@@ -133,7 +133,7 @@ def main():
     commit = text(git("rev-parse", "HEAD")).strip()
     git("merge-base", "--is-ancestor", MAIN_BASE_COMMIT, commit)
     git("merge-base", "--is-ancestor", PREVIOUS_SOURCE, commit)
-    assert f"APP_VER='v{PUBLIC_VERSION} · 角色日程到点自然报备'" in text(git("show", "HEAD:app.js"))
+    assert f"APP_VER='v{PUBLIC_VERSION} · 通话标签与心率'" in text(git("show", "HEAD:app.js"))
     files = committed_private_files()
     validate(files)
     base = committed_private_files(MAIN_BASE_COMMIT)
@@ -160,7 +160,7 @@ def main():
         assert not (set(manifest) - {"SOURCE_STATE.json"} - set(files)), "previous package files missing"
     log = text(TEST_LOG.read_bytes())
     match = re.search(r"pass (\d+)", log)
-    assert match and int(match[1]) >= 4393 and re.search(r"fail 0\b", log) and "cancelled 0" in log
+    assert match and int(match[1]) >= 4487 and re.search(r"fail 0\b", log) and "cancelled 0" in log
     browser = text((EVIDENCE_ROOT / "eight-chat/sky-core-check.log").read_bytes())
     assert browser.count('"refreshAndSinceAndRevocation":true,"pageErrors":0') >= 2
     owner_browser = text((EVIDENCE_ROOT / "eight-chat/sky-owner-todo-check.log").read_bytes())
@@ -171,8 +171,8 @@ def main():
         "mainBaseCommit": MAIN_BASE_COMMIT,
         "lastDeliveredPackage": {"name": PREVIOUS_ZIP.name, "sha256": PREVIOUS_ZIP_SHA256, "manifestSha256": sha256(manifest_bytes).hexdigest(), "sourceCommit": PREVIOUS_SOURCE},
         "inheritedValidation": {"sourceCommit": PREVIOUS_SOURCE, "validation": previous_state.get("validation", {})},
-        "preserved": sorted(set(previous_state.get("preserved", [])) | {"complete-published-main-ae94dc52-private-payload", "GRUDGE_JAIL_ANNOUNCE_V1", "SETTINGS_BLACK_BLUE_V1", "all-43-stickers-and-list", "all-25-task-note-assets", "OFF_LAST_SESSION_V1", "COHAB_GLASS_NO_COLOR_V1", "APP_SOLID_MODAL_V1", "SKY_ROLE_SYNC_V1", "complete-private-v1830-package-inherited"}),
-        "knownUnresolved": ["iOS480-Mac-build-signing-and-real-iPhone-not-verified", "checkin-after-19:08-user-result-pending", "historical-checkin-Busy-launch-not-proven-fixed", "cohab-real-laughter-and-voice-visual-device-acceptance-pending", "sky-role-pairing-and-game-to-phone-device-verification-pending"],
+        "preserved": sorted(set(previous_state.get("preserved", [])) | {"complete-private-v1852-ios501-payload", "GRUDGE_JAIL_ANNOUNCE_V1", "SETTINGS_BLACK_BLUE_V1", "all-43-stickers-and-list", "all-25-task-note-assets", "OFF_LAST_SESSION_V1", "COHAB_GLASS_NO_COLOR_V1", "APP_SOLID_MODAL_V1", "SKY_ROLE_SYNC_V1", "complete-private-v1830-package-inherited"}),
+        "knownUnresolved": ["this-overlay-Mac-build-signing-and-real-iPhone-not-verified", "checkin-after-19:08-user-result-pending", "historical-checkin-Busy-launch-not-proven-fixed", "cohab-real-laughter-and-voice-visual-device-acceptance-pending", "sky-role-pairing-and-game-to-phone-device-verification-pending"],
         "validation": {"nodeTests": {"passed": int(match[1]), "failed": 0, "sourceCommit": commit}, "authorizedChatBothRuntimes": True, "ownerTodoBothRuntimes": True, "previousManifestCRCVerified": True, "publishedBaselinePayloadVerified": True, "privateCompanionNativeChangesThisRelease": False, "signingConfigurationUnchanged": True, "macBuildVerified": False, "realIPhoneVerified": False},
         "ownerTodoBackend": {"private":47,"public":43,"deployedSeparately":True,"realDeviceVerified":False},
         "skyRoleBackend": {"project": "qvuahlqimcfgeoetosnl", "marker": "SKY_ROLE_SYNC_V1", "deployed": True, "transactionTestsRolledBack": True, "cloudModelCalls": 0, "periodicPolling": False, "realRolePaired": False},
