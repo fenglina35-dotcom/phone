@@ -12,18 +12,18 @@ import subprocess
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = "native/private-small-phone/XcodeProject/"
 BUNDLE = "PhoneCompanionTest/PhoneWeb.bundle/"
-PREFIX = "SmallPhone_v1853_iOS501_Private/"
-OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1853_iOS501.zip"
+PREFIX = "SmallPhone_v1854_iOS501_Private/"
+OUTPUT = ROOT.parent / "最新私人版本覆盖包_v1854_iOS501.zip"
 
-WEB_VERSION = "1853"
+WEB_VERSION = "1854"
 REVIEWED_RUNTIME_COMMIT = "HEAD"
-MAIN_BASE_COMMIT = "5ee8e315b2fb3e9b520989aa59bf73a80b559a73"
+MAIN_BASE_COMMIT = "dcd9233d457da69acc623a37b549ed102a765b11"
 PUBLIC_VERSION = "1849"
 EVIDENCE_ROOT = ROOT / ".codex_tmp"
 TEST_LOG = EVIDENCE_ROOT / "eight-chat" / "sky-full-tests.log"
-PREVIOUS_ZIP = ROOT.parent / "最新私人版本覆盖包_v1830_iOS480.zip"
-PREVIOUS_ZIP_SHA256 = "f2a00e7be9e9d306aa8f8afaddad3239940cb1c393489644674260ac57db14bd"
-PREVIOUS_SOURCE = "3e0fe4bb5ce85dc62820f923d8f00ab1dec5ef27"
+PREVIOUS_ZIP = ROOT.parent / "最新私人版本覆盖包_v1853_iOS501.zip"
+PREVIOUS_ZIP_SHA256 = "4b5c774454e103993ac8ec0777464a4255e9b99b9adcec49b0942c374b62b06c"
+PREVIOUS_SOURCE = "dcd9233d457da69acc623a37b549ed102a765b11"
 
 
 class FolderArchive:
@@ -160,7 +160,7 @@ def main():
         assert not (set(manifest) - {"SOURCE_STATE.json"} - set(files)), "previous package files missing"
     log = text(TEST_LOG.read_bytes())
     match = re.search(r"pass (\d+)", log)
-    assert match and int(match[1]) >= 4487 and re.search(r"fail 0\b", log) and "cancelled 0" in log
+    assert match and int(match[1]) >= 4488 and re.search(r"fail 0\b", log) and "cancelled 0" in log
     browser = text((EVIDENCE_ROOT / "eight-chat/sky-core-check.log").read_bytes())
     assert browser.count('"refreshAndSinceAndRevocation":true,"pageErrors":0') >= 2
     owner_browser = text((EVIDENCE_ROOT / "eight-chat/sky-owner-todo-check.log").read_bytes())
@@ -171,7 +171,7 @@ def main():
         "mainBaseCommit": MAIN_BASE_COMMIT,
         "lastDeliveredPackage": {"name": PREVIOUS_ZIP.name, "sha256": PREVIOUS_ZIP_SHA256, "manifestSha256": sha256(manifest_bytes).hexdigest(), "sourceCommit": PREVIOUS_SOURCE},
         "inheritedValidation": {"sourceCommit": PREVIOUS_SOURCE, "validation": previous_state.get("validation", {})},
-        "preserved": sorted(set(previous_state.get("preserved", [])) | {"complete-private-v1852-ios501-payload", "GRUDGE_JAIL_ANNOUNCE_V1", "SETTINGS_BLACK_BLUE_V1", "all-43-stickers-and-list", "all-25-task-note-assets", "OFF_LAST_SESSION_V1", "COHAB_GLASS_NO_COLOR_V1", "APP_SOLID_MODAL_V1", "SKY_ROLE_SYNC_V1", "complete-private-v1830-package-inherited"}),
+        "preserved": sorted(set(previous_state.get("preserved", [])) | {"complete-private-v1852-ios501-payload", "GRUDGE_JAIL_ANNOUNCE_V1", "SETTINGS_BLACK_BLUE_V1", "all-43-stickers-and-list", "all-25-task-note-assets", "OFF_LAST_SESSION_V1", "COHAB_GLASS_NO_COLOR_V1", "APP_SOLID_MODAL_V1", "SKY_ROLE_SYNC_V1", "complete-private-v1853-package-inherited"}),
         "knownUnresolved": ["this-overlay-Mac-build-signing-and-real-iPhone-not-verified", "checkin-after-19:08-user-result-pending", "historical-checkin-Busy-launch-not-proven-fixed", "cohab-real-laughter-and-voice-visual-device-acceptance-pending", "sky-role-pairing-and-game-to-phone-device-verification-pending"],
         "validation": {"nodeTests": {"passed": int(match[1]), "failed": 0, "sourceCommit": commit}, "authorizedChatBothRuntimes": True, "ownerTodoBothRuntimes": True, "previousManifestCRCVerified": True, "publishedBaselinePayloadVerified": True, "privateCompanionNativeChangesThisRelease": False, "signingConfigurationUnchanged": True, "macBuildVerified": False, "realIPhoneVerified": False},
         "ownerTodoBackend": {"private":47,"public":43,"deployedSeparately":True,"realDeviceVerified":False},

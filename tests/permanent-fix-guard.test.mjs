@@ -36,6 +36,8 @@ test('private Sky role channel retains scoped pairing, hidden metadata and both 
  const source=read(PRIVATE_DIR+'private-sky-sync.js');
  for(const marker of ['SKY_ROLE_SYNC_V1','resolveBinding','preparePhone','historyContent','sceneVersion','sentSignature'])assert(source.includes(marker));
  for(const entry of ['index.html','小手机.html'])assert(read(PRIVATE_DIR+entry).includes('private-sky-sync.js?v=1'));
+ assert(source.includes("state.me&&state.me.active||'main'"));
+ assert(!source.includes("includes('虚空间')"));
  assert(read(PRIVATE).includes('NorthSkyRoleSync.preparePhone(c)'));
  assert(read(PRIVATE).includes("_ms[i]._skySource!=='sky'"));
  assert(!read(WEB).includes('NorthSkyRoleSync.preparePhone(c)'));

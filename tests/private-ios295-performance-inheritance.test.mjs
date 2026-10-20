@@ -47,10 +47,10 @@ function functionSource(sourceText, name) {
 
 test('private identifiers remain v1355 and iOS 399 while public advances independently', () => {
   assert.equal(index, alias);
-  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1853'/);
-  assert.match(index, /app\.js\?v=1853&r=v1853-private-package-1/);
+  assert.match(index, /window\.__NORTH_SHELL_BUILD__='1854'/);
+  assert.match(index, /app\.js\?v=1854&r=v1854-private-package-1/);
   assert.match(index, /private-runtime-diagnostics\.js\?v=339/);
-  assert.match(app, /APP_VER='v1853 · 光遇同角色同步'/);
+  assert.match(app, /APP_VER='v1854 · 光遇同角色同步'/);
   assert.match(overlay, /336-daily-file-backup/);
   assert.match(webview, /1\.0\.501 \(501\)/);
   assert.match(bridge, /private static let build = "1\.0\.501 \(501\)"/);

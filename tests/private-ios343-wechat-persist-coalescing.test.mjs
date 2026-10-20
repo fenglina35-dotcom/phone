@@ -59,14 +59,14 @@ function persistenceRuntime() {
 }
 
 test('private identity remains v1355 and iOS 399 while public advances independently', () => {
-  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1853'/);
-  assert.match(privateApp, /APP_VER='v1853 · 光遇同角色同步'/);
+  assert.match(privateApp, /__NORTH_SHELL_BUILD__!=='1854'/);
+  assert.match(privateApp, /APP_VER='v1854 · 光遇同角色同步'/);
   for (const html of [privateIndex, privateAlias]) {
-    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1853'/);
-    assert.match(html, /app\.js\?v=1853&r=v1853-private-package-1/);
+    assert.match(html, /window\.__NORTH_SHELL_BUILD__='1854'/);
+    assert.match(html, /app\.js\?v=1854&r=v1854-private-package-1/);
     assert.match(html, /private-runtime-diagnostics\.js\?v=339/);
   }
-  assert.match(privateRepair, /index\.html\?repair=1&v=1853/);
+  assert.match(privateRepair, /index\.html\?repair=1&v=1854/);
   assert.match(swift, /1\.0\.501 \(501\)/);
   assert.match(bridge, /private static let build = "1\.0\.501 \(501\)"/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 501;/g) || []).length, 12);

@@ -2,10 +2,8 @@
 (function(root){
  'use strict';
  function resolveBinding(state){
-  const accounts=(state.me&&state.me.accounts||[]).filter(a=>[a.name,a.nickname,a.label].includes('虚空间'));
-  if(accounts.length!==1)throw new Error('无法唯一确认「虚空间」账号，请先检查账号名称');
-  const accountId=accounts[0].id,roles=(state.contacts||[]).filter(c=>c&&!c.deleted&&[c.remark,c.name].includes('先生')&&(accountId==='main'||c._added&&c._added[accountId]));
-  if(roles.length!==1)throw new Error('无法唯一确认「虚空间／先生」，未绑定其他角色');
+  const accountId=String(state.me&&state.me.active||'main'),roles=(state.contacts||[]).filter(c=>c&&!c.deleted&&[c.remark,c.name].includes('先生')&&(accountId==='main'||c._added&&c._added[accountId]));
+  if(roles.length!==1)throw new Error('无法唯一确认当前微信里的「先生」，未绑定其他角色');
   return {accountId,roleId:roles[0].id};
  }
  function eventMessage(e){
@@ -36,7 +34,7 @@
    contextRounds:Math.max(2,Math.min(100,+S.settings.hist||12)),recall:onlineMemoryRecallLimits(),history,sourceAt:Date.now()};
  }
  async function rpc(action,fields){
-  const cfg=config(),owner=identity();if(!cfg||cfg.accountId!==owner.account)throw new Error('当前账号不是已绑定的虚空间');
+  const cfg=config(),owner=identity();if(!cfg||cfg.accountId!==owner.account)throw new Error('当前微信身份与已有连接不同');
   const response=await fetch(SKY_SYNC_URL+'/rest/v1/rpc/phone_sky_owner',{method:'POST',headers:companionHeaders(),body:JSON.stringify(Object.assign({p_target:owner.target,p_secret:companionOwnerSecret(),p_account:cfg.accountId,p_role:cfg.roleId,p_action:action},fields||{})),signal:AbortSignal.timeout(15000)});
   if(!response.ok)throw new Error('光遇同步失败（'+response.status+'），保留本机记录');
   const result=await response.json();if(!valid(owner))throw new Error('账号已变化，未应用同步结果');
@@ -88,7 +86,7 @@
  }
  async function publish(){if(flight)return false;const task=publishInner();flight=task;try{return await task;}catch(e){lastError=String(e.message||e);throw e;}finally{if(flight===task)flight=null;}}
  async function bind(){
-  try{const found=resolveBinding(S);if(found.accountId!==actId())throw new Error('请先切换到「虚空间」账号');
+  try{const found=resolveBinding(S);if(found.accountId!==actId())throw new Error('微信身份已变化，请重试');
    const previous=config();if(previous&&previous.enabled){
     if(previous.accountId!==found.accountId||previous.roleId!==found.roleId)throw new Error('已有连接归属不同，未覆盖其他角色');
     if(typeof uiConfirm!=='function'||!await uiConfirm('重新生成连接码后，电脑的旧连接码会失效；已有聊天和记忆保留。继续重新连接吗？'))return;
@@ -108,7 +106,7 @@
  root.NorthSkyRoleSync=api;
  const originalSystem=root.buildSystem;if(typeof originalSystem==='function')root.buildSystem=function(c){const base=originalSystem.apply(this,arguments);return base+(active(c)?'\n\n# 光遇交流连续性（内部信息，不显示标签）\n历史中标明光遇来源的对话是在游戏里发生的。你仍是同一个人。North现在正在小手机微信里和你交流，当前交流渠道已切回微信；自然接着聊，不重答旧消息，不能假定North此刻仍在游戏，也不声称游戏软件已退出。':'');};
  const originalSummary=root.wechatSummarySystem;if(typeof originalSummary==='function')root.wechatSummarySystem=function(c){return originalSummary.apply(this,arguments)+(active(c)?'\n其中明确注明光遇来源的内容发生在光遇游戏里，游戏动作不能记成现实见面。重要场景要自然写入记忆正文，不输出系统标签或同步说明。':'');};
- const originalSection=root.privatePhoneAccountSection;if(typeof originalSection==='function')root.privatePhoneAccountSection=function(){return originalSection.apply(this,arguments)+'<div class="section"><div class="it"><span>光遇里的先生<small>同步当前角色人设、记忆与设置范围内的聊天</small></span><button class="btn g" onclick="NorthSkyRoleSync.bind()">连接光遇</button></div></div>';};
+ const originalSection=root.privatePhoneAccountSection;if(typeof originalSection==='function')root.privatePhoneAccountSection=function(){return originalSection.apply(this,arguments)+'<div class="section"><div class="it"><span>光遇里的先生<small>连接当前微信里的先生，同步人设、记忆与设置范围内的聊天</small></span><button class="btn g" onclick="NorthSkyRoleSync.bind()">连接光遇</button></div></div>';};
  function wake(){if(flight||document.hidden||foregroundChecked||!active())return;foregroundChecked=true;if(timer)clearTimeout(timer);timer=setTimeout(()=>{timer=null;sync(false).catch(()=>{foregroundChecked=false;});},1500);}
  function changed(){if(flight||document.hidden||!active()||!config().linkId)return;if(publishTimer)clearTimeout(publishTimer);publishTimer=setTimeout(()=>{publishTimer=null;publish().catch(()=>{});},1500);}
  const originalSave=root.save;if(typeof originalSave==='function')root.save=function(){const result=originalSave.apply(this,arguments);if(result!==false)changed();return result;};

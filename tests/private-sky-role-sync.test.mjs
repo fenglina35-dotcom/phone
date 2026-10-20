@@ -11,13 +11,21 @@ const source = new URL('../native/private-small-phone/XcodeProject/PhoneCompanio
 const box = {module:{exports:{}}};
 vm.runInNewContext(fs.readFileSync(source,'utf8'),box);
 const api=box.module.exports;
-test('binding requires an exact account and role and rejects ambiguity',()=>{
- const state={me:{accounts:[{id:'main',name:'主号'},{id:'space',name:'虚空间'}]},contacts:[{id:'sir',name:'Claude',remark:'先生',_added:{space:true}}]};
- assert.equal(api.resolveBinding(state).accountId,'space');
+test('binding uses the current WeChat identity without requiring a named account',()=>{
+ const state={me:{},contacts:[{id:'sir',name:'Claude',remark:'先生'}]};
+ assert.equal(api.resolveBinding(state).accountId,'main');
  assert.equal(api.resolveBinding(state).roleId,'sir');
- state.contacts.push({id:'other',remark:'先生',_added:{space:true}});
+ state.contacts.push({id:'other',remark:'先生'});
  assert.throws(()=>api.resolveBinding(state),/唯一/);
 });
+test('binding ignores other accounts and never falls back to a different account',()=>{
+ const state={me:{active:'current',accounts:[{id:'current',name:'我的微信'},{id:'space',name:'虚空间'}]},contacts:[{id:'sir',remark:'先生',_added:{current:true}},{id:'another',remark:'先生',_added:{space:true}}]};
+ assert.equal(api.resolveBinding(state).accountId,'current');
+ assert.equal(api.resolveBinding(state).roleId,'sir');
+ state.contacts[0]._added.current=false;
+ assert.throws(()=>api.resolveBinding(state),/唯一/);
+});
+
 test('only plain conversation is imported and transport metadata is not visible',()=>{
  const m=api.eventMessage({id:'event',role:'assistant',text:'刚才跑图好开心',at:1700000000000,session:'s'});
  assert.equal(m.content,'刚才跑图好开心');
