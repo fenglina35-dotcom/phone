@@ -37,6 +37,7 @@ const PERMANENT_FIXES = [
   {release:"web v1846 / private v1849",scope:"both",least:1,file:"app.js",name:"发消息后等发送画完再通知服务器（情侣角色发文字旧气泡不再闪空）",marker:"SEND_TOUCH_DEFER_V1"},
   {release:"private v1850 / iOS499",scope:"private",least:1,file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/couple-windowsill/shell.js",name:"窗台稳定每秒 30 张：影子只画一次、去阴影细节和景深、面光换便宜的光、玻璃保留（她在手机测速网页上选定）",marker:"WINDOWSILL_STEADY30_V1"},
   {release:"private v1851 / iOS500",scope:"private",least:1,file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-couple-windowsill.js",name:"窗台桌上的东西接小手机：碎碎念每天一次限字数、蜡烛先问再说晚安、真实天气、星星罐、他在哪、相册五张",marker:"WINDOWSILL_DESK_V1"},
+  {release:"web v1848",scope:"web",least:1,file:"couple-windowsill.js",name:"网页版情侣空间首页也是 3D 赴约窗台（作者同意；称呼用户、可关掉）",marker:"COUPLE_WINDOWSILL_WEB_V1"},
   {release:"private v1841 / iOS490",scope:"private",least:1,file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/private-couple-windowsill.js",name:"私人版情侣空间首页是 3D 赴约窗台（不联网、可返回、设置与授权保留原内容、省电模式）",marker:"COUPLE_WINDOWSILL_V1"},
   {release:"web v1837 / private v1840",scope:"both",least:1,file:"wechat-me.js",name:"自己导入的表情包可设封面，名字自己写（导入不再用识图）",marker:"cover:ssImportCoverImg(st),items:"},
   {release:"private v1839 / iOS488",scope:"private",least:1,file:"native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneNativeBridge.swift",name:"表情仓库从相册选图走原生选图器，动图保持会动",marker:"NATIVE_IMAGE_PICKER_V1"},

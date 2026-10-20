@@ -163,5 +163,11 @@ try { readFileSync(join(out, 'pet.js')); } catch (e) { throw new Error('先运�
 tpl = tpl.replace(mod, '<script src="shell.js"></script>\n' + (testOut ? '<script src="test-overrides.js"></script>\n' : '') + '<script src="models.js"></script>\n<script src="pet.js"></script>\n<script src="windowsill.js"></script>');
 if (/cdn\.jsdelivr|https?:\/\/(?!github\.com\/TangfanOVO)/.test(tpl.replace(/<!--[\s\S]*?-->/g, ''))) throw new Error('页面里还有联网地址');
 writeFileSync(join(out, 'index.html'), '<!-- 赴约 · 窗台 by 唐幡 (TangfanOVO), AGPL-3.0. Source: native/private-small-phone/third_party/qiaosi-windowsill -->\n' + tpl);
+// the public web build gets the very same page (she says the author agreed, 2026-10-20): couple-windowsill/ at the web root
+if (!testOut) {
+  const webOut = join(root, 'couple-windowsill');
+  mkdirSync(webOut, {recursive: true});
+  for (const f of ['index.html', 'shell.js', 'models.js', 'pet.js', 'windowsill.js']) copyFileSync(join(out, f), join(webOut, f));
+}
 const kb = f => Math.round(readFileSync(join(out, f)).length / 1024);
 console.log('couple-windowsill:', ['index.html', 'shell.js', 'models.js', 'pet.js', 'windowsill.js'].map(f => f + ' ' + kb(f) + 'KB').join(', '));

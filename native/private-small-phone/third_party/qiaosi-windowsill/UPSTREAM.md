@@ -4,7 +4,8 @@
 - 来源：https://github.com/TangfanOVO/qiaosi ，`scenes/windowsill`
 - 取用的版本：提交 `309508f1ce637269638810d9b1e43cb5d1aeb7bd`（2026-10-17）
 - 协议：AGPL-3.0（见本目录 `LICENSE`），商用另行授权见 `COMMERCIAL.md`
-- 用户（North）说明已征得作者同意接入小手机。目前只用于私人版（只装在她自己的手机上）；网页版接入前需要作者的书面授权。
+- 用户（North）说明已征得作者同意接入小手机。2026-10-20 她进一步说明作者也同意放进公开网页版，按她的要求接入网页版（根目录 `couple-windowsill/` 和 `couple-windowsill.js`）。
+- 网页版和私人版都保留作者署名（页面里的「致谢」盆景、打包文件开头的版权说明）和 AGPL-3.0 协议；本仓库公开，源码即在本目录。
 
 ## 本目录里有什么
 
@@ -30,6 +31,6 @@
 node scripts/build_couple_windowsill.mjs --tools <装了 esbuild@0.24.0 和 three@0.170.0 的 node_modules 所在文件夹>
 ```
 
-输出到 `native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/couple-windowsill/`：
+输出到 `native/private-small-phone/XcodeProject/PhoneCompanionTest/PhoneWeb.bundle/couple-windowsill/`，同时复制一份到网页根目录 `couple-windowsill/`：
 `index.html`（上游页面骨架，去掉了 CDN 引用）、`windowsill.js`（three.js + 场景脚本打成一个普通脚本）、`models.js`（四件模型）、`shell.js`。
 three.js 是 MIT 协议。

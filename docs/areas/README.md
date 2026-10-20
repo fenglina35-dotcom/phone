@@ -530,6 +530,7 @@ v1844（她在 iPhone 15 上试 v1843：画质和电脑上不一样、动起来�
 现在（v1850，WINDOWSILL_STEADY30_V1，2026-10-20）：窗台重新启用，用她在手机测速网页上选定的「新方案，清晰度 1.6，稳定 30 张」——开关都在 smallphone/shell.js（__WS_SHADOW_FREEZE、__WS_NO_AO、__WS_NO_DOF、__WS_PCF、__WS_NO_CANDLE_SHADOW、__WS_FAKE_AREA，清晰度 1.6/省电 1.25，降档门槛 14 帧），打包脚本把它们接进上游。改画质先在测速网页上量，别回到在电脑上猜（上面 v1842～v1844 的失败）。
 桌面功能（v1851，WINDOWSILL_DESK_V1，她定的对照表）：外层 private-couple-windowsill.js 的 deskData() 每 30 秒和回来时把真实内容发给窗台（windowsill:data），shell.js 按卡片标题（DESK 表）改卡片文字、按钮发 windowsill:open 回外层打开对应页面（openDesk）。碎碎念 S.couple.wsNotes（当天）／wsNotesTried（当天已试过，失败也不再调），看窗台满 4 秒才写（为此核心检查曾数到多余的模型调用）。天气 S.couple.wsWeather（半小时）。相册 S.couple.wallPhotos 五格，镜头位置是她用预览窗口里的调整面板自己定的（打包脚本里 __WS_PHOTO_SHOT）。改名 梗库→星星罐、我在哪→他在哪、彩蛋→致谢。千纸鹤「飞走」只藏模型，原处有看不见的点击盒（隐藏的东西不能点）。纸飞机只在有没拆的信时出现。黄铜小壶去掉；手机壳粉色金属（__WS_PHONE_COLOR/BACK/RING/BAND）。
 停放（WINDOWSILL_KEEP_V1）：离开窗台 = park()（holder 隐藏、发 windowsill:pause，shell 的限速 rAF 把回调攒着不画），回来 unpark() 立即继续；离开满 10 分钟或 WebGL 被收回才真正 unmount。render() 只换 #app，窗台挂在 .screen 下不会被冲掉。
+网页版（v1848，COUPLE_WINDOWSILL_WEB_V1，2026-10-20 她说明作者同意）：网页入口 小手机.html 加载根目录 couple-windowsill.js（私人版外层的复制，改了称呼、健康提示、加开关 S.settings.windowsillOff），iframe 用根目录 couple-windowsill/（打包脚本和私人版同时输出、内容一样，测试会比对）。改外层时两份都要改（私人版 private-couple-windowsill.js 有她的名字 North，网页版不能有）。
 - 注意：shell.js 比 pet.js 先加载，帧图要等 DOMContentLoaded 再读。
 
 后续步骤（未做）：点桌上东西打开对应功能（对照表见聊天：手机=进入真实小手机，电脑=一起听，书=共读，挂历=纪念日，便签=报备，蜡烛=睡眠，茶=健康，千纸鹤=我在哪，透卡/流麻牌=桌宠小橘，风铃=朋友圈，信=信箱，木盒=游戏大厅，手帐=出门，星星罐=表情仓库，盆景=作者致谢），接真实数据，桌宠换小橘；以后可加开关做成整个 App 首页。

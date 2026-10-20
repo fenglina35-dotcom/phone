@@ -190,5 +190,5 @@ test('private identity advances while public web stays unchanged',()=>{
   assert.match(webView,/1\.0\.500 \(500\)/);
   assert.equal((project.match(/CURRENT_PROJECT_VERSION = 500;/g)||[]).length,12);
   assert.equal((project.match(/MARKETING_VERSION = 1.0.500;/g)||[]).length,12);
-  assert.match(read('app.js'),/APP_VER='v1847 · 形象工作室加载修复'/);
+  assert.match(read('app.js'),/APP_VER='v1848 · 网页窗台'/);
 });

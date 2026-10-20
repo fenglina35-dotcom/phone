@@ -71,6 +71,17 @@ test('the desk is wired to her small phone (WINDOWSILL_DESK_V1)', () => {
   assert.match(js, /slot >= 0 && slot < 5 && \(d\.data === '' \|\| \(typeof d\.data === 'string' && d\.data\.indexOf\('data:image\/'\) === 0\)\)/);
 });
 
+test('the public web gets the same windowsill without her name and with an off switch (COUPLE_WINDOWSILL_WEB_V1)', () => {
+  const web = read('couple-windowsill.js');
+  assert.doesNotMatch(web, /North/, 'her name stays in the private app');
+  assert.match(web, /写便签，贴在你们窗台边的挂板上/);
+  assert.match(web, /网页版看不到健康数据/);
+  assert.match(web, /S\.settings\.windowsillOff/);
+  assert.match(web, /src="couple-windowsill\/index\.html/);
+  assert.match(read(T + 'UPSTREAM.md'), /作者也同意放进公开网页版/);
+  for (const f of ['index.html', 'shell.js', 'models.js', 'pet.js', 'windowsill.js']) assert.equal(read('couple-windowsill/' + f), read(P + 'couple-windowsill/' + f), f + ' is the same build in both');
+});
+
 test('the upstream scene is kept with its licence and origin', () => {
   assert.match(read(T + 'LICENSE'), /GNU AFFERO GENERAL PUBLIC LICENSE/);
   assert.match(read(T + 'UPSTREAM.md'), /309508f1ce637269638810d9b1e43cb5d1aeb7bd/);
@@ -97,7 +108,9 @@ test('the built page works offline: no CDN, models and three.js bundled', () => 
 
 test('only the private app loads the windowsill, inside the phone screen under overlays', () => {
   for (const f of ['index.html', '小手机.html']) assert.match(read(P + f), /<script src="private-couple-windowsill\.js\?v=\d+"><\/script>/);
-  assert.doesNotMatch(read('小手机.html'), /couple-windowsill/, 'the web build stays as it is');
+  // 2026-10-20 she asked for it on the public web too (the author agreed): the web loads its own copy (COUPLE_WINDOWSILL_WEB_V1)
+  assert.match(read('小手机.html'), /<script src="couple-windowsill\.js\?v=\d+"/);
+  assert.doesNotMatch(read('小手机.html'), /private-couple-windowsill/);
   const js = read(P + 'private-couple-windowsill.js');
   assert.match(js, /#cw-holder\{position:absolute;inset:0;z-index:150;/);
   assert.match(js, /\(document\.querySelector\('\.screen'\) \|\| document\.body\)\.appendChild\(holder\)/);

@@ -14,7 +14,9 @@ function localAssets(shell,tag,attr){
   return [...shell.matchAll(re)].map(match=>match[1]).filter(value=>!/^https?:|^data:|^blob:/.test(value));
 }
 
-const deploymentOnly=new Set(['web-hotfix.js']);
+// couple-windowsill.js is the web's own windowsill wrapper (COUPLE_WINDOWSILL_WEB_V1); the private app has its own
+// private-couple-windowsill.js (her name, private features), so it must not be copied over.
+const deploymentOnly=new Set(['web-hotfix.js','couple-windowsill.js']);
 
 test('private shell contains every public runtime and stylesheet',()=>{
   for(const [tag,attr] of [['script','src'],['link','href']]){
